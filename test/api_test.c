@@ -1266,69 +1266,138 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                         }
 
         /*
-         * Invalid cipher IV length test
+         * Invalid cipher IV length tests
          */
+        const struct invalid_cipher_iv_params {
+                IMB_CIPHER_MODE cipher_mode;
+                uint64_t invalid_iv_len;
+        } invalid_iv_lens[] = {
+                /* IVs must be 16 bytes */
+                { IMB_CIPHER_CBC, 15 },
+                { IMB_CIPHER_CBC, 17 },
+                { IMB_CIPHER_CBCS_1_9, 15 },
+                { IMB_CIPHER_CBCS_1_9, 17 },
+                { IMB_CIPHER_DOCSIS_SEC_BPI, 15 },
+                { IMB_CIPHER_DOCSIS_SEC_BPI, 17 },
+                { IMB_CIPHER_CNTR_BITLEN, 15 },
+                { IMB_CIPHER_CNTR_BITLEN, 17 },
+                { IMB_CIPHER_PON_AES_CNTR, 15 },
+                { IMB_CIPHER_PON_AES_CNTR, 17 },
+                { IMB_CIPHER_SNOW3G_UEA2_BITLEN, 15 },
+                { IMB_CIPHER_SNOW3G_UEA2_BITLEN, 17 },
+                { IMB_CIPHER_SNOW_V_AEAD, 15 },
+                { IMB_CIPHER_SNOW_V_AEAD, 17 },
+                { IMB_CIPHER_SNOW_V, 15 },
+                { IMB_CIPHER_SNOW_V, 17 },
+                /* CCM IV must be 13 to 7 bytes */
+                { IMB_CIPHER_CCM, 6 },
+                { IMB_CIPHER_CCM, 14 },
+                /* ECB IV must be 0 bytes */
+                { IMB_CIPHER_ECB, 1 },
+                { IMB_CIPHER_ECB, -1 },
+                /* CNTR IV must be 12 or 16 bytes */
+                { IMB_CIPHER_CNTR, 11 },
+                { IMB_CIPHER_CNTR, 14 },
+                { IMB_CIPHER_CNTR, 17 },
+                /* DES IVs must be 8 bytes */
+                { IMB_CIPHER_DES, 7 },
+                { IMB_CIPHER_DES, 9 },
+                { IMB_CIPHER_DOCSIS_DES, 7 },
+                { IMB_CIPHER_DOCSIS_DES, 9 },
+                { IMB_CIPHER_DES3, 7 },
+                { IMB_CIPHER_DES3, 9 },
+                /* KASUMI IV must be 8 bytes */
+                { IMB_CIPHER_KASUMI_UEA1_BITLEN, 7 },
+                { IMB_CIPHER_KASUMI_UEA1_BITLEN, 9 },
+                /* ZUC IV must be 16, 23 or 25 bytes */
+                { IMB_CIPHER_ZUC_EEA3, 15 },
+                { IMB_CIPHER_ZUC_EEA3, 17 },
+                { IMB_CIPHER_ZUC_EEA3, 22 },
+                { IMB_CIPHER_ZUC_EEA3, 24 },
+                { IMB_CIPHER_ZUC_EEA3, 26 },
+                /* CHACHA20 IVs must be 12 bytes */
+                { IMB_CIPHER_CHACHA20, 15 },
+                { IMB_CIPHER_CHACHA20, 17 },
+                { IMB_CIPHER_CHACHA20_POLY1305, 15 },
+                { IMB_CIPHER_CHACHA20_POLY1305, 17 },
+                { IMB_CIPHER_CHACHA20_POLY1305_SGL, 15 },
+                { IMB_CIPHER_CHACHA20_POLY1305_SGL, 17 },
+                /* GCM IVs must be not be 0 bytes */
+                { IMB_CIPHER_GCM, 0 },
+                { IMB_CIPHER_GCM_SGL, 0 },
+        };
+
+        dir = IMB_DIR_ENCRYPT;
+
         for (order = IMB_ORDER_CIPHER_HASH; order <= IMB_ORDER_HASH_CIPHER;
-             order++)
-                for (dir = IMB_DIR_ENCRYPT; dir <= IMB_DIR_DECRYPT; dir++)
-                        for (cipher = IMB_CIPHER_CBC;
-                             cipher < IMB_CIPHER_NUM; cipher++) {
+             order++) {
+                uint64_t key_len;
+
+                for (key_len = IMB_KEY_128_BYTES; key_len <= IMB_KEY_256_BYTES;
+                     key_len += 8) {
+                        uint32_t i;
+
+                        for (i = 0; i < DIM(invalid_iv_lens); i++) {
                                 IMB_JOB *job = &template_job;
 
+                                /* set cipher mode */
+                                cipher = invalid_iv_lens[i].cipher_mode;
+
+                                /* set up job fields */
                                 fill_in_job(job, cipher, dir, hash, order,
                                             &chacha_ctx, &gcm_ctx);
-                                /*
-                                 * Set invalid IV lengths
-                                 * for relevant algos
-                                 */
+
+                                /* set key length */
+                                job->key_len_in_bytes = key_len;
+
+                                /* set invalid IV length */
+                                job->iv_len_in_bytes =
+                                        invalid_iv_lens[i].invalid_iv_len;
+
+                                /* skip some key lengths for specific ciphers */
                                 switch (cipher) {
-                                        /* IVs must be 16 bytes */
-                                case IMB_CIPHER_CBC:
-                                case IMB_CIPHER_CBCS_1_9:
-                                case IMB_CIPHER_DOCSIS_SEC_BPI:
-                                case IMB_CIPHER_CNTR_BITLEN:
-                                case IMB_CIPHER_PON_AES_CNTR:
-                                case IMB_CIPHER_SNOW3G_UEA2_BITLEN:
-                                case IMB_CIPHER_SNOW_V_AEAD:
-                                case IMB_CIPHER_SNOW_V:
-                                        /* CCM IV must be 13 to 7 bytes */
                                 case IMB_CIPHER_CCM:
-                                        /* ECB IV must be 0 bytes */
-                                case IMB_CIPHER_ECB:
-                                        /* CNTR IV must be 12 or 16 bytes */
-                                case IMB_CIPHER_CNTR:
-                                        /* DES IVs must be 8 bytes */
+                                case IMB_CIPHER_DOCSIS_SEC_BPI:
+                                case IMB_CIPHER_ZUC_EEA3:
+                                        if (key_len == IMB_KEY_192_BYTES)
+                                                continue;
+                                        break;
                                 case IMB_CIPHER_DES:
                                 case IMB_CIPHER_DOCSIS_DES:
+                                        /* override default key len for DES */
+                                        job->key_len_in_bytes = 8;
+                                        break;
                                 case IMB_CIPHER_DES3:
-                                        /* KASUMI IV must be 8 bytes */
-                                case IMB_CIPHER_KASUMI_UEA1_BITLEN:
-                                        /* ZUC IV must be 16 or 25 bytes */
-                                case IMB_CIPHER_ZUC_EEA3:
-                                        /* CHACHA20 IVs must be 12 bytes */
+                                        if (key_len != IMB_KEY_192_BYTES)
+                                                continue;
+                                        break;
                                 case IMB_CIPHER_CHACHA20:
                                 case IMB_CIPHER_CHACHA20_POLY1305:
                                 case IMB_CIPHER_CHACHA20_POLY1305_SGL:
-                                        job->iv_len_in_bytes = 1;
+                                case IMB_CIPHER_SNOW_V_AEAD:
+                                case IMB_CIPHER_SNOW_V:
+                                        if (key_len != IMB_KEY_256_BYTES)
+                                                continue;
                                         break;
-                                        /* GCM IVs must be not be 0 bytes */
-                                case IMB_CIPHER_GCM:
-                                case IMB_CIPHER_GCM_SGL:
-                                        job->iv_len_in_bytes = 0;
+                                case IMB_CIPHER_CBCS_1_9:
+                                case IMB_CIPHER_PON_AES_CNTR:
+                                case IMB_CIPHER_SNOW3G_UEA2_BITLEN:
+                                case IMB_CIPHER_KASUMI_UEA1_BITLEN:
+                                        if (key_len != IMB_KEY_128_BYTES)
+                                                continue;
                                         break;
                                 default:
-                                        /*
-                                         * Skip other algos
-                                         */
-                                        continue;
+                                        break;
                                 }
+
                                 if (!is_submit_invalid(mb_mgr, job,
                                                        TEST_CIPH_IV_LEN,
                                                        IMB_ERR_JOB_IV_LEN))
                                         return 1;
-
                                 printf(".");
                         }
+                }
+        }
 
         /*
          * OTHER MISC TESTS
