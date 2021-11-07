@@ -1463,10 +1463,6 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job)
                         imb_set_errno(state, IMB_ERR_JOB_IV_LEN);
                         return 1;
                 }
-                if (job->iv == NULL) {
-                        imb_set_errno(state, IMB_ERR_JOB_NULL_IV);
-                        return 1;
-                }
                 break;
         case IMB_CIPHER_CNTR:
         case IMB_CIPHER_CNTR_BITLEN:

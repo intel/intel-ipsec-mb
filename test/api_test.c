@@ -1026,6 +1026,10 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                                 if (check_aead(hash, cipher))
                                         continue;
 
+                                /* Skip AES-ECB, as it doesn't use any IV */
+                                if (cipher == IMB_CIPHER_ECB)
+                                        continue;
+
                                 fill_in_job(&template_job, cipher, dir,
                                             hash, order, &chacha_ctx, &gcm_ctx);
                                 template_job.iv = NULL;
