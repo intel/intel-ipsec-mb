@@ -248,6 +248,7 @@ usage(const char *name)
 	fprintf(stderr,
                 "Usage: %s [args], where args are zero or more\n"
                 "--test-type TEST_NAME : Run single test type\n"
+                "--stop-on-fail: Stop test execution if a test fails\n"
                 "--no-aesni-emu: Don't do AESNI emulation\n"
                 "--no-avx512: Don't do AVX512\n"
 		"--no-avx2: Don't do AVX2\n"
@@ -338,6 +339,7 @@ main(int argc, char **argv)
         int i, atype, auto_detect = 0;
         uint64_t flags = 0;
         int errors = 0;
+        unsigned int stop_on_fail = 0;
 
         /* Check version number */
         if (imb_get_version() < IMB_VERSION(0, 50, 0))
@@ -362,6 +364,8 @@ main(int argc, char **argv)
 			continue;
 		else if (strcmp(argv[i], "--auto-detect") == 0)
                         (void) auto_detect; /* legacy option - to be removed */
+		else if (strcmp(argv[i], "--stop-on-fail") == 0)
+                        stop_on_fail = 1;
                 else if (strcmp(argv[i], "--test-type") == 0) {
                         unsigned selected_test;
 
@@ -419,8 +423,17 @@ main(int argc, char **argv)
                 print_tested_arch(p_mgr->features, atype);
 
                 for (test_idx = 0; test_idx < DIM(tests); test_idx++) {
-                        if (tests[test_idx].enabled)
+                        if (tests[test_idx].enabled) {
                                 errors += tests[test_idx].fn(p_mgr);
+                                /*
+                                 * Stop the execution if a failure is
+                                 * encountered and stop_on_fail parameter is set
+                                 */
+                                if (errors && stop_on_fail) {
+                                        free_mb_mgr(p_mgr);
+                                        return EXIT_FAILURE;
+                                }
+                        }
                 }
 
                 free_mb_mgr(p_mgr);
