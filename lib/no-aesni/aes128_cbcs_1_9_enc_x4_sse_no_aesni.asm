@@ -25,9 +25,30 @@
 ;; OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;
 
+;;; Routine to do 128 bit AES-CBC encryption in CBCS mode
+;;; performing 1:9 crypt:skip pattern to encrypt 1 block then
+;;; skip the following 9 blocks processing 4 buffers at a time.
+;;; Updates In and Out pointers at the end.
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; struct AES_ARGS {
+;;     void*    in[8];
+;;     void*    out[8];
+;;     UINT128* keys[8];
+;;     UINT128  IV[8];
+;; }
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; void aes_cbcs_1_9_enc_128_x4(AES_ARGS *args, UINT64 len);
+;; arg 1: ARG : addr of AES_ARGS structure
+;; arg 2: LEN : len (in units of bytes)
 %include "include/aesni_emu.inc"
-%define NROUNDS 13
-%define AES_CBC_MAC aes256_cbc_mac_x4_no_aesni
-%define SUBMIT_JOB_AES_CCM_AUTH submit_job_aes256_ccm_auth_sse_no_aesni
-%define FLUSH_JOB_AES_CCM_AUTH flush_job_aes256_ccm_auth_sse_no_aesni
-%include "sse/mb_mgr_aes128_ccm_auth_submit_flush_x4_sse.asm"
+
+%define FUNC     aes_cbcs_1_9_enc_128_x4_no_aesni
+%define MODE     CBC
+%define OFFSET   160
+%define ARG_IN   _aesarg_in
+%define ARG_OUT  _aesarg_out
+%define ARG_KEYS _aesarg_keys
+%define ARG_IV   _aesarg_IV
+
+%include "sse/aes128_cbc_enc_x4_sse.asm"

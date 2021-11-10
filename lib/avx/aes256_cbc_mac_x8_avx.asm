@@ -25,9 +25,7 @@
 ;; OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;
 
-%include "include/aesni_emu.inc"
-%define NROUNDS 13
-%define AES_CBC_MAC aes256_cbc_mac_x4_no_aesni
-%define SUBMIT_JOB_AES_CCM_AUTH submit_job_aes256_ccm_auth_sse_no_aesni
-%define FLUSH_JOB_AES_CCM_AUTH flush_job_aes256_ccm_auth_sse_no_aesni
-%include "sse/mb_mgr_aes128_ccm_auth_submit_flush_x4_sse.asm"
+;;; Routine to compute CBC-MAC. It is based on 256 bit CBC AES encrypt code.
+
+%define CBC_MAC 1
+%include "avx/aes256_cbc_enc_x8_avx.asm"

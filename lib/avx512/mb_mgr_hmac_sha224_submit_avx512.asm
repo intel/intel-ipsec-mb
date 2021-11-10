@@ -1,5 +1,5 @@
 ;;
-;; Copyright (c) 2020-2021, Intel Corporation
+;; Copyright (c) 2017-2021, Intel Corporation
 ;;
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
@@ -24,10 +24,5 @@
 ;; OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 ;; OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;
-
-%include "include/aesni_emu.inc"
-%define NROUNDS 13
-%define AES_CBC_MAC aes256_cbc_mac_x4_no_aesni
-%define SUBMIT_JOB_AES_CCM_AUTH submit_job_aes256_ccm_auth_sse_no_aesni
-%define FLUSH_JOB_AES_CCM_AUTH flush_job_aes256_ccm_auth_sse_no_aesni
-%include "sse/mb_mgr_aes128_ccm_auth_submit_flush_x4_sse.asm"
+%define SHA224
+%include "avx512/mb_mgr_hmac_sha256_submit_avx512.asm"

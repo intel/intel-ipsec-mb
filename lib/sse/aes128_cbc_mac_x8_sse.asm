@@ -28,4 +28,4 @@
 ;;; Routine to compute CBC-MAC based on 128 bit CBC AES encryptionk code
 
 %define CBC_MAC
-%include "sse/aes_cbc_enc_128_x8_sse.asm"
+%include "sse/aes128_cbc_enc_x8_sse.asm"

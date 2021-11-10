@@ -247,11 +247,11 @@ c_lib_objs := \
 	kasumi_avx.o \
 	kasumi_iv.o \
 	kasumi_sse.o \
-	zuc_sse_top.o \
-	zuc_sse_no_aesni_top.o \
-	zuc_avx_top.o \
-	zuc_avx2_top.o \
-	zuc_avx512_top.o \
+	zuc_top_sse.o \
+	zuc_top_sse_no_aesni.o \
+	zuc_top_avx.o \
+	zuc_top_avx2.o \
+	zuc_top_avx512.o \
 	zuc_iv.o \
 	snow3g_sse.o \
 	snow3g_sse_no_aesni.o \
@@ -260,9 +260,6 @@ c_lib_objs := \
 	snow3g_avx512.o \
 	snow3g_tables.o \
 	snow3g_iv.o \
-	snow_v_sse.o \
-	snow_v_sse_noaesni.o \
-	snow_v_avx.o \
 	mb_mgr_auto.o \
 	error.o
 #
@@ -292,9 +289,9 @@ asm_noaesni_lib_objs := \
 	aes128_cbc_dec_by4_sse_no_aesni.o \
 	aes192_cbc_dec_by4_sse_no_aesni.o \
 	aes256_cbc_dec_by4_sse_no_aesni.o \
-	aes_cbc_enc_128_x4_no_aesni.o \
-	aes_cbc_enc_192_x4_no_aesni.o \
-	aes_cbc_enc_256_x4_no_aesni.o \
+	aes128_cbc_enc_x4_sse_no_aesni.o \
+	aes192_cbc_enc_x4_sse_no_aesni.o \
+	aes256_cbc_enc_x4_sse_no_aesni.o \
 	aes128_cntr_by8_sse_no_aesni.o \
 	aes192_cntr_by8_sse_no_aesni.o \
 	aes256_cntr_by8_sse_no_aesni.o \
@@ -304,25 +301,25 @@ asm_noaesni_lib_objs := \
 	pon_sse_no_aesni.o \
 	zuc_sse_no_aesni.o \
 	aes_cfb_sse_no_aesni.o \
-	aes128_cbc_mac_x4_no_aesni.o \
-	aes256_cbc_mac_x4_no_aesni.o \
-	aes_xcbc_mac_128_x4_no_aesni.o \
-	mb_mgr_aes_flush_sse_no_aesni.o \
-	mb_mgr_aes_submit_sse_no_aesni.o \
-	mb_mgr_aes192_flush_sse_no_aesni.o \
-	mb_mgr_aes192_submit_sse_no_aesni.o \
-	mb_mgr_aes256_flush_sse_no_aesni.o \
-	mb_mgr_aes256_submit_sse_no_aesni.o \
-	mb_mgr_aes_cmac_submit_flush_sse_no_aesni.o \
+	aes128_cbc_mac_x4_sse_no_aesni.o \
+	aes256_cbc_mac_x4_sse_no_aesni.o \
+	aes128_xcbc_mac_x4_sse_no_aesni.o \
+	mb_mgr_aes128_cbc_enc_flush_sse_no_aesni.o \
+	mb_mgr_aes128_cbc_enc_submit_sse_no_aesni.o \
+	mb_mgr_aes192_cbc_enc_flush_sse_no_aesni.o \
+	mb_mgr_aes192_cbc_enc_submit_sse_no_aesni.o \
+	mb_mgr_aes256_cbc_enc_flush_sse_no_aesni.o \
+	mb_mgr_aes256_cbc_enc_submit_sse_no_aesni.o \
+	mb_mgr_aes128_cmac_submit_flush_sse_no_aesni.o \
 	mb_mgr_aes256_cmac_submit_flush_sse_no_aesni.o \
-	mb_mgr_aes_ccm_auth_submit_flush_sse_no_aesni.o \
+	mb_mgr_aes128_ccm_auth_submit_flush_sse_no_aesni.o \
 	mb_mgr_aes256_ccm_auth_submit_flush_sse_no_aesni.o \
-	mb_mgr_aes_xcbc_flush_sse_no_aesni.o \
-	mb_mgr_aes_xcbc_submit_sse_no_aesni.o \
+	mb_mgr_aes128_xcbc_flush_sse_no_aesni.o \
+	mb_mgr_aes128_xcbc_submit_sse_no_aesni.o \
 	mb_mgr_zuc_submit_flush_sse_no_aesni.o \
 	ethernet_fcs_sse_no_aesni.o \
 	crc16_x25_sse_no_aesni.o \
-	aes_cbcs_1_9_enc_128_x4_no_aesni.o \
+	aes128_cbcs_1_9_enc_x4_sse_no_aesni.o \
 	aes128_cbcs_1_9_dec_by4_sse_no_aesni.o \
 	mb_mgr_aes128_cbcs_1_9_submit_sse.o \
 	mb_mgr_aes128_cbcs_1_9_flush_sse.o \
@@ -335,6 +332,7 @@ asm_noaesni_lib_objs := \
 	crc32_fp_sse_no_aesni.o \
 	crc32_iuup_sse_no_aesni.o \
 	crc32_wimax_sse_no_aesni.o \
+	snow_v_sse_no_aesni.o \
 	snow3g_uia2_sse_no_aesni.o
 
 #
@@ -347,12 +345,12 @@ asm_sse_lib_objs := \
 	aes192_cbc_dec_by8_sse.o \
 	aes256_cbc_dec_by4_sse.o \
 	aes256_cbc_dec_by8_sse.o \
-	aes_cbc_enc_128_x4.o \
-	aes_cbc_enc_192_x4.o \
-	aes_cbc_enc_256_x4.o \
-	aes_cbc_enc_128_x8_sse.o \
-	aes_cbc_enc_192_x8_sse.o \
-	aes_cbc_enc_256_x8_sse.o \
+	aes128_cbc_enc_x4_sse.o \
+	aes192_cbc_enc_x4_sse.o \
+	aes256_cbc_enc_x4_sse.o \
+	aes128_cbc_enc_x8_sse.o \
+	aes192_cbc_enc_x8_sse.o \
+	aes256_cbc_enc_x8_sse.o \
 	pon_by8_sse.o \
 	aes128_cntr_by8_sse.o \
 	aes192_cntr_by8_sse.o \
@@ -363,8 +361,8 @@ asm_sse_lib_objs := \
 	aes128_cntr_ccm_by8_sse.o \
 	aes256_cntr_ccm_by8_sse.o \
 	aes_cfb_sse.o \
-	aes128_cbc_mac_x4.o \
-	aes256_cbc_mac_x4.o \
+	aes128_cbc_mac_x4_sse.o \
+	aes256_cbc_mac_x4_sse.o \
 	aes128_cbc_mac_x8_sse.o \
 	aes256_cbc_mac_x8_sse.o \
 	aes128_xcbc_mac_x4_sse.o \
@@ -376,57 +374,57 @@ asm_sse_lib_objs := \
 	sha384_one_block_sse.o \
 	sha512_one_block_sse.o \
 	sha512_x2_sse.o \
-	sha_256_mult_sse.o \
+	sha256_mult_sse.o \
 	sha1_ni_x2_sse.o \
 	sha256_ni_x2_sse.o \
 	zuc_x4_sse.o \
-	zuc_sse_gfni.o \
-	mb_mgr_aes_flush_sse.o \
-	mb_mgr_aes_submit_sse.o \
-	mb_mgr_aes192_flush_sse.o \
-	mb_mgr_aes192_submit_sse.o \
-	mb_mgr_aes256_flush_sse.o \
-	mb_mgr_aes256_submit_sse.o \
-	mb_mgr_aes_flush_sse_x8.o \
-	mb_mgr_aes_submit_sse_x8.o \
-	mb_mgr_aes192_flush_sse_x8.o \
-	mb_mgr_aes192_submit_sse_x8.o \
-	mb_mgr_aes256_flush_sse_x8.o \
-	mb_mgr_aes256_submit_sse_x8.o \
-	mb_mgr_aes128_cmac_x4_submit_flush_sse.o \
-	mb_mgr_aes256_cmac_x4_submit_flush_sse.o \
-	mb_mgr_aes_cmac_submit_flush_sse_x8.o \
-	mb_mgr_aes256_cmac_submit_flush_sse_x8.o \
-	mb_mgr_aes128_ccm_by8_auth_submit_flush_sse.o \
-	mb_mgr_aes_ccm_auth_submit_flush_sse_x8.o \
-	mb_mgr_aes256_ccm_by8_auth_submit_flush_sse.o \
-	mb_mgr_aes256_ccm_auth_submit_flush_sse_x8.o \
-	mb_mgr_aes128_xcbc_x4_flush_sse.o \
-	mb_mgr_aes128_xcbc_x4_submit_sse.o \
+	zuc_gfni_sse.o \
+	mb_mgr_aes128_cbc_enc_flush_x4_sse.o \
+	mb_mgr_aes128_cbc_enc_submit_x4_sse.o \
+	mb_mgr_aes192_cbc_enc_flush_x4_sse.o \
+	mb_mgr_aes192_cbc_enc_submit_x4_sse.o \
+	mb_mgr_aes256_cbc_enc_flush_x4_sse.o \
+	mb_mgr_aes256_cbc_enc_submit_x4_sse.o \
+	mb_mgr_aes128_cbc_enc_flush_x8_sse.o \
+	mb_mgr_aes128_cbc_enc_submit_x8_sse.o \
+	mb_mgr_aes192_cbc_enc_flush_x8_sse.o \
+	mb_mgr_aes192_cbc_enc_submit_x8_sse.o \
+	mb_mgr_aes256_cbc_enc_flush_x8_sse.o \
+	mb_mgr_aes256_cbc_enc_submit_x8_sse.o \
+	mb_mgr_aes128_cmac_submit_flush_x4_sse.o \
+	mb_mgr_aes256_cmac_submit_flush_x4_sse.o \
+	mb_mgr_aes128_cmac_submit_flush_x8_sse.o \
+	mb_mgr_aes256_cmac_submit_flush_x8_sse.o \
+	mb_mgr_aes128_ccm_auth_submit_flush_x4_sse.o \
+	mb_mgr_aes128_ccm_auth_submit_flush_x8_sse.o \
+	mb_mgr_aes256_ccm_auth_submit_flush_x4_sse.o \
+	mb_mgr_aes256_ccm_auth_submit_flush_x8_sse.o \
+	mb_mgr_aes128_xcbc_flush_x4_sse.o \
+	mb_mgr_aes128_xcbc_submit_x4_sse.o \
 	mb_mgr_hmac_md5_flush_sse.o \
 	mb_mgr_hmac_md5_submit_sse.o \
-	mb_mgr_hmac_flush_sse.o \
-	mb_mgr_hmac_submit_sse.o \
-	mb_mgr_hmac_sha_224_flush_sse.o \
-	mb_mgr_hmac_sha_224_submit_sse.o \
-	mb_mgr_hmac_sha_256_flush_sse.o \
-	mb_mgr_hmac_sha_256_submit_sse.o \
-	mb_mgr_hmac_sha_384_flush_sse.o \
-	mb_mgr_hmac_sha_384_submit_sse.o \
-	mb_mgr_hmac_sha_512_flush_sse.o \
-	mb_mgr_hmac_sha_512_submit_sse.o \
-	mb_mgr_hmac_flush_ni_sse.o \
-	mb_mgr_hmac_submit_ni_sse.o \
-	mb_mgr_hmac_sha_224_flush_ni_sse.o \
-	mb_mgr_hmac_sha_224_submit_ni_sse.o \
-	mb_mgr_hmac_sha_256_flush_ni_sse.o \
-	mb_mgr_hmac_sha_256_submit_ni_sse.o \
+	mb_mgr_hmac_sha1_flush_sse.o \
+	mb_mgr_hmac_sha1_submit_sse.o \
+	mb_mgr_hmac_sha224_flush_sse.o \
+	mb_mgr_hmac_sha224_submit_sse.o \
+	mb_mgr_hmac_sha256_flush_sse.o \
+	mb_mgr_hmac_sha256_submit_sse.o \
+	mb_mgr_hmac_sha384_flush_sse.o \
+	mb_mgr_hmac_sha384_submit_sse.o \
+	mb_mgr_hmac_sha512_flush_sse.o \
+	mb_mgr_hmac_sha512_submit_sse.o \
+	mb_mgr_hmac_sha1_flush_ni_sse.o \
+	mb_mgr_hmac_sha1_submit_ni_sse.o \
+	mb_mgr_hmac_sha224_flush_ni_sse.o \
+	mb_mgr_hmac_sha224_submit_ni_sse.o \
+	mb_mgr_hmac_sha256_flush_ni_sse.o \
+	mb_mgr_hmac_sha256_submit_ni_sse.o \
 	mb_mgr_zuc_submit_flush_sse.o \
 	mb_mgr_zuc_submit_flush_gfni_sse.o \
 	ethernet_fcs_sse.o \
 	crc16_x25_sse.o \
 	crc32_sctp_sse.o \
-	aes_cbcs_1_9_enc_128_x4.o \
+	aes128_cbcs_1_9_enc_x4_sse.o \
 	aes128_cbcs_1_9_dec_by4_sse.o \
 	crc32_refl_by8_sse.o \
 	crc32_by8_sse.o \
@@ -436,15 +434,16 @@ asm_sse_lib_objs := \
 	crc32_wimax_sse.o \
 	chacha20_sse.o \
         memcpy_sse.o \
+	snow_v_sse.o \
 	snow3g_uia2_by4_sse.o
 
 #
 # List of ASM modules (avx directory)
 #
 asm_avx_lib_objs := \
-	aes_cbc_enc_128_x8.o \
-	aes_cbc_enc_192_x8.o \
-	aes_cbc_enc_256_x8.o \
+	aes128_cbc_enc_x8_avx.o \
+	aes192_cbc_enc_x8_avx.o \
+	aes256_cbc_enc_x8_avx.o \
 	aes128_cbc_dec_by8_avx.o \
 	aes192_cbc_dec_by8_avx.o \
 	aes256_cbc_dec_by8_avx.o \
@@ -458,47 +457,47 @@ asm_avx_lib_objs := \
 	aes192_ecb_by4_avx.o \
 	aes256_ecb_by4_avx.o \
 	aes_cfb_avx.o \
-	aes128_cbc_mac_x8.o \
-	aes256_cbc_mac_x8.o \
+	aes128_cbc_mac_x8_avx.o \
+	aes256_cbc_mac_x8_avx.o \
 	aes128_xcbc_mac_x8_avx.o \
 	md5_x4x2_avx.o \
 	sha1_x4_avx.o \
 	sha1_one_block_avx.o \
 	sha224_one_block_avx.o \
 	sha256_one_block_avx.o \
-	sha_256_mult_avx.o \
+	sha256_mult_avx.o \
 	sha384_one_block_avx.o \
 	sha512_one_block_avx.o \
 	sha512_x2_avx.o \
 	zuc_x4_avx.o \
-	mb_mgr_aes_flush_avx.o \
-	mb_mgr_aes_submit_avx.o \
-	mb_mgr_aes192_flush_avx.o \
-	mb_mgr_aes192_submit_avx.o \
-	mb_mgr_aes256_flush_avx.o \
-	mb_mgr_aes256_submit_avx.o \
-	mb_mgr_aes128_cmac_x8_submit_flush_avx.o \
-	mb_mgr_aes256_cmac_x8_submit_flush_avx.o \
-	mb_mgr_aes128_ccm_by8_auth_submit_flush_avx.o \
-	mb_mgr_aes256_ccm_by8_auth_submit_flush_avx.o \
-	mb_mgr_aes128_xcbc_x8_flush_avx.o \
-	mb_mgr_aes128_xcbc_x8_submit_avx.o \
+	mb_mgr_aes128_cbc_enc_flush_avx.o \
+	mb_mgr_aes128_cbc_enc_submit_avx.o \
+	mb_mgr_aes192_cbc_enc_flush_avx.o \
+	mb_mgr_aes192_cbc_enc_submit_avx.o \
+	mb_mgr_aes256_cbc_enc_flush_avx.o \
+	mb_mgr_aes256_cbc_enc_submit_avx.o \
+	mb_mgr_aes128_cmac_submit_flush_x8_avx.o \
+	mb_mgr_aes256_cmac_submit_flush_x8_avx.o \
+	mb_mgr_aes128_ccm_auth_submit_flush_x8_avx.o \
+	mb_mgr_aes256_ccm_auth_submit_flush_x8_avx.o \
+	mb_mgr_aes128_xcbc_flush_x8_avx.o \
+	mb_mgr_aes128_xcbc_submit_x8_avx.o \
 	mb_mgr_hmac_md5_flush_avx.o \
 	mb_mgr_hmac_md5_submit_avx.o \
-	mb_mgr_hmac_flush_avx.o \
-	mb_mgr_hmac_submit_avx.o \
-	mb_mgr_hmac_sha_224_flush_avx.o \
-	mb_mgr_hmac_sha_224_submit_avx.o \
-	mb_mgr_hmac_sha_256_flush_avx.o \
-	mb_mgr_hmac_sha_256_submit_avx.o \
-	mb_mgr_hmac_sha_384_flush_avx.o \
-	mb_mgr_hmac_sha_384_submit_avx.o \
-	mb_mgr_hmac_sha_512_flush_avx.o \
-	mb_mgr_hmac_sha_512_submit_avx.o \
+	mb_mgr_hmac_sha1_flush_avx.o \
+	mb_mgr_hmac_sha1_submit_avx.o \
+	mb_mgr_hmac_sha224_flush_avx.o \
+	mb_mgr_hmac_sha224_submit_avx.o \
+	mb_mgr_hmac_sha256_flush_avx.o \
+	mb_mgr_hmac_sha256_submit_avx.o \
+	mb_mgr_hmac_sha384_flush_avx.o \
+	mb_mgr_hmac_sha384_submit_avx.o \
+	mb_mgr_hmac_sha512_flush_avx.o \
+	mb_mgr_hmac_sha512_submit_avx.o \
 	mb_mgr_zuc_submit_flush_avx.o \
 	ethernet_fcs_avx.o \
 	crc16_x25_avx.o \
-	aes_cbcs_1_9_enc_128_x8.o \
+	aes128_cbcs_1_9_enc_x8_avx.o \
 	aes128_cbcs_1_9_dec_by8_avx.o \
 	mb_mgr_aes128_cbcs_1_9_submit_avx.o \
 	mb_mgr_aes128_cbcs_1_9_flush_avx.o \
@@ -511,6 +510,7 @@ asm_avx_lib_objs := \
 	crc32_wimax_avx.o \
 	chacha20_avx.o \
         memcpy_avx.o \
+	snow_v_avx.o \
 	snow3g_uia2_by4_avx.o
 
 #
@@ -524,16 +524,16 @@ asm_avx2_lib_objs := \
 	zuc_x8_avx2.o \
 	mb_mgr_hmac_md5_flush_avx2.o \
 	mb_mgr_hmac_md5_submit_avx2.o \
-	mb_mgr_hmac_flush_avx2.o \
-	mb_mgr_hmac_submit_avx2.o \
-	mb_mgr_hmac_sha_224_flush_avx2.o \
-	mb_mgr_hmac_sha_224_submit_avx2.o \
-	mb_mgr_hmac_sha_256_flush_avx2.o \
-	mb_mgr_hmac_sha_256_submit_avx2.o \
-	mb_mgr_hmac_sha_384_flush_avx2.o \
-	mb_mgr_hmac_sha_384_submit_avx2.o \
-	mb_mgr_hmac_sha_512_flush_avx2.o \
-	mb_mgr_hmac_sha_512_submit_avx2.o \
+	mb_mgr_hmac_sha1_flush_avx2.o \
+	mb_mgr_hmac_sha1_submit_avx2.o \
+	mb_mgr_hmac_sha224_flush_avx2.o \
+	mb_mgr_hmac_sha224_submit_avx2.o \
+	mb_mgr_hmac_sha256_flush_avx2.o \
+	mb_mgr_hmac_sha256_submit_avx2.o \
+	mb_mgr_hmac_sha384_flush_avx2.o \
+	mb_mgr_hmac_sha384_submit_avx2.o \
+	mb_mgr_hmac_sha512_flush_avx2.o \
+	mb_mgr_hmac_sha512_submit_avx2.o \
 	mb_mgr_zuc_submit_flush_avx2.o \
 	chacha20_avx2.o
 
@@ -557,28 +557,28 @@ asm_avx512_lib_objs := \
 	aes_docsis_enc_vaes_avx512.o \
 	zuc_x16_avx512.o \
 	zuc_x16_vaes_avx512.o \
-	mb_mgr_aes_submit_avx512.o \
-	mb_mgr_aes_flush_avx512.o \
-	mb_mgr_aes192_submit_avx512.o \
-	mb_mgr_aes192_flush_avx512.o \
-	mb_mgr_aes256_submit_avx512.o \
-	mb_mgr_aes256_flush_avx512.o \
-	mb_mgr_hmac_flush_avx512.o \
-	mb_mgr_hmac_submit_avx512.o \
-	mb_mgr_hmac_sha_224_flush_avx512.o \
-	mb_mgr_hmac_sha_224_submit_avx512.o \
-	mb_mgr_hmac_sha_256_flush_avx512.o \
-	mb_mgr_hmac_sha_256_submit_avx512.o \
-	mb_mgr_hmac_sha_384_flush_avx512.o \
-	mb_mgr_hmac_sha_384_submit_avx512.o \
-	mb_mgr_hmac_sha_512_flush_avx512.o \
-	mb_mgr_hmac_sha_512_submit_avx512.o \
+	mb_mgr_aes128_cbc_enc_submit_avx512.o \
+	mb_mgr_aes128_cbc_enc_flush_avx512.o \
+	mb_mgr_aes192_cbc_enc_submit_avx512.o \
+	mb_mgr_aes192_cbc_enc_flush_avx512.o \
+	mb_mgr_aes256_cbc_enc_submit_avx512.o \
+	mb_mgr_aes256_cbc_enc_flush_avx512.o \
+	mb_mgr_hmac_sha1_flush_avx512.o \
+	mb_mgr_hmac_sha1_submit_avx512.o \
+	mb_mgr_hmac_sha224_flush_avx512.o \
+	mb_mgr_hmac_sha224_submit_avx512.o \
+	mb_mgr_hmac_sha256_flush_avx512.o \
+	mb_mgr_hmac_sha256_submit_avx512.o \
+	mb_mgr_hmac_sha384_flush_avx512.o \
+	mb_mgr_hmac_sha384_submit_avx512.o \
+	mb_mgr_hmac_sha512_flush_avx512.o \
+	mb_mgr_hmac_sha512_submit_avx512.o \
 	mb_mgr_des_avx512.o \
-	mb_mgr_aes128_cmac_x16_submit_flush_vaes_avx512.o \
-	mb_mgr_aes256_cmac_x16_submit_flush_vaes_avx512.o \
-	mb_mgr_aes128_ccm_by16_auth_submit_flush_vaes_avx512.o \
-	mb_mgr_aes256_ccm_by16_auth_submit_flush_vaes_avx512.o \
-	mb_mgr_aes128_xcbc_x16_submit_flush_vaes_avx512.o \
+	mb_mgr_aes128_cmac_submit_flush_x16_vaes_avx512.o \
+	mb_mgr_aes256_cmac_submit_flush_x16_vaes_avx512.o \
+	mb_mgr_aes128_ccm_auth_submit_flush_x16_vaes_avx512.o \
+	mb_mgr_aes256_ccm_auth_submit_flush_x16_vaes_avx512.o \
+	mb_mgr_aes128_xcbc_submit_flush_x16_vaes_avx512.o \
 	mb_mgr_zuc_submit_flush_avx512.o \
 	mb_mgr_zuc_submit_flush_gfni_avx512.o \
 	chacha20_avx512.o \
@@ -588,8 +588,8 @@ asm_avx512_lib_objs := \
 	crc16_x25_avx512.o \
 	crc32_refl_by16_vclmul_avx512.o \
 	crc32_by16_vclmul_avx512.o \
-	mb_mgr_aes_cbcs_1_9_submit_avx512.o \
-	mb_mgr_aes_cbcs_1_9_flush_avx512.o \
+	mb_mgr_aes128_cbcs_1_9_submit_avx512.o \
+	mb_mgr_aes128_cbcs_1_9_flush_avx512.o \
 	crc32_sctp_avx512.o \
 	crc32_lte_avx512.o \
 	crc32_fp_avx512.o \
@@ -864,7 +864,7 @@ help:
 
 CHECKPATCH ?= checkpatch.pl
 # checkpatch ignore settings:
-#   SPACING - produces false positives with tyepdefs and *
+#   SPACING - produces false positives with typedefs and *
 #   CONSTANT_COMPARISON - forbids defensive programming technique
 #   USE_FUNC - produces false positives for Windows target
 #   INITIALISED_STATIC, LEADING_SPACE, SPLIT_STRING, CODE_INDENT,

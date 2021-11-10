@@ -34,4 +34,4 @@
 %define ARG_KEYS _aesxcbcarg_keys
 %define ARG_IV   _aesxcbcarg_ICV
 
-%include "avx/aes_cbc_enc_128_x8.asm"
+%include "avx/aes128_cbc_enc_x8_avx.asm"
