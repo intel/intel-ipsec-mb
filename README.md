@@ -471,7 +471,6 @@ Algorithms where these constant time functions are used are the following:
 - DES: SSE, AVX and AVX2 implementations  
 - KASUMI: all architectures  
 - SNOW3G: all architectures  
-- ZUC: all architectures  
 
 If SAFE_LOOKUP is not enabled in the build (e.g. make SAFE_LOOKUP=n) then the
 algorithms listed above may be susceptible to timing attacks which could expose
