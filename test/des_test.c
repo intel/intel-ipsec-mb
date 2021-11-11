@@ -36,7 +36,7 @@
 #include "gcm_ctr_vectors_test.h"
 #include "utils.h"
 
-int des_test(const enum arch_type arch, struct IMB_MGR *mb_mgr);
+int des_test(struct IMB_MGR *mb_mgr);
 
 struct des_vector {
 	const uint8_t *K;          /* key */
@@ -610,13 +610,10 @@ test_des3_vectors(struct IMB_MGR *mb_mgr,
 }
 
 int
-des_test(const enum arch_type arch,
-         struct IMB_MGR *mb_mgr)
+des_test(struct IMB_MGR *mb_mgr)
 {
         struct test_suite_context ctx;
         int errors;
-
-        (void) arch;
 
         test_suite_start(&ctx, "DES-CBC-64");
         test_des_vectors(mb_mgr, DIM(vectors), vectors,

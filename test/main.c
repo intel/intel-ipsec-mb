@@ -35,7 +35,7 @@
 #include "customop_test.h"
 #include "utils.h"
 
-extern int des_test(const enum arch_type arch, struct IMB_MGR *mb_mgr);
+extern int des_test(struct IMB_MGR *mb_mgr);
 extern int ccm_test(struct IMB_MGR *mb_mgr);
 extern int cmac_test(struct IMB_MGR *mb_mgr);
 extern int hmac_sha1_test(struct IMB_MGR *mb_mgr);
@@ -45,7 +45,7 @@ extern int aes_test(struct IMB_MGR *mb_mgr);
 extern int ecb_test(struct IMB_MGR *mb_mgr);
 extern int sha_test(struct IMB_MGR *mb_mgr);
 extern int chained_test(struct IMB_MGR *mb_mgr);
-extern int api_test(struct IMB_MGR *mb_mgr, uint64_t flags);
+extern int api_test(struct IMB_MGR *mb_mgr);
 extern int pon_test(struct IMB_MGR *mb_mgr);
 extern int zuc_test(struct IMB_MGR *mb_mgr);
 extern int kasumi_test(struct IMB_MGR *mb_mgr);
@@ -203,7 +203,7 @@ main(int argc, char **argv)
                 errors += xcbc_test(p_mgr);
                 errors += gcm_test(p_mgr);
                 errors += customop_test(p_mgr);
-                errors += des_test(atype, p_mgr);
+                errors += des_test(p_mgr);
                 errors += ccm_test(p_mgr);
                 errors += cmac_test(p_mgr);
                 errors += zuc_test(p_mgr);
@@ -220,7 +220,7 @@ main(int argc, char **argv)
                 errors += aes_cbcs_test(p_mgr);
                 errors += chacha_test(p_mgr);
                 errors += poly1305_test(p_mgr);
-                errors += api_test(p_mgr, flags);
+                errors += api_test(p_mgr);
                 errors += direct_api_test(p_mgr);
                 errors += clear_mem_test(p_mgr);
                 errors += crc_test(p_mgr);

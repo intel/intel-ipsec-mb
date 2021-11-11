@@ -38,7 +38,7 @@
 #define __func__ __FUNCTION__
 #endif
 
-int api_test(struct IMB_MGR *mb_mgr, uint64_t flags);
+int api_test(struct IMB_MGR *mb_mgr);
 
 enum {
       TEST_UNEXPECTED_JOB = 1,
@@ -1476,7 +1476,7 @@ test_job_invalid_misc_args(struct IMB_MGR *mb_mgr)
  * should remain, so after a flush, a job should be retrieved.
  */
 static int
-submit_reset_check_job(struct IMB_MGR *mb_mgr, const uint64_t flags,
+submit_reset_check_job(struct IMB_MGR *mb_mgr,
                        IMB_CIPHER_MODE cipher, IMB_CIPHER_DIRECTION dir,
                        IMB_HASH_ALG hash, IMB_CHAIN_ORDER order)
 {
@@ -1502,7 +1502,7 @@ submit_reset_check_job(struct IMB_MGR *mb_mgr, const uint64_t flags,
                  * Reset MB MGR pointers first and
                  * check if job can be retrieved later
                  */
-                if (imb_set_pointers_mb_mgr(mb_mgr, flags, 0) == NULL)
+                if (imb_set_pointers_mb_mgr(mb_mgr, mb_mgr->flags, 0) == NULL)
                         return 1;
 
                 next_job = IMB_FLUSH_JOB(mb_mgr);
@@ -1526,7 +1526,7 @@ submit_reset_check_job(struct IMB_MGR *mb_mgr, const uint64_t flags,
  * @brief Test reset API
  */
 static int
-test_reset_api(struct IMB_MGR *mb_mgr, uint64_t flags)
+test_reset_api(struct IMB_MGR *mb_mgr)
 {
         IMB_HASH_ALG hash;
         IMB_CIPHER_DIRECTION dir;
@@ -1540,7 +1540,7 @@ test_reset_api(struct IMB_MGR *mb_mgr, uint64_t flags)
                 ;
 
         /* Reset MB MGR pointers first */
-        if (imb_set_pointers_mb_mgr(mb_mgr, flags, 0) == NULL)
+        if (imb_set_pointers_mb_mgr(mb_mgr, mb_mgr->flags, 0) == NULL)
                 return 1;
 
         /* Loop around all cipher algorithms */
@@ -1560,7 +1560,7 @@ test_reset_api(struct IMB_MGR *mb_mgr, uint64_t flags)
                                 if (check_aead(hash, cipher))
                                         continue;
 
-                                if (submit_reset_check_job(mb_mgr, flags,
+                                if (submit_reset_check_job(mb_mgr,
                                                            cipher, dir,
                                                            hash, order) > 0)
                                         return 1;
@@ -1588,7 +1588,7 @@ test_reset_api(struct IMB_MGR *mb_mgr, uint64_t flags)
                                 if (check_aead(hash, cipher))
                                         continue;
 
-                                if (submit_reset_check_job(mb_mgr, flags,
+                                if (submit_reset_check_job(mb_mgr,
                                                            cipher, dir,
                                                            hash, order) > 0)
                                         return 1;
@@ -1627,7 +1627,7 @@ test_reset_api(struct IMB_MGR *mb_mgr, uint64_t flags)
                         order = IMB_ORDER_CIPHER_HASH;
                 dir = IMB_DIR_ENCRYPT;
 
-                if (submit_reset_check_job(mb_mgr, flags, cipher,
+                if (submit_reset_check_job(mb_mgr, cipher,
                                            dir, hash, order) > 0)
                         return 1;
 
@@ -1638,7 +1638,7 @@ test_reset_api(struct IMB_MGR *mb_mgr, uint64_t flags)
                         order = IMB_ORDER_HASH_CIPHER;
                 dir = IMB_DIR_DECRYPT;
 
-                if (submit_reset_check_job(mb_mgr, flags, cipher,
+                if (submit_reset_check_job(mb_mgr, cipher,
                                            dir, hash, order) > 0)
                         return 1;
 
@@ -1653,7 +1653,7 @@ test_reset_api(struct IMB_MGR *mb_mgr, uint64_t flags)
 }
 
 int
-api_test(struct IMB_MGR *mb_mgr, uint64_t flags)
+api_test(struct IMB_MGR *mb_mgr)
 {
         int errors = 0, run = 0;
         struct test_suite_context ctx;
@@ -1672,7 +1672,7 @@ api_test(struct IMB_MGR *mb_mgr, uint64_t flags)
         errors += test_job_invalid_misc_args(mb_mgr);
         run++;
 
-        errors += test_reset_api(mb_mgr, flags);
+        errors += test_reset_api(mb_mgr);
         run++;
 
         test_suite_update(&ctx, run - errors, errors);
