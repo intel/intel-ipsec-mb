@@ -1083,23 +1083,27 @@ IMB_DLL_LOCAL void asm_Eia3Round16BSSE_no_aesni(void *T, const void *ks,
  *      Definition of the external function to return the authentication
  *      update value to be XOR'ed with current authentication tag (SSE variant)
  *
+ * @param[in] T                     Pointer to authentication tag
  * @param[in] ks                    Pointer to key stream
- *
  * @param[in] data                  Pointer to the data
- *
- * @param[in] n_words               Number of data bits to be processed
- *
+ * @param[in] n_bits                Number of data bits to be processed
+ * @param[in] key_size              Key size (128 or 256 bits)
+ * @param[in] tag_size              Tag size (4, 8 or 16 bytes)
  * @pre
  *      None
  *
  *****************************************************************************/
 IMB_DLL_LOCAL void asm_Eia3RemainderSSE(void *T, const void *ks,
                                         const void *data,
-                                        const uint64_t n_bits);
+                                        const uint64_t n_bits,
+                                        const uint64_t key_size,
+                                        const uint64_t tag_size);
 
 IMB_DLL_LOCAL void asm_Eia3RemainderSSE_no_aesni(void *T, const void *ks,
                                                  const void *data,
-                                                 const uint64_t n_bits);
+                                                 const uint64_t n_bits,
+                                                 const uint64_t key_size,
+                                                 const uint64_t tag_size);
 
 /**
  ******************************************************************************

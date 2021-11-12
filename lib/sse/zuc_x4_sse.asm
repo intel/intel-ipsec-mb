@@ -51,12 +51,14 @@
 %define arg3    rdx
 %define arg4    rcx
 %define arg5    r8
+%define arg6    r9
 %else
 %define arg1    rcx
 %define arg2    rdx
 %define arg3    r8
 %define arg4    r9
 %define arg5    qword [rsp + 40]
+%define arg6    qword [rsp + 48]
 %endif
 
 %define APPEND(a,b) a %+ b
@@ -1579,24 +1581,30 @@ exit_cipher:
 
         ret
 
-
-%macro REMAINDER 14
+%macro REMAINDER 17
 %define %%T             %1  ; [in] Pointer to authentication tag
 %define %%KS            %2  ; [in] Pointer to 32-byte keystream
 %define %%DATA          %3  ; [in] Pointer to input data
 %define %%N_BITS        %4  ; [in] Number of bits to digest
 %define %%N_BYTES       %5  ; [clobbered] Number of bytes to digest
-%define %%TMP           %6  ; [clobbered] Temporary GP register
+%define %%TMP1          %6  ; [clobbered] Temporary GP register
 %define %%TMP2          %7  ; [clobbered] Temporary GP register
-%define %%XTMP1         %8  ; [clobbered] Temporary XMM register
-%define %%XTMP2         %9  ; [clobbered] Temporary XMM register
-%define %%XTMP3         %10 ; [clobbered] Temporary XMM register
-%define %%XTMP4         %11 ; [clobbered] Temporary XMM register
-%define %%XTMP5         %12 ; [clobbered] Temporary XMM register
-%define %%KS_L          %13 ; [clobbered] Temporary XMM register
-%define %%KS_H          %14 ; [clobbered] Temporary XMM register
+%define %%TMP3          %8  ; [clobbered] Temporary GP register
+%define %%XTMP1         %9  ; [clobbered] Temporary XMM register
+%define %%XTMP2         %10 ; [clobbered] Temporary XMM register
+%define %%XTMP3         %11 ; [clobbered] Temporary XMM register
+%define %%XTMP4         %12 ; [clobbered] Temporary XMM register
+%define %%XTMP5         %13 ; [clobbered] Temporary XMM register
+%define %%KS_L          %14 ; [clobbered] Temporary XMM register
+%define %%KS_H          %15 ; [clobbered] Temporary XMM register
+%define %%KEY_SZ        %16 ; [in] Key size (128 or 256)
+%define %%TAG_SZ        %17 ; [in] Key size (4, 8 or 16)
+
+%define %%N_BYTES %%TMP3
 
         FUNC_SAVE
+
+        pxor    %%XTMP2, %%XTMP2
 
         or      %%N_BITS, %%N_BITS
         jz      %%Eia3RoundsSSE_end
@@ -1609,11 +1617,11 @@ exit_cipher:
         ;; read up to 16 bytes of data, zero bits not needed if partial byte and bit-reverse
         simd_load_sse_16_1 %%XTMP1, %%DATA, %%N_BYTES
         ; check if there is a partial byte (less than 8 bits in last byte)
-        mov     %%TMP, %%N_BITS
-        and     %%TMP, 0x7
-        shl     %%TMP, 4
+        mov     %%TMP1, %%N_BITS
+        and     %%TMP1, 0x7
+        shl     %%TMP1, 4
         lea     %%TMP2, [rel bit_mask_table]
-        add     %%TMP2, %%TMP
+        add     %%TMP2, %%TMP1
 
         ; Get mask to clear last bits
         movdqa  %%XTMP2, [%%TMP2]
@@ -1622,9 +1630,9 @@ exit_cipher:
         ; to apply mask, then restore by shifting right same amount of bytes
         mov     %%TMP2, 16
         sub     %%TMP2, %%N_BYTES
-        XPSLLB  %%XTMP1, %%TMP2, %%XTMP3, %%TMP
+        XPSLLB  %%XTMP1, %%TMP2, %%XTMP3, %%TMP1
         pand    %%XTMP1, %%XTMP2
-        XPSRLB  %%XTMP1, %%TMP2, %%XTMP3, %%TMP
+        XPSRLB  %%XTMP1, %%TMP2, %%XTMP3, %%TMP1
 
         movdqa  %%XTMP3, [rel bit_reverse_and_table]
 
@@ -1672,11 +1680,47 @@ exit_cipher:
         pxor    %%XTMP3, %%XTMP5
         pxor    %%XTMP2, %%XTMP3
 
-        ;; - update T
-        movq    %%TMP, %%XTMP2
-        shr     %%TMP, 32
-        xor     [%%T], DWORD(%%TMP)
 %%Eia3RoundsSSE_end:
+
+%define %%TAG DWORD(%%TMP1)
+        ;; - update T
+        mov     %%TAG, [%%T]
+        movq    %%TMP2, %%XTMP2
+        shr     %%TMP2, 32
+        xor     %%TAG, DWORD(%%TMP2)
+
+        ;; XOR with keyStr[n_bits] (Z_length, from spec)
+
+        ; Read keyStr[N_BITS / 32]
+        mov     %%TMP2, %%N_BITS
+        shr     %%TMP2, 5
+        mov     %%TMP3, [%%KS + %%TMP2*4]
+
+        ; Rotate left by N_BITS % 32
+        mov     %%TMP2, rcx ; Save RCX
+        mov     rcx, %%N_BITS
+        and     rcx, 0x1F
+        rol     %%TMP3, cl
+        mov     rcx, %%TMP2 ; Restore RCX
+
+        ; XOR with previous digest calculation
+        xor     %%TAG, DWORD(%%TMP3)
+
+%if %%KEY_SZ == 128
+        ;; XOR with keyStr[L-1]
+
+        ; Read keyStr[L - 1] (last double word of keyStr)
+        mov     %%TMP2, %%N_BITS
+        add     %%TMP2, (31 + 64)
+        shr     %%TMP2, 5 ; L
+        dec     %%TMP2
+        mov     DWORD(%%TMP3), [%%KS + %%TMP2 * 4]
+        ; XOR with previous digest calculation
+        xor     %%TAG, DWORD(%%TMP3)
+
+%endif
+        bswap   %%TAG
+        mov     [%%T], %%TAG
 
         FUNC_RESTORE
 
@@ -1684,7 +1728,9 @@ exit_cipher:
 
 ;;
 ;; extern void asm_Eia3RemainderSSE(void *T, const void *ks,
-;;                                  const void *data, const uint64_t n_bits)
+;;                                  const void *data, const uint64_t n_bits,
+;;                                  const uint64_t key_size,
+;;                                  const uint64_t tag_size);
 ;;
 ;; Returns authentication update value to be XOR'ed with current authentication tag
 ;;
@@ -1692,6 +1738,8 @@ exit_cipher:
 ;;  @param [in] KS (key stream pointer)
 ;;  @param [in] DATA (data pointer)
 ;;  @param [in] N_BITS (number of bits to digest)
+;;  @param [in] KEY_SZ (Key size: 128 or 256 bits)
+;;  @param [in] TAG_SZ (Tag size: 4, 8 or 16 bytes)
 ;;
 align 16
 MKGLOBAL(ZUC_EIA3REMAINDER,function,internal)
@@ -1700,9 +1748,22 @@ ZUC_EIA3REMAINDER:
 %define KS      arg2
 %define DATA    arg3
 %define N_BITS  arg4
+%define KEY_SZ  arg5
+%define TAG_SZ  arg6
 
-        REMAINDER T, KS, DATA, N_BITS, r12, r13, r14, \
-                  xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6
+        cmp     KEY_SZ, 128
+        je      remainder_key_sz_128
+
+        ; Key size = 256
+        ;; TODO: Handle tag sizes of 8 and 16 bytes
+        REMAINDER T, KS, DATA, N_BITS, r12, r13, r14, r15, \
+                  xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, 256, 4
+
+        ret
+
+remainder_key_sz_128:
+        REMAINDER T, KS, DATA, N_BITS, r12, r13, r14, r15, \
+                  xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, 128, 4
 
         ret
 ;;

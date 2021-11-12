@@ -585,16 +585,6 @@ void zuc_eea3_n_buffer_gfni_sse(const void * const pKey[],
                            numBuffers, 1);
 }
 
-static inline uint64_t rotate_left(uint64_t u, size_t r)
-{
-        return (((u) << (r)) | ((u) >> (64 - (r))));
-}
-
-static inline uint64_t load_uint64(const void *ptr)
-{
-        return *((const uint64_t *)ptr);
-}
-
 static inline
 void _zuc_eia3_1_buffer_sse(const void *pKey,
                             const void *pIv,
@@ -639,13 +629,9 @@ void _zuc_eia3_1_buffer_sse(const void *pKey,
          */
         if (remainingBits > (2 * 32))
                 asm_ZucGenKeystream8B_sse(&keyStream[4], &zucState);
-        asm_Eia3RemainderSSE(&T, &keyStream[0], pIn8, remainingBits);
-        T ^= rotate_left(load_uint64(&keyStream[remainingBits / 32]),
-                         remainingBits % 32);
-
+        asm_Eia3RemainderSSE(&T, &keyStream[0], pIn8, remainingBits, 128, 4);
         /* save the final MAC-I result */
-        uint32_t keyBlock = keyStream[L - 1];
-        *pMacI = bswap4(T ^ keyBlock);
+        *pMacI = T;
 
 #ifdef SAFE_DATA
         /* Clear sensitive data (in registers and stack) */
@@ -804,14 +790,10 @@ void _zuc_eia3_4_buffer_sse(const void * const pKey[NUM_SSE_BUFS],
                         asm_ZucGenKeystream8B_sse(&keyStr32[4],
                                                   &singlePktState);
 
-                uint32_t keyBlock = keyStr32[L - 1];
-
-                asm_Eia3RemainderSSE(&T[i], keyStr32, pIn8[i], remainBits);
-                T[i] ^= rotate_left(load_uint64(&keyStr32[remainBits / 32]),
-                                 remainBits % 32);
-
+                asm_Eia3RemainderSSE(&T[i], keyStr32, pIn8[i], remainBits,
+                                     128, 4);
                 /* save the final MAC-I result */
-                *(pMacI[i]) = bswap4(T[i] ^ keyBlock);
+                *(pMacI[i]) = T[i];
         }
 
 #ifdef SAFE_DATA
@@ -1029,14 +1011,10 @@ void _zuc_eia3_4_buffer_job(const void * const pKey[NUM_SSE_BUFS],
                         asm_ZucGenKeystream8B_sse(&keyStr32[4],
                                                   &singlePktState);
 
-                uint32_t keyBlock = keyStr32[L - 1];
-
-                asm_Eia3RemainderSSE(&T[i], keyStr32, pIn8[i], remainBits);
-                T[i] ^= rotate_left(load_uint64(&keyStr32[remainBits / 32]),
-                                 remainBits % 32);
-
+                asm_Eia3RemainderSSE(&T[i], keyStr32, pIn8[i], remainBits,
+                                     128, 4);
                 /* save the final MAC-I result */
-                *(pMacI[i]) = bswap4(T[i] ^ keyBlock);
+                *(pMacI[i]) = T[i];
         }
 
 #ifdef SAFE_DATA
@@ -1226,12 +1204,10 @@ void _zuc256_eia3_4_buffer_job(const void * const pKey[NUM_SSE_BUFS],
                         asm_ZucGenKeystream_sse(&keyStr32[4],
                                                 &singlePktState, 1);
 
-                asm_Eia3RemainderSSE(tag, keyStr32, pIn8[i], remainBits);
-                *tag ^= rotate_left(load_uint64(&keyStr32[remainBits / 32]),
-                                 remainBits % 32);
-
+                asm_Eia3RemainderSSE(tag, keyStr32, pIn8[i], remainBits,
+                                     256, tag_size);
                 /* save the final MAC-I result */
-                *((uint32_t *)pMacI[i]) = bswap4(*tag);
+                memcpy(pMacI[i], tag, tag_size);
         }
 
 #ifdef SAFE_DATA
