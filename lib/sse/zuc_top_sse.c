@@ -50,9 +50,9 @@
 #define KEYSTR_ROUND_LEN 16
 
 static inline void
-init_lfsr_4(ZucKey4_t *keys, const uint8_t *ivs, ZucState4_t *state,
-            const uint64_t key_sz, const uint64_t tag_sz,
-            const unsigned use_gfni)
+init_4(ZucKey4_t *keys, const uint8_t *ivs, ZucState4_t *state,
+       const uint64_t key_sz, const uint64_t tag_sz,
+       void *T, const unsigned use_gfni)
 {
         if (key_sz == 128) {
                 if (use_gfni)
@@ -62,9 +62,10 @@ init_lfsr_4(ZucKey4_t *keys, const uint8_t *ivs, ZucState4_t *state,
         } else {
                 if (use_gfni)
                         asm_Zuc256Initialization_4_gfni_sse(keys, ivs,
-                                                            state, tag_sz);
+                                                            state, T, tag_sz);
                 else
-                        asm_Zuc256Initialization_4_sse(keys, ivs, state, tag_sz);
+                        asm_Zuc256Initialization_4_sse(keys, ivs, state, T,
+                                                       tag_sz);
         }
 }
 
@@ -185,7 +186,7 @@ void _zuc_eea3_4_buffer_sse(const void * const pKey[NUM_SSE_BUFS],
                 memcpy(ivs + i*32, pIv[i], 16);
         }
 
-        init_lfsr_4(&keys, ivs, &state, 128, 0, use_gfni);
+        init_4(&keys, ivs, &state, 128, 0, NULL, use_gfni);
 
         for (i = 0; i < NUM_SSE_BUFS; i++) {
                 pOut64[i] = (uint64_t *) pBufferOut[i];
@@ -701,7 +702,7 @@ void _zuc_eia3_4_buffer_sse(const void * const pKey[NUM_SSE_BUFS],
                 memcpy(ivs + i*32, pIv[i], 16);
         }
 
-        init_lfsr_4(&keys, ivs, &state, 128, 0, use_gfni);
+        init_4(&keys, ivs, &state, 128, 0, NULL, use_gfni);
         if (use_gfni) {
                 /* Generate 16 bytes at a time */
                 asm_ZucGenKeystream16B_4_gfni_sse(&state, pKeyStrArr);
@@ -922,7 +923,7 @@ void _zuc_eia3_4_buffer_job(const void * const pKey[NUM_SSE_BUFS],
                 keys.pKeys[i] = pKey[i];
         }
 
-        init_lfsr_4(&keys, ivs, &state, 128, 0, use_gfni);
+        init_4(&keys, ivs, &state, 128, 0, NULL, use_gfni);
         if (use_gfni) {
                 /* Generate 16 bytes at a time */
                 asm_ZucGenKeystream16B_4_gfni_sse(&state, pKeyStrArr);
@@ -1092,7 +1093,7 @@ void _zuc256_eia3_4_buffer_job(const void * const pKey[NUM_SSE_BUFS],
         const uint8_t *pIn8[NUM_SSE_BUFS] = {NULL};
         uint32_t remainCommonBits;
         uint32_t numKeyStr = 0;
-        uint32_t T[NUM_SSE_BUFS] = {0};
+        uint8_t T[NUM_SSE_BUFS*16] = {0};
         const uint32_t keyStreamLengthInBits = KEYSTR_ROUND_LEN * 8;
         DECLARE_ALIGNED(uint32_t *pKeyStrArr[NUM_SSE_BUFS], 16) = {NULL};
         unsigned int allCommonBits;
@@ -1121,23 +1122,11 @@ void _zuc256_eia3_4_buffer_job(const void * const pKey[NUM_SSE_BUFS],
         }
 
         /* TODO: Handle 8 and 16-byte digest cases */
-        init_lfsr_4(&keys, ivs, &state, 256, tag_size, use_gfni);
+        init_4(&keys, ivs, &state, 256, tag_size, T, use_gfni);
         if (use_gfni) {
-                /* Initialize the tags with the first 4 bytes of keystream */
-                asm_ZucGenKeystream4B_4_gfni_sse(&state, pKeyStrArr);
-
-                for (i = 0; i < NUM_SSE_BUFS; i++)
-                        memcpy(&T[i], pKeyStrArr[i], 4);
-
                 /* Generate 16 bytes at a time */
                 asm_ZucGenKeystream16B_4_gfni_sse(&state, pKeyStrArr);
         } else {
-                /* Initialize the tags with the first 4 bytes of keystream */
-                asm_ZucGenKeystream4B_4_sse(&state, pKeyStrArr);
-
-                for (i = 0; i < NUM_SSE_BUFS; i++)
-                        memcpy(&T[i], pKeyStrArr[i], 4);
-
                 /* Generate 16 bytes at a time */
                 asm_ZucGenKeystream16B_4_sse(&state, pKeyStrArr);
         }
@@ -1167,9 +1156,11 @@ void _zuc256_eia3_4_buffer_job(const void * const pKey[NUM_SSE_BUFS],
                                                              pKeyStrArr);
                 }
                 for (i = 0; i < NUM_SSE_BUFS; i++) {
+                        uint32_t *tag = (uint32_t *) &T[i*4];
+
                         if (job_in_lane[i] == NULL)
                                 continue;
-                        T[i] = asm_Eia3Round16BSSE(T[i], keyStr[i],
+                        *tag = asm_Eia3Round16BSSE(*tag, keyStr[i],
                                                    pIn8[i]);
                         /* Copy the last keystream generated
                          * to the first 16 bytes */
@@ -1181,6 +1172,8 @@ void _zuc256_eia3_4_buffer_job(const void * const pKey[NUM_SSE_BUFS],
 
         /* Process each packet separately for the remaining bits */
         for (i = 0; i < NUM_SSE_BUFS; i++) {
+                uint32_t *tag = (uint32_t *) &T[i*4];
+
                 if (job_in_lane[i] == NULL)
                         continue;
 
@@ -1223,7 +1216,7 @@ void _zuc256_eia3_4_buffer_job(const void * const pKey[NUM_SSE_BUFS],
                         else
                                 asm_ZucGenKeystream16B_sse(&keyStr32[4],
                                                            &singlePktState);
-                        T[i] = asm_Eia3Round16BSSE(T[i], keyStr32,
+                        *tag = asm_Eia3Round16BSSE(*tag, keyStr32,
                                                    pIn8[i]);
                         /* Copy the last keystream generated
                          * to the first 16 bytes */
@@ -1239,12 +1232,12 @@ void _zuc256_eia3_4_buffer_job(const void * const pKey[NUM_SSE_BUFS],
                         asm_ZucGenKeystream_sse(&keyStr32[4],
                                                 &singlePktState, 1);
 
-                T[i] ^= asm_Eia3RemainderSSE(keyStr32, pIn8[i], remainBits);
-                T[i] ^= rotate_left(load_uint64(&keyStr32[remainBits / 32]),
+                *tag ^= asm_Eia3RemainderSSE(keyStr32, pIn8[i], remainBits);
+                *tag ^= rotate_left(load_uint64(&keyStr32[remainBits / 32]),
                                  remainBits % 32);
 
                 /* save the final MAC-I result */
-                *((uint32_t *)pMacI[i]) = bswap4(T[i]);
+                *((uint32_t *)pMacI[i]) = bswap4(*tag);
         }
 
 #ifdef SAFE_DATA

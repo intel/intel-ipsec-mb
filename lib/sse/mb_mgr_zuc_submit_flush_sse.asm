@@ -336,26 +336,21 @@ mksection .text
 
         ;; If Windows, reserve memory in stack for parameter transferring
 %ifndef LINUX
-        ;; 24 bytes for 3 parameters
-        sub     rsp, 24
+        ;; 40 bytes for 5 parameters
+        sub     rsp, 8*5
 %endif
         lea     arg1, [r12 + _zuc_args_keys]
         lea     arg2, [r12 + _zuc_args_IV]
         lea     arg3, [r12 + _zuc_state]
-%if %%KEY_SIZE == 256
-        ;; Setting "tag size" to 2 in case of ciphering
-        ;; (dummy size, just for constant selecion at Initialization)
-        mov     arg4, 2
-%endif
-
 %if %%KEY_SIZE == 128
         call    ZUC128_INIT_4
 %else
+        mov     arg5, 0 ; Tag size = 0, arg4 not used
         call    ZUC256_INIT_4
 %endif
 
 %ifndef LINUX
-        add     rsp, 24
+        add     rsp, 8*5
 %endif
 
         cmp     byte [r12 + _zuc_init_not_done], 0x0f ; Init done for all lanes
@@ -549,26 +544,22 @@ APPEND(%%skip_eea3_,I):
 
         ;; If Windows, reserve memory in stack for parameter transferring
 %ifndef LINUX
-        ;; 24 bytes for 3 parameters
-        sub     rsp, 24
+        ;; 40 bytes for 5 parameters
+        sub     rsp, 8*5
 %endif
         lea     arg1, [r12 + _zuc_args_keys]
         lea     arg2, [r12 + _zuc_args_IV]
         lea     arg3, [r12 + _zuc_state]
-%if %%KEY_SIZE == 256
-        ;; Setting "tag size" to 2 in case of ciphering
-        ;; (dummy size, just for constant selecion at Initialization)
-        mov     arg4, 2
-%endif
 
 %if %%KEY_SIZE == 128
         call    ZUC128_INIT_4
 %else
+        mov     arg5, 0 ; Tag size = 0, arg4 not used
         call    ZUC256_INIT_4
 %endif
 
 %ifndef LINUX
-        add     rsp, 24
+        add     rsp, 8*5
 %endif
         cmp     word [r12 + _zuc_init_not_done], 0x0f ; Init done for all lanes
         je      %%skip_flush_restoring_state

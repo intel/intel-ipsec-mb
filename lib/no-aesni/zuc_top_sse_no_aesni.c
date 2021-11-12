@@ -1022,13 +1022,8 @@ zuc256_eia3_4_buffer_job_sse_no_aesni(const void * const pKey[NUM_SSE_BUFS],
         }
 
         /* TODO: Handle 8 and 16-byte digest cases */
-        asm_Zuc256Initialization_4_sse_no_aesni(&keys, ivs, &state, tag_size);
-
-        /* Initialize the tags with the first 4 bytes of keystream */
-        asm_ZucGenKeystream4B_4_sse_no_aesni(&state, pKeyStrArr);
-
-        for (i = 0; i < NUM_SSE_BUFS; i++)
-                memcpy(&T[i], pKeyStrArr[i], 4);
+        asm_Zuc256Initialization_4_sse_no_aesni(&keys, ivs, &state, T,
+                                                tag_size);
 
         /* Generate 16 bytes at a time */
         asm_ZucGenKeystream16B_4_sse_no_aesni(&state, pKeyStrArr);

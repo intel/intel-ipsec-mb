@@ -44,6 +44,20 @@
 %define USE_GFNI 0
 %endif
 
+%ifdef LINUX
+%define arg1    rdi
+%define arg2    rsi
+%define arg3    rdx
+%define arg4    rcx
+%define arg5    r8
+%else
+%define arg1    rcx
+%define arg2    rdx
+%define arg3    r8
+%define arg4    r9
+%define arg5    qword [rsp + 40]
+%endif
+
 %define APPEND(a,b) a %+ b
 
 mksection .rodata
@@ -57,7 +71,7 @@ dd      0x004D7800, 0x002F1300, 0x006BC400, 0x001AF100,
 dd      0x005E2600, 0x003C4D00, 0x00789A00, 0x0047AC00
 
 ; Constants to be used to initialize the LFSR registers
-; This table contains four different sets of constants:
+; The tables contain four different sets of constants:
 ; 0-63 bytes: Encryption
 ; 64-127 bytes: Authentication with tag size = 4
 ; 128-191 bytes: Authentication with tag size = 8
@@ -68,14 +82,23 @@ dd      0x00220000, 0x002F0000, 0x00240000, 0x002A0000,
 dd      0x006D0000, 0x00400000, 0x00400000, 0x00400000,
 dd      0x00400000, 0x00400000, 0x00400000, 0x00400000,
 dd      0x00400000, 0x00520000, 0x00100000, 0x00300000
+
+align 16
+EK256_EIA3_4:
 dd      0x00220000, 0x002F0000, 0x00250000, 0x002A0000,
 dd      0x006D0000, 0x00400000, 0x00400000, 0x00400000,
 dd      0x00400000, 0x00400000, 0x00400000, 0x00400000,
 dd      0x00400000, 0x00520000, 0x00100000, 0x00300000
+
+align 16
+EK256_EIA3_8:
 dd      0x00230000, 0x002F0000, 0x00240000, 0x002A0000,
 dd      0x006D0000, 0x00400000, 0x00400000, 0x00400000,
 dd      0x00400000, 0x00400000, 0x00400000, 0x00400000,
 dd      0x00400000, 0x00520000, 0x00100000, 0x00300000
+
+align 16
+EK256_EIA3_16:
 dd      0x00230000, 0x002F0000, 0x00250000, 0x002A0000,
 dd      0x006D0000, 0x00400000, 0x00400000, 0x00400000,
 dd      0x00400000, 0x00400000, 0x00400000, 0x00400000,
@@ -644,6 +667,33 @@ mksection .text
     ; LFSR_S16 = (LFSR_S15++) = eax
 %endmacro
 
+; This macro reorder the LFSR registers
+; after N rounds (1 <= N <= 15), since the registers
+; are shifted every round
+;
+; The macro clobbers XMM0-15
+;
+%macro REORDER_LFSR 2
+%define %%STATE      %1
+%define %%NUM_ROUNDS %2
+
+%if %%NUM_ROUNDS != 16
+%assign %%i 0
+%rep 16
+    movdqa APPEND(xmm,%%i), [%%STATE + 16*%%i]
+%assign %%i (%%i+1)
+%endrep
+
+%assign %%i 0
+%assign %%j %%NUM_ROUNDS
+%rep 16
+    movdqa [%%STATE + 16*%%i], APPEND(xmm,%%j)
+%assign %%i (%%i+1)
+%assign %%j ((%%j+1) % 16)
+%endrep
+%endif ;; %%NUM_ROUNDS != 16
+
+%endmacro
 ;
 ; Initialize LFSR registers for a single lane, for ZUC-128
 ;
@@ -687,8 +737,13 @@ mksection .text
 %define %%LFSR12_15 %6 ;; [out] XMM register to contain initialized LFSR regs 12-15
 %define %%XTMP      %7 ;; [clobbered] XMM temporary register
 %define %%TMP       %8 ;; [clobbered] GP temporary register
-%define %%CONSTANTS %9 ;; [in] Address to constants
+%define %%TAG_SIZE  %9 ;; [in] Tag size (0, 4, 8 or 16 bytes)
 
+%if %%TAG_SIZE == 0
+%define %%CONSTANTS rel EK256_d64
+%elif %%TAG_SIZE == 4
+%define %%CONSTANTS rel EK256_EIA3_4
+%endif
     ; s0 - s3
     pxor           %%LFSR0_3, %%LFSR0_3
     pinsrb         %%LFSR0_3, [%%KEY], 3      ; s0
@@ -811,19 +866,19 @@ mksection .text
     por            %%LFSR12_15, %%XTMP
 %endmacro
 
-%macro ZUC_INIT_4 1
+%macro ZUC_INIT_4 2-3
 %define %%KEY_SIZE %1 ; [constant] Key size (128 or 256)
+%define %%TAG_SIZE %2 ; [in] Tag size (0 (for cipher), 4, 8 or 16)
+%define %%TAGS     %3 ; [in] Array of temporary tags
 
 %ifdef LINUX
 	%define		pKe	rdi
 	%define		pIv	rsi
 	%define		pState	rdx
-	%define		tag_sz	rcx ; Only used in ZUC-256
 %else
 	%define		pKe	rcx
 	%define		pIv	rdx
 	%define		pState	r8
-	%define		tag_sz	r9 ; Only used in ZUC-256
 %endif
 
     FUNC_SAVE
@@ -845,8 +900,8 @@ mksection .text
 %assign i 4
 %assign j 8
 %rep 4
-    mov     r9,  [pKe + off]
-    movdqu  APPEND(xmm,i), [r9]
+    mov     r15,  [pKe + off]
+    movdqu  APPEND(xmm,i), [r15]
     ; Read 16 bytes of IV
     movdqa  APPEND(xmm,j), [pIv + off*4]
 %assign off (off + 8)
@@ -889,23 +944,15 @@ mksection .text
 %endrep
 
 %else ;; %%KEY_SIZE == 256
-    ; Get pointer to constants (depending on tag size, this will point at
-    ; constants for encryption, authentication with 4-byte, 8-byte or 16-byte tags)
-    lea    r13, [rel EK256_d64]
-    bsf    DWORD(tag_sz), DWORD(tag_sz)
-    dec    DWORD(tag_sz)
-    shl    DWORD(tag_sz), 6
-    add    r13, tag_sz
-
     ;;; Initialize all LFSR registers
 %assign off 0
 %rep 4
     ;; Load key and IV for each packet
-    mov     r9,  [pKe + off]
+    mov     r15,  [pKe + off]
     lea     r10, [pIv + off*4]
 
     ; Initialize S0-15 for each packet
-    INIT_LFSR_256 r9, r10, xmm0, xmm1, xmm2, xmm3, xmm4, r11, r13
+    INIT_LFSR_256 r15, r10, xmm0, xmm1, xmm2, xmm3, xmm4, r11, %%TAG_SIZE
 
 %assign i 0
 %rep 4
@@ -960,6 +1007,47 @@ mksection .text
     pxor    xmm0, xmm0
     lfsr_updt4 rax, 0, no_reg, xmm0
 
+    ; Generate extra 4, 8 or 16 bytes of KS for initial tags
+%if %%TAG_SIZE == 4
+%define %%NUM_ROUNDS 1
+%elif %%TAG_SIZE == 8
+%define %%NUM_ROUNDS 2
+%elif %%TAG_SIZE == 16
+%define %%NUM_ROUNDS 4
+%else
+%define %%NUM_ROUNDS 0
+%endif
+
+%if %%NUM_ROUNDS != 0
+    mov         r10, rsp
+    sub         rsp, (%%NUM_ROUNDS * 16)
+    and         rsp, -16
+%endif
+
+%assign N 1
+%rep %%NUM_ROUNDS
+    bits_reorg4 rax, N, no_reg, xmm10
+    nonlin_fun4 rax, USE_GFNI, xmm0
+    ; OFS_X3 XOR W (xmm0) and store in stack
+    pxor        xmm10, xmm0
+    movdqa [rsp + (N-1)*16], xmm10
+    pxor        xmm0, xmm0
+    lfsr_updt4  rax, N, no_reg, xmm0
+%assign N N+1
+%endrep
+
+%if %%TAG_SIZE == 4
+    movdqa      xmm0, [rsp]
+    movdqa      [%%TAGS], xmm0
+    REORDER_LFSR rax, 1
+%elif %%TAG_SIZE == 8 ;;TODO
+%elif %%TAG_SIZE == 16 ;;TODO
+%endif
+
+%if %%NUM_ROUNDS != 0
+    mov         rsp, r10
+%endif
+
     FUNC_RESTORE
 
     ret
@@ -967,39 +1055,26 @@ mksection .text
 
 MKGLOBAL(ZUC128_INIT_4,function,internal)
 ZUC128_INIT_4:
-        ZUC_INIT_4 128
+        ZUC_INIT_4 128, 0
 
 MKGLOBAL(ZUC256_INIT_4,function,internal)
 ZUC256_INIT_4:
-        ZUC_INIT_4 256
 
-; This macro reorder the LFSR registers
-; after N rounds (1 <= N <= 15), since the registers
-; are shifted every round
-;
-; The macro clobbers XMM0-15
-;
-%macro REORDER_LFSR 2
-%define %%STATE      %1
-%define %%NUM_ROUNDS %2
+%define tags   arg4
+%define tag_sz arg5
 
-%if %%NUM_ROUNDS != 16
-%assign %%i 0
-%rep 16
-    movdqa APPEND(xmm,%%i), [%%STATE + 16*%%i]
-%assign %%i (%%i+1)
-%endrep
+    cmp tag_sz, 0
+    je  init_for_cipher
 
-%assign %%i 0
-%assign %%j %%NUM_ROUNDS
-%rep 16
-    movdqa [%%STATE + 16*%%i], APPEND(xmm,%%j)
-%assign %%i (%%i+1)
-%assign %%j ((%%j+1) % 16)
-%endrep
-%endif ;; %%NUM_ROUNDS != 16
+    ;; TODO: Check for 8B and 16B tags
+    cmp tag_sz, 4
+    je init_for_auth_tag_4B
 
-%endmacro
+init_for_cipher:
+    ZUC_INIT_4 256, 0
+
+init_for_auth_tag_4B:
+    ZUC_INIT_4 256, 4, tags
 
 ;
 ; Generate N*4 bytes of keystream
@@ -1277,22 +1352,15 @@ ZUC_KEYGEN4B_4:
 MKGLOBAL(ZUC_CIPHER_4,function,internal)
 ZUC_CIPHER_4:
 
+%define pState  arg1
+%define pIn     arg2
+%define pOut    arg3
+%define lengths arg4
+
 %ifdef LINUX
-        %define         pState  rdi
-        %define         pIn     rsi
-        %define         pOut    rdx
-        %define         lengths rcx
-        %define         arg5    r8
-
-        %define         nrounds r8
+        %define nrounds r8
 %else
-        %define         pState  rcx
-        %define         pIn     rdx
-        %define         pOut    r8
-        %define         lengths r9
-        %define         arg5    [rsp + 40]
-
-        %define         nrounds rdi
+        %define nrounds rdi
 %endif
 
 %define min_length r10

@@ -282,9 +282,11 @@ IMB_DLL_LOCAL void asm_ZucInitialization_4_avx(ZucKey4_t *pKeys,
  * @param[in,out] pState            Pointer to a ZUC state structure of type
  *                                  @ref ZucState4_t that will be populated
  *                                  with the initialized ZUC state.
- * @param[in] tag_sz                Tag size (2, 4, 8 or 16), to select the
+ * @param[in,out] tags              Array of 4 pointers to authentication tags
+ *                                  (up to 16 bytes each, only for ZUC-EIA3)
+ * @param[in] tag_sz                Tag size (0, 4, 8 or 16), to select the
  *                                  constants used to initialize the LFSR
- *                                  the LFSR registers (2 is used in case of
+ *                                  the LFSR registers (0 is used in case of
  *                                  encryption).
  *
  * @pre
@@ -294,16 +296,19 @@ IMB_DLL_LOCAL void asm_ZucInitialization_4_avx(ZucKey4_t *pKeys,
 IMB_DLL_LOCAL void asm_Zuc256Initialization_4_sse(ZucKey4_t *pKeys,
                                                   const uint8_t *ivs,
                                                   ZucState4_t *pState,
+                                                  void *tags,
                                                   const uint64_t tag_sz);
 
 IMB_DLL_LOCAL void asm_Zuc256Initialization_4_sse_no_aesni(ZucKey4_t *pKeys,
                                                          const uint8_t *ivs,
                                                          ZucState4_t *pState,
+                                                         void *tags,
                                                          const uint64_t tag_sz);
 
 IMB_DLL_LOCAL void asm_Zuc256Initialization_4_gfni_sse(ZucKey4_t *pKeys,
                                                        const uint8_t *ivs,
                                                        ZucState4_t *pState,
+                                                       void *tags,
                                                        const uint64_t tag_sz);
 
 IMB_DLL_LOCAL void asm_Zuc256Initialization_4_avx(ZucKey4_t *pKeys,
