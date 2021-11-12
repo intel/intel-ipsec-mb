@@ -49,6 +49,25 @@
 #define NUM_SSE_BUFS 4
 #define KEYSTR_ROUND_LEN 16
 
+static inline void
+init_lfsr_4(ZucKey4_t *keys, const uint8_t *ivs, ZucState4_t *state,
+            const uint64_t key_sz, const uint64_t tag_sz,
+            const unsigned use_gfni)
+{
+        if (key_sz == 128) {
+                if (use_gfni)
+                        asm_ZucInitialization_4_gfni_sse(keys, ivs, state);
+                else
+                        asm_ZucInitialization_4_sse(keys, ivs, state);
+        } else {
+                if (use_gfni)
+                        asm_Zuc256Initialization_4_gfni_sse(keys, ivs,
+                                                            state, tag_sz);
+                else
+                        asm_Zuc256Initialization_4_sse(keys, ivs, state, tag_sz);
+        }
+}
+
 static inline
 void _zuc_eea3_1_buffer_sse(const void *pKey,
                             const void *pIv,
@@ -166,10 +185,7 @@ void _zuc_eea3_4_buffer_sse(const void * const pKey[NUM_SSE_BUFS],
                 memcpy(ivs + i*32, pIv[i], 16);
         }
 
-        if (use_gfni)
-                asm_ZucInitialization_4_gfni_sse(&keys, ivs, &state);
-        else
-                asm_ZucInitialization_4_sse(&keys, ivs, &state);
+        init_lfsr_4(&keys, ivs, &state, 128, 0, use_gfni);
 
         for (i = 0; i < NUM_SSE_BUFS; i++) {
                 pOut64[i] = (uint64_t *) pBufferOut[i];
@@ -685,14 +701,11 @@ void _zuc_eia3_4_buffer_sse(const void * const pKey[NUM_SSE_BUFS],
                 memcpy(ivs + i*32, pIv[i], 16);
         }
 
+        init_lfsr_4(&keys, ivs, &state, 128, 0, use_gfni);
         if (use_gfni) {
-                asm_ZucInitialization_4_gfni_sse(&keys, ivs, &state);
-
                 /* Generate 16 bytes at a time */
                 asm_ZucGenKeystream16B_4_gfni_sse(&state, pKeyStrArr);
         } else {
-                asm_ZucInitialization_4_sse(&keys, ivs, &state);
-
                 /* Generate 16 bytes at a time */
                 asm_ZucGenKeystream16B_4_sse(&state, pKeyStrArr);
         }
@@ -909,14 +922,11 @@ void _zuc_eia3_4_buffer_job(const void * const pKey[NUM_SSE_BUFS],
                 keys.pKeys[i] = pKey[i];
         }
 
+        init_lfsr_4(&keys, ivs, &state, 128, 0, use_gfni);
         if (use_gfni) {
-                asm_ZucInitialization_4_gfni_sse(&keys, ivs, &state);
-
                 /* Generate 16 bytes at a time */
                 asm_ZucGenKeystream16B_4_gfni_sse(&state, pKeyStrArr);
         } else {
-                asm_ZucInitialization_4_sse(&keys, ivs, &state);
-
                 /* Generate 16 bytes at a time */
                 asm_ZucGenKeystream16B_4_sse(&state, pKeyStrArr);
         }
@@ -1067,9 +1077,10 @@ static inline
 void _zuc256_eia3_4_buffer_job(const void * const pKey[NUM_SSE_BUFS],
                                const uint8_t *ivs,
                                const void * const pBufferIn[NUM_SSE_BUFS],
-                               uint32_t *pMacI[NUM_SSE_BUFS],
+                               void *pMacI[NUM_SSE_BUFS],
                                const uint16_t lengthInBits[NUM_SSE_BUFS],
                                const void * const job_in_lane[NUM_SSE_BUFS],
+                               const uint64_t tag_size,
                                const unsigned use_gfni)
 {
         unsigned int i;
@@ -1110,9 +1121,8 @@ void _zuc256_eia3_4_buffer_job(const void * const pKey[NUM_SSE_BUFS],
         }
 
         /* TODO: Handle 8 and 16-byte digest cases */
+        init_lfsr_4(&keys, ivs, &state, 256, tag_size, use_gfni);
         if (use_gfni) {
-                asm_Zuc256Initialization_4_gfni_sse(&keys, ivs, &state, 4);
-
                 /* Initialize the tags with the first 4 bytes of keystream */
                 asm_ZucGenKeystream4B_4_gfni_sse(&state, pKeyStrArr);
 
@@ -1122,8 +1132,6 @@ void _zuc256_eia3_4_buffer_job(const void * const pKey[NUM_SSE_BUFS],
                 /* Generate 16 bytes at a time */
                 asm_ZucGenKeystream16B_4_gfni_sse(&state, pKeyStrArr);
         } else {
-                asm_Zuc256Initialization_4_sse(&keys, ivs, &state, 4);
-
                 /* Initialize the tags with the first 4 bytes of keystream */
                 asm_ZucGenKeystream4B_4_sse(&state, pKeyStrArr);
 
@@ -1236,7 +1244,7 @@ void _zuc256_eia3_4_buffer_job(const void * const pKey[NUM_SSE_BUFS],
                                  remainBits % 32);
 
                 /* save the final MAC-I result */
-                *(pMacI[i]) = bswap4(T[i]);
+                *((uint32_t *)pMacI[i]) = bswap4(T[i]);
         }
 
 #ifdef SAFE_DATA
@@ -1251,23 +1259,25 @@ void _zuc256_eia3_4_buffer_job(const void * const pKey[NUM_SSE_BUFS],
 void zuc256_eia3_4_buffer_job_no_gfni_sse(const void * const pKey[NUM_SSE_BUFS],
                                   const uint8_t *pIv,
                                   const void * const pBufferIn[NUM_SSE_BUFS],
-                                  uint32_t *pMacI[NUM_SSE_BUFS],
+                                  void *pMacI[NUM_SSE_BUFS],
                                   const uint16_t lengthInBits[NUM_SSE_BUFS],
-                                  const void * const job_in_lane[NUM_SSE_BUFS])
+                                  const void * const job_in_lane[NUM_SSE_BUFS],
+                                  const uint64_t tag_size)
 {
         _zuc256_eia3_4_buffer_job(pKey, pIv, pBufferIn, pMacI, lengthInBits,
-                               job_in_lane, 0);
+                                  job_in_lane, tag_size, 0);
 }
 
 void zuc256_eia3_4_buffer_job_gfni_sse(const void * const pKey[NUM_SSE_BUFS],
                                   const uint8_t *pIv,
                                   const void * const pBufferIn[NUM_SSE_BUFS],
-                                  uint32_t *pMacI[NUM_SSE_BUFS],
+                                  void *pMacI[NUM_SSE_BUFS],
                                   const uint16_t lengthInBits[NUM_SSE_BUFS],
-                                  const void * const job_in_lane[NUM_SSE_BUFS])
+                                  const void * const job_in_lane[NUM_SSE_BUFS],
+                                  const uint64_t tag_size)
 {
         _zuc256_eia3_4_buffer_job(pKey, pIv, pBufferIn, pMacI, lengthInBits,
-                               job_in_lane, 1);
+                               job_in_lane, tag_size, 1);
 }
 
 static inline

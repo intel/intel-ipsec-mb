@@ -111,13 +111,15 @@ extern ZUC_CIPHER_4
 %define arg4    rcx
 %define arg5    r8
 %define arg6    r9
+%define arg7    qword [rsp]
 %else
 %define arg1    rcx
 %define arg2    rdx
 %define arg3    r8
 %define arg4    r9
-%define arg5    [rsp + 32]
-%define arg6    [rsp + 40]
+%define arg5    qword [rsp + 32]
+%define arg6    qword [rsp + 40]
+%define arg7    qword [rsp + 48]
 %endif
 
 %define state   arg1
@@ -830,11 +832,22 @@ FLUSH_JOB_ZUC256_EEA3:
         ; to pass parameter to next function
         mov     r11, state
 
+%if %%KEY_SIZE == 128
         ;; If Windows, reserve memory in stack for parameter transferring
 %ifndef LINUX
         ;; 48 bytes for 6 parameters (already aligned to 16 bytes)
         sub     rsp, 48
 %endif
+%else ; %%KEY_SIZE == 256
+%ifndef LINUX
+        ;; 56 bytes for 7 parameters
+        sub     rsp, 8*7
+%else
+        ;; 8 bytes for one extra parameter (apart from first 6)
+        sub     rsp, 8
+%endif
+%endif ;; %%KEY_SIZE
+
         lea     arg1, [r11 + _zuc_args_keys]
         lea     arg2, [r11 + _zuc_args_IV]
         lea     arg3, [r11 + _zuc_args_in]
@@ -848,6 +861,9 @@ FLUSH_JOB_ZUC256_EEA3:
         lea     r12, [r11 + _zuc_job_in_lane]
         mov     arg6, r12
 %endif
+%if %%KEY_SIZE == 256
+        mov     arg7, 4
+%endif
 
 %if %%KEY_SIZE == 128
         call    ZUC_EIA3_4_BUFFER
@@ -855,9 +871,17 @@ FLUSH_JOB_ZUC256_EEA3:
         call    ZUC256_EIA3_4_BUFFER
 %endif
 
+%if %%KEY_SIZE == 128
 %ifndef LINUX
         add     rsp, 48
 %endif
+%else ;; %%KEY_SIZE == 256
+%ifndef LINUX
+        add     rsp, 8*7
+%else
+        add     rsp, 8
+%endif
+%endif ;; %%KEY_SIZE
         mov     state, [rsp + _gpr_save + 8*8]
         mov     job,   [rsp + _gpr_save + 8*9]
 
@@ -985,10 +1009,21 @@ APPEND(%%skip_eia3_,I):
         ; to pass parameter to next function
         mov     r11, state
 
+%if %%KEY_SIZE == 128
+        ;; If Windows, reserve memory in stack for parameter transferring
 %ifndef LINUX
         ;; 48 bytes for 6 parameters (already aligned to 16 bytes)
         sub     rsp, 48
 %endif
+%else ; %%KEY_SIZE == 256
+%ifndef LINUX
+        ;; 56 bytes for 7 parameters
+        sub     rsp, 8*7
+%else
+        ;; 8 bytes for one extra parameter (apart from first 6)
+        sub     rsp, 8
+%endif
+%endif ;; %%KEY_SIZE
         lea     arg1, [r11 + _zuc_args_keys]
         lea     arg2, [r11 + _zuc_args_IV]
         lea     arg3, [r11 + _zuc_args_in]
@@ -1002,6 +1037,9 @@ APPEND(%%skip_eia3_,I):
         lea     r12, [r11 + _zuc_job_in_lane]
         mov     arg6, r12
 %endif
+%if %%KEY_SIZE == 256
+        mov     arg7, 4
+%endif
 
 %if %%KEY_SIZE == 128
         call    ZUC_EIA3_4_BUFFER
@@ -1009,9 +1047,17 @@ APPEND(%%skip_eia3_,I):
         call    ZUC256_EIA3_4_BUFFER
 %endif
 
+%if %%KEY_SIZE == 128
 %ifndef LINUX
         add     rsp, 48
 %endif
+%else ;; %%KEY_SIZE == 256
+%ifndef LINUX
+        add     rsp, 8*7
+%else
+        add     rsp, 8
+%endif
+%endif ;; %%KEY_SIZE
 
         mov	tmp5, [rsp + _null_len_save]
         mov     state, [rsp + _gpr_save + 8*8]

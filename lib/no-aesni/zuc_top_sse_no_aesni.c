@@ -979,9 +979,10 @@ void
 zuc256_eia3_4_buffer_job_sse_no_aesni(const void * const pKey[NUM_SSE_BUFS],
                                    const uint8_t *ivs,
                                    const void * const pBufferIn[NUM_SSE_BUFS],
-                                   uint32_t *pMacI[NUM_SSE_BUFS],
+                                   void *pMacI[NUM_SSE_BUFS],
                                    const uint16_t lengthInBits[NUM_SSE_BUFS],
-                                   const void * const job_in_lane[NUM_SSE_BUFS])
+                                   const void * const job_in_lane[NUM_SSE_BUFS],
+                                   const uint64_t tag_size)
 {
         unsigned int i;
         DECLARE_ALIGNED(ZucState4_t state, 64);
@@ -1021,7 +1022,7 @@ zuc256_eia3_4_buffer_job_sse_no_aesni(const void * const pKey[NUM_SSE_BUFS],
         }
 
         /* TODO: Handle 8 and 16-byte digest cases */
-        asm_Zuc256Initialization_4_sse_no_aesni(&keys, ivs, &state, 4);
+        asm_Zuc256Initialization_4_sse_no_aesni(&keys, ivs, &state, tag_size);
 
         /* Initialize the tags with the first 4 bytes of keystream */
         asm_ZucGenKeystream4B_4_sse_no_aesni(&state, pKeyStrArr);
@@ -1129,7 +1130,7 @@ zuc256_eia3_4_buffer_job_sse_no_aesni(const void * const pKey[NUM_SSE_BUFS],
                                  remainBits % 32);
 
                 /* save the final MAC-I result */
-                *(pMacI[i]) = bswap4(T[i]);
+                *((uint32_t *)pMacI[i]) = bswap4(T[i]);
         }
 
 #ifdef SAFE_DATA
