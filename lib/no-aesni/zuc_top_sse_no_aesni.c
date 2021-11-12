@@ -566,7 +566,7 @@ void _zuc_eia3_1_buffer_sse_no_aesni(const void *pKey,
                 else
                         asm_ZucGenKeystream16B_sse_no_aesni(&keyStream[4],
                                                             &zucState);
-                T = asm_Eia3Round16BSSE_no_aesni(T, keyStream, pIn8);
+                asm_Eia3Round16BSSE_no_aesni(&T, keyStream, pIn8);
                 /* Copy the last keystream generated
                  * to the first 16 bytes */
                 memcpy(&keyStream[0], &keyStream[4], KEYSTR_ROUND_LEN);
@@ -579,8 +579,7 @@ void _zuc_eia3_1_buffer_sse_no_aesni(const void *pKey,
          */
         if (remainingBits > (2 * 32))
                 asm_ZucGenKeystream8B_sse_no_aesni(&keyStream[4], &zucState);
-        T ^= asm_Eia3RemainderSSE_no_aesni(&keyStream[0], pIn8,
-                                            remainingBits);
+        asm_Eia3RemainderSSE_no_aesni(&keyStream[0], pIn8, remainingBits, &T);
         T ^= rotate_left(load_uint64(&keyStream[remainingBits / 32]),
                          remainingBits % 32);
 
@@ -663,8 +662,7 @@ void _zuc_eia3_4_buffer_sse_no_aesni(const void * const pKey[NUM_SSE_BUFS],
                         asm_ZucGenKeystream16B_4_sse_no_aesni(&state,
                                                               pKeyStrArr);
                 for (i = 0; i < NUM_SSE_BUFS; i++) {
-                        T[i] = asm_Eia3Round16BSSE_no_aesni(T[i], keyStr[i],
-                                                            pIn8[i]);
+                        asm_Eia3Round16BSSE_no_aesni(&T[i], keyStr[i], pIn8[i]);
                         /* Copy the last keystream generated
                          * to the first 16 bytes */
                         memcpy(&keyStr[i][0], &keyStr[i][KEYSTR_ROUND_LEN],
@@ -720,9 +718,7 @@ void _zuc_eia3_4_buffer_sse_no_aesni(const void * const pKey[NUM_SSE_BUFS],
                                 asm_ZucGenKeystream16B_sse_no_aesni(
                                                         &keyStr32[4],
                                                         &singlePktState);
-                        T[i] = asm_Eia3Round16BSSE_no_aesni(T[i],
-                                                            keyStr32,
-                                                            pIn8[i]);
+                        asm_Eia3Round16BSSE_no_aesni(&T[i], keyStr32, pIn8[i]);
                         /* Copy the last keystream generated
                          * to the first 16 bytes */
                         memcpy(keyStr32, &keyStr32[4], KEYSTR_ROUND_LEN);
@@ -739,8 +735,8 @@ void _zuc_eia3_4_buffer_sse_no_aesni(const void * const pKey[NUM_SSE_BUFS],
 
                 uint32_t keyBlock = keyStr32[L - 1];
 
-                T[i] ^= asm_Eia3RemainderSSE_no_aesni(keyStr32, pIn8[i],
-                                                      remainBits);
+                asm_Eia3RemainderSSE_no_aesni(keyStr32, pIn8[i], remainBits,
+                                              &T[i]);
                 T[i] ^= rotate_left(load_uint64(&keyStr32[remainBits / 32]),
                                  remainBits % 32);
 
@@ -879,8 +875,7 @@ zuc_eia3_4_buffer_job_sse_no_aesni(const void * const pKey[NUM_SSE_BUFS],
                 for (i = 0; i < NUM_SSE_BUFS; i++) {
                         if (job_in_lane[i] == NULL)
                                 continue;
-                        T[i] = asm_Eia3Round16BSSE_no_aesni(T[i], keyStr[i],
-                                                            pIn8[i]);
+                        asm_Eia3Round16BSSE_no_aesni(&T[i], keyStr[i], pIn8[i]);
                         /* Copy the last keystream generated
                          * to the first 16 bytes */
                         memcpy(&keyStr[i][0], &keyStr[i][KEYSTR_ROUND_LEN],
@@ -939,8 +934,7 @@ zuc_eia3_4_buffer_job_sse_no_aesni(const void * const pKey[NUM_SSE_BUFS],
                                 asm_ZucGenKeystream16B_sse_no_aesni(
                                                         &keyStr32[4],
                                                         &singlePktState);
-                        T[i] = asm_Eia3Round16BSSE_no_aesni(T[i], keyStr32,
-                                                            pIn8[i]);
+                        asm_Eia3Round16BSSE_no_aesni(&T[i], keyStr32, pIn8[i]);
                         /* Copy the last keystream generated
                          * to the first 16 bytes */
                         memcpy(keyStr32, &keyStr32[4], KEYSTR_ROUND_LEN);
@@ -957,8 +951,8 @@ zuc_eia3_4_buffer_job_sse_no_aesni(const void * const pKey[NUM_SSE_BUFS],
 
                 uint32_t keyBlock = keyStr32[L - 1];
 
-                T[i] ^= asm_Eia3RemainderSSE_no_aesni(keyStr32, pIn8[i],
-                                                      remainBits);
+                asm_Eia3RemainderSSE_no_aesni(keyStr32, pIn8[i], remainBits,
+                                              &T[i]);
                 T[i] ^= rotate_left(load_uint64(&keyStr32[remainBits / 32]),
                                  remainBits % 32);
 
@@ -993,7 +987,7 @@ zuc256_eia3_4_buffer_job_sse_no_aesni(const void * const pKey[NUM_SSE_BUFS],
         const uint8_t *pIn8[NUM_SSE_BUFS] = {NULL};
         uint32_t remainCommonBits;
         uint32_t numKeyStr = 0;
-        uint32_t T[NUM_SSE_BUFS] = {0};
+        uint8_t T[NUM_SSE_BUFS*16] = {0};
         const uint32_t keyStreamLengthInBits = KEYSTR_ROUND_LEN * 8;
         uint32_t *pKeyStrArr[NUM_SSE_BUFS] = {NULL};
         unsigned int allCommonBits;
@@ -1045,10 +1039,11 @@ zuc256_eia3_4_buffer_job_sse_no_aesni(const void * const pKey[NUM_SSE_BUFS],
                                                              pKeyStrArr);
 
                 for (i = 0; i < NUM_SSE_BUFS; i++) {
+                        uint32_t *tag = (uint32_t *) &T[i*4];
+
                         if (job_in_lane[i] == NULL)
                                 continue;
-                        T[i] = asm_Eia3Round16BSSE_no_aesni(T[i], keyStr[i],
-                                                            pIn8[i]);
+                        asm_Eia3Round16BSSE_no_aesni(tag, keyStr[i], pIn8[i]);
                         /* Copy the last keystream generated
                          * to the first 16 bytes */
                         memcpy(&keyStr[i][0], &keyStr[i][KEYSTR_ROUND_LEN],
@@ -1059,6 +1054,8 @@ zuc256_eia3_4_buffer_job_sse_no_aesni(const void * const pKey[NUM_SSE_BUFS],
 
         /* Process each packet separately for the remaining bits */
         for (i = 0; i < NUM_SSE_BUFS; i++) {
+                uint32_t *tag = (uint32_t *) &T[i*4];
+
                 if (job_in_lane[i] == NULL)
                         continue;
 
@@ -1103,8 +1100,7 @@ zuc256_eia3_4_buffer_job_sse_no_aesni(const void * const pKey[NUM_SSE_BUFS],
                                 asm_ZucGenKeystream16B_sse_no_aesni(
                                                         &keyStr32[4],
                                                         &singlePktState);
-                        T[i] = asm_Eia3Round16BSSE_no_aesni(T[i], keyStr32,
-                                                            pIn8[i]);
+                        asm_Eia3Round16BSSE_no_aesni(tag, keyStr32, pIn8[i]);
                         /* Copy the last keystream generated
                          * to the first 16 bytes */
                         memcpy(keyStr32, &keyStr32[4], KEYSTR_ROUND_LEN);
@@ -1119,13 +1115,13 @@ zuc256_eia3_4_buffer_job_sse_no_aesni(const void * const pKey[NUM_SSE_BUFS],
                         asm_ZucGenKeystream8B_sse_no_aesni(&keyStr32[4],
                                                            &singlePktState);
 
-                T[i] ^= asm_Eia3RemainderSSE_no_aesni(keyStr32, pIn8[i],
-                                                      remainBits);
-                T[i] ^= rotate_left(load_uint64(&keyStr32[remainBits / 32]),
+                asm_Eia3RemainderSSE_no_aesni(keyStr32, pIn8[i], remainBits,
+                                              tag);
+                *tag ^= rotate_left(load_uint64(&keyStr32[remainBits / 32]),
                                  remainBits % 32);
 
                 /* save the final MAC-I result */
-                *((uint32_t *)pMacI[i]) = bswap4(T[i]);
+                *((uint32_t *)pMacI[i]) = bswap4(*tag);
         }
 
 #ifdef SAFE_DATA

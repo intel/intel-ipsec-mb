@@ -1061,7 +1061,7 @@ IMB_DLL_LOCAL void asm_ZucCipher_16_gfni_avx512(ZucState16_t *pState,
  *      Definition of the external function to update the authentication tag
  *      based on keystream and data (SSE variant)
  *
- * @param[in] T                     Authentication tag
+ * @param[in] T                     Pointer to authentication tag
  *
  * @param[in] ks                    Pointer to key stream
  *
@@ -1071,11 +1071,11 @@ IMB_DLL_LOCAL void asm_ZucCipher_16_gfni_avx512(ZucState16_t *pState,
  *      None
  *
  *****************************************************************************/
-IMB_DLL_LOCAL uint32_t asm_Eia3Round16BSSE(uint32_t T, const void *ks,
-                                           const void *data);
+IMB_DLL_LOCAL void asm_Eia3Round16BSSE(void *T, const void *ks,
+                                       const void *data);
 
-IMB_DLL_LOCAL uint32_t asm_Eia3Round16BSSE_no_aesni(uint32_t T, const void *ks,
-                                                    const void *data);
+IMB_DLL_LOCAL void asm_Eia3Round16BSSE_no_aesni(void *T, const void *ks,
+                                                const void *data);
 
 /**
  ******************************************************************************
@@ -1093,12 +1093,13 @@ IMB_DLL_LOCAL uint32_t asm_Eia3Round16BSSE_no_aesni(uint32_t T, const void *ks,
  *      None
  *
  *****************************************************************************/
-IMB_DLL_LOCAL uint32_t asm_Eia3RemainderSSE(const void *ks, const void *data,
-                                            const uint64_t n_words);
+IMB_DLL_LOCAL void asm_Eia3RemainderSSE(const void *ks, const void *data,
+                                        const uint64_t n_words, void *T);
 
-IMB_DLL_LOCAL uint32_t asm_Eia3RemainderSSE_no_aesni(const void *ks,
-                                                     const void *data,
-                                                     const uint64_t n_words);
+IMB_DLL_LOCAL void asm_Eia3RemainderSSE_no_aesni(const void *ks,
+                                                 const void *data,
+                                                 const uint64_t n_words,
+                                                 void *T);
 
 /**
  ******************************************************************************

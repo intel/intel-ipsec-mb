@@ -31,6 +31,7 @@
 %include "include/memcpy.asm"
 %include "include/mb_mgr_datastruct.asm"
 %include "include/cet.inc"
+%include "include/const.inc"
 
 %ifndef ZUC_CIPHER_4
 %define ZUC_CIPHER_4 asm_ZucCipher_4_sse
@@ -150,9 +151,6 @@ align 16
 data_mask_64bits:
 dd	0xffffffff, 0xffffffff, 0x00000000, 0x00000000
 
-bit_mask_table:
-db	0x00, 0x80, 0xc0, 0xe0, 0xf0, 0xf8, 0xfc, 0xfe
-
 align 16
 swap_mask:
 db      0x03, 0x02, 0x01, 0x00, 0x07, 0x06, 0x05, 0x04
@@ -213,6 +211,17 @@ dw      0x000f, 0x000f, 0x000f, 0x000f, 0x000f, 0x000f, 0x000f, 0x000f
 align 16
 all_10s:
 dw      0x0010, 0x0010, 0x0010, 0x0010, 0x0010, 0x0010, 0x0010, 0x0010
+
+align 16
+bit_mask_table:
+db      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff
+db      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x80
+db      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xc0
+db      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xe0
+db      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xf0
+db      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xf8
+db      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfc
+db      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfe
 
 ; Stack frame for ZucCipher function
 struc STACK
@@ -1591,11 +1600,16 @@ ZUC_EIA3REMAINDER:
 	%define		KS	rdi
 	%define		DATA	rsi
 	%define		N_BITS	rdx
+	%define		TAG	rcx
 %else
 	%define		KS	rcx
 	%define		DATA	rdx
 	%define		N_BITS	r8
+	%define		TAG	r9
 %endif
+
+%define N_BYTES rbx
+%define OFFSET  r15
 
         FUNC_SAVE
 
@@ -1606,12 +1620,13 @@ ZUC_EIA3REMAINDER:
 
         pxor    xmm9, xmm9
 
+        xor     OFFSET, OFFSET
 %rep 3
         cmp     N_BITS, 128
         jb      Eia3RoundsSSE_dq_end
 
         ;; read 16 bytes and reverse bits
-        movdqu  xmm0, [DATA]
+        movdqu  xmm0, [DATA + OFFSET]
         movdqa  xmm1, xmm0
         pand    xmm1, xmm7
 
@@ -1631,8 +1646,8 @@ ZUC_EIA3REMAINDER:
         ;; ZUC authentication part
         ;; - 4x32 data bits
         ;; - set up KS
-        movdqu  xmm3, [KS + (0*4)]
-        movdqu  xmm4, [KS + (2*4)]
+        movdqu  xmm3, [KS + OFFSET + (0*4)]
+        movdqu  xmm4, [KS + OFFSET + (2*4)]
         pshufd  xmm0, xmm3, 0x61
         pshufd  xmm1, xmm4, 0x61
 
@@ -1657,99 +1672,100 @@ ZUC_EIA3REMAINDER:
         pxor    xmm13, xmm14
         pxor    xmm9, xmm3
         pxor    xmm9, xmm13
-        lea     DATA, [DATA + 16]
-        lea     KS, [KS + 16]
+
+        add     OFFSET, 16
         sub     N_BITS, 128
 %endrep
 Eia3RoundsSSE_dq_end:
 
-%rep 3
-        cmp     N_BITS, 32
-        jb      Eia3RoundsSSE_dw_end
+        or      N_BITS, N_BITS
+        jz      Eia3RoundsSSE_end
 
-        ;; swap dwords in KS
-        movq    xmm1, [KS]
-        pshufd  xmm4, xmm1, 0xf1
+        ; Get number of bytes
+        mov     N_BYTES, N_BITS
+        add     N_BYTES, 7
+        shr     N_BYTES, 3
 
-        ;;  bit-reverse 4 bytes of data
-        movdqa  xmm2, xmm7
-        movd    xmm0, [DATA]
+        ;; read up to 16 bytes of data, zero bits not needed if partial byte and bit-reverse
+        simd_load_sse_16_1 xmm0, DATA + OFFSET, N_BYTES
+        ; check if there is a partial byte (less than 8 bits in last byte)
+        mov     rax, N_BITS
+        and     rax, 0x7
+        shl     rax, 4
+        lea     r10, [rel bit_mask_table]
+        add     r10, rax
+
+        ; Get mask to clear last bits
+        movdqa  xmm3, [r10]
+
+        ; Shift left 16-N bytes to have the last byte always at the end of the XMM register
+        ; to apply mask, then restore by shifting right same amount of bytes
+        mov     r10, 16
+        sub     r10, N_BYTES
+        XPSLLB  xmm0, r10, xmm4, r11
+        pand    xmm0, xmm3
+        XPSRLB  xmm0, r10, xmm4, r11
+
         movdqa  xmm1, xmm0
-        pand    xmm1, xmm2
+        pand    xmm1, xmm7
 
+        movdqa  xmm2, xmm7
         pandn   xmm2, xmm0
         psrld   xmm2, 4
 
-        movdqa  xmm0, xmm6    ; bit reverse low nibbles (use high table)
-        pshufb  xmm0, xmm1
+        movdqa  xmm8, xmm6      ; bit reverse low nibbles (use high table)
+        pshufb  xmm8, xmm1
 
-        movdqa  xmm3, xmm5    ; bit reverse high nibbles (use low table)
-        pshufb  xmm3, xmm2
+        movdqa  xmm4, xmm5      ; bit reverse high nibbles (use low table)
+        pshufb  xmm4, xmm2
 
-        por     xmm0, xmm3
+        por     xmm8, xmm4
+        ; xmm8 - bit reversed data bytes
 
-        ;; rol & xor
-        pclmulqdq xmm0, xmm4, 0
-        pxor    xmm9, xmm0
+        ;; ZUC authentication part
+        ;; - 4x32 data bits
+        ;; - set up KS
+        movdqu  xmm3, [KS + OFFSET + (0*4)]
+        movdqu  xmm4, [KS + OFFSET + (2*4)]
+        pshufd  xmm0, xmm3, 0x61
+        pshufd  xmm1, xmm4, 0x61
 
-        lea     DATA, [DATA + 4]
-        lea     KS, [KS + 4]
-        sub     N_BITS, 32
-%endrep
+        ;;  - set up DATA
+        movdqa  xmm2, xmm8
+        pand    xmm2, xmm10
+        pshufd  xmm3, xmm2, 0xdc
+        movdqa  xmm4, xmm3
 
-Eia3RoundsSSE_dw_end:
+        psrldq  xmm8, 8
+        pshufd  xmm13, xmm8, 0xdc
+        movdqa  xmm14, xmm13
+
+        ;; - clmul
+        ;; - xor the results from 4 32-bit words together
+        pclmulqdq xmm3, xmm0, 0x00
+        pclmulqdq xmm4, xmm0, 0x11
+        pclmulqdq xmm13, xmm1, 0x00
+        pclmulqdq xmm14, xmm1, 0x11
+
+        pxor    xmm3, xmm4
+        pxor    xmm13, xmm14
+        pxor    xmm9, xmm3
+        pxor    xmm9, xmm13
+
+Eia3RoundsSSE_end:
+
+        mov     r11d, [TAG]
         movq    rax, xmm9
         shr     rax, 32
-
-        or      N_BITS, N_BITS
-        jz      Eia3RoundsSSE_byte_loop_end
-
-        ;; get 64-bit key stream for the last data bits (less than 32)
-        mov     KS, [KS]
-
-;        ;; process remaining data bytes and bits
-Eia3RoundsSSE_byte_loop:
-        or      N_BITS, N_BITS
-        jz      Eia3RoundsSSE_byte_loop_end
-
-        cmp     N_BITS, 8
-        jb      Eia3RoundsSSE_byte_partial
-
-        movzx   r11, byte [DATA]
-        sub     N_BITS, 8
-        jmp     Eia3RoundsSSE_byte_read
-
-Eia3RoundsSSE_byte_partial:
-        ;; process remaining bits (up to 7)
-        lea     r11, [bit_mask_table]
-        movzx   r10, byte [r11 + N_BITS]
-        movzx   r11, byte [DATA]
-        and     r11, r10
-        xor     N_BITS, N_BITS
-Eia3RoundsSSE_byte_read:
-
-%assign DATATEST 0x80
-%rep 8
-        xor     r10, r10
-        test    r11, DATATEST
-        cmovne  r10, KS
-        xor     rax, r10
-        rol     KS, 1
-%assign DATATEST (DATATEST >> 1)
-%endrep                 ; byte boundary
-        lea     DATA, [DATA + 1]
-        jmp     Eia3RoundsSSE_byte_loop
-
-Eia3RoundsSSE_byte_loop_end:
-
-        ;; eax - holds the return value at this stage
+        xor     eax, r11d
+        mov     [TAG], eax
 
         FUNC_RESTORE
 
         ret
 
 ;;
-;;extern uint32_t Zuc_Eia3_Round16B_sse(uint32_t T, const void *KS, const void *DATA)
+;;extern Zuc_Eia3_Round16B_sse(void *T, const void *KS, const void *DATA)
 ;;
 ;; Updates authentication tag T based on keystream KS and DATA.
 ;; - it processes 16 bytes of DATA
@@ -1759,11 +1775,11 @@ Eia3RoundsSSE_byte_loop_end:
 ;; - copies top 16 bytes of KS to bottom (for the next round)
 ;;
 ;; WIN64
-;;	RCX - T
+;;	RCX - Pointer to authentication tag T
 ;;	RDX - KS pointer to key stream (2 x 16 bytes)
 ;;;     R8  - DATA pointer to data
 ;; LIN64
-;;	RDI - T
+;;	RDI - Pointer to authentication tag T
 ;;	RSI - KS pointer to key stream (2 x 16 bytes)
 ;;      RDX - DATA pointer to data
 ;;
@@ -1772,11 +1788,11 @@ MKGLOBAL(ZUC_EIA3ROUND16B,function,internal)
 ZUC_EIA3ROUND16B:
 
 %ifdef LINUX
-	%define		T	edi
+	%define		T	rdi
 	%define		KS	rsi
 	%define		DATA	rdx
 %else
-	%define		T	ecx
+	%define		T	rcx
 	%define		KS	rdx
 	%define		DATA	r8
 %endif
@@ -1843,7 +1859,7 @@ ZUC_EIA3ROUND16B:
         ;; - update T
         movq    rax, xmm9
         shr     rax, 32
-        xor     eax, T
+        xor     [T], eax
 
         FUNC_RESTORE
 
