@@ -1022,7 +1022,7 @@ ZUC256_INIT_4:
     ; and reserve memory for storing keystreams for all 4 buffers
     mov         r10, rsp
     sub         rsp, (4*8 + %%NUM_ROUNDS * 16)
-    and         rsp, -15
+    and         rsp, -16
 
 %assign i 0
 %rep 2
@@ -1346,7 +1346,7 @@ ZUC_CIPHER_4:
         ; space for rsp (8 bytes) and 2 GP registers (16 bytes) that will be clobbered later
         mov     rax, rsp
         sub     rsp, STACK_size
-        and     rsp, -15
+        and     rsp, -16
         xor     buf_idx, buf_idx
         movq    [rsp + _rem_bytes_save], xmm1
         mov     [rsp + _rsp_save], rax
