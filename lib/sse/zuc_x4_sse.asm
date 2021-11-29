@@ -1609,7 +1609,6 @@ ZUC_EIA3REMAINDER:
 %endif
 
 %define N_BYTES rbx
-%define OFFSET  r15
 
         FUNC_SAVE
 
@@ -1620,64 +1619,6 @@ ZUC_EIA3REMAINDER:
 
         pxor    xmm9, xmm9
 
-        xor     OFFSET, OFFSET
-%rep 3
-        cmp     N_BITS, 128
-        jb      Eia3RoundsSSE_dq_end
-
-        ;; read 16 bytes and reverse bits
-        movdqu  xmm0, [DATA + OFFSET]
-        movdqa  xmm1, xmm0
-        pand    xmm1, xmm7
-
-        movdqa  xmm2, xmm7
-        pandn   xmm2, xmm0
-        psrld   xmm2, 4
-
-        movdqa  xmm8, xmm6      ; bit reverse low nibbles (use high table)
-        pshufb  xmm8, xmm1
-
-        movdqa  xmm4, xmm5      ; bit reverse high nibbles (use low table)
-        pshufb  xmm4, xmm2
-
-        por     xmm8, xmm4
-        ; xmm8 - bit reversed data bytes
-
-        ;; ZUC authentication part
-        ;; - 4x32 data bits
-        ;; - set up KS
-        movdqu  xmm3, [KS + OFFSET + (0*4)]
-        movdqu  xmm4, [KS + OFFSET + (2*4)]
-        pshufd  xmm0, xmm3, 0x61
-        pshufd  xmm1, xmm4, 0x61
-
-        ;;  - set up DATA
-        movdqa  xmm2, xmm8
-        pand    xmm2, xmm10
-        pshufd  xmm3, xmm2, 0xdc
-        movdqa  xmm4, xmm3
-
-        psrldq  xmm8, 8
-        pshufd  xmm13, xmm8, 0xdc
-        movdqa  xmm14, xmm13
-
-        ;; - clmul
-        ;; - xor the results from 4 32-bit words together
-        pclmulqdq xmm3, xmm0, 0x00
-        pclmulqdq xmm4, xmm0, 0x11
-        pclmulqdq xmm13, xmm1, 0x00
-        pclmulqdq xmm14, xmm1, 0x11
-
-        pxor    xmm3, xmm4
-        pxor    xmm13, xmm14
-        pxor    xmm9, xmm3
-        pxor    xmm9, xmm13
-
-        add     OFFSET, 16
-        sub     N_BITS, 128
-%endrep
-Eia3RoundsSSE_dq_end:
-
         or      N_BITS, N_BITS
         jz      Eia3RoundsSSE_end
 
@@ -1687,7 +1628,7 @@ Eia3RoundsSSE_dq_end:
         shr     N_BYTES, 3
 
         ;; read up to 16 bytes of data, zero bits not needed if partial byte and bit-reverse
-        simd_load_sse_16_1 xmm0, DATA + OFFSET, N_BYTES
+        simd_load_sse_16_1 xmm0, DATA, N_BYTES
         ; check if there is a partial byte (less than 8 bits in last byte)
         mov     rax, N_BITS
         and     rax, 0x7
@@ -1725,8 +1666,8 @@ Eia3RoundsSSE_dq_end:
         ;; ZUC authentication part
         ;; - 4x32 data bits
         ;; - set up KS
-        movdqu  xmm3, [KS + OFFSET + (0*4)]
-        movdqu  xmm4, [KS + OFFSET + (2*4)]
+        movdqu  xmm3, [KS + (0*4)]
+        movdqu  xmm4, [KS + (2*4)]
         pshufd  xmm0, xmm3, 0x61
         pshufd  xmm1, xmm4, 0x61
 
