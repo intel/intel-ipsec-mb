@@ -1834,37 +1834,44 @@ remainder_key_sz_128:
         shr     %%TMP, 32
         xor     [%%T], DWORD(%%TMP)
 
+        ;; Copy last 16 bytes of KS to the front
+        movdqa  %%XTMP1, [%%KS + 16]
+        movdqa  [%%KS], %%XTMP1
+
         FUNC_RESTORE
 
 %endmacro
 
 ;;
-;;extern asm_Eia3Round16BSSE(void *T, const void *KS, const void *DATA)
+;;extern void asm_Eia3Round16BSSE(void *T, const void *KS, const void *DATA,
+;;                                const uint64_t tag_sz)
 ;;
 ;; Updates authentication tag T based on keystream KS and DATA.
 ;; - it processes 16 bytes of DATA
 ;; - reads data in 16 byte chunks and bit reverses them
 ;; - reads and re-arranges KS
 ;; - employs clmul for the XOR & ROL part
+;; - copies last 16 bytes of KS to top 16 bytes
 ;;
 ;;  @param [in] T (digest pointer)
 ;;  @param [in] KS (key stream pointer)
 ;;  @param [in] DATA (data pointer)
+;;  @param [in] TAG_SZ (Tag size: 4, 8 or 16 bytes)
 ;;
 align 16
 MKGLOBAL(ZUC_EIA3ROUND16B,function,internal)
 ZUC_EIA3ROUND16B:
 
-%ifdef LINUX
-	%define		T	rdi
-	%define		KS	rsi
-	%define		DATA	rdx
-%else
-	%define		T	rcx
-	%define		KS	rdx
-	%define		DATA	r8
-%endif
+%define	T       arg1
+%define	KS      arg2
+%define	DATA    arg3
+%define TAG_SZ  arg4
 
+        ;; TODO: Handle tag sizes of 8 and 16 bytes
+        cmp     TAG_SZ, 4
+        je      round_tag_4B
+
+round_tag_4B:
         ROUND T, KS, DATA, rax, xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6
 
         ret

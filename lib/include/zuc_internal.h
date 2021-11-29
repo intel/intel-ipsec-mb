@@ -1067,15 +1067,18 @@ IMB_DLL_LOCAL void asm_ZucCipher_16_gfni_avx512(ZucState16_t *pState,
  *
  * @param[in] data                  Pointer to the data
  *
+ * @param[in] tag_sz                Tag size (4, 8 or 16 bytes)
+ *
  * @pre
  *      None
  *
  *****************************************************************************/
 IMB_DLL_LOCAL void asm_Eia3Round16BSSE(void *T, const void *ks,
-                                       const void *data);
+                                       const void *data, const uint64_t tag_sz);
 
 IMB_DLL_LOCAL void asm_Eia3Round16BSSE_no_aesni(void *T, const void *ks,
-                                                const void *data);
+                                                const void *data,
+                                                const uint64_t tag_sz);
 
 /**
  ******************************************************************************
