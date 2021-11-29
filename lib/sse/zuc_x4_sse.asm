@@ -1581,66 +1581,23 @@ exit_cipher:
 
         ret
 
-%macro REMAINDER 17
-%define %%T             %1  ; [in] Pointer to authentication tag
-%define %%KS            %2  ; [in] Pointer to 32-byte keystream
-%define %%DATA          %3  ; [in] Pointer to input data
-%define %%N_BITS        %4  ; [in] Number of bits to digest
-%define %%N_BYTES       %5  ; [clobbered] Number of bytes to digest
-%define %%TMP1          %6  ; [clobbered] Temporary GP register
-%define %%TMP2          %7  ; [clobbered] Temporary GP register
-%define %%TMP3          %8  ; [clobbered] Temporary GP register
-%define %%XTMP1         %9  ; [clobbered] Temporary XMM register
-%define %%XTMP2         %10 ; [clobbered] Temporary XMM register
-%define %%XTMP3         %11 ; [clobbered] Temporary XMM register
-%define %%XTMP4         %12 ; [clobbered] Temporary XMM register
-%define %%XTMP5         %13 ; [clobbered] Temporary XMM register
-%define %%KS_L          %14 ; [clobbered] Temporary XMM register
-%define %%KS_H          %15 ; [clobbered] Temporary XMM register
-%define %%KEY_SZ        %16 ; [in] Key size (128 or 256)
-%define %%TAG_SZ        %17 ; [in] Key size (4, 8 or 16)
+%macro DIGEST_16_BYTES 9
+%define %%KS      %1 ; [in] Pointer to keystream
+%define %%XDATA   %2 ; [in] XMM register with input data
+%define %%XDIGEST %3 ; [out] XMM register with result digest
+%define %%XTMP1   %4 ; [clobbered] Temporary XMM register
+%define %%XTMP2   %5 ; [clobbered] Temporary XMM register
+%define %%XTMP3   %6 ; [clobbered] Temporary XMM register
+%define %%XTMP4   %7 ; [clobbered] Temporary XMM register
+%define %%KS_L    %8 ; [clobbered] Temporary XMM register
+%define %%KS_H    %9 ; [clobbered] Temporary XMM register
 
-%define %%N_BYTES %%TMP3
-
-        FUNC_SAVE
-
-        pxor    %%XTMP2, %%XTMP2
-
-        or      %%N_BITS, %%N_BITS
-        jz      %%Eia3RoundsSSE_end
-
-        ; Get number of bytes
-        mov     %%N_BYTES, %%N_BITS
-        add     %%N_BYTES, 7
-        shr     %%N_BYTES, 3
-
-        ;; read up to 16 bytes of data, zero bits not needed if partial byte and bit-reverse
-        simd_load_sse_16_1 %%XTMP1, %%DATA, %%N_BYTES
-        ; check if there is a partial byte (less than 8 bits in last byte)
-        mov     %%TMP1, %%N_BITS
-        and     %%TMP1, 0x7
-        shl     %%TMP1, 4
-        lea     %%TMP2, [rel bit_mask_table]
-        add     %%TMP2, %%TMP1
-
-        ; Get mask to clear last bits
-        movdqa  %%XTMP2, [%%TMP2]
-
-        ; Shift left 16-N bytes to have the last byte always at the end of the XMM register
-        ; to apply mask, then restore by shifting right same amount of bytes
-        mov     %%TMP2, 16
-        sub     %%TMP2, %%N_BYTES
-        XPSLLB  %%XTMP1, %%TMP2, %%XTMP3, %%TMP1
-        pand    %%XTMP1, %%XTMP2
-        XPSRLB  %%XTMP1, %%TMP2, %%XTMP3, %%TMP1
-
+        ; Reverse data bytes
         movdqa  %%XTMP3, [rel bit_reverse_and_table]
-
-        ; Bit reverse
-        movdqa  %%XTMP2, %%XTMP1
+        movdqa  %%XTMP2, %%XDATA
         pand    %%XTMP2, %%XTMP3
 
-        pandn   %%XTMP3, %%XTMP1
+        pandn   %%XTMP3, %%XDATA
         psrld   %%XTMP3, 4
 
         movdqa  %%XTMP4, [rel bit_reverse_table_h] ; bit reverse low nibbles (use high table)
@@ -1667,25 +1624,83 @@ exit_cipher:
 
         psrldq  %%XTMP4, 8
         pshufd  %%XTMP3, %%XTMP4, 0xdc
-        movdqa  %%XTMP5, %%XTMP3 ;; %%XTMP5/3 - Data bytes [95:64 0s 127:96 0s]
+        movdqa  %%XDIGEST, %%XTMP3 ;; %%XDIGEST/XTMP3 - Data bytes [95:64 0s 127:96 0s]
 
         ;; - clmul
         ;; - xor the results from 4 32-bit words together
         pclmulqdq %%XTMP1, %%KS_L, 0x00
         pclmulqdq %%XTMP2, %%KS_L, 0x11
-        pclmulqdq %%XTMP5, %%KS_H, 0x00
+        pclmulqdq %%XDIGEST, %%KS_H, 0x00
         pclmulqdq %%XTMP3, %%KS_H, 0x11
 
         pxor    %%XTMP2, %%XTMP1
-        pxor    %%XTMP3, %%XTMP5
-        pxor    %%XTMP2, %%XTMP3
+        pxor    %%XDIGEST, %%XTMP3
+        pxor    %%XDIGEST, %%XTMP2
+
+%endmacro
+
+%macro REMAINDER 18
+%define %%T             %1  ; [in] Pointer to authentication tag
+%define %%KS            %2  ; [in] Pointer to 32-byte keystream
+%define %%DATA          %3  ; [in] Pointer to input data
+%define %%N_BITS        %4  ; [in] Number of bits to digest
+%define %%N_BYTES       %5  ; [clobbered] Number of bytes to digest
+%define %%TMP1          %6  ; [clobbered] Temporary GP register
+%define %%TMP2          %7  ; [clobbered] Temporary GP register
+%define %%TMP3          %8  ; [clobbered] Temporary GP register
+%define %%XTMP1         %9  ; [clobbered] Temporary XMM register
+%define %%XTMP2         %10 ; [clobbered] Temporary XMM register
+%define %%XTMP3         %11 ; [clobbered] Temporary XMM register
+%define %%XTMP4         %12 ; [clobbered] Temporary XMM register
+%define %%XTMP5         %13 ; [clobbered] Temporary XMM register
+%define %%XTMP6         %14 ; [clobbered] Temporary XMM register
+%define %%KS_L          %15 ; [clobbered] Temporary XMM register
+%define %%KS_H          %16 ; [clobbered] Temporary XMM register
+%define %%KEY_SZ        %17 ; [in] Key size (128 or 256)
+%define %%TAG_SZ        %18 ; [in] Key size (4, 8 or 16)
+
+%define %%N_BYTES %%TMP3
+
+        FUNC_SAVE
+
+        pxor    %%XTMP6, %%XTMP6
+
+        or      %%N_BITS, %%N_BITS
+        jz      %%Eia3RoundsSSE_end
+
+        ; Get number of bytes
+        mov     %%N_BYTES, %%N_BITS
+        add     %%N_BYTES, 7
+        shr     %%N_BYTES, 3
+
+        ; read up to 16 bytes of data, zero bits not needed if partial byte and bit-reverse
+        simd_load_sse_16_1 %%XTMP1, %%DATA, %%N_BYTES
+        ; check if there is a partial byte (less than 8 bits in last byte)
+        mov     %%TMP1, %%N_BITS
+        and     %%TMP1, 0x7
+        shl     %%TMP1, 4
+        lea     %%TMP2, [rel bit_mask_table]
+        add     %%TMP2, %%TMP1
+
+        ; Get mask to clear last bits
+        movdqa  %%XTMP2, [%%TMP2]
+
+        ; Shift left 16-N bytes to have the last byte always at the end of the XMM register
+        ; to apply mask, then restore by shifting right same amount of bytes
+        mov     %%TMP2, 16
+        sub     %%TMP2, %%N_BYTES
+        XPSLLB  %%XTMP1, %%TMP2, %%XTMP3, %%TMP1
+        pand    %%XTMP1, %%XTMP2
+        XPSRLB  %%XTMP1, %%TMP2, %%XTMP3, %%TMP1
+
+        DIGEST_16_BYTES %%KS, %%XTMP1, %%XTMP6, %%XTMP2, %%XTMP3, %%XTMP4, %%XTMP5, %%KS_L, %%KS_H
 
 %%Eia3RoundsSSE_end:
 
 %define %%TAG DWORD(%%TMP1)
         ;; - update T
         mov     %%TAG, [%%T]
-        movq    %%TMP2, %%XTMP2
+        movq    %%TMP2, %%XTMP6
         shr     %%TMP2, 32
         xor     %%TAG, DWORD(%%TMP2)
 
@@ -1757,17 +1772,17 @@ ZUC_EIA3REMAINDER:
         ; Key size = 256
         ;; TODO: Handle tag sizes of 8 and 16 bytes
         REMAINDER T, KS, DATA, N_BITS, r12, r13, r14, r15, \
-                  xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, 256, 4
+                  xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, 256, 4
 
         ret
 
 remainder_key_sz_128:
         REMAINDER T, KS, DATA, N_BITS, r12, r13, r14, r15, \
-                  xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, 128, 4
+                  xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, 128, 4
 
         ret
 
-%macro ROUND 11
+%macro ROUND 12
 %define %%T             %1  ; [in] Pointer to authentication tag
 %define %%KS            %2  ; [in] Pointer to 32-byte keystream
 %define %%DATA          %3  ; [in] Pointer to input data
@@ -1777,60 +1792,18 @@ remainder_key_sz_128:
 %define %%XTMP3         %7  ; [clobbered] Temporary XMM register
 %define %%XTMP4         %8  ; [clobbered] Temporary XMM register
 %define %%XTMP5         %9  ; [clobbered] Temporary XMM register
-%define %%KS_L          %10 ; [clobbered] Temporary XMM register
-%define %%KS_H          %11 ; [clobbered] Temporary XMM register
+%define %%XTMP6         %10 ; [clobbered] Temporary XMM register
+%define %%KS_L          %11 ; [clobbered] Temporary XMM register
+%define %%KS_H          %12 ; [clobbered] Temporary XMM register
 
         FUNC_SAVE
 
-        movdqa  %%XTMP3, [rel bit_reverse_and_table]
-
         ;; read 16 bytes and reverse bits
         movdqu  %%XTMP1, [%%DATA]
-        movdqa  %%XTMP2, %%XTMP1
-        pand    %%XTMP2, %%XTMP3
-
-        pandn   %%XTMP3, %%XTMP1
-        psrld   %%XTMP3, 4
-
-        movdqa  %%XTMP4, [rel bit_reverse_table_h] ; bit reverse low nibbles (use high table)
-        pshufb  %%XTMP4, %%XTMP2
-
-        movdqa  %%XTMP1, [rel bit_reverse_table_l] ; bit reverse high nibbles (use low table)
-        pshufb  %%XTMP1, %%XTMP3
-
-        por     %%XTMP4, %%XTMP1 ;; %%XTMP4 - bit reverse data bytes
-
-        ;; ZUC authentication part
-        ;; - 4x32 data bits
-        ;; - set up KS
-        movdqu  %%XTMP1, [%%KS + (0*4)]
-        movdqu  %%XTMP2, [%%KS + (2*4)]
-        pshufd  %%KS_L, %%XTMP1, 0x61
-        pshufd  %%KS_H, %%XTMP2, 0x61
-
-        ;;  - set up DATA
-        movdqa  %%XTMP1, %%XTMP4
-        pand    %%XTMP1, [rel data_mask_64bits]
-        pshufd  %%XTMP2, %%XTMP1, 0xdc
-        movdqa  %%XTMP1, %%XTMP2 ;; %%XTMP1/2 - Data bytes [31:0 0s 63:32 0s]
-
-        psrldq  %%XTMP4, 8
-        pshufd  %%XTMP3, %%XTMP4, 0xdc
-        movdqa  %%XTMP5, %%XTMP3 ;; %%XTMP5/3 - Data bytes [95:64 0s 127:96 0s]
-
-        ;; - clmul
-        ;; - xor the results from 4 32-bit words together
-        pclmulqdq %%XTMP1, %%KS_L, 0x00
-        pclmulqdq %%XTMP2, %%KS_L, 0x11
-        pclmulqdq %%XTMP5, %%KS_H, 0x00
-        pclmulqdq %%XTMP3, %%KS_H, 0x11
-
-        pxor    %%XTMP2, %%XTMP1
-        pxor    %%XTMP3, %%XTMP5
-        pxor    %%XTMP2, %%XTMP3
+        DIGEST_16_BYTES %%KS, %%XTMP1, %%XTMP6, %%XTMP2, %%XTMP3, %%XTMP4, %%XTMP5, %%KS_L, %%KS_H
 
         ;; - update T
-        movq    %%TMP, %%XTMP2
+        movq    %%TMP, %%XTMP6
         shr     %%TMP, 32
         xor     [%%T], DWORD(%%TMP)
 
@@ -1872,7 +1845,7 @@ ZUC_EIA3ROUND16B:
         je      round_tag_4B
 
 round_tag_4B:
-        ROUND T, KS, DATA, rax, xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6
+        ROUND T, KS, DATA, rax, xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7
 
         ret
 
