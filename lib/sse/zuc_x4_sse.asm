@@ -1766,6 +1766,78 @@ remainder_key_sz_128:
                   xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, 128, 4
 
         ret
+
+%macro ROUND 11
+%define %%T             %1  ; [in] Pointer to authentication tag
+%define %%KS            %2  ; [in] Pointer to 32-byte keystream
+%define %%DATA          %3  ; [in] Pointer to input data
+%define %%TMP           %4  ; [clobbered] Temporary GP register
+%define %%XTMP1         %5  ; [clobbered] Temporary XMM register
+%define %%XTMP2         %6  ; [clobbered] Temporary XMM register
+%define %%XTMP3         %7  ; [clobbered] Temporary XMM register
+%define %%XTMP4         %8  ; [clobbered] Temporary XMM register
+%define %%XTMP5         %9  ; [clobbered] Temporary XMM register
+%define %%KS_L          %10 ; [clobbered] Temporary XMM register
+%define %%KS_H          %11 ; [clobbered] Temporary XMM register
+
+        FUNC_SAVE
+
+        movdqa  %%XTMP3, [rel bit_reverse_and_table]
+
+        ;; read 16 bytes and reverse bits
+        movdqu  %%XTMP1, [%%DATA]
+        movdqa  %%XTMP2, %%XTMP1
+        pand    %%XTMP2, %%XTMP3
+
+        pandn   %%XTMP3, %%XTMP1
+        psrld   %%XTMP3, 4
+
+        movdqa  %%XTMP4, [rel bit_reverse_table_h] ; bit reverse low nibbles (use high table)
+        pshufb  %%XTMP4, %%XTMP2
+
+        movdqa  %%XTMP1, [rel bit_reverse_table_l] ; bit reverse high nibbles (use low table)
+        pshufb  %%XTMP1, %%XTMP3
+
+        por     %%XTMP4, %%XTMP1 ;; %%XTMP4 - bit reverse data bytes
+
+        ;; ZUC authentication part
+        ;; - 4x32 data bits
+        ;; - set up KS
+        movdqu  %%XTMP1, [%%KS + (0*4)]
+        movdqu  %%XTMP2, [%%KS + (2*4)]
+        pshufd  %%KS_L, %%XTMP1, 0x61
+        pshufd  %%KS_H, %%XTMP2, 0x61
+
+        ;;  - set up DATA
+        movdqa  %%XTMP1, %%XTMP4
+        pand    %%XTMP1, [rel data_mask_64bits]
+        pshufd  %%XTMP2, %%XTMP1, 0xdc
+        movdqa  %%XTMP1, %%XTMP2 ;; %%XTMP1/2 - Data bytes [31:0 0s 63:32 0s]
+
+        psrldq  %%XTMP4, 8
+        pshufd  %%XTMP3, %%XTMP4, 0xdc
+        movdqa  %%XTMP5, %%XTMP3 ;; %%XTMP5/3 - Data bytes [95:64 0s 127:96 0s]
+
+        ;; - clmul
+        ;; - xor the results from 4 32-bit words together
+        pclmulqdq %%XTMP1, %%KS_L, 0x00
+        pclmulqdq %%XTMP2, %%KS_L, 0x11
+        pclmulqdq %%XTMP5, %%KS_H, 0x00
+        pclmulqdq %%XTMP3, %%KS_H, 0x11
+
+        pxor    %%XTMP2, %%XTMP1
+        pxor    %%XTMP3, %%XTMP5
+        pxor    %%XTMP2, %%XTMP3
+
+        ;; - update T
+        movq    %%TMP, %%XTMP2
+        shr     %%TMP, 32
+        xor     [%%T], DWORD(%%TMP)
+
+        FUNC_RESTORE
+
+%endmacro
+
 ;;
 ;;extern asm_Eia3Round16BSSE(void *T, const void *KS, const void *DATA)
 ;;
@@ -1793,71 +1865,7 @@ ZUC_EIA3ROUND16B:
 	%define		DATA	r8
 %endif
 
-        FUNC_SAVE
-
-        movdqa  xmm5, [bit_reverse_table_l]
-        movdqa  xmm6, [bit_reverse_table_h]
-        movdqa  xmm7, [bit_reverse_and_table]
-        movdqa  xmm10, [data_mask_64bits]
-
-        pxor    xmm9, xmm9
-
-        ;; read 16 bytes and reverse bits
-        movdqu  xmm0, [DATA]
-        movdqa  xmm1, xmm0
-        pand    xmm1, xmm7
-
-        movdqa  xmm2, xmm7
-        pandn   xmm2, xmm0
-        psrld   xmm2, 4
-
-        movdqa  xmm8, xmm6      ; bit reverse low nibbles (use high table)
-        pshufb  xmm8, xmm1
-
-        movdqa  xmm4, xmm5      ; bit reverse high nibbles (use low table)
-        pshufb  xmm4, xmm2
-
-        por     xmm8, xmm4
-        ; xmm8 - bit reversed data bytes
-
-        ;; ZUC authentication part
-        ;; - 4x32 data bits
-        ;; - set up KS
-        movdqu  xmm2, [KS + (0*4)]
-        movdqu  xmm3, [KS + (4*4)]
-        movdqa  xmm12, xmm3
-        palignr xmm3, xmm2, 8
-        pshufd  xmm1, xmm2, 0x61
-        pshufd  xmm11, xmm3, 0x61
-
-        ;;  - set up DATA
-        movdqa  xmm0, xmm8
-        pand    xmm0, xmm10
-        pshufd  xmm3, xmm0, 0xdc
-        movdqa  xmm0, xmm3
-
-        psrldq  xmm8, 8
-        pshufd  xmm13, xmm8, 0xdc
-        movdqa  xmm14, xmm13
-
-        ;; - clmul
-        ;; - xor the results from 4 32-bit words together
-        pclmulqdq xmm0, xmm1, 0x00
-        pclmulqdq xmm3, xmm1, 0x11
-        pclmulqdq xmm14, xmm11, 0x00
-        pclmulqdq xmm13, xmm11, 0x11
-
-        pxor    xmm3, xmm0
-        pxor    xmm13, xmm14
-        pxor    xmm9, xmm3
-        pxor    xmm9, xmm13
-
-        ;; - update T
-        movq    rax, xmm9
-        shr     rax, 32
-        xor     [T], eax
-
-        FUNC_RESTORE
+        ROUND T, KS, DATA, rax, xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6
 
         ret
 
