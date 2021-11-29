@@ -250,7 +250,7 @@ lib_objs1 = \
 	$(OBJ_DIR)\zuc_top_avx2.obj \
 	$(OBJ_DIR)\zuc_top_avx512.obj \
 	$(OBJ_DIR)\zuc_x4_sse.obj \
-	$(OBJ_DIR)\zuc_gfni_sse.obj \
+	$(OBJ_DIR)\zuc_x4_gfni_sse.obj \
 	$(OBJ_DIR)\zuc_x4_avx.obj \
 	$(OBJ_DIR)\zuc_x8_avx2.obj \
 	$(OBJ_DIR)\zuc_x16_avx512.obj \
