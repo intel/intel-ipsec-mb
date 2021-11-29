@@ -1579,150 +1579,144 @@ exit_cipher:
 
         ret
 
-;;
-;; extern uint32_t Zuc_Eia3_Remainder_sse(const void *ks, const void *data, uint64_t n_bits)
-;;
-;; Returns authentication update value to be XOR'ed with current authentication tag
-;;
-;; WIN64
-;;	RCX - KS (key stream pointer)
-;; 	RDX - DATA (data pointer)
-;;      R8  - N_BITS (number data bits to process)
-;; LIN64
-;;	RDI - KS (key stream pointer)
-;;	RSI - DATA (data pointer)
-;;      RDX - N_BITS (number data bits to process)
-;;
-align 16
-MKGLOBAL(ZUC_EIA3REMAINDER,function,internal)
-ZUC_EIA3REMAINDER:
-%ifdef LINUX
-	%define		KS	rdi
-	%define		DATA	rsi
-	%define		N_BITS	rdx
-	%define		TAG	rcx
-%else
-	%define		KS	rcx
-	%define		DATA	rdx
-	%define		N_BITS	r8
-	%define		TAG	r9
-%endif
 
-%define N_BYTES rbx
+%macro REMAINDER 14
+%define %%T             %1  ; [in] Pointer to authentication tag
+%define %%KS            %2  ; [in] Pointer to 32-byte keystream
+%define %%DATA          %3  ; [in] Pointer to input data
+%define %%N_BITS        %4  ; [in] Number of bits to digest
+%define %%N_BYTES       %5  ; [clobbered] Number of bytes to digest
+%define %%TMP           %6  ; [clobbered] Temporary GP register
+%define %%TMP2          %7  ; [clobbered] Temporary GP register
+%define %%XTMP1         %8  ; [clobbered] Temporary XMM register
+%define %%XTMP2         %9  ; [clobbered] Temporary XMM register
+%define %%XTMP3         %10 ; [clobbered] Temporary XMM register
+%define %%XTMP4         %11 ; [clobbered] Temporary XMM register
+%define %%XTMP5         %12 ; [clobbered] Temporary XMM register
+%define %%KS_L          %13 ; [clobbered] Temporary XMM register
+%define %%KS_H          %14 ; [clobbered] Temporary XMM register
 
         FUNC_SAVE
 
-        movdqa  xmm5, [bit_reverse_table_l]
-        movdqa  xmm6, [bit_reverse_table_h]
-        movdqa  xmm7, [bit_reverse_and_table]
-        movdqa  xmm10, [data_mask_64bits]
-
-        pxor    xmm9, xmm9
-
-        or      N_BITS, N_BITS
-        jz      Eia3RoundsSSE_end
+        or      %%N_BITS, %%N_BITS
+        jz      %%Eia3RoundsSSE_end
 
         ; Get number of bytes
-        mov     N_BYTES, N_BITS
-        add     N_BYTES, 7
-        shr     N_BYTES, 3
+        mov     %%N_BYTES, %%N_BITS
+        add     %%N_BYTES, 7
+        shr     %%N_BYTES, 3
 
         ;; read up to 16 bytes of data, zero bits not needed if partial byte and bit-reverse
-        simd_load_sse_16_1 xmm0, DATA, N_BYTES
+        simd_load_sse_16_1 %%XTMP1, %%DATA, %%N_BYTES
         ; check if there is a partial byte (less than 8 bits in last byte)
-        mov     rax, N_BITS
-        and     rax, 0x7
-        shl     rax, 4
-        lea     r10, [rel bit_mask_table]
-        add     r10, rax
+        mov     %%TMP, %%N_BITS
+        and     %%TMP, 0x7
+        shl     %%TMP, 4
+        lea     %%TMP2, [rel bit_mask_table]
+        add     %%TMP2, %%TMP
 
         ; Get mask to clear last bits
-        movdqa  xmm3, [r10]
+        movdqa  %%XTMP2, [%%TMP2]
 
         ; Shift left 16-N bytes to have the last byte always at the end of the XMM register
         ; to apply mask, then restore by shifting right same amount of bytes
-        mov     r10, 16
-        sub     r10, N_BYTES
-        XPSLLB  xmm0, r10, xmm4, r11
-        pand    xmm0, xmm3
-        XPSRLB  xmm0, r10, xmm4, r11
+        mov     %%TMP2, 16
+        sub     %%TMP2, %%N_BYTES
+        XPSLLB  %%XTMP1, %%TMP2, %%XTMP3, %%TMP
+        pand    %%XTMP1, %%XTMP2
+        XPSRLB  %%XTMP1, %%TMP2, %%XTMP3, %%TMP
 
-        movdqa  xmm1, xmm0
-        pand    xmm1, xmm7
+        movdqa  %%XTMP3, [rel bit_reverse_and_table]
 
-        movdqa  xmm2, xmm7
-        pandn   xmm2, xmm0
-        psrld   xmm2, 4
+        ; Bit reverse
+        movdqa  %%XTMP2, %%XTMP1
+        pand    %%XTMP2, %%XTMP3
 
-        movdqa  xmm8, xmm6      ; bit reverse low nibbles (use high table)
-        pshufb  xmm8, xmm1
+        pandn   %%XTMP3, %%XTMP1
+        psrld   %%XTMP3, 4
 
-        movdqa  xmm4, xmm5      ; bit reverse high nibbles (use low table)
-        pshufb  xmm4, xmm2
+        movdqa  %%XTMP4, [rel bit_reverse_table_h] ; bit reverse low nibbles (use high table)
+        pshufb  %%XTMP4, %%XTMP2
 
-        por     xmm8, xmm4
-        ; xmm8 - bit reversed data bytes
+        movdqa  %%XTMP1, [rel bit_reverse_table_l] ; bit reverse high nibbles (use low table)
+        pshufb  %%XTMP1, %%XTMP3
+
+        por     %%XTMP4, %%XTMP1 ;; %%XTMP4 - bit reverse data bytes
 
         ;; ZUC authentication part
         ;; - 4x32 data bits
         ;; - set up KS
-        movdqu  xmm3, [KS + (0*4)]
-        movdqu  xmm4, [KS + (2*4)]
-        pshufd  xmm0, xmm3, 0x61
-        pshufd  xmm1, xmm4, 0x61
+        movdqu  %%XTMP1, [%%KS + (0*4)]
+        movdqu  %%XTMP2, [%%KS + (2*4)]
+        pshufd  %%KS_L, %%XTMP1, 0x61
+        pshufd  %%KS_H, %%XTMP2, 0x61
 
         ;;  - set up DATA
-        movdqa  xmm2, xmm8
-        pand    xmm2, xmm10
-        pshufd  xmm3, xmm2, 0xdc
-        movdqa  xmm4, xmm3
+        movdqa  %%XTMP1, %%XTMP4
+        pand    %%XTMP1, [rel data_mask_64bits]
+        pshufd  %%XTMP2, %%XTMP1, 0xdc
+        movdqa  %%XTMP1, %%XTMP2 ;; %%XTMP1/2 - Data bytes [31:0 0s 63:32 0s]
 
-        psrldq  xmm8, 8
-        pshufd  xmm13, xmm8, 0xdc
-        movdqa  xmm14, xmm13
+        psrldq  %%XTMP4, 8
+        pshufd  %%XTMP3, %%XTMP4, 0xdc
+        movdqa  %%XTMP5, %%XTMP3 ;; %%XTMP5/3 - Data bytes [95:64 0s 127:96 0s]
 
         ;; - clmul
         ;; - xor the results from 4 32-bit words together
-        pclmulqdq xmm3, xmm0, 0x00
-        pclmulqdq xmm4, xmm0, 0x11
-        pclmulqdq xmm13, xmm1, 0x00
-        pclmulqdq xmm14, xmm1, 0x11
+        pclmulqdq %%XTMP1, %%KS_L, 0x00
+        pclmulqdq %%XTMP2, %%KS_L, 0x11
+        pclmulqdq %%XTMP5, %%KS_H, 0x00
+        pclmulqdq %%XTMP3, %%KS_H, 0x11
 
-        pxor    xmm3, xmm4
-        pxor    xmm13, xmm14
-        pxor    xmm9, xmm3
-        pxor    xmm9, xmm13
+        pxor    %%XTMP2, %%XTMP1
+        pxor    %%XTMP3, %%XTMP5
+        pxor    %%XTMP2, %%XTMP3
 
-Eia3RoundsSSE_end:
-
-        mov     r11d, [TAG]
-        movq    rax, xmm9
-        shr     rax, 32
-        xor     eax, r11d
-        mov     [TAG], eax
+        ;; - update T
+        movq    %%TMP, %%XTMP2
+        shr     %%TMP, 32
+        xor     [%%T], DWORD(%%TMP)
+%%Eia3RoundsSSE_end:
 
         FUNC_RESTORE
 
-        ret
+%endmacro
 
 ;;
-;;extern Zuc_Eia3_Round16B_sse(void *T, const void *KS, const void *DATA)
+;; extern void asm_Eia3RemainderSSE(void *T, const void *ks,
+;;                                  const void *data, const uint64_t n_bits)
+;;
+;; Returns authentication update value to be XOR'ed with current authentication tag
+;;
+;;  @param [in] T (digest pointer)
+;;  @param [in] KS (key stream pointer)
+;;  @param [in] DATA (data pointer)
+;;  @param [in] N_BITS (number of bits to digest)
+;;
+align 16
+MKGLOBAL(ZUC_EIA3REMAINDER,function,internal)
+ZUC_EIA3REMAINDER:
+%define T       arg1
+%define KS      arg2
+%define DATA    arg3
+%define N_BITS  arg4
+
+        REMAINDER T, KS, DATA, N_BITS, r12, r13, r14, \
+                  xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6
+
+        ret
+;;
+;;extern asm_Eia3Round16BSSE(void *T, const void *KS, const void *DATA)
 ;;
 ;; Updates authentication tag T based on keystream KS and DATA.
 ;; - it processes 16 bytes of DATA
 ;; - reads data in 16 byte chunks and bit reverses them
 ;; - reads and re-arranges KS
 ;; - employs clmul for the XOR & ROL part
-;; - copies top 16 bytes of KS to bottom (for the next round)
 ;;
-;; WIN64
-;;	RCX - Pointer to authentication tag T
-;;	RDX - KS pointer to key stream (2 x 16 bytes)
-;;;     R8  - DATA pointer to data
-;; LIN64
-;;	RDI - Pointer to authentication tag T
-;;	RSI - KS pointer to key stream (2 x 16 bytes)
-;;      RDX - DATA pointer to data
+;;  @param [in] T (digest pointer)
+;;  @param [in] KS (key stream pointer)
+;;  @param [in] DATA (data pointer)
 ;;
 align 16
 MKGLOBAL(ZUC_EIA3ROUND16B,function,internal)

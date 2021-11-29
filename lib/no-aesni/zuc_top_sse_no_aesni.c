@@ -579,7 +579,7 @@ void _zuc_eia3_1_buffer_sse_no_aesni(const void *pKey,
          */
         if (remainingBits > (2 * 32))
                 asm_ZucGenKeystream8B_sse_no_aesni(&keyStream[4], &zucState);
-        asm_Eia3RemainderSSE_no_aesni(&keyStream[0], pIn8, remainingBits, &T);
+        asm_Eia3RemainderSSE_no_aesni(&T, &keyStream[0], pIn8, remainingBits);
         T ^= rotate_left(load_uint64(&keyStream[remainingBits / 32]),
                          remainingBits % 32);
 
@@ -735,8 +735,8 @@ void _zuc_eia3_4_buffer_sse_no_aesni(const void * const pKey[NUM_SSE_BUFS],
 
                 uint32_t keyBlock = keyStr32[L - 1];
 
-                asm_Eia3RemainderSSE_no_aesni(keyStr32, pIn8[i], remainBits,
-                                              &T[i]);
+                asm_Eia3RemainderSSE_no_aesni(&T[i], keyStr32, pIn8[i],
+                                              remainBits);
                 T[i] ^= rotate_left(load_uint64(&keyStr32[remainBits / 32]),
                                  remainBits % 32);
 
@@ -951,8 +951,8 @@ zuc_eia3_4_buffer_job_sse_no_aesni(const void * const pKey[NUM_SSE_BUFS],
 
                 uint32_t keyBlock = keyStr32[L - 1];
 
-                asm_Eia3RemainderSSE_no_aesni(keyStr32, pIn8[i], remainBits,
-                                              &T[i]);
+                asm_Eia3RemainderSSE_no_aesni(&T[i], keyStr32, pIn8[i],
+                                              remainBits);
                 T[i] ^= rotate_left(load_uint64(&keyStr32[remainBits / 32]),
                                  remainBits % 32);
 
@@ -1115,8 +1115,8 @@ zuc256_eia3_4_buffer_job_sse_no_aesni(const void * const pKey[NUM_SSE_BUFS],
                         asm_ZucGenKeystream8B_sse_no_aesni(&keyStr32[4],
                                                            &singlePktState);
 
-                asm_Eia3RemainderSSE_no_aesni(keyStr32, pIn8[i], remainBits,
-                                              tag);
+                asm_Eia3RemainderSSE_no_aesni(tag, keyStr32, pIn8[i],
+                                              remainBits);
                 *tag ^= rotate_left(load_uint64(&keyStr32[remainBits / 32]),
                                  remainBits % 32);
 

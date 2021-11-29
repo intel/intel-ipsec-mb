@@ -639,7 +639,7 @@ void _zuc_eia3_1_buffer_sse(const void *pKey,
          */
         if (remainingBits > (2 * 32))
                 asm_ZucGenKeystream8B_sse(&keyStream[4], &zucState);
-        asm_Eia3RemainderSSE(&keyStream[0], pIn8, remainingBits, &T);
+        asm_Eia3RemainderSSE(&T, &keyStream[0], pIn8, remainingBits);
         T ^= rotate_left(load_uint64(&keyStream[remainingBits / 32]),
                          remainingBits % 32);
 
@@ -806,7 +806,7 @@ void _zuc_eia3_4_buffer_sse(const void * const pKey[NUM_SSE_BUFS],
 
                 uint32_t keyBlock = keyStr32[L - 1];
 
-                asm_Eia3RemainderSSE(keyStr32, pIn8[i], remainBits, &T[i]);
+                asm_Eia3RemainderSSE(&T[i], keyStr32, pIn8[i], remainBits);
                 T[i] ^= rotate_left(load_uint64(&keyStr32[remainBits / 32]),
                                  remainBits % 32);
 
@@ -1031,7 +1031,7 @@ void _zuc_eia3_4_buffer_job(const void * const pKey[NUM_SSE_BUFS],
 
                 uint32_t keyBlock = keyStr32[L - 1];
 
-                asm_Eia3RemainderSSE(keyStr32, pIn8[i], remainBits, &T[i]);
+                asm_Eia3RemainderSSE(&T[i], keyStr32, pIn8[i], remainBits);
                 T[i] ^= rotate_left(load_uint64(&keyStr32[remainBits / 32]),
                                  remainBits % 32);
 
@@ -1226,7 +1226,7 @@ void _zuc256_eia3_4_buffer_job(const void * const pKey[NUM_SSE_BUFS],
                         asm_ZucGenKeystream_sse(&keyStr32[4],
                                                 &singlePktState, 1);
 
-                asm_Eia3RemainderSSE(keyStr32, pIn8[i], remainBits, tag);
+                asm_Eia3RemainderSSE(tag, keyStr32, pIn8[i], remainBits);
                 *tag ^= rotate_left(load_uint64(&keyStr32[remainBits / 32]),
                                  remainBits % 32);
 

@@ -1093,13 +1093,13 @@ IMB_DLL_LOCAL void asm_Eia3Round16BSSE_no_aesni(void *T, const void *ks,
  *      None
  *
  *****************************************************************************/
-IMB_DLL_LOCAL void asm_Eia3RemainderSSE(const void *ks, const void *data,
-                                        const uint64_t n_words, void *T);
+IMB_DLL_LOCAL void asm_Eia3RemainderSSE(void *T, const void *ks,
+                                        const void *data,
+                                        const uint64_t n_bits);
 
-IMB_DLL_LOCAL void asm_Eia3RemainderSSE_no_aesni(const void *ks,
+IMB_DLL_LOCAL void asm_Eia3RemainderSSE_no_aesni(void *T, const void *ks,
                                                  const void *data,
-                                                 const uint64_t n_words,
-                                                 void *T);
+                                                 const uint64_t n_bits);
 
 /**
  ******************************************************************************
