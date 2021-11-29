@@ -40,8 +40,8 @@
 %define ZUC_KEYGEN16B_4 asm_ZucGenKeystream16B_4_sse
 %define ZUC_KEYGEN8B_4 asm_ZucGenKeystream8B_4_sse
 %define ZUC_KEYGEN4B_4 asm_ZucGenKeystream4B_4_sse
-%define ZUC_EIA3ROUND16B asm_Eia3Round16BSSE
-%define ZUC_EIA3REMAINDER asm_Eia3RemainderSSE
+%define ZUC_EIA3ROUND16B asm_Eia3Round16B_sse
+%define ZUC_EIA3REMAINDER asm_Eia3Remainder_sse
 %define USE_GFNI 0
 %endif
 
@@ -224,6 +224,10 @@ db      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 
 db      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xf8
 db      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfc
 db      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfe
+
+align 16
+bit_reverse_table:
+times 2 db      0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80
 
 ; Stack frame for ZucCipher function
 struc STACK
@@ -473,12 +477,11 @@ mksection .text
 ;   return
 ;       W value, updates F_R1[] / F_R2[]
 ;
-%macro nonlin_fun4  2-3
+%macro nonlin_fun4  1-2
 %define %%STATE     %1  ; [in] ZUC state
-%define %%USE_GFNI  %2  ; [in] Use GFNI instruction if set
-%define %%W         %3  ; [out] XMM register to contain W for all lanes
+%define %%W         %2  ; [out] XMM register to contain W for all lanes
 
-%if (%0 == 3)
+%if (%0 == 2)
     movdqa      %%W, [%%STATE + OFS_X0]
     pxor        %%W, [%%STATE + OFS_R1]
     paddd       %%W, [%%STATE + OFS_R2]    ; W = (BRC_X0 ^ F_R1) + F_R2
@@ -528,8 +531,8 @@ mksection .text
     shufpd      xmm2, xmm3, 0x2 ; All S1 input values
 
     ; Compute S0 and S1 values
-    S0_comput_SSE   xmm1, xmm3, xmm4, %%USE_GFNI
-    S1_comput_SSE   xmm2, xmm3, xmm4, xmm5, %%USE_GFNI
+    S0_comput_SSE   xmm1, xmm3, xmm4, USE_GFNI
+    S1_comput_SSE   xmm2, xmm3, xmm4, xmm5, USE_GFNI
 
     ; Need to shuffle back xmm1 & xmm2 before storing output
     ; (revert what was done before S0 and S1 computations)
@@ -1005,7 +1008,7 @@ mksection .text
     je  %%exit_loop
     ; Shift LFSR 32-times, update state variables
     bits_reorg4 rax, r15, r14
-    nonlin_fun4 rax, USE_GFNI, xmm0
+    nonlin_fun4 rax, xmm0
     psrld  xmm0,1                ; Shift out LSB of W
     lfsr_updt4  rax, r15, r14, xmm0     ; W (xmm0) used in LFSR update - not set to zero
     inc r15
@@ -1014,7 +1017,7 @@ mksection .text
 %%exit_loop:
     ; And once more, initial round from keygen phase = 33 times
     bits_reorg4 rax, 0, no_reg
-    nonlin_fun4 rax, USE_GFNI
+    nonlin_fun4 rax
     pxor    xmm0, xmm0
     lfsr_updt4 rax, 0, no_reg, xmm0
 
@@ -1038,7 +1041,7 @@ mksection .text
 %assign N 1
 %rep %%NUM_ROUNDS
     bits_reorg4 rax, N, no_reg, xmm10
-    nonlin_fun4 rax, USE_GFNI, xmm0
+    nonlin_fun4 rax, xmm0
     ; OFS_X3 XOR W (xmm0) and store in stack
     pxor        xmm10, xmm0
     movdqa [rsp + (N-1)*16], xmm10
@@ -1127,7 +1130,7 @@ init_for_auth_tag_4B:
 %assign N 1
 %rep %%NUM_ROUNDS
     bits_reorg4 rax, N, no_reg, xmm10
-    nonlin_fun4 rax, USE_GFNI, xmm0
+    nonlin_fun4 rax, xmm0
     ; OFS_X3 XOR W (xmm0) and store in stack
     pxor        xmm10, xmm0
     movdqa [rsp + 4*8 + (N-1)*16], xmm10
@@ -1258,7 +1261,7 @@ ZUC_KEYGEN4B_4:
 %assign %%round (%%INITIAL_ROUND + %%N)
 %rep %%NROUNDS
         bits_reorg4 rax, %%round, no_reg, xmm10
-        nonlin_fun4 rax, USE_GFNI, xmm0
+        nonlin_fun4 rax, xmm0
         ; OFS_XR XOR W (xmm0) and store in stack
         pxor    xmm10, xmm0
         movdqa  [rsp + _keystr_save + (%%N-1)*16], xmm10
@@ -1593,6 +1596,10 @@ exit_cipher:
 %define %%KS_H    %9 ; [clobbered] Temporary XMM register
 
         ; Reverse data bytes
+%if USE_GFNI == 1
+        movdqa  %%XTMP4, %%XDATA
+        gf2p8affineqb   %%XTMP4, [rel bit_reverse_table], 0x00
+%else
         movdqa  %%XTMP3, [rel bit_reverse_and_table]
         movdqa  %%XTMP2, %%XDATA
         pand    %%XTMP2, %%XTMP3
@@ -1607,6 +1614,7 @@ exit_cipher:
         pshufb  %%XTMP1, %%XTMP3
 
         por     %%XTMP4, %%XTMP1 ;; %%XTMP4 - bit reverse data bytes
+%endif
 
         ;; ZUC authentication part
         ;; - 4x32 data bits

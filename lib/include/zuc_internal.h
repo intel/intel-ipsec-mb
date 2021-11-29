@@ -1073,12 +1073,17 @@ IMB_DLL_LOCAL void asm_ZucCipher_16_gfni_avx512(ZucState16_t *pState,
  *      None
  *
  *****************************************************************************/
-IMB_DLL_LOCAL void asm_Eia3Round16BSSE(void *T, const void *ks,
-                                       const void *data, const uint64_t tag_sz);
+IMB_DLL_LOCAL void asm_Eia3Round16B_sse(void *T, const void *ks,
+                                        const void *data,
+                                        const uint64_t tag_sz);
 
-IMB_DLL_LOCAL void asm_Eia3Round16BSSE_no_aesni(void *T, const void *ks,
-                                                const void *data,
-                                                const uint64_t tag_sz);
+IMB_DLL_LOCAL void asm_Eia3Round16B_sse_no_aesni(void *T, const void *ks,
+                                                 const void *data,
+                                                 const uint64_t tag_sz);
+
+IMB_DLL_LOCAL void asm_Eia3Round16B_gfni_sse(void *T, const void *ks,
+                                             const void *data,
+                                             const uint64_t tag_sz);
 
 /**
  ******************************************************************************
@@ -1096,17 +1101,23 @@ IMB_DLL_LOCAL void asm_Eia3Round16BSSE_no_aesni(void *T, const void *ks,
  *      None
  *
  *****************************************************************************/
-IMB_DLL_LOCAL void asm_Eia3RemainderSSE(void *T, const void *ks,
-                                        const void *data,
-                                        const uint64_t n_bits,
-                                        const uint64_t key_size,
-                                        const uint64_t tag_size);
+IMB_DLL_LOCAL void asm_Eia3Remainder_sse(void *T, const void *ks,
+                                         const void *data,
+                                         const uint64_t n_bits,
+                                         const uint64_t key_size,
+                                         const uint64_t tag_size);
 
-IMB_DLL_LOCAL void asm_Eia3RemainderSSE_no_aesni(void *T, const void *ks,
-                                                 const void *data,
-                                                 const uint64_t n_bits,
-                                                 const uint64_t key_size,
-                                                 const uint64_t tag_size);
+IMB_DLL_LOCAL void asm_Eia3Remainder_sse_no_aesni(void *T, const void *ks,
+                                                  const void *data,
+                                                  const uint64_t n_bits,
+                                                  const uint64_t key_size,
+                                                  const uint64_t tag_size);
+
+IMB_DLL_LOCAL void asm_Eia3Remainder_gfni_sse(void *T, const void *ks,
+                                              const void *data,
+                                              const uint64_t n_bits,
+                                              const uint64_t key_size,
+                                              const uint64_t tag_size);
 
 /**
  ******************************************************************************

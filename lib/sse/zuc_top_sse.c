@@ -69,6 +69,28 @@ init_4(ZucKey4_t *keys, const uint8_t *ivs, ZucState4_t *state,
         }
 }
 
+static inline void
+eia3_round16B(void *T, const void *ks, const void *data,
+              const uint64_t tag_sz, const unsigned use_gfni)
+{
+        if (use_gfni)
+                asm_Eia3Round16B_gfni_sse(T, ks, data, tag_sz);
+        else
+                asm_Eia3Round16B_sse(T, ks, data, tag_sz);
+}
+
+static inline void
+eia3_remainder(void *T, const void *ks, const void *data,
+               const uint64_t n_bits, const uint64_t key_size,
+               const uint64_t tag_size, const unsigned use_gfni)
+{
+        if (use_gfni)
+                asm_Eia3Remainder_gfni_sse(T, ks, data, n_bits, key_size,
+                                           tag_size);
+        else
+                asm_Eia3Remainder_sse(T, ks, data, n_bits, key_size,
+                                      tag_size);
+}
 static inline
 void _zuc_eea3_1_buffer_sse(const void *pKey,
                             const void *pIv,
@@ -618,7 +640,7 @@ void _zuc_eia3_1_buffer_sse(const void *pKey,
                         asm_ZucGenKeystream8B_sse(&keyStream[4], &zucState);
                 else
                         asm_ZucGenKeystream16B_sse(&keyStream[4], &zucState);
-                asm_Eia3Round16BSSE(&T, keyStream, pIn8, 4);
+                eia3_round16B(&T, keyStream, pIn8, 4, 0);
                 pIn8 = &pIn8[KEYSTR_ROUND_LEN];
         }
 
@@ -628,7 +650,7 @@ void _zuc_eia3_1_buffer_sse(const void *pKey,
          */
         if (remainingBits > (2 * 32))
                 asm_ZucGenKeystream8B_sse(&keyStream[4], &zucState);
-        asm_Eia3RemainderSSE(&T, &keyStream[0], pIn8, remainingBits, 128, 4);
+        eia3_remainder(&T, &keyStream[0], pIn8, remainingBits, 128, 4, 0);
         /* save the final MAC-I result */
         *pMacI = T;
 
@@ -722,7 +744,7 @@ void _zuc_eia3_4_buffer_sse(const void * const pKey[NUM_SSE_BUFS],
                                                              pKeyStrArr);
                 }
                 for (i = 0; i < NUM_SSE_BUFS; i++) {
-                        asm_Eia3Round16BSSE(&T[i], keyStr[i], pIn8[i], 4);
+                        eia3_round16B(&T[i], keyStr[i], pIn8[i], 4, use_gfni);
                         pIn8[i] = &pIn8[i][KEYSTR_ROUND_LEN];
                 }
         }
@@ -772,7 +794,7 @@ void _zuc_eia3_4_buffer_sse(const void * const pKey[NUM_SSE_BUFS],
                         else
                                 asm_ZucGenKeystream16B_sse(&keyStr32[4],
                                                            &singlePktState);
-                        asm_Eia3Round16BSSE(&T[i], keyStr32, pIn8[i], 4);
+                        eia3_round16B(&T[i], keyStr32, pIn8[i], 4, use_gfni);
                         pIn8[i] = &pIn8[i][KEYSTR_ROUND_LEN];
                 }
 
@@ -784,8 +806,8 @@ void _zuc_eia3_4_buffer_sse(const void * const pKey[NUM_SSE_BUFS],
                         asm_ZucGenKeystream8B_sse(&keyStr32[4],
                                                   &singlePktState);
 
-                asm_Eia3RemainderSSE(&T[i], keyStr32, pIn8[i], remainBits,
-                                     128, 4);
+                eia3_remainder(&T[i], keyStr32, pIn8[i], remainBits,
+                               128, 4, use_gfni);
                 /* save the final MAC-I result */
                 *(pMacI[i]) = T[i];
         }
@@ -935,7 +957,7 @@ void _zuc_eia3_4_buffer_job(const void * const pKey[NUM_SSE_BUFS],
                 for (i = 0; i < NUM_SSE_BUFS; i++) {
                         if (job_in_lane[i] == NULL)
                                 continue;
-                        asm_Eia3Round16BSSE(&T[i], keyStr[i], pIn8[i], 4);
+                        eia3_round16B(&T[i], keyStr[i], pIn8[i], 4, use_gfni);
                         pIn8[i] = &pIn8[i][KEYSTR_ROUND_LEN];
                 }
         }
@@ -988,7 +1010,7 @@ void _zuc_eia3_4_buffer_job(const void * const pKey[NUM_SSE_BUFS],
                         else
                                 asm_ZucGenKeystream16B_sse(&keyStr32[4],
                                                            &singlePktState);
-                        asm_Eia3Round16BSSE(&T[i], keyStr32, pIn8[i], 4);
+                        eia3_round16B(&T[i], keyStr32, pIn8[i], 4, use_gfni);
                         pIn8[i] = &pIn8[i][KEYSTR_ROUND_LEN];
                 }
 
@@ -1000,8 +1022,8 @@ void _zuc_eia3_4_buffer_job(const void * const pKey[NUM_SSE_BUFS],
                         asm_ZucGenKeystream8B_sse(&keyStr32[4],
                                                   &singlePktState);
 
-                asm_Eia3RemainderSSE(&T[i], keyStr32, pIn8[i], remainBits,
-                                     128, 4);
+                eia3_remainder(&T[i], keyStr32, pIn8[i], remainBits,
+                               128, 4, use_gfni);
                 /* save the final MAC-I result */
                 *(pMacI[i]) = T[i];
         }
@@ -1125,7 +1147,8 @@ void _zuc256_eia3_4_buffer_job(const void * const pKey[NUM_SSE_BUFS],
 
                         if (job_in_lane[i] == NULL)
                                 continue;
-                        asm_Eia3Round16BSSE(tag, keyStr[i], pIn8[i], tag_size);
+                        eia3_round16B(tag, keyStr[i], pIn8[i], tag_size,
+                                      use_gfni);
                         pIn8[i] = &pIn8[i][KEYSTR_ROUND_LEN];
                 }
         }
@@ -1176,7 +1199,8 @@ void _zuc256_eia3_4_buffer_job(const void * const pKey[NUM_SSE_BUFS],
                         else
                                 asm_ZucGenKeystream16B_sse(&keyStr32[4],
                                                            &singlePktState);
-                        asm_Eia3Round16BSSE(tag, keyStr32, pIn8[i], tag_size);
+                        eia3_round16B(tag, keyStr32, pIn8[i],
+                                      tag_size, use_gfni);
                         pIn8[i] = &pIn8[i][KEYSTR_ROUND_LEN];
                 }
 
@@ -1188,8 +1212,8 @@ void _zuc256_eia3_4_buffer_job(const void * const pKey[NUM_SSE_BUFS],
                         asm_ZucGenKeystream_sse(&keyStr32[4],
                                                 &singlePktState, 1);
 
-                asm_Eia3RemainderSSE(tag, keyStr32, pIn8[i], remainBits,
-                                     256, tag_size);
+                eia3_remainder(tag, keyStr32, pIn8[i], remainBits,
+                               256, tag_size, use_gfni);
                 /* save the final MAC-I result */
                 memcpy(pMacI[i], tag, tag_size);
         }

@@ -32,4 +32,6 @@
 %define ZUC_KEYGEN16B_4 asm_ZucGenKeystream16B_4_gfni_sse
 %define ZUC_KEYGEN8B_4 asm_ZucGenKeystream8B_4_gfni_sse
 %define ZUC_KEYGEN4B_4 asm_ZucGenKeystream4B_4_gfni_sse
+%define ZUC_EIA3ROUND16B asm_Eia3Round16B_gfni_sse
+%define ZUC_EIA3REMAINDER asm_Eia3Remainder_gfni_sse
 %include "sse/zuc_x4_sse.asm"

@@ -32,7 +32,7 @@
 %define ZUC_KEYGEN16B_4 asm_ZucGenKeystream16B_4_sse_no_aesni
 %define ZUC_KEYGEN8B_4 asm_ZucGenKeystream8B_4_sse_no_aesni
 %define ZUC_KEYGEN4B_4 asm_ZucGenKeystream4B_4_sse_no_aesni
-%define ZUC_EIA3ROUND16B asm_Eia3Round16BSSE_no_aesni
-%define ZUC_EIA3REMAINDER asm_Eia3RemainderSSE_no_aesni
+%define ZUC_EIA3ROUND16B asm_Eia3Round16B_sse_no_aesni
+%define ZUC_EIA3REMAINDER asm_Eia3Remainder_sse_no_aesni
 %define USE_GFNI 0
 %include "sse/zuc_x4_sse.asm"
