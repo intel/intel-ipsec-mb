@@ -606,10 +606,14 @@ asm_avx512_lib_objs := \
 c_gcm_objs := gcm.o
 
 asm_noaesni_gcm_objs := \
-	gcm128_sse_no_aesni.o gcm192_sse_no_aesni.o gcm256_sse_no_aesni.o
+	gcm128_api_sse_no_aesni.o gcm192_api_sse_no_aesni.o gcm256_api_sse_no_aesni.o \
+	gcm128_sgl_api_sse_no_aesni.o gcm192_sgl_api_sse_no_aesni.o gcm256_sgl_api_sse_no_aesni.o \
+	gcm128_gmac_api_sse_no_aesni.o gcm192_gmac_api_sse_no_aesni.o gcm256_gmac_api_sse_no_aesni.o
 
 asm_sse_gcm_objs := \
-	aes128_gcm_by8_sse.o aes192_gcm_by8_sse.o aes256_gcm_by8_sse.o
+	gcm128_api_by8_sse.o gcm192_api_by8_sse.o gcm256_api_by8_sse.o \
+	gcm128_sgl_api_by8_sse.o gcm192_sgl_api_by8_sse.o gcm256_sgl_api_by8_sse.o \
+	gcm128_gmac_api_by8_sse.o gcm192_gmac_api_by8_sse.o gcm256_gmac_api_by8_sse.o
 
 asm_avx_gcm_objs := \
 	aes128_gcm_by8_avx.o aes192_gcm_by8_avx.o aes256_gcm_by8_avx.o

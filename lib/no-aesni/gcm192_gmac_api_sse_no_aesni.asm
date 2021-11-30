@@ -1,5 +1,5 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;  Copyright(c) 2018-2021 Intel Corporation All rights reserved.
+;  Copyright(c) 2018-2021, Intel Corporation All rights reserved.
 ;
 ;  Redistribution and use in source and binary forms, with or without
 ;  modification, are permitted provided that the following conditions
@@ -29,5 +29,4 @@
 
 %include "include/aesni_emu.inc"
 %define NO_AESNI
-%define GCM128_MODE 1
-%include "sse/gcm_sse.asm"
+%include "sse/gcm192_gmac_api_by8_sse.asm"
