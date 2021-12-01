@@ -270,14 +270,187 @@ static void fill_additional_hash_data(struct IMB_JOB *job,
         }
 }
 
+/* function to read env variables to import specific hash mode */
+static IMB_HASH_ALG hash_selection(void)
+{
+        const char *a = getenv("HASH");
+
+        if (a == NULL) {
+                return 0;
+        } else {
+                if  (strcmp(a, "IMB_AUTH_HMAC_SHA_1") == 0)
+                        return IMB_AUTH_HMAC_SHA_1;
+                else if (strcmp(a, "IMB_AUTH_HMAC_SHA_224") == 0)
+                        return IMB_AUTH_HMAC_SHA_224;
+                else if (strcmp(a, "IMB_AUTH_HMAC_SHA_256") == 0)
+                        return IMB_AUTH_HMAC_SHA_256;
+                else if (strcmp(a, "IMB_AUTH_HMAC_SHA_384") == 0)
+                        return IMB_AUTH_HMAC_SHA_384;
+                else if (strcmp(a, "IMB_AUTH_HMAC_SHA_512") == 0)
+                        return IMB_AUTH_HMAC_SHA_512;
+                else if (strcmp(a, "IMB_AUTH_AES_XCBC") == 0)
+                        return IMB_AUTH_AES_XCBC;
+                else if (strcmp(a, "IMB_AUTH_MD5") == 0)
+                        return IMB_AUTH_MD5;
+                else if (strcmp(a, "IMB_AUTH_NULL") == 0)
+                        return IMB_AUTH_NULL;
+                else if (strcmp(a, "IMB_AUTH_AES_GMAC") == 0)
+                        return IMB_AUTH_AES_GMAC;
+                else if (strcmp(a, "IMB_AUTH_CUSTOM") == 0)
+                        return IMB_AUTH_CUSTOM;
+                else if (strcmp(a, "IMB_AUTH_AES_CCM") == 0)
+                        return IMB_AUTH_AES_CCM;
+                else if (strcmp(a, "IMB_AUTH_AES_CMAC") == 0)
+                        return IMB_AUTH_AES_CMAC;
+                else if (strcmp(a, "IMB_AUTH_SHA_1") == 0)
+                        return IMB_AUTH_SHA_1;
+                else if (strcmp(a, "IMB_AUTH_SHA_224") == 0)
+                        return IMB_AUTH_SHA_224;
+                else if (strcmp(a, "IMB_AUTH_SHA_256") == 0)
+                        return IMB_AUTH_SHA_256;
+                else if (strcmp(a, "IMB_AUTH_SHA_384") == 0)
+                        return IMB_AUTH_SHA_384;
+                else if (strcmp(a, "IMB_AUTH_SHA_512") == 0)
+                        return IMB_AUTH_SHA_512;
+                else if (strcmp(a, "IMB_AUTH_AES_CMAC_BITLEN") == 0)
+                        return IMB_AUTH_AES_CMAC_BITLEN;
+                else if (strcmp(a, "IMB_AUTH_PON_CRC_BIP") == 0)
+                        return IMB_AUTH_PON_CRC_BIP;
+                else if (strcmp(a, "IMB_AUTH_ZUC_EIA3_BITLEN") == 0)
+                        return IMB_AUTH_ZUC_EIA3_BITLEN;
+                else if (strcmp(a, "IMB_AUTH_DOCSIS_CRC32") == 0)
+                        return IMB_AUTH_DOCSIS_CRC32;
+                else if (strcmp(a, "IMB_AUTH_SNOW3G_UIA2_BITLEN") == 0)
+                        return IMB_AUTH_SNOW3G_UIA2_BITLEN;
+                else if (strcmp(a, "IMB_AUTH_KASUMI_UIA1") == 0)
+                        return IMB_AUTH_KASUMI_UIA1;
+                else if (strcmp(a, "IMB_AUTH_AES_GMAC_128") == 0)
+                        return IMB_AUTH_AES_GMAC_128;
+                else if (strcmp(a, "IMB_AUTH_AES_GMAC_192") == 0)
+                        return IMB_AUTH_AES_GMAC_192;
+                else if (strcmp(a, "IMB_AUTH_AES_GMAC_256") == 0)
+                        return IMB_AUTH_AES_GMAC_256;
+                else if (strcmp(a, "IMB_AUTH_NULL") == 0)
+                        return IMB_AUTH_NULL;
+                else if (strcmp(a, "IMB_AUTH_AES_GMAC") == 0)
+                        return IMB_AUTH_AES_GMAC;
+                else if (strcmp(a, "IMB_AUTH_AES_CMAC_256") == 0)
+                        return IMB_AUTH_AES_CMAC_256;
+                else if (strcmp(a, "IMB_AUTH_AES_CCM") == 0)
+                        return IMB_AUTH_AES_CCM;
+                else if (strcmp(a, "IMB_AUTH_AES_CMAC") == 0)
+                        return IMB_AUTH_AES_CMAC;
+                else if (strcmp(a, "IMB_AUTH_POLY1305") == 0)
+                        return IMB_AUTH_POLY1305;
+                else if (strcmp(a, "IMB_AUTH_CHACHA20_POLY1305") == 0)
+                        return IMB_AUTH_CHACHA20_POLY1305;
+                else if (strcmp(a, "IMB_AUTH_CHACHA20_POLY1305_SGL") == 0)
+                        return IMB_AUTH_CHACHA20_POLY1305_SGL;
+                else if (strcmp(a, "IMB_AUTH_ZUC256_EIA3_BITLEN") == 0)
+                        return IMB_AUTH_ZUC256_EIA3_BITLEN;
+                else if (strcmp(a, "IMB_AUTH_SNOW_V_AEAD") == 0)
+                        return IMB_AUTH_SNOW_V_AEAD;
+                else if (strcmp(a, "IMB_AUTH_GCM_SGL") == 0)
+                        return IMB_AUTH_GCM_SGL;
+                else if (strcmp(a, "IMB_AUTH_CRC32_ETHERNET_FCS") == 0)
+                        return IMB_AUTH_CRC32_ETHERNET_FCS;
+                else if (strcmp(a, "IMB_AUTH_CRC32_SCTP") == 0)
+                        return IMB_AUTH_CRC32_SCTP;
+                else if (strcmp(a, "IMB_AUTH_CRC32_WIMAX_OFDMA_DATA") == 0)
+                        return IMB_AUTH_CRC32_WIMAX_OFDMA_DATA;
+                else if (strcmp(a, "IMB_AUTH_CRC24_LTE_A") == 0)
+                        return IMB_AUTH_CRC24_LTE_A;
+                else if (strcmp(a, "IMB_AUTH_CRC24_LTE_B") == 0)
+                        return IMB_AUTH_CRC24_LTE_B;
+                else if (strcmp(a, "IMB_AUTH_CRC16_X25") == 0)
+                        return IMB_AUTH_CRC16_X25;
+                else if (strcmp(a, "IMB_AUTH_CRC16_FP_DATA") == 0)
+                        return IMB_AUTH_CRC16_FP_DATA;
+                else if (strcmp(a, "IMB_AUTH_CRC11_FP_HEADER") == 0)
+                        return IMB_AUTH_CRC11_FP_HEADER;
+                else if (strcmp(a, "IMB_AUTH_CRC10_IUUP_DATA") == 0)
+                        return IMB_AUTH_CRC10_IUUP_DATA;
+                else if (strcmp(a, "IMB_AUTH_CRC8_WIMAX_OFDMA_HCS") == 0)
+                        return IMB_AUTH_CRC8_WIMAX_OFDMA_HCS;
+                else if (strcmp(a, "IMB_AUTH_CRC7_FP_HEADER") == 0)
+                        return IMB_AUTH_CRC7_FP_HEADER;
+                else if (strcmp(a, "IMB_AUTH_CRC6_IUUP_HEADER") == 0)
+                        return IMB_AUTH_CRC6_IUUP_HEADER;
+                else
+                        return 0;
+        }
+}
+
+/* function to read env variables to import specific cipher mode */
+static IMB_CIPHER_MODE cipher_selection(void)
+{
+        const char *a = getenv("CIPHER");
+
+        if (a == NULL) {
+                return 0;
+        } else {
+                if  (strcmp(a, "IMB_CIPHER_CBC") == 0)
+                        return IMB_CIPHER_CBC;
+                else if (strcmp(a, "IMB_CIPHER_CNTR") == 0)
+                        return IMB_CIPHER_CNTR;
+                else if (strcmp(a, "IMB_CIPHER_NULL") == 0)
+                        return IMB_CIPHER_NULL;
+                else if (strcmp(a, "IMB_CIPHER_DOCSIS_SEC_BPI") == 0)
+                        return IMB_CIPHER_DOCSIS_SEC_BPI;
+                else if (strcmp(a, "IMB_CIPHER_GCM") == 0)
+                        return IMB_CIPHER_GCM;
+                else if (strcmp(a, "IMB_CIPHER_CUSTOM") == 0)
+                        return IMB_CIPHER_CUSTOM;
+                else if (strcmp(a, "IMB_CIPHER_DES") == 0)
+                        return IMB_CIPHER_DES;
+                else if (strcmp(a, "IMB_CIPHER_DOCSIS_DES") == 0)
+                        return IMB_CIPHER_DOCSIS_DES;
+                else if (strcmp(a, "IMB_CIPHER_CCM") == 0)
+                        return IMB_CIPHER_CCM;
+                else if (strcmp(a, "IMB_CIPHER_DES3") == 0)
+                        return IMB_CIPHER_DES3;
+                else if (strcmp(a, "IMB_CIPHER_PON_AES_CNTR") == 0)
+                        return IMB_CIPHER_PON_AES_CNTR;
+                else if (strcmp(a, "IMB_CIPHER_ECB") == 0)
+                        return IMB_CIPHER_ECB;
+                else if (strcmp(a, "IMB_CIPHER_CNTR_BITLEN") == 0)
+                        return IMB_CIPHER_CNTR_BITLEN;
+                else if (strcmp(a, "IMB_CIPHER_ZUC_EEA3") == 0)
+                        return IMB_CIPHER_ZUC_EEA3;
+                else if (strcmp(a, "IMB_CIPHER_SNOW3G_UEA2_BITLEN") == 0)
+                        return IMB_CIPHER_SNOW3G_UEA2_BITLEN;
+                else if (strcmp(a, "IMB_CIPHER_KASUMI_UEA1_BITLEN") == 0)
+                        return IMB_CIPHER_KASUMI_UEA1_BITLEN;
+                else if (strcmp(a, "IMB_CIPHER_CBCS_1_9") == 0)
+                        return IMB_CIPHER_CBCS_1_9;
+                else if (strcmp(a, "IMB_CIPHER_CHACHA20") == 0)
+                        return IMB_CIPHER_CHACHA20;
+                else if (strcmp(a, "IMB_CIPHER_CHACHA20_POLY1305") == 0)
+                        return IMB_CIPHER_CHACHA20_POLY1305;
+                else if (strcmp(a, "IMB_CIPHER_CHACHA20_POLY1305_SGL") == 0)
+                        return IMB_CIPHER_CHACHA20_POLY1305_SGL;
+                else if (strcmp(a, "IMB_CIPHER_SNOW_V") == 0)
+                        return IMB_CIPHER_SNOW_V;
+                else if (strcmp(a, "IMB_CIPHER_SNOW_V_AEAD") == 0)
+                        return IMB_CIPHER_SNOW_V_AEAD;
+                else if (strcmp(a, "IMB_CIPHER_GCM_SGL") == 0)
+                        return IMB_CIPHER_GCM_SGL;
+                else
+                        return 0;
+        }
+}
+
 int LLVMFuzzerTestOneInput(const uint8_t *data, size_t dataSize)
 {
+        IMB_HASH_ALG hash;
+        IMB_CIPHER_MODE cipher;
+        char *ar;
+
         IMB_MGR *p_mgr = NULL;
         IMB_ARCH arch;
         unsigned i;
         const unsigned num_jobs = 20;
         const size_t buffsize = (32*1024*1024);
-
         /* Setting minimum datasize to always fill job structure  */
         if (dataSize < sizeof(IMB_JOB))
                 return 0;
@@ -288,17 +461,43 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t dataSize)
                 printf("Error allocating MB_MGR structure!\n");
                 return EXIT_FAILURE;
         }
+        ar = getenv("ARCH");
+        if (ar == NULL) {
+                init_mb_mgr_auto(p_mgr, &arch);
+        } else {
+                if (strcmp(ar, "avx") == 0)
+                        init_mb_mgr_avx(p_mgr);
+                else if (strcmp(ar, "avx2") == 0)
+                        init_mb_mgr_avx2(p_mgr);
+                else if (strcmp(ar, "avx512") == 0)
+                        init_mb_mgr_avx512(p_mgr);
+                else if (strcmp(ar, "sse") == 0)
+                        init_mb_mgr_sse(p_mgr);
+                else
+                        init_mb_mgr_auto(p_mgr, &arch);
+        }
 
-        init_mb_mgr_auto(p_mgr, &arch);
         IMB_JOB *job = NULL;
 
         for (i = 0; i < num_jobs; i++) {
                 void *buff;
 
+                hash = hash_selection();
+                cipher = cipher_selection();
                 job = IMB_GET_NEXT_JOB(p_mgr);
                 memcpy(job, data, sizeof(*job));
-                job->cipher_mode %= (IMB_CIPHER_NUM + 1);
-                job->hash_alg %= (IMB_AUTH_NUM + 1);
+                /*
+                 * setenv is invalid or unset - receive flag and fuzz random
+                 * else a specific algo has been selected to fuzz.
+                 */
+                if (hash == 0)
+                        job->hash_alg %= (IMB_AUTH_NUM + 1);
+                else
+                        job->hash_alg = hash;
+                if (cipher == 0)
+                        job->cipher_mode %= (IMB_CIPHER_NUM + 1);
+                else
+                        job->cipher_mode = cipher;
                 clamp_lengths(job, buffsize);
 
                 if (posix_memalign((void **)&buff, 64, (2*buffsize)))
