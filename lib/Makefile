@@ -545,7 +545,10 @@ asm_avx512_lib_objs := \
 	sha256_x16_avx512.o \
 	sha512_x8_avx512.o \
 	des_x16_avx512.o \
-	aes_cntr_by16_vaes_avx512.o \
+	aes_cntr_api_by16_vaes_avx512.o \
+	aes_cntr_bit_api_by16_vaes_avx512.o \
+	aes_cntr_ccm_api_by16_vaes_avx512.o \
+	aes_cntr_pon_api_by16_vaes_avx512.o \
 	pon_vaes_avx512.o \
 	aes_cbc_dec_by16_vaes_avx512.o \
 	aes_cbc_enc_vaes_avx512.o \

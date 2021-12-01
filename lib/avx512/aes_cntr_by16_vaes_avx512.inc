@@ -27,6 +27,9 @@
 ;  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+%ifndef AES_CNTR_VAES_AVX512_INC
+%define AES_CNTR_VAES_AVX512_INC
+
 %include "include/os.asm"
 %include "include/reg_sizes.asm"
 %include "include/mb_mgr_datastruct.asm"
@@ -39,10 +42,6 @@
 %include "include/cet.inc"
 mksection .rodata
 default rel
-
-align 16
-ONE:
-        dq     0x0000000000000001, 0x0000000000000000
 
 align 64
 SHUF_MASK:
@@ -1901,146 +1900,4 @@ APPEND(%%_initial_num_blocks_is_,%%i):
 
         mov     arg6, %%BIP ; Need to return BIP through argument
 %endmacro                       ; CNTR_PON_ENC_DEC
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;IMB_JOB * aes_cntr_ccm_128_vaes_avx512(IMB_JOB *job)
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-MKGLOBAL(aes_cntr_ccm_128_vaes_avx512,function,internal)
-aes_cntr_ccm_128_vaes_avx512:
-        endbranch64
-        FUNC_SAVE CNTR
-        ;; arg1 - [in] job
-        ;; arg2 - [in] NROUNDS
-        ;; arg3 - [in] Type of CNTR operation to do (CNTR/CNTR_BIT/CCM)
-        CNTR_ENC_DEC arg1, 9, CCM
-        FUNC_RESTORE CNTR
-
-        ret
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;IMB_JOB * aes_cntr_ccm_256_vaes_avx512(IMB_JOB *job)
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-MKGLOBAL(aes_cntr_ccm_256_vaes_avx512,function,internal)
-aes_cntr_ccm_256_vaes_avx512:
-        endbranch64
-        FUNC_SAVE CNTR
-        ;; arg1 - [in] job
-        ;; arg2 - [in] NROUNDS
-        ;; arg3 - [in] Type of CNTR operation to do (CNTR/CNTR_BIT/CCM)
-        CNTR_ENC_DEC arg1, 13, CCM
-        FUNC_RESTORE CNTR
-
-        ret
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;void aes_cntr_128_submit_vaes_avx512 (IMB_JOB *job)
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-MKGLOBAL(aes_cntr_128_submit_vaes_avx512,function,internal)
-aes_cntr_128_submit_vaes_avx512:
-        endbranch64
-        FUNC_SAVE CNTR
-        ;; arg1 - [in] job
-        ;; arg2 - [in] NROUNDS
-        ;; arg3 - [in] Type of CNTR operation to do (CNTR/CNTR_BIT)
-        CNTR_ENC_DEC arg1, 9, CNTR
-        FUNC_RESTORE CNTR
-
-        ret
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;void aes_cntr_192_submit_vaes_avx512 (IMB_JOB *job)
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-MKGLOBAL(aes_cntr_192_submit_vaes_avx512,function,internal)
-aes_cntr_192_submit_vaes_avx512:
-        endbranch64
-        FUNC_SAVE CNTR
-        ;; arg1 - [in] job
-        ;; arg2 - [in] NROUNDS
-        ;; arg3 - [in] Type of CNTR operation to do (CNTR/CNTR_BIT)
-        CNTR_ENC_DEC arg1, 11, CNTR
-        FUNC_RESTORE CNTR
-
-        ret
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;void aes_cntr_256_submit_vaes_avx512 (IMB_JOB *job)
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-MKGLOBAL(aes_cntr_256_submit_vaes_avx512,function,internal)
-aes_cntr_256_submit_vaes_avx512:
-        endbranch64
-        FUNC_SAVE CNTR
-        ;; arg1 - [in] job
-        ;; arg2 - [in] NROUNDS
-        ;; arg3 - [in] Type of CNTR operation to do (CNTR/CNTR_BIT)
-        CNTR_ENC_DEC arg1, 13, CNTR
-        FUNC_RESTORE CNTR
-
-        ret
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;void aes_cntr_bit_128_submit_vaes_avx512 (IMB_JOB *job)
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-MKGLOBAL(aes_cntr_bit_128_submit_vaes_avx512,function,internal)
-aes_cntr_bit_128_submit_vaes_avx512:
-        endbranch64
-        FUNC_SAVE CNTR_BIT
-        ;; arg1 - [in] job
-        ;; arg2 - [in] NROUNDS
-        ;; arg3 - [in] Type of CNTR operation to do (CNTR/CNTR_BIT)
-        CNTR_ENC_DEC arg1, 9, CNTR_BIT
-        FUNC_RESTORE CNTR_BIT
-
-        ret
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;void aes_cntr_bit_192_submit_vaes_avx512 (IMB_JOB *job)
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-MKGLOBAL(aes_cntr_bit_192_submit_vaes_avx512,function,internal)
-aes_cntr_bit_192_submit_vaes_avx512:
-        endbranch64
-        FUNC_SAVE CNTR_BIT
-        ;; arg1 - [in] job
-        ;; arg2 - [in] NROUNDS
-        ;; arg3 - [in] Type of CNTR operation to do (CNTR/CNTR_BIT)
-        CNTR_ENC_DEC arg1, 11, CNTR_BIT
-        FUNC_RESTORE CNTR_BIT
-
-        ret
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;void aes_cntr_bit_256_submit_vaes_avx512 (IMB_JOB *job)
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-MKGLOBAL(aes_cntr_bit_256_submit_vaes_avx512,function,internal)
-aes_cntr_bit_256_submit_vaes_avx512:
-        endbranch64
-        FUNC_SAVE CNTR_BIT
-        ;; arg1 - [in] job
-        ;; arg2 - [in] NROUNDS
-        ;; arg3 - [in] Type of CNTR operation to do (CNTR/CNTR_BIT)
-        CNTR_ENC_DEC arg1, 13, CNTR_BIT
-        FUNC_RESTORE CNTR_BIT
-
-        ret
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;void aes_cntr_pon_enc_128_vaes_avx512 (void *src, void *dst, void *iv, void *keys, uint64_t length, uint32_t *bip)
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-MKGLOBAL(aes_cntr_pon_enc_128_vaes_avx512,function,internal)
-aes_cntr_pon_enc_128_vaes_avx512:
-        endbranch64
-        CNTR_PON_ENC_DEC ENCRYPT
-
-        ret
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;void aes_cntr_pon_dec_128_vaes_avx512 (void *src, void *dst, void *iv, void *keys, uint64_t length, uint32_t *bip)
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-MKGLOBAL(aes_cntr_pon_dec_128_vaes_avx512,function,internal)
-aes_cntr_pon_dec_128_vaes_avx512:
-        endbranch64
-
-        CNTR_PON_ENC_DEC DECRYPT
-
-        ret
-
-mksection stack-noexec
+%endif  ; AS_CNTR_VAES_AVX512_INC
