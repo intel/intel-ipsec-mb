@@ -26,8 +26,6 @@
 ;;
 
 extern idx_rows_avx512
-extern all_7fs
-extern all_80s
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Parallel lookup 64x8-bits with table to be loaded from memory (AVX-512 only)
@@ -123,6 +121,34 @@ extern all_80s
 
 %endmacro
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Parallel lookup 64x8-bits with table already loaded into registers (AVX512-VBMI)
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+%macro LOOKUP8_64_AVX512_VBMI_4_MAP_TABLES 10
+%define %%INDICES           %1  ;; [in] zmm register with values for lookup
+%define %%RET_VALUES        %2  ;; [out] zmm register filled with looked up values
+%define %%HIGH_BIT          %3  ;; [clobbered] temporary zmm register
+%define %%ZTMP1             %4  ;; [clobbered] temporary zmm register
+%define %%ZTMP2             %5  ;; [clobbered] temporary zmm register
+%define %%MAP_TAB_0         %6  ;; [in] lookup values for bytes eq 0-3f
+%define %%MAP_TAB_1         %7  ;; [in] lookup values for bytes eq 40-7f
+%define %%MAP_TAB_2         %8  ;; [in] lookup values for bytes eq 80-bf
+%define %%MAP_TAB_3         %9  ;; [in] lookup values for bytes eq c0-ff
+%define %%KR1               %10 ;; [clobbered] temporary k-register
+
+        vmovdqa64       %%ZTMP1, %%INDICES
+        vmovdqa64       %%ZTMP2, %%INDICES
+
+        vpmovb2m        %%KR1, %%INDICES ; Moves MSB to %%KR1
+        ; Permutes the bytes of tables based on bits 0-6 of indices (ZTMP1/2),
+        ; and chooses between table 1 or 2 based on bit 7
+        vpermi2b        %%ZTMP1, %%MAP_TAB_0, %%MAP_TAB_1
+        vpermi2b        %%ZTMP2, %%MAP_TAB_2, %%MAP_TAB_3
+        ; Blends results based on MSB of indices
+        vpblendmb       %%RET_VALUES{%%KR1}, %%ZTMP1, %%ZTMP2
+
+%endmacro
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Parallel lookup 64x8-bits with table to be loaded from memory (AVX512-VBMI)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -144,47 +170,8 @@ extern all_80s
         vmovdqu64       %%MAP_TAB_2, [%%TABLE + 64*2]
         vmovdqu64       %%MAP_TAB_3, [%%TABLE + 64*3]
 
-        vpandq          %%ZTMP1, %%INDICES, [rel all_7fs] ; 7 LSB on each byte
-        vpandq          %%HIGH_BIT, %%INDICES, [rel all_80s] ; 1 MSB on each byte
-        vmovdqa64       %%ZTMP2, %%ZTMP1
-
-        vpxorq          %%RET_VALUES, %%RET_VALUES
-        vpcmpb          %%KR1, %%HIGH_BIT, %%RET_VALUES, 4
-        ; Permutes the bytes of tables based on bits 0-5 of indices (ZTMP1/2),
-        ; and chooses between table 1 or 2 based on bit 6
-        vpermi2b        %%ZTMP1, %%MAP_TAB_0, %%MAP_TAB_1
-        vpermi2b        %%ZTMP2, %%MAP_TAB_2, %%MAP_TAB_3
-        ; Blends results based on MSB of indices
-        vpblendmb       %%RET_VALUES{%%KR1}, %%ZTMP1, %%ZTMP2
-
-%endmacro
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Parallel lookup 64x8-bits with table already loaded into registers (AVX512-VBMI)
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-%macro LOOKUP8_64_AVX512_VBMI_4_MAP_TABLES 10
-%define %%INDICES           %1  ;; [in] zmm register with values for lookup
-%define %%RET_VALUES        %2  ;; [out] zmm register filled with looked up values
-%define %%HIGH_BIT          %3  ;; [clobbered] temporary zmm register
-%define %%ZTMP1             %4  ;; [clobbered] temporary zmm register
-%define %%ZTMP2             %5  ;; [clobbered] temporary zmm register
-%define %%MAP_TAB_0         %6  ;; [in] lookup values for bytes eq 0-3f
-%define %%MAP_TAB_1         %7  ;; [in] lookup values for bytes eq 40-7f
-%define %%MAP_TAB_2         %8  ;; [in] lookup values for bytes eq 80-bf
-%define %%MAP_TAB_3         %9  ;; [in] lookup values for bytes eq c0-ff
-%define %%KR1               %10 ;; [clobbered] temporary k-register
-
-        vpandq          %%ZTMP1, %%INDICES, [rel all_7fs] ; 7 LSB on each byte
-        vpandq          %%HIGH_BIT, %%INDICES, [rel all_80s] ; 1 MSB on each byte
-        vmovdqa64       %%ZTMP2, %%ZTMP1
-
-        vpxorq          %%RET_VALUES, %%RET_VALUES
-        vpcmpb          %%KR1, %%HIGH_BIT, %%RET_VALUES, 4
-        ; Permutes the bytes of tables based on bits 0-5 of indices (ZTMP1/2),
-        ; and chooses between table 1 or 2 based on bit 6
-        vpermi2b        %%ZTMP1, %%MAP_TAB_0, %%MAP_TAB_1
-        vpermi2b        %%ZTMP2, %%MAP_TAB_2, %%MAP_TAB_3
-        ; Blends results based on MSB of indices
-        vpblendmb       %%RET_VALUES{%%KR1}, %%ZTMP1, %%ZTMP2
-
+        LOOKUP8_64_AVX512_VBMI_4_MAP_TABLES %%INDICES, %%RET_VALUES, %%HIGH_BIT, \
+                                            %%ZTMP1, %%ZTMP2, \
+                                            %%MAP_TAB_0, %%MAP_TAB_1, \
+                                            %%MAP_TAB_2, %%MAP_TAB_3, %%KR1
 %endmacro
