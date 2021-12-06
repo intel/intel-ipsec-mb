@@ -346,6 +346,8 @@ endstruc
         LOAD_STORE_4x1 4, 5, 6, 7, OUT, %%IDX, %%ZIV04_07, %%TMP0, %%TMP1, STORE
         LOAD_STORE_4x1 8, 9, 10, 11, OUT, %%IDX, %%ZIV08_11, %%TMP0, %%TMP1, STORE
 
+        add     %%IDX, %%OFFSET
+
 %%encrypt_12_done:
         ;; update in/out pointers
         vpbroadcastq    %%ZTMP2, %%IDX
@@ -382,8 +384,13 @@ endstruc
 %define %%IN    ARG + _aesarg_in
 %define %%OUT   ARG + _aesarg_out
 
+        ;; set len to 16 if < 160 as below
+        ;; division will fail in this case
+        cmp     LEN, 160
+        jb      %%skip_len_cal
+
         ;; convert CBCS length to standard number of CBC blocks
-        ;; ((num_bytes + 9 blocks) / 160) = num blocks to decrypt
+        ;; ((num_bytes + 9 blocks) / 160) = num blocks to encrypt
 %ifdef LINUX
         ;; save rdx, only on Linux, as for Windows, rdx = len, which is updated here
         mov     IA1, rdx
@@ -398,7 +405,12 @@ endstruc
 %ifdef LINUX
         mov     rdx, IA1        ;; restore rdx
 %endif
+        jmp %%cbcs_enc_start
 
+%%skip_len_cal:
+        mov     LEN, 16
+
+%%cbcs_enc_start:
         ;; load IV's per lane
         vmovdqa64       ZIV00_03, [%%IV + 16*0]
         vmovdqa64       ZIV04_07, [%%IV + 16*4]

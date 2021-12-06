@@ -70,9 +70,6 @@ SUBMIT_JOB_AES_CBCS_ENC:
 
         mov     [state + _aes_job_in_lane + lane*8], job
 
-        mov     tmp, 0xfff
-        kmovq   k3, tmp
-
         ;; Update lane len
         vpbroadcastq    zmm5, len
         lea             tmp, [rel index_to_lane16_mask]
@@ -87,8 +84,8 @@ SUBMIT_JOB_AES_CBCS_ENC:
         vmovdqa64 zmm6{k1}, zmm5
         vmovdqa64 zmm7{k2}, zmm5
 
-        vmovdqa64 [state + _aes_lens_64]{k3}, zmm6
-        vmovdqa64 [state + _aes_lens_64 + 64]{k3}, zmm7
+        vmovdqa64 [state + _aes_lens_64], zmm6
+        vmovdqa64 [state + _aes_lens_64 + 64], ymm7
 
         ;; Update input pointer
         mov     tmp, [job + _src]
@@ -129,11 +126,36 @@ SUBMIT_JOB_AES_CBCS_ENC:
         or	len2, len2
 	jz	len_is_0
 
+        ;; Subtract min len from all jobs
+        ;; In CBCS we need to find the min number of blocks to process
+        ;; then subtract min_num_blocks * 160 from all job lens
+
+        ; Round up to multiple of 16*10
+        ; N = (length + 159) / 160 ;; Number of 160-byte blocks
+        mov     rax, len2
+        xor     rdx, rdx ;; zero rdx for div
+        add     rax, 159
+        mov     tmp3, 160
+        div     tmp3
+        ; Number of 160-byte blocks in rax
+        mov     tmp3, 160
+        mul     tmp3
+        ; Number of bytes to process in rax
+        mov     len2, rax
+
         vpbroadcastq    zmm5, len2
         vpsubq          zmm6, zmm6, zmm5
         vpsubq          zmm7, zmm7, zmm5
-        vmovdqa64       [state + _aes_lens_64]{k3}, zmm6
-        vmovdqa64       [state + _aes_lens_64 + 64]{k3}, zmm7
+
+        ;; zero any lens < 0 before writing back
+        vpxorq          zmm5, zmm5
+        vpcmpq          k1, zmm6, zmm5, 0x1
+        vpcmpq          k2, ymm7, ymm5, 0x1
+        vmovdqa64       zmm6{k1}, zmm5
+        vmovdqa64       ymm7{k2}, ymm5
+
+        vmovdqa64       [state + _aes_lens_64], zmm6
+        vmovdqa64       [state + _aes_lens_64 + 64], ymm7
 
         ; "state" and "args" are the same address, arg1
         ; len is arg2

@@ -63,9 +63,9 @@ FLUSH_JOB_AES_CBCS_ENC:
         ; find a lane with a non-null job
         vpxord          zmm0, zmm0, zmm0
         vmovdqu64       zmm1, [state + _aes_job_in_lane + (0*PTR_SZ)]
-        vmovdqu64       zmm2, [state + _aes_job_in_lane + (8*PTR_SZ)]
+        vmovdqu64       ymm2, [state + _aes_job_in_lane + (8*PTR_SZ)]
         vpcmpq          k1, zmm1, zmm0, 4 ; NEQ
-        vpcmpq          k2, zmm2, zmm0, 4 ; NEQ
+        vpcmpq          k2, ymm2, ymm0, 4 ; NEQ
         kmovw           DWORD(tmp), k1
         kmovw           DWORD(tmp1), k2
         mov             DWORD(tmp2), DWORD(tmp1)
@@ -86,15 +86,12 @@ FLUSH_JOB_AES_CBCS_ENC:
         mov             tmp, [state + _aes_args_in + tmp2*8]
         vpbroadcastq    zmm1, tmp
         vmovdqa64       [state + _aes_args_in + (0*PTR_SZ)]{k4}, zmm1
-        vmovdqa64       [state + _aes_args_in + (8*PTR_SZ)]{k5}, zmm1
+        vmovdqa64       [state + _aes_args_in + (8*PTR_SZ)]{k5}, ymm1
         ;; - out pointer
         mov             tmp, [state + _aes_args_out + tmp2*8]
         vpbroadcastq    zmm1, tmp
         vmovdqa64       [state + _aes_args_out + (0*PTR_SZ)]{k4}, zmm1
-        vmovdqa64       [state + _aes_args_out + (8*PTR_SZ)]{k5}, zmm1
-
-        mov             tmp, 0xfff
-        kmovq           k3, tmp
+        vmovdqa64       [state + _aes_args_out + (8*PTR_SZ)]{k5}, ymm1
 
         ;; - set len to MAX
         vmovdqa64 zmm6, [state + _aes_lens_64]
@@ -106,8 +103,8 @@ FLUSH_JOB_AES_CBCS_ENC:
         vmovdqa64 zmm6{k4}, zmm1
         vmovdqa64 zmm7{k5}, zmm1
 
-        vmovdqa64 [state + _aes_lens_64]{k3}, zmm6
-        vmovdqa64 [state + _aes_lens_64 + 64]{k3}, zmm7
+        vmovdqa64 [state + _aes_lens_64], zmm6
+        vmovdqa64 [state + _aes_lens_64 + 64], ymm7
 
         ;; scale up good lane idx before copying IV and keys
         shl             tmp2, 4
@@ -115,7 +112,7 @@ FLUSH_JOB_AES_CBCS_ENC:
         ;; - copy IV and round keys to null lanes
         COPY_IV_KEYS_TO_NULL_LANES tmp2, tmp1, tmp3, xmm4, xmm5, k6
 
-        ;; Update lens and find min for lanes 8-15
+        ;; Update lens and find min for all lanes
         vpsllq          zmm8, zmm6, 4
         vpsllq          zmm9, zmm7, 4
         vporq           zmm8, zmm8, [rel index_to_lane16]
@@ -135,11 +132,36 @@ FLUSH_JOB_AES_CBCS_ENC:
         or	len2, len2
 	jz	len_is_0
 
+        ;; Subtract min len from all jobs
+        ;; In CBCS we need to find the min number of blocks to process
+        ;; then subtract min_num_blocks * 160 from all job lens
+
+        ; Round up to multiple of 16*10
+        ; N = (length + 159) / 160 ;; Number of 160-byte blocks
+        mov     rax, len2
+        xor     rdx, rdx ;; zero rdx for div
+        add     rax, 159
+        mov     tmp3, 160
+        div     tmp3
+        ; Number of 160-byte blocks in rax
+        mov     tmp3, 160
+        mul     tmp3
+        ; Number of bytes to process in rax
+        mov     len2, rax
+
         vpbroadcastq    zmm5, len2
         vpsubq          zmm6, zmm6, zmm5
         vpsubq          zmm7, zmm7, zmm5
-        vmovdqa64       [state + _aes_lens_64]{k3}, zmm6
-        vmovdqa64       [state + _aes_lens_64 + 64]{k3}, zmm7
+
+        ;; zero any lens < 0 before writing back
+        vpxorq          zmm5, zmm5
+        vpcmpq          k1, zmm6, zmm5, 0x1
+        vpcmpq          k2, ymm7, ymm5, 0x1
+        vmovdqa64       zmm6{k1}, zmm5
+        vmovdqa64       ymm7{k2}, ymm5
+
+        vmovdqa64       [state + _aes_lens_64], zmm6
+        vmovdqa64       [state + _aes_lens_64 + 64], ymm7
 
         ; "state" and "args" are the same address, arg1
         ; len is arg2
