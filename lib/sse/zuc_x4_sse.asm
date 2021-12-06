@@ -744,6 +744,8 @@ mksection .text
 %define %%CONSTANTS rel EK256_d64
 %elif %%TAG_SIZE == 4
 %define %%CONSTANTS rel EK256_EIA3_4
+%elif %%TAG_SIZE == 8
+%define %%CONSTANTS rel EK256_EIA3_8
 %endif
     ; s0 - s3
     pxor           %%LFSR0_3, %%LFSR0_3
@@ -901,6 +903,10 @@ mksection .text
 
 %define %%W     %%XTMP10
 %define %%X3    %%XTMP11
+%define %%KSTR1 %%XTMP12
+%define %%KSTR2 %%XTMP13
+%define %%KSTR3 %%XTMP14
+%define %%KSTR4 %%XTMP15
 %define %%MASK_31 %%XTMP16
 
         FUNC_SAVE
@@ -1036,46 +1042,44 @@ mksection .text
 %define %%NUM_ROUNDS 0
 %endif
 
-%if %%NUM_ROUNDS != 0
-        mov     r10, rsp
-        sub     rsp, (%%NUM_ROUNDS * 16)
-        and     rsp, -16
-%endif
-
 %assign %%N 1
 %rep %%NUM_ROUNDS
         BITS_REORG4 pState, %%N, no_reg, %%XTMP1, %%XTMP2, %%XTMP3, %%XTMP4, %%XTMP5, \
-                    %%XTMP6, %%XTMP7, %%XTMP8, %%XTMP9, %%XTMP10, %%X3
+                    %%XTMP6, %%XTMP7, %%XTMP8, %%XTMP9, %%XTMP10, APPEND(%%KSTR, %%N)
         NONLIN_FUN4 pState, %%XTMP1, %%XTMP2, %%XTMP3, \
                     %%XTMP4, %%XTMP5, %%XTMP6, %%XTMP7, %%W
         ; OFS_X3 XOR W and store in stack
-        pxor        %%X3, %%W
-        movdqa      [rsp + (%%N-1)*16], %%X3
+        pxor        APPEND(%%KSTR, %%N), %%W
         LFSR_UPDT4  pState, %%N, no_reg, %%XTMP1, %%XTMP2, %%XTMP3, %%XTMP4, %%XTMP5, %%XTMP6, \
                     %%MASK_31, %%XTMP8, work
 %assign %%N (%%N + 1)
 %endrep
 
 %if %%TAG_SIZE == 4
-        movdqa  xmm0, [rsp]
-        movdqa  [%%TAGS], xmm0
+        movdqa  [%%TAGS], %%KSTR1
         REORDER_LFSR pState, 1
-%elif %%TAG_SIZE == 8 ;;TODO
+%elif %%TAG_SIZE == 8
+        ; Transpose the keystream and store the 8 bytes per buffer consecutively,
+        ; being the initial tag for each buffer
+        pshufd  %%KSTR1, %%KSTR1, 0xD8
+        pshufd  %%KSTR2, %%KSTR2, 0xD8
+
+        movdqa  %%XTMP1, %%KSTR1
+        punpckldq   %%XTMP1, %%KSTR2
+        punpckldq   %%KSTR1, %%KSTR2
+        movdqa  [%%TAGS], %%XTMP1
+        movdqa  [%%TAGS + 16], %%KSTR1
+        REORDER_LFSR pState, 2
 %elif %%TAG_SIZE == 16 ;;TODO
 %endif
 
-%if %%NUM_ROUNDS != 0
-        mov     rsp, r10
-%endif
-
     FUNC_RESTORE
-
-    ret
 %endmacro
 
 MKGLOBAL(ZUC128_INIT_4,function,internal)
 ZUC128_INIT_4:
         ZUC_INIT_4 128, 0
+        ret
 
 MKGLOBAL(ZUC256_INIT_4,function,internal)
 ZUC256_INIT_4:
@@ -1086,16 +1090,22 @@ ZUC256_INIT_4:
     cmp tag_sz, 0
     je  init_for_cipher
 
-    ;; TODO: Check for 8B and 16B tags
-    cmp tag_sz, 4
-    je init_for_auth_tag_4B
+    ;; TODO: Check for 16B tags
+    cmp tag_sz, 8
+    je init_for_auth_tag_8B
+    jb init_for_auth_tag_4B
 
 init_for_cipher:
     ZUC_INIT_4 256, 0
+    ret
 
 init_for_auth_tag_4B:
     ZUC_INIT_4 256, 4, tags
+    ret
 
+init_for_auth_tag_8B:
+    ZUC_INIT_4 256, 8, tags
+    ret
 ;
 ; Generate N*4 bytes of keystream
 ; for 4 buffers (where N is number of rounds)
