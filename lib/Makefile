@@ -81,7 +81,7 @@ INCLUDES := $(foreach i,$(INCLUDE_DIRS),-I $i)
 
 CC ?= gcc
 # MINGW should be non-zero value if detected
-MINGW ?= $(shell $(CC) -dM -E - < /dev/null | grep -i mingw | wc -l)
+MINGW ?= $(shell $(CC) -dM -E - < /dev/null | grep -i mingw | wc -l | sed 's/^ *//')
 
 # if "-z ibt" is supported then assume "-z shstk, -z cet-report=error" are also supported
 # "-fcf-protection" needs to be checked separately

@@ -35,7 +35,7 @@ USE_YASM ?= n
 YASM ?= yasm
 NASM ?= nasm
 
-MINGW ?= $(shell $(CC) -dM -E - < /dev/null | grep -i mingw | wc -l)
+MINGW ?= $(shell $(CC) -dM -E - < /dev/null | grep -i mingw | wc -l | sed 's/^ *//')
 
 CFLAGS = -MMD -D_GNU_SOURCE -DNO_COMPAT_IMB_API_053 \
 	-W -Wall -Wextra -Wmissing-declarations -Wpointer-arith \

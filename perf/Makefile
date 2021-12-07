@@ -28,7 +28,7 @@ INSTPATH ?= /usr/include/intel-ipsec-mb.h
 LIB_DIR ?= ../lib
 NASM ?= nasm
 
-MINGW ?= $(shell $(CC) -dM -E - < /dev/null | grep -i mingw | wc -l)
+MINGW ?= $(shell $(CC) -dM -E - < /dev/null | grep -i mingw | wc -l | sed 's/^ *//')
 
 CFLAGS = -D_GNU_SOURCE -DNO_COMPAT_IMB_API_053 $(INCLUDES) \
 	-W -Wall -Wextra -Wmissing-declarations -Wpointer-arith \
