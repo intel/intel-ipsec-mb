@@ -235,8 +235,6 @@ endstruc
 
 mksection .text
 
-%define MASK31  xmm12
-
 %define OFS_R1  (16*16)
 %define OFS_R2  (OFS_R1 + 16)
 %define OFS_X0  (OFS_R2 + 16)
@@ -353,7 +351,7 @@ mksection .text
 ;;
 ;; Store LFSR register to memory from XMM register
 ;;
-%macro store_lfsr 5
+%macro STORE_LFSR 5
 %define %%STATE     %1 ;; [in] ZUC state
 %define %%ROUND_NUM %2 ;; [in] GP Register with Round number
 %define %%REG_IDX   %3 ;; [in] Register index to load (immediate)
@@ -587,91 +585,98 @@ mksection .text
 %endmacro
 
 ;
-;   add_mod31()
-;       add two 32-bit args and reduce mod (2^31-1)
-;   params
-;       %1  - arg1/res
-;       %2  - arg2
-;   uses
-;       xmm2
-;   return
-;       %1
-%macro  add_mod31   2
-    paddd       %1, %2
-    movdqa     xmm2, %1
-    psrld      xmm2, 31
-    pand        %1, MASK31
-    paddd       %1, xmm2
+; Add two 32-bit args and reduce mod (2^31-1)
+;
+%macro  ADD_MOD31 4
+%define %%IN_OUT        %1 ; [in/out] XMM register with first input and output
+%define %%IN2           %2 ; [in] XMM register with second input
+%define %%XTMP          %3 ; [clobbered] Temporary XMM register
+%define %%MASK31        %4 ; [in] XMM register containing 0x7FFFFFFF's in all dwords
+        paddd   %%IN_OUT, %%IN2
+        movdqa  %%XTMP, %%IN_OUT
+        psrld   %%XTMP, 31
+        pand    %%IN_OUT, %%MASK31
+        paddd   %%IN_OUT, %%XTMP
 %endmacro
 
 ;
-;   rot_mod31()
-;       rotate (mult by pow of 2) 32-bit arg and reduce mod (2^31-1)
-;   params
-;       %1  - arg
-;       %2  - # of bits
-;   uses
-;       xmm2
-;   return
-;       %1
-%macro  rot_mod31   2
+; Rotate (mult by pow of 2) 32-bit arg and reduce mod (2^31-1)
+;
+%macro  ROT_MOD31   4
+%define %%IN_OUT        %1 ; [in/out] XMM register with input and output
+%define %%XTMP          %2 ; [clobbered] Temporary XMM register
+%define %%MASK31        %3 ; [in] XMM register containing 0x7FFFFFFF's in all dwords
+%define %%N_BITS        %4 ; [immediate] Number of bits to rotate for each dword
 
-    movdqa     xmm2, %1
-    pslld      xmm2, %2
-    psrld      %1, (31 - %2)
+        movdqa %%XTMP, %%IN_OUT
+        pslld  %%XTMP, %%N_BITS
+        psrld  %%IN_OUT, (31 - %%N_BITS)
 
-    por         %1, xmm2
-    pand        %1, MASK31
+        por    %%IN_OUT, %%XTMP
+        pand   %%IN_OUT, %%MASK31
 %endmacro
 
 ;
-;   lfsr_updt4()
+; Update LFSR registers, calculating S_16
 ;
-%macro  lfsr_updt4  4
+; S_16 = [ 2^15*S_15 + 2^17*S_13 + 2^21*S_10 + 2^20*S_4 + (1 + 2^8)*S_0 ] mod (2^31 - 1)
+; If init mode, add W to the calculation above.
+; S_16 -> S_15 for next round
+;
+%macro  LFSR_UPDT4  12
 %define %%STATE     %1 ; [in] ZUC state
 %define %%ROUND_NUM %2 ; [in] Round number
 %define %%TMP       %3 ; [clobbered] Temporary GP register (used when ROUND_NUM is a register)
-%define %%W         %4 ; [in/clobbered] XMM register to contain W for all lanes
-    ;
-    ; xmm1  = LFSR_S0
-    ; xmm4  = LFSR_S4
-    ; xmm10 = LFSR_S10
-    ; xmm13 = LFSR_S13
-    ; xmm15 = LFSR_S15
-    ;
-%ifnum %%ROUND_NUM
-    movdqa      xmm1,  [%%STATE + (( 0 + %%ROUND_NUM) % 16)*16]
-    movdqa      xmm4,  [%%STATE + (( 4 + %%ROUND_NUM) % 16)*16]
-    movdqa      xmm10, [%%STATE + ((10 + %%ROUND_NUM) % 16)*16]
-    movdqa      xmm13, [%%STATE + ((13 + %%ROUND_NUM) % 16)*16]
-    movdqa      xmm15, [%%STATE + ((15 + %%ROUND_NUM) % 16)*16]
-%else
-    LOAD_LFSR %%STATE, %%ROUND_NUM, 0, %%TMP, xmm1
-    LOAD_LFSR %%STATE, %%ROUND_NUM, 4, %%TMP, xmm4
-    LOAD_LFSR %%STATE, %%ROUND_NUM, 10, %%TMP, xmm10
-    LOAD_LFSR %%STATE, %%ROUND_NUM, 13, %%TMP, xmm13
-    LOAD_LFSR %%STATE, %%ROUND_NUM, 15, %%TMP, xmm15
-%endif
-
-    ; Calculate LFSR feedback
-    add_mod31   %%W, xmm1
-    rot_mod31   xmm1, 8
-    add_mod31   %%W, xmm1
-    rot_mod31   xmm4, 20
-    add_mod31   %%W, xmm4
-    rot_mod31   xmm10, 21
-    add_mod31   %%W, xmm10
-    rot_mod31   xmm13, 17
-    add_mod31   %%W, xmm13
-    rot_mod31   xmm15, 15
-    add_mod31   %%W, xmm15
+%define %%LFSR_0    %4  ; [clobbered] LFSR_0
+%define %%LFSR_4    %5  ; [clobbered] LFSR_2
+%define %%LFSR_10   %6  ; [clobbered] LFSR_5
+%define %%LFSR_13   %7  ; [clobbered] LFSR_7
+%define %%LFSR_15   %8  ; [clobbered] LFSR_9
+%define %%XTMP      %9  ; [clobbered] Temporary XMM register
+%define %%MASK_31   %10 ; [in] Mask_31
+%define %%W         %11 ; [in/clobbered] In init mode, contains W for all 4 lanes
+%define %%MODE      %12 ; [constant] "init" / "work" mode
 
 %ifnum %%ROUND_NUM
-    movdqa      [%%STATE + (( 0 + %%ROUND_NUM) % 16)*16], %%W
+        movdqa  %%LFSR_0,  [%%STATE + (( 0 + %%ROUND_NUM) % 16)*16]
+        movdqa  %%LFSR_4,  [%%STATE + (( 4 + %%ROUND_NUM) % 16)*16]
+        movdqa  %%LFSR_10, [%%STATE + ((10 + %%ROUND_NUM) % 16)*16]
+        movdqa  %%LFSR_13, [%%STATE + ((13 + %%ROUND_NUM) % 16)*16]
+        movdqa  %%LFSR_15, [%%STATE + ((15 + %%ROUND_NUM) % 16)*16]
 %else
-    store_lfsr %%STATE, %%ROUND_NUM, 0, %%TMP, %%W
+        LOAD_LFSR %%STATE, %%ROUND_NUM, 0, %%TMP, %%LFSR_0
+        LOAD_LFSR %%STATE, %%ROUND_NUM, 4, %%TMP, %%LFSR_4
+        LOAD_LFSR %%STATE, %%ROUND_NUM, 10, %%TMP, %%LFSR_10
+        LOAD_LFSR %%STATE, %%ROUND_NUM, 13, %%TMP, %%LFSR_13
+        LOAD_LFSR %%STATE, %%ROUND_NUM, 15, %%TMP, %%LFSR_15
 %endif
-    ; LFSR_S16 = (LFSR_S15++) = eax
+
+    ; Calculate LFSR feedback (S_16)
+
+    ; In Init mode, W is added to the S_16 calculation
+%ifidn %%MODE, init
+        ADD_MOD31 %%W, %%LFSR_0, %%XTMP, %%MASK_31
+%else
+        movdqa  %%W, %%LFSR_0
+%endif
+        ; Calculate LFSR feedback
+        ROT_MOD31   %%LFSR_0, %%XTMP, %%MASK_31, 8
+        ADD_MOD31   %%W, %%LFSR_0, %%XTMP, %%MASK_31
+        ROT_MOD31   %%LFSR_4, %%XTMP, %%MASK_31, 20
+        ADD_MOD31   %%W, %%LFSR_4, %%XTMP, %%MASK_31
+        ROT_MOD31   %%LFSR_10, %%XTMP, %%MASK_31, 21
+        ADD_MOD31   %%W, %%LFSR_10, %%XTMP, %%MASK_31
+        ROT_MOD31   %%LFSR_13, %%XTMP, %%MASK_31, 17
+        ADD_MOD31   %%W, %%LFSR_13, %%XTMP, %%MASK_31
+        ROT_MOD31   %%LFSR_15, %%XTMP, %%MASK_31, 15
+        ADD_MOD31   %%W, %%LFSR_15, %%XTMP, %%MASK_31
+
+        ; Store LFSR_S16
+%ifnum %%ROUND_NUM
+        movdqa  [%%STATE + (( 0 + %%ROUND_NUM) % 16)*16], %%W
+%else
+        STORE_LFSR %%STATE, %%ROUND_NUM, 0, %%TMP, %%W
+%endif
 %endmacro
 
 ; This macro reorder the LFSR registers
@@ -888,6 +893,8 @@ mksection .text
 	%define		pState	r8
 %endif
 
+%define %%MASK_31 xmm15
+
     FUNC_SAVE
 
     mov     rax, pState
@@ -993,7 +1000,7 @@ mksection .text
 %endif ;; %%KEY_SIZE == 256
 
     ; Load read-only registers
-    movdqa  xmm12, [rel mask31]
+    movdqa  %%MASK_31, [rel mask31]
 
     mov r15, 0
 %%start_loop:
@@ -1003,8 +1010,9 @@ mksection .text
     BITS_REORG4 rax, r15, r14, xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, \
                 xmm6, xmm7, xmm8, xmm9
     NONLIN_FUN4 rax, xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7
-    psrld  xmm7,1                ; Shift out LSB of W
-    lfsr_updt4  rax, r15, r14, xmm7     ; W (xmm7) used in LFSR update
+    psrld  xmm7, 1                ; Shift out LSB of W
+    LFSR_UPDT4  rax, r15, r14, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, \
+                %%MASK_31, xmm7, init ; W (xmm8) used in LFSR update
     inc r15
     jmp %%start_loop
 
@@ -1013,8 +1021,8 @@ mksection .text
     BITS_REORG4 rax, 0, no_reg, xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, \
                 xmm6, xmm7, xmm8, xmm9
     NONLIN_FUN4 rax, xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6
-    pxor    xmm0, xmm0
-    lfsr_updt4 rax, 0, no_reg, xmm0
+    LFSR_UPDT4  rax, 0, no_reg, xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, \
+                %%MASK_31, xmm6, work
 
     ; Generate extra 4, 8 or 16 bytes of KS for initial tags
 %if %%TAG_SIZE == 4
@@ -1041,8 +1049,8 @@ mksection .text
     ; OFS_X3 XOR W (xmm7) and store in stack
     pxor        xmm10, xmm7
     movdqa [rsp + (N-1)*16], xmm10
-    pxor        xmm0, xmm0
-    lfsr_updt4  rax, N, no_reg, xmm0
+    LFSR_UPDT4  rax, N, no_reg, xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, \
+                %%MASK_31, xmm6, work
 %assign N N+1
 %endrep
 
@@ -1101,6 +1109,8 @@ init_for_auth_tag_4B:
 	%define		pKS	rdx
 %endif
 
+%define %%MASK_31 xmm15
+
     FUNC_SAVE
 
     ; Store 4 keystream pointers on the stack
@@ -1120,7 +1130,7 @@ init_for_auth_tag_4B:
     mov         rax, pState
 
     ; Load read-only registers
-    movdqa      xmm12, [rel mask31]
+    movdqa      %%MASK_31, [rel mask31]
 
     ; Generate N*4B of keystream in N rounds
 %assign N 1
@@ -1131,8 +1141,8 @@ init_for_auth_tag_4B:
     ; OFS_X3 XOR W (xmm7) and store in stack
     pxor        xmm10, xmm7
     movdqa [rsp + 4*8 + (N-1)*16], xmm10
-    pxor        xmm0, xmm0
-    lfsr_updt4  rax, N, no_reg, xmm0
+    LFSR_UPDT4  rax, N, no_reg, xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, \
+                %%MASK_31, xmm7, work
 %assign N N+1
 %endrep
 
@@ -1250,8 +1260,11 @@ ZUC_KEYGEN4B_4:
 %define %%TMP1 rdi
 %define %%TMP2 rsi
 %endif
+
+%define %%MASK_31 xmm15
+
         ; Load read-only registers
-        movdqa  xmm12, [rel mask31]
+        movdqa  %%MASK_31, [rel mask31]
 
         ; Generate N*4B of keystream in N rounds
 %assign %%N 1
@@ -1263,8 +1276,8 @@ ZUC_KEYGEN4B_4:
         ; OFS_XR XOR W (xmm7) and store in stack
         pxor    xmm10, xmm7
         movdqa  [rsp + _keystr_save + (%%N-1)*16], xmm10
-        pxor    xmm0, xmm0
-        lfsr_updt4  rax, %%round, no_reg, xmm0
+        LFSR_UPDT4  rax, %%round, no_reg, xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, \
+                %%MASK_31, xmm7, work
 %assign %%N (%%N + 1)
 %assign %%round (%%round + 1)
 %endrep
