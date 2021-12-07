@@ -195,10 +195,6 @@ db      0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01
 db      0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01
 
 align 16
-all_ffs:
-dw      0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff
-
-align 16
 all_threes:
 dw      0x0003, 0x0003, 0x0003, 0x0003, 0x0003, 0x0003, 0x0003, 0x0003
 
@@ -333,21 +329,6 @@ mksection .text
         movdqa  %%r2, %%r0
 	shufps	%%t0, %%t1, 0x88	; r0 = {d0 c0 b0 a0}
         movdqa  %%r0, %%t0
-%endmacro
-
-;
-;   make_u31()
-;
-%macro  make_u31    4
-
-%define %%Rt        %1
-%define %%Ke        %2
-%define %%Ek        %3
-%define %%Iv        %4
-    xor         %%Rt, %%Rt
-    shrd        %%Rt, %%Iv, 8
-    shrd        %%Rt, %%Ek, 15
-    shrd        %%Rt, %%Ke, 9
 %endmacro
 
 ;;
