@@ -603,6 +603,8 @@ void _zuc_eia3_1_buffer_sse(const void *pKey,
         uint32_t T = 0;
         const uint8_t *pIn8 = (const uint8_t *) pBufferIn;
 
+        memset(keyStream, 0, sizeof(keyStream));
+
         asm_ZucInitialization_sse(pKey, pIv, &(zucState));
         asm_ZucGenKeystream16B_sse(pZuc, &zucState);
 
@@ -660,6 +662,8 @@ void _zuc_eia3_4_buffer_sse(const void * const pKey[NUM_SSE_BUFS],
         const uint32_t keyStreamLengthInBits = KEYSTR_ROUND_LEN * 8;
         DECLARE_ALIGNED(uint32_t *pKeyStrArr[NUM_SSE_BUFS], 16) = {NULL};
         unsigned int allCommonBits;
+
+        memset(keyStr, 0, sizeof(keyStr));
 
         /* Check if all lengths are equal */
         if ((lengthInBits[0] == lengthInBits[1]) &&
@@ -870,6 +874,8 @@ void _zuc_eia3_4_buffer_job(const void * const pKey[NUM_SSE_BUFS],
         DECLARE_ALIGNED(uint32_t *pKeyStrArr[NUM_SSE_BUFS], 16) = {NULL};
         unsigned int allCommonBits;
 
+        memset(keyStr, 0, sizeof(keyStr));
+
         /* Check if all lengths are equal */
         if ((lengthInBits[0] == lengthInBits[1]) &&
             (lengthInBits[0] == lengthInBits[2]) &&
@@ -1054,6 +1060,8 @@ void _zuc256_eia3_4_buffer_job(const void * const pKey[NUM_SSE_BUFS],
         const uint32_t keyStreamLengthInBits = KEYSTR_ROUND_LEN * 8;
         DECLARE_ALIGNED(uint32_t *pKeyStrArr[NUM_SSE_BUFS], 16) = {NULL};
         unsigned int allCommonBits;
+
+        memset(keyStr, 0, sizeof(keyStr));
 
         /* Check if all lengths are equal */
         if ((lengthInBits[0] == lengthInBits[1]) &&
