@@ -1892,10 +1892,16 @@ remainder_key_sz_128:
         DIGEST_16_BYTES %%KS, %%XTMP1, %%XTMP6, %%XTMP2, %%XTMP3, %%XTMP4, %%XTMP5, \
                         %%XTMP7, %%KS_L, %%KS_M, %%KS_H, %%TAG_SZ
 
+%if %%TAG_SZ == 4
         ;; - update T
         movq    %%TMP, %%XTMP6
         shr     %%TMP, 32
         xor     [%%T], DWORD(%%TMP)
+%else ;; %%TAG_SZ == 8
+        ;; - update T
+        movq    %%TMP, %%XTMP6
+        xor     [%%T], %%TMP
+%endif
 
         ;; Copy last 16 bytes of KS to the front
         movdqa  %%XTMP1, [%%KS + 16]
@@ -1942,7 +1948,7 @@ round_tag_4B:
 
 round_tag_8B:
         ROUND T, KS, DATA, rax, xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, \
-              xmm7, xmm8, xmm9, 4
+              xmm7, xmm8, xmm9, 8
         ret
 
 ;----------------------------------------------------------------------------------------
