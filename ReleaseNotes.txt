@@ -1,6 +1,12 @@
 ========================================================================
 Release Notes for Intel(R) Multi-Buffer Crypto for IPsec Library
 
+Unreleased
+========================================================================
+
+Library
+- ZUC-EIA3-256 8-byte tag support added for SSE
+
 v1.2 February 2022
 ========================================================================
 

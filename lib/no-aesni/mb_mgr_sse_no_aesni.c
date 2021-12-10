@@ -122,8 +122,10 @@ IMB_JOB *submit_job_zuc_eia3_sse_no_aesni(MB_MGR_ZUC_OOO *state,
 IMB_JOB *flush_job_zuc_eia3_sse_no_aesni(MB_MGR_ZUC_OOO *state);
 
 IMB_JOB *submit_job_zuc256_eia3_sse_no_aesni(MB_MGR_ZUC_OOO *state,
-                                             IMB_JOB *job);
-IMB_JOB *flush_job_zuc256_eia3_sse_no_aesni(MB_MGR_ZUC_OOO *state);
+                                             IMB_JOB *job,
+                                             const uint64_t tag_sz);
+IMB_JOB *flush_job_zuc256_eia3_sse_no_aesni(MB_MGR_ZUC_OOO *state,
+                                            const uint64_t tag_sz);
 
 uint32_t hec_32_sse_no_aesni(const uint8_t *in);
 uint64_t hec_64_sse_no_aesni(const uint8_t *in);

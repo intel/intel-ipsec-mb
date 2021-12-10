@@ -142,12 +142,16 @@ IMB_JOB *aes_cntr_ccm_128_vaes_avx512(IMB_JOB *job);
 IMB_JOB *aes_cntr_ccm_256_vaes_avx512(IMB_JOB *job);
 
 IMB_JOB *submit_job_zuc256_eia3_no_gfni_avx512(MB_MGR_ZUC_OOO *state,
-                                               IMB_JOB *job);
-IMB_JOB *flush_job_zuc256_eia3_no_gfni_avx512(MB_MGR_ZUC_OOO *state);
+                                               IMB_JOB *job,
+                                               const uint64_t tag_sz);
+IMB_JOB *flush_job_zuc256_eia3_no_gfni_avx512(MB_MGR_ZUC_OOO *state,
+                                               const uint64_t tag_sz);
 
 IMB_JOB *submit_job_zuc256_eia3_gfni_avx512(MB_MGR_ZUC_OOO *state,
-                                            IMB_JOB *job);
-IMB_JOB *flush_job_zuc256_eia3_gfni_avx512(MB_MGR_ZUC_OOO *state);
+                                            IMB_JOB *job,
+                                            const uint64_t tag_sz);
+IMB_JOB *flush_job_zuc256_eia3_gfni_avx512(MB_MGR_ZUC_OOO *state,
+                                           const uint64_t tag_sz);
 
 void aes_cmac_256_subkey_gen_avx512(const void *key_exp,
                                     void *key1, void *key2);
@@ -890,12 +894,13 @@ static IMB_JOB *
 
 static IMB_JOB *
 (*submit_job_zuc256_eia3_avx512)
-        (MB_MGR_ZUC_OOO *state, IMB_JOB *job) =
+        (MB_MGR_ZUC_OOO *state, IMB_JOB *job, const uint64_t tag_sz) =
                         submit_job_zuc256_eia3_no_gfni_avx512;
 
 static IMB_JOB *
 (*flush_job_zuc256_eia3_avx512)
-        (MB_MGR_ZUC_OOO *state) = flush_job_zuc256_eia3_no_gfni_avx512;
+        (MB_MGR_ZUC_OOO *state, const uint64_t tag_sz) =
+                        flush_job_zuc256_eia3_no_gfni_avx512;
 
 static IMB_JOB *
 (*submit_job_aes_xcbc_avx512)

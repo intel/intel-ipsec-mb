@@ -149,7 +149,7 @@ Notes:
 (3) - AVX512 plus VAES, VPCLMULQDQ, GFNI and IFMA extensions  
 (4) - used only with AES256-DOCSIS and AES128-DOCSIS ciphers  
 (5) - x8 on selected CPU's supporting GFNI  
-(6) - 4 byte tag size is supported only  
+(6) - 4 and 8 byte tag sizes are supported only
 (7) - Supported CRC types:
  - CRC32: Ethernet FCS, SCTP, WIMAX OFDMA  
  - CRC24: LTE A, LTE B  

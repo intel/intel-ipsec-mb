@@ -1079,7 +1079,8 @@ SUBMIT_JOB_HASH(IMB_MGR *state, IMB_JOB *job)
         case IMB_AUTH_ZUC_EIA3_BITLEN:
                 return SUBMIT_JOB_ZUC_EIA3(zuc_eia3_ooo, job);
         case IMB_AUTH_ZUC256_EIA3_BITLEN:
-                return SUBMIT_JOB_ZUC256_EIA3(zuc256_eia3_ooo, job);
+                return SUBMIT_JOB_ZUC256_EIA3(zuc256_eia3_ooo, job,
+                                        job->auth_tag_output_len_in_bytes);
         case IMB_AUTH_SNOW3G_UIA2_BITLEN:
 #ifdef AVX512
                 return SUBMIT_JOB_SNOW3G_UIA2(snow3g_uia2_ooo, job);
@@ -1241,7 +1242,8 @@ FLUSH_JOB_HASH(IMB_MGR *state, IMB_JOB *job)
         case IMB_AUTH_ZUC_EIA3_BITLEN:
                 return FLUSH_JOB_ZUC_EIA3(zuc_eia3_ooo);
         case IMB_AUTH_ZUC256_EIA3_BITLEN:
-                return FLUSH_JOB_ZUC256_EIA3(zuc256_eia3_ooo);
+                return FLUSH_JOB_ZUC256_EIA3(zuc256_eia3_ooo,
+                                             job->auth_tag_output_len_in_bytes);
 #ifdef AVX512
         case IMB_AUTH_SNOW3G_UIA2_BITLEN:
                 return FLUSH_JOB_SNOW3G_UIA2(snow3g_uia2_ooo);
@@ -2469,8 +2471,8 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job)
                                 return 1;
                         }
                 }
-                if (job->auth_tag_output_len_in_bytes !=
-                    auth_tag_len_ipsec[job->hash_alg]) {
+                if ((job->auth_tag_output_len_in_bytes != 4) &&
+                    (job->auth_tag_output_len_in_bytes != 8)) {
                         imb_set_errno(state, IMB_ERR_JOB_AUTH_TAG_LEN);
                         return 1;
                 }

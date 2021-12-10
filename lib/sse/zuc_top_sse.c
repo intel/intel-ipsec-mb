@@ -91,6 +91,28 @@ eia3_remainder(void *T, const void *ks, const void *data,
                 asm_Eia3Remainder_sse(T, ks, data, n_bits, key_size,
                                       tag_size);
 }
+
+static inline void
+keygen_4(ZucState4_t *state, uint32_t **pKeyStrArr,
+         const uint64_t numKeyStrBytes, const unsigned use_gfni)
+{
+        if (use_gfni) {
+                if (numKeyStrBytes == 4)
+                        asm_ZucGenKeystream4B_4_gfni_sse(state, pKeyStrArr);
+                else if (numKeyStrBytes == 8)
+                        asm_ZucGenKeystream8B_4_gfni_sse(state, pKeyStrArr);
+                else /* 16 */
+                        asm_ZucGenKeystream16B_4_gfni_sse(state, pKeyStrArr);
+        } else {
+                if (numKeyStrBytes == 4)
+                        asm_ZucGenKeystream4B_4_sse(state, pKeyStrArr);
+                else if (numKeyStrBytes == 8)
+                        asm_ZucGenKeystream8B_4_sse(state, pKeyStrArr);
+                else /* 16 */
+                        asm_ZucGenKeystream16B_4_sse(state, pKeyStrArr);
+        }
+}
+
 static inline
 void _zuc_eea3_1_buffer_sse(const void *pKey,
                             const void *pIv,
@@ -1101,13 +1123,7 @@ void _zuc256_eia3_4_buffer_job(const void * const pKey[NUM_SSE_BUFS],
 
         /* TODO: Handle 16-byte digest cases */
         init_4(&keys, ivs, &state, 256, tag_size, T, use_gfni);
-        if (use_gfni) {
-                /* Generate 16 bytes at a time */
-                asm_ZucGenKeystream16B_4_gfni_sse(&state, pKeyStrArr);
-        } else {
-                /* Generate 16 bytes at a time */
-                asm_ZucGenKeystream16B_4_sse(&state, pKeyStrArr);
-        }
+        keygen_4(&state, pKeyStrArr, 16, use_gfni);
 
         /* Point at the next 16 bytes of the key */
         for (i = 0; i < NUM_SSE_BUFS; i++)
@@ -1117,24 +1133,14 @@ void _zuc256_eia3_4_buffer_job(const void * const pKey[NUM_SSE_BUFS],
         while (remainCommonBits >= keyStreamLengthInBits) {
                 remainCommonBits -= keyStreamLengthInBits;
                 dataDigested += keyStreamLengthInBits;
-                /* Generate the next key stream 4 bytes or 16 bytes */
-                if (use_gfni) {
-                        if (!remainCommonBits && allCommonBits)
-                                asm_ZucGenKeystream4B_4_gfni_sse(&state,
-                                                                 pKeyStrArr);
-                        else
-                                asm_ZucGenKeystream16B_4_gfni_sse(&state,
-                                                                  pKeyStrArr);
-                } else {
-                        if (!remainCommonBits && allCommonBits)
-                                asm_ZucGenKeystream4B_4_sse(&state,
-                                                            pKeyStrArr);
-                        else
-                                asm_ZucGenKeystream16B_4_sse(&state,
-                                                             pKeyStrArr);
-                }
+                /* Generate the next key stream 4/8 bytes or 16 bytes */
+                if (!remainCommonBits && allCommonBits)
+                        keygen_4(&state, pKeyStrArr, tag_size, use_gfni);
+                else
+                        keygen_4(&state, pKeyStrArr, 16, use_gfni);
+
                 for (i = 0; i < NUM_SSE_BUFS; i++) {
-                        uint32_t *tag = (uint32_t *) &T[i*4];
+                        void *tag = (void *) &T[i*tag_size];
 
                         if (job_in_lane[i] == NULL)
                                 continue;
@@ -1146,14 +1152,14 @@ void _zuc256_eia3_4_buffer_job(const void * const pKey[NUM_SSE_BUFS],
 
         /* Process each packet separately for the remaining bits */
         for (i = 0; i < NUM_SSE_BUFS; i++) {
-                uint32_t *tag = (uint32_t *) &T[i*4];
+                void *tag = (void *) &T[i*tag_size];
 
                 if (job_in_lane[i] == NULL)
                         continue;
 
                 uint32_t remainBits = lengthInBits[i] - dataDigested;
                 uint32_t *keyStr32 = (uint32_t *) keyStr[i];
-                const uint32_t N = remainBits +  ZUC_WORD_BITS;
+                const uint32_t N = remainBits + ((uint32_t) tag_size << 3);
                 uint32_t L = ((N + 31) / ZUC_WORD_BITS);
 
                 /* 4 KS words are generated already */
