@@ -150,10 +150,6 @@ bit_reverse_and_table:
 db	0x0f, 0x0f, 0x0f, 0x0f, 0x0f, 0x0f, 0x0f, 0x0f, 0x0f, 0x0f, 0x0f, 0x0f, 0x0f, 0x0f, 0x0f, 0x0f
 
 align 16
-data_mask_64bits:
-dd	0xffffffff, 0xffffffff, 0x00000000, 0x00000000
-
-align 16
 swap_mask:
 db      0x03, 0x02, 0x01, 0x00, 0x07, 0x06, 0x05, 0x04
 db      0x0b, 0x0a, 0x09, 0x08, 0x0f, 0x0e, 0x0d, 0x0c
@@ -224,6 +220,20 @@ db      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 
 align 16
 bit_reverse_table:
 times 2 db      0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80
+
+align 16
+bits_32_63:
+dd      0x00000000, 0xffffffff, 0x00000000, 0x00000000
+
+align 16
+shuf_mask_dw0_0_dw1_0:
+db      0x00, 0x01, 0x02, 0x03, 0xff, 0xff, 0xff, 0xff
+db      0x04, 0x05, 0x06, 0x07, 0xff, 0xff, 0xff, 0xff
+
+align 16
+shuf_mask_dw2_0_dw3_0:
+db      0x08, 0x09, 0x0a, 0x0b, 0xff, 0xff, 0xff, 0xff
+db      0x0c, 0x0d, 0x0e, 0x0f, 0xff, 0xff, 0xff, 0xff
 
 ; Stack frame for ZucCipher function
 struc STACK
@@ -1602,36 +1612,40 @@ exit_cipher:
 
         ret
 
-%macro DIGEST_16_BYTES 9
-%define %%KS      %1 ; [in] Pointer to keystream
-%define %%XDATA   %2 ; [in] XMM register with input data
-%define %%XDIGEST %3 ; [out] XMM register with result digest
-%define %%XTMP1   %4 ; [clobbered] Temporary XMM register
-%define %%XTMP2   %5 ; [clobbered] Temporary XMM register
-%define %%XTMP3   %6 ; [clobbered] Temporary XMM register
-%define %%XTMP4   %7 ; [clobbered] Temporary XMM register
-%define %%KS_L    %8 ; [clobbered] Temporary XMM register
-%define %%KS_H    %9 ; [clobbered] Temporary XMM register
+%macro DIGEST_16_BYTES 12
+%define %%KS      %1  ; [in] Pointer to keystream
+%define %%XDATA   %2  ; [in] XMM register with input data
+%define %%XDIGEST %3  ; [out] XMM register with result digest
+%define %%XTMP1   %4  ; [clobbered] Temporary XMM register
+%define %%XTMP2   %5  ; [clobbered] Temporary XMM register
+%define %%XTMP3   %6  ; [clobbered] Temporary XMM register
+%define %%XTMP4   %7  ; [clobbered] Temporary XMM register
+%define %%XTMP4   %7  ; [clobbered] Temporary XMM register
+%define %%XTMP5   %8  ; [clobbered] Temporary XMM register
+%define %%KS_L    %9  ; [clobbered] Temporary XMM register
+%define %%KS_M    %10 ; [clobbered] Temporary XMM register
+%define %%KS_H    %11 ; [clobbered] Temporary XMM register
+%define %%TAG_SZ  %12 ; [in] Tag size (4, 8 or 16)
 
         ; Reverse data bytes
 %if USE_GFNI == 1
-        movdqa  %%XTMP4, %%XDATA
-        gf2p8affineqb   %%XTMP4, [rel bit_reverse_table], 0x00
+        movdqa  %%XTMP3, %%XDATA
+        gf2p8affineqb   %%XTMP3, [rel bit_reverse_table], 0x00
 %else
-        movdqa  %%XTMP3, [rel bit_reverse_and_table]
+        movdqa  %%XTMP4, [rel bit_reverse_and_table]
         movdqa  %%XTMP2, %%XDATA
-        pand    %%XTMP2, %%XTMP3
+        pand    %%XTMP2, %%XTMP4
 
-        pandn   %%XTMP3, %%XDATA
-        psrld   %%XTMP3, 4
+        pandn   %%XTMP4, %%XDATA
+        psrld   %%XTMP4, 4
 
-        movdqa  %%XTMP4, [rel bit_reverse_table_h] ; bit reverse low nibbles (use high table)
-        pshufb  %%XTMP4, %%XTMP2
+        movdqa  %%XTMP3, [rel bit_reverse_table_h] ; bit reverse low nibbles (use high table)
+        pshufb  %%XTMP3, %%XTMP2
 
         movdqa  %%XTMP1, [rel bit_reverse_table_l] ; bit reverse high nibbles (use low table)
-        pshufb  %%XTMP1, %%XTMP3
+        pshufb  %%XTMP1, %%XTMP4
 
-        por     %%XTMP4, %%XTMP1 ;; %%XTMP4 - bit reverse data bytes
+        por     %%XTMP3, %%XTMP1 ;; %%XTMP3 - bit reverse data bytes
 %endif
 
         ;; ZUC authentication part
@@ -1640,32 +1654,73 @@ exit_cipher:
         movdqu  %%XTMP1, [%%KS + (0*4)]
         movdqu  %%XTMP2, [%%KS + (2*4)]
         pshufd  %%KS_L, %%XTMP1, 0x61
-        pshufd  %%KS_H, %%XTMP2, 0x61
+        pshufd  %%KS_M, %%XTMP2, 0x61
+%if %%TAG_SZ == 8
+        pshufd  %%KS_H, %%XTMP2, 0xBB ; Swap bytes 16-19 and 20-23
+%endif
 
         ;;  - set up DATA
-        movdqa  %%XTMP1, %%XTMP4
-        pand    %%XTMP1, [rel data_mask_64bits]
-        pshufd  %%XTMP2, %%XTMP1, 0xdc
-        movdqa  %%XTMP1, %%XTMP2 ;; %%XTMP1/2 - Data bytes [31:0 0s 63:32 0s]
+        movdqa  %%XTMP1, %%XTMP3
+        pshufb  %%XTMP1, [rel shuf_mask_dw0_0_dw1_0]
+        movdqa  %%XTMP2, %%XTMP1 ;; %%XTMP1/2 - Data bytes [31:0 0s 63:32 0s]
 
-        psrldq  %%XTMP4, 8
-        pshufd  %%XTMP3, %%XTMP4, 0xdc
+        pshufb  %%XTMP3, [rel shuf_mask_dw2_0_dw3_0]
         movdqa  %%XDIGEST, %%XTMP3 ;; %%XDIGEST/XTMP3 - Data bytes [95:64 0s 127:96 0s]
 
         ;; - clmul
         ;; - xor the results from 4 32-bit words together
+%if %%TAG_SZ == 4
         pclmulqdq %%XTMP1, %%KS_L, 0x00
         pclmulqdq %%XTMP2, %%KS_L, 0x11
-        pclmulqdq %%XDIGEST, %%KS_H, 0x00
-        pclmulqdq %%XTMP3, %%KS_H, 0x11
+        pclmulqdq %%XDIGEST, %%KS_M, 0x00
+        pclmulqdq %%XTMP3, %%KS_M, 0x11
 
         pxor    %%XTMP2, %%XTMP1
         pxor    %%XDIGEST, %%XTMP3
         pxor    %%XDIGEST, %%XTMP2
+%else ; %%TAG_SZ == 8
+        ; Save data for following products
+        movdqa  %%XTMP4, %%XTMP2 ; Data bytes [31:0 0s 63:32 0s]
+        movdqa  %%XTMP5, %%XTMP3 ; Data bytes [95:64 0s 127:96 0s]
+
+        ; Calculate lower 32 bits of tag
+        pclmulqdq %%XTMP1, %%KS_L, 0x00
+        pclmulqdq %%XTMP2, %%KS_L, 0x11
+        pclmulqdq %%XDIGEST, %%KS_M, 0x00
+        pclmulqdq %%XTMP3, %%KS_M, 0x11
+
+        ; XOR all products and move 32-bits to lower 32 bits
+        pxor    %%XTMP2, %%XTMP1
+        pxor    %%XDIGEST, %%XTMP3
+        pxor    %%XDIGEST, %%XTMP2
+        movq    %%XDIGEST, %%XDIGEST ; Clear top 64 bits
+        psrldq  %%XDIGEST, 4
+
+        ; Prepare data and calculate bits 63-32 of tag
+        movdqa  %%XTMP1, %%XTMP4
+        movdqa  %%XTMP2, %%XTMP4
+        movdqa  %%XTMP3, %%XTMP5
+        movdqa  %%XTMP4, %%XTMP5
+
+        pclmulqdq %%XTMP1, %%KS_L, 0x10
+        pclmulqdq %%XTMP2, %%KS_M, 0x01
+        pclmulqdq %%XTMP3, %%KS_M, 0x10
+        pclmulqdq %%XTMP4, %%KS_H, 0x01
+
+        ; XOR all the products and keep only 32-63 bits
+        pxor    %%XTMP1, %%XTMP2
+        pxor    %%XTMP3, %%XTMP4
+        pxor    %%XTMP1, %%XTMP3
+        pand    %%XTMP1, [rel bits_32_63]
+
+        ; OR with lower 32 bits, to construct 64 bits of tag
+        por     %%XDIGEST, %%XTMP1
+
+%endif ; %%TAG_SZ
 
 %endmacro
 
-%macro REMAINDER 18
+%macro REMAINDER 20
 %define %%T             %1  ; [in] Pointer to authentication tag
 %define %%KS            %2  ; [in] Pointer to 32-byte keystream
 %define %%DATA          %3  ; [in] Pointer to input data
@@ -1680,10 +1735,12 @@ exit_cipher:
 %define %%XTMP4         %12 ; [clobbered] Temporary XMM register
 %define %%XTMP5         %13 ; [clobbered] Temporary XMM register
 %define %%XTMP6         %14 ; [clobbered] Temporary XMM register
-%define %%KS_L          %15 ; [clobbered] Temporary XMM register
-%define %%KS_H          %16 ; [clobbered] Temporary XMM register
-%define %%KEY_SZ        %17 ; [in] Key size (128 or 256)
-%define %%TAG_SZ        %18 ; [in] Key size (4, 8 or 16)
+%define %%XTMP7         %15 ; [clobbered] Temporary XMM register
+%define %%KS_L          %16 ; [clobbered] Temporary XMM register
+%define %%KS_M          %17 ; [clobbered] Temporary XMM register
+%define %%KS_H          %18 ; [clobbered] Temporary XMM register
+%define %%KEY_SZ        %19 ; [in] Key size (128 or 256)
+%define %%TAG_SZ        %20 ; [in] Key size (4, 8 or 16)
 
 %define %%N_BYTES %%TMP3
 
@@ -1719,7 +1776,8 @@ exit_cipher:
         pand    %%XTMP1, %%XTMP2
         XPSRLB  %%XTMP1, %%TMP2, %%XTMP3, %%TMP1
 
-        DIGEST_16_BYTES %%KS, %%XTMP1, %%XTMP6, %%XTMP2, %%XTMP3, %%XTMP4, %%XTMP5, %%KS_L, %%KS_H
+        DIGEST_16_BYTES %%KS, %%XTMP1, %%XTMP6, %%XTMP2, %%XTMP3, %%XTMP4, \
+                        %%XTMP5, %%XTMP7, %%KS_L, %%KS_M, %%KS_H, %%TAG_SZ
 
 %%Eia3RoundsSSE_end:
 
@@ -1798,17 +1856,19 @@ ZUC_EIA3REMAINDER:
         ; Key size = 256
         ;; TODO: Handle tag sizes of 8 and 16 bytes
         REMAINDER T, KS, DATA, N_BITS, r12, r13, r14, r15, \
-                  xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, 256, 4
+                  xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, \
+                  xmm8, xmm9, 256, 4
 
         ret
 
 remainder_key_sz_128:
         REMAINDER T, KS, DATA, N_BITS, r12, r13, r14, r15, \
-                  xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, 128, 4
+                  xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, \
+                  xmm8, xmm9, 128, 4
 
         ret
 
-%macro ROUND 12
+%macro ROUND 15
 %define %%T             %1  ; [in] Pointer to authentication tag
 %define %%KS            %2  ; [in] Pointer to 32-byte keystream
 %define %%DATA          %3  ; [in] Pointer to input data
@@ -1819,14 +1879,18 @@ remainder_key_sz_128:
 %define %%XTMP4         %8  ; [clobbered] Temporary XMM register
 %define %%XTMP5         %9  ; [clobbered] Temporary XMM register
 %define %%XTMP6         %10 ; [clobbered] Temporary XMM register
-%define %%KS_L          %11 ; [clobbered] Temporary XMM register
-%define %%KS_H          %12 ; [clobbered] Temporary XMM register
+%define %%XTMP7         %11 ; [clobbered] Temporary XMM register
+%define %%KS_L          %12 ; [clobbered] Temporary XMM register
+%define %%KS_M          %13 ; [clobbered] Temporary XMM register
+%define %%KS_H          %14 ; [clobbered] Temporary XMM register
+%define %%TAG_SZ        %15 ; [constant] Tag size (4, 8 or 16 bytes)
 
         FUNC_SAVE
 
         ;; read 16 bytes and reverse bits
         movdqu  %%XTMP1, [%%DATA]
-        DIGEST_16_BYTES %%KS, %%XTMP1, %%XTMP6, %%XTMP2, %%XTMP3, %%XTMP4, %%XTMP5, %%KS_L, %%KS_H
+        DIGEST_16_BYTES %%KS, %%XTMP1, %%XTMP6, %%XTMP2, %%XTMP3, %%XTMP4, %%XTMP5, \
+                        %%XTMP7, %%KS_L, %%KS_M, %%KS_H, %%TAG_SZ
 
         ;; - update T
         movq    %%TMP, %%XTMP6
@@ -1866,13 +1930,19 @@ ZUC_EIA3ROUND16B:
 %define	DATA    arg3
 %define TAG_SZ  arg4
 
-        ;; TODO: Handle tag sizes of 8 and 16 bytes
-        cmp     TAG_SZ, 4
-        je      round_tag_4B
+        ;; TODO: Handle tag sizes of 16 bytes
+        cmp     TAG_SZ, 8
+        je      round_tag_8B
+        jb      round_tag_4B
 
 round_tag_4B:
-        ROUND T, KS, DATA, rax, xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7
+        ROUND T, KS, DATA, rax, xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, \
+              xmm7, xmm8, xmm9, 4
+        ret
 
+round_tag_8B:
+        ROUND T, KS, DATA, rax, xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, \
+              xmm7, xmm8, xmm9, 4
         ret
 
 ;----------------------------------------------------------------------------------------
