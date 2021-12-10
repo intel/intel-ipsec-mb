@@ -1720,7 +1720,7 @@ exit_cipher:
 
 %endmacro
 
-%macro REMAINDER 20
+%macro REMAINDER 21
 %define %%T             %1  ; [in] Pointer to authentication tag
 %define %%KS            %2  ; [in] Pointer to 32-byte keystream
 %define %%DATA          %3  ; [in] Pointer to input data
@@ -1729,18 +1729,19 @@ exit_cipher:
 %define %%TMP1          %6  ; [clobbered] Temporary GP register
 %define %%TMP2          %7  ; [clobbered] Temporary GP register
 %define %%TMP3          %8  ; [clobbered] Temporary GP register
-%define %%XTMP1         %9  ; [clobbered] Temporary XMM register
-%define %%XTMP2         %10 ; [clobbered] Temporary XMM register
-%define %%XTMP3         %11 ; [clobbered] Temporary XMM register
-%define %%XTMP4         %12 ; [clobbered] Temporary XMM register
-%define %%XTMP5         %13 ; [clobbered] Temporary XMM register
-%define %%XTMP6         %14 ; [clobbered] Temporary XMM register
-%define %%XTMP7         %15 ; [clobbered] Temporary XMM register
-%define %%KS_L          %16 ; [clobbered] Temporary XMM register
-%define %%KS_M          %17 ; [clobbered] Temporary XMM register
-%define %%KS_H          %18 ; [clobbered] Temporary XMM register
-%define %%KEY_SZ        %19 ; [in] Key size (128 or 256)
-%define %%TAG_SZ        %20 ; [in] Key size (4, 8 or 16)
+%define %%TMP4          %9  ; [clobbered] Temporary GP register
+%define %%XTMP1         %10 ; [clobbered] Temporary XMM register
+%define %%XTMP2         %11 ; [clobbered] Temporary XMM register
+%define %%XTMP3         %12 ; [clobbered] Temporary XMM register
+%define %%XTMP4         %13 ; [clobbered] Temporary XMM register
+%define %%XTMP5         %14 ; [clobbered] Temporary XMM register
+%define %%XTMP6         %15 ; [clobbered] Temporary XMM register
+%define %%XTMP7         %16 ; [clobbered] Temporary XMM register
+%define %%KS_L          %17 ; [clobbered] Temporary XMM register
+%define %%KS_M          %18 ; [clobbered] Temporary XMM register
+%define %%KS_H          %19 ; [clobbered] Temporary XMM register
+%define %%KEY_SZ        %20 ; [in] Key size (128 or 256)
+%define %%TAG_SZ        %21 ; [in] Key size (4, 8 or 16)
 
 %define %%N_BYTES %%TMP3
 
@@ -1781,6 +1782,7 @@ exit_cipher:
 
 %%Eia3RoundsSSE_end:
 
+%if %%TAG_SZ == 4
 %define %%TAG DWORD(%%TMP1)
         ;; - update T
         mov     %%TAG, [%%T]
@@ -1820,6 +1822,41 @@ exit_cipher:
 %endif
         bswap   %%TAG
         mov     [%%T], %%TAG
+%else ;; %%TAG_SZ == 8
+%define %%TAG %%TMP1
+        ;; - update T
+        mov     %%TAG, [%%T]
+        movq    %%TMP2, %%XTMP6
+        xor     %%TAG, %%TMP2
+
+        ;; XOR with keyStr[n_bits] (Z_length, from spec)
+
+        ; Read keyStr[N_BITS / 32]
+        mov     %%TMP2, %%N_BITS
+        shr     %%TMP2, 5
+        mov     %%TMP3, [%%KS + %%TMP2*4]
+        mov     %%TMP4, [%%KS + %%TMP2*4 + 4]
+
+        ; Rotate left by N_BITS % 32
+        mov     %%TMP2, rcx ; Save RCX
+        mov     rcx, %%N_BITS
+        and     rcx, 0x1F
+        rol     %%TMP3, cl
+        rol     %%TMP4, cl
+        mov     rcx, %%TMP2 ; Restore RCX
+
+        shl     %%TMP4, 32
+        mov     DWORD(%%TMP3), DWORD(%%TMP3) ; Clear top 32 bits
+        or      %%TMP4, %%TMP3
+
+        ; XOR with previous digest calculation
+        xor     %%TAG, %%TMP4
+
+        ; Byte swap both dwords of the digest before writing out
+        bswap   %%TAG
+        ror     %%TAG, 32
+        mov     [%%T], %%TAG
+%endif
 
         FUNC_RESTORE
 
@@ -1853,19 +1890,28 @@ ZUC_EIA3REMAINDER:
         cmp     KEY_SZ, 128
         je      remainder_key_sz_128
 
+        cmp     TAG_SZ, 8
+        je      remainder_tag_sz_8
+        jb      remainder_tag_sz_4
+
         ; Key size = 256
-        ;; TODO: Handle tag sizes of 8 and 16 bytes
-        REMAINDER T, KS, DATA, N_BITS, r12, r13, r14, r15, \
+        ;; TODO: Handle tag sizes of 16 bytes
+remainder_tag_sz_4:
+        REMAINDER T, KS, DATA, N_BITS, r11, r12, r13, r14, r15, \
                   xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, \
                   xmm8, xmm9, 256, 4
+        ret
 
+remainder_tag_sz_8:
+        REMAINDER T, KS, DATA, N_BITS, r11, r12, r13, r14, r15, \
+                  xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, \
+                  xmm8, xmm9, 256, 8
         ret
 
 remainder_key_sz_128:
-        REMAINDER T, KS, DATA, N_BITS, r12, r13, r14, r15, \
+        REMAINDER T, KS, DATA, N_BITS, r11, r12, r13, r14, r15, \
                   xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, \
                   xmm8, xmm9, 128, 4
-
         ret
 
 %macro ROUND 15
