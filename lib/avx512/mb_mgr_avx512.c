@@ -141,17 +141,17 @@ IMB_JOB *aes_cntr_ccm_128_vaes_avx512(IMB_JOB *job);
 
 IMB_JOB *aes_cntr_ccm_256_vaes_avx512(IMB_JOB *job);
 
-IMB_JOB *submit_job_zuc256_eia3_no_gfni_avx512(MB_MGR_ZUC_OOO *state,
-                                               IMB_JOB *job,
-                                               const uint64_t tag_sz);
-IMB_JOB *flush_job_zuc256_eia3_no_gfni_avx512(MB_MGR_ZUC_OOO *state,
-                                               const uint64_t tag_sz);
-
-IMB_JOB *submit_job_zuc256_eia3_gfni_avx512(MB_MGR_ZUC_OOO *state,
+IMB_JOB *submit_job_zuc256_eia3_no_gfni_sse(MB_MGR_ZUC_OOO *state,
                                             IMB_JOB *job,
                                             const uint64_t tag_sz);
-IMB_JOB *flush_job_zuc256_eia3_gfni_avx512(MB_MGR_ZUC_OOO *state,
+IMB_JOB *flush_job_zuc256_eia3_no_gfni_sse(MB_MGR_ZUC_OOO *state,
                                            const uint64_t tag_sz);
+
+IMB_JOB *submit_job_zuc256_eia3_gfni_sse(MB_MGR_ZUC_OOO *state,
+                                         IMB_JOB *job,
+                                         const uint64_t tag_sz);
+IMB_JOB *flush_job_zuc256_eia3_gfni_sse(MB_MGR_ZUC_OOO *state,
+                                        const uint64_t tag_sz);
 
 void aes_cmac_256_subkey_gen_avx512(const void *key_exp,
                                     void *key1, void *key2);
@@ -895,12 +895,12 @@ static IMB_JOB *
 static IMB_JOB *
 (*submit_job_zuc256_eia3_avx512)
         (MB_MGR_ZUC_OOO *state, IMB_JOB *job, const uint64_t tag_sz) =
-                        submit_job_zuc256_eia3_no_gfni_avx512;
+                        submit_job_zuc256_eia3_no_gfni_sse;
 
 static IMB_JOB *
 (*flush_job_zuc256_eia3_avx512)
         (MB_MGR_ZUC_OOO *state, const uint64_t tag_sz) =
-                        flush_job_zuc256_eia3_no_gfni_avx512;
+                        flush_job_zuc256_eia3_no_gfni_sse;
 
 static IMB_JOB *
 (*submit_job_aes_xcbc_avx512)
@@ -1364,12 +1364,12 @@ reset_ooo_mgrs(IMB_MGR *state)
                sizeof(zuc256_eia3_ooo->lens));
         memset(zuc256_eia3_ooo->job_in_lane, 0,
                sizeof(zuc256_eia3_ooo->job_in_lane));
-        zuc256_eia3_ooo->unused_lanes = 0xFEDCBA9876543210;
+        zuc256_eia3_ooo->unused_lanes = 0xFF03020100;
         zuc256_eia3_ooo->num_lanes_inuse = 0;
         memset(&zuc256_eia3_ooo->state, 0,
                sizeof(zuc256_eia3_ooo->state));
         zuc256_eia3_ooo->init_not_done = 0;
-        zuc256_eia3_ooo->unused_lane_bitmask = 0xffff;
+        zuc256_eia3_ooo->unused_lane_bitmask = 0x0f;
         memset(zuc256_eia3_ooo->args.digest, 0,
                sizeof(zuc256_eia3_ooo->args.digest));
 
@@ -1846,9 +1846,9 @@ init_mb_mgr_avx512_internal(IMB_MGR *state, const int reset_mgrs)
                 flush_job_zuc256_eea3_avx512 =
                                 flush_job_zuc256_eea3_gfni_avx512;
                 submit_job_zuc256_eia3_avx512 =
-                                submit_job_zuc256_eia3_gfni_avx512;
+                                submit_job_zuc256_eia3_gfni_sse;
                 flush_job_zuc256_eia3_avx512 =
-                                flush_job_zuc256_eia3_gfni_avx512;
+                                flush_job_zuc256_eia3_gfni_sse;
         }
 
         if (reset_mgrs) {
