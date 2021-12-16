@@ -339,12 +339,12 @@ mksection .text
 %define %%TMP       %4 ;; [clobbered] Temp GP reg
 %define %%LFSR      %5 ;; [out] XMM register to contain LFSR
 
-    mov         %%TMP, %%ROUND_NUM
-    add         %%TMP, %%REG_IDX
-    and         %%TMP, 0xf
-    shl         %%TMP, 4
-    add         %%TMP, %%STATE
-    movdqa      %%LFSR, [%%TMP]
+        mov     %%TMP, %%ROUND_NUM
+        add     %%TMP, %%REG_IDX
+        and     %%TMP, 0xf
+        shl     %%TMP, 4
+        add     %%TMP, %%STATE
+        movdqa  %%LFSR, [%%TMP]
 
 %endmacro
 
@@ -358,12 +358,12 @@ mksection .text
 %define %%TMP       %4 ;; [clobbered] Temp GP reg
 %define %%LFSR      %5 ;; [in] XMM register to contain LFSR
 
-    mov         %%TMP, %%ROUND_NUM
-    add         %%TMP, %%REG_IDX
-    and         %%TMP, 0xf
-    shl         %%TMP, 4
-    add         %%TMP, %%STATE
-    movdqa      [%%TMP], %%LFSR
+        mov     %%TMP, %%ROUND_NUM
+        add     %%TMP, %%REG_IDX
+        and     %%TMP, 0xf
+        shl     %%TMP, 4
+        add     %%TMP, %%STATE
+        movdqa  [%%TMP], %%LFSR
 
 %endmacro
 
@@ -539,49 +539,39 @@ mksection .text
 %endmacro
 
 ;
-;   store16B_kstr4()
+; Stores 16 bytes of keystream for 4 lanes
 ;
-%macro  store16B_kstr4 4
-%define %%DATA16B_L0  %1  ; [in] 16 bytes of keystream for lane 0
-%define %%DATA16B_L1  %2  ; [in] 16 bytes of keystream for lane 1
-%define %%DATA16B_L2  %3  ; [in] 16 bytes of keystream for lane 2
-%define %%DATA16B_L3  %4  ; [in] 16 bytes of keystream for lane 3
+%macro  STORE16B_KSTR4 8
+%define %%DATA16B_L0    %1 ; [in] 16 bytes of keystream for lane 0
+%define %%DATA16B_L1    %2 ; [in] 16 bytes of keystream for lane 1
+%define %%DATA16B_L2    %3 ; [in] 16 bytes of keystream for lane 2
+%define %%DATA16B_L3    %4 ; [in] 16 bytes of keystream for lane 3
+%define %%KS_PTR0       %5 ; [in] Pointer to keystream for lane 0
+%define %%KS_PTR1       %6 ; [in] Pointer to keystream for lane 1
+%define %%KS_PTR2       %7 ; [in] Pointer to keystream for lane 2
+%define %%KS_PTR3       %8 ; [in] Pointer to keystream for lane 3
 
-    mov         rcx, [rsp]
-    mov         rdx, [rsp + 8]
-    mov         r8,  [rsp + 16]
-    mov         r9,  [rsp + 24]
-    movdqu      [rcx], %%DATA16B_L0
-    movdqu      [rdx], %%DATA16B_L1
-    movdqu      [r8],  %%DATA16B_L2
-    movdqu      [r9],  %%DATA16B_L3
+        movdqa  [%%KS_PTR0], %%DATA16B_L0
+        movdqa  [%%KS_PTR1], %%DATA16B_L1
+        movdqa  [%%KS_PTR2], %%DATA16B_L2
+        movdqa  [%%KS_PTR3], %%DATA16B_L3
 %endmacro
 
 ;
-;   store4B_kstr4()
+; Stores 4 bytes of keystream for 4 lanes
 ;
-;   params
-;
-;   %1 - XMM register with OFS_X3
-;   return
-;
-%macro  store4B_kstr4 1
-    mov         rcx, [rsp]
-    mov         rdx, [rsp + 8]
-    mov         r8,  [rsp + 16]
-    mov         r9,  [rsp + 24]
-    pextrd      [r9], %1, 3
-    pextrd      [r8], %1, 2
-    pextrd      [rdx], %1, 1
-    movd        [rcx], %1
-    add         rcx, 4
-    add         rdx, 4
-    add         r8, 4
-    add         r9, 4
-    mov         [rsp],      rcx
-    mov         [rsp + 8],  rdx
-    mov         [rsp + 16], r8
-    mov         [rsp + 24], r9
+%macro  STORE4B_KSTR4 6
+%define %%DATA4B_L03    %1 ; [in] 4 bytes of keystream for lanes 0-3
+%define %%KS_PTR0       %2 ; [in] Pointer to keystream for lane 0
+%define %%KS_PTR1       %3 ; [in] Pointer to keystream for lane 1
+%define %%KS_PTR2       %4 ; [in] Pointer to keystream for lane 2
+%define %%KS_PTR3       %5 ; [in] Pointer to keystream for lane 3
+%define %%OFFSET        %6 ; [in] Offset into keystream
+
+        movd    [%%KS_PTR0 + %%OFFSET], %%DATA4B_L03
+        pextrd  [%%KS_PTR1 + %%OFFSET], %%DATA4B_L03, 1
+        pextrd  [%%KS_PTR2 + %%OFFSET], %%DATA4B_L03, 2
+        pextrd  [%%KS_PTR3 + %%OFFSET], %%DATA4B_L03, 3
 %endmacro
 
 ;
@@ -1145,16 +1135,10 @@ init_for_auth_tag_4B:
 
         FUNC_SAVE
 
-        ; Store 4 keystream pointers on the stack
-        ; and reserve memory for storing keystreams for all 4 buffers
+        ; Reserve memory for storing keystreams for all 4 buffers
         mov     r10, rsp
-        sub     rsp, (4*8 + %%NUM_ROUNDS * 16)
+        sub     rsp, (%%NUM_ROUNDS * 16)
         and     rsp, -16
-
-        movdqa  %%XTMP1, [pKS]
-        movdqa  %%XTMP2, [pKS + 16]
-        movdqa  [rsp], %%XTMP1
-        movdqa  [rsp + 8*2], %%XTMP2
 
         ; Load read-only registers
         movdqa  %%MASK_31, [rel mask31]
@@ -1168,28 +1152,35 @@ init_for_auth_tag_4B:
                     %%XTMP4, %%XTMP5, %%XTMP6, %%XTMP7, %%W
         ; OFS_X3 XOR W and store in stack
         pxor        %%X3, %%W
-        movdqa      [rsp + 4*8 + (%%N-1)*16], %%X3
+        movdqa      [rsp + (%%N-1)*16], %%X3
         LFSR_UPDT4  pState, %%N, no_reg, %%XTMP1, %%XTMP2, %%XTMP3, %%XTMP4, %%XTMP5, %%XTMP6, \
                     %%MASK_31, %%XTMP8, work
 %assign %%N (%%N + 1)
 %endrep
 
+        ; Read keystream pointers
+        mov     r12, [pKS]
+        mov     r13, [pKS + 8]
+        mov     r14,  [pKS + 16]
+        mov     r15,  [pKS + 24]
 %if (%%NUM_ROUNDS == 4)
         ;; Load all OFS_X3
-        movdqa  %%XTMP1, [rsp + 4*8]
-        movdqa  %%XTMP2, [rsp + 4*8 + 16]
-        movdqa  %%XTMP3, [rsp + 4*8 + 16*2]
-        movdqa  %%XTMP4, [rsp + 4*8 + 16*3]
+        movdqa  %%XTMP1, [rsp]
+        movdqa  %%XTMP2, [rsp + 16]
+        movdqa  %%XTMP3, [rsp + 16*2]
+        movdqa  %%XTMP4, [rsp + 16*3]
 
         TRANSPOSE4_U32 %%XTMP1, %%XTMP2, %%XTMP3, %%XTMP4, %%XTMP5, %%XTMP6
 
-        store16B_kstr4 %%XTMP1, %%XTMP2, %%XTMP3, %%XTMP4
+        STORE16B_KSTR4 %%XTMP1, %%XTMP2, %%XTMP3, %%XTMP4, r12, r13, r14, r15
 %else ;; NUM_ROUNDS != 4
 %assign %%IDX 1
+%assign %%OFFSET 0
 %rep %%NUM_ROUNDS
-        movdqa  APPEND(%%XTMP, %%IDX), [rsp + 4*8 + (%%IDX-1)*16]
-        store4B_kstr4 APPEND(%%XTMP, %%IDX)
+        movdqa  APPEND(%%XTMP, %%IDX), [rsp + (%%IDX-1)*16]
+        STORE4B_KSTR4 APPEND(%%XTMP, %%IDX), r12, r13, r14, r15, %%OFFSET
 %assign %%IDX (%%IDX + 1)
+%assign %%OFFSET (%%OFFSET + 4)
 %endrep
 %endif ;; NUM_ROUNDS == 4
 
@@ -1197,7 +1188,7 @@ init_for_auth_tag_4B:
 %ifdef SAFE_DATA
         pxor    %%XTMP1, %%XTMP1
 %assign %%I 0
-%rep (2 + %%NUM_ROUNDS)
+%rep %%NUM_ROUNDS
         movdqa  [rsp + %%I*16], %%XTMP1
 %assign %%I (%%I + 1)
 %endrep
