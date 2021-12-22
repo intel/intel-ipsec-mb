@@ -756,6 +756,8 @@ mksection .text
 %define %%CONSTANTS rel EK256_EIA3_4
 %elif %%TAG_SIZE == 8
 %define %%CONSTANTS rel EK256_EIA3_8
+%elif %%TAG_SIZE == 16
+%define %%CONSTANTS rel EK256_EIA3_16
 %endif
     ; s0 - s3
     pxor           %%LFSR0_3, %%LFSR0_3
@@ -1080,7 +1082,13 @@ mksection .text
         movdqa  [%%TAGS], %%XTMP1
         movdqa  [%%TAGS + 16], %%KSTR1
         REORDER_LFSR pState, 2
-%elif %%TAG_SIZE == 16 ;;TODO
+%elif %%TAG_SIZE == 16
+        TRANSPOSE4_U32 %%KSTR1, %%KSTR2, %%KSTR3, %%KSTR4, %%XTMP5, %%XTMP6
+        movdqa  [%%TAGS], %%KSTR1
+        movdqa  [%%TAGS + 16], %%KSTR2
+        movdqa  [%%TAGS + 16*2], %%KSTR3
+        movdqa  [%%TAGS + 16*3], %%KSTR4
+        REORDER_LFSR pState, 4
 %endif
 
     FUNC_RESTORE
@@ -1100,22 +1108,27 @@ ZUC256_INIT_4:
     cmp tag_sz, 0
     je  init_for_cipher
 
-    ;; TODO: Check for 16B tags
     cmp tag_sz, 8
     je init_for_auth_tag_8B
     jb init_for_auth_tag_4B
 
-init_for_cipher:
-    ZUC_INIT_4 256, 0
+    ; Fall-through for tag size = 16 bytes
+init_for_auth_tag_16B:
+    ZUC_INIT_4 256, 16, tags
+    ret
+
+init_for_auth_tag_8B:
+    ZUC_INIT_4 256, 8, tags
     ret
 
 init_for_auth_tag_4B:
     ZUC_INIT_4 256, 4, tags
     ret
 
-init_for_auth_tag_8B:
-    ZUC_INIT_4 256, 8, tags
+init_for_cipher:
+    ZUC_INIT_4 256, 0
     ret
+
 ;
 ; Generate N*4 bytes of keystream
 ; for 4 buffers (where N is number of rounds)

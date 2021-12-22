@@ -1121,7 +1121,6 @@ void _zuc256_eia3_4_buffer_job(const void * const pKey[NUM_SSE_BUFS],
                 keys.pKeys[i] = pKey[i];
         }
 
-        /* TODO: Handle 16-byte digest cases */
         init_4(&keys, ivs, &state, 256, tag_size, T, use_gfni);
         keygen_4(&state, pKeyStrArr, 16, use_gfni);
 
