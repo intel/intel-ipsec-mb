@@ -72,6 +72,7 @@
 #define MAX_AAD_SIZE 1024
 
 #define MAX_IV_SIZE 25 /* IV size for ZUC-256 */
+#define MAX_TAG_SIZE 16 /* Max tag size for ZUC-256 */
 
 #define MAX_NUM_JOBS 32
 #define IMIX_ITER 1000
@@ -665,6 +666,7 @@ unsigned int imix_enabled = 0;
 /* cipher and authentication IV sizes */
 uint32_t cipher_iv_size = 0;
 uint32_t auth_iv_size = 0;
+uint8_t auth_tag_size = 0;
 
 struct custom_job_params custom_job_params = {
         .cipher_mode  = IMB_CIPHER_NULL,
@@ -1034,7 +1036,7 @@ fill_job(IMB_JOB *job, const struct params_s *params,
                 return -1;
         }
 
-        job->auth_tag_output_len_in_bytes = tag_size;
+        job->auth_tag_output_len_in_bytes = (uint64_t) tag_size;
 
         job->cipher_direction = cipher_dir;
 
@@ -1705,7 +1707,6 @@ do_test(IMB_MGR *enc_mb_mgr, const IMB_ARCH enc_arch,
         IMB_JOB *job;
         uint32_t i, imix_job_idx = 0;
         int ret = -1;
-        uint8_t tag_size = auth_tag_length_bytes[params->hash_alg - 1];
         uint64_t xgem_hdr[MAX_NUM_JOBS] = {0};
         uint8_t tag_size_to_check[MAX_NUM_JOBS];
         struct cipher_auth_keys *enc_keys = &data->enc_keys;
@@ -1723,6 +1724,12 @@ do_test(IMB_MGR *enc_mb_mgr, const IMB_ARCH enc_arch,
         unsigned int num_processed_jobs = 0;
         uint8_t next_iv[IMB_AES_BLOCK_SIZE];
         uint16_t pli = 0;
+        uint8_t tag_size;
+
+        if (auth_tag_size == 0)
+                tag_size = auth_tag_length_bytes[params->hash_alg - 1];
+        else
+                tag_size = auth_tag_size;
 
         if (num_jobs == 0)
                 return ret;
@@ -2582,6 +2589,7 @@ static void usage(const char *app_name)
                 "--shani-off: don't use SHA extensions\n"
                 "--cipher-iv-size: size of cipher IV.\n"
                 "--auth-iv-size: size of authentication IV.\n"
+                "--tag-size: size of authentication tag\n"
                 "--job-size: size of the cipher & MAC job in bytes. "
 #ifndef PIN_BASED_CEC
                 "It can be:\n"
@@ -2882,6 +2890,15 @@ int main(int argc, char *argv[])
                         if (auth_iv_size > MAX_IV_SIZE) {
                                 fprintf(stderr, "IV size cannot be "
                                         "higher than %u\n", MAX_IV_SIZE);
+                                return EXIT_FAILURE;
+                        }
+                } else if (strcmp(argv[i], "--tag-size") == 0) {
+                        i = get_next_num_arg((const char * const *)argv, i,
+                                             argc, &auth_tag_size,
+                                             sizeof(auth_tag_size));
+                        if (auth_tag_size > MAX_TAG_SIZE) {
+                                fprintf(stderr, "Tag size cannot be "
+                                        "higher than %u\n", MAX_TAG_SIZE);
                                 return EXIT_FAILURE;
                         }
                 } else if (strcmp(argv[i], "--num-jobs") == 0) {
