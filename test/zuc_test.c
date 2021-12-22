@@ -1019,8 +1019,10 @@ verify_tag_256(void *mac, const struct test256EIA3_vectors_t *vector,
 
         if (tag_sz == 4)
                 ref_mac = &vector->mac4;
-        else /* tag_sz == 8 */
+        else if (tag_sz == 8)
                 ref_mac = &vector->mac8;
+        else
+                ref_mac = &vector->mac16;
 
         ret = memcmp(mac, ref_mac, tag_sz);
         if (ret) {
@@ -1055,7 +1057,6 @@ int validate_zuc256_EIA3(struct IMB_MGR *mb_mgr, uint8_t **pSrcData,
         unsigned int iv_lens[MAXBUFS];
         unsigned tag_sz;
 
-        /* TODO: check 16-byte digests */
         for (i = 0; i < NUM_ZUC_256_EIA3_TESTS; i++) {
                 vector = &test256EIA3_vectors[i];
                 for (j = 0; j < numBuffs; j++) {
@@ -1066,7 +1067,7 @@ int validate_zuc256_EIA3(struct IMB_MGR *mb_mgr, uint8_t **pSrcData,
                         memcpy(pSrcData[j], vector->message, byteLength);
                         iv_lens[j] = vector->iv_length;
                 }
-                for (tag_sz = 4; tag_sz <= 8; tag_sz *= 2) {
+                for (tag_sz = 4; tag_sz <= 16; tag_sz *= 2) {
                         submit_eia3_jobs(mb_mgr, pKeys, pIV,
                                          pSrcData, pDstData,
                                          bitLength, numBuffs,

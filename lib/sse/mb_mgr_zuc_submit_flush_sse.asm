@@ -1113,6 +1113,11 @@ SUBMIT_JOB_ZUC256_EIA3:
         cmp     arg3, 8
         je      submit_tag_8B
         jb      submit_tag_4B
+
+        ; Fall-through when tag size == 16 bytes
+submit_tag_16B:
+        SUBMIT_JOB_ZUC_EIA3 256, 16
+        ret
 submit_tag_8B:
         SUBMIT_JOB_ZUC_EIA3 256, 8
         ret
@@ -1136,10 +1141,14 @@ FLUSH_JOB_ZUC128_EIA3:
 MKGLOBAL(FLUSH_JOB_ZUC256_EIA3,function,internal)
 FLUSH_JOB_ZUC256_EIA3:
         endbranch64
-        ; TODO: Handle 16-byte digests
         cmp     arg2, 8
         je      flush_tag_8B
         jb      flush_tag_4B
+
+        ; Fall-through when tag size == 16 bytes
+flush_tag_16B:
+        FLUSH_JOB_ZUC_EIA3 256, 16
+        ret
 flush_tag_8B:
         FLUSH_JOB_ZUC_EIA3 256, 8
         ret

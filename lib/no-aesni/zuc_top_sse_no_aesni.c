@@ -992,8 +992,11 @@ zuc256_eia3_4_buffer_job_sse_no_aesni(const void * const pKey[NUM_SSE_BUFS],
                         if (tag_size == 4)
                                 asm_ZucGenKeystream4B_4_sse_no_aesni(&state,
                                                              pKeyStrArr);
-                        else /* 8 */
+                        else if (tag_size == 8)
                                 asm_ZucGenKeystream8B_4_sse_no_aesni(&state,
+                                                             pKeyStrArr);
+                        else
+                                asm_ZucGenKeystream16B_4_sse_no_aesni(&state,
                                                              pKeyStrArr);
                 else
                         asm_ZucGenKeystream16B_4_sse_no_aesni(&state,

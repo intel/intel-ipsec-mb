@@ -140,16 +140,16 @@ implementations.
     | AES256-CMAC-96    | Y      | Y(5)x4 | Y   x8 | N      | N      | Y x16  |
     | KASUMI-F9         | Y      | N      | N      | N      | N      | N      |
     | ZUC-EIA3          | N      | Y  x4  | Y  x4  | Y  x8  | Y  x16 | Y  x16 |
-    | ZUC-EIA3-256(6)   | N      | Y  x4  | Y  x4  | Y  x8  | Y  x16 | Y  x16 |
-    | SNOW3G-UIA2(9)    | N      | Y by4  | Y by4  | N      | Y by32 | Y by32 |
+    | ZUC-EIA3-256      | N      | Y  x4  | Y  x4  | Y  x8  | Y  x16 | Y  x16 |
+    | SNOW3G-UIA2(8)    | N      | Y by4  | Y by4  | N      | Y by32 | Y by32 |
     | DOCSIS-CRC32(4)   | N      | Y      | Y      | N      | Y      | Y      |
     | HEC               | N      | Y      | Y      | N      | N      | N      |
     | POLY1305          | Y      | N      | N      | N      | Y      | Y      |
     | POLY1305 AEAD     | Y      | N      | N      | N      | Y      | Y      |
     | SNOW-V AEAD       | N      | Y  by8 | Y  by8 | Y  by8 | Y  by8 | Y by48 |
     | GHASH             | N      | Y  by8 | Y  by8 | Y  by8 | Y  by8 | Y by48 |
-    | CRC(7)            | N      | Y  by8 | Y  by8 | N      | N      | Y by16 |
-    | PON-CRC-BIP(8)    | N      | Y      | Y      | N      | N      | Y      |
+    | CRC(6)            | N      | Y  by8 | Y  by8 | N      | N      | Y by16 |
+    | PON-CRC-BIP(7)    | N      | Y      | Y      | N      | N      | Y      |
     +-------------------------------------------------------------------------+
 
 Notes:
@@ -158,8 +158,7 @@ Notes:
 (3) - AVX512 plus VAES, VPCLMULQDQ, GFNI and IFMA extensions
 (4) - used only with AES256-DOCSIS and AES128-DOCSIS ciphers
 (5) - x8 on selected CPU’s supporting GFNI
-(6) - 4 and 8 byte tag sizes are supported only
-(7) - Supported CRC types: - CRC32: Ethernet FCS, SCTP, WIMAX OFDMA
+(6) - Supported CRC types: - CRC32: Ethernet FCS, SCTP, WIMAX OFDMA
 - CRC24: LTE A, LTE B
 - CRC16: X25, FP data
 - CRC11: FP header
@@ -167,8 +166,8 @@ Notes:
 - CRC8: WIMAX OFDMA HCS
 - CRC7: FP header
 - CRC6: IUUP header
-(8) - used only with PON-AES128-CTR cipher
-(9) - x16 for init keystream generation, then by32
+(7) - used only with PON-AES128-CTR cipher
+(8) - x16 for init keystream generation, then by32
 
 Legend:
 byY- single buffer Y blocks at a time

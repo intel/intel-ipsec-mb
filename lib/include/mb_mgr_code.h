@@ -2472,7 +2472,8 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job)
                         }
                 }
                 if ((job->auth_tag_output_len_in_bytes != 4) &&
-                    (job->auth_tag_output_len_in_bytes != 8)) {
+                    (job->auth_tag_output_len_in_bytes != 8) &&
+                    (job->auth_tag_output_len_in_bytes != 16)) {
                         imb_set_errno(state, IMB_ERR_JOB_AUTH_TAG_LEN);
                         return 1;
                 }
