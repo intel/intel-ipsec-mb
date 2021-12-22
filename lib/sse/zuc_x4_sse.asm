@@ -2019,10 +2019,14 @@ remainder_key_sz_128:
         ;; - update T
         movd    DWORD(%%TMP), %%XTMP6
         xor     [%%T], DWORD(%%TMP)
-%else ;; %%TAG_SZ == 8
+%elif %%TAG_SZ == 8
         ;; - update T
         movq    %%TMP, %%XTMP6
         xor     [%%T], %%TMP
+%else ;; %%TAG_SZ == 16
+        movdqa  %%XTMP1, [%%T]
+        pxor    %%XTMP1, %%XTMP6
+        movdqa  [%%T], %%XTMP1
 %endif
 
         ;; Copy last 16 bytes of KS to the front
@@ -2058,11 +2062,11 @@ ZUC_EIA3ROUND16B:
 %define	DATA    arg3
 %define TAG_SZ  arg4
 
-        ;; TODO: Handle tag sizes of 16 bytes
         cmp     TAG_SZ, 8
         je      round_tag_8B
-        jb      round_tag_4B
+        ja      round_tag_16B
 
+        ; Fall-through for tag size = 4 bytes
 round_tag_4B:
         ROUND T, KS, DATA, rax, xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, \
               xmm7, xmm8, xmm9, xmm10, xmm11, 4
@@ -2071,6 +2075,11 @@ round_tag_4B:
 round_tag_8B:
         ROUND T, KS, DATA, rax, xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, \
               xmm7, xmm8, xmm9, xmm10, xmm11, 8
+        ret
+
+round_tag_16B:
+        ROUND T, KS, DATA, rax, xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, \
+              xmm7, xmm8, xmm9, xmm10, xmm11, 16
         ret
 
 ;----------------------------------------------------------------------------------------
