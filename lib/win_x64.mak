@@ -12,7 +12,7 @@
 #     * Neither the name of Intel Corporation nor the names of its contributors
 #       may be used to endorse or promote products derived from this software
 #       without specific prior written permission.
-# 
+#
 # THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 # AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 # IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -71,14 +71,14 @@ LIB_DIR = .\
 
 !ifdef DEBUG
 OPT = $(DEBUG_OPT)
-DCFLAGS = /DDEBUG /Z7
+DCFLAGS = /DDEBUG
 DAFLAGS = -gcv8
-DLFLAGS = /DEBUG
+DLFLAGS =
 !else
 OPT = /O2 /Oi
 DCFLAGS =
 DAFLAGS =
-DLFLAGS = /RELEASE
+DLFLAGS = /RELEASE /OPT:REF /OPT:ICF
 !endif
 
 !if "$(SAFE_DATA)" != "n"
@@ -98,7 +98,7 @@ DAFLAGS = $(DAFLAGS) -DSAFE_LOOKUP
 
 CC = cl
 CFLAGS_ALL = $(EXTRA_CFLAGS) /DNO_COMPAT_IMB_API_053 /I. /Iinclude /Ino-aesni \
-	/nologo /Y- /W3 /WX- /Gm- /fp:precise /EHsc
+	/nologo /Y- /W3 /WX- /Gm- /fp:precise /EHsc /Z7
 
 CFLAGS = $(CFLAGS_ALL) $(OPT) $(DCFLAGS)
 CFLAGS_NO_SIMD = $(CFLAGS_ALL) /Od $(DCFLAGS)
@@ -107,7 +107,7 @@ LIB_TOOL = lib
 LIBFLAGS = /nologo /machine:X64 /nodefaultlib
 
 LINK_TOOL = link
-LINKFLAGS = $(DLFLAGS) /nologo /machine:X64
+LINKFLAGS = $(DLFLAGS) /nologo /machine:X64 /DEBUG /INCREMENTAL:NO
 
 AS = nasm
 AFLAGS = $(DAFLAGS) -Werror -fwin64 -Xvc -DWIN_ABI -Iinclude/ \
