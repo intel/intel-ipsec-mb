@@ -912,7 +912,7 @@ asm_Zuc256Initialization_8_avx2:
     ; and reserve memory for storing keystreams for all 8 buffers
     mov     r10, rsp
     sub     rsp, (8*8 + %%NUM_ROUNDS * 32)
-    and     rsp, -31
+    and     rsp, -32
 
 %assign i 0
 %rep 2
@@ -1289,7 +1289,7 @@ asm_ZucCipher_8_avx2:
         ; space for rsp (8 bytes) and 2 GP registers (16 bytes) that will be clobbered later
         mov     rax, rsp
         sub     rsp, (32*8 + 16 + 16 + 8)
-        and     rsp, -31
+        and     rsp, -32
         xor     buf_idx, buf_idx
         vmovdqu [rsp + 32*8], xmm1
         mov     [rsp + 32*8 + 16], rax
