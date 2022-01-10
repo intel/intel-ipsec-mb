@@ -2028,7 +2028,8 @@ test_IMB_ZUC_EEA3_4_BUFFER(struct IMB_MGR *mgr)
         void *dst[MAX_BUFFS];
         void *dst_NULL_pts[MAX_BUFFS];
         uint8_t dst_s[MAX_BUFFS][BUFF_SIZE];
-        const uint32_t len_last_null[MAX_BUFFS - 1];
+        const uint32_t len_all_zero[MAX_BUFFS] = { 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                                                   0, 0, 0, 0, 0, 0, 0, 0 };
         const uint32_t len[MAX_BUFFS] = { 1, 1, 1, 1, 1, 1, 1, 1, 1,
                                           1, 1, 1, 1, 1, 1, 1, 1 };
         int seg_err; /* segfault flag */
@@ -2065,8 +2066,7 @@ test_IMB_ZUC_EEA3_4_BUFFER(struct IMB_MGR *mgr)
                         { key, iv, NULL, dst, len, IMB_ERR_NULL_SRC },
                         { key, iv, src, dst_NULL_pts, len, IMB_ERR_NULL_DST },
                         { key, iv, src, NULL, len, IMB_ERR_NULL_DST },
-                        { key, iv, src, dst, len_last_null,
-                          IMB_ERR_CIPH_LEN } };
+                        { key, iv, src, dst, len_all_zero, IMB_ERR_CIPH_LEN } };
 
         /* Iterate over args */
         for (i = 0; i < DIM(fn_args); i++) {
@@ -2098,7 +2098,8 @@ test_IMB_ZUC_EEA3_N_BUFFER(struct IMB_MGR *mgr)
         void *dst[MAX_BUFFS];
         void *dst_NULL_pts[MAX_BUFFS];
         uint8_t dst_s[MAX_BUFFS][BUFF_SIZE];
-        const uint32_t len_last_null[MAX_BUFFS - 1];
+        const uint32_t len_all_zero[MAX_BUFFS] = { 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                                                   0, 0, 0, 0, 0, 0, 0, 0 };
         const uint32_t len[MAX_BUFFS] = { 1, 1, 1, 1, 1, 1, 1, 1, 1,
                                           1, 1, 1, 1, 1, 1, 1, 1 };
         const uint32_t count = MAX_BUFFS;
@@ -2138,7 +2139,7 @@ test_IMB_ZUC_EEA3_N_BUFFER(struct IMB_MGR *mgr)
                 { key, iv, NULL, dst, len, count, IMB_ERR_NULL_SRC },
                 { key, iv, src, dst_NULL_pts, len, count, IMB_ERR_NULL_DST },
                 { key, iv, src, NULL, len, count, IMB_ERR_NULL_DST },
-                { key, iv, src, dst, len_last_null, count, IMB_ERR_CIPH_LEN }
+                { key, iv, src, dst, len_all_zero, count, IMB_ERR_CIPH_LEN }
         };
 
         /* Iterate over args */
@@ -2518,7 +2519,8 @@ test_IMB_KASUMI_F8_N_BUFFER(struct IMB_MGR *mgr)
         void *dst[MAX_BUFFS];
         void *dst_NULL_pts[MAX_BUFFS];
         uint8_t dst_s[MAX_BUFFS][BUFF_SIZE];
-        const uint32_t len_last_null[MAX_BUFFS - 1];
+        const uint32_t len_all_zero[MAX_BUFFS] = { 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                                                   0, 0, 0, 0, 0, 0, 0, 0 };
         const uint32_t len[MAX_BUFFS] = { 1, 1, 1, 1, 1, 1, 1, 1, 1,
                                           1, 1, 1, 1, 1, 1, 1, 1 };
         const uint32_t count = MAX_BUFFS;
@@ -2553,8 +2555,7 @@ test_IMB_KASUMI_F8_N_BUFFER(struct IMB_MGR *mgr)
                 { exp_key, iv, src, dst_NULL_pts, len, count,
                   IMB_ERR_NULL_DST },
                 { exp_key, iv, src, NULL, len, count, IMB_ERR_NULL_DST },
-                { exp_key, iv, src, dst, len_last_null, count,
-                  IMB_ERR_CIPH_LEN }
+                { exp_key, iv, src, dst, len_all_zero, count, IMB_ERR_CIPH_LEN }
         };
 
         /* Iterate over args */
@@ -3990,7 +3991,8 @@ test_IMB_ZUC_EIA3_N_BUFFER(struct IMB_MGR *mgr)
         const void *src[MAX_BUFFS];
         const void *src_NULL_pts[MAX_BUFFS];
         const uint8_t src_s[MAX_BUFFS][BUFF_SIZE];
-        const uint32_t len_last_null[MAX_BUFFS - 1];
+        const uint32_t len_all_zero[MAX_BUFFS] = { 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                                                   0, 0, 0, 0, 0, 0, 0, 0 };
         const uint32_t len[MAX_BUFFS] = { 1, 1, 1, 1, 1, 1, 1, 1, 1,
                                           1, 1, 1, 1, 1, 1, 1, 1 };
         uint32_t *tag[MAX_BUFFS];
@@ -4031,7 +4033,7 @@ test_IMB_ZUC_EIA3_N_BUFFER(struct IMB_MGR *mgr)
                 { key, NULL, src, len, tag, count, IMB_ERR_NULL_IV },
                 { key, iv, src_NULL_pts, len, tag, count, IMB_ERR_NULL_SRC },
                 { key, iv, NULL, len, tag, count, IMB_ERR_NULL_SRC },
-                { key, iv, src, len_last_null, tag, count, IMB_ERR_AUTH_LEN },
+                { key, iv, src, len_all_zero, tag, count, IMB_ERR_AUTH_LEN },
                 { key, iv, src, len, tag_NULL_pts, count, IMB_ERR_NULL_AUTH },
                 { key, iv, src, len, NULL, count, IMB_ERR_NULL_AUTH }
         };

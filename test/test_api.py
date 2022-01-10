@@ -183,8 +183,11 @@ def declare_args(arg_list, test_vectors, fun):
                     (values, a_len) = ([], "[MAX_BUFFS]")
                     for i in range(MAX_BUFFS): values.append("1")
                     val = "{" + ", ".join(values) + "}"
-                    if pts > 0: args_def.append(n_type + " " + n_name +
-                                        "_last_null [MAX_BUFFS - 1];")
+                    if pts > 0:
+                        new_val = val.replace("1","0")
+                        args_def.append(n_type + " " + n_name +
+                                        "_all_zero [MAX_BUFFS] = " \
+                                        + new_val + ";")
                 elif 'uint' in n_type: a_len = "[BUFF_SIZE]"
                 else: # struct declaration
                     args_def.append(n_type + " " + n_name + "_s;")
@@ -320,7 +323,7 @@ def assign_errors_to_inv_parameters_by_arg_name(full_data):
                     err_name = "IMB_ERR_NULL_AUTH"
                     err_val = "NULL"
                 else:
-                    err_val = simplified_arg_n.lower().strip("_") + "_last_null"
+                    err_val = simplified_arg_n.lower().strip("_") + "_all_zero"
                     if check_cipher(fun): err_name = "IMB_ERR_CIPH_LEN"
                     elif check_auth(fun): err_name = "IMB_ERR_AUTH_LEN"
             elif "_LEN" in simplified_arg_n or simplified_arg_n[len(simplified_arg_n)-1] == "L":
