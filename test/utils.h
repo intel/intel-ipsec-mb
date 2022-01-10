@@ -28,6 +28,7 @@
 #ifndef TESTAPP_UTILS_H
 #define TESTAPP_UTILS_H
 
+#include <stdio.h>
 #include <intel-ipsec-mb.h>
 
 #define DIM(_x) (sizeof(_x)/sizeof(_x[0]))
