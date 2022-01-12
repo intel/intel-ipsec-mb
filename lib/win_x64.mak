@@ -12,7 +12,7 @@
 #     * Neither the name of Intel Corporation nor the names of its contributors
 #       may be used to endorse or promote products derived from this software
 #       without specific prior written permission.
-# 
+#
 # THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 # AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 # IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -71,14 +71,14 @@ LIB_DIR = .\
 
 !ifdef DEBUG
 OPT = $(DEBUG_OPT)
-DCFLAGS = /DDEBUG /Z7
+DCFLAGS = /DDEBUG
 DAFLAGS = -gcv8
-DLFLAGS = /DEBUG
+DLFLAGS = /DEBUG /INCREMENTAL:NO
 !else
 OPT = /O2 /Oi
 DCFLAGS =
 DAFLAGS =
-DLFLAGS = /RELEASE
+DLFLAGS = /RELEASE /DEBUG /OPT:REF /OPT:ICF /INCREMENTAL:NO
 !endif
 
 !if "$(SAFE_DATA)" != "n"
@@ -98,7 +98,7 @@ DAFLAGS = $(DAFLAGS) -DSAFE_LOOKUP
 
 CC = cl
 CFLAGS_ALL = $(EXTRA_CFLAGS) /DNO_COMPAT_IMB_API_053 /I. /Iinclude /Ino-aesni \
-	/nologo /Y- /W3 /WX- /Gm- /fp:precise /EHsc
+	/nologo /Y- /W3 /WX- /Gm- /fp:precise /EHsc /Z7
 
 CFLAGS = $(CFLAGS_ALL) $(OPT) $(DCFLAGS)
 CFLAGS_NO_SIMD = $(CFLAGS_ALL) /Od $(DCFLAGS)
@@ -633,6 +633,7 @@ install:
 	-copy /Y /V /B $(LIBBASE).lib "$(INSTDIR)"
 	-copy /Y /V /A intel-ipsec-mb.h "$(INSTDIR)"
 !if "$(SHARED)" == "y"
+	-copy /Y /V /B $(LIB_DIR)\$(LIBBASE).pdb "$(INSTDIR)"
 	-copy /Y /V /B $(LIB_DIR)\$(LIBBASE).dll "$(INSTDIR)"
 	-copy /Y /V /B $(LIB_DIR)\$(LIBBASE).dll "%windir%\system32"
 !endif
@@ -641,6 +642,7 @@ uninstall:
 !if "$(SHARED)" == "y"
 	-del /Q "%windir%\system32\$(LIBBASE).dll"
 	-del /Q "$(INSTDIR)\$(LIBBASE).dll"
+	-del /Q "$(INSTDIR)\$(LIBBASE).pdb"
 !endif
 	-del /Q "$(INSTDIR)\$(LIBBASE).def"
 	-del /Q "$(INSTDIR)\$(LIBBASE).exp"
