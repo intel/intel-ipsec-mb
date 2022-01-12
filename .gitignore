@@ -1,4 +1,5 @@
 *.d
+*.pdb
 *.dll
 *.lib
 *.exp

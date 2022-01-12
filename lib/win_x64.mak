@@ -624,7 +624,7 @@ help:
 clean:
 	-del /q $(OBJ_DIR)\*.obj
 	-del /q $(OBJ_DIR)\*.dep
-	-del /q $(LIB_DIR)\$(LIBBASE).dll $(LIB_DIR)\$(LIBBASE).lib $(LIB_DIR)\$(LIBBASE).exp $(DEPALL)
+	-del /q $(LIB_DIR)\$(LIBBASE).dll $(LIB_DIR)\$(LIBBASE).pdb $(LIB_DIR)\$(LIBBASE).lib $(LIB_DIR)\$(LIBBASE).exp $(DEPALL)
 
 install:
 	-md "$(INSTDIR)"
