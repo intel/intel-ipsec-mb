@@ -1,4 +1,5 @@
 [![Coverity Status](https://scan.coverity.com/projects/16449/badge.svg)](https://scan.coverity.com/projects/intel-ipsec-mb)
+![Linux Build Status](https://github.com/intel/intel-ipsec-mb/actions/workflows/linux_make.yml/badge.svg)
 
 # Intel(R) Multi-Buffer Crypto for IPsec Library
 
