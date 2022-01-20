@@ -3306,6 +3306,7 @@ int main(int argc, char *argv[])
                         get_tsc_to_core_scale(turbo_enabled));
 
         fprintf(stderr, "SHA size incr = %d\n", sha_size_incr);
+        fprintf(stderr, "Library version: %s\n", IMB_VERSION_STR);
 
         if (custom_job_params.cipher_mode == TEST_GCM)
                 fprintf(stderr, "GCM AAD = %"PRIu64"\n", gcm_aad_size);
