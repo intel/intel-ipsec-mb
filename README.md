@@ -343,8 +343,10 @@ Build without safety features:
 - SAFE_DATA clears sensitive information stored temporarily on stack, registers or internal data structures  
 - SAFE_PARAM adds extra checks on input parameters  
 - SAFE_LOOKUP uses constant-time lookups (enabled by default)  
+- SAFE_OPTIONS additional option to disable all safe options. disable to turn off SAFE_DATA, SAFE_PARAM, SAFE_LOOKUP (enabled by default)
 
 `> nmake /f win_x64.mak SAFE_DATA=n SAFE_PARAM=n`
+`> nmake /f win_x64.mak SAFE_OPTIONS=n`
 
 Build with debugging information:   
 `> nmake /f win_x64.mak DEBUG=y`
@@ -476,6 +478,11 @@ Algorithms where these constant time functions are used are the following:
 If SAFE_LOOKUP is not enabled in the build (e.g. make SAFE_LOOKUP=n) then the
 algorithms listed above may be susceptible to timing attacks which could expose
 the cryptographic key.
+
+### SAFE_OPTIONS
+SAFE_OPTIONS is a parameter that can be used to disable
+all other safe options(SAFE_DATA, SAFE_PARAM, SAFE_LOOKUP). By just
+setting this parameter (e.g. SAFE_OPTIONS=n).
 
 ### Security API
 **Force clearing/zeroing of memory**

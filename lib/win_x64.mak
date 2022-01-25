@@ -37,6 +37,7 @@
 # SAFE_PARAM=y  - this option will add extra input parameter checks
 # SAFE_LOOKUP=y - this option will perform constant-time lookups depending on
 # 		  sensitive data (default)
+# SAFE_OPTIONS=n - this will disable all safe options( by default all safe options are enabled )
 
 !if !defined(SHARED)
 SHARED = y
@@ -79,6 +80,12 @@ OPT = /O2 /Oi
 DCFLAGS =
 DAFLAGS =
 DLFLAGS = /RELEASE /DEBUG /OPT:REF /OPT:ICF /INCREMENTAL:NO
+!endif
+
+!if "$(SAFE_OPTIONS)" == "n"
+SAFE_DATA = n
+SAFE_PARAM = n
+SAFE_LOOKUP = n
 !endif
 
 !if "$(SAFE_DATA)" != "n"
@@ -138,6 +145,8 @@ SAFE_DATA_MSG2=Stack and registers containing sensitive information, \
 SAFE_LOOKUP_MSG1=SAFE_LOOKUP option not set.
 SAFE_LOOKUP_MSG2=Lookups which depend on sensitive information \
 		are not guaranteed to be done in constant time.
+SAFE_OPTIONS_MSG1="SAFE_OPTIONS not set."
+SAFE_OPTIONS_MSG2="All safe options enabled."
 
 lib_objs1 = \
 	$(OBJ_DIR)\aes128_cbc_dec_by4_sse.obj \
@@ -546,6 +555,10 @@ $(LIB_DIR)\$(LIBNAME): $(all_objs)
 	@echo NOTE:  $(SAFE_LOOKUP_MSG1) $(SAFE_LOOKUP_MSG2)
 !endif
 
+!if "$(SAFE_OPTIONS)" != "n"
+	@echo NOTE:  $(SAFE_OPTIONS_MSG1) $(SAFE_OPTIONS_MSG2)
+!endif
+
 $(all_objs): $(OBJ_DIR) $(LIB_DIR)
 
 $(DEPALL): $(all_objs)
@@ -627,6 +640,8 @@ help:
 	@echo "          - Lookups depending on sensitive data might not be constant time"
 	@echo "SAFE_LOOKUP=y (default)"
 	@echo "          - Lookups depending on sensitive data are constant time"
+	@echo "SAFE_OPTIONS=n "
+	@echo "          - Disable all safe options (enabled by default)"
 
 clean:
 	-del /q $(OBJ_DIR)\*.obj

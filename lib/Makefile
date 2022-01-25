@@ -133,6 +133,12 @@ LDFLAGS += -s
 endif
 endif
 
+ifeq ($(SAFE_OPTIONS), n)
+SAFE_DATA = n
+SAFE_PARAM = n
+SAFE_LOOKUP = n
+endif
+
 ifneq ($(SAFE_DATA),n)
 CFLAGS += -DSAFE_DATA
 NASM_FLAGS += -DSAFE_DATA
@@ -224,6 +230,8 @@ SAFE_DATA_MSG2="Stack and registers containing sensitive information, \
 SAFE_LOOKUP_MSG1="SAFE_LOOKUP option not set."
 SAFE_LOOKUP_MSG2="Lookups which depend on sensitive information \
 		are not guaranteed to be done in constant time."
+SAFE_OPTIONS_MSG1="SAFE_OPTIONS not specified."
+SAFE_OPTIONS_MSG2="All safe options enabled by default."
 
 #
 # List of C modules (any origin)
@@ -686,6 +694,9 @@ endif
 ifeq ($(SAFE_LOOKUP), n)
 	@echo "NOTE:" $(SAFE_LOOKUP_MSG1) $(SAFE_LOOKUP_MSG2)
 endif
+ifneq ($(SAFE_OPTIONS), n)
+	@echo "NOTE:" $(SAFE_OPTIONS_MSG1) $(SAFE_OPTIONS_MSG2)
+endif
 
 .PHONY: install
 install: $(LIB_DIR)/$(LIBNAME)
@@ -867,6 +878,8 @@ help:
 	@echo "          - Lookups depending on sensitive data might not be constant time"
 	@echo "SAFE_LOOKUP=y (default)"
 	@echo "          - Lookups depending on sensitive data are constant time"
+	@echo "SAFE_OPTIONS=n"
+	@echo "          - Disable all safe options (enabled by default)"
 
 
 CHECKPATCH ?= checkpatch.pl
