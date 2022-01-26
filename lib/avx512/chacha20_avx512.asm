@@ -1282,6 +1282,8 @@ no_partial_block:
 
 %ifdef SAFE_DATA
         clear_all_zmms_asm
+%else
+        vzeroupper
 %endif
         mov     rax, job
         or      dword [rax + _status], IMB_STATUS_COMPLETED_CIPHER
@@ -1546,6 +1548,8 @@ no_partial_block_poly:
 
 %ifdef SAFE_DATA
         clear_all_zmms_asm
+%else
+        vzeroupper
 %endif
         mov     rax, job
         or      dword [rax + _status], IMB_STATUS_COMPLETED_CIPHER
@@ -1968,6 +1972,8 @@ no_partial_block_dec:
         vmovdqa64 [ks + 64*i], zmm0
 %assign i (i + 1)
 %endrep
+%else
+        vzeroupper
 %endif
         mov     rax, job
         or      dword [rax + _status], IMB_STATUS_COMPLETED_CIPHER
@@ -2261,6 +2267,8 @@ no_partial_block_ks:
         add     rsp, 8*7
 %ifdef SAFE_DATA
         clear_all_zmms_asm
+%else
+        vzeroupper
 %endif
 
 exit_ks:

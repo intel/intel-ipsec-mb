@@ -834,6 +834,8 @@ aes_cbc_enc_128_vaes_avx512:
 
 %ifdef SAFE_DATA
 	clear_all_zmms_asm
+%else
+        vzeroupper
 %endif ;; SAFE_DATA
 
         ret
@@ -850,6 +852,8 @@ aes_cbc_enc_192_vaes_avx512:
 
 %ifdef SAFE_DATA
 	clear_all_zmms_asm
+%else
+        vzeroupper
 %endif ;; SAFE_DATA
 
         ret
@@ -876,6 +880,8 @@ aes128_cbc_mac_vaes_avx512:
 
 %ifdef SAFE_DATA
 	clear_all_zmms_asm
+%else
+        vzeroupper
 %endif ;; SAFE_DATA
 
         ret
@@ -892,6 +898,8 @@ aes256_cbc_mac_vaes_avx512:
 
 %ifdef SAFE_DATA
 	clear_all_zmms_asm
+%else
+        vzeroupper
 %endif ;; SAFE_DATA
 
         ret
@@ -908,6 +916,8 @@ aes_xcbc_mac_128_vaes_avx512:
 
 %ifdef SAFE_DATA
 	clear_all_zmms_asm
+%else
+        vzeroupper
 %endif ;; SAFE_DATA
 
         ret
