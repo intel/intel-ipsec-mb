@@ -217,6 +217,7 @@ error_keyexp_sse:
         jmp aes_keyexp_192_sse_return
 %endif
 
+%ifdef AESNI_EMU
 MKGLOBAL(aes_keyexp_192_sse_no_aesni,function,)
 aes_keyexp_192_sse_no_aesni:
         endbranch64
@@ -320,6 +321,7 @@ error_keyexp_sse_no_aesni:
 
         jmp aes_keyexp_192_sse_no_aesni_return
 %endif
+%endif ; AESNI_EMU
 
 MKGLOBAL(aes_keyexp_192_avx,function,)
 MKGLOBAL(aes_keyexp_192_avx2,function,)
@@ -521,6 +523,7 @@ error_keyexp_enc_sse:
         jmp aes_keyexp_192_enc_sse_return
 %endif
 
+%ifdef AESNI_EMU
 MKGLOBAL(aes_keyexp_192_enc_sse_no_aesni,function,)
 aes_keyexp_192_enc_sse_no_aesni:
         endbranch64
@@ -602,6 +605,7 @@ error_keyexp_enc_sse_no_aesni:
 
         jmp aes_keyexp_192_enc_sse_no_aesni_return
 %endif
+%endif ; AESNI_EMU
 
 MKGLOBAL(aes_keyexp_192_enc_avx,function,)
 MKGLOBAL(aes_keyexp_192_enc_avx2,function,)

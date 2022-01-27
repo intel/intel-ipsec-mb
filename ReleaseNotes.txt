@@ -6,7 +6,7 @@ Unreleased
 
 General
 - Windows CET support
-
+- Disable AESNI emulation support by default and make it optional
 
 v1.1 October 2021
 ========================================================================

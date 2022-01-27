@@ -41,8 +41,10 @@ void
 init_mb_mgr_auto(IMB_MGR *state, IMB_ARCH *arch)
 {
         IMB_ARCH arch_detected = IMB_ARCH_NONE;
+#ifdef AESNI_EMU
         const uint64_t detect_no_aesni =
                 IMB_FEATURE_SSE4_2 | IMB_FEATURE_CMOV;
+#endif
         const uint64_t detect_sse =
                 IMB_FEATURE_SSE4_2 | IMB_FEATURE_CMOV |
                 IMB_FEATURE_AESNI | IMB_FEATURE_PCLMULQDQ;
@@ -83,12 +85,13 @@ init_mb_mgr_auto(IMB_MGR *state, IMB_ARCH *arch)
                 goto init_mb_mgr_auto_ret;
         }
 
+#ifdef AESNI_EMU
         if ((state->features & detect_no_aesni) == detect_no_aesni) {
                 init_mb_mgr_sse_no_aesni(state);
                 arch_detected = IMB_ARCH_NOAESNI;
                 goto init_mb_mgr_auto_ret;
         }
-
+#endif
         imb_set_errno(state, ENODEV);
 
  init_mb_mgr_auto_ret:

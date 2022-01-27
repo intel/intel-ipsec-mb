@@ -28,8 +28,9 @@
 
 #include <stdio.h>
 #include "intel-ipsec-mb.h"
-
-#include "noaesni.h"
+#ifdef AESNI_EMU
+#include "include/noaesni.h"
+#endif
 #include "asm.h"
 #include "include/clear_regs_mem.h"
 #include "include/error.h"
@@ -67,6 +68,7 @@ aes_xcbc_expand_key_sse(const void *key, void *k1_exp, void *k2, void *k3)
 #endif
 }
 
+#ifdef AESNI_EMU
 void
 aes_xcbc_expand_key_sse_no_aesni(const void *key, void *k1_exp,
                                  void *k2, void *k3)
@@ -94,6 +96,7 @@ aes_xcbc_expand_key_sse_no_aesni(const void *key, void *k1_exp,
         clear_mem(&keys_exp_enc, sizeof(keys_exp_enc));
 #endif
 }
+#endif /* AESNI_EMU */
 
 __forceinline
 void

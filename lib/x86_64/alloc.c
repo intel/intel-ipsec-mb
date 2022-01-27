@@ -179,6 +179,13 @@ IMB_MGR *imb_set_pointers_mb_mgr(void *mem_ptr, const uint64_t flags,
         const size_t mem_size = imb_get_mb_mgr_size();
         unsigned i;
 
+        /* Check if AESNI_EMU flag is set, needed to support AESNI emulation */
+#ifndef AESNI_EMU
+        if (flags & IMB_FLAG_AESNI_OFF) {
+                imb_set_errno(ptr, IMB_ERR_NO_AESNI_EMU);
+                return NULL;
+        }
+#endif
         if (reset_mgr) {
                 /* Zero out MB_MGR memory */
                 memset(mem_ptr, 0, mem_size);
@@ -188,8 +195,14 @@ IMB_MGR *imb_set_pointers_mb_mgr(void *mem_ptr, const uint64_t flags,
                 /* Reset function pointers from previously used architecture */
                 switch (used_arch) {
                 case IMB_ARCH_NOAESNI:
+#ifdef AESNI_EMU
                         init_mb_mgr_sse_no_aesni_internal(ptr, 0);
                         break;
+#else
+                        /* Return NULL if AESNI_EMU is not enabled */
+                        imb_set_errno(ptr, IMB_ERR_NO_AESNI_EMU);
+                        return NULL;
+#endif
                 case IMB_ARCH_SSE:
                         init_mb_mgr_sse_internal(ptr, 0);
                         break;
@@ -267,6 +280,13 @@ IMB_MGR *alloc_mb_mgr(uint64_t flags)
 {
         IMB_MGR *ptr = NULL;
 
+        /* Check if AESNI_EMU flag is set, needed to support AESNI emulation */
+#ifndef AESNI_EMU
+        if (flags & IMB_FLAG_AESNI_OFF) {
+                imb_set_errno(ptr, IMB_ERR_NO_AESNI_EMU);
+                return NULL;
+        }
+#endif
         ptr = alloc_aligned_mem(imb_get_mb_mgr_size());
         IMB_ASSERT(ptr != NULL);
         if (ptr != NULL) {

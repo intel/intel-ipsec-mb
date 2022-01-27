@@ -235,6 +235,9 @@ uint64_t cpu_feature_detect(void)
 #ifdef SAFE_PARAM
         features |= IMB_FEATURE_SAFE_PARAM;
 #endif
+#ifdef AESNI_EMU
+        features |= IMB_FEATURE_AESNI_EMU;
+#endif
 
         return features;
 }
@@ -248,4 +251,10 @@ uint64_t cpu_feature_adjust(const uint64_t flags, uint64_t features)
                 features &= ~IMB_FEATURE_AESNI;
 
         return features;
+}
+
+/* External function to retrieve feature flags */
+uint64_t imb_get_feature_flags(void)
+{
+        return cpu_feature_detect();
 }

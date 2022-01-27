@@ -38,12 +38,12 @@
 #include "include/snow3g.h"
 #include "include/gcm.h"
 #include "include/chacha20_poly1305.h"
-
 #include "include/save_xmms.h"
 #include "include/asm.h"
 #include "include/des.h"
 #include "include/cpu_feature.h"
 #include "include/noaesni.h"
+#include "include/aesni_emu.h"
 #include "include/error.h"
 
 IMB_JOB *submit_job_aes128_enc_avx(MB_MGR_AES_OOO *state,
@@ -878,7 +878,7 @@ init_mb_mgr_avx_internal(IMB_MGR *state, const int reset_mgrs)
                                              cpu_feature_detect());
 
         if (!(state->features & IMB_FEATURE_AESNI)) {
-                init_mb_mgr_sse_no_aesni_internal(state, reset_mgrs);
+                fallback_no_aesni(state, reset_mgrs);
                 return;
         }
 

@@ -25,6 +25,7 @@
 ;; OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;
 
+%ifdef AESNI_EMU
 %ifndef _AESNI_EMU_INC_
 %define _AESNI_EMU_INC_
 
@@ -262,3 +263,4 @@ extern emulate_AESKEYGENASSIST
 extern emulate_PCLMULQDQ
 
 %endif ; end ifndef _AESNI_EMU_INC_
+%endif ; AESNI_EMU

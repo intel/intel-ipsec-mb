@@ -152,6 +152,7 @@ aes128_ecbenc_x3_sse_return:
 %endif
 	ret
 
+%ifdef AESNI_EMU
 MKGLOBAL(aes128_ecbenc_x3_sse_no_aesni,function,internal)
 aes128_ecbenc_x3_sse_no_aesni:
 
@@ -243,6 +244,7 @@ aes128_ecbenc_x3_sse_no_aesni_return:
         clear_scratch_xmms_sse_asm
 %endif
 	ret
+%endif ; AESNI_EMU
 
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

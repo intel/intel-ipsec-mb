@@ -216,6 +216,7 @@ typedef enum {
         IMB_ERR_SRC_OFFSET,
         IMB_ERR_NULL_AUTH_KEY,
         IMB_ERR_NULL_CTX,
+        IMB_ERR_NO_AESNI_EMU,
         IMB_ERR_MAX       /* don't move this one */
 } IMB_ERR;
 
@@ -975,6 +976,7 @@ typedef uint32_t (*crc32_fn_t)(const void *, const uint64_t);
 #define IMB_FEATURE_GFNI       (1ULL << 16)
 #define IMB_FEATURE_AVX512_IFMA (1ULL << 17)
 #define IMB_FEATURE_BMI2       (1ULL << 18)
+#define IMB_FEATURE_AESNI_EMU  (1ULL << 19)
 
 /* TOP LEVEL (IMB_MGR) Data structure fields */
 
@@ -1258,6 +1260,14 @@ IMB_DLL_EXPORT size_t imb_get_mb_mgr_size(void);
  */
 IMB_DLL_EXPORT IMB_MGR *imb_set_pointers_mb_mgr(void *ptr, const uint64_t flags,
                                                 const unsigned reset_mgr);
+
+/**
+ * @brief Retrieves the bitmask with the features supported by the library,
+ *        without having to allocate/initialize IMB_MGR;
+ *
+ * @return Bitmask containing feature flags
+ */
+IMB_DLL_EXPORT uint64_t imb_get_feature_flags(void);
 
 IMB_DLL_EXPORT void init_mb_mgr_avx(IMB_MGR *state);
 IMB_DLL_EXPORT IMB_JOB *submit_job_avx(IMB_MGR *state);

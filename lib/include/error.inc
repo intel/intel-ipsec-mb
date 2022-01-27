@@ -28,6 +28,8 @@
 %ifndef ERROR_ASM_INCLUDED
 %define ERROR_ASM_INCLUDED
 
+%include "include/reg_sizes.asm"
+
 extern imb_errno
 extern imb_errno_types
 

@@ -348,12 +348,14 @@ aes_cmac_subkey_gen_sse:
         AES_CMAC_SUBKEY_GEN_SSE 9
         ret
 
+%ifdef AESNI_EMU
 MKGLOBAL(aes_cmac_subkey_gen_sse_no_aesni,function,)
 align 32
 aes_cmac_subkey_gen_sse_no_aesni:
         endbranch64
         AES_CMAC_SUBKEY_GEN_SSE 9, no_aesni
         ret
+%endif
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -373,12 +375,14 @@ aes_cmac_256_subkey_gen_sse:
         AES_CMAC_SUBKEY_GEN_SSE 13
         ret
 
+%ifdef AESNI_EMU
 MKGLOBAL(aes_cmac_256_subkey_gen_sse_no_aesni,function,)
 align 32
 aes_cmac_256_subkey_gen_sse_no_aesni:
         endbranch64
         AES_CMAC_SUBKEY_GEN_SSE 13, no_aesni
         ret
+%endif
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;

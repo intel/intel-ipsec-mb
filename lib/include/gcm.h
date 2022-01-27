@@ -330,6 +330,7 @@ aes_gcm_pre_256_avx512(const void *key, struct gcm_key_data *key_data);
  * - intentionally this is not exposed in intel-ipsec-mb.h
  * - available through IMB_GCM_xxx() macros from intel-ipsec-mb.h
  */
+#ifdef AESNI_EMU
 IMB_DLL_EXPORT void
 aes_gcm_enc_128_sse_no_aesni(const struct gcm_key_data *key_data,
                              struct gcm_context_data *context_data,
@@ -472,6 +473,7 @@ IMB_DLL_EXPORT void
 aes_gcm_pre_192_sse_no_aesni(const void *key, struct gcm_key_data *key_data);
 IMB_DLL_EXPORT void
 aes_gcm_pre_256_sse_no_aesni(const void *key, struct gcm_key_data *key_data);
+#endif /* AESNI-EMU */
 
 /*
  * Extra GCM API (for SSE/AVX/AVX2)

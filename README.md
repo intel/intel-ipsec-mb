@@ -311,6 +311,9 @@ or
 Build with debugging information:  
 `> make DEBUG=y`
 
+Build with AESNI emulation support (disabled by default):
+ > make AESNI_EMU=y
+
 **Note:** Building with debugging information is not advised for production use.
 
 For more build options and their explanation run:   
@@ -350,6 +353,9 @@ Build without safety features:
 
 Build with debugging information:   
 `> nmake /f win_x64.mak DEBUG=y`
+
+Build with AESNI emulation support (disabled by default):
+ > nmake /f win_x64.mak AESNI_EMU=y
 
 **Note:** Building with debugging information is not advised for production use.
 

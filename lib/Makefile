@@ -157,6 +157,12 @@ NASM_FLAGS += -DSAFE_LOOKUP
 YASM_FLAGS += -DSAFE_LOOKUP
 endif
 
+ifeq ($(AESNI_EMU),y)
+CFLAGS += -DAESNI_EMU
+NASM_FLAGS += -DAESNI_EMU
+YASM_FLAGS += -DAESNI_EMU
+endif
+
 # prevent SIMD optimizations for non-aesni modules
 CFLAGS_NO_SIMD = $(CFLAGS) -O1
 CFLAGS += $(OPT)
@@ -241,7 +247,6 @@ c_lib_objs := \
 	mb_mgr_avx2.o \
 	mb_mgr_avx512.o \
 	mb_mgr_sse.o \
-	mb_mgr_sse_no_aesni.o \
 	alloc.o \
 	aes_xcbc_expand_key.o \
 	md5_one_block.o \
@@ -251,18 +256,15 @@ c_lib_objs := \
 	des_basic.o \
 	version.o \
 	cpu_feature.o \
-	aesni_emu.o \
 	kasumi_avx.o \
 	kasumi_iv.o \
 	kasumi_sse.o \
 	zuc_top_sse.o \
-	zuc_top_sse_no_aesni.o \
 	zuc_top_avx.o \
 	zuc_top_avx2.o \
 	zuc_top_avx512.o \
 	zuc_iv.o \
 	snow3g_sse.o \
-	snow3g_sse_no_aesni.o \
 	snow3g_avx.o \
 	snow3g_avx2.o \
 	snow3g_avx512.o \
@@ -270,6 +272,15 @@ c_lib_objs := \
 	snow3g_iv.o \
 	mb_mgr_auto.o \
 	error.o
+
+ifeq ($(AESNI_EMU), y)
+c_lib_objs := $(c_lib_objs) \
+	mb_mgr_sse_no_aesni.o \
+	aesni_emu.o \
+	zuc_top_sse_no_aesni.o \
+	snow3g_sse_no_aesni.o
+endif
+
 #
 # List of ASM modules (root directory/common)
 #
@@ -329,8 +340,6 @@ asm_noaesni_lib_objs := \
 	crc16_x25_sse_no_aesni.o \
 	aes128_cbcs_1_9_enc_x4_sse_no_aesni.o \
 	aes128_cbcs_1_9_dec_by4_sse_no_aesni.o \
-	mb_mgr_aes128_cbcs_1_9_submit_sse.o \
-	mb_mgr_aes128_cbcs_1_9_flush_sse.o \
 	mb_mgr_aes128_cbcs_1_9_submit_sse_no_aesni.o \
 	mb_mgr_aes128_cbcs_1_9_flush_sse_no_aesni.o \
 	crc32_refl_by8_sse_no_aesni.o \
@@ -399,6 +408,8 @@ asm_sse_lib_objs := \
 	mb_mgr_aes192_cbc_enc_submit_x8_sse.o \
 	mb_mgr_aes256_cbc_enc_flush_x8_sse.o \
 	mb_mgr_aes256_cbc_enc_submit_x8_sse.o \
+	mb_mgr_aes128_cbcs_1_9_submit_sse.o \
+	mb_mgr_aes128_cbcs_1_9_flush_sse.o \
 	mb_mgr_aes128_cmac_submit_flush_x4_sse.o \
 	mb_mgr_aes256_cmac_submit_flush_x4_sse.o \
 	mb_mgr_aes128_cmac_submit_flush_x8_sse.o \
@@ -642,11 +653,14 @@ asm_avx512_gcm_objs := \
 # build object files lists
 #
 asm_obj_files := $(asm_generic_lib_objs) \
-	$(asm_noaesni_lib_objs) $(asm_noaesni_gcm_objs) \
 	$(asm_sse_lib_objs) $(asm_sse_gcm_objs) \
 	$(asm_avx_lib_objs) $(asm_avx_gcm_objs) \
 	$(asm_avx2_lib_objs) $(asm_avx2_gcm_objs) \
 	$(asm_avx512_lib_objs) $(asm_avx512_gcm_objs)
+
+ifeq ($(AESNI_EMU), y)
+asm_obj_files := $(asm_obj_files) $(asm_noaesni_lib_objs) $(asm_noaesni_gcm_objs)
+endif
 c_obj_files := $(c_lib_objs) $(c_gcm_objs)
 
 #
@@ -673,12 +687,19 @@ dep_target_files := $(dep_files:%=$(OBJ_DIR)/%)
 
 all: $(LIB_DIR)/$(LIBNAME)
 
-$(LIB_DIR)/$(LIBNAME): $(target_obj_files)
+$(LIB)_lnk.def: $(LIB).def
+ifneq ($(AESNI_EMU), y)
+	grep -v _no_aesni $(LIB).def > $(LIB)_lnk.def
+else
+	cp -f $(LIB).def $(LIB)_lnk.def
+endif
+
+$(LIB_DIR)/$(LIBNAME): $(target_obj_files) $(LIB)_lnk.def
 ifeq ($(SHARED),y)
 ifneq ($(MINGW),0)
-	$(CC) -shared $(LDFLAGS) -o $(LIBNAME) $^ $(LIB).def
+	$(CC) -shared $(LDFLAGS) -o $(LIBNAME) $^
 else
-	$(CC) -shared $(LDFLAGS) -Wl,-soname,$(LIB).so.$(SO_VERSION) -o $@ $^ -lc
+	$(CC) -shared $(LDFLAGS) -Wl,-soname,$(LIB).so.$(SO_VERSION) -o $@ $(target_obj_files) -lc
 	ln -f -s $(LIBNAME) $(LIB_DIR)/$(LIB).so.$(SO_VERSION)
 	ln -f -s $(LIB).so.$(SO_VERSION) $(LIB_DIR)/$(LIB).so
 endif
@@ -843,6 +864,7 @@ TAGS:
 clean:
 	rm -Rf $(target_obj_files)
 	rm -Rf $(dep_target_files)
+	rm -f $(LIB_DIR)/$(LIB)_lnk.def
 	rm -f $(LIB_DIR)/$(LIB).a $(LIB_DIR)/$(LIB).so* $(LIB_DIR)/$(LIB).dll
 
 .PHONY: doxy
@@ -860,6 +882,8 @@ help:
 	@echo "		- this option will modify the optimization level when DEBUG is used"
 	@echo "DEBUG=y   - this option will produce library fit for debugging"
 	@echo "SHARED=n  - this option will produce static library"
+	@echo "AESNI_EMU=y - AESNI emulation support enabled"
+	@echo "AESNI_EMU=n - AESNI emulation support disabled (default)"
 	@echo "OBJ_DIR=obj (default)"
 	@echo "          - this option can be used to change build directory"
 	@echo "LIB_DIR=. (default)"

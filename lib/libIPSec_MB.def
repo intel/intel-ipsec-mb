@@ -543,3 +543,4 @@ EXPORTS
     init_mb_mgr_auto				@517
     imb_get_mb_mgr_size                         @518
     imb_set_pointers_mb_mgr                     @519
+    imb_get_feature_flags                       @520

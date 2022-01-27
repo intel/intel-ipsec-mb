@@ -325,6 +325,9 @@ or
 Build with debugging information:
 > make DEBUG=y
 
+Build with AESNI emulation support (disabled by default):
+> make AESNI_EMU=y
+
 NOTE: Building with debugging information is not advised for production
 use.
 
@@ -368,6 +371,9 @@ disable to turn off SAFE_DATA, SAFE_PARAM, SAFE_LOOKUP (enabled by default)
 
 Build with debugging information:
 > nmake /f win_x64.mak DEBUG=y
+
+Build with AESNI emulation support (disabled by default):
+> nmake /f win_x64.mak AESNI_EMU=y
 
 NOTE: Building with debugging information is not advised for production
 use.

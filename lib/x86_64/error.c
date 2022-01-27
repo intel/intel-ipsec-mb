@@ -77,7 +77,8 @@ IMB_DLL_LOCAL const int imb_errno_types[] = {
         IMB_ERR_AAD_LEN,
         IMB_ERR_SRC_OFFSET,
         IMB_ERR_NULL_AUTH_KEY,
-        IMB_ERR_NULL_CTX
+        IMB_ERR_NULL_CTX,
+        IMB_ERR_NO_AESNI_EMU
 };
 
 #ifdef DEBUG
@@ -180,6 +181,8 @@ imb_get_strerror(int errnum)
                 return "Null pointer to authentication key (direct API)";
         case IMB_ERR_NULL_CTX:
                 return "Null pointer to context (direct API)";
+        case IMB_ERR_NO_AESNI_EMU:
+                return "No AESNI emulation support";
         default:
                 return strerror(errnum);
         }

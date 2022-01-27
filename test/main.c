@@ -332,6 +332,17 @@ exit:
         return DIM(tests);
 }
 
+/* Check if expected error for no AESNI Emulation support is returned */
+static int
+check_err_no_aesni_emu(const uint64_t feature_flags, IMB_MGR *p_mgr)
+{
+        if (((feature_flags & IMB_FEATURE_AESNI_EMU) == 0) &&
+            (imb_get_errno(p_mgr) == IMB_ERR_NO_AESNI_EMU))
+                return 1;
+
+        return 0;
+}
+
 int
 main(int argc, char **argv)
 {
@@ -340,6 +351,7 @@ main(int argc, char **argv)
         uint64_t flags = 0;
         int errors = 0;
         unsigned int stop_on_fail = 0;
+        const uint64_t feat_flags = imb_get_feature_flags();
 
         /* Check version number */
         if (imb_get_version() < IMB_VERSION(0, 50, 0))
@@ -400,6 +412,16 @@ main(int argc, char **argv)
                 p_mgr = alloc_mb_mgr(used_flags);
 
                 if (p_mgr == NULL) {
+                        if (atype == IMB_ARCH_NOAESNI) {
+                                if (check_err_no_aesni_emu(feat_flags, p_mgr)) {
+                                        printf("AESNI Emulation is not enabled."
+                                               " Skipping NOAESNI test.\n");
+                                        continue;
+                                }
+                                printf("Expected %s error, got %s error\n",
+                                       imb_get_strerror(IMB_ERR_NO_AESNI_EMU),
+                                       imb_get_strerror(imb_get_errno(p_mgr)));
+                        }
                         printf("Error allocating MB_MGR structure!\n");
                         return EXIT_FAILURE;
                 }

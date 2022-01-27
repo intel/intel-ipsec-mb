@@ -29,6 +29,7 @@
 #define _AESNI_EMU_H_
 #include <stdint.h>
 
+#ifdef AESNI_EMU
 /* Interface to AESNI emulation routines */
 
 /* XMM type definitions and constants */
@@ -131,4 +132,15 @@ IMB_DLL_LOCAL void emulate_PCLMULQDQ(union xmm_reg *src1_dst,
                                      const union xmm_reg *src2,
                                      const uint32_t imm8);
 
+#endif /* AESNI_EMU */
+static void
+fallback_no_aesni(IMB_MGR *state, uint64_t reset_mgrs)
+{
+#ifdef AESNI_EMU
+                init_mb_mgr_sse_no_aesni_internal(state, reset_mgrs);
+#else
+                (void) reset_mgrs; /* Unused */
+                imb_set_errno(state, IMB_ERR_NO_AESNI_EMU);
+#endif
+}
 #endif /* _AESNI_EMU_H_ */

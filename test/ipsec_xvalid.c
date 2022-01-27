@@ -2326,9 +2326,14 @@ run_test(const IMB_ARCH enc_arch, const IMB_ARCH dec_arch,
         IMB_MGR *enc_mgr = NULL;
         IMB_MGR *dec_mgr = NULL;
 
-        if (enc_arch == IMB_ARCH_NOAESNI)
+        if (enc_arch == IMB_ARCH_NOAESNI) {
                 enc_mgr = alloc_mb_mgr(flags | IMB_FLAG_AESNI_OFF);
-        else
+                if (imb_get_errno(enc_mgr) == IMB_ERR_NO_AESNI_EMU) {
+                        printf("AESNI Emulation is not enabled. "
+                               "Skipping NOAESNI test.\n");
+                        return;
+                }
+        } else
                 enc_mgr = alloc_mb_mgr(flags);
 
         if (enc_mgr == NULL) {
@@ -2358,9 +2363,14 @@ run_test(const IMB_ARCH enc_arch, const IMB_ARCH dec_arch,
         printf("Encrypting ");
         print_tested_arch(enc_mgr->features, enc_arch);
 
-        if (dec_arch == IMB_ARCH_NOAESNI)
+        if (dec_arch == IMB_ARCH_NOAESNI) {
                 dec_mgr = alloc_mb_mgr(flags | IMB_FLAG_AESNI_OFF);
-        else
+                if (imb_get_errno(dec_mgr) == IMB_ERR_NO_AESNI_EMU) {
+                        printf("AESNI Emulation is not enabled. "
+                               "Skipping NOAESNI test.\n");
+                        return;
+                }
+        } else
                 dec_mgr = alloc_mb_mgr(flags);
 
         if (dec_mgr == NULL) {

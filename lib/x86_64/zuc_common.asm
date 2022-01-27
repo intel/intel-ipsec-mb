@@ -667,11 +667,13 @@ asm_ZucInitialization_sse:
 ;;	RSI - pIV
 ;;      RDX - pState
 ;;
+%ifdef AESNI_EMU
 align 16
 MKGLOBAL(asm_ZucInitialization_sse_no_aesni,function,internal)
 asm_ZucInitialization_sse_no_aesni:
 
     ZUC_INIT SSE_NO_AESNI
+%endif ; AESNI_EMU
 
     ret
 
@@ -723,6 +725,7 @@ asm_ZucGenKeystream8B_sse:
 ;;	RDI - KS (key stream pointer)
 ;;	RSI - STATE (state pointer)
 ;;
+%ifdef AESNI_EMU
 align 16
 MKGLOBAL(asm_ZucGenKeystream8B_sse_no_aesni,function,internal)
 asm_ZucGenKeystream8B_sse_no_aesni:
@@ -730,6 +733,7 @@ asm_ZucGenKeystream8B_sse_no_aesni:
     ZUC_KEYGEN SSE_NO_AESNI, 2
 
     ret
+%endif ; AESNI_EMU
 
 ;;
 ;; void asm_ZucGenKeystream8B_avx(void *pKeystream, ZucState_t *pState);
@@ -777,6 +781,7 @@ asm_ZucGenKeystream16B_sse:
 ;;	RDI - KS (key stream pointer)
 ;;	RSI - STATE (state pointer)
 ;;
+%ifdef AESNI_EMU
 align 16
 MKGLOBAL(asm_ZucGenKeystream16B_sse_no_aesni,function,internal)
 asm_ZucGenKeystream16B_sse_no_aesni:
@@ -784,6 +789,7 @@ asm_ZucGenKeystream16B_sse_no_aesni:
     ZUC_KEYGEN SSE_NO_AESNI, 4
 
     ret
+%endif ; AESNI_EMU
 
 ;;
 ;; void asm_ZucGenKeystream64B_avx(uint32_t * pKeystream, uint32_t * pState);
@@ -873,6 +879,7 @@ asm_ZucGenKeystream_sse:
 ;;	RSI - STATE (state pointer)
 ;; 	RDX - NROUNDS (number of 4B rounds)
 ;;
+%ifdef AESNI_EMU
 align 16
 MKGLOBAL(asm_ZucGenKeystream_sse_no_aesni,function,internal)
 asm_ZucGenKeystream_sse_no_aesni:
@@ -880,6 +887,7 @@ asm_ZucGenKeystream_sse_no_aesni:
     ZUC_KEYGEN_VAR SSE_NO_AESNI
 
     ret
+%endif ; AESNI_EMU
 
 ;;
 ;; void asm_ZucGenKeystream_avx(uint32_t * pKeystream, uint32_t * pState);
