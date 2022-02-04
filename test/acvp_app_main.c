@@ -44,14 +44,21 @@ static ACVP_RESULT logger(char *msg)
 
 IMB_MGR *mb_mgr = NULL;
 int verbose = 0;
+int direct_api = 0; /* job API by default */
 
 static int aes_gcm_handler(ACVP_TEST_CASE *test_case)
 {
         ACVP_SYM_CIPHER_TC *tc;
-        IMB_JOB *job;
+        IMB_JOB *job = NULL;
+        aes_gcm_init_var_iv_t init_var_iv = NULL;
+        aes_gcm_enc_dec_update_t update_enc = NULL;
+        aes_gcm_enc_dec_finalize_t finalize_enc = NULL;
+        aes_gcm_enc_dec_update_t update_dec = NULL;
+        aes_gcm_enc_dec_finalize_t finalize_dec = NULL;
         int ret = 0;
 
         struct gcm_key_data key;
+        struct gcm_context_data ctx;
 
         if (test_case == NULL)
                 return EXIT_FAILURE;
@@ -80,54 +87,98 @@ static int aes_gcm_handler(ACVP_TEST_CASE *test_case)
                 goto end;
         }
 
-        job = IMB_GET_NEXT_JOB(mb_mgr);
-        job->key_len_in_bytes = tc->key_len >> 3;
-        job->cipher_mode = IMB_CIPHER_GCM;
-        job->hash_alg = IMB_AUTH_AES_GMAC;
-        job->iv = tc->iv;
-        job->iv_len_in_bytes = tc->iv_len;
-        job->cipher_start_src_offset_in_bytes = 0;
-        job->hash_start_src_offset_in_bytes = 0;
-        job->enc_keys = &key;
-        job->dec_keys = &key;
-        job->u.GCM.aad = tc->aad;
-        job->u.GCM.aad_len_in_bytes = tc->aad_len;
-        job->auth_tag_output_len_in_bytes = tc->tag_len;
+        if (direct_api == 0) {
+                job = IMB_GET_NEXT_JOB(mb_mgr);
+                job->key_len_in_bytes = tc->key_len >> 3;
+                job->cipher_mode = IMB_CIPHER_GCM;
+                job->hash_alg = IMB_AUTH_AES_GMAC;
+                job->iv = tc->iv;
+                job->iv_len_in_bytes = tc->iv_len;
+                job->cipher_start_src_offset_in_bytes = 0;
+                job->hash_start_src_offset_in_bytes = 0;
+                job->enc_keys = &key;
+                job->dec_keys = &key;
+                job->u.GCM.aad = tc->aad;
+                job->u.GCM.aad_len_in_bytes = tc->aad_len;
+                job->auth_tag_output_len_in_bytes = tc->tag_len;
+        } else {
+                switch (tc->key_len) {
+                case 128:
+                        init_var_iv = mb_mgr->gcm128_init_var_iv;
+                        update_enc = mb_mgr->gcm128_enc_update;
+                        finalize_enc = mb_mgr->gcm128_enc_finalize;
+                        update_dec = mb_mgr->gcm128_dec_update;
+                        finalize_dec = mb_mgr->gcm128_dec_finalize;
+                        break;
+                case 192:
+                        init_var_iv = mb_mgr->gcm192_init_var_iv;
+                        update_enc = mb_mgr->gcm192_enc_update;
+                        finalize_enc = mb_mgr->gcm192_enc_finalize;
+                        update_dec = mb_mgr->gcm192_dec_update;
+                        finalize_dec = mb_mgr->gcm192_dec_finalize;
+                        break;
+                case 256:
+                        init_var_iv = mb_mgr->gcm256_init_var_iv;
+                        update_enc = mb_mgr->gcm256_enc_update;
+                        finalize_enc = mb_mgr->gcm256_enc_finalize;
+                        update_dec = mb_mgr->gcm256_dec_update;
+                        finalize_dec = mb_mgr->gcm256_dec_finalize;
+                        break;
+                default:
+                        fprintf(stderr, "Unsupported AES key length\n");
+                        ret = 1;
+                        goto end;
+                }
+        }
 
         if (tc->direction == ACVP_SYM_CIPH_DIR_ENCRYPT) {
-                job->cipher_direction = IMB_DIR_ENCRYPT;
-                job->chain_order = IMB_ORDER_CIPHER_HASH;
-                job->src = tc->pt;
-                job->dst = tc->ct;
-                job->msg_len_to_cipher_in_bytes = tc->pt_len;
-                job->msg_len_to_hash_in_bytes = tc->pt_len;
-                job->auth_tag_output = tc->tag;
+                if (direct_api == 1) {
+                        init_var_iv(&key, &ctx, tc->iv, tc->iv_len,
+                                    tc->aad, tc->aad_len);
+                        update_enc(&key, &ctx, tc->ct, tc->pt, tc->pt_len);
+                        finalize_enc(&key, &ctx, tc->tag, tc->tag_len);
+                } else {
+                        job->cipher_direction = IMB_DIR_ENCRYPT;
+                        job->chain_order = IMB_ORDER_CIPHER_HASH;
+                        job->src = tc->pt;
+                        job->dst = tc->ct;
+                        job->msg_len_to_cipher_in_bytes = tc->pt_len;
+                        job->msg_len_to_hash_in_bytes = tc->pt_len;
+                        job->auth_tag_output = tc->tag;
 
-                job = IMB_SUBMIT_JOB(mb_mgr);
-                if (job == NULL)
-                        job = IMB_FLUSH_JOB(mb_mgr);
-                if (job->status != IMB_STATUS_COMPLETED) {
-                        ret = 1;
-                        fprintf(stderr, "Invalid job\n");
+                        job = IMB_SUBMIT_JOB(mb_mgr);
+                        if (job == NULL)
+                                job = IMB_FLUSH_JOB(mb_mgr);
+                        if (job->status != IMB_STATUS_COMPLETED) {
+                                ret = 1;
+                                fprintf(stderr, "Invalid job\n");
+                        }
                 }
         } else /* DECRYPT */ {
                 uint8_t res_tag[MAX_TAG_LENGTH];
 
-                job->cipher_direction = IMB_DIR_DECRYPT;
-                job->chain_order = IMB_ORDER_HASH_CIPHER;
-                job->src = tc->ct;
-                job->dst = tc->pt;
-                job->msg_len_to_cipher_in_bytes = tc->ct_len;
-                job->msg_len_to_hash_in_bytes = tc->ct_len;
-                job->auth_tag_output = res_tag;
+                if (direct_api == 1) {
+                        init_var_iv(&key, &ctx, tc->iv, tc->iv_len,
+                                    tc->aad, tc->aad_len);
+                        update_dec(&key, &ctx, tc->pt, tc->ct, tc->ct_len);
+                        finalize_dec(&key, &ctx, res_tag, tc->tag_len);
+                } else {
+                        job->cipher_direction = IMB_DIR_DECRYPT;
+                        job->chain_order = IMB_ORDER_HASH_CIPHER;
+                        job->src = tc->ct;
+                        job->dst = tc->pt;
+                        job->msg_len_to_cipher_in_bytes = tc->ct_len;
+                        job->msg_len_to_hash_in_bytes = tc->ct_len;
+                        job->auth_tag_output = res_tag;
 
-                job = IMB_SUBMIT_JOB(mb_mgr);
-                if (job == NULL)
-                        job = IMB_FLUSH_JOB(mb_mgr);
-                if (job->status != IMB_STATUS_COMPLETED) {
-                        ret = 1;
-                        fprintf(stderr, "Invalid job\n");
-                        goto end;
+                        job = IMB_SUBMIT_JOB(mb_mgr);
+                        if (job == NULL)
+                                job = IMB_FLUSH_JOB(mb_mgr);
+                        if (job->status != IMB_STATUS_COMPLETED) {
+                                ret = 1;
+                                fprintf(stderr, "Invalid job\n");
+                                goto end;
+                        }
                 }
                 if (memcmp(res_tag, tc->tag, tc->tag_len) != 0) {
                         ret = 1;
@@ -150,6 +201,7 @@ static void usage(const char *app_name)
                 "where args are two or more\n"
                 "--req FILENAME: request file in JSON format (required)\n"
                 "--resp FILENAME: response file in JSON format (required)\n"
+                "--direct-api: uses direct API instead of job API if available\n"
                 "--arch ARCH: select arch to test (SSE/AVX/AVX2/AVX512)\n"
                 "-h: print this message\n"
                 "-v: verbose, prints extra information\n\n"
@@ -216,6 +268,8 @@ main(int argc, char **argv)
                                 goto exit;
                         }
                         i++;
+                } else if (strcmp(argv[i], "--direct-api") == 0) {
+                        direct_api = 1;
                 } else if (strcmp(argv[i], "-h") == 0) {
                         usage(argv[0]);
                         ret = EXIT_SUCCESS;
