@@ -3870,6 +3870,8 @@ void snow3g_f9_1_buffer_vaes_avx512(const snow3g_key_schedule_t *pHandle,
         CLEAR_MEM(&ctx, sizeof(ctx));
         CLEAR_SCRATCH_GPS();
         CLEAR_SCRATCH_SIMD_REGS();
+#else
+        _mm256_zeroupper();
 #endif /* SAFE_DATA */
 }
 #endif /* AVX512 */
