@@ -158,10 +158,13 @@
 ;
 %macro clear_scratch_zmms_asm 0
 ; On Linux, all ZMM registers are scratch registers
-       vzeroall
-%assign i 16
-%rep 16
-        vpxorq  xmm %+ i, xmm %+ i
+        vpxorq  xmm0, xmm0, xmm0
+        vpxorq  xmm1, xmm1, xmm1
+        vpxorq  xmm2, xmm2, xmm2
+%assign i 3
+%rep (16 + 13)
+%assign j (i % 3)
+        vmovdqa64  xmm %+ i, xmm %+ j
 %assign i (i+1)
 %endrep
 %endmacro
