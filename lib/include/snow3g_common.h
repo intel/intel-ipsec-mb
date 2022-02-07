@@ -2210,134 +2210,6 @@ preserve_bits(uint64_t *KS,
 }
 
 /**
- * @brief Core SNOW3G F8 bit algorithm for the 3GPP confidentiality algorithm
- *
- * @param[in]    pCtx          Context where the scheduled keys are stored
- * @param[in]    pIn           Input buffer
- * @param[out]   pOut          Output buffer
- * @param[in]    lengthInBits  length in bits of the data to be encrypted
- * @param[in]    offsetinBits  offset in input buffer, where data are valid
- */
-static inline void f8_snow3g_bit(snow3gKeyState1_t *pCtx,
-                                 const void *pIn,
-                                 void *pOut,
-                                 const uint32_t lengthInBits,
-                                 const uint32_t offsetInBits)
-{
-        const uint8_t *pBufferIn = pIn;
-        uint8_t *pBufferOut = pOut;
-        uint32_t cipherLengthInBits = lengthInBits;
-        uint64_t shiftrem = 0;
-        uint64_t KS8, KS8bit; /* 8 bytes of key stream */
-        const uint8_t *pcBufferIn = pBufferIn + (offsetInBits / 8);
-        uint8_t *pcBufferOut = pBufferOut + (offsetInBits / 8);
-        /* Offset into the first byte (0 - 7 bits) */
-        uint32_t remainOffset = offsetInBits % 8;
-        SafeBuf safeInBuf = {0};
-        SafeBuf safeOutBuf = {0};
-
-        /* Now run the block cipher */
-
-        /* Start with potential partial block (due to offset and length) */
-        KS8 = snow3g_keystream_1_8(pCtx);
-        KS8bit = KS8 >> remainOffset;
-        /* Only one block to encrypt */
-        if (cipherLengthInBits < (64 - remainOffset)) {
-                const uint32_t byteLength = (cipherLengthInBits + 7) / 8;
-
-                memcpy_keystrm(safeInBuf.b8, pcBufferIn, byteLength);
-                /*
-                 * If operation is Out-of-place and there is offset
-                 * to be applied, "remainOffset" bits from the output buffer
-                 * need to be preserved (only applicable to first byte,
-                 * since remainOffset is up to 7 bits)
-                 */
-                if ((pIn != pOut) && remainOffset) {
-                        const uint8_t mask8 = (uint8_t)
-                                (1 << (8 - remainOffset)) - 1;
-
-                        safeInBuf.b8[0] = (safeInBuf.b8[0] & mask8) |
-                                (pcBufferOut[0] & ~mask8);
-                }
-                /* If last byte is a partial byte, the last bits of the output
-                 * need to be preserved */
-                const uint8_t bitlen_with_off = remainOffset +
-                        cipherLengthInBits;
-
-                if ((bitlen_with_off & 0x7) != 0)
-                        preserve_bits(&KS8bit, pcBufferOut, pcBufferIn,
-                                      &safeOutBuf, &safeInBuf,
-                                      bitlen_with_off, byteLength);
-
-                xor_keystrm_rev(safeOutBuf.b8, safeInBuf.b8, KS8bit);
-                memcpy_keystrm(pcBufferOut, safeOutBuf.b8, byteLength);
-                return;
-        }
-        /*
-         * If operation is Out-of-place and there is offset
-         * to be applied, "remainOffset" bits from the output buffer
-         * need to be preserved (only applicable to first byte,
-         * since remainOffset is up to 7 bits)
-         */
-        if ((pIn != pOut) && remainOffset) {
-                const uint8_t mask8 = (uint8_t)(1 << (8 - remainOffset)) - 1;
-
-                memcpy_keystrm(safeInBuf.b8, pcBufferIn, 8);
-                safeInBuf.b8[0] = (safeInBuf.b8[0] & mask8) |
-                        (pcBufferOut[0] & ~mask8);
-                xor_keystrm_rev(pcBufferOut, safeInBuf.b8, KS8bit);
-                pcBufferIn += SNOW3G_BLOCK_SIZE;
-        } else {
-                /* At least 64 bits to produce (including offset) */
-                pcBufferIn = xor_keystrm_rev(pcBufferOut, pcBufferIn, KS8bit);
-        }
-
-        if (remainOffset != 0)
-                shiftrem = KS8 << (64 - remainOffset);
-        cipherLengthInBits -= SNOW3G_BLOCK_SIZE * 8 - remainOffset;
-        pcBufferOut += SNOW3G_BLOCK_SIZE;
-
-        while (cipherLengthInBits) {
-                /* produce the next block of key stream */
-                KS8 = snow3g_keystream_1_8(pCtx);
-                KS8bit = (KS8 >> remainOffset) | shiftrem;
-                if (remainOffset != 0)
-                        shiftrem = KS8 << (64 - remainOffset);
-                if (cipherLengthInBits >= SNOW3G_BLOCK_SIZE * 8) {
-                        pcBufferIn = xor_keystrm_rev(pcBufferOut,
-                                                     pcBufferIn, KS8bit);
-                        cipherLengthInBits -= SNOW3G_BLOCK_SIZE * 8;
-                        pcBufferOut += SNOW3G_BLOCK_SIZE;
-                        /* loop variant */
-                } else {
-                        /* end of the loop, handle the last bytes */
-                        const uint32_t byteLength =
-                                (cipherLengthInBits + 7) / 8;
-
-                        memcpy_keystrm(safeInBuf.b8, pcBufferIn,
-                                       byteLength);
-
-                        /* If last byte is a partial byte, the last bits
-                         * of the output need to be preserved */
-                        if ((cipherLengthInBits & 0x7) != 0)
-                                preserve_bits(&KS8bit, pcBufferOut, pcBufferIn,
-                                              &safeOutBuf, &safeInBuf,
-                                              cipherLengthInBits, byteLength);
-
-                        xor_keystrm_rev(safeOutBuf.b8, safeInBuf.b8, KS8bit);
-                        memcpy_keystrm(pcBufferOut, safeOutBuf.b8, byteLength);
-                        cipherLengthInBits = 0;
-                }
-        }
-#ifdef SAFE_DATA
-        CLEAR_VAR(&KS8, sizeof(KS8));
-        CLEAR_VAR(&KS8bit, sizeof(KS8bit));
-        CLEAR_MEM(&safeInBuf, sizeof(safeInBuf));
-        CLEAR_MEM(&safeOutBuf, sizeof(safeOutBuf));
-#endif
-}
-
-/**
  * @brief Core SNOW3G F8 algorithm for the 3GPP confidentiality algorithm
  *
  * @param[in]  pCtx           Context where the scheduled keys are stored
@@ -2626,25 +2498,18 @@ void SNOW3G_F8_1_BUFFER_BIT(const snow3g_key_schedule_t *pHandle,
                 return;
         }
 #endif
-#ifdef SAFE_DATA
-        CLEAR_SCRATCH_SIMD_REGS();
-#endif /* SAFE_DATA */
+        uint8_t save_start = 0, save_end = 0;
+        uint8_t *dst = &((uint8_t *) pBufferOut)[offsetInBits >> 3];
 
-        snow3gKeyState1_t ctx;
+        save_msg_start_end(dst, offsetInBits & 7, lengthInBits, &save_start,
+                           &save_end);
+        copy_bits(dst, pBufferIn, offsetInBits, lengthInBits);
 
-        /* Initialize the schedule from the IV */
-        snow3gStateInitialize_1(&ctx, pHandle, pIV);
+        SNOW3G_F8_1_BUFFER(pHandle, pIV, dst, dst, (lengthInBits + 7) / 8);
 
-        /* Clock FSM and LFSR once, ignore the key stream */
-        (void) snow3g_keystream_1_4(&ctx);
-
-        f8_snow3g_bit(&ctx, pBufferIn, pBufferOut, lengthInBits, offsetInBits);
-
-#ifdef SAFE_DATA
-        CLEAR_MEM(&ctx, sizeof(ctx));
-        CLEAR_SCRATCH_GPS();
-        CLEAR_SCRATCH_SIMD_REGS();
-#endif /* SAFE_DATA */
+        shift_bits(dst, offsetInBits & 7, lengthInBits);
+        restore_msg_start_end(dst, offsetInBits & 7, lengthInBits, save_start,
+                              save_end);
 }
 
 /**
