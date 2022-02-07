@@ -115,6 +115,7 @@
 %include "include/clear_regs.asm"
 %include "include/gcm_defines.asm"
 %include "include/gcm_keys_avx2_avx512.asm"
+%include "include/gcm_common.inc"
 %include "include/memcpy.asm"
 %include "include/cet.inc"
 %include "include/error.inc"
@@ -261,57 +262,6 @@ default rel
         GHASH_MUL %%T5, %%HK, %%T1, %%T3, %%T4, %%T6, %%T2      ;  %%T5 = HashKey^8<<1 mod poly
         vmovdqu  [%%GDATA + HashKey_8], %%T5
 %endmacro
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; READ_SMALL_DATA_INPUT: Packs xmm register with data when data input is less than 16 bytes.
-; Returns 0 if data has length 0.
-; Input: The input data (INPUT), that data's length (LENGTH).
-; Output: The packed xmm register (OUTPUT).
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-%macro READ_SMALL_DATA_INPUT    6
-%define %%OUTPUT                %1 ; %%OUTPUT is an xmm register
-%define %%INPUT                 %2
-%define %%LENGTH                %3
-%define %%END_READ_LOCATION     %4 ; All this and the lower inputs are temp registers
-%define %%COUNTER               %5
-%define %%TMP1                  %6
-
-        vpxor   %%OUTPUT, %%OUTPUT
-        mov     %%COUNTER, %%LENGTH
-        mov     %%END_READ_LOCATION, %%INPUT
-        add     %%END_READ_LOCATION, %%LENGTH
-        xor     %%TMP1, %%TMP1
-
-        cmp     %%COUNTER, 8
-        jl      %%_byte_loop_2
-        vpinsrq %%OUTPUT, [%%INPUT],0           ;Read in 8 bytes if they exists
-        je      %%_done
-
-        sub     %%COUNTER, 8
-
-%%_byte_loop_1:                                 ;Read in data 1 byte at a time while data is left
-        shl     %%TMP1, 8                       ;This loop handles when 8 bytes were already read in
-        dec     %%END_READ_LOCATION
-        mov     BYTE(%%TMP1), BYTE [%%END_READ_LOCATION]
-        dec     %%COUNTER
-        jg      %%_byte_loop_1
-        vpinsrq %%OUTPUT, %%TMP1, 1
-        jmp     %%_done
-
-%%_byte_loop_2:                                 ;Read in data 1 byte at a time while data is left
-	;; NOTE: in current implementation check for zero length is obsolete here.
-        ;;      The adequate checks are done by callers of this macro.
-        ;; cmp     %%COUNTER, 0
-        ;; je      %%_done
-        shl     %%TMP1, 8                       ;This loop handles when no bytes were already read in
-        dec     %%END_READ_LOCATION
-        mov     BYTE(%%TMP1), BYTE [%%END_READ_LOCATION]
-        dec     %%COUNTER
-        jg      %%_byte_loop_2
-        vpinsrq %%OUTPUT, %%TMP1, 0
-%%_done:
-
-%endmacro ; READ_SMALL_DATA_INPUT
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; CALC_AAD_HASH: Calculates the hash of the data which will not be encrypted.
@@ -487,7 +437,7 @@ default rel
         je      %%_CALC_AAD_done
 
         vmovdqu         %%XTMP0, [%%GDATA_KEY + HashKey]
-        READ_SMALL_DATA_INPUT   %%XTMP1, %%T1, %%T2, %%T3, %%T4, %%T5
+        READ_SMALL_DATA_INPUT_AVX   %%XTMP1, %%T1, %%T2, %%T3, %%T4, %%T5
         ;byte-reflect the AAD data
         vpshufb         %%XTMP1, [rel SHUF_MASK]
         vpxor           %%AAD_HASH, %%XTMP1
@@ -527,7 +477,7 @@ default rel
 
 %%_fewer_than_16_bytes:
         lea     r10, [%%PLAIN_CYPH_IN + %%DATA_OFFSET]
-        READ_SMALL_DATA_INPUT   xmm1, r10, %%PLAIN_CYPH_LEN, rax, r12, r15
+        READ_SMALL_DATA_INPUT_AVX   xmm1, r10, %%PLAIN_CYPH_LEN, rax, r12, r15
 
 %%_data_read:                           ;Finished reading in data
 
@@ -2417,7 +2367,7 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
         ;; r10           - input data address
         ;; r13           - input data length
         ;; r12, r15, rax - temp registers
-        READ_SMALL_DATA_INPUT   %%T1, r10, r13, r12, r15, rax
+        READ_SMALL_DATA_INPUT_AVX   %%T1, r10, r13, r12, r15, rax
 
         lea      r12, [SHIFT_MASK + 16]
         sub      r12, r13
@@ -4438,7 +4388,7 @@ error_ghash:
 
 %%_fewer_than_16_bytes:
 	lea	r10, [%%PLAIN_IN]
-	READ_SMALL_DATA_INPUT	xmm1, r10, %%PLAIN_LEN, rax, r12, r15
+	READ_SMALL_DATA_INPUT_AVX	xmm1, r10, %%PLAIN_LEN, rax, r12, r15
 
         ; Finished reading in data
 %%_data_read:
@@ -4570,7 +4520,7 @@ no_full_blocks:
 
         ; Save next partial block
         mov	[arg2 + PBlockLen], arg4
-        READ_SMALL_DATA_INPUT xmm1, arg3, arg4, r11, r12, r13
+        READ_SMALL_DATA_INPUT_AVX xmm1, arg3, arg4, r11, r12, r13
         vpshufb xmm1, [rel SHUF_MASK]
         vpxor   xmm8, xmm1
         vmovdqu [arg2 + AadHash], xmm8

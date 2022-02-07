@@ -116,6 +116,7 @@
 %include "include/clear_regs.asm"
 %include "include/gcm_defines.asm"
 %include "include/gcm_keys_avx2_avx512.asm"
+%include "include/gcm_common.inc"
 %include "include/cet.inc"
 %include "include/mb_mgr_datastruct.asm"
 %include "include/imb_job.asm"
@@ -262,30 +263,6 @@ default rel
         GHASH_MUL %%T5, %%HK, %%T1, %%T3, %%T4, %%T6, %%T2      ;  %%T5 = HashKey^8<<1 mod poly
         vmovdqu  [%%GDATA + HashKey_8], %%T5
 %endmacro
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; READ_SMALL_DATA_INPUT: Packs xmm register with data when data input is less than 16 bytes.
-; Returns 0 if data has length 0.
-; Input: The input data (INPUT), that data's length (LENGTH).
-; Output: The packed xmm register (OUTPUT).
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-%macro READ_SMALL_DATA_INPUT    4
-%define %%OUTPUT                %1 ; %%OUTPUT is an xmm register
-%define %%INPUT                 %2
-%define %%LENGTH                %3
-%define %%TMP1                  %4
-
-        lea             %%TMP1, [rel byte_len_to_mask_table]
-%ifidn __OUTPUT_FORMAT__, win64
-        add             %%TMP1, %%LENGTH
-        add             %%TMP1, %%LENGTH
-        kmovw           k1, [%%TMP1]
-%else
-        kmovw           k1, [%%TMP1 + %%LENGTH*2]
-%endif
-        vmovdqu8        XWORD(%%OUTPUT){k1}{z}, [%%INPUT]
-
-%endmacro ; READ_SMALL_DATA_INPUT
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; CALC_AAD_HASH: Calculates the hash of the data which will not be encrypted.
@@ -459,7 +436,7 @@ default rel
         je      %%_CALC_AAD_done
 
         vmovdqu         %%XTMP0, [%%GDATA_KEY + HashKey]
-        READ_SMALL_DATA_INPUT   %%XTMP1, %%T1, %%T2, %%T3
+        READ_SMALL_DATA_INPUT_AVX512   %%XTMP1, %%T1, %%T2, %%T3, k1
         ;byte-reflect the AAD data
         vpshufb         %%XTMP1, [rel SHUF_MASK]
         vpxor           %%AAD_HASH, %%XTMP1
@@ -492,16 +469,8 @@ default rel
         cmp     r13, 0
         je      %%_partial_block_done           ;Leave Macro if no partial blocks
 
-        cmp     %%PLAIN_CYPH_LEN, 16            ;Read in input data without over reading
-        jl      %%_fewer_than_16_bytes
-        VXLDR   xmm1, [%%PLAIN_CYPH_IN]         ;If more than 16 bytes of data, just fill the xmm register
-        jmp     %%_data_read
-
-%%_fewer_than_16_bytes:
-        lea     r10, [%%PLAIN_CYPH_IN]
-        READ_SMALL_DATA_INPUT   xmm1, r10, %%PLAIN_CYPH_LEN, rax
-
-%%_data_read:                           ;Finished reading in data
+        ; Read in input data without over reading
+        READ_SMALL_DATA_INPUT_LEN_BT16_AVX512   xmm1, %%PLAIN_CYPH_IN, %%PLAIN_CYPH_LEN, r12, rax, k1
 
         vmovdqu xmm9, [%%GDATA_CTX + PBlockEncKey]  ;xmm9 = my_ctx_data.partial_block_enc_key
 
@@ -2346,7 +2315,7 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
         ;; out:
         ;; T1            - packed output
         ;; k1            - valid byte mask
-        READ_SMALL_DATA_INPUT   %%T1, %%PLAIN_CYPH_IN+%%DATA_OFFSET, r13, rax
+        READ_SMALL_DATA_INPUT_AVX512   %%T1, {%%PLAIN_CYPH_IN + %%DATA_OFFSET}, r13, rax, k1
 
         ;; At this point T1 contains the partial block data
         ;; Plaintext XOR E(K, Yn)
@@ -4332,15 +4301,7 @@ error_ghash:
 	je	%%_partial_block_done
 
         ; Read in input data without over reading
-	cmp	%%PLAIN_LEN, 16
-	jl	%%_fewer_than_16_bytes
-        ; If more than 16 bytes of data, just fill the xmm register
-	VXLDR   xmm1, [%%PLAIN_IN]
-	jmp	%%_data_read
-
-%%_fewer_than_16_bytes:
-	lea	r10, [%%PLAIN_IN]
-	READ_SMALL_DATA_INPUT	xmm1, r10, %%PLAIN_LEN, rax
+        READ_SMALL_DATA_INPUT_LEN_BT16_AVX512	xmm1, %%PLAIN_IN, %%PLAIN_LEN, r12, rax, k1
 
         ; Finished reading in data
 %%_data_read:
@@ -4472,7 +4433,7 @@ no_full_blocks:
 
         ; Save next partial block
         mov	[arg2 + PBlockLen], arg4
-        READ_SMALL_DATA_INPUT xmm1, arg3, arg4, r11
+        READ_SMALL_DATA_INPUT_AVX512 xmm1, arg3, arg4, r11, k1
         vpshufb xmm1, [rel SHUF_MASK]
         vpxor   xmm8, xmm1
         vmovdqu [arg2 + AadHash], xmm8

@@ -119,6 +119,7 @@
 %include "include/clear_regs.asm"
 %include "include/gcm_defines.asm"
 %include "include/gcm_keys_vaes_avx512.asm"
+%include "include/gcm_common.inc"
 %include "include/memcpy.asm"
 %include "include/aes_common.asm"
 %include "include/cet.inc"
@@ -680,33 +681,6 @@
 %endmacro
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; READ_SMALL_DATA_INPUT
-;;; Packs xmm register with data when data input is less or equal to 16 bytes
-;;; Returns 0 if data has length 0
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-%macro READ_SMALL_DATA_INPUT    6
-%define %%OUTPUT        %1 ; [out] xmm register
-%define %%INPUT         %2 ; [in] buffer pointer to read from
-%define %%LENGTH        %3 ; [in] number of bytes to read
-%define %%TMP1          %4 ; [clobbered]
-%define %%TMP2          %5 ; [clobbered]
-%define %%MASK          %6 ; [out] k1 to k7 register to store the partial block mask
-
-        mov             DWORD(%%TMP2), 16
-        lea             %%TMP1, [rel byte_len_to_mask_table]
-        cmp             %%LENGTH, %%TMP2
-        cmovb           %%TMP2, %%LENGTH
-%ifidn __OUTPUT_FORMAT__, win64
-        add             %%TMP1, %%TMP2
-        add             %%TMP1, %%TMP2
-        kmovw           %%MASK, [%%TMP1]
-%else
-        kmovw           %%MASK, [%%TMP1 + %%TMP2*2]
-%endif
-        vmovdqu8        %%OUTPUT{%%MASK}{z}, [%%INPUT]
-%endmacro ; READ_SMALL_DATA_INPUT
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; CALC_AAD_HASH: Calculates the hash of the data which will not be encrypted.
 ; Input: The input data (A_IN), that data's length (A_LEN), and the hash key (HASH_KEY).
 ; Output: The hash of the data (AAD_HASH).
@@ -1012,7 +986,8 @@
         or              %%LENGTH, %%LENGTH
         je              %%_partial_block_done           ;Leave Macro if no partial blocks
 
-        READ_SMALL_DATA_INPUT   %%XTMP0, %%PLAIN_CIPH_IN, %%PLAIN_CIPH_LEN, %%IA0, %%IA2, %%MASKREG
+        READ_SMALL_DATA_INPUT_LEN_BT16_AVX512 %%XTMP0, %%PLAIN_CIPH_IN, %%PLAIN_CIPH_LEN, \
+                                              %%IA0, %%IA2, %%MASKREG
 
         ;; XTMP1 = my_ctx_data.partial_block_enc_key
         vmovdqu64       %%XTMP1, [%%GDATA_CTX + PBlockEncKey]
@@ -3704,7 +3679,8 @@
         or              %%LENGTH, %%LENGTH
         je              %%_partial_block_done           ;Leave Macro if no partial blocks
 
-        READ_SMALL_DATA_INPUT   %%XTMP4, %%PLAIN_IN, %%PLAIN_LEN, %%IA0, %%IA1, %%MASKREG
+        READ_SMALL_DATA_INPUT_LEN_BT16_AVX512   %%XTMP4, %%PLAIN_IN, %%PLAIN_LEN, \
+                                                %%IA0, %%IA1, %%MASKREG
 
         vmovdqu64       %%XTMP2, [%%GDATA_KEY + HashKey]
 
