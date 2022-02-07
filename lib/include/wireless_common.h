@@ -213,7 +213,7 @@ save_msg_start_end(const void *msg,
 }
 
 /**
- * @brief Resconstruct start and end of the buffer around message
+ * @brief Reconstruct start and end of the buffer around message
  *
  * @param msg message buffer (destination buffer)
  * @param bit_offset message offset in bits (0 to 7)

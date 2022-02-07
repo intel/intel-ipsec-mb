@@ -2183,32 +2183,6 @@ snow3gStateInitialize_8(snow3gKeyState8_t *pCtx,
 }
 #endif /* AVX2 */
 
-static inline void
-preserve_bits(uint64_t *KS,
-              const uint8_t *pcBufferOut, const uint8_t *pcBufferIn,
-              SafeBuf *safeOutBuf, SafeBuf *safeInBuf,
-              const uint8_t bit_len, const uint8_t byte_len)
-{
-        const uint64_t mask = UINT64_MAX << (SNOW3G_BLOCK_SIZE * 8 - bit_len);
-
-        /* Clear the last bits of the key stream and the input
-         * (input only in out-of-place case) */
-        *KS &= mask;
-        if (pcBufferIn != pcBufferOut) {
-                const uint64_t swapMask = BSWAP64(mask);
-
-                safeInBuf->b64 &= swapMask;
-
-                /*
-                 * Merge the last bits from the output, to be preserved,
-                 * in the key stream, to be XOR'd with the input
-                 * (which last bits are 0, maintaining the output bits)
-                 */
-                memcpy_keystrm(safeOutBuf->b8, pcBufferOut, byte_len);
-                *KS |= BSWAP64(safeOutBuf->b64 & ~swapMask);
-        }
-}
-
 /**
  * @brief Core SNOW3G F8 algorithm for the 3GPP confidentiality algorithm
  *
