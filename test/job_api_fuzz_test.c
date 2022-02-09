@@ -34,6 +34,8 @@
 
 #include <intel-ipsec-mb.h>
 
+#define BUFF_SIZE (32*1024*1024)
+
 int LLVMFuzzerTestOneInput(const uint8_t *, size_t);
 
 static int custom_op(struct IMB_JOB *job)
@@ -450,7 +452,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t dataSize)
         IMB_ARCH arch;
         unsigned i;
         const unsigned num_jobs = 20;
-        const size_t buffsize = (32*1024*1024);
+        const size_t buffsize = BUFF_SIZE;
         /* Setting minimum datasize to always fill job structure  */
         if (dataSize < sizeof(IMB_JOB))
                 return 0;
@@ -480,8 +482,6 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t dataSize)
         IMB_JOB *job = NULL;
 
         for (i = 0; i < num_jobs; i++) {
-                void *buff;
-
                 hash = hash_selection();
                 cipher = cipher_selection();
                 job = IMB_GET_NEXT_JOB(p_mgr);
@@ -499,32 +499,13 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t dataSize)
                 else
                         job->cipher_mode = cipher;
                 clamp_lengths(job, buffsize);
-
-                if (posix_memalign((void **)&buff, 64, (2*buffsize)))
-                        goto end;
+                static DECLARE_ALIGNED(uint8_t buff[2*BUFF_SIZE], 64);
 
                 fill_job_data(job, buff);
                 fill_additional_cipher_data(job, buff, buffsize);
                 fill_additional_hash_data(job, buff, buffsize);
                 job = IMB_SUBMIT_JOB(p_mgr);
-
-                int err = imb_get_errno(p_mgr);
-                /*
-                 * If error in submission free the buff.
-                 * Else if submission was successful and we
-                 * got a job back, then free buffer associated
-                 * with returned job
-                 */
-                if (err != 0)
-                        free(buff);
-                else if (job != NULL)
-                        free(job->dst);
         }
- end:
-
-        while ((job = IMB_FLUSH_JOB(p_mgr)) != NULL)
-                free(job->dst);
-
         free_mb_mgr(p_mgr);
         return 0;
 }
