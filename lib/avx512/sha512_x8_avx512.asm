@@ -584,6 +584,8 @@ lastLoop:
 	vmovdqa64 [rsp + i*64], zmm0
 %assign i (i+1)
 %endrep
+%else
+        vzeroupper
 %endif
         mov     rsp, [rsp + _RSP]
 ;hash_done:

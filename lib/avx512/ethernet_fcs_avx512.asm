@@ -99,6 +99,11 @@ end_param_check:
 
         call            crc32_refl_by16_vclmul_avx512
 
+%ifdef SAFE_DATA
+        clear_scratch_zmms_asm
+%else
+        vzeroupper
+%endif
 %ifndef LINUX
         vmovdqa         xmm6,  [rsp + _xmm_save + 16*0]
         vmovdqa         xmm7,  [rsp + _xmm_save + 16*1]
@@ -108,9 +113,6 @@ end_param_check:
         vmovdqa         xmm11, [rsp + _xmm_save + 16*5]
         vmovdqa         xmm12, [rsp + _xmm_save + 16*6]
         vmovdqa         xmm13, [rsp + _xmm_save + 16*7]
-%endif
-%ifdef SAFE_DATA
-        clear_scratch_zmms_asm
 %endif
         mov             rsp, [rsp + _rsp_save]
 

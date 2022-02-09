@@ -104,6 +104,8 @@ crc24_lte_a_avx512:
 
 %ifdef SAFE_DATA
         clear_scratch_zmms_asm
+%else
+        vzeroupper
 %endif
 %ifndef LINUX
         vmovdqa         xmm6,  [rsp + _xmm_save + 16*0]
@@ -182,6 +184,8 @@ crc24_lte_b_avx512:
 
 %ifdef SAFE_DATA
         clear_scratch_zmms_asm
+%else
+        vzeroupper
 %endif
 %ifndef LINUX
         vmovdqa         xmm6,  [rsp + _xmm_save + 16*0]

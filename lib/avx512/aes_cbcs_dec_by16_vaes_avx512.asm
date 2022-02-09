@@ -64,6 +64,8 @@ aes_cbcs_1_9_dec_128_vaes_avx512:
 
 %ifdef SAFE_DATA
 	clear_all_zmms_asm
+%else
+        vzeroupper
 %endif ;; SAFE_DATA
 
         ret

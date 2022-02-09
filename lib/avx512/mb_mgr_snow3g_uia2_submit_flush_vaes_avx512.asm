@@ -250,12 +250,11 @@ mksection .text
         jmp     %%process_job_uia2
 
 %%return_uia2:
-%ifndef SAFE_DATA
-        vzeroupper
-%else
+%ifdef SAFE_DATA
         clear_scratch_zmms_asm
 %endif
 
+        ;; vzeroupper done as part of SNOW3G_FUNC_END if SAFE_DATA=n
         SNOW3G_FUNC_END
 
         ret

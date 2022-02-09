@@ -102,6 +102,8 @@ end_param_check:
 
 %ifdef SAFE_DATA
         clear_scratch_zmms_asm
+%else
+        vzeroupper
 %endif
 %ifndef LINUX
         vmovdqa         xmm6,  [rsp + _xmm_save + 16*0]

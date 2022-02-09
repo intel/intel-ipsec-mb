@@ -172,10 +172,7 @@ iv_len_12_init_IV:
                 zmm12, zmm13, zmm15, zmm16, zmm17, zmm18, zmm19, zmm20, multi_call
 
 skip_iv_len_12_init_IV:
-%ifdef SAFE_DATA
-        clear_scratch_gps_asm
-        clear_scratch_zmms_asm
-%endif
+        ;; SAFE_DATA covered in FUNC_RESTORE()
 exit_init_IV:
 
         FUNC_RESTORE

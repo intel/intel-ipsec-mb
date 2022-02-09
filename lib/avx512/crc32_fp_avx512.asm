@@ -104,6 +104,8 @@ crc16_fp_data_avx512:
 
 %ifdef SAFE_DATA
         clear_scratch_zmms_asm
+%else
+        vzeroupper
 %endif
 %ifndef LINUX
         vmovdqa         xmm6,  [rsp + _xmm_save + 16*0]
@@ -182,6 +184,8 @@ crc11_fp_header_avx512:
 
 %ifdef SAFE_DATA
         clear_scratch_zmms_asm
+%else
+        vzeroupper
 %endif
 %ifndef LINUX
         vmovdqa         xmm6,  [rsp + _xmm_save + 16*0]
@@ -260,6 +264,8 @@ crc7_fp_header_avx512:
 
 %ifdef SAFE_DATA
         clear_scratch_zmms_asm
+%else
+        vzeroupper
 %endif
 %ifndef LINUX
         vmovdqa         xmm6,  [rsp + _xmm_save + 16*0]
