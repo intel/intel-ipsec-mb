@@ -64,28 +64,6 @@
 %endmacro
 
 ;
-; This macro clears any YMM registers passed
-;
-%macro clear_ymms 1-16
-%define %%NUM_REGS %0
-%rep %%NUM_REGS
-        vpxor   %1, %1
-%rotate 1
-%endrep
-%endmacro
-
-;
-; This macro clears any ZMM registers passed
-;
-%macro clear_zmms 1-32
-%define %%NUM_REGS %0
-%rep %%NUM_REGS
-        vpxorq  %1, %1
-%rotate 1
-%endrep
-%endmacro
-
-;
 ; This macro clears all scratch GP registers
 ; for Windows or Linux
 ;
