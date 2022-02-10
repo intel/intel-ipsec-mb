@@ -25,7 +25,7 @@
 
 # Versions numbers
 %global major        1
-%global minor        1
+%global minor        2
 %global patch        0
 %global fullversion  %{major}.%{minor}.%{patch}
 
