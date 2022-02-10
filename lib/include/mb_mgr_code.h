@@ -2109,6 +2109,14 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job)
                         imb_set_errno(state, IMB_ERR_JOB_NULL_AUTH);
                         return 1;
                 }
+                if (job->u.HMAC._hashed_auth_key_xor_ipad == NULL) {
+                        imb_set_errno(state, IMB_ERR_JOB_NULL_HMAC_IPAD);
+                        return 1;
+                }
+                if (job->u.HMAC._hashed_auth_key_xor_opad == NULL) {
+                        imb_set_errno(state, IMB_ERR_JOB_NULL_HMAC_OPAD);
+                        return 1;
+                }
                 break;
         case IMB_AUTH_AES_XCBC:
                 if (job->src == NULL) {

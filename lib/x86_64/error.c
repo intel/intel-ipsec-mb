@@ -78,7 +78,9 @@ IMB_DLL_LOCAL const int imb_errno_types[] = {
         IMB_ERR_SRC_OFFSET,
         IMB_ERR_NULL_AUTH_KEY,
         IMB_ERR_NULL_CTX,
-        IMB_ERR_NO_AESNI_EMU
+        IMB_ERR_NO_AESNI_EMU,
+        IMB_ERR_JOB_NULL_HMAC_OPAD,
+        IMB_ERR_JOB_NULL_HMAC_IPAD
 };
 
 #ifdef DEBUG
@@ -147,6 +149,10 @@ imb_get_strerror(int errnum)
                 return "Null pointer to next IV";
         case IMB_ERR_JOB_PON_PLI:
                 return "Invalid PON PLI (CRC length vs cipher length)";
+        case IMB_ERR_JOB_NULL_HMAC_OPAD:
+                return "Null pointer to HMAC OPAD";
+        case IMB_ERR_JOB_NULL_HMAC_IPAD:
+                return "Null pointer to HMAC IPAD";
         case IMB_ERR_NULL_SRC:
                 return "Null source pointer (direct API)";
         case IMB_ERR_NULL_DST:

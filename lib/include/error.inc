@@ -83,7 +83,10 @@ SET_ERRNO_TYPES \
     IMB_ERR_AAD_LEN,            \
     IMB_ERR_SRC_OFFSET,         \
     IMB_ERR_NULL_AUTH_KEY,      \
-    IMB_ERR_NULL_CTX
+    IMB_ERR_NULL_CTX,           \
+    IMB_ERR_NO_AESNI_EMU,       \
+    IMB_ERR_JOB_NULL_HMAC_OPAD, \
+    IMB_ERR_JOB_NULL_HMAC_IPAD
 
 ;; Reset global imb_errno to 0
 %macro IMB_ERR_CHECK_RESET 0

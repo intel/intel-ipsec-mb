@@ -49,6 +49,8 @@ enum {
       TEST_AUTH_MSG_LEN_ZERO,
       TEST_AUTH_MSG_LEN_GT_MAX,
       TEST_AUTH_IV_LEN,
+      TEST_AUTH_NULL_HMAC_OPAD,
+      TEST_AUTH_NULL_HMAC_IPAD,
       TEST_CIPH_SRC_NULL = 200,
       TEST_CIPH_DST_NULL,
       TEST_CIPH_IV_NULL,
@@ -920,6 +922,54 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
                                 printf(".");
                         }
 
+        /*
+         * Invalid HMAC IPAD & OPAD
+         */
+        for (order = IMB_ORDER_CIPHER_HASH; order <= IMB_ORDER_HASH_CIPHER;
+             order++)
+                for (dir = IMB_DIR_ENCRYPT; dir <= IMB_DIR_DECRYPT; dir++)
+                        for (hash = IMB_AUTH_HMAC_SHA_1;
+                             hash < IMB_AUTH_NUM; hash++) {
+                                IMB_JOB *job = &template_job;
+                                int skip = 1;
+                                
+                                switch (hash) {
+                                case IMB_AUTH_HMAC_SHA_1:
+                                case IMB_AUTH_HMAC_SHA_224:
+                                case IMB_AUTH_HMAC_SHA_256:
+                                case IMB_AUTH_HMAC_SHA_384:
+                                case IMB_AUTH_HMAC_SHA_512:
+                                case IMB_AUTH_MD5:
+                                        skip = 0;
+                                        break;
+                                default:
+                                        break;
+                                }
+
+                                if (skip)
+                                        continue;
+
+                                fill_in_job(job, cipher, dir,
+                                            hash, order, &chacha_ctx,
+                                            &gcm_ctx);
+                                job->u.HMAC._hashed_auth_key_xor_ipad = NULL;
+                                if (!is_submit_invalid(mb_mgr, job,
+                                                       TEST_AUTH_NULL_HMAC_IPAD,
+                                                       IMB_ERR_JOB_NULL_HMAC_IPAD))
+                                        return 1;
+                                printf(".");
+
+                                fill_in_job(job, cipher, dir,
+                                            hash, order, &chacha_ctx,
+                                            &gcm_ctx);
+                                job->u.HMAC._hashed_auth_key_xor_opad = NULL;
+                                if (!is_submit_invalid(mb_mgr, job,
+                                                       TEST_AUTH_NULL_HMAC_OPAD,
+                                                       IMB_ERR_JOB_NULL_HMAC_OPAD))
+                                        return 1;
+                                printf(".");
+
+                        }
 
         /* clean up */
         while (IMB_FLUSH_JOB(mb_mgr) != NULL)
