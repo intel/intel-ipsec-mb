@@ -80,7 +80,10 @@ IMB_DLL_LOCAL const int imb_errno_types[] = {
         IMB_ERR_NULL_CTX,
         IMB_ERR_NO_AESNI_EMU,
         IMB_ERR_JOB_NULL_HMAC_OPAD,
-        IMB_ERR_JOB_NULL_HMAC_IPAD
+        IMB_ERR_JOB_NULL_HMAC_IPAD,
+        IMB_ERR_JOB_NULL_XCBC_K1_EXP,
+        IMB_ERR_JOB_NULL_XCBC_K2,
+        IMB_ERR_JOB_NULL_XCBC_K3
 };
 
 #ifdef DEBUG
@@ -153,6 +156,12 @@ imb_get_strerror(int errnum)
                 return "Null pointer to HMAC OPAD";
         case IMB_ERR_JOB_NULL_HMAC_IPAD:
                 return "Null pointer to HMAC IPAD";
+        case IMB_ERR_JOB_NULL_XCBC_K1_EXP:
+                return "Null pointer to XCBC K1 expanded";
+        case IMB_ERR_JOB_NULL_XCBC_K2:
+                return "Null pointer to XCBC K2";
+        case IMB_ERR_JOB_NULL_XCBC_K3:
+                return "Null pointer to XCBC K3";
         case IMB_ERR_NULL_SRC:
                 return "Null source pointer (direct API)";
         case IMB_ERR_NULL_DST:

@@ -51,6 +51,9 @@ enum {
       TEST_AUTH_IV_LEN,
       TEST_AUTH_NULL_HMAC_OPAD,
       TEST_AUTH_NULL_HMAC_IPAD,
+      TEST_AUTH_NULL_XCBC_K1_EXP,
+      TEST_AUTH_NULL_XCBC_K2,
+      TEST_AUTH_NULL_XCBC_K3,
       TEST_CIPH_SRC_NULL = 200,
       TEST_CIPH_DST_NULL,
       TEST_CIPH_IV_NULL,
@@ -932,7 +935,7 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
                              hash < IMB_AUTH_NUM; hash++) {
                                 IMB_JOB *job = &template_job;
                                 int skip = 1;
-                                
+
                                 switch (hash) {
                                 case IMB_AUTH_HMAC_SHA_1:
                                 case IMB_AUTH_HMAC_SHA_224:
@@ -953,9 +956,12 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
                                             hash, order, &chacha_ctx,
                                             &gcm_ctx);
                                 job->u.HMAC._hashed_auth_key_xor_ipad = NULL;
+
+                                const int err_ipad = IMB_ERR_JOB_NULL_HMAC_IPAD;
+
                                 if (!is_submit_invalid(mb_mgr, job,
                                                        TEST_AUTH_NULL_HMAC_IPAD,
-                                                       IMB_ERR_JOB_NULL_HMAC_IPAD))
+                                                       err_ipad))
                                         return 1;
                                 printf(".");
 
@@ -963,13 +969,57 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
                                             hash, order, &chacha_ctx,
                                             &gcm_ctx);
                                 job->u.HMAC._hashed_auth_key_xor_opad = NULL;
+
+                                const int err_opad = IMB_ERR_JOB_NULL_HMAC_OPAD;
+
                                 if (!is_submit_invalid(mb_mgr, job,
                                                        TEST_AUTH_NULL_HMAC_OPAD,
-                                                       IMB_ERR_JOB_NULL_HMAC_OPAD))
+                                                       err_opad))
                                         return 1;
                                 printf(".");
 
                         }
+
+        /*
+         * Invalid XCBC key parameters
+         */
+        for (order = IMB_ORDER_CIPHER_HASH; order <= IMB_ORDER_HASH_CIPHER;
+             order++)
+                for (dir = IMB_DIR_ENCRYPT; dir <= IMB_DIR_DECRYPT; dir++) {
+                        IMB_JOB *job = &template_job;
+
+                        hash = IMB_AUTH_AES_XCBC;
+
+                        fill_in_job(job, cipher, dir,
+                                    hash, order, &chacha_ctx,
+                                    &gcm_ctx);
+                        job->u.XCBC._k1_expanded = NULL;
+                        if (!is_submit_invalid(mb_mgr, job,
+                                               TEST_AUTH_NULL_XCBC_K1_EXP,
+                                               IMB_ERR_JOB_NULL_XCBC_K1_EXP))
+                                return 1;
+                        printf(".");
+
+                        fill_in_job(job, cipher, dir,
+                                    hash, order, &chacha_ctx,
+                                    &gcm_ctx);
+                        job->u.XCBC._k2 = NULL;
+                        if (!is_submit_invalid(mb_mgr, job,
+                                               TEST_AUTH_NULL_XCBC_K2,
+                                               IMB_ERR_JOB_NULL_XCBC_K2))
+                                return 1;
+                        printf(".");
+
+                        fill_in_job(job, cipher, dir,
+                                    hash, order, &chacha_ctx,
+                                    &gcm_ctx);
+                        job->u.XCBC._k3 = NULL;
+                        if (!is_submit_invalid(mb_mgr, job,
+                                               TEST_AUTH_NULL_XCBC_K3,
+                                               IMB_ERR_JOB_NULL_XCBC_K3))
+                                return 1;
+                        printf(".");
+                }
 
         /* clean up */
         while (IMB_FLUSH_JOB(mb_mgr) != NULL)

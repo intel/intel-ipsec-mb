@@ -2138,6 +2138,18 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job)
                         imb_set_errno(state, IMB_ERR_JOB_AUTH_LEN);
                         return 1;
                 }
+                if (job->u.XCBC._k1_expanded == NULL) {
+                        imb_set_errno(state, IMB_ERR_JOB_NULL_XCBC_K1_EXP);
+                        return 1;
+                }
+                if (job->u.XCBC._k2 == NULL) {
+                        imb_set_errno(state, IMB_ERR_JOB_NULL_XCBC_K2);
+                        return 1;
+                }
+                if (job->u.XCBC._k3 == NULL) {
+                        imb_set_errno(state, IMB_ERR_JOB_NULL_XCBC_K3);
+                        return 1;
+                }
                 break;
         case IMB_AUTH_NULL:
                 break;
