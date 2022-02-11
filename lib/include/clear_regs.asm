@@ -170,6 +170,7 @@
 %assign i (i+1)
 %endrep
 %endif ; LINUX
+        vzeroupper
 %endmacro
 
 ;
@@ -218,6 +219,7 @@
         vmovdqa64  xmm %+ i, xmm %+ j
 %assign i (i+1)
 %endrep
+        vzeroupper
 %endmacro
 
 %endif ;; _CLEAR_REGS_ASM
