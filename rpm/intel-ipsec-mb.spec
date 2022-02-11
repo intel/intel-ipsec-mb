@@ -109,6 +109,9 @@ ln -s libIPSec_MB.so.%{fullversion} libIPSec_MB.so
 %{_libdir}/libIPSec_MB.so
 
 %changelog
+* Fri Feb 11 2022 Stephen Mcintyre <stephen.mcintyre@intel.com> 1.2.0-1
+- Update for release package v1.2
+
 * Fri Oct 22 2021 Pablo de Lara Guarch <pablo.de.lara.guarch@intel.com> 1.1.0-1
 - Update for release package v1.1
 
