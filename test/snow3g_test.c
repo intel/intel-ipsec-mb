@@ -474,6 +474,9 @@ validate_snow3g_f8_1_bitblock(struct IMB_MGR *mb_mgr,
 #endif
 
         memset(padding, -1, sizeof(padding));
+        memset(srcBuff, 0, sizeof(srcBuff));
+        memset(midBuff, 0, sizeof(midBuff));
+        memset(dstBuff, 0, sizeof(dstBuff));
 
         pIV = malloc(SNOW3G_IV_LEN_IN_BYTES);
         if (!pIV) {
@@ -540,7 +543,7 @@ validate_snow3g_f8_1_bitblock(struct IMB_MGR *mb_mgr,
                                         testStandardVectors[i].dataLenInBytes;
                                 final_byte_offset = byte_len;
                                 bit_len = byte_len * 8;
-                                tail_offset = bit_len;
+                                tail_offset = bit_len % 8;
                                 memcpy(srcBuff,
                                        testStandardVectors[i].plaintext,
                                        byte_len);
