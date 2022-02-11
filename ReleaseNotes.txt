@@ -1,12 +1,32 @@
 ========================================================================
 Release Notes for Intel(R) Multi-Buffer Crypto for IPsec Library
 
-Unreleased
+v1.2 February 2022
 ========================================================================
 
 General
 - Windows CET support
-- Disable AESNI emulation support by default and make it optional
+- Disabled AESNI emulation support by default and make it optional
+
+Library
+- Generation of PDB in release build on Windows added
+- SAFE_OPTIONS option added to unify SAFE_DATA, SAFE_PARAM, SAFE_LOOKUP options
+
+Test Applications
+- Extended invalid IV length tests
+- Test application improvements added
+- Fuzz testing tool improvements added
+- Auto-generation of direct API invalid parameters tests added
+- ACVP test application added
+
+Performance Application
+- GCM support for SGL API added
+
+Fixes
+- Fixed incorrect job length calculation in CBCS encryption
+- Fixed FreeBSD build (intel/intel-ipsec-mb#94)
+- Added missing checks for HMAC IPAD and opad
+- Added missing checks for XCBC K1, K2 and K3
 
 v1.1 October 2021
 ========================================================================
