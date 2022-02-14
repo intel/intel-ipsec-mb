@@ -28,8 +28,11 @@
 #ifndef _AESNI_EMU_H_
 #define _AESNI_EMU_H_
 #include <stdint.h>
+#include "include/error.h"
 
 #ifdef AESNI_EMU
+#include "include/ipsec_ooo_mgr.h"
+
 /* Interface to AESNI emulation routines */
 
 /* XMM type definitions and constants */
@@ -133,8 +136,8 @@ IMB_DLL_LOCAL void emulate_PCLMULQDQ(union xmm_reg *src1_dst,
                                      const uint32_t imm8);
 
 #endif /* AESNI_EMU */
-static void
-fallback_no_aesni(IMB_MGR *state, uint64_t reset_mgrs)
+static inline void
+fallback_no_aesni(IMB_MGR *state, const int reset_mgrs)
 {
 #ifdef AESNI_EMU
                 init_mb_mgr_sse_no_aesni_internal(state, reset_mgrs);
