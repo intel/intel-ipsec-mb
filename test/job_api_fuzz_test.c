@@ -194,8 +194,11 @@ static void fill_additional_hash_data(struct IMB_JOB *job,
                 if (job->u.CMAC._skey2 != NULL)
                         job->u.CMAC._skey2 = buff;
                 break;
-        case IMB_AUTH_ZUC_EIA3_BITLEN:
         case IMB_AUTH_ZUC256_EIA3_BITLEN:
+                if (job->u.ZUC_EIA3._iv23 != NULL)
+                        job->u.ZUC_EIA3._iv23 = (uint8_t *)buff;
+                /* fall through */
+        case IMB_AUTH_ZUC_EIA3_BITLEN:
                 if (job->u.ZUC_EIA3._key != NULL)
                         job->u.ZUC_EIA3._key = (uint8_t *)buff;
                 if (job->u.ZUC_EIA3._iv != NULL)
