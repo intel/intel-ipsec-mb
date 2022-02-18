@@ -31,6 +31,22 @@
 %include "include/memcpy.asm"
 %include "include/mb_mgr_datastruct.asm"
 %include "include/cet.inc"
+%include "include/const.inc"
+
+%ifdef LINUX
+%define arg1    rdi
+%define arg2    rsi
+%define arg3    rdx
+%define arg4    rcx
+%define arg5    r8
+%else
+%define arg1    rcx
+%define arg2    rdx
+%define arg3    r8
+%define arg4    r9
+%define arg5    qword [rsp + 40]
+%endif
+
 %define APPEND(a,b) a %+ b
 
 mksection .rodata
@@ -114,9 +130,6 @@ align 16
 data_mask_64bits:
 dd	0xffffffff, 0xffffffff, 0x00000000, 0x00000000
 
-bit_mask_table:
-db	0x00, 0x80, 0xc0, 0xe0, 0xf0, 0xf8, 0xfc, 0xfe
-
 align 16
 swap_mask:
 db      0x03, 0x02, 0x01, 0x00, 0x07, 0x06, 0x05, 0x04
@@ -177,6 +190,17 @@ dw      0x000f, 0x000f, 0x000f, 0x000f, 0x000f, 0x000f, 0x000f, 0x000f
 align 16
 all_10s:
 dw      0x0010, 0x0010, 0x0010, 0x0010, 0x0010, 0x0010, 0x0010, 0x0010
+
+align 16
+bit_mask_table:
+db      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff
+db      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x80
+db      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xc0
+db      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xe0
+db      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xf0
+db      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xf8
+db      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfc
+db      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfe
 
 ; Stack frame for ZucCipher function
 struc STACK
@@ -1407,32 +1431,26 @@ exit_cipher:
         ret
 
 ;;
-;; extern uint32_t asm_Eia3RemainderAVX(const void *ks, const void *data, uint64_t n_bits)
+;; extern void asm_Eia3Remainder_avx(void *T, const void *ks, const void *data, uint64_t n_bits)
 ;;
 ;; Returns authentication update value to be XOR'ed with current authentication tag
 ;;
-;; WIN64
-;;	RCX - KS (key stream pointer)
-;; 	RDX - DATA (data pointer)
-;;      R8  - N_BITS (number data bits to process)
-;; LIN64
-;;	RDI - KS (key stream pointer)
-;;	RSI - DATA (data pointer)
-;;      RDX - N_BITS (number data bits to process)
+;;  @param [in] T (digest pointer)
+;;  @param [in] KS (key stream pointer)
+;;  @param [in] DATA (data pointer)
+;;  @param [in] N_BITS (number of bits to digest)
 ;;
 align 64
-MKGLOBAL(asm_Eia3RemainderAVX,function,internal)
-asm_Eia3RemainderAVX:
+MKGLOBAL(asm_Eia3Remainder_avx,function,internal)
+asm_Eia3Remainder_avx:
 
-%ifdef LINUX
-	%define		KS	rdi
-	%define		DATA	rsi
-	%define		N_BITS	rdx
-%else
-	%define		KS	rcx
-	%define		DATA	rdx
-	%define		N_BITS	r8
-%endif
+%define T       arg1
+%define KS      arg2
+%define DATA    arg3
+%define N_BITS  arg4
+
+%define N_BYTES rbx
+
         FUNC_SAVE
 
         vmovdqa  xmm5, [bit_reverse_table_l]
@@ -1441,9 +1459,9 @@ asm_Eia3RemainderAVX:
         vmovdqa  xmm10, [data_mask_64bits]
         vpxor    xmm9, xmm9
 
-%rep 3
-        cmp     N_BITS, 128
-        jb      Eia3RoundsAVX_dq_end
+        ; Length between 1 and 255 bits
+        test    N_BITS, 128
+        jz      Eia3RoundsAVX_dq_end
 
         ;; read 16 bytes and reverse bits
         vmovdqu xmm0, [DATA]
@@ -1482,91 +1500,97 @@ asm_Eia3RemainderAVX:
         vpclmulqdq xmm13, xmm1, 0x00
         vpclmulqdq xmm14, xmm1, 0x11
 
-        vpxor    xmm3, xmm4
-        vpxor    xmm13, xmm14
-        vpxor    xmm9, xmm3
-        vpxor    xmm9, xmm13
-        lea     DATA, [DATA + 16]
-        lea     KS, [KS + 16]
+        vpxor   xmm3, xmm4
+        vpxor   xmm13, xmm14
+        vpxor   xmm9, xmm3
+        vpxor   xmm9, xmm13
+
+        add     DATA, 16
+        add     KS, 16
         sub     N_BITS, 128
-%endrep
 Eia3RoundsAVX_dq_end:
 
-%rep 3
-        cmp     N_BITS, 32
-        jb      Eia3RoundsAVX_dw_end
+        or      N_BITS, N_BITS
+        jz      Eia3RoundsAVX_end
 
-        ;; swap dwords in KS
-        vmovq   xmm1, [KS]
-        vpshufd xmm4, xmm1, 0xf1
+        ; Get number of bytes
+        mov     N_BYTES, N_BITS
+        add     N_BYTES, 7
+        shr     N_BYTES, 3
 
-        ;;  bit-reverse 4 bytes of data
-        vmovd   xmm0, [DATA]
-        vpand   xmm1, xmm0, xmm7
+        ;; read up to 16 bytes of data, zero bits not needed if partial byte and bit-reverse
+        simd_load_avx_16_1 xmm0, DATA, N_BYTES
 
-        vpandn  xmm2, xmm7, xmm0
+        ; check if there is a partial byte (less than 8 bits in last byte)
+        mov     rax, N_BITS
+        and     rax, 0x7
+        shl     rax, 4
+        lea     r10, [rel bit_mask_table]
+        add     r10, rax
+
+        ; Get mask to clear last bits
+        vmovdqa xmm3, [r10]
+
+        ; Shift left 16-N bytes to have the last byte always at the end of the XMM register
+        ; to apply mask, then restore by shifting right same amount of bytes
+        mov     r10, 16
+        sub     r10, N_BYTES
+        XVPSLLB xmm0, r10, xmm4, r11
+        vpand   xmm0, xmm3
+        XVPSRLB xmm0, r10, xmm4, r11
+
+        vmovdqa xmm1, xmm0
+        vpand   xmm1, xmm7
+
+        vmovdqa xmm2, xmm7
+        vpandn  xmm2, xmm0
         vpsrld  xmm2, 4
 
-        vpshufb xmm0, xmm6, xmm1 ; bit reverse low nibbles (use high table)
-        vpshufb xmm3, xmm5, xmm2 ; bit reverse high nibbles (use low table)
+        vmovdqa xmm8, xmm6      ; bit reverse low nibbles (use high table)
+        vpshufb xmm8, xmm1
 
-        vpor    xmm0, xmm3
+        vmovdqa xmm4, xmm5      ; bit reverse high nibbles (use low table)
+        vpshufb xmm4, xmm2
 
-        ;; rol & xor
-        vpclmulqdq xmm0, xmm4, 0
-        vpxor    xmm9, xmm0
+        vpor    xmm8, xmm4
+        ; xmm8 - bit reversed data bytes
 
-        lea     DATA, [DATA + 4]
-        lea     KS, [KS + 4]
-        sub     N_BITS, 32
-%endrep
+        ;; ZUC authentication part
+        ;; - 4x32 data bits
+        ;; - set up KS
+        vmovdqu xmm3, [KS + (0*4)]
+        vmovdqu xmm4, [KS + (2*4)]
+        vpshufd xmm0, xmm3, 0x61
+        vpshufd xmm1, xmm4, 0x61
 
-Eia3RoundsAVX_dw_end:
+        ;;  - set up DATA
+        vmovdqa xmm2, xmm8
+        vpand   xmm2, xmm10
+        vpshufd xmm3, xmm2, 0xdc
+        vmovdqa xmm4, xmm3
+
+        vpsrldq xmm8, 8
+        vpshufd xmm13, xmm8, 0xdc
+        vmovdqa xmm14, xmm13
+
+        ;; - clmul
+        ;; - xor the results from 4 32-bit words together
+        vpclmulqdq xmm3, xmm0, 0x00
+        vpclmulqdq xmm4, xmm0, 0x11
+        vpclmulqdq xmm13, xmm1, 0x00
+        vpclmulqdq xmm14, xmm1, 0x11
+
+        vpxor   xmm3, xmm4
+        vpxor   xmm13, xmm14
+        vpxor   xmm9, xmm3
+        vpxor   xmm9, xmm13
+
+Eia3RoundsAVX_end:
+
         vmovq   rax, xmm9
         shr     rax, 32
+        xor     [T], eax
 
-        or      N_BITS, N_BITS
-        jz      Eia3RoundsAVX_byte_loop_end
-
-        ;; get 64-bit key stream for the last data bits (less than 32)
-        mov     KS, [KS]
-
-        ;; process remaining data bytes and bits
-Eia3RoundsAVX_byte_loop:
-        or      N_BITS, N_BITS
-        jz      Eia3RoundsAVX_byte_loop_end
-
-        cmp     N_BITS, 8
-        jb      Eia3RoundsAVX_byte_partial
-
-        movzx   r11, byte [DATA]
-        sub     N_BITS, 8
-        jmp     Eia3RoundsAVX_byte_read
-
-Eia3RoundsAVX_byte_partial:
-        ;; process remaining bits (up to 7)
-        lea     r11, [bit_mask_table]
-        movzx   r10, byte [r11 + N_BITS]
-        movzx   r11, byte [DATA]
-        and     r11, r10
-        xor     N_BITS, N_BITS
-Eia3RoundsAVX_byte_read:
-
-%assign DATATEST 0x80
-%rep 8
-        xor     r10, r10
-        test    r11, DATATEST
-        cmovne  r10, KS
-        xor     rax, r10
-        rol     KS, 1
-%assign DATATEST (DATATEST >> 1)
-%endrep                 ; byte boundary
-        lea     DATA, [DATA + 1]
-        jmp     Eia3RoundsAVX_byte_loop
-
-Eia3RoundsAVX_byte_loop_end:
-
-        ;; eax - holds the return value at this stage
         FUNC_RESTORE
 
         ret
@@ -1575,11 +1599,11 @@ Eia3RoundsAVX_byte_loop_end:
 %define %%NUM_16B_ROUNDS %1
 
 %ifdef LINUX
-	%define		T	edi
+	%define		T	rdi
 	%define		KS	rsi
 	%define		DATA	rdx
 %else
-	%define		T	ecx
+	%define		T	rcx
 	%define		KS	rdx
 	%define		DATA	r8
 %endif
@@ -1655,43 +1679,12 @@ Eia3RoundsAVX_byte_loop_end:
         ;; - update T
         vmovq   rax, xmm9
         shr     rax, 32
-        xor     eax, T
+        xor     [T], eax
 
 %endmacro
 
 ;;
-;;extern uint32_t asm_Eia3Round64BAVX(uint32_t T, const void *KS, const void *DATA)
-;;
-;; Updates authentication tag T based on keystream KS and DATA.
-;; - it processes 64 bytes of DATA
-;; - reads data in 16 byte chunks and bit reverses them
-;; - reads and re-arranges KS
-;; - employs clmul for the XOR & ROL part
-;; - copies top 64 bytes of KS to bottom (for the next round)
-;;
-;; WIN64
-;;	RCX - T
-;;	RDX - KS pointer to key stream (2 x 64 bytes)
-;;;     R8  - DATA pointer to data
-;; LIN64
-;;	RDI - T
-;;	RSI - KS pointer to key stream (2 x 64 bytes)
-;;      RDX - DATA pointer to data
-;;
-align 64
-MKGLOBAL(asm_Eia3Round64BAVX,function,internal)
-asm_Eia3Round64BAVX:
-
-        FUNC_SAVE
-
-        EIA3_ROUND 4
-
-        FUNC_RESTORE
-
-        ret
-
-;;
-;;extern uint32_t asm_Eia3Round32BAVX(uint32_t T, const void *KS, const void *DATA)
+;;extern void asm_Eia3Round32B_avx(void *T, const void *KS, const void *DATA)
 ;;
 ;; Updates authentication tag T based on keystream KS and DATA.
 ;; - it processes 32 bytes of DATA
@@ -1700,18 +1693,13 @@ asm_Eia3Round64BAVX:
 ;; - employs clmul for the XOR & ROL part
 ;; - copies top 32 bytes of KS to bottom (for the next round)
 ;;
-;; WIN64
-;;	RCX - T
-;;	RDX - KS pointer to key stream (2 x 32 bytes)
-;;;     R8  - DATA pointer to data
-;; LIN64
-;;	RDI - T
-;;	RSI - KS pointer to key stream (2 x 32 bytes)
-;;      RDX - DATA pointer to data
+;;  @param [in] T (digest pointer)
+;;  @param [in] KS (key stream pointer)
+;;  @param [in] DATA (data pointer)
 ;;
 align 64
-MKGLOBAL(asm_Eia3Round32BAVX,function,internal)
-asm_Eia3Round32BAVX:
+MKGLOBAL(asm_Eia3Round32B_avx,function,internal)
+asm_Eia3Round32B_avx:
 
         FUNC_SAVE
 
@@ -1722,7 +1710,7 @@ asm_Eia3Round32BAVX:
         ret
 
 ;;
-;;extern uint32_t asm_Eia3Round16BAVX(uint32_t T, const void *KS, const void *DATA)
+;;extern void asm_Eia3Round16B_avx(void *T, const void *KS, const void *DATA)
 ;;
 ;; Updates authentication tag T based on keystream KS and DATA.
 ;; - it processes 16 bytes of DATA
@@ -1731,18 +1719,13 @@ asm_Eia3Round32BAVX:
 ;; - employs clmul for the XOR & ROL part
 ;; - copies top 16 bytes of KS to bottom (for the next round)
 ;;
-;; WIN64
-;;	RCX - T
-;;	RDX - KS pointer to key stream (2 x 16 bytes)
-;;;     R8  - DATA pointer to data
-;; LIN64
-;;	RDI - T
-;;	RSI - KS pointer to key stream (2 x 16 bytes)
-;;      RDX - DATA pointer to data
+;;  @param [in] T (digest pointer)
+;;  @param [in] KS (key stream pointer)
+;;  @param [in] DATA (data pointer)
 ;;
 align 64
-MKGLOBAL(asm_Eia3Round16BAVX,function,internal)
-asm_Eia3Round16BAVX:
+MKGLOBAL(asm_Eia3Round16B_avx,function,internal)
+asm_Eia3Round16B_avx:
 
         FUNC_SAVE
 

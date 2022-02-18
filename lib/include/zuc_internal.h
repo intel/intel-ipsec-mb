@@ -1085,6 +1085,12 @@ IMB_DLL_LOCAL void asm_Eia3Round16B_gfni_sse(void *T, const void *ks,
                                              const void *data,
                                              const uint64_t tag_sz);
 
+IMB_DLL_LOCAL void asm_Eia3Round16B_avx(void *T, const void *ks,
+                                        const void *data);
+
+IMB_DLL_LOCAL void asm_Eia3Round32B_avx(void *T, const void *ks,
+                                        const void *data);
+
 /**
  ******************************************************************************
  * @description
@@ -1135,8 +1141,6 @@ IMB_DLL_LOCAL void asm_Eia3Remainder_gfni_sse(void *T, const void *ks,
  *      None
  *
  *****************************************************************************/
-IMB_DLL_LOCAL uint32_t asm_Eia3Round64BAVX(uint32_t T, const void *ks,
-                                           const void *data);
 
 IMB_DLL_LOCAL void asm_Eia3Round64BAVX512_16(uint32_t *T,
                                              const uint32_t *ks,
@@ -1147,12 +1151,6 @@ IMB_DLL_LOCAL void asm_Eia3Round64B_16_VPCLMUL(uint32_t *T,
                                                const uint32_t *ks,
                                                const void **data,
                                                uint16_t *len);
-
-IMB_DLL_LOCAL uint32_t asm_Eia3Round32BAVX(uint32_t T, const void *ks,
-                                           const void *data);
-
-IMB_DLL_LOCAL uint32_t asm_Eia3Round16BAVX(uint32_t T, const void *ks,
-                                           const void *data);
 
 IMB_DLL_LOCAL void asm_Eia3Round64BAVX512(uint32_t *T, const void *ks,
                                           const void *data);
@@ -1167,14 +1165,15 @@ IMB_DLL_LOCAL void asm_Eia3Round64BAVX512(uint32_t *T, const void *ks,
  *
  * @param[in] data                  Pointer to the data
  *
- * @param[in] n_words               Number of data bits to be processed
+ * @param[in] n_bits                Number of data bits to be processed
  *
  * @pre
  *      None
  *
  *****************************************************************************/
-IMB_DLL_LOCAL uint32_t asm_Eia3RemainderAVX(const void *ks, const void *data,
-                                            const uint64_t n_words);
+IMB_DLL_LOCAL void asm_Eia3Remainder_avx(void *T, const void *ks,
+                                         const void *data,
+                                         const uint64_t n_bits);
 
 /**
  ******************************************************************************
