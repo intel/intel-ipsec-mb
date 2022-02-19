@@ -189,6 +189,16 @@
 
 ;;; ===========================================================================
 ;;; ===========================================================================
+;;; Horizontal XOR - 2 x 128bits xored together
+%macro VHPXORI2x128 2
+%define %%REG   %1      ; [in/out] YMM with 2x128bits to xor; 128bit output
+%define %%TMP   %2      ; [clobbered] YMM temporary register
+        vextracti32x4   XWORD(%%TMP), YWORD(%%REG), 1
+        vpxorq          XWORD(%%REG), XWORD(%%REG), XWORD(%%TMP)
+%endmacro               ; VHPXORI2x128
+
+;;; ===========================================================================
+;;; ===========================================================================
 ;;; AVX512 reduction macro
 %macro VCLMUL_REDUCE 6
 %define %%OUT   %1      ; [out] zmm/ymm/xmm: result (must not be %%TMP1 or %%HI128)
@@ -552,8 +562,24 @@
 %endif ; blocks_left > 0
 
         ;; add TH and TL 128-bit words horizontally
+%if %0 == 20
+        ;; *** GH/GM/GL passed as arguments
+        ;; always do horizontal xor on 4 blocks
         VHPXORI4x128    %%T0H, %%T1M1
         VHPXORI4x128    %%T0L, %%T1M2
+%else
+        ;; *** GH/GM/GL NOT passed as arguments
+        ;; - figure out size of horizontal xor
+%if %%NUM_BLOCKS == 1
+        ;; do nothing
+%elif %%NUM_BLOCKS == 2
+        VHPXORI2x128    %%T0H, %%T1M1
+        VHPXORI2x128    %%T0L, %%T1M2
+%else
+        VHPXORI4x128    %%T0H, %%T1M1
+        VHPXORI4x128    %%T0L, %%T1M2
+%endif
+%endif
 
         ;; reduction
         vmovdqa64       XWORD(%%HK), [rel POLY2]
