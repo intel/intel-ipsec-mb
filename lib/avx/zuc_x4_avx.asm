@@ -1641,91 +1641,70 @@ asm_Eia3Remainder_avx:
 
         ret
 
-%macro EIA3_ROUND 1
-%define %%NUM_16B_ROUNDS %1
+%macro EIA3_ROUND 15
+%define %%T              %1  ; [in] Pointer to authentication tag
+%define %%KS             %2  ; [in/clobbered] Pointer to 32-byte keystream
+%define %%DATA           %3  ; [in/clobbered] Pointer to input data
+%define %%TMP            %4  ; [clobbered] Temporary GP register
+%define %%BIT_REV_L      %5  ; [in] Bit reverse low table (XMM)
+%define %%BIT_REV_H      %6  ; [in] Bit reverse high table (XMM)
+%define %%BIT_REV_AND    %7  ; [in] Bit reverse and table (XMM)
+%define %%XDIGEST        %8  ; [clobbered] Temporary digest (XMM)
+%define %%XTMP1          %9  ; [clobbered] Temporary XMM register
+%define %%XTMP2          %10 ; [clobbered] Temporary XMM register
+%define %%XTMP3          %11 ; [clobbered] Temporary XMM register
+%define %%XTMP4          %12 ; [clobbered] Temporary XMM register
+%define %%KS_L           %13 ; [clobbered] Temporary XMM register
+%define %%KS_H           %14 ; [clobbered] Temporary XMM register
+%define %%NUM_16B_ROUNDS %15 ; [in] Number of 16-byte rounds
 
-%ifdef LINUX
-	%define		T	rdi
-	%define		KS	rsi
-	%define		DATA	rdx
-%else
-	%define		T	rcx
-	%define		KS	rdx
-	%define		DATA	r8
-%endif
+        vpxor   %%XDIGEST, %%XDIGEST
 
-        vmovdqa  xmm5, [bit_reverse_table_l]
-        vmovdqa  xmm6, [bit_reverse_table_h]
-        vmovdqa  xmm7, [bit_reverse_and_table]
-        vmovdqa  xmm10, [data_mask_64bits]
-
-        vpxor    xmm9, xmm9
-%assign I 0
+%assign %%I 0
 %rep %%NUM_16B_ROUNDS
-        ;; read 16 bytes and reverse bits
-        vmovdqu  xmm0, [DATA + 16*I]
-        vpand    xmm1, xmm0, xmm7
+        ;; read up to 16 bytes of data and reverse bits
+        vmovdqu %%XTMP1, [%%DATA + 16*%%I]
+        vpand   %%XTMP2, %%XTMP1, %%BIT_REV_AND
 
-        vpandn   xmm2, xmm7, xmm0
-        vpsrld   xmm2, 4
+        vpandn  %%XTMP3, %%BIT_REV_AND, %%XTMP1
+        vpsrld  %%XTMP3, 4
 
-        vpshufb  xmm8, xmm6, xmm1       ; bit reverse low nibbles (use high table)
-        vpshufb  xmm4, xmm5, xmm2       ; bit reverse high nibbles (use low table)
-
-        vpor     xmm8, xmm4
-        ; xmm8 - bit reversed data bytes
+        vpshufb %%XTMP4, %%BIT_REV_H, %%XTMP2
+        vpshufb %%XTMP1, %%BIT_REV_L, %%XTMP3
+        vpor    %%XTMP4, %%XTMP1 ;; %%XTMP4 - bit reverse data bytes
 
         ;; ZUC authentication part
         ;; - 4x32 data bits
         ;; - set up KS
-%if I != 0
-        vmovdqa  xmm11, xmm12
-        vmovdqu  xmm12, [KS + (I*16) + (4*4)]
-%else
-        vmovdqu  xmm11, [KS + (I*16) + (0*4)]
-        vmovdqu  xmm12, [KS + (I*16) + (4*4)]
-%endif
-        vpalignr xmm13, xmm12, xmm11, 8
-        vpshufd  xmm2, xmm11, 0x61
-        vpshufd  xmm3, xmm13, 0x61
+        vpshufd %%KS_L, [%%KS + 16*%%I + (0*4)], 0x61
+        vpshufd %%KS_H, [%%KS + 16*%%I + (2*4)], 0x61
 
         ;;  - set up DATA
-        vpand    xmm13, xmm10, xmm8
-        vpshufd  xmm0, xmm13, 0xdc
+        ; Data bytes [31:0 0s 63:32 0s]
+        vpshufb %%XTMP1, %%XTMP4, [rel shuf_mask_dw0_0_dw1_0]
 
-        vpsrldq  xmm8, 8
-        vpshufd  xmm1, xmm8, 0xdc
+        ; Data bytes [95:64 0s 127:96 0s]
+        vpshufb %%XTMP3, %%XTMP4, [rel shuf_mask_dw2_0_dw3_0]
 
         ;; - clmul
         ;; - xor the results from 4 32-bit words together
-%if I != 0
-        vpclmulqdq xmm13, xmm0, xmm2, 0x00
-        vpclmulqdq xmm14, xmm0, xmm2, 0x11
-        vpclmulqdq xmm15, xmm1, xmm3, 0x00
-        vpclmulqdq xmm8,  xmm1, xmm3, 0x11
+        vpclmulqdq %%XTMP2, %%XTMP1, %%KS_L, 0x11
+        vpclmulqdq %%XTMP1, %%KS_L, 0x00
+        vpclmulqdq %%XTMP4, %%XTMP3, %%KS_H, 0x00
+        vpclmulqdq %%XTMP3, %%KS_H, 0x11
 
-        vpxor    xmm13, xmm14
-        vpxor    xmm15, xmm8
-        vpxor    xmm9, xmm13
-        vpxor    xmm9, xmm15
-%else
-        vpclmulqdq xmm9, xmm0, xmm2, 0x00
-        vpclmulqdq xmm13, xmm0, xmm2, 0x11
-        vpclmulqdq xmm14, xmm1, xmm3, 0x00
-        vpclmulqdq xmm15, xmm1, xmm3, 0x11
+        vpxor   %%XTMP2, %%XTMP1
+        vpxor   %%XTMP4, %%XTMP3
+        vpxor   %%XDIGEST, %%XTMP2
+        vpxor   %%XDIGEST, %%XTMP4
 
-        vpxor    xmm14, xmm15
-        vpxor    xmm9, xmm13
-        vpxor    xmm9, xmm14
-%endif
-
-%assign I (I + 1)
+%assign %%I (%%I + 1)
 %endrep
 
         ;; - update T
-        vmovq   rax, xmm9
-        shr     rax, 32
-        xor     [T], eax
+        vmovq   %%TMP, %%XDIGEST
+        shr     %%TMP, 32
+        xor     [%%T], DWORD(%%TMP)
 
 %endmacro
 
@@ -1747,9 +1726,19 @@ align 64
 MKGLOBAL(asm_Eia3Round32B_avx,function,internal)
 asm_Eia3Round32B_avx:
 
+%define T	arg1
+%define	KS	arg2
+%define	DATA	arg3
+
         FUNC_SAVE
 
-        EIA3_ROUND 2
+        vmovdqa  xmm0, [bit_reverse_table_l]
+        vmovdqa  xmm1, [bit_reverse_table_h]
+        vmovdqa  xmm2, [bit_reverse_and_table]
+
+        EIA3_ROUND T, KS, DATA, r11, \
+                  xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, \
+                  xmm8, xmm9, 2
 
         FUNC_RESTORE
 
@@ -1773,9 +1762,19 @@ align 64
 MKGLOBAL(asm_Eia3Round16B_avx,function,internal)
 asm_Eia3Round16B_avx:
 
+%define T	arg1
+%define	KS	arg2
+%define	DATA	arg3
+
         FUNC_SAVE
 
-        EIA3_ROUND 1
+        vmovdqa  xmm0, [bit_reverse_table_l]
+        vmovdqa  xmm1, [bit_reverse_table_h]
+        vmovdqa  xmm2, [bit_reverse_and_table]
+
+        EIA3_ROUND T, KS, DATA, r11, \
+                  xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, \
+                  xmm8, xmm9, 1
 
         FUNC_RESTORE
 
