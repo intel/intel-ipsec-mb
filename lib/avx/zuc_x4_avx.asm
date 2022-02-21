@@ -202,6 +202,16 @@ db      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 
 db      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfc
 db      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfe
 
+align 16
+shuf_mask_dw0_0_dw1_0:
+db      0x00, 0x01, 0x02, 0x03, 0xff, 0xff, 0xff, 0xff
+db      0x04, 0x05, 0x06, 0x07, 0xff, 0xff, 0xff, 0xff
+
+align 16
+shuf_mask_dw2_0_dw3_0:
+db      0x08, 0x09, 0x0a, 0x0b, 0xff, 0xff, 0xff, 0xff
+db      0x0c, 0x0d, 0x0e, 0x0f, 0xff, 0xff, 0xff, 0xff
+
 ; Stack frame for ZucCipher function
 struc STACK
 _keystr_save    resq  2*4 ; Space for 4 keystreams
@@ -1430,6 +1440,146 @@ exit_cipher:
 
         ret
 
+%macro REMAINDER 17
+%define %%T             %1  ; [in] Pointer to authentication tag
+%define %%KS            %2  ; [in/clobbered] Pointer to 32-byte keystream
+%define %%DATA          %3  ; [in/clobbered] Pointer to input data
+%define %%N_BITS        %4  ; [in/clobbered] Number of bits to digest
+%define %%N_BYTES       %5  ; [clobbered] Number of bytes to digest
+%define %%TMP           %6  ; [clobbered] Temporary GP register
+%define %%TMP2          %7  ; [clobbered] Temporary GP register
+%define %%BIT_REV_L     %8  ; [in] Bit reverse low table (XMM)
+%define %%BIT_REV_H     %9  ; [in] Bit reverse high table (XMM)
+%define %%BIT_REV_AND   %10 ; [in] Bit reverse and table (XMM)
+%define %%XDIGEST       %11 ; [clobbered] Temporary digest (XMM)
+%define %%XTMP1         %12 ; [clobbered] Temporary XMM register
+%define %%XTMP2         %13 ; [clobbered] Temporary XMM register
+%define %%XTMP3         %14 ; [clobbered] Temporary XMM register
+%define %%XTMP4         %15 ; [clobbered] Temporary XMM register
+%define %%KS_L          %16 ; [clobbered] Temporary XMM register
+%define %%KS_H          %17 ; [clobbered] Temporary XMM register
+
+        FUNC_SAVE
+
+        vpxor   %%XDIGEST, %%XDIGEST
+
+        ; Length between 1 and 255 bits
+        test    %%N_BITS, 128
+        jz      %%Eia3RoundsAVX_dq_end
+
+        ;; read up to 16 bytes of data and reverse bits
+        vmovdqu %%XTMP1, [%%DATA]
+        vpand   %%XTMP2, %%XTMP1, %%BIT_REV_AND
+
+        vpandn  %%XTMP3, %%BIT_REV_AND, %%XTMP1
+        vpsrld  %%XTMP3, 4
+
+        vpshufb %%XTMP4, %%BIT_REV_H, %%XTMP2
+        vpshufb %%XTMP1, %%BIT_REV_L, %%XTMP3
+        vpor    %%XTMP4, %%XTMP1 ;; %%XTMP4 - bit reverse data bytes
+
+        ;; ZUC authentication part
+        ;; - 4x32 data bits
+        ;; - set up KS
+        vpshufd %%KS_L, [%%KS + (0*4)], 0x61
+        vpshufd %%KS_H, [%%KS + (2*4)], 0x61
+
+        ;;  - set up DATA
+        ; Data bytes [31:0 0s 63:32 0s]
+        vpshufb %%XTMP1, %%XTMP4, [rel shuf_mask_dw0_0_dw1_0]
+
+        ; Data bytes [95:64 0s 127:96 0s]
+        vpshufb %%XTMP3, %%XTMP4, [rel shuf_mask_dw2_0_dw3_0]
+
+        ;; - clmul
+        ;; - xor the results from 4 32-bit words together
+        vpclmulqdq %%XTMP2, %%XTMP1, %%KS_L, 0x11
+        vpclmulqdq %%XTMP1, %%KS_L, 0x00
+        vpclmulqdq %%XDIGEST, %%XTMP3, %%KS_H, 0x00
+        vpclmulqdq %%XTMP3, %%KS_H, 0x11
+
+        vpxor   %%XTMP2, %%XTMP1
+        vpxor   %%XDIGEST, %%XTMP3
+        vpxor   %%XDIGEST, %%XTMP2
+
+        add     %%DATA, 16
+        add     %%KS, 16
+        sub     %%N_BITS, 128
+%%Eia3RoundsAVX_dq_end:
+
+        or      %%N_BITS, %%N_BITS
+        jz      %%Eia3RoundsAVX_end
+
+        ; Get number of bytes
+        mov     %%N_BYTES, %%N_BITS
+        add     %%N_BYTES, 7
+        shr     %%N_BYTES, 3
+
+        ;; read up to 16 bytes of data, zero bits not needed if partial byte and bit-reverse
+        simd_load_avx_16_1 %%XTMP1, %%DATA, %%N_BYTES
+        ; check if there is a partial byte (less than 8 bits in last byte)
+        mov     %%TMP, %%N_BITS
+        and     %%TMP, 0x7
+        shl     %%TMP, 4
+        lea     %%TMP2, [rel bit_mask_table]
+        add     %%TMP2, %%TMP
+
+        ; Get mask to clear last bits
+        vmovdqa %%XTMP2, [%%TMP2]
+
+        ; Shift left 16-N bytes to have the last byte always at the end of the XMM register
+        ; to apply mask, then restore by shifting right same amount of bytes
+        mov     %%TMP2, 16
+        sub     %%TMP2, %%N_BYTES
+        XVPSLLB %%XTMP1, %%TMP2, %%XTMP3, %%TMP
+        vpand   %%XTMP1, %%XTMP2
+        XVPSRLB %%XTMP1, %%TMP2, %%XTMP3, %%TMP
+
+        ; Bit reverse
+        vpand   %%XTMP2, %%XTMP1, %%BIT_REV_AND
+
+        vpandn  %%XTMP3, %%BIT_REV_AND, %%XTMP1
+        vpsrld  %%XTMP3, 4
+
+        vpshufb %%XTMP4, %%BIT_REV_H, %%XTMP2
+        vpshufb %%XTMP1, %%BIT_REV_L, %%XTMP3
+        vpor    %%XTMP4, %%XTMP1 ;; %%XTMP4 - bit reverse data bytes
+
+        ;; ZUC authentication part
+        ;; - 4x32 data bits
+        ;; - set up KS
+        vpshufd %%KS_L, [%%KS + (0*4)], 0x61
+        vpshufd %%KS_H, [%%KS + (2*4)], 0x61
+
+        ;;  - set up DATA
+        ; Data bytes [31:0 0s 63:32 0s]
+        vpshufb %%XTMP1, %%XTMP4, [rel shuf_mask_dw0_0_dw1_0]
+
+        ; Data bytes [95:64 0s 127:96 0s]
+        vpshufb %%XTMP3, %%XTMP4, [rel shuf_mask_dw2_0_dw3_0]
+
+        ;; - clmul
+        ;; - xor the results from 4 32-bit words together
+        vpclmulqdq %%XTMP2, %%XTMP1, %%KS_L, 0x11
+        vpclmulqdq %%XTMP1, %%KS_L, 0x00
+        vpclmulqdq %%XTMP4, %%XTMP3, %%KS_H, 0x00
+        vpclmulqdq %%XTMP3, %%KS_H, 0x11
+
+        vpxor   %%XTMP2, %%XTMP1
+        vpxor   %%XTMP4, %%XTMP3
+        vpxor   %%XDIGEST, %%XTMP2
+        vpxor   %%XDIGEST, %%XTMP4
+
+%%Eia3RoundsAVX_end:
+        ;; - update T
+        vmovq   %%TMP, %%XDIGEST
+        shr     %%TMP, 32
+        xor     [%%T], DWORD(%%TMP)
+
+        FUNC_RESTORE
+
+%endmacro
+
 ;;
 ;; extern void asm_Eia3Remainder_avx(void *T, const void *ks, const void *data, uint64_t n_bits)
 ;;
@@ -1449,149 +1599,13 @@ asm_Eia3Remainder_avx:
 %define DATA    arg3
 %define N_BITS  arg4
 
-%define N_BYTES rbx
+        vmovdqa  xmm0, [rel bit_reverse_table_l]
+        vmovdqa  xmm1, [rel bit_reverse_table_h]
+        vmovdqa  xmm2, [rel bit_reverse_and_table]
 
-        FUNC_SAVE
-
-        vmovdqa  xmm5, [bit_reverse_table_l]
-        vmovdqa  xmm6, [bit_reverse_table_h]
-        vmovdqa  xmm7, [bit_reverse_and_table]
-        vmovdqa  xmm10, [data_mask_64bits]
-        vpxor    xmm9, xmm9
-
-        ; Length between 1 and 255 bits
-        test    N_BITS, 128
-        jz      Eia3RoundsAVX_dq_end
-
-        ;; read 16 bytes and reverse bits
-        vmovdqu xmm0, [DATA]
-        vpand   xmm1, xmm0, xmm7
-
-        vpandn  xmm2, xmm7, xmm0
-        vpsrld  xmm2, 4
-
-        vpshufb xmm8, xmm6, xmm1 ; bit reverse low nibbles (use high table)
-        vpshufb xmm4, xmm5, xmm2 ; bit reverse high nibbles (use low table)
-
-        vpor    xmm8, xmm4
-        ; xmm8 - bit reversed data bytes
-
-        ;; ZUC authentication part
-        ;; - 4x32 data bits
-        ;; - set up KS
-        vmovdqu xmm3, [KS + (0*4)]
-        vmovdqu xmm4, [KS + (2*4)]
-        vpshufd xmm0, xmm3, 0x61
-        vpshufd xmm1, xmm4, 0x61
-
-        ;;  - set up DATA
-        vpand   xmm2, xmm8, xmm10
-        vpshufd xmm3, xmm2, 0xdc
-        vmovdqa xmm4, xmm3
-
-        vpsrldq xmm8, 8
-        vpshufd xmm13, xmm8, 0xdc
-        vmovdqa xmm14, xmm13
-
-        ;; - clmul
-        ;; - xor the results from 4 32-bit words together
-        vpclmulqdq xmm3, xmm0, 0x00
-        vpclmulqdq xmm4, xmm0, 0x11
-        vpclmulqdq xmm13, xmm1, 0x00
-        vpclmulqdq xmm14, xmm1, 0x11
-
-        vpxor   xmm3, xmm4
-        vpxor   xmm13, xmm14
-        vpxor   xmm9, xmm3
-        vpxor   xmm9, xmm13
-
-        add     DATA, 16
-        add     KS, 16
-        sub     N_BITS, 128
-Eia3RoundsAVX_dq_end:
-
-        or      N_BITS, N_BITS
-        jz      Eia3RoundsAVX_end
-
-        ; Get number of bytes
-        mov     N_BYTES, N_BITS
-        add     N_BYTES, 7
-        shr     N_BYTES, 3
-
-        ;; read up to 16 bytes of data, zero bits not needed if partial byte and bit-reverse
-        simd_load_avx_16_1 xmm0, DATA, N_BYTES
-
-        ; check if there is a partial byte (less than 8 bits in last byte)
-        mov     rax, N_BITS
-        and     rax, 0x7
-        shl     rax, 4
-        lea     r10, [rel bit_mask_table]
-        add     r10, rax
-
-        ; Get mask to clear last bits
-        vmovdqa xmm3, [r10]
-
-        ; Shift left 16-N bytes to have the last byte always at the end of the XMM register
-        ; to apply mask, then restore by shifting right same amount of bytes
-        mov     r10, 16
-        sub     r10, N_BYTES
-        XVPSLLB xmm0, r10, xmm4, r11
-        vpand   xmm0, xmm3
-        XVPSRLB xmm0, r10, xmm4, r11
-
-        vmovdqa xmm1, xmm0
-        vpand   xmm1, xmm7
-
-        vmovdqa xmm2, xmm7
-        vpandn  xmm2, xmm0
-        vpsrld  xmm2, 4
-
-        vmovdqa xmm8, xmm6      ; bit reverse low nibbles (use high table)
-        vpshufb xmm8, xmm1
-
-        vmovdqa xmm4, xmm5      ; bit reverse high nibbles (use low table)
-        vpshufb xmm4, xmm2
-
-        vpor    xmm8, xmm4
-        ; xmm8 - bit reversed data bytes
-
-        ;; ZUC authentication part
-        ;; - 4x32 data bits
-        ;; - set up KS
-        vmovdqu xmm3, [KS + (0*4)]
-        vmovdqu xmm4, [KS + (2*4)]
-        vpshufd xmm0, xmm3, 0x61
-        vpshufd xmm1, xmm4, 0x61
-
-        ;;  - set up DATA
-        vmovdqa xmm2, xmm8
-        vpand   xmm2, xmm10
-        vpshufd xmm3, xmm2, 0xdc
-        vmovdqa xmm4, xmm3
-
-        vpsrldq xmm8, 8
-        vpshufd xmm13, xmm8, 0xdc
-        vmovdqa xmm14, xmm13
-
-        ;; - clmul
-        ;; - xor the results from 4 32-bit words together
-        vpclmulqdq xmm3, xmm0, 0x00
-        vpclmulqdq xmm4, xmm0, 0x11
-        vpclmulqdq xmm13, xmm1, 0x00
-        vpclmulqdq xmm14, xmm1, 0x11
-
-        vpxor   xmm3, xmm4
-        vpxor   xmm13, xmm14
-        vpxor   xmm9, xmm3
-        vpxor   xmm9, xmm13
-
-Eia3RoundsAVX_end:
-
-        vmovq   rax, xmm9
-        shr     rax, 32
-        xor     [T], eax
-
-        FUNC_RESTORE
+        REMAINDER T, KS, DATA, N_BITS, r12, r13, r14, \
+                  xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, \
+                  xmm8, xmm9
 
         ret
 
