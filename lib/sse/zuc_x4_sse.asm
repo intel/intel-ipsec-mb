@@ -1829,8 +1829,7 @@ exit_cipher:
         jz      %%Eia3RoundsSSE_end
 
         ; Get number of bytes
-        mov     %%N_BYTES, %%N_BITS
-        add     %%N_BYTES, 7
+        lea     %%N_BYTES, [%%N_BITS + 7]
         shr     %%N_BYTES, 3
 
         ; read up to 16 bytes of data, zero bits not needed if partial byte and bit-reverse
@@ -1887,12 +1886,10 @@ exit_cipher:
 
         ; Read keyStr[L - 1] (last double word of keyStr)
         mov     %%TMP2, %%N_BITS
-        add     %%TMP2, (31 + 64)
+        add     %%TMP2, (31 + 64 - 32) ; (32 is subtracted here to get L - 1)
         shr     %%TMP2, 5 ; L
-        dec     %%TMP2
-        mov     DWORD(%%TMP3), [%%KS + %%TMP2 * 4]
         ; XOR with previous digest calculation
-        xor     %%TAG, DWORD(%%TMP3)
+        xor     %%TAG, [%%KS + %%TMP2 * 4]
 
 %endif
         bswap   %%TAG

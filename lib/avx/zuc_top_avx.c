@@ -512,16 +512,6 @@ void zuc_eea3_n_buffer_avx(const void * const pKey[], const void * const pIv[],
 #endif
 }
 
-static inline uint64_t rotate_left(uint64_t u, size_t r)
-{
-        return (((u) << (r)) | ((u) >> (64 - (r))));
-}
-
-static inline uint64_t load_uint64(const void *ptr)
-{
-        return *((const uint64_t *)ptr);
-}
-
 static inline
 void _zuc_eia3_1_buffer_avx(const void *pKey,
                             const void *pIv,
@@ -566,12 +556,8 @@ void _zuc_eia3_1_buffer_avx(const void *pKey,
         if (remainingBits > (2 * 32))
                 asm_ZucGenKeystream8B_avx(&keyStream[4], &zucState);
         asm_Eia3Remainder_avx(&T, &keyStream[0], pIn8, remainingBits);
-        T ^= rotate_left(load_uint64(&keyStream[remainingBits / 32]),
-                         remainingBits % 32);
 
-        /* save the final MAC-I result */
-        uint32_t keyBlock = keyStream[L - 1];
-        *pMacI = bswap4(T ^ keyBlock);
+        *pMacI = T;
 
 #ifdef SAFE_DATA
         /* Clear sensitive data (in registers and stack) */
@@ -717,14 +703,9 @@ void _zuc_eia3_4_buffer_avx(const void * const pKey[NUM_AVX_BUFS],
                         asm_ZucGenKeystream8B_avx(&keyStr32[4],
                                                   &singlePktState);
 
-                uint32_t keyBlock = keyStr32[L - 1];
-
                 asm_Eia3Remainder_avx(&T[i], keyStr32, pIn8[i], remainBits);
-                T[i] ^= rotate_left(load_uint64(&keyStr32[remainBits / 32]),
-                                 remainBits % 32);
-
                 /* save the final MAC-I result */
-                *(pMacI[i]) = bswap4(T[i] ^ keyBlock);
+                *(pMacI[i]) = T[i];
         }
 
 #ifdef SAFE_DATA
@@ -925,14 +906,9 @@ void zuc_eia3_4_buffer_job_avx(const void * const pKey[NUM_AVX_BUFS],
                         asm_ZucGenKeystream8B_avx(&keyStr32[4],
                                                   &singlePktState);
 
-                uint32_t keyBlock = keyStr32[L - 1];
-
                 asm_Eia3Remainder_avx(&T[i], keyStr32, pIn8[i], remainBits);
-                T[i] ^= rotate_left(load_uint64(&keyStr32[remainBits / 32]),
-                                 remainBits % 32);
-
                 /* save the final MAC-I result */
-                *(pMacI[i]) = bswap4(T[i] ^ keyBlock);
+                *(pMacI[i]) = T[i];
         }
 
 #ifdef SAFE_DATA
@@ -1090,10 +1066,8 @@ void zuc256_eia3_4_buffer_job_avx(const void * const pKey[NUM_AVX_BUFS],
                                                   &singlePktState, 1);
 
                 asm_Eia3Remainder_avx(tag, keyStr32, pIn8[i], remainBits);
-                *tag ^= rotate_left(load_uint64(&keyStr32[remainBits / 32]),
-                                 remainBits % 32);
                 /* save the final MAC-I result */
-                *((uint32_t *)pMacI[i]) = bswap4(*tag);
+                memcpy(pMacI[i], tag, 4);
         }
 
 #ifdef SAFE_DATA

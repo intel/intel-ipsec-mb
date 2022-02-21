@@ -1440,7 +1440,7 @@ exit_cipher:
 
         ret
 
-%macro REMAINDER 17
+%macro REMAINDER 18
 %define %%T             %1  ; [in] Pointer to authentication tag
 %define %%KS            %2  ; [in/clobbered] Pointer to 32-byte keystream
 %define %%DATA          %3  ; [in/clobbered] Pointer to input data
@@ -1448,16 +1448,17 @@ exit_cipher:
 %define %%N_BYTES       %5  ; [clobbered] Number of bytes to digest
 %define %%TMP           %6  ; [clobbered] Temporary GP register
 %define %%TMP2          %7  ; [clobbered] Temporary GP register
-%define %%BIT_REV_L     %8  ; [in] Bit reverse low table (XMM)
-%define %%BIT_REV_H     %9  ; [in] Bit reverse high table (XMM)
-%define %%BIT_REV_AND   %10 ; [in] Bit reverse and table (XMM)
-%define %%XDIGEST       %11 ; [clobbered] Temporary digest (XMM)
-%define %%XTMP1         %12 ; [clobbered] Temporary XMM register
-%define %%XTMP2         %13 ; [clobbered] Temporary XMM register
-%define %%XTMP3         %14 ; [clobbered] Temporary XMM register
-%define %%XTMP4         %15 ; [clobbered] Temporary XMM register
-%define %%KS_L          %16 ; [clobbered] Temporary XMM register
-%define %%KS_H          %17 ; [clobbered] Temporary XMM register
+%define %%TMP3          %8  ; [clobbered] Temporary GP register
+%define %%BIT_REV_L     %9  ; [in] Bit reverse low table (XMM)
+%define %%BIT_REV_H     %10 ; [in] Bit reverse high table (XMM)
+%define %%BIT_REV_AND   %11 ; [in] Bit reverse and table (XMM)
+%define %%XDIGEST       %12 ; [clobbered] Temporary digest (XMM)
+%define %%XTMP1         %13 ; [clobbered] Temporary XMM register
+%define %%XTMP2         %14 ; [clobbered] Temporary XMM register
+%define %%XTMP3         %15 ; [clobbered] Temporary XMM register
+%define %%XTMP4         %16 ; [clobbered] Temporary XMM register
+%define %%KS_L          %17 ; [clobbered] Temporary XMM register
+%define %%KS_H          %18 ; [clobbered] Temporary XMM register
 
         FUNC_SAVE
 
@@ -1511,8 +1512,7 @@ exit_cipher:
         jz      %%Eia3RoundsAVX_end
 
         ; Get number of bytes
-        mov     %%N_BYTES, %%N_BITS
-        add     %%N_BYTES, 7
+        lea     %%N_BYTES, [%%N_BITS + 7]
         shr     %%N_BYTES, 3
 
         ;; read up to 16 bytes of data, zero bits not needed if partial byte and bit-reverse
@@ -1571,10 +1571,42 @@ exit_cipher:
         vpxor   %%XDIGEST, %%XTMP4
 
 %%Eia3RoundsAVX_end:
+
+%define %%TAG DWORD(%%TMP)
         ;; - update T
-        vmovq   %%TMP, %%XDIGEST
-        shr     %%TMP, 32
-        xor     [%%T], DWORD(%%TMP)
+        mov     %%TAG, [%%T]
+        vmovq   %%TMP2, %%XDIGEST
+        shr     %%TMP2, 32
+        xor     %%TAG, DWORD(%%TMP2)
+
+        ;; XOR with keyStr[n_bits] (Z_length, from spec)
+
+        ; Read keyStr[N_BITS / 32]
+        mov     %%TMP2, %%N_BITS
+        shr     %%TMP2, 5
+        mov     %%TMP3, [%%KS + %%TMP2*4]
+
+        ; Rotate left by N_BITS % 32
+        mov     %%TMP2, rcx ; Save RCX
+        mov     rcx, %%N_BITS
+        and     rcx, 0x1F
+        rol     %%TMP3, cl
+        mov     rcx, %%TMP2 ; Restore RCX
+
+        ; XOR with previous digest calculation
+        xor     %%TAG, DWORD(%%TMP3)
+
+        ;; XOR with keyStr[L-1]
+
+        ; Read keyStr[L - 1] (last double word of keyStr)
+        mov     %%TMP2, %%N_BITS
+        add     %%TMP2, (31 + 64 - 32) ; (32 is subtracted here to get L - 1)
+        shr     %%TMP2, 5 ; L - 1
+        ; XOR with previous digest calculation
+        xor     %%TAG, [%%KS + %%TMP2 * 4]
+
+        bswap   %%TAG
+        mov     [%%T], %%TAG
 
         FUNC_RESTORE
 
@@ -1603,7 +1635,7 @@ asm_Eia3Remainder_avx:
         vmovdqa  xmm1, [rel bit_reverse_table_h]
         vmovdqa  xmm2, [rel bit_reverse_and_table]
 
-        REMAINDER T, KS, DATA, N_BITS, r12, r13, r14, \
+        REMAINDER T, KS, DATA, N_BITS, r12, r13, r14, r15, \
                   xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, \
                   xmm8, xmm9
 
