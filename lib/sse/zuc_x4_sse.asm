@@ -155,16 +155,8 @@ db      0x03, 0x02, 0x01, 0x00, 0x07, 0x06, 0x05, 0x04
 db      0x0b, 0x0a, 0x09, 0x08, 0x0f, 0x0e, 0x0d, 0x0c
 
 align 16
-S1_S0_shuf:
-db      0x00, 0x02, 0x04, 0x06, 0x08, 0x0A, 0x0C, 0x0E, 0x01, 0x03, 0x05, 0x07, 0x09, 0x0B, 0x0D, 0x0F
-
-align 16
 S0_S1_shuf:
 db      0x01, 0x03, 0x05, 0x07, 0x09, 0x0B, 0x0D, 0x0F, 0x00, 0x02, 0x04, 0x06, 0x08, 0x0A, 0x0C, 0x0E
-
-align 16
-rev_S1_S0_shuf:
-db      0x00, 0x08, 0x01, 0x09, 0x02, 0x0A, 0x03, 0x0B, 0x04, 0x0C, 0x05, 0x0D, 0x06, 0x0E, 0x07, 0x0F
 
 align 16
 rev_S0_S1_shuf:
@@ -534,11 +526,11 @@ mksection .text
         ; Compress all S0 and S1 input values in each register
 
         pshufb  %%XTMP1, [rel S0_S1_shuf] ; S0: Bytes 0-7, S1: Bytes 8-15
-        pshufb  %%XTMP2, [rel S1_S0_shuf] ; S1: Bytes 0-7, S0: Bytes 8-15
+        pshufb  %%XTMP2, [rel S0_S1_shuf] ; S0: Bytes 0-7, S1: Bytes 8-15
 
         movdqa  %%XTMP3, %%XTMP1
-        shufpd  %%XTMP1, %%XTMP2, 0x2 ; All S0 input values
-        shufpd  %%XTMP2, %%XTMP3, 0x2 ; All S1 input values
+        shufpd  %%XTMP1, %%XTMP2, 0x0 ; All S0 input values
+        shufpd  %%XTMP2, %%XTMP3, 0x3 ; All S1 input values
 
         ; Compute S0 and S1 values
         S0_comput_SSE   %%XTMP1, %%XTMP3, %%XTMP4, USE_GFNI
@@ -548,13 +540,13 @@ mksection .text
         ; (revert what was done before S0 and S1 computations)
         movdqa  %%XTMP3, %%XTMP1
         shufpd  %%XTMP1, %%XTMP2, 0x2 ; All S0 input values
-        shufpd  %%XTMP2, %%XTMP3, 0x2 ; All S1 input values
+        shufpd  %%XTMP3, %%XTMP2, 0x1 ; All S1 input values
 
         pshufb  %%XTMP1, [rel rev_S0_S1_shuf]
-        pshufb  %%XTMP2, [rel rev_S1_S0_shuf]
+        pshufb  %%XTMP3, [rel rev_S0_S1_shuf]
 
         movdqa  [%%STATE + OFS_R1], %%XTMP1
-        movdqa  [%%STATE + OFS_R2], %%XTMP2
+        movdqa  [%%STATE + OFS_R2], %%XTMP3
 %endmacro
 
 ;
