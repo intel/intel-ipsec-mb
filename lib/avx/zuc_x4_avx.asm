@@ -1740,6 +1740,12 @@ asm_Eia3Round32B_avx:
                   xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, \
                   xmm8, xmm9, 2
 
+        ;; Copy last 32 bytes of KS to the front
+        vmovdqa xmm0, [KS + 32]
+        vmovdqa xmm1, [KS + 48]
+        vmovdqa [KS], xmm0
+        vmovdqa [KS + 16], xmm1
+
         FUNC_RESTORE
 
         ret
@@ -1775,6 +1781,10 @@ asm_Eia3Round16B_avx:
         EIA3_ROUND T, KS, DATA, r11, \
                   xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, \
                   xmm8, xmm9, 1
+
+        ;; Copy last 16 bytes of KS to the front
+        vmovdqa xmm0, [KS + 16]
+        vmovdqa [KS], xmm0
 
         FUNC_RESTORE
 

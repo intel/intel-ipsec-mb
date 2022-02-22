@@ -544,8 +544,6 @@ void _zuc_eia3_1_buffer_avx(const void *pKey,
                 else
                         asm_ZucGenKeystream16B_avx(&keyStream[4], &zucState);
                 asm_Eia3Round16B_avx(&T, keyStream, pIn8);
-                /* Copy the last keystream generated to the first 16 bytes */
-                memcpy(&keyStream[0], &keyStream[4], KEYSTR_ROUND_LEN);
                 pIn8 = &pIn8[KEYSTR_ROUND_LEN];
         }
 
@@ -634,10 +632,6 @@ void _zuc_eia3_4_buffer_avx(const void * const pKey[NUM_AVX_BUFS],
                         asm_ZucGenKeystream16B_4_avx(&state, pKeyStrArr);
                 for (i = 0; i < NUM_AVX_BUFS; i++) {
                         asm_Eia3Round16B_avx(&T[i], keyStr[i], pIn8[i]);
-                        /* Copy the last keystream generated
-                         * to the first 16 bytes */
-                        memcpy(&keyStr[i][0], &keyStr[i][KEYSTR_ROUND_LEN],
-                               KEYSTR_ROUND_LEN);
                         pIn8[i] = &pIn8[i][KEYSTR_ROUND_LEN];
                 }
         }
@@ -688,9 +682,6 @@ void _zuc_eia3_4_buffer_avx(const void * const pKey[NUM_AVX_BUFS],
                                 asm_ZucGenKeystream16B_avx(&keyStr32[4],
                                                            &singlePktState);
                         asm_Eia3Round16B_avx(&T[i], keyStr32, pIn8[i]);
-                        /* Copy the last keystream generated
-                         * to the first 16 bytes */
-                        memcpy(keyStr32, &keyStr32[4], KEYSTR_ROUND_LEN);
                         pIn8[i] = &pIn8[i][KEYSTR_ROUND_LEN];
                 }
 
@@ -835,10 +826,6 @@ void zuc_eia3_4_buffer_job_avx(const void * const pKey[NUM_AVX_BUFS],
                         if (job_in_lane[i] == NULL)
                                 continue;
                         asm_Eia3Round16B_avx(&T[i], keyStr[i], pIn8[i]);
-                        /* Copy the last keystream generated
-                         * to the first 16 bytes */
-                        memcpy(&keyStr[i][0], &keyStr[i][KEYSTR_ROUND_LEN],
-                               KEYSTR_ROUND_LEN);
                         pIn8[i] = &pIn8[i][KEYSTR_ROUND_LEN];
                 }
         }
@@ -892,9 +879,6 @@ void zuc_eia3_4_buffer_job_avx(const void * const pKey[NUM_AVX_BUFS],
                                 asm_ZucGenKeystream16B_avx(&keyStr32[4],
                                                            &singlePktState);
                         asm_Eia3Round16B_avx(&T[i], keyStr32, pIn8[i]);
-                        /* Copy the last keystream generated
-                         * to the first 16 bytes */
-                        memcpy(keyStr32, &keyStr32[4], KEYSTR_ROUND_LEN);
                         pIn8[i] = &pIn8[i][KEYSTR_ROUND_LEN];
                 }
 
@@ -996,10 +980,6 @@ void zuc256_eia3_4_buffer_job_avx(const void * const pKey[NUM_AVX_BUFS],
                                 continue;
 
                         asm_Eia3Round16B_avx(tag, keyStr[i], pIn8[i]);
-                        /* Copy the last keystream generated
-                         * to the first 16 bytes */
-                        memcpy(&keyStr[i][0], &keyStr[i][KEYSTR_ROUND_LEN],
-                               KEYSTR_ROUND_LEN);
                         pIn8[i] = &pIn8[i][KEYSTR_ROUND_LEN];
                 }
         }
@@ -1051,9 +1031,6 @@ void zuc256_eia3_4_buffer_job_avx(const void * const pKey[NUM_AVX_BUFS],
                                 asm_ZucGenKeystream16B_avx(&keyStr32[4],
                                                            &singlePktState);
                         asm_Eia3Round16B_avx(tag, keyStr32, pIn8[i]);
-                        /* Copy the last keystream generated
-                         * to the first 16 bytes */
-                        memcpy(keyStr32, &keyStr32[4], KEYSTR_ROUND_LEN);
                         pIn8[i] = &pIn8[i][KEYSTR_ROUND_LEN];
                 }
 
