@@ -1440,6 +1440,58 @@ exit_cipher:
 
         ret
 
+;
+; Processes 16 bytes of data and updates the digest
+;
+%macro DIGEST_16_BYTES 12
+%define %%KS            %1  ; [in] Pointer to 24-byte keystream
+%define %%BIT_REV_L     %2  ; [in] Bit reverse low table (XMM)
+%define %%BIT_REV_H     %3  ; [in] Bit reverse high table (XMM)
+%define %%BIT_REV_AND   %4  ; [in] Bit reverse and table (XMM)
+%define %%XDIGEST       %5  ; [in/out] Temporary digest (XMM)
+%define %%XTMP1         %6  ; [clobbered] Temporary XMM register
+%define %%XTMP2         %7  ; [clobbered] Temporary XMM register
+%define %%XTMP3         %8  ; [clobbered] Temporary XMM register
+%define %%XTMP4         %9  ; [clobbered] Temporary XMM register
+%define %%KS_L          %10 ; [clobbered] Temporary XMM register
+%define %%KS_H          %11 ; [clobbered] Temporary XMM register
+%define %%OFF           %12 ; [in] Offset into KS
+
+        vpand   %%XTMP2, %%XTMP1, %%BIT_REV_AND
+
+        vpandn  %%XTMP3, %%BIT_REV_AND, %%XTMP1
+        vpsrld  %%XTMP3, 4
+
+        vpshufb %%XTMP4, %%BIT_REV_H, %%XTMP2
+        vpshufb %%XTMP1, %%BIT_REV_L, %%XTMP3
+        vpor    %%XTMP4, %%XTMP1 ;; %%XTMP4 - bit reverse data bytes
+
+        ;; ZUC authentication part
+        ;; - 4x32 data bits
+        ;; - set up KS
+        vpshufd %%KS_L, [%%KS + %%OFF + (0*4)], 0x61
+        vpshufd %%KS_H, [%%KS + %%OFF + (2*4)], 0x61
+
+        ;;  - set up DATA
+        ; Data bytes [31:0 0s 63:32 0s]
+        vpshufb %%XTMP1, %%XTMP4, [rel shuf_mask_dw0_0_dw1_0]
+
+        ; Data bytes [95:64 0s 127:96 0s]
+        vpshufb %%XTMP3, %%XTMP4, [rel shuf_mask_dw2_0_dw3_0]
+
+        ;; - clmul
+        ;; - xor the results from 4 32-bit words together
+        vpclmulqdq %%XTMP2, %%XTMP1, %%KS_L, 0x11
+        vpclmulqdq %%XTMP1, %%KS_L, 0x00
+        vpclmulqdq %%XTMP4, %%XTMP3, %%KS_H, 0x00
+        vpclmulqdq %%XTMP3, %%KS_H, 0x11
+
+        vpxor   %%XTMP2, %%XTMP1
+        vpxor   %%XTMP4, %%XTMP3
+        vpxor   %%XDIGEST, %%XTMP2
+        vpxor   %%XDIGEST, %%XTMP4
+%endmacro
+
 %macro REMAINDER 18
 %define %%T             %1  ; [in] Pointer to authentication tag
 %define %%KS            %2  ; [in/clobbered] Pointer to 32-byte keystream
@@ -1470,38 +1522,9 @@ exit_cipher:
 
         ;; read up to 16 bytes of data and reverse bits
         vmovdqu %%XTMP1, [%%DATA]
-        vpand   %%XTMP2, %%XTMP1, %%BIT_REV_AND
-
-        vpandn  %%XTMP3, %%BIT_REV_AND, %%XTMP1
-        vpsrld  %%XTMP3, 4
-
-        vpshufb %%XTMP4, %%BIT_REV_H, %%XTMP2
-        vpshufb %%XTMP1, %%BIT_REV_L, %%XTMP3
-        vpor    %%XTMP4, %%XTMP1 ;; %%XTMP4 - bit reverse data bytes
-
-        ;; ZUC authentication part
-        ;; - 4x32 data bits
-        ;; - set up KS
-        vpshufd %%KS_L, [%%KS + (0*4)], 0x61
-        vpshufd %%KS_H, [%%KS + (2*4)], 0x61
-
-        ;;  - set up DATA
-        ; Data bytes [31:0 0s 63:32 0s]
-        vpshufb %%XTMP1, %%XTMP4, [rel shuf_mask_dw0_0_dw1_0]
-
-        ; Data bytes [95:64 0s 127:96 0s]
-        vpshufb %%XTMP3, %%XTMP4, [rel shuf_mask_dw2_0_dw3_0]
-
-        ;; - clmul
-        ;; - xor the results from 4 32-bit words together
-        vpclmulqdq %%XTMP2, %%XTMP1, %%KS_L, 0x11
-        vpclmulqdq %%XTMP1, %%KS_L, 0x00
-        vpclmulqdq %%XDIGEST, %%XTMP3, %%KS_H, 0x00
-        vpclmulqdq %%XTMP3, %%KS_H, 0x11
-
-        vpxor   %%XTMP2, %%XTMP1
-        vpxor   %%XDIGEST, %%XTMP3
-        vpxor   %%XDIGEST, %%XTMP2
+        DIGEST_16_BYTES %%KS, %%BIT_REV_L, %%BIT_REV_H, %%BIT_REV_AND, \
+                        %%XDIGEST, %%XTMP1, %%XTMP2, %%XTMP3, %%XTMP4, \
+                        %%KS_L, %%KS_H, 0
 
         add     %%DATA, 16
         add     %%KS, 16
@@ -1535,40 +1558,9 @@ exit_cipher:
         vpand   %%XTMP1, %%XTMP2
         XVPSRLB %%XTMP1, %%TMP2, %%XTMP3, %%TMP
 
-        ; Bit reverse
-        vpand   %%XTMP2, %%XTMP1, %%BIT_REV_AND
-
-        vpandn  %%XTMP3, %%BIT_REV_AND, %%XTMP1
-        vpsrld  %%XTMP3, 4
-
-        vpshufb %%XTMP4, %%BIT_REV_H, %%XTMP2
-        vpshufb %%XTMP1, %%BIT_REV_L, %%XTMP3
-        vpor    %%XTMP4, %%XTMP1 ;; %%XTMP4 - bit reverse data bytes
-
-        ;; ZUC authentication part
-        ;; - 4x32 data bits
-        ;; - set up KS
-        vpshufd %%KS_L, [%%KS + (0*4)], 0x61
-        vpshufd %%KS_H, [%%KS + (2*4)], 0x61
-
-        ;;  - set up DATA
-        ; Data bytes [31:0 0s 63:32 0s]
-        vpshufb %%XTMP1, %%XTMP4, [rel shuf_mask_dw0_0_dw1_0]
-
-        ; Data bytes [95:64 0s 127:96 0s]
-        vpshufb %%XTMP3, %%XTMP4, [rel shuf_mask_dw2_0_dw3_0]
-
-        ;; - clmul
-        ;; - xor the results from 4 32-bit words together
-        vpclmulqdq %%XTMP2, %%XTMP1, %%KS_L, 0x11
-        vpclmulqdq %%XTMP1, %%KS_L, 0x00
-        vpclmulqdq %%XTMP4, %%XTMP3, %%KS_H, 0x00
-        vpclmulqdq %%XTMP3, %%KS_H, 0x11
-
-        vpxor   %%XTMP2, %%XTMP1
-        vpxor   %%XTMP4, %%XTMP3
-        vpxor   %%XDIGEST, %%XTMP2
-        vpxor   %%XDIGEST, %%XTMP4
+        DIGEST_16_BYTES %%KS, %%BIT_REV_L, %%BIT_REV_H, %%BIT_REV_AND, \
+                        %%XDIGEST, %%XTMP1, %%XTMP2, %%XTMP3, %%XTMP4, \
+                        %%KS_L, %%KS_H, 0
 
 %%Eia3RoundsAVX_end:
 
@@ -1660,45 +1652,15 @@ asm_Eia3Remainder_avx:
 
         vpxor   %%XDIGEST, %%XDIGEST
 
-%assign %%I 0
+%assign %%OFF 0
 %rep %%NUM_16B_ROUNDS
-        ;; read up to 16 bytes of data and reverse bits
-        vmovdqu %%XTMP1, [%%DATA + 16*%%I]
-        vpand   %%XTMP2, %%XTMP1, %%BIT_REV_AND
+        vmovdqu %%XTMP1, [%%DATA + %%OFF]
 
-        vpandn  %%XTMP3, %%BIT_REV_AND, %%XTMP1
-        vpsrld  %%XTMP3, 4
+        DIGEST_16_BYTES %%KS, %%BIT_REV_L, %%BIT_REV_H, %%BIT_REV_AND, \
+                        %%XDIGEST, %%XTMP1, %%XTMP2, %%XTMP3, %%XTMP4, \
+                        %%KS_L, %%KS_H, %%OFF
 
-        vpshufb %%XTMP4, %%BIT_REV_H, %%XTMP2
-        vpshufb %%XTMP1, %%BIT_REV_L, %%XTMP3
-        vpor    %%XTMP4, %%XTMP1 ;; %%XTMP4 - bit reverse data bytes
-
-        ;; ZUC authentication part
-        ;; - 4x32 data bits
-        ;; - set up KS
-        vpshufd %%KS_L, [%%KS + 16*%%I + (0*4)], 0x61
-        vpshufd %%KS_H, [%%KS + 16*%%I + (2*4)], 0x61
-
-        ;;  - set up DATA
-        ; Data bytes [31:0 0s 63:32 0s]
-        vpshufb %%XTMP1, %%XTMP4, [rel shuf_mask_dw0_0_dw1_0]
-
-        ; Data bytes [95:64 0s 127:96 0s]
-        vpshufb %%XTMP3, %%XTMP4, [rel shuf_mask_dw2_0_dw3_0]
-
-        ;; - clmul
-        ;; - xor the results from 4 32-bit words together
-        vpclmulqdq %%XTMP2, %%XTMP1, %%KS_L, 0x11
-        vpclmulqdq %%XTMP1, %%KS_L, 0x00
-        vpclmulqdq %%XTMP4, %%XTMP3, %%KS_H, 0x00
-        vpclmulqdq %%XTMP3, %%KS_H, 0x11
-
-        vpxor   %%XTMP2, %%XTMP1
-        vpxor   %%XTMP4, %%XTMP3
-        vpxor   %%XDIGEST, %%XTMP2
-        vpxor   %%XDIGEST, %%XTMP4
-
-%assign %%I (%%I + 1)
+%assign %%OFF (%%OFF + 16)
 %endrep
 
         ;; - update T
