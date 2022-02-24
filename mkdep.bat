@@ -27,7 +27,7 @@ REM // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 REM // 
 REM // Script to produce C/C++ dependencies based using CL compiler
 REM // 
-REM // Using: deps.bat arg1 arg2 arg3
+REM // Using: mkdep.bat arg1 arg2 arg3
 REM // 
 REM // arg1 - C/C++ file name to produce dependencies for
 REM // arg2 - object file corresponding to the C/C++ file name
