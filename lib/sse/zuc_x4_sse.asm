@@ -628,11 +628,11 @@ mksection .text
 %define %%STATE     %1 ; [in] ZUC state
 %define %%ROUND_NUM %2 ; [in] Round number
 %define %%TMP       %3 ; [clobbered] Temporary GP register (used when ROUND_NUM is a register)
-%define %%LFSR_0    %4  ; [clobbered] LFSR_0
-%define %%LFSR_4    %5  ; [clobbered] LFSR_2
-%define %%LFSR_10   %6  ; [clobbered] LFSR_5
-%define %%LFSR_13   %7  ; [clobbered] LFSR_7
-%define %%LFSR_15   %8  ; [clobbered] LFSR_9
+%define %%LFSR_0    %4  ; [clobbered] LFSR_0 (XMM)
+%define %%LFSR_4    %5  ; [clobbered] LFSR_4 (XMM)
+%define %%LFSR_10   %6  ; [clobbered] LFSR_10 (XMM)
+%define %%LFSR_13   %7  ; [clobbered] LFSR_13 (XMM)
+%define %%LFSR_15   %8  ; [clobbered] LFSR_15 (XMM)
 %define %%XTMP      %9  ; [clobbered] Temporary XMM register
 %define %%MASK_31   %10 ; [in] Mask_31
 %define %%W         %11 ; [in/clobbered] In init mode, contains W for all 4 lanes
