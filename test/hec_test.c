@@ -58,7 +58,7 @@ test_32_bit(IMB_MGR *mgr, struct test_suite_context *ctx)
                 uint32_t out = 0;
                 const uint8_t *in_p = (const uint8_t *) &in;
 #ifdef DEBUG
-                printf("[32-bit %d] PF | HEC:\t0x%08lx", i + 1,
+                printf("[32-bit %u] PF | HEC:\t0x%08lx", i + 1,
                        (unsigned long) expected_out);
 #endif
                 out = IMB_HEC_32(mgr, in_p);
@@ -100,7 +100,7 @@ test_64_bit(IMB_MGR *mgr, struct test_suite_context *ctx)
                 uint64_t out = 0;
                 const uint8_t *in_p = (const uint8_t *) &in;
 #ifdef DEBUG
-                printf("[64-bit %d] PF | HEC:\t0x%016llx", i + 1,
+                printf("[64-bit %u] PF | HEC:\t0x%016llx", i + 1,
                        (unsigned long long)expected_out);
 #endif
                 out = IMB_HEC_64(mgr, in_p);
