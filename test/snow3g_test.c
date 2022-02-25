@@ -156,7 +156,7 @@ submit_uea2_jobs(struct IMB_MGR *mb_mgr, uint8_t **keys, uint8_t **ivs,
                 if (job != NULL) {
                         jobs_rx++;
                         if (job->status != IMB_STATUS_COMPLETED) {
-                                printf("%d error status:%d, job %d",
+                                printf("%d error status:%d, job %u",
                                        __LINE__, job->status, i);
                                 return -1;
                         }
@@ -166,14 +166,14 @@ submit_uea2_jobs(struct IMB_MGR *mb_mgr, uint8_t **keys, uint8_t **ivs,
         while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL) {
                 jobs_rx++;
                 if (job->status != IMB_STATUS_COMPLETED) {
-                        printf("%d error status:%d, job %d",
+                        printf("%d error status:%d, job %u",
                                __LINE__, job->status, i);
                         return -1;
                 }
         }
 
         if (jobs_rx != num_jobs) {
-                printf("Expected %d jobs, received %d\n", num_jobs, jobs_rx);
+                printf("Expected %u jobs, received %u\n", num_jobs, jobs_rx);
                 return -1;
         }
 
@@ -2280,7 +2280,7 @@ static int validate_f8_iv_gen(void)
 
                 /* validate result */
                 if (memcmp(IV, snow3g_f8_linear_bitvectors.iv[i], 16) != 0) {
-                        printf("snow3g_f8_iv_gen vector num: %d\n", i);
+                        printf("snow3g_f8_iv_gen vector num: %u\n", i);
                         snow3g_hexdump("Actual", IV, 16);
                         snow3g_hexdump("Expected",
                                        snow3g_f8_linear_bitvectors.iv[i], 16);
@@ -2316,7 +2316,7 @@ static int validate_f9_iv_gen(void)
 
                 /* validate result */
                 if (memcmp(IV, snow_f9_vectors[i].iv, 16) != 0) {
-                        printf("snow3g_f9_iv_gen vector num: %d\n", i);
+                        printf("snow3g_f9_iv_gen vector num: %u\n", i);
                         snow3g_hexdump("Actual", IV, 16);
                         snow3g_hexdump("Expected", snow_f9_vectors[i].iv, 16);
                         return 1;
