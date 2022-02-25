@@ -202,7 +202,6 @@ db      0x0c, 0x0d, 0x0e, 0x0f, 0xff, 0xff, 0xff, 0xff
 
 ; Stack frame for ZucCipher function
 struc STACK
-_keystr_save    resq  2*4 ; Space for 4 keystreams
 _rsp_save:      resq    1 ; Space for rsp pointer
 _gpr_save:      resq    2 ; Space for GP registers
 _rem_bytes_save resq    1 ; Space for number of remaining bytes
@@ -949,16 +948,14 @@ asm_Zuc256Initialization_4_avx:
 %define %%XTMP15 xmm14
 %define %%XTMP16 xmm15
 
-%define %%W     %%XTMP10
-%define %%X3    %%XTMP11
+%define %%W     %%XTMP11
+%define %%KSTR1 %%XTMP12
+%define %%KSTR2 %%XTMP13
+%define %%KSTR3 %%XTMP14
+%define %%KSTR4 %%XTMP15
 %define %%MASK_31 %%XTMP16
 
         FUNC_SAVE
-
-        ; Reserve memory for storing keystreams for all 4 buffers
-        mov     r10, rsp
-        sub     rsp, (%%NUM_ROUNDS * 16)
-        and     rsp, -16
 
         ; Load read-only registers
         vmovdqa %%MASK_31, [rel mask31]
@@ -968,59 +965,37 @@ asm_Zuc256Initialization_4_avx:
 %assign %%N 1
 %rep %%NUM_ROUNDS
         BITS_REORG4 pState, %%N, %%XTMP1, %%XTMP2, %%XTMP3, %%XTMP4, %%XTMP5, \
-                    %%XTMP6, %%XTMP7, %%XTMP8, %%XTMP9, %%XTMP10, %%X3
+                    %%XTMP6, %%XTMP7, %%XTMP8, %%XTMP9, %%XTMP10, APPEND(%%KSTR, %%N)
         NONLIN_FUN4 pState, %%XTMP1, %%XTMP2, %%XTMP3, \
                     %%XTMP4, %%XTMP5, %%XTMP6, %%XTMP7, %%W
         ; OFS_X3 XOR W and store in stack
-        vpxor   %%X3, %%W
-        vmovdqa [rsp + (%%N-1)*16], %%X3
+        vpxor   APPEND(%%KSTR, %%N), %%W
         LFSR_UPDT4  pState, %%N, %%XTMP1, %%XTMP2, %%XTMP3, %%XTMP4, %%XTMP5, %%XTMP6, \
                     %%MASK_31, %%XTMP8, work
 %assign %%N (%%N + 1)
 %endrep
 
-        ; Read keystream pointers
+        ; Read keystream pointers and store the keystreams
         mov     r12, [pKS]
         mov     r13, [pKS + 8]
         mov     r14, [pKS + 16]
         mov     r15, [pKS + 24]
 %if (%%NUM_ROUNDS == 4)
-        ;; Load all OFS_X3
-        vmovdqa %%XTMP1, [rsp]
-        vmovdqa %%XTMP2, [rsp + 16]
-        vmovdqa %%XTMP3, [rsp + 16*2]
-        vmovdqa %%XTMP4, [rsp + 16*3]
-
-        TRANSPOSE4_U32 %%XTMP1, %%XTMP2, %%XTMP3, %%XTMP4, %%XTMP5, %%XTMP6
-
-        STORE16B_KSTR4 %%XTMP1, %%XTMP2, %%XTMP3, %%XTMP4, r12, r13, r14, r15
+        TRANSPOSE4_U32 %%KSTR1, %%KSTR2, %%KSTR3, %%KSTR4, %%XTMP5, %%XTMP6
+        STORE16B_KSTR4 %%KSTR1, %%KSTR2, %%KSTR3, %%KSTR4, r12, r13, r14, r15
 %else ;; NUM_ROUNDS != 4
 %assign %%IDX 1
 %assign %%OFFSET 0
 %rep %%NUM_ROUNDS
-        vmovdqa APPEND(%%XTMP, %%IDX), [rsp + (%%IDX-1)*16]
-        STORE4B_KSTR4 APPEND(%%XTMP, %%IDX), r12, r13, r14, r15, %%OFFSET
+        STORE4B_KSTR4 APPEND(%%KSTR, %%IDX), r12, r13, r14, r15, %%OFFSET
 %assign %%IDX (%%IDX + 1)
 %assign %%OFFSET (%%OFFSET + 4)
 %endrep
 %endif ;; NUM_ROUNDS == 4
 
-        ;; Clear stack frame containing keystream information
-%ifdef SAFE_DATA
-        vpxor   %%XTMP1, %%XTMP1
-%assign %%I 0
-%rep %%NUM_ROUNDS
-        vmovdqa [rsp + %%I*16], %%XTMP1
-%assign %%I (%%I + 1)
-%endrep
-%endif
-
         ;; Reorder memory for LFSR registers, as not all 16 rounds
-        ;; will be completed (can be 4 or 2)
+        ;; will be completed
         REORDER_LFSR pState, %%NUM_ROUNDS
-
-        ;; Restore rsp pointer to value before pushing keystreams
-        mov     rsp, r10
 
         FUNC_RESTORE
 
@@ -1119,7 +1094,10 @@ asm_ZucGenKeystream4B_4_avx:
 %define %%XTMP16 xmm15
 
 %define %%W     %%XTMP10
-%define %%X3    %%XTMP11
+%define %%KSTR1 %%XTMP12
+%define %%KSTR2 %%XTMP13
+%define %%KSTR3 %%XTMP14
+%define %%KSTR4 %%XTMP15
 %define %%MASK_31 %%XTMP16
 
         ; Load read-only registers
@@ -1130,27 +1108,20 @@ asm_ZucGenKeystream4B_4_avx:
 %assign %%round (%%INITIAL_ROUND + %%N)
 %rep %%NROUNDS
         BITS_REORG4 pState, %%round, %%XTMP1, %%XTMP2, %%XTMP3, %%XTMP4, %%XTMP5, \
-                    %%XTMP6, %%XTMP7, %%XTMP8, %%XTMP9, %%XTMP10, %%X3
+                    %%XTMP6, %%XTMP7, %%XTMP8, %%XTMP9, %%XTMP10, APPEND(%%KSTR, %%N)
         NONLIN_FUN4 pState, %%XTMP1, %%XTMP2, %%XTMP3, \
                     %%XTMP4, %%XTMP5, %%XTMP6, %%XTMP7, %%W
         ; OFS_X3 XOR W and store in stack
-        vpxor       %%X3, %%W
-        vmovdqa     [rsp + _keystr_save + (%%N-1)*16], %%X3
+        vpxor       APPEND(%%KSTR, %%N), %%W
         LFSR_UPDT4  pState, %%round, %%XTMP1, %%XTMP2, %%XTMP3, %%XTMP4, %%XTMP5, %%XTMP6, \
                     %%MASK_31, %%XTMP8, work
 %assign %%N (%%N + 1)
 %assign %%round (%%round + 1)
 %endrep
 
-%assign %%N 1
-%rep %%NROUNDS
-        vmovdqa APPEND(%%XTMP, %%N), [rsp + _keystr_save + (%%N-1)*16]
-%assign %%N (%%N + 1)
-%endrep
+        TRANSPOSE4_U32 %%KSTR1, %%KSTR2, %%KSTR3, %%KSTR4, %%XTMP5, %%XTMP6
 
-        TRANSPOSE4_U32 %%XTMP1, %%XTMP2, %%XTMP3, %%XTMP4, %%XTMP5, %%XTMP6
-
-        vmovdqa %%XTMP15, [rel swap_mask]
+        vmovdqa %%XTMP16, [rel swap_mask]
 
         ;; XOR Input buffer with keystream in rounds of 16B
         mov     r12, [pIn]
@@ -1178,15 +1149,15 @@ asm_ZucGenKeystream4B_4_avx:
         vmovdqu %%XTMP8, [r15 + %%OFFSET]
 %endif
 
-        vpshufb %%XTMP1, %%XTMP15
-        vpshufb %%XTMP2, %%XTMP15
-        vpshufb %%XTMP3, %%XTMP15
-        vpshufb %%XTMP4, %%XTMP15
+        vpshufb %%KSTR1, %%XTMP16
+        vpshufb %%KSTR2, %%XTMP16
+        vpshufb %%KSTR3, %%XTMP16
+        vpshufb %%KSTR4, %%XTMP16
 
-        vpxor   %%XTMP1, %%XTMP5
-        vpxor   %%XTMP2, %%XTMP6
-        vpxor   %%XTMP3, %%XTMP7
-        vpxor   %%XTMP4, %%XTMP8
+        vpxor   %%KSTR1, %%XTMP5
+        vpxor   %%KSTR2, %%XTMP6
+        vpxor   %%KSTR3, %%XTMP7
+        vpxor   %%KSTR4, %%XTMP8
 
         mov     r12, [pOut]
         mov     r13, [pOut + 8]
@@ -1195,22 +1166,22 @@ asm_ZucGenKeystream4B_4_avx:
 
 %if (%%LAST_CALL == 1)
         movzx  r10d, word [rsp + _rem_bytes_save]
-        simd_store_avx r12, %%XTMP1, r10, %%TMP1, %%TMP2, %%OFFSET
+        simd_store_avx r12, %%KSTR1, r10, %%TMP1, %%TMP2, %%OFFSET
         movzx  r10d, word [rsp + _rem_bytes_save + 2]
-        simd_store_avx r13, %%XTMP2, r10, %%TMP1, %%TMP2, %%OFFSET
+        simd_store_avx r13, %%KSTR2, r10, %%TMP1, %%TMP2, %%OFFSET
         movzx  r10d, word [rsp + _rem_bytes_save + 4]
-        simd_store_avx r14, %%XTMP3, r10, %%TMP1, %%TMP2, %%OFFSET
+        simd_store_avx r14, %%KSTR3, r10, %%TMP1, %%TMP2, %%OFFSET
         movzx  r10d, word [rsp + _rem_bytes_save + 6]
-        simd_store_avx r15, %%XTMP4, r10, %%TMP1, %%TMP2, %%OFFSET
+        simd_store_avx r15, %%KSTR4, r10, %%TMP1, %%TMP2, %%OFFSET
 
         ; Restore registers
         mov     %%TMP1, [rsp + _gpr_save]
         mov     %%TMP2, [rsp + _gpr_save + 8]
 %else
-        vmovdqu [r12 + %%OFFSET], %%XTMP1
-        vmovdqu [r13 + %%OFFSET], %%XTMP2
-        vmovdqu [r14 + %%OFFSET], %%XTMP3
-        vmovdqu [r15 + %%OFFSET], %%XTMP4
+        vmovdqu [r12 + %%OFFSET], %%KSTR1
+        vmovdqu [r13 + %%OFFSET], %%KSTR2
+        vmovdqu [r14 + %%OFFSET], %%KSTR3
+        vmovdqu [r15 + %%OFFSET], %%KSTR4
 %endif
 %endmacro
 
@@ -1423,15 +1394,6 @@ exit_final_rounds:
         vmovdqa [pOut], xmm1
         vmovdqa [pOut + 16], xmm2
 
-        ;; Clear stack frame containing keystream information
-%ifdef SAFE_DATA
-        vpxor   xmm0, xmm0
-%assign i 0
-%rep 4
-	vmovdqa [rsp + _keystr_save + i*16], xmm0
-%assign i (i+1)
-%endrep
-%endif
         ; Restore rsp
         mov     rsp, [rsp + _rsp_save]
 
