@@ -335,16 +335,8 @@ static IMB_HASH_ALG hash_selection(void)
                         return IMB_AUTH_AES_GMAC_192;
                 else if (strcmp(a, "IMB_AUTH_AES_GMAC_256") == 0)
                         return IMB_AUTH_AES_GMAC_256;
-                else if (strcmp(a, "IMB_AUTH_NULL") == 0)
-                        return IMB_AUTH_NULL;
-                else if (strcmp(a, "IMB_AUTH_AES_GMAC") == 0)
-                        return IMB_AUTH_AES_GMAC;
                 else if (strcmp(a, "IMB_AUTH_AES_CMAC_256") == 0)
                         return IMB_AUTH_AES_CMAC_256;
-                else if (strcmp(a, "IMB_AUTH_AES_CCM") == 0)
-                        return IMB_AUTH_AES_CCM;
-                else if (strcmp(a, "IMB_AUTH_AES_CMAC") == 0)
-                        return IMB_AUTH_AES_CMAC;
                 else if (strcmp(a, "IMB_AUTH_POLY1305") == 0)
                         return IMB_AUTH_POLY1305;
                 else if (strcmp(a, "IMB_AUTH_CHACHA20_POLY1305") == 0)
