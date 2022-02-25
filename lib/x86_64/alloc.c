@@ -175,7 +175,7 @@ IMB_MGR *imb_set_pointers_mb_mgr(void *mem_ptr, const uint64_t flags,
 
         IMB_MGR *ptr = (IMB_MGR *) mem_ptr;
         uint8_t *ptr8 = (uint8_t *) ptr;
-        uint8_t *free_mem = &ptr8[ALIGN(sizeof(IMB_MGR), ALIGNMENT)];
+        uint8_t *free_ptr = &ptr8[ALIGN(sizeof(IMB_MGR), ALIGNMENT)];
         const size_t mem_size = imb_get_mb_mgr_size();
         unsigned i;
 
@@ -226,9 +226,9 @@ IMB_MGR *imb_set_pointers_mb_mgr(void *mem_ptr, const uint64_t flags,
 
         /* Set OOO pointers */
         for (i = 0; i < IMB_DIM(ooo_mgr_table); i++) {
-                set_ooo_ptr(ptr, ooo_mgr_table[i].ooo_ptr_offset, free_mem);
-                free_mem = &free_mem[ooo_mgr_table[i].ooo_aligned_size];
-                IMB_ASSERT((uintptr_t)(free_mem - ptr8) <= mem_size);
+                set_ooo_ptr(ptr, ooo_mgr_table[i].ooo_ptr_offset, free_ptr);
+                free_ptr = &free_ptr[ooo_mgr_table[i].ooo_aligned_size];
+                IMB_ASSERT((uintptr_t)(free_ptr - ptr8) <= mem_size);
         }
         set_ooo_mgr_road_block(ptr);
 
