@@ -180,14 +180,14 @@ known_answer_test(IMB_MGR *mb_mgr)
         }
         for (i = 0; i < NUMBYTES; i++) {
                 if (test_buf[i] != plain[i]) {
-                        printf("AES128 Dec mismatch on byte %d\n", i);
+                        printf("AES128 Dec mismatch on byte %u\n", i);
                         return 1;
                 }
         }
 
         for (i = 0; i < 12; i++) {
                 if (digest[i] != hmac12[i]) {
-                        printf("HMAC/SHA1 mismatch on byte %d\n", i);
+                        printf("HMAC/SHA1 mismatch on byte %u\n", i);
                         return 1;
                 }
         }
