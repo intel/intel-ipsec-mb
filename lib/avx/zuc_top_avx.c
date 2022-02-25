@@ -639,9 +639,6 @@ void _zuc_eia3_4_buffer_avx(const void * const pKey[NUM_AVX_BUFS],
 
         /* Process each packet separately for the remaining bits */
         for (i = 0; i < NUM_AVX_BUFS; i++) {
-                const uint32_t N = lengthInBits[i] + (2 * ZUC_WORD_BITS);
-                uint32_t L = ((N + 31) / ZUC_WORD_BITS) -
-                             numKeyStr*(keyStreamLengthInBits / 32);
                 uint32_t remainBits = lengthInBits[i] -
                                       numKeyStr*keyStreamLengthInBits;
                 uint32_t *keyStr32 = (uint32_t *) keyStr[i];
@@ -673,7 +670,6 @@ void _zuc_eia3_4_buffer_avx(const void * const pKey[NUM_AVX_BUFS],
 
                 while (remainBits >= keyStreamLengthInBits) {
                         remainBits -= keyStreamLengthInBits;
-                        L -= (keyStreamLengthInBits / 32);
 
                         /* Generate the next key stream 8 bytes or 16 bytes */
                         if (!remainBits)
@@ -838,9 +834,6 @@ void zuc_eia3_4_buffer_job_avx(const void * const pKey[NUM_AVX_BUFS],
                 if (job_in_lane[i] == NULL)
                         continue;
 
-                const uint32_t N = lengthInBits[i] + (2 * ZUC_WORD_BITS);
-                uint32_t L = ((N + 31) / ZUC_WORD_BITS) -
-                             numKeyStr*(keyStreamLengthInBits / 32);
                 uint32_t remainBits = lengthInBits[i] -
                                       numKeyStr*keyStreamLengthInBits;
                 uint32_t *keyStr32 = (uint32_t *) keyStr[i];
@@ -872,7 +865,6 @@ void zuc_eia3_4_buffer_job_avx(const void * const pKey[NUM_AVX_BUFS],
 
                 while (remainBits >= keyStreamLengthInBits) {
                         remainBits -= keyStreamLengthInBits;
-                        L -= (keyStreamLengthInBits / 32);
 
                         /* Generate the next key stream 8 bytes or 16 bytes */
                         if (!remainBits)
