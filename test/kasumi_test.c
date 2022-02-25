@@ -93,12 +93,12 @@ submit_kasumi_f8_jobs(struct IMB_MGR *mb_mgr, kasumi_key_sched_t **keys,
                       const uint32_t *bitlens, const uint32_t *bit_offsets,
                       int dir, const unsigned int num_jobs)
 {
-        IMB_JOB *job;
         unsigned int i;
         unsigned int jobs_rx = 0;
 
         for (i = 0; i < num_jobs; i++) {
-                job = IMB_GET_NEXT_JOB(mb_mgr);
+                IMB_JOB *job = IMB_GET_NEXT_JOB(mb_mgr);
+
                 job->cipher_direction = dir;
                 job->chain_order = IMB_ORDER_CIPHER_HASH;
                 job->cipher_mode = IMB_CIPHER_KASUMI_UEA1_BITLEN;
@@ -117,7 +117,7 @@ submit_kasumi_f8_jobs(struct IMB_MGR *mb_mgr, kasumi_key_sched_t **keys,
                 if (job != NULL) {
                         jobs_rx++;
                         if (job->status != IMB_STATUS_COMPLETED) {
-                                printf("%d error status:%d, job %d",
+                                printf("%d error status:%d, job %u",
                                        __LINE__, job->status, i);
                                 return -1;
                         }
@@ -128,7 +128,7 @@ submit_kasumi_f8_jobs(struct IMB_MGR *mb_mgr, kasumi_key_sched_t **keys,
         }
 
         if (jobs_rx != num_jobs) {
-                printf("Expected %d jobs, received %d\n", num_jobs, jobs_rx);
+                printf("Expected %u jobs, received %u\n", num_jobs, jobs_rx);
                 return -1;
         }
 
@@ -286,7 +286,7 @@ static int validate_kasumi_f8_1_block(IMB_MGR *mgr, const unsigned job_api)
 /* Shift right a buffer by "offset" bits, "offset" < 8 */
 static void buffer_shift_right(uint8_t *buffer, uint32_t length, uint8_t offset)
 {
-        uint8_t curr_byte, prev_byte;
+        uint8_t prev_byte;
         const uint32_t length_in_bytes = (length + offset + 7) / CHAR_BIT;
         const uint8_t lower_byte_mask = (1 << offset) - 1;
         uint32_t i;
@@ -295,7 +295,8 @@ static void buffer_shift_right(uint8_t *buffer, uint32_t length, uint8_t offset)
         prev_byte = 0xff;
 
         for (i = 0; i < length_in_bytes; i++) {
-                curr_byte = buffer[i];
+                const uint8_t curr_byte = buffer[i];
+
                 buffer[i] = ((prev_byte & lower_byte_mask) << (8 - offset)) |
                             (curr_byte >> offset);
                 prev_byte = curr_byte;
@@ -510,13 +511,13 @@ static int validate_kasumi_f8_1_bitblock_offset(IMB_MGR *mgr,
         numKasumiTestVectors = numCipherTestVectors[1];
 
         uint8_t *pKey = NULL;
-        int keyLen = MAX_KEY_LEN;
+        int keyLen = MAX_KEY_LEN, ret;
         uint8_t srcBuff[MAX_DATA_LEN];
         uint8_t dstBuff[MAX_DATA_LEN];
         uint64_t IV;
         uint32_t bufferbytesize = 0;
         uint8_t wrkbuf[MAX_DATA_LEN];
-        uint32_t offset = 0, byteoffset = 0, ret;
+        uint32_t offset = 0, byteoffset = 0;
         uint8_t *pSrcBuff = srcBuff;
         uint8_t *pDstBuff = dstBuff;
         uint8_t *pWrkBuff = wrkbuf;
@@ -650,17 +651,11 @@ static int validate_kasumi_f8_1_bitblock_offset(IMB_MGR *mgr,
 
 static int validate_kasumi_f8_2_blocks(IMB_MGR *mgr, const unsigned job_api)
 {
-
-        int numKasumiTestVectors, i = 0, numPackets = 2;
-        const cipher_test_vector_t *kasumi_test_vectors = NULL;
+        unsigned i = 0, numPackets = 2;
+        const cipher_test_vector_t *kasumi_test_vectors =
+                cipher_test_vectors[0];
         kasumi_key_sched_t *keySched[3] = {NULL};
-
-        printf("Testing IMB_KASUMI_F8_2_BUFFER (%s):\n",
-               job_api ? "Job API" : "Direct API");
-
-        kasumi_test_vectors = cipher_test_vectors[0];
-        numKasumiTestVectors = numCipherTestVectors[0];
-
+        const int numKasumiTestVectors = numCipherTestVectors[0];
         uint8_t *key[3] = {NULL};
         int keyLen = MAX_KEY_LEN;
         uint64_t iv[3];
@@ -671,6 +666,9 @@ static int validate_kasumi_f8_2_blocks(IMB_MGR *mgr, const unsigned job_api)
         uint32_t bitOffsets[3];
         uint64_t *pIV[3] = {NULL};
         int ret = 1;
+
+        printf("Testing IMB_KASUMI_F8_2_BUFFER (%s):\n",
+               job_api ? "Job API" : "Direct API");
 
         if (!numKasumiTestVectors) {
                 printf("No Kasumi vectors found !\n");
@@ -743,7 +741,7 @@ static int validate_kasumi_f8_2_blocks(IMB_MGR *mgr, const unsigned job_api)
         for (i = 0; i < numPackets; i++) {
                 if (memcmp(srcBuff[i], kasumi_test_vectors[i].ciphertext,
                            packetLen[i]) != 0) {
-                        printf("kasumi_f8_2_buffer(Enc)  vector:%d\n", i);
+                        printf("kasumi_f8_2_buffer(Enc)  vector:%u\n", i);
                         hexdump(stdout, "Actual:", srcBuff[i], packetLen[i]);
                         hexdump(stdout, "Expected:",
                                 kasumi_test_vectors[i].ciphertext,
@@ -767,7 +765,7 @@ static int validate_kasumi_f8_2_blocks(IMB_MGR *mgr, const unsigned job_api)
                                    kasumi_test_vectors[i].ciphertext,
                                    packetLen[i]) != 0) {
                                 printf("kasumi_f8_2_buffer(Enc)  "
-                                       "vector:%d\n", i);
+                                       "vector:%u\n", i);
                                 hexdump(stdout, "Actual:", srcBuff[i],
                                         packetLen[i]);
                                 hexdump(stdout, "Expected:",
@@ -793,7 +791,7 @@ static int validate_kasumi_f8_2_blocks(IMB_MGR *mgr, const unsigned job_api)
                                    kasumi_test_vectors[i].ciphertext,
                                    packetLen[i]) != 0) {
                                 printf("kasumi_f8_2_buffer(Enc) "
-                                       "vector:%d\n", i);
+                                       "vector:%u\n", i);
                                 hexdump(stdout, "Actual:", srcBuff[i],
                                         packetLen[i]);
                                 hexdump(stdout, "Expected:",
@@ -820,7 +818,7 @@ static int validate_kasumi_f8_2_blocks(IMB_MGR *mgr, const unsigned job_api)
         for (i = 0; i < numPackets; i++) {
                 if (memcmp(dstBuff[i], kasumi_test_vectors[i].plaintext,
                            packetLen[i]) != 0) {
-                        printf("kasumi_f8_2_buffer(Dec)  vector:%d\n", i);
+                        printf("kasumi_f8_2_buffer(Dec)  vector:%u\n", i);
                         hexdump(stdout, "Actual:", dstBuff[i], packetLen[i]);
                         hexdump(stdout, "Expected:",
                                 kasumi_test_vectors[i].plaintext,
@@ -844,7 +842,7 @@ static int validate_kasumi_f8_2_blocks(IMB_MGR *mgr, const unsigned job_api)
                         if (memcmp(dstBuff[i], kasumi_test_vectors[i].plaintext,
                                    packetLen[i]) != 0) {
                                 printf("kasumi_f8_2_buffer(Dec) "
-                                       "vector:%d\n", i);
+                                       "vector:%u\n", i);
                                 hexdump(stdout, "Actual:", dstBuff[i],
                                         packetLen[i]);
                                 hexdump(stdout, "Expected:",
@@ -869,7 +867,7 @@ exit:
 
 static int validate_kasumi_f8_3_blocks(IMB_MGR *mgr, const unsigned job_api)
 {
-        int numKasumiTestVectors, i = 0, numPackets = 3;
+        unsigned i = 0, numPackets = 3;
         const cipher_test_vector_t *kasumi_test_vectors = NULL;
         kasumi_key_sched_t *keySched[3] = {NULL};
 
@@ -877,7 +875,7 @@ static int validate_kasumi_f8_3_blocks(IMB_MGR *mgr, const unsigned job_api)
                job_api ? "Job API" : "Direct API");
 
         kasumi_test_vectors = cipher_test_vectors[0];
-        numKasumiTestVectors = numCipherTestVectors[0];
+        const int numKasumiTestVectors = numCipherTestVectors[0];
 
         uint8_t *key[3] = {NULL};
         int keyLen = MAX_KEY_LEN;
@@ -961,7 +959,7 @@ static int validate_kasumi_f8_3_blocks(IMB_MGR *mgr, const unsigned job_api)
         for (i = 0; i < numPackets; i++) {
                 if (memcmp(srcBuff[i], kasumi_test_vectors[0].ciphertext,
                            packetLen[0]) != 0) {
-                        printf("kasumi_f8_3_buffer(Enc)  vector:%d\n", i);
+                        printf("kasumi_f8_3_buffer(Enc)  vector:%u\n", i);
                         hexdump(stdout, "Actual:", srcBuff[i], packetLen[0]);
                         hexdump(stdout, "Expected:",
                                 kasumi_test_vectors[0].ciphertext,
@@ -988,7 +986,7 @@ static int validate_kasumi_f8_3_blocks(IMB_MGR *mgr, const unsigned job_api)
         for (i = 0; i < numPackets; i++) {
                 if (memcmp(dstBuff[i], kasumi_test_vectors[0].plaintext,
                            packetLen[0]) != 0) {
-                        printf("kasumi_f8_3_buffer(Dec)  vector:%d\n", i);
+                        printf("kasumi_f8_3_buffer(Dec)  vector:%u\n", i);
                         hexdump(stdout, "Actual:", dstBuff[i], packetLen[0]);
                         hexdump(stdout, "Expected:",
                                 kasumi_test_vectors[0].plaintext,
@@ -1011,7 +1009,7 @@ exit:
 
 static int validate_kasumi_f8_4_blocks(IMB_MGR *mgr, const unsigned job_api)
 {
-        int numKasumiTestVectors, i = 0, numPackets = 4;
+        unsigned i = 0, numPackets = 4;
         const cipher_test_vector_t *kasumi_test_vectors = NULL;
         kasumi_key_sched_t *keySched[4] = {NULL};
 
@@ -1019,7 +1017,7 @@ static int validate_kasumi_f8_4_blocks(IMB_MGR *mgr, const unsigned job_api)
                job_api ? "Job API" : "Direct API");
 
         kasumi_test_vectors = cipher_test_vectors[0];
-        numKasumiTestVectors = numCipherTestVectors[0];
+        const int numKasumiTestVectors = numCipherTestVectors[0];
 
         uint8_t *key[4] = {NULL};
         int keyLen = MAX_KEY_LEN;
@@ -1104,7 +1102,7 @@ static int validate_kasumi_f8_4_blocks(IMB_MGR *mgr, const unsigned job_api)
         for (i = 0; i < numPackets; i++) {
                 if (memcmp(srcBuff[i], kasumi_test_vectors[0].ciphertext,
                            packetLen[0]) != 0) {
-                        printf("kasumi_f8_4_buffer(Enc)  vector:%d\n", i);
+                        printf("kasumi_f8_4_buffer(Enc)  vector:%u\n", i);
                         hexdump(stdout, "Actual:", srcBuff[i], packetLen[0]);
                         hexdump(stdout, "Expected:",
                                 kasumi_test_vectors[0].ciphertext,
@@ -1132,7 +1130,7 @@ static int validate_kasumi_f8_4_blocks(IMB_MGR *mgr, const unsigned job_api)
         for (i = 0; i < numPackets; i++) {
                 if (memcmp(dstBuff[i], kasumi_test_vectors[0].plaintext,
                            packetLen[0]) != 0) {
-                        printf("kasumi_f8_4_buffer(Dec)  vector:%d\n", i);
+                        printf("kasumi_f8_4_buffer(Dec)  vector:%u\n", i);
                         hexdump(stdout, "Actual:", dstBuff[i], packetLen[0]);
                         hexdump(stdout, "Expected:",
                                 kasumi_test_vectors[0].plaintext,
@@ -1165,7 +1163,7 @@ static int validate_kasumi_f8_n_blocks(IMB_MGR *mgr, const unsigned job_api)
         uint32_t bitLens[NUM_SUPPORTED_BUFFERS];
         uint32_t bitOffsets[NUM_SUPPORTED_BUFFERS];
 
-        int i = 0, j = 0;
+        unsigned i = 0, j = 0;
         int ret = -1;
 
         printf("Testing IMB_KASUMI_F8_N_BUFFER (%s):\n",
@@ -1265,7 +1263,7 @@ static int validate_kasumi_f8_n_blocks(IMB_MGR *mgr, const unsigned job_api)
                         if (memcmp(srcBuff[j], refBuff[j],
                                    buffLenInBytes[j]) != 0) {
                                 printf("kasumi_f8_n_buffer equal sizes, "
-                                       "numBuffs:%d\n", i + 1);
+                                       "numBuffs:%u\n", i + 1);
                                 hexdump(stdout, "Actual:", srcBuff[j],
                                         buffLenInBytes[j]);
                                 hexdump(stdout, "Expected:", refBuff[j],
@@ -1274,7 +1272,7 @@ static int validate_kasumi_f8_n_blocks(IMB_MGR *mgr, const unsigned job_api)
                         }
                 }
         }
-        printf("[%s]: PASS, 1 to %d buffers of equal size.\n", __FUNCTION__, i);
+        printf("[%s]: PASS, 1 to %u buffers of equal size.\n", __FUNCTION__, i);
 
         /* Testing multiple buffers of increasing size */
         for (i = 0; i < NUM_SUPPORTED_BUFFERS; i++) {
@@ -1334,7 +1332,7 @@ static int validate_kasumi_f8_n_blocks(IMB_MGR *mgr, const unsigned job_api)
                         if (memcmp(srcBuff[j], refBuff[j],
                                    buffLenInBytes[j]) != 0) {
                                 printf("kasumi_f8_n_buffer increasing sizes, "
-                                       "numBuffs:%d\n", i + 1);
+                                       "numBuffs:%u\n", i + 1);
                                 hexdump(stdout, "Actual:", srcBuff[j],
                                         buffLenInBytes[j]);
                                 hexdump(stdout, "Expected:", refBuff[j],
@@ -1344,7 +1342,7 @@ static int validate_kasumi_f8_n_blocks(IMB_MGR *mgr, const unsigned job_api)
                 }
         }
 
-        printf("[%s]: PASS, 1 to %d buffers of increasing size.\n",
+        printf("[%s]: PASS, 1 to %u buffers of increasing size.\n",
                __FUNCTION__, i);
 
         /* Testing multiple buffers of decreasing size */
@@ -1403,7 +1401,7 @@ static int validate_kasumi_f8_n_blocks(IMB_MGR *mgr, const unsigned job_api)
                         if (memcmp(srcBuff[j], refBuff[j],
                                    buffLenInBytes[j]) != 0) {
                                 printf("kasumi_f8_n_buffer decreasing sizes, "
-                                       "numBuffs:%d\n", i + 1);
+                                       "numBuffs:%u\n", i + 1);
                                 hexdump(stdout, "Actual:", srcBuff[j],
                                         buffLenInBytes[j]);
                                 hexdump(stdout, "Expected:", refBuff[j],
@@ -1414,7 +1412,7 @@ static int validate_kasumi_f8_n_blocks(IMB_MGR *mgr, const unsigned job_api)
         }
 
         ret = 0;
-        printf("[%s]: PASS, 1 to %d buffers of decreasing size.\n",
+        printf("[%s]: PASS, 1 to %u buffers of decreasing size.\n",
                __FUNCTION__, i);
 exit:
         /* free up test buffers */
@@ -1575,7 +1573,7 @@ static int validate_kasumi_f9_user(IMB_MGR *mgr, const unsigned job_api)
                                 IMB_KASUMI_DIGEST_SIZE);
                         hexdump(stdout, "exp_out", kasumiF9_vectors[i].exp_out,
                                 IMB_KASUMI_DIGEST_SIZE);
-                        printf("direction %d\n", direction);
+                        printf("direction %u\n", direction);
                         printf("F9 integrity %d Failed\n", i);
                         goto exit;
                 }
