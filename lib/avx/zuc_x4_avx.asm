@@ -446,49 +446,39 @@ align 64
 %endmacro
 
 ;
-;   store16B_kstr4()
+; Stores 16 bytes of keystream for 4 lanes
 ;
-%macro  store16B_kstr4 4
-%define %%DATA16B_L0  %1  ; [in] 16 bytes of keystream for lane 0
-%define %%DATA16B_L1  %2  ; [in] 16 bytes of keystream for lane 1
-%define %%DATA16B_L2  %3  ; [in] 16 bytes of keystream for lane 2
-%define %%DATA16B_L3  %4  ; [in] 16 bytes of keystream for lane 3
+%macro  STORE16B_KSTR4 8
+%define %%DATA16B_L0    %1 ; [in] 16 bytes of keystream for lane 0
+%define %%DATA16B_L1    %2 ; [in] 16 bytes of keystream for lane 1
+%define %%DATA16B_L2    %3 ; [in] 16 bytes of keystream for lane 2
+%define %%DATA16B_L3    %4 ; [in] 16 bytes of keystream for lane 3
+%define %%KS_PTR0       %5 ; [in] Pointer to keystream for lane 0
+%define %%KS_PTR1       %6 ; [in] Pointer to keystream for lane 1
+%define %%KS_PTR2       %7 ; [in] Pointer to keystream for lane 2
+%define %%KS_PTR3       %8 ; [in] Pointer to keystream for lane 3
 
-    mov         rcx, [rsp]
-    mov         rdx, [rsp + 8]
-    mov         r8,  [rsp + 16]
-    mov         r9,  [rsp + 24]
-    vmovdqu     [rcx], %%DATA16B_L0
-    vmovdqu     [rdx], %%DATA16B_L1
-    vmovdqu     [r8],  %%DATA16B_L2
-    vmovdqu     [r9],  %%DATA16B_L3
+        vmovdqa [%%KS_PTR0], %%DATA16B_L0
+        vmovdqa [%%KS_PTR1], %%DATA16B_L1
+        vmovdqa [%%KS_PTR2], %%DATA16B_L2
+        vmovdqa [%%KS_PTR3], %%DATA16B_L3
 %endmacro
 
 ;
-;   store4B_kstr4()
+; Stores 4 bytes of keystream for 4 lanes
 ;
-;   params
-;
-;   %1 - XMM register with OFS_X3
-;   return
-;
-%macro  store4B_kstr4 1
-    mov         rcx, [rsp]
-    mov         rdx, [rsp + 8]
-    mov         r8,  [rsp + 16]
-    mov         r9,  [rsp + 24]
-    vpextrd     [r9], %1, 3
-    vpextrd     [r8], %1, 2
-    vpextrd     [rdx], %1, 1
-    vmovd       [rcx], %1
-    add         rcx, 4
-    add         rdx, 4
-    add         r8, 4
-    add         r9, 4
-    mov         [rsp],      rcx
-    mov         [rsp + 8],  rdx
-    mov         [rsp + 16], r8
-    mov         [rsp + 24], r9
+%macro  STORE4B_KSTR4 6
+%define %%DATA4B_L03    %1 ; [in] 4 bytes of keystream for lanes 0-3
+%define %%KS_PTR0       %2 ; [in] Pointer to keystream for lane 0
+%define %%KS_PTR1       %3 ; [in] Pointer to keystream for lane 1
+%define %%KS_PTR2       %4 ; [in] Pointer to keystream for lane 2
+%define %%KS_PTR3       %5 ; [in] Pointer to keystream for lane 3
+%define %%OFFSET        %6 ; [in] Offset into keystream
+
+        vmovd   [%%KS_PTR0 + %%OFFSET], %%DATA4B_L03
+        vpextrd [%%KS_PTR1 + %%OFFSET], %%DATA4B_L03, 1
+        vpextrd [%%KS_PTR2 + %%OFFSET], %%DATA4B_L03, 2
+        vpextrd [%%KS_PTR3 + %%OFFSET], %%DATA4B_L03, 3
 %endmacro
 
 ;
@@ -965,16 +955,10 @@ asm_Zuc256Initialization_4_avx:
 
         FUNC_SAVE
 
-        ; Store 4 keystream pointers on the stack
-        ; and reserve memory for storing keystreams for all 4 buffers
+        ; Reserve memory for storing keystreams for all 4 buffers
         mov     r10, rsp
-        sub     rsp, (4*8 + %%NUM_ROUNDS * 16)
+        sub     rsp, (%%NUM_ROUNDS * 16)
         and     rsp, -16
-
-        vmovdqa %%XTMP1, [pKS]
-        vmovdqa %%XTMP2, [pKS + 16]
-        vmovdqa [rsp], %%XTMP1
-        vmovdqa [rsp + 8*2], %%XTMP2
 
         ; Load read-only registers
         vmovdqa %%MASK_31, [rel mask31]
@@ -988,29 +972,36 @@ asm_Zuc256Initialization_4_avx:
         NONLIN_FUN4 pState, %%XTMP1, %%XTMP2, %%XTMP3, \
                     %%XTMP4, %%XTMP5, %%XTMP6, %%XTMP7, %%W
         ; OFS_X3 XOR W and store in stack
-        vpxor       %%X3, %%W
-        vmovdqa     [rsp + 4*8 + (%%N-1)*16], %%X3
+        vpxor   %%X3, %%W
+        vmovdqa [rsp + (%%N-1)*16], %%X3
         LFSR_UPDT4  pState, %%N, %%XTMP1, %%XTMP2, %%XTMP3, %%XTMP4, %%XTMP5, %%XTMP6, \
                     %%MASK_31, %%XTMP8, work
 %assign %%N (%%N + 1)
 %endrep
 
+        ; Read keystream pointers
+        mov     r12, [pKS]
+        mov     r13, [pKS + 8]
+        mov     r14, [pKS + 16]
+        mov     r15, [pKS + 24]
 %if (%%NUM_ROUNDS == 4)
         ;; Load all OFS_X3
-        vmovdqa %%XTMP1, [rsp + 4*8]
-        vmovdqa %%XTMP2, [rsp + 4*8 + 16]
-        vmovdqa %%XTMP3, [rsp + 4*8 + 16*2]
-        vmovdqa %%XTMP4, [rsp + 4*8 + 16*3]
+        vmovdqa %%XTMP1, [rsp]
+        vmovdqa %%XTMP2, [rsp + 16]
+        vmovdqa %%XTMP3, [rsp + 16*2]
+        vmovdqa %%XTMP4, [rsp + 16*3]
 
         TRANSPOSE4_U32 %%XTMP1, %%XTMP2, %%XTMP3, %%XTMP4, %%XTMP5, %%XTMP6
 
-        store16B_kstr4 %%XTMP1, %%XTMP2, %%XTMP3, %%XTMP4
+        STORE16B_KSTR4 %%XTMP1, %%XTMP2, %%XTMP3, %%XTMP4, r12, r13, r14, r15
 %else ;; NUM_ROUNDS != 4
 %assign %%IDX 1
+%assign %%OFFSET 0
 %rep %%NUM_ROUNDS
-        vmovdqa APPEND(%%XTMP, %%IDX), [rsp + 4*8 + (%%IDX-1)*16]
-        store4B_kstr4 APPEND(%%XTMP, %%IDX)
+        vmovdqa APPEND(%%XTMP, %%IDX), [rsp + (%%IDX-1)*16]
+        STORE4B_KSTR4 APPEND(%%XTMP, %%IDX), r12, r13, r14, r15, %%OFFSET
 %assign %%IDX (%%IDX + 1)
+%assign %%OFFSET (%%OFFSET + 4)
 %endrep
 %endif ;; NUM_ROUNDS == 4
 
@@ -1018,7 +1009,7 @@ asm_Zuc256Initialization_4_avx:
 %ifdef SAFE_DATA
         vpxor   %%XTMP1, %%XTMP1
 %assign %%I 0
-%rep (2 + %%NUM_ROUNDS)
+%rep %%NUM_ROUNDS
         vmovdqa [rsp + %%I*16], %%XTMP1
 %assign %%I (%%I + 1)
 %endrep
