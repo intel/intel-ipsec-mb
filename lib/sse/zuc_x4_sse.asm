@@ -926,9 +926,9 @@ mksection .text
         FUNC_SAVE
 
         ; Zero out R1-R2
-        pxor    xmm0, xmm0
-        movdqa  [pState + OFS_R1], xmm0
-        movdqa  [pState + OFS_R1 + 16], xmm0
+        pxor    %%XTMP1, %%XTMP1
+        movdqa  [pState + OFS_R1], %%XTMP1
+        movdqa  [pState + OFS_R2], %%XTMP1
 
 %if %%KEY_SIZE == 128
         ;; Load key and IVs

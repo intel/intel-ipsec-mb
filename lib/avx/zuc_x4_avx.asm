@@ -591,11 +591,11 @@ align 64
 %define %%LFSR      %6 ;; [out] XMM register to contain initialized LFSR regs
 %define %%XTMP      %7 ;; [clobbered] XMM temporary register
 
-    vpshufb         %%LFSR, %%KEY, %%SHUF_KEY
-    vpsrld          %%LFSR, 1
-    vpshufb         %%XTMP, %%IV, %%SHUF_IV
-    vpor            %%LFSR, %%XTMP
-    vpor            %%LFSR, %%EKD_MASK
+        vpshufb %%LFSR, %%KEY, %%SHUF_KEY
+        vpsrld  %%LFSR, 1
+        vpshufb %%XTMP, %%IV, %%SHUF_IV
+        vpor    %%LFSR, %%XTMP
+        vpor    %%LFSR, %%EKD_MASK
 
 %endmacro
 
@@ -613,282 +613,287 @@ align 64
 %define %%TMP       %8 ;; [clobbered] GP temporary register
 %define %%CONSTANTS %9 ;; [in] Address to constants
 
-    ; s0 - s3
-    vpxor          %%LFSR0_3, %%LFSR0_3
-    vpinsrb        %%LFSR0_3, [%%KEY], 3      ; s0
-    vpinsrb        %%LFSR0_3, [%%KEY + 1], 7  ; s1
-    vpinsrb        %%LFSR0_3, [%%KEY + 2], 11 ; s2
-    vpinsrb        %%LFSR0_3, [%%KEY + 3], 15 ; s3
+        ; s0 - s3
+        vpxor   %%LFSR0_3, %%LFSR0_3
+        vpinsrb %%LFSR0_3, [%%KEY], 3      ; s0
+        vpinsrb %%LFSR0_3, [%%KEY + 1], 7  ; s1
+        vpinsrb %%LFSR0_3, [%%KEY + 2], 11 ; s2
+        vpinsrb %%LFSR0_3, [%%KEY + 3], 15 ; s3
 
-    vpsrld         %%LFSR0_3, 1
+        vpsrld  %%LFSR0_3, 1
 
-    vpor           %%LFSR0_3, [%%CONSTANTS] ; s0 - s3
+        vpor    %%LFSR0_3, [%%CONSTANTS] ; s0 - s3
 
-    vpinsrb        %%LFSR0_3, [%%KEY + 21], 1 ; s0
-    vpinsrb        %%LFSR0_3, [%%KEY + 16], 0 ; s0
+        vpinsrb %%LFSR0_3, [%%KEY + 21], 1 ; s0
+        vpinsrb %%LFSR0_3, [%%KEY + 16], 0 ; s0
 
-    vpinsrb        %%LFSR0_3, [%%KEY + 22], 5 ; s1
-    vpinsrb        %%LFSR0_3, [%%KEY + 17], 4 ; s1
+        vpinsrb %%LFSR0_3, [%%KEY + 22], 5 ; s1
+        vpinsrb %%LFSR0_3, [%%KEY + 17], 4 ; s1
 
-    vpinsrb        %%LFSR0_3, [%%KEY + 23], 9 ; s2
-    vpinsrb        %%LFSR0_3, [%%KEY + 18], 8 ; s2
+        vpinsrb %%LFSR0_3, [%%KEY + 23], 9 ; s2
+        vpinsrb %%LFSR0_3, [%%KEY + 18], 8 ; s2
 
-    vpinsrb        %%LFSR0_3, [%%KEY + 24], 13 ; s3
-    vpinsrb        %%LFSR0_3, [%%KEY + 19], 12 ; s3
+        vpinsrb %%LFSR0_3, [%%KEY + 24], 13 ; s3
+        vpinsrb %%LFSR0_3, [%%KEY + 19], 12 ; s3
 
-    ; s4 - s7
-    vpxor          %%LFSR4_7, %%LFSR4_7
-    vpinsrb        %%LFSR4_7, [%%KEY + 4], 3   ; s4
-    vpinsrb        %%LFSR4_7, [%%IV], 7        ; s5
-    vpinsrb        %%LFSR4_7, [%%IV + 1], 11   ; s6
-    vpinsrb        %%LFSR4_7, [%%IV + 10], 15  ; s7
+        ; s4 - s7
+        vpxor   %%LFSR4_7, %%LFSR4_7
+        vpinsrb %%LFSR4_7, [%%KEY + 4], 3   ; s4
+        vpinsrb %%LFSR4_7, [%%IV], 7        ; s5
+        vpinsrb %%LFSR4_7, [%%IV + 1], 11   ; s6
+        vpinsrb %%LFSR4_7, [%%IV + 10], 15  ; s7
 
-    vpsrld         %%LFSR4_7, 1
+        vpsrld  %%LFSR4_7, 1
 
-    vpinsrb        %%LFSR4_7, [%%KEY + 25], 1 ; s4
-    vpinsrb        %%LFSR4_7, [%%KEY + 20], 0 ; s4
+        vpinsrb %%LFSR4_7, [%%KEY + 25], 1 ; s4
+        vpinsrb %%LFSR4_7, [%%KEY + 20], 0 ; s4
 
-    vpinsrb        %%LFSR4_7, [%%KEY + 5], 5 ; s5
-    vpinsrb        %%LFSR4_7, [%%KEY + 26], 4 ; s5
+        vpinsrb %%LFSR4_7, [%%KEY + 5], 5 ; s5
+        vpinsrb %%LFSR4_7, [%%KEY + 26], 4 ; s5
 
-    vpinsrb        %%LFSR4_7, [%%KEY + 6], 9 ; s6
-    vpinsrb        %%LFSR4_7, [%%KEY + 27], 8 ; s6
+        vpinsrb %%LFSR4_7, [%%KEY + 6], 9 ; s6
+        vpinsrb %%LFSR4_7, [%%KEY + 27], 8 ; s6
 
-    vpinsrb        %%LFSR4_7, [%%KEY + 7], 13 ; s7
-    vpinsrb        %%LFSR4_7, [%%IV + 2], 12 ; s7
+        vpinsrb %%LFSR4_7, [%%KEY + 7], 13 ; s7
+        vpinsrb %%LFSR4_7, [%%IV + 2], 12 ; s7
 
-    vpor           %%LFSR4_7, [%%CONSTANTS + 16] ; s4 - s7
+        vpor    %%LFSR4_7, [%%CONSTANTS + 16] ; s4 - s7
 
-    vmovd          %%XTMP, [%%IV + 17]
-    vpshufb        %%XTMP, [rel shuf_mask_iv_17_19]
-    vpand          %%XTMP, [rel clear_iv_mask]
+        vmovd   %%XTMP, [%%IV + 17]
+        vpshufb %%XTMP, [rel shuf_mask_iv_17_19]
+        vpand   %%XTMP, [rel clear_iv_mask]
 
-    vpor           %%LFSR4_7, %%XTMP
+        vpor    %%LFSR4_7, %%XTMP
 
-    ; s8 - s11
-    vpxor          %%LFSR8_11, %%LFSR8_11
-    vpinsrb        %%LFSR8_11, [%%KEY + 8], 3   ; s8
-    vpinsrb        %%LFSR8_11, [%%KEY + 9], 7   ; s9
-    vpinsrb        %%LFSR8_11, [%%IV + 5], 11   ; s10
-    vpinsrb        %%LFSR8_11, [%%KEY + 11], 15 ; s11
+        ; s8 - s11
+        vpxor   %%LFSR8_11, %%LFSR8_11
+        vpinsrb %%LFSR8_11, [%%KEY + 8], 3   ; s8
+        vpinsrb %%LFSR8_11, [%%KEY + 9], 7   ; s9
+        vpinsrb %%LFSR8_11, [%%IV + 5], 11   ; s10
+        vpinsrb %%LFSR8_11, [%%KEY + 11], 15 ; s11
 
-    vpsrld         %%LFSR8_11, 1
+        vpsrld  %%LFSR8_11, 1
 
-    vpinsrb        %%LFSR8_11, [%%IV + 3], 1 ; s8
-    vpinsrb        %%LFSR8_11, [%%IV + 11], 0 ; s8
+        vpinsrb %%LFSR8_11, [%%IV + 3], 1 ; s8
+        vpinsrb %%LFSR8_11, [%%IV + 11], 0 ; s8
 
-    vpinsrb        %%LFSR8_11, [%%IV + 12], 5 ; s9
-    vpinsrb        %%LFSR8_11, [%%IV + 4], 4 ; s9
+        vpinsrb %%LFSR8_11, [%%IV + 12], 5 ; s9
+        vpinsrb %%LFSR8_11, [%%IV + 4], 4 ; s9
 
-    vpinsrb        %%LFSR8_11, [%%KEY + 10], 9 ; s10
-    vpinsrb        %%LFSR8_11, [%%KEY + 28], 8 ; s10
+        vpinsrb %%LFSR8_11, [%%KEY + 10], 9 ; s10
+        vpinsrb %%LFSR8_11, [%%KEY + 28], 8 ; s10
 
-    vpinsrb        %%LFSR8_11, [%%IV + 6], 13 ; s11
-    vpinsrb        %%LFSR8_11, [%%IV + 13], 12 ; s11
+        vpinsrb %%LFSR8_11, [%%IV + 6], 13 ; s11
+        vpinsrb %%LFSR8_11, [%%IV + 13], 12 ; s11
 
-    vpor           %%LFSR8_11, [%%CONSTANTS + 32] ; s8 - s11
+        vpor    %%LFSR8_11, [%%CONSTANTS + 32] ; s8 - s11
 
-    vmovd          %%XTMP, [%%IV + 20]
-    vpshufb        %%XTMP, [rel shuf_mask_iv_20_23]
-    vpand          %%XTMP, [rel clear_iv_mask]
+        vmovd   %%XTMP, [%%IV + 20]
+        vpshufb %%XTMP, [rel shuf_mask_iv_20_23]
+        vpand   %%XTMP, [rel clear_iv_mask]
 
-    vpor           %%LFSR8_11, %%XTMP
+        vpor    %%LFSR8_11, %%XTMP
 
-    ; s12 - s15
-    vpxor          %%LFSR12_15, %%LFSR12_15
-    vpinsrb        %%LFSR12_15, [%%KEY + 12], 3   ; s12
-    vpinsrb        %%LFSR12_15, [%%KEY + 13], 7   ; s13
-    vpinsrb        %%LFSR12_15, [%%KEY + 14], 11  ; s14
-    vpinsrb        %%LFSR12_15, [%%KEY + 15], 15  ; s15
+        ; s12 - s15
+        vpxor   %%LFSR12_15, %%LFSR12_15
+        vpinsrb %%LFSR12_15, [%%KEY + 12], 3   ; s12
+        vpinsrb %%LFSR12_15, [%%KEY + 13], 7   ; s13
+        vpinsrb %%LFSR12_15, [%%KEY + 14], 11  ; s14
+        vpinsrb %%LFSR12_15, [%%KEY + 15], 15  ; s15
 
-    vpsrld         %%LFSR12_15, 1
+        vpsrld  %%LFSR12_15, 1
 
-    vpinsrb        %%LFSR12_15, [%%IV + 7], 1 ; s12
-    vpinsrb        %%LFSR12_15, [%%IV + 14], 0 ; s12
+        vpinsrb %%LFSR12_15, [%%IV + 7], 1 ; s12
+        vpinsrb %%LFSR12_15, [%%IV + 14], 0 ; s12
 
-    vpinsrb        %%LFSR12_15, [%%IV + 15], 5 ; s13
-    vpinsrb        %%LFSR12_15, [%%IV + 8], 4 ; s13
+        vpinsrb %%LFSR12_15, [%%IV + 15], 5 ; s13
+        vpinsrb %%LFSR12_15, [%%IV + 8], 4 ; s13
 
-    vpinsrb        %%LFSR12_15, [%%IV + 16], 9 ; s14
-    vpinsrb        %%LFSR12_15, [%%IV + 9], 8 ; s14
+        vpinsrb %%LFSR12_15, [%%IV + 16], 9 ; s14
+        vpinsrb %%LFSR12_15, [%%IV + 9], 8 ; s14
 
-    vpinsrb        %%LFSR12_15, [%%KEY + 30], 13 ; s15
-    vpinsrb        %%LFSR12_15, [%%KEY + 29], 12 ; s15
+        vpinsrb %%LFSR12_15, [%%KEY + 30], 13 ; s15
+        vpinsrb %%LFSR12_15, [%%KEY + 29], 12 ; s15
 
-    vpor           %%LFSR12_15, [%%CONSTANTS + 48] ; s12 - s15
+        vpor    %%LFSR12_15, [%%CONSTANTS + 48] ; s12 - s15
 
-    movzx          DWORD(%%TMP), byte [%%IV + 24]
-    and            DWORD(%%TMP), 0x0000003f
-    shl            DWORD(%%TMP), 16
-    vmovd          %%XTMP, DWORD(%%TMP)
+        movzx   DWORD(%%TMP), byte [%%IV + 24]
+        and     DWORD(%%TMP), 0x0000003f
+        shl     DWORD(%%TMP), 16
+        vmovd   %%XTMP, DWORD(%%TMP)
 
-    movzx          DWORD(%%TMP), byte [%%KEY + 31]
-    shl            DWORD(%%TMP), 12
-    and            DWORD(%%TMP), 0x000f0000 ; high nibble of K_31
-    vpinsrd        %%XTMP, DWORD(%%TMP), 2
+        movzx   DWORD(%%TMP), byte [%%KEY + 31]
+        shl     DWORD(%%TMP), 12
+        and     DWORD(%%TMP), 0x000f0000 ; high nibble of K_31
+        vpinsrd %%XTMP, DWORD(%%TMP), 2
 
-    movzx          DWORD(%%TMP), byte [%%KEY + 31]
-    shl            DWORD(%%TMP), 16
-    and            DWORD(%%TMP), 0x000f0000 ; low nibble of K_31
-    vpinsrd        %%XTMP, DWORD(%%TMP), 3
+        movzx   DWORD(%%TMP), byte [%%KEY + 31]
+        shl     DWORD(%%TMP), 16
+        and     DWORD(%%TMP), 0x000f0000 ; low nibble of K_31
+        vpinsrd %%XTMP, DWORD(%%TMP), 3
 
-    vpor          %%LFSR12_15, %%XTMP
+        vpor    %%LFSR12_15, %%XTMP
 %endmacro
 
 %macro ZUC_INIT_4 1
 %define %%KEY_SIZE %1 ; [constant] Key size (128 or 256)
 
-%ifdef LINUX
-	%define		pKe	rdi
-	%define		pIv	rsi
-	%define		pState	rdx
-	%define		tag_sz	rcx ; Only used in ZUC-256
-%else
-	%define		pKe	rcx
-	%define		pIv	rdx
-	%define		pState	r8
-	%define		tag_sz	r9 ; Only used in ZUC-256
-%endif
+%define pKe	arg1
+%define pIv	arg2
+%define pState	arg3
+%define tag_sz	arg4 ; Only used in ZUC-256
 
-%define %%MASK_31 xmm15
+%define %%XTMP1  xmm0
+%define %%XTMP2  xmm1
+%define %%XTMP3  xmm2
+%define %%XTMP4  xmm3
+%define %%XTMP5  xmm4
+%define %%XTMP6  xmm5
+%define %%XTMP7  xmm6
+%define %%XTMP8  xmm7
+%define %%XTMP9  xmm8
+%define %%XTMP10 xmm9
+%define %%XTMP11 xmm10
+%define %%XTMP12 xmm11
+%define %%XTMP13 xmm12
+%define %%XTMP14 xmm13
+%define %%XTMP15 xmm14
+%define %%XTMP16 xmm15
 
-    FUNC_SAVE
+%define %%W     %%XTMP10
+%define %%X3    %%XTMP11
+%define %%MASK_31 %%XTMP16
 
-    mov     rax, pState
+        FUNC_SAVE
 
-    ; Zero out R1-R2 (only lower 128 bits)
-    vpxor   xmm0, xmm0
-%assign I 0
-%rep 2
-    vmovdqa [pState + OFS_R1 + I*16], xmm0
-%assign I (I + 1)
-%endrep
+        ; Zero out R1-R2
+        vpxor   %%XTMP1, %%XTMP1
+        vmovdqa [pState + OFS_R1], %%XTMP1
+        vmovdqa [pState + OFS_R2], %%XTMP1
 
 %if %%KEY_SIZE == 128
 
-    ;; Load key and IVs
-%assign off 0
-%assign i 4
-%assign j 8
+        ;; Load key and IVs
+%assign %%OFF 0
+%assign %%I 1
+%assign %%J 5
 %rep 4
-    mov     r9,  [pKe + off]
-    vmovdqu APPEND(xmm,i), [r9]
-    ; Read 16 bytes of IV
-    vmovdqa APPEND(xmm,j), [pIv + off*4]
-%assign off (off + 8)
-%assign i (i + 1)
-%assign j (j + 1)
+        mov     r15,  [pKe + %%OFF]
+        vmovdqu APPEND(%%XTMP, %%I), [r15]
+        ; Read 16 bytes of IV
+        vmovdqa APPEND(%%XTMP, %%J), [pIv + %%OFF*4]
+%assign %%OFF (%%OFF + 8)
+%assign %%I (%%I + 1)
+%assign %%J (%%J + 1)
 %endrep
 
-    ;;; Initialize all LFSR registers in four steps:
-    ;;; first, registers 0-3, then registers 4-7, 8-11, 12-15
-%assign off 0
+        ;;; Initialize all LFSR registers in four steps:
+        ;;; first, registers 0-3, then registers 4-7, 8-11, 12-15
+%assign %%OFF 0
 %rep 4
-    ; Set read-only registers for shuffle masks for key, IV and Ek_d for 8 registers
-    vmovdqa xmm13, [rel shuf_mask_key + off]
-    vmovdqa xmm14, [rel shuf_mask_iv + off]
-    vmovdqa xmm15, [rel Ek_d + off]
+        ; Set read-only registers for shuffle masks for key, IV and Ek_d for 8 registers
+        vmovdqa %%XTMP13, [rel shuf_mask_key + %%OFF]
+        vmovdqa %%XTMP14, [rel shuf_mask_iv + %%OFF]
+        vmovdqa %%XTMP15, [rel Ek_d + %%OFF]
 
-    ; Set 4xLFSR registers for all packets
-%assign idx 0
-%assign i 4
-%assign j 8
+        ; Set 4xLFSR registers for all packets
+%assign %%IDX 9
+%assign %%I 1
+%assign %%J 5
 %rep 4
-    INIT_LFSR_128 APPEND(xmm,i), APPEND(xmm,j), xmm13, xmm14, xmm15, APPEND(xmm, idx), xmm12
-%assign idx (idx + 1)
-%assign i (i + 1)
-%assign j (j + 1)
+        INIT_LFSR_128 APPEND(%%XTMP,%%I), APPEND(%%XTMP,%%J), %%XTMP13, %%XTMP14, \
+                      %%XTMP15, APPEND(%%XTMP, %%IDX), %%XTMP16
+%assign %%IDX (%%IDX + 1)
+%assign %%I (%%I + 1)
+%assign %%J (%%J + 1)
 %endrep
 
-    ; Store 4xLFSR registers in memory (reordering first,
-    ; so all SX registers are together)
-    TRANSPOSE4_U32  xmm0, xmm1, xmm2, xmm3, xmm13, xmm14
+        ; Store 4xLFSR registers in memory (reordering first,
+        ; so all SX registers are together)
+        TRANSPOSE4_U32  %%XTMP9, %%XTMP10, %%XTMP11, %%XTMP12, %%XTMP13, %%XTMP14
 
-%assign i 0
-%rep 4
-    vmovdqa [pState + 4*off + 16*i], APPEND(xmm, i)
-%assign i (i+1)
-%endrep
+        vmovdqa [pState + 4*%%OFF], %%XTMP9
+        vmovdqa [pState + 4*%%OFF + 16], %%XTMP10
+        vmovdqa [pState + 4*%%OFF + 16*2], %%XTMP11
+        vmovdqa [pState + 4*%%OFF + 16*3], %%XTMP12
 
-%assign off (off + 16)
+%assign %%OFF (%%OFF + 16)
 %endrep
 
 %else ;; %%KEY_SIZE == 256
 
-    ; Get pointer to constants (depending on tag size, this will point at
-    ; constants for encryption, authentication with 4-byte, 8-byte or 16-byte tags)
-    lea    r13, [rel EK256_d64]
-    bsf    DWORD(tag_sz), DWORD(tag_sz)
-    dec    DWORD(tag_sz)
-    shl    DWORD(tag_sz), 6
-    add    r13, tag_sz
+        ; Get pointer to constants (depending on tag size, this will point at
+        ; constants for encryption, authentication with 4-byte, 8-byte or 16-byte tags)
+        lea    r13, [rel EK256_d64]
+        bsf    DWORD(tag_sz), DWORD(tag_sz)
+        dec    DWORD(tag_sz)
+        shl    DWORD(tag_sz), 6
+        add    r13, tag_sz
 
     ;;; Initialize all LFSR registers
-%assign off 0
+%assign %%OFF 0
 %rep 4
-    ;; Load key and IV for each packet
-    mov     r12, [pKe + off]
-    lea     r10, [pIv + off*4]
+        ;; Load key and IV for each packet
+        mov     r15, [pKe + %%OFF]
+        lea     r10, [pIv + %%OFF*4]
 
-    ; Initialize S0-15 for each packet
-    INIT_LFSR_256 r12, r10, xmm0, xmm1, xmm2, xmm3, xmm4, r11, r13
+        ; Initialize S0-15 for each packet
+        INIT_LFSR_256 r15, r10, %%XTMP1, %%XTMP2, %%XTMP3, %%XTMP4, %%XTMP5, r11, r13
 
-%assign i 0
-%rep 4
-    vmovdqa [pState + 64*i + 2*off], APPEND(xmm, i)
-%assign i (i+1)
+        vmovdqa [pState + 2*%%OFF], %%XTMP1
+        vmovdqa [pState + 2*%%OFF + 64], %%XTMP2
+        vmovdqa [pState + 2*%%OFF + 64*2], %%XTMP3
+        vmovdqa [pState + 2*%%OFF + 64*3], %%XTMP4
+%assign %%OFF (%%OFF + 8)
 %endrep
 
-%assign off (off + 8)
-%endrep
-
-    ; Read, transpose and store, so all S_X from the 4 packets are in the same register
-%assign off 0
+        ; Read, transpose and store, so all S_X from the 4 packets are
+        ; in the same register
+%assign %%OFF 0
 %rep 4
+        vmovdqa %%XTMP1, [pState + %%OFF]
+        vmovdqa %%XTMP2, [pState + %%OFF + 16]
+        vmovdqa %%XTMP3, [pState + %%OFF + 16*2]
+        vmovdqa %%XTMP4, [pState + %%OFF + 16*3]
 
-%assign i 0
-%rep 4
-    vmovdqa APPEND(xmm, i), [pState + 16*i + off]
-%assign i (i+1)
-%endrep
+        TRANSPOSE4_U32  %%XTMP1, %%XTMP2, %%XTMP3, %%XTMP4, %%XTMP5, %%XTMP6
 
-    TRANSPOSE4_U32 xmm0, xmm1, xmm2, xmm3, xmm14, xmm15
+        vmovdqa [pState + %%OFF], %%XTMP1
+        vmovdqa [pState + %%OFF + 16], %%XTMP2
+        vmovdqa [pState + %%OFF + 16*2], %%XTMP3
+        vmovdqa [pState + %%OFF + 16*3], %%XTMP4
 
-%assign i 0
-%rep 4
-    vmovdqa [pState + 16*i + off], APPEND(xmm, i)
-%assign i (i+1)
-%endrep
-
-%assign off (off + 64)
+%assign %%OFF (%%OFF + 64)
 %endrep
 %endif ;; %%KEY_SIZE == 256
 
-    ; Load read-only registers
-    vmovdqa %%MASK_31, [rel mask31]
+        ; Load read-only registers
+        vmovdqa %%MASK_31, [rel mask31]
 
     ; Shift LFSR 32-times, update state variables
 %assign N 0
 %rep 32
-    BITS_REORG4 rax, N, xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, \
-                xmm6, xmm7, xmm8, xmm9
-    NONLIN_FUN4 rax, xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7
-    vpsrld  xmm7, 1             ; Shift out LSB of W
-    LFSR_UPDT4  rax, N, xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, \
-                %%MASK_31, xmm7, init ; W (xmm7) used in LFSR update
+        BITS_REORG4 pState, N, %%XTMP1, %%XTMP2, %%XTMP3, %%XTMP4, %%XTMP5, \
+                    %%XTMP6, %%XTMP7, %%XTMP8, %%XTMP9, %%XTMP10
+        NONLIN_FUN4 pState, %%XTMP1, %%XTMP2, %%XTMP3, \
+                    %%XTMP4, %%XTMP5, %%XTMP6, %%XTMP7, %%W
+        vpsrld  %%W, 1 ; Shift out LSB of W
+        LFSR_UPDT4  pState, N, %%XTMP1, %%XTMP2, %%XTMP3, %%XTMP4, %%XTMP5, %%XTMP6, \
+                    %%MASK_31, %%W, init ; W used in LFSR update
 %assign N N+1
 %endrep
 
-    ; And once more, initial round from keygen phase = 33 times
-    BITS_REORG4 rax, 0, xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, \
-                xmm6, xmm7, xmm8, xmm9
-    NONLIN_FUN4 rax, xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7
-    LFSR_UPDT4  rax, 0, xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, \
-                %%MASK_31, xmm7, work
+        ; And once more, initial round from keygen phase = 33 times
+        BITS_REORG4 pState, 0, %%XTMP1, %%XTMP2, %%XTMP3, %%XTMP4, %%XTMP5, \
+                    %%XTMP6, %%XTMP7, %%XTMP8, %%XTMP9, %%XTMP10
+        NONLIN_FUN4 pState, %%XTMP1, %%XTMP2, %%XTMP3, \
+                    %%XTMP4, %%XTMP5, %%XTMP6, %%XTMP7, %%W
+        LFSR_UPDT4  pState, 0, %%XTMP1, %%XTMP2, %%XTMP3, %%XTMP4, %%XTMP5, %%XTMP6, \
+                    %%MASK_31, %%XTMP8, work
 
-    FUNC_RESTORE
+        FUNC_RESTORE
 
-    ret
+        ret
 %endmacro
 
 MKGLOBAL(asm_ZucInitialization_4_avx,function,internal)
@@ -912,14 +917,14 @@ asm_Zuc256Initialization_4_avx:
 %if %%NUM_ROUNDS != 16
 %assign %%i 0
 %rep 16
-    vmovdqa APPEND(xmm,%%i), [%%STATE + 16*%%i]
+        vmovdqa APPEND(xmm,%%i), [%%STATE + 16*%%i]
 %assign %%i (%%i+1)
 %endrep
 
 %assign %%i 0
 %assign %%j %%NUM_ROUNDS
 %rep 16
-    vmovdqa [%%STATE + 16*%%i], APPEND(xmm,%%j)
+        vmovdqa [%%STATE + 16*%%i], APPEND(xmm,%%j)
 %assign %%i (%%i+1)
 %assign %%j ((%%j+1) % 16)
 %endrep
@@ -934,89 +939,99 @@ asm_Zuc256Initialization_4_avx:
 %macro KEYGEN_4_AVX 1
 %define %%NUM_ROUNDS    %1 ; [in] Number of 4-byte rounds
 
-%ifdef LINUX
-	%define		pState	rdi
-	%define		pKS	rsi
-%else
-	%define		pState	rcx
-	%define		pKS	rdx
-%endif
+%define	pState  arg1
+%define	pKS     arg2
 
-%define %%MASK_31 xmm15
+%define %%XTMP1  xmm0
+%define %%XTMP2  xmm1
+%define %%XTMP3  xmm2
+%define %%XTMP4  xmm3
+%define %%XTMP5  xmm4
+%define %%XTMP6  xmm5
+%define %%XTMP7  xmm6
+%define %%XTMP8  xmm7
+%define %%XTMP9  xmm8
+%define %%XTMP10 xmm9
+%define %%XTMP11 xmm10
+%define %%XTMP12 xmm11
+%define %%XTMP13 xmm12
+%define %%XTMP14 xmm13
+%define %%XTMP15 xmm14
+%define %%XTMP16 xmm15
 
-    FUNC_SAVE
+%define %%W     %%XTMP10
+%define %%X3    %%XTMP11
+%define %%MASK_31 %%XTMP16
 
-    ; Store 4 keystream pointers on the stack
-    ; and reserve memory for storing keystreams for all 4 buffers
-    mov     r10, rsp
-    sub     rsp, (4*8 + %%NUM_ROUNDS * 16)
-    and     rsp, -16
+        FUNC_SAVE
 
-%assign i 0
-%rep 2
-    vmovdqa     xmm0, [pKS + 16*i]
-    vmovdqa     [rsp + 16*i], xmm0
-%assign i (i+1)
-%endrep
+        ; Store 4 keystream pointers on the stack
+        ; and reserve memory for storing keystreams for all 4 buffers
+        mov     r10, rsp
+        sub     rsp, (4*8 + %%NUM_ROUNDS * 16)
+        and     rsp, -16
 
-    ; Load state pointer in RAX
-    mov         rax, pState
+        vmovdqa %%XTMP1, [pKS]
+        vmovdqa %%XTMP2, [pKS + 16]
+        vmovdqa [rsp], %%XTMP1
+        vmovdqa [rsp + 8*2], %%XTMP2
 
-    ; Load read-only registers
-    vmovdqa %%MASK_31, [rel mask31]
+        ; Load read-only registers
+        vmovdqa %%MASK_31, [rel mask31]
+
 
     ; Generate N*4B of keystream in N rounds
-%assign N 1
+%assign %%N 1
 %rep %%NUM_ROUNDS
-    BITS_REORG4 rax, N, xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, \
-                xmm6, xmm7, xmm8, xmm9, xmm10
-    NONLIN_FUN4 rax, xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7
-    ; OFS_X3 XOR W (xmm7) and store in stack
-    vpxor       xmm10, xmm7
-    vmovdqa [rsp + 4*8 + (N-1)*16], xmm10
-    LFSR_UPDT4  rax, N, xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, \
-                %%MASK_31, xmm7, work
-%assign N N+1
+        BITS_REORG4 pState, %%N, %%XTMP1, %%XTMP2, %%XTMP3, %%XTMP4, %%XTMP5, \
+                    %%XTMP6, %%XTMP7, %%XTMP8, %%XTMP9, %%XTMP10, %%X3
+        NONLIN_FUN4 pState, %%XTMP1, %%XTMP2, %%XTMP3, \
+                    %%XTMP4, %%XTMP5, %%XTMP6, %%XTMP7, %%W
+        ; OFS_X3 XOR W and store in stack
+        vpxor       %%X3, %%W
+        vmovdqa     [rsp + 4*8 + (%%N-1)*16], %%X3
+        LFSR_UPDT4  pState, %%N, %%XTMP1, %%XTMP2, %%XTMP3, %%XTMP4, %%XTMP5, %%XTMP6, \
+                    %%MASK_31, %%XTMP8, work
+%assign %%N (%%N + 1)
 %endrep
 
 %if (%%NUM_ROUNDS == 4)
-    ;; Load all OFS_X3
-%assign i 0
-%rep 4
-    vmovdqa     APPEND(xmm,i), [rsp + 4*8 + i*16]
-%assign i (i+1)
-%endrep
+        ;; Load all OFS_X3
+        vmovdqa %%XTMP1, [rsp + 4*8]
+        vmovdqa %%XTMP2, [rsp + 4*8 + 16]
+        vmovdqa %%XTMP3, [rsp + 4*8 + 16*2]
+        vmovdqa %%XTMP4, [rsp + 4*8 + 16*3]
 
-    TRANSPOSE4_U32 xmm0, xmm1, xmm2, xmm3, xmm4, xmm5
+        TRANSPOSE4_U32 %%XTMP1, %%XTMP2, %%XTMP3, %%XTMP4, %%XTMP5, %%XTMP6
 
-    store16B_kstr4 xmm0, xmm1, xmm2, xmm3
+        store16B_kstr4 %%XTMP1, %%XTMP2, %%XTMP3, %%XTMP4
 %else ;; NUM_ROUNDS != 4
-%assign idx 0
+%assign %%IDX 1
 %rep %%NUM_ROUNDS
-    vmovdqa APPEND(xmm, idx), [rsp + 4*8 + idx*16]
-    store4B_kstr4 APPEND(xmm, idx)
-%assign idx (idx + 1)
+        vmovdqa APPEND(%%XTMP, %%IDX), [rsp + 4*8 + (%%IDX-1)*16]
+        store4B_kstr4 APPEND(%%XTMP, %%IDX)
+%assign %%IDX (%%IDX + 1)
 %endrep
 %endif ;; NUM_ROUNDS == 4
 
         ;; Clear stack frame containing keystream information
 %ifdef SAFE_DATA
-    vpxor   xmm0, xmm0
-%assign i 0
-%rep (2+%%NUM_ROUNDS)
-    vmovdqa [rsp + i*16], xmm0
-%assign i (i+1)
+        vpxor   %%XTMP1, %%XTMP1
+%assign %%I 0
+%rep (2 + %%NUM_ROUNDS)
+        vmovdqa [rsp + %%I*16], %%XTMP1
+%assign %%I (%%I + 1)
 %endrep
 %endif
 
-    ;; Reorder memory for LFSR registers, as not all 16 rounds
-    ;; will be completed (can be 4 or 2)
-    REORDER_LFSR rax, %%NUM_ROUNDS
+        ;; Reorder memory for LFSR registers, as not all 16 rounds
+        ;; will be completed (can be 4 or 2)
+        REORDER_LFSR pState, %%NUM_ROUNDS
 
-    ;; Restore rsp pointer to value before pushing keystreams
-    mov         rsp, r10
+        ;; Restore rsp pointer to value before pushing keystreams
+        mov     rsp, r10
 
-    FUNC_RESTORE
+        FUNC_RESTORE
 
 %endmacro
 
@@ -1095,7 +1110,26 @@ asm_ZucGenKeystream4B_4_avx:
 %define %%TMP2 rsi
 %endif
 
-%define %%MASK_31 xmm15
+%define %%XTMP1  xmm0
+%define %%XTMP2  xmm1
+%define %%XTMP3  xmm2
+%define %%XTMP4  xmm3
+%define %%XTMP5  xmm4
+%define %%XTMP6  xmm5
+%define %%XTMP7  xmm6
+%define %%XTMP8  xmm7
+%define %%XTMP9  xmm8
+%define %%XTMP10 xmm9
+%define %%XTMP11 xmm10
+%define %%XTMP12 xmm11
+%define %%XTMP13 xmm12
+%define %%XTMP14 xmm13
+%define %%XTMP15 xmm14
+%define %%XTMP16 xmm15
+
+%define %%W     %%XTMP10
+%define %%X3    %%XTMP11
+%define %%MASK_31 %%XTMP16
 
         ; Load read-only registers
         vmovdqa %%MASK_31, [rel mask31]
@@ -1104,29 +1138,28 @@ asm_ZucGenKeystream4B_4_avx:
 %assign %%N 1
 %assign %%round (%%INITIAL_ROUND + %%N)
 %rep %%NROUNDS
-        BITS_REORG4 rax, %%round, xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, \
-                    xmm6, xmm7, xmm8, xmm9, xmm10
-        NONLIN_FUN4 rax, xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7
-        ; OFS_XR XOR W (xmm7) and store in stack
-        vpxor   xmm10, xmm7
-        vmovdqa [rsp + _keystr_save + (%%N-1)*16], xmm10
-        LFSR_UPDT4  rax, %%round, xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, \
-                %%MASK_31, xmm7, work
+        BITS_REORG4 pState, %%round, %%XTMP1, %%XTMP2, %%XTMP3, %%XTMP4, %%XTMP5, \
+                    %%XTMP6, %%XTMP7, %%XTMP8, %%XTMP9, %%XTMP10, %%X3
+        NONLIN_FUN4 pState, %%XTMP1, %%XTMP2, %%XTMP3, \
+                    %%XTMP4, %%XTMP5, %%XTMP6, %%XTMP7, %%W
+        ; OFS_X3 XOR W and store in stack
+        vpxor       %%X3, %%W
+        vmovdqa     [rsp + _keystr_save + (%%N-1)*16], %%X3
+        LFSR_UPDT4  pState, %%round, %%XTMP1, %%XTMP2, %%XTMP3, %%XTMP4, %%XTMP5, %%XTMP6, \
+                    %%MASK_31, %%XTMP8, work
 %assign %%N (%%N + 1)
 %assign %%round (%%round + 1)
 %endrep
 
-%assign %%N 0
-%assign %%idx 4
+%assign %%N 1
 %rep %%NROUNDS
-        vmovdqa APPEND(xmm, %%idx), [rsp + _keystr_save + %%N*16]
+        vmovdqa APPEND(%%XTMP, %%N), [rsp + _keystr_save + (%%N-1)*16]
 %assign %%N (%%N + 1)
-%assign %%idx (%%idx+1)
 %endrep
 
-        TRANSPOSE4_U32 xmm4, xmm5, xmm6, xmm7, xmm8, xmm9
+        TRANSPOSE4_U32 %%XTMP1, %%XTMP2, %%XTMP3, %%XTMP4, %%XTMP5, %%XTMP6
 
-        vmovdqa xmm15, [rel swap_mask]
+        vmovdqa %%XTMP15, [rel swap_mask]
 
         ;; XOR Input buffer with keystream in rounds of 16B
         mov     r12, [pIn]
@@ -1140,29 +1173,29 @@ asm_ZucGenKeystream4B_4_avx:
 
         ;; Read in r10 the word containing the number of final bytes to read for each lane
         movzx  r10d, word [rsp + _rem_bytes_save]
-        simd_load_avx_16_1 xmm0, r12 + %%OFFSET, r10
+        simd_load_avx_16_1 %%XTMP5, r12 + %%OFFSET, r10
         movzx  r10d, word [rsp + _rem_bytes_save + 2]
-        simd_load_avx_16_1 xmm1, r13 + %%OFFSET, r10
+        simd_load_avx_16_1 %%XTMP6, r13 + %%OFFSET, r10
         movzx  r10d, word [rsp + _rem_bytes_save + 4]
-        simd_load_avx_16_1 xmm2, r14 + %%OFFSET, r10
+        simd_load_avx_16_1 %%XTMP7, r14 + %%OFFSET, r10
         movzx  r10d, word [rsp + _rem_bytes_save + 6]
-        simd_load_avx_16_1 xmm3, r15 + %%OFFSET, r10
+        simd_load_avx_16_1 %%XTMP8, r15 + %%OFFSET, r10
 %else
-        vmovdqu xmm0, [r12 + %%OFFSET]
-        vmovdqu xmm1, [r13 + %%OFFSET]
-        vmovdqu xmm2, [r14 + %%OFFSET]
-        vmovdqu xmm3, [r15 + %%OFFSET]
+        vmovdqu %%XTMP5, [r12 + %%OFFSET]
+        vmovdqu %%XTMP6, [r13 + %%OFFSET]
+        vmovdqu %%XTMP7, [r14 + %%OFFSET]
+        vmovdqu %%XTMP8, [r15 + %%OFFSET]
 %endif
 
-        vpshufb xmm4, xmm15
-        vpshufb xmm5, xmm15
-        vpshufb xmm6, xmm15
-        vpshufb xmm7, xmm15
+        vpshufb %%XTMP1, %%XTMP15
+        vpshufb %%XTMP2, %%XTMP15
+        vpshufb %%XTMP3, %%XTMP15
+        vpshufb %%XTMP4, %%XTMP15
 
-        vpxor   xmm4, xmm0
-        vpxor   xmm5, xmm1
-        vpxor   xmm6, xmm2
-        vpxor   xmm7, xmm3
+        vpxor   %%XTMP1, %%XTMP5
+        vpxor   %%XTMP2, %%XTMP6
+        vpxor   %%XTMP3, %%XTMP7
+        vpxor   %%XTMP4, %%XTMP8
 
         mov     r12, [pOut]
         mov     r13, [pOut + 8]
@@ -1171,22 +1204,22 @@ asm_ZucGenKeystream4B_4_avx:
 
 %if (%%LAST_CALL == 1)
         movzx  r10d, word [rsp + _rem_bytes_save]
-        simd_store_avx r12, xmm4, r10, %%TMP1, %%TMP2, %%OFFSET
+        simd_store_avx r12, %%XTMP1, r10, %%TMP1, %%TMP2, %%OFFSET
         movzx  r10d, word [rsp + _rem_bytes_save + 2]
-        simd_store_avx r13, xmm5, r10, %%TMP1, %%TMP2, %%OFFSET
+        simd_store_avx r13, %%XTMP2, r10, %%TMP1, %%TMP2, %%OFFSET
         movzx  r10d, word [rsp + _rem_bytes_save + 4]
-        simd_store_avx r14, xmm6, r10, %%TMP1, %%TMP2, %%OFFSET
+        simd_store_avx r14, %%XTMP3, r10, %%TMP1, %%TMP2, %%OFFSET
         movzx  r10d, word [rsp + _rem_bytes_save + 6]
-        simd_store_avx r15, xmm7, r10, %%TMP1, %%TMP2, %%OFFSET
+        simd_store_avx r15, %%XTMP4, r10, %%TMP1, %%TMP2, %%OFFSET
 
         ; Restore registers
         mov     %%TMP1, [rsp + _gpr_save]
         mov     %%TMP2, [rsp + _gpr_save + 8]
 %else
-        vmovdqu [r12 + %%OFFSET], xmm4
-        vmovdqu [r13 + %%OFFSET], xmm5
-        vmovdqu [r14 + %%OFFSET], xmm6
-        vmovdqu [r15 + %%OFFSET], xmm7
+        vmovdqu [r12 + %%OFFSET], %%XTMP1
+        vmovdqu [r13 + %%OFFSET], %%XTMP2
+        vmovdqu [r14 + %%OFFSET], %%XTMP3
+        vmovdqu [r15 + %%OFFSET], %%XTMP4
 %endif
 %endmacro
 
@@ -1211,22 +1244,15 @@ asm_ZucGenKeystream4B_4_avx:
 MKGLOBAL(asm_ZucCipher_4_avx,function,internal)
 asm_ZucCipher_4_avx:
 
+%define pState  arg1
+%define pIn     arg2
+%define pOut    arg3
+%define lengths arg4
+
 %ifdef LINUX
-        %define         pState  rdi
-        %define         pIn     rsi
-        %define         pOut    rdx
-        %define         lengths rcx
-        %define         arg5    r8
-
-        %define         nrounds r8
+        %define nrounds r8
 %else
-        %define         pState  rcx
-        %define         pIn     rdx
-        %define         pOut    r8
-        %define         lengths r9
-        %define         arg5    [rsp + 40]
-
-        %define         nrounds rdi
+        %define nrounds rdi
 %endif
 
 %define min_length r10
@@ -1279,9 +1305,6 @@ asm_ZucCipher_4_avx:
         xor     buf_idx, buf_idx
         vmovq   [rsp + _rem_bytes_save], xmm1
         mov     [rsp + _rsp_save], rax
-
-        ; Load state pointer in RAX
-        mov     rax, pState
 
 loop_cipher64:
         cmp     min_length, 64
@@ -1348,7 +1371,7 @@ _final_rounds_is_1_3:
 %rep 4
 APPEND(_num_final_rounds_is_,I):
         CIPHERNx4B_4 I, 0, buf_idx, 1
-        REORDER_LFSR rax, I
+        REORDER_LFSR pState, I
         add     buf_idx, (I*4)
         jmp     exit_final_rounds
 %assign I (I + 1)
@@ -1361,7 +1384,7 @@ APPEND(_num_final_rounds_is_,I):
         add     buf_idx, 16
         CIPHERNx4B_4 (I-4), 4, buf_idx, 1
         add     buf_idx, ((I-4)*4)
-        REORDER_LFSR rax, I
+        REORDER_LFSR pState, I
         jmp     exit_final_rounds
 %assign I (I + 1)
 %endrep
@@ -1375,7 +1398,7 @@ APPEND(_num_final_rounds_is_,I):
         add     buf_idx, 16
         CIPHERNx4B_4 (I-8), 8, buf_idx, 1
         add     buf_idx, ((I-8)*4)
-        REORDER_LFSR rax, I
+        REORDER_LFSR pState, I
         jmp     exit_final_rounds
 %assign I (I + 1)
 %endrep
@@ -1391,23 +1414,23 @@ APPEND(_num_final_rounds_is_,I):
         add     buf_idx, 16
         CIPHERNx4B_4 (I-12), 12, buf_idx, 1
         add     buf_idx, ((I-12)*4)
-        REORDER_LFSR rax, I
+        REORDER_LFSR pState, I
         jmp     exit_final_rounds
 %assign I (I + 1)
 %endrep
 
 exit_final_rounds:
         ;; update in/out pointers
-        vmovq           xmm0, buf_idx
-        vpshufd         xmm0, xmm0, 0x44
-        vpaddq          xmm1, xmm0, [pIn]
-        vpaddq          xmm2, xmm0, [pIn + 16]
-        vmovdqa         [pIn], xmm1
-        vmovdqa         [pIn + 16], xmm2
-        vpaddq          xmm1, xmm0, [pOut]
-        vpaddq          xmm2, xmm0, [pOut + 16]
-        vmovdqa         [pOut], xmm1
-        vmovdqa         [pOut + 16], xmm2
+        vmovq   xmm0, buf_idx
+        vpshufd xmm0, xmm0, 0x44
+        vpaddq  xmm1, xmm0, [pIn]
+        vpaddq  xmm2, xmm0, [pIn + 16]
+        vmovdqa [pIn], xmm1
+        vmovdqa [pIn + 16], xmm2
+        vpaddq  xmm1, xmm0, [pOut]
+        vpaddq  xmm2, xmm0, [pOut + 16]
+        vmovdqa [pOut], xmm1
+        vmovdqa [pOut + 16], xmm2
 
         ;; Clear stack frame containing keystream information
 %ifdef SAFE_DATA
