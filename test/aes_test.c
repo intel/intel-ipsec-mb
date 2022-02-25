@@ -2315,7 +2315,7 @@ cfb128_validate_ok(const uint8_t *output, const uint8_t *in_text,
                    const int in_place)
 {
         if (memcmp(output, in_text, plen) != 0) {
-                printf("\nAES-CFB128 standard test vector %d %s (%s): fail\n",
+                printf("\nAES-CFB128 standard test vector %u %s (%s): fail\n",
                        i + 1, (is_enc) ? "encrypt" : "decrypt",
                        (in_place) ? "in-place" : "out-of-place");
                 return 0;
