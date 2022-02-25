@@ -143,7 +143,7 @@ chained_job_ok(const IMB_JOB *job,
                const size_t sizeof_padding)
 {
         if (job->status != IMB_STATUS_COMPLETED) {
-                printf("%d error status:%d, job %d",
+                printf("%d error status:%d, job %u",
                        __LINE__, job->status, num_vec);
                 return 0;
         }
@@ -151,7 +151,7 @@ chained_job_ok(const IMB_JOB *job,
         /* cipher checks */
         if (memcmp(expected_text, received_text + sizeof_padding,
                    text_len)) {
-                printf("cipher %d mismatched\n", num_vec);
+                printf("cipher %u mismatched\n", num_vec);
                 hexdump(stderr, "Received", received_text + sizeof_padding,
                         text_len);
                 hexdump(stderr, "Expected", expected_text,
@@ -160,7 +160,7 @@ chained_job_ok(const IMB_JOB *job,
         }
 
         if (memcmp(padding, received_text, sizeof_padding)) {
-                printf("cipher %d overwrite head\n", num_vec);
+                printf("cipher %u overwrite head\n", num_vec);
                 hexdump(stderr, "Target", received_text, sizeof_padding);
                 return 0;
         }
@@ -168,7 +168,7 @@ chained_job_ok(const IMB_JOB *job,
         if (memcmp(padding,
                    received_text + sizeof_padding + text_len,
                    sizeof_padding)) {
-                printf("cipher %d overwrite tail\n", num_vec);
+                printf("cipher %u overwrite tail\n", num_vec);
                 hexdump(stderr, "Target",
                         received_text + sizeof_padding + text_len,
                         sizeof_padding);
@@ -178,7 +178,7 @@ chained_job_ok(const IMB_JOB *job,
         /* hash checks */
         if (memcmp(expected_digest, received_digest + sizeof_padding,
                    digest_len)) {
-                printf("hash %d mismatched\n", num_vec);
+                printf("hash %u mismatched\n", num_vec);
                 hexdump(stderr, "Received", received_digest + sizeof_padding,
                         digest_len);
                 hexdump(stderr, "Expected", expected_digest,
@@ -187,14 +187,14 @@ chained_job_ok(const IMB_JOB *job,
         }
 
         if (memcmp(padding, received_digest, sizeof_padding)) {
-                printf("hash %d overwrite head\n", num_vec);
+                printf("hash %u overwrite head\n", num_vec);
                 hexdump(stderr, "Target", received_digest, sizeof_padding);
                 return 0;
         }
 
         if (memcmp(padding, received_digest + sizeof_padding + digest_len,
                    sizeof_padding)) {
-                printf("hash %d overwrite tail\n", num_vec);
+                printf("hash %u overwrite tail\n", num_vec);
                 hexdump(stderr, "Target",
                         received_digest + sizeof_padding + digest_len,
                         sizeof_padding);
@@ -354,7 +354,7 @@ test_chained_many(struct IMB_MGR *mb_mgr,
         }
 
         if (jobs_rx != num_jobs) {
-                printf("Expected %d jobs, received %d\n", num_jobs, jobs_rx);
+                printf("Expected %u jobs, received %u\n", num_jobs, jobs_rx);
                 goto end;
         }
         ret = 0;
