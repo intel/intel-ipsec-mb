@@ -1415,7 +1415,7 @@ test_ctr(struct IMB_MGR *mb_mgr,
         }
         job = IMB_FLUSH_JOB(mb_mgr);
         if (job) {
-                printf("%u Unexpected return from flush_job\n", __LINE__);
+                printf("%d Unexpected return from flush_job\n", __LINE__);
                 goto end;
         }
 
@@ -1462,14 +1462,14 @@ test_ctr_vectors(struct IMB_MGR *mb_mgr,
                 struct test_suite_context *ctx;
 #ifdef DEBUG
                 if (alg == IMB_CIPHER_CNTR)
-		        printf("Standard vector %d/%d  Keylen:%d "
+		        printf("Standard vector %u/%u  Keylen:%d "
                                "IVlen:%d PTLen:%d\n",
                                vect, vectors_cnt - 1,
                                (int) vectors[vect].Klen,
                                (int) vectors[vect].IVlen,
                                (int) vectors[vect].Plen);
                 else
-		        printf("Bit vector %d/%d  Keylen:%d "
+		        printf("Bit vector %u/%u  Keylen:%d "
                                "IVlen:%d PTLen:%d\n",
                                vect, vectors_cnt - 1,
                                (int) vectors[vect].Klen,
@@ -1506,7 +1506,7 @@ test_ctr_vectors(struct IMB_MGR *mb_mgr,
                              vectors[vect].P, vectors[vect].C,
                              (unsigned) vectors[vect].Plen,
                              IMB_DIR_ENCRYPT, IMB_ORDER_CIPHER_HASH, alg)) {
-                        printf("error #%d encrypt\n", vect + 1);
+                        printf("error #%u encrypt\n", vect + 1);
                         test_suite_update(ctx, 0, 1);
                 } else {
                         test_suite_update(ctx, 1, 0);
@@ -1519,7 +1519,7 @@ test_ctr_vectors(struct IMB_MGR *mb_mgr,
                              vectors[vect].C, vectors[vect].P,
                              (unsigned) vectors[vect].Plen,
                              IMB_DIR_DECRYPT, IMB_ORDER_HASH_CIPHER, alg)) {
-                        printf("error #%d decrypt\n", vect + 1);
+                        printf("error #%u decrypt\n", vect + 1);
                         test_suite_update(ctx, 0, 1);
                 } else {
                         test_suite_update(ctx, 1, 0);
@@ -1549,7 +1549,7 @@ test_ctr_vectors(struct IMB_MGR *mb_mgr,
                                      (unsigned) vectors[vect].Plen,
                                      IMB_DIR_ENCRYPT, IMB_ORDER_CIPHER_HASH,
                                      alg)) {
-                                printf("error #%d encrypt\n", vect + 1);
+                                printf("error #%u encrypt\n", vect + 1);
                                 test_suite_update(ctx, 0, 1);
                         } else {
                                 test_suite_update(ctx, 1, 0);
@@ -1562,7 +1562,7 @@ test_ctr_vectors(struct IMB_MGR *mb_mgr,
                                      (unsigned) vectors[vect].Plen,
                                      IMB_DIR_DECRYPT, IMB_ORDER_HASH_CIPHER,
                                      alg)) {
-                                printf("error #%d decrypt\n", vect + 1);
+                                printf("error #%u decrypt\n", vect + 1);
                                 test_suite_update(ctx, 0, 1);
                         } else {
                                 test_suite_update(ctx, 1, 0);
