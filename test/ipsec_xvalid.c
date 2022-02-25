@@ -1031,7 +1031,7 @@ fill_job(IMB_JOB *job, const struct params_s *params,
                 job->u.SNOW_V_AEAD.aad = aad;
                 break;
         default:
-                printf("Unsupported hash algorithm %u, line %u\n",
+                printf("Unsupported hash algorithm %u, line %d\n",
                        (unsigned) params->hash_alg, __LINE__);
                 return -1;
         }
@@ -1255,7 +1255,7 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys,
                         break;
                 default:
                         fprintf(stderr,
-                                "Unsupported hash algorithm %u, line %u\n",
+                                "Unsupported hash algorithm %u, line %d\n",
                                 (unsigned) params->hash_alg, __LINE__);
                         return -1;
                 }
@@ -1451,7 +1451,7 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys,
                 memcpy(k1_expanded, auth_key, 32);
                 break;
         default:
-                fprintf(stderr, "Unsupported hash algorithm %u, line %u\n",
+                fprintf(stderr, "Unsupported hash algorithm %u, line %d\n",
                         (unsigned) params->hash_alg, __LINE__);
                 return -1;
         }
@@ -2218,7 +2218,6 @@ process_variant(IMB_MGR *enc_mgr, const IMB_ARCH enc_arch,
         uint32_t sz;
         uint64_t min_aad_sz = 0;
         uint64_t max_aad_sz, aad_sz;
-        unsigned int i, j;
 
         if (verbose) {
                 printf("[INFO] ");
@@ -2306,6 +2305,8 @@ process_variant(IMB_MGR *enc_mgr, const IMB_ARCH enc_arch,
 
         /* Perform IMIX tests */
         if (imix_enabled) {
+                unsigned int i, j;
+
                 params->aad_size = min_aad_sz;
 
                 for (i = 2; i <= max_num_jobs; i++) {
@@ -2602,7 +2603,7 @@ static void usage(const char *app_name)
 #endif
                 "            (-o still applies for MAC)\n"
                 "--num-jobs: maximum number of number of jobs to submit in one go "
-                "(maximum = %u)\n"
+                "(maximum = %d)\n"
                 "--safe-check: check if keys, IVs, plaintext or tags "
                 "get cleared from IMB_MGR upon job completion (off by default; "
                 "requires library compiled with SAFE_DATA)\n",
@@ -2869,7 +2870,7 @@ int main(int argc, char *argv[])
                                           job_sizes);
                         if (job_sizes[RANGE_MAX] > JOB_SIZE_TOP) {
                                 fprintf(stderr,
-                                       "Invalid job size %u (max %u)\n",
+                                       "Invalid job size %u (max %d)\n",
                                        (unsigned) job_sizes[RANGE_MAX],
                                        JOB_SIZE_TOP);
                                 return EXIT_FAILURE;
@@ -2880,7 +2881,7 @@ int main(int argc, char *argv[])
                                              sizeof(cipher_iv_size));
                         if (cipher_iv_size > MAX_IV_SIZE) {
                                 fprintf(stderr, "IV size cannot be "
-                                        "higher than %u\n", MAX_IV_SIZE);
+                                        "higher than %d\n", MAX_IV_SIZE);
                                 return EXIT_FAILURE;
                         }
                 } else if (strcmp(argv[i], "--auth-iv-size") == 0) {
@@ -2889,7 +2890,7 @@ int main(int argc, char *argv[])
                                              sizeof(auth_iv_size));
                         if (auth_iv_size > MAX_IV_SIZE) {
                                 fprintf(stderr, "IV size cannot be "
-                                        "higher than %u\n", MAX_IV_SIZE);
+                                        "higher than %d\n", MAX_IV_SIZE);
                                 return EXIT_FAILURE;
                         }
                 } else if (strcmp(argv[i], "--tag-size") == 0) {
@@ -2898,7 +2899,7 @@ int main(int argc, char *argv[])
                                              sizeof(auth_tag_size));
                         if (auth_tag_size > MAX_TAG_SIZE) {
                                 fprintf(stderr, "Tag size cannot be "
-                                        "higher than %u\n", MAX_TAG_SIZE);
+                                        "higher than %d\n", MAX_TAG_SIZE);
                                 return EXIT_FAILURE;
                         }
                 } else if (strcmp(argv[i], "--num-jobs") == 0) {
@@ -2907,7 +2908,7 @@ int main(int argc, char *argv[])
                                              sizeof(max_num_jobs));
                         if (max_num_jobs > MAX_NUM_JOBS) {
                                 fprintf(stderr, "Number of jobs cannot be "
-                                        "higher than %u\n", MAX_NUM_JOBS);
+                                        "higher than %d\n", MAX_NUM_JOBS);
                                 return EXIT_FAILURE;
                         }
                 } else if (strcmp(argv[i], "--safe-check") == 0) {
