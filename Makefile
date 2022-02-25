@@ -81,3 +81,9 @@ spellcheck:
 	-S "ipsec_MB_testapp,ipsec_xvalid_test" \
 	./lib ./perf ./test README README.md SECURITY.md CONTRIBUTING \
 	Makefile win_x64.mak ReleaseNotes.txt LICENSE $(CS_EXTRA_OPTS)
+
+# cppcheck analysis check
+CPPCHECK ?= cppcheck
+.PHONY: cppcheck
+cppcheck:
+	$(CPPCHECK) ./ --force --enable=all
