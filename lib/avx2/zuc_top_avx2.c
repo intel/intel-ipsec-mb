@@ -193,14 +193,12 @@ void _zuc_eea3_8_buffer_avx2(const void * const pKey[NUM_AVX2_BUFS],
         DECLARE_ALIGNED(ZucState_t singlePktState, 64);
         unsigned int i = 0;
         uint16_t bytes = (uint16_t) find_min_length32(length, &i);
-        uint32_t numKeyStreamsPerPkt;
         DECLARE_ALIGNED(uint16_t remainBytes[NUM_AVX2_BUFS], 16) = {0};
         DECLARE_ALIGNED(uint8_t keyStr[NUM_AVX2_BUFS][KEYSTR_ROUND_LEN], 64);
         /* structure to store the 8 keys */
         DECLARE_ALIGNED(ZucKey8_t keys, 64);
         /* structure to store the 8 IV's */
         DECLARE_ALIGNED(uint8_t ivs[NUM_AVX2_BUFS*32], 16);
-        uint32_t numBytesLeftOver = 0;
         const uint8_t *pTempBufInPtr = NULL;
         uint8_t *pTempBufOutPtr = NULL;
 
@@ -251,8 +249,10 @@ void _zuc_eea3_8_buffer_avx2(const void * const pKey[NUM_AVX2_BUFS],
                         singlePktState.fR1 = state.fR1[i];
                         singlePktState.fR2 = state.fR2[i];
 
-                        numKeyStreamsPerPkt = remainBytes[i] / KEYSTR_ROUND_LEN;
-                        numBytesLeftOver = remainBytes[i]  % KEYSTR_ROUND_LEN;
+                        uint32_t numKeyStreamsPerPkt =
+                                remainBytes[i] / KEYSTR_ROUND_LEN;
+                        const uint32_t numBytesLeftOver =
+                                remainBytes[i]  % KEYSTR_ROUND_LEN;
 
                         pTempBufInPtr = pBufferIn[i];
                         pTempBufOutPtr = pBufferOut[i];
@@ -509,8 +509,6 @@ void _zuc_eia3_1_buffer_avx2(const void *pKey,
         DECLARE_ALIGNED(uint32_t keyStream[8 * 2], 64);
         const uint32_t keyStreamLengthInBits = KEYSTR_ROUND_LEN * 8;
         /* generate a key-stream 2 words longer than the input message */
-        const uint32_t N = lengthInBits + (2 * ZUC_WORD_BITS);
-        uint32_t L = (N + 31) / ZUC_WORD_BITS;
         uint32_t *pZuc = (uint32_t *) &keyStream[0];
         uint32_t remainingBits = lengthInBits;
         uint32_t T = 0;
@@ -522,7 +520,6 @@ void _zuc_eia3_1_buffer_avx2(const void *pKey,
         /* loop over the message bits */
         while (remainingBits >= keyStreamLengthInBits) {
                 remainingBits -=  keyStreamLengthInBits;
-                L -= (keyStreamLengthInBits / KEYSTR_ROUND_LEN);
                 /* Generate the next key stream 8 bytes or 32 bytes */
                 if (!remainingBits)
                         asm_ZucGenKeystream8B_avx(&keyStream[8], &zucState);
