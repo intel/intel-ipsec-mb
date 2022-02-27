@@ -567,9 +567,7 @@ struct str_value_mapping aead_algo_str_map[] = {
 
 /* This struct stores all information about performed test case */
 struct variant_s {
-        uint32_t arch;
         struct params_s params;
-        uint64_t *avg_times;
 };
 
 const uint8_t auth_tag_length_bytes[] = {
