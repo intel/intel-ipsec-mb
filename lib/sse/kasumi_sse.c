@@ -294,12 +294,7 @@ kasumi_f8_n_buffer_sse(const kasumi_key_sched_t *pKeySchedule,
         SAVE_XMMS(xmm_save);
 #endif
         uint32_t numLeft = dataCount;
-        const uint64_t *IVPtr;
-        const void * const *pDataInPtr;
-        void **pDataOutPtr;
-        const uint32_t *dataLenPtr;
         uint32_t i = 0;
-        uint32_t numBuffs;
 
 #ifdef SAFE_PARAM
         /* Check for NULL pointers */
@@ -349,11 +344,11 @@ kasumi_f8_n_buffer_sse(const kasumi_key_sched_t *pKeySchedule,
 
         /* KASUMI F8 n buffer function can handle up to 16 buffers */
         while (numLeft > 0) {
-                IVPtr = &IV[i];
-                pDataInPtr = &pDataIn[i];
-                pDataOutPtr = &pDataOut[i];
-                dataLenPtr = &dataLen[i];
-                numBuffs = (numLeft > 16) ? 16 : numLeft;
+                const uint64_t *IVPtr = &IV[i];
+                const void * const *pDataInPtr = &pDataIn[i];
+                void **pDataOutPtr = &pDataOut[i];
+                const uint32_t *dataLenPtr = &dataLen[i];
+                const uint32_t numBuffs = (numLeft > 16) ? 16 : numLeft;
 
                 kasumi_f8_n_buffer(pKeySchedule, IVPtr, pDataInPtr, pDataOutPtr,
                                    dataLenPtr, numBuffs);
