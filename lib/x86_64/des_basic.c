@@ -477,18 +477,18 @@ des_enc_cbc_basic(const void *input, void *output, const int size,
         if ((input == NULL) || (output == NULL) ||
             (ks == NULL) || (ivec == NULL) || (size < 0))
                 return;
+#else
+        IMB_ASSERT(size >= 0);
+        IMB_ASSERT(input != NULL);
+        IMB_ASSERT(output != NULL);
+        IMB_ASSERT(ks != NULL);
+        IMB_ASSERT(ivec != NULL);
 #endif
         const uint64_t *in = input;
         uint64_t *out = output;
         const int nblocks = size / 8;
         int n;
         uint64_t iv = *ivec;
-
-        IMB_ASSERT(size >= 0);
-        IMB_ASSERT(input != NULL);
-        IMB_ASSERT(output != NULL);
-        IMB_ASSERT(ks != NULL);
-        IMB_ASSERT(ivec != NULL);
 
         for (n = 0; n < nblocks; n++)
                 out[n] = iv = enc_dec_1(in[n] ^ iv, ks, 1 /* encrypt */);
@@ -509,18 +509,18 @@ des_dec_cbc_basic(const void *input, void *output, const int size,
         if ((input == NULL) || (output == NULL) ||
             (ks == NULL) || (ivec == NULL) || (size < 0))
                 return;
+#else
+        IMB_ASSERT(size >= 0);
+        IMB_ASSERT(input != NULL);
+        IMB_ASSERT(output != NULL);
+        IMB_ASSERT(ks != NULL);
+        IMB_ASSERT(ivec != NULL);
 #endif
         const uint64_t *in = input;
         uint64_t *out = output;
         const int nblocks = size / 8;
         int n;
         uint64_t iv = *ivec;
-
-        IMB_ASSERT(size >= 0);
-        IMB_ASSERT(input != NULL);
-        IMB_ASSERT(output != NULL);
-        IMB_ASSERT(ks != NULL);
-        IMB_ASSERT(ivec != NULL);
 
         for (n = 0; n < nblocks; n++) {
                 uint64_t in_block = in[n];
@@ -546,13 +546,7 @@ des3_enc_cbc_basic(const void *input, void *output, const int size,
             (ks1 == NULL) || (ks2 == NULL) || (ks3 == NULL) ||
             (ivec == NULL) || (size < 0))
                 return;
-#endif
-        const uint64_t *in = input;
-        uint64_t *out = output;
-        const int nblocks = size / 8;
-        int n;
-        uint64_t iv = *ivec;
-
+#else
         IMB_ASSERT(size >= 0);
         IMB_ASSERT(input != NULL);
         IMB_ASSERT(output != NULL);
@@ -560,6 +554,12 @@ des3_enc_cbc_basic(const void *input, void *output, const int size,
         IMB_ASSERT(ks2 != NULL);
         IMB_ASSERT(ks3 != NULL);
         IMB_ASSERT(ivec != NULL);
+#endif
+        const uint64_t *in = input;
+        uint64_t *out = output;
+        const int nblocks = size / 8;
+        int n;
+        uint64_t iv = *ivec;
 
         for (n = 0; n < nblocks; n++) {
                 uint64_t t = in[n] ^ iv;
@@ -587,13 +587,7 @@ des3_dec_cbc_basic(const void *input, void *output, const int size,
             (ks1 == NULL) || (ks2 == NULL) || (ks3 == NULL) ||
             (ivec == NULL) || (size < 0))
                 return;
-#endif
-        const uint64_t *in = input;
-        uint64_t *out = output;
-        const int nblocks = size / 8;
-        int n;
-        uint64_t iv = *ivec;
-
+#else
         IMB_ASSERT(size >= 0);
         IMB_ASSERT(input != NULL);
         IMB_ASSERT(output != NULL);
@@ -601,6 +595,12 @@ des3_dec_cbc_basic(const void *input, void *output, const int size,
         IMB_ASSERT(ks2 != NULL);
         IMB_ASSERT(ks3 != NULL);
         IMB_ASSERT(ivec != NULL);
+#endif
+        const uint64_t *in = input;
+        uint64_t *out = output;
+        const int nblocks = size / 8;
+        int n;
+        uint64_t iv = *ivec;
 
         for (n = 0; n < nblocks; n++) {
                 uint64_t t;
@@ -629,16 +629,16 @@ cfb_one_basic(const void *input, void *output, const int size,
         if ((input == NULL) || (output == NULL) ||
             (ks == NULL) || (ivec == NULL) || (size < 0))
                 return;
-#endif
-        uint8_t *out = (uint8_t *) output;
-        const uint8_t *in = (const uint8_t *) input;
-        uint64_t t;
-
+#else
         IMB_ASSERT(size <= 8 && size >= 0);
         IMB_ASSERT(input != NULL);
         IMB_ASSERT(output != NULL);
         IMB_ASSERT(ks != NULL);
         IMB_ASSERT(ivec != NULL);
+#endif
+        uint8_t *out = (uint8_t *) output;
+        const uint8_t *in = (const uint8_t *) input;
+        uint64_t t;
 
         t = enc_dec_1(*ivec, ks, 1 /* encrypt */);
 
@@ -679,6 +679,12 @@ docsis_des_enc_basic(const void *input, void *output, const int size,
         if ((input == NULL) || (output == NULL) ||
             (ks == NULL) || (ivec == NULL) || (size < 0))
                 return;
+#else
+        IMB_ASSERT(size >= 0);
+        IMB_ASSERT(input != NULL);
+        IMB_ASSERT(output != NULL);
+        IMB_ASSERT(ks != NULL);
+        IMB_ASSERT(ivec != NULL);
 #endif
         const uint64_t *in = input;
         uint64_t *out = output;
@@ -686,12 +692,6 @@ docsis_des_enc_basic(const void *input, void *output, const int size,
         const int partial = size & 7;
         int n;
         uint64_t iv = *ivec;
-
-        IMB_ASSERT(size >= 0);
-        IMB_ASSERT(input != NULL);
-        IMB_ASSERT(output != NULL);
-        IMB_ASSERT(ks != NULL);
-        IMB_ASSERT(ivec != NULL);
 
         for (n = 0; n < nblocks; n++)
                 out[n] = iv = enc_dec_1(in[n] ^ iv, ks, 1 /* encrypt */);
@@ -719,6 +719,12 @@ docsis_des_dec_basic(const void *input, void *output, const int size,
         if ((input == NULL) || (output == NULL) ||
             (ks == NULL) || (ivec == NULL) || (size < 0))
                 return;
+#else
+        IMB_ASSERT(size >= 0);
+        IMB_ASSERT(input != NULL);
+        IMB_ASSERT(output != NULL);
+        IMB_ASSERT(ks != NULL);
+        IMB_ASSERT(ivec != NULL);
 #endif
         const uint64_t *in = input;
         uint64_t *out = output;
@@ -727,17 +733,10 @@ docsis_des_dec_basic(const void *input, void *output, const int size,
         int n;
         uint64_t iv = *ivec;
 
-        IMB_ASSERT(size >= 0);
-        IMB_ASSERT(input != NULL);
-        IMB_ASSERT(output != NULL);
-        IMB_ASSERT(ks != NULL);
-        IMB_ASSERT(ivec != NULL);
-
         if (partial) {
                 if (!nblocks) {
                         /* first block is the partial one */
                         cfb_one_basic(input, output, partial, ks, ivec);
-                        iv = 0;
                         return;
                 }
                 /* last block is partial */
@@ -751,9 +750,4 @@ docsis_des_dec_basic(const void *input, void *output, const int size,
                 out[n] = enc_dec_1(in_block, ks, 0 /* decrypt */) ^ iv;
                 iv = in_block;
         }
-
-#ifdef SAFE_DATA
-        /* *ivec = iv; */
-        clear_var(&iv, sizeof(iv));
-#endif
 }
