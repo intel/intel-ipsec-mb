@@ -2940,7 +2940,7 @@ static void print_info(void)
 {
         uint32_t i;
         uint32_t supported_archs[NUM_ARCHS];
-        uint8_t archs[NUM_ARCHS];
+        uint8_t arch_tab[NUM_ARCHS];
 
         /* detect and print all archs */
         if (detect_arch(supported_archs) < 0)
@@ -2953,11 +2953,11 @@ static void print_info(void)
         printf("\n");
 
         /* detect and print best arch */
-        if (detect_best_arch(archs) != 0)
+        if (detect_best_arch(arch_tab) != 0)
                 goto print_info_err;
 
         for (i = 0; i < DIM(arch_str_map); i++)
-                if (archs[i]) {
+                if (arch_tab[i]) {
                         printf("Best architecture: %s\n",
                                arch_str_map[i].name);
                         break;
