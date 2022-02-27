@@ -1048,7 +1048,7 @@ static int set_affinity(const int cpu)
         /* Check if selected core is valid */
         if (cpu < 0 || cpu >= num_cpus) {
                 fprintf(stderr, "Invalid CPU selected! "
-                        "Max valid CPU is %u\n", num_cpus - 1);
+                        "Max valid CPU is %d\n", num_cpus - 1);
                 return 1;
         }
 
@@ -2331,7 +2331,7 @@ print_times(struct variant_s *variant_list, struct params_s *params,
 
         for (sz = 0; sz < sizes; sz++) {
                 if (imix_list_count != 0)
-                        printf("%d", average_job_size);
+                        printf("%u", average_job_size);
                 else if (job_size_count == 0)
                         printf("%d", job_sizes[RANGE_MIN] +
                                      (sz * job_sizes[RANGE_STEP]));
@@ -2412,7 +2412,7 @@ run_tests(void *arg)
                         goto exit_failure;
                 } else
                         fprintf(stderr, "Started counting unhalted cycles on "
-                                "core %d\nUnhalted cycles read cost = %lu "
+                                "core %u\nUnhalted cycles read cost = %lu "
                                 "cycles\n", params.core,
                                 (unsigned long)rd_cycles_cost);
         }
@@ -2457,8 +2457,8 @@ run_tests(void *arg)
 
         for (run = 0; run < NUM_RUNS; run++) {
                 if (info->print_info)
-                        fprintf(stderr, "\nStarting run %d of %d%c",
-                                run+1, NUM_RUNS,
+                        fprintf(stderr, "\nStarting run %u of %d%c",
+                                run + 1, NUM_RUNS,
                                 silent_progress_bar ? '\r' : '\n' );
 
                 variant = 0;
@@ -2769,7 +2769,7 @@ parse_list(const char * const *argv, const int index, const int argc,
 
         while (token != NULL) {
                 if (count == MAX_LIST) {
-                        fprintf(stderr, "Using only the first %u sizes\n",
+                        fprintf(stderr, "Using only the first %d sizes\n",
                                 MAX_LIST);
                         break;
                 }
@@ -3110,7 +3110,7 @@ int main(int argc, char *argv[])
                                           job_sizes);
                         if (job_sizes[RANGE_MAX] > JOB_SIZE_TOP) {
                                 fprintf(stderr,
-                                       "Invalid job size %u (max %u)\n",
+                                       "Invalid job size %u (max %d)\n",
                                        (unsigned) job_sizes[RANGE_MAX],
                                        JOB_SIZE_TOP);
                                 return EXIT_FAILURE;
@@ -3131,7 +3131,7 @@ int main(int argc, char *argv[])
                                              sizeof(gcm_aad_size));
                         if (gcm_aad_size > AAD_SIZE_MAX) {
                                 fprintf(stderr,
-                                        "Invalid AAD size %u (max %u)!\n",
+                                        "Invalid AAD size %u (max %d)!\n",
                                         (unsigned) gcm_aad_size,
                                         AAD_SIZE_MAX);
                                 return EXIT_FAILURE;
@@ -3194,7 +3194,7 @@ int main(int argc, char *argv[])
 
         if (custom_job_params.cipher_mode == TEST_CCM) {
                 if (ccm_aad_size > CCM_AAD_SIZE_MAX) {
-                        fprintf(stderr, "AAD cannot be higher than %u in CCM\n",
+                        fprintf(stderr, "AAD cannot be higher than %d in CCM\n",
                                 CCM_AAD_SIZE_MAX);
                         return EXIT_FAILURE;
                 }
@@ -3276,7 +3276,7 @@ int main(int argc, char *argv[])
         /* Check num cores >= number of threads */
         if ((core_mask != 0 && num_t != 0) && (num_t > bitcount(core_mask))) {
                 fprintf(stderr, "Insufficient number of cores in "
-                        "core mask (0x%lx) to run %d threads!\n",
+                        "core mask (0x%lx) to run %u threads!\n",
                         (unsigned long) core_mask, num_t);
                 return EXIT_FAILURE;
         }
@@ -3314,7 +3314,7 @@ int main(int argc, char *argv[])
                         get_tsc_to_core_scale(turbo_enabled));
 
         fprintf(stderr,
-                "SHA size incr = %d\n"
+                "Authentication size = cipher size + %u\n"
                 "Tool version: %s\n"
                 "Library version: %s\n",
                 sha_size_incr, IMB_VERSION_STR, imb_get_version_str());
