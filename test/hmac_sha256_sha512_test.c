@@ -1068,13 +1068,13 @@ test_hmac_shax_std_vectors(struct IMB_MGR *mb_mgr,
 		printf(".");
 #endif
 
+                if (flag) {
 #ifdef DEBUG
-                if (flag)
                         printf("Skipped vector %d, N/A for HMAC-SHA%d\n",
                                vect, sha_type);
 #endif
-                if (flag)
                         continue;
+                }
 
                 if (test_hmac_shax(mb_mgr, &hmac_sha256_sha512_vectors[idx],
                                    num_jobs, sha_type)) {
