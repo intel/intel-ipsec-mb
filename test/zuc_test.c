@@ -376,7 +376,7 @@ submit_eea3_jobs(struct IMB_MGR *mb_mgr, uint8_t **keys, uint8_t **ivs,
                 if (job != NULL) {
                         jobs_rx++;
                         if (job->status != IMB_STATUS_COMPLETED) {
-                                printf("%d error status:%d, job %d",
+                                printf("%d error status:%d, job %u",
                                        __LINE__, job->status, i);
                                 return -1;
                         }
@@ -386,14 +386,14 @@ submit_eea3_jobs(struct IMB_MGR *mb_mgr, uint8_t **keys, uint8_t **ivs,
         while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL) {
                 jobs_rx++;
                 if (job->status != IMB_STATUS_COMPLETED) {
-                        printf("%d error status:%d, job %d",
+                        printf("%d error status:%d, job %u",
                                __LINE__, job->status, i);
                         return -1;
                 }
         }
 
         if (jobs_rx != num_jobs) {
-                printf("Expected %d jobs, received %d\n", num_jobs, jobs_rx);
+                printf("Expected %u jobs, received %u\n", num_jobs, jobs_rx);
                 return -1;
         }
 
@@ -439,7 +439,7 @@ submit_eia3_jobs(struct IMB_MGR *mb_mgr, uint8_t **keys, uint8_t **iv,
                 if (job != NULL) {
                         jobs_rx++;
                         if (job->status != IMB_STATUS_COMPLETED) {
-                                printf("%d error status:%d, job %d",
+                                printf("%d error status:%d, job %u",
                                        __LINE__, job->status, i);
                                 return -1;
                         }
@@ -449,14 +449,14 @@ submit_eia3_jobs(struct IMB_MGR *mb_mgr, uint8_t **keys, uint8_t **iv,
         while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL) {
                 jobs_rx++;
                 if (job->status != IMB_STATUS_COMPLETED) {
-                        printf("%d error status:%d, job %d",
+                        printf("%d error status:%d, job %u",
                                __LINE__, job->status, i);
                         return -1;
                 }
         }
 
         if (jobs_rx != num_jobs) {
-                printf("Expected %d jobs, received %d\n", num_jobs, jobs_rx);
+                printf("Expected %u jobs, received %u\n", num_jobs, jobs_rx);
                 return -1;
         }
 
@@ -878,7 +878,7 @@ int validate_zuc_EIA_1_block(struct IMB_MGR *mb_mgr, uint8_t *pSrcData,
                     memcmp(pDstData, &testEIA3_vectors[i].mac,
                            sizeof(((struct test128EIA3_vectors_t *)0)->mac));
                 if (retTmp) {
-                        printf("Validate ZUC 1 block  test %d (Int): FAIL\n",
+                        printf("Validate ZUC 1 block  test %u (Int): FAIL\n",
                                i + 1);
                         byte_hexdump("Expected",
                                      (const uint8_t *)&testEIA3_vectors[i].mac,
@@ -888,7 +888,7 @@ int validate_zuc_EIA_1_block(struct IMB_MGR *mb_mgr, uint8_t *pSrcData,
                 }
 #ifdef DEBUG
                 else
-                        printf("Validate ZUC 1 block  test %d (Int): PASS\n",
+                        printf("Validate ZUC 1 block  test %u (Int): PASS\n",
                                i + 1);
 #endif
                 fflush(stdout);
@@ -1148,10 +1148,10 @@ int validate_zuc_algorithm(struct IMB_MGR *mb_mgr, uint8_t *pSrcData,
                 swapBytes.sbw[1] = bswap4(testZUC_vectors[i].Z[1]);
                 ret = memcmp(pDstData, swapBytes.sbb, 8);
                 if (ret)
-                        printf("ZUC 1 algorithm test %d: FAIL\n", i);
+                        printf("ZUC 1 algorithm test %u: FAIL\n", i);
 #ifdef DEBUG
                 else
-                        printf("ZUC 1 algorithm test %d: PASS\n", i);
+                        printf("ZUC 1 algorithm test %u: PASS\n", i);
 #endif
         }
         return ret;
