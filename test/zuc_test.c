@@ -96,12 +96,14 @@ static void byte_hexdump(const char *message, const uint8_t *ptr, int len);
 static uint32_t createData(uint8_t *pSrcData[MAXBUFS],
                                  uint32_t numOfBuffs)
 {
-        uint32_t i = 0, j = 0;
+        uint32_t i = 0;
 
         for (i = 0; i < numOfBuffs; i++) {
                 pSrcData[i] = (uint8_t *)malloc(MAX_BUFFER_LENGTH_IN_BYTES);
 
                 if (!pSrcData[i]) {
+                        uint32_t j = 0;
+
                         printf("malloc(pSrcData[i]): failed!\n");
 
                         for (j = 0; j < i; j++) {
@@ -131,9 +133,11 @@ static uint32_t createKeyVecData(uint32_t keyLen, uint8_t *pKeys[MAXBUFS],
                                  uint32_t ivLen, uint8_t *pIV[MAXBUFS],
                                  uint32_t numOfBuffs)
 {
-        uint32_t i = 0, j = 0;
+        uint32_t i = 0;
 
         for (i = 0; i < numOfBuffs; i++) {
+                uint32_t j = 0;
+
                 pIV[i] = (uint8_t *)malloc(ivLen);
 
                 if (!pIV[i]) {
@@ -850,8 +854,7 @@ int validate_zuc_EIA_1_block(struct IMB_MGR *mb_mgr, uint8_t *pSrcData,
                              const unsigned int job_api)
 {
         uint32_t i;
-        int retTmp, ret = 0;
-        uint32_t byteLength;
+        int ret = 0;
         uint32_t bitLength;
 
         for (i = 0; i < NUM_ZUC_EIA3_TESTS; i++) {
@@ -864,7 +867,9 @@ int validate_zuc_EIA_1_block(struct IMB_MGR *mb_mgr, uint8_t *pSrcData,
                                 testEIA3_vectors[i].Direction,
                                 pIV);
                 bitLength = testEIA3_vectors[i].length_in_bits;
-                byteLength = (bitLength + 7) / 8;
+
+                const uint32_t byteLength = (bitLength + 7) / 8;
+
                 memcpy(pSrcData, testEIA3_vectors[i].message, byteLength);
                 if (job_api)
                         submit_eia3_jobs(mb_mgr, &pKeys, &pIV,
@@ -874,7 +879,7 @@ int validate_zuc_EIA_1_block(struct IMB_MGR *mb_mgr, uint8_t *pSrcData,
                 else
                         IMB_ZUC_EIA3_1_BUFFER(mb_mgr, pKeys, pIV, pSrcData,
                                               bitLength, (uint32_t *)pDstData);
-                retTmp =
+                const int retTmp =
                     memcmp(pDstData, &testEIA3_vectors[i].mac,
                            sizeof(((struct test128EIA3_vectors_t *)0)->mac));
                 if (retTmp) {
