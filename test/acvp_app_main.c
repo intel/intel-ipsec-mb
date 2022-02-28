@@ -50,11 +50,11 @@ static int aes_gcm_handler(ACVP_TEST_CASE *test_case)
 {
         ACVP_SYM_CIPHER_TC *tc;
         IMB_JOB *job = NULL;
-        aes_gcm_init_var_iv_t init_var_iv = NULL;
-        aes_gcm_enc_dec_update_t update_enc = NULL;
-        aes_gcm_enc_dec_finalize_t finalize_enc = NULL;
-        aes_gcm_enc_dec_update_t update_dec = NULL;
-        aes_gcm_enc_dec_finalize_t finalize_dec = NULL;
+        aes_gcm_init_var_iv_t init_var_iv = mb_mgr->gcm128_init_var_iv;
+        aes_gcm_enc_dec_update_t update_enc = mb_mgr->gcm128_enc_update;
+        aes_gcm_enc_dec_finalize_t finalize_enc = mb_mgr->gcm128_enc_finalize;
+        aes_gcm_enc_dec_update_t update_dec = mb_mgr->gcm128_dec_update;
+        aes_gcm_enc_dec_finalize_t finalize_dec = mb_mgr->gcm128_dec_finalize;
         int ret = 0;
 
         struct gcm_key_data key;
@@ -87,28 +87,10 @@ static int aes_gcm_handler(ACVP_TEST_CASE *test_case)
                 goto end;
         }
 
-        if (direct_api == 0) {
-                job = IMB_GET_NEXT_JOB(mb_mgr);
-                job->key_len_in_bytes = tc->key_len >> 3;
-                job->cipher_mode = IMB_CIPHER_GCM;
-                job->hash_alg = IMB_AUTH_AES_GMAC;
-                job->iv = tc->iv;
-                job->iv_len_in_bytes = tc->iv_len;
-                job->cipher_start_src_offset_in_bytes = 0;
-                job->hash_start_src_offset_in_bytes = 0;
-                job->enc_keys = &key;
-                job->dec_keys = &key;
-                job->u.GCM.aad = tc->aad;
-                job->u.GCM.aad_len_in_bytes = tc->aad_len;
-                job->auth_tag_output_len_in_bytes = tc->tag_len;
-        } else {
+        if (direct_api == 1) {
                 switch (tc->key_len) {
                 case 128:
-                        init_var_iv = mb_mgr->gcm128_init_var_iv;
-                        update_enc = mb_mgr->gcm128_enc_update;
-                        finalize_enc = mb_mgr->gcm128_enc_finalize;
-                        update_dec = mb_mgr->gcm128_dec_update;
-                        finalize_dec = mb_mgr->gcm128_dec_finalize;
+                        /* Function pointers already set for 128-bit key */
                         break;
                 case 192:
                         init_var_iv = mb_mgr->gcm192_init_var_iv;
@@ -129,6 +111,20 @@ static int aes_gcm_handler(ACVP_TEST_CASE *test_case)
                         ret = 1;
                         goto end;
                 }
+        } else {
+                job = IMB_GET_NEXT_JOB(mb_mgr);
+                job->key_len_in_bytes = tc->key_len >> 3;
+                job->cipher_mode = IMB_CIPHER_GCM;
+                job->hash_alg = IMB_AUTH_AES_GMAC;
+                job->iv = tc->iv;
+                job->iv_len_in_bytes = tc->iv_len;
+                job->cipher_start_src_offset_in_bytes = 0;
+                job->hash_start_src_offset_in_bytes = 0;
+                job->enc_keys = &key;
+                job->dec_keys = &key;
+                job->u.GCM.aad = tc->aad;
+                job->u.GCM.aad_len_in_bytes = tc->aad_len;
+                job->auth_tag_output_len_in_bytes = tc->tag_len;
         }
 
         if (tc->direction == ACVP_SYM_CIPH_DIR_ENCRYPT) {
