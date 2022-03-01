@@ -1197,6 +1197,7 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                         case IMB_CIPHER_DES:
                         case IMB_CIPHER_DES3:
                         case IMB_CIPHER_DOCSIS_DES:
+                        case IMB_CIPHER_ECB:
                                 template_job.dec_keys = NULL;
                                 if (!is_submit_invalid(mb_mgr, &template_job,
                                                        TEST_CIPH_DEC_KEY_NULL,
@@ -1206,7 +1207,6 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                         case IMB_CIPHER_CNTR:
                         case IMB_CIPHER_CNTR_BITLEN:
                         case IMB_CIPHER_CCM:
-                        case IMB_CIPHER_ECB:
                         case IMB_CIPHER_PON_AES_CNTR:
                         case IMB_CIPHER_ZUC_EEA3:
                         case IMB_CIPHER_SNOW3G_UEA2_BITLEN:

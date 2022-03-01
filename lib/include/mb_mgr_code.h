@@ -1442,7 +1442,13 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job)
                         imb_set_errno(state, IMB_ERR_JOB_NULL_DST);
                         return 1;
                 }
-                if (job->enc_keys == NULL) {
+                if (job->cipher_direction == IMB_DIR_ENCRYPT &&
+                    job->enc_keys == NULL) {
+                        imb_set_errno(state, IMB_ERR_JOB_NULL_KEY);
+                        return 1;
+                }
+                if (job->cipher_direction == IMB_DIR_DECRYPT &&
+                    job->dec_keys == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_KEY);
                         return 1;
                 }
