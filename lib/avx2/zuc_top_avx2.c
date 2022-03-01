@@ -488,16 +488,6 @@ void zuc_eea3_n_buffer_avx2(const void * const pKey[], const void * const pIv[],
 #endif
 }
 
-static inline uint64_t rotate_left(uint64_t u, size_t r)
-{
-        return (((u) << (r)) | ((u) >> (64 - (r))));
-}
-
-static inline uint64_t load_uint64(const void *ptr)
-{
-        return *((const uint64_t *)ptr);
-}
-
 static inline
 void _zuc_eia3_1_buffer_avx2(const void *pKey,
                              const void *pIv,
