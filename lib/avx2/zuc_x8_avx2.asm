@@ -105,19 +105,9 @@ db      0x03, 0x02, 0x01, 0x00, 0x07, 0x06, 0x05, 0x04
 db      0x0b, 0x0a, 0x09, 0x08, 0x0f, 0x0e, 0x0d, 0x0c
 
 align 32
-S1_S0_shuf:
-db      0x00, 0x02, 0x04, 0x06, 0x08, 0x0A, 0x0C, 0x0E, 0x01, 0x03, 0x05, 0x07, 0x09, 0x0B, 0x0D, 0x0F
-db      0x00, 0x02, 0x04, 0x06, 0x08, 0x0A, 0x0C, 0x0E, 0x01, 0x03, 0x05, 0x07, 0x09, 0x0B, 0x0D, 0x0F
-
-align 32
 S0_S1_shuf:
 db      0x01, 0x03, 0x05, 0x07, 0x09, 0x0B, 0x0D, 0x0F, 0x00, 0x02, 0x04, 0x06, 0x08, 0x0A, 0x0C, 0x0E,
 db      0x01, 0x03, 0x05, 0x07, 0x09, 0x0B, 0x0D, 0x0F, 0x00, 0x02, 0x04, 0x06, 0x08, 0x0A, 0x0C, 0x0E,
-
-align 32
-rev_S1_S0_shuf:
-db      0x00, 0x08, 0x01, 0x09, 0x02, 0x0A, 0x03, 0x0B, 0x04, 0x0C, 0x05, 0x0D, 0x06, 0x0E, 0x07, 0x0F
-db      0x00, 0x08, 0x01, 0x09, 0x02, 0x0A, 0x03, 0x0B, 0x04, 0x0C, 0x05, 0x0D, 0x06, 0x0E, 0x07, 0x0F
 
 align 32
 rev_S0_S1_shuf:
@@ -316,95 +306,102 @@ align 64
         vpor    %%X3, %%LFSR_2, %%LFSR_0
 %endif
 %endmacro
-;
-;   rot_mod32()
-;
-;   uses ymm7
-;
-%macro  rot_mod32   3
-%if (%3 == 8)
-    vpshufb %1, %2, [rel rot8_mod32]
-%elif (%3 == 16)
-    vpshufb %1, %2, [rel rot16_mod32]
-%elif (%3 == 24)
-    vpshufb %1, %2, [rel rot24_mod32]
-%else
-    vpslld      %1, %2, %3
-    vpsrld      ymm7, %2, (32 - %3)
 
-    vpor        %1, ymm7
+;
+;  Rotate dwords by N_BITS
+;
+%macro  ROT_MOD32 4
+%define %%OUT    %1 ; [out] YMM register
+%define %%IN     %2 ; [in] YMM register
+%define %%YTMP   %3 ; [clobbered] YMM register
+%define %%N_BITS %4 ; [constant] Number of bits
+
+%if (%%N_BITS == 8)
+        vpshufb %%OUT, %%IN, [rel rot8_mod32]
+%elif (%%N_BITS == 16)
+        vpshufb %%OUT, %%IN, [rel rot16_mod32]
+%elif (%%N_BITS == 24)
+        vpshufb %%OUT, %%IN, [rel rot24_mod32]
+%else
+        vpslld  %%OUT, %%IN, %%N_BITS
+        vpsrld  %%YTMP, %%IN, (32 - %%N_BITS)
+        vpor    %%OUT, %%YTMP
 %endif
 %endmacro
 
 ;
-;   nonlin_fun8()
+; Updates R1-R2, using X0-X3 and generates W (if needed)
 ;
-;   return
-;       W value, updates F_R1[] / F_R2[]
-;
-%macro nonlin_fun8  1-2
+%macro NONLIN_FUN8  8-9
 %define %%STATE     %1  ; [in] ZUC state
-%define %%W         %2  ; [out] YMM register to contain W for all lanes
+%define %%YTMP1     %2  ; [clobbered] Temporary YMM register
+%define %%YTMP2     %3  ; [clobbered] Temporary YMM register
+%define %%YTMP3     %4  ; [clobbered] Temporary YMM register
+%define %%YTMP4     %5  ; [clobbered] Temporary YMM register
+%define %%YTMP5     %6  ; [clobbered] Temporary YMM register
+%define %%YTMP6     %7  ; [clobbered] Temporary YMM register
+%define %%YTMP7     %8  ; [clobbered] Temporary YMM register
+%define %%W         %9  ; [out] ZMM register to contain W for all lanes
 
-%if (%0 == 2)
-    vmovdqa     %%W, [%%STATE + OFS_X0]
-    vpxor       %%W, [%%STATE + OFS_R1]
-    vpaddd      %%W, [%%STATE + OFS_R2]    ; W = (BRC_X0 ^ F_R1) + F_R2
+%if (%0 == 9)
+        vmovdqa %%W, [%%STATE + OFS_X0]
+        vpxor   %%W, [%%STATE + OFS_R1]
+        vpaddd  %%W, [%%STATE + OFS_R2]    ; W = (BRC_X0 ^ F_R1) + F_R2
 %endif
 
-    vmovdqa     ymm1, [%%STATE + OFS_R1]
-    vmovdqa     ymm2, [%%STATE + OFS_R2]
-    vpaddd      ymm1, [%%STATE + OFS_X1]    ; W1 = F_R1 + BRC_X1
-    vpxor       ymm2, [%%STATE + OFS_X2]    ; W2 = F_R2 ^ BRC_X2
+        vmovdqa %%YTMP1, [%%STATE + OFS_R1]
+        vmovdqa %%YTMP2, [%%STATE + OFS_R2]
+        vpaddd  %%YTMP1, [%%STATE + OFS_X1]    ; W1 = F_R1 + BRC_X1
+        vpxor   %%YTMP2, [%%STATE + OFS_X2]    ; W2 = F_R2 ^ BRC_X2
 
-    vpslld      ymm3, ymm1, 16
-    vpsrld      ymm4, ymm1, 16
-    vpslld      ymm5, ymm2, 16
-    vpsrld      ymm6, ymm2, 16
-    vpor        ymm1, ymm3, ymm6
-    vpor        ymm2, ymm4, ymm5
+        vpslld  %%YTMP3, %%YTMP1, 16
+        vpsrld  %%YTMP4, %%YTMP1, 16
+        vpslld  %%YTMP5, %%YTMP2, 16
+        vpsrld  %%YTMP6, %%YTMP2, 16
+        vpor    %%YTMP1, %%YTMP3, %%YTMP6
+        vpor    %%YTMP2, %%YTMP4, %%YTMP5
 
-    rot_mod32   ymm3, ymm1, 2
-    rot_mod32   ymm4, ymm1, 10
-    rot_mod32   ymm5, ymm1, 18
-    rot_mod32   ymm6, ymm1, 24
-    vpxor       ymm1, ymm3
-    vpxor       ymm1, ymm4
-    vpxor       ymm1, ymm5
-    vpxor       ymm1, ymm6      ; XMM1 = U = L1(P)
+        ROT_MOD32 %%YTMP3, %%YTMP1, %%YTMP7, 2
+        ROT_MOD32 %%YTMP4, %%YTMP1, %%YTMP7, 10
+        ROT_MOD32 %%YTMP5, %%YTMP1, %%YTMP7, 18
+        ROT_MOD32 %%YTMP6, %%YTMP1, %%YTMP7, 24
+        vpxor     %%YTMP1, %%YTMP3
+        vpxor     %%YTMP1, %%YTMP4
+        vpxor     %%YTMP1, %%YTMP5
+        vpxor     %%YTMP1, %%YTMP6      ; XMM1 = U = L1(P)
 
-    rot_mod32   ymm3, ymm2, 8
-    rot_mod32   ymm4, ymm2, 14
-    rot_mod32   ymm5, ymm2, 22
-    rot_mod32   ymm6, ymm2, 30
-    vpxor       ymm2, ymm3
-    vpxor       ymm2, ymm4
-    vpxor       ymm2, ymm5
-    vpxor       ymm2, ymm6      ; XMM2 = V = L2(Q)
+        ROT_MOD32 %%YTMP3, %%YTMP2, %%YTMP7, 8
+        ROT_MOD32 %%YTMP4, %%YTMP2, %%YTMP7, 14
+        ROT_MOD32 %%YTMP5, %%YTMP2, %%YTMP7, 22
+        ROT_MOD32 %%YTMP6, %%YTMP2, %%YTMP7, 30
+        vpxor     %%YTMP2, %%YTMP3
+        vpxor     %%YTMP2, %%YTMP4
+        vpxor     %%YTMP2, %%YTMP5
+        vpxor     %%YTMP2, %%YTMP6      ; XMM2 = V = L2(Q)
 
-    ; Shuffle U and V to have all S0 lookups in XMM1 and all S1 lookups in XMM2
+        ; Shuffle U and V to have all S0 lookups in %%YTMP1 and all S1 lookups in %%YTMP2
 
-    ; Compress all S0 and S1 input values in each register
-    vpshufb     ymm1, [rel S0_S1_shuf] ; S0: Bytes 0-7,16-23 S1: Bytes 8-15,24-31
-    vpshufb     ymm2, [rel S1_S0_shuf] ; S1: Bytes 0-7,16-23 S0: Bytes 8-15,24-31
+        ; Compress all S0 and S1 input values in each register
+        vpshufb %%YTMP1, [rel S0_S1_shuf] ; S0: Bytes 0-7, S1: Bytes 8-15
+        vpshufb %%YTMP2, [rel S0_S1_shuf] ; S0: Bytes 0-7, S1: Bytes 8-15
 
-    vshufpd     ymm3, ymm1, ymm2, 0xA ; All S0 input values
-    vshufpd     ymm4, ymm2, ymm1, 0xA ; All S1 input values
+        vshufpd %%YTMP3, %%YTMP1, %%YTMP2, 0x00 ; All S0 input values
+        vshufpd %%YTMP4, %%YTMP2, %%YTMP1, 0xFF ; All S1 input values
 
-    ; Compute S0 and S1 values
-    S0_comput_AVX2  ymm3, ymm1, ymm2
-    S1_comput_AVX2  ymm4, ymm1, ymm2, ymm5
+        ; Compute S0 and S1 values
+        S0_comput_AVX2 %%YTMP3, %%YTMP1, %%YTMP2
+        S1_comput_AVX2 %%YTMP4, %%YTMP1, %%YTMP2, %%YTMP5
 
-    ; Need to shuffle back ymm1 & ymm2 before storing output
-    ; (revert what was done before S0 and S1 computations)
-    vshufpd    ymm1, ymm3, ymm4, 0xA
-    vshufpd    ymm2, ymm4, ymm3, 0xA
+        ; Need to shuffle back %%YTMP1 & %%YTMP2 before storing output
+        ; (revert what was done before S0 and S1 computations)
+        vshufpd %%YTMP1, %%YTMP3, %%YTMP4, 0xAA
+        vshufpd %%YTMP2, %%YTMP3, %%YTMP4, 0x55
 
-    vpshufb     ymm1, [rel rev_S0_S1_shuf]
-    vpshufb     ymm2, [rel rev_S1_S0_shuf]
+        vpshufb %%YTMP1, [rel rev_S0_S1_shuf]
+        vpshufb %%YTMP2, [rel rev_S0_S1_shuf]
 
-    vmovdqa     [%%STATE + OFS_R1], ymm1
-    vmovdqa     [%%STATE + OFS_R2], ymm2
+        vmovdqa [%%STATE + OFS_R1], %%YTMP1
+        vmovdqa [%%STATE + OFS_R2], %%YTMP2
 %endmacro
 
 ;
@@ -846,16 +843,16 @@ align 64
 %rep 32
     BITS_REORG8 rax, N, ymm0, ymm1, ymm2, ymm3, ymm4, ymm5, \
                 ymm6, ymm7, ymm8, ymm9
-    nonlin_fun8 rax, ymm0
-    vpsrld  ymm0,1           ; Shift out LSB of W
-    lfsr_updt8  rax, N, ymm0 ; W (ymm0) used in LFSR update - not set to zero
+    NONLIN_FUN8 rax, ymm0, ymm1, ymm2, ymm3, ymm4, ymm5, ymm6, ymm7
+    vpsrld  ymm7, 1           ; Shift out LSB of W
+    lfsr_updt8  rax, N, ymm7 ; W (ymm7) used in LFSR update
 %assign N N+1
 %endrep
 
     ; And once more, initial round from keygen phase = 33 times
     BITS_REORG8 rax, 0, ymm0, ymm1, ymm2, ymm3, ymm4, ymm5, \
                 ymm6, ymm7, ymm8, ymm9
-    nonlin_fun8 rax
+    NONLIN_FUN8 rax, ymm0, ymm1, ymm2, ymm3, ymm4, ymm5, ymm6, ymm7
 
     vpxor    ymm0, ymm0
     lfsr_updt8  rax, 0, ymm0
@@ -916,9 +913,9 @@ asm_Zuc256Initialization_8_avx2:
 %rep %%NUM_ROUNDS
     BITS_REORG8 rax, N, ymm0, ymm1, ymm2, ymm3, ymm4, ymm5, \
                 ymm6, ymm7, ymm8, ymm9, ymm10
-    nonlin_fun8 rax, ymm0
-    ; OFS_X3 XOR W (ymm0) and store in stack
-    vpxor   ymm10, ymm0
+    NONLIN_FUN8 rax, ymm0, ymm1, ymm2, ymm3, ymm4, ymm5, ymm6, ymm7
+    ; OFS_X3 XOR W (ymm7) and store in stack
+    vpxor   ymm10, ymm7
     vmovdqa [rsp + 64 + (N-1)*32], ymm10
     vpxor        ymm0, ymm0
     lfsr_updt8  rax, N, ymm0
@@ -1060,9 +1057,9 @@ asm_ZucGenKeystream4B_8_avx2:
 %rep %%NROUNDS
         BITS_REORG8 rax, round, ymm0, ymm1, ymm2, ymm3, ymm4, ymm5, \
                 ymm6, ymm7, ymm8, ymm9, ymm10
-        nonlin_fun8 rax, ymm0
-        ; OFS_XR XOR W (ymm0)
-        vpxor   ymm10, ymm0
+        NONLIN_FUN8 rax, ymm0, ymm1, ymm2, ymm3, ymm4, ymm5, ymm6, ymm7
+        ; OFS_X3 XOR W (ymm7)
+        vpxor   ymm10, ymm7
         vmovdqa [rsp + (N-1)*32], ymm10
         vpxor   ymm0, ymm0
         lfsr_updt8  rax, round, ymm0
