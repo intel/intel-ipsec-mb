@@ -418,9 +418,9 @@ align 64
 %endmacro
 
 ;
-;   store32B_kstr8()
+; Stores 32 bytes of keystream for 8 lanes
 ;
-%macro  store32B_kstr8 8
+%macro  STORE32B_KSTR8 13
 %define %%DATA32B_L0  %1  ; [in] 32 bytes of keystream for lane 0
 %define %%DATA32B_L1  %2  ; [in] 32 bytes of keystream for lane 1
 %define %%DATA32B_L2  %3  ; [in] 32 bytes of keystream for lane 2
@@ -429,70 +429,71 @@ align 64
 %define %%DATA32B_L5  %6  ; [in] 32 bytes of keystream for lane 5
 %define %%DATA32B_L6  %7  ; [in] 32 bytes of keystream for lane 6
 %define %%DATA32B_L7  %8  ; [in] 32 bytes of keystream for lane 7
+%define %%OUT_PTRS    %9  ; [in] Keystream pointers for all 8 lanes
+%define %%TMP1        %10 ; [clobbered] Temporary GP register
+%define %%TMP2        %11 ; [clobbered] Temporary GP register
+%define %%TMP3        %12 ; [clobbered] Temporary GP register
+%define %%TMP4        %13 ; [clobbered] Temporary GP register
 
-    mov         r12, [rsp]
-    mov         rdx, [rsp + 8]
-    mov         r8,  [rsp + 16]
-    mov         r9,  [rsp + 24]
-    vmovdqu     [r12], %%DATA32B_L0
-    vmovdqu     [rdx], %%DATA32B_L1
-    vmovdqu     [r8],  %%DATA32B_L2
-    vmovdqu     [r9],  %%DATA32B_L3
+        mov     %%TMP1, [%%OUT_PTRS]
+        mov     %%TMP2, [%%OUT_PTRS + 8]
+        mov     %%TMP3, [%%OUT_PTRS + 16]
+        mov     %%TMP4, [%%OUT_PTRS + 24]
+        vmovdqu [%%TMP1], %%DATA32B_L0
+        vmovdqu [%%TMP2], %%DATA32B_L1
+        vmovdqu [%%TMP3], %%DATA32B_L2
+        vmovdqu [%%TMP4], %%DATA32B_L3
 
-    mov         r12, [rsp + 32]
-    mov         rdx, [rsp + 40]
-    mov         r8,  [rsp + 48]
-    mov         r9,  [rsp + 56]
-    vmovdqu     [r12], %%DATA32B_L4
-    vmovdqu     [rdx], %%DATA32B_L5
-    vmovdqu     [r8],  %%DATA32B_L6
-    vmovdqu     [r9],  %%DATA32B_L7
+        mov     %%TMP1, [%%OUT_PTRS + 32]
+        mov     %%TMP2, [%%OUT_PTRS + 40]
+        mov     %%TMP3, [%%OUT_PTRS + 48]
+        mov     %%TMP4, [%%OUT_PTRS + 56]
+        vmovdqu [%%TMP1], %%DATA32B_L4
+        vmovdqu [%%TMP2], %%DATA32B_L5
+        vmovdqu [%%TMP3], %%DATA32B_L6
+        vmovdqu [%%TMP4], %%DATA32B_L7
 
 %endmacro
 
 ;
-;   store4B_kstr8()
+; Stores 4 bytes of keystream for 8 lanes
 ;
-;   params
-;
-;   %1 - YMM register with OFS_X3
-;   return
-;
-%macro  store4B_kstr8 1
-    mov         r12, [rsp]
-    mov         r13, [rsp + 8]
-    mov         r14,  [rsp + 16]
-    mov         r15,  [rsp + 24]
-    vpextrd     [r15],  XWORD(%1), 3
-    vpextrd     [r14],  XWORD(%1), 2
-    vpextrd     [r13], XWORD(%1), 1
-    vmovd       [r12], XWORD(%1)
-    add         r12, 4
-    add         r13, 4
-    add         r14, 4
-    add         r15, 4
-    mov         [rsp],      r12
-    mov         [rsp + 8],  r13
-    mov         [rsp + 16], r14
-    mov         [rsp + 24], r15
+%macro  STORE4B_KSTR8 6
+%define %%DATA4B_L07  %1 ; [in] 4 bytes of keystream for lanes 0-7
+%define %%OUT_PTRS    %2 ; [in] Keystream pointers for all 8 lanes
+%define %%TMP1        %3 ; [clobbered] Temporary GP register
+%define %%TMP2        %4 ; [clobbered] Temporary GP register
+%define %%TMP3        %5 ; [clobbered] Temporary GP register
+%define %%TMP4        %6 ; [clobbered] Temporary GP register
 
-    vextracti128 XWORD(%1), %1, 1
-    mov         r12, [rsp + 32]
-    mov         r13, [rsp + 40]
-    mov         r14,  [rsp + 48]
-    mov         r15,  [rsp + 56]
-    vpextrd     [r15],  XWORD(%1), 3
-    vpextrd     [r14],  XWORD(%1), 2
-    vpextrd     [r13], XWORD(%1), 1
-    vmovd       [r12], XWORD(%1)
-    add         r12, 4
-    add         r13, 4
-    add         r14, 4
-    add         r15, 4
-    mov         [rsp + 32], r12
-    mov         [rsp + 40], r13
-    mov         [rsp + 48], r14
-    mov         [rsp + 56], r15
+        mov     %%TMP1, [%%OUT_PTRS]
+        mov     %%TMP2, [%%OUT_PTRS + 8]
+        mov     %%TMP3, [%%OUT_PTRS + 16]
+        mov     %%TMP4, [%%OUT_PTRS + 24]
+        vpextrd [%%TMP4], XWORD(%%DATA4B_L07), 3
+        vpextrd [%%TMP3], XWORD(%%DATA4B_L07), 2
+        vpextrd [%%TMP2], XWORD(%%DATA4B_L07), 1
+        vmovd   [%%TMP1], XWORD(%%DATA4B_L07)
+        mov     DWORD(%%TMP1), 4
+        add     [%%OUT_PTRS],      %%TMP1
+        add     [%%OUT_PTRS + 8],  %%TMP1
+        add     [%%OUT_PTRS + 16], %%TMP1
+        add     [%%OUT_PTRS + 24], %%TMP1
+
+        vextracti128 XWORD(%1), %1, 1
+        mov     %%TMP1, [%%OUT_PTRS + 32]
+        mov     %%TMP2, [%%OUT_PTRS + 40]
+        mov     %%TMP3, [%%OUT_PTRS + 48]
+        mov     %%TMP4, [%%OUT_PTRS + 56]
+        vpextrd [%%TMP4], XWORD(%%DATA4B_L07), 3
+        vpextrd [%%TMP3], XWORD(%%DATA4B_L07), 2
+        vpextrd [%%TMP2], XWORD(%%DATA4B_L07), 1
+        vmovd   [%%TMP1], XWORD(%%DATA4B_L07)
+        mov     DWORD(%%TMP1), 4
+        add     [%%OUT_PTRS + 32], %%TMP1
+        add     [%%OUT_PTRS + 40], %%TMP1
+        add     [%%OUT_PTRS + 48], %%TMP1
+        add     [%%OUT_PTRS + 56], %%TMP1
 
 %endmacro
 
@@ -983,13 +984,13 @@ asm_Zuc256Initialization_8_avx2:
 
         TRANSPOSE8_U32_PRELOADED %%YTMP1, %%YTMP2, %%YTMP3, %%YTMP4, %%YTMP5, %%YTMP6, %%YTMP7, %%YTMP8, %%YTMP9, %%YTMP10
 
-        store32B_kstr8 %%YTMP1, %%YTMP2, %%YTMP3, %%YTMP4, %%YTMP5, %%YTMP6, %%YTMP7, %%YTMP8
+        STORE32B_KSTR8 %%YTMP1, %%YTMP2, %%YTMP3, %%YTMP4, %%YTMP5, %%YTMP6, %%YTMP7, %%YTMP8, rsp, r12, r13, r14, r15
 
 %else ;; NUM_ROUNDS == 8
 %assign %%I 1
 %rep %%NUM_ROUNDS
         vmovdqa APPEND(%%YTMP, %%I), [rsp + 8*8 + (%%I-1)*32]
-        store4B_kstr8 APPEND(%%YTMP, %%I)
+        STORE4B_KSTR8 APPEND(%%YTMP, %%I), rsp, r12, r13, r14, r15
 %assign %%I (%%I + 1)
 %endrep
 %endif ;; NUM_ROUNDS == 8
