@@ -3039,4 +3039,105 @@ GET_NEXT_JOB(IMB_MGR *state)
         return JOBS(state, state->next_job);
 }
 
+/**
+ * Submit multiple jobs to be processed synchronously
+ *
+ * @param [in] state pointer to multi-buffer manager
+ * @param [in] jobs pointer to array of jobs
+ * @param [in] n_jobs number of jobs to process
+ *
+ * @return number of completed jobs
+ */
+__forceinline
+uint32_t submit_burst_and_check(IMB_MGR *state, IMB_JOB *jobs,
+                                const uint32_t n_jobs, const int run_check)
+{
+        uint32_t i, completed_jobs = 0;
+
+        if (run_check) {
+                /* validate jobs */
+                for (i = 0; i < n_jobs; i++) {
+                        IMB_JOB *job = &jobs[i];
+
+                        /* validate job */
+                        if (is_job_invalid(state, job)) {
+                                job->status = IMB_STATUS_INVALID_ARGS;
+                                return 0;
+                        }
+                }
+        }
+
+        /* submit all jobs */
+        for (i = 0; i < n_jobs; i++) {
+                IMB_JOB *job = &jobs[i];
+
+                job->status = IMB_STATUS_BEING_PROCESSED;
+
+                if (job->cipher_mode == IMB_CIPHER_GCM) {
+                        if (job->cipher_direction == IMB_DIR_ENCRYPT)
+                                SUBMIT_JOB_AES_GCM_ENC(state, job);
+                        else
+                                SUBMIT_JOB_AES_GCM_DEC(state, job);
+                        completed_jobs++;
+                } else if (IMB_CIPHER_CHACHA20_POLY1305 == job->cipher_mode) {
+                        SUBMIT_JOB_CHACHA20_POLY1305(state, job);
+                        completed_jobs++;
+                } else {
+                        if (submit_new_job(state, job) != NULL)
+                                completed_jobs++;
+                }
+        }
+
+         /* return if all jobs complete */
+        if (completed_jobs == n_jobs)
+                return completed_jobs;
+
+        /* otherwise complete remaining jobs */
+        for (i = 0; i < n_jobs; i++) {
+                IMB_JOB *job = &jobs[i];
+
+                if (job->status < IMB_STATUS_COMPLETED) {
+                        /* force job to completion */
+                        complete_job(state, job);
+                        completed_jobs++;
+                }
+        }
+
+        return completed_jobs;
+}
+
+uint32_t
+SUBMIT_BURST(IMB_MGR *state, IMB_JOB *jobs, const uint32_t n_jobs)
+{
+        /* reset error status */
+        imb_set_errno(state, 0);
+
+#ifdef SAFE_PARAM
+        if (state == NULL) {
+                imb_set_errno(NULL, IMB_ERR_NULL_MBMGR);
+                return 0;
+        }
+#endif
+
+        return submit_burst_and_check(state, jobs, n_jobs, 1);
+}
+
+uint32_t
+SUBMIT_BURST_NOCHECK(IMB_MGR *state, IMB_JOB *jobs, const uint32_t n_jobs)
+{
+        /* reset error status */
+        imb_set_errno(state, 0);
+
+#ifdef SAFE_PARAM
+        if (state == NULL) {
+                imb_set_errno(NULL, IMB_ERR_NULL_MBMGR);
+                return 0;
+        }
+#endif
+
+        return submit_burst_and_check(state, jobs, n_jobs, 0);
+}
+
+
+
 #endif /* MB_MGR_CODE_H */

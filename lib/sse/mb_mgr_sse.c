@@ -306,6 +306,8 @@ void *poly1305_mac_scalar(IMB_JOB *job);
 #define SUBMIT_JOB_NOCHECK submit_job_nocheck_sse
 #define GET_NEXT_JOB       get_next_job_sse
 #define GET_COMPLETED_JOB  get_completed_job_sse
+#define SUBMIT_BURST       submit_burst_sse
+#define SUBMIT_BURST_NOCHECK submit_burst_nocheck_sse
 
 #define SUBMIT_JOB_AES128_DEC submit_job_aes128_dec_sse
 #define SUBMIT_JOB_AES192_DEC submit_job_aes192_dec_sse
@@ -1220,6 +1222,8 @@ init_mb_mgr_sse_internal(IMB_MGR *state, const int reset_mgrs)
         /* set SSE handlers */
         state->get_next_job        = get_next_job_sse;
         state->submit_job          = submit_job_sse;
+        state->submit_burst        = submit_burst_sse;
+        state->submit_burst_nocheck= submit_burst_nocheck_sse;
         state->submit_job_nocheck  = submit_job_nocheck_sse;
         state->get_completed_job   = get_completed_job_sse;
         state->flush_job           = flush_job_sse;

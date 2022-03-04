@@ -263,6 +263,8 @@ IMB_JOB *flush_job_aes256_ccm_auth_avx(MB_MGR_CCM_OOO *state);
 #define QUEUE_SIZE         queue_size_avx2
 #define GET_NEXT_JOB       get_next_job_avx2
 #define GET_COMPLETED_JOB  get_completed_job_avx2
+#define SUBMIT_BURST       submit_burst_avx2
+#define SUBMIT_BURST_NOCHECK submit_burst_nocheck_avx2
 
 /* ====================================================================== */
 
@@ -890,6 +892,8 @@ init_mb_mgr_avx2_internal(IMB_MGR *state, const int reset_mgrs)
         /* set handlers */
         state->get_next_job        = get_next_job_avx2;
         state->submit_job          = submit_job_avx2;
+        state->submit_burst        = submit_burst_avx2;
+        state->submit_burst_nocheck= submit_burst_nocheck_avx2;
         state->submit_job_nocheck  = submit_job_nocheck_avx2;
         state->get_completed_job   = get_completed_job_avx2;
         state->flush_job           = flush_job_avx2;

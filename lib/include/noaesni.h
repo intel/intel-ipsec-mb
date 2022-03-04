@@ -38,6 +38,14 @@ IMB_DLL_EXPORT uint32_t queue_size_sse_no_aesni(IMB_MGR *state);
 IMB_DLL_EXPORT IMB_JOB *get_completed_job_sse_no_aesni(IMB_MGR *state);
 IMB_DLL_EXPORT IMB_JOB *get_next_job_sse_no_aesni(IMB_MGR *state);
 
+IMB_DLL_EXPORT uint32_t
+submit_burst_sse_no_aesni(IMB_MGR *state,
+                          IMB_JOB *jobs,
+                          const uint32_t n_jobs);
+IMB_DLL_EXPORT uint32_t
+submit_burst_nocheck_sse_no_aesni(IMB_MGR *state, IMB_JOB *jobs,
+                                  const uint32_t n_jobs);
+
 IMB_DLL_EXPORT void
 aes_keyexp_128_sse_no_aesni(const void *key, void *enc_exp_keys,
                             void *dec_exp_keys);
