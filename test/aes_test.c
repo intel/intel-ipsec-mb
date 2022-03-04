@@ -1972,6 +1972,108 @@ end_alloc:
         return ret;
 }
 
+static int
+test_aes_many_burst(struct IMB_MGR *mb_mgr,
+                    void *enc_keys,
+                    void *dec_keys,
+                    const void *iv,
+                    const uint8_t *in_text,
+                    const uint8_t *out_text,
+                    const unsigned text_len,
+                    const int dir,
+                    const int order,
+                    const IMB_CIPHER_MODE cipher,
+                    const int in_place,
+                    const int key_len,
+                    const int num_jobs)
+{
+        struct IMB_JOB *job, jobs[24];
+        uint8_t padding[16];
+        uint8_t **targets = malloc(num_jobs * sizeof(void *));
+        int i, jobs_rx = 0, ret = -1;
+
+        if (targets == NULL)
+                goto end_alloc;
+
+        memset(targets, 0, num_jobs * sizeof(void *));
+        memset(padding, -1, sizeof(padding));
+
+        for (i = 0; i < num_jobs; i++) {
+                targets[i] = malloc(text_len + (sizeof(padding) * 2));
+                if (targets[i] == NULL)
+                        goto end_alloc;
+                memset(targets[i], -1, text_len + (sizeof(padding) * 2));
+                if (in_place) {
+                        /* copy input text to the allocated buffer */
+                        memcpy(targets[i] + sizeof(padding), in_text, text_len);
+                }
+        }
+
+        for (i = 0; i < num_jobs; i++) {
+                job = &jobs[i];
+                job->cipher_direction = dir;
+                job->chain_order = order;
+                if (!in_place) {
+                        job->dst = targets[i] + sizeof(padding);
+                        job->src = in_text;
+                } else {
+                        job->dst = targets[i] + sizeof(padding);
+                        job->src = targets[i] + sizeof(padding);
+                }
+                job->cipher_mode = cipher;
+                job->enc_keys = enc_keys;
+                job->dec_keys = dec_keys;
+                job->key_len_in_bytes = key_len;
+
+                job->iv = iv;
+                job->iv_len_in_bytes = 16;
+                job->cipher_start_src_offset_in_bytes = 0;
+                job->msg_len_to_cipher_in_bytes = text_len;
+                job->user_data = targets[i];
+                job->user_data2 = (void *)((uint64_t)i);
+
+                job->hash_alg = IMB_AUTH_NULL;
+        }
+
+        int completed_jobs = IMB_SUBMIT_BURST(mb_mgr, jobs, num_jobs);
+
+        if (completed_jobs != num_jobs) {
+                int err = imb_get_errno(mb_mgr);
+
+                if (err != 0) {
+                        printf("submit_burst error %d : '%s'\n", err,
+                               imb_get_strerror(err));
+                        goto end;
+                }
+        }
+
+        for (i = 0; i < num_jobs; i++) {
+                job = &jobs[i];
+
+                if (!aes_job_ok(job, out_text, job->user_data, padding,
+                                sizeof(padding), text_len))
+                        goto end;
+                jobs_rx++;
+        }
+
+        if (jobs_rx != num_jobs) {
+                printf("Expected %d jobs, received %d\n", num_jobs, jobs_rx);
+                goto end;
+        }
+        ret = 0;
+
+ end:
+
+ end_alloc:
+        if (targets != NULL) {
+                for (i = 0; i < num_jobs; i++)
+                        free(targets[i]);
+                free(targets);
+        }
+
+        return ret;
+}
+
 static void
 test_aes_vectors(struct IMB_MGR *mb_mgr,
                  struct test_suite_context *ctx128,
@@ -2027,6 +2129,19 @@ test_aes_vectors(struct IMB_MGR *mb_mgr,
                         test_suite_update(ctx, 1, 0);
                 }
 
+                if (test_aes_many_burst(mb_mgr, enc_keys, dec_keys,
+                                        vec_tab[vect].IV,
+                                        vec_tab[vect].P, vec_tab[vect].C,
+                                        (unsigned) vec_tab[vect].Plen,
+                                        IMB_DIR_ENCRYPT, IMB_ORDER_CIPHER_HASH,
+                                        cipher, 0,
+                                        vec_tab[vect].Klen, num_jobs)) {
+                        printf("error #%d encrypt burst\n", vect + 1);
+                        test_suite_update(ctx, 0, 1);
+                } else {
+                        test_suite_update(ctx, 1, 0);
+                }
+
                 if (test_aes_many(mb_mgr, enc_keys, dec_keys,
                                   vec_tab[vect].IV,
                                   vec_tab[vect].C, vec_tab[vect].P,
@@ -2035,6 +2150,19 @@ test_aes_vectors(struct IMB_MGR *mb_mgr,
                                   cipher, 0,
                                   vec_tab[vect].Klen, num_jobs)) {
                         printf("error #%d decrypt\n", vect + 1);
+                        test_suite_update(ctx, 0, 1);
+                } else {
+                        test_suite_update(ctx, 1, 0);
+                }
+
+                if (test_aes_many_burst(mb_mgr, enc_keys, dec_keys,
+                                        vec_tab[vect].IV,
+                                        vec_tab[vect].C, vec_tab[vect].P,
+                                        (unsigned) vec_tab[vect].Plen,
+                                        IMB_DIR_DECRYPT, IMB_ORDER_HASH_CIPHER,
+                                        cipher, 0,
+                                        vec_tab[vect].Klen, num_jobs)) {
+                        printf("error #%d decrypt burst\n", vect + 1);
                         test_suite_update(ctx, 0, 1);
                 } else {
                         test_suite_update(ctx, 1, 0);
@@ -2053,6 +2181,19 @@ test_aes_vectors(struct IMB_MGR *mb_mgr,
                         test_suite_update(ctx, 1, 0);
                 }
 
+                if (test_aes_many_burst(mb_mgr, enc_keys, dec_keys,
+                                        vec_tab[vect].IV,
+                                        vec_tab[vect].P, vec_tab[vect].C,
+                                        (unsigned) vec_tab[vect].Plen,
+                                        IMB_DIR_ENCRYPT, IMB_ORDER_CIPHER_HASH,
+                                        cipher, 1,
+                                        vec_tab[vect].Klen, num_jobs)) {
+                        printf("error #%d encrypt burst in-place\n", vect + 1);
+                        test_suite_update(ctx, 0, 1);
+                } else {
+                        test_suite_update(ctx, 1, 0);
+                }
+
                 if (test_aes_many(mb_mgr, enc_keys, dec_keys,
                                   vec_tab[vect].IV,
                                   vec_tab[vect].C, vec_tab[vect].P,
@@ -2065,6 +2206,20 @@ test_aes_vectors(struct IMB_MGR *mb_mgr,
                 } else {
                         test_suite_update(ctx, 1, 0);
                 }
+
+                if (test_aes_many_burst(mb_mgr, enc_keys, dec_keys,
+                                        vec_tab[vect].IV,
+                                        vec_tab[vect].C, vec_tab[vect].P,
+                                        (unsigned) vec_tab[vect].Plen,
+                                        IMB_DIR_DECRYPT, IMB_ORDER_HASH_CIPHER,
+                                        cipher, 1,
+                                        vec_tab[vect].Klen, num_jobs)) {
+                        printf("error #%d decrypt burst in-place\n", vect + 1);
+                        test_suite_update(ctx, 0, 1);
+                } else {
+                        test_suite_update(ctx, 1, 0);
+                }
+
 	}
 	printf("\n");
 }

@@ -437,6 +437,102 @@ test_aead(struct IMB_MGR *mb_mgr,
                 goto end;
         }
 
+        /*
+         * *******************************************
+         * BURST API TEST
+         * *******************************************
+         */
+
+        /* create job array */
+        IMB_JOB jobs[32] = {0};
+
+        jobs_rx = 0;
+
+        /* reset buffers */
+        for (i = 0; i < num_jobs; i++) {
+                memset(auths[i], -1, 16 + (sizeof(padding) * 2));
+                memset(targets[i], -1, vec->msg_len + (sizeof(padding) * 2));
+
+                if (in_place) {
+                        if (dir == IMB_DIR_ENCRYPT)
+                                memcpy(targets[i] + sizeof(padding),
+                                       vec->plain, vec->msg_len);
+                        else
+                                memcpy(targets[i] + sizeof(padding),
+                                       vec->cipher, vec->msg_len);
+                }
+        }
+
+        /**
+         * Set all job params before submitting burst
+         */
+        for (i = 0; i < num_jobs; i++) {
+                job = &jobs[i];
+                job->cipher_direction = dir;
+                job->chain_order = IMB_ORDER_HASH_CIPHER;
+                job->cipher_mode = IMB_CIPHER_CHACHA20_POLY1305;
+                job->hash_alg = IMB_AUTH_CHACHA20_POLY1305;
+                job->enc_keys = vec->key;
+                job->dec_keys = vec->key;
+                job->key_len_in_bytes = 32;
+
+                job->u.CHACHA20_POLY1305.aad = vec->aad;
+                job->u.CHACHA20_POLY1305.aad_len_in_bytes = vec->aad_len;
+
+                if (in_place)
+                        job->src = targets[i] + sizeof(padding);
+                else
+                        if (dir == IMB_DIR_ENCRYPT)
+                                job->src = vec->plain;
+                        else
+                                job->src = vec->cipher;
+                job->dst = targets[i] + sizeof(padding);
+
+                job->iv = vec->iv;
+                job->iv_len_in_bytes = 12;
+                job->msg_len_to_cipher_in_bytes = vec->msg_len;
+                job->cipher_start_src_offset_in_bytes = 0;
+
+                job->msg_len_to_hash_in_bytes = vec->msg_len;
+                job->hash_start_src_offset_in_bytes = 0;
+                job->auth_tag_output = auths[i] + sizeof(padding);
+                job->auth_tag_output_len_in_bytes = 16;
+
+                job->user_data = auths[i];
+        }
+
+        int completed_jobs = IMB_SUBMIT_BURST(mb_mgr, jobs, num_jobs);
+
+        if (completed_jobs != num_jobs) {
+                int err = imb_get_errno(mb_mgr);
+
+                if (err != 0) {
+                        printf("submit_burst error %d : '%s'\n", err,
+                               imb_get_strerror(err));
+                        goto end;
+                }
+        }
+
+        for (i = 0; i < num_jobs; i++) {
+                job = &jobs[i];
+
+                if (!aead_job_ok(mb_mgr, vec, job, job->user_data,
+                                 padding, sizeof(padding)))
+                        goto end;
+                jobs_rx++;
+        }
+
+        if (jobs_rx != num_jobs) {
+                printf("Expected %d jobs after burst, "
+                       "received %d\n", num_jobs, jobs_rx);
+                goto end;
+        }
+
+        /*
+         * *******************************************
+         * END BURST API TEST
+         * *******************************************
+         */
 
         ret = 0;
 
