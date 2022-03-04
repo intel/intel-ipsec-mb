@@ -528,6 +528,8 @@ void _zuc_eia3_1_buffer_avx(const void *pKey,
         uint32_t T = 0;
         const uint8_t *pIn8 = (const uint8_t *) pBufferIn;
 
+        memset(keyStream, 0, sizeof(keyStream));
+
         asm_ZucInitialization_avx(pKey, pIv, &(zucState));
         asm_ZucGenKeystream16B_avx(pZuc, &zucState);
 
@@ -584,7 +586,9 @@ void _zuc_eia3_4_buffer_avx(const void * const pKey[NUM_AVX_BUFS],
         DECLARE_ALIGNED(uint32_t *pKeyStrArr[NUM_AVX_BUFS], 16) = {NULL};
         unsigned int allCommonBits;
 
+        memset(keyStr, 0, sizeof(keyStr));
         memset(T, 0, sizeof(T));
+
         /* Check if all lengths are equal */
         if ((lengthInBits[0] == lengthInBits[1]) &&
             (lengthInBits[0] == lengthInBits[2]) &&
@@ -778,6 +782,8 @@ void zuc_eia3_4_buffer_job_avx(const void * const pKey[NUM_AVX_BUFS],
         DECLARE_ALIGNED(uint32_t *pKeyStrArr[NUM_AVX_BUFS], 16) = {NULL};
         unsigned int allCommonBits;
 
+        memset(keyStr, 0, sizeof(keyStr));
+
         /* Check if all lengths are equal */
         if ((lengthInBits[0] == lengthInBits[1]) &&
             (lengthInBits[0] == lengthInBits[2]) &&
@@ -921,6 +927,8 @@ void zuc256_eia3_4_buffer_job_avx(const void * const pKey[NUM_AVX_BUFS],
         const uint32_t keyStreamLengthInBits = KEYSTR_ROUND_LEN * 8;
         DECLARE_ALIGNED(uint32_t *pKeyStrArr[NUM_AVX_BUFS], 16) = {NULL};
         unsigned int allCommonBits;
+
+        memset(keyStr, 0, sizeof(keyStr));
 
         /* Check if all lengths are equal */
         if ((lengthInBits[0] == lengthInBits[1]) &&
