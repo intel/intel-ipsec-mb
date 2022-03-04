@@ -107,6 +107,9 @@ typedef cpuset_t cpu_set_t;
 #define IA32_MSR_PERF_GLOBAL_CTR     0x38F
 #define IA32_MSR_CPU_UNHALTED_THREAD 0x30A
 
+#define DEFAULT_BURST_SIZE 32
+#define MAX_BURST_SIZE 256
+
 enum arch_type_e {
         ARCH_SSE = 0,
         ARCH_AVX,
@@ -908,6 +911,9 @@ static uint32_t pb_mod = 0;
 
 static int silent_progress_bar = 0;
 static int plot_output_option = 0;
+
+static uint32_t burst_api = 0;  /* burst API enable/disable flag */
+static uint32_t burst_size = 0; /* num jobs to pass to burst API */
 
 /* Return rdtsc to core cycle scale factor */
 static double get_tsc_to_core_scale(const int turbo)
@@ -1879,44 +1885,84 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
 #endif
                 time = __rdtscp(&aux);
 
-        for (i = 0; i < num_iter; i++) {
-                job = IMB_GET_NEXT_JOB(mb_mgr);
-                *job = job_template;
+        if (burst_api) {
+                IMB_JOB jobs[MAX_BURST_SIZE];
+                uint32_t num_jobs = num_iter;
 
-                set_job_fields(job, p_buffer, p_keys, i, index);
+                while (num_jobs) {
+                        uint32_t n_jobs =
+                                (num_jobs / burst_size) ? burst_size : num_jobs;
 
-                index = get_next_index(index);
+                        /* set all job params */
+                        for (i = 0; i < n_jobs; i++) {
+                                job = &jobs[i];
+                                *job = job_template;
+
+                                set_job_fields(job, p_buffer, p_keys, i, index);
+
+                                index = get_next_index(index);
+                        }
+                        /* submit burst */
 #ifdef DEBUG
-                job = IMB_SUBMIT_JOB(mb_mgr);
+                        const uint32_t completed_jobs =
+                                IMB_SUBMIT_BURST(mb_mgr, jobs, n_jobs);
+
+                        if (completed_jobs != n_jobs) {
+                                const int err = imb_get_errno(mb_mgr);
+
+                                if (err != 0) {
+                                        printf("submit_burst error %d : '%s'\n",
+                                               err, imb_get_strerror(err));
+                                }
+                        }
 #else
-                job = IMB_SUBMIT_JOB_NOCHECK(mb_mgr);
+                        IMB_SUBMIT_BURST_NOCHECK(mb_mgr, jobs, n_jobs);
 #endif
-                while (job) {
+                        num_jobs -= n_jobs;
+                }
+        } else {
+                for (i = 0; i < num_iter; i++) {
+                        job = IMB_GET_NEXT_JOB(mb_mgr);
+                        *job = job_template;
+
+                        set_job_fields(job, p_buffer, p_keys, i, index);
+
+                        index = get_next_index(index);
+#ifdef DEBUG
+                        job = IMB_SUBMIT_JOB(mb_mgr);
+#else
+                        job = IMB_SUBMIT_JOB_NOCHECK(mb_mgr);
+#endif
+                        while (job) {
+#ifdef DEBUG
+                                if (job->status != IMB_STATUS_COMPLETED) {
+                                        fprintf(stderr,
+                                                "failed job, status:%d\n",
+                                                job->status);
+                                        return 1;
+                                }
+#endif
+                                job = IMB_GET_COMPLETED_JOB(mb_mgr);
+                        }
+                }
+
+                while ((job = IMB_FLUSH_JOB(mb_mgr))) {
 #ifdef DEBUG
                         if (job->status != IMB_STATUS_COMPLETED) {
-                                fprintf(stderr, "failed job, status:%d\n",
-                                        job->status);
+                                const int errc = imb_get_errno(mb_mgr);
+
+                                fprintf(stderr,
+                                        "failed job, status:%d, "
+                                        "error code:%d, %s\n", job->status,
+                                        errc, imb_get_strerror(errc));
                                 return 1;
                         }
-#endif
-                        job = IMB_GET_COMPLETED_JOB(mb_mgr);
-                }
-        }
-
-        while ((job = IMB_FLUSH_JOB(mb_mgr))) {
-#ifdef DEBUG
-                if (job->status != IMB_STATUS_COMPLETED) {
-                        const int errc = imb_get_errno(mb_mgr);
-
-                        fprintf(stderr,
-                                "failed job, status:%d, error code:%d, %s\n",
-                                job->status, errc, imb_get_strerror(errc));
-                        return 1;
-                }
 #else
-                (void)job;
+                        (void)job;
 #endif
-        }
+                }
+
+        } /* if burst api */
 
 #ifndef _WIN32
         if (use_unhalted_cycles)
@@ -2618,7 +2664,9 @@ static void usage(void)
                 "        (Use when turbo enabled)\n"
                 "--no-tsc-detect: don't check TSC to core scaling\n"
                 "--tag-size: modify tag size\n"
-                "--plot: Adjust text output for direct use with plot output\n",
+                "--plot: Adjust text output for direct use with plot output\n"
+                "--burst-api: use burst API for perf tests\n"
+                "--burst-size: number of jobs to submit per burst\n",
                 MAX_NUM_THREADS + 1);
 }
 
@@ -3190,10 +3238,30 @@ int main(int argc, char *argv[])
                 } else if (strcmp(argv[i], "--tag-size") == 0) {
                         i = get_next_num_arg((const char * const *)argv, i,
                                              argc, &tag_size, sizeof(tag_size));
+                } else if (strcmp(argv[i], "--burst-api") == 0) {
+                        burst_api = 1;
+                } else if (strcmp(argv[i], "--burst-size") == 0) {
+                        i = get_next_num_arg((const char * const *)argv, i,
+                                             argc, &burst_size,
+                                             sizeof(burst_size));
+                        if (burst_size > (MAX_BURST_SIZE)) {
+                                fprintf(stderr, "Burst size cannot be "
+                                        "more than %d\n", MAX_BURST_SIZE);
+                                return EXIT_FAILURE;
+                        }
                 } else {
                         usage();
                         return EXIT_FAILURE;
                 }
+
+        if (burst_size != 0 && burst_api == 0) {
+                fprintf(stderr, "--burst-size can only be used with "
+                        "--burst-api\n");
+                return EXIT_FAILURE;
+        }
+
+        if (burst_api != 0 && burst_size == 0)
+                burst_size = DEFAULT_BURST_SIZE;
 
         if (aead_algo_set == 0 && cipher_algo_set == 0 &&
             hash_algo_set == 0) {
@@ -3202,6 +3270,7 @@ int main(int argc, char *argv[])
                 usage();
                 return EXIT_FAILURE;
         }
+
         if (aead_algo_set && (cipher_algo_set || hash_algo_set)) {
                 fprintf(stderr, "AEAD algorithm cannot be used "
                         "combined with another cipher/hash "
@@ -3341,6 +3410,15 @@ int main(int argc, char *argv[])
                 "Tool version: %s\n"
                 "Library version: %s\n",
                 sha_size_incr, IMB_VERSION_STR, imb_get_version_str());
+
+        fprintf(stderr, "API type: %s", burst_api ? "burst" : "job");
+        if (burst_api)
+                fprintf(stderr, " (burst size = %u)\n", burst_size);
+        else
+                fprintf(stderr, "\n");
+
+        fprintf(stderr, "GCM API type: %s\n",
+                use_gcm_job_api ? (burst_api ? "burst" : "job") : "direct");
 
         if (custom_job_params.cipher_mode == TEST_GCM)
                 fprintf(stderr, "GCM AAD = %"PRIu64"\n", gcm_aad_size);
