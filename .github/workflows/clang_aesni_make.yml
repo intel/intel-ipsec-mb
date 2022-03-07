@@ -1,0 +1,20 @@
+name: Clang aesni make
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - run: sudo apt install -y nasm clang
+    - uses: actions/checkout@v2
+      with:
+        repository: intel/intel-ipsec-mb
+    - name: make aesni
+      run: make CC=clang AESNI_EMU=y -j

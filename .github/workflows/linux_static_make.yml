@@ -1,0 +1,20 @@
+name: Linux static make
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - run: sudo apt install -y nasm
+    - uses: actions/checkout@v2
+      with:
+        repository: intel/intel-ipsec-mb
+    - name: make static
+      run: make SHARED=n -j
