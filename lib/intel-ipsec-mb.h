@@ -222,6 +222,7 @@ typedef enum {
         IMB_ERR_JOB_NULL_XCBC_K1_EXP,
         IMB_ERR_JOB_NULL_XCBC_K2,
         IMB_ERR_JOB_NULL_XCBC_K3,
+        IMB_ERR_JOB_CIPH_DIR,
         /* add new error types above this comment */
         IMB_ERR_MAX       /* don't move this one */
 } IMB_ERR;

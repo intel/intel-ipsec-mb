@@ -1373,6 +1373,12 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job)
          * of XGEM header */
         const uint64_t max_pon_len = (1 << 14) + 8;
 
+        if (job->cipher_direction != IMB_DIR_DECRYPT &&
+            job->cipher_direction != IMB_DIR_ENCRYPT &&
+            job->cipher_mode != IMB_CIPHER_NULL) {
+                imb_set_errno(state, IMB_ERR_JOB_CIPH_DIR);
+                return 1;
+        }
         switch (job->cipher_mode) {
         case IMB_CIPHER_CBC:
         case IMB_CIPHER_CBCS_1_9:

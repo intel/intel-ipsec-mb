@@ -63,6 +63,7 @@ enum {
       TEST_CIPH_MSG_LEN_GT_MAX,
       TEST_CIPH_NEXT_IV_NULL,
       TEST_CIPH_IV_LEN,
+      TEST_CIPH_DIR,
       TEST_INVALID_PON_PLI = 300,
 };
 
@@ -1139,6 +1140,40 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                                         return 1;
                                 printf(".");
                         }
+         /*
+         * CIPHER_DIR = Invalid dir
+         */
+        for (dir = 0; dir <= 10; dir++) {
+                /* skip valid directions */
+                if (dir == IMB_DIR_ENCRYPT || dir == IMB_DIR_DECRYPT)
+                        continue;
+
+                for (cipher = IMB_CIPHER_CBC;
+                     cipher < IMB_CIPHER_NUM; cipher++) {
+
+                        if (cipher == IMB_CIPHER_NULL ||
+                            cipher == IMB_CIPHER_CUSTOM)
+                                continue;
+
+                        /*
+                         * Skip cipher algorithms belonging to AEAD
+                         * algorithms, as the test is for cipher
+                         * only algorithms */
+                        if (check_aead(hash, cipher))
+                                continue;
+
+                        order = IMB_ORDER_CIPHER_HASH;
+
+                        fill_in_job(&template_job, cipher, dir,
+                                    hash, order, &chacha_ctx, &gcm_ctx);
+
+                        if (!is_submit_invalid(mb_mgr, &template_job,
+                                               TEST_CIPH_DIR,
+                                               IMB_ERR_JOB_CIPH_DIR))
+                                return 1;
+                        printf(".");
+                }
+        }
 
         /* ======== (encrypt test)
          * AES_ENC_KEY_EXPANDED = NULL
