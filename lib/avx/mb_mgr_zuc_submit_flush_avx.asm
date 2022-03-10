@@ -325,24 +325,20 @@ mksection .text
 %assign I (I + 1)
 %endrep
 
-        RESERVE_STACK_SPACE 4
+        RESERVE_STACK_SPACE 5
 
         lea     arg1, [r12 + _zuc_args_keys]
         lea     arg2, [r12 + _zuc_args_IV]
         lea     arg3, [r12 + _zuc_state]
-%if %%KEY_SIZE == 256
-        ;; Setting "tag size" to 2 in case of ciphering
-        ;; (dummy size, just for constant selecion at Initialization)
-        mov     arg4, 2
-%endif
 
 %if %%KEY_SIZE == 128
         call    asm_ZucInitialization_4_avx
 %else
+        mov     arg5, 0 ; Tag size = 0, arg4 not used
         call    asm_Zuc256Initialization_4_avx
 %endif
 
-        RESTORE_STACK_SPACE 4
+        RESTORE_STACK_SPACE 5
 
         cmp     byte [r12 + _zuc_init_not_done], 0x0f ; Init done for all lanes
         je      %%skip_submit_restoring_state
@@ -529,24 +525,20 @@ APPEND(%%skip_eea3_,I):
 %assign I (I + 1)
 %endrep
 
-        RESERVE_STACK_SPACE 4
+        RESERVE_STACK_SPACE 5
 
         lea     arg1, [r12 + _zuc_args_keys]
         lea     arg2, [r12 + _zuc_args_IV]
         lea     arg3, [r12 + _zuc_state]
-%if %%KEY_SIZE == 256
-        ;; Setting "tag size" to 2 in case of ciphering
-        ;; (dummy size, just for constant selecion at Initialization)
-        mov     arg4, 2
-%endif
 
 %if %%KEY_SIZE == 128
         call    asm_ZucInitialization_4_avx
 %else
+        mov     arg5, 0 ; Tag size = 0, arg4 not used
         call    asm_Zuc256Initialization_4_avx
 %endif
 
-        RESTORE_STACK_SPACE 4
+        RESTORE_STACK_SPACE 5
 
         cmp     word [r12 + _zuc_init_not_done], 0x0f ; Init done for all lanes
         je      %%skip_flush_restoring_state

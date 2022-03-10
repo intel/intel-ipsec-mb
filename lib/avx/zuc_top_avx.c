@@ -916,7 +916,7 @@ void zuc256_eia3_4_buffer_job_avx(const void * const pKey[NUM_AVX_BUFS],
         const uint8_t *pIn8[NUM_AVX_BUFS] = {NULL};
         uint32_t remainCommonBits;
         uint32_t numKeyStr = 0;
-        uint8_t T[NUM_AVX_BUFS*4] = {0};
+        DECLARE_ALIGNED(uint8_t T[NUM_AVX_BUFS*4], 16) = {0};
         const uint32_t keyStreamLengthInBits = KEYSTR_ROUND_LEN * 8;
         DECLARE_ALIGNED(uint32_t *pKeyStrArr[NUM_AVX_BUFS], 16) = {NULL};
         unsigned int allCommonBits;
@@ -947,13 +947,7 @@ void zuc256_eia3_4_buffer_job_avx(const void * const pKey[NUM_AVX_BUFS],
         }
 
         /* TODO: Handle 8 and 16-byte digest cases */
-        asm_Zuc256Initialization_4_avx(&keys, ivs, &state, tag_size);
-
-        asm_ZucGenKeystream4B_4_avx(&state, pKeyStrArr);
-
-        /* Initialize the tag with the first 4 bytes of the keystream */
-        for (i = 0; i < NUM_AVX_BUFS; i++)
-                memcpy(&T[i], pKeyStrArr[i], 4);
+        asm_Zuc256Initialization_4_avx(&keys, ivs, &state, T, tag_size);
 
         /* Generate 16 bytes at a time */
         asm_ZucGenKeystream16B_4_avx(&state, pKeyStrArr);

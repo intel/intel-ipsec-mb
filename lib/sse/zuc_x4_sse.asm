@@ -687,8 +687,8 @@ mksection .text
 ; The macro clobbers XMM0-15
 ;
 %macro REORDER_LFSR 2
-%define %%STATE      %1
-%define %%NUM_ROUNDS %2
+%define %%STATE      %1 ; [in] Pointer to LFSR state
+%define %%NUM_ROUNDS %2 ; [immediate] Number of key generation rounds
 
 %if %%NUM_ROUNDS != 16
 %assign %%i 0

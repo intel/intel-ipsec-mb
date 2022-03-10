@@ -314,6 +314,7 @@ IMB_DLL_LOCAL void asm_Zuc256Initialization_4_gfni_sse(ZucKey4_t *pKeys,
 IMB_DLL_LOCAL void asm_Zuc256Initialization_4_avx(ZucKey4_t *pKeys,
                                                   const uint8_t *ivs,
                                                   ZucState4_t *pState,
+                                                  void *tags,
                                                   const uint64_t tag_sz);
 
 

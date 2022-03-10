@@ -1091,7 +1091,7 @@ void _zuc256_eia3_4_buffer_job(const void * const pKey[NUM_SSE_BUFS],
         const uint8_t *pIn8[NUM_SSE_BUFS] = {NULL};
         uint32_t remainCommonBits;
         uint32_t dataDigested = 0;
-        uint8_t T[NUM_SSE_BUFS*16] = {0};
+        DECLARE_ALIGNED(uint8_t T[NUM_SSE_BUFS*16], 16) = {0};
         const uint32_t keyStreamLengthInBits = KEYSTR_ROUND_LEN * 8;
         DECLARE_ALIGNED(uint32_t *pKeyStrArr[NUM_SSE_BUFS], 16) = {NULL};
         unsigned int allCommonBits;
