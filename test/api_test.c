@@ -800,8 +800,8 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
                                     hash == IMB_AUTH_CRC8_WIMAX_OFDMA_HCS ||
                                     hash == IMB_AUTH_CRC7_FP_HEADER ||
                                     hash == IMB_AUTH_CRC6_IUUP_HEADER ||
-                                    hash == IMB_AUTH_GHASH ||
-                                    hash == IMB_AUTH_POLY1305)
+                                    hash == IMB_AUTH_POLY1305 ||
+                                    hash == IMB_AUTH_GHASH)
                                         continue;
 
                                 /*
@@ -1759,7 +1759,9 @@ submit_reset_check_job(struct IMB_MGR *mb_mgr,
         if (next_job->status != IMB_STATUS_COMPLETED) {
                 printf("Returned job's status is not completed\n");
                 printf("cipher = %u\n", cipher);
-                printf("imb errno = %u\n", mb_mgr->imb_errno);
+                printf("imb errno = %u (%s)\n",
+                       mb_mgr->imb_errno,
+                       imb_get_strerror(mb_mgr->imb_errno));
                 exit(0);
         }
 

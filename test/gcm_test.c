@@ -2014,12 +2014,13 @@ test_gcm_std_vectors(struct test_suite_context *ts128,
 }
 
 static void
-test_ghash(struct test_suite_context *ts)
+test_ghash(struct test_suite_context *ts, const int use_job_api)
 {
 	const int vectors_cnt = DIM(ghash_vectors);
 	int vect;
 
-	printf("GHASH test vectors:\n");
+	printf("GHASH test vectors (%s API):\n",
+               use_job_api ? "job" : "direct");
 	for (vect = 0; vect < vectors_cnt; vect++) {
 	        struct gcm_key_data gdata_key;
                 struct gcm_ctr_vector const *vector = &ghash_vectors[vect];
@@ -2028,8 +2029,44 @@ test_ghash(struct test_suite_context *ts)
                 memset(&gdata_key, 0, sizeof(struct gcm_key_data));
                 memset(T_test, 0, sizeof(T_test));
                 IMB_GHASH_PRE(p_gcm_mgr, vector->K, &gdata_key);
-                IMB_GHASH(p_gcm_mgr, &gdata_key, vector->P, vector->Plen,
-                          T_test, vector->Tlen);
+
+                if (!use_job_api) {
+                        IMB_GHASH(p_gcm_mgr, &gdata_key, vector->P,
+                                  vector->Plen, T_test, vector->Tlen);
+                } else {
+                        IMB_JOB *job = IMB_GET_NEXT_JOB(p_gcm_mgr);
+
+                        if (!job) {
+                                fprintf(stderr,
+                                        "failed to get job for ghash\n");
+                                return;
+                        }
+
+                        job->cipher_mode = IMB_CIPHER_NULL;
+                        job->hash_alg = IMB_AUTH_GHASH;
+                        job->u.GHASH._key = &gdata_key;
+                        job->u.GHASH._init_tag = T_test;
+                        job->src = vector->P;
+                        job->msg_len_to_hash_in_bytes = vector->Plen;
+                        job->hash_start_src_offset_in_bytes = UINT64_C(0);
+                        job->auth_tag_output = T_test;
+                        job->auth_tag_output_len_in_bytes = vector->Tlen;
+
+                        job = IMB_SUBMIT_JOB(p_gcm_mgr);
+                        while (job) {
+                                if (job->status != IMB_STATUS_COMPLETED)
+                                        fprintf(stderr,
+                                                "failed job, status:%d\n",
+                                                job->status);
+                                job = IMB_GET_COMPLETED_JOB(p_gcm_mgr);
+                        }
+                        while ((job = IMB_FLUSH_JOB(p_gcm_mgr)) != NULL) {
+                                if (job->status != IMB_STATUS_COMPLETED)
+                                        fprintf(stderr,
+                                                "failed job, status:%d\n",
+                                                job->status);
+                        }
+                }
 
 	        if (check_data(T_test, vector->T, vector->Tlen,
                                "generated tag (T)"))
@@ -2524,7 +2561,8 @@ int gcm_test(IMB_MGR *p_mgr)
         errors += test_suite_end(&ts256);
 
         test_suite_start(&ts128, "GHASH");
-        test_ghash(&ts128);
+        test_ghash(&ts128, 0);
+        test_ghash(&ts128, 1);
         errors += test_suite_end(&ts128);
 
 	return errors;

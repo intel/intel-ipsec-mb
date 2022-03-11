@@ -12,6 +12,9 @@ Library
 Fixes
 - Fixed 23-byte IV expansion for ZUC-256 (intel/intel-ipsec-mb#102)
 
+Test Applications
+- GHASH JOB API support added in the test application
+
 v1.2 February 2022
 ========================================================================
 
