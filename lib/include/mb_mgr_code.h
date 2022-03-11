@@ -973,6 +973,22 @@ process_gmac(IMB_MGR *state, IMB_JOB *job, const IMB_KEY_SIZE_BYTES key_size)
         }
 }
 
+__forceinline IMB_JOB *process_ghash(IMB_MGR *state, IMB_JOB *job)
+{
+        /* copy initial tag value to the destination */
+        memcpy(job->auth_tag_output, job->u.GHASH._init_tag,
+               job->auth_tag_output_len_in_bytes);
+
+        /* compute new tag value */
+        IMB_GHASH(state, job->u.GHASH._key,
+                  job->src + job->hash_start_src_offset_in_bytes,
+                  job->msg_len_to_hash_in_bytes,
+                  job->auth_tag_output, job->auth_tag_output_len_in_bytes);
+
+        job->status |= IMB_STATUS_COMPLETED_AUTH;
+        return job;
+}
+
 __forceinline
 IMB_JOB *
 SUBMIT_JOB_HASH(IMB_MGR *state, IMB_JOB *job)
@@ -1166,11 +1182,13 @@ SUBMIT_JOB_HASH(IMB_MGR *state, IMB_JOB *job)
                 CRC(IMB_CRC6_IUUP_HEADER, state, job);
                 job->status |= IMB_STATUS_COMPLETED_AUTH;
                 return job;
+        case IMB_AUTH_GHASH:
+                return process_ghash(state, job);
+        default:
                 /**
                  * assume IMB_AUTH_GCM, IMB_AUTH_PON_CRC_BIP,
-                 *  IMB_AUTH_SNOW_V_AEAD or IMB_AUTH_NULL
+                 * IMB_AUTH_SNOW_V_AEAD or IMB_AUTH_NULL
                  */
-        default:
                 job->status |= IMB_STATUS_COMPLETED_AUTH;
                 return job;
         }
@@ -2265,6 +2283,7 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job)
                         return 1;
                 }
                 if (job->u.GMAC._key == NULL) {
+                        /* @todo change to IMB_ERR_JOB_NULL_AUTH_KEY */
                         imb_set_errno(state, IMB_ERR_JOB_NULL_KEY);
                         return 1;
                 }
@@ -2274,6 +2293,29 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job)
                 }
                 if (job->u.GMAC.iv_len_in_bytes == 0) {
                         imb_set_errno(state, IMB_ERR_JOB_IV_LEN);
+                        return 1;
+                }
+                if (job->msg_len_to_hash_in_bytes != 0 && job->src == NULL) {
+                        imb_set_errno(state, IMB_ERR_JOB_NULL_SRC);
+                        return 1;
+                }
+                break;
+        case IMB_AUTH_GHASH:
+                if (job->auth_tag_output_len_in_bytes < UINT64_C(1) ||
+                    job->auth_tag_output_len_in_bytes > UINT64_C(16)) {
+                        imb_set_errno(state, IMB_ERR_JOB_AUTH_TAG_LEN);
+                        return 1;
+                }
+                if (job->auth_tag_output == NULL) {
+                        imb_set_errno(state, IMB_ERR_JOB_NULL_AUTH);
+                        return 1;
+                }
+                if (job->u.GHASH._key == NULL) {
+                        imb_set_errno(state, IMB_ERR_JOB_NULL_AUTH_KEY);
+                        return 1;
+                }
+                if (job->u.GHASH._init_tag == NULL) {
+                        imb_set_errno(state, IMB_ERR_JOB_NULL_GHASH_INIT_TAG);
                         return 1;
                 }
                 if (job->msg_len_to_hash_in_bytes != 0 && job->src == NULL) {

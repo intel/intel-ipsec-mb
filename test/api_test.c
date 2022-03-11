@@ -54,6 +54,8 @@ enum {
       TEST_AUTH_NULL_XCBC_K1_EXP,
       TEST_AUTH_NULL_XCBC_K2,
       TEST_AUTH_NULL_XCBC_K3,
+      TEST_AUTH_NULL_GHASH_KEY,
+      TEST_AUTH_NULL_GHASH_INIT_TAG,
       TEST_CIPH_SRC_NULL = 200,
       TEST_CIPH_DST_NULL,
       TEST_CIPH_IV_NULL,
@@ -228,6 +230,7 @@ fill_in_job(struct IMB_JOB *job,
                 4,  /* IMB_AUTH_CRC8_WIMAX_OFDMA_HCS */
                 4,  /* IMB_AUTH_CRC7_FP_HEADER */
                 4,  /* IMB_AUTH_CRC6_IUUP_HEADER */
+                16, /* IMB_AUTH_GHASH */
         };
         static DECLARE_ALIGNED(uint8_t dust_bin[2048], 64);
         static void *ks_ptrs[3];
@@ -482,6 +485,11 @@ fill_in_job(struct IMB_JOB *job,
                 job->u.GMAC._key = (struct gcm_key_data *) dust_bin;
                 job->u.GMAC._iv = dust_bin;
                 job->u.GMAC.iv_len_in_bytes = 12;
+                job->auth_tag_output_len_in_bytes = 16;
+                break;
+        case IMB_AUTH_GHASH:
+                job->u.GHASH._key = (struct gcm_key_data *) dust_bin;
+                job->u.GHASH._init_tag = dust_bin;
                 job->auth_tag_output_len_in_bytes = 16;
                 break;
         case IMB_AUTH_POLY1305:
@@ -792,6 +800,7 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
                                     hash == IMB_AUTH_CRC8_WIMAX_OFDMA_HCS ||
                                     hash == IMB_AUTH_CRC7_FP_HEADER ||
                                     hash == IMB_AUTH_CRC6_IUUP_HEADER ||
+                                    hash == IMB_AUTH_GHASH ||
                                     hash == IMB_AUTH_POLY1305)
                                         continue;
 
@@ -1018,6 +1027,37 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
                         if (!is_submit_invalid(mb_mgr, job,
                                                TEST_AUTH_NULL_XCBC_K3,
                                                IMB_ERR_JOB_NULL_XCBC_K3))
+                                return 1;
+                        printf(".");
+                }
+
+        /*
+         * Invalid GHASH parameters
+         */
+        for (order = IMB_ORDER_CIPHER_HASH; order <= IMB_ORDER_HASH_CIPHER;
+             order++)
+                for (dir = IMB_DIR_ENCRYPT; dir <= IMB_DIR_DECRYPT; dir++) {
+                        IMB_JOB *job = &template_job;
+
+                        hash = IMB_AUTH_GHASH;
+
+                        fill_in_job(job, cipher, dir,
+                                    hash, order, &chacha_ctx,
+                                    &gcm_ctx);
+                        job->u.GHASH._key = NULL;
+                        if (!is_submit_invalid(mb_mgr, job,
+                                               TEST_AUTH_NULL_GHASH_KEY,
+                                               IMB_ERR_JOB_NULL_AUTH_KEY))
+                                return 1;
+                        printf(".");
+
+                        fill_in_job(job, cipher, dir,
+                                    hash, order, &chacha_ctx,
+                                    &gcm_ctx);
+                        job->u.GHASH._init_tag = NULL;
+                        if (!is_submit_invalid(mb_mgr, job,
+                                               TEST_AUTH_NULL_GHASH_INIT_TAG,
+                                               IMB_ERR_JOB_NULL_GHASH_INIT_TAG))
                                 return 1;
                         printf(".");
                 }

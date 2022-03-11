@@ -223,6 +223,7 @@ typedef enum {
         IMB_ERR_JOB_NULL_XCBC_K2,
         IMB_ERR_JOB_NULL_XCBC_K3,
         IMB_ERR_JOB_CIPH_DIR,
+        IMB_ERR_JOB_NULL_GHASH_INIT_TAG,
         /* add new error types above this comment */
         IMB_ERR_MAX       /* don't move this one */
 } IMB_ERR;
@@ -429,6 +430,7 @@ typedef enum {
         IMB_AUTH_CRC8_WIMAX_OFDMA_HCS,  /**< CRC8-WIMAX-OFDMA-HCS */
         IMB_AUTH_CRC7_FP_HEADER,        /**< CRC7-FP-HEADER */
         IMB_AUTH_CRC6_IUUP_HEADER,      /**< CRC6-IUUP-HEADER */
+        IMB_AUTH_GHASH,                 /**< GHASH */
         IMB_AUTH_NUM
 } IMB_HASH_ALG;
 
@@ -565,6 +567,11 @@ typedef struct IMB_JOB {
                         uint64_t iv_len_in_bytes;
                         /**< Authentication IV length in bytes */
                 } GMAC; /**< AES-GMAC specific fields */
+                struct _GHASH_specific_fields {
+                        const struct gcm_key_data *_key;
+                        /**< Expanded GHASH key */
+                        const void *_init_tag; /**< initial tag value */
+                } GHASH; /**< GHASH specific fields */
                 struct _POLY1305_specific_fields {
                         const void *_key;
                         /**< Poly1305 key */

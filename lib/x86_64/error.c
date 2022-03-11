@@ -84,7 +84,8 @@ IMB_DLL_LOCAL const int imb_errno_types[] = {
         IMB_ERR_JOB_NULL_XCBC_K1_EXP,
         IMB_ERR_JOB_NULL_XCBC_K2,
         IMB_ERR_JOB_NULL_XCBC_K3,
-        IMB_ERR_JOB_CIPH_DIR
+        IMB_ERR_JOB_CIPH_DIR,
+        IMB_ERR_JOB_NULL_GHASH_INIT_TAG
 };
 
 #ifdef DEBUG
@@ -163,6 +164,8 @@ imb_get_strerror(int errnum)
                 return "Null pointer to XCBC K2";
         case IMB_ERR_JOB_NULL_XCBC_K3:
                 return "Null pointer to XCBC K3";
+        case IMB_ERR_JOB_NULL_GHASH_INIT_TAG:
+                return "Null pointer to GHASH initial tag value";
         case IMB_ERR_NULL_SRC:
                 return "Null source pointer (direct API)";
         case IMB_ERR_NULL_DST:
