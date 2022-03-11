@@ -918,7 +918,7 @@ void zuc256_eia3_4_buffer_job_avx(const void * const pKey[NUM_AVX_BUFS],
         const uint8_t *pIn8[NUM_AVX_BUFS] = {NULL};
         uint32_t remainCommonBits;
         uint32_t numKeyStr = 0;
-        DECLARE_ALIGNED(uint8_t T[NUM_AVX_BUFS*4], 16) = {0};
+        DECLARE_ALIGNED(uint8_t T[NUM_AVX_BUFS*16], 16) = {0};
         const uint32_t keyStreamLengthInBits = KEYSTR_ROUND_LEN * 8;
         DECLARE_ALIGNED(uint32_t *pKeyStrArr[NUM_AVX_BUFS], 16) = {NULL};
         unsigned int allCommonBits;
@@ -961,13 +961,19 @@ void zuc256_eia3_4_buffer_job_avx(const void * const pKey[NUM_AVX_BUFS],
         while (remainCommonBits >= keyStreamLengthInBits) {
                 remainCommonBits -= keyStreamLengthInBits;
                 numKeyStr++;
-                /* Generate the next key stream 4 bytes or 16 bytes */
-                if (!remainCommonBits && allCommonBits)
-                        asm_ZucGenKeystream4B_4_avx(&state, pKeyStrArr);
-                else
+                /* Generate the next key stream 4/8 bytes or 16 bytes */
+                if (!remainCommonBits && allCommonBits) {
+                        if (tag_size == 4)
+                                asm_ZucGenKeystream4B_4_avx(&state, pKeyStrArr);
+                        else if (tag_size == 8)
+                                asm_ZucGenKeystream8B_4_avx(&state, pKeyStrArr);
+                        else
+                                asm_ZucGenKeystream16B_4_avx(&state,
+                                                             pKeyStrArr);
+                } else
                         asm_ZucGenKeystream16B_4_avx(&state, pKeyStrArr);
                 for (i = 0; i < NUM_AVX_BUFS; i++) {
-                        uint32_t *tag = (uint32_t *) &T[i*4];
+                        void *tag = (void *) &T[i*tag_size];
 
                         if (job_in_lane[i] == NULL)
                                 continue;
@@ -979,7 +985,7 @@ void zuc256_eia3_4_buffer_job_avx(const void * const pKey[NUM_AVX_BUFS],
 
         /* Process each packet separately for the remaining bits */
         for (i = 0; i < NUM_AVX_BUFS; i++) {
-                uint32_t *tag = (uint32_t *) &T[i*4];
+                void *tag = (void *) &T[i*tag_size];
 
                 if (job_in_lane[i] == NULL)
                         continue;
@@ -987,11 +993,15 @@ void zuc256_eia3_4_buffer_job_avx(const void * const pKey[NUM_AVX_BUFS],
                 uint32_t remainBits = lengthInBits[i] -
                                       numKeyStr*keyStreamLengthInBits;
                 uint32_t *keyStr32 = (uint32_t *) keyStr[i];
+                const uint32_t N = remainBits + ((uint32_t) tag_size << 3);
+                uint32_t L = ((N + 31) / ZUC_WORD_BITS);
 
-                /* If remaining bits are more than 4 bytes, we need to generate
-                 * at least 4B more of keystream, so we need to copy
-                 * the zuc state to single packet state first */
-                if (remainBits > 32) {
+                /* 4 KS words are generated already */
+                L = (L > 4) ? (L - 4) : 0;
+
+                /* Copy the ZUC state to single packet state,
+                 * if more KS is needed */
+                if (L > 0) {
                         singlePktState.lfsrState[0] = state.lfsrState[0][i];
                         singlePktState.lfsrState[1] = state.lfsrState[1][i];
                         singlePktState.lfsrState[2] = state.lfsrState[2][i];
@@ -1016,24 +1026,24 @@ void zuc256_eia3_4_buffer_job_avx(const void * const pKey[NUM_AVX_BUFS],
                 while (remainBits >= keyStreamLengthInBits) {
                         remainBits -= keyStreamLengthInBits;
 
-                        /* Generate the next key stream 4 bytes or 16 bytes */
-                        if (!remainBits)
-                                asm_ZucGenKeystream_avx(&keyStr32[4],
-                                                        &singlePktState, 1);
-                        else
+                        /* Generate the next key stream (16 bytes max) */
+                        if (L > 3) {
                                 asm_ZucGenKeystream16B_avx(&keyStr32[4],
                                                            &singlePktState);
+                                L -= 4;
+                        } else {
+                                asm_ZucGenKeystream_avx(&keyStr32[4],
+                                                        &singlePktState, L);
+                                L = 0;
+                        }
                         asm_Eia3Round16B_avx(tag, keyStr32, pIn8[i], tag_size);
                         pIn8[i] = &pIn8[i][KEYSTR_ROUND_LEN];
                 }
 
-                /*
-                 * If remaining bits has more than 1 ZUC WORD (double words),
-                 * keystream needs to have another ZUC WORD (4B)
-                 */
-                if (remainBits > (32))
+                /* Generate final keystream if needed */
+                if (L > 0)
                         asm_ZucGenKeystream_avx(&keyStr32[4],
-                                                  &singlePktState, 1);
+                                                &singlePktState, L);
 
                 asm_Eia3Remainder_avx(tag, keyStr32, pIn8[i], remainBits,
                                       256, tag_size);
