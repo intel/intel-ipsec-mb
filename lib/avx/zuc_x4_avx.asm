@@ -1761,7 +1761,7 @@ asm_Eia3Remainder_avx:
 
         ret
 
-%macro EIA3_ROUND 19
+%macro EIA3_ROUND 20
 %define %%T              %1  ; [in] Pointer to authentication tag
 %define %%KS             %2  ; [in/clobbered] Pointer to 32-byte keystream
 %define %%DATA           %3  ; [in/clobbered] Pointer to input data
@@ -1781,6 +1781,7 @@ asm_Eia3Remainder_avx:
 %define %%KS_M2          %17 ; [clobbered] Temporary XMM register
 %define %%KS_H           %18 ; [clobbered] Temporary XMM register
 %define %%NUM_16B_ROUNDS %19 ; [in] Number of 16-byte rounds
+%define %%TAG_SZ         %20 ; [constant] Tag size (4, 8 or 16 bytes)
 
         vpxor   %%XDIGEST, %%XDIGEST
 
@@ -1791,20 +1792,31 @@ asm_Eia3Remainder_avx:
         DIGEST_16_BYTES %%KS, %%BIT_REV_L, %%BIT_REV_H, %%BIT_REV_AND, \
                         %%XDIGEST, %%XTMP1, %%XTMP2, %%XTMP3, %%XTMP4, \
                         %%XTMP5, %%XTMP6, %%KS_L, %%KS_M1, %%KS_M2, %%KS_H, \
-                        %%OFF, 4
+                        %%OFF, %%TAG_SZ
 
 %assign %%OFF (%%OFF + 16)
 %endrep
 
+%if %%TAG_SZ == 4
         ;; - update T
         vmovq   %%TMP, %%XDIGEST
         shr     %%TMP, 32
         xor     [%%T], DWORD(%%TMP)
+%elif %%TAG_SZ == 8
+        ;; - update T
+        vmovq   %%TMP, %%XDIGEST
+        xor     [%%T], %%TMP
+%else ;; %%TAG_SZ == 16
+        vmovdqa %%XTMP1, [%%T]
+        vpxor   %%XTMP1, %%XDIGEST
+        vmovdqa [%%T], %%XTMP1
+%endif
 
 %endmacro
 
 ;;
-;;extern void asm_Eia3Round32B_avx(void *T, const void *KS, const void *DATA)
+;;extern void asm_Eia3Round32B_avx(void *T, const void *KS, const void *DATA,
+;;                                 const uint64_t tag_sz)
 ;;
 ;; Updates authentication tag T based on keystream KS and DATA.
 ;; - it processes 32 bytes of DATA
@@ -1816,14 +1828,16 @@ asm_Eia3Remainder_avx:
 ;;  @param [in] T (digest pointer)
 ;;  @param [in] KS (key stream pointer)
 ;;  @param [in] DATA (data pointer)
+;;  @param [in] TAG_SZ (Tag size: 4, 8 or 16 bytes)
 ;;
 align 64
 MKGLOBAL(asm_Eia3Round32B_avx,function,internal)
 asm_Eia3Round32B_avx:
 
-%define T	arg1
-%define	KS	arg2
-%define	DATA	arg3
+%define T       arg1
+%define KS      arg2
+%define DATA    arg3
+%define TAG_SZ  arg4
 
         FUNC_SAVE
 
@@ -1831,9 +1845,30 @@ asm_Eia3Round32B_avx:
         vmovdqa  xmm1, [bit_reverse_table_h]
         vmovdqa  xmm2, [bit_reverse_and_table]
 
+        cmp     TAG_SZ, 8
+        je      round32B_tag_8B
+        ja      round32B_tag_16B
+
+        ; Fall-through for 4 bytes
+round32B_tag_4B:
         EIA3_ROUND T, KS, DATA, r11, \
                   xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, \
-                  xmm8, xmm9, xmm10, xmm11, xmm12, xmm13, 2
+                  xmm8, xmm9, xmm10, xmm11, xmm12, xmm13, 2, 4
+
+        jmp     end_round32B
+
+round32B_tag_8B:
+        EIA3_ROUND T, KS, DATA, r11, \
+                  xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, \
+                  xmm8, xmm9, xmm10, xmm11, xmm12, xmm13, 2, 8
+
+        jmp     end_round32B
+
+round32B_tag_16B:
+        EIA3_ROUND T, KS, DATA, r11, \
+                  xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, \
+                  xmm8, xmm9, xmm10, xmm11, xmm12, xmm13, 2, 16
+end_round32B:
 
         ;; Copy last 32 bytes of KS to the front
         vmovdqa xmm0, [KS + 32]
@@ -1846,7 +1881,8 @@ asm_Eia3Round32B_avx:
         ret
 
 ;;
-;;extern void asm_Eia3Round16B_avx(void *T, const void *KS, const void *DATA)
+;;extern void asm_Eia3Round16B_avx(void *T, const void *KS, const void *DATA,
+;;                                 const uint64_t tag_sz)
 ;;
 ;; Updates authentication tag T based on keystream KS and DATA.
 ;; - it processes 16 bytes of DATA
@@ -1858,14 +1894,16 @@ asm_Eia3Round32B_avx:
 ;;  @param [in] T (digest pointer)
 ;;  @param [in] KS (key stream pointer)
 ;;  @param [in] DATA (data pointer)
+;;  @param [in] TAG_SZ (Tag size: 4, 8 or 16 bytes)
 ;;
 align 64
 MKGLOBAL(asm_Eia3Round16B_avx,function,internal)
 asm_Eia3Round16B_avx:
 
-%define T	arg1
-%define	KS	arg2
-%define	DATA	arg3
+%define T       arg1
+%define KS      arg2
+%define DATA    arg3
+%define TAG_SZ  arg4
 
         FUNC_SAVE
 
@@ -1873,10 +1911,30 @@ asm_Eia3Round16B_avx:
         vmovdqa  xmm1, [bit_reverse_table_h]
         vmovdqa  xmm2, [bit_reverse_and_table]
 
+        cmp     TAG_SZ, 8
+        je      round16B_tag_8B
+        ja      round16B_tag_16B
+
+        ; Fall-through for 4 bytes
+round16B_tag_4B:
         EIA3_ROUND T, KS, DATA, r11, \
                   xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, \
-                  xmm8, xmm9, xmm10, xmm11, xmm12, xmm13, 1
+                  xmm8, xmm9, xmm10, xmm11, xmm12, xmm13, 1, 4
 
+        jmp     end_round16B
+
+round16B_tag_8B:
+        EIA3_ROUND T, KS, DATA, r11, \
+                  xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, \
+                  xmm8, xmm9, xmm10, xmm11, xmm12, xmm13, 1, 8
+
+        jmp     end_round16B
+
+round16B_tag_16B:
+        EIA3_ROUND T, KS, DATA, r11, \
+                  xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, \
+                  xmm8, xmm9, xmm10, xmm11, xmm12, xmm13, 1, 16
+end_round16B:
         ;; Copy last 16 bytes of KS to the front
         vmovdqa xmm0, [KS + 16]
         vmovdqa [KS], xmm0

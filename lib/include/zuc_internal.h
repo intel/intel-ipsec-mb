@@ -1087,10 +1087,12 @@ IMB_DLL_LOCAL void asm_Eia3Round16B_gfni_sse(void *T, const void *ks,
                                              const uint64_t tag_sz);
 
 IMB_DLL_LOCAL void asm_Eia3Round16B_avx(void *T, const void *ks,
-                                        const void *data);
+                                        const void *data,
+                                        const uint64_t tag_sz);
 
 IMB_DLL_LOCAL void asm_Eia3Round32B_avx(void *T, const void *ks,
-                                        const void *data);
+                                        const void *data,
+                                        const uint64_t tag_sz);
 
 /**
  ******************************************************************************

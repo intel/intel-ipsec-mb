@@ -542,7 +542,7 @@ void _zuc_eia3_1_buffer_avx(const void *pKey,
                         asm_ZucGenKeystream8B_avx(&keyStream[4], &zucState);
                 else
                         asm_ZucGenKeystream16B_avx(&keyStream[4], &zucState);
-                asm_Eia3Round16B_avx(&T, keyStream, pIn8);
+                asm_Eia3Round16B_avx(&T, keyStream, pIn8, 4);
                 pIn8 = &pIn8[KEYSTR_ROUND_LEN];
         }
 
@@ -632,7 +632,7 @@ void _zuc_eia3_4_buffer_avx(const void * const pKey[NUM_AVX_BUFS],
                 else
                         asm_ZucGenKeystream16B_4_avx(&state, pKeyStrArr);
                 for (i = 0; i < NUM_AVX_BUFS; i++) {
-                        asm_Eia3Round16B_avx(&T[i], keyStr[i], pIn8[i]);
+                        asm_Eia3Round16B_avx(&T[i], keyStr[i], pIn8[i], 4);
                         pIn8[i] = &pIn8[i][KEYSTR_ROUND_LEN];
                 }
         }
@@ -678,7 +678,7 @@ void _zuc_eia3_4_buffer_avx(const void * const pKey[NUM_AVX_BUFS],
                         else
                                 asm_ZucGenKeystream16B_avx(&keyStr32[4],
                                                            &singlePktState);
-                        asm_Eia3Round16B_avx(&T[i], keyStr32, pIn8[i]);
+                        asm_Eia3Round16B_avx(&T[i], keyStr32, pIn8[i], 4);
                         pIn8[i] = &pIn8[i][KEYSTR_ROUND_LEN];
                 }
 
@@ -824,7 +824,7 @@ void zuc_eia3_4_buffer_job_avx(const void * const pKey[NUM_AVX_BUFS],
                 for (i = 0; i < NUM_AVX_BUFS; i++) {
                         if (job_in_lane[i] == NULL)
                                 continue;
-                        asm_Eia3Round16B_avx(&T[i], keyStr[i], pIn8[i]);
+                        asm_Eia3Round16B_avx(&T[i], keyStr[i], pIn8[i], 4);
                         pIn8[i] = &pIn8[i][KEYSTR_ROUND_LEN];
                 }
         }
@@ -873,7 +873,7 @@ void zuc_eia3_4_buffer_job_avx(const void * const pKey[NUM_AVX_BUFS],
                         else
                                 asm_ZucGenKeystream16B_avx(&keyStr32[4],
                                                            &singlePktState);
-                        asm_Eia3Round16B_avx(&T[i], keyStr32, pIn8[i]);
+                        asm_Eia3Round16B_avx(&T[i], keyStr32, pIn8[i], 4);
                         pIn8[i] = &pIn8[i][KEYSTR_ROUND_LEN];
                 }
 
@@ -970,7 +970,7 @@ void zuc256_eia3_4_buffer_job_avx(const void * const pKey[NUM_AVX_BUFS],
                         if (job_in_lane[i] == NULL)
                                 continue;
 
-                        asm_Eia3Round16B_avx(tag, keyStr[i], pIn8[i]);
+                        asm_Eia3Round16B_avx(tag, keyStr[i], pIn8[i], tag_size);
                         pIn8[i] = &pIn8[i][KEYSTR_ROUND_LEN];
                 }
         }
@@ -1021,7 +1021,7 @@ void zuc256_eia3_4_buffer_job_avx(const void * const pKey[NUM_AVX_BUFS],
                         else
                                 asm_ZucGenKeystream16B_avx(&keyStr32[4],
                                                            &singlePktState);
-                        asm_Eia3Round16B_avx(tag, keyStr32, pIn8[i]);
+                        asm_Eia3Round16B_avx(tag, keyStr32, pIn8[i], tag_size);
                         pIn8[i] = &pIn8[i][KEYSTR_ROUND_LEN];
                 }
 
