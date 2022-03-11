@@ -225,6 +225,12 @@ static void fill_additional_hash_data(struct IMB_JOB *job,
                 if (job->u.GMAC.iv_len_in_bytes > buffsize)
                         job->u.GMAC.iv_len_in_bytes = buffsize;
                 break;
+        case IMB_AUTH_GHASH:
+                if (job->u.GHASH._key != NULL)
+                        job->u.GHASH._key = buff;
+                if (job->u.GHASH._init_tag != NULL)
+                        job->u.GHASH._init_tag = buff;
+                break;
         case IMB_AUTH_POLY1305:
                 if (job->u.POLY1305._key != NULL)
                         job->u.POLY1305._key = buff;
@@ -373,6 +379,8 @@ static IMB_HASH_ALG hash_selection(void)
                         return IMB_AUTH_CRC7_FP_HEADER;
                 else if (strcmp(a, "IMB_AUTH_CRC6_IUUP_HEADER") == 0)
                         return IMB_AUTH_CRC6_IUUP_HEADER;
+                else if (strcmp(a, "IMB_AUTH_GHASH") == 0)
+                        return IMB_AUTH_GHASH;
                 else
                         return 0;
         }
