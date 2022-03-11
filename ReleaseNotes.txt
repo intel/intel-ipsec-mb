@@ -15,6 +15,9 @@ Fixes
 Test Applications
 - GHASH JOB API support added in the test application
 
+Performance Application
+- GHASH support added (through JOB API)
+
 v1.2 February 2022
 ========================================================================
 

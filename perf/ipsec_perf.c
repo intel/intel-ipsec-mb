@@ -187,6 +187,7 @@ enum test_hash_alg_e {
         TEST_CRC8_WIMAX_OFDMA_HCS,
         TEST_CRC7_FP_HEADER,
         TEST_CRC6_IUUP_HEADER,
+        TEST_AUTH_GHASH,
         TEST_NUM_HASH_TESTS
 };
 
@@ -654,6 +655,12 @@ const struct str_value_mapping hash_algo_str_map[] = {
                         .hash_alg = TEST_CRC6_IUUP_HEADER,
                 }
         },
+        {
+                .name = "ghash",
+                .values.job_params = {
+                        .hash_alg = TEST_AUTH_GHASH,
+                }
+        },
 };
 
 const struct str_value_mapping aead_algo_str_map[] = {
@@ -835,6 +842,7 @@ const uint32_t auth_tag_length_bytes[] = {
                 4,  /* IMB_AUTH_CRC8_WIMAX_OFDMA_HCS */
                 4,  /* IMB_AUTH_CRC7_FP_HEADER */
                 4,  /* IMB_AUTH_CRC6_IUUP_HEADER */
+                16, /* IMB_AUTH_GHASH */
 };
 uint32_t index_limit;
 uint32_t key_idxs[NUM_OFFSETS];
@@ -1705,6 +1713,12 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
                 job_template.u.GMAC._iv = (uint8_t *) &auth_iv;
                 job_template.u.GMAC.iv_len_in_bytes = 12;
                 break;
+        case TEST_AUTH_GHASH:
+                job_template.hash_alg = IMB_AUTH_GHASH;
+                IMB_GHASH_PRE(mb_mgr, gcm_key, &gdata_key);
+                job_template.u.GHASH._key = &gdata_key;
+                job_template.u.GHASH._init_tag = (uint8_t *) &auth_iv;
+                break;
         case TEST_AUTH_SNOW_V_AEAD:
                 job_template.hash_alg = IMB_AUTH_SNOW_V_AEAD;
                 break;
@@ -2291,7 +2305,11 @@ print_times(struct variant_s *variant_list, struct params_s *params,
                         "BIP-CRC32", "ZUC_EIA3_BITLEN", "SNOW3G_UIA2_BITLEN",
                         "KASUMI_UIA1", "GMAC-128", "GMAC-192", "GMAC-256",
                         "POLY1305", "POLY1305_AEAD", "ZUC256_EIA3",
-                        "SNOW_V_AEAD"
+                        "SNOW_V_AEAD", "CRC32_ETH_FCS", "CRC32_SCTP",
+                        "CRC32_WIMAX_DATA", "CRC24_LTE_A", "CR24_LTE_B",
+                        "CR16_X25", "CRC16_FP_DATA", "CRC11_FP_HEADER",
+                        "CRC10_IUUP_DATA", "CRC8_WIMAX_HCS", "CRC7_FP_HEADER",
+                        "CRC6_IUUP_HEADER", "GHASH"
                 };
                 struct params_s par;
 
