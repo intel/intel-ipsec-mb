@@ -643,6 +643,10 @@ align 64
 %define %%CONSTANTS rel EK256_d64
 %elif %%TAG_SIZE == 4
 %define %%CONSTANTS rel EK256_EIA3_4
+%elif %%TAG_SIZE == 8
+%define %%CONSTANTS rel EK256_EIA3_8
+%elif %%TAG_SIZE == 16
+%define %%CONSTANTS rel EK256_EIA3_16
 %endif
         ; s0 - s3
         vpxor   %%LFSR0_3, %%LFSR0_3
@@ -945,17 +949,32 @@ align 64
 %if %%TAG_SIZE == 4
         vmovdqa [%%TAGS], %%KSTR1
         REORDER_LFSR pState, 1
-%elif %%TAG_SIZE == 8 ;;TODO
-%elif %%TAG_SIZE == 16 ;;TODO
+%elif %%TAG_SIZE == 8
+        ; Transpose the keystream and store the 8 bytes per buffer consecutively,
+        ; being the initial tag for each buffer
+        vpunpckldq %%XTMP1, %%KSTR1, %%KSTR2
+        vpunpckhdq %%XTMP2, %%KSTR1, %%KSTR2
+        vmovdqa [%%TAGS], %%XTMP1
+        vmovdqa [%%TAGS + 16], %%XTMP2
+        REORDER_LFSR pState, 2
+%elif %%TAG_SIZE == 16
+        ; Transpose the keystream and store the 16 bytes per buffer consecutively,
+        ; being the initial tag for each buffer
+        TRANSPOSE4_U32 %%KSTR1, %%KSTR2, %%KSTR3, %%KSTR4, %%XTMP5, %%XTMP6
+        vmovdqa [%%TAGS], %%KSTR1
+        vmovdqa [%%TAGS + 16], %%KSTR2
+        vmovdqa [%%TAGS + 16*2], %%KSTR3
+        vmovdqa [%%TAGS + 16*3], %%KSTR4
+        REORDER_LFSR pState, 4
 %endif
         FUNC_RESTORE
-
-        ret
 %endmacro
 
 MKGLOBAL(asm_ZucInitialization_4_avx,function,internal)
 asm_ZucInitialization_4_avx:
         ZUC_INIT_4 128, 0
+
+        ret
 
 MKGLOBAL(asm_Zuc256Initialization_4_avx,function,internal)
 asm_Zuc256Initialization_4_avx:
@@ -965,15 +984,26 @@ asm_Zuc256Initialization_4_avx:
         cmp tag_sz, 0
         je  init_for_cipher
 
-        ;; TODO: Check for 8B and 16B tags
-        cmp tag_sz, 4
-        je init_for_auth_tag_4B
+        cmp tag_sz, 8
+        je init_for_auth_tag_8B
+        jb init_for_auth_tag_4B
 
-init_for_cipher:
-        ZUC_INIT_4 256, 0
+        ; Fall-through for tag size = 16 bytes
+init_for_auth_tag_16B:
+        ZUC_INIT_4 256, 16, tags
+        ret
+
+init_for_auth_tag_8B:
+        ZUC_INIT_4 256, 8, tags
+        ret
 
 init_for_auth_tag_4B:
         ZUC_INIT_4 256, 4, tags
+        ret
+
+init_for_cipher:
+        ZUC_INIT_4 256, 0
+        ret
 
 ;
 ; Generate N*4 bytes of keystream

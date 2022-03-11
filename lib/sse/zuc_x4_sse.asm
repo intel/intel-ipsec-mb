@@ -1075,16 +1075,15 @@ mksection .text
 %elif %%TAG_SIZE == 8
         ; Transpose the keystream and store the 8 bytes per buffer consecutively,
         ; being the initial tag for each buffer
-        pshufd  %%KSTR1, %%KSTR1, 0xD8
-        pshufd  %%KSTR2, %%KSTR2, 0xD8
-
         movdqa  %%XTMP1, %%KSTR1
         punpckldq   %%XTMP1, %%KSTR2
-        punpckldq   %%KSTR1, %%KSTR2
+        punpckhdq   %%KSTR1, %%KSTR2
         movdqa  [%%TAGS], %%XTMP1
         movdqa  [%%TAGS + 16], %%KSTR1
         REORDER_LFSR pState, 2
 %elif %%TAG_SIZE == 16
+        ; Transpose the keystream and store the 16 bytes per buffer consecutively,
+        ; being the initial tag for each buffer
         TRANSPOSE4_U32 %%KSTR1, %%KSTR2, %%KSTR3, %%KSTR4, %%XTMP5, %%XTMP6
         movdqa  [%%TAGS], %%KSTR1
         movdqa  [%%TAGS + 16], %%KSTR2

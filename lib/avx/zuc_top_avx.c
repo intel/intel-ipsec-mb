@@ -946,7 +946,6 @@ void zuc256_eia3_4_buffer_job_avx(const void * const pKey[NUM_AVX_BUFS],
                 keys.pKeys[i] = pKey[i];
         }
 
-        /* TODO: Handle 8 and 16-byte digest cases */
         asm_Zuc256Initialization_4_avx(&keys, ivs, &state, T, tag_size);
 
         /* Generate 16 bytes at a time */
