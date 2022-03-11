@@ -1,0 +1,27 @@
+name: FreeBSD make
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  testfreebsd:
+    runs-on: macos-10.15
+    name: FreeBSD run
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          repository: intel/intel-ipsec-mb
+      - name: Test in FreeBSD
+        id: tests
+        uses: vmactions/freebsd-vm@v0.1.5
+        with:
+          usesh: true
+          mem: 8192
+          prepare: pkg install -y curl nasm llvm gmake
+          run: |
+            freebsd-version
+            gmake CC=clang -j 4
