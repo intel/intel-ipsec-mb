@@ -552,7 +552,7 @@ void _zuc_eia3_1_buffer_avx(const void *pKey,
          */
         if (remainingBits > (2 * 32))
                 asm_ZucGenKeystream8B_avx(&keyStream[4], &zucState);
-        asm_Eia3Remainder_avx(&T, &keyStream[0], pIn8, remainingBits);
+        asm_Eia3Remainder_avx(&T, &keyStream[0], pIn8, remainingBits, 128, 4);
 
         *pMacI = T;
 
@@ -691,7 +691,8 @@ void _zuc_eia3_4_buffer_avx(const void * const pKey[NUM_AVX_BUFS],
                         asm_ZucGenKeystream8B_avx(&keyStr32[4],
                                                   &singlePktState);
 
-                asm_Eia3Remainder_avx(&T[i], keyStr32, pIn8[i], remainBits);
+                asm_Eia3Remainder_avx(&T[i], keyStr32, pIn8[i], remainBits,
+                                      128, 4);
                 /* save the final MAC-I result */
                 *(pMacI[i]) = T[i];
         }
@@ -885,7 +886,8 @@ void zuc_eia3_4_buffer_job_avx(const void * const pKey[NUM_AVX_BUFS],
                         asm_ZucGenKeystream8B_avx(&keyStr32[4],
                                                   &singlePktState);
 
-                asm_Eia3Remainder_avx(&T[i], keyStr32, pIn8[i], remainBits);
+                asm_Eia3Remainder_avx(&T[i], keyStr32, pIn8[i], remainBits,
+                                      128, 4);
                 /* save the final MAC-I result */
                 *(pMacI[i]) = T[i];
         }
@@ -1033,7 +1035,8 @@ void zuc256_eia3_4_buffer_job_avx(const void * const pKey[NUM_AVX_BUFS],
                         asm_ZucGenKeystream_avx(&keyStr32[4],
                                                   &singlePktState, 1);
 
-                asm_Eia3Remainder_avx(tag, keyStr32, pIn8[i], remainBits);
+                asm_Eia3Remainder_avx(tag, keyStr32, pIn8[i], remainBits,
+                                      256, tag_size);
                 /* save the final MAC-I result */
                 memcpy(pMacI[i], tag, tag_size);
         }

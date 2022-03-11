@@ -1128,6 +1128,12 @@ IMB_DLL_LOCAL void asm_Eia3Remainder_gfni_sse(void *T, const void *ks,
                                               const uint64_t key_size,
                                               const uint64_t tag_size);
 
+IMB_DLL_LOCAL void asm_Eia3Remainder_avx(void *T, const void *ks,
+                                         const void *data,
+                                         const uint64_t n_bits,
+                                         const uint64_t key_size,
+                                         const uint64_t tag_size);
+
 /**
  ******************************************************************************
  * @description
@@ -1157,26 +1163,6 @@ IMB_DLL_LOCAL void asm_Eia3Round64B_16_VPCLMUL(uint32_t *T,
 
 IMB_DLL_LOCAL void asm_Eia3Round64BAVX512(uint32_t *T, const void *ks,
                                           const void *data);
-
-/**
- ******************************************************************************
- * @description
- *      Definition of the external function to return the authentication
- *      update value to be XOR'ed with current authentication tag (AVX variant)
- *
- * @param[in] ks                    Pointer to key stream
- *
- * @param[in] data                  Pointer to the data
- *
- * @param[in] n_bits                Number of data bits to be processed
- *
- * @pre
- *      None
- *
- *****************************************************************************/
-IMB_DLL_LOCAL void asm_Eia3Remainder_avx(void *T, const void *ks,
-                                         const void *data,
-                                         const uint64_t n_bits);
 
 /**
  ******************************************************************************
