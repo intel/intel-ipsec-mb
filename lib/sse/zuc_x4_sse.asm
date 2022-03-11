@@ -1626,6 +1626,9 @@ exit_cipher:
 
         ret
 
+;
+; Processes 16 bytes of data and updates the digest
+;
 %macro DIGEST_16_BYTES 14
 %define %%KS      %1  ; [in] Pointer to keystream
 %define %%XDATA   %2  ; [in] XMM register with input data
