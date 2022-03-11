@@ -807,7 +807,7 @@ typedef void (*chacha_poly_enc_dec_update_t)(const void *,
                                      void *, const void *, const uint64_t);
 typedef void (*chacha_poly_finalize_t)(struct chacha20_poly1305_context_data *,
                                     void *, const uint64_t);
-typedef void (*ghash_t)(struct gcm_key_data *, const void *,
+typedef void (*ghash_t)(const struct gcm_key_data *, const void *,
                         const uint64_t, void *, const uint64_t);
 
 typedef void (*zuc_eea3_1_buffer_t)(const void *, const void *, const void *,

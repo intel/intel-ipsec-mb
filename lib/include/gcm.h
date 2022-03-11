@@ -844,25 +844,25 @@ aes_gcm_dec_var_iv_256_sse_no_aesni(const struct gcm_key_data *key_data,
  */
 
 IMB_DLL_EXPORT void
-ghash_sse_no_aesni(struct gcm_key_data *key_data, const void *in,
+ghash_sse_no_aesni(const struct gcm_key_data *key_data, const void *in,
                    const uint64_t in_len, void *io_tag, const uint64_t tag_len);
 IMB_DLL_EXPORT void
-ghash_sse(struct gcm_key_data *key_data, const void *in,
+ghash_sse(const struct gcm_key_data *key_data, const void *in,
           const uint64_t in_len, void *io_tag, const uint64_t tag_len);
 IMB_DLL_EXPORT void
-ghash_avx_gen2(struct gcm_key_data *key_data, const void *in,
+ghash_avx_gen2(const struct gcm_key_data *key_data, const void *in,
                const uint64_t in_len, void *io_tag,
                const uint64_t tag_len);
 IMB_DLL_EXPORT void
-ghash_avx_gen4(struct gcm_key_data *key_data, const void *in,
+ghash_avx_gen4(const struct gcm_key_data *key_data, const void *in,
                const uint64_t in_len, void *io_tag,
                const uint64_t tag_len);
 IMB_DLL_EXPORT void
-ghash_avx512(struct gcm_key_data *key_data, const void *in,
+ghash_avx512(const struct gcm_key_data *key_data, const void *in,
              const uint64_t in_len, void *io_tag,
              const uint64_t tag_len);
 IMB_DLL_EXPORT void
-ghash_vaes_avx512(struct gcm_key_data *key_data, const void *in,
+ghash_vaes_avx512(const struct gcm_key_data *key_data, const void *in,
                   const uint64_t in_len, void *io_tag,
                   const uint64_t tag_len);
 
