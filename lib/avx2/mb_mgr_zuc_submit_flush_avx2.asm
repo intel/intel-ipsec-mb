@@ -92,13 +92,15 @@ extern asm_ZucCipher_8_avx2
 %define arg4    rcx
 %define arg5    r8
 %define arg6    r9
+%define arg7    qword [rsp]
 %else
 %define arg1    rcx
 %define arg2    rdx
 %define arg3    r8
 %define arg4    r9
-%define arg5    [rsp + 32]
-%define arg6    [rsp + 40]
+%define arg5    qword [rsp + 32]
+%define arg6    qword [rsp + 40]
+%define arg7    qword [rsp + 48]
 %endif
 
 %define state   arg1
@@ -853,7 +855,11 @@ FLUSH_JOB_ZUC256_EEA3:
         ; to pass parameter to next function
         mov     r11, state
 
+%if %%KEY_SIZE == 128
         RESERVE_STACK_SPACE 6
+%else ; %%KEY_SIZE == 256
+        RESERVE_STACK_SPACE 7
+%endif
 
         lea     arg1, [r11 + _zuc_args_keys]
         lea     arg2, [r11 + _zuc_args_IV]
@@ -868,6 +874,9 @@ FLUSH_JOB_ZUC256_EEA3:
         lea     r12, [r11 + _zuc_job_in_lane]
         mov     arg6, r12
 %endif
+%if %%KEY_SIZE == 256
+        mov     arg7, 4
+%endif
 
 %if %%KEY_SIZE == 128
         call    zuc_eia3_8_buffer_job_avx2
@@ -875,7 +884,11 @@ FLUSH_JOB_ZUC256_EEA3:
         call    zuc256_eia3_8_buffer_job_avx2
 %endif
 
+%if %%KEY_SIZE == 128
         RESTORE_STACK_SPACE 6
+%else ; %%KEY_SIZE == 256
+        RESTORE_STACK_SPACE 7
+%endif
 
         mov     state, [rsp + _gpr_save + 8*8]
         mov     job,   [rsp + _gpr_save + 8*9]
@@ -1002,7 +1015,11 @@ APPEND(%%skip_eia3_,I):
         ; to pass parameter to next function
         mov     r11, state
 
+%if %%KEY_SIZE == 128
         RESERVE_STACK_SPACE 6
+%else ; %%KEY_SIZE == 256
+        RESERVE_STACK_SPACE 7
+%endif
 
         lea     arg1, [r11 + _zuc_args_keys]
         lea     arg2, [r11 + _zuc_args_IV]
@@ -1017,6 +1034,9 @@ APPEND(%%skip_eia3_,I):
         lea     r12, [r11 + _zuc_job_in_lane]
         mov     arg6, r12
 %endif
+%if %%KEY_SIZE == 256
+        mov     arg7, 4
+%endif
 
 %if %%KEY_SIZE == 128
         call    zuc_eia3_8_buffer_job_avx2
@@ -1024,7 +1044,11 @@ APPEND(%%skip_eia3_,I):
         call    zuc256_eia3_8_buffer_job_avx2
 %endif
 
+%if %%KEY_SIZE == 128
         RESTORE_STACK_SPACE 6
+%else ; %%KEY_SIZE == 256
+        RESTORE_STACK_SPACE 7
+%endif
 
         vmovdqa xmm2, [rsp + _null_len_save]
 

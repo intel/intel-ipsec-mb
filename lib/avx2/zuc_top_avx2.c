@@ -846,9 +846,10 @@ void zuc_eia3_8_buffer_job_avx2(const void * const pKey[NUM_AVX2_BUFS],
 void zuc256_eia3_8_buffer_job_avx2(const void * const pKey[NUM_AVX2_BUFS],
                                 const uint8_t *ivs,
                                 const void * const pBufferIn[NUM_AVX2_BUFS],
-                                uint32_t *pMacI[NUM_AVX2_BUFS],
+                                void *pMacI[NUM_AVX2_BUFS],
                                 const uint16_t lengthInBits[NUM_AVX2_BUFS],
-                                const void * const job_in_lane[NUM_AVX2_BUFS])
+                                const void * const job_in_lane[NUM_AVX2_BUFS],
+                                const uint64_t tag_size)
 {
         unsigned int i = 0;
         DECLARE_ALIGNED(ZucState8_t state, 64);
@@ -873,13 +874,13 @@ void zuc256_eia3_8_buffer_job_avx2(const void * const pKey[NUM_AVX2_BUFS],
         }
 
         /* TODO: Handle 8 and 16-byte digest cases */
-        asm_Zuc256Initialization_8_avx2(&keys, ivs, &state, 4);
+        asm_Zuc256Initialization_8_avx2(&keys, ivs, &state, tag_size);
 
         asm_ZucGenKeystream4B_8_avx2(&state, pKeyStrArr);
 
         /* Initialize the tag with the first 4 bytes of the keystream */
         for (i = 0; i < NUM_AVX2_BUFS; i++)
-                memcpy(&T[i], pKeyStrArr[i], 4);
+                memcpy(&T[i], pKeyStrArr[i], tag_size);
 
         /* Generate 32 bytes at a time */
         asm_ZucGenKeystream32B_8_avx2(&state, (uint32_t **)pKeyStrArr);
@@ -955,7 +956,8 @@ void zuc256_eia3_8_buffer_job_avx2(const void * const pKey[NUM_AVX2_BUFS],
                         else
                                 asm_ZucGenKeystream32B_avx(&keyStr32[8],
                                                            &singlePktState);
-                        asm_Eia3Round32B_avx(tag, &keyStr32[0], pIn8[i], 4);
+                        asm_Eia3Round32B_avx(tag, &keyStr32[0], pIn8[i],
+                                             tag_size);
                         pIn8[i] = &pIn8[i][KEYSTR_ROUND_LEN];
                 }
 
@@ -969,10 +971,10 @@ void zuc256_eia3_8_buffer_job_avx2(const void * const pKey[NUM_AVX2_BUFS],
                                                 &singlePktState, 1);
 
                 asm_Eia3Remainder_avx(tag, keyStr32, pIn8[i], remainBits,
-                                      256, 4);
+                                      256, tag_size);
 
                 /* save the final MAC-I result */
-                memcpy(pMacI[i], tag, 4);
+                memcpy(pMacI[i], tag, tag_size);
         }
 
 #ifdef SAFE_DATA
