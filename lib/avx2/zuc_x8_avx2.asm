@@ -249,6 +249,35 @@ align 64
         mov     rsp, [rsp + GP_OFFSET + 40]
 %endmacro
 
+;
+; Transpose 4 YMM registers, double word granularity
+;
+%macro TRANSPOSE4_U32 8
+%define %%R0 %1 ; [in/out] Input / Output row 0
+%define %%R1 %2 ; [in/out] Input / Output row 1
+%define %%R2 %3 ; [in/out] Input / Output row 2
+%define %%R3 %4 ; [in/out] Input / Output row 3
+%define %%T0 %5 ; [clobbered] Temporary YMM register
+%define %%T1 %6 ; [clobbered] Temporary YMM register
+%define %%T2 %7 ; [clobbered] Temporary YMM register
+%define %%T3 %8 ; [clobbered] Temporary YMM register
+
+        vshufps %%T0, %%R0, %%R1, 0x44  ; T0 = {b5 b4 a5 a4   b1 b0 a1 a0}
+        vshufps %%R0, %%R0, %%R1, 0xEE  ; R0 = {b7 b6 a7 a6   b3 b2 a3 a2}
+        vshufps %%T1, %%R2, %%R3, 0x44  ; T1 = {d5 d4 c5 c4   d1 d0 c1 c0}
+        vshufps %%R2, %%R2, %%R3, 0xEE  ; R2 = {d7 d6 c7 c6   d3 d2 c3 c2}
+
+        vshufps %%T3, %%T0, %%T1, 0xDD  ; T3 = {d5 c5 b5 a5   d1 c1 b1 a1}
+        vshufps %%T2, %%R0, %%R2, 0x88  ; T2 = {d6 c6 b6 a6   d2 c2 b2 a2}
+        vshufps %%R0, %%R0, %%R2, 0xDD  ; R0 = {d7 c7 b7 a7   d3 c3 b3 a3}
+        vshufps %%T0, %%T0, %%T1, 0x88  ; T0 = {d4 c4 b4 a4   d0 c0 b0 a0}
+
+        vperm2i128 %%R2, %%T0, %%T3, 0x31  ; {d5 c5 b5 a5 d4 c4 b4 a4}
+        vperm2i128 %%R1, %%T2, %%R0, 0x20  ; {d3 c3 b3 a3 d2 c2 b2 a2}
+        vperm2i128 %%R3, %%T2, %%R0, 0x31  ; {d7 c7 b7 a7 d6 c6 b6 a6}
+        vperm2i128 %%R0, %%T0, %%T3, 0x20  ; {d1 c1 b1 a1 d0 c0 b0 a0}
+%endmacro
+
 ; This macro reorder the LFSR registers
 ; after N rounds (1 <= N <= 15), since the registers
 ; are shifted every round
@@ -256,8 +285,8 @@ align 64
 ; The macro clobbers YMM0-15
 ;
 %macro REORDER_LFSR 2
-%define %%STATE      %1
-%define %%NUM_ROUNDS %2
+%define %%STATE      %1 ; [in] Pointer to LFSR state
+%define %%NUM_ROUNDS %2 ; [immediate] Number of key generation rounds
 
 %if %%NUM_ROUNDS != 16
 %assign i 0
@@ -630,6 +659,10 @@ align 64
 %define %%CONSTANTS rel EK256_d64
 %elif %%TAG_SIZE == 4
 %define %%CONSTANTS rel EK256_EIA3_4
+%elif %%TAG_SIZE == 8
+%define %%CONSTANTS rel EK256_EIA3_8
+%elif %%TAG_SIZE == 16
+%define %%CONSTANTS rel EK256_EIA3_16
 %endif
 
         ; s0 - s7
@@ -921,18 +954,36 @@ align 64
 %if %%TAG_SIZE == 4
         vmovdqa [%%TAGS], %%KSTR1
         REORDER_LFSR pState, 1
-%elif %%TAG_SIZE == 8 ; TODO
-%elif %%TAG_SIZE == 16 ; TODO
+%elif %%TAG_SIZE == 8
+        ; Transpose the keystream and store the 8 bytes per buffer consecutively,
+        ; being the initial tag for each buffer
+        vpunpckldq %%YTMP1, %%KSTR1, %%KSTR2
+        vpunpckhdq %%YTMP2, %%KSTR1, %%KSTR2
+        vperm2i128 %%KSTR1, %%YTMP1, %%YTMP2, 0x20
+        vperm2i128 %%KSTR2, %%YTMP1, %%YTMP2, 0x31
+
+        vmovdqa [%%TAGS], %%KSTR1
+        vmovdqa [%%TAGS + 32], %%KSTR2
+        REORDER_LFSR pState, 2
+%elif %%TAG_SIZE == 16
+        TRANSPOSE4_U32 %%KSTR1, %%KSTR2, %%KSTR3, %%KSTR4, \
+                       %%YTMP1, %%YTMP2, %%YTMP3, %%YTMP4
+
+        vmovdqa [%%TAGS], %%KSTR1
+        vmovdqa [%%TAGS + 32], %%KSTR2
+        vmovdqa [%%TAGS + 32*2], %%KSTR3
+        vmovdqa [%%TAGS + 32*3], %%KSTR4
+        REORDER_LFSR pState, 4
 %endif
         FUNC_RESTORE
-
-        ret
 %endmacro
 
 MKGLOBAL(asm_ZucInitialization_8_avx2,function,internal)
 asm_ZucInitialization_8_avx2:
         endbranch64
         ZUC_INIT_8 128, 0
+
+        ret
 
 MKGLOBAL(asm_Zuc256Initialization_8_avx2,function,internal)
 asm_Zuc256Initialization_8_avx2:
@@ -944,15 +995,26 @@ asm_Zuc256Initialization_8_avx2:
         cmp tag_sz, 0
         je  init_for_cipher
 
-        ;; TODO: Check for 8B and 16B tags
-        cmp tag_sz, 4
-        je init_for_auth_tag_4B
+        cmp tag_sz, 8
+        je init_for_auth_tag_8B
+        jb init_for_auth_tag_4B
 
-init_for_cipher:
-        ZUC_INIT_8 256, 0
+        ; Fall-through for tag size = 16 bytes
+init_for_auth_tag_16B:
+        ZUC_INIT_8 256, 16, tags
+        ret
+
+init_for_auth_tag_8B:
+        ZUC_INIT_8 256, 8, tags
+        ret
 
 init_for_auth_tag_4B:
         ZUC_INIT_8 256, 4, tags
+        ret
+
+init_for_cipher:
+        ZUC_INIT_8 256, 0
+        ret
 
 ;
 ; Generate N*4 bytes of keystream
