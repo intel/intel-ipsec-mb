@@ -56,6 +56,9 @@ enum {
       TEST_AUTH_NULL_XCBC_K3,
       TEST_AUTH_NULL_GHASH_KEY,
       TEST_AUTH_NULL_GHASH_INIT_TAG,
+      TEST_AUTH_NULL_GMAC_KEY,
+      TEST_AUTH_NULL_GMAC_IV,
+      TEST_AUTH_GMAC_IV_LEN,
       TEST_CIPH_SRC_NULL = 200,
       TEST_CIPH_DST_NULL,
       TEST_CIPH_IV_NULL,
@@ -1060,6 +1063,49 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
                                                IMB_ERR_JOB_NULL_GHASH_INIT_TAG))
                                 return 1;
                         printf(".");
+                }
+
+        /*
+         * Invalid GMAC parameters
+         */
+        for (order = IMB_ORDER_CIPHER_HASH; order <= IMB_ORDER_HASH_CIPHER;
+             order++)
+                for (dir = IMB_DIR_ENCRYPT; dir <= IMB_DIR_DECRYPT; dir++) {
+                        for (hash = IMB_AUTH_AES_GMAC_128;
+                             hash <= IMB_AUTH_AES_GMAC_256; hash++) {
+                                IMB_JOB *job = &template_job;
+
+                                fill_in_job(job, cipher, dir,
+                                            hash, order, &chacha_ctx,
+                                            &gcm_ctx);
+                                job->u.GMAC._key = NULL;
+
+                                if (!is_submit_invalid(mb_mgr, job,
+                                                     TEST_AUTH_NULL_GMAC_KEY,
+                                                     IMB_ERR_JOB_NULL_AUTH_KEY))
+                                        return 1;
+                                printf(".");
+
+                                fill_in_job(job, cipher, dir,
+                                            hash, order, &chacha_ctx,
+                                            &gcm_ctx);
+                                job->u.GMAC._iv = NULL;
+                                if (!is_submit_invalid(mb_mgr, job,
+                                                       TEST_AUTH_NULL_GMAC_IV,
+                                                       IMB_ERR_JOB_NULL_IV))
+                                        return 1;
+                                printf(".");
+
+                                fill_in_job(job, cipher, dir,
+                                            hash, order, &chacha_ctx,
+                                            &gcm_ctx);
+                                job->u.GMAC.iv_len_in_bytes = 0;
+                                if (!is_submit_invalid(mb_mgr, job,
+                                                       TEST_AUTH_GMAC_IV_LEN,
+                                                       IMB_ERR_JOB_IV_LEN))
+                                        return 1;
+                                printf(".");
+                        }
                 }
 
         /* clean up */
