@@ -874,13 +874,7 @@ void zuc256_eia3_8_buffer_job_avx2(const void * const pKey[NUM_AVX2_BUFS],
         }
 
         /* TODO: Handle 8 and 16-byte digest cases */
-        asm_Zuc256Initialization_8_avx2(&keys, ivs, &state, tag_size);
-
-        asm_ZucGenKeystream4B_8_avx2(&state, pKeyStrArr);
-
-        /* Initialize the tag with the first 4 bytes of the keystream */
-        for (i = 0; i < NUM_AVX2_BUFS; i++)
-                memcpy(&T[i], pKeyStrArr[i], tag_size);
+        asm_Zuc256Initialization_8_avx2(&keys, ivs, &state, T, tag_size);
 
         /* Generate 32 bytes at a time */
         asm_ZucGenKeystream32B_8_avx2(&state, (uint32_t **)pKeyStrArr);

@@ -57,6 +57,12 @@ Ek_d:
 dd	0x0044D700, 0x0026BC00, 0x00626B00, 0x00135E00, 0x00578900, 0x0035E200, 0x00713500, 0x0009AF00
 dd	0x004D7800, 0x002F1300, 0x006BC400, 0x001AF100, 0x005E2600, 0x003C4D00, 0x00789A00, 0x0047AC00
 
+; Constants to be used to initialize the LFSR registers
+; The tables contain four different sets of constants:
+; 0-63 bytes: Encryption
+; 64-127 bytes: Authentication with tag size = 4
+; 128-191 bytes: Authentication with tag size = 8
+; 192-255 bytes: Authentication with tag size = 16
 align 16
 EK256_d64:
 dd      0x00220000, 0x002F0000, 0x00240000, 0x002A0000,
@@ -618,7 +624,13 @@ align 64
 %define %%XTMP      %5 ;; [clobbered] XMM temporary register
 %define %%XTMP2     %6 ;; [clobbered] XMM temporary register
 %define %%TMP       %7 ;; [clobbered] GP temporary register
-%define %%CONSTANTS %8 ;; [in] Address to constants
+%define %%TAG_SIZE  %8 ;; [in] Tag size (0, 4, 8 or 16 bytes)
+
+%if %%TAG_SIZE == 0
+%define %%CONSTANTS rel EK256_d64
+%elif %%TAG_SIZE == 4
+%define %%CONSTANTS rel EK256_EIA3_4
+%endif
 
         ; s0 - s7
         vpxor   %%LFSR0_7, %%LFSR0_7
@@ -743,13 +755,14 @@ align 64
         vinserti128 %%LFSR8_15, %%XTMP, 1
 %endmacro
 
-%macro ZUC_INIT_8 1
+%macro ZUC_INIT_8 2-3
 %define %%KEY_SIZE %1 ; [constant] Key size (128 or 256)
+%define %%TAG_SIZE %2 ; [in] Tag size (0 (for cipher), 4, 8 or 16)
+%define %%TAGS     %3 ; [in] Array of temporary tags
 
 %define pKe     arg1
 %define pIv     arg2
 %define pState  arg3
-%define tag_sz  arg4 ; Only used in ZUC-256
 
 %define %%YTMP1  ymm0
 %define %%YTMP2  ymm1
@@ -770,6 +783,10 @@ align 64
 
 %define %%W     %%YTMP10
 %define %%X3    %%YTMP11
+%define %%KSTR1 %%YTMP12
+%define %%KSTR2 %%YTMP13
+%define %%KSTR3 %%YTMP14
+%define %%KSTR4 %%YTMP15
 %define %%MASK_31 %%YTMP16
 
         FUNC_SAVE
@@ -815,14 +832,6 @@ align 64
 %endrep
 %else ;; %%KEY_SIZE == 256
 
-        ; Get pointer to constants (depending on tag size, this will point at
-        ; constants for encryption, authentication with 4-byte, 8-byte or 16-byte tags)
-        lea    r13, [rel EK256_d64]
-        bsf    DWORD(tag_sz), DWORD(tag_sz)
-        dec    DWORD(tag_sz)
-        shl    DWORD(tag_sz), 6
-        add    r13, tag_sz
-
     ;;; Initialize all LFSR registers
 %assign %%OFF 0
 %rep 8
@@ -831,7 +840,7 @@ align 64
         lea     r10, [pIv + 4*%%OFF] ; Load IV N pointer
 
         ; Initialize S0-15 for each packet
-        INIT_LFSR_256 r15, r10, %%YTMP1, %%YTMP2, XWORD(%%YTMP3), XWORD(%%YTMP4), r11, r13
+        INIT_LFSR_256 r15, r10, %%YTMP1, %%YTMP2, XWORD(%%YTMP3), XWORD(%%YTMP4), r11, %%TAG_SIZE
 
         vmovdqa [pState + 4*%%OFF], %%YTMP1
         vmovdqa [pState + 256 + 4*%%OFF], %%YTMP2
@@ -865,16 +874,16 @@ align 64
         vmovdqa %%MASK_31, [rel mask31]
 
         ; Shift LFSR 32-times, update state variables
-%assign N 0
+%assign %%N 0
 %rep 32
-        BITS_REORG8 pState, N, %%YTMP1, %%YTMP2, %%YTMP3, %%YTMP4, %%YTMP5, \
+        BITS_REORG8 pState, %%N, %%YTMP1, %%YTMP2, %%YTMP3, %%YTMP4, %%YTMP5, \
                     %%YTMP6, %%YTMP7, %%YTMP8, %%YTMP9, %%YTMP10
         NONLIN_FUN8 pState, %%YTMP1, %%YTMP2, %%YTMP3, \
                     %%YTMP4, %%YTMP5, %%YTMP6, %%YTMP7, %%W
         vpsrld  %%W, 1 ; Shift out LSB of W
-        LFSR_UPDT8  pState, N, %%YTMP1, %%YTMP2, %%YTMP3, %%YTMP4, %%YTMP5, %%YTMP6, \
+        LFSR_UPDT8  pState, %%N, %%YTMP1, %%YTMP2, %%YTMP3, %%YTMP4, %%YTMP5, %%YTMP6, \
                     %%MASK_31, %%W, init ; W used in LFSR update
-%assign N N+1
+%assign %%N %%N+1
 %endrep
 
         ; And once more, initial round from keygen phase = 33 times
@@ -885,6 +894,36 @@ align 64
         LFSR_UPDT8  pState, 0, %%YTMP1, %%YTMP2, %%YTMP3, %%YTMP4, %%YTMP5, %%YTMP6, \
                     %%MASK_31, %%YTMP8, work
 
+    ; Generate extra 4, 8 or 16 bytes of KS for initial tags
+%if %%TAG_SIZE == 4
+%define %%NUM_ROUNDS 1
+%elif %%TAG_SIZE == 8
+%define %%NUM_ROUNDS 2
+%elif %%TAG_SIZE == 16
+%define %%NUM_ROUNDS 4
+%else
+%define %%NUM_ROUNDS 0
+%endif
+
+%assign %%N 1
+%rep %%NUM_ROUNDS
+        BITS_REORG8 pState, %%N, %%YTMP1, %%YTMP2, %%YTMP3, %%YTMP4, %%YTMP5, \
+                    %%YTMP6, %%YTMP7, %%YTMP8, %%YTMP9, %%YTMP10, APPEND(%%KSTR,%%N)
+        NONLIN_FUN8 pState, %%YTMP1, %%YTMP2, %%YTMP3, \
+                    %%YTMP4, %%YTMP5, %%YTMP6, %%YTMP7, %%W
+        ; OFS_X3 XOR W and store in stack
+        vpxor   APPEND(%%KSTR, %%N), %%W
+        LFSR_UPDT8  pState, %%N, %%YTMP1, %%YTMP2, %%YTMP3, %%YTMP4, %%YTMP5, %%YTMP6, \
+                    %%MASK_31, %%YTMP8, work
+%assign %%N %%N+1
+%endrep
+
+%if %%TAG_SIZE == 4
+        vmovdqa [%%TAGS], %%KSTR1
+        REORDER_LFSR pState, 1
+%elif %%TAG_SIZE == 8 ; TODO
+%elif %%TAG_SIZE == 16 ; TODO
+%endif
         FUNC_RESTORE
 
         ret
@@ -893,12 +932,27 @@ align 64
 MKGLOBAL(asm_ZucInitialization_8_avx2,function,internal)
 asm_ZucInitialization_8_avx2:
         endbranch64
-        ZUC_INIT_8 128
+        ZUC_INIT_8 128, 0
 
 MKGLOBAL(asm_Zuc256Initialization_8_avx2,function,internal)
 asm_Zuc256Initialization_8_avx2:
+%define tags   arg4
+%define tag_sz arg5
+
         endbranch64
-        ZUC_INIT_8 256
+
+        cmp tag_sz, 0
+        je  init_for_cipher
+
+        ;; TODO: Check for 8B and 16B tags
+        cmp tag_sz, 4
+        je init_for_auth_tag_4B
+
+init_for_cipher:
+        ZUC_INIT_8 256, 0
+
+init_for_auth_tag_4B:
+        ZUC_INIT_8 256, 4, tags
 
 ;
 ; Generate N*4 bytes of keystream

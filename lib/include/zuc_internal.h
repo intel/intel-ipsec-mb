@@ -361,6 +361,12 @@ IMB_DLL_LOCAL void asm_ZucInitialization_8_avx2(ZucKey8_t *pKeys,
  * @param[in,out] pState            Pointer to a ZUC state structure of type
  *                                  @ref ZucState8_t that will be populated
  *                                  with the initialized ZUC state.
+ * @param[in,out] tags              Array of 4 pointers to authentication tags
+ *                                  (up to 16 bytes each, only for ZUC-EIA3)
+ * @param[in] tag_sz                Tag size (0, 4, 8 or 16), to select the
+ *                                  constants used to initialize the LFSR
+ *                                  the LFSR registers (0 is used in case of
+ *                                  encryption).
  *
  * @pre
  *      None
@@ -369,7 +375,8 @@ IMB_DLL_LOCAL void asm_ZucInitialization_8_avx2(ZucKey8_t *pKeys,
 IMB_DLL_LOCAL void asm_Zuc256Initialization_8_avx2(ZucKey8_t *pKeys,
                                                    const uint8_t *ivs,
                                                    ZucState8_t *pState,
-                                                   const unsigned tag_sz);
+                                                   void *tags,
+                                                   const uint64_t tag_sz);
 
 /**
  ******************************************************************************
