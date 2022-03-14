@@ -488,6 +488,12 @@ struct str_value_mapping hash_algo_str_map[] = {
                         .hash_alg = IMB_AUTH_ZUC256_EIA3_BITLEN,
                 }
         },
+        {
+                .name = "GHASH",
+                .values.job_params = {
+                        .hash_alg = IMB_AUTH_GHASH,
+                }
+        },
 };
 
 struct str_value_mapping aead_algo_str_map[] = {
@@ -616,6 +622,7 @@ const uint8_t auth_tag_length_bytes[] = {
                 4,  /* IMB_AUTH_CRC8_WIMAX_OFDMA_HCS */
                 4,  /* IMB_AUTH_CRC7_FP_HEADER */
                 4,  /* IMB_AUTH_CRC6_IUUP_HEADER */
+                16, /* IMB_AUTH_GHASH */
 };
 
 /* Minimum, maximum and step values of key sizes */
@@ -990,6 +997,10 @@ fill_job(IMB_JOB *job, const struct params_s *params,
                 job->u.GMAC._iv = auth_iv;
                 job->u.GMAC.iv_len_in_bytes = 12;
                 break;
+        case IMB_AUTH_GHASH:
+                job->u.GHASH._key = gdata_key;
+                job->u.GHASH._init_tag = auth_iv;
+                break;
         case IMB_AUTH_PON_CRC_BIP:
         case IMB_AUTH_NULL:
         case IMB_AUTH_AES_GMAC:
@@ -1248,6 +1259,7 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys,
                 case IMB_AUTH_AES_GMAC_128:
                 case IMB_AUTH_AES_GMAC_192:
                 case IMB_AUTH_AES_GMAC_256:
+                case IMB_AUTH_GHASH:
                         memset(gdata_key, pattern_auth_key,
                                sizeof(keys->gdata_key));
                         break;
@@ -1416,6 +1428,9 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys,
                 break;
         case IMB_AUTH_AES_GMAC_256:
                 IMB_AES256_GCM_PRE(mb_mgr, auth_key, gdata_key);
+                break;
+        case IMB_AUTH_GHASH:
+                IMB_GHASH_PRE(mb_mgr, auth_key, gdata_key);
                 break;
         case IMB_AUTH_AES_CCM:
         case IMB_AUTH_AES_GMAC:
@@ -2455,11 +2470,6 @@ run_test(const IMB_ARCH enc_arch, const IMB_ARCH dec_arch,
                                 continue;
                         if (c_mode != IMB_CIPHER_DOCSIS_SEC_BPI &&
                             hash_alg == IMB_AUTH_DOCSIS_CRC32)
-                                continue;
-                        if (c_mode == IMB_CIPHER_GCM &&
-                            (hash_alg == IMB_AUTH_AES_GMAC_128 ||
-                             hash_alg == IMB_AUTH_AES_GMAC_192 ||
-                             hash_alg == IMB_AUTH_AES_GMAC_256))
                                 continue;
                         if ((c_mode == IMB_CIPHER_CHACHA20_POLY1305 &&
                              hash_alg != IMB_AUTH_CHACHA20_POLY1305) ||

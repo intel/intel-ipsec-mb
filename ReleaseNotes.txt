@@ -13,7 +13,7 @@ Fixes
 - Fixed 23-byte IV expansion for ZUC-256 (intel/intel-ipsec-mb#102)
 
 Test Applications
-- GHASH JOB API support added in the test application and fuzzing tool
+- GHASH JOB API support added in the test application, fuzzing and xvalid tools
 
 Performance Application
 - GHASH support added (through JOB API)
