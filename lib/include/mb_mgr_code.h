@@ -2283,8 +2283,7 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job)
                         return 1;
                 }
                 if (job->u.GMAC._key == NULL) {
-                        /* @todo change to IMB_ERR_JOB_NULL_AUTH_KEY */
-                        imb_set_errno(state, IMB_ERR_JOB_NULL_KEY);
+                        imb_set_errno(state, IMB_ERR_JOB_NULL_AUTH_KEY);
                         return 1;
                 }
                 if (job->u.GMAC._iv == NULL) {
