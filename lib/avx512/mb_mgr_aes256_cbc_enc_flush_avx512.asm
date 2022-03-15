@@ -25,7 +25,7 @@
 ;; OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;
 
-%define AES_CBC_ENC_X16 aes_cbc_enc_256_vaes_avx512
+%define AES_CBC_ENC_X16 aes_cbc_enc_256_flush_vaes_avx512
 %define FLUSH_JOB_AES_ENC flush_job_aes256_enc_vaes_avx512
 %define NUM_KEYS 15
 %include "avx512/mb_mgr_aes128_cbc_enc_flush_avx512.asm"

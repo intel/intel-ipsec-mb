@@ -32,7 +32,7 @@
 %include "include/reg_sizes.asm"
 %include "include/cet.inc"
 %ifndef AES_CBC_ENC_X16
-%define AES_CBC_ENC_X16 aes_cbc_enc_128_vaes_avx512
+%define AES_CBC_ENC_X16 aes_cbc_enc_128_flush_vaes_avx512
 %define FLUSH_JOB_AES_ENC flush_job_aes128_enc_vaes_avx512
 %define NUM_KEYS 11
 %endif
@@ -47,9 +47,11 @@ mksection .text
 %ifdef LINUX
 %define arg1    rdi
 %define arg2    rsi
+%define arg3    rdx
 %else
 %define arg1    rcx
 %define arg2    rdx
+%define arg3    r8
 %endif
 
 %define state   arg1
@@ -62,7 +64,6 @@ mksection .text
 %define unused_lanes     rbx
 %define tmp1             rbx
 
-%define good_lane        rdx
 %define iv               rdx
 
 %define tmp2             rax
@@ -71,8 +72,8 @@ mksection .text
 %define tmp              rbp
 %define idx              rbp
 
-%define tmp3             r8
-%define tmp4             r9
+%define tmp3             r9
+%define tmp4             r10
 %endif
 
 ; copy IV's and round keys into NULL lanes
@@ -180,31 +181,22 @@ FLUSH_JOB_AES_ENC:
         vmovdqu64       zmm2, [state + _aes_job_in_lane + (8*PTR_SZ)]
         vpcmpq          k1, zmm1, zmm0, 4 ; NEQ
         vpcmpq          k2, zmm2, zmm0, 4 ; NEQ
-        kmovw           DWORD(tmp), k1
-        kmovw           DWORD(tmp1), k2
-        mov             DWORD(tmp2), DWORD(tmp1)
-        shl             DWORD(tmp2), 8
-        or              DWORD(tmp2), DWORD(tmp) ; mask of non-null jobs in tmp2
-        not             BYTE(tmp)
-        kmovw           k4, DWORD(tmp)
-        not             BYTE(tmp1)
-        kmovw           k5, DWORD(tmp1)
-        mov             DWORD(tmp), DWORD(tmp2)
-        not             WORD(tmp)
-        kmovw           k6, DWORD(tmp)         ; mask of NULL jobs in k4, k5 and k6
-        mov             DWORD(tmp), DWORD(tmp2)
-        xor             tmp2, tmp2
-        bsf             WORD(tmp2), WORD(tmp)   ; index of the 1st set bit in tmp2
+        kshiftlw        k2, k2, 8
+        korw            k6, k2, k1
+        kmovw           DWORD(arg3), k6 ; mask of non-null lanes in arg3
+        knotw           k6, k6
+        kshiftrw        k5, k6, 8 ; mask of NULL jobs in k4, k5 and k6
 
-        ;; copy good lane data into NULL lanes
-        mov             tmp, [state + _aes_args_in + tmp2*8]
-        vpbroadcastq    zmm1, tmp
-        vmovdqa64       [state + _aes_args_in + (0*PTR_SZ)]{k4}, zmm1
-        vmovdqa64       [state + _aes_args_in + (8*PTR_SZ)]{k5}, zmm1
-        ;; - out pointer
+        xor             tmp2, tmp2
+        bsf             WORD(tmp2), WORD(arg3)   ; index of the 1st set bit in tmp2
+
+        ;; copy good lane output pointer into NULL lanes in & out
+        ;; NOTE: NULL lanes not updated so any valid address can be used
         mov             tmp, [state + _aes_args_out + tmp2*8]
         vpbroadcastq    zmm1, tmp
-        vmovdqa64       [state + _aes_args_out + (0*PTR_SZ)]{k4}, zmm1
+        vmovdqa64       [state + _aes_args_in + (0*PTR_SZ)]{k6}, zmm1
+        vmovdqa64       [state + _aes_args_in + (8*PTR_SZ)]{k5}, zmm1
+        vmovdqa64       [state + _aes_args_out + (0*PTR_SZ)]{k6}, zmm1
         vmovdqa64       [state + _aes_args_out + (8*PTR_SZ)]{k5}, zmm1
 
         ;; - set len to UINT16_MAX
@@ -217,15 +209,9 @@ FLUSH_JOB_AES_ENC:
         ;; Find min length for lanes 0-7
         vphminposuw     xmm2, xmm0
 
-        ;; scale up good lane idx before copying IV and keys
-        shl             tmp2, 4
-
         ; extract min length of lanes 0-7
         vpextrw         DWORD(len2), xmm2, 0   ; min value
         vpextrw         DWORD(idx), xmm2, 1   ; min index
-
-        ;; - copy IV and round keys to null lanes
-        COPY_IV_KEYS_TO_NULL_LANES tmp2, tmp1, tmp3, xmm4, xmm5, k6
 
         ;; Update lens and find min for lanes 8-15
         vextracti128    xmm1, ymm0, 1
@@ -237,12 +223,16 @@ FLUSH_JOB_AES_ENC:
         add             DWORD(idx), 8               ; but index +8
         mov             len2, tmp3                    ; min len
 use_min:
+        or              len2, len2
+        je              len_is_0
+
         vpbroadcastw    ymm3, WORD(len2)
         vpsubw          ymm0, ymm0, ymm3
         vmovdqa         [state + _aes_lens], ymm0
 
         ; "state" and "args" are the same address, arg1
         ; len is arg2
+        ; valid lane mask is arg3
         call    AES_CBC_ENC_X16
         ; state and idx are intact
 
