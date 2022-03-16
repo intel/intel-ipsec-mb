@@ -35,12 +35,14 @@
 
 %ifndef AES_XCBC_X16
 %define AES_XCBC_X16 aes_xcbc_mac_128_vaes_avx512
+%define AES_XCBC_X16_FLUSH aes_xcbc_mac_128_flush_vaes_avx512
 %define SUBMIT_JOB_AES_XCBC submit_job_aes_xcbc_vaes_avx512
 %define FLUSH_JOB_AES_XCBC flush_job_aes_xcbc_vaes_avx512
 %define NUM_KEYS 11
 %endif
 
 extern AES_XCBC_X16
+extern AES_XCBC_X16_FLUSH
 
 mksection .rodata
 default rel
@@ -58,9 +60,11 @@ mksection .text
 %ifdef LINUX
 %define arg1	rdi
 %define arg2	rsi
+%define arg3    rdx
 %else
 %define arg1	rcx
 %define arg2	rdx
+%define arg3    r8
 %endif
 
 %define state	arg1
@@ -136,42 +140,6 @@ endstruc
         vextracti64x2   [%%COL + ROW*8], %%ZTMP, 0
         vextracti64x2   [%%COL + ROW*9], %%ZTMP, 1
         vextracti64x2   [%%COL + ROW*10], %%ZTMP, 2
-%endmacro
-
-; copy IV's and round keys into NULL lanes
-%macro COPY_IV_KEYS_TO_NULL_LANES 6
-%define %%IDX           %1 ; [in] GP with good lane idx (scaled x16)
-%define %%NULL_MASK     %2 ; [clobbered] GP to store NULL lane mask
-%define %%KEY_TAB       %3 ; [clobbered] GP to store key table pointer
-%define %%XTMP1         %4 ; [clobbered] temp XMM reg
-%define %%XTMP2         %5 ; [clobbered] temp XMM reg
-%define %%MASK_REG      %6 ; [in] mask register
-
-        vmovdqa64       %%XTMP1, [state + _aes_xcbc_args_ICV + %%IDX]
-        lea             %%KEY_TAB, [state + _aes_xcbc_args_key_tab]
-        kmovw           DWORD(%%NULL_MASK), %%MASK_REG
-
-%assign j 0 ; outer loop to iterate through round keys
-%rep NUM_KEYS
-        vmovdqa64       %%XTMP2, [%%KEY_TAB + j + %%IDX]
-
-%assign k 0 ; inner loop to iterate through lanes
-%rep 16
-        bt              %%NULL_MASK, k
-        jnc             %%_skip_copy %+ j %+ _ %+ k
-
-%if j == 0 ;; copy IVs for each lane just once
-        vmovdqa64       [state + _aes_xcbc_args_ICV + (k*16)], %%XTMP1
-%endif
-        ;; copy key for each lane
-        vmovdqa64       [%%KEY_TAB + j + (k*16)], %%XTMP2
-%%_skip_copy %+ j %+ _ %+ k:
-%assign k (k + 1)
-%endrep
-
-%assign j (j + 256)
-%endrep
-
 %endmacro
 
 ; clear final block buffers and round key's in NULL lanes
@@ -304,10 +272,10 @@ endstruc
 %assign i (i - 1)
 %endrep
         kmovw           k6, DWORD(tmp)
-        movzx           tmp3, BYTE(tmp)
-        kmovw           k4, DWORD(tmp3)
-        shr             tmp, 8
-        kmovw           k5, DWORD(tmp)
+        kmovw           k4, k6
+        kshiftrw        k5, k6, 8
+        kmovw           DWORD(arg3), k6
+        not             WORD(arg3) ; mask of non-null lanes in arg3
 
         mov             tmp, [state + _aes_xcbc_args_in + tmp2*8]
         vpbroadcastq    zmm1, tmp
@@ -320,12 +288,6 @@ endstruc
         vmovdqa64       ymm0, [state + _aes_xcbc_lens]
         vmovdqu16       ymm0{k6}, ymm3
         vmovdqa64       [state + _aes_xcbc_lens], ymm0
-
-        ;; scale up good lane idx before copying IV and keys
-        shl             tmp2, 4
-
-        ;; - copy IV and round keys to null lanes
-        COPY_IV_KEYS_TO_NULL_LANES tmp2, tmp, tmp3, xmm4, xmm5, k6
 
         ;; Find min length for lanes 0-7
         vphminposuw xmm2, xmm0
@@ -355,7 +317,12 @@ endstruc
 
 	; "state" and "args" are the same address, arg1
 	; len is arg2
-	call	AES_XCBC_X16
+%ifidn %%SUBMIT_FLUSH, SUBMIT
+        call    AES_XCBC_X16
+%else
+        ; valid lane mask is arg3
+        call    AES_XCBC_X16_FLUSH
+%endif
 	; state and idx are intact
 
 %%_len_is_0:
@@ -370,8 +337,9 @@ endstruc
         ;; Update lane len
         vmovdqa64 ymm0, [state + _aes_xcbc_lens]
 
-        SHIFT_GP 1, idx, tmp, tmp3, left
-        kmovq   k1, tmp
+        xor             tmp, tmp
+        bts             WORD(tmp), WORD(idx)
+        kmovq           k1, tmp
 
         mov             tmp3, 16
         vpbroadcastw    ymm1, WORD(tmp3)
@@ -399,6 +367,10 @@ endstruc
         kshiftrw        k5, k4, 8  ;; lanes 8-15 mask in k5
         vmovdqa64       [state + _aes_xcbc_args_in + (0*PTR_SZ)]{k4}, zmm1
         vmovdqa64       [state + _aes_xcbc_args_in + (8*PTR_SZ)]{k5}, zmm1
+
+        ;; reset valid lanes in arg3
+        knotw           k4, k6
+        kmovw           DWORD(arg3), k4
 %else
         ;; only update processed lane input pointer on submit
         mov	[state + _aes_xcbc_args_in + 8*idx], tmp
