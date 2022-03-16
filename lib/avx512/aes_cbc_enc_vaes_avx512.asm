@@ -1201,4 +1201,44 @@ aes_cbc_enc_256_flush_vaes_avx512:
 
         ret
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;  void aes128_cbc_mac_flush_vaes_avx512(AES_ARGS *args,
+;;                                        uint64_t len_in_bytes,
+;;                                        uint16_t valid_lane_mask);
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+MKGLOBAL(aes128_cbc_mac_flush_vaes_avx512,function,internal)
+aes128_cbc_mac_flush_vaes_avx512:
+        endbranch64
+        FUNC_SAVE
+        CBC_ENC 9, MAC_TYPE_CBC, FLUSH
+        FUNC_RESTORE
+
+%ifdef SAFE_DATA
+	clear_all_zmms_asm
+%else
+        vzeroupper
+%endif ;; SAFE_DATA
+
+        ret
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;  void aes256_cbc_mac_flush_vaes_avx512(AES_ARGS *args,
+;;                                        uint64_t len_in_bytes,
+;;                                        uint16_t valid_lane_mask);
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+MKGLOBAL(aes256_cbc_mac_flush_vaes_avx512,function,internal)
+aes256_cbc_mac_flush_vaes_avx512:
+        endbranch64
+        FUNC_SAVE
+        CBC_ENC 13, MAC_TYPE_CBC, FLUSH
+        FUNC_RESTORE
+
+%ifdef SAFE_DATA
+	clear_all_zmms_asm
+%else
+        vzeroupper
+%endif ;; SAFE_DATA
+
+        ret
+
 mksection stack-noexec
