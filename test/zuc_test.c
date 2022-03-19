@@ -1017,7 +1017,8 @@ int validate_zuc_EIA_n_block(struct IMB_MGR *mb_mgr, uint8_t **pSrcData,
 
 static int
 verify_tag_256(void *mac, const struct test256EIA3_vectors_t *vector,
-               const unsigned tag_sz, const uint32_t i, const uint32_t j)
+               const unsigned tag_sz, const uint32_t test_idx,
+               const uint32_t vector_idx, const int multi_vector)
 {
         const void *ref_mac = NULL;
         int ret;
@@ -1031,19 +1032,34 @@ verify_tag_256(void *mac, const struct test256EIA3_vectors_t *vector,
 
         ret = memcmp(mac, ref_mac, tag_sz);
         if (ret) {
-                printf("Validate ZUC-256 n block test %u, "
-                       "index %u (Int - %u bytes): FAIL\n",
-                       i + 1, j, tag_sz);
+                if (multi_vector) {
+                        printf("Validate ZUC-256 n block multi-vector test "
+                               "# jobs = %u, index %u (Int - %u bytes): FAIL\n",
+                               test_idx, vector_idx, tag_sz);
+
+                } else {
+                        printf("Validate ZUC-256 n block test %u, "
+                               "index %u (Int - %u bytes): FAIL\n",
+                               test_idx + 1, vector_idx, tag_sz);
+                }
                 byte_hexdump("Expected",
                              (const uint8_t *)ref_mac,
                              tag_sz);
                 byte_hexdump("Found", mac, tag_sz);
         }
 #ifdef DEBUG
-        else
-                printf("Validate ZUC-256 n block test %u, "
-                       "index %u (Int - %u bytes): PASS\n",
-                       i + 1, j, tag_sz);
+        else {
+                if (multi_vector) {
+                        printf("Validate ZUC-256 n block multi-vector test "
+                               "# jobs = %u, index %u (Int - %u bytes): PASS\n",
+                               test_idx, vector_idx, tag_sz);
+
+                } else {
+                        printf("Validate ZUC-256 n block test %u, "
+                               "index %u (Int - %u bytes): PASS\n",
+                               test_idx + 1, vector_idx, tag_sz);
+                }
+        }
 #endif
         fflush(stdout);
 
@@ -1081,7 +1097,7 @@ int validate_zuc256_EIA3(struct IMB_MGR *mb_mgr, uint8_t **pSrcData,
 
                         for (j = 0; j < numBuffs; j++) {
                                 retTmp = verify_tag_256(pDstData[j], vector,
-                                                        tag_sz, i, j);
+                                                        tag_sz, i, j, 0);
                                 if (retTmp)
                                         ret = retTmp;
                         }
@@ -1101,34 +1117,22 @@ int validate_zuc256_EIA3(struct IMB_MGR *mb_mgr, uint8_t **pSrcData,
                 iv_lens[i] = vector->iv_length;
         }
 
-        submit_eia3_jobs(mb_mgr, pKeys, pIV,
-                         pSrcData, pDstData,
-                         bitLength, numBuffs,
-                         ZUC256_KEY_LEN_IN_BYTES, ZUC_DIGEST_LEN,
-                         iv_lens);
+        for (tag_sz = 4; tag_sz <= 16; tag_sz *= 2) {
+                submit_eia3_jobs(mb_mgr, pKeys, pIV,
+                                 pSrcData, pDstData,
+                                 bitLength, numBuffs,
+                                 ZUC256_KEY_LEN_IN_BYTES, tag_sz,
+                                 iv_lens);
 
-        for (i = 0; i < numBuffs; i++) {
-                vector = &test256EIA3_vectors[i % NUM_ZUC_256_EIA3_TESTS];
-                retTmp =
-                    memcmp(pDstData[i], &vector->mac4,
-                           sizeof(((struct test256EIA3_vectors_t *)0)->mac4));
-                if (retTmp) {
-                        printf("Validate ZUC-256 n block multi-vector test "
-                               "# jobs = %u, index %u (Int): FAIL\n",
-                               numBuffs, i);
-                        byte_hexdump("Expected",
-                                     (const uint8_t *)&vector->mac4,
-                                     ZUC_DIGEST_LEN);
-                        byte_hexdump("Found", pDstData[i], ZUC_DIGEST_LEN);
-                        ret = retTmp;
+                for (i = 0; i < numBuffs; i++) {
+                        const uint32_t vector_idx = i % NUM_ZUC_256_EIA3_TESTS;
+
+                        vector = &test256EIA3_vectors[vector_idx];
+                        retTmp = verify_tag_256(pDstData[i], vector,
+                                                tag_sz, numBuffs, i, 1);
+                        if (retTmp)
+                                ret = retTmp;
                 }
-#ifdef DEBUG
-                else
-                        printf("Validate ZUC-256 n block multi-vector test, "
-                               "# jobs = %u, index %u (Int): PASS\n",
-                               numBuffs, i);
-#endif
-                fflush(stdout);
         }
         return ret;
 };
