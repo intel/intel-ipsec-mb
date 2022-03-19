@@ -177,14 +177,15 @@ mksection .text
         ; Read and write next byte
         mov     al, [tmp + 16]
         mov     [state + _zuc_args_IV + lane + 16], al
-        ; Read next 6 bytes
-        movzx   DWORD(tmp2), word [tmp + 17]
-        mov     DWORD(tmp3), [tmp + 19]
-        shl     tmp2, 32
-        or      tmp2, tmp3
-        ; Expand to 8 bytes and write
+        ; Read last 8 bytes and keep only the last 6 bytes
+        mov     tmp2, [tmp + 15]
+        mov     tmp3, 0x0000ffffffffffff
+        bswap   tmp2
+        and     tmp2, tmp3 ; last 6 bytes of IV
+        ; Expand 6 bytes to 8 bytes and write out
         mov     tmp3, 0x3f3f3f3f3f3f3f3f
         pdep    tmp2, tmp2, tmp3
+        bswap   tmp2
         mov     [state + _zuc_args_IV + lane + 17], tmp2
 
         jmp     %%_iv_read
@@ -801,14 +802,15 @@ FLUSH_JOB_ZUC256_EEA3:
         ; Read and write next byte
         mov     al, [tmp + 16]
         mov     [state + _zuc_args_IV + lane + 16], al
-        ; Read next 6 bytes
-        movzx   DWORD(tmp2), word [tmp + 17]
-        mov     DWORD(tmp3), [tmp + 19]
-        shl     tmp2, 32
-        or      tmp2, tmp3
-        ; Expand to 8 bytes and write
+        ; Read last 8 bytes and keep only the last 6 bytes
+        mov     tmp2, [tmp + 15]
+        mov     tmp3, 0x0000ffffffffffff
+        bswap   tmp2
+        and     tmp2, tmp3 ; last 6 bytes of IV
+        ; Expand 6 bytes to 8 bytes and write out
         mov     tmp3, 0x3f3f3f3f3f3f3f3f
         pdep    tmp2, tmp2, tmp3
+        bswap   tmp2
         mov     [state + _zuc_args_IV + lane + 17], tmp2
 
         jmp     %%_iv_read
