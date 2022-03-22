@@ -248,15 +248,16 @@ len_is_0:
         sub     qword [state + _aes_lanes_in_use], 1
 
 %ifdef SAFE_DATA
-        ; Set bit of lane of returned job
-        xor     DWORD(tmp3), DWORD(tmp3)
-        bts     DWORD(tmp3), DWORD(idx)
-        kmovw   k1, DWORD(tmp3)
-        korw    k6, k1, k6
+        ;; Clear IV
+        vpxorq  xmm0, xmm0
+        shl     idx, 4 ; multiply by 16
 
-        ;; Clear IV and expanded keys of returned job and "NULL lanes"
-        ;; (k6 contains the mask of the jobs)
-        CLEAR_IV_KEYS_IN_NULL_LANES tmp1, xmm0, k6
+        ;; Clear expanded keys
+%assign round 0
+%rep NUM_KEYS
+        vmovdqa [state + _aesarg_key_tab + round * (16*16) + idx], xmm0
+%assign round (round + 1)
+%endrep
 %endif
 
 return:

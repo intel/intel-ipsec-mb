@@ -152,35 +152,6 @@ endstruc
 %endif
 %endmacro
 
-; clear IVs, scratch buffers and round key's in NULL lanes
-%macro CLEAR_IV_KEYS_SCRATCH_IN_NULL_LANES 3
-%define %%NULL_MASK     %1 ; [clobbered] GP to store NULL lane mask
-%define %%XTMP          %2 ; [clobbered] temp XMM reg
-%define %%MASK_REG      %3 ; [in] mask register
-
-        vpxorq          %%XTMP, %%XTMP
-        kmovw           DWORD(%%NULL_MASK), %%MASK_REG
-%assign k 0 ; outer loop to iterate through lanes
-%rep 16
-        bt              %%NULL_MASK, k
-        jnc             %%_skip_clear %+ k
-
-        ;; clean lane scratch and IV buffers
-        vmovdqa64       [state + _aes_cmac_scratch + (k*16)], %%XTMP
-        vmovdqa64       [state + _aes_cmac_args_IV + (k*16)], %%XTMP
-
-%assign j 0 ; inner loop to iterate through round keys
-%rep NUM_KEYS
-        vmovdqa64       [state + _aes_cmac_args_key_tab + j + (k*16)], %%XTMP
-%assign j (j + 256)
-
-%endrep
-%%_skip_clear %+ k:
-%assign k (k + 1)
-%endrep
-
-%endmacro
-
 ;;; ===========================================================================
 ;;; AES CMAC job submit & flush
 ;;; ===========================================================================
@@ -496,7 +467,6 @@ endstruc
 
 %ifdef SAFE_DATA
         vpxor   xmm0, xmm0
-%ifidn %%SUBMIT_FLUSH, SUBMIT
         ;; Clear IV and scratch memory of returned job
         shl     idx, 4
         vmovdqa [state + _aes_cmac_scratch + idx], xmm0
@@ -508,18 +478,6 @@ endstruc
         vmovdqa [state + _aes_cmac_args_key_tab + round * (16*16) + idx], xmm0
 %assign round (round + 1)
 %endrep
-
-%else
-        ;; Clear keys and scratch memory of returned job and "NULL lanes"
-        xor     DWORD(tmp2), DWORD(tmp2)
-        bts     DWORD(tmp2), DWORD(idx)
-        kmovw   k1, DWORD(tmp2)
-        korw    k6, k1, k6
-
-        ;; Clear IVs, keys and scratch buffers of returned job and "NULL lanes"
-        ;; (k6 contains the mask of the jobs)
-        CLEAR_IV_KEYS_SCRATCH_IN_NULL_LANES tmp4, xmm0, k6
-%endif ;; SUBMIT
 
 %else
         vzeroupper

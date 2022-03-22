@@ -142,34 +142,6 @@ endstruc
         vextracti64x2   [%%COL + ROW*10], %%ZTMP, 2
 %endmacro
 
-; clear final block buffers and round key's in NULL lanes
-%macro CLEAR_KEYS_FINAL_BLK_IN_NULL_LANES 3
-%define %%NULL_MASK     %1 ; [clobbered] GP to store NULL lane mask
-%define %%YTMP          %2 ; [clobbered] temp YMM reg
-%define %%MASK_REG      %3 ; [in] mask register
-
-        vpxor           %%YTMP, %%YTMP
-        kmovw           DWORD(%%NULL_MASK), %%MASK_REG
-%assign k 0 ; outer loop to iterate through lanes
-%rep 16
-        bt              %%NULL_MASK, k
-        jnc             %%_skip_clear %+ k
-
-        ;; clear final blocks and ICV buffers
-        vmovdqa         [state + _aes_xcbc_ldata + k * _XCBC_LANE_DATA_size + _xcbc_final_block], %%YTMP
-        vmovdqa         [state + _aes_xcbc_args_ICV + k * 16], XWORD(%%YTMP)
-%assign j 0 ; inner loop to iterate through round keys
-%rep NUM_KEYS
-        vmovdqa         [state + _aes_xcbc_args_key_tab + j + (k*16)], XWORD(%%YTMP)
-%assign j (j + 256)
-
-%endrep
-%%_skip_clear %+ k:
-%assign k (k + 1)
-%endrep
-
-%endmacro
-
 ;;; ===========================================================================
 ;;; AES XCBC job submit & flush
 ;;; ===========================================================================
@@ -399,7 +371,6 @@ endstruc
 
 %ifdef SAFE_DATA
         vpxor   ymm0, ymm0
-%ifidn %%SUBMIT_FLUSH, SUBMIT
         ;; Clear final block (32 bytes)
         vmovdqa [lane_data + _xcbc_final_block], ymm0
 
@@ -410,16 +381,6 @@ endstruc
 %assign round (round + 1)
 %endrep
 
-%else ;; FLUSH
-        ;; Clear keys and final blocks of returned job and "NULL lanes"
-        shr     idx, 4 ;; divide by 16 to restore lane idx
-        xor     DWORD(tmp), DWORD(tmp)
-        bts     DWORD(tmp), DWORD(idx)
-        kmovw   k1, DWORD(tmp)
-        korw    k6, k1, k6
-        ;; k6 contains the mask of the jobs
-        CLEAR_KEYS_FINAL_BLK_IN_NULL_LANES tmp, ymm0, k6
-%endif
 %else
         vzeroupper
 %endif
