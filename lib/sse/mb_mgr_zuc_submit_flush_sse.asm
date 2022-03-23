@@ -334,11 +334,8 @@ mksection .text
 %assign I (I + 1)
 %endrep
 
-        ;; If Windows, reserve memory in stack for parameter transferring
-%ifndef LINUX
-        ;; 40 bytes for 5 parameters
-        sub     rsp, 8*5
-%endif
+        RESERVE_STACK_SPACE 5
+
         lea     arg1, [r12 + _zuc_args_keys]
         lea     arg2, [r12 + _zuc_args_IV]
         lea     arg3, [r12 + _zuc_state]
@@ -349,9 +346,7 @@ mksection .text
         call    ZUC256_INIT_4
 %endif
 
-%ifndef LINUX
-        add     rsp, 8*5
-%endif
+        RESTORE_STACK_SPACE 5
 
         cmp     byte [r12 + _zuc_init_not_done], 0x0f ; Init done for all lanes
         je      %%skip_submit_restoring_state
@@ -392,11 +387,8 @@ mksection .text
 %endif
         mov     byte [r12 + _zuc_init_not_done], 0 ; Init done for all lanes
 
-        ;; If Windows, reserve memory in stack for parameter transferring
-%ifndef LINUX
-        ;; 40 bytes for 5 parameters
-        sub     rsp, 40
-%endif
+        RESERVE_STACK_SPACE 5
+
         lea     arg1, [r12 + _zuc_state]
         lea     arg2, [r12 + _zuc_args_in]
         lea     arg3, [r12 + _zuc_args_out]
@@ -405,9 +397,8 @@ mksection .text
 
         call    ZUC_CIPHER_4
 
-%ifndef LINUX
-        add     rsp, 40
-%endif
+        RESTORE_STACK_SPACE 5
+
         mov     state, [rsp + _gpr_save + 8*8]
         mov     job,   [rsp + _gpr_save + 8*9]
 
@@ -542,11 +533,8 @@ APPEND(%%skip_eea3_,I):
 %assign I (I + 1)
 %endrep
 
-        ;; If Windows, reserve memory in stack for parameter transferring
-%ifndef LINUX
-        ;; 40 bytes for 5 parameters
-        sub     rsp, 8*5
-%endif
+        RESERVE_STACK_SPACE 5
+
         lea     arg1, [r12 + _zuc_args_keys]
         lea     arg2, [r12 + _zuc_args_IV]
         lea     arg3, [r12 + _zuc_state]
@@ -558,9 +546,8 @@ APPEND(%%skip_eea3_,I):
         call    ZUC256_INIT_4
 %endif
 
-%ifndef LINUX
-        add     rsp, 8*5
-%endif
+        RESTORE_STACK_SPACE 5
+
         cmp     word [r12 + _zuc_init_not_done], 0x0f ; Init done for all lanes
         je      %%skip_flush_restoring_state
 
@@ -619,11 +606,8 @@ APPEND3(%%skip_eea3_copy_,I,J):
         movdqa  [r12 + _zuc_state + 16*I], xmm1 ; Save new state
 %assign I (I+1)
 %endrep
-        ;; If Windows, reserve memory in stack for parameter transferring
-%ifndef LINUX
-        ;; 40 bytes for 5 parameters
-        sub     rsp, 40
-%endif
+        RESERVE_STACK_SPACE 5
+
         lea     arg1, [r12 + _zuc_state]
         lea     arg2, [r12 + _zuc_args_in]
         lea     arg3, [r12 + _zuc_args_out]
@@ -632,9 +616,8 @@ APPEND3(%%skip_eea3_copy_,I,J):
 
         call    ZUC_CIPHER_4
 
-%ifndef LINUX
-        add     rsp, 40
-%endif
+        RESTORE_STACK_SPACE 5
+
         mov     state, [rsp + _gpr_save + 8*8]
 
         ; Clear ZUC state of the lane that is returned and NULL lanes
@@ -825,20 +808,10 @@ FLUSH_JOB_ZUC256_EEA3:
         mov     r11, state
 
 %if %%KEY_SIZE == 128
-        ;; If Windows, reserve memory in stack for parameter transferring
-%ifndef LINUX
-        ;; 48 bytes for 6 parameters (already aligned to 16 bytes)
-        sub     rsp, 48
-%endif
+        RESERVE_STACK_SPACE 6
 %else ; %%KEY_SIZE == 256
-%ifndef LINUX
-        ;; 56 bytes for 7 parameters
-        sub     rsp, 8*7
-%else
-        ;; 8 bytes for one extra parameter (apart from first 6)
-        sub     rsp, 8
+        RESERVE_STACK_SPACE 7
 %endif
-%endif ;; %%KEY_SIZE
 
         lea     arg1, [r11 + _zuc_args_keys]
         lea     arg2, [r11 + _zuc_args_IV]
@@ -864,16 +837,10 @@ FLUSH_JOB_ZUC256_EEA3:
 %endif
 
 %if %%KEY_SIZE == 128
-%ifndef LINUX
-        add     rsp, 48
+        RESTORE_STACK_SPACE 6
+%else ; %%KEY_SIZE == 256
+        RESTORE_STACK_SPACE 7
 %endif
-%else ;; %%KEY_SIZE == 256
-%ifndef LINUX
-        add     rsp, 8*7
-%else
-        add     rsp, 8
-%endif
-%endif ;; %%KEY_SIZE
         mov     state, [rsp + _gpr_save + 8*8]
         mov     job,   [rsp + _gpr_save + 8*9]
 
@@ -1005,20 +972,11 @@ APPEND(%%skip_eia3_,I):
         mov     r11, state
 
 %if %%KEY_SIZE == 128
-        ;; If Windows, reserve memory in stack for parameter transferring
-%ifndef LINUX
-        ;; 48 bytes for 6 parameters (already aligned to 16 bytes)
-        sub     rsp, 48
-%endif
+        RESERVE_STACK_SPACE 6
 %else ; %%KEY_SIZE == 256
-%ifndef LINUX
-        ;; 56 bytes for 7 parameters
-        sub     rsp, 8*7
-%else
-        ;; 8 bytes for one extra parameter (apart from first 6)
-        sub     rsp, 8
+        RESERVE_STACK_SPACE 7
 %endif
-%endif ;; %%KEY_SIZE
+
         lea     arg1, [r11 + _zuc_args_keys]
         lea     arg2, [r11 + _zuc_args_IV]
         lea     arg3, [r11 + _zuc_args_in]
@@ -1043,16 +1001,10 @@ APPEND(%%skip_eia3_,I):
 %endif
 
 %if %%KEY_SIZE == 128
-%ifndef LINUX
-        add     rsp, 48
+        RESTORE_STACK_SPACE 6
+%else ; %%KEY_SIZE == 256
+        RESTORE_STACK_SPACE 7
 %endif
-%else ;; %%KEY_SIZE == 256
-%ifndef LINUX
-        add     rsp, 8*7
-%else
-        add     rsp, 8
-%endif
-%endif ;; %%KEY_SIZE
 
         mov	tmp5, [rsp + _null_len_save]
         mov     state, [rsp + _gpr_save + 8*8]

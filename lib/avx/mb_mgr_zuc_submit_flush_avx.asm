@@ -323,11 +323,8 @@ mksection .text
 %assign I (I + 1)
 %endrep
 
-        ;; If Windows, reserve memory in stack for parameter transferring
-%ifndef LINUX
-        ;; 24 bytes for 3 parameters
-        sub     rsp, 24
-%endif
+        RESERVE_STACK_SPACE 3
+
         lea     arg1, [r12 + _zuc_args_keys]
         lea     arg2, [r12 + _zuc_args_IV]
         lea     arg3, [r12 + _zuc_state]
@@ -343,9 +340,7 @@ mksection .text
         call    asm_Zuc256Initialization_4_avx
 %endif
 
-%ifndef LINUX
-        add     rsp, 24
-%endif
+        RESTORE_STACK_SPACE 3
 
         cmp     byte [r12 + _zuc_init_not_done], 0x0f ; Init done for all lanes
         je      %%skip_submit_restoring_state
@@ -385,11 +380,8 @@ mksection .text
 %endif
         mov     byte [r12 + _zuc_init_not_done], 0 ; Init done for all lanes
 
-        ;; If Windows, reserve memory in stack for parameter transferring
-%ifndef LINUX
-        ;; 40 bytes for 5 parameters
-        sub     rsp, 40
-%endif
+        RESERVE_STACK_SPACE 5
+
         lea     arg1, [r12 + _zuc_state]
         lea     arg2, [r12 + _zuc_args_in]
         lea     arg3, [r12 + _zuc_args_out]
@@ -398,9 +390,7 @@ mksection .text
 
         call    asm_ZucCipher_4_avx
 
-%ifndef LINUX
-        add     rsp, 40
-%endif
+        RESTORE_STACK_SPACE 5
 
         mov     state, [rsp + _gpr_save + 8*8]
         mov     job,   [rsp + _gpr_save + 8*9]
@@ -537,11 +527,8 @@ APPEND(%%skip_eea3_,I):
 %assign I (I + 1)
 %endrep
 
-        ;; If Windows, reserve memory in stack for parameter transferring
-%ifndef LINUX
-        ;; 24 bytes for 3 parameters
-        sub     rsp, 24
-%endif
+        RESERVE_STACK_SPACE 3
+
         lea     arg1, [r12 + _zuc_args_keys]
         lea     arg2, [r12 + _zuc_args_IV]
         lea     arg3, [r12 + _zuc_state]
@@ -557,9 +544,8 @@ APPEND(%%skip_eea3_,I):
         call    asm_Zuc256Initialization_4_avx
 %endif
 
-%ifndef LINUX
-        add     rsp, 24
-%endif
+        RESTORE_STACK_SPACE 3
+
         cmp     word [r12 + _zuc_init_not_done], 0x0f ; Init done for all lanes
         je      %%skip_flush_restoring_state
 
@@ -617,11 +603,8 @@ APPEND3(%%skip_eea3_copy_,I,J):
         vmovdqa [r12 + _zuc_state + 16*I], xmm1 ; Save new state
 %assign I (I+1)
 %endrep
-        ;; If Windows, reserve memory in stack for parameter transferring
-%ifndef LINUX
-        ;; 40 bytes for 5 parameters
-        sub     rsp, 40
-%endif
+        RESERVE_STACK_SPACE 5
+
         lea     arg1, [r12 + _zuc_state]
         lea     arg2, [r12 + _zuc_args_in]
         lea     arg3, [r12 + _zuc_args_out]
@@ -630,9 +613,8 @@ APPEND3(%%skip_eea3_copy_,I,J):
 
         call    asm_ZucCipher_4_avx
 
-%ifndef LINUX
-        add     rsp, 40
-%endif
+        RESTORE_STACK_SPACE 5
+
         mov     state, [rsp + _gpr_save + 8*8]
 
         ; Clear ZUC state of the lane that is returned and NULL lanes
@@ -817,11 +799,8 @@ FLUSH_JOB_ZUC256_EEA3:
         ; to pass parameter to next function
         mov     r11, state
 
-        ;; If Windows, reserve memory in stack for parameter transferring
-%ifndef LINUX
-        ;; 48 bytes for 6 parameters (already aligned to 16 bytes)
-        sub     rsp, 48
-%endif
+        RESERVE_STACK_SPACE 6
+
         lea     arg1, [r11 + _zuc_args_keys]
         lea     arg2, [r11 + _zuc_args_IV]
         lea     arg3, [r11 + _zuc_args_in]
@@ -842,9 +821,8 @@ FLUSH_JOB_ZUC256_EEA3:
         call    zuc256_eia3_4_buffer_job_avx
 %endif
 
-%ifndef LINUX
-        add     rsp, 48
-%endif
+        RESTORE_STACK_SPACE 6
+
         mov     state, [rsp + _gpr_save + 8*8]
         mov     job,   [rsp + _gpr_save + 8*9]
 
@@ -971,10 +949,8 @@ APPEND(%%skip_eia3_,I):
         ; to pass parameter to next function
         mov     r11, state
 
-%ifndef LINUX
-        ;; 48 bytes for 6 parameters (already aligned to 16 bytes)
-        sub     rsp, 48
-%endif
+        RESERVE_STACK_SPACE 6
+
         lea     arg1, [r11 + _zuc_args_keys]
         lea     arg2, [r11 + _zuc_args_IV]
         lea     arg3, [r11 + _zuc_args_in]
@@ -995,9 +971,7 @@ APPEND(%%skip_eia3_,I):
         call    zuc256_eia3_4_buffer_job_avx
 %endif
 
-%ifndef LINUX
-        add     rsp, 48
-%endif
+        RESTORE_STACK_SPACE 6
 
         mov	tmp5, [rsp + _null_len_save]
         mov     state, [rsp + _gpr_save + 8*8]

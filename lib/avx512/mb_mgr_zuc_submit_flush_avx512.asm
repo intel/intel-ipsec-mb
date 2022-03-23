@@ -274,11 +274,8 @@ mksection .text
 
         mov     word [r11 + _zuc_init_not_done], 0 ; Init done for all lanes
 
-        ;; If Windows, reserve memory in stack for parameter transferring
-%ifndef LINUX
-        ;; 40 bytes for 5 parameters
-        sub     rsp, 40
-%endif
+        RESERVE_STACK_SPACE 5
+
         lea     arg1, [r11 + _zuc_state]
         lea     arg2, [r11 + _zuc_args_in]
         lea     arg3, [r11 + _zuc_args_out]
@@ -287,9 +284,8 @@ mksection .text
 
         call    ZUC_CIPHER
 
-%ifndef LINUX
-        add     rsp, 40
-%endif
+        RESTORE_STACK_SPACE 5
+
         mov     state, [rsp + _gpr_save + 8*8]
         mov     job,   [rsp + _gpr_save + 8*9]
 
@@ -488,11 +484,8 @@ mksection .text
         vpbroadcastd    zmm0, DWORD(tmp4)
         vmovdqa32 [r12 + _zuc_state + OFS_R2]{k1}, zmm0
 
-        ;; If Windows, reserve memory in stack for parameter transferring
-%ifndef LINUX
-        ;; 40 bytes for 5 parameters
-        sub     rsp, 40
-%endif
+        RESERVE_STACK_SPACE 5
+
         lea     arg1, [r12 + _zuc_state]
         lea     arg2, [r12 + _zuc_args_in]
         lea     arg3, [r12 + _zuc_args_out]
@@ -501,9 +494,8 @@ mksection .text
 
         call    ZUC_CIPHER
 
-%ifndef LINUX
-        add     rsp, 40
-%endif
+        RESTORE_STACK_SPACE 5
+
         mov     state, [rsp + _gpr_save + 8*8]
 
         ; Prepare bitmask to clear ZUC state with lane
@@ -628,10 +620,8 @@ FLUSH_JOB_ZUC256_EEA3:
 
         ; Generate L KS words (less than 16), except for old buffers, which only need L-2,
         ; since 2 words are reused from previous iteration
-%ifndef LINUX
-        ;; 40 bytes for 5 parameters
-        sub     rsp, 40
-%endif
+        RESERVE_STACK_SPACE 5
+
         lea     arg1, [%%OOO + _zuc_state]
         lea     arg2, [%%OOO + _zuc_args_KS]
         xor     arg3, arg3 ; offset = 0
@@ -645,9 +635,8 @@ FLUSH_JOB_ZUC256_EEA3:
 
         call    ZUC_KEYGEN_SKIP8_16
 
-%ifndef LINUX
-        add     rsp, 40
-%endif
+        RESTORE_STACK_SPACE 5
+
         jmp     %%_exit
 
 %%_above_eq_16:
@@ -690,10 +679,8 @@ FLUSH_JOB_ZUC256_EEA3:
 %%_above_eq_16_loop:
 
         ; Generate next 16 KS words and digest 64 bytes of data
-%ifndef LINUX
-        ;; 48 bytes for 6 parameters
-        sub     rsp, 48
-%endif
+        RESERVE_STACK_SPACE 6
+
         mov     DWORD(%%TMP), %%L
         shr     DWORD(%%TMP), 4 ; Number of rounds of 64 bytes
 
@@ -716,10 +703,8 @@ FLUSH_JOB_ZUC256_EEA3:
 
         call    ZUC_EIA3_N64B
 
-%ifndef LINUX
-        ;; 48 bytes for 6 parameters
-        add     rsp, 48
-%endif
+        RESTORE_STACK_SPACE 6
+
         and     %%L, 0xf ; Remaining words of KS left to generate
 
         jmp     %%_loop
@@ -736,10 +721,8 @@ FLUSH_JOB_ZUC256_EEA3:
         call    ZUC_KEYGEN_16
 
 %%_exit:
-%ifndef LINUX
-        ;; 40 bytes for 5 parameters
-        sub     rsp, 40
-%endif
+        RESERVE_STACK_SPACE 5
+
         ; Digest final bytes of data and generate tag for finished buffers
         lea     arg1, [%%OOO + _zuc_args_digest]
         lea     arg2, [%%OOO + _zuc_args_KS]
@@ -757,9 +740,8 @@ FLUSH_JOB_ZUC256_EEA3:
         call    ZUC256_REMAINDER_16
 %endif
 
-%ifndef LINUX
-        add     rsp, 40
-%endif
+        RESTORE_STACK_SPACE 5
+
         mov     word [%%OOO + _zuc_init_not_done], 0
 %endmacro
 

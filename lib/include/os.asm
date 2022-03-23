@@ -76,4 +76,42 @@
 %endif
 %endmacro
 
+;; Macro to reserve stack space before function call,
+;; based on number of arguments
+%macro RESERVE_STACK_SPACE 1
+%define %%N_ARGS        %1 ; [immediate] Number of arguments
+
+%ifdef LINUX
+%if %%N_ARGS > 6
+        sub     rsp, 8*(%%N_ARGS - 6)
+%endif
+%else ; Windows
+%if %%N_ARGS <= 4
+        ; Reserve 32 bytes if number of arguments is <= 4
+        sub     rsp, 8*4
+%else
+        sub     rsp, 8*%%N_ARGS
+%endif
+%endif ; LINUX
+%endmacro
+
+;; Macro to restore stack pointer after function call,
+;; based on number of arguments
+%macro RESTORE_STACK_SPACE 1
+%define %%N_ARGS        %1 ; [immediate] Number of arguments
+
+%ifdef LINUX
+%if %%N_ARGS > 6
+        add     rsp, 8*(%%N_ARGS - 6)
+%endif
+%else ; Windows
+%if %%N_ARGS <= 4
+        ; Reserve 32 bytes if number of arguments is <= 4
+        add     rsp, 8*4
+%else
+        add     rsp, 8*%%N_ARGS
+%endif
+%endif ; LINUX
+%endmacro
+
 %endif                          ; OS_ASM_FILE
