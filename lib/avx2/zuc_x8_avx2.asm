@@ -1150,6 +1150,24 @@ asm_ZucGenKeystream32B_8_avx2:
         ret
 
 ;;
+;; void asm_ZucGenKeystream16B_8_avx2(state8_t *pSta, u32* pKeyStr[8])
+;;
+;; WIN64
+;;  RCX    - pSta
+;;  RDX    - pKeyStr
+;;
+;; LIN64
+;;  RDI    - pSta
+;;  RSI    - pKeyStr
+;;
+MKGLOBAL(asm_ZucGenKeystream16B_8_avx2,function,internal)
+asm_ZucGenKeystream16B_8_avx2:
+        endbranch64
+        KEYGEN_8_AVX2 4
+        vzeroupper
+        ret
+
+;;
 ;; void asm_ZucGenKeystream8B_8_avx2(state8_t *pSta, u32* pKeyStr[8])
 ;;
 ;; WIN64

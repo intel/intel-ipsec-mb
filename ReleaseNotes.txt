@@ -5,7 +5,7 @@ Unreleased
 ========================================================================
 
 Library
-- ZUC-EIA3-256 8-byte and 16-byte tag support added for SSE and AVX
+- ZUC-EIA3-256 8-byte and 16-byte tag support added for SSE, AVX and AVX2
 - AES-ECB AVX512-VAES implementation added
 - JOB API GHASH support added
 - AES-ECB optimizations for AVX and SSE

@@ -733,8 +733,9 @@ FLUSH_JOB_ZUC256_EEA3:
         endbranch64
         FLUSH_JOB_ZUC_EEA3 256
 
-%macro SUBMIT_JOB_ZUC_EIA3 1
+%macro SUBMIT_JOB_ZUC_EIA3 2
 %define %%KEY_SIZE      %1 ; [constant] Key size (128 or 256)
+%define %%TAG_SIZE      %2 ; [constant] Tag size (4, 8 or 16)
 
 ; idx needs to be in rbp
 %define len              rbp
@@ -866,7 +867,7 @@ FLUSH_JOB_ZUC256_EEA3:
         mov     arg6, r12
 %endif
 %if %%KEY_SIZE == 256
-        mov     arg7, 4
+        mov     arg7, %%TAG_SIZE
 %endif
 
 %if %%KEY_SIZE == 128
@@ -914,15 +915,18 @@ FLUSH_JOB_ZUC256_EEA3:
 %endif
         mov     rsp, [rsp + _rsp_save]  ; original SP
 
-        ret
+        jmp     %%exit_submit_eia3
 
 %%return_null_submit_eia3:
         xor     job_rax, job_rax
         jmp     %%return_submit_eia3
+
+%%exit_submit_eia3:
 %endmacro
 
-%macro FLUSH_JOB_ZUC_EIA3 1
+%macro FLUSH_JOB_ZUC_EIA3 2
 %define %%KEY_SIZE      %1 ; [constant] Key size (128 or 256)
+%define %%TAG_SIZE      %2 ; [constant] Tag size (4, 8 or 16)
 
 %define unused_lanes     rbx
 %define tmp1             rbx
@@ -1026,7 +1030,7 @@ APPEND(%%skip_eia3_,I):
         mov     arg6, r12
 %endif
 %if %%KEY_SIZE == 256
-        mov     arg7, 4
+        mov     arg7, %%TAG_SIZE
 %endif
 
 %if %%KEY_SIZE == 128
@@ -1074,11 +1078,13 @@ APPEND(%%skip_eia3_,I):
 %endif
         mov     rsp, [rsp + _rsp_save]  ; original SP
 
-        ret
+        jmp     %%exit_flush_eia3
 
 %%return_null_flush_eia3:
         xor     job_rax, job_rax
         jmp     %%return_flush_eia3
+
+%%exit_flush_eia3:
 %endmacro
 
 ; JOB* SUBMIT_JOB_ZUC128_EIA3(MB_MGR_ZUC_OOO *state, IMB_JOB *job)
@@ -1087,28 +1093,62 @@ APPEND(%%skip_eia3_,I):
 MKGLOBAL(SUBMIT_JOB_ZUC128_EIA3,function,internal)
 SUBMIT_JOB_ZUC128_EIA3:
         endbranch64
-        SUBMIT_JOB_ZUC_EIA3 128
+        SUBMIT_JOB_ZUC_EIA3 128, 4
+        ret
 
-; JOB* SUBMIT_JOB_ZUC256_EIA3(MB_MGR_ZUC_OOO *state, IMB_JOB *job)
+; JOB* SUBMIT_JOB_ZUC256_EIA3(MB_MGR_ZUC_OOO *state, IMB_JOB *job,
+;                             const uint64_t tag_sz)
 ; arg 1 : state
 ; arg 2 : job
+; arg 3 : tag size (4, 8 or 16 bytes)
 MKGLOBAL(SUBMIT_JOB_ZUC256_EIA3,function,internal)
 SUBMIT_JOB_ZUC256_EIA3:
         endbranch64
-        SUBMIT_JOB_ZUC_EIA3 256
+        cmp     arg3, 8
+        je      submit_tag_8B
+        jb      submit_tag_4B
+
+        ; Fall-through for 16-byte tag
+submit_tag_16B:
+        SUBMIT_JOB_ZUC_EIA3 256, 16
+        ret
+submit_tag_8B:
+        SUBMIT_JOB_ZUC_EIA3 256, 8
+        ret
+submit_tag_4B:
+        SUBMIT_JOB_ZUC_EIA3 256, 4
+        ret
 
 ; JOB* FLUSH_JOB_ZUC128_EIA3(MB_MGR_ZUC_OOO *state)
 ; arg 1 : state
 MKGLOBAL(FLUSH_JOB_ZUC128_EIA3,function,internal)
 FLUSH_JOB_ZUC128_EIA3:
         endbranch64
-        FLUSH_JOB_ZUC_EIA3 128
+        FLUSH_JOB_ZUC_EIA3 128, 4
+        ret
 
-; JOB* FLUSH_JOB_ZUC256_EIA3(MB_MGR_ZUC_OOO *state)
+; JOB* FLUSH_JOB_ZUC256_EIA3(MB_MGR_ZUC_OOO *state,
+;                            const uint64_t tag_sz)
 ; arg 1 : state
+; arg 2 : tag size (4, 8 or 16 bytes)
 MKGLOBAL(FLUSH_JOB_ZUC256_EIA3,function,internal)
 FLUSH_JOB_ZUC256_EIA3:
         endbranch64
-        FLUSH_JOB_ZUC_EIA3 256
+        cmp     arg2, 8
+        je      flush_tag_8B
+        jb      flush_tag_4B
+
+        ; Fall-through for 16-byte tag
+flush_tag_16B:
+        FLUSH_JOB_ZUC_EIA3 256, 16
+        ret
+
+flush_tag_8B:
+        FLUSH_JOB_ZUC_EIA3 256, 8
+        ret
+
+flush_tag_4B:
+        FLUSH_JOB_ZUC_EIA3 256, 4
+        ret
 
 mksection stack-noexec

@@ -859,7 +859,7 @@ void zuc256_eia3_8_buffer_job_avx2(const void * const pKey[NUM_AVX2_BUFS],
         DECLARE_ALIGNED(ZucKey8_t keys, 64);
         const uint8_t *pIn8[NUM_AVX2_BUFS] = {NULL};
         uint32_t numKeyStr = 0;
-        uint8_t T[NUM_AVX2_BUFS*4];
+        DECLARE_ALIGNED(uint8_t T[NUM_AVX2_BUFS*16], 32);
         const uint32_t keyStreamLengthInBits = KEYSTR_ROUND_LEN * 8;
         DECLARE_ALIGNED(uint32_t *pKeyStrArr[NUM_AVX2_BUFS], 32) = {NULL};
         unsigned int allCommonBits;
@@ -873,7 +873,6 @@ void zuc256_eia3_8_buffer_job_avx2(const void * const pKey[NUM_AVX2_BUFS],
                 keys.pKeys[i] = pKey[i];
         }
 
-        /* TODO: Handle 8 and 16-byte digest cases */
         asm_Zuc256Initialization_8_avx2(&keys, ivs, &state, T, tag_size);
 
         /* Generate 32 bytes at a time */
@@ -886,27 +885,35 @@ void zuc256_eia3_8_buffer_job_avx2(const void * const pKey[NUM_AVX2_BUFS],
         while (remainCommonBits >= keyStreamLengthInBits) {
                 remainCommonBits -= keyStreamLengthInBits;
                 numKeyStr++;
-                /* Generate the next key stream 4 bytes or 32 bytes */
-                if (!remainCommonBits && allCommonBits)
-                        asm_ZucGenKeystream4B_8_avx2(&state,
-                                                     (uint32_t **)pKeyStrArr);
-                else
+                /* Generate the next key stream 4/8/16 bytes or 32 bytes */
+                if (!remainCommonBits && allCommonBits) {
+                        if (tag_size == 4)
+                                asm_ZucGenKeystream4B_8_avx2(&state,
+                                                             pKeyStrArr);
+                        else if (tag_size == 8)
+                                asm_ZucGenKeystream8B_8_avx2(&state,
+                                                             pKeyStrArr);
+                        else
+                                asm_ZucGenKeystream16B_8_avx2(&state,
+                                                              pKeyStrArr);
+                } else
                         asm_ZucGenKeystream32B_8_avx2(&state,
                                                       (uint32_t **)pKeyStrArr);
                 for (i = 0; i < NUM_AVX2_BUFS; i++) {
-                        uint32_t *tag = (uint32_t *) &T[i*4];
+                        void *tag = (void *) &T[i*tag_size];
 
                         if (job_in_lane[i] == NULL)
                                 continue;
 
-                        asm_Eia3Round32B_avx(tag, &keyStr[i][0], pIn8[i], 4);
+                        asm_Eia3Round32B_avx(tag, &keyStr[i][0], pIn8[i],
+                                             tag_size);
                         pIn8[i] = &pIn8[i][KEYSTR_ROUND_LEN];
                 }
         }
 
         /* Process each packet separately for the remaining bits */
         for (i = 0; i < NUM_AVX2_BUFS; i++) {
-                uint32_t *tag = (uint32_t *) &T[i*4];
+                void *tag = (void *) &T[i*tag_size];
 
                 if (job_in_lane[i] == NULL)
                         continue;
@@ -915,10 +922,15 @@ void zuc256_eia3_8_buffer_job_avx2(const void * const pKey[NUM_AVX2_BUFS],
                                       numKeyStr*keyStreamLengthInBits;
                 uint32_t *keyStr32 = (uint32_t *) keyStr[i];
 
-                /* If remaining bits are more than 160 bytes, we need to
-                 * generate at least 4B more of keystream, so we need to copy
-                 * the zuc state to single packet state first */
-                if (remainBits > (5*32)) {
+                const uint32_t N = remainBits + ((uint32_t) tag_size << 3);
+                uint32_t L = ((N + 31) / ZUC_WORD_BITS);
+
+                /* 8 KS words are generated already */
+                L = (L > 8) ? (L - 8) : 0;
+
+                /* Copy the ZUC state to single packet state,
+                 * if more KS is needed */
+                if (L > 0) {
                         singlePktState.lfsrState[0] = state.lfsrState[0][i];
                         singlePktState.lfsrState[1] = state.lfsrState[1][i];
                         singlePktState.lfsrState[2] = state.lfsrState[2][i];
@@ -943,26 +955,25 @@ void zuc256_eia3_8_buffer_job_avx2(const void * const pKey[NUM_AVX2_BUFS],
                 while (remainBits >= keyStreamLengthInBits) {
                         remainBits -= keyStreamLengthInBits;
 
-                        /* Generate the next key stream 4 bytes or 32 bytes */
-                        if (!remainBits)
-                                asm_ZucGenKeystream_avx(&keyStr32[8],
-                                                        &singlePktState, 1);
-                        else
+                        /* Generate the next key stream (32 bytes max) */
+                        if (L > 7) {
                                 asm_ZucGenKeystream32B_avx(&keyStr32[8],
                                                            &singlePktState);
+                                L -= 8;
+                        } else {
+                                asm_ZucGenKeystream_avx(&keyStr32[8],
+                                                        &singlePktState, L);
+                                L = 0;
+                        }
                         asm_Eia3Round32B_avx(tag, &keyStr32[0], pIn8[i],
                                              tag_size);
                         pIn8[i] = &pIn8[i][KEYSTR_ROUND_LEN];
                 }
 
-                /*
-                 * If remaining bits has more than 5 ZUC WORDS (double words),
-                 * keystream needs to have another ZUC WORD (4B)
-                 */
-
-                if (remainBits > (5 * 32))
+                /* Generate final keystream if needed */
+                if (L > 0)
                         asm_ZucGenKeystream_avx(&keyStr32[8],
-                                                &singlePktState, 1);
+                                                &singlePktState, L);
 
                 asm_Eia3Remainder_avx(tag, keyStr32, pIn8[i], remainBits,
                                       256, tag_size);
