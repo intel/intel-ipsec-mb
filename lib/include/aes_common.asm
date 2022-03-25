@@ -747,4 +747,533 @@
 
 %endmacro
 
+;; =============================================================================
+;; Generic macro to produce code that executes %%OPCODE instruction with 3
+;; operands on selected number of AES blocks (16 bytes long) between 0 and 8.
+;; All three operands of the instruction come from registers.
+%macro XMM_OPCODE3_DSTR_SRC1R_SRC2R_BLOCKS_0_8 26
+%define %%NUM_BLOCKS    %1      ; [in] numerical value, number of AES blocks (0 to 8)
+%define %%OPCODE        %2      ; [in] instruction name
+%define %%DST0          %3      ; [out] destination XMM register
+%define %%DST1          %4      ; [out] destination XMM register
+%define %%DST2          %5      ; [out] destination XMM register
+%define %%DST3          %6      ; [out] destination XMM register
+%define %%DST4          %7      ; [out] destination XMM register
+%define %%DST5          %8      ; [out] destination XMM register
+%define %%DST6          %9      ; [out] destination XMM register
+%define %%DST7          %10     ; [out] destination XMM register
+%define %%SRC1_0        %11     ; [in] source 1 XMM register
+%define %%SRC1_1        %12     ; [in] source 1 XMM register
+%define %%SRC1_2        %13     ; [in] source 1 XMM register
+%define %%SRC1_3        %14     ; [in] source 1 XMM register
+%define %%SRC1_4        %15     ; [in] source 1 XMM register
+%define %%SRC1_5        %16     ; [in] source 1 XMM register
+%define %%SRC1_6        %17     ; [in] source 1 XMM register
+%define %%SRC1_7        %18     ; [in] source 1 XMM register
+%define %%SRC2_0        %19     ; [in] source 2 XMM register
+%define %%SRC2_1        %20     ; [in] source 2 XMM register
+%define %%SRC2_2        %21     ; [in] source 2 XMM register
+%define %%SRC2_3        %22     ; [in] source 2 XMM register
+%define %%SRC2_4        %23     ; [in] source 2 XMM register
+%define %%SRC2_5        %24     ; [in] source 2 XMM register
+%define %%SRC2_6        %25     ; [in] source 2 XMM register
+%define %%SRC2_7        %26     ; [in] source 2 XMM register
+
+%assign _reg_idx     0
+
+%rep (%%NUM_BLOCKS)
+%xdefine %%DSTREG  %%DST %+ _reg_idx
+%xdefine %%SRC1REG %%SRC1_ %+ _reg_idx
+%xdefine %%SRC2REG %%SRC2_ %+ _reg_idx
+        %%OPCODE        %%DSTREG, %%SRC1REG, %%SRC2REG
+%undef %%DSTREG
+%undef %%SRC1REG
+%undef %%SRC2REG
+%assign _reg_idx     (_reg_idx + 1)
+%endrep
+
+%endmacro
+
+;; =============================================================================
+;; Generic macro to produce code that executes %%OPCODE instruction with 2
+;; operands on selected number of AES blocks (16 bytes long) between 0 and 8.
+;; Both operands of the instruction come from registers.
+%macro XMM_OPCODE2_DSTR_SRCR_BLOCKS_0_8 18
+%define %%NUM_BLOCKS    %1      ; [in] numerical value, number of AES blocks (0 to 8)
+%define %%OPCODE        %2      ; [in] instruction name
+%define %%DST0          %3      ; [out] destination YMM register
+%define %%DST1          %4      ; [out] destination YMM register
+%define %%DST2          %5      ; [out] destination YMM register
+%define %%DST3          %6      ; [out] destination YMM register
+%define %%DST4          %7      ; [out] destination YMM register
+%define %%DST5          %8      ; [out] destination YMM register
+%define %%DST6          %9      ; [out] destination YMM register
+%define %%DST7          %10     ; [out] destination YMM register
+%define %%SRC0          %11     ; [in] source YMM register
+%define %%SRC1          %12     ; [in] source YMM register
+%define %%SRC2          %13     ; [in] source YMM register
+%define %%SRC3          %14     ; [in] source YMM register
+%define %%SRC4          %15     ; [in] source YMM register
+%define %%SRC5          %16     ; [in] source YMM register
+%define %%SRC6          %17     ; [in] source YMM register
+%define %%SRC7          %18     ; [in] source YMM register
+
+%assign _reg_idx     0
+
+%rep (%%NUM_BLOCKS)
+%xdefine %%DSTREG  %%DST %+ _reg_idx
+%xdefine %%SRCREG %%SRC %+ _reg_idx
+        %%OPCODE        %%DSTREG, %%SRCREG
+%undef %%DSTREG
+%undef %%SRCREG
+%assign _reg_idx     (_reg_idx + 1)
+%endrep
+
+%endmacro
+
+;;; ===========================================================================
+;;; Handles AES encryption rounds for 0 to 8 blocks on AVX
+;;; It handles special cases: the last and first rounds
+;;; Optionally, it performs XOR with data after the last AES round.
+;;; Uses NROUNDS parameter to check what needs to be done for the current round.
+%macro XMM_AESENC_ROUND_BLOCKS_AVX_0_8 20
+%define %%L0B0          %1      ; [in/out] xmm; ciphered blocks
+%define %%L0B1          %2      ; [in/out] xmm; ciphered blocks
+%define %%L0B2          %3      ; [in/out] xmm; ciphered blocks
+%define %%L0B3          %4      ; [in/out] xmm; ciphered blocks
+%define %%L0B4          %5      ; [in/out] xmm; ciphered blocks
+%define %%L0B5          %6      ; [in/out] xmm; ciphered blocks
+%define %%L0B6          %7      ; [in/out] xmm; ciphered blocks
+%define %%L0B7          %8      ; [in/out] xmm; ciphered blocks
+%define %%KEY           %9      ; [in] xmm containing round key
+%define %%ROUND         %10     ; [in] round number
+%define %%D0            %11     ; [in] xmm or no_data; plain/cipher text blocks
+%define %%D1            %12     ; [in] xmm or no_data; plain/cipher text blocks
+%define %%D2            %13     ; [in] xmm or no_data; plain/cipher text blocks
+%define %%D3            %14     ; [in] xmm or no_data; plain/cipher text blocks
+%define %%D4            %15     ; [in] xmm or no_data; plain/cipher text blocks
+%define %%D5            %16     ; [in] xmm or no_data; plain/cipher text blocks
+%define %%D6            %17     ; [in] xmm or no_data; plain/cipher text blocks
+%define %%D7            %18     ; [in] xmm or no_data; plain/cipher text blocks
+%define %%NUMBL         %19     ; [in] number of blocks; numerical value
+%define %%NROUNDS       %20     ; [in] number of rounds; numerical value
+
+;;; === first AES round
+%if (%%ROUND < 1)
+        ;;  round 0
+        XMM_OPCODE3_DSTR_SRC1R_SRC2R_BLOCKS_0_8 %%NUMBL, vpxor, \
+                        %%L0B0, %%L0B1,   %%L0B2,   %%L0B3, \
+                        %%L0B4, %%L0B5, %%L0B6, %%L0B7, \
+                        %%L0B0, %%L0B1,   %%L0B2,   %%L0B3, \
+                        %%L0B4, %%L0B5, %%L0B6, %%L0B7, \
+                        %%KEY, %%KEY, %%KEY, %%KEY, %%KEY, %%KEY, %%KEY, %%KEY
+%endif                  ; ROUND 0
+
+;;; === middle AES rounds
+%if (%%ROUND >= 1 && %%ROUND <= %%NROUNDS)
+        ;; rounds 1 to 9/11/13
+        XMM_OPCODE3_DSTR_SRC1R_SRC2R_BLOCKS_0_8 %%NUMBL, vaesenc, \
+                        %%L0B0, %%L0B1,   %%L0B2,   %%L0B3, \
+                        %%L0B4, %%L0B5, %%L0B6, %%L0B7, \
+                        %%L0B0, %%L0B1,   %%L0B2,   %%L0B3, \
+                        %%L0B4, %%L0B5, %%L0B6, %%L0B7, \
+                        %%KEY, %%KEY, %%KEY, %%KEY, %%KEY, %%KEY, %%KEY, %%KEY
+%endif                  ; rounds 1 to 9/11/13
+
+;;; === last AES round
+%if (%%ROUND > %%NROUNDS)
+        ;; the last round - mix enclast with text xor's
+        XMM_OPCODE3_DSTR_SRC1R_SRC2R_BLOCKS_0_8 %%NUMBL, vaesenclast, \
+                        %%L0B0, %%L0B1,   %%L0B2,   %%L0B3, \
+                        %%L0B4, %%L0B5, %%L0B6, %%L0B7, \
+                        %%L0B0, %%L0B1,   %%L0B2,   %%L0B3, \
+                        %%L0B4, %%L0B5, %%L0B6, %%L0B7, \
+                        %%KEY, %%KEY, %%KEY, %%KEY, %%KEY, %%KEY, %%KEY, %%KEY
+
+;;; === XOR with data
+%ifnidn %%D0, no_data
+%ifnidn %%D1, no_data
+%ifnidn %%D2, no_data
+%ifnidn %%D3, no_data
+%ifnidn %%D4, no_data
+%ifnidn %%D5, no_data
+%ifnidn %%D6, no_data
+%ifnidn %%D7, no_data
+        XMM_OPCODE3_DSTR_SRC1R_SRC2R_BLOCKS_0_8 %%NUMBL, vpxor, \
+                        %%L0B0, %%L0B1,   %%L0B2,   %%L0B3, \
+                        %%L0B4, %%L0B5, %%L0B6, %%L0B7, \
+                        %%D0, %%D1,   %%D2,   %%D3, \
+                        %%D4, %%D5, %%D6, %%D7
+%endif                          ; !no_data
+%endif                          ; !no_data
+%endif                          ; !no_data
+%endif                          ; !no_data
+%endif                          ; !no_data
+%endif                          ; !no_data
+%endif                          ; !no_data
+%endif                          ; !no_data
+
+%endif                  ; The last round
+
+%endmacro
+
+;;; ===========================================================================
+;;; Handles AES encryption rounds for 0 to 8 blocks on SSE
+;;; It handles special cases: the last and first rounds
+;;; Optionally, it performs XOR with data after the last AES round.
+;;; Uses NROUNDS parameter to check what needs to be done for the current round.
+%macro XMM_AESENC_ROUND_BLOCKS_SSE_0_8 20
+%define %%L0B0          %1      ; [in/out] xmm; ciphered blocks
+%define %%L0B1          %2      ; [in/out] xmm; ciphered blocks
+%define %%L0B2          %3      ; [in/out] xmm; ciphered blocks
+%define %%L0B3          %4      ; [in/out] xmm; ciphered blocks
+%define %%L0B4          %5      ; [in/out] xmm; ciphered blocks
+%define %%L0B5          %6      ; [in/out] xmm; ciphered blocks
+%define %%L0B6          %7      ; [in/out] xmm; ciphered blocks
+%define %%L0B7          %8      ; [in/out] xmm; ciphered blocks
+%define %%KEY           %9      ; [in] xmm containing round key
+%define %%ROUND         %10     ; [in] round number
+%define %%D0            %11     ; [in] xmm or no_data; plain/cipher text blocks
+%define %%D1            %12     ; [in] xmm or no_data; plain/cipher text blocks
+%define %%D2            %13     ; [in] xmm or no_data; plain/cipher text blocks
+%define %%D3            %14     ; [in] xmm or no_data; plain/cipher text blocks
+%define %%D4            %15     ; [in] xmm or no_data; plain/cipher text blocks
+%define %%D5            %16     ; [in] xmm or no_data; plain/cipher text blocks
+%define %%D6            %17     ; [in] xmm or no_data; plain/cipher text blocks
+%define %%D7            %18     ; [in] xmm or no_data; plain/cipher text blocks
+%define %%NUMBL         %19     ; [in] number of blocks; numerical value
+%define %%NROUNDS       %20     ; [in] number of rounds; numerical value
+
+;;; === first AES round
+%if (%%ROUND < 1)
+        ;;  round 0
+        XMM_OPCODE2_DSTR_SRCR_BLOCKS_0_8 %%NUMBL, pxor, \
+                        %%L0B0, %%L0B1,   %%L0B2,   %%L0B3, \
+                        %%L0B4, %%L0B5, %%L0B6, %%L0B7, \
+                        %%KEY, %%KEY, %%KEY, %%KEY, %%KEY, %%KEY, %%KEY, %%KEY
+%endif                  ; ROUND 0
+
+;;; === middle AES rounds
+%if (%%ROUND >= 1 && %%ROUND <= %%NROUNDS)
+        ;; rounds 1 to 9/11/13
+        XMM_OPCODE2_DSTR_SRCR_BLOCKS_0_8 %%NUMBL, aesenc, \
+                        %%L0B0, %%L0B1,   %%L0B2,   %%L0B3, \
+                        %%L0B4, %%L0B5, %%L0B6, %%L0B7, \
+                        %%KEY, %%KEY, %%KEY, %%KEY, %%KEY, %%KEY, %%KEY, %%KEY
+%endif                  ; rounds 1 to 9/11/13
+
+;;; === last AES round
+%if (%%ROUND > %%NROUNDS)
+        ;; the last round - mix enclast with text xor's
+        XMM_OPCODE2_DSTR_SRCR_BLOCKS_0_8 %%NUMBL, aesenclast, \
+                        %%L0B0, %%L0B1,   %%L0B2,   %%L0B3, \
+                        %%L0B4, %%L0B5, %%L0B6, %%L0B7, \
+                        %%KEY, %%KEY, %%KEY, %%KEY, %%KEY, %%KEY, %%KEY, %%KEY
+
+;;; === XOR with data
+%ifnidn %%D0, no_data
+%ifnidn %%D1, no_data
+%ifnidn %%D2, no_data
+%ifnidn %%D3, no_data
+%ifnidn %%D4, no_data
+%ifnidn %%D5, no_data
+%ifnidn %%D6, no_data
+%ifnidn %%D7, no_data
+        XMM_OPCODE2_DSTR_SRCR_BLOCKS_0_8 %%NUMBL, pxor, \
+                        %%L0B0, %%L0B1,   %%L0B2,   %%L0B3, \
+                        %%L0B4, %%L0B5, %%L0B6, %%L0B7, \
+                        %%D0, %%D1,   %%D2,   %%D3, \
+                        %%D4, %%D5, %%D6, %%D7
+%endif                          ; !no_data
+%endif                          ; !no_data
+%endif                          ; !no_data
+%endif                          ; !no_data
+%endif                          ; !no_data
+%endif                          ; !no_data
+%endif                          ; !no_data
+%endif                          ; !no_data
+
+%endif                  ; The last round
+
+%endmacro
+
+
+;;; ===========================================================================
+;;; Handles AES decryption rounds for 0 to 8 blocks on AVX
+;;; It handles special cases: the last and first rounds
+;;; Optionally, it performs XOR with data after the last AES round.
+;;; Uses NROUNDS parameter to check what needs to be done for the current round.
+%macro XMM_AESDEC_ROUND_BLOCKS_AVX_0_8 20
+%define %%L0B0          %1      ; [in/out] xmm; ciphered blocks
+%define %%L0B1          %2      ; [in/out] xmm; ciphered blocks
+%define %%L0B2          %3      ; [in/out] xmm; ciphered blocks
+%define %%L0B3          %4      ; [in/out] xmm; ciphered blocks
+%define %%L0B4          %5      ; [in/out] xmm; ciphered blocks
+%define %%L0B5          %6      ; [in/out] xmm; ciphered blocks
+%define %%L0B6          %7      ; [in/out] xmm; ciphered blocks
+%define %%L0B7          %8      ; [in/out] xmm; ciphered blocks
+%define %%KEY           %9      ; [in] xmm containing round key
+%define %%ROUND         %10     ; [in] round number
+%define %%D0            %11     ; [in] xmm or no_data; plain/cipher text blocks
+%define %%D1            %12     ; [in] xmm or no_data; plain/cipher text blocks
+%define %%D2            %13     ; [in] xmm or no_data; plain/cipher text blocks
+%define %%D3            %14     ; [in] xmm or no_data; plain/cipher text blocks
+%define %%D4            %15     ; [in] xmm or no_data; plain/cipher text blocks
+%define %%D5            %16     ; [in] xmm or no_data; plain/cipher text blocks
+%define %%D6            %17     ; [in] xmm or no_data; plain/cipher text blocks
+%define %%D7            %18     ; [in] xmm or no_data; plain/cipher text blocks
+%define %%NUMBL         %19     ; [in] number of blocks; numerical value
+%define %%NROUNDS       %20     ; [in] number of rounds; numerical value
+
+;;; === first AES round
+%if (%%ROUND < 1)
+        ;;  round 0
+        XMM_OPCODE3_DSTR_SRC1R_SRC2R_BLOCKS_0_8 %%NUMBL, vpxor, \
+                        %%L0B0, %%L0B1,   %%L0B2,   %%L0B3, \
+                        %%L0B4, %%L0B5, %%L0B6, %%L0B7, \
+                        %%L0B0, %%L0B1,   %%L0B2,   %%L0B3, \
+                        %%L0B4, %%L0B5, %%L0B6, %%L0B7, \
+                        %%KEY, %%KEY, %%KEY, %%KEY, %%KEY, %%KEY, %%KEY, %%KEY
+%endif                  ; ROUND 0
+
+;;; === middle AES rounds
+%if (%%ROUND >= 1 && %%ROUND <= %%NROUNDS)
+        ;; rounds 1 to 9/11/13
+        XMM_OPCODE3_DSTR_SRC1R_SRC2R_BLOCKS_0_8 %%NUMBL, vaesdec, \
+                        %%L0B0, %%L0B1,   %%L0B2,   %%L0B3, \
+                        %%L0B4, %%L0B5, %%L0B6, %%L0B7, \
+                        %%L0B0, %%L0B1,   %%L0B2,   %%L0B3, \
+                        %%L0B4, %%L0B5, %%L0B6, %%L0B7, \
+                        %%KEY, %%KEY, %%KEY, %%KEY, %%KEY, %%KEY, %%KEY, %%KEY
+%endif                  ; rounds 1 to 9/11/13
+
+;;; === last AES round
+%if (%%ROUND > %%NROUNDS)
+        ;; the last round - mix enclast with text xor's
+        XMM_OPCODE3_DSTR_SRC1R_SRC2R_BLOCKS_0_8 %%NUMBL, vaesdeclast, \
+                        %%L0B0, %%L0B1,   %%L0B2,   %%L0B3, \
+                        %%L0B4, %%L0B5, %%L0B6, %%L0B7, \
+                        %%L0B0, %%L0B1,   %%L0B2,   %%L0B3, \
+                        %%L0B4, %%L0B5, %%L0B6, %%L0B7, \
+                        %%KEY, %%KEY, %%KEY, %%KEY, %%KEY, %%KEY, %%KEY, %%KEY
+
+;;; === XOR with data
+%ifnidn %%D0, no_data
+%ifnidn %%D1, no_data
+%ifnidn %%D2, no_data
+%ifnidn %%D3, no_data
+%ifnidn %%D4, no_data
+%ifnidn %%D5, no_data
+%ifnidn %%D6, no_data
+%ifnidn %%D7, no_data
+        XMM_OPCODE3_DSTR_SRC1R_SRC2R_BLOCKS_0_8 %%NUMBL, vpxor, \
+                        %%L0B0, %%L0B1,   %%L0B2,   %%L0B3, \
+                        %%L0B4, %%L0B5, %%L0B6, %%L0B7, \
+                        %%D0, %%D1,   %%D2,   %%D3, \
+                        %%D4, %%D5, %%D6, %%D7
+%endif                          ; !no_data
+%endif                          ; !no_data
+%endif                          ; !no_data
+%endif                          ; !no_data
+%endif                          ; !no_data
+%endif                          ; !no_data
+%endif                          ; !no_data
+%endif                          ; !no_data
+
+%endif                  ; The last round
+
+%endmacro
+
 %endif ;; _AES_COMMON_ASM
+
+;;; ===========================================================================
+;;; Handles AES decryption rounds for 0 to 8 blocks on SSE
+;;; It handles special cases: the last and first rounds
+;;; Optionally, it performs XOR with data after the last AES round.
+;;; Uses NROUNDS parameter to check what needs to be done for the current round.
+%macro XMM_AESDEC_ROUND_BLOCKS_SSE_0_8 20
+%define %%L0B0          %1      ; [in/out] xmm; ciphered blocks
+%define %%L0B1          %2      ; [in/out] xmm; ciphered blocks
+%define %%L0B2          %3      ; [in/out] xmm; ciphered blocks
+%define %%L0B3          %4      ; [in/out] xmm; ciphered blocks
+%define %%L0B4          %5      ; [in/out] xmm; ciphered blocks
+%define %%L0B5          %6      ; [in/out] xmm; ciphered blocks
+%define %%L0B6          %7      ; [in/out] xmm; ciphered blocks
+%define %%L0B7          %8      ; [in/out] xmm; ciphered blocks
+%define %%KEY           %9      ; [in] xmm containing round key
+%define %%ROUND         %10     ; [in] round number
+%define %%D0            %11     ; [in] xmm or no_data; plain/cipher text blocks
+%define %%D1            %12     ; [in] xmm or no_data; plain/cipher text blocks
+%define %%D2            %13     ; [in] xmm or no_data; plain/cipher text blocks
+%define %%D3            %14     ; [in] xmm or no_data; plain/cipher text blocks
+%define %%D4            %15     ; [in] xmm or no_data; plain/cipher text blocks
+%define %%D5            %16     ; [in] xmm or no_data; plain/cipher text blocks
+%define %%D6            %17     ; [in] xmm or no_data; plain/cipher text blocks
+%define %%D7            %18     ; [in] xmm or no_data; plain/cipher text blocks
+%define %%NUMBL         %19     ; [in] number of blocks; numerical value
+%define %%NROUNDS       %20     ; [in] number of rounds; numerical value
+
+;;; === first AES round
+%if (%%ROUND < 1)
+        ;;  round 0
+        XMM_OPCODE2_DSTR_SRCR_BLOCKS_0_8 %%NUMBL, pxor, \
+                        %%L0B0, %%L0B1,   %%L0B2,   %%L0B3, \
+                        %%L0B4, %%L0B5, %%L0B6, %%L0B7, \
+                        %%KEY, %%KEY, %%KEY, %%KEY, %%KEY, %%KEY, %%KEY, %%KEY
+%endif                  ; ROUND 0
+
+;;; === middle AES rounds
+%if (%%ROUND >= 1 && %%ROUND <= %%NROUNDS)
+        ;; rounds 1 to 9/11/13
+        XMM_OPCODE2_DSTR_SRCR_BLOCKS_0_8 %%NUMBL, aesdec, \
+                        %%L0B0, %%L0B1,   %%L0B2,   %%L0B3, \
+                        %%L0B4, %%L0B5, %%L0B6, %%L0B7, \
+                        %%KEY, %%KEY, %%KEY, %%KEY, %%KEY, %%KEY, %%KEY, %%KEY
+%endif                  ; rounds 1 to 9/11/13
+
+;;; === last AES round
+%if (%%ROUND > %%NROUNDS)
+        ;; the last round - mix enclast with text xor's
+        XMM_OPCODE2_DSTR_SRCR_BLOCKS_0_8 %%NUMBL, aesdeclast, \
+                        %%L0B0, %%L0B1,   %%L0B2,   %%L0B3, \
+                        %%L0B4, %%L0B5, %%L0B6, %%L0B7, \
+                        %%KEY, %%KEY, %%KEY, %%KEY, %%KEY, %%KEY, %%KEY, %%KEY
+
+;;; === XOR with data
+%ifnidn %%D0, no_data
+%ifnidn %%D1, no_data
+%ifnidn %%D2, no_data
+%ifnidn %%D3, no_data
+%ifnidn %%D4, no_data
+%ifnidn %%D5, no_data
+%ifnidn %%D6, no_data
+%ifnidn %%D7, no_data
+        XMM_OPCODE2_DSTR_SRCR_BLOCKS_0_8 %%NUMBL, pxor, \
+                        %%L0B0, %%L0B1,   %%L0B2,   %%L0B3, \
+                        %%L0B4, %%L0B5, %%L0B6, %%L0B7, \
+                        %%D0, %%D1,   %%D2,   %%D3, \
+                        %%D4, %%D5, %%D6, %%D7
+%endif                          ; !no_data
+%endif                          ; !no_data
+%endif                          ; !no_data
+%endif                          ; !no_data
+%endif                          ; !no_data
+%endif                          ; !no_data
+%endif                          ; !no_data
+%endif                          ; !no_data
+
+%endif                  ; The last round
+
+%endmacro
+
+;; =============================================================================
+;; Loads up to 8 blocks into XMM registers on AVX
+%macro XMM_LOAD_BLOCKS_AVX_0_8 11
+%define %%NUM_BLOCKS    %1      ; [in] numerical value, number of AES blocks (0 to 16)
+%define %%INP           %2      ; [in] input data pointer to read from
+%define %%DATA_OFFSET   %3      ; [in] offset to the output pointer (GP or numerical)
+%define %%DST0          %4      ; [out] XMM register with loaded data
+%define %%DST1          %5      ; [out] XMM register with loaded data
+%define %%DST2          %6      ; [out] XMM register with loaded data
+%define %%DST3          %7      ; [out] XMM register with loaded data
+%define %%DST4          %8      ; [out] XMM register with loaded data
+%define %%DST5          %9      ; [out] XMM register with loaded data
+%define %%DST6          %10     ; [out] XMM register with loaded data
+%define %%DST7          %11     ; [out] XMM register with loaded data
+
+%assign src_offset  0
+%assign dst_idx     0
+
+%rep (%%NUM_BLOCKS)
+%xdefine %%DSTREG %%DST %+ dst_idx
+        vmovdqu         %%DSTREG, [%%INP + %%DATA_OFFSET + src_offset]
+%undef %%DSTREG
+%assign src_offset  (src_offset + 16)
+%assign dst_idx     (dst_idx + 1)
+%endrep
+
+%endmacro
+
+;; =============================================================================
+;; Loads up to 8 AES blocks into XMM registers on SSE
+%macro XMM_LOAD_BLOCKS_SSE_0_8 11
+%define %%NUM_BLOCKS    %1      ; [in] numerical value, number of AES blocks (0 to 16)
+%define %%INP           %2      ; [in] input data pointer to read from
+%define %%DATA_OFFSET   %3      ; [in] offset to the output pointer (GP or numerical)
+%define %%DST0          %4      ; [out] XMM register with loaded data
+%define %%DST1          %5      ; [out] XMM register with loaded data
+%define %%DST2          %6      ; [out] XMM register with loaded data
+%define %%DST3          %7      ; [out] XMM register with loaded data
+%define %%DST4          %8      ; [out] XMM register with loaded data
+%define %%DST5          %9      ; [out] XMM register with loaded data
+%define %%DST6          %10     ; [out] XMM register with loaded data
+%define %%DST7          %11     ; [out] XMM register with loaded data
+
+%assign src_offset  0
+%assign dst_idx     0
+
+%rep (%%NUM_BLOCKS)
+%xdefine %%DSTREG %%DST %+ dst_idx
+        movdqu         %%DSTREG, [%%INP + %%DATA_OFFSET + src_offset]
+%undef %%DSTREG
+%assign src_offset  (src_offset + 16)
+%assign dst_idx     (dst_idx + 1)
+%endrep
+
+%endmacro
+
+;; =============================================================================
+;; Stores up to 8 AES blocks from XMM registers on AVX
+%macro XMM_STORE_BLOCKS_AVX_0_8 11
+%define %%NUM_BLOCKS    %1      ; [in] numerical value, number of AES blocks (0 to 8)
+%define %%OUTP          %2      ; [in] output data pointer to write to
+%define %%DATA_OFFSET   %3      ; [in] offset to the output pointer (GP or numerical)
+%define %%SRC0          %4      ; [in] XMM register with data to store
+%define %%SRC1          %5      ; [in] XMM register with data to store
+%define %%SRC2          %6      ; [in] XMM register with data to store
+%define %%SRC3          %7      ; [in] XMM register with data to store
+%define %%SRC4          %8      ; [in] XMM register with data to store
+%define %%SRC5          %9      ; [in] XMM register with data to store
+%define %%SRC6          %10     ; [in] XMM register with data to store
+%define %%SRC7          %11     ; [in] XMM register with data to store
+
+%assign dst_offset  0
+%assign src_idx     0
+
+%rep (%%NUM_BLOCKS)
+%xdefine %%SRCREG %%SRC %+ src_idx
+        vmovdqu         [%%OUTP + %%DATA_OFFSET + dst_offset], %%SRCREG
+%undef %%SRCREG
+%assign dst_offset  (dst_offset + 16)
+%assign src_idx     (src_idx + 1)
+%endrep
+
+%endmacro
+
+;; =============================================================================
+;; Stores up to 8 AES blocks from XMM registers on SSE
+%macro XMM_STORE_BLOCKS_SSE_0_8 11
+%define %%NUM_BLOCKS    %1      ; [in] numerical value, number of AES blocks (0 to 8)
+%define %%OUTP          %2      ; [in] output data pointer to write to
+%define %%DATA_OFFSET   %3      ; [in] offset to the output pointer (GP or numerical)
+%define %%SRC0          %4      ; [in] XMM register with data to store
+%define %%SRC1          %5      ; [in] XMM register with data to store
+%define %%SRC2          %6      ; [in] XMM register with data to store
+%define %%SRC3          %7      ; [in] XMM register with data to store
+%define %%SRC4          %8      ; [in] XMM register with data to store
+%define %%SRC5          %9      ; [in] XMM register with data to store
+%define %%SRC6          %10     ; [in] XMM register with data to store
+%define %%SRC7          %11     ; [in] XMM register with data to store
+
+%assign dst_offset  0
+%assign src_idx     0
+
+%rep (%%NUM_BLOCKS)
+%xdefine %%SRCREG %%SRC %+ src_idx
+        movdqu         [%%OUTP + %%DATA_OFFSET + dst_offset], %%SRCREG
+%undef %%SRCREG
+%assign dst_offset  (dst_offset + 16)
+%assign src_idx     (src_idx + 1)
+%endrep
+
+%endmacro
