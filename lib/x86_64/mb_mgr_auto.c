@@ -41,19 +41,6 @@ void
 init_mb_mgr_auto(IMB_MGR *state, IMB_ARCH *arch)
 {
         IMB_ARCH arch_detected = IMB_ARCH_NONE;
-#ifdef AESNI_EMU
-        const uint64_t detect_no_aesni =
-                IMB_FEATURE_SSE4_2 | IMB_FEATURE_CMOV;
-#endif
-        const uint64_t detect_sse =
-                IMB_FEATURE_SSE4_2 | IMB_FEATURE_CMOV |
-                IMB_FEATURE_AESNI | IMB_FEATURE_PCLMULQDQ;
-        const uint64_t detect_avx =
-                IMB_FEATURE_AVX | IMB_FEATURE_CMOV | IMB_FEATURE_AESNI;
-        const uint64_t detect_avx2 = IMB_FEATURE_AVX2 | IMB_FEATURE_BMI2 |
-                                     detect_avx;
-        const uint64_t detect_avx512 = IMB_FEATURE_AVX512_SKX | detect_avx2;
-
         /* reset error status */
         imb_set_errno(state, 0);
 
@@ -63,31 +50,31 @@ init_mb_mgr_auto(IMB_MGR *state, IMB_ARCH *arch)
                 return;
         }
 #endif
-        if ((state->features & detect_avx512) == detect_avx512) {
+        if ((state->features & IMB_CPUFLAGS_AVX512) == IMB_CPUFLAGS_AVX512) {
                 init_mb_mgr_avx512(state);
                 arch_detected = IMB_ARCH_AVX512;
                 goto init_mb_mgr_auto_ret;
         }
-        if ((state->features & detect_avx2) == detect_avx2) {
+        if ((state->features & IMB_CPUFLAGS_AVX2) == IMB_CPUFLAGS_AVX2) {
                 init_mb_mgr_avx2(state);
                 arch_detected = IMB_ARCH_AVX2;
                 goto init_mb_mgr_auto_ret;
         }
 
-        if ((state->features & detect_avx) == detect_avx) {
+        if ((state->features & IMB_CPUFLAGS_AVX) == IMB_CPUFLAGS_AVX) {
                 init_mb_mgr_avx(state);
                 arch_detected = IMB_ARCH_AVX;
                 goto init_mb_mgr_auto_ret;
         }
 
-        if ((state->features & detect_sse) == detect_sse) {
+        if ((state->features & IMB_CPUFLAGS_SSE) == IMB_CPUFLAGS_SSE) {
                 init_mb_mgr_sse(state);
                 arch_detected = IMB_ARCH_SSE;
                 goto init_mb_mgr_auto_ret;
         }
 
 #ifdef AESNI_EMU
-        if ((state->features & detect_no_aesni) == detect_no_aesni) {
+        if ((state->features & IMB_CPUFLAGS_NO_AESNI) == IMB_CPUFLAGS_NO_AESNI) {
                 init_mb_mgr_sse_no_aesni(state);
                 arch_detected = IMB_ARCH_NOAESNI;
                 goto init_mb_mgr_auto_ret;

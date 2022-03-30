@@ -224,6 +224,7 @@ typedef enum {
         IMB_ERR_JOB_NULL_XCBC_K3,
         IMB_ERR_JOB_CIPH_DIR,
         IMB_ERR_JOB_NULL_GHASH_INIT_TAG,
+        IMB_ERR_MISSING_CPUFLAGS_INIT_MGR,
         /* add new error types above this comment */
         IMB_ERR_MAX       /* don't move this one */
 } IMB_ERR;
@@ -991,6 +992,17 @@ typedef uint32_t (*crc32_fn_t)(const void *, const uint64_t);
 #define IMB_FEATURE_AVX512_IFMA (1ULL << 17)
 #define IMB_FEATURE_BMI2       (1ULL << 18)
 #define IMB_FEATURE_AESNI_EMU  (1ULL << 19)
+
+/**
+ * CPU flags needed for each implementation
+ */
+#define IMB_CPUFLAGS_NO_AESNI   (IMB_FEATURE_SSE4_2 | IMB_FEATURE_CMOV)
+#define IMB_CPUFLAGS_SSE        (IMB_CPUFLAGS_NO_AESNI | IMB_FEATURE_AESNI | \
+                                 IMB_FEATURE_PCLMULQDQ)
+#define IMB_CPUFLAGS_AVX        (IMB_CPUFLAGS_SSE | IMB_FEATURE_AVX)
+#define IMB_CPUFLAGS_AVX2       (IMB_CPUFLAGS_AVX | IMB_FEATURE_AVX2 | \
+                                 IMB_FEATURE_BMI2)
+#define IMB_CPUFLAGS_AVX512     (IMB_CPUFLAGS_AVX2 | IMB_FEATURE_AVX512_SKX)
 
 /* TOP LEVEL (IMB_MGR) Data structure fields */
 

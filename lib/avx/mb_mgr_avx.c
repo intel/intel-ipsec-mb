@@ -883,6 +883,12 @@ init_mb_mgr_avx_internal(IMB_MGR *state, const int reset_mgrs)
                 return;
         }
 
+        /* Check if CPU flags needed for AVX interface are present */
+        if ((state->features & IMB_CPUFLAGS_AVX) != IMB_CPUFLAGS_AVX) {
+                imb_set_errno(state, IMB_ERR_MISSING_CPUFLAGS_INIT_MGR);
+                return;
+        }
+
         /* Set architecture for future checks */
         state->used_arch = (uint32_t) IMB_ARCH_AVX;
 

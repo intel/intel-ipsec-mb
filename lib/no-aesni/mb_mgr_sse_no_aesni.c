@@ -876,6 +876,14 @@ init_mb_mgr_sse_no_aesni_internal(IMB_MGR *state, const int reset_mgrs)
         /* reset error status */
         imb_set_errno(state, 0);
 
+
+        /* Check if CPU flags needed for NO_AESNI interface are present */
+        if ((state->features & IMB_CPUFLAGS_NO_AESNI) !=
+            IMB_CPUFLAGS_NO_AESNI) {
+                imb_set_errno(state, IMB_ERR_MISSING_CPUFLAGS_INIT_MGR);
+                return;
+        }
+
         /* Set architecture for future checks */
         state->used_arch = (uint32_t) IMB_ARCH_NOAESNI;
 
