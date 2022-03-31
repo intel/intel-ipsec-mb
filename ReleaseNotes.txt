@@ -8,6 +8,7 @@ Library
 - ZUC-EIA3-256 8-byte and 16-byte tag support added for SSE and AVX
 - AES-ECB AVX512-VAES implementation added
 - JOB API GHASH support added
+- AES-ECB optimizations for AVX and SSE
 
 Fixes
 - Fixed 23-byte IV expansion for ZUC-256 (intel/intel-ipsec-mb#102)

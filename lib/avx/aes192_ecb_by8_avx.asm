@@ -1,5 +1,5 @@
 ;;
-;; Copyright (c) 2021-2022, Intel Corporation
+;; Copyright (c) 2022, Intel Corporation
 ;;
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
@@ -25,9 +25,9 @@
 ;; OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;
 
-; routine to do AES ECB 192 encrypt/decrypt on 16n bytes doing AES by 4
+; routine to do AES ECB 192 encrypt/decrypt on 16n bytes doing AES by 8
 
-%define AES_ECB_ENC_192 aes_ecb_enc_192_avx
-%define AES_ECB_DEC_192 aes_ecb_dec_192_avx
+%define AES_ECB_NROUNDS 12
 
-%include "avx/aes128_ecb_by4_avx.asm"
+%include "include/os.asm"
+%include "avx/aes128_ecb_by8_avx.asm"
