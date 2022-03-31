@@ -162,6 +162,9 @@ lib_objs1 = \
 	$(OBJ_DIR)\aes128_ecb_by4_sse.obj \
 	$(OBJ_DIR)\aes192_ecb_by4_sse.obj \
 	$(OBJ_DIR)\aes256_ecb_by4_sse.obj \
+	$(OBJ_DIR)\aes128_ecb_by8_sse.obj \
+	$(OBJ_DIR)\aes192_ecb_by8_sse.obj \
+	$(OBJ_DIR)\aes256_ecb_by8_sse.obj \
 	$(OBJ_DIR)\aes128_ecb_by4_avx.obj \
 	$(OBJ_DIR)\aes192_ecb_by4_avx.obj \
 	$(OBJ_DIR)\aes256_ecb_by4_avx.obj \

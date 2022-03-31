@@ -27,7 +27,7 @@
 
 ; routine to do AES ECB 192 encrypt/decrypt on 16n bytes doing AES by 4
 
-%define AES_ECB_ENC_192 aes_ecb_enc_192_sse
-%define AES_ECB_DEC_192 aes_ecb_dec_192_sse
+%define AES_ECB_ENC_192 aes_ecb_enc_192_by4_sse
+%define AES_ECB_DEC_192 aes_ecb_dec_192_by4_sse
 
 %include "sse/aes128_ecb_by4_sse.asm"

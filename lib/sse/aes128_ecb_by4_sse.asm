@@ -25,7 +25,7 @@
 ;; OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;
 
-; routine to do AES ECB encrypt/decrypt on 16n bytes doing AES by 4
+; routine to do AES ECB 128 encrypt/decrypt on 16n bytes doing AES by 4
 
 ; XMM registers are clobbered. Saving/restoring must be done at a higher level
 
@@ -48,8 +48,8 @@
 %ifndef AES_ECB_ENC_256
 %ifndef AES_ECB_ENC_192
 %ifndef AES_ECB_ENC_128
-%define AES_ECB_ENC_128 aes_ecb_enc_128_sse
-%define AES_ECB_DEC_128 aes_ecb_dec_128_sse
+%define AES_ECB_ENC_128 aes_ecb_enc_128_by4_sse
+%define AES_ECB_DEC_128 aes_ecb_dec_128_by4_sse
 %endif
 %endif
 %endif

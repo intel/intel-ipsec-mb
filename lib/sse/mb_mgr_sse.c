@@ -454,6 +454,41 @@ static ccm_flush_job_t flush_job_aes256_ccm_auth_ptr =
 /* ====================================================================== */
 
 /*
+ * ECB function pointers
+ */
+static void
+(*aes_ecb_enc_128_sse) (const void *in, const void *keys,
+                void *out, uint64_t len_bytes)=
+                aes_ecb_enc_128_by4_sse;
+
+static void
+(*aes_ecb_enc_192_sse) (const void *in, const void *keys,
+                void *out, uint64_t len_bytes)=
+                aes_ecb_enc_192_by4_sse;
+
+static void
+(*aes_ecb_enc_256_sse) (const void *in, const void *keys,
+                void *out, uint64_t len_bytes)=
+                aes_ecb_enc_256_by4_sse;
+
+static void
+(*aes_ecb_dec_128_sse) (const void *in, const void *keys,
+                void *out, uint64_t len_bytes)=
+                aes_ecb_dec_128_by4_sse;
+
+static void
+(*aes_ecb_dec_192_sse) (const void *in, const void *keys,
+                void *out, uint64_t len_bytes)=
+                aes_ecb_dec_192_by4_sse;
+
+static void
+(*aes_ecb_dec_256_sse) (const void *in, const void *keys,
+                void *out, uint64_t len_bytes)=
+                aes_ecb_dec_256_by4_sse;
+
+/* ====================================================================== */
+
+/*
  * GCM submit / flush API for SSE arch
  */
 static IMB_JOB *
@@ -720,6 +755,17 @@ reset_ooo_mgrs(IMB_MGR *state)
                 aes128_cbc_dec_ptr = aes_cbc_dec_128_by8_sse;
                 aes192_cbc_dec_ptr = aes_cbc_dec_192_by8_sse;
                 aes256_cbc_dec_ptr = aes_cbc_dec_256_by8_sse;
+        }
+
+        if (state->features & IMB_FEATURE_GFNI) {
+                /* change AES-ECB implementation */
+                aes_ecb_enc_128_sse = aes_ecb_enc_128_by8_sse;
+                aes_ecb_enc_192_sse = aes_ecb_enc_192_by8_sse;
+                aes_ecb_enc_256_sse = aes_ecb_enc_256_by8_sse;
+
+                aes_ecb_dec_128_sse = aes_ecb_dec_128_by8_sse;
+                aes_ecb_dec_192_sse = aes_ecb_dec_192_by8_sse;
+                aes_ecb_dec_256_sse = aes_ecb_dec_256_by8_sse;
         }
 
         /* DOCSIS SEC BPI uses same settings as AES CBC */
