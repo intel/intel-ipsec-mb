@@ -1,0 +1,9 @@
+project: intel-ipsec-mb
+
+target: ipsec
+
+
+
+cmds:
+
+  - cmd: /intel-ipsec-mb/test/job_api_fuzz_test
