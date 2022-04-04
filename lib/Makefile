@@ -544,6 +544,9 @@ asm_avx2_lib_objs := \
 	sha256_oct_avx2.o \
 	sha512_x4_avx2.o \
 	zuc_x8_avx2.o \
+	aes128_ecb_vaes_avx2.o \
+	aes192_ecb_vaes_avx2.o \
+	aes256_ecb_vaes_avx2.o \
 	mb_mgr_hmac_md5_flush_avx2.o \
 	mb_mgr_hmac_md5_submit_avx2.o \
 	mb_mgr_hmac_sha1_flush_avx2.o \

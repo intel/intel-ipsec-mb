@@ -997,7 +997,6 @@
 
 %endmacro
 
-
 ;;; ===========================================================================
 ;;; Handles AES decryption rounds for 0 to 8 blocks on AVX
 ;;; It handles special cases: the last and first rounds
@@ -1153,6 +1152,7 @@
                         %%L0B4, %%L0B5, %%L0B6, %%L0B7, \
                         %%D0, %%D1,   %%D2,   %%D3, \
                         %%D4, %%D5, %%D6, %%D7
+
 %endif                          ; !no_data
 %endif                          ; !no_data
 %endif                          ; !no_data
@@ -1275,5 +1275,250 @@
 %assign dst_offset  (dst_offset + 16)
 %assign src_idx     (src_idx + 1)
 %endrep
+
+%endmacro
+
+;; =============================================================================
+;; Loads specified number of AES blocks into YMM registers
+%macro YMM_LOAD_BLOCKS_AVX2_0_16 11
+%define %%NUM_BLOCKS    %1 ; [in] numerical value, number of AES blocks (0 to 16)
+%define %%INP           %2 ; [in] input data pointer to read from
+%define %%DATA_OFFSET   %3 ; [in] offset to the output pointer (GP or numerical)
+%define %%DST0          %4 ; [out] YMM register with loaded data
+%define %%DST1          %5 ; [out] YMM register with loaded data
+%define %%DST2          %6 ; [out] YMM register with loaded data
+%define %%DST3          %7 ; [out] YMM register with loaded data
+%define %%DST4          %8 ; [out] YMM register with loaded data
+%define %%DST5          %9 ; [out] YMM register with loaded data
+%define %%DST6          %10 ; [out] YMM register with loaded data
+%define %%DST7          %11 ; [out] YMM register with loaded data
+
+%assign src_offset  0
+%assign dst_idx     0
+
+%rep (%%NUM_BLOCKS / 2)
+%xdefine %%DSTREG %%DST %+ dst_idx
+        vmovdqu        %%DSTREG, [%%INP + %%DATA_OFFSET + src_offset]
+%undef %%DSTREG
+%assign src_offset  (src_offset + 32)
+%assign dst_idx     (dst_idx + 1)
+%endrep
+
+%assign blocks_left (%%NUM_BLOCKS % 2)
+%xdefine %%DSTREG %%DST %+ dst_idx
+
+%if blocks_left == 1
+        vmovdqu        XWORD(%%DSTREG), [%%INP + %%DATA_OFFSET + src_offset]
+%endif
+
+%endmacro
+
+;; =============================================================================
+;; Stores specified number of AES blocks from YMM registers
+%macro YMM_STORE_BLOCKS_AVX2_0_16 11
+%define %%NUM_BLOCKS    %1 ; [in] numerical value, number of AES blocks (0 to 16)
+%define %%OUTP          %2 ; [in] output data pointer to write to
+%define %%DATA_OFFSET   %3 ; [in] offset to the output pointer (GP or numerical)
+%define %%SRC0          %4 ; [in] YMM register with data to store
+%define %%SRC1          %5 ; [in] YMM register with data to store
+%define %%SRC2          %6 ; [in] YMM register with data to store
+%define %%SRC3          %7 ; [in] YMM register with data to store
+%define %%SRC4          %8 ; [in] YMM register with data to store
+%define %%SRC5          %9 ; [in] YMM register with data to store
+%define %%SRC6          %10 ; [in] YMM register with data to store
+%define %%SRC7          %11 ; [in] YMM register with data to store
+
+%assign dst_offset  0
+%assign src_idx     0
+
+%rep (%%NUM_BLOCKS / 2)
+%xdefine %%SRCREG %%SRC %+ src_idx
+        vmovdqu         [%%OUTP + %%DATA_OFFSET + dst_offset], %%SRCREG
+%undef %%SRCREG
+%assign dst_offset  (dst_offset + 32)
+%assign src_idx     (src_idx + 1)
+%endrep
+
+%assign blocks_left (%%NUM_BLOCKS % 2)
+%xdefine %%SRCREG %%SRC %+ src_idx
+
+%if blocks_left == 1
+        vmovdqu        [%%OUTP + %%DATA_OFFSET + dst_offset], XWORD(%%SRCREG)
+%endif
+
+%endmacro
+
+;;; ===========================================================================
+;;; Handles AES encryption rounds
+;;; It handles special cases: the last and first rounds
+;;; Optionally, it performs XOR with data after the last AES round.
+;;; Uses NROUNDS parameter to check what needs to be done for the current round.
+%macro YMM_AESENC_ROUND_BLOCKS_AVX2_0_16 20
+%define %%L0B0_1   %1      ; [in/out] ymm; ciphered blocks
+%define %%L0B2_3   %2      ; [in/out] ymm; ciphered blocks
+%define %%L0B4_5   %3      ; [in/out] ymm; ciphered blocks
+%define %%L0B6_7   %4      ; [in/out] ymm; ciphered blocks
+%define %%L0B8_9   %5      ; [in/out] ymm; ciphered blocks
+%define %%L0B10_11 %6      ; [in/out] ymm; ciphered blocks
+%define %%L0B12_13 %7      ; [in/out] ymm; ciphered blocks
+%define %%L0B14_15 %8      ; [in/out] ymm; ciphered blocks
+%define %%KEY      %9      ; [in] ymm containing round key
+%define %%ROUND    %10     ; [in] round number
+%define %%D0_1     %11     ; [in] ymm or no_data; plain/cipher text blocks
+%define %%D2_3     %12     ; [in] ymm or no_data; plain/cipher text blocks
+%define %%D4_5     %13     ; [in] ymm or no_data; plain/cipher text blocks
+%define %%D6_7     %14     ; [in] ymm or no_data; plain/cipher text blocks
+%define %%D8_9     %15     ; [in] ymm or no_data; plain/cipher text blocks
+%define %%D10_11   %16     ; [in] ymm or no_data; plain/cipher text blocks
+%define %%D12_13   %17     ; [in] ymm or no_data; plain/cipher text blocks
+%define %%D14_15   %18     ; [in] ymm or no_data; plain/cipher text blocks
+%define %%NUMBL    %19     ; [in] number of blocks; numerical value
+%define %%NROUNDS  %20     ; [in] number of rounds; numerical value
+
+;;; === first AES round
+%if (%%ROUND < 1)
+        ;;  round 0
+        YMM_OPCODE3_DSTR_SRC1R_SRC2R_BLOCKS_0_16 %%NUMBL, vpxor, \
+                        %%L0B0_1, %%L0B2_3,   %%L0B4_5,   %%L0B6_7, \
+                        %%L0B8_9, %%L0B10_11, %%L0B12_13, %%L0B14_15, \
+                        %%L0B0_1, %%L0B2_3,   %%L0B4_5,   %%L0B6_7, \
+                        %%L0B8_9, %%L0B10_11, %%L0B12_13, %%L0B14_15, \
+                        %%KEY, %%KEY, %%KEY, %%KEY, %%KEY, %%KEY, %%KEY, %%KEY
+%endif                  ; ROUND 0
+
+;;; === middle AES rounds
+%if (%%ROUND >= 1 && %%ROUND <= %%NROUNDS)
+        ;; rounds 1 to 9/11/13
+        YMM_OPCODE3_DSTR_SRC1R_SRC2R_BLOCKS_0_16 %%NUMBL, vaesenc, \
+                        %%L0B0_1, %%L0B2_3,   %%L0B4_5,   %%L0B6_7, \
+                        %%L0B8_9, %%L0B10_11, %%L0B12_13, %%L0B14_15, \
+                        %%L0B0_1, %%L0B2_3,   %%L0B4_5,   %%L0B6_7, \
+                        %%L0B8_9, %%L0B10_11, %%L0B12_13, %%L0B14_15, \
+                        %%KEY, %%KEY, %%KEY, %%KEY, %%KEY, %%KEY, %%KEY, %%KEY
+%endif                  ; rounds 1 to 9/11/13
+
+;;; === last AES round
+%if (%%ROUND > %%NROUNDS)
+        ;; the last round - mix enclast with text xor's
+        YMM_OPCODE3_DSTR_SRC1R_SRC2R_BLOCKS_0_16 %%NUMBL, vaesenclast, \
+                        %%L0B0_1, %%L0B2_3,   %%L0B4_5,   %%L0B6_7, \
+                        %%L0B8_9, %%L0B10_11, %%L0B12_13, %%L0B14_15, \
+                        %%L0B0_1, %%L0B2_3,   %%L0B4_5,   %%L0B6_7, \
+                        %%L0B8_9, %%L0B10_11, %%L0B12_13, %%L0B14_15, \
+                        %%KEY, %%KEY, %%KEY, %%KEY, %%KEY, %%KEY, %%KEY, %%KEY
+
+%ifnidn %%D0_1, no_data
+%ifnidn %%D2_3, no_data
+%ifnidn %%D4_5, no_data
+%ifnidn %%D6_7, no_data
+%ifnidn %%D8_9, no_data
+%ifnidn %%D10_11, no_data
+%ifnidn %%D12_13, no_data
+%ifnidn %%D14_15, no_data
+        YMM_OPCODE3_DSTR_SRC1R_SRC2R_BLOCKS_0_16 %%NUMBL, vpxor, \
+                        %%L0B0_1, %%L0B2_3,   %%L0B4_5,   %%L0B6_7, \
+                        %%L0B8_9, %%L0B10_11, %%L0B12_13, %%L0B14_15, \
+                        %%L0B0_1, %%L0B2_3,   %%L0B4_5,   %%L0B6_7, \
+                        %%L0B8_9, %%L0B10_11, %%L0B12_13, %%L0B14_15, \
+                        %%D0_1, %%D2_3,   %%D4_5,   %%D6_7, \
+                        %%D8_9, %%D10_11, %%D12_13, %%D14_15
+%endif                          ; !no_data
+%endif                          ; !no_data
+%endif                          ; !no_data
+%endif                          ; !no_data
+%endif                          ; !no_data
+%endif                          ; !no_data
+%endif                          ; !no_data
+%endif                          ; !no_data
+
+%endif                  ; The last round
+
+%endmacro
+
+;;; ===========================================================================
+;;; Handles AES decryption rounds
+;;; It handles special cases: the last and first rounds
+;;; Optionally, it performs XOR with data after the last AES round.
+;;; Uses NROUNDS parameterto check what needs to be done for the current round.
+%macro YMM_AESDEC_ROUND_BLOCKS_AVX2_0_16 20
+%define %%L0B0_1   %1      ; [in/out] ymm; ciphered blocks
+%define %%L0B2_3   %2      ; [in/out] ymm; ciphered blocks
+%define %%L0B4_5   %3      ; [in/out] ymm; ciphered blocks
+%define %%L0B6_7   %4      ; [in/out] ymm; ciphered blocks
+%define %%L0B8_9   %5      ; [in/out] ymm; ciphered blocks
+%define %%L0B10_11 %6      ; [in/out] ymm; ciphered blocks
+%define %%L0B12_13 %7      ; [in/out] ymm; ciphered blocks
+%define %%L0B14_15 %8      ; [in/out] ymm; ciphered blocks
+%define %%KEY      %9      ; [in] ymm containing round key
+%define %%ROUND    %10     ; [in] round number
+%define %%D0_1     %11     ; [in] ymm or no_data; plain/cipher text blocks
+%define %%D2_3     %12     ; [in] ymm or no_data; plain/cipher text blocks
+%define %%D4_5     %13     ; [in] ymm or no_data; plain/cipher text blocks
+%define %%D6_7     %14     ; [in] ymm or no_data; plain/cipher text blocks
+%define %%D8_9     %15     ; [in] ymm or no_data; plain/cipher text blocks
+%define %%D10_11   %16     ; [in] ymm or no_data; plain/cipher text blocks
+%define %%D12_13   %17     ; [in] ymm or no_data; plain/cipher text blocks
+%define %%D14_15   %18     ; [in] ymm or no_data; plain/cipher text blocks
+%define %%NUMBL    %19     ; [in] number of blocks; numerical value
+%define %%NROUNDS  %20     ; [in] number of rounds; numerical value
+
+;;; === first AES round
+%if (%%ROUND < 1)
+        ;;  round 0
+        YMM_OPCODE3_DSTR_SRC1R_SRC2R_BLOCKS_0_16 %%NUMBL, vpxor, \
+                        %%L0B0_1, %%L0B2_3,   %%L0B4_5,   %%L0B6_7, \
+                        %%L0B8_9, %%L0B10_11, %%L0B12_13, %%L0B14_15, \
+                        %%L0B0_1, %%L0B2_3,   %%L0B4_5,   %%L0B6_7, \
+                        %%L0B8_9, %%L0B10_11, %%L0B12_13, %%L0B14_15, \
+                        %%KEY, %%KEY, %%KEY, %%KEY, %%KEY, %%KEY, %%KEY, %%KEY
+%endif                  ; ROUND 0
+
+;;; === middle AES rounds
+%if (%%ROUND >= 1 && %%ROUND <= %%NROUNDS)
+        ;; rounds 1 to 9/11/13
+        YMM_OPCODE3_DSTR_SRC1R_SRC2R_BLOCKS_0_16 %%NUMBL, vaesdec, \
+                        %%L0B0_1, %%L0B2_3,   %%L0B4_5,   %%L0B6_7, \
+                        %%L0B8_9, %%L0B10_11, %%L0B12_13, %%L0B14_15, \
+                        %%L0B0_1, %%L0B2_3,   %%L0B4_5,   %%L0B6_7, \
+                        %%L0B8_9, %%L0B10_11, %%L0B12_13, %%L0B14_15, \
+                        %%KEY, %%KEY, %%KEY, %%KEY, %%KEY, %%KEY, %%KEY, %%KEY
+%endif                  ; rounds 1 to 9/11/13
+
+;;; === last AES round
+%if (%%ROUND > %%NROUNDS)
+        ;; the last round - mix enclast with text xor's
+        YMM_OPCODE3_DSTR_SRC1R_SRC2R_BLOCKS_0_16 %%NUMBL, vaesdeclast, \
+                        %%L0B0_1, %%L0B2_3,   %%L0B4_5,   %%L0B6_7, \
+                        %%L0B8_9, %%L0B10_11, %%L0B12_13, %%L0B14_15, \
+                        %%L0B0_1, %%L0B2_3,   %%L0B4_5,   %%L0B6_7, \
+                        %%L0B8_9, %%L0B10_11, %%L0B12_13, %%L0B14_15, \
+                        %%KEY, %%KEY, %%KEY, %%KEY, %%KEY, %%KEY, %%KEY, %%KEY
+
+;;; === XOR with data
+%ifnidn %%D0_1, no_data
+%ifnidn %%D2_3, no_data
+%ifnidn %%D4_5, no_data
+%ifnidn %%D6_7, no_data
+%ifnidn %%D8_9, no_data
+%ifnidn %%D10_11, no_data
+%ifnidn %%D12_13, no_data
+%ifnidn %%D14_15, no_data
+        YMM_OPCODE3_DSTR_SRC1R_SRC2R_BLOCKS_0_16 %%NUMBL, vpxor, \
+                        %%L0B0_1, %%L0B2_3,   %%L0B4_5,   %%L0B6_7, \
+                        %%L0B8_9, %%L0B10_11, %%L0B12_13, %%L0B14_15, \
+                        %%L0B0_1, %%L0B2_3,   %%L0B4_5,   %%L0B6_7, \
+                        %%L0B8_9, %%L0B10_11, %%L0B12_13, %%L0B14_15, \
+                        %%D0_1, %%D2_3,   %%D4_5,   %%D6_7, \
+                        %%D8_9, %%D10_11, %%D12_13, %%D14_15
+%endif                          ; !no_data
+%endif                          ; !no_data
+%endif                          ; !no_data
+%endif                          ; !no_data
+%endif                          ; !no_data
+%endif                          ; !no_data
+%endif                          ; !no_data
+%endif                          ; !no_data
+
+%endif                  ; The last round
 
 %endmacro

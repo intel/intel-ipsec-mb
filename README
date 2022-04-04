@@ -75,9 +75,9 @@ Table 1. List of supported cipher algorithms and their implementations.
     | AES128-CTR     | N      | Y  by8 | Y  by8 | N      | N      | Y by16 |
     | AES192-CTR     | N      | Y  by8 | Y  by8 | N      | N      | Y by16 |
     | AES256-CTR     | N      | Y  by8 | Y  by8 | N      | N      | Y by16 |
-    | AES128-ECB     | N      | Y(1)   | Y  by8 | N      | N      | Y by16 |
-    | AES192-ECB     | N      | Y(1)   | Y  by8 | N      | N      | Y by16 |
-    | AES256-ECB     | N      | Y(1)   | Y  by8 | N      | N      | Y by16 |
+    | AES128-ECB     | N      | Y(1)   | Y  by8 | Y(10)  | N      | Y by16 |
+    | AES192-ECB     | N      | Y(1)   | Y  by8 | Y(10)  | N      | Y by16 |
+    | AES256-ECB     | N      | Y(1)   | Y  by8 | Y(10)  | N      | Y by16 |
     | NULL           | Y      | N      | N      | N      | N      | N      |
     | AES128-DOCSIS  | N      | Y(2)   | Y(4)   | N      | Y(7)   | Y(8)   |
     | AES256-DOCSIS  | N      | Y(2)   | Y(4)   | N      | Y(7)   | Y(8)   |
@@ -105,6 +105,8 @@ On CPU’s supporting GFNI, decryption is by8 and encryption is x8.
 (7) - same as AES128-CBC for AVX, combines cipher and CRC32
 (8) - decryption is by16 and encryption is x16
 (9) - currently 1:9 crypt:skip pattern supported
+(10) - by default, decryption and encryption are AVX by8.
+On CPUs supporting VAES, decryption and encryption are AVX2-VAES by16.
 
 Legend:
 byY - single buffer Y blocks at a time

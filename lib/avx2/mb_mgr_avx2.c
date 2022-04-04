@@ -118,12 +118,12 @@ IMB_JOB *snow_v_aead_init_avx(IMB_JOB *job);
 #define SUBMIT_JOB_AES256_DEC submit_job_aes256_dec_avx
 #define FLUSH_JOB_AES256_ENC  flush_job_aes256_enc_avx
 
-#define SUBMIT_JOB_AES_ECB_128_ENC submit_job_aes_ecb_128_enc_avx
-#define SUBMIT_JOB_AES_ECB_128_DEC submit_job_aes_ecb_128_dec_avx
-#define SUBMIT_JOB_AES_ECB_192_ENC submit_job_aes_ecb_192_enc_avx
-#define SUBMIT_JOB_AES_ECB_192_DEC submit_job_aes_ecb_192_dec_avx
-#define SUBMIT_JOB_AES_ECB_256_ENC submit_job_aes_ecb_256_enc_avx
-#define SUBMIT_JOB_AES_ECB_256_DEC submit_job_aes_ecb_256_dec_avx
+#define SUBMIT_JOB_AES_ECB_128_ENC submit_job_aes_ecb_128_enc_avx2
+#define SUBMIT_JOB_AES_ECB_128_DEC submit_job_aes_ecb_128_dec_avx2
+#define SUBMIT_JOB_AES_ECB_192_ENC submit_job_aes_ecb_192_enc_avx2
+#define SUBMIT_JOB_AES_ECB_192_DEC submit_job_aes_ecb_192_dec_avx2
+#define SUBMIT_JOB_AES_ECB_256_ENC submit_job_aes_ecb_256_enc_avx2
+#define SUBMIT_JOB_AES_ECB_256_DEC submit_job_aes_ecb_256_dec_avx2
 
 #define SUBMIT_JOB_AES_CNTR   submit_job_aes_cntr_avx
 #define SUBMIT_JOB_AES_CNTR_BIT   submit_job_aes_cntr_bit_avx
@@ -148,12 +148,12 @@ IMB_JOB *snow_v_aead_init_avx(IMB_JOB *job);
 #define AES_CNTR_CCM_128   aes_cntr_ccm_128_avx
 #define AES_CNTR_CCM_256   aes_cntr_ccm_256_avx
 
-#define AES_ECB_ENC_128       aes_ecb_enc_128_avx
-#define AES_ECB_ENC_192       aes_ecb_enc_192_avx
-#define AES_ECB_ENC_256       aes_ecb_enc_256_avx
-#define AES_ECB_DEC_128       aes_ecb_dec_128_avx
-#define AES_ECB_DEC_192       aes_ecb_dec_192_avx
-#define AES_ECB_DEC_256       aes_ecb_dec_256_avx
+#define AES_ECB_ENC_128       aes_ecb_enc_128_avx2
+#define AES_ECB_ENC_192       aes_ecb_enc_192_avx2
+#define AES_ECB_ENC_256       aes_ecb_enc_256_avx2
+#define AES_ECB_DEC_128       aes_ecb_dec_128_avx2
+#define AES_ECB_DEC_192       aes_ecb_dec_192_avx2
+#define AES_ECB_DEC_256       aes_ecb_dec_256_avx2
 
 #define SUBMIT_JOB_PON_ENC        submit_job_pon_enc_avx
 #define SUBMIT_JOB_PON_DEC        submit_job_pon_dec_avx
@@ -316,6 +316,41 @@ uint32_t crc8_wimax_ofdma_hcs_avx(const void *msg, const uint64_t len);
 #define FLUSH_JOB_AES128_CBCS_1_9_ENC  flush_job_aes128_cbcs_1_9_enc_avx
 #define SUBMIT_JOB_AES128_CBCS_1_9_DEC submit_job_aes128_cbcs_1_9_dec_avx
 #define AES_CBCS_1_9_DEC_128           aes_cbcs_1_9_dec_128_avx
+
+/* ====================================================================== */
+
+/*
+ * ECB function pointers
+ */
+static void
+(*aes_ecb_enc_128_avx2) (const void *in, const void *keys,
+                void *out, uint64_t len_bytes)=
+                aes_ecb_enc_128_avx;
+
+static void
+(*aes_ecb_enc_192_avx2) (const void *in, const void *keys,
+                void *out, uint64_t len_bytes)=
+                aes_ecb_enc_192_avx;
+
+static void
+(*aes_ecb_enc_256_avx2) (const void *in, const void *keys,
+                void *out, uint64_t len_bytes)=
+                aes_ecb_enc_256_avx;
+
+static void
+(*aes_ecb_dec_128_avx2) (const void *in, const void *keys,
+                void *out, uint64_t len_bytes)=
+                aes_ecb_dec_128_avx;
+
+static void
+(*aes_ecb_dec_192_avx2) (const void *in, const void *keys,
+                void *out, uint64_t len_bytes)=
+                aes_ecb_dec_192_avx;
+
+static void
+(*aes_ecb_dec_256_avx2) (const void *in, const void *keys,
+                void *out, uint64_t len_bytes)=
+                aes_ecb_dec_256_avx;
 
 /* ====================================================================== */
 
@@ -834,6 +869,15 @@ init_mb_mgr_avx2_internal(IMB_MGR *state, const int reset_mgrs)
 
         /* Set architecture for future checks */
         state->used_arch = (uint32_t) IMB_ARCH_AVX2;
+
+        if ((state->features & IMB_FEATURE_VAES) == IMB_FEATURE_VAES) {
+                aes_ecb_enc_128_avx2 = aes_ecb_enc_128_vaes_avx2;
+                aes_ecb_enc_192_avx2 = aes_ecb_enc_192_vaes_avx2;
+                aes_ecb_enc_256_avx2 = aes_ecb_enc_256_vaes_avx2;
+                aes_ecb_dec_128_avx2 = aes_ecb_dec_128_vaes_avx2;
+                aes_ecb_dec_192_avx2 = aes_ecb_dec_192_vaes_avx2;
+                aes_ecb_dec_256_avx2 = aes_ecb_dec_256_vaes_avx2;
+        }
 
         if (reset_mgrs) {
                 reset_ooo_mgrs(state);
