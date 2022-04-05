@@ -45,6 +45,7 @@
 %include "include/os.asm"
 %include "include/clear_regs.asm"
 %include "include/aes_common.asm"
+%include "include/cet.inc"
 %define AES_ECB_ENC_128 aes_ecb_enc_128_vaes_avx512
 %define AES_ECB_DEC_128 aes_ecb_dec_128_vaes_avx512
 %define AES_ECB_ENC_192 aes_ecb_enc_192_vaes_avx512
@@ -202,14 +203,14 @@ align 16
 align 16
 MKGLOBAL(AES_ECB_ENC_128,function,internal)
 AES_ECB_ENC_128:
-
+        endbranch64
         AES_ECB 10, ENC
         ret
 
 align 16
 MKGLOBAL(AES_ECB_DEC_128,function,internal)
 AES_ECB_DEC_128:
-
+        endbranch64
         AES_ECB 10, DEC
         ret
 
@@ -219,14 +220,14 @@ AES_ECB_DEC_128:
 align 16
 MKGLOBAL(AES_ECB_ENC_192,function,internal)
 AES_ECB_ENC_192:
-
+        endbranch64
         AES_ECB 12, ENC
         ret
 
 align 16
 MKGLOBAL(AES_ECB_DEC_192,function,internal)
 AES_ECB_DEC_192:
-
+        endbranch64
         AES_ECB 12, DEC
         ret
 
@@ -236,14 +237,14 @@ AES_ECB_DEC_192:
 align 16
 MKGLOBAL(AES_ECB_ENC_256,function,internal)
 AES_ECB_ENC_256:
-
+        endbranch64
         AES_ECB 14, ENC
         ret
 
 align 16
 MKGLOBAL(AES_ECB_DEC_256,function,internal)
 AES_ECB_DEC_256:
-
+        endbranch64
         AES_ECB 14, DEC
         ret
 
