@@ -1689,6 +1689,63 @@ static inline __m256i snow3g_keystream_8_4(snow3gKeyState8_t *pCtx)
         return keyStream;
 }
 
+/*
+ * @brief 8x8 uint32_t matrix tranpose.
+ *
+ * @param[in/clobbered] in      Array of rows to transpose
+ * @param[out]          out     Array of transposed columns
+ */
+static inline void
+transpose8xu32_avx2(__m256i in[8], __m256i out[8])
+{
+        __m256i tmp[2];
+
+        tmp[0] = (__m256i) _mm256_shuffle_ps((__m256)in[0], (__m256)in[1],
+                                             0x44);
+        in[0]  = (__m256i) _mm256_shuffle_ps((__m256)in[0], (__m256)in[1],
+                                             0xEE);
+        tmp[1] = (__m256i) _mm256_shuffle_ps((__m256)in[2], (__m256)in[3],
+                                             0x44);
+        in[2]  = (__m256i) _mm256_shuffle_ps((__m256)in[2], (__m256)in[3],
+                                             0xEE);
+
+        in[3]  = (__m256i) _mm256_shuffle_ps((__m256)tmp[0],(__m256) tmp[1],
+                                             0xDD);
+        in[1]  = (__m256i) _mm256_shuffle_ps((__m256)in[0], (__m256) in[2],
+                                             0x88);
+        in[0]  = (__m256i) _mm256_shuffle_ps((__m256)in[0], (__m256) in[2],
+                                             0xDD);
+        tmp[0] = (__m256i) _mm256_shuffle_ps((__m256)tmp[0],(__m256) tmp[1],
+                                             0x88);
+
+        in[2]  = (__m256i) _mm256_shuffle_ps((__m256)in[4], (__m256)in[5],
+                                             0x44);
+        in[4]  = (__m256i) _mm256_shuffle_ps((__m256)in[4], (__m256)in[5],
+                                             0xEE);
+        tmp[1] = (__m256i) _mm256_shuffle_ps((__m256)in[6], (__m256)in[7],
+                                             0x44);
+        in[6]  = (__m256i) _mm256_shuffle_ps((__m256)in[6], (__m256)in[7],
+                                             0xEE);
+
+        in[7]  = (__m256i) _mm256_shuffle_ps((__m256)in[2],(__m256) tmp[1],
+                                             0xDD);
+        in[5]  = (__m256i) _mm256_shuffle_ps((__m256)in[4], (__m256) in[6],
+                                             0x88);
+        in[4]  = (__m256i) _mm256_shuffle_ps((__m256)in[4], (__m256) in[6],
+                                             0xDD);
+        tmp[1] = (__m256i) _mm256_shuffle_ps((__m256)in[2],(__m256) tmp[1],
+                                             0x88);
+
+        out[6]  = _mm256_permute2f128_si256(in[5], in[1], 0x13);
+        out[2]  = _mm256_permute2f128_si256(in[5], in[1], 0x02);
+        out[5]  = _mm256_permute2f128_si256(in[7], in[3], 0x13);
+        out[1]  = _mm256_permute2f128_si256(in[7], in[3], 0x02);
+        out[7]  = _mm256_permute2f128_si256(in[4], in[0], 0x13);
+        out[3]  = _mm256_permute2f128_si256(in[4], in[0], 0x02);
+        out[4]  = _mm256_permute2f128_si256(tmp[1], tmp[0], 0x13);
+        out[0]  = _mm256_permute2f128_si256(tmp[1], tmp[0], 0x02);
+}
+
 /**
  * @brief Generates 32 bytes of key stream 8 buffers at a time
  *
@@ -1698,81 +1755,24 @@ static inline __m256i snow3g_keystream_8_4(snow3gKeyState8_t *pCtx)
 static inline void snow3g_keystream_8_32(snow3gKeyState8_t *pCtx,
                                          __m256i *pKeyStream)
 {
-
-        __m256i temp[8];
-
-        /** produces the next 4 bytes for each buffer */
-        int i;
+        __m256i in[8];
+        unsigned int i;
 
         /** Byte reversal on each KS */
-        static const __m256i mask1 = {
-                0x0001020304050607ULL, 0x08090a0b0c0d0e0fULL,
-                0x0001020304050607ULL, 0x08090a0b0c0d0e0fULL
-        };
-        /** Reversal, shifted 4 bytes right */
-        static const __m256i mask2 = {
-                0x0405060708090a0bULL, 0x0c0d0e0f00010203ULL,
-                0x0405060708090a0bULL, 0x0c0d0e0f00010203ULL
-        };
-        /** Reversal, shifted 8 bytes right */
-        static const __m256i mask3 = {
-                0x08090a0b0c0d0e0fULL, 0x0001020304050607ULL,
-                0x08090a0b0c0d0e0fULL, 0x0001020304050607ULL
-        };
-        /** Reversal, shifted 12 bytes right */
-        static const __m256i mask4 = {
-                0x0c0d0e0f00010203ULL, 0x0405060708090a0bULL,
-                0x0c0d0e0f00010203ULL, 0x0405060708090a0bULL
+        static const __m256i mask = {
+                0x0405060700010203ULL, 0x0c0d0e0f08090a0bULL,
+                0x0405060700010203ULL, 0x0c0d0e0f08090a0bULL
         };
 
-        temp[0] = _mm256_shuffle_epi8(snow3g_keystream_8_4(pCtx), mask1);
-        temp[1] = _mm256_shuffle_epi8(snow3g_keystream_8_4(pCtx), mask2);
-        temp[2] = _mm256_shuffle_epi8(snow3g_keystream_8_4(pCtx), mask3);
-        temp[3] = _mm256_shuffle_epi8(snow3g_keystream_8_4(pCtx), mask4);
-        temp[4] = _mm256_shuffle_epi8(snow3g_keystream_8_4(pCtx), mask1);
-        temp[5] = _mm256_shuffle_epi8(snow3g_keystream_8_4(pCtx), mask2);
-        temp[6] = _mm256_shuffle_epi8(snow3g_keystream_8_4(pCtx), mask3);
-        temp[7] = _mm256_shuffle_epi8(snow3g_keystream_8_4(pCtx), mask4);
+        /** produces the next 4 bytes for each buffer */
+        for (i = 0; i < 8; i++)
+                in[i] = _mm256_shuffle_epi8(snow3g_keystream_8_4(pCtx), mask);
 
-        __m256i blended[8];
-        /* blends KS together: 128bit slice consists
-           of 4 32-bit words for one packet */
-        blended[0] = _mm256_blend_epi32(temp[0], temp[1], 0xaa);
-        blended[1] = _mm256_blend_epi32(temp[0], temp[1], 0x55);
-        blended[2] = _mm256_blend_epi32(temp[2], temp[3], 0xaa);
-        blended[3] = _mm256_blend_epi32(temp[2], temp[3], 0x55);
-        blended[4] = _mm256_blend_epi32(temp[4], temp[5], 0xaa);
-        blended[5] = _mm256_blend_epi32(temp[4], temp[5], 0x55);
-        blended[6] = _mm256_blend_epi32(temp[6], temp[7], 0xaa);
-        blended[7] = _mm256_blend_epi32(temp[6], temp[7], 0x55);
+        /* Transposes the dwords of KS for all buffers into
+         * 32 consecutive KS bytes for each buffer */
+        transpose8xu32_avx2(in, pKeyStream);
 
-        temp[0] = _mm256_blend_epi32(blended[0], blended[2], 0xcc);
-        temp[1] = _mm256_blend_epi32(blended[1], blended[3], 0x99);
-        temp[2] = _mm256_blend_epi32(blended[0], blended[2], 0x33);
-        temp[3] = _mm256_blend_epi32(blended[1], blended[3], 0x66);
-        temp[4] = _mm256_blend_epi32(blended[4], blended[6], 0xcc);
-        temp[5] = _mm256_blend_epi32(blended[5], blended[7], 0x99);
-        temp[6] = _mm256_blend_epi32(blended[4], blended[6], 0x33);
-        temp[7] = _mm256_blend_epi32(blended[5], blended[7], 0x66);
 
-        /** sorts 32 bit words back into order */
-        blended[0] = temp[0];
-        blended[1] = _mm256_shuffle_epi32(temp[1], 0x39);
-        blended[2] = _mm256_shuffle_epi32(temp[2], 0x4e);
-        blended[3] = _mm256_shuffle_epi32(temp[3], 0x93);
-        blended[4] = temp[4];
-        blended[5] = _mm256_shuffle_epi32(temp[5], 0x39);
-        blended[6] = _mm256_shuffle_epi32(temp[6], 0x4e);
-        blended[7] = _mm256_shuffle_epi32(temp[7], 0x93);
-
-        for (i = 0; i < 4; i++) {
-                pKeyStream[i] =
-                        _mm256_permute2x128_si256(blended[i],
-                                                  blended[i + 4], 0x20);
-                pKeyStream[i + 4] =
-                        _mm256_permute2x128_si256(blended[i],
-                                                   blended[i + 4], 0x31);
-        }
 }
 #endif /* AVX2 */
 

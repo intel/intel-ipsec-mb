@@ -20,6 +20,9 @@ Test Applications
 Performance Application
 - GHASH support added (through JOB API)
 
+Fixes
+- Fixed incorrect 8-buffer SNOW3G keystream generation
+
 v1.2 February 2022
 ========================================================================
 
