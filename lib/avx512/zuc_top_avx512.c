@@ -705,9 +705,6 @@ void _zuc_eia3_16_buffer_avx512(const void * const pKey[NUM_AVX512_BUFS],
 
         /* Process each packet separately for the remaining bits */
         for (i = 0; i < NUM_AVX512_BUFS; i++) {
-                const uint32_t N = lengthInBits[i] + (2 * ZUC_WORD_BITS);
-                uint32_t L = ((N + 31) / ZUC_WORD_BITS) -
-                             numKeyStr*(keyStreamLengthInBits / 32);
                 uint32_t remainBits = lengthInBits[i] -
                                       numKeyStr*keyStreamLengthInBits;
                 uint32_t keyStr32[16*2];
@@ -748,7 +745,6 @@ void _zuc_eia3_16_buffer_avx512(const void * const pKey[NUM_AVX512_BUFS],
 
                 while (remainBits >= keyStreamLengthInBits) {
                         remainBits -= keyStreamLengthInBits;
-                        L -= (keyStreamLengthInBits / 32);
 
                         /* Generate the next key stream 8 bytes or 64 bytes */
                         if (!remainBits)
