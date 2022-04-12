@@ -1336,6 +1336,7 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job)
                 4,  /* IMB_AUTH_CRC8_WIMAX_OFDMA_HCS */
                 4,  /* IMB_AUTH_CRC7_FP_HEADER */
                 4,  /* IMB_AUTH_CRC6_IUUP_HEADER */
+                16, /* IMB_AUTH_GHASH */
         };
         const uint64_t auth_tag_len_ipsec[] = {
                 0,  /* INVALID selection */
@@ -1384,6 +1385,7 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job)
                 4,  /* IMB_AUTH_CRC8_WIMAX_OFDMA_HCS */
                 4,  /* IMB_AUTH_CRC7_FP_HEADER */
                 4,  /* IMB_AUTH_CRC6_IUUP_HEADER */
+                16, /* IMB_AUTH_GHASH */
         };
 
         /* Maximum length of buffer in PON is 2^14 + 8, since maximum
