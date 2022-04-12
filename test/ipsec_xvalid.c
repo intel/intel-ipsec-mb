@@ -84,6 +84,10 @@
 #define SEED 0xdeadcafe
 #define STACK_DEPTH 8192
 
+/* Max safe check retries to eliminate false positives */
+#define MAX_SAFE_RETRIES 100
+#define DEFAULT_SAFE_RETRIES 2
+
 static int pattern_auth_key;
 static int pattern_cipher_key;
 static int pattern_plain_text;
@@ -653,6 +657,7 @@ const uint8_t key_sizes[][3] = {
 
 uint8_t custom_test = 0;
 uint8_t verbose = 0;
+uint32_t safe_retries = DEFAULT_SAFE_RETRIES;
 
 enum range {
         RANGE_MIN = 0,
@@ -2291,14 +2296,22 @@ process_variant(IMB_MGR *enc_mgr, const IMB_ARCH enc_arch,
                                                  dec_arch, params,
                                                  variant_data, 1, 0, 1);
                                 if (result < 0) {
-                                        printf("=== Issue found. "
-                                               "Checking again...\n");
-                                        generate_patterns();
-                                        result = do_test(enc_mgr, enc_arch,
-                                                         dec_mgr, dec_arch,
-                                                         params, variant_data,
-                                                         1, 0, 1);
+                                        uint32_t j;
 
+                                        for (j = 0; j < safe_retries; j++) {
+                                                printf("=== Issue found. "
+                                                       "Checking again...\n");
+                                                generate_patterns();
+                                                result = do_test(enc_mgr,
+                                                                 enc_arch,
+                                                                 dec_mgr,
+                                                                 dec_arch,
+                                                                 params,
+                                                                 variant_data,
+                                                                 1, 0, 1);
+                                                if (result == 0)
+                                                        break;
+                                        }
                                         if (result < 0) {
                                                 if (verbose)
                                                         printf("FAIL\n");
@@ -2921,6 +2934,15 @@ int main(int argc, char *argv[])
                         }
                 } else if (strcmp(argv[i], "--safe-check") == 0) {
                         safe_check = 1;
+                } else if (strcmp(argv[i], "--safe-retries") == 0) {
+                        i = get_next_num_arg((const char * const *)argv, i,
+                                             argc, &safe_retries,
+                                             sizeof(safe_retries));
+                        if (safe_retries > MAX_SAFE_RETRIES) {
+                                fprintf(stderr, "Number of retries cannot be "
+                                        "higher than %d\n", MAX_SAFE_RETRIES);
+                                return EXIT_FAILURE;
+                        }
                 } else if (strcmp(argv[i], "--imix") == 0) {
                         imix_enabled = 1;
                 } else {
