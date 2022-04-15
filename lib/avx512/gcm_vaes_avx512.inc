@@ -233,7 +233,7 @@
 ;;;   %%INPTR address is 64 byte aligned
 ;;; - there is an option to pass ready blocks through ZMM registers too.
 ;;;   4 extra parameters need to passed in such case and 21st argument can be empty
-%macro GHASH_16 21-25
+%macro GHASH_16 21-22
 %define %%TYPE  %1      ; [in] ghash type: start (xor hash), mid, end (same as mid; no reduction),
                         ;      end_reduce (end with reduction), start_reduce
 %define %%GH    %2      ; [in/out] ZMM ghash sum: high 128-bits
@@ -256,10 +256,7 @@
 %define %%ZTMP7 %19     ; [clobbered] temporary ZMM
 %define %%ZTMP8 %20     ; [clobbered] temporary ZMM
 %define %%ZTMP9 %21     ; [clobbered] temporary ZMM
-%define %%DAT0  %22     ; [in] ZMM with 4 blocks of input data (INPTR, INOFF, INDIS unused)
-%define %%DAT1  %23     ; [in] ZMM with 4 blocks of input data (INPTR, INOFF, INDIS unused)
-%define %%DAT2  %24     ; [in] ZMM with 4 blocks of input data (INPTR, INOFF, INDIS unused)
-%define %%DAT3  %25     ; [in] ZMM with 4 blocks of input data (INPTR, INOFF, INDIS unused)
+%define %%SHUFM %22     ; [in] ZMM with shuffle mask - provided only when input data needs shuffling
 
 %assign start_ghash 0
 %assign do_reduction 0
@@ -278,14 +275,15 @@
 %endif
 
         ;; ghash blocks 0-3
-%if %0 == 21
-        vmovdqa64       %%ZTMP9, [%%INPTR + %%INOFF + %%INDIS]
+%if %0 == 22
+        vmovdqu64       %%ZTMP9, [%%INPTR + %%INOFF + %%INDIS]
+        vpshufb         %%ZTMP9, %%ZTMP9, %%SHUFM
 %else
-%xdefine %%ZTMP9 %%DAT0
+        vmovdqa64       %%ZTMP9, [%%INPTR + %%INOFF + %%INDIS]
 %endif
 
 %if start_ghash != 0
-        vpxorq          %%ZTMP9, %%HASH
+        vpxorq          %%ZTMP9, %%ZTMP9, %%HASH
 %endif
         vmovdqu64       %%ZTMP8, [%%HKPTR + %%HKOFF + %%HKDIS]
         vpclmulqdq      %%ZTMP0, %%ZTMP9, %%ZTMP8, 0x11     ; T0H = a1*b1
@@ -293,10 +291,11 @@
         vpclmulqdq      %%ZTMP2, %%ZTMP9, %%ZTMP8, 0x01     ; T0M1 = a1*b0
         vpclmulqdq      %%ZTMP3, %%ZTMP9, %%ZTMP8, 0x10     ; T0M2 = a0*b1
         ;; ghash blocks 4-7
-%if %0 == 21
-        vmovdqa64       %%ZTMP9, [%%INPTR + %%INOFF + %%INDIS + 64]
+%if %0 == 22
+        vmovdqu64       %%ZTMP9, [%%INPTR + %%INOFF + %%INDIS + 64]
+        vpshufb         %%ZTMP9, %%ZTMP9, %%SHUFM
 %else
-%xdefine %%ZTMP9 %%DAT1
+        vmovdqa64       %%ZTMP9, [%%INPTR + %%INOFF + %%INDIS + 64]
 %endif
         vmovdqu64       %%ZTMP8, [%%HKPTR + %%HKOFF + %%HKDIS + 64]
         vpclmulqdq      %%ZTMP4, %%ZTMP9, %%ZTMP8, 0x11     ; T1H = a1*b1
@@ -316,10 +315,11 @@
         vpternlogq      %%GM, %%ZTMP3, %%ZTMP7, 0x96        ; GM += T0M2 + T1M1
 %endif
         ;; ghash blocks 8-11
-%if %0 == 21
-        vmovdqa64       %%ZTMP9, [%%INPTR + %%INOFF + %%INDIS + 128]
+%if %0 == 22
+        vmovdqu64       %%ZTMP9, [%%INPTR + %%INOFF + %%INDIS + 128]
+        vpshufb         %%ZTMP9, %%ZTMP9, %%SHUFM
 %else
-%xdefine %%ZTMP9 %%DAT2
+        vmovdqa64       %%ZTMP9, [%%INPTR + %%INOFF + %%INDIS + 128]
 %endif
         vmovdqu64       %%ZTMP8, [%%HKPTR + %%HKOFF + %%HKDIS + 128]
         vpclmulqdq      %%ZTMP0, %%ZTMP9, %%ZTMP8, 0x11     ; T0H = a1*b1
@@ -327,10 +327,11 @@
         vpclmulqdq      %%ZTMP2, %%ZTMP9, %%ZTMP8, 0x01     ; T0M1 = a1*b0
         vpclmulqdq      %%ZTMP3, %%ZTMP9, %%ZTMP8, 0x10     ; T0M2 = a0*b1
         ;; ghash blocks 12-15
-%if %0 == 21
-        vmovdqa64       %%ZTMP9, [%%INPTR + %%INOFF + %%INDIS + 192]
+%if %0 == 22
+        vmovdqu64       %%ZTMP9, [%%INPTR + %%INOFF + %%INDIS + 192]
+        vpshufb         %%ZTMP9, %%ZTMP9, %%SHUFM
 %else
-%xdefine %%ZTMP9 %%DAT3
+        vmovdqa64       %%ZTMP9, [%%INPTR + %%INOFF + %%INDIS + 192]
 %endif
         vmovdqu64       %%ZTMP8, [%%HKPTR + %%HKOFF + %%HKDIS + 192]
         vpclmulqdq      %%ZTMP4, %%ZTMP9, %%ZTMP8, 0x11     ; T1H = a1*b1
@@ -753,58 +754,28 @@
         cmp             %%T2, (48*16)
         jl              %%_exit_AAD_loop48x16
 
-        vmovdqu64       %%ZT1, [%%T1 + 64*0]  ; Blocks 0-3
-        vmovdqu64       %%ZT2, [%%T1 + 64*1]  ; Blocks 4-7
-        vmovdqu64       %%ZT3, [%%T1 + 64*2]  ; Blocks 8-11
-        vmovdqu64       %%ZT4, [%%T1 + 64*3]  ; Blocks 12-15
-        vpshufb         %%ZT1, %%SHFMSK
-        vpshufb         %%ZT2, %%SHFMSK
-        vpshufb         %%ZT3, %%SHFMSK
-        vpshufb         %%ZT4, %%SHFMSK
-
         GHASH_16        start, %%ZT5, %%ZT6, %%ZT7, \
-                        NO_INPUT_PTR, NO_INPUT_PTR, NO_INPUT_PTR, \
+                        %%T1,  (0*64), 0, \
                         %%GDATA_KEY, HashKey_48, 0, ZWORD(%%AAD_HASH), \
                         %%ZT0, %%ZT8, %%ZT9, %%ZT10, %%ZT11, %%ZT12, \
-                        %%ZT14, %%ZT15, %%ZT16, NO_ZMM, \
-                        %%ZT1, %%ZT2, %%ZT3, %%ZT4
-
-        vmovdqu64       %%ZT1, [%%T1 + 16*16 + 64*0]  ; Blocks 16-19
-        vmovdqu64       %%ZT2, [%%T1 + 16*16 + 64*1]  ; Blocks 20-23
-        vmovdqu64       %%ZT3, [%%T1 + 16*16 + 64*2]  ; Blocks 24-27
-        vmovdqu64       %%ZT4, [%%T1 + 16*16 + 64*3]  ; Blocks 28-31
-        vpshufb         %%ZT1, %%SHFMSK
-        vpshufb         %%ZT2, %%SHFMSK
-        vpshufb         %%ZT3, %%SHFMSK
-        vpshufb         %%ZT4, %%SHFMSK
+                        %%ZT14, %%ZT15, %%ZT16, %%ZT1, %%SHFMSK
 
         GHASH_16        mid, %%ZT5, %%ZT6, %%ZT7, \
-                        NO_INPUT_PTR, NO_INPUT_PTR, NO_INPUT_PTR, \
+                        %%T1,  (4*64), 0, \
                         %%GDATA_KEY, HashKey_32, 0, NO_HASH_IN_OUT, \
                         %%ZT0, %%ZT8, %%ZT9, %%ZT10, %%ZT11, %%ZT12, \
-                        %%ZT14, %%ZT15, %%ZT16, NO_ZMM, \
-                        %%ZT1, %%ZT2, %%ZT3, %%ZT4
-
-        vmovdqu64       %%ZT1, [%%T1 + 32*16 + 64*0]  ; Blocks 32-35
-        vmovdqu64       %%ZT2, [%%T1 + 32*16 + 64*1]  ; Blocks 36-39
-        vmovdqu64       %%ZT3, [%%T1 + 32*16 + 64*2]  ; Blocks 40-43
-        vmovdqu64       %%ZT4, [%%T1 + 32*16 + 64*3]  ; Blocks 44-47
-        vpshufb         %%ZT1, %%SHFMSK
-        vpshufb         %%ZT2, %%SHFMSK
-        vpshufb         %%ZT3, %%SHFMSK
-        vpshufb         %%ZT4, %%SHFMSK
+                        %%ZT14, %%ZT15, %%ZT16, %%ZT1, %%SHFMSK
 
         GHASH_16        end_reduce, %%ZT5, %%ZT6, %%ZT7, \
-                        NO_INPUT_PTR, NO_INPUT_PTR, NO_INPUT_PTR, \
+                        %%T1,  (8*64), 0, \
                         %%GDATA_KEY, HashKey_16, 0, ZWORD(%%AAD_HASH), \
                         %%ZT0, %%ZT8, %%ZT9, %%ZT10, %%ZT11, %%ZT12, \
-                        %%ZT14, %%ZT15, %%ZT16, NO_ZMM, \
-                        %%ZT1, %%ZT2, %%ZT3, %%ZT4
+                        %%ZT14, %%ZT15, %%ZT16, %%ZT1, %%SHFMSK
 
-        sub             %%T2, (48*16)
+        sub             %%T2, (12*64)
         je              %%_CALC_AAD_done
 
-        add             %%T1, (48*16)
+        add             %%T1, (12*64)
         jmp             %%_get_AAD_loop48x16
 
 %%_exit_AAD_loop48x16:
@@ -813,37 +784,17 @@
         jl              %%_less_than_32x16
 
         ; Get next 16 blocks
-        vmovdqu64       %%ZT1, [%%T1 + 64*0]
-        vmovdqu64       %%ZT2, [%%T1 + 64*1]
-        vmovdqu64       %%ZT3, [%%T1 + 64*2]
-        vmovdqu64       %%ZT4, [%%T1 + 64*3]
-        vpshufb         %%ZT1, %%SHFMSK
-        vpshufb         %%ZT2, %%SHFMSK
-        vpshufb         %%ZT3, %%SHFMSK
-        vpshufb         %%ZT4, %%SHFMSK
-
         GHASH_16        start, %%ZT5, %%ZT6, %%ZT7, \
-                        NO_INPUT_PTR, NO_INPUT_PTR, NO_INPUT_PTR, \
+                        %%T1,  (0*64), 0, \
                         %%GDATA_KEY, HashKey_32, 0, ZWORD(%%AAD_HASH), \
                         %%ZT0, %%ZT8, %%ZT9, %%ZT10, %%ZT11, %%ZT12, \
-                        %%ZT14, %%ZT15, %%ZT16, NO_ZMM, \
-                        %%ZT1, %%ZT2, %%ZT3, %%ZT4
-
-        vmovdqu64       %%ZT1, [%%T1 + 16*16 + 64*0]
-        vmovdqu64       %%ZT2, [%%T1 + 16*16 + 64*1]
-        vmovdqu64       %%ZT3, [%%T1 + 16*16 + 64*2]
-        vmovdqu64       %%ZT4, [%%T1 + 16*16 + 64*3]
-        vpshufb         %%ZT1, %%SHFMSK
-        vpshufb         %%ZT2, %%SHFMSK
-        vpshufb         %%ZT3, %%SHFMSK
-        vpshufb         %%ZT4, %%SHFMSK
+                        %%ZT14, %%ZT15, %%ZT16, %%ZT1, %%SHFMSK
 
         GHASH_16        end_reduce, %%ZT5, %%ZT6, %%ZT7, \
-                        NO_INPUT_PTR, NO_INPUT_PTR, NO_INPUT_PTR, \
+                        %%T1,  (4*64), 0, \
                         %%GDATA_KEY, HashKey_16, 0, ZWORD(%%AAD_HASH), \
                         %%ZT0, %%ZT8, %%ZT9, %%ZT10, %%ZT11, %%ZT12, \
-                        %%ZT14, %%ZT15, %%ZT16, NO_ZMM, \
-                        %%ZT1, %%ZT2, %%ZT3, %%ZT4
+                        %%ZT14, %%ZT15, %%ZT16, %%ZT1, %%SHFMSK
 
         sub             %%T2, (32*16)
         je              %%_CALC_AAD_done
@@ -855,21 +806,11 @@
         cmp             %%T2, (16*16)
         jl              %%_less_than_16x16
         ; Get next 16 blocks
-        vmovdqu64       %%ZT1, [%%T1 + 64*0]
-        vmovdqu64       %%ZT2, [%%T1 + 64*1]
-        vmovdqu64       %%ZT3, [%%T1 + 64*2]
-        vmovdqu64       %%ZT4, [%%T1 + 64*3]
-        vpshufb         %%ZT1, %%SHFMSK
-        vpshufb         %%ZT2, %%SHFMSK
-        vpshufb         %%ZT3, %%SHFMSK
-        vpshufb         %%ZT4, %%SHFMSK
-
         GHASH_16        start_reduce, %%ZT5, %%ZT6, %%ZT7, \
-                        NO_INPUT_PTR, NO_INPUT_PTR, NO_INPUT_PTR, \
+                        %%T1,  (0*64), 0, \
                         %%GDATA_KEY, HashKey_16, 0, ZWORD(%%AAD_HASH), \
                         %%ZT0, %%ZT8, %%ZT9, %%ZT10, %%ZT11, %%ZT12, \
-                        %%ZT14, %%ZT15, %%ZT16, NO_ZMM, \
-                        %%ZT1, %%ZT2, %%ZT3, %%ZT4
+                        %%ZT14, %%ZT15, %%ZT16, %%ZT1, %%SHFMSK
 
         sub             %%T2, (16*16)
         je              %%_CALC_AAD_done
