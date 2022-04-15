@@ -89,9 +89,9 @@
 %macro AES_ECB 1
 %define %%DIR     %1 ; [in] Direction (ENC/DIR)
 %ifidn %%DIR, ENC
-%define AES      YMM_AESENC_ROUND_BLOCKS_0_16
+%define AES      YMM_AESENC_ROUND_BLOCKS_AVX2_0_16
 %else ; DIR = DEC
-%define AES      YMM_AESDEC_ROUND_BLOCKS_0_16
+%define AES      YMM_AESDEC_ROUND_BLOCKS_AVX2_0_16
 %endif
 
         or      LEN, LEN
@@ -157,7 +157,7 @@
 %endrep
 
         ; store initial blocks
-        YMM_STORE_BLOCKS_0_16 num_blocks, OUT, 0, YDATA0, YDATA1,\
+        YMM_STORE_BLOCKS_AVX2_0_16 num_blocks, OUT, 0, YDATA0, YDATA1,\
                 YDATA2, YDATA3, YDATA4, YDATA5, YDATA6, YDATA7
 
         add     IDX, num_blocks*16
@@ -188,7 +188,7 @@ align 16
 %endrep
 
         ; store 16 blocks
-        YMM_STORE_BLOCKS_0_16 16, {OUT + IDX}, 0, YDATA0, YDATA1,\
+        YMM_STORE_BLOCKS_AVX2_0_16 16, {OUT + IDX}, 0, YDATA0, YDATA1,\
                 YDATA2, YDATA3, YDATA4, YDATA5, YDATA6, YDATA7
 
         add     IDX, 16*16
