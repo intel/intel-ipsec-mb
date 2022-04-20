@@ -265,7 +265,7 @@ mksection .text
         lea     arg2, [r11 + _zuc_args_IV]
         lea     arg3, [r11 + _zuc_state]
         movzx   DWORD(arg4), word [r11 + _zuc_init_not_done]
-        mov     r10, 2 ; Argument 5 hardcoded to r10, as INIT is expecting it in that register
+        xor     r10, r10 ; Argument 5 hardcoded to r10, as INIT is expecting it in that register
 
         call    ZUC256_INIT_16
 
@@ -458,7 +458,7 @@ mksection .text
         lea     arg2, [r12 + _zuc_args_IV]
         lea     arg3, [r12 + _zuc_state]
         movzx   DWORD(arg4), word [r12 + _zuc_init_not_done]
-        mov     r10, 2 ; Argument 5 hardcoded to r10, as INIT is expecting it in that register
+        xor     r10, r10 ; Argument 5 hardcoded to r10, as INIT is expecting it in that register
 
         call    ZUC256_INIT_16
 
@@ -891,15 +891,9 @@ FLUSH_JOB_ZUC256_EEA3:
         lea     arg3, [r12 + _zuc_state]
         movzx   DWORD(arg4), word [r12 + _zuc_init_not_done]
         mov     r10, 4 ; Argument 5 hardcoded to r10, as INIT is expecting it in that register
+        lea     r11, [r12 + _zuc_args_digest] ; Argument 6 hardcoded to r11
 
         call    ZUC256_INIT_16
-
-        lea     arg1, [r12 + _zuc_state]
-        lea     arg2, [r12 + _zuc_args_digest]
-        movzx   DWORD(arg3), word [r12 + _zuc_init_not_done]
-
-        ; Generate first 4 bytes of keystream, used as the initial value of digests
-        call    ZUC_KEYGEN4B_16
 
 %endif ;; %%KEY_SIZE == 128
 
@@ -1072,15 +1066,9 @@ FLUSH_JOB_ZUC256_EEA3:
         lea     arg3, [r12 + _zuc_state]
         movzx   DWORD(arg4), word [r12 + _zuc_init_not_done]
         mov     r10, 4 ; Argument 5 hardcoded to r10, as INIT is expecting it in that register
+        lea     r11, [r12 + _zuc_args_digest] ; Argument 6 hardcoded to r11
 
         call    ZUC256_INIT_16
-
-        lea     arg1, [r12 + _zuc_state]
-        lea     arg2, [r12 + _zuc_args_digest]
-        movzx   DWORD(arg3), word [r12 + _zuc_init_not_done]
-
-        ; Generate first 4 bytes of keystream, used as the initial value of digests
-        call    ZUC_KEYGEN4B_16
 
 %endif ;; %%KEY_SIZE == 128
 

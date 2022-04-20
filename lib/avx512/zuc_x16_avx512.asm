@@ -61,6 +61,12 @@ EK_d64:
 dd	0x0044D700, 0x0026BC00, 0x00626B00, 0x00135E00, 0x00578900, 0x0035E200, 0x00713500, 0x0009AF00
 dd	0x004D7800, 0x002F1300, 0x006BC400, 0x001AF100, 0x005E2600, 0x003C4D00, 0x00789A00, 0x0047AC00
 
+; Constants to be used to initialize the LFSR registers
+; The tables contain four different sets of constants:
+; 0-63 bytes: Encryption
+; 64-127 bytes: Authentication with tag size = 4
+; 128-191 bytes: Authentication with tag size = 8
+; 192-255 bytes: Authentication with tag size = 16
 align 64
 EK256_d64:
 dd      0x00220000, 0x002F0000, 0x00240000, 0x002A0000, 0x006D0000, 0x00400000, 0x00400000, 0x00400000
@@ -995,10 +1001,19 @@ align 64
 %define %%ZTMP3       %6 ;; [clobbered] ZMM temporary register
 %define %%ZTMP4       %7 ;; [clobbered] ZMM temporary register
 %define %%ZTMP5       %8 ;; [clobbered] ZMM temporary register
-%define %%CONSTANTS   %9 ;; [in] Address to constants
-%define %%SHIFT_MASK %10 ;; [in] Mask register to shift K_31
-%define %%IV_MASK    %11 ;; [in] Mask register to read IV (last 10 bytes)
+%define %%SHIFT_MASK  %9 ;; [in] Mask register to shift K_31
+%define %%IV_MASK    %10 ;; [in] Mask register to read IV (last 10 bytes)
+%define %%TAG_SIZE   %11 ;; [in] Tag size (0, 4, 8 or 16 bytes)
 
+%if %%TAG_SIZE == 0
+%define %%CONSTANTS rel EK256_d64
+%elif %%TAG_SIZE == 4
+%define %%CONSTANTS rel EK256_EIA3_4
+%elif %%TAG_SIZE == 8
+%define %%CONSTANTS rel EK256_EIA3_8
+%elif %%TAG_SIZE == 16
+%define %%CONSTANTS rel EK256_EIA3_16
+%endif
         vmovdqu8        XWORD(%%ZTMP4){%%IV_MASK}, [%%IV + 16]
         ; Zero out first 2 bits of IV bytes 17-24
         vpandq          XWORD(%%ZTMP4), [rel iv_mask_low_6]
@@ -1026,16 +1041,16 @@ align 64
         vporq           %%LFSR, [%%CONSTANTS]
 %endmacro
 
-%macro INIT_16_AVX512 1
-%define %%KEY_SIZE   %1 ; [in] Key size (128 or 256)
-
-%define pKe             arg1
-%define pIv             arg2
-%define pState          arg3
-%define lane_mask       arg4
-
-%define tag_sz          r10d ; Only used in ZUC-256 (caller written in assembly, so using a hardcoded register)
-%define tag_sz_q        r10
+%macro INIT_16_AVX512 8-9
+%define %%KEY           %1 ; [in] Array of 16 key pointers
+%define %%IV            %2 ; [in] Array of 16 IV pointers
+%define %%STATE         %3 ; [in] State
+%define %%LANE_MASK     %4 ; [in] Mask register with lanes to update
+%define %%TMP           %5 ; [clobbered] Temporary GP register
+%define %%TMP2          %6 ; [clobbered] Temporary GP register
+%define %%KEY_SIZE      %7 ; [in] Key size (128 or 256)
+%define %%TAG_SIZE      %8 ; [in] Tag size (0, 4, 8 or 16 bytes)
+%define %%TAGS          %9 ; [in] Array of temporary tags
 
 %define %%TMP           r14
 %define %%TMP2          r15
@@ -1082,25 +1097,23 @@ align 64
 %define %%R2     %%ZTMP15
 %define %%MASK31 %%ZTMP16
 
+%define %%KSTR1 zmm16
+%define %%KSTR2 zmm17
+%define %%KSTR3 zmm18
+%define %%KSTR4 zmm19
+
 %define %%BLEND_KMASK     k1 ; Mask to blend LFSRs 14&15
 %define %%INIT_LANE_KMASK k2 ; Mask containing lanes to initialize
 %define %%SHIFT_KMASK     k3 ; Mask to shift 4 bytes only in the 15th dword
 %define %%IV_KMASK        k4 ; Mask to read 10 bytes of IV
 
-        kmovw   %%INIT_LANE_KMASK, DWORD(lane_mask)
+        kmovw   %%INIT_LANE_KMASK, DWORD(%%LANE_MASK)
 
 %if %%KEY_SIZE == 256
-        ; Get pointer to constants (depending on tag size, this will point at
-        ; constants for encryption, authentication with 4-byte, 8-byte or 16-byte tags)
-        lea    %%TMP, [rel EK256_d64]
-        bsf    tag_sz, tag_sz
-        dec    tag_sz
-        shl    tag_sz, 6
-        add    tag_sz_q, %%TMP
-        mov    %%TMP2, 0x4000
-        kmovq  %%SHIFT_KMASK, %%TMP2
-        mov    %%TMP2, 0x3ff
-        kmovq  %%IV_KMASK, %%TMP2
+        mov    %%TMP, 0x4000 ; Mask to shift 4 bits only in the 15th dword
+        kmovq  %%SHIFT_KMASK, %%TMP
+        mov    %%TMP, 0x3ff ; Mask to read 10 bytes of IV
+        kmovq  %%IV_KMASK, %%TMP
 %endif
 
         ; Set LFSR registers for Packets 1-16
@@ -1113,8 +1126,8 @@ align 64
         INIT_LFSR_128 %%TMP, %%TMP2, APPEND(%%LFSR, %%LFSR_IDX), %%ZTMP1
 %else
         INIT_LFSR_256 %%TMP, %%TMP2, APPEND(%%LFSR, %%LFSR_IDX), %%ZTMP1, \
-                      %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, tag_sz_q, \
-                      %%SHIFT_KMASK, %%IV_KMASK
+                      %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, \
+                      %%SHIFT_KMASK, %%IV_KMASK, %%TAG_SIZE
 %endif
 %assign %%IDX (%%IDX + 1)
 %assign %%LFSR_IDX (%%LFSR_IDX + 1)
@@ -1147,43 +1160,80 @@ align 64
     ; Shift LFSR 32-times, update state variables
 %assign %%N 0
 %rep 32
-        BITS_REORG16 pState, %%N, %%INIT_LANE_KMASK, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, %%ZTMP6, \
+        BITS_REORG16 %%STATE, %%N, %%INIT_LANE_KMASK, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, %%ZTMP6, \
                      %%ZTMP7, %%ZTMP8, %%ZTMP9, %%BLEND_KMASK, %%X0, %%X1, %%X2
-        NONLIN_FUN16 pState, %%INIT_LANE_KMASK, %%X0, %%X1, %%X2, %%R1, %%R2, \
+        NONLIN_FUN16 %%STATE, %%INIT_LANE_KMASK, %%X0, %%X1, %%X2, %%R1, %%R2, \
                      %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, %%ZTMP6, %%W
         vpsrld  %%W, 1         ; Shift out LSB of W
 
-        LFSR_UPDT16  pState, %%N, %%INIT_LANE_KMASK, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, \
+        LFSR_UPDT16  %%STATE, %%N, %%INIT_LANE_KMASK, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, \
                      %%ZTMP6, %%MASK31, %%W, init  ; W used in LFSR update
 %assign %%N (%%N + 1)
 %endrep
 
         ; And once more, initial round from keygen phase = 33 times
-        BITS_REORG16 pState, 0, %%INIT_LANE_KMASK, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, %%ZTMP6, %%ZTMP7, \
+        BITS_REORG16 %%STATE, 0, %%INIT_LANE_KMASK, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, %%ZTMP6, %%ZTMP7, \
                      %%ZTMP8, %%ZTMP9, %%BLEND_KMASK, %%X0, %%X1, %%X2
-        NONLIN_FUN16 pState, %%INIT_LANE_KMASK, %%X0, %%X1, %%X2, %%R1, %%R2, \
+        NONLIN_FUN16 %%STATE, %%INIT_LANE_KMASK, %%X0, %%X1, %%X2, %%R1, %%R2, \
                      %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, %%ZTMP6
 
-        LFSR_UPDT16  pState, 0, %%INIT_LANE_KMASK, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, \
+        LFSR_UPDT16  %%STATE, 0, %%INIT_LANE_KMASK, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, \
                      %%ZTMP6, %%MASK31, %%W, work
 
+    ; Generate extra 4, 8 or 16 bytes of KS for initial tags
+%if %%TAG_SIZE == 4
+%define %%NUM_ROUNDS 1
+%elif %%TAG_SIZE == 8
+%define %%NUM_ROUNDS 2
+%elif %%TAG_SIZE == 16
+%define %%NUM_ROUNDS 4
+%else
+%define %%NUM_ROUNDS 0
+%endif
+
+%assign %%N 1
+%rep %%NUM_ROUNDS
+        BITS_REORG16 %%STATE, %%N, %%INIT_LANE_KMASK, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, %%ZTMP6, \
+                     %%ZTMP7, %%ZTMP8, %%ZTMP9, %%BLEND_KMASK, %%X0, %%X1, %%X2, APPEND(%%KSTR, %%N)
+        NONLIN_FUN16 %%STATE, %%INIT_LANE_KMASK, %%X0, %%X1, %%X2, %%R1, %%R2, \
+                     %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, %%ZTMP6, %%W
+        ; OFS_X3 XOR W
+        vpxorq      APPEND(%%KSTR, %%N), %%W
+        LFSR_UPDT16  %%STATE, %%N, %%INIT_LANE_KMASK, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, \
+                     %%ZTMP6, %%MASK31, %%ZTMP7, work
+%assign %%N %%N+1
+%endrep
+
         ; Update R1, R2
-        vmovdqa32   [pState + OFS_R1]{%%INIT_LANE_KMASK}, %%R1
-        vmovdqa32   [pState + OFS_R2]{%%INIT_LANE_KMASK}, %%R2
+        vmovdqa32   [%%STATE + OFS_R1]{%%INIT_LANE_KMASK}, %%R1
+        vmovdqa32   [%%STATE + OFS_R2]{%%INIT_LANE_KMASK}, %%R2
+
+%if %%TAG_SIZE == 4
+        vmovdqa32 [%%TAGS]{%%INIT_LANE_KMASK}, %%KSTR1
+        REORDER_LFSR %%STATE, 1, %%INIT_LANE_KMASK
+%elif %%TAG_SIZE == 8 ;; TODO
+%elif %%TAG_SIZE == 16 ;; TODO
+%endif
 
 %endmacro ; INIT_16_AVX512
 
 ;;
 ;; void asm_ZucInitialization_16_avx512(ZucKey16_t *pKeys, ZucIv16_t *pIvs,
-;;                                      ZucState16_t *pState)
+;;                                      ZucState16_t *pState,
+;;                                      const uint64_t lane_mask)
 ;;
 MKGLOBAL(ZUC128_INIT,function,internal)
 ZUC128_INIT:
+%define pKe             arg1
+%define pIv             arg2
+%define pState          arg3
+%define lane_mask       arg4
+
         endbranch64
 
         FUNC_SAVE
 
-        INIT_16_AVX512 128
+        INIT_16_AVX512 pKe, pIv, pState, lane_mask, r12, r13, 128, 0
 
         FUNC_RESTORE
 
@@ -1191,15 +1241,42 @@ ZUC128_INIT:
 
 ;;
 ;; void asm_Zuc256Initialization_16_avx512(ZucKey16_t *pKeys, ZucIv16_t *pIvs,
-;;                                         ZucState16_t *pState, uint32_t tag_sz)
+;;                                         ZucState16_t *pState,
+;;                                         const uint64_t lane_mask,
+;;                                         const uint32_t tag_sz,
+;;                                         void *tags)
 ;;
 MKGLOBAL(ZUC256_INIT,function,internal)
 ZUC256_INIT:
+%define pKe             arg1
+%define pIv             arg2
+%define pState          arg3
+%define lane_mask       arg4
+%define tag_sz          r10
+%define tags            r11
+
         endbranch64
 
+        or      tag_sz, tag_sz
+        jz      init_for_cipher
+
+        ;; TODO: Check for 8B and 16B tags
+        cmp     tag_sz, 4
+        je      init_for_auth_tag_4B
+
+init_for_cipher:
         FUNC_SAVE
 
-        INIT_16_AVX512 256
+        INIT_16_AVX512 pKe, pIv, pState, lane_mask, r12, r13, 256, 0, tags
+
+        FUNC_RESTORE
+
+        ret
+
+init_for_auth_tag_4B:
+        FUNC_SAVE
+
+        INIT_16_AVX512 pKe, pIv, pState, lane_mask, r12, r13, 256, 4, tags
 
         FUNC_RESTORE
 
@@ -1325,7 +1402,7 @@ ZUC256_INIT:
         vmovdqa32   [pState + OFS_R2]{%%ALL_KMASK}, %%R2
 %endif
 
-        ; Generate rest of the KS bytes (last 8 bytes) for selected lanes
+       ; Generate rest of the KS bytes (last 8 bytes) for selected lanes
 %rep 2
         BITS_REORG16 pState, %%N, %%FULL_LANE_KMASK, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, %%ZTMP6, \
                      %%ZTMP7, %%ZTMP8, %%ZTMP9, %%BLEND_KMASK, %%X0, %%X1, %%X2, APPEND(%%KSTR, %%IDX)
@@ -1357,7 +1434,7 @@ ZUC256_INIT:
         lea         %%TMP2, [rel mov_mask]
         STORE_KSTR16 pKS, %%ZTMP7, %%ZTMP5, %%KSTR13, %%KSTR1, %%ZTMP8, %%ZTMP6, %%KSTR14, %%KSTR2, \
                      %%ZTMP3, %%ZTMP1, %%KSTR15, %%KSTR3, %%ZTMP4, %%ZTMP2, %%KSTR16, %%KSTR4, %%KEY_OFF, \
-                     %%LANE_MASK, %%TMP1, %%TMP2, %%TMP3, %%TMP_KMASK1,%%TMP_KMASK2
+                     %%LANE_MASK, %%TMP1, %%TMP2, %%TMP3, %%TMP_KMASK1, %%TMP_KMASK2
 %else
         STORE_KSTR16 pKS, %%ZTMP7, %%ZTMP5, %%KSTR13, %%KSTR1, %%ZTMP8, %%ZTMP6, %%KSTR14, %%KSTR2, \
                      %%ZTMP3, %%ZTMP1, %%KSTR15, %%KSTR3, %%ZTMP4, %%ZTMP2, %%KSTR16, %%KSTR4, %%KEY_OFF
