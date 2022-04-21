@@ -114,7 +114,7 @@ typedef struct {
 
 typedef struct {
         DECLARE_ALIGNED(uint32_t digest[SHA1_DIGEST_SZ], 32);
-        uint8_t *data_ptr[AVX512_NUM_SHA1_LANES];
+        const uint8_t *data_ptr[AVX512_NUM_SHA1_LANES];
 } SHA1_ARGS;
 
 typedef struct {

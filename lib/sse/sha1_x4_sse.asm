@@ -78,6 +78,12 @@ mksection .text
 ; r0 = {d2 c2 b2 a2}
 ; r3 = {d3 c3 b3 a3}
 ;
+%define XMM_STORAGE     16*10
+%define GP_STORAGE      8*3
+
+%define VARIABLE_OFFSET XMM_STORAGE + GP_STORAGE
+%define GP_OFFSET XMM_STORAGE
+
 %macro TRANSPOSE 6
 %define %%r0 %1
 %define %%r1 %2
@@ -224,7 +230,7 @@ mksection .text
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;; FRAMESZ must be an odd multiple of 8
-%define FRAMESZ	16*16 + 8
+%define FRAMESZ	16*16
 
 %define MOVPS	movdqu
 
@@ -288,6 +294,69 @@ mksection .text
 %xdefine W14 TMP_
 %endm
 
+%macro FUNC_SAVE 0
+    mov     r11, rsp
+    sub     rsp, VARIABLE_OFFSET
+    and     rsp, ~15	; align rsp to 16 bytes
+
+    movdqa  [rsp + 0*16], xmm6
+    movdqa  [rsp + 1*16], xmm7
+    movdqa  [rsp + 2*16], xmm8
+    movdqa  [rsp + 3*16], xmm9
+    movdqa  [rsp + 4*16], xmm10
+    movdqa  [rsp + 5*16], xmm11
+    movdqa  [rsp + 6*16], xmm12
+    movdqa  [rsp + 7*16], xmm13
+    movdqa  [rsp + 8*16], xmm14
+    movdqa  [rsp + 9*16], xmm15
+%endif
+%ifidn __OUTPUT_FORMAT__, win64
+    ; rdi and rdx need to be maintained for Windows
+    mov     [rsp + GP_OFFSET], rdi
+    mov     [rsp + GP_OFFSET + 8], r11 ;; rsp pointer
+%else
+    mov     [rsp + GP_OFFSET], rsi
+    mov     [rsp + GP_OFFSET + 8], r11 ;; rsp pointer
+%endif
+%endmacro
+
+%macro FUNC_RESTORE 0
+%ifndef LINUX
+    movdqa  xmm6, [rsp + 0*16]
+    movdqa  xmm7, [rsp + 1*16]
+    movdqa  xmm8, [rsp + 2*16]
+    movdqa  xmm9, [rsp + 3*16]
+    movdqa  xmm10, [rsp + 4*16]
+    movdqa  xmm11, [rsp + 5*16]
+    movdqa  xmm12, [rsp + 6*16]
+    movdqa  xmm13, [rsp + 7*16]
+    movdqa  xmm14, [rsp + 8*16]
+    movdqa  xmm15, [rsp + 9*16]
+%endif
+
+    pxor 	xmm5, xmm5
+    movdqa  [rsp + 0*16], xmm5
+    movdqa  [rsp + 1*16], xmm5
+    movdqa  [rsp + 2*16], xmm5
+    movdqa  [rsp + 3*16], xmm5
+    movdqa  [rsp + 4*16], xmm5
+    movdqa  [rsp + 5*16], xmm5
+    movdqa  [rsp + 6*16], xmm5
+    movdqa  [rsp + 7*16], xmm5
+    movdqa  [rsp + 8*16], xmm5
+    movdqa  [rsp + 9*16], xmm5
+
+%ifidn __OUTPUT_FORMAT__, win64
+    ; rdi and rdx need to be maintained for Windows
+    mov     rdi, [rsp + GP_OFFSET]
+    mov     rsp, [rsp + GP_OFFSET + 8] ;; rsp pointer
+%else
+	; rsi needs to be maintained for Linux
+    mov     rsi, [rsp + GP_OFFSET]
+    mov     rsp, [rsp + GP_OFFSET + 8] ;; rsp pointer
+%endif
+%endmacro
+
 align 32
 
 ; XMM registers are clobbered. Saving/restoring must be done at a higher level
@@ -297,7 +366,7 @@ align 32
 ; arg 2 : rdx : size (in blocks) ;; assumed to be >= 1
 MKGLOBAL(sha1_mult_sse,function,internal)
 sha1_mult_sse:
-
+	FUNC_SAVE
 	sub	rsp, FRAMESZ
 
 	;; Initialize digests
@@ -429,7 +498,7 @@ lloop:
 %endif
 
 	add	rsp, FRAMESZ
-
+	FUNC_RESTORE
 	ret
 
 mksection stack-noexec

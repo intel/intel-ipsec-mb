@@ -84,6 +84,7 @@ const struct {
 	OOO_INFO(aes256_cmac_ooo, MB_MGR_CMAC_OOO),
         OOO_INFO(snow3g_uea2_ooo, MB_MGR_SNOW3G_OOO),
         OOO_INFO(snow3g_uia2_ooo, MB_MGR_SNOW3G_OOO),
+        OOO_INFO(sha_1_ooo, MB_MGR_HMAC_SHA_1_OOO)
 };
 
 /**

@@ -1,3 +1,4 @@
+
 /*******************************************************************************
   Copyright (c) 2012-2022, Intel Corporation
 
@@ -46,12 +47,17 @@
 #include "intel-ipsec-mb.h"
 #include "error.h"
 #include "include/snow3g_submit.h"
+#include "constants.h"
 
 #ifdef LINUX
 #define BSWAP64 __builtin_bswap64
 #else
 #define BSWAP64 _byteswap_uint64
 #endif
+
+extern void sha1_mult_sse(SHA1_ARGS *args, uint32_t size_in_blocks);
+extern void sha1_block_sse(const void *, void *);
+extern void sha1_block_avx(const void *, void *);
 
 #define CRC(func, state, job) *((uint32_t *)job->auth_tag_output) = \
                 func(state, job->src + job->hash_start_src_offset_in_bytes, \
@@ -75,6 +81,263 @@ void ADV_JOBS(int *ptr)
         *ptr += sizeof(IMB_JOB);
         if (*ptr >= (int) (IMB_MAX_JOBS * sizeof(IMB_JOB)))
                 *ptr = 0;
+}
+
+/* ========================================================================= */
+/* SHA1 */
+/* ========================================================================= */
+__forceinline
+void
+sha_generic_one_block(const void *inp, void *digest,
+                      const int is_avx, const int sha_type)
+{
+        if (sha_type == 1) {
+                if (is_avx)
+                        sha1_block_avx(inp, digest);
+                else
+                        sha1_block_sse(inp, digest);
+        }
+}
+
+__forceinline
+uint32_t mbswap4(const uint32_t val)
+{
+        return ((val >> 24) |
+                ((val & 0xff0000) >> 8) |
+                ((val & 0xff00) << 8) |
+                (val << 24));
+}
+
+__forceinline
+uint64_t mbswap8(const uint64_t val)
+{
+        return (((uint64_t) mbswap4((uint32_t) val)) << 32) |
+                (((uint64_t) mbswap4((uint32_t) (val >> 32))));
+}
+
+__forceinline
+void copy_bswap4_array(void *dst, const void *src, const size_t num)
+{
+        uint32_t *outp = (uint32_t *) dst;
+        const uint32_t *inp = (const uint32_t *) src;
+        size_t i;
+
+        for (i = 0; i < num; i++)
+                outp[i] = mbswap4(inp[i]);
+}
+
+__forceinline
+void copy_bswap8_array(void *dst, const void *src, const size_t num)
+{
+        uint64_t *outp = (uint64_t *) dst;
+        const uint64_t *inp = (const uint64_t *) src;
+        size_t i;
+
+        for (i = 0; i < num; i++)
+                outp[i] = mbswap8(inp[i]);
+}
+
+__forceinline
+void sha1_init_digest(void *d, unsigned lane)
+{
+        uint32_t *digest = (uint32_t *)d;
+
+        digest[lane + 0*16] = H0;
+        digest[lane + 1*16] = H1;
+        digest[lane + 2*16] = H2;
+        digest[lane + 3*16] = H3;
+        digest[lane + 4*16] = H4;
+}
+
+__forceinline
+void
+sha_generic_init(void *digest, const int sha_type, unsigned lane)
+{
+        if (sha_type == 1)
+                sha1_init_digest(digest, lane);
+}
+
+__forceinline
+void sha1_sc_digest(void *p, void *d, unsigned lane)
+{
+        uint32_t *p_digest = (uint32_t *)p;
+        uint32_t *d_digest = (uint32_t *)d;
+
+        p_digest[0] = d_digest[lane + 0*16];
+        p_digest[1] = d_digest[lane + 1*16];
+        p_digest[2] = d_digest[lane + 2*16];
+        p_digest[3] = d_digest[lane + 3*16];
+        p_digest[4] = d_digest[lane + 4*16];
+}
+
+__forceinline
+void
+sha_generic_sc(void *digest, void *d, unsigned lane, const int sha_type)
+{
+        if (sha_type == 1)
+                sha1_sc_digest(digest, d, lane);
+}
+
+__forceinline
+void sha_generic_write_digest(void *dst, const void *src, const int sha_type)
+{
+        if (sha_type == 1)
+                copy_bswap4_array(dst, src, NUM_SHA_DIGEST_WORDS);
+}
+
+__forceinline
+void store8_be(void *outp, const uint64_t val)
+{
+        *((uint64_t *)outp) = mbswap8(val);
+}
+
+__forceinline
+void var_memcpy(void *dst, const void *src, const uint64_t len)
+{
+        uint64_t i;
+        const uint8_t *src8 = (const uint8_t *)src;
+        uint8_t *dst8 = (uint8_t *)dst;
+
+        for (i = 0; i < len; i++)
+                dst8[i] = src8[i];
+}
+
+__forceinline
+IMB_JOB *
+submit_flush_job_sha_1(MB_MGR_HMAC_SHA_1_OOO *state, IMB_JOB *job,
+                         const unsigned max_jobs, const int is_submit,
+                         const int is_avx, const int sha_type,
+                         const uint64_t blk_size, const uint64_t pad_size)
+{
+        unsigned lane, min_len, min_idx;
+        IMB_JOB *ret_job = NULL;
+        unsigned i;
+        uint8_t cb[IMB_SHA_512_BLOCK_SIZE];
+        union {
+                uint32_t digest1[NUM_SHA_256_DIGEST_WORDS];
+                uint64_t digest2[NUM_SHA_512_DIGEST_WORDS];
+        } local_digest;
+        void *ld = (void *) &local_digest;
+        uint64_t r;
+
+        if (is_submit) {
+                /*
+                 * SUBMIT
+                 * - get a free lane id
+                 */
+
+                lane = state->unused_lanes & 15;
+                state->unused_lanes >>= 4;
+                state->args.data_ptr[lane] =
+                        job->src + job->hash_start_src_offset_in_bytes;
+
+                sha_generic_init(state->args.digest, sha_type, lane);
+
+                /* copy job data in and set up initial blocks */
+                state->ldata[lane].job_in_lane = job;
+                state->lens[lane] = (uint16_t)job->msg_len_to_hash_in_bytes;
+
+                /* enough jobs to start processing? */
+                if (state->unused_lanes != 0xf)
+                        return NULL;
+        } else {
+                /*
+                 * FLUSH
+                 * - find 1st non null job
+                 */
+                for (lane = 0; lane < max_jobs; lane++)
+                        if (state->ldata[lane].job_in_lane != NULL)
+                                break;
+                if (lane >= max_jobs)
+                        return NULL; /* no not null job */
+        }
+
+        if (is_submit) {
+                /*
+                 * SUBMIT
+                 * - find min common length to process
+                 */
+                min_idx = 0;
+                min_len = state->lens[0];
+
+                for (i = 1; i < max_jobs; i++) {
+                        if (min_len > state->lens[i]) {
+                                min_idx = i;
+                                min_len = state->lens[i];
+                        }
+                }
+        } else {
+                /*
+                 * FLUSH
+                 * - copy good (not null) lane onto empty lanes
+                 * - find min common length to process across not null lanes
+                 */
+                min_idx = lane;
+                min_len = state->lens[lane];
+
+                for (i = 0; i < max_jobs; i++) {
+                        if (i == lane)
+                                continue;
+
+                        if (state->ldata[i].job_in_lane != NULL) {
+                                if (min_len > state->lens[i]) {
+                                        min_idx = i;
+                                        min_len = state->lens[i];
+                                }
+                        } else {
+                                state->args.data_ptr[i] =
+                                        state->args.data_ptr[lane];
+                                state->lens[i] = UINT16_MAX;
+                        }
+                }
+        }
+
+        /* subtract min len from all lanes */
+        for (i = 0; i < max_jobs; i++)
+                state->lens[i] -= (uint16_t)((min_len/blk_size)*blk_size);
+
+        r = min_len % blk_size;
+
+        /* run the algorithmic code on full selected blocks */
+        if(min_len >= blk_size)
+                sha1_mult_sse(&state->args, (uint32_t)(min_len/blk_size));
+
+        /* process partial block */
+        memset(cb, 0, sizeof(cb));
+        var_memcpy(cb, state->args.data_ptr[min_idx], r);
+        cb[r] = 0x80;
+
+        sha_generic_sc(ld, state->args.digest, min_idx, sha_type);
+
+        if (r >= (blk_size - pad_size)) {
+                /* length will be encoded in the next block */
+                sha_generic_one_block(cb, ld, is_avx, sha_type);
+                memset(cb, 0, sizeof(cb));
+        }
+
+        ret_job = state->ldata[min_idx].job_in_lane;
+
+        /* encode bit length */
+        store8_be(&cb[blk_size - 8], ret_job->msg_len_to_hash_in_bytes * 8);
+        sha_generic_one_block(cb, ld, is_avx, sha_type);
+
+        /* put back processed packet into unused lanes, set job as complete */
+        state->unused_lanes = (state->unused_lanes << 4) | min_idx;
+        sha_generic_write_digest(ret_job->auth_tag_output, ld, sha_type);
+        ret_job->status |= IMB_STATUS_COMPLETED_AUTH;
+        state->ldata[min_idx].job_in_lane = NULL;
+
+#ifdef SAFE_DATA
+        clear_mem(cb, sizeof(cb));
+        clear_mem(&local_digest, sizeof(local_digest));
+        clear_scratch_gps();
+        if (is_avx)
+                clear_scratch_xmms_avx();
+        else
+                clear_scratch_xmms_sse();
+#endif
+
+        return ret_job;
 }
 
 /* ========================================================================= */
@@ -1006,6 +1269,9 @@ SUBMIT_JOB_HASH(IMB_MGR *state, IMB_JOB *job)
 	MB_MGR_CMAC_OOO *aes256_cmac_ooo = state->aes256_cmac_ooo;
         MB_MGR_ZUC_OOO *zuc_eia3_ooo = state->zuc_eia3_ooo;
         MB_MGR_ZUC_OOO *zuc256_eia3_ooo = state->zuc256_eia3_ooo;
+#ifndef AVX2
+        MB_MGR_HMAC_SHA_1_OOO *sha_1_ooo = state->sha_1_ooo;
+#endif
 #ifdef AVX512
         MB_MGR_SNOW3G_OOO *snow3g_uia2_ooo = state->snow3g_uia2_ooo;
 #endif
@@ -1063,11 +1329,17 @@ SUBMIT_JOB_HASH(IMB_MGR *state, IMB_JOB *job)
                         job->msg_len_to_hash_in_bytes * 8;
                 return SUBMIT_JOB_AES256_CMAC_AUTH(aes256_cmac_ooo, job);
         case IMB_AUTH_SHA_1:
+        #ifdef AVX2
                 IMB_SHA1(state,
-                         job->src + job->hash_start_src_offset_in_bytes,
-                         job->msg_len_to_hash_in_bytes, job->auth_tag_output);
+                           job->src + job->hash_start_src_offset_in_bytes,
+                           job->msg_len_to_hash_in_bytes, job->auth_tag_output);
                 job->status |= IMB_STATUS_COMPLETED_AUTH;
                 return job;
+        #else
+                return submit_flush_job_sha_1(sha_1_ooo, job, 4, 1, 0, 1,
+                                              IMB_SHA1_BLOCK_SIZE,
+                                              SHA1_PAD_SIZE);
+        #endif
         case IMB_AUTH_SHA_224:
                 IMB_SHA224(state,
                            job->src + job->hash_start_src_offset_in_bytes,
@@ -1211,6 +1483,9 @@ FLUSH_JOB_HASH(IMB_MGR *state, IMB_JOB *job)
 	MB_MGR_CMAC_OOO *aes256_cmac_ooo = state->aes256_cmac_ooo;
         MB_MGR_ZUC_OOO *zuc_eia3_ooo = state->zuc_eia3_ooo;
         MB_MGR_ZUC_OOO *zuc256_eia3_ooo = state->zuc256_eia3_ooo;
+#ifndef AVX2
+        MB_MGR_HMAC_SHA_1_OOO *sha_1_ooo = state->sha_1_ooo;
+#endif
 #ifdef AVX512
         MB_MGR_SNOW3G_OOO *snow3g_uia2_ooo = state->snow3g_uia2_ooo;
 #endif
@@ -1240,6 +1515,12 @@ FLUSH_JOB_HASH(IMB_MGR *state, IMB_JOB *job)
                 return FLUSH_JOB_HMAC_SHA_384(hmac_sha_384_ooo);
         case IMB_AUTH_HMAC_SHA_512:
                 return FLUSH_JOB_HMAC_SHA_512(hmac_sha_512_ooo);
+        #ifndef AVX2
+        case IMB_AUTH_SHA_1:
+                return submit_flush_job_sha_1(sha_1_ooo, job, 4, 0, 0, 1,
+                                              IMB_SHA1_BLOCK_SIZE,
+                                              SHA1_PAD_SIZE);
+        #endif
         case IMB_AUTH_AES_XCBC:
                 return FLUSH_JOB_AES_XCBC(aes_xcbc_ooo);
         case IMB_AUTH_MD5:
