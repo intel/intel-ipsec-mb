@@ -44,7 +44,12 @@ CFLAGS = -MMD -D_GNU_SOURCE -DNO_COMPAT_IMB_API_053 \
 	-Wformat -Wformat-security \
 	-Wunreachable-code -Wmissing-noreturn -Wsign-compare -Wno-endif-labels \
 	-Wstrict-prototypes -Wmissing-prototypes -Wold-style-definition \
-	-fno-strict-overflow -fno-delete-null-pointer-checks -fwrapv
+	-fno-delete-null-pointer-checks -fwrapv
+
+# -fno-strict-overflow is not supported by clang
+ifneq ($(CC),clang)
+CFLAGS += -fno-strict-overflow
+endif
 
 # if "-z ibt" is supported then assume "-z shstk, -z cet-report=error" are also supported
 # "-fcf-protection" needs to be checked separately

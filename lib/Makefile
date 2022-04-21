@@ -96,7 +96,12 @@ CFLAGS := -DNO_COMPAT_IMB_API_053 $(EXTRA_CFLAGS) $(INCLUDES) \
 	-Wformat -Wformat-security \
 	-Wunreachable-code -Wmissing-noreturn -Wsign-compare -Wno-endif-labels \
 	-Wstrict-prototypes -Wmissing-prototypes -Wold-style-definition \
-	-fno-strict-overflow -fno-delete-null-pointer-checks -fwrapv
+	-fno-delete-null-pointer-checks -fwrapv
+
+# -fno-strict-overflow is not supported by clang
+ifneq ($(CC),clang)
+CFLAGS += -fno-strict-overflow
+endif
 
 ifeq ($(MINGW),0)
 CFLAGS += -DLINUX
