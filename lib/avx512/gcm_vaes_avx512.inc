@@ -745,14 +745,14 @@
         mov             %%T1, %%A_IN            ; T1 = AAD
         mov             %%T2, %%A_LEN           ; T2 = aadLen
 
-        or              %%T2, %%T2
-        jz              %%_CALC_AAD_done
+        cmp             %%T2, (16*16)
+        jb              %%_less_than_16x16
 
         vmovdqa64       %%SHFMSK, [rel SHUF_MASK]
 
 %%_get_AAD_loop48x16:
         cmp             %%T2, (48*16)
-        jl              %%_exit_AAD_loop48x16
+        jb              %%_exit_AAD_loop48x16
 
         GHASH_16        start, %%ZT5, %%ZT6, %%ZT7, \
                         %%T1,  (0*64), 0, \
@@ -780,10 +780,37 @@
 
 %%_exit_AAD_loop48x16:
         ; Less than 48x16 bytes remaining
+        cmp             %%T2, (16*16)
+        jb              %%_less_than_16x16
+        je              %%_equal_16x16
         cmp             %%T2, (32*16)
-        jl              %%_less_than_32x16
+        jb              %%_less_than_32x16
+        je              %%_equal_32x16
+
+        ;; calculate offset to hash key to start with
+        lea             %%T3, [%%T2 + 15]
+        and             %%T3, ~15
+        neg             %%T3
+        add             %%T3, HashKey_1 + 16
 
         ; Get next 16 blocks
+        GHASH_16        start, %%ZT5, %%ZT6, %%ZT7, \
+                        %%T1,  (0*64), 0, \
+                        %%GDATA_KEY, %%T3, 0, ZWORD(%%AAD_HASH), \
+                        %%ZT0, %%ZT8, %%ZT9, %%ZT10, %%ZT11, %%ZT12, \
+                        %%ZT14, %%ZT15, %%ZT16, %%ZT1, %%SHFMSK
+
+        GHASH_16        mid, %%ZT5, %%ZT6, %%ZT7, \
+                        %%T1,  (4*64), 0, \
+                        %%GDATA_KEY, {%%T3 + 16*16}, 0, ZWORD(%%AAD_HASH), \
+                        %%ZT0, %%ZT8, %%ZT9, %%ZT10, %%ZT11, %%ZT12, \
+                        %%ZT14, %%ZT15, %%ZT16, %%ZT1, %%SHFMSK
+
+        sub             %%T2, (32*16)
+        add             %%T1, (32*16)
+        jmp             %%_less_than_16x16_remain
+
+%%_equal_32x16:
         GHASH_16        start, %%ZT5, %%ZT6, %%ZT7, \
                         %%T1,  (0*64), 0, \
                         %%GDATA_KEY, HashKey_32, 0, ZWORD(%%AAD_HASH), \
@@ -795,29 +822,110 @@
                         %%GDATA_KEY, HashKey_16, 0, ZWORD(%%AAD_HASH), \
                         %%ZT0, %%ZT8, %%ZT9, %%ZT10, %%ZT11, %%ZT12, \
                         %%ZT14, %%ZT15, %%ZT16, %%ZT1, %%SHFMSK
-
-        sub             %%T2, (32*16)
-        je              %%_CALC_AAD_done
-
-        add             %%T1, (32*16)
-        jmp             %%_less_than_16x16
+        jmp             %%_CALC_AAD_done
 
 %%_less_than_32x16:
-        cmp             %%T2, (16*16)
-        jl              %%_less_than_16x16
-        ; Get next 16 blocks
+        ;; calculate offset to hash key to start with
+        lea             %%T3, [%%T2 + 15]
+        and             %%T3, ~15
+        neg             %%T3
+        add             %%T3, HashKey_1 + 16
+
+        GHASH_16        start, %%ZT5, %%ZT6, %%ZT7, \
+                        %%T1,  (0*64), 0, \
+                        %%GDATA_KEY, %%T3, 0, ZWORD(%%AAD_HASH), \
+                        %%ZT0, %%ZT8, %%ZT9, %%ZT10, %%ZT11, %%ZT12, \
+                        %%ZT14, %%ZT15, %%ZT16, %%ZT1, %%SHFMSK
+        sub             %%T2, (16*16)
+        add             %%T1, (16*16)
+        jmp             %%_less_than_16x16_remain
+
+%%_equal_16x16:
         GHASH_16        start_reduce, %%ZT5, %%ZT6, %%ZT7, \
                         %%T1,  (0*64), 0, \
                         %%GDATA_KEY, HashKey_16, 0, ZWORD(%%AAD_HASH), \
                         %%ZT0, %%ZT8, %%ZT9, %%ZT10, %%ZT11, %%ZT12, \
                         %%ZT14, %%ZT15, %%ZT16, %%ZT1, %%SHFMSK
-
-        sub             %%T2, (16*16)
-        je              %%_CALC_AAD_done
-
-        add             %%T1, (16*16)
+        jmp             %%_CALC_AAD_done
 
         ; Less than 16x16 bytes remaining
+%%_less_than_16x16_remain:
+        ;; ZT5 (H), ZT6 (M), ZT7 (L) contain ghash sums
+        ;; prep mask source address
+        lea             %%T3, [rel byte64_len_to_mask_table]
+        lea             %%T3, [%%T3 + %%T2*8]
+
+        ;; calculate number of blocks to ghash (including partial bytes)
+        add             DWORD(%%T2), 15
+        shr             DWORD(%%T2), 4
+        jz              %%_CALC_AAD_done        ;; catch zero length
+        cmp             DWORD(%%T2), 2
+        jb              %%_AAD_blocks_cont_1
+        je              %%_AAD_blocks_cont_2
+        cmp             DWORD(%%T2), 4
+        jb              %%_AAD_blocks_cont_3
+        je              %%_AAD_blocks_cont_4
+        cmp             DWORD(%%T2), 6
+        jb              %%_AAD_blocks_cont_5
+        je              %%_AAD_blocks_cont_6
+        cmp             DWORD(%%T2), 8
+        jb              %%_AAD_blocks_cont_7
+        je              %%_AAD_blocks_cont_8
+        cmp             DWORD(%%T2), 10
+        jb              %%_AAD_blocks_cont_9
+        je              %%_AAD_blocks_cont_10
+        cmp             DWORD(%%T2), 12
+        jb              %%_AAD_blocks_cont_11
+        je              %%_AAD_blocks_cont_12
+        cmp             DWORD(%%T2), 14
+        jb              %%_AAD_blocks_cont_13
+        je              %%_AAD_blocks_cont_14
+        cmp             DWORD(%%T2), 15
+        je              %%_AAD_blocks_cont_15
+        ;; fall through for 16 blocks
+
+        ;; The flow of each of these cases is identical:
+        ;; - load blocks plain text
+        ;; - shuffle loaded blocks
+        ;; - xor in current hash value into block 0
+        ;; - perform up multiplications with ghash keys
+        ;; - jump to reduction code
+
+%assign I 16
+        ;; generate all 16 cases using preprocessor
+%rep 16
+
+%%_AAD_blocks_cont_ %+ I:
+%if I > 12
+        sub             %%T3, 12 * 16 * 8
+%elif I > 8
+        sub             %%T3, 8 * 16 * 8
+%elif I > 4
+        sub             %%T3, 4 * 16 * 8
+%endif
+        kmovq           %%MASKREG, [%%T3]
+
+        ZMM_LOAD_MASKED_BLOCKS_0_16 \
+                        I, %%T1, 0, \
+                        %%ZT14, %%ZT15, %%ZT16, %%ZT17, %%MASKREG
+
+        ZMM_OPCODE3_DSTR_SRC1R_SRC2R_BLOCKS_0_16 \
+                        I, vpshufb, \
+                        %%ZT14, %%ZT15, %%ZT16, %%ZT17, \
+                        %%ZT14, %%ZT15, %%ZT16, %%ZT17, \
+                        %%SHFMSK, %%SHFMSK, %%SHFMSK, %%SHFMSK
+
+        GHASH_1_TO_16 %%GDATA_KEY, ZWORD(%%AAD_HASH), \
+                        %%ZT0, %%ZT1, %%ZT2, %%ZT3, %%ZT4, \
+                        %%ZT9, %%ZT10, %%ZT11, %%ZT12, \
+                        ZWORD(%%AAD_HASH), %%ZT14, %%ZT15, %%ZT16, %%ZT17, I, \
+                        %%ZT5, %%ZT6, %%ZT7
+        jmp             %%_CALC_AAD_done
+
+%assign I (I - 1)
+%endrep
+
+        ; Less than 16x16 bytes
 %%_less_than_16x16:
         ;; prep mask source address
         lea             %%T3, [rel byte64_len_to_mask_table]
@@ -826,6 +934,7 @@
         ;; calculate number of blocks to ghash (including partial bytes)
         add             DWORD(%%T2), 15
         shr             DWORD(%%T2), 4
+        jz              %%_CALC_AAD_done        ;; catch zero length
         cmp             DWORD(%%T2), 2
         jb              %%_AAD_blocks_1
         je              %%_AAD_blocks_2
@@ -863,6 +972,14 @@
 %rep 16
 
 %%_AAD_blocks_ %+ I:
+%if I >= 3
+        vmovdqa64       %%SHFMSK, [rel SHUF_MASK]
+%elif I == 2
+        vmovdqa64       YWORD(%%SHFMSK), [rel SHUF_MASK]
+%elif I == 1
+        vmovdqa64       XWORD(%%SHFMSK), [rel SHUF_MASK]
+%endif
+
 %if I > 12
         sub             %%T3, 12 * 16 * 8
 %elif I > 8
