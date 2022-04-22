@@ -18,7 +18,7 @@ Test Applications
 - GHASH JOB API support added in the test application, fuzzing and xvalid tools
 
 Performance Application
-- GHASH support added (through JOB API)
+- GHASH support added (through JOB and direct API)
 
 Fixes
 - Fixed incorrect 8-buffer SNOW3G keystream generation

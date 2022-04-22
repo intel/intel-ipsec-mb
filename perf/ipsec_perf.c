@@ -2207,6 +2207,61 @@ do_test_gcm(struct params_s *params,
         return time / num_iter;
 }
 
+/* Performs test using GCM */
+static uint64_t
+do_test_ghash(struct params_s *params,
+              const uint32_t num_iter, IMB_MGR *mb_mgr,
+              uint8_t *p_buffer, imb_uint128_t *p_keys)
+{
+        static DECLARE_ALIGNED(struct gcm_key_data gdata_key, 512);
+        uint64_t time = 0;
+        uint32_t aux;
+        uint32_t i, index = 0;
+        uint8_t auth_tag[16];
+
+        IMB_GHASH_PRE(mb_mgr, p_keys, &gdata_key);
+
+#ifndef _WIN32
+        if (use_unhalted_cycles)
+                time = read_cycles(params->core);
+        else
+#endif
+                time = __rdtscp(&aux);
+
+        if (imix_list_count != 0) {
+                for (i = 0; i < num_iter; i++) {
+                        uint8_t *pb = get_dst_buffer(index, p_buffer);
+                        const uint32_t buf_size = get_next_size(i);
+
+                        IMB_GHASH(mb_mgr, &gdata_key, pb, buf_size,
+                                  auth_tag, sizeof(auth_tag));
+                        index = get_next_index(index);
+                }
+        } else {
+                for (i = 0; i < num_iter; i++) {
+                        uint8_t *pb = get_dst_buffer(index, p_buffer);
+                        const uint32_t buf_size = params->size_aes;
+
+                        IMB_GHASH(mb_mgr, &gdata_key, pb, buf_size,
+                                  auth_tag, sizeof(auth_tag));
+                        index = get_next_index(index);
+                }
+        }
+
+#ifndef _WIN32
+        if (use_unhalted_cycles)
+                time = (read_cycles(params->core) -
+                        rd_cycles_cost) - time;
+        else
+#endif
+                time = __rdtscp(&aux) - time;
+
+        if (!num_iter)
+                return time;
+
+        return time / num_iter;
+}
+
 /* Computes mean of set of times after dropping bottom and top quarters */
 static uint64_t
 mean_median(uint64_t *array, uint32_t size,
@@ -2303,6 +2358,14 @@ process_variant(IMB_MGR *mgr, const enum arch_type_e arch,
                         else
                                 *times = do_test_gcm(params, job_iter, mgr,
                                                      p_buffer, p_keys);
+                } else if (params->hash_alg == TEST_AUTH_GHASH &&
+                           (!use_gcm_job_api)) {
+                        if (job_iter == 0)
+                                *times = do_test_ghash(params, 2 * num_iter,
+                                                       mgr, p_buffer, p_keys);
+                        else
+                                *times = do_test_ghash(params, job_iter, mgr,
+                                                       p_buffer, p_keys);
                 } else {
                         if (job_iter == 0)
                                 *times = do_test(mgr, params, num_iter,
@@ -2630,10 +2693,10 @@ static void usage(void)
                 "-o val: Use <val> for the SHA size increment, default is 24\n"
                 "--shani-on: use SHA extensions, default: auto-detect\n"
                 "--shani-off: don't use SHA extensions\n"
-                "--gcm-job-api: use JOB API for GCM perf tests"
-                " (raw GCM API is default)\n"
+                "--gcm-job-api: use JOB API for GCM/GHASH perf tests"
+                " (direct GCM/GHASH API is default)\n"
                 "--gcm-sgl-api: use direct SGL API for GCM perf tests"
-                " (raw GCM API is default)\n"
+                " (direct GCM API is default)\n"
                 "--threads num: <num> for the number of threads to run"
                 " Max: %d\n"
                 "--cores mask: <mask> CPU's to run threads\n"
