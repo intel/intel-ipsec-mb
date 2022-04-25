@@ -2310,10 +2310,10 @@ ZUC_ROUND64B_16:
         mov             r12d, 0x55555555
         kmovd           k1, r12d
         ;; Read first buffers 0,4,8,12; then 1,5,9,13, and so on,
-        ;; since the keystream is laid out this way, which chunks of
+        ;; since the keystream is laid out this way, with chunks of
         ;; 16 bytes interleaved. First the 128 bytes for
         ;; buffers 0,4,8,12 (total of 512 bytes), then the 128 bytes
-        ;; for buffers 1,5,9,13, and so on
+        ;; for buffers 1,5,9,13, and so on.
 %assign IDX 0
 %rep 4
         vpxorq          APPEND(DIGEST_, IDX), APPEND(DIGEST_, IDX)
@@ -2338,26 +2338,9 @@ ZUC_ROUND64B_16:
         ;; Reverse bits of next 16 bytes from all 4 buffers
         vgf2p8affineqb  ZTMP1, APPEND(DATA_TRANS,I), [rel bit_reverse_table], 0x00
 
-        ;; ZUC authentication part
-        ;; - 4x32 data bits
-        ;; - set up KS
-        vpalignr        ZTMP2, APPEND(KS_TRANS, J), APPEND(KS_TRANS, I), 8
-        vpshufd         ZTMP3, APPEND(KS_TRANS, I), 0x61
-        vpshufd         ZTMP4, ZTMP2, 0x61
-
-        ;;  - set up DATA
-        vpshufd         APPEND(DATA_TRANS, I){k1}{z}, ZTMP1, 0x10
-        vpshufd         ZTMP2{k1}{z}, ZTMP1, 0x32
-
-        ;; - clmul
-        ;; - xor the results from 4 32-bit words together
-        vpclmulqdq      ZTMP5, APPEND(DATA_TRANS, I), ZTMP3, 0x00
-        vpclmulqdq      ZTMP6, APPEND(DATA_TRANS, I), ZTMP3, 0x11
-        vpclmulqdq      ZTMP7, ZTMP2, ZTMP4, 0x00
-        vpclmulqdq      ZTMP8, ZTMP2, ZTMP4, 0x11
-
-        vpternlogq      ZTMP5, ZTMP6, ZTMP8, 0x96
-        vpternlogq      APPEND(DIGEST_, IDX), ZTMP5, ZTMP7, 0x96
+        ; Digest 16 bytes of data with 24 bytes of KS, for 4 buffers
+        DIGEST_DATA ZTMP1, APPEND(KS_TRANS, I), APPEND(KS_TRANS, J), APPEND(DIGEST_, IDX), \
+                    k1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7
 
 %assign J (J + 1)
 %assign I (I + 1)
@@ -2450,12 +2433,9 @@ ZUC_ROUND64B_16:
         vpshufb  xmm8, xmm6, xmm1 ; bit reverse low nibbles (use high table)
         vpshufb  xmm4, xmm5, xmm2 ; bit reverse high nibbles (use low table)
 
-        vpor     xmm8, xmm4
-        ; xmm8 - bit reversed data bytes
+        vpor     xmm8, xmm4 ; xmm8 - bit reversed data bytes
 
-        ;; ZUC authentication part
-        ;; - 4x32 data bits
-        ;; - set up KS
+        ; Read the next 2 blocks of 16 bytes of KS
 %if K != 0
         vmovdqa  xmm11, xmm12
         vmovdqu  xmm12, [KS + (16*J + I*512) + (K + 1)*(16*4)]
@@ -2463,23 +2443,9 @@ ZUC_ROUND64B_16:
         vmovdqu  xmm11, [KS + (16*J + I*512)]
         vmovdqu  xmm12, [KS + (16*J + I*512) + (16*4)]
 %endif
-        vpalignr xmm13, xmm12, xmm11, 8
-        vpshufd  xmm2, xmm11, 0x61
-        vpshufd  xmm3, xmm13, 0x61
-
-        ;;  - set up DATA
-        vpshufd xmm0{k1}{z}, xmm8, 0x10
-        vpshufd xmm1{k1}{z}, xmm8, 0x32
-
-        ;; - clmul
-        ;; - xor the results from 4 32-bit words together
-        vpclmulqdq xmm13, xmm0, xmm2, 0x00
-        vpclmulqdq xmm14, xmm0, xmm2, 0x11
-        vpclmulqdq xmm15, xmm1, xmm3, 0x00
-        vpclmulqdq xmm8,  xmm1, xmm3, 0x11
-
-        vpternlogq xmm13, xmm14, xmm8, 0x96
-        vpternlogq xmm9, xmm13, xmm15, 0x96
+        ; Digest 16 bytes of data with 24 bytes of KS, for 4 buffers
+        DIGEST_DATA xmm8, xmm11, xmm12, xmm9, k1, \
+                    xmm0, xmm1, xmm2, xmm3, xmm13, xmm14
 
 %assign K (K + 1)
 %endrep
@@ -2644,9 +2610,7 @@ ZUC_ROUND64B_16:
 %endif
         ; xmm8 - bit reversed data bytes
 
-        ;; ZUC authentication part
-        ;; - 4x32 data bits
-        ;; - set up KS
+        ; Read the next 2 blocks of 16 bytes of KS
 %if K != 0
         vmovdqa  xmm11, xmm12
         vmovdqu  xmm12, [KS + (16*I + J*512) + OFFSET*4 + (16*4)]
@@ -2654,23 +2618,9 @@ ZUC_ROUND64B_16:
         vmovdqu  xmm11, [KS + (16*I + J*512) + (0*4)]
         vmovdqu  xmm12, [KS + (16*I + J*512) + (16*4)]
 %endif
-        vpalignr xmm13, xmm12, xmm11, 8
-        vpshufd  xmm2, xmm11, 0x61
-        vpshufd  xmm3, xmm13, 0x61
-
-        ;;  - set up DATA
-        vpshufd xmm0{k2}{z}, xmm8, 0x10
-        vpshufd xmm1{k2}{z}, xmm8, 0x32
-
-        ;; - clmul
-        ;; - xor the results from 4 32-bit words together
-        vpclmulqdq xmm13, xmm0, xmm2, 0x00
-        vpclmulqdq xmm14, xmm0, xmm2, 0x11
-        vpclmulqdq xmm15, xmm1, xmm3, 0x00
-        vpclmulqdq xmm8,  xmm1, xmm3, 0x11
-
-        vpternlogq xmm13, xmm14, xmm8, 0x96
-        vpternlogq xmm9, xmm13, xmm15, 0x96
+        ; Digest 16 bytes of data with 24 bytes of KS, for 4 buffers
+        DIGEST_DATA xmm8, xmm11, xmm12, xmm9, k2, \
+                    xmm0, xmm1, xmm2, xmm3, xmm13, xmm14
         add     OFFSET, 16
         sub     TMP, 128
 %assign K (K + 1)
@@ -2687,15 +2637,6 @@ APPEND3(%%Eia3RoundsAVX512_dq_end,I,J):
 
         lea     r11, [rel byte64_len_to_mask_table]
         kmovq   k1, [r11 + N_BYTES*8]
-
-        ;; Set up KS
-        shl     OFFSET, 2
-        vmovdqu xmm1, [KS + (16*I + J*512) + OFFSET]
-        vmovdqu xmm2, [KS + (16*I + J*512) + OFFSET + 16*4]
-        shr     OFFSET, 2
-        vpalignr xmm13, xmm2, xmm1, 8
-        vpshufd xmm11, xmm1, 0x61
-        vpshufd xmm12, xmm13, 0x61
 
         ;; read up to 16 bytes of data, zero bits not needed if partial byte and bit-reverse
         vmovdqu8 xmm0{k1}{z}, [DATA_ADDR + OFFSET]
@@ -2733,19 +2674,15 @@ APPEND3(%%Eia3RoundsAVX512_dq_end,I,J):
         vpor    xmm8, xmm3
 %endif
 
-        ;;  - set up DATA
-        vpshufd xmm0{k2}{z}, xmm8, 0x10 ; D 0-3 || Os || D 4-7 || 0s
-        vpshufd xmm1{k2}{z}, xmm8, 0x32 ; D 8-11 || 0s || D 12-15 || 0s
+        ; Read the next 2 blocks of 16 bytes of KS
+        shl     OFFSET, 2
+        vmovdqu xmm11, [KS + (16*I + J*512) + OFFSET]
+        vmovdqu xmm12, [KS + (16*I + J*512) + OFFSET + 16*4]
+        shr     OFFSET, 2
 
-        ;; - clmul
-        ;; - xor the results from 4 32-bit words together
-        vpclmulqdq xmm13, xmm0, xmm11, 0x00
-        vpclmulqdq xmm14, xmm0, xmm11, 0x11
-        vpclmulqdq xmm15, xmm1, xmm12, 0x00
-        vpclmulqdq xmm8, xmm1, xmm12, 0x11
-        vpternlogq xmm9, xmm14, xmm13, 0x96
-        vpternlogq xmm9, xmm15, xmm8, 0x96
-
+        ; Digest 16 bytes of data with 24 bytes of KS, for 4 buffers
+        DIGEST_DATA xmm8, xmm11, xmm12, xmm9, k2, \
+                    xmm0, xmm1, xmm2, xmm3, xmm13, xmm14
 APPEND3(%%Eia3RoundsAVX_end,I,J):
         vinserti32x4 APPEND(DIGEST_, I), xmm9, J
 %assign J (J + 1)
