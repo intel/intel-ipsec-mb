@@ -737,6 +737,7 @@ FLUSH_JOB_ZUC256_EEA3:
 %if %%KEY_SIZE == 128
         call    ZUC_REMAINDER_16
 %else
+        mov     arg6, 4 ; Hardcoded to 4-byte digest for now
         call    ZUC256_REMAINDER_16
 %endif
 

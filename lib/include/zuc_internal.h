@@ -1202,7 +1202,8 @@ IMB_DLL_LOCAL uint32_t asm_Eia3_256_RemainderAVX512_16(uint32_t *T,
                                                   const uint32_t *ks,
                                                   const void **data,
                                                   uint16_t *lens,
-                                                  const uint32_t commonBits);
+                                                  const uint64_t commonBits,
+                                                  const uint64_t tag_size);
 
 IMB_DLL_LOCAL uint32_t asm_Eia3RemainderAVX512_16_VPCLMUL(uint32_t *T,
                                                   const uint32_t *ks,
@@ -1214,7 +1215,8 @@ IMB_DLL_LOCAL uint32_t asm_Eia3_256_RemainderAVX512_16_VPCLMUL(uint32_t *T,
                                                   const uint32_t *ks,
                                                   const void **data,
                                                   uint16_t *lens,
-                                                  const uint32_t commonBits);
+                                                  const uint64_t commonBits,
+                                                  const uint64_t tag_size);
 
 /**
  ******************************************************************************

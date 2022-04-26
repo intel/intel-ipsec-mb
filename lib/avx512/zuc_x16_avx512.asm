@@ -389,8 +389,8 @@ align 64
 %define arg2 rdx
 %define arg3 r8
 %define arg4 r9
-%define arg5 [rsp + 40]
-%define arg6 [rsp + 48]
+%define arg5 qword [rsp + 40]
+%define arg6 qword [rsp + 48]
 %endif
 
 %define OFS_R1  (16*(4*16))
@@ -2578,74 +2578,104 @@ round_4B:
 
         ret
 
-%macro REMAINDER_16 1
-%define %%KEY_SIZE      %1 ; [constant] Key size (128 or 256)
+%macro REMAINDER_16 14
+%define %%T             %1 ; [in] Pointer to digests
+%define %%KS            %2 ; [in] Pointer to keystream (128x16 bytes)
+%define %%DATA          %3 ; [in] Pointer to array of pointers to data buffers
+%define %%LEN           %4 ; [in] Pointer to array of remaining length to digest
+%define %%MIN_LEN       %5 ; [in] Minimum common length
+%define %%TMP1          %6 ; [clobbered] Temporary GP register
+%define %%TMP2          %7 ; [clobbered] Temporary GP register
+%define %%TMP3          %8 ; [clobbered] Temporary GP register
+%define %%TMP4          %9 ; [clobbered] Temporary GP register
+%define %%TMP5          %10 ; [clobbered] Temporary GP register
+%define %%TMP6          %11 ; [clobbered] Temporary GP register
+%define %%TMP7          %12 ; [clobbered] Temporary GP register
+%define %%KEY_SIZE      %13 ; [constant] Key size (128 or 256)
+%define %%TAG_SIZE      %14 ; [constant] Tag size (4, 8 or 16 bytes)
 
-%ifdef LINUX
-        %define         T       rdi
-        %define	        KS      rsi
-        %define	        DATA    rdx
-        %define         LEN     rcx
-        %define	        arg5    r8d
-%else
-        %define         T       rcx
-        %define	        KS      rdx
-        %define	        DATA    r8
-        %define	        LEN     r9
-        %define         arg5    [rsp + 40]
-%endif
+%define %%DIGEST_0     zmm28
+%define %%DIGEST_1     zmm29
+%define %%DIGEST_2     zmm30
+%define %%DIGEST_3     zmm31
 
-%define DIGEST_0        zmm28
-%define DIGEST_1        zmm29
-%define DIGEST_2        zmm30
-%define DIGEST_3        zmm31
+;;
+;; There are two main parts in this code:
+;;   - 1st part: digest data
+;;   - 2nd part: reading final KS words and XOR'ing with digest
+;;
+%define %%DATA_ADDR    %%TMP2 ; %%DATA_ADDR only used in 1st part / %%TMP2 only used in 2nd part
+%define %%OFFSET       %%TMP3 ; %%OFFSET only used in 1st part / %%TMP3 only used in 2nd part
+%define %%KS_ADDR      %%TMP7 ; %%KS_ADDR used in all code
+%define %%N_BYTES      %%TMP6 ; %%N_BYTES only  used in 1st part
 
-%define DATA_ADDR       r12
-%define KS_ADDR         r13
+%define %%LEN_BUF      %%TMP4 ; %%LEN_BUF only used in 2nd part
+%define %%IDX          %%TMP5 ; %%IDX Only used in 2nd part
+%define %%DIGEST       %%TMP6 ; %%DIGEST only used in 2nd part
 
-%define N_BYTES         r14
-%define OFFSET          r15
+%define %%YTMP1         ymm7
+%define %%YTMP2         ymm8
+%define %%YTMP3         ymm9
+%define %%YTMP4         ymm10
 
-%define MIN_LEN         r10d
-%define MIN_LEN_Q       r10
-%define IDX             rax
-%define TMP             rbx
+%define %%REV_TABLE_L   xmm0
+%define %%REV_TABLE_H   xmm1
+%define %%REV_AND_TABLE xmm2
+%define %%TEMP_DIGEST   xmm3
+%define %%KS_L          xmm4
+%define %%KS_H          xmm5
+%define %%XDATA         xmm6
+%define %%XTMP1         xmm7
+%define %%XTMP2         xmm8
+%define %%XTMP3         xmm9
+%define %%XTMP4         xmm10
+%define %%XTMP5         xmm11
+%define %%XTMP6         xmm12
 
-        mov     MIN_LEN, arg5
+%define %%ZTMP1         zmm7
+%define %%ZTMP2         zmm8
+%define %%ZTMP3         zmm9
+%define %%ZTMP4         zmm10
 
-        vpbroadcastw ymm0, MIN_LEN
+%define %%VALID_KMASK        k1 ; Mask with valid lanes
+%define %%SHUF_DATA_KMASK    k2 ; Mask to shuffle data
+%define %%PERM_DIGEST_KMASK1 k3 ; Permutation mask for digests
+%define %%PERM_DIGEST_KMASK2 k4 ; Permulation mask for digests
+%define %%TEMP_KMASK         k5
+
+        vpbroadcastw %%YTMP1, DWORD(%%MIN_LEN)
         ; Get mask of non-NULL lanes (lengths not set to UINT16_MAX, indicating that lane is not valid)
-        vmovdqa ymm1, [LEN]
-        vpcmpw k1, ymm1, [rel all_ffs], 4 ; NEQ
+        vmovdqa %%YTMP2, [%%LEN]
+        vpcmpw %%VALID_KMASK, %%YTMP2, [rel all_ffs], 4 ; NEQ
 
         ; Round up to nearest multiple of 32 bits
-        vpaddw  ymm0{k1}, [rel all_31w]
-        vpandq  ymm0, [rel all_ffe0w]
+        vpaddw  %%YTMP1{%%VALID_KMASK}, [rel all_31w]
+        vpandq  %%YTMP1, [rel all_ffe0w]
 
         ; Calculate remaining bits to authenticate after function call
-        vpcmpuw k2, ymm1, ymm0, 1 ; Get mask of lengths that will be < 0 after subtracting
-        vpsubw  ymm2{k1}, ymm1, ymm0
-        vpxorq  ymm3, ymm3
+        vpcmpuw %%TEMP_KMASK, %%YTMP2, %%YTMP1, 1 ; Get mask of lengths that will be < 0 after subtracting
+        vpsubw  %%YTMP3{%%VALID_KMASK}, %%YTMP2, %%YTMP1
+        vpxorq  %%YTMP4, %%YTMP4
         ; Set to zero the lengths of the lanes which are going to be completed
-        vmovdqu16 ymm2{k2}, ymm3 ; YMM2 contain final lengths
-        vmovdqu16 [LEN]{k1}, ymm2 ; Update in memory the final updated lengths
+        vmovdqu16 %%YTMP3{%%TEMP_KMASK}, %%YTMP4 ; YMM2 contain final lengths
+        vmovdqu16 [%%LEN]{%%VALID_KMASK}, %%YTMP3 ; Update in memory the final updated lengths
 
         ; Calculate number of bits to authenticate (up to 511 bits),
         ; for each lane, and store it in stack to be used later
-        vpsubw  ymm1{k1}{z}, ymm2 ; Bits to authenticate in all lanes (zero out length of NULL lanes)
+        vpsubw  %%YTMP2{%%VALID_KMASK}{z}, %%YTMP3 ; Bits to authenticate in all lanes (zero out length of NULL lanes)
         sub     rsp, 32
-        vmovdqu [rsp], ymm1
+        vmovdqu [rsp], %%YTMP2
 
-        xor     OFFSET, OFFSET
+        xor     %%OFFSET, %%OFFSET
 
 %if USE_GFNI_VAES_VPCLMUL != 1
-        vmovdqa  xmm5, [rel bit_reverse_table_l]
-        vmovdqa  xmm6, [rel bit_reverse_table_h]
-        vmovdqa  xmm7, [rel bit_reverse_and_table]
+        vmovdqa  %%REV_TABLE_L, [rel bit_reverse_table_l]
+        vmovdqa  %%REV_TABLE_H, [rel bit_reverse_table_h]
+        vmovdqa  %%REV_AND_TABLE, [rel bit_reverse_and_table]
 %endif
 
         mov             r12d, 0x55555555
-        kmovd           k2, r12d
+        kmovd           %%SHUF_DATA_KMASK, r12d
 
         ;; Read first buffers 0,4,8,12; then 1,5,9,13, and so on,
         ;; since the keystream is laid out this way, which chunks of
@@ -2658,297 +2688,329 @@ round_4B:
 %rep 4
 
         ; Read  length to authenticate for each buffer
-        movzx   TMP, word [rsp + 2*(I*4 + J)]
+        movzx   %%LEN_BUF, word [rsp + 2*(I*4 + J)]
 
-        vpxor   xmm9, xmm9
+        vpxor   %%TEMP_DIGEST, %%TEMP_DIGEST
 
-        xor     OFFSET, OFFSET
-        mov     DATA_ADDR, [DATA + 8*(I*4 + J)]
+        xor     %%OFFSET, %%OFFSET
+        mov     %%DATA_ADDR, [%%DATA + 8*(I*4 + J)]
 
 %assign K 0
 %rep 4
-        cmp     TMP, 128
+        cmp     %%LEN_BUF, 128
         jb      APPEND3(%%Eia3RoundsAVX512_dq_end,I,J)
 
         ;; read 16 bytes and reverse bits
-        vmovdqu xmm0, [DATA_ADDR + OFFSET]
+        vmovdqu %%XTMP1, [%%DATA_ADDR + %%OFFSET]
 %if USE_GFNI_VAES_VPCLMUL == 1
-        vgf2p8affineqb  xmm8, xmm0, [rel bit_reverse_table], 0x00
+        vgf2p8affineqb  %%XDATA, %%XTMP1, [rel bit_reverse_table], 0x00
 %else
-        vpand   xmm1, xmm0, xmm7
+        vpand   %%XTMP2, %%XTMP1, %%REV_AND_TABLE
 
-        vpandn  xmm2, xmm7, xmm0
-        vpsrld  xmm2, 4
+        vpandn  %%XTMP3, %%REV_AND_TABLE, %%XTMP1
+        vpsrld  %%XTMP3, 4
 
-        vpshufb xmm8, xmm6, xmm1 ; bit reverse low nibbles (use high table)
-        vpshufb xmm4, xmm5, xmm2 ; bit reverse high nibbles (use low table)
+        vpshufb %%XDATA, %%REV_TABLE_H, %%XTMP2 ; bit reverse low nibbles (use high table)
+        vpshufb %%XTMP4, %%REV_TABLE_L, %%XTMP3 ; bit reverse high nibbles (use low table)
 
-        vpor    xmm8, xmm4
+        vpor    %%XDATA, %%XTMP4
 %endif
-        ; xmm8 - bit reversed data bytes
+        ; %%XDATA - bit reversed data bytes
 
-        ; Read the next 2 blocks of 16 bytes of KS
+        ; Read the next 2 blocks of 16 bytes of %%KS
 %if K != 0
-        vmovdqa  xmm11, xmm12
-        vmovdqu  xmm12, [KS + (16*I + J*512) + OFFSET*4 + (16*4)]
+        vmovdqa  %%KS_L, %%KS_H
+        vmovdqu  %%KS_H, [%%KS + (16*I + J*512) + %%OFFSET*4 + (16*4)]
 %else
-        vmovdqu  xmm11, [KS + (16*I + J*512) + (0*4)]
-        vmovdqu  xmm12, [KS + (16*I + J*512) + (16*4)]
+        vmovdqu  %%KS_L, [%%KS + (16*I + J*512) + (0*4)]
+        vmovdqu  %%KS_H, [%%KS + (16*I + J*512) + (16*4)]
 %endif
         ; Digest 16 bytes of data with 24 bytes of KS, for 4 buffers
-        DIGEST_DATA xmm8, xmm11, xmm12, xmm9, k2, \
-                    xmm0, xmm1, xmm2, xmm3, xmm13, xmm14
-        add     OFFSET, 16
-        sub     TMP, 128
+        DIGEST_DATA %%XDATA, %%KS_L, %%KS_H, %%TEMP_DIGEST, %%SHUF_DATA_KMASK, \
+                    %%XTMP1, %%XTMP2, %%XTMP3, %%XTMP4, %%XTMP5, %%XTMP6
+        add     %%OFFSET, 16
+        sub     %%LEN_BUF, 128
 %assign K (K + 1)
 %endrep
 APPEND3(%%Eia3RoundsAVX512_dq_end,I,J):
 
-        or      TMP, TMP
+        or      %%LEN_BUF, %%LEN_BUF
         jz      APPEND3(%%Eia3RoundsAVX_end,I,J)
 
         ; Get number of bytes
-        mov     N_BYTES, TMP
-        add     N_BYTES, 7
-        shr     N_BYTES, 3
+        mov     %%N_BYTES, %%LEN_BUF
+        add     %%N_BYTES, 7
+        shr     %%N_BYTES, 3
 
-        lea     r11, [rel byte64_len_to_mask_table]
-        kmovq   k1, [r11 + N_BYTES*8]
+        lea     %%TMP1, [rel byte64_len_to_mask_table]
+        kmovq   %%TEMP_KMASK, [%%TMP1 + %%N_BYTES*8]
 
         ;; read up to 16 bytes of data, zero bits not needed if partial byte and bit-reverse
-        vmovdqu8 xmm0{k1}{z}, [DATA_ADDR + OFFSET]
+        vmovdqu8 %%XTMP1{%%TEMP_KMASK}{z}, [%%DATA_ADDR + %%OFFSET]
         ; check if there is a partial byte (less than 8 bits in last byte)
-        mov     rax, TMP
-        and     rax, 0x7
-        shl     rax, 4
-        lea     r11, [rel bit_mask_table]
-        add     r11, rax
+        mov     %%TMP2, %%LEN_BUF
+        and     %%TMP2, 0x7
+        shl     %%TMP2, 4
+        lea     %%TMP1, [rel bit_mask_table]
+        add     %%TMP1, %%TMP2
 
         ; Get mask to clear last bits
-        vmovdqa xmm3, [r11]
+        vmovdqa %%XTMP4, [%%TMP1]
 
         ; Shift left 16-N bytes to have the last byte always at the end of the XMM register
         ; to apply mask, then restore by shifting right same amount of bytes
-        mov     r11, 16
-        sub     r11, N_BYTES
-        ; r13 = DATA_ADDR can be used at this stage
-        XVPSLLB xmm0, r11, xmm4, r13
-        vpandq  xmm0, xmm3
-        XVPSRLB xmm0, r11, xmm4, r13
+        mov     %%TMP1, 16
+        sub     %%TMP1, %%N_BYTES
+        XVPSLLB %%XTMP1, %%TMP1, %%XTMP5, %%TMP2
+        vpandq  %%XTMP1, %%XTMP4
+        XVPSRLB %%XTMP1, %%TMP1, %%XTMP5, %%TMP2
 
 %if USE_GFNI_VAES_VPCLMUL == 1
-        vgf2p8affineqb  xmm8, xmm0, [rel bit_reverse_table], 0x00
+        vgf2p8affineqb  %%XDATA, %%XTMP1, [rel bit_reverse_table], 0x00
 %else
         ; Bit reverse input data
-        vpand   xmm1, xmm0, xmm7
+        vpand   %%XTMP2, %%XTMP1, %%REV_AND_TABLE
 
-        vpandn  xmm2, xmm7, xmm0
-        vpsrld  xmm2, 4
+        vpandn  %%XTMP3, %%REV_AND_TABLE, %%XTMP1
+        vpsrld  %%XTMP3, 4
 
-        vpshufb xmm8, xmm6, xmm1 ; bit reverse low nibbles (use high table)
-        vpshufb xmm3, xmm5, xmm2 ; bit reverse high nibbles (use low table)
+        vpshufb %%XDATA, %%REV_TABLE_H, %%XTMP2 ; bit reverse low nibbles (use high table)
+        vpshufb %%XTMP4, %%REV_TABLE_L, %%XTMP3 ; bit reverse high nibbles (use low table)
 
-        vpor    xmm8, xmm3
+        vpor    %%XDATA, %%XTMP4
 %endif
 
         ; Read the next 2 blocks of 16 bytes of KS
-        shl     OFFSET, 2
-        vmovdqu xmm11, [KS + (16*I + J*512) + OFFSET]
-        vmovdqu xmm12, [KS + (16*I + J*512) + OFFSET + 16*4]
-        shr     OFFSET, 2
+        shl     %%OFFSET, 2
+        vmovdqu %%KS_L, [%%KS + (16*I + J*512) + %%OFFSET]
+        vmovdqu %%KS_H, [%%KS + (16*I + J*512) + %%OFFSET + 16*4]
+        shr     %%OFFSET, 2
 
-        ; Digest 16 bytes of data with 24 bytes of KS, for 4 buffers
-        DIGEST_DATA xmm8, xmm11, xmm12, xmm9, k2, \
-                    xmm0, xmm1, xmm2, xmm3, xmm13, xmm14
+        ; Digest 16 bytes of data with 24 bytes of %%KS, for 4 buffers
+        DIGEST_DATA %%XDATA, %%KS_L, %%KS_H, %%TEMP_DIGEST, k2, \
+                    %%XTMP1, %%XTMP2, %%XTMP3, %%XTMP4, %%XTMP5, %%XTMP6
 APPEND3(%%Eia3RoundsAVX_end,I,J):
-        vinserti32x4 APPEND(DIGEST_, I), xmm9, J
+        vinserti32x4 APPEND(%%DIGEST_, I), %%TEMP_DIGEST, J
 %assign J (J + 1)
 %endrep
 %assign I (I + 1)
 %endrep
 
         ;; - update tags
-        mov             TMP, 0x00FF
-        kmovq           k1, TMP
-        mov             TMP, 0xFF00
-        kmovq           k2, TMP
+        mov             %%TMP1, 0x00FF
+        kmovq           %%PERM_DIGEST_KMASK1, %%TMP1
+        mov             %%TMP1, 0xFF00
+        kmovq           %%PERM_DIGEST_KMASK2, %%TMP1
 
-        vmovdqu64       zmm4, [T] ; Input tags
-        vmovdqa64       zmm0, [rel shuf_mask_tags_0_1_2_3]
-        vmovdqa64       zmm1, [rel shuf_mask_tags_0_1_2_3 + 64]
+        vmovdqu64       %%ZTMP1, [%%T] ; Input tags
+        vmovdqa64       %%ZTMP2, [rel shuf_mask_tags_0_1_2_3]
+        vmovdqa64       %%ZTMP3, [rel shuf_mask_tags_0_1_2_3 + 64]
         ; Get result tags for 16 buffers in different position in each lane
         ; and blend these tags into an ZMM register.
         ; Then, XOR the results with the previous tags and write out the result.
-        vpermt2d        DIGEST_0{k1}{z}, zmm0, DIGEST_1
-        vpermt2d        DIGEST_2{k2}{z}, zmm1, DIGEST_3
-        vpternlogq      zmm4, DIGEST_0, DIGEST_2, 0x96 ; A XOR B XOR C
+        vpermt2d        %%DIGEST_0{%%PERM_DIGEST_KMASK1}{z}, %%ZTMP2, %%DIGEST_1
+        vpermt2d        %%DIGEST_2{%%PERM_DIGEST_KMASK2}{z}, %%ZTMP3, %%DIGEST_3
+        vpternlogq      %%ZTMP1, %%DIGEST_0, %%DIGEST_2, 0x96 ; A XOR B XOR C
 
-        vmovdqa64       [T], zmm4 ; Store temporary digests
+        vmovdqa64       [%%T], %%ZTMP1 ; Store temporary digests
 
         ; These last steps should be done only for the buffers that
         ; have no more data to authenticate
-        xor     IDX, IDX
+        xor     %%IDX, %%IDX
 %%start_loop:
         ; Update data pointer
-        movzx   r11d, word [rsp + IDX*2]
-        shr     r11d, 3 ; length authenticated in bytes
-        add     [DATA + IDX*8], r11
+        movzx   DWORD(%%TMP1), word [rsp + %%IDX*2]
+        shr     DWORD(%%TMP1), 3 ; length authenticated in bytes
+        add     [%%DATA + %%IDX*8], %%TMP1
 
-        cmp     word [LEN + 2*IDX], 0
+        cmp     word [%%LEN + 2*%%IDX], 0
         jnz     %%skip_comput
 
-        mov     r11, IDX
-        and     r11, 0x3
-        shl     r11, 9 ; * 512
+        mov     %%TMP1, %%IDX
+        and     %%TMP1, 0x3
+        shl     %%TMP1, 9 ; * 512
 
-        mov     r12, IDX
-        shr     r12, 2
-        shl     r12, 4 ; * 16
-        add     r11, r12
-        lea     KS_ADDR, [KS + r11]
+        mov     %%TMP2, %%IDX
+        shr     %%TMP2, 2
+        shl     %%TMP2, 4 ; * 16
+        add     %%TMP1, %%TMP2
+        lea     %%KS_ADDR, [%%KS + %%TMP1]
 
         ; Read digest
-        mov     r12d, [T + 4*IDX]
+        mov     DWORD(%%DIGEST), [%%T + 4*%%IDX]
 
         ; Read keyStr[MIN_LEN / 32]
-        movzx   TMP, word [rsp + 2*IDX]
-        mov     r15, TMP
-        shr     r15, 5
-        mov     r11, r15
-        shr     r15, 2
-        shl     r15, (4+2)
-        and     r11, 0x3
-        shl     r11, 2
-        add     r15, r11
-        mov     r11, r15
-        and     r11, 0xf
-        cmp     r11, 12
+        movzx   %%LEN_BUF, word [rsp + 2*%%IDX]
+        mov     %%TMP2, %%LEN_BUF
+        shr     %%TMP2, 5
+        mov     %%TMP3, %%TMP2
+        shr     %%TMP2, 2
+        shl     %%TMP2, (4+2)
+        and     %%TMP3, 0x3
+        shl     %%TMP3, 2
+        add     %%TMP2, %%TMP3
+        mov     %%TMP3, %%TMP2
+        and     %%TMP3, 0xf
+        cmp     %%TMP3, 12
         je      %%_read_2dwords
-        mov     r11, [KS_ADDR + r15]
+        mov     %%TMP1, [%%KS_ADDR + %%TMP2]
         jmp     %%_ks_qword_read
 
-        ;; The 8 bytes of KS are separated
+        ;; The 8 bytes of %%KS are separated
 %%_read_2dwords:
-        mov     r11d, [KS_ADDR + r15]
-        mov     r15d, [KS_ADDR + r15 + (4+48)]
-        shl     r15, 32
-        or      r11, r15
+        mov     DWORD(%%TMP1), [%%KS_ADDR + %%TMP2]
+        mov     DWORD(%%TMP2), [%%KS_ADDR + %%TMP2 + (4+48)]
+        shl     %%TMP2, 32
+        or      %%TMP1, %%TMP2
 %%_ks_qword_read:
         ; Rotate left by MIN_LEN % 32
-        mov     r15, rcx
-        mov     rcx, TMP
+        mov     %%TMP2, rcx
+        mov     rcx, %%LEN_BUF
         and     rcx, 0x1F
-        rol     r11, cl
-        mov     rcx, r15
+        rol     %%TMP1, cl
+        mov     rcx, %%TMP2
         ; XOR with current digest
-        xor     r12d, r11d
+        xor     DWORD(%%DIGEST), DWORD(%%TMP1)
 
 %if %%KEY_SIZE == 128
         ; Read keystr[L - 1] (last dword of keyStr)
-        add     TMP, (31 + 64)
-        shr     TMP, 5 ; L
-        dec     TMP
-        mov     r11, TMP
-        shr     r11, 2
-        shl     r11, (4+2)
-        and     TMP, 0x3
-        shl     TMP, 2
-        add     TMP, r11
-        mov     r11d, [KS_ADDR + TMP]
+        add     %%LEN_BUF, (31 + 64)
+        shr     %%LEN_BUF, 5 ; L
+        dec     %%LEN_BUF
+        mov     %%TMP2, %%LEN_BUF
+        shr     %%TMP2, 2
+        shl     %%TMP2, (4+2)
+        and     %%LEN_BUF, 0x3
+        shl     %%LEN_BUF, 2
+        add     %%LEN_BUF, %%TMP2
+        mov     DWORD(%%TMP2), [%%KS_ADDR + %%LEN_BUF]
         ; XOR with current digest
-        xor     r12d, r11d
+        xor     DWORD(%%DIGEST), DWORD(%%TMP2)
 %endif
 
         ; byte swap and write digest out
-        bswap   r12d
-        mov     [T + 4*IDX], r12d
+        bswap   DWORD(%%DIGEST)
+        mov     [%%T + 4*%%IDX], DWORD(%%DIGEST)
 
 %%skip_comput:
-        inc     IDX
-        cmp     IDX, 16
+        inc     %%IDX
+        cmp     %%IDX, 16
         jne     %%start_loop
 
         add     rsp, 32
 
-        ; Memcpy last 8 bytes of KS into start
-        add     MIN_LEN, 31
-        shr     MIN_LEN, 5
-        shl     MIN_LEN, 2 ; Offset where to copy the last 8 bytes from
+        ; Memcpy last 8 bytes of %%KS into start
+        add     DWORD(%%MIN_LEN), 31
+        shr     DWORD(%%MIN_LEN), 5
+        shl     DWORD(%%MIN_LEN), 2 ; Offset where to copy the last 8 bytes from
 
-        mov     r12d, MIN_LEN
-        shr     MIN_LEN, 4
-        shl     MIN_LEN, (4+2)
-        and     r12d, 0xf
-        add     MIN_LEN, r12d
-        cmp     r12d, 12
+        mov     DWORD(%%TMP1), DWORD(%%MIN_LEN)
+        shr     DWORD(%%MIN_LEN), 4
+        shl     DWORD(%%MIN_LEN), (4+2)
+        and     DWORD(%%TMP1), 0xf
+        add     DWORD(%%MIN_LEN), DWORD(%%TMP1)
+        cmp     DWORD(%%TMP1), 12
         je      %%_copy_2dwords
 
 %assign %%i 0
 %rep 4
 %assign %%j 0
 %rep 4
-        mov     TMP, [KS + 512*%%i + 16*%%j + MIN_LEN_Q]
-        mov     [KS + 512*%%i + 16*%%j], TMP
+        mov     %%TMP1, [%%KS + 512*%%i + 16*%%j + %%MIN_LEN]
+        mov     [%%KS + 512*%%i + 16*%%j], %%TMP1
 %assign %%j (%%j + 1)
 %endrep
 %assign %%i (%%i + 1)
 %endrep
         jmp     %%_ks_copied
 
-        ;; The 8 bytes of KS are separated
+        ;; The 8 bytes of %%KS are separated
 %%_copy_2dwords:
 %assign %%i 0
 %rep 4
 %assign %%j 0
 %rep 4
-        mov     DWORD(TMP), [KS + 512*%%i + 16*%%j + MIN_LEN_Q]
-        mov     [KS + 512*%%i + 16*%%j], DWORD(TMP)
-        mov     DWORD(TMP), [KS + 512*%%i + 16*%%j + (48+4) + MIN_LEN_Q]
-        mov     [KS + 512*%%i + 16*%%j + 4], DWORD(TMP)
+        mov     DWORD(%%TMP1), [%%KS + 512*%%i + 16*%%j + %%MIN_LEN]
+        mov     [%%KS + 512*%%i + 16*%%j], DWORD(%%TMP1)
+        mov     DWORD(%%TMP1), [%%KS + 512*%%i + 16*%%j + (48+4) + %%MIN_LEN]
+        mov     [%%KS + 512*%%i + 16*%%j + 4], DWORD(%%TMP1)
 %assign %%j (%%j + 1)
 %endrep
 %assign %%i (%%i + 1)
 %endrep
 %%_ks_copied:
         vzeroupper
-%endmacro
+%endmacro ; REMAINDER_16
 
 ;;
-;; extern void asm_Eia3RemainderAVX512_16(uint32_t *T, const void **ks, const void **data, uint64_t n_bits)
+;; extern void asm_Eia3RemainderAVX512_16(uint32_t *T, const void **ks,
+;;                                        const void **data, uint16_t *len,
+;;                                        const uint64_t n_bits)
 ;;
 ;;  @param [in] T: Array of digests for all 16 buffers
 ;;  @param [in] KS : Array of pointers to key stream for all 16 buffers
 ;;  @param [in] DATA : Array of pointers to data for all 16 buffers
-;;  @param [in] N_BITS (number data bits to process)
+;;  @param [in] N_BITS : Number of common data bits to process
 ;;
 align 64
 MKGLOBAL(ZUC128_REMAINDER_16,function,internal)
 ZUC128_REMAINDER_16:
+
+%define T       arg1
+%define KS      arg2
+%define DATA    arg3
+%define LEN     arg4
+
+%define N_BITS r10
+
         endbranch64
+
+        mov     N_BITS, arg5
 
         FUNC_SAVE
 
-        REMAINDER_16 128
+        REMAINDER_16 T, KS, DATA, LEN, N_BITS, rax, rbx, r11, r12, r13, r14, r15, 128, 4
 
         FUNC_RESTORE
 
         ret
 ;;
-;; extern void asm_Eia3_256_RemainderAVX512_16(uint32_t *T, const void **ks, const void **data, uint64_t n_bits)
+;; extern void asm_Eia3_256_RemainderAVX512_16(void *T, const void **ks,
+;;                                             const void **data, uint16_t *len,
+;;                                             const uint64_t n_bits,
+;;                                             const uint64_t tag_size)
 ;;
 ;;  @param [in] T: Array of digests for all 16 buffers
 ;;  @param [in] KS : Array of pointers to key stream for all 16 buffers
 ;;  @param [in] DATA : Array of pointers to data for all 16 buffers
-;;  @param [in] N_BITS (number data bits to process)
+;;  @param [in] N_BITS : Number data bits to process
+;;  @param [in] TAG_SIZE : Tag size (4, 8 or 16 bytes)
 ;;
 align 64
 MKGLOBAL(ZUC256_REMAINDER_16,function,internal)
 ZUC256_REMAINDER_16:
+
+%define T       arg1
+%define KS      arg2
+%define DATA    arg3
+%define LEN     arg4
+
+%define N_BITS r10
+
+%define TAG_SZ  arg6
+
         endbranch64
 
+        mov     N_BITS, arg5
+
+        ; TODO: 8-byte and 16-byte digests
+        cmp     TAG_SZ, 4
+        je      remainder_4B
+
+remainder_4B:
         FUNC_SAVE
 
-        REMAINDER_16 256
+        REMAINDER_16 T, KS, DATA, LEN, N_BITS, rax, rbx, r11, r12, r13, r14, r15, 256, 4
 
         FUNC_RESTORE
 
