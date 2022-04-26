@@ -260,6 +260,7 @@ len_is_0:
 %endrep
 %endif
 
+        vzeroupper
 return:
 
         mov     rbx, [rsp + _gpr_save + 8*0]
