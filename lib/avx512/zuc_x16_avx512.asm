@@ -2233,8 +2233,303 @@ _no_final_rounds:
 
         ret
 
+
 ;;
-;;extern void asm_Eia3Round64B_16(uint32_t *T, const void *KS,
+;; Updates authentication tag T of 16 buffers based on keystream KS and DATA
+;; (GFNI/VAES/VPCLMULQDQ version)
+;;
+%macro ROUND64B_16_GFNI 11
+%define %%T             %1  ; [in] Pointer to digests
+%define %%KS            %2  ; [in] Pointer to keystream (128x16 bytes)
+%define %%DATA          %3  ; [in] Pointer to array of pointers to data buffers
+%define %%LEN           %4  ; [in] Pointer to array of remaining length to digest
+%define %%TMP1          %5  ; [clobbered] Temporary GP register
+%define %%TMP2          %6  ; [clobbered] Temporary GP register
+%define %%TMP3          %7  ; [clobbered] Temporary GP register
+%define %%TMP4          %8  ; [clobbered] Temporary GP register
+%define %%TMP5          %9  ; [clobbered] Temporary GP register
+%define %%TMP6          %10 ; [clobbered] Temporary GP register
+%define %%TAG_SIZE      %11 ; [constant] Tag size (4, 8 or 16 bytes)
+
+%define %%SHUF_DATA_KMASK    k1 ; Mask to shuffle data
+%define %%PERM_DIGEST_KMASK1 k2 ; Permutation mask for digests
+%define %%PERM_DIGEST_KMASK2 k3 ; Permulation mask for digests
+%define %%TMP_KMASK          k4
+
+%define %%DATA_ADDR0    %%TMP3
+%define %%DATA_ADDR1    %%TMP4
+%define %%DATA_ADDR2    %%TMP5
+%define %%DATA_ADDR3    %%TMP6
+
+%define %%DATA_TRANS0   zmm19
+%define %%DATA_TRANS1   zmm20
+%define %%DATA_TRANS2   zmm21
+%define %%DATA_TRANS3   zmm22
+%define %%DATA_TRANS0x  xmm19
+%define %%DATA_TRANS1x  xmm20
+%define %%DATA_TRANS2x  xmm21
+%define %%DATA_TRANS3x  xmm22
+
+%define %%KS_TRANS0     zmm23
+%define %%KS_TRANS1     zmm24
+%define %%KS_TRANS2     zmm25
+%define %%KS_TRANS3     zmm26
+%define %%KS_TRANS4     zmm27
+%define %%KS_TRANS0x    xmm23
+%define %%KS_TRANS1x    xmm24
+%define %%KS_TRANS2x    xmm25
+%define %%KS_TRANS3x    xmm26
+%define %%KS_TRANS4x    xmm27
+
+%define %%DIGEST_0      zmm28
+%define %%DIGEST_1      zmm29
+%define %%DIGEST_2      zmm30
+%define %%DIGEST_3      zmm31
+
+%define %%ZTMP1         zmm0
+%define %%ZTMP2         zmm1
+%define %%ZTMP3         zmm2
+%define %%ZTMP4         zmm3
+%define %%ZTMP5         zmm4
+%define %%ZTMP6         zmm5
+%define %%ZTMP7         zmm6
+%define %%ZTMP8         zmm7
+
+%define %%YTMP1         YWORD(%%ZTMP1)
+
+        mov             DWORD(%%TMP1), 0x55555555
+        kmovd           %%SHUF_DATA_KMASK, DWORD(%%TMP1)
+        ;; Read first buffers 0,4,8,12; then 1,5,9,13, and so on,
+        ;; since the keystream is laid out this way, with chunks of
+        ;; 16 bytes interleaved. First the 128 bytes for
+        ;; buffers 0,4,8,12 (total of 512 bytes), then the 128 bytes
+        ;; for buffers 1,5,9,13, and so on.
+%assign %%IDX 0
+%rep 4
+        vpxorq          APPEND(%%DIGEST_, %%IDX), APPEND(%%DIGEST_, %%IDX)
+
+        mov             %%DATA_ADDR0, [%%DATA + %%IDX*8 + 0*32]
+        mov             %%DATA_ADDR1, [%%DATA + %%IDX*8 + 1*32]
+        mov             %%DATA_ADDR2, [%%DATA + %%IDX*8 + 2*32]
+        mov             %%DATA_ADDR3, [%%DATA + %%IDX*8 + 3*32]
+
+        vmovdqu64       %%KS_TRANS0, [%%KS + %%IDX*64*2*4]
+
+%assign %%I 0
+%assign %%J 1
+%rep 4
+        vmovdqu64       XWORD(APPEND(%%DATA_TRANS, %%I)), [%%DATA_ADDR0 + 16*%%I]
+        vinserti32x4    APPEND(%%DATA_TRANS, %%I), [%%DATA_ADDR1 + 16*%%I], 1
+        vinserti32x4    APPEND(%%DATA_TRANS, %%I), [%%DATA_ADDR2 + 16*%%I], 2
+        vinserti32x4    APPEND(%%DATA_TRANS, %%I), [%%DATA_ADDR3 + 16*%%I], 3
+
+        vmovdqu64       APPEND(%%KS_TRANS, %%J), [%%KS + %%IDX*64*2*4 + 64*%%J]
+
+        ;; Reverse bits of next 16 bytes from all 4 buffers
+        vgf2p8affineqb  %%ZTMP1, APPEND(%%DATA_TRANS,%%I), [rel bit_reverse_table], 0x00
+
+        ; Digest 16 bytes of data with 24 bytes of KS, for 4 buffers
+        DIGEST_DATA %%ZTMP1, APPEND(%%KS_TRANS, %%I), APPEND(%%KS_TRANS, %%J), APPEND(%%DIGEST_, %%IDX), \
+                    %%SHUF_DATA_KMASK, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, %%ZTMP6, %%ZTMP7
+
+%assign %%J (%%J + 1)
+%assign %%I (%%I + 1)
+%endrep
+
+        ; Memcpy KS 64-127 bytes to 0-63 bytes
+        vmovdqa64       %%ZTMP4, [%%KS + %%IDX*4*64*2 + 64*4]
+        vmovdqa64       %%ZTMP1, [%%KS + %%IDX*4*64*2 + 64*5]
+        vmovdqa64       %%ZTMP2, [%%KS + %%IDX*4*64*2 + 64*6]
+        vmovdqa64       %%ZTMP3, [%%KS + %%IDX*4*64*2 + 64*7]
+        vmovdqa64       [%%KS + %%IDX*4*64*2], %%ZTMP4
+        vmovdqa64       [%%KS + %%IDX*4*64*2 + 64], %%ZTMP1
+        vmovdqa64       [%%KS + %%IDX*4*64*2 + 64*2], %%ZTMP2
+        vmovdqa64       [%%KS + %%IDX*4*64*2 + 64*3], %%ZTMP3
+
+%assign %%IDX (%%IDX + 1)
+%endrep
+
+        ;; - update tags
+        mov             %%TMP1, 0x3333
+        mov             %%TMP2, 0xCCCC
+        kmovq           %%PERM_DIGEST_KMASK1, %%TMP1
+        kmovq           %%PERM_DIGEST_KMASK2, %%TMP2
+
+        vmovdqu64       %%ZTMP1, [%%T] ; Input tags
+        vmovdqa64       %%ZTMP2, [rel shuf_mask_tags_0_4_8_12]
+        vmovdqa64       %%ZTMP3, [rel shuf_mask_tags_0_4_8_12 + 64]
+        ; Get result tags for 16 buffers in different position in each lane
+        ; and blend these tags into an ZMM register.
+        ; Then, XOR the results with the previous tags and write out the result.
+        vpermt2d        %%DIGEST_0{%%PERM_DIGEST_KMASK1}{z}, %%ZTMP2, %%DIGEST_1
+        vpermt2d        %%DIGEST_2{%%PERM_DIGEST_KMASK2}{z}, %%ZTMP3, %%DIGEST_3
+        vpternlogq      %%ZTMP1, %%DIGEST_0, %%DIGEST_2, 0x96 ; A XOR B XOR C
+        vmovdqu64       [%%T], %%ZTMP1
+
+        ; Update data pointers
+        vmovdqu64       %%ZTMP1, [%%DATA]
+        vmovdqu64       %%ZTMP2, [%%DATA + 64]
+        vpaddq          %%ZTMP1, [rel add_64]
+        vpaddq          %%ZTMP2, [rel add_64]
+        vmovdqu64       [%%DATA], %%ZTMP1
+        vmovdqu64       [%%DATA + 64], %%ZTMP2
+
+        ; Update array of lengths (subtract 512 bits from all lengths if valid lane)
+        vmovdqa         %%YTMP1, [LEN]
+        vpcmpw          %%TMP_KMASK, %%YTMP1, [rel all_ffs], 4
+        vpsubw          %%YTMP1{%%TMP_KMASK}, [rel all_512w]
+        vmovdqa         [%%LEN], %%YTMP1
+
+%endmacro
+
+
+;;
+;; Updates authentication tag T of 16 buffers based on keystream KS and DATA.
+;;
+%macro ROUND64B_16_NO_GFNI 11
+%define %%T             %1  ; [in] Pointer to digests
+%define %%KS            %2  ; [in] Pointer to keystream (128x16 bytes)
+%define %%DATA          %3  ; [in] Pointer to array of pointers to data buffers
+%define %%LEN           %4  ; [in] Pointer to array of remaining length to digest
+%define %%TMP1          %5  ; [clobbered] Temporary GP register
+%define %%TMP2          %6  ; [clobbered] Temporary GP register
+%define %%TMP3          %7  ; [clobbered] Temporary GP register
+%define %%TMP4          %8  ; [clobbered] Temporary GP register
+%define %%TMP5          %9  ; [clobbered] Temporary GP register
+%define %%TMP6          %10 ; [clobbered] Temporary GP register
+%define %%TAG_SIZE      %11 ; [constant] Tag size (4, 8 or 16 bytes)
+
+%define %%SHUF_DATA_KMASK    k1 ; Mask to shuffle data
+%define %%PERM_DIGEST_KMASK1 k2 ; Permutation mask for digests
+%define %%PERM_DIGEST_KMASK2 k3 ; Permulation mask for digests
+%define %%TMP_KMASK          k4
+
+%define %%REV_TABLE_L     xmm0
+%define %%REV_TABLE_H     xmm1
+%define %%REV_AND_TABLE   xmm2
+%define %%TEMP_DIGEST     xmm3
+%define %%KS_L            xmm4
+%define %%KS_H            xmm5
+%define %%XDATA           xmm6
+%define %%XTMP1           xmm7
+%define %%XTMP2           xmm8
+%define %%XTMP3           xmm9
+%define %%XTMP4           xmm10
+%define %%XTMP5           xmm11
+%define %%XTMP6           xmm12
+
+%define %%ZTMP1           zmm24
+%define %%ZTMP2           zmm25
+%define %%ZTMP3           zmm26
+%define %%ZTMP4           zmm27
+%define %%DIGEST_0        zmm28
+%define %%DIGEST_1        zmm29
+%define %%DIGEST_2        zmm30
+%define %%DIGEST_3        zmm31
+
+%define %%YTMP1           ymm24
+
+%define %%DATA_ADDR       %%TMP3
+
+        vmovdqa  %%REV_TABLE_L, [rel bit_reverse_table_l]
+        vmovdqa  %%REV_TABLE_H, [rel bit_reverse_table_h]
+        vmovdqa  %%REV_AND_TABLE, [rel bit_reverse_and_table]
+
+        mov      DWORD(%%TMP1), 0x55555555
+        kmovd    %%SHUF_DATA_KMASK, DWORD(%%TMP1)
+
+        ;; Read first buffers 0,4,8,12; then 1,5,9,13, and so on,
+        ;; since the keystream is laid out this way, which chunks of
+        ;; 16 bytes interleved. First the 128 bytes for
+        ;; buffers 0,4,8,12 (total of 512 bytes), then the 128 bytes
+        ;; for buffers 1,5,9,13, and so on
+%assign %%I 0
+%rep 4
+%assign %%J 0
+%rep 4
+
+        vpxor   %%TEMP_DIGEST, %%TEMP_DIGEST
+        mov     %%DATA_ADDR, [%%DATA + 8*(%%J*4 + %%I)]
+
+%assign %%K 0
+%rep 4
+        ;; read 16 bytes and reverse bits
+        vmovdqu  %%XTMP1, [%%DATA_ADDR + 16*%%K]
+        vpand    %%XTMP2, %%XTMP1, %%REV_AND_TABLE
+
+        vpandn   %%XTMP3, %%REV_AND_TABLE, %%XTMP1
+        vpsrld   %%XTMP3, 4
+
+        vpshufb  %%XDATA, %%REV_TABLE_H, %%XTMP2 ; bit reverse low nibbles (use high table)
+        vpshufb  %%XTMP4, %%REV_TABLE_L, %%XTMP3 ; bit reverse high nibbles (use low table)
+
+        vpor     %%XDATA, %%XDATA, %%XTMP4 ; %%DATA - bit reversed data bytes
+
+        ; Read the next 2 blocks of 16 bytes of KS
+%if %%K != 0
+        vmovdqa  %%KS_L, %%KS_H
+        vmovdqu  %%KS_H, [%%KS + (16*%%J + %%I*512) + (%%K + 1)*(16*4)]
+%else
+        vmovdqu  %%KS_L, [%%KS + (16*%%J + %%I*512)]
+        vmovdqu  %%KS_H, [%%KS + (16*%%J + %%I*512) + (16*4)]
+%endif
+        ; Digest 16 bytes of data with 24 bytes of KS, for 4 buffers
+        DIGEST_DATA %%XDATA, %%KS_L, %%KS_H, %%TEMP_DIGEST, %%SHUF_DATA_KMASK, \
+                    %%XTMP1, %%XTMP2, %%XTMP3, %%XTMP4, %%XTMP5, %%XTMP6
+
+%assign %%K (%%K + 1)
+%endrep
+
+        vinserti32x4 APPEND(%%DIGEST_, %%I), %%TEMP_DIGEST, %%J
+%assign %%J (%%J + 1)
+%endrep
+        ; Memcpy KS 64-127 bytes to 0-63 bytes
+        vmovdqa64       %%ZTMP1, [%%KS + %%I*4*64*2 + 64*4]
+        vmovdqa64       %%ZTMP2, [%%KS + %%I*4*64*2 + 64*5]
+        vmovdqa64       %%ZTMP3, [%%KS + %%I*4*64*2 + 64*6]
+        vmovdqa64       %%ZTMP4, [%%KS + %%I*4*64*2 + 64*7]
+        vmovdqa64       [%%KS + %%I*4*64*2], %%ZTMP1
+        vmovdqa64       [%%KS + %%I*4*64*2 + 64], %%ZTMP2
+        vmovdqa64       [%%KS + %%I*4*64*2 + 64*2], %%ZTMP3
+        vmovdqa64       [%%KS + %%I*4*64*2 + 64*3], %%ZTMP4
+%assign %%I (%%I + 1)
+%endrep
+
+        ;; - update tags
+        mov             %%TMP1, 0x3333
+        mov             %%TMP2, 0xCCCC
+        kmovq           %%PERM_DIGEST_KMASK1, %%TMP1
+        kmovq           %%PERM_DIGEST_KMASK2, %%TMP2
+
+        vmovdqu64       %%ZTMP1, [%%T] ; Input tags
+        vmovdqa64       %%ZTMP2, [rel shuf_mask_tags_0_4_8_12]
+        vmovdqa64       %%ZTMP3, [rel shuf_mask_tags_0_4_8_12 + 64]
+        ; Get result tags for 16 buffers in different position in each lane
+        ; and blend these tags into an ZMM register.
+        ; Then, XOR the results with the previous tags and write out the result.
+        vpermt2d        %%DIGEST_0{%%PERM_DIGEST_KMASK1}{z}, %%ZTMP2, %%DIGEST_1
+        vpermt2d        %%DIGEST_2{%%PERM_DIGEST_KMASK2}{z}, %%ZTMP3, %%DIGEST_3
+        vpternlogq      %%ZTMP1, %%DIGEST_0, %%DIGEST_2, 0x96 ; A XOR B XOR C
+        vmovdqu64       [%%T], %%ZTMP1
+
+        ; Update data pointers
+        vmovdqu64       %%ZTMP2, [%%DATA]
+        vmovdqu64       %%ZTMP3, [%%DATA + 64]
+        vpaddq          %%ZTMP2, [rel add_64]
+        vpaddq          %%ZTMP3, [rel add_64]
+        vmovdqu64       [%%DATA], %%ZTMP2
+        vmovdqu64       [%%DATA + 64], %%ZTMP3
+
+        ; Update array of lengths (if lane is valid, so length < UINT16_MAX)
+        vmovdqa64       %%YTMP1, [%%LEN]
+        vpcmpw          %%TMP_KMASK, %%YTMP1, [rel all_ffs], 4 ; valid lanes
+        vpsubw          %%YTMP1{%%TMP_KMASK}, [rel all_512w]
+        vmovdqa64       [%%LEN], %%YTMP1
+
+%endmacro
+
+;;
+;;extern void asm_Eia3Round64B_16(void *T, const void *KS,
 ;;                                const void **DATA, uint16_t *LEN);
 ;;
 ;; Updates authentication tag T of 16 buffers based on keystream KS and DATA.
@@ -2252,251 +2547,33 @@ _no_final_rounds:
 ;;  @param [in] KS: Pointer to 128 bytes of keystream for all 16 buffers (2048 bytes in total)
 ;;  @param [in] DATA: Array of pointers to data for all 16 buffers
 ;;  @param [in] LEN: Array of lengths for all 16 buffers
+;;  @param [in] TAG_SZ: Tag size (4, 8 or 16 bytes)
 ;;
 align 64
 MKGLOBAL(ZUC_ROUND64B_16,function,internal)
 ZUC_ROUND64B_16:
-%define         T       arg1
-%define         KS      arg2
-%define         DATA    arg3
-%define         LEN     arg4
-
-%if USE_GFNI_VAES_VPCLMUL == 1
-%define         DATA_ADDR0      rbx
-%define         DATA_ADDR1      r10
-%define         DATA_ADDR2      r11
-%define         DATA_ADDR3      r12
-
-%define         DATA_TRANS0     zmm19
-%define         DATA_TRANS1     zmm20
-%define         DATA_TRANS2     zmm21
-%define         DATA_TRANS3     zmm22
-%define         DATA_TRANS0x    xmm19
-%define         DATA_TRANS1x    xmm20
-%define         DATA_TRANS2x    xmm21
-%define         DATA_TRANS3x    xmm22
-
-%define         KS_TRANS0       zmm23
-%define         KS_TRANS1       zmm24
-%define         KS_TRANS2       zmm25
-%define         KS_TRANS3       zmm26
-%define         KS_TRANS4       zmm27
-%define         KS_TRANS0x      xmm23
-%define         KS_TRANS1x      xmm24
-%define         KS_TRANS2x      xmm25
-%define         KS_TRANS3x      xmm26
-%define         KS_TRANS4x      xmm27
-
-%define         DIGEST_0        zmm28
-%define         DIGEST_1        zmm29
-%define         DIGEST_2        zmm30
-%define         DIGEST_3        zmm31
-
-%define         ZTMP1           zmm0
-%define         ZTMP2           zmm1
-%define         ZTMP3           zmm2
-%define         ZTMP4           zmm3
-%define         ZTMP5           zmm4
-%define         ZTMP6           zmm5
-%define         ZTMP7           zmm6
-%define         ZTMP8           zmm7
-
-%define         YTMP1           YWORD(ZTMP1)
+%define T       arg1
+%define KS      arg2
+%define DATA    arg3
+%define LEN     arg4
+%define TAG_SZ  arg5
 
         endbranch64
 
-        FUNC_SAVE
+        ; TODO: 8-byte and 16-byte digests
+        cmp     TAG_SZ, 4
+        je      round_4B
 
-        mov             r12d, 0x55555555
-        kmovd           k1, r12d
-        ;; Read first buffers 0,4,8,12; then 1,5,9,13, and so on,
-        ;; since the keystream is laid out this way, with chunks of
-        ;; 16 bytes interleaved. First the 128 bytes for
-        ;; buffers 0,4,8,12 (total of 512 bytes), then the 128 bytes
-        ;; for buffers 1,5,9,13, and so on.
-%assign IDX 0
-%rep 4
-        vpxorq          APPEND(DIGEST_, IDX), APPEND(DIGEST_, IDX)
-
-        mov             DATA_ADDR0, [DATA + IDX*8 + 0*32]
-        mov             DATA_ADDR1, [DATA + IDX*8 + 1*32]
-        mov             DATA_ADDR2, [DATA + IDX*8 + 2*32]
-        mov             DATA_ADDR3, [DATA + IDX*8 + 3*32]
-
-        vmovdqu64       KS_TRANS0, [KS + IDX*64*2*4]
-
-%assign I 0
-%assign J 1
-%rep 4
-        vmovdqu64       XWORD(APPEND(DATA_TRANS, I)), [DATA_ADDR0 + 16*I]
-        vinserti32x4    APPEND(DATA_TRANS, I), [DATA_ADDR1 + 16*I], 1
-        vinserti32x4    APPEND(DATA_TRANS, I), [DATA_ADDR2 + 16*I], 2
-        vinserti32x4    APPEND(DATA_TRANS, I), [DATA_ADDR3 + 16*I], 3
-
-        vmovdqu64       APPEND(KS_TRANS, J), [KS + IDX*64*2*4 + 64*J]
-
-        ;; Reverse bits of next 16 bytes from all 4 buffers
-        vgf2p8affineqb  ZTMP1, APPEND(DATA_TRANS,I), [rel bit_reverse_table], 0x00
-
-        ; Digest 16 bytes of data with 24 bytes of KS, for 4 buffers
-        DIGEST_DATA ZTMP1, APPEND(KS_TRANS, I), APPEND(KS_TRANS, J), APPEND(DIGEST_, IDX), \
-                    k1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7
-
-%assign J (J + 1)
-%assign I (I + 1)
-%endrep
-
-        ; Memcpy KS 64-127 bytes to 0-63 bytes
-        vmovdqa64       ZTMP4, [KS + IDX*4*64*2 + 64*4]
-        vmovdqa64       ZTMP1, [KS + IDX*4*64*2 + 64*5]
-        vmovdqa64       ZTMP2, [KS + IDX*4*64*2 + 64*6]
-        vmovdqa64       ZTMP3, [KS + IDX*4*64*2 + 64*7]
-        vmovdqa64       [KS + IDX*4*64*2], ZTMP4
-        vmovdqa64       [KS + IDX*4*64*2 + 64], ZTMP1
-        vmovdqa64       [KS + IDX*4*64*2 + 64*2], ZTMP2
-        vmovdqa64       [KS + IDX*4*64*2 + 64*3], ZTMP3
-
-%assign IDX (IDX + 1)
-%endrep
-
-        ;; - update tags
-        mov             r12, 0x3333
-        mov             r13, 0xCCCC
-        kmovq           k1, r12
-        kmovq           k2, r13
-
-        vmovdqu64       ZTMP1, [T] ; Input tags
-        vmovdqa64       ZTMP2, [rel shuf_mask_tags_0_4_8_12]
-        vmovdqa64       ZTMP3, [rel shuf_mask_tags_0_4_8_12 + 64]
-        ; Get result tags for 16 buffers in different position in each lane
-        ; and blend these tags into an ZMM register.
-        ; Then, XOR the results with the previous tags and write out the result.
-        vpermt2d        DIGEST_0{k1}{z}, ZTMP2, DIGEST_1
-        vpermt2d        DIGEST_2{k2}{z}, ZTMP3, DIGEST_3
-        vpternlogq      ZTMP1, DIGEST_0, DIGEST_2, 0x96 ; A XOR B XOR C
-        vmovdqu64       [T], ZTMP1
-
-        ; Update data pointers
-        vmovdqu64       ZTMP1, [DATA]
-        vmovdqu64       ZTMP2, [DATA + 64]
-        vpaddq          ZTMP1, [rel add_64]
-        vpaddq          ZTMP2, [rel add_64]
-        vmovdqu64       [DATA], ZTMP1
-        vmovdqu64       [DATA + 64], ZTMP2
-
-        ; Update array of lengths (subtract 512 bits from all lengths if valid lane)
-        vmovdqa         YTMP1, [LEN]
-        vpcmpw          k1, YTMP1, [rel all_ffs], 4
-        vpsubw          YTMP1{k1}, [rel all_512w]
-        vmovdqa         [LEN], YTMP1
-
-%else ; USE_GFNI_VAES_VPCLMUL == 1
-
-%define         DIGEST_0        zmm28
-%define         DIGEST_1        zmm29
-%define         DIGEST_2        zmm30
-%define         DIGEST_3        zmm31
-
-%define         DATA_ADDR       r10
+round_4B:
 
         FUNC_SAVE
 
-        vmovdqa  xmm5, [rel bit_reverse_table_l]
-        vmovdqa  xmm6, [rel bit_reverse_table_h]
-        vmovdqa  xmm7, [rel bit_reverse_and_table]
-
-        mov             r12d, 0x55555555
-        kmovd           k1, r12d
-
-        ;; Read first buffers 0,4,8,12; then 1,5,9,13, and so on,
-        ;; since the keystream is laid out this way, which chunks of
-        ;; 16 bytes interleved. First the 128 bytes for
-        ;; buffers 0,4,8,12 (total of 512 bytes), then the 128 bytes
-        ;; for buffers 1,5,9,13, and so on
-%assign I 0
-%rep 4
-%assign J 0
-%rep 4
-
-        vpxor   xmm9, xmm9
-        mov     DATA_ADDR, [DATA + 8*(J*4 + I)]
-
-%assign K 0
-%rep 4
-        ;; read 16 bytes and reverse bits
-        vmovdqu  xmm0, [DATA_ADDR + 16*K]
-        vpand    xmm1, xmm0, xmm7
-
-        vpandn   xmm2, xmm7, xmm0
-        vpsrld   xmm2, 4
-
-        vpshufb  xmm8, xmm6, xmm1 ; bit reverse low nibbles (use high table)
-        vpshufb  xmm4, xmm5, xmm2 ; bit reverse high nibbles (use low table)
-
-        vpor     xmm8, xmm4 ; xmm8 - bit reversed data bytes
-
-        ; Read the next 2 blocks of 16 bytes of KS
-%if K != 0
-        vmovdqa  xmm11, xmm12
-        vmovdqu  xmm12, [KS + (16*J + I*512) + (K + 1)*(16*4)]
+%if USE_GFNI_VAES_VPCLMUL == 1
+        ROUND64B_16_GFNI T, KS, DATA, LEN, rbx, r10, r11, r12, r13, r14, 4
 %else
-        vmovdqu  xmm11, [KS + (16*J + I*512)]
-        vmovdqu  xmm12, [KS + (16*J + I*512) + (16*4)]
+        ROUND64B_16_NO_GFNI T, KS, DATA, LEN, rbx, r10, r11, r12, r13, r14, 4
 %endif
-        ; Digest 16 bytes of data with 24 bytes of KS, for 4 buffers
-        DIGEST_DATA xmm8, xmm11, xmm12, xmm9, k1, \
-                    xmm0, xmm1, xmm2, xmm3, xmm13, xmm14
 
-%assign K (K + 1)
-%endrep
-
-        vinserti32x4 APPEND(DIGEST_, I), xmm9, J
-%assign J (J + 1)
-%endrep
-        ; Memcpy KS 64-127 bytes to 0-63 bytes
-        vmovdqa64       zmm23, [KS + I*4*64*2 + 64*4]
-        vmovdqa64       zmm24, [KS + I*4*64*2 + 64*5]
-        vmovdqa64       zmm25, [KS + I*4*64*2 + 64*6]
-        vmovdqa64       zmm26, [KS + I*4*64*2 + 64*7]
-        vmovdqa64       [KS + I*4*64*2], zmm23
-        vmovdqa64       [KS + I*4*64*2 + 64], zmm24
-        vmovdqa64       [KS + I*4*64*2 + 64*2], zmm25
-        vmovdqa64       [KS + I*4*64*2 + 64*3], zmm26
-%assign I (I + 1)
-%endrep
-
-        ;; - update tags
-        mov             r12, 0x3333
-        mov             r13, 0xCCCC
-        kmovq           k1, r12
-        kmovq           k2, r13
-
-        vmovdqu64       zmm4, [T] ; Input tags
-        vmovdqa64       zmm0, [rel shuf_mask_tags_0_4_8_12]
-        vmovdqa64       zmm1, [rel shuf_mask_tags_0_4_8_12 + 64]
-        ; Get result tags for 16 buffers in different position in each lane
-        ; and blend these tags into an ZMM register.
-        ; Then, XOR the results with the previous tags and write out the result.
-        vpermt2d        DIGEST_0{k1}{z}, zmm0, DIGEST_1
-        vpermt2d        DIGEST_2{k2}{z}, zmm1, DIGEST_3
-        vpternlogq      zmm4, DIGEST_0, DIGEST_2, 0x96 ; A XOR B XOR C
-        vmovdqu64       [T], zmm4
-
-        ; Update data pointers
-        vmovdqu64       zmm0, [DATA]
-        vmovdqu64       zmm1, [DATA + 64]
-        vpaddq          zmm0, [rel add_64]
-        vpaddq          zmm1, [rel add_64]
-        vmovdqu64       [DATA], zmm0
-        vmovdqu64       [DATA + 64], zmm1
-
-        ; Update array of lengths (if lane is valid, so length < UINT16_MAX)
-        vmovdqa         ymm2, [LEN]
-        vpcmpw          k1, ymm2, [rel all_ffs], 4 ; k1 -> valid lanes
-        vpsubw          ymm2{k1}, [rel all_512w]
-        vmovdqa         [LEN], ymm2
-
-%endif ;; USE_GFNI_VAES_VPCLMUL == 0
         FUNC_RESTORE
 
         ret

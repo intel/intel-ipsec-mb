@@ -145,12 +145,12 @@ cipher_16(ZucState16_t *pState, const uint64_t *pIn[16], uint64_t *pOut[16],
 
 static inline void
 round64B_16(uint32_t *T, const uint32_t *ks, const void **data,
-            uint16_t *lens, const unsigned use_gfni)
+            uint16_t *lens, const unsigned use_gfni, const uint64_t tag_sz)
 {
         if (use_gfni)
-                asm_Eia3Round64B_16_VPCLMUL(T, ks, data, lens);
+                asm_Eia3Round64B_16_VPCLMUL(T, ks, data, lens, tag_sz);
         else
-                asm_Eia3Round64BAVX512_16(T, ks, data, lens);
+                asm_Eia3Round64BAVX512_16(T, ks, data, lens, tag_sz);
 }
 
 static inline
@@ -700,7 +700,7 @@ void _zuc_eia3_16_buffer_avx512(const void * const pKey[NUM_AVX512_BUFS],
                 else
                         keystr_64B_gen_16(&state, keyStr, 64, use_gfni);
                 round64B_16(T, keyStr,
-                            (const void **)pIn8, lens, use_gfni);
+                            (const void **)pIn8, lens, use_gfni, 4);
         }
 
         /* Process each packet separately for the remaining bits */

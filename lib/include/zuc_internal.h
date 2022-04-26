@@ -1140,26 +1140,32 @@ IMB_DLL_LOCAL void asm_Eia3Remainder_avx(void *T, const void *ks,
  *      Definition of the external function to update the authentication tag
  *      based on keystream and data (AVX variant)
  *
- * @param[in] T                     Authentication tag
+ * @param[in] T                     Array of authentication tags for 16 buffers
  *
- * @param[in] ks                    Pointer to key stream
+ * @param[in] ks                    Array of keystreams for 16 buffers
  *
- * @param[in] data                  Pointer to the data
+ * @param[in] data                  Array of pointers to the data for 16 buffers
+ *
+ * @param[in] len                   Array of remaining lengths for 16 buffers
+ *
+ * @param[in] tag_sz                Tag size (4, 8 or 16 bytes)
  *
  * @pre
  *      None
  *
  *****************************************************************************/
 
-IMB_DLL_LOCAL void asm_Eia3Round64BAVX512_16(uint32_t *T,
+IMB_DLL_LOCAL void asm_Eia3Round64BAVX512_16(void *T,
                                              const uint32_t *ks,
                                              const void **data,
-                                             uint16_t *len);
+                                             uint16_t *len,
+                                             const uint64_t tag_sz);
 
-IMB_DLL_LOCAL void asm_Eia3Round64B_16_VPCLMUL(uint32_t *T,
+IMB_DLL_LOCAL void asm_Eia3Round64B_16_VPCLMUL(void *T,
                                                const uint32_t *ks,
                                                const void **data,
-                                               uint16_t *len);
+                                               uint16_t *len,
+                                               const uint64_t tag_sz);
 
 IMB_DLL_LOCAL void asm_Eia3Round64BAVX512(uint32_t *T, const void *ks,
                                           const void *data);

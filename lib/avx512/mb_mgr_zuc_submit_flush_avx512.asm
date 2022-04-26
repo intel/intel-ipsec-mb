@@ -669,6 +669,7 @@ FLUSH_JOB_ZUC256_EEA3:
         lea     arg2, [%%OOO + _zuc_args_KS]
         lea     arg3, [%%OOO + _zuc_args_in]
         lea     arg4, [%%OOO + _zuc_lens]
+        mov     arg5, 4
 
         call    ZUC_ROUND64B
 
