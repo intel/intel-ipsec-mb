@@ -44,7 +44,6 @@
 %define ZUC256_REMAINDER_16 asm_Eia3_256_RemainderAVX512_16
 %define ZUC_KEYGEN64B_16 asm_ZucGenKeystream64B_16_avx512
 %define ZUC_KEYGEN8B_16 asm_ZucGenKeystream8B_16_avx512
-%define ZUC_KEYGEN4B_16 asm_ZucGenKeystream4B_16_avx512
 %define ZUC_KEYGEN_16 asm_ZucGenKeystream_16_avx512
 %define ZUC_KEYGEN64B_SKIP8_16 asm_ZucGenKeystream64B_16_skip8_avx512
 %define ZUC_KEYGEN8B_SKIP8_16 asm_ZucGenKeystream8B_16_skip8_avx512
@@ -1286,11 +1285,10 @@ init_for_auth_tag_4B:
 ; Generate N*4 bytes of keystream
 ; for 16 buffers (where N is number of rounds)
 ;
-%macro KEYGEN_16_AVX512 3-4
+%macro KEYGEN_16_AVX512 2-3
 %define %%NUM_ROUNDS    %1 ; [in] Number of 4-byte rounds
-%define %%STORE_SINGLE  %2 ; [in] If 1, KS will be stored continuously in a single buffer
-%define %%KEY_OFF       %3 ; [in] Offset to start writing Keystream
-%define %%LANE_MASK     %4 ; [in] Lane mask with lanes to generate all keystream words
+%define %%KEY_OFF       %2 ; [in] Offset to start writing Keystream
+%define %%LANE_MASK     %3 ; [in] Lane mask with lanes to generate all keystream words
 
 %define pState  arg1
 %define pKS     arg2
@@ -1353,7 +1351,7 @@ init_for_auth_tag_4B:
         mov         DWORD(%%TMP1), 0xAAAAAAAA
         kmovd       %%BLEND_KMASK, DWORD(%%TMP1)
 
-%if (%0 == 4)
+%if (%0 == 3)
         kmovd       %%FULL_LANE_KMASK, DWORD(%%LANE_MASK)
         knotd       %%SKIP_LANE_KMASK, %%FULL_LANE_KMASK
         mov         DWORD(%%TMP1), 0x0000FFFF
@@ -1419,9 +1417,6 @@ init_for_auth_tag_4B:
         vmovdqa32   [pState + OFS_R2]{%%FULL_LANE_KMASK}, %%R2
 %endif ;; (%%NUM_ROUNDS == 1)
 
-%if (%%STORE_SINGLE == 1)
-        vmovdqa32 [pKS]{%%FULL_LANE_KMASK}, zmm16
-%else
         ; Perform a 32-bit 16x16 transpose to have up to 64 bytes
         ; (NUM_ROUNDS * 4B) of each lane in a different register
         TRANSPOSE16_U32_INTERLEAVED %%KSTR1, %%KSTR2, %%KSTR3, %%KSTR4, %%KSTR5, %%KSTR6, %%KSTR7, %%KSTR8, \
@@ -1429,7 +1424,7 @@ init_for_auth_tag_4B:
                         %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, %%ZTMP6, %%ZTMP7, %%ZTMP8, \
                         %%ZTMP9, %%ZTMP10
 
-%if (%0 == 4)
+%if (%0 == 3)
         lea         %%TMP1, [rel alignr_mask]
         lea         %%TMP2, [rel mov_mask]
         STORE_KSTR16 pKS, %%ZTMP7, %%ZTMP5, %%KSTR13, %%KSTR1, %%ZTMP8, %%ZTMP6, %%KSTR14, %%KSTR2, \
@@ -1439,10 +1434,9 @@ init_for_auth_tag_4B:
         STORE_KSTR16 pKS, %%ZTMP7, %%ZTMP5, %%KSTR13, %%KSTR1, %%ZTMP8, %%ZTMP6, %%KSTR14, %%KSTR2, \
                      %%ZTMP3, %%ZTMP1, %%KSTR15, %%KSTR3, %%ZTMP4, %%ZTMP2, %%KSTR16, %%KSTR4, %%KEY_OFF
 %endif
-%endif ;; %%STORE_SINGLE == 1
 
         ; Reorder LFSR registers
-%if (%0 == 4)
+%if (%0 == 3)
         REORDER_LFSR pState, %%NUM_ROUNDS, %%FULL_LANE_KMASK
 %if (%%NUM_ROUNDS >= 2)
         REORDER_LFSR pState, (%%NUM_ROUNDS - 2), %%SKIP_LANE_KMASK ; 2 less rounds for "old" buffers
@@ -1803,7 +1797,7 @@ ZUC_KEYGEN64B_16:
 
         FUNC_SAVE
 
-        KEYGEN_16_AVX512 16, 0, arg3
+        KEYGEN_16_AVX512 16, arg3
 
         FUNC_RESTORE
 
@@ -1854,7 +1848,7 @@ ZUC_KEYGEN64B_SKIP8_16:
 
         FUNC_SAVE
 
-        KEYGEN_16_AVX512 16, 0, arg3, arg4
+        KEYGEN_16_AVX512 16, arg3, arg4
 
         FUNC_RESTORE
 
@@ -1870,23 +1864,7 @@ ZUC_KEYGEN8B_16:
 
         FUNC_SAVE
 
-        KEYGEN_16_AVX512 2, 0, arg3
-
-        FUNC_RESTORE
-
-        ret
-
-;;
-;; void asm_ZucGenKeystream4B_16_avx512(state16_t *pSta, u32 pKeyStr[16],
-;;                                      const u32 lane_mask)
-;;
-MKGLOBAL(ZUC_KEYGEN4B_16,function,internal)
-ZUC_KEYGEN4B_16:
-        endbranch64
-
-        FUNC_SAVE
-
-        KEYGEN_16_AVX512 1, 1, 0, arg3
+        KEYGEN_16_AVX512 2, arg3
 
         FUNC_RESTORE
 
@@ -1941,9 +1919,9 @@ ZUC_KEYGEN4B_16:
 %rep 16
 APPEND(%%_num_rounds_is_,%%I):
 %if (%0 == 3)
-        KEYGEN_16_AVX512 %%I, 0, %%KEY_OFF, %%LANE_MASK
+        KEYGEN_16_AVX512 %%I, %%KEY_OFF, %%LANE_MASK
 %else
-        KEYGEN_16_AVX512 %%I, 0, %%KEY_OFF
+        KEYGEN_16_AVX512 %%I, %%KEY_OFF
 %endif
         jmp     %%_done
 
