@@ -2441,7 +2441,7 @@ _no_final_rounds:
 %define %%TMP4          %8  ; [clobbered] Temporary GP register
 %define %%TMP5          %9  ; [clobbered] Temporary GP register
 %define %%TMP6          %10 ; [clobbered] Temporary GP register
-%define %%TAG_SIZE      %11 ; [constant] Tag size (4, 8 or 16 bytes)
+%define %%TAG_SIZE      %11 ; [constant] Tag size (4 or 8 bytes)
 
 %define %%SHUF_DATA_KMASK    k1 ; Mask to shuffle data
 %define %%TMP_KMASK1         k2
@@ -2545,7 +2545,7 @@ _no_final_rounds:
 
         UPDATE_TAGS %%T, %%TAG_SIZE, order_0_4_8_12, %%TMP1, %%TMP_KMASK1, %%TMP_KMASK2, \
                     %%DIGEST_0, %%DIGEST_1,  %%DIGEST_2, %%DIGEST_3, \
-                    %%ZTMP1, %%ZTMP2, %%ZTMP3
+                    %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, %%ZTMP6
 
         ; Update data pointers
         vmovdqu64       %%ZTMP1, [%%DATA]
@@ -2578,7 +2578,7 @@ _no_final_rounds:
 %define %%TMP4          %8  ; [clobbered] Temporary GP register
 %define %%TMP5          %9  ; [clobbered] Temporary GP register
 %define %%TMP6          %10 ; [clobbered] Temporary GP register
-%define %%TAG_SIZE      %11 ; [constant] Tag size (4, 8 or 16 bytes)
+%define %%TAG_SIZE      %11 ; [constant] Tag size (4 or 8 bytes)
 
 %define %%SHUF_DATA_KMASK    k1 ; Mask to shuffle data
 %define %%TMP_KMASK1         k2
@@ -2600,10 +2600,12 @@ _no_final_rounds:
 %define %%XTMP7           xmm13
 %define %%XTMP8           xmm14
 
-%define %%ZTMP1           zmm24
-%define %%ZTMP2           zmm25
-%define %%ZTMP3           zmm26
-%define %%ZTMP4           zmm27
+%define %%ZTMP1           zmm22
+%define %%ZTMP2           zmm23
+%define %%ZTMP3           zmm24
+%define %%ZTMP4           zmm25
+%define %%ZTMP5           zmm26
+%define %%ZTMP6           zmm27
 %define %%DIGEST_0        zmm28
 %define %%DIGEST_1        zmm29
 %define %%DIGEST_2        zmm30
@@ -2679,7 +2681,7 @@ _no_final_rounds:
 
         UPDATE_TAGS %%T, %%TAG_SIZE, order_0_4_8_12, %%TMP1, %%TMP_KMASK1, %%TMP_KMASK2, \
                     %%DIGEST_0, %%DIGEST_1,  %%DIGEST_2, %%DIGEST_3, \
-                    %%ZTMP1, %%ZTMP2, %%ZTMP3
+                    %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, %%ZTMP6
 
         ; Update data pointers
         vmovdqu64       %%ZTMP2, [%%DATA]
@@ -2721,18 +2723,31 @@ _no_final_rounds:
 align 64
 MKGLOBAL(ZUC_ROUND64B_16,function,internal)
 ZUC_ROUND64B_16:
-%define T       arg1
-%define KS      arg2
-%define DATA    arg3
-%define LEN     arg4
-%define TAG_SZ  arg5
+%define T         arg1
+%define KS        arg2
+%define DATA      arg3
+%define LEN       arg4
+%define TAG_SIZE  arg5
 
         endbranch64
 
-        ; TODO: 8-byte and 16-byte digests
-        cmp     TAG_SZ, 4
-        je      round_4B
+        cmp     TAG_SIZE, 8
+        je      round_8B
+        jb      round_4B
 
+round_8B:
+
+        FUNC_SAVE
+
+%if USE_GFNI_VAES_VPCLMUL == 1
+        ROUND64B_16_GFNI T, KS, DATA, LEN, rbx, r10, r11, r12, r13, r14, 8
+%else
+        ROUND64B_16_NO_GFNI T, KS, DATA, LEN, rbx, r10, r11, r12, r13, r14, 8
+%endif
+
+        FUNC_RESTORE
+
+        ret
 round_4B:
 
         FUNC_SAVE
