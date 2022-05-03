@@ -100,7 +100,7 @@ extern asm_Eia3_Nx64B_AVX512_16_VPCLMUL
 %define arg3    r8
 %define arg4    r9
 %define arg5    qword [rsp + 32]
-%define arg6    dword [rsp + 40]
+%define arg6    qword [rsp + 40]
 %define arg7    qword [rsp + 48]
 %endif
 

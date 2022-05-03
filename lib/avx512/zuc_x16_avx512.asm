@@ -2776,7 +2776,7 @@ round_4B:
 %define %%TMP6          %11 ; [clobbered] Temporary GP register
 %define %%TMP7          %12 ; [clobbered] Temporary GP register
 %define %%KEY_SIZE      %13 ; [constant] Key size (128 or 256)
-%define %%TAG_SIZE      %14 ; [constant] Tag size (4, 8 or 16 bytes)
+%define %%TAG_SIZE      %14 ; [constant] Tag size (4 or 8 bytes)
 
 %define %%DIGEST_0     zmm28
 %define %%DIGEST_1     zmm29
@@ -2822,6 +2822,8 @@ round_4B:
 %define %%ZTMP2         zmm8
 %define %%ZTMP3         zmm9
 %define %%ZTMP4         zmm10
+%define %%ZTMP5         zmm11
+%define %%ZTMP6         zmm12
 
 %define %%VALID_KMASK        k1 ; Mask with valid lanes
 %define %%SHUF_DATA_KMASK    k2 ; Mask to shuffle data
@@ -2983,7 +2985,7 @@ APPEND3(%%Eia3RoundsAVX_end,I,J):
 
         UPDATE_TAGS %%T, %%TAG_SIZE, order_0_1_2_3, %%TMP1, %%TMP_KMASK1, %%TMP_KMASK2, \
                     %%DIGEST_0, %%DIGEST_1,  %%DIGEST_2, %%DIGEST_3, \
-                    %%ZTMP1, %%ZTMP2, %%ZTMP3
+                    %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, %%ZTMP6
 
         ; These last steps should be done only for the buffers that
         ; have no more data to authenticate
@@ -2997,20 +2999,22 @@ APPEND3(%%Eia3RoundsAVX_end,I,J):
         cmp     word [%%LEN + 2*%%IDX], 0
         jnz     %%skip_comput
 
+        ; Load base address of keystream for lane %%IDX
+        ; Fist, find the offset for the 512-byte set (containing the 128-byte KS for 4 lanes)
         mov     %%TMP1, %%IDX
         and     %%TMP1, 0x3
         shl     %%TMP1, 9 ; * 512
 
+        ; Then, find the offset within the 512-byte set, based on the lane,
+        ; and add to the previous offset
         mov     %%TMP2, %%IDX
         shr     %%TMP2, 2
         shl     %%TMP2, 4 ; * 16
         add     %%TMP1, %%TMP2
+        ;; Load pointer to the base address of keystream for lane %%IDX
         lea     %%KS_ADDR, [%%KS + %%TMP1]
 
-        ; Read digest
-        mov     DWORD(%%DIGEST), [%%T + 4*%%IDX]
-
-        ; Read keyStr[MIN_LEN / 32]
+        ; Read keyStr[MIN_LEN / 32] (last dwords of KS, based on tag_size)
         movzx   %%LEN_BUF, word [rsp + 2*%%IDX]
         mov     %%TMP2, %%LEN_BUF
         shr     %%TMP2, 5
@@ -3019,9 +3023,15 @@ APPEND3(%%Eia3RoundsAVX_end,I,J):
         shl     %%TMP2, (4+2)
         and     %%TMP3, 0x3
         shl     %%TMP3, 2
-        add     %%TMP2, %%TMP3
+        add     %%TMP2, %%TMP3 ;; Offset to last dwords of KS, from base address
         mov     %%TMP3, %%TMP2
         and     %%TMP3, 0xf
+%if %%TAG_SIZE == 4
+        ; Read 4-byte digest
+        mov     DWORD(%%DIGEST), [%%T + 4*%%IDX]
+
+        ; Read last two dwords of KS, which can be scattered or contiguous
+        ; (First dword can be at the end of a 16-byte chunk)
         cmp     %%TMP3, 12
         je      %%_read_2dwords
         mov     %%TMP1, [%%KS_ADDR + %%TMP2]
@@ -3062,6 +3072,65 @@ APPEND3(%%Eia3RoundsAVX_end,I,J):
         ; byte swap and write digest out
         bswap   DWORD(%%DIGEST)
         mov     [%%T + 4*%%IDX], DWORD(%%DIGEST)
+%elif %%TAG_SIZE == 8
+        ; Read 8-byte digest
+        mov     %%DIGEST, [%%T + 8*%%IDX]
+
+        ; Read last three dwords of KS, which can be scattered or contiguous
+        ; (First dword can be at the end of a 16-byte chunk and the other
+        ;  two dwords in the next chunk; first two dwords can be at the end of
+        ;  a 16-byte chunk and the other dword in the next chunk; or all three
+        ;  dwords can be in the same 16-byte chunk)
+        cmp     %%TMP3, 8
+        je      %%_read_8B_4B
+        cmp     %%TMP3, 12
+        je      %%_read_4B_8B
+
+        ;; All 12 bytes of KS are contiguous
+%%_read_12B:
+        mov     %%TMP1, [%%KS_ADDR + %%TMP2]
+        mov     %%TMP2, [%%KS_ADDR + %%TMP2 + 4]
+        jmp     %%_ks_qwords_read
+
+        ;; The first 8 bytes of KS are contiguous, the other 4 are separated
+%%_read_8B_4B:
+        mov     %%TMP1, [%%KS_ADDR + %%TMP2]
+        ; Read last 4 bytes of first segment and first 4 bytes of second segment
+        mov     DWORD(%%TMP3), [%%KS_ADDR + %%TMP2 + 4]
+        mov     DWORD(%%TMP2), [%%KS_ADDR + %%TMP2 + (8+48)]
+        shl     %%TMP2, 32
+        or      %%TMP2, %%TMP3
+
+        jmp     %%_ks_qwords_read
+        ;; The first 8 bytes of KS are separated, the other 8 are contiguous
+%%_read_4B_8B:
+        mov     DWORD(%%TMP1), [%%KS_ADDR + %%TMP2]
+        mov     DWORD(%%TMP3), [%%KS_ADDR + %%TMP2 + (4+48)]
+        shl     %%TMP3, 32
+        or      %%TMP1, %%TMP3
+        mov     %%TMP2, [%%KS_ADDR + %%TMP2 + (4+48)]
+%%_ks_qwords_read:
+        ; Rotate left by MIN_LEN % 32
+        mov     %%TMP3, rcx
+        mov     rcx, %%LEN_BUF
+        and     rcx, 0x1F
+        rol     %%TMP1, cl
+        rol     %%TMP2, cl
+        mov     rcx, %%TMP3
+
+        shl     %%TMP2, 32
+        mov     DWORD(%%TMP1), DWORD(%%TMP1) ; Clear top 32 bits
+        or      %%TMP2, %%TMP1
+
+        ; XOR with current digest
+        xor     %%DIGEST, %%TMP2
+
+        ; byte swap and write digest out
+        bswap   %%DIGEST
+        ror     %%DIGEST, 32
+        mov     [%%T + 8*%%IDX], %%DIGEST
+%else ; %%TAG_SIZE == 16
+%endif
 
 %%skip_comput:
         inc     %%IDX
@@ -3168,16 +3237,24 @@ ZUC256_REMAINDER_16:
 
 %define N_BITS r10
 
-%define TAG_SZ  arg6
+%define TAG_SIZE  arg6
 
         endbranch64
 
         mov     N_BITS, arg5
 
-        ; TODO: 8-byte and 16-byte digests
-        cmp     TAG_SZ, 4
-        je      remainder_4B
+        cmp     TAG_SIZE, 8
+        je      remainder_8B
+        jb      remainder_4B
 
+remainder_8B:
+        FUNC_SAVE
+
+        REMAINDER_16 T, KS, DATA, LEN, N_BITS, rax, rbx, r11, r12, r13, r14, r15, 256, 8
+
+        FUNC_RESTORE
+
+        ret
 remainder_4B:
         FUNC_SAVE
 
