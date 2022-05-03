@@ -34,6 +34,8 @@
 #include "gcm_ctr_vectors_test.h"
 #include "utils.h"
 
+#define max_burst_jobs 32
+
 int hmac_sha256_sha512_test(struct IMB_MGR *mb_mgr);
 
 /*
@@ -818,18 +820,19 @@ hmac_shax_job_ok(const struct hmac_rfc4231_vector *vec,
 static int
 test_hmac_shax(struct IMB_MGR *mb_mgr,
                const struct hmac_rfc4231_vector *vec,
-               const int num_jobs,
+               const uint32_t num_jobs,
                const int sha_type)
 {
         struct IMB_JOB *job;
         uint8_t padding[16];
         uint8_t **auths = malloc(num_jobs * sizeof(void *));
-        int i = 0, jobs_rx = 0, ret = -1;
+        uint32_t i = 0, jobs_rx = 0;
+        int ret = -1;
         uint8_t key[IMB_SHA_512_BLOCK_SIZE];
         uint8_t buf[IMB_SHA_512_BLOCK_SIZE];
         DECLARE_ALIGNED(uint8_t ipad_hash[IMB_SHA512_DIGEST_SIZE_IN_BYTES], 16);
         DECLARE_ALIGNED(uint8_t opad_hash[IMB_SHA512_DIGEST_SIZE_IN_BYTES], 16);
-        int key_len = 0;
+        uint32_t key_len = 0;
         size_t digest_len = 0;
         size_t block_size = 0;
 
@@ -1037,10 +1040,226 @@ test_hmac_shax(struct IMB_MGR *mb_mgr,
         return ret;
 }
 
+static int
+test_hmac_shax_burst(struct IMB_MGR *mb_mgr,
+                     const struct hmac_rfc4231_vector *vec,
+                     const uint32_t num_jobs,
+                     const int sha_type)
+{
+        struct IMB_JOB *job, jobs[max_burst_jobs] = {0};
+        uint8_t padding[16];
+        uint8_t **auths = malloc(num_jobs * sizeof(void *));
+        uint32_t i = 0, jobs_rx = 0;
+        int ret = -1;
+        uint8_t key[IMB_SHA_512_BLOCK_SIZE];
+        uint8_t buf[IMB_SHA_512_BLOCK_SIZE];
+        DECLARE_ALIGNED(uint8_t ipad_hash[IMB_SHA512_DIGEST_SIZE_IN_BYTES], 16);
+        DECLARE_ALIGNED(uint8_t opad_hash[IMB_SHA512_DIGEST_SIZE_IN_BYTES], 16);
+        uint32_t key_len = 0;
+        size_t digest_len = 0;
+        size_t block_size = 0;
+
+        if (auths == NULL) {
+		fprintf(stderr, "Can't allocate buffer memory\n");
+		goto end2;
+        }
+
+        switch (sha_type) {
+        case 224:
+                digest_len = vec->hmac_sha224_len;
+                block_size = IMB_SHA_256_BLOCK_SIZE;
+                break;
+        case 256:
+                digest_len = vec->hmac_sha256_len;
+                block_size = IMB_SHA_256_BLOCK_SIZE;
+                break;
+        case 384:
+                digest_len = vec->hmac_sha384_len;
+                block_size = IMB_SHA_384_BLOCK_SIZE;
+                break;
+        case 512:
+                digest_len = vec->hmac_sha512_len;
+                block_size = IMB_SHA_512_BLOCK_SIZE;
+                break;
+        default:
+                fprintf(stderr, "Wrong SHA type selection 'SHA-%d'!\n",
+                        sha_type);
+                goto end2;
+        }
+
+        memset(padding, -1, sizeof(padding));
+        memset(auths, 0, num_jobs * sizeof(void *));
+
+        for (i = 0; i < num_jobs; i++) {
+                const size_t alloc_len =
+                        digest_len + (sizeof(padding) * 2);
+
+                auths[i] = malloc(alloc_len);
+                if (auths[i] == NULL) {
+                        fprintf(stderr, "Can't allocate buffer memory\n");
+                        goto end;
+                }
+                memset(auths[i], -1, alloc_len);
+        }
+
+        /* prepare the key */
+        memset(key, 0, sizeof(key));
+        if (vec->key_len <= block_size) {
+                memcpy(key, vec->key, vec->key_len);
+                key_len = (int) vec->key_len;
+        } else {
+                switch (sha_type) {
+                case 224:
+                        IMB_SHA224(mb_mgr, vec->key, vec->key_len, key);
+                        key_len = IMB_SHA224_DIGEST_SIZE_IN_BYTES;
+                        break;
+                case 256:
+                        IMB_SHA256(mb_mgr, vec->key, vec->key_len, key);
+                        key_len = IMB_SHA256_DIGEST_SIZE_IN_BYTES;
+                        break;
+                case 384:
+                        IMB_SHA384(mb_mgr, vec->key, vec->key_len, key);
+                        key_len = IMB_SHA384_DIGEST_SIZE_IN_BYTES;
+                        break;
+                case 512:
+                        IMB_SHA512(mb_mgr, vec->key, vec->key_len, key);
+                        key_len = IMB_SHA512_DIGEST_SIZE_IN_BYTES;
+                        break;
+                default:
+                        fprintf(stderr, "Wrong SHA type selection 'SHA-%d'!\n",
+                                sha_type);
+                        goto end;
+                }
+        }
+
+        /* compute ipad hash */
+        memset(buf, 0x36, sizeof(buf));
+        for (i = 0; i < key_len; i++)
+                buf[i] ^= key[i];
+
+        switch (sha_type) {
+        case 224:
+                IMB_SHA224_ONE_BLOCK(mb_mgr, buf, ipad_hash);
+                break;
+        case 256:
+                IMB_SHA256_ONE_BLOCK(mb_mgr, buf, ipad_hash);
+                break;
+        case 384:
+                IMB_SHA384_ONE_BLOCK(mb_mgr, buf, ipad_hash);
+                break;
+        case 512:
+        default:
+                IMB_SHA512_ONE_BLOCK(mb_mgr, buf, ipad_hash);
+                break;
+        }
+
+        /* compute opad hash */
+        memset(buf, 0x5c, sizeof(buf));
+        for (i = 0; i < key_len; i++)
+                buf[i] ^= key[i];
+
+        switch (sha_type) {
+        case 224:
+                IMB_SHA224_ONE_BLOCK(mb_mgr, buf, opad_hash);
+                break;
+        case 256:
+                IMB_SHA256_ONE_BLOCK(mb_mgr, buf, opad_hash);
+                break;
+        case 384:
+                IMB_SHA384_ONE_BLOCK(mb_mgr, buf, opad_hash);
+                break;
+        case 512:
+        default:
+                IMB_SHA512_ONE_BLOCK(mb_mgr, buf, opad_hash);
+                break;
+        }
+
+        for (i = 0; i < num_jobs; i++) {
+                job = &jobs[i];
+                job->enc_keys = NULL;
+                job->dec_keys = NULL;
+                job->cipher_direction = IMB_DIR_ENCRYPT;
+                job->chain_order = IMB_ORDER_HASH_CIPHER;
+                job->dst = NULL;
+                job->key_len_in_bytes = 0;
+                job->auth_tag_output = auths[i] + sizeof(padding);
+                job->auth_tag_output_len_in_bytes = digest_len;
+                job->iv = NULL;
+                job->iv_len_in_bytes = 0;
+                job->src = vec->data;
+                job->cipher_start_src_offset_in_bytes = 0;
+                job->msg_len_to_cipher_in_bytes = 0;
+                job->hash_start_src_offset_in_bytes = 0;
+                job->msg_len_to_hash_in_bytes = vec->data_len;
+                job->u.HMAC._hashed_auth_key_xor_ipad = ipad_hash;
+                job->u.HMAC._hashed_auth_key_xor_opad = opad_hash;
+                job->cipher_mode = IMB_CIPHER_NULL;
+
+                switch (sha_type) {
+                case 224:
+                        job->hash_alg = IMB_AUTH_HMAC_SHA_224;
+                        break;
+                case 256:
+                        job->hash_alg = IMB_AUTH_HMAC_SHA_256;
+                        break;
+                case 384:
+                        job->hash_alg = IMB_AUTH_HMAC_SHA_384;
+                        break;
+                case 512:
+                default:
+                        job->hash_alg = IMB_AUTH_HMAC_SHA_512;
+                        break;
+                }
+
+                job->user_data = auths[i];
+
+        }
+
+        uint32_t completed_jobs = IMB_SUBMIT_BURST(mb_mgr, jobs, num_jobs);
+
+        if (completed_jobs != num_jobs) {
+                int err = imb_get_errno(mb_mgr);
+
+                if (err != 0) {
+                        printf("submit_burst error %d : '%s'\n", err,
+                               imb_get_strerror(err));
+                        goto end;
+                }
+        }
+
+        for (i = 0; i < num_jobs; i++) {
+                job = &jobs[i];
+
+                if (!hmac_shax_job_ok(vec, job, sha_type,
+                                      job->user_data,
+                                      padding, sizeof(padding)))
+                        goto end;
+                jobs_rx++;
+        }
+
+        if (jobs_rx != num_jobs) {
+                printf("Expected %d jobs, received %d\n", num_jobs, jobs_rx);
+                goto end;
+        }
+        ret = 0;
+
+ end:
+        for (i = 0; i < num_jobs; i++) {
+                if (auths[i] != NULL)
+                        free(auths[i]);
+        }
+
+ end2:
+        if (auths != NULL)
+                free(auths);
+
+        return ret;
+}
+
 static void
 test_hmac_shax_std_vectors(struct IMB_MGR *mb_mgr,
                            const int sha_type,
-                           const int num_jobs,
+                           const uint32_t num_jobs,
                            struct test_suite_context *ts)
 {
 	const int vectors_cnt = DIM(hmac_sha256_sha512_vectors);
@@ -1083,6 +1302,14 @@ test_hmac_shax_std_vectors(struct IMB_MGR *mb_mgr,
                 } else {
                         test_suite_update(ts, 1, 0);
                 }
+                if (test_hmac_shax_burst(mb_mgr,
+                                         &hmac_sha256_sha512_vectors[idx],
+                                         num_jobs, sha_type)) {
+                        printf("error #%d - burst API\n", vect);
+                        test_suite_update(ts, 0, 1);
+                } else {
+                        test_suite_update(ts, 1, 0);
+                }
         }
 	printf("\n");
 }
@@ -1096,19 +1323,16 @@ hmac_sha256_sha512_test(struct IMB_MGR *mb_mgr)
         static const char * const sha_names_tab[] = {
                 "HMAC-SHA224", "HMAC-SHA256", "HMAC-SHA384", "HMAC-SHA512"
         };
-        const int num_jobs_tab[] = {
-                1, 3, 4, 5, 7, 8, 9, 15, 16, 17
-        };
-        unsigned i, j;
+        unsigned i, num_jobs;
         int errors = 0;
 
         for (i = 0; i < DIM(sha_types_tab); i++) {
                 struct test_suite_context ts;
 
                 test_suite_start(&ts, sha_names_tab[i]);
-                for (j = 0; j < DIM(num_jobs_tab); j++)
+                for (num_jobs = 1; num_jobs <= max_burst_jobs; num_jobs++)
                         test_hmac_shax_std_vectors(mb_mgr, sha_types_tab[i],
-                                                   num_jobs_tab[j], &ts);
+                                                   num_jobs, &ts);
                 errors += test_suite_end(&ts);
         }
 

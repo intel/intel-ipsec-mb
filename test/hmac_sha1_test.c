@@ -39,6 +39,7 @@ int hmac_sha1_test(struct IMB_MGR *mb_mgr);
 #define block_size    64
 #define digest_size   20
 #define digest96_size 12
+#define max_burst_jobs 32
 
 /*
  * Test vectors from https://tools.ietf.org/html/rfc2202
@@ -347,17 +348,18 @@ hmac_sha1_job_ok(const struct hmac_sha1_rfc2202_vector *vec,
 static int
 test_hmac_sha1(struct IMB_MGR *mb_mgr,
                const struct hmac_sha1_rfc2202_vector *vec,
-               const int num_jobs)
+               const uint32_t num_jobs)
 {
         struct IMB_JOB *job;
         uint8_t padding[16];
         uint8_t **auths = malloc(num_jobs * sizeof(void *));
-        int i = 0, jobs_rx = 0, ret = -1;
+        uint32_t i = 0, jobs_rx = 0;
+        int ret = -1;
         uint8_t key[block_size];
         uint8_t buf[block_size];
         DECLARE_ALIGNED(uint8_t ipad_hash[digest_size], 16);
         DECLARE_ALIGNED(uint8_t opad_hash[digest_size], 16);
-        int key_len = 0;
+        uint32_t key_len = 0;
 
         if (auths == NULL) {
 		fprintf(stderr, "Can't allocate buffer memory\n");
@@ -477,9 +479,133 @@ test_hmac_sha1(struct IMB_MGR *mb_mgr,
         return ret;
 }
 
+static int
+test_hmac_sha1_burst(struct IMB_MGR *mb_mgr,
+                     const struct hmac_sha1_rfc2202_vector *vec,
+                     const uint32_t num_jobs)
+{
+        struct IMB_JOB *job, jobs[max_burst_jobs] = {0};
+        uint8_t padding[16];
+        uint8_t **auths = malloc(num_jobs * sizeof(void *));
+        uint32_t i = 0, jobs_rx = 0;
+        int ret = -1;
+        uint8_t key[block_size];
+        uint8_t buf[block_size];
+        DECLARE_ALIGNED(uint8_t ipad_hash[digest_size], 16);
+        DECLARE_ALIGNED(uint8_t opad_hash[digest_size], 16);
+        uint32_t key_len = 0;
+
+        if (auths == NULL) {
+		fprintf(stderr, "Can't allocate buffer memory\n");
+		goto end2;
+        }
+
+        memset(padding, -1, sizeof(padding));
+        memset(auths, 0, num_jobs * sizeof(void *));
+
+        for (i = 0; i < num_jobs; i++) {
+                const size_t alloc_len =
+                        vec->digest_len + (sizeof(padding) * 2);
+
+                auths[i] = malloc(alloc_len);
+                if (auths[i] == NULL) {
+                        fprintf(stderr, "Can't allocate buffer memory\n");
+                        goto end;
+                }
+                memset(auths[i], -1, alloc_len);
+        }
+
+        /* prepare the key */
+        memset(key, 0, sizeof(key));
+        if (vec->key_len <= block_size) {
+                memcpy(key, vec->key, vec->key_len);
+                key_len = (int) vec->key_len;
+        } else {
+                IMB_SHA1(mb_mgr, vec->key, vec->key_len, key);
+                key_len = digest_size;
+        }
+
+        /* compute ipad hash */
+        memset(buf, 0x36, sizeof(buf));
+        for (i = 0; i < key_len; i++)
+                buf[i] ^= key[i];
+        IMB_SHA1_ONE_BLOCK(mb_mgr, buf, ipad_hash);
+
+        /* compute opad hash */
+        memset(buf, 0x5c, sizeof(buf));
+        for (i = 0; i < key_len; i++)
+                buf[i] ^= key[i];
+        IMB_SHA1_ONE_BLOCK(mb_mgr, buf, opad_hash);
+
+        for (i = 0; i < num_jobs; i++) {
+                job = &jobs[i];
+                job->enc_keys = NULL;
+                job->dec_keys = NULL;
+                job->cipher_direction = IMB_DIR_ENCRYPT;
+                job->chain_order = IMB_ORDER_HASH_CIPHER;
+                job->dst = NULL;
+                job->key_len_in_bytes = 0;
+                job->auth_tag_output = auths[i] + sizeof(padding);
+                job->auth_tag_output_len_in_bytes = vec->digest_len;
+                job->iv = NULL;
+                job->iv_len_in_bytes = 0;
+                job->src = vec->data;
+                job->cipher_start_src_offset_in_bytes = 0;
+                job->msg_len_to_cipher_in_bytes = 0;
+                job->hash_start_src_offset_in_bytes = 0;
+                job->msg_len_to_hash_in_bytes = vec->data_len;
+                job->u.HMAC._hashed_auth_key_xor_ipad = ipad_hash;
+                job->u.HMAC._hashed_auth_key_xor_opad = opad_hash;
+                job->cipher_mode = IMB_CIPHER_NULL;
+                job->hash_alg = IMB_AUTH_HMAC_SHA_1;
+
+                job->user_data = auths[i];
+
+        }
+
+        uint32_t completed_jobs = IMB_SUBMIT_BURST(mb_mgr, jobs, num_jobs);
+
+        if (completed_jobs != num_jobs) {
+                int err = imb_get_errno(mb_mgr);
+
+                if (err != 0) {
+                        printf("submit_burst error %d : '%s'\n", err,
+                               imb_get_strerror(err));
+                        goto end;
+                }
+        }
+
+        for (i = 0; i < num_jobs; i++) {
+                job = &jobs[i];
+
+                if (!hmac_sha1_job_ok(vec, job, job->user_data,
+                                      padding, sizeof(padding)))
+                        goto end;
+                jobs_rx++;
+        }
+
+        if (jobs_rx != num_jobs) {
+                printf("Expected %d jobs, received %d\n", num_jobs, jobs_rx);
+                goto end;
+        }
+        ret = 0;
+
+ end:
+        for (i = 0; i < num_jobs; i++) {
+                if (auths[i] != NULL)
+                        free(auths[i]);
+        }
+
+ end2:
+        if (auths != NULL)
+                free(auths);
+
+        return ret;
+}
+
 static void
 test_hmac_sha1_std_vectors(struct IMB_MGR *mb_mgr,
-                           const int num_jobs,
+                           const uint32_t num_jobs,
                            struct test_suite_context *ts)
 {
 	const int vectors_cnt = DIM(hmac_sha1_vectors);
@@ -506,6 +632,13 @@ test_hmac_sha1_std_vectors(struct IMB_MGR *mb_mgr,
                 } else {
                         test_suite_update(ts, 1, 0);
                 }
+                if (test_hmac_sha1_burst(mb_mgr, &hmac_sha1_vectors[idx],
+                                         num_jobs)) {
+                        printf("error #%d - burst API\n", vect);
+                        test_suite_update(ts, 0, 1);
+                } else {
+                        test_suite_update(ts, 1, 0);
+                }
 	}
 	printf("\n");
 }
@@ -514,10 +647,11 @@ int
 hmac_sha1_test(struct IMB_MGR *mb_mgr)
 {
         struct test_suite_context ts;
-        int num_jobs, errors = 0;
+        int errors = 0;
+        uint32_t num_jobs;
 
         test_suite_start(&ts, "HMAC-SHA1");
-        for (num_jobs = 1; num_jobs <= 17; num_jobs++)
+        for (num_jobs = 1; num_jobs <= max_burst_jobs; num_jobs++)
                 test_hmac_sha1_std_vectors(mb_mgr, num_jobs, &ts);
         errors = test_suite_end(&ts);
 
