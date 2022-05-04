@@ -93,6 +93,7 @@ extern asm_Eia3_Nx64B_AVX512_16_VPCLMUL
 %define arg4    rcx
 %define arg5    r8
 %define arg6    r9
+%define arg7    qword [rsp]
 %else
 %define arg1    rcx
 %define arg2    rdx
@@ -100,6 +101,7 @@ extern asm_Eia3_Nx64B_AVX512_16_VPCLMUL
 %define arg4    r9
 %define arg5    qword [rsp + 32]
 %define arg6    dword [rsp + 40]
+%define arg7    qword [rsp + 48]
 %endif
 
 %define state   arg1
@@ -679,7 +681,7 @@ FLUSH_JOB_ZUC256_EEA3:
 %%_above_eq_16_loop:
 
         ; Generate next 16 KS words and digest 64 bytes of data
-        RESERVE_STACK_SPACE 6
+        RESERVE_STACK_SPACE 7
 
         mov     DWORD(%%TMP), %%L
         shr     DWORD(%%TMP), 4 ; Number of rounds of 64 bytes
@@ -700,10 +702,11 @@ FLUSH_JOB_ZUC256_EEA3:
         lea     %%TMP, [%%OOO + _zuc_lens]
         mov     [rsp + 32], %%TMP
 %endif
+        mov     arg7, 4 ; Hardcoded to 4 (tag size)
 
         call    ZUC_EIA3_N64B
 
-        RESTORE_STACK_SPACE 6
+        RESTORE_STACK_SPACE 7
 
         and     %%L, 0xf ; Remaining words of KS left to generate
 

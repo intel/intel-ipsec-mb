@@ -1229,6 +1229,7 @@ IMB_DLL_LOCAL uint32_t asm_Eia3_256_RemainderAVX512_16_VPCLMUL(uint32_t *T,
  * @param[in] data                  Array of 16 pointers to data for 16 buffers
  * @param[in] len                   Array of lengths for 16 buffers
  * @param[in] numRounds             Number of 64B rounds to perform
+ * @param[in] tagSize               Tag size (4 or 8 bytes)
  *
  *****************************************************************************/
 IMB_DLL_LOCAL
@@ -1237,14 +1238,16 @@ void asm_Eia3_Nx64B_AVX512_16(ZucState16_t *pState,
                               uint32_t *T,
                               const void **data,
                               uint16_t *len,
-                              const uint32_t numRounds);
+                              const uint64_t numRounds,
+                              const uint64_t tagSize);
 IMB_DLL_LOCAL
 void asm_Eia3_Nx64B_AVX512_16_VPCLMUL(ZucState16_t *pState,
                                       uint32_t *pKeyStr,
                                       uint32_t *T,
                                       const void **data,
                                       uint16_t *len,
-                                      const uint32_t numRounds);
+                                      const uint64_t numRounds,
+                                      const uint64_t tagSize);
 IMB_DLL_LOCAL
 void zuc_eia3_4_buffer_job_gfni_sse(const void * const pKey[4],
                                     const uint8_t *ivs,

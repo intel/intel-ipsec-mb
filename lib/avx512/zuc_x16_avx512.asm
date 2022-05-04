@@ -394,6 +394,7 @@ align 64
 %define arg4 rcx
 %define arg5 r8
 %define arg6 r9d
+%define arg7 qword [rsp + 8]
 %else
 %define arg1 rcx
 %define arg2 rdx
@@ -401,6 +402,7 @@ align 64
 %define arg4 r9
 %define arg5 qword [rsp + 40]
 %define arg6 qword [rsp + 48]
+%define arg7 qword [rsp + 56]
 %endif
 
 %define OFS_R1  (16*(4*16))
@@ -1560,13 +1562,14 @@ init_for_auth_tag_8B:
 ; Generate 64 bytes of keystream
 ; for 16 buffers and authenticate 64 bytes of data
 ;
-%macro ZUC_EIA3_16_64B_AVX512 6
+%macro ZUC_EIA3_16_64B_AVX512 7
 %define %%STATE         %1 ; [in] ZUC state
 %define %%KS            %2 ; [in] Pointer to keystream (128x16 bytes)
 %define %%T             %3 ; [in] Pointer to digests
 %define %%DATA          %4 ; [in] Pointer to array of pointers to data buffers
 %define %%LEN           %5 ; [in] Pointer to array of remaining length to digest
 %define %%NROUNDS       %6 ; [in/clobbered] Number of rounds of 64 bytes of data to digest
+%define %%TAG_SIZE      %7 ; [in] Tag size (4 or 8 bytes)
 
 %define %%TMP           r12
 %define %%DATA_ADDR0    rbx
@@ -1844,7 +1847,9 @@ ZUC_KEYGEN64B_16:
 ;;                               uint32_t *pKeyStr,
 ;;                               uint32_t *T,
 ;;                               const void **data,
-;;                               uint16_t *len);
+;;                               uint16_t *len,
+;;                               const uint64_t numRounds,
+;;                               const uint64_t tag_size);
 MKGLOBAL(ZUC_EIA3_N64B,function,internal)
 ZUC_EIA3_N64B:
 %define STATE         arg1
@@ -1859,6 +1864,8 @@ ZUC_EIA3_N64B:
 %define LEN           r10
 %define NROUNDS       r11
 %endif
+%define TAG_SIZE      arg7
+
         endbranch64
 
 %ifndef LINUX
@@ -1866,9 +1873,23 @@ ZUC_EIA3_N64B:
         mov     NROUNDS, arg6
 %endif
 
+        cmp     TAG_SIZE, 8
+        je      Eia3_N64B_tag_8B
+
+        ; Fall-through for 4 bytes
+Eia3_N64B_tag_4B:
         FUNC_SAVE
 
-        ZUC_EIA3_16_64B_AVX512 STATE, KS, T, DATA, LEN, NROUNDS
+        ZUC_EIA3_16_64B_AVX512 STATE, KS, T, DATA, LEN, NROUNDS, 4
+
+        FUNC_RESTORE
+
+        ret
+
+Eia3_N64B_tag_8B:
+        FUNC_SAVE
+
+        ZUC_EIA3_16_64B_AVX512 STATE, KS, T, DATA, LEN, NROUNDS, 8
 
         FUNC_RESTORE
 
