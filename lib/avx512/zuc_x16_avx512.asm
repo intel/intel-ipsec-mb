@@ -415,6 +415,10 @@ align 64
 shuf_mask_0_0_0_dw1:
 times 4 db 0x04, 0x05, 0x06, 0x07, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff
 
+expand_mask:
+db      0x00, 0x03, 0x0c, 0x0f, 0x30, 0x33, 0x3c, 0x3f
+db      0xc0, 0xc3, 0xcc, 0xcf, 0xf0, 0xf3, 0xfc, 0xff
+
 ;; Calculate address for next bytes of keystream (KS)
 ;; Memory for KS is laid out in the following way:
 ;; - There are 128 bytes of KS for each buffer spread in chunks of 16 bytes,
@@ -664,6 +668,60 @@ align 64
         vpunpckhqdq     %%IN01, %%K0, %%T0
         vpunpcklqdq     %%IN02, %%K1, %%T1
         vpunpckhqdq     %%IN03, %%K1, %%T1
+%endmacro
+
+;
+; Performs a 4x16 32-bit transpose
+;
+; Input (each item is a 32-bit word):
+; A0 A1 .. A15
+; B0 B1 .. B15
+; C0 C1 .. C15
+; D0 D1 .. D15
+;
+; Output (each item is a 32-bit word):
+; A0  B0  C0  D0  A1  B1 ..  C3  D3
+; A4  B4  C4  D4  A5  B5 ..  C7  D7
+; A8  B8  C8  D8  A9  B9 ..  C11 D11
+; A12 B12 C12 D12 A13 B13 .. C15 D15
+;
+%macro TRANSPOSE4_U32 16
+%define %%IN00 %1  ; [in/out] Input row 0 / Output column 0
+%define %%IN01 %2  ; [in/out] Input row 1 / Output column 1
+%define %%IN02 %3  ; [in/out] Input row 2 / Output column 2
+%define %%IN03 %4  ; [in/out] Input row 3 / Output column 3
+%define %%T0   %5  ; [clobbered] Temporary ZMM register
+%define %%T1   %6  ; [clobbered] Temporary ZMM register
+%define %%T2   %7  ; [clobbered] Temporary ZMM register
+%define %%T3   %8  ; [clobbered] Temporary ZMM register
+%define %%K0   %9  ; [clobbered] Temporary ZMM register
+%define %%K1   %10 ; [clobbered] Temporary ZMM register
+%define %%K2   %11 ; [clobbered] Temporary ZMM register
+%define %%K3   %12 ; [clobbered] Temporary ZMM register
+%define %%H0   %13 ; [clobbered] Temporary ZMM register
+%define %%H1   %14 ; [clobbered] Temporary ZMM register
+%define %%H2   %15 ; [clobbered] Temporary ZMM register
+%define %%H3   %16 ; [clobbered] Temporary ZMM register
+
+        vpunpckldq      %%K0, %%IN00, %%IN01
+        vpunpckhdq      %%K1, %%IN00, %%IN01
+        vpunpckldq      %%T0, %%IN02, %%IN03
+        vpunpckhdq      %%T1, %%IN02, %%IN03
+
+        vpunpcklqdq     %%K2, %%K0, %%T0
+        vpunpckhqdq     %%T2, %%K0, %%T0
+        vpunpcklqdq     %%K3, %%K1, %%T1
+        vpunpckhqdq     %%T3, %%K1, %%T1
+
+        vshufi64x2      %%H0, %%K2, %%T2, 0x44
+        vshufi64x2      %%H1, %%K2, %%T2, 0xee
+        vshufi64x2      %%H2, %%K3, %%T3, 0x44
+        vshufi64x2      %%H3, %%K3, %%T3, 0xee
+
+        vshufi64x2      %%IN00, %%H0, %%H2, 0x88
+        vshufi64x2      %%IN01, %%H0, %%H2, 0xdd
+        vshufi64x2      %%IN02, %%H1, %%H3, 0x88
+        vshufi64x2      %%IN03, %%H1, %%H3, 0xdd
 
 %endmacro
 
@@ -1188,6 +1246,8 @@ align 64
 
 %define %%TMP_KMASK1      k3
 %define %%TMP_KMASK2      k4
+%define %%TMP_KMASK3      k5
+%define %%TMP_KMASK4      k6
 
         kmovw   %%INIT_LANE_KMASK, DWORD(%%LANE_MASK)
 
@@ -1307,7 +1367,33 @@ align 64
         vmovdqa64 [%%TAGS]{%%TMP_KMASK1}, %%ZTMP1
         vmovdqa64 [%%TAGS + 64]{%%TMP_KMASK2}, %%ZTMP2
         REORDER_LFSR %%STATE, 2, %%INIT_LANE_KMASK
-%elif %%TAG_SIZE == 16 ;; TODO
+%elif %%TAG_SIZE == 16
+        lea     %%TMP, [rel expand_mask]
+        kmovd   DWORD(%%TMP2), %%INIT_LANE_KMASK
+        and     DWORD(%%TMP2), 0xf
+        kmovb   %%TMP_KMASK1, [%%TMP + %%TMP2] ; First 4 lanes
+        kmovd   DWORD(%%TMP2), %%INIT_LANE_KMASK
+        shr     DWORD(%%TMP2), 4
+        and     DWORD(%%TMP2), 0xf
+        kmovb   %%TMP_KMASK2, [%%TMP + %%TMP2] ; Second 4 lanes
+
+        kmovd   DWORD(%%TMP2), %%INIT_LANE_KMASK
+        shr     DWORD(%%TMP2), 8
+        and     DWORD(%%TMP2), 0xf
+        kmovb   %%TMP_KMASK3, [%%TMP + %%TMP2] ; Third 4 lanes
+        kmovd   DWORD(%%TMP2), %%INIT_LANE_KMASK
+        shr     DWORD(%%TMP2), 12
+        kmovb   %%TMP_KMASK4, [%%TMP + %%TMP2] ; Fourth 4 lanes
+
+        TRANSPOSE4_U32 %%KSTR1, %%KSTR2, %%KSTR3, %%KSTR4, \
+                       %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, \
+                       %%ZTMP5, %%ZTMP6, %%ZTMP7, %%ZTMP8, \
+                       %%ZTMP9, %%ZTMP10, %%ZTMP11, %%ZTMP12
+        vmovdqa64 [%%TAGS]{%%TMP_KMASK1}, %%KSTR1
+        vmovdqa64 [%%TAGS + 64]{%%TMP_KMASK2}, %%KSTR2
+        vmovdqa64 [%%TAGS + 64*2]{%%TMP_KMASK3}, %%KSTR3
+        vmovdqa64 [%%TAGS + 64*3]{%%TMP_KMASK4}, %%KSTR4
+        REORDER_LFSR %%STATE, 4, %%INIT_LANE_KMASK
 %endif
 
 %endmacro ; INIT_16_AVX512
@@ -1355,11 +1441,18 @@ ZUC256_INIT:
         or      tag_sz, tag_sz
         jz      init_for_cipher
 
-        ;; TODO: Check for 16B tags
         cmp     tag_sz, 8
         je      init_for_auth_tag_8B
         jb      init_for_auth_tag_4B
 
+init_for_auth_tag_16B:
+        FUNC_SAVE
+
+        INIT_16_AVX512 pKe, pIv, pState, lane_mask, r12, r13, 256, 16, tags
+
+        FUNC_RESTORE
+
+        ret
 
 init_for_cipher:
         FUNC_SAVE
