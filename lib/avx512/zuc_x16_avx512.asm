@@ -362,6 +362,16 @@ db      10111010b, 10111011b, 10111110b, 10111111b
 db      11101010b, 11101011b, 11101110b, 11101111b
 db      11111010b, 11111011b, 11111110b, 11111111b
 
+align 64
+idx_tags_64_0_7:
+dd      0x00, 0x10, 0x01, 0x11, 0x02, 0x12, 0x03, 0x13
+dd      0x04, 0x14, 0x05, 0x15, 0x06, 0x16, 0x07, 0x17
+
+align 64
+idx_tags_64_8_15:
+dd      0x08, 0x18, 0x09, 0x19, 0x0A, 0x1A, 0x0B, 0x1B
+dd      0x0C, 0x1C, 0x0D, 0x1D, 0x0E, 0x1E, 0x0F, 0x1F
+
 ;; Calculate address for next bytes of keystream (KS)
 ;; Memory for KS is laid out in the following way:
 ;; - There are 128 bytes of KS for each buffer spread in chunks of 16 bytes,
@@ -1106,6 +1116,9 @@ align 64
 %define %%SHIFT_KMASK     k3 ; Mask to shift 4 bytes only in the 15th dword
 %define %%IV_KMASK        k4 ; Mask to read 10 bytes of IV
 
+%define %%TMP_KMASK1      k3
+%define %%TMP_KMASK2      k4
+
         kmovw   %%INIT_LANE_KMASK, DWORD(%%LANE_MASK)
 
 %if %%KEY_SIZE == 256
@@ -1207,10 +1220,23 @@ align 64
         vmovdqa32   [%%STATE + OFS_R1]{%%INIT_LANE_KMASK}, %%R1
         vmovdqa32   [%%STATE + OFS_R2]{%%INIT_LANE_KMASK}, %%R2
 
+        ; Transpose (if needed) the keystream generated and store it
+        ; for each lane as their initial digest
 %if %%TAG_SIZE == 4
         vmovdqa32 [%%TAGS]{%%INIT_LANE_KMASK}, %%KSTR1
         REORDER_LFSR %%STATE, 1, %%INIT_LANE_KMASK
-%elif %%TAG_SIZE == 8 ;; TODO
+%elif %%TAG_SIZE == 8
+        mov     DWORD(%%TMP), 0xff
+        kmovd   %%TMP_KMASK1, DWORD(%%TMP)
+        kandd   %%TMP_KMASK1, %%TMP_KMASK1, %%INIT_LANE_KMASK ; First 8 lanes
+        kshiftrd %%TMP_KMASK2, %%INIT_LANE_KMASK, 8 ; Second 8 lanes
+        vmovdqa64 %%ZTMP1, [rel idx_tags_64_0_7]
+        vmovdqa64 %%ZTMP2, [rel idx_tags_64_8_15]
+        vpermi2d  %%ZTMP1, %%KSTR1, %%KSTR2
+        vpermi2d  %%ZTMP2, %%KSTR1, %%KSTR2
+        vmovdqa64 [%%TAGS]{%%TMP_KMASK1}, %%ZTMP1
+        vmovdqa64 [%%TAGS + 64]{%%TMP_KMASK2}, %%ZTMP2
+        REORDER_LFSR %%STATE, 2, %%INIT_LANE_KMASK
 %elif %%TAG_SIZE == 16 ;; TODO
 %endif
 
@@ -1259,9 +1285,11 @@ ZUC256_INIT:
         or      tag_sz, tag_sz
         jz      init_for_cipher
 
-        ;; TODO: Check for 8B and 16B tags
-        cmp     tag_sz, 4
-        je      init_for_auth_tag_4B
+        ;; TODO: Check for 16B tags
+        cmp     tag_sz, 8
+        je      init_for_auth_tag_8B
+        jb      init_for_auth_tag_4B
+
 
 init_for_cipher:
         FUNC_SAVE
@@ -1276,6 +1304,15 @@ init_for_auth_tag_4B:
         FUNC_SAVE
 
         INIT_16_AVX512 pKe, pIv, pState, lane_mask, r12, r13, 256, 4, tags
+
+        FUNC_RESTORE
+
+        ret
+
+init_for_auth_tag_8B:
+        FUNC_SAVE
+
+        INIT_16_AVX512 pKe, pIv, pState, lane_mask, r12, r13, 256, 8, tags
 
         FUNC_RESTORE
 
