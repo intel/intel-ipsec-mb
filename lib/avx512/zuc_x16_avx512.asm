@@ -372,6 +372,14 @@ idx_tags_64_8_15:
 dd      0x08, 0x18, 0x09, 0x19, 0x0A, 0x1A, 0x0B, 0x1B
 dd      0x0C, 0x1C, 0x0D, 0x1D, 0x0E, 0x1E, 0x0F, 0x1F
 
+align 64
+bits_32_63:
+times 4 dd 0x00000000, 0xffffffff, 0x00000000, 0x00000000
+
+align 64
+shuf_mask_0_0_0_dw1:
+times 4 db 0x04, 0x05, 0x06, 0x07, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff
+
 ;; Calculate address for next bytes of keystream (KS)
 ;; Memory for KS is laid out in the following way:
 ;; - There are 128 bytes of KS for each buffer spread in chunks of 16 bytes,
@@ -1517,18 +1525,21 @@ init_for_auth_tag_8B:
 ;; To use it with YMM and ZMM registers, VPCMULQDQ must be
 ;; supported.
 ;;
-%macro DIGEST_DATA 11
-%define %%DATA          %1 ; [in] Input data (16 bytes)
-%define %%KS_L          %2 ; [in] Lower 16 bytes of KS
-%define %%KS_H          %3 ; [in] Higher 16 bytes of KS
-%define %%IN_OUT        %4 ; [in/out] Accumulated digest
-%define %%KMASK         %5 ; [in] Shuffle mask register
-%define %%TMP1          %6 ; [clobbered] Temporary XMM/YMM/ZMM register
-%define %%TMP2          %7 ; [clobbered] Temporary XMM/YMM/ZMM register
-%define %%TMP3          %8 ; [clobbered] Temporary XMM/YMM/ZMM register
-%define %%TMP4          %9 ; [clobbered] Temporary XMM/YMM/ZMM register
-%define %%TMP5          %10 ; [clobbered] Temporary XMM/YMM/ZMM register
-%define %%TMP6          %11 ; [clobbered] Temporary XMM/YMM/ZMM register
+%macro DIGEST_DATA 14
+%define %%DATA          %1  ; [in] Input data (16 bytes) per buffer
+%define %%KS_L          %2  ; [in] Lower 16 bytes of KS per buffer
+%define %%KS_H          %3  ; [in] Higher 16 bytes of KS per buffer
+%define %%KS_M1         %4  ; [clobbered] Temporary XMM/YMM/ZMM register
+%define %%KS_M2         %5  ; [cloberred] Temporary XMM/YMM/ZMM register
+%define %%IN_OUT        %6  ; [in/out] Accumulated digest
+%define %%KMASK         %7  ; [in] Shuffle mask register
+%define %%TMP1          %8  ; [clobbered] Temporary XMM/YMM/ZMM register
+%define %%TMP2          %9  ; [clobbered] Temporary XMM/YMM/ZMM register
+%define %%TMP3          %10 ; [clobbered] Temporary XMM/YMM/ZMM register
+%define %%TMP4          %11 ; [clobbered] Temporary XMM/YMM/ZMM register
+%define %%TMP5          %12 ; [clobbered] Temporary XMM/YMM/ZMM register
+%define %%TMP6          %13 ; [clobbered] Temporary XMM/YMM/ZMM register
+%define %%TAG_SIZE      %14 ; [in] Tag size (4 or 8 bytes)
 
         ;; Set up KS
         ;;
@@ -1537,25 +1548,54 @@ init_for_auth_tag_8B:
         ;; TMP1 to contain bytes in the following order [7:4 11:8 3:0 7:4]
         ;; TMP2 to contain bytes in the following order [15:12 19:16 11:8 15:12]
         vpalignr        %%TMP1, %%KS_H, %%KS_L, 8
-        vpshufd         %%TMP2, %%KS_L, 0x61
-        vpshufd         %%TMP1, %%TMP1, 0x61
+%if %%TAG_SIZE != 4 ;; TAG_SIZE == 8 or 16
+        vpshufd         %%KS_M2, %%KS_H, 0x61 ; KS bits [191:160 159:128 223:192 191:160]
+%endif
+%if %%TAG_SIZE == 16
+        vpshufd         %%KS_H, %%KS_H, 0xBB ; KS bits [255:224 223:192 255:224 223:192]
+%endif
+        vpshufd         %%KS_L, %%KS_L, 0x61
+        vpshufd         %%KS_M1, %%TMP1, 0x61
 
         ;; Set up DATA
         ;;
         ;; DATA contains 16 bytes of input data (for 1, 2 or 4 buffers)
         ;; TMP3 to contain bytes in the following order [4*0's 7:4 4*0's 3:0]
         ;; TMP3 to contain bytes in the following order [4*0's 15:12 4*0's 11:8]
-        vpshufd         %%TMP3{%%KMASK}{z}, %%DATA, 0x10
-        vpshufd         %%TMP4{%%KMASK}{z}, %%DATA, 0x32
+        vpshufd         %%TMP1{%%KMASK}{z}, %%DATA, 0x10
+        vpshufd         %%TMP2{%%KMASK}{z}, %%DATA, 0x32
 
         ;; PCMUL the KS's with the DATA
         ;; XOR the results from 4 32-bit words together
-        vpclmulqdq      %%TMP5, %%TMP3, %%TMP2, 0x00
-        vpclmulqdq      %%TMP3, %%TMP3, %%TMP2, 0x11
-        vpclmulqdq      %%TMP6, %%TMP4, %%TMP1, 0x00
-        vpclmulqdq      %%TMP4, %%TMP4, %%TMP1, 0x11
-        vpternlogq      %%TMP5, %%TMP3, %%TMP6, 0x96
-        vpternlogq      %%IN_OUT, %%TMP5, %%TMP4, 0x96
+        vpclmulqdq      %%TMP3, %%TMP1, %%KS_L, 0x00
+        vpclmulqdq      %%TMP4, %%TMP1, %%KS_L, 0x11
+        vpclmulqdq      %%TMP5, %%TMP2, %%KS_M1, 0x00
+        vpclmulqdq      %%TMP6, %%TMP2, %%KS_M1, 0x11
+        vpternlogq      %%TMP5, %%TMP3, %%TMP4, 0x96
+%if %%TAG_SIZE == 4
+        vpternlogq      %%IN_OUT, %%TMP5, %%TMP6, 0x96
+%endif ; %%TAG_SIZE == 4
+%if %%TAG_SIZE >= 8
+        ; Move previous result to low 32 bits and XOR with previous digest
+        vpxorq          %%TMP5, %%TMP5, %%TMP6
+        vpshufb         %%TMP5, %%TMP5, [rel shuf_mask_0_0_0_dw1]
+
+        vpxorq          %%IN_OUT, %%IN_OUT, %%TMP5
+
+        vpclmulqdq      %%TMP3, %%TMP1, %%KS_L, 0x10
+        vpclmulqdq      %%TMP4, %%TMP1, %%KS_M1, 0x01
+        vpclmulqdq      %%TMP5, %%TMP2, %%KS_M1, 0x10
+        vpclmulqdq      %%TMP6, %%TMP2, %%KS_M2, 0x01
+
+        ; XOR all the products and keep only 32-63 bits
+        vpternlogq      %%TMP5, %%TMP3, %%TMP4, 0x96
+        vpxorq          %%TMP5, %%TMP5, %%TMP6
+        vpandq          %%TMP5, %%TMP5, [rel bits_32_63]
+
+        ; XOR with bits 32-63 of previous digest
+        vpxorq          %%IN_OUT, %%TMP5
+
+%endif ; %%TAG_SIZE >= 8
 %endmacro
 
 ;
@@ -1592,6 +1632,7 @@ init_for_auth_tag_8B:
 %define %%ZTMP7         zmm7
 %define %%ZTMP8         zmm8
 %define %%ZTMP9         zmm9
+%define %%ZTMP10        zmm0
 
 %define %%ZKS_L         %%ZTMP9
 %define %%ZKS_H         zmm21
@@ -1603,7 +1644,9 @@ init_for_auth_tag_8B:
 %define %%XTMP5         xmm5
 %define %%XTMP6         xmm6
 %define %%XTMP7         xmm7
+%define %%XTMP8         xmm8
 %define %%XTMP9         xmm9
+%define %%XTMP10        xmm0
 %define %%KS_L          %%XTMP9
 %define %%KS_H          xmm21
 %define %%XDIGEST_0     xmm13
@@ -1657,9 +1700,6 @@ init_for_auth_tag_8B:
         vpxorq     %%DIGEST_2, %%DIGEST_2
         vpxorq     %%DIGEST_3, %%DIGEST_3
 
-        ; Load read-only registers
-        vmovdqa64   %%MASK31, [rel mask31]
-
 %if USE_GFNI_VAES_VPCLMUL == 0
         vmovdqa64  %%REV_TABLE_L, [rel bit_reverse_table_l]
         vmovdqa64  %%REV_TABLE_H, [rel bit_reverse_table_h]
@@ -1691,6 +1731,9 @@ init_for_auth_tag_8B:
 
 %assign %%idx 0
 %rep 4
+        ; Load read-only registers
+        vmovdqa64   %%MASK31, [rel mask31]
+
         BITS_REORG16 %%STATE, %%N, %%ALL_KMASK, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, %%ZTMP6, \
                      %%ZTMP7, %%ZTMP8, %%ZTMP9, %%BLEND_KMASK, %%X0, %%X1, %%X2, APPEND(%%KS_, %%idx)
         NONLIN_FUN16 %%STATE, %%ALL_KMASK, %%X0, %%X1, %%X2, %%R1, %%R2, \
@@ -1727,8 +1770,9 @@ init_for_auth_tag_8B:
         vgf2p8affineqb  %%ZTMP7, %%ZTMP1, [rel bit_reverse_table], 0x00
 
         ; Digest 16 bytes of data with 24 bytes of KS, for 4 buffers
-        DIGEST_DATA %%ZTMP7, %%ZKS_L, %%ZKS_H, APPEND(%%DIGEST_, %%LANE_GROUP), %%SHUF_DATA_KMASK, \
-                    %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, %%ZTMP6
+        DIGEST_DATA %%ZTMP7, %%ZKS_L, %%ZKS_H, %%ZTMP8, %%ZTMP10, \
+                    APPEND(%%DIGEST_, %%LANE_GROUP), %%SHUF_DATA_KMASK, \
+                    %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, %%ZTMP6, %%TAG_SIZE
 
 %else ; USE_GFNI_VAES_VPCLMUL == 1
         ;; If VPCMUL is NOT available, read chunks of 16 bytes of data
@@ -1751,8 +1795,9 @@ init_for_auth_tag_8B:
                      %%REV_AND_TABLE, %%XTMP2, %%XTMP3
 
         ; Digest 16 bytes of data with 24 bytes of KS, for one buffer
-        DIGEST_DATA %%XTMP7, %%KS_L, %%KS_H, APPEND(%%XDIGEST_, %%J), %%SHUF_DATA_KMASK, \
-                    %%XTMP1, %%XTMP2, %%XTMP3, %%XTMP4, %%XTMP5, %%XTMP6
+        DIGEST_DATA %%XTMP7, %%KS_L, %%KS_H, %%XTMP8, %%XTMP10, APPEND(%%XDIGEST_, %%J), \
+                    %%SHUF_DATA_KMASK, \
+                    %%XTMP1, %%XTMP2, %%XTMP3, %%XTMP4, %%XTMP5, %%XTMP6, %%TAG_SIZE
 
         ; Once all 64 bytes of data have been digested, insert them in temporary ZMM register
 %if %%idx == 3
@@ -2352,6 +2397,7 @@ _no_final_rounds:
 %define %%ZTMP6         zmm5
 %define %%ZTMP7         zmm6
 %define %%ZTMP8         zmm7
+%define %%ZTMP9         zmm8
 
 %define %%YTMP1         YWORD(%%ZTMP1)
 
@@ -2387,8 +2433,10 @@ _no_final_rounds:
         vgf2p8affineqb  %%ZTMP1, APPEND(%%DATA_TRANS,%%I), [rel bit_reverse_table], 0x00
 
         ; Digest 16 bytes of data with 24 bytes of KS, for 4 buffers
-        DIGEST_DATA %%ZTMP1, APPEND(%%KS_TRANS, %%I), APPEND(%%KS_TRANS, %%J), APPEND(%%DIGEST_, %%IDX), \
-                    %%SHUF_DATA_KMASK, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, %%ZTMP6, %%ZTMP7
+        DIGEST_DATA %%ZTMP1, APPEND(%%KS_TRANS, %%I), APPEND(%%KS_TRANS, %%J), \
+                    %%ZTMP8, %%ZTMP9, APPEND(%%DIGEST_, %%IDX), %%SHUF_DATA_KMASK, \
+                    %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, \
+                    %%ZTMP6, %%ZTMP7, %%TAG_SIZE
 
 %assign %%J (%%J + 1)
 %assign %%I (%%I + 1)
@@ -2475,6 +2523,8 @@ _no_final_rounds:
 %define %%XTMP4           xmm10
 %define %%XTMP5           xmm11
 %define %%XTMP6           xmm12
+%define %%XTMP7           xmm13
+%define %%XTMP8           xmm14
 
 %define %%ZTMP1           zmm24
 %define %%ZTMP2           zmm25
@@ -2532,8 +2582,8 @@ _no_final_rounds:
         vmovdqu  %%KS_H, [%%KS + (16*%%J + %%I*512) + (16*4)]
 %endif
         ; Digest 16 bytes of data with 24 bytes of KS, for 4 buffers
-        DIGEST_DATA %%XDATA, %%KS_L, %%KS_H, %%TEMP_DIGEST, %%SHUF_DATA_KMASK, \
-                    %%XTMP1, %%XTMP2, %%XTMP3, %%XTMP4, %%XTMP5, %%XTMP6
+        DIGEST_DATA %%XDATA, %%KS_L, %%KS_H, %%XTMP7, %%XTMP8, %%TEMP_DIGEST, %%SHUF_DATA_KMASK, \
+                    %%XTMP1, %%XTMP2, %%XTMP3, %%XTMP4, %%XTMP5, %%XTMP6, %%TAG_SIZE
 
 %assign %%K (%%K + 1)
 %endrep
@@ -2689,6 +2739,8 @@ round_4B:
 %define %%XTMP4         xmm10
 %define %%XTMP5         xmm11
 %define %%XTMP6         xmm12
+%define %%XTMP7         xmm13
+%define %%XTMP8         xmm14
 
 %define %%ZTMP1         zmm7
 %define %%ZTMP2         zmm8
@@ -2784,8 +2836,8 @@ round_4B:
         vmovdqu  %%KS_H, [%%KS + (16*I + J*512) + (16*4)]
 %endif
         ; Digest 16 bytes of data with 24 bytes of KS, for 4 buffers
-        DIGEST_DATA %%XDATA, %%KS_L, %%KS_H, %%TEMP_DIGEST, %%SHUF_DATA_KMASK, \
-                    %%XTMP1, %%XTMP2, %%XTMP3, %%XTMP4, %%XTMP5, %%XTMP6
+        DIGEST_DATA %%XDATA, %%KS_L, %%KS_H, %%XTMP7, %%XTMP8, %%TEMP_DIGEST, %%SHUF_DATA_KMASK, \
+                    %%XTMP1, %%XTMP2, %%XTMP3, %%XTMP4, %%XTMP5, %%XTMP6, %%TAG_SIZE
         add     %%OFFSET, 16
         sub     %%LEN_BUF, 128
 %assign K (K + 1)
@@ -2844,9 +2896,9 @@ APPEND3(%%Eia3RoundsAVX512_dq_end,I,J):
         vmovdqu %%KS_H, [%%KS + (16*I + J*512) + %%OFFSET + 16*4]
         shr     %%OFFSET, 2
 
-        ; Digest 16 bytes of data with 24 bytes of %%KS, for 4 buffers
-        DIGEST_DATA %%XDATA, %%KS_L, %%KS_H, %%TEMP_DIGEST, k2, \
-                    %%XTMP1, %%XTMP2, %%XTMP3, %%XTMP4, %%XTMP5, %%XTMP6
+        ; Digest 16 bytes of data with 24 bytes of KS, for 4 buffers
+        DIGEST_DATA %%XDATA, %%KS_L, %%KS_H, %%XTMP7, %%XTMP8, %%TEMP_DIGEST, %%SHUF_DATA_KMASK, \
+                    %%XTMP1, %%XTMP2, %%XTMP3, %%XTMP4, %%XTMP5, %%XTMP6, %%TAG_SIZE
 APPEND3(%%Eia3RoundsAVX_end,I,J):
         vinserti32x4 APPEND(%%DIGEST_, I), %%TEMP_DIGEST, J
 %assign J (J + 1)

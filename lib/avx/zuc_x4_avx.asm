@@ -1508,7 +1508,7 @@ exit_cipher:
 %define %%BIT_REV_H     %3  ; [in] Bit reverse high table (XMM)
 %define %%BIT_REV_AND   %4  ; [in] Bit reverse and table (XMM)
 %define %%XDIGEST       %5  ; [in/out] Temporary digest (XMM)
-%define %%XTMP1         %6  ; [clobbered] Temporary XMM register
+%define %%XDATA         %6  ; [in/clobbered] Input data (16 bytes) / Temporary XMM register
 %define %%XTMP2         %7  ; [clobbered] Temporary XMM register
 %define %%XTMP3         %8  ; [clobbered] Temporary XMM register
 %define %%XTMP4         %9  ; [clobbered] Temporary XMM register
@@ -1521,9 +1521,11 @@ exit_cipher:
 %define %%OFF           %16 ; [in] Offset into KS
 %define %%TAG_SZ        %17 ; [in] Tag size (4, 8 or 16)
 
-        vpand   %%XTMP2, %%XTMP1, %%BIT_REV_AND
+%define %%XTMP1 %%XDATA
 
-        vpandn  %%XTMP3, %%BIT_REV_AND, %%XTMP1
+        vpand   %%XTMP2, %%XDATA, %%BIT_REV_AND
+
+        vpandn  %%XTMP3, %%BIT_REV_AND, %%XDATA
         vpsrld  %%XTMP3, 4
 
         vpshufb %%XTMP4, %%BIT_REV_H, %%XTMP2
