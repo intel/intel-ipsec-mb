@@ -1088,7 +1088,7 @@ int validate_zuc256_EIA3(struct IMB_MGR *mb_mgr, uint8_t **pSrcData,
                         memcpy(pSrcData[j], vector->message, byteLength);
                         iv_lens[j] = vector->iv_length;
                 }
-                for (tag_sz = 4; tag_sz <= 16; tag_sz *= 2) {
+                for (tag_sz = 4; tag_sz <= 8; tag_sz *= 2) {
                         submit_eia3_jobs(mb_mgr, pKeys, pIV,
                                          pSrcData, pDstData,
                                          bitLength, numBuffs,
@@ -1117,7 +1117,7 @@ int validate_zuc256_EIA3(struct IMB_MGR *mb_mgr, uint8_t **pSrcData,
                 iv_lens[i] = vector->iv_length;
         }
 
-        for (tag_sz = 4; tag_sz <= 16; tag_sz *= 2) {
+        for (tag_sz = 4; tag_sz <= 8; tag_sz *= 2) {
                 submit_eia3_jobs(mb_mgr, pKeys, pIV,
                                  pSrcData, pDstData,
                                  bitLength, numBuffs,
