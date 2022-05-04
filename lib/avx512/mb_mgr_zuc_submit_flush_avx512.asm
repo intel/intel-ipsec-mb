@@ -601,12 +601,13 @@ FLUSH_JOB_ZUC256_EEA3:
         endbranch64
         FLUSH_JOB_ZUC_EEA3 256
 
-%macro ZUC_EIA3_16_BUFFER 5
+%macro ZUC_EIA3_16_BUFFER 6
 %define %%OOO           %1 ; [in] Pointer to ZUC OOO manager
 %define %%KEY_SIZE      %2 ; [constant] Key size (16 or 32)
-%define %%L             %3 ; [clobbered] Temporary GP register (dword)
-%define %%REMAIN_BITS   %4 ; [clobbered] Temporary GP register (dword)
-%define %%TMP           %5 ; [clobbered] Temporary GP register
+%define %%TAG_SIZE      %3 ; [constant] Tag size (4 or 8 bytes)
+%define %%L             %4 ; [clobbered] Temporary GP register (dword)
+%define %%REMAIN_BITS   %5 ; [clobbered] Temporary GP register (dword)
+%define %%TMP           %6 ; [clobbered] Temporary GP register
 
         ; Find minimum length
         vmovdqa xmm0, [%%OOO + _zuc_lens]
@@ -618,8 +619,13 @@ FLUSH_JOB_ZUC256_EEA3:
         cmp     DWORD(%%TMP), %%REMAIN_BITS
         cmovbe  %%REMAIN_BITS, DWORD(%%TMP)
 
-        ; Get number of KS 32-bit words to generate ([length/32] + 2))
-        lea     %%L, [%%REMAIN_BITS + 31 + (2 << 5)]
+        ; Get number of KS 32-bit words to generate ([length/32] + tag_size))
+%if %%KEY_SIZE == 128
+        lea     %%L, [%%REMAIN_BITS + 31 + 2*(8*%%TAG_SIZE)]
+%else ; %%KEY_SIZE == 256
+        lea     %%L, [%%REMAIN_BITS + 31 + (8*%%TAG_SIZE)]
+%endif
+
         shr     %%L, 5
 
         cmp     %%L, 16
@@ -640,7 +646,15 @@ FLUSH_JOB_ZUC256_EEA3:
         mov     [rsp + 32], %%L
 %endif
 
+%if %%KEY_SIZE == 128
         call    ZUC_KEYGEN_SKIP8_16
+%else ; %%KEY_SIZE == 256
+%if %%TAG_SIZE == 4
+        call    ZUC_KEYGEN_SKIP4_16
+%else ;; %%TAG_SIZE = 8
+        call    ZUC_KEYGEN_SKIP8_16
+%endif
+%endif ; %%KEY_SIZE
 
         RESTORE_STACK_SPACE 5
 
@@ -654,7 +668,15 @@ FLUSH_JOB_ZUC256_EEA3:
         xor     arg3, arg3 ; offset = 0
         movzx   DWORD(arg4), word [%%OOO + _zuc_init_not_done]
 
+%if %%KEY_SIZE == 128
         call    ZUC_KEYGEN64B_SKIP8_16
+%else ; %%KEY_SIZE == 256
+%if %%TAG_SIZE == 4
+        call    ZUC_KEYGEN64B_SKIP4_16
+%else ;; %%TAG_SIZE = 8
+        call    ZUC_KEYGEN64B_SKIP8_16
+%endif
+%endif
         sub     %%L, 16
 
 %%_loop:
@@ -677,7 +699,7 @@ FLUSH_JOB_ZUC256_EEA3:
         lea     arg2, [%%OOO + _zuc_args_KS]
         lea     arg3, [%%OOO + _zuc_args_in]
         lea     arg4, [%%OOO + _zuc_lens]
-        mov     arg5, 4
+        mov     arg5, %%TAG_SIZE
 
         call    ZUC_ROUND64B
 
@@ -708,7 +730,7 @@ FLUSH_JOB_ZUC256_EEA3:
         lea     %%TMP, [%%OOO + _zuc_lens]
         mov     [rsp + 32], %%TMP
 %endif
-        mov     arg7, 4 ; Hardcoded to 4 (tag size)
+        mov     arg7, %%TAG_SIZE
 
         call    ZUC_EIA3_N64B
 
@@ -746,7 +768,7 @@ FLUSH_JOB_ZUC256_EEA3:
 %if %%KEY_SIZE == 128
         call    ZUC_REMAINDER_16
 %else
-        mov     arg6, 4 ; Hardcoded to 4-byte digest for now
+        mov     arg6, %%TAG_SIZE
         call    ZUC256_REMAINDER_16
 %endif
 
@@ -755,8 +777,9 @@ FLUSH_JOB_ZUC256_EEA3:
         mov     word [%%OOO + _zuc_init_not_done], 0
 %endmacro
 
-%macro SUBMIT_JOB_ZUC_EIA3 1
+%macro SUBMIT_JOB_ZUC_EIA3 2
 %define %%KEY_SIZE      %1 ; [constant] Key size (128 or 256)
+%define %%TAG_SIZE      %2 ; [constant] Tag size (4 or 8)
 
 ; idx needs to be in rbp
 %define len              rbp
@@ -844,7 +867,11 @@ FLUSH_JOB_ZUC256_EEA3:
         not     tmp
         and     [state + _zuc_unused_lane_bitmask], WORD(tmp)
         ; Reset temporary digest for the lane
+%if %%TAG_SIZE == 4
         mov     dword [state + _zuc_args_digest + lane*4], 0
+%else
+        mov     qword [state + _zuc_args_digest + lane*8], 0
+%endif
 
         mov     tmp, [job + _src]
         add     tmp, [job + _hash_start_src_offset_in_bytes]
@@ -899,14 +926,14 @@ FLUSH_JOB_ZUC256_EEA3:
         lea     arg2, [r12 + _zuc_args_IV]
         lea     arg3, [r12 + _zuc_state]
         movzx   DWORD(arg4), word [r12 + _zuc_init_not_done]
-        mov     r10, 4 ; Argument 5 hardcoded to r10, as INIT is expecting it in that register
+        mov     r10, %%TAG_SIZE ; Argument 5 hardcoded to r10, as INIT is expecting it in that register
         lea     r11, [r12 + _zuc_args_digest] ; Argument 6 hardcoded to r11
 
         call    ZUC256_INIT_16
 
 %endif ;; %%KEY_SIZE == 128
 
-        ZUC_EIA3_16_BUFFER r12, %%KEY_SIZE, DWORD(tmp), DWORD(tmp2), tmp3
+        ZUC_EIA3_16_BUFFER r12, %%KEY_SIZE, %%TAG_SIZE, DWORD(tmp), DWORD(tmp2), tmp3
 
         mov     state, [rsp + _gpr_save + 8*8]
         mov     job,   [rsp + _gpr_save + 8*9]
@@ -920,9 +947,14 @@ FLUSH_JOB_ZUC256_EEA3:
         mov     qword [state + _zuc_job_in_lane + idx*8], 0
         or      dword [job_rax + _status], IMB_STATUS_COMPLETED_AUTH
         ; Copy digest to auth tag output
-        mov     r10d, [state + _zuc_args_digest + idx*4]
         mov     r11, [job_rax + _auth_tag_output]
+%if %%TAG_SIZE == 4
+        mov     r10d, [state + _zuc_args_digest + idx*4]
         mov     [r11], r10d
+%elif %%TAG_SIZE == 8
+        mov     r10, [state + _zuc_args_digest + idx*8]
+        mov     [r11], r10
+%endif
         shl     unused_lanes, 4
         or      unused_lanes, idx
         mov     [state + _zuc_unused_lanes], unused_lanes
@@ -963,8 +995,9 @@ FLUSH_JOB_ZUC256_EEA3:
         jmp     %%return_submit_eia3
 %endmacro
 
-%macro FLUSH_JOB_ZUC_EIA3 1
+%macro FLUSH_JOB_ZUC_EIA3 2
 %define %%KEY_SIZE      %1 ; [constant] Key size (128 or 256)
+%define %%TAG_SIZE      %2 ; [constant] Tag size (4 or 8)
 
 %define unused_lanes     rbx
 %define tmp1             rbx
@@ -1074,7 +1107,7 @@ FLUSH_JOB_ZUC256_EEA3:
         lea     arg2, [r12 + _zuc_args_IV]
         lea     arg3, [r12 + _zuc_state]
         movzx   DWORD(arg4), word [r12 + _zuc_init_not_done]
-        mov     r10, 4 ; Argument 5 hardcoded to r10, as INIT is expecting it in that register
+        mov     r10, %%TAG_SIZE ; Argument 5 hardcoded to r10, as INIT is expecting it in that register
         lea     r11, [r12 + _zuc_args_digest] ; Argument 6 hardcoded to r11
 
         call    ZUC256_INIT_16
@@ -1082,7 +1115,7 @@ FLUSH_JOB_ZUC256_EEA3:
 %endif ;; %%KEY_SIZE == 128
 
 %%skip_init_flush_eia3:
-        ZUC_EIA3_16_BUFFER r12, %%KEY_SIZE, DWORD(tmp), DWORD(tmp2), tmp4
+        ZUC_EIA3_16_BUFFER r12, %%KEY_SIZE, %%TAG_SIZE, DWORD(tmp), DWORD(tmp2), tmp4
 
         mov     state, [rsp + _gpr_save + 8*8]
 
@@ -1113,9 +1146,14 @@ FLUSH_JOB_ZUC256_EEA3:
         mov     qword [state + _zuc_job_in_lane + idx*8], 0
         or      dword [job_rax + _status], IMB_STATUS_COMPLETED_AUTH
         ; Copy digest to auth tag output
-        mov     r10d, [state + _zuc_args_digest + idx*4]
         mov     r11, [job_rax + _auth_tag_output]
+%if %%TAG_SIZE == 4
+        mov     r10d, [state + _zuc_args_digest + idx*4]
         mov     [r11], r10d
+%elif %%TAG_SIZE == 8
+        mov     r10, [state + _zuc_args_digest + idx*8]
+        mov     [r11], r10
+%endif
         shl     unused_lanes, 4
         or      unused_lanes, idx
         mov     [state + _zuc_unused_lanes], unused_lanes
@@ -1162,28 +1200,48 @@ FLUSH_JOB_ZUC256_EEA3:
 MKGLOBAL(SUBMIT_JOB_ZUC128_EIA3,function,internal)
 SUBMIT_JOB_ZUC128_EIA3:
         endbranch64
-        SUBMIT_JOB_ZUC_EIA3 128
+        SUBMIT_JOB_ZUC_EIA3 128, 4
 
-; JOB* SUBMIT_JOB_ZUC256_EIA3(MB_MGR_ZUC_OOO *state, IMB_JOB *job)
+; JOB* SUBMIT_JOB_ZUC256_EIA3(MB_MGR_ZUC_OOO *state, IMB_JOB *job,
+;                             const uint64_t tag_sz)
 ; arg 1 : state
 ; arg 2 : job
+; arg 3 : tag size (4 or 8 bytes)
 MKGLOBAL(SUBMIT_JOB_ZUC256_EIA3,function,internal)
 SUBMIT_JOB_ZUC256_EIA3:
         endbranch64
-        SUBMIT_JOB_ZUC_EIA3 256
+        cmp     arg3, 8
+        je      submit_tag_8B
+        jb      submit_tag_4B
+
+submit_tag_8B:
+        SUBMIT_JOB_ZUC_EIA3 256, 8
+
+submit_tag_4B:
+        SUBMIT_JOB_ZUC_EIA3 256, 4
 
 ; JOB* FLUSH_JOB_ZUC128_EIA3(MB_MGR_ZUC_OOO *state)
 ; arg 1 : state
 MKGLOBAL(FLUSH_JOB_ZUC128_EIA3,function,internal)
 FLUSH_JOB_ZUC128_EIA3:
         endbranch64
-        FLUSH_JOB_ZUC_EIA3 128
+        FLUSH_JOB_ZUC_EIA3 128, 4
 
-; JOB* FLUSH_JOB_ZUC256_EIA3(MB_MGR_ZUC_OOO *state)
+; JOB* FLUSH_JOB_ZUC256_EIA3(MB_MGR_ZUC_OOO *state,
+;                            const uint64_t tag_sz)
 ; arg 1 : state
+; arg 2 : tag size (4 or 8 bytes)
 MKGLOBAL(FLUSH_JOB_ZUC256_EIA3,function,internal)
 FLUSH_JOB_ZUC256_EIA3:
         endbranch64
-        FLUSH_JOB_ZUC_EIA3 256
+        cmp     arg2, 8
+        je      flush_tag_8B
+        jb      flush_tag_4B
+
+flush_tag_8B:
+        FLUSH_JOB_ZUC_EIA3 256, 8
+
+flush_tag_4B:
+        FLUSH_JOB_ZUC_EIA3 256, 4
 
 mksection stack-noexec
