@@ -705,6 +705,43 @@ asm_ZucGenKeystream64B_16_skip8_gfni_avx512(ZucState16_t *pState,
  *
  * @description
  *      Definition of the external function that implements the working
+ *      stage of the ZUC algorithm. The function will generate 64 bytes of
+ *      keystream for 16 packets in parallel, except for selected lanes,
+ *      which will have 60 bytes of keystream generated instead.
+ *
+ * @param[in] pState                Pointer to a ZUC state structure of type
+ *                                  @ref ZucState16_t
+ *
+ * @param[in,out] pKeyStr           Array of pointers to 16 input buffers
+ *                                  that will contain the generated keystream
+ *                                  for these 16 packets.
+ *
+ * @param[in] key_off               Starting offset for writing KS.
+ *
+ * @param[in] lane_mask             Mask containing lanes which will have 64
+ *                                  bytes of KS generated (4 bytes less for
+ *                                  the rest)
+ *
+ * @pre
+ *      A successful call to @ref asm_ZucInitialization_16_avx512 to initialize
+ *      the ZUC state.
+ *
+ *****************************************************************************/
+IMB_DLL_LOCAL void asm_ZucGenKeystream64B_16_skip4_avx512(ZucState16_t *pState,
+                                                    uint32_t *pKeyStr,
+                                                    const unsigned key_off,
+                                                    const uint16_t lane_mask);
+
+IMB_DLL_LOCAL void
+asm_ZucGenKeystream64B_16_skip4_gfni_avx512(ZucState16_t *pState,
+                                            uint32_t *pKeyStr,
+                                            const unsigned key_off,
+                                            const uint16_t lane_mask);
+/**
+ ******************************************************************************
+ *
+ * @description
+ *      Definition of the external function that implements the working
  *      stage of the ZUC algorithm. The function will generate 8 bytes of
  *      keystream for four packets in parallel.
  *
@@ -936,6 +973,48 @@ asm_ZucGenKeystream_16_skip8_avx512(ZucState16_t *pState,
 
 IMB_DLL_LOCAL void
 asm_ZucGenKeystream_16_skip8_gfni_avx512(ZucState16_t *pState,
+                                         uint32_t *pKstr,
+                                         const unsigned key_off,
+                                         const uint16_t lane_mask,
+                                         const uint32_t numRounds);
+
+/**
+ ******************************************************************************
+ *
+ * @description
+ *      Definition of the external function that implements the working
+ *      stage of the ZUC algorithm. The function will generate N*4 bytes of
+ *      keystream for sixteen packets in parallel.
+ *
+ * @param[in] pState                Pointer to a ZUC state structure of type
+ *                                  @ref ZucState16_t
+ *
+ * @param[in,out] pKeyStr           Array of pointers to 16 input buffers
+ *                                  that will contain the generated keystream
+ *                                  for these 16 packets.
+ *
+ * @param[in] key_off               Starting offset for writing KS.
+ *
+ * @param[in] lane_mask             Mask containing lanes which will have N*4
+ *                                  bytes of KS generated (4 bytes less for
+ *                                  the rest)
+ *
+ * @param[in] numRounds             Number of 4-byte rounds (1 to 16 rounds)
+ *
+ * @pre
+ *      A successful call to @ref asm_ZucInitialization to initialize the ZUC
+ *      state.
+ *
+ *****************************************************************************/
+IMB_DLL_LOCAL void
+asm_ZucGenKeystream_16_skip4_avx512(ZucState16_t *pState,
+                                    uint32_t *pKstr,
+                                    const unsigned key_off,
+                                    const uint16_t lane_mask,
+                                    const uint32_t numRounds);
+
+IMB_DLL_LOCAL void
+asm_ZucGenKeystream_16_skip4_gfni_avx512(ZucState16_t *pState,
                                          uint32_t *pKstr,
                                          const unsigned key_off,
                                          const uint16_t lane_mask,

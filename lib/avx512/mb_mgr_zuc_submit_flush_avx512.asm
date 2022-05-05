@@ -50,6 +50,8 @@
 %define ZUC256_REMAINDER_16 asm_Eia3_256_RemainderAVX512_16
 %define ZUC_KEYGEN_SKIP8_16 asm_ZucGenKeystream_16_skip8_avx512
 %define ZUC_KEYGEN64B_SKIP8_16 asm_ZucGenKeystream64B_16_skip8_avx512
+%define ZUC_KEYGEN_SKIP4_16 asm_ZucGenKeystream_16_skip4_avx512
+%define ZUC_KEYGEN64B_SKIP4_16 asm_ZucGenKeystream64B_16_skip4_avx512
 %define ZUC_KEYGEN_16      asm_ZucGenKeystream_16_avx512
 %define ZUC_KEYGEN64B_16   asm_ZucGenKeystream64B_16_avx512
 %define ZUC_ROUND64B       asm_Eia3Round64BAVX512_16
@@ -77,6 +79,10 @@ extern asm_ZucGenKeystream_16_skip8_avx512
 extern asm_ZucGenKeystream_16_skip8_gfni_avx512
 extern asm_ZucGenKeystream64B_16_skip8_avx512
 extern asm_ZucGenKeystream64B_16_skip8_gfni_avx512
+extern asm_ZucGenKeystream_16_skip4_avx512
+extern asm_ZucGenKeystream_16_skip4_gfni_avx512
+extern asm_ZucGenKeystream64B_16_skip4_avx512
+extern asm_ZucGenKeystream64B_16_skip4_gfni_avx512
 extern asm_ZucGenKeystream_16_avx512
 extern asm_ZucGenKeystream_16_gfni_avx512
 extern asm_ZucGenKeystream64B_16_avx512
