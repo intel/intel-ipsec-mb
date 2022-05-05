@@ -3189,16 +3189,27 @@ APPEND3(%%Eia3RoundsAVX_end,I,J):
 
         add     rsp, 32
 
-        ; Memcpy last 8 bytes of %%KS into start
         add     DWORD(%%MIN_LEN), 31
         shr     DWORD(%%MIN_LEN), 5
-        shl     DWORD(%%MIN_LEN), 2 ; Offset where to copy the last 8 bytes from
+        shl     DWORD(%%MIN_LEN), 2 ; Offset where to copy the last 4/8 bytes from
+
+%if %%KEY_SIZE == 128
+%define %%KS_WORDS_TO_COPY 2
+%else ;; %%KEY_SIZE == 256
+%if %%TAG_SIZE == 4
+%define %%KS_WORDS_TO_COPY 1
+%elif %%TAG_SIZE == 8
+%define %%KS_WORDS_TO_COPY 2
+%endif
+%endif ;; %%KEY_SIZE
 
         mov     DWORD(%%TMP1), DWORD(%%MIN_LEN)
         shr     DWORD(%%MIN_LEN), 4
         shl     DWORD(%%MIN_LEN), (4+2)
         and     DWORD(%%TMP1), 0xf
         add     DWORD(%%MIN_LEN), DWORD(%%TMP1)
+%if %%KS_WORDS_TO_COPY == 2
+        ; Memcpy last 8 bytes of KS into start
         cmp     DWORD(%%TMP1), 12
         je      %%_copy_2dwords
 
@@ -3228,6 +3239,19 @@ APPEND3(%%Eia3RoundsAVX_end,I,J):
 %endrep
 %assign %%i (%%i + 1)
 %endrep
+%elif %%KS_WORDS_TO_COPY == 1
+        ; Memcpy last 4 bytes of KS into start
+%assign %%i 0
+%rep 4
+%assign %%j 0
+%rep 4
+        mov     DWORD(%%TMP1), [%%KS + 512*%%i + 16*%%j + %%MIN_LEN]
+        mov     [%%KS + 512*%%i + 16*%%j], DWORD(%%TMP1)
+%assign %%j (%%j + 1)
+%endrep
+%assign %%i (%%i + 1)
+%endrep
+%endif ; %%KS_WORDS_TO_COPY
 %%_ks_copied:
         vzeroupper
 %endmacro ; REMAINDER_16
