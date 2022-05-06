@@ -2704,7 +2704,7 @@ _no_final_rounds:
 %define %%TMP4          %8  ; [clobbered] Temporary GP register
 %define %%TMP5          %9  ; [clobbered] Temporary GP register
 %define %%TMP6          %10 ; [clobbered] Temporary GP register
-%define %%TAG_SIZE      %11 ; [constant] Tag size (4 or 8 bytes)
+%define %%TAG_SIZE      %11 ; [constant] Tag size (4, 8 or 16 bytes)
 
 %define %%SHUF_DATA_KMASK    k1 ; Mask to shuffle data
 %define %%TMP_KMASK1         k2
@@ -2840,7 +2840,7 @@ _no_final_rounds:
 %define %%TMP4          %8  ; [clobbered] Temporary GP register
 %define %%TMP5          %9  ; [clobbered] Temporary GP register
 %define %%TMP6          %10 ; [clobbered] Temporary GP register
-%define %%TAG_SIZE      %11 ; [constant] Tag size (4 or 8 bytes)
+%define %%TAG_SIZE      %11 ; [constant] Tag size (4, 8 or 16 bytes)
 
 %define %%SHUF_DATA_KMASK    k1 ; Mask to shuffle data
 %define %%TMP_KMASK1         k2
@@ -2989,6 +2989,21 @@ ZUC_ROUND64B_16:
         cmp     TAG_SIZE, 8
         je      round_8B
         jb      round_4B
+
+        ;; Fall-through for 16-byte tag
+round_16B:
+
+        FUNC_SAVE
+
+%if USE_GFNI_VAES_VPCLMUL == 1
+        ROUND64B_16_GFNI T, KS, DATA, LEN, rbx, r10, r11, r12, r13, r14, 16
+%else
+        ROUND64B_16_NO_GFNI T, KS, DATA, LEN, rbx, r10, r11, r12, r13, r14, 16
+%endif
+
+        FUNC_RESTORE
+
+        ret
 
 round_8B:
 
