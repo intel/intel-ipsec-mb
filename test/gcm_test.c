@@ -43,7 +43,7 @@
 #define IV_SZ 12
 #define DIGEST_SZ 16
 #define MAX_KEY_SZ 32
-#define MAX_JOBS 32
+#define GCM_MAX_JOBS 32
 
 /*
  * 60-Byte Packet Encryption Using GCM-AES-128
@@ -1644,7 +1644,7 @@ aes_gcm_burst(IMB_MGR *mb_mgr,
               const IMB_CIPHER_MODE cipher_mode, const IMB_SGL_STATE sgl_state,
               const uint32_t num_jobs)
 {
-        IMB_JOB *job, jobs[MAX_JOBS];
+        IMB_JOB *job, jobs[GCM_MAX_JOBS];
         uint32_t i;
 
         for (i = 0; i < num_jobs; i++) {
@@ -2094,7 +2094,7 @@ test_gcm_vectors_burst(struct gcm_ctr_vector const *vector,
 	uint8_t **T_test = NULL;
         const uint8_t *iv = vector->IV;
         uint64_t iv_len = vector->IVlen;
-        uint32_t i, j, num_jobs = MAX_JOBS;
+        uint32_t i, j, num_jobs = GCM_MAX_JOBS;
 
         /* Allocate space for the calculated ciphertext */
         ct_test = malloc(num_jobs * sizeof(void *));
