@@ -260,17 +260,19 @@ Legacy or to be avoided algorithms listed in the table below are
 implemented in the library in order to support legacy applications.
 Please use corresponding alternative algorithms instead.
 
-    +-------------------------------------------------------------+
-    | # | Algorithm          | Recommendation | Alternative       |
-    |---+--------------------+----------------+-------------------|
-    | 1 | DES encryption     | Avoid          | AES encryption    |
-    |---+--------------------+----------------+-------------------|
-    | 2 | 3DES encryption    | Avoid          | AES encryption    |
-    |---+--------------------+----------------+-------------------|
-    | 3 | HMAC-MD5 integrity | Legacy         | HMAC-SHA1         |
-    |---+--------------------+----------------+-------------------|
-    | 4 | AES-ECB encryption | Avoid          | AES-CBC, AES-CNTR |
-    +-------------------------------------------------------------+
+    +--------------------------------------------------------------+
+    | # | Algorithm           | Recommendation | Alternative       |
+    |---+---------------------+----------------+-------------------|
+    | 1 | DES encryption      | Avoid          | AES encryption    |
+    |---+---------------------+----------------+-------------------|
+    | 2 | 3DES encryption     | Avoid          | AES encryption    |
+    |---+---------------------+----------------+-------------------|
+    | 3 | HMAC-MD5 integrity  | Legacy         | HMAC-SHA256       |
+    |---+---------------------+----------------+-------------------|
+    | 4 | AES-ECB encryption  | Avoid          | AES-CBC, AES-CNTR |
+    |---+---------------------+----------------+-------------------|
+    | 3 | HMAC-SHA1 integrity | Avoid          | HMAC-SHA256       |
+    +--------------------------------------------------------------+
 
 Intel(R) Multi-Buffer Crypto for IPsec Library depends on C library and
 it is recommended to use its latest version.
