@@ -1,5 +1,11 @@
 [![Coverity Status](https://scan.coverity.com/projects/16449/badge.svg)](https://scan.coverity.com/projects/intel-ipsec-mb)
-![Linux Build Status](https://github.com/intel/intel-ipsec-mb/actions/workflows/linux_make.yml/badge.svg)
+![Linux Build Shared gcc](https://github.com/intel/intel-ipsec-mb/actions/workflows/linux_make.yml/badge.svg)
+![Linux Build Static gcc](https://github.com/intel/intel-ipsec-mb/actions/workflows/linux_static_make.yml/badge.svg)
+![Linux Build Shared clang](https://github.com/intel/intel-ipsec-mb/actions/workflows/clang_make.yml/badge.svg)
+![Linux Build Static clang](https://github.com/intel/intel-ipsec-mb/actions/workflows/clang_static_make.yml/badge.svg)
+![Linux Build Shared clang AESNI emulation](https://github.com/intel/intel-ipsec-mb/actions/workflows/clang_aesni_make.yml/badge.svg)
+![FreeBSD Build Shared clang](https://github.com/intel/intel-ipsec-mb/actions/workflows/freebsd_make.yml/badge.svg)
+![FreeBSD Build Shared gcc](https://github.com/intel/intel-ipsec-mb/actions/workflows/freebsd_gcc_make.yml/badge.svg)
 
 # Intel(R) Multi-Buffer Crypto for IPsec Library
 
@@ -66,9 +72,9 @@ Table 1. List of supported cipher algorithms and their implementations.
 | AES128-CTR     | N      | Y  by8 | Y  by8 | N      | N      | Y by16 |
 | AES192-CTR     | N      | Y  by8 | Y  by8 | N      | N      | Y by16 |
 | AES256-CTR     | N      | Y  by8 | Y  by8 | N      | N      | Y by16 |
-| AES128-ECB     | N      | Y(1)   | Y  by4 | Y(10)  | N      | Y by16 |
-| AES192-ECB     | N      | Y(1)   | Y  by4 | Y(10)  | N      | Y by16 |
-| AES256-ECB     | N      | Y(1)   | Y  by4 | Y(10)  | N      | Y by16 |
+| AES128-ECB     | N      | Y(1)   | Y  by8 | Y(10)  | N      | Y by16 |
+| AES192-ECB     | N      | Y(1)   | Y  by8 | Y(10)  | N      | Y by16 |
+| AES256-ECB     | N      | Y(1)   | Y  by8 | Y(10)  | N      | Y by16 |
 | NULL           | Y      | N      | N      | N      | N      | N      |
 | AES128-DOCSIS  | N      | Y(2)   | Y(4)   | N      | Y(7)   | Y(8)   |
 | AES256-DOCSIS  | N      | Y(2)   | Y(4)   | N      | Y(7)   | Y(8)   |
@@ -95,9 +101,9 @@ Notes:
 (6)   - decryption is by16 and encryption is x16  
 (7)   - same as AES128-CBC for AVX, combines cipher and CRC32  
 (8)   - decryption is by16 and encryption is x16  
-(9)   - currently 1:9 crypt:skip pattern supported 
-(10)  - by default, decryption and encryption are AVX by8.
-        On CPUs supporting VAES, decryption and encryption are AVX2-VAES by16. 
+(9)   - currently 1:9 crypt:skip pattern supported  
+(10)  - by default, decryption and encryption are AVX by8.  
+        On CPUs supporting VAES, decryption and encryption are AVX2-VAES by16.  
 
 Legend:  
 ` byY` - single buffer Y blocks at a time  
@@ -160,8 +166,8 @@ Notes:
  - CRC8: WIMAX OFDMA HCS  
  - CRC7: FP header  
  - CRC6: IUUP header  
-(7) - used only with PON-AES128-CTR cipher
-(8) - x16 for init keystream generation, then by32
+(7) - used only with PON-AES128-CTR cipher  
+(8) - x16 for init keystream generation, then by32  
 
 Legend:  
 ` byY`- single buffer Y blocks at a time  
@@ -312,8 +318,8 @@ or
 Build with debugging information:  
 `> make DEBUG=y`
 
-Build with AESNI emulation support (disabled by default):
- > make AESNI_EMU=y
+Build with AESNI emulation support (disabled by default):  
+`> make AESNI_EMU=y`
 
 **Note:** Building with debugging information is not advised for production use.
 
@@ -347,7 +353,8 @@ Build without safety features:
 - SAFE_DATA clears sensitive information stored temporarily on stack, registers or internal data structures  
 - SAFE_PARAM adds extra checks on input parameters  
 - SAFE_LOOKUP uses constant-time lookups (enabled by default)  
-- SAFE_OPTIONS additional option to disable all safe options. disable to turn off SAFE_DATA, SAFE_PARAM, SAFE_LOOKUP (enabled by default)
+- SAFE_OPTIONS additional option to disable all safe options. Enabled by default.  
+  Disable to turn off: SAFE_DATA, SAFE_PARAM and SAFE_LOOKUP.  
 
 `> nmake /f win_x64.mak SAFE_DATA=n SAFE_PARAM=n`
 `> nmake /f win_x64.mak SAFE_OPTIONS=n`
@@ -355,8 +362,8 @@ Build without safety features:
 Build with debugging information:   
 `> nmake /f win_x64.mak DEBUG=y`
 
-Build with AESNI emulation support (disabled by default):
- > nmake /f win_x64.mak AESNI_EMU=y
+Build with AESNI emulation support (disabled by default):   
+`> nmake /f win_x64.mak AESNI_EMU=y`
 
 **Note:** Building with debugging information is not advised for production use.
 
@@ -487,9 +494,10 @@ algorithms listed above may be susceptible to timing attacks which could expose
 the cryptographic key.
 
 ### SAFE_OPTIONS
-SAFE_OPTIONS is a parameter that can be used to disable
-all other safe options(SAFE_DATA, SAFE_PARAM, SAFE_LOOKUP). By just
-setting this parameter (e.g. SAFE_OPTIONS=n).
+SAFE_OPTIONS is a parameter that can be used to disable/enable
+all supported safe options (i.e. SAFE_DATA, SAFE_PARAM, SAFE_LOOKUP).
+It is set to `y` by default and all safe options are enabled.
+`SAFE_OPTIONS=n` disables all safe options.
 
 ### Security API
 **Force clearing/zeroing of memory**

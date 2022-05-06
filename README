@@ -1,4 +1,7 @@
-[Coverity Status] [Linux Build Status]
+[Coverity Status] [Linux Build Shared gcc] [Linux Build Static gcc]
+[Linux Build Shared clang] [Linux Build Static clang] [Linux Build
+Shared clang AESNI emulation] [FreeBSD Build Shared clang] [FreeBSD
+Build Shared gcc]
 
 
 
@@ -364,8 +367,9 @@ Build without safety features:
 registers or internal data structures
 - SAFE_PARAM adds extra checks on input parameters
 - SAFE_LOOKUP uses constant-time lookups (enabled by default)
-- SAFE_OPTIONS additional option to disable all safe options.
-disable to turn off SAFE_DATA, SAFE_PARAM, SAFE_LOOKUP (enabled by default)
+- SAFE_OPTIONS additional option to disable all safe options. Enabled by
+default.
+Disable to turn off: SAFE_DATA, SAFE_PARAM and SAFE_LOOKUP.
 
 > nmake /f win_x64.mak SAFE_DATA=n SAFE_PARAM=n
 > nmake /f win_x64.mak SAFE_OPTIONS=n
@@ -521,9 +525,10 @@ which could expose the cryptographic key.
 
 SAFE_OPTIONS
 
-SAFE_OPTIONS is a parameter that can be used to disable
-all other safe options(SAFE_DATA, SAFE_PARAM, SAFE_LOOKUP). By just
-setting this parameter (e.g. SAFE_OPTIONS=n).
+SAFE_OPTIONS is a parameter that can be used to disable/enable all
+supported safe options (i.e. SAFE_DATA, SAFE_PARAM, SAFE_LOOKUP). It is
+set to y by default and all safe options are enabled. SAFE_OPTIONS=n
+disables all safe options.
 
 Security API
 
