@@ -3398,6 +3398,8 @@ APPEND3(%%Eia3RoundsAVX_end,I,J):
 %define %%KS_WORDS_TO_COPY 1
 %elif %%TAG_SIZE == 8
 %define %%KS_WORDS_TO_COPY 2
+%else ;; %%TAG_SIZE == 16
+%define %%KS_WORDS_TO_COPY 4
 %endif
 %endif ;; %%KEY_SIZE
 
@@ -3406,7 +3408,76 @@ APPEND3(%%Eia3RoundsAVX_end,I,J):
         shl     DWORD(%%MIN_LEN), (4+2)
         and     DWORD(%%TMP1), 0xf
         add     DWORD(%%MIN_LEN), DWORD(%%TMP1)
-%if %%KS_WORDS_TO_COPY == 2
+%if %%KS_WORDS_TO_COPY == 4
+        ; Memcpy last 16 bytes of KS into start
+        or      DWORD(%%TMP1), DWORD(%%TMP1)
+        jz      %%_copy_16bytes
+
+        cmp     DWORD(%%TMP1), 8
+        je      %%_copy_8bytes_8bytes
+        ja      %%_copy_4bytes_12bytes
+
+        ; Fall-through if 16 bytes to copy are 12 contiguous bytes and 4 separated bytes
+%%_copy_12bytes_4bytes:
+%assign %%i 0
+%rep 4
+%assign %%j 0
+%rep 4
+        mov     %%TMP1, [%%KS + 512*%%i + 16*%%j + %%MIN_LEN]
+        mov     [%%KS + 512*%%i + 16*%%j], %%TMP1
+        mov     DWORD(%%TMP1), [%%KS + 512*%%i + 16*%%j + %%MIN_LEN + 8]
+        mov     [%%KS + 512*%%i + 16*%%j + 8], DWORD(%%TMP1)
+        mov     DWORD(%%TMP1), [%%KS + 512*%%i + 16*%%j + (48+12) + %%MIN_LEN]
+        mov     [%%KS + 512*%%i + 16*%%j + 12], DWORD(%%TMP1)
+%assign %%j (%%j + 1)
+%endrep
+%assign %%i (%%i + 1)
+%endrep
+        jmp     %%_ks_copied
+
+%%_copy_8bytes_8bytes:
+%assign %%i 0
+%rep 4
+%assign %%j 0
+%rep 4
+        mov     %%TMP1, [%%KS + 512*%%i + 16*%%j + %%MIN_LEN]
+        mov     [%%KS + 512*%%i + 16*%%j], %%TMP1
+        mov     %%TMP1, [%%KS + 512*%%i + 16*%%j + (48+8) + %%MIN_LEN]
+        mov     [%%KS + 512*%%i + 16*%%j + 8], %%TMP1
+%assign %%j (%%j + 1)
+%endrep
+%assign %%i (%%i + 1)
+%endrep
+        jmp     %%_ks_copied
+%%_copy_4bytes_12bytes:
+%assign %%i 0
+%rep 4
+%assign %%j 0
+%rep 4
+        mov     DWORD(%%TMP1), [%%KS + 512*%%i + 16*%%j + %%MIN_LEN]
+        mov     [%%KS + 512*%%i + 16*%%j], DWORD(%%TMP1)
+        mov     %%TMP1, [%%KS + 512*%%i + 16*%%j + (48+4) + %%MIN_LEN]
+        mov     [%%KS + 512*%%i + 16*%%j + 4], %%TMP1
+        mov     DWORD(%%TMP1), [%%KS + 512*%%i + 16*%%j + (48+4) + %%MIN_LEN + 8]
+        mov     [%%KS + 512*%%i + 16*%%j + 12], DWORD(%%TMP1)
+%assign %%j (%%j + 1)
+%endrep
+%assign %%i (%%i + 1)
+%endrep
+        jmp     %%_ks_copied
+%%_copy_16bytes:
+%assign %%i 0
+%rep 4
+%assign %%j 0
+%rep 4
+        vmovdqa64 %%XTMP1, [%%KS + 512*%%i + 16*%%j + %%MIN_LEN]
+        vmovdqa64 [%%KS + 512*%%i + 16*%%j], %%XTMP1
+%assign %%j (%%j + 1)
+%endrep
+%assign %%i (%%i + 1)
+%endrep
+
+%elif %%KS_WORDS_TO_COPY == 2
         ; Memcpy last 8 bytes of KS into start
         cmp     DWORD(%%TMP1), 12
         je      %%_copy_2dwords
