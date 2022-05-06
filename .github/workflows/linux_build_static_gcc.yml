@@ -1,4 +1,4 @@
-name: Linux make
+name: Linux Build Static gcc
 
 on:
   push:
@@ -16,5 +16,5 @@ jobs:
     - uses: actions/checkout@v2
       with:
         repository: intel/intel-ipsec-mb
-    - name: make
-      run: make -j
+    - name: make static
+      run: make SHARED=n -j

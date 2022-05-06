@@ -1,4 +1,4 @@
-name: Clang static make
+name: Linux Build Shared clang
 
 on:
   push:
@@ -16,5 +16,5 @@ jobs:
     - uses: actions/checkout@v2
       with:
         repository: intel/intel-ipsec-mb
-    - name: make static
-      run: make CC=clang SHARED=n -j
+    - name: make
+      run: make CC=clang -j

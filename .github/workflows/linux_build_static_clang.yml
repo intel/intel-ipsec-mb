@@ -1,4 +1,4 @@
-name: Linux static make
+name: Linux Build Static clang
 
 on:
   push:
@@ -12,9 +12,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - run: sudo apt install -y nasm
+    - run: sudo apt install -y nasm clang
     - uses: actions/checkout@v2
       with:
         repository: intel/intel-ipsec-mb
     - name: make static
-      run: make SHARED=n -j
+      run: make CC=clang SHARED=n -j

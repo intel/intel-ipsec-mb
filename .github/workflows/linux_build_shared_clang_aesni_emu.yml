@@ -1,4 +1,4 @@
-name: Clang make
+name: Linux Build Shared clang AESNI emulation
 
 on:
   push:
@@ -16,5 +16,5 @@ jobs:
     - uses: actions/checkout@v2
       with:
         repository: intel/intel-ipsec-mb
-    - name: make
-      run: make CC=clang -j
+    - name: make aesni
+      run: make CC=clang AESNI_EMU=y -j

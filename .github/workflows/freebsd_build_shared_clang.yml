@@ -1,4 +1,4 @@
-name: FreeBSD GCC make
+name: FreeBSD Build Shared clang
 
 on:
   push:
@@ -9,19 +9,19 @@ on:
 jobs:
   testfreebsd:
     runs-on: macos-10.15
-    name: FreeBSD GCC run
+    name: FreeBSD run
     steps:
       - name: Checkout
         uses: actions/checkout@v2
         with:
           repository: intel/intel-ipsec-mb
-      - name: Test FreeBSD GCC build
+      - name: Test in FreeBSD
         id: tests
         uses: vmactions/freebsd-vm@v0.1.5
         with:
           usesh: true
           mem: 8192
-          prepare: pkg install -y curl nasm gmake gcc
+          prepare: pkg install -y curl nasm llvm gmake
           run: |
             freebsd-version
-            gmake CC=gcc -j 4
+            gmake CC=clang -j 4
