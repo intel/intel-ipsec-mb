@@ -3042,6 +3042,101 @@ round_4B:
 
         ret
 
+
+;
+; Reads a qword of KS, rotates it by LEN % 32, and store the results as a single dword
+;
+%macro READ_AND_ROTATE_KS_DWORD 4
+%define %%KS_ADDR          %1 ; [in] Base address of KS to read
+%define %%LEN_BUF          %2 ; [in] Remaining bytes of data
+%define %%IN_OFFSET_OUT_KS %3 ; [in/out] Offset to read qwords of KS
+%define %%TMP1             %4 ; [clobbered] Temporary GP register
+
+        mov     %%TMP1, %%IN_OFFSET_OUT_KS
+        and     %%TMP1, 0xf
+        ; Read last two dwords of KS, which can be scattered or contiguous
+        ; (First dword can be at the end of a 16-byte chunk)
+        cmp     %%TMP1, 12
+        je      %%_read_2dwords
+        mov     %%IN_OFFSET_OUT_KS, [%%KS_ADDR + %%IN_OFFSET_OUT_KS]
+        jmp     %%_ks_qword_read
+
+        ;; The 8 bytes of %%KS are separated
+%%_read_2dwords:
+        mov     DWORD(%%TMP1), [%%KS_ADDR + %%IN_OFFSET_OUT_KS]
+        mov     DWORD(%%IN_OFFSET_OUT_KS), [%%KS_ADDR + %%IN_OFFSET_OUT_KS + (4+48)]
+        shl     %%IN_OFFSET_OUT_KS, 32
+        or      %%IN_OFFSET_OUT_KS, %%TMP1
+%%_ks_qword_read:
+        ; Rotate left by MIN_LEN % 32
+        mov     %%TMP1, rcx
+        mov     rcx, %%LEN_BUF
+        and     rcx, 0x1F
+        rol     %%IN_OFFSET_OUT_KS, cl
+        mov     rcx, %%TMP1
+%endmacro
+;
+; Reads two qwords of KS, overlapped by 4 bytes (e.g. KS[0-7] and KS[4-11]),
+; rotates both qwords by LEN % 32, and store the results as a single qword,
+; where lower dword is the result of rotation on first qword, and upper dword
+; is the rotation on second dword.
+;
+%macro READ_AND_ROTATE_KS_QWORD 5
+%define %%KS_ADDR          %1 ; [in] Base address of KS to read
+%define %%LEN_BUF          %2 ; [in] Remaining bytes of data
+%define %%IN_OFFSET_OUT_KS %3 ; [in/out] Offset to read qwords of KS
+%define %%TMP1             %4 ; [clobbered] Temporary GP register
+%define %%TMP2             %5 ; [clobbered] Temporary GP register
+
+        mov     %%TMP2, %%IN_OFFSET_OUT_KS
+        and     %%TMP2, 0xf
+        ; Read last three dwords of KS, which can be scattered or contiguous
+        ; (First dword can be at the end of a 16-byte chunk and the other
+        ;  two dwords in the next chunk; first two dwords can be at the end of
+        ;  a 16-byte chunk and the other dword in the next chunk; or all three
+        ;  dwords can be in the same 16-byte chunk)
+        cmp     %%TMP2, 8
+        je      %%_read_8B_4B
+        cmp     %%TMP2, 12
+        je      %%_read_4B_8B
+
+        ;; All 12 bytes of KS are contiguous
+%%_read_12B:
+        mov     %%TMP1, [%%KS_ADDR + %%IN_OFFSET_OUT_KS]
+        mov     %%IN_OFFSET_OUT_KS, [%%KS_ADDR + %%IN_OFFSET_OUT_KS + 4]
+        jmp     %%_ks_qwords_read
+
+        ;; The first 8 bytes of KS are contiguous, the other 4 are separated
+%%_read_8B_4B:
+        mov     %%TMP1, [%%KS_ADDR + %%IN_OFFSET_OUT_KS]
+        ; Read last 4 bytes of first segment and first 4 bytes of second segment
+        mov     DWORD(%%TMP2), [%%KS_ADDR + %%IN_OFFSET_OUT_KS + 4]
+        mov     DWORD(%%IN_OFFSET_OUT_KS), [%%KS_ADDR + %%IN_OFFSET_OUT_KS + (8+48)]
+        shl     %%IN_OFFSET_OUT_KS, 32
+        or      %%IN_OFFSET_OUT_KS, %%TMP2
+
+        jmp     %%_ks_qwords_read
+        ;; The first 8 bytes of KS are separated, the other 8 are contiguous
+%%_read_4B_8B:
+        mov     DWORD(%%TMP1), [%%KS_ADDR + %%IN_OFFSET_OUT_KS]
+        mov     DWORD(%%TMP2), [%%KS_ADDR + %%IN_OFFSET_OUT_KS + (4+48)]
+        shl     %%TMP2, 32
+        or      %%TMP1, %%TMP2
+        mov     %%IN_OFFSET_OUT_KS, [%%KS_ADDR + %%IN_OFFSET_OUT_KS + (4+48)]
+%%_ks_qwords_read:
+        ; Rotate left by LEN_BUF % 32
+        mov     %%TMP2, rcx
+        mov     rcx, %%LEN_BUF
+        and     rcx, 0x1F
+        rol     %%TMP1, cl
+        rol     %%IN_OFFSET_OUT_KS, cl
+        mov     rcx, %%TMP2
+
+        shl     %%IN_OFFSET_OUT_KS, 32
+        mov     DWORD(%%TMP1), DWORD(%%TMP1) ; Clear top 32 bits
+        or      %%IN_OFFSET_OUT_KS, %%TMP1
+%endmacro
+
 %macro REMAINDER_16 14
 %define %%T             %1 ; [in] Pointer to digests
 %define %%KS            %2 ; [in] Pointer to keystream (128x16 bytes)
@@ -3056,7 +3151,7 @@ round_4B:
 %define %%TMP6          %11 ; [clobbered] Temporary GP register
 %define %%TMP7          %12 ; [clobbered] Temporary GP register
 %define %%KEY_SIZE      %13 ; [constant] Key size (128 or 256)
-%define %%TAG_SIZE      %14 ; [constant] Tag size (4 or 8 bytes)
+%define %%TAG_SIZE      %14 ; [constant] Tag size (4, 8 or 16 bytes)
 
 %define %%DIGEST_0     zmm28
 %define %%DIGEST_1     zmm29
@@ -3297,34 +3392,13 @@ APPEND3(%%Eia3RoundsAVX_end,I,J):
         and     %%TMP3, 0x3
         shl     %%TMP3, 2
         add     %%TMP2, %%TMP3 ;; Offset to last dwords of KS, from base address
-        mov     %%TMP3, %%TMP2
-        and     %%TMP3, 0xf
 %if %%TAG_SIZE == 4
         ; Read 4-byte digest
         mov     DWORD(%%DIGEST), [%%T + 4*%%IDX]
 
-        ; Read last two dwords of KS, which can be scattered or contiguous
-        ; (First dword can be at the end of a 16-byte chunk)
-        cmp     %%TMP3, 12
-        je      %%_read_2dwords
-        mov     %%TMP1, [%%KS_ADDR + %%TMP2]
-        jmp     %%_ks_qword_read
-
-        ;; The 8 bytes of %%KS are separated
-%%_read_2dwords:
-        mov     DWORD(%%TMP1), [%%KS_ADDR + %%TMP2]
-        mov     DWORD(%%TMP2), [%%KS_ADDR + %%TMP2 + (4+48)]
-        shl     %%TMP2, 32
-        or      %%TMP1, %%TMP2
-%%_ks_qword_read:
-        ; Rotate left by MIN_LEN % 32
-        mov     %%TMP2, rcx
-        mov     rcx, %%LEN_BUF
-        and     rcx, 0x1F
-        rol     %%TMP1, cl
-        mov     rcx, %%TMP2
+        READ_AND_ROTATE_KS_DWORD %%KS_ADDR, %%LEN_BUF, %%TMP2, %%TMP1
         ; XOR with current digest
-        xor     DWORD(%%DIGEST), DWORD(%%TMP1)
+        xor     DWORD(%%DIGEST), DWORD(%%TMP2)
 
 %if %%KEY_SIZE == 128
         ; Read keystr[L - 1] (last dword of keyStr)
@@ -3349,51 +3423,7 @@ APPEND3(%%Eia3RoundsAVX_end,I,J):
         ; Read 8-byte digest
         mov     %%DIGEST, [%%T + 8*%%IDX]
 
-        ; Read last three dwords of KS, which can be scattered or contiguous
-        ; (First dword can be at the end of a 16-byte chunk and the other
-        ;  two dwords in the next chunk; first two dwords can be at the end of
-        ;  a 16-byte chunk and the other dword in the next chunk; or all three
-        ;  dwords can be in the same 16-byte chunk)
-        cmp     %%TMP3, 8
-        je      %%_read_8B_4B
-        cmp     %%TMP3, 12
-        je      %%_read_4B_8B
-
-        ;; All 12 bytes of KS are contiguous
-%%_read_12B:
-        mov     %%TMP1, [%%KS_ADDR + %%TMP2]
-        mov     %%TMP2, [%%KS_ADDR + %%TMP2 + 4]
-        jmp     %%_ks_qwords_read
-
-        ;; The first 8 bytes of KS are contiguous, the other 4 are separated
-%%_read_8B_4B:
-        mov     %%TMP1, [%%KS_ADDR + %%TMP2]
-        ; Read last 4 bytes of first segment and first 4 bytes of second segment
-        mov     DWORD(%%TMP3), [%%KS_ADDR + %%TMP2 + 4]
-        mov     DWORD(%%TMP2), [%%KS_ADDR + %%TMP2 + (8+48)]
-        shl     %%TMP2, 32
-        or      %%TMP2, %%TMP3
-
-        jmp     %%_ks_qwords_read
-        ;; The first 8 bytes of KS are separated, the other 8 are contiguous
-%%_read_4B_8B:
-        mov     DWORD(%%TMP1), [%%KS_ADDR + %%TMP2]
-        mov     DWORD(%%TMP3), [%%KS_ADDR + %%TMP2 + (4+48)]
-        shl     %%TMP3, 32
-        or      %%TMP1, %%TMP3
-        mov     %%TMP2, [%%KS_ADDR + %%TMP2 + (4+48)]
-%%_ks_qwords_read:
-        ; Rotate left by MIN_LEN % 32
-        mov     %%TMP3, rcx
-        mov     rcx, %%LEN_BUF
-        and     rcx, 0x1F
-        rol     %%TMP1, cl
-        rol     %%TMP2, cl
-        mov     rcx, %%TMP3
-
-        shl     %%TMP2, 32
-        mov     DWORD(%%TMP1), DWORD(%%TMP1) ; Clear top 32 bits
-        or      %%TMP2, %%TMP1
+        READ_AND_ROTATE_KS_QWORD %%KS_ADDR, %%LEN_BUF, %%TMP2, %%TMP1, %%TMP3
 
         ; XOR with current digest
         xor     %%DIGEST, %%TMP2
@@ -3403,6 +3433,49 @@ APPEND3(%%Eia3RoundsAVX_end,I,J):
         ror     %%DIGEST, 32
         mov     [%%T + 8*%%IDX], %%DIGEST
 %else ; %%TAG_SIZE == 16
+        ;; Update digest in two steps:
+        ;; - First, read the first 12 bytes of KS[MIN_LEN/32],
+        ;;   rotate them and XOR the qword with first qword of digest
+        ;; - Last, skip 8 bytes of KS[MIN_LEN/32] and read another 12 bytes,
+        ;;   rotate them and XOR the qword with second qword of digest
+        shl     %%IDX, 4
+        ; Read first 8 bytes of digest
+        mov     %%DIGEST, [%%T + %%IDX]
+
+        READ_AND_ROTATE_KS_QWORD %%KS_ADDR, %%LEN_BUF, %%TMP2, %%TMP1, %%TMP3
+
+        ; XOR with current first half of digest
+        xor     %%DIGEST, %%TMP2
+
+        ; byte swap and write first half of digest out
+        bswap   %%DIGEST
+        ror     %%DIGEST, 32
+        mov     [%%T + %%IDX], %%DIGEST
+
+        ; Read next 8 bytes after keyStr[MIN_LEN / 32]
+        mov     %%TMP2, %%LEN_BUF
+        shr     %%TMP2, 5
+        add     %%TMP2, 2 ; Add 2 dwords to offset
+        mov     %%TMP3, %%TMP2
+        shr     %%TMP2, 2
+        shl     %%TMP2, (4+2)
+        and     %%TMP3, 0x3
+        shl     %%TMP3, 2
+        add     %%TMP2, %%TMP3 ;; Offset to last dwords of KS, from base address
+
+        ; Read second 8 bytes of digest
+        mov     %%DIGEST, [%%T + %%IDX + 8]
+
+        READ_AND_ROTATE_KS_QWORD %%KS_ADDR, %%LEN_BUF, %%TMP2, %%TMP1, %%TMP3
+
+        ; XOR with current second half of digest
+        xor     %%DIGEST, %%TMP2
+
+        ; byte swap and write second half of digest out
+        bswap   %%DIGEST
+        ror     %%DIGEST, 32
+        mov     [%%T + %%IDX + 8], %%DIGEST
+        shr     %%IDX, 4
 %endif
 
 %%skip_comput:
@@ -3615,6 +3688,15 @@ ZUC256_REMAINDER_16:
         je      remainder_8B
         jb      remainder_4B
 
+        ; Fall-through for 16-byte tag
+remainder_16B:
+        FUNC_SAVE
+
+        REMAINDER_16 T, KS, DATA, LEN, N_BITS, rax, rbx, r11, r12, r13, r14, r15, 256, 16
+
+        FUNC_RESTORE
+
+        ret
 remainder_8B:
         FUNC_SAVE
 
