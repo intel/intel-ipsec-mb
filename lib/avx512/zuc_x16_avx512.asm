@@ -1796,9 +1796,9 @@ init_for_auth_tag_8B:
 %endif ; %%TAG_SIZE >= 8
 %endmacro
 
-%macro UPDATE_TAGS 13-16
+%macro UPDATE_TAGS 13-14
 %define %%T                  %1 ; [in] Pointer to digests
-%define %%TAG_SIZE           %2 ; [constant] Tag size (4 or 8 bytes)
+%define %%TAG_SIZE           %2 ; [constant] Tag size (4, 8 or 16 bytes)
 %define %%ORDER_TAGS         %3 ; [constant] Order of tags (order_0_4_8_12 or order_0_1_2_3)
 %define %%TMP                %4 ; [clobbered] Temporary GP register
 %define %%PERM_DIGEST_KMASK1 %5 ; [clobbered] Permutation mask for digests
@@ -1811,8 +1811,6 @@ init_for_auth_tag_8B:
 %define %%ZTMP2              %12 ; [clobbered] Temporary ZMM register
 %define %%ZTMP3              %13 ; [clobbered] Temporary ZMM register
 %define %%ZTMP4              %14 ; [clobbered] Temporary ZMM register
-%define %%ZTMP5              %15 ; [clobbered] Temporary ZMM register
-%define %%ZTMP6              %16 ; [clobbered] Temporary ZMM register
 
 %if %%TAG_SIZE == 4
 %ifidn %%ORDER_TAGS, order_0_4_8_12
@@ -1828,56 +1826,70 @@ init_for_auth_tag_8B:
         vmovdqa64       %%ZTMP2, [rel shuf_mask_4B_tags_0_1_2_3]
         vmovdqa64       %%ZTMP3, [rel shuf_mask_4B_tags_0_1_2_3 + 64]
 %endif
-        vmovdqu64       %%ZTMP1, [%%T] ; Input tags
         ; Get result tags for 16 buffers in different position in each lane
         ; and blend these tags into an ZMM register.
         ; Then, XOR the results with the previous tags and write out the result.
         vpermt2d        %%DIGEST_0{%%PERM_DIGEST_KMASK1}{z}, %%ZTMP2, %%DIGEST_1
         vpermt2d        %%DIGEST_2{%%PERM_DIGEST_KMASK2}{z}, %%ZTMP3, %%DIGEST_3
-        vpternlogq      %%ZTMP1, %%DIGEST_0, %%DIGEST_2, 0x96 ; A XOR B XOR C
-        vmovdqu64       [%%T], %%ZTMP1
+        vpternlogq      %%DIGEST_0, %%DIGEST_2, [%%T], 0x96 ; A XOR B XOR C
+        vmovdqu64       [%%T], %%DIGEST_0
 
 %elif %%TAG_SIZE == 8
-        ; Input tags
-        vmovdqu64       %%ZTMP1, [%%T]
-        vmovdqu64       %%ZTMP2, [%%T + 64]
 %ifidn %%ORDER_TAGS, order_0_4_8_12
         mov             DWORD(%%TMP), 0x33
         kmovd           %%PERM_DIGEST_KMASK1, DWORD(%%TMP)
         kshiftld        %%PERM_DIGEST_KMASK2, %%PERM_DIGEST_KMASK1, 2
 
-        vmovdqa64       %%ZTMP3, [rel shuf_mask_8B_tags_0_1_4_5]
-        vmovdqa64       %%ZTMP4, [rel shuf_mask_8B_tags_2_3_6_7]
-        vmovdqa64       %%ZTMP5, [rel shuf_mask_8B_tags_8_9_12_13]
-        vmovdqa64       %%ZTMP6, [rel shuf_mask_8B_tags_10_11_14_15]
+        vmovdqa64       %%ZTMP1, [rel shuf_mask_8B_tags_0_1_4_5]
+        vmovdqa64       %%ZTMP2, [rel shuf_mask_8B_tags_2_3_6_7]
+        vmovdqa64       %%ZTMP3, [rel shuf_mask_8B_tags_8_9_12_13]
+        vmovdqa64       %%ZTMP4, [rel shuf_mask_8B_tags_10_11_14_15]
 
         ; Get result tags for 16 buffers in different positions in each lane
         ; and blend these tags into two ZMM registers
         ; Then, XOR the results with the previous tags and write out the result.
 
+        vpermi2q        %%ZTMP1{%%PERM_DIGEST_KMASK1}{z}, %%DIGEST_0, %%DIGEST_1
+        vpermi2q        %%ZTMP2{%%PERM_DIGEST_KMASK2}{z}, %%DIGEST_2, %%DIGEST_3
         vpermi2q        %%ZTMP3{%%PERM_DIGEST_KMASK1}{z}, %%DIGEST_0, %%DIGEST_1
         vpermi2q        %%ZTMP4{%%PERM_DIGEST_KMASK2}{z}, %%DIGEST_2, %%DIGEST_3
-        vpermi2q        %%ZTMP5{%%PERM_DIGEST_KMASK1}{z}, %%DIGEST_0, %%DIGEST_1
-        vpermi2q        %%ZTMP6{%%PERM_DIGEST_KMASK2}{z}, %%DIGEST_2, %%DIGEST_3
 
-        vpternlogq      %%ZTMP1, %%ZTMP3, %%ZTMP4, 0x96 ; A XOR B XOR C
-        vpternlogq      %%ZTMP2, %%ZTMP5, %%ZTMP6, 0x96 ; A XOR B XOR C
+        vpternlogq      %%ZTMP1, %%ZTMP2, [%%T], 0x96 ; A XOR B XOR C
+        vpternlogq      %%ZTMP3, %%ZTMP4, [%%T + 64], 0x96 ; A XOR B XOR C
 
 %else ; %%ORDER_TAGS == order_0_1_2_3
-        ; Input tags
         vmovdqa64       %%ZTMP3, [rel shuf_mask_8B_tags]
         ; Get result tags for 16 buffers in different position in each lane
         ; and blend these tags into an ZMM register.
         ; Then, XOR the results with the previous tags and write out the result.
         vpermt2q        %%DIGEST_0, %%ZTMP3, %%DIGEST_1
         vpermt2q        %%DIGEST_2, %%ZTMP3, %%DIGEST_3
-        vpxorq          %%ZTMP1, %%ZTMP1, %%DIGEST_0
-        vpxorq          %%ZTMP2, %%ZTMP2, %%DIGEST_2
+        vpxorq          %%ZTMP1, %%DIGEST_0, [%%T]
+        vpxorq          %%ZTMP3, %%DIGEST_2, [%%T + 64]
 %endif
         vmovdqu64       [%%T], %%ZTMP1
-        vmovdqu64       [%%T + 64], %%ZTMP2
+        vmovdqu64       [%%T + 64], %%ZTMP3
 %else ;; %%TAG_SIZE == 16
+%ifidn %%ORDER_TAGS, order_0_4_8_12
+        ; Get result tags for 16 buffers in different positions in each lane
+        ; from 0,4,8,12 to 0,1,2,3
+        ; Then, XOR the results with the previous tags and write out the result.
+
+        TRANSPOSE4_U128_INPLACE %%DIGEST_0, %%DIGEST_1, %%DIGEST_2, %%DIGEST_3, \
+                                %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4
+
 %endif
+
+        ; XOR with previous tags and store
+        vpxorq  %%DIGEST_0, [%%T]
+        vpxorq  %%DIGEST_1, [%%T + 64]
+        vpxorq  %%DIGEST_2, [%%T + 64*2]
+        vpxorq  %%DIGEST_3, [%%T + 64*3]
+        vmovdqa64  [%%T], %%DIGEST_0
+        vmovdqa64  [%%T + 64], %%DIGEST_1
+        vmovdqa64  [%%T + 64*2], %%DIGEST_2
+        vmovdqa64  [%%T + 64*3], %%DIGEST_3
+%endif ; %%TAG_SIZE
 %endmacro
 ;
 ; Generate 64 bytes of keystream
@@ -2114,7 +2126,7 @@ init_for_auth_tag_8B:
 
         UPDATE_TAGS %%T, %%TAG_SIZE, order_0_4_8_12, %%TMP, %%TMP_KMASK1, %%TMP_KMASK2, \
                     %%DIGEST_0, %%DIGEST_1, %%DIGEST_2, %%DIGEST_3, \
-                    %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, %%ZTMP6
+                    %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4
 
         ; Update R1/R2
         vmovdqa64   [%%STATE + OFS_R1], %%R1
@@ -2795,7 +2807,7 @@ _no_final_rounds:
 
         UPDATE_TAGS %%T, %%TAG_SIZE, order_0_4_8_12, %%TMP1, %%TMP_KMASK1, %%TMP_KMASK2, \
                     %%DIGEST_0, %%DIGEST_1,  %%DIGEST_2, %%DIGEST_3, \
-                    %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, %%ZTMP6
+                    %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4
 
         ; Update data pointers
         vmovdqu64       %%ZTMP1, [%%DATA]
@@ -2854,8 +2866,6 @@ _no_final_rounds:
 %define %%ZTMP2           zmm23
 %define %%ZTMP3           zmm24
 %define %%ZTMP4           zmm25
-%define %%ZTMP5           zmm26
-%define %%ZTMP6           zmm27
 %define %%DIGEST_0        zmm28
 %define %%DIGEST_1        zmm29
 %define %%DIGEST_2        zmm30
@@ -2926,7 +2936,7 @@ _no_final_rounds:
 
         UPDATE_TAGS %%T, %%TAG_SIZE, order_0_4_8_12, %%TMP1, %%TMP_KMASK1, %%TMP_KMASK2, \
                     %%DIGEST_0, %%DIGEST_1,  %%DIGEST_2, %%DIGEST_3, \
-                    %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, %%ZTMP6
+                    %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4
 
         ; Update data pointers
         vmovdqu64       %%ZTMP2, [%%DATA]
@@ -3067,8 +3077,6 @@ round_4B:
 %define %%ZTMP2         zmm8
 %define %%ZTMP3         zmm9
 %define %%ZTMP4         zmm10
-%define %%ZTMP5         zmm11
-%define %%ZTMP6         zmm12
 
 %define %%VALID_KMASK        k1 ; Mask with valid lanes
 %define %%SHUF_DATA_KMASK    k2 ; Mask to shuffle data
@@ -3225,7 +3233,7 @@ APPEND3(%%Eia3RoundsAVX_end,I,J):
 
         UPDATE_TAGS %%T, %%TAG_SIZE, order_0_1_2_3, %%TMP1, %%TMP_KMASK1, %%TMP_KMASK2, \
                     %%DIGEST_0, %%DIGEST_1,  %%DIGEST_2, %%DIGEST_3, \
-                    %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, %%ZTMP6
+                    %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4
 
         ; These last steps should be done only for the buffers that
         ; have no more data to authenticate
