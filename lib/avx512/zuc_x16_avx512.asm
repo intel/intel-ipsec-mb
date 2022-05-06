@@ -45,6 +45,8 @@
 %define ZUC_KEYGEN64B_16 asm_ZucGenKeystream64B_16_avx512
 %define ZUC_KEYGEN8B_16 asm_ZucGenKeystream8B_16_avx512
 %define ZUC_KEYGEN_16 asm_ZucGenKeystream_16_avx512
+%define ZUC_KEYGEN64B_SKIP16_16 asm_ZucGenKeystream64B_16_skip16_avx512
+%define ZUC_KEYGEN_SKIP16_16 asm_ZucGenKeystream_16_skip16_avx512
 %define ZUC_KEYGEN64B_SKIP8_16 asm_ZucGenKeystream64B_16_skip8_avx512
 %define ZUC_KEYGEN_SKIP8_16 asm_ZucGenKeystream_16_skip8_avx512
 %define ZUC_KEYGEN64B_SKIP4_16 asm_ZucGenKeystream64B_16_skip4_avx512
@@ -376,6 +378,12 @@ dw      0xffff, 0xffff, 0x0000, 0x0000
 dw      0x0000, 0xffff, 0x0000, 0x0000
 dw      0xffff, 0x0000, 0x0000, 0x0000
 dw      0x0000, 0x0000, 0x0000, 0x0000
+
+mov_16B_mask:
+dw      0000000000000000b, 0000000000001111b, 0000000011110000b, 0000000011111111b
+dw      0000111100000000b, 0000111100001111b, 0000111111110000b, 0000111111111111b
+dw      1111000000000000b, 1111000000001111b, 1111000011110000b, 1111000011111111b
+dw      1111111100000000b, 1111111100001111b, 1111111111110000b, 1111111111111111b
 
 mov_8B_mask:
 dw      1100110011001100b, 1100110011001111b, 1100110011111100b, 1100110011111111b
@@ -838,7 +846,7 @@ align 64
 %define %%TMP         %22 ; [in] Temporary GP register
 %define %%KMASK1      %23 ; [clobbered] Temporary K mask
 %define %%KMASK2      %24 ; [clobbered] Temporary K mask
-%define %%SKIP_ROUNDS %25 ; [constant] Number of rounds to skip
+%define %%SKIP_ROUNDS %25 ; [constant] Number of rounds to skip (1, 2 or 4)
 
 %if (%0 == 18)
         vmovdqu64 [%%KS + %%KEY_OFF*4], %%DATA64B_L0
@@ -864,11 +872,17 @@ align 64
         pext      DWORD(%%TMP), DWORD(%%LANE_MASK), [rel extr_bits_0_4_8_12]
         kmovq     %%KMASK1, [%%ALIGN_MASK + 8*%%TMP]
         kmovw     %%KMASK2, [%%MOV_MASK + 2*%%TMP]
-        ; Shifting left 8 bytes of KS for lanes which first 8 bytes are skipped
+        ; Shifting left 4/8/16 bytes of KS for lanes which first 4/8/16 bytes are skipped
+%if %%SKIP_ROUNDS == 4
+        vmovdqu8 %%DATA64B_L3{%%KMASK1}, %%DATA64B_L2
+        vmovdqu8 %%DATA64B_L2{%%KMASK1}, %%DATA64B_L1
+        vmovdqu8 %%DATA64B_L1{%%KMASK1}, %%DATA64B_L0
+%else
         vpalignr  %%DATA64B_L3{%%KMASK1}, %%DATA64B_L3, %%DATA64B_L2, (16 - %%SKIP_ROUNDS * 4)
         vpalignr  %%DATA64B_L2{%%KMASK1}, %%DATA64B_L2, %%DATA64B_L1, (16 - %%SKIP_ROUNDS * 4)
         vpalignr  %%DATA64B_L1{%%KMASK1}, %%DATA64B_L1, %%DATA64B_L0, (16 - %%SKIP_ROUNDS * 4)
         vpalignr  %%DATA64B_L0{%%KMASK1}, %%DATA64B_L0, %%DATA64B_L3, (16 - %%SKIP_ROUNDS * 4)
+%endif
         vmovdqu32 [%%KS + %%KEY_OFF*4]{%%KMASK2}, %%DATA64B_L0
         vmovdqu32 [%%KS + %%KEY_OFF*4 + 64], %%DATA64B_L1
         vmovdqu32 [%%KS + %%KEY_OFF*4 + 2*64], %%DATA64B_L2
@@ -877,10 +891,16 @@ align 64
         pext      DWORD(%%TMP), DWORD(%%LANE_MASK), [rel extr_bits_1_5_9_13]
         kmovq     %%KMASK1, [%%ALIGN_MASK + 8*%%TMP]
         kmovw     %%KMASK2, [%%MOV_MASK + 2*%%TMP]
+%if %%SKIP_ROUNDS == 4
+        vmovdqu8 %%DATA64B_L7{%%KMASK1}, %%DATA64B_L6
+        vmovdqu8 %%DATA64B_L6{%%KMASK1}, %%DATA64B_L5
+        vmovdqu8 %%DATA64B_L5{%%KMASK1}, %%DATA64B_L4
+%else
         vpalignr  %%DATA64B_L7{%%KMASK1}, %%DATA64B_L7, %%DATA64B_L6, (16 - %%SKIP_ROUNDS * 4)
         vpalignr  %%DATA64B_L6{%%KMASK1}, %%DATA64B_L6, %%DATA64B_L5, (16 - %%SKIP_ROUNDS * 4)
         vpalignr  %%DATA64B_L5{%%KMASK1}, %%DATA64B_L5, %%DATA64B_L4, (16 - %%SKIP_ROUNDS * 4)
         vpalignr  %%DATA64B_L4{%%KMASK1}, %%DATA64B_L4, %%DATA64B_L7, (16 - %%SKIP_ROUNDS * 4)
+%endif
         vmovdqu32 [%%KS + %%KEY_OFF*4 + 512]{%%KMASK2}, %%DATA64B_L4
         vmovdqu32 [%%KS + %%KEY_OFF*4 + 512 + 64], %%DATA64B_L5
         vmovdqu32 [%%KS + %%KEY_OFF*4 + 512 + 64*2], %%DATA64B_L6
@@ -889,10 +909,16 @@ align 64
         pext      DWORD(%%TMP), DWORD(%%LANE_MASK), [rel extr_bits_2_6_10_14]
         kmovq     %%KMASK1, [%%ALIGN_MASK + 8*%%TMP]
         kmovw     %%KMASK2, [%%MOV_MASK + 2*%%TMP]
+%if %%SKIP_ROUNDS == 4
+        vmovdqu8 %%DATA64B_L11{%%KMASK1}, %%DATA64B_L10
+        vmovdqu8 %%DATA64B_L10{%%KMASK1}, %%DATA64B_L9
+        vmovdqu8 %%DATA64B_L9{%%KMASK1}, %%DATA64B_L8
+%else
         vpalignr  %%DATA64B_L11{%%KMASK1}, %%DATA64B_L11, %%DATA64B_L10, (16 - %%SKIP_ROUNDS * 4)
         vpalignr  %%DATA64B_L10{%%KMASK1}, %%DATA64B_L10, %%DATA64B_L9, (16 - %%SKIP_ROUNDS * 4)
         vpalignr  %%DATA64B_L9{%%KMASK1}, %%DATA64B_L9, %%DATA64B_L8, (16 - %%SKIP_ROUNDS * 4)
         vpalignr  %%DATA64B_L8{%%KMASK1}, %%DATA64B_L8, %%DATA64B_L11, (16 - %%SKIP_ROUNDS * 4)
+%endif
         vmovdqu32 [%%KS + %%KEY_OFF*4 + 512*2]{%%KMASK2}, %%DATA64B_L8
         vmovdqu32 [%%KS + %%KEY_OFF*4 + 512*2 + 64], %%DATA64B_L9
         vmovdqu32 [%%KS + %%KEY_OFF*4 + 512*2 + 64*2], %%DATA64B_L10
@@ -901,10 +927,16 @@ align 64
         pext      DWORD(%%TMP), DWORD(%%LANE_MASK), [rel extr_bits_3_7_11_15]
         kmovq     %%KMASK1, [%%ALIGN_MASK + 8*%%TMP]
         kmovw     %%KMASK2, [%%MOV_MASK + 2*%%TMP]
+%if %%SKIP_ROUNDS == 4
+        vmovdqu8 %%DATA64B_L15{%%KMASK1}, %%DATA64B_L14
+        vmovdqu8 %%DATA64B_L14{%%KMASK1}, %%DATA64B_L13
+        vmovdqu8 %%DATA64B_L13{%%KMASK1}, %%DATA64B_L12
+%else
         vpalignr  %%DATA64B_L15{%%KMASK1}, %%DATA64B_L15, %%DATA64B_L14, (16 - %%SKIP_ROUNDS * 4)
         vpalignr  %%DATA64B_L14{%%KMASK1}, %%DATA64B_L14, %%DATA64B_L13, (16 - %%SKIP_ROUNDS * 4)
         vpalignr  %%DATA64B_L13{%%KMASK1}, %%DATA64B_L13, %%DATA64B_L12, (16 - %%SKIP_ROUNDS * 4)
         vpalignr  %%DATA64B_L12{%%KMASK1}, %%DATA64B_L12, %%DATA64B_L15, (16 - %%SKIP_ROUNDS * 4)
+%endif
         vmovdqu32 [%%KS + %%KEY_OFF*4 + 512*3]{%%KMASK2}, %%DATA64B_L12
         vmovdqu32 [%%KS + %%KEY_OFF*4 + 512*3 + 64], %%DATA64B_L13
         vmovdqu32 [%%KS + %%KEY_OFF*4 + 512*3 + 64*2], %%DATA64B_L14
@@ -1363,7 +1395,7 @@ init_for_auth_tag_8B:
 %macro KEYGEN_16_AVX512 3-4
 %define %%NUM_ROUNDS    %1 ; [in] Number of 4-byte rounds
 %define %%KEY_OFF       %2 ; [in] Offset to start writing Keystream
-%define %%SKIP_ROUNDS   %3 ; [constant] Number of rounds to skip
+%define %%SKIP_ROUNDS   %3 ; [constant] Number of rounds to skip (1, 2 or 4)
 %define %%LANE_MASK     %4 ; [in] Lane mask with lanes to generate all keystream words
 
 %define pState  arg1
@@ -1443,7 +1475,7 @@ init_for_auth_tag_8B:
         vmovdqa32   %%R2, [pState + OFS_R2]
 
         ; Store all 4 bytes of keystream in a single 64-byte buffer
-%if (%%NUM_ROUNDS == 1)
+%if (%%NUM_ROUNDS <= %%SKIP_ROUNDS)
         BITS_REORG16 pState, 1, %%FULL_LANE_KMASK, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, %%ZTMP6, \
                      %%ZTMP7, %%ZTMP8, %%ZTMP9, %%BLEND_KMASK, %%X0, %%X1, %%X2, %%KSTR1
         NONLIN_FUN16 pState, %%FULL_LANE_KMASK, %%X0, %%X1, %%X2, %%R1, %%R2, \
@@ -1454,7 +1486,7 @@ init_for_auth_tag_8B:
                      %%ZTMP6, %%MASK31, %%ZTMP7, work
         vmovdqa32    [pState + OFS_R1]{%%FULL_LANE_KMASK}, %%R1
         vmovdqa32    [pState + OFS_R2]{%%FULL_LANE_KMASK}, %%R2
-%else ;; %%NUM_ROUNDS != 1
+%else ;; %%NUM_ROUNDS > %%SKIP_ROUNDS
         ; Generate N*4B of keystream in N rounds
         ; Generate first bytes of KS for all lanes
 %assign %%N 1
@@ -1504,8 +1536,10 @@ init_for_auth_tag_8B:
         lea         %%TMP1, [rel alignr_mask]
 %if %%SKIP_ROUNDS == 1
         lea         %%TMP2, [rel mov_4B_mask]
-%else ; %%SKIP_ROUNDS == 2
+%elif %%SKIP_ROUNDS == 2
         lea         %%TMP2, [rel mov_8B_mask]
+%else ; %%SKIP_ROUNDS == 4
+        lea         %%TMP2, [rel mov_16B_mask]
 %endif
         STORE_KSTR16 pKS, %%ZTMP7, %%ZTMP5, %%KSTR13, %%KSTR1, %%ZTMP8, %%ZTMP6, %%KSTR14, %%KSTR2, \
                      %%ZTMP3, %%ZTMP1, %%KSTR15, %%KSTR3, %%ZTMP4, %%ZTMP2, %%KSTR16, %%KSTR4, %%KEY_OFF, \
@@ -1519,7 +1553,7 @@ init_for_auth_tag_8B:
 %if (%0 == 4)
         REORDER_LFSR pState, %%NUM_ROUNDS, %%FULL_LANE_KMASK
 %if (%%NUM_ROUNDS >= %%SKIP_ROUNDS)
-        REORDER_LFSR pState, (%%NUM_ROUNDS - %%SKIP_ROUNDS), %%SKIP_LANE_KMASK ; 2 less rounds for "old" buffers
+        REORDER_LFSR pState, (%%NUM_ROUNDS - %%SKIP_ROUNDS), %%SKIP_LANE_KMASK ; 1/2/4 less rounds for "old" buffers
 %endif
 %else
         REORDER_LFSR pState, %%NUM_ROUNDS, %%FULL_LANE_KMASK
@@ -2043,6 +2077,23 @@ Eia3_N64B_tag_8B:
         ret
 
 ;
+;; void asm_ZucGenKeystream64B_16_skip16_avx512(state16_t *pSta, u32* pKeyStr[16],
+;;                                             const u32 key_off,
+;;                                             const u16 lane_mask)
+;;
+MKGLOBAL(ZUC_KEYGEN64B_SKIP16_16,function,internal)
+ZUC_KEYGEN64B_SKIP16_16:
+        endbranch64
+
+        FUNC_SAVE
+
+        KEYGEN_16_AVX512 16, arg3, 4, arg4
+
+        FUNC_RESTORE
+
+        ret
+
+;
 ;; void asm_ZucGenKeystream64B_16_skip8_avx512(state16_t *pSta, u32* pKeyStr[16],
 ;;                                             const u32 key_off,
 ;;                                             const u16 lane_mask)
@@ -2094,7 +2145,7 @@ ZUC_KEYGEN8B_16:
 %macro KEYGEN_VAR_16_AVX512 3-4
 %define %%NUM_ROUNDS    %1 ; [in] Number of 4-byte rounds (GP dowrd register)
 %define %%KEY_OFF       %2 ; [in] Offset to start writing Keystream
-%define %%SKIP_ROUNDS   %3 ; [constant] Number of rounds to skip
+%define %%SKIP_ROUNDS   %3 ; [constant] Number of rounds to skip (1, 2 or 4)
 %define %%LANE_MASK     %4 ; [in] Lane mask with lanes to generate full keystream (rest 1-2 words less)
 
         cmp     %%NUM_ROUNDS, 16
@@ -2170,6 +2221,25 @@ ZUC_KEYGEN_16:
 
         ret
 
+;;
+;; void asm_ZucGenKeystream_16_skip16_avx512(state16_t *pSta, u32* pKeyStr[16],
+;;                                          const u32 key_off,
+;;                                          const u16 lane_mask,
+;;                                          u32 numRounds)
+;;
+MKGLOBAL(ZUC_KEYGEN_SKIP16_16,function,internal)
+ZUC_KEYGEN_SKIP16_16:
+        endbranch64
+
+        mov     r10, arg5
+
+        FUNC_SAVE
+
+        KEYGEN_VAR_16_AVX512 r10d, arg3, 4, arg4
+
+        FUNC_RESTORE
+
+        ret
 ;;
 ;; void asm_ZucGenKeystream_16_skip8_avx512(state16_t *pSta, u32* pKeyStr[16],
 ;;                                          const u32 key_off,
