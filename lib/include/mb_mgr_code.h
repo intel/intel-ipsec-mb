@@ -2809,8 +2809,14 @@ IMB_JOB *submit_new_job(IMB_MGR *state, IMB_JOB *job)
 }
 
 __forceinline
-void complete_job(IMB_MGR *state, IMB_JOB *job)
+uint32_t complete_job(IMB_MGR *state, IMB_JOB *job)
 {
+        uint32_t completed_jobs = 0;
+
+        /**
+         * complete as many jobs as necessary
+         * until specified 'job' has completed
+         */
         if (job->chain_order == IMB_ORDER_CIPHER_HASH) {
                 /* while() loop optimized for cipher_hash order */
                 while (job->status < IMB_STATUS_COMPLETED) {
@@ -2820,6 +2826,7 @@ void complete_job(IMB_MGR *state, IMB_JOB *job)
                                 tmp = FLUSH_JOB_HASH(state, job);
 
                         (void) RESUBMIT_JOB(state, tmp);
+                        completed_jobs++;
                 }
         } else {
                 /* while() loop optimized for hash_cipher order */
@@ -2830,8 +2837,11 @@ void complete_job(IMB_MGR *state, IMB_JOB *job)
                                 tmp = FLUSH_JOB_AES(state, job);
 
                         (void) RESUBMIT_JOB(state, tmp);
+                        completed_jobs++;
                 }
         }
+
+        return completed_jobs;
 }
 
 __forceinline
@@ -2872,7 +2882,7 @@ submit_job_and_check(IMB_MGR *state, const int run_check)
         if (state->earliest_job == state->next_job) {
                 /* Full */
                 job = JOBS(state, state->earliest_job);
-                complete_job(state, job);
+                (void) complete_job(state, job);
                 ADV_JOBS(&state->earliest_job);
                 goto exit;
         }
@@ -2952,7 +2962,7 @@ FLUSH_JOB(IMB_MGR *state)
         SAVE_XMMS(xmm_save);
 #endif
         job = JOBS(state, state->earliest_job);
-        complete_job(state, job);
+        (void) complete_job(state, job);
 
         ADV_JOBS(&state->earliest_job);
 
@@ -3098,8 +3108,7 @@ uint32_t submit_burst_and_check(IMB_MGR *state, IMB_JOB *jobs,
 
                 if (job->status < IMB_STATUS_COMPLETED) {
                         /* force job to completion */
-                        complete_job(state, job);
-                        completed_jobs++;
+                        completed_jobs += complete_job(state, job);
                 }
         }
 
