@@ -2199,6 +2199,7 @@ ZUC_EIA3_N64B:
 
         cmp     TAG_SIZE, 8
         je      Eia3_N64B_tag_8B
+        ja      Eia3_N64B_tag_16B
 
         ; Fall-through for 4 bytes
 Eia3_N64B_tag_4B:
@@ -2214,6 +2215,15 @@ Eia3_N64B_tag_8B:
         FUNC_SAVE
 
         ZUC_EIA3_16_64B_AVX512 STATE, KS, T, DATA, LEN, NROUNDS, 8
+
+        FUNC_RESTORE
+
+        ret
+
+Eia3_N64B_tag_16B:
+        FUNC_SAVE
+
+        ZUC_EIA3_16_64B_AVX512 STATE, KS, T, DATA, LEN, NROUNDS, 16
 
         FUNC_RESTORE
 
