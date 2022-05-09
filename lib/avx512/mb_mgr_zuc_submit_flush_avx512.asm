@@ -48,6 +48,8 @@
 %define ZUC_CIPHER         asm_ZucCipher_16_avx512
 %define ZUC_REMAINDER_16   asm_Eia3RemainderAVX512_16
 %define ZUC256_REMAINDER_16 asm_Eia3_256_RemainderAVX512_16
+%define ZUC_KEYGEN_SKIP16_16 asm_ZucGenKeystream_16_skip16_avx512
+%define ZUC_KEYGEN64B_SKIP16_16 asm_ZucGenKeystream64B_16_skip16_avx512
 %define ZUC_KEYGEN_SKIP8_16 asm_ZucGenKeystream_16_skip8_avx512
 %define ZUC_KEYGEN64B_SKIP8_16 asm_ZucGenKeystream64B_16_skip8_avx512
 %define ZUC_KEYGEN_SKIP4_16 asm_ZucGenKeystream_16_skip4_avx512
@@ -75,6 +77,10 @@ extern asm_Eia3RemainderAVX512_16
 extern asm_Eia3RemainderAVX512_16_VPCLMUL
 extern asm_Eia3_256_RemainderAVX512_16
 extern asm_Eia3_256_RemainderAVX512_16_VPCLMUL
+extern asm_ZucGenKeystream_16_skip16_avx512
+extern asm_ZucGenKeystream_16_skip16_gfni_avx512
+extern asm_ZucGenKeystream64B_16_skip16_avx512
+extern asm_ZucGenKeystream64B_16_skip16_gfni_avx512
 extern asm_ZucGenKeystream_16_skip8_avx512
 extern asm_ZucGenKeystream_16_skip8_gfni_avx512
 extern asm_ZucGenKeystream64B_16_skip8_avx512
@@ -236,8 +242,9 @@ mksection .text
         ;; Find min length for lanes 0-7
         vphminposuw     xmm2, xmm0
 
+        xor     job_rax, job_rax
         cmp     qword [state + _zuc_lanes_in_use], 16
-        jne     %%return_null_submit_eea3
+        jne     %%return_submit_eea3
 
         ; Find min length for lanes 8-15
         vpextrw         DWORD(min_len), xmm2, 0   ; min value
@@ -336,12 +343,6 @@ mksection .text
         mov     rdi, [rsp + _gpr_save + 8*7]
 %endif
         mov     rsp, [rsp + _rsp_save]  ; original SP
-
-        ret
-
-%%return_null_submit_eea3:
-        xor     job_rax, job_rax
-        jmp     %%return_submit_eea3
 %endmacro
 
 %macro FLUSH_JOB_ZUC_EEA3 1
@@ -380,8 +381,9 @@ mksection .text
         mov     [rsp + _rsp_save], rax  ; original SP
 
         ; check for empty
+        xor     job_rax, job_rax
         cmp     qword [state + _zuc_lanes_in_use], 0
-        jz      %%return_null_flush_eea3
+        jz      %%return_flush_eea3
 
         ; Find lanes with NULL jobs
         vpxorq          zmm0, zmm0
@@ -563,12 +565,6 @@ mksection .text
         mov     rdi, [rsp + _gpr_save + 8*7]
 %endif
         mov     rsp, [rsp + _rsp_save]  ; original SP
-
-        ret
-
-%%return_null_flush_eea3:
-        xor     job_rax, job_rax
-        jmp     %%return_flush_eea3
 %endmacro
 
 ; JOB* SUBMIT_JOB_ZUC128_EEA3(MB_MGR_ZUC_OOO *state, IMB_JOB *job)
@@ -578,6 +574,7 @@ MKGLOBAL(SUBMIT_JOB_ZUC128_EEA3,function,internal)
 SUBMIT_JOB_ZUC128_EEA3:
         endbranch64
         SUBMIT_JOB_ZUC_EEA3 128
+        ret
 
 ; JOB* SUBMIT_JOB_ZUC256_EEA3(MB_MGR_ZUC_OOO *state, IMB_JOB *job)
 ; arg 1 : state
@@ -586,6 +583,7 @@ MKGLOBAL(SUBMIT_JOB_ZUC256_EEA3,function,internal)
 SUBMIT_JOB_ZUC256_EEA3:
         endbranch64
         SUBMIT_JOB_ZUC_EEA3 256
+        ret
 
 ; JOB* FLUSH_JOB_ZUC128_EEA3(MB_MGR_ZUC_OOO *state)
 ; arg 1 : state
@@ -593,6 +591,7 @@ MKGLOBAL(FLUSH_JOB_ZUC128_EEA3,function,internal)
 FLUSH_JOB_ZUC128_EEA3:
         endbranch64
         FLUSH_JOB_ZUC_EEA3 128
+        ret
 
 ; JOB* FLUSH_JOB_ZUC256_EEA3(MB_MGR_ZUC_OOO *state)
 ; arg 1 : state
@@ -600,11 +599,12 @@ MKGLOBAL(FLUSH_JOB_ZUC256_EEA3,function,internal)
 FLUSH_JOB_ZUC256_EEA3:
         endbranch64
         FLUSH_JOB_ZUC_EEA3 256
+        ret
 
 %macro ZUC_EIA3_16_BUFFER 6
 %define %%OOO           %1 ; [in] Pointer to ZUC OOO manager
 %define %%KEY_SIZE      %2 ; [constant] Key size (16 or 32)
-%define %%TAG_SIZE      %3 ; [constant] Tag size (4 or 8 bytes)
+%define %%TAG_SIZE      %3 ; [constant] Tag size (4, 8 or 16 bytes)
 %define %%L             %4 ; [clobbered] Temporary GP register (dword)
 %define %%REMAIN_BITS   %5 ; [clobbered] Temporary GP register (dword)
 %define %%TMP           %6 ; [clobbered] Temporary GP register
@@ -651,8 +651,10 @@ FLUSH_JOB_ZUC256_EEA3:
 %else ; %%KEY_SIZE == 256
 %if %%TAG_SIZE == 4
         call    ZUC_KEYGEN_SKIP4_16
-%else ;; %%TAG_SIZE = 8
+%elif %%TAG_SIZE == 8
         call    ZUC_KEYGEN_SKIP8_16
+%else ;; %%TAG_SIZE == 16
+        call    ZUC_KEYGEN_SKIP16_16
 %endif
 %endif ; %%KEY_SIZE
 
@@ -673,8 +675,10 @@ FLUSH_JOB_ZUC256_EEA3:
 %else ; %%KEY_SIZE == 256
 %if %%TAG_SIZE == 4
         call    ZUC_KEYGEN64B_SKIP4_16
-%else ;; %%TAG_SIZE = 8
+%elif %%TAG_SIZE == 8
         call    ZUC_KEYGEN64B_SKIP8_16
+%else ;; %%TAG_SIZE == 16
+        call    ZUC_KEYGEN64B_SKIP16_16
 %endif
 %endif
         sub     %%L, 16
@@ -779,7 +783,7 @@ FLUSH_JOB_ZUC256_EEA3:
 
 %macro SUBMIT_JOB_ZUC_EIA3 2
 %define %%KEY_SIZE      %1 ; [constant] Key size (128 or 256)
-%define %%TAG_SIZE      %2 ; [constant] Tag size (4 or 8)
+%define %%TAG_SIZE      %2 ; [constant] Tag size (4, 8 or 16 bytes)
 
 ; idx needs to be in rbp
 %define len              rbp
@@ -869,8 +873,13 @@ FLUSH_JOB_ZUC256_EEA3:
         ; Reset temporary digest for the lane
 %if %%TAG_SIZE == 4
         mov     dword [state + _zuc_args_digest + lane*4], 0
-%else
+%elif %%TAG_SIZE == 8
         mov     qword [state + _zuc_args_digest + lane*8], 0
+%else ; %%TAG_SIZE == 16
+        vpxor   xmm0, xmm0
+        shl     lane, 4
+        vmovdqa [state + _zuc_args_digest + lane], xmm0
+        shr     lane, 4
 %endif
 
         mov     tmp, [job + _src]
@@ -888,8 +897,9 @@ FLUSH_JOB_ZUC256_EEA3:
         vmovdqu16       ymm0{k1}, ymm1
         vmovdqa64       [state + _zuc_lens], ymm0
 
+        xor     job_rax, job_rax
         cmp     qword [state + _zuc_lanes_in_use], 16
-        jne     %%return_null_submit_eia3
+        jne     %%return_submit_eia3
 
         ;; Find min length for lanes 0-7
         vphminposuw     xmm2, xmm0
@@ -954,6 +964,11 @@ FLUSH_JOB_ZUC256_EEA3:
 %elif %%TAG_SIZE == 8
         mov     r10, [state + _zuc_args_digest + idx*8]
         mov     [r11], r10
+%else ; %%TAG_SIZE == 16
+        shl     idx, 4
+        vmovdqa xmm0, [state + _zuc_args_digest + idx]
+        vmovdqu [r11], xmm0
+        shr     idx, 4
 %endif
         shl     unused_lanes, 4
         or      unused_lanes, idx
@@ -987,17 +1002,11 @@ FLUSH_JOB_ZUC256_EEA3:
         mov     rdi, [rsp + _gpr_save + 8*7]
 %endif
         mov     rsp, [rsp + _rsp_save]  ; original SP
-
-        ret
-
-%%return_null_submit_eia3:
-        xor     job_rax, job_rax
-        jmp     %%return_submit_eia3
 %endmacro
 
 %macro FLUSH_JOB_ZUC_EIA3 2
 %define %%KEY_SIZE      %1 ; [constant] Key size (128 or 256)
-%define %%TAG_SIZE      %2 ; [constant] Tag size (4 or 8)
+%define %%TAG_SIZE      %2 ; [constant] Tag size (4, 8 or 16 bytes)
 
 %define unused_lanes     rbx
 %define tmp1             rbx
@@ -1029,8 +1038,9 @@ FLUSH_JOB_ZUC256_EEA3:
         mov     [rsp + _rsp_save], rax  ; original SP
 
         ; check for empty
+        xor     job_rax, job_rax
         cmp     qword [state + _zuc_lanes_in_use], 0
-        jz      %%return_null_flush_eia3
+        jz      %%return_flush_eia3
 
         ; find a lane with a null job
         vpxorq          zmm0, zmm0
@@ -1153,6 +1163,11 @@ FLUSH_JOB_ZUC256_EEA3:
 %elif %%TAG_SIZE == 8
         mov     r10, [state + _zuc_args_digest + idx*8]
         mov     [r11], r10
+%else ; %%TAG_SIZE == 16
+        shl     idx, 4
+        vmovdqa xmm0, [state + _zuc_args_digest + idx]
+        vmovdqu [r11], xmm0
+        shr     idx, 4
 %endif
         shl     unused_lanes, 4
         or      unused_lanes, idx
@@ -1186,12 +1201,6 @@ FLUSH_JOB_ZUC256_EEA3:
         mov     rdi, [rsp + _gpr_save + 8*7]
 %endif
         mov     rsp, [rsp + _rsp_save]  ; original SP
-
-        ret
-
-%%return_null_flush_eia3:
-        xor     job_rax, job_rax
-        jmp     %%return_flush_eia3
 %endmacro
 
 ; JOB* SUBMIT_JOB_ZUC128_EIA3(MB_MGR_ZUC_OOO *state, IMB_JOB *job)
@@ -1201,12 +1210,13 @@ MKGLOBAL(SUBMIT_JOB_ZUC128_EIA3,function,internal)
 SUBMIT_JOB_ZUC128_EIA3:
         endbranch64
         SUBMIT_JOB_ZUC_EIA3 128, 4
+        ret
 
 ; JOB* SUBMIT_JOB_ZUC256_EIA3(MB_MGR_ZUC_OOO *state, IMB_JOB *job,
 ;                             const uint64_t tag_sz)
 ; arg 1 : state
 ; arg 2 : job
-; arg 3 : tag size (4 or 8 bytes)
+; arg 3 : tag size (4, 8 or 16 bytes)
 MKGLOBAL(SUBMIT_JOB_ZUC256_EIA3,function,internal)
 SUBMIT_JOB_ZUC256_EIA3:
         endbranch64
@@ -1214,11 +1224,17 @@ SUBMIT_JOB_ZUC256_EIA3:
         je      submit_tag_8B
         jb      submit_tag_4B
 
+submit_tag_16B:
+        SUBMIT_JOB_ZUC_EIA3 256, 16
+        ret
+
 submit_tag_8B:
         SUBMIT_JOB_ZUC_EIA3 256, 8
+        ret
 
 submit_tag_4B:
         SUBMIT_JOB_ZUC_EIA3 256, 4
+        ret
 
 ; JOB* FLUSH_JOB_ZUC128_EIA3(MB_MGR_ZUC_OOO *state)
 ; arg 1 : state
@@ -1226,11 +1242,12 @@ MKGLOBAL(FLUSH_JOB_ZUC128_EIA3,function,internal)
 FLUSH_JOB_ZUC128_EIA3:
         endbranch64
         FLUSH_JOB_ZUC_EIA3 128, 4
+        ret
 
 ; JOB* FLUSH_JOB_ZUC256_EIA3(MB_MGR_ZUC_OOO *state,
 ;                            const uint64_t tag_sz)
 ; arg 1 : state
-; arg 2 : tag size (4 or 8 bytes)
+; arg 2 : tag size (4, 8 or 16 bytes)
 MKGLOBAL(FLUSH_JOB_ZUC256_EIA3,function,internal)
 FLUSH_JOB_ZUC256_EIA3:
         endbranch64
@@ -1238,10 +1255,16 @@ FLUSH_JOB_ZUC256_EIA3:
         je      flush_tag_8B
         jb      flush_tag_4B
 
+flush_tag_16B:
+        FLUSH_JOB_ZUC_EIA3 256, 16
+        ret
+
 flush_tag_8B:
         FLUSH_JOB_ZUC_EIA3 256, 8
+        ret
 
 flush_tag_4B:
         FLUSH_JOB_ZUC_EIA3 256, 4
+        ret
 
 mksection stack-noexec

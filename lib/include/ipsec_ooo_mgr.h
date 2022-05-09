@@ -155,7 +155,7 @@ typedef struct {
         DECLARE_ALIGNED(uint8_t *out[16], 64);
         const uint8_t *keys[16];
         DECLARE_ALIGNED(uint8_t iv[16*32], 32);
-        DECLARE_ALIGNED(uint32_t digest[16*2], 64);
+        DECLARE_ALIGNED(uint32_t digest[16*4], 64);
         /* Memory for 128 bytes of KS for 16 buffers */
         DECLARE_ALIGNED(uint32_t ks[16 * 2 * 16], 64);
 } ZUC_ARGS_x16;
