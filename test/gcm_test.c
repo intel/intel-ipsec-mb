@@ -1687,6 +1687,19 @@ aes_gcm_burst(IMB_MGR *mb_mgr,
                         printf("submit_burst error %d : '%s'\n", err,
                                imb_get_strerror(err));
                         return -1;
+                } else {
+                        printf("submit_burst error: not enough "
+                               "jobs returned!\n");
+                        return -1;
+                }
+        }
+
+        for (i = 0; i < num_jobs; i++) {
+                job = &jobs[i];
+
+                if (job->status != IMB_STATUS_COMPLETED) {
+                        printf("job %d status not complete!\n", i+1);
+                       return -1;
                 }
         }
 

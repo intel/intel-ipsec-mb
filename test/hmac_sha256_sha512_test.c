@@ -1224,11 +1224,20 @@ test_hmac_shax_burst(struct IMB_MGR *mb_mgr,
                         printf("submit_burst error %d : '%s'\n", err,
                                imb_get_strerror(err));
                         goto end;
+                } else {
+                        printf("submit_burst error: not enough "
+                               "jobs returned!\n");
+                        goto end;
                 }
         }
 
         for (i = 0; i < num_jobs; i++) {
                 job = &jobs[i];
+
+                if (job->status != IMB_STATUS_COMPLETED) {
+                        printf("job %d status not complete!\n", i+1);
+                        goto end;
+                }
 
                 if (!hmac_shax_job_ok(vec, job, sha_type,
                                       job->user_data,
