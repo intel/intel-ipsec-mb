@@ -32,6 +32,10 @@
 #include <inttypes.h>
 #include <string.h>
 #include <errno.h>
+#ifdef LINUX
+#include <signal.h>
+#include <sys/time.h>
+#endif
 
 #ifdef _WIN32
 #include <malloc.h> /* memalign() or _aligned_malloc()/aligned_free() */
@@ -914,6 +918,17 @@ static int plot_output_option = 0;
 
 static uint32_t burst_api = 0;  /* burst API enable/disable flag */
 static uint32_t burst_size = 0; /* num jobs to pass to burst API */
+
+#ifdef LINUX
+static volatile int timebox_on = 1; /* flag to stop the test loop */
+static int use_timebox = 1;         /* time-box feature on/off flag */
+
+static void timebox_callback(int sig)
+{
+        (void) sig;
+        timebox_on = 0;
+}
+#endif
 
 /* Return rdtsc to core cycle scale factor */
 static double get_tsc_to_core_scale(const int turbo)
@@ -1878,6 +1893,27 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
                         params->aad_size;
         }
 
+#ifdef LINUX
+#define TIMEOUT_MS 100 /*< max time for one packet size to be tested for */
+
+        uint32_t jobs_done = 0; /*< to track how many jobs done over time */
+
+        if (use_timebox) {
+                struct itimerval it_next;
+
+                /* set up one shot timer */
+                it_next.it_interval.tv_sec = 0;
+                it_next.it_interval.tv_usec = 0;
+                it_next.it_value.tv_sec = TIMEOUT_MS / 1000;
+                it_next.it_value.tv_usec = (TIMEOUT_MS % 1000) * 1000;
+                if (setitimer(ITIMER_REAL, &it_next, NULL)) {
+                        perror("setitimer(one-shot)");
+                        exit(EXIT_FAILURE);
+                }
+                timebox_on = 1;
+        }
+#endif
+
 #ifndef _WIN32
         if (use_unhalted_cycles)
                 time = read_cycles(params->core);
@@ -1889,7 +1925,7 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
                 IMB_JOB jobs[MAX_BURST_SIZE];
                 uint32_t num_jobs = num_iter;
 
-                while (num_jobs) {
+                while (num_jobs && timebox_on) {
                         uint32_t n_jobs =
                                 (num_jobs / burst_size) ? burst_size : num_jobs;
 
@@ -1920,8 +1956,11 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
 #endif
                         num_jobs -= n_jobs;
                 }
+#ifdef LINUX
+                jobs_done = num_iter - num_jobs;
+#endif
         } else {
-                for (i = 0; i < num_iter; i++) {
+                for (i = 0; (i < num_iter) && timebox_on; i++) {
                         job = IMB_GET_NEXT_JOB(mb_mgr);
                         *job = job_template;
 
@@ -1945,7 +1984,9 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
                                 job = IMB_GET_COMPLETED_JOB(mb_mgr);
                         }
                 }
-
+#ifdef LINUX
+                jobs_done = i;
+#endif
                 while ((job = IMB_FLUSH_JOB(mb_mgr))) {
 #ifdef DEBUG
                         if (job->status != IMB_STATUS_COMPLETED) {
@@ -1971,6 +2012,25 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
 #endif
                 time = __rdtscp(&aux) - time;
 
+#ifdef LINUX
+        if (use_timebox) {
+                /* disarm the timer */
+                struct itimerval it_disarm;
+
+                memset(&it_disarm, 0, sizeof(it_disarm));
+
+                if (setitimer(ITIMER_REAL, &it_disarm, NULL)) {
+                        perror("setitimer(disarm)");
+                        exit(EXIT_FAILURE);
+                }
+
+                /* calculate return value */
+                if (jobs_done == 0)
+                        return 0;
+
+                return time / jobs_done;
+        }
+#endif
         if (!num_iter)
                 return time;
 
@@ -2728,6 +2788,10 @@ static void usage(void)
                 "--no-tsc-detect: don't check TSC to core scaling\n"
                 "--tag-size: modify tag size\n"
                 "--plot: Adjust text output for direct use with plot output\n"
+#ifdef LINUX
+                "--no-time-box: disables 100ms watchdog timer on "
+                "an algorithm@packet-size performance test\n"
+#endif
                 "--burst-api: use burst API for perf tests\n"
                 "--burst-size: number of jobs to submit per burst\n",
                 MAX_NUM_THREADS + 1);
@@ -3312,6 +3376,10 @@ int main(int argc, char *argv[])
                                         "more than %d\n", MAX_BURST_SIZE);
                                 return EXIT_FAILURE;
                         }
+#ifdef LINUX
+                } else if (strcmp(argv[i], "--no-time-box") == 0) {
+                        use_timebox = 0;
+#endif
                 } else {
                         usage();
                         return EXIT_FAILURE;
@@ -3436,6 +3504,17 @@ int main(int argc, char *argv[])
                 return EXIT_FAILURE;
         }
 
+#ifdef LINUX
+        /* Check timebox option vs number of threads bigger than 1 */
+        if (use_timebox && num_t > 1) {
+                fprintf(stderr,
+                        "Time-box feature, enabled by default, doesn't work "
+                        "safely with number of threads bigger than one! Please "
+                        "use '--no-time-box' option to disable\n");
+                return EXIT_FAILURE;
+        }
+#endif
+
         /* if cycles selected then init MSR module */
         if (use_unhalted_cycles) {
                 if (core_mask == 0) {
@@ -3507,6 +3586,16 @@ int main(int argc, char *argv[])
         init_offsets(cache_type);
 
         srand(ITER_SCALE_LONG + ITER_SCALE_SHORT + ITER_SCALE_SMOKE);
+
+#ifdef LINUX
+        if (use_timebox) {
+                /* set up timebox callback function */
+                if (signal(SIGALRM, timebox_callback) == SIG_ERR) {
+                        perror("signal(SIGALRM)");
+                        return EXIT_FAILURE;
+                }
+        }
+#endif
 
         if (num_t > 1) {
                 uint32_t n;
