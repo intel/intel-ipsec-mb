@@ -70,6 +70,7 @@
 #define MAX_GCM_AAD_SIZE 1024
 #define MAX_CCM_AAD_SIZE 46
 #define MAX_AAD_SIZE 1024
+#define NUM_TAG_SIZES 7
 
 #define MAX_IV_SIZE 25 /* IV size for ZUC-256 */
 #define MAX_TAG_SIZE 16 /* Max tag size for ZUC-256 */
@@ -136,6 +137,7 @@ struct data {
         uint8_t auth_key[MAX_KEY_SIZE];
         struct cipher_auth_keys enc_keys;
         struct cipher_auth_keys dec_keys;
+        uint8_t tag_size;
 };
 
 struct custom_job_params {
@@ -580,7 +582,7 @@ struct variant_s {
         struct params_s params;
 };
 
-const uint8_t auth_tag_length_bytes[] = {
+const uint8_t auth_tag_len_bytes[] = {
                 12, /* IMB_AUTH_HMAC_SHA_1 */
                 14, /* IMB_AUTH_HMAC_SHA_224 */
                 16, /* IMB_AUTH_HMAC_SHA_256 */
@@ -1742,12 +1744,7 @@ do_test(IMB_MGR *enc_mb_mgr, const IMB_ARCH enc_arch,
         unsigned int num_processed_jobs = 0;
         uint8_t next_iv[IMB_AES_BLOCK_SIZE];
         uint16_t pli = 0;
-        uint8_t tag_size;
-
-        if (auth_tag_size == 0)
-                tag_size = auth_tag_length_bytes[params->hash_alg - 1];
-        else
-                tag_size = auth_tag_size;
+        uint8_t tag_size = data->tag_size;
 
         if (num_jobs == 0)
                 return ret;
@@ -2221,29 +2218,18 @@ exit:
         return ret;
 }
 
-/* Runs test for each buffer size */
 static void
-process_variant(IMB_MGR *enc_mgr, const IMB_ARCH enc_arch,
-                IMB_MGR *dec_mgr, const IMB_ARCH dec_arch,
-                struct params_s *params, struct data *variant_data,
-                const unsigned int safe_check)
+test_single(IMB_MGR *enc_mgr, const IMB_ARCH enc_arch,
+            IMB_MGR *dec_mgr, const IMB_ARCH dec_arch,
+            struct params_s *params, struct data *variant_data,
+            const uint32_t buf_size,
+            const unsigned int safe_check)
 {
-#ifdef PIN_BASED_CEC
-        const uint32_t sizes = job_sizes[RANGE_MAX];
-#else
-        const uint32_t sizes = params->num_sizes;
-#endif
-        uint32_t sz;
+        unsigned int i;
+        unsigned int num_tag_sizes = 0;
+        uint8_t tag_sizes[NUM_TAG_SIZES];
         uint64_t min_aad_sz = 0;
         uint64_t max_aad_sz, aad_sz;
-
-        if (verbose) {
-                printf("[INFO] ");
-                print_algo_info(params);
-        }
-
-        /* Reset the variant data */
-        clear_data(variant_data);
 
         if (params->cipher_mode == IMB_CIPHER_GCM)
                 max_aad_sz = MAX_GCM_AAD_SIZE;
@@ -2252,13 +2238,28 @@ process_variant(IMB_MGR *enc_mgr, const IMB_ARCH enc_arch,
         else
                 max_aad_sz = 0;
 
-        for (sz = 0; sz < sizes; sz++) {
-#ifdef PIN_BASED_CEC
-                const uint32_t buf_size = job_sizes[RANGE_MIN];
-#else
-                const uint32_t buf_size = job_sizes[RANGE_MIN] +
-                        (sz * job_sizes[RANGE_STEP]);
-#endif
+        /* If tag size is defined by user, only test this size */
+        if (auth_tag_size != 0) {
+                tag_sizes[0] = auth_tag_size;
+                num_tag_sizes = 1;
+        } else {
+                /* If CCM, test all tag sizes supported (4,6,8,10,12,14,16) */
+                if (params->hash_alg == IMB_AUTH_AES_CCM) {
+                        for (i = 4; i <= 16; i += 2)
+                                tag_sizes[num_tag_sizes++] = i;
+                /* If ZUC-EIA3-256, test all tag sizes supported (4,8,16) */
+                } else if (params->hash_alg == IMB_AUTH_ZUC256_EIA3_BITLEN) {
+                        for (i = 4; i <= 16; i *= 2)
+                                tag_sizes[num_tag_sizes++] = i;
+                } else {
+                        tag_sizes[0] = auth_tag_len_bytes[params->hash_alg - 1];
+                        num_tag_sizes = 1;
+                }
+        }
+
+        for (i = 0; i < num_tag_sizes; i++) {
+                variant_data->tag_size = tag_sizes[i];
+
                 for (aad_sz = min_aad_sz; aad_sz <= max_aad_sz; aad_sz++) {
                         params->aad_size = aad_sz;
                         params->buf_size = buf_size;
@@ -2326,14 +2327,49 @@ process_variant(IMB_MGR *enc_mgr, const IMB_ARCH enc_arch,
                                     params, variant_data, 0, 0, 1) < 0)
                                 exit(EXIT_FAILURE);
                 }
+        }
+}
 
+/* Runs test for each buffer size */
+static void
+process_variant(IMB_MGR *enc_mgr, const IMB_ARCH enc_arch,
+                IMB_MGR *dec_mgr, const IMB_ARCH dec_arch,
+                struct params_s *params, struct data *variant_data,
+                const unsigned int safe_check)
+{
+#ifdef PIN_BASED_CEC
+        const uint32_t sizes = job_sizes[RANGE_MAX];
+#else
+        const uint32_t sizes = params->num_sizes;
+#endif
+        uint32_t sz;
+
+        if (verbose) {
+                printf("[INFO] ");
+                print_algo_info(params);
+        }
+
+        /* Reset the variant data */
+        clear_data(variant_data);
+
+        for (sz = 0; sz < sizes; sz++) {
+#ifdef PIN_BASED_CEC
+                const uint32_t buf_size = job_sizes[RANGE_MIN];
+#else
+                const uint32_t buf_size = job_sizes[RANGE_MIN] +
+                        (sz * job_sizes[RANGE_STEP]);
+#endif
+
+                test_single(enc_mgr, enc_arch, dec_mgr,
+                            dec_arch, params, variant_data,
+                            buf_size, safe_check);
         }
 
         /* Perform IMIX tests */
         if (imix_enabled) {
                 unsigned int i, j;
 
-                params->aad_size = min_aad_sz;
+                params->aad_size = 0;
 
                 for (i = 2; i <= max_num_jobs; i++) {
                         for (j = 0; j < IMIX_ITER; j++) {
