@@ -670,7 +670,7 @@ uint32_t job_sizes[NUM_RANGE] = {DEFAULT_JOB_SIZE_MIN,
                                  DEFAULT_JOB_SIZE_STEP,
                                  DEFAULT_JOB_SIZE_MAX};
 /* Max number of jobs to submit in IMIX testing */
-uint32_t max_num_jobs = 16;
+uint32_t max_num_jobs = 17;
 /* IMIX disabled by default */
 unsigned int imix_enabled = 0;
 /* cipher and authentication IV sizes */
