@@ -29,6 +29,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define SSE
 #define CLEAR_SCRATCH_SIMD_REGS clear_scratch_xmms_sse
 
 #include "intel-ipsec-mb.h"
@@ -192,6 +193,11 @@ IMB_JOB *submit_job_zuc256_eia3_gfni_sse(MB_MGR_ZUC_OOO *state,
 IMB_JOB *flush_job_zuc256_eia3_gfni_sse(MB_MGR_ZUC_OOO *state,
                                         const uint64_t tag_sz);
 
+IMB_JOB *submit_job_sha1_sse(MB_MGR_HMAC_SHA_1_OOO *state,
+                                  IMB_JOB *job);
+IMB_JOB *flush_job_sha1_sse(MB_MGR_HMAC_SHA_1_OOO *state,
+                                  IMB_JOB *job);
+
 void aes_cmac_256_subkey_gen_sse(const void *key_exp,
                                  void *key1, void *key2);
 uint32_t hec_32_sse(const uint8_t *in);
@@ -246,6 +252,8 @@ void *poly1305_mac_scalar(IMB_JOB *job);
 #define FLUSH_JOB_HMAC_MD5    flush_job_hmac_md5_sse
 #define SUBMIT_JOB_AES_XCBC   submit_job_aes_xcbc_sse
 #define FLUSH_JOB_AES_XCBC    flush_job_aes_xcbc_sse
+#define SUBMIT_JOB_SHA1   submit_job_sha1_sse
+#define FLUSH_JOB_SHA1    flush_job_sha1_sse
 
 #define SUBMIT_JOB_AES_CNTR   submit_job_aes_cntr_sse
 #define SUBMIT_JOB_AES_CNTR_BIT   submit_job_aes_cntr_bit_sse
@@ -1179,8 +1187,6 @@ reset_ooo_mgrs(IMB_MGR *state)
         for (j = 0; j < SSE_NUM_SHA1_LANES; j++)
                 sha_1_ooo->ldata[j].job_in_lane = NULL;
 }
-
-
 
 IMB_DLL_LOCAL void
 init_mb_mgr_sse_internal(IMB_MGR *state, const int reset_mgrs)

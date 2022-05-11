@@ -79,7 +79,7 @@ mksection .text
 ; r3 = {d3 c3 b3 a3}
 ;
 %define XMM_STORAGE     16*10
-%define GP_STORAGE      8*3
+%define GP_STORAGE      8
 
 %define VARIABLE_OFFSET XMM_STORAGE + GP_STORAGE
 %define GP_OFFSET XMM_STORAGE
@@ -229,8 +229,7 @@ mksection .text
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;; FRAMESZ must be an odd multiple of 8
-%define FRAMESZ	16*16
+%define FRAMESZ	16*16 + 8
 
 %define MOVPS	movdqu
 
@@ -295,10 +294,10 @@ mksection .text
 %endm
 
 %macro FUNC_SAVE 0
+%ifndef LINUX
     mov     r11, rsp
     sub     rsp, VARIABLE_OFFSET
     and     rsp, ~15	; align rsp to 16 bytes
-
     movdqa  [rsp + 0*16], xmm6
     movdqa  [rsp + 1*16], xmm7
     movdqa  [rsp + 2*16], xmm8
@@ -309,14 +308,7 @@ mksection .text
     movdqa  [rsp + 7*16], xmm13
     movdqa  [rsp + 8*16], xmm14
     movdqa  [rsp + 9*16], xmm15
-%endif
-%ifidn __OUTPUT_FORMAT__, win64
-    ; rdi and rdx need to be maintained for Windows
-    mov     [rsp + GP_OFFSET], rdi
-    mov     [rsp + GP_OFFSET + 8], r11 ;; rsp pointer
-%else
-    mov     [rsp + GP_OFFSET], rsi
-    mov     [rsp + GP_OFFSET + 8], r11 ;; rsp pointer
+    mov     [rsp + GP_OFFSET], r11 ;; rsp pointer
 %endif
 %endmacro
 
@@ -332,8 +324,8 @@ mksection .text
     movdqa  xmm13, [rsp + 7*16]
     movdqa  xmm14, [rsp + 8*16]
     movdqa  xmm15, [rsp + 9*16]
-%endif
 
+%ifdef SAFE_DATA
     pxor 	xmm5, xmm5
     movdqa  [rsp + 0*16], xmm5
     movdqa  [rsp + 1*16], xmm5
@@ -345,15 +337,9 @@ mksection .text
     movdqa  [rsp + 7*16], xmm5
     movdqa  [rsp + 8*16], xmm5
     movdqa  [rsp + 9*16], xmm5
+%endif
 
-%ifidn __OUTPUT_FORMAT__, win64
-    ; rdi and rdx need to be maintained for Windows
-    mov     rdi, [rsp + GP_OFFSET]
-    mov     rsp, [rsp + GP_OFFSET + 8] ;; rsp pointer
-%else
-	; rsi needs to be maintained for Linux
-    mov     rsi, [rsp + GP_OFFSET]
-    mov     rsp, [rsp + GP_OFFSET + 8] ;; rsp pointer
+    mov     rsp, [rsp + GP_OFFSET] ;; rsp pointer
 %endif
 %endmacro
 
@@ -366,8 +352,10 @@ align 32
 ; arg 2 : rdx : size (in blocks) ;; assumed to be >= 1
 MKGLOBAL(sha1_mult_sse,function,internal)
 sha1_mult_sse:
-	FUNC_SAVE
+	mov 	r11, rsp
 	sub	rsp, FRAMESZ
+	and 	rsp, ~15	; align rsp to 16 bytes
+	mov 	[rsp + 16*16], r11
 
 	;; Initialize digests
 	movdqa	A, [arg1 + 0*SHA1_DIGEST_ROW_SIZE]
@@ -497,7 +485,14 @@ lloop:
 	clear_all_xmms_sse_asm
 %endif
 
-	add	rsp, FRAMESZ
+	mov 	rsp, [rsp + 16*16]
+	ret
+
+; void call_sha1_mult_sse_from_c(SHA1_ARGS *args, UINT32 size_in_blocks);
+MKGLOBAL(call_sha1_mult_sse_from_c,function,internal)
+call_sha1_mult_sse_from_c:
+	FUNC_SAVE
+	call sha1_mult_sse
 	FUNC_RESTORE
 	ret
 
