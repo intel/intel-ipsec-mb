@@ -919,13 +919,22 @@ static int plot_output_option = 0;
 static uint32_t burst_api = 0;  /* burst API enable/disable flag */
 static uint32_t burst_size = 0; /* num jobs to pass to burst API */
 
-#ifdef LINUX
 static volatile int timebox_on = 1; /* flag to stop the test loop */
 static int use_timebox = 1;         /* time-box feature on/off flag */
 
+#ifdef LINUX
 static void timebox_callback(int sig)
 {
         (void) sig;
+        timebox_on = 0;
+}
+#endif
+
+#ifdef _WIN32
+static void CALLBACK timebox_callback(PVOID lpParam, BOOLEAN TimerFired)
+{
+        (void) lpParam;
+        (void) TimerFired;
         timebox_on = 0;
 }
 #endif
@@ -1893,12 +1902,16 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
                         params->aad_size;
         }
 
-#ifdef LINUX
 #define TIMEOUT_MS 100 /*< max time for one packet size to be tested for */
 
         uint32_t jobs_done = 0; /*< to track how many jobs done over time */
+#ifdef _WIN32
+        HANDLE hTimebox = NULL;
+        HANDLE hTimeboxQueue = NULL;
+#endif
 
         if (use_timebox) {
+#ifdef LINUX
                 struct itimerval it_next;
 
                 /* set up one shot timer */
@@ -1910,9 +1923,27 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
                         perror("setitimer(one-shot)");
                         exit(EXIT_FAILURE);
                 }
+#else /* _WIN32 */
+                /* create the timer queue */
+                hTimeboxQueue = CreateTimerQueue();
+                if (NULL == hTimeboxQueue) {
+                        fprintf(stderr, "CreateTimerQueue() error %u\n",
+                                (unsigned) GetLastError());
+                        exit(EXIT_FAILURE);
+                }
+
+                /* set a timer to call the timebox */
+                if (!CreateTimerQueueTimer(&hTimebox, hTimeboxQueue,
+                                           (WAITORTIMERCALLBACK)
+                                           timebox_callback,
+                                           NULL, TIMEOUT_MS, 0, 0)) {
+                        fprintf(stderr, "CreateTimerQueueTimer() error %u\n",
+                                (unsigned) GetLastError());
+                        exit(EXIT_FAILURE);
+                }
+#endif
                 timebox_on = 1;
         }
-#endif
 
 #ifndef _WIN32
         if (use_unhalted_cycles)
@@ -1956,9 +1987,8 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
 #endif
                         num_jobs -= n_jobs;
                 }
-#ifdef LINUX
                 jobs_done = num_iter - num_jobs;
-#endif
+
         } else {
                 for (i = 0; (i < num_iter) && timebox_on; i++) {
                         job = IMB_GET_NEXT_JOB(mb_mgr);
@@ -1984,9 +2014,8 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
                                 job = IMB_GET_COMPLETED_JOB(mb_mgr);
                         }
                 }
-#ifdef LINUX
                 jobs_done = i;
-#endif
+
                 while ((job = IMB_FLUSH_JOB(mb_mgr))) {
 #ifdef DEBUG
                         if (job->status != IMB_STATUS_COMPLETED) {
@@ -2012,8 +2041,8 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
 #endif
                 time = __rdtscp(&aux) - time;
 
-#ifdef LINUX
         if (use_timebox) {
+#ifdef LINUX
                 /* disarm the timer */
                 struct itimerval it_disarm;
 
@@ -2023,6 +2052,12 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
                         perror("setitimer(disarm)");
                         exit(EXIT_FAILURE);
                 }
+#else /* _WIN32 */
+                /* delete all timeboxes in the timer queue */
+                if (!DeleteTimerQueue(hTimeboxQueue))
+                        fprintf(stderr, "DeleteTimerQueue() error %u\n",
+                                (unsigned) GetLastError());
+#endif
 
                 /* calculate return value */
                 if (jobs_done == 0)
@@ -2030,7 +2065,7 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
 
                 return time / jobs_done;
         }
-#endif
+
         if (!num_iter)
                 return time;
 
@@ -2788,10 +2823,8 @@ static void usage(void)
                 "--no-tsc-detect: don't check TSC to core scaling\n"
                 "--tag-size: modify tag size\n"
                 "--plot: Adjust text output for direct use with plot output\n"
-#ifdef LINUX
                 "--no-time-box: disables 100ms watchdog timer on "
                 "an algorithm@packet-size performance test\n"
-#endif
                 "--burst-api: use burst API for perf tests\n"
                 "--burst-size: number of jobs to submit per burst\n",
                 MAX_NUM_THREADS + 1);
@@ -3376,10 +3409,8 @@ int main(int argc, char *argv[])
                                         "more than %d\n", MAX_BURST_SIZE);
                                 return EXIT_FAILURE;
                         }
-#ifdef LINUX
                 } else if (strcmp(argv[i], "--no-time-box") == 0) {
                         use_timebox = 0;
-#endif
                 } else {
                         usage();
                         return EXIT_FAILURE;
@@ -3504,7 +3535,6 @@ int main(int argc, char *argv[])
                 return EXIT_FAILURE;
         }
 
-#ifdef LINUX
         /* Check timebox option vs number of threads bigger than 1 */
         if (use_timebox && num_t > 1) {
                 fprintf(stderr,
@@ -3513,7 +3543,6 @@ int main(int argc, char *argv[])
                         "use '--no-time-box' option to disable\n");
                 return EXIT_FAILURE;
         }
-#endif
 
         /* if cycles selected then init MSR module */
         if (use_unhalted_cycles) {
