@@ -717,7 +717,7 @@ else
 	ln -f -s $(LIB).so.$(SO_VERSION) $(LIB_DIR)/$(LIB).so
 endif
 else
-	$(AR) -qcs $@ $^
+	$(AR) -qcs $@ $(target_obj_files)
 endif
 ifeq ($(SAFE_PARAM), n)
 	@echo "NOTE:" $(SAFE_PARAM_MSG1) $(SAFE_PARAM_MSG2)
