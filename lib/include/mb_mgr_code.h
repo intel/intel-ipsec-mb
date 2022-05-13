@@ -3083,6 +3083,11 @@ uint32_t submit_burst_and_check(IMB_MGR *state, IMB_JOB *jobs,
                 for (i = 0; i < n_jobs; i++) {
                         IMB_JOB *job = &jobs[i];
 
+                        if (job == NULL) {
+                                imb_set_errno(state, IMB_ERR_NULL_JOB);
+                                return 0;
+                        }
+
                         /* validate job */
                         if (is_job_invalid(state, job)) {
                                 job->status = IMB_STATUS_INVALID_ARGS;
@@ -3140,6 +3145,10 @@ SUBMIT_BURST(IMB_MGR *state, IMB_JOB *jobs, const uint32_t n_jobs)
                 imb_set_errno(NULL, IMB_ERR_NULL_MBMGR);
                 return 0;
         }
+        if (jobs == NULL) {
+                imb_set_errno(NULL, IMB_ERR_NULL_JOB);
+                return 0;
+        }
 #endif
 
         return submit_burst_and_check(state, jobs, n_jobs, 1);
@@ -3154,6 +3163,10 @@ SUBMIT_BURST_NOCHECK(IMB_MGR *state, IMB_JOB *jobs, const uint32_t n_jobs)
 #ifdef SAFE_PARAM
         if (state == NULL) {
                 imb_set_errno(NULL, IMB_ERR_NULL_MBMGR);
+                return 0;
+        }
+        if (jobs == NULL) {
+                imb_set_errno(NULL, IMB_ERR_NULL_JOB);
                 return 0;
         }
 #endif

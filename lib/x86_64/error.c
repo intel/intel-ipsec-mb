@@ -86,7 +86,8 @@ IMB_DLL_LOCAL const int imb_errno_types[] = {
         IMB_ERR_JOB_NULL_XCBC_K3,
         IMB_ERR_JOB_CIPH_DIR,
         IMB_ERR_JOB_NULL_GHASH_INIT_TAG,
-        IMB_ERR_MISSING_CPUFLAGS_INIT_MGR
+        IMB_ERR_MISSING_CPUFLAGS_INIT_MGR,
+        IMB_ERR_NULL_JOB
 };
 
 #ifdef DEBUG
@@ -208,6 +209,8 @@ imb_get_strerror(int errnum)
         case IMB_ERR_MISSING_CPUFLAGS_INIT_MGR:
                 return "Failed to initialize IMB_MGR due to missing "
                        "required CPU flags";
+        case IMB_ERR_NULL_JOB:
+                return "NULL job pointer";
         default:
                 return strerror(errnum);
         }

@@ -177,7 +177,6 @@ typedef enum {
  */
 typedef enum {
         IMB_ERR_MIN = 2000,
-        /* job api */
         IMB_ERR_NULL_MBMGR,
         IMB_ERR_JOB_NULL_SRC,
         IMB_ERR_JOB_NULL_DST,
@@ -199,7 +198,6 @@ typedef enum {
         IMB_ERR_JOB_NULL_SGL_CTX,
         IMB_ERR_JOB_NULL_NEXT_IV,
         IMB_ERR_JOB_PON_PLI,
-        /* direct api */
         IMB_ERR_NULL_SRC,
         IMB_ERR_NULL_DST,
         IMB_ERR_NULL_KEY,
@@ -225,6 +223,7 @@ typedef enum {
         IMB_ERR_JOB_CIPH_DIR,
         IMB_ERR_JOB_NULL_GHASH_INIT_TAG,
         IMB_ERR_MISSING_CPUFLAGS_INIT_MGR,
+        IMB_ERR_NULL_JOB,
         /* add new error types above this comment */
         IMB_ERR_MAX       /* don't move this one */
 } IMB_ERR;
