@@ -871,17 +871,9 @@ FLUSH_JOB_ZUC256_EEA3:
         not     tmp
         and     [state + _zuc_unused_lane_bitmask], WORD(tmp)
         ; Reset temporary digest for the lane
-%if %%TAG_SIZE == 4
+%if %%KEY_SIZE == 128
         mov     dword [state + _zuc_args_digest + lane*4], 0
-%elif %%TAG_SIZE == 8
-        mov     qword [state + _zuc_args_digest + lane*8], 0
-%else ; %%TAG_SIZE == 16
-        vpxor   xmm0, xmm0
-        shl     lane, 4
-        vmovdqa [state + _zuc_args_digest + lane], xmm0
-        shr     lane, 4
 %endif
-
         mov     tmp, [job + _src]
         add     tmp, [job + _hash_start_src_offset_in_bytes]
         mov     [state + _zuc_args_in + lane*8], tmp
