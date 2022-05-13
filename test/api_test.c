@@ -38,11 +38,14 @@
 #define __func__ __FUNCTION__
 #endif
 
+#define MAX_BURST_JOBS 32
+
 int api_test(struct IMB_MGR *mb_mgr);
 
 enum {
       TEST_UNEXPECTED_JOB = 1,
       TEST_INVALID_JOB,
+      TEST_INVALID_BURST,
       TEST_AUTH_SRC_NULL = 100,
       TEST_AUTH_AUTH_TAG_OUTPUT_NULL,
       TEST_AUTH_TAG_OUTPUT_LEN_ZERO,
@@ -633,6 +636,150 @@ is_submit_invalid(struct IMB_MGR *mb_mgr, const struct IMB_JOB *job,
 }
 
 /*
+ * @brief Submits \a job using the burst API and verifies it failed with
+ *        invalid arguments status and error value
+ */
+static int
+is_submit_burst_invalid(struct IMB_MGR *mb_mgr, const struct IMB_JOB *job,
+                        const int test_num, int expected_errnum)
+{
+        IMB_JOB jobs[MAX_BURST_JOBS] = {0};
+        uint32_t i, completed_jobs;
+        int err;
+
+        /* duplicate job to test */
+        for (i = 0; i < MAX_BURST_JOBS; i++)
+                jobs[i] = *job;
+
+         /* submit the job for processing */
+        completed_jobs = IMB_SUBMIT_BURST(mb_mgr, jobs, MAX_BURST_JOBS);
+        if (completed_jobs != 0) {
+                printf("%s : test %d, hash_alg %d, chain_order %d, "
+                       "cipher_dir %d, cipher_mode %d : "
+                       "unexpected number of completed jobs: %u\n",
+                       __func__, test_num, (int) job->hash_alg,
+                       (int) job->chain_order, (int) job->cipher_direction,
+                       (int) job->cipher_mode, completed_jobs);
+        }
+
+        err = imb_get_errno(mb_mgr);
+        if (err != expected_errnum) {
+                printf("%s : test %d, hash_alg %d, chain_order %d, "
+                       "cipher_dir %d, cipher_mode %d : "
+                       "unexpected error: %s\n",
+                       __func__, test_num, (int) job->hash_alg,
+                       (int) job->chain_order, (int) job->cipher_direction,
+                       (int) job->cipher_mode, imb_get_strerror(err));
+                return 0;
+        }
+
+        if (jobs[0].status != IMB_STATUS_INVALID_ARGS) {
+                printf("%s : test %d, hash_alg %d, chain_order %d, "
+                       "cipher_dir %d, cipher_mode %d : "
+                       "unexpected job->status %d != IMB_STATUS_INVALID_ARGS\n",
+                       __func__, test_num, (int) job->hash_alg,
+                       (int) job->chain_order,
+                       (int) job->cipher_direction,
+                       (int) job->cipher_mode, (int) job->status);
+                return 0;
+        }
+
+        return 1;
+}
+
+/*
+ * @brief Performs BURST API behavior tests
+ */
+static int
+test_burst_api(struct IMB_MGR *mb_mgr)
+{
+        struct IMB_JOB *job = NULL, jobs[MAX_BURST_JOBS] = {0};
+        uint32_t i, completed_jobs, n_jobs = MAX_BURST_JOBS;
+        int err;
+
+	printf("BURST API behavior test:\n");
+
+        /* ======== test 1 : NULL MB_MGR */
+
+        /**
+         * Using sse API directly since IMB_SUBMIT_BURST
+         * macro cannot be used to test for NULL MB_MGR.
+         */
+
+        /* test only when SAFE_PARAM is enabled */
+        if ((mb_mgr->features & IMB_FEATURE_SAFE_PARAM) != 0) {
+
+                completed_jobs = submit_burst_sse(NULL, jobs, n_jobs);
+                if (completed_jobs != 0) {
+                        printf("%s: test %d, unexpected number of "
+                               "completed jobs: %u\n", __func__,
+                               TEST_INVALID_BURST, completed_jobs);
+                        return 1;
+                }
+                printf(".");
+
+                err = imb_get_errno(mb_mgr);
+                if (err != IMB_ERR_NULL_MBMGR) {
+                        printf("%s: test %d, unexpected error: %s\n",
+                               __func__, TEST_INVALID_BURST,
+                               imb_get_strerror(err));
+                        return 1;
+                }
+                printf(".");
+        }
+
+        /* ======== test 2 : NULL jobs array  */
+
+        completed_jobs = IMB_SUBMIT_BURST(mb_mgr, job, n_jobs);
+        if (completed_jobs != 0) {
+                printf("%s: test %d, unexpected number of completed jobs\n",
+                       __func__, TEST_INVALID_BURST);
+                return 1;
+        }
+        printf(".");
+
+        err = imb_get_errno(mb_mgr);
+        if (err != IMB_ERR_NULL_JOB) {
+                printf("%s: test %d, unexpected error: %s\n",
+                       __func__, TEST_INVALID_BURST, imb_get_strerror(err));
+                return 1;
+        }
+        printf(".");
+
+        /* ======== test 3 : invalid job */
+
+        /* fill in valid jobs */
+        for (i = 0; i < n_jobs; i++) {
+                job = &jobs[i];
+                fill_in_job(job, IMB_CIPHER_CBC, IMB_DIR_ENCRYPT, IMB_AUTH_NULL,
+                            IMB_ORDER_CIPHER_HASH, NULL, NULL);
+        }
+
+        /* set a single invalid field */
+        jobs[n_jobs - 1].enc_keys = NULL;
+
+        /* no jobs should complete if any job is invalid */
+        completed_jobs = IMB_SUBMIT_BURST(mb_mgr, jobs, n_jobs);
+        if (completed_jobs != 0) {
+                printf("%s: test %d, unexpected number of completed jobs\n",
+                       __func__, TEST_INVALID_BURST);
+                return 1;
+        }
+        printf(".");
+
+        err = imb_get_errno(mb_mgr);
+        if (err != IMB_ERR_JOB_NULL_KEY) {
+                printf("%s: test %d, unexpected error: %s\n",
+                       __func__, TEST_INVALID_BURST, imb_get_strerror(err));
+                return 1;
+        }
+        printf(".");
+
+	printf("\n");
+        return 0;
+}
+
+/*
  * @brief Checks for AEAD algorithms
  */
 static int
@@ -707,6 +854,12 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
                                                        TEST_AUTH_SRC_NULL,
                                                        IMB_ERR_JOB_NULL_SRC))
                                         return 1;
+
+                                if (!is_submit_burst_invalid(mb_mgr,
+                                                          &template_job,
+                                                          TEST_AUTH_SRC_NULL,
+                                                          IMB_ERR_JOB_NULL_SRC))
+                                        return 1;
                                 printf(".");
                         }
 
@@ -739,6 +892,12 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
                                                  TEST_AUTH_AUTH_TAG_OUTPUT_NULL,
                                                  IMB_ERR_JOB_NULL_AUTH))
                                         return 1;
+
+                                if (!is_submit_burst_invalid(mb_mgr,
+                                                 &template_job,
+                                                 TEST_AUTH_AUTH_TAG_OUTPUT_NULL,
+                                                 IMB_ERR_JOB_NULL_AUTH))
+                                        return 1;
                                 printf(".");
                         }
 
@@ -768,6 +927,11 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
                                         template_job.sgl_state =
                                                 IMB_SGL_COMPLETE;
                                 if (!is_submit_invalid(mb_mgr, &template_job,
+                                                  TEST_AUTH_TAG_OUTPUT_LEN_ZERO,
+                                                  IMB_ERR_JOB_AUTH_TAG_LEN))
+                                        return 1;
+                                if (!is_submit_burst_invalid(mb_mgr,
+                                                  &template_job,
                                                   TEST_AUTH_TAG_OUTPUT_LEN_ZERO,
                                                   IMB_ERR_JOB_AUTH_TAG_LEN))
                                         return 1;
@@ -849,6 +1013,12 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
                                                   TEST_AUTH_MSG_LEN_GT_MAX,
                                                   IMB_ERR_JOB_AUTH_LEN))
                                         return 1;
+
+                                if (!is_submit_burst_invalid(mb_mgr,
+                                                       &template_job,
+                                                       TEST_AUTH_MSG_LEN_GT_MAX,
+                                                       IMB_ERR_JOB_AUTH_LEN))
+                                        return 1;
                                 printf(".");
                         }
 
@@ -898,6 +1068,12 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
                                                        TEST_AUTH_MSG_LEN_ZERO,
                                                        IMB_ERR_JOB_AUTH_LEN))
                                         return 1;
+
+                                if (!is_submit_burst_invalid(mb_mgr,
+                                                         &template_job,
+                                                         TEST_AUTH_MSG_LEN_ZERO,
+                                                         IMB_ERR_JOB_AUTH_LEN))
+                                        return 1;
                                 printf(".");
                         }
 
@@ -934,6 +1110,11 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
                                 if (!is_submit_invalid(mb_mgr, job,
                                                        TEST_AUTH_IV_LEN,
                                                        IMB_ERR_JOB_IV_LEN))
+                                        return 1;
+
+                                if (!is_submit_burst_invalid(mb_mgr, job,
+                                                            TEST_AUTH_IV_LEN,
+                                                            IMB_ERR_JOB_IV_LEN))
                                         return 1;
                                 printf(".");
                         }
@@ -976,6 +1157,11 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
                                                        TEST_AUTH_NULL_HMAC_IPAD,
                                                        err_ipad))
                                         return 1;
+
+                                if (!is_submit_burst_invalid(mb_mgr, job,
+                                                       TEST_AUTH_NULL_HMAC_IPAD,
+                                                       err_ipad))
+                                        return 1;
                                 printf(".");
 
                                 fill_in_job(job, cipher, dir,
@@ -986,6 +1172,11 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
                                 const int err_opad = IMB_ERR_JOB_NULL_HMAC_OPAD;
 
                                 if (!is_submit_invalid(mb_mgr, job,
+                                                       TEST_AUTH_NULL_HMAC_OPAD,
+                                                       err_opad))
+                                        return 1;
+
+                                if (!is_submit_burst_invalid(mb_mgr, job,
                                                        TEST_AUTH_NULL_HMAC_OPAD,
                                                        err_opad))
                                         return 1;
@@ -1011,6 +1202,11 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
                                                TEST_AUTH_NULL_XCBC_K1_EXP,
                                                IMB_ERR_JOB_NULL_XCBC_K1_EXP))
                                 return 1;
+
+                        if (!is_submit_burst_invalid(mb_mgr, job,
+                                                  TEST_AUTH_NULL_XCBC_K1_EXP,
+                                                  IMB_ERR_JOB_NULL_XCBC_K1_EXP))
+                                return 1;
                         printf(".");
 
                         fill_in_job(job, cipher, dir,
@@ -1021,6 +1217,11 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
                                                TEST_AUTH_NULL_XCBC_K2,
                                                IMB_ERR_JOB_NULL_XCBC_K2))
                                 return 1;
+
+                        if (!is_submit_burst_invalid(mb_mgr, job,
+                                                     TEST_AUTH_NULL_XCBC_K2,
+                                                     IMB_ERR_JOB_NULL_XCBC_K2))
+                                return 1;
                         printf(".");
 
                         fill_in_job(job, cipher, dir,
@@ -1030,6 +1231,10 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
                         if (!is_submit_invalid(mb_mgr, job,
                                                TEST_AUTH_NULL_XCBC_K3,
                                                IMB_ERR_JOB_NULL_XCBC_K3))
+                                return 1;
+                        if (!is_submit_burst_invalid(mb_mgr, job,
+                                                     TEST_AUTH_NULL_XCBC_K3,
+                                                     IMB_ERR_JOB_NULL_XCBC_K3))
                                 return 1;
                         printf(".");
                 }
@@ -1052,6 +1257,11 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
                                                TEST_AUTH_NULL_GHASH_KEY,
                                                IMB_ERR_JOB_NULL_AUTH_KEY))
                                 return 1;
+
+                        if (!is_submit_burst_invalid(mb_mgr, job,
+                                                     TEST_AUTH_NULL_GHASH_KEY,
+                                                     IMB_ERR_JOB_NULL_AUTH_KEY))
+                                return 1;
                         printf(".");
 
                         fill_in_job(job, cipher, dir,
@@ -1059,6 +1269,11 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
                                     &gcm_ctx);
                         job->u.GHASH._init_tag = NULL;
                         if (!is_submit_invalid(mb_mgr, job,
+                                               TEST_AUTH_NULL_GHASH_INIT_TAG,
+                                               IMB_ERR_JOB_NULL_GHASH_INIT_TAG))
+                                return 1;
+
+                        if (!is_submit_burst_invalid(mb_mgr, job,
                                                TEST_AUTH_NULL_GHASH_INIT_TAG,
                                                IMB_ERR_JOB_NULL_GHASH_INIT_TAG))
                                 return 1;
@@ -1084,6 +1299,11 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
                                                      TEST_AUTH_NULL_GMAC_KEY,
                                                      IMB_ERR_JOB_NULL_AUTH_KEY))
                                         return 1;
+
+                                if (!is_submit_burst_invalid(mb_mgr, job,
+                                                     TEST_AUTH_NULL_GMAC_KEY,
+                                                     IMB_ERR_JOB_NULL_AUTH_KEY))
+                                        return 1;
                                 printf(".");
 
                                 fill_in_job(job, cipher, dir,
@@ -1094,6 +1314,11 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
                                                        TEST_AUTH_NULL_GMAC_IV,
                                                        IMB_ERR_JOB_NULL_IV))
                                         return 1;
+
+                                if (!is_submit_burst_invalid(mb_mgr, job,
+                                                         TEST_AUTH_NULL_GMAC_IV,
+                                                         IMB_ERR_JOB_NULL_IV))
+                                        return 1;
                                 printf(".");
 
                                 fill_in_job(job, cipher, dir,
@@ -1103,6 +1328,11 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
                                 if (!is_submit_invalid(mb_mgr, job,
                                                        TEST_AUTH_GMAC_IV_LEN,
                                                        IMB_ERR_JOB_IV_LEN))
+                                        return 1;
+
+                                if (!is_submit_burst_invalid(mb_mgr, job,
+                                                          TEST_AUTH_GMAC_IV_LEN,
+                                                          IMB_ERR_JOB_IV_LEN))
                                         return 1;
                                 printf(".");
                         }
@@ -1162,6 +1392,12 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                                                        TEST_CIPH_SRC_NULL,
                                                        IMB_ERR_JOB_NULL_SRC))
                                         return 1;
+
+                                if (!is_submit_burst_invalid(mb_mgr,
+                                                          &template_job,
+                                                          TEST_CIPH_SRC_NULL,
+                                                          IMB_ERR_JOB_NULL_SRC))
+                                        return 1;
                                 printf(".");
                         }
 
@@ -1190,6 +1426,12 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                                 if (!is_submit_invalid(mb_mgr, &template_job,
                                                        TEST_CIPH_DST_NULL,
                                                        IMB_ERR_JOB_NULL_DST))
+                                        return 1;
+
+                                if (!is_submit_burst_invalid(mb_mgr,
+                                                          &template_job,
+                                                          TEST_CIPH_DST_NULL,
+                                                          IMB_ERR_JOB_NULL_DST))
                                         return 1;
                                 printf(".");
                         }
@@ -1224,6 +1466,12 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                                                        TEST_CIPH_IV_NULL,
                                                        IMB_ERR_JOB_NULL_IV))
                                         return 1;
+
+                                if (!is_submit_burst_invalid(mb_mgr,
+                                                           &template_job,
+                                                           TEST_CIPH_IV_NULL,
+                                                           IMB_ERR_JOB_NULL_IV))
+                                        return 1;
                                 printf(".");
                         }
          /*
@@ -1257,6 +1505,11 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                                                TEST_CIPH_DIR,
                                                IMB_ERR_JOB_CIPH_DIR))
                                 return 1;
+
+                        if (!is_submit_burst_invalid(mb_mgr, &template_job,
+                                                     TEST_CIPH_DIR,
+                                                     IMB_ERR_JOB_CIPH_DIR))
+                                return 1;
                         printf(".");
                 }
         }
@@ -1288,6 +1541,12 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                                 if (!is_submit_invalid(mb_mgr, &template_job,
                                                        TEST_CIPH_ENC_KEY_NULL,
                                                        IMB_ERR_JOB_NULL_KEY))
+                                        return 1;
+
+                                if (!is_submit_burst_invalid(mb_mgr,
+                                                         &template_job,
+                                                         TEST_CIPH_ENC_KEY_NULL,
+                                                         IMB_ERR_JOB_NULL_KEY))
                                         return 1;
                                 break;
                         }
@@ -1324,6 +1583,12 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                                                        TEST_CIPH_DEC_KEY_NULL,
                                                        IMB_ERR_JOB_NULL_KEY))
                                         return 1;
+
+                                if (!is_submit_burst_invalid(mb_mgr,
+                                                         &template_job,
+                                                         TEST_CIPH_DEC_KEY_NULL,
+                                                         IMB_ERR_JOB_NULL_KEY))
+                                        return 1;
                                 break;
                         case IMB_CIPHER_CNTR:
                         case IMB_CIPHER_CNTR_BITLEN:
@@ -1338,6 +1603,12 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                                                        TEST_CIPH_DEC_KEY_NULL,
                                                        IMB_ERR_JOB_NULL_KEY))
                                         return 1;
+
+                                if (!is_submit_burst_invalid(mb_mgr,
+                                                         &template_job,
+                                                         TEST_CIPH_DEC_KEY_NULL,
+                                                         IMB_ERR_JOB_NULL_KEY))
+                                        return 1;
                                 break;
                         case IMB_CIPHER_DOCSIS_SEC_BPI:
                                 template_job.enc_keys = NULL;
@@ -1345,12 +1616,24 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                                                        TEST_CIPH_DEC_KEY_NULL,
                                                        IMB_ERR_JOB_NULL_KEY))
                                         return 1;
+
+                                if (!is_submit_burst_invalid(mb_mgr,
+                                                         &template_job,
+                                                         TEST_CIPH_DEC_KEY_NULL,
+                                                         IMB_ERR_JOB_NULL_KEY))
+                                        return 1;
                                 template_job.enc_keys =
                                         template_job.dec_keys;
                                 template_job.dec_keys = NULL;
                                 if (!is_submit_invalid(mb_mgr, &template_job,
                                                        TEST_CIPH_DEC_KEY_NULL,
                                                        IMB_ERR_JOB_NULL_KEY))
+                                        return 1;
+
+                                if (!is_submit_burst_invalid(mb_mgr,
+                                                         &template_job,
+                                                         TEST_CIPH_DEC_KEY_NULL,
+                                                         IMB_ERR_JOB_NULL_KEY))
                                         return 1;
                                 break;
                         case IMB_CIPHER_NULL:
@@ -1401,6 +1684,12 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                                 default:
                                         job->msg_len_to_cipher_in_bytes = 0;
                                         if (!is_submit_invalid(mb_mgr, job,
+                                                         TEST_CIPH_MSG_LEN_ZERO,
+                                                         IMB_ERR_JOB_CIPH_LEN))
+                                                return 1;
+
+                                        if (!is_submit_burst_invalid(mb_mgr,
+                                                         job,
                                                          TEST_CIPH_MSG_LEN_ZERO,
                                                          IMB_ERR_JOB_CIPH_LEN))
                                                 return 1;
@@ -1479,6 +1768,11 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                                         break;
                                 }
                                 if (!is_submit_invalid(mb_mgr, job,
+                                                       TEST_CIPH_MSG_LEN_GT_MAX,
+                                                       IMB_ERR_JOB_CIPH_LEN))
+                                        return 1;
+
+                                if (!is_submit_burst_invalid(mb_mgr, job,
                                                        TEST_CIPH_MSG_LEN_GT_MAX,
                                                        IMB_ERR_JOB_CIPH_LEN))
                                         return 1;
@@ -1615,6 +1909,11 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                                                        TEST_CIPH_IV_LEN,
                                                        IMB_ERR_JOB_IV_LEN))
                                         return 1;
+
+                                if (!is_submit_burst_invalid(mb_mgr, job,
+                                                            TEST_CIPH_IV_LEN,
+                                                            IMB_ERR_JOB_IV_LEN))
+                                        return 1;
                                 printf(".");
                         }
                 }
@@ -1647,6 +1946,11 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                         if (!is_submit_invalid(mb_mgr, job,
                                                TEST_CIPH_NEXT_IV_NULL,
                                                IMB_ERR_JOB_NULL_NEXT_IV))
+                                return 1;
+
+                        if (!is_submit_burst_invalid(mb_mgr, job,
+                                                     TEST_CIPH_NEXT_IV_NULL,
+                                                     IMB_ERR_JOB_NULL_NEXT_IV))
                                 return 1;
                         printf(".");
                 }
@@ -1703,6 +2007,11 @@ test_job_invalid_misc_args(struct IMB_MGR *mb_mgr)
                                                TEST_INVALID_PON_PLI,
                                                IMB_ERR_JOB_PON_PLI))
                                 return 1;
+
+                        if (!is_submit_burst_invalid(mb_mgr, &template_job,
+                                                     TEST_INVALID_PON_PLI,
+                                                     IMB_ERR_JOB_PON_PLI))
+                                return 1;
                         printf(".");
                 }
 
@@ -1745,6 +2054,11 @@ test_job_invalid_misc_args(struct IMB_MGR *mb_mgr)
                                         continue;
                                 }
                                 if (!is_submit_invalid(mb_mgr, job,
+                                                       TEST_CIPH_MSG_LEN_GT_MAX,
+                                                       IMB_ERR_JOB_CIPH_LEN))
+                                        return 1;
+
+                                if (!is_submit_burst_invalid(mb_mgr, job,
                                                        TEST_CIPH_MSG_LEN_GT_MAX,
                                                        IMB_ERR_JOB_CIPH_LEN))
                                         return 1;
@@ -1953,6 +2267,9 @@ api_test(struct IMB_MGR *mb_mgr)
         test_suite_start(&ctx, "INVALID-JOB-ARGS");
 
         errors += test_job_api(mb_mgr);
+        run++;
+
+        errors += test_burst_api(mb_mgr);
         run++;
 
         errors += test_job_invalid_mac_args(mb_mgr);
