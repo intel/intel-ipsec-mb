@@ -270,6 +270,8 @@ void aes_cmac_256_subkey_gen_avx(const void *key_exp,
 #define GET_COMPLETED_JOB  get_completed_job_avx
 #define SUBMIT_BURST       submit_burst_avx
 #define SUBMIT_BURST_NOCHECK submit_burst_nocheck_avx
+#define SUBMIT_CIPHER_BURST submit_cipher_burst_avx
+#define SUBMIT_CIPHER_BURST_NOCHECK submit_cipher_burst_nocheck_avx
 
 /* ====================================================================== */
 
@@ -928,6 +930,8 @@ init_mb_mgr_avx_internal(IMB_MGR *state, const int reset_mgrs)
         state->submit_job          = submit_job_avx;
         state->submit_burst        = submit_burst_avx;
         state->submit_burst_nocheck= submit_burst_nocheck_avx;
+        state->submit_cipher_burst = submit_cipher_burst_avx;
+        state->submit_cipher_burst_nocheck = submit_cipher_burst_nocheck_avx;
         state->submit_job_nocheck  = submit_job_nocheck_avx;
         state->get_completed_job   = get_completed_job_avx;
         state->flush_job           = flush_job_avx;

@@ -488,6 +488,8 @@ SUBMIT_JOB_DOCSIS_SEC_CRC_DEC(MB_MGR_DOCSIS_AES_OOO *state, IMB_JOB *job,
 #define GET_COMPLETED_JOB  get_completed_job_avx512
 #define SUBMIT_BURST       submit_burst_avx512
 #define SUBMIT_BURST_NOCHECK submit_burst_nocheck_avx512
+#define SUBMIT_CIPHER_BURST submit_cipher_burst_avx512
+#define SUBMIT_CIPHER_BURST_NOCHECK submit_cipher_burst_nocheck_avx512
 
 /* ====================================================================== */
 
@@ -1925,6 +1927,8 @@ init_mb_mgr_avx512_internal(IMB_MGR *state, const int reset_mgrs)
         state->submit_job          = submit_job_avx512;
         state->submit_burst        = submit_burst_avx512;
         state->submit_burst_nocheck= submit_burst_nocheck_avx512;
+        state->submit_cipher_burst = submit_cipher_burst_avx512;
+        state->submit_cipher_burst_nocheck = submit_cipher_burst_nocheck_avx512;
         state->submit_job_nocheck  = submit_job_nocheck_avx512;
         state->get_completed_job   = get_completed_job_avx512;
         state->flush_job           = flush_job_avx512;

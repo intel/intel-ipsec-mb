@@ -761,10 +761,14 @@ typedef IMB_JOB *(*submit_job_t)(struct IMB_MGR *);
 typedef IMB_JOB *(*get_completed_job_t)(struct IMB_MGR *);
 typedef IMB_JOB *(*flush_job_t)(struct IMB_MGR *);
 typedef uint32_t (*queue_size_t)(struct IMB_MGR *);
-
 typedef uint32_t (*submit_burst_t)(struct IMB_MGR *,
-                                   struct IMB_JOB *, uint32_t);
-
+                                   struct IMB_JOB *, const uint32_t);
+typedef uint32_t (*submit_cipher_burst_t)(struct IMB_MGR *,
+                                          struct IMB_JOB *,
+                                          const uint32_t,
+                                          const IMB_CIPHER_MODE cipher,
+                                          const IMB_CIPHER_DIRECTION dir,
+                                          const IMB_KEY_SIZE_BYTES key_size);
 typedef void (*keyexp_t)(const void *, void *, void *);
 typedef void (*cmac_subkey_gen_t)(const void *, void *, void *);
 typedef void (*hash_one_block_t)(const void *, void *);
@@ -1148,6 +1152,8 @@ typedef struct IMB_MGR {
 
         submit_burst_t submit_burst;
         submit_burst_t submit_burst_nocheck;
+        submit_cipher_burst_t submit_cipher_burst;
+        submit_cipher_burst_t submit_cipher_burst_nocheck;
 
         /* in-order scheduler fields */
         int              earliest_job; /**< byte offset, -1 if none */
@@ -1353,6 +1359,55 @@ IMB_DLL_EXPORT uint32_t
 submit_burst_nocheck_avx512(IMB_MGR *state, IMB_JOB *jobs,
                             const uint32_t n_jobs);
 
+IMB_DLL_EXPORT uint32_t
+submit_cipher_burst_sse(IMB_MGR *state, IMB_JOB *jobs,
+                        const uint32_t n_jobs,
+                        const IMB_CIPHER_MODE cipher,
+                        const IMB_CIPHER_DIRECTION dir,
+                        const IMB_KEY_SIZE_BYTES key_size);
+IMB_DLL_EXPORT uint32_t
+submit_cipher_burst_avx(IMB_MGR *state, IMB_JOB *jobs,
+                        const uint32_t n_jobs,
+                        const IMB_CIPHER_MODE cipher,
+                        const IMB_CIPHER_DIRECTION dir,
+                        const IMB_KEY_SIZE_BYTES key_size);
+IMB_DLL_EXPORT uint32_t
+submit_cipher_burst_avx2(IMB_MGR *state, IMB_JOB *jobs,
+                         const uint32_t n_jobs,
+                         const IMB_CIPHER_MODE cipher,
+                         const IMB_CIPHER_DIRECTION dir,
+                         const IMB_KEY_SIZE_BYTES key_size);
+IMB_DLL_EXPORT uint32_t
+submit_cipher_burst_avx512(IMB_MGR *state, IMB_JOB *jobs,
+                           const uint32_t n_jobs,
+                           const IMB_CIPHER_MODE cipher,
+                           const IMB_CIPHER_DIRECTION dir,
+                           const IMB_KEY_SIZE_BYTES key_size);
+
+IMB_DLL_EXPORT uint32_t
+submit_cipher_burst_nocheck_sse(IMB_MGR *state, IMB_JOB *jobs,
+                                const uint32_t n_jobs,
+                                const IMB_CIPHER_MODE cipher,
+                                const IMB_CIPHER_DIRECTION dir,
+                                const IMB_KEY_SIZE_BYTES key_size);
+IMB_DLL_EXPORT uint32_t
+submit_cipher_burst_nocheck_avx(IMB_MGR *state, IMB_JOB *jobs,
+                                const uint32_t n_jobs,
+                                const IMB_CIPHER_MODE cipher,
+                                const IMB_CIPHER_DIRECTION dir,
+                                const IMB_KEY_SIZE_BYTES key_size);
+IMB_DLL_EXPORT uint32_t
+submit_cipher_burst_nocheck_avx2(IMB_MGR *state, IMB_JOB *jobs,
+                                 const uint32_t n_jobs,
+                                 const IMB_CIPHER_MODE cipher,
+                                 const IMB_CIPHER_DIRECTION dir,
+                                 const IMB_KEY_SIZE_BYTES key_size);
+IMB_DLL_EXPORT uint32_t
+submit_cipher_burst_nocheck_avx512(IMB_MGR *state, IMB_JOB *jobs,
+                                   const uint32_t n_jobs,
+                                   const IMB_CIPHER_MODE cipher,
+                                   const IMB_CIPHER_DIRECTION dir,
+                                   const IMB_KEY_SIZE_BYTES key_size);
 /**
  * @brief Automatically initialize most performant
  *        Multi-buffer manager based on CPU features
@@ -1395,7 +1450,14 @@ IMB_DLL_EXPORT void init_mb_mgr_auto(IMB_MGR *state, IMB_ARCH *arch);
         ((_mgr)->submit_burst((_mgr), (_jobs), (_n_jobs)))
 #define IMB_SUBMIT_BURST_NOCHECK(_mgr, _jobs, _n_jobs)                  \
         ((_mgr)->submit_burst_nocheck((_mgr), (_jobs), (_n_jobs)))
-
+#define IMB_SUBMIT_CIPHER_BURST(_mgr, _jobs, _n_jobs, _cipher,          \
+                                _dir, _key_size)                        \
+        ((_mgr)->submit_cipher_burst((_mgr), (_jobs), (_n_jobs),        \
+                                     (_cipher), (_dir), (_key_size)))
+#define IMB_SUBMIT_CIPHER_BURST_NOCHECK(_mgr, _jobs, _n_jobs, _cipher,  \
+                                        _dir, _key_size)                \
+        ((_mgr)->submit_cipher_burst_nocheck((_mgr), (_jobs), (_n_jobs),\
+                                             (_cipher), (_dir), (_key_size)))
 /* Key expansion and generation API's */
 #define IMB_AES_KEYEXP_128(_mgr, _key, _enc_exp_key, _dec_exp_key)      \
         ((_mgr)->keyexp_128((_key), (_enc_exp_key), (_dec_exp_key)))
