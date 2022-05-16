@@ -75,6 +75,12 @@ mksection .text
 ; r0 = {d2 c2 b2 a2}
 ; r3 = {d3 c3 b3 a3}
 ;
+%define XMM_STORAGE     16*10
+%define GP_STORAGE      8
+
+%define VARIABLE_OFFSET XMM_STORAGE + GP_STORAGE
+%define GP_OFFSET XMM_STORAGE
+
 %macro TRANSPOSE 6
 %define %%r0 %1
 %define %%r1 %2
@@ -288,6 +294,55 @@ mksection .text
 %xdefine W14 TMP_
 %endm
 
+%macro FUNC_SAVE 0
+    mov     r11, rsp
+    sub     rsp, VARIABLE_OFFSET
+    and     rsp, ~15	; align rsp to 16 bytes
+%ifndef LINUX
+    vmovdqa  [rsp + 0*16], xmm6
+    vmovdqa  [rsp + 1*16], xmm7
+    vmovdqa  [rsp + 2*16], xmm8
+    vmovdqa  [rsp + 3*16], xmm9
+    vmovdqa  [rsp + 4*16], xmm10
+    vmovdqa  [rsp + 5*16], xmm11
+    vmovdqa  [rsp + 6*16], xmm12
+    vmovdqa  [rsp + 7*16], xmm13
+    vmovdqa  [rsp + 8*16], xmm14
+    vmovdqa  [rsp + 9*16], xmm15
+%endif
+    mov     [rsp + GP_OFFSET], r11 ;; rsp pointer
+%endmacro
+
+%macro FUNC_RESTORE 0
+%ifndef LINUX
+    vmovdqa  xmm6, [rsp + 0*16]
+    vmovdqa  xmm7, [rsp + 1*16]
+    vmovdqa  xmm8, [rsp + 2*16]
+    vmovdqa  xmm9, [rsp + 3*16]
+    vmovdqa  xmm10, [rsp + 4*16]
+    vmovdqa  xmm11, [rsp + 5*16]
+    vmovdqa  xmm12, [rsp + 6*16]
+    vmovdqa  xmm13, [rsp + 7*16]
+    vmovdqa  xmm14, [rsp + 8*16]
+    vmovdqa  xmm15, [rsp + 9*16]
+
+%ifdef SAFE_DATA
+    vpxor 	xmm5, xmm5, xmm5
+    vmovdqa  [rsp + 0*16], xmm5
+    vmovdqa  [rsp + 1*16], xmm5
+    vmovdqa  [rsp + 2*16], xmm5
+    vmovdqa  [rsp + 3*16], xmm5
+    vmovdqa  [rsp + 4*16], xmm5
+    vmovdqa  [rsp + 5*16], xmm5
+    vmovdqa  [rsp + 6*16], xmm5
+    vmovdqa  [rsp + 7*16], xmm5
+    vmovdqa  [rsp + 8*16], xmm5
+    vmovdqa  [rsp + 9*16], xmm5
+%endif
+%endif
+    mov     rsp, [rsp + GP_OFFSET] ;; rsp pointer
+%endmacro
+
 align 32
 
 ; XMM registers are clobbered. Saving/restoring must be done at a higher level
@@ -426,8 +481,15 @@ lloop:
 %endrep
 %endif
 
-	add	rsp, FRAMESZ
+	add 	rsp, FRAMESZ
+	ret
 
+; void call_sha1_mult_avx_from_c(SHA1_ARGS *args, UINT32 size_in_blocks);
+MKGLOBAL(call_sha1_mult_avx_from_c,function,internal)
+call_sha1_mult_avx_from_c:
+	FUNC_SAVE
+	call sha1_mult_avx
+	FUNC_RESTORE
 	ret
 
 mksection stack-noexec

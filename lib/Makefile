@@ -258,6 +258,7 @@ c_lib_objs := \
 	sha_sse.o \
 	sha_mb_sse.o \
 	sha_avx.o \
+	sha_mb_avx.o \
 	des_key.o \
 	des_basic.o \
 	version.o \
