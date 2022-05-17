@@ -153,9 +153,9 @@ IMB_JOB *submit_job_zuc256_eia3_gfni_avx512(MB_MGR_ZUC_OOO *state,
 IMB_JOB *flush_job_zuc256_eia3_gfni_avx512(MB_MGR_ZUC_OOO *state,
                                         const uint64_t tag_sz);
 
-IMB_JOB *submit_job_sha1_avx512(MB_MGR_HMAC_SHA_1_OOO *state,
+IMB_JOB *submit_job_sha1_avx512(MB_MGR_SHA_1_OOO *state,
                                 IMB_JOB *job);
-IMB_JOB *flush_job_sha1_avx512(MB_MGR_HMAC_SHA_1_OOO *state,
+IMB_JOB *flush_job_sha1_avx512(MB_MGR_SHA_1_OOO *state,
                                IMB_JOB *job);
 
 void aes_cmac_256_subkey_gen_avx512(const void *key_exp,
@@ -1178,7 +1178,7 @@ reset_ooo_mgrs(IMB_MGR *state)
         MB_MGR_AES_OOO *aes128_cbcs_ooo = state->aes128_cbcs_ooo;
         MB_MGR_SNOW3G_OOO *snow3g_uea2_ooo = state->snow3g_uea2_ooo;
         MB_MGR_SNOW3G_OOO *snow3g_uia2_ooo = state->snow3g_uia2_ooo;
-        MB_MGR_HMAC_SHA_1_OOO *sha_1_ooo = state->sha_1_ooo;
+        MB_MGR_SHA_1_OOO *sha_1_ooo = state->sha_1_ooo;
 
         /* Init AES out-of-order fields */
         if ((state->features & IMB_FEATURE_VAES) == IMB_FEATURE_VAES) {

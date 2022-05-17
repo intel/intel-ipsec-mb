@@ -27,8 +27,8 @@
 
 #include "include/sha_mb_mgr.h"
 
-IMB_JOB *submit_job_sha1_avx(MB_MGR_HMAC_SHA_1_OOO *state, IMB_JOB *job);
-IMB_JOB *flush_job_sha1_avx(MB_MGR_HMAC_SHA_1_OOO *state, IMB_JOB *job);
+IMB_JOB *submit_job_sha1_avx(MB_MGR_SHA_1_OOO *state, IMB_JOB *job);
+IMB_JOB *flush_job_sha1_avx(MB_MGR_SHA_1_OOO *state, IMB_JOB *job);
 
 /* ========================================================================== */
 /*
@@ -36,7 +36,7 @@ IMB_JOB *flush_job_sha1_avx(MB_MGR_HMAC_SHA_1_OOO *state, IMB_JOB *job);
  */
 
 IMB_DLL_LOCAL
-IMB_JOB *submit_job_sha1_avx(MB_MGR_HMAC_SHA_1_OOO *state, IMB_JOB *job)
+IMB_JOB *submit_job_sha1_avx(MB_MGR_SHA_1_OOO *state, IMB_JOB *job)
 {
         return submit_flush_job_sha_1(state, job, 4, 1, 1,
                                         IMB_SHA1_BLOCK_SIZE, SHA1_PAD_SIZE,
@@ -44,7 +44,7 @@ IMB_JOB *submit_job_sha1_avx(MB_MGR_HMAC_SHA_1_OOO *state, IMB_JOB *job)
 }
 
 IMB_DLL_LOCAL
-IMB_JOB *flush_job_sha1_avx(MB_MGR_HMAC_SHA_1_OOO *state, IMB_JOB *job)
+IMB_JOB *flush_job_sha1_avx(MB_MGR_SHA_1_OOO *state, IMB_JOB *job)
 {
         return submit_flush_job_sha_1(state, job, 4, 0, 1,
                                         IMB_SHA1_BLOCK_SIZE, SHA1_PAD_SIZE,

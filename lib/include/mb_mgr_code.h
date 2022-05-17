@@ -1006,7 +1006,7 @@ SUBMIT_JOB_HASH(IMB_MGR *state, IMB_JOB *job)
 	MB_MGR_CMAC_OOO *aes256_cmac_ooo = state->aes256_cmac_ooo;
         MB_MGR_ZUC_OOO *zuc_eia3_ooo = state->zuc_eia3_ooo;
         MB_MGR_ZUC_OOO *zuc256_eia3_ooo = state->zuc256_eia3_ooo;
-        MB_MGR_HMAC_SHA_1_OOO *sha_1_ooo = state->sha_1_ooo;
+        MB_MGR_SHA_1_OOO *sha_1_ooo = state->sha_1_ooo;
 #ifdef AVX512
         MB_MGR_SNOW3G_OOO *snow3g_uia2_ooo = state->snow3g_uia2_ooo;
 #endif
@@ -1208,7 +1208,7 @@ FLUSH_JOB_HASH(IMB_MGR *state, IMB_JOB *job)
 	MB_MGR_CMAC_OOO *aes256_cmac_ooo = state->aes256_cmac_ooo;
         MB_MGR_ZUC_OOO *zuc_eia3_ooo = state->zuc_eia3_ooo;
         MB_MGR_ZUC_OOO *zuc256_eia3_ooo = state->zuc256_eia3_ooo;
-        MB_MGR_HMAC_SHA_1_OOO *sha_1_ooo = state->sha_1_ooo;
+        MB_MGR_SHA_1_OOO *sha_1_ooo = state->sha_1_ooo;
 #ifdef AVX512
         MB_MGR_SNOW3G_OOO *snow3g_uia2_ooo = state->snow3g_uia2_ooo;
 #endif

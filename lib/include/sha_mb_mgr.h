@@ -82,7 +82,7 @@ void sha_mb_generic_write_digest(void *dst, const void *src,
 }
 
 __forceinline
-void create_extra_blocks(MB_MGR_HMAC_SHA_1_OOO *state,
+void create_extra_blocks(MB_MGR_SHA_1_OOO *state,
                          const uint64_t blk_size, const uint64_t r,
                          const unsigned min_idx)
 {
@@ -106,13 +106,14 @@ void create_extra_blocks(MB_MGR_HMAC_SHA_1_OOO *state,
 
 __forceinline
 IMB_JOB *
-submit_flush_job_sha_1(MB_MGR_HMAC_SHA_1_OOO *state, IMB_JOB *job,
+submit_flush_job_sha_1(MB_MGR_SHA_1_OOO *state, IMB_JOB *job,
                          const unsigned max_jobs, const int is_submit,
                          const int sha_type, const uint64_t blk_size,
                          const uint64_t pad_size,
                          void (*fn)(SHA1_ARGS *, uint32_t))
 {
-        unsigned lane, min_len, min_idx;
+        unsigned lane, min_idx;
+        uint64_t min_len;
         IMB_JOB *ret_job = NULL;
         unsigned i;
 
@@ -124,6 +125,7 @@ submit_flush_job_sha_1(MB_MGR_HMAC_SHA_1_OOO *state, IMB_JOB *job,
 
                 lane = state->unused_lanes & 15;
                 state->unused_lanes >>= 4;
+                state->num_lanes_inuse++;
                 state->args.data_ptr[lane] =
                         job->src + job->hash_start_src_offset_in_bytes;
 
@@ -131,11 +133,11 @@ submit_flush_job_sha_1(MB_MGR_HMAC_SHA_1_OOO *state, IMB_JOB *job,
 
                 /* copy job data in and set up initial blocks */
                 state->ldata[lane].job_in_lane = job;
-                state->lens[lane] = (uint16_t)job->msg_len_to_hash_in_bytes;
+                state->lens[lane] = job->msg_len_to_hash_in_bytes;
                 state->ldata[lane].extra_blocks = 1;
 
                 /* enough jobs to start processing? */
-                if (state->unused_lanes != 0xf)
+                if (state->num_lanes_inuse != max_jobs)
                         return NULL;
         } else {
                 /*
@@ -186,7 +188,7 @@ submit_flush_job_sha_1(MB_MGR_HMAC_SHA_1_OOO *state, IMB_JOB *job,
                                 } else {
                                         state->args.data_ptr[i] =
                                                 state->args.data_ptr[lane];
-                                        state->lens[i] = UINT16_MAX;
+                                        state->lens[i] = UINT64_MAX;
                                 }
                         }
                 }
@@ -217,6 +219,7 @@ submit_flush_job_sha_1(MB_MGR_HMAC_SHA_1_OOO *state, IMB_JOB *job,
 
         /* put back processed packet into unused lanes, set job as complete */
         state->unused_lanes = (state->unused_lanes << 4) | min_idx;
+        state->num_lanes_inuse--;
         sha_mb_generic_write_digest(ret_job->auth_tag_output,
                 state->args.digest, sha_type, 16, min_idx);
         ret_job->status |= IMB_STATUS_COMPLETED_AUTH;

@@ -87,9 +87,9 @@ IMB_JOB *submit_job_zuc256_eia3_avx2(MB_MGR_ZUC_OOO *state,
 IMB_JOB *flush_job_zuc256_eia3_avx2(MB_MGR_ZUC_OOO *state,
                                     const uint64_t tag_sz);
 
-IMB_JOB *submit_job_sha1_avx2(MB_MGR_HMAC_SHA_1_OOO *state,
+IMB_JOB *submit_job_sha1_avx2(MB_MGR_SHA_1_OOO *state,
                               IMB_JOB *job);
-IMB_JOB *flush_job_sha1_avx2(MB_MGR_HMAC_SHA_1_OOO *state,
+IMB_JOB *flush_job_sha1_avx2(MB_MGR_SHA_1_OOO *state,
                              IMB_JOB *job);
 
 void aes_cmac_256_subkey_gen_avx2(const void *key_exp,
@@ -490,7 +490,7 @@ reset_ooo_mgrs(IMB_MGR *state)
         MB_MGR_ZUC_OOO *zuc_eia3_ooo = state->zuc_eia3_ooo;
         MB_MGR_ZUC_OOO *zuc256_eia3_ooo = state->zuc256_eia3_ooo;
         MB_MGR_AES_OOO *aes128_cbcs_ooo = state->aes128_cbcs_ooo;
-        MB_MGR_HMAC_SHA_1_OOO *sha_1_ooo = state->sha_1_ooo;
+        MB_MGR_SHA_1_OOO *sha_1_ooo = state->sha_1_ooo;
 
         /* Init AES out-of-order fields */
         memset(aes128_ooo->lens, 0xFF,
@@ -851,6 +851,7 @@ reset_ooo_mgrs(IMB_MGR *state)
 
         /* Init SHA1 out-of-order fields */
         sha_1_ooo->unused_lanes = 0xF76543210;
+        sha_1_ooo->num_lanes_inuse = 0;
         for (j = 0; j < AVX2_NUM_SHA1_LANES; j++){
                 sha_1_ooo->lens[j] = 0;
                 sha_1_ooo->ldata[j].job_in_lane = NULL;
