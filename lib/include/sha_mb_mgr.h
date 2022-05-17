@@ -38,6 +38,9 @@ extern void call_sha1_mult_avx_from_c(SHA1_ARGS *args,
 extern void call_sha1_x8_avx2_from_c(SHA1_ARGS *args,
                                       uint32_t size_in_blocks);
 
+extern void call_sha1_x16_avx512_from_c(SHA1_ARGS *args,
+                                        uint32_t size_in_blocks);
+
 __forceinline
 void copy_bswap4_array_mb(void *dst, const void *src, const size_t num,
                           const size_t offset, const unsigned lane)
@@ -189,9 +192,10 @@ submit_flush_job_sha_1(MB_MGR_HMAC_SHA_1_OOO *state, IMB_JOB *job,
                 }
 
                 /* subtract min len from all lanes */
+                const uint64_t min_len_blk = min_len & (~(blk_size - 1));
+
                 for (i = 0; i < max_jobs; i++)
-                        state->lens[i] -=
-                                (uint16_t)((min_len/blk_size)*blk_size);
+                        state->lens[i] -= min_len_blk;
 
                 const uint64_t r = min_len % blk_size;
 

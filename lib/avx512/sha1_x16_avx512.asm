@@ -94,6 +94,12 @@ mksection .text
 
 %define APPEND(a,b) a %+ b
 
+%define XMM_STORAGE     16*10
+%define GP_STORAGE      8*5
+
+%define VARIABLE_OFFSET XMM_STORAGE + GP_STORAGE
+%define GP_OFFSET XMM_STORAGE
+
 %ifdef LINUX
 %define arg1	rdi
 %define arg2	rsi
@@ -227,6 +233,62 @@ mksection .text
 	vmovups      YWORD(%%Wt), [%%TMP1+%%OFFSET_PTR+32]
 	vinserti64x4 %%Wt, %%Wt,  [%%TMP2+%%OFFSET_PTR+32], 0x01
 %endif
+%endmacro
+
+%macro FUNC_SAVE 0
+    mov     r11, rsp
+    sub     rsp, VARIABLE_OFFSET
+%ifndef LINUX
+    vmovdqa32  [rsp + 0*16], xmm6
+    vmovdqa32  [rsp + 1*16], xmm7
+    vmovdqa32  [rsp + 2*16], xmm8
+    vmovdqa32  [rsp + 3*16], xmm9
+    vmovdqa32  [rsp + 4*16], xmm10
+    vmovdqa32  [rsp + 5*16], xmm11
+    vmovdqa32  [rsp + 6*16], xmm12
+    vmovdqa32  [rsp + 7*16], xmm13
+    vmovdqa32  [rsp + 8*16], xmm14
+    vmovdqa32  [rsp + 9*16], xmm15
+%endif
+    mov     [rsp + GP_OFFSET], r12
+    mov     [rsp + GP_OFFSET + 8], r13
+    mov     [rsp + GP_OFFSET + 2*8], r14
+    mov     [rsp + GP_OFFSET + 3*8], r15
+    mov     [rsp + GP_OFFSET + 4*8], r11 ;; rsp pointer
+%endmacro
+
+%macro FUNC_RESTORE 0
+%ifndef LINUX
+    vmovdqa32  xmm6, [rsp + 0*16]
+    vmovdqa32  xmm7, [rsp + 1*16]
+    vmovdqa32  xmm8, [rsp + 2*16]
+    vmovdqa32  xmm9, [rsp + 3*16]
+    vmovdqa32  xmm10, [rsp + 4*16]
+    vmovdqa32  xmm11, [rsp + 5*16]
+    vmovdqa32  xmm12, [rsp + 6*16]
+    vmovdqa32  xmm13, [rsp + 7*16]
+    vmovdqa32  xmm14, [rsp + 8*16]
+    vmovdqa32  xmm15, [rsp + 9*16]
+
+%ifdef SAFE_DATA
+    vpxord     xmm5, xmm5, xmm5
+    vmovdqa32  [rsp + 0*16], xmm5
+    vmovdqa32  [rsp + 1*16], xmm5
+    vmovdqa32  [rsp + 2*16], xmm5
+    vmovdqa32  [rsp + 3*16], xmm5
+    vmovdqa32  [rsp + 4*16], xmm5
+    vmovdqa32  [rsp + 5*16], xmm5
+    vmovdqa32  [rsp + 6*16], xmm5
+    vmovdqa32  [rsp + 7*16], xmm5
+    vmovdqa32  [rsp + 8*16], xmm5
+    vmovdqa32  [rsp + 9*16], xmm5
+%endif
+%endif
+    mov     r12, [rsp + GP_OFFSET]
+    mov     r13, [rsp + GP_OFFSET + 8]
+    mov     r14, [rsp + GP_OFFSET + 2*8]
+    mov     r15, [rsp + GP_OFFSET + 3*8]
+    mov     rsp, [rsp + GP_OFFSET + 4*8] ;; rsp pointer
 %endmacro
 
 align 64
@@ -441,6 +503,14 @@ lastLoop:
         vzeroupper
 %endif ;; SAFE_DATA
 
+	ret
+
+; void call_sha1_x16_avx512_from_c(SHA1_ARGS *args, UINT32 size_in_blocks);
+MKGLOBAL(call_sha1_x16_avx512_from_c,function,internal)
+call_sha1_x16_avx512_from_c:
+	FUNC_SAVE
+	call sha1_x16_avx512
+	FUNC_RESTORE
 	ret
 
 mksection stack-noexec

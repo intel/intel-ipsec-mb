@@ -153,6 +153,11 @@ IMB_JOB *submit_job_zuc256_eia3_gfni_avx512(MB_MGR_ZUC_OOO *state,
 IMB_JOB *flush_job_zuc256_eia3_gfni_avx512(MB_MGR_ZUC_OOO *state,
                                         const uint64_t tag_sz);
 
+IMB_JOB *submit_job_sha1_avx512(MB_MGR_HMAC_SHA_1_OOO *state,
+                                IMB_JOB *job);
+IMB_JOB *flush_job_sha1_avx512(MB_MGR_HMAC_SHA_1_OOO *state,
+                               IMB_JOB *job);
+
 void aes_cmac_256_subkey_gen_avx512(const void *key_exp,
                                     void *key1, void *key2);
 uint32_t hec_32_avx(const uint8_t *in);
@@ -249,6 +254,9 @@ IMB_JOB *flush_job_snow3g_uia2_avx512(MB_MGR_SNOW3G_OOO *state);
 
 #define SUBMIT_JOB_AES_XCBC   submit_job_aes_xcbc_avx512
 #define FLUSH_JOB_AES_XCBC    flush_job_aes_xcbc_avx512
+
+#define SUBMIT_JOB_SHA1   submit_job_sha1_avx512
+#define FLUSH_JOB_SHA1    flush_job_sha1_avx512
 
 #define SUBMIT_JOB_DES_CBC_ENC submit_job_des_cbc_enc_avx512
 #define FLUSH_JOB_DES_CBC_ENC  flush_job_des_cbc_enc_avx512
@@ -1170,6 +1178,7 @@ reset_ooo_mgrs(IMB_MGR *state)
         MB_MGR_AES_OOO *aes128_cbcs_ooo = state->aes128_cbcs_ooo;
         MB_MGR_SNOW3G_OOO *snow3g_uea2_ooo = state->snow3g_uea2_ooo;
         MB_MGR_SNOW3G_OOO *snow3g_uia2_ooo = state->snow3g_uia2_ooo;
+        MB_MGR_HMAC_SHA_1_OOO *sha_1_ooo = state->sha_1_ooo;
 
         /* Init AES out-of-order fields */
         if ((state->features & IMB_FEATURE_VAES) == IMB_FEATURE_VAES) {
@@ -1777,6 +1786,14 @@ reset_ooo_mgrs(IMB_MGR *state)
         snow3g_uia2_ooo->init_done = 0;
         memset(snow3g_uia2_ooo->lens, 0,
                 sizeof(snow3g_uia2_ooo->lens));
+
+        /* Init SHA1 out-of-order fields */
+        sha_1_ooo->unused_lanes = 0xFEDCBA9876543210;
+        sha_1_ooo->num_lanes_inuse = 0;
+        for (j = 0; j < AVX512_NUM_SHA1_LANES; j++){
+                sha_1_ooo->lens[j] = 0;
+                sha_1_ooo->ldata[j].job_in_lane = NULL;
+        }
 }
 
 IMB_DLL_LOCAL void
