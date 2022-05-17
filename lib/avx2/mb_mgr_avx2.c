@@ -87,6 +87,11 @@ IMB_JOB *submit_job_zuc256_eia3_avx2(MB_MGR_ZUC_OOO *state,
 IMB_JOB *flush_job_zuc256_eia3_avx2(MB_MGR_ZUC_OOO *state,
                                     const uint64_t tag_sz);
 
+IMB_JOB *submit_job_sha1_avx2(MB_MGR_HMAC_SHA_1_OOO *state,
+                              IMB_JOB *job);
+IMB_JOB *flush_job_sha1_avx2(MB_MGR_HMAC_SHA_1_OOO *state,
+                             IMB_JOB *job);
+
 void aes_cmac_256_subkey_gen_avx2(const void *key_exp,
                                   void *key1, void *key2);
 uint32_t hec_32_avx(const uint8_t *in);
@@ -179,6 +184,9 @@ IMB_JOB *snow_v_aead_init_avx(IMB_JOB *job);
 
 #define SUBMIT_JOB_AES_XCBC   submit_job_aes_xcbc_avx
 #define FLUSH_JOB_AES_XCBC    flush_job_aes_xcbc_avx
+
+#define SUBMIT_JOB_SHA1   submit_job_sha1_avx2
+#define FLUSH_JOB_SHA1    flush_job_sha1_avx2
 
 #define SUBMIT_JOB_AES128_DEC submit_job_aes128_dec_avx
 #define SUBMIT_JOB_AES192_DEC submit_job_aes192_dec_avx
@@ -482,6 +490,7 @@ reset_ooo_mgrs(IMB_MGR *state)
         MB_MGR_ZUC_OOO *zuc_eia3_ooo = state->zuc_eia3_ooo;
         MB_MGR_ZUC_OOO *zuc256_eia3_ooo = state->zuc256_eia3_ooo;
         MB_MGR_AES_OOO *aes128_cbcs_ooo = state->aes128_cbcs_ooo;
+        MB_MGR_HMAC_SHA_1_OOO *sha_1_ooo = state->sha_1_ooo;
 
         /* Init AES out-of-order fields */
         memset(aes128_ooo->lens, 0xFF,
@@ -839,6 +848,13 @@ reset_ooo_mgrs(IMB_MGR *state)
                sizeof(aes128_cbcs_ooo->job_in_lane));
         aes128_cbcs_ooo->unused_lanes = 0xF76543210;
         aes128_cbcs_ooo->num_lanes_inuse = 0;
+
+        /* Init SHA1 out-of-order fields */
+        sha_1_ooo->unused_lanes = 0xF76543210;
+        for (j = 0; j < AVX2_NUM_SHA1_LANES; j++){
+                sha_1_ooo->lens[j] = 0;
+                sha_1_ooo->ldata[j].job_in_lane = NULL;
+        }
 }
 
 IMB_DLL_LOCAL void

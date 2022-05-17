@@ -67,6 +67,12 @@ K60_79:                  ;ddq 0xCA62C1D6CA62C1D6CA62C1D6CA62C1D6
 
 mksection .text
 
+%define XMM_STORAGE     16*10
+%define GP_STORAGE      8*5
+
+%define VARIABLE_OFFSET XMM_STORAGE + GP_STORAGE
+%define GP_OFFSET XMM_STORAGE
+
 %ifdef LINUX
 %define arg1	rdi
 %define arg2	rsi
@@ -296,6 +302,63 @@ mksection .text
 %xdefine W14 TMP_
 %endm
 
+%macro FUNC_SAVE 0
+    mov     r11, rsp
+    sub     rsp, VARIABLE_OFFSET
+    and     rsp, ~31	; align rsp to 32 bytes
+%ifndef LINUX
+    vmovdqa  [rsp + 0*16], xmm6
+    vmovdqa  [rsp + 1*16], xmm7
+    vmovdqa  [rsp + 2*16], xmm8
+    vmovdqa  [rsp + 3*16], xmm9
+    vmovdqa  [rsp + 4*16], xmm10
+    vmovdqa  [rsp + 5*16], xmm11
+    vmovdqa  [rsp + 6*16], xmm12
+    vmovdqa  [rsp + 7*16], xmm13
+    vmovdqa  [rsp + 8*16], xmm14
+    vmovdqa  [rsp + 9*16], xmm15
+%endif
+    mov     [rsp + GP_OFFSET], r12
+    mov     [rsp + GP_OFFSET + 8], r13
+    mov     [rsp + GP_OFFSET + 2*8], r14
+    mov     [rsp + GP_OFFSET + 3*8], r15
+    mov     [rsp + GP_OFFSET + 4*8], r11 ;; rsp pointer
+%endmacro
+
+%macro FUNC_RESTORE 0
+%ifndef LINUX
+    vmovdqa  xmm6, [rsp + 0*16]
+    vmovdqa  xmm7, [rsp + 1*16]
+    vmovdqa  xmm8, [rsp + 2*16]
+    vmovdqa  xmm9, [rsp + 3*16]
+    vmovdqa  xmm10, [rsp + 4*16]
+    vmovdqa  xmm11, [rsp + 5*16]
+    vmovdqa  xmm12, [rsp + 6*16]
+    vmovdqa  xmm13, [rsp + 7*16]
+    vmovdqa  xmm14, [rsp + 8*16]
+    vmovdqa  xmm15, [rsp + 9*16]
+
+%ifdef SAFE_DATA
+    vpxor    xmm5, xmm5, xmm5
+    vmovdqa  [rsp + 0*16], xmm5
+    vmovdqa  [rsp + 1*16], xmm5
+    vmovdqa  [rsp + 2*16], xmm5
+    vmovdqa  [rsp + 3*16], xmm5
+    vmovdqa  [rsp + 4*16], xmm5
+    vmovdqa  [rsp + 5*16], xmm5
+    vmovdqa  [rsp + 6*16], xmm5
+    vmovdqa  [rsp + 7*16], xmm5
+    vmovdqa  [rsp + 8*16], xmm5
+    vmovdqa  [rsp + 9*16], xmm5
+%endif
+%endif
+    mov     r12, [rsp + GP_OFFSET]
+    mov     r13, [rsp + GP_OFFSET + 8]
+    mov     r14, [rsp + GP_OFFSET + 2*8]
+    mov     r15, [rsp + GP_OFFSET + 3*8]
+    mov     rsp, [rsp + GP_OFFSET + 4*8] ;; rsp pointer
+%endmacro
+
 align 32
 
 ; void sha1_x8_avx2(void *state, int num_blks)
@@ -454,8 +517,16 @@ lloop:
 %endrep
 %endif
 
-	add	rsp, FRAMESZ
+	add 	rsp, FRAMESZ
 
+	ret
+
+; void call_sha1_x8_avx2_from_c(SHA1_ARGS *args, UINT32 size_in_blocks);
+MKGLOBAL(call_sha1_x8_avx2_from_c,function,internal)
+call_sha1_x8_avx2_from_c:
+	FUNC_SAVE
+	call sha1_x8_avx2
+	FUNC_RESTORE
 	ret
 
 mksection stack-noexec
