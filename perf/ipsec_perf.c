@@ -951,7 +951,18 @@ static uint32_t pb_mod = 0;
 static int silent_progress_bar = 0;
 static int plot_output_option = 0;
 
-static uint32_t burst_api = 0;  /* burst API enable/disable flag */
+/* API types */
+typedef enum  {
+        TEST_API_JOB = 0,
+        TEST_API_BURST,
+        TEST_API_CIPHER_BURST,
+        TEST_API_NUMOF
+} TEST_API;
+
+const char *str_api_list[TEST_API_NUMOF] = {"job", "burst",
+                                            "cipher-only burst"};
+
+static TEST_API test_api = TEST_API_JOB; /* test job API by default */
 static uint32_t burst_size = 0; /* num jobs to pass to burst API */
 
 static volatile int timebox_on = 1; /* flag to stop the test loop */
@@ -1668,6 +1679,7 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
         uint32_t aux;
         uint8_t gcm_key[32];
         uint8_t next_iv[IMB_AES_BLOCK_SIZE];
+        IMB_JOB jobs[MAX_BURST_SIZE];
 
         memset(&job_template, 0, sizeof(IMB_JOB));
 
@@ -2002,8 +2014,8 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
 #endif
                 time = __rdtscp(&aux);
 
-        if (burst_api) {
-                IMB_JOB jobs[MAX_BURST_SIZE];
+        /* test burst api */
+        if (test_api == TEST_API_BURST) {
                 uint32_t num_jobs = num_iter;
 
                 while (num_jobs && timebox_on) {
@@ -2039,7 +2051,71 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
                 }
                 jobs_done = num_iter - num_jobs;
 
-        } else {
+                /* test cipher-only burst api */
+        } else if (test_api == TEST_API_CIPHER_BURST) {
+                IMB_JOB *jt = &job_template;
+                uint32_t num_jobs = num_iter;
+                uint32_t list_idx;
+
+                while (num_jobs && timebox_on) {
+                        uint32_t n_jobs =
+                                (num_jobs / burst_size) ? burst_size : num_jobs;
+
+                        /* set all job params */
+                        for (i = 0; i < n_jobs; i++) {
+                                job = &jobs[i];
+
+                                /* If IMIX testing is being done, set the buffer
+                                 * size to cipher going through the
+                                 * list of sizes precalculated */
+                                if (imix_list_count != 0) {
+                                        list_idx = i & (JOB_SIZE_IMIX_LIST - 1);
+                                        job->msg_len_to_cipher_in_bytes =
+                                                cipher_size_list[list_idx];
+                                } else
+                                        job->msg_len_to_cipher_in_bytes =
+                                                jt->msg_len_to_cipher_in_bytes;
+
+                                job->src = get_src_buffer(index, p_buffer);
+                                job->dst = get_dst_buffer(index, p_buffer);
+                                job->enc_keys = job->dec_keys =
+                                        (const uint32_t *)
+                                        get_key_pointer(index, p_keys);
+                                job->cipher_start_src_offset_in_bytes =
+                                        jt->cipher_start_src_offset_in_bytes;
+                                job->iv = jt->iv;
+                                job->iv_len_in_bytes = jt->iv_len_in_bytes;
+
+                                index = get_next_index(index);
+                        }
+                        /* submit cipher-only burst */
+#ifdef DEBUG
+                        const uint32_t completed_jobs =
+                                IMB_SUBMIT_CIPHER_BURST(mb_mgr, jobs, n_jobs,
+                                                        jt->cipher_mode,
+                                                        jt->cipher_direction,
+                                                        jt->key_len_in_bytes);
+
+                        if (completed_jobs != n_jobs) {
+                                const int err = imb_get_errno(mb_mgr);
+
+                                if (err != 0) {
+                                        printf("submit_cipher_burst error "
+                                               "%d : '%s'\n", err,
+                                               imb_get_strerror(err));
+                                }
+                        }
+#else
+                        IMB_SUBMIT_CIPHER_BURST_NOCHECK(mb_mgr, jobs, n_jobs,
+                                                        jt->cipher_mode,
+                                                        jt->cipher_direction,
+                                                        jt->key_len_in_bytes);
+#endif
+                        num_jobs -= n_jobs;
+                }
+                jobs_done = num_iter - num_jobs;
+
+        } else { /* test job api */
                 for (i = 0; (i < num_iter) && timebox_on; i++) {
                         job = IMB_GET_NEXT_JOB(mb_mgr);
                         *job = job_template;
@@ -2082,7 +2158,7 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
 #endif
                 }
 
-        } /* if burst api */
+        } /* if test_api */
 
 #ifndef _WIN32
         if (use_unhalted_cycles)
@@ -2878,6 +2954,7 @@ static void usage(void)
                 "--no-time-box: disables 100ms watchdog timer on "
                 "an algorithm@packet-size performance test\n"
                 "--burst-api: use burst API for perf tests\n"
+                "--cipher-burst-api: use cipher-only burst API for perf tests\n"
                 "--burst-size: number of jobs to submit per burst\n",
                 MAX_NUM_THREADS + 1);
 }
@@ -3451,7 +3528,9 @@ int main(int argc, char *argv[])
                         i = get_next_num_arg((const char * const *)argv, i,
                                              argc, &tag_size, sizeof(tag_size));
                 } else if (strcmp(argv[i], "--burst-api") == 0) {
-                        burst_api = 1;
+                        test_api = TEST_API_BURST;
+                } else if (strcmp(argv[i], "--cipher-burst-api") == 0) {
+                        test_api = TEST_API_CIPHER_BURST;
                 } else if (strcmp(argv[i], "--burst-size") == 0) {
                         i = get_next_num_arg((const char * const *)argv, i,
                                              argc, &burst_size,
@@ -3468,14 +3547,22 @@ int main(int argc, char *argv[])
                         return EXIT_FAILURE;
                 }
 
-        if (burst_size != 0 && burst_api == 0) {
+        if (burst_size != 0 && test_api == TEST_API_JOB) {
                 fprintf(stderr, "--burst-size can only be used with "
-                        "--burst-api\n");
+                        "--burst-api or --cipher-burst-api\n");
                 return EXIT_FAILURE;
         }
 
-        if (burst_api != 0 && burst_size == 0)
+        if (test_api != TEST_API_JOB && burst_size == 0)
                 burst_size = DEFAULT_BURST_SIZE;
+
+        /* currently only AES-CBC supported by cipher-only burst API */
+        if (test_api == TEST_API_CIPHER_BURST &&
+            custom_job_params.cipher_mode != TEST_CBC) {
+                fprintf(stderr, "Unsupported cipher-only burst "
+                        "API algorithm selected\n");
+                return EXIT_FAILURE;
+        }
 
         if (aead_algo_set == 0 && cipher_algo_set == 0 &&
             hash_algo_set == 0) {
@@ -3634,14 +3721,14 @@ int main(int argc, char *argv[])
                 "Library version: %s\n",
                 sha_size_incr, IMB_VERSION_STR, imb_get_version_str());
 
-        fprintf(stderr, "API type: %s", burst_api ? "burst" : "job");
-        if (burst_api)
+        fprintf(stderr, "API type: %s", str_api_list[test_api]);
+        if (test_api != TEST_API_JOB)
                 fprintf(stderr, " (burst size = %u)\n", burst_size);
         else
                 fprintf(stderr, "\n");
 
         fprintf(stderr, "GCM API type: %s\n",
-                use_gcm_job_api ? (burst_api ? "burst" : "job") : "direct");
+                use_gcm_job_api ? str_api_list[test_api] : "direct");
 
         if (custom_job_params.cipher_mode == TEST_GCM)
                 fprintf(stderr, "GCM AAD = %"PRIu64"\n", gcm_aad_size);
