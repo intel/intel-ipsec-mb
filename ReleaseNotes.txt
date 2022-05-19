@@ -10,6 +10,7 @@ Library
 - JOB API GHASH support added
 - AES-ECB optimizations for AVX and SSE
 - AES-ECB AVX2-VAES implementation added
+- SHA1 multi-buffer implementation added
 
 Fixes
 - Fixed 23-byte IV expansion for ZUC-256 (intel/intel-ipsec-mb#102)
@@ -19,6 +20,7 @@ Test Applications
 
 Performance Application
 - GHASH support added (through JOB and direct API)
+- Support added for SHA1/224/256/384/512
 
 Fixes
 - Fixed incorrect 8-buffer SNOW3G keystream generation
