@@ -156,14 +156,19 @@ enum test_cipher_mode_e {
 /* This enum will be mostly translated to IMB_HASH_ALG
  * (make sure to update h_alg_names list in print_times function)  */
 enum test_hash_alg_e {
-        TEST_SHA1 = 1,
+        TEST_SHA1_HMAC = 1,
+        TEST_SHA_224_HMAC,
+        TEST_SHA_256_HMAC,
+        TEST_SHA_384_HMAC,
+        TEST_SHA_512_HMAC,
+        TEST_XCBC,
+        TEST_MD5,
+        TEST_HASH_CMAC, /* added here to be included in AES tests */
+        TEST_SHA1,
         TEST_SHA_224,
         TEST_SHA_256,
         TEST_SHA_384,
         TEST_SHA_512,
-        TEST_XCBC,
-        TEST_MD5,
-        TEST_HASH_CMAC, /* added here to be included in AES tests */
         TEST_HASH_CMAC_BITLEN,
         TEST_HASH_CMAC_256,
         TEST_NULL_HASH,
@@ -479,29 +484,59 @@ const struct str_value_mapping hash_algo_str_map[] = {
         {
                 .name = "sha1-hmac",
                 .values.job_params = {
-                        .hash_alg = TEST_SHA1
+                        .hash_alg = TEST_SHA1_HMAC
                 }
         },
         {
                 .name = "sha224-hmac",
                 .values.job_params = {
-                        .hash_alg = TEST_SHA_224
+                        .hash_alg = TEST_SHA_224_HMAC
                 }
         },
         {
                 .name = "sha256-hmac",
                 .values.job_params = {
-                        .hash_alg = TEST_SHA_256
+                        .hash_alg = TEST_SHA_256_HMAC
                 }
         },
         {
                 .name = "sha384-hmac",
                 .values.job_params = {
-                        .hash_alg = TEST_SHA_384
+                        .hash_alg = TEST_SHA_384_HMAC
                 }
         },
         {
                 .name = "sha512-hmac",
+                .values.job_params = {
+                        .hash_alg = TEST_SHA_512_HMAC
+                }
+        },
+        {
+                .name = "sha1",
+                .values.job_params = {
+                        .hash_alg = TEST_SHA1
+                }
+        },
+        {
+                .name = "sha224",
+                .values.job_params = {
+                        .hash_alg = TEST_SHA_224
+                }
+        },
+        {
+                .name = "sha256",
+                .values.job_params = {
+                        .hash_alg = TEST_SHA_256
+                }
+        },
+        {
+                .name = "sha384",
+                .values.job_params = {
+                        .hash_alg = TEST_SHA_384
+                }
+        },
+        {
+                .name = "sha512",
                 .values.job_params = {
                         .hash_alg = TEST_SHA_512
                 }
@@ -804,11 +839,11 @@ enum cache_type_e {
 enum cache_type_e cache_type = WARM;
 
 const uint32_t auth_tag_length_bytes[] = {
-                12, /* SHA1 */
-                14, /* SHA_224 */
-                16, /* SHA_256 */
-                24, /* SHA_384 */
-                32, /* SHA_512 */
+                12, /* SHA1_HMAC */
+                14, /* SHA_224_HMAC */
+                16, /* SHA_256_HMAC */
+                24, /* SHA_384_HMAC */
+                32, /* SHA_512_HMAC */
                 12, /* AES_XCBC */
                 12, /* MD5 */
                 0,  /* NULL_HASH */
@@ -1656,6 +1691,21 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
         job_template.auth_tag_output = (uint8_t *) digest;
 
         switch (params->hash_alg) {
+        case TEST_SHA1:
+                job_template.hash_alg = IMB_AUTH_SHA_1;
+                break;
+        case TEST_SHA_224:
+                job_template.hash_alg = IMB_AUTH_SHA_224;
+                break;
+        case TEST_SHA_256:
+                job_template.hash_alg = IMB_AUTH_SHA_256;
+                break;
+        case TEST_SHA_384:
+                job_template.hash_alg = IMB_AUTH_SHA_384;
+                break;
+        case TEST_SHA_512:
+                job_template.hash_alg = IMB_AUTH_SHA_512;
+                break;
         case TEST_XCBC:
                 job_template.u.XCBC._k1_expanded = k1_expanded;
                 job_template.u.XCBC._k2 = k2;
@@ -2503,6 +2553,8 @@ print_times(struct variant_s *variant_list, struct params_s *params,
                         "ENCRYPT", "DECRYPT"
                 };
                 const char *h_alg_names[TEST_NUM_HASH_TESTS - 1] = {
+                        "SHA1_HMAC", "SHA_224_HMAC", "SHA_256_HMAC",
+                        "SHA_384_HMAC", "SHA_512_HMAC",
                         "SHA1", "SHA_224", "SHA_256", "SHA_384", "SHA_512",
                         "XCBC", "MD5", "CMAC", "CMAC_BITLEN", "CMAC_256",
                         "NULL_HASH", "CRC32", "GCM", "CUSTOM", "CCM",
@@ -2543,7 +2595,7 @@ print_times(struct variant_s *variant_list, struct params_s *params,
                 for (col = 0; col < total_variants; col++) {
                         par = variant_list[col].params;
 
-                        const uint8_t h_alg = par.hash_alg - TEST_SHA1;
+                        const uint8_t h_alg = par.hash_alg - TEST_SHA1_HMAC;
 
                         printf("\t%s", h_alg_names[h_alg]);
                 }
