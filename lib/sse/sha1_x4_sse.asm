@@ -294,10 +294,10 @@ mksection .text
 %endm
 
 %macro FUNC_SAVE 0
-%ifndef LINUX
     mov     r11, rsp
     sub     rsp, VARIABLE_OFFSET
     and     rsp, ~15	; align rsp to 16 bytes
+%ifndef LINUX
     movdqa  [rsp + 0*16], xmm6
     movdqa  [rsp + 1*16], xmm7
     movdqa  [rsp + 2*16], xmm8
@@ -308,8 +308,8 @@ mksection .text
     movdqa  [rsp + 7*16], xmm13
     movdqa  [rsp + 8*16], xmm14
     movdqa  [rsp + 9*16], xmm15
-    mov     [rsp + GP_OFFSET], r11 ;; rsp pointer
 %endif
+    mov     [rsp + GP_OFFSET], r11 ;; rsp pointer
 %endmacro
 
 %macro FUNC_RESTORE 0
@@ -338,9 +338,8 @@ mksection .text
     movdqa  [rsp + 8*16], xmm5
     movdqa  [rsp + 9*16], xmm5
 %endif
-
-    mov     rsp, [rsp + GP_OFFSET] ;; rsp pointer
 %endif
+    mov     rsp, [rsp + GP_OFFSET] ;; rsp pointer
 %endmacro
 
 align 32
@@ -352,10 +351,8 @@ align 32
 ; arg 2 : rdx : size (in blocks) ;; assumed to be >= 1
 MKGLOBAL(sha1_mult_sse,function,internal)
 sha1_mult_sse:
-	mov 	r11, rsp
+
 	sub	rsp, FRAMESZ
-	and 	rsp, ~15	; align rsp to 16 bytes
-	mov 	[rsp + 16*16], r11
 
 	;; Initialize digests
 	movdqa	A, [arg1 + 0*SHA1_DIGEST_ROW_SIZE]
@@ -485,7 +482,7 @@ lloop:
 	clear_all_xmms_sse_asm
 %endif
 
-	mov 	rsp, [rsp + 16*16]
+	add 	rsp, FRAMESZ
 	ret
 
 ; void call_sha1_mult_sse_from_c(SHA1_ARGS *args, UINT32 size_in_blocks);
