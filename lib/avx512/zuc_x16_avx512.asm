@@ -439,6 +439,13 @@ times 4 db 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xf
 ;; - To access a 16-byte chunk inside a 64-byte chunk, ks_idx is used
 %define GET_KS(base, lane4_idx, bytes16_idx, ks_idx) (base + lane4_idx * 512 + bytes16_idx * 64 + ks_idx * 16)
 
+; Define Stack Layout
+START_FIELDS
+;;;     name                    size            align
+FIELD	_TEMP_DIGEST_SAVE,	16*64,	        64
+FIELD	_RSP,		        8,	        8
+%assign STACK_SPACE	_FIELD_OFFSET
+
 mksection .text
 align 64
 
@@ -1693,7 +1700,7 @@ init_for_auth_tag_8B:
 ;; To use it with YMM and ZMM registers, VPCMULQDQ must be
 ;; supported.
 ;;
-%macro DIGEST_DATA 14
+%macro DIGEST_DATA 14-16
 %define %%DATA          %1  ; [in] Input data (16 bytes) per buffer
 %define %%KS_L          %2  ; [in/clobbered] Lower 16 bytes of KS per buffer
 %define %%KS_H          %3  ; [in/clobbered] Higher 16 bytes of KS per buffer
@@ -1707,8 +1714,13 @@ init_for_auth_tag_8B:
 %define %%TMP4          %11 ; [clobbered] Temporary XMM/YMM/ZMM register
 %define %%TMP5          %12 ; [clobbered] Temporary XMM/YMM/ZMM register
 %define %%TMP6          %13 ; [clobbered] Temporary XMM/YMM/ZMM register
-%define %%TAG_SIZE      %14 ; [in] Tag size (4, 8 or 16 bytes)
+%define %%TAG_SIZE      %14 ; [constant] Tag size (4, 8 or 16 bytes)
+%define %%LANE_GROUP    %15 ; [constant] Lane group (0-3)
+%define %%IDX           %16 ; [constant] Index inside lane group (0-3)
 
+%if %0 == 15
+%define %%IDX 0
+%endif
         ;; Set up KS
         ;;
         ;; KS_L contains bytes 15:0 of KS (for 1, 2 or 4 buffers)
@@ -1745,10 +1757,14 @@ init_for_auth_tag_8B:
 %endif ; %%TAG_SIZE == 4
 %if %%TAG_SIZE >= 8
         ; Move previous result to low 32 bits and XOR with previous digest
+%if %0 > 14
+        vpternlogq      %%TMP5, %%TMP6, [rsp + 256*%%LANE_GROUP + %%IDX*16], 0x96
+        vmovdqa64       [rsp + 256*%%LANE_GROUP + %%IDX*16], %%TMP5
+%else
         vpxorq          %%TMP5, %%TMP5, %%TMP6
         vpshufb         %%TMP5, %%TMP5, [rel shuf_mask_0_0_0_dw1]
-
         vpxorq          %%IN_OUT, %%IN_OUT, %%TMP5
+%endif
 
         vpclmulqdq      %%TMP3, %%TMP1, %%KS_L, 0x10
         vpclmulqdq      %%TMP4, %%TMP1, %%KS_M1, 0x01
@@ -1757,12 +1773,16 @@ init_for_auth_tag_8B:
 
         ; XOR all the products and keep only 32-63 bits
         vpternlogq      %%TMP5, %%TMP3, %%TMP4, 0x96
+%if %0 > 14
+        vpternlogq      %%TMP5, %%TMP6, [rsp + 256*%%LANE_GROUP + 64 + %%IDX*16], 0x96
+        vmovdqa64       [rsp + 256*%%LANE_GROUP + 64 + %%IDX*16], %%TMP5
+%else
         vpxorq          %%TMP5, %%TMP5, %%TMP6
         vpandq          %%TMP5, %%TMP5, [rel bits_32_63]
 
         ; XOR with bits 32-63 of previous digest
         vpxorq          %%IN_OUT, %%TMP5
-
+%endif
 %if %%TAG_SIZE == 16
         ; Prepare data and calculate bits 95-64 of tag
         vpclmulqdq      %%TMP3, %%TMP1, %%KS_M1, 0x00
@@ -1772,11 +1792,16 @@ init_for_auth_tag_8B:
 
         ; XOR all the products and move bits 63-32 to bits 95-64
         vpternlogq      %%TMP5, %%TMP3, %%TMP4, 0x96
+%if %0 > 14
+        vpternlogq      %%TMP5, %%TMP6, [rsp + 256*%%LANE_GROUP + 64*2 + %%IDX*16], 0x96
+        vmovdqa64       [rsp + 256*%%LANE_GROUP + 64*2 + %%IDX*16], %%TMP5
+%else
         vpxorq          %%TMP5, %%TMP5, %%TMP6
         vpshufb         %%TMP5, %%TMP5, [rel shuf_mask_0_dw1_0_0]
 
         ; XOR with previous bits 64-95 of previous digest
         vpxorq          %%IN_OUT, %%TMP5
+%endif
 
         ; Prepare data and calculate bits 127-96 of tag
         vpclmulqdq      %%TMP3, %%TMP1, %%KS_M1, 0x10
@@ -1786,11 +1811,16 @@ init_for_auth_tag_8B:
 
         ; XOR all the products and move bits 63-32 to bits 127-96
         vpternlogq      %%TMP5, %%TMP3, %%TMP4, 0x96
+%if %0 > 14
+        vpternlogq      %%TMP5, %%TMP6, [rsp + 256*%%LANE_GROUP + 64*3 + %%IDX*16], 0x96
+        vmovdqa64       [rsp + 256*%%LANE_GROUP + 64*3 + %%IDX*16], %%TMP5
+%else
         vpxorq          %%TMP5, %%TMP5, %%TMP6
         vpshufb         %%TMP5, %%TMP5, [rel shuf_mask_dw1_0_0_0]
 
         ; XOR with lower 96 bits, to construct 128 bits of tag
         vpxorq          %%IN_OUT, %%TMP5
+%endif
 
 %endif ; %%TAG_SIZE == 16
 %endif ; %%TAG_SIZE >= 8
@@ -1971,6 +2001,21 @@ init_for_auth_tag_8B:
 %define %%TMP_KMASK1         k4
 %define %%TMP_KMASK2         k5
 
+%if %%TAG_SIZE != 4
+        mov     %%TMP, rsp
+        ; Reserve stack space to store temporary digest products
+        sub     rsp, STACK_SPACE
+        and     rsp, ~63
+        mov     [rsp + _RSP], %%TMP
+
+        vpxorq  %%ZTMP1, %%ZTMP1
+%assign %%I 0
+%rep 16
+        vmovdqa64 [rsp + 64*%%I], %%ZTMP1
+%assign %%I (%%I + 1)
+%endrep
+%endif
+
         xor     %%OFFSET, %%OFFSET
 
         mov     DWORD(%%TMP), 0xAAAAAAAA
@@ -1982,10 +2027,12 @@ init_for_auth_tag_8B:
         mov     DWORD(%%TMP), 0x55555555
         kmovd   %%SHUF_DATA_KMASK, DWORD(%%TMP)
 
+%if %%TAG_SIZE == 4
         vpxorq     %%DIGEST_0, %%DIGEST_0
         vpxorq     %%DIGEST_1, %%DIGEST_1
         vpxorq     %%DIGEST_2, %%DIGEST_2
         vpxorq     %%DIGEST_3, %%DIGEST_3
+%endif
 
 %if USE_GFNI_VAES_VPCLMUL == 0
         vmovdqa64  %%REV_TABLE_L, [rel bit_reverse_table_l]
@@ -2059,7 +2106,8 @@ init_for_auth_tag_8B:
         ; Digest 16 bytes of data with 24 bytes of KS, for 4 buffers
         DIGEST_DATA %%ZTMP7, %%ZKS_L, %%ZKS_H, %%ZTMP8, %%ZTMP10, \
                     APPEND(%%DIGEST_, %%LANE_GROUP), %%SHUF_DATA_KMASK, \
-                    %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, %%ZTMP6, %%TAG_SIZE
+                    %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, %%ZTMP6, \
+                    %%TAG_SIZE, %%LANE_GROUP
 
 %else ; USE_GFNI_VAES_VPCLMUL == 1
         ;; If VPCMUL is NOT available, read chunks of 16 bytes of data
@@ -2068,9 +2116,11 @@ init_for_auth_tag_8B:
 
 %assign %%J 0
 %rep 4
+%if %%TAG_SIZE == 4
 %if %%idx == 0
         ; Reset temporary digests (for the first 16 bytes)
         vpxorq  APPEND(%%XDIGEST_, %%J), APPEND(%%XDIGEST_, %%J)
+%endif
 %endif
         ; Read the next 2 blocks of 16 bytes of KS
         vmovdqa64  %%KS_L, [GET_KS(%%KS, %%LANE_GROUP, %%idx, %%J)]
@@ -2082,20 +2132,25 @@ init_for_auth_tag_8B:
                      %%REV_AND_TABLE, %%XTMP2, %%XTMP3
 
         ; Digest 16 bytes of data with 24 bytes of KS, for one buffer
-        DIGEST_DATA %%XTMP7, %%KS_L, %%KS_H, %%XTMP8, %%XTMP10, APPEND(%%XDIGEST_, %%J), \
-                    %%SHUF_DATA_KMASK, \
-                    %%XTMP1, %%XTMP2, %%XTMP3, %%XTMP4, %%XTMP5, %%XTMP6, %%TAG_SIZE
+        DIGEST_DATA %%XTMP7, %%KS_L, %%KS_H, %%XTMP8, %%XTMP10, \
+                    APPEND(%%XDIGEST_, %%J), %%SHUF_DATA_KMASK, \
+                    %%XTMP1, %%XTMP2, %%XTMP3, %%XTMP4, %%XTMP5, %%XTMP6, %%TAG_SIZE, \
+                    %%LANE_GROUP, %%J
 
         ; Once all 64 bytes of data have been digested, insert them in temporary ZMM register
+%if %%TAG_SIZE == 4
 %if %%idx == 3
         vinserti32x4 %%Z_TEMP_DIGEST, APPEND(%%XDIGEST_, %%J), %%J
+%endif
 %endif
 %assign %%J (%%J + 1)
 %endrep ; %rep 4 %%J
 
         ; XOR with previous digest
+%if %%TAG_SIZE == 4
 %if %%idx == 3
         vpxorq  APPEND(%%DIGEST_, %%LANE_GROUP), %%Z_TEMP_DIGEST
+%endif
 %endif
 %endif ;; USE_GFNI_VAES_VPCLMUL == 0
 %assign %%idx (%%idx + 1)
@@ -2124,6 +2179,29 @@ init_for_auth_tag_8B:
         dec     %%NROUNDS
         jnz     %%_loop
 
+        ; Read from stack to extract the products and arrange them to XOR later
+        ; against previous digests (only for 8-byte and 16-byte tag)
+%if %%TAG_SIZE != 4
+%assign %%I 0
+%rep 4
+        vmovdqa64       %%ZTMP1, [rsp + %%I*256]
+        vmovdqa64       %%ZTMP2, [rsp + %%I*256 + 64]
+        vpshufb         %%ZTMP1, %%ZTMP1, [rel shuf_mask_0_0_0_dw1]
+        vpandq          %%ZTMP2, %%ZTMP2, [rel bits_32_63]
+%if %%TAG_SIZE == 16
+        vmovdqa64       %%ZTMP3, [rsp + %%I*256 + 64*2]
+        vmovdqa64       %%ZTMP4, [rsp + %%I*256 + 64*3]
+        vpshufb         %%ZTMP3, %%ZTMP3, [rel shuf_mask_0_dw1_0_0]
+        vpshufb         %%ZTMP4, %%ZTMP4, [rel shuf_mask_dw1_0_0_0]
+        vpternlogq      %%ZTMP1, %%ZTMP2, %%ZTMP3, 0x96
+        vpxorq          APPEND(%%DIGEST_, %%I), %%ZTMP1, %%ZTMP4
+%else ; %%TAG_SIZE == 8
+        vpxorq          APPEND(%%DIGEST_, %%I), %%ZTMP1, %%ZTMP2
+%endif
+%assign %%I (%%I + 1)
+%endrep
+%endif ; %%TAG_SIZE != 4
+
         UPDATE_TAGS %%T, %%TAG_SIZE, order_0_4_8_12, %%TMP, %%TMP_KMASK1, %%TMP_KMASK2, \
                     %%DIGEST_0, %%DIGEST_1, %%DIGEST_2, %%DIGEST_3, \
                     %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4
@@ -2149,6 +2227,18 @@ init_for_auth_tag_8B:
         vpsubw          YWORD(%%ZTMP2){%%TMP_KMASK1}, YWORD(%%ZTMP1)
         vmovdqa64       [%%LEN], YWORD(%%ZTMP2)
 
+%if %%TAG_SIZE != 4
+%ifdef SAFE_DATA
+        vpxorq  %%ZTMP1, %%ZTMP1
+%assign %%I 0
+%rep 16
+        vmovdqa64 [rsp + %%I*64], %%ZTMP1
+%assign %%I (%%I + 1)
+%endrep
+%endif
+
+        mov     rsp, [rsp + _RSP]
+%endif
 %endmacro
 
 ;;
@@ -2762,6 +2852,21 @@ _no_final_rounds:
 
 %define %%YTMP1         YWORD(%%ZTMP1)
 
+%if %%TAG_SIZE != 4
+        mov             %%TMP1, rsp
+        ; Reserve stack space to store temporary digest products
+        sub             rsp, STACK_SPACE
+        and             rsp, ~63
+        mov             [rsp + _RSP], %%TMP1
+
+        vpxorq          %%ZTMP1, %%ZTMP1
+%assign %%I 0
+%rep 16
+        vmovdqa64       [rsp + 64*%%I], %%ZTMP1
+%assign %%I (%%I + 1)
+%endrep
+%endif ; %%TAG_SIZE != 4
+
         mov             DWORD(%%TMP1), 0x55555555
         kmovd           %%SHUF_DATA_KMASK, DWORD(%%TMP1)
         ;; Read first buffers 0,4,8,12; then 1,5,9,13, and so on,
@@ -2771,8 +2876,9 @@ _no_final_rounds:
         ;; for buffers 1,5,9,13, and so on.
 %assign %%IDX 0
 %rep 4
+%if %%TAG_SIZE == 4
         vpxorq          APPEND(%%DIGEST_, %%IDX), APPEND(%%DIGEST_, %%IDX)
-
+%endif
         mov             %%DATA_ADDR0, [%%DATA + %%IDX*8 + 0*32]
         mov             %%DATA_ADDR1, [%%DATA + %%IDX*8 + 1*32]
         mov             %%DATA_ADDR2, [%%DATA + %%IDX*8 + 2*32]
@@ -2796,7 +2902,7 @@ _no_final_rounds:
         DIGEST_DATA %%ZTMP1, APPEND(%%KS_TRANS, %%I), APPEND(%%KS_TRANS, %%J), \
                     %%ZTMP8, %%ZTMP9, APPEND(%%DIGEST_, %%IDX), %%SHUF_DATA_KMASK, \
                     %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, \
-                    %%ZTMP6, %%ZTMP7, %%TAG_SIZE
+                    %%ZTMP6, %%ZTMP7, %%TAG_SIZE, %%IDX
 
 %assign %%J (%%J + 1)
 %assign %%I (%%I + 1)
@@ -2815,6 +2921,29 @@ _no_final_rounds:
 %assign %%IDX (%%IDX + 1)
 %endrep
 
+        ; Read from stack to extract the products and arrange them to XOR later
+        ; against previous digests (only for 8-byte and 16-byte tag)
+%if %%TAG_SIZE != 4
+%assign %%I 0
+%rep 4
+        vmovdqa64       %%ZTMP1, [rsp + %%I*256]
+        vmovdqa64       %%ZTMP2, [rsp + %%I*256 + 64]
+        vpshufb         %%ZTMP1, %%ZTMP1, [rel shuf_mask_0_0_0_dw1]
+        vpandq          %%ZTMP2, %%ZTMP2, [rel bits_32_63]
+%if %%TAG_SIZE == 16
+        vmovdqa64       %%ZTMP3, [rsp + %%I*256 + 64*2]
+        vmovdqa64       %%ZTMP4, [rsp + %%I*256 + 64*3]
+        vpshufb         %%ZTMP3, %%ZTMP3, [rel shuf_mask_0_dw1_0_0]
+        vpshufb         %%ZTMP4, %%ZTMP4, [rel shuf_mask_dw1_0_0_0]
+        vpternlogq      %%ZTMP1, %%ZTMP2, %%ZTMP3, 0x96
+        vpxorq          APPEND(%%DIGEST_, %%I), %%ZTMP1, %%ZTMP4
+%else ; %%TAG_SIZE == 8
+        vpxorq          APPEND(%%DIGEST_, %%I), %%ZTMP1, %%ZTMP2
+%endif
+%assign %%I (%%I + 1)
+%endrep
+%endif ; %%TAG_SIZE != 4
+
         UPDATE_TAGS %%T, %%TAG_SIZE, order_0_4_8_12, %%TMP1, %%TMP_KMASK1, %%TMP_KMASK2, \
                     %%DIGEST_0, %%DIGEST_1,  %%DIGEST_2, %%DIGEST_3, \
                     %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4
@@ -2828,11 +2957,23 @@ _no_final_rounds:
         vmovdqu64       [%%DATA + 64], %%ZTMP2
 
         ; Update array of lengths (subtract 512 bits from all lengths if valid lane)
-        vmovdqa         %%YTMP1, [LEN]
+        vmovdqa64       %%YTMP1, [LEN]
         vpcmpw          %%TMP_KMASK1, %%YTMP1, [rel all_ffs], 4
         vpsubw          %%YTMP1{%%TMP_KMASK1}, [rel all_512w]
-        vmovdqa         [%%LEN], %%YTMP1
+        vmovdqa64       [%%LEN], %%YTMP1
 
+%if %%TAG_SIZE != 4
+%ifdef SAFE_DATA
+        vpxorq          %%ZTMP1, %%ZTMP1
+%assign %%I 0
+%rep 16
+        vmovdqa64       [rsp + %%I*64], %%ZTMP1
+%assign %%I (%%I + 1)
+%endrep
+%endif
+
+        mov             rsp, [rsp + _RSP]
+%endif ; %%TAG_SIZE != 4
 %endmacro
 
 
@@ -2885,6 +3026,21 @@ _no_final_rounds:
 
 %define %%DATA_ADDR       %%TMP3
 
+%if %%TAG_SIZE != 4
+        mov             %%TMP1, rsp
+        ; Reserve stack space to store temporary digest products
+        sub             rsp, STACK_SPACE
+        and             rsp, ~63
+        mov             [rsp + _RSP], %%TMP1
+
+        vpxorq          %%ZTMP1, %%ZTMP1
+%assign %%I 0
+%rep 16
+        vmovdqa64       [rsp + 64*%%I], %%ZTMP1
+%assign %%I (%%I + 1)
+%endrep
+%endif ; %%TAG_SIZE != 4
+
         vmovdqa  %%REV_TABLE_L, [rel bit_reverse_table_l]
         vmovdqa  %%REV_TABLE_H, [rel bit_reverse_table_h]
         vmovdqa  %%REV_AND_TABLE, [rel bit_reverse_and_table]
@@ -2902,7 +3058,9 @@ _no_final_rounds:
 %assign %%J 0
 %rep 4
 
+%if %%TAG_SIZE == 4
         vpxor   %%TEMP_DIGEST, %%TEMP_DIGEST
+%endif
         mov     %%DATA_ADDR, [%%DATA + 8*(%%J*4 + %%I)]
 
 %assign %%K 0
@@ -2924,7 +3082,7 @@ _no_final_rounds:
         vmovdqu  %%KS_H, [%%KS + (16*%%J + %%I*512) + (%%K + 1)*(16*4)]
         ; Digest 16 bytes of data with 24 bytes of KS, for 4 buffers
         DIGEST_DATA %%XDATA, %%KS_L, %%KS_H, %%XTMP7, %%XTMP8, %%TEMP_DIGEST, %%SHUF_DATA_KMASK, \
-                    %%XTMP1, %%XTMP2, %%XTMP3, %%XTMP4, %%XTMP5, %%XTMP6, %%TAG_SIZE
+                    %%XTMP1, %%XTMP2, %%XTMP3, %%XTMP4, %%XTMP5, %%XTMP6, %%TAG_SIZE, %%I, %%J
 
 %assign %%K (%%K + 1)
 %endrep
@@ -2944,6 +3102,28 @@ _no_final_rounds:
 %assign %%I (%%I + 1)
 %endrep
 
+        ; Read from stack to extract the products and arrange them to XOR later
+        ; against previous digests (only for 8-byte and 16-byte tag)
+%if %%TAG_SIZE != 4
+%assign %%I 0
+%rep 4
+        vmovdqa64       %%ZTMP1, [rsp + %%I*256]
+        vmovdqa64       %%ZTMP2, [rsp + %%I*256 + 64]
+        vpshufb         %%ZTMP1, %%ZTMP1, [rel shuf_mask_0_0_0_dw1]
+        vpandq          %%ZTMP2, %%ZTMP2, [rel bits_32_63]
+%if %%TAG_SIZE == 16
+        vmovdqa64       %%ZTMP3, [rsp + %%I*256 + 64*2]
+        vmovdqa64       %%ZTMP4, [rsp + %%I*256 + 64*3]
+        vpshufb         %%ZTMP3, %%ZTMP3, [rel shuf_mask_0_dw1_0_0]
+        vpshufb         %%ZTMP4, %%ZTMP4, [rel shuf_mask_dw1_0_0_0]
+        vpternlogq      %%ZTMP1, %%ZTMP2, %%ZTMP3, 0x96
+        vpxorq          APPEND(%%DIGEST_, %%I), %%ZTMP1, %%ZTMP4
+%else ; %%TAG_SIZE == 8
+        vpxorq          APPEND(%%DIGEST_, %%I), %%ZTMP1, %%ZTMP2
+%endif
+%assign %%I (%%I + 1)
+%endrep
+%endif ; %%TAG_SIZE != 4
         UPDATE_TAGS %%T, %%TAG_SIZE, order_0_4_8_12, %%TMP1, %%TMP_KMASK1, %%TMP_KMASK2, \
                     %%DIGEST_0, %%DIGEST_1,  %%DIGEST_2, %%DIGEST_3, \
                     %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4
@@ -2962,6 +3142,18 @@ _no_final_rounds:
         vpsubw          %%YTMP1{%%TMP_KMASK1}, [rel all_512w]
         vmovdqa64       [%%LEN], %%YTMP1
 
+%if %%TAG_SIZE != 4
+%ifdef SAFE_DATA
+        vpxorq          %%ZTMP1, %%ZTMP1
+%assign %%I 0
+%rep 16
+        vmovdqa64       [rsp + %%I*64], %%ZTMP1
+%assign %%I (%%I + 1)
+%endrep
+%endif
+
+        mov             rsp, [rsp + _RSP]
+%endif ; %%TAG_SIZE != 4
 %endmacro
 
 ;;
