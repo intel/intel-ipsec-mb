@@ -3287,6 +3287,86 @@ uint32_t submit_aes_cbc_burst_dec(IMB_MGR *state,
 }
 
 __forceinline
+uint32_t submit_aes_ctr_burst(IMB_MGR *state,
+                              IMB_JOB *jobs,
+                              const uint32_t n_jobs,
+                              const IMB_KEY_SIZE_BYTES key_size,
+                              const int run_check)
+{
+        uint32_t i, completed_jobs = 0;
+
+        if (run_check) {
+                /* validate jobs */
+                for (i = 0; i < n_jobs; i++) {
+                        IMB_JOB *job = &jobs[i];
+
+                        if (job == NULL) {
+                                imb_set_errno(state, IMB_ERR_NULL_JOB);
+                                return 0;
+                        }
+
+                        /* validate job */
+                        if (is_job_invalid(state, job,
+                                           IMB_CIPHER_CNTR, IMB_AUTH_NULL,
+                                           IMB_DIR_ENCRYPT, key_size)) {
+                                job->status = IMB_STATUS_INVALID_ARGS;
+                                return 0;
+                        }
+                }
+        }
+
+#ifdef AVX512
+        if ((state->features & IMB_FEATURE_VAES) == IMB_FEATURE_VAES) {
+                static void (*submit_fn_vaes) (IMB_JOB *job) = NULL;
+
+                if (key_size == 16)
+                        submit_fn_vaes = aes_cntr_128_submit_vaes_avx512;
+                else if (key_size == 24)
+                        submit_fn_vaes = aes_cntr_192_submit_vaes_avx512;
+                else  /* assume 32 */
+                        submit_fn_vaes = aes_cntr_256_submit_vaes_avx512;
+
+                for (i = 0; i < n_jobs; i++) {
+                        IMB_JOB *job = &jobs[i];
+
+                        submit_fn_vaes(job);
+                        job->status = IMB_STATUS_COMPLETED;
+                        completed_jobs++;
+                }
+        } else {
+#endif
+                static void (*submit_fn) (const void *in, const void *IV,
+                                          const void *keys, void *out,
+                                          uint64_t len_bytes,
+                                          uint64_t iv_len_bytes) = NULL;
+
+                if (key_size == 16)
+                        submit_fn = AES_CNTR_128;
+                else if (key_size == 24)
+                        submit_fn = AES_CNTR_192;
+                else  /* assume 32 */
+                        submit_fn = AES_CNTR_256;
+
+                for (i = 0; i < n_jobs; i++) {
+                        IMB_JOB *job = &jobs[i];
+
+                        submit_fn(job->src +
+                                  job->cipher_start_src_offset_in_bytes,
+                                  job->iv,
+                                  job->enc_keys,
+                                  job->dst,
+                                  job->msg_len_to_cipher_in_bytes,
+                                  job->iv_len_in_bytes);
+                        job->status = IMB_STATUS_COMPLETED;
+                        completed_jobs++;
+                }
+#ifdef AVX512
+        }
+#endif
+        return completed_jobs;
+}
+
+__forceinline
 uint32_t submit_cipher_burst_and_check(IMB_MGR *state, IMB_JOB *jobs,
                                        const uint32_t n_jobs,
                                        const IMB_CIPHER_MODE cipher,
@@ -3302,6 +3382,9 @@ uint32_t submit_cipher_burst_and_check(IMB_MGR *state, IMB_JOB *jobs,
                 else
                         return submit_aes_cbc_burst_dec(state, jobs, n_jobs,
                                                         key_size, run_check);
+        case IMB_CIPHER_CNTR:
+                return submit_aes_ctr_burst(state, jobs, n_jobs,
+                                            key_size, run_check);
         default:
                 break;
         }
