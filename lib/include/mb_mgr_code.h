@@ -3371,12 +3371,77 @@ SUBMIT_CIPHER_BURST_NOCHECK(IMB_MGR *state, IMB_JOB *jobs,
 }
 
 __forceinline
+uint32_t submit_hmac_sha1_burst(IMB_MGR *state,
+                                IMB_JOB *jobs,
+                                const uint32_t n_jobs,
+                                const int run_check)
+{
+        uint32_t i, completed_jobs = 0;
+        MB_MGR_HMAC_SHA_1_OOO *hmac_sha_1_ooo = state->hmac_sha_1_ooo;
+
+        IMB_JOB *(*submit_fn)
+                (MB_MGR_HMAC_SHA_1_OOO *state, IMB_JOB *job) = SUBMIT_JOB_HMAC;
+        IMB_JOB *(*flush_fn) (MB_MGR_HMAC_SHA_1_OOO *state) = FLUSH_JOB_HMAC;
+
+#ifdef HASH_USE_SHAEXT
+        if (state->features & IMB_FEATURE_SHANI) {
+                submit_fn = SUBMIT_JOB_HMAC_NI;
+                flush_fn = FLUSH_JOB_HMAC_NI;
+        }
+#endif
+        if (run_check) {
+                /* validate jobs */
+                for (i = 0; i < n_jobs; i++) {
+                        IMB_JOB *job = &jobs[i];
+
+                        if (job == NULL) {
+                                imb_set_errno(state, IMB_ERR_NULL_JOB);
+                                return 0;
+                        }
+
+                        /* validate job */
+                        if (is_job_invalid(state, job,
+                                           IMB_CIPHER_NULL,
+                                           IMB_AUTH_HMAC_SHA_1,
+                                           IMB_DIR_ENCRYPT,
+                                           job->key_len_in_bytes)) {
+                                job->status = IMB_STATUS_INVALID_ARGS;
+                                return 0;
+                        }
+                }
+        }
+        /* submit all jobs */
+        for (i = 0; i < n_jobs; i++) {
+                IMB_JOB *job = &jobs[i];
+
+                job = submit_fn(hmac_sha_1_ooo, job);
+                if (job != NULL) {
+                        job->status = IMB_STATUS_COMPLETED;
+                        completed_jobs++;
+                }
+        }
+        /* flush any outstanding jobs */
+        if (completed_jobs != n_jobs) {
+                IMB_JOB *job = NULL;
+
+                while ((job = flush_fn(hmac_sha_1_ooo)) != NULL) {
+                        job->status = IMB_STATUS_COMPLETED;
+                        completed_jobs++;
+                }
+        }
+
+        return completed_jobs;
+}
+
+__forceinline
 uint32_t submit_hash_burst_and_check(IMB_MGR *state, IMB_JOB *jobs,
                                      const uint32_t n_jobs,
                                      const IMB_HASH_ALG hash,
                                      const int run_check)
 {
         switch (hash) {
+        case IMB_AUTH_HMAC_SHA_1:
+                return submit_hmac_sha1_burst(state, jobs, n_jobs, run_check);
         default:
                 break;
         }
