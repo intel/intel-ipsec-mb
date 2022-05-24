@@ -769,6 +769,10 @@ typedef uint32_t (*submit_cipher_burst_t)(struct IMB_MGR *,
                                           const IMB_CIPHER_MODE cipher,
                                           const IMB_CIPHER_DIRECTION dir,
                                           const IMB_KEY_SIZE_BYTES key_size);
+typedef uint32_t (*submit_hash_burst_t)(struct IMB_MGR *,
+                                        struct IMB_JOB *,
+                                        const uint32_t,
+                                        const IMB_HASH_ALG hash);
 typedef void (*keyexp_t)(const void *, void *, void *);
 typedef void (*cmac_subkey_gen_t)(const void *, void *, void *);
 typedef void (*hash_one_block_t)(const void *, void *);
@@ -1154,6 +1158,8 @@ typedef struct IMB_MGR {
         submit_burst_t submit_burst_nocheck;
         submit_cipher_burst_t submit_cipher_burst;
         submit_cipher_burst_t submit_cipher_burst_nocheck;
+        submit_hash_burst_t submit_hash_burst;
+        submit_hash_burst_t submit_hash_burst_nocheck;
 
         /* in-order scheduler fields */
         int              earliest_job; /**< byte offset, -1 if none */
@@ -1458,6 +1464,11 @@ IMB_DLL_EXPORT void init_mb_mgr_auto(IMB_MGR *state, IMB_ARCH *arch);
                                         _dir, _key_size)                \
         ((_mgr)->submit_cipher_burst_nocheck((_mgr), (_jobs), (_n_jobs),\
                                              (_cipher), (_dir), (_key_size)))
+#define IMB_SUBMIT_HASH_BURST(_mgr, _jobs, _n_jobs, _hash)              \
+        ((_mgr)->submit_hash_burst((_mgr), (_jobs), (_n_jobs), (_hash)))
+#define IMB_SUBMIT_HASH_BURST_NOCHECK(_mgr, _jobs, _n_jobs, _hash)      \
+        ((_mgr)->submit_hash_burst_nocheck((_mgr), (_jobs), (_n_jobs), (_hash)))
+
 /* Key expansion and generation API's */
 #define IMB_AES_KEYEXP_128(_mgr, _key, _enc_exp_key, _dec_exp_key)      \
         ((_mgr)->keyexp_128((_key), (_enc_exp_key), (_dec_exp_key)))

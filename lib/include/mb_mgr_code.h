@@ -3370,4 +3370,55 @@ SUBMIT_CIPHER_BURST_NOCHECK(IMB_MGR *state, IMB_JOB *jobs,
                                              cipher, dir, key_size, 0);
 }
 
+__forceinline
+uint32_t submit_hash_burst_and_check(IMB_MGR *state, IMB_JOB *jobs,
+                                     const uint32_t n_jobs,
+                                     const IMB_HASH_ALG hash,
+                                     const int run_check)
+{
+        switch (hash) {
+        default:
+                break;
+        }
+
+        /* unsupported hash alg */
+        imb_set_errno(state, IMB_ERR_HASH_ALGO);
+
+        return 0;
+}
+
+uint32_t
+SUBMIT_HASH_BURST(IMB_MGR *state, IMB_JOB *jobs,
+                  const uint32_t n_jobs,
+                  const IMB_HASH_ALG hash)
+{
+        /* reset error status */
+        imb_set_errno(state, 0);
+
+#ifdef SAFE_PARAM
+        if (jobs == NULL) {
+                imb_set_errno(NULL, IMB_ERR_NULL_JOB);
+                return 0;
+        }
+#endif
+        return submit_hash_burst_and_check(state, jobs, n_jobs, hash, 1);
+}
+
+uint32_t
+SUBMIT_HASH_BURST_NOCHECK(IMB_MGR *state, IMB_JOB *jobs,
+                          const uint32_t n_jobs,
+                          const IMB_HASH_ALG hash)
+{
+        /* reset error status */
+        imb_set_errno(state, 0);
+
+#ifdef SAFE_PARAM
+        if (jobs == NULL) {
+                imb_set_errno(NULL, IMB_ERR_NULL_JOB);
+                return 0;
+        }
+#endif
+        return submit_hash_burst_and_check(state, jobs, n_jobs, hash, 0);
+}
+
 #endif /* MB_MGR_CODE_H */

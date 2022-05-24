@@ -564,3 +564,13 @@ EXPORTS
     submit_cipher_burst_nocheck_avx             @538
     submit_cipher_burst_nocheck_avx2            @539
     submit_cipher_burst_nocheck_avx512          @540
+    submit_hash_burst_sse                       @541
+    submit_hash_burst_sse_no_aesni              @542
+    submit_hash_burst_avx                       @543
+    submit_hash_burst_avx2                      @544
+    submit_hash_burst_avx512                    @545
+    submit_hash_burst_nocheck_sse               @546
+    submit_hash_burst_nocheck_sse_no_aesni      @547
+    submit_hash_burst_nocheck_avx               @548
+    submit_hash_burst_nocheck_avx2              @549
+    submit_hash_burst_nocheck_avx512            @550
