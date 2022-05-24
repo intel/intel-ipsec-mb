@@ -34,6 +34,7 @@
 #include "asm.h"
 #include "include/clear_regs_mem.h"
 #include "include/error.h"
+#include "include/arch_noaesni.h"
 #include "include/arch_sse_type1.h"
 
 static uint32_t in[4*3] = {

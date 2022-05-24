@@ -57,25 +57,7 @@ void aes_cbc_dec_256_vaes_avx512(const void *in, const uint8_t *IV,
                                  const void *keys, void *out,
                                  uint64_t len_bytes);
 
-void aes_cbc_dec_128_sse_no_aesni(const void *in, const uint8_t *IV,
-                                  const void *keys, void *out,
-                                  uint64_t len_bytes);
-void aes_cbc_dec_192_sse_no_aesni(const void *in, const uint8_t *IV,
-                                  const void *keys, void *out,
-                                  uint64_t len_bytes);
-void aes_cbc_dec_256_sse_no_aesni(const void *in, const uint8_t *IV,
-                                  const void *keys, void *out,
-                                  uint64_t len_bytes);
-
 /* AES-CTR */
-void aes_cntr_256_sse_no_aesni(const void *in, const void *IV, const void *keys,
-                               void *out, uint64_t len_bytes, uint64_t IV_len);
-void aes_cntr_192_sse_no_aesni(const void *in, const void *IV, const void *keys,
-                               void *out, uint64_t len_bytes, uint64_t IV_len);
-void aes_cntr_128_sse_no_aesni(const void *in, const void *IV, const void *keys,
-                               void *out, uint64_t len_bytes, uint64_t IV_len);
-
-
 void aes_cntr_256_avx(const void *in, const void *IV, const void *keys,
                       void *out, uint64_t len_bytes, uint64_t IV_len);
 void aes_cntr_192_avx(const void *in, const void *IV, const void *keys,
@@ -88,16 +70,6 @@ void aes_cntr_192_submit_vaes_avx512(IMB_JOB *job);
 void aes_cntr_256_submit_vaes_avx512(IMB_JOB *job);
 
 /* AES-CTR-BITLEN */
-void aes_cntr_bit_256_sse_no_aesni(const void *in, const void *IV,
-                                   const void *keys, void *out,
-                                   uint64_t len_bits, uint64_t IV_len);
-void aes_cntr_bit_192_sse_no_aesni(const void *in, const void *IV,
-                                   const void *keys, void *out,
-                                   uint64_t len_bits, uint64_t IV_len);
-void aes_cntr_bit_128_sse_no_aesni(const void *in, const void *IV,
-                                   const void *keys, void *out,
-                                   uint64_t len_bits, uint64_t IV_len);
-
 void aes_cntr_bit_256_avx(const void *in, const void *IV, const void *keys,
                           void *out, uint64_t len_bits, uint64_t IV_len);
 void aes_cntr_bit_192_avx(const void *in, const void *IV, const void *keys,
@@ -110,23 +82,10 @@ void aes_cntr_bit_192_submit_vaes_avx512(IMB_JOB *job);
 void aes_cntr_bit_256_submit_vaes_avx512(IMB_JOB *job);
 
 /* AES-CCM */
-IMB_JOB *aes_cntr_ccm_128_sse_no_aesni(IMB_JOB *job);
-
-IMB_JOB *aes_cntr_ccm_256_sse_no_aesni(IMB_JOB *job);
-
 IMB_JOB *aes_cntr_ccm_128_avx(IMB_JOB *job);
-
 IMB_JOB *aes_cntr_ccm_256_avx(IMB_JOB *job);
 
 /* AES-ECB */
-void aes_ecb_enc_256_sse_no_aesni(const void *in, const void *keys,
-                                  void *out, uint64_t len_bytes);
-void aes_ecb_enc_192_sse_no_aesni(const void *in, const void *keys,
-                                  void *out, uint64_t len_bytes);
-void aes_ecb_enc_128_sse_no_aesni(const void *in, const void *keys,
-                                  void *out, uint64_t len_bytes);
-
-
 void aes_ecb_enc_256_avx(const void *in, const void *keys,
                          void *out, uint64_t len_bytes);
 void aes_ecb_enc_192_avx(const void *in, const void *keys,
@@ -147,14 +106,6 @@ void aes_ecb_enc_192_vaes_avx512(const void *in, const void *keys,
                          void *out, uint64_t len_bytes);
 void aes_ecb_enc_128_vaes_avx512(const void *in, const void *keys,
                          void *out, uint64_t len_bytes);
-
-void aes_ecb_dec_256_sse_no_aesni(const void *in, const void *keys,
-                                  void *out, uint64_t len_bytes);
-void aes_ecb_dec_192_sse_no_aesni(const void *in, const void *keys,
-                                  void *out, uint64_t len_bytes);
-void aes_ecb_dec_128_sse_no_aesni(const void *in, const void *keys,
-                                  void *out, uint64_t len_bytes);
-
 
 void aes_ecb_dec_256_avx(const void *in, const void *keys,
                          void *out, uint64_t len_bytes);
@@ -178,15 +129,10 @@ void aes_ecb_dec_128_vaes_avx512(const void *in, const void *keys,
                                  void *out, uint64_t len_bytes);
 
 /* AES128-ECBENC */
-void aes128_ecbenc_x3_sse_no_aesni(const void *in, void *keys,
-                                   void *out1, void *out2, void *out3);
 void aes128_ecbenc_x3_avx(const void *in, void *keys,
                           void *out1, void *out2, void *out3);
 
 /* AES-CBCS */
-void aes_cbcs_1_9_dec_128_sse_no_aesni(const void *in, const uint8_t *IV,
-                                       const void *keys, void *out,
-                                       uint64_t len_bytes, void *next_iv);
 void aes_cbcs_1_9_dec_128_avx(const void *in, const uint8_t *IV,
                               const void *keys, void *out,
                               uint64_t len_bytes, void *next_iv);
@@ -194,22 +140,15 @@ void aes_cbcs_1_9_dec_128_vaes_avx512(const void *in, const uint8_t *IV,
                                       const void *keys, void *out,
                                       uint64_t len_bytes, void *next_iv);
 
-
 /* stitched AES128-CNTR, CRC32 and BIP */
 IMB_JOB *submit_job_pon_enc_avx(IMB_JOB *job);
 IMB_JOB *submit_job_pon_dec_avx(IMB_JOB *job);
-
-IMB_JOB *submit_job_pon_enc_sse_no_aesni(IMB_JOB *job);
-IMB_JOB *submit_job_pon_dec_sse_no_aesni(IMB_JOB *job);
 
 IMB_JOB *submit_job_pon_enc_vaes_avx512(IMB_JOB *job);
 IMB_JOB *submit_job_pon_dec_vaes_avx512(IMB_JOB *job);
 
 IMB_JOB *submit_job_pon_enc_no_ctr_avx(IMB_JOB *job);
 IMB_JOB *submit_job_pon_dec_no_ctr_avx(IMB_JOB *job);
-
-IMB_JOB *submit_job_pon_enc_no_ctr_sse_no_aesni(IMB_JOB *job);
-IMB_JOB *submit_job_pon_dec_no_ctr_sse_no_aesni(IMB_JOB *job);
 
 IMB_JOB *submit_job_pon_enc_no_ctr_vaes_avx512(IMB_JOB *job);
 IMB_JOB *submit_job_pon_dec_no_ctr_vaes_avx512(IMB_JOB *job);

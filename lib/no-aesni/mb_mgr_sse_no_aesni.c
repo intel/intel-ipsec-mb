@@ -39,112 +39,14 @@
 #include "include/chacha20_poly1305.h"
 
 #include "include/save_xmms.h"
-#include "include/asm.h"
 #include "include/des.h"
 #include "include/gcm.h"
 #include "include/noaesni.h"
 #include "include/error.h"
+#include "include/arch_noaesni.h"
+#include "include/arch_sse_type1.h"
 
 /* ====================================================================== */
-
-IMB_JOB *submit_job_aes128_enc_sse_no_aesni(MB_MGR_AES_OOO *state,
-                                                 IMB_JOB *job);
-IMB_JOB *flush_job_aes128_enc_sse_no_aesni(MB_MGR_AES_OOO *state);
-
-IMB_JOB *submit_job_aes192_enc_sse_no_aesni(MB_MGR_AES_OOO *state,
-                                                 IMB_JOB *job);
-IMB_JOB *flush_job_aes192_enc_sse_no_aesni(MB_MGR_AES_OOO *state);
-
-IMB_JOB *submit_job_aes256_enc_sse_no_aesni(MB_MGR_AES_OOO *state,
-                                                 IMB_JOB *job);
-IMB_JOB *flush_job_aes256_enc_sse_no_aesni(MB_MGR_AES_OOO *state);
-
-IMB_JOB *submit_job_hmac_sse(MB_MGR_HMAC_SHA_1_OOO *state,
-                                  IMB_JOB *job);
-IMB_JOB *flush_job_hmac_sse(MB_MGR_HMAC_SHA_1_OOO *state);
-
-IMB_JOB *submit_job_hmac_sha_224_sse(MB_MGR_HMAC_SHA_256_OOO *state,
-                                          IMB_JOB *job);
-IMB_JOB *flush_job_hmac_sha_224_sse(MB_MGR_HMAC_SHA_256_OOO *state);
-
-IMB_JOB *submit_job_hmac_sha_256_sse(MB_MGR_HMAC_SHA_256_OOO *state,
-                                          IMB_JOB *job);
-IMB_JOB *flush_job_hmac_sha_256_sse(MB_MGR_HMAC_SHA_256_OOO *state);
-
-IMB_JOB *submit_job_hmac_sha_384_sse(MB_MGR_HMAC_SHA_512_OOO *state,
-                                          IMB_JOB *job);
-IMB_JOB *flush_job_hmac_sha_384_sse(MB_MGR_HMAC_SHA_512_OOO *state);
-
-IMB_JOB *submit_job_hmac_sha_512_sse(MB_MGR_HMAC_SHA_512_OOO *state,
-                                          IMB_JOB *job);
-IMB_JOB *flush_job_hmac_sha_512_sse(MB_MGR_HMAC_SHA_512_OOO *state);
-
-IMB_JOB *submit_job_hmac_md5_sse(MB_MGR_HMAC_MD5_OOO *state,
-                                      IMB_JOB *job);
-IMB_JOB *flush_job_hmac_md5_sse(MB_MGR_HMAC_MD5_OOO *state);
-
-IMB_JOB *submit_job_aes_xcbc_sse_no_aesni(MB_MGR_AES_XCBC_OOO *state,
-                                               IMB_JOB *job);
-IMB_JOB *flush_job_aes_xcbc_sse_no_aesni(MB_MGR_AES_XCBC_OOO *state);
-
-IMB_JOB *submit_job_aes128_cmac_auth_sse_no_aesni(MB_MGR_CMAC_OOO *state,
-                                                    IMB_JOB *job);
-IMB_JOB *flush_job_aes128_cmac_auth_sse_no_aesni(MB_MGR_CMAC_OOO *state);
-
-IMB_JOB *submit_job_aes256_cmac_auth_sse_no_aesni(MB_MGR_CMAC_OOO *state,
-                                                    IMB_JOB *job);
-IMB_JOB *flush_job_aes256_cmac_auth_sse_no_aesni(MB_MGR_CMAC_OOO *state);
-
-IMB_JOB *submit_job_aes128_ccm_auth_sse_no_aesni(MB_MGR_CCM_OOO *state,
-                                                 IMB_JOB *job);
-
-IMB_JOB *flush_job_aes128_ccm_auth_sse_no_aesni(MB_MGR_CCM_OOO *state);
-
-IMB_JOB *submit_job_aes256_ccm_auth_sse_no_aesni(MB_MGR_CCM_OOO *state,
-                                                 IMB_JOB *job);
-
-IMB_JOB *flush_job_aes256_ccm_auth_sse_no_aesni(MB_MGR_CCM_OOO *state);
-
-IMB_JOB *submit_job_aes_cntr_sse_no_aesni(IMB_JOB *job);
-
-IMB_JOB *submit_job_aes_cntr_bit_sse_no_aesni(IMB_JOB *job);
-
-IMB_JOB *submit_job_zuc_eea3_sse_no_aesni(MB_MGR_ZUC_OOO *state,
-                                               IMB_JOB *job);
-IMB_JOB *flush_job_zuc_eea3_sse_no_aesni(MB_MGR_ZUC_OOO *state);
-
-IMB_JOB *submit_job_zuc256_eea3_sse_no_aesni(MB_MGR_ZUC_OOO *state,
-                                               IMB_JOB *job);
-IMB_JOB *flush_job_zuc256_eea3_sse_no_aesni(MB_MGR_ZUC_OOO *state);
-
-IMB_JOB *submit_job_zuc_eia3_sse_no_aesni(MB_MGR_ZUC_OOO *state,
-                                               IMB_JOB *job);
-IMB_JOB *flush_job_zuc_eia3_sse_no_aesni(MB_MGR_ZUC_OOO *state);
-
-IMB_JOB *submit_job_zuc256_eia3_sse_no_aesni(MB_MGR_ZUC_OOO *state,
-                                             IMB_JOB *job,
-                                             const uint64_t tag_sz);
-IMB_JOB *flush_job_zuc256_eia3_sse_no_aesni(MB_MGR_ZUC_OOO *state,
-                                            const uint64_t tag_sz);
-
-IMB_JOB *submit_job_sha1_sse(MB_MGR_SHA_1_OOO *state,
-                             IMB_JOB *job);
-IMB_JOB *flush_job_sha1_sse(MB_MGR_SHA_1_OOO *state,
-                            IMB_JOB *job);
-
-uint32_t hec_32_sse_no_aesni(const uint8_t *in);
-uint64_t hec_64_sse_no_aesni(const uint8_t *in);
-
-IMB_JOB *submit_job_aes128_cbcs_1_9_enc_sse_no_aesni(MB_MGR_AES_OOO *state,
-                                                     IMB_JOB *job);
-IMB_JOB *flush_job_aes128_cbcs_1_9_enc_sse_no_aesni(MB_MGR_AES_OOO *state);
-
-IMB_JOB *submit_job_chacha20_enc_dec_sse(IMB_JOB *job);
-
-void *poly1305_mac_scalar(IMB_JOB *job);
-
-IMB_JOB *snow_v_sse_no_aesni(IMB_JOB *job);
-IMB_JOB *snow_v_aead_init_sse_no_aesni(IMB_JOB *job);
 
 #define SAVE_XMMS               save_xmms
 #define RESTORE_XMMS            restore_xmms
@@ -271,7 +173,6 @@ IMB_JOB *snow_v_aead_init_sse_no_aesni(IMB_JOB *job);
 #define AES_CFB_128_ONE    aes_cfb_128_one_sse_no_aesni
 #define AES_CFB_256_ONE    aes_cfb_256_one_sse_no_aesni
 
-void aes128_cbc_mac_x4_no_aesni(AES_ARGS *args, uint64_t len);
 
 #define AES128_CBC_MAC     aes128_cbc_mac_x4_no_aesni
 
@@ -307,25 +208,8 @@ void aes128_cbc_mac_x4_no_aesni(AES_ARGS *args, uint64_t len);
 
 /* ====================================================================== */
 
-uint32_t
-ethernet_fcs_sse_no_aesni_local(const void *msg, const uint64_t len,
-                                const void *tag_ouput);
-
 #define ETHERNET_FCS ethernet_fcs_sse_no_aesni_local
 
-uint32_t ethernet_fcs_sse_no_aesni(const void *msg, const uint64_t len);
-uint32_t crc16_x25_sse_no_aesni(const void *msg, const uint64_t len);
-uint32_t crc32_sctp_sse_no_aesni(const void *msg, const uint64_t len);
-uint32_t crc24_lte_a_sse_no_aesni(const void *msg, const uint64_t len);
-uint32_t crc24_lte_b_sse_no_aesni(const void *msg, const uint64_t len);
-uint32_t crc16_fp_data_sse_no_aesni(const void *msg, const uint64_t len);
-uint32_t crc11_fp_header_sse_no_aesni(const void *msg, const uint64_t len);
-uint32_t crc7_fp_header_sse_no_aesni(const void *msg, const uint64_t len);
-uint32_t crc10_iuup_data_sse_no_aesni(const void *msg, const uint64_t len);
-uint32_t crc6_iuup_header_sse_no_aesni(const void *msg, const uint64_t len);
-uint32_t
-crc32_wimax_ofdma_data_sse_no_aesni(const void *msg, const uint64_t len);
-uint32_t crc8_wimax_ofdma_hcs_sse_no_aesni(const void *msg, const uint64_t len);
 
 /* ====================================================================== */
 
