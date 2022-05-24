@@ -3623,9 +3623,10 @@ int main(int argc, char *argv[])
         if (test_api != TEST_API_JOB && burst_size == 0)
                 burst_size = DEFAULT_BURST_SIZE;
 
-        /* currently only AES-CBC supported by cipher-only burst API */
+        /* currently only AES-CBC & CTR supported by cipher-only burst API */
         if (test_api == TEST_API_CIPHER_BURST &&
-            custom_job_params.cipher_mode != TEST_CBC) {
+            (custom_job_params.cipher_mode != TEST_CBC &&
+             custom_job_params.cipher_mode != TEST_CNTR)) {
                 fprintf(stderr, "Unsupported cipher-only burst "
                         "API algorithm selected\n");
                 return EXIT_FAILURE;
