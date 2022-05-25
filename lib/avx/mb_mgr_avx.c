@@ -40,70 +40,11 @@
 #include "include/gcm.h"
 #include "include/chacha20_poly1305.h"
 #include "include/save_xmms.h"
-#include "include/asm.h"
 #include "include/des.h"
 #include "include/cpu_feature.h"
-#include "include/noaesni.h"
 #include "include/aesni_emu.h"
 #include "include/error.h"
-
-IMB_JOB *submit_job_aes128_enc_avx(MB_MGR_AES_OOO *state,
-                                        IMB_JOB *job);
-IMB_JOB *flush_job_aes128_enc_avx(MB_MGR_AES_OOO *state);
-
-IMB_JOB *submit_job_aes192_enc_avx(MB_MGR_AES_OOO *state,
-                                        IMB_JOB *job);
-IMB_JOB *flush_job_aes192_enc_avx(MB_MGR_AES_OOO *state);
-
-IMB_JOB *submit_job_aes256_enc_avx(MB_MGR_AES_OOO *state,
-                                        IMB_JOB *job);
-IMB_JOB *flush_job_aes256_enc_avx(MB_MGR_AES_OOO *state);
-
-IMB_JOB *submit_job_aes_xcbc_avx(MB_MGR_AES_XCBC_OOO *state,
-                                      IMB_JOB *job);
-IMB_JOB *flush_job_aes_xcbc_avx(MB_MGR_AES_XCBC_OOO *state);
-
-IMB_JOB *submit_job_aes_cntr_avx(IMB_JOB *job);
-
-IMB_JOB *submit_job_aes_cntr_bit_avx(IMB_JOB *job);
-
-IMB_JOB *submit_job_zuc_eea3_avx(MB_MGR_ZUC_OOO *state,
-                                        IMB_JOB *job);
-IMB_JOB *flush_job_zuc_eea3_avx(MB_MGR_ZUC_OOO *state);
-
-IMB_JOB *flush_job_zuc256_eea3_avx(MB_MGR_ZUC_OOO *state);
-
-IMB_JOB *submit_job_zuc256_eea3_avx(MB_MGR_ZUC_OOO *state,
-                                    IMB_JOB *job);
-
-IMB_JOB *submit_job_zuc_eia3_avx(MB_MGR_ZUC_OOO *state,
-                                        IMB_JOB *job);
-IMB_JOB *flush_job_zuc_eia3_avx(MB_MGR_ZUC_OOO *state);
-
-IMB_JOB *submit_job_zuc256_eia3_avx(MB_MGR_ZUC_OOO *state,
-                                    IMB_JOB *job,
-                                    const uint64_t tag_sz);
-IMB_JOB *flush_job_zuc256_eia3_avx(MB_MGR_ZUC_OOO *state,
-                                   const uint64_t tag_sz);
-
-IMB_JOB *submit_job_sha1_avx(MB_MGR_SHA_1_OOO *state,
-                             IMB_JOB *job);
-IMB_JOB *flush_job_sha1_avx(MB_MGR_SHA_1_OOO *state,
-                             IMB_JOB *job);
-
-uint32_t hec_32_avx(const uint8_t *in);
-uint64_t hec_64_avx(const uint8_t *in);
-
-IMB_JOB *submit_job_aes128_cbcs_1_9_enc_avx(MB_MGR_AES_OOO *state,
-                                            IMB_JOB *job);
-IMB_JOB *flush_job_aes128_cbcs_1_9_enc_avx(MB_MGR_AES_OOO *state);
-
-IMB_JOB *submit_job_chacha20_enc_dec_avx(IMB_JOB *job);
-
-void *poly1305_mac_scalar(IMB_JOB *job);
-
-IMB_JOB *snow_v_avx(IMB_JOB *job);
-IMB_JOB *snow_v_aead_init_avx(IMB_JOB *job);
+#include "include/arch_avx_type1.h"
 
 #define SAVE_XMMS               save_xmms_avx
 #define RESTORE_XMMS            restore_xmms_avx
@@ -201,53 +142,6 @@ IMB_JOB *snow_v_aead_init_avx(IMB_JOB *job);
 #define SUBMIT_JOB_SNOW_V snow_v_avx
 #define SUBMIT_JOB_SNOW_V_AEAD snow_v_aead_init_avx
 
-IMB_JOB *submit_job_hmac_avx(MB_MGR_HMAC_SHA_1_OOO *state,
-                                  IMB_JOB *job);
-IMB_JOB *flush_job_hmac_avx(MB_MGR_HMAC_SHA_1_OOO *state);
-
-IMB_JOB *submit_job_hmac_sha_224_avx(MB_MGR_HMAC_SHA_256_OOO *state,
-                                          IMB_JOB *job);
-IMB_JOB *flush_job_hmac_sha_224_avx(MB_MGR_HMAC_SHA_256_OOO *state);
-
-IMB_JOB *submit_job_hmac_sha_256_avx(MB_MGR_HMAC_SHA_256_OOO *state,
-                                          IMB_JOB *job);
-IMB_JOB *flush_job_hmac_sha_256_avx(MB_MGR_HMAC_SHA_256_OOO *state);
-
-IMB_JOB *submit_job_hmac_sha_384_avx(MB_MGR_HMAC_SHA_512_OOO *state,
-                                          IMB_JOB *job);
-IMB_JOB *flush_job_hmac_sha_384_avx(MB_MGR_HMAC_SHA_512_OOO *state);
-
-IMB_JOB *submit_job_hmac_sha_512_avx(MB_MGR_HMAC_SHA_512_OOO *state,
-                                          IMB_JOB *job);
-IMB_JOB *flush_job_hmac_sha_512_avx(MB_MGR_HMAC_SHA_512_OOO *state);
-
-IMB_JOB *submit_job_hmac_md5_avx(MB_MGR_HMAC_MD5_OOO *state,
-                                      IMB_JOB *job);
-IMB_JOB *flush_job_hmac_md5_avx(MB_MGR_HMAC_MD5_OOO *state);
-
-IMB_JOB *submit_job_aes128_cmac_auth_avx(MB_MGR_CMAC_OOO *state,
-                                         IMB_JOB *job);
-
-IMB_JOB *flush_job_aes128_cmac_auth_avx(MB_MGR_CMAC_OOO *state);
-
-IMB_JOB *submit_job_aes256_cmac_auth_avx(MB_MGR_CMAC_OOO *state,
-                                         IMB_JOB *job);
-
-IMB_JOB *flush_job_aes256_cmac_auth_avx(MB_MGR_CMAC_OOO *state);
-
-IMB_JOB *submit_job_aes128_ccm_auth_avx(MB_MGR_CCM_OOO *state,
-                                        IMB_JOB *job);
-
-IMB_JOB *flush_job_aes128_ccm_auth_avx(MB_MGR_CCM_OOO *state);
-
-IMB_JOB *submit_job_aes256_ccm_auth_avx(MB_MGR_CCM_OOO *state,
-                                        IMB_JOB *job);
-
-IMB_JOB *flush_job_aes256_ccm_auth_avx(MB_MGR_CCM_OOO *state);
-
-void aes_cmac_256_subkey_gen_avx(const void *key_exp,
-                                 void *key1, void *key2);
-
 #define SUBMIT_JOB_HMAC               submit_job_hmac_avx
 #define FLUSH_JOB_HMAC                flush_job_hmac_avx
 #define SUBMIT_JOB_HMAC_SHA_224       submit_job_hmac_sha_224_avx
@@ -286,7 +180,6 @@ void aes_cmac_256_subkey_gen_avx(const void *key_exp,
 #define AES_CFB_128_ONE    aes_cfb_128_one_avx
 #define AES_CFB_256_ONE    aes_cfb_256_one_avx
 
-void aes128_cbc_mac_x8(AES_ARGS *args, uint64_t len);
 
 #define AES128_CBC_MAC     aes128_cbc_mac_x8
 
@@ -309,19 +202,6 @@ ethernet_fcs_avx_local(const void *msg, const uint64_t len,
                        const void *tag_ouput);
 
 #define ETHERNET_FCS ethernet_fcs_avx_local
-
-uint32_t ethernet_fcs_avx(const void *msg, const uint64_t len);
-uint32_t crc16_x25_avx(const void *msg, const uint64_t len);
-uint32_t crc32_sctp_avx(const void *msg, const uint64_t len);
-uint32_t crc24_lte_a_avx(const void *msg, const uint64_t len);
-uint32_t crc24_lte_b_avx(const void *msg, const uint64_t len);
-uint32_t crc16_fp_data_avx(const void *msg, const uint64_t len);
-uint32_t crc11_fp_header_avx(const void *msg, const uint64_t len);
-uint32_t crc7_fp_header_avx(const void *msg, const uint64_t len);
-uint32_t crc10_iuup_data_avx(const void *msg, const uint64_t len);
-uint32_t crc6_iuup_header_avx(const void *msg, const uint64_t len);
-uint32_t crc32_wimax_ofdma_data_avx(const void *msg, const uint64_t len);
-uint32_t crc8_wimax_ofdma_hcs_avx(const void *msg, const uint64_t len);
 
 /* ====================================================================== */
 

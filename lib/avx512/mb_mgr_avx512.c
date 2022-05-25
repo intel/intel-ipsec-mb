@@ -50,21 +50,7 @@
 #include "include/aesni_emu.h"
 #include "include/error.h"
 
-IMB_JOB *submit_job_aes128_enc_avx(MB_MGR_AES_OOO *state,
-                                   IMB_JOB *job);
-IMB_JOB *flush_job_aes128_enc_avx(MB_MGR_AES_OOO *state);
-
-IMB_JOB *submit_job_aes192_enc_avx(MB_MGR_AES_OOO *state,
-                                   IMB_JOB *job);
-IMB_JOB *flush_job_aes192_enc_avx(MB_MGR_AES_OOO *state);
-
-IMB_JOB *submit_job_aes256_enc_avx(MB_MGR_AES_OOO *state,
-                                   IMB_JOB *job);
-IMB_JOB *flush_job_aes256_enc_avx(MB_MGR_AES_OOO *state);
-
-IMB_JOB *submit_job_aes_xcbc_avx(MB_MGR_AES_XCBC_OOO *state,
-                                 IMB_JOB *job);
-IMB_JOB *flush_job_aes_xcbc_avx(MB_MGR_AES_XCBC_OOO *state);
+#include "include/arch_avx_type1.h"
 
 IMB_JOB *submit_job_aes_xcbc_vaes_avx512(MB_MGR_AES_XCBC_OOO *state,
                                          IMB_JOB *job);
@@ -108,10 +94,6 @@ IMB_JOB *flush_job_docsis_des_enc_avx512(MB_MGR_DES_OOO *state);
 IMB_JOB *submit_job_docsis_des_dec_avx512(MB_MGR_DES_OOO *state,
                                           IMB_JOB *job);
 IMB_JOB *flush_job_docsis_des_dec_avx512(MB_MGR_DES_OOO *state);
-
-IMB_JOB *submit_job_aes_cntr_avx(IMB_JOB *job);
-
-IMB_JOB *submit_job_aes_cntr_bit_avx(IMB_JOB *job);
 
 IMB_JOB *submit_job_zuc_eea3_no_gfni_avx512(MB_MGR_ZUC_OOO *state,
                                             IMB_JOB *job);
@@ -160,8 +142,6 @@ IMB_JOB *flush_job_sha1_avx512(MB_MGR_SHA_1_OOO *state,
 
 void aes_cmac_256_subkey_gen_avx512(const void *key_exp,
                                     void *key1, void *key2);
-uint32_t hec_32_avx(const uint8_t *in);
-uint64_t hec_64_avx(const uint8_t *in);
 
 IMB_JOB *submit_job_aes128_cbcs_1_9_enc_avx(MB_MGR_AES_OOO *state,
                                             IMB_JOB *job);
@@ -170,10 +150,6 @@ IMB_JOB *flush_job_aes128_cbcs_1_9_enc_avx(MB_MGR_AES_OOO *state);
 IMB_JOB *submit_job_aes128_cbcs_1_9_enc_vaes_avx512(MB_MGR_AES_OOO *state,
                                                     IMB_JOB *job);
 IMB_JOB *flush_job_aes128_cbcs_1_9_enc_vaes_avx512(MB_MGR_AES_OOO *state);
-
-IMB_JOB *snow_v_avx(IMB_JOB *job);
-IMB_JOB *snow_v_aead_init_avx(IMB_JOB *job);
-
 
 IMB_JOB *submit_job_snow3g_uea2_vaes_avx512(MB_MGR_SNOW3G_OOO *state,
                                             IMB_JOB *job);
@@ -312,17 +288,6 @@ IMB_JOB *submit_job_hmac_md5_avx2(MB_MGR_HMAC_MD5_OOO *state,
                                        IMB_JOB *job);
 IMB_JOB *flush_job_hmac_md5_avx2(MB_MGR_HMAC_MD5_OOO *state);
 
-IMB_JOB *submit_job_aes128_cmac_auth_avx(MB_MGR_CMAC_OOO *state,
-                                         IMB_JOB *job);
-
-IMB_JOB *flush_job_aes128_cmac_auth_avx(MB_MGR_CMAC_OOO *state);
-
-IMB_JOB *submit_job_aes256_cmac_auth_avx(MB_MGR_CMAC_OOO *state,
-                                         IMB_JOB *job);
-
-IMB_JOB *flush_job_aes256_cmac_auth_avx(MB_MGR_CMAC_OOO *state);
-
-
 IMB_JOB *submit_job_aes128_cmac_auth_vaes_avx512(MB_MGR_CMAC_OOO *state,
                                                  IMB_JOB *job);
 
@@ -333,20 +298,10 @@ IMB_JOB *submit_job_aes256_cmac_auth_vaes_avx512(MB_MGR_CMAC_OOO *state,
 
 IMB_JOB *flush_job_aes256_cmac_auth_vaes_avx512(MB_MGR_CMAC_OOO *state);
 
-IMB_JOB *submit_job_aes128_ccm_auth_avx(MB_MGR_CCM_OOO *state,
-                                        IMB_JOB *job);
-
-IMB_JOB *flush_job_aes128_ccm_auth_avx(MB_MGR_CCM_OOO *state);
-
 IMB_JOB *submit_job_aes128_ccm_auth_vaes_avx512(MB_MGR_CCM_OOO *state,
                                                 IMB_JOB *job);
 
 IMB_JOB *flush_job_aes128_ccm_auth_vaes_avx512(MB_MGR_CCM_OOO *state);
-
-IMB_JOB *submit_job_aes256_ccm_auth_avx(MB_MGR_CCM_OOO *state,
-                                        IMB_JOB *job);
-
-IMB_JOB *flush_job_aes256_ccm_auth_avx(MB_MGR_CCM_OOO *state);
 
 IMB_JOB *submit_job_aes256_ccm_auth_vaes_avx512(MB_MGR_CCM_OOO *state,
                                                 IMB_JOB *job);
@@ -540,19 +495,6 @@ extern uint32_t
 crc32_wimax_ofdma_data_avx512(const void *msg, const uint64_t len);
 extern uint32_t
 crc8_wimax_ofdma_hcs_avx512(const void *msg, const uint64_t len);
-
-extern uint32_t ethernet_fcs_avx(const void *msg, const uint64_t len);
-extern uint32_t crc16_x25_avx(const void *msg, const uint64_t len);
-extern uint32_t crc32_sctp_avx(const void *msg, const uint64_t len);
-extern uint32_t crc24_lte_a_avx(const void *msg, const uint64_t len);
-extern uint32_t crc24_lte_b_avx(const void *msg, const uint64_t len);
-extern uint32_t crc16_fp_data_avx(const void *msg, const uint64_t len);
-extern uint32_t crc11_fp_header_avx(const void *msg, const uint64_t len);
-extern uint32_t crc7_fp_header_avx(const void *msg, const uint64_t len);
-extern uint32_t crc10_iuup_data_avx(const void *msg, const uint64_t len);
-extern uint32_t crc6_iuup_header_avx(const void *msg, const uint64_t len);
-extern uint32_t crc32_wimax_ofdma_data_avx(const void *msg, const uint64_t len);
-extern uint32_t crc8_wimax_ofdma_hcs_avx(const void *msg, const uint64_t len);
 
 extern void snow3g_f9_1_buffer_vaes_avx512(const snow3g_key_schedule_t *pHandle,
                                            const void *pIV,

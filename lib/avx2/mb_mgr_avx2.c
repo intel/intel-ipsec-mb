@@ -48,25 +48,8 @@
 #include "include/aesni_emu.h"
 #include "include/error.h"
 
-IMB_JOB *submit_job_aes128_enc_avx(MB_MGR_AES_OOO *state,
-                                        IMB_JOB *job);
-IMB_JOB *flush_job_aes128_enc_avx(MB_MGR_AES_OOO *state);
-
-IMB_JOB *submit_job_aes192_enc_avx(MB_MGR_AES_OOO *state,
-                                        IMB_JOB *job);
-IMB_JOB *flush_job_aes192_enc_avx(MB_MGR_AES_OOO *state);
-
-IMB_JOB *submit_job_aes256_enc_avx(MB_MGR_AES_OOO *state,
-                                        IMB_JOB *job);
-IMB_JOB *flush_job_aes256_enc_avx(MB_MGR_AES_OOO *state);
-
-IMB_JOB *submit_job_aes_xcbc_avx(MB_MGR_AES_XCBC_OOO *state,
-                                      IMB_JOB *job);
-IMB_JOB *flush_job_aes_xcbc_avx(MB_MGR_AES_XCBC_OOO *state);
-
-IMB_JOB *submit_job_aes_cntr_avx(IMB_JOB *job);
-
-IMB_JOB *submit_job_aes_cntr_bit_avx(IMB_JOB *job);
+#include "include/arch_sse_type1.h" /* poly1305 */
+#include "include/arch_avx_type1.h"
 
 IMB_JOB *submit_job_zuc_eea3_avx2(MB_MGR_ZUC_OOO *state,
                                         IMB_JOB *job);
@@ -94,19 +77,8 @@ IMB_JOB *flush_job_sha1_avx2(MB_MGR_SHA_1_OOO *state,
 
 void aes_cmac_256_subkey_gen_avx2(const void *key_exp,
                                   void *key1, void *key2);
-uint32_t hec_32_avx(const uint8_t *in);
-uint64_t hec_64_avx(const uint8_t *in);
-
-IMB_JOB *submit_job_aes128_cbcs_1_9_enc_avx(MB_MGR_AES_OOO *state,
-                                            IMB_JOB *job);
-IMB_JOB *flush_job_aes128_cbcs_1_9_enc_avx(MB_MGR_AES_OOO *state);
 
 IMB_JOB *submit_job_chacha20_enc_dec_avx2(IMB_JOB *job);
-
-void *poly1305_mac_scalar(IMB_JOB *job);
-
-IMB_JOB *snow_v_avx(IMB_JOB *job);
-IMB_JOB *snow_v_aead_init_avx(IMB_JOB *job);
 
 #define SAVE_XMMS               save_xmms_avx
 #define RESTORE_XMMS            restore_xmms_avx
