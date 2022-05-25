@@ -956,11 +956,13 @@ typedef enum  {
         TEST_API_JOB = 0,
         TEST_API_BURST,
         TEST_API_CIPHER_BURST,
+        TEST_API_HASH_BURST,
         TEST_API_NUMOF
 } TEST_API;
 
 const char *str_api_list[TEST_API_NUMOF] = {"job", "burst",
-                                            "cipher-only burst"};
+                                            "cipher-only burst",
+                                            "hash-only burst"};
 
 static TEST_API test_api = TEST_API_JOB; /* test job API by default */
 static uint32_t burst_size = 0; /* num jobs to pass to burst API */
@@ -2115,6 +2117,67 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
                 }
                 jobs_done = num_iter - num_jobs;
 
+                /* test hash-only burst api */
+        } else if (test_api == TEST_API_HASH_BURST) {
+                IMB_JOB *jt = &job_template;
+                uint32_t num_jobs = num_iter;
+                uint32_t list_idx;
+
+                while (num_jobs && timebox_on) {
+                        uint32_t n_jobs =
+                                (num_jobs / burst_size) ? burst_size : num_jobs;
+
+                        /* set all job params */
+                        for (i = 0; i < n_jobs; i++) {
+                                job = &jobs[i];
+
+                                /* If IMIX testing is being done, set the buffer
+                                 * size to cipher going through the
+                                 * list of sizes precalculated */
+                                if (imix_list_count != 0) {
+                                        list_idx = i & (JOB_SIZE_IMIX_LIST - 1);
+                                        job->msg_len_to_hash_in_bytes =
+                                                hash_size_list[list_idx];
+                                } else
+                                        job->msg_len_to_hash_in_bytes =
+                                                jt->msg_len_to_hash_in_bytes;
+
+                                job->src = get_src_buffer(index, p_buffer);
+                                job->hash_start_src_offset_in_bytes =
+                                        jt->hash_start_src_offset_in_bytes;
+                                job->auth_tag_output_len_in_bytes =
+                                        jt->auth_tag_output_len_in_bytes;
+                                job->u.HMAC._hashed_auth_key_xor_ipad =
+                                        jt->u.HMAC._hashed_auth_key_xor_ipad;
+                                job->u.HMAC._hashed_auth_key_xor_opad =
+                                        jt->u.HMAC._hashed_auth_key_xor_opad;
+                                job->auth_tag_output = jt->auth_tag_output;
+
+                                index = get_next_index(index);
+                        }
+                        /* submit hash-only burst */
+#ifdef DEBUG
+                        const uint32_t completed_jobs =
+                                IMB_SUBMIT_HASH_BURST(mb_mgr, jobs, n_jobs,
+                                                      jt->hash_alg);
+
+                        if (completed_jobs != n_jobs) {
+                                const int err = imb_get_errno(mb_mgr);
+
+                                if (err != 0) {
+                                        printf("submit_hash_burst error "
+                                               "%d : '%s'\n", err,
+                                               imb_get_strerror(err));
+                                }
+                        }
+#else
+                        IMB_SUBMIT_HASH_BURST_NOCHECK(mb_mgr, jobs, n_jobs,
+                                                        jt->hash_alg);
+#endif
+                        num_jobs -= n_jobs;
+                }
+                jobs_done = num_iter - num_jobs;
+
         } else { /* test job api */
                 for (i = 0; (i < num_iter) && timebox_on; i++) {
                         job = IMB_GET_NEXT_JOB(mb_mgr);
@@ -2955,6 +3018,7 @@ static void usage(void)
                 "an algorithm@packet-size performance test\n"
                 "--burst-api: use burst API for perf tests\n"
                 "--cipher-burst-api: use cipher-only burst API for perf tests\n"
+                "--hash-burst-api: use hash-only burst API for perf tests\n"
                 "--burst-size: number of jobs to submit per burst\n",
                 MAX_NUM_THREADS + 1);
 }
@@ -3531,6 +3595,8 @@ int main(int argc, char *argv[])
                         test_api = TEST_API_BURST;
                 } else if (strcmp(argv[i], "--cipher-burst-api") == 0) {
                         test_api = TEST_API_CIPHER_BURST;
+                } else if (strcmp(argv[i], "--hash-burst-api") == 0) {
+                        test_api = TEST_API_HASH_BURST;
                 } else if (strcmp(argv[i], "--burst-size") == 0) {
                         i = get_next_num_arg((const char * const *)argv, i,
                                              argc, &burst_size,
@@ -3549,7 +3615,8 @@ int main(int argc, char *argv[])
 
         if (burst_size != 0 && test_api == TEST_API_JOB) {
                 fprintf(stderr, "--burst-size can only be used with "
-                        "--burst-api or --cipher-burst-api\n");
+                        "--burst-api, --cipher-burst-api or "
+                        "--hash-burst-api options\n");
                 return EXIT_FAILURE;
         }
 
@@ -3561,6 +3628,14 @@ int main(int argc, char *argv[])
             custom_job_params.cipher_mode != TEST_CBC) {
                 fprintf(stderr, "Unsupported cipher-only burst "
                         "API algorithm selected\n");
+                return EXIT_FAILURE;
+        }
+
+        /* currently only HMAC-SHA1 supported by hash-only burst API */
+        if (test_api == TEST_API_HASH_BURST &&
+            custom_job_params.hash_alg != TEST_SHA1_HMAC) {
+                fprintf(stderr,
+                        "Unsupported hash-only burst API algorithm selected\n");
                 return EXIT_FAILURE;
         }
 
