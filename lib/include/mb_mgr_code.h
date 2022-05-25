@@ -3135,10 +3135,6 @@ SUBMIT_BURST(IMB_MGR *state, IMB_JOB *jobs, const uint32_t n_jobs)
         imb_set_errno(state, 0);
 
 #ifdef SAFE_PARAM
-        if (state == NULL) {
-                imb_set_errno(NULL, IMB_ERR_NULL_MBMGR);
-                return 0;
-        }
         if (jobs == NULL) {
                 imb_set_errno(NULL, IMB_ERR_NULL_JOB);
                 return 0;
@@ -3155,10 +3151,6 @@ SUBMIT_BURST_NOCHECK(IMB_MGR *state, IMB_JOB *jobs, const uint32_t n_jobs)
         imb_set_errno(state, 0);
 
 #ifdef SAFE_PARAM
-        if (state == NULL) {
-                imb_set_errno(NULL, IMB_ERR_NULL_MBMGR);
-                return 0;
-        }
         if (jobs == NULL) {
                 imb_set_errno(NULL, IMB_ERR_NULL_JOB);
                 return 0;
@@ -3331,10 +3323,6 @@ SUBMIT_CIPHER_BURST(IMB_MGR *state, IMB_JOB *jobs,
         imb_set_errno(state, 0);
 
 #ifdef SAFE_PARAM
-        if (state == NULL) {
-                imb_set_errno(NULL, IMB_ERR_NULL_MBMGR);
-                return 0;
-        }
         if (jobs == NULL) {
                 imb_set_errno(NULL, IMB_ERR_NULL_JOB);
                 return 0;
@@ -3356,10 +3344,6 @@ SUBMIT_CIPHER_BURST_NOCHECK(IMB_MGR *state, IMB_JOB *jobs,
         imb_set_errno(state, 0);
 
 #ifdef SAFE_PARAM
-        if (state == NULL) {
-                imb_set_errno(NULL, IMB_ERR_NULL_MBMGR);
-                return 0;
-        }
         if (jobs == NULL) {
                 imb_set_errno(NULL, IMB_ERR_NULL_JOB);
                 return 0;

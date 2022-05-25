@@ -405,6 +405,73 @@ IMB_DLL_LOCAL void
 init_mb_mgr_avx512_internal(IMB_MGR *state, const int reset_mgrs);
 
 IMB_DLL_EXPORT uint32_t
+submit_burst_sse(IMB_MGR *state, IMB_JOB *jobs, const uint32_t n_jobs);
+IMB_DLL_EXPORT uint32_t
+submit_burst_avx(IMB_MGR *state, IMB_JOB *jobs, const uint32_t n_jobs);
+IMB_DLL_EXPORT uint32_t
+submit_burst_avx2(IMB_MGR *state, IMB_JOB *jobs, const uint32_t n_jobs);
+IMB_DLL_EXPORT uint32_t
+submit_burst_avx512(IMB_MGR *state, IMB_JOB *jobs, const uint32_t n_jobs);
+
+IMB_DLL_EXPORT uint32_t
+submit_burst_nocheck_sse(IMB_MGR *state, IMB_JOB *jobs, const uint32_t n_jobs);
+IMB_DLL_EXPORT uint32_t
+submit_burst_nocheck_avx(IMB_MGR *state, IMB_JOB *jobs, const uint32_t n_jobs);
+IMB_DLL_EXPORT uint32_t
+submit_burst_nocheck_avx2(IMB_MGR *state, IMB_JOB *jobs, const uint32_t n_jobs);
+IMB_DLL_EXPORT uint32_t
+submit_burst_nocheck_avx512(IMB_MGR *state, IMB_JOB *jobs,
+                            const uint32_t n_jobs);
+IMB_DLL_EXPORT uint32_t
+submit_cipher_burst_sse(IMB_MGR *state, IMB_JOB *jobs,
+                        const uint32_t n_jobs,
+                        const IMB_CIPHER_MODE cipher,
+                        const IMB_CIPHER_DIRECTION dir,
+                        const IMB_KEY_SIZE_BYTES key_size);
+IMB_DLL_EXPORT uint32_t
+submit_cipher_burst_avx(IMB_MGR *state, IMB_JOB *jobs,
+                        const uint32_t n_jobs,
+                        const IMB_CIPHER_MODE cipher,
+                        const IMB_CIPHER_DIRECTION dir,
+                        const IMB_KEY_SIZE_BYTES key_size);
+IMB_DLL_EXPORT uint32_t
+submit_cipher_burst_avx2(IMB_MGR *state, IMB_JOB *jobs,
+                         const uint32_t n_jobs,
+                         const IMB_CIPHER_MODE cipher,
+                         const IMB_CIPHER_DIRECTION dir,
+                         const IMB_KEY_SIZE_BYTES key_size);
+IMB_DLL_EXPORT uint32_t
+submit_cipher_burst_avx512(IMB_MGR *state, IMB_JOB *jobs,
+                           const uint32_t n_jobs,
+                           const IMB_CIPHER_MODE cipher,
+                           const IMB_CIPHER_DIRECTION dir,
+                           const IMB_KEY_SIZE_BYTES key_size);
+
+IMB_DLL_EXPORT uint32_t
+submit_cipher_burst_nocheck_sse(IMB_MGR *state, IMB_JOB *jobs,
+                                const uint32_t n_jobs,
+                                const IMB_CIPHER_MODE cipher,
+                                const IMB_CIPHER_DIRECTION dir,
+                                const IMB_KEY_SIZE_BYTES key_size);
+IMB_DLL_EXPORT uint32_t
+submit_cipher_burst_nocheck_avx(IMB_MGR *state, IMB_JOB *jobs,
+                                const uint32_t n_jobs,
+                                const IMB_CIPHER_MODE cipher,
+                                const IMB_CIPHER_DIRECTION dir,
+                                const IMB_KEY_SIZE_BYTES key_size);
+IMB_DLL_EXPORT uint32_t
+submit_cipher_burst_nocheck_avx2(IMB_MGR *state, IMB_JOB *jobs,
+                                 const uint32_t n_jobs,
+                                 const IMB_CIPHER_MODE cipher,
+                                 const IMB_CIPHER_DIRECTION dir,
+                                 const IMB_KEY_SIZE_BYTES key_size);
+IMB_DLL_EXPORT uint32_t
+submit_cipher_burst_nocheck_avx512(IMB_MGR *state, IMB_JOB *jobs,
+                                   const uint32_t n_jobs,
+                                   const IMB_CIPHER_MODE cipher,
+                                   const IMB_CIPHER_DIRECTION dir,
+                                   const IMB_KEY_SIZE_BYTES key_size);
+IMB_DLL_EXPORT uint32_t
 submit_hash_burst_sse(IMB_MGR *state, IMB_JOB *jobs,
                       const uint32_t n_jobs,
                       const IMB_HASH_ALG hash);
