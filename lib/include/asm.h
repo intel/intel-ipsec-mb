@@ -57,26 +57,12 @@ void aes_cntr_bit_192_submit_vaes_avx512(IMB_JOB *job);
 void aes_cntr_bit_256_submit_vaes_avx512(IMB_JOB *job);
 
 /* AES-ECB */
-void aes_ecb_enc_256_vaes_avx2(const void *in, const void *keys,
-                         void *out, uint64_t len_bytes);
-void aes_ecb_enc_192_vaes_avx2(const void *in, const void *keys,
-                         void *out, uint64_t len_bytes);
-void aes_ecb_enc_128_vaes_avx2(const void *in, const void *keys,
-                         void *out, uint64_t len_bytes);
-
 void aes_ecb_enc_256_vaes_avx512(const void *in, const void *keys,
                          void *out, uint64_t len_bytes);
 void aes_ecb_enc_192_vaes_avx512(const void *in, const void *keys,
                          void *out, uint64_t len_bytes);
 void aes_ecb_enc_128_vaes_avx512(const void *in, const void *keys,
                          void *out, uint64_t len_bytes);
-
-void aes_ecb_dec_256_vaes_avx2(const void *in, const void *keys,
-                                 void *out, uint64_t len_bytes);
-void aes_ecb_dec_192_vaes_avx2(const void *in, const void *keys,
-                                 void *out, uint64_t len_bytes);
-void aes_ecb_dec_128_vaes_avx2(const void *in, const void *keys,
-                                 void *out, uint64_t len_bytes);
 
 void aes_ecb_dec_256_vaes_avx512(const void *in, const void *keys,
                                  void *out, uint64_t len_bytes);

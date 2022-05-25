@@ -50,7 +50,8 @@
 #include "include/aesni_emu.h"
 #include "include/error.h"
 
-#include "include/arch_avx_type1.h"
+#include "include/arch_avx_type1.h" /* AESNI */
+#include "include/arch_avx2_type1.h" /* MD5 */
 
 IMB_JOB *submit_job_aes_xcbc_vaes_avx512(MB_MGR_AES_XCBC_OOO *state,
                                          IMB_JOB *job);
@@ -283,10 +284,6 @@ IMB_JOB *flush_job_hmac_sha_384_avx512(MB_MGR_HMAC_SHA_512_OOO *state);
 IMB_JOB *submit_job_hmac_sha_512_avx512(MB_MGR_HMAC_SHA_512_OOO *state,
                                              IMB_JOB *job);
 IMB_JOB *flush_job_hmac_sha_512_avx512(MB_MGR_HMAC_SHA_512_OOO *state);
-
-IMB_JOB *submit_job_hmac_md5_avx2(MB_MGR_HMAC_MD5_OOO *state,
-                                       IMB_JOB *job);
-IMB_JOB *flush_job_hmac_md5_avx2(MB_MGR_HMAC_MD5_OOO *state);
 
 IMB_JOB *submit_job_aes128_cmac_auth_vaes_avx512(MB_MGR_CMAC_OOO *state,
                                                  IMB_JOB *job);
