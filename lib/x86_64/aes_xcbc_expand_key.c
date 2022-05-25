@@ -31,7 +31,6 @@
 #ifdef AESNI_EMU
 #include "include/noaesni.h"
 #endif
-#include "asm.h"
 #include "include/clear_regs_mem.h"
 #include "include/error.h"
 #include "include/arch_noaesni.h"

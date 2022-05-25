@@ -41,7 +41,6 @@
 #include "include/chacha20_poly1305.h"
 
 #include "include/save_xmms.h"
-#include "include/asm.h"
 #include "include/des.h"
 #include "include/cpu_feature.h"
 #include "include/noaesni.h"

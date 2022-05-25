@@ -42,7 +42,6 @@
 #include "include/snow3g_submit.h"
 
 #include "include/save_xmms.h"
-#include "include/asm.h"
 #include "include/des.h"
 #include "include/gcm.h"
 #include "include/cpu_feature.h"
@@ -52,125 +51,8 @@
 
 #include "include/arch_avx_type1.h" /* AESNI */
 #include "include/arch_avx2_type1.h" /* MD5 */
-
-IMB_JOB *submit_job_aes_xcbc_vaes_avx512(MB_MGR_AES_XCBC_OOO *state,
-                                         IMB_JOB *job);
-IMB_JOB *flush_job_aes_xcbc_vaes_avx512(MB_MGR_AES_XCBC_OOO *state);
-
-IMB_JOB *submit_job_aes128_enc_vaes_avx512(MB_MGR_AES_OOO *state,
-                                           IMB_JOB *job);
-
-IMB_JOB *flush_job_aes128_enc_vaes_avx512(MB_MGR_AES_OOO *state);
-
-IMB_JOB *submit_job_aes192_enc_vaes_avx512(MB_MGR_AES_OOO *state,
-                                           IMB_JOB *job);
-
-IMB_JOB *flush_job_aes192_enc_vaes_avx512(MB_MGR_AES_OOO *state);
-
-IMB_JOB *submit_job_aes256_enc_vaes_avx512(MB_MGR_AES_OOO *state,
-                                           IMB_JOB *job);
-
-IMB_JOB *flush_job_aes256_enc_vaes_avx512(MB_MGR_AES_OOO *state);
-
-IMB_JOB *submit_job_des_cbc_enc_avx512(MB_MGR_DES_OOO *state,
-                                       IMB_JOB *job);
-IMB_JOB *flush_job_des_cbc_enc_avx512(MB_MGR_DES_OOO *state);
-
-IMB_JOB *submit_job_des_cbc_dec_avx512(MB_MGR_DES_OOO *state,
-                                       IMB_JOB *job);
-IMB_JOB *flush_job_des_cbc_dec_avx512(MB_MGR_DES_OOO *state);
-
-IMB_JOB *submit_job_3des_cbc_enc_avx512(MB_MGR_DES_OOO *state,
-                                        IMB_JOB *job);
-IMB_JOB *flush_job_3des_cbc_enc_avx512(MB_MGR_DES_OOO *state);
-
-IMB_JOB *submit_job_3des_cbc_dec_avx512(MB_MGR_DES_OOO *state,
-                                        IMB_JOB *job);
-IMB_JOB *flush_job_3des_cbc_dec_avx512(MB_MGR_DES_OOO *state);
-
-IMB_JOB *submit_job_docsis_des_enc_avx512(MB_MGR_DES_OOO *state,
-                                          IMB_JOB *job);
-IMB_JOB *flush_job_docsis_des_enc_avx512(MB_MGR_DES_OOO *state);
-
-IMB_JOB *submit_job_docsis_des_dec_avx512(MB_MGR_DES_OOO *state,
-                                          IMB_JOB *job);
-IMB_JOB *flush_job_docsis_des_dec_avx512(MB_MGR_DES_OOO *state);
-
-IMB_JOB *submit_job_zuc_eea3_no_gfni_avx512(MB_MGR_ZUC_OOO *state,
-                                            IMB_JOB *job);
-IMB_JOB *flush_job_zuc_eea3_no_gfni_avx512(MB_MGR_ZUC_OOO *state);
-
-IMB_JOB *submit_job_zuc_eia3_no_gfni_avx512(MB_MGR_ZUC_OOO *state,
-                                            IMB_JOB *job);
-IMB_JOB *flush_job_zuc_eia3_no_gfni_avx512(MB_MGR_ZUC_OOO *state);
-
-IMB_JOB *submit_job_zuc_eea3_gfni_avx512(MB_MGR_ZUC_OOO *state,
-                                         IMB_JOB *job);
-IMB_JOB *flush_job_zuc_eea3_gfni_avx512(MB_MGR_ZUC_OOO *state);
-
-IMB_JOB *submit_job_zuc_eia3_gfni_avx512(MB_MGR_ZUC_OOO *state,
-                                         IMB_JOB *job);
-IMB_JOB *flush_job_zuc_eia3_gfni_avx512(MB_MGR_ZUC_OOO *state);
-
-IMB_JOB *submit_job_zuc256_eea3_no_gfni_avx512(MB_MGR_ZUC_OOO *state,
-                                               IMB_JOB *job);
-IMB_JOB *flush_job_zuc256_eea3_no_gfni_avx512(MB_MGR_ZUC_OOO *state);
-
-IMB_JOB *submit_job_zuc256_eea3_gfni_avx512(MB_MGR_ZUC_OOO *state,
-                                            IMB_JOB *job);
-IMB_JOB *flush_job_zuc256_eea3_gfni_avx512(MB_MGR_ZUC_OOO *state);
-
-IMB_JOB *aes_cntr_ccm_128_vaes_avx512(IMB_JOB *job);
-
-IMB_JOB *aes_cntr_ccm_256_vaes_avx512(IMB_JOB *job);
-
-IMB_JOB *submit_job_zuc256_eia3_no_gfni_avx512(MB_MGR_ZUC_OOO *state,
-                                            IMB_JOB *job,
-                                            const uint64_t tag_sz);
-IMB_JOB *flush_job_zuc256_eia3_no_gfni_avx512(MB_MGR_ZUC_OOO *state,
-                                           const uint64_t tag_sz);
-
-IMB_JOB *submit_job_zuc256_eia3_gfni_avx512(MB_MGR_ZUC_OOO *state,
-                                         IMB_JOB *job,
-                                         const uint64_t tag_sz);
-IMB_JOB *flush_job_zuc256_eia3_gfni_avx512(MB_MGR_ZUC_OOO *state,
-                                        const uint64_t tag_sz);
-
-IMB_JOB *submit_job_sha1_avx512(MB_MGR_SHA_1_OOO *state,
-                                IMB_JOB *job);
-IMB_JOB *flush_job_sha1_avx512(MB_MGR_SHA_1_OOO *state,
-                               IMB_JOB *job);
-
-void aes_cmac_256_subkey_gen_avx512(const void *key_exp,
-                                    void *key1, void *key2);
-
-IMB_JOB *submit_job_aes128_cbcs_1_9_enc_avx(MB_MGR_AES_OOO *state,
-                                            IMB_JOB *job);
-IMB_JOB *flush_job_aes128_cbcs_1_9_enc_avx(MB_MGR_AES_OOO *state);
-
-IMB_JOB *submit_job_aes128_cbcs_1_9_enc_vaes_avx512(MB_MGR_AES_OOO *state,
-                                                    IMB_JOB *job);
-IMB_JOB *flush_job_aes128_cbcs_1_9_enc_vaes_avx512(MB_MGR_AES_OOO *state);
-
-IMB_JOB *submit_job_snow3g_uea2_vaes_avx512(MB_MGR_SNOW3G_OOO *state,
-                                            IMB_JOB *job);
-
-IMB_JOB *flush_job_snow3g_uea2_vaes_avx512(MB_MGR_SNOW3G_OOO *state);
-
-IMB_JOB *submit_job_snow3g_uea2_avx512(MB_MGR_SNOW3G_OOO *state,
-                                       IMB_JOB *job);
-
-IMB_JOB *flush_job_snow3g_uea2_avx512(MB_MGR_SNOW3G_OOO *state);
-
-IMB_JOB *submit_job_snow3g_uia2_vaes_avx512(MB_MGR_SNOW3G_OOO *state,
-                                            IMB_JOB *job);
-
-IMB_JOB *flush_job_snow3g_uia2_vaes_avx512(MB_MGR_SNOW3G_OOO *state);
-
-IMB_JOB *submit_job_snow3g_uia2_avx512(MB_MGR_SNOW3G_OOO *state,
-                                       IMB_JOB *job);
-
-IMB_JOB *flush_job_snow3g_uia2_avx512(MB_MGR_SNOW3G_OOO *state);
+#include "include/arch_avx512_type1.h"
+#include "include/arch_avx512_type2.h"
 
 #define SAVE_XMMS               save_xmms_avx
 #define RESTORE_XMMS            restore_xmms_avx
@@ -265,46 +147,6 @@ IMB_JOB *flush_job_snow3g_uia2_avx512(MB_MGR_SNOW3G_OOO *state);
 #define SUBMIT_JOB_SNOW_V snow_v_avx
 #define SUBMIT_JOB_SNOW_V_AEAD snow_v_aead_init_avx
 
-IMB_JOB *submit_job_hmac_avx512(MB_MGR_HMAC_SHA_1_OOO *state,
-                                     IMB_JOB *job);
-IMB_JOB *flush_job_hmac_avx512(MB_MGR_HMAC_SHA_1_OOO *state);
-
-IMB_JOB *submit_job_hmac_sha_224_avx512(MB_MGR_HMAC_SHA_256_OOO *state,
-                                             IMB_JOB *job);
-IMB_JOB *flush_job_hmac_sha_224_avx512(MB_MGR_HMAC_SHA_256_OOO *state);
-
-IMB_JOB *submit_job_hmac_sha_256_avx512(MB_MGR_HMAC_SHA_256_OOO *state,
-                                             IMB_JOB *job);
-IMB_JOB *flush_job_hmac_sha_256_avx512(MB_MGR_HMAC_SHA_256_OOO *state);
-
-IMB_JOB *submit_job_hmac_sha_384_avx512(MB_MGR_HMAC_SHA_512_OOO *state,
-                                             IMB_JOB *job);
-IMB_JOB *flush_job_hmac_sha_384_avx512(MB_MGR_HMAC_SHA_512_OOO *state);
-
-IMB_JOB *submit_job_hmac_sha_512_avx512(MB_MGR_HMAC_SHA_512_OOO *state,
-                                             IMB_JOB *job);
-IMB_JOB *flush_job_hmac_sha_512_avx512(MB_MGR_HMAC_SHA_512_OOO *state);
-
-IMB_JOB *submit_job_aes128_cmac_auth_vaes_avx512(MB_MGR_CMAC_OOO *state,
-                                                 IMB_JOB *job);
-
-IMB_JOB *flush_job_aes128_cmac_auth_vaes_avx512(MB_MGR_CMAC_OOO *state);
-
-IMB_JOB *submit_job_aes256_cmac_auth_vaes_avx512(MB_MGR_CMAC_OOO *state,
-                                                 IMB_JOB *job);
-
-IMB_JOB *flush_job_aes256_cmac_auth_vaes_avx512(MB_MGR_CMAC_OOO *state);
-
-IMB_JOB *submit_job_aes128_ccm_auth_vaes_avx512(MB_MGR_CCM_OOO *state,
-                                                IMB_JOB *job);
-
-IMB_JOB *flush_job_aes128_ccm_auth_vaes_avx512(MB_MGR_CCM_OOO *state);
-
-IMB_JOB *submit_job_aes256_ccm_auth_vaes_avx512(MB_MGR_CCM_OOO *state,
-                                                IMB_JOB *job);
-
-IMB_JOB *flush_job_aes256_ccm_auth_vaes_avx512(MB_MGR_CCM_OOO *state);
-
 static IMB_JOB *submit_snow3g_uea2_job_vaes_avx512(IMB_MGR *state, IMB_JOB *job)
 {
         MB_MGR_SNOW3G_OOO *snow3g_uea2_ooo = state->snow3g_uea2_ooo;
@@ -363,11 +205,6 @@ static IMB_JOB *(*flush_job_snow3g_uia2_avx512_ptr)
 
 
 /* ====================================================================== */
-
-IMB_JOB *submit_job_chacha20_enc_dec_avx512(IMB_JOB *job);
-
-void poly1305_mac_fma_avx512(IMB_JOB *job);
-void poly1305_mac_plain_avx512(IMB_JOB *job);
 
 static void (*poly1305_mac_avx512)
         (IMB_JOB *) = poly1305_mac_plain_avx512;
@@ -477,27 +314,6 @@ ethernet_fcs_avx_local(const void *msg, const uint64_t len,
                        const void *tag_ouput);
 
 #define ETHERNET_FCS ethernet_fcs_avx_local
-
-extern uint32_t ethernet_fcs_avx512(const void *msg, const uint64_t len);
-extern uint32_t crc16_x25_avx512(const void *msg, const uint64_t len);
-extern uint32_t crc32_sctp_avx512(const void *msg, const uint64_t len);
-extern uint32_t crc24_lte_a_avx512(const void *msg, const uint64_t len);
-extern uint32_t crc24_lte_b_avx512(const void *msg, const uint64_t len);
-extern uint32_t crc16_fp_data_avx512(const void *msg, const uint64_t len);
-extern uint32_t crc11_fp_header_avx512(const void *msg, const uint64_t len);
-extern uint32_t crc7_fp_header_avx512(const void *msg, const uint64_t len);
-extern uint32_t crc10_iuup_data_avx512(const void *msg, const uint64_t len);
-extern uint32_t crc6_iuup_header_avx512(const void *msg, const uint64_t len);
-extern uint32_t
-crc32_wimax_ofdma_data_avx512(const void *msg, const uint64_t len);
-extern uint32_t
-crc8_wimax_ofdma_hcs_avx512(const void *msg, const uint64_t len);
-
-extern void snow3g_f9_1_buffer_vaes_avx512(const snow3g_key_schedule_t *pHandle,
-                                           const void *pIV,
-                                           const void *pBufferIn,
-                                           const uint64_t lengthInBits,
-                                           void *pDigest);
 
 /* ====================================================================== */
 
@@ -916,15 +732,9 @@ __forceinline
 IMB_JOB *
 SUBMIT_JOB_DOCSIS128_SEC_DEC(MB_MGR_DOCSIS_AES_OOO *state, IMB_JOB *job);
 
-extern void aes_docsis128_dec_crc32_avx512(IMB_JOB *job);
-extern void aes_docsis128_dec_crc32_vaes_avx512(IMB_JOB *job);
-
 __forceinline
 IMB_JOB *
 SUBMIT_JOB_DOCSIS256_SEC_DEC(MB_MGR_DOCSIS_AES_OOO *state, IMB_JOB *job);
-
-extern void aes_docsis256_dec_crc32_avx512(IMB_JOB *job);
-extern void aes_docsis256_dec_crc32_vaes_avx512(IMB_JOB *job);
 
 static IMB_JOB *
 submit_aes_docsis128_dec_crc32_avx512(MB_MGR_DOCSIS_AES_OOO *state,
@@ -971,30 +781,6 @@ submit_aes_docsis256_dec_crc32_avx512(MB_MGR_DOCSIS_AES_OOO *state,
 
         return job;
 }
-
-extern IMB_JOB *
-submit_job_aes_docsis128_enc_crc32_avx512(MB_MGR_DOCSIS_AES_OOO *state,
-                                          IMB_JOB *job);
-extern IMB_JOB *
-flush_job_aes_docsis128_enc_crc32_avx512(MB_MGR_DOCSIS_AES_OOO *state);
-
-extern IMB_JOB *
-submit_job_aes_docsis256_enc_crc32_avx512(MB_MGR_DOCSIS_AES_OOO *state,
-                                          IMB_JOB *job);
-extern IMB_JOB *
-flush_job_aes_docsis256_enc_crc32_avx512(MB_MGR_DOCSIS_AES_OOO *state);
-
-extern IMB_JOB *
-submit_job_aes_docsis128_enc_crc32_vaes_avx512(MB_MGR_DOCSIS_AES_OOO *state,
-                                               IMB_JOB *job);
-extern IMB_JOB *
-flush_job_aes_docsis128_enc_crc32_vaes_avx512(MB_MGR_DOCSIS_AES_OOO *state);
-
-extern IMB_JOB *
-submit_job_aes_docsis256_enc_crc32_vaes_avx512(MB_MGR_DOCSIS_AES_OOO *state,
-                                               IMB_JOB *job);
-extern IMB_JOB *
-flush_job_aes_docsis256_enc_crc32_vaes_avx512(MB_MGR_DOCSIS_AES_OOO *state);
 
 static IMB_JOB *
 submit_job_docsis128_sec_crc_dec_vaes_avx512(MB_MGR_DOCSIS_AES_OOO *state,
