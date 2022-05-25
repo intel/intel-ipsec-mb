@@ -699,36 +699,7 @@ test_burst_api(struct IMB_MGR *mb_mgr)
 
 	printf("BURST API behavior test:\n");
 
-        /* ======== test 1 : NULL MB_MGR */
-
-        /**
-         * Using sse API directly since IMB_SUBMIT_BURST
-         * macro cannot be used to test for NULL MB_MGR.
-         */
-
-        /* test only when SAFE_PARAM is enabled */
-        if ((mb_mgr->features & IMB_FEATURE_SAFE_PARAM) != 0) {
-
-                completed_jobs = submit_burst_sse(NULL, jobs, n_jobs);
-                if (completed_jobs != 0) {
-                        printf("%s: test %d, unexpected number of "
-                               "completed jobs: %u\n", __func__,
-                               TEST_INVALID_BURST, completed_jobs);
-                        return 1;
-                }
-                printf(".");
-
-                err = imb_get_errno(mb_mgr);
-                if (err != IMB_ERR_NULL_MBMGR) {
-                        printf("%s: test %d, unexpected error: %s\n",
-                               __func__, TEST_INVALID_BURST,
-                               imb_get_strerror(err));
-                        return 1;
-                }
-                printf(".");
-        }
-
-        /* ======== test 2 : NULL jobs array  */
+        /* ======== test 1 : NULL jobs array  */
 
         completed_jobs = IMB_SUBMIT_BURST(mb_mgr, job, n_jobs);
         if (completed_jobs != 0) {
@@ -746,7 +717,7 @@ test_burst_api(struct IMB_MGR *mb_mgr)
         }
         printf(".");
 
-        /* ======== test 3 : invalid job */
+        /* ======== test 2 : invalid job */
 
         /* fill in valid jobs */
         for (i = 0; i < n_jobs; i++) {
