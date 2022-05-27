@@ -3632,9 +3632,13 @@ int main(int argc, char *argv[])
                 return EXIT_FAILURE;
         }
 
-        /* currently only HMAC-SHA1 supported by hash-only burst API */
+        /* currently only HMAC-SHAx algs supported by hash-only burst API */
         if (test_api == TEST_API_HASH_BURST &&
-            custom_job_params.hash_alg != TEST_SHA1_HMAC) {
+            ((custom_job_params.hash_alg != TEST_SHA1_HMAC) &&
+             (custom_job_params.hash_alg != TEST_SHA_224_HMAC) &&
+             (custom_job_params.hash_alg != TEST_SHA_256_HMAC) &&
+             (custom_job_params.hash_alg != TEST_SHA_384_HMAC) &&
+             (custom_job_params.hash_alg != TEST_SHA_512_HMAC))) {
                 fprintf(stderr,
                         "Unsupported hash-only burst API algorithm selected\n");
                 return EXIT_FAILURE;
