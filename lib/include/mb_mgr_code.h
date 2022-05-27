@@ -3438,24 +3438,17 @@ SUBMIT_CIPHER_BURST_NOCHECK(IMB_MGR *state, IMB_JOB *jobs,
 }
 
 __forceinline
-uint32_t submit_hmac_sha1_burst(IMB_MGR *state,
-                                IMB_JOB *jobs,
-                                const uint32_t n_jobs,
-                                const int run_check)
+uint32_t submit_burst_hmac_sha_x(IMB_MGR *state,
+                                 IMB_JOB *jobs,
+                                 const uint32_t n_jobs,
+                                 const int run_check,
+                                 const IMB_HASH_ALG hash_alg,
+                                 void *ooo_mgr,
+                                 IMB_JOB *(*submit_fn)(void *, IMB_JOB *),
+                                 IMB_JOB *(*flush_fn)(void *))
 {
         uint32_t i, completed_jobs = 0;
-        MB_MGR_HMAC_SHA_1_OOO *hmac_sha_1_ooo = state->hmac_sha_1_ooo;
 
-        IMB_JOB *(*submit_fn)
-                (MB_MGR_HMAC_SHA_1_OOO *state, IMB_JOB *job) = SUBMIT_JOB_HMAC;
-        IMB_JOB *(*flush_fn) (MB_MGR_HMAC_SHA_1_OOO *state) = FLUSH_JOB_HMAC;
-
-#ifdef HASH_USE_SHAEXT
-        if (state->features & IMB_FEATURE_SHANI) {
-                submit_fn = SUBMIT_JOB_HMAC_NI;
-                flush_fn = FLUSH_JOB_HMAC_NI;
-        }
-#endif
         if (run_check) {
                 /* validate jobs */
                 for (i = 0; i < n_jobs; i++) {
@@ -3469,7 +3462,7 @@ uint32_t submit_hmac_sha1_burst(IMB_MGR *state,
                         /* validate job */
                         if (is_job_invalid(state, job,
                                            IMB_CIPHER_NULL,
-                                           IMB_AUTH_HMAC_SHA_1,
+                                           hash_alg,
                                            IMB_DIR_ENCRYPT,
                                            job->key_len_in_bytes)) {
                                 job->status = IMB_STATUS_INVALID_ARGS;
@@ -3481,7 +3474,7 @@ uint32_t submit_hmac_sha1_burst(IMB_MGR *state,
         for (i = 0; i < n_jobs; i++) {
                 IMB_JOB *job = &jobs[i];
 
-                job = submit_fn(hmac_sha_1_ooo, job);
+                job = submit_fn(ooo_mgr, job);
                 if (job != NULL) {
                         job->status = IMB_STATUS_COMPLETED;
                         completed_jobs++;
@@ -3491,13 +3484,106 @@ uint32_t submit_hmac_sha1_burst(IMB_MGR *state,
         if (completed_jobs != n_jobs) {
                 IMB_JOB *job = NULL;
 
-                while ((job = flush_fn(hmac_sha_1_ooo)) != NULL) {
+                while ((job = flush_fn(ooo_mgr)) != NULL) {
                         job->status = IMB_STATUS_COMPLETED;
                         completed_jobs++;
                 }
         }
 
         return completed_jobs;
+}
+
+__forceinline
+uint32_t submit_burst_hmac_sha_1(IMB_MGR *state,
+                                 IMB_JOB *jobs,
+                                 const uint32_t n_jobs,
+                                 const int run_check)
+{
+#ifdef HASH_USE_SHAEXT
+        if (state->features & IMB_FEATURE_SHANI) {
+                return submit_burst_hmac_sha_x(state, jobs, n_jobs, run_check,
+                                               IMB_AUTH_HMAC_SHA_1,
+                                               (void *)state->hmac_sha_1_ooo,
+                                               (void *)SUBMIT_JOB_HMAC_NI,
+                                               (void *)FLUSH_JOB_HMAC_NI);
+        }
+#endif
+        return submit_burst_hmac_sha_x(state, jobs, n_jobs, run_check,
+                                       IMB_AUTH_HMAC_SHA_1,
+                                       (void *)state->hmac_sha_1_ooo,
+                                       (void *)SUBMIT_JOB_HMAC,
+                                       (void *)FLUSH_JOB_HMAC);
+}
+
+__forceinline
+uint32_t submit_burst_hmac_sha_224(IMB_MGR *state,
+                                   IMB_JOB *jobs,
+                                   const uint32_t n_jobs,
+                                   const int run_check)
+{
+#ifdef HASH_USE_SHAEXT
+        if (state->features & IMB_FEATURE_SHANI) {
+                return submit_burst_hmac_sha_x(state, jobs, n_jobs, run_check,
+                                             IMB_AUTH_HMAC_SHA_224,
+                                             (void *)state->hmac_sha_224_ooo,
+                                             (void *)SUBMIT_JOB_HMAC_SHA_224_NI,
+                                             (void *)FLUSH_JOB_HMAC_SHA_224_NI);
+        }
+#endif
+        return submit_burst_hmac_sha_x(state, jobs, n_jobs, run_check,
+                                       IMB_AUTH_HMAC_SHA_224,
+                                       (void *)state->hmac_sha_224_ooo,
+                                       (void *)SUBMIT_JOB_HMAC_SHA_224,
+                                       (void *)FLUSH_JOB_HMAC_SHA_224);
+
+}
+
+__forceinline
+uint32_t submit_burst_hmac_sha_256(IMB_MGR *state,
+                                   IMB_JOB *jobs,
+                                   const uint32_t n_jobs,
+                                   const int run_check)
+{
+#ifdef HASH_USE_SHAEXT
+        if (state->features & IMB_FEATURE_SHANI) {
+                return submit_burst_hmac_sha_x(state, jobs, n_jobs, run_check,
+                                             IMB_AUTH_HMAC_SHA_256,
+                                             (void *)state->hmac_sha_256_ooo,
+                                             (void *)SUBMIT_JOB_HMAC_SHA_256_NI,
+                                             (void *)FLUSH_JOB_HMAC_SHA_256_NI);
+        }
+#endif
+        return submit_burst_hmac_sha_x(state, jobs, n_jobs, run_check,
+                                       IMB_AUTH_HMAC_SHA_256,
+                                       (void *)state->hmac_sha_256_ooo,
+                                       (void *)SUBMIT_JOB_HMAC_SHA_256,
+                                       (void *)FLUSH_JOB_HMAC_SHA_256);
+}
+
+__forceinline
+uint32_t submit_burst_hmac_sha_384(IMB_MGR *state,
+                                   IMB_JOB *jobs,
+                                   const uint32_t n_jobs,
+                                   const int run_check)
+{
+        return submit_burst_hmac_sha_x(state, jobs, n_jobs, run_check,
+                                       IMB_AUTH_HMAC_SHA_384,
+                                       (void *)state->hmac_sha_384_ooo,
+                                       (void *)SUBMIT_JOB_HMAC_SHA_384,
+                                       (void *)FLUSH_JOB_HMAC_SHA_384);
+}
+
+__forceinline
+uint32_t submit_burst_hmac_sha_512(IMB_MGR *state,
+                                   IMB_JOB *jobs,
+                                   const uint32_t n_jobs,
+                                   const int run_check)
+{
+        return submit_burst_hmac_sha_x(state, jobs, n_jobs, run_check,
+                                       IMB_AUTH_HMAC_SHA_512,
+                                       (void *)state->hmac_sha_512_ooo,
+                                       (void *)SUBMIT_JOB_HMAC_SHA_512,
+                                       (void *)FLUSH_JOB_HMAC_SHA_512);
 }
 
 __forceinline
@@ -3508,7 +3594,20 @@ uint32_t submit_hash_burst_and_check(IMB_MGR *state, IMB_JOB *jobs,
 {
         switch (hash) {
         case IMB_AUTH_HMAC_SHA_1:
-                return submit_hmac_sha1_burst(state, jobs, n_jobs, run_check);
+                return submit_burst_hmac_sha_1(state, jobs,
+                                               n_jobs, run_check);
+        case IMB_AUTH_HMAC_SHA_224:
+                return submit_burst_hmac_sha_224(state, jobs,
+                                                 n_jobs, run_check);
+        case IMB_AUTH_HMAC_SHA_256:
+                return submit_burst_hmac_sha_256(state, jobs,
+                                                 n_jobs, run_check);
+        case IMB_AUTH_HMAC_SHA_384:
+                return submit_burst_hmac_sha_384(state, jobs,
+                                                 n_jobs, run_check);
+        case IMB_AUTH_HMAC_SHA_512:
+                return submit_burst_hmac_sha_512(state, jobs,
+                                                 n_jobs, run_check);
         default:
                 break;
         }
