@@ -30,4 +30,4 @@
 %define CRC11_FP_HEADER_FN  crc11_fp_header_sse_no_aesni
 %define CRC7_FP_HEADER_FN   crc7_fp_header_sse_no_aesni
 %define CRC32_FN            crc32_by8_sse_no_aesni
-%include "sse/crc32_fp_sse.asm"
+%include "sse_t1/crc32_fp_sse.asm"

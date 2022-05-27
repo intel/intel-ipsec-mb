@@ -28,4 +28,4 @@
 %include "include/aesni_emu.inc"
 %define AES_CNTR_192 aes_cntr_192_sse_no_aesni
 %define AES_CNTR_BIT_192 aes_cntr_bit_192_sse_no_aesni
-%include "sse/aes192_cntr_by8_sse.asm"
+%include "sse_t1/aes192_cntr_by8_sse.asm"

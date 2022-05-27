@@ -27,4 +27,4 @@
 
 %include "include/aesni_emu.inc"
 %define AES_CBC_DEC_128 aes_cbc_dec_128_sse_no_aesni
-%include "sse/aes128_cbc_dec_by4_sse.asm"
+%include "sse_t1/aes128_cbc_dec_by4_sse.asm"

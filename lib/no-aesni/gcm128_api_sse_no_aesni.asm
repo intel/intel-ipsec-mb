@@ -29,4 +29,4 @@
 
 %include "include/aesni_emu.inc"
 %define NO_AESNI
-%include "sse/gcm128_api_by8_sse.asm"
+%include "sse_t1/gcm128_api_by8_sse.asm"

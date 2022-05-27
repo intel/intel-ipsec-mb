@@ -28,4 +28,4 @@
 %include "include/aesni_emu.inc"
 %define SNOW_V snow_v_sse_no_aesni
 %define SNOW_V_AEAD_INIT snow_v_aead_init_sse_no_aesni
-%include "sse/snow_v_sse.asm"
+%include "sse_t1/snow_v_sse.asm"

@@ -27,4 +27,4 @@
 
 %include "include/aesni_emu.inc"
 %define AES_CBC_ENC_X4 aes_cbc_enc_192_x4_no_aesni
-%include "sse/aes192_cbc_enc_x4_sse.asm"
+%include "sse_t1/aes192_cbc_enc_x4_sse.asm"

@@ -27,4 +27,4 @@
 
 %include "include/aesni_emu.inc"
 %define CRC32_FN   crc32_by8_sse_no_aesni
-%include "sse/crc32_by8_sse.asm"
+%include "sse_t1/crc32_by8_sse.asm"

@@ -27,4 +27,4 @@
 
 %include "include/aesni_emu.inc"
 %define AES_CNTR_CCM_128 aes_cntr_ccm_128_sse_no_aesni
-%include "sse/aes128_cntr_ccm_by8_sse.asm"
+%include "sse_t1/aes128_cntr_ccm_by8_sse.asm"

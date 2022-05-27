@@ -29,4 +29,4 @@
 %define CRC10_IUUP_DATA_FN  crc10_iuup_data_sse_no_aesni
 %define CRC6_IUUP_HEADER_FN crc6_iuup_header_sse_no_aesni
 %define CRC32_FN            crc32_by8_sse_no_aesni
-%include "sse/crc32_iuup_sse.asm"
+%include "sse_t1/crc32_iuup_sse.asm"

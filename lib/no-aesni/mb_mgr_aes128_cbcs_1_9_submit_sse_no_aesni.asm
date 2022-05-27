@@ -27,4 +27,4 @@
 
 %define AES_CBCS_ENC_X4 aes_cbcs_1_9_enc_128_x4_no_aesni
 %define SUBMIT_JOB_AES_CBCS_ENC submit_job_aes128_cbcs_1_9_enc_sse_no_aesni
-%include "sse/mb_mgr_aes128_cbcs_1_9_submit_sse.asm"
+%include "sse_t1/mb_mgr_aes128_cbcs_1_9_submit_sse.asm"

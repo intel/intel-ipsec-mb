@@ -28,4 +28,4 @@
 %include "include/aesni_emu.inc"
 %define AES_CFB_128_ONE aes_cfb_128_one_sse_no_aesni
 %define AES_CFB_256_ONE aes_cfb_256_one_sse_no_aesni
-%include "sse/aes_cfb_sse.asm"
+%include "sse_t1/aes_cfb_sse.asm"

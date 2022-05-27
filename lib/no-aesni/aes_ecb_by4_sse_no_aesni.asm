@@ -32,4 +32,4 @@
 %define AES_ECB_DEC_128 aes_ecb_dec_128_sse_no_aesni
 %define AES_ECB_DEC_192 aes_ecb_dec_192_sse_no_aesni
 %define AES_ECB_DEC_256 aes_ecb_dec_256_sse_no_aesni
-%include "sse/aes128_ecb_by4_sse.asm"
+%include "sse_t1/aes128_ecb_by4_sse.asm"

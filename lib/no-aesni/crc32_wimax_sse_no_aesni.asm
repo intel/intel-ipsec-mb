@@ -29,4 +29,4 @@
 %define CRC32_WIMAX_DATA_FN crc32_wimax_ofdma_data_sse_no_aesni
 %define CRC8_WIMAX_HCS_FN   crc8_wimax_ofdma_hcs_sse_no_aesni
 %define CRC32_FN            crc32_by8_sse_no_aesni
-%include "sse/crc32_wimax_sse.asm"
+%include "sse_t1/crc32_wimax_sse.asm"

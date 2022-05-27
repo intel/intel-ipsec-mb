@@ -28,4 +28,4 @@
 %include "include/aesni_emu.inc"
 %define CRC16_X25_FN          crc16_x25_sse_no_aesni
 %define CRC32_REFL_FN         crc32_refl_by8_sse_no_aesni
-%include "sse/crc16_x25_sse.asm"
+%include "sse_t1/crc16_x25_sse.asm"

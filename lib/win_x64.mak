@@ -604,11 +604,25 @@ $(DEPALL): $(all_objs)
 {x86_64\}.asm{$(OBJ_DIR)}.obj:
 	$(AS) -MD $@.dep -o $@ $(AFLAGS) $<
 
-{sse\}.c{$(OBJ_DIR)}.obj:
+{sse_t1\}.c{$(OBJ_DIR)}.obj:
 	$(CC) /Fo$@ /c $(CFLAGS) $<
         $(DEPTOOL) $< $@ "$(DEPFLAGS)" > $@.dep
 
-{sse\}.asm{$(OBJ_DIR)}.obj:
+{sse_t1\}.asm{$(OBJ_DIR)}.obj:
+	$(AS) -MD $@.dep -o $@ $(AFLAGS) $<
+
+{sse_t2\}.c{$(OBJ_DIR)}.obj:
+	$(CC) /Fo$@ /c $(CFLAGS) $<
+        $(DEPTOOL) $< $@ "$(DEPFLAGS)" > $@.dep
+
+{sse_t2\}.asm{$(OBJ_DIR)}.obj:
+	$(AS) -MD $@.dep -o $@ $(AFLAGS) $<
+
+{sse_t3\}.c{$(OBJ_DIR)}.obj:
+	$(CC) /Fo$@ /c $(CFLAGS) $<
+        $(DEPTOOL) $< $@ "$(DEPFLAGS)" > $@.dep
+
+{sse_t3\}.asm{$(OBJ_DIR)}.obj:
 	$(AS) -MD $@.dep -o $@ $(AFLAGS) $<
 
 {avx\}.c{$(OBJ_DIR)}.obj:

@@ -27,4 +27,4 @@
 
 %define AES_CBC_ENC_X4 aes_cbc_enc_256_x4_no_aesni
 %define FLUSH_JOB_AES_ENC flush_job_aes256_enc_sse_no_aesni
-%include "sse/mb_mgr_aes128_cbc_enc_flush_x4_sse.asm"
+%include "sse_t1/mb_mgr_aes128_cbc_enc_flush_x4_sse.asm"

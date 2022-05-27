@@ -28,4 +28,4 @@
 %include "include/aesni_emu.inc"
 %define CRC32_SCTP_FN       crc32_sctp_sse_no_aesni
 %define CRC32_FN            crc32_by8_sse_no_aesni
-%include "sse/crc32_sctp_sse.asm"
+%include "sse_t1/crc32_sctp_sse.asm"

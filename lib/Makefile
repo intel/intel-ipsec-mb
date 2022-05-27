@@ -795,10 +795,38 @@ ifeq ($(CC_HAS_CET),1)
 	mv $@.tmp $@
 endif
 
-$(OBJ_DIR)/%.o:sse/%.c
+$(OBJ_DIR)/%.o:sse_t1/%.c
 	$(CC) -MMD $(OPT_SSE) -c $(CFLAGS) $< -o $@
 
-$(OBJ_DIR)/%.o:sse/%.asm
+$(OBJ_DIR)/%.o:sse_t1/%.asm
+ifeq ($(USE_YASM),y)
+	$(YASM) $(YASM_FLAGS) $< -o $@
+else
+	$(NASM) -MD $(@:.o=.d) -MT $@ -o $@ $(NASM_FLAGS) $<
+endif
+ifeq ($(CC_HAS_CET),1)
+	$(LD) $(CET_LDFLAGS) -o $@.tmp $@
+	mv $@.tmp $@
+endif
+
+$(OBJ_DIR)/%.o:sse_t2/%.c
+	$(CC) -MMD $(OPT_SSE) -c $(CFLAGS) $< -o $@
+
+$(OBJ_DIR)/%.o:sse_t2/%.asm
+ifeq ($(USE_YASM),y)
+	$(YASM) $(YASM_FLAGS) $< -o $@
+else
+	$(NASM) -MD $(@:.o=.d) -MT $@ -o $@ $(NASM_FLAGS) $<
+endif
+ifeq ($(CC_HAS_CET),1)
+	$(LD) $(CET_LDFLAGS) -o $@.tmp $@
+	mv $@.tmp $@
+endif
+
+$(OBJ_DIR)/%.o:sse_t3/%.c
+	$(CC) -MMD $(OPT_SSE) -c $(CFLAGS) $< -o $@
+
+$(OBJ_DIR)/%.o:sse_t3/%.asm
 ifeq ($(USE_YASM),y)
 	$(YASM) $(YASM_FLAGS) $< -o $@
 else

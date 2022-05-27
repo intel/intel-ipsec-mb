@@ -32,4 +32,4 @@
 %define CBCS
 %endif
 
-%include "sse/aes128_cbc_dec_by4_sse.asm"
+%include "sse_t1/aes128_cbc_dec_by4_sse.asm"

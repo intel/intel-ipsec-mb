@@ -35,4 +35,4 @@
 %define ZUC_EIA3ROUND16B asm_Eia3Round16B_sse_no_aesni
 %define ZUC_EIA3REMAINDER asm_Eia3Remainder_sse_no_aesni
 %define USE_GFNI 0
-%include "sse/zuc_x4_sse.asm"
+%include "sse_t1/zuc_x4_sse.asm"
