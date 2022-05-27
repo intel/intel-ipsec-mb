@@ -38,6 +38,11 @@
 
 int hmac_sha256_sha512_test(struct IMB_MGR *mb_mgr);
 
+typedef enum {
+        BURST_TYPE_GENERIC = 0,
+        BURST_TYPE_HASH,
+} BURST_TYPE;
+
 /*
  * Test vectors from https://tools.ietf.org/html/rfc4231
  */
@@ -1044,12 +1049,13 @@ static int
 test_hmac_shax_burst(struct IMB_MGR *mb_mgr,
                      const struct hmac_rfc4231_vector *vec,
                      const uint32_t num_jobs,
-                     const int sha_type)
+                     const int sha_type,
+                     const BURST_TYPE burst_type)
 {
         struct IMB_JOB *job, jobs[max_burst_jobs] = {0};
         uint8_t padding[16];
         uint8_t **auths = malloc(num_jobs * sizeof(void *));
-        uint32_t i = 0, jobs_rx = 0;
+        uint32_t i = 0, jobs_rx = 0, completed_jobs = 0;
         int ret = -1;
         uint8_t key[IMB_SHA_512_BLOCK_SIZE];
         uint8_t buf[IMB_SHA_512_BLOCK_SIZE];
@@ -1215,7 +1221,11 @@ test_hmac_shax_burst(struct IMB_MGR *mb_mgr,
 
         }
 
-        uint32_t completed_jobs = IMB_SUBMIT_BURST(mb_mgr, jobs, num_jobs);
+        if (burst_type == BURST_TYPE_GENERIC)
+                completed_jobs = IMB_SUBMIT_BURST(mb_mgr, jobs, num_jobs);
+        else
+                completed_jobs = IMB_SUBMIT_HASH_BURST(mb_mgr, jobs, num_jobs,
+                                                       job->hash_alg);
 
         if (completed_jobs != num_jobs) {
                 int err = imb_get_errno(mb_mgr);
@@ -1313,12 +1323,23 @@ test_hmac_shax_std_vectors(struct IMB_MGR *mb_mgr,
                 }
                 if (test_hmac_shax_burst(mb_mgr,
                                          &hmac_sha256_sha512_vectors[idx],
-                                         num_jobs, sha_type)) {
+                                         num_jobs, sha_type,
+                                         BURST_TYPE_GENERIC)) {
                         printf("error #%d - burst API\n", vect);
                         test_suite_update(ts, 0, 1);
                 } else {
                         test_suite_update(ts, 1, 0);
                 }
+                if (test_hmac_shax_burst(mb_mgr,
+                                         &hmac_sha256_sha512_vectors[idx],
+                                         num_jobs, sha_type,
+                                         BURST_TYPE_HASH)) {
+                        printf("error #%d - hash-only burst API\n", vect);
+                        test_suite_update(ts, 0, 1);
+                } else {
+                        test_suite_update(ts, 1, 0);
+                }
+
         }
 	printf("\n");
 }
