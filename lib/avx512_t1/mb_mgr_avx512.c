@@ -874,15 +874,12 @@ static void
 reset_ooo_mgrs(IMB_MGR *state)
 {
         unsigned int j;
-        uint8_t *p;
-        size_t size;
         MB_MGR_DES_OOO *des_enc_ooo = state->des_enc_ooo;
         MB_MGR_DES_OOO *des_dec_ooo = state->des_dec_ooo;
         MB_MGR_DES_OOO *des3_enc_ooo = state->des3_enc_ooo;
         MB_MGR_DES_OOO *des3_dec_ooo = state->des3_dec_ooo;
         MB_MGR_DES_OOO *docsis_des_enc_ooo = state->docsis_des_enc_ooo;
         MB_MGR_DES_OOO *docsis_des_dec_ooo = state->docsis_des_dec_ooo;
-        MB_MGR_HMAC_MD5_OOO *hmac_md5_ooo = state->hmac_md5_ooo;
         MB_MGR_ZUC_OOO *zuc_eea3_ooo = state->zuc_eea3_ooo;
         MB_MGR_ZUC_OOO *zuc_eia3_ooo = state->zuc_eia3_ooo;
         MB_MGR_ZUC_OOO *zuc256_eea3_ooo = state->zuc256_eea3_ooo;
@@ -903,7 +900,6 @@ reset_ooo_mgrs(IMB_MGR *state)
                 ooo_mgr_aes_reset(state->aes192_ooo, 8);
                 ooo_mgr_aes_reset(state->aes256_ooo, 8);
         }
-
 
         /* DOCSIS SEC BPI (AES CBC + AES CFB for partial block)
          * uses same settings as AES CBC.
@@ -1047,39 +1043,7 @@ reset_ooo_mgrs(IMB_MGR *state)
                                   AVX512_NUM_SHA512_LANES);
 
         /* Init HMAC/MD5 out-of-order fields */
-        hmac_md5_ooo->lens[0] = 0;
-        hmac_md5_ooo->lens[1] = 0;
-        hmac_md5_ooo->lens[2] = 0;
-        hmac_md5_ooo->lens[3] = 0;
-        hmac_md5_ooo->lens[4] = 0;
-        hmac_md5_ooo->lens[5] = 0;
-        hmac_md5_ooo->lens[6] = 0;
-        hmac_md5_ooo->lens[7] = 0;
-        hmac_md5_ooo->lens[8] = 0;
-        hmac_md5_ooo->lens[9] = 0;
-        hmac_md5_ooo->lens[10] = 0;
-        hmac_md5_ooo->lens[11] = 0;
-        hmac_md5_ooo->lens[12] = 0;
-        hmac_md5_ooo->lens[13] = 0;
-        hmac_md5_ooo->lens[14] = 0;
-        hmac_md5_ooo->lens[15] = 0;
-        hmac_md5_ooo->unused_lanes = 0xFEDCBA9876543210;
-        hmac_md5_ooo->num_lanes_inuse = 0;
-        for (j = 0; j < AVX512_NUM_MD5_LANES; j++) {
-                hmac_md5_ooo->ldata[j].job_in_lane = NULL;
-
-                p = hmac_md5_ooo->ldata[j].extra_block;
-                size = sizeof(hmac_md5_ooo->ldata[j].extra_block);
-                memset (p, 0x00, size);
-                p[64] = 0x80;
-
-                p = hmac_md5_ooo->ldata[j].outer_block;
-                size = sizeof(hmac_md5_ooo->ldata[j].outer_block);
-                memset(p, 0x00, size);
-                p[4 * 4] = 0x80;
-                p[64 - 7] = 0x02;
-                p[64 - 8] = 0x80;
-        }
+        ooo_mgr_hmac_md5_reset(state->hmac_md5_ooo, AVX2_NUM_MD5_LANES);
 
         /* Init AES/XCBC OOO fields */
         if ((state->features & IMB_FEATURE_VAES) == IMB_FEATURE_VAES)

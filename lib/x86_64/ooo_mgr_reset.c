@@ -277,3 +277,28 @@ void ooo_mgr_hmac_sha512_reset(void *p_ooo_mgr, const unsigned num_lanes)
         else if (num_lanes == AVX512_NUM_SHA512_LANES)
                 p_mgr->unused_lanes = 0xF76543210;
 }
+
+IMB_DLL_LOCAL
+void ooo_mgr_hmac_md5_reset(void *p_ooo_mgr, const unsigned num_lanes)
+{
+        MB_MGR_HMAC_MD5_OOO *p_mgr = (MB_MGR_HMAC_MD5_OOO *) p_ooo_mgr;
+        unsigned i;
+        
+        memset(p_mgr, 0, sizeof(*p_mgr));
+        memset(p_mgr->lens, 0xff, sizeof(p_mgr->lens));
+
+        for (i = 0; i < num_lanes; i++) {
+                p_mgr->ldata[i].extra_block[64] = 0x80;
+
+                p_mgr->ldata[i].outer_block[4 * 4] = 0x80;
+                p_mgr->ldata[i].outer_block[64 - 7] = 0x02;
+                p_mgr->ldata[i].outer_block[64 - 8] = 0x80;
+        }
+
+        IMB_ASSERT(AVX_NUM_MD5_LANES == SSE_NUM_MD5_LANES);
+
+        if (num_lanes == AVX_NUM_MD5_LANES)
+                p_mgr->unused_lanes = 0xF76543210;
+        else if (num_lanes == AVX2_NUM_MD5_LANES)
+                p_mgr->unused_lanes = 0xFEDCBA9876543210;
+}
