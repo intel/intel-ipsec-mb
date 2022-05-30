@@ -52,6 +52,8 @@
 #include "include/arch_sse_type2.h"
 #include "include/arch_sse_type3.h"
 
+#include "include/ooo_mgr_reset.h"
+
 #define SAVE_XMMS               save_xmms
 #define RESTORE_XMMS            restore_xmms
 
@@ -547,15 +549,6 @@ reset_ooo_mgrs(IMB_MGR *state)
         unsigned int j;
         uint8_t *p;
         size_t size;
-        MB_MGR_AES_OOO *aes128_ooo = state->aes128_ooo;
-        MB_MGR_AES_OOO *aes192_ooo = state->aes192_ooo;
-        MB_MGR_AES_OOO *aes256_ooo = state->aes256_ooo;
-        MB_MGR_DOCSIS_AES_OOO *docsis128_sec_ooo = state->docsis128_sec_ooo;
-        MB_MGR_DOCSIS_AES_OOO *docsis128_crc32_sec_ooo =
-                                                state->docsis128_crc32_sec_ooo;
-        MB_MGR_DOCSIS_AES_OOO *docsis256_sec_ooo = state->docsis256_sec_ooo;
-        MB_MGR_DOCSIS_AES_OOO *docsis256_crc32_sec_ooo =
-                                                state->docsis256_crc32_sec_ooo;
         MB_MGR_HMAC_SHA_1_OOO *hmac_sha_1_ooo = state->hmac_sha_1_ooo;
         MB_MGR_HMAC_SHA_256_OOO *hmac_sha_224_ooo = state->hmac_sha_224_ooo;
         MB_MGR_HMAC_SHA_256_OOO *hmac_sha_256_ooo = state->hmac_sha_256_ooo;
@@ -576,40 +569,28 @@ reset_ooo_mgrs(IMB_MGR *state)
         MB_MGR_SNOW3G_OOO *snow3g_uea2_ooo = state->snow3g_uea2_ooo;
 
         /* Init AES out-of-order fields */
-        memset(aes128_ooo->lens, 0xFF, sizeof(aes128_ooo->lens));
-        memset(aes128_ooo->job_in_lane, 0,
-               sizeof(aes128_ooo->job_in_lane));
-        aes128_ooo->num_lanes_inuse = 0;
         if (state->features & IMB_FEATURE_GFNI) {
-                aes128_ooo->unused_lanes = 0xF76543210;
+                ooo_mgr_aes_reset(state->aes128_ooo, 8);
                 submit_job_aes128_enc_ptr = submit_job_aes128_enc_x8_sse;
                 flush_job_aes128_enc_ptr = flush_job_aes128_enc_x8_sse;
         } else {
-                aes128_ooo->unused_lanes = 0xF3210;
+                ooo_mgr_aes_reset(state->aes128_ooo, 4);
         }
 
-        memset(aes192_ooo->lens, 0xFF, sizeof(aes192_ooo->lens));
-        memset(aes192_ooo->job_in_lane, 0,
-               sizeof(aes192_ooo->job_in_lane));
-        aes192_ooo->num_lanes_inuse = 0;
         if (state->features & IMB_FEATURE_GFNI) {
-                aes192_ooo->unused_lanes = 0xF76543210;
+                ooo_mgr_aes_reset(state->aes192_ooo, 8);
                 submit_job_aes192_enc_ptr = submit_job_aes192_enc_x8_sse;
                 flush_job_aes192_enc_ptr = flush_job_aes192_enc_x8_sse;
         } else {
-                aes192_ooo->unused_lanes = 0xF3210;
+                ooo_mgr_aes_reset(state->aes192_ooo, 4);
         }
 
-        memset(aes256_ooo->lens, 0xFF, sizeof(aes256_ooo->lens));
-        memset(aes256_ooo->job_in_lane, 0,
-               sizeof(aes256_ooo->job_in_lane));
-        aes256_ooo->num_lanes_inuse = 0;
         if (state->features & IMB_FEATURE_GFNI) {
-                aes256_ooo->unused_lanes = 0xF76543210;
+                ooo_mgr_aes_reset(state->aes256_ooo, 8);
                 submit_job_aes256_enc_ptr = submit_job_aes256_enc_x8_sse;
                 flush_job_aes256_enc_ptr = flush_job_aes256_enc_x8_sse;
         } else {
-                aes256_ooo->unused_lanes = 0xF3210;
+                ooo_mgr_aes_reset(state->aes256_ooo, 4);
         }
 
         if (state->features & IMB_FEATURE_GFNI) {
@@ -631,45 +612,17 @@ reset_ooo_mgrs(IMB_MGR *state)
         }
 
         /* DOCSIS SEC BPI uses same settings as AES CBC */
-        memset(docsis128_sec_ooo->lens, 0xFF,
-               sizeof(docsis128_sec_ooo->lens));
-        memset(docsis128_sec_ooo->job_in_lane, 0,
-               sizeof(docsis128_sec_ooo->job_in_lane));
-        docsis128_sec_ooo->num_lanes_inuse = 0;
-        if (state->features & IMB_FEATURE_GFNI)
-                docsis128_sec_ooo->unused_lanes = 0xF76543210;
-        else
-                docsis128_sec_ooo->unused_lanes = 0xF3210;
-
-        memset(docsis128_crc32_sec_ooo->lens, 0xFF,
-               sizeof(docsis128_crc32_sec_ooo->lens));
-        memset(docsis128_crc32_sec_ooo->job_in_lane, 0,
-               sizeof(docsis128_crc32_sec_ooo->job_in_lane));
-        docsis128_crc32_sec_ooo->num_lanes_inuse = 0;
-        if (state->features & IMB_FEATURE_GFNI)
-                docsis128_crc32_sec_ooo->unused_lanes = 0xF76543210;
-        else
-                docsis128_crc32_sec_ooo->unused_lanes = 0xF3210;
-
-        memset(docsis256_sec_ooo->lens, 0xFF,
-               sizeof(docsis256_sec_ooo->lens));
-        memset(docsis256_sec_ooo->job_in_lane, 0,
-               sizeof(docsis256_sec_ooo->job_in_lane));
-        docsis256_sec_ooo->num_lanes_inuse = 0;
-        if (state->features & IMB_FEATURE_GFNI)
-                docsis256_sec_ooo->unused_lanes = 0xF76543210;
-        else
-                docsis256_sec_ooo->unused_lanes = 0xF3210;
-
-        memset(docsis256_crc32_sec_ooo->lens, 0xFF,
-               sizeof(docsis256_crc32_sec_ooo->lens));
-        memset(docsis256_crc32_sec_ooo->job_in_lane, 0,
-               sizeof(docsis256_crc32_sec_ooo->job_in_lane));
-        docsis256_crc32_sec_ooo->num_lanes_inuse = 0;
-        if (state->features & IMB_FEATURE_GFNI)
-                docsis256_crc32_sec_ooo->unused_lanes = 0xF76543210;
-        else
-                docsis256_crc32_sec_ooo->unused_lanes = 0xF3210;
+        if (state->features & IMB_FEATURE_GFNI) {
+                ooo_mgr_docsis_aes_reset(state->docsis128_sec_ooo, 8);
+                ooo_mgr_docsis_aes_reset(state->docsis128_crc32_sec_ooo, 8);
+                ooo_mgr_docsis_aes_reset(state->docsis256_sec_ooo, 8);
+                ooo_mgr_docsis_aes_reset(state->docsis256_crc32_sec_ooo, 8);
+        } else {
+                ooo_mgr_docsis_aes_reset(state->docsis128_sec_ooo, 4);
+                ooo_mgr_docsis_aes_reset(state->docsis128_crc32_sec_ooo, 4);
+                ooo_mgr_docsis_aes_reset(state->docsis256_sec_ooo, 4);
+                ooo_mgr_docsis_aes_reset(state->docsis256_crc32_sec_ooo, 4);
+        }
 
         /* Init ZUC out-of-order fields */
         memset(zuc_eea3_ooo->lens, 0,
