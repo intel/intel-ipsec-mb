@@ -546,8 +546,6 @@ static IMB_JOB *
 static void
 reset_ooo_mgrs(IMB_MGR *state)
 {
-        unsigned int j;
-        MB_MGR_SHA_1_OOO *sha_1_ooo = state->sha_1_ooo;
         MB_MGR_SNOW3G_OOO *snow3g_uea2_ooo = state->snow3g_uea2_ooo;
 
         /* Init AES out-of-order fields */
@@ -704,14 +702,7 @@ reset_ooo_mgrs(IMB_MGR *state)
         ooo_mgr_aes_reset(state->aes128_cbcs_ooo, 4);
 
         /* Init SHA1 out-of-order fields */
-        sha_1_ooo->lens[0] = 0;
-        sha_1_ooo->lens[1] = 0;
-        sha_1_ooo->lens[2] = 0;
-        sha_1_ooo->lens[3] = 0;
-        sha_1_ooo->unused_lanes = 0xF3210;
-        sha_1_ooo->num_lanes_inuse = 0;
-        for (j = 0; j < SSE_NUM_SHA1_LANES; j++)
-                sha_1_ooo->ldata[j].job_in_lane = NULL;
+        ooo_mgr_sha1_reset(state->sha_1_ooo, 4);
 
         /* Init SNOW3G-UEA out-of-order fields */
         memset(&snow3g_uea2_ooo->args, 0, sizeof(snow3g_uea2_ooo->args));

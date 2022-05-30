@@ -873,7 +873,6 @@ static IMB_JOB *
 static void
 reset_ooo_mgrs(IMB_MGR *state)
 {
-        unsigned int j;
         MB_MGR_DES_OOO *des_enc_ooo = state->des_enc_ooo;
         MB_MGR_DES_OOO *des_dec_ooo = state->des_dec_ooo;
         MB_MGR_DES_OOO *des3_enc_ooo = state->des3_enc_ooo;
@@ -882,7 +881,7 @@ reset_ooo_mgrs(IMB_MGR *state)
         MB_MGR_DES_OOO *docsis_des_dec_ooo = state->docsis_des_dec_ooo;
         MB_MGR_SNOW3G_OOO *snow3g_uea2_ooo = state->snow3g_uea2_ooo;
         MB_MGR_SNOW3G_OOO *snow3g_uia2_ooo = state->snow3g_uia2_ooo;
-        MB_MGR_SHA_1_OOO *sha_1_ooo = state->sha_1_ooo;
+        unsigned j;
 
         /* Init AES out-of-order fields */
         if ((state->features & IMB_FEATURE_VAES) == IMB_FEATURE_VAES) {
@@ -1058,12 +1057,7 @@ reset_ooo_mgrs(IMB_MGR *state)
                 sizeof(snow3g_uia2_ooo->lens));
 
         /* Init SHA1 out-of-order fields */
-        sha_1_ooo->unused_lanes = 0xFEDCBA9876543210;
-        sha_1_ooo->num_lanes_inuse = 0;
-        for (j = 0; j < AVX512_NUM_SHA1_LANES; j++){
-                sha_1_ooo->lens[j] = 0;
-                sha_1_ooo->ldata[j].job_in_lane = NULL;
-        }
+        ooo_mgr_sha1_reset(state->sha_1_ooo, 16);
 }
 
 IMB_DLL_LOCAL void

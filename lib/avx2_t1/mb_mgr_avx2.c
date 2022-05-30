@@ -352,9 +352,6 @@ submit_job_aes_gcm_enc_avx2(IMB_MGR *state, IMB_JOB *job)
 static void
 reset_ooo_mgrs(IMB_MGR *state)
 {
-        unsigned int j;
-        MB_MGR_SHA_1_OOO *sha_1_ooo = state->sha_1_ooo;
-
         /* Init AES out-of-order fields */
         ooo_mgr_aes_reset(state->aes128_ooo, 8);
         ooo_mgr_aes_reset(state->aes192_ooo, 8);
@@ -411,12 +408,7 @@ reset_ooo_mgrs(IMB_MGR *state)
         ooo_mgr_aes_reset(state->aes128_cbcs_ooo, 8);
 
         /* Init SHA1 out-of-order fields */
-        sha_1_ooo->unused_lanes = 0xF76543210;
-        sha_1_ooo->num_lanes_inuse = 0;
-        for (j = 0; j < AVX2_NUM_SHA1_LANES; j++){
-                sha_1_ooo->lens[j] = 0;
-                sha_1_ooo->ldata[j].job_in_lane = NULL;
-        }
+        ooo_mgr_sha1_reset(state->sha_1_ooo, 8);
 }
 
 IMB_DLL_LOCAL void

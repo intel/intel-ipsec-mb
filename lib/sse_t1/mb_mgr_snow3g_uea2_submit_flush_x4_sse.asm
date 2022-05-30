@@ -30,7 +30,7 @@
 %include "include/mb_mgr_datastruct.asm"
 %include "include/reg_sizes.asm"
 %include "include/cet.inc"
-%include "sse/snow3g_uea2_by4_sse.asm"
+%include "sse_t1/snow3g_uea2_by4_sse.asm"
 
 %define SUBMIT_JOB_SNOW3G_UEA2 submit_job_snow3g_uea2_sse
 %define FLUSH_JOB_SNOW3G_UEA2 flush_job_snow3g_uea2_sse

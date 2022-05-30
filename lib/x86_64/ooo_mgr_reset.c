@@ -322,3 +322,18 @@ void ooo_mgr_zuc_reset(void *p_ooo_mgr, const unsigned num_lanes)
                 p_mgr->unused_lane_bitmask = 0xffff;
         }
 }
+
+IMB_DLL_LOCAL
+void ooo_mgr_sha1_reset(void *p_ooo_mgr, const unsigned num_lanes)
+{
+        MB_MGR_SHA_1_OOO *p_mgr = (MB_MGR_SHA_1_OOO *) p_ooo_mgr;
+        
+        memset(p_mgr, 0, sizeof(*p_mgr));
+
+        if (num_lanes == 4)
+                p_mgr->unused_lanes = 0xF3210;
+        else if (num_lanes == 8)
+                p_mgr->unused_lanes = 0xF76543210;
+        else if (num_lanes == 16)
+                p_mgr->unused_lanes = 0xFEDCBA9876543210;
+}
