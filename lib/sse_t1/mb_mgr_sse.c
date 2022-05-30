@@ -549,8 +549,6 @@ reset_ooo_mgrs(IMB_MGR *state)
         unsigned int j;
         uint8_t *p;
         size_t size;
-        MB_MGR_HMAC_SHA_256_OOO *hmac_sha_224_ooo = state->hmac_sha_224_ooo;
-        MB_MGR_HMAC_SHA_256_OOO *hmac_sha_256_ooo = state->hmac_sha_256_ooo;
         MB_MGR_HMAC_SHA_512_OOO *hmac_sha_384_ooo = state->hmac_sha_384_ooo;
         MB_MGR_HMAC_SHA_512_OOO *hmac_sha_512_ooo = state->hmac_sha_512_ooo;
         MB_MGR_HMAC_MD5_OOO *hmac_md5_ooo = state->hmac_md5_ooo;
@@ -673,82 +671,24 @@ reset_ooo_mgrs(IMB_MGR *state)
 #endif /* HASH_USE_SHAEXT */
 
         /* Init HMAC/SHA224 out-of-order fields */
-        hmac_sha_224_ooo->lens[0] = 0;
-        hmac_sha_224_ooo->lens[1] = 0;
-        hmac_sha_224_ooo->lens[2] = 0;
-        hmac_sha_224_ooo->lens[3] = 0;
-        hmac_sha_224_ooo->lens[4] = 0xFFFF;
-        hmac_sha_224_ooo->lens[5] = 0xFFFF;
-        hmac_sha_224_ooo->lens[6] = 0xFFFF;
-        hmac_sha_224_ooo->lens[7] = 0xFFFF;
-        hmac_sha_224_ooo->unused_lanes = 0xFF03020100;
-        for (j = 0; j < SSE_NUM_SHA256_LANES; j++) {
-                hmac_sha_224_ooo->ldata[j].job_in_lane = NULL;
+        ooo_mgr_hmac_sha224_reset(state->hmac_sha_224_ooo,
+                                  SSE_NUM_SHA256_LANES);
 
-                p = hmac_sha_224_ooo->ldata[j].extra_block;
-                size = sizeof(hmac_sha_224_ooo->ldata[j].extra_block);
-                memset (p, 0x00, size);
-                p[64] = 0x80;
-
-                p = hmac_sha_224_ooo->ldata[j].outer_block;
-                size = sizeof(hmac_sha_224_ooo->ldata[j].outer_block);
-                memset(p, 0x00, size);
-                p[7*4] = 0x80;  /* digest 7 words long */
-                p[64-2] = 0x02; /* length in little endian = 0x02E0 */
-                p[64-1] = 0xE0;
-        }
 #ifdef HASH_USE_SHAEXT
         if (state->features & IMB_FEATURE_SHANI) {
                 /* Init HMAC/SHA224 NI out-of-order fields */
-                hmac_sha_224_ooo->lens[0] = 0;
-                hmac_sha_224_ooo->lens[1] = 0;
-                hmac_sha_224_ooo->lens[2] = 0xFFFF;
-                hmac_sha_224_ooo->lens[3] = 0xFFFF;
-                hmac_sha_224_ooo->lens[4] = 0xFFFF;
-                hmac_sha_224_ooo->lens[5] = 0xFFFF;
-                hmac_sha_224_ooo->lens[6] = 0xFFFF;
-                hmac_sha_224_ooo->lens[7] = 0xFFFF;
-                hmac_sha_224_ooo->unused_lanes = 0xFF0100;
+                ooo_mgr_hmac_sha224_reset(state->hmac_sha_224_ooo, 2);
         }
 #endif /* HASH_USE_SHAEXT */
 
         /* Init HMAC/SHA_256 out-of-order fields */
-        hmac_sha_256_ooo->lens[0] = 0;
-        hmac_sha_256_ooo->lens[1] = 0;
-        hmac_sha_256_ooo->lens[2] = 0;
-        hmac_sha_256_ooo->lens[3] = 0;
-        hmac_sha_256_ooo->lens[4] = 0xFFFF;
-        hmac_sha_256_ooo->lens[5] = 0xFFFF;
-        hmac_sha_256_ooo->lens[6] = 0xFFFF;
-        hmac_sha_256_ooo->lens[7] = 0xFFFF;
-        hmac_sha_256_ooo->unused_lanes = 0xFF03020100;
-        for (j = 0; j < SSE_NUM_SHA256_LANES; j++) {
-                hmac_sha_256_ooo->ldata[j].job_in_lane = NULL;
-                hmac_sha_256_ooo->ldata[j].extra_block[64] = 0x80;
-                memset(hmac_sha_256_ooo->ldata[j].extra_block + 65,
-                       0x00,
-                       64+7);
-                p = hmac_sha_256_ooo->ldata[j].outer_block;
-                memset(p + 8*4 + 1,
-                       0x00,
-                       64 - 8*4 - 1 - 2); /* digest is 8*4 bytes long */
-                p[8*4] = 0x80;
-                p[64-2] = 0x03; /* length of (opad (64*8) bits + 256 bits)
-                                 * in hex is 0x300 */
-                p[64-1] = 0x00;
-        }
+        ooo_mgr_hmac_sha256_reset(state->hmac_sha_256_ooo,
+                                  SSE_NUM_SHA256_LANES);
+
 #ifdef HASH_USE_SHAEXT
         if (state->features & IMB_FEATURE_SHANI) {
                 /* Init HMAC/SHA256 NI out-of-order fields */
-                hmac_sha_256_ooo->lens[0] = 0;
-                hmac_sha_256_ooo->lens[1] = 0;
-                hmac_sha_256_ooo->lens[2] = 0xFFFF;
-                hmac_sha_256_ooo->lens[3] = 0xFFFF;
-                hmac_sha_256_ooo->lens[4] = 0xFFFF;
-                hmac_sha_256_ooo->lens[5] = 0xFFFF;
-                hmac_sha_256_ooo->lens[6] = 0xFFFF;
-                hmac_sha_256_ooo->lens[7] = 0xFFFF;
-                hmac_sha_256_ooo->unused_lanes = 0xFF0100;
+                ooo_mgr_hmac_sha256_reset(state->hmac_sha_256_ooo, 2);
         }
 #endif /* HASH_USE_SHAEXT */
 

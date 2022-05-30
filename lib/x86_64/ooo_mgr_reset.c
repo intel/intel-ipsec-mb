@@ -145,3 +145,63 @@ void ooo_mgr_hmac_sha1_reset(void *p_ooo_mgr, const unsigned num_lanes)
         else if (num_lanes == AVX512_NUM_SHA1_LANES)
                 p_mgr->unused_lanes = 0xFEDCBA9876543210;
 }
+
+IMB_DLL_LOCAL
+void ooo_mgr_hmac_sha224_reset(void *p_ooo_mgr, const unsigned num_lanes)
+{
+        MB_MGR_HMAC_SHA_256_OOO *p_mgr = (MB_MGR_HMAC_SHA_256_OOO *) p_ooo_mgr;
+        unsigned i;
+        
+        memset(p_mgr, 0, sizeof(*p_mgr));
+        memset(p_mgr->lens, 0xff, sizeof(p_mgr->lens));
+
+        for (i = 0; i < num_lanes; i++) {
+                p_mgr->ldata[i].extra_block[64] = 0x80;
+
+                /* 7 dwords of digest, add padding */
+                p_mgr->ldata[i].outer_block[7 * 4] = 0x80;
+                p_mgr->ldata[i].outer_block[64 - 2] = 0x02;
+                p_mgr->ldata[i].outer_block[64 - 1] = 0xe0;
+        }
+
+        IMB_ASSERT(AVX_NUM_SHA256_LANES == SSE_NUM_SHA256_LANES);
+
+        if (num_lanes == 2)
+                p_mgr->unused_lanes = 0xFF0100; /* SHANI */
+        else if (num_lanes == AVX_NUM_SHA256_LANES)
+                p_mgr->unused_lanes = 0xFF03020100;
+        else if (num_lanes == AVX2_NUM_SHA256_LANES)
+                p_mgr->unused_lanes = 0xF76543210;
+        else if (num_lanes == AVX512_NUM_SHA256_LANES)
+                p_mgr->unused_lanes = 0xFEDCBA9876543210;
+}
+
+IMB_DLL_LOCAL
+void ooo_mgr_hmac_sha256_reset(void *p_ooo_mgr, const unsigned num_lanes)
+{
+        MB_MGR_HMAC_SHA_256_OOO *p_mgr = (MB_MGR_HMAC_SHA_256_OOO *) p_ooo_mgr;
+        unsigned i;
+        
+        memset(p_mgr, 0, sizeof(*p_mgr));
+        memset(p_mgr->lens, 0xff, sizeof(p_mgr->lens));
+
+        for (i = 0; i < num_lanes; i++) {
+                p_mgr->ldata[i].extra_block[64] = 0x80;
+
+                /* 8 dwords of digest, add padding */
+                p_mgr->ldata[i].outer_block[8 * 4] = 0x80;
+                p_mgr->ldata[i].outer_block[64 - 2] = 0x03;
+                p_mgr->ldata[i].outer_block[64 - 1] = 0x00;
+        }
+
+        IMB_ASSERT(AVX_NUM_SHA256_LANES == SSE_NUM_SHA256_LANES);
+
+        if (num_lanes == 2)
+                p_mgr->unused_lanes = 0xFF0100; /* SHANI */
+        else if (num_lanes == AVX_NUM_SHA256_LANES)
+                p_mgr->unused_lanes = 0xFF03020100;
+        else if (num_lanes == AVX2_NUM_SHA256_LANES)
+                p_mgr->unused_lanes = 0xF76543210;
+        else if (num_lanes == AVX512_NUM_SHA256_LANES)
+                p_mgr->unused_lanes = 0xFEDCBA9876543210;
+}

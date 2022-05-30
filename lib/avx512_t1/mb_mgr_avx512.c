@@ -882,13 +882,9 @@ reset_ooo_mgrs(IMB_MGR *state)
         MB_MGR_DES_OOO *des3_dec_ooo = state->des3_dec_ooo;
         MB_MGR_DES_OOO *docsis_des_enc_ooo = state->docsis_des_enc_ooo;
         MB_MGR_DES_OOO *docsis_des_dec_ooo = state->docsis_des_dec_ooo;
-        MB_MGR_HMAC_SHA_1_OOO *hmac_sha_1_ooo = state->hmac_sha_1_ooo;
-        MB_MGR_HMAC_SHA_256_OOO *hmac_sha_224_ooo = state->hmac_sha_224_ooo;
-        MB_MGR_HMAC_SHA_256_OOO *hmac_sha_256_ooo = state->hmac_sha_256_ooo;
         MB_MGR_HMAC_SHA_512_OOO *hmac_sha_384_ooo = state->hmac_sha_384_ooo;
         MB_MGR_HMAC_SHA_512_OOO *hmac_sha_512_ooo = state->hmac_sha_512_ooo;
         MB_MGR_HMAC_MD5_OOO *hmac_md5_ooo = state->hmac_md5_ooo;
-        MB_MGR_AES_XCBC_OOO *aes_xcbc_ooo = state->aes_xcbc_ooo;
         MB_MGR_ZUC_OOO *zuc_eea3_ooo = state->zuc_eea3_ooo;
         MB_MGR_ZUC_OOO *zuc_eia3_ooo = state->zuc_eia3_ooo;
         MB_MGR_ZUC_OOO *zuc256_eea3_ooo = state->zuc256_eea3_ooo;
@@ -1037,77 +1033,12 @@ reset_ooo_mgrs(IMB_MGR *state)
         ooo_mgr_hmac_sha1_reset(state->hmac_sha_1_ooo, AVX512_NUM_SHA1_LANES);
 
         /* Init HMAC/SHA224 out-of-order fields */
-        hmac_sha_224_ooo->lens[0] = 0;
-        hmac_sha_224_ooo->lens[1] = 0;
-        hmac_sha_224_ooo->lens[2] = 0;
-        hmac_sha_224_ooo->lens[3] = 0;
-        hmac_sha_224_ooo->lens[4] = 0;
-        hmac_sha_224_ooo->lens[5] = 0;
-        hmac_sha_224_ooo->lens[6] = 0;
-        hmac_sha_224_ooo->lens[7] = 0;
-        hmac_sha_224_ooo->lens[8] = 0;
-        hmac_sha_224_ooo->lens[9] = 0;
-        hmac_sha_224_ooo->lens[10] = 0;
-        hmac_sha_224_ooo->lens[11] = 0;
-        hmac_sha_224_ooo->lens[12] = 0;
-        hmac_sha_224_ooo->lens[13] = 0;
-        hmac_sha_224_ooo->lens[14] = 0;
-        hmac_sha_224_ooo->lens[15] = 0;
-        hmac_sha_224_ooo->unused_lanes = 0xFEDCBA9876543210;
-        hmac_sha_224_ooo->num_lanes_inuse = 0;
-        /* sha256 and sha224 are very similar except for
-         * digest constants and output size
-         */
-        for (j = 0; j < AVX512_NUM_SHA256_LANES; j++) {
-                hmac_sha_224_ooo->ldata[j].job_in_lane = NULL;
-
-                p = hmac_sha_224_ooo->ldata[j].extra_block;
-                size = sizeof(hmac_sha_224_ooo->ldata[j].extra_block);
-                memset (p, 0x00, size);
-                p[64] = 0x80;
-
-                p = hmac_sha_224_ooo->ldata[j].outer_block;
-                size = sizeof(hmac_sha_224_ooo->ldata[j].outer_block);
-                memset(p, 0x00, size);
-                p[7 * 4] = 0x80;  /* digest 7 words long */
-                p[64 - 2] = 0x02; /* length in little endian = 0x02E0 */
-                p[64 - 1] = 0xE0;
-        }
+        ooo_mgr_hmac_sha224_reset(state->hmac_sha_224_ooo,
+                                  AVX512_NUM_SHA256_LANES);
 
         /* Init HMAC/SHA256 out-of-order fields */
-        hmac_sha_256_ooo->lens[0] = 0;
-        hmac_sha_256_ooo->lens[1] = 0;
-        hmac_sha_256_ooo->lens[2] = 0;
-        hmac_sha_256_ooo->lens[3] = 0;
-        hmac_sha_256_ooo->lens[4] = 0;
-        hmac_sha_256_ooo->lens[5] = 0;
-        hmac_sha_256_ooo->lens[6] = 0;
-        hmac_sha_256_ooo->lens[7] = 0;
-        hmac_sha_256_ooo->lens[8] = 0;
-        hmac_sha_256_ooo->lens[9] = 0;
-        hmac_sha_256_ooo->lens[10] = 0;
-        hmac_sha_256_ooo->lens[11] = 0;
-        hmac_sha_256_ooo->lens[12] = 0;
-        hmac_sha_256_ooo->lens[13] = 0;
-        hmac_sha_256_ooo->lens[14] = 0;
-        hmac_sha_256_ooo->lens[15] = 0;
-        hmac_sha_256_ooo->unused_lanes = 0xFEDCBA9876543210;
-        hmac_sha_256_ooo->num_lanes_inuse = 0;
-        for (j = 0; j < AVX512_NUM_SHA256_LANES; j++) {
-                hmac_sha_256_ooo->ldata[j].job_in_lane = NULL;
-                hmac_sha_256_ooo->ldata[j].extra_block[64] = 0x80;
-                memset(hmac_sha_256_ooo->ldata[j].extra_block + 65,
-                       0x00,
-                       64 + 7);
-                /* hmac related */
-                p = hmac_sha_256_ooo->ldata[j].outer_block;
-                memset(p + 8*4 + 1,
-                       0x00,
-                       64 - 8*4 - 1 - 2);
-                p[8 * 4] = 0x80;  /* 8 digest words */
-                p[64 - 2] = 0x03; /* length */
-                p[64 - 1] = 0x00;
-        }
+        ooo_mgr_hmac_sha256_reset(state->hmac_sha_256_ooo,
+                                  AVX512_NUM_SHA256_LANES);
 
         /* Init HMAC/SHA384 out-of-order fields */
         hmac_sha_384_ooo->lens[0] = 0;
