@@ -95,3 +95,24 @@ void ooo_mgr_ccm_reset(void *p_ooo_mgr, const unsigned num_lanes)
         else if (num_lanes == 16)
                 p_mgr->unused_lanes = 0xFEDCBA9876543210;
 }
+
+IMB_DLL_LOCAL
+void ooo_mgr_aes_xcbc_reset(void *p_ooo_mgr, const unsigned num_lanes)
+{
+        MB_MGR_AES_XCBC_OOO *p_mgr = (MB_MGR_AES_XCBC_OOO *) p_ooo_mgr;
+        unsigned i;
+        
+        memset(p_mgr, 0, sizeof(*p_mgr));
+        memset(p_mgr->lens, 0xff, sizeof(p_mgr->lens));
+
+        for (i = 0; i < num_lanes; i++)
+                p_mgr->ldata[i].final_block[16] = 0x80;
+
+        if (num_lanes == 4)
+                p_mgr->unused_lanes = 0xFF03020100;
+        else if (num_lanes == 8)
+                p_mgr->unused_lanes = 0xF76543210;
+        else if (num_lanes == 16)
+                p_mgr->unused_lanes = 0xFEDCBA9876543210;
+
+}

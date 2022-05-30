@@ -40,4 +40,7 @@ ooo_mgr_cmac_reset(void *p_ooo_mgr, const unsigned num_lanes);
 IMB_DLL_LOCAL void
 ooo_mgr_ccm_reset(void *p_ooo_mgr, const unsigned num_lanes);
 
+IMB_DLL_LOCAL
+void ooo_mgr_aes_xcbc_reset(void *p_ooo_mgr, const unsigned num_lanes);
+
 #endif /* OOO_MGR_RESET_H */

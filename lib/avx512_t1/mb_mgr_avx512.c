@@ -1246,27 +1246,10 @@ reset_ooo_mgrs(IMB_MGR *state)
         }
 
         /* Init AES/XCBC OOO fields */
-        if ((state->features & IMB_FEATURE_VAES) == IMB_FEATURE_VAES) {
-                aes_xcbc_ooo->unused_lanes = 0xFEDCBA9876543210;
-                aes_xcbc_ooo->num_lanes_inuse = 0;
-                for (j = 0; j < 16; j++) {
-                        aes_xcbc_ooo->lens[j] = 0;
-                        aes_xcbc_ooo->ldata[j].final_block[16] = 0x80;
-                        memset(aes_xcbc_ooo->ldata[j].final_block + 17,
-                               0x00, 15);
-                }
-        } else {
-                memset(aes_xcbc_ooo->lens, 0xff,
-                       sizeof(aes_xcbc_ooo->lens));
-                aes_xcbc_ooo->unused_lanes = 0xF76543210;
-                aes_xcbc_ooo->num_lanes_inuse = 0;
-                for (j = 0; j < 8; j++) {
-                        aes_xcbc_ooo->lens[j] = 0;
-                        aes_xcbc_ooo->ldata[j].final_block[16] = 0x80;
-                        memset(aes_xcbc_ooo->ldata[j].final_block + 17,
-                               0x00, 15);
-                }
-        }
+        if ((state->features & IMB_FEATURE_VAES) == IMB_FEATURE_VAES)
+                ooo_mgr_aes_xcbc_reset(state->aes_xcbc_ooo, 16);
+        else
+                ooo_mgr_aes_xcbc_reset(state->aes_xcbc_ooo, 8);
 
         /* Init AES-CCM auth out-of-order fields */
         if ((state->features & IMB_FEATURE_VAES) == IMB_FEATURE_VAES) {

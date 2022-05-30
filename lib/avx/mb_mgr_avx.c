@@ -381,7 +381,6 @@ reset_ooo_mgrs(IMB_MGR *state)
         MB_MGR_HMAC_SHA_512_OOO *hmac_sha_384_ooo = state->hmac_sha_384_ooo;
         MB_MGR_HMAC_SHA_512_OOO *hmac_sha_512_ooo = state->hmac_sha_512_ooo;
         MB_MGR_HMAC_MD5_OOO *hmac_md5_ooo = state->hmac_md5_ooo;
-        MB_MGR_AES_XCBC_OOO *aes_xcbc_ooo = state->aes_xcbc_ooo;
         MB_MGR_ZUC_OOO *zuc_eea3_ooo = state->zuc_eea3_ooo;
         MB_MGR_ZUC_OOO *zuc_eia3_ooo = state->zuc_eia3_ooo;
         MB_MGR_ZUC_OOO *zuc256_eea3_ooo = state->zuc256_eea3_ooo;
@@ -630,16 +629,7 @@ reset_ooo_mgrs(IMB_MGR *state)
         }
 
         /* Init AES/XCBC OOO fields */
-        memset(aes_xcbc_ooo->lens, 0xff,
-               sizeof(aes_xcbc_ooo->lens));
-        aes_xcbc_ooo->unused_lanes = 0xF76543210;
-        for (j = 0; j < 8; j++) {
-                aes_xcbc_ooo->lens[j] = 0;
-                aes_xcbc_ooo->ldata[j].job_in_lane = NULL;
-                aes_xcbc_ooo->ldata[j].final_block[16] = 0x80;
-                memset(aes_xcbc_ooo->ldata[j].final_block + 17, 0x00, 15);
-        }
-        aes_xcbc_ooo->num_lanes_inuse = 0;
+        ooo_mgr_aes_xcbc_reset(state->aes_xcbc_ooo, 8);
 
         /* Init AES-CCM auth out-of-order fields */
         ooo_mgr_ccm_reset(state->aes_ccm_ooo, 8);
