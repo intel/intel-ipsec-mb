@@ -280,7 +280,8 @@ c_lib_objs := \
 	snow3g_tables.o \
 	snow3g_iv.o \
 	mb_mgr_auto.o \
-	error.o
+	error.o \
+	ooo_mgr_reset.o
 
 ifeq ($(AESNI_EMU), y)
 c_lib_objs := $(c_lib_objs) \

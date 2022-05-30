@@ -352,7 +352,8 @@ lib_objs1 = \
 	$(OBJ_DIR)\mb_mgr_aes128_cbcs_1_9_flush_avx.obj \
 	$(OBJ_DIR)\error.obj \
 	$(OBJ_DIR)\memcpy_sse.obj \
-	$(OBJ_DIR)\memcpy_avx.obj
+	$(OBJ_DIR)\memcpy_avx.obj \
+	$(OBJ_DIR)\ooo_mgr_reset.obj
 
 lib_objs2 = \
 	$(OBJ_DIR)\mb_mgr_aes192_cbc_enc_flush_avx.obj \
