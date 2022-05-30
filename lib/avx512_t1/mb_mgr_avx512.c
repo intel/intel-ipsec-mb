@@ -880,10 +880,6 @@ reset_ooo_mgrs(IMB_MGR *state)
         MB_MGR_DES_OOO *des3_dec_ooo = state->des3_dec_ooo;
         MB_MGR_DES_OOO *docsis_des_enc_ooo = state->docsis_des_enc_ooo;
         MB_MGR_DES_OOO *docsis_des_dec_ooo = state->docsis_des_dec_ooo;
-        MB_MGR_ZUC_OOO *zuc_eea3_ooo = state->zuc_eea3_ooo;
-        MB_MGR_ZUC_OOO *zuc_eia3_ooo = state->zuc_eia3_ooo;
-        MB_MGR_ZUC_OOO *zuc256_eea3_ooo = state->zuc256_eea3_ooo;
-        MB_MGR_ZUC_OOO *zuc256_eia3_ooo = state->zuc256_eia3_ooo;
         MB_MGR_SNOW3G_OOO *snow3g_uea2_ooo = state->snow3g_uea2_ooo;
         MB_MGR_SNOW3G_OOO *snow3g_uia2_ooo = state->snow3g_uia2_ooo;
         MB_MGR_SHA_1_OOO *sha_1_ooo = state->sha_1_ooo;
@@ -976,52 +972,10 @@ reset_ooo_mgrs(IMB_MGR *state)
                sizeof(docsis_des_dec_ooo->args));
 
         /* Init ZUC out-of-order fields */
-        memset(zuc_eea3_ooo->lens, 0,
-               sizeof(zuc_eea3_ooo->lens));
-        memset(zuc_eea3_ooo->job_in_lane, 0,
-               sizeof(zuc_eea3_ooo->job_in_lane));
-        zuc_eea3_ooo->unused_lanes = 0xFEDCBA9876543210;
-        zuc_eea3_ooo->num_lanes_inuse = 0;
-        memset(&zuc_eea3_ooo->state, 0,
-               sizeof(zuc_eea3_ooo->state));
-        zuc_eea3_ooo->init_not_done = 0;
-        zuc_eea3_ooo->unused_lane_bitmask = 0xffff;
-
-        memset(zuc_eia3_ooo->lens, 0xFF,
-               sizeof(zuc_eia3_ooo->lens));
-        memset(zuc_eia3_ooo->job_in_lane, 0,
-               sizeof(zuc_eia3_ooo->job_in_lane));
-        zuc_eia3_ooo->unused_lanes = 0xFEDCBA9876543210;
-        zuc_eia3_ooo->num_lanes_inuse = 0;
-        memset(&zuc_eia3_ooo->state, 0,
-               sizeof(zuc_eia3_ooo->state));
-        zuc_eia3_ooo->init_not_done = 0;
-        zuc_eia3_ooo->unused_lane_bitmask = 0xffff;
-        memset(zuc_eia3_ooo->args.digest, 0, sizeof(zuc_eia3_ooo->args.digest));
-
-        memset(zuc256_eea3_ooo->lens, 0,
-               sizeof(zuc256_eea3_ooo->lens));
-        memset(zuc256_eea3_ooo->job_in_lane, 0,
-               sizeof(zuc256_eea3_ooo->job_in_lane));
-        zuc256_eea3_ooo->unused_lanes = 0xFEDCBA9876543210;
-        zuc256_eea3_ooo->num_lanes_inuse = 0;
-        memset(&zuc256_eea3_ooo->state, 0,
-               sizeof(zuc256_eea3_ooo->state));
-        zuc256_eea3_ooo->init_not_done = 0;
-        zuc256_eea3_ooo->unused_lane_bitmask = 0xffff;
-
-        memset(zuc256_eia3_ooo->lens, 0xFF,
-               sizeof(zuc256_eia3_ooo->lens));
-        memset(zuc256_eia3_ooo->job_in_lane, 0,
-               sizeof(zuc256_eia3_ooo->job_in_lane));
-        zuc256_eia3_ooo->unused_lanes = 0xFEDCBA9876543210;
-        zuc256_eia3_ooo->num_lanes_inuse = 0;
-        memset(&zuc256_eia3_ooo->state, 0,
-               sizeof(zuc256_eia3_ooo->state));
-        zuc256_eia3_ooo->init_not_done = 0;
-        zuc256_eia3_ooo->unused_lane_bitmask = 0xffff;
-        memset(zuc256_eia3_ooo->args.digest, 0,
-               sizeof(zuc256_eia3_ooo->args.digest));
+        ooo_mgr_zuc_reset(state->zuc_eea3_ooo, 16);
+        ooo_mgr_zuc_reset(state->zuc_eia3_ooo, 16);
+        ooo_mgr_zuc_reset(state->zuc256_eea3_ooo, 16);
+        ooo_mgr_zuc_reset(state->zuc256_eia3_ooo, 16);
 
         /* Init HMAC/SHA1 out-of-order fields */
         ooo_mgr_hmac_sha1_reset(state->hmac_sha_1_ooo, AVX512_NUM_SHA1_LANES);

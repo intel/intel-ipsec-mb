@@ -302,3 +302,23 @@ void ooo_mgr_hmac_md5_reset(void *p_ooo_mgr, const unsigned num_lanes)
         else if (num_lanes == AVX2_NUM_MD5_LANES)
                 p_mgr->unused_lanes = 0xFEDCBA9876543210;
 }
+
+IMB_DLL_LOCAL
+void ooo_mgr_zuc_reset(void *p_ooo_mgr, const unsigned num_lanes)
+{
+        MB_MGR_ZUC_OOO *p_mgr = (MB_MGR_ZUC_OOO *) p_ooo_mgr;
+        
+        memset(p_mgr, 0, sizeof(*p_mgr));
+        memset(p_mgr->lens, 0xff, sizeof(p_mgr->lens));
+
+        if (num_lanes == 4) {
+                p_mgr->unused_lanes = 0xFF03020100;
+                p_mgr->unused_lane_bitmask = 0x0f;
+        } else if (num_lanes == 8) {
+                p_mgr->unused_lanes = 0xF76543210;
+                p_mgr->unused_lane_bitmask = 0xff;
+        } else if (num_lanes == 16) {
+                p_mgr->unused_lanes = 0xFEDCBA9876543210;
+                p_mgr->unused_lane_bitmask = 0xffff;
+        }
+}
