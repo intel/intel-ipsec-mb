@@ -632,11 +632,18 @@ $(DEPALL): $(all_objs)
 {avx\}.asm{$(OBJ_DIR)}.obj:
 	$(AS) -MD $@.dep -o $@ $(AFLAGS) $<
 
-{avx2\}.c{$(OBJ_DIR)}.obj:
+{avx2_t1\}.c{$(OBJ_DIR)}.obj:
 	$(CC) /arch:AVX /Fo$@ /c $(CFLAGS) $<
         $(DEPTOOL) $< $@ "$(DEPFLAGS)" > $@.dep
 
-{avx2\}.asm{$(OBJ_DIR)}.obj:
+{avx2_t1\}.asm{$(OBJ_DIR)}.obj:
+	$(AS) -MD $@.dep -o $@ $(AFLAGS) $<
+
+{avx2_t2\}.c{$(OBJ_DIR)}.obj:
+	$(CC) /arch:AVX /Fo$@ /c $(CFLAGS) $<
+        $(DEPTOOL) $< $@ "$(DEPFLAGS)" > $@.dep
+
+{avx2_t2\}.asm{$(OBJ_DIR)}.obj:
 	$(AS) -MD $@.dep -o $@ $(AFLAGS) $<
 
 {avx512\}.c{$(OBJ_DIR)}.obj:

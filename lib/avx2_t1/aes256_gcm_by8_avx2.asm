@@ -27,5 +27,5 @@
 ;  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-%define GCM128_MODE 1
-%include "avx2/gcm_avx_gen4.asm"
+%define GCM256_MODE 1
+%include "avx2_t1/gcm_avx_gen4.asm"

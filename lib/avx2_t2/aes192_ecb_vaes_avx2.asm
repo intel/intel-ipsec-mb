@@ -1,5 +1,5 @@
 ;;
-;; Copyright (c) 2012-2022, Intel Corporation
+;; Copyright (c) 2022, Intel Corporation
 ;;
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
@@ -25,7 +25,9 @@
 ;; OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;
 
-%define FUNC flush_job_hmac_sha_224_avx2
-%define SHA224
+; routine to do AES ECB 192 encrypt/decrypt on 16n bytes doing AES by 8
 
-%include "avx2/mb_mgr_hmac_sha256_flush_avx2.asm"
+%define AES_ECB_NROUNDS 12
+
+%include "include/os.asm"
+%include "avx2_t2/aes128_ecb_vaes_avx2.asm"

@@ -28,4 +28,4 @@
 %define FUNC submit_job_hmac_sha_224_avx2
 %define SHA224
 
-%include "avx2/mb_mgr_hmac_sha256_submit_avx2.asm"
+%include "avx2_t1/mb_mgr_hmac_sha256_submit_avx2.asm"
