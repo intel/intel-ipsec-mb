@@ -46,6 +46,100 @@ IMB_MGR *mb_mgr = NULL;
 int verbose = 0;
 int direct_api = 0; /* job API by default */
 
+static int aes_cbc_handler(ACVP_TEST_CASE *test_case)
+{
+        ACVP_SYM_CIPHER_TC *tc;
+        IMB_JOB *job = NULL;
+        DECLARE_ALIGNED(uint32_t enc_keys[15*4], 16);
+        DECLARE_ALIGNED(uint32_t dec_keys[15*4], 16);
+        static uint8_t next_iv[16];
+
+        if (test_case == NULL)
+                return EXIT_FAILURE;
+
+        tc = test_case->tc.symmetric;
+
+        if (tc->direction != ACVP_SYM_CIPH_DIR_ENCRYPT &&
+            tc->direction != ACVP_SYM_CIPH_DIR_DECRYPT) {
+                fprintf(stderr, "Unsupported direction\n");
+                return EXIT_FAILURE;
+        }
+
+        switch (tc->key_len) {
+        case 128:
+                IMB_AES_KEYEXP_128(mb_mgr, tc->key, enc_keys, dec_keys);
+                break;
+        case 192:
+                IMB_AES_KEYEXP_192(mb_mgr, tc->key, enc_keys, dec_keys);
+                break;
+        case 256:
+                IMB_AES_KEYEXP_256(mb_mgr, tc->key, enc_keys, dec_keys);
+                break;
+        default:
+                fprintf(stderr, "Unsupported AES key length\n");
+                return EXIT_FAILURE;
+        }
+
+        job = IMB_GET_NEXT_JOB(mb_mgr);
+        job->key_len_in_bytes = tc->key_len >> 3;
+        job->cipher_mode = IMB_CIPHER_CBC;
+        job->hash_alg = IMB_AUTH_NULL;
+        /*
+         * If Monte-carlo test, use the IV from the ciphertext of
+         * the previous iteration
+         */
+        if (tc->test_type == ACVP_SYM_TEST_TYPE_MCT &&
+            tc->mct_index != 0)
+                job->iv = next_iv;
+        else
+                job->iv = tc->iv;
+
+        job->iv_len_in_bytes = tc->iv_len;
+        job->cipher_start_src_offset_in_bytes = 0;
+        job->enc_keys = enc_keys;
+        job->dec_keys = dec_keys;
+
+        if (tc->direction == ACVP_SYM_CIPH_DIR_ENCRYPT) {
+                job->cipher_direction = IMB_DIR_ENCRYPT;
+                job->chain_order = IMB_ORDER_CIPHER_HASH;
+                job->src = tc->pt;
+                job->dst = tc->ct;
+                job->msg_len_to_cipher_in_bytes = tc->pt_len;
+                tc->ct_len = tc->pt_len;
+
+                job = IMB_SUBMIT_JOB(mb_mgr);
+                if (job == NULL)
+                        job = IMB_FLUSH_JOB(mb_mgr);
+                if (job->status != IMB_STATUS_COMPLETED) {
+                        fprintf(stderr, "Invalid job\n");
+                        return EXIT_FAILURE;
+                }
+        } else /* DECRYPT */ {
+                job->cipher_direction = IMB_DIR_DECRYPT;
+                job->chain_order = IMB_ORDER_HASH_CIPHER;
+                job->src = tc->ct;
+                job->dst = tc->pt;
+                job->msg_len_to_cipher_in_bytes = tc->ct_len;
+                tc->pt_len = tc->ct_len;
+
+                job = IMB_SUBMIT_JOB(mb_mgr);
+                if (job == NULL)
+                        job = IMB_FLUSH_JOB(mb_mgr);
+                if (job->status != IMB_STATUS_COMPLETED) {
+                        fprintf(stderr, "Invalid job\n");
+                        return EXIT_FAILURE;
+                }
+        }
+        /*
+         * If Monte-carlo test, copy the ciphertext for
+         * the IV of the next iteration
+         */
+        if (tc->test_type == ACVP_SYM_TEST_TYPE_MCT)
+                memcpy(next_iv, tc->ct, 16);
+
+        return EXIT_SUCCESS;
+}
+
 static int aes_gcm_handler(ACVP_TEST_CASE *test_case)
 {
         ACVP_SYM_CIPHER_TC *tc;
@@ -55,7 +149,6 @@ static int aes_gcm_handler(ACVP_TEST_CASE *test_case)
         aes_gcm_enc_dec_finalize_t finalize_enc = mb_mgr->gcm128_enc_finalize;
         aes_gcm_enc_dec_update_t update_dec = mb_mgr->gcm128_dec_update;
         aes_gcm_enc_dec_finalize_t finalize_dec = mb_mgr->gcm128_dec_finalize;
-        int ret = 0;
 
         struct gcm_key_data key;
         struct gcm_context_data ctx;
@@ -67,7 +160,6 @@ static int aes_gcm_handler(ACVP_TEST_CASE *test_case)
 
         if (tc->direction != ACVP_SYM_CIPH_DIR_ENCRYPT &&
             tc->direction != ACVP_SYM_CIPH_DIR_DECRYPT) {
-                fprintf(stderr, "Unsupported direction\n");
                 return EXIT_FAILURE;
         }
 
@@ -83,8 +175,7 @@ static int aes_gcm_handler(ACVP_TEST_CASE *test_case)
                 break;
         default:
                 fprintf(stderr, "Unsupported AES key length\n");
-                ret = 1;
-                goto end;
+                return EXIT_FAILURE;
         }
 
         if (direct_api == 1) {
@@ -108,8 +199,7 @@ static int aes_gcm_handler(ACVP_TEST_CASE *test_case)
                         break;
                 default:
                         fprintf(stderr, "Unsupported AES key length\n");
-                        ret = 1;
-                        goto end;
+                        return EXIT_FAILURE;
                 }
         } else {
                 job = IMB_GET_NEXT_JOB(mb_mgr);
@@ -146,8 +236,8 @@ static int aes_gcm_handler(ACVP_TEST_CASE *test_case)
                         if (job == NULL)
                                 job = IMB_FLUSH_JOB(mb_mgr);
                         if (job->status != IMB_STATUS_COMPLETED) {
-                                ret = 1;
                                 fprintf(stderr, "Invalid job\n");
+                                return EXIT_FAILURE;
                         }
                 }
         } else /* DECRYPT */ {
@@ -171,13 +261,11 @@ static int aes_gcm_handler(ACVP_TEST_CASE *test_case)
                         if (job == NULL)
                                 job = IMB_FLUSH_JOB(mb_mgr);
                         if (job->status != IMB_STATUS_COMPLETED) {
-                                ret = 1;
                                 fprintf(stderr, "Invalid job\n");
-                                goto end;
+                                return EXIT_FAILURE;
                         }
                 }
                 if (memcmp(res_tag, tc->tag, tc->tag_len) != 0) {
-                        ret = 1;
                         if (verbose) {
                                 hexdump(stdout, "result tag: ",
                                         res_tag, tc->tag_len);
@@ -185,10 +273,10 @@ static int aes_gcm_handler(ACVP_TEST_CASE *test_case)
                                         tc->tag, tc->tag_len);
                                 fprintf(stderr, "Invalid tag\n");
                         }
+                        return EXIT_FAILURE;
                 }
         }
-end:
-        return ret;
+        return EXIT_SUCCESS;
 }
 
 static void usage(const char *app_name)
@@ -294,6 +382,10 @@ main(int argc, char **argv)
 
         if (acvp_cap_sym_cipher_enable(ctx, ACVP_AES_GCM,
                                        &aes_gcm_handler) != ACVP_SUCCESS)
+                goto exit;
+
+        if (acvp_cap_sym_cipher_enable(ctx, ACVP_AES_CBC,
+                                       &aes_cbc_handler) != ACVP_SUCCESS)
                 goto exit;
 
         /* Allocate and initialize MB_MGR */
