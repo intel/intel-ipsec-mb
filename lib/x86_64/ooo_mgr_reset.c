@@ -126,12 +126,12 @@ void ooo_mgr_hmac_sha1_reset(void *p_ooo_mgr, const unsigned num_lanes)
         memset(p_mgr->lens, 0xff, sizeof(p_mgr->lens));
 
         for (i = 0; i < num_lanes; i++) {
-                p_mgr->ldata[i].extra_block[64] = 0x80;
+                p_mgr->ldata[i].extra_block[IMB_SHA1_BLOCK_SIZE] = 0x80;
 
-                /* 5 dwords of digest, add padding */
-                p_mgr->ldata[i].outer_block[5 * 4] = 0x80;
-                p_mgr->ldata[i].outer_block[64 - 2] = 0x02;
-                p_mgr->ldata[i].outer_block[64 - 1] = 0xa0;
+                p_mgr->ldata[i].outer_block[IMB_SHA1_DIGEST_SIZE_IN_BYTES] =
+                        0x80;
+                p_mgr->ldata[i].outer_block[IMB_SHA1_BLOCK_SIZE - 2] = 0x02;
+                p_mgr->ldata[i].outer_block[IMB_SHA1_BLOCK_SIZE - 1] = 0xa0;
         }
 
         IMB_ASSERT(AVX_NUM_SHA1_LANES == SSE_NUM_SHA1_LANES);
@@ -156,12 +156,12 @@ void ooo_mgr_hmac_sha224_reset(void *p_ooo_mgr, const unsigned num_lanes)
         memset(p_mgr->lens, 0xff, sizeof(p_mgr->lens));
 
         for (i = 0; i < num_lanes; i++) {
-                p_mgr->ldata[i].extra_block[64] = 0x80;
+                p_mgr->ldata[i].extra_block[IMB_SHA_256_BLOCK_SIZE] = 0x80;
 
-                /* 7 dwords of digest, add padding */
-                p_mgr->ldata[i].outer_block[7 * 4] = 0x80;
-                p_mgr->ldata[i].outer_block[64 - 2] = 0x02;
-                p_mgr->ldata[i].outer_block[64 - 1] = 0xe0;
+                p_mgr->ldata[i].outer_block[IMB_SHA224_DIGEST_SIZE_IN_BYTES] =
+                        0x80;
+                p_mgr->ldata[i].outer_block[IMB_SHA_256_BLOCK_SIZE - 2] = 0x02;
+                p_mgr->ldata[i].outer_block[IMB_SHA_256_BLOCK_SIZE - 1] = 0xe0;
         }
 
         IMB_ASSERT(AVX_NUM_SHA256_LANES == SSE_NUM_SHA256_LANES);
@@ -186,12 +186,12 @@ void ooo_mgr_hmac_sha256_reset(void *p_ooo_mgr, const unsigned num_lanes)
         memset(p_mgr->lens, 0xff, sizeof(p_mgr->lens));
 
         for (i = 0; i < num_lanes; i++) {
-                p_mgr->ldata[i].extra_block[64] = 0x80;
+                p_mgr->ldata[i].extra_block[IMB_SHA_256_BLOCK_SIZE] = 0x80;
 
-                /* 8 dwords of digest, add padding */
-                p_mgr->ldata[i].outer_block[8 * 4] = 0x80;
-                p_mgr->ldata[i].outer_block[64 - 2] = 0x03;
-                p_mgr->ldata[i].outer_block[64 - 1] = 0x00;
+                p_mgr->ldata[i].outer_block[IMB_SHA256_DIGEST_SIZE_IN_BYTES] =
+                        0x80;
+                p_mgr->ldata[i].outer_block[IMB_SHA_256_BLOCK_SIZE - 2] = 0x03;
+                p_mgr->ldata[i].outer_block[IMB_SHA_256_BLOCK_SIZE - 1] = 0x00;
         }
 
         IMB_ASSERT(AVX_NUM_SHA256_LANES == SSE_NUM_SHA256_LANES);
@@ -204,4 +204,76 @@ void ooo_mgr_hmac_sha256_reset(void *p_ooo_mgr, const unsigned num_lanes)
                 p_mgr->unused_lanes = 0xF76543210;
         else if (num_lanes == AVX512_NUM_SHA256_LANES)
                 p_mgr->unused_lanes = 0xFEDCBA9876543210;
+}
+
+IMB_DLL_LOCAL
+void ooo_mgr_hmac_sha384_reset(void *p_ooo_mgr, const unsigned num_lanes)
+{
+        MB_MGR_HMAC_SHA_512_OOO *p_mgr = (MB_MGR_HMAC_SHA_512_OOO *) p_ooo_mgr;
+        unsigned i;
+        
+        memset(p_mgr, 0, sizeof(*p_mgr));
+        memset(p_mgr->lens, 0xff, sizeof(p_mgr->lens));
+
+        for (i = 0; i < num_lanes; i++) {
+                p_mgr->ldata[i].extra_block[IMB_SHA_384_BLOCK_SIZE] = 0x80;
+
+                p_mgr->ldata[i].outer_block[IMB_SHA384_DIGEST_SIZE_IN_BYTES] =
+                        0x80;
+                /*
+                 * hmac outer block length always of fixed size, it is OKey
+                 * length, a whole message block length, 1024 bits, with padding
+                 * plus the length of the inner digest, which is 384 bits
+                 * 1408 bits == 0x0580. The input message block needs to be
+                 * converted to big endian within the sha implementation
+                 * before use.
+                 */
+                p_mgr->ldata[i].outer_block[IMB_SHA_384_BLOCK_SIZE - 2] = 0x05;
+                p_mgr->ldata[i].outer_block[IMB_SHA_384_BLOCK_SIZE - 1] = 0x80;
+        }
+
+        IMB_ASSERT(AVX_NUM_SHA512_LANES == SSE_NUM_SHA512_LANES);
+
+        if (num_lanes == AVX_NUM_SHA512_LANES)
+                p_mgr->unused_lanes = 0xFF0100;
+        else if (num_lanes == AVX2_NUM_SHA512_LANES)
+                p_mgr->unused_lanes = 0xFF03020100;
+        else if (num_lanes == AVX512_NUM_SHA512_LANES)
+                p_mgr->unused_lanes = 0xF76543210;
+}
+
+IMB_DLL_LOCAL
+void ooo_mgr_hmac_sha512_reset(void *p_ooo_mgr, const unsigned num_lanes)
+{
+        MB_MGR_HMAC_SHA_512_OOO *p_mgr = (MB_MGR_HMAC_SHA_512_OOO *) p_ooo_mgr;
+        unsigned i;
+        
+        memset(p_mgr, 0, sizeof(*p_mgr));
+        memset(p_mgr->lens, 0xff, sizeof(p_mgr->lens));
+
+        for (i = 0; i < num_lanes; i++) {
+                p_mgr->ldata[i].extra_block[IMB_SHA_512_BLOCK_SIZE] = 0x80;
+
+                p_mgr->ldata[i].outer_block[IMB_SHA512_DIGEST_SIZE_IN_BYTES] =
+                        0x80;
+                 /*
+                 * hmac outer block length always of fixed size, it is OKey
+                 * length, a whole message block length, 1024 bits, with padding
+                 * plus the length of the inner digest, which is 512 bits
+                 * 1536 bits == 0x600. The input message block needs to be
+                 * converted to big endian within the sha implementation
+                 * before use.
+                 */
+                p_mgr->ldata[i].outer_block[IMB_SHA_512_BLOCK_SIZE - 2] = 0x06;
+                p_mgr->ldata[i].outer_block[IMB_SHA_512_BLOCK_SIZE - 1] = 0x00;
+        }
+
+        IMB_ASSERT(AVX_NUM_SHA512_LANES == SSE_NUM_SHA512_LANES);
+
+        if (num_lanes == AVX_NUM_SHA512_LANES)
+                p_mgr->unused_lanes = 0xFF0100;
+        else if (num_lanes == AVX2_NUM_SHA512_LANES)
+                p_mgr->unused_lanes = 0xFF03020100;
+        else if (num_lanes == AVX512_NUM_SHA512_LANES)
+                p_mgr->unused_lanes = 0xF76543210;
 }

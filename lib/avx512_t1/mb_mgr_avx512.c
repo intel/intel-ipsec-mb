@@ -882,8 +882,6 @@ reset_ooo_mgrs(IMB_MGR *state)
         MB_MGR_DES_OOO *des3_dec_ooo = state->des3_dec_ooo;
         MB_MGR_DES_OOO *docsis_des_enc_ooo = state->docsis_des_enc_ooo;
         MB_MGR_DES_OOO *docsis_des_dec_ooo = state->docsis_des_dec_ooo;
-        MB_MGR_HMAC_SHA_512_OOO *hmac_sha_384_ooo = state->hmac_sha_384_ooo;
-        MB_MGR_HMAC_SHA_512_OOO *hmac_sha_512_ooo = state->hmac_sha_512_ooo;
         MB_MGR_HMAC_MD5_OOO *hmac_md5_ooo = state->hmac_md5_ooo;
         MB_MGR_ZUC_OOO *zuc_eea3_ooo = state->zuc_eea3_ooo;
         MB_MGR_ZUC_OOO *zuc_eia3_ooo = state->zuc_eia3_ooo;
@@ -1041,74 +1039,12 @@ reset_ooo_mgrs(IMB_MGR *state)
                                   AVX512_NUM_SHA256_LANES);
 
         /* Init HMAC/SHA384 out-of-order fields */
-        hmac_sha_384_ooo->lens[0] = 0;
-        hmac_sha_384_ooo->lens[1] = 0;
-        hmac_sha_384_ooo->lens[2] = 0;
-        hmac_sha_384_ooo->lens[3] = 0;
-        hmac_sha_384_ooo->lens[4] = 0;
-        hmac_sha_384_ooo->lens[5] = 0;
-        hmac_sha_384_ooo->lens[6] = 0;
-        hmac_sha_384_ooo->lens[7] = 0;
-        hmac_sha_384_ooo->unused_lanes = 0xF76543210;
-        for (j = 0; j < AVX512_NUM_SHA512_LANES; j++) {
-                MB_MGR_HMAC_SHA_512_OOO *ctx = hmac_sha_384_ooo;
-
-                ctx->ldata[j].job_in_lane = NULL;
-                ctx->ldata[j].extra_block[IMB_SHA_384_BLOCK_SIZE] = 0x80;
-                memset(ctx->ldata[j].extra_block + (IMB_SHA_384_BLOCK_SIZE + 1),
-                       0x00, IMB_SHA_384_BLOCK_SIZE + 7);
-                p = ctx->ldata[j].outer_block;
-                /* special end point because this length is constant */
-                memset(p + IMB_SHA384_DIGEST_SIZE_IN_BYTES  + 1, 0x00,
-                       IMB_SHA_384_BLOCK_SIZE -
-                       IMB_SHA384_DIGEST_SIZE_IN_BYTES  - 1 - 2);
-                /* mark the end */
-                p[IMB_SHA384_DIGEST_SIZE_IN_BYTES] = 0x80;
-                /* hmac outer block length always of fixed size,
-                 * it is OKey length, a whole message block length, 1024 bits,
-                 * with padding plus the length of the inner digest,
-                 * which is 384 bits, 1408 bits == 0x0580.
-                 * The input message block needs to be converted to big endian
-                 * within the sha implementation before use.
-                 */
-                p[IMB_SHA_384_BLOCK_SIZE - 2] = 0x05;
-                p[IMB_SHA_384_BLOCK_SIZE - 1] = 0x80;
-        }
+        ooo_mgr_hmac_sha384_reset(state->hmac_sha_384_ooo,
+                                  AVX512_NUM_SHA512_LANES);
 
         /* Init HMAC/SHA512 out-of-order fields */
-        hmac_sha_512_ooo->lens[0] = 0;
-        hmac_sha_512_ooo->lens[1] = 0;
-        hmac_sha_512_ooo->lens[2] = 0;
-        hmac_sha_512_ooo->lens[3] = 0;
-        hmac_sha_512_ooo->lens[4] = 0;
-        hmac_sha_512_ooo->lens[5] = 0;
-        hmac_sha_512_ooo->lens[6] = 0;
-        hmac_sha_512_ooo->lens[7] = 0;
-        hmac_sha_512_ooo->unused_lanes = 0xF76543210;
-        for (j = 0; j < AVX512_NUM_SHA512_LANES; j++) {
-                MB_MGR_HMAC_SHA_512_OOO *ctx = hmac_sha_512_ooo;
-
-                ctx->ldata[j].job_in_lane = NULL;
-                ctx->ldata[j].extra_block[IMB_SHA_512_BLOCK_SIZE] = 0x80;
-                memset(ctx->ldata[j].extra_block + (IMB_SHA_512_BLOCK_SIZE + 1),
-                       0x00, IMB_SHA_512_BLOCK_SIZE + 7);
-                p = ctx->ldata[j].outer_block;
-                /* special end point because this length is constant */
-                memset(p + IMB_SHA512_DIGEST_SIZE_IN_BYTES  + 1, 0x00,
-                       IMB_SHA_512_BLOCK_SIZE -
-                       IMB_SHA512_DIGEST_SIZE_IN_BYTES  - 1 - 2);
-                /* mark the end */
-                p[IMB_SHA512_DIGEST_SIZE_IN_BYTES] = 0x80;
-                /* hmac outer block length always of fixed size,
-                 * it is OKey length, a whole message block length, 1024 bits,
-                 * with padding plus the length of the inner digest,
-                 * which is 512 bits, 1536 bits == 0x600.
-                 * The input message block needs to be converted to big endian
-                 * within the sha implementation before use.
-                 */
-                p[IMB_SHA_512_BLOCK_SIZE - 2] = 0x06;
-                p[IMB_SHA_512_BLOCK_SIZE - 1] = 0x00;
-        }
+        ooo_mgr_hmac_sha512_reset(state->hmac_sha_512_ooo,
+                                  AVX512_NUM_SHA512_LANES);
 
         /* Init HMAC/MD5 out-of-order fields */
         hmac_md5_ooo->lens[0] = 0;

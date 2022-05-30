@@ -52,4 +52,10 @@ void ooo_mgr_hmac_sha224_reset(void *p_ooo_mgr, const unsigned num_lanes);
 IMB_DLL_LOCAL
 void ooo_mgr_hmac_sha256_reset(void *p_ooo_mgr, const unsigned num_lanes);
 
+IMB_DLL_LOCAL
+void ooo_mgr_hmac_sha384_reset(void *p_ooo_mgr, const unsigned num_lanes);
+
+IMB_DLL_LOCAL
+void ooo_mgr_hmac_sha512_reset(void *p_ooo_mgr, const unsigned num_lanes);
+
 #endif /* OOO_MGR_RESET_H */
