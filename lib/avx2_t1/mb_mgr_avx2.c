@@ -355,7 +355,6 @@ reset_ooo_mgrs(IMB_MGR *state)
         unsigned int j;
         uint8_t *p;
         size_t size;
-        MB_MGR_HMAC_SHA_1_OOO *hmac_sha_1_ooo = state->hmac_sha_1_ooo;
         MB_MGR_HMAC_SHA_256_OOO *hmac_sha_224_ooo = state->hmac_sha_224_ooo;
         MB_MGR_HMAC_SHA_256_OOO *hmac_sha_256_ooo = state->hmac_sha_256_ooo;
         MB_MGR_HMAC_SHA_512_OOO *hmac_sha_384_ooo = state->hmac_sha_384_ooo;
@@ -426,29 +425,8 @@ reset_ooo_mgrs(IMB_MGR *state)
         zuc256_eia3_ooo->unused_lane_bitmask = 0xff;
 
         /* Init HMAC/SHA1 out-of-order fields */
-        hmac_sha_1_ooo->lens[0] = 0;
-        hmac_sha_1_ooo->lens[1] = 0;
-        hmac_sha_1_ooo->lens[2] = 0;
-        hmac_sha_1_ooo->lens[3] = 0;
-        hmac_sha_1_ooo->lens[4] = 0;
-        hmac_sha_1_ooo->lens[5] = 0;
-        hmac_sha_1_ooo->lens[6] = 0;
-        hmac_sha_1_ooo->lens[7] = 0;
-        hmac_sha_1_ooo->unused_lanes = 0xF76543210;
-        for (j = 0; j < AVX2_NUM_SHA1_LANES; j++) {
-                hmac_sha_1_ooo->ldata[j].job_in_lane = NULL;
-                hmac_sha_1_ooo->ldata[j].extra_block[64] = 0x80;
-                memset(hmac_sha_1_ooo->ldata[j].extra_block + 65,
-                       0x00,
-                       64 + 7);
-                p = hmac_sha_1_ooo->ldata[j].outer_block;
-                memset(p + 5*4 + 1,
-                       0x00,
-                       64 - 5*4 - 1 - 2);
-                p[5 * 4] = 0x80;
-                p[64 - 2] = 0x02;
-                p[64 - 1] = 0xA0;
-        }
+        ooo_mgr_hmac_sha1_reset(state->hmac_sha_1_ooo, AVX2_NUM_SHA1_LANES);
+
         /* Init HMAC/SHA224 out-of-order fields */
         hmac_sha_224_ooo->lens[0] = 0;
         hmac_sha_224_ooo->lens[1] = 0;
