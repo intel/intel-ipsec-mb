@@ -873,15 +873,8 @@ static IMB_JOB *
 static void
 reset_ooo_mgrs(IMB_MGR *state)
 {
-        MB_MGR_DES_OOO *des_enc_ooo = state->des_enc_ooo;
-        MB_MGR_DES_OOO *des_dec_ooo = state->des_dec_ooo;
-        MB_MGR_DES_OOO *des3_enc_ooo = state->des3_enc_ooo;
-        MB_MGR_DES_OOO *des3_dec_ooo = state->des3_dec_ooo;
-        MB_MGR_DES_OOO *docsis_des_enc_ooo = state->docsis_des_enc_ooo;
-        MB_MGR_DES_OOO *docsis_des_dec_ooo = state->docsis_des_dec_ooo;
         MB_MGR_SNOW3G_OOO *snow3g_uea2_ooo = state->snow3g_uea2_ooo;
         MB_MGR_SNOW3G_OOO *snow3g_uia2_ooo = state->snow3g_uia2_ooo;
-        unsigned j;
 
         /* Init AES out-of-order fields */
         if ((state->features & IMB_FEATURE_VAES) == IMB_FEATURE_VAES) {
@@ -914,61 +907,12 @@ reset_ooo_mgrs(IMB_MGR *state)
         }
 
         /* DES, 3DES and DOCSIS DES (DES CBC + DES CFB for partial block) */
-        /* - separate DES OOO for encryption */
-        for (j = 0; j < AVX512_NUM_DES_LANES; j++) {
-                des_enc_ooo->lens[j] = 0;
-                des_enc_ooo->job_in_lane[j] = NULL;
-        }
-        des_enc_ooo->unused_lanes = 0xFEDCBA9876543210;
-        des_enc_ooo->num_lanes_inuse = 0;
-        memset(&des_enc_ooo->args, 0, sizeof(des_enc_ooo->args));
-
-        /* - separate DES OOO for decryption */
-        for (j = 0; j < AVX512_NUM_DES_LANES; j++) {
-                des_dec_ooo->lens[j] = 0;
-                des_dec_ooo->job_in_lane[j] = NULL;
-        }
-        des_dec_ooo->unused_lanes = 0xFEDCBA9876543210;
-        des_dec_ooo->num_lanes_inuse = 0;
-        memset(&des_dec_ooo->args, 0, sizeof(des_dec_ooo->args));
-
-        /* - separate 3DES OOO for encryption */
-        for (j = 0; j < AVX512_NUM_DES_LANES; j++) {
-                des3_enc_ooo->lens[j] = 0;
-                des3_enc_ooo->job_in_lane[j] = NULL;
-        }
-        des3_enc_ooo->unused_lanes = 0xFEDCBA9876543210;
-        des3_enc_ooo->num_lanes_inuse = 0;
-        memset(&des3_enc_ooo->args, 0, sizeof(des3_enc_ooo->args));
-
-        /* - separate 3DES OOO for decryption */
-        for (j = 0; j < AVX512_NUM_DES_LANES; j++) {
-                des3_dec_ooo->lens[j] = 0;
-                des3_dec_ooo->job_in_lane[j] = NULL;
-        }
-        des3_dec_ooo->unused_lanes = 0xFEDCBA9876543210;
-        des3_dec_ooo->num_lanes_inuse = 0;
-        memset(&des3_dec_ooo->args, 0, sizeof(des3_dec_ooo->args));
-
-        /* - separate DOCSIS DES OOO for encryption */
-        for (j = 0; j < AVX512_NUM_DES_LANES; j++) {
-                docsis_des_enc_ooo->lens[j] = 0;
-                docsis_des_enc_ooo->job_in_lane[j] = NULL;
-        }
-        docsis_des_enc_ooo->unused_lanes = 0xFEDCBA9876543210;
-        docsis_des_enc_ooo->num_lanes_inuse = 0;
-        memset(&docsis_des_enc_ooo->args, 0,
-               sizeof(docsis_des_enc_ooo->args));
-
-        /* - separate DES OOO for decryption */
-        for (j = 0; j < AVX512_NUM_DES_LANES; j++) {
-                docsis_des_dec_ooo->lens[j] = 0;
-                docsis_des_dec_ooo->job_in_lane[j] = NULL;
-        }
-        docsis_des_dec_ooo->unused_lanes = 0xFEDCBA9876543210;
-        docsis_des_dec_ooo->num_lanes_inuse = 0;
-        memset(&docsis_des_dec_ooo->args, 0,
-               sizeof(docsis_des_dec_ooo->args));
+        ooo_mgr_des_reset(state->des_enc_ooo, AVX512_NUM_DES_LANES);
+        ooo_mgr_des_reset(state->des_dec_ooo, AVX512_NUM_DES_LANES);
+        ooo_mgr_des_reset(state->des3_enc_ooo, AVX512_NUM_DES_LANES);
+        ooo_mgr_des_reset(state->des3_dec_ooo, AVX512_NUM_DES_LANES);
+        ooo_mgr_des_reset(state->docsis_des_enc_ooo, AVX512_NUM_DES_LANES);
+        ooo_mgr_des_reset(state->docsis_des_dec_ooo, AVX512_NUM_DES_LANES);
 
         /* Init ZUC out-of-order fields */
         ooo_mgr_zuc_reset(state->zuc_eea3_ooo, 16);

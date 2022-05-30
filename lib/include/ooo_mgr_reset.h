@@ -67,4 +67,7 @@ void ooo_mgr_zuc_reset(void *p_ooo_mgr, const unsigned num_lanes);
 IMB_DLL_LOCAL
 void ooo_mgr_sha1_reset(void *p_ooo_mgr, const unsigned num_lanes);
 
+IMB_DLL_LOCAL
+void ooo_mgr_des_reset(void *p_ooo_mgr, const unsigned num_lanes);
+
 #endif /* OOO_MGR_RESET_H */
