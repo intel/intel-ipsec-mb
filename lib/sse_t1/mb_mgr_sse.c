@@ -558,8 +558,6 @@ reset_ooo_mgrs(IMB_MGR *state)
         MB_MGR_AES_XCBC_OOO *aes_xcbc_ooo = state->aes_xcbc_ooo;
         MB_MGR_CCM_OOO *aes_ccm_ooo = state->aes_ccm_ooo;
         MB_MGR_CCM_OOO *aes256_ccm_ooo = state->aes256_ccm_ooo;
-        MB_MGR_CMAC_OOO *aes_cmac_ooo = state->aes_cmac_ooo;
-	MB_MGR_CMAC_OOO *aes256_cmac_ooo = state->aes256_cmac_ooo;
         MB_MGR_ZUC_OOO *zuc_eea3_ooo = state->zuc_eea3_ooo;
         MB_MGR_ZUC_OOO *zuc_eia3_ooo = state->zuc_eia3_ooo;
         MB_MGR_ZUC_OOO *zuc256_eea3_ooo = state->zuc256_eea3_ooo;
@@ -940,38 +938,24 @@ reset_ooo_mgrs(IMB_MGR *state)
         aes256_ccm_ooo->num_lanes_inuse = 0;
 
         /* Init AES-CMAC auth out-of-order fields */
-        memset(aes_cmac_ooo->init_done, 0,
-               sizeof(aes_cmac_ooo->init_done));
-        memset(aes_cmac_ooo->lens, 0xff,
-               sizeof(aes_cmac_ooo->lens));
-        memset(aes_cmac_ooo->job_in_lane, 0,
-               sizeof(aes_cmac_ooo->job_in_lane));
-        aes_cmac_ooo->num_lanes_inuse = 0;
         if (state->features & IMB_FEATURE_GFNI) {
                 submit_job_aes128_cmac_auth_ptr =
                         submit_job_aes128_cmac_auth_x8_sse;
                 flush_job_aes128_cmac_auth_ptr =
                         flush_job_aes128_cmac_auth_x8_sse;
-                aes_cmac_ooo->unused_lanes = 0xF76543210;
+                ooo_mgr_cmac_reset(state->aes_cmac_ooo, 8);
         } else {
-                aes_cmac_ooo->unused_lanes = 0xF3210;
+                ooo_mgr_cmac_reset(state->aes_cmac_ooo, 4);
         }
 
-	memset(aes256_cmac_ooo->init_done, 0,
-               sizeof(aes256_cmac_ooo->init_done));
-        memset(aes256_cmac_ooo->lens, 0xff,
-               sizeof(aes256_cmac_ooo->lens));
-        memset(aes256_cmac_ooo->job_in_lane, 0,
-               sizeof(aes256_cmac_ooo->job_in_lane));
-        aes256_cmac_ooo->num_lanes_inuse = 0;
         if (state->features & IMB_FEATURE_GFNI) {
                 submit_job_aes256_cmac_auth_ptr =
                         submit_job_aes256_cmac_auth_x8_sse;
                 flush_job_aes256_cmac_auth_ptr =
                         flush_job_aes256_cmac_auth_x8_sse;
-                aes256_cmac_ooo->unused_lanes = 0xF76543210;
+                ooo_mgr_cmac_reset(state->aes256_cmac_ooo, 8);
         } else {
-                aes256_cmac_ooo->unused_lanes = 0xF3210;
+                ooo_mgr_cmac_reset(state->aes256_cmac_ooo, 4);
         }
 
         /* Init AES-CBCS out-of-order fields */
