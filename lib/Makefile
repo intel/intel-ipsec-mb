@@ -879,10 +879,24 @@ ifeq ($(CC_HAS_CET),1)
 	mv $@.tmp $@
 endif
 
-$(OBJ_DIR)/%.o:avx512/%.c
+$(OBJ_DIR)/%.o:avx512_t1/%.c
 	$(CC) -MMD $(OPT_AVX512) -c $(CFLAGS) $< -o $@
 
-$(OBJ_DIR)/%.o:avx512/%.asm
+$(OBJ_DIR)/%.o:avx512_t1/%.asm
+ifeq ($(USE_YASM),y)
+	$(YASM) $(YASM_FLAGS) $< -o $@
+else
+	$(NASM) -MD $(@:.o=.d) -MT $@ -o $@ $(NASM_FLAGS) $<
+endif
+ifeq ($(CC_HAS_CET),1)
+	$(LD) $(CET_LDFLAGS) -o $@.tmp $@
+	mv $@.tmp $@
+endif
+
+$(OBJ_DIR)/%.o:avx512_t2/%.c
+	$(CC) -MMD $(OPT_AVX512) -c $(CFLAGS) $< -o $@
+
+$(OBJ_DIR)/%.o:avx512_t2/%.asm
 ifeq ($(USE_YASM),y)
 	$(YASM) $(YASM_FLAGS) $< -o $@
 else
