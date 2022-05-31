@@ -348,3 +348,33 @@ void ooo_mgr_des_reset(void *p_ooo_mgr, const unsigned num_lanes)
         if (num_lanes == 16)
                 p_mgr->unused_lanes = 0xFEDCBA9876543210;
 }
+
+IMB_DLL_LOCAL
+void ooo_mgr_snow3g_reset(void *p_ooo_mgr, const unsigned num_lanes)
+{
+        MB_MGR_SNOW3G_OOO *p_mgr = (MB_MGR_SNOW3G_OOO *) p_ooo_mgr;
+
+        memset(p_mgr, 0, sizeof(*p_mgr));
+        memset(p_mgr->lens, 0xff, sizeof(p_mgr->lens));
+
+        if (num_lanes == 4) {
+                /*
+                 * lens[0:3]   indicate outstanding bytes after
+                 *             rounding up length to dwords
+                 *             - initialize to 0
+                 * lens[4]     common min length for all lanes in dwords
+                 *             - initialize to 0
+                 * lens[8:11]  keep lengths rounded up to dwords
+                 *             - initialize to UINT32_MAX not to interfere
+                 *               when searching for minimum length
+                 * lens[5:7]   unused
+                 * lens[12:15] unused
+                 */
+                p_mgr->lens[8] = 0xffffffff;
+                p_mgr->lens[9] = 0xffffffff;
+                p_mgr->lens[10] = 0xffffffff;
+                p_mgr->lens[11] = 0xffffffff;
+                p_mgr->unused_lanes = 0x3210;
+        } else if (num_lanes == 16)
+                p_mgr->unused_lanes = 0xFEDCBA9876543210;
+}

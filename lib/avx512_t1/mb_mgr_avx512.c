@@ -873,9 +873,6 @@ static IMB_JOB *
 static void
 reset_ooo_mgrs(IMB_MGR *state)
 {
-        MB_MGR_SNOW3G_OOO *snow3g_uea2_ooo = state->snow3g_uea2_ooo;
-        MB_MGR_SNOW3G_OOO *snow3g_uia2_ooo = state->snow3g_uia2_ooo;
-
         /* Init AES out-of-order fields */
         if ((state->features & IMB_FEATURE_VAES) == IMB_FEATURE_VAES) {
                 /* init 16 lanes */
@@ -977,28 +974,8 @@ reset_ooo_mgrs(IMB_MGR *state)
                 ooo_mgr_aes_reset(state->aes128_cbcs_ooo, 8);
 
         /* Init SNOW3G out-of-order fields */
-        memset(&snow3g_uea2_ooo->args, 0,
-                sizeof(snow3g_uea2_ooo->args));
-        memset(snow3g_uea2_ooo->job_in_lane, 0,
-                sizeof(snow3g_uea2_ooo->job_in_lane));
-        snow3g_uea2_ooo->unused_lanes = 0xFEDCBA9876543210;
-        snow3g_uea2_ooo->num_lanes_inuse = 0;
-        snow3g_uea2_ooo->init_mask = 0;
-        snow3g_uea2_ooo->init_done = 0;
-        memset(snow3g_uea2_ooo->lens, 0xff,
-                sizeof(snow3g_uea2_ooo->lens));
-        memset(&snow3g_uia2_ooo->args, 0,
-                sizeof(snow3g_uia2_ooo->args));
-        memset(snow3g_uia2_ooo->job_in_lane, 0,
-                sizeof(snow3g_uia2_ooo->job_in_lane));
-        memset(snow3g_uia2_ooo->ks, 0,
-                sizeof(snow3g_uia2_ooo->ks));
-        snow3g_uia2_ooo->unused_lanes = 0xFEDCBA9876543210;
-        snow3g_uia2_ooo->num_lanes_inuse = 0;
-        snow3g_uia2_ooo->init_mask = 0;
-        snow3g_uia2_ooo->init_done = 0;
-        memset(snow3g_uia2_ooo->lens, 0,
-                sizeof(snow3g_uia2_ooo->lens));
+        ooo_mgr_snow3g_reset(state->snow3g_uea2_ooo, 16);
+        ooo_mgr_snow3g_reset(state->snow3g_uia2_ooo, 16);
 
         /* Init SHA1 out-of-order fields */
         ooo_mgr_sha1_reset(state->sha_1_ooo, 16);

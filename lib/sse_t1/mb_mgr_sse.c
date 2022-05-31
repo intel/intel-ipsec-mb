@@ -546,8 +546,6 @@ static IMB_JOB *
 static void
 reset_ooo_mgrs(IMB_MGR *state)
 {
-        MB_MGR_SNOW3G_OOO *snow3g_uea2_ooo = state->snow3g_uea2_ooo;
-
         /* Init AES out-of-order fields */
         if (state->features & IMB_FEATURE_GFNI) {
                 ooo_mgr_aes_reset(state->aes128_ooo, 8);
@@ -705,30 +703,7 @@ reset_ooo_mgrs(IMB_MGR *state)
         ooo_mgr_sha1_reset(state->sha_1_ooo, 4);
 
         /* Init SNOW3G-UEA out-of-order fields */
-        memset(&snow3g_uea2_ooo->args, 0, sizeof(snow3g_uea2_ooo->args));
-        memset(snow3g_uea2_ooo->job_in_lane, 0,
-               sizeof(snow3g_uea2_ooo->job_in_lane));
-        snow3g_uea2_ooo->unused_lanes = 0x3210;
-        snow3g_uea2_ooo->num_lanes_inuse = 0;
-        /*
-         * lens[0:3] are used to indicate outstanding bytes after rounding
-         *           up length to dwords
-         * lens[4] is used for common min length for all lanes in dwords
-         * lens[8:11] are used for keeping lengths rounded up to dwords
-         * lens [5:7], [12:15] are unused
-         */
-        snow3g_uea2_ooo->lens[0]=0;
-        snow3g_uea2_ooo->lens[1]=0;
-        snow3g_uea2_ooo->lens[2]=0;
-        snow3g_uea2_ooo->lens[3]=0;
-        /*
-         * Dwords rounded lengths need to be initialized to max length not to
-         * interfere when searching for minimum length.
-         */
-        snow3g_uea2_ooo->lens[8]=0xffffffff;
-        snow3g_uea2_ooo->lens[9]=0xffffffff;
-        snow3g_uea2_ooo->lens[10]=0xffffffff;
-        snow3g_uea2_ooo->lens[11]=0xffffffff;
+        ooo_mgr_snow3g_reset(state->snow3g_uea2_ooo, 4);
 }
 
 IMB_DLL_LOCAL void
