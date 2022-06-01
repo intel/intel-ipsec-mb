@@ -31,6 +31,7 @@
 
 %include "include/os.asm"
 %include "include/clear_regs.asm"
+%include "include/cet.inc"
 
 %define CONCAT(a,b) a %+ b
 %define VMOVDQ vmovdqu
@@ -215,7 +216,7 @@ mksection .text
 
 MKGLOBAL(AES_CBC_DEC_128_X8,function,internal)
 AES_CBC_DEC_128_X8:
-
+        endbranch64
 %ifndef LINUX
 	mov	num_bytes, [rsp + 8*5]
 %else

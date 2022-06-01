@@ -89,6 +89,7 @@ endstruc
 ; arg 2 : job
 MKGLOBAL(SUBMIT_JOB_AES_ENC,function,internal)
 SUBMIT_JOB_AES_ENC:
+        endbranch64
 
         mov	rax, rsp
         sub	rsp, STACK_size

@@ -116,6 +116,7 @@ endstruc
 ; arg 2 : job
 MKGLOBAL(FLUSH_JOB_AES_ENC,function,internal)
 FLUSH_JOB_AES_ENC:
+        endbranch64
 
         mov	rax, rsp
         sub	rsp, STACK_size
