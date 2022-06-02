@@ -40,3 +40,7 @@
 #define CLEAR_SCRATCH_SIMD_REGS clear_scratch_xmms_sse
 
 #include "include/snow3g_common.h"
+#include "include/ipsec_ooo_mgr.h"
+
+IMB_DLL_LOCAL void submit_job_snow3g_uea2_sse(MB_MGR_SNOW3G_OOO *, IMB_JOB *);
+IMB_DLL_LOCAL void flush_job_snow3g_uea2_sse(MB_MGR_SNOW3G_OOO);

@@ -39,6 +39,7 @@
 #include "include/snow3g.h"
 #include "include/gcm.h"
 #include "include/chacha20_poly1305.h"
+#include "include/snow3g_submit.h"
 
 #include "include/save_xmms.h"
 #include "include/asm.h"
@@ -212,6 +213,9 @@ IMB_JOB *submit_job_chacha20_enc_dec_sse(IMB_JOB *job);
 IMB_JOB *snow_v_sse(IMB_JOB *job);
 IMB_JOB *snow_v_aead_init_sse(IMB_JOB *job);
 
+IMB_JOB *submit_job_snow3g_uea2_sse(MB_MGR_SNOW3G_OOO *state, IMB_JOB *job);
+IMB_JOB *flush_job_snow3g_uea2_sse(MB_MGR_SNOW3G_OOO *state);
+
 void *poly1305_mac_scalar(IMB_JOB *job);
 
 #define SAVE_XMMS               save_xmms
@@ -365,6 +369,9 @@ void *poly1305_mac_scalar(IMB_JOB *job);
 
 #define SUBMIT_JOB_SNOW_V snow_v_sse
 #define SUBMIT_JOB_SNOW_V_AEAD snow_v_aead_init_sse
+
+#define SUBMIT_JOB_SNOW3G_UEA2 submit_snow3g_uea2_job_sse
+#define FLUSH_JOB_SNOW3G_UEA2  flush_snow3g_uea2_job_sse
 
 /* ====================================================================== */
 
@@ -595,6 +602,26 @@ submit_job_aes_gcm_enc_sse(IMB_MGR *state, IMB_JOB *job)
         return job;
 }
 
+static IMB_JOB *
+submit_snow3g_uea2_job_sse(IMB_MGR *state, IMB_JOB *job)
+{
+        MB_MGR_SNOW3G_OOO *snow3g_uea2_ooo = state->snow3g_uea2_ooo;
+
+        if ((job->msg_len_to_cipher_in_bits & 7) ||
+            (job->cipher_start_offset_in_bits & 7))
+                return def_submit_snow3g_uea2_job(state, job);
+
+        return submit_job_snow3g_uea2_sse(snow3g_uea2_ooo, job);
+}
+
+static IMB_JOB *
+flush_snow3g_uea2_job_sse(IMB_MGR *state)
+{
+        MB_MGR_SNOW3G_OOO *snow3g_uea2_ooo = state->snow3g_uea2_ooo;
+
+        return flush_job_snow3g_uea2_sse(snow3g_uea2_ooo);
+}
+
 IMB_DLL_LOCAL IMB_JOB *
 submit_job_aes_cntr_sse(IMB_JOB *job)
 {
@@ -727,6 +754,7 @@ reset_ooo_mgrs(IMB_MGR *state)
         MB_MGR_AES_OOO *aes128_cbcs_ooo = state->aes128_cbcs_ooo;
         MB_MGR_ZUC_OOO *zuc256_eia3_ooo = state->zuc256_eia3_ooo;
         MB_MGR_SHA_1_OOO *sha_1_ooo = state->sha_1_ooo;
+        MB_MGR_SNOW3G_OOO *snow3g_uea2_ooo = state->snow3g_uea2_ooo;
 
         /* Init AES out-of-order fields */
         memset(aes128_ooo->lens, 0xFF, sizeof(aes128_ooo->lens));
@@ -1191,6 +1219,32 @@ reset_ooo_mgrs(IMB_MGR *state)
         sha_1_ooo->num_lanes_inuse = 0;
         for (j = 0; j < SSE_NUM_SHA1_LANES; j++)
                 sha_1_ooo->ldata[j].job_in_lane = NULL;
+
+        /* Init SNOW3G-UEA out-of-order fields */
+        memset(&snow3g_uea2_ooo->args, 0, sizeof(snow3g_uea2_ooo->args));
+        memset(snow3g_uea2_ooo->job_in_lane, 0,
+               sizeof(snow3g_uea2_ooo->job_in_lane));
+        snow3g_uea2_ooo->unused_lanes = 0x3210;
+        snow3g_uea2_ooo->num_lanes_inuse = 0;
+        /*
+         * lens[0:3] are used to indicate outstanding bytes after rounding
+         *           up length to dwords
+         * lens[4] is used for common min length for all lanes in dwords
+         * lens[8:11] are used for keeping lengths rounded up to dwords
+         * lens [5:7], [12:15] are unused
+         */
+        snow3g_uea2_ooo->lens[0]=0;
+        snow3g_uea2_ooo->lens[1]=0;
+        snow3g_uea2_ooo->lens[2]=0;
+        snow3g_uea2_ooo->lens[3]=0;
+        /*
+         * Dwords rounded lengths need to be initialized to max length not to
+         * interfere when searching for minimum length.
+         */
+        snow3g_uea2_ooo->lens[8]=0xffffffff;
+        snow3g_uea2_ooo->lens[9]=0xffffffff;
+        snow3g_uea2_ooo->lens[10]=0xffffffff;
+        snow3g_uea2_ooo->lens[11]=0xffffffff;
 }
 
 IMB_DLL_LOCAL void

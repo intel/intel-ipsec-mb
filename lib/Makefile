@@ -452,6 +452,7 @@ asm_sse_lib_objs := \
 	mb_mgr_hmac_sha256_submit_ni_sse.o \
 	mb_mgr_zuc_submit_flush_sse.o \
 	mb_mgr_zuc_submit_flush_gfni_sse.o \
+	mb_mgr_snow3g_uea2_submit_flush_x4_sse.o \
 	ethernet_fcs_sse.o \
 	crc16_x25_sse.o \
 	crc32_sctp_sse.o \
@@ -464,7 +465,7 @@ asm_sse_lib_objs := \
 	crc32_iuup_sse.o \
 	crc32_wimax_sse.o \
 	chacha20_sse.o \
-        memcpy_sse.o \
+	memcpy_sse.o \
 	snow_v_sse.o \
 	snow3g_uia2_by4_sse.o
 
