@@ -1809,8 +1809,8 @@ IMB_DLL_EXPORT void init_mb_mgr_auto(IMB_MGR *state, IMB_ARCH *arch);
  * KASUMI F9 key schedule init function.
  *
  * @param[in]  _mgr      Pointer to multi-buffer structure
- * @param[in]  _exp_key  Integrity key (expected in LE format)
- * @param[out] _ctx      Key schedule context to be initialised
+ * @param[in]  _key      Integrity key (expected in LE format)
+ * @param[out] _exp_key  Key schedule context to be initialised
  * @return 0 on success, -1 on failure
  *
  ******************************************************************************/
