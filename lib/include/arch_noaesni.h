@@ -163,8 +163,6 @@ IMB_JOB *submit_job_aes128_cbcs_1_9_enc_sse_no_aesni(MB_MGR_AES_OOO *state,
                                                      IMB_JOB *job);
 IMB_JOB *flush_job_aes128_cbcs_1_9_enc_sse_no_aesni(MB_MGR_AES_OOO *state);
 
-void *poly1305_mac_scalar(IMB_JOB *job);
-
 IMB_JOB *snow_v_sse_no_aesni(IMB_JOB *job);
 IMB_JOB *snow_v_aead_init_sse_no_aesni(IMB_JOB *job);
 

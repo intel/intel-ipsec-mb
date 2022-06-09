@@ -29,6 +29,7 @@
 #define IMB_CHACHA20POLY1305_H
 
 #include "intel-ipsec-mb.h"
+#include "include/arch_x86_64.h"
 
 /* new internal API's */
 IMB_JOB *aead_chacha20_poly1305_sse(IMB_MGR *mgr, IMB_JOB *job);
@@ -67,11 +68,6 @@ IMB_JOB *submit_job_chacha20_poly_enc_sse(IMB_JOB *, void *poly_key);
 
 void poly1305_key_gen_sse(const void *key, const void *iv, void *poly_key);
 void poly1305_key_gen_avx(const void *key, const void *iv, void *poly_key);
-
-void poly1305_aead_update_scalar(const void *msg, const uint64_t msg_len,
-                                 void *hash, const void *key);
-void poly1305_aead_complete_scalar(const void *hash, const void *key,
-                                   void *tag);
 
 void poly1305_aead_update_avx512(const void *msg, const uint64_t msg_len,
                                  void *hash, const void *key);
