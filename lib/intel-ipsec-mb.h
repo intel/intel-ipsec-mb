@@ -1422,26 +1422,111 @@ IMB_DLL_EXPORT void init_mb_mgr_auto(IMB_MGR *state, IMB_ARCH *arch);
         ((_mgr)->des_key_sched((_exp_key), (_key)))
 
 /* Hash API's */
+
+/**
+ * Authenticate 64-byte data buffer with SHA1.
+ *
+ * @param[in] _mgr    Pointer to multi-buffer structure
+ * @param[in] _src    64-byte data buffer
+ * @param[out] _tag   Digest output (20 bytes)
+ */
 #define IMB_SHA1_ONE_BLOCK(_mgr, _src, _tag)        \
         ((_mgr)->sha1_one_block((_src), (_tag)))
+
+/**
+ * Authenticate variable sized data with SHA1.
+ *
+ * @param[in] _mgr    Pointer to multi-buffer structure
+ * @param[in] _src    Data buffer
+ * @param[in] _length Length of data in bytes for authentication.
+ * @param[out] _tag   Digest output (20 bytes)
+ */
 #define IMB_SHA1(_mgr, _src, _length, _tag)         \
         ((_mgr)->sha1((_src), (_length), (_tag)))
+/**
+ * Authenticate 64-byte data buffer with SHA224.
+ *
+ * @param[in] _mgr    Pointer to multi-buffer structure
+ * @param[in] _src    64-byte data buffer
+ * @param[out] _tag   Digest output (28 bytes)
+ */
 #define IMB_SHA224_ONE_BLOCK(_mgr, _src, _tag)      \
         ((_mgr)->sha224_one_block((_src), (_tag)))
+
+/**
+ * Authenticate variable sized data with SHA224.
+ *
+ * @param[in] _mgr    Pointer to multi-buffer structure
+ * @param[in] _src    Data buffer
+ * @param[in] _length Length of data in bytes for authentication.
+ * @param[out] _tag   Digest output (28 bytes)
+ */
 #define IMB_SHA224(_mgr, _src, _length, _tag)       \
         ((_mgr)->sha224((_src), (_length), (_tag)))
+/**
+ * Authenticate 64-byte data buffer with SHA256.
+ *
+ * @param[in] _mgr    Pointer to multi-buffer structure
+ * @param[in] _src    64-byte data buffer
+ * @param[out] _tag   Digest output (32 bytes)
+ */
 #define IMB_SHA256_ONE_BLOCK(_mgr, _src, _tag)      \
         ((_mgr)->sha256_one_block((_src), (_tag)))
+/**
+ * Authenticate variable sized data with SHA256.
+ *
+ * @param[in] _mgr    Pointer to multi-buffer structure
+ * @param[in] _src    Data buffer
+ * @param[in] _length Length of data in bytes for authentication.
+ * @param[out] _tag   Digest output (32 bytes)
+ */
 #define IMB_SHA256(_mgr, _src, _length, _tag)       \
         ((_mgr)->sha256((_src), (_length), (_tag)))
+/**
+ * Authenticate 128-byte data buffer with SHA384.
+ *
+ * @param[in] _mgr    Pointer to multi-buffer structure
+ * @param[in] _src    128-byte data buffer
+ * @param[out] _tag   Digest output (48 bytes)
+ */
 #define IMB_SHA384_ONE_BLOCK(_mgr, _src, _tag)      \
         ((_mgr)->sha384_one_block((_src), (_tag)))
+/**
+ * Authenticate variable sized data with SHA384.
+ *
+ * @param[in] _mgr    Pointer to multi-buffer structure
+ * @param[in] _src    Data buffer
+ * @param[in] _length Length of data in bytes for authentication.
+ * @param[out] _tag   Digest output (48 bytes)
+ */
 #define IMB_SHA384(_mgr, _src, _length, _tag)       \
         ((_mgr)->sha384((_src), (_length), (_tag)))
+/**
+ * Authenticate 128-byte data buffer with SHA512.
+ *
+ * @param[in] _mgr    Pointer to multi-buffer structure
+ * @param[in] _src    128-byte data buffer
+ * @param[out] _tag   Digest output (64 bytes)
+ */
 #define IMB_SHA512_ONE_BLOCK(_mgr, _src, _tag)      \
         ((_mgr)->sha512_one_block((_src), (_tag)))
+/**
+ * Authenticate variable sized data with SHA512.
+ *
+ * @param[in] _mgr    Pointer to multi-buffer structure
+ * @param[in] _src    Data buffer
+ * @param[in] _length Length of data in bytes for authentication.
+ * @param[out] _tag   Digest output (20 bytes)
+ */
 #define IMB_SHA512(_mgr, _src, _length, _tag)       \
         ((_mgr)->sha512((_src), (_length), (_tag)))
+/**
+ * Authenticate 64-byte data buffer with MD5.
+ *
+ * @param[in] _mgr    Pointer to multi-buffer structure
+ * @param[in] _src    64-byte data buffer
+ * @param[out] _tag   Digest output (16 bytes)
+ */
 #define IMB_MD5_ONE_BLOCK(_mgr, _src, _tag)         \
         ((_mgr)->md5_one_block((_src), (_tag)))
 
@@ -2179,23 +2264,253 @@ IMB_DLL_EXPORT void init_mb_mgr_auto(IMB_MGR *state, IMB_ARCH *arch);
 IMB_DLL_EXPORT int
 des_key_schedule(uint64_t *ks, const void *key);
 
-/* SSE */
+/**
+ * Authenticate variable sized data with SHA1.
+ *
+ * @param[in] data    Data buffer
+ * @param[in] length  Length of data in bytes for authentication.
+ * @param[out] digest Digest output (20 bytes)
+ */
 IMB_DLL_EXPORT void sha1_sse(const void *data, const uint64_t length,
                              void *digest);
+
+/**
+ * @copydoc sha1_sse
+ */
+IMB_DLL_EXPORT void sha1_avx(const void *data, const uint64_t length,
+                             void *digest);
+/**
+ * @copydoc sha1_sse
+ */
+IMB_DLL_EXPORT void sha1_avx2(const void *data, const uint64_t length,
+                              void *digest);
+/**
+ * @copydoc sha1_sse
+ */
+IMB_DLL_EXPORT void sha1_avx512(const void *data, const uint64_t length,
+                                 void *digest);
+
+/**
+ * Authenticate 64-byte data buffer with SHA1.
+ *
+ * @param[in] data    64-byte data buffer
+ * @param[out] digest Digest output (20 bytes)
+ */
 IMB_DLL_EXPORT void sha1_one_block_sse(const void *data, void *digest);
+/**
+ * @copydoc sha1_one_block_sse
+ */
+IMB_DLL_EXPORT void sha1_one_block_avx(const void *data, void *digest);
+/**
+ * @copydoc sha1_one_block_sse
+ */
+IMB_DLL_EXPORT void sha1_one_block_avx2(const void *data, void *digest);
+/**
+ * @copydoc sha1_one_block_sse
+ */
+IMB_DLL_EXPORT void sha1_one_block_avx512(const void *data, void *digest);
+
+/**
+ * Authenticate variable sized data with SHA224.
+ *
+ * @param[in] data    Data buffer
+ * @param[in] length  Length of data in bytes for authentication.
+ * @param[out] digest Digest output (28 bytes)
+ */
 IMB_DLL_EXPORT void sha224_sse(const void *data, const uint64_t length,
                                void *digest);
+/**
+ * @copydoc sha224_sse
+ */
+IMB_DLL_EXPORT void sha224_avx(const void *data, const uint64_t length,
+                               void *digest);
+/**
+ * @copydoc sha224_sse
+ */
+IMB_DLL_EXPORT void sha224_avx2(const void *data, const uint64_t length,
+                                void *digest);
+/**
+ * @copydoc sha224_sse
+ */
+IMB_DLL_EXPORT void sha224_avx512(const void *data, const uint64_t length,
+                                  void *digest);
+
+/**
+ * Authenticate 64-byte data buffer with SHA224.
+ *
+ * @param[in] data    64-byte data buffer
+ * @param[out] digest Digest output (28 bytes)
+ */
 IMB_DLL_EXPORT void sha224_one_block_sse(const void *data, void *digest);
+/**
+ * @copydoc sha224_one_block_sse
+ */
+IMB_DLL_EXPORT void sha224_one_block_avx(const void *data, void *digest);
+/**
+ * @copydoc sha224_one_block_sse
+ */
+IMB_DLL_EXPORT void sha224_one_block_avx2(const void *data, void *digest);
+/**
+ * @copydoc sha224_one_block_sse
+ */
+IMB_DLL_EXPORT void sha224_one_block_avx512(const void *data, void *digest);
+
+/**
+ * Authenticate variable sized data with SHA256.
+ *
+ * @param[in] data    Data buffer
+ * @param[in] length  Length of data in bytes for authentication.
+ * @param[out] digest Digest output (32 bytes)
+ */
 IMB_DLL_EXPORT void sha256_sse(const void *data, const uint64_t length,
                                void *digest);
+/**
+ * @copydoc sha256_sse
+ */
+IMB_DLL_EXPORT void sha256_avx(const void *data, const uint64_t length,
+                               void *digest);
+/**
+ * @copydoc sha256_sse
+ */
+IMB_DLL_EXPORT void sha256_avx2(const void *data, const uint64_t length,
+                                void *digest);
+/**
+ * @copydoc sha256_sse
+ */
+IMB_DLL_EXPORT void sha256_avx512(const void *data, const uint64_t length,
+                                  void *digest);
+
+/**
+ * Authenticate 64-byte data buffer with SHA256.
+ *
+ * @param[in] data    64-byte data buffer
+ * @param[out] digest Digest output (32 bytes)
+ */
 IMB_DLL_EXPORT void sha256_one_block_sse(const void *data, void *digest);
+/**
+ * @copydoc sha256_one_block_sse
+ */
+IMB_DLL_EXPORT void sha256_one_block_avx(const void *data, void *digest);
+/**
+ * @copydoc sha256_one_block_sse
+ */
+IMB_DLL_EXPORT void sha256_one_block_avx2(const void *data, void *digest);
+/**
+ * @copydoc sha256_one_block_sse
+ */
+IMB_DLL_EXPORT void sha256_one_block_avx512(const void *data, void *digest);
+
+/**
+ * Authenticate variable sized data with SHA384.
+ *
+ * @param[in] data    Data buffer
+ * @param[in] length  Length of data in bytes for authentication.
+ * @param[out] digest Digest output (48 bytes)
+ */
 IMB_DLL_EXPORT void sha384_sse(const void *data, const uint64_t length,
                                void *digest);
+/**
+ * @copydoc sha384_sse
+ */
+IMB_DLL_EXPORT void sha384_avx(const void *data, const uint64_t length,
+                               void *digest);
+/**
+ * @copydoc sha384_sse
+ */
+IMB_DLL_EXPORT void sha384_avx2(const void *data, const uint64_t length,
+                                void *digest);
+/**
+ * @copydoc sha384_sse
+ */
+IMB_DLL_EXPORT void sha384_avx512(const void *data, const uint64_t length,
+                                  void *digest);
+
+/**
+ * Authenticate 128-byte data buffer with SHA384.
+ *
+ * @param[in] data    64-byte data buffer
+ * @param[out] digest Digest output (48 bytes)
+ */
 IMB_DLL_EXPORT void sha384_one_block_sse(const void *data, void *digest);
+/**
+ * @copydoc sha384_one_block_sse
+ */
+IMB_DLL_EXPORT void sha384_one_block_avx(const void *data, void *digest);
+/**
+ * @copydoc sha384_one_block_sse
+ */
+IMB_DLL_EXPORT void sha384_one_block_avx2(const void *data, void *digest);
+/**
+ * @copydoc sha384_one_block_sse
+ */
+IMB_DLL_EXPORT void sha384_one_block_avx512(const void *data, void *digest);
+
+/**
+ * Authenticate variable sized data with SHA512.
+ *
+ * @param[in] data    Data buffer
+ * @param[in] length  Length of data in bytes for authentication.
+ * @param[out] digest Digest output (64 bytes)
+ */
 IMB_DLL_EXPORT void sha512_sse(const void *data, const uint64_t length,
                                void *digest);
+/**
+ * @copydoc sha512_sse
+ */
+IMB_DLL_EXPORT void sha512_avx(const void *data, const uint64_t length,
+                               void *digest);
+/**
+ * @copydoc sha512_sse
+ */
+IMB_DLL_EXPORT void sha512_avx2(const void *data, const uint64_t length,
+                                void *digest);
+/**
+ * @copydoc sha512_sse
+ */
+IMB_DLL_EXPORT void sha512_avx512(const void *data, const uint64_t length,
+                                  void *digest);
+
+/**
+ * Authenticate 64-byte data buffer with SHA512.
+ *
+ * @param[in] data    128-byte data buffer
+ * @param[out] digest Digest output (64 bytes)
+ */
 IMB_DLL_EXPORT void sha512_one_block_sse(const void *data, void *digest);
+/**
+ * @copydoc sha512_one_block_sse
+ */
+IMB_DLL_EXPORT void sha512_one_block_avx(const void *data, void *digest);
+/**
+ * @copydoc sha512_one_block_sse
+ */
+IMB_DLL_EXPORT void sha512_one_block_avx2(const void *data, void *digest);
+/**
+ * @copydoc sha512_one_block_sse
+ */
+IMB_DLL_EXPORT void sha512_one_block_avx512(const void *data, void *digest);
+
+/**
+ * Authenticate 64-byte data buffer with MD5.
+ *
+ * @param[in] data    64-byte data buffer
+ * @param[out] digest Digest output (16 bytes)
+ */
 IMB_DLL_EXPORT void md5_one_block_sse(const void *data, void *digest);
+/**
+ * @copydoc md5_one_block_sse
+ */
+IMB_DLL_EXPORT void md5_one_block_avx(const void *data, void *digest);
+/**
+ * @copydoc md5_one_block_sse
+ */
+IMB_DLL_EXPORT void md5_one_block_avx2(const void *data, void *digest);
+/**
+ * @copydoc md5_one_block_sse
+ */
+IMB_DLL_EXPORT void md5_one_block_avx512(const void *data, void *digest);
+
+
 IMB_DLL_EXPORT void aes_keyexp_128_sse(const void *key, void *enc_exp_keys,
                                        void *dec_exp_keys);
 IMB_DLL_EXPORT void aes_keyexp_192_sse(const void *key, void *enc_exp_keys,
@@ -2215,23 +2530,6 @@ IMB_DLL_EXPORT void aes_cmac_subkey_gen_sse(const void *key_exp, void *key1,
 IMB_DLL_EXPORT void aes_cfb_128_one_sse(void *out, const void *in,
                                         const void *iv, const void *keys,
                                         uint64_t len);
-/* AVX */
-IMB_DLL_EXPORT void sha1_avx(const void *data, const uint64_t length,
-                             void *digest);
-IMB_DLL_EXPORT void sha1_one_block_avx(const void *data, void *digest);
-IMB_DLL_EXPORT void sha224_avx(const void *data, const uint64_t length,
-                               void *digest);
-IMB_DLL_EXPORT void sha224_one_block_avx(const void *data, void *digest);
-IMB_DLL_EXPORT void sha256_avx(const void *data, const uint64_t length,
-                               void *digest);
-IMB_DLL_EXPORT void sha256_one_block_avx(const void *data, void *digest);
-IMB_DLL_EXPORT void sha384_avx(const void *data, const uint64_t length,
-                               void *digest);
-IMB_DLL_EXPORT void sha384_one_block_avx(const void *data, void *digest);
-IMB_DLL_EXPORT void sha512_avx(const void *data, const uint64_t length,
-                               void *digest);
-IMB_DLL_EXPORT void sha512_one_block_avx(const void *data, void *digest);
-IMB_DLL_EXPORT void md5_one_block_avx(const void *data, void *digest);
 IMB_DLL_EXPORT void aes_keyexp_128_avx(const void *key, void *enc_exp_keys,
                                        void *dec_exp_keys);
 IMB_DLL_EXPORT void aes_keyexp_192_avx(const void *key, void *enc_exp_keys,
@@ -2251,23 +2549,6 @@ IMB_DLL_EXPORT void aes_cmac_subkey_gen_avx(const void *key_exp, void *key1,
 IMB_DLL_EXPORT void aes_cfb_128_one_avx(void *out, const void *in,
                                         const void *iv, const void *keys,
                                         uint64_t len);
-/* AVX2 */
-IMB_DLL_EXPORT void sha1_avx2(const void *data, const uint64_t length,
-                              void *digest);
-IMB_DLL_EXPORT void sha1_one_block_avx2(const void *data, void *digest);
-IMB_DLL_EXPORT void sha224_avx2(const void *data, const uint64_t length,
-                                void *digest);
-IMB_DLL_EXPORT void sha224_one_block_avx2(const void *data, void *digest);
-IMB_DLL_EXPORT void sha256_avx2(const void *data, const uint64_t length,
-                                void *digest);
-IMB_DLL_EXPORT void sha256_one_block_avx2(const void *data, void *digest);
-IMB_DLL_EXPORT void sha384_avx2(const void *data, const uint64_t length,
-                                void *digest);
-IMB_DLL_EXPORT void sha384_one_block_avx2(const void *data, void *digest);
-IMB_DLL_EXPORT void sha512_avx2(const void *data, const uint64_t length,
-                                void *digest);
-IMB_DLL_EXPORT void sha512_one_block_avx2(const void *data, void *digest);
-IMB_DLL_EXPORT void md5_one_block_avx2(const void *data, void *digest);
 IMB_DLL_EXPORT void aes_keyexp_128_avx2(const void *key, void *enc_exp_keys,
                                         void *dec_exp_keys);
 IMB_DLL_EXPORT void aes_keyexp_192_avx2(const void *key, void *enc_exp_keys,
@@ -2288,23 +2569,6 @@ IMB_DLL_EXPORT void aes_cfb_128_one_avx2(void *out, const void *in,
                                          const void *iv, const void *keys,
                                          uint64_t len);
 
-/* AVX512 */
-IMB_DLL_EXPORT void sha1_avx512(const void *data, const uint64_t length,
-                                 void *digest);
-IMB_DLL_EXPORT void sha1_one_block_avx512(const void *data, void *digest);
-IMB_DLL_EXPORT void sha224_avx512(const void *data, const uint64_t length,
-                                  void *digest);
-IMB_DLL_EXPORT void sha224_one_block_avx512(const void *data, void *digest);
-IMB_DLL_EXPORT void sha256_avx512(const void *data, const uint64_t length,
-                                  void *digest);
-IMB_DLL_EXPORT void sha256_one_block_avx512(const void *data, void *digest);
-IMB_DLL_EXPORT void sha384_avx512(const void *data, const uint64_t length,
-                                  void *digest);
-IMB_DLL_EXPORT void sha384_one_block_avx512(const void *data, void *digest);
-IMB_DLL_EXPORT void sha512_avx512(const void *data, const uint64_t length,
-                                  void *digest);
-IMB_DLL_EXPORT void sha512_one_block_avx512(const void *data, void *digest);
-IMB_DLL_EXPORT void md5_one_block_avx512(const void *data, void *digest);
 IMB_DLL_EXPORT void aes_keyexp_128_avx512(const void *key, void *enc_exp_keys,
                                           void *dec_exp_keys);
 IMB_DLL_EXPORT void aes_keyexp_192_avx512(const void *key, void *enc_exp_keys,
