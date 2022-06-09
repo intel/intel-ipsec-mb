@@ -1402,19 +1402,69 @@ IMB_DLL_EXPORT void init_mb_mgr_auto(IMB_MGR *state, IMB_ARCH *arch);
         ((_mgr)->submit_hash_burst_nocheck((_mgr), (_jobs), (_n_jobs), (_hash)))
 
 /* Key expansion and generation API's */
+
+/**
+ * Generate encryption/decryption AES-128 expansion keys.
+ *
+ * @param[in] _mgr          Pointer to multi-buffer structure
+ * @param[in] _key          AES-128 key
+ * @param[out] _enc_exp_key AES-128 encryption expansion key
+ * @param[out] _dec_exp_key AES-128 decryption expansion key
+ */
 #define IMB_AES_KEYEXP_128(_mgr, _key, _enc_exp_key, _dec_exp_key)      \
         ((_mgr)->keyexp_128((_key), (_enc_exp_key), (_dec_exp_key)))
+/**
+ * Generate encryption/decryption AES-192 expansion keys.
+ *
+ * @param[in] _mgr          Pointer to multi-buffer structure
+ * @param[in] _key          AES-192 key
+ * @param[out] _enc_exp_key AES-192 encryption expansion key
+ * @param[out] _dec_exp_key AES-192 decryption expansion key
+ */
 #define IMB_AES_KEYEXP_192(_mgr, _key, _enc_exp_key, _dec_exp_key)      \
         ((_mgr)->keyexp_192((_key), (_enc_exp_key), (_dec_exp_key)))
+/**
+ * Generate encryption/decryption AES-256 expansion keys.
+ *
+ * @param[in] _mgr          Pointer to multi-buffer structure
+ * @param[in] _key          AES-256 key
+ * @param[out] _enc_exp_key AES-256 encryption expansion key
+ * @param[out] _dec_exp_key AES-256 decryption expansion key
+ */
 #define IMB_AES_KEYEXP_256(_mgr, _key, _enc_exp_key, _dec_exp_key)      \
         ((_mgr)->keyexp_256((_key), (_enc_exp_key), (_dec_exp_key)))
 
+/**
+ * Generate AES-128-CMAC subkeys.
+ *
+ * @param[in] _mgr         Pointer to multi-buffer structure
+ * @param[in] _exp_key     Input expanded AES-128-CMAC key
+ * @param[out] _key1       Subkey 1
+ * @param[out] _key2       Subkey 2
+ */
 #define IMB_AES_CMAC_SUBKEY_GEN_128(_mgr, _exp_key, _key1, _key2)   \
         ((_mgr)->cmac_subkey_gen_128((_exp_key), (_key1), (_key2)))
 
+/**
+ * Generate AES-256-CMAC subkeys.
+ *
+ * @param[in] _mgr         Pointer to multi-buffer structure
+ * @param[in] _exp_key     Input expanded AES-256-CMAC key
+ * @param[out] _key1       Subkey 1
+ * @param[out] _key2       Subkey 2
+ */
 #define IMB_AES_CMAC_SUBKEY_GEN_256(_mgr, _exp_key, _key1, _key2)   \
         ((_mgr)->cmac_subkey_gen_256((_exp_key), (_key1), (_key2)))
 
+/**
+ * Generate AES-128-XCBC expansion keys.
+ *
+ * @param[in] _mgr         Pointer to multi-buffer structure
+ * @param[in] _key         AES-128-XCBC key
+ * @param[out] _exp_key    k1 expansion key
+ * @param[out] _exp_key2   k2 expansion key
+ * @param[out] _exp_key3   k3 expansion key
+ */
 #define IMB_AES_XCBC_KEYEXP(_mgr, _key, _exp_key, _exp_key2, _exp_key3) \
         ((_mgr)->xcbc_keyexp((_key), (_exp_key), (_exp_key2), (_exp_key3)))
 
@@ -2511,80 +2561,213 @@ IMB_DLL_EXPORT void md5_one_block_avx2(const void *data, void *digest);
 IMB_DLL_EXPORT void md5_one_block_avx512(const void *data, void *digest);
 
 
+/**
+ * Generate encryption/decryption AES-128 expansion keys.
+ *
+ * @param[in] key           AES-128 key
+ * @param[out] enc_exp_keys AES-128 encryption expansion key
+ * @param[out] dec_exp_keys AES-128 decryption expansion key
+ */
 IMB_DLL_EXPORT void aes_keyexp_128_sse(const void *key, void *enc_exp_keys,
                                        void *dec_exp_keys);
+/**
+ * @copydoc aes_keyexp_128_sse
+ */
+IMB_DLL_EXPORT void aes_keyexp_128_avx(const void *key, void *enc_exp_keys,
+                                       void *dec_exp_keys);
+/**
+ * @copydoc aes_keyexp_128_sse
+ */
+IMB_DLL_EXPORT void aes_keyexp_128_avx2(const void *key, void *enc_exp_keys,
+                                        void *dec_exp_keys);
+/**
+ * @copydoc aes_keyexp_128_sse
+ */
+IMB_DLL_EXPORT void aes_keyexp_128_avx512(const void *key, void *enc_exp_keys,
+                                          void *dec_exp_keys);
+
+/**
+ * Generate encryption/decryption AES-192 expansion keys.
+ *
+ * @param[in] key           AES-192 key
+ * @param[out] enc_exp_keys AES-192 encryption expansion key
+ * @param[out] dec_exp_keys AES-192 decryption expansion key
+ */
 IMB_DLL_EXPORT void aes_keyexp_192_sse(const void *key, void *enc_exp_keys,
                                        void *dec_exp_keys);
+/**
+ * @copydoc aes_keyexp_256_sse
+ */
+IMB_DLL_EXPORT void aes_keyexp_192_avx(const void *key, void *enc_exp_keys,
+                                       void *dec_exp_keys);
+/**
+ * @copydoc aes_keyexp_256_sse
+ */
+IMB_DLL_EXPORT void aes_keyexp_192_avx2(const void *key, void *enc_exp_keys,
+                                        void *dec_exp_keys);
+/**
+ * @copydoc aes_keyexp_256_sse
+ */
+IMB_DLL_EXPORT void aes_keyexp_192_avx512(const void *key, void *enc_exp_keys,
+                                          void *dec_exp_keys);
+
+/**
+ * Generate encryption/decryption AES-256 expansion keys.
+ *
+ * @param[in] key           AES-256 key
+ * @param[out] enc_exp_keys AES-256 encryption expansion key
+ * @param[out] dec_exp_keys AES-256 decryption expansion key
+ */
 IMB_DLL_EXPORT void aes_keyexp_256_sse(const void *key, void *enc_exp_keys,
                                        void *dec_exp_keys);
-IMB_DLL_EXPORT void aes_xcbc_expand_key_sse(const void *key, void *k1_exp,
-                                            void *k2, void *k3);
+/**
+ * @copydoc aes_keyexp_256_sse
+ */
+IMB_DLL_EXPORT void aes_keyexp_256_avx(const void *key, void *enc_exp_keys,
+                                       void *dec_exp_keys);
+/**
+ * @copydoc aes_keyexp_256_sse
+ */
+IMB_DLL_EXPORT void aes_keyexp_256_avx2(const void *key, void *enc_exp_keys,
+                                        void *dec_exp_keys);
+/**
+ * @copydoc aes_keyexp_256_sse
+ */
+IMB_DLL_EXPORT void aes_keyexp_256_avx512(const void *key, void *enc_exp_keys,
+                                          void *dec_exp_keys);
+
+/**
+ * Generate encryption AES-128 expansion keys.
+ *
+ * @param[in] key           AES-128 key
+ * @param[out] enc_exp_keys AES-128 encryption expansion key
+ */
 IMB_DLL_EXPORT void aes_keyexp_128_enc_sse(const void *key,
                                            void *enc_exp_keys);
+/**
+ * @copydoc aes_keyexp_128_enc_sse
+ */
+IMB_DLL_EXPORT void aes_keyexp_128_enc_avx(const void *key,
+                                           void *enc_exp_keys);
+/**
+ * @copydoc aes_keyexp_128_enc_sse
+ */
+IMB_DLL_EXPORT void aes_keyexp_128_enc_avx2(const void *key,
+                                            void *enc_exp_keys);
+/**
+ * @copydoc aes_keyexp_128_enc_sse
+ */
+IMB_DLL_EXPORT void aes_keyexp_128_enc_avx512(const void *key,
+                                              void *enc_exp_keys);
+
+/**
+ * Generate encryption AES-192 expansion keys.
+ *
+ * @param[in] key           AES-192 key
+ * @param[out] enc_exp_keys AES-192 encryption expansion key
+ */
 IMB_DLL_EXPORT void aes_keyexp_192_enc_sse(const void *key,
                                            void *enc_exp_keys);
+/**
+ * @copydoc aes_keyexp_192_enc_sse
+ */
+IMB_DLL_EXPORT void aes_keyexp_192_enc_avx(const void *key,
+                                           void *enc_exp_keys);
+/**
+ * @copydoc aes_keyexp_192_enc_sse
+ */
+IMB_DLL_EXPORT void aes_keyexp_192_enc_avx2(const void *key,
+                                            void *enc_exp_keys);
+/**
+ * @copydoc aes_keyexp_192_enc_sse
+ */
+IMB_DLL_EXPORT void aes_keyexp_192_enc_avx512(const void *key,
+                                              void *enc_exp_keys);
+
+/**
+ * Generate encryption AES-256 expansion keys.
+ *
+ * @param[in] key           AES-256 key
+ * @param[out] enc_exp_keys AES-256 encryption expansion key
+ */
 IMB_DLL_EXPORT void aes_keyexp_256_enc_sse(const void *key,
                                            void *enc_exp_keys);
+/**
+ * @copydoc aes_keyexp_256_enc_sse
+ */
+IMB_DLL_EXPORT void aes_keyexp_256_enc_avx(const void *key,
+                                           void *enc_exp_keys);
+/**
+ * @copydoc aes_keyexp_256_enc_sse
+ */
+IMB_DLL_EXPORT void aes_keyexp_256_enc_avx2(const void *key,
+                                            void *enc_exp_keys);
+/**
+ * @copydoc aes_keyexp_256_enc_sse
+ */
+IMB_DLL_EXPORT void aes_keyexp_256_enc_avx512(const void *key,
+                                              void *enc_exp_keys);
+
+/**
+ * Generate AES-128-XCBC expansion keys.
+ *
+ * @param[in] key     Input AES-128-XCBC key
+ * @param[out] k1_exp k1 expansion key
+ * @param[out] k2     k2 key
+ * @param[out] k3     k3 key
+ */
+IMB_DLL_EXPORT void aes_xcbc_expand_key_sse(const void *key, void *k1_exp,
+                                            void *k2, void *k3);
+/**
+ * @copydoc aes_xcbc_expand_key_sse
+ */
+IMB_DLL_EXPORT void aes_xcbc_expand_key_avx(const void *key, void *k1_exp,
+                                            void *k2, void *k3);
+/**
+ * @copydoc aes_xcbc_expand_key_sse
+ */
+IMB_DLL_EXPORT void aes_xcbc_expand_key_avx2(const void *key, void *k1_exp,
+                                             void *k2, void *k3);
+/**
+ * @copydoc aes_xcbc_expand_key_sse
+ */
+IMB_DLL_EXPORT void aes_xcbc_expand_key_avx512(const void *key, void *k1_exp,
+                                               void *k2, void *k3);
+
+/**
+ * Generate AES-128-CMAC subkeys.
+ *
+ * @param[in] key_exp Input expanded AES-128-CMAC key
+ * @param[out] key1   Subkey 1
+ * @param[out] key2   Subkey 2
+ */
 IMB_DLL_EXPORT void aes_cmac_subkey_gen_sse(const void *key_exp, void *key1,
                                             void *key2);
+/**
+ * @copydoc aes_cmac_subkey_gen_sse
+ */
+IMB_DLL_EXPORT void aes_cmac_subkey_gen_avx(const void *key_exp, void *key1,
+                                            void *key2);
+/**
+ * @copydoc aes_cmac_subkey_gen_sse
+ */
+IMB_DLL_EXPORT void aes_cmac_subkey_gen_avx2(const void *key_exp, void *key1,
+                                             void *key2);
+/**
+ * @copydoc aes_cmac_subkey_gen_sse
+ */
+IMB_DLL_EXPORT void aes_cmac_subkey_gen_avx512(const void *key_exp, void *key1,
+                                               void *key2);
+
 IMB_DLL_EXPORT void aes_cfb_128_one_sse(void *out, const void *in,
                                         const void *iv, const void *keys,
                                         uint64_t len);
-IMB_DLL_EXPORT void aes_keyexp_128_avx(const void *key, void *enc_exp_keys,
-                                       void *dec_exp_keys);
-IMB_DLL_EXPORT void aes_keyexp_192_avx(const void *key, void *enc_exp_keys,
-                                       void *dec_exp_keys);
-IMB_DLL_EXPORT void aes_keyexp_256_avx(const void *key, void *enc_exp_keys,
-                                       void *dec_exp_keys);
-IMB_DLL_EXPORT void aes_xcbc_expand_key_avx(const void *key, void *k1_exp,
-                                            void *k2, void *k3);
-IMB_DLL_EXPORT void aes_keyexp_128_enc_avx(const void *key,
-                                           void *enc_exp_keys);
-IMB_DLL_EXPORT void aes_keyexp_192_enc_avx(const void *key,
-                                           void *enc_exp_keys);
-IMB_DLL_EXPORT void aes_keyexp_256_enc_avx(const void *key,
-                                           void *enc_exp_keys);
-IMB_DLL_EXPORT void aes_cmac_subkey_gen_avx(const void *key_exp, void *key1,
-                                            void *key2);
 IMB_DLL_EXPORT void aes_cfb_128_one_avx(void *out, const void *in,
                                         const void *iv, const void *keys,
                                         uint64_t len);
-IMB_DLL_EXPORT void aes_keyexp_128_avx2(const void *key, void *enc_exp_keys,
-                                        void *dec_exp_keys);
-IMB_DLL_EXPORT void aes_keyexp_192_avx2(const void *key, void *enc_exp_keys,
-                                        void *dec_exp_keys);
-IMB_DLL_EXPORT void aes_keyexp_256_avx2(const void *key, void *enc_exp_keys,
-                                        void *dec_exp_keys);
-IMB_DLL_EXPORT void aes_xcbc_expand_key_avx2(const void *key, void *k1_exp,
-                                             void *k2, void *k3);
-IMB_DLL_EXPORT void aes_keyexp_128_enc_avx2(const void *key,
-                                            void *enc_exp_keys);
-IMB_DLL_EXPORT void aes_keyexp_192_enc_avx2(const void *key,
-                                            void *enc_exp_keys);
-IMB_DLL_EXPORT void aes_keyexp_256_enc_avx2(const void *key,
-                                            void *enc_exp_keys);
-IMB_DLL_EXPORT void aes_cmac_subkey_gen_avx2(const void *key_exp, void *key1,
-                                             void *key2);
 IMB_DLL_EXPORT void aes_cfb_128_one_avx2(void *out, const void *in,
                                          const void *iv, const void *keys,
                                          uint64_t len);
-
-IMB_DLL_EXPORT void aes_keyexp_128_avx512(const void *key, void *enc_exp_keys,
-                                          void *dec_exp_keys);
-IMB_DLL_EXPORT void aes_keyexp_192_avx512(const void *key, void *enc_exp_keys,
-                                          void *dec_exp_keys);
-IMB_DLL_EXPORT void aes_keyexp_256_avx512(const void *key, void *enc_exp_keys,
-                                          void *dec_exp_keys);
-IMB_DLL_EXPORT void aes_xcbc_expand_key_avx512(const void *key, void *k1_exp,
-                                               void *k2, void *k3);
-IMB_DLL_EXPORT void aes_keyexp_128_enc_avx512(const void *key,
-                                              void *enc_exp_keys);
-IMB_DLL_EXPORT void aes_keyexp_192_enc_avx512(const void *key,
-                                              void *enc_exp_keys);
-IMB_DLL_EXPORT void aes_keyexp_256_enc_avx512(const void *key,
-                                              void *enc_exp_keys);
-IMB_DLL_EXPORT void aes_cmac_subkey_gen_avx512(const void *key_exp, void *key1,
-                                               void *key2);
 IMB_DLL_EXPORT void aes_cfb_128_one_avx512(void *out, const void *in,
                                            const void *iv, const void *keys,
                                            uint64_t len);
