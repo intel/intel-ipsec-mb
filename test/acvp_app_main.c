@@ -45,6 +45,7 @@ static ACVP_RESULT logger(char *msg)
 IMB_MGR *mb_mgr = NULL;
 int verbose = 0;
 int direct_api = 0; /* job API by default */
+int gmac_api = 0;
 
 static int aes_cbc_handler(ACVP_TEST_CASE *test_case)
 {
@@ -144,14 +145,20 @@ static int aes_gcm_handler(ACVP_TEST_CASE *test_case)
 {
         ACVP_SYM_CIPHER_TC *tc;
         IMB_JOB *job = NULL;
-        aes_gcm_init_var_iv_t init_var_iv = mb_mgr->gcm128_init_var_iv;
-        aes_gcm_enc_dec_update_t update_enc = mb_mgr->gcm128_enc_update;
-        aes_gcm_enc_dec_finalize_t finalize_enc = mb_mgr->gcm128_enc_finalize;
-        aes_gcm_enc_dec_update_t update_dec = mb_mgr->gcm128_dec_update;
-        aes_gcm_enc_dec_finalize_t finalize_dec = mb_mgr->gcm128_dec_finalize;
-
+        aes_gcm_init_var_iv_t gcm_init_var_iv = mb_mgr->gcm128_init_var_iv;
+        aes_gcm_enc_dec_update_t gcm_update_enc = mb_mgr->gcm128_enc_update;
+        aes_gcm_enc_dec_finalize_t gcm_finalize_enc =
+                mb_mgr->gcm128_enc_finalize;
+        aes_gcm_enc_dec_update_t gcm_update_dec = mb_mgr->gcm128_dec_update;
+        aes_gcm_enc_dec_finalize_t gcm_finalize_dec =
+                mb_mgr->gcm128_dec_finalize;
+        aes_gmac_init_t gmac_init_var = mb_mgr->gmac128_init;
+        aes_gmac_update_t gmac_update = mb_mgr->gmac128_update;
+        aes_gmac_finalize_t gmac_finalize = mb_mgr->gmac128_finalize;
         struct gcm_key_data key;
         struct gcm_context_data ctx;
+        IMB_HASH_ALG hash_mode;
+        int use_gmac_api = 0;
 
         if (test_case == NULL)
                 return EXIT_FAILURE;
@@ -163,15 +170,26 @@ static int aes_gcm_handler(ACVP_TEST_CASE *test_case)
                 return EXIT_FAILURE;
         }
 
+        if (gmac_api) {
+                if ((tc->direction == ACVP_SYM_CIPH_DIR_ENCRYPT &&
+                     tc->pt_len == 0) ||
+                    (tc->direction == ACVP_SYM_CIPH_DIR_DECRYPT &&
+                     tc->ct_len == 0))
+                        use_gmac_api = 1;
+        }
+
         switch (tc->key_len) {
         case 128:
                 IMB_AES128_GCM_PRE(mb_mgr, tc->key, &key);
+                hash_mode = IMB_AUTH_AES_GMAC_128;
                 break;
         case 192:
                 IMB_AES192_GCM_PRE(mb_mgr, tc->key, &key);
+                hash_mode = IMB_AUTH_AES_GMAC_192;
                 break;
         case 256:
                 IMB_AES256_GCM_PRE(mb_mgr, tc->key, &key);
+                hash_mode = IMB_AUTH_AES_GMAC_256;
                 break;
         default:
                 fprintf(stderr, "Unsupported AES key length\n");
@@ -184,18 +202,24 @@ static int aes_gcm_handler(ACVP_TEST_CASE *test_case)
                         /* Function pointers already set for 128-bit key */
                         break;
                 case 192:
-                        init_var_iv = mb_mgr->gcm192_init_var_iv;
-                        update_enc = mb_mgr->gcm192_enc_update;
-                        finalize_enc = mb_mgr->gcm192_enc_finalize;
-                        update_dec = mb_mgr->gcm192_dec_update;
-                        finalize_dec = mb_mgr->gcm192_dec_finalize;
+                        gcm_init_var_iv = mb_mgr->gcm192_init_var_iv;
+                        gcm_update_enc = mb_mgr->gcm192_enc_update;
+                        gcm_finalize_enc = mb_mgr->gcm192_enc_finalize;
+                        gcm_update_dec = mb_mgr->gcm192_dec_update;
+                        gcm_finalize_dec = mb_mgr->gcm192_dec_finalize;
+                        gmac_init_var = mb_mgr->gmac192_init;
+                        gmac_update = mb_mgr->gmac192_update;
+                        gmac_finalize = mb_mgr->gmac192_finalize;
                         break;
                 case 256:
-                        init_var_iv = mb_mgr->gcm256_init_var_iv;
-                        update_enc = mb_mgr->gcm256_enc_update;
-                        finalize_enc = mb_mgr->gcm256_enc_finalize;
-                        update_dec = mb_mgr->gcm256_dec_update;
-                        finalize_dec = mb_mgr->gcm256_dec_finalize;
+                        gcm_init_var_iv = mb_mgr->gcm256_init_var_iv;
+                        gcm_update_enc = mb_mgr->gcm256_enc_update;
+                        gcm_finalize_enc = mb_mgr->gcm256_enc_finalize;
+                        gcm_update_dec = mb_mgr->gcm256_dec_update;
+                        gcm_finalize_dec = mb_mgr->gcm256_dec_finalize;
+                        gmac_init_var = mb_mgr->gmac256_init;
+                        gmac_update = mb_mgr->gmac256_update;
+                        gmac_finalize = mb_mgr->gmac256_finalize;
                         break;
                 default:
                         fprintf(stderr, "Unsupported AES key length\n");
@@ -204,32 +228,54 @@ static int aes_gcm_handler(ACVP_TEST_CASE *test_case)
         } else {
                 job = IMB_GET_NEXT_JOB(mb_mgr);
                 job->key_len_in_bytes = tc->key_len >> 3;
-                job->cipher_mode = IMB_CIPHER_GCM;
-                job->hash_alg = IMB_AUTH_AES_GMAC;
-                job->iv = tc->iv;
-                job->iv_len_in_bytes = tc->iv_len;
+                if (use_gmac_api == 1) {
+                        job->cipher_mode = IMB_CIPHER_NULL;
+                        job->hash_alg = hash_mode;
+                        job->u.GMAC._iv = tc->iv;
+                        job->u.GMAC.iv_len_in_bytes = tc->iv_len;
+                        job->u.GMAC._key = &key;
+                } else {
+                        job->cipher_mode = IMB_CIPHER_GCM;
+                        job->hash_alg = IMB_AUTH_AES_GMAC;
+                        job->u.GCM.aad = tc->aad;
+                        job->u.GCM.aad_len_in_bytes = tc->aad_len;
+                        job->enc_keys = &key;
+                        job->dec_keys = &key;
+                        job->iv = tc->iv;
+                        job->iv_len_in_bytes = tc->iv_len;
+                }
                 job->cipher_start_src_offset_in_bytes = 0;
                 job->hash_start_src_offset_in_bytes = 0;
-                job->enc_keys = &key;
-                job->dec_keys = &key;
-                job->u.GCM.aad = tc->aad;
-                job->u.GCM.aad_len_in_bytes = tc->aad_len;
                 job->auth_tag_output_len_in_bytes = tc->tag_len;
         }
 
         if (tc->direction == ACVP_SYM_CIPH_DIR_ENCRYPT) {
                 if (direct_api == 1) {
-                        init_var_iv(&key, &ctx, tc->iv, tc->iv_len,
-                                    tc->aad, tc->aad_len);
-                        update_enc(&key, &ctx, tc->ct, tc->pt, tc->pt_len);
-                        finalize_enc(&key, &ctx, tc->tag, tc->tag_len);
+                        if (use_gmac_api == 1) {
+                                gmac_init_var(&key, &ctx, tc->iv, tc->iv_len);
+                                gmac_update(&key, &ctx, tc->aad, tc->aad_len);
+                                gmac_finalize(&key, &ctx, tc->tag,
+                                              tc->tag_len);
+                        } else {
+                                gcm_init_var_iv(&key, &ctx, tc->iv, tc->iv_len,
+                                            tc->aad, tc->aad_len);
+                                gcm_update_enc(&key, &ctx, tc->ct,
+                                           tc->pt, tc->pt_len);
+                                gcm_finalize_enc(&key, &ctx, tc->tag,
+                                                 tc->tag_len);
+                                }
                 } else {
+                        if (use_gmac_api == 1) {
+                                job->src = tc->aad;
+                                job->msg_len_to_hash_in_bytes = tc->aad_len;
+                        } else {
+                                job->src = tc->pt;
+                                job->dst = tc->ct;
+                                job->msg_len_to_cipher_in_bytes = tc->pt_len;
+                                job->msg_len_to_hash_in_bytes = tc->pt_len;
+                        }
                         job->cipher_direction = IMB_DIR_ENCRYPT;
                         job->chain_order = IMB_ORDER_CIPHER_HASH;
-                        job->src = tc->pt;
-                        job->dst = tc->ct;
-                        job->msg_len_to_cipher_in_bytes = tc->pt_len;
-                        job->msg_len_to_hash_in_bytes = tc->pt_len;
                         job->auth_tag_output = tc->tag;
 
                         job = IMB_SUBMIT_JOB(mb_mgr);
@@ -244,17 +290,30 @@ static int aes_gcm_handler(ACVP_TEST_CASE *test_case)
                 uint8_t res_tag[MAX_TAG_LENGTH];
 
                 if (direct_api == 1) {
-                        init_var_iv(&key, &ctx, tc->iv, tc->iv_len,
-                                    tc->aad, tc->aad_len);
-                        update_dec(&key, &ctx, tc->pt, tc->ct, tc->ct_len);
-                        finalize_dec(&key, &ctx, res_tag, tc->tag_len);
+                        if (use_gmac_api == 1) {
+                                gmac_init_var(&key, &ctx, tc->iv, tc->iv_len);
+                                gmac_update(&key, &ctx, tc->aad, tc->aad_len);
+                                gmac_finalize(&key, &ctx, tc->tag, tc->tag_len);
+                        } else {
+                                gcm_init_var_iv(&key, &ctx, tc->iv, tc->iv_len,
+                                                tc->aad, tc->aad_len);
+                                gcm_update_dec(&key, &ctx, tc->pt,
+                                               tc->ct, tc->ct_len);
+                                gcm_finalize_dec(&key, &ctx,
+                                                 res_tag, tc->tag_len);
+                        }
                 } else {
+                        if (use_gmac_api == 1) {
+                                job->src = tc->aad;
+                                job->msg_len_to_hash_in_bytes = tc->aad_len;
+                        } else {
+                                job->src = tc->ct;
+                                job->dst = tc->pt;
+                                job->msg_len_to_cipher_in_bytes = tc->ct_len;
+                                job->msg_len_to_hash_in_bytes = tc->ct_len;
+                        }
                         job->cipher_direction = IMB_DIR_DECRYPT;
                         job->chain_order = IMB_ORDER_HASH_CIPHER;
-                        job->src = tc->ct;
-                        job->dst = tc->pt;
-                        job->msg_len_to_cipher_in_bytes = tc->ct_len;
-                        job->msg_len_to_hash_in_bytes = tc->ct_len;
                         job->auth_tag_output = res_tag;
 
                         job = IMB_SUBMIT_JOB(mb_mgr);
@@ -364,6 +423,7 @@ static void usage(const char *app_name)
                 "--req FILENAME: request file in JSON format (required)\n"
                 "--resp FILENAME: response file in JSON format (required)\n"
                 "--direct-api: uses direct API instead of job API if available\n"
+                "--gmac-api: uses GMAC API\n"
                 "--arch ARCH: select arch to test (SSE/AVX/AVX2/AVX512)\n"
                 "-h: print this message\n"
                 "-v: verbose, prints extra information\n\n"
@@ -431,6 +491,8 @@ int main(int argc, char **argv)
                         i++;
                 } else if (strcmp(argv[i], "--direct-api") == 0) {
                         direct_api = 1;
+                } else if (strcmp(argv[i], "--gmac-api") == 0) {
+                        gmac_api = 1;
                 } else if (strcmp(argv[i], "-h") == 0) {
                         usage(argv[0]);
                         ret = EXIT_SUCCESS;
