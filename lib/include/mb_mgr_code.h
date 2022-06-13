@@ -2794,9 +2794,8 @@ uint32_t submit_aes_cbc_burst_enc(IMB_MGR *state,
         uint32_t i, completed_jobs = 0;
         MB_MGR_AES_OOO *aes_ooo = NULL;
 
-        static IMB_JOB * (*submit_fn)
-                (MB_MGR_AES_OOO *state, IMB_JOB *job) = NULL;
-        static IMB_JOB * (*flush_fn) (MB_MGR_AES_OOO *state) = NULL;
+        IMB_JOB * (*submit_fn)(MB_MGR_AES_OOO *state, IMB_JOB *job) = NULL;
+        IMB_JOB * (*flush_fn)(MB_MGR_AES_OOO *state) = NULL;
 
         if (run_check) {
                 /* validate jobs */
@@ -2857,10 +2856,9 @@ uint32_t submit_aes_cbc_burst_dec(IMB_MGR *state,
                                   const int run_check)
 {
         uint32_t i, completed_jobs = 0;
-
-        static void (*submit_fn) (const void *in, const uint8_t *IV,
-                                  const void *keys, void *out,
-                                  uint64_t len_bytes) = NULL;
+        void (*submit_fn) (const void *in, const uint8_t *IV,
+                           const void *keys, void *out,
+                           uint64_t len_bytes) = NULL;
         (void) state;
 
         if (run_check) {
@@ -2926,7 +2924,7 @@ uint32_t submit_aes_ctr_burst(IMB_MGR *state,
 
 #ifdef AVX512
         if ((state->features & IMB_FEATURE_VAES) == IMB_FEATURE_VAES) {
-                static void (*submit_fn_vaes) (IMB_JOB *job) = NULL;
+                void (*submit_fn_vaes) (IMB_JOB *job) = NULL;
 
                 if (key_size == 16)
                         submit_fn_vaes = aes_cntr_128_submit_vaes_avx512;
@@ -2944,10 +2942,10 @@ uint32_t submit_aes_ctr_burst(IMB_MGR *state,
                 }
         } else {
 #endif
-                static void (*submit_fn) (const void *in, const void *IV,
-                                          const void *keys, void *out,
-                                          uint64_t len_bytes,
-                                          uint64_t iv_len_bytes) = NULL;
+                void (*submit_fn) (const void *in, const void *IV,
+                                   const void *keys, void *out,
+                                   uint64_t len_bytes,
+                                   uint64_t iv_len_bytes) = NULL;
 
                 if (key_size == 16)
                         submit_fn = AES_CNTR_128;
