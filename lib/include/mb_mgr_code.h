@@ -2698,7 +2698,15 @@ uint32_t submit_burst_and_check(IMB_MGR *state, IMB_JOB *jobs,
 {
         uint32_t i, completed_jobs = 0;
 
+        /* reset error status */
+        imb_set_errno(state, 0);
+
         if (run_check) {
+                if (jobs == NULL) {
+                        imb_set_errno(NULL, IMB_ERR_NULL_JOB);
+                        return 0;
+                }
+
                 /* validate jobs */
                 for (i = 0; i < n_jobs; i++) {
                         IMB_JOB *job = &jobs[i];
@@ -2735,7 +2743,7 @@ uint32_t submit_burst_and_check(IMB_MGR *state, IMB_JOB *jobs,
                 }
         }
 
-         /* return if all jobs complete */
+        /* return if all jobs complete */
         if (completed_jobs == n_jobs)
                 return completed_jobs;
 
@@ -2755,32 +2763,12 @@ uint32_t submit_burst_and_check(IMB_MGR *state, IMB_JOB *jobs,
 uint32_t
 SUBMIT_BURST(IMB_MGR *state, IMB_JOB *jobs, const uint32_t n_jobs)
 {
-        /* reset error status */
-        imb_set_errno(state, 0);
-
-#ifdef SAFE_PARAM
-        if (jobs == NULL) {
-                imb_set_errno(NULL, IMB_ERR_NULL_JOB);
-                return 0;
-        }
-#endif
-
         return submit_burst_and_check(state, jobs, n_jobs, 1);
 }
 
 uint32_t
 SUBMIT_BURST_NOCHECK(IMB_MGR *state, IMB_JOB *jobs, const uint32_t n_jobs)
 {
-        /* reset error status */
-        imb_set_errno(state, 0);
-
-#ifdef SAFE_PARAM
-        if (jobs == NULL) {
-                imb_set_errno(NULL, IMB_ERR_NULL_JOB);
-                return 0;
-        }
-#endif
-
         return submit_burst_and_check(state, jobs, n_jobs, 0);
 }
 
@@ -2981,6 +2969,16 @@ uint32_t submit_cipher_burst_and_check(IMB_MGR *state, IMB_JOB *jobs,
                                        const IMB_KEY_SIZE_BYTES key_size,
                                        const int run_check)
 {
+        /* reset error status */
+        imb_set_errno(state, 0);
+
+        if (run_check) {
+                if (jobs == NULL) {
+                        imb_set_errno(NULL, IMB_ERR_NULL_JOB);
+                        return 0;
+                }
+        }
+
         switch (cipher) {
         case IMB_CIPHER_CBC:
                 if (dir == IMB_DIR_ENCRYPT)
@@ -3009,16 +3007,6 @@ SUBMIT_CIPHER_BURST(IMB_MGR *state, IMB_JOB *jobs,
                     const IMB_CIPHER_DIRECTION dir,
                     const IMB_KEY_SIZE_BYTES key_size)
 {
-        /* reset error status */
-        imb_set_errno(state, 0);
-
-#ifdef SAFE_PARAM
-        if (jobs == NULL) {
-                imb_set_errno(NULL, IMB_ERR_NULL_JOB);
-                return 0;
-        }
-#endif
-
         return submit_cipher_burst_and_check(state, jobs, n_jobs,
                                              cipher, dir, key_size, 1);
 }
@@ -3030,16 +3018,6 @@ SUBMIT_CIPHER_BURST_NOCHECK(IMB_MGR *state, IMB_JOB *jobs,
                             const IMB_CIPHER_DIRECTION dir,
                             const IMB_KEY_SIZE_BYTES key_size)
 {
-        /* reset error status */
-        imb_set_errno(state, 0);
-
-#ifdef SAFE_PARAM
-        if (jobs == NULL) {
-                imb_set_errno(NULL, IMB_ERR_NULL_JOB);
-                return 0;
-        }
-#endif
-
         return submit_cipher_burst_and_check(state, jobs, n_jobs,
                                              cipher, dir, key_size, 0);
 }
@@ -3194,6 +3172,16 @@ uint32_t submit_hash_burst_and_check(IMB_MGR *state, IMB_JOB *jobs,
                                      const IMB_HASH_ALG hash,
                                      const int run_check)
 {
+        /* reset error status */
+        imb_set_errno(state, 0);
+
+        if (run_check) {
+                if (jobs == NULL) {
+                        imb_set_errno(NULL, IMB_ERR_NULL_JOB);
+                        return 0;
+                }
+        }
+
         switch (hash) {
         case IMB_AUTH_HMAC_SHA_1:
                 return submit_burst_hmac_sha_1(state, jobs,
@@ -3225,15 +3213,6 @@ SUBMIT_HASH_BURST(IMB_MGR *state, IMB_JOB *jobs,
                   const uint32_t n_jobs,
                   const IMB_HASH_ALG hash)
 {
-        /* reset error status */
-        imb_set_errno(state, 0);
-
-#ifdef SAFE_PARAM
-        if (jobs == NULL) {
-                imb_set_errno(NULL, IMB_ERR_NULL_JOB);
-                return 0;
-        }
-#endif
         return submit_hash_burst_and_check(state, jobs, n_jobs, hash, 1);
 }
 
@@ -3242,15 +3221,6 @@ SUBMIT_HASH_BURST_NOCHECK(IMB_MGR *state, IMB_JOB *jobs,
                           const uint32_t n_jobs,
                           const IMB_HASH_ALG hash)
 {
-        /* reset error status */
-        imb_set_errno(state, 0);
-
-#ifdef SAFE_PARAM
-        if (jobs == NULL) {
-                imb_set_errno(NULL, IMB_ERR_NULL_JOB);
-                return 0;
-        }
-#endif
         return submit_hash_burst_and_check(state, jobs, n_jobs, hash, 0);
 }
 
