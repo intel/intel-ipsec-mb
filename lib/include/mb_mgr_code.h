@@ -2480,6 +2480,17 @@ IMB_JOB *
 submit_job_and_check(IMB_MGR *state, const int run_check)
 {
         IMB_JOB *job = NULL;
+
+        /* reset error status */
+        imb_set_errno(state, 0);
+
+        if (run_check) {
+                if (state == NULL) {
+                        imb_set_errno(NULL, IMB_ERR_NULL_MBMGR);
+                        return NULL;
+                }
+        }
+
 #ifndef LINUX
         DECLARE_ALIGNED(imb_uint128_t xmm_save[10], 16);
 
@@ -2544,32 +2555,12 @@ exit:
 IMB_JOB *
 SUBMIT_JOB(IMB_MGR *state)
 {
-        /* reset error status */
-        imb_set_errno(state, 0);
-
-#ifdef SAFE_PARAM
-        if (state == NULL) {
-                imb_set_errno(NULL, IMB_ERR_NULL_MBMGR);
-                return NULL;
-        }
-#endif
-
         return submit_job_and_check(state, 1);
 }
 
 IMB_JOB *
 SUBMIT_JOB_NOCHECK(IMB_MGR *state)
 {
-        /* reset error status */
-        imb_set_errno(state, 0);
-
-#ifdef SAFE_PARAM
-        if (state == NULL) {
-                imb_set_errno(NULL, IMB_ERR_NULL_MBMGR);
-                return NULL;
-        }
-#endif
-
         return submit_job_and_check(state, 0);
 }
 
