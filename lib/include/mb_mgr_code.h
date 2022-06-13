@@ -2703,11 +2703,6 @@ uint32_t submit_burst_and_check(IMB_MGR *state, IMB_JOB *jobs,
                 for (i = 0; i < n_jobs; i++) {
                         IMB_JOB *job = &jobs[i];
 
-                        if (job == NULL) {
-                                imb_set_errno(state, IMB_ERR_NULL_JOB);
-                                return 0;
-                        }
-
                         /* validate job */
                         if (is_job_invalid(state, job,
                                            job->cipher_mode, job->hash_alg,
@@ -2808,11 +2803,6 @@ uint32_t submit_aes_cbc_burst_enc(IMB_MGR *state,
                 for (i = 0; i < n_jobs; i++) {
                         IMB_JOB *job = &jobs[i];
 
-                        if (job == NULL) {
-                                imb_set_errno(state, IMB_ERR_NULL_JOB);
-                                return 0;
-                        }
-
                         /* validate job */
                         if (is_job_invalid(state, job,
                                            IMB_CIPHER_CBC, IMB_AUTH_NULL,
@@ -2878,11 +2868,6 @@ uint32_t submit_aes_cbc_burst_dec(IMB_MGR *state,
                 for (i = 0; i < n_jobs; i++) {
                         IMB_JOB *job = &jobs[i];
 
-                        if (job == NULL) {
-                                imb_set_errno(state, IMB_ERR_NULL_JOB);
-                                return 0;
-                        }
-
                         /* validate job */
                         if (is_job_invalid(state, job,
                                            IMB_CIPHER_CBC, IMB_AUTH_NULL,
@@ -2928,11 +2913,6 @@ uint32_t submit_aes_ctr_burst(IMB_MGR *state,
                 /* validate jobs */
                 for (i = 0; i < n_jobs; i++) {
                         IMB_JOB *job = &jobs[i];
-
-                        if (job == NULL) {
-                                imb_set_errno(state, IMB_ERR_NULL_JOB);
-                                return 0;
-                        }
 
                         /* validate job */
                         if (is_job_invalid(state, job,
@@ -3082,11 +3062,6 @@ uint32_t submit_burst_hmac_sha_x(IMB_MGR *state,
                 /* validate jobs */
                 for (i = 0; i < n_jobs; i++) {
                         IMB_JOB *job = &jobs[i];
-
-                        if (job == NULL) {
-                                imb_set_errno(state, IMB_ERR_NULL_JOB);
-                                return 0;
-                        }
 
                         /* validate job */
                         if (is_job_invalid(state, job,
