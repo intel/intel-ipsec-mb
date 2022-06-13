@@ -279,6 +279,84 @@ static int aes_gcm_handler(ACVP_TEST_CASE *test_case)
         return EXIT_SUCCESS;
 }
 
+static int aes_ctr_handler(ACVP_TEST_CASE *test_case)
+{
+        ACVP_SYM_CIPHER_TC *tc;
+        IMB_JOB *job = NULL;
+        DECLARE_ALIGNED(uint32_t enc_keys[15*4], 16);
+        DECLARE_ALIGNED(uint32_t dec_keys[15*4], 16);
+
+        if (test_case == NULL)
+                return EXIT_FAILURE;
+
+        tc = test_case->tc.symmetric;
+
+        if (tc->direction != ACVP_SYM_CIPH_DIR_ENCRYPT &&
+            tc->direction != ACVP_SYM_CIPH_DIR_DECRYPT) {
+                fprintf(stderr, "Unsupported direction\n");
+                return EXIT_FAILURE;
+        }
+
+        switch (tc->key_len) {
+        case 128:
+                IMB_AES_KEYEXP_128(mb_mgr, tc->key, enc_keys, dec_keys);
+                break;
+        case 192:
+                IMB_AES_KEYEXP_192(mb_mgr, tc->key, enc_keys, dec_keys);
+                break;
+        case 256:
+                IMB_AES_KEYEXP_256(mb_mgr, tc->key, enc_keys, dec_keys);
+                break;
+        default:
+                fprintf(stderr, "Unsupported AES key length\n");
+                return EXIT_FAILURE;
+        }
+
+        job = IMB_GET_NEXT_JOB(mb_mgr);
+        job->key_len_in_bytes = tc->key_len >> 3;
+        job->cipher_mode = IMB_CIPHER_CNTR;
+        job->hash_alg = IMB_AUTH_NULL;
+
+        job->iv = tc->iv;
+        job->iv_len_in_bytes = tc->iv_len;
+        job->cipher_start_src_offset_in_bytes = 0;
+        job->enc_keys = enc_keys;
+        job->dec_keys = dec_keys;
+
+        if (tc->direction == ACVP_SYM_CIPH_DIR_ENCRYPT) {
+                job->cipher_direction = IMB_DIR_ENCRYPT;
+                job->chain_order = IMB_ORDER_CIPHER_HASH;
+                job->src = tc->pt;
+                job->dst = tc->ct;
+                job->msg_len_to_cipher_in_bytes = tc->pt_len;
+                tc->ct_len = tc->pt_len;
+
+                job = IMB_SUBMIT_JOB(mb_mgr);
+                if (job == NULL)
+                        job = IMB_FLUSH_JOB(mb_mgr);
+                if (job->status != IMB_STATUS_COMPLETED) {
+                        fprintf(stderr, "Invalid job\n");
+                        return EXIT_FAILURE;
+                }
+        } else /* DECRYPT */ {
+                job->cipher_direction = IMB_DIR_DECRYPT;
+                job->chain_order = IMB_ORDER_HASH_CIPHER;
+                job->src = tc->ct;
+                job->dst = tc->pt;
+                job->msg_len_to_cipher_in_bytes = tc->ct_len;
+                tc->pt_len = tc->ct_len;
+
+                job = IMB_SUBMIT_JOB(mb_mgr);
+                if (job == NULL)
+                        job = IMB_FLUSH_JOB(mb_mgr);
+                if (job->status != IMB_STATUS_COMPLETED) {
+                        fprintf(stderr, "Invalid job\n");
+                        return EXIT_FAILURE;
+                }
+        }
+        return EXIT_SUCCESS;
+}
+
 static void usage(const char *app_name)
 {
         fprintf(stderr, "Usage: %s --req FILENAME --resp FILENAME [opt args], "
@@ -293,8 +371,7 @@ static void usage(const char *app_name)
                 app_name, app_name);
 }
 
-int
-main(int argc, char **argv)
+int main(int argc, char **argv)
 {
         ACVP_RESULT acvp_ret = ACVP_SUCCESS;
         ACVP_CTX *ctx = NULL;
@@ -375,7 +452,7 @@ main(int argc, char **argv)
                 goto exit;
         }
 
-        /* Create test session and enable GCM tests */
+        /* Create test session and enable supported algorithms */
         acvp_ret = acvp_create_test_session(&ctx, logger, ACVP_LOG_LVL_INFO);
         if (acvp_ret != ACVP_SUCCESS)
                 goto exit;
@@ -386,6 +463,10 @@ main(int argc, char **argv)
 
         if (acvp_cap_sym_cipher_enable(ctx, ACVP_AES_CBC,
                                        &aes_cbc_handler) != ACVP_SUCCESS)
+                goto exit;
+
+        if (acvp_cap_sym_cipher_enable(ctx, ACVP_AES_CTR,
+                                       &aes_ctr_handler) != ACVP_SUCCESS)
                 goto exit;
 
         /* Allocate and initialize MB_MGR */
