@@ -202,6 +202,11 @@ IMB_JOB *submit_job_sha1_sse(MB_MGR_SHA_1_OOO *state,
 IMB_JOB *flush_job_sha1_sse(MB_MGR_SHA_1_OOO *state,
                             IMB_JOB *job);
 
+IMB_JOB *submit_job_sha256_sse(MB_MGR_SHA_256_OOO *state,
+                               IMB_JOB *job);
+IMB_JOB *flush_job_sha256_sse(MB_MGR_SHA_256_OOO *state,
+                              IMB_JOB *job);
+
 void aes_cmac_256_subkey_gen_sse(const void *key_exp,
                                  void *key1, void *key2);
 uint32_t hec_32_sse(const uint8_t *in);

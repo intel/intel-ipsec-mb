@@ -94,6 +94,8 @@
 #define FLUSH_JOB_AES_XCBC    flush_job_aes_xcbc_sse
 #define SUBMIT_JOB_SHA1   submit_job_sha1_sse
 #define FLUSH_JOB_SHA1    flush_job_sha1_sse
+#define SUBMIT_JOB_SHA256   submit_job_sha256_sse
+#define FLUSH_JOB_SHA256    flush_job_sha256_sse
 
 #define SUBMIT_JOB_AES_CNTR   submit_job_aes_cntr_sse
 #define SUBMIT_JOB_AES_CNTR_BIT   submit_job_aes_cntr_bit_sse
@@ -700,7 +702,10 @@ reset_ooo_mgrs(IMB_MGR *state)
         ooo_mgr_aes_reset(state->aes128_cbcs_ooo, 4);
 
         /* Init SHA1 out-of-order fields */
-        ooo_mgr_sha1_reset(state->sha_1_ooo, 4);
+        ooo_mgr_sha1_reset(state->sha_1_ooo, SSE_NUM_SHA1_LANES);
+
+        /* Init SHA256 out-of-order fields */
+        ooo_mgr_sha256_reset(state->sha_256_ooo, SSE_NUM_SHA256_LANES);
 
         /* Init SNOW3G-UEA out-of-order fields */
         ooo_mgr_snow3g_reset(state->snow3g_uea2_ooo, 4);

@@ -512,6 +512,24 @@ const struct str_value_mapping hash_algo_str_map[] = {
                 }
         },
         {
+                .name = "aes-xcbc",
+                .values.job_params = {
+                        .hash_alg = TEST_XCBC
+                }
+        },
+        {
+                .name = "md5-hmac",
+                .values.job_params = {
+                        .hash_alg = TEST_MD5
+                }
+        },
+        {
+                .name = "aes-cmac",
+                .values.job_params = {
+                        .hash_alg = TEST_HASH_CMAC
+                }
+        },
+        {
                 .name = "sha1",
                 .values.job_params = {
                         .hash_alg = TEST_SHA1
@@ -539,24 +557,6 @@ const struct str_value_mapping hash_algo_str_map[] = {
                 .name = "sha512",
                 .values.job_params = {
                         .hash_alg = TEST_SHA_512
-                }
-        },
-        {
-                .name = "aes-xcbc",
-                .values.job_params = {
-                        .hash_alg = TEST_XCBC
-                }
-        },
-        {
-                .name = "md5-hmac",
-                .values.job_params = {
-                        .hash_alg = TEST_MD5
-                }
-        },
-        {
-                .name = "aes-cmac",
-                .values.job_params = {
-                        .hash_alg = TEST_HASH_CMAC
                 }
         },
         {
@@ -2693,9 +2693,9 @@ print_times(struct variant_s *variant_list, struct params_s *params,
                 };
                 const char *h_alg_names[TEST_NUM_HASH_TESTS - 1] = {
                         "SHA1_HMAC", "SHA_224_HMAC", "SHA_256_HMAC",
-                        "SHA_384_HMAC", "SHA_512_HMAC",
-                        "SHA1", "SHA_224", "SHA_256", "SHA_384", "SHA_512",
-                        "XCBC", "MD5", "CMAC", "CMAC_BITLEN", "CMAC_256",
+                        "SHA_384_HMAC", "SHA_512_HMAC", "XCBC",
+                        "MD5", "CMAC", "SHA1", "SHA_224", "SHA_256",
+                        "SHA_384", "SHA_512", "CMAC_BITLEN", "CMAC_256",
                         "NULL_HASH", "CRC32", "GCM", "CUSTOM", "CCM",
                         "BIP-CRC32", "ZUC_EIA3_BITLEN", "SNOW3G_UIA2_BITLEN",
                         "KASUMI_UIA1", "GMAC-128", "GMAC-192", "GMAC-256",

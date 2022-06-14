@@ -119,7 +119,7 @@ typedef struct {
 
 typedef struct {
         DECLARE_ALIGNED(uint32_t digest[SHA256_DIGEST_SZ], 32);
-        uint8_t *data_ptr[AVX512_NUM_SHA256_LANES];
+        const uint8_t *data_ptr[AVX512_NUM_SHA256_LANES];
 } SHA256_ARGS;
 
 typedef struct {
@@ -355,6 +355,15 @@ typedef struct {
         uint32_t num_lanes_inuse;
         uint64_t road_block;
 } MB_MGR_HMAC_SHA_256_OOO;
+
+typedef struct {
+        SHA256_ARGS args;
+        DECLARE_ALIGNED(uint64_t lens[AVX512_NUM_SHA256_LANES], 16);
+        uint64_t unused_lanes;
+        HMAC_SHA1_LANE_DATA ldata[AVX512_NUM_SHA256_LANES];
+        uint32_t num_lanes_inuse;
+        uint64_t road_block;
+} MB_MGR_SHA_256_OOO;
 
 typedef struct {
         SHA512_ARGS args;
