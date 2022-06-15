@@ -667,17 +667,17 @@ endstruc
 %define %%OUT_XMM_LANE_1      %2 ;; [out] 128bit keystream for lane 1
 %define %%OUT_XMM_LANE_2      %3 ;; [out] 128bit keystream for lane 0
 %define %%OUT_XMM_LANE_3      %4 ;; [out] 128bit keystream for lane 3
-%define %%TMPXMM            %5 ;; [clobbered] temporary xmm register
-%define %%TMPXMM_1          %6 ;; [clobbered] temporary xmm register
+%define %%XTMP0               %5 ;; [clobbered] temporary xmm register
+%define %%XTMP1               %6 ;; [clobbered] temporary xmm register
 
         movdqa  %%OUT_XMM_LANE_2, [rsp + _keystream + 0 * 16]
         movdqa  %%OUT_XMM_LANE_1, [rsp + _keystream + 1 * 16]
-        movdqa  %%TMPXMM_1, [rsp + _keystream + 2 * 16]
+        movdqa  %%XTMP1, [rsp + _keystream + 2 * 16]
         movdqa  %%OUT_XMM_LANE_3, [rsp + _keystream + 3 * 16]
 
         ;; output looks like: {t0 r1 r0 r3}
-        TRANSPOSE4_U32  %%OUT_XMM_LANE_2, %%OUT_XMM_LANE_1, %%TMPXMM_1,      \
-                        %%OUT_XMM_LANE_3, %%OUT_XMM_LANE_0, %%TMPXMM
+        TRANSPOSE4_U32  %%OUT_XMM_LANE_2, %%OUT_XMM_LANE_1, %%XTMP1,      \
+                        %%OUT_XMM_LANE_3, %%OUT_XMM_LANE_0, %%XTMP0
 
 %endmacro
 
@@ -768,10 +768,10 @@ endstruc
 %define %%STATE         %1 ;; [in] ptr to MB_MGR_SNOW3G_OOO structure
 %define %%LANE          %2 ;; [in] nr of lane initialize data in
 %define %%P_KEY         %3 ;; [in] ptr to key
-%define %%P_IV          %4 ;; [in*] ptr to IV copy (IV bytes swapped in each dw)
-%define %%TMPXMM_1    %5 ;; [clobbered] temporary xmm reg
-%define %%TMPXMM_2    %6 ;; [clobbered] temporary xmm reg
-%define %%TMPXMM_3    %7 ;; [clobbered] temporary xmm reg
+%define %%P_IV          %4 ;; [in] ptr to IV
+%define %%TMPXMM_1      %5 ;; [clobbered] temporary xmm reg
+%define %%TMPXMM_2      %6 ;; [clobbered] temporary xmm reg
+%define %%TMPXMM_3      %7 ;; [clobbered] temporary xmm reg
 
         movd            %%TMPXMM_1, [%%P_KEY]         ;; key
         movdqa          %%TMPXMM_2, %%TMPXMM_1
@@ -844,24 +844,24 @@ endstruc
 %define %%IN            %3      ;; [clobbered] r64 gp reg temp
 %define %%OUT           %4      ;; [clobbered] r64 gp reg temp
 %define %%LENGTH        %5      ;; [clobbered] r64 gp reg temp
-%define %%TMP1_64     %6      ;; [clobbered] r64 gp reg temp
-%define %%TMP2_64     %7      ;; [clobbered] r64 gp reg temp
-%define %%TMP1         %8      ;; [clobbered] temporary xmm register
-%define %%TMP2         %9      ;; [clobbered] temporary xmm register
-%define %%TMP3         %10     ;; [clobbered] temporary xmm register
-%define %%TMP4         %11     ;; [clobbered] temporary xmm register
-%define %%TMP5         %12     ;; [clobbered] temporary xmm register
-%define %%TMP6         %13     ;; [clobbered] temporary xmm register
-%define %%TMP7         %14     ;; [clobbered] temporary xmm register
-%define %%TMP8         %15     ;; [clobbered] temporary xmm register
-%define %%TMP9         %16     ;; [clobbered] temporary xmm register
-%define %%TMP10        %17     ;; [clobbered] temporary xmm register
-%define %%TMP11        %18     ;; [clobbered] temporary xmm register
-%define %%TMP12        %19     ;; [clobbered] temporary xmm register
-%define %%TMP13        %20     ;; [clobbered] temporary xmm register
-%define %%TMP14        %21     ;; [clobbered] temporary xmm register
-%define %%TMP15        %22     ;; [clobbered] temporary xmm register
-%define %%TMP16        %23     ;; [clobbered] temporary xmm register
+%define %%TMP1_64       %6      ;; [clobbered] r64 gp reg temp
+%define %%TMP2_64       %7      ;; [clobbered] r64 gp reg temp
+%define %%TMP1          %8      ;; [clobbered] temporary xmm register
+%define %%TMP2          %9      ;; [clobbered] temporary xmm register
+%define %%TMP3          %10     ;; [clobbered] temporary xmm register
+%define %%TMP4          %11     ;; [clobbered] temporary xmm register
+%define %%TMP5          %12     ;; [clobbered] temporary xmm register
+%define %%TMP6          %13     ;; [clobbered] temporary xmm register
+%define %%TMP7          %14     ;; [clobbered] temporary xmm register
+%define %%TMP8          %15     ;; [clobbered] temporary xmm register
+%define %%TMP9          %16     ;; [clobbered] temporary xmm register
+%define %%TMP10         %17     ;; [clobbered] temporary xmm register
+%define %%TMP11         %18     ;; [clobbered] temporary xmm register
+%define %%TMP12         %19     ;; [clobbered] temporary xmm register
+%define %%TMP13         %20     ;; [clobbered] temporary xmm register
+%define %%TMP14         %21     ;; [clobbered] temporary xmm register
+%define %%TMP15         %22     ;; [clobbered] temporary xmm register
+%define %%TMP16         %23     ;; [clobbered] temporary xmm register
 
         sub             %%COMMON_LEN, 1
         mov             %%LENGTH, %%COMMON_LEN
@@ -919,6 +919,97 @@ endstruc
         SNOW3G_OUTPUT      3, %%STATE,  3, %%IN, %%OUT, %%TMP1_64, %%LENGTH
 
 %%zero_bytes:
+%endmacro
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Generate 5 double words of key stream for SNOW3G authentication
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+%macro   SNOW3G_AUTH_INIT_5_BY_4 22
+%define %%KEY           %1   ;; [in] array of pointers to 4 keys
+%define %%IV            %2   ;; [in] array of pointers to 4 IV's
+%define %%DST_PTR       %3   ;; [in] destination buffer to put 5DW of keystream for each lane
+%define %%TMP1_64       %4   ;; [clobbered] r64 gp reg temp
+%define %%TMP2_64       %5   ;; [clobbered] r64 gp reg temp
+%define %%TMP1          %6   ;; [clobbered] temporary xmm register
+%define %%TMP2          %7   ;; [clobbered] temporary xmm register
+%define %%TMP3          %8   ;; [clobbered] temporary xmm register
+%define %%TMP4          %9   ;; [clobbered] temporary xmm register
+%define %%TMP5          %10  ;; [clobbered] temporary xmm register
+%define %%TMP6          %11  ;; [clobbered] temporary xmm register
+%define %%TMP7          %12  ;; [clobbered] temporary xmm register
+%define %%TMP8          %13  ;; [clobbered] temporary xmm register
+%define %%TMP9          %14  ;; [clobbered] temporary xmm register
+%define %%TMP10         %15  ;; [clobbered] temporary xmm register
+%define %%TMP11         %16  ;; [clobbered] temporary xmm register
+%define %%TMP12         %17  ;; [clobbered] temporary xmm register
+%define %%TMP13         %18  ;; [clobbered] temporary xmm register
+%define %%TMP14         %19  ;; [clobbered] temporary xmm register
+%define %%TMP15         %20  ;; [clobbered] temporary xmm register
+%define %%TMP16         %21  ;; [clobbered] temporary xmm register
+%define %%STATE         %22  ;; [in] ptr to LFSR/FSM struct
+
+%define KEYGEN_STAGE    _snow3g_args_LD_ST_MASK
+%define INIT1_DONE      _snow3g_args_LD_ST_MASK+16
+
+        ;; Initialize LFSR and FSM registers
+%assign i 0
+%rep 4
+        mov     %%TMP1_64, [%%KEY + i*8]
+        mov     %%TMP2_64, [%%IV + i*8]
+        SNOW3G_INIT_LANE_SSE %%STATE, i, %%TMP1_64, %%TMP2_64, %%TMP1, %%TMP2, %%TMP3
+%assign i (i+1)
+%endrep
+
+        ;; Run 32 iteration in INIT mode (reject keystreams)
+%rep 32
+        SNOW3G_KEY_GEN_SSE %%STATE, %%TMP1, %%TMP2, %%TMP3, %%TMP4, %%TMP5,    \
+                           %%TMP6, %%TMP7, %%TMP8, %%TMP9, %%TMP10, %%TMP11,   \
+                           %%TMP12, %%TMP13, %%TMP14, %%TMP15, %%TMP16, 0
+%endrep
+        ;; Mark INIT1 phase done for all lanes
+        movdqa  %%TMP1, [rel all_fs]
+        movdqa  [state + INIT1_DONE], %%TMP1
+
+        SNOW3G_KEY_GEN_SSE %%STATE, %%TMP1, %%TMP2, %%TMP3, %%TMP4, %%TMP5,    \
+                           %%TMP6, %%TMP7, %%TMP8, %%TMP9, %%TMP10, %%TMP11,   \
+                           %%TMP12, %%TMP13, %%TMP14, %%TMP15, %%TMP16, 0
+
+        ;; Put all lanes in KEYGEN state
+        movdqa  %%TMP1, [rel all_fs]
+        movdqa  [state + KEYGEN_STAGE], %%TMP1
+
+        ;; Generate 4 dw of keystream for each lane
+%assign i 0
+%rep 4
+        SNOW3G_KEY_GEN_SSE %%STATE, %%TMP1, %%TMP2, %%TMP3, %%TMP4, %%TMP5,    \
+                           %%TMP6, %%TMP7, %%TMP8, %%TMP9, %%TMP10, %%TMP11,   \
+                           %%TMP12, %%TMP13, %%TMP14, %%TMP15, %%TMP16, i
+
+%assign i (i+1)
+%endrep
+        TRANSPOSE_4X32  %%TMP1, %%TMP2, %%TMP3, %%TMP4, %%TMP5, %%TMP6
+
+        ;; Store 4 dw of keystream for each lane
+        movdqu  [%%DST_PTR + 0*32], %%TMP1
+        movdqu  [%%DST_PTR + 1*32], %%TMP2
+        movdqu  [%%DST_PTR + 2*32], %%TMP3
+        movdqu  [%%DST_PTR + 3*32], %%TMP4
+
+        ;; Generate final dw of keystream for each lane
+        SNOW3G_KEY_GEN_SSE %%STATE, %%TMP1, %%TMP2, %%TMP3, %%TMP4, %%TMP5,    \
+                           %%TMP6, %%TMP7, %%TMP8, %%TMP9, %%TMP10, %%TMP11,   \
+                           %%TMP12, %%TMP13, %%TMP14, %%TMP15, %%TMP16, 0
+
+        ;; Store final dw of keystream for each lane
+        mov     DWORD(%%TMP1_64), [rsp + _keystream + 0*4]
+        mov     [%%DST_PTR + 16 + (0*32)], DWORD(%%TMP1_64)
+        mov     DWORD(%%TMP1_64), [rsp + _keystream + 1*4]
+        mov     [%%DST_PTR + 16 + (1 * 32)], DWORD(%%TMP1_64)
+        mov     DWORD(%%TMP1_64), [rsp + _keystream + 2*4]
+        mov     [%%DST_PTR + 16 + (2*32)], DWORD(%%TMP1_64)
+        mov     DWORD(%%TMP1_64), [rsp + _keystream + 3*4]
+        mov     [%%DST_PTR + 16 + (3 * 32)], DWORD(%%TMP1_64)
+
 %endmacro
 
 mksection stack-noexec
