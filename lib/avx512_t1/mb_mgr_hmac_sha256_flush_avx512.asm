@@ -45,6 +45,7 @@
 %include "include/mb_mgr_datastruct.asm"
 %include "include/reg_sizes.asm"
 %include "include/cet.inc"
+%include "include/clear_regs.asm"
 ;; %define DO_DBGPRINT
 %include "include/dbgprint.asm"
 
@@ -411,9 +412,13 @@ APPEND(skip_clear_,I):
 
 %endif ;; SAFE_DATA
 
-return:
+%ifdef SAFE_DATA
+        clear_all_zmms_asm
+%else
         vzeroupper
+%endif
 
+return:
 	mov	rbx, [rsp + _gpr_save + 8*0]
 	mov	rbp, [rsp + _gpr_save + 8*1]
 	mov	r12, [rsp + _gpr_save + 8*2]

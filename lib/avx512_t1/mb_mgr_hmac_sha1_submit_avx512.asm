@@ -47,6 +47,7 @@
 %include "include/memcpy.asm"
 %include "include/const.inc"
 %include "include/cet.inc"
+%include "include/clear_regs.asm"
 ;; %define DO_DBGPRINT
 %include "include/dbgprint.asm"
 
@@ -380,8 +381,13 @@ clear_ret:
         mov     dword [lane_data + _outer_block + 16], 0
 %endif
 
-return:
+%ifdef SAFE_DATA
+        clear_all_zmms_asm
+%else
         vzeroupper
+%endif
+
+return:
 
         DBGPRINTL "---------- exit sha1 submit -----------"
         mov	rbp, [rsp + _gpr_save + 8*0]

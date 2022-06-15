@@ -39,6 +39,7 @@
 %include "include/memcpy.asm"
 %include "include/reg_sizes.asm"
 %include "include/crc32_refl.inc"
+%include "include/clear_regs.asm"
 
 [bits 64]
 default rel
@@ -286,6 +287,9 @@ crc32_refl_by8_avx:
         vpextrd         eax, xmm7, 2
 
 .cleanup:
+%ifdef SAFE_DATA
+        clear_all_xmms_avx_asm
+%endif
         not             eax
         ret
 

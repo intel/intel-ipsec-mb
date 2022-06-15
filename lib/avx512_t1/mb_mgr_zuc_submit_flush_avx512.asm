@@ -32,6 +32,7 @@
 %include "include/cet.inc"
 %include "include/reg_sizes.asm"
 %include "include/const.inc"
+%include "include/clear_regs.asm"
 
 %ifndef SUBMIT_JOB_ZUC128_EEA3
 %define SUBMIT_JOB_ZUC128_EEA3 submit_job_zuc_eea3_no_gfni_avx512
@@ -330,8 +331,11 @@ mksection .text
 %endif
 
 %%return_submit_eea3:
+%ifdef SAFE_DATA
+        clear_all_zmms_asm
+%else
         vzeroupper
-
+%endif
         mov     rbx, [rsp + _gpr_save + 8*0]
         mov     rbp, [rsp + _gpr_save + 8*1]
         mov     r12, [rsp + _gpr_save + 8*2]
@@ -550,7 +554,11 @@ mksection .text
 %endrep
 %endif
 
+%ifdef SAFE_DATA
+        clear_all_zmms_asm
+%else
         vzeroupper
+%endif
 
 %%return_flush_eea3:
 
@@ -981,7 +989,11 @@ FLUSH_JOB_ZUC256_EEA3:
 %endif
 
 %%return_submit_eia3:
+%ifdef SAFE_DATA
+        clear_all_zmms_asm
+%else
         vzeroupper
+%endif
 
         mov     rbx, [rsp + _gpr_save + 8*0]
         mov     rbp, [rsp + _gpr_save + 8*1]
@@ -1178,7 +1190,11 @@ FLUSH_JOB_ZUC256_EEA3:
 %endrep
 %endif
 
+%ifdef SAFE_DATA
+        clear_all_zmms_asm
+%else
         vzeroupper
+%endif
 
 %%return_flush_eia3:
 

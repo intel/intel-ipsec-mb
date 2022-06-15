@@ -2565,10 +2565,6 @@ submit_job_and_check(IMB_MGR *state, const int run_check)
 
         ADV_JOBS(&state->earliest_job);
 exit:
-#ifdef SAFE_DATA
-        CLEAR_SCRATCH_GPS();
-        CLEAR_SCRATCH_SIMD_REGS();
-#endif /* SAFE_DATA */
 
 #ifndef LINUX
         RESTORE_XMMS(xmm_save);
@@ -2617,11 +2613,6 @@ FLUSH_JOB(IMB_MGR *state)
 
         if (state->earliest_job == state->next_job)
                 state->earliest_job = -1; /* becomes empty */
-
-#ifdef SAFE_DATA
-        CLEAR_SCRATCH_GPS();
-        CLEAR_SCRATCH_SIMD_REGS();
-#endif /* SAFE_DATA */
 
 #ifndef LINUX
         RESTORE_XMMS(xmm_save);

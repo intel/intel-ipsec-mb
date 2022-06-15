@@ -31,6 +31,7 @@
 %include "include/cet.inc"
 %include "include/reg_sizes.asm"
 %include "include/const.inc"
+%include "include/clear_regs.asm"
 
 %define SUBMIT_JOB_ZUC128_EEA3 submit_job_zuc_eea3_avx2
 %define FLUSH_JOB_ZUC128_EEA3 flush_job_zuc_eea3_avx2
@@ -406,6 +407,11 @@ mksection .text
 %endif
 
 %%return_submit_eea3:
+%ifdef SAFE_DATA
+        clear_all_xmms_avx_asm
+%else
+        vzeroupper
+%endif
 
         mov     rbx, [rsp + _gpr_save + 8*0]
         mov     rbp, [rsp + _gpr_save + 8*1]
@@ -681,6 +687,11 @@ APPEND3(%%skip_eea3_copy_,I,J):
         SHIFT_GP        1, idx, tmp3, tmp4, left
         or      [state + _zuc_unused_lane_bitmask], BYTE(tmp3)
 %%return_flush_eea3:
+%ifdef SAFE_DATA
+        clear_all_xmms_avx_asm
+%else
+        vzeroupper
+%endif
 
         mov     rbx, [rsp + _gpr_save + 8*0]
         mov     rbp, [rsp + _gpr_save + 8*1]
@@ -902,6 +913,11 @@ FLUSH_JOB_ZUC256_EEA3:
         mov     [state + _zuc_unused_lanes], unused_lanes
 
 %%return_submit_eia3:
+%ifdef SAFE_DATA
+        clear_all_xmms_avx_asm
+%else
+        vzeroupper
+%endif
 
         mov     rbx, [rsp + _gpr_save + 8*0]
         mov     rbp, [rsp + _gpr_save + 8*1]
@@ -1065,6 +1081,11 @@ APPEND(%%skip_eia3_,I):
         mov     [state + _zuc_unused_lanes], unused_lanes
 
 %%return_flush_eia3:
+%ifdef SAFE_DATA
+        clear_all_xmms_avx_asm
+%else
+        vzeroupper
+%endif
 
         mov     rbx, [rsp + _gpr_save + 8*0]
         mov     rbp, [rsp + _gpr_save + 8*1]

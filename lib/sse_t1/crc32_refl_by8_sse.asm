@@ -39,6 +39,7 @@
 %include "include/memcpy.asm"
 %include "include/reg_sizes.asm"
 %include "include/crc32_refl.inc"
+%include "include/clear_regs.asm"
 
 %ifndef CRC32_REFL_FN
 %define CRC32_REFL_FN crc32_refl_by8_sse
@@ -308,6 +309,9 @@ CRC32_REFL_FN:
         pextrd          eax, xmm7, 2
 
 .cleanup:
+%ifdef SAFE_DATA
+        clear_all_xmms_sse_asm
+%endif
         not             eax
         ret
 

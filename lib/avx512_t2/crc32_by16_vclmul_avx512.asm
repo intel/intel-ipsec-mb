@@ -40,6 +40,8 @@
 %include "include/clear_regs.asm"
 %include "include/crc32.inc"
 %include "include/cet.inc"
+%include "include/clear_regs.asm"
+
 [bits 64]
 default rel
 
@@ -280,6 +282,11 @@ crc32_by16_vclmul_avx512:
 	vpextrd		eax, xmm7, 1
 
 .cleanup:
+%ifdef SAFE_DATA
+        clear_all_zmms_asm
+%else
+        vzeroupper
+%endif
 	ret
 
 align 32

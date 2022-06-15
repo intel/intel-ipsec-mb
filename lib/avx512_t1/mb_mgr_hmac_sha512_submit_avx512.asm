@@ -39,6 +39,8 @@
 %include "include/memcpy.asm"
 %include "include/const.inc"
 %include "include/cet.inc"
+%include "include/clear_regs.asm"
+
 extern sha512_x8_avx512
 
 mksection .rodata
@@ -394,9 +396,13 @@ clear_ret:
 %endif
 %endif ;; SAFE_DATA
 
-return:
+%ifdef SAFE_DATA
+        clear_all_zmms_asm
+%else
         vzeroupper
+%endif
 
+return:
 	mov	rbx, [rsp + _gpr_save + 8*0]
 	mov	rbp, [rsp + _gpr_save + 8*1]
 	mov	r12, [rsp + _gpr_save + 8*2]

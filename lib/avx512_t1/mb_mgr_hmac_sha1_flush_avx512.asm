@@ -44,6 +44,7 @@
 %include "include/imb_job.asm"
 %include "include/mb_mgr_datastruct.asm"
 %include "include/reg_sizes.asm"
+%include "include/clear_regs.asm"
 
 ;; %define DO_DBGPRINT
 %include "include/dbgprint.asm"
@@ -349,10 +350,14 @@ APPEND(skip_clear_,I):
 
 %endif ;; SAFE_DATA
 
+%ifdef SAFE_DATA
+        clear_all_zmms_asm
+%else
+        vzeroupper
+%endif
+
 return:
         DBGPRINTL "---------- exit hmac flush avx512 -----------"
-        vzeroupper
-
         mov	rbp, [rsp + _gpr_save + 8*0]
         mov	r12, [rsp + _gpr_save + 8*1]
         mov	r13, [rsp + _gpr_save + 8*2]

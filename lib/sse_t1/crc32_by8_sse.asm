@@ -39,6 +39,7 @@
 %include "include/memcpy.asm"
 %include "include/reg_sizes.asm"
 %include "include/crc32.inc"
+%include "include/clear_regs.asm"
 
 %ifndef CRC32_FN
 %define CRC32_FN crc32_by8_sse
@@ -333,6 +334,9 @@ CRC32_FN:
         pextrd          eax, xmm7, 1
 
 .cleanup:
+%ifdef SAFE_DATA
+        clear_all_xmms_sse_asm
+%endif
         ret
 
 align 32
