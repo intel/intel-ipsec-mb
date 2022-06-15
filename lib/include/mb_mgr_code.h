@@ -638,7 +638,7 @@ SUBMIT_JOB_HASH(IMB_MGR *state, IMB_JOB *job)
         MB_MGR_SHA_1_OOO *sha_1_ooo = state->sha_1_ooo;
         MB_MGR_SHA_256_OOO *sha_256_ooo = state->sha_256_ooo;
         MB_MGR_SHA_256_OOO *sha_224_ooo = state->sha_224_ooo;
-#ifdef AVX512
+#if defined (SSE) || defined (AVX512)
         MB_MGR_SNOW3G_OOO *snow3g_uia2_ooo = state->snow3g_uia2_ooo;
 #endif
 
@@ -718,7 +718,7 @@ SUBMIT_JOB_HASH(IMB_MGR *state, IMB_JOB *job)
                 return SUBMIT_JOB_ZUC256_EIA3(zuc256_eia3_ooo, job,
                                         job->auth_tag_output_len_in_bytes);
         case IMB_AUTH_SNOW3G_UIA2_BITLEN:
-#ifdef AVX512
+#if defined (SSE) || defined (AVX512)
                 return SUBMIT_JOB_SNOW3G_UIA2(snow3g_uia2_ooo, job);
 #else
                 IMB_SNOW3G_F9_1_BUFFER(state, (const snow3g_key_schedule_t *)
@@ -834,7 +834,7 @@ FLUSH_JOB_HASH(IMB_MGR *state, IMB_JOB *job)
         MB_MGR_SHA_1_OOO *sha_1_ooo = state->sha_1_ooo;
         MB_MGR_SHA_256_OOO *sha_256_ooo = state->sha_256_ooo;
         MB_MGR_SHA_256_OOO *sha_224_ooo = state->sha_224_ooo;
-#ifdef AVX512
+#if defined(SSE) || defined (AVX512)
         MB_MGR_SNOW3G_OOO *snow3g_uia2_ooo = state->snow3g_uia2_ooo;
 #endif
 
@@ -891,7 +891,7 @@ FLUSH_JOB_HASH(IMB_MGR *state, IMB_JOB *job)
         case IMB_AUTH_ZUC256_EIA3_BITLEN:
                 return FLUSH_JOB_ZUC256_EIA3(zuc256_eia3_ooo,
                                              job->auth_tag_output_len_in_bytes);
-#ifdef AVX512
+#if defined(SSE) || defined (AVX512)
         case IMB_AUTH_SNOW3G_UIA2_BITLEN:
                 return FLUSH_JOB_SNOW3G_UIA2(snow3g_uia2_ooo);
 #endif

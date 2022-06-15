@@ -230,4 +230,8 @@ IMB_JOB *snow_v_aead_init_sse(IMB_JOB *job);
 IMB_JOB *submit_job_snow3g_uea2_sse(MB_MGR_SNOW3G_OOO *state, IMB_JOB *job);
 IMB_JOB *flush_job_snow3g_uea2_sse(MB_MGR_SNOW3G_OOO *state);
 
+IMB_JOB *submit_job_snow3g_uia2_sse(MB_MGR_SNOW3G_OOO *state,
+                                    IMB_JOB *job);
+IMB_JOB *flush_job_snow3g_uia2_sse(MB_MGR_SNOW3G_OOO *state);
+
 #endif /* IMB_ARCH_SSE_TYPE1_H */

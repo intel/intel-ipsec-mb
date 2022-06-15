@@ -209,6 +209,8 @@
 
 #define SUBMIT_JOB_SNOW3G_UEA2 submit_snow3g_uea2_job_sse
 #define FLUSH_JOB_SNOW3G_UEA2  flush_snow3g_uea2_job_sse
+#define SUBMIT_JOB_SNOW3G_UIA2 submit_job_snow3g_uia2_sse
+#define FLUSH_JOB_SNOW3G_UIA2 flush_job_snow3g_uia2_sse
 
 /* ====================================================================== */
 
@@ -714,6 +716,9 @@ reset_ooo_mgrs(IMB_MGR *state)
 
         /* Init SNOW3G-UEA out-of-order fields */
         ooo_mgr_snow3g_reset(state->snow3g_uea2_ooo, 4);
+
+        /* Init SNOW3G-UIA out-of-order fields */
+        ooo_mgr_snow3g_reset(state->snow3g_uia2_ooo, 4);
 }
 
 IMB_DLL_LOCAL void
