@@ -276,6 +276,7 @@ lib_objs1 = \
 	$(OBJ_DIR)\mb_mgr_snow3g_uea2_submit_flush_vaes_avx512.obj \
 	$(OBJ_DIR)\mb_mgr_snow3g_uia2_submit_flush_vaes_avx512.obj \
 	$(OBJ_DIR)\mb_mgr_snow3g_uea2_submit_flush_x4_sse.obj \
+	$(OBJ_DIR)\mb_mgr_snow3g_uia2_submit_flush_x4_sse.obj \
 	$(OBJ_DIR)\aes_xcbc_expand_key.obj \
 	$(OBJ_DIR)\md5_one_block.obj \
 	$(OBJ_DIR)\sha_sse.obj \

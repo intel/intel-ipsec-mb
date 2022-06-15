@@ -454,6 +454,7 @@ asm_sse_lib_objs := \
 	mb_mgr_zuc_submit_flush_sse.o \
 	mb_mgr_zuc_submit_flush_gfni_sse.o \
 	mb_mgr_snow3g_uea2_submit_flush_x4_sse.o \
+	mb_mgr_snow3g_uia2_submit_flush_x4_sse.o \
 	ethernet_fcs_sse.o \
 	crc16_x25_sse.o \
 	crc32_sctp_sse.o \

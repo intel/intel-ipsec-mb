@@ -170,7 +170,7 @@ mksection .text
 
 struc STACK
 _keystream:     resb    (4 * 16)
-_gpr_save:      resq    6
+_gpr_save:      resq    8
 _rsp_save:      resq    1
 endstruc
 
@@ -187,11 +187,12 @@ endstruc
         mov     [rsp + _gpr_save + 8 * 2], r12
         mov     [rsp + _gpr_save + 8 * 3], rsi
         mov     [rsp + _gpr_save + 8 * 4], rdi
+        mov     [rsp + _gpr_save + 8 * 5], r13
 %ifdef LINUX
-        mov     [rsp + _gpr_save + 8 * 5], r9
+        mov     [rsp + _gpr_save + 8 * 6], r9
 %else
-        mov     [rsp + _gpr_save + 8 * 5], rcx
-        mov     [rsp + _gpr_save + 8 * 6], rdx
+        mov     [rsp + _gpr_save + 8 * 6], rcx
+        mov     [rsp + _gpr_save + 8 * 7], rdx
 %endif
         mov     [rsp + _rsp_save], rax  ;; original SP
 %endmacro
@@ -205,11 +206,12 @@ endstruc
         mov     r12, [rsp + _gpr_save + 8 * 2]
         mov     rsi, [rsp + _gpr_save + 8 * 3]
         mov     rdi, [rsp + _gpr_save + 8 * 4]
+        mov     r13, [rsp + _gpr_save + 8 * 5]
 %ifdef LINUX
-        mov     r9, [rsp + _gpr_save + 8 * 5]
+        mov     r9, [rsp + _gpr_save + 8 * 6]
 %else
-        mov     rcx, [rsp + _gpr_save + 8 * 5]
-        mov     rdx, [rsp + _gpr_save + 8 * 6]
+        mov     rcx, [rsp + _gpr_save + 8 * 6]
+        mov     rdx, [rsp + _gpr_save + 8 * 7]
 %endif
         mov     rsp, [rsp + _rsp_save]  ;; original SP
 %endmacro
