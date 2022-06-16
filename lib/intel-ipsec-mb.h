@@ -3106,96 +3106,168 @@ aes_gcm_init_256_avx_gen4(const struct gcm_key_data *key_data,
                           uint8_t const *aad, uint64_t aad_len);
 
 /**
- * @brief encrypt a block of a AES-GCM Encryption message
+ * @brief Encrypt a block of a AES-GCM-128 encryption message.
  *
- * @param key_data GCM expanded key data
- * @param context_data GCM operation context data
- * @param out Ciphertext output. Encrypt in-place is allowed.
- * @param in Plaintext input.
- * @param len Length of data in Bytes for decryption.
+ * @param [in] key_data         GCM expanded key data
+ * @param [in,out] context_data GCM operation context data
+ * @param [out] out             Ciphertext output. Encrypt in-place is allowed
+ * @param [in] in               Plaintext input
+ * @param [in] len              Length of data in bytes for encryption
  */
 IMB_DLL_EXPORT void
 aes_gcm_enc_128_update_sse(const struct gcm_key_data *key_data,
                            struct gcm_context_data *context_data,
                            uint8_t *out, const uint8_t *in, uint64_t len);
+/**
+ * @copydoc aes_gcm_enc_128_update_sse
+ */
 IMB_DLL_EXPORT void
 aes_gcm_enc_128_update_avx_gen2(const struct gcm_key_data *key_data,
                                 struct gcm_context_data *context_data,
                                 uint8_t *out, const uint8_t *in, uint64_t len);
+/**
+ * @copydoc aes_gcm_enc_128_update_sse
+ */
 IMB_DLL_EXPORT void
 aes_gcm_enc_128_update_avx_gen4(const struct gcm_key_data *key_data,
                                 struct gcm_context_data *context_data,
                                 uint8_t *out, const uint8_t *in, uint64_t len);
 
+/**
+ * @brief Encrypt a block of a AES-GCM-192 encryption message.
+ *
+ * @param [in] key_data         GCM expanded key data
+ * @param [in,out] context_data GCM operation context data
+ * @param [out] out             Ciphertext output. Encrypt in-place is allowed
+ * @param [in] in               Plaintext input
+ * @param [in] len              Length of data in bytes for encryption
+ */
 IMB_DLL_EXPORT void
 aes_gcm_enc_192_update_sse(const struct gcm_key_data *key_data,
                            struct gcm_context_data *context_data,
                            uint8_t *out, const uint8_t *in, uint64_t len);
+/**
+ * @copydoc aes_gcm_enc_192_update_sse
+ */
 IMB_DLL_EXPORT void
 aes_gcm_enc_192_update_avx_gen2(const struct gcm_key_data *key_data,
                                 struct gcm_context_data *context_data,
                                 uint8_t *out, const uint8_t *in, uint64_t len);
+/**
+ * @copydoc aes_gcm_enc_192_update_sse
+ */
 IMB_DLL_EXPORT void
 aes_gcm_enc_192_update_avx_gen4(const struct gcm_key_data *key_data,
                                 struct gcm_context_data *context_data,
                                 uint8_t *out, const uint8_t *in, uint64_t len);
 
+/**
+ * @brief Encrypt a block of a AES-GCM-256 encryption message.
+ *
+ * @param [in] key_data         GCM expanded key data
+ * @param [in,out] context_data GCM operation context data
+ * @param [out] out             Ciphertext output. Encrypt in-place is allowed
+ * @param [in] in               Plaintext input
+ * @param [in] len              Length of data in bytes for encryption
+ */
 IMB_DLL_EXPORT void
 aes_gcm_enc_256_update_sse(const struct gcm_key_data *key_data,
                            struct gcm_context_data *context_data,
                            uint8_t *out, const uint8_t *in, uint64_t len);
+/**
+ * @copydoc aes_gcm_enc_256_update_sse
+ */
 IMB_DLL_EXPORT void
 aes_gcm_enc_256_update_avx_gen2(const struct gcm_key_data *key_data,
                                 struct gcm_context_data *context_data,
                                 uint8_t *out, const uint8_t *in, uint64_t len);
+/**
+ * @copydoc aes_gcm_enc_256_update_sse
+ */
 IMB_DLL_EXPORT void
 aes_gcm_enc_256_update_avx_gen4(const struct gcm_key_data *key_data,
                                 struct gcm_context_data *context_data,
                                 uint8_t *out, const uint8_t *in, uint64_t len);
 
 /**
- * @brief decrypt a block of a AES-GCM Encryption message
+ * @brief Decrypt a block of a AES-GCM-128 encryption message.
  *
- * @param key_data GCM expanded key data
- * @param context_data GCM operation context data
- * @param out Plaintext output. Decrypt in-place is allowed.
- * @param in Ciphertext input.
- * @param len Length of data in Bytes for decryption.
+ * @param [in] key_data         GCM expanded key data
+ * @param [in,out] context_data GCM operation context data
+ * @param [out] out             Plaintext output. Decrypt in-place is allowed
+ * @param [in] in               Ciphertext input
+ * @param [in] len              Length of data in bytes for decryption
  */
 IMB_DLL_EXPORT void
 aes_gcm_dec_128_update_sse(const struct gcm_key_data *key_data,
                            struct gcm_context_data *context_data,
                            uint8_t *out, const uint8_t *in, uint64_t len);
+/**
+ * @copydoc aes_gcm_dec_128_update_sse
+ */
 IMB_DLL_EXPORT void
 aes_gcm_dec_128_update_avx_gen2(const struct gcm_key_data *key_data,
                                 struct gcm_context_data *context_data,
                                 uint8_t *out, const uint8_t *in, uint64_t len);
+/**
+ * @copydoc aes_gcm_dec_128_update_sse
+ */
 IMB_DLL_EXPORT void
 aes_gcm_dec_128_update_avx_gen4(const struct gcm_key_data *key_data,
                                 struct gcm_context_data *context_data,
                                 uint8_t *out, const uint8_t *in, uint64_t len);
 
+/**
+ * @brief Decrypt a block of a AES-GCM-192 encryption message.
+ *
+ * @param [in] key_data         GCM expanded key data
+ * @param [in,out] context_data GCM operation context data
+ * @param [out] out             Plaintext output. Decrypt in-place is allowed
+ * @param [in] in               Ciphertext input
+ * @param [in] len              Length of data in bytes for decryption
+ */
 IMB_DLL_EXPORT void
 aes_gcm_dec_192_update_sse(const struct gcm_key_data *key_data,
                            struct gcm_context_data *context_data,
                            uint8_t *out, const uint8_t *in, uint64_t len);
+/**
+ * @copydoc aes_gcm_dec_192_update_sse
+ */
 IMB_DLL_EXPORT void
 aes_gcm_dec_192_update_avx_gen2(const struct gcm_key_data *key_data,
                                 struct gcm_context_data *context_data,
                                 uint8_t *out, const uint8_t *in, uint64_t len);
+/**
+ * @copydoc aes_gcm_dec_192_update_sse
+ */
 IMB_DLL_EXPORT void
 aes_gcm_dec_192_update_avx_gen4(const struct gcm_key_data *key_data,
                                 struct gcm_context_data *context_data,
                                 uint8_t *out, const uint8_t *in, uint64_t len);
 
+/**
+ * @brief Decrypt a block of a AES-GCM-256 encryption message.
+ *
+ * @param [in] key_data         GCM expanded key data
+ * @param [in,out] context_data GCM operation context data
+ * @param [out] out             Plaintext output. Decrypt in-place is allowed
+ * @param [in] in               Ciphertext input
+ * @param [in] len              Length of data in bytes for decryption
+ */
 IMB_DLL_EXPORT void
 aes_gcm_dec_256_update_sse(const struct gcm_key_data *key_data,
                            struct gcm_context_data *context_data,
                            uint8_t *out, const uint8_t *in, uint64_t len);
+/**
+ * @copydoc aes_gcm_dec_256_update_sse
+ */
 IMB_DLL_EXPORT void
 aes_gcm_dec_256_update_avx_gen2(const struct gcm_key_data *key_data,
                                 struct gcm_context_data *context_data,
                                 uint8_t *out, const uint8_t *in, uint64_t len);
+/**
+ * @copydoc aes_gcm_dec_256_update_sse
+ */
 IMB_DLL_EXPORT void
 aes_gcm_dec_256_update_avx_gen4(const struct gcm_key_data *key_data,
                                 struct gcm_context_data *context_data,
