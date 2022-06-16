@@ -47,6 +47,9 @@ extern void call_sha_256_mult_sse_from_c(SHA256_ARGS *args,
 extern void call_sha_256_mult_avx_from_c(SHA256_ARGS *args,
                                          uint32_t size_in_blocks);
 
+extern void call_sha256_oct_avx2_from_c(SHA256_ARGS *args,
+                                        uint32_t size_in_blocks);
+
 __forceinline
 void copy_bswap4_array_mb(void *dst, const void *src, const size_t num,
                           const size_t offset, const unsigned lane)

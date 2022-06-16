@@ -208,6 +208,78 @@ K256:
 
 mksection .text
 
+%define XMM_STORAGE     10*16
+%define GP_STORAGE      9*8
+
+%define VARIABLE_OFFSET XMM_STORAGE + GP_STORAGE
+%define GP_OFFSET XMM_STORAGE
+
+%macro FUNC_SAVE 0
+    mov      r11, rsp
+    sub      rsp, VARIABLE_OFFSET
+    and      rsp, ~31	; align rsp to 32 bytes
+
+    mov      [rsp + 0*8],  rbx
+    mov      [rsp + 1*8],  rbp
+    mov      [rsp + 2*8],  r12
+    mov      [rsp + 3*8],  r13
+    mov      [rsp + 4*8],  r14
+    mov      [rsp + 5*8],  r15
+%ifndef LINUX
+    mov      [rsp + 6*8],  rsi
+    mov      [rsp + 7*8],  rdi
+    vmovdqa  [rsp + 4*16], xmm6
+    vmovdqa  [rsp + 5*16], xmm7
+    vmovdqa  [rsp + 6*16], xmm8
+    vmovdqa  [rsp + 7*16], xmm9
+    vmovdqa  [rsp + 8*16], xmm10
+    vmovdqa  [rsp + 9*16], xmm11
+    vmovdqa  [rsp + 10*16], xmm12
+    vmovdqa  [rsp + 11*16], xmm13
+    vmovdqa  [rsp + 12*16], xmm14
+    vmovdqa  [rsp + 13*16], xmm15
+%endif ; LINUX
+    mov      [rsp + 14*16], r11 ;; rsp pointer
+%endmacro
+
+%macro FUNC_RESTORE 0
+    mov      rbx,  [rsp + 0*8]
+    mov      rbp,  [rsp + 1*8]
+    mov      r12,  [rsp + 2*8]
+    mov      r13,  [rsp + 3*8]
+    mov      r14,  [rsp + 4*8]
+    mov      r15,  [rsp + 5*8]
+%ifndef LINUX
+    mov      rsi,   [rsp + 6*8]
+    mov      rdi,   [rsp + 7*8]
+    vmovdqa  xmm6,  [rsp + 4*16]
+    vmovdqa  xmm7,  [rsp + 5*16]
+    vmovdqa  xmm8,  [rsp + 6*16]
+    vmovdqa  xmm9,  [rsp + 7*16]
+    vmovdqa  xmm10, [rsp + 8*16]
+    vmovdqa  xmm11, [rsp + 9*16]
+    vmovdqa  xmm12, [rsp + 10*16]
+    vmovdqa  xmm13, [rsp + 11*16]
+    vmovdqa  xmm14, [rsp + 12*16]
+    vmovdqa  xmm15, [rsp + 13*16]
+
+%ifdef SAFE_DATA
+    vpxor    xmm5, xmm5, xmm5
+    vmovdqa  xmm5,  [rsp + 4*16]
+    vmovdqa  xmm5,  [rsp + 5*16]
+    vmovdqa  xmm5,  [rsp + 6*16]
+    vmovdqa  xmm5,  [rsp + 7*16]
+    vmovdqa  xmm5,  [rsp + 8*16]
+    vmovdqa  xmm5,  [rsp + 9*16]
+    vmovdqa  xmm5,  [rsp + 10*16]
+    vmovdqa  xmm5,  [rsp + 11*16]
+    vmovdqa  xmm5,  [rsp + 12*16]
+    vmovdqa  xmm5,  [rsp + 13*16]
+%endif
+%endif ; LINUX
+    mov      rsp,   [rsp + 14*16] ;; rsp pointer
+%endmacro
+
 %ifdef LINUX
      %define arg1 	rdi
      %define arg2	rsi
@@ -580,6 +652,14 @@ Lrounds_16_xx:
 %endif
 
 	add rsp, FRAMESZ
+	ret
+
+; void call_sha256_oct_avx2_from_c(SHA256_ARGS *args, UINT32 size_in_blocks);
+MKGLOBAL(call_sha256_oct_avx2_from_c,function,internal)
+call_sha256_oct_avx2_from_c:
+	FUNC_SAVE
+	call sha256_oct_avx2
+	FUNC_RESTORE
 	ret
 
 mksection stack-noexec
