@@ -2774,35 +2774,38 @@ IMB_DLL_EXPORT void aes_cfb_128_one_avx512(void *out, const void *in,
                                            const void *iv, const void *keys,
                                            uint64_t len);
 
-/**
+/*
  * Direct GCM API.
  * Note that GCM is also available through job API.
  */
 
 /**
- * @brief GCM-AES Encryption
+ * @brief AES-GCM-128 Encryption.
  *
- * @param key_data GCM expanded key data
- * @param context_data GCM operation context data
- * @param out Ciphertext output. Encrypt in-place is allowed.
- * @param in Plaintext input.
- * @param len Length of data in Bytes for encryption.
- * @param iv pointer to 12 byte IV structure. Internally, library
- *        concates 0x00000001 value to it.
- * @param aad Additional Authentication Data (AAD).
- * @param aad_len Length of AAD.
- * @param auth_tag Authenticated Tag output.
- * @param auth_tag_len Authenticated Tag Length in bytes (must be
- *                     a multiple of 4 bytes). Valid values are
- *                     16 (most likely), 12 or 8.
+ * @param [in] key_data         GCM expanded key data
+ * @param [in,out] context_data GCM operation context data
+ * @param [out] out             Ciphertext output. Encrypt in-place is allowed
+ * @param [in] in               Plaintext input
+ * @param [in] len              Length of data in bytes for encryption
+ * @param [in] iv               Pointer to 12 byte IV structure
+ *                              Internally, the library concatenates 0x00000001
+ *                              to the IV
+ * @param [in] aad              Additional Authentication Data (AAD)
+ * @param [in] aad_len          Length of AAD in bytes
+ * @param [out] auth_tag        Authenticated Tag output
+ * @param [in] auth_tag_len     Authenticated Tag Length in bytes (must be
+ *                              a multiple of 4 bytes). Valid values are 16
+ *                              (most likely), 12 or 8
  */
-
 IMB_DLL_EXPORT void
 aes_gcm_enc_128_sse(const struct gcm_key_data *key_data,
                     struct gcm_context_data *context_data,
                     uint8_t *out, uint8_t const *in, uint64_t len,
                     const uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
                     uint8_t *auth_tag, uint64_t auth_tag_len);
+/**
+ * @copydoc aes_gcm_enc_128_sse
+ */
 IMB_DLL_EXPORT void
 aes_gcm_enc_128_avx_gen2(const struct gcm_key_data *key_data,
                          struct gcm_context_data *context_data,
@@ -2810,6 +2813,9 @@ aes_gcm_enc_128_avx_gen2(const struct gcm_key_data *key_data,
                          const uint8_t *iv,
                          uint8_t const *aad, uint64_t aad_len,
                          uint8_t *auth_tag, uint64_t auth_tag_len);
+/**
+ * @copydoc aes_gcm_enc_128_sse
+ */
 IMB_DLL_EXPORT void
 aes_gcm_enc_128_avx_gen4(const struct gcm_key_data *key_data,
                          struct gcm_context_data *context_data,
@@ -2817,13 +2823,33 @@ aes_gcm_enc_128_avx_gen4(const struct gcm_key_data *key_data,
                          const uint8_t *iv,
                          uint8_t const *aad, uint64_t aad_len,
                          uint8_t *auth_tag, uint64_t auth_tag_len);
-
+/**
+ * @brief AES-GCM-192 Encryption.
+ *
+ * @param [in] key_data         GCM expanded key data
+ * @param [in,out] context_data GCM operation context data
+ * @param [out] out             Ciphertext output. Encrypt in-place is allowed
+ * @param [in] in               Plaintext input
+ * @param [in] len              Length of data in bytes for encryption
+ * @param [in] iv               Pointer to 12 byte IV structure
+ *                              Internally, the library concatenates 0x00000001
+ *                              to the IV
+ * @param [in] aad              Additional Authentication Data (AAD)
+ * @param [in] aad_len          Length of AAD in bytes
+ * @param [out] auth_tag        Authenticated Tag output
+ * @param [in] auth_tag_len     Authenticated Tag Length in bytes (must be
+ *                              a multiple of 4 bytes). Valid values are 16
+ *                              (most likely), 12 or 8
+ */
 IMB_DLL_EXPORT void
 aes_gcm_enc_192_sse(const struct gcm_key_data *key_data,
                     struct gcm_context_data *context_data,
                     uint8_t *out, uint8_t const *in, uint64_t len,
                     const uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
                     uint8_t *auth_tag, uint64_t auth_tag_len);
+/**
+ * @copydoc aes_gcm_enc_192_sse
+ */
 IMB_DLL_EXPORT void
 aes_gcm_enc_192_avx_gen2(const struct gcm_key_data *key_data,
                          struct gcm_context_data *context_data,
@@ -2831,6 +2857,9 @@ aes_gcm_enc_192_avx_gen2(const struct gcm_key_data *key_data,
                          const uint8_t *iv,
                          uint8_t const *aad, uint64_t aad_len,
                          uint8_t *auth_tag, uint64_t auth_tag_len);
+/**
+ * @copydoc aes_gcm_enc_192_sse
+ */
 IMB_DLL_EXPORT void
 aes_gcm_enc_192_avx_gen4(const struct gcm_key_data *key_data,
                          struct gcm_context_data *context_data,
@@ -2839,6 +2868,24 @@ aes_gcm_enc_192_avx_gen4(const struct gcm_key_data *key_data,
                          uint8_t const *aad, uint64_t aad_len,
                          uint8_t *auth_tag, uint64_t auth_tag_len);
 
+/**
+ * @brief AES-GCM-256 Encryption.
+ *
+ * @param [in] key_data         GCM expanded key data
+ * @param [in,out] context_data GCM operation context data
+ * @param [out] out             Ciphertext output. Encrypt in-place is allowed
+ * @param [in] in               Plaintext input
+ * @param [in] len              Length of data in bytes for encryption
+ * @param [in] iv               Pointer to 12 byte IV structure
+ *                              Internally, the library concatenates 0x00000001
+ *                              to the IV
+ * @param [in] aad              Additional Authentication Data (AAD)
+ * @param [in] aad_len          Length of AAD in bytes
+ * @param [out] auth_tag        Authenticated Tag output
+ * @param [in] auth_tag_len     Authenticated Tag Length in bytes (must be
+ *                              a multiple of 4 bytes). Valid values are 16
+ *                              (most likely), 12 or 8
+ */
 IMB_DLL_EXPORT void
 aes_gcm_enc_256_sse(const struct gcm_key_data *key_data,
                     struct gcm_context_data *context_data,
@@ -2846,6 +2893,9 @@ aes_gcm_enc_256_sse(const struct gcm_key_data *key_data,
                     const uint8_t *iv,
                     uint8_t const *aad, uint64_t aad_len,
                     uint8_t *auth_tag, uint64_t auth_tag_len);
+/**
+ * @copydoc aes_gcm_enc_256_sse
+ */
 IMB_DLL_EXPORT void
 aes_gcm_enc_256_avx_gen2(const struct gcm_key_data *key_data,
                          struct gcm_context_data *context_data,
@@ -2853,6 +2903,9 @@ aes_gcm_enc_256_avx_gen2(const struct gcm_key_data *key_data,
                          const uint8_t *iv,
                          uint8_t const *aad, uint64_t aad_len,
                          uint8_t *auth_tag, uint64_t auth_tag_len);
+/**
+ * @copydoc aes_gcm_enc_256_sse
+ */
 IMB_DLL_EXPORT void
 aes_gcm_enc_256_avx_gen4(const struct gcm_key_data *key_data,
                          struct gcm_context_data *context_data,
@@ -2862,21 +2915,22 @@ aes_gcm_enc_256_avx_gen4(const struct gcm_key_data *key_data,
                          uint8_t *auth_tag, uint64_t auth_tag_len);
 
 /**
- * @brief GCM-AES Decryption
+ * @brief AES-GCM-128 Decryption.
  *
- * @param key_data GCM expanded keys data
- * @param context_data GCM operation context data
- * @param out Plaintext output. Decrypt in-place is allowed.
- * @param in Ciphertext input.
- * @param len Length of data in Bytes for decryption.
- * @param iv pointer to 12 byte IV structure. Internally, library
- *        concates 0x00000001 value to it.
- * @param aad Additional Authentication Data (AAD).
- * @param aad_len Length of AAD.
- * @param auth_tag Authenticated Tag output.
- * @param auth_tag_len Authenticated Tag Length in bytes (must be
- *                     a multiple of 4 bytes). Valid values are
- *                     16 (most likely), 12 or 8.
+ * @param [in] key_data         GCM expanded key data
+ * @param [in,out] context_data GCM operation context data
+ * @param [out] out             Plaintext output. Decrypt in-place is allowed
+ * @param [in] in               Ciphertext input
+ * @param [in] len              Length of data in bytes for decryption
+ * @param [in] iv               Pointer to 12 byte IV structure
+ *                              Internally, the library concatenates 0x00000001
+ *                              to the IV
+ * @param [in] aad              Additional Authentication Data (AAD)
+ * @param [in] aad_len          Length of AAD in bytes
+ * @param [out] auth_tag        Authenticated Tag output
+ * @param [in] auth_tag_len     Authenticated Tag Length in bytes (must be
+ *                              a multiple of 4 bytes). Valid values are 16
+ *                              (most likely), 12 or 8
  */
 IMB_DLL_EXPORT void
 aes_gcm_dec_128_sse(const struct gcm_key_data *key_data,
@@ -2884,6 +2938,9 @@ aes_gcm_dec_128_sse(const struct gcm_key_data *key_data,
                     uint8_t *out, uint8_t const *in, uint64_t len,
                     const uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
                     uint8_t *auth_tag, uint64_t auth_tag_len);
+/**
+ * @copydoc aes_gcm_dec_128_sse
+ */
 IMB_DLL_EXPORT void
 aes_gcm_dec_128_avx_gen2(const struct gcm_key_data *key_data,
                          struct gcm_context_data *context_data,
@@ -2891,6 +2948,9 @@ aes_gcm_dec_128_avx_gen2(const struct gcm_key_data *key_data,
                          const uint8_t *iv,
                          uint8_t const *aad, uint64_t aad_len,
                          uint8_t *auth_tag, uint64_t auth_tag_len);
+/**
+ * @copydoc aes_gcm_dec_128_sse
+ */
 IMB_DLL_EXPORT void
 aes_gcm_dec_128_avx_gen4(const struct gcm_key_data *key_data,
                          struct gcm_context_data *context_data,
@@ -2899,12 +2959,33 @@ aes_gcm_dec_128_avx_gen4(const struct gcm_key_data *key_data,
                          uint8_t const *aad, uint64_t aad_len,
                          uint8_t *auth_tag, uint64_t auth_tag_len);
 
+/**
+ * @brief AES-GCM-192 Decryption.
+ *
+ * @param [in] key_data         GCM expanded key data
+ * @param [in,out] context_data GCM operation context data
+ * @param [out] out             Plaintext output. Decrypt in-place is allowed
+ * @param [in] in               Ciphertext input
+ * @param [in] len              Length of data in bytes for decryption
+ * @param [in] iv               Pointer to 12 byte IV structure
+ *                              Internally, the library concatenates 0x00000001
+ *                              to the IV
+ * @param [in] aad              Additional Authentication Data (AAD)
+ * @param [in] aad_len          Length of AAD in bytes
+ * @param [out] auth_tag        Authenticated Tag output
+ * @param [in] auth_tag_len     Authenticated Tag Length in bytes (must be
+ *                              a multiple of 4 bytes). Valid values are 16
+ *                              (most likely), 12 or 8
+ */
 IMB_DLL_EXPORT void
 aes_gcm_dec_192_sse(const struct gcm_key_data *key_data,
                     struct gcm_context_data *context_data,
                     uint8_t *out, uint8_t const *in, uint64_t len,
                     const uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
                     uint8_t *auth_tag, uint64_t auth_tag_len);
+/**
+ * @copydoc aes_gcm_dec_192_sse
+ */
 IMB_DLL_EXPORT void
 aes_gcm_dec_192_avx_gen2(const struct gcm_key_data *key_data,
                          struct gcm_context_data *context_data,
@@ -2912,6 +2993,9 @@ aes_gcm_dec_192_avx_gen2(const struct gcm_key_data *key_data,
                          const uint8_t *iv,
                          uint8_t const *aad, uint64_t aad_len,
                          uint8_t *auth_tag, uint64_t auth_tag_len);
+/**
+ * @copydoc aes_gcm_dec_192_sse
+ */
 IMB_DLL_EXPORT void
 aes_gcm_dec_192_avx_gen4(const struct gcm_key_data *key_data,
                          struct gcm_context_data *context_data,
@@ -2920,12 +3004,33 @@ aes_gcm_dec_192_avx_gen4(const struct gcm_key_data *key_data,
                          uint8_t const *aad, uint64_t aad_len,
                          uint8_t *auth_tag, uint64_t auth_tag_len);
 
+/**
+ * @brief AES-GCM-256 Decryption.
+ *
+ * @param [in] key_data         GCM expanded key data
+ * @param [in,out] context_data GCM operation context data
+ * @param [out] out             Plaintext output. Decrypt in-place is allowed
+ * @param [in] in               Ciphertext input
+ * @param [in] len              Length of data in bytes for decryption
+ * @param [in] iv               Pointer to 12 byte IV structure
+ *                              Internally, the library concatenates 0x00000001
+ *                              to the IV
+ * @param [in] aad              Additional Authentication Data (AAD)
+ * @param [in] aad_len          Length of AAD in bytes
+ * @param [out] auth_tag        Authenticated Tag output
+ * @param [in] auth_tag_len     Authenticated Tag Length in bytes (must be
+ *                              a multiple of 4 bytes). Valid values are 16
+ *                              (most likely), 12 or 8
+ */
 IMB_DLL_EXPORT void
 aes_gcm_dec_256_sse(const struct gcm_key_data *key_data,
                     struct gcm_context_data *context_data,
                     uint8_t *out, uint8_t const *in, uint64_t len,
                     const uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
                     uint8_t *auth_tag, uint64_t auth_tag_len);
+/**
+ * @copydoc aes_gcm_dec_256_sse
+ */
 IMB_DLL_EXPORT void
 aes_gcm_dec_256_avx_gen2(const struct gcm_key_data *key_data,
                          struct gcm_context_data *context_data,
@@ -2933,6 +3038,9 @@ aes_gcm_dec_256_avx_gen2(const struct gcm_key_data *key_data,
                          const uint8_t *iv,
                          uint8_t const *aad, uint64_t aad_len,
                          uint8_t *auth_tag, uint64_t auth_tag_len);
+/**
+ * @copydoc aes_gcm_dec_256_sse
+ */
 IMB_DLL_EXPORT void
 aes_gcm_dec_256_avx_gen4(const struct gcm_key_data *key_data,
                          struct gcm_context_data *context_data,
