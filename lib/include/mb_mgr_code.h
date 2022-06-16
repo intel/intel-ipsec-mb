@@ -636,9 +636,7 @@ SUBMIT_JOB_HASH(IMB_MGR *state, IMB_JOB *job)
         MB_MGR_ZUC_OOO *zuc_eia3_ooo = state->zuc_eia3_ooo;
         MB_MGR_ZUC_OOO *zuc256_eia3_ooo = state->zuc256_eia3_ooo;
         MB_MGR_SHA_1_OOO *sha_1_ooo = state->sha_1_ooo;
-#if defined(SSE) || defined(AVX) || defined(AVX2)
         MB_MGR_SHA_256_OOO *sha_256_ooo = state->sha_256_ooo;
-#endif
 #ifdef AVX512
         MB_MGR_SNOW3G_OOO *snow3g_uia2_ooo = state->snow3g_uia2_ooo;
 #endif
@@ -704,15 +702,7 @@ SUBMIT_JOB_HASH(IMB_MGR *state, IMB_JOB *job)
                 job->status |= IMB_STATUS_COMPLETED_AUTH;
                 return job;
         case IMB_AUTH_SHA_256:
-#if defined(SSE) || defined(AVX) || defined(AVX2)
                 return SUBMIT_JOB_SHA256(sha_256_ooo, job);
-#else
-                IMB_SHA256(state,
-                           job->src + job->hash_start_src_offset_in_bytes,
-                           job->msg_len_to_hash_in_bytes, job->auth_tag_output);
-                job->status |= IMB_STATUS_COMPLETED_AUTH;
-                return job;
-#endif
         case IMB_AUTH_SHA_384:
                 IMB_SHA384(state,
                            job->src + job->hash_start_src_offset_in_bytes,
@@ -845,9 +835,7 @@ FLUSH_JOB_HASH(IMB_MGR *state, IMB_JOB *job)
         MB_MGR_ZUC_OOO *zuc_eia3_ooo = state->zuc_eia3_ooo;
         MB_MGR_ZUC_OOO *zuc256_eia3_ooo = state->zuc256_eia3_ooo;
         MB_MGR_SHA_1_OOO *sha_1_ooo = state->sha_1_ooo;
-#if defined(SSE) || defined(AVX) || defined(AVX2)
         MB_MGR_SHA_256_OOO *sha_256_ooo = state->sha_256_ooo;
-#endif
 #ifdef AVX512
         MB_MGR_SNOW3G_OOO *snow3g_uia2_ooo = state->snow3g_uia2_ooo;
 #endif
@@ -879,10 +867,8 @@ FLUSH_JOB_HASH(IMB_MGR *state, IMB_JOB *job)
                 return FLUSH_JOB_HMAC_SHA_512(hmac_sha_512_ooo);
         case IMB_AUTH_SHA_1:
                 return FLUSH_JOB_SHA1(sha_1_ooo, job);
-#if defined(SSE) || defined(AVX) || defined(AVX2)
         case IMB_AUTH_SHA_256:
                 return FLUSH_JOB_SHA256(sha_256_ooo, job);
-#endif
         case IMB_AUTH_AES_XCBC:
                 return FLUSH_JOB_AES_XCBC(aes_xcbc_ooo);
         case IMB_AUTH_MD5:

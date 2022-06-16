@@ -118,6 +118,8 @@
 
 #define SUBMIT_JOB_SHA1   submit_job_sha1_avx512
 #define FLUSH_JOB_SHA1    flush_job_sha1_avx512
+#define SUBMIT_JOB_SHA256   submit_job_sha256_avx512
+#define FLUSH_JOB_SHA256    flush_job_sha256_avx512
 
 #define SUBMIT_JOB_DES_CBC_ENC submit_job_des_cbc_enc_avx512
 #define FLUSH_JOB_DES_CBC_ENC  flush_job_des_cbc_enc_avx512
@@ -978,7 +980,10 @@ reset_ooo_mgrs(IMB_MGR *state)
         ooo_mgr_snow3g_reset(state->snow3g_uia2_ooo, 16);
 
         /* Init SHA1 out-of-order fields */
-        ooo_mgr_sha1_reset(state->sha_1_ooo, 16);
+        ooo_mgr_sha1_reset(state->sha_1_ooo, AVX512_NUM_SHA1_LANES);
+
+        /* Init SHA256 out-of-order fields */
+        ooo_mgr_sha256_reset(state->sha_256_ooo, AVX512_NUM_SHA256_LANES);
 }
 
 IMB_DLL_LOCAL void
