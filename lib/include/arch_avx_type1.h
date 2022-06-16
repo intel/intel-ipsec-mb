@@ -149,6 +149,11 @@ IMB_JOB *submit_job_sha1_avx(MB_MGR_SHA_1_OOO *state,
 IMB_JOB *flush_job_sha1_avx(MB_MGR_SHA_1_OOO *state,
                              IMB_JOB *job);
 
+IMB_JOB *submit_job_sha256_avx(MB_MGR_SHA_256_OOO *state,
+                               IMB_JOB *job);
+IMB_JOB *flush_job_sha256_avx(MB_MGR_SHA_256_OOO *state,
+                              IMB_JOB *job);
+
 uint32_t hec_32_avx(const uint8_t *in);
 uint64_t hec_64_avx(const uint8_t *in);
 
