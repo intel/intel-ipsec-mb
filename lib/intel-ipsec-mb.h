@@ -3274,98 +3274,174 @@ aes_gcm_dec_256_update_avx_gen4(const struct gcm_key_data *key_data,
                                 uint8_t *out, const uint8_t *in, uint64_t len);
 
 /**
- * @brief End encryption of a AES-GCM Encryption message
+ * @brief End encryption of a AES-GCM-128 encryption message.
  *
- * @param key_data GCM expanded key data
- * @param context_data GCM operation context data
- * @param auth_tag Authenticated Tag output.
- * @param auth_tag_len Authenticated Tag Length in bytes (must be
- *                     a multiple of 4 bytes). Valid values are
- *                     16 (most likely), 12 or 8.
+ * @param [in] key_data         GCM expanded key data
+ * @param [in,out] context_data GCM operation context data
+ * @param [out] auth_tag        Authenticated Tag output
+ * @param [in] auth_tag_len     Authenticated Tag Length in bytes (must be
+ *                              a multiple of 4 bytes). Valid values are
+ *                              16 (most likely), 12 or 8.
  */
 IMB_DLL_EXPORT void
 aes_gcm_enc_128_finalize_sse(const struct gcm_key_data *key_data,
                              struct gcm_context_data *context_data,
                              uint8_t *auth_tag, uint64_t auth_tag_len);
+/**
+ * @copydoc aes_gcm_enc_128_finalize_sse
+ */
 IMB_DLL_EXPORT void
 aes_gcm_enc_128_finalize_avx_gen2(const struct gcm_key_data *key_data,
                                   struct gcm_context_data *context_data,
                                   uint8_t *auth_tag, uint64_t auth_tag_len);
+/**
+ * @copydoc aes_gcm_enc_128_finalize_sse
+ */
 IMB_DLL_EXPORT void
 aes_gcm_enc_128_finalize_avx_gen4(const struct gcm_key_data *key_data,
                                   struct gcm_context_data *context_data,
                                   uint8_t *auth_tag, uint64_t auth_tag_len);
 
+/**
+ * @brief End encryption of a AES-GCM-192 encryption message.
+ *
+ * @param [in] key_data         GCM expanded key data
+ * @param [in,out] context_data GCM operation context data
+ * @param [out] auth_tag        Authenticated Tag output
+ * @param [in] auth_tag_len     Authenticated Tag Length in bytes (must be
+ *                              a multiple of 4 bytes). Valid values are
+ *                              16 (most likely), 12 or 8.
+ */
 IMB_DLL_EXPORT void
 aes_gcm_enc_192_finalize_sse(const struct gcm_key_data *key_data,
                              struct gcm_context_data *context_data,
                              uint8_t *auth_tag, uint64_t auth_tag_len);
+/**
+ * @copydoc aes_gcm_enc_192_finalize_sse
+ */
 IMB_DLL_EXPORT void
 aes_gcm_enc_192_finalize_avx_gen2(const struct gcm_key_data *key_data,
                                   struct gcm_context_data *context_data,
                                   uint8_t *auth_tag, uint64_t auth_tag_len);
+/**
+ * @copydoc aes_gcm_enc_192_finalize_sse
+ */
 IMB_DLL_EXPORT void
 aes_gcm_enc_192_finalize_avx_gen4(const struct gcm_key_data *key_data,
                                   struct gcm_context_data *context_data,
                                   uint8_t *auth_tag, uint64_t auth_tag_len);
 
+/**
+ * @brief End encryption of a AES-GCM-256 encryption message.
+ *
+ * @param [in] key_data         GCM expanded key data
+ * @param [in,out] context_data GCM operation context data
+ * @param [out] auth_tag        Authenticated Tag output
+ * @param [in] auth_tag_len     Authenticated Tag Length in bytes (must be
+ *                              a multiple of 4 bytes). Valid values are
+ *                              16 (most likely), 12 or 8.
+ */
 IMB_DLL_EXPORT void
 aes_gcm_enc_256_finalize_sse(const struct gcm_key_data *key_data,
                              struct gcm_context_data *context_data,
                              uint8_t *auth_tag, uint64_t auth_tag_len);
+/**
+ * @copydoc aes_gcm_enc_256_finalize_sse
+ */
 IMB_DLL_EXPORT void
 aes_gcm_enc_256_finalize_avx_gen2(const struct gcm_key_data *key_data,
                                   struct gcm_context_data *context_data,
                                   uint8_t *auth_tag, uint64_t auth_tag_len);
+/**
+ * @copydoc aes_gcm_enc_256_finalize_sse
+ */
 IMB_DLL_EXPORT void
 aes_gcm_enc_256_finalize_avx_gen4(const struct gcm_key_data *key_data,
                                   struct gcm_context_data *context_data,
                                   uint8_t *auth_tag, uint64_t auth_tag_len);
 
 /**
- * @brief End decryption of a AES-GCM Encryption message
+ * @brief End decryption of a AES-GCM-128 encryption message.
  *
- * @param key_data GCM expanded key data
- * @param context_data GCM operation context data
- * @param auth_tag Authenticated Tag output.
- * @param auth_tag_len Authenticated Tag Length in bytes (must be
- *                     a multiple of 4 bytes). Valid values are
- *                     16 (most likely), 12 or 8.
+ * @param [in] key_data         GCM expanded key data
+ * @param [in,out] context_data GCM operation context data
+ * @param [out] auth_tag        Authenticated Tag output
+ * @param [in] auth_tag_len     Authenticated Tag Length in bytes (must be
+ *                              a multiple of 4 bytes). Valid values are
+ *                              16 (most likely), 12 or 8.
  */
 IMB_DLL_EXPORT void
 aes_gcm_dec_128_finalize_sse(const struct gcm_key_data *key_data,
                              struct gcm_context_data *context_data,
                              uint8_t *auth_tag, uint64_t auth_tag_len);
+/**
+ * @copydoc aes_gcm_dec_128_finalize_sse
+ */
 IMB_DLL_EXPORT void
 aes_gcm_dec_128_finalize_avx_gen2(const struct gcm_key_data *key_data,
                                   struct gcm_context_data *context_data,
                                   uint8_t *auth_tag, uint64_t auth_tag_len);
+/**
+ * @copydoc aes_gcm_dec_128_finalize_sse
+ */
 IMB_DLL_EXPORT void
 aes_gcm_dec_128_finalize_avx_gen4(const struct gcm_key_data *key_data,
                                   struct gcm_context_data *context_data,
                                   uint8_t *auth_tag, uint64_t auth_tag_len);
 
+/**
+ * @brief End decryption of a AES-GCM-192 encryption message.
+ *
+ * @param [in] key_data         GCM expanded key data
+ * @param [in,out] context_data GCM operation context data
+ * @param [out] auth_tag        Authenticated Tag output
+ * @param [in] auth_tag_len     Authenticated Tag Length in bytes (must be
+ *                              a multiple of 4 bytes). Valid values are
+ *                              16 (most likely), 12 or 8.
+ */
 IMB_DLL_EXPORT void
 aes_gcm_dec_192_finalize_sse(const struct gcm_key_data *key_data,
                              struct gcm_context_data *context_data,
                              uint8_t *auth_tag, uint64_t auth_tag_len);
+/**
+ * @copydoc aes_gcm_dec_192_finalize_sse
+ */
 IMB_DLL_EXPORT void
 aes_gcm_dec_192_finalize_avx_gen2(const struct gcm_key_data *key_data,
                                   struct gcm_context_data *context_data,
                                   uint8_t *auth_tag, uint64_t auth_tag_len);
+/**
+ * @copydoc aes_gcm_dec_192_finalize_sse
+ */
 IMB_DLL_EXPORT void
 aes_gcm_dec_192_finalize_avx_gen4(const struct gcm_key_data *key_data,
                                   struct gcm_context_data *context_data,
                                   uint8_t *auth_tag, uint64_t auth_tag_len);
 
+/**
+ * @brief End decryption of a AES-GCM-256 encryption message.
+ *
+ * @param [in] key_data         GCM expanded key data
+ * @param [in,out] context_data GCM operation context data
+ * @param [out] auth_tag        Authenticated Tag output
+ * @param [in] auth_tag_len     Authenticated Tag Length in bytes (must be
+ *                              a multiple of 4 bytes). Valid values are
+ *                              16 (most likely), 12 or 8.
+ */
 IMB_DLL_EXPORT void
 aes_gcm_dec_256_finalize_sse(const struct gcm_key_data *key_data,
                              struct gcm_context_data *context_data,
                              uint8_t *auth_tag, uint64_t auth_tag_len);
+/**
+ * @copydoc aes_gcm_dec_256_finalize_sse
+ */
 IMB_DLL_EXPORT void
 aes_gcm_dec_256_finalize_avx_gen2(const struct gcm_key_data *key_data,
                                   struct gcm_context_data *context_data,
                                   uint8_t *auth_tag, uint64_t auth_tag_len);
+/**
+ * @copydoc aes_gcm_dec_256_finalize_sse
+ */
 IMB_DLL_EXPORT void
 aes_gcm_dec_256_finalize_avx_gen4(const struct gcm_key_data *key_data,
                                   struct gcm_context_data *context_data,
