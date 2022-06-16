@@ -3448,51 +3448,126 @@ aes_gcm_dec_256_finalize_avx_gen4(const struct gcm_key_data *key_data,
                                   uint8_t *auth_tag, uint64_t auth_tag_len);
 
 /**
- * @brief Precomputation of HashKey constants
+ * @brief Precomputation of AES-GCM-128 HashKey constants.
  *
  * Precomputation of HashKey<<1 mod poly constants (shifted_hkey_X and
  * shifted_hkey_X_k).
  *
- * @param [in] key_data GCM key data
+ * @param [in,out] key_data GCM key data
  */
 IMB_DLL_EXPORT void aes_gcm_precomp_128_sse(struct gcm_key_data *key_data);
+
+/**
+ * @copydoc aes_gcm_precomp_128_sse
+ */
 IMB_DLL_EXPORT void aes_gcm_precomp_128_avx_gen2(struct gcm_key_data *key_data);
+
+/**
+ * @copydoc aes_gcm_precomp_128_sse
+ */
 IMB_DLL_EXPORT void aes_gcm_precomp_128_avx_gen4(struct gcm_key_data *key_data);
 
+/**
+ * @brief Precomputation of AES-GCM-192 HashKey constants.
+ *
+ * Precomputation of HashKey<<1 mod poly constants (shifted_hkey_X and
+ * shifted_hkey_X_k).
+ *
+ * @param [in,out] key_data GCM key data
+ */
 IMB_DLL_EXPORT void aes_gcm_precomp_192_sse(struct gcm_key_data *key_data);
+
+/**
+ * @copydoc aes_gcm_precomp_192_sse
+ */
 IMB_DLL_EXPORT void aes_gcm_precomp_192_avx_gen2(struct gcm_key_data *key_data);
+
+/**
+ * @copydoc aes_gcm_precomp_192_sse
+ */
 IMB_DLL_EXPORT void aes_gcm_precomp_192_avx_gen4(struct gcm_key_data *key_data);
 
+/**
+ * @brief Precomputation of AES-GCM-256 HashKey constants.
+ *
+ * Precomputation of HashKey<<1 mod poly constants (shifted_hkey_X and
+ * shifted_hkey_X_k).
+ *
+ * @param [in,out] key_data GCM key data
+ */
 IMB_DLL_EXPORT void aes_gcm_precomp_256_sse(struct gcm_key_data *key_data);
+
+/**
+ * @copydoc aes_gcm_precomp_256_sse
+ */
 IMB_DLL_EXPORT void aes_gcm_precomp_256_avx_gen2(struct gcm_key_data *key_data);
+
+/**
+ * @copydoc aes_gcm_precomp_256_sse
+ */
 IMB_DLL_EXPORT void aes_gcm_precomp_256_avx_gen4(struct gcm_key_data *key_data);
 
 /**
- * @brief Pre-processes GCM key data
+ * @brief Pre-processes AES-GCM-128 key data.
  *
  * Prefills the gcm key data with key values for each round and
  * the initial sub hash key for tag encoding
  *
- * @param key pointer to key data
- * @param key_data GCM expanded key data
- *
+ * @param [in] key       Pointer to key data
+ * @param [out] key_data GCM expanded key data
  */
 IMB_DLL_EXPORT void aes_gcm_pre_128_sse(const void *key,
                                         struct gcm_key_data *key_data);
+/**
+ * @copydoc aes_gcm_pre_128_sse
+ */
 IMB_DLL_EXPORT void aes_gcm_pre_128_avx_gen2(const void *key,
                                              struct gcm_key_data *key_data);
+/**
+ * @copydoc aes_gcm_pre_128_sse
+ */
 IMB_DLL_EXPORT void aes_gcm_pre_128_avx_gen4(const void *key,
                                              struct gcm_key_data *key_data);
+/**
+ * @brief Pre-processes AES-GCM-192 key data.
+ *
+ * Prefills the gcm key data with key values for each round and
+ * the initial sub hash key for tag encoding
+ *
+ * @param [in] key       Pointer to key data
+ * @param [out] key_data GCM expanded key data
+ */
 IMB_DLL_EXPORT void aes_gcm_pre_192_sse(const void *key,
                                         struct gcm_key_data *key_data);
+/**
+ * @copydoc aes_gcm_pre_192_sse
+ */
 IMB_DLL_EXPORT void aes_gcm_pre_192_avx_gen2(const void *key,
                                              struct gcm_key_data *key_data);
+/**
+ * @copydoc aes_gcm_pre_192_sse
+ */
 IMB_DLL_EXPORT void aes_gcm_pre_192_avx_gen4(const void *key,
                                              struct gcm_key_data *key_data);
+/**
+ * @brief Pre-processes AES-GCM-256 key data.
+ *
+ * Prefills the gcm key data with key values for each round and
+ * the initial sub hash key for tag encoding
+ *
+ * @param [in] key       Pointer to key data
+ * @param [out] key_data GCM expanded key data
+ */
 IMB_DLL_EXPORT void aes_gcm_pre_256_sse(const void *key,
                                         struct gcm_key_data *key_data);
+/**
+ * @copydoc aes_gcm_pre_256_sse
+ */
 IMB_DLL_EXPORT void aes_gcm_pre_256_avx_gen2(const void *key,
                                              struct gcm_key_data *key_data);
+/**
+ * @copydoc aes_gcm_pre_256_sse
+ */
 IMB_DLL_EXPORT void aes_gcm_pre_256_avx_gen4(const void *key,
                                              struct gcm_key_data *key_data);
 
