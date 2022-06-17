@@ -58,6 +58,11 @@ IMB_JOB *submit_job_sha1_avx2(MB_MGR_SHA_1_OOO *state,
 IMB_JOB *flush_job_sha1_avx2(MB_MGR_SHA_1_OOO *state,
                              IMB_JOB *job);
 
+IMB_JOB *submit_job_sha224_avx2(MB_MGR_SHA_256_OOO *state,
+                                IMB_JOB *job);
+IMB_JOB *flush_job_sha224_avx2(MB_MGR_SHA_256_OOO *state,
+                               IMB_JOB *job);
+
 IMB_JOB *submit_job_sha256_avx2(MB_MGR_SHA_256_OOO *state,
                                 IMB_JOB *job);
 IMB_JOB *flush_job_sha256_avx2(MB_MGR_SHA_256_OOO *state,
