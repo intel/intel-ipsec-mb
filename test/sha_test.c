@@ -597,14 +597,17 @@ sha_test(struct IMB_MGR *mb_mgr)
         struct test_suite_context sha1_ctx, sha224_ctx, sha256_ctx;
         struct test_suite_context sha384_ctx, sha512_ctx;
         int errors;
+        unsigned i;
 
         test_suite_start(&sha1_ctx, "SHA1");
         test_suite_start(&sha224_ctx, "SHA224");
         test_suite_start(&sha256_ctx, "SHA256");
         test_suite_start(&sha384_ctx, "SHA384");
         test_suite_start(&sha512_ctx, "SHA512");
-        test_sha_vectors(mb_mgr, &sha1_ctx, &sha224_ctx,
-                         &sha256_ctx, &sha384_ctx, &sha512_ctx, 1);
+        for (i = 1; i <= 17; i++) {
+                test_sha_vectors(mb_mgr, &sha1_ctx, &sha224_ctx,
+                                &sha256_ctx, &sha384_ctx, &sha512_ctx, i);
+        }
         errors = test_suite_end(&sha1_ctx);
         errors += test_suite_end(&sha224_ctx);
         errors += test_suite_end(&sha256_ctx);
