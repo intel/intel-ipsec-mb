@@ -1201,6 +1201,7 @@ typedef struct IMB_MGR {
         void *snow3g_uia2_ooo;
         void *sha_1_ooo;
         void *sha_256_ooo;
+        void *sha_224_ooo;
 } IMB_MGR;
 
 /**

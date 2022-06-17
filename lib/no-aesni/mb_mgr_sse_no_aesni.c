@@ -88,6 +88,8 @@
 #define FLUSH_JOB_AES_XCBC    flush_job_aes_xcbc_sse_no_aesni
 #define SUBMIT_JOB_SHA1   submit_job_sha1_sse
 #define FLUSH_JOB_SHA1    flush_job_sha1_sse
+#define SUBMIT_JOB_SHA224   submit_job_sha224_sse
+#define FLUSH_JOB_SHA224    flush_job_sha224_sse
 #define SUBMIT_JOB_SHA256   submit_job_sha256_sse
 #define FLUSH_JOB_SHA256    flush_job_sha256_sse
 
@@ -772,6 +774,16 @@ reset_ooo_mgrs(IMB_MGR *state)
         sha_1_ooo->num_lanes_inuse = 0;
         for (j = 0; j < SSE_NUM_SHA1_LANES; j++)
                 sha_1_ooo->ldata[j].job_in_lane = NULL;
+
+        /* Init SHA224 out-of-order fields */
+        sha_224_ooo->lens[0] = 0;
+        sha_224_ooo->lens[1] = 0;
+        sha_224_ooo->lens[2] = 0;
+        sha_224_ooo->lens[3] = 0;
+        sha_224_ooo->unused_lanes = 0xF3210;
+        sha_224_ooo->num_lanes_inuse = 0;
+        for (j = 0; j < SSE_NUM_SHA256_LANES; j++)
+                sha_224_ooo->ldata[j].job_in_lane = NULL;
 
         /* Init SHA256 out-of-order fields */
         sha_256_ooo->lens[0] = 0;

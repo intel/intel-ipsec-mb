@@ -76,6 +76,19 @@ void sha1_mb_init_digest(uint32_t *digest, const unsigned lane)
 }
 
 __forceinline
+void sha224_mb_init_digest(uint32_t *digest, const unsigned lane)
+{
+        digest[lane + 0*16] = SHA224_H0;
+        digest[lane + 1*16] = SHA224_H1;
+        digest[lane + 2*16] = SHA224_H2;
+        digest[lane + 3*16] = SHA224_H3;
+        digest[lane + 4*16] = SHA224_H4;
+        digest[lane + 5*16] = SHA224_H5;
+        digest[lane + 6*16] = SHA224_H6;
+        digest[lane + 7*16] = SHA224_H7;
+}
+
+__forceinline
 void sha256_mb_init_digest(uint32_t *digest, const unsigned lane)
 {
         digest[lane + 0*16] = SHA256_H0;
@@ -94,6 +107,8 @@ sha_mb_generic_init(void *digest, const int sha_type, const unsigned lane)
 {
         if (sha_type == 1)
                 sha1_mb_init_digest(digest, lane);
+        else if (sha_type == 224)
+                sha224_mb_init_digest(digest, lane);
         else if (sha_type == 256)
                 sha256_mb_init_digest(digest, lane);
 }
@@ -105,6 +120,9 @@ void sha_mb_generic_write_digest(void *dst, const void *src,
 {
         if (sha_type == 1)
                 copy_bswap4_array_mb(dst, src, NUM_SHA_DIGEST_WORDS, offset,
+                                     lane);
+        else if (sha_type == 224)
+                copy_bswap4_array_mb(dst, src, NUM_SHA_224_DIGEST_WORDS, offset,
                                      lane);
         else if (sha_type == 256)
                 copy_bswap4_array_mb(dst, src, NUM_SHA_256_DIGEST_WORDS, offset,
