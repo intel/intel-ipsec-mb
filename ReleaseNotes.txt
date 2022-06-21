@@ -10,7 +10,7 @@ Library
 - JOB API GHASH support added
 - AES-ECB optimizations for AVX and SSE
 - AES-ECB AVX2-VAES implementation added
-- SHA1/224/256 multi-buffer implementation added
+- SHA1/224/256/512 multi-buffer implementation added
 - Burst API added
 - Cipher-only burst API added (AES-CBC/CTR support only)
 - Hash-only burst API added (HMAC-SHA1/224/256/384/512 support only)
