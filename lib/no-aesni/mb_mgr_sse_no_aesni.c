@@ -98,6 +98,8 @@
 #define FLUSH_JOB_SHA224_NI     flush_job_sha224_ni_sse
 #define SUBMIT_JOB_SHA256_NI    submit_job_sha256_ni_sse
 #define FLUSH_JOB_SHA256_NI     flush_job_sha256_ni_sse
+#define SUBMIT_JOB_SHA512   submit_job_sha512_sse
+#define FLUSH_JOB_SHA512    flush_job_sha512_sse
 
 #define SUBMIT_JOB_AES_CNTR   submit_job_aes_cntr_sse_no_aesni
 #define SUBMIT_JOB_AES_CNTR_BIT   submit_job_aes_cntr_bit_sse_no_aesni
@@ -412,6 +414,7 @@ reset_ooo_mgrs(IMB_MGR *state)
         MB_MGR_SHA_1_OOO *sha_1_ooo = state->sha_1_ooo;
         MB_MGR_SHA_256_OOO *sha_224_ooo = state->sha_224_ooo;
         MB_MGR_SHA_256_OOO *sha_256_ooo = state->sha_256_ooo;
+        MB_MGR_SHA_512_OOO *sha_512_ooo = state->sha_512_ooo;
 
         /* Init AES out-of-order fields */
         memset(aes128_ooo->lens, 0xFF,
@@ -801,6 +804,13 @@ reset_ooo_mgrs(IMB_MGR *state)
         sha_256_ooo->num_lanes_inuse = 0;
         for (j = 0; j < SSE_NUM_SHA256_LANES; j++)
                 sha_256_ooo->ldata[j].job_in_lane = NULL;
+
+       /* Init SHA512 out-of-order fields */
+        sha_512_ooo->lens[0] = 0;
+        sha_512_ooo->lens[1] = 0;
+        sha_512_ooo->unused_lanes = 0xFF0100;
+        for (j = 0; j < SSE_NUM_SHA512_LANES; j++)
+                sha_512_ooo->ldata[j].job_in_lane = NULL;
 }
 
 IMB_DLL_LOCAL void

@@ -124,7 +124,7 @@ typedef struct {
 
 typedef struct {
         DECLARE_ALIGNED(uint64_t digest[SHA512_DIGEST_SZ], 32);
-        uint8_t *data_ptr[AVX512_NUM_SHA512_LANES];
+        const uint8_t *data_ptr[AVX512_NUM_SHA512_LANES];
 }  SHA512_ARGS;
 
 typedef struct {
@@ -372,6 +372,15 @@ typedef struct {
         HMAC_SHA512_LANE_DATA ldata[AVX512_NUM_SHA512_LANES];
         uint64_t road_block;
 } MB_MGR_HMAC_SHA_512_OOO;
+
+typedef struct {
+        SHA512_ARGS args;
+        DECLARE_ALIGNED(uint64_t lens[AVX512_NUM_SHA512_LANES], 16);
+        uint64_t unused_lanes;
+        HMAC_SHA512_LANE_DATA ldata[AVX512_NUM_SHA512_LANES];
+        uint32_t num_lanes_inuse;
+        uint64_t road_block;
+} MB_MGR_SHA_512_OOO;
 
 /* MD5-HMAC out-of-order scheduler fields */
 typedef struct {

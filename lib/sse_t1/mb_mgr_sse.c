@@ -104,6 +104,8 @@
 #define FLUSH_JOB_SHA224_NI     flush_job_sha224_ni_sse
 #define SUBMIT_JOB_SHA256_NI    submit_job_sha256_ni_sse
 #define FLUSH_JOB_SHA256_NI     flush_job_sha256_ni_sse
+#define SUBMIT_JOB_SHA512   submit_job_sha512_sse
+#define FLUSH_JOB_SHA512    flush_job_sha512_sse
 
 #define SUBMIT_JOB_AES_CNTR   submit_job_aes_cntr_sse
 #define SUBMIT_JOB_AES_CNTR_BIT   submit_job_aes_cntr_bit_sse
@@ -740,6 +742,9 @@ reset_ooo_mgrs(IMB_MGR *state)
                 ooo_mgr_sha256_reset(state->sha_256_ooo, SSE_NUM_SHA256_LANES);
         }
 #endif /* HASH_USE_SHAEXT */
+
+        /* Init SHA512 out-of-order fields */
+        ooo_mgr_sha512_reset(state->sha_512_ooo, SSE_NUM_SHA512_LANES);
 
         /* Init SNOW3G-UEA out-of-order fields */
         ooo_mgr_snow3g_reset(state->snow3g_uea2_ooo, 4);

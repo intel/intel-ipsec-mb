@@ -310,6 +310,72 @@ endstruc
 	ROUND_00_15 %%T1, %%i
 %endm
 
+%define XMM_STORAGE     10*16
+%define GP_STORAGE      6*8
+
+%define VARIABLE_OFFSET XMM_STORAGE + GP_STORAGE
+%define GP_OFFSET XMM_STORAGE
+
+%macro FUNC_SAVE 0
+    mov     r11, rsp
+    sub     rsp, VARIABLE_OFFSET
+    and     rsp, ~15	; align rsp to 16 bytes
+
+    mov     [rsp + 0*8],  rbx
+    mov     [rsp + 1*8],  rbp
+    mov     [rsp + 2*8],  r12
+%ifndef LINUX
+    mov     [rsp + 3*8], rsi
+    mov     [rsp + 4*8], rdi
+    movdqa  [rsp + 3*16], xmm6
+    movdqa  [rsp + 4*16], xmm7
+    movdqa  [rsp + 5*16], xmm8
+    movdqa  [rsp + 6*16], xmm9
+    movdqa  [rsp + 7*16], xmm10
+    movdqa  [rsp + 8*16], xmm11
+    movdqa  [rsp + 9*16], xmm12
+    movdqa  [rsp + 10*16], xmm13
+    movdqa  [rsp + 11*16], xmm14
+    movdqa  [rsp + 12*16], xmm15
+%endif ; LINUX
+    mov     [rsp + 5*8], r11 ;; rsp pointer
+%endmacro
+
+%macro FUNC_RESTORE 0
+    mov     rbx, [rsp + 0*8]
+    mov     rbp, [rsp + 1*8]
+    mov     r12, [rsp + 2*8]
+%ifndef LINUX
+    mov     rsi,   [rsp + 3*8]
+    mov     rdi,   [rsp + 4*8]
+    movdqa  xmm6,  [rsp + 3*16]
+    movdqa  xmm7,  [rsp + 4*16]
+    movdqa  xmm8,  [rsp + 5*16]
+    movdqa  xmm9,  [rsp + 6*16]
+    movdqa  xmm10, [rsp + 7*16]
+    movdqa  xmm11, [rsp + 8*16]
+    movdqa  xmm12, [rsp + 9*16]
+    movdqa  xmm13, [rsp + 10*16]
+    movdqa  xmm14, [rsp + 11*16]
+    movdqa  xmm15, [rsp + 12*16]
+
+%ifdef SAFE_DATA
+    pxor    xmm5, xmm5
+    movdqa  xmm5,  [rsp + 3*16]
+    movdqa  xmm5,  [rsp + 4*16]
+    movdqa  xmm5,  [rsp + 5*16]
+    movdqa  xmm5,  [rsp + 6*16]
+    movdqa  xmm5,  [rsp + 7*16]
+    movdqa  xmm5,  [rsp + 8*16]
+    movdqa  xmm5,  [rsp + 9*16]
+    movdqa  xmm5,  [rsp + 10*16]
+    movdqa  xmm5,  [rsp + 11*16]
+    movdqa  xmm5,  [rsp + 12*16]
+%endif
+%endif ; LINUX
+    mov     rsp,   [rsp + 5*8] ;; rsp pointer
+%endmacro
+
 ;; SHA512_ARGS:
 ;;   UINT128 digest[8];  // transposed digests
 ;;   UINT8  *data_ptr[2];
@@ -435,6 +501,14 @@ Lrounds_16_xx:
 
 	add	rsp, STACK_size
 DBGPRINTL "====================== exit sha512_x2_sse code =====================\n"
+	ret
+
+; void call_sha512_x2_sse_from_c(SHA512_ARGS *args, UINT64 size_in_blocks);
+MKGLOBAL(call_sha512_x2_sse_from_c,function,internal)
+call_sha512_x2_sse_from_c:
+	FUNC_SAVE
+	call sha512_x2_sse
+	FUNC_RESTORE
 	ret
 
 mksection stack-noexec

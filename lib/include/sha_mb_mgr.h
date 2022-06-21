@@ -62,6 +62,9 @@ extern void call_sha224_ni_x2_sse_from_c(SHA256_ARGS *args,
 extern void call_sha256_ni_x2_sse_from_c(SHA256_ARGS *args,
                                          uint32_t size_in_blocks);
 
+extern void call_sha512_x2_sse_from_c(SHA512_ARGS *args,
+                                      uint64_t size_in_blocks);
+
 __forceinline
 void copy_bswap4_array_mb(void *dst, const void *src, const size_t num,
                           const size_t offset, const unsigned lane)
@@ -84,6 +87,18 @@ void copy_bswap4_array_mb_ni(void *dst, const void *src, const size_t num,
 
         for (i = 0; i < num; i++)
                 outp[i] = bswap4(inp[digest_row_sz*lane + i]);
+}
+
+__forceinline
+void copy_bswap8_array_mb(void *dst, const void *src, const size_t num,
+                          const size_t offset, const unsigned lane)
+{
+        uint64_t *outp = (uint64_t *) dst;
+        const uint64_t *inp = (const uint64_t *) src;
+        size_t i;
+
+        for (i = 0; i < num; i++)
+                outp[i] = bswap8(inp[lane + i*offset]);
 }
 
 __forceinline
@@ -159,6 +174,19 @@ void sha256_ni_mb_init_digest(uint32_t *digest, const unsigned lane)
 }
 
 __forceinline
+void sha512_mb_init_digest(uint64_t *digest, const unsigned lane)
+{
+        digest[lane + 0*8] = SHA512_H0;
+        digest[lane + 1*8] = SHA512_H1;
+        digest[lane + 2*8] = SHA512_H2;
+        digest[lane + 3*8] = SHA512_H3;
+        digest[lane + 4*8] = SHA512_H4;
+        digest[lane + 5*8] = SHA512_H5;
+        digest[lane + 6*8] = SHA512_H6;
+        digest[lane + 7*8] = SHA512_H7;
+}
+
+__forceinline
 void
 sha_mb_generic_init(void *digest, const int sha_type, const unsigned lane)
 {
@@ -168,6 +196,8 @@ sha_mb_generic_init(void *digest, const int sha_type, const unsigned lane)
                 sha224_mb_init_digest(digest, lane);
         else if (sha_type == 256)
                 sha256_mb_init_digest(digest, lane);
+        else if (sha_type == 512)
+                sha512_mb_init_digest(digest, lane);
 }
 
 __forceinline
@@ -195,6 +225,9 @@ void sha_mb_generic_write_digest(void *dst, const void *src,
                                      lane);
         else if (sha_type == 256)
                 copy_bswap4_array_mb(dst, src, NUM_SHA_256_DIGEST_WORDS, offset,
+                                     lane);
+        else if (sha_type == 512)
+                copy_bswap8_array_mb(dst, src, NUM_SHA_512_DIGEST_WORDS, offset,
                                      lane);
 }
 
@@ -260,6 +293,29 @@ void sha256_create_extra_blocks(MB_MGR_SHA_256_OOO *state,
 }
 
 __forceinline
+void sha512_create_extra_blocks(MB_MGR_SHA_512_OOO *state,
+                                const uint64_t blk_size, const uint64_t r,
+                                const unsigned min_idx)
+{
+        HMAC_SHA512_LANE_DATA *ld = &state->ldata[min_idx];
+        const uint64_t xblk_size = blk_size*state->ldata[min_idx].extra_blocks;
+
+        memset(ld->extra_block, 0, sizeof(ld->extra_block));
+
+        var_memcpy(ld->extra_block, state->args.data_ptr[min_idx], r);
+        ld->extra_block[r] = 0x80;
+
+        store8_be(&ld->extra_block[xblk_size - 8],
+                  ld->job_in_lane->msg_len_to_hash_in_bytes * 8);
+
+        state->args.data_ptr[min_idx] = &ld->extra_block[0];
+
+        state->lens[min_idx] = (uint16_t)xblk_size;
+
+        state->ldata[min_idx].extra_blocks = 0;
+}
+
+__forceinline
 IMB_JOB *
 submit_flush_job_sha_1(MB_MGR_SHA_1_OOO *state, IMB_JOB *job,
                          const unsigned max_jobs, const int is_submit,
@@ -268,9 +324,7 @@ submit_flush_job_sha_1(MB_MGR_SHA_1_OOO *state, IMB_JOB *job,
                          void (*fn)(SHA1_ARGS *, uint32_t), const int shani)
 {
         unsigned lane, min_idx;
-        uint64_t min_len;
         IMB_JOB *ret_job = NULL;
-        unsigned i;
 
         if (is_submit) {
                 /*
@@ -312,6 +366,9 @@ submit_flush_job_sha_1(MB_MGR_SHA_1_OOO *state, IMB_JOB *job,
         }
 
         do {
+                uint64_t min_len;
+                unsigned i;
+
                 if (is_submit) {
                         /*
                         * SUBMIT
@@ -382,10 +439,12 @@ submit_flush_job_sha_1(MB_MGR_SHA_1_OOO *state, IMB_JOB *job,
         state->num_lanes_inuse--;
         if (shani)
                 sha_ni_mb_generic_write_digest(ret_job->auth_tag_output,
-                        state->args.digest, sha_type, min_idx);
+                                               state->args.digest, sha_type,
+                                               min_idx);
         else
                 sha_mb_generic_write_digest(ret_job->auth_tag_output,
-                        state->args.digest, sha_type, 16, min_idx);
+                                            state->args.digest, sha_type, 16,
+                                            min_idx);
         ret_job->status |= IMB_STATUS_COMPLETED_AUTH;
         state->ldata[min_idx].job_in_lane = NULL;
 
@@ -401,9 +460,7 @@ submit_flush_job_sha_256(MB_MGR_SHA_256_OOO *state, IMB_JOB *job,
                          void (*fn)(SHA256_ARGS *, uint32_t), const int shani)
 {
         unsigned lane, min_idx;
-        uint64_t min_len;
         IMB_JOB *ret_job = NULL;
-        unsigned i;
 
         if (is_submit) {
                 /*
@@ -445,6 +502,9 @@ submit_flush_job_sha_256(MB_MGR_SHA_256_OOO *state, IMB_JOB *job,
         }
 
         do {
+                uint64_t min_len;
+                unsigned i;
+
                 if (is_submit) {
                         /*
                         * SUBMIT
@@ -514,10 +574,135 @@ submit_flush_job_sha_256(MB_MGR_SHA_256_OOO *state, IMB_JOB *job,
         state->num_lanes_inuse--;
         if (shani)
                 sha_ni_mb_generic_write_digest(ret_job->auth_tag_output,
-                        state->args.digest, sha_type, min_idx);
+                                               state->args.digest, sha_type,
+                                               min_idx);
         else
                 sha_mb_generic_write_digest(ret_job->auth_tag_output,
-                        state->args.digest, sha_type, 16, min_idx);
+                                            state->args.digest, sha_type, 16,
+                                            min_idx);
+        ret_job->status |= IMB_STATUS_COMPLETED_AUTH;
+        state->ldata[min_idx].job_in_lane = NULL;
+        return ret_job;
+}
+
+__forceinline
+IMB_JOB *
+submit_flush_job_sha_512(MB_MGR_SHA_512_OOO *state, IMB_JOB *job,
+                         const unsigned max_jobs, const int is_submit,
+                         const int sha_type, const uint64_t blk_size,
+                         const uint64_t pad_size,
+                         void (*fn)(SHA512_ARGS *, uint64_t))
+{
+        unsigned lane, min_idx;
+        IMB_JOB *ret_job = NULL;
+
+        if (is_submit) {
+                /*
+                 * SUBMIT
+                 * - get a free lane id
+                 */
+
+                lane = state->unused_lanes & 15;
+                state->unused_lanes >>= 4;
+                state->num_lanes_inuse++;
+                state->args.data_ptr[lane] =
+                        job->src + job->hash_start_src_offset_in_bytes;
+
+                sha_mb_generic_init(state->args.digest, sha_type, lane);
+
+                /* copy job data in and set up initial blocks */
+                state->ldata[lane].job_in_lane = job;
+                state->lens[lane] = (uint16_t)job->msg_len_to_hash_in_bytes;
+                state->ldata[lane].extra_blocks = 1;
+
+                /* enough jobs to start processing? */
+                if (state->num_lanes_inuse != max_jobs)
+                        return NULL;
+        } else {
+                /*
+                 * FLUSH
+                 * - find 1st non null job
+                 */
+                for (lane = 0; lane < max_jobs; lane++)
+                        if (state->ldata[lane].job_in_lane != NULL)
+                                break;
+                if (lane >= max_jobs)
+                        return NULL; /* no not null job */
+        }
+
+        do {
+                uint64_t min_len;
+                unsigned i;
+
+                if (is_submit) {
+                        /*
+                        * SUBMIT
+                        * - find min common length to process
+                        */
+                        min_idx = 0;
+                        min_len = state->lens[0];
+
+                        for (i = 1; i < max_jobs; i++) {
+                                if (min_len > state->lens[i]) {
+                                        min_idx = i;
+                                        min_len = state->lens[i];
+                                }
+                        }
+                } else {
+                        /*
+                        * FLUSH
+                        * - copy good (not null) lane onto empty lanes
+                        * - find min common length to process across
+                        * - not null lanes
+                        */
+                        min_idx = lane;
+                        min_len = state->lens[lane];
+
+                        for (i = 0; i < max_jobs; i++) {
+                                if (i == lane)
+                                        continue;
+
+                                if (state->ldata[i].job_in_lane != NULL) {
+                                        if (min_len > state->lens[i]) {
+                                                min_idx = i;
+                                                min_len = state->lens[i];
+                                        }
+                                } else {
+                                        state->args.data_ptr[i] =
+                                                state->args.data_ptr[lane];
+                                        state->lens[i] = UINT64_MAX;
+                                }
+                        }
+                }
+
+                /* subtract min len from all lanes */
+                const uint64_t min_len_blk = min_len & (~(blk_size - 1));
+
+                for (i = 0; i < max_jobs; i++)
+                        state->lens[i] -= min_len_blk;
+
+                const uint64_t r = min_len % blk_size;
+
+                if (r >= (blk_size - pad_size))
+                        state->ldata[min_idx].extra_blocks = 2;
+
+                /* run the algorithmic code on full selected blocks */
+                if(min_len >= blk_size)
+                        (*fn)(&state->args,
+                                (uint64_t)(min_len/blk_size));
+
+                /* create extra blocks */
+                if (state->ldata[min_idx].extra_blocks != 0)
+                        sha512_create_extra_blocks(state, blk_size, r, min_idx);
+
+        } while(state->lens[min_idx] != 0);
+
+        ret_job = state->ldata[min_idx].job_in_lane;
+        /* put back processed packet into unused lanes, set job as complete */
+        state->unused_lanes = (state->unused_lanes << 4) | min_idx;
+        state->num_lanes_inuse--;
+        sha_mb_generic_write_digest(ret_job->auth_tag_output,
+                                    state->args.digest, sha_type, 8, min_idx);
         ret_job->status |= IMB_STATUS_COMPLETED_AUTH;
         state->ldata[min_idx].job_in_lane = NULL;
         return ret_job;
