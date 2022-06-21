@@ -412,6 +412,78 @@ PSHUFFLE_BYTE_FLIP_MASK:
 
 mksection .text
 
+%define XMM_STORAGE     10*16
+%define GP_STORAGE      9*8
+
+%define VARIABLE_OFFSET XMM_STORAGE + GP_STORAGE
+%define GP_OFFSET XMM_STORAGE
+
+%macro FUNC_SAVE 0
+    mov      r11, rsp
+    sub      rsp, VARIABLE_OFFSET
+    and      rsp, ~31	; align rsp to 32 bytes
+
+    mov      [rsp + 0*8],  rbx
+    mov      [rsp + 1*8],  rbp
+    mov      [rsp + 2*8],  r12
+    mov      [rsp + 3*8],  r13
+    mov      [rsp + 4*8],  r14
+    mov      [rsp + 5*8],  r15
+%ifndef LINUX
+    mov        [rsp + 6*8],  rsi
+    mov        [rsp + 7*8],  rdi
+    vmovdqa32  [rsp + 4*16], xmm6
+    vmovdqa32  [rsp + 5*16], xmm7
+    vmovdqa32  [rsp + 6*16], xmm8
+    vmovdqa32  [rsp + 7*16], xmm9
+    vmovdqa32  [rsp + 8*16], xmm10
+    vmovdqa32  [rsp + 9*16], xmm11
+    vmovdqa32  [rsp + 10*16], xmm12
+    vmovdqa32  [rsp + 11*16], xmm13
+    vmovdqa32  [rsp + 12*16], xmm14
+    vmovdqa32  [rsp + 13*16], xmm15
+%endif ; LINUX
+    mov        [rsp + 14*16], r11 ;; rsp pointer
+%endmacro
+
+%macro FUNC_RESTORE 0
+    mov      rbx,  [rsp + 0*8]
+    mov      rbp,  [rsp + 1*8]
+    mov      r12,  [rsp + 2*8]
+    mov      r13,  [rsp + 3*8]
+    mov      r14,  [rsp + 4*8]
+    mov      r15,  [rsp + 5*8]
+%ifndef LINUX
+    mov        rsi,   [rsp + 6*8]
+    mov        rdi,   [rsp + 7*8]
+    vmovdqa32  xmm6,  [rsp + 4*16]
+    vmovdqa32  xmm7,  [rsp + 5*16]
+    vmovdqa32  xmm8,  [rsp + 6*16]
+    vmovdqa32  xmm9,  [rsp + 7*16]
+    vmovdqa32  xmm10, [rsp + 8*16]
+    vmovdqa32  xmm11, [rsp + 9*16]
+    vmovdqa32  xmm12, [rsp + 10*16]
+    vmovdqa32  xmm13, [rsp + 11*16]
+    vmovdqa32  xmm14, [rsp + 12*16]
+    vmovdqa32  xmm15, [rsp + 13*16]
+
+%ifdef SAFE_DATA
+    vpxord     xmm5, xmm5, xmm5
+    vmovdqa32  xmm5,  [rsp + 4*16]
+    vmovdqa32  xmm5,  [rsp + 5*16]
+    vmovdqa32  xmm5,  [rsp + 6*16]
+    vmovdqa32  xmm5,  [rsp + 7*16]
+    vmovdqa32  xmm5,  [rsp + 8*16]
+    vmovdqa32  xmm5,  [rsp + 9*16]
+    vmovdqa32  xmm5,  [rsp + 10*16]
+    vmovdqa32  xmm5,  [rsp + 11*16]
+    vmovdqa32  xmm5,  [rsp + 12*16]
+    vmovdqa32  xmm5,  [rsp + 13*16]
+%endif
+%endif ; LINUX
+    mov        rsp,   [rsp + 14*16] ;; rsp pointer
+%endmacro
+
 ;; void sha512_x8_avx512(void *input_data, UINT64 *digest[NUM_LANES], const int size)
 ;; arg 1 : rcx : pointer to input data
 ;; arg 2 : rdx : pointer to UINT64 digest[8][num_lanes]
@@ -590,5 +662,13 @@ lastLoop:
         mov     rsp, [rsp + _RSP]
 ;hash_done:
         ret
+
+; void call_sha512_x8_avx512_from_c(SHA512_ARGS *args, UINT64 size_in_blocks);
+MKGLOBAL(call_sha512_x8_avx512_from_c,function,internal)
+call_sha512_x8_avx512_from_c:
+	FUNC_SAVE
+	call sha512_x8_avx512
+	FUNC_RESTORE
+	ret
 
 mksection stack-noexec

@@ -90,6 +90,11 @@ IMB_JOB *submit_job_sha256_avx512(MB_MGR_SHA_256_OOO *state,
 IMB_JOB *flush_job_sha256_avx512(MB_MGR_SHA_256_OOO *state,
                                  IMB_JOB *job);
 
+IMB_JOB *submit_job_sha512_avx512(MB_MGR_SHA_512_OOO *state,
+                                  IMB_JOB *job);
+IMB_JOB *flush_job_sha512_avx512(MB_MGR_SHA_512_OOO *state,
+                                 IMB_JOB *job);
+
 IMB_JOB *submit_job_snow3g_uea2_avx512(MB_MGR_SNOW3G_OOO *state,
                                        IMB_JOB *job);
 
