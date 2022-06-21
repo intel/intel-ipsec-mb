@@ -65,6 +65,9 @@ extern void call_sha256_ni_x2_sse_from_c(SHA256_ARGS *args,
 extern void call_sha512_x2_sse_from_c(SHA512_ARGS *args,
                                       uint64_t size_in_blocks);
 
+extern void call_sha512_x2_avx_from_c(SHA512_ARGS *args,
+                                      uint64_t size_in_blocks);
+
 __forceinline
 void copy_bswap4_array_mb(void *dst, const void *src, const size_t num,
                           const size_t offset, const unsigned lane)
