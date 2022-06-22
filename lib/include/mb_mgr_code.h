@@ -638,7 +638,7 @@ SUBMIT_JOB_HASH(IMB_MGR *state, IMB_JOB *job)
         MB_MGR_SHA_1_OOO *sha_1_ooo = state->sha_1_ooo;
         MB_MGR_SHA_256_OOO *sha_224_ooo = state->sha_224_ooo;
         MB_MGR_SHA_256_OOO *sha_256_ooo = state->sha_256_ooo;
-#ifdef SSE
+#if defined(SSE) || defined(AVX)
         MB_MGR_SHA_512_OOO *sha_384_ooo = state->sha_384_ooo;
 #endif
         MB_MGR_SHA_512_OOO *sha_512_ooo = state->sha_512_ooo;
@@ -717,7 +717,7 @@ SUBMIT_JOB_HASH(IMB_MGR *state, IMB_JOB *job)
 #endif
                 return SUBMIT_JOB_SHA256(sha_256_ooo, job);
         case IMB_AUTH_SHA_384:
-#ifdef SSE
+#if defined(SSE) || defined(AVX)
                 return SUBMIT_JOB_SHA384(sha_384_ooo, job);
 #else
                 IMB_SHA384(state,
@@ -850,7 +850,7 @@ FLUSH_JOB_HASH(IMB_MGR *state, IMB_JOB *job)
         MB_MGR_SHA_1_OOO *sha_1_ooo = state->sha_1_ooo;
         MB_MGR_SHA_256_OOO *sha_224_ooo = state->sha_224_ooo;
         MB_MGR_SHA_256_OOO *sha_256_ooo = state->sha_256_ooo;
-#ifdef SSE
+#if defined(SSE) || defined(AVX)
         MB_MGR_SHA_512_OOO *sha_384_ooo = state->sha_384_ooo;
 #endif
         MB_MGR_SHA_512_OOO *sha_512_ooo = state->sha_512_ooo;
@@ -901,7 +901,7 @@ FLUSH_JOB_HASH(IMB_MGR *state, IMB_JOB *job)
                         return FLUSH_JOB_SHA256_NI(sha_256_ooo, job);
 #endif
                 return FLUSH_JOB_SHA256(sha_256_ooo, job);
-#ifdef SSE
+#if defined(SSE) || defined(AVX)
         case IMB_AUTH_SHA_384:
                 return FLUSH_JOB_SHA384(sha_384_ooo, job);
 #endif
