@@ -212,6 +212,11 @@ IMB_JOB *submit_job_sha256_sse(MB_MGR_SHA_256_OOO *state,
 IMB_JOB *flush_job_sha256_sse(MB_MGR_SHA_256_OOO *state,
                               IMB_JOB *job);
 
+IMB_JOB *submit_job_sha384_sse(MB_MGR_SHA_512_OOO *state,
+                               IMB_JOB *job);
+IMB_JOB *flush_job_sha384_sse(MB_MGR_SHA_512_OOO *state,
+                              IMB_JOB *job);
+
 IMB_JOB *submit_job_sha512_sse(MB_MGR_SHA_512_OOO *state,
                                IMB_JOB *job);
 IMB_JOB *flush_job_sha512_sse(MB_MGR_SHA_512_OOO *state,

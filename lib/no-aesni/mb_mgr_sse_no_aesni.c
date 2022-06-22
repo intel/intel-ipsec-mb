@@ -100,6 +100,8 @@
 #define FLUSH_JOB_SHA224_NI     flush_job_sha224_ni_sse
 #define SUBMIT_JOB_SHA256_NI    submit_job_sha256_ni_sse
 #define FLUSH_JOB_SHA256_NI     flush_job_sha256_ni_sse
+#define SUBMIT_JOB_SHA384   submit_job_sha384_sse
+#define FLUSH_JOB_SHA384    flush_job_sha384_sse
 #define SUBMIT_JOB_SHA512   submit_job_sha512_sse
 #define FLUSH_JOB_SHA512    flush_job_sha512_sse
 
@@ -446,6 +448,9 @@ reset_ooo_mgrs(IMB_MGR *state)
 
         /* Init SHA256 out-of-order fields */
         ooo_mgr_sha256_reset(state->sha_256_ooo, SSE_NUM_SHA256_LANES);
+
+       /* Init SHA384 out-of-order fields */
+        ooo_mgr_sha512_reset(state->sha_384_ooo, SSE_NUM_SHA512_LANES);
 
        /* Init SHA512 out-of-order fields */
         ooo_mgr_sha512_reset(state->sha_512_ooo, SSE_NUM_SHA512_LANES);

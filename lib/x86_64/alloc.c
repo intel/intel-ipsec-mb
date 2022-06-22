@@ -87,6 +87,7 @@ const struct {
         OOO_INFO(sha_1_ooo, MB_MGR_SHA_1_OOO),
         OOO_INFO(sha_224_ooo, MB_MGR_SHA_256_OOO),
         OOO_INFO(sha_256_ooo, MB_MGR_SHA_256_OOO),
+        OOO_INFO(sha_384_ooo, MB_MGR_SHA_512_OOO),
         OOO_INFO(sha_512_ooo, MB_MGR_SHA_512_OOO)
 };
 

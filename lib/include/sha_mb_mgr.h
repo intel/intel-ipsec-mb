@@ -183,6 +183,19 @@ void sha256_ni_mb_init_digest(uint32_t *digest, const unsigned lane)
 }
 
 __forceinline
+void sha384_mb_init_digest(uint64_t *digest, const unsigned lane)
+{
+        digest[lane + 0*8] = SHA384_H0;
+        digest[lane + 1*8] = SHA384_H1;
+        digest[lane + 2*8] = SHA384_H2;
+        digest[lane + 3*8] = SHA384_H3;
+        digest[lane + 4*8] = SHA384_H4;
+        digest[lane + 5*8] = SHA384_H5;
+        digest[lane + 6*8] = SHA384_H6;
+        digest[lane + 7*8] = SHA384_H7;
+}
+
+__forceinline
 void sha512_mb_init_digest(uint64_t *digest, const unsigned lane)
 {
         digest[lane + 0*8] = SHA512_H0;
@@ -205,7 +218,9 @@ sha_mb_generic_init(void *digest, const int sha_type, const unsigned lane)
                 sha224_mb_init_digest(digest, lane);
         else if (sha_type == 256)
                 sha256_mb_init_digest(digest, lane);
-        else if (sha_type == 512)
+        else if (sha_type == 384)
+                sha384_mb_init_digest(digest, lane);
+        else    /* sha_type == 512 */
                 sha512_mb_init_digest(digest, lane);
 }
 
@@ -235,7 +250,10 @@ void sha_mb_generic_write_digest(void *dst, const void *src,
         else if (sha_type == 256)
                 copy_bswap4_array_mb(dst, src, NUM_SHA_256_DIGEST_WORDS, offset,
                                      lane);
-        else if (sha_type == 512)
+        else if (sha_type == 384)
+                copy_bswap8_array_mb(dst, src, NUM_SHA_384_DIGEST_WORDS, offset,
+                                     lane);
+        else    /* sha_type == 512 */
                 copy_bswap8_array_mb(dst, src, NUM_SHA_512_DIGEST_WORDS, offset,
                                      lane);
 }

@@ -1223,6 +1223,7 @@ typedef struct IMB_MGR {
         void *sha_1_ooo;
         void *sha_224_ooo;
         void *sha_256_ooo;
+        void *sha_384_ooo;
         void *sha_512_ooo;
         void *end_ooo; /* add new out-of-order managers above this line */
 } IMB_MGR;
