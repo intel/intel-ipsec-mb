@@ -2740,8 +2740,18 @@ uint32_t submit_burst_and_check(IMB_MGR *state, IMB_JOB *jobs,
                         else
                                 SUBMIT_JOB_AES_GCM_DEC(state, job);
                         completed_jobs++;
+                } else if (job->cipher_mode == IMB_CIPHER_GCM_SGL) {
+                        if (job->cipher_direction == IMB_DIR_ENCRYPT)
+                                submit_gcm_sgl_enc(state, job);
+                        else
+                                submit_gcm_sgl_dec(state, job);
+                        completed_jobs++;
                 } else if (IMB_CIPHER_CHACHA20_POLY1305 == job->cipher_mode) {
                         SUBMIT_JOB_CHACHA20_POLY1305(state, job);
+                        completed_jobs++;
+                } else if (IMB_CIPHER_CHACHA20_POLY1305_SGL ==
+                           job->cipher_mode) {
+                        SUBMIT_JOB_CHACHA20_POLY1305_SGL(state, job);
                         completed_jobs++;
                 } else {
                         if (submit_new_job(state, job) != NULL)

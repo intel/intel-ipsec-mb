@@ -448,8 +448,18 @@ typedef enum {
 typedef enum {
         IMB_SGL_INIT = 0,
         IMB_SGL_UPDATE,
-        IMB_SGL_COMPLETE
+        IMB_SGL_COMPLETE,
+        IMB_SGL_ALL
 } IMB_SGL_STATE;
+
+/**
+ * Input/output SGL segment structure.
+ */
+struct IMB_SGL_IOV {
+    const void *in; /**< Input segment */
+    void *out; /**< Output segment */
+    uint64_t len; /** Length of segment */
+};
 
 /**
  * Job structure.
@@ -474,10 +484,20 @@ typedef struct IMB_JOB {
         const void *enc_keys;  /**< Encryption key pointer */
         const void *dec_keys;  /**< Decryption key pointer */
         uint64_t key_len_in_bytes; /**< Key length in bytes */
-        const uint8_t *src; /**< Input buffer. May be ciphertext or plaintext.
-			      In-place ciphering allowed. */
-        uint8_t *dst; /**< Output buffer. May be ciphertext or plaintext.
-			In-place ciphering allowed, i.e. dst = src. */
+        union {
+                const uint8_t *src; /**< Input buffer.
+                                May be ciphertext or plaintext.
+                                In-place ciphering allowed. */
+                const struct IMB_SGL_IOV *sgl_io_segs;
+                /**< Pointer to array of input/output SGL segments */
+        };
+        union {
+                uint8_t *dst; /**< Output buffer.
+                               May be ciphertext or plaintext.
+                               In-place ciphering allowed, i.e. dst = src. */
+                uint64_t num_sgl_io_segs;
+                /**< Number of input/output SGL segments */
+        };
         union {
                 uint64_t cipher_start_src_offset_in_bytes;
                 /**< Offset into input buffer to start ciphering (in bytes) */
@@ -610,7 +630,8 @@ typedef struct IMB_JOB {
         /**< Customer hash function */
 
         IMB_SGL_STATE sgl_state;
-        /**< SGL state (IMB_SGL_INIT/IMB_SGL_UPDATE/IMB_SGL_COMPLETE) */
+        /**< SGL state (IMB_SGL_INIT/IMB_SGL_UPDATE/IMB_SGL_COMPLETE/
+                        IMB_SGL_ALL) */
 
         union {
                 struct _CBCS_specific_fields {

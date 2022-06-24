@@ -104,6 +104,7 @@ typedef cpuset_t cpu_set_t;
 
 #define BITS(x) (sizeof(x) * 8)
 #define DIM(x) (sizeof(x)/sizeof(x[0]))
+#define DIV_ROUND_UP(x, y) ((x + y - 1) / y)
 
 #define MAX_NUM_THREADS 16 /* Maximum number of threads that can be created */
 
@@ -911,6 +912,7 @@ uint32_t *hash_size_list = NULL;
 uint64_t *xgem_hdr_list = NULL;
 uint16_t imix_list_count = 0;
 uint32_t average_job_size = 0;
+uint32_t max_job_size = 0;
 
 /* Size of IMIX list (needs to be multiple of 2) */
 #define JOB_SIZE_IMIX_LIST 1024
@@ -1579,17 +1581,27 @@ set_job_fields(IMB_JOB *job, uint8_t *p_buffer, imb_uint128_t *p_keys,
 }
 
 static inline void
-set_sgl_job_fields(IMB_JOB *job, const uint8_t *src, uint8_t *dst,
-                   const uint32_t *keys, const uint8_t *aad,
-                   const uint64_t len,
-                   IMB_SGL_STATE state,
-                   struct gcm_context_data *gcm_ctx,
+set_sgl_job_fields(IMB_JOB *job, uint8_t *p_buffer, imb_uint128_t *p_keys,
+                   const uint32_t size_idx, const uint32_t buf_index,
+                   struct IMB_SGL_IOV *sgl, struct gcm_context_data *gcm_ctx,
                    struct chacha20_poly1305_context_data *cp_ctx)
 {
+        uint8_t *src = get_src_buffer(buf_index, p_buffer);
+        uint8_t *dst = get_dst_buffer(buf_index, p_buffer);
+        uint8_t *aad = src;
+        uint32_t buf_size;
+
         job->src = src;
         job->dst = dst;
-        job->msg_len_to_cipher_in_bytes = len;
-        job->msg_len_to_hash_in_bytes = len;
+
+        /* If IMIX testing is being done, set the buffer size to cipher and hash
+         * going through the list of sizes precalculated */
+        if (imix_list_count != 0) {
+                uint32_t list_idx = size_idx & (JOB_SIZE_IMIX_LIST - 1);
+
+                job->msg_len_to_cipher_in_bytes = cipher_size_list[list_idx];
+        }
+        buf_size = (uint32_t) job->msg_len_to_cipher_in_bytes;
         if (job->cipher_mode == IMB_CIPHER_GCM_SGL) {
                 job->u.GCM.aad = aad;
                 job->u.GCM.ctx = gcm_ctx;
@@ -1597,11 +1609,30 @@ set_sgl_job_fields(IMB_JOB *job, const uint8_t *src, uint8_t *dst,
                 job->u.CHACHA20_POLY1305.aad = aad;
                 job->u.CHACHA20_POLY1305.ctx = cp_ctx;
         }
+        job->enc_keys = job->dec_keys =
+                (const uint32_t *) get_key_pointer(buf_index,
+                                   p_keys);
+        job->sgl_state = IMB_SGL_ALL;
 
-        job->enc_keys = job->dec_keys = keys;
-        job->sgl_state = state;
+        const uint32_t num_segs = buf_size / segment_size;
+        const uint32_t final_seg_sz = buf_size % segment_size;
+        unsigned i;
+
+        job->num_sgl_io_segs = num_segs;
+
+        for (i = 0; i < num_segs; i++) {
+                sgl[i].in = &src[i * segment_size];
+                sgl[i].out = &dst[i * segment_size];
+                sgl[i].len = segment_size;
+        }
+        if (final_seg_sz != 0) {
+                sgl[i].in = &src[num_segs * segment_size];
+                sgl[i].out = &dst[num_segs * segment_size];
+                sgl[i].len = final_seg_sz;
+                (job->num_sgl_io_segs)++;
+        }
+        job->sgl_io_segs = sgl;
 };
-
 
 static void
 set_size_lists(uint32_t *cipher_size_list, uint32_t *hash_size_list,
@@ -1715,12 +1746,29 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
         uint8_t gcm_key[32];
         uint8_t next_iv[IMB_AES_BLOCK_SIZE];
         IMB_JOB jobs[MAX_BURST_SIZE];
+        struct gcm_context_data gcm_ctx[MAX_BURST_SIZE];
+        struct chacha20_poly1305_context_data cp_ctx[MAX_BURST_SIZE];
+        struct IMB_SGL_IOV *sgl[MAX_BURST_SIZE] = {NULL};
+        uint32_t max_num_segs = 1;
 
         memset(&job_template, 0, sizeof(IMB_JOB));
 
         /* Set cipher and hash length arrays to be used in each job,
            and set the XGEM header in case PON is used. */
         set_size_lists(cipher_size_list, hash_size_list, xgem_hdr_list, params);
+
+        if (segment_size != 0)
+                max_num_segs = DIV_ROUND_UP(job_sizes[RANGE_MAX],
+                                            segment_size);
+
+        for (i = 0; i < MAX_BURST_SIZE; i++) {
+                sgl[i] = malloc(sizeof(struct IMB_SGL_IOV) *
+                                max_num_segs);
+                if (sgl[i] == NULL) {
+                        fprintf(stderr, "malloc() failed\n");
+                        goto exit;
+                }
+        }
 
         /*
          * If single size is used, set the cipher and hash lengths in the
@@ -2026,7 +2074,7 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
                 it_next.it_value.tv_usec = (TIMEOUT_MS % 1000) * 1000;
                 if (setitimer(ITIMER_REAL, &it_next, NULL)) {
                         perror("setitimer(one-shot)");
-                        exit(EXIT_FAILURE);
+                        goto exit;
                 }
 #else /* _WIN32 */
                 /* create the timer queue */
@@ -2034,7 +2082,7 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
                 if (NULL == hTimeboxQueue) {
                         fprintf(stderr, "CreateTimerQueue() error %u\n",
                                 (unsigned) GetLastError());
-                        exit(EXIT_FAILURE);
+                        goto exit;
                 }
 
                 /* set a timer to call the timebox */
@@ -2044,7 +2092,7 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
                                            NULL, TIMEOUT_MS, 0, 0)) {
                         fprintf(stderr, "CreateTimerQueueTimer() error %u\n",
                                 (unsigned) GetLastError());
-                        exit(EXIT_FAILURE);
+                        goto exit;
                 }
 #endif
                 timebox_on = 1;
@@ -2070,9 +2118,18 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
                                 job = &jobs[i];
                                 *job = job_template;
 
-                                set_job_fields(job, p_buffer, p_keys, i, index);
+                                if (segment_size != 0)
+                                        set_sgl_job_fields(job, p_buffer,
+                                                           p_keys, i,
+                                                           index, sgl[i],
+                                                           &gcm_ctx[i],
+                                                           &cp_ctx[i]);
+                                else
+                                        set_job_fields(job, p_buffer, p_keys,
+                                                       i, index);
 
                                 index = get_next_index(index);
+
                         }
                         /* submit burst */
 #ifdef DEBUG
@@ -2221,75 +2278,15 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
 
         } else { /* test job api */
                 for (i = 0; (i < num_iter) && timebox_on; i++) {
-
                         job = IMB_GET_NEXT_JOB(mb_mgr);
                         *job = job_template;
 
-                        if (segment_size != 0) {
-                                /* SGL */
-                                struct gcm_context_data gcm_ctx;
-                                struct chacha20_poly1305_context_data cp_ctx;
-                                const uint32_t *keys =
-                                        (const uint32_t *) get_key_pointer(index,
-                                                                           p_keys);
-
-                                uint8_t *src = get_src_buffer(index, p_buffer);
-                                uint8_t *dst = get_dst_buffer(index, p_buffer);
-                                uint8_t *aad = src;
-
-                                set_sgl_job_fields(job, NULL, NULL, keys, aad, 0,
-                                                   IMB_SGL_INIT, &gcm_ctx, &cp_ctx);
-#ifdef DEBUG
-                                job = IMB_SUBMIT_JOB(mb_mgr);
-#else
-                                job = IMB_SUBMIT_JOB_NOCHECK(mb_mgr);
-#endif
-
-                                const uint32_t num_segs = cipher_size_list[0] /
-                                                          segment_size;
-                                const uint32_t final_seg_sz = cipher_size_list[0] %
-                                                        segment_size;
-                                uint32_t j;
-
-                                for (j = 0; j < num_segs; j++) {
-                                        job = IMB_GET_NEXT_JOB(mb_mgr);
-                                        *job = job_template;
-
-                                        set_sgl_job_fields(job, &src[j*segment_size],
-                                                           &dst[j*segment_size], keys,
-                                                           aad, segment_size,
-                                                           IMB_SGL_UPDATE,
-                                                           &gcm_ctx, &cp_ctx);
-#ifdef DEBUG
-                                        job = IMB_SUBMIT_JOB(mb_mgr);
-#else
-                                        job = IMB_SUBMIT_JOB_NOCHECK(mb_mgr);
-#endif
-                                }
-                                if (final_seg_sz != 0) {
-                                        job = IMB_GET_NEXT_JOB(mb_mgr);
-                                        *job = job_template;
-
-                                        set_sgl_job_fields(job, &src[j*segment_size],
-                                                           &dst[j*segment_size], keys,
-                                                           aad, final_seg_sz,
-                                                           IMB_SGL_UPDATE,
-                                                           &gcm_ctx, &cp_ctx);
-#ifdef DEBUG
-                                        job = IMB_SUBMIT_JOB(mb_mgr);
-#else
-                                        job = IMB_SUBMIT_JOB_NOCHECK(mb_mgr);
-#endif
-                                }
-                                job = IMB_GET_NEXT_JOB(mb_mgr);
-                                *job = job_template;
-
-                                set_sgl_job_fields(job, NULL, NULL,
-                                                   keys, aad,
-                                                   0,
-                                                   IMB_SGL_COMPLETE,
-                                                   &gcm_ctx, &cp_ctx);
-                        } else /* Linear buffer */
+                        if (segment_size != 0)
+                                set_sgl_job_fields(job, p_buffer, p_keys,
+                                                   i, index,
+                                                   sgl[0], &gcm_ctx[0],
+                                                   &cp_ctx[0]);
+                        else
                                 set_job_fields(job, p_buffer, p_keys, i, index);
 
                         index = get_next_index(index);
@@ -2304,7 +2301,7 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
                                         fprintf(stderr,
                                                 "failed job, status:%d\n",
                                                 job->status);
-                                        return 1;
+                                        goto exit;
                                 }
 #endif
                                 job = IMB_GET_COMPLETED_JOB(mb_mgr);
@@ -2321,7 +2318,7 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
                                         "failed job, status:%d, "
                                         "error code:%d, %s\n", job->status,
                                         errc, imb_get_strerror(errc));
-                                return 1;
+                                goto exit;
                         }
 #else
                         (void)job;
@@ -2329,6 +2326,11 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
                 }
 
         } /* if test_api */
+
+        for (i = 0; i < MAX_BURST_SIZE; i++) {
+                free(sgl[i]);
+                sgl[i] = NULL;
+        }
 
 #ifndef _WIN32
         if (use_unhalted_cycles)
@@ -2346,7 +2348,7 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
 
                 if (setitimer(ITIMER_REAL, &it_disarm, NULL)) {
                         perror("setitimer(disarm)");
-                        exit(EXIT_FAILURE);
+                        goto exit;
                 }
 #else /* _WIN32 */
                 /* delete all timeboxes in the timer queue */
@@ -2366,6 +2368,12 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
                 return time;
 
         return time / num_iter;
+
+exit:
+        for (i = 0; i < MAX_BURST_SIZE; i++)
+                free(sgl[i]);
+
+        exit(EXIT_FAILURE);
 }
 
 static void
@@ -2405,7 +2413,8 @@ run_gcm_sgl(aes_gcm_init_t init, aes_gcm_enc_dec_update_t update,
                                        &pb[j*segment_size],
                                        &pb[j*segment_size],
                                        final_seg_sz);
-                        finalize(gdata_key, gdata_ctx, auth_tag, sizeof(auth_tag));
+                        finalize(gdata_key, gdata_ctx, auth_tag,
+                                 sizeof(auth_tag));
 
                         index = get_next_index(index);
                 }
@@ -2418,7 +2427,8 @@ run_gcm_sgl(aes_gcm_init_t init, aes_gcm_enc_dec_update_t update,
 
                         init(gdata_key, gdata_ctx, iv, aad, aad_size);
                         update(gdata_key, gdata_ctx, pb, pb, buf_size);
-                        finalize(gdata_key, gdata_ctx, auth_tag, sizeof(auth_tag));
+                        finalize(gdata_key, gdata_ctx, auth_tag,
+                                 sizeof(auth_tag));
 
                         index = get_next_index(index);
                 }
@@ -2728,11 +2738,11 @@ do_test_chacha_poly(struct params_s *params,
         }
 #ifndef _WIN32
         if (use_unhalted_cycles)
-               time = (read_cycles(params->core) -
-                       rd_cycles_cost) - time;
+                time = (read_cycles(params->core) -
+                        rd_cycles_cost) - time;
         else
 #endif
-               time = __rdtscp(&aux) - time;
+                time = __rdtscp(&aux) - time;
 
         free(aad);
 
@@ -2893,7 +2903,8 @@ process_variant(IMB_MGR *mgr, const enum arch_type_e arch,
                         else
                                 *times = do_test_gcm(params, job_iter, mgr,
                                                      p_buffer, p_keys);
-                } else if (params->cipher_mode == TEST_AEAD_CHACHA20 && (!use_job_api)) {
+                } else if (params->cipher_mode == TEST_AEAD_CHACHA20 &&
+                           (!use_job_api)) {
                         if (job_iter == 0)
                                 *times = do_test_chacha_poly(params,
                                                      2 * num_iter, mgr,

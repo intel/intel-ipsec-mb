@@ -162,41 +162,69 @@ void init_chacha20_poly1305(IMB_JOB *job, const IMB_ARCH arch,
                                     job->dst, job->msg_len_to_cipher_in_bytes,
                                     job->enc_keys, ctx, arch);
         }
-        job->status |= IMB_STATUS_COMPLETED;
+        job->status = IMB_STATUS_COMPLETED;
 }
 
 __forceinline
-void update_chacha20_poly1305(IMB_JOB *job, const IMB_ARCH arch,
-                              const unsigned ifma)
+void update_chacha20_poly1305_direct(const void *key,
+                                     struct chacha20_poly1305_context_data *ctx,
+                                     void *dst, const void *src,
+                                     const uint64_t len,
+                                     const IMB_CIPHER_DIRECTION dir,
+                                     const IMB_ARCH arch,
+                                     const unsigned check_param,
+                                     const unsigned ifma)
 {
-        struct chacha20_poly1305_context_data *ctx =
-                                                job->u.CHACHA20_POLY1305.ctx;
-        uint64_t hash_len = job->msg_len_to_hash_in_bytes;
+#ifdef SAFE_PARAM
+        if (check_param) {
+                /* reset error status */
+                imb_set_errno(NULL, 0);
+
+                if (key == NULL) {
+                        imb_set_errno(NULL, IMB_ERR_NULL_KEY);
+                        return;
+                }
+                if (ctx == NULL) {
+                        imb_set_errno(NULL, IMB_ERR_NULL_CTX);
+                        return;
+                }
+                if (src == NULL && len != 0) {
+                        imb_set_errno(NULL, IMB_ERR_NULL_SRC);
+                        return;
+                }
+                if (dst == NULL && len != 0) {
+                        imb_set_errno(NULL, IMB_ERR_NULL_DST);
+                        return;
+                }
+        }
+#else
+        (void) check_param;
+#endif
         uint64_t bytes_to_copy = 0;
         uint64_t remain_bytes_to_fill = (16 - ctx->remain_ct_bytes);
         uint64_t remain_ct_bytes;
         const uint8_t *remain_ct_ptr;
+        const uint8_t *src8 = (const uint8_t *) src;
+        uint8_t *dst8 = (uint8_t *) dst;
+        uint64_t length = len;
 
         /* Need to copy more bytes into scratchpad */
         if ((ctx->remain_ct_bytes > 0) && (remain_bytes_to_fill > 0)) {
-                if (hash_len < remain_bytes_to_fill)
-                        bytes_to_copy = hash_len;
+                if (len < remain_bytes_to_fill)
+                        bytes_to_copy = length;
                 else
                         bytes_to_copy = remain_bytes_to_fill;
         }
 
         /* Increment total hash length */
-        ctx->hash_len += job->msg_len_to_hash_in_bytes;
+        ctx->hash_len += length;
 
-        if (job->cipher_direction == IMB_DIR_ENCRYPT) {
-                chacha20_enc_dec_ks(job->src +
-                                    job->cipher_start_src_offset_in_bytes,
-                                    job->dst, job->msg_len_to_cipher_in_bytes,
-                                    job->enc_keys, ctx, arch);
+        if (dir == IMB_DIR_ENCRYPT) {
+                chacha20_enc_dec_ks(src, dst, length, key, ctx, arch);
 
                 /* Copy more bytes on Poly scratchpad */
                 memcpy_asm(ctx->poly_scratch + ctx->remain_ct_bytes,
-                           job->dst, bytes_to_copy, arch);
+                           dst, bytes_to_copy, arch);
                 ctx->remain_ct_bytes += bytes_to_copy;
 
                 /*
@@ -209,16 +237,16 @@ void update_chacha20_poly1305(IMB_JOB *job, const IMB_ARCH arch,
                         ctx->remain_ct_bytes = 0;
                 }
 
-                hash_len -= bytes_to_copy;
-                remain_ct_bytes = hash_len & HASH_REMAIN_CLAMP;
-                hash_len &= hash_len & HASH_LEN_CLAMP;
+                length -= bytes_to_copy;
+                remain_ct_bytes = length & HASH_REMAIN_CLAMP;
+                length &= HASH_LEN_CLAMP;
 
                 /* compute hash after cipher on encrypt */
-                poly1305_aead_update(job->dst + bytes_to_copy,
-                                     hash_len, ctx->hash, ctx->poly_key, arch,
+                poly1305_aead_update(dst8 + bytes_to_copy,
+                                     length, ctx->hash, ctx->poly_key, arch,
                                      ifma);
 
-                remain_ct_ptr = job->dst + bytes_to_copy + hash_len;
+                remain_ct_ptr = dst8 + bytes_to_copy + length;
                 /* copy last bytes of ciphertext (less than 16 bytes) */
                 memcpy_asm(ctx->poly_scratch, remain_ct_ptr, remain_ct_bytes,
                            arch);
@@ -226,8 +254,7 @@ void update_chacha20_poly1305(IMB_JOB *job, const IMB_ARCH arch,
         } else {
                 /* Copy more bytes on Poly scratchpad */
                 memcpy_asm(ctx->poly_scratch + ctx->remain_ct_bytes,
-                           job->src + job->hash_start_src_offset_in_bytes,
-                           bytes_to_copy, arch);
+                           src, bytes_to_copy, arch);
                 ctx->remain_ct_bytes += bytes_to_copy;
 
                 /*
@@ -240,28 +267,37 @@ void update_chacha20_poly1305(IMB_JOB *job, const IMB_ARCH arch,
                         ctx->remain_ct_bytes = 0;
                 }
 
-                hash_len -= bytes_to_copy;
-                remain_ct_bytes = hash_len & HASH_REMAIN_CLAMP;
-                hash_len &= hash_len & HASH_LEN_CLAMP;
+                length -= bytes_to_copy;
+                remain_ct_bytes = length & HASH_REMAIN_CLAMP;
+                length &= HASH_LEN_CLAMP;
 
                 /* compute hash first on decrypt */
-                poly1305_aead_update(job->src +
-                             job->hash_start_src_offset_in_bytes +
-                             bytes_to_copy, hash_len, ctx->hash, ctx->poly_key,
-                             arch, ifma);
+                poly1305_aead_update(src8 + bytes_to_copy, length, ctx->hash,
+                                     ctx->poly_key, arch, ifma);
 
-                remain_ct_ptr = job->src + job->hash_start_src_offset_in_bytes
-                                + bytes_to_copy + hash_len;
+                remain_ct_ptr = src8 + bytes_to_copy + length;
                 /* copy last bytes of ciphertext (less than 16 bytes) */
                 memcpy_asm(ctx->poly_scratch, remain_ct_ptr, remain_ct_bytes,
                            arch);
                 ctx->remain_ct_bytes += remain_ct_bytes;
-                chacha20_enc_dec_ks(job->src +
-                                    job->cipher_start_src_offset_in_bytes,
-                                    job->dst, job->msg_len_to_cipher_in_bytes,
-                                    job->enc_keys, ctx, arch);
+                chacha20_enc_dec_ks(src, dst, len, key, ctx, arch);
         }
-        job->status |= IMB_STATUS_COMPLETED;
+}
+
+__forceinline
+void update_chacha20_poly1305(IMB_JOB *job, const IMB_ARCH arch,
+                              const unsigned ifma)
+{
+        update_chacha20_poly1305_direct(job->enc_keys,
+                                        job->u.CHACHA20_POLY1305.ctx,
+                                        job->dst,
+                                        job->src +
+                                        job->cipher_start_src_offset_in_bytes,
+                                        job->msg_len_to_cipher_in_bytes,
+                                        job->cipher_direction,
+                                        arch,
+                                        0, ifma);
+        job->status = IMB_STATUS_COMPLETED;
 }
 
 __forceinline
@@ -370,13 +406,136 @@ void complete_chacha20_poly1305(IMB_JOB *job, const IMB_ARCH arch,
         clear_mem(ctx->last_ks, sizeof(ctx->last_ks));
         clear_mem(ctx->poly_key, sizeof(ctx->poly_key));
 #endif
-        job->status |= IMB_STATUS_COMPLETED;
+        job->status = IMB_STATUS_COMPLETED;
+}
+
+__forceinline
+void init_chacha20_poly1305_direct(const void *key,
+                                   struct chacha20_poly1305_context_data *ctx,
+                                   const void *iv, const void *aad,
+                                   const uint64_t aad_len, const IMB_ARCH arch,
+                                   const unsigned check_params,
+                                   const unsigned ifma)
+{
+#ifdef SAFE_PARAM
+        if (check_params) {
+                /* reset error status */
+                imb_set_errno(NULL, 0);
+
+                if (key == NULL) {
+                        imb_set_errno(NULL, IMB_ERR_NULL_KEY);
+                        return;
+                }
+                if (ctx == NULL) {
+                        imb_set_errno(NULL, IMB_ERR_NULL_CTX);
+                        return;
+                }
+                if (iv == NULL) {
+                        imb_set_errno(NULL, IMB_ERR_NULL_IV);
+                        return;
+                }
+                if (aad == NULL && aad_len != 0) {
+                        imb_set_errno(NULL, IMB_ERR_NULL_AAD);
+                        return;
+                }
+        }
+#else
+        (void) check_params;
+#endif
+        ctx->hash[0] = 0;
+        ctx->hash[1] = 0;
+        ctx->hash[2] = 0;
+        ctx->aad_len = aad_len;
+        ctx->hash_len = 0;
+        ctx->last_block_count = 0;
+        ctx->remain_ks_bytes = 0;
+        ctx->remain_ct_bytes = 0;
+
+        /* Store IV */
+        memcpy_asm(ctx->IV, iv, 12, arch);
+
+        /* Generate Poly key */
+        if (arch == IMB_ARCH_SSE)
+                poly1305_key_gen_sse(key, iv, ctx->poly_key);
+        else
+                poly1305_key_gen_avx(key, iv, ctx->poly_key);
+
+        /* Calculate hash over AAD */
+        poly1305_aead_update(aad, aad_len, ctx->hash, ctx->poly_key,
+                             arch, ifma);
+}
+
+__forceinline
+void
+finalize_chacha20_poly1305_direct(struct chacha20_poly1305_context_data *ctx,
+                                  void *tag, const uint64_t tag_len,
+                                  const IMB_ARCH arch,
+                                  const unsigned check_params,
+                                  const unsigned ifma)
+{
+#ifdef SAFE_PARAM
+        if (check_params) {
+                /* reset error status */
+                imb_set_errno(NULL, 0);
+
+                if (ctx == NULL) {
+                        imb_set_errno(NULL, IMB_ERR_NULL_CTX);
+                        return;
+                }
+                if (tag == NULL) {
+                        imb_set_errno(NULL, IMB_ERR_NULL_AUTH);
+                        return;
+                }
+                if (tag_len == 0 || tag_len > 16) {
+                        imb_set_errno(NULL, IMB_ERR_AUTH_TAG_LEN);
+                        return;
+                }
+        }
+#else
+        (void) check_params;
+#endif
+        uint64_t last[2];
+        uint8_t auth_tag[16];
+
+        if (ctx->remain_ct_bytes > 0) {
+                poly1305_aead_update(ctx->poly_scratch,
+                                     ctx->remain_ct_bytes,
+                                     ctx->hash,
+                                     ctx->poly_key,
+                                     arch, ifma);
+                ctx->remain_ct_bytes = 0;
+        }
+
+        /*
+         * Construct extra block with AAD and message lengths for
+         * authentication
+         */
+        last[0] = ctx->aad_len;
+        last[1] = ctx->hash_len;
+        poly1305_aead_update(last, sizeof(last), ctx->hash, ctx->poly_key,
+                             arch, ifma);
+
+        /* Finalize AEAD Poly1305 (final reduction and +S) */
+        poly1305_aead_complete(ctx->hash, ctx->poly_key, auth_tag, arch, ifma);
+
+        /* Copy N bytes of tag */
+        memcpy_asm((uint8_t *) tag, auth_tag, tag_len, arch);
+
+        /* Clear sensitive data from the context */
+#ifdef SAFE_DATA
+        clear_mem(ctx->last_ks, sizeof(ctx->last_ks));
+        clear_mem(ctx->poly_key, sizeof(ctx->poly_key));
+#endif
 }
 
 __forceinline
 IMB_JOB *aead_chacha20_poly1305_sgl(IMB_JOB *job, const IMB_ARCH arch,
                                     const unsigned ifma)
 {
+        unsigned i;
+        struct chacha20_poly1305_context_data *ctx =
+                job->u.CHACHA20_POLY1305.ctx;
+
         switch (job->sgl_state) {
         case IMB_SGL_INIT:
                 init_chacha20_poly1305(job, arch, ifma);
@@ -385,8 +544,35 @@ IMB_JOB *aead_chacha20_poly1305_sgl(IMB_JOB *job, const IMB_ARCH arch,
                 update_chacha20_poly1305(job, arch, ifma);
                 break;
         case IMB_SGL_COMPLETE:
-        default:
                 complete_chacha20_poly1305(job, arch, ifma);
+                break;
+        case IMB_SGL_ALL:
+        default:
+                init_chacha20_poly1305_direct(job->enc_keys,
+                                              ctx,
+                                              job->iv, job->u.CHACHA20_POLY1305.aad,
+                                              job->u.CHACHA20_POLY1305.aad_len_in_bytes,
+                                              arch, 0, ifma);
+                for (i = 0; i < job->num_sgl_io_segs; i++)
+                        update_chacha20_poly1305_direct(job->enc_keys,
+                                                        ctx,
+                                                        job->sgl_io_segs[i].out,
+                                                        job->sgl_io_segs[i].in,
+                                                        job->sgl_io_segs[i].len,
+                                                        job->cipher_direction,
+                                                        arch,
+                                                        0, ifma);
+
+                finalize_chacha20_poly1305_direct(ctx,
+                                                  job->auth_tag_output,
+                                                  job->auth_tag_output_len_in_bytes,
+                                                  arch, 0, ifma);
+                /* Clear sensitive data from the context */
+#ifdef SAFE_DATA
+                clear_mem(ctx->last_ks, sizeof(ctx->last_ks));
+                clear_mem(ctx->poly_key, sizeof(ctx->poly_key));
+#endif
+                job->status = IMB_STATUS_COMPLETED;
         }
 
         return job;
@@ -490,7 +676,7 @@ IMB_JOB *aead_chacha20_poly1305(IMB_JOB *job, const IMB_ARCH arch,
         /* Finalize AEAD Poly1305 (final reduction and +S) */
         poly1305_aead_complete(hash, ks, job->auth_tag_output, arch, ifma);
 
-        job->status |= IMB_STATUS_COMPLETED;
+        job->status = IMB_STATUS_COMPLETED;
 
         return job;
 }
@@ -555,57 +741,6 @@ IMB_JOB *aead_chacha20_poly1305_sgl_avx512(IMB_MGR *mgr, IMB_JOB *job)
                 return aead_chacha20_poly1305_sgl(job, IMB_ARCH_AVX512, 0);
 }
 
-__forceinline
-void init_chacha20_poly1305_direct(const void *key,
-                                   struct chacha20_poly1305_context_data *ctx,
-                                   const void *iv, const void *aad,
-                                   const uint64_t aad_len, const IMB_ARCH arch,
-                                   const unsigned ifma)
-{
-#ifdef SAFE_PARAM
-        /* reset error status */
-        imb_set_errno(NULL, 0);
-
-        if (key == NULL) {
-                imb_set_errno(NULL, IMB_ERR_NULL_KEY);
-                return;
-        }
-        if (ctx == NULL) {
-                imb_set_errno(NULL, IMB_ERR_NULL_CTX);
-                return;
-        }
-        if (iv == NULL) {
-                imb_set_errno(NULL, IMB_ERR_NULL_IV);
-                return;
-        }
-        if (aad == NULL && aad_len != 0) {
-                imb_set_errno(NULL, IMB_ERR_NULL_AAD);
-                return;
-        }
-#endif
-        ctx->hash[0] = 0;
-        ctx->hash[1] = 0;
-        ctx->hash[2] = 0;
-        ctx->aad_len = aad_len;
-        ctx->hash_len = 0;
-        ctx->last_block_count = 0;
-        ctx->remain_ks_bytes = 0;
-        ctx->remain_ct_bytes = 0;
-
-        /* Store IV */
-        memcpy_asm(ctx->IV, iv, 12, arch);
-
-        /* Generate Poly key */
-        if (arch == IMB_ARCH_SSE)
-                poly1305_key_gen_sse(key, iv, ctx->poly_key);
-        else
-                poly1305_key_gen_avx(key, iv, ctx->poly_key);
-
-        /* Calculate hash over AAD */
-        poly1305_aead_update(aad, aad_len, ctx->hash, ctx->poly_key,
-                             arch, ifma);
-}
-
 IMB_DLL_LOCAL
 void init_chacha20_poly1305_sse(const void *key,
                                 struct chacha20_poly1305_context_data *ctx,
@@ -613,7 +748,7 @@ void init_chacha20_poly1305_sse(const void *key,
                                 const uint64_t aad_len)
 {
         init_chacha20_poly1305_direct(key, ctx, iv, aad,
-                                      aad_len, IMB_ARCH_SSE, 0);
+                                      aad_len, IMB_ARCH_SSE, 1, 0);
 }
 
 IMB_DLL_LOCAL
@@ -623,7 +758,7 @@ void init_chacha20_poly1305_avx(const void *key,
                                 const uint64_t aad_len)
 {
         init_chacha20_poly1305_direct(key, ctx, iv, aad,
-                                      aad_len, IMB_ARCH_AVX, 0);
+                                      aad_len, IMB_ARCH_AVX, 1, 0);
 }
 
 IMB_DLL_LOCAL
@@ -633,7 +768,7 @@ void init_chacha20_poly1305_avx512(const void *key,
                                 const uint64_t aad_len)
 {
         init_chacha20_poly1305_direct(key, ctx, iv, aad,
-                                      aad_len, IMB_ARCH_AVX512, 0);
+                                      aad_len, IMB_ARCH_AVX512, 1, 0);
 }
 
 IMB_DLL_LOCAL
@@ -643,121 +778,7 @@ void init_chacha20_poly1305_fma_avx512(const void *key,
                                 const uint64_t aad_len)
 {
         init_chacha20_poly1305_direct(key, ctx, iv, aad,
-                                      aad_len, IMB_ARCH_AVX512, 1);
-}
-
-__forceinline
-void update_chacha20_poly1305_direct(const void *key,
-                                     struct chacha20_poly1305_context_data *ctx,
-                                     void *dst, const void *src,
-                                     const uint64_t len,
-                                     const IMB_CIPHER_DIRECTION dir,
-                                     const IMB_ARCH arch,
-                                     const unsigned ifma)
-{
-#ifdef SAFE_PARAM
-        /* reset error status */
-        imb_set_errno(NULL, 0);
-
-        if (key == NULL) {
-                imb_set_errno(NULL, IMB_ERR_NULL_KEY);
-                return;
-        }
-        if (ctx == NULL) {
-                imb_set_errno(NULL, IMB_ERR_NULL_CTX);
-                return;
-        }
-        if (src == NULL && len != 0) {
-                imb_set_errno(NULL, IMB_ERR_NULL_SRC);
-                return;
-        }
-        if (dst == NULL && len != 0) {
-                imb_set_errno(NULL, IMB_ERR_NULL_DST);
-                return;
-        }
-#endif
-        uint64_t bytes_to_copy = 0;
-        uint64_t remain_bytes_to_fill = (16 - ctx->remain_ct_bytes);
-        uint64_t remain_ct_bytes;
-        const uint8_t *remain_ct_ptr;
-        const uint8_t *src8 = (const uint8_t *) src;
-        uint8_t *dst8 = (uint8_t *) dst;
-        uint64_t length = len;
-
-        /* Need to copy more bytes into scratchpad */
-        if ((ctx->remain_ct_bytes > 0) && (remain_bytes_to_fill > 0)) {
-                if (len < remain_bytes_to_fill)
-                        bytes_to_copy = length;
-                else
-                        bytes_to_copy = remain_bytes_to_fill;
-        }
-
-        /* Increment total hash length */
-        ctx->hash_len += length;
-
-        if (dir == IMB_DIR_ENCRYPT) {
-                chacha20_enc_dec_ks(src, dst, length, key, ctx, arch);
-
-                /* Copy more bytes on Poly scratchpad */
-                memcpy_asm(ctx->poly_scratch + ctx->remain_ct_bytes,
-                           dst, bytes_to_copy, arch);
-                ctx->remain_ct_bytes += bytes_to_copy;
-
-                /*
-                 * Compute hash on remaining bytes of previous segment and
-                 * first bytes of this segment (if there are 16 bytes)
-                 */
-                if (ctx->remain_ct_bytes == 16) {
-                        poly1305_aead_update(ctx->poly_scratch, 16, ctx->hash,
-                                             ctx->poly_key, arch, ifma);
-                        ctx->remain_ct_bytes = 0;
-                }
-
-                length -= bytes_to_copy;
-                remain_ct_bytes = length & HASH_REMAIN_CLAMP;
-                length &= length & HASH_LEN_CLAMP;
-
-                /* compute hash after cipher on encrypt */
-                poly1305_aead_update(dst8 + bytes_to_copy,
-                                     length, ctx->hash, ctx->poly_key, arch,
-                                     ifma);
-
-                remain_ct_ptr = dst8 + bytes_to_copy + length;
-                /* copy last bytes of ciphertext (less than 16 bytes) */
-                memcpy_asm(ctx->poly_scratch, remain_ct_ptr, remain_ct_bytes,
-                           arch);
-                ctx->remain_ct_bytes += remain_ct_bytes;
-        } else {
-                /* Copy more bytes on Poly scratchpad */
-                memcpy_asm(ctx->poly_scratch + ctx->remain_ct_bytes,
-                           src, bytes_to_copy, arch);
-                ctx->remain_ct_bytes += bytes_to_copy;
-
-                /*
-                 * Compute hash on remaining bytes of previous segment and
-                 * first bytes of this segment (if there are 16 bytes)
-                 */
-                if (ctx->remain_ct_bytes == 16) {
-                        poly1305_aead_update(ctx->poly_scratch, 16, ctx->hash,
-                                             ctx->poly_key, arch, ifma);
-                        ctx->remain_ct_bytes = 0;
-                }
-
-                length -= bytes_to_copy;
-                remain_ct_bytes = length & HASH_REMAIN_CLAMP;
-                length &= length & HASH_LEN_CLAMP;
-
-                /* compute hash first on decrypt */
-                poly1305_aead_update(src8 + bytes_to_copy, length, ctx->hash,
-                                     ctx->poly_key, arch, ifma);
-
-                remain_ct_ptr = src8 + bytes_to_copy + length;
-                /* copy last bytes of ciphertext (less than 16 bytes) */
-                memcpy_asm(ctx->poly_scratch, remain_ct_ptr, remain_ct_bytes,
-                           arch);
-                ctx->remain_ct_bytes += remain_ct_bytes;
-                chacha20_enc_dec_ks(src, dst, len, key, ctx, arch);
-        }
+                                      aad_len, IMB_ARCH_AVX512, 1, 1);
 }
 
 void update_enc_chacha20_poly1305_sse(const void *key,
@@ -766,7 +787,7 @@ void update_enc_chacha20_poly1305_sse(const void *key,
                                      const uint64_t len)
 {
         update_chacha20_poly1305_direct(key, ctx, dst, src, len,
-                                        IMB_DIR_ENCRYPT, IMB_ARCH_SSE, 0);
+                                        IMB_DIR_ENCRYPT, IMB_ARCH_SSE, 1, 0);
 }
 
 void update_enc_chacha20_poly1305_avx(const void *key,
@@ -775,7 +796,7 @@ void update_enc_chacha20_poly1305_avx(const void *key,
                                      const uint64_t len)
 {
         update_chacha20_poly1305_direct(key, ctx, dst, src, len,
-                                        IMB_DIR_ENCRYPT, IMB_ARCH_AVX, 0);
+                                        IMB_DIR_ENCRYPT, IMB_ARCH_AVX, 1, 0);
 }
 
 void update_enc_chacha20_poly1305_avx2(const void *key,
@@ -784,7 +805,7 @@ void update_enc_chacha20_poly1305_avx2(const void *key,
                                      const uint64_t len)
 {
         update_chacha20_poly1305_direct(key, ctx, dst, src, len,
-                                        IMB_DIR_ENCRYPT, IMB_ARCH_AVX2, 0);
+                                        IMB_DIR_ENCRYPT, IMB_ARCH_AVX2, 1, 0);
 }
 
 
@@ -794,7 +815,7 @@ void update_enc_chacha20_poly1305_avx512(const void *key,
                                      const uint64_t len)
 {
         update_chacha20_poly1305_direct(key, ctx, dst, src, len,
-                                        IMB_DIR_ENCRYPT, IMB_ARCH_AVX512, 0);
+                                        IMB_DIR_ENCRYPT, IMB_ARCH_AVX512, 1, 0);
 }
 
 void update_enc_chacha20_poly1305_fma_avx512(const void *key,
@@ -803,7 +824,7 @@ void update_enc_chacha20_poly1305_fma_avx512(const void *key,
                                      const uint64_t len)
 {
         update_chacha20_poly1305_direct(key, ctx, dst, src, len,
-                                        IMB_DIR_ENCRYPT, IMB_ARCH_AVX512, 1);
+                                        IMB_DIR_ENCRYPT, IMB_ARCH_AVX512, 1, 1);
 }
 
 void update_dec_chacha20_poly1305_sse(const void *key,
@@ -812,7 +833,7 @@ void update_dec_chacha20_poly1305_sse(const void *key,
                                      const uint64_t len)
 {
         update_chacha20_poly1305_direct(key, ctx, dst, src, len,
-                                        IMB_DIR_DECRYPT, IMB_ARCH_SSE, 0);
+                                        IMB_DIR_DECRYPT, IMB_ARCH_SSE, 1, 0);
 }
 
 void update_dec_chacha20_poly1305_avx(const void *key,
@@ -821,7 +842,7 @@ void update_dec_chacha20_poly1305_avx(const void *key,
                                      const uint64_t len)
 {
         update_chacha20_poly1305_direct(key, ctx, dst, src, len,
-                                        IMB_DIR_DECRYPT, IMB_ARCH_AVX, 0);
+                                        IMB_DIR_DECRYPT, IMB_ARCH_AVX, 1, 0);
 }
 
 void update_dec_chacha20_poly1305_avx2(const void *key,
@@ -830,7 +851,7 @@ void update_dec_chacha20_poly1305_avx2(const void *key,
                                      const uint64_t len)
 {
         update_chacha20_poly1305_direct(key, ctx, dst, src, len,
-                                        IMB_DIR_DECRYPT, IMB_ARCH_AVX2, 0);
+                                        IMB_DIR_DECRYPT, IMB_ARCH_AVX2, 1, 0);
 }
 
 void update_dec_chacha20_poly1305_avx512(const void *key,
@@ -839,7 +860,7 @@ void update_dec_chacha20_poly1305_avx512(const void *key,
                                      const uint64_t len)
 {
         update_chacha20_poly1305_direct(key, ctx, dst, src, len,
-                                        IMB_DIR_DECRYPT, IMB_ARCH_AVX512, 0);
+                                        IMB_DIR_DECRYPT, IMB_ARCH_AVX512, 1, 0);
 }
 
 void update_dec_chacha20_poly1305_fma_avx512(const void *key,
@@ -848,76 +869,19 @@ void update_dec_chacha20_poly1305_fma_avx512(const void *key,
                                      const uint64_t len)
 {
         update_chacha20_poly1305_direct(key, ctx, dst, src, len,
-                                        IMB_DIR_DECRYPT, IMB_ARCH_AVX512, 1);
-}
-
-__forceinline
-void
-finalize_chacha20_poly1305_direct(struct chacha20_poly1305_context_data *ctx,
-                                  void *tag, const uint64_t tag_len,
-                                  const IMB_ARCH arch, const unsigned ifma)
-{
-#ifdef SAFE_PARAM
-        /* reset error status */
-        imb_set_errno(NULL, 0);
-
-        if (ctx == NULL) {
-                imb_set_errno(NULL, IMB_ERR_NULL_CTX);
-                return;
-        }
-        if (tag == NULL) {
-                imb_set_errno(NULL, IMB_ERR_NULL_AUTH);
-                return;
-        }
-        if (tag_len == 0 || tag_len > 16) {
-                imb_set_errno(NULL, IMB_ERR_AUTH_TAG_LEN);
-                return;
-        }
-#endif
-        uint64_t last[2];
-        uint8_t auth_tag[16];
-
-        if (ctx->remain_ct_bytes > 0) {
-                poly1305_aead_update(ctx->poly_scratch,
-                                     ctx->remain_ct_bytes,
-                                     ctx->hash,
-                                     ctx->poly_key,
-                                     arch, ifma);
-                ctx->remain_ct_bytes = 0;
-        }
-
-        /*
-         * Construct extra block with AAD and message lengths for
-         * authentication
-         */
-        last[0] = ctx->aad_len;
-        last[1] = ctx->hash_len;
-        poly1305_aead_update(last, sizeof(last), ctx->hash, ctx->poly_key,
-                             arch, ifma);
-
-        /* Finalize AEAD Poly1305 (final reduction and +S) */
-        poly1305_aead_complete(ctx->hash, ctx->poly_key, auth_tag, arch, ifma);
-
-        /* Copy N bytes of tag */
-        memcpy_asm((uint8_t *) tag, auth_tag, tag_len, arch);
-
-        /* Clear sensitive data from the context */
-#ifdef SAFE_DATA
-        clear_mem(ctx->last_ks, sizeof(ctx->last_ks));
-        clear_mem(ctx->poly_key, sizeof(ctx->poly_key));
-#endif
+                                        IMB_DIR_DECRYPT, IMB_ARCH_AVX512, 1, 1);
 }
 
 void finalize_chacha20_poly1305_sse(struct chacha20_poly1305_context_data *ctx,
                                     void *tag, const uint64_t tag_len)
 {
-        finalize_chacha20_poly1305_direct(ctx, tag, tag_len, IMB_ARCH_SSE, 0);
+        finalize_chacha20_poly1305_direct(ctx, tag, tag_len, IMB_ARCH_SSE, 1, 0);
 }
 
 void finalize_chacha20_poly1305_avx(struct chacha20_poly1305_context_data *ctx,
                                     void *tag, const uint64_t tag_len)
 {
-        finalize_chacha20_poly1305_direct(ctx, tag, tag_len, IMB_ARCH_AVX, 0);
+        finalize_chacha20_poly1305_direct(ctx, tag, tag_len, IMB_ARCH_AVX, 1, 0);
 }
 
 void finalize_chacha20_poly1305_avx512(
@@ -925,7 +889,7 @@ void finalize_chacha20_poly1305_avx512(
                                     void *tag, const uint64_t tag_len)
 {
         finalize_chacha20_poly1305_direct(ctx, tag, tag_len,
-                                          IMB_ARCH_AVX512, 0);
+                                          IMB_ARCH_AVX512, 1, 0);
 }
 
 void finalize_chacha20_poly1305_fma_avx512(
@@ -933,5 +897,5 @@ void finalize_chacha20_poly1305_fma_avx512(
                                     void *tag, const uint64_t tag_len)
 {
         finalize_chacha20_poly1305_direct(ctx, tag, tag_len,
-                                          IMB_ARCH_AVX512, 1);
+                                          IMB_ARCH_AVX512, 1, 1);
 }

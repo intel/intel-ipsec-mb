@@ -1778,7 +1778,7 @@ poly1305_aead_complete_fma_avx512:
 
         ;; clear Poly key
 %ifdef SAFE_DATA
-        vpxorq  ymm0, ymm0
+        vpxorq  xmm0, xmm0
         vmovdqu64 [arg2], ymm0
 %endif
 
