@@ -966,6 +966,7 @@ const char *str_api_list[TEST_API_NUMOF] = {"single job", "burst",
 
 static TEST_API test_api = TEST_API_JOB; /* test job API by default */
 static uint32_t burst_size = 0; /* num jobs to pass to burst API */
+static uint32_t segment_size = 0; /* segment size to test SGL (0 = no SGL) */
 
 static volatile int timebox_on = 1; /* flag to stop the test loop */
 static int use_timebox = 1;         /* time-box feature on/off flag */
@@ -1455,7 +1456,10 @@ translate_cipher_mode(const enum test_cipher_mode_e test_mode)
                 c_mode = IMB_CIPHER_DOCSIS_DES;
                 break;
         case TEST_GCM:
-                c_mode = IMB_CIPHER_GCM;
+                if (segment_size != 0)
+                        c_mode = IMB_CIPHER_GCM_SGL;
+                else
+                        c_mode = IMB_CIPHER_GCM;
                 break;
         case TEST_CCM:
                 c_mode = IMB_CIPHER_CCM;
@@ -1486,7 +1490,11 @@ translate_cipher_mode(const enum test_cipher_mode_e test_mode)
                 c_mode = IMB_CIPHER_CHACHA20;
                 break;
         case TEST_AEAD_CHACHA20:
-                c_mode = IMB_CIPHER_CHACHA20_POLY1305;
+                if (segment_size != 0)
+                        c_mode = IMB_CIPHER_CHACHA20_POLY1305_SGL;
+                else
+                        c_mode = IMB_CIPHER_CHACHA20_POLY1305;
+
                 break;
         case TEST_SNOW_V:
                 c_mode = IMB_CIPHER_SNOW_V;
@@ -1569,6 +1577,31 @@ set_job_fields(IMB_JOB *job, uint8_t *p_buffer, imb_uint128_t *p_keys,
                                                            p_keys);
         }
 }
+
+static inline void
+set_sgl_job_fields(IMB_JOB *job, const uint8_t *src, uint8_t *dst,
+                   const uint32_t *keys, const uint8_t *aad,
+                   const uint64_t len,
+                   IMB_SGL_STATE state,
+                   struct gcm_context_data *gcm_ctx,
+                   struct chacha20_poly1305_context_data *cp_ctx)
+{
+        job->src = src;
+        job->dst = dst;
+        job->msg_len_to_cipher_in_bytes = len;
+        job->msg_len_to_hash_in_bytes = len;
+        if (job->cipher_mode == IMB_CIPHER_GCM_SGL) {
+                job->u.GCM.aad = aad;
+                job->u.GCM.ctx = gcm_ctx;
+        } else {
+                job->u.CHACHA20_POLY1305.aad = aad;
+                job->u.CHACHA20_POLY1305.ctx = cp_ctx;
+        }
+
+        job->enc_keys = job->dec_keys = keys;
+        job->sgl_state = state;
+};
+
 
 static void
 set_size_lists(uint32_t *cipher_size_list, uint32_t *hash_size_list,
@@ -1730,7 +1763,10 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
                 job_template.hash_alg = IMB_AUTH_AES_CCM;
                 break;
         case TEST_HASH_GCM:
-                job_template.hash_alg = IMB_AUTH_AES_GMAC;
+                if (segment_size != 0)
+                        job_template.hash_alg = IMB_AUTH_GCM_SGL;
+                else
+                        job_template.hash_alg = IMB_AUTH_AES_GMAC;
                 break;
         case TEST_DOCSIS_CRC32:
                 job_template.hash_alg = IMB_AUTH_DOCSIS_CRC32;
@@ -1761,7 +1797,10 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
                 job_template.hash_alg = IMB_AUTH_POLY1305;
                 break;
         case TEST_AEAD_POLY1305:
-                job_template.hash_alg = IMB_AUTH_CHACHA20_POLY1305;
+                if (segment_size != 0)
+                        job_template.hash_alg = IMB_AUTH_CHACHA20_POLY1305_SGL;
+                else
+                        job_template.hash_alg = IMB_AUTH_CHACHA20_POLY1305;
                 break;
         case TEST_PON_CRC_BIP:
                 job_template.hash_alg = IMB_AUTH_PON_CRC_BIP;
@@ -1889,7 +1928,8 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
         /* Translating enum to the API's one */
         job_template.cipher_mode = translate_cipher_mode(params->cipher_mode);
         job_template.key_len_in_bytes = params->aes_key_size;
-        if (job_template.cipher_mode == IMB_CIPHER_GCM) {
+        if (job_template.cipher_mode == IMB_CIPHER_GCM ||
+            job_template.cipher_mode == IMB_CIPHER_GCM_SGL) {
                 switch (params->aes_key_size) {
                 case IMB_KEY_128_BYTES:
                         IMB_AES128_GCM_PRE(mb_mgr, gcm_key, &gdata_key);
@@ -1948,7 +1988,8 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
                 job_template.iv_len_in_bytes = 0;
         else if (job_template.cipher_mode == IMB_CIPHER_CHACHA20)
                 job_template.iv_len_in_bytes = 12;
-        else if (job_template.cipher_mode == IMB_CIPHER_CHACHA20_POLY1305) {
+        else if (job_template.cipher_mode == IMB_CIPHER_CHACHA20_POLY1305 ||
+                 job_template.cipher_mode == IMB_CIPHER_CHACHA20_POLY1305_SGL) {
                 job_template.hash_start_src_offset_in_bytes = 0;
                 job_template.cipher_start_src_offset_in_bytes = 0;
                 job_template.enc_keys = k1_expanded;
@@ -2180,10 +2221,76 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
 
         } else { /* test job api */
                 for (i = 0; (i < num_iter) && timebox_on; i++) {
+
                         job = IMB_GET_NEXT_JOB(mb_mgr);
                         *job = job_template;
 
-                        set_job_fields(job, p_buffer, p_keys, i, index);
+                        if (segment_size != 0) {
+                                /* SGL */
+                                struct gcm_context_data gcm_ctx;
+                                struct chacha20_poly1305_context_data cp_ctx;
+                                const uint32_t *keys =
+                                        (const uint32_t *) get_key_pointer(index,
+                                                                           p_keys);
+
+                                uint8_t *src = get_src_buffer(index, p_buffer);
+                                uint8_t *dst = get_dst_buffer(index, p_buffer);
+                                uint8_t *aad = src;
+
+                                set_sgl_job_fields(job, NULL, NULL, keys, aad, 0,
+                                                   IMB_SGL_INIT, &gcm_ctx, &cp_ctx);
+#ifdef DEBUG
+                                job = IMB_SUBMIT_JOB(mb_mgr);
+#else
+                                job = IMB_SUBMIT_JOB_NOCHECK(mb_mgr);
+#endif
+
+                                const uint32_t num_segs = cipher_size_list[0] /
+                                                          segment_size;
+                                const uint32_t final_seg_sz = cipher_size_list[0] %
+                                                        segment_size;
+                                uint32_t j;
+
+                                for (j = 0; j < num_segs; j++) {
+                                        job = IMB_GET_NEXT_JOB(mb_mgr);
+                                        *job = job_template;
+
+                                        set_sgl_job_fields(job, &src[j*segment_size],
+                                                           &dst[j*segment_size], keys,
+                                                           aad, segment_size,
+                                                           IMB_SGL_UPDATE,
+                                                           &gcm_ctx, &cp_ctx);
+#ifdef DEBUG
+                                        job = IMB_SUBMIT_JOB(mb_mgr);
+#else
+                                        job = IMB_SUBMIT_JOB_NOCHECK(mb_mgr);
+#endif
+                                }
+                                if (final_seg_sz != 0) {
+                                        job = IMB_GET_NEXT_JOB(mb_mgr);
+                                        *job = job_template;
+
+                                        set_sgl_job_fields(job, &src[j*segment_size],
+                                                           &dst[j*segment_size], keys,
+                                                           aad, final_seg_sz,
+                                                           IMB_SGL_UPDATE,
+                                                           &gcm_ctx, &cp_ctx);
+#ifdef DEBUG
+                                        job = IMB_SUBMIT_JOB(mb_mgr);
+#else
+                                        job = IMB_SUBMIT_JOB_NOCHECK(mb_mgr);
+#endif
+                                }
+                                job = IMB_GET_NEXT_JOB(mb_mgr);
+                                *job = job_template;
+
+                                set_sgl_job_fields(job, NULL, NULL,
+                                                   keys, aad,
+                                                   0,
+                                                   IMB_SGL_COMPLETE,
+                                                   &gcm_ctx, &cp_ctx);
+                        } else /* Linear buffer */
+                                set_job_fields(job, p_buffer, p_keys, i, index);
 
                         index = get_next_index(index);
 #ifdef DEBUG
@@ -2275,17 +2382,46 @@ run_gcm_sgl(aes_gcm_init_t init, aes_gcm_enc_dec_update_t update,
         uint8_t auth_tag[12];
         DECLARE_ALIGNED(uint8_t iv[16], 16);
 
-        for (i = 0; i < num_iter; i++) {
-                uint8_t *pb = get_dst_buffer(index, p_buffer);
+        /* SGL */
+        if (segment_size != 0) {
+                for (i = 0; i < num_iter; i++) {
+                        uint8_t *pb = get_dst_buffer(index, p_buffer);
 
-                if (imix_list_count != 0)
-                        buf_size = get_next_size(i);
+                        if (imix_list_count != 0)
+                                buf_size = get_next_size(i);
 
-                init(gdata_key, gdata_ctx, iv, aad, aad_size);
-                update(gdata_key, gdata_ctx, pb, pb, buf_size);
-                finalize(gdata_key, gdata_ctx, auth_tag, sizeof(auth_tag));
+                        const uint32_t num_segs = buf_size / segment_size;
+                        const uint32_t final_seg_sz = buf_size % segment_size;
+                        uint32_t j;
 
-                index = get_next_index(index);
+                        init(gdata_key, gdata_ctx, iv, aad, aad_size);
+                        for (j = 0; j < num_segs; j++)
+                                update(gdata_key, gdata_ctx,
+                                       &pb[j*segment_size],
+                                       &pb[j*segment_size],
+                                       segment_size);
+                        if (final_seg_sz != 0)
+                                update(gdata_key, gdata_ctx,
+                                       &pb[j*segment_size],
+                                       &pb[j*segment_size],
+                                       final_seg_sz);
+                        finalize(gdata_key, gdata_ctx, auth_tag, sizeof(auth_tag));
+
+                        index = get_next_index(index);
+                }
+        } else {
+                for (i = 0; i < num_iter; i++) {
+                        uint8_t *pb = get_dst_buffer(index, p_buffer);
+
+                        if (imix_list_count != 0)
+                                buf_size = get_next_size(i);
+
+                        init(gdata_key, gdata_ctx, iv, aad, aad_size);
+                        update(gdata_key, gdata_ctx, pb, pb, buf_size);
+                        finalize(gdata_key, gdata_ctx, auth_tag, sizeof(auth_tag));
+
+                        index = get_next_index(index);
+                }
         }
 }
 
@@ -2328,6 +2464,10 @@ do_test_gcm(struct params_s *params,
         uint8_t *aad = NULL;
         uint64_t time = 0;
         uint32_t aux;
+
+        /* Force SGL API if segment size is not 0 */
+        if (segment_size != 0)
+                use_gcm_sgl_api = 1;
 
         key = (uint8_t *) malloc(sizeof(uint8_t) * params->aes_key_size);
         if (!key) {
@@ -2505,14 +2645,23 @@ do_test_chacha_poly(struct params_s *params,
         uint32_t aux;
         struct chacha20_poly1305_context_data chacha_ctx;
         static uint32_t index = 0;
-        uint32_t buf_size = params->size_aes;
-        unsigned i;
+        uint32_t num_segs;
+        uint32_t final_seg_sz;
+        unsigned i, j;
 
         aad = (uint8_t *) malloc(sizeof(uint8_t) * params->aad_size);
         if (!aad) {
                 fprintf(stderr, "Could not malloc AAD\n");
                 free_mem(&p_buffer, &p_keys);
                 exit(EXIT_FAILURE);
+        }
+
+        if (segment_size != 0) {
+                num_segs = params->size_aes / segment_size;
+                final_seg_sz = params->size_aes % segment_size;
+        } else {
+                num_segs = 0;
+                final_seg_sz = params->size_aes;
         }
 
 #ifndef _WIN32
@@ -2525,28 +2674,51 @@ do_test_chacha_poly(struct params_s *params,
         for (i = 0; i < num_iter; i++) {
                 uint8_t *pb = get_dst_buffer(index, p_buffer);
 
-                if (imix_list_count != 0)
-                        buf_size = get_next_size(i);
+                if (imix_list_count != 0) {
+                        uint32_t buf_size = get_next_size(i);
+
+                        if (segment_size != 0) {
+                                num_segs = buf_size / segment_size;
+                                final_seg_sz = buf_size % segment_size;
+                        } else {
+                                num_segs = 0;
+                                final_seg_sz = buf_size;
+                        }
+                }
 
                 IMB_CHACHA20_POLY1305_INIT(mb_mgr, key, &chacha_ctx, iv,
                                            aad, params->aad_size);
 
                 if (params->cipher_dir == IMB_DIR_ENCRYPT) {
-                        IMB_CHACHA20_POLY1305_ENC_UPDATE(mb_mgr, key,
+                        for (j = 0; j < num_segs; j++)
+                                IMB_CHACHA20_POLY1305_ENC_UPDATE(mb_mgr, key,
                                                          &chacha_ctx,
-                                                         pb,
-                                                         pb,
-                                                         buf_size);
+                                                         &pb[j*segment_size],
+                                                         &pb[j*segment_size],
+                                                         segment_size);
+                        if (final_seg_sz != 0)
+                                IMB_CHACHA20_POLY1305_ENC_UPDATE(mb_mgr, key,
+                                                         &chacha_ctx,
+                                                         &pb[j*segment_size],
+                                                         &pb[j*segment_size],
+                                                         final_seg_sz);
                         IMB_CHACHA20_POLY1305_ENC_FINALIZE(mb_mgr,
                                                            &chacha_ctx,
                                                            auth_tag,
                                                            sizeof(auth_tag));
-                } else {
-                        IMB_CHACHA20_POLY1305_DEC_UPDATE(mb_mgr, key,
+                } else { /* IMB_DIR_DECRYPT */
+                        for (j = 0; j < num_segs; j++)
+                                IMB_CHACHA20_POLY1305_ENC_UPDATE(mb_mgr, key,
                                                          &chacha_ctx,
-                                                         pb,
-                                                         pb,
-                                                         buf_size);
+                                                         &pb[j*segment_size],
+                                                         &pb[j*segment_size],
+                                                         segment_size);
+                        if (final_seg_sz != 0)
+                                IMB_CHACHA20_POLY1305_DEC_UPDATE(mb_mgr, key,
+                                                         &chacha_ctx,
+                                                         &pb[j*segment_size],
+                                                         &pb[j*segment_size],
+                                                         final_seg_sz);
                         IMB_CHACHA20_POLY1305_DEC_FINALIZE(mb_mgr,
                                                            &chacha_ctx,
                                                            auth_tag,
@@ -3086,6 +3258,7 @@ static void usage(void)
                 "            - range: test multiple sizes with following format"
                 " min:step:max (e.g. 16:16:256)\n"
                 "            (-o still applies for MAC)\n"
+                "--segment-size: size of segment to test SGL (default: 0)\n"
                 "--imix: set numbers that establish occurrence proportions"
                 " between packet sizes.\n"
                 "        It requires a list of sizes through --job-size.\n"
@@ -3692,6 +3865,15 @@ int main(int argc, char *argv[])
                         if (burst_size > (MAX_BURST_SIZE)) {
                                 fprintf(stderr, "Burst size cannot be "
                                         "more than %d\n", MAX_BURST_SIZE);
+                                return EXIT_FAILURE;
+                        }
+                } else if (strcmp(argv[i], "--segment-size") == 0) {
+                        i = get_next_num_arg((const char * const *)argv, i,
+                                             argc, &segment_size,
+                                             sizeof(segment_size));
+                        if (segment_size > (JOB_SIZE_TOP)) {
+                                fprintf(stderr, "Segment size cannot be "
+                                        "more than %d\n", JOB_SIZE_TOP);
                                 return EXIT_FAILURE;
                         }
                 } else if (strcmp(argv[i], "--no-time-box") == 0) {
