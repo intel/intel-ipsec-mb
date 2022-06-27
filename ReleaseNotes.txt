@@ -11,16 +11,21 @@ Library
 - AES-ECB optimizations for AVX and SSE
 - AES-ECB AVX2-VAES implementation added
 - SHA1/224/256 multi-buffer implementation added
+- Burst API added
+- Cipher-only burst API added (AES-CBC/CTR support only)
+- Hash-only burst API added (HMAC-SHA1/224/256/384/512 support only)
 
 Fixes
 - Fixed 23-byte IV expansion for ZUC-256 (intel/intel-ipsec-mb#102)
 
 Test Applications
 - GHASH JOB API support added in the test application, fuzzing and xvalid tools
+- Burst API support added for supported algorithms
 
 Performance Application
 - GHASH support added (through JOB and direct API)
 - Support added for SHA1/224/256/384/512
+- Burst API support added for supported algorithms
 
 Fixes
 - Fixed incorrect 8-buffer SNOW3G keystream generation
