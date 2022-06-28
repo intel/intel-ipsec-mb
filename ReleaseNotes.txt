@@ -14,6 +14,8 @@ Library
 - Burst API added
 - Cipher-only burst API added (AES-CBC/CTR support only)
 - Hash-only burst API added (HMAC-SHA1/224/256/384/512 support only)
+- SNOW3G-UEA2 SSE multi-buffer implementation added
+- SNOW3G-UIA2 SSE multi-buffer initialization and keystream generation added
 
 Fixes
 - Fixed 23-byte IV expansion for ZUC-256 (intel/intel-ipsec-mb#102)

@@ -175,7 +175,7 @@ Notes:
 - CRC7: FP header
 - CRC6: IUUP header
 (7) - used only with PON-AES128-CTR cipher
-(8) - x16 for init keystream generation, then by32
+(8) - x4/x16 for init keystream generation, then by4/by32
 
 Legend:
 byY- single buffer Y blocks at a time
