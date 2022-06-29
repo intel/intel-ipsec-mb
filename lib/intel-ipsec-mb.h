@@ -1265,7 +1265,7 @@ IMB_DLL_EXPORT const char *imb_get_strerror(int errnum);
  *                          currently SHANI is only available for SSE
  *     IMB_FLAG_AESNI_OFF - disable use (and detection) of AES extensions.
  *
- * @return Pointer to allocated memory for MB_MGR structure
+ * @return Pointer to allocated memory for IMB_MGR structure
  * @retval NULL on allocation error
  */
 IMB_DLL_EXPORT IMB_MGR *alloc_mb_mgr(uint64_t flags);
@@ -1316,36 +1316,159 @@ IMB_DLL_EXPORT IMB_MGR *imb_set_pointers_mb_mgr(void *ptr, const uint64_t flags,
  */
 IMB_DLL_EXPORT uint64_t imb_get_feature_flags(void);
 
+/**
+ * @brief Initialize Multi-Buffer Manager structure.
+ *
+ * Must be called before calling JOB/BURST API.
+ *
+ * @param [in,out] state Pointer to IMB_MGR structure
+ *                       For binary compatibility between library versions, it
+ *                       is recommended to allocate the IMB_MGR structure using
+ *                       the alloc_mb_mgr() API
+ */
 IMB_DLL_EXPORT void init_mb_mgr_avx(IMB_MGR *state);
-IMB_DLL_EXPORT IMB_JOB *submit_job_avx(IMB_MGR *state);
-IMB_DLL_EXPORT IMB_JOB *submit_job_nocheck_avx(IMB_MGR *state);
-IMB_DLL_EXPORT IMB_JOB *flush_job_avx(IMB_MGR *state);
-IMB_DLL_EXPORT uint32_t queue_size_avx(IMB_MGR *state);
-IMB_DLL_EXPORT IMB_JOB *get_completed_job_avx(IMB_MGR *state);
-IMB_DLL_EXPORT IMB_JOB *get_next_job_avx(IMB_MGR *state);
-
+/**
+ * @copydoc init_mb_mgr_avx
+ */
 IMB_DLL_EXPORT void init_mb_mgr_avx2(IMB_MGR *state);
-IMB_DLL_EXPORT IMB_JOB *submit_job_avx2(IMB_MGR *state);
-IMB_DLL_EXPORT IMB_JOB *submit_job_nocheck_avx2(IMB_MGR *state);
-IMB_DLL_EXPORT IMB_JOB *flush_job_avx2(IMB_MGR *state);
-IMB_DLL_EXPORT uint32_t queue_size_avx2(IMB_MGR *state);
-IMB_DLL_EXPORT IMB_JOB *get_completed_job_avx2(IMB_MGR *state);
-IMB_DLL_EXPORT IMB_JOB *get_next_job_avx2(IMB_MGR *state);
-
+/**
+ * @copydoc init_mb_mgr_avx
+ */
 IMB_DLL_EXPORT void init_mb_mgr_avx512(IMB_MGR *state);
-IMB_DLL_EXPORT IMB_JOB *submit_job_avx512(IMB_MGR *state);
-IMB_DLL_EXPORT IMB_JOB *submit_job_nocheck_avx512(IMB_MGR *state);
-IMB_DLL_EXPORT IMB_JOB *flush_job_avx512(IMB_MGR *state);
-IMB_DLL_EXPORT uint32_t queue_size_avx512(IMB_MGR *state);
-IMB_DLL_EXPORT IMB_JOB *get_completed_job_avx512(IMB_MGR *state);
-IMB_DLL_EXPORT IMB_JOB *get_next_job_avx512(IMB_MGR *state);
-
+/**
+ * @copydoc init_mb_mgr_avx
+ */
 IMB_DLL_EXPORT void init_mb_mgr_sse(IMB_MGR *state);
+
+
+/**
+ * @brief Submit job for processing after validating.
+ *
+ * @param [in,out] state Pointer to initialized IMB_MGR structure
+ *
+ * @return Pointer to completed IMB_JOB or NULL if no job completed
+ *         If NULL, imb_get_errno() can be used to check for potential
+ *         error conditions
+ */
+IMB_DLL_EXPORT IMB_JOB *submit_job_avx(IMB_MGR *state);
+/**
+ * @copydoc submit_job_avx
+ */
+IMB_DLL_EXPORT IMB_JOB *submit_job_avx2(IMB_MGR *state);
+/**
+ * @copydoc submit_job_avx
+ */
+IMB_DLL_EXPORT IMB_JOB *submit_job_avx512(IMB_MGR *state);
+/**
+ * @copydoc submit_job_avx
+ */
 IMB_DLL_EXPORT IMB_JOB *submit_job_sse(IMB_MGR *state);
+
+/**
+ * @brief Submit job for processing without validating.
+ *
+ * This is more performant but less secure than submit_job_xxx()
+ *
+ * @param [in,out] state Pointer to initialized IMB_MGR structure
+ *
+ * @return Pointer to completed IMB_JOB or NULL if no job completed
+ */
+IMB_DLL_EXPORT IMB_JOB *submit_job_nocheck_avx(IMB_MGR *state);
+/**
+ * @copydoc submit_job_nocheck_avx
+ */
+IMB_DLL_EXPORT IMB_JOB *submit_job_nocheck_avx2(IMB_MGR *state);
+/**
+ * @copydoc submit_job_nocheck_avx
+ */
+IMB_DLL_EXPORT IMB_JOB *submit_job_nocheck_avx512(IMB_MGR *state);
+/**
+ * @copydoc submit_job_nocheck_avx
+ */
 IMB_DLL_EXPORT IMB_JOB *submit_job_nocheck_sse(IMB_MGR *state);
+
+/**
+ * @brief Force processing until next job in queue is completed.
+ *
+ * @param [in,out] state Pointer to initialized IMB_MGR structure
+ *
+ * @return Pointer to completed IMB_JOB or NULL if no more jobs to process
+ */
+IMB_DLL_EXPORT IMB_JOB *flush_job_avx(IMB_MGR *state);
+/**
+ * @copydoc flush_job_avx
+ */
+IMB_DLL_EXPORT IMB_JOB *flush_job_avx2(IMB_MGR *state);
+/**
+ * @copydoc flush_job_avx
+ */
+IMB_DLL_EXPORT IMB_JOB *flush_job_avx512(IMB_MGR *state);
+/**
+ * @copydoc flush_job_avx
+ */
 IMB_DLL_EXPORT IMB_JOB *flush_job_sse(IMB_MGR *state);
+
+/**
+ * @brief Get number of jobs queued to be processed.
+ *
+ * @param [in,out] state Pointer to initialized IMB_MGR structure
+ *
+ * @return Number of jobs in the queue
+ */
+IMB_DLL_EXPORT uint32_t queue_size_avx(IMB_MGR *state);
+/**
+ * @copydoc queue_size_avx
+ */
+IMB_DLL_EXPORT uint32_t queue_size_avx2(IMB_MGR *state);
+/**
+ * @copydoc queue_size_avx
+ */
+IMB_DLL_EXPORT uint32_t queue_size_avx512(IMB_MGR *state);
+/**
+ * @copydoc queue_size_avx
+ */
 IMB_DLL_EXPORT uint32_t queue_size_sse(IMB_MGR *state);
+
+/**
+ * @brief Get next completed job.
+ *
+ * @param [in,out] state Pointer to initialized IMB_MGR structure
+ *
+ * @return Pointer to completed IMB_JOB or NULL if next job not complete
+ */
+IMB_DLL_EXPORT IMB_JOB *get_completed_job_avx(IMB_MGR *state);
+/**
+ * @copydoc get_completed_job_avx
+ */
+IMB_DLL_EXPORT IMB_JOB *get_completed_job_avx2(IMB_MGR *state);
+/**
+ * @copydoc get_completed_job_avx
+ */
+IMB_DLL_EXPORT IMB_JOB *get_completed_job_avx512(IMB_MGR *state);
+/**
+ * @copydoc get_completed_job_avx
+ */
 IMB_DLL_EXPORT IMB_JOB *get_completed_job_sse(IMB_MGR *state);
+
+/**
+ * @brief Get next available job.
+ *
+ * @param [in,out] state Pointer to initialized IMB_MGR structure
+ *
+ * @return Pointer to next free IMB_JOB in the queue
+ */
+IMB_DLL_EXPORT IMB_JOB *get_next_job_avx(IMB_MGR *state);
+/**
+ * @copydoc get_next_job_avx
+ */
+IMB_DLL_EXPORT IMB_JOB *get_next_job_avx2(IMB_MGR *state);
+/**
+ * @copydoc get_next_job_avx
+ */
+IMB_DLL_EXPORT IMB_JOB *get_next_job_avx512(IMB_MGR *state);
+/**
+ * @copydoc get_next_job_avx
+ */
 IMB_DLL_EXPORT IMB_JOB *get_next_job_sse(IMB_MGR *state);
 
 /**
