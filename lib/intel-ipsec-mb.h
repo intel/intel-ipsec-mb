@@ -1705,9 +1705,21 @@ IMB_DLL_EXPORT void init_mb_mgr_auto(IMB_MGR *state, IMB_ARCH *arch);
 #define IMB_MD5_ONE_BLOCK(_mgr, _src, _tag)         \
         ((_mgr)->md5_one_block((_src), (_tag)))
 
-/* AES-CFB API */
-#define IMB_AES128_CFB_ONE(_mgr, _dst, _src, _iv, _enc_exp_key, _len)          \
-        ((_mgr)->aes128_cfb_one((_dst), (_src), (_iv), (_enc_exp_key), (_len)))
+/**
+ * @brief AES-CFB-128 Encrypt/Decrypt up to one block.
+ *
+ * Processes only one buffer at a time.
+ * Designed to manage partial blocks of DOCSIS 3.1 SEC BPI.
+ *
+ * @param [in] _mgr     Pointer to multi-buffer structure
+ * @param [out] _dst    Plaintext/Ciphertext output
+ * @param [in] _src     Plaintext/Ciphertext input
+ * @param [in] _iv      Pointer to 16 byte IV
+ * @param [in] _exp_key Pointer to expanded AES keys
+ * @param [in] _len     Length of data in bytes
+ */
+#define IMB_AES128_CFB_ONE(_mgr, _dst, _src, _iv, _exp_key, _len)       \
+        ((_mgr)->aes128_cfb_one((_dst), (_src), (_iv), (_exp_key), (_len)))
 
 /* AES-GCM API's */
 #define IMB_AES128_GCM_ENC(_mgr, _exp_key, _ctx, _dst, _src, _len, _iv, _aad,  \
@@ -2883,16 +2895,36 @@ IMB_DLL_EXPORT void aes_cmac_subkey_gen_avx2(const void *key_exp, void *key1,
  */
 IMB_DLL_EXPORT void aes_cmac_subkey_gen_avx512(const void *key_exp, void *key1,
                                                void *key2);
-
+/**
+ * @brief AES-CFB-128 Encrypt/Decrypt up to one block.
+ *
+ * Processes only one buffer at a time.
+ * Designed to manage partial blocks of DOCSIS 3.1 SEC BPI.
+ *
+ * @param [out] out Plaintext/Ciphertext output
+ * @param [in] in   Plaintext/Ciphertext input
+ * @param [in] iv   Pointer to 16 byte IV
+ * @param [in] keys Pointer to expanded AES keys
+ * @param [in] len  Length of data in bytes
+ */
 IMB_DLL_EXPORT void aes_cfb_128_one_sse(void *out, const void *in,
                                         const void *iv, const void *keys,
                                         uint64_t len);
+/**
+ * @copydoc aes_cfb_128_one_sse
+ */
 IMB_DLL_EXPORT void aes_cfb_128_one_avx(void *out, const void *in,
                                         const void *iv, const void *keys,
                                         uint64_t len);
+/**
+ * @copydoc aes_cfb_128_one_sse
+ */
 IMB_DLL_EXPORT void aes_cfb_128_one_avx2(void *out, const void *in,
                                          const void *iv, const void *keys,
                                          uint64_t len);
+/**
+ * @copydoc aes_cfb_128_one_sse
+ */
 IMB_DLL_EXPORT void aes_cfb_128_one_avx512(void *out, const void *in,
                                            const void *iv, const void *keys,
                                            uint64_t len);
