@@ -3205,55 +3205,96 @@ aes_gcm_dec_256_avx_gen4(const struct gcm_key_data *key_data,
                          uint8_t *auth_tag, uint64_t auth_tag_len);
 
 /**
- * @brief Start a AES-GCM Encryption message
+ * @brief Initialize a gcm_context_data structure to prepare for
+ *        AES-GCM-128 Encryption.
  *
- * @param key_data GCM expanded key data
- * @param context_data GCM operation context data
- * @param iv pointer to 12 byte IV structure. Internally, library
- *        concates 0x00000001 value to it.
- * @param aad Additional Authentication Data (AAD).
- * @param aad_len Length of AAD.
- *
+ * @param [in] key_data         GCM expanded key data
+ * @param [in,out] context_data GCM operation context data
+ * @param [in] iv               Pointer to 12 byte IV structure
+ *                              Internally, the library concatenates 0x00000001
+ *                              to the IV
+ * @param [in] aad              Additional Authenticated Data (AAD)
+ * @param [in] aad_len          Length of AAD in bytes
  */
 IMB_DLL_EXPORT void
 aes_gcm_init_128_sse(const struct gcm_key_data *key_data,
                      struct gcm_context_data *context_data,
                      const uint8_t *iv, uint8_t const *aad, uint64_t aad_len);
+/**
+ * @copydoc aes_gcm_init_128_sse
+ */
 IMB_DLL_EXPORT void
 aes_gcm_init_128_avx_gen2(const struct gcm_key_data *key_data,
                           struct gcm_context_data *context_data,
                           const uint8_t *iv,
                           uint8_t const *aad, uint64_t aad_len);
+/**
+ * @copydoc aes_gcm_init_128_sse
+ */
 IMB_DLL_EXPORT void
 aes_gcm_init_128_avx_gen4(const struct gcm_key_data *key_data,
                           struct gcm_context_data *context_data,
                           const uint8_t *iv,
                           uint8_t const *aad, uint64_t aad_len);
-
+/**
+ * @brief Initialize a gcm_context_data structure to prepare for
+ *        AES-GCM-192 Encryption.
+ *
+ * @param [in] key_data         GCM expanded key data
+ * @param [in,out] context_data GCM operation context data
+ * @param [in] iv               Pointer to 12 byte IV structure
+ *                              Internally, the library concatenates 0x00000001
+ *                              to the IV
+ * @param [in] aad              Additional Authenticated Data (AAD)
+ * @param [in] aad_len          Length of AAD in bytes
+ */
 IMB_DLL_EXPORT void
 aes_gcm_init_192_sse(const struct gcm_key_data *key_data,
                      struct gcm_context_data *context_data,
                      const uint8_t *iv, uint8_t const *aad, uint64_t aad_len);
+/**
+ * @copydoc aes_gcm_init_192_sse
+ */
 IMB_DLL_EXPORT void
 aes_gcm_init_192_avx_gen2(const struct gcm_key_data *key_data,
                           struct gcm_context_data *context_data,
                           const uint8_t *iv,
                           uint8_t const *aad, uint64_t aad_len);
+/**
+ * @copydoc aes_gcm_init_192_sse
+ */
 IMB_DLL_EXPORT void
 aes_gcm_init_192_avx_gen4(const struct gcm_key_data *key_data,
                           struct gcm_context_data *context_data,
                           const uint8_t *iv,
                           uint8_t const *aad, uint64_t aad_len);
-
+/**
+ * @brief Initialize a gcm_context_data structure to prepare for
+ *        AES-GCM-256 Encryption.
+ *
+ * @param [in] key_data         GCM expanded key data
+ * @param [in,out] context_data GCM operation context data
+ * @param [in] iv               Pointer to 12 byte IV structure
+ *                              Internally, the library concatenates 0x00000001
+ *                              to the IV
+ * @param [in] aad              Additional Authenticated Data (AAD)
+ * @param [in] aad_len          Length of AAD in bytes
+ */
 IMB_DLL_EXPORT void
 aes_gcm_init_256_sse(const struct gcm_key_data *key_data,
                      struct gcm_context_data *context_data,
                      const uint8_t *iv, uint8_t const *aad, uint64_t aad_len);
+/**
+ * @copydoc aes_gcm_init_256_sse
+ */
 IMB_DLL_EXPORT void
 aes_gcm_init_256_avx_gen2(const struct gcm_key_data *key_data,
                           struct gcm_context_data *context_data,
                           const uint8_t *iv,
                           uint8_t const *aad, uint64_t aad_len);
+/**
+ * @copydoc aes_gcm_init_256_sse
+ */
 IMB_DLL_EXPORT void
 aes_gcm_init_256_avx_gen4(const struct gcm_key_data *key_data,
                           struct gcm_context_data *context_data,
