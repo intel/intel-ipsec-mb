@@ -1481,7 +1481,7 @@ IMB_DLL_EXPORT IMB_JOB *get_next_job_sse(IMB_MGR *state);
  */
 IMB_DLL_EXPORT void init_mb_mgr_auto(IMB_MGR *state, IMB_ARCH *arch);
 
-/**
+/*
  * Wrapper macros to call arch API's set up
  * at init phase of multi-buffer manager.
  *
@@ -1503,26 +1503,150 @@ IMB_DLL_EXPORT void init_mb_mgr_auto(IMB_MGR *state, IMB_ARCH *arch);
  * it can simplify application implementation.
  * The test app provides example of using the indirect interface.
  */
-#define IMB_GET_NEXT_JOB(_mgr)       ((_mgr)->get_next_job((_mgr)))
-#define IMB_SUBMIT_JOB(_mgr)         ((_mgr)->submit_job((_mgr)))
+
+/**
+ * @brief Get next available job.
+ *
+ * @param [in,out] _mgr Pointer to initialized IMB_MGR structure
+ *
+ * @return Pointer to next free IMB_JOB in the queue
+ */
+#define IMB_GET_NEXT_JOB(_mgr) ((_mgr)->get_next_job((_mgr)))
+
+/**
+ * @brief Submit job for processing after validating.
+ *
+ * @param [in,out] _mgr Pointer to initialized IMB_MGR structure
+ *
+ * @return Pointer to completed IMB_JOB or NULL if no job completed
+ *         If NULL, imb_get_errno() can be used to check for potential
+ *         error conditions
+ */
+#define IMB_SUBMIT_JOB(_mgr) ((_mgr)->submit_job((_mgr)))
+
+/**
+ * @brief Submit job for processing without validating.
+ *
+ * This is more performant but less secure than submit_job_xxx()
+ *
+ * @param [in,out] _mgr Pointer to initialized IMB_MGR structure
+ *
+ * @return Pointer to completed IMB_JOB or NULL if no job completed
+ */
 #define IMB_SUBMIT_JOB_NOCHECK(_mgr) ((_mgr)->submit_job_nocheck((_mgr)))
+
+/**
+ * @brief Get next completed job.
+ *
+ * @param [in,out] _mgr Pointer to initialized IMB_MGR structure
+ *
+ * @return Pointer to completed IMB_JOB or NULL if next job not complete
+ */
 #define IMB_GET_COMPLETED_JOB(_mgr)  ((_mgr)->get_completed_job((_mgr)))
+
+/**
+ * @brief Force processing until next job in queue is completed.
+ *
+ * @param [in,out] _mgr Pointer to initialized IMB_MGR structure
+ *
+ * @return Pointer to completed IMB_JOB or NULL if no more jobs to process
+ */
 #define IMB_FLUSH_JOB(_mgr)          ((_mgr)->flush_job((_mgr)))
+
+/**
+ * @brief Get number of jobs queued to be processed.
+ *
+ * @param [in,out] _mgr Pointer to initialized IMB_MGR structure
+ *
+ * @return Number of jobs in the queue
+ */
 #define IMB_QUEUE_SIZE(_mgr)         ((_mgr)->queue_size((_mgr)))
+
+/**
+ * Submit multiple jobs to be processed synchronously after validating.
+ *
+ * @param [in] _mgr        Pointer to initialized IMB_MGR structure
+ * @param [in,out] _jobs   Pointer to array of IMB_JOB structures
+ * @param [in] _n_jobs     Number of jobs to process
+ *
+ * @return Number of completed jobs
+ */
 #define IMB_SUBMIT_BURST(_mgr, _jobs, _n_jobs)          \
         ((_mgr)->submit_burst((_mgr), (_jobs), (_n_jobs)))
+
+/**
+ * Submit multiple jobs to be processed synchronously without validating.
+ *
+ * This is more performant but less secure than IMB_SUBMIT_BURST().
+ *
+ * @param [in] _mgr        Pointer to initialized IMB_MGR structure
+ * @param [in,out] _jobs   Pointer to array of IMB_JOB structures
+ * @param [in] _n_jobs     Number of jobs to process
+ *
+ * @return Number of completed jobs
+ */
 #define IMB_SUBMIT_BURST_NOCHECK(_mgr, _jobs, _n_jobs)                  \
         ((_mgr)->submit_burst_nocheck((_mgr), (_jobs), (_n_jobs)))
+
+/**
+ * Submit multiple cipher jobs to be processed synchronously after validating.
+ *
+ * @param [in] _mgr        Pointer to initialized IMB_MGR structure
+ * @param [in,out] _jobs   Pointer to array of IMB_JOB structures
+ * @param [in] _n_jobs     Number of jobs to process
+ * @param [in] _cipher     Cipher algorithm of type #IMB_CIPHER_MODE
+ * @param [in] _dir        Cipher direction of type #IMB_CIPHER_DIRECTION
+ * @param [in] _key_size   Key size in bytes of type #IMB_KEY_SIZE_BYTES
+ *
+ * @return Number of completed jobs
+ */
 #define IMB_SUBMIT_CIPHER_BURST(_mgr, _jobs, _n_jobs, _cipher,          \
                                 _dir, _key_size)                        \
         ((_mgr)->submit_cipher_burst((_mgr), (_jobs), (_n_jobs),        \
                                      (_cipher), (_dir), (_key_size)))
+/**
+ * Submit multiple cipher jobs to be processed synchronously without validating.
+ *
+ * This is more performant but less secure than IMB_SUBMIT_CIPHER_BURST().
+ *
+ * @param [in] _mgr        Pointer to initialized IMB_MGR structure
+ * @param [in,out] _jobs   Pointer to array of IMB_JOB structures
+ * @param [in] _n_jobs     Number of jobs to process
+ * @param [in] _cipher     Cipher algorithm of type #IMB_CIPHER_MODE
+ * @param [in] _dir        Cipher direction of type #IMB_CIPHER_DIRECTION
+ * @param [in] _key_size   Key size in bytes of type #IMB_KEY_SIZE_BYTES
+ *
+ * @return Number of completed jobs
+ */
 #define IMB_SUBMIT_CIPHER_BURST_NOCHECK(_mgr, _jobs, _n_jobs, _cipher,  \
                                         _dir, _key_size)                \
         ((_mgr)->submit_cipher_burst_nocheck((_mgr), (_jobs), (_n_jobs),\
                                              (_cipher), (_dir), (_key_size)))
+/**
+ * Submit multiple hash jobs to be processed synchronously after validating.
+ *
+ * @param [in] _mgr        Pointer to initialized IMB_MGR structure
+ * @param [in,out] _jobs   Pointer to array of IMB_JOB structures
+ * @param [in] _n_jobs     Number of jobs to process
+ * @param [in] _hash       Hash algorithm of type #IMB_HASH_ALG
+ *
+ * @return Number of completed jobs
+ */
 #define IMB_SUBMIT_HASH_BURST(_mgr, _jobs, _n_jobs, _hash)              \
         ((_mgr)->submit_hash_burst((_mgr), (_jobs), (_n_jobs), (_hash)))
+
+/**
+ * Submit multiple hash jobs to be processed synchronously without validating.
+ *
+ * This is more performant but less secure than IMB_SUBMIT_HASH_BURST().
+ *
+ * @param [in] _mgr        Pointer to initialized IMB_MGR structure
+ * @param [in,out] _jobs   Pointer to array of IMB_JOB structures
+ * @param [in] _n_jobs     Number of jobs to process
+ * @param [in] _hash       Hash algorithm of type #IMB_HASH_ALG
+ *
+ * @return Number of completed jobs
+ */
 #define IMB_SUBMIT_HASH_BURST_NOCHECK(_mgr, _jobs, _n_jobs, _hash)      \
         ((_mgr)->submit_hash_burst_nocheck((_mgr), (_jobs), (_n_jobs), (_hash)))
 
