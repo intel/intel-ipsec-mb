@@ -2561,12 +2561,12 @@ IMB_DLL_EXPORT void init_mb_mgr_auto(IMB_MGR *state, IMB_ARCH *arch);
 /* Auxiliary functions */
 
 /**
- * @brief DES key schedule set up
+ * @brief DES key schedule set up.
  *
  * \a ks buffer needs to accommodate \a DES_KEY_SCHED_SIZE (128) bytes of data.
  *
- * @param ks destination buffer to accommodate DES key schedule
- * @param key a pointer to an 8 byte DES key
+ * @param[out] ks Destination buffer to accommodate DES key schedule
+ * @param[in] key Pointer to an 8 byte DES key
  *
  * @return Operation status
  * @retval 0 success
@@ -3892,90 +3892,102 @@ IMB_DLL_EXPORT void aes_gcm_pre_256_avx_gen4(const void *key,
                                              struct gcm_key_data *key_data);
 
 /**
- * @brief Generation of ZUC Initialization Vectors (for EEA3 and EIA3)
+ * @brief Generation of ZUC-EEA3 Initialization Vector.
  *
- * @param [in]  count  COUNT (4 bytes in Little Endian)
- * @param [in]  bearer BEARER (5 bits)
- * @param [in]  dir    DIRECTION (1 bit)
+ * @param [in] count   COUNT (4 bytes in Little Endian)
+ * @param [in] bearer  BEARER (5 bits)
+ * @param [in] dir     DIRECTION (1 bit)
  * @param [out] iv_ptr Pointer to generated IV (16 bytes)
  *
- * @return
- *      - 0 if success
- *      - 1 if one or more parameters are wrong
+ * @return Operation status
+ * @retval 0 success
+ * @retval -1 if one or more parameters are invalid
  */
 IMB_DLL_EXPORT int zuc_eea3_iv_gen(const uint32_t count,
                                    const uint8_t bearer,
                                    const uint8_t dir,
                                    void *iv_ptr);
+/**
+ * @brief Generation of ZUC-EIA3 Initialization Vector.
+ *
+ * @param [in] count   COUNT (4 bytes in Little Endian)
+ * @param [in] bearer  BEARER (5 bits)
+ * @param [in] dir     DIRECTION (1 bit)
+ * @param [out] iv_ptr Pointer to generated IV (16 bytes)
+ *
+ * @return Operation status
+ * @retval 0 success
+ * @retval -1 if one or more parameters are invalid
+ */
 IMB_DLL_EXPORT int zuc_eia3_iv_gen(const uint32_t count,
                                    const uint8_t bearer,
                                    const uint8_t dir,
                                    void *iv_ptr);
 
 /**
- * @brief Generation of KASUMI F8 Initialization Vector
+ * @brief Generation of KASUMI F8 Initialization Vector.
  *
- * @param [in]  count  COUNT (4 bytes in Little Endian)
- * @param [in]  bearer BEARER (5 bits)
- * @param [in]  dir    DIRECTION (1 bit)
+ * @param [in] count   COUNT (4 bytes in Little Endian)
+ * @param [in] bearer  BEARER (5 bits)
+ * @param [in] dir     DIRECTION (1 bit)
  * @param [out] iv_ptr Pointer to generated IV (16 bytes)
  *
- * @return
- *      - 0 if success
- *      - 1 if one or more parameters are wrong
+ * @return Operation status
+ * @retval 0 success
+ * @retval -1 if one or more parameters are invalid
  */
 IMB_DLL_EXPORT int kasumi_f8_iv_gen(const uint32_t count,
                                     const uint8_t bearer,
                                     const uint8_t dir,
                                     void *iv_ptr);
 /**
- * @brief Generation of KASUMI F9 Initialization Vector
+ * @brief Generation of KASUMI F9 Initialization Vector.
  *
- * @param [in]  count  COUNT (4 bytes in Little Endian)
- * @param [in]  fresh  FRESH (4 bytes in Little Endian)
+ * @param [in] count   COUNT (4 bytes in Little Endian)
+ * @param [in] fresh   FRESH (4 bytes in Little Endian)
  * @param [out] iv_ptr Pointer to generated IV (16 bytes)
  *
- * @return
- *      - 0 if success
- *      - 1 if one or more parameters are wrong
+ * @return Operation status
+ * @retval 0 success
+ * @retval -1 if one or more parameters are invalid
  */
 IMB_DLL_EXPORT int kasumi_f9_iv_gen(const uint32_t count,
                                     const uint32_t fresh,
                                     void *iv_ptr);
 
 /**
- * @brief Generation of SNOW3G F8 Initialization Vector
+ * @brief Generation of SNOW3G F8 Initialization Vector.
  *
  * Parameters are passed in Little Endian format and
- * used to generate the IV in Big Endian format
+ * used to generate the IV in Big Endian format.
  *
- * @param [in]  count  COUNT (4 bytes in Little Endian)
- * @param [in]  bearer BEARER (5 bits)
- * @param [in]  dir    DIRECTION (1 bit)
+ * @param [in] count   COUNT (4 bytes in Little Endian)
+ * @param [in] bearer  BEARER (5 bits)
+ * @param [in] dir     DIRECTION (1 bit)
  * @param [out] iv_ptr Pointer to generated IV (16 bytes) in Big Endian format
  *
- * @return
- *      - 0 if success
- *      - 1 if one or more parameters are wrong
+ * @return Operation status
+ * @retval 0 success
+ * @retval -1 if one or more parameters are invalid
  */
 IMB_DLL_EXPORT int snow3g_f8_iv_gen(const uint32_t count,
                                     const uint8_t bearer,
                                     const uint8_t dir,
                                     void *iv_ptr);
 /**
- * @brief Generation of SNOW3G F9 Initialization Vector
+ * @brief Generation of SNOW3G F9 Initialization Vector.
  *
  * Parameters are passed in Little Endian format and
- * used to generate the IV in Big Endian format
+ * used to generate the IV in Big Endian format.
  *
- * @param [in]  count  COUNT (4 bytes in Little Endian)
- * @param [in]  fresh  FRESH (4 bytes in Little Endian)
- * @param [in]  dir    DIRECTION (1 bit)
+ * @param [in] count   COUNT (4 bytes in Little Endian)
+ * @param [in] fresh   FRESH (4 bytes in Little Endian)
+ * @param [in] dir     DIRECTION (1 bit)
  * @param [out] iv_ptr Pointer to generated IV (16 bytes) in Big Endian format
  *
- * @return
- *      - 0 if success
- *      - 1 if one or more parameters are wrong
+ * @return Operation status
+ * @retval 0 success
+ * @retval -1 if one or more parameters are invalid
  */
 IMB_DLL_EXPORT int snow3g_f9_iv_gen(const uint32_t count,
                                     const uint32_t fresh,
