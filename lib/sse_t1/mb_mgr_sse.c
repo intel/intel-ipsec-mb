@@ -98,6 +98,8 @@
 #define FLUSH_JOB_SHA224    flush_job_sha224_sse
 #define SUBMIT_JOB_SHA256   submit_job_sha256_sse
 #define FLUSH_JOB_SHA256    flush_job_sha256_sse
+#define SUBMIT_JOB_SHA1_NI    submit_job_sha1_ni_sse
+#define FLUSH_JOB_SHA1_NI     flush_job_sha1_ni_sse
 
 #define SUBMIT_JOB_AES_CNTR   submit_job_aes_cntr_sse
 #define SUBMIT_JOB_AES_CNTR_BIT   submit_job_aes_cntr_bit_sse
@@ -705,8 +707,15 @@ reset_ooo_mgrs(IMB_MGR *state)
         /* Init AES-CBCS out-of-order fields */
         ooo_mgr_aes_reset(state->aes128_cbcs_ooo, 4);
 
-        /* Init SHA1 out-of-order fields */
-        ooo_mgr_sha1_reset(state->sha_1_ooo, SSE_NUM_SHA1_LANES);
+#ifdef HASH_USE_SHAEXT
+        if (state->features & IMB_FEATURE_SHANI) {
+                /* Init SHA1 NI out-of-order fields */
+                ooo_mgr_sha1_reset(state->sha_1_ooo, 2);
+        } else {
+                /* Init SHA1 out-of-order fields */
+                ooo_mgr_sha1_reset(state->sha_1_ooo, SSE_NUM_SHA1_LANES);
+        }
+#endif /* HASH_USE_SHAEXT */
 
         /* Init SHA224 out-of-order fields */
         ooo_mgr_sha256_reset(state->sha_224_ooo, SSE_NUM_SHA256_LANES);

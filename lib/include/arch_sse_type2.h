@@ -47,4 +47,8 @@ IMB_JOB *submit_job_hmac_sha_256_ni_sse(MB_MGR_HMAC_SHA_256_OOO *state,
                                         IMB_JOB *job);
 IMB_JOB *flush_job_hmac_sha_256_ni_sse(MB_MGR_HMAC_SHA_256_OOO *state);
 
+IMB_JOB *submit_job_sha1_ni_sse(MB_MGR_SHA_1_OOO *state, IMB_JOB *job);
+
+IMB_JOB *flush_job_sha1_ni_sse(MB_MGR_SHA_1_OOO *state, IMB_JOB *job);
+
 #endif /* IMB_ARCH_SSE_TYPE2_H */

@@ -53,16 +53,24 @@ extern void call_sha256_oct_avx2_from_c(SHA256_ARGS *args,
 extern void call_sha256_x16_avx512_from_c(SHA256_ARGS *args,
                                           uint32_t size_in_blocks);
 
+extern void call_sha1_ni_x2_sse_from_c(SHA1_ARGS *args,
+                                       uint32_t size_in_blocks);
 __forceinline
 void copy_bswap4_array_mb(void *dst, const void *src, const size_t num,
-                          const size_t offset, const unsigned lane)
+                          const size_t offset, const unsigned lane,
+                          const int shani)
 {
         uint32_t *outp = (uint32_t *) dst;
         const uint32_t *inp = (const uint32_t *) src;
         size_t i;
 
-        for (i = 0; i < num; i++)
-                outp[i] = bswap4(inp[lane + i*offset]);
+        if (shani) {
+                for (i = 0; i < num; i++)
+                        outp[i] = bswap4(inp[5*lane + i*offset]);
+        } else {
+                for (i = 0; i < num; i++)
+                        outp[i] = bswap4(inp[lane + i*offset]);
+        }
 }
 
 __forceinline
@@ -73,6 +81,16 @@ void sha1_mb_init_digest(uint32_t *digest, const unsigned lane)
         digest[lane + 2*16] = H2;
         digest[lane + 3*16] = H3;
         digest[lane + 4*16] = H4;
+}
+
+__forceinline
+void sha1_ni_mb_init_digest(uint32_t *digest, const unsigned lane)
+{
+        digest[5*lane + 0] = H0;
+        digest[5*lane + 1] = H1;
+        digest[5*lane + 2] = H2;
+        digest[5*lane + 3] = H3;
+        digest[5*lane + 4] = H4;
 }
 
 __forceinline
@@ -103,11 +121,15 @@ void sha256_mb_init_digest(uint32_t *digest, const unsigned lane)
 
 __forceinline
 void
-sha_mb_generic_init(void *digest, const int sha_type, const unsigned lane)
+sha_mb_generic_init(void *digest, const int sha_type, const unsigned lane,
+                    const int shani)
 {
-        if (sha_type == 1)
-                sha1_mb_init_digest(digest, lane);
-        else if (sha_type == 224)
+        if (sha_type == 1){
+                if (shani)
+                        sha1_ni_mb_init_digest(digest, lane);
+                else
+                        sha1_mb_init_digest(digest, lane);
+        } else if (sha_type == 224)
                 sha224_mb_init_digest(digest, lane);
         else if (sha_type == 256)
                 sha256_mb_init_digest(digest, lane);
@@ -116,17 +138,17 @@ sha_mb_generic_init(void *digest, const int sha_type, const unsigned lane)
 __forceinline
 void sha_mb_generic_write_digest(void *dst, const void *src,
                                  const int sha_type, const size_t offset,
-                                 const unsigned lane)
+                                 const unsigned lane, const int shani)
 {
         if (sha_type == 1)
                 copy_bswap4_array_mb(dst, src, NUM_SHA_DIGEST_WORDS, offset,
-                                     lane);
+                                     lane, shani);
         else if (sha_type == 224)
                 copy_bswap4_array_mb(dst, src, NUM_SHA_224_DIGEST_WORDS, offset,
-                                     lane);
+                                     lane, shani);
         else if (sha_type == 256)
                 copy_bswap4_array_mb(dst, src, NUM_SHA_256_DIGEST_WORDS, offset,
-                                  lane);
+                                     lane, shani);
 }
 
 __forceinline
@@ -181,7 +203,7 @@ submit_flush_job_sha_1(MB_MGR_SHA_1_OOO *state, IMB_JOB *job,
                          const unsigned max_jobs, const int is_submit,
                          const int sha_type, const uint64_t blk_size,
                          const uint64_t pad_size,
-                         void (*fn)(SHA1_ARGS *, uint32_t))
+                         void (*fn)(SHA1_ARGS *, uint32_t), const int shani)
 {
         unsigned lane, min_idx;
         uint64_t min_len;
@@ -200,7 +222,7 @@ submit_flush_job_sha_1(MB_MGR_SHA_1_OOO *state, IMB_JOB *job,
                 state->args.data_ptr[lane] =
                         job->src + job->hash_start_src_offset_in_bytes;
 
-                sha_mb_generic_init(state->args.digest, sha_type, lane);
+                sha_mb_generic_init(state->args.digest, sha_type, lane, shani);
 
                 /* copy job data in and set up initial blocks */
                 state->ldata[lane].job_in_lane = job;
@@ -291,8 +313,13 @@ submit_flush_job_sha_1(MB_MGR_SHA_1_OOO *state, IMB_JOB *job,
         /* put back processed packet into unused lanes, set job as complete */
         state->unused_lanes = (state->unused_lanes << 4) | min_idx;
         state->num_lanes_inuse--;
-        sha_mb_generic_write_digest(ret_job->auth_tag_output,
-                state->args.digest, sha_type, 16, min_idx);
+        if (shani) {
+                sha_mb_generic_write_digest(ret_job->auth_tag_output,
+                        state->args.digest, sha_type, 1, min_idx, shani);
+        } else {
+                sha_mb_generic_write_digest(ret_job->auth_tag_output,
+                        state->args.digest, sha_type, 16, min_idx, shani);
+        }
         ret_job->status |= IMB_STATUS_COMPLETED_AUTH;
         state->ldata[min_idx].job_in_lane = NULL;
 
@@ -324,7 +351,7 @@ submit_flush_job_sha_256(MB_MGR_SHA_256_OOO *state, IMB_JOB *job,
                 state->args.data_ptr[lane] =
                         job->src + job->hash_start_src_offset_in_bytes;
 
-                sha_mb_generic_init(state->args.digest, sha_type, lane);
+                sha_mb_generic_init(state->args.digest, sha_type, lane, 0);
 
                 /* copy job data in and set up initial blocks */
                 state->ldata[lane].job_in_lane = job;
@@ -415,7 +442,7 @@ submit_flush_job_sha_256(MB_MGR_SHA_256_OOO *state, IMB_JOB *job,
         state->unused_lanes = (state->unused_lanes << 4) | min_idx;
         state->num_lanes_inuse--;
         sha_mb_generic_write_digest(ret_job->auth_tag_output,
-                state->args.digest, sha_type, 16, min_idx);
+                state->args.digest, sha_type, 16, min_idx, 0);
         ret_job->status |= IMB_STATUS_COMPLETED_AUTH;
         state->ldata[min_idx].job_in_lane = NULL;
         return ret_job;
