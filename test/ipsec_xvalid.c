@@ -613,7 +613,7 @@ const uint8_t auth_tag_len_bytes[] = {
                 16, /* IMB_AUTH_CHACHA20_POLY1305_SGL */
                 4,  /* IMB_AUTH_ZUC256_EIA3_BITLEN */
                 16, /* IMB_AUTH_SNOW_V_AEAD */
-                16, /* IMB_AUTH_CRC32_ETHERNET_FCS */
+                16, /* IMB_AUTH_AES_GCM_SGL */
                 4,  /* IMB_AUTH_CRC32_ETHERNET_FCS */
                 4,  /* IMB_AUTH_CRC32_SCTP */
                 4,  /* IMB_AUTH_CRC32_WIMAX_OFDMA_DATA */
@@ -2228,6 +2228,14 @@ test_single(IMB_MGR *enc_mgr, const IMB_ARCH enc_arch,
         uint8_t tag_sizes[NUM_TAG_SIZES];
         uint64_t min_aad_sz = 0;
         uint64_t max_aad_sz, aad_sz;
+
+        if (params->hash_alg >= IMB_AUTH_NUM) {
+                if (verbose) {
+                        fprintf(stderr, "Invalid hash alg\n");
+                        printf("FAIL\n");
+                }
+                exit(EXIT_FAILURE);
+        }
 
         if (params->cipher_mode == IMB_CIPHER_GCM)
                 max_aad_sz = MAX_GCM_AAD_SIZE;

@@ -422,7 +422,7 @@ static int aes_ccm_handler(ACVP_TEST_CASE *test_case)
         IMB_JOB *job = NULL;
         DECLARE_ALIGNED(uint32_t enc_keys[15*4], 16);
         DECLARE_ALIGNED(uint32_t dec_keys[15*4], 16);
-        uint8_t res_tag[MAX_TAG_LENGTH];
+        uint8_t res_tag[MAX_TAG_LENGTH] = {0};
 
         if (test_case == NULL)
                 return EXIT_FAILURE;

@@ -2242,6 +2242,11 @@ validate_snow3g_f8_n_blocks_linear_mkeys(struct IMB_MGR *mb_mgr,
         bitOffsets = malloc(sizeof(*bitOffsets) * numVectors);
         bitLens = malloc(sizeof(*bitLens) * numVectors);
 
+        if (!pSrcBuff || !pSrcBuff_const || !pDstBuff ||
+            !pDstBuff_const || !pIV || !pKey || !pKeySched ||
+            !packetLen || !bitOffsets || !bitLens)
+                goto snow3g_f8_n_buff_linear_mkey_early_exit;
+
         memset(pSrcBuff, 0, sizeof(*pSrcBuff) * numVectors);
         memset(pSrcBuff_const, 0, sizeof(*pSrcBuff_const) * numVectors);
         memset(pDstBuff, 0, sizeof(*pDstBuff) * numVectors);
@@ -2468,7 +2473,7 @@ snow3g_f8_n_buff_linear_mkey_exit:
                 if (pIV[i] != NULL)
                         free(pIV[i]);
         }
-
+snow3g_f8_n_buff_linear_mkey_early_exit:
         if (pKey != NULL)
                 free(pKey);
         if (pSrcBuff != NULL)

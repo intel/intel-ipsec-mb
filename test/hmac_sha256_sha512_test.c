@@ -1054,7 +1054,7 @@ test_hmac_shax_burst(struct IMB_MGR *mb_mgr,
 {
         struct IMB_JOB *job, jobs[max_burst_jobs] = {0};
         uint8_t padding[16];
-        uint8_t **auths = malloc(num_jobs * sizeof(void *));
+        uint8_t **auths = NULL;
         uint32_t i = 0, jobs_rx = 0, completed_jobs = 0;
         int ret = -1;
         uint8_t key[IMB_SHA_512_BLOCK_SIZE];
@@ -1065,6 +1065,10 @@ test_hmac_shax_burst(struct IMB_MGR *mb_mgr,
         size_t digest_len = 0;
         size_t block_size = 0;
 
+        if (num_jobs == 0)
+                return 0;
+
+        auths = malloc(num_jobs * sizeof(void *));
         if (auths == NULL) {
 		fprintf(stderr, "Can't allocate buffer memory\n");
 		goto end2;
