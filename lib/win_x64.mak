@@ -282,6 +282,7 @@ lib_objs1 = \
 	$(OBJ_DIR)\sha_sse.obj \
 	$(OBJ_DIR)\sha_avx.obj \
 	$(OBJ_DIR)\sha_mb_sse.obj \
+	$(OBJ_DIR)\sha_ni_mb_sse.obj \
 	$(OBJ_DIR)\sha_mb_avx.obj \
 	$(OBJ_DIR)\sha_mb_avx2.obj \
 	$(OBJ_DIR)\sha_mb_avx512.obj \

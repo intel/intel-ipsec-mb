@@ -348,6 +348,8 @@ void ooo_mgr_sha256_reset(void *p_ooo_mgr, const unsigned num_lanes)
 
         memset(p_mgr, 0, sizeof(*p_mgr));
 
+        if (num_lanes == 2)
+                p_mgr->unused_lanes = 0xF10; /* SHANI */
         if (num_lanes == AVX_NUM_SHA256_LANES)
                 p_mgr->unused_lanes = 0xF3210;
         else if (num_lanes == AVX2_NUM_SHA256_LANES)

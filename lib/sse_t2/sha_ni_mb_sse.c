@@ -25,34 +25,52 @@
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 *******************************************************************************/
 
-/* ARCH SSE TYPE 2: SSE4.2, AESNI, PCLMULQDQ, CMOV, BSWAP, SHANI */
-
-#ifndef IMB_ARCH_SSE_TYPE2_H
-#define IMB_ARCH_SSE_TYPE2_H
-
-#include "intel-ipsec-mb.h"
-#include "ipsec_ooo_mgr.h"
-
-/* Moved from MB MGR */
-
-IMB_JOB *submit_job_hmac_ni_sse(MB_MGR_HMAC_SHA_1_OOO *state,
-                                IMB_JOB *job);
-IMB_JOB *flush_job_hmac_ni_sse(MB_MGR_HMAC_SHA_1_OOO *state);
-
-IMB_JOB *submit_job_hmac_sha_224_ni_sse(MB_MGR_HMAC_SHA_256_OOO *state,
-                                        IMB_JOB *job);
-IMB_JOB *flush_job_hmac_sha_224_ni_sse(MB_MGR_HMAC_SHA_256_OOO *state);
-
-IMB_JOB *submit_job_hmac_sha_256_ni_sse(MB_MGR_HMAC_SHA_256_OOO *state,
-                                        IMB_JOB *job);
-IMB_JOB *flush_job_hmac_sha_256_ni_sse(MB_MGR_HMAC_SHA_256_OOO *state);
+#include "include/sha_mb_mgr.h"
 
 IMB_JOB *submit_job_sha1_ni_sse(MB_MGR_SHA_1_OOO *state, IMB_JOB *job);
-
 IMB_JOB *flush_job_sha1_ni_sse(MB_MGR_SHA_1_OOO *state, IMB_JOB *job);
 
 IMB_JOB *submit_job_sha256_ni_sse(MB_MGR_SHA_256_OOO *state, IMB_JOB *job);
-
 IMB_JOB *flush_job_sha256_ni_sse(MB_MGR_SHA_256_OOO *state, IMB_JOB *job);
 
-#endif /* IMB_ARCH_SSE_TYPE2_H */
+/* ========================================================================== */
+/*
+ * SHA1-NI MB API
+ */
+
+IMB_DLL_LOCAL
+IMB_JOB *submit_job_sha1_ni_sse(MB_MGR_SHA_1_OOO *state, IMB_JOB *job)
+{
+        return submit_flush_job_sha_1(state, job, 2, 1, 1,
+                                        IMB_SHA1_BLOCK_SIZE, SHA1_PAD_SIZE,
+                                        call_sha1_ni_x2_sse_from_c, 1);
+}
+
+IMB_DLL_LOCAL
+IMB_JOB *flush_job_sha1_ni_sse(MB_MGR_SHA_1_OOO *state, IMB_JOB *job)
+{
+        return submit_flush_job_sha_1(state, job, 2, 0, 1,
+                                        IMB_SHA1_BLOCK_SIZE, SHA1_PAD_SIZE,
+                                        call_sha1_ni_x2_sse_from_c, 1);
+}
+
+/* ========================================================================== */
+/*
+ * SHA256-NI MB API
+ */
+
+IMB_DLL_LOCAL
+IMB_JOB *submit_job_sha256_ni_sse(MB_MGR_SHA_256_OOO *state, IMB_JOB *job)
+{
+        return submit_flush_job_sha_256(state, job, 2, 1, 256,
+                                        IMB_SHA_256_BLOCK_SIZE, SHA256_PAD_SIZE,
+                                        call_sha256_ni_x2_sse_from_c, 1);
+}
+
+IMB_DLL_LOCAL
+IMB_JOB *flush_job_sha256_ni_sse(MB_MGR_SHA_256_OOO *state, IMB_JOB *job)
+{
+        return submit_flush_job_sha_256(state, job, 2, 0, 256,
+                                        IMB_SHA_256_BLOCK_SIZE, SHA256_PAD_SIZE,
+                                        call_sha256_ni_x2_sse_from_c, 1);
+}

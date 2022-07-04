@@ -257,6 +257,7 @@ c_lib_objs := \
 	md5_one_block.o \
 	sha_sse.o \
 	sha_mb_sse.o \
+	sha_ni_mb_sse.o \
 	sha_avx.o \
 	sha_mb_avx.o \
 	sha_mb_avx2.o \

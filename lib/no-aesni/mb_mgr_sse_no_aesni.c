@@ -94,6 +94,8 @@
 #define FLUSH_JOB_SHA256    flush_job_sha256_sse
 #define SUBMIT_JOB_SHA1_NI    submit_job_sha1_ni_sse
 #define FLUSH_JOB_SHA1_NI     flush_job_sha1_ni_sse
+#define SUBMIT_JOB_SHA256_NI    submit_job_sha256_ni_sse
+#define FLUSH_JOB_SHA256_NI     flush_job_sha256_ni_sse
 
 #define SUBMIT_JOB_AES_CNTR   submit_job_aes_cntr_sse_no_aesni
 #define SUBMIT_JOB_AES_CNTR_BIT   submit_job_aes_cntr_bit_sse_no_aesni

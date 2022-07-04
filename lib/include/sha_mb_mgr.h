@@ -55,22 +55,32 @@ extern void call_sha256_x16_avx512_from_c(SHA256_ARGS *args,
 
 extern void call_sha1_ni_x2_sse_from_c(SHA1_ARGS *args,
                                        uint32_t size_in_blocks);
+
+extern void call_sha256_ni_x2_sse_from_c(SHA256_ARGS *args,
+                                         uint32_t size_in_blocks);
+
 __forceinline
 void copy_bswap4_array_mb(void *dst, const void *src, const size_t num,
-                          const size_t offset, const unsigned lane,
-                          const int shani)
+                          const size_t offset, const unsigned lane)
 {
         uint32_t *outp = (uint32_t *) dst;
         const uint32_t *inp = (const uint32_t *) src;
         size_t i;
 
-        if (shani) {
-                for (i = 0; i < num; i++)
-                        outp[i] = bswap4(inp[5*lane + i*offset]);
-        } else {
-                for (i = 0; i < num; i++)
-                        outp[i] = bswap4(inp[lane + i*offset]);
-        }
+        for (i = 0; i < num; i++)
+                outp[i] = bswap4(inp[lane + i*offset]);
+}
+
+__forceinline
+void copy_bswap4_array_mb_ni(void *dst, const void *src, const size_t num,
+                             const unsigned lane, const int digest_row_sz)
+{
+        uint32_t *outp = (uint32_t *) dst;
+        const uint32_t *inp = (const uint32_t *) src;
+        size_t i;
+
+        for (i = 0; i < num; i++)
+                outp[i] = bswap4(inp[digest_row_sz*lane + i]);
 }
 
 __forceinline
@@ -120,35 +130,66 @@ void sha256_mb_init_digest(uint32_t *digest, const unsigned lane)
 }
 
 __forceinline
-void
-sha_mb_generic_init(void *digest, const int sha_type, const unsigned lane,
-                    const int shani)
+void sha256_ni_mb_init_digest(uint32_t *digest, const unsigned lane)
 {
-        if (sha_type == 1){
-                if (shani)
-                        sha1_ni_mb_init_digest(digest, lane);
-                else
-                        sha1_mb_init_digest(digest, lane);
-        } else if (sha_type == 224)
+        digest[8*lane + 0] = SHA256_H0;
+        digest[8*lane + 1] = SHA256_H1;
+        digest[8*lane + 2] = SHA256_H2;
+        digest[8*lane + 3] = SHA256_H3;
+        digest[8*lane + 4] = SHA256_H4;
+        digest[8*lane + 5] = SHA256_H5;
+        digest[8*lane + 6] = SHA256_H6;
+        digest[8*lane + 7] = SHA256_H7;
+}
+
+__forceinline
+void
+sha_mb_generic_init(void *digest, const int sha_type, const unsigned lane)
+{
+        if (sha_type == 1)
+                sha1_mb_init_digest(digest, lane);
+        else if (sha_type == 224)
                 sha224_mb_init_digest(digest, lane);
         else if (sha_type == 256)
                 sha256_mb_init_digest(digest, lane);
 }
 
 __forceinline
+void
+sha_ni_mb_generic_init(void *digest, const int sha_type, const unsigned lane)
+{
+        if (sha_type == 1)
+                sha1_ni_mb_init_digest(digest, lane);
+        else if (sha_type == 256)
+                sha256_ni_mb_init_digest(digest, lane);
+}
+
+__forceinline
 void sha_mb_generic_write_digest(void *dst, const void *src,
                                  const int sha_type, const size_t offset,
-                                 const unsigned lane, const int shani)
+                                 const unsigned lane)
 {
         if (sha_type == 1)
                 copy_bswap4_array_mb(dst, src, NUM_SHA_DIGEST_WORDS, offset,
-                                     lane, shani);
+                                     lane);
         else if (sha_type == 224)
                 copy_bswap4_array_mb(dst, src, NUM_SHA_224_DIGEST_WORDS, offset,
-                                     lane, shani);
+                                     lane);
         else if (sha_type == 256)
                 copy_bswap4_array_mb(dst, src, NUM_SHA_256_DIGEST_WORDS, offset,
-                                     lane, shani);
+                                     lane);
+}
+
+__forceinline
+void sha_ni_mb_generic_write_digest(void *dst, const void *src,
+                                    const int sha_type, const unsigned lane)
+{
+        if (sha_type == 1)
+                copy_bswap4_array_mb_ni(dst, src, NUM_SHA_DIGEST_WORDS,
+                                        lane, 5);
+        else if (sha_type == 256)
+                copy_bswap4_array_mb_ni(dst, src, NUM_SHA_256_DIGEST_WORDS,
+                                        lane, 8);
 }
 
 __forceinline
@@ -222,7 +263,12 @@ submit_flush_job_sha_1(MB_MGR_SHA_1_OOO *state, IMB_JOB *job,
                 state->args.data_ptr[lane] =
                         job->src + job->hash_start_src_offset_in_bytes;
 
-                sha_mb_generic_init(state->args.digest, sha_type, lane, shani);
+                if (shani)
+                        sha_ni_mb_generic_init(state->args.digest, sha_type,
+                                               lane);
+                else
+                        sha_mb_generic_init(state->args.digest, sha_type,
+                                            lane);
 
                 /* copy job data in and set up initial blocks */
                 state->ldata[lane].job_in_lane = job;
@@ -313,13 +359,12 @@ submit_flush_job_sha_1(MB_MGR_SHA_1_OOO *state, IMB_JOB *job,
         /* put back processed packet into unused lanes, set job as complete */
         state->unused_lanes = (state->unused_lanes << 4) | min_idx;
         state->num_lanes_inuse--;
-        if (shani) {
+        if (shani)
+                sha_ni_mb_generic_write_digest(ret_job->auth_tag_output,
+                        state->args.digest, sha_type, min_idx);
+        else
                 sha_mb_generic_write_digest(ret_job->auth_tag_output,
-                        state->args.digest, sha_type, 1, min_idx, shani);
-        } else {
-                sha_mb_generic_write_digest(ret_job->auth_tag_output,
-                        state->args.digest, sha_type, 16, min_idx, shani);
-        }
+                        state->args.digest, sha_type, 16, min_idx);
         ret_job->status |= IMB_STATUS_COMPLETED_AUTH;
         state->ldata[min_idx].job_in_lane = NULL;
 
@@ -332,7 +377,7 @@ submit_flush_job_sha_256(MB_MGR_SHA_256_OOO *state, IMB_JOB *job,
                          const unsigned max_jobs, const int is_submit,
                          const int sha_type, const uint64_t blk_size,
                          const uint64_t pad_size,
-                         void (*fn)(SHA256_ARGS *, uint32_t))
+                         void (*fn)(SHA256_ARGS *, uint32_t), const int shani)
 {
         unsigned lane, min_idx;
         uint64_t min_len;
@@ -351,7 +396,12 @@ submit_flush_job_sha_256(MB_MGR_SHA_256_OOO *state, IMB_JOB *job,
                 state->args.data_ptr[lane] =
                         job->src + job->hash_start_src_offset_in_bytes;
 
-                sha_mb_generic_init(state->args.digest, sha_type, lane, 0);
+                if (shani)
+                        sha_ni_mb_generic_init(state->args.digest, sha_type,
+                                               lane);
+                else
+                        sha_mb_generic_init(state->args.digest, sha_type,
+                                            lane);
 
                 /* copy job data in and set up initial blocks */
                 state->ldata[lane].job_in_lane = job;
@@ -441,8 +491,12 @@ submit_flush_job_sha_256(MB_MGR_SHA_256_OOO *state, IMB_JOB *job,
         /* put back processed packet into unused lanes, set job as complete */
         state->unused_lanes = (state->unused_lanes << 4) | min_idx;
         state->num_lanes_inuse--;
-        sha_mb_generic_write_digest(ret_job->auth_tag_output,
-                state->args.digest, sha_type, 16, min_idx, 0);
+        if (shani)
+                sha_ni_mb_generic_write_digest(ret_job->auth_tag_output,
+                        state->args.digest, sha_type, min_idx);
+        else
+                sha_mb_generic_write_digest(ret_job->auth_tag_output,
+                        state->args.digest, sha_type, 16, min_idx);
         ret_job->status |= IMB_STATUS_COMPLETED_AUTH;
         state->ldata[min_idx].job_in_lane = NULL;
         return ret_job;
