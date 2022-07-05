@@ -248,48 +248,52 @@ mksection .text
         or              %%TGP0, %%TGP0
         jz              %%_len_is_0
 
+        ;; fill %%TMP_XMM_0 with common length values per initialized length
+        ;; to be subtracted from remaining byte lengths and rounded dw lengths
         movd            %%TMP_XMM_0, DWORD(%%TGP0)
         pshufd	        %%TMP_XMM_0, %%TMP_XMM_0, 0
 
-        movdqa          %%TMP_XMM_5, [state + ROUNDED_DW_LENS]
-        pxor            %%TMP_XMM_6, %%TMP_XMM_6
-        pxor            %%TMP_XMM_7, %%TMP_XMM_7
-
         ;; Create mask with lanes in use
-        pcmpeqq         %%TMP_XMM_6, [state + _snow3g_job_in_lane]
-        pcmpeqq         %%TMP_XMM_7, [state + _snow3g_job_in_lane + 16]
-        pshufd          %%TMP_XMM_6, %%TMP_XMM_6, 0x88 ;; lane order: 1,0,1,0
-        pshufd          %%TMP_XMM_7, %%TMP_XMM_7, 0x88 ;; lane order: 3,2,3,2
-        pblendw         %%TMP_XMM_6, %%TMP_XMM_7, 0xf0
+        pxor            %%TMP_XMM_2, %%TMP_XMM_2
+        pxor            %%TMP_XMM_3, %%TMP_XMM_3
+        pcmpeqq         %%TMP_XMM_2, [state + _snow3g_job_in_lane]              
+        pcmpeqq         %%TMP_XMM_3, [state + _snow3g_job_in_lane + 16]
+        pshufd          %%TMP_XMM_2, %%TMP_XMM_2, 0x88 ;; lane order: 1,0,1,0
+        pshufd          %%TMP_XMM_3, %%TMP_XMM_3, 0x88 ;; lane order: 3,2,3,2
+        pblendw         %%TMP_XMM_2, %%TMP_XMM_3, 0xf0
 
-        pxor            %%TMP_XMM_6, [rel all_fs]
-        pand            %%TMP_XMM_6, %%TMP_XMM_0
-        psubd           %%TMP_XMM_5, %%TMP_XMM_6
+        pandn            %%TMP_XMM_2, %%TMP_XMM_0
+
+        ;; Decrease rouded dw lengths remaining for processing
+        movdqa          %%TMP_XMM_5, [state + ROUNDED_DW_LENS]
+        psubd           %%TMP_XMM_5, %%TMP_XMM_2
         movdqa          [state + ROUNDED_DW_LENS], %%TMP_XMM_5
 
-        pslld           %%TMP_XMM_0, 2
+        ;; Set all bits in dws where rounded dw length is bigger than original
+        ;; byte lengths and lane is initialized
+        pslld           %%TMP_XMM_0, 2          ;; common length in bytes
         pand            %%TMP_XMM_0, [state + KEYGEN_STAGE]
         movdqa          %%TMP_XMM_1, %%TMP_XMM_0
-
-        ;; Set all bits in dws where rounded dw length is bigger than original
-        ;; byte lengths
         pcmpgtd         %%TMP_XMM_1, [state + _snow3g_args_byte_length]
+        movdqa          %%TMP_XMM_2, %%TMP_XMM_1
         pand            %%TMP_XMM_1, [state + _snow3g_args_byte_length]
+
+        pandn           %%TMP_XMM_0, %%TMP_XMM_2
+        por             %%TMP_XMM_0, %%TMP_XMM_1
+
         ;; Write outstanding bytes to _snow3g_lens dwords [0:3] and adjust
         ;; _snow3g_args_byte_length so after common dw length subtraction
         ;; it is set to 0
         pand            %%TMP_XMM_1, [rel last_3_bytes]
-        pcmpeqd         %%TMP_XMM_1, [rel zero_xmm]
-        movdqa          %%TMP_XMM_4, %%TMP_XMM_1
-        pxor            %%TMP_XMM_4, [rel all_fs]
-        pand            %%TMP_XMM_4, [state+_snow3g_lens]
-        pand            %%TMP_XMM_1, [state + _snow3g_args_byte_length]
-        por             %%TMP_XMM_4, %%TMP_XMM_1
-        movdqa          [state + _snow3g_args_byte_length], %%TMP_XMM_4
+        pandn            %%TMP_XMM_2, [state+_snow3g_lens]
+        por             %%TMP_XMM_1, %%TMP_XMM_2
+        movdqa          [state + _snow3g_lens], %%TMP_XMM_1
 
-        movdqa          %%TMP_XMM_3, [state+_snow3g_args_byte_length]
-        psubd           %%TMP_XMM_3, %%TMP_XMM_0
-        movdqa          [state+_snow3g_args_byte_length], %%TMP_XMM_3
+        ;; Subtract Common dw length from all byte lengths
+        movdqa        %%TMP_XMM_4, [state+_snow3g_args_byte_length]
+        psubd         %%TMP_XMM_4, %%TMP_XMM_0
+        movdqa        [state+_snow3g_args_byte_length], %%TMP_XMM_4
+ 
         ;; Do cipher / clock operation for all lanes and given common length
         SNOW3G_ENC_DEC  state, %%TGP0, %%TGP1, %%TGP2, %%TGP3, %%TGP4, %%TGP5, \
                         %%TMP_XMM_0, %%TMP_XMM_1, %%TMP_XMM_2, %%TMP_XMM_3,    \

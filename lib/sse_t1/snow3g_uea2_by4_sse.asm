@@ -730,11 +730,12 @@ endstruc
 %else ;; up to 4 bytes (defined by %%length)
         mov             DWORD(%%LENGTH), [%%STATE + _snow3g_lens + %%LANE * 4]
         cmp             %%LENGTH, 4
-        jne              %%_not_dw
+        jne             %%_not_dw
         xor             DWORD(%%TMP64), [%%IN_PTR]
         mov             dword [%%OUT_PTR], DWORD(%%TMP64)
         jmp             %%_write_done
 %%_not_dw:
+        and             %%LENGTH, 3
         cmp             %%LENGTH, 2
         jl              %%_write_single_byte
 
@@ -745,7 +746,7 @@ endstruc
         add             %%OUT_PTR, 2
         and             %%LENGTH, 1
         je              %%_write_done
-
+        shr             %%TMP64, 16
 %%_write_single_byte:
         xor             BYTE(%%TMP64), [%%IN_PTR]
         mov             byte [%%OUT_PTR], BYTE(%%TMP64)
