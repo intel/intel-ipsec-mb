@@ -1909,6 +1909,56 @@ job_sgl_aes_gcm(IMB_MGR *p_mgr,
 }
 
 static int
+aes_gcm_single_job_sgl(IMB_MGR *mb_mgr,
+                       IMB_CIPHER_DIRECTION cipher_dir,
+                       const struct gcm_key_data *key,
+                       const uint64_t key_len,
+                       struct IMB_SGL_IOV *sgl_segs,
+                       const unsigned num_sgl_segs,
+                       const uint8_t *iv, const uint64_t iv_len,
+                       const uint8_t *aad, const uint64_t aad_len,
+                       uint8_t *auth_tag, const uint64_t auth_tag_len,
+                       struct gcm_context_data *ctx)
+{
+        IMB_JOB *job;
+
+        job = IMB_GET_NEXT_JOB(mb_mgr);
+        if (!job) {
+                fprintf(stderr, "failed to get job\n");
+                return -1;
+        }
+
+        job->cipher_mode = IMB_CIPHER_GCM_SGL;
+        job->cipher_direction = cipher_dir;
+        job->hash_alg = IMB_AUTH_GCM_SGL;
+        job->chain_order                      =
+                (cipher_dir == IMB_DIR_ENCRYPT) ? IMB_ORDER_CIPHER_HASH :
+                                                  IMB_ORDER_HASH_CIPHER;
+        job->enc_keys             = key;
+        job->dec_keys             = key;
+        job->key_len_in_bytes             = key_len;
+        job->num_sgl_io_segs                  = num_sgl_segs;
+        job->sgl_io_segs                      = sgl_segs;
+        job->cipher_start_src_offset_in_bytes = UINT64_C(0);
+        job->iv                               = iv;
+        job->iv_len_in_bytes                  = iv_len;
+        job->u.GCM.aad                        = aad;
+        job->u.GCM.aad_len_in_bytes           = aad_len;
+        job->auth_tag_output                  = auth_tag;
+        job->auth_tag_output_len_in_bytes     = auth_tag_len;
+        job->u.GCM.ctx = ctx;
+        job->sgl_state = IMB_SGL_ALL;
+        job = IMB_SUBMIT_JOB(mb_mgr);
+
+        if (job->status != IMB_STATUS_COMPLETED) {
+                fprintf(stderr, "failed job, status:%d\n", job->status);
+                return -1;
+        }
+
+        return 0;
+}
+
+static int
 job_sgl_aes_gcm_enc(IMB_MGR *p_mgr,
                     const struct gcm_key_data *key,
                     struct gcm_context_data *ctx,
@@ -2621,6 +2671,157 @@ test_gmac(struct test_suite_context *ts128,
 }
 
 static void
+test_single_job_sgl(struct IMB_MGR *mb_mgr,
+                    struct test_suite_context *ctx,
+                    const uint32_t key_sz,
+                    const uint32_t buffer_sz,
+                    const uint32_t seg_sz,
+                    const IMB_CIPHER_DIRECTION cipher_dir)
+{
+        uint8_t *in_buffer = NULL;
+        uint8_t **segments = NULL;
+        uint8_t linear_digest[DIGEST_SZ];
+        uint8_t sgl_digest[DIGEST_SZ];
+        uint8_t k[MAX_KEY_SZ];
+        unsigned int i;
+        uint8_t aad[AAD_SZ];
+        uint8_t iv[IV_SZ];
+        struct gcm_context_data gcm_ctx;
+        struct gcm_key_data key;
+        uint32_t last_seg_sz = buffer_sz % seg_sz;
+        struct IMB_SGL_IOV *sgl_segs = NULL;
+        const uint32_t num_segments = DIV_ROUND_UP(buffer_sz, seg_sz);
+
+        if (last_seg_sz == 0)
+                last_seg_sz = seg_sz;
+
+        sgl_segs = malloc(sizeof(struct IMB_SGL_IOV) * num_segments);
+
+        in_buffer = malloc(buffer_sz);
+        if (in_buffer == NULL) {
+                fprintf(stderr, "Could not allocate memory for input buffer\n");
+                test_suite_update(ctx, 0, 1);
+                goto exit;
+        }
+
+        /*
+         * Initialize tags with different values, to make sure the comparison
+         * is false if they are not updated by the library
+         */
+        memset(sgl_digest, 0, DIGEST_SZ);
+        memset(linear_digest, 0xFF, DIGEST_SZ);
+
+        generate_random_buf(in_buffer, buffer_sz);
+        generate_random_buf(k, key_sz);
+        generate_random_buf(iv, IV_SZ);
+        generate_random_buf(aad, AAD_SZ);
+
+        if (key_sz == IMB_KEY_128_BYTES)
+                IMB_AES128_GCM_PRE(mb_mgr, k, &key);
+        else if (key_sz == IMB_KEY_192_BYTES)
+                IMB_AES192_GCM_PRE(mb_mgr, k, &key);
+        else /* key_sz == 32 */
+                IMB_AES256_GCM_PRE(mb_mgr, k, &key);
+
+        segments = malloc(num_segments * sizeof(*segments));
+        if (segments == NULL) {
+                fprintf(stderr,
+                        "Could not allocate memory for segments array\n");
+                test_suite_update(ctx, 0, 1);
+                goto exit;
+        }
+        memset(segments, 0, num_segments * sizeof(*segments));
+
+        for (i = 0; i < (num_segments - 1); i++) {
+                segments[i] = malloc(seg_sz);
+                if (segments[i] == NULL) {
+                        fprintf(stderr,
+                                "Could not allocate memory for segment %u\n",
+                                i);
+                        test_suite_update(ctx, 0, 1);
+                        goto exit;
+                }
+                memcpy(segments[i], in_buffer + seg_sz * i, seg_sz);
+                sgl_segs[i].in = segments[i];
+                sgl_segs[i].out = segments[i];
+                sgl_segs[i].len = seg_sz;
+        }
+        segments[i] = malloc(last_seg_sz);
+        if (segments[i] == NULL) {
+                fprintf(stderr, "Could not allocate memory for segment %u\n",
+                        i);
+                test_suite_update(ctx, 0, 1);
+                goto exit;
+        }
+        memcpy(segments[i], in_buffer + seg_sz * i, last_seg_sz);
+        sgl_segs[i].in = segments[i];
+        sgl_segs[i].out = segments[i];
+        sgl_segs[i].len = last_seg_sz;
+
+        /* Process linear (single segment) buffer */
+        if (aes_gcm_job(mb_mgr, cipher_dir, &key, key_sz,
+                        in_buffer, in_buffer, buffer_sz, iv, IV_SZ, aad, AAD_SZ,
+                        linear_digest, DIGEST_SZ,
+                        &gcm_ctx, IMB_CIPHER_GCM, 0) < 0) {
+                test_suite_update(ctx, 0, 1);
+                goto exit;
+        } else
+                test_suite_update(ctx, 1, 0);
+
+        /* Process multi-segment buffer */
+        aes_gcm_single_job_sgl(mb_mgr, cipher_dir, &key, key_sz,
+                       sgl_segs, num_segments,
+                       iv, IV_SZ, aad, AAD_SZ,
+                       sgl_digest, DIGEST_SZ, &gcm_ctx);
+
+        for (i = 0; i < (num_segments - 1); i++) {
+                if (memcmp(in_buffer + i*seg_sz, segments[i],
+                           seg_sz) != 0) {
+                        printf("ciphertext mismatched "
+                               "in segment number %u "
+                               "(segment size = %u)\n",
+                               i, seg_sz);
+                        hexdump(stderr, "Expected output",
+                                in_buffer + i*seg_sz, seg_sz);
+                        hexdump(stderr, "SGL output", segments[i],
+                                seg_sz);
+                        test_suite_update(ctx, 0, 1);
+                        goto exit;
+                }
+        }
+        /* Check last segment */
+        if (memcmp(in_buffer + i*seg_sz, segments[i],
+                   last_seg_sz) != 0) {
+                printf("ciphertext mismatched "
+                       "in segment number %u (segment size = %u)\n",
+                       i, seg_sz);
+                hexdump(stderr, "Expected output",
+                        in_buffer + i*seg_sz, last_seg_sz);
+                hexdump(stderr, "SGL output", segments[i], last_seg_sz);
+                test_suite_update(ctx, 0, 1);
+        }
+        if (memcmp(sgl_digest, linear_digest, 16) != 0) {
+                printf("hash mismatched (segment size = %u)\n",
+                       seg_sz);
+                hexdump(stderr, "Expected digest",
+                        linear_digest, DIGEST_SZ);
+                hexdump(stderr, "SGL digest", sgl_digest, DIGEST_SZ);
+                test_suite_update(ctx, 0, 1);
+        } else {
+                test_suite_update(ctx, 1, 0);
+        }
+
+exit:
+        free(sgl_segs);
+        free(in_buffer);
+        if (segments != NULL) {
+                for (i = 0; i < num_segments; i++)
+                        free(segments[i]);
+                free(segments);
+        }
+}
+
+static void
 test_sgl(struct IMB_MGR *mb_mgr,
          struct test_suite_context *ctx,
          const uint32_t key_sz,
@@ -2673,16 +2874,16 @@ test_sgl(struct IMB_MGR *mb_mgr,
         else /* key_sz == 32 */
                 IMB_AES256_GCM_PRE(mb_mgr, k, &key);
 
-        segments = malloc(num_segments * 8);
+        segments = malloc(num_segments * sizeof(*segments));
         if (segments == NULL) {
                 fprintf(stderr,
                         "Could not allocate memory for segments array\n");
                 test_suite_update(ctx, 0, 1);
                 goto exit;
         }
-        memset(segments, 0, num_segments * 8);
+        memset(segments, 0, num_segments * sizeof(*segments));
 
-        segment_sizes = malloc(num_segments * 4);
+        segment_sizes = malloc(num_segments * sizeof(*segment_sizes));
         if (segment_sizes == NULL) {
                 fprintf(stderr,
                         "Could not allocate memory for array of sizes\n");
@@ -2901,6 +3102,11 @@ int gcm_test(IMB_MGR *p_mgr)
                                  IMB_DIR_ENCRYPT, 1);
                         test_sgl(p_mgr, ctx, key_sz, buf_sz, seg_sz,
                                  IMB_DIR_DECRYPT, 1);
+                        /* Single job SGL API */
+                        test_single_job_sgl(p_mgr, ctx, key_sz, buf_sz, seg_sz,
+                                            IMB_DIR_ENCRYPT);
+                        test_single_job_sgl(p_mgr, ctx, key_sz, buf_sz, seg_sz,
+                                            IMB_DIR_DECRYPT);
                         /* Direct API */
                         test_sgl(p_mgr, ctx, key_sz, buf_sz, seg_sz,
                                  IMB_DIR_ENCRYPT, 0);

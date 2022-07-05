@@ -634,6 +634,202 @@ test_aead_vectors(struct IMB_MGR *mb_mgr,
 }
 
 static void
+test_single_job_sgl(struct IMB_MGR *mb_mgr,
+                    struct test_suite_context *ctx,
+                    const uint32_t buffer_sz,
+                    const uint32_t seg_sz,
+                    const IMB_CIPHER_DIRECTION cipher_dir)
+{
+        struct IMB_JOB *job;
+        uint8_t *in_buffer = NULL;
+        uint8_t **segments = NULL;
+        uint8_t linear_digest[DIGEST_SZ];
+        uint8_t sgl_digest[DIGEST_SZ];
+        uint8_t key[KEY_SZ];
+        unsigned i;
+        uint8_t aad[AAD_SZ];
+        uint8_t iv[IV_SZ];
+        struct chacha20_poly1305_context_data chacha_ctx;
+        uint32_t last_seg_sz = buffer_sz % seg_sz;
+        struct IMB_SGL_IOV *sgl_segs = NULL;
+        const uint32_t num_segments = DIV_ROUND_UP(buffer_sz, seg_sz);
+
+        sgl_segs = malloc(sizeof(struct IMB_SGL_IOV) * num_segments);
+
+        if (last_seg_sz == 0)
+                last_seg_sz = seg_sz;
+
+        in_buffer = malloc(buffer_sz);
+        if (in_buffer == NULL) {
+                fprintf(stderr, "Could not allocate memory for input buffer\n");
+                test_suite_update(ctx, 0, 1);
+                goto exit;
+        }
+
+        /*
+         * Initialize tags with different values, to make sure the comparison
+         * is false if they are not updated by the library
+         */
+        memset(sgl_digest, 0, DIGEST_SZ);
+        memset(linear_digest, 0xFF, DIGEST_SZ);
+
+        generate_random_buf(in_buffer, buffer_sz);
+        generate_random_buf(key, KEY_SZ);
+        generate_random_buf(iv, IV_SZ);
+        generate_random_buf(aad, AAD_SZ);
+
+        segments = malloc(num_segments * sizeof(*segments));
+        if (segments == NULL) {
+                fprintf(stderr,
+                        "Could not allocate memory for segments array\n");
+                test_suite_update(ctx, 0, 1);
+                goto exit;
+        }
+        memset(segments, 0, num_segments * sizeof(*segments));
+
+        for (i = 0; i < (num_segments - 1); i++) {
+                segments[i] = malloc(seg_sz);
+                if (segments[i] == NULL) {
+                        fprintf(stderr,
+                                "Could not allocate memory for segment %u\n",
+                                i);
+                        test_suite_update(ctx, 0, 1);
+                        goto exit;
+                }
+                memcpy(segments[i], in_buffer + seg_sz * i, seg_sz);
+                sgl_segs[i].in = segments[i];
+                sgl_segs[i].out = segments[i];
+                sgl_segs[i].len = seg_sz;
+        }
+        segments[i] = malloc(last_seg_sz);
+        if (segments[i] == NULL) {
+                fprintf(stderr, "Could not allocate memory for segment %u\n",
+                        i);
+                test_suite_update(ctx, 0, 1);
+                goto exit;
+        }
+        memcpy(segments[i], in_buffer + seg_sz * i, last_seg_sz);
+        sgl_segs[i].in = segments[i];
+        sgl_segs[i].out = segments[i];
+        sgl_segs[i].len = last_seg_sz;
+
+        /* Process linear (single segment) buffer */
+        job = IMB_GET_NEXT_JOB(mb_mgr);
+        job->cipher_direction = cipher_dir;
+        job->chain_order = IMB_ORDER_HASH_CIPHER;
+        job->cipher_mode = IMB_CIPHER_CHACHA20_POLY1305;
+        job->hash_alg = IMB_AUTH_CHACHA20_POLY1305;
+        job->enc_keys = key;
+        job->dec_keys = key;
+        job->src = in_buffer;
+        job->dst = in_buffer;
+        job->key_len_in_bytes = KEY_SZ;
+
+        job->u.CHACHA20_POLY1305.aad = aad;
+        job->u.CHACHA20_POLY1305.aad_len_in_bytes = AAD_SZ;
+
+        job->iv = iv;
+        job->iv_len_in_bytes = IV_SZ;
+        job->msg_len_to_cipher_in_bytes = buffer_sz;
+        job->cipher_start_src_offset_in_bytes = 0;
+
+        job->msg_len_to_hash_in_bytes = buffer_sz;
+        job->hash_start_src_offset_in_bytes = 0;
+        job->auth_tag_output = linear_digest;
+        job->auth_tag_output_len_in_bytes = DIGEST_SZ;
+
+        job = IMB_SUBMIT_JOB(mb_mgr);
+
+        if (job->status == IMB_STATUS_COMPLETED)
+                test_suite_update(ctx, 1, 0);
+        else {
+                fprintf(stderr, "job status returned as not successful"
+                                " for the linear buffer\n");
+                test_suite_update(ctx, 0, 1);
+                goto exit;
+        }
+
+        /* Process multi-segment buffer */
+        job = IMB_GET_NEXT_JOB(mb_mgr);
+        job->cipher_direction = cipher_dir;
+        job->chain_order = IMB_ORDER_HASH_CIPHER;
+        job->cipher_mode = IMB_CIPHER_CHACHA20_POLY1305_SGL;
+        job->hash_alg = IMB_AUTH_CHACHA20_POLY1305_SGL;
+        job->enc_keys = key;
+        job->dec_keys = key;
+        job->key_len_in_bytes = KEY_SZ;
+
+        job->u.CHACHA20_POLY1305.aad = aad;
+        job->u.CHACHA20_POLY1305.aad_len_in_bytes = AAD_SZ;
+        job->u.CHACHA20_POLY1305.ctx = &chacha_ctx;
+
+        job->iv = iv;
+        job->iv_len_in_bytes = IV_SZ;
+        job->cipher_start_src_offset_in_bytes = 0;
+
+        job->hash_start_src_offset_in_bytes = 0;
+        job->auth_tag_output = sgl_digest;
+        job->auth_tag_output_len_in_bytes = DIGEST_SZ;
+
+        job->num_sgl_io_segs = num_segments;
+        job->sgl_state = IMB_SGL_ALL;
+        job->sgl_io_segs = sgl_segs;
+        job = IMB_SUBMIT_JOB(mb_mgr);
+
+        if (job->status == IMB_STATUS_COMPLETED) {
+                for (i = 0; i < (num_segments - 1); i++) {
+                        if (memcmp(in_buffer + i*seg_sz, segments[i],
+                                   seg_sz) != 0) {
+                                printf("ciphertext mismatched "
+                                       "in segment number %u "
+                                       "(segment size = %u)\n",
+                                       i, seg_sz);
+                                hexdump(stderr, "Linear output",
+                                        in_buffer + i*seg_sz, seg_sz);
+                                hexdump(stderr, "SGL output", segments[i],
+                                        seg_sz);
+                                test_suite_update(ctx, 0, 1);
+                                goto exit;
+                        }
+                }
+                /* Check last segment */
+                if (memcmp(in_buffer + i*seg_sz, segments[i],
+                           last_seg_sz) != 0) {
+                        printf("ciphertext mismatched "
+                               "in segment number %u (segment size = %u)\n",
+                               i, seg_sz);
+                        hexdump(stderr, "Linear output",
+                                in_buffer + i*seg_sz, last_seg_sz);
+                        hexdump(stderr, "SGL output", segments[i], last_seg_sz);
+                        test_suite_update(ctx, 0, 1);
+                }
+                if (memcmp(sgl_digest, linear_digest, 16) != 0) {
+                        printf("hash mismatched (segment size = %u)\n",
+                               seg_sz);
+                        hexdump(stderr, "Linear digest",
+                                linear_digest, DIGEST_SZ);
+                        hexdump(stderr, "SGL digest", sgl_digest, DIGEST_SZ);
+                        test_suite_update(ctx, 0, 1);
+                } else {
+                        test_suite_update(ctx, 1, 0);
+                }
+        } else {
+                fprintf(stderr, "job status returned as not successful"
+                                " for the segmented buffer\n");
+                test_suite_update(ctx, 0, 1);
+        }
+
+exit:
+        free(sgl_segs);
+        free(in_buffer);
+        if (segments != NULL) {
+                for (i = 0; i < num_segments; i++)
+                        free(segments[i]);
+                free(segments);
+        }
+}
+
+static void
 test_sgl(struct IMB_MGR *mb_mgr,
          struct test_suite_context *ctx,
          const uint32_t buffer_sz,
@@ -679,16 +875,16 @@ test_sgl(struct IMB_MGR *mb_mgr,
         generate_random_buf(iv, IV_SZ);
         generate_random_buf(aad, AAD_SZ);
 
-        segments = malloc(num_segments * 8);
+        segments = malloc(num_segments * sizeof(*segments));
         if (segments == NULL) {
                 fprintf(stderr,
                         "Could not allocate memory for segments array\n");
                 test_suite_update(ctx, 0, 1);
                 goto exit;
         }
-        memset(segments, 0, num_segments * 8);
+        memset(segments, 0, num_segments * sizeof(*segments));
 
-        segment_sizes = malloc(num_segments * 4);
+        segment_sizes = malloc(num_segments * sizeof(*segment_sizes));
         if (segment_sizes == NULL) {
                 fprintf(stderr,
                         "Could not allocate memory for array of sizes\n");
@@ -968,6 +1164,11 @@ chacha20_poly1305_test(struct IMB_MGR *mb_mgr)
                 test_sgl(mb_mgr, &ctx, BUF_SZ, seg_sz, IMB_DIR_DECRYPT, 1, 0);
                 test_sgl(mb_mgr, &ctx, BUF_SZ, seg_sz, IMB_DIR_ENCRYPT, 1, 1);
                 test_sgl(mb_mgr, &ctx, BUF_SZ, seg_sz, IMB_DIR_DECRYPT, 1, 1);
+                /* Single job SGL API */
+                test_single_job_sgl(mb_mgr, &ctx, BUF_SZ, seg_sz,
+                                    IMB_DIR_ENCRYPT);
+                test_single_job_sgl(mb_mgr, &ctx, BUF_SZ, seg_sz,
+                                    IMB_DIR_DECRYPT);
                 /* Direct API */
                 test_sgl(mb_mgr, &ctx, BUF_SZ, seg_sz, IMB_DIR_ENCRYPT, 0, 1);
                 test_sgl(mb_mgr, &ctx, BUF_SZ, seg_sz, IMB_DIR_DECRYPT, 0, 1);
