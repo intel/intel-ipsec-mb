@@ -97,8 +97,6 @@ static uint64_t pattern8_cipher_key;
 static uint64_t pattern8_plain_text;
 
 #define MAX_OOO_MGR_SIZE 8192
-#define OOO_MGR_FIRST aes128_ooo
-#define OOO_MGR_LAST  zuc_eia3_ooo
 
 /* Struct storing cipher parameters */
 struct params_s {
@@ -799,18 +797,20 @@ search_patterns(const void *ptr, const size_t mem_size)
 static size_t
 calculate_ooo_mgr_size(const void *ptr)
 {
+        const size_t max_size = MAX_OOO_MGR_SIZE - sizeof(uint64_t);
         size_t i;
 
-        for (i = 0; i <= (MAX_OOO_MGR_SIZE - sizeof(uint64_t)); i++) {
-                const uint64_t end_of_ooo_pattern = 0xDEADCAFEDEADCAFE;
+        for (i = 0; i <= max_size; i++) {
+                const uint64_t end_of_ooo_pattern = 0xDEADCAFEDEADCAFEULL;
                 const uint8_t *ptr8 = (const uint8_t *) ptr;
-                const uint64_t string = *((const uint64_t *) &ptr8[i]);
+                const uint64_t *ptr64 = (const uint64_t *) &ptr8[i];
 
-                if (string == end_of_ooo_pattern)
+                if (*ptr64 == end_of_ooo_pattern)
                         return i + sizeof(uint64_t);
         }
 
         /* no marker found */
+        fprintf(stderr, "No road-block marker found for %p manager!\n", ptr);
         return MAX_OOO_MGR_SIZE;
 }
 
@@ -1680,16 +1680,37 @@ perform_safe_checks(IMB_MGR *mgr, const IMB_ARCH arch, const char *dir)
         }
 
         /* search OOO managers */
-        for (ooo_ptr = &mgr->OOO_MGR_FIRST, i = 0;
-             ooo_ptr <= &mgr->OOO_MGR_LAST;
+        for (ooo_ptr = &mgr->aes128_ooo, i = 0;
+             ooo_ptr < &mgr->end_ooo;
              ooo_ptr++, i++) {
+                static const char * const ooo_names[] = {
+                        "aes128_ooo", "aes192_ooo", "aes256_ooo",
+                        "docsis128_sec_ooo", "docsis128_crc32_sec_ooo",
+                        "docsis256_sec_ooo", "docsis256_crc32_sec_ooo",
+                        "des_enc_ooo", "des_dec_ooo",
+                        "des3_enc_ooo", "des3_dec_ooo",
+                        "docsis_des_enc_ooo", "docsis_des_dec_ooo",
+                        "hmac_sha_1_ooo",
+                        "hmac_sha_224_ooo", "hmac_sha_256_ooo",
+                        "hmac_sha_384_ooo", "hmac_sha_512_ooo",
+                        "hmac_md5_ooo",
+                        "aes_xcbc_ooo", "aes_ccm_ooo", "aes_cmac_ooo",
+                        "zuc_eea3_ooo", "zuc_eia3_ooo",
+                        "aes128_cbcs_ooo",
+                        "zuc256_eea3_ooo", "zuc256_eia3_ooo",
+                        "aes256_ccm_ooo", "aes256_cmac_ooo",
+                        "snow3g_uea2_ooo", "snow3g_uia2_ooo",
+                        "sha_1_ooo", "sha_224_ooo", "sha_256_ooo",
+                        "sha_512_ooo",
+                        "end_ooo" /* add new ooo manager above this line */
+                };
                 void *ooo_mgr_p = *ooo_ptr;
 
                 if (search_patterns(ooo_mgr_p,
                                     get_ooo_mgr_size(ooo_mgr_p, i)) == 0) {
                         fprintf(stderr,
-                                "Pattern found in 000 MGR (%d) after %s data\n",
-                                (int)(ooo_ptr - &mgr->OOO_MGR_FIRST), dir);
+                                "Pattern found in OOO MGR (index=%u,\"%s\") after %s data\n",
+                                i, ooo_names[i], dir);
                         return -1;
                 }
         }
