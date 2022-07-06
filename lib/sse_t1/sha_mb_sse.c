@@ -37,16 +37,16 @@ IMB_DLL_LOCAL
 IMB_JOB *submit_job_sha1_sse(MB_MGR_SHA_1_OOO *state, IMB_JOB *job)
 {
         return submit_flush_job_sha_1(state, job, 4, 1, 1,
-                                        IMB_SHA1_BLOCK_SIZE, SHA1_PAD_SIZE,
-                                        call_sha1_mult_sse_from_c, 0);
+                                      IMB_SHA1_BLOCK_SIZE, SHA1_PAD_SIZE,
+                                      call_sha1_mult_sse_from_c, 0);
 }
 
 IMB_DLL_LOCAL
 IMB_JOB *flush_job_sha1_sse(MB_MGR_SHA_1_OOO *state, IMB_JOB *job)
 {
         return submit_flush_job_sha_1(state, job, 4, 0, 1,
-                                        IMB_SHA1_BLOCK_SIZE, SHA1_PAD_SIZE,
-                                        call_sha1_mult_sse_from_c, 0);
+                                      IMB_SHA1_BLOCK_SIZE, SHA1_PAD_SIZE,
+                                      call_sha1_mult_sse_from_c, 0);
 }
 
 /* ========================================================================== */
