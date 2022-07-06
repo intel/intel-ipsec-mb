@@ -1697,29 +1697,6 @@ perform_safe_checks(IMB_MGR *mgr, const IMB_ARCH arch, const char *dir)
         return 0;
 }
 
-static void
-clear_scratch_simd(const IMB_ARCH arch)
-{
-        switch (arch) {
-        case IMB_ARCH_SSE:
-        case IMB_ARCH_NOAESNI:
-                clr_scratch_xmms_sse();
-                break;
-        case IMB_ARCH_AVX:
-                clr_scratch_xmms_avx();
-                break;
-        case IMB_ARCH_AVX2:
-                clr_scratch_ymms();
-                break;
-        case IMB_ARCH_AVX512:
-                clr_scratch_zmms();
-                break;
-        default:
-                fprintf(stderr, "Invalid architecture\n");
-                exit(EXIT_FAILURE);
-        }
-}
-
 /* Performs test using AES_HMAC or DOCSIS */
 static int
 do_test(IMB_MGR *enc_mb_mgr, const IMB_ARCH enc_arch,
@@ -1871,7 +1848,6 @@ do_test(IMB_MGR *enc_mb_mgr, const IMB_ARCH enc_arch,
                 /* Clear scratch registers before expanding keys to prevent
                  * other functions from storing sensitive data in stack
                  */
-                clear_scratch_simd(enc_arch);
                 if (prepare_keys(enc_mb_mgr, enc_keys, ciph_key, auth_key,
                                  params, 0) < 0)
                         goto exit;
@@ -1961,8 +1937,6 @@ do_test(IMB_MGR *enc_mb_mgr, const IMB_ARCH enc_arch,
 
                 /* Clear scratch registers before submitting job to prevent
                  * other functions from storing sensitive data in stack */
-                if (safe_check)
-                        clear_scratch_simd(enc_arch);
                 job = IMB_SUBMIT_JOB(enc_mb_mgr);
 
                 if (job) {
@@ -2082,8 +2056,6 @@ do_test(IMB_MGR *enc_mb_mgr, const IMB_ARCH enc_arch,
 
                 /* Clear scratch registers before submitting job to prevent
                  * other functions from storing sensitive data in stack */
-                if (safe_check)
-                        clear_scratch_simd(dec_arch);
                 job = IMB_SUBMIT_JOB(dec_mb_mgr);
 
                 if (job != NULL) {
