@@ -36,7 +36,7 @@ extern void call_sha1_mult_avx_from_c(SHA1_ARGS *args,
                                       uint32_t size_in_blocks);
 
 extern void call_sha1_x8_avx2_from_c(SHA1_ARGS *args,
-                                      uint32_t size_in_blocks);
+                                     uint32_t size_in_blocks);
 
 extern void call_sha1_x16_avx512_from_c(SHA1_ARGS *args,
                                         uint32_t size_in_blocks);
@@ -327,10 +327,10 @@ void sha512_create_extra_blocks(MB_MGR_SHA_512_OOO *state,
 __forceinline
 IMB_JOB *
 submit_flush_job_sha_1(MB_MGR_SHA_1_OOO *state, IMB_JOB *job,
-                         const unsigned max_jobs, const int is_submit,
-                         const int sha_type, const uint64_t blk_size,
-                         const uint64_t pad_size,
-                         void (*fn)(SHA1_ARGS *, uint32_t), const int shani)
+                       const unsigned max_jobs, const int is_submit,
+                       const int sha_type, const uint64_t blk_size,
+                       const uint64_t pad_size,
+                       void (*fn)(SHA1_ARGS *, uint32_t), const int shani)
 {
         unsigned lane, min_idx;
         IMB_JOB *ret_job = NULL;
@@ -380,9 +380,9 @@ submit_flush_job_sha_1(MB_MGR_SHA_1_OOO *state, IMB_JOB *job,
 
                 if (is_submit) {
                         /*
-                        * SUBMIT
-                        * - find min common length to process
-                        */
+                         * SUBMIT
+                         * - find min common length to process
+                         */
                         min_idx = 0;
                         min_len = state->lens[0];
 
@@ -394,11 +394,11 @@ submit_flush_job_sha_1(MB_MGR_SHA_1_OOO *state, IMB_JOB *job,
                         }
                 } else {
                         /*
-                        * FLUSH
-                        * - copy good (not null) lane onto empty lanes
-                        * - find min common length to process across
-                        * - not null lanes
-                        */
+                         * FLUSH
+                         * - copy good (not null) lane onto empty lanes
+                         * - find min common length to process across
+                         * - not null lanes
+                         */
                         min_idx = lane;
                         min_len = state->lens[lane];
 
@@ -433,7 +433,7 @@ submit_flush_job_sha_1(MB_MGR_SHA_1_OOO *state, IMB_JOB *job,
                 /* run the algorithmic code on full selected blocks */
                 if(min_len >= blk_size)
                         (*fn)(&state->args,
-                                (uint32_t)(min_len/blk_size));
+                              (uint32_t)(min_len/blk_size));
 
                 /* create extra blocks */
                 if (state->ldata[min_idx].extra_blocks != 0)
@@ -518,9 +518,9 @@ submit_flush_job_sha_256(MB_MGR_SHA_256_OOO *state, IMB_JOB *job,
 
                 if (is_submit) {
                         /*
-                        * SUBMIT
-                        * - find min common length to process
-                        */
+                         * SUBMIT
+                         * - find min common length to process
+                         */
                         min_idx = 0;
                         min_len = state->lens[0];
 
@@ -532,11 +532,11 @@ submit_flush_job_sha_256(MB_MGR_SHA_256_OOO *state, IMB_JOB *job,
                         }
                 } else {
                         /*
-                        * FLUSH
-                        * - copy good (not null) lane onto empty lanes
-                        * - find min common length to process across
-                        * - not null lanes
-                        */
+                         * FLUSH
+                         * - copy good (not null) lane onto empty lanes
+                         * - find min common length to process across
+                         * - not null lanes
+                         */
                         min_idx = lane;
                         min_len = state->lens[lane];
 
@@ -571,7 +571,7 @@ submit_flush_job_sha_256(MB_MGR_SHA_256_OOO *state, IMB_JOB *job,
                 /* run the algorithmic code on full selected blocks */
                 if(min_len >= blk_size)
                         (*fn)(&state->args,
-                                (uint32_t)(min_len/blk_size));
+                              (uint32_t)(min_len/blk_size));
 
                 /* create extra blocks */
                 if (state->ldata[min_idx].extra_blocks != 0)
@@ -595,6 +595,7 @@ submit_flush_job_sha_256(MB_MGR_SHA_256_OOO *state, IMB_JOB *job,
                 sha_mb_generic_write_digest(ret_job->auth_tag_output,
                                             state->args.digest, sha_type, 16,
                                             min_idx);
+
         ret_job->status |= IMB_STATUS_COMPLETED_AUTH;
         state->ldata[min_idx].job_in_lane = NULL;
         return ret_job;
