@@ -728,12 +728,12 @@ static void generate_patterns(void)
                  pattern_cipher_key == 0 ||
                  pattern_plain_text == 0);
 
-        memset(&pattern8_auth_key, pattern_auth_key,
-               sizeof(pattern8_auth_key));
-        memset(&pattern8_cipher_key, pattern_cipher_key,
-               sizeof(pattern8_cipher_key));
-        memset(&pattern8_plain_text, pattern_plain_text,
-               sizeof(pattern8_plain_text));
+        nosimd_memset(&pattern8_auth_key, pattern_auth_key,
+                sizeof(pattern8_auth_key));
+        nosimd_memset(&pattern8_cipher_key, pattern_cipher_key,
+                sizeof(pattern8_cipher_key));
+        nosimd_memset(&pattern8_plain_text, pattern_plain_text,
+                sizeof(pattern8_plain_text));
 
         printf(">>> Patterns: AUTH_KEY = 0x%02x, CIPHER_KEY = 0x%02x, "
                "PLAIN_TEXT = 0x%02x\n",
@@ -1205,19 +1205,19 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys,
         if (force_pattern) {
                 switch (params->hash_alg) {
                 case IMB_AUTH_AES_XCBC:
-                        memset(k1_expanded, pattern_auth_key,
+                        nosimd_memset(k1_expanded, pattern_auth_key,
                                sizeof(keys->k1_expanded));
                         break;
                 case IMB_AUTH_AES_CMAC:
                 case IMB_AUTH_AES_CMAC_BITLEN:
                 case IMB_AUTH_AES_CMAC_256:
-                        memset(k1_expanded, pattern_auth_key,
+                        nosimd_memset(k1_expanded, pattern_auth_key,
                                sizeof(keys->k1_expanded));
-                        memset(k2, pattern_auth_key, sizeof(keys->k2));
-                        memset(k3, pattern_auth_key, sizeof(keys->k3));
+                        nosimd_memset(k2, pattern_auth_key, sizeof(keys->k2));
+                        nosimd_memset(k3, pattern_auth_key, sizeof(keys->k3));
                         break;
                 case IMB_AUTH_POLY1305:
-                        memset(k1_expanded, pattern_auth_key,
+                        nosimd_memset(k1_expanded, pattern_auth_key,
                                sizeof(keys->k1_expanded));
                         break;
                 case IMB_AUTH_HMAC_SHA_1:
@@ -1226,14 +1226,16 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys,
                 case IMB_AUTH_HMAC_SHA_384:
                 case IMB_AUTH_HMAC_SHA_512:
                 case IMB_AUTH_MD5:
-                        memset(ipad, pattern_auth_key, sizeof(keys->ipad));
-                        memset(opad, pattern_auth_key, sizeof(keys->opad));
+                        nosimd_memset(ipad, pattern_auth_key,
+                                      sizeof(keys->ipad));
+                        nosimd_memset(opad, pattern_auth_key,
+                                      sizeof(keys->opad));
                         break;
                 case IMB_AUTH_ZUC_EIA3_BITLEN:
                 case IMB_AUTH_ZUC256_EIA3_BITLEN:
                 case IMB_AUTH_SNOW3G_UIA2_BITLEN:
                 case IMB_AUTH_KASUMI_UIA1:
-                        memset(k3, pattern_auth_key, sizeof(keys->k3));
+                        nosimd_memset(k3, pattern_auth_key, sizeof(keys->k3));
                         break;
                 case IMB_AUTH_AES_CCM:
                 case IMB_AUTH_AES_GMAC:
@@ -1267,7 +1269,7 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys,
                 case IMB_AUTH_AES_GMAC_192:
                 case IMB_AUTH_AES_GMAC_256:
                 case IMB_AUTH_GHASH:
-                        memset(gdata_key, pattern_auth_key,
+                        nosimd_memset(gdata_key, pattern_auth_key,
                                sizeof(keys->gdata_key));
                         break;
                 default:
@@ -1279,7 +1281,7 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys,
 
                 switch (params->cipher_mode) {
                 case IMB_CIPHER_GCM:
-                        memset(gdata_key, pattern_cipher_key,
+                        nosimd_memset(gdata_key, pattern_cipher_key,
                                 sizeof(keys->gdata_key));
                         break;
                 case IMB_CIPHER_PON_AES_CNTR:
@@ -1290,20 +1292,20 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys,
                 case IMB_CIPHER_DOCSIS_SEC_BPI:
                 case IMB_CIPHER_ECB:
                 case IMB_CIPHER_CBCS_1_9:
-                        memset(enc_keys, pattern_cipher_key,
+                        nosimd_memset(enc_keys, pattern_cipher_key,
                                sizeof(keys->enc_keys));
-                        memset(dec_keys, pattern_cipher_key,
+                        nosimd_memset(dec_keys, pattern_cipher_key,
                                sizeof(keys->dec_keys));
                         break;
                 case IMB_CIPHER_DES:
                 case IMB_CIPHER_DES3:
                 case IMB_CIPHER_DOCSIS_DES:
-                        memset(enc_keys, pattern_cipher_key,
+                        nosimd_memset(enc_keys, pattern_cipher_key,
                                sizeof(keys->enc_keys));
                         break;
                 case IMB_CIPHER_SNOW3G_UEA2_BITLEN:
                 case IMB_CIPHER_KASUMI_UEA1_BITLEN:
-                        memset(k2, pattern_cipher_key, 16);
+                        nosimd_memset(k2, pattern_cipher_key, 16);
                         break;
                 case IMB_CIPHER_ZUC_EEA3:
                 case IMB_CIPHER_CHACHA20:
@@ -1311,7 +1313,7 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys,
                 case IMB_CIPHER_CHACHA20_POLY1305_SGL:
                 case IMB_CIPHER_SNOW_V:
                 case IMB_CIPHER_SNOW_V_AEAD:
-                        memset(k2, pattern_cipher_key, 32);
+                        nosimd_memset(k2, pattern_cipher_key, 32);
                         break;
                 case IMB_CIPHER_NULL:
                         /* No operation needed */
@@ -1339,13 +1341,13 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys,
                 break;
         case IMB_AUTH_HMAC_SHA_1:
                 /* compute ipad hash */
-                memset(buf, 0x36, IMB_SHA1_BLOCK_SIZE);
+                nosimd_memset(buf, 0x36, IMB_SHA1_BLOCK_SIZE);
                 for (i = 0; i < IMB_SHA1_BLOCK_SIZE; i++)
                         buf[i] ^= auth_key[i];
                 IMB_SHA1_ONE_BLOCK(mb_mgr, buf, ipad);
 
                 /* compute opad hash */
-                memset(buf, 0x5c, IMB_SHA1_BLOCK_SIZE);
+                nosimd_memset(buf, 0x5c, IMB_SHA1_BLOCK_SIZE);
                 for (i = 0; i < IMB_SHA1_BLOCK_SIZE; i++)
                         buf[i] ^= auth_key[i];
                 IMB_SHA1_ONE_BLOCK(mb_mgr, buf, opad);
@@ -1353,13 +1355,13 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys,
                 break;
         case IMB_AUTH_HMAC_SHA_224:
                 /* compute ipad hash */
-                memset(buf, 0x36, IMB_SHA_256_BLOCK_SIZE);
+                nosimd_memset(buf, 0x36, IMB_SHA_256_BLOCK_SIZE);
                 for (i = 0; i < IMB_SHA_256_BLOCK_SIZE; i++)
                         buf[i] ^= auth_key[i];
                 IMB_SHA224_ONE_BLOCK(mb_mgr, buf, ipad);
 
                 /* compute opad hash */
-                memset(buf, 0x5c, IMB_SHA_256_BLOCK_SIZE);
+                nosimd_memset(buf, 0x5c, IMB_SHA_256_BLOCK_SIZE);
                 for (i = 0; i < IMB_SHA_256_BLOCK_SIZE; i++)
                         buf[i] ^= auth_key[i];
                 IMB_SHA224_ONE_BLOCK(mb_mgr, buf, opad);
@@ -1367,13 +1369,13 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys,
                 break;
         case IMB_AUTH_HMAC_SHA_256:
                 /* compute ipad hash */
-                memset(buf, 0x36, IMB_SHA_256_BLOCK_SIZE);
+                nosimd_memset(buf, 0x36, IMB_SHA_256_BLOCK_SIZE);
                 for (i = 0; i < IMB_SHA_256_BLOCK_SIZE; i++)
                         buf[i] ^= auth_key[i];
                 IMB_SHA256_ONE_BLOCK(mb_mgr, buf, ipad);
 
                 /* compute opad hash */
-                memset(buf, 0x5c, IMB_SHA_256_BLOCK_SIZE);
+                nosimd_memset(buf, 0x5c, IMB_SHA_256_BLOCK_SIZE);
                 for (i = 0; i < IMB_SHA_256_BLOCK_SIZE; i++)
                         buf[i] ^= auth_key[i];
                 IMB_SHA256_ONE_BLOCK(mb_mgr, buf, opad);
@@ -1381,13 +1383,13 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys,
                 break;
         case IMB_AUTH_HMAC_SHA_384:
                 /* compute ipad hash */
-                memset(buf, 0x36, IMB_SHA_384_BLOCK_SIZE);
+                nosimd_memset(buf, 0x36, IMB_SHA_384_BLOCK_SIZE);
                 for (i = 0; i < IMB_SHA_384_BLOCK_SIZE; i++)
                         buf[i] ^= auth_key[i];
                 IMB_SHA384_ONE_BLOCK(mb_mgr, buf, ipad);
 
                 /* compute opad hash */
-                memset(buf, 0x5c, IMB_SHA_384_BLOCK_SIZE);
+                nosimd_memset(buf, 0x5c, IMB_SHA_384_BLOCK_SIZE);
                 for (i = 0; i < IMB_SHA_384_BLOCK_SIZE; i++)
                         buf[i] ^= auth_key[i];
                 IMB_SHA384_ONE_BLOCK(mb_mgr, buf, opad);
@@ -1395,13 +1397,13 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys,
                 break;
         case IMB_AUTH_HMAC_SHA_512:
                 /* compute ipad hash */
-                memset(buf, 0x36, IMB_SHA_512_BLOCK_SIZE);
+                nosimd_memset(buf, 0x36, IMB_SHA_512_BLOCK_SIZE);
                 for (i = 0; i < IMB_SHA_512_BLOCK_SIZE; i++)
                         buf[i] ^= auth_key[i];
                 IMB_SHA512_ONE_BLOCK(mb_mgr, buf, ipad);
 
                 /* compute opad hash */
-                memset(buf, 0x5c, IMB_SHA_512_BLOCK_SIZE);
+                nosimd_memset(buf, 0x5c, IMB_SHA_512_BLOCK_SIZE);
                 for (i = 0; i < IMB_SHA_512_BLOCK_SIZE; i++)
                         buf[i] ^= auth_key[i];
                 IMB_SHA512_ONE_BLOCK(mb_mgr, buf, opad);
@@ -1409,13 +1411,13 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys,
                 break;
         case IMB_AUTH_MD5:
                 /* compute ipad hash */
-                memset(buf, 0x36, 64);
+                nosimd_memset(buf, 0x36, 64);
                 for (i = 0; i < 64; i++)
                         buf[i] ^= auth_key[i];
                 IMB_MD5_ONE_BLOCK(mb_mgr, buf, ipad);
 
                 /* compute opad hash */
-                memset(buf, 0x5c, 64);
+                nosimd_memset(buf, 0x5c, 64);
                 for (i = 0; i < 64; i++)
                         buf[i] ^= auth_key[i];
                 IMB_MD5_ONE_BLOCK(mb_mgr, buf, opad);
@@ -1425,7 +1427,7 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys,
         case IMB_AUTH_ZUC256_EIA3_BITLEN:
         case IMB_AUTH_SNOW3G_UIA2_BITLEN:
         case IMB_AUTH_KASUMI_UIA1:
-                memcpy(k2, auth_key, sizeof(keys->k2));
+                nosimd_memcpy(k2, auth_key, sizeof(keys->k2));
                 break;
         case IMB_AUTH_AES_GMAC_128:
                 IMB_AES128_GCM_PRE(mb_mgr, auth_key, gdata_key);
@@ -1468,7 +1470,7 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys,
                 /* No operation needed */
                 break;
         case IMB_AUTH_POLY1305:
-                memcpy(k1_expanded, auth_key, 32);
+                nosimd_memcpy(k1_expanded, auth_key, 32);
                 break;
         default:
                 fprintf(stderr, "Unsupported hash algorithm %u, line %d\n",
@@ -1538,7 +1540,7 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys,
                 break;
         case IMB_CIPHER_SNOW3G_UEA2_BITLEN:
         case IMB_CIPHER_KASUMI_UEA1_BITLEN:
-                memcpy(k2, ciph_key, 16);
+                nosimd_memcpy(k2, ciph_key, 16);
                 break;
         case IMB_CIPHER_ZUC_EEA3:
         case IMB_CIPHER_CHACHA20:
@@ -1547,12 +1549,12 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys,
         case IMB_CIPHER_SNOW_V:
         case IMB_CIPHER_SNOW_V_AEAD:
                 /* Use of:
-                 *     memcpy(k2, ciph_key, 32);
+                 *     nosimd_memcpy(k2, ciph_key, 32);
                  * leaves sensitive data on the stack.
                  * Copying data in 16 byte chunks instead.
                  */
-                memcpy(k2, ciph_key, 16);
-                memcpy(k2 + 16, ciph_key + 16, 16);
+                nosimd_memcpy(k2, ciph_key, 16);
+                nosimd_memcpy(k2 + 16, ciph_key + 16, 16);
                 break;
         case IMB_CIPHER_NULL:
                 /* No operation needed */
@@ -1609,7 +1611,7 @@ modify_docsis_crc32_test_buf(uint8_t *test_buf,
         if (buf_size >=
             (IMB_DOCSIS_CRC32_MIN_ETH_PDU_SIZE + IMB_DOCSIS_CRC32_TAG_SIZE)) {
                 /* Set plaintext CRC32 in the test buffer */
-                memcpy(&test_buf[buf_size - IMB_DOCSIS_CRC32_TAG_SIZE],
+                nosimd_memcpy(&test_buf[buf_size - IMB_DOCSIS_CRC32_TAG_SIZE],
                        job->auth_tag_output, IMB_DOCSIS_CRC32_TAG_SIZE);
         }
 }
@@ -1757,8 +1759,8 @@ do_test(IMB_MGR *enc_mb_mgr, const IMB_ARCH enc_arch,
         generate_random_buf(auth_iv, MAX_IV_SIZE);
         generate_random_buf(aad, MAX_AAD_SIZE);
         if (safe_check) {
-                memset(ciph_key, pattern_cipher_key, MAX_KEY_SIZE);
-                memset(auth_key, pattern_auth_key, MAX_KEY_SIZE);
+                nosimd_memset(ciph_key, pattern_cipher_key, MAX_KEY_SIZE);
+                nosimd_memset(auth_key, pattern_auth_key, MAX_KEY_SIZE);
         } else {
                 generate_random_buf(ciph_key, MAX_KEY_SIZE);
                 generate_random_buf(auth_key, MAX_KEY_SIZE);
@@ -1835,7 +1837,8 @@ do_test(IMB_MGR *enc_mb_mgr, const IMB_ARCH enc_arch,
                 }
 
                 if (safe_check)
-                        memset(test_buf[i], pattern_plain_text, buf_sizes[i]);
+                        nosimd_memset(test_buf[i], pattern_plain_text,
+                                      buf_sizes[i]);
                 else
                         generate_random_buf(test_buf[i], buf_sizes[i]);
 
@@ -1945,7 +1948,7 @@ do_test(IMB_MGR *enc_mb_mgr, const IMB_ARCH enc_arch,
                  * Encrypt + generate digest from encrypted message
                  * using architecture under test
                  */
-                memcpy(src_dst_buf[i], test_buf[i], buf_sizes[i]);
+                nosimd_memcpy(src_dst_buf[i], test_buf[i], buf_sizes[i]);
                 if (fill_job(job, params, src_dst_buf[i], in_digest[i], aad,
                              buf_sizes[i], tag_size, IMB_DIR_ENCRYPT, enc_keys,
                              cipher_iv, auth_iv, i, next_iv) < 0)
@@ -2861,7 +2864,7 @@ int main(int argc, char *argv[])
                          * Disable all the other architectures
                          * and enable only the specified
                          */
-                        memset(enc_archs, 0, sizeof(enc_archs));
+                        nosimd_memset(enc_archs, 0, sizeof(enc_archs));
                         enc_archs[values->arch_type] = 1;
                         i++;
                 } else if (strcmp(argv[i], "--dec-arch") == 0) {
@@ -2876,7 +2879,7 @@ int main(int argc, char *argv[])
                          * Disable all the other architectures
                          * and enable only the specified
                          */
-                        memset(dec_archs, 0, sizeof(dec_archs));
+                        nosimd_memset(dec_archs, 0, sizeof(dec_archs));
                         dec_archs[values->arch_type] = 1;
                         i++;
                 } else if (strcmp(argv[i], "--cipher-algo") == 0) {
