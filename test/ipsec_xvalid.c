@@ -751,6 +751,7 @@ search_patterns(const void *ptr, const size_t mem_size)
 {
         const uint8_t *ptr8 = (const uint8_t *) ptr;
         const size_t limit = mem_size - sizeof(uint64_t);
+        const char *err_str = "";
         int ret = -1;
         size_t i;
 
@@ -763,14 +764,13 @@ search_patterns(const void *ptr, const size_t mem_size)
                 const uint64_t string = *((const uint64_t *) &ptr8[i]);
 
                 if (string == pattern8_cipher_key) {
-                        fprintf(stderr, "Part of CIPHER_KEY is present\n");
+                        err_str = "Part of CIPHER_KEY is present";
                         ret = 0;
                 } else if (string == pattern8_auth_key) {
-                        fprintf(stderr, "Part of AUTH_KEY is present\n");
+                        err_str = "Part of AUTH_KEY is present";
                         ret = 0;
                 } else if (string == pattern8_plain_text) {
-                        fprintf(stderr,
-                                "Part of plain/ciphertext is present\n");
+                        err_str = "Part of plain/ciphertext is present";
                         ret = 0;
                 }
 
@@ -779,15 +779,17 @@ search_patterns(const void *ptr, const size_t mem_size)
         }
 
         if (ret != -1) {
-                size_t len_to_print = mem_size - i;
+                static uint8_t tb[64];
+                const size_t len_to_print =
+                        (mem_size - i) > sizeof(tb) ? sizeof(tb) : mem_size - i;
 
+                nosimd_memcpy(tb, &ptr8[i], len_to_print);
+
+                fprintf(stderr, "%s\n", err_str);
                 fprintf(stderr, "Offset = %zu bytes, Addr = %p, RSP = %p\n",
                         i, &ptr8[i], rdrsp());
 
-                if (len_to_print > 64)
-                        len_to_print = 64;
-
-                hexdump_ex(stderr, NULL, &ptr8[i], len_to_print, &ptr8[i]);
+                hexdump_ex(stderr, NULL, tb, len_to_print, &ptr8[i]);
                 return 0;
         }
 
