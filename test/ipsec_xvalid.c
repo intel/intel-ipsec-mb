@@ -2477,11 +2477,12 @@ run_test(const IMB_ARCH enc_arch, const IMB_ARCH dec_arch,
                 goto exit;
         }
 
-        IMB_HASH_ALG    hash_alg;
         IMB_CIPHER_MODE c_mode;
 
         for (c_mode = IMB_CIPHER_CBC; c_mode < IMB_CIPHER_NUM;
              c_mode++) {
+                IMB_HASH_ALG hash_alg;
+
                 /* Skip IMB_CIPHER_CUSTOM */
                 if (c_mode == IMB_CIPHER_CUSTOM)
                         continue;
