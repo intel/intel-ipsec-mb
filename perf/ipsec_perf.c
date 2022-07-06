@@ -930,7 +930,7 @@ struct custom_job_params custom_job_params = {
 };
 
 uint8_t archs[NUM_ARCHS] = {1, 1, 1, 1}; /* uses all function sets */
-int use_gcm_job_api = 0;
+int use_job_api = 0;
 int use_gcm_sgl_api = 0;
 int use_unhalted_cycles = 0; /* read unhalted cycles instead of tsc */
 uint64_t rd_cycles_cost = 0; /* cost of reading unhalted cycles */
@@ -960,7 +960,7 @@ typedef enum  {
         TEST_API_NUMOF
 } TEST_API;
 
-const char *str_api_list[TEST_API_NUMOF] = {"job", "burst",
+const char *str_api_list[TEST_API_NUMOF] = {"single job", "burst",
                                             "cipher-only burst",
                                             "hash-only burst"};
 
@@ -2491,6 +2491,85 @@ do_test_gcm(struct params_s *params,
         return time / num_iter;
 }
 
+/* Performs test using CHACHA20-POLY1305 direct API */
+static uint64_t
+do_test_chacha_poly(struct params_s *params,
+                    const uint32_t num_iter, IMB_MGR *mb_mgr,
+                    uint8_t *p_buffer, imb_uint128_t *p_keys)
+{
+        uint8_t key[32];
+        uint8_t auth_tag[16];
+        DECLARE_ALIGNED(uint8_t iv[16], 16);
+        uint8_t *aad = NULL;
+        uint64_t time = 0;
+        uint32_t aux;
+        struct chacha20_poly1305_context_data chacha_ctx;
+        static uint32_t index = 0;
+        uint32_t buf_size = params->size_aes;
+        unsigned i;
+
+        aad = (uint8_t *) malloc(sizeof(uint8_t) * params->aad_size);
+        if (!aad) {
+                fprintf(stderr, "Could not malloc AAD\n");
+                free_mem(&p_buffer, &p_keys);
+                exit(EXIT_FAILURE);
+        }
+
+#ifndef _WIN32
+        if (use_unhalted_cycles)
+                time = read_cycles(params->core);
+        else
+#endif
+                time = __rdtscp(&aux);
+
+        for (i = 0; i < num_iter; i++) {
+                uint8_t *pb = get_dst_buffer(index, p_buffer);
+
+                if (imix_list_count != 0)
+                        buf_size = get_next_size(i);
+
+                IMB_CHACHA20_POLY1305_INIT(mb_mgr, key, &chacha_ctx, iv,
+                                           aad, params->aad_size);
+
+                if (params->cipher_dir == IMB_DIR_ENCRYPT) {
+                        IMB_CHACHA20_POLY1305_ENC_UPDATE(mb_mgr, key,
+                                                         &chacha_ctx,
+                                                         pb,
+                                                         pb,
+                                                         buf_size);
+                        IMB_CHACHA20_POLY1305_ENC_FINALIZE(mb_mgr,
+                                                           &chacha_ctx,
+                                                           auth_tag,
+                                                           sizeof(auth_tag));
+                } else {
+                        IMB_CHACHA20_POLY1305_DEC_UPDATE(mb_mgr, key,
+                                                         &chacha_ctx,
+                                                         pb,
+                                                         pb,
+                                                         buf_size);
+                        IMB_CHACHA20_POLY1305_DEC_FINALIZE(mb_mgr,
+                                                           &chacha_ctx,
+                                                           auth_tag,
+                                                           sizeof(auth_tag));
+                }
+                index = get_next_index(index);
+        }
+#ifndef _WIN32
+        if (use_unhalted_cycles)
+               time = (read_cycles(params->core) -
+                       rd_cycles_cost) - time;
+        else
+#endif
+               time = __rdtscp(&aux) - time;
+
+        free(aad);
+
+        if (!num_iter)
+                return time;
+
+        return time / num_iter;
+}
+
 /* Performs test using GCM */
 static uint64_t
 do_test_ghash(struct params_s *params,
@@ -2635,15 +2714,24 @@ process_variant(IMB_MGR *mgr, const enum arch_type_e arch,
                         num_iter = iter_scale;
 
                 params->size_aes = size_aes;
-                if (params->cipher_mode == TEST_GCM && (!use_gcm_job_api)) {
+                if (params->cipher_mode == TEST_GCM && (!use_job_api)) {
                         if (job_iter == 0)
                                 *times = do_test_gcm(params, 2 * num_iter, mgr,
                                                      p_buffer, p_keys);
                         else
                                 *times = do_test_gcm(params, job_iter, mgr,
                                                      p_buffer, p_keys);
+                } else if (params->cipher_mode == TEST_AEAD_CHACHA20 && (!use_job_api)) {
+                        if (job_iter == 0)
+                                *times = do_test_chacha_poly(params,
+                                                     2 * num_iter, mgr,
+                                                     p_buffer, p_keys);
+                        else
+                                *times = do_test_chacha_poly(params,
+                                                     job_iter, mgr,
+                                                     p_buffer, p_keys);
                 } else if (params->hash_alg == TEST_AUTH_GHASH &&
-                           (!use_gcm_job_api)) {
+                           (!use_job_api)) {
                         if (job_iter == 0)
                                 *times = do_test_ghash(params, 2 * num_iter,
                                                        mgr, p_buffer, p_keys);
@@ -2979,8 +3067,8 @@ static void usage(void)
                 "-o val: Use <val> for the SHA size increment, default is 24\n"
                 "--shani-on: use SHA extensions, default: auto-detect\n"
                 "--shani-off: don't use SHA extensions\n"
-                "--gcm-job-api: use JOB API for GCM/GHASH perf tests"
-                " (direct GCM/GHASH API is default)\n"
+                "--force-job-api: use JOB API"
+                " (direct API used for GCM/GHASH/CHACHA20_POLY1305 API by default)\n"
                 "--gcm-sgl-api: use direct SGL API for GCM perf tests"
                 " (direct GCM API is default)\n"
                 "--threads num: <num> for the number of threads to run"
@@ -3447,8 +3535,8 @@ int main(int argc, char *argv[])
                         flags &= (~IMB_FLAG_SHANI_OFF);
                 } else if (strcmp(argv[i], "--shani-off") == 0) {
                         flags |= IMB_FLAG_SHANI_OFF;
-                } else if (strcmp(argv[i], "--gcm-job-api") == 0) {
-                        use_gcm_job_api = 1;
+                } else if (strcmp(argv[i], "--force-job-api") == 0) {
+                        use_job_api = 1;
                 } else if (strcmp(argv[i], "--gcm-sgl-api") == 0) {
                         use_gcm_sgl_api = 1;
                 } else if (strcmp(argv[i], "--quick") == 0) {
@@ -3801,14 +3889,15 @@ int main(int argc, char *argv[])
                 "Library version: %s\n",
                 sha_size_incr, IMB_VERSION_STR, imb_get_version_str());
 
-        fprintf(stderr, "API type: %s", str_api_list[test_api]);
-        if (test_api != TEST_API_JOB)
-                fprintf(stderr, " (burst size = %u)\n", burst_size);
-        else
-                fprintf(stderr, "\n");
-
-        fprintf(stderr, "GCM API type: %s\n",
-                use_gcm_job_api ? str_api_list[test_api] : "direct");
+        if (!use_job_api)
+                fprintf(stderr, "API type: direct\n");
+        else {
+                fprintf(stderr, "API type: %s", str_api_list[test_api]);
+                if (test_api != TEST_API_JOB)
+                        fprintf(stderr, " (burst size = %u)\n", burst_size);
+                else
+                        fprintf(stderr, "\n");
+        }
 
         if (custom_job_params.cipher_mode == TEST_GCM)
                 fprintf(stderr, "GCM AAD = %"PRIu64"\n", gcm_aad_size);
