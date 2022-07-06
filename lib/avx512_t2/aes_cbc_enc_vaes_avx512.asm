@@ -138,7 +138,6 @@ endstruc
 %endif
 	mov             r15, [GPR_SAVE_AREA + 8*3]
         add             rsp, STACK_size
-        vzeroupper
 %endmacro
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -549,7 +548,7 @@ endstruc
 %if %%MAC_TYPE == MAC_TYPE_XCBC
 %define %%KP    ARG + _aes_xcbc_args_key_tab
 %else
-%define %%KP    ARG + _aesarg_key_tab
+%define %%KP    ARG + _aes_args_key_tab
 %endif
 %define %%K00_03_OFFSET 0
 %define %%K04_07_OFFSET 64
@@ -752,9 +751,9 @@ endstruc
 
 
 %if %%MAC_TYPE == MAC_TYPE_XCBC
-%define %%KP    ARG + _aesxcbcarg_key_tab
+%define %%KP    ARG + _aes_xcbc_args_key_tab
 %else
-%define %%KP    ARG + _aesarg_key_tab
+%define %%KP    ARG + _aes_args_key_tab
 %endif
 %define %%K00_03_OFFSET 0
 %define %%K04_07_OFFSET 64
@@ -934,10 +933,10 @@ endstruc
 %define %%IV    ARG + _aes_xcbc_args_ICV
 %define %%IN    ARG + _aes_xcbc_args_in
 %else
-%define %%KP    ARG + _aesarg_key_tab
-%define %%IV    ARG + _aesarg_IV
-%define %%IN    ARG + _aesarg_in
-%define %%OUT   ARG + _aesarg_out
+%define %%KP    ARG + _aes_args_key_tab
+%define %%IV    ARG + _aes_args_IV
+%define %%IN    ARG + _aes_args_in
+%define %%OUT   ARG + _aes_args_out
 %endif
 
 ;; check if flush
