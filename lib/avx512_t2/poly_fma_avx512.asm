@@ -1449,8 +1449,6 @@ APPEND(%%_shuffle_blocks_, i):
         vmovdqa64 [rsp + _r_save + 64*5], zmm0
 %endif
 
-        vzeroupper
-
 %%_final_loop:
         cmp     %%LEN, POLY1305_BLOCK_SIZE
         jb      %%_poly1305_blocks_partial
@@ -1664,7 +1662,10 @@ APPEND(%%_shuffle_blocks_, i):
         mov     rsp, [rsp + _rsp_save]
 
 %ifdef SAFE_DATA
-       clear_scratch_gps_asm
+        clear_scratch_gps_asm
+        clear_all_zmms_asm
+%else
+        vzeroupper
 %endif ;; SAFE_DATA
 
 %endmacro
