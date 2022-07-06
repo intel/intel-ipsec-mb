@@ -191,7 +191,7 @@ align 16
 %%done:
 
 %ifdef SAFE_DATA
-        clear_all_ymms_asm
+        clear_all_zmms_asm
 %else
         vzeroupper
 %endif
