@@ -34,6 +34,12 @@
 ;;;  - type : function or data
 ;;;  - scope : internal, private, default
 %define MKGLOBAL(name,type,scope) global name %+ : %+ type scope
+
+;;; ABI function arguments
+%define arg1 rdi
+%define arg2 rsi
+%define arg3 rdx
+%define arg4 rcx
 %endif
 
 %ifdef WIN_ABI
@@ -42,6 +48,12 @@
 ;;;  - type : function or data
 ;;;  - scope : internal, private, default (ignored in win64 coff format)
 %define MKGLOBAL(name,type,scope) global name
+
+;;; ABI function arguments
+%define arg1 rcx
+%define arg2 rdx
+%define arg3 r8
+%define arg4 r9
 %endif
 
 section .bss
@@ -56,14 +68,74 @@ simd_regs:	resb	32*64
 
 section .text
 
+;; void *nosimd_memcpy(void *dst, const void *src, size_t n)
+MKGLOBAL(nosimd_memcpy,function,)
+align 16
+nosimd_memcpy:
+        pushfq
+        push    arg1
+        cld                     ;; increment dst/src pointers
+
+%ifdef WIN_ABI
+        push    rdi
+        push    rsi
+        mov     rdi, arg1       ;; arg1 = rcx
+        mov     rsi, arg2       ;; arg2 = rdx
+        mov     rcx, arg3       ;; arg3 = r8
+        rep movsb
+        pop     rsi
+        pop     rdi
+%endif
+
+%ifdef LINUX
+        ;; rdi = arg1
+        ;; rsi = arg2
+        mov     rcx, arg3       ;; arg3 = rdx
+        rep movsb
+%endif
+
+        pop     rax             ;; return `dst`
+        popfq
+        ret
+
+;; void *nosimd_memset(void *p, int c, size_t n)
+MKGLOBAL(nosimd_memset,function,)
+align 16
+nosimd_memset:
+        pushfq
+        push    arg1
+        cld                     ;; increment dst pointer
+
+%ifdef WIN_ABI
+        push    rdi
+        mov     rdi, arg1       ;; arg1 = rcx
+        mov     rax, arg2       ;; arg2 = rdx
+        mov     rcx, arg3       ;; arg3 = r8
+        rep stosb
+        pop     rdi
+%endif
+
+%ifdef LINUX
+        ;; rdi = arg1
+        mov     rax, arg2       ;; arg2 = rsi
+        mov     rcx, arg3       ;; arg3 = rdx
+        rep stosb
+%endif
+
+        pop     rax             ;; return `p`
+        popfq
+        ret
+
 ;; Returns RSP pointer with the value BEFORE the call, so 8 bytes need
 ;; to be added
 MKGLOBAL(rdrsp,function,)
+align 16
 rdrsp:
         lea rax, [rsp + 8]
         ret
 
 MKGLOBAL(dump_gps,function,)
+align 16
 dump_gps:
 
         mov     [rel gps],      rax
@@ -84,6 +156,7 @@ dump_gps:
         ret
 
 MKGLOBAL(dump_xmms_sse,function,)
+align 16
 dump_xmms_sse:
 
 %assign i 0
@@ -97,6 +170,7 @@ dump_xmms_sse:
         ret
 
 MKGLOBAL(dump_xmms_avx,function,)
+align 16
 dump_xmms_avx:
 
 %assign i 0
@@ -110,6 +184,7 @@ dump_xmms_avx:
         ret
 
 MKGLOBAL(dump_ymms,function,)
+align 16
 dump_ymms:
 
 %assign i 0
@@ -123,6 +198,7 @@ dump_ymms:
         ret
 
 MKGLOBAL(dump_zmms,function,)
+align 16
 dump_zmms:
 
 %assign i 0
@@ -140,6 +216,7 @@ dump_zmms:
 ;
 ; void clr_scratch_xmms_sse(void)
 MKGLOBAL(clr_scratch_xmms_sse,function,internal)
+align 16
 clr_scratch_xmms_sse:
 
 %ifdef LINUX
@@ -167,6 +244,7 @@ clr_scratch_xmms_sse:
 ;
 ; void clr_scratch_xmms_avx(void)
 MKGLOBAL(clr_scratch_xmms_avx,function,internal)
+align 16
 clr_scratch_xmms_avx:
 
 %ifdef LINUX
@@ -190,6 +268,7 @@ clr_scratch_xmms_avx:
 ;
 ; void clr_scratch_ymms(void)
 MKGLOBAL(clr_scratch_ymms,function,internal)
+align 16
 clr_scratch_ymms:
 ; On Linux, all YMM registers are scratch registers
 %ifdef LINUX
@@ -219,6 +298,7 @@ clr_scratch_ymms:
 ;
 ; void clr_scratch_zmms(void)
 MKGLOBAL(clr_scratch_zmms,function,internal)
+align 16
 clr_scratch_zmms:
 
 ; On Linux, all ZMM registers are scratch registers

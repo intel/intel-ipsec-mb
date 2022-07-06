@@ -55,4 +55,10 @@ void clr_scratch_xmms_avx(void);
 void clr_scratch_ymms(void);
 void clr_scratch_zmms(void);
 
+/* custom replacement for memset() */
+void *nosimd_memset(void *p, int c, size_t n);
+
+/* custom replacement for memcpy() */
+void *nosimd_memcpy(void *dst, const void *src, size_t n);
+
 #endif /* XVALIDAPP_MISC_H */
