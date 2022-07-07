@@ -26,15 +26,7 @@
 *******************************************************************************/
 
 #include "include/sha_mb_mgr.h"
-
-IMB_JOB *submit_job_sha1_avx512(MB_MGR_SHA_1_OOO *state, IMB_JOB *job);
-IMB_JOB *flush_job_sha1_avx512(MB_MGR_SHA_1_OOO *state, IMB_JOB *job);
-
-IMB_JOB *submit_job_sha224_avx512(MB_MGR_SHA_256_OOO *state, IMB_JOB *job);
-IMB_JOB *flush_job_sha224_avx512(MB_MGR_SHA_256_OOO *state, IMB_JOB *job);
-
-IMB_JOB *submit_job_sha256_avx512(MB_MGR_SHA_256_OOO *state, IMB_JOB *job);
-IMB_JOB *flush_job_sha256_avx512(MB_MGR_SHA_256_OOO *state, IMB_JOB *job);
+#include "include/arch_avx512_type1.h"
 
 /* ========================================================================== */
 /*

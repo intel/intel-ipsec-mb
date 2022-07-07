@@ -701,6 +701,10 @@ SUBMIT_JOB_HASH(IMB_MGR *state, IMB_JOB *job)
 #endif
                 return SUBMIT_JOB_SHA1(sha_1_ooo, job);
         case IMB_AUTH_SHA_224:
+#ifdef HASH_USE_SHAEXT
+                if (state->features & IMB_FEATURE_SHANI)
+                        return SUBMIT_JOB_SHA224_NI(sha_224_ooo, job);
+#endif
                 return SUBMIT_JOB_SHA224(sha_224_ooo, job);
         case IMB_AUTH_SHA_256:
 #ifdef HASH_USE_SHAEXT
@@ -878,6 +882,10 @@ FLUSH_JOB_HASH(IMB_MGR *state, IMB_JOB *job)
 #endif
                 return FLUSH_JOB_SHA1(sha_1_ooo, job);
         case IMB_AUTH_SHA_224:
+#ifdef HASH_USE_SHAEXT
+                if (state->features & IMB_FEATURE_SHANI)
+                        return FLUSH_JOB_SHA224_NI(sha_224_ooo, job);
+#endif
                 return FLUSH_JOB_SHA224(sha_224_ooo, job);
         case IMB_AUTH_SHA_256:
 #ifdef HASH_USE_SHAEXT

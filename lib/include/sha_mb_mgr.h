@@ -56,6 +56,9 @@ extern void call_sha256_x16_avx512_from_c(SHA256_ARGS *args,
 extern void call_sha1_ni_x2_sse_from_c(SHA1_ARGS *args,
                                        uint32_t size_in_blocks);
 
+extern void call_sha224_ni_x2_sse_from_c(SHA256_ARGS *args,
+                                         uint32_t size_in_blocks);
+
 extern void call_sha256_ni_x2_sse_from_c(SHA256_ARGS *args,
                                          uint32_t size_in_blocks);
 
@@ -117,6 +120,19 @@ void sha224_mb_init_digest(uint32_t *digest, const unsigned lane)
 }
 
 __forceinline
+void sha224_ni_mb_init_digest(uint32_t *digest, const unsigned lane)
+{
+        digest[8*lane + 0] = SHA224_H0;
+        digest[8*lane + 1] = SHA224_H1;
+        digest[8*lane + 2] = SHA224_H2;
+        digest[8*lane + 3] = SHA224_H3;
+        digest[8*lane + 4] = SHA224_H4;
+        digest[8*lane + 5] = SHA224_H5;
+        digest[8*lane + 6] = SHA224_H6;
+        digest[8*lane + 7] = SHA224_H7;
+}
+
+__forceinline
 void sha256_mb_init_digest(uint32_t *digest, const unsigned lane)
 {
         digest[lane + 0*16] = SHA256_H0;
@@ -160,6 +176,8 @@ sha_ni_mb_generic_init(void *digest, const int sha_type, const unsigned lane)
 {
         if (sha_type == 1)
                 sha1_ni_mb_init_digest(digest, lane);
+        else if (sha_type == 224)
+                sha224_ni_mb_init_digest(digest, lane);
         else if (sha_type == 256)
                 sha256_ni_mb_init_digest(digest, lane);
 }
@@ -187,6 +205,9 @@ void sha_ni_mb_generic_write_digest(void *dst, const void *src,
         if (sha_type == 1)
                 copy_bswap4_array_mb_ni(dst, src, NUM_SHA_DIGEST_WORDS,
                                         lane, 5);
+        else if (sha_type == 224)
+                copy_bswap4_array_mb_ni(dst, src, NUM_SHA_224_DIGEST_WORDS,
+                                        lane, 8);
         else if (sha_type == 256)
                 copy_bswap4_array_mb_ni(dst, src, NUM_SHA_256_DIGEST_WORDS,
                                         lane, 8);

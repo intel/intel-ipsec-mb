@@ -94,6 +94,8 @@
 #define FLUSH_JOB_SHA256    flush_job_sha256_sse
 #define SUBMIT_JOB_SHA1_NI    submit_job_sha1_ni_sse
 #define FLUSH_JOB_SHA1_NI     flush_job_sha1_ni_sse
+#define SUBMIT_JOB_SHA224_NI    submit_job_sha224_ni_sse
+#define FLUSH_JOB_SHA224_NI     flush_job_sha224_ni_sse
 #define SUBMIT_JOB_SHA256_NI    submit_job_sha256_ni_sse
 #define FLUSH_JOB_SHA256_NI     flush_job_sha256_ni_sse
 

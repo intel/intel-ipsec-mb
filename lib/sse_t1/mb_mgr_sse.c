@@ -100,6 +100,8 @@
 #define FLUSH_JOB_SHA256    flush_job_sha256_sse
 #define SUBMIT_JOB_SHA1_NI    submit_job_sha1_ni_sse
 #define FLUSH_JOB_SHA1_NI     flush_job_sha1_ni_sse
+#define SUBMIT_JOB_SHA224_NI    submit_job_sha224_ni_sse
+#define FLUSH_JOB_SHA224_NI     flush_job_sha224_ni_sse
 #define SUBMIT_JOB_SHA256_NI    submit_job_sha256_ni_sse
 #define FLUSH_JOB_SHA256_NI     flush_job_sha256_ni_sse
 
@@ -719,15 +721,22 @@ reset_ooo_mgrs(IMB_MGR *state)
         }
 #endif /* HASH_USE_SHAEXT */
 
-        /* Init SHA224 out-of-order fields */
-        ooo_mgr_sha256_reset(state->sha_224_ooo, SSE_NUM_SHA256_LANES);
+#ifdef HASH_USE_SHAEXT
+        if (state->features & IMB_FEATURE_SHANI) {
+                /* Init SHA224 NI out-of-order fields */
+                ooo_mgr_sha256_reset(state->sha_224_ooo, 2);
+        } else {
+                /* Init SHA224 out-of-order fields */
+                ooo_mgr_sha256_reset(state->sha_224_ooo, SSE_NUM_SHA256_LANES);
+        }
+#endif /* HASH_USE_SHAEXT */
 
 #ifdef HASH_USE_SHAEXT
         if (state->features & IMB_FEATURE_SHANI) {
-                /* Init SHA1 NI out-of-order fields */
+                /* Init SHA256 NI out-of-order fields */
                 ooo_mgr_sha256_reset(state->sha_256_ooo, 2);
         } else {
-                /* Init SHA1 out-of-order fields */
+                /* Init SHA256 out-of-order fields */
                 ooo_mgr_sha256_reset(state->sha_256_ooo, SSE_NUM_SHA256_LANES);
         }
 #endif /* HASH_USE_SHAEXT */
