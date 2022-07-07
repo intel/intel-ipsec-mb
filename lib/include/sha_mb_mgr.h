@@ -442,7 +442,10 @@ submit_flush_job_sha_1(MB_MGR_SHA_1_OOO *state, IMB_JOB *job,
         } while(state->lens[min_idx] != 0);
 
         ret_job = state->ldata[min_idx].job_in_lane;
-
+#ifdef SAFE_DATA
+        if (ret_job->msg_len_to_hash_in_bytes % blk_size)
+                memset(state->ldata[min_idx].extra_block, 0, blk_size);
+#endif
         /* put back processed packet into unused lanes, set job as complete */
         state->unused_lanes = (state->unused_lanes << 4) | min_idx;
         state->num_lanes_inuse--;
@@ -456,7 +459,6 @@ submit_flush_job_sha_1(MB_MGR_SHA_1_OOO *state, IMB_JOB *job,
                                             min_idx);
         ret_job->status |= IMB_STATUS_COMPLETED_AUTH;
         state->ldata[min_idx].job_in_lane = NULL;
-
         return ret_job;
 }
 
@@ -578,6 +580,10 @@ submit_flush_job_sha_256(MB_MGR_SHA_256_OOO *state, IMB_JOB *job,
         } while(state->lens[min_idx] != 0);
 
         ret_job = state->ldata[min_idx].job_in_lane;
+#ifdef SAFE_DATA
+        if (ret_job->msg_len_to_hash_in_bytes % blk_size)
+                memset(state->ldata[min_idx].extra_block, 0, blk_size);
+#endif
         /* put back processed packet into unused lanes, set job as complete */
         state->unused_lanes = (state->unused_lanes << 4) | min_idx;
         state->num_lanes_inuse--;
@@ -707,6 +713,10 @@ submit_flush_job_sha_512(MB_MGR_SHA_512_OOO *state, IMB_JOB *job,
         } while(state->lens[min_idx] != 0);
 
         ret_job = state->ldata[min_idx].job_in_lane;
+#ifdef SAFE_DATA
+        if (ret_job->msg_len_to_hash_in_bytes % blk_size)
+                memset(state->ldata[min_idx].extra_block, 0, blk_size);
+#endif
         /* put back processed packet into unused lanes, set job as complete */
         state->unused_lanes = (state->unused_lanes << 4) | min_idx;
         state->num_lanes_inuse--;
