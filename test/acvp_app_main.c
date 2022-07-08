@@ -293,7 +293,7 @@ static int aes_gcm_handler(ACVP_TEST_CASE *test_case)
                         if (use_gmac_api == 1) {
                                 gmac_init_var(&key, &ctx, tc->iv, tc->iv_len);
                                 gmac_update(&key, &ctx, tc->aad, tc->aad_len);
-                                gmac_finalize(&key, &ctx, tc->tag, tc->tag_len);
+                                gmac_finalize(&key, &ctx, res_tag, tc->tag_len);
                         } else {
                                 gcm_init_var_iv(&key, &ctx, tc->iv, tc->iv_len,
                                                 tc->aad, tc->aad_len);
