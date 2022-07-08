@@ -50,7 +50,7 @@
 ;%define DO_DBGPRINT
 %include "include/dbgprint.asm"
 
-extern sha1_ni
+extern sha1_ni_x1
 
 mksection .rodata
 default rel
@@ -66,9 +66,11 @@ mksection .text
 %ifdef LINUX
 %define arg1	rdi
 %define arg2	rsi
+%define arg3    rdx
 %else
 %define arg1	rcx
 %define arg2	rdx
+%define arg3    r8
 %endif
 
 %define state	arg1
@@ -93,8 +95,8 @@ mksection .text
 %define extra_blocks    arg2
 %define p               arg2
 
-%define tmp4		r8
-%define p2		r8
+%define tmp4		r9
+%define p2		r9
 
 ; This routine clobbers rbx, rbp
 struc STACK
@@ -133,27 +135,19 @@ flush_job_hmac_ni_sse:
 	DBGPRINTL64 "idx:", idx
 
 copy_lane_data:
-	; copy valid lane (idx) to empty lanes
-	mov	tmp, [state + _args_data_ptr + PTR_SZ*idx]
 	movzx	len2, word [state + _lens + idx*2]
-
-	DBGPRINTL64 "ptr", tmp
-
-	; there are only two lanes so if one is empty it is easy to determine which one
-	xor	idx, 1
-	mov	[state + _args_data_ptr + PTR_SZ*idx], tmp
-	xor	idx, 1
+        mov     arg3, idx
 
 	; No need to find min length - only two lanes available
         cmp	len2, 0
         je	len_is_0
 
-	; Set length on both lanes to 0
-	mov	dword [state + _lens], 0
+	; Set length on lane to 0
+	mov	word [state + _lens + idx*2], 0
 
 	; "state" and "args" are the same address, arg1
 	; len is arg2
-	call	sha1_ni
+	call	sha1_ni_x1
 	; state is intact
 
 len_is_0:

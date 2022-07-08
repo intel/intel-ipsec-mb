@@ -227,6 +227,7 @@ lib_objs1 = \
 	$(OBJ_DIR)\sha1_x4_avx.obj \
 	$(OBJ_DIR)\sha1_x4_sse.obj \
 	$(OBJ_DIR)\sha1_ni_x2_sse.obj \
+	$(OBJ_DIR)\sha1_ni_x1_sse.obj \
 	$(OBJ_DIR)\sha1_one_block_avx.obj \
 	$(OBJ_DIR)\sha1_one_block_sse.obj \
 	$(OBJ_DIR)\sha1_x8_avx2.obj \

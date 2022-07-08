@@ -407,6 +407,7 @@ asm_sse_lib_objs := \
 	sha512_x2_sse.o \
 	sha256_mult_sse.o \
 	sha1_ni_x2_sse.o \
+	sha1_ni_x1_sse.o \
 	sha256_ni_x2_sse.o \
 	zuc_x4_sse.o \
 	zuc_x4_gfni_sse.o \
