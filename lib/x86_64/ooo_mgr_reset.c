@@ -365,7 +365,7 @@ void ooo_mgr_sha512_reset(void *p_ooo_mgr, const unsigned num_lanes)
 {
         MB_MGR_SHA_512_OOO *p_mgr = (MB_MGR_SHA_512_OOO *) p_ooo_mgr;
 
-        memset(p_mgr, 0, sizeof(*p_mgr));
+        memset(p_mgr, 0, offsetof(MB_MGR_SHA_512_OOO,road_block));
 
         if (num_lanes == AVX_NUM_SHA512_LANES)
                 p_mgr->unused_lanes = 0xF10;
