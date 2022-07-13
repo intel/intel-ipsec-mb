@@ -512,6 +512,81 @@ static int aes_ccm_handler(ACVP_TEST_CASE *test_case)
         return EXIT_SUCCESS;
 }
 
+static int aes_cmac_handler(ACVP_TEST_CASE *test_case)
+{
+        ACVP_CMAC_TC *tc;
+        IMB_JOB *job = NULL;
+        DECLARE_ALIGNED(uint32_t expkey[4*15], 16);
+        DECLARE_ALIGNED(uint32_t dust[4*15], 16);
+        uint32_t skey1[4], skey2[4];
+        uint8_t res_tag[MAX_TAG_LENGTH] = {0};
+
+        if (test_case == NULL)
+                return EXIT_FAILURE;
+
+        tc = test_case->tc.cmac;
+
+        switch (tc->key_len) {
+        case 16:
+                IMB_AES_KEYEXP_128(mb_mgr, tc->key, expkey, dust);
+                IMB_AES_CMAC_SUBKEY_GEN_128(mb_mgr, expkey, skey1, skey2);
+                break;
+        case 32:
+                IMB_AES_KEYEXP_256(mb_mgr, tc->key, expkey, dust);
+                IMB_AES_CMAC_SUBKEY_GEN_256(mb_mgr, expkey, skey1, skey2);
+                break;
+        default:
+                fprintf(stderr, "Unsupported AES key length\n");
+                return EXIT_FAILURE;
+        }
+
+        job = IMB_GET_NEXT_JOB(mb_mgr);
+        job->key_len_in_bytes = tc->key_len;
+        job->cipher_mode = IMB_CIPHER_NULL;
+
+        if (tc->key_len == 32)
+                job->hash_alg = IMB_AUTH_AES_CMAC_256;
+        else
+                job->hash_alg = IMB_AUTH_AES_CMAC;
+
+        job->cipher_start_src_offset_in_bytes = 0;
+        job->hash_start_src_offset_in_bytes = 0;
+        job->u.CMAC._key_expanded = expkey;
+        job->u.CMAC._skey1 = skey1;
+        job->u.CMAC._skey2 = skey2;
+        job->src = tc->msg;
+        job->msg_len_to_hash_in_bytes = tc->msg_len;
+        job->auth_tag_output_len_in_bytes = tc->mac_len;
+
+        if (tc->verify == 1)
+                job->auth_tag_output = res_tag;
+        else /* verify == 0 */
+                job->auth_tag_output = tc->mac;
+
+        job = IMB_SUBMIT_JOB(mb_mgr);
+        if (job == NULL)
+                job = IMB_FLUSH_JOB(mb_mgr);
+        if (job->status != IMB_STATUS_COMPLETED) {
+                fprintf(stderr, "Invalid job\n");
+                return EXIT_FAILURE;
+        }
+
+        if (tc->verify == 1) {
+                if (memcmp(res_tag, tc->mac, tc->mac_len != 0)) {
+                        if (verbose) {
+                                hexdump(stdout, "result tag: ",
+                                        res_tag, (tc->mac_len));
+                                hexdump(stdout, "reference tag: ",
+                                        tc->mac, tc->mac_len);
+                                fprintf(stderr, "Invalid tag\n");
+                        }
+                        tc->ver_disposition = ACVP_TEST_DISPOSITION_FAIL;
+                } else
+                        tc->ver_disposition = ACVP_TEST_DISPOSITION_PASS;
+        }
+        return EXIT_SUCCESS;
+}
+
 static void usage(const char *app_name)
 {
         fprintf(stderr, "Usage: %s --req FILENAME --resp FILENAME [opt args], "
@@ -629,6 +704,10 @@ int main(int argc, char **argv)
 
         if (acvp_cap_sym_cipher_enable(ctx, ACVP_AES_CCM,
                                        &aes_ccm_handler) != ACVP_SUCCESS)
+                goto exit;
+
+        if (acvp_cap_cmac_enable(ctx, ACVP_CMAC_AES,
+                                &aes_cmac_handler) != ACVP_SUCCESS)
                 goto exit;
 
         /* Allocate and initialize MB_MGR */

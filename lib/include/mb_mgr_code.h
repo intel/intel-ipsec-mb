@@ -2057,8 +2057,9 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job,
                 }
                 /* T is 128 bits but 96 bits is also allowed due to
                  * IPsec use case (RFC 4494) and 32 bits for CMAC 3GPP.
+                 * ACVP validation requires tag size of 8 bits.
                  */
-                if (job->auth_tag_output_len_in_bytes < UINT64_C(4) ||
+                if (job->auth_tag_output_len_in_bytes < UINT64_C(1) ||
                     job->auth_tag_output_len_in_bytes > UINT64_C(16)) {
                         imb_set_errno(state, IMB_ERR_JOB_AUTH_TAG_LEN);
                         return 1;
