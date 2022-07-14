@@ -90,7 +90,7 @@ CC_HAS_CET = $(and $(shell $(CC) --target-help 2> /dev/null | grep -m1 -e "-z ib
 	$(shell $(CC) --help=common 2> /dev/null | grep -m1 -e "-fcf-protection" | wc -l))
 CET_LDFLAGS=-r -z ibt -z shstk
 endif
-CFLAGS := -DNO_COMPAT_IMB_API_053 $(EXTRA_CFLAGS) $(INCLUDES) \
+CFLAGS := -fPIC -DNO_COMPAT_IMB_API_053 $(EXTRA_CFLAGS) $(INCLUDES) \
 	-W -Wall -Wextra -Wmissing-declarations -Wpointer-arith \
 	-Wcast-qual -Wundef -Wwrite-strings  \
 	-Wformat -Wformat-security \
@@ -210,7 +210,6 @@ endif
 
 # so or static build
 ifeq ($(SHARED),y)
-CFLAGS += -fPIC
 ifneq ($(MINGW),0)
 LIBNAME = $(LIB).dll
 else
@@ -222,7 +221,6 @@ ifeq ($(CC_HAS_CET),1)
 LDFLAGS += -fcf-protection=full -Wl,-z,ibt -Wl,-z,shstk -Wl,-z,cet-report=error
 endif
 else
-CFLAGS += -fPIE
 LIBNAME = $(LIB).a
 LIBPERM = 0644
 LDFLAGS += -g
