@@ -714,34 +714,31 @@ reset_ooo_mgrs(IMB_MGR *state)
         ooo_mgr_aes_reset(state->aes128_cbcs_ooo, 4);
 
 #ifdef HASH_USE_SHAEXT
-        if (state->features & IMB_FEATURE_SHANI) {
+        if (state->features & IMB_FEATURE_SHANI)
                 /* Init SHA1 NI out-of-order fields */
                 ooo_mgr_sha1_reset(state->sha_1_ooo, 2);
-        } else {
+        else
+#endif /* HASH_USE_SHAEXT */
                 /* Init SHA1 out-of-order fields */
                 ooo_mgr_sha1_reset(state->sha_1_ooo, SSE_NUM_SHA1_LANES);
-        }
-#endif /* HASH_USE_SHAEXT */
 
 #ifdef HASH_USE_SHAEXT
-        if (state->features & IMB_FEATURE_SHANI) {
+        if (state->features & IMB_FEATURE_SHANI)
                 /* Init SHA224 NI out-of-order fields */
                 ooo_mgr_sha256_reset(state->sha_224_ooo, 2);
-        } else {
+        else
+#endif /* HASH_USE_SHAEXT */
                 /* Init SHA224 out-of-order fields */
                 ooo_mgr_sha256_reset(state->sha_224_ooo, SSE_NUM_SHA256_LANES);
-        }
-#endif /* HASH_USE_SHAEXT */
 
 #ifdef HASH_USE_SHAEXT
-        if (state->features & IMB_FEATURE_SHANI) {
+        if (state->features & IMB_FEATURE_SHANI)
                 /* Init SHA256 NI out-of-order fields */
                 ooo_mgr_sha256_reset(state->sha_256_ooo, 2);
-        } else {
+        else
+#endif /* HASH_USE_SHAEXT */
                 /* Init SHA256 out-of-order fields */
                 ooo_mgr_sha256_reset(state->sha_256_ooo, SSE_NUM_SHA256_LANES);
-        }
-#endif /* HASH_USE_SHAEXT */
 
         /* Init SHA512 out-of-order fields */
         ooo_mgr_sha512_reset(state->sha_512_ooo, SSE_NUM_SHA512_LANES);
