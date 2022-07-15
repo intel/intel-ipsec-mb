@@ -565,33 +565,26 @@
         or      %%SIZE, %%SIZE
         je      %%end_load
 %endif
-        cmp     %%SIZE, 1
-        je      %%_size_1
         cmp     %%SIZE, 2
+        jb      %%_size_1
         je      %%_size_2
-        cmp     %%SIZE, 3
-        je      %%_size_3
         cmp     %%SIZE, 4
+        jb      %%_size_3
         je      %%_size_4
-        cmp     %%SIZE, 5
-        je      %%_size_5
         cmp     %%SIZE, 6
+        jb      %%_size_5
         je      %%_size_6
-        cmp     %%SIZE, 7
-        je      %%_size_7
         cmp     %%SIZE, 8
+        jb      %%_size_7
         je      %%_size_8
-        cmp     %%SIZE, 9
-        je      %%_size_9
         cmp     %%SIZE, 10
+        jb      %%_size_9
         je      %%_size_10
-        cmp     %%SIZE, 11
-        je      %%_size_11
         cmp     %%SIZE, 12
+        jb      %%_size_11
         je      %%_size_12
-        cmp     %%SIZE, 13
-        je      %%_size_13
         cmp     %%SIZE, 14
+        jb      %%_size_13
         je      %%_size_14
 
 %%_size_15:
@@ -654,12 +647,29 @@
         sub     %%TMP, 16
 
 %%_check_size:
-%assign %%I 1
-%rep 16
-        cmp     %%TMP, %%I
-        je      APPEND(%%_size_, %%I)
-%assign %%I (%%I+1)
-%endrep
+        cmp     %%TMP, 2
+        jb      %%_size_1
+        je      %%_size_2
+        cmp     %%TMP, 4
+        jb      %%_size_3
+        je      %%_size_4
+        cmp     %%TMP, 6
+        jb      %%_size_5
+        je      %%_size_6
+        cmp     %%TMP, 8
+        jb      %%_size_7
+        je      %%_size_8
+        cmp     %%TMP, 10
+        jb      %%_size_9
+        je      %%_size_10
+        cmp     %%TMP, 12
+        jb      %%_size_11
+        je      %%_size_12
+        cmp     %%TMP, 14
+        jb      %%_size_13
+        je      %%_size_14
+        cmp     %%TMP, 15
+        je      %%_size_15
 
 %%_size_16:
         vmovdqu XWORD(%%DST), [%%IDX]
