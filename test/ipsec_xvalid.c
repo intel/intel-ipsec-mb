@@ -1701,7 +1701,7 @@ perform_safe_checks(IMB_MGR *mgr, const IMB_ARCH arch, const char *dir)
                         "aes256_ccm_ooo", "aes256_cmac_ooo",
                         "snow3g_uea2_ooo", "snow3g_uia2_ooo",
                         "sha_1_ooo", "sha_224_ooo", "sha_256_ooo",
-                        "sha_512_ooo",
+                        "sha_384_ooo", "sha_512_ooo",
                         "end_ooo" /* add new ooo manager above this line */
                 };
                 void *ooo_mgr_p = *ooo_ptr;
