@@ -68,4 +68,24 @@ memcpy_fn_sse_128:
 
         ret
 
+MKGLOBAL(safe_memcpy,function,internal)
+safe_memcpy:
+%ifndef LINUX
+        ;; save rdi and rsi
+        mov     rax, rdi
+        mov     r9,  rsi
+
+        mov     rdi, arg1
+        mov     rsi, arg2
+%endif
+        mov     rcx, arg3
+        rep     movsb
+
+%ifndef LINUX
+        ;; restore rdi and rsi
+        mov     rdi, rax
+        mov     rsi, r9
+%endif
+        ret
+
 mksection stack-noexec

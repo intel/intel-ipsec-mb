@@ -42,6 +42,7 @@
 #include "wireless_common.h"
 #include "include/clear_regs_mem.h"
 #include "include/constant_lookup.h"
+#include "memcpy.h"
 #include "error.h"
 
 /*---------------------------------------------------------------------
@@ -1680,7 +1681,7 @@ kasumi_f9_1_buffer(const kasumi_key_sched_t *pCtx, const void *dataIn,
 
                 /* Not a whole 8 byte block remaining */
                 mask.b64[0] = ~(mask.b64[0] >> (BYTESIZE * lengthInBytes));
-                memcpy(&safeBuf.b64, pIn, lengthInBytes);
+                safe_memcpy(&safeBuf.b64, pIn, lengthInBytes);
                 mask.b64[0] &= BSWAP64(safeBuf.b64);
                 a.b64[0] ^= mask.b64[0];
 
@@ -1768,7 +1769,7 @@ kasumi_f9_1_buffer_user(const kasumi_key_sched_t *pCtx, const uint64_t IV,
                 message.b64[0] = 0;
                 mask.b64[0] = ~(mask.b64[0] >> lengthInBits);
                 /*round up and copy last lengthInBits */
-                memcpy(&safebuff.b64[0], pIn, (lengthInBits + 7) / 8);
+                safe_memcpy(&safebuff.b64[0], pIn, (lengthInBits + 7) / 8);
                 message.b64[0] = BSWAP64(safebuff.b64[0]);
                 temp.b64[0] = mask.b64[0] & message.b64[0];
                 temp.b64[0] |=
