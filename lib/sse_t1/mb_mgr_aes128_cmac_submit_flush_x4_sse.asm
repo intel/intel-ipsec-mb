@@ -240,7 +240,7 @@ endstruc
         shl     tmp3, 4
         add     tmp, tmp3
 
-        memcpy_sse_16 m_last, tmp, r, tmp4, iv
+        memcpy_sse_16 m_last, tmp, r, tmp4, tmp3
 
         ;; src + n + r
         mov     tmp3, [job + _skey2]
