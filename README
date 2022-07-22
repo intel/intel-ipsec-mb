@@ -12,8 +12,8 @@ The library provides software crypto acceleration primarily targeting
 packet processing applications. It can be used for application such as:
 IPsec, TLS, Wireless (RAN), Cable or MPEG DRM.
 
-The library is used as software crypto provider in DPDK, Intel(R) QAT
-Engine and FD.io.
+The library is is hosted on GitHub and is used as software crypto
+provider in DPDK, Intel(R) QAT Engine and FD.io.
 
 Using crypto interfaces from the above frameworks gives freedom to
 change providers without subsequent application modifications. The
@@ -312,7 +312,18 @@ https://github.com/intel/intel-ipsec-mb/releases
 
 
 
-5. COMPILATION
+5. DOCUMENTATION
+
+
+Full documentation can be found at:
+https://intel.github.io/intel-ipsec-mb
+
+To generate documentation locally, run:
+> make doxy
+
+
+
+6. COMPILATION
 
 
 Linux (64-bit only)
@@ -451,7 +462,7 @@ For more build options and their explanation run:
 
 
 
-6. SECURITY CONSIDERATIONS & OPTIONS FOR INCREASED SECURITY
+7. SECURITY CONSIDERATIONS & OPTIONS FOR INCREASED SECURITY
 
 
 Security Considerations
@@ -558,7 +569,7 @@ details, trade offs and mitigations of using shorter tag sizes.
 
 
 
-7. INSTALLATION
+8. INSTALLATION
 
 
 Linux (64-bit only)
@@ -623,7 +634,7 @@ install it using SHARED=n option:
 
 
 
-8. BACKWARDS COMPATIBILITY
+9. BACKWARDS COMPATIBILITY
 
 
 In version 0.54, some symbols have been renamed to avoid too generic
@@ -643,7 +654,7 @@ which will not export the old symbols.
 
 
 
-9. DISCLAIMER (ZUC, KASUMI, SNOW3G)
+10. DISCLAIMER (ZUC, KASUMI, SNOW3G)
 
 
 Please note that cryptographic material, such as ciphering algorithms,
@@ -658,7 +669,7 @@ https://www.etsi.org/security-algorithms-and-codes/cellular-algorithm-licences
 
 
 
-10. LEGAL DISCLAIMER
+11. LEGAL DISCLAIMER
 
 
 THIS SOFTWARE IS PROVIDED BY INTEL“AS IS”. NO LICENSE, EXPRESS OR

@@ -12,8 +12,9 @@
 The library provides software crypto acceleration primarily targeting packet processing
 applications. It can be used for application such as: IPsec, TLS, Wireless (RAN), Cable or MPEG DRM.
 
-The library is used as software crypto provider in [DPDK](https://www.dpdk.org/),
-[Intel(R) QAT Engine](https://github.com/intel/QAT_Engine) and [FD.io](https://fd.io/).
+The library is is hosted on [GitHub](https://github.com/intel/intel-ipsec-mb) and is used as software crypto
+provider in [DPDK](https://www.dpdk.org/), [Intel(R) QAT Engine](https://github.com/intel/QAT_Engine)
+and [FD.io](https://fd.io/).
 
 Using crypto interfaces from the above frameworks gives freedom to change providers
 without subsequent application modifications. The library can also be used directly
@@ -299,8 +300,15 @@ Code taken from the tip of the master branch should not be considered fit for pr
 Refer to the releases tab for stable code versions:  
 https://github.com/intel/intel-ipsec-mb/releases
 
+5\. Documentation
+===============
 
-5\. Compilation
+Full documentation can be found at: https://intel.github.io/intel-ipsec-mb
+
+To generate documentation locally, run:  
+`> make doxy`
+
+6\. Compilation
 ===============
 
 Linux (64-bit only)
@@ -431,7 +439,7 @@ Build with debugging information:
 For more build options and their explanation run:   
 `> gmake help`
 
-6\. Security Considerations & Options for Increased Security
+7\. Security Considerations & Options for Increased Security
 ============================================================
 
 ### Security Considerations
@@ -521,7 +529,7 @@ The library GCM and GMAC implementation provides flexibility as to tag size sele
 As explained in [NIST Special Publication 800-38D](https://csrc.nist.gov/publications/detail/sp/800-38d/final) section 5.2.1.2 and Appendix C, using tag sizes shorter than 96 bits can be insecure.
 Please refer to the aforementioned sections to understand the details, trade offs and mitigations of using shorter tag sizes.
 
-7\. Installation
+8\. Installation
 ================
 
 Linux (64-bit only)
@@ -578,7 +586,7 @@ If there is no need to run ldconfig at install stage please use NOLDCONFIG=y opt
 If library was compiled as an archive (not a default option) then install it using SHARED=n option:   
 `> sudo gmake install SHARED=n`
 
-8\. Backwards compatibility
+9\. Backwards compatibility
 ===========================
 
 In version 0.54, some symbols have been renamed to avoid too generic names (such as cipher modes or
@@ -594,7 +602,7 @@ For applications which face symbol conflicts due to these old generic names,
 they should be compiled with the flag -DNO_COMPAT_IMB_API_053, which will
 not export the old symbols.
 
-9\. Disclaimer (ZUC, KASUMI, SNOW3G)
+10\. Disclaimer (ZUC, KASUMI, SNOW3G)
 ====================================
 
 Please note that cryptographic material, such as ciphering algorithms, may be
@@ -606,7 +614,7 @@ For more details please see:
 - GSMA https://www.gsma.com/security/security-algorithms/  
 - ETSI https://www.etsi.org/security-algorithms-and-codes/cellular-algorithm-licences
 
-10\. Legal Disclaimer
+11\. Legal Disclaimer
 ====================
 
 THIS SOFTWARE IS PROVIDED BY INTEL"AS IS". NO LICENSE, EXPRESS OR   
