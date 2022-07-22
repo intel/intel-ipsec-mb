@@ -60,6 +60,7 @@ section .bss
 default rel
 
 MKGLOBAL(gps,data,)
+align 8
 gps:	        resq	14
 
 MKGLOBAL(simd_regs,data,)
@@ -67,6 +68,17 @@ alignb 64
 simd_regs:	resb	32*64
 
 section .text
+
+;; uint32_t avx_sse_transition_check(void)
+MKGLOBAL(avx_sse_transition_check,function,)
+align 16
+avx_sse_transition_check:
+        mov     ecx, 1
+        xgetbv
+        ;; result goes to edx:eax
+        ;; we care about bits 2 and 6 only
+        and     eax, (1 << 2) | (1 << 6)
+        ret
 
 ;; void *nosimd_memcpy(void *dst, const void *src, size_t n)
 MKGLOBAL(nosimd_memcpy,function,)
