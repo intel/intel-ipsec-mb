@@ -31,6 +31,8 @@
 %include "include/cet.inc"
 %include "include/reg_sizes.asm"
 %include "include/const.inc"
+%include "include/clear_regs.asm"
+
 %ifndef AES_CBC_ENC_X16
 %define AES_CBC_ENC_X16 aes_cbc_enc_128_vaes_avx512
 %define NUM_KEYS 11
@@ -252,13 +254,14 @@ len_is_0:
         vmovdqa [state + _aesarg_key_tab + round * (16*16) + idx], xmm0
 %assign round (round + 1)
 %endrep
-
 %endif
 
 return:
-%ifndef SAFE_DATA
+%ifdef SAFE_DATA
+	clear_all_zmms_asm
+%else
         vzeroupper
-%endif
+%endif ;; SAFE_DATA
         mov     rbx, [rsp + _gpr_save + 8*0]
         mov     rbp, [rsp + _gpr_save + 8*1]
         mov     r12, [rsp + _gpr_save + 8*2]
