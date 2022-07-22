@@ -662,6 +662,7 @@ IMB_JOB *aead_chacha20_poly1305(IMB_JOB *job, const IMB_ARCH arch,
                            for Poly key */
                         submit_job_chacha20_poly_dec_avx512(job, ks + 64,
                                                             len_to_gen - 64);
+                        break;
                 }
         }
 

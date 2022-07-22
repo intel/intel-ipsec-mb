@@ -1321,7 +1321,10 @@ APPEND(%%_shuffle_blocks_, i):
         mov     rsp, [rsp + _rsp_save]
 
 %ifdef SAFE_DATA
-       clear_scratch_gps_asm
+        clear_scratch_gps_asm
+        clear_all_zmms_asm
+%else
+        vzeroupper
 %endif ;; SAFE_DATA
 
 %endmacro
