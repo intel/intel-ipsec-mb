@@ -1117,13 +1117,6 @@ aes_xcbc_mac_128_vaes_avx512:
         FUNC_SAVE
         CBC_ENC 9, MAC_TYPE_XCBC, SUBMIT
         FUNC_RESTORE
-
-%ifdef SAFE_DATA
-	clear_all_zmms_asm
-%else
-        vzeroupper
-%endif ;; SAFE_DATA
-
         ret
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1223,13 +1216,6 @@ aes_xcbc_mac_128_flush_vaes_avx512:
         FUNC_SAVE
         CBC_ENC 9, MAC_TYPE_XCBC, FLUSH
         FUNC_RESTORE
-
-%ifdef SAFE_DATA
-	clear_all_zmms_asm
-%else
-        vzeroupper
-%endif ;; SAFE_DATA
-
         ret
 
 mksection stack-noexec

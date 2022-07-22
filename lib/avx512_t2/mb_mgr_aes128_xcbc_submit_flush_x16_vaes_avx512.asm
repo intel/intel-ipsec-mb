@@ -32,6 +32,7 @@
 %include "include/reg_sizes.asm"
 %include "include/memcpy.asm"
 %include "include/const.inc"
+%include "include/clear_regs.asm"
 
 %ifndef AES_XCBC_X16
 %define AES_XCBC_X16 aes_xcbc_mac_128_vaes_avx512
@@ -370,7 +371,7 @@ endstruc
         vmovdqu8 [icv]{k1}, xmm0
 
 %ifdef SAFE_DATA
-        vpxor   ymm0, ymm0
+        vpxor   xmm0, xmm0, xmm0
         ;; Clear final block (32 bytes)
         vmovdqa [lane_data + _xcbc_final_block], ymm0
 
@@ -380,12 +381,15 @@ endstruc
         vmovdqa [state + _aes_xcbc_args_key_tab + round * (16*16) + idx], xmm0
 %assign round (round + 1)
 %endrep
-
-%else
-        vzeroupper
 %endif
 
 %%_return:
+
+%ifdef SAFE_DATA
+	clear_all_zmms_asm
+%else
+        vzeroupper
+%endif ;; SAFE_DATA
 
 	mov	rbx, [rsp + _gpr_save + 8*0]
 	mov	rbp, [rsp + _gpr_save + 8*1]
