@@ -690,6 +690,31 @@ uint8_t dec_archs[IMB_ARCH_NUM] = {0, 0, 1, 1, 1, 1};
 
 uint64_t flags = 0; /* flags passed to alloc_mb_mgr() */
 
+int is_avx_sse_check_possible = -1; /* -1 => detect, 0 => not possible, 1 => possible */
+
+static void
+avx_sse_check(const char *ctx_str,
+              const unsigned hash_alg,
+              const unsigned cipher_mode)
+{
+        if (!is_avx_sse_check_possible)
+                return;
+
+        if (is_avx_sse_check_possible == -1)
+                is_avx_sse_check_possible = avx_sse_detectability();
+
+        const uint32_t avx_sse_flag = avx_sse_transition_check();
+
+        if (avx_sse_flag & MISC_AVX_SSE_ZMM0_15_ISSUE)
+                printf("AVX-SSE transition after %s in ZMM0-ZMM15: "
+                       "hash_alg = %u, cipher_mode = %u, flag 0x%x\n",
+                       ctx_str, hash_alg, cipher_mode, avx_sse_flag);
+        else if (avx_sse_flag & MISC_AVX_SSE_YMM0_15_ISSUE)
+                printf("AVX-SSE transition after %s in YMM0-YMM15: "
+                       "hash_alg = %u, cipher_mode = %u, flag 0x%x\n",
+                       ctx_str, hash_alg, cipher_mode, avx_sse_flag);
+}
+
 static void
 clear_data(struct data *data)
 {
@@ -1960,6 +1985,9 @@ do_test(IMB_MGR *enc_mb_mgr, const IMB_ARCH enc_arch,
                  * other functions from storing sensitive data in stack */
                 job = IMB_SUBMIT_JOB(enc_mb_mgr);
 
+                avx_sse_check("enc-submit", (unsigned) params->hash_alg,
+                              (unsigned) params->cipher_mode);
+
                 if (job) {
                         unsigned idx = (unsigned)((uintptr_t) job->user_data);
 
@@ -1994,6 +2022,10 @@ do_test(IMB_MGR *enc_mb_mgr, const IMB_ARCH enc_arch,
         /* Flush rest of the jobs, if there are outstanding jobs */
         while (num_processed_jobs != num_jobs) {
                 job = IMB_FLUSH_JOB(enc_mb_mgr);
+
+                avx_sse_check("enc-flush", (unsigned) params->hash_alg,
+                              (unsigned) params->cipher_mode);
+
                 while (job != NULL) {
                         unsigned idx = (unsigned)((uintptr_t) job->user_data);
 
@@ -2079,6 +2111,9 @@ do_test(IMB_MGR *enc_mb_mgr, const IMB_ARCH enc_arch,
                  * other functions from storing sensitive data in stack */
                 job = IMB_SUBMIT_JOB(dec_mb_mgr);
 
+                avx_sse_check("dec-submit", (unsigned) params->hash_alg,
+                              (unsigned) params->cipher_mode);
+
                 if (job != NULL) {
                         unsigned idx = (unsigned)((uintptr_t) job->user_data);
 
@@ -2104,6 +2139,10 @@ do_test(IMB_MGR *enc_mb_mgr, const IMB_ARCH enc_arch,
         /* Flush rest of the jobs, if there are outstanding jobs */
         while (num_processed_jobs != num_jobs) {
                 job = IMB_FLUSH_JOB(dec_mb_mgr);
+
+                avx_sse_check("dec-flush", (unsigned) params->hash_alg,
+                              (unsigned) params->cipher_mode);
+
                 while (job != NULL) {
                         unsigned idx = (unsigned)((uintptr_t) job->user_data);
 
