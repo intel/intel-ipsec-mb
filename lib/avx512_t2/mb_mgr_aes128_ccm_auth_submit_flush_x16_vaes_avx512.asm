@@ -32,6 +32,7 @@
 %include "include/reg_sizes.asm"
 %include "include/const.inc"
 %include "include/memcpy.asm"
+%include "include/clear_regs.asm"
 
 %ifndef AES_CBC_MAC
 %define AES_CBC_MAC aes128_cbc_mac_vaes_avx512
@@ -602,7 +603,9 @@ endstruc
 %endif ;; SAFE_DATA
 
 %%_return:
-%ifndef SAFE_DATA
+%ifdef SAFE_DATA
+        clear_all_zmms_asm
+%else
         vzeroupper
 %endif
         mov     rbx, [rsp + _gpr_save + 8*0]
