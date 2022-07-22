@@ -51,6 +51,8 @@
 ;; %define DO_DBGPRINT
 %include "include/dbgprint.asm"
 
+%use smartalign
+
 extern sha1_x16_avx512
 
 mksection .rodata
@@ -213,7 +215,6 @@ ge64_bytes:
 	mov	DWORD(num_lanes_inuse), [state + _num_lanes_inuse_sha1]
         cmp	num_lanes_inuse, 0x10 ; all 16 lanes used?
         jne	return_null
-        jmp	start_loop
 
         align	16
 start_loop:
@@ -381,13 +382,12 @@ clear_ret:
         mov     dword [lane_data + _outer_block + 16], 0
 %endif
 
+return:
 %ifdef SAFE_DATA
         clear_all_zmms_asm
 %else
         vzeroupper
 %endif
-
-return:
 
         DBGPRINTL "---------- exit sha1 submit -----------"
         mov	rbp, [rsp + _gpr_save + 8*0]
