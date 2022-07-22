@@ -12,7 +12,7 @@
 The library provides software crypto acceleration primarily targeting packet processing
 applications. It can be used for application such as: IPsec, TLS, Wireless (RAN), Cable or MPEG DRM.
 
-The library is is hosted on [GitHub](https://github.com/intel/intel-ipsec-mb) and is used as software crypto
+The library is hosted on [GitHub](https://github.com/intel/intel-ipsec-mb) and is used as software crypto
 provider in [DPDK](https://www.dpdk.org/), [Intel(R) QAT Engine](https://github.com/intel/QAT_Engine)
 and [FD.io](https://fd.io/).
 
@@ -35,12 +35,13 @@ Contents
 2. Processor Extensions
 3. Recommendations
 4. Package Content
-5. Compilation
-6. Security Considerations & Options for Increased Security
-7. Installation
-8. Backwards compatibility
-9. Disclaimer (ZUC, KASUMI, SNOW3G)
-10. Legal Disclaimer
+5. Documentation
+6. Compilation
+7. Security Considerations & Options for Increased Security
+8. Installation
+9. Backwards compatibility
+10. Disclaimer (ZUC, KASUMI, SNOW3G)
+11. Legal Disclaimer
 
 1\. Overview
 ============

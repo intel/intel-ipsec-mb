@@ -12,8 +12,8 @@ The library provides software crypto acceleration primarily targeting
 packet processing applications. It can be used for application such as:
 IPsec, TLS, Wireless (RAN), Cable or MPEG DRM.
 
-The library is is hosted on GitHub and is used as software crypto
-provider in DPDK, Intel(R) QAT Engine and FD.io.
+The library is hosted on GitHub and is used as software crypto provider
+in DPDK, Intel(R) QAT Engine and FD.io.
 
 Using crypto interfaces from the above frameworks gives freedom to
 change providers without subsequent application modifications. The
@@ -37,12 +37,13 @@ CONTENTS
 2.  Processor Extensions
 3.  Recommendations
 4.  Package Content
-5.  Compilation
-6.  Security Considerations & Options for Increased Security
-7.  Installation
-8.  Backwards compatibility
-9.  Disclaimer (ZUC, KASUMI, SNOW3G)
-10. Legal Disclaimer
+5.  Documentation
+6.  Compilation
+7.  Security Considerations & Options for Increased Security
+8.  Installation
+9.  Backwards compatibility
+10. Disclaimer (ZUC, KASUMI, SNOW3G)
+11. Legal Disclaimer
 
 
 
