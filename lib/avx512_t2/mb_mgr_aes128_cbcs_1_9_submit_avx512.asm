@@ -197,6 +197,11 @@ len_is_0:
 %endif
 
 return:
+%ifdef SAFE_DATA
+	clear_all_zmms_asm
+%else
+        vzeroupper
+%endif ;; SAFE_DATA
 
         mov     rbx, [rsp + _gpr_save + 8*0]
         mov     rbp, [rsp + _gpr_save + 8*1]

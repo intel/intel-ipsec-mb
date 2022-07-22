@@ -32,9 +32,6 @@
 %include "include/reg_sizes.asm"
 %include "include/clear_regs.asm"
 %include "include/cet.inc"
-struc STACK
-_gpr_save:      resq    1
-endstruc
 
 %define GPR_SAVE_AREA   rsp + _gpr_save
 
@@ -104,16 +101,13 @@ endstruc
 
 ;; Save registers states
 %macro FUNC_SAVE 0
-        sub             rsp, STACK_size
-        mov             [GPR_SAVE_AREA + 8*0], rbp
+        push            rbp
 %endmacro
 
 ;; Restore register states
 %macro FUNC_RESTORE 0
         ;; XMMs are saved at a higher level
-        mov             rbp, [GPR_SAVE_AREA + 8*0]
-        add             rsp, STACK_size
-        vzeroupper
+        pop             rbp
 %endmacro
 
 %macro LOAD_STORE_4x1 10
@@ -454,15 +448,9 @@ mksection .text
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(aes_cbcs_1_9_enc_128_vaes_avx512,function,internal)
 aes_cbcs_1_9_enc_128_vaes_avx512:
-        endbranch64
         FUNC_SAVE
         CBCS_ENC 9, 160
         FUNC_RESTORE
-
-%ifdef SAFE_DATA
-	clear_all_zmms_asm
-%endif ;; SAFE_DATA
-
         ret
 
 mksection stack-noexec
