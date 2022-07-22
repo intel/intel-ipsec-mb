@@ -1095,13 +1095,6 @@ aes128_cbc_mac_vaes_avx512:
         FUNC_SAVE
         CBC_ENC 9, MAC_TYPE_CBC, SUBMIT
         FUNC_RESTORE
-
-%ifdef SAFE_DATA
-	clear_all_zmms_asm
-%else
-        vzeroupper
-%endif ;; SAFE_DATA
-
         ret
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1113,13 +1106,6 @@ aes256_cbc_mac_vaes_avx512:
         FUNC_SAVE
         CBC_ENC 13, MAC_TYPE_CBC, SUBMIT
         FUNC_RESTORE
-
-%ifdef SAFE_DATA
-	clear_all_zmms_asm
-%else
-        vzeroupper
-%endif ;; SAFE_DATA
-
         ret
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1211,13 +1197,6 @@ aes128_cbc_mac_flush_vaes_avx512:
         FUNC_SAVE
         CBC_ENC 9, MAC_TYPE_CBC, FLUSH
         FUNC_RESTORE
-
-%ifdef SAFE_DATA
-	clear_all_zmms_asm
-%else
-        vzeroupper
-%endif ;; SAFE_DATA
-
         ret
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1231,13 +1210,6 @@ aes256_cbc_mac_flush_vaes_avx512:
         FUNC_SAVE
         CBC_ENC 13, MAC_TYPE_CBC, FLUSH
         FUNC_RESTORE
-
-%ifdef SAFE_DATA
-	clear_all_zmms_asm
-%else
-        vzeroupper
-%endif ;; SAFE_DATA
-
         ret
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

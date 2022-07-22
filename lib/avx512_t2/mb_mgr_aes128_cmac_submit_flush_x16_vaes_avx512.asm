@@ -31,6 +31,7 @@
 %include "include/cet.inc"
 %include "include/reg_sizes.asm"
 %include "include/const.inc"
+%include "include/clear_regs.asm"
 
 %ifndef AES_CBC_MAC
 %define AES_CBC_MAC aes128_cbc_mac_vaes_avx512
@@ -479,12 +480,16 @@ endstruc
 %assign round (round + 1)
 %endrep
 
+%endif ;; SAFE_DATA
+
+%%_return:
+%ifdef SAFE_DATA
+	clear_all_zmms_asm
 %else
         vzeroupper
 %endif ;; SAFE_DATA
 
-%%_return:
-	mov	rbx, [rsp + _gpr_save + 8*0]
+        mov	rbx, [rsp + _gpr_save + 8*0]
 	mov	rbp, [rsp + _gpr_save + 8*1]
 	mov	r12, [rsp + _gpr_save + 8*2]
 	mov	r13, [rsp + _gpr_save + 8*3]
