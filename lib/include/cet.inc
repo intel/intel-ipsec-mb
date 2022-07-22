@@ -29,7 +29,10 @@
 %define _CET_INC_
 
 %macro endbranch64 0
-db 0xf3, 0x0f, 0x1e, 0xfa
+       ;; generate enbranch64 opcode only for Linux/FreeBSD
+%ifdef LINUX
+       db 0xf3, 0x0f, 0x1e, 0xfa
+%endif
 %endmacro
 
 %endif ; _CET_INC_

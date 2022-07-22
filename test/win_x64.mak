@@ -59,12 +59,6 @@ DLFLAGS =
 # compiler
 CC = cl
 
-# check for CET support
-!if ([$(CC) /? 2>&1 | findstr /C:"guard:cf" > nul] == 0)
-DCFLAGS = $(DCFLAGS) /guard:cf
-DLFLAGS = $(DLFLAGS) /CETCOMPAT /GUARD:CF /DYNAMICBASE
-!endif
-
 # _CRT_SECURE_NO_WARNINGS disables warning C4996 about unsecure snprintf() being used
 CFLAGS = /nologo /DNO_COMPAT_IMB_API_053 /D_CRT_SECURE_NO_WARNINGS $(DCFLAGS) /Y- /W3 /WX- /Gm- /fp:precise /EHsc $(EXTRA_CFLAGS) $(INCDIR)
 
