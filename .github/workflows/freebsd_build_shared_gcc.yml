@@ -8,7 +8,7 @@ on:
 
 jobs:
   testfreebsd:
-    runs-on: macos-10.15
+    runs-on: macos-12
     name: FreeBSD GCC run
     steps:
       - name: Checkout
@@ -17,7 +17,7 @@ jobs:
           repository: intel/intel-ipsec-mb
       - name: Test FreeBSD GCC build
         id: tests
-        uses: vmactions/freebsd-vm@v0.1.5
+        uses: vmactions/freebsd-vm@v0.2.0
         with:
           usesh: true
           mem: 8192
