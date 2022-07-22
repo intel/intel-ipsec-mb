@@ -41,6 +41,8 @@
 %include "include/cet.inc"
 %include "include/clear_regs.asm"
 
+%use smartalign
+
 extern sha512_x8_avx512
 
 mksection .rodata
@@ -208,7 +210,6 @@ lt128_bytes:
 ge128_bytes:
 	cmp	unused_lanes, 0xf
 	jne	return_null
-	jmp	start_loop
 
 	align	32
 start_loop:
@@ -396,13 +397,13 @@ clear_ret:
 %endif
 %endif ;; SAFE_DATA
 
+return:
 %ifdef SAFE_DATA
         clear_all_zmms_asm
 %else
         vzeroupper
 %endif
 
-return:
 	mov	rbx, [rsp + _gpr_save + 8*0]
 	mov	rbp, [rsp + _gpr_save + 8*1]
 	mov	r12, [rsp + _gpr_save + 8*2]
