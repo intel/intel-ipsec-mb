@@ -690,8 +690,8 @@ uint8_t dec_archs[IMB_ARCH_NUM] = {0, 0, 1, 1, 1, 1};
 
 uint64_t flags = 0; /* flags passed to alloc_mb_mgr() */
 
-/* -1 => detect, 0 => not possible, 1 => possible */
-int is_avx_sse_check_possible = -1;
+/* 0 => not possible, 1 => possible */
+int is_avx_sse_check_possible = 0;
 
 static void
 avx_sse_check(const char *ctx_str,
@@ -700,9 +700,6 @@ avx_sse_check(const char *ctx_str,
 {
         if (!is_avx_sse_check_possible)
                 return;
-
-        if (is_avx_sse_check_possible == -1)
-                is_avx_sse_check_possible = avx_sse_detectability();
 
         const uint32_t avx_sse_flag = avx_sse_transition_check();
 
@@ -714,11 +711,11 @@ avx_sse_check(const char *ctx_str,
 
         if (avx_sse_flag & MISC_AVX_SSE_ZMM0_15_ISSUE)
                 printf("ERROR: AVX-SSE transition after %s in ZMM0-ZMM15: "
-                       "hash: %s, cipher: %s\n",
+                       "HASH=%s, CIPHER=%s\n",
                        ctx_str, hash_str, cipher_str);
         else if (avx_sse_flag & MISC_AVX_SSE_YMM0_15_ISSUE)
                 printf("ERROR: AVX-SSE transition after %s in YMM0-YMM15: "
-                       "hash: %s, cipher: %s\n",
+                       "HASH=%s, CIPHER=%s\n",
                        ctx_str, hash_str, cipher_str);
 }
 
@@ -2716,7 +2713,9 @@ static void usage(const char *app_name)
                 "(maximum = %d)\n"
                 "--safe-check: check if keys, IVs, plaintext or tags "
                 "get cleared from IMB_MGR upon job completion (off by default; "
-                "requires library compiled with SAFE_DATA)\n",
+                "requires library compiled with SAFE_DATA)\n"
+                "--avx-sse: if XGETBV is available then check for potential "
+                "AVX-SSE transition problems\n",
                 app_name, MAX_NUM_JOBS);
 }
 
@@ -3034,6 +3033,10 @@ int main(int argc, char *argv[])
                         }
                 } else if (strcmp(argv[i], "--imix") == 0) {
                         imix_enabled = 1;
+                } else if (strcmp(argv[i], "--avx-sse") == 0) {
+                        is_avx_sse_check_possible = avx_sse_detectability();
+                        if (!is_avx_sse_check_possible)
+                                fprintf(stderr, "XGETBV not available\n");
                 } else {
                         usage(argv[0]);
                         return EXIT_FAILURE;
