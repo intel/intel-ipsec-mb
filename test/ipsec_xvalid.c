@@ -690,12 +690,13 @@ uint8_t dec_archs[IMB_ARCH_NUM] = {0, 0, 1, 1, 1, 1};
 
 uint64_t flags = 0; /* flags passed to alloc_mb_mgr() */
 
-int is_avx_sse_check_possible = -1; /* -1 => detect, 0 => not possible, 1 => possible */
+/* -1 => detect, 0 => not possible, 1 => possible */
+int is_avx_sse_check_possible = -1;
 
 static void
 avx_sse_check(const char *ctx_str,
-              const unsigned hash_alg,
-              const unsigned cipher_mode)
+              const IMB_HASH_ALG hash_alg,
+              const IMB_CIPHER_MODE cipher_mode)
 {
         if (!is_avx_sse_check_possible)
                 return;
@@ -705,14 +706,20 @@ avx_sse_check(const char *ctx_str,
 
         const uint32_t avx_sse_flag = avx_sse_transition_check();
 
+        if (!avx_sse_flag)
+                return;
+
+        const char *hash_str = misc_hash_alg_to_str(hash_alg);
+        const char *cipher_str = misc_cipher_mode_to_str(cipher_mode);
+
         if (avx_sse_flag & MISC_AVX_SSE_ZMM0_15_ISSUE)
-                printf("AVX-SSE transition after %s in ZMM0-ZMM15: "
-                       "hash_alg = %u, cipher_mode = %u, flag 0x%x\n",
-                       ctx_str, hash_alg, cipher_mode, avx_sse_flag);
+                printf("ERROR: AVX-SSE transition after %s in ZMM0-ZMM15: "
+                       "hash: %s, cipher: %s\n",
+                       ctx_str, hash_str, cipher_str);
         else if (avx_sse_flag & MISC_AVX_SSE_YMM0_15_ISSUE)
-                printf("AVX-SSE transition after %s in YMM0-YMM15: "
-                       "hash_alg = %u, cipher_mode = %u, flag 0x%x\n",
-                       ctx_str, hash_alg, cipher_mode, avx_sse_flag);
+                printf("ERROR: AVX-SSE transition after %s in YMM0-YMM15: "
+                       "hash: %s, cipher: %s\n",
+                       ctx_str, hash_str, cipher_str);
 }
 
 static void

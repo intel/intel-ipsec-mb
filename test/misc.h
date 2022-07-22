@@ -29,6 +29,8 @@
 #include <intrin.h>
 #endif
 
+#include <intel-ipsec-mb.h>
+
 #ifndef XVALIDAPP_MISC_H
 #define XVALIDAPP_MISC_H
 
@@ -147,4 +149,173 @@ static int avx_sse_detectability(void)
         return (r.eax >> 2) & 1;
 }
 
+/* decodes cipher mode to string */
+static const char *misc_cipher_mode_to_str(const IMB_CIPHER_MODE mode)
+{
+        static char cb[64];
+
+        switch (mode) {
+        case IMB_CIPHER_CBC:
+                return "aes-cbc";
+        case IMB_CIPHER_CNTR:
+                return "aes-ctr";
+        case IMB_CIPHER_NULL:
+                return "null";
+        case IMB_CIPHER_DOCSIS_SEC_BPI:
+                return "aes-docsis";
+        case IMB_CIPHER_GCM:
+                return "aead-aes-gcm";
+        case IMB_CIPHER_CUSTOM:
+                return "custom";
+        case IMB_CIPHER_DES:
+                return "des-cbc";
+        case IMB_CIPHER_DOCSIS_DES:
+                return "des-docsis";
+        case IMB_CIPHER_CCM:
+                return "aes-ccm";
+        case IMB_CIPHER_DES3:
+                return "3des-cbc";
+        case IMB_CIPHER_PON_AES_CNTR:
+                return "pon-aes-ctr";
+        case IMB_CIPHER_ECB:
+                return "aes-ecb";
+        case IMB_CIPHER_CNTR_BITLEN:
+                return "aes-ctr (bitlen)";
+        case IMB_CIPHER_ZUC_EEA3:
+                return "zuc-eea3";
+        case IMB_CIPHER_SNOW3G_UEA2_BITLEN:
+                return "snow3g-uea2";
+        case IMB_CIPHER_KASUMI_UEA1_BITLEN:
+                return "kasumi-uea1";
+        case IMB_CIPHER_CBCS_1_9:
+                return "aes-cbcs-1-9";
+        case IMB_CIPHER_CHACHA20:
+                return "chacha20";
+        case IMB_CIPHER_CHACHA20_POLY1305:
+                return "aead-chacha20-poly1305";
+        case IMB_CIPHER_CHACHA20_POLY1305_SGL:
+                return "aead-chacha20-poly1305-sgl";
+        case IMB_CIPHER_SNOW_V:
+                return "snow-v";
+        case IMB_CIPHER_SNOW_V_AEAD:
+                return "aead-snow-v";
+        case IMB_CIPHER_GCM_SGL:
+                return "aead-aes-gcm-sgl";
+        case IMB_CIPHER_NUM:
+        default:
+                break;
+        }
+
+        memset(cb, 0, sizeof(cb));
+        snprintf(cb, sizeof(cb) - 1, "unknown<%u>", (unsigned) mode);
+        return cb;
+}
+
+/* decodes hash algorithm to string */
+static const char *misc_hash_alg_to_str(const IMB_HASH_ALG mode)
+{
+        static char cb[64];
+
+        switch (mode) {
+        case IMB_AUTH_HMAC_SHA_1:
+                return "hmac-sha1";
+        case IMB_AUTH_HMAC_SHA_224:
+                return "hmac-sha224";
+        case IMB_AUTH_HMAC_SHA_256:
+                return "hmac-sha256";
+        case IMB_AUTH_HMAC_SHA_384:
+                return "hmac-sha384";
+        case IMB_AUTH_HMAC_SHA_512:
+                return "hmac-sha512";
+        case IMB_AUTH_AES_XCBC:
+                return "aes-xcbc";
+        case IMB_AUTH_MD5:
+                return "hmac-md5";
+        case IMB_AUTH_NULL:
+                return "null";
+        case IMB_AUTH_AES_GMAC:
+                return "aead-aes-gcm";
+        case IMB_AUTH_CUSTOM:
+                return "custom";
+        case IMB_AUTH_AES_CCM:
+                return "aes-ccm";
+        case IMB_AUTH_AES_CMAC:
+                return "aes-cmac-128";
+        case IMB_AUTH_SHA_1:
+                return "sha1";
+        case IMB_AUTH_SHA_224:
+                return "sha224";
+        case IMB_AUTH_SHA_256:
+                return "sha256";
+        case IMB_AUTH_SHA_384:
+                return "sha384";
+        case IMB_AUTH_SHA_512:
+                return "sha512";
+        case IMB_AUTH_AES_CMAC_BITLEN:
+                return "aes-cmac (bitlen)";
+        case IMB_AUTH_PON_CRC_BIP:
+                return "pon-crc-bip";
+        case IMB_AUTH_ZUC_EIA3_BITLEN:
+                return "zuc-eia3";
+        case IMB_AUTH_DOCSIS_CRC32:
+                return "docsis-crc32";
+        case IMB_AUTH_SNOW3G_UIA2_BITLEN:
+                return "snow3g-uia2";
+        case IMB_AUTH_KASUMI_UIA1:
+                return "kasumi-uia1";
+        case IMB_AUTH_AES_GMAC_128:
+                return "aes-gmac-128";
+        case IMB_AUTH_AES_GMAC_192:
+                return "aes-gmac-192";
+        case IMB_AUTH_AES_GMAC_256:
+                return "aes-gmac-256";
+        case IMB_AUTH_AES_CMAC_256:
+                return "aes-cmac-256";
+        case IMB_AUTH_POLY1305:
+                return "poly1305";
+        case IMB_AUTH_CHACHA20_POLY1305:
+                return "aead-chacha20-poly1305";
+        case IMB_AUTH_CHACHA20_POLY1305_SGL:
+                return "aead-chacha20-poly1305-sgl";
+        case IMB_AUTH_ZUC256_EIA3_BITLEN:
+                return "zuc256-eia3";
+        case IMB_AUTH_SNOW_V_AEAD:
+                return "aead-snow-v";
+        case IMB_AUTH_GCM_SGL:
+                return "aead-aes-gcm-sgl";
+        case IMB_AUTH_CRC32_ETHERNET_FCS:
+                return "crc32-ethernet-fcs";
+        case IMB_AUTH_CRC32_SCTP:
+                return "crc32-sctp";
+        case IMB_AUTH_CRC32_WIMAX_OFDMA_DATA:
+                return "crc32-wimax-ofdma-data";
+        case IMB_AUTH_CRC24_LTE_A:
+                return "crc24-lte-a";
+        case IMB_AUTH_CRC24_LTE_B:
+                return "crc24-lte-b";
+        case IMB_AUTH_CRC16_X25:
+                return "crc16-x25";
+        case IMB_AUTH_CRC16_FP_DATA:
+                return "crc16-fp-data";
+        case IMB_AUTH_CRC11_FP_HEADER:
+                return "crc11-fp-header";
+        case IMB_AUTH_CRC10_IUUP_DATA:
+                return "crc10-iuup-data";
+        case IMB_AUTH_CRC8_WIMAX_OFDMA_HCS:
+                return "crc8-wimax-ofdma-hcs";
+        case IMB_AUTH_CRC7_FP_HEADER:
+                return "crc7-fp-header";
+        case IMB_AUTH_CRC6_IUUP_HEADER:
+                return "crc6-iuup-header";
+        case IMB_AUTH_GHASH:
+                return "ghash";
+        case IMB_AUTH_NUM:
+        default:
+                break;
+        }
+
+        memset(cb, 0, sizeof(cb));
+        snprintf(cb, sizeof(cb) - 1, "unknown<%u>", (unsigned) mode);
+        return cb;
+}
 #endif /* XVALIDAPP_MISC_H */
