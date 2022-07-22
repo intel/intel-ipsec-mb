@@ -332,7 +332,9 @@ endstruc
 ;; Restores register contents and removes the stack frame
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 %macro SNOW3G_FUNC_END 0
-%ifndef SAFE_DATA
+%ifdef SAFE_DATA
+        clear_all_zmms_asm
+%else
         vzeroupper
 %endif
         mov     rbx, [rsp + _gpr_save + 8 * 0]
