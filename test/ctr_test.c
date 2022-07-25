@@ -34,11 +34,6 @@
 #include "gcm_ctr_vectors_test.h"
 #include "utils.h"
 
-typedef enum {
-        BURST_TYPE_GENERIC = 0,
-        BURST_TYPE_CIPHER,
-} BURST_TYPE;
-
 #define MAX_CTR_JOBS 32
 
 #define BYTE_ROUND_UP(x) ((x + 7) / 8)
@@ -1464,8 +1459,134 @@ test_ctr_burst(struct IMB_MGR *mb_mgr,
                const IMB_CIPHER_DIRECTION dir,
                const IMB_CHAIN_ORDER order,
                const IMB_CIPHER_MODE alg,
-               const uint32_t num_jobs,
-               const BURST_TYPE burst_type)
+               const uint32_t num_jobs)
+{
+        uint32_t text_byte_len, i, completed_jobs, jobs_rx = 0;
+        struct IMB_JOB *job, *jobs[MAX_CTR_JOBS];
+        uint8_t padding[16];
+        uint8_t **targets = malloc(num_jobs * sizeof(void *));
+        int ret = -1;
+
+        if (targets == NULL)
+                goto end_alloc;
+
+        /* Get number of bytes (in case algo is CNTR_BITLEN) */
+        if (alg == IMB_CIPHER_CNTR)
+                text_byte_len = text_len;
+        else
+                text_byte_len = BYTE_ROUND_UP(text_len);
+
+        memset(targets, 0, num_jobs * sizeof(void *));
+        memset(padding, -1, sizeof(padding));
+
+        for (i = 0; i < num_jobs; i++) {
+                targets[i] = malloc(text_byte_len + (sizeof(padding) * 2));
+                if (targets[i] == NULL)
+                        goto end_alloc;
+                memset(targets[i], -1, text_byte_len + (sizeof(padding) * 2));
+        }
+
+        while (IMB_GET_NEXT_BURST(mb_mgr, num_jobs, jobs) < num_jobs)
+                IMB_FLUSH_BURST(mb_mgr, num_jobs, jobs);
+
+        for (i = 0; i < num_jobs; i++) {
+                job = jobs[i];
+                job->cipher_direction = dir;
+                job->chain_order = order;
+                job->dst = targets[i] + sizeof(padding);
+                job->src = in_text;
+                job->cipher_mode = alg;
+                job->enc_keys = expkey;
+                job->dec_keys = expkey;
+                job->key_len_in_bytes = key_len;
+                job->iv = iv;
+                job->iv_len_in_bytes = iv_len;
+                job->cipher_start_src_offset_in_bytes = 0;
+                if (alg == IMB_CIPHER_CNTR)
+                        job->msg_len_to_cipher_in_bytes = text_byte_len;
+                else
+                        job->msg_len_to_cipher_in_bits = text_len;
+                job->hash_alg = IMB_AUTH_NULL;
+                job->user_data = targets[i];
+                job->user_data2 = (void *)((uint64_t)i);
+        }
+
+        completed_jobs = IMB_SUBMIT_BURST(mb_mgr, num_jobs, jobs);
+        if (completed_jobs != num_jobs) {
+                int err = imb_get_errno(mb_mgr);
+
+                if (err != 0) {
+                        printf("submit_burst error %d : '%s'\n", err,
+                               imb_get_strerror(err));
+                        goto end;
+                } else {
+                        printf("submit_burst error: not enough "
+                               "jobs returned!\n");
+                        goto end;
+                }
+        }
+
+        for (i = 0; i < num_jobs; i++) {
+                job = jobs[i];
+
+                if (job->status != IMB_STATUS_COMPLETED) {
+                        printf("job %d status not complete!\n", i+1);
+                        goto end;
+                }
+                if (memcmp(out_text, targets[i] + sizeof(padding),
+                           text_byte_len)) {
+                        printf("mismatched\n");
+                        hexdump(stderr, "Target", targets[i] + sizeof(padding),
+                                text_byte_len);
+                        hexdump(stderr, "Expected", out_text, text_byte_len);
+                        goto end;
+                }
+                if (memcmp(padding, targets[i], sizeof(padding))) {
+                        printf("overwrite head\n");
+                        hexdump(stderr, "Target", targets[i], text_byte_len +
+                                (sizeof(padding) * 2));
+                        goto end;
+                }
+                if (memcmp(padding, targets[i] + sizeof(padding) +
+                           text_byte_len, sizeof(padding))) {
+                        printf("overwrite tail\n");
+                        hexdump(stderr, "Target", targets[i], text_byte_len +
+                                (sizeof(padding) * 2));
+                        goto end;
+                }
+                jobs_rx++;
+        }
+
+        if (jobs_rx != num_jobs) {
+                printf("Expected %d jobs, received %d\n", num_jobs, jobs_rx);
+                goto end;
+        }
+        ret = 0;
+ end:
+
+ end_alloc:
+        if (targets != NULL) {
+                for (i = 0; i < num_jobs; i++)
+                        free(targets[i]);
+                free(targets);
+        }
+
+        return ret;
+}
+
+static int
+test_ctr_cipher_burst(struct IMB_MGR *mb_mgr,
+                      const void *expkey,
+                      unsigned key_len,
+                      const void *iv,
+                      unsigned iv_len,
+                      const uint8_t *in_text,
+                      const uint8_t *out_text,
+                      unsigned text_len,
+                      const IMB_CIPHER_DIRECTION dir,
+                      const IMB_CHAIN_ORDER order,
+                      const IMB_CIPHER_MODE alg,
+                      const uint32_t num_jobs)
 {
         uint32_t text_byte_len, i, completed_jobs, jobs_rx = 0;
         struct IMB_JOB *job, jobs[MAX_CTR_JOBS];
@@ -1515,12 +1636,8 @@ test_ctr_burst(struct IMB_MGR *mb_mgr,
         }
 
 
-        if (burst_type == BURST_TYPE_GENERIC)
-                completed_jobs = IMB_SUBMIT_BURST(mb_mgr, jobs, num_jobs);
-        else
-                completed_jobs = IMB_SUBMIT_CIPHER_BURST(mb_mgr, jobs, num_jobs,
-                                                         alg, dir, key_len);
-
+        completed_jobs = IMB_SUBMIT_CIPHER_BURST(mb_mgr, jobs, num_jobs,
+                                                 alg, dir, key_len);
         if (completed_jobs != num_jobs) {
                 int err = imb_get_errno(mb_mgr);
 
@@ -1719,7 +1836,7 @@ test_ctr_vectors_burst(struct IMB_MGR *mb_mgr,
                        const uint32_t vectors_cnt, const IMB_CIPHER_MODE alg,
                        const uint32_t num_jobs)
 {
-	uint32_t vect, burst_type;
+	uint32_t vect;
         DECLARE_ALIGNED(uint32_t expkey[4*15], 16);
         DECLARE_ALIGNED(uint32_t dust[4*15], 16);
 
@@ -1765,26 +1882,62 @@ test_ctr_vectors_burst(struct IMB_MGR *mb_mgr,
                         return;
                 }
 
-                for (burst_type = BURST_TYPE_GENERIC;
-                     burst_type <= BURST_TYPE_CIPHER; burst_type++) {
-                        const char *bt = (burst_type == BURST_TYPE_CIPHER) ?
-                                "cipher-only burst" : "burst";
+                if (test_ctr_burst(mb_mgr,
+                                   expkey, vectors[vect].Klen,
+                                   vectors[vect].IV,
+                                   (unsigned) vectors[vect].IVlen,
+                                   vectors[vect].P, vectors[vect].C,
+                                   (unsigned) vectors[vect].Plen,
+                                   IMB_DIR_ENCRYPT,
+                                   IMB_ORDER_CIPHER_HASH, alg, num_jobs)) {
+                        printf("error #%u encrypt burst\n", vect + 1);
+                        test_suite_update(ctx, 0, 1);
+                } else {
+                        test_suite_update(ctx, 1, 0);
+                }
 
-                        /* skip bitlen cipher-only burst api tests */
-                        if (alg == IMB_CIPHER_CNTR_BITLEN &&
-                            burst_type == BURST_TYPE_CIPHER)
-                                continue;
+                if (test_ctr_burst(mb_mgr,
+                                   expkey, vectors[vect].Klen,
+                                   vectors[vect].IV,
+                                   (unsigned) vectors[vect].IVlen,
+                                   vectors[vect].C, vectors[vect].P,
+                                   (unsigned) vectors[vect].Plen,
+                                   IMB_DIR_DECRYPT,
+                                   IMB_ORDER_HASH_CIPHER, alg, num_jobs)) {
+                        printf("error #%u decrypt burst\n", vect + 1);
+                        test_suite_update(ctx, 0, 1);
+                } else {
+                        test_suite_update(ctx, 1, 0);
+                }
+
+                if (vectors[vect].IVlen == 12 &&
+                    alg == IMB_CIPHER_CNTR) {
+                        /* IV in the table didn't
+                         * include block counter (12 bytes).
+                         * Let's encrypt & decrypt the same but
+                         * with 16 byte IV that includes block counter.
+                         */
+                        const unsigned new_iv_len = 16;
+                        const unsigned orig_iv_len = 12;
+                        uint8_t local_iv[16];
+
+                        memcpy(local_iv, vectors[vect].IV, orig_iv_len);
+                        /* 32-bit 0x1 in BE == 0x01000000 in LE */
+                        local_iv[12] = 0x00;
+                        local_iv[13] = 0x00;
+                        local_iv[14] = 0x00;
+                        local_iv[15] = 0x01;
 
                         if (test_ctr_burst(mb_mgr,
                                            expkey, vectors[vect].Klen,
-                                           vectors[vect].IV,
-                                           (unsigned) vectors[vect].IVlen,
-                                           vectors[vect].P, vectors[vect].C,
-                                           (unsigned) vectors[vect].Plen,
+                                           local_iv, new_iv_len,
+                                           vectors[vect].P,
+                                           vectors[vect].C, (unsigned)
+                                           vectors[vect].Plen,
                                            IMB_DIR_ENCRYPT,
-                                           IMB_ORDER_CIPHER_HASH, alg,
-                                           num_jobs, burst_type)) {
-                                printf("error #%u encrypt %s\n", vect + 1, bt);
+                                           IMB_ORDER_CIPHER_HASH,
+                                           alg, num_jobs)) {
+                                printf("error #%u encrypt burst\n", vect + 1);
                                 test_suite_update(ctx, 0, 1);
                         } else {
                                 test_suite_update(ctx, 1, 0);
@@ -1792,71 +1945,107 @@ test_ctr_vectors_burst(struct IMB_MGR *mb_mgr,
 
                         if (test_ctr_burst(mb_mgr,
                                            expkey, vectors[vect].Klen,
-                                           vectors[vect].IV,
-                                           (unsigned) vectors[vect].IVlen,
-                                           vectors[vect].C, vectors[vect].P,
-                                           (unsigned) vectors[vect].Plen,
+                                           local_iv, new_iv_len,
+                                           vectors[vect].C,
+                                           vectors[vect].P, (unsigned)
+                                           vectors[vect].Plen,
                                            IMB_DIR_DECRYPT,
-                                           IMB_ORDER_HASH_CIPHER, alg,
-                                           num_jobs, burst_type)) {
-                                printf("error #%u decrypt %s\n", vect + 1, bt);
+                                           IMB_ORDER_HASH_CIPHER,
+                                           alg, num_jobs)) {
+                                printf("error #%u decrypt burst\n", vect + 1);
                                 test_suite_update(ctx, 0, 1);
                         } else {
                                 test_suite_update(ctx, 1, 0);
-                        }
-
-                        if (vectors[vect].IVlen == 12 &&
-                            alg == IMB_CIPHER_CNTR) {
-                                /* IV in the table didn't
-                                 * include block counter (12 bytes).
-                                 * Let's encrypt & decrypt the same but
-                                 * with 16 byte IV that includes block counter.
-                                 */
-                                const unsigned new_iv_len = 16;
-                                const unsigned orig_iv_len = 12;
-                                uint8_t local_iv[16];
-
-                                memcpy(local_iv, vectors[vect].IV, orig_iv_len);
-                                /* 32-bit 0x1 in BE == 0x01000000 in LE */
-                                local_iv[12] = 0x00;
-                                local_iv[13] = 0x00;
-                                local_iv[14] = 0x00;
-                                local_iv[15] = 0x01;
-
-                                if (test_ctr_burst(mb_mgr,
-                                                   expkey, vectors[vect].Klen,
-                                                   local_iv, new_iv_len,
-                                                   vectors[vect].P,
-                                                   vectors[vect].C, (unsigned)
-                                                   vectors[vect].Plen,
-                                                   IMB_DIR_ENCRYPT,
-                                                   IMB_ORDER_CIPHER_HASH,
-                                                   alg, num_jobs, burst_type)) {
-                                        printf("error #%u encrypt %s\n",
-                                               vect + 1, bt);
-                                        test_suite_update(ctx, 0, 1);
-                                } else {
-                                        test_suite_update(ctx, 1, 0);
-                                }
-
-                                if (test_ctr_burst(mb_mgr,
-                                                   expkey, vectors[vect].Klen,
-                                                   local_iv, new_iv_len,
-                                                   vectors[vect].C,
-                                                   vectors[vect].P, (unsigned)
-                                                   vectors[vect].Plen,
-                                                   IMB_DIR_DECRYPT,
-                                                   IMB_ORDER_HASH_CIPHER,
-                                                   alg, num_jobs, burst_type)) {
-                                        printf("error #%u decrypt %s\n",
-                                               vect + 1, bt);
-                                        test_suite_update(ctx, 0, 1);
-                                } else {
-                                        test_suite_update(ctx, 1, 0);
-                                }
                         }
                 }
-	}
+
+                /* skip bitlen cipher-only burst api tests */
+                if (alg == IMB_CIPHER_CNTR_BITLEN)
+                        continue;
+
+                if (test_ctr_cipher_burst(mb_mgr,
+                                          expkey, vectors[vect].Klen,
+                                          vectors[vect].IV,
+                                          (unsigned) vectors[vect].IVlen,
+                                          vectors[vect].P, vectors[vect].C,
+                                          (unsigned) vectors[vect].Plen,
+                                          IMB_DIR_ENCRYPT,
+                                          IMB_ORDER_CIPHER_HASH, alg,
+                                          num_jobs)) {
+                        printf("error #%u encrypt cipher-only burst\n",
+                               vect + 1);
+                        test_suite_update(ctx, 0, 1);
+                } else {
+                        test_suite_update(ctx, 1, 0);
+                }
+
+                if (test_ctr_cipher_burst(mb_mgr,
+                                          expkey, vectors[vect].Klen,
+                                          vectors[vect].IV,
+                                          (unsigned) vectors[vect].IVlen,
+                                          vectors[vect].C, vectors[vect].P,
+                                          (unsigned) vectors[vect].Plen,
+                                          IMB_DIR_DECRYPT,
+                                          IMB_ORDER_HASH_CIPHER, alg,
+                                          num_jobs)) {
+                        printf("error #%u decrypt cipher-only burst\n",
+                               vect + 1);
+                        test_suite_update(ctx, 0, 1);
+                } else {
+                        test_suite_update(ctx, 1, 0);
+                }
+
+                if (vectors[vect].IVlen == 12 &&
+                    alg == IMB_CIPHER_CNTR) {
+                        /* IV in the table didn't
+                         * include block counter (12 bytes).
+                         * Let's encrypt & decrypt the same but
+                         * with 16 byte IV that includes block counter.
+                         */
+                        const unsigned new_iv_len = 16;
+                        const unsigned orig_iv_len = 12;
+                        uint8_t local_iv[16];
+
+                        memcpy(local_iv, vectors[vect].IV, orig_iv_len);
+                        /* 32-bit 0x1 in BE == 0x01000000 in LE */
+                        local_iv[12] = 0x00;
+                        local_iv[13] = 0x00;
+                        local_iv[14] = 0x00;
+                        local_iv[15] = 0x01;
+
+                        if (test_ctr_cipher_burst(mb_mgr,
+                                                  expkey, vectors[vect].Klen,
+                                                  local_iv, new_iv_len,
+                                                  vectors[vect].P,
+                                                  vectors[vect].C, (unsigned)
+                                                  vectors[vect].Plen,
+                                                  IMB_DIR_ENCRYPT,
+                                                  IMB_ORDER_CIPHER_HASH,
+                                                  alg, num_jobs)) {
+                                printf("error #%u encrypt cipher-only burst\n",
+                                       vect + 1);
+                                test_suite_update(ctx, 0, 1);
+                        } else {
+                                test_suite_update(ctx, 1, 0);
+                        }
+
+                        if (test_ctr_cipher_burst(mb_mgr,
+                                                  expkey, vectors[vect].Klen,
+                                                  local_iv, new_iv_len,
+                                                  vectors[vect].C,
+                                                  vectors[vect].P, (unsigned)
+                                                  vectors[vect].Plen,
+                                                  IMB_DIR_DECRYPT,
+                                                  IMB_ORDER_HASH_CIPHER,
+                                                  alg, num_jobs)) {
+                                printf("error #%u decrypt cipher-only burst\n",
+                                       vect + 1);
+                                test_suite_update(ctx, 0, 1);
+                        } else {
+                                test_suite_update(ctx, 1, 0);
+                        }
+                }
+        }
 	printf("\n");
 }
 

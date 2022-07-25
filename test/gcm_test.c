@@ -1644,11 +1644,14 @@ aes_gcm_burst(IMB_MGR *mb_mgr,
               const IMB_CIPHER_MODE cipher_mode, const IMB_SGL_STATE sgl_state,
               const uint32_t num_jobs)
 {
-        IMB_JOB *job, jobs[GCM_MAX_JOBS];
+        IMB_JOB *job, *jobs[GCM_MAX_JOBS];
         uint32_t i;
 
+        while (IMB_GET_NEXT_BURST(mb_mgr, num_jobs, jobs) < num_jobs)
+                IMB_FLUSH_BURST(mb_mgr, num_jobs, jobs);
+
         for (i = 0; i < num_jobs; i++) {
-                job = &jobs[i];
+                job = jobs[i];
 
                 job->cipher_mode                      = cipher_mode;
                 job->chain_order                      =
@@ -1678,7 +1681,7 @@ aes_gcm_burst(IMB_MGR *mb_mgr,
         }
 
         const uint32_t completed_jobs =
-                IMB_SUBMIT_BURST(mb_mgr, jobs, num_jobs);
+                IMB_SUBMIT_BURST(mb_mgr, num_jobs, jobs);
 
         if (completed_jobs != num_jobs) {
                 int err = imb_get_errno(mb_mgr);
@@ -1695,7 +1698,7 @@ aes_gcm_burst(IMB_MGR *mb_mgr,
         }
 
         for (i = 0; i < num_jobs; i++) {
-                job = &jobs[i];
+                job = jobs[i];
 
                 if (job->status != IMB_STATUS_COMPLETED) {
                         printf("job %d status not complete!\n", i+1);

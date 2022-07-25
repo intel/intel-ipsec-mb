@@ -444,7 +444,7 @@ test_aead(struct IMB_MGR *mb_mgr,
          */
 
         /* create job array */
-        IMB_JOB jobs[32] = {0};
+        IMB_JOB * jobs[32] = {NULL};
 
         jobs_rx = 0;
 
@@ -463,11 +463,14 @@ test_aead(struct IMB_MGR *mb_mgr,
                 }
         }
 
+        while (IMB_GET_NEXT_BURST(mb_mgr, num_jobs, jobs) < (uint32_t)num_jobs)
+                IMB_FLUSH_BURST(mb_mgr, num_jobs, jobs);
+
         /**
          * Set all job params before submitting burst
          */
         for (i = 0; i < num_jobs; i++) {
-                job = &jobs[i];
+                job = jobs[i];
                 job->cipher_direction = dir;
                 job->chain_order = IMB_ORDER_HASH_CIPHER;
                 job->cipher_mode = IMB_CIPHER_CHACHA20_POLY1305;
@@ -501,9 +504,9 @@ test_aead(struct IMB_MGR *mb_mgr,
                 job->user_data = auths[i];
         }
 
-        int completed_jobs = IMB_SUBMIT_BURST(mb_mgr, jobs, num_jobs);
+        uint32_t completed_jobs = IMB_SUBMIT_BURST(mb_mgr, num_jobs, jobs);
 
-        if (completed_jobs != num_jobs) {
+        if (completed_jobs != (uint32_t)num_jobs) {
                 int err = imb_get_errno(mb_mgr);
 
                 if (err != 0) {
@@ -518,7 +521,7 @@ test_aead(struct IMB_MGR *mb_mgr,
         }
 
         for (i = 0; i < num_jobs; i++) {
-                job = &jobs[i];
+                job = jobs[i];
 
                 if (job->status != IMB_STATUS_COMPLETED) {
                         printf("job %d status not complete!\n", i+1);

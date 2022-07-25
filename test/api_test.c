@@ -643,16 +643,19 @@ static int
 is_submit_burst_invalid(struct IMB_MGR *mb_mgr, const struct IMB_JOB *job,
                         const int test_num, int expected_errnum)
 {
-        IMB_JOB jobs[MAX_BURST_JOBS] = {0};
-        uint32_t i, completed_jobs;
+        IMB_JOB * jobs[MAX_BURST_JOBS] = {NULL};
+        uint32_t i, completed_jobs, n_jobs = MAX_BURST_JOBS;
         int err;
 
+        while (IMB_GET_NEXT_BURST(mb_mgr, n_jobs, jobs) < n_jobs)
+                IMB_FLUSH_BURST(mb_mgr, n_jobs, jobs);
+
         /* duplicate job to test */
-        for (i = 0; i < MAX_BURST_JOBS; i++)
-                jobs[i] = *job;
+        for (i = 0; i < n_jobs; i++)
+                *jobs[i] = *job;
 
          /* submit the job for processing */
-        completed_jobs = IMB_SUBMIT_BURST(mb_mgr, jobs, MAX_BURST_JOBS);
+        completed_jobs = IMB_SUBMIT_BURST(mb_mgr, n_jobs, jobs);
         if (completed_jobs != 0) {
                 printf("%s : test %d, hash_alg %d, chain_order %d, "
                        "cipher_dir %d, cipher_mode %d : "
@@ -673,7 +676,7 @@ is_submit_burst_invalid(struct IMB_MGR *mb_mgr, const struct IMB_JOB *job,
                 return 0;
         }
 
-        if (jobs[0].status != IMB_STATUS_INVALID_ARGS) {
+        if (jobs[0]->status != IMB_STATUS_INVALID_ARGS) {
                 printf("%s : test %d, hash_alg %d, chain_order %d, "
                        "cipher_dir %d, cipher_mode %d : "
                        "unexpected job->status %d != IMB_STATUS_INVALID_ARGS\n",
@@ -693,44 +696,123 @@ is_submit_burst_invalid(struct IMB_MGR *mb_mgr, const struct IMB_JOB *job,
 static int
 test_burst_api(struct IMB_MGR *mb_mgr)
 {
-        struct IMB_JOB *job = NULL, jobs[MAX_BURST_JOBS] = {0};
+        struct IMB_JOB *job = NULL, *jobs[MAX_BURST_JOBS] = {NULL};
         uint32_t i, completed_jobs, n_jobs = MAX_BURST_JOBS;
         int err;
 
 	printf("BURST API behavior test:\n");
 
-        /* ======== test 1 : NULL jobs array  */
+        /* ======== test 1 : NULL pointer to jobs array */
 
-        completed_jobs = IMB_SUBMIT_BURST(mb_mgr, job, n_jobs);
+        if (mb_mgr->features & IMB_FEATURE_SAFE_PARAM) {
+                IMB_JOB **null_jobs = NULL;
+
+                completed_jobs = IMB_SUBMIT_BURST(mb_mgr, n_jobs, null_jobs);
+                if (completed_jobs != 0) {
+                        printf("%s: test %d, unexpected number of completed "
+                               "jobs\n", __func__, TEST_INVALID_BURST);
+                        return 1;
+                }
+                printf(".");
+
+                err = imb_get_errno(mb_mgr);
+                if (err != IMB_ERR_NULL_BURST) {
+                        printf("%s: test %d, unexpected error: %s\n",
+                               __func__, TEST_INVALID_BURST,
+                               imb_get_strerror(err));
+                        return 1;
+                }
+                printf(".");
+
+                /* ======== test 2 : NULL jobs array  */
+
+                completed_jobs = IMB_SUBMIT_BURST(mb_mgr, n_jobs, jobs);
+                if (completed_jobs != 0) {
+                        printf("%s: test %d, unexpected number of completed "
+                               "jobs\n", __func__, TEST_INVALID_BURST);
+                        return 1;
+                }
+                printf(".");
+
+                err = imb_get_errno(mb_mgr);
+                if (err != IMB_ERR_NULL_JOB) {
+                        printf("%s: test %d, unexpected error: %s\n",
+                               __func__, TEST_INVALID_BURST,
+                               imb_get_strerror(err));
+                        return 1;
+                }
+                printf(".");
+
+                /* ========== test 3: invalid burst size */
+
+                completed_jobs = IMB_SUBMIT_BURST(mb_mgr,
+                                                  IMB_MAX_BURST_SIZE + 1, jobs);
+                if (completed_jobs != 0) {
+                        printf("%s: test %d, unexpected number of completed "
+                               "jobs\n", __func__, TEST_INVALID_BURST);
+                        return 1;
+                }
+                printf(".");
+
+                err = imb_get_errno(mb_mgr);
+                if (err != IMB_ERR_BURST_SIZE) {
+                        printf("%s: test %d, unexpected error: %s\n",
+                               __func__, TEST_INVALID_BURST,
+                               imb_get_strerror(err));
+                        return 1;
+                }
+                printf(".");
+        }
+
+        /* ======== test 4 : invalid job order */
+
+        while (IMB_GET_NEXT_BURST(mb_mgr, n_jobs, jobs) < n_jobs)
+                IMB_FLUSH_BURST(mb_mgr, n_jobs, jobs);
+
+        /* fill in valid jobs */
+        for (i = 0; i < n_jobs; i++) {
+                job = jobs[i];
+                fill_in_job(job, IMB_CIPHER_CBC, IMB_DIR_ENCRYPT, IMB_AUTH_NULL,
+                            IMB_ORDER_CIPHER_HASH, NULL, NULL);
+        }
+
+        /* set invalid job order */
+        jobs[n_jobs / 2] = jobs[n_jobs - 1];
+
+        completed_jobs = IMB_SUBMIT_BURST(mb_mgr, n_jobs, jobs);
         if (completed_jobs != 0) {
-                printf("%s: test %d, unexpected number of completed jobs\n",
-                       __func__, TEST_INVALID_BURST);
+                printf("%s: test %d, unexpected number of completed "
+                       "jobs\n", __func__, TEST_INVALID_BURST);
                 return 1;
         }
         printf(".");
 
         err = imb_get_errno(mb_mgr);
-        if (err != IMB_ERR_NULL_JOB) {
+        if (err != IMB_ERR_BURST_OOO) {
                 printf("%s: test %d, unexpected error: %s\n",
-                       __func__, TEST_INVALID_BURST, imb_get_strerror(err));
+                       __func__, TEST_INVALID_BURST,
+                       imb_get_strerror(err));
                 return 1;
         }
         printf(".");
 
-        /* ======== test 2 : invalid job */
+        /* ======== test 5 : invalid job */
+
+        while (IMB_GET_NEXT_BURST(mb_mgr, n_jobs, jobs) < n_jobs)
+                IMB_FLUSH_BURST(mb_mgr, n_jobs, jobs);
 
         /* fill in valid jobs */
         for (i = 0; i < n_jobs; i++) {
-                job = &jobs[i];
+                job = jobs[i];
                 fill_in_job(job, IMB_CIPHER_CBC, IMB_DIR_ENCRYPT, IMB_AUTH_NULL,
                             IMB_ORDER_CIPHER_HASH, NULL, NULL);
         }
 
         /* set a single invalid field */
-        jobs[n_jobs - 1].enc_keys = NULL;
+        jobs[n_jobs - 1]->enc_keys = NULL;
 
         /* no jobs should complete if any job is invalid */
-        completed_jobs = IMB_SUBMIT_BURST(mb_mgr, jobs, n_jobs);
+        completed_jobs = IMB_SUBMIT_BURST(mb_mgr, n_jobs, jobs);
         if (completed_jobs != 0) {
                 printf("%s: test %d, unexpected number of completed jobs\n",
                        __func__, TEST_INVALID_BURST);
@@ -745,6 +827,14 @@ test_burst_api(struct IMB_MGR *mb_mgr)
                 return 1;
         }
         printf(".");
+
+        /* check invalid job returned in jobs[0] */
+        if (jobs[0] != jobs[n_jobs - 1]) {
+                printf("%s: test %d, unexpected error: %s\n",
+                       __func__, TEST_INVALID_BURST,
+                       "invalid job not returned in burst_job[0]");
+                return 1;
+        }
 
 	printf("\n");
         return 0;
