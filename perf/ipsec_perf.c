@@ -2108,14 +2108,18 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
         /* test burst api */
         if (test_api == TEST_API_BURST) {
                 uint32_t num_jobs = num_iter;
+                IMB_JOB *jobs[IMB_MAX_BURST_SIZE] = {NULL};
 
                 while (num_jobs && timebox_on) {
-                        uint32_t n_jobs =
-                                (num_jobs / burst_size) ? burst_size : num_jobs;
+                        uint32_t n = (num_jobs / burst_size) ?
+                                burst_size : num_jobs;
+
+                        while (IMB_GET_NEXT_BURST(mb_mgr, n, jobs) < n)
+                                IMB_FLUSH_BURST(mb_mgr, n, jobs);
 
                         /* set all job params */
-                        for (i = 0; i < n_jobs; i++) {
-                                job = &jobs[i];
+                        for (i = 0; i < n; i++) {
+                                IMB_JOB *job = jobs[i];
                                 *job = job_template;
 
                                 if (segment_size != 0)
@@ -2133,10 +2137,8 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
                         }
                         /* submit burst */
 #ifdef DEBUG
-                        const uint32_t completed_jobs =
-                                IMB_SUBMIT_BURST(mb_mgr, jobs, n_jobs);
-
-                        if (completed_jobs != n_jobs) {
+                        jobs_done += IMB_SUBMIT_BURST(mb_mgr, n, jobs);
+                        if (jobs_done == 0) {
                                 const int err = imb_get_errno(mb_mgr);
 
                                 if (err != 0) {
@@ -2145,11 +2147,13 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
                                 }
                         }
 #else
-                        IMB_SUBMIT_BURST_NOCHECK(mb_mgr, jobs, n_jobs);
+                        jobs_done +=
+                                IMB_SUBMIT_BURST_NOCHECK(mb_mgr, n, jobs);
 #endif
-                        num_jobs -= n_jobs;
+                        num_jobs -= n;
                 }
-                jobs_done = num_iter - num_jobs;
+                jobs_done +=
+                        IMB_FLUSH_BURST(mb_mgr, IMB_MAX_BURST_SIZE, jobs);
 
                 /* test cipher-only burst api */
         } else if (test_api == TEST_API_CIPHER_BURST) {
