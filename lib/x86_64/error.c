@@ -87,7 +87,11 @@ IMB_DLL_LOCAL const int imb_errno_types[] = {
         IMB_ERR_JOB_CIPH_DIR,
         IMB_ERR_JOB_NULL_GHASH_INIT_TAG,
         IMB_ERR_MISSING_CPUFLAGS_INIT_MGR,
-        IMB_ERR_NULL_JOB
+        IMB_ERR_NULL_JOB,
+        IMB_ERR_QUEUE_SPACE,
+        IMB_ERR_NULL_BURST,
+        IMB_ERR_BURST_OOO,
+        IMB_ERR_BURST_SIZE
 };
 
 #ifdef DEBUG
@@ -211,6 +215,14 @@ imb_get_strerror(int errnum)
                        "required CPU flags";
         case IMB_ERR_NULL_JOB:
                 return "NULL job pointer";
+        case IMB_ERR_QUEUE_SPACE:
+                return "Not enough space in job queue";
+        case IMB_ERR_NULL_BURST:
+                return "NULL pointer to burst job array";
+        case IMB_ERR_BURST_SIZE:
+                return "Invalid burst size";
+        case IMB_ERR_BURST_OOO:
+                return "Burst jobs out of order";
         default:
                 return strerror(errnum);
         }

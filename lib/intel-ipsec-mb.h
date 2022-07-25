@@ -224,6 +224,10 @@ typedef enum {
         IMB_ERR_JOB_NULL_GHASH_INIT_TAG,
         IMB_ERR_MISSING_CPUFLAGS_INIT_MGR,
         IMB_ERR_NULL_JOB,
+        IMB_ERR_QUEUE_SPACE,
+        IMB_ERR_NULL_BURST,
+        IMB_ERR_BURST_SIZE,
+        IMB_ERR_BURST_OOO,
         /* add new error types above this comment */
         IMB_ERR_MAX       /* don't move this one */
 } IMB_ERR;
