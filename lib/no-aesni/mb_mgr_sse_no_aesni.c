@@ -164,8 +164,10 @@
 #define SUBMIT_JOB_NOCHECK submit_job_nocheck_sse_no_aesni
 #define GET_NEXT_JOB       get_next_job_sse_no_aesni
 #define GET_COMPLETED_JOB  get_completed_job_sse_no_aesni
+#define GET_NEXT_BURST     get_next_burst_sse_no_aesni
 #define SUBMIT_BURST       submit_burst_sse_no_aesni
 #define SUBMIT_BURST_NOCHECK submit_burst_nocheck_sse_no_aesni
+#define FLUSH_BURST        flush_burst_sse_no_aesni
 #define SUBMIT_CIPHER_BURST submit_cipher_burst_sse_no_aesni
 #define SUBMIT_CIPHER_BURST_NOCHECK submit_cipher_burst_nocheck_sse_no_aesni
 #define SUBMIT_HASH_BURST submit_hash_burst_sse_no_aesni
@@ -497,8 +499,10 @@ init_mb_mgr_sse_no_aesni_internal(IMB_MGR *state, const int reset_mgrs)
         /* set SSE NO AESNI handlers */
         state->get_next_job        = get_next_job_sse_no_aesni;
         state->submit_job          = submit_job_sse_no_aesni;
+        state->get_next_burst      = get_next_burst_sse_no_aesni;
         state->submit_burst        = submit_burst_sse_no_aesni;
         state->submit_burst_nocheck= submit_burst_nocheck_sse_no_aesni;
+        state->flush_burst        = flush_burst_sse_no_aesni;
         state->submit_cipher_burst = submit_cipher_burst_sse_no_aesni;
         state->submit_cipher_burst_nocheck =
                 submit_cipher_burst_nocheck_sse_no_aesni;

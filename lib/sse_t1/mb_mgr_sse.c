@@ -168,8 +168,10 @@
 #define SUBMIT_JOB_NOCHECK submit_job_nocheck_sse
 #define GET_NEXT_JOB       get_next_job_sse
 #define GET_COMPLETED_JOB  get_completed_job_sse
+#define GET_NEXT_BURST     get_next_burst_sse
 #define SUBMIT_BURST       submit_burst_sse
 #define SUBMIT_BURST_NOCHECK submit_burst_nocheck_sse
+#define FLUSH_BURST       flush_burst_sse
 #define SUBMIT_CIPHER_BURST submit_cipher_burst_sse
 #define SUBMIT_CIPHER_BURST_NOCHECK submit_cipher_burst_nocheck_sse
 #define SUBMIT_HASH_BURST submit_hash_burst_sse
@@ -807,8 +809,10 @@ init_mb_mgr_sse_internal(IMB_MGR *state, const int reset_mgrs)
         /* set SSE handlers */
         state->get_next_job        = get_next_job_sse;
         state->submit_job          = submit_job_sse;
+        state->get_next_burst      = get_next_burst_sse;
         state->submit_burst        = submit_burst_sse;
         state->submit_burst_nocheck= submit_burst_nocheck_sse;
+        state->flush_burst        = flush_burst_sse;
         state->submit_cipher_burst = submit_cipher_burst_sse;
         state->submit_cipher_burst_nocheck = submit_cipher_burst_nocheck_sse;
         state->submit_hash_burst   = submit_hash_burst_sse;

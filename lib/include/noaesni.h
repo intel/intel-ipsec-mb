@@ -39,12 +39,17 @@ IMB_DLL_EXPORT IMB_JOB *get_completed_job_sse_no_aesni(IMB_MGR *state);
 IMB_DLL_EXPORT IMB_JOB *get_next_job_sse_no_aesni(IMB_MGR *state);
 
 IMB_DLL_EXPORT uint32_t
-submit_burst_sse_no_aesni(IMB_MGR *state,
-                          IMB_JOB *jobs,
-                          const uint32_t n_jobs);
+get_next_burst_sse_no_aesni(IMB_MGR *state, const uint32_t n_jobs,
+                            IMB_JOB **jobs);
 IMB_DLL_EXPORT uint32_t
-submit_burst_nocheck_sse_no_aesni(IMB_MGR *state, IMB_JOB *jobs,
-                                  const uint32_t n_jobs);
+submit_burst_sse_no_aesni(IMB_MGR *state, const uint32_t n_jobs,
+                          IMB_JOB **jobs);
+IMB_DLL_EXPORT uint32_t
+submit_burst_nocheck_sse_no_aesni(IMB_MGR *state, const uint32_t n_jobs,
+                                  IMB_JOB **jobs);
+IMB_DLL_EXPORT uint32_t
+flush_burst_sse_no_aesni(IMB_MGR *state, const uint32_t max_jobs,
+                         IMB_JOB **jobs);
 
 IMB_DLL_EXPORT uint32_t
 submit_cipher_burst_sse_no_aesni(IMB_MGR *state, IMB_JOB *jobs,

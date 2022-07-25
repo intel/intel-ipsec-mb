@@ -786,8 +786,9 @@ typedef IMB_JOB *(*submit_job_t)(struct IMB_MGR *);
 typedef IMB_JOB *(*get_completed_job_t)(struct IMB_MGR *);
 typedef IMB_JOB *(*flush_job_t)(struct IMB_MGR *);
 typedef uint32_t (*queue_size_t)(struct IMB_MGR *);
-typedef uint32_t (*submit_burst_t)(struct IMB_MGR *,
-                                   struct IMB_JOB *, const uint32_t);
+typedef uint32_t (*burst_fn_t)(struct IMB_MGR *,
+                               const uint32_t,
+                               struct IMB_JOB **);
 typedef uint32_t (*submit_cipher_burst_t)(struct IMB_MGR *,
                                           struct IMB_JOB *,
                                           const uint32_t,
@@ -1042,7 +1043,8 @@ typedef uint32_t (*crc32_fn_t)(const void *, const uint64_t);
 
 /* TOP LEVEL (IMB_MGR) Data structure fields */
 
-#define IMB_MAX_JOBS 128
+#define IMB_MAX_BURST_SIZE 128
+#define IMB_MAX_JOBS (IMB_MAX_BURST_SIZE * 2)
 
 typedef struct IMB_MGR {
 
@@ -1179,8 +1181,10 @@ typedef struct IMB_MGR {
         chacha_poly_enc_dec_update_t chacha20_poly1305_dec_update;
         chacha_poly_finalize_t       chacha20_poly1305_finalize;
 
-        submit_burst_t submit_burst;
-        submit_burst_t submit_burst_nocheck;
+        burst_fn_t get_next_burst;
+        burst_fn_t submit_burst;
+        burst_fn_t submit_burst_nocheck;
+        burst_fn_t flush_burst;
         submit_cipher_burst_t submit_cipher_burst;
         submit_cipher_burst_t submit_cipher_burst_nocheck;
         submit_hash_burst_t submit_hash_burst;
@@ -1591,30 +1595,59 @@ IMB_DLL_EXPORT void init_mb_mgr_auto(IMB_MGR *state, IMB_ARCH *arch);
 #define IMB_QUEUE_SIZE(_mgr)         ((_mgr)->queue_size((_mgr)))
 
 /**
- * Submit multiple jobs to be processed synchronously after validating.
+ * @brief Get next available burst
+ *        (list of pointers to available IMB_JOB structures).
  *
- * @param [in] _mgr        Pointer to initialized IMB_MGR structure
- * @param [in,out] _jobs   Pointer to array of IMB_JOB structures
- * @param [in] _n_jobs     Number of jobs to process
+ * @param [in,out] _mgr     Pointer to initialized IMB_MGR structure
+ * @param [in] _n_jobs      Requested number of burst jobs
+ * @param [out] _jobs       List of pointers to returned jobs
  *
- * @return Number of completed jobs
+ * @return Number of returned jobs.
+ *         May be less than number of requested jobs if not enough space in
+ *         queue. IMB_FLUSH_BURST() can be used to free up space.
  */
-#define IMB_SUBMIT_BURST(_mgr, _jobs, _n_jobs)          \
-        ((_mgr)->submit_burst((_mgr), (_jobs), (_n_jobs)))
+#define IMB_GET_NEXT_BURST(_mgr, _n_jobs, _jobs)   \
+        ((_mgr)->get_next_burst((_mgr), (_n_jobs), (_jobs)))
 
 /**
- * Submit multiple jobs to be processed synchronously without validating.
+ * Submit multiple jobs to be processed after validating.
  *
- * This is more performant but less secure than IMB_SUBMIT_BURST().
+ * @param [in,out] _mgr         Pointer to initialized IMB_MGR structure
+ * @param [in] _n_jobs          Number of jobs to submit for processing
+ * @param [in,out] _jobs        In:  List of pointers to jobs for submission
+ *                              Out: List of pointers to completed jobs
  *
- * @param [in] _mgr        Pointer to initialized IMB_MGR structure
- * @param [in,out] _jobs   Pointer to array of IMB_JOB structures
- * @param [in] _n_jobs     Number of jobs to process
+ * @return Number of completed jobs or zero on error.
+ *         If zero, imb_get_errno() can be used to check for potential
+ *         error conditions and _jobs[0] contains pointer to invalid job
+ */
+#define IMB_SUBMIT_BURST(_mgr, _n_jobs, _jobs)   \
+        ((_mgr)->submit_burst((_mgr), (_n_jobs), (_jobs)))
+
+/**
+ * Submit multiple jobs to be processed without validating.
+ *
+ * @param [in,out] _mgr         Pointer to initialized IMB_MGR structure
+ * @param [in] _n_jobs          Number of jobs to submit for processing
+ * @param [in,out] _jobs        In:  List of pointers to jobs for submission
+ *                              Out: List of pointers to completed jobs
+ *
+ * @return Number of completed jobs or zero on error
+ */
+#define IMB_SUBMIT_BURST_NOCHECK(_mgr, _n_jobs, _jobs)  \
+        ((_mgr)->submit_burst_nocheck((_mgr), (_n_jobs), (_jobs)))
+
+/**
+ * @brief Force up to \a max_jobs outstanding jobs to completion.
+ *
+ * @param [in,out] _mgr         Pointer to initialized IMB_MGR structure
+ * @param [in] _max_jobs        Maximum number of jobs to flush
+ * @param [out] _jobs           List of pointers to completed jobs
  *
  * @return Number of completed jobs
  */
-#define IMB_SUBMIT_BURST_NOCHECK(_mgr, _jobs, _n_jobs)                  \
-        ((_mgr)->submit_burst_nocheck((_mgr), (_jobs), (_n_jobs)))
+#define IMB_FLUSH_BURST(_mgr, _max_jobs, _jobs)  \
+        ((_mgr)->flush_burst((_mgr), (_max_jobs), (_jobs)))
 
 /**
  * Submit multiple cipher jobs to be processed synchronously after validating.

@@ -180,8 +180,10 @@
 #define QUEUE_SIZE         queue_size_avx2
 #define GET_NEXT_JOB       get_next_job_avx2
 #define GET_COMPLETED_JOB  get_completed_job_avx2
+#define GET_NEXT_BURST     get_next_burst_avx2
 #define SUBMIT_BURST       submit_burst_avx2
 #define SUBMIT_BURST_NOCHECK submit_burst_nocheck_avx2
+#define FLUSH_BURST       flush_burst_avx2
 #define SUBMIT_CIPHER_BURST submit_cipher_burst_avx2
 #define SUBMIT_CIPHER_BURST_NOCHECK submit_cipher_burst_nocheck_avx2
 #define SUBMIT_HASH_BURST submit_hash_burst_avx2
@@ -482,8 +484,10 @@ init_mb_mgr_avx2_internal(IMB_MGR *state, const int reset_mgrs)
         /* set handlers */
         state->get_next_job        = get_next_job_avx2;
         state->submit_job          = submit_job_avx2;
+        state->get_next_burst      = get_next_burst_avx2;
         state->submit_burst        = submit_burst_avx2;
         state->submit_burst_nocheck= submit_burst_nocheck_avx2;
+        state->flush_burst        = flush_burst_avx2;
         state->submit_cipher_burst = submit_cipher_burst_avx2;
         state->submit_cipher_burst_nocheck = submit_cipher_burst_nocheck_avx2;
         state->submit_hash_burst   = submit_hash_burst_avx2;
