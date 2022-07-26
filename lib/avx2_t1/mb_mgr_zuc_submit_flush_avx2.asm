@@ -408,7 +408,7 @@ mksection .text
 
 %%return_submit_eea3:
 %ifdef SAFE_DATA
-        clear_all_xmms_avx_asm
+        clear_scratch_ymms_asm
 %else
         vzeroupper
 %endif
@@ -688,7 +688,7 @@ APPEND3(%%skip_eea3_copy_,I,J):
         or      [state + _zuc_unused_lane_bitmask], BYTE(tmp3)
 %%return_flush_eea3:
 %ifdef SAFE_DATA
-        clear_all_xmms_avx_asm
+        clear_scratch_ymms_asm
 %else
         vzeroupper
 %endif
@@ -914,7 +914,7 @@ FLUSH_JOB_ZUC256_EEA3:
 
 %%return_submit_eia3:
 %ifdef SAFE_DATA
-        clear_all_xmms_avx_asm
+        clear_scratch_ymms_asm
 %else
         vzeroupper
 %endif
@@ -1082,7 +1082,7 @@ APPEND(%%skip_eia3_,I):
 
 %%return_flush_eia3:
 %ifdef SAFE_DATA
-        clear_all_xmms_avx_asm
+        clear_scratch_ymms_asm
 %else
         vzeroupper
 %endif
