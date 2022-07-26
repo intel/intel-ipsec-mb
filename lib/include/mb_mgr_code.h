@@ -2789,19 +2789,17 @@ submit_burst_and_check(IMB_MGR *state, const uint32_t n_jobs,
         /* reset error status */
         imb_set_errno(state, 0);
 
-#ifdef SAFE_PARAM
-        if (jobs == NULL) {
-                imb_set_errno(state, IMB_ERR_NULL_BURST);
-                return 0;
-        }
-        if (n_jobs > IMB_MAX_BURST_SIZE) {
-                imb_set_errno(state, IMB_ERR_BURST_SIZE);
-                return 0;
-        }
-#endif
         if (run_check) {
                 int job_offset = state->next_job;
 
+                if (jobs == NULL) {
+                        imb_set_errno(state, IMB_ERR_NULL_BURST);
+                        return 0;
+                }
+                if (n_jobs > IMB_MAX_BURST_SIZE) {
+                        imb_set_errno(state, IMB_ERR_BURST_SIZE);
+                        return 0;
+                }
                 /* check enough space in queue */
                 if (queue_sz_remaining(state) < n_jobs) {
                         imb_set_errno(state, IMB_ERR_QUEUE_SPACE);
@@ -2809,12 +2807,10 @@ submit_burst_and_check(IMB_MGR *state, const uint32_t n_jobs,
                 }
 
                 for (i = 0; i < n_jobs; i++) {
-#ifdef SAFE_PARAM
                         if (jobs[i] == NULL) {
                                 imb_set_errno(state, IMB_ERR_NULL_JOB);
                                 return 0;
                         }
-#endif
                         if (jobs[i] != JOBS(state, job_offset)) {
                                 imb_set_errno(state, IMB_ERR_BURST_OOO);
                                 goto return_invalid_job;
@@ -3140,12 +3136,11 @@ uint32_t submit_cipher_burst_and_check(IMB_MGR *state, IMB_JOB *jobs,
         /* reset error status */
         imb_set_errno(state, 0);
 
-        if (run_check) {
+        if (run_check)
                 if (jobs == NULL) {
-                        imb_set_errno(NULL, IMB_ERR_NULL_JOB);
+                        imb_set_errno(state, IMB_ERR_NULL_BURST);
                         return 0;
                 }
-        }
 
         switch (cipher) {
         case IMB_CIPHER_CBC:
