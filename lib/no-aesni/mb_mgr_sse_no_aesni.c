@@ -29,8 +29,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define CLEAR_SCRATCH_SIMD_REGS clear_scratch_xmms_sse
-
 #include "intel-ipsec-mb.h"
 #include "include/ipsec_ooo_mgr.h"
 #include "include/kasumi_internal.h"

@@ -30,7 +30,6 @@
 #include <string.h>
 
 #define AVX512
-#define CLEAR_SCRATCH_SIMD_REGS clear_scratch_zmms
 
 #include "intel-ipsec-mb.h"
 #include "include/ipsec_ooo_mgr.h"

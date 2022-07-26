@@ -30,7 +30,6 @@
 #include <string.h>
 
 #define SSE
-#define CLEAR_SCRATCH_SIMD_REGS clear_scratch_xmms_sse
 
 #include "intel-ipsec-mb.h"
 #include "include/ipsec_ooo_mgr.h"
