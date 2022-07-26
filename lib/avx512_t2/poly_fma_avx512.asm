@@ -32,6 +32,10 @@
 %include "include/clear_regs.asm"
 %include "include/cet.inc"
 
+;; Enforce EVEX encoding for AVX512 capable systems
+%xdefine vpmadd52luq {evex}vpmadd52luq
+%xdefine vpmadd52huq {evex}vpmadd52huq
+
 [bits 64]
 default rel
 
