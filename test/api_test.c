@@ -698,15 +698,14 @@ test_burst_api(struct IMB_MGR *mb_mgr)
 {
         struct IMB_JOB *job = NULL, *jobs[MAX_BURST_JOBS] = {NULL};
         uint32_t i, completed_jobs, n_jobs = MAX_BURST_JOBS;
+        struct IMB_JOB **null_jobs = NULL;
         int err;
 
-	printf("BURST API behavior test:\n");
+	printf("SUBMIT_BURST() API behavior test:\n");
 
         /* ======== test 1 : NULL pointer to jobs array */
 
         if (mb_mgr->features & IMB_FEATURE_SAFE_PARAM) {
-                IMB_JOB **null_jobs = NULL;
-
                 completed_jobs = IMB_SUBMIT_BURST(mb_mgr, n_jobs, null_jobs);
                 if (completed_jobs != 0) {
                         printf("%s: test %d, unexpected number of completed "
@@ -837,6 +836,70 @@ test_burst_api(struct IMB_MGR *mb_mgr)
         }
 
 	printf("\n");
+
+        if ((mb_mgr->features & IMB_FEATURE_SAFE_PARAM) == 0)
+                return 0;
+
+        printf("GET_NEXT_BURST() API behavior test:\n");
+
+        /* ======== test 6 : NULL pointer to burst job array */
+
+        completed_jobs = IMB_GET_NEXT_BURST(mb_mgr, n_jobs, null_jobs);
+        if (completed_jobs != 0) {
+                printf("%s: test %d, unexpected number of completed jobs\n",
+                       __func__, TEST_INVALID_BURST);
+                return 1;
+        }
+        printf(".");
+
+        err = imb_get_errno(mb_mgr);
+        if (err != IMB_ERR_NULL_BURST) {
+                printf("%s: test %d, unexpected error: %s\n",
+                       __func__, TEST_INVALID_BURST,
+                       imb_get_strerror(err));
+                return 1;
+        }
+        printf(".");
+
+        /* ======== test 7 : Invalid burst size */
+
+        completed_jobs = IMB_GET_NEXT_BURST(mb_mgr,
+                                            IMB_MAX_BURST_SIZE + 1, jobs);
+        if (completed_jobs != 0) {
+                printf("%s: test %d, unexpected number of completed jobs\n",
+                       __func__, TEST_INVALID_BURST);
+                return 1;
+        }
+        printf(".");
+
+        err = imb_get_errno(mb_mgr);
+        if (err != IMB_ERR_BURST_SIZE) {
+                printf("%s: test %d, unexpected error: %s\n",
+                       __func__, TEST_INVALID_BURST,
+                       imb_get_strerror(err));
+                return 1;
+        }
+        printf(".\n");
+
+        printf("FLUSH_BURST() API behavior test:\n");
+
+        completed_jobs = IMB_FLUSH_BURST(mb_mgr, n_jobs, null_jobs);
+        if (completed_jobs != 0) {
+                printf("%s: test %d, unexpected number of completed jobs\n",
+                       __func__, TEST_INVALID_BURST);
+                return 1;
+        }
+        printf(".");
+
+        err = imb_get_errno(mb_mgr);
+        if (err != IMB_ERR_NULL_BURST) {
+                printf("%s: test %d, unexpected error: %s\n",
+                       __func__, TEST_INVALID_BURST,
+                       imb_get_strerror(err));
+                return 1;
+        }
+        printf(".\n");
+
         return 0;
 }
 
