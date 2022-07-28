@@ -601,7 +601,7 @@ endstruc
 %define %%TMP14       %15 ;; [clobbered] temporary xmm register
 %define %%TMP15       %16 ;; [out] generated keystream
 %define %%TMP16       %17 ;; [out] generated keystream
-%define %%DWORD_ITER    %18 ;; [in] offset for stack storing keystream
+%define %%DWORD_ITER  %18 ;; [in] gp reg with offset for stack storing keystream
 
         ;; Calculate F = (LFSR_S[15] + FSM_R1) ^ FSM_R2;
         movdqa          %%TMP1, [ %%STATE + _snow3g_args_LFSR_15 ]
@@ -616,7 +616,8 @@ endstruc
         pxor            %%TMP1, [%%STATE + _snow3g_args_LFSR_0]
         pand            %%TMP3, %%TMP1          ;; zero in init mode
         por             %%TMP2, %%TMP3
-        movdqa          [rsp + _keystream + %%DWORD_ITER * 16], %%TMP2
+        shl             %%DWORD_ITER, 4
+        movdqa          [rsp + _keystream + %%DWORD_ITER], %%TMP2
 
         ;; FSM Clock
         SNOW3G_FSM_CLOCK {%%STATE + _snow3g_args_FSM_1},  \
@@ -654,11 +655,13 @@ endstruc
 
         ;; in init mode mask is 0, so this is applies only in init mode
         movdqa          %%TMP2, [%%STATE + _snow3g_args_LD_ST_MASK + 4*4]
-        pandn           %%TMP2, [rsp + _keystream + %%DWORD_ITER * 16]
+        pandn           %%TMP2, [rsp + _keystream + %%DWORD_ITER]
         pxor            %%TMP15, %%TMP2
 
         SHIFT_LFSRS     %%STATE, %%TMP15, %%TMP1, %%TMP2, %%TMP3,      \
                         %%TMP4, %%TMP5, %%TMP6, %%TMP7
+        ;; restore offset
+        shr             %%DWORD_ITER, 4
 %endmacro
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -872,15 +875,18 @@ endstruc
         shr             %%LENGTH, 2
         je              %%no_dqws
 
+
 %%next_dqw:
-%assign i 0
-%rep 4
+        xor             %%TMP1_64, %%TMP1_64
+
+%%next_dqw_round:
         SNOW3G_KEY_GEN_SSE %%STATE, %%TMP1, %%TMP2, %%TMP3, %%TMP4, %%TMP5,    \
                            %%TMP6, %%TMP7, %%TMP8, %%TMP9, %%TMP10, %%TMP11,   \
-                           %%TMP12, %%TMP13, %%TMP14, %%TMP15, %%TMP16, i
+                           %%TMP12, %%TMP13, %%TMP14, %%TMP15, %%TMP16, %%TMP1_64
 
-%assign i (i+1)
-%endrep
+        inc             %%TMP1_64
+        cmp             %%TMP1_64, 4
+        jb              %%next_dqw_round
 
         TRANSPOSE_4X32  %%TMP1, %%TMP2, %%TMP3, %%TMP4, %%TMP5, %%TMP6
         SNOW3G_OUTPUT   16, %%STATE, 0, %%IN, %%OUT, %%TMP1_64, %%TMP5, %%TMP1
@@ -898,9 +904,10 @@ endstruc
         je              %%no_full_dws_to_write_out
 
 %%next_dw:
+        xor             %%TMP1_64,  %%TMP1_64
         SNOW3G_KEY_GEN_SSE %%STATE, %%TMP1, %%TMP2, %%TMP3, %%TMP4, %%TMP5,    \
                            %%TMP6, %%TMP7, %%TMP8, %%TMP9, %%TMP10, %%TMP11,   \
-                           %%TMP12, %%TMP13, %%TMP14, %%TMP15, %%TMP16, 0
+                           %%TMP12, %%TMP13, %%TMP14, %%TMP15, %%TMP16, %%TMP1_64
 
         SNOW3G_OUTPUT       4, %%STATE, 0, %%IN, %%OUT, %%TMP1_64, %%TMP2_64
         SNOW3G_OUTPUT       4, %%STATE, 1, %%IN, %%OUT, %%TMP1_64, %%TMP2_64
@@ -912,9 +919,10 @@ endstruc
 
 %%no_full_dws_to_write_out:
         ;; Process last dw/bytes:
+        xor             %%TMP1_64,  %%TMP1_64
         SNOW3G_KEY_GEN_SSE %%STATE, %%TMP1, %%TMP2, %%TMP3, %%TMP4, %%TMP5,    \
                            %%TMP6, %%TMP7, %%TMP8, %%TMP9, %%TMP10, %%TMP11,   \
-                           %%TMP12, %%TMP13, %%TMP14, %%TMP15, %%TMP16, 0
+                           %%TMP12, %%TMP13, %%TMP14, %%TMP15, %%TMP16, %%TMP1_64
 
         SNOW3G_OUTPUT      3, %%STATE,  0, %%IN, %%OUT, %%TMP1_64, %%LENGTH
         SNOW3G_OUTPUT      3, %%STATE,  1, %%IN, %%OUT, %%TMP1_64, %%LENGTH
@@ -964,32 +972,39 @@ endstruc
 %endrep
 
         ;; Run 32 iteration in INIT mode (reject keystreams)
-%rep 32
+        mov     %%TMP1_64, 32
+        xor     %%TMP2_64, %%TMP2_64
+
+%%next_auth_round:
         SNOW3G_KEY_GEN_SSE %%STATE, %%TMP1, %%TMP2, %%TMP3, %%TMP4, %%TMP5,    \
                            %%TMP6, %%TMP7, %%TMP8, %%TMP9, %%TMP10, %%TMP11,   \
-                           %%TMP12, %%TMP13, %%TMP14, %%TMP15, %%TMP16, 0
-%endrep
+                           %%TMP12, %%TMP13, %%TMP14, %%TMP15, %%TMP16, %%TMP2_64
+        dec     %%TMP1_64
+        jnz     %%next_auth_round
+
         ;; Mark INIT1 phase done for all lanes
         movdqa  %%TMP1, [rel all_fs]
         movdqa  [state + INIT1_DONE], %%TMP1
 
         SNOW3G_KEY_GEN_SSE %%STATE, %%TMP1, %%TMP2, %%TMP3, %%TMP4, %%TMP5,    \
                            %%TMP6, %%TMP7, %%TMP8, %%TMP9, %%TMP10, %%TMP11,   \
-                           %%TMP12, %%TMP13, %%TMP14, %%TMP15, %%TMP16, 0
+                           %%TMP12, %%TMP13, %%TMP14, %%TMP15, %%TMP16, %%TMP2_64
 
         ;; Put all lanes in KEYGEN state
         movdqa  %%TMP1, [rel all_fs]
         movdqa  [state + KEYGEN_STAGE], %%TMP1
 
         ;; Generate 4 dw of keystream for each lane
-%assign i 0
-%rep 4
+        xor     %%TMP1_64, %%TMP1_64
+
+%%next_auth_round2:
         SNOW3G_KEY_GEN_SSE %%STATE, %%TMP1, %%TMP2, %%TMP3, %%TMP4, %%TMP5,    \
                            %%TMP6, %%TMP7, %%TMP8, %%TMP9, %%TMP10, %%TMP11,   \
-                           %%TMP12, %%TMP13, %%TMP14, %%TMP15, %%TMP16, i
+                           %%TMP12, %%TMP13, %%TMP14, %%TMP15, %%TMP16, %%TMP1_64
+        inc     %%TMP1_64
+        cmp     %%TMP1_64, 4
+        jb      %%next_auth_round2
 
-%assign i (i+1)
-%endrep
         TRANSPOSE_4X32  %%TMP1, %%TMP2, %%TMP3, %%TMP4, %%TMP5, %%TMP6
 
         ;; Store 4 dw of keystream for each lane
@@ -1001,7 +1016,7 @@ endstruc
         ;; Generate final dw of keystream for each lane
         SNOW3G_KEY_GEN_SSE %%STATE, %%TMP1, %%TMP2, %%TMP3, %%TMP4, %%TMP5,    \
                            %%TMP6, %%TMP7, %%TMP8, %%TMP9, %%TMP10, %%TMP11,   \
-                           %%TMP12, %%TMP13, %%TMP14, %%TMP15, %%TMP16, 0
+                           %%TMP12, %%TMP13, %%TMP14, %%TMP15, %%TMP16, %%TMP2_64
 
         ;; Store final dw of keystream for each lane
         mov     DWORD(%%TMP1_64), [rsp + _keystream + 0*4]
