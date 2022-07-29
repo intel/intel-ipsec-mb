@@ -33,7 +33,7 @@
 
 #include "intel-ipsec-mb.h"
 #include "include/ipsec_ooo_mgr.h"
-#include "include/kasumi_internal.h"
+#include "include/kasumi_interface.h"
 #include "include/zuc_internal.h"
 #include "include/snow3g.h"
 #include "include/gcm.h"
