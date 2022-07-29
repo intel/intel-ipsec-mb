@@ -448,6 +448,8 @@ lib_objs2 = \
 	$(OBJ_DIR)\mb_mgr_avx.obj \
 	$(OBJ_DIR)\mb_mgr_avx2.obj \
 	$(OBJ_DIR)\mb_mgr_avx512.obj \
+	$(OBJ_DIR)\mb_mgr_avx512_t1.obj \
+	$(OBJ_DIR)\mb_mgr_avx512_t2.obj \
 	$(OBJ_DIR)\mb_mgr_des_avx512.obj \
 	$(OBJ_DIR)\mb_mgr_sse.obj \
 	$(OBJ_DIR)\alloc.obj \

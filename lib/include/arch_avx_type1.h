@@ -231,6 +231,8 @@ void aes_cmac_256_subkey_gen_avx(const void *key_exp,
 void aes128_cbc_mac_x8(AES_ARGS *args, uint64_t len);
 
 uint32_t ethernet_fcs_avx(const void *msg, const uint64_t len);
+uint32_t ethernet_fcs_avx_local(const void *msg, const uint64_t len,
+                                const void *tag_ouput);
 uint32_t crc16_x25_avx(const void *msg, const uint64_t len);
 uint32_t crc32_sctp_avx(const void *msg, const uint64_t len);
 uint32_t crc24_lte_a_avx(const void *msg, const uint64_t len);

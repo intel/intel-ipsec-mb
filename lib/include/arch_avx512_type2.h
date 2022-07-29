@@ -27,7 +27,6 @@
 
 /* AVX512 + VAES + VPCLMULQDQ + GFNI + FMA */
 
-
 #ifndef IMB_ASM_AVX512_T2_H
 #define IMB_ASM_AVX512_T2_H
 
@@ -163,6 +162,8 @@ IMB_JOB *flush_job_aes256_ccm_auth_vaes_avx512(MB_MGR_CCM_OOO *state);
 void poly1305_mac_fma_avx512(IMB_JOB *job);
 
 uint32_t ethernet_fcs_avx512(const void *msg, const uint64_t len);
+uint32_t ethernet_fcs_avx512_local(const void *msg, const uint64_t len,
+                                   const void *tag_ouput);
 uint32_t crc16_x25_avx512(const void *msg, const uint64_t len);
 uint32_t crc32_sctp_avx512(const void *msg, const uint64_t len);
 uint32_t crc24_lte_a_avx512(const void *msg, const uint64_t len);

@@ -249,6 +249,8 @@ c_lib_objs := \
 	mb_mgr_avx.o \
 	mb_mgr_avx2.o \
 	mb_mgr_avx512.o \
+	mb_mgr_avx512_t1.o \
+	mb_mgr_avx512_t2.o \
 	mb_mgr_sse.o \
 	alloc.o \
 	aes_xcbc_expand_key.o \
