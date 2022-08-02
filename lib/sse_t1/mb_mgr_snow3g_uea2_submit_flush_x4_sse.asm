@@ -261,8 +261,7 @@ mksection .text
         pshufd          %%TMP_XMM_2, %%TMP_XMM_2, 0x88 ;; lane order: 1,0,1,0
         pshufd          %%TMP_XMM_3, %%TMP_XMM_3, 0x88 ;; lane order: 3,2,3,2
         pblendw         %%TMP_XMM_2, %%TMP_XMM_3, 0xf0
-
-        pandn            %%TMP_XMM_2, %%TMP_XMM_0
+        pandn           %%TMP_XMM_2, %%TMP_XMM_0
 
         ;; Decrease rouded dw lengths remaining for processing
         movdqa          %%TMP_XMM_5, [state + ROUNDED_DW_LENS]
@@ -278,14 +277,15 @@ mksection .text
         movdqa          %%TMP_XMM_2, %%TMP_XMM_1
         pand            %%TMP_XMM_1, [state + _snow3g_args_byte_length]
 
-        pandn           %%TMP_XMM_0, %%TMP_XMM_2
+        pxor            %%TMP_XMM_2, [rel all_fs]
+        pand            %%TMP_XMM_0, %%TMP_XMM_2
         por             %%TMP_XMM_0, %%TMP_XMM_1
 
         ;; Write outstanding bytes to _snow3g_lens dwords [0:3] and adjust
         ;; _snow3g_args_byte_length so after common dw length subtraction
         ;; it is set to 0
         pand            %%TMP_XMM_1, [rel last_3_bytes]
-        pandn            %%TMP_XMM_2, [state+_snow3g_lens]
+        pand            %%TMP_XMM_2, [state+_snow3g_lens]
         por             %%TMP_XMM_1, %%TMP_XMM_2
         movdqa          [state + _snow3g_lens], %%TMP_XMM_1
 
