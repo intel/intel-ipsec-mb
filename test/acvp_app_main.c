@@ -719,6 +719,72 @@ static int aes_hmac_sha256_handler(ACVP_TEST_CASE *test_case)
         return EXIT_SUCCESS;
 }
 
+static int aes_hmac_sha224_handler(ACVP_TEST_CASE *test_case)
+{
+        ACVP_HMAC_TC *tc;
+        IMB_JOB *job = NULL;
+        uint32_t i = 0;
+        DECLARE_ALIGNED(uint8_t ipad_hash[IMB_SHA224_DIGEST_SIZE_IN_BYTES], 16);
+        DECLARE_ALIGNED(uint8_t opad_hash[IMB_SHA224_DIGEST_SIZE_IN_BYTES], 16);
+        uint8_t key[IMB_SHA_256_BLOCK_SIZE];
+        uint8_t buf[IMB_SHA_256_BLOCK_SIZE];
+        uint32_t key_len = 0;
+
+        if (test_case == NULL)
+                return EXIT_FAILURE;
+
+        tc = test_case->tc.hmac;
+
+        /* prepare the key */
+        memset(key, 0, sizeof(key));
+        if (tc->key_len <= IMB_SHA_256_BLOCK_SIZE) {
+                memcpy(key, tc->key, tc->key_len);
+                key_len = (uint32_t) tc->key_len;
+        } else {
+                IMB_SHA224(mb_mgr, tc->key, tc->key_len, key);
+                key_len = IMB_SHA224_DIGEST_SIZE_IN_BYTES;
+        }
+
+        /* compute ipad hash */
+        memset(buf, 0x36, sizeof(buf));
+        for (i = 0; i < key_len; i++)
+                buf[i] ^= key[i];
+        IMB_SHA224_ONE_BLOCK(mb_mgr, buf, ipad_hash);
+
+        /* compute opad hash */
+        memset(buf, 0x5c, sizeof(buf));
+        for (i = 0; i < key_len; i++)
+                buf[i] ^= key[i];
+        IMB_SHA224_ONE_BLOCK(mb_mgr, buf, opad_hash);
+
+        job = IMB_GET_NEXT_JOB(mb_mgr);
+        job->key_len_in_bytes = tc->key_len;
+        job->cipher_mode = IMB_CIPHER_NULL;
+        job->hash_alg = IMB_AUTH_HMAC_SHA_224;
+        job->cipher_start_src_offset_in_bytes = 0;
+        job->msg_len_to_cipher_in_bytes = 0;
+        job->hash_start_src_offset_in_bytes = 0;
+        job->u.HMAC._hashed_auth_key_xor_ipad = ipad_hash;
+        job->u.HMAC._hashed_auth_key_xor_opad = opad_hash;
+        job->src = tc->msg;
+        job->msg_len_to_hash_in_bytes = tc->msg_len;
+        /*
+         * The library only supports 14 or 28-byte tags and therefore,
+         * we are outputting 28 bytes always
+        */
+        job->auth_tag_output_len_in_bytes = IMB_SHA224_DIGEST_SIZE_IN_BYTES;
+        job->auth_tag_output = tc->mac;
+
+        job = IMB_SUBMIT_JOB(mb_mgr);
+        if (job == NULL)
+                job = IMB_FLUSH_JOB(mb_mgr);
+        if (job->status != IMB_STATUS_COMPLETED) {
+                fprintf(stderr, "Invalid job\n");
+                return EXIT_FAILURE;
+        }
+        return EXIT_SUCCESS;
+}
+
 static void usage(const char *app_name)
 {
         fprintf(stderr, "Usage: %s --req FILENAME --resp FILENAME [opt args], "
@@ -848,6 +914,10 @@ int main(int argc, char **argv)
 
         if (acvp_cap_hmac_enable(ctx, ACVP_HMAC_SHA2_256,
                                 &aes_hmac_sha256_handler) != ACVP_SUCCESS)
+                goto exit;
+
+        if (acvp_cap_hmac_enable(ctx, ACVP_HMAC_SHA2_224,
+                                &aes_hmac_sha224_handler) != ACVP_SUCCESS)
                 goto exit;
 
         /* Allocate and initialize MB_MGR */
