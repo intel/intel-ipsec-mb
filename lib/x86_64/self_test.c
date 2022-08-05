@@ -904,6 +904,40 @@ static int self_test_hash(IMB_MGR *p_mgr)
                 if (memcmp(scratch, v->tag, v->tag_size))
                         return 0;
 
+                /* exercise direct API test if available */
+                memset(scratch, 0, sizeof(scratch));
+
+                if (v->hash_mode == IMB_AUTH_SHA_1) {
+                        memset(scratch, 0, sizeof(scratch));
+                        IMB_SHA1(p_mgr, v->message, v->message_size, scratch);
+                        if (memcmp(scratch, v->tag, v->tag_size))
+                                return 0;
+                }
+                if (v->hash_mode == IMB_AUTH_SHA_224) {
+                        memset(scratch, 0, sizeof(scratch));
+                        IMB_SHA224(p_mgr, v->message, v->message_size, scratch);
+                        if (memcmp(scratch, v->tag, v->tag_size))
+                                return 0;
+                }
+                if (v->hash_mode == IMB_AUTH_SHA_256) {
+                        memset(scratch, 0, sizeof(scratch));
+                        IMB_SHA256(p_mgr, v->message, v->message_size, scratch);
+                        if (memcmp(scratch, v->tag, v->tag_size))
+                                return 0;
+                }
+                if (v->hash_mode == IMB_AUTH_SHA_384) {
+                        memset(scratch, 0, sizeof(scratch));
+                        IMB_SHA384(p_mgr, v->message, v->message_size, scratch);
+                        if (memcmp(scratch, v->tag, v->tag_size))
+                                return 0;
+                }
+                if (v->hash_mode == IMB_AUTH_SHA_512) {
+                        memset(scratch, 0, sizeof(scratch));
+                        IMB_SHA512(p_mgr, v->message, v->message_size, scratch);
+                        if (memcmp(scratch, v->tag, v->tag_size))
+                                return 0;
+                }
+
         } /* for(hash_vectors) */
 
         return 1;
