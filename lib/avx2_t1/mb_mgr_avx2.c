@@ -46,6 +46,7 @@
 #include "include/aesni_emu.h"
 #include "include/error.h"
 
+#include "include/arch_x86_64.h" /* self-test */
 #include "include/arch_sse_type1.h" /* poly1305 */
 #include "include/arch_avx_type1.h"
 #include "include/arch_avx2_type1.h"
@@ -612,6 +613,9 @@ void
 init_mb_mgr_avx2(IMB_MGR *state)
 {
         init_mb_mgr_avx2_internal(state, 1);
+
+        if (!self_test(state))
+                imb_set_errno(state, IMB_ERR_SELFTEST);
 }
 
 #include "mb_mgr_code.h"

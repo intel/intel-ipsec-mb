@@ -41,6 +41,7 @@
 #include "include/gcm.h"
 #include "include/noaesni.h"
 #include "include/error.h"
+#include "include/arch_x86_64.h" /* self-test */
 #include "include/arch_noaesni.h"
 #include "include/arch_sse_type1.h"
 
@@ -631,6 +632,9 @@ void
 init_mb_mgr_sse_no_aesni(IMB_MGR *state)
 {
         init_mb_mgr_sse_no_aesni_internal(state, 1);
+
+        if (!self_test(state))
+                imb_set_errno(state, IMB_ERR_SELFTEST);
 }
 
 #include "mb_mgr_code.h"

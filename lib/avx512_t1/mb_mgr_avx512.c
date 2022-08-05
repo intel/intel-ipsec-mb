@@ -30,6 +30,8 @@
 #include "include/error.h"
 #include "include/cpu_feature.h"
 #include "include/aesni_emu.h"
+#include "include/error.h"
+#include "include/arch_x86_64.h" /* self-test */
 
 IMB_DLL_LOCAL void
 init_mb_mgr_avx512_internal(IMB_MGR *state, const int reset_mgrs)
@@ -63,6 +65,9 @@ void
 init_mb_mgr_avx512(IMB_MGR *state)
 {
         init_mb_mgr_avx512_internal(state, 1);
+
+        if (!self_test(state))
+                imb_set_errno(state, IMB_ERR_SELFTEST);
 }
 
 IMB_JOB *submit_job_avx512(IMB_MGR *state)

@@ -442,6 +442,13 @@ main(int argc, char **argv)
                         break;
                 }
 
+                if (imb_get_errno(p_mgr) != 0) {
+                        printf("Error initializing MB_MGR structure! %s\n",
+                               imb_get_strerror(imb_get_errno(p_mgr)));
+                        free_mb_mgr(p_mgr);
+                        return EXIT_FAILURE;
+                }
+
                 print_tested_arch(p_mgr->features, atype);
 
                 for (test_idx = 0; test_idx < DIM(tests); test_idx++) {

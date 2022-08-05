@@ -43,6 +43,7 @@
 #include "include/cpu_feature.h"
 #include "include/aesni_emu.h"
 #include "include/error.h"
+#include "include/arch_x86_64.h" /* self-test */
 #include "include/arch_avx_type1.h"
 #include "include/ooo_mgr_reset.h"
 
@@ -622,6 +623,9 @@ void
 init_mb_mgr_avx(IMB_MGR *state)
 {
         init_mb_mgr_avx_internal(state, 1);
+
+        if (!self_test(state))
+                imb_set_errno(state, IMB_ERR_SELFTEST);
 }
 
 #include "mb_mgr_code.h"
