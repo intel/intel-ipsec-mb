@@ -937,6 +937,48 @@ static int self_test_hash(IMB_MGR *p_mgr)
                         if (memcmp(scratch, v->tag, v->tag_size))
                                 return 0;
                 }
+                if (v->hash_mode == IMB_AUTH_AES_GMAC_128) {
+                        struct gcm_context_data ctx;
+
+                        memset(scratch, 0, sizeof(scratch));
+                        IMB_AES128_GCM_PRE(p_mgr, v->hash_key, &gmac_key);
+                        IMB_AES128_GMAC_INIT(p_mgr, &gmac_key, &ctx, v->hash_iv,
+                                             v->hash_iv_size);
+                        IMB_AES128_GMAC_UPDATE(p_mgr, &gmac_key, &ctx,
+                                               v->message, v->message_size);
+                        IMB_AES128_GMAC_FINALIZE(p_mgr, &gmac_key, &ctx,
+                                                 scratch, v->tag_size);
+                        if (memcmp(scratch, v->tag, v->tag_size))
+                                return 0;
+                }
+                if (v->hash_mode == IMB_AUTH_AES_GMAC_192) {
+                        struct gcm_context_data ctx;
+
+                        memset(scratch, 0, sizeof(scratch));
+                        IMB_AES192_GCM_PRE(p_mgr, v->hash_key, &gmac_key);
+                        IMB_AES192_GMAC_INIT(p_mgr, &gmac_key, &ctx, v->hash_iv,
+                                             v->hash_iv_size);
+                        IMB_AES192_GMAC_UPDATE(p_mgr, &gmac_key, &ctx,
+                                               v->message, v->message_size);
+                        IMB_AES192_GMAC_FINALIZE(p_mgr, &gmac_key, &ctx,
+                                                 scratch, v->tag_size);
+                        if (memcmp(scratch, v->tag, v->tag_size))
+                                return 0;
+                }
+                if (v->hash_mode == IMB_AUTH_AES_GMAC_256) {
+                        struct gcm_context_data ctx;
+
+                        memset(scratch, 0, sizeof(scratch));
+                        IMB_AES256_GCM_PRE(p_mgr, v->hash_key, &gmac_key);
+                        IMB_AES256_GMAC_INIT(p_mgr, &gmac_key, &ctx, v->hash_iv,
+                                             v->hash_iv_size);
+                        IMB_AES256_GMAC_UPDATE(p_mgr, &gmac_key, &ctx,
+                                               v->message, v->message_size);
+                        IMB_AES256_GMAC_FINALIZE(p_mgr, &gmac_key, &ctx,
+                                                 scratch, v->tag_size);
+                        if (memcmp(scratch, v->tag, v->tag_size))
+                                return 0;
+                }
 
         } /* for(hash_vectors) */
 
