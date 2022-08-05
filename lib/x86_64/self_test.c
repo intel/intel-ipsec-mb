@@ -32,6 +32,38 @@
 #include "intel-ipsec-mb.h"
 #include "arch_x86_64.h"
 
+static int process_job(IMB_MGR *p_mgr, IMB_JOB **p_job)
+{
+        IMB_JOB *job = IMB_SUBMIT_JOB(p_mgr);
+
+        if (!job) {
+                const int err = imb_get_errno(p_mgr);
+                
+                /* check for error */
+                if (err != 0)
+                        return 0;
+                
+                /* if no error then flush to get one */
+                job = IMB_FLUSH_JOB(p_mgr);
+                /* if flush returns nothing then it's an error */
+                if (!job)
+                        return 0;
+        }
+
+        /* if returned job is not complete then it's an error */
+        if (job->status != IMB_STATUS_COMPLETED)
+                return 0;
+
+        *p_job = job;
+        return 1;
+}
+
+/*
+ * =============================================================================
+ * CIPHER SELF-TEST
+ * =============================================================================
+ */
+
 struct self_test_cipher_vector {
         IMB_CIPHER_MODE cipher_mode;
 	const uint8_t *cipher_key;
@@ -218,32 +250,6 @@ struct self_test_cipher_vector cipher_vectors[] = {
                           aes_ctr_256_plain_text, aes_ctr_256_cipher_text),
 };
 
-static int process_job(IMB_MGR *p_mgr, IMB_JOB **p_job)
-{
-        IMB_JOB *job = IMB_SUBMIT_JOB(p_mgr);
-
-        if (!job) {
-                const int err = imb_get_errno(p_mgr);
-                
-                /* check for error */
-                if (err != 0)
-                        return 0;
-                
-                /* if no error then flush to get one */
-                job = IMB_FLUSH_JOB(p_mgr);
-                /* if flush returns nothing then it's an error */
-                if (!job)
-                        return 0;
-        }
-
-        /* if returned job is not complete then it's an error */
-        if (job->status != IMB_STATUS_COMPLETED)
-                return 0;
-
-        *p_job = job;
-        return 1;
-}
-
 static int self_test_ciphers(IMB_MGR *p_mgr)
 {
         uint8_t scratch[256];
@@ -342,9 +348,167 @@ static int self_test_ciphers(IMB_MGR *p_mgr)
         return 1;
 }
 
+/*
+ * =============================================================================
+ * HASH SELF-TEST
+ * =============================================================================
+ */
+
+struct self_test_hash_vector {
+        IMB_HASH_ALG hash_mode;
+	const uint8_t *hash_key;
+        size_t hash_key_size;    /* key size in bytes */
+	const uint8_t *hash_iv;  /* initialization vector */
+        size_t hash_iv_size;
+	const uint8_t *message;
+        size_t message_size;
+	const uint8_t *tag;
+        size_t tag_size;
+};
+
+/*
+ * Test vectors come from this NIST document:
+ *
+ * https://csrc.nist.gov/csrc/media/projects/
+ *     cryptographic-standards-and-guidelines/documents/examples/sha_all.pdf
+ */
+
+const uint8_t sha_message[] = {
+        0x61, 0x62, 0x63, 0x64, 0x62, 0x63, 0x64, 0x65,
+        0x63, 0x64, 0x65, 0x66, 0x64, 0x65, 0x66, 0x67,
+        0x65, 0x66, 0x67, 0x68, 0x66, 0x67, 0x68, 0x69,
+        0x67, 0x68, 0x69, 0x6a, 0x68, 0x69, 0x6a, 0x6b,
+        0x69, 0x6a, 0x6b, 0x6c, 0x6a, 0x6b, 0x6c, 0x6d,
+        0x6b, 0x6c, 0x6d, 0x6e, 0x6c, 0x6d, 0x6e, 0x6f,
+        0x6d, 0x6e, 0x6f, 0x70, 0x6e, 0x6f, 0x70, 0x71
+};
+
+const uint8_t sha1_digest[] = {
+        0x84, 0x98, 0x3e, 0x44,
+        0x1c, 0x3b, 0xd2, 0x6e,
+        0xba, 0xae, 0x4a, 0xa1,
+        0xf9, 0x51, 0x29, 0xe5,
+        0xe5, 0x46, 0x70, 0xf1
+};
+
+const uint8_t sha224_digest[] = {
+        0x75, 0x38, 0x8b, 0x16,
+        0x51, 0x27, 0x76, 0xcc,
+        0x5d, 0xba, 0x5d, 0xa1,
+        0xfd, 0x89, 0x01, 0x50,
+        0xb0, 0xc6, 0x45, 0x5c,
+        0xb4, 0xf5, 0x8b, 0x19,
+        0x52, 0x52, 0x25, 0x25
+};
+
+const uint8_t sha256_digest[] = {
+        0x24, 0x8d, 0x6a, 0x61,
+        0xd2, 0x06, 0x38, 0xb8,
+        0xe5, 0xc0, 0x26, 0x93,
+        0x0c, 0x3e, 0x60, 0x39,
+        0xa3, 0x3c, 0xe4, 0x59,
+        0x64, 0xff, 0x21, 0x67,
+        0xf6, 0xec, 0xed, 0xd4,
+        0x19, 0xdb, 0x06, 0xc1
+};
+
+const uint8_t sha384_digest[] = {
+        0x33, 0x91, 0xfd, 0xdd, 0xfc, 0x8d, 0xc7, 0x39,
+        0x37, 0x07, 0xa6, 0x5b, 0x1b, 0x47, 0x09, 0x39,
+        0x7c, 0xf8, 0xb1, 0xd1, 0x62, 0xaf, 0x05, 0xab,
+        0xfe, 0x8f, 0x45, 0x0d, 0xe5, 0xf3, 0x6b, 0xc6,
+        0xb0, 0x45, 0x5a, 0x85, 0x20, 0xbc, 0x4e, 0x6f,
+        0x5f, 0xe9, 0x5b, 0x1f, 0xe3, 0xc8, 0x45, 0x2b
+};
+
+const uint8_t sha512_digest[] = {
+        0x20, 0x4a, 0x8f, 0xc6, 0xdd, 0xa8, 0x2f, 0x0a,
+        0x0c, 0xed, 0x7b, 0xeb, 0x8e, 0x08, 0xa4, 0x16,
+        0x57, 0xc1, 0x6e, 0xf4, 0x68, 0xb2, 0x28, 0xa8,
+        0x27, 0x9b, 0xe3, 0x31, 0xa7, 0x03, 0xc3, 0x35,
+        0x96, 0xfd, 0x15, 0xc1, 0x3b, 0x1b, 0x07, 0xf9,
+        0xaa, 0x1d, 0x3b, 0xea, 0x57, 0x78, 0x9c, 0xa0,
+        0x31, 0xad, 0x85, 0xc7, 0xa7, 0x1d, 0xd7, 0x03,
+        0x54, 0xec, 0x63, 0x12, 0x38, 0xca, 0x34, 0x45
+};
+
+#define ADD_SHA_VECTOR(_hmode,_msg,_digest)     \
+        {_hmode, NULL, 0, NULL, 0, _msg, sizeof(_msg), \
+                        _digest, sizeof(_digest)}
+
+struct self_test_hash_vector hash_vectors[] = {
+        ADD_SHA_VECTOR(IMB_AUTH_SHA_1, sha_message, sha1_digest),
+        ADD_SHA_VECTOR(IMB_AUTH_SHA_224, sha_message, sha224_digest),
+        ADD_SHA_VECTOR(IMB_AUTH_SHA_256, sha_message, sha256_digest),
+        ADD_SHA_VECTOR(IMB_AUTH_SHA_384, sha_message, sha384_digest),
+        ADD_SHA_VECTOR(IMB_AUTH_SHA_512, sha_message, sha512_digest)
+};
+
+static int self_test_hash(IMB_MGR *p_mgr)
+{
+        uint8_t scratch[64];
+        unsigned i;
+
+        while (IMB_FLUSH_JOB(p_mgr) != NULL)
+                ;
+
+        for (i = 0; i < IMB_DIM(hash_vectors); i++) {
+                struct self_test_hash_vector *v = &hash_vectors[i];
+
+                IMB_ASSERT(v->tag_size <= sizeof(scratch));
+
+                /* tag too long */
+                if (v->tag_size > sizeof(scratch))
+                        return 0;
+
+                /* test encrypt direction */
+                IMB_JOB *job = IMB_GET_NEXT_JOB(p_mgr);
+
+                job->hash_alg = v->hash_mode;
+                job->cipher_mode = IMB_CIPHER_NULL;
+                job->cipher_direction = IMB_DIR_ENCRYPT;
+                job->chain_order = IMB_ORDER_HASH_CIPHER;
+                job->src = v->message;
+                job->hash_start_src_offset_in_bytes = 0;
+                job->msg_len_to_hash_in_bytes = v->message_size;
+                job->auth_tag_output = scratch;
+                job->auth_tag_output_len_in_bytes = v->tag_size;
+
+                memset(scratch, 0, sizeof(scratch));
+
+                /* submit job and get it processed */
+                if (!process_job(p_mgr, &job))
+                        return 0;
+
+                /* check for TAG mismatch */
+                if (memcmp(scratch, v->tag, v->tag_size))
+                        return 0;
+
+        } /* for(hash_vectors) */
+
+        return 1;
+}
+
+/*
+ * =============================================================================
+ * AEAD SELF-TEST
+ * =============================================================================
+ */
+
+/* @todo */
+
+/*
+ * =============================================================================
+ * SELF-TEST INTERNAL API
+ * =============================================================================
+ */
+
 IMB_DLL_LOCAL int self_test(IMB_MGR *p_mgr)
 {
         if (!self_test_ciphers(p_mgr))
+                return 0;
+
+        if (!self_test_hash(p_mgr))
                 return 0;
 
         return 1;
