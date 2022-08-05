@@ -121,4 +121,15 @@ IMB_DLL_LOCAL
 void docsis_des_dec_basic(const void *input, void *output, const int size,
                           const uint64_t *ks, const uint64_t *ivec);
 
+/**
+ * @brief Runs self test on selected CAVP algorithms
+ *
+ * @param p_mgr initialized MB manager structure
+ *
+ * @return Self test status
+ * @retval 0 self test failed
+ * @retval 1 seld test passed
+ */
+IMB_DLL_LOCAL int self_test(IMB_MGR *p_mgr);
+
 #endif /* IMB_ARCH_X86_64_H */

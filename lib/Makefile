@@ -282,7 +282,8 @@ c_lib_objs := \
 	snow3g_iv.o \
 	mb_mgr_auto.o \
 	error.o \
-	ooo_mgr_reset.o
+	ooo_mgr_reset.o \
+	self_test.o
 
 ifeq ($(AESNI_EMU), y)
 c_lib_objs := $(c_lib_objs) \
