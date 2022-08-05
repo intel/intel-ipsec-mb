@@ -228,6 +228,7 @@ typedef enum {
         IMB_ERR_NULL_BURST,
         IMB_ERR_BURST_SIZE,
         IMB_ERR_BURST_OOO,
+        IMB_ERR_SELFTEST,
         /* add new error types above this comment */
         IMB_ERR_MAX       /* don't move this one */
 } IMB_ERR;

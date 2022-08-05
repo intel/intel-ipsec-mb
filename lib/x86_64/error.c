@@ -90,8 +90,9 @@ IMB_DLL_LOCAL const int imb_errno_types[] = {
         IMB_ERR_NULL_JOB,
         IMB_ERR_QUEUE_SPACE,
         IMB_ERR_NULL_BURST,
+        IMB_ERR_BURST_SIZE,
         IMB_ERR_BURST_OOO,
-        IMB_ERR_BURST_SIZE
+        IMB_ERR_SELFTEST
 };
 
 #ifdef DEBUG
@@ -223,6 +224,8 @@ imb_get_strerror(int errnum)
                 return "Invalid burst size";
         case IMB_ERR_BURST_OOO:
                 return "Burst jobs out of order";
+        case IMB_ERR_SELFTEST:
+                return "Self-test failed";
         default:
                 return strerror(errnum);
         }
