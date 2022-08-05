@@ -356,12 +356,14 @@ static int self_test_ciphers(IMB_MGR *p_mgr)
 
 struct self_test_hash_vector {
         IMB_HASH_ALG hash_mode;
-	const uint8_t *hash_key; /* cmac, hmac */
+	const uint8_t *hash_key; /* cmac, hmac, gmac */
         size_t hash_key_size;    /* key size in bytes */
 	const uint8_t *message;
         size_t message_size;
 	const uint8_t *tag;
         size_t tag_size;
+	const uint8_t *hash_iv; /* gmac */
+        size_t hash_iv_size;
 };
 
 /*
@@ -431,8 +433,8 @@ const uint8_t sha512_digest[] = {
 };
 
 #define ADD_SHA_VECTOR(_hmode,_msg,_digest)     \
-        {_hmode, NULL, 0, _msg, sizeof(_msg),           \
-                        _digest, sizeof(_digest)}
+        {_hmode, NULL, 0, _msg, sizeof(_msg),                   \
+                        _digest, sizeof(_digest), NULL, 0}
 
 /*
  * Test vector from https://csrc.nist.gov/csrc/media/publications/fips/198/
@@ -588,7 +590,7 @@ static const uint8_t hmac_sha512_digest[] = {
 
 #define ADD_HMAC_SHA_VECTOR(_hmode,_key,_msg,_digest)  \
         {_hmode, _key, sizeof(_key), _msg, sizeof(_msg),        \
-                        _digest, sizeof(_digest)}
+                        _digest, sizeof(_digest), NULL, 0}
 
 /*
  * 3GPP 33.401 C.2.1 Test Case 2
@@ -623,9 +625,91 @@ static const uint8_t aes_cmac_256_tag[] = {
         0x02, 0x3C, 0x1F, 0xE0, 0x3B, 0xAD, 0x6D, 0x93
 };
 
-#define ADD_CMAC_VECTOR(_hmode,_key,_msg,_digest)         \
-        {_hmode, _key, sizeof(_key), _msg, sizeof(_msg), \
-                        _digest, sizeof(_digest)}
+#define ADD_CMAC_VECTOR(_hmode,_key,_msg,_digest)               \
+        {_hmode, _key, sizeof(_key), _msg, sizeof(_msg),        \
+                        _digest, sizeof(_digest), NULL, 0}
+
+/*
+ * GMAC vectors
+ */
+static const uint8_t aes_gmac_128_key[] = {
+        0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+        0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F
+};
+static const uint8_t aes_gmac_128_iv[] = {
+        0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+        0x08, 0x09, 0x0A, 0x0B
+};
+static const uint8_t aes_gmac_128_message[] = {
+        0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+        0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f,
+        0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17,
+        0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f,
+        0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27,
+        0x28, 0x29, 0x2a, 0x2b, 0x2c, 0x2d, 0x2e, 0x2f,
+        0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37,
+        0x38, 0x39, 0x3a, 0x3b, 0x3c, 0x3d, 0x3e, 0x3f,
+};
+static const uint8_t aes_gmac_128_tag[] =  {
+        0xC5, 0x3A, 0xF9, 0xE8
+};
+
+static const uint8_t aes_gmac_192_key[] = {
+        0xaa, 0x74, 0x0a, 0xbf, 0xad, 0xcd, 0xa7, 0x79,
+        0x22, 0x0d, 0x3b, 0x40, 0x6c, 0x5d, 0x7e, 0xc0,
+        0x9a, 0x77, 0xfe, 0x9d, 0x94, 0x10, 0x45, 0x39,
+};
+static const uint8_t aes_gmac_192_iv[] = {
+        0xab, 0x22, 0x65, 0xb4, 0xc1, 0x68, 0x95, 0x55,
+        0x61, 0xf0, 0x43, 0x15
+};
+static const uint8_t aes_gmac_192_message[] = {
+        0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
+        0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10,
+        0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
+        0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10,
+        0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
+        0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10,
+        0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
+        0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10,
+        0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
+        0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10,
+};
+static const uint8_t aes_gmac_192_tag[] =  {
+        0xCF, 0x82, 0x80, 0x64, 0x02, 0x46, 0xF4, 0xFB,
+        0x33, 0xAE, 0x1D, 0x90, 0xEA, 0x48, 0x83, 0xDB
+};
+
+static const uint8_t aes_gmac_256_key[] = {
+        0xb5, 0x48, 0xe4, 0x93, 0x4f, 0x5c, 0x64, 0xd3,
+        0xc0, 0xf0, 0xb7, 0x8f, 0x7b, 0x4d, 0x88, 0x24,
+        0xaa, 0xc4, 0x6b, 0x3c, 0x8d, 0x2c, 0xc3, 0x5e,
+        0xe4, 0xbf, 0xb2, 0x54, 0xe4, 0xfc, 0xba, 0xf7,
+};
+static const uint8_t aes_gmac_256_iv[] = {
+        0x2e, 0xed, 0xe1, 0xdc, 0x64, 0x47, 0xc7, 0xaf,
+        0xc4, 0x41, 0x53, 0x58,
+};
+static const uint8_t aes_gmac_256_message[] = {
+        0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
+        0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10,
+        0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
+        0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10,
+        0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
+        0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10,
+        0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
+        0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10,
+        0x01
+};
+static const uint8_t aes_gmac_256_tag[] =  {
+        0x77, 0x46, 0x0D, 0x6F, 0xB1, 0x87, 0xDB, 0xA9,
+        0x46, 0xAD, 0xCD, 0xFB, 0xB7, 0xF9, 0x13, 0xA1
+};
+
+#define ADD_GMAC_VECTOR(_hmode,_key,_iv,_msg,_tag)              \
+        {_hmode, _key, sizeof(_key), _msg, sizeof(_msg),        \
+                        _tag, sizeof(_tag), \
+                        _iv, sizeof(_iv)}
 
 struct self_test_hash_vector hash_vectors[] = {
         ADD_SHA_VECTOR(IMB_AUTH_SHA_1, sha_message, sha1_digest),
@@ -647,6 +731,15 @@ struct self_test_hash_vector hash_vectors[] = {
                         aes_cmac_128_message, aes_cmac_128_tag),
         ADD_CMAC_VECTOR(IMB_AUTH_AES_CMAC_256, aes_cmac_256_key,
                         aes_cmac_256_message, aes_cmac_256_tag),
+        ADD_GMAC_VECTOR(IMB_AUTH_AES_GMAC_128, aes_gmac_128_key,
+                        aes_gmac_128_iv, aes_gmac_128_message,
+                        aes_gmac_128_tag),
+        ADD_GMAC_VECTOR(IMB_AUTH_AES_GMAC_192, aes_gmac_192_key,
+                        aes_gmac_192_iv, aes_gmac_192_message,
+                        aes_gmac_192_tag),
+        ADD_GMAC_VECTOR(IMB_AUTH_AES_GMAC_256, aes_gmac_256_key,
+                        aes_gmac_256_iv, aes_gmac_256_message,
+                        aes_gmac_256_tag),
 };
 
 static int self_test_hash(IMB_MGR *p_mgr)
@@ -658,6 +751,8 @@ static int self_test_hash(IMB_MGR *p_mgr)
         DECLARE_ALIGNED(uint32_t expkey[4*15], 16);
         DECLARE_ALIGNED(uint32_t dust[4*15], 16);
         uint32_t skey1[4], skey2[4];
+        /* gmac */
+        struct gcm_key_data gmac_key;
         /* all */
         uint8_t scratch[IMB_SHA_512_BLOCK_SIZE];
         unsigned i;
@@ -775,6 +870,27 @@ static int self_test_hash(IMB_MGR *p_mgr)
                         job->u.CMAC._key_expanded = expkey;
                         job->u.CMAC._skey1 = skey1;
                         job->u.CMAC._skey2 = skey2;
+                }
+
+                if (v->hash_mode == IMB_AUTH_AES_GMAC_128) {
+                        IMB_AES128_GCM_PRE(p_mgr, v->hash_key, &gmac_key);
+                        job->u.GMAC._key = &gmac_key;
+                        job->u.GMAC._iv = v->hash_iv;
+                        job->u.GMAC.iv_len_in_bytes = v->hash_iv_size;
+                }
+                
+                if (v->hash_mode == IMB_AUTH_AES_GMAC_192) {
+                        IMB_AES192_GCM_PRE(p_mgr, v->hash_key, &gmac_key);
+                        job->u.GMAC._key = &gmac_key;
+                        job->u.GMAC._iv = v->hash_iv;
+                        job->u.GMAC.iv_len_in_bytes = v->hash_iv_size;
+                }
+
+                if (v->hash_mode == IMB_AUTH_AES_GMAC_256) {
+                        IMB_AES256_GCM_PRE(p_mgr, v->hash_key, &gmac_key);
+                        job->u.GMAC._key = &gmac_key;
+                        job->u.GMAC._iv = v->hash_iv;
+                        job->u.GMAC.iv_len_in_bytes = v->hash_iv_size;
                 }
 
                 /* clear space where computed TAG is put into */
