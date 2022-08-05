@@ -356,10 +356,8 @@ static int self_test_ciphers(IMB_MGR *p_mgr)
 
 struct self_test_hash_vector {
         IMB_HASH_ALG hash_mode;
-	const uint8_t *hash_key;
+	const uint8_t *hash_key; /* cmac, hmac */
         size_t hash_key_size;    /* key size in bytes */
-	const uint8_t *hash_iv;  /* initialization vector */
-        size_t hash_iv_size;
 	const uint8_t *message;
         size_t message_size;
 	const uint8_t *tag;
@@ -433,7 +431,7 @@ const uint8_t sha512_digest[] = {
 };
 
 #define ADD_SHA_VECTOR(_hmode,_msg,_digest)     \
-        {_hmode, NULL, 0, NULL, 0, _msg, sizeof(_msg), \
+        {_hmode, NULL, 0, _msg, sizeof(_msg),           \
                         _digest, sizeof(_digest)}
 
 /*
@@ -589,7 +587,44 @@ static const uint8_t hmac_sha512_digest[] = {
 };
 
 #define ADD_HMAC_SHA_VECTOR(_hmode,_key,_msg,_digest)  \
-        {_hmode, _key, sizeof(_key), NULL, 0, _msg, sizeof(_msg),       \
+        {_hmode, _key, sizeof(_key), _msg, sizeof(_msg),        \
+                        _digest, sizeof(_digest)}
+
+/*
+ * 3GPP 33.401 C.2.1 Test Case 2
+ */
+static const uint8_t aes_cmac_128_key[] = {
+        0xd3, 0xc5, 0xd5, 0x92, 0x32, 0x7f, 0xb1, 0x1c,
+        0x40, 0x35, 0xc6, 0x68, 0x0a, 0xf8, 0xc6, 0xd1
+};
+
+static const uint8_t aes_cmac_128_tag[] = {
+        0xb9, 0x37, 0x87, 0xe6
+};
+
+static const uint8_t aes_cmac_128_message[] = {
+        0x39, 0x8a, 0x59, 0xb4, 0xd4, 0x00, 0x00, 0x00,
+        0x48, 0x45, 0x83, 0xd5, 0xaf, 0xe0, 0x82, 0xae
+};
+
+static const uint8_t aes_cmac_256_key[] = {
+        0x60, 0x3D, 0xEB, 0x10, 0x15, 0xCA, 0x71, 0xBE,
+        0x2B, 0x73, 0xAE, 0xF0, 0x85, 0x7D, 0x77, 0x81,
+        0x1F, 0x35, 0x2C, 0x07, 0x3B, 0x61, 0x08, 0xD7,
+        0x2D, 0x98, 0x10, 0xA3, 0x09, 0x14, 0xDF, 0xF4
+};
+static const uint8_t aes_cmac_256_message[] = {
+        0x6b, 0xc1, 0xbe, 0xe2, 0x2e, 0x40, 0x9f, 0x96,
+        0xe9, 0x3d, 0x7e, 0x11, 0x73, 0x93, 0x17, 0x2a,
+        0xae, 0x2d, 0x8a, 0x57
+};
+static const uint8_t aes_cmac_256_tag[] = {
+        0x15, 0x67, 0x27, 0xDC, 0x08, 0x78, 0x94, 0x4A,
+        0x02, 0x3C, 0x1F, 0xE0, 0x3B, 0xAD, 0x6D, 0x93
+};
+
+#define ADD_CMAC_VECTOR(_hmode,_key,_msg,_digest)         \
+        {_hmode, _key, sizeof(_key), _msg, sizeof(_msg), \
                         _digest, sizeof(_digest)}
 
 struct self_test_hash_vector hash_vectors[] = {
@@ -608,12 +643,22 @@ struct self_test_hash_vector hash_vectors[] = {
                             hmac_sha384_message, hmac_sha384_digest),
         ADD_HMAC_SHA_VECTOR(IMB_AUTH_HMAC_SHA_512, hmac_sha512_key,
                             hmac_sha512_message, hmac_sha512_digest),
+        ADD_CMAC_VECTOR(IMB_AUTH_AES_CMAC, aes_cmac_128_key,
+                        aes_cmac_128_message, aes_cmac_128_tag),
+        ADD_CMAC_VECTOR(IMB_AUTH_AES_CMAC_256, aes_cmac_256_key,
+                        aes_cmac_256_message, aes_cmac_256_tag),
 };
 
 static int self_test_hash(IMB_MGR *p_mgr)
 {
+        /* hmac */
         DECLARE_ALIGNED(uint8_t hmac_ipad[IMB_SHA512_DIGEST_SIZE_IN_BYTES], 16);
         DECLARE_ALIGNED(uint8_t hmac_opad[IMB_SHA512_DIGEST_SIZE_IN_BYTES], 16);
+        /* cmac */
+        DECLARE_ALIGNED(uint32_t expkey[4*15], 16);
+        DECLARE_ALIGNED(uint32_t dust[4*15], 16);
+        uint32_t skey1[4], skey2[4];
+        /* all */
         uint8_t scratch[IMB_SHA_512_BLOCK_SIZE];
         unsigned i;
 
@@ -661,6 +706,7 @@ static int self_test_hash(IMB_MGR *p_mgr)
                         job->u.HMAC._hashed_auth_key_xor_ipad = hmac_ipad;
                         job->u.HMAC._hashed_auth_key_xor_opad = hmac_opad;
                 }
+
                 if (v->hash_mode == IMB_AUTH_HMAC_SHA_224 ||
                     v->hash_mode == IMB_AUTH_HMAC_SHA_256) {
                         /* compute IPAD and OPAD */
@@ -687,6 +733,7 @@ static int self_test_hash(IMB_MGR *p_mgr)
                         job->u.HMAC._hashed_auth_key_xor_ipad = hmac_ipad;
                         job->u.HMAC._hashed_auth_key_xor_opad = hmac_opad;
                 }
+
                 if (v->hash_mode == IMB_AUTH_HMAC_SHA_384 ||
                     v->hash_mode == IMB_AUTH_HMAC_SHA_512) {
                         /* compute IPAD and OPAD */
@@ -714,6 +761,23 @@ static int self_test_hash(IMB_MGR *p_mgr)
                         job->u.HMAC._hashed_auth_key_xor_opad = hmac_opad;
                 }
 
+                if (v->hash_mode == IMB_AUTH_AES_CMAC) {
+                        IMB_AES_KEYEXP_128(p_mgr, v->hash_key, expkey, dust);
+                        IMB_AES_CMAC_SUBKEY_GEN_128(p_mgr, expkey, skey1, skey2);
+                        job->u.CMAC._key_expanded = expkey;
+                        job->u.CMAC._skey1 = skey1;
+                        job->u.CMAC._skey2 = skey2;
+                }
+
+                if (v->hash_mode == IMB_AUTH_AES_CMAC_256) {
+                        IMB_AES_KEYEXP_256(p_mgr, v->hash_key, expkey, dust);
+                        IMB_AES_CMAC_SUBKEY_GEN_256(p_mgr, expkey, skey1, skey2);
+                        job->u.CMAC._key_expanded = expkey;
+                        job->u.CMAC._skey1 = skey1;
+                        job->u.CMAC._skey2 = skey2;
+                }
+
+                /* clear space where computed TAG is put into */
                 memset(scratch, 0, sizeof(scratch));
 
                 /* submit job and get it processed */
