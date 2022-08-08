@@ -1,5 +1,5 @@
 /*******************************************************************************
-  Copyright (c) 2012-2022, Intel Corporation
+  Copyright (c) 2022, Intel Corporation
 
   Redistribution and use in source and binary forms, with or without
   modification, are permitted provided that the following conditions are met:
@@ -32,19 +32,20 @@
 #include "intel-ipsec-mb.h"
 #include "arch_x86_64.h"
 
-static int process_job(IMB_MGR *p_mgr, IMB_JOB **p_job)
+static int process_job(IMB_MGR *p_mgr)
 {
         IMB_JOB *job = IMB_SUBMIT_JOB(p_mgr);
 
         if (!job) {
                 const int err = imb_get_errno(p_mgr);
-                
+
                 /* check for error */
                 if (err != 0)
                         return 0;
-                
-                /* if no error then flush to get one */
+
+                /* flush to get the job processed */
                 job = IMB_FLUSH_JOB(p_mgr);
+                
                 /* if flush returns nothing then it's an error */
                 if (!job)
                         return 0;
@@ -54,7 +55,6 @@ static int process_job(IMB_MGR *p_mgr, IMB_JOB **p_job)
         if (job->status != IMB_STATUS_COMPLETED)
                 return 0;
 
-        *p_job = job;
         return 1;
 }
 
@@ -308,7 +308,7 @@ static int self_test_ciphers(IMB_MGR *p_mgr)
                 memset(scratch, 0, sizeof(scratch));
 
                 /* submit job and get it processed */
-                if (!process_job(p_mgr, &job))
+                if (!process_job(p_mgr))
                         return 0;
 
                 /* check for cipher text mismatch */
@@ -336,7 +336,7 @@ static int self_test_ciphers(IMB_MGR *p_mgr)
                 memset(scratch, 0, sizeof(scratch));
 
                 /* submit job and get it processed */
-                if (!process_job(p_mgr, &job))
+                if (!process_job(p_mgr))
                         return 0;
 
                 /* check for plain text mismatch */
@@ -897,7 +897,7 @@ static int self_test_hash(IMB_MGR *p_mgr)
                 memset(scratch, 0, sizeof(scratch));
 
                 /* submit job and get it processed */
-                if (!process_job(p_mgr, &job))
+                if (!process_job(p_mgr))
                         return 0;
 
                 /* check for TAG mismatch */
@@ -991,7 +991,7 @@ static int self_test_hash(IMB_MGR *p_mgr)
  * =============================================================================
  */
 
-struct self_test_aead_vector {
+struct self_test_gcm_vector {
         IMB_HASH_ALG hash_mode;
         IMB_CIPHER_MODE cipher_mode;
 	const uint8_t *cipher_key;
@@ -1120,7 +1120,7 @@ static const uint8_t aes_gcm_256_tag[] = {
                         _plain, sizeof(_plain), _cipher,        \
                         _tag, sizeof(_tag)}
 
-struct self_test_aead_vector aead_vectors[] = {
+struct self_test_gcm_vector aead_gcm_vectors[] = {
         ADD_GCM_VECTOR(aes_gcm_128_key, aes_gcm_128_iv, aes_gcm_128_aad,
                        aes_gcm_128_plain_text, aes_gcm_128_cipher_text,
                        aes_gcm_128_tag),
@@ -1129,10 +1129,11 @@ struct self_test_aead_vector aead_vectors[] = {
                        aes_gcm_192_tag),
         ADD_GCM_VECTOR(aes_gcm_256_key, aes_gcm_256_iv, aes_gcm_256_aad,
                        aes_gcm_256_plain_text, aes_gcm_256_cipher_text,
-                       aes_gcm_256_tag),
+                       aes_gcm_256_tag)
 };
 
-static int self_test_aead(IMB_MGR *p_mgr)
+
+static int self_test_aead_gcm(IMB_MGR *p_mgr)
 {
         struct gcm_key_data gcm_key;
         struct gcm_context_data ctx;
@@ -1142,8 +1143,8 @@ static int self_test_aead(IMB_MGR *p_mgr)
         while (IMB_FLUSH_JOB(p_mgr) != NULL)
                 ;
 
-        for (i = 0; i < IMB_DIM(aead_vectors); i++) {
-                struct self_test_aead_vector *v = &aead_vectors[i];
+        for (i = 0; i < IMB_DIM(aead_gcm_vectors); i++) {
+                struct self_test_gcm_vector *v = &aead_gcm_vectors[i];
 
                 IMB_ASSERT(v->tag_size <= sizeof(tag));
                 IMB_ASSERT(v->plain_text_size <= sizeof(text));
@@ -1156,23 +1157,21 @@ static int self_test_aead(IMB_MGR *p_mgr)
                 if (v->plain_text_size > sizeof(text))
                         return 0;
 
-                if (v->cipher_mode == IMB_CIPHER_GCM) {
-                        switch (v->cipher_key_size) {
-                        case IMB_KEY_128_BYTES:
-                                IMB_AES128_GCM_PRE(p_mgr, v->cipher_key,
-                                                   &gcm_key);
-                                break;
-                        case IMB_KEY_192_BYTES:
-                                IMB_AES192_GCM_PRE(p_mgr, v->cipher_key,
-                                                   &gcm_key);
-                                break;
-                        case IMB_KEY_256_BYTES:
-                                IMB_AES256_GCM_PRE(p_mgr, v->cipher_key,
-                                                   &gcm_key);
-                                break;
-                        default:
-                                return 0;
-                        }
+                switch (v->cipher_key_size) {
+                case IMB_KEY_128_BYTES:
+                        IMB_AES128_GCM_PRE(p_mgr, v->cipher_key,
+                                           &gcm_key);
+                        break;
+                case IMB_KEY_192_BYTES:
+                        IMB_AES192_GCM_PRE(p_mgr, v->cipher_key,
+                                           &gcm_key);
+                        break;
+                case IMB_KEY_256_BYTES:
+                        IMB_AES256_GCM_PRE(p_mgr, v->cipher_key,
+                                           &gcm_key);
+                        break;
+                default:
+                        return 0;
                 }
 
                 /* test JOB API */
@@ -1192,17 +1191,16 @@ static int self_test_aead(IMB_MGR *p_mgr)
                 job->auth_tag_output = tag;
                 job->auth_tag_output_len_in_bytes = v->tag_size;
                 job->hash_alg = v->hash_mode;
-                if (v->cipher_mode == IMB_CIPHER_GCM) {
-                        job->enc_keys = &gcm_key;
-                        job->dec_keys = &gcm_key;
-                        job->u.GCM.aad = v->aad;
-                        job->u.GCM.aad_len_in_bytes = v->aad_size;
-                }
+                job->enc_keys = &gcm_key;
+                job->dec_keys = &gcm_key;
+                job->u.GCM.aad = v->aad;
+                job->u.GCM.aad_len_in_bytes = v->aad_size;
+
                 memset(text, 0, sizeof(text));
                 memset(tag, 0, sizeof(tag));
 
                 /* submit job and get it processed */
-                if (!process_job(p_mgr, &job))
+                if (!process_job(p_mgr))
                         return 0;
 
                 /* check for TAG mismatch */
@@ -1229,17 +1227,16 @@ static int self_test_aead(IMB_MGR *p_mgr)
                 job->auth_tag_output = tag;
                 job->auth_tag_output_len_in_bytes = v->tag_size;
                 job->hash_alg = v->hash_mode;
-                if (v->cipher_mode == IMB_CIPHER_GCM) {
-                        job->enc_keys = &gcm_key;
-                        job->dec_keys = &gcm_key;
-                        job->u.GCM.aad = v->aad;
-                        job->u.GCM.aad_len_in_bytes = v->aad_size;
-                }
+                job->enc_keys = &gcm_key;
+                job->dec_keys = &gcm_key;
+                job->u.GCM.aad = v->aad;
+                job->u.GCM.aad_len_in_bytes = v->aad_size;
+
                 memset(text, 0, sizeof(text));
                 memset(tag, 0, sizeof(tag));
 
                 /* submit job and get it processed */
-                if (!process_job(p_mgr, &job))
+                if (!process_job(p_mgr))
                         return 0;
 
                 /* check for TAG mismatch */
@@ -1251,8 +1248,6 @@ static int self_test_aead(IMB_MGR *p_mgr)
                         return 0;
 
                 /* test direct API */
-                if (v->cipher_mode != IMB_CIPHER_GCM)
-                        continue;
 
                 /* encrypt direction */
                 memset(text, 0, sizeof(text));
@@ -1351,8 +1346,220 @@ static int self_test_aead(IMB_MGR *p_mgr)
                 if (memcmp(text, v->plain_text, v->plain_text_size))
                         return 0;
 
-        }  /* for(aead_vectors) */
+        }  /* for(gcm_vectors) */
 
+        return 1;
+}
+
+struct self_test_aead_ccm_vector {
+        IMB_HASH_ALG hash_mode;
+        IMB_CIPHER_MODE cipher_mode;
+	const uint8_t *cipher_key;
+        size_t cipher_key_size;
+	const uint8_t *cipher_nonce;
+        size_t cipher_nonce_size;
+	const uint8_t *aad;
+        size_t aad_size;
+	const uint8_t *plain_text;
+        size_t plain_text_size;
+	const uint8_t *cipher_text;
+	const uint8_t *tag;
+        size_t tag_size;
+};
+
+/*
+ * Test vectors from https://tools.ietf.org/html/rfc3610
+ */
+static const uint8_t aes_ccm_128_key[] = {
+        0xC0, 0xC1, 0xC2, 0xC3, 0xC4, 0xC5, 0xC6, 0xC7,
+        0xC8, 0xC9, 0xCA, 0xCB, 0xCC, 0xCD, 0xCE, 0xCF
+};
+static const uint8_t aes_ccm_128_nonce[] = {
+        0x00, 0x00, 0x00, 0x03, 0x02, 0x01, 0x00, 0xA0,
+        0xA1, 0xA2, 0xA3, 0xA4, 0xA5
+};
+static const uint8_t aes_ccm_128_plain_text[] = {
+        0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F,
+        0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17,
+        0x18, 0x19, 0x1A, 0x1B, 0x1C, 0x1D, 0x1E
+};
+static const uint8_t aes_ccm_128_aad[] = {
+        0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07
+};
+static const uint8_t aes_ccm_128_cipher_text[] = {
+        0x58, 0x8C, 0x97, 0x9A, 0x61, 0xC6, 0x63, 0xD2,
+        0xF0, 0x66, 0xD0, 0xC2, 0xC0, 0xF9, 0x89, 0x80,
+        0x6D, 0x5F, 0x6B, 0x61, 0xDA, 0xC3, 0x84,
+};
+static const uint8_t aes_ccm_128_tag[] = {
+        0x17, 0xE8, 0xD1, 0x2C, 0xFD, 0xF9, 0x26, 0xE0
+};
+
+static const uint8_t aes_ccm_256_key[] = {
+        0xC0, 0xC1, 0xC2, 0xC3, 0xC4, 0xC5, 0xC6, 0xC7,
+        0xC8, 0xC9, 0xCA, 0xCB, 0xCC, 0xCD, 0xCE, 0xCF,
+        0xC0, 0xC1, 0xC2, 0xC3, 0xC4, 0xC5, 0xC6, 0xC7,
+        0xC8, 0xC9, 0xCA, 0xCB, 0xCC, 0xCD, 0xCE, 0xCF
+};
+static const uint8_t aes_ccm_256_nonce[] = {
+        0x00, 0x00, 0x00, 0x03, 0x02, 0x01, 0x00, 0xA0,
+        0xA1, 0xA2, 0xA3, 0xA4, 0xA5
+};
+static const uint8_t aes_ccm_256_plain_text[] = {
+        0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F,
+        0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17,
+        0x18, 0x19, 0x1A, 0x1B, 0x1C, 0x1D, 0x1E
+};
+static const uint8_t aes_ccm_256_aad[] = {
+        0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+};
+static const uint8_t aes_ccm_256_cipher_text[] = {
+        0x21, 0x61, 0x63, 0xDE, 0xCF, 0x74, 0xE0, 0x0C,
+        0xAB, 0x04, 0x56, 0xFF, 0x45, 0xCD, 0xA7, 0x17,
+        0x1F, 0xA5, 0x96, 0xD7, 0x0F, 0x76, 0x91
+};
+static const uint8_t aes_ccm_256_tag[] = {
+        0xCA, 0x8A, 0xFA, 0xA2, 0x3F, 0x22, 0x3E, 0x64
+};
+
+#define ADD_CCM_VECTOR(_key,_nonce,_aad,_plain,_cipher,_tag)   \
+        {IMB_AUTH_AES_CCM, IMB_CIPHER_CCM, _key, sizeof(_key), \
+                        _nonce, sizeof(_nonce), _aad, sizeof(_aad),   \
+                        _plain, sizeof(_plain), _cipher, \
+                        _tag, sizeof(_tag)}
+
+struct self_test_aead_ccm_vector aead_ccm_vectors[] = {
+        ADD_CCM_VECTOR(aes_ccm_128_key, aes_ccm_128_nonce, aes_ccm_128_aad,
+                       aes_ccm_128_plain_text, aes_ccm_128_cipher_text,
+                       aes_ccm_128_tag),
+        ADD_CCM_VECTOR(aes_ccm_256_key, aes_ccm_256_nonce, aes_ccm_256_aad,
+                       aes_ccm_256_plain_text, aes_ccm_256_cipher_text,
+                       aes_ccm_256_tag)
+};
+
+static int self_test_aead_ccm(IMB_MGR *p_mgr)
+{
+        DECLARE_ALIGNED(uint32_t expkey[4*15], 16);
+        DECLARE_ALIGNED(uint32_t dust[4*15], 16);
+        uint8_t text[128], tag[16];
+        unsigned i;
+
+        while (IMB_FLUSH_JOB(p_mgr) != NULL)
+                ;
+
+        for (i = 0; i < IMB_DIM(aead_ccm_vectors); i++) {
+                struct self_test_aead_ccm_vector *v = &aead_ccm_vectors[i];
+
+                IMB_ASSERT(v->tag_size <= sizeof(tag));
+                IMB_ASSERT(v->plain_text_size <= sizeof(text));
+
+                /* tag too long */
+                if (v->tag_size > sizeof(tag))
+                        return 0;
+
+                /* message too long */
+                if (v->plain_text_size > sizeof(text))
+                        return 0;
+
+                switch (v->cipher_key_size) {
+                case IMB_KEY_128_BYTES:
+                        IMB_AES_KEYEXP_128(p_mgr, v->cipher_key, expkey,
+                                           dust);
+                        break;
+                case IMB_KEY_256_BYTES:
+                        IMB_AES_KEYEXP_256(p_mgr, v->cipher_key, expkey,
+                                           dust);
+                        break;
+                default:
+                        return 0;
+                }
+
+                IMB_JOB *job = IMB_GET_NEXT_JOB(p_mgr);
+
+                /* encrypt test */
+                job->cipher_mode = v->cipher_mode;
+                job->cipher_direction = IMB_DIR_ENCRYPT;
+                job->chain_order = IMB_ORDER_HASH_CIPHER;
+                job->key_len_in_bytes = v->cipher_key_size;
+                job->src = v->plain_text;
+                job->dst = text;
+                job->msg_len_to_cipher_in_bytes = v->plain_text_size;
+                job->cipher_start_src_offset_in_bytes = UINT64_C(0);
+                job->msg_len_to_hash_in_bytes = v->plain_text_size;
+                job->hash_start_src_offset_in_bytes = UINT64_C(0);
+                job->iv = v->cipher_nonce;
+                job->iv_len_in_bytes = v->cipher_nonce_size;
+                job->auth_tag_output = tag;
+                job->auth_tag_output_len_in_bytes = v->tag_size;
+                job->hash_alg = v->hash_mode;
+                job->enc_keys = expkey;
+                job->dec_keys = expkey;
+                job->u.CCM.aad_len_in_bytes = v->aad_size;
+                job->u.CCM.aad = v->aad;
+
+                memset(text, 0, sizeof(text));
+                memset(tag, 0, sizeof(tag));
+
+                /* submit job and get it processed */
+                if (!process_job(p_mgr))
+                        return 0;
+
+                /* check for TAG mismatch */
+                if (memcmp(tag, v->tag, v->tag_size))
+                        return 0;
+
+                /* check for text mismatch */
+                if (memcmp(text, v->cipher_text, v->plain_text_size))
+                        return 0;
+
+                /* decrypt test */
+                job = IMB_GET_NEXT_JOB(p_mgr);
+
+                job->cipher_mode = v->cipher_mode;
+                job->cipher_direction = IMB_DIR_DECRYPT;
+                job->chain_order = IMB_ORDER_CIPHER_HASH;
+                job->key_len_in_bytes = v->cipher_key_size;
+                job->src = v->cipher_text;
+                job->dst = text;
+                job->msg_len_to_cipher_in_bytes = v->plain_text_size;
+                job->cipher_start_src_offset_in_bytes = UINT64_C(0);
+                job->msg_len_to_hash_in_bytes = v->plain_text_size;
+                job->hash_start_src_offset_in_bytes = UINT64_C(0);
+                job->iv = v->cipher_nonce;
+                job->iv_len_in_bytes = v->cipher_nonce_size;
+                job->auth_tag_output = tag;
+                job->auth_tag_output_len_in_bytes = v->tag_size;
+                job->hash_alg = v->hash_mode;
+                job->enc_keys = expkey;
+                job->dec_keys = expkey;
+                job->u.CCM.aad_len_in_bytes = v->aad_size;
+                job->u.CCM.aad = v->aad;
+
+                memset(text, 0, sizeof(text));
+                memset(tag, 0, sizeof(tag));
+
+                /* submit job and get it processed */
+                if (!process_job(p_mgr))
+                        return 0;
+
+                /* check for TAG mismatch */
+                if (memcmp(tag, v->tag, v->tag_size))
+                        return 0;
+
+                /* check for text mismatch */
+                if (memcmp(text, v->plain_text, v->plain_text_size))
+                        return 0;
+        }  /* for(ccm_vectors) */
+
+        return 1;
+}
+
+static int self_test_aead(IMB_MGR *p_mgr)
+{
+        if (!self_test_aead_gcm(p_mgr))
+                return 0;
+        if (!self_test_aead_ccm(p_mgr))
+                return 0;
         return 1;
 }
 

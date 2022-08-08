@@ -128,7 +128,7 @@ void docsis_des_dec_basic(const void *input, void *output, const int size,
  *
  * @return Self test status
  * @retval 0 self test failed
- * @retval 1 seld test passed
+ * @retval 1 self test passed
  */
 IMB_DLL_LOCAL int self_test(IMB_MGR *p_mgr);
 
