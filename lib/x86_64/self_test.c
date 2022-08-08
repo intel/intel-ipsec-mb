@@ -991,7 +991,370 @@ static int self_test_hash(IMB_MGR *p_mgr)
  * =============================================================================
  */
 
-/* @todo */
+struct self_test_aead_vector {
+        IMB_HASH_ALG hash_mode;
+        IMB_CIPHER_MODE cipher_mode;
+	const uint8_t *cipher_key;
+        size_t cipher_key_size;
+	const uint8_t *cipher_iv;
+        size_t cipher_iv_size;
+	const uint8_t *aad;
+        size_t aad_size;
+	const uint8_t *plain_text;
+        size_t plain_text_size;
+	const uint8_t *cipher_text;
+	const uint8_t *tag;
+        size_t tag_size;
+};
+
+/*
+ * http://csrc.nist.gov/groups/STM/cavp/gcmtestvectors.zip
+ *    gcmEncryptExtIV128.rsp
+ */
+static const uint8_t aes_gcm_128_key[] = {
+        0xc9, 0x39, 0xcc, 0x13, 0x39, 0x7c, 0x1d, 0x37,
+        0xde, 0x6a, 0xe0, 0xe1, 0xcb, 0x7c, 0x42, 0x3c
+};
+static const uint8_t aes_gcm_128_iv[] = {
+        0xb3, 0xd8, 0xcc, 0x01, 0x7c, 0xbb, 0x89, 0xb3,
+        0x9e, 0x0f, 0x67, 0xe2
+};
+static const uint8_t aes_gcm_128_plain_text[] = {
+        0xc3, 0xb3, 0xc4, 0x1f, 0x11, 0x3a, 0x31, 0xb7,
+        0x3d, 0x9a, 0x5c, 0xd4, 0x32, 0x10, 0x30, 0x69
+};
+static const uint8_t aes_gcm_128_aad[] = {
+        0x24, 0x82, 0x56, 0x02, 0xbd, 0x12, 0xa9, 0x84,
+        0xe0, 0x09, 0x2d, 0x3e, 0x44, 0x8e, 0xda, 0x5f
+};
+static const uint8_t aes_gcm_128_cipher_text[] = {
+        0x93, 0xfe, 0x7d, 0x9e, 0x9b, 0xfd, 0x10, 0x34,
+        0x8a, 0x56, 0x06, 0xe5, 0xca, 0xfa, 0x73, 0x54
+};
+static const uint8_t aes_gcm_128_tag[] = {
+        0x00, 0x32, 0xa1, 0xdc, 0x85, 0xf1, 0xc9, 0x78,
+        0x69, 0x25, 0xa2, 0xe7, 0x1d, 0x82, 0x72, 0xdd
+};
+
+/*
+ * https://tools.ietf.org/html/draft-mcgrew-gcm-test-01 case #7
+ */
+static const uint8_t aes_gcm_192_key[] = {
+        0xfe, 0xff, 0xe9, 0x92, 0x86, 0x65, 0x73, 0x1c,
+        0x6d, 0x6a, 0x8f, 0x94, 0x67, 0x30, 0x83, 0x08,
+        0xfe, 0xff, 0xe9, 0x92, 0x86, 0x65, 0x73, 0x1c,
+};
+static const uint8_t aes_gcm_192_plain_text[] =  {
+        0x45, 0x00, 0x00, 0x28, 0xa4, 0xad, 0x40, 0x00,
+        0x40, 0x06, 0x78, 0x80, 0x0a, 0x01, 0x03, 0x8f,
+        0x0a, 0x01, 0x06, 0x12, 0x80, 0x23, 0x06, 0xb8,
+        0xcb, 0x71, 0x26, 0x02, 0xdd, 0x6b, 0xb0, 0x3e,
+        0x50, 0x10, 0x16, 0xd0, 0x75, 0x68, 0x00, 0x01,
+};
+static const uint8_t aes_gcm_192_aad[] = {
+        0x00, 0x00, 0xa5, 0xf8, 0x00, 0x00, 0x00, 0x0a,
+};
+static const uint8_t aes_gcm_192_iv[] = {
+        0xca, 0xfe, 0xba, 0xbe, 0xfa, 0xce, 0xdb, 0xad,
+        0xde, 0xca, 0xf8, 0x88,
+};
+static const uint8_t aes_gcm_192_cipher_text[] = {
+        0xa5, 0xb1, 0xf8, 0x06, 0x60, 0x29, 0xae, 0xa4,
+        0x0e, 0x59, 0x8b, 0x81, 0x22, 0xde, 0x02, 0x42,
+        0x09, 0x38, 0xb3, 0xab, 0x33, 0xf8, 0x28, 0xe6,
+        0x87, 0xb8, 0x85, 0x8b, 0x5b, 0xfb, 0xdb, 0xd0,
+        0x31, 0x5b, 0x27, 0x45, 0x21, 0x44, 0xcc, 0x77,
+};
+static const uint8_t aes_gcm_192_tag[] = {
+        0x95, 0x45, 0x7b, 0x96, 0x52, 0x03, 0x7f, 0x53,
+        0x18, 0x02, 0x7b, 0x5b, 0x4c, 0xd7, 0xa6, 0x36,
+};
+
+/*
+ * http://csrc.nist.gov/groups/ST/toolkit/BCM/
+ *    documents/proposedmodes/gcm/gcm-revised-spec.pdf
+ */
+static const uint8_t aes_gcm_256_key[] = {
+        0xfe, 0xff, 0xe9, 0x92, 0x86, 0x65, 0x73, 0x1c,
+        0x6d, 0x6a, 0x8f, 0x94, 0x67, 0x30, 0x83, 0x08,
+        0xfe, 0xff, 0xe9, 0x92, 0x86, 0x65, 0x73, 0x1c,
+        0x6d, 0x6a, 0x8f, 0x94, 0x67, 0x30, 0x83, 0x08
+};
+static const uint8_t aes_gcm_256_plain_text[] =  {
+        0xd9, 0x31, 0x32, 0x25, 0xf8, 0x84, 0x06, 0xe5,
+        0xa5, 0x59, 0x09, 0xc5, 0xaf, 0xf5, 0x26, 0x9a,
+        0x86, 0xa7, 0xa9, 0x53, 0x15, 0x34, 0xf7, 0xda,
+        0x2e, 0x4c, 0x30, 0x3d, 0x8a, 0x31, 0x8a, 0x72,
+        0x1c, 0x3c, 0x0c, 0x95, 0x95, 0x68, 0x09, 0x53,
+        0x2f, 0xcf, 0x0e, 0x24, 0x49, 0xa6, 0xb5, 0x25,
+        0xb1, 0x6a, 0xed, 0xf5, 0xaa, 0x0d, 0xe6, 0x57,
+        0xba, 0x63, 0x7b, 0x39
+};
+static const uint8_t aes_gcm_256_aad[] = {
+        0xfe, 0xed, 0xfa, 0xce, 0xde, 0xad, 0xbe, 0xef,
+        0xfe, 0xed, 0xfa, 0xce, 0xde, 0xad, 0xbe, 0xef,
+        0xab, 0xad, 0xda, 0xd2
+};
+static const uint8_t aes_gcm_256_iv[] = {
+        0xca, 0xfe, 0xba, 0xbe, 0xfa, 0xce, 0xdb, 0xad,
+        0xde, 0xca, 0xf8, 0x88
+};
+static const uint8_t aes_gcm_256_cipher_text[] = {
+        0x52, 0x2d, 0xc1, 0xf0, 0x99, 0x56, 0x7d, 0x07,
+        0xf4, 0x7f, 0x37, 0xa3, 0x2a, 0x84, 0x42, 0x7d,
+        0x64, 0x3a, 0x8c, 0xdc, 0xbf, 0xe5, 0xc0, 0xc9,
+        0x75, 0x98, 0xa2, 0xbd, 0x25, 0x55, 0xd1, 0xaa,
+        0x8c, 0xb0, 0x8e, 0x48, 0x59, 0x0d, 0xbb, 0x3d,
+        0xa7, 0xb0, 0x8b, 0x10, 0x56, 0x82, 0x88, 0x38,
+        0xc5, 0xf6, 0x1e, 0x63, 0x93, 0xba, 0x7a, 0x0a,
+        0xbc, 0xc9, 0xf6, 0x62
+};
+static const uint8_t aes_gcm_256_tag[] = {
+        0x76, 0xfc, 0x6e, 0xce, 0x0f, 0x4e, 0x17, 0x68,
+        0xcd, 0xdf, 0x88, 0x53, 0xbb, 0x2d, 0x55, 0x1b
+};
+
+#define ADD_GCM_VECTOR(_key,_iv,_aad,_plain,_cipher,_tag)       \
+        {IMB_AUTH_AES_GMAC, IMB_CIPHER_GCM, _key, sizeof(_key), \
+                        _iv, sizeof(_iv), _aad, sizeof(_aad),   \
+                        _plain, sizeof(_plain), _cipher,        \
+                        _tag, sizeof(_tag)}
+
+struct self_test_aead_vector aead_vectors[] = {
+        ADD_GCM_VECTOR(aes_gcm_128_key, aes_gcm_128_iv, aes_gcm_128_aad,
+                       aes_gcm_128_plain_text, aes_gcm_128_cipher_text,
+                       aes_gcm_128_tag),
+        ADD_GCM_VECTOR(aes_gcm_192_key, aes_gcm_192_iv, aes_gcm_192_aad,
+                       aes_gcm_192_plain_text, aes_gcm_192_cipher_text,
+                       aes_gcm_192_tag),
+        ADD_GCM_VECTOR(aes_gcm_256_key, aes_gcm_256_iv, aes_gcm_256_aad,
+                       aes_gcm_256_plain_text, aes_gcm_256_cipher_text,
+                       aes_gcm_256_tag),
+};
+
+static int self_test_aead(IMB_MGR *p_mgr)
+{
+        struct gcm_key_data gcm_key;
+        struct gcm_context_data ctx;
+        uint8_t text[128], tag[16];
+        unsigned i;
+
+        while (IMB_FLUSH_JOB(p_mgr) != NULL)
+                ;
+
+        for (i = 0; i < IMB_DIM(aead_vectors); i++) {
+                struct self_test_aead_vector *v = &aead_vectors[i];
+
+                IMB_ASSERT(v->tag_size <= sizeof(tag));
+                IMB_ASSERT(v->plain_text_size <= sizeof(text));
+
+                /* tag too long */
+                if (v->tag_size > sizeof(tag))
+                        return 0;
+
+                /* message too long */
+                if (v->plain_text_size > sizeof(text))
+                        return 0;
+
+                if (v->cipher_mode == IMB_CIPHER_GCM) {
+                        switch (v->cipher_key_size) {
+                        case IMB_KEY_128_BYTES:
+                                IMB_AES128_GCM_PRE(p_mgr, v->cipher_key,
+                                                   &gcm_key);
+                                break;
+                        case IMB_KEY_192_BYTES:
+                                IMB_AES192_GCM_PRE(p_mgr, v->cipher_key,
+                                                   &gcm_key);
+                                break;
+                        case IMB_KEY_256_BYTES:
+                                IMB_AES256_GCM_PRE(p_mgr, v->cipher_key,
+                                                   &gcm_key);
+                                break;
+                        default:
+                                return 0;
+                        }
+                }
+
+                /* test JOB API */
+                IMB_JOB *job = IMB_GET_NEXT_JOB(p_mgr);
+
+                /* encrypt test */
+                job->cipher_mode = v->cipher_mode;
+                job->cipher_direction = IMB_DIR_ENCRYPT;
+                job->chain_order = IMB_ORDER_CIPHER_HASH;
+                job->key_len_in_bytes = v->cipher_key_size;
+                job->src = v->plain_text;
+                job->dst = text;
+                job->msg_len_to_cipher_in_bytes = v->plain_text_size;
+                job->cipher_start_src_offset_in_bytes = UINT64_C(0);
+                job->iv = v->cipher_iv;
+                job->iv_len_in_bytes = v->cipher_iv_size;
+                job->auth_tag_output = tag;
+                job->auth_tag_output_len_in_bytes = v->tag_size;
+                job->hash_alg = v->hash_mode;
+                if (v->cipher_mode == IMB_CIPHER_GCM) {
+                        job->enc_keys = &gcm_key;
+                        job->dec_keys = &gcm_key;
+                        job->u.GCM.aad = v->aad;
+                        job->u.GCM.aad_len_in_bytes = v->aad_size;
+                }
+                memset(text, 0, sizeof(text));
+                memset(tag, 0, sizeof(tag));
+
+                /* submit job and get it processed */
+                if (!process_job(p_mgr, &job))
+                        return 0;
+
+                /* check for TAG mismatch */
+                if (memcmp(tag, v->tag, v->tag_size))
+                        return 0;
+
+                /* check for text mismatch */
+                if (memcmp(text, v->cipher_text, v->plain_text_size))
+                        return 0;
+
+                /* decrypt test */
+                job = IMB_GET_NEXT_JOB(p_mgr);
+
+                job->cipher_mode = v->cipher_mode;
+                job->cipher_direction = IMB_DIR_DECRYPT;
+                job->chain_order = IMB_ORDER_HASH_CIPHER;
+                job->key_len_in_bytes = v->cipher_key_size;
+                job->src = v->cipher_text;
+                job->dst = text;
+                job->msg_len_to_cipher_in_bytes = v->plain_text_size;
+                job->cipher_start_src_offset_in_bytes = UINT64_C(0);
+                job->iv = v->cipher_iv;
+                job->iv_len_in_bytes = v->cipher_iv_size;
+                job->auth_tag_output = tag;
+                job->auth_tag_output_len_in_bytes = v->tag_size;
+                job->hash_alg = v->hash_mode;
+                if (v->cipher_mode == IMB_CIPHER_GCM) {
+                        job->enc_keys = &gcm_key;
+                        job->dec_keys = &gcm_key;
+                        job->u.GCM.aad = v->aad;
+                        job->u.GCM.aad_len_in_bytes = v->aad_size;
+                }
+                memset(text, 0, sizeof(text));
+                memset(tag, 0, sizeof(tag));
+
+                /* submit job and get it processed */
+                if (!process_job(p_mgr, &job))
+                        return 0;
+
+                /* check for TAG mismatch */
+                if (memcmp(tag, v->tag, v->tag_size))
+                        return 0;
+
+                /* check for text mismatch */
+                if (memcmp(text, v->plain_text, v->plain_text_size))
+                        return 0;
+
+                /* test direct API */
+                if (v->cipher_mode != IMB_CIPHER_GCM)
+                        continue;
+
+                /* encrypt direction */
+                memset(text, 0, sizeof(text));
+                memset(tag, 0, sizeof(tag));
+
+                switch (v->cipher_key_size) {
+                case IMB_KEY_128_BYTES:
+                        IMB_AES128_GCM_INIT_VAR_IV(p_mgr, &gcm_key, &ctx,
+                                                   v->cipher_iv,
+                                                   v->cipher_iv_size,
+                                                   v->aad, v->aad_size);
+                        IMB_AES128_GCM_ENC_UPDATE(p_mgr, &gcm_key, &ctx, text,
+                                                  v->plain_text,
+                                                  v->plain_text_size);
+                        IMB_AES128_GCM_ENC_FINALIZE(p_mgr, &gcm_key, &ctx, tag,
+                                                    v->tag_size);
+                        break;
+                case IMB_KEY_192_BYTES:
+                        IMB_AES192_GCM_INIT_VAR_IV(p_mgr, &gcm_key, &ctx,
+                                                   v->cipher_iv,
+                                                   v->cipher_iv_size,
+                                                   v->aad, v->aad_size);
+                        IMB_AES192_GCM_ENC_UPDATE(p_mgr, &gcm_key, &ctx, text,
+                                                  v->plain_text,
+                                                  v->plain_text_size);
+                        IMB_AES192_GCM_ENC_FINALIZE(p_mgr, &gcm_key, &ctx, tag,
+                                                    v->tag_size);
+                        break;
+                case IMB_KEY_256_BYTES:
+                        IMB_AES256_GCM_INIT_VAR_IV(p_mgr, &gcm_key, &ctx,
+                                                   v->cipher_iv,
+                                                   v->cipher_iv_size,
+                                                   v->aad, v->aad_size);
+                        IMB_AES256_GCM_ENC_UPDATE(p_mgr, &gcm_key, &ctx, text,
+                                                  v->plain_text,
+                                                  v->plain_text_size);
+                        IMB_AES256_GCM_ENC_FINALIZE(p_mgr, &gcm_key, &ctx, tag,
+                                                    v->tag_size);
+                        break;
+                default:
+                        return 0;
+                }
+                /* check for TAG mismatch */
+                if (memcmp(tag, v->tag, v->tag_size))
+                        return 0;
+
+                /* check for text mismatch */
+                if (memcmp(text, v->cipher_text, v->plain_text_size))
+                        return 0;
+
+                /* decrypt direction */
+                memset(text, 0, sizeof(text));
+                memset(tag, 0, sizeof(tag));
+                switch (v->cipher_key_size) {
+                case IMB_KEY_128_BYTES:
+                        IMB_AES128_GCM_INIT_VAR_IV(p_mgr, &gcm_key, &ctx,
+                                                   v->cipher_iv,
+                                                   v->cipher_iv_size,
+                                                   v->aad, v->aad_size);
+                        IMB_AES128_GCM_DEC_UPDATE(p_mgr, &gcm_key, &ctx, text,
+                                                  v->cipher_text,
+                                                  v->plain_text_size);
+                        IMB_AES128_GCM_DEC_FINALIZE(p_mgr, &gcm_key, &ctx, tag,
+                                                    v->tag_size);
+                        break;
+                case IMB_KEY_192_BYTES:
+                        IMB_AES192_GCM_INIT_VAR_IV(p_mgr, &gcm_key, &ctx,
+                                                   v->cipher_iv,
+                                                   v->cipher_iv_size,
+                                                   v->aad, v->aad_size);
+                        IMB_AES192_GCM_DEC_UPDATE(p_mgr, &gcm_key, &ctx, text,
+                                                  v->cipher_text,
+                                                  v->plain_text_size);
+                        IMB_AES192_GCM_DEC_FINALIZE(p_mgr, &gcm_key, &ctx, tag,
+                                                    v->tag_size);
+                        break;
+                case IMB_KEY_256_BYTES:
+                        IMB_AES256_GCM_INIT_VAR_IV(p_mgr, &gcm_key, &ctx,
+                                                   v->cipher_iv,
+                                                   v->cipher_iv_size,
+                                                   v->aad, v->aad_size);
+                        IMB_AES256_GCM_DEC_UPDATE(p_mgr, &gcm_key, &ctx, text,
+                                                  v->cipher_text,
+                                                  v->plain_text_size);
+                        IMB_AES256_GCM_DEC_FINALIZE(p_mgr, &gcm_key, &ctx, tag,
+                                                    v->tag_size);
+                        break;
+                default:
+                        return 0;
+                }
+                /* check for TAG mismatch */
+                if (memcmp(tag, v->tag, v->tag_size))
+                        return 0;
+
+                /* check for text mismatch */
+                if (memcmp(text, v->plain_text, v->plain_text_size))
+                        return 0;
+
+        }  /* for(aead_vectors) */
+
+        return 1;
+}
 
 /*
  * =============================================================================
@@ -1005,6 +1368,9 @@ IMB_DLL_LOCAL int self_test(IMB_MGR *p_mgr)
                 return 0;
 
         if (!self_test_hash(p_mgr))
+                return 0;
+
+        if (!self_test_aead(p_mgr))
                 return 0;
 
         return 1;
