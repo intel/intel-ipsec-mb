@@ -572,7 +572,7 @@ static int aes_cmac_handler(ACVP_TEST_CASE *test_case)
         }
 
         if (tc->verify == 1) {
-                if (memcmp(res_tag, tc->mac, tc->mac_len != 0)) {
+                if (memcmp(res_tag, tc->mac, tc->mac_len) != 0) {
                         if (verbose) {
                                 hexdump(stdout, "result tag: ",
                                         res_tag, (tc->mac_len));
