@@ -1033,6 +1033,64 @@ static int aes_sha2_224_handler(ACVP_TEST_CASE *test_case)
         return EXIT_SUCCESS;
 }
 
+static int aes_sha2_256_handler(ACVP_TEST_CASE *test_case)
+{
+        ACVP_HASH_TC *tc;
+        IMB_JOB *job = NULL;
+        unsigned len;
+        uint8_t *m;
+
+        if (test_case == NULL)
+                return EXIT_FAILURE;
+
+        tc = test_case->tc.hash;
+
+        if (tc->test_type == ACVP_HASH_TEST_TYPE_MCT) {
+                m = malloc(tc->msg_len * 3);
+                len = tc->msg_len * 3;
+
+                if (m == NULL) {
+                        printf("Can't allocate buffer memory\n");
+                        return EXIT_FAILURE;
+                }
+                memcpy(m, tc->m1, tc->msg_len);
+                memcpy(m + tc->msg_len, tc->m2, tc->msg_len);
+                memcpy(m + tc->msg_len * 2, tc->m3, tc->msg_len);
+        } else {
+                m = tc->msg;
+                len = tc->msg_len;
+        }
+
+        if (direct_api == 1) {
+                IMB_SHA256(mb_mgr, m, len, tc->md);
+        } else {
+                job = IMB_GET_NEXT_JOB(mb_mgr);
+                job->cipher_direction = IMB_DIR_ENCRYPT;
+                job->chain_order = IMB_ORDER_HASH_CIPHER;
+                job->cipher_mode = IMB_CIPHER_NULL;
+                job->hash_alg = IMB_AUTH_SHA_256;
+                job->cipher_start_src_offset_in_bytes = 0;
+                job->hash_start_src_offset_in_bytes = 0;
+                job->src = m;
+                job->msg_len_to_hash_in_bytes = len;
+                job->auth_tag_output_len_in_bytes =
+                        IMB_SHA256_DIGEST_SIZE_IN_BYTES;
+                job->auth_tag_output = tc->md;
+
+                job = IMB_SUBMIT_JOB(mb_mgr);
+                if (job == NULL)
+                        job = IMB_FLUSH_JOB(mb_mgr);
+                if (job->status != IMB_STATUS_COMPLETED) {
+                        fprintf(stderr, "Invalid job\n");
+                        return EXIT_FAILURE;
+                }
+        }
+        if (tc->test_type == ACVP_HASH_TEST_TYPE_MCT)
+                free(m);
+        tc->md_len = IMB_SHA256_DIGEST_SIZE_IN_BYTES;
+        return EXIT_SUCCESS;
+}
+
 static void usage(const char *app_name)
 {
         fprintf(stderr, "Usage: %s --req FILENAME --resp FILENAME [opt args], "
@@ -1182,6 +1240,10 @@ int main(int argc, char **argv)
 
         if (acvp_cap_hash_enable(ctx, ACVP_HASH_SHA224,
                                 &aes_sha2_224_handler) != ACVP_SUCCESS)
+                goto exit;
+
+        if (acvp_cap_hash_enable(ctx, ACVP_HASH_SHA256,
+                                &aes_sha2_256_handler) != ACVP_SUCCESS)
                 goto exit;
 
         /* Allocate and initialize MB_MGR */
