@@ -34,6 +34,10 @@
 %include "include/memcpy.asm"
 %include "include/transpose_sse.asm"
 
+extern snow3g_table_A_mul
+extern snow3g_table_A_div
+extern snow3g_table_S2
+
 align 64
 const_fixup_mask:
 times 2 dq 0x7272727272727272
@@ -169,7 +173,7 @@ mksection .text
 
 struc STACK
 _keystream:     resb    (4 * 16)
-_gpr_save:      resq    8
+_gpr_save:      resq    10
 _rsp_save:      resq    1
 endstruc
 
@@ -187,11 +191,14 @@ endstruc
         mov     [rsp + _gpr_save + 8 * 3], rsi
         mov     [rsp + _gpr_save + 8 * 4], rdi
         mov     [rsp + _gpr_save + 8 * 5], r13
+        mov     [rsp + _gpr_save + 8 * 6], r14
+        mov     [rsp + _gpr_save + 8 * 7], r15
+
 %ifdef LINUX
-        mov     [rsp + _gpr_save + 8 * 6], r9
+        mov     [rsp + _gpr_save + 8 * 8], r9
 %else
-        mov     [rsp + _gpr_save + 8 * 6], rcx
-        mov     [rsp + _gpr_save + 8 * 7], rdx
+        mov     [rsp + _gpr_save + 8 * 8], rcx
+        mov     [rsp + _gpr_save + 8 * 9], rdx
 %endif
         mov     [rsp + _rsp_save], rax  ;; original SP
 %endmacro
@@ -206,11 +213,13 @@ endstruc
         mov     rsi, [rsp + _gpr_save + 8 * 3]
         mov     rdi, [rsp + _gpr_save + 8 * 4]
         mov     r13, [rsp + _gpr_save + 8 * 5]
+        mov     r14, [rsp + _gpr_save + 8 * 6]
+        mov     r15, [rsp + _gpr_save + 8 * 7]
 %ifdef LINUX
-        mov     r9, [rsp + _gpr_save + 8 * 6]
+        mov     r9, [rsp + _gpr_save + 8 * 8]
 %else
-        mov     rcx, [rsp + _gpr_save + 8 * 6]
-        mov     rdx, [rsp + _gpr_save + 8 * 7]
+        mov     rcx, [rsp + _gpr_save + 8 * 8]
+        mov     rdx, [rsp + _gpr_save + 8 * 9]
 %endif
         mov     rsp, [rsp + _rsp_save]  ;; original SP
 %endmacro
@@ -364,6 +373,24 @@ endstruc
 %endmacro
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Search SNOW3G S2 box value per byte from FSM2 indicated in args.
+;; Fill single dword in output depending on given lane nr
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+%macro S2_BOX_BYTE_SEARCH 7
+%define %%OUT         %1        ;; [out] xmm register (1 dword filled)
+%define %%FSM_R2      %2        ;; [in] ptr to FSM2 values per 4 lanes
+%define %%TABLE_PTR   %3        ;; [in] address of table for search
+%define %%LANE        %4        ;; [in] lane nr
+%define %%BYTE_NR     %5        ;; [in] byte number for search (from FSM2)
+%define %%BYTE_OFFSET %6        ;; [in] byte offset for output
+%define %%TMP_64_1    %7        ;; [clobbered] temp gpr
+
+        movzx           %%TMP_64_1, byte[%%FSM_R2 + %%LANE*4 + %%BYTE_NR]
+        pinsrd          %%OUT, [%%TABLE_PTR + %%TMP_64_1*8 + %%BYTE_OFFSET], %%LANE
+
+%endmacro
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; SNOW3G S2 box calculation for 4 32-bit values passed in 1st input parameter.
 ;; Clobbers all 15 input xmm registers
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -416,41 +443,76 @@ endstruc
 ;; 32-bit values each.
 ;; Values under FSM_R1-FSM_R3 are updated as a result of this macro.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-%macro SNOW3G_FSM_CLOCK 20
+%macro SNOW3G_FSM_CLOCK 11-20
 %define %%FSM_R1        %1      ;; [in] address of 4 FSM values R1
 %define %%FSM_R2        %2      ;; [in] address of 4 FSM values R2
 %define %%FSM_R3        %3      ;; [in] address of 4 FSM values R3
-%define %%TMP1        %4      ;; [clobbered] temp xmm register
-%define %%TMP2        %5      ;; [clobbered] temp xmm register
-%define %%TMP3        %6      ;; [clobbered] temp xmm register
-%define %%TMP4        %7      ;; [clobbered] temp xmm register
-%define %%TMP5        %8      ;; [clobbered] temp xmm register
-%define %%TMP6        %9      ;; [clobbered] temp xmm register
-%define %%TMP7        %10     ;; [clobbered] temp xmm register
-%define %%TMP8        %11     ;; [clobbered] temp xmm register
-%define %%TMP9        %12     ;; [clobbered] temp xmm register
-%define %%TMP10       %13     ;; [clobbered] temp xmm register
-%define %%TMP11       %14     ;; [clobbered] temp xmm register
-%define %%TMP12       %15     ;; [clobbered] temp xmm register
-%define %%TMP13       %16     ;; [clobbered] temp xmm register
-%define %%TMP14       %17     ;; [clobbered] temp xmm register
-%define %%TMP15       %18     ;; [clobbered] temp xmm register
-%define %%TMP16       %19     ;; [clobbered] temp xmm register
+%define %%TMP1          %4      ;; [clobbered] temp xmm register
+%define %%TMP2          %5      ;; [clobbered] temp xmm register
+%define %%TMP3          %6      ;; [clobbered] temp xmm register
+%define %%TMP4          %7      ;; [clobbered] temp xmm register
+%define %%TMP5          %8      ;; [clobbered] temp xmm register
+%ifdef SAFE_LOOKUP
+%define %%TMP6          %9      ;; [clobbered] temp xmm register
+%define %%TMP7          %10     ;; [clobbered] temp xmm register
+%define %%TMP8          %11     ;; [clobbered] temp xmm register
+%define %%TMP9          %12     ;; [clobbered] temp xmm register
+%define %%TMP10         %13     ;; [clobbered] temp xmm register
+%define %%TMP11         %14     ;; [clobbered] temp xmm register
+%define %%TMP12         %15     ;; [clobbered] temp xmm register
+%define %%TMP13         %16     ;; [clobbered] temp xmm register
+%define %%TMP14         %17     ;; [clobbered] temp xmm register
+%define %%TMP15         %18     ;; [clobbered] temp xmm register
+%define %%TMP16         %19     ;; [clobbered] temp xmm register
 %define %%LFSR_5        %20     ;; [in] address of 4 LFSR 5 values
+%else
+%define %%TMP_64        %9      ;; [clobbered] temp gp register
+%define %%TMP_64_1      %10     ;; [clobbered] temp gp register
+%define %%LFSR_5        %11     ;; [in] address of 4 LFSR 5 values
 
-        movdqa          %%TMP1, [ %%FSM_R2 ]
+%endif  ;; SAFE_LOOKUP
 
         ;; FSM_3 = S2_box(FSM_2)
-        S2_BOX_SSE      %%TMP1, %%TMP2, %%TMP3, %%TMP4, %%TMP5,  \
+%ifdef SAFE_LOOKUP
+        movdqa          %%TMP15, [ %%FSM_R2 ]
+        S2_BOX_SSE      %%TMP15, %%TMP2, %%TMP3, %%TMP4, %%TMP5,  \
                         %%TMP6, %%TMP7, %%TMP8, %%TMP9, %%TMP10, \
-                        %%TMP11, %%TMP12, %%TMP13, %%TMP14, %%TMP15
+                        %%TMP11, %%TMP12, %%TMP13, %%TMP14, %%TMP1
+%else
+        lea             %%TMP_64, [rel snow3g_table_S2]
+        ;; w0= S2[(x >> 24) & 0xff];
+        ;; w1= S2[(x >> 16) & 0xff];
+        ;; w2= S2[(x >> 8) & 0xff];
+        ;; w3= S2[x & 0xff];
+        S2_BOX_BYTE_SEARCH      %%TMP1, %%FSM_R2, %%TMP_64, 0, 3, 0, %%TMP_64_1
+        S2_BOX_BYTE_SEARCH      %%TMP2, %%FSM_R2, %%TMP_64, 0, 2, 1, %%TMP_64_1
+        S2_BOX_BYTE_SEARCH      %%TMP3, %%FSM_R2, %%TMP_64, 0, 1, 2, %%TMP_64_1
+        S2_BOX_BYTE_SEARCH      %%TMP4, %%FSM_R2, %%TMP_64, 0, 0, 3, %%TMP_64_1
+        S2_BOX_BYTE_SEARCH      %%TMP1, %%FSM_R2, %%TMP_64, 1, 3, 0, %%TMP_64_1
+        S2_BOX_BYTE_SEARCH      %%TMP2, %%FSM_R2, %%TMP_64, 1, 2, 1, %%TMP_64_1
+        S2_BOX_BYTE_SEARCH      %%TMP3, %%FSM_R2, %%TMP_64, 1, 1, 2, %%TMP_64_1
+        S2_BOX_BYTE_SEARCH      %%TMP4, %%FSM_R2, %%TMP_64, 1, 0, 3, %%TMP_64_1
+        S2_BOX_BYTE_SEARCH      %%TMP1, %%FSM_R2, %%TMP_64, 2, 3, 0, %%TMP_64_1
+        S2_BOX_BYTE_SEARCH      %%TMP2, %%FSM_R2, %%TMP_64, 2, 2, 1, %%TMP_64_1
+        S2_BOX_BYTE_SEARCH      %%TMP3, %%FSM_R2, %%TMP_64, 2, 1, 2, %%TMP_64_1
+        S2_BOX_BYTE_SEARCH      %%TMP4, %%FSM_R2, %%TMP_64, 2, 0, 3, %%TMP_64_1
+        S2_BOX_BYTE_SEARCH      %%TMP1, %%FSM_R2, %%TMP_64, 3, 3, 0, %%TMP_64_1
+        S2_BOX_BYTE_SEARCH      %%TMP2, %%FSM_R2, %%TMP_64, 3, 2, 1, %%TMP_64_1
+        S2_BOX_BYTE_SEARCH      %%TMP3, %%FSM_R2, %%TMP_64, 3, 1, 2, %%TMP_64_1
+        S2_BOX_BYTE_SEARCH      %%TMP4, %%FSM_R2, %%TMP_64, 3, 0, 3, %%TMP_64_1
+
+        pxor            %%TMP4, %%TMP3
+        pxor            %%TMP1, %%TMP2
+        pxor            %%TMP1, %%TMP4
+%endif  ;; SAFE_LOOKUP
+
         ;; R = (FSM_R3 ^ LFSR_5) + FSM_R2
-        movdqa          %%TMP16, [%%FSM_R3]
-        pxor            %%TMP16, [%%LFSR_5]
-        paddd           %%TMP16, [%%FSM_R2]
+        movdqa          %%TMP5, [%%FSM_R3]
+        pxor            %%TMP5, [%%LFSR_5]
+        paddd           %%TMP5, [%%FSM_R2]
 
         ;; FSM_3 = S2_box(FSM_2)
-        movdqa          [%%FSM_R3], %%TMP15
+        movdqa          [%%FSM_R3], %%TMP1
 
         ;; FSM_R2 = S1_box(FSM_R1)
         movdqa          %%TMP3, [%%FSM_R1]
@@ -463,7 +525,7 @@ endstruc
         movdqa          [%%FSM_R2], %%TMP3
 
         ;; FSM_1 = R
-        movdqa          [%%FSM_R1], %%TMP16
+        movdqa          [%%FSM_R1], %%TMP5
 
 %endmacro
 
@@ -475,6 +537,7 @@ endstruc
 ;; Result of mul_alpha and div_alpha operations are precalculated and expected
 ;; under %%OP_TABLE address. This function searches those tables.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+%ifdef SAFE_LOOKUP
 %macro ALPHA_OP 7
 %define %%LFSR_X        %1 ;; [in/clobbered] xmm with LFSR value
 %define %%OP_TABLE      %2 ;; [in] address of mulalpha/divalpha val table
@@ -520,6 +583,47 @@ endstruc
         punpcklwd       %%TMP1, %%TMP4
         pxor            %%TMP1, %%TMP2
 %endmacro
+
+%else   ;; SAFE_LOOKUP
+
+%macro ALPHA_OP_NOT_SAFE 5
+%define %%LFSR_PTR      %1 ;; [in] r64 with address of LFSR register
+                             ;;      for mulalpha pass LFSR
+                             ;;      for divalpha pass LSFR 11
+%define %%OP_TABLE      %2 ;; [in] address of mulalpha/divalpha val table
+%define %%TMP1          %3 ;; [out] temporary xmm register
+%define %%TMP_64        %4 ;; [clobbered] temporary gp register
+%define %%TMP_64_1      %5 ;; [clobbered] temporary gp register
+        lea             %%TMP_64, [rel %%OP_TABLE]
+
+%ifidn %%OP_TABLE, snow3g_table_A_div
+        movzx           %%TMP_64_1, byte[%%LFSR_PTR]
+%else
+        movzx           %%TMP_64_1, byte[%%LFSR_PTR+3]
+%endif
+        movd            %%TMP1, [%%TMP_64 + %%TMP_64_1*4]
+
+%ifidn %%OP_TABLE, snow3g_table_A_div
+        movzx           %%TMP_64_1, byte[%%LFSR_PTR+4]
+%else
+        movzx           %%TMP_64_1, byte[%%LFSR_PTR+7]
+%endif
+        pinsrd          %%TMP1, [%%TMP_64 + %%TMP_64_1*4], 1
+%ifidn %%OP_TABLE, snow3g_table_A_div
+        movzx           %%TMP_64_1, byte[%%LFSR_PTR+8]
+%else
+        movzx           %%TMP_64_1, byte[%%LFSR_PTR+11]
+%endif
+        pinsrd          %%TMP1, [%%TMP_64 + %%TMP_64_1*4], 2
+%ifidn %%OP_TABLE, snow3g_table_A_div
+        movzx           %%TMP_64_1, byte[%%LFSR_PTR+12]
+%else
+        movzx           %%TMP_64_1, byte[%%LFSR_PTR+15]
+%endif
+        pinsrd          %%TMP1, [%%TMP_64 + %%TMP_64_1*4], 3
+%endmacro
+
+%endif  ;; SAFE_LOOKUP
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Perform SNOW3G LFSR shift operation.
@@ -582,8 +686,8 @@ endstruc
 ;; In initialization mode F is stored on stack.
 ;; In keystream mode keystream is stored on stack.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-%macro SNOW3G_KEY_GEN_SSE 18
-%define %%STATE         %1  ;; [in] ptr to LFSR/FSM struct
+%macro SNOW3G_KEY_GEN_SSE 12-18
+%define %%STATE       %1  ;; [in] ptr to LFSR/FSM struct
 %define %%TMP1        %2  ;; [clobbered] temporary xmm register
 %define %%TMP2        %3  ;; [clobbered] temporary xmm register
 %define %%TMP3        %4  ;; [clobbered] temporary xmm register
@@ -591,6 +695,7 @@ endstruc
 %define %%TMP5        %6  ;; [clobbered] temporary xmm register
 %define %%TMP6        %7  ;; [clobbered] temporary xmm register
 %define %%TMP7        %8  ;; [clobbered] temporary xmm register
+%ifdef SAFE_LOOKUP
 %define %%TMP8        %9  ;; [clobbered] temporary xmm register
 %define %%TMP9        %10 ;; [clobbered] temporary xmm register
 %define %%TMP10       %11 ;; [clobbered] temporary xmm register
@@ -598,9 +703,16 @@ endstruc
 %define %%TMP12       %13 ;; [clobbered] temporary xmm register
 %define %%TMP13       %14 ;; [clobbered] temporary xmm register
 %define %%TMP14       %15 ;; [clobbered] temporary xmm register
-%define %%TMP15       %16 ;; [out] generated keystream
-%define %%TMP16       %17 ;; [out] generated keystream
+%define %%TMP15       %16 ;; [clobbered] temporary xmm register
+%define %%TMP16       %17 ;; [clobbered] temporary xmm register
 %define %%DWORD_ITER  %18 ;; [in] gp reg with offset for stack storing keystream
+%else   ;;SAFE_LOOKUP
+%define %%TMP15       %9  ;; [clobbered] temporary xmm register
+%define %%TMP_64_1    %10 ;; [clobbered] temp gpr
+%define %%TMP_64_2    %11 ;; [clobbered] temp gpr
+%define %%DWORD_ITER  %12 ;; [in] gp reg with offset for stack storing keystream
+%endif  ;;SAFE_LOOKUP
+
 
         ;; Calculate F = (LFSR_S[15] + FSM_R1) ^ FSM_R2;
         movdqa          %%TMP1, [ %%STATE + _snow3g_args_LFSR_15 ]
@@ -619,6 +731,7 @@ endstruc
         movdqa          [rsp + _keystream + %%DWORD_ITER], %%TMP2
 
         ;; FSM Clock
+%ifdef SAFE_LOOKUP
         SNOW3G_FSM_CLOCK {%%STATE + _snow3g_args_FSM_1},  \
                          {%%STATE + _snow3g_args_FSM_2},  \
                          {%%STATE + _snow3g_args_FSM_3}, %%TMP1, %%TMP2,    \
@@ -626,20 +739,31 @@ endstruc
                          %%TMP8, %%TMP9, %%TMP10, %%TMP11, %%TMP12, \
                          %%TMP13, %%TMP14, %%TMP15, %%TMP16,          \
                          %%STATE + _snow3g_args_LFSR_5
-
-        ;; LFSR clock: mul alpha
         movdqa          %%TMP15, [ %%STATE + _snow3g_args_LFSR_0 ]
         movdqa          %%TMP2, [rel ms_byte_mask]
         pshufb          %%TMP15,  %%TMP2
         ALPHA_OP        %%TMP15, mul_alpha, %%TMP2, %%TMP3, %%TMP4,    \
                         %%TMP5, %%TMP6
+        ; LFSR clock: div alpha
 
-        ;; LFSR clock: div alpha
         movdqa          %%TMP15, [%%STATE + _snow3g_args_LFSR_11 ]
         movdqa          %%TMP7, [rel ls_byte_mask]
         pshufb          %%TMP15,  %%TMP7
         ALPHA_OP        %%TMP15, div_alpha, %%TMP7, %%TMP3, %%TMP4,    \
                         %%TMP5, %%TMP6
+%else
+        SNOW3G_FSM_CLOCK {%%STATE + _snow3g_args_FSM_1},  \
+                         {%%STATE + _snow3g_args_FSM_2},  \
+                         {%%STATE + _snow3g_args_FSM_3}, %%TMP1, %%TMP2,    \
+                         %%TMP3, %%TMP4, %%TMP5, %%TMP_64_1, %%TMP_64_2, \
+                         %%STATE + _snow3g_args_LFSR_5
+        ALPHA_OP_NOT_SAFE {%%STATE + _snow3g_args_LFSR_0}, snow3g_table_A_mul, \
+                          %%TMP2, %%TMP_64_1, %%TMP_64_2
+
+
+        ALPHA_OP_NOT_SAFE {%%STATE + _snow3g_args_LFSR_11}, snow3g_table_A_div, \
+                          %%TMP7, %%TMP_64_1, %%TMP_64_2
+%endif  ;; SAFE_LOOKUP
 
         movdqa          %%TMP15, [%%STATE + _snow3g_args_LFSR_2 ]
         pxor            %%TMP15, %%TMP2
@@ -879,9 +1003,14 @@ endstruc
         xor             %%TMP1_64, %%TMP1_64
 
 %%next_dqw_round:
+%ifdef SAFE_LOOKUP
         SNOW3G_KEY_GEN_SSE %%STATE, %%TMP1, %%TMP2, %%TMP3, %%TMP4, %%TMP5,    \
                            %%TMP6, %%TMP7, %%TMP8, %%TMP9, %%TMP10, %%TMP11,   \
                            %%TMP12, %%TMP13, %%TMP14, %%TMP15, %%TMP16, %%TMP1_64
+%else
+        SNOW3G_KEY_GEN_SSE %%STATE, %%TMP1, %%TMP2, %%TMP3, %%TMP4, %%TMP5,    \
+                           %%TMP6, %%TMP7, %%TMP15, %%TMP2_64, %%IN, %%TMP1_64
+%endif
 
         inc             %%TMP1_64
         cmp             %%TMP1_64, 4
@@ -904,9 +1033,14 @@ endstruc
 
 %%next_dw:
         xor             %%TMP1_64,  %%TMP1_64
+%ifdef SAFE_LOOKUP
         SNOW3G_KEY_GEN_SSE %%STATE, %%TMP1, %%TMP2, %%TMP3, %%TMP4, %%TMP5,    \
                            %%TMP6, %%TMP7, %%TMP8, %%TMP9, %%TMP10, %%TMP11,   \
                            %%TMP12, %%TMP13, %%TMP14, %%TMP15, %%TMP16, %%TMP1_64
+%else
+        SNOW3G_KEY_GEN_SSE %%STATE, %%TMP1, %%TMP2, %%TMP3, %%TMP4, %%TMP5,    \
+                           %%TMP6, %%TMP7, %%TMP15, %%TMP2_64, %%IN, %%TMP1_64
+%endif
 
         SNOW3G_OUTPUT       4, %%STATE, 0, %%IN, %%OUT, %%TMP1_64, %%TMP2_64
         SNOW3G_OUTPUT       4, %%STATE, 1, %%IN, %%OUT, %%TMP1_64, %%TMP2_64
@@ -919,9 +1053,14 @@ endstruc
 %%no_full_dws_to_write_out:
         ;; Process last dw/bytes:
         xor             %%TMP1_64,  %%TMP1_64
+%ifdef SAFE_LOOKUP
         SNOW3G_KEY_GEN_SSE %%STATE, %%TMP1, %%TMP2, %%TMP3, %%TMP4, %%TMP5,    \
                            %%TMP6, %%TMP7, %%TMP8, %%TMP9, %%TMP10, %%TMP11,   \
                            %%TMP12, %%TMP13, %%TMP14, %%TMP15, %%TMP16, %%TMP1_64
+%else
+        SNOW3G_KEY_GEN_SSE %%STATE, %%TMP1, %%TMP2, %%TMP3, %%TMP4, %%TMP5,    \
+                           %%TMP6, %%TMP7, %%TMP15, %%TMP2_64, %%IN, %%TMP1_64
+%endif
 
         SNOW3G_OUTPUT      3, %%STATE,  0, %%IN, %%OUT, %%TMP1_64, %%LENGTH
         SNOW3G_OUTPUT      3, %%STATE,  1, %%IN, %%OUT, %%TMP1_64, %%LENGTH
@@ -934,29 +1073,31 @@ endstruc
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Generate 5 double words of key stream for SNOW3G authentication
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-%macro   SNOW3G_AUTH_INIT_5_BY_4 22
+%macro   SNOW3G_AUTH_INIT_5_BY_4 24
 %define %%KEY           %1   ;; [in] array of pointers to 4 keys
 %define %%IV            %2   ;; [in] array of pointers to 4 IV's
 %define %%DST_PTR       %3   ;; [in] destination buffer to put 5DW of keystream for each lane
 %define %%TMP1_64       %4   ;; [clobbered] r64 gp reg temp
 %define %%TMP2_64       %5   ;; [clobbered] r64 gp reg temp
-%define %%TMP1          %6   ;; [clobbered] temporary xmm register
-%define %%TMP2          %7   ;; [clobbered] temporary xmm register
-%define %%TMP3          %8   ;; [clobbered] temporary xmm register
-%define %%TMP4          %9   ;; [clobbered] temporary xmm register
-%define %%TMP5          %10  ;; [clobbered] temporary xmm register
-%define %%TMP6          %11  ;; [clobbered] temporary xmm register
-%define %%TMP7          %12  ;; [clobbered] temporary xmm register
-%define %%TMP8          %13  ;; [clobbered] temporary xmm register
-%define %%TMP9          %14  ;; [clobbered] temporary xmm register
-%define %%TMP10         %15  ;; [clobbered] temporary xmm register
-%define %%TMP11         %16  ;; [clobbered] temporary xmm register
-%define %%TMP12         %17  ;; [clobbered] temporary xmm register
-%define %%TMP13         %18  ;; [clobbered] temporary xmm register
-%define %%TMP14         %19  ;; [clobbered] temporary xmm register
-%define %%TMP15         %20  ;; [clobbered] temporary xmm register
-%define %%TMP16         %21  ;; [clobbered] temporary xmm register
-%define %%STATE         %22  ;; [in] ptr to LFSR/FSM struct
+%define %%TMP3_64       %6   ;; [clobbered] r64 gp reg temp
+%define %%TMP4_64       %7   ;; [clobbered] r64 gp reg temp
+%define %%TMP1          %8   ;; [clobbered] temporary xmm register
+%define %%TMP2          %9   ;; [clobbered] temporary xmm register
+%define %%TMP3          %10  ;; [clobbered] temporary xmm register
+%define %%TMP4          %11  ;; [clobbered] temporary xmm register
+%define %%TMP5          %12  ;; [clobbered] temporary xmm register
+%define %%TMP6          %13  ;; [clobbered] temporary xmm register
+%define %%TMP7          %14  ;; [clobbered] temporary xmm register
+%define %%TMP8          %15  ;; [clobbered] temporary xmm register
+%define %%TMP9          %16  ;; [clobbered] temporary xmm register
+%define %%TMP10         %17  ;; [clobbered] temporary xmm register
+%define %%TMP11         %18  ;; [clobbered] temporary xmm register
+%define %%TMP12         %19  ;; [clobbered] temporary xmm register
+%define %%TMP13         %20  ;; [clobbered] temporary xmm register
+%define %%TMP14         %21  ;; [clobbered] temporary xmm register
+%define %%TMP15         %22  ;; [clobbered] temporary xmm register
+%define %%TMP16         %23  ;; [clobbered] temporary xmm register
+%define %%STATE         %24  ;; [in] ptr to LFSR/FSM struct
 
 %define KEYGEN_STAGE    _snow3g_args_LD_ST_MASK
 %define INIT1_DONE      _snow3g_args_LD_ST_MASK+16
@@ -975,9 +1116,14 @@ endstruc
         xor     %%TMP2_64, %%TMP2_64
 
 %%next_auth_round:
+%ifdef SAFE_LOOKUP
         SNOW3G_KEY_GEN_SSE %%STATE, %%TMP1, %%TMP2, %%TMP3, %%TMP4, %%TMP5,    \
                            %%TMP6, %%TMP7, %%TMP8, %%TMP9, %%TMP10, %%TMP11,   \
                            %%TMP12, %%TMP13, %%TMP14, %%TMP15, %%TMP16, %%TMP2_64
+%else
+        SNOW3G_KEY_GEN_SSE %%STATE, %%TMP1, %%TMP2, %%TMP3, %%TMP4, %%TMP5,    \
+                           %%TMP6, %%TMP7, %%TMP15, %%TMP3_64, %%TMP4_64, %%TMP2_64
+%endif
         dec     %%TMP1_64
         jnz     %%next_auth_round
 
@@ -985,9 +1131,14 @@ endstruc
         movdqa  %%TMP1, [rel all_fs]
         movdqa  [state + INIT1_DONE], %%TMP1
 
+%ifdef SAFE_LOOKUP
         SNOW3G_KEY_GEN_SSE %%STATE, %%TMP1, %%TMP2, %%TMP3, %%TMP4, %%TMP5,    \
                            %%TMP6, %%TMP7, %%TMP8, %%TMP9, %%TMP10, %%TMP11,   \
                            %%TMP12, %%TMP13, %%TMP14, %%TMP15, %%TMP16, %%TMP2_64
+%else
+        SNOW3G_KEY_GEN_SSE %%STATE, %%TMP1, %%TMP2, %%TMP3, %%TMP4, %%TMP5,    \
+                           %%TMP6, %%TMP7, %%TMP15, %%TMP3_64, %%TMP4_64, %%TMP2_64
+%endif
 
         ;; Put all lanes in KEYGEN state
         movdqa  %%TMP1, [rel all_fs]
@@ -997,9 +1148,14 @@ endstruc
         xor     %%TMP1_64, %%TMP1_64
 
 %%next_auth_round2:
+%ifdef SAFE_LOOKUP
         SNOW3G_KEY_GEN_SSE %%STATE, %%TMP1, %%TMP2, %%TMP3, %%TMP4, %%TMP5,    \
                            %%TMP6, %%TMP7, %%TMP8, %%TMP9, %%TMP10, %%TMP11,   \
                            %%TMP12, %%TMP13, %%TMP14, %%TMP15, %%TMP16, %%TMP1_64
+%else
+        SNOW3G_KEY_GEN_SSE %%STATE, %%TMP1, %%TMP2, %%TMP3, %%TMP4, %%TMP5,    \
+                           %%TMP6, %%TMP7, %%TMP15, %%TMP3_64, %%TMP4_64, %%TMP1_64
+%endif
         inc     %%TMP1_64
         cmp     %%TMP1_64, 4
         jb      %%next_auth_round2
@@ -1013,9 +1169,14 @@ endstruc
         movdqu  [%%DST_PTR + 3*32], %%TMP4
 
         ;; Generate final dw of keystream for each lane
+%ifdef SAFE_LOOKUP
         SNOW3G_KEY_GEN_SSE %%STATE, %%TMP1, %%TMP2, %%TMP3, %%TMP4, %%TMP5,    \
                            %%TMP6, %%TMP7, %%TMP8, %%TMP9, %%TMP10, %%TMP11,   \
                            %%TMP12, %%TMP13, %%TMP14, %%TMP15, %%TMP16, %%TMP2_64
+%else
+        SNOW3G_KEY_GEN_SSE %%STATE, %%TMP1, %%TMP2, %%TMP3, %%TMP4, %%TMP5,    \
+                           %%TMP6, %%TMP7, %%TMP15, %%TMP3_64, %%TMP4_64, %%TMP2_64
+%endif
 
         ;; Store final dw of keystream for each lane
         mov     DWORD(%%TMP1_64), [rsp + _keystream + 0*4]

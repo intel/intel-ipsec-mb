@@ -59,9 +59,11 @@ mksection .text
 %define tmp_gp1    rbp
 %define tmp_gp2    r9
 %define tmp_gp3    r10
-%define tmp_gp4    r13
 %define init_lanes r11
 %define tmp_state  r12
+%define tmp_gp4    r13
+%define tmp_gp5    r14
+%define tmp_gp6    r15
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Get lane nr from ptr to the list of unused lanes.
@@ -91,29 +93,31 @@ mksection .text
         mov     [%%JOB_LANES + %%LANE_NR*8], %%JOB
 %endmacro
 
-%macro SUBMIT_FLUSH_JOB_SNOW3G_UIA2 22
+%macro SUBMIT_FLUSH_JOB_SNOW3G_UIA2 24
 %define %%SUBMIT_FLUSH          %1    ;; [in] submit/flush selector
 %define %%UNUSED_LANES          %2    ;; [clobbered] GP register
 %define %%LANE                  %3    ;; [clobbered] GP register
 %define %%TGP0                  %4    ;; [clobbered] GP register
 %define %%TGP1                  %5    ;; [clobbered] GP register
 %define %%TGP2                  %6    ;; [clobbered] GP register
-%define %%TMP_XMM_0             %7    ;; [clobbered] xmm register
-%define %%TMP_XMM_1             %8    ;; [clobbered] xmm register
-%define %%TMP_XMM_2             %9    ;; [clobbered] xmm register
-%define %%TMP_XMM_3             %10   ;; [clobbered] xmm register
-%define %%TMP_XMM_4             %11   ;; [clobbered] xmm register
-%define %%TMP_XMM_5             %12   ;; [clobbered] xmm register
-%define %%TMP_XMM_6             %13   ;; [clobbered] xmm register
-%define %%TMP_XMM_7             %14   ;; [clobbered] xmm register
-%define %%TMP_XMM_8             %15   ;; [clobbered] xmm register
-%define %%TMP_XMM_9             %16   ;; [clobbered] xmm register
-%define %%TMP_XMM_10            %17   ;; [clobbered] xmm register
-%define %%TMP_XMM_11            %18   ;; [clobbered] xmm register
-%define %%TMP_XMM_12            %19   ;; [clobbered] xmm register
-%define %%TMP_XMM_13            %20   ;; [clobbered] xmm register
-%define %%TMP_XMM_14            %21   ;; [clobbered] xmm register
-%define %%TMP_XMM_15            %22   ;; [clobbered] xmm register
+%define %%TGP3                  %7    ;; [clobbered] GP register
+%define %%TGP4                  %8    ;; [clobbered] GP register
+%define %%TMP_XMM_0             %9    ;; [clobbered] xmm register
+%define %%TMP_XMM_1             %10   ;; [clobbered] xmm register
+%define %%TMP_XMM_2             %11   ;; [clobbered] xmm register
+%define %%TMP_XMM_3             %12   ;; [clobbered] xmm register
+%define %%TMP_XMM_4             %13   ;; [clobbered] xmm register
+%define %%TMP_XMM_5             %14   ;; [clobbered] xmm register
+%define %%TMP_XMM_6             %15   ;; [clobbered] xmm register
+%define %%TMP_XMM_7             %16   ;; [clobbered] xmm register
+%define %%TMP_XMM_8             %17   ;; [clobbered] xmm register
+%define %%TMP_XMM_9             %18   ;; [clobbered] xmm register
+%define %%TMP_XMM_10            %19   ;; [clobbered] xmm register
+%define %%TMP_XMM_11            %20   ;; [clobbered] xmm register
+%define %%TMP_XMM_12            %21   ;; [clobbered] xmm register
+%define %%TMP_XMM_13            %22   ;; [clobbered] xmm register
+%define %%TMP_XMM_14            %23   ;; [clobbered] xmm register
+%define %%TMP_XMM_15            %24   ;; [clobbered] xmm register
 
         SNOW3G_FUNC_START
         xor     job_rax, job_rax        ;; assume NULL return job
@@ -254,7 +258,7 @@ APPEND(skip_lane_copy_,i):
 
         SNOW3G_AUTH_INIT_5_BY_4 {state + _snow3g_args_keys},              \
                                 {state + _snow3g_args_IV},                \
-                                %%TGP0, %%TGP1, %%TGP2,                   \
+                                %%TGP0, %%TGP1, %%TGP2, %%TGP3, %%TGP4,   \
                                 %%TMP_XMM_0, %%TMP_XMM_1, %%TMP_XMM_2,    \
                                 %%TMP_XMM_3, %%TMP_XMM_4, %%TMP_XMM_5,    \
                                 %%TMP_XMM_6, %%TMP_XMM_7, %%TMP_XMM_8,    \
@@ -283,10 +287,10 @@ APPEND(skip_lane_copy_,i):
 MKGLOBAL(SUBMIT_JOB_SNOW3G_UIA2,function,internal)
 SUBMIT_JOB_SNOW3G_UIA2:
         SUBMIT_FLUSH_JOB_SNOW3G_UIA2 submit, tmp_gp0, tmp_gp1, \
-                                     tmp_gp2, tmp_gp3, tmp_gp4, xmm0, \
-                                     xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, \
-                                     xmm7, xmm8, xmm9, xmm10, xmm11, xmm12, \
-                                     xmm13, xmm14, xmm15
+                                     tmp_gp2, tmp_gp3, tmp_gp4, tmp_gp5, \
+                                     tmp_gp6, xmm0, xmm1, xmm2, xmm3, xmm4, \
+                                     xmm5, xmm6, xmm7, xmm8, xmm9, xmm10, \
+                                     xmm11, xmm12, xmm13, xmm14, xmm15
         ret
 
 ; JOB* FLUSH_JOB_SNOW3G_UIA2(MB_MGR_SNOW3G_OOO *state)
@@ -294,10 +298,10 @@ SUBMIT_JOB_SNOW3G_UIA2:
 MKGLOBAL(FLUSH_JOB_SNOW3G_UIA2,function,internal)
 FLUSH_JOB_SNOW3G_UIA2:
         SUBMIT_FLUSH_JOB_SNOW3G_UIA2 flush, tmp_gp0, tmp_gp1, \
-                                     tmp_gp2, tmp_gp3, tmp_gp4, xmm0, \
-                                     xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, \
-                                     xmm7, xmm8, xmm9, xmm10, xmm11, xmm12, \
-                                     xmm13, xmm14, xmm15
+                                     tmp_gp2, tmp_gp3, tmp_gp4, tmp_gp5, \
+                                     tmp_gp6, xmm0, xmm1, xmm2, xmm3, xmm4, \
+                                     xmm5, xmm6, xmm7, xmm8, xmm9, xmm10, \
+                                     xmm11, xmm12, xmm13, xmm14, xmm15
         ret
 
 mksection stack-noexec

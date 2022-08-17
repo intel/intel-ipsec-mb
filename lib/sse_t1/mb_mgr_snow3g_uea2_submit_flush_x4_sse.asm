@@ -255,7 +255,7 @@ mksection .text
         ;; Create mask with lanes in use
         pxor            %%TMP_XMM_2, %%TMP_XMM_2
         pxor            %%TMP_XMM_3, %%TMP_XMM_3
-        pcmpeqq         %%TMP_XMM_2, [state + _snow3g_job_in_lane]              
+        pcmpeqq         %%TMP_XMM_2, [state + _snow3g_job_in_lane]
         pcmpeqq         %%TMP_XMM_3, [state + _snow3g_job_in_lane + 16]
         pshufd          %%TMP_XMM_2, %%TMP_XMM_2, 0x88 ;; lane order: 1,0,1,0
         pshufd          %%TMP_XMM_3, %%TMP_XMM_3, 0x88 ;; lane order: 3,2,3,2
@@ -292,7 +292,7 @@ mksection .text
         movdqa        %%TMP_XMM_4, [state+_snow3g_args_byte_length]
         psubd         %%TMP_XMM_4, %%TMP_XMM_0
         movdqa        [state+_snow3g_args_byte_length], %%TMP_XMM_4
- 
+
         ;; Do cipher / clock operation for all lanes and given common length
         SNOW3G_ENC_DEC  state, %%TGP0, %%TGP1, %%TGP2, %%TGP3, %%TGP4, %%TGP5, \
                         %%TMP_XMM_0, %%TMP_XMM_1, %%TMP_XMM_2, %%TMP_XMM_3,    \
