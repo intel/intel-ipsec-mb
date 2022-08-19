@@ -44,6 +44,7 @@ CONTENTS
 9.  Backwards compatibility
 10. Disclaimer (ZUC, KASUMI, SNOW3G)
 11. Legal Disclaimer
+12. FIPS Compliance
 
 
 
@@ -681,3 +682,72 @@ DISCLAIMS ANY EXPRESS OR IMPLIED WARRANTY, RELATING TO SALE AND/OR
 USE OF INTEL PRODUCTS INCLUDING LIABILITY OR WARRANTIES RELATING TO
 FITNESS FOR A PARTICULAR PURPOSE, MERCHANTABILITY, OR INFRINGEMENT
 OF ANY PATENT, COPYRIGHT OR OTHER INTELLECTUAL PROPERTY RIGHT.
+
+
+
+12. FIPS COMPLIANCE
+
+
+The library does not fulfill technical requirements to achieve
+Cryptographic Module (CMVP) certification as a standalone component. It
+is fit for Cryptographic Algorithm validation and certification (CAVP)
+and it can be part of CMVP as one of the components.
+
+CAVP
+
+ACVP test application located in test directory is to support CAVP
+process. It implements validation of the following algorithms:
+- AES-GCM
+- AES-GMAC
+- AES-CCM
+- AES-CBC
+- AES-CTR
+- AES-CMAC
+- SHA1
+- SHA224
+- SHA256
+- SHA384
+- SHA512
+- HMAC-SHA1
+- HMAC-SHA224
+- HMAC-SHA256
+- HMAC-SHA384
+- HMAC-SHA512
+
+Self-Test
+
+In order to support CMVP, the library implements Self-Test functionality
+that is available with all compilation options. The test is always
+performed as part of library initialization (power-up). There is no
+conditional self-test functionality as none of such conditions occur
+(i.e. pair-wise consistency test, software/firmware load test, manual
+key entry test, continuous random number generator test, and bypass
+test). The self-test consists of Cryptographic algorithm test (known
+answer test) on following algorithms:
+- AES-GCM
+- AES-GMAC
+- AES-CCM
+- AES-CBC
+- AES-CTR
+- AES-CMAC
+- SHA1
+- SHA224
+- SHA256
+- SHA384
+- SHA512
+- HMAC-SHA1
+- HMAC-SHA224
+- HMAC-SHA256
+- HMAC-SHA384
+- HMAC-SHA512
+
+Detecting library self-test failure in the application:
+
+    IMB_ARCH arch;
+    IMB_MGR *p_mgr = alloc_mb_mgr(0);
+
+    init_mb_mgr_auto(p_mgr, &arch); /* or init_mb_mgr_sse/avx/avx2/avx512 */
+    if (imb_get_errno(p_mgr) == IMB_ERR_SELFTEST) {
+            /* self-test error */
+            exit(EXIT_FAILURE);
+    }
