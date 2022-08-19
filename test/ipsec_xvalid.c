@@ -2479,6 +2479,12 @@ run_test(const IMB_ARCH enc_arch, const IMB_ARCH dec_arch,
                 exit(EXIT_FAILURE);
         }
 
+        if (imb_get_errno(enc_mgr) != 0) {
+                fprintf(stderr, "Error initializing enc MB_MGR structure! %s\n",
+                        imb_get_strerror(imb_get_errno(enc_mgr)));
+                exit(EXIT_FAILURE);
+        }
+
         printf("Encrypting ");
         print_tested_arch(enc_mgr->features, enc_arch);
 
@@ -2513,6 +2519,12 @@ run_test(const IMB_ARCH enc_arch, const IMB_ARCH dec_arch,
                 break;
         default:
                 fprintf(stderr, "Invalid architecture\n");
+                exit(EXIT_FAILURE);
+        }
+
+        if (imb_get_errno(dec_mgr) != 0) {
+                fprintf(stderr, "Error initializing dec MB_MGR structure! %s\n",
+                        imb_get_strerror(imb_get_errno(dec_mgr)));
                 exit(EXIT_FAILURE);
         }
 

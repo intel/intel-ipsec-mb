@@ -1407,6 +1407,13 @@ int main(int argc, char **argv)
                 goto exit;
         }
 
+        if (imb_get_errno(mb_mgr) != 0) {
+                fprintf(stderr, "Error initializing MB_MGR structure! %s\n",
+                        imb_get_strerror(imb_get_errno(mb_mgr)));
+                free_mb_mgr(mb_mgr);
+                goto exit;
+        }
+
         /* Parse request file, run crypto tests and write out response file */
         acvp_run_vectors_from_file(ctx, req_filename, resp_filename);
 
