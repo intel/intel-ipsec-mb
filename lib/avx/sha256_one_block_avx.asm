@@ -32,6 +32,9 @@
 
 mksection .rodata
 default rel
+
+%ifndef FUNC
+MKGLOBAL(K256,data,internal)
 align 64
 K256:
 	dd	0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5
@@ -50,7 +53,11 @@ K256:
 	dd	0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3
 	dd	0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208
 	dd	0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2
+%else
+extern K256
+%endif
 
+align 16
 PSHUFFLE_BYTE_FLIP_MASK: ;ddq 0x0c0d0e0f08090a0b0405060700010203
 	dq 0x0405060700010203, 0x0c0d0e0f08090a0b
 

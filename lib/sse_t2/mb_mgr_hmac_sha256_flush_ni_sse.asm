@@ -41,14 +41,16 @@
 ;%define DO_DBGPRINT
 %include "include/dbgprint.asm"
 
-extern sha256_ni
+extern sha256_ni_x1
 
 %ifdef LINUX
 %define arg1	rdi
 %define arg2	rsi
+%define arg3    rdx
 %else
 %define arg1	rcx
 %define arg2	rdx
+%define arg3    r8
 %endif
 
 %define state	arg1
@@ -73,7 +75,7 @@ extern sha256_ni
 %define extra_blocks	arg2
 %define p		arg2
 
-%define tmp4		r8
+%define tmp4		r11
 
 %define tmp5	        r9
 
@@ -136,26 +138,21 @@ flush_job_hmac_sha_256_ni_sse:
 	DBGPRINTL64 "idx:", idx
 
 copy_lane_data:
-	; copy idx to empty lanes
-	mov	tmp, [state + _args_data_ptr_sha256 + PTR_SZ*idx]
 	xor	len2, len2
 	mov	WORD(len2), word [state + _lens_sha256 + idx*2]
 
-	; there are only two lanes so if one is empty it is easy to determine which one
-	xor	idx, 1
-	mov	[state + _args_data_ptr_sha256 + PTR_SZ*idx], tmp
-	xor	idx, 1
+        mov     arg3, idx
 
 	; No need to find min length - only two lanes available
         cmp	len2, 0
         je	len_is_0
 
-	; set length on both lanes to 0
-	mov	dword [state + _lens_sha256], 0
+	; set length lane to 0
+        mov	dword [state + _lens_sha256 + idx*2], 0
 
-	; "state" and "args" are the same address, arg1
+        ; "state" and "args" are the same address, arg1
 	; len is arg2
-	call	sha256_ni
+	call	sha256_ni_x1
 	; state and idx are intact
 
 len_is_0:

@@ -62,6 +62,9 @@ extern void call_sha224_ni_x2_sse_from_c(SHA256_ARGS *args,
 extern void call_sha256_ni_x2_sse_from_c(SHA256_ARGS *args,
                                          uint32_t size_in_blocks);
 
+extern void call_sha256_ni_x1_sse_from_c(SHA256_ARGS *args,
+                                         uint32_t size_in_blocks);
+
 extern void call_sha512_x2_sse_from_c(SHA512_ARGS *args,
                                       uint64_t size_in_blocks);
 
