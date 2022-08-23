@@ -1037,6 +1037,8 @@ typedef uint32_t (*crc32_fn_t)(const void *, const uint64_t);
 #define IMB_CPUFLAGS_NO_AESNI   (IMB_FEATURE_SSE4_2 | IMB_FEATURE_CMOV)
 #define IMB_CPUFLAGS_SSE        (IMB_CPUFLAGS_NO_AESNI | IMB_FEATURE_AESNI | \
                                  IMB_FEATURE_PCLMULQDQ)
+#define IMB_CPUFLAGS_SSE_T2     (IMB_CPUFLAGS_SSE | IMB_FEATURE_SHANI)
+#define IMB_CPUFLAGS_SSE_T3     (IMB_CPUFLAGS_SSE_T2 | IMB_FEATURE_GFNI)
 #define IMB_CPUFLAGS_AVX        (IMB_CPUFLAGS_SSE | IMB_FEATURE_AVX)
 #define IMB_CPUFLAGS_AVX2       (IMB_CPUFLAGS_AVX | IMB_FEATURE_AVX2 | \
                                  IMB_FEATURE_BMI2)

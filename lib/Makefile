@@ -252,6 +252,9 @@ c_lib_objs := \
 	mb_mgr_avx512_t1.o \
 	mb_mgr_avx512_t2.o \
 	mb_mgr_sse.o \
+	mb_mgr_sse_t1.o \
+	mb_mgr_sse_t2.o \
+	mb_mgr_sse_t3.o \
 	alloc.o \
 	aes_xcbc_expand_key.o \
 	md5_one_block.o \

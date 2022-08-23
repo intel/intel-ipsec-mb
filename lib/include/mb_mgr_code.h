@@ -656,24 +656,10 @@ SUBMIT_JOB_HASH(IMB_MGR *state, IMB_JOB *job)
 
         switch (job->hash_alg) {
         case IMB_AUTH_HMAC_SHA_1:
-#ifdef HASH_USE_SHAEXT
-                if (state->features & IMB_FEATURE_SHANI)
-                        return SUBMIT_JOB_HMAC_NI(hmac_sha_1_ooo, job);
-#endif
                 return SUBMIT_JOB_HMAC(hmac_sha_1_ooo, job);
         case IMB_AUTH_HMAC_SHA_224:
-#ifdef HASH_USE_SHAEXT
-                if (state->features & IMB_FEATURE_SHANI)
-                        return SUBMIT_JOB_HMAC_SHA_224_NI
-                                (hmac_sha_224_ooo, job);
-#endif
                 return SUBMIT_JOB_HMAC_SHA_224(hmac_sha_224_ooo, job);
         case IMB_AUTH_HMAC_SHA_256:
-#ifdef HASH_USE_SHAEXT
-                if (state->features & IMB_FEATURE_SHANI)
-                        return SUBMIT_JOB_HMAC_SHA_256_NI
-                                (hmac_sha_256_ooo, job);
-#endif
                 return SUBMIT_JOB_HMAC_SHA_256(hmac_sha_256_ooo, job);
         case IMB_AUTH_HMAC_SHA_384:
                 return SUBMIT_JOB_HMAC_SHA_384(hmac_sha_384_ooo, job);
@@ -706,22 +692,10 @@ SUBMIT_JOB_HASH(IMB_MGR *state, IMB_JOB *job)
                         job->msg_len_to_hash_in_bytes * 8;
                 return SUBMIT_JOB_AES256_CMAC_AUTH(aes256_cmac_ooo, job);
         case IMB_AUTH_SHA_1:
-#ifdef HASH_USE_SHAEXT
-                if (state->features & IMB_FEATURE_SHANI)
-                        return SUBMIT_JOB_SHA1_NI(sha_1_ooo, job);
-#endif
                 return SUBMIT_JOB_SHA1(sha_1_ooo, job);
         case IMB_AUTH_SHA_224:
-#ifdef HASH_USE_SHAEXT
-                if (state->features & IMB_FEATURE_SHANI)
-                        return SUBMIT_JOB_SHA224_NI(sha_224_ooo, job);
-#endif
                 return SUBMIT_JOB_SHA224(sha_224_ooo, job);
         case IMB_AUTH_SHA_256:
-#ifdef HASH_USE_SHAEXT
-                if (state->features & IMB_FEATURE_SHANI)
-                        return SUBMIT_JOB_SHA256_NI(sha_256_ooo, job);
-#endif
                 return SUBMIT_JOB_SHA256(sha_256_ooo, job);
         case IMB_AUTH_SHA_384:
                 return SUBMIT_JOB_SHA384(sha_384_ooo, job);
@@ -857,46 +831,20 @@ FLUSH_JOB_HASH(IMB_MGR *state, IMB_JOB *job)
 
         switch (job->hash_alg) {
         case IMB_AUTH_HMAC_SHA_1:
-#ifdef HASH_USE_SHAEXT
-                if (state->features & IMB_FEATURE_SHANI)
-                        return FLUSH_JOB_HMAC_NI(hmac_sha_1_ooo);
-#endif
                 return FLUSH_JOB_HMAC(hmac_sha_1_ooo);
         case IMB_AUTH_HMAC_SHA_224:
-#ifdef HASH_USE_SHAEXT
-                if (state->features & IMB_FEATURE_SHANI)
-                        return FLUSH_JOB_HMAC_SHA_224_NI
-                                (hmac_sha_224_ooo);
-#endif
                 return FLUSH_JOB_HMAC_SHA_224(hmac_sha_224_ooo);
         case IMB_AUTH_HMAC_SHA_256:
-#ifdef HASH_USE_SHAEXT
-                if (state->features & IMB_FEATURE_SHANI)
-                        return FLUSH_JOB_HMAC_SHA_256_NI
-                                (hmac_sha_256_ooo);
-#endif
                 return FLUSH_JOB_HMAC_SHA_256(hmac_sha_256_ooo);
         case IMB_AUTH_HMAC_SHA_384:
                 return FLUSH_JOB_HMAC_SHA_384(hmac_sha_384_ooo);
         case IMB_AUTH_HMAC_SHA_512:
                 return FLUSH_JOB_HMAC_SHA_512(hmac_sha_512_ooo);
         case IMB_AUTH_SHA_1:
-#ifdef HASH_USE_SHAEXT
-                if (state->features & IMB_FEATURE_SHANI)
-                        return FLUSH_JOB_SHA1_NI(sha_1_ooo, job);
-#endif
                 return FLUSH_JOB_SHA1(sha_1_ooo, job);
         case IMB_AUTH_SHA_224:
-#ifdef HASH_USE_SHAEXT
-                if (state->features & IMB_FEATURE_SHANI)
-                        return FLUSH_JOB_SHA224_NI(sha_224_ooo, job);
-#endif
                 return FLUSH_JOB_SHA224(sha_224_ooo, job);
         case IMB_AUTH_SHA_256:
-#ifdef HASH_USE_SHAEXT
-                if (state->features & IMB_FEATURE_SHANI)
-                        return FLUSH_JOB_SHA256_NI(sha_256_ooo, job);
-#endif
                 return FLUSH_JOB_SHA256(sha_256_ooo, job);
         case IMB_AUTH_SHA_384:
                 return FLUSH_JOB_SHA384(sha_384_ooo, job);
@@ -3242,15 +3190,6 @@ uint32_t submit_burst_hmac_sha_1(IMB_MGR *state,
                                  const uint32_t n_jobs,
                                  const int run_check)
 {
-#ifdef HASH_USE_SHAEXT
-        if (state->features & IMB_FEATURE_SHANI) {
-                return submit_burst_hmac_sha_x(state, jobs, n_jobs, run_check,
-                                               IMB_AUTH_HMAC_SHA_1,
-                                               (void *)state->hmac_sha_1_ooo,
-                                               (void *)SUBMIT_JOB_HMAC_NI,
-                                               (void *)FLUSH_JOB_HMAC_NI);
-        }
-#endif
         return submit_burst_hmac_sha_x(state, jobs, n_jobs, run_check,
                                        IMB_AUTH_HMAC_SHA_1,
                                        (void *)state->hmac_sha_1_ooo,
@@ -3264,15 +3203,6 @@ uint32_t submit_burst_hmac_sha_224(IMB_MGR *state,
                                    const uint32_t n_jobs,
                                    const int run_check)
 {
-#ifdef HASH_USE_SHAEXT
-        if (state->features & IMB_FEATURE_SHANI) {
-                return submit_burst_hmac_sha_x(state, jobs, n_jobs, run_check,
-                                             IMB_AUTH_HMAC_SHA_224,
-                                             (void *)state->hmac_sha_224_ooo,
-                                             (void *)SUBMIT_JOB_HMAC_SHA_224_NI,
-                                             (void *)FLUSH_JOB_HMAC_SHA_224_NI);
-        }
-#endif
         return submit_burst_hmac_sha_x(state, jobs, n_jobs, run_check,
                                        IMB_AUTH_HMAC_SHA_224,
                                        (void *)state->hmac_sha_224_ooo,
@@ -3287,15 +3217,6 @@ uint32_t submit_burst_hmac_sha_256(IMB_MGR *state,
                                    const uint32_t n_jobs,
                                    const int run_check)
 {
-#ifdef HASH_USE_SHAEXT
-        if (state->features & IMB_FEATURE_SHANI) {
-                return submit_burst_hmac_sha_x(state, jobs, n_jobs, run_check,
-                                             IMB_AUTH_HMAC_SHA_256,
-                                             (void *)state->hmac_sha_256_ooo,
-                                             (void *)SUBMIT_JOB_HMAC_SHA_256_NI,
-                                             (void *)FLUSH_JOB_HMAC_SHA_256_NI);
-        }
-#endif
         return submit_burst_hmac_sha_x(state, jobs, n_jobs, run_check,
                                        IMB_AUTH_HMAC_SHA_256,
                                        (void *)state->hmac_sha_256_ooo,

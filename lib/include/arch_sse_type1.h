@@ -111,7 +111,8 @@ uint32_t crc10_iuup_data_sse(const void *msg, const uint64_t len);
 uint32_t crc6_iuup_header_sse(const void *msg, const uint64_t len);
 uint32_t crc32_wimax_ofdma_data_sse(const void *msg, const uint64_t len);
 uint32_t crc8_wimax_ofdma_hcs_sse(const void *msg, const uint64_t len);
-
+uint32_t ethernet_fcs_sse_local(const void *msg, const uint64_t len,
+                                const void *tag_ouput);
 
 /* moved from MB MGR */
 IMB_JOB *submit_job_aes128_enc_sse(MB_MGR_AES_OOO *state,
@@ -174,10 +175,6 @@ IMB_JOB *submit_job_aes256_ccm_auth_sse(MB_MGR_CCM_OOO *state,
 IMB_JOB *flush_job_aes128_ccm_auth_sse(MB_MGR_CCM_OOO *state);
 
 IMB_JOB *flush_job_aes256_ccm_auth_sse(MB_MGR_CCM_OOO *state);
-
-IMB_JOB *submit_job_aes_cntr_sse(IMB_JOB *job);
-
-IMB_JOB *submit_job_aes_cntr_bit_sse(IMB_JOB *job);
 
 IMB_JOB *submit_job_zuc_eea3_no_gfni_sse(MB_MGR_ZUC_OOO *state,
                                          IMB_JOB *job);
