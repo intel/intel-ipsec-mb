@@ -168,10 +168,14 @@ else
 endif
 
 $(FUZZ_APP): $(FUZZ_SOURCES)
+ifeq ($(MINGW),0)
 ifneq (, $(shell which clang))
 	clang $(FUZZ_CFLAGS) $(FUZZ_SOURCES) $(LDLIBS) -o $@
 else
 	@echo "Clang is not installed. $(FUZZ_APP) is not built"
+endif
+else
+	@echo "Fuzzing not supported on MinGW build. $(FUZZ_APP) is not built"
 endif
 
 

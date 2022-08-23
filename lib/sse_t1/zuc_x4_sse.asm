@@ -1070,7 +1070,7 @@ mksection .text
 %endrep
 
 %if %%TAG_SIZE == 4
-        movdqa  [%%TAGS], %%KSTR1
+        movdqu  [%%TAGS], %%KSTR1
         REORDER_LFSR pState, 1
 %elif %%TAG_SIZE == 8
         ; Transpose the keystream and store the 8 bytes per buffer consecutively,
@@ -1078,17 +1078,17 @@ mksection .text
         movdqa  %%XTMP1, %%KSTR1
         punpckldq   %%XTMP1, %%KSTR2
         punpckhdq   %%KSTR1, %%KSTR2
-        movdqa  [%%TAGS], %%XTMP1
-        movdqa  [%%TAGS + 16], %%KSTR1
+        movdqu  [%%TAGS], %%XTMP1
+        movdqu  [%%TAGS + 16], %%KSTR1
         REORDER_LFSR pState, 2
 %elif %%TAG_SIZE == 16
         ; Transpose the keystream and store the 16 bytes per buffer consecutively,
         ; being the initial tag for each buffer
         TRANSPOSE4_U32 %%KSTR1, %%KSTR2, %%KSTR3, %%KSTR4, %%XTMP5, %%XTMP6
-        movdqa  [%%TAGS], %%KSTR1
-        movdqa  [%%TAGS + 16], %%KSTR2
-        movdqa  [%%TAGS + 16*2], %%KSTR3
-        movdqa  [%%TAGS + 16*3], %%KSTR4
+        movdqu  [%%TAGS], %%KSTR1
+        movdqu  [%%TAGS + 16], %%KSTR2
+        movdqu  [%%TAGS + 16*2], %%KSTR3
+        movdqu  [%%TAGS + 16*3], %%KSTR4
         REORDER_LFSR pState, 4
 %endif
 
@@ -2053,9 +2053,9 @@ remainder_key_sz_128:
         movq    %%TMP, %%XTMP6
         xor     [%%T], %%TMP
 %else ;; %%TAG_SZ == 16
-        movdqa  %%XTMP1, [%%T]
+        movdqu  %%XTMP1, [%%T]
         pxor    %%XTMP1, %%XTMP6
-        movdqa  [%%T], %%XTMP1
+        movdqu  [%%T], %%XTMP1
 %endif
 
         ;; Copy last 16 bytes of KS to the front

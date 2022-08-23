@@ -959,24 +959,24 @@ align 64
 %endrep
 
 %if %%TAG_SIZE == 4
-        vmovdqa [%%TAGS], %%KSTR1
+        vmovdqu [%%TAGS], %%KSTR1
         REORDER_LFSR pState, 1
 %elif %%TAG_SIZE == 8
         ; Transpose the keystream and store the 8 bytes per buffer consecutively,
         ; being the initial tag for each buffer
         vpunpckldq %%XTMP1, %%KSTR1, %%KSTR2
         vpunpckhdq %%XTMP2, %%KSTR1, %%KSTR2
-        vmovdqa [%%TAGS], %%XTMP1
-        vmovdqa [%%TAGS + 16], %%XTMP2
+        vmovdqu [%%TAGS], %%XTMP1
+        vmovdqu [%%TAGS + 16], %%XTMP2
         REORDER_LFSR pState, 2
 %elif %%TAG_SIZE == 16
         ; Transpose the keystream and store the 16 bytes per buffer consecutively,
         ; being the initial tag for each buffer
         TRANSPOSE4_U32 %%KSTR1, %%KSTR2, %%KSTR3, %%KSTR4, %%XTMP5, %%XTMP6
-        vmovdqa [%%TAGS], %%KSTR1
-        vmovdqa [%%TAGS + 16], %%KSTR2
-        vmovdqa [%%TAGS + 16*2], %%KSTR3
-        vmovdqa [%%TAGS + 16*3], %%KSTR4
+        vmovdqu [%%TAGS], %%KSTR1
+        vmovdqu [%%TAGS + 16], %%KSTR2
+        vmovdqu [%%TAGS + 16*2], %%KSTR3
+        vmovdqu [%%TAGS + 16*3], %%KSTR4
         REORDER_LFSR pState, 4
 %endif
         FUNC_RESTORE
@@ -1921,7 +1921,7 @@ remainder_key_sz_128:
         xor     [%%T], %%TMP
 %else ;; %%TAG_SZ == 16
         vpxor   %%XDIGEST, [%%T]
-        vmovdqa [%%T], %%XDIGEST
+        vmovdqu [%%T], %%XDIGEST
 %endif
 
 %endmacro
