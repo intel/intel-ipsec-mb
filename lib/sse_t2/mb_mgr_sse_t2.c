@@ -189,17 +189,17 @@ submit_job_aes_gcm_enc_sse(IMB_MGR *state, IMB_JOB *job)
 #define SUBMIT_JOB_AES_GCM_ENC submit_job_aes_gcm_enc_sse
 
 /* AES-CBC */
-#define SUBMIT_JOB_AES128_ENC submit_job_aes128_enc_sse
-#define SUBMIT_JOB_AES128_DEC submit_job_aes128_dec_sse
-#define FLUSH_JOB_AES128_ENC  flush_job_aes128_enc_sse
+#define SUBMIT_JOB_AES_CBC_128_ENC submit_job_aes128_enc_sse
+#define SUBMIT_JOB_AES_CBC_128_DEC submit_job_aes128_dec_sse
+#define FLUSH_JOB_AES_CBC_128_ENC  flush_job_aes128_enc_sse
 
-#define SUBMIT_JOB_AES192_ENC submit_job_aes192_enc_sse
-#define SUBMIT_JOB_AES192_DEC submit_job_aes192_dec_sse
-#define FLUSH_JOB_AES192_ENC  flush_job_aes192_enc_sse
+#define SUBMIT_JOB_AES_CBC_192_ENC submit_job_aes192_enc_sse
+#define SUBMIT_JOB_AES_CBC_192_DEC submit_job_aes192_dec_sse
+#define FLUSH_JOB_AES_CBC_192_ENC  flush_job_aes192_enc_sse
 
-#define SUBMIT_JOB_AES256_ENC submit_job_aes256_enc_sse
-#define SUBMIT_JOB_AES256_DEC submit_job_aes256_dec_sse
-#define FLUSH_JOB_AES256_ENC  flush_job_aes256_enc_sse
+#define SUBMIT_JOB_AES_CBC_256_ENC submit_job_aes256_enc_sse
+#define SUBMIT_JOB_AES_CBC_256_DEC submit_job_aes256_dec_sse
+#define FLUSH_JOB_AES_CBC_256_ENC  flush_job_aes256_enc_sse
 
 #define AES_CBC_DEC_128       aes_cbc_dec_128_sse
 #define AES_CBC_DEC_192       aes_cbc_dec_192_sse

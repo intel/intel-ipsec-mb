@@ -59,9 +59,7 @@
 /* Lower level "out of order" schedulers */
 /* ========================================================================= */
 
-__forceinline
-IMB_JOB *
-SUBMIT_JOB_AES128_DEC(IMB_JOB *job)
+__forceinline IMB_JOB *SUBMIT_JOB_AES_CBC_128_DEC(IMB_JOB *job)
 {
         AES_CBC_DEC_128(job->src + job->cipher_start_src_offset_in_bytes,
                         job->iv,
@@ -72,9 +70,7 @@ SUBMIT_JOB_AES128_DEC(IMB_JOB *job)
         return job;
 }
 
-__forceinline
-IMB_JOB *
-SUBMIT_JOB_AES192_DEC(IMB_JOB *job)
+__forceinline IMB_JOB *SUBMIT_JOB_AES_CBC_192_DEC(IMB_JOB *job)
 {
         AES_CBC_DEC_192(job->src + job->cipher_start_src_offset_in_bytes,
                         job->iv,
@@ -85,9 +81,7 @@ SUBMIT_JOB_AES192_DEC(IMB_JOB *job)
         return job;
 }
 
-__forceinline
-IMB_JOB *
-SUBMIT_JOB_AES256_DEC(IMB_JOB *job)
+__forceinline IMB_JOB *SUBMIT_JOB_AES_CBC_256_DEC(IMB_JOB *job)
 {
         AES_CBC_DEC_256(job->src + job->cipher_start_src_offset_in_bytes,
                         job->iv,
@@ -98,9 +92,7 @@ SUBMIT_JOB_AES256_DEC(IMB_JOB *job)
         return job;
 }
 
-__forceinline
-IMB_JOB *
-SUBMIT_JOB_AES_ECB_128_ENC(IMB_JOB *job)
+__forceinline IMB_JOB *SUBMIT_JOB_AES_ECB_128_ENC(IMB_JOB *job)
 {
         AES_ECB_ENC_128(job->src + job->cipher_start_src_offset_in_bytes,
                         job->enc_keys,
@@ -110,9 +102,7 @@ SUBMIT_JOB_AES_ECB_128_ENC(IMB_JOB *job)
         return job;
 }
 
-__forceinline
-IMB_JOB *
-SUBMIT_JOB_AES_ECB_192_ENC(IMB_JOB *job)
+__forceinline IMB_JOB *SUBMIT_JOB_AES_ECB_192_ENC(IMB_JOB *job)
 {
         AES_ECB_ENC_192(job->src + job->cipher_start_src_offset_in_bytes,
                         job->enc_keys,
@@ -122,9 +112,7 @@ SUBMIT_JOB_AES_ECB_192_ENC(IMB_JOB *job)
         return job;
 }
 
-__forceinline
-IMB_JOB *
-SUBMIT_JOB_AES_ECB_256_ENC(IMB_JOB *job)
+__forceinline IMB_JOB *SUBMIT_JOB_AES_ECB_256_ENC(IMB_JOB *job)
 {
         AES_ECB_ENC_256(job->src + job->cipher_start_src_offset_in_bytes,
                         job->enc_keys,
@@ -134,9 +122,7 @@ SUBMIT_JOB_AES_ECB_256_ENC(IMB_JOB *job)
         return job;
 }
 
-__forceinline
-IMB_JOB *
-SUBMIT_JOB_AES_ECB_128_DEC(IMB_JOB *job)
+__forceinline IMB_JOB *SUBMIT_JOB_AES_ECB_128_DEC(IMB_JOB *job)
 {
         AES_ECB_DEC_128(job->src + job->cipher_start_src_offset_in_bytes,
                         job->dec_keys,
@@ -146,9 +132,7 @@ SUBMIT_JOB_AES_ECB_128_DEC(IMB_JOB *job)
         return job;
 }
 
-__forceinline
-IMB_JOB *
-SUBMIT_JOB_AES_ECB_192_DEC(IMB_JOB *job)
+__forceinline IMB_JOB *SUBMIT_JOB_AES_ECB_192_DEC(IMB_JOB *job)
 {
         AES_ECB_DEC_192(job->src + job->cipher_start_src_offset_in_bytes,
                         job->dec_keys,
@@ -158,9 +142,7 @@ SUBMIT_JOB_AES_ECB_192_DEC(IMB_JOB *job)
         return job;
 }
 
-__forceinline
-IMB_JOB *
-SUBMIT_JOB_AES_ECB_256_DEC(IMB_JOB *job)
+__forceinline IMB_JOB *SUBMIT_JOB_AES_ECB_256_DEC(IMB_JOB *job)
 {
         AES_ECB_DEC_256(job->src + job->cipher_start_src_offset_in_bytes,
                         job->dec_keys,
@@ -170,9 +152,7 @@ SUBMIT_JOB_AES_ECB_256_DEC(IMB_JOB *job)
         return job;
 }
 
-__forceinline
-IMB_JOB *
-SUBMIT_JOB_AES128_CBCS_1_9_DEC(IMB_JOB *job)
+__forceinline IMB_JOB * SUBMIT_JOB_AES128_CBCS_1_9_DEC(IMB_JOB *job)
 {
         AES_CBCS_1_9_DEC_128(job->src + job->cipher_start_src_offset_in_bytes,
                              job->iv,
@@ -194,9 +174,7 @@ SUBMIT_JOB_AES128_CBCS_1_9_DEC(IMB_JOB *job)
 /* Custom hash / cipher */
 /* ========================================================================= */
 
-__forceinline
-IMB_JOB *
-JOB_CUSTOM_CIPHER(IMB_JOB *job)
+__forceinline IMB_JOB *JOB_CUSTOM_CIPHER(IMB_JOB *job)
 {
         if (!(job->status & IMB_STATUS_COMPLETED_CIPHER)) {
                 if (job->cipher_func(job))
@@ -207,23 +185,17 @@ JOB_CUSTOM_CIPHER(IMB_JOB *job)
         return job;
 }
 
-__forceinline
-IMB_JOB *
-SUBMIT_JOB_CUSTOM_CIPHER(IMB_JOB *job)
+__forceinline IMB_JOB *SUBMIT_JOB_CUSTOM_CIPHER(IMB_JOB *job)
 {
         return JOB_CUSTOM_CIPHER(job);
 }
 
-__forceinline
-IMB_JOB *
-FLUSH_JOB_CUSTOM_CIPHER(IMB_JOB *job)
+__forceinline IMB_JOB *FLUSH_JOB_CUSTOM_CIPHER(IMB_JOB *job)
 {
         return JOB_CUSTOM_CIPHER(job);
 }
 
-__forceinline
-IMB_JOB *
-JOB_CUSTOM_HASH(IMB_JOB *job)
+__forceinline IMB_JOB *JOB_CUSTOM_HASH(IMB_JOB *job)
 {
         if (!(job->status & IMB_STATUS_COMPLETED_AUTH)) {
                 if (job->hash_func(job))
@@ -234,16 +206,12 @@ JOB_CUSTOM_HASH(IMB_JOB *job)
         return job;
 }
 
-__forceinline
-IMB_JOB *
-SUBMIT_JOB_CUSTOM_HASH(IMB_JOB *job)
+__forceinline IMB_JOB *SUBMIT_JOB_CUSTOM_HASH(IMB_JOB *job)
 {
         return JOB_CUSTOM_HASH(job);
 }
 
-__forceinline
-IMB_JOB *
-FLUSH_JOB_CUSTOM_HASH(IMB_JOB *job)
+__forceinline IMB_JOB *FLUSH_JOB_CUSTOM_HASH(IMB_JOB *job)
 {
         return JOB_CUSTOM_HASH(job);
 }
@@ -259,15 +227,15 @@ SUBMIT_JOB_AES_ENC(IMB_MGR *state, IMB_JOB *job)
                 if (16 == job->key_len_in_bytes) {
                         MB_MGR_AES_OOO *aes128_ooo = state->aes128_ooo;
 
-                        return SUBMIT_JOB_AES128_ENC(aes128_ooo, job);
+                        return SUBMIT_JOB_AES_CBC_128_ENC(aes128_ooo, job);
                 } else if (24 == job->key_len_in_bytes) {
                         MB_MGR_AES_OOO *aes192_ooo = state->aes192_ooo;
 
-                        return SUBMIT_JOB_AES192_ENC(aes192_ooo, job);
+                        return SUBMIT_JOB_AES_CBC_192_ENC(aes192_ooo, job);
                 } else { /* assume 32 */
                         MB_MGR_AES_OOO *aes256_ooo = state->aes256_ooo;
 
-                        return SUBMIT_JOB_AES256_ENC(aes256_ooo, job);
+                        return SUBMIT_JOB_AES_CBC_256_ENC(aes256_ooo, job);
                 }
         } else if (IMB_CIPHER_CNTR == job->cipher_mode) {
                 return SUBMIT_JOB_AES_CNTR(job);
@@ -372,15 +340,15 @@ FLUSH_JOB_AES_ENC(IMB_MGR *state, IMB_JOB *job)
                 if (16 == job->key_len_in_bytes) {
                         MB_MGR_AES_OOO *aes128_ooo = state->aes128_ooo;
 
-                        return FLUSH_JOB_AES128_ENC(aes128_ooo);
+                        return FLUSH_JOB_AES_CBC_128_ENC(aes128_ooo);
                 } else if (24 == job->key_len_in_bytes) {
                         MB_MGR_AES_OOO *aes192_ooo = state->aes192_ooo;
 
-                        return FLUSH_JOB_AES192_ENC(aes192_ooo);
+                        return FLUSH_JOB_AES_CBC_192_ENC(aes192_ooo);
                 } else  { /* assume 32 */
                         MB_MGR_AES_OOO *aes256_ooo = state->aes256_ooo;
 
-                        return FLUSH_JOB_AES256_ENC(aes256_ooo);
+                        return FLUSH_JOB_AES_CBC_256_ENC(aes256_ooo);
                 }
         } else if (IMB_CIPHER_DOCSIS_SEC_BPI == job->cipher_mode) {
                 return flush_docsis_enc_job(state, job);
@@ -438,11 +406,11 @@ SUBMIT_JOB_AES_DEC(IMB_MGR *state, IMB_JOB *job)
 {
         if (IMB_CIPHER_CBC == job->cipher_mode) {
                 if (16 == job->key_len_in_bytes) {
-                        return SUBMIT_JOB_AES128_DEC(job);
+                        return SUBMIT_JOB_AES_CBC_128_DEC(job);
                 } else if (24 == job->key_len_in_bytes) {
-                        return SUBMIT_JOB_AES192_DEC(job);
+                        return SUBMIT_JOB_AES_CBC_192_DEC(job);
                 } else { /* assume 32 */
-                        return SUBMIT_JOB_AES256_DEC(job);
+                        return SUBMIT_JOB_AES_CBC_256_DEC(job);
                 }
         } else if (IMB_CIPHER_CNTR == job->cipher_mode) {
                 return SUBMIT_JOB_AES_CNTR(job);

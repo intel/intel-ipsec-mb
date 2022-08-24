@@ -64,16 +64,16 @@ uint32_t submit_aes_cbc_burst_enc(IMB_MGR *state,
 
         if (key_size == 16) {
                 aes_ooo = state->aes128_ooo;
-                submit_fn = SUBMIT_JOB_AES128_ENC;
-                flush_fn = FLUSH_JOB_AES128_ENC;
+                submit_fn = SUBMIT_JOB_AES_CBC_128_ENC;
+                flush_fn = FLUSH_JOB_AES_CBC_128_ENC;
         } else if (key_size == 24) {
                 aes_ooo = state->aes192_ooo;
-                submit_fn = SUBMIT_JOB_AES192_ENC;
-                flush_fn = FLUSH_JOB_AES192_ENC;
+                submit_fn = SUBMIT_JOB_AES_CBC_192_ENC;
+                flush_fn = FLUSH_JOB_AES_CBC_192_ENC;
         } else { /* assume 32 */
                 aes_ooo = state->aes256_ooo;
-                submit_fn = SUBMIT_JOB_AES256_ENC;
-                flush_fn = FLUSH_JOB_AES256_ENC;
+                submit_fn = SUBMIT_JOB_AES_CBC_256_ENC;
+                flush_fn = FLUSH_JOB_AES_CBC_256_ENC;
         }
 
         for (i = 0; i < n_jobs; i++) {

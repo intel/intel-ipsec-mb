@@ -52,15 +52,15 @@
 #define SAVE_XMMS               save_xmms
 #define RESTORE_XMMS            restore_xmms
 
-#define SUBMIT_JOB_AES128_ENC submit_job_aes128_enc_sse_no_aesni
-#define SUBMIT_JOB_AES128_DEC submit_job_aes128_dec_sse_no_aesni
-#define FLUSH_JOB_AES128_ENC  flush_job_aes128_enc_sse_no_aesni
-#define SUBMIT_JOB_AES192_ENC submit_job_aes192_enc_sse_no_aesni
-#define SUBMIT_JOB_AES192_DEC submit_job_aes192_dec_sse_no_aesni
-#define FLUSH_JOB_AES192_ENC  flush_job_aes192_enc_sse_no_aesni
-#define SUBMIT_JOB_AES256_ENC submit_job_aes256_enc_sse_no_aesni
-#define SUBMIT_JOB_AES256_DEC submit_job_aes256_dec_sse_no_aesni
-#define FLUSH_JOB_AES256_ENC  flush_job_aes256_enc_sse_no_aesni
+#define SUBMIT_JOB_AES_CBC_128_ENC submit_job_aes128_enc_sse_no_aesni
+#define SUBMIT_JOB_AES_CBC_128_DEC submit_job_aes128_dec_sse_no_aesni
+#define FLUSH_JOB_AES_CBC_128_ENC  flush_job_aes128_enc_sse_no_aesni
+#define SUBMIT_JOB_AES_CBC_192_ENC submit_job_aes192_enc_sse_no_aesni
+#define SUBMIT_JOB_AES_CBC_192_DEC submit_job_aes192_dec_sse_no_aesni
+#define FLUSH_JOB_AES_CBC_192_ENC  flush_job_aes192_enc_sse_no_aesni
+#define SUBMIT_JOB_AES_CBC_256_ENC submit_job_aes256_enc_sse_no_aesni
+#define SUBMIT_JOB_AES_CBC_256_DEC submit_job_aes256_dec_sse_no_aesni
+#define FLUSH_JOB_AES_CBC_256_ENC  flush_job_aes256_enc_sse_no_aesni
 #define SUBMIT_JOB_AES_ECB_128_ENC submit_job_aes_ecb_128_enc_sse_no_aesni
 #define SUBMIT_JOB_AES_ECB_128_DEC submit_job_aes_ecb_128_dec_sse_no_aesni
 #define SUBMIT_JOB_AES_ECB_192_ENC submit_job_aes_ecb_192_enc_sse_no_aesni
