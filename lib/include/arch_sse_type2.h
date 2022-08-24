@@ -33,6 +33,11 @@
 #include "intel-ipsec-mb.h"
 #include "ipsec_ooo_mgr.h"
 
+/* SHA */
+void call_sha1_ni_x2_sse_from_c(SHA1_ARGS *args, uint32_t size_in_blocks);
+void call_sha224_ni_x2_sse_from_c(SHA256_ARGS *args, uint32_t size_in_blocks);
+void call_sha256_ni_x2_sse_from_c(SHA256_ARGS *args, uint32_t size_in_blocks);
+
 /* Moved from MB MGR */
 
 IMB_JOB *submit_job_hmac_ni_sse(MB_MGR_HMAC_SHA_1_OOO *state,

@@ -182,27 +182,27 @@ IMB_JOB *snow_v_avx(IMB_JOB *job);
 IMB_JOB *snow_v_aead_init_avx(IMB_JOB *job);
 
 IMB_JOB *submit_job_hmac_avx(MB_MGR_HMAC_SHA_1_OOO *state,
-                                  IMB_JOB *job);
+                             IMB_JOB *job);
 IMB_JOB *flush_job_hmac_avx(MB_MGR_HMAC_SHA_1_OOO *state);
 
 IMB_JOB *submit_job_hmac_sha_224_avx(MB_MGR_HMAC_SHA_256_OOO *state,
-                                          IMB_JOB *job);
+                                     IMB_JOB *job);
 IMB_JOB *flush_job_hmac_sha_224_avx(MB_MGR_HMAC_SHA_256_OOO *state);
 
 IMB_JOB *submit_job_hmac_sha_256_avx(MB_MGR_HMAC_SHA_256_OOO *state,
-                                          IMB_JOB *job);
+                                     IMB_JOB *job);
 IMB_JOB *flush_job_hmac_sha_256_avx(MB_MGR_HMAC_SHA_256_OOO *state);
 
 IMB_JOB *submit_job_hmac_sha_384_avx(MB_MGR_HMAC_SHA_512_OOO *state,
-                                          IMB_JOB *job);
+                                     IMB_JOB *job);
 IMB_JOB *flush_job_hmac_sha_384_avx(MB_MGR_HMAC_SHA_512_OOO *state);
 
 IMB_JOB *submit_job_hmac_sha_512_avx(MB_MGR_HMAC_SHA_512_OOO *state,
-                                          IMB_JOB *job);
+                                     IMB_JOB *job);
 IMB_JOB *flush_job_hmac_sha_512_avx(MB_MGR_HMAC_SHA_512_OOO *state);
 
 IMB_JOB *submit_job_hmac_md5_avx(MB_MGR_HMAC_MD5_OOO *state,
-                                      IMB_JOB *job);
+                                 IMB_JOB *job);
 IMB_JOB *flush_job_hmac_md5_avx(MB_MGR_HMAC_MD5_OOO *state);
 
 IMB_JOB *submit_job_aes128_cmac_auth_avx(MB_MGR_CMAC_OOO *state,
@@ -244,5 +244,10 @@ uint32_t crc10_iuup_data_avx(const void *msg, const uint64_t len);
 uint32_t crc6_iuup_header_avx(const void *msg, const uint64_t len);
 uint32_t crc32_wimax_ofdma_data_avx(const void *msg, const uint64_t len);
 uint32_t crc8_wimax_ofdma_hcs_avx(const void *msg, const uint64_t len);
+
+/* SHA */
+void call_sha1_mult_avx_from_c(SHA1_ARGS *args, uint32_t size_in_blocks);
+void call_sha_256_mult_avx_from_c(SHA256_ARGS *args, uint32_t size_in_blocks);
+void call_sha512_x2_avx_from_c(SHA512_ARGS *args, uint64_t size_in_blocks);
 
 #endif /* IMB_ASM_AVX_T1_H */

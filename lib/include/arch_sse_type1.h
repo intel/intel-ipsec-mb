@@ -114,6 +114,11 @@ uint32_t crc8_wimax_ofdma_hcs_sse(const void *msg, const uint64_t len);
 uint32_t ethernet_fcs_sse_local(const void *msg, const uint64_t len,
                                 const void *tag_ouput);
 
+/* SHA */
+void call_sha1_mult_sse_from_c(SHA1_ARGS *args, uint32_t size_in_blocks);
+void call_sha_256_mult_sse_from_c(SHA256_ARGS *args, uint32_t size_in_blocks);
+void call_sha512_x2_sse_from_c(SHA512_ARGS *args, uint64_t size_in_blocks);
+
 /* moved from MB MGR */
 IMB_JOB *submit_job_aes128_enc_sse(MB_MGR_AES_OOO *state,
                                    IMB_JOB *job);

@@ -28,54 +28,11 @@
 #include "include/sha_generic.h"
 #include "ipsec_ooo_mgr.h"
 #include "constants.h"
-
-extern void call_sha1_mult_sse_from_c(SHA1_ARGS *args,
-                                      uint32_t size_in_blocks);
-
-extern void call_sha1_mult_avx_from_c(SHA1_ARGS *args,
-                                      uint32_t size_in_blocks);
-
-extern void call_sha1_x8_avx2_from_c(SHA1_ARGS *args,
-                                     uint32_t size_in_blocks);
-
-extern void call_sha1_x16_avx512_from_c(SHA1_ARGS *args,
-                                        uint32_t size_in_blocks);
-
-extern void call_sha_256_mult_sse_from_c(SHA256_ARGS *args,
-                                         uint32_t size_in_blocks);
-
-extern void call_sha_256_mult_avx_from_c(SHA256_ARGS *args,
-                                         uint32_t size_in_blocks);
-
-extern void call_sha256_oct_avx2_from_c(SHA256_ARGS *args,
-                                        uint32_t size_in_blocks);
-
-extern void call_sha256_x16_avx512_from_c(SHA256_ARGS *args,
-                                          uint32_t size_in_blocks);
-
-extern void call_sha1_ni_x2_sse_from_c(SHA1_ARGS *args,
-                                       uint32_t size_in_blocks);
-
-extern void call_sha224_ni_x2_sse_from_c(SHA256_ARGS *args,
-                                         uint32_t size_in_blocks);
-
-extern void call_sha256_ni_x2_sse_from_c(SHA256_ARGS *args,
-                                         uint32_t size_in_blocks);
-
-extern void call_sha256_ni_x1_sse_from_c(SHA256_ARGS *args,
-                                         uint32_t size_in_blocks);
-
-extern void call_sha512_x2_sse_from_c(SHA512_ARGS *args,
-                                      uint64_t size_in_blocks);
-
-extern void call_sha512_x2_avx_from_c(SHA512_ARGS *args,
-                                      uint64_t size_in_blocks);
-
-extern void call_sha512_x4_avx2_from_c(SHA512_ARGS *args,
-                                       uint64_t size_in_blocks);
-
-extern void call_sha512_x8_avx512_from_c(SHA512_ARGS *args,
-                                         uint64_t size_in_blocks);
+#include "include/arch_sse_type1.h"
+#include "include/arch_sse_type2.h"
+#include "include/arch_avx_type1.h"
+#include "include/arch_avx2_type1.h"
+#include "include/arch_avx512_type1.h"
 
 __forceinline
 void copy_bswap4_array_mb(void *dst, const void *src, const size_t num,

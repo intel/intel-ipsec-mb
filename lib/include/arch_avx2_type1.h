@@ -33,6 +33,11 @@
 #include "intel-ipsec-mb.h"
 #include "ipsec_ooo_mgr.h"
 
+/* SHA */
+void call_sha1_x8_avx2_from_c(SHA1_ARGS *args, uint32_t size_in_blocks);
+void call_sha256_oct_avx2_from_c(SHA256_ARGS *args, uint32_t size_in_blocks);
+void call_sha512_x4_avx2_from_c(SHA512_ARGS *args, uint64_t size_in_blocks);
+
 /* moved from MB MGR */
 IMB_JOB *submit_job_zuc_eea3_avx2(MB_MGR_ZUC_OOO *state,
                                   IMB_JOB *job);

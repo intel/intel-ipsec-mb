@@ -70,10 +70,10 @@ IMB_JOB *submit_job_zuc256_eea3_no_gfni_avx512(MB_MGR_ZUC_OOO *state,
 IMB_JOB *flush_job_zuc256_eea3_no_gfni_avx512(MB_MGR_ZUC_OOO *state);
 
 IMB_JOB *submit_job_zuc256_eia3_no_gfni_avx512(MB_MGR_ZUC_OOO *state,
-                                            IMB_JOB *job,
-                                            const uint64_t tag_sz);
+                                               IMB_JOB *job,
+                                               const uint64_t tag_sz);
 IMB_JOB *flush_job_zuc256_eia3_no_gfni_avx512(MB_MGR_ZUC_OOO *state,
-                                           const uint64_t tag_sz);
+                                              const uint64_t tag_sz);
 
 IMB_JOB *submit_job_sha1_avx512(MB_MGR_SHA_1_OOO *state,
                                 IMB_JOB *job);
@@ -114,23 +114,23 @@ void aes_cmac_256_subkey_gen_avx512(const void *key_exp,
                                     void *key1, void *key2);
 
 IMB_JOB *submit_job_hmac_avx512(MB_MGR_HMAC_SHA_1_OOO *state,
-                                     IMB_JOB *job);
+                                IMB_JOB *job);
 IMB_JOB *flush_job_hmac_avx512(MB_MGR_HMAC_SHA_1_OOO *state);
 
 IMB_JOB *submit_job_hmac_sha_224_avx512(MB_MGR_HMAC_SHA_256_OOO *state,
-                                             IMB_JOB *job);
+                                        IMB_JOB *job);
 IMB_JOB *flush_job_hmac_sha_224_avx512(MB_MGR_HMAC_SHA_256_OOO *state);
 
 IMB_JOB *submit_job_hmac_sha_256_avx512(MB_MGR_HMAC_SHA_256_OOO *state,
-                                             IMB_JOB *job);
+                                        IMB_JOB *job);
 IMB_JOB *flush_job_hmac_sha_256_avx512(MB_MGR_HMAC_SHA_256_OOO *state);
 
 IMB_JOB *submit_job_hmac_sha_384_avx512(MB_MGR_HMAC_SHA_512_OOO *state,
-                                             IMB_JOB *job);
+                                        IMB_JOB *job);
 IMB_JOB *flush_job_hmac_sha_384_avx512(MB_MGR_HMAC_SHA_512_OOO *state);
 
 IMB_JOB *submit_job_hmac_sha_512_avx512(MB_MGR_HMAC_SHA_512_OOO *state,
-                                             IMB_JOB *job);
+                                        IMB_JOB *job);
 IMB_JOB *flush_job_hmac_sha_512_avx512(MB_MGR_HMAC_SHA_512_OOO *state);
 
 void poly1305_mac_plain_avx512(IMB_JOB *job);
@@ -151,6 +151,10 @@ submit_job_aes_docsis256_enc_crc32_avx512(MB_MGR_DOCSIS_AES_OOO *state,
 IMB_JOB *
 flush_job_aes_docsis256_enc_crc32_avx512(MB_MGR_DOCSIS_AES_OOO *state);
 
+/* SHA */
+void call_sha1_x16_avx512_from_c(SHA1_ARGS *args, uint32_t size_in_blocks);
+void call_sha256_x16_avx512_from_c(SHA256_ARGS *args, uint32_t size_in_blocks);
+void call_sha512_x8_avx512_from_c(SHA512_ARGS *args, uint64_t size_in_blocks);
 
 #endif /* IMB_ASM_AVX512_T1_H */
 
