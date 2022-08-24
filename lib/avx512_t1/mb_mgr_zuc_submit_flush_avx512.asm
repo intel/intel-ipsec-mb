@@ -764,7 +764,11 @@ FLUSH_JOB_ZUC256_EEA3:
         call    ZUC_KEYGEN_16
 
 %%_exit:
+%if %%KEY_SIZE == 128
         RESERVE_STACK_SPACE 5
+%else
+        RESERVE_STACK_SPACE 6
+%endif
 
         ; Digest final bytes of data and generate tag for finished buffers
         lea     arg1, [%%OOO + _zuc_args_digest]
@@ -779,12 +783,12 @@ FLUSH_JOB_ZUC256_EEA3:
 
 %if %%KEY_SIZE == 128
         call    ZUC_REMAINDER_16
+        RESTORE_STACK_SPACE 5
 %else
         mov     arg6, %%TAG_SIZE
         call    ZUC256_REMAINDER_16
+        RESTORE_STACK_SPACE 6
 %endif
-
-        RESTORE_STACK_SPACE 5
 
         mov     word [%%OOO + _zuc_init_not_done], 0
 %endmacro
