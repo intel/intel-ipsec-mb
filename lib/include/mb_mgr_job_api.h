@@ -223,7 +223,11 @@ __forceinline
 IMB_JOB *
 SUBMIT_JOB_AES_ENC(IMB_MGR *state, IMB_JOB *job)
 {
-        if (IMB_CIPHER_CBC == job->cipher_mode) {
+        if (IMB_CIPHER_GCM == job->cipher_mode) {
+                return SUBMIT_JOB_AES_GCM_ENC(state, job);
+        } else if (IMB_CIPHER_GCM_SGL == job->cipher_mode) {
+                return submit_gcm_sgl_enc(state, job);
+        } else if (IMB_CIPHER_CBC == job->cipher_mode) {
                 if (16 == job->key_len_in_bytes) {
                         MB_MGR_AES_OOO *aes128_ooo = state->aes128_ooo;
 
@@ -256,10 +260,6 @@ SUBMIT_JOB_AES_ENC(IMB_MGR *state, IMB_JOB *job)
                         return SUBMIT_JOB_PON_ENC_NO_CTR(job);
                 else
                         return SUBMIT_JOB_PON_ENC(job);
-        } else if (IMB_CIPHER_GCM == job->cipher_mode) {
-                return SUBMIT_JOB_AES_GCM_ENC(state, job);
-        } else if (IMB_CIPHER_GCM_SGL == job->cipher_mode) {
-                return submit_gcm_sgl_enc(state, job);
         } else if (IMB_CIPHER_CUSTOM == job->cipher_mode) {
                 return SUBMIT_JOB_CUSTOM_CIPHER(job);
         } else if (IMB_CIPHER_DES == job->cipher_mode) {
@@ -404,7 +404,11 @@ __forceinline
 IMB_JOB *
 SUBMIT_JOB_AES_DEC(IMB_MGR *state, IMB_JOB *job)
 {
-        if (IMB_CIPHER_CBC == job->cipher_mode) {
+        if (IMB_CIPHER_GCM == job->cipher_mode) {
+                return SUBMIT_JOB_AES_GCM_DEC(state, job);
+        } else if (IMB_CIPHER_GCM_SGL == job->cipher_mode) {
+                return submit_gcm_sgl_dec(state, job);
+        } else if (IMB_CIPHER_CBC == job->cipher_mode) {
                 if (16 == job->key_len_in_bytes) {
                         return SUBMIT_JOB_AES_CBC_128_DEC(job);
                 } else if (24 == job->key_len_in_bytes) {
@@ -431,10 +435,6 @@ SUBMIT_JOB_AES_DEC(IMB_MGR *state, IMB_JOB *job)
                         return SUBMIT_JOB_PON_DEC_NO_CTR(job);
                 else
                         return SUBMIT_JOB_PON_DEC(job);
-        } else if (IMB_CIPHER_GCM == job->cipher_mode) {
-                return SUBMIT_JOB_AES_GCM_DEC(state, job);
-        } else if (IMB_CIPHER_GCM_SGL == job->cipher_mode) {
-                return submit_gcm_sgl_dec(state, job);
         } else if (IMB_CIPHER_DES == job->cipher_mode) {
 #ifdef SUBMIT_JOB_DES_CBC_DEC
                 MB_MGR_DES_OOO *des_dec_ooo = state->des_dec_ooo;
