@@ -101,13 +101,6 @@
 #define SUBMIT_JOB_PON_ENC_NO_CTR submit_job_pon_enc_no_ctr_avx
 #define SUBMIT_JOB_PON_DEC_NO_CTR submit_job_pon_dec_no_ctr_avx
 
-#define AES_GCM_DEC_128   aes_gcm_dec_128_avx_gen2
-#define AES_GCM_ENC_128   aes_gcm_enc_128_avx_gen2
-#define AES_GCM_DEC_192   aes_gcm_dec_192_avx_gen2
-#define AES_GCM_ENC_192   aes_gcm_enc_192_avx_gen2
-#define AES_GCM_DEC_256   aes_gcm_dec_256_avx_gen2
-#define AES_GCM_ENC_256   aes_gcm_enc_256_avx_gen2
-
 #define AES_GCM_DEC_IV_128   aes_gcm_dec_var_iv_128_avx_gen2
 #define AES_GCM_ENC_IV_128   aes_gcm_enc_var_iv_128_avx_gen2
 #define AES_GCM_DEC_IV_192   aes_gcm_dec_var_iv_192_avx_gen2
@@ -220,101 +213,6 @@ ethernet_fcs_avx_local(const void *msg, const uint64_t len,
 #define FLUSH_JOB_AES128_CBCS_1_9_ENC  flush_job_aes128_cbcs_1_9_enc_avx
 #define SUBMIT_JOB_AES128_CBCS_1_9_DEC submit_job_aes128_cbcs_1_9_dec_avx
 #define AES_CBCS_1_9_DEC_128           aes_cbcs_1_9_dec_128_avx
-
-/* ====================================================================== */
-
-/*
- * GCM submit / flush API for AVX arch
- */
-static IMB_JOB *
-submit_job_aes_gcm_dec_avx(IMB_MGR *state, IMB_JOB *job)
-{
-        DECLARE_ALIGNED(struct gcm_context_data ctx, 16);
-        (void) state;
-
-        if (16 == job->key_len_in_bytes) {
-                AES_GCM_DEC_IV_128(job->dec_keys,
-                                   &ctx, job->dst,
-                                   job->src +
-                                   job->cipher_start_src_offset_in_bytes,
-                                   job->msg_len_to_cipher_in_bytes,
-                                   job->iv, job->iv_len_in_bytes,
-                                   job->u.GCM.aad,
-                                   job->u.GCM.aad_len_in_bytes,
-                                   job->auth_tag_output,
-                                   job->auth_tag_output_len_in_bytes);
-        } else if (24 == job->key_len_in_bytes) {
-                AES_GCM_DEC_IV_192(job->dec_keys,
-                                   &ctx, job->dst,
-                                   job->src +
-                                   job->cipher_start_src_offset_in_bytes,
-                                   job->msg_len_to_cipher_in_bytes,
-                                   job->iv, job->iv_len_in_bytes,
-                                   job->u.GCM.aad,
-                                   job->u.GCM.aad_len_in_bytes,
-                                   job->auth_tag_output,
-                                   job->auth_tag_output_len_in_bytes);
-        } else { /* assume 32 bytes */
-                AES_GCM_DEC_IV_256(job->dec_keys,
-                                   &ctx, job->dst,
-                                   job->src +
-                                   job->cipher_start_src_offset_in_bytes,
-                                   job->msg_len_to_cipher_in_bytes,
-                                   job->iv, job->iv_len_in_bytes,
-                                   job->u.GCM.aad,
-                                   job->u.GCM.aad_len_in_bytes,
-                                   job->auth_tag_output,
-                                   job->auth_tag_output_len_in_bytes);
-        }
-
-        job->status = IMB_STATUS_COMPLETED;
-        return job;
-}
-
-static IMB_JOB *
-submit_job_aes_gcm_enc_avx(IMB_MGR *state, IMB_JOB *job)
-{
-        DECLARE_ALIGNED(struct gcm_context_data ctx, 16);
-        (void) state;
-
-        if (16 == job->key_len_in_bytes) {
-                AES_GCM_ENC_IV_128(job->enc_keys,
-                                   &ctx, job->dst,
-                                   job->src +
-                                   job->cipher_start_src_offset_in_bytes,
-                                   job->msg_len_to_cipher_in_bytes,
-                                   job->iv, job->iv_len_in_bytes,
-                                   job->u.GCM.aad,
-                                   job->u.GCM.aad_len_in_bytes,
-                                   job->auth_tag_output,
-                                   job->auth_tag_output_len_in_bytes);
-        } else if (24 == job->key_len_in_bytes) {
-                AES_GCM_ENC_IV_192(job->enc_keys,
-                                   &ctx, job->dst,
-                                   job->src +
-                                   job->cipher_start_src_offset_in_bytes,
-                                   job->msg_len_to_cipher_in_bytes,
-                                   job->iv, job->iv_len_in_bytes,
-                                   job->u.GCM.aad,
-                                   job->u.GCM.aad_len_in_bytes,
-                                   job->auth_tag_output,
-                                   job->auth_tag_output_len_in_bytes);
-        } else { /* assume 32 bytes */
-                AES_GCM_ENC_IV_256(job->enc_keys,
-                                   &ctx, job->dst,
-                                   job->src +
-                                   job->cipher_start_src_offset_in_bytes,
-                                   job->msg_len_to_cipher_in_bytes,
-                                   job->iv, job->iv_len_in_bytes,
-                                   job->u.GCM.aad,
-                                   job->u.GCM.aad_len_in_bytes,
-                                   job->auth_tag_output,
-                                   job->auth_tag_output_len_in_bytes);
-        }
-
-        job->status = IMB_STATUS_COMPLETED;
-        return job;
-}
 
 /* ====================================================================== */
 

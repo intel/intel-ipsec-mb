@@ -81,109 +81,12 @@
 #define SUBMIT_JOB_CIPHER_DEC SUBMIT_JOB_CIPHER_DEC_SSE
 
 /* AES-GCM */
-#define AES_GCM_DEC_128   aes_gcm_dec_128_sse
-#define AES_GCM_ENC_128   aes_gcm_enc_128_sse
-#define AES_GCM_DEC_192   aes_gcm_dec_192_sse
-#define AES_GCM_ENC_192   aes_gcm_enc_192_sse
-#define AES_GCM_DEC_256   aes_gcm_dec_256_sse
-#define AES_GCM_ENC_256   aes_gcm_enc_256_sse
-
 #define AES_GCM_DEC_IV_128   aes_gcm_dec_var_iv_128_sse
 #define AES_GCM_ENC_IV_128   aes_gcm_enc_var_iv_128_sse
 #define AES_GCM_DEC_IV_192   aes_gcm_dec_var_iv_192_sse
 #define AES_GCM_ENC_IV_192   aes_gcm_enc_var_iv_192_sse
 #define AES_GCM_DEC_IV_256   aes_gcm_dec_var_iv_256_sse
 #define AES_GCM_ENC_IV_256   aes_gcm_enc_var_iv_256_sse
-
-static IMB_JOB *
-submit_job_aes_gcm_dec_sse(IMB_MGR *state, IMB_JOB *job)
-{
-        DECLARE_ALIGNED(struct gcm_context_data ctx, 16);
-        (void) state;
-
-        if (16 == job->key_len_in_bytes) {
-                AES_GCM_DEC_IV_128(job->dec_keys,
-                                   &ctx, job->dst,
-                                   job->src +
-                                   job->cipher_start_src_offset_in_bytes,
-                                   job->msg_len_to_cipher_in_bytes,
-                                   job->iv, job->iv_len_in_bytes,
-                                   job->u.GCM.aad,
-                                   job->u.GCM.aad_len_in_bytes,
-                                   job->auth_tag_output,
-                                   job->auth_tag_output_len_in_bytes);
-        } else if (24 == job->key_len_in_bytes) {
-                AES_GCM_DEC_IV_192(job->dec_keys,
-                                   &ctx, job->dst,
-                                   job->src +
-                                   job->cipher_start_src_offset_in_bytes,
-                                   job->msg_len_to_cipher_in_bytes,
-                                   job->iv, job->iv_len_in_bytes,
-                                   job->u.GCM.aad,
-                                   job->u.GCM.aad_len_in_bytes,
-                                   job->auth_tag_output,
-                                   job->auth_tag_output_len_in_bytes);
-        } else { /* assume 32 bytes */
-                AES_GCM_DEC_IV_256(job->dec_keys,
-                                   &ctx, job->dst,
-                                   job->src +
-                                   job->cipher_start_src_offset_in_bytes,
-                                   job->msg_len_to_cipher_in_bytes,
-                                   job->iv, job->iv_len_in_bytes,
-                                   job->u.GCM.aad,
-                                   job->u.GCM.aad_len_in_bytes,
-                                   job->auth_tag_output,
-                                   job->auth_tag_output_len_in_bytes);
-        }
-
-        job->status = IMB_STATUS_COMPLETED;
-        return job;
-}
-
-static IMB_JOB *
-submit_job_aes_gcm_enc_sse(IMB_MGR *state, IMB_JOB *job)
-{
-        DECLARE_ALIGNED(struct gcm_context_data ctx, 16);
-        (void) state;
-
-        if (16 == job->key_len_in_bytes) {
-                AES_GCM_ENC_IV_128(job->enc_keys,
-                                   &ctx, job->dst,
-                                   job->src +
-                                   job->cipher_start_src_offset_in_bytes,
-                                   job->msg_len_to_cipher_in_bytes,
-                                   job->iv, job->iv_len_in_bytes,
-                                   job->u.GCM.aad,
-                                   job->u.GCM.aad_len_in_bytes,
-                                   job->auth_tag_output,
-                                   job->auth_tag_output_len_in_bytes);
-        } else if (24 == job->key_len_in_bytes) {
-                AES_GCM_ENC_IV_192(job->enc_keys,
-                                   &ctx, job->dst,
-                                   job->src +
-                                   job->cipher_start_src_offset_in_bytes,
-                                   job->msg_len_to_cipher_in_bytes,
-                                   job->iv, job->iv_len_in_bytes,
-                                   job->u.GCM.aad,
-                                   job->u.GCM.aad_len_in_bytes,
-                                   job->auth_tag_output,
-                                   job->auth_tag_output_len_in_bytes);
-        } else { /* assume 32 bytes */
-                AES_GCM_ENC_IV_256(job->enc_keys,
-                                   &ctx, job->dst,
-                                   job->src +
-                                   job->cipher_start_src_offset_in_bytes,
-                                   job->msg_len_to_cipher_in_bytes,
-                                   job->iv, job->iv_len_in_bytes,
-                                   job->u.GCM.aad,
-                                   job->u.GCM.aad_len_in_bytes,
-                                   job->auth_tag_output,
-                                   job->auth_tag_output_len_in_bytes);
-        }
-
-        job->status = IMB_STATUS_COMPLETED;
-        return job;
-}
 
 #define SUBMIT_JOB_AES_GCM_DEC submit_job_aes_gcm_dec_sse
 #define SUBMIT_JOB_AES_GCM_ENC submit_job_aes_gcm_enc_sse
