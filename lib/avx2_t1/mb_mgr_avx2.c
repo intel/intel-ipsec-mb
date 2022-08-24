@@ -142,14 +142,14 @@
 #define SUBMIT_JOB_SHA512   submit_job_sha512_avx2
 #define FLUSH_JOB_SHA512    flush_job_sha512_avx2
 
-#define SUBMIT_JOB_AES128_DEC submit_job_aes128_dec_avx
-#define SUBMIT_JOB_AES192_DEC submit_job_aes192_dec_avx
-#define SUBMIT_JOB_AES256_DEC submit_job_aes256_dec_avx
+#define SUBMIT_JOB_AES_CBC_128_DEC submit_job_aes128_dec_avx
+#define SUBMIT_JOB_AES_CBC_192_DEC submit_job_aes192_dec_avx
+#define SUBMIT_JOB_AES_CBC_256_DEC submit_job_aes256_dec_avx
 #define QUEUE_SIZE queue_size_avx2
 
-#define SUBMIT_JOB_AES_ENC SUBMIT_JOB_AES_ENC_AVX2
-#define FLUSH_JOB_AES_ENC  FLUSH_JOB_AES_ENC_AVX2
-#define SUBMIT_JOB_AES_DEC SUBMIT_JOB_AES_DEC_AVX2
+#define SUBMIT_JOB_CIPHER_ENC SUBMIT_JOB_CIPHER_ENC_AVX2
+#define FLUSH_JOB_CIPHER_ENC  FLUSH_JOB_CIPHER_ENC_AVX2
+#define SUBMIT_JOB_CIPHER_DEC SUBMIT_JOB_CIPHER_DEC_AVX2
 
 #define SUBMIT_JOB_CHACHA20_ENC_DEC submit_job_chacha20_enc_dec_avx2
 #define SUBMIT_JOB_CHACHA20_POLY1305 aead_chacha20_poly1305_avx2

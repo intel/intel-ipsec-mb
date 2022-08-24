@@ -56,7 +56,7 @@
                      job->msg_len_to_hash_in_bytes)
 
 /* ========================================================================= */
-/* Lower level "out of order" schedulers */
+/* AES-CBC */
 /* ========================================================================= */
 
 __forceinline IMB_JOB *SUBMIT_JOB_AES_CBC_128_DEC(IMB_JOB *job)
@@ -91,6 +91,10 @@ __forceinline IMB_JOB *SUBMIT_JOB_AES_CBC_256_DEC(IMB_JOB *job)
         job->status |= IMB_STATUS_COMPLETED_CIPHER;
         return job;
 }
+
+/* ========================================================================= */
+/* AES-ECB */
+/* ========================================================================= */
 
 __forceinline IMB_JOB *SUBMIT_JOB_AES_ECB_128_ENC(IMB_JOB *job)
 {
@@ -151,6 +155,10 @@ __forceinline IMB_JOB *SUBMIT_JOB_AES_ECB_256_DEC(IMB_JOB *job)
         job->status |= IMB_STATUS_COMPLETED_CIPHER;
         return job;
 }
+
+/* ========================================================================= */
+/* AES-CBCS */
+/* ========================================================================= */
 
 __forceinline IMB_JOB * SUBMIT_JOB_AES128_CBCS_1_9_DEC(IMB_JOB *job)
 {
@@ -219,9 +227,7 @@ __forceinline IMB_JOB *FLUSH_JOB_CUSTOM_HASH(IMB_JOB *job)
 /* ========================================================================= */
 /* Cipher submit & flush functions */
 /* ========================================================================= */
-__forceinline
-IMB_JOB *
-SUBMIT_JOB_AES_ENC(IMB_MGR *state, IMB_JOB *job)
+__forceinline IMB_JOB *SUBMIT_JOB_CIPHER_ENC(IMB_MGR *state, IMB_JOB *job)
 {
         if (IMB_CIPHER_GCM == job->cipher_mode) {
                 return SUBMIT_JOB_AES_GCM_ENC(state, job);
@@ -332,9 +338,7 @@ SUBMIT_JOB_AES_ENC(IMB_MGR *state, IMB_JOB *job)
         }
 }
 
-__forceinline
-IMB_JOB *
-FLUSH_JOB_AES_ENC(IMB_MGR *state, IMB_JOB *job)
+__forceinline IMB_JOB *FLUSH_JOB_CIPHER_ENC(IMB_MGR *state, IMB_JOB *job)
 {
         if (IMB_CIPHER_CBC == job->cipher_mode) {
                 if (16 == job->key_len_in_bytes) {
@@ -400,9 +404,7 @@ FLUSH_JOB_AES_ENC(IMB_MGR *state, IMB_JOB *job)
         }
 }
 
-__forceinline
-IMB_JOB *
-SUBMIT_JOB_AES_DEC(IMB_MGR *state, IMB_JOB *job)
+__forceinline IMB_JOB *SUBMIT_JOB_CIPHER_DEC(IMB_MGR *state, IMB_JOB *job)
 {
         if (IMB_CIPHER_GCM == job->cipher_mode) {
                 return SUBMIT_JOB_AES_GCM_DEC(state, job);
@@ -507,9 +509,7 @@ SUBMIT_JOB_AES_DEC(IMB_MGR *state, IMB_JOB *job)
         }
 }
 
-__forceinline
-IMB_JOB *
-FLUSH_JOB_AES_DEC(IMB_MGR *state, IMB_JOB *job)
+__forceinline IMB_JOB *FLUSH_JOB_CIPHER_DEC(IMB_MGR *state, IMB_JOB *job)
 {
 #ifdef FLUSH_JOB_SNOW3G_UEA2
         if (IMB_CIPHER_SNOW3G_UEA2_BITLEN == job->cipher_mode)
@@ -825,23 +825,23 @@ FLUSH_JOB_HASH(IMB_MGR *state, IMB_JOB *job)
 /* ========================================================================= */
 
 __forceinline
-IMB_JOB *SUBMIT_JOB_AES(IMB_MGR *state, IMB_JOB *job)
+IMB_JOB *SUBMIT_JOB_CIPHER(IMB_MGR *state, IMB_JOB *job)
 {
 	if (job->cipher_direction == IMB_DIR_ENCRYPT)
-		job = SUBMIT_JOB_AES_ENC(state, job);
+		job = SUBMIT_JOB_CIPHER_ENC(state, job);
 	else
-		job = SUBMIT_JOB_AES_DEC(state, job);
+		job = SUBMIT_JOB_CIPHER_DEC(state, job);
 
 	return job;
 }
 
 __forceinline
-IMB_JOB *FLUSH_JOB_AES(IMB_MGR *state, IMB_JOB *job)
+IMB_JOB *FLUSH_JOB_CIPHER(IMB_MGR *state, IMB_JOB *job)
 {
 	if (job->cipher_direction == IMB_DIR_ENCRYPT)
-		job = FLUSH_JOB_AES_ENC(state, job);
+		job = FLUSH_JOB_CIPHER_ENC(state, job);
 	else
-		job = FLUSH_JOB_AES_DEC(state, job);
+		job = FLUSH_JOB_CIPHER_DEC(state, job);
 
 	return job;
 }
@@ -852,7 +852,7 @@ IMB_JOB *RESUBMIT_JOB(IMB_MGR *state, IMB_JOB *job)
 {
         while (job != NULL && job->status < IMB_STATUS_COMPLETED) {
                 if (job->status == IMB_STATUS_COMPLETED_AUTH)
-                        job = SUBMIT_JOB_AES(state, job);
+                        job = SUBMIT_JOB_CIPHER(state, job);
                 else /* assumed job->status = IMB_STATUS_COMPLETED_CIPHER */
                         job = SUBMIT_JOB_HASH(state, job);
         }
@@ -864,7 +864,7 @@ __forceinline
 IMB_JOB *submit_new_job(IMB_MGR *state, IMB_JOB *job)
 {
 	if (job->chain_order == IMB_ORDER_CIPHER_HASH)
-		job = SUBMIT_JOB_AES(state, job);
+		job = SUBMIT_JOB_CIPHER(state, job);
 	else
 		job = SUBMIT_JOB_HASH(state, job);
 
@@ -884,7 +884,7 @@ uint32_t complete_job(IMB_MGR *state, IMB_JOB *job)
         if (job->chain_order == IMB_ORDER_CIPHER_HASH) {
                 /* while() loop optimized for cipher_hash order */
                 while (job->status < IMB_STATUS_COMPLETED) {
-                        IMB_JOB *tmp = FLUSH_JOB_AES(state, job);
+                        IMB_JOB *tmp = FLUSH_JOB_CIPHER(state, job);
 
                         if (tmp == NULL)
                                 tmp = FLUSH_JOB_HASH(state, job);
@@ -898,7 +898,7 @@ uint32_t complete_job(IMB_MGR *state, IMB_JOB *job)
                         IMB_JOB *tmp = FLUSH_JOB_HASH(state, job);
 
                         if (tmp == NULL)
-                                tmp = FLUSH_JOB_AES(state, job);
+                                tmp = FLUSH_JOB_CIPHER(state, job);
 
                         (void) RESUBMIT_JOB(state, tmp);
                         completed_jobs++;
