@@ -31,7 +31,6 @@
 %include "include/os.asm"
 %include "include/memcpy.asm"
 %include "include/clear_regs.asm"
-%include "include/cet.inc"
 
 extern aes_cntr_pon_enc_128_vaes_avx512
 extern aes_cntr_pon_dec_128_vaes_avx512
@@ -505,7 +504,6 @@ endstruc
 align 64
 MKGLOBAL(submit_job_pon_enc_vaes_avx512,function,internal)
 submit_job_pon_enc_vaes_avx512:
-        endbranch64
         AES128_CTR_PON_ENC CTR
         ret
 
@@ -513,7 +511,6 @@ submit_job_pon_enc_vaes_avx512:
 align 64
 MKGLOBAL(submit_job_pon_dec_vaes_avx512,function,internal)
 submit_job_pon_dec_vaes_avx512:
-        endbranch64
         AES128_CTR_PON_DEC CTR
         ret
 
@@ -521,7 +518,6 @@ submit_job_pon_dec_vaes_avx512:
 align 64
 MKGLOBAL(submit_job_pon_enc_no_ctr_vaes_avx512,function,internal)
 submit_job_pon_enc_no_ctr_vaes_avx512:
-        endbranch64
         AES128_CTR_PON_ENC NO_CTR
         ret
 
@@ -529,7 +525,6 @@ submit_job_pon_enc_no_ctr_vaes_avx512:
 align 64
 MKGLOBAL(submit_job_pon_dec_no_ctr_vaes_avx512,function,internal)
 submit_job_pon_dec_no_ctr_vaes_avx512:
-        endbranch64
         AES128_CTR_PON_DEC NO_CTR
         ret
 

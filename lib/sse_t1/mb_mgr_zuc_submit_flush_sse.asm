@@ -30,7 +30,6 @@
 %include "include/mb_mgr_datastruct.asm"
 %include "include/reg_sizes.asm"
 %include "include/const.inc"
-%include "include/cet.inc"
 %include "include/clear_regs.asm"
 
 %ifndef SUBMIT_JOB_ZUC128_EEA3
@@ -683,7 +682,6 @@ APPEND3(%%skip_eea3_copy_,I,J):
 ; arg 2 : job
 MKGLOBAL(SUBMIT_JOB_ZUC128_EEA3,function,internal)
 SUBMIT_JOB_ZUC128_EEA3:
-        endbranch64
         SUBMIT_JOB_ZUC_EEA3 128
 
 ; JOB* SUBMIT_JOB_ZUC256_EEA3(MB_MGR_ZUC_OOO *state, IMB_JOB *job)
@@ -691,21 +689,18 @@ SUBMIT_JOB_ZUC128_EEA3:
 ; arg 2 : job
 MKGLOBAL(SUBMIT_JOB_ZUC256_EEA3,function,internal)
 SUBMIT_JOB_ZUC256_EEA3:
-        endbranch64
         SUBMIT_JOB_ZUC_EEA3 256
 
 ; JOB* FLUSH_JOB_ZUC128_EEA3(MB_MGR_ZUC_OOO *state)
 ; arg 1 : state
 MKGLOBAL(FLUSH_JOB_ZUC128_EEA3,function,internal)
 FLUSH_JOB_ZUC128_EEA3:
-        endbranch64
         FLUSH_JOB_ZUC_EEA3 128
 
 ; JOB* FLUSH_JOB_ZUC256_EEA3(MB_MGR_ZUC_OOO *state)
 ; arg 1 : state
 MKGLOBAL(FLUSH_JOB_ZUC256_EEA3,function,internal)
 FLUSH_JOB_ZUC256_EEA3:
-        endbranch64
         FLUSH_JOB_ZUC_EEA3 256
 
 %macro SUBMIT_JOB_ZUC_EIA3 2
@@ -1065,7 +1060,6 @@ APPEND(%%skip_eia3_,I):
 ; arg 2 : job
 MKGLOBAL(SUBMIT_JOB_ZUC128_EIA3,function,internal)
 SUBMIT_JOB_ZUC128_EIA3:
-        endbranch64
         SUBMIT_JOB_ZUC_EIA3 128, 4
         ret
 
@@ -1076,7 +1070,6 @@ SUBMIT_JOB_ZUC128_EIA3:
 ; arg 3 : tag size (4, 8 or 16 bytes)
 MKGLOBAL(SUBMIT_JOB_ZUC256_EIA3,function,internal)
 SUBMIT_JOB_ZUC256_EIA3:
-        endbranch64
         cmp     arg3, 8
         je      submit_tag_8B
         jb      submit_tag_4B
@@ -1097,7 +1090,6 @@ submit_tag_4B:
 ; arg 1 : state
 MKGLOBAL(FLUSH_JOB_ZUC128_EIA3,function,internal)
 FLUSH_JOB_ZUC128_EIA3:
-        endbranch64
         FLUSH_JOB_ZUC_EIA3 128, 4
         ret
 
@@ -1107,7 +1099,6 @@ FLUSH_JOB_ZUC128_EIA3:
 ; arg 2 : tag size (4, 8 or 16 bytes)
 MKGLOBAL(FLUSH_JOB_ZUC256_EIA3,function,internal)
 FLUSH_JOB_ZUC256_EIA3:
-        endbranch64
         cmp     arg2, 8
         je      flush_tag_8B
         jb      flush_tag_4B

@@ -28,7 +28,6 @@
 %include "include/os.asm"
 %include "include/imb_job.asm"
 %include "include/mb_mgr_datastruct.asm"
-%include "include/cet.inc"
 %include "include/reg_sizes.asm"
 %include "include/memcpy.asm"
 %include "include/const.inc"
@@ -451,14 +450,12 @@ align 64
 ; arg 2 : job
 MKGLOBAL(SUBMIT_JOB_AES_XCBC,function,internal)
 SUBMIT_JOB_AES_XCBC:
-        endbranch64
         GENERIC_SUBMIT_FLUSH_JOB_AES_XCBC_VAES_AVX512 SUBMIT
 
 ; IMB_JOB * flush_job_aes_xcbc_vaes_avx512(MB_MGR_XCBC_OOO *state)
 ; arg 1 : state
 MKGLOBAL(FLUSH_JOB_AES_XCBC,function,internal)
 FLUSH_JOB_AES_XCBC:
-        endbranch64
         GENERIC_SUBMIT_FLUSH_JOB_AES_XCBC_VAES_AVX512 FLUSH
 
 mksection stack-noexec

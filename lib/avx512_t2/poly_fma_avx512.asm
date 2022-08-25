@@ -1113,7 +1113,6 @@ mksection .text
         and     %%T0, 0xffffffffffffff00 ; multiple of 256 bytes
 
 %%_poly1305_blocks_loop:
-        endbranch64
         cmp     %%T0, POLY1305_BLOCK_SIZE*16
         jbe     %%_poly1305_blocks_loop_end
 
@@ -1211,8 +1210,6 @@ mksection .text
         and     %%LEN, (POLY1305_BLOCK_SIZE*16 - 1) ; Get remaining lengths (LEN < 256 bytes)
 
 %%_less_than_256:
-        endbranch64
-
         cmp     %%LEN, POLY1305_BLOCK_SIZE*8
         jb      %%_less_than_128
 
@@ -1378,8 +1375,6 @@ APPEND(%%_shuffle_blocks_, i):
 %endrep
 
 %%_end_shuffle:
-        endbranch64
-
         ; zmm13-zmm15 contain the 8 blocks of message plus the previous accumulator
         ; zmm22-24 contain the 3x44-bit limbs of the powers of R
         ; zmm25-26 contain the 3x44-bit limbs of the powers of R' (5*4*R)
@@ -1812,7 +1807,6 @@ poly1305_aead_complete_fma_avx512:
 align 32
 MKGLOBAL(poly1305_mac_fma_avx512,function,internal)
 poly1305_mac_fma_avx512:
-        endbranch64
         FUNC_ENTRY
 
 %ifndef LINUX

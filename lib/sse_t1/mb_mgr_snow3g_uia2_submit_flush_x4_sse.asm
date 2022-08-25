@@ -29,7 +29,6 @@
 %include "include/imb_job.asm"
 %include "include/mb_mgr_datastruct.asm"
 %include "include/reg_sizes.asm"
-%include "include/cet.inc"
 %include "include/clear_regs.asm"
 %include "sse_t1/snow3g_uea2_by4_sse.asm"
 
@@ -283,7 +282,6 @@ APPEND(skip_lane_copy_,i):
 ; arg 2 : job
 MKGLOBAL(SUBMIT_JOB_SNOW3G_UIA2,function,internal)
 SUBMIT_JOB_SNOW3G_UIA2:
-        endbranch64
         SUBMIT_FLUSH_JOB_SNOW3G_UIA2 submit, tmp_gp0, tmp_gp1, \
                                      tmp_gp2, tmp_gp3, tmp_gp4, xmm0, \
                                      xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, \
@@ -295,7 +293,6 @@ SUBMIT_JOB_SNOW3G_UIA2:
 ; arg 1 : state
 MKGLOBAL(FLUSH_JOB_SNOW3G_UIA2,function,internal)
 FLUSH_JOB_SNOW3G_UIA2:
-        endbranch64
         SUBMIT_FLUSH_JOB_SNOW3G_UIA2 flush, tmp_gp0, tmp_gp1, \
                                      tmp_gp2, tmp_gp3, tmp_gp4, xmm0, \
                                      xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, \

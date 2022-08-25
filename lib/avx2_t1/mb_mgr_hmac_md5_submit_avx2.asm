@@ -31,7 +31,6 @@
 %include "include/memcpy.asm"
 %include "include/reg_sizes.asm"
 %include "include/const.inc"
-%include "include/cet.inc"
 ;%define DO_DBGPRINT
 %include "include/dbgprint.asm"
 extern md5_x8x2_avx2
@@ -97,7 +96,6 @@ mksection .text
 ; arg 2 : rdx : job
 MKGLOBAL(submit_job_hmac_md5_avx2,function,internal)
 submit_job_hmac_md5_avx2:
-        endbranch64
         mov	rax, rsp
         sub	rsp, STACK_size
         and	rsp, -32
@@ -156,7 +154,6 @@ fast_copy:
         vmovdqu    [lane_data + _extra_block + 0*32], ymm0
         vmovdqu    [lane_data + _extra_block + 1*32], ymm1
 end_fast_copy:
-        endbranch64
         mov	size_offset, extra_blocks
         shl	size_offset, 6
         sub	size_offset, last_len
@@ -195,7 +192,6 @@ ge64_bytes:
 
         align	16
 start_loop:
-        endbranch64
         ; Find min length
         vmovdqa	xmm0, [state + _lens_md5]
         vphminposuw	xmm1, xmm0
@@ -351,7 +347,6 @@ clear_ret:
 %endif
 
 return:
-        endbranch64
         DBGPRINTL "---------- exit md5 submit -----------"
 
         vzeroupper

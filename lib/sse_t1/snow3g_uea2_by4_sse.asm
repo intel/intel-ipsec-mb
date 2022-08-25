@@ -30,7 +30,6 @@
 %include "include/memcpy.asm"
 %include "include/imb_job.asm"
 %include "include/clear_regs.asm"
-%include "include/cet.inc"
 %include "include/mb_mgr_datastruct.asm"
 %include "include/memcpy.asm"
 %include "include/transpose_sse.asm"

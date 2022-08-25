@@ -32,7 +32,6 @@
 %include "include/os.asm"
 %include "include/clear_regs.asm"
 
-%include "include/cet.inc"
 %include "avx512_t2/snow3g_uea2_by16_vaes_avx512.asm"
 
 %ifndef SUBMIT_JOB_SNOW3G_UEA2
@@ -380,14 +379,13 @@ mksection .text
 ;; arg 2 : job
 MKGLOBAL(SUBMIT_JOB_SNOW3G_UEA2_GEN2,function,internal)
 SUBMIT_JOB_SNOW3G_UEA2_GEN2:
-        endbranch64
         SNOW3G_FUNC_START
         SUBMIT_FLUSH_JOB_SNOW3G_UEA2 submit, tmp_gp1, tmp_gp2, tmp_gp3, tmp_gp4, tmp_gp5, tmp_gp6, tmp_gp7, tmp_gp8, tmp_gp9, tmp_gp10, tmp_gp11, avx512_gen2
         SNOW3G_FUNC_END
         ret
+
 MKGLOBAL(SUBMIT_JOB_SNOW3G_UEA2,function,internal)
 SUBMIT_JOB_SNOW3G_UEA2:
-        endbranch64
         SNOW3G_FUNC_START
         SUBMIT_FLUSH_JOB_SNOW3G_UEA2 submit, tmp_gp1, tmp_gp2, tmp_gp3, tmp_gp4, tmp_gp5, tmp_gp6, tmp_gp7, tmp_gp8, tmp_gp9, tmp_gp10, tmp_gp11, avx512_gen1
         SNOW3G_FUNC_END
@@ -397,16 +395,16 @@ SUBMIT_JOB_SNOW3G_UEA2:
 ;; arg 1 : state
 MKGLOBAL(FLUSH_JOB_SNOW3G_UEA2_GEN2,function,internal)
 FLUSH_JOB_SNOW3G_UEA2_GEN2:
-        endbranch64
         SNOW3G_FUNC_START
         SUBMIT_FLUSH_JOB_SNOW3G_UEA2 flush, tmp_gp1, tmp_gp2, tmp_gp3, tmp_gp4, tmp_gp5, tmp_gp6, tmp_gp7, tmp_gp8, tmp_gp9, tmp_gp10, tmp_gp11, avx512_gen2
         SNOW3G_FUNC_END
         ret
+
 MKGLOBAL(FLUSH_JOB_SNOW3G_UEA2,function,internal)
 FLUSH_JOB_SNOW3G_UEA2:
-        endbranch64
         SNOW3G_FUNC_START
         SUBMIT_FLUSH_JOB_SNOW3G_UEA2 flush, tmp_gp1, tmp_gp2, tmp_gp3, tmp_gp4, tmp_gp5, tmp_gp6, tmp_gp7, tmp_gp8, tmp_gp9, tmp_gp10, tmp_gp11, avx512_gen1
         SNOW3G_FUNC_END
         ret
+
 mksection stack-noexec

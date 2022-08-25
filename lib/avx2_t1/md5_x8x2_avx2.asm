@@ -40,7 +40,7 @@
 %include "include/mb_mgr_datastruct.asm"
 %include "include/transpose_avx2.asm"
 %include "include/clear_regs.asm"
-%include "include/cet.inc"
+
 mksection .rodata
 default rel
 align 64
@@ -387,7 +387,6 @@ align 32
 
 MKGLOBAL(md5_x8x2_avx2,function,internal)
 md5_x8x2_avx2:
-        endbranch64
 	sub	rsp, STACK_size
 
 	mov	DPTR1, rsp
@@ -467,7 +466,6 @@ md5_x8x2_avx2:
         vmovdqu	Y_D2,[state + 3 * MD5_DIGEST_ROW_SIZE + 32]
 
 lloop:
-        endbranch64
 	; save old digests to stack
 	vmovdqa	[Y_AA], Y_A
 	vmovdqa	[Y_BB], Y_B

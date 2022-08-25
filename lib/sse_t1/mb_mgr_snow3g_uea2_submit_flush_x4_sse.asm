@@ -29,7 +29,6 @@
 %include "include/imb_job.asm"
 %include "include/mb_mgr_datastruct.asm"
 %include "include/reg_sizes.asm"
-%include "include/cet.inc"
 %include "sse_t1/snow3g_uea2_by4_sse.asm"
 
 %define SUBMIT_JOB_SNOW3G_UEA2 submit_job_snow3g_uea2_sse
@@ -409,7 +408,6 @@ mksection .text
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(SUBMIT_JOB_SNOW3G_UEA2,function,internal)
 SUBMIT_JOB_SNOW3G_UEA2:
-        endbranch64
         SUBMIT_FLUSH_JOB_SNOW3G_UEA2_SSE submit, tmp_gp1, tmp_gp2, tmp_gp3,     \
                                      tmp_gp4, tmp_gp5, tmp_gp6, tmp_gp7,    \
                                      tmp_gp8, xmm0, xmm1, xmm2, xmm3, xmm4, \
@@ -420,7 +418,6 @@ SUBMIT_JOB_SNOW3G_UEA2:
 
 MKGLOBAL(FLUSH_JOB_SNOW3G_UEA2,function,internal)
 FLUSH_JOB_SNOW3G_UEA2:
-        endbranch64
         SUBMIT_FLUSH_JOB_SNOW3G_UEA2_SSE flush, tmp_gp1, tmp_gp2, tmp_gp3, tmp_gp4,\
                                      tmp_gp5, tmp_gp6, tmp_gp7, tmp_gp8, xmm0, \
                                      xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, \

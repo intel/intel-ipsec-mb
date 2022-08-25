@@ -29,7 +29,6 @@
 %include "include/imb_job.asm"
 %include "include/mb_mgr_datastruct.asm"
 %include "include/constants.asm"
-%include "include/cet.inc"
 %include "include/reg_sizes.asm"
 %include "include/const.inc"
 %include "include/clear_regs.asm"
@@ -269,24 +268,20 @@ mksection .text
 ; arg 2 : job
 MKGLOBAL(SUBMIT_JOB_SNOW3G_UIA2_GEN2,function,internal)
 SUBMIT_JOB_SNOW3G_UIA2_GEN2:
-        endbranch64
         SUBMIT_FLUSH_JOB_SNOW3G_UIA2 submit, avx512_gen2
 
 MKGLOBAL(SUBMIT_JOB_SNOW3G_UIA2,function,internal)
 SUBMIT_JOB_SNOW3G_UIA2:
-        endbranch64
         SUBMIT_FLUSH_JOB_SNOW3G_UIA2 submit, avx512_gen1
 
 ; JOB* FLUSH_JOB_SNOW3G_UIA2(MB_MGR_SNOW3G_OOO *state)
 ; arg 1 : state
 MKGLOBAL(FLUSH_JOB_SNOW3G_UIA2_GEN2,function,internal)
 FLUSH_JOB_SNOW3G_UIA2_GEN2:
-        endbranch64
         SUBMIT_FLUSH_JOB_SNOW3G_UIA2 flush, avx512_gen2
 
 MKGLOBAL(FLUSH_JOB_SNOW3G_UIA2,function,internal)
 FLUSH_JOB_SNOW3G_UIA2:
-        endbranch64
         SUBMIT_FLUSH_JOB_SNOW3G_UIA2 flush, avx512_gen1
 
 mksection stack-noexec
