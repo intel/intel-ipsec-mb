@@ -449,6 +449,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t dataSize)
 {
         IMB_HASH_ALG hash;
         IMB_CIPHER_MODE cipher;
+        IMB_CIPHER_DIRECTION dir;
         char *ar;
 
         IMB_MGR *p_mgr = NULL;
@@ -456,12 +457,21 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t dataSize)
         unsigned i;
         const char *n_jobs = getenv("NUM_JOBS");
         const unsigned num_jobs = strtol(n_jobs, NULL, 10);
+        const char *key_length = getenv("KEY_LEN");
+        const unsigned key_len = strtol(key_length, NULL, 10);
         const size_t buffsize = BUFF_SIZE;
         /* Setting minimum datasize to always fill job structure  */
         if (dataSize < sizeof(IMB_JOB))
                 return 0;
 
-        if (num_jobs > 32 || num_jobs == 0)
+        if (num_jobs > 32 || num_jobs == 0 || key_len == 0)
+                return 0;
+
+        if (strcmp(getenv("DIR"), "ENCRYPT") == 0)
+                dir = IMB_DIR_ENCRYPT;
+        else if (strcmp(getenv("DIR"), "DECRYPT") == 0)
+                dir = IMB_DIR_DECRYPT;
+        else
                 return 0;
 
         /* allocate multi-buffer manager */
@@ -522,6 +532,31 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t dataSize)
                 }
 
                 IMB_SUBMIT_BURST(p_mgr, num_jobs, jobs);
+        } else if (strcmp(getenv("API"), "CIPHER_BURST") == 0) {
+                while (IMB_GET_NEXT_BURST(p_mgr, num_jobs, jobs)
+                                                        < (uint32_t)num_jobs)
+                        IMB_FLUSH_BURST(p_mgr, num_jobs, jobs);
+
+                for (i = 0; i < num_jobs; i++) {
+                        job = jobs[i];
+                        cipher = cipher_selection();
+                        memcpy(job, data, sizeof(*job));
+                        /*
+                        * setenv is invalid or unset -
+                        * receive flag and fuzz random
+                        * else a specific algo has been selected to fuzz.
+                        */
+                        if (cipher == 0)
+                                cipher = (job->cipher_mode %
+                                                        (IMB_CIPHER_NUM + 1));
+                        clamp_lengths(job, buffsize);
+                        static DECLARE_ALIGNED(uint8_t buff[2*BUFF_SIZE], 64);
+
+                        fill_job_data(job, buff);
+                }
+
+                IMB_SUBMIT_CIPHER_BURST(p_mgr, jobs[0], num_jobs,
+                                        cipher, dir, key_len);
         } else {
                 for (i = 0; i < num_jobs; i++) {
                         hash = hash_selection();
