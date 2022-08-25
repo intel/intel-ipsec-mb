@@ -449,6 +449,8 @@ lib_objs2 = \
 	$(OBJ_DIR)\mb_mgr_zuc_submit_flush_gfni_avx512.obj \
 	$(OBJ_DIR)\mb_mgr_avx.obj \
 	$(OBJ_DIR)\mb_mgr_avx2.obj \
+	$(OBJ_DIR)\mb_mgr_avx2_t1.obj \
+	$(OBJ_DIR)\mb_mgr_avx2_t2.obj \
 	$(OBJ_DIR)\mb_mgr_avx512.obj \
 	$(OBJ_DIR)\mb_mgr_avx512_t1.obj \
 	$(OBJ_DIR)\mb_mgr_avx512_t2.obj \
