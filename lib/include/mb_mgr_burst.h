@@ -361,10 +361,7 @@ uint32_t submit_burst_hmac_sha_x(IMB_MGR *state,
                                  IMB_JOB *jobs,
                                  const uint32_t n_jobs,
                                  const int run_check,
-                                 const IMB_HASH_ALG hash_alg,
-                                 void *ooo_mgr,
-                                 IMB_JOB *(*submit_fn)(void *, IMB_JOB *),
-                                 IMB_JOB *(*flush_fn)(void *))
+                                 const IMB_HASH_ALG hash_alg)
 {
         uint32_t i, completed_jobs = 0;
 
@@ -384,93 +381,123 @@ uint32_t submit_burst_hmac_sha_x(IMB_MGR *state,
                         }
                 }
         }
-        /* submit all jobs */
-        for (i = 0; i < n_jobs; i++) {
-                IMB_JOB *job = &jobs[i];
 
-                job = submit_fn(ooo_mgr, job);
-                if (job != NULL) {
-                        job->status = IMB_STATUS_COMPLETED;
-                        completed_jobs++;
+        if (hash_alg == IMB_AUTH_HMAC_SHA_1) {
+                /* submit all jobs */
+                for (i = 0; i < n_jobs; i++) {
+                        IMB_JOB *job = &jobs[i];
+
+                        job = SUBMIT_JOB_HMAC(state->hmac_sha_1_ooo, job);
+                        if (job != NULL) {
+                                job->status = IMB_STATUS_COMPLETED;
+                                completed_jobs++;
+                        }
                 }
-        }
-        /* flush any outstanding jobs */
-        if (completed_jobs != n_jobs) {
-                IMB_JOB *job = NULL;
+                /* flush any outstanding jobs */
+                if (completed_jobs != n_jobs) {
+                        IMB_JOB *job = NULL;
 
-                while ((job = flush_fn(ooo_mgr)) != NULL) {
-                        job->status = IMB_STATUS_COMPLETED;
-                        completed_jobs++;
+                        while ((job = FLUSH_JOB_HMAC(state->hmac_sha_1_ooo))
+                               != NULL) {
+                                job->status = IMB_STATUS_COMPLETED;
+                                completed_jobs++;
+                        }
+                }
+        } else if (hash_alg == IMB_AUTH_HMAC_SHA_224) {
+                /* submit all jobs */
+                for (i = 0; i < n_jobs; i++) {
+                        IMB_JOB *job = &jobs[i];
+
+                        job = SUBMIT_JOB_HMAC_SHA_224(state->hmac_sha_224_ooo,
+                                                      job);
+                        if (job != NULL) {
+                                job->status = IMB_STATUS_COMPLETED;
+                                completed_jobs++;
+                        }
+                }
+                /* flush any outstanding jobs */
+                if (completed_jobs != n_jobs) {
+                        IMB_JOB *job = NULL;
+
+                        while ((job =
+                                FLUSH_JOB_HMAC_SHA_224(state->hmac_sha_224_ooo))
+                               != NULL) {
+                                job->status = IMB_STATUS_COMPLETED;
+                                completed_jobs++;
+                        }
+                }
+        } else if (hash_alg == IMB_AUTH_HMAC_SHA_256) {
+                /* submit all jobs */
+                for (i = 0; i < n_jobs; i++) {
+                        IMB_JOB *job = &jobs[i];
+
+                        job = SUBMIT_JOB_HMAC_SHA_256(state->hmac_sha_256_ooo,
+                                                      job);
+                        if (job != NULL) {
+                                job->status = IMB_STATUS_COMPLETED;
+                                completed_jobs++;
+                        }
+                }
+                /* flush any outstanding jobs */
+                if (completed_jobs != n_jobs) {
+                        IMB_JOB *job = NULL;
+
+                        while ((job =
+                                FLUSH_JOB_HMAC_SHA_256(state->hmac_sha_256_ooo))
+                               != NULL) {
+                                job->status = IMB_STATUS_COMPLETED;
+                                completed_jobs++;
+                        }
+                }
+        } else if (hash_alg == IMB_AUTH_HMAC_SHA_384) {
+                /* submit all jobs */
+                for (i = 0; i < n_jobs; i++) {
+                        IMB_JOB *job = &jobs[i];
+
+                        job = SUBMIT_JOB_HMAC_SHA_384(state->hmac_sha_384_ooo,
+                                                      job);
+                        if (job != NULL) {
+                                job->status = IMB_STATUS_COMPLETED;
+                                completed_jobs++;
+                        }
+                }
+                /* flush any outstanding jobs */
+                if (completed_jobs != n_jobs) {
+                        IMB_JOB *job = NULL;
+
+                        while ((job =
+                                FLUSH_JOB_HMAC_SHA_384(state->hmac_sha_384_ooo))
+                               != NULL) {
+                                job->status = IMB_STATUS_COMPLETED;
+                                completed_jobs++;
+                        }
+                }
+        } else if (hash_alg == IMB_AUTH_HMAC_SHA_512) {
+                /* submit all jobs */
+                for (i = 0; i < n_jobs; i++) {
+                        IMB_JOB *job = &jobs[i];
+
+                        job = SUBMIT_JOB_HMAC_SHA_512(state->hmac_sha_512_ooo,
+                                                      job);
+                        if (job != NULL) {
+                                job->status = IMB_STATUS_COMPLETED;
+                                completed_jobs++;
+                        }
+                }
+                /* flush any outstanding jobs */
+                if (completed_jobs != n_jobs) {
+                        IMB_JOB *job = NULL;
+
+                        while ((job =
+                                FLUSH_JOB_HMAC_SHA_512(state->hmac_sha_512_ooo))
+                               != NULL) {
+                                job->status = IMB_STATUS_COMPLETED;
+                                completed_jobs++;
+                        }
                 }
         }
 
         return completed_jobs;
-}
-
-__forceinline
-uint32_t submit_burst_hmac_sha_1(IMB_MGR *state,
-                                 IMB_JOB *jobs,
-                                 const uint32_t n_jobs,
-                                 const int run_check)
-{
-        return submit_burst_hmac_sha_x(state, jobs, n_jobs, run_check,
-                                       IMB_AUTH_HMAC_SHA_1,
-                                       (void *)state->hmac_sha_1_ooo,
-                                       (void *)SUBMIT_JOB_HMAC,
-                                       (void *)FLUSH_JOB_HMAC);
-}
-
-__forceinline
-uint32_t submit_burst_hmac_sha_224(IMB_MGR *state,
-                                   IMB_JOB *jobs,
-                                   const uint32_t n_jobs,
-                                   const int run_check)
-{
-        return submit_burst_hmac_sha_x(state, jobs, n_jobs, run_check,
-                                       IMB_AUTH_HMAC_SHA_224,
-                                       (void *)state->hmac_sha_224_ooo,
-                                       (void *)SUBMIT_JOB_HMAC_SHA_224,
-                                       (void *)FLUSH_JOB_HMAC_SHA_224);
-
-}
-
-__forceinline
-uint32_t submit_burst_hmac_sha_256(IMB_MGR *state,
-                                   IMB_JOB *jobs,
-                                   const uint32_t n_jobs,
-                                   const int run_check)
-{
-        return submit_burst_hmac_sha_x(state, jobs, n_jobs, run_check,
-                                       IMB_AUTH_HMAC_SHA_256,
-                                       (void *)state->hmac_sha_256_ooo,
-                                       (void *)SUBMIT_JOB_HMAC_SHA_256,
-                                       (void *)FLUSH_JOB_HMAC_SHA_256);
-}
-
-__forceinline
-uint32_t submit_burst_hmac_sha_384(IMB_MGR *state,
-                                   IMB_JOB *jobs,
-                                   const uint32_t n_jobs,
-                                   const int run_check)
-{
-        return submit_burst_hmac_sha_x(state, jobs, n_jobs, run_check,
-                                       IMB_AUTH_HMAC_SHA_384,
-                                       (void *)state->hmac_sha_384_ooo,
-                                       (void *)SUBMIT_JOB_HMAC_SHA_384,
-                                       (void *)FLUSH_JOB_HMAC_SHA_384);
-}
-
-__forceinline
-uint32_t submit_burst_hmac_sha_512(IMB_MGR *state,
-                                   IMB_JOB *jobs,
-                                   const uint32_t n_jobs,
-                                   const int run_check)
-{
-        return submit_burst_hmac_sha_x(state, jobs, n_jobs, run_check,
-                                       IMB_AUTH_HMAC_SHA_512,
-                                       (void *)state->hmac_sha_512_ooo,
-                                       (void *)SUBMIT_JOB_HMAC_SHA_512,
-                                       (void *)FLUSH_JOB_HMAC_SHA_512);
 }
 
 __forceinline
@@ -491,20 +518,20 @@ uint32_t submit_hash_burst_and_check(IMB_MGR *state, IMB_JOB *jobs,
 
         switch (hash) {
         case IMB_AUTH_HMAC_SHA_1:
-                return submit_burst_hmac_sha_1(state, jobs,
-                                               n_jobs, run_check);
+                return submit_burst_hmac_sha_x(state, jobs, n_jobs, run_check,
+                                               IMB_AUTH_HMAC_SHA_1);
         case IMB_AUTH_HMAC_SHA_224:
-                return submit_burst_hmac_sha_224(state, jobs,
-                                                 n_jobs, run_check);
+                return submit_burst_hmac_sha_x(state, jobs, n_jobs, run_check,
+                                               IMB_AUTH_HMAC_SHA_224);
         case IMB_AUTH_HMAC_SHA_256:
-                return submit_burst_hmac_sha_256(state, jobs,
-                                                 n_jobs, run_check);
+                return submit_burst_hmac_sha_x(state, jobs, n_jobs, run_check,
+                                               IMB_AUTH_HMAC_SHA_256);
         case IMB_AUTH_HMAC_SHA_384:
-                return submit_burst_hmac_sha_384(state, jobs,
-                                                 n_jobs, run_check);
+                return submit_burst_hmac_sha_x(state, jobs, n_jobs, run_check,
+                                               IMB_AUTH_HMAC_SHA_384);
         case IMB_AUTH_HMAC_SHA_512:
-                return submit_burst_hmac_sha_512(state, jobs,
-                                                 n_jobs, run_check);
+                return submit_burst_hmac_sha_x(state, jobs, n_jobs, run_check,
+                                               IMB_AUTH_HMAC_SHA_512);
         default:
                 break;
         }
