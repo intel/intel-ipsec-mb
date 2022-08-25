@@ -31,7 +31,6 @@
 
 %include "include/reg_sizes.asm"
 %include "include/const.inc"
-%include "include/cet.inc"
 %ifndef NUM_LANES
 %define NUM_LANES 4
 %endif
@@ -91,7 +90,6 @@ mksection .text
 ; arg 2 : job
 MKGLOBAL(SUBMIT_JOB_AES_ENC,function,internal)
 SUBMIT_JOB_AES_ENC:
-        endbranch64
         mov	rax, rsp
         sub	rsp, STACK_size
         and	rsp, -16
@@ -176,7 +174,6 @@ len_is_0:
 %endif
 
 return:
-        endbranch64
 	mov	rbx, [rsp + _gpr_save + 8*0]
 	mov	rbp, [rsp + _gpr_save + 8*1]
 	mov	r12, [rsp + _gpr_save + 8*2]

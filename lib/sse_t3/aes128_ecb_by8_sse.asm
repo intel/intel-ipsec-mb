@@ -30,7 +30,6 @@
 %include "include/os.asm"
 %include "include/clear_regs.asm"
 %include "include/aes_common.asm"
-%include "include/cet.inc"
 
 %ifdef LINUX
 %define IN              rdi
@@ -155,13 +154,11 @@ mksection .text
 align 16
 MKGLOBAL(AES_ECB_ENC,function,internal)
 AES_ECB_ENC:
-        endbranch64
         AES_ECB ENC
         ret
 align 16
 MKGLOBAL(AES_ECB_DEC,function,internal)
 AES_ECB_DEC:
-        endbranch64
         AES_ECB DEC
         ret
 

@@ -40,7 +40,7 @@
 %include "include/mb_mgr_datastruct.asm"
 %include "include/transpose_avx2.asm"
 %include "include/clear_regs.asm"
-%include "include/cet.inc"
+
 mksection .rodata
 default rel
 align 32
@@ -366,7 +366,6 @@ align 32
 ; arg 2 : rdx  : size (in blocks) ;; assumed to be >= 1
 MKGLOBAL(sha1_x8_avx2,function,internal)
 sha1_x8_avx2:
-        endbranch64
 	sub	rsp, FRAMESZ
 
 	;; Initialize digests

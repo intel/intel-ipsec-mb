@@ -30,7 +30,6 @@
 ; XMM registers are clobbered. Saving/restoring must be done at a higher level
 %include "include/os.asm"
 %include "include/clear_regs.asm"
-%include "include/cet.inc"
 
 %define CONCAT(a,b) a %+ b
 %define VMOVDQ vmovdqu
@@ -231,7 +230,6 @@ mksection .text
 ;; aes_cbc_dec_192_avx(void *in, void *IV, void *keys, void *out, UINT64 num_bytes)
 MKGLOBAL(aes_cbc_dec_192_avx,function,internal)
 aes_cbc_dec_192_avx:
-        endbranch64
 %ifndef LINUX
 	mov	num_bytes, [rsp + 8*5]
 %endif

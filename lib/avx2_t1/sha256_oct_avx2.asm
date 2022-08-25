@@ -42,7 +42,6 @@
 %include "include/os.asm"
 ;%define DO_DBGPRINT
 %include "include/dbgprint.asm"
-%include "include/cet.inc"
 %include "include/mb_mgr_datastruct.asm"
 %include "include/transpose_avx2.asm"
 %include "include/clear_regs.asm"
@@ -480,7 +479,6 @@ endstruc
 MKGLOBAL(sha256_oct_avx2,function,internal)
 align 16
 sha256_oct_avx2:
-        endbranch64
 	; general registers preserved in outer calling routine
 	; outer calling routine saves all the XMM registers
 	sub	rsp, FRAMESZ
@@ -568,7 +566,6 @@ lloop:
 	jmp	Lrounds_16_xx
 align 16
 Lrounds_16_xx:
-        endbranch64
 %rep 16
 	ROUND_16_XX	T1, i
 %assign i (i+1)

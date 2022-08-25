@@ -29,7 +29,7 @@
 %include "include/reg_sizes.asm"
 %include "include/aes_common.asm"
 %include "include/clear_regs.asm"
-%include "include/cet.inc"
+
 %define zIV        zmm0
 %define zBLK_0_3   zmm1
 %define zBLK_4_7   zmm2
@@ -471,7 +471,6 @@ mksection .text
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(aes_cbc_dec_128_vaes_avx512,function,internal)
 aes_cbc_dec_128_vaes_avx512:
-        endbranch64
 %ifndef LINUX
         mov     num_bytes, [rsp + 8*5]
 %endif
@@ -490,7 +489,6 @@ aes_cbc_dec_128_vaes_avx512:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(aes_cbc_dec_192_vaes_avx512,function,internal)
 aes_cbc_dec_192_vaes_avx512:
-        endbranch64
 %ifndef LINUX
         mov     num_bytes, [rsp + 8*5]
 %endif
@@ -509,7 +507,6 @@ aes_cbc_dec_192_vaes_avx512:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(aes_cbc_dec_256_vaes_avx512,function,internal)
 aes_cbc_dec_256_vaes_avx512:
-        endbranch64
 %ifndef LINUX
         mov     num_bytes, [rsp + 8*5]
 %endif

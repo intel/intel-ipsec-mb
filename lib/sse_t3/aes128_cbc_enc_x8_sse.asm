@@ -32,7 +32,6 @@
 %include "include/os.asm"
 %include "include/mb_mgr_datastruct.asm"
 %include "include/clear_regs.asm"
-%include "include/cet.inc"
 
 %macro PXOR2 2
 	movdqu	XTMP, %2
@@ -119,7 +118,6 @@ aes128_cbc_mac_x8_sse:
 MKGLOBAL(aes_cbc_enc_128_x8_sse,function,internal)
 aes_cbc_enc_128_x8_sse:
 %endif
-        endbranch64
         sub	rsp, STACK_size
 	mov	[GPR_SAVE_AREA + 8*0], rbp
 %ifdef CBC_MAC

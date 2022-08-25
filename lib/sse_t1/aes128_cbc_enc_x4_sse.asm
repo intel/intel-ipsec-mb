@@ -32,7 +32,6 @@
 %include "include/os.asm"
 %include "include/mb_mgr_datastruct.asm"
 %include "include/clear_regs.asm"
-%include "include/cet.inc"
 
 %define	MOVDQ movdqu ;; assume buffers not aligned
 %macro pxor2 2
@@ -378,7 +377,6 @@ mksection .text
 
 MKGLOBAL(FUNC,function,internal)
 FUNC:
-        endbranch64
 %ifdef ARG_OUT
         AES_CBC_X4 MODE, OFFSET, ARG_IV, ARG_KEYS, ARG_IN, ARG_OUT
 %else

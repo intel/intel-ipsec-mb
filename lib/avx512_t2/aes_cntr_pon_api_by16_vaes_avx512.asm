@@ -35,7 +35,6 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(aes_cntr_pon_enc_128_vaes_avx512,function,internal)
 aes_cntr_pon_enc_128_vaes_avx512:
-        endbranch64
         CNTR_PON_ENC_DEC ENCRYPT
 
         ret
@@ -45,8 +44,6 @@ aes_cntr_pon_enc_128_vaes_avx512:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(aes_cntr_pon_dec_128_vaes_avx512,function,internal)
 aes_cntr_pon_dec_128_vaes_avx512:
-        endbranch64
-
         CNTR_PON_ENC_DEC DECRYPT
 
         ret

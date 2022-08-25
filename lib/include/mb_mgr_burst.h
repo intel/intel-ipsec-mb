@@ -41,13 +41,11 @@ uint32_t submit_aes_cbc_burst_enc(IMB_MGR *state,
                                   const IMB_KEY_SIZE_BYTES key_size,
                                   const int run_check)
 {
-        uint32_t i, completed_jobs = 0;
-        MB_MGR_AES_OOO *aes_ooo = NULL;
-
-        IMB_JOB * (*submit_fn)(MB_MGR_AES_OOO *state, IMB_JOB *job) = NULL;
-        IMB_JOB * (*flush_fn)(MB_MGR_AES_OOO *state) = NULL;
+        uint32_t completed_jobs = 0;
 
         if (run_check) {
+                uint32_t i;
+
                 /* validate jobs */
                 for (i = 0; i < n_jobs; i++) {
                         IMB_JOB *job = &jobs[i];
@@ -62,36 +60,74 @@ uint32_t submit_aes_cbc_burst_enc(IMB_MGR *state,
                 }
         }
 
-        if (key_size == 16) {
-                aes_ooo = state->aes128_ooo;
-                submit_fn = SUBMIT_JOB_AES_CBC_128_ENC;
-                flush_fn = FLUSH_JOB_AES_CBC_128_ENC;
-        } else if (key_size == 24) {
-                aes_ooo = state->aes192_ooo;
-                submit_fn = SUBMIT_JOB_AES_CBC_192_ENC;
-                flush_fn = FLUSH_JOB_AES_CBC_192_ENC;
-        } else { /* assume 32 */
-                aes_ooo = state->aes256_ooo;
-                submit_fn = SUBMIT_JOB_AES_CBC_256_ENC;
-                flush_fn = FLUSH_JOB_AES_CBC_256_ENC;
-        }
+        if (key_size == IMB_KEY_128_BYTES) {
+                MB_MGR_AES_OOO *aes_ooo = state->aes128_ooo;
+                uint32_t i;
 
-        for (i = 0; i < n_jobs; i++) {
-                IMB_JOB *job = &jobs[i];
+                for (i = 0; i < n_jobs; i++) {
+                        IMB_JOB *job = &jobs[i];
 
-                job = submit_fn(aes_ooo, job);
-                if (job != NULL) {
-                        job->status = IMB_STATUS_COMPLETED;
-                        completed_jobs++;
+                        job = SUBMIT_JOB_AES_CBC_128_ENC(aes_ooo, job);
+                        if (job != NULL) {
+                                job->status = IMB_STATUS_COMPLETED;
+                                completed_jobs++;
+                        }
                 }
-        }
 
-        if (completed_jobs != n_jobs) {
-                IMB_JOB *job = NULL;
+                if (completed_jobs != n_jobs) {
+                        IMB_JOB *job = NULL;
 
-                while((job = flush_fn(aes_ooo)) != NULL) {
-                        job->status = IMB_STATUS_COMPLETED;
-                        completed_jobs++;
+                        while((job = FLUSH_JOB_AES_CBC_128_ENC(aes_ooo))
+                              != NULL) {
+                                job->status = IMB_STATUS_COMPLETED;
+                                completed_jobs++;
+                        }
+                }
+        } else if (key_size == IMB_KEY_192_BYTES) {
+                MB_MGR_AES_OOO *aes_ooo = state->aes192_ooo;
+                uint32_t i;
+
+                for (i = 0; i < n_jobs; i++) {
+                        IMB_JOB *job = &jobs[i];
+
+                        job = SUBMIT_JOB_AES_CBC_192_ENC(aes_ooo, job);
+                        if (job != NULL) {
+                                job->status = IMB_STATUS_COMPLETED;
+                                completed_jobs++;
+                        }
+                }
+
+                if (completed_jobs != n_jobs) {
+                        IMB_JOB *job = NULL;
+
+                        while((job = FLUSH_JOB_AES_CBC_192_ENC(aes_ooo))
+                              != NULL) {
+                                job->status = IMB_STATUS_COMPLETED;
+                                completed_jobs++;
+                        }
+                }
+        } else { /* assume 256-bit key */
+                MB_MGR_AES_OOO *aes_ooo = state->aes256_ooo;
+                uint32_t i;
+
+                for (i = 0; i < n_jobs; i++) {
+                        IMB_JOB *job = &jobs[i];
+
+                        job = SUBMIT_JOB_AES_CBC_256_ENC(aes_ooo, job);
+                        if (job != NULL) {
+                                job->status = IMB_STATUS_COMPLETED;
+                                completed_jobs++;
+                        }
+                }
+
+                if (completed_jobs != n_jobs) {
+                        IMB_JOB *job = NULL;
+
+                        while((job = FLUSH_JOB_AES_CBC_256_ENC(aes_ooo))
+                              != NULL) {
+                                job->status = IMB_STATUS_COMPLETED;
+                                completed_jobs++;
+                        }
                 }
         }
 
@@ -105,13 +141,11 @@ uint32_t submit_aes_cbc_burst_dec(IMB_MGR *state,
                                   const IMB_KEY_SIZE_BYTES key_size,
                                   const int run_check)
 {
-        uint32_t i, completed_jobs = 0;
-        void (*submit_fn) (const void *in, const uint8_t *IV,
-                           const void *keys, void *out,
-                           uint64_t len_bytes) = NULL;
         (void) state;
 
         if (run_check) {
+                uint32_t i;
+
                 /* validate jobs */
                 for (i = 0; i < n_jobs; i++) {
                         IMB_JOB *job = &jobs[i];
@@ -126,26 +160,54 @@ uint32_t submit_aes_cbc_burst_dec(IMB_MGR *state,
                 }
         }
 
-        if (key_size == 16)
-                submit_fn = AES_CBC_DEC_128;
-        else if (key_size == 24)
-                submit_fn = AES_CBC_DEC_192;
-        else  /* assume 32 */
-                submit_fn = AES_CBC_DEC_256;
+        if (key_size == IMB_KEY_128_BYTES) {
+                uint32_t i;
 
-        for (i = 0; i < n_jobs; i++) {
-                IMB_JOB *job = &jobs[i];
+                for (i = 0; i < n_jobs; i++) {
+                        IMB_JOB *job = &jobs[i];
 
-                submit_fn(job->src + job->cipher_start_src_offset_in_bytes,
-                          job->iv,
-                          job->dec_keys,
-                          job->dst,
-                          job->msg_len_to_cipher_in_bytes & (~15));
-                job->status = IMB_STATUS_COMPLETED;
-                completed_jobs++;
+                        AES_CBC_DEC_128(job->src +
+                                        job->cipher_start_src_offset_in_bytes,
+                                        job->iv,
+                                        job->dec_keys,
+                                        job->dst,
+                                        job->msg_len_to_cipher_in_bytes &
+                                        (~15));
+                        job->status = IMB_STATUS_COMPLETED;
+                }
+        } else if (key_size == IMB_KEY_192_BYTES) {
+                uint32_t i;
+
+                for (i = 0; i < n_jobs; i++) {
+                        IMB_JOB *job = &jobs[i];
+
+                        AES_CBC_DEC_192(job->src +
+                                        job->cipher_start_src_offset_in_bytes,
+                                        job->iv,
+                                        job->dec_keys,
+                                        job->dst,
+                                        job->msg_len_to_cipher_in_bytes &
+                                        (~15));
+                        job->status = IMB_STATUS_COMPLETED;
+                }
+        } else  /* assume 256-bit key */ {
+                uint32_t i;
+
+                for (i = 0; i < n_jobs; i++) {
+                        IMB_JOB *job = &jobs[i];
+
+                        AES_CBC_DEC_256(job->src +
+                                        job->cipher_start_src_offset_in_bytes,
+                                        job->iv,
+                                        job->dec_keys,
+                                        job->dst,
+                                        job->msg_len_to_cipher_in_bytes &
+                                        (~15));
+                        job->status = IMB_STATUS_COMPLETED;
+                }
         }
 
-        return completed_jobs;
+        return n_jobs;
 }
 
 __forceinline

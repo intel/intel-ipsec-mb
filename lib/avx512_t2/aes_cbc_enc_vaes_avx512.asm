@@ -31,7 +31,7 @@
 %include "include/mb_mgr_datastruct.asm"
 %include "include/reg_sizes.asm"
 %include "include/clear_regs.asm"
-%include "include/cet.inc"
+
 struc STACK
 _gpr_save:      resq    4
 _lane_masks:    resw    16
@@ -1037,7 +1037,6 @@ mksection .text
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(aes_cbc_enc_128_vaes_avx512,function,internal)
 aes_cbc_enc_128_vaes_avx512:
-        endbranch64
         FUNC_SAVE
         CBC_ENC 9, MAC_TYPE_NONE, SUBMIT
         FUNC_RESTORE
@@ -1048,7 +1047,6 @@ aes_cbc_enc_128_vaes_avx512:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(aes_cbc_enc_192_vaes_avx512,function,internal)
 aes_cbc_enc_192_vaes_avx512:
-        endbranch64
         FUNC_SAVE
         CBC_ENC 11, MAC_TYPE_NONE, SUBMIT
         FUNC_RESTORE
@@ -1059,7 +1057,6 @@ aes_cbc_enc_192_vaes_avx512:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(aes_cbc_enc_256_vaes_avx512,function,internal)
 aes_cbc_enc_256_vaes_avx512:
-        endbranch64
         FUNC_SAVE
         CBC_ENC 13, MAC_TYPE_NONE, SUBMIT
         FUNC_RESTORE
@@ -1070,7 +1067,6 @@ aes_cbc_enc_256_vaes_avx512:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(aes128_cbc_mac_vaes_avx512,function,internal)
 aes128_cbc_mac_vaes_avx512:
-        endbranch64
         FUNC_SAVE
         CBC_ENC 9, MAC_TYPE_CBC, SUBMIT
         FUNC_RESTORE
@@ -1081,7 +1077,6 @@ aes128_cbc_mac_vaes_avx512:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(aes256_cbc_mac_vaes_avx512,function,internal)
 aes256_cbc_mac_vaes_avx512:
-        endbranch64
         FUNC_SAVE
         CBC_ENC 13, MAC_TYPE_CBC, SUBMIT
         FUNC_RESTORE
@@ -1092,7 +1087,6 @@ aes256_cbc_mac_vaes_avx512:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(aes_xcbc_mac_128_vaes_avx512,function,internal)
 aes_xcbc_mac_128_vaes_avx512:
-        endbranch64
         FUNC_SAVE
         CBC_ENC 9, MAC_TYPE_XCBC, SUBMIT
         FUNC_RESTORE
@@ -1105,7 +1099,6 @@ aes_xcbc_mac_128_vaes_avx512:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(aes_cbc_enc_128_flush_vaes_avx512,function,internal)
 aes_cbc_enc_128_flush_vaes_avx512:
-        endbranch64
         FUNC_SAVE
         CBC_ENC 9, MAC_TYPE_NONE, FLUSH
         FUNC_RESTORE
@@ -1118,7 +1111,6 @@ aes_cbc_enc_128_flush_vaes_avx512:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(aes_cbc_enc_192_flush_vaes_avx512,function,internal)
 aes_cbc_enc_192_flush_vaes_avx512:
-        endbranch64
         FUNC_SAVE
         CBC_ENC 11, MAC_TYPE_NONE, FLUSH
         FUNC_RESTORE
@@ -1131,7 +1123,6 @@ aes_cbc_enc_192_flush_vaes_avx512:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(aes_cbc_enc_256_flush_vaes_avx512,function,internal)
 aes_cbc_enc_256_flush_vaes_avx512:
-        endbranch64
         FUNC_SAVE
         CBC_ENC 13, MAC_TYPE_NONE, FLUSH
         FUNC_RESTORE
@@ -1144,7 +1135,6 @@ aes_cbc_enc_256_flush_vaes_avx512:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(aes128_cbc_mac_flush_vaes_avx512,function,internal)
 aes128_cbc_mac_flush_vaes_avx512:
-        endbranch64
         FUNC_SAVE
         CBC_ENC 9, MAC_TYPE_CBC, FLUSH
         FUNC_RESTORE
@@ -1157,7 +1147,6 @@ aes128_cbc_mac_flush_vaes_avx512:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(aes256_cbc_mac_flush_vaes_avx512,function,internal)
 aes256_cbc_mac_flush_vaes_avx512:
-        endbranch64
         FUNC_SAVE
         CBC_ENC 13, MAC_TYPE_CBC, FLUSH
         FUNC_RESTORE
@@ -1170,7 +1159,6 @@ aes256_cbc_mac_flush_vaes_avx512:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(aes_xcbc_mac_128_flush_vaes_avx512,function,internal)
 aes_xcbc_mac_128_flush_vaes_avx512:
-        endbranch64
         FUNC_SAVE
         CBC_ENC 9, MAC_TYPE_XCBC, FLUSH
         FUNC_RESTORE

@@ -31,7 +31,6 @@
 %include "include/const.inc"
 %include "include/reg_sizes.asm"
 %include "include/clear_regs.asm"
-%include "include/cet.inc"
 
 ; routine to do AES256 CNTR enc/decrypt "by8"
 ; XMM registers are clobbered. Saving/restoring must be done at a higher level
@@ -589,21 +588,22 @@ align 32
         jmp     %%_bswap_iv
 %endmacro
 
-align 32
 %ifdef CNTR_CCM_SSE
 ; IMB_JOB * aes_cntr_ccm_256_<arch>(IMB_JOB *job)
 ; arg 1 : job
+align 32
 MKGLOBAL(AES_CNTR_CCM_256,function,internal)
 AES_CNTR_CCM_256:
         DO_CNTR CCM
 %else
 ;; aes_cntr_256_sse(void *in, void *IV, void *keys, void *out, UINT64 num_bytes, UINT64 iv_len)
+align 32
 MKGLOBAL(AES_CNTR_256,function,internal)
 AES_CNTR_256:
-        endbranch64
         DO_CNTR CNTR
 
 ;; aes_cntr_bit_256_sse(void *in, void *IV, void *keys, void *out, UINT64 num_bits, UINT64 iv_len)
+align 32
 MKGLOBAL(AES_CNTR_BIT_256,function,internal)
 AES_CNTR_BIT_256:
         DO_CNTR CNTR_BIT

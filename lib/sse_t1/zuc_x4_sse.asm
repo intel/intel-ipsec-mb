@@ -30,7 +30,6 @@
 %include "include/zuc_sbox.inc"
 %include "include/memcpy.asm"
 %include "include/mb_mgr_datastruct.asm"
-%include "include/cet.inc"
 %include "include/const.inc"
 
 %ifndef ZUC_CIPHER_4

@@ -34,7 +34,6 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(aes_cntr_ccm_128_vaes_avx512,function,internal)
 aes_cntr_ccm_128_vaes_avx512:
-        endbranch64
         FUNC_SAVE CNTR
         ;; arg1 - [in] job
         ;; arg2 - [in] NROUNDS
@@ -49,7 +48,6 @@ aes_cntr_ccm_128_vaes_avx512:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(aes_cntr_ccm_256_vaes_avx512,function,internal)
 aes_cntr_ccm_256_vaes_avx512:
-        endbranch64
         FUNC_SAVE CNTR
         ;; arg1 - [in] job
         ;; arg2 - [in] NROUNDS

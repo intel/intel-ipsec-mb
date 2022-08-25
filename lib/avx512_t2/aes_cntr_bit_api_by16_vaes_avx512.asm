@@ -34,7 +34,6 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(aes_cntr_bit_128_submit_vaes_avx512,function,internal)
 aes_cntr_bit_128_submit_vaes_avx512:
-        endbranch64
         FUNC_SAVE CNTR_BIT
         ;; arg1 - [in] job
         ;; arg2 - [in] NROUNDS
@@ -49,7 +48,6 @@ aes_cntr_bit_128_submit_vaes_avx512:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(aes_cntr_bit_192_submit_vaes_avx512,function,internal)
 aes_cntr_bit_192_submit_vaes_avx512:
-        endbranch64
         FUNC_SAVE CNTR_BIT
         ;; arg1 - [in] job
         ;; arg2 - [in] NROUNDS
@@ -64,7 +62,6 @@ aes_cntr_bit_192_submit_vaes_avx512:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(aes_cntr_bit_256_submit_vaes_avx512,function,internal)
 aes_cntr_bit_256_submit_vaes_avx512:
-        endbranch64
         FUNC_SAVE CNTR_BIT
         ;; arg1 - [in] job
         ;; arg2 - [in] NROUNDS

@@ -28,7 +28,6 @@
 %include "include/os.asm"
 %include "include/imb_job.asm"
 %include "include/mb_mgr_datastruct.asm"
-%include "include/cet.inc"
 %include "include/reg_sizes.asm"
 
 %ifndef AES_CBC_ENC_X8
@@ -116,8 +115,6 @@ endstruc
 ; arg 2 : job
 MKGLOBAL(FLUSH_JOB_AES_ENC,function,internal)
 FLUSH_JOB_AES_ENC:
-        endbranch64
-
         mov	rax, rsp
         sub	rsp, STACK_size
         and	rsp, -16

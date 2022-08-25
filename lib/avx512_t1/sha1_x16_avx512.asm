@@ -44,7 +44,6 @@
 %include "include/transpose_avx512.asm"
 %include "include/reg_sizes.asm"
 %include "include/clear_regs.asm"
-%include "include/cet.inc"
 mksection .rodata
 default rel
 align 64
@@ -297,7 +296,6 @@ align 64
 ; arg 2 : size (in blocks) ;; assumed to be >= 1
 MKGLOBAL(sha1_x16_avx512,function,internal)
 sha1_x16_avx512:
-        endbranch64
 	;; Initialize digests
 	vmovdqu32	A, [state + 0*SHA1_DIGEST_ROW_SIZE]
 	vmovdqu32	B, [state + 1*SHA1_DIGEST_ROW_SIZE]
