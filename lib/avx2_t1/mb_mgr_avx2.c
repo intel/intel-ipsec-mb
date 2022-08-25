@@ -76,9 +76,6 @@
 #define SUBMIT_JOB_AES_ECB_256_ENC submit_job_aes_ecb_256_enc_avx2
 #define SUBMIT_JOB_AES_ECB_256_DEC submit_job_aes_ecb_256_dec_avx2
 
-#define SUBMIT_JOB_AES_CNTR   submit_job_aes_cntr_avx
-#define SUBMIT_JOB_AES_CNTR_BIT   submit_job_aes_cntr_bit_avx
-
 #define SUBMIT_JOB_ZUC_EEA3   submit_job_zuc_eea3_avx2
 #define FLUSH_JOB_ZUC_EEA3    flush_job_zuc_eea3_avx2
 #define SUBMIT_JOB_ZUC_EIA3   submit_job_zuc_eia3_avx2
@@ -92,9 +89,12 @@
 #define AES_CBC_DEC_192       aes_cbc_dec_192_avx
 #define AES_CBC_DEC_256       aes_cbc_dec_256_avx
 
-#define AES_CNTR_128       aes_cntr_128_avx
-#define AES_CNTR_192       aes_cntr_192_avx
-#define AES_CNTR_256       aes_cntr_256_avx
+#define AES_CTR_128       aes_cntr_128_avx
+#define AES_CTR_192       aes_cntr_192_avx
+#define AES_CTR_256       aes_cntr_256_avx
+#define AES_CTR_128_BIT   aes_cntr_bit_128_avx
+#define AES_CTR_192_BIT   aes_cntr_bit_192_avx
+#define AES_CTR_256_BIT   aes_cntr_bit_256_avx
 
 #define AES_CNTR_CCM_128   aes_cntr_ccm_128_avx
 #define AES_CNTR_CCM_256   aes_cntr_ccm_256_avx

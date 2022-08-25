@@ -130,12 +130,12 @@
 #define AES_ECB_DEC_256       aes_ecb_dec_256_by4_sse
 
 /* AES-CTR */
-#define SUBMIT_JOB_AES_CNTR       submit_job_aes_cntr_sse
-#define SUBMIT_JOB_AES_CNTR_BIT   submit_job_aes_cntr_bit_sse
-
-#define AES_CNTR_128       aes_cntr_128_sse
-#define AES_CNTR_192       aes_cntr_192_sse
-#define AES_CNTR_256       aes_cntr_256_sse
+#define AES_CTR_128       aes_cntr_128_sse
+#define AES_CTR_192       aes_cntr_192_sse
+#define AES_CTR_256       aes_cntr_256_sse
+#define AES_CTR_128_BIT   aes_cntr_bit_128_sse
+#define AES_CTR_192_BIT   aes_cntr_bit_192_sse
+#define AES_CTR_256_BIT   aes_cntr_bit_256_sse
 
 /* AES-CCM */
 #define AES_CNTR_CCM_128   aes_cntr_ccm_128_sse
@@ -254,72 +254,7 @@ flush_snow3g_uea2_job_sse(IMB_MGR *state)
 
 /* ====================================================================== */
 
-static IMB_JOB *
-submit_job_aes_cntr_sse(IMB_JOB *job)
-{
-        if (16 == job->key_len_in_bytes)
-                AES_CNTR_128(job->src + job->cipher_start_src_offset_in_bytes,
-                             job->iv,
-                             job->enc_keys,
-                             job->dst,
-                             job->msg_len_to_cipher_in_bytes,
-                             job->iv_len_in_bytes);
-        else if (24 == job->key_len_in_bytes)
-                AES_CNTR_192(job->src + job->cipher_start_src_offset_in_bytes,
-                             job->iv,
-                             job->enc_keys,
-                             job->dst,
-                             job->msg_len_to_cipher_in_bytes,
-                             job->iv_len_in_bytes);
-        else /* assume 32 bytes */
-                AES_CNTR_256(job->src + job->cipher_start_src_offset_in_bytes,
-                             job->iv,
-                             job->enc_keys,
-                             job->dst,
-                             job->msg_len_to_cipher_in_bytes,
-                             job->iv_len_in_bytes);
-
-        job->status |= IMB_STATUS_COMPLETED_CIPHER;
-        return job;
-}
-
-static IMB_JOB *
-submit_job_aes_cntr_bit_sse(IMB_JOB *job)
-{
-        if (16 == job->key_len_in_bytes)
-                aes_cntr_bit_128_sse(job->src +
-                                     job->cipher_start_src_offset_in_bytes,
-                                     job->iv,
-                                     job->enc_keys,
-                                     job->dst,
-                                     job->msg_len_to_cipher_in_bits,
-                                     job->iv_len_in_bytes);
-        else if (24 == job->key_len_in_bytes)
-                aes_cntr_bit_192_sse(job->src +
-                                     job->cipher_start_src_offset_in_bytes,
-                                     job->iv,
-                                     job->enc_keys,
-                                     job->dst,
-                                     job->msg_len_to_cipher_in_bits,
-                                     job->iv_len_in_bytes);
-        else /* assume 32 bytes */
-                aes_cntr_bit_256_sse(job->src +
-                                     job->cipher_start_src_offset_in_bytes,
-                                     job->iv,
-                                     job->enc_keys,
-                                     job->dst,
-                                     job->msg_len_to_cipher_in_bits,
-                                     job->iv_len_in_bytes);
-
-        job->status |= IMB_STATUS_COMPLETED_CIPHER;
-        return job;
-}
-
-/* ====================================================================== */
-
-
-static void
-reset_ooo_mgrs(IMB_MGR *state)
+static void reset_ooo_mgrs(IMB_MGR *state)
 {
         /* Init AES out-of-order fields */
         ooo_mgr_aes_reset(state->aes128_ooo, 4);

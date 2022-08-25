@@ -139,38 +139,12 @@
 #define AES_ECB_DEC_256       aes_ecb_dec_256_vaes_avx512
 
 /* AES-CTR */
-#define SUBMIT_JOB_AES_CNTR     vaes_submit_cntr_avx512
-#define SUBMIT_JOB_AES_CNTR_BIT vaes_submit_cntr_bit_avx512
-
-#define AES_CNTR_128       aes_cntr_128_avx
-#define AES_CNTR_192       aes_cntr_192_avx
-#define AES_CNTR_256       aes_cntr_256_avx
-
-static IMB_JOB * vaes_submit_cntr_avx512(IMB_JOB *job)
-{
-        if (16 == job->key_len_in_bytes)
-                aes_cntr_128_submit_vaes_avx512(job);
-        else if (24 == job->key_len_in_bytes)
-                aes_cntr_192_submit_vaes_avx512(job);
-        else /* assume 32 bytes */
-                aes_cntr_256_submit_vaes_avx512(job);
-
-        job->status |= IMB_STATUS_COMPLETED_CIPHER;
-        return job;
-}
-
-static IMB_JOB * vaes_submit_cntr_bit_avx512(IMB_JOB *job)
-{
-        if (16 == job->key_len_in_bytes)
-                aes_cntr_bit_128_submit_vaes_avx512(job);
-        else if (24 == job->key_len_in_bytes)
-                aes_cntr_bit_192_submit_vaes_avx512(job);
-        else /* assume 32 bytes */
-                aes_cntr_bit_256_submit_vaes_avx512(job);
-
-        job->status |= IMB_STATUS_COMPLETED_CIPHER;
-        return job;
-}
+#define SUBMIT_JOB_AES_CTR_128     aes_cntr_128_submit_vaes_avx512
+#define SUBMIT_JOB_AES_CTR_192     aes_cntr_192_submit_vaes_avx512
+#define SUBMIT_JOB_AES_CTR_256     aes_cntr_256_submit_vaes_avx512
+#define SUBMIT_JOB_AES_CTR_128_BIT aes_cntr_bit_128_submit_vaes_avx512
+#define SUBMIT_JOB_AES_CTR_192_BIT aes_cntr_bit_192_submit_vaes_avx512
+#define SUBMIT_JOB_AES_CTR_256_BIT aes_cntr_bit_256_submit_vaes_avx512
 
 /* AES-CCM */
 #define AES_CNTR_CCM_128   aes_cntr_ccm_128_vaes_avx512

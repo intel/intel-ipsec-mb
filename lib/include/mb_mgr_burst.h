@@ -155,9 +155,9 @@ uint32_t submit_aes_ctr_burst(IMB_MGR *state,
                               const IMB_KEY_SIZE_BYTES key_size,
                               const int run_check)
 {
-        uint32_t i, completed_jobs = 0;
-
         if (run_check) {
+                uint32_t i;
+
                 /* validate jobs */
                 for (i = 0; i < n_jobs; i++) {
                         IMB_JOB *job = &jobs[i];
@@ -172,55 +172,66 @@ uint32_t submit_aes_ctr_burst(IMB_MGR *state,
                 }
         }
 
-#ifdef AVX512
-        if ((state->features & IMB_FEATURE_VAES) == IMB_FEATURE_VAES) {
-                void (*submit_fn_vaes) (IMB_JOB *job) = NULL;
-
-                if (key_size == 16)
-                        submit_fn_vaes = aes_cntr_128_submit_vaes_avx512;
-                else if (key_size == 24)
-                        submit_fn_vaes = aes_cntr_192_submit_vaes_avx512;
-                else  /* assume 32 */
-                        submit_fn_vaes = aes_cntr_256_submit_vaes_avx512;
+        if (key_size == IMB_KEY_128_BYTES) {
+                uint32_t i;
 
                 for (i = 0; i < n_jobs; i++) {
                         IMB_JOB *job = &jobs[i];
 
-                        submit_fn_vaes(job);
-                        job->status = IMB_STATUS_COMPLETED;
-                        completed_jobs++;
-                }
-        } else {
+#ifdef SUBMIT_JOB_AES_CTR_128
+                        SUBMIT_JOB_AES_CTR_128(job);
+#else
+                        AES_CTR_128(job->src +
+                                    job->cipher_start_src_offset_in_bytes,
+                                    job->iv,
+                                    job->enc_keys,
+                                    job->dst,
+                                    job->msg_len_to_cipher_in_bytes,
+                                    job->iv_len_in_bytes);
 #endif
-                void (*submit_fn) (const void *in, const void *IV,
-                                   const void *keys, void *out,
-                                   uint64_t len_bytes,
-                                   uint64_t iv_len_bytes) = NULL;
-
-                if (key_size == 16)
-                        submit_fn = AES_CNTR_128;
-                else if (key_size == 24)
-                        submit_fn = AES_CNTR_192;
-                else  /* assume 32 */
-                        submit_fn = AES_CNTR_256;
+                        job->status = IMB_STATUS_COMPLETED;
+                }
+        } else if (key_size == IMB_KEY_192_BYTES) {
+                uint32_t i;
 
                 for (i = 0; i < n_jobs; i++) {
                         IMB_JOB *job = &jobs[i];
 
-                        submit_fn(job->src +
-                                  job->cipher_start_src_offset_in_bytes,
-                                  job->iv,
-                                  job->enc_keys,
-                                  job->dst,
-                                  job->msg_len_to_cipher_in_bytes,
-                                  job->iv_len_in_bytes);
+#ifdef SUBMIT_JOB_AES_CTR_192
+                        SUBMIT_JOB_AES_CTR_192(job);
+#else
+                        AES_CTR_192(job->src +
+                                    job->cipher_start_src_offset_in_bytes,
+                                    job->iv,
+                                    job->enc_keys,
+                                    job->dst,
+                                    job->msg_len_to_cipher_in_bytes,
+                                    job->iv_len_in_bytes);
+#endif
                         job->status = IMB_STATUS_COMPLETED;
-                        completed_jobs++;
                 }
-#ifdef AVX512
+        } else  /* assume 256-bit key */ {
+                uint32_t i;
+
+                for (i = 0; i < n_jobs; i++) {
+                        IMB_JOB *job = &jobs[i];
+
+#ifdef SUBMIT_JOB_AES_CTR_256
+                        SUBMIT_JOB_AES_CTR_256(job);
+#else
+                        AES_CTR_256(job->src +
+                                    job->cipher_start_src_offset_in_bytes,
+                                    job->iv,
+                                    job->enc_keys,
+                                    job->dst,
+                                    job->msg_len_to_cipher_in_bytes,
+                                    job->iv_len_in_bytes);
+#endif
+                        job->status = IMB_STATUS_COMPLETED;
+                }
         }
-#endif
-        return completed_jobs;
+
+        return n_jobs;
 }
 
 __forceinline

@@ -134,12 +134,12 @@
 #define AES_ECB_DEC_256       aes_ecb_dec_256_avx
 
 /* AES-CTR */
-#define SUBMIT_JOB_AES_CNTR       submit_job_aes_cntr_avx
-#define SUBMIT_JOB_AES_CNTR_BIT   submit_job_aes_cntr_bit_avx
-
-#define AES_CNTR_128       aes_cntr_128_avx
-#define AES_CNTR_192       aes_cntr_192_avx
-#define AES_CNTR_256       aes_cntr_256_avx
+#define AES_CTR_128       aes_cntr_128_avx
+#define AES_CTR_192       aes_cntr_192_avx
+#define AES_CTR_256       aes_cntr_256_avx
+#define AES_CTR_128_BIT   aes_cntr_bit_128_avx
+#define AES_CTR_192_BIT   aes_cntr_bit_192_avx
+#define AES_CTR_256_BIT   aes_cntr_bit_256_avx
 
 /* AES-CCM */
 #define AES_CNTR_CCM_128   aes_cntr_ccm_128_avx

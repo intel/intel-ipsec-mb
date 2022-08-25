@@ -104,9 +104,6 @@
 #define SUBMIT_JOB_SHA512   submit_job_sha512_sse
 #define FLUSH_JOB_SHA512    flush_job_sha512_sse
 
-#define SUBMIT_JOB_AES_CNTR   submit_job_aes_cntr_sse_no_aesni
-#define SUBMIT_JOB_AES_CNTR_BIT   submit_job_aes_cntr_bit_sse_no_aesni
-
 #define SUBMIT_JOB_ZUC_EEA3   submit_job_zuc_eea3_sse_no_aesni
 #define FLUSH_JOB_ZUC_EEA3    flush_job_zuc_eea3_sse_no_aesni
 #define SUBMIT_JOB_ZUC_EIA3   submit_job_zuc_eia3_sse_no_aesni
@@ -120,9 +117,12 @@
 #define AES_CBC_DEC_192       aes_cbc_dec_192_sse_no_aesni
 #define AES_CBC_DEC_256       aes_cbc_dec_256_sse_no_aesni
 
-#define AES_CNTR_128       aes_cntr_128_sse_no_aesni
-#define AES_CNTR_192       aes_cntr_192_sse_no_aesni
-#define AES_CNTR_256       aes_cntr_256_sse_no_aesni
+#define AES_CTR_128       aes_cntr_128_sse_no_aesni
+#define AES_CTR_192       aes_cntr_192_sse_no_aesni
+#define AES_CTR_256       aes_cntr_256_sse_no_aesni
+#define AES_CTR_128_BIT   aes_cntr_bit_128_sse_no_aesni
+#define AES_CTR_192_BIT   aes_cntr_bit_192_sse_no_aesni
+#define AES_CTR_256_BIT   aes_cntr_bit_256_sse_no_aesni
 
 #define AES_CNTR_CCM_128   aes_cntr_ccm_128_sse_no_aesni
 #define AES_CNTR_CCM_256   aes_cntr_ccm_256_sse_no_aesni
@@ -219,69 +219,6 @@
 /* ====================================================================== */
 
 #define ETHERNET_FCS ethernet_fcs_sse_no_aesni_local
-
-
-/* ====================================================================== */
-
-IMB_DLL_LOCAL IMB_JOB *
-submit_job_aes_cntr_sse_no_aesni(IMB_JOB *job)
-{
-        if (16 == job->key_len_in_bytes)
-                AES_CNTR_128(job->src + job->cipher_start_src_offset_in_bytes,
-                             job->iv,
-                             job->enc_keys,
-                             job->dst,
-                             job->msg_len_to_cipher_in_bytes,
-                             job->iv_len_in_bytes);
-        else if (24 == job->key_len_in_bytes)
-                AES_CNTR_192(job->src + job->cipher_start_src_offset_in_bytes,
-                             job->iv,
-                             job->enc_keys,
-                             job->dst,
-                             job->msg_len_to_cipher_in_bytes,
-                             job->iv_len_in_bytes);
-        else /* assume 32 bytes */
-                AES_CNTR_256(job->src + job->cipher_start_src_offset_in_bytes,
-                             job->iv,
-                             job->enc_keys,
-                             job->dst,
-                             job->msg_len_to_cipher_in_bytes,
-                             job->iv_len_in_bytes);
-
-        job->status |= IMB_STATUS_COMPLETED_CIPHER;
-        return job;
-}
-
-IMB_DLL_LOCAL IMB_JOB *
-submit_job_aes_cntr_bit_sse_no_aesni(IMB_JOB *job)
-{
-        const uint64_t offset = job->cipher_start_src_offset_in_bytes;
-
-        if (16 == job->key_len_in_bytes)
-                aes_cntr_bit_128_sse_no_aesni(job->src + offset,
-                                              job->iv,
-                                              job->enc_keys,
-                                              job->dst,
-                                              job->msg_len_to_cipher_in_bits,
-                                              job->iv_len_in_bytes);
-        else if (24 == job->key_len_in_bytes)
-                aes_cntr_bit_192_sse_no_aesni(job->src + offset,
-                                              job->iv,
-                                              job->enc_keys,
-                                              job->dst,
-                                              job->msg_len_to_cipher_in_bits,
-                                              job->iv_len_in_bytes);
-        else /* assume 32 bytes */
-                aes_cntr_bit_256_sse_no_aesni(job->src + offset,
-                                              job->iv,
-                                              job->enc_keys,
-                                              job->dst,
-                                              job->msg_len_to_cipher_in_bits,
-                                              job->iv_len_in_bytes);
-
-        job->status |= IMB_STATUS_COMPLETED_CIPHER;
-        return job;
-}
 
 /* ====================================================================== */
 

@@ -268,6 +268,93 @@ __forceinline IMB_JOB *SUBMIT_JOB_AES_GCM_ENC(IMB_MGR *state, IMB_JOB *job)
         job->status = IMB_STATUS_COMPLETED;
         return job;
 }
+/* ========================================================================= */
+/* AES-CTR */
+/* ========================================================================= */
+__forceinline IMB_JOB *SUBMIT_JOB_AES_CTR(IMB_JOB *job)
+{
+        if (IMB_KEY_128_BYTES == job->key_len_in_bytes) {
+#ifdef SUBMIT_JOB_AES_CTR_128
+                SUBMIT_JOB_AES_CTR_128(job);
+#else
+                AES_CTR_128(job->src + job->cipher_start_src_offset_in_bytes,
+                            job->iv,
+                            job->enc_keys,
+                            job->dst,
+                            job->msg_len_to_cipher_in_bytes,
+                            job->iv_len_in_bytes);
+#endif
+        } else if (IMB_KEY_192_BYTES == job->key_len_in_bytes) {
+#ifdef SUBMIT_JOB_AES_CTR_192
+                SUBMIT_JOB_AES_CTR_192(job);
+#else
+                AES_CTR_192(job->src + job->cipher_start_src_offset_in_bytes,
+                            job->iv,
+                            job->enc_keys,
+                            job->dst,
+                            job->msg_len_to_cipher_in_bytes,
+                            job->iv_len_in_bytes);
+#endif
+        } else /* assume 256-bit key */ {
+#ifdef SUBMIT_JOB_AES_CTR_256
+                SUBMIT_JOB_AES_CTR_256(job);
+#else
+                AES_CTR_256(job->src + job->cipher_start_src_offset_in_bytes,
+                            job->iv,
+                            job->enc_keys,
+                            job->dst,
+                            job->msg_len_to_cipher_in_bytes,
+                            job->iv_len_in_bytes);
+#endif
+        }
+
+        job->status |= IMB_STATUS_COMPLETED_CIPHER;
+        return job;
+}
+
+__forceinline IMB_JOB *SUBMIT_JOB_AES_CTR_BIT(IMB_JOB *job)
+{
+        if (IMB_KEY_128_BYTES == job->key_len_in_bytes) {
+#ifdef SUBMIT_JOB_AES_CTR_128_BIT
+                SUBMIT_JOB_AES_CTR_128_BIT(job);
+#else
+                AES_CTR_128_BIT(job->src +
+                                job->cipher_start_src_offset_in_bytes,
+                                job->iv,
+                                job->enc_keys,
+                                job->dst,
+                                job->msg_len_to_cipher_in_bits,
+                                job->iv_len_in_bytes);
+#endif
+        } else if (IMB_KEY_192_BYTES == job->key_len_in_bytes) {
+#ifdef SUBMIT_JOB_AES_CTR_192_BIT
+                SUBMIT_JOB_AES_CTR_192_BIT(job);
+#else
+                AES_CTR_192_BIT(job->src +
+                                job->cipher_start_src_offset_in_bytes,
+                                job->iv,
+                                job->enc_keys,
+                                job->dst,
+                                job->msg_len_to_cipher_in_bits,
+                                job->iv_len_in_bytes);
+#endif
+        } else /* assume 256-bit key */ {
+#ifdef SUBMIT_JOB_AES_CTR_256_BIT
+                SUBMIT_JOB_AES_CTR_256_BIT(job);
+#else
+                AES_CTR_256_BIT(job->src +
+                                job->cipher_start_src_offset_in_bytes,
+                                job->iv,
+                                job->enc_keys,
+                                job->dst,
+                                job->msg_len_to_cipher_in_bits,
+                                job->iv_len_in_bytes);
+#endif
+        }
+
+        job->status |= IMB_STATUS_COMPLETED_CIPHER;
+        return job;
+}
 
 /* ========================================================================= */
 /* Custom hash / cipher */
@@ -339,9 +426,9 @@ __forceinline IMB_JOB *SUBMIT_JOB_CIPHER_ENC(IMB_MGR *state, IMB_JOB *job)
                         return SUBMIT_JOB_AES_CBC_256_ENC(aes256_ooo, job);
                 }
         } else if (IMB_CIPHER_CNTR == job->cipher_mode) {
-                return SUBMIT_JOB_AES_CNTR(job);
+                return SUBMIT_JOB_AES_CTR(job);
         } else if (IMB_CIPHER_CNTR_BITLEN == job->cipher_mode) {
-                return SUBMIT_JOB_AES_CNTR_BIT(job);
+                return SUBMIT_JOB_AES_CTR_BIT(job);
         } else if (IMB_CIPHER_ECB == job->cipher_mode) {
                 if (16 == job->key_len_in_bytes) {
                         return SUBMIT_JOB_AES_ECB_128_ENC(job);
@@ -510,9 +597,9 @@ __forceinline IMB_JOB *SUBMIT_JOB_CIPHER_DEC(IMB_MGR *state, IMB_JOB *job)
                         return SUBMIT_JOB_AES_CBC_256_DEC(job);
                 }
         } else if (IMB_CIPHER_CNTR == job->cipher_mode) {
-                return SUBMIT_JOB_AES_CNTR(job);
+                return SUBMIT_JOB_AES_CTR(job);
         } else if (IMB_CIPHER_CNTR_BITLEN == job->cipher_mode) {
-                return SUBMIT_JOB_AES_CNTR_BIT(job);
+                return SUBMIT_JOB_AES_CTR_BIT(job);
         } else if (IMB_CIPHER_ECB == job->cipher_mode) {
                 if (16 == job->key_len_in_bytes) {
                         return SUBMIT_JOB_AES_ECB_128_DEC(job);
