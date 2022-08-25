@@ -31,7 +31,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <time.h>
-
+#include <stdbool.h>
 #include <intel-ipsec-mb.h>
 
 #define BUFF_SIZE (32*1024*1024)
@@ -451,15 +451,28 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t dataSize)
         IMB_CIPHER_MODE cipher;
         IMB_CIPHER_DIRECTION dir;
         char *ar;
+        const char *api;
 
         IMB_MGR *p_mgr = NULL;
         IMB_ARCH arch;
         unsigned i;
         const char *n_jobs = getenv("NUM_JOBS");
-        const unsigned num_jobs = strtol(n_jobs, NULL, 10);
         const char *key_length = getenv("KEY_LEN");
-        const unsigned key_len = strtol(key_length, NULL, 10);
+        unsigned num_jobs;
+        unsigned key_len;
         const size_t buffsize = BUFF_SIZE;
+        bool single = false, cipher_burst = false,
+                hash_burst = false, burst = false;
+
+        if (n_jobs == NULL)
+                num_jobs = 10;
+        else
+                num_jobs = strtoul(n_jobs, NULL, 10);
+        if (key_length == NULL)
+                key_len = 16;
+        else
+                key_len = strtoul(key_length, NULL, 10);
+
         /* Setting minimum datasize to always fill job structure  */
         if (dataSize < sizeof(IMB_JOB))
                 return 0;
@@ -467,12 +480,14 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t dataSize)
         if (num_jobs > 32 || num_jobs == 0 || key_len == 0)
                 return 0;
 
-        if (strcmp(getenv("DIR"), "ENCRYPT") == 0)
+        if (getenv("DIR")) {
+                if (strcmp(getenv("DIR"), "ENCRYPT") == 0)
+                        dir = IMB_DIR_ENCRYPT;
+                else if (strcmp(getenv("DIR"), "DECRYPT") == 0)
+                        dir = IMB_DIR_DECRYPT;
+        } else {
                 dir = IMB_DIR_ENCRYPT;
-        else if (strcmp(getenv("DIR"), "DECRYPT") == 0)
-                dir = IMB_DIR_DECRYPT;
-        else
-                return 0;
+        }
 
         /* allocate multi-buffer manager */
         p_mgr = alloc_mb_mgr(0);
@@ -500,74 +515,32 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t dataSize)
         /* create job array */
         IMB_JOB *jobs[32] = {NULL};
 
-        if (strcmp(getenv("API"), "BURST") == 0) {
-                while (IMB_GET_NEXT_BURST(p_mgr, num_jobs, jobs)
-                                                        < (uint32_t)num_jobs)
-                        IMB_FLUSH_BURST(p_mgr, num_jobs, jobs);
+        api = getenv("API");
 
-                for (i = 0; i < num_jobs; i++) {
-                        job = jobs[i];
-                        hash = hash_selection();
-                        cipher = cipher_selection();
-                        memcpy(job, data, sizeof(*job));
-                        /*
-                        * setenv is invalid or unset -
-                        * receive flag and fuzz random
-                        * else a specific algo has been selected to fuzz.
-                        */
-                        if (hash == 0)
-                                job->hash_alg %= (IMB_AUTH_NUM + 1);
-                        else
-                                job->hash_alg = hash;
-                        if (cipher == 0)
-                                job->cipher_mode %= (IMB_CIPHER_NUM + 1);
-                        else
-                                job->cipher_mode = cipher;
-                        clamp_lengths(job, buffsize);
-                        static DECLARE_ALIGNED(uint8_t buff[2*BUFF_SIZE], 64);
-
-                        fill_job_data(job, buff);
-                        fill_additional_cipher_data(job, buff, buffsize);
-                        fill_additional_hash_data(job, buff, buffsize);
-                }
-
-                IMB_SUBMIT_BURST(p_mgr, num_jobs, jobs);
-        } else if (strcmp(getenv("API"), "CIPHER_BURST") == 0) {
-                while (IMB_GET_NEXT_BURST(p_mgr, num_jobs, jobs)
-                                                        < (uint32_t)num_jobs)
-                        IMB_FLUSH_BURST(p_mgr, num_jobs, jobs);
-
-                for (i = 0; i < num_jobs; i++) {
-                        job = jobs[i];
-                        cipher = cipher_selection();
-                        memcpy(job, data, sizeof(*job));
-                        /*
-                        * setenv is invalid or unset -
-                        * receive flag and fuzz random
-                        * else a specific algo has been selected to fuzz.
-                        */
-                        if (cipher == 0)
-                                cipher = (job->cipher_mode %
-                                                        (IMB_CIPHER_NUM + 1));
-                        clamp_lengths(job, buffsize);
-                        static DECLARE_ALIGNED(uint8_t buff[2*BUFF_SIZE], 64);
-
-                        fill_job_data(job, buff);
-                }
-
-                IMB_SUBMIT_CIPHER_BURST(p_mgr, jobs[0], num_jobs,
-                                        cipher, dir, key_len);
+        if (api == NULL || (strcmp(api, "SINGLE") == 0)) {
+                single = true;
+        } else if (strcmp(api, "BURST") == 0) {
+                burst = true;
+        } else if (strcmp(api, "CIPHER_BURST") == 0) {
+                cipher_burst = true;
+        } else if (strcmp(api, "HASH_BURST") == 0) {
+                hash_burst = true;
         } else {
+                printf("Invalid API passed to application. Terminating\n");
+                return 0;
+        }
+
+        if (single) {
                 for (i = 0; i < num_jobs; i++) {
                         hash = hash_selection();
                         cipher = cipher_selection();
                         job = IMB_GET_NEXT_JOB(p_mgr);
                         memcpy(job, data, sizeof(*job));
                         /*
-                        * setenv is invalid or unset -
-                        * receive flag and fuzz random
-                        * else a specific algo has been selected to fuzz.
-                        */
+                         * setenv is invalid or unset -
+                         * receive flag and fuzz random
+                         * else a specific algo has been selected to fuzz.
+                         */
                         if (hash == 0)
                                 job->hash_alg %= (IMB_AUTH_NUM + 1);
                         else
@@ -584,7 +557,98 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t dataSize)
                         fill_additional_hash_data(job, buff, buffsize);
                         job = IMB_SUBMIT_JOB(p_mgr);
                 }
+        } else if (burst) {
+                while (IMB_GET_NEXT_BURST(p_mgr, num_jobs, jobs)
+                       < (uint32_t)num_jobs)
+                        IMB_FLUSH_BURST(p_mgr, num_jobs, jobs);
+
+                for (i = 0; i < num_jobs; i++) {
+                        job = jobs[i];
+                        hash = hash_selection();
+                        cipher = cipher_selection();
+                        memcpy(job, data, sizeof(*job));
+                        /*
+                         * setenv is invalid or unset -
+                         * receive flag and fuzz random
+                         * else a specific algo has been
+                         * selected to fuzz.
+                         */
+                        if (hash == 0)
+                                job->hash_alg %= (IMB_AUTH_NUM + 1);
+                        else
+                                job->hash_alg = hash;
+                        if (cipher == 0)
+                                job->cipher_mode %=
+                                        (IMB_CIPHER_NUM + 1);
+                        else
+                                job->cipher_mode = cipher;
+                        clamp_lengths(job, buffsize);
+                        static DECLARE_ALIGNED
+                                (uint8_t buff[2*BUFF_SIZE], 64);
+
+                        fill_job_data(job, buff);
+                        fill_additional_cipher_data
+                                (job, buff, buffsize);
+                        fill_additional_hash_data
+                                (job, buff, buffsize);
+                }
+
+                IMB_SUBMIT_BURST(p_mgr, num_jobs, jobs);
+        } else if (cipher_burst) {
+                while (IMB_GET_NEXT_BURST(p_mgr, num_jobs, jobs)
+                       < (uint32_t)num_jobs)
+                        IMB_FLUSH_BURST(p_mgr, num_jobs, jobs);
+
+                for (i = 0; i < num_jobs; i++) {
+                        job = jobs[i];
+                        cipher = cipher_selection();
+                        memcpy(job, data, sizeof(*job));
+                        /*
+                         * setenv is invalid or unset -
+                         * receive flag and fuzz random
+                         * else a specific algo has been
+                         * selected to fuzz.
+                         */
+                        if (cipher == 0)
+                                cipher = (job->cipher_mode %
+                                          (IMB_CIPHER_NUM + 1));
+                        clamp_lengths(job, buffsize);
+                        static DECLARE_ALIGNED
+                                (uint8_t buff[2*BUFF_SIZE], 64);
+
+                        fill_job_data(job, buff);
+                }
+
+                IMB_SUBMIT_CIPHER_BURST(p_mgr, job, num_jobs,
+                                        cipher, dir, key_len);
+        } else if (hash_burst) {
+                while (IMB_GET_NEXT_BURST(p_mgr, num_jobs, jobs)
+                       < (uint32_t)num_jobs)
+                        IMB_FLUSH_BURST(p_mgr, num_jobs, jobs);
+
+                for (i = 0; i < num_jobs; i++) {
+                        job = jobs[i];
+                        hash = hash_selection();
+                        memcpy(job, data, sizeof(*job));
+                        /*
+                         * setenv is invalid or unset -
+                         * receive flag and fuzz random
+                         * else a specific algo has
+                         * been selected to fuzz.
+                         */
+                        if (hash == 0)
+                                hash = (job->hash_alg %
+                                        (IMB_AUTH_NUM + 1));
+                        clamp_lengths(job, buffsize);
+                        static DECLARE_ALIGNED
+                                (uint8_t buff[2*BUFF_SIZE], 64);
+
+                        fill_job_data(job, buff);
+                }
+
+                IMB_SUBMIT_HASH_BURST(p_mgr, jobs[0], num_jobs, hash);
         }
+
         free_mb_mgr(p_mgr);
         return 0;
 }
