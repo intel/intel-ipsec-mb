@@ -3188,6 +3188,12 @@ run_tests(void *arg)
                                 break;
                         }
 
+                        if (imb_get_errno(p_mgr) != 0) {
+                                printf("Error initializing MB_MGR! %s\n",
+                                       imb_get_strerror(imb_get_errno(p_mgr)));
+                                goto exit_failure;
+                        }
+
                         process_variant(p_mgr, arch, &params,
                                         variant_ptr, run, buf, keys);
 
