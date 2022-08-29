@@ -698,3 +698,4 @@ EXPORTS
     aes_cfb_256_one_avx2			@672
     aes_cfb_256_one_avx512			@673
     aes_cfb_256_one_sse_no_aesni		@674
+    imb_quic_aes_gcm				@675

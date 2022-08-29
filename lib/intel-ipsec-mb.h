@@ -4083,6 +4083,41 @@ IMB_DLL_EXPORT int snow3g_f9_iv_gen(const uint32_t count,
  */
 IMB_DLL_EXPORT void imb_clear_mem(void *mem, const size_t size);
 
+/**
+ * @brief Batch of GCM encrypt/decrypt operations with the same key
+ *
+ * @note IV length of 12 bytes is assumed.
+ * @note If used out of place then AAD needs to be copied by the caller.
+ *
+ * @param [in]  state         pointer to IMB_MGR
+ * @param [in]  key_data      initialized key data (AES keys and hash keys)
+ * @param [in]  key_size      key size (in bytes, see IMB_KEY_128_BYTES etc.)
+ * @param [in]  cipher_dir    cipher direction (IMB_DIR_ENCRYPT / DECRYPT)
+ * @param [out] dst_ptr_array array with destination pointers
+ * @param [in]  src_ptr_array array with source pointers
+ * @param [in]  len_array     array with message lengths in bytes
+ * @param [in]  iv_ptr_array  array with IV pointers
+ * @param [in]  aad_ptr_array array with AAD pointers
+ * @param [in]  aad_len       AAD length in bytes
+ * @param [out] tag_ptr_array array with authentication TAG pointers
+ * @param [in]  tag_len       authentication TAG length in bytes
+ * @param [in]  num_packets   number of packets in this batch
+ */
+IMB_DLL_EXPORT void
+imb_quic_aes_gcm(IMB_MGR *state,
+                 const struct gcm_key_data *key_data,
+                 const IMB_KEY_SIZE_BYTES key_size,
+                 const IMB_CIPHER_DIRECTION cipher_dir,
+                 void *dst_ptr_array[],
+                 const void * const src_ptr_array[],
+                 const uint64_t len_array[],
+                 const void * const iv_ptr_array[],
+                 const void * const aad_ptr_array[],
+                 const uint64_t aad_len,
+                 void *tag_ptr_array[],
+                 const uint64_t tag_len,
+                 const uint64_t num_packets);
+
 #ifdef __cplusplus
 }
 #endif

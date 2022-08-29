@@ -311,7 +311,8 @@ c_lib_objs := \
 	mb_mgr_auto.o \
 	error.o \
 	ooo_mgr_reset.o \
-	self_test.o
+	self_test.o \
+	quic_aes_gcm.o
 
 ifeq ($(AESNI_EMU), y)
 c_lib_objs := $(c_lib_objs) \

@@ -1630,6 +1630,75 @@ sgl_aes_gcm_dec(IMB_MGR *p_mgr,
 }
 
 /*****************************************************************************
+ * QUIC API
+ *****************************************************************************/
+static int
+quic_aes_gcm_enc(IMB_MGR *p_mgr,
+		 const struct gcm_key_data *key,
+		 struct gcm_context_data *ctx,
+		 uint8_t *out, const uint8_t *in, uint64_t len,
+		 const uint8_t *iv, const uint64_t iv_len,
+		 const uint8_t *aad, uint64_t aad_len,
+		 uint8_t *auth_tag, uint64_t auth_tag_len,
+		 IMB_KEY_SIZE_BYTES key_len)
+{
+	if (iv_len != 12)
+		return aes_gcm_enc(p_mgr, key, ctx,
+				   out, in, len,
+				   iv, iv_len,
+				   aad, aad_len,
+				   auth_tag, auth_tag_len, key_len);
+
+	imb_quic_aes_gcm(p_mgr, key, key_len, IMB_DIR_ENCRYPT,
+			 (void **) &out, (const void * const*) &in, &len,
+			 (const void * const*) &iv,
+                         (const void * const*) &aad, aad_len,
+			 (void **) &auth_tag, auth_tag_len, 1);
+
+        const int err = imb_get_errno(p_mgr);
+
+        if (err != 0) {
+                printf("QUIC GCM encrypt error %d, %s\n",
+                       err, imb_get_strerror(err));
+                return 1;
+        }
+        return 0;
+}
+
+static int
+quic_aes_gcm_dec(IMB_MGR *p_mgr,
+		 const struct gcm_key_data *key,
+		 struct gcm_context_data *ctx,
+		 uint8_t *out, const uint8_t *in, uint64_t len,
+		 const uint8_t *iv, const uint64_t iv_len,
+		 const uint8_t *aad, uint64_t aad_len,
+		 uint8_t *auth_tag, uint64_t auth_tag_len,
+		 IMB_KEY_SIZE_BYTES key_len)
+{
+	if (iv_len != 12)
+		return aes_gcm_dec(p_mgr, key, ctx,
+				   out, in, len,
+				   iv, iv_len,
+				   aad, aad_len,
+				   auth_tag, auth_tag_len, key_len);
+
+	imb_quic_aes_gcm(p_mgr, key, key_len, IMB_DIR_DECRYPT,
+			 (void **) &out, (const void * const*) &in, &len,
+			 (const void * const*) &iv,
+                         (const void * const*) &aad, aad_len,
+			 (void **) &auth_tag, auth_tag_len, 1);
+
+        const int err = imb_get_errno(p_mgr);
+
+        if (err != 0) {
+                printf("QUIC GCM decrypt error %d, %s\n",
+                       err, imb_get_strerror(err));
+                return 1;
+        }
+        return 0;
+}
+
+/*****************************************************************************
  * burst API
  *****************************************************************************/
 static int
@@ -1726,6 +1795,51 @@ burst_aes_gcm_enc(IMB_MGR *p_mgr,
 }
 
 static int
+burst_quic_gcm_enc(IMB_MGR *p_mgr,
+                   const struct gcm_key_data *key,
+                   struct gcm_context_data **ctx, uint8_t **out,
+                   const uint8_t *in, const uint64_t len,
+                   const uint8_t *iv, const uint64_t iv_len,
+                   const uint8_t *aad, const uint64_t aad_len,
+                   uint8_t **auth_tag, const uint64_t auth_tag_len,
+                   const IMB_KEY_SIZE_BYTES key_len, const uint32_t num_jobs)
+{
+	if (iv_len != 12) {
+		return burst_aes_gcm_enc(p_mgr, key, ctx, out, in, len,
+                                         iv, iv_len, aad, aad_len,
+                                         auth_tag, auth_tag_len,
+                                         key_len, num_jobs);
+        }
+
+        const void *in_array[GCM_MAX_JOBS];
+        uint64_t len_array[GCM_MAX_JOBS];
+        const void *iv_array[GCM_MAX_JOBS];
+        const void *aad_array[GCM_MAX_JOBS];
+        uint32_t i;
+
+        for (i = 0; i < num_jobs; i++) {
+                in_array[i] = (const void *) in;
+                len_array[i] = len;
+                iv_array[i] = (const void *) iv;
+                aad_array[i] = (const void *) aad;
+        }
+
+	imb_quic_aes_gcm(p_mgr, key, key_len, IMB_DIR_ENCRYPT,
+			 (void **) out, in_array, len_array,
+                         iv_array, aad_array, aad_len,
+			 (void **) auth_tag, auth_tag_len, num_jobs);
+
+        const int err = imb_get_errno(p_mgr);
+
+        if (err != 0) {
+                printf("QUIC GCM burst-encrypt error %d, %s\n",
+                       err, imb_get_strerror(err));
+                return 1;
+        }
+        return 0;
+}
+
+static int
 burst_aes_gcm_dec(IMB_MGR *p_mgr,
                   const struct gcm_key_data *key,
                   struct gcm_context_data **ctx, uint8_t **out,
@@ -1739,6 +1853,51 @@ burst_aes_gcm_dec(IMB_MGR *p_mgr,
                              key_len, out, in, len, iv, iv_len, aad, aad_len,
                              auth_tag, auth_tag_len, ctx, IMB_CIPHER_GCM, 0,
                              num_jobs);
+}
+
+static int
+burst_quic_gcm_dec(IMB_MGR *p_mgr,
+                   const struct gcm_key_data *key,
+                   struct gcm_context_data **ctx, uint8_t **out,
+                   const uint8_t *in, const uint64_t len,
+                   const uint8_t *iv, const uint64_t iv_len,
+                   const uint8_t *aad, const uint64_t aad_len,
+                   uint8_t **auth_tag, const uint64_t auth_tag_len,
+                   const IMB_KEY_SIZE_BYTES key_len, const uint32_t num_jobs)
+{
+	if (iv_len != 12) {
+		return burst_aes_gcm_dec(p_mgr, key, ctx, out, in, len,
+                                         iv, iv_len, aad, aad_len,
+                                         auth_tag, auth_tag_len,
+                                         key_len, num_jobs);
+        }
+
+        const void *in_array[GCM_MAX_JOBS];
+        uint64_t len_array[GCM_MAX_JOBS];
+        const void *iv_array[GCM_MAX_JOBS];
+        const void *aad_array[GCM_MAX_JOBS];
+        uint32_t i;
+
+        for (i = 0; i < num_jobs; i++) {
+                in_array[i] = (const void *) in;
+                len_array[i] = len;
+                iv_array[i] = (const void *) iv;
+                aad_array[i] = (const void *) aad;
+        }
+
+	imb_quic_aes_gcm(p_mgr, key, key_len, IMB_DIR_DECRYPT,
+			 (void **) out, in_array, len_array,
+                         iv_array, aad_array, aad_len,
+			 (void **) auth_tag, auth_tag_len, num_jobs);
+
+        const int err = imb_get_errno(p_mgr);
+
+        if (err != 0) {
+                printf("QUIC GCM burst-decrypt error %d, %s\n",
+                       err, imb_get_strerror(err));
+                return 1;
+        }
+        return 0;
 }
 
 static int
@@ -2145,6 +2304,7 @@ test_gcm_vectors(struct gcm_ctr_vector const *vector,
 		free(T2_test);
 }
 
+
 static void
 test_gcm_vectors_burst(struct gcm_ctr_vector const *vector,
                        gcm_enc_dec_many_fn_t encfn,
@@ -2358,6 +2518,14 @@ test_gcm_std_vectors(struct test_suite_context *ts128,
                                                        burst_aes_gcm_enc,
                                                        burst_aes_gcm_dec,
                                                        ts128);
+                                test_gcm_vectors(&vectors[vect],
+						 quic_aes_gcm_enc,
+						 quic_aes_gcm_dec,
+						 ts128);
+                                test_gcm_vectors_burst(&vectors[vect],
+                                                       burst_quic_gcm_enc,
+                                                       burst_quic_gcm_dec,
+                                                       ts128);
                         }
                         break;
                 case IMB_KEY_192_BYTES:
@@ -2386,6 +2554,14 @@ test_gcm_std_vectors(struct test_suite_context *ts128,
                                 test_gcm_vectors_burst(&vectors[vect],
                                                        burst_aes_gcm_enc,
                                                        burst_aes_gcm_dec,
+                                                       ts192);
+                                test_gcm_vectors(&vectors[vect],
+						 quic_aes_gcm_enc,
+						 quic_aes_gcm_dec,
+						 ts192);
+                                test_gcm_vectors_burst(&vectors[vect],
+                                                       burst_quic_gcm_enc,
+                                                       burst_quic_gcm_dec,
                                                        ts192);
                         }
                         break;
@@ -2417,7 +2593,14 @@ test_gcm_std_vectors(struct test_suite_context *ts128,
                                                  burst_aes_gcm_enc,
                                                  burst_aes_gcm_dec,
                                                  ts256);
-
+                                test_gcm_vectors(&vectors[vect],
+						 quic_aes_gcm_enc,
+						 quic_aes_gcm_dec,
+						 ts256);
+                                test_gcm_vectors_burst(&vectors[vect],
+                                                       burst_quic_gcm_enc,
+                                                       burst_quic_gcm_dec,
+                                                       ts256);
                         }
                         break;
                 default:
