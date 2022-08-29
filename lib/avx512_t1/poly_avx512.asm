@@ -217,6 +217,7 @@ dw      0, 0x1, 0x5, 0x15, 0x55, 0x57, 0x5f, 0x7f, 0xff
 struc STACKFRAME
 _r_save:        resq    16 ; Memory to save limbs of powers of R
 _rp_save:       resq    8  ; Memory to save limbs of powers of R'
+_xmm_save:      reso    10 ; Memory to save XMM registers
 _gpr_save:      resq    8  ; Memory to save GP registers
 _rsp_save:      resq    1  ; Memory to save RSP pointer
 endstruc
@@ -1298,6 +1299,13 @@ APPEND(%%_shuffle_blocks_, i):
 %ifndef LINUX
         mov     [rsp + _gpr_save + 8*6], rsi
         mov     [rsp + _gpr_save + 8*7], rdi
+%assign i 0
+%assign j 6
+%rep 10
+	vmovdqa	[rsp + _xmm_save + i*16], APPEND(xmm, j)
+%assign i (i + 1)
+%assign j (j + 1)
+%endrep
 %endif
         mov     [rsp + _rsp_save], rax
 
@@ -1308,6 +1316,13 @@ APPEND(%%_shuffle_blocks_, i):
 ;; Restores registers and removes the stack frame
 ;; =============================================================================
 %macro FUNC_EXIT 0
+%ifdef SAFE_DATA
+        clear_scratch_gps_asm
+        clear_all_zmms_asm
+%else
+        vzeroupper
+%endif ;; SAFE_DATA
+
         mov     rbx, [rsp + _gpr_save + 8*0]
         mov     rbp, [rsp + _gpr_save + 8*1]
         mov     r12, [rsp + _gpr_save + 8*2]
@@ -1317,15 +1332,15 @@ APPEND(%%_shuffle_blocks_, i):
 %ifndef LINUX
         mov     rsi, [rsp + _gpr_save + 8*6]
         mov     rdi, [rsp + _gpr_save + 8*7]
+%assign i 0
+%assign j 6
+%rep 10
+	vmovdqa	APPEND(xmm, j), [rsp + _xmm_save + i*16]
+%assign i (i + 1)
+%assign j (j + 1)
+%endrep
 %endif
         mov     rsp, [rsp + _rsp_save]
-
-%ifdef SAFE_DATA
-        clear_scratch_gps_asm
-        clear_all_zmms_asm
-%else
-        vzeroupper
-%endif ;; SAFE_DATA
 
 %endmacro
 

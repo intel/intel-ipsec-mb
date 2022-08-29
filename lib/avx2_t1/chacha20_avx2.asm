@@ -81,6 +81,7 @@ db      2, 3, 0, 1, 6, 7, 4, 5, 10, 11, 8, 9, 14, 15, 12, 13
 struc STACK
 _STATE:         reso    32      ; Space to store first 8 states
 _YMM_SAVE:      resy    2       ; Space to store up to 2 temporary YMM registers
+_XMM_WIN_SAVE:  reso    10      ; Space to store up to 10 XMM registers
 _GP_SAVE:       resq    7       ; Space to store up to 7 GP registers
 _RSP_SAVE:      resq    1       ; Space to store rsp pointer
 endstruc
@@ -582,6 +583,15 @@ submit_job_chacha20_enc_dec_avx2:
         mov     rax, rsp
         sub     rsp, STACK_SIZE
         and     rsp, -32
+%ifndef LINUX
+%assign i 0
+%assign j 6
+%rep 10
+	vmovdqa	[rsp + _XMM_WIN_SAVE + i*16], APPEND(xmm, j)
+%assign i (i + 1)
+%assign j (j + 1)
+%endrep
+%endif
         mov     [rsp + _RSP_SAVE], rax ; save RSP
 
         xor     off, off
@@ -917,7 +927,7 @@ partial_block:
 no_partial_block:
         endbranch64
 %ifdef SAFE_DATA
-        vpxor ymm0, ymm0
+        clear_all_ymms_asm
         ; Clear stack frame
 %assign i 0
 %rep 16
@@ -928,12 +938,20 @@ no_partial_block:
         vmovdqa [rsp + _YMM_SAVE + 32], ymm0
 %endif
 
+%ifndef LINUX
+%assign i 0
+%assign j 6
+%rep 10
+	vmovdqa	APPEND(xmm, j), [rsp + _XMM_WIN_SAVE + i*16]
+%assign i (i + 1)
+%assign j (j + 1)
+%endrep
+%endif
         mov     rsp, [rsp + _RSP_SAVE]
 
 exit:
         mov     rax, job
         or      dword [rax + _status], IMB_STATUS_COMPLETED_CIPHER
-        clear_all_ymms_asm
 
         ret
 
@@ -981,6 +999,13 @@ chacha20_enc_dec_ks_avx2:
         mov     [rsp + _GP_SAVE + 40], rbp
 %ifndef LINUX
         mov     [rsp + _GP_SAVE + 48], rdi
+%assign i 0
+%assign j 6
+%rep 10
+	vmovdqa	[rsp + _XMM_WIN_SAVE + i*16], APPEND(xmm, j)
+%assign i (i + 1)
+%assign j (j + 1)
+%endrep
 %endif
         mov     [rsp + _RSP_SAVE], rax ; save RSP
 
@@ -1353,7 +1378,7 @@ no_partial_block_ks:
         mov     [ctx + LastBlkCount], blk_cnt
 
 %ifdef SAFE_DATA
-        vpxor ymm0, ymm0
+        clear_all_ymms_asm
         ; Clear stack frame
 %assign i 0
 %rep 16
@@ -1372,11 +1397,17 @@ no_partial_block_ks:
         mov     rbp, [rsp + _GP_SAVE + 40]
 %ifndef LINUX
         mov     rdi, [rsp + _GP_SAVE + 48]
+%assign i 0
+%assign j 6
+%rep 10
+	vmovdqa	APPEND(xmm, j), [rsp + _XMM_WIN_SAVE + i*16]
+%assign i (i + 1)
+%assign j (j + 1)
+%endrep
 %endif
         mov     rsp, [rsp + _RSP_SAVE]
 
 exit_ks:
-        clear_all_ymms_asm
 
         ret
 

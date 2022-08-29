@@ -85,6 +85,7 @@ dq      0x0ffffffc0fffffff, 0x0ffffffc0ffffffc
 struc STACK
 _STATE:         reso    16      ; Space to store first 4 states
 _XMM_SAVE:      reso    2       ; Space to store up to 2 temporary XMM registers
+_XMM_WIN_SAVE:  reso    10      ; Space to store up to 10 XMM registers
 _GP_SAVE:       resq    7       ; Space to store up to 7 GP registers
 _RSP_SAVE:      resq    1       ; Space to store rsp pointer
 endstruc
@@ -619,6 +620,15 @@ submit_job_chacha20_enc_dec_avx:
         mov     rax, rsp
         sub     rsp, STACK_SIZE
         and     rsp, -16
+%ifndef LINUX
+%assign i 0
+%assign j 6
+%rep 10
+	vmovdqa	[rsp + _XMM_WIN_SAVE + i*16], APPEND(xmm, j)
+%assign i (i + 1)
+%assign j (j + 1)
+%endrep
+%endif
         mov     [rsp + _RSP_SAVE], rax ; save RSP
 
         xor     off, off
@@ -1140,6 +1150,15 @@ no_partial_block:
         vmovdqa [rsp + _XMM_SAVE + 16], xmm0
 %endif
 
+%ifndef LINUX
+%assign i 0
+%assign j 6
+%rep 10
+	vmovdqa	APPEND(xmm, j), [rsp + _XMM_WIN_SAVE + i*16]
+%assign i (i + 1)
+%assign j (j + 1)
+%endrep
+%endif
         mov     rsp, [rsp + _RSP_SAVE]
 
 exit:
@@ -1188,6 +1207,13 @@ chacha20_enc_dec_ks_avx:
         mov     [rsp + _GP_SAVE + 40], rbp
 %ifndef LINUX
         mov     [rsp + _GP_SAVE + 48], rdi
+%assign i 0
+%assign j 6
+%rep 10
+	vmovdqa	[rsp + _XMM_WIN_SAVE + i*16], APPEND(xmm, j)
+%assign i (i + 1)
+%assign j (j + 1)
+%endrep
 %endif
         mov     [rsp + _RSP_SAVE], rax ; save RSP
 
@@ -1703,6 +1729,13 @@ exit_ks:
         mov     rbp, [rsp + _GP_SAVE + 40]
 %ifndef LINUX
         mov     rdi, [rsp + _GP_SAVE + 48]
+%assign i 0
+%assign j 6
+%rep 10
+	vmovdqa	APPEND(xmm, j), [rsp + _XMM_WIN_SAVE + i*16]
+%assign i (i + 1)
+%assign j (j + 1)
+%endrep
 %endif
         mov     rsp, [rsp + _RSP_SAVE]; restore RSP
 
@@ -1712,6 +1745,15 @@ exit_ks:
 align 32
 MKGLOBAL(poly1305_key_gen_avx,function,internal)
 poly1305_key_gen_avx:
+%ifndef LINUX
+        mov     rax, rsp
+        sub     rsp, 3*16 + 8
+        and     rsp, -16
+	vmovdqa	[rsp], xmm6
+	vmovdqa	[rsp + 16], xmm7
+	vmovdqa	[rsp + 16*2], xmm8
+	mov	[rsp + 16*3], rax
+%endif
         ;; prepare chacha state from IV, key
         vmovdqa xmm0, [rel constants]
         vmovdqu xmm1, [arg1]          ; Load key bytes 0-15
@@ -1732,6 +1774,12 @@ poly1305_key_gen_avx:
 
 %ifdef SAFE_DATA
         clear_all_xmms_avx_asm
+%endif
+%ifndef LINUX
+	vmovdqa	xmm6, [rsp]
+	vmovdqa	xmm7, [rsp + 16]
+	vmovdqa	xmm8, [rsp + 16*2]
+	mov	rsp, [rsp + 16*3]
 %endif
         ret
 

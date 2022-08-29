@@ -130,6 +130,13 @@ poly_clamp_r:
 dq      0x0ffffffc0fffffff, 0x0ffffffc0ffffffc
 dq      0xffffffffffffffff, 0xffffffffffffffff
 
+struc STACK
+_XMM_WIN_SAVE:  reso    10      ; Space to store up to 10 XMM registers
+_GP_SAVE:       resq    7       ; Space to store up to 7 GP registers
+_RSP_SAVE:      resq    1       ; Space to store rsp pointer
+endstruc
+%define STACK_SIZE STACK_size
+
 %define APPEND(a,b) a %+ b
 %define APPEND3(a,b,c) a %+ b %+ c
 
@@ -1302,10 +1309,22 @@ submit_job_chacha20_poly_enc_avx512:
 %define tmp     r13
 %define off     rax
 
-        sub     rsp, 16
-        mov     [rsp], r12
-        mov     [rsp + 8], r13
 
+        mov     rax, rsp
+        sub     rsp, STACK_SIZE
+        and     rsp, -16
+        mov     [rsp + _GP_SAVE], r12
+        mov     [rsp + _GP_SAVE + 8], r13
+%ifndef LINUX
+%assign i 0
+%assign j 6
+%rep 10
+	vmovdqa	[rsp + _XMM_WIN_SAVE + i*16], APPEND(xmm, j)
+%assign i (i + 1)
+%assign j (j + 1)
+%endrep
+%endif
+        mov     [rsp + _RSP_SAVE], rax ; save RSP
         mov     added_len, 64
         xor     off, off
 
@@ -1554,9 +1573,18 @@ no_partial_block_poly:
         mov     rax, job
         or      dword [rax + _status], IMB_STATUS_COMPLETED_CIPHER
 
-        mov     r12, [rsp]
-        mov     r13, [rsp + 8]
-        add     rsp, 16
+        mov     r12, [rsp + _GP_SAVE]
+        mov     r13, [rsp + _GP_SAVE + 8]
+%ifndef LINUX
+%assign i 0
+%assign j 6
+%rep 10
+	vmovdqa	APPEND(xmm, j), [rsp + _XMM_WIN_SAVE + i*16]
+%assign i (i + 1)
+%assign j (j + 1)
+%endrep
+%endif
+        mov     rsp, [rsp + _RSP_SAVE]
 
         ret
 
@@ -1571,6 +1599,19 @@ gen_keystr_poly_key_avx512:
 
 %define off     rax
 
+%ifndef LINUX
+        mov     rax, rsp
+        sub     rsp, STACK_SIZE
+        and     rsp, -16
+%assign i 0
+%assign j 6
+%rep 10
+	vmovdqa	[rsp + _XMM_WIN_SAVE + i*16], APPEND(xmm, j)
+%assign i (i + 1)
+%assign j (j + 1)
+%endrep
+        mov     [rsp + _RSP_SAVE], rax ; save RSP
+%endif
         ; Generate up to 1KB of keystream
 
         ; If less than or equal to 64*8 bytes, prepare directly states for up to 8 blocks
@@ -1624,7 +1665,7 @@ gen_keystr_poly_key_avx512:
         vmovdqa64 [ks + 64*14], zmm30
         vmovdqa64 [ks + 64*15], zmm18
 
-        ret
+        jmp	exit_gen_keystr
 
 less_than_512_ks:
 
@@ -1648,7 +1689,7 @@ less_than_512_ks:
         vmovdqa64 [ks + 64*2], zmm17
         vmovdqa64 [ks + 64*3], zmm29
 
-        ret
+        jmp	exit_gen_keystr
 
 more_than_256_ks:
         xor     off, off
@@ -1672,6 +1713,17 @@ more_than_256_ks:
         vmovdqa64 [ks + 64*6], zmm26
         vmovdqa64 [ks + 64*7], zmm23
 
+exit_gen_keystr:
+%ifndef LINUX
+%assign i 0
+%assign j 6
+%rep 10
+	vmovdqa	APPEND(xmm, j), [rsp + _XMM_WIN_SAVE + i*16]
+%assign i (i + 1)
+%assign j (j + 1)
+%endrep
+        mov     rsp, [rsp + _RSP_SAVE]
+%endif
         ret
 
 align 32
@@ -1694,7 +1746,18 @@ submit_job_chacha20_poly_dec_avx512:
 %define len_xor iv
 
 %ifndef LINUX
-        push    rsi
+        mov     rax, rsp
+        sub     rsp, STACK_SIZE
+        and     rsp, -16
+        mov	[rsp + _GP_SAVE], rsi
+%assign i 0
+%assign j 6
+%rep 10
+	vmovdqa	[rsp + _XMM_WIN_SAVE + i*16], APPEND(xmm, j)
+%assign i (i + 1)
+%assign j (j + 1)
+%endrep
+        mov     [rsp + _RSP_SAVE], rax ; save RSP
 %endif
         mov     len_xor, arg3
 
@@ -1979,7 +2042,15 @@ no_partial_block_dec:
         or      dword [rax + _status], IMB_STATUS_COMPLETED_CIPHER
 
 %ifndef LINUX
-        pop     rsi
+%assign i 0
+%assign j 6
+%rep 10
+	vmovdqa	APPEND(xmm, j), [rsp + _XMM_WIN_SAVE + i*16]
+%assign i (i + 1)
+%assign j (j + 1)
+%endrep
+        mov     rsi, [rsp + _GP_SAVE]
+        mov     rsp, [rsp + _RSP_SAVE]
 %endif
         ret
 
@@ -2016,16 +2087,26 @@ chacha20_enc_dec_ks_avx512:
 
         mov     ctx, arg5
 
-        sub     rsp, 8*7
-        mov     [rsp], r12
-        mov     [rsp + 8], r13
-        mov     [rsp + 16], r14
-        mov     [rsp + 24], r15
-        mov     [rsp + 32], rbx
-        mov     [rsp + 40], rbp
+        mov     rax, rsp
+        sub     rsp, STACK_SIZE
+        and     rsp, -16
+        mov     [rsp + _GP_SAVE], r12
+        mov     [rsp + _GP_SAVE + 8], r13
+        mov     [rsp + _GP_SAVE + 16], r14
+        mov     [rsp + _GP_SAVE + 24], r15
+        mov     [rsp + _GP_SAVE + 32], rbx
+        mov     [rsp + _GP_SAVE + 40], rbp
 %ifndef LINUX
-        mov     [rsp + 48], rdi
+        mov     [rsp + _GP_SAVE + 48], rdi
+%assign i 0
+%assign j 6
+%rep 10
+	vmovdqa	[rsp + _XMM_WIN_SAVE + i*16], APPEND(xmm, j)
+%assign i (i + 1)
+%assign j (j + 1)
+%endrep
 %endif
+        mov     [rsp + _RSP_SAVE], rax ; save RSP
 
         xor     off, off
         mov     blk_cnt, [ctx + LastBlkCount]
@@ -2255,16 +2336,23 @@ no_partial_block_ks:
 
         mov     [ctx + LastBlkCount], blk_cnt
 
-        mov     r12, [rsp]
-        mov     r13, [rsp + 8]
-        mov     r14, [rsp + 16]
-        mov     r15, [rsp + 24]
-        mov     rbx, [rsp + 32]
-        mov     rbp, [rsp + 40]
+        mov     r12, [rsp + _GP_SAVE]
+        mov     r13, [rsp + _GP_SAVE + 8]
+        mov     r14, [rsp + _GP_SAVE + 16]
+        mov     r15, [rsp + _GP_SAVE + 24]
+        mov     rbx, [rsp + _GP_SAVE + 32]
+        mov     rbp, [rsp + _GP_SAVE + 40]
 %ifndef LINUX
-        mov     rdi, [rsp + 48]
+        mov     rdi, [rsp + _GP_SAVE + 48]
+%assign i 0
+%assign j 6
+%rep 10
+	vmovdqa	APPEND(xmm, j), [rsp + _XMM_WIN_SAVE + i*16]
+%assign i (i + 1)
+%assign j (j + 1)
+%endrep
 %endif
-        add     rsp, 8*7
+        mov     rsp, [rsp + _RSP_SAVE]; restore RSP
 %ifdef SAFE_DATA
         clear_all_zmms_asm
 %else

@@ -93,6 +93,7 @@ dq      0x0ffffffc0fffffff, 0x0ffffffc0ffffffc
 struc STACK
 _STATE:         reso    16      ; Space to store first 4 states
 _XMM_SAVE:      reso    2       ; Space to store up to 2 temporary XMM registers
+_XMM_WIN_SAVE:  reso    10      ; Space to store up to 10 XMM registers
 _GP_SAVE:       resq    7       ; Space to store up to 7 GP registers
 _RSP_SAVE:      resq    1       ; Space to store rsp pointer
 endstruc
@@ -1109,7 +1110,15 @@ chacha20_enc_dec_ks_sse:
         mov     [rsp + _GP_SAVE + 40], rbp
 %ifndef LINUX
         mov     [rsp + _GP_SAVE + 48], rdi
+%assign i 0
+%assign j 6
+%rep 10
+	movdqa	[rsp + _XMM_WIN_SAVE + i*16], APPEND(xmm, j)
+%assign i (i + 1)
+%assign j (j + 1)
+%endrep
 %endif
+
         mov     [rsp + _RSP_SAVE], rax ; save RSP
 
         ; Check if there is nothing to encrypt
@@ -1548,6 +1557,13 @@ exit_ks:
         mov     rbp, [rsp + _GP_SAVE + 40]
 %ifndef LINUX
         mov     rdi, [rsp + _GP_SAVE + 48]
+%assign i 0
+%assign j 6
+%rep 10
+	movdqa	APPEND(xmm, j), [rsp + _XMM_WIN_SAVE + i*16]
+%assign i (i + 1)
+%assign j (j + 1)
+%endrep
 %endif
         mov     rsp, [rsp + _RSP_SAVE]; restore RSP
 
@@ -1558,6 +1574,16 @@ exit_ks:
 align 32
 MKGLOBAL(poly1305_key_gen_sse,function,internal)
 poly1305_key_gen_sse:
+
+%ifndef LINUX
+        mov     rax, rsp
+        sub     rsp, 3*16 + 8
+        and     rsp, -16
+	movdqa	[rsp], xmm6
+	movdqa	[rsp + 16], xmm7
+	movdqa	[rsp + 16*2], xmm8
+	mov	[rsp + 16*3], rax
+%endif
         ;; prepare chacha state from IV, key
         movdqa  xmm0, [rel constants]
         movdqu  xmm1, [arg1]          ; Load key bytes 0-15
@@ -1580,6 +1606,12 @@ poly1305_key_gen_sse:
         clear_all_xmms_sse_asm
 %endif
 
+%ifndef LINUX
+	movdqa	xmm6, [rsp]
+	movdqa	xmm7, [rsp + 16]
+	movdqa	xmm8, [rsp + 16*2]
+	mov	rsp, [rsp + 16*3]
+%endif
         ret
 
 align 32
@@ -1601,6 +1633,15 @@ submit_job_chacha20_poly_enc_sse:
         mov     [rsp + _GP_SAVE], r12
         mov     [rsp + _GP_SAVE + 8], r13
         mov     [rsp + _GP_SAVE + 16], r14
+;%ifndef LINUX
+%assign i 0
+%assign j 6
+%rep 10
+	movdqa	[rsp + _XMM_WIN_SAVE + i*16], APPEND(xmm, j)
+%assign i (i + 1)
+%assign j (j + 1)
+%endrep
+;%endif
         mov     [rsp + _RSP_SAVE], rax ; save RSP
 
         mov     added_len, 64
@@ -2160,6 +2201,15 @@ no_partial_block_poly:
         mov     r12, [rsp + _GP_SAVE]
         mov     r13, [rsp + _GP_SAVE + 8]
         mov     r14, [rsp + _GP_SAVE + 16]
+%ifndef LINUX
+%assign i 0
+%assign j 6
+%rep 10
+	movdqa	APPEND(xmm, j), [rsp + _XMM_WIN_SAVE + i*16]
+%assign i (i + 1)
+%assign j (j + 1)
+%endrep
+%endif
         mov     rsp, [rsp + _RSP_SAVE]
 
         mov     rax, job
@@ -2193,6 +2243,13 @@ submit_job_chacha20_poly_dec_sse:
         mov     [rsp + _GP_SAVE + 8], r13
 %ifndef LINUX
         mov     [rsp + _GP_SAVE + 16], rsi
+%assign i 0
+%assign j 6
+%rep 10
+	movdqa	[rsp + _XMM_WIN_SAVE + i*16], APPEND(xmm, j)
+%assign i (i + 1)
+%assign j (j + 1)
+%endrep
 %endif
         mov     [rsp + _RSP_SAVE], rax ; save RSP
 
@@ -2632,6 +2689,15 @@ no_partial_block_dec:
 %ifndef LINUX
         mov     rsi, [rsp + _GP_SAVE + 16]
 %endif
+%ifndef LINUX
+%assign i 0
+%assign j 6
+%rep 10
+	movdqa	APPEND(xmm, j), [rsp + _XMM_WIN_SAVE + i*16]
+%assign i (i + 1)
+%assign j (j + 1)
+%endrep
+%endif
         mov     rsp, [rsp + _RSP_SAVE]
         ret
 
@@ -2643,15 +2709,24 @@ gen_keystr_poly_key_sse:
 %define len     arg3
 %define ks      arg4
 
+        mov     rax, rsp
+        sub     rsp, STACK_SIZE
+        and     rsp, -16
+%ifndef LINUX
+%assign i 0
+%assign j 6
+%rep 10
+	movdqa	[rsp + _XMM_WIN_SAVE + i*16], APPEND(xmm, j)
+%assign i (i + 1)
+%assign j (j + 1)
+%endrep
+%endif
+        mov     [rsp + _RSP_SAVE], rax ; save RSP
+
         ; If less than or equal to 64*2 bytes, prepare directly states for
         ; up to 2 blocks
         cmp     len, 64*2
         jbe     check_1_or_2_blocks_left_gen
-
-        mov     rax, rsp
-        sub     rsp, STACK_SIZE
-        and     rsp, -16
-        mov     [rsp + _RSP_SAVE], rax ; save RSP
 
         ; Prepare first 4 chacha states
         movdqa  xmm0, [rel constants0]
@@ -2758,6 +2833,16 @@ gen_keystr_poly_key_sse:
         movdqa  [rsp + _XMM_SAVE + 16], xmm0
 %endif
 
+restore_gen_keystr:
+%ifndef LINUX
+%assign i 0
+%assign j 6
+%rep 10
+	movdqa	APPEND(xmm, j), [rsp + _XMM_WIN_SAVE + i*16]
+%assign i (i + 1)
+%assign j (j + 1)
+%endrep
+%endif
         mov     rsp, [rsp + _RSP_SAVE]
 
         ret
@@ -2833,6 +2918,6 @@ exit_gen:
 %ifdef SAFE_DATA
         clear_all_xmms_sse_asm
 %endif
-        ret
+        jmp	restore_gen_keystr
 
 mksection stack-noexec
