@@ -1321,6 +1321,9 @@ int main(int argc, char **argv)
         if (acvp_cap_sym_cipher_enable(ctx, ACVP_AES_CTR,
                                        &aes_ctr_handler) != ACVP_SUCCESS)
                 goto exit;
+        if (acvp_cap_sym_cipher_enable(ctx, ACVP_AES_GMAC,
+                                       &aes_gcm_handler) != ACVP_SUCCESS)
+                goto exit;
 
         if (acvp_cap_sym_cipher_enable(ctx, ACVP_AES_CCM,
                                        &aes_ccm_handler) != ACVP_SUCCESS)
