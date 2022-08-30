@@ -587,7 +587,7 @@ static int aes_cmac_handler(ACVP_TEST_CASE *test_case)
         return EXIT_SUCCESS;
 }
 
-static int aes_hmac_sha1_handler(ACVP_TEST_CASE *test_case)
+static int hmac_sha1_handler(ACVP_TEST_CASE *test_case)
 {
         ACVP_HMAC_TC *tc;
         IMB_JOB *job = NULL;
@@ -653,7 +653,7 @@ static int aes_hmac_sha1_handler(ACVP_TEST_CASE *test_case)
         return EXIT_SUCCESS;
 }
 
-static int aes_hmac_sha256_handler(ACVP_TEST_CASE *test_case)
+static int hmac_sha256_handler(ACVP_TEST_CASE *test_case)
 {
         ACVP_HMAC_TC *tc;
         IMB_JOB *job = NULL;
@@ -719,7 +719,7 @@ static int aes_hmac_sha256_handler(ACVP_TEST_CASE *test_case)
         return EXIT_SUCCESS;
 }
 
-static int aes_hmac_sha224_handler(ACVP_TEST_CASE *test_case)
+static int hmac_sha224_handler(ACVP_TEST_CASE *test_case)
 {
         ACVP_HMAC_TC *tc;
         IMB_JOB *job = NULL;
@@ -785,7 +785,7 @@ static int aes_hmac_sha224_handler(ACVP_TEST_CASE *test_case)
         return EXIT_SUCCESS;
 }
 
-static int aes_hmac_sha384_handler(ACVP_TEST_CASE *test_case)
+static int hmac_sha384_handler(ACVP_TEST_CASE *test_case)
 {
         ACVP_HMAC_TC *tc;
         IMB_JOB *job = NULL;
@@ -851,7 +851,7 @@ static int aes_hmac_sha384_handler(ACVP_TEST_CASE *test_case)
         return EXIT_SUCCESS;
 }
 
-static int aes_hmac_sha512_handler(ACVP_TEST_CASE *test_case)
+static int hmac_sha512_handler(ACVP_TEST_CASE *test_case)
 {
         ACVP_HMAC_TC *tc;
         IMB_JOB *job = NULL;
@@ -917,7 +917,7 @@ static int aes_hmac_sha512_handler(ACVP_TEST_CASE *test_case)
         return EXIT_SUCCESS;
 }
 
-static int aes_sha1_handler(ACVP_TEST_CASE *test_case)
+static int sha1_handler(ACVP_TEST_CASE *test_case)
 {
         ACVP_HASH_TC *tc;
         IMB_JOB *job = NULL;
@@ -975,7 +975,7 @@ static int aes_sha1_handler(ACVP_TEST_CASE *test_case)
         return EXIT_SUCCESS;
 }
 
-static int aes_sha2_224_handler(ACVP_TEST_CASE *test_case)
+static int sha2_224_handler(ACVP_TEST_CASE *test_case)
 {
         ACVP_HASH_TC *tc;
         IMB_JOB *job = NULL;
@@ -1033,7 +1033,7 @@ static int aes_sha2_224_handler(ACVP_TEST_CASE *test_case)
         return EXIT_SUCCESS;
 }
 
-static int aes_sha2_256_handler(ACVP_TEST_CASE *test_case)
+static int sha2_256_handler(ACVP_TEST_CASE *test_case)
 {
         ACVP_HASH_TC *tc;
         IMB_JOB *job = NULL;
@@ -1091,7 +1091,7 @@ static int aes_sha2_256_handler(ACVP_TEST_CASE *test_case)
         return EXIT_SUCCESS;
 }
 
-static int aes_sha2_384_handler(ACVP_TEST_CASE *test_case)
+static int sha2_384_handler(ACVP_TEST_CASE *test_case)
 {
         ACVP_HASH_TC *tc;
         IMB_JOB *job = NULL;
@@ -1149,7 +1149,7 @@ static int aes_sha2_384_handler(ACVP_TEST_CASE *test_case)
         return EXIT_SUCCESS;
 }
 
-static int aes_sha2_512_handler(ACVP_TEST_CASE *test_case)
+static int sha2_512_handler(ACVP_TEST_CASE *test_case)
 {
         ACVP_HASH_TC *tc;
         IMB_JOB *job = NULL;
@@ -1331,43 +1331,43 @@ int main(int argc, char **argv)
                 goto exit;
 
         if (acvp_cap_hmac_enable(ctx, ACVP_HMAC_SHA1,
-                                &aes_hmac_sha1_handler) != ACVP_SUCCESS)
+                                &hmac_sha1_handler) != ACVP_SUCCESS)
                 goto exit;
 
         if (acvp_cap_hmac_enable(ctx, ACVP_HMAC_SHA2_256,
-                                &aes_hmac_sha256_handler) != ACVP_SUCCESS)
+                                &hmac_sha256_handler) != ACVP_SUCCESS)
                 goto exit;
 
         if (acvp_cap_hmac_enable(ctx, ACVP_HMAC_SHA2_224,
-                                &aes_hmac_sha224_handler) != ACVP_SUCCESS)
+                                &hmac_sha224_handler) != ACVP_SUCCESS)
                 goto exit;
 
         if (acvp_cap_hmac_enable(ctx, ACVP_HMAC_SHA2_384,
-                                &aes_hmac_sha384_handler) != ACVP_SUCCESS)
+                                &hmac_sha384_handler) != ACVP_SUCCESS)
                 goto exit;
 
         if (acvp_cap_hmac_enable(ctx, ACVP_HMAC_SHA2_512,
-                                &aes_hmac_sha512_handler) != ACVP_SUCCESS)
+                                &hmac_sha512_handler) != ACVP_SUCCESS)
                 goto exit;
 
         if (acvp_cap_hash_enable(ctx, ACVP_HASH_SHA1,
-                                &aes_sha1_handler) != ACVP_SUCCESS)
+                                &sha1_handler) != ACVP_SUCCESS)
                 goto exit;
 
         if (acvp_cap_hash_enable(ctx, ACVP_HASH_SHA224,
-                                &aes_sha2_224_handler) != ACVP_SUCCESS)
+                                &sha2_224_handler) != ACVP_SUCCESS)
                 goto exit;
 
         if (acvp_cap_hash_enable(ctx, ACVP_HASH_SHA256,
-                                &aes_sha2_256_handler) != ACVP_SUCCESS)
+                                &sha2_256_handler) != ACVP_SUCCESS)
                 goto exit;
 
         if (acvp_cap_hash_enable(ctx, ACVP_HASH_SHA384,
-                                &aes_sha2_384_handler) != ACVP_SUCCESS)
+                                &sha2_384_handler) != ACVP_SUCCESS)
                 goto exit;
 
         if (acvp_cap_hash_enable(ctx, ACVP_HASH_SHA512,
-                                &aes_sha2_512_handler) != ACVP_SUCCESS)
+                                &sha2_512_handler) != ACVP_SUCCESS)
                 goto exit;
 
         /* Allocate and initialize MB_MGR */
