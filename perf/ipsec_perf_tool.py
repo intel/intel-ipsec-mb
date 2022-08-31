@@ -60,7 +60,7 @@ class Variant:
     """Class to setup and run test case variant"""
     def __init__(self, idx=None, arch=None, direction='encrypt', cipher_alg=None,
                  hash_alg=None, aead_alg=None, sizes=None, offset=None,
-                 cold_cache=False, shani_off=False, gcm_job_api=False,
+                 cold_cache=False, shani_off=False, force_job_api=False,
                  unhalted_cycles=False, quick_test=False, smoke_test=False,
                  imix=None, aad_size=None, job_iter=None, no_time_box=False):
         """Build perf app command line"""
@@ -80,7 +80,7 @@ class Variant:
         self.core = None
         self.cold_cache = cold_cache
         self.shani_off = shani_off
-        self.gcm_job_api = gcm_job_api
+        self.force_job_api = force_job_api
         self.unhalted_cycles = unhalted_cycles
         self.quick_test = quick_test
         self.smoke_test = smoke_test
@@ -128,8 +128,8 @@ class Variant:
         if self.shani_off is True:
             self.cmd += ' --shani-off'
 
-        if self.gcm_job_api is True:
-            self.cmd += ' --gcm-job-api'
+        if self.force_job_api is True:
+            self.cmd += ' --force-job-api'
 
         if self.unhalted_cycles is True:
             self.cmd += ' --unhalted-cycles'
@@ -393,8 +393,8 @@ def parse_args():
     parser.add_argument("--arch-best", action='store_true',
                         help="detect available architectures and run only on the best one")
     parser.add_argument("--shani-off", action='store_true', help="don't use SHA extensions")
-    parser.add_argument("--gcm-job-api", action='store_true',
-                        help="use JOB API for GCM perf tests (raw GCM API is default)")
+    parser.add_argument("--force-job-api", action='store_true',
+                        help="use JOB API for algorithms supported through direct API (i.e. AES-GCM, chacha20-poly1305)")
     parser.add_argument("--unhalted-cycles", action='store_true',
                         help=textwrap.dedent('''\
                         measure using unhalted cycles (requires root).
@@ -457,7 +457,7 @@ def parse_args():
 
     return args.arch, cores, directions, args.offset, \
         alg_types, args.job_size, args.cold_cache, args.arch_best, \
-        args.shani_off, args.gcm_job_api, args.unhalted_cycles, \
+        args.shani_off, args.force_job_api, args.unhalted_cycles, \
         args.quick, args.smoke, args.imix, \
         args.aad_size, args.job_iter, args.no_time_box
 
@@ -528,7 +528,7 @@ def main():
 
     # parse command line args
     archs, cores, directions, offset, alg_types, sizes, cold_cache, arch_best, \
-        shani_off, gcm_job_api, unhalted_cycles, quick_test, smoke_test, \
+        shani_off, force_job_api, unhalted_cycles, quick_test, smoke_test, \
         imix, aad_size, job_iter, no_time_box = parse_args()
 
     # validate requested archs are supported
@@ -560,7 +560,7 @@ def main():
             print('  Cores: {}'.format(cores), file=sys.stderr)
         print('  Cache: {}'.format("cold" if cold_cache else "warm"), file=sys.stderr)
         print('  SHANI: {}'.format("off" if shani_off else "on"), file=sys.stderr)
-        print('  GCM API: {}'.format("job" if gcm_job_api else "direct"), file=sys.stderr)
+        print('  API: {}'.format("job" if force_job_api else "direct"), file=sys.stderr)
         print('  Measuring using {}'.format("unhalted cycles" if unhalted_cycles \
                                             else "rdtsc"), file=sys.stderr)
         if quick_test is True or smoke_test is True:
@@ -578,7 +578,7 @@ def main():
                     TODO_Q.put(Variant(idx=TOTAL_VARIANTS, arch=arch, direction=direction,
                                        offset=offset, sizes=sizes, cipher_alg=cipher_alg,
                                        cold_cache=cold_cache, shani_off=shani_off,
-                                       gcm_job_api=gcm_job_api, unhalted_cycles=unhalted_cycles,
+                                       force_job_api=force_job_api, unhalted_cycles=unhalted_cycles,
                                        quick_test=quick_test, smoke_test=smoke_test, imix=imix,
                                        aad_size=aad_size, job_iter=job_iter, no_time_box=no_time_box))
                     TOTAL_VARIANTS += 1
@@ -589,7 +589,7 @@ def main():
                 TODO_Q.put(Variant(idx=TOTAL_VARIANTS, arch=arch, direction=None,
                                    offset=offset, sizes=sizes, hash_alg=hash_alg,
                                    cold_cache=cold_cache, shani_off=shani_off,
-                                   gcm_job_api=gcm_job_api, unhalted_cycles=unhalted_cycles,
+                                   force_job_api=force_job_api, unhalted_cycles=unhalted_cycles,
                                    quick_test=quick_test, smoke_test=smoke_test, imix=imix,
                                    aad_size=aad_size, job_iter=job_iter, no_time_box=no_time_box))
                 TOTAL_VARIANTS += 1
@@ -600,7 +600,7 @@ def main():
                     TODO_Q.put(Variant(idx=TOTAL_VARIANTS, arch=arch, direction=direction,
                                        offset=offset, sizes=sizes, aead_alg=aead_alg,
                                        cold_cache=cold_cache, shani_off=shani_off,
-                                       gcm_job_api=gcm_job_api, unhalted_cycles=unhalted_cycles,
+                                       force_job_api=force_job_api, unhalted_cycles=unhalted_cycles,
                                        quick_test=quick_test, smoke_test=smoke_test, imix=imix,
                                        aad_size=aad_size, job_iter=job_iter, no_time_box=no_time_box))
                     TOTAL_VARIANTS += 1
@@ -613,7 +613,7 @@ def main():
                         TODO_Q.put(Variant(idx=TOTAL_VARIANTS, arch=arch, direction=direction,
                                            offset=offset, sizes=sizes, cipher_alg=cipher_alg,
                                            hash_alg=hash_alg, cold_cache=cold_cache,
-                                           shani_off=shani_off, gcm_job_api=gcm_job_api,
+                                           shani_off=shani_off, force_job_api=force_job_api,
                                            unhalted_cycles=unhalted_cycles, quick_test=quick_test,
                                            smoke_test=smoke_test, imix=imix, aad_size=aad_size,
                                            job_iter=job_iter, no_time_box=no_time_box))
