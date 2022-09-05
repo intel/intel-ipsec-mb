@@ -5248,14 +5248,15 @@ direct_api_param_test(struct IMB_MGR *mb_mgr)
         void *handler;
 #endif
 #endif
-        printf("Extended Invalid Direct API arguments test:");
+        printf("Extended Invalid Direct API arguments test:\n");
         test_suite_start(&ts, "INVALID-ARGS");
 #ifndef DEBUG
         handler = signal(SIGSEGV, seg_handler);
 
 #endif
         if ((mb_mgr->features & IMB_FEATURE_SAFE_PARAM) == 0) {
-                printf("SAFE_PARAM feature disabled, skipping remaining tests");
+                printf("SAFE_PARAM feature disabled, "
+                       "skipping remaining tests\n");
                 goto dir_api_exit;
         }
         errors += test_IMB_AES_KEYEXP_128(mb_mgr);
