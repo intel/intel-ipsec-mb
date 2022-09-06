@@ -17,3 +17,5 @@ job_api_fuzz_test*
 *_lnk.def
 TAGS
 acvp_app
+test/wycheproof/wycheproof
+!wycheproof.c

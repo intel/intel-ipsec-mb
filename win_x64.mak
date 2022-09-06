@@ -28,11 +28,13 @@
 all:
 	cd lib & $(MAKE) /f win_x64.mak
 	cd test & $(MAKE) /f win_x64.mak
+	cd test\wycheproof & $(MAKE) /f win_x64.mak
 	cd perf & $(MAKE) /f win_x64.mak
 
 clean:
 	cd lib & $(MAKE) /f win_x64.mak clean
 	cd test & $(MAKE) /f win_x64.mak clean
+	cd test\wycheproof & $(MAKE) /f win_x64.mak clean
 	cd perf & $(MAKE) /f win_x64.mak clean
 
 install:

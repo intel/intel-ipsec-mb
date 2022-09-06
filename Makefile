@@ -30,16 +30,19 @@
 all:
 	$(MAKE) -C lib
 	$(MAKE) -C test
+	$(MAKE) -C test/wycheproof
 	$(MAKE) -C perf
 
 clean:
 	$(MAKE) -C lib clean
 	$(MAKE) -C test clean
+	$(MAKE) -C test/wycheproof clean
 	$(MAKE) -C perf clean
 
 style:
 	$(MAKE) -C lib style
 	$(MAKE) -C test style
+	$(MAKE) -C test/wycheproof style
 	$(MAKE) -C perf style
 
 install:
