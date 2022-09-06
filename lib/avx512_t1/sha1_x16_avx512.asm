@@ -290,12 +290,29 @@ mksection .text
     mov     rsp, [rsp + GP_OFFSET + 4*8] ;; rsp pointer
 %endmacro
 
+;; FRAMESZ must be an odd multiple of 8
+%define FRAMESZ	16*10 + 8
+
 align 64
 ; void sha1_mult_x16_avx3(void **input_data, UINT128 *digest, UINT32 size)
 ; arg 1 : pointer to SHA1 args structure
 ; arg 2 : size (in blocks) ;; assumed to be >= 1
 MKGLOBAL(sha1_x16_avx512,function,internal)
 sha1_x16_avx512:
+%ifndef LINUX
+	sub	rsp, FRAMESZ
+
+        vmovdqa  [rsp + 0*16], xmm6
+        vmovdqa  [rsp + 1*16], xmm7
+        vmovdqa  [rsp + 2*16], xmm8
+        vmovdqa  [rsp + 3*16], xmm9
+        vmovdqa  [rsp + 4*16], xmm10
+        vmovdqa  [rsp + 5*16], xmm11
+        vmovdqa  [rsp + 6*16], xmm12
+        vmovdqa  [rsp + 7*16], xmm13
+        vmovdqa  [rsp + 8*16], xmm14
+        vmovdqa  [rsp + 9*16], xmm15
+%endif
 	;; Initialize digests
 	vmovdqu32	A, [state + 0*SHA1_DIGEST_ROW_SIZE]
 	vmovdqu32	B, [state + 1*SHA1_DIGEST_ROW_SIZE]
@@ -496,11 +513,33 @@ lastLoop:
 	mov	[state + _data_ptr_sha1 + 15*PTR_SZ], inp7
 
 %ifdef SAFE_DATA
-	clear_all_zmms_asm
+	clear_scratch_zmms_asm
 %else
         vzeroupper
 %endif ;; SAFE_DATA
 
+%ifndef LINUX
+        vmovdqa  xmm6, [rsp + 0*16]
+        vmovdqa  xmm7, [rsp + 1*16]
+        vmovdqa  xmm8, [rsp + 2*16]
+        vmovdqa  xmm9, [rsp + 3*16]
+        vmovdqa  xmm10, [rsp + 4*16]
+        vmovdqa  xmm11, [rsp + 5*16]
+        vmovdqa  xmm12, [rsp + 6*16]
+        vmovdqa  xmm13, [rsp + 7*16]
+        vmovdqa  xmm14, [rsp + 8*16]
+        vmovdqa  xmm15, [rsp + 9*16]
+
+%ifdef SAFE_DATA
+	; xmm0 already 0
+%assign i 0
+%rep 10
+        vmovdqa	[rsp + i*16], xmm0
+%assign i (i+1)
+%endrep
+%endif ;SAFE_DATA
+	add 	rsp, FRAMESZ
+%endif ; !LINUX
 	ret
 
 ; void call_sha1_x16_avx512_from_c(SHA1_ARGS *args, UINT32 size_in_blocks);

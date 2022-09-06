@@ -65,6 +65,7 @@ struc frame
 .E_SAVE		reso	1
 .ABCD_SAVEb	reso	1
 .E_SAVEb	reso	1
+.XMM_SAVE	reso	10
 .align		resq	1
 endstruc
 
@@ -174,6 +175,16 @@ align 32
 sha1_ni:
 	sub		rsp, frame_size
 
+	movdqa		[rsp + frame.XMM_SAVE], xmm6
+	movdqa		[rsp + frame.XMM_SAVE + 16], xmm7
+	movdqa		[rsp + frame.XMM_SAVE + 16*2], xmm8
+	movdqa		[rsp + frame.XMM_SAVE + 16*3], xmm9
+	movdqa		[rsp + frame.XMM_SAVE + 16*4], xmm10
+	movdqa		[rsp + frame.XMM_SAVE + 16*5], xmm11
+	movdqa		[rsp + frame.XMM_SAVE + 16*6], xmm12
+	movdqa		[rsp + frame.XMM_SAVE + 16*7], xmm13
+	movdqa		[rsp + frame.XMM_SAVE + 16*8], xmm14
+	movdqa		[rsp + frame.XMM_SAVE + 16*9], xmm15
         DBGPRINTL "enter sha1-ni-x2"
 
 	shl		NUM_BLKS, 6	; convert to bytes
@@ -548,6 +559,16 @@ done_hash:
 	clear_all_xmms_sse_asm
 %endif
 
+	movdqa		xmm6, [rsp + frame.XMM_SAVE]
+	movdqa		xmm7, [rsp + frame.XMM_SAVE + 16],
+	movdqa		xmm8, [rsp + frame.XMM_SAVE + 16*2]
+	movdqa		xmm9, [rsp + frame.XMM_SAVE + 16*3]
+	movdqa		xmm10, [rsp + frame.XMM_SAVE + 16*4]
+	movdqa		xmm11, [rsp + frame.XMM_SAVE + 16*5]
+	movdqa		xmm12, [rsp + frame.XMM_SAVE + 16*6]
+	movdqa		xmm13, [rsp + frame.XMM_SAVE + 16*7]
+	movdqa		xmm14, [rsp + frame.XMM_SAVE + 16*8]
+	movdqa		xmm15, [rsp + frame.XMM_SAVE + 16*9]
 	add		rsp, frame_size
 
 	ret

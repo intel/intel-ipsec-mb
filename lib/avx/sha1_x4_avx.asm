@@ -230,7 +230,7 @@ mksection .text
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;; FRAMESZ must be an odd multiple of 8
-%define FRAMESZ	16*16 + 8
+%define FRAMESZ	16*16 + 16*10 + 8
 
 %define VMOVPS	vmovdqu
 
@@ -354,6 +354,19 @@ MKGLOBAL(sha1_mult_avx,function,internal)
 sha1_mult_avx:
 
 	sub	rsp, FRAMESZ
+
+%ifndef LINUX
+        vmovdqa  [rsp + 16*16 + 0*16], xmm6
+        vmovdqa  [rsp + 16*16 + 1*16], xmm7
+        vmovdqa  [rsp + 16*16 + 2*16], xmm8
+        vmovdqa  [rsp + 16*16 + 3*16], xmm9
+        vmovdqa  [rsp + 16*16 + 4*16], xmm10
+        vmovdqa  [rsp + 16*16 + 5*16], xmm11
+        vmovdqa  [rsp + 16*16 + 6*16], xmm12
+        vmovdqa  [rsp + 16*16 + 7*16], xmm13
+        vmovdqa  [rsp + 16*16 + 8*16], xmm14
+        vmovdqa  [rsp + 16*16 + 9*16], xmm15
+%endif
 
         ;; Initialize digests
 	vmovdqa	A, [arg1 + 0*SHA1_DIGEST_ROW_SIZE]
@@ -481,6 +494,27 @@ lloop:
 %endrep
 %endif
 
+%ifndef LINUX
+        vmovdqa  xmm6, [rsp + 16*16 + 0*16]
+        vmovdqa  xmm7, [rsp + 16*16 + 1*16]
+        vmovdqa  xmm8, [rsp + 16*16 + 2*16]
+        vmovdqa  xmm9, [rsp + 16*16 + 3*16]
+        vmovdqa  xmm10, [rsp + 16*16 + 4*16]
+        vmovdqa  xmm11, [rsp + 16*16 + 5*16]
+        vmovdqa  xmm12, [rsp + 16*16 + 6*16]
+        vmovdqa  xmm13, [rsp + 16*16 + 7*16]
+        vmovdqa  xmm14, [rsp + 16*16 + 8*16]
+        vmovdqa  xmm15, [rsp + 16*16 + 9*16]
+
+%ifdef SAFE_DATA
+	; xmm0 already 0
+%assign i 0
+%rep 10
+        vmovdqa	[rsp + 16*16 + i*16], xmm0
+%assign i (i+1)
+%endrep
+%endif
+%endif
 	add 	rsp, FRAMESZ
 	ret
 

@@ -228,7 +228,7 @@ mksection .text
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-%define FRAMESZ	16*16 + 8
+%define FRAMESZ	16*16 + 16*10 + 8
 
 %define MOVPS	movdqu
 
@@ -353,6 +353,18 @@ sha1_mult_sse:
 
 	sub	rsp, FRAMESZ
 
+%ifndef LINUX
+        movdqa  [rsp + 16*16 + 0*16], xmm6
+        movdqa  [rsp + 16*16 + 1*16], xmm7
+        movdqa  [rsp + 16*16 + 2*16], xmm8
+        movdqa  [rsp + 16*16 + 3*16], xmm9
+        movdqa  [rsp + 16*16 + 4*16], xmm10
+        movdqa  [rsp + 16*16 + 5*16], xmm11
+        movdqa  [rsp + 16*16 + 6*16], xmm12
+        movdqa  [rsp + 16*16 + 7*16], xmm13
+        movdqa  [rsp + 16*16 + 8*16], xmm14
+        movdqa  [rsp + 16*16 + 9*16], xmm15
+%endif
 	;; Initialize digests
 	movdqa	A, [arg1 + 0*SHA1_DIGEST_ROW_SIZE]
 	movdqa	B, [arg1 + 1*SHA1_DIGEST_ROW_SIZE]
@@ -472,15 +484,35 @@ lloop:
 
         ;; Clear stack frame (16*16 bytes)
 %ifdef SAFE_DATA
-        pxor    xmm0, xmm0
+	clear_all_xmms_sse_asm
 %assign i 0
 %rep 16
         movdqa	[rsp + i*16], xmm0
 %assign i (i+1)
 %endrep
-	clear_all_xmms_sse_asm
 %endif
 
+%ifndef LINUX
+        movdqa  xmm6, [rsp + 16*16 + 0*16]
+        movdqa  xmm7, [rsp + 16*16 + 1*16]
+        movdqa  xmm8, [rsp + 16*16 + 2*16]
+        movdqa  xmm9, [rsp + 16*16 + 3*16]
+        movdqa  xmm10, [rsp + 16*16 + 4*16]
+        movdqa  xmm11, [rsp + 16*16 + 5*16]
+        movdqa  xmm12, [rsp + 16*16 + 6*16]
+        movdqa  xmm13, [rsp + 16*16 + 7*16]
+        movdqa  xmm14, [rsp + 16*16 + 8*16]
+        movdqa  xmm15, [rsp + 16*16 + 9*16]
+
+%ifdef SAFE_DATA
+	; xmm0 already 0
+%assign i 0
+%rep 10
+        movdqa	[rsp + 16*16 + i*16], xmm0
+%assign i (i+1)
+%endrep
+%endif
+%endif
 	add 	rsp, FRAMESZ
 	ret
 

@@ -146,7 +146,7 @@ mksection .text
 
 ;; Assume stack aligned to 32 bytes before call
 ;; Therefore FRAMESIZE mod 32 must be 32-8 = 24
-%define FRAMESZ	32*16 + 24
+%define FRAMESZ	32*16 + 16*10 + 24
 
 %define VMOVPS	vmovups
 
@@ -368,6 +368,19 @@ MKGLOBAL(sha1_x8_avx2,function,internal)
 sha1_x8_avx2:
 	sub	rsp, FRAMESZ
 
+%ifndef LINUX
+        vmovdqa  [rsp + 32*16 + 0*16], xmm6
+        vmovdqa  [rsp + 32*16 + 1*16], xmm7
+        vmovdqa  [rsp + 32*16 + 2*16], xmm8
+        vmovdqa  [rsp + 32*16 + 3*16], xmm9
+        vmovdqa  [rsp + 32*16 + 4*16], xmm10
+        vmovdqa  [rsp + 32*16 + 5*16], xmm11
+        vmovdqa  [rsp + 32*16 + 6*16], xmm12
+        vmovdqa  [rsp + 32*16 + 7*16], xmm13
+        vmovdqa  [rsp + 32*16 + 8*16], xmm14
+        vmovdqa  [rsp + 32*16 + 9*16], xmm15
+%endif
+
 	;; Initialize digests
 	vmovdqu	A, [state + 0*SHA1_DIGEST_ROW_SIZE]
 	vmovdqu	B, [state + 1*SHA1_DIGEST_ROW_SIZE]
@@ -516,6 +529,27 @@ lloop:
 %endrep
 %endif
 
+%ifndef LINUX
+        vmovdqa  xmm6, [rsp + 32*16 + 0*16]
+        vmovdqa  xmm7, [rsp + 32*16 + 1*16]
+        vmovdqa  xmm8, [rsp + 32*16 + 2*16]
+        vmovdqa  xmm9, [rsp + 32*16 + 3*16]
+        vmovdqa  xmm10, [rsp + 32*16 + 4*16]
+        vmovdqa  xmm11, [rsp + 32*16 + 5*16]
+        vmovdqa  xmm12, [rsp + 32*16 + 6*16]
+        vmovdqa  xmm13, [rsp + 32*16 + 7*16]
+        vmovdqa  xmm14, [rsp + 32*16 + 8*16]
+        vmovdqa  xmm15, [rsp + 32*16 + 9*16]
+
+%ifdef SAFE_DATA
+	; xmm0 already 0
+%assign i 0
+%rep 10
+        vmovdqa	[rsp + 32*16 + i*16], xmm0
+%assign i (i+1)
+%endrep
+%endif
+%endif
 	add 	rsp, FRAMESZ
 
 	ret
