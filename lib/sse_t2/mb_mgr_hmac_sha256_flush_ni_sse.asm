@@ -148,7 +148,7 @@ copy_lane_data:
         je	len_is_0
 
 	; set length lane to 0
-        mov	dword [state + _lens_sha256 + idx*2], 0
+        mov	dword [state + _lens_sha256], 0
 
         ; "state" and "args" are the same address, arg1
 	; len is arg2

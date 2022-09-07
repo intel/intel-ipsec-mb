@@ -65,11 +65,8 @@ endstruc
 %define args            arg1
 %define NUM_BLKS 	arg2
 %define lane            arg3
-%define tmp             arg4
 
 %define INP		r10
-
-%define SHA256CONSTANTS	r11
 
 ;; MSG MUST be xmm0 (implicit argument)
 %define MSG		xmm0
@@ -194,7 +191,6 @@ sha256_ni_x1:
 	palignr		STATE0, STATE1, 8	; ABEF
 	pblendw		STATE1, MSGTMP4, 0xF0	; CDGH
 
-	lea		SHA256CONSTANTS,[rel K256]
 	movdqa		SHUF_MASK, [rel PSHUFFLE_BYTE_FLIP_MASK]
 
 .loop0:
@@ -206,7 +202,7 @@ sha256_ni_x1:
 	movdqu		MSG, [INP + 0*16]
 	pshufb		MSG, SHUF_MASK
 	movdqa		MSGTMP0, MSG
-	paddd		MSG, [SHA256CONSTANTS + 0*16]
+	paddd		MSG, [rel K256 + 0*16]
 	sha256rnds2	STATE1, STATE0, MSG	; MSG is implicit argument
 	pshufd 		MSG, MSG, 0x0E
 	sha256rnds2	STATE0, STATE1, MSG	; MSG is implicit argument
@@ -215,7 +211,7 @@ sha256_ni_x1:
 	movdqu		MSG, [INP + 1*16]
 	pshufb		MSG, SHUF_MASK
 	movdqa		MSGTMP1, MSG
-	paddd		MSG, [SHA256CONSTANTS + 1*16]
+	paddd		MSG, [rel K256 + 1*16]
 	sha256rnds2	STATE1, STATE0, MSG	; MSG is implicit argument
 	pshufd 		MSG, MSG, 0x0E
 	sha256rnds2	STATE0, STATE1, MSG	; MSG is implicit argument
@@ -225,7 +221,7 @@ sha256_ni_x1:
 	movdqu		MSG, [INP + 2*16]
 	pshufb		MSG, SHUF_MASK
 	movdqa		MSGTMP2, MSG
-	paddd		MSG, [SHA256CONSTANTS + 2*16]
+	paddd		MSG, [rel K256 + 2*16]
 	sha256rnds2	STATE1, STATE0, MSG	; MSG is implicit argument
 	pshufd 		MSG, MSG, 0x0E
 	sha256rnds2	STATE0, STATE1, MSG	; MSG is implicit argument
@@ -235,7 +231,7 @@ sha256_ni_x1:
 	movdqu		MSG, [INP + 3*16]
 	pshufb		MSG, SHUF_MASK
 	movdqa		MSGTMP3, MSG
-	paddd		MSG, [SHA256CONSTANTS + 3*16]
+	paddd		MSG, [rel K256 + 3*16]
 	sha256rnds2	STATE1, STATE0, MSG	; MSG is implicit argument
 	movdqa		MSGTMP, MSGTMP3
 	palignr		MSGTMP, MSGTMP2, 4
@@ -247,7 +243,7 @@ sha256_ni_x1:
 
 	;; Rounds 16-19
 	movdqa		MSG, MSGTMP0
-	paddd		MSG, [SHA256CONSTANTS + 4*16]
+	paddd		MSG, [rel K256 + 4*16]
 	sha256rnds2	STATE1, STATE0, MSG	; MSG is implicit argument
 	movdqa		MSGTMP, MSGTMP0
 	palignr		MSGTMP, MSGTMP3, 4
@@ -259,7 +255,7 @@ sha256_ni_x1:
 
 	;; Rounds 20-23
 	movdqa		MSG, MSGTMP1
-	paddd		MSG, [SHA256CONSTANTS + 5*16]
+	paddd		MSG, [rel K256 + 5*16]
 	sha256rnds2	STATE1, STATE0, MSG	; MSG is implicit argument
 	movdqa		MSGTMP, MSGTMP1
 	palignr		MSGTMP, MSGTMP0, 4
@@ -271,7 +267,7 @@ sha256_ni_x1:
 
 	;; Rounds 24-27
 	movdqa		MSG, MSGTMP2
-	paddd		MSG, [SHA256CONSTANTS + 6*16]
+	paddd		MSG, [rel K256 + 6*16]
 	sha256rnds2	STATE1, STATE0, MSG	; MSG is implicit argument
 	movdqa		MSGTMP, MSGTMP2
 	palignr		MSGTMP, MSGTMP1, 4
@@ -283,7 +279,7 @@ sha256_ni_x1:
 
 	;; Rounds 28-31
 	movdqa		MSG, MSGTMP3
-	paddd		MSG, [SHA256CONSTANTS + 7*16]
+	paddd		MSG, [rel K256 + 7*16]
 	sha256rnds2	STATE1, STATE0, MSG	; MSG is implicit argument
 	movdqa		MSGTMP, MSGTMP3
 	palignr		MSGTMP, MSGTMP2, 4
@@ -295,7 +291,7 @@ sha256_ni_x1:
 
 	;; Rounds 32-35
 	movdqa		MSG, MSGTMP0
-	paddd		MSG, [SHA256CONSTANTS + 8*16]
+	paddd		MSG, [rel K256 + 8*16]
 	sha256rnds2	STATE1, STATE0, MSG	; MSG is implicit argument
 	movdqa		MSGTMP, MSGTMP0
 	palignr		MSGTMP, MSGTMP3, 4
@@ -307,7 +303,7 @@ sha256_ni_x1:
 
 	;; Rounds 36-39
         movdqa		MSG, MSGTMP1
-	paddd		MSG, [SHA256CONSTANTS + 9*16]
+	paddd		MSG, [rel K256 + 9*16]
 	sha256rnds2	STATE1, STATE0, MSG	; MSG is implicit argument
 	movdqa		MSGTMP, MSGTMP1
 	palignr		MSGTMP, MSGTMP0, 4
@@ -319,7 +315,7 @@ sha256_ni_x1:
 
 	;; Rounds 40-43
 	movdqa		MSG, MSGTMP2
-	paddd		MSG, [SHA256CONSTANTS + 10*16]
+	paddd		MSG, [rel K256 + 10*16]
 	sha256rnds2	STATE1, STATE0, MSG	; MSG is implicit argument
 	movdqa		MSGTMP, MSGTMP2
 	palignr		MSGTMP, MSGTMP1, 4
@@ -331,7 +327,7 @@ sha256_ni_x1:
 
 	;; Rounds 44-47
 	movdqa		MSG, MSGTMP3
-	paddd		MSG, [SHA256CONSTANTS + 11*16]
+	paddd		MSG, [rel K256 + 11*16]
 	sha256rnds2	STATE1, STATE0, MSG	; MSG is implicit argument
 	movdqa		MSGTMP, MSGTMP3
 	palignr		MSGTMP, MSGTMP2, 4
@@ -343,7 +339,7 @@ sha256_ni_x1:
 
 	;; Rounds 48-51
 	movdqa		MSG, MSGTMP0
-	paddd		MSG, [SHA256CONSTANTS + 12*16]
+	paddd		MSG, [rel K256 + 12*16]
 	sha256rnds2	STATE1, STATE0, MSG	; MSG is implicit argument
 	movdqa		MSGTMP, MSGTMP0
 	palignr		MSGTMP, MSGTMP3, 4
@@ -355,7 +351,7 @@ sha256_ni_x1:
 
 	;; Rounds 52-55
 	movdqa		MSG, MSGTMP1
-	paddd		MSG, [SHA256CONSTANTS + 13*16]
+	paddd		MSG, [rel K256 + 13*16]
 	sha256rnds2	STATE1, STATE0, MSG	; MSG is implicit argument
 	movdqa		MSGTMP, MSGTMP1
 	palignr		MSGTMP, MSGTMP0, 4
@@ -366,7 +362,7 @@ sha256_ni_x1:
 
 	;; Rounds 56-59
 	movdqa		MSG, MSGTMP2
-	paddd		MSG, [SHA256CONSTANTS + 14*16]
+	paddd		MSG, [rel K256 + 14*16]
 	sha256rnds2	STATE1, STATE0, MSG	; MSG is implicit argument
 	movdqa		MSGTMP, MSGTMP2
 	palignr		MSGTMP, MSGTMP1, 4
@@ -377,7 +373,7 @@ sha256_ni_x1:
 
 	;; Rounds 60-63
 	movdqa		MSG, MSGTMP3
-	paddd		MSG, [SHA256CONSTANTS + 15*16]
+	paddd		MSG, [rel K256 + 15*16]
 	sha256rnds2	STATE1, STATE0, MSG	; MSG is implicit argument
 	pshufd 		MSG, MSG, 0x0E
 	sha256rnds2	STATE0, STATE1, MSG	; MSG is implicit argument
@@ -389,8 +385,6 @@ sha256_ni_x1:
 	cmp		INP, NUM_BLKS
 	jne		.loop0
 
-	;; update data pointers
-	mov		[args + _data_ptr_sha256 + lane*PTR_SZ], INP
 
 	; Reorder for writeback
 	pshufd		STATE0, STATE0, 0x1B	; FEBA
@@ -403,6 +397,9 @@ sha256_ni_x1:
 	movdqu		[args + lane + 0*16], STATE0
 	movdqu		[args + lane + 1*16], STATE1
         shr             lane, 5
+
+        ;; update data pointers
+	mov		[args + _data_ptr_sha256 + lane*PTR_SZ], INP
 
 done_hash:
 
