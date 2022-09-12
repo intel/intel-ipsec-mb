@@ -999,6 +999,7 @@ typedef uint32_t (*crc32_fn_t)(const void *, const uint64_t);
 
 #define IMB_FLAG_SHANI_OFF (1ULL << 0) /**< disable use of SHANI extension */
 #define IMB_FLAG_AESNI_OFF (1ULL << 1) /**< disable use of AESNI extension */
+#define IMB_FLAG_GFNI_OFF (1ULL << 2) /**< disable use of GFNI extension */
 
 /**
  * Multi-buffer manager detected features
@@ -1305,6 +1306,8 @@ IMB_DLL_EXPORT const char *imb_get_strerror(int errnum);
  *     IMB_FLAG_SHANI_OFF - disable use (and detection) of SHA extensions,
  *                          currently SHANI is only available for SSE
  *     IMB_FLAG_AESNI_OFF - disable use (and detection) of AES extensions.
+ *     IMB_FLAG_GFNI_OFF - disable use (and detection) of
+ *                         Galois Field extensions.
  *
  * @return Pointer to allocated memory for IMB_MGR structure
  * @retval NULL on allocation error
@@ -1341,6 +1344,8 @@ IMB_DLL_EXPORT size_t imb_get_mb_mgr_size(void);
  *     IMB_FLAG_SHANI_OFF - disable use (and detection) of SHA extensions,
  *                          currently SHANI is only available for SSE
  *     IMB_FLAG_AESNI_OFF - disable use (and detection) of AES extensions.
+ *     IMB_FLAG_GFNI_OFF - disable use (and detection)
+ *                         of Galois Field extensions.
  *
  * @param [in] reset_mgr if 0, IMB_MGR structure is not cleared, else it is.
  *

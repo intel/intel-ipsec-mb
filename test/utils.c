@@ -189,6 +189,10 @@ update_flags_and_archs(const char *arg,
                 *flags &= (~IMB_FLAG_SHANI_OFF);
         else if (strcmp(arg, "--shani-off") == 0)
                 *flags |= IMB_FLAG_SHANI_OFF;
+        else if (strcmp(arg, "--gfni-on") == 0)
+                *flags &= (~IMB_FLAG_GFNI_OFF);
+        else if (strcmp(arg, "--gfni-off") == 0)
+                *flags |= IMB_FLAG_GFNI_OFF;
         else
                 match = 0;
         return match;

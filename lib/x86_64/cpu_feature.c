@@ -250,6 +250,9 @@ uint64_t cpu_feature_adjust(const uint64_t flags, uint64_t features)
         if (flags & IMB_FLAG_AESNI_OFF)
                 features &= ~IMB_FEATURE_AESNI;
 
+        if (flags & IMB_FLAG_GFNI_OFF)
+                features &= ~IMB_FEATURE_GFNI;
+
         return features;
 }
 

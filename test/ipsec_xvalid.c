@@ -2707,6 +2707,8 @@ static void usage(const char *app_name)
                 "--aesni-emu: Do AESNI_EMU (disabled by default)\n"
                 "--shani-on: use SHA extensions, default: auto-detect\n"
                 "--shani-off: don't use SHA extensions\n"
+                "--gfni-on: use Galois Field extensions, default: auto-detect\n"
+                "--gfni-off: don't use Galois Field extensions\n"
                 "--cipher-iv-size: size of cipher IV.\n"
                 "--auth-iv-size: size of authentication IV.\n"
                 "--tag-size: size of authentication tag\n"

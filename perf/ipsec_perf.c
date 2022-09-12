@@ -3260,6 +3260,8 @@ static void usage(void)
                 "-o val: Use <val> for the SHA size increment, default is 24\n"
                 "--shani-on: use SHA extensions, default: auto-detect\n"
                 "--shani-off: don't use SHA extensions\n"
+                "--gfni-on: use Galois Field extensions, default: auto-detect\n"
+                "--gfni-off: don't use Galois Field extensions\n"
                 "--force-job-api: use JOB API"
                 " (direct API used for GCM/GHASH/CHACHA20_POLY1305 API by default)\n"
                 "--gcm-sgl-api: use direct SGL API for GCM perf tests"
@@ -3729,6 +3731,10 @@ int main(int argc, char *argv[])
                         flags &= (~IMB_FLAG_SHANI_OFF);
                 } else if (strcmp(argv[i], "--shani-off") == 0) {
                         flags |= IMB_FLAG_SHANI_OFF;
+                } else if (strcmp(argv[i], "--gfni-on") == 0) {
+                        flags &= (~IMB_FLAG_GFNI_OFF);
+                } else if (strcmp(argv[i], "--gfni-off") == 0) {
+                        flags |= IMB_FLAG_GFNI_OFF;
                 } else if (strcmp(argv[i], "--force-job-api") == 0) {
                         use_job_api = 1;
                 } else if (strcmp(argv[i], "--gcm-sgl-api") == 0) {

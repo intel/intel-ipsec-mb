@@ -257,6 +257,8 @@ usage(const char *name)
                 "--auto-detect: auto detects current architecture "
                 "to run the tests\n  Note: Auto detection "
                 "option now run by default and will be removed in the future\n"
+                "--gfni-on: use Galois Field extensions, default: auto-detect\n"
+                "--gfni-off: don't use Galois Field extensions\n"
 		"--shani-on: use SHA extensions, default: auto-detect\n"
 		"--shani-off: don't use SHA extensions\n", name);
 }
