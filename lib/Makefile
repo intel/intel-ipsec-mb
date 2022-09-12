@@ -248,6 +248,7 @@ SAFE_OPTIONS_MSG2="All safe options enabled by default."
 c_lib_objs := \
 	mb_mgr_avx.o \
 	mb_mgr_avx_t1.o \
+	mb_mgr_avx_t2.o \
 	mb_mgr_avx2.o \
 	mb_mgr_avx2_t1.o \
 	mb_mgr_avx2_t2.o \
