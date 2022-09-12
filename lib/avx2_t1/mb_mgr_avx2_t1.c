@@ -311,7 +311,6 @@ init_mb_mgr_avx2_t1_internal(IMB_MGR *state, const int reset_mgrs)
         }
 
         /* set handlers */
-        /* set handlers */
         state->get_next_job        = GET_NEXT_JOB;
         state->submit_job          = SUBMIT_JOB;
         state->submit_job_nocheck  = SUBMIT_JOB_NOCHECK;

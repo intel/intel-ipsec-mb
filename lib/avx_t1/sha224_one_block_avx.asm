@@ -25,7 +25,9 @@
 ;; OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;
 
-%define FUNC submit_job_hmac_sha_384_avx
-%define SHA_X_DIGEST_SIZE 384
+; This code schedules 1 blocks at a time, with 4 lanes per block
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-%include "avx/mb_mgr_hmac_sha512_submit_avx.asm"
+%define FUNC sha224_block_avx
+
+%include "avx_t1/sha256_one_block_avx.asm"

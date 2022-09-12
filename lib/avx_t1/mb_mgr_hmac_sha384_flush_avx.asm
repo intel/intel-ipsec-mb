@@ -25,9 +25,7 @@
 ;; OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;
 
-; This code schedules 1 blocks at a time, with 4 lanes per block
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+%define FUNC flush_job_hmac_sha_384_avx
+%define SHA_X_DIGEST_SIZE 384
 
-%define FUNC sha384_block_avx
-
-%include "avx/sha512_one_block_avx.asm"
+%include "avx_t1/mb_mgr_hmac_sha512_flush_avx.asm"

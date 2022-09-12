@@ -1,5 +1,5 @@
 ;;
-;; Copyright (c) 2020-2022, Intel Corporation
+;; Copyright (c) 2012-2022, Intel Corporation
 ;;
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
@@ -25,28 +25,13 @@
 ;; OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;
 
-;;; Routine to do 128 bit AES-CBC encryption in CBCS mode
-;;; performing 1:9 crypt:skip pattern to encrypt 1 block then
-;;; skip the following 9 blocks processing 4 buffers at a time.
-;;; Updates In and Out pointers at the end.
+;;; routine to do 128 bit AES XCBC
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; struct AES_ARGS {
-;;     void*    in[8];
-;;     void*    out[8];
-;;     UINT128* keys[8];
-;;     UINT128  IV[8];
-;; }
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; void aes_cbcs_1_9_enc_128_x8(AES_ARGS *args, UINT64 len);
-;; arg 1: ARG : addr of AES_ARGS structure
-;; arg 2: LEN : len (in units of bytes)
-%define FUNC     aes_cbcs_1_9_enc_128_x8
-%define MODE     CBC
-%define OFFSET   160
-%define ARG_IN   _aesarg_in
-%define ARG_OUT  _aesarg_out
-%define ARG_KEYS _aesarg_keys
-%define ARG_IV   _aesarg_IV
+%define FUNC     aes_xcbc_mac_128_x8
+%define MODE     CBC_XCBC_MAC
+%define OFFSET   16
+%define ARG_IN   _aesxcbcarg_in
+%define ARG_KEYS _aesxcbcarg_keys
+%define ARG_IV   _aesxcbcarg_ICV
 
-%include "avx/aes128_cbc_enc_x8_avx.asm"
+%include "avx_t1/aes128_cbc_enc_x8_avx.asm"

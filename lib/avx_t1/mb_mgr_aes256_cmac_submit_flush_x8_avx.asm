@@ -1,5 +1,5 @@
 ;;
-;; Copyright (c) 2019-2022, Intel Corporation
+;; Copyright (c) 2020-2022, Intel Corporation
 ;;
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
@@ -25,8 +25,8 @@
 ;; OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;
 
-%define CNTR_CCM_AVX
-%ifndef AES_CNTR_CCM_128
-%define AES_CNTR_CCM_128 aes_cntr_ccm_128_avx
-%endif
-%include "avx/aes128_cntr_by8_avx.asm"
+%define AES_CBC_MAC aes256_cbc_mac_x8
+%define SUBMIT_JOB_AES_CMAC_AUTH submit_job_aes256_cmac_auth_avx
+%define FLUSH_JOB_AES_CMAC_AUTH flush_job_aes256_cmac_auth_avx
+
+%include "avx_t1/mb_mgr_aes128_cmac_submit_flush_x8_avx.asm"

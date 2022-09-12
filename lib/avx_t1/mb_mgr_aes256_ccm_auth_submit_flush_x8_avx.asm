@@ -1,5 +1,5 @@
 ;;
-;; Copyright (c) 2012-2022, Intel Corporation
+;; Copyright (c) 2020-2022, Intel Corporation
 ;;
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
@@ -25,7 +25,11 @@
 ;; OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;
 
-%define FUNC submit_job_hmac_sha_224_avx
-%define SHA224
+%ifndef AES_CBC_MAC
+%define NROUNDS 13
+%define AES_CBC_MAC aes256_cbc_mac_x8
+%define SUBMIT_JOB_AES_CCM_AUTH submit_job_aes256_ccm_auth_avx
+%define FLUSH_JOB_AES_CCM_AUTH flush_job_aes256_ccm_auth_avx
+%endif
 
-%include "avx/mb_mgr_hmac_sha256_submit_avx.asm"
+%include "avx_t1/mb_mgr_aes128_ccm_auth_submit_flush_x8_avx.asm"

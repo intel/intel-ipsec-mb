@@ -25,6 +25,7 @@
 ;; OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;
 
-%define AES_CBC_ENC_X8 aes_cbc_enc_256_x8
-%define FLUSH_JOB_AES_ENC flush_job_aes256_enc_avx
-%include "avx/mb_mgr_aes128_cbc_enc_flush_avx.asm"
+%define FUNC submit_job_hmac_sha_384_avx
+%define SHA_X_DIGEST_SIZE 384
+
+%include "avx_t1/mb_mgr_hmac_sha512_submit_avx.asm"

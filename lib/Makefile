@@ -247,6 +247,7 @@ SAFE_OPTIONS_MSG2="All safe options enabled by default."
 #
 c_lib_objs := \
 	mb_mgr_avx.o \
+	mb_mgr_avx_t1.o \
 	mb_mgr_avx2.o \
 	mb_mgr_avx2_t1.o \
 	mb_mgr_avx2_t2.o \
@@ -848,10 +849,24 @@ ifeq ($(CC_HAS_CET),1)
 	mv $@.tmp $@
 endif
 
-$(OBJ_DIR)/%.o:avx/%.c
+$(OBJ_DIR)/%.o:avx_t1/%.c
 	$(CC) -MMD $(OPT_AVX) -c $(CFLAGS) $< -o $@
 
-$(OBJ_DIR)/%.o:avx/%.asm
+$(OBJ_DIR)/%.o:avx_t1/%.asm
+ifeq ($(USE_YASM),y)
+	$(YASM) $(YASM_FLAGS) $< -o $@
+else
+	$(NASM) -MD $(@:.o=.d) -MT $@ -o $@ $(NASM_FLAGS) $<
+endif
+ifeq ($(CC_HAS_CET),1)
+	$(LD) $(CET_LDFLAGS) -o $@.tmp $@
+	mv $@.tmp $@
+endif
+
+$(OBJ_DIR)/%.o:avx_t2/%.c
+	$(CC) -MMD $(OPT_AVX) -c $(CFLAGS) $< -o $@
+
+$(OBJ_DIR)/%.o:avx_t2/%.asm
 ifeq ($(USE_YASM),y)
 	$(YASM) $(YASM_FLAGS) $< -o $@
 else

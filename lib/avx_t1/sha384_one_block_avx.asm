@@ -25,13 +25,9 @@
 ;; OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;
 
-;;; routine to do 128 bit AES XCBC
+; This code schedules 1 blocks at a time, with 4 lanes per block
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-%define FUNC     aes_xcbc_mac_128_x8
-%define MODE     CBC_XCBC_MAC
-%define OFFSET   16
-%define ARG_IN   _aesxcbcarg_in
-%define ARG_KEYS _aesxcbcarg_keys
-%define ARG_IV   _aesxcbcarg_ICV
+%define FUNC sha384_block_avx
 
-%include "avx/aes128_cbc_enc_x8_avx.asm"
+%include "avx_t1/sha512_one_block_avx.asm"

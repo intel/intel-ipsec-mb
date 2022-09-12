@@ -1,5 +1,5 @@
 ;;
-;; Copyright (c) 2020-2022, Intel Corporation
+;; Copyright (c) 2012-2022, Intel Corporation
 ;;
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
@@ -25,12 +25,7 @@
 ;; OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;
 
-%ifndef AES_CBC_DEC_128_X8
-;; aes_cbcs_1_9_dec_128_avx(void *in, void *IV, void *keys, void *out,
-;;                          UINT64 num_bytes, void *next_iv)
-%define AES_CBC_DEC_128_X8 aes_cbcs_1_9_dec_128_avx
-%define OFFSET 160
-%define CBCS
-%endif
+%define FUNC submit_job_hmac_sha_224_avx
+%define SHA224
 
-%include "avx/aes128_cbc_dec_by8_avx.asm"
+%include "avx_t1/mb_mgr_hmac_sha256_submit_avx.asm"

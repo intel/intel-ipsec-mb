@@ -1,5 +1,5 @@
 ;;
-;; Copyright (c) 2022, Intel Corporation
+;; Copyright (c) 2019-2022, Intel Corporation
 ;;
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
@@ -25,9 +25,8 @@
 ;; OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;
 
-; routine to do AES ECB 256 encrypt/decrypt on 16n bytes doing AES by 8
-
-%define AES_ECB_NROUNDS 14
-
-%include "include/os.asm"
-%include "avx/aes128_ecb_by8_avx.asm"
+%define CNTR_CCM_AVX
+%ifndef AES_CNTR_CCM_128
+%define AES_CNTR_CCM_128 aes_cntr_ccm_128_avx
+%endif
+%include "avx_t1/aes128_cntr_by8_avx.asm"

@@ -548,7 +548,7 @@ EXPORTS
     get_next_burst_sse_t2                       @522
     get_next_burst_sse_t3                       @523
     get_next_burst_sse_no_aesni                 @524
-    get_next_burst_avx                          @525
+    get_next_burst_avx_t1                       @525
     get_next_burst_avx2_t1                      @526
     get_next_burst_avx2_t2                      @527
     get_next_burst_avx512_t1                    @528
@@ -557,7 +557,7 @@ EXPORTS
     submit_burst_sse_t2                         @531
     submit_burst_sse_t3                         @532
     submit_burst_sse_no_aesni                   @533
-    submit_burst_avx                            @534
+    submit_burst_avx_t1                         @534
     submit_burst_avx2_t1                        @535
     submit_burst_avx2_t2                        @536
     submit_burst_avx512_t1                      @537
@@ -575,7 +575,7 @@ EXPORTS
     flush_burst_sse_t2                          @549
     flush_burst_sse_t3                          @550
     flush_burst_sse_no_aesni                    @551
-    flush_burst_avx                             @552
+    flush_burst_avx_t1                          @552
     flush_burst_avx2_t1                         @553
     flush_burst_avx2_t2                         @554
     flush_burst_avx512_t1                       @555
@@ -584,7 +584,7 @@ EXPORTS
     submit_cipher_burst_sse_t2                  @558
     submit_cipher_burst_sse_t3                  @559
     submit_cipher_burst_sse_no_aesni            @560
-    submit_cipher_burst_avx                     @561
+    submit_cipher_burst_avx_t1                  @561
     submit_cipher_burst_avx2_t1                 @562
     submit_cipher_burst_avx2_t2                 @563
     submit_cipher_burst_avx512_t1               @564
@@ -602,7 +602,7 @@ EXPORTS
     submit_hash_burst_sse_t2                    @576
     submit_hash_burst_sse_t3                    @577
     submit_hash_burst_sse_no_aesni              @578
-    submit_hash_burst_avx                       @579
+    submit_hash_burst_avx_t1                    @579
     submit_hash_burst_avx2_t1                   @580
     submit_hash_burst_avx2_t2                   @581
     submit_hash_burst_avx512_t1                 @582
@@ -611,7 +611,7 @@ EXPORTS
     submit_hash_burst_nocheck_sse_t2            @585
     submit_hash_burst_nocheck_sse_t3            @586
     submit_hash_burst_nocheck_sse_no_aesni      @587
-    submit_hash_burst_nocheck_avx               @588
+    submit_hash_burst_nocheck_avx_t1            @588
     submit_hash_burst_nocheck_avx2_t1           @589
     submit_hash_burst_nocheck_avx2_t2           @590
     submit_hash_burst_nocheck_avx512_t1         @591
@@ -619,42 +619,48 @@ EXPORTS
     flush_job_sse_t1				@593
     flush_job_sse_t2				@594
     flush_job_sse_t3				@595
-    flush_job_avx2_t1				@596
-    flush_job_avx2_t2				@597
-    flush_job_avx512_t1				@598
-    flush_job_avx512_t2				@599
-    queue_size_sse_t1				@600
-    queue_size_sse_t2				@601
-    queue_size_sse_t3				@602
-    queue_size_avx2_t1				@603
-    queue_size_avx2_t2				@604
-    queue_size_avx512_t1			@605
-    queue_size_avx512_t2			@606
-    submit_job_sse_t1				@607
-    submit_job_sse_t2				@608
-    submit_job_sse_t3				@609
-    submit_job_avx2_t1				@610
-    submit_job_avx2_t2				@611
-    submit_job_avx512_t1			@612
-    submit_job_avx512_t2			@613
-    submit_job_nocheck_sse_t1			@614
-    submit_job_nocheck_sse_t2			@615
-    submit_job_nocheck_sse_t3			@616
-    submit_job_nocheck_avx2_t1			@617
-    submit_job_nocheck_avx2_t2			@618
-    submit_job_nocheck_avx512_t1		@619
-    submit_job_nocheck_avx512_t2		@620
-    get_next_job_sse_t1				@621
-    get_next_job_sse_t2                		@622
-    get_next_job_sse_t3                		@623
-    get_next_job_avx2_t1			@624
-    get_next_job_avx2_t2                	@625
-    get_next_job_avx512_t1			@626
-    get_next_job_avx512_t2                	@627
-    get_completed_job_sse_t1              	@628
-    get_completed_job_sse_t2            	@629
-    get_completed_job_sse_t3            	@630
-    get_completed_job_avx2_t1              	@631
-    get_completed_job_avx2_t2            	@632
-    get_completed_job_avx512_t1              	@633
-    get_completed_job_avx512_t2            	@634
+    flush_job_avx_t1				@596
+    flush_job_avx2_t1				@597
+    flush_job_avx2_t2				@598
+    flush_job_avx512_t1				@599
+    flush_job_avx512_t2				@601
+    queue_size_sse_t1				@602
+    queue_size_sse_t2				@603
+    queue_size_sse_t3				@604
+    queue_size_avx_t1				@605
+    queue_size_avx2_t1				@606
+    queue_size_avx2_t2				@607
+    queue_size_avx512_t1			@608
+    queue_size_avx512_t2			@609
+    submit_job_sse_t1				@610
+    submit_job_sse_t2				@611
+    submit_job_sse_t3				@612
+    submit_job_avx_t1				@613
+    submit_job_avx2_t1				@614
+    submit_job_avx2_t2				@615
+    submit_job_avx512_t1			@616
+    submit_job_avx512_t2			@617
+    submit_job_nocheck_sse_t1			@618
+    submit_job_nocheck_sse_t2			@619
+    submit_job_nocheck_sse_t3			@620
+    submit_job_nocheck_avx_t1			@621
+    submit_job_nocheck_avx2_t1			@622
+    submit_job_nocheck_avx2_t2			@623
+    submit_job_nocheck_avx512_t1		@624
+    submit_job_nocheck_avx512_t2		@625
+    get_next_job_sse_t1				@626
+    get_next_job_sse_t2                		@627
+    get_next_job_sse_t3                		@628
+    get_next_job_avx_t1				@629
+    get_next_job_avx2_t1			@630
+    get_next_job_avx2_t2                	@631
+    get_next_job_avx512_t1			@632
+    get_next_job_avx512_t2                	@633
+    get_completed_job_sse_t1              	@634
+    get_completed_job_sse_t2            	@635
+    get_completed_job_sse_t3            	@636
+    get_completed_job_avx_t1              	@637
+    get_completed_job_avx2_t1              	@638
+    get_completed_job_avx2_t2            	@639
+    get_completed_job_avx512_t1              	@640
+    get_completed_job_avx512_t2            	@641

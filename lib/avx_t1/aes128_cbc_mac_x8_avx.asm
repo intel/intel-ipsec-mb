@@ -1,5 +1,5 @@
 ;;
-;; Copyright (c) 2012-2022, Intel Corporation
+;; Copyright (c) 2017-2022, Intel Corporation
 ;;
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
@@ -25,6 +25,13 @@
 ;; OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;
 
-%define AES_CBC_ENC_X8 aes_cbc_enc_192_x8
-%define SUBMIT_JOB_AES_ENC submit_job_aes192_enc_avx
-%include "avx/mb_mgr_aes128_cbc_enc_submit_avx.asm"
+;;; Routine to compute CBC-MAC. It is based on 128 bit CBC AES encrypt code.
+
+%define FUNC     aes128_cbc_mac_x8
+%define MODE     CBC_XCBC_MAC
+%define OFFSET   16
+%define ARG_IN   _aesarg_in
+%define ARG_KEYS _aesarg_keys
+%define ARG_IV   _aesarg_IV
+
+%include "avx_t1/aes128_cbc_enc_x8_avx.asm"

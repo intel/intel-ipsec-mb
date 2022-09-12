@@ -26,5 +26,6 @@
 ;  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 ;  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-%define GCM256_MODE 1
-%include "avx/gcm_avx_gen2.asm"
+
+%define GCM128_MODE 1
+%include "avx_t1/gcm_avx_gen2.asm"

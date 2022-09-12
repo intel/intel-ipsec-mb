@@ -1,5 +1,5 @@
 /*******************************************************************************
- Copyright (c) 2012-2022, Intel Corporation
+ Copyright (c) 2022, Intel Corporation
 
  Redistribution and use in source and binary forms, with or without
  modification, are permitted provided that the following conditions are met:
@@ -50,57 +50,32 @@
 #define SAVE_XMMS               save_xmms_avx
 #define RESTORE_XMMS            restore_xmms_avx
 
-#define SUBMIT_JOB_AES_CBC_128_ENC submit_job_aes128_enc_avx
-#define SUBMIT_JOB_AES_CBC_128_DEC submit_job_aes128_dec_avx
-#define FLUSH_JOB_AES_CBC_128_ENC  flush_job_aes128_enc_avx
-#define SUBMIT_JOB_AES_CBC_192_ENC submit_job_aes192_enc_avx
-#define SUBMIT_JOB_AES_CBC_192_DEC submit_job_aes192_dec_avx
-#define FLUSH_JOB_AES_CBC_192_ENC  flush_job_aes192_enc_avx
-#define SUBMIT_JOB_AES_CBC_256_ENC submit_job_aes256_enc_avx
-#define SUBMIT_JOB_AES_CBC_256_DEC submit_job_aes256_dec_avx
-#define FLUSH_JOB_AES_CBC_256_ENC  flush_job_aes256_enc_avx
-#define SUBMIT_JOB_AES_ECB_128_ENC submit_job_aes_ecb_128_enc_avx
-#define SUBMIT_JOB_AES_ECB_128_DEC submit_job_aes_ecb_128_dec_avx
-#define SUBMIT_JOB_AES_ECB_192_ENC submit_job_aes_ecb_192_enc_avx
-#define SUBMIT_JOB_AES_ECB_192_DEC submit_job_aes_ecb_192_dec_avx
-#define SUBMIT_JOB_AES_ECB_256_ENC submit_job_aes_ecb_256_enc_avx
-#define SUBMIT_JOB_AES_ECB_256_DEC submit_job_aes_ecb_256_dec_avx
+/* JOB API */
+#define SUBMIT_JOB         submit_job_avx_t1
+#define FLUSH_JOB          flush_job_avx_t1
+#define QUEUE_SIZE         queue_size_avx_t1
+#define SUBMIT_JOB_NOCHECK submit_job_nocheck_avx_t1
+#define GET_NEXT_JOB       get_next_job_avx_t1
+#define GET_COMPLETED_JOB  get_completed_job_avx_t1
+#define GET_NEXT_BURST     get_next_burst_avx_t1
+#define SUBMIT_BURST       submit_burst_avx_t1
+#define SUBMIT_BURST_NOCHECK submit_burst_nocheck_avx_t1
+#define FLUSH_BURST       flush_burst_avx_t1
+#define SUBMIT_CIPHER_BURST submit_cipher_burst_avx_t1
+#define SUBMIT_CIPHER_BURST_NOCHECK submit_cipher_burst_nocheck_avx_t1
+#define SUBMIT_HASH_BURST submit_hash_burst_avx_t1
+#define SUBMIT_HASH_BURST_NOCHECK submit_hash_burst_nocheck_avx_t1
 
-#define SUBMIT_JOB_ZUC_EEA3   submit_job_zuc_eea3_avx
-#define FLUSH_JOB_ZUC_EEA3    flush_job_zuc_eea3_avx
-#define SUBMIT_JOB_ZUC_EIA3   submit_job_zuc_eia3_avx
-#define FLUSH_JOB_ZUC_EIA3    flush_job_zuc_eia3_avx
-#define SUBMIT_JOB_ZUC256_EEA3   submit_job_zuc256_eea3_avx
-#define FLUSH_JOB_ZUC256_EEA3    flush_job_zuc256_eea3_avx
-#define SUBMIT_JOB_ZUC256_EIA3   submit_job_zuc256_eia3_avx
-#define FLUSH_JOB_ZUC256_EIA3    flush_job_zuc256_eia3_avx
+/* Hash */
+#define SUBMIT_JOB_HASH    SUBMIT_JOB_HASH_AVX
+#define FLUSH_JOB_HASH     FLUSH_JOB_HASH_AVX
 
-#define AES_CBC_DEC_128       aes_cbc_dec_128_avx
-#define AES_CBC_DEC_192       aes_cbc_dec_192_avx
-#define AES_CBC_DEC_256       aes_cbc_dec_256_avx
+/* Cipher encrypt / decrypt */
+#define SUBMIT_JOB_CIPHER_ENC SUBMIT_JOB_CIPHER_ENC_AVX
+#define FLUSH_JOB_CIPHER_ENC  FLUSH_JOB_CIPHER_ENC_AVX
+#define SUBMIT_JOB_CIPHER_DEC SUBMIT_JOB_CIPHER_DEC_AVX
 
-#define AES_CTR_128       aes_cntr_128_avx
-#define AES_CTR_192       aes_cntr_192_avx
-#define AES_CTR_256       aes_cntr_256_avx
-#define AES_CTR_128_BIT   aes_cntr_bit_128_avx
-#define AES_CTR_192_BIT   aes_cntr_bit_192_avx
-#define AES_CTR_256_BIT   aes_cntr_bit_256_avx
-
-#define AES_CNTR_CCM_128   aes_cntr_ccm_128_avx
-#define AES_CNTR_CCM_256   aes_cntr_ccm_256_avx
-
-#define AES_ECB_ENC_128       aes_ecb_enc_128_avx
-#define AES_ECB_ENC_192       aes_ecb_enc_192_avx
-#define AES_ECB_ENC_256       aes_ecb_enc_256_avx
-#define AES_ECB_DEC_128       aes_ecb_dec_128_avx
-#define AES_ECB_DEC_192       aes_ecb_dec_192_avx
-#define AES_ECB_DEC_256       aes_ecb_dec_256_avx
-
-#define SUBMIT_JOB_PON_ENC        submit_job_pon_enc_avx
-#define SUBMIT_JOB_PON_DEC        submit_job_pon_dec_avx
-#define SUBMIT_JOB_PON_ENC_NO_CTR submit_job_pon_enc_no_ctr_avx
-#define SUBMIT_JOB_PON_DEC_NO_CTR submit_job_pon_dec_no_ctr_avx
-
+/* AES-GCM */
 #define AES_GCM_DEC_IV_128   aes_gcm_dec_var_iv_128_avx_gen2
 #define AES_GCM_ENC_IV_128   aes_gcm_enc_var_iv_128_avx_gen2
 #define AES_GCM_DEC_IV_192   aes_gcm_dec_var_iv_192_avx_gen2
@@ -111,9 +86,88 @@
 #define SUBMIT_JOB_AES_GCM_DEC submit_job_aes_gcm_dec_avx
 #define SUBMIT_JOB_AES_GCM_ENC submit_job_aes_gcm_enc_avx
 
+/* AES-CBC */
+#define SUBMIT_JOB_AES_CBC_128_ENC submit_job_aes128_enc_avx
+#define SUBMIT_JOB_AES_CBC_128_DEC submit_job_aes128_dec_avx
+#define FLUSH_JOB_AES_CBC_128_ENC  flush_job_aes128_enc_avx
+
+#define SUBMIT_JOB_AES_CBC_192_ENC submit_job_aes192_enc_avx
+#define SUBMIT_JOB_AES_CBC_192_DEC submit_job_aes192_dec_avx
+#define FLUSH_JOB_AES_CBC_192_ENC  flush_job_aes192_enc_avx
+
+#define SUBMIT_JOB_AES_CBC_256_ENC submit_job_aes256_enc_avx
+#define SUBMIT_JOB_AES_CBC_256_DEC submit_job_aes256_dec_avx
+#define FLUSH_JOB_AES_CBC_256_ENC  flush_job_aes256_enc_avx
+
+#define AES_CBC_DEC_128       aes_cbc_dec_128_avx
+#define AES_CBC_DEC_192       aes_cbc_dec_192_avx
+#define AES_CBC_DEC_256       aes_cbc_dec_256_avx
+
+#define SUBMIT_JOB_AES128_DEC submit_job_aes128_dec_avx
+#define SUBMIT_JOB_AES192_DEC submit_job_aes192_dec_avx
+#define SUBMIT_JOB_AES256_DEC submit_job_aes256_dec_avx
+
+/* AES-CBCS */
+#define SUBMIT_JOB_AES128_CBCS_1_9_ENC submit_job_aes128_cbcs_1_9_enc_avx
+#define FLUSH_JOB_AES128_CBCS_1_9_ENC  flush_job_aes128_cbcs_1_9_enc_avx
+#define SUBMIT_JOB_AES128_CBCS_1_9_DEC submit_job_aes128_cbcs_1_9_dec_avx
+#define AES_CBCS_1_9_DEC_128           aes_cbcs_1_9_dec_128_avx
+
+/* AES-ECB */
+#define SUBMIT_JOB_AES_ECB_128_ENC submit_job_aes_ecb_128_enc_avx
+#define SUBMIT_JOB_AES_ECB_128_DEC submit_job_aes_ecb_128_dec_avx
+#define SUBMIT_JOB_AES_ECB_192_ENC submit_job_aes_ecb_192_enc_avx
+#define SUBMIT_JOB_AES_ECB_192_DEC submit_job_aes_ecb_192_dec_avx
+#define SUBMIT_JOB_AES_ECB_256_ENC submit_job_aes_ecb_256_enc_avx
+#define SUBMIT_JOB_AES_ECB_256_DEC submit_job_aes_ecb_256_dec_avx
+
+#define AES_ECB_ENC_128       aes_ecb_enc_128_avx
+#define AES_ECB_ENC_192       aes_ecb_enc_192_avx
+#define AES_ECB_ENC_256       aes_ecb_enc_256_avx
+#define AES_ECB_DEC_128       aes_ecb_dec_128_avx
+#define AES_ECB_DEC_192       aes_ecb_dec_192_avx
+#define AES_ECB_DEC_256       aes_ecb_dec_256_avx
+
+/* AES-CTR */
+#define AES_CTR_128       aes_cntr_128_avx
+#define AES_CTR_192       aes_cntr_192_avx
+#define AES_CTR_256       aes_cntr_256_avx
+#define AES_CTR_128_BIT   aes_cntr_bit_128_avx
+#define AES_CTR_192_BIT   aes_cntr_bit_192_avx
+#define AES_CTR_256_BIT   aes_cntr_bit_256_avx
+
+/* AES-CCM */
+#define AES_CNTR_CCM_128   aes_cntr_ccm_128_avx
+#define AES_CNTR_CCM_256   aes_cntr_ccm_256_avx
+
+#define FLUSH_JOB_AES128_CCM_AUTH     flush_job_aes128_ccm_auth_avx
+#define SUBMIT_JOB_AES128_CCM_AUTH    submit_job_aes128_ccm_auth_avx
+
+#define FLUSH_JOB_AES256_CCM_AUTH     flush_job_aes256_ccm_auth_avx
+#define SUBMIT_JOB_AES256_CCM_AUTH    submit_job_aes256_ccm_auth_avx
+
+/* AES-CMAC */
+#define FLUSH_JOB_AES128_CMAC_AUTH    flush_job_aes128_cmac_auth_avx
+#define SUBMIT_JOB_AES128_CMAC_AUTH   submit_job_aes128_cmac_auth_avx
+
+#define FLUSH_JOB_AES256_CMAC_AUTH    flush_job_aes256_cmac_auth_avx
+#define SUBMIT_JOB_AES256_CMAC_AUTH   submit_job_aes256_cmac_auth_avx
+
+/* AES-CFB */
+#define AES_CFB_128_ONE    aes_cfb_128_one_avx
+#define AES_CFB_256_ONE    aes_cfb_256_one_avx
+
+/* AES-XCBC */
 #define SUBMIT_JOB_AES_XCBC   submit_job_aes_xcbc_avx
 #define FLUSH_JOB_AES_XCBC    flush_job_aes_xcbc_avx
 
+/* PON */
+#define SUBMIT_JOB_PON_ENC        submit_job_pon_enc_avx
+#define SUBMIT_JOB_PON_DEC        submit_job_pon_dec_avx
+#define SUBMIT_JOB_PON_ENC_NO_CTR submit_job_pon_enc_no_ctr_avx
+#define SUBMIT_JOB_PON_DEC_NO_CTR submit_job_pon_dec_no_ctr_avx
+
+/* SHA1/224/256/384/512 */
 #define SUBMIT_JOB_SHA1   submit_job_sha1_avx
 #define FLUSH_JOB_SHA1    flush_job_sha1_avx
 #define SUBMIT_JOB_SHA224   submit_job_sha224_avx
@@ -125,25 +179,7 @@
 #define SUBMIT_JOB_SHA512   submit_job_sha512_avx
 #define FLUSH_JOB_SHA512    flush_job_sha512_avx
 
-#define SUBMIT_JOB_AES128_DEC submit_job_aes128_dec_avx
-#define SUBMIT_JOB_AES192_DEC submit_job_aes192_dec_avx
-#define SUBMIT_JOB_AES256_DEC submit_job_aes256_dec_avx
-#define QUEUE_SIZE queue_size_avx
-
-#define SUBMIT_JOB_CIPHER_ENC SUBMIT_JOB_CIPHER_ENC_AVX
-#define FLUSH_JOB_CIPHER_ENC  FLUSH_JOB_CIPHER_ENC_AVX
-#define SUBMIT_JOB_CIPHER_DEC SUBMIT_JOB_CIPHER_DEC_AVX
-#define FLUSH_JOB_CIPHER_DEC  FLUSH_JOB_CIPHER_DEC_AVX
-
-#define SUBMIT_JOB_CHACHA20_ENC_DEC submit_job_chacha20_enc_dec_avx
-
-#define SUBMIT_JOB_CHACHA20_POLY1305 aead_chacha20_poly1305_avx
-#define SUBMIT_JOB_CHACHA20_POLY1305_SGL aead_chacha20_poly1305_sgl_avx
-#define POLY1305_MAC poly1305_mac_scalar
-
-#define SUBMIT_JOB_SNOW_V snow_v_avx
-#define SUBMIT_JOB_SNOW_V_AEAD snow_v_aead_init_avx
-
+/* HMAC-SHA1/224/256/384/512 */
 #define SUBMIT_JOB_HMAC               submit_job_hmac_avx
 #define FLUSH_JOB_HMAC                flush_job_hmac_avx
 #define SUBMIT_JOB_HMAC_SHA_224       submit_job_hmac_sha_224_avx
@@ -157,64 +193,28 @@
 #define SUBMIT_JOB_HMAC_MD5           submit_job_hmac_md5_avx
 #define FLUSH_JOB_HMAC_MD5            flush_job_hmac_md5_avx
 
-/* ====================================================================== */
+/* CHACHA20 & POLY1305 */
+#define SUBMIT_JOB_CHACHA20_ENC_DEC submit_job_chacha20_enc_dec_avx
+#define SUBMIT_JOB_CHACHA20_POLY1305 aead_chacha20_poly1305_avx
+#define SUBMIT_JOB_CHACHA20_POLY1305_SGL aead_chacha20_poly1305_sgl_avx
+#define POLY1305_MAC poly1305_mac_scalar
 
-#define SUBMIT_JOB         submit_job_avx
-#define FLUSH_JOB          flush_job_avx
-#define SUBMIT_JOB_NOCHECK submit_job_nocheck_avx
-#define GET_NEXT_JOB       get_next_job_avx
-#define GET_COMPLETED_JOB  get_completed_job_avx
-#define GET_NEXT_BURST     get_next_burst_avx
-#define SUBMIT_BURST       submit_burst_avx
-#define SUBMIT_BURST_NOCHECK submit_burst_nocheck_avx
-#define FLUSH_BURST       flush_burst_avx
-#define SUBMIT_CIPHER_BURST submit_cipher_burst_avx
-#define SUBMIT_CIPHER_BURST_NOCHECK submit_cipher_burst_nocheck_avx
-#define SUBMIT_HASH_BURST submit_hash_burst_avx
-#define SUBMIT_HASH_BURST_NOCHECK submit_hash_burst_nocheck_avx
+/* ZUC EEA3 & EIA3 */
+#define SUBMIT_JOB_ZUC_EEA3   submit_job_zuc_eea3_avx
+#define FLUSH_JOB_ZUC_EEA3    flush_job_zuc_eea3_avx
+#define SUBMIT_JOB_ZUC_EIA3   submit_job_zuc_eia3_avx
+#define FLUSH_JOB_ZUC_EIA3    flush_job_zuc_eia3_avx
+#define SUBMIT_JOB_ZUC256_EEA3   submit_job_zuc256_eea3_avx
+#define FLUSH_JOB_ZUC256_EEA3    flush_job_zuc256_eea3_avx
+#define SUBMIT_JOB_ZUC256_EIA3   submit_job_zuc256_eia3_avx
+#define FLUSH_JOB_ZUC256_EIA3    flush_job_zuc256_eia3_avx
 
-/* ====================================================================== */
+/* SNOW-V */
+#define SUBMIT_JOB_SNOW_V snow_v_avx
+#define SUBMIT_JOB_SNOW_V_AEAD snow_v_aead_init_avx
 
-
-#define SUBMIT_JOB_HASH    SUBMIT_JOB_HASH_AVX
-#define FLUSH_JOB_HASH     FLUSH_JOB_HASH_AVX
-
-/* ====================================================================== */
-
-#define AES_CFB_128_ONE    aes_cfb_128_one_avx
-#define AES_CFB_256_ONE    aes_cfb_256_one_avx
-
-
-#define AES128_CBC_MAC     aes128_cbc_mac_x8
-
-#define FLUSH_JOB_AES128_CCM_AUTH     flush_job_aes128_ccm_auth_avx
-#define SUBMIT_JOB_AES128_CCM_AUTH    submit_job_aes128_ccm_auth_avx
-
-#define FLUSH_JOB_AES256_CCM_AUTH     flush_job_aes256_ccm_auth_avx
-#define SUBMIT_JOB_AES256_CCM_AUTH    submit_job_aes256_ccm_auth_avx
-
-#define FLUSH_JOB_AES128_CMAC_AUTH    flush_job_aes128_cmac_auth_avx
-#define SUBMIT_JOB_AES128_CMAC_AUTH   submit_job_aes128_cmac_auth_avx
-
-#define FLUSH_JOB_AES256_CMAC_AUTH    flush_job_aes256_cmac_auth_avx
-#define SUBMIT_JOB_AES256_CMAC_AUTH   submit_job_aes256_cmac_auth_avx
-
-/* ====================================================================== */
-
-uint32_t
-ethernet_fcs_avx_local(const void *msg, const uint64_t len,
-                       const void *tag_ouput);
-
+/* AES-DOCSIS */
 #define ETHERNET_FCS ethernet_fcs_avx_local
-
-/* ====================================================================== */
-
-#define SUBMIT_JOB_AES128_CBCS_1_9_ENC submit_job_aes128_cbcs_1_9_enc_avx
-#define FLUSH_JOB_AES128_CBCS_1_9_ENC  flush_job_aes128_cbcs_1_9_enc_avx
-#define SUBMIT_JOB_AES128_CBCS_1_9_DEC submit_job_aes128_cbcs_1_9_dec_avx
-#define AES_CBCS_1_9_DEC_128           aes_cbcs_1_9_dec_128_avx
-
-/* ====================================================================== */
 
 static void reset_ooo_mgrs(IMB_MGR *state)
 {
@@ -290,26 +290,8 @@ static void reset_ooo_mgrs(IMB_MGR *state)
 }
 
 IMB_DLL_LOCAL void
-init_mb_mgr_avx_internal(IMB_MGR *state, const int reset_mgrs)
+init_mb_mgr_avx_t1_internal(IMB_MGR *state, const int reset_mgrs)
 {
-#ifdef SAFE_PARAM
-        if (state == NULL) {
-                imb_set_errno(NULL, IMB_ERR_NULL_MBMGR);
-                return;
-        }
-#endif
-
-        /* reset error status */
-        imb_set_errno(state, 0);
-
-        state->features = cpu_feature_adjust(state->flags,
-                                             cpu_feature_detect());
-
-        if (!(state->features & IMB_FEATURE_AESNI)) {
-                fallback_no_aesni(state, reset_mgrs);
-                return;
-        }
-
         /* Check if CPU flags needed for AVX interface are present */
         if ((state->features & IMB_CPUFLAGS_AVX) != IMB_CPUFLAGS_AVX) {
                 imb_set_errno(state, IMB_ERR_MISSING_CPUFLAGS_INIT_MGR);
@@ -327,28 +309,32 @@ init_mb_mgr_avx_internal(IMB_MGR *state, const int reset_mgrs)
                 state->earliest_job = -1;
         }
 
-        /* set AVX handlers */
-        state->get_next_job        = get_next_job_avx;
-        state->submit_job          = submit_job_avx;
-        state->get_next_burst      = get_next_burst_avx;
-        state->submit_burst        = submit_burst_avx;
-        state->submit_burst_nocheck= submit_burst_nocheck_avx;
-        state->flush_burst         = flush_burst_avx;
-        state->submit_cipher_burst = submit_cipher_burst_avx;
-        state->submit_cipher_burst_nocheck = submit_cipher_burst_nocheck_avx;
-        state->submit_hash_burst   = submit_hash_burst_avx;
-        state->submit_hash_burst_nocheck = submit_hash_burst_nocheck_avx;
-        state->submit_job_nocheck  = submit_job_nocheck_avx;
-        state->get_completed_job   = get_completed_job_avx;
-        state->flush_job           = flush_job_avx;
-        state->queue_size          = queue_size_avx;
+        /* set handlers */
+        state->get_next_job        = GET_NEXT_JOB;
+        state->submit_job          = SUBMIT_JOB;
+        state->submit_job_nocheck  = SUBMIT_JOB_NOCHECK;
+        state->get_completed_job   = GET_COMPLETED_JOB;
+        state->flush_job           = FLUSH_JOB;
+        state->queue_size          = QUEUE_SIZE;
+        state->get_next_burst      = GET_NEXT_BURST;
+        state->submit_burst        = SUBMIT_BURST;
+        state->submit_burst_nocheck= SUBMIT_BURST_NOCHECK;
+        state->flush_burst         = FLUSH_BURST;
+        state->submit_cipher_burst = SUBMIT_CIPHER_BURST;
+        state->submit_cipher_burst_nocheck = SUBMIT_CIPHER_BURST_NOCHECK;
+        state->submit_hash_burst   = SUBMIT_HASH_BURST;
+        state->submit_hash_burst_nocheck = SUBMIT_HASH_BURST_NOCHECK;
+
         state->keyexp_128          = aes_keyexp_128_avx;
         state->keyexp_192          = aes_keyexp_192_avx;
         state->keyexp_256          = aes_keyexp_256_avx;
+
         state->cmac_subkey_gen_128 = aes_cmac_subkey_gen_avx;
         state->cmac_subkey_gen_256 = aes_cmac_256_subkey_gen_avx;
+
         state->xcbc_keyexp         = aes_xcbc_expand_key_avx;
         state->des_key_sched       = des_key_schedule;
+
         state->sha1_one_block      = sha1_one_block_avx;
         state->sha1                = sha1_avx;
         state->sha224_one_block    = sha224_one_block_avx;
@@ -360,6 +346,7 @@ init_mb_mgr_avx_internal(IMB_MGR *state, const int reset_mgrs)
         state->sha512_one_block    = sha512_one_block_avx;
         state->sha512              = sha512_avx;
         state->md5_one_block       = md5_one_block_avx;
+
         state->aes128_cfb_one      = aes_cfb_128_one_avx;
 
         state->eea3_1_buffer       = zuc_eea3_1_buffer_avx;
@@ -392,6 +379,27 @@ init_mb_mgr_avx_internal(IMB_MGR *state, const int reset_mgrs)
         state->snow3g_init_key_sched = snow3g_init_key_sched_avx;
         state->snow3g_key_sched_size = snow3g_key_sched_size_avx;
 
+        state->hec_32              = hec_32_avx;
+        state->hec_64              = hec_64_avx;
+
+        state->crc32_ethernet_fcs  = ethernet_fcs_avx;
+        state->crc16_x25           = crc16_x25_avx;
+        state->crc32_sctp          = crc32_sctp_avx;
+        state->crc24_lte_a         = crc24_lte_a_avx;
+        state->crc24_lte_b         = crc24_lte_b_avx;
+        state->crc16_fp_data       = crc16_fp_data_avx;
+        state->crc11_fp_header     = crc11_fp_header_avx;
+        state->crc7_fp_header      = crc7_fp_header_avx;
+        state->crc10_iuup_data     = crc10_iuup_data_avx;
+        state->crc6_iuup_header    = crc6_iuup_header_avx;
+        state->crc32_wimax_ofdma_data = crc32_wimax_ofdma_data_avx;
+        state->crc8_wimax_ofdma_hcs = crc8_wimax_ofdma_hcs_avx;
+
+        state->chacha20_poly1305_init = init_chacha20_poly1305_avx;
+        state->chacha20_poly1305_enc_update = update_enc_chacha20_poly1305_avx;
+        state->chacha20_poly1305_dec_update = update_dec_chacha20_poly1305_avx;
+        state->chacha20_poly1305_finalize = finalize_chacha20_poly1305_avx;
+
         state->gcm128_enc          = aes_gcm_enc_128_avx_gen2;
         state->gcm192_enc          = aes_gcm_enc_192_avx_gen2;
         state->gcm256_enc          = aes_gcm_enc_256_avx_gen2;
@@ -422,6 +430,7 @@ init_mb_mgr_avx_internal(IMB_MGR *state, const int reset_mgrs)
         state->gcm128_pre          = aes_gcm_pre_128_avx_gen2;
         state->gcm192_pre          = aes_gcm_pre_192_avx_gen2;
         state->gcm256_pre          = aes_gcm_pre_256_avx_gen2;
+
         state->ghash               = ghash_avx_gen2;
         state->ghash_pre           = ghash_pre_avx_gen2;
 
@@ -434,34 +443,6 @@ init_mb_mgr_avx_internal(IMB_MGR *state, const int reset_mgrs)
         state->gmac128_finalize    = imb_aes_gmac_finalize_128_avx_gen2;
         state->gmac192_finalize    = imb_aes_gmac_finalize_192_avx_gen2;
         state->gmac256_finalize    = imb_aes_gmac_finalize_256_avx_gen2;
-        state->hec_32              = hec_32_avx;
-        state->hec_64              = hec_64_avx;
-        state->crc32_ethernet_fcs  = ethernet_fcs_avx;
-        state->crc16_x25           = crc16_x25_avx;
-        state->crc32_sctp          = crc32_sctp_avx;
-        state->crc24_lte_a         = crc24_lte_a_avx;
-        state->crc24_lte_b         = crc24_lte_b_avx;
-        state->crc16_fp_data       = crc16_fp_data_avx;
-        state->crc11_fp_header     = crc11_fp_header_avx;
-        state->crc7_fp_header      = crc7_fp_header_avx;
-        state->crc10_iuup_data     = crc10_iuup_data_avx;
-        state->crc6_iuup_header    = crc6_iuup_header_avx;
-        state->crc32_wimax_ofdma_data = crc32_wimax_ofdma_data_avx;
-        state->crc8_wimax_ofdma_hcs = crc8_wimax_ofdma_hcs_avx;
-
-        state->chacha20_poly1305_init = init_chacha20_poly1305_avx;
-        state->chacha20_poly1305_enc_update = update_enc_chacha20_poly1305_avx;
-        state->chacha20_poly1305_dec_update = update_dec_chacha20_poly1305_avx;
-        state->chacha20_poly1305_finalize = finalize_chacha20_poly1305_avx;
-}
-
-void
-init_mb_mgr_avx(IMB_MGR *state)
-{
-        init_mb_mgr_avx_internal(state, 1);
-
-        if (!self_test(state))
-                imb_set_errno(state, IMB_ERR_SELFTEST);
 }
 
 #include "mb_mgr_code.h"

@@ -125,8 +125,7 @@ LINK_TOOL = link
 LINKFLAGS = $(DLFLAGS) /nologo /machine:X64
 
 AS = nasm
-AFLAGS = $(DAFLAGS) -Werror -fwin64 -Xvc -DWIN_ABI -Iinclude/ \
-	-I./ -Iavx/ -Iavx2/ -Iavx512/ -Isse/
+AFLAGS = $(DAFLAGS) -Werror -fwin64 -Xvc -DWIN_ABI -I.
 
 # dependency
 !ifndef DEPTOOL
@@ -448,6 +447,7 @@ lib_objs2 = \
 	$(OBJ_DIR)\mb_mgr_zuc_submit_flush_avx512.obj \
 	$(OBJ_DIR)\mb_mgr_zuc_submit_flush_gfni_avx512.obj \
 	$(OBJ_DIR)\mb_mgr_avx.obj \
+	$(OBJ_DIR)\mb_mgr_avx_t1.obj \
 	$(OBJ_DIR)\mb_mgr_avx2.obj \
 	$(OBJ_DIR)\mb_mgr_avx2_t1.obj \
 	$(OBJ_DIR)\mb_mgr_avx2_t2.obj \
@@ -632,11 +632,18 @@ $(DEPALL): $(all_objs)
 {sse_t3\}.asm{$(OBJ_DIR)}.obj:
 	$(AS) -MD $@.dep -o $@ $(AFLAGS) $<
 
-{avx\}.c{$(OBJ_DIR)}.obj:
+{avx_t1\}.c{$(OBJ_DIR)}.obj:
 	$(CC) /arch:AVX /Fo$@ /c $(CFLAGS) $<
         $(DEPTOOL) $< $@ "$(DEPFLAGS)" > $@.dep
 
-{avx\}.asm{$(OBJ_DIR)}.obj:
+{avx_t1\}.asm{$(OBJ_DIR)}.obj:
+	$(AS) -MD $@.dep -o $@ $(AFLAGS) $<
+
+{avx_t2\}.c{$(OBJ_DIR)}.obj:
+	$(CC) /arch:AVX /Fo$@ /c $(CFLAGS) $<
+        $(DEPTOOL) $< $@ "$(DEPFLAGS)" > $@.dep
+
+{avx_t2\}.asm{$(OBJ_DIR)}.obj:
 	$(AS) -MD $@.dep -o $@ $(AFLAGS) $<
 
 {avx2_t1\}.c{$(OBJ_DIR)}.obj:
