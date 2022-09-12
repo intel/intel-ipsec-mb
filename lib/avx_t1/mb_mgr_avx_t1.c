@@ -36,6 +36,7 @@
 #include "include/kasumi_interface.h"
 #include "include/zuc_internal.h"
 #include "include/snow3g.h"
+#include "include/snow3g_submit.h"
 #include "include/gcm.h"
 #include "include/chacha20_poly1305.h"
 #include "include/save_xmms.h"
@@ -43,7 +44,7 @@
 #include "include/cpu_feature.h"
 #include "include/aesni_emu.h"
 #include "include/error.h"
-#include "include/arch_x86_64.h" /* self-test */
+#include "include/arch_sse_type1.h" /* snow3g */
 #include "include/arch_avx_type1.h"
 #include "include/ooo_mgr_reset.h"
 
@@ -213,6 +214,33 @@
 #define SUBMIT_JOB_SNOW_V snow_v_avx
 #define SUBMIT_JOB_SNOW_V_AEAD snow_v_aead_init_avx
 
+/* SNOW3G UE2 & UIA2 */
+static IMB_JOB *
+submit_snow3g_uea2_job_avx_t1(IMB_MGR *state, IMB_JOB *job)
+{
+        MB_MGR_SNOW3G_OOO *snow3g_uea2_ooo = state->snow3g_uea2_ooo;
+
+        if ((job->msg_len_to_cipher_in_bits & 7) ||
+            (job->cipher_start_offset_in_bits & 7))
+                return def_submit_snow3g_uea2_job(state, job);
+
+        return submit_job_snow3g_uea2_sse(snow3g_uea2_ooo, job);
+}
+
+static IMB_JOB *
+flush_snow3g_uea2_job_avx_t1(IMB_MGR *state)
+{
+        MB_MGR_SNOW3G_OOO *snow3g_uea2_ooo = state->snow3g_uea2_ooo;
+
+        return flush_job_snow3g_uea2_sse(snow3g_uea2_ooo);
+}
+
+#define SUBMIT_JOB_SNOW3G_UEA2 submit_snow3g_uea2_job_avx_t1
+#define FLUSH_JOB_SNOW3G_UEA2  flush_snow3g_uea2_job_avx_t1
+
+#define SUBMIT_JOB_SNOW3G_UIA2 submit_job_snow3g_uia2_avx_t1
+#define FLUSH_JOB_SNOW3G_UIA2  flush_job_snow3g_uia2_avx_t1
+
 /* AES-DOCSIS */
 #define ETHERNET_FCS ethernet_fcs_avx_local
 
@@ -287,6 +315,12 @@ static void reset_ooo_mgrs(IMB_MGR *state)
 
         /* Init SHA512 out-of-order fields */
         ooo_mgr_sha512_reset(state->sha_512_ooo, AVX_NUM_SHA512_LANES);
+
+        /* Init SNOW3G-UEA out-of-order fields */
+        ooo_mgr_snow3g_reset(state->snow3g_uea2_ooo, 4);
+
+        /* Init SNOW3G-UIA out-of-order fields */
+        ooo_mgr_snow3g_reset(state->snow3g_uia2_ooo, 4);
 }
 
 IMB_DLL_LOCAL void
