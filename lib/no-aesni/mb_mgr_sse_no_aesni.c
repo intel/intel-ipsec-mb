@@ -29,6 +29,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define SSE_AESNI_EMU
+
 #include "intel-ipsec-mb.h"
 #include "include/ipsec_ooo_mgr.h"
 #include "include/kasumi_interface.h"

@@ -238,8 +238,8 @@ flush_snow3g_uea2_job_avx_t1(IMB_MGR *state)
 #define SUBMIT_JOB_SNOW3G_UEA2 submit_snow3g_uea2_job_avx_t1
 #define FLUSH_JOB_SNOW3G_UEA2  flush_snow3g_uea2_job_avx_t1
 
-#define SUBMIT_JOB_SNOW3G_UIA2 submit_job_snow3g_uia2_avx_t1
-#define FLUSH_JOB_SNOW3G_UIA2  flush_job_snow3g_uia2_avx_t1
+#define SUBMIT_JOB_SNOW3G_UIA2 submit_job_snow3g_uia2_sse
+#define FLUSH_JOB_SNOW3G_UIA2  flush_job_snow3g_uia2_sse
 
 /* AES-DOCSIS */
 #define ETHERNET_FCS ethernet_fcs_avx_local
