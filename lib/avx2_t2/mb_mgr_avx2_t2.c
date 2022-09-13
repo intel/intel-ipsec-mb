@@ -47,6 +47,7 @@
 #include "include/error.h"
 
 #include "include/arch_sse_type1.h" /* poly1305 */
+#include "include/arch_sse_type2.h" /* shani */
 #include "include/arch_avx_type1.h"
 #include "include/arch_avx2_type1.h"
 #include "include/arch_avx2_type2.h"
@@ -170,12 +171,13 @@
 #define SUBMIT_JOB_PON_DEC_NO_CTR submit_job_pon_dec_no_ctr_avx
 
 /* SHA1/224/256/384/512 */
+/* note: SHA1 MB is better than SHANI on Xeon processors */
 #define SUBMIT_JOB_SHA1     submit_job_sha1_avx2
 #define FLUSH_JOB_SHA1      flush_job_sha1_avx2
-#define SUBMIT_JOB_SHA224   submit_job_sha224_avx2
-#define FLUSH_JOB_SHA224    flush_job_sha224_avx2
-#define SUBMIT_JOB_SHA256   submit_job_sha256_avx2
-#define FLUSH_JOB_SHA256    flush_job_sha256_avx2
+#define SUBMIT_JOB_SHA224   submit_job_sha224_ni_sse
+#define FLUSH_JOB_SHA224    flush_job_sha224_ni_sse
+#define SUBMIT_JOB_SHA256   submit_job_sha256_ni_sse
+#define FLUSH_JOB_SHA256    flush_job_sha256_ni_sse
 #define SUBMIT_JOB_SHA384   submit_job_sha384_avx2
 #define FLUSH_JOB_SHA384    flush_job_sha384_avx2
 #define SUBMIT_JOB_SHA512   submit_job_sha512_avx2
@@ -184,10 +186,10 @@
 /* HMAC-SHA1/224/256/384/512 */
 #define SUBMIT_JOB_HMAC               submit_job_hmac_avx2
 #define FLUSH_JOB_HMAC                flush_job_hmac_avx2
-#define SUBMIT_JOB_HMAC_SHA_224       submit_job_hmac_sha_224_avx2
-#define FLUSH_JOB_HMAC_SHA_224        flush_job_hmac_sha_224_avx2
-#define SUBMIT_JOB_HMAC_SHA_256       submit_job_hmac_sha_256_avx2
-#define FLUSH_JOB_HMAC_SHA_256        flush_job_hmac_sha_256_avx2
+#define SUBMIT_JOB_HMAC_SHA_224       submit_job_hmac_sha_224_ni_sse
+#define FLUSH_JOB_HMAC_SHA_224        flush_job_hmac_sha_224_ni_sse
+#define SUBMIT_JOB_HMAC_SHA_256       submit_job_hmac_sha_256_ni_sse
+#define FLUSH_JOB_HMAC_SHA_256        flush_job_hmac_sha_256_ni_sse
 #define SUBMIT_JOB_HMAC_SHA_384       submit_job_hmac_sha_384_avx2
 #define FLUSH_JOB_HMAC_SHA_384        flush_job_hmac_sha_384_avx2
 #define SUBMIT_JOB_HMAC_SHA_512       submit_job_hmac_sha_512_avx2
@@ -243,12 +245,10 @@ static void reset_ooo_mgrs(IMB_MGR *state)
         ooo_mgr_hmac_sha1_reset(state->hmac_sha_1_ooo, AVX2_NUM_SHA1_LANES);
 
         /* Init HMAC/SHA224 out-of-order fields */
-        ooo_mgr_hmac_sha224_reset(state->hmac_sha_224_ooo,
-                                  AVX2_NUM_SHA256_LANES);
+        ooo_mgr_hmac_sha224_reset(state->hmac_sha_224_ooo, 2);
 
-        /* Init HMAC/SHA256 out-of-order fields */
-        ooo_mgr_hmac_sha256_reset(state->hmac_sha_256_ooo,
-                                  AVX2_NUM_SHA256_LANES);
+        /* Init HMAC/SHA_256 out-of-order fields */
+        ooo_mgr_hmac_sha256_reset(state->hmac_sha_256_ooo, 2);
 
         /* Init HMAC/SHA384 out-of-order fields */
         ooo_mgr_hmac_sha384_reset(state->hmac_sha_384_ooo,
@@ -279,10 +279,10 @@ static void reset_ooo_mgrs(IMB_MGR *state)
         ooo_mgr_sha1_reset(state->sha_1_ooo, AVX2_NUM_SHA1_LANES);
 
         /* Init SHA224 out-of-order fields */
-        ooo_mgr_sha256_reset(state->sha_224_ooo, AVX2_NUM_SHA256_LANES);
+        ooo_mgr_sha256_reset(state->sha_224_ooo, 2);
 
         /* Init SHA256 out-of-order fields */
-        ooo_mgr_sha256_reset(state->sha_256_ooo, AVX2_NUM_SHA256_LANES);
+        ooo_mgr_sha256_reset(state->sha_256_ooo, 2);
 
         /* Init SHA384 out-of-order fields */
         ooo_mgr_sha512_reset(state->sha_384_ooo, AVX2_NUM_SHA512_LANES);
