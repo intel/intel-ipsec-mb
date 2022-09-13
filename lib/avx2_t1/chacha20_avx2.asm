@@ -927,7 +927,7 @@ partial_block:
 no_partial_block:
         endbranch64
 %ifdef SAFE_DATA
-        clear_all_ymms_asm
+        vpxor   ymm0, ymm0
         ; Clear stack frame
 %assign i 0
 %rep 16
@@ -948,6 +948,12 @@ no_partial_block:
 %endrep
 %endif
         mov     rsp, [rsp + _RSP_SAVE]
+
+%ifdef SAFE_DATA
+        clear_scratch_ymms_asm
+%else
+        vzeroupper
+%endif
 
 exit:
         mov     rax, job
@@ -1378,7 +1384,7 @@ no_partial_block_ks:
         mov     [ctx + LastBlkCount], blk_cnt
 
 %ifdef SAFE_DATA
-        clear_all_ymms_asm
+        vpxor   ymm0, ymm0
         ; Clear stack frame
 %assign i 0
 %rep 16
@@ -1406,6 +1412,12 @@ no_partial_block_ks:
 %endrep
 %endif
         mov     rsp, [rsp + _RSP_SAVE]
+
+%ifdef SAFE_DATA
+        clear_scratch_ymms_asm
+%else
+        vzeroupper
+%endif
 
 exit_ks:
 
