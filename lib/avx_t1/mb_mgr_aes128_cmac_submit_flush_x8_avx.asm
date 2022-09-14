@@ -292,6 +292,22 @@ APPEND(skip_,I):
 %endrep
         ;; Find min length
         vphminposuw xmm1, xmm0
+        jmp     %%_cmac_round
+
+%%_cmac_round_flush:
+        ;; - good lane already known
+        ;; - copy good_lane input pointer to empty lanes
+        ;; - lens updated and vphminposuw executed
+        mov     tmp2, [state + _aes_cmac_args_in + good_lane*8]
+        xor     tmp3, tmp3
+%assign I 0
+%rep 8
+        cmp     qword [state + _aes_cmac_job_in_lane + I*8], tmp3
+        jne     APPEND(skip2_,I)
+        mov     [state + _aes_cmac_args_in + I*8], tmp2
+APPEND(skip2_,I):
+%assign I (I+1)
+%endrep
 
 %endif ; end FLUSH
 
@@ -350,7 +366,12 @@ APPEND(skip_,I):
         lea     m_last, [state + _aes_cmac_scratch + tmp3]
         mov     [state + _aes_cmac_args_in + idx*8], m_last
 
+%ifidn %%SUBMIT_FLUSH, SUBMIT
         jmp     %%_cmac_round
+%else
+        mov     good_lane, idx
+        jmp     %%_cmac_round_flush
+%endif
 
 %%_copy_complete_digest:
         ; Job complete, copy digest to AT output
