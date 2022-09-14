@@ -495,7 +495,30 @@ endstruc
         COPY_IV_KEYS_TO_NULL_LANES tmp2, tmp4, tmp3, xmm4, xmm5, k6
 
         ;; Find min length for lanes 0-7
-        vphminposuw min_len_idx, XWORD(ccm_lens)
+        vphminposuw     min_len_idx, XWORD(ccm_lens)
+        jmp             %%_ccm_round
+
+%%_ccm_round_flush:
+        ;; find null lanes
+        ;; - vphminposuw already issued
+        ;; - lens updated
+        vpxorq          zmm7, zmm7, zmm7
+        vmovdqu64       zmm8, [state + _aes_ccm_job_in_lane + (0*PTR_SZ)]
+        vmovdqu64       zmm9, [state + _aes_ccm_job_in_lane + (8*PTR_SZ)]
+        vpcmpq          k4, zmm8, zmm7, 0 ; EQ
+        vpcmpq          k5, zmm9, zmm7, 0 ; EQ
+        kshiftlw        k6, k5, 8
+        korw            k6, k6, k4              ; masks of NULL jobs in k4 (8), k5 (8) and k6 (16)
+        knotw           k7, k6                  ; mask of non-NULL jobs
+        kmovw           DWORD(tmp), k7
+        bsf             DWORD(tmp2), DWORD(tmp) ; index of the 1st set bit in tmp
+
+        ;; copy good lane data into NULL lanes
+        mov             tmp, [state + _aes_ccm_args_in + tmp2*8]
+        vpbroadcastq    zmm8, tmp
+        vmovdqa64       [state + _aes_ccm_args_in + (0*PTR_SZ)]{k4}, zmm8
+        vmovdqa64       [state + _aes_ccm_args_in + (8*PTR_SZ)]{k5}, zmm8
+
 %endif ; end FLUSH
 
 %%_ccm_round:
@@ -655,8 +678,11 @@ endstruc
         vpbroadcastw    ccm_lens{k1}, WORD(tmp)
         vmovdqa64       [state + _aes_cmac_lens], ccm_lens
         vphminposuw     min_len_idx, XWORD(ccm_lens)
-
+%ifidn %%SUBMIT_FLUSH, SUBMIT
         jmp     %%_ccm_round
+%else
+        jmp     %%_ccm_round_flush
+%endif
 
 %%_prepare_partial_block_to_auth:
         ; Check if partial block needs to be hashed
@@ -687,8 +713,11 @@ endstruc
 %%_finish_partial_block_copy:
         vmovdqa [init_block_addr], xtmp0
         mov     [state + _aes_ccm_args_in + min_idx * 8], init_block_addr
-
+%ifidn %%SUBMIT_FLUSH, SUBMIT
         jmp     %%_ccm_round
+%else
+        jmp     %%_ccm_round_flush
+%endif
 %endmacro
 
 align 64
