@@ -386,6 +386,23 @@ APPEND(skip_,I):
         vmovdqa [state + _aes_ccm_lens], ccm_lens
         ;; Find min length
         vphminposuw min_len_idx, ccm_lens
+        jmp     %%_ccm_round
+
+%%_ccm_round_flush:
+        ;; This is identical to the above block but optimized for
+        ;; a repeat flush operation when keys etc. are already set
+        ;; - vphminposuw was already executed
+        ;; - good_lane is already known
+        ;; - copy input pointer from good lane to empty lanes
+        mov     tmp2, [state + _aes_ccm_args_in + good_lane*8]
+%assign I 0
+%rep 8
+        cmp     qword [state + _aes_ccm_job_in_lane + I*8], 0
+        jne     APPEND(skip2_,I)
+        mov     [state + _aes_ccm_args_in + I*8], tmp2
+APPEND(skip2_,I):
+%assign I (I+1)
+%endrep
 
 %endif ; end FLUSH
 
@@ -524,12 +541,17 @@ APPEND(skip_clear_,I):
         ; Reset NULL lane lens to UINT16_MAX
 %ifidn %%SUBMIT_FLUSH, FLUSH
         SET_NULL_JOB_LENS_TO_MAX ccm_lens, xtmp0, xtmp1, xtmp2, xtmp3, xtmp4
+        mov     good_lane, min_idx
 %endif
         XVPINSRW ccm_lens, xtmp0, tmp2, min_idx, tmp, scale_x16
         vphminposuw min_len_idx, ccm_lens
         vmovdqa [state + _aes_ccm_lens], ccm_lens
 
+%ifidn %%SUBMIT_FLUSH, FLUSH
+        jmp     %%_ccm_round_flush
+%else
         jmp     %%_ccm_round
+%endif
 
 %%_prepare_partial_block_to_auth:
         ; Check if partial block needs to be hashed
@@ -559,7 +581,12 @@ APPEND(skip_clear_,I):
         vmovdqa [init_block_addr], xtmp0
         mov     [state + _aes_ccm_args_in + min_idx * 8], init_block_addr
 
+%ifidn %%SUBMIT_FLUSH, FLUSH
+        mov     good_lane, min_idx
+        jmp     %%_ccm_round_flush
+%else
         jmp     %%_ccm_round
+%endif
 %endmacro
 
 align 64
