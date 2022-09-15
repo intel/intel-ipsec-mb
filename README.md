@@ -642,17 +642,80 @@ ACVP test application located in `test` directory is to support CAVP process. It
 - AES-CBC  
 - AES-CTR  
 - AES-CMAC  
-- SHA1  
-- SHA224  
-- SHA256  
-- SHA384  
-- SHA512  
-- HMAC-SHA1  
-- HMAC-SHA224  
-- HMAC-SHA256  
-- HMAC-SHA384  
-- HMAC-SHA512  
+- SHA1 (SHA-1)  
+- SHA224 (SHA2-224)  
+- SHA256 (SHA2-256)  
+- SHA384 (SHA2-384)  
+- SHA512 (SHA2-512)  
+- HMAC-SHA1 (HMAC-SHA-1)  
+- HMAC-SHA224 (HMAC-SHA2-224)  
+- HMAC-SHA256 (HMAC-SHA2-256)  
+- HMAC-SHA384 (HMAC-SHA2-384)  
+- HMAC-SHA512 (HMAC-SHA2-512)  
 
+### CAVP Algorithm Parameters
+
+**Note:** all sizes in bits
+```
++--------------------------------------------------------------------------------------------+
+| Algorithm           | Standard  | Parameters                                               |
+|---------------------+-----------+----------------------------------------------------------|
+| AES-GCM             | SP800-38D | Key size: 128, 192, 256                                  |
+|                     |           | Direction: encrypt and decrypt                           |
+|                     |           | ivLen: [min = 8, max = 1024, increment 8]                |
+|                     |           | tagLen: 32, 64, 96, 104, 112, 120, 128                   |
+|                     |           | payloadLen: [min = 0, max = 65536, increment = 8]        |
+|                     |           | aadLen: [min = 0, max = 65536, increment = 8]            |
+|---------------------+-----------+----------------------------------------------------------|
+| AES-CBC             | SP800-38A | Key size: 128, 192, 256                                  |
+|                     |           | Direction: encrypt and decrypt                           |
+|---------------------+-----------+----------------------------------------------------------|
+| AES-CTR             | SP800-38A | Key size: 128, 192, 256                                  |
+|                     |           | Direction: encrypt and decrypt                           |
+|                     |           | payloadLen: [min = 8, max = 128, increment = 8]          |
+|---------------------+-----------+----------------------------------------------------------|
+| SHA1 (SHA-1)        | FIPS180-4 | messageLength: [min = 0, max = 65528, increment = 8]     |
+|---------------------+-----------+----------------------------------------------------------|
+| SHA224 (SHA2-224)   | FIPS180-4 | messageLength: [min = 0, max = 65528, increment = 8]     |
+|---------------------+-----------+----------------------------------------------------------|
+| SHA256 (SHA2-256)   | FIPS180-4 | messageLength: [min = 0, max = 65528, increment = 8]     |
+|---------------------+-----------+----------------------------------------------------------|
+| SHA384 (SHA2-384)   | FIPS180-4 | messageLength: [min = 0, max = 65528, increment = 8]     |
+|---------------------+-----------+----------------------------------------------------------|
+| SHA512 (SHA2-512)   | FIPS180-4 | messageLength: [min = 0, max = 65528, increment = 8]     |
+|---------------------+-----------+----------------------------------------------------------|
+| AES-CCM             | SP800-38C | Key size: 128, 256                                       |
+|                     |           | Direction: encrypt and decrypt                           |
+|                     |           | ivLen: [min = 56, max = 104, increment 8]                |
+|                     |           | tagLen: 32, 48, 64, 80, 96, 112, 128                     |
+|                     |           | payloadLen: [min = 0, max = 256, increment = 8]          |
+|                     |           | aadLen: [min = 0, max = 368, increment = 8]              |
+|---------------------+-----------+----------------------------------------------------------|
+| AES-GMAC            | SP800-38B | Key size: 128, 192, 256                                  |
+|                     |           | ivLen: [min = 8, max = 1024, increment 8]                |
+|                     |           | tagLen: 32, 64, 96, 104, 112, 120, 128                   |
+|                     |           | aadLen: [min = 0, max = 65536, increment = 8]            |
+|---------------------+-----------+----------------------------------------------------------|
+| AES-CMAC            | SP800-38B | Key size: 128, 256                                       |
+|                     |           | msgLen: [min = 8, max = 65528, increment 8]              |
+|                     |           | macLen: [min = 8, max = 128, increment = 8]              |
+|---------------------+-----------+----------------------------------------------------------|
+| HMAC-SHA1           | FIPS198-1 | keyLen: [min = 8, max = 524288, increment = 8]           |
+| (HMAC-SHA-1)        |           | macLen: [min = 32, max = 160, increment = 8]             |
+|---------------------+-----------+----------------------------------------------------------|
+| HMAC-SHA224         | FIPS198-1 | keyLen: [min = 8, max = 524288, increment = 8]           |
+| (HMAC-SHA2-224)     |           | macLen: [min = 32, max = 224, increment = 8]             |
+|---------------------+-----------+----------------------------------------------------------|
+| HMAC-SHA256         | FIPS198-1 | keyLen: [min = 8, max = 524288, increment = 8]           |
+| (HMAC-SHA2-256)     |           | macLen: [min = 32, max = 256, increment = 8]             |
+|---------------------+-----------+----------------------------------------------------------|
+| HMAC-SHA384         | FIPS198-1 | keyLen: [min = 8, max = 524288, increment = 8]           |
+| (HMAC-SHA2-384)     |           | macLen: [min = 32, max = 384, increment = 8]             |
+|---------------------+-----------+----------------------------------------------------------|
+| HMAC-SHA512         | FIPS198-1 | keyLen: [min = 8, max = 524288, increment = 8]           |
+| (HMAC-SHA2-512)     |           | macLen: [min = 32, max = 512, increment = 8]             |
++--------------------------------------------------------------------------------------------+
+```
 ### Self-Test
 
 In order to support CMVP, the library implements Self-Test functionality that is available with all compilation options.
