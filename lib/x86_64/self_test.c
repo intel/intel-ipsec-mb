@@ -1571,6 +1571,8 @@ static int self_test_aead(IMB_MGR *p_mgr)
 
 IMB_DLL_LOCAL int self_test(IMB_MGR *p_mgr)
 {
+        p_mgr->features &= ~IMB_FEATURE_SELF_TEST;
+
         if (!self_test_ciphers(p_mgr))
                 return 0;
 
@@ -1580,5 +1582,6 @@ IMB_DLL_LOCAL int self_test(IMB_MGR *p_mgr)
         if (!self_test_aead(p_mgr))
                 return 0;
 
+        p_mgr->features |= IMB_FEATURE_SELF_TEST;
         return 1;
 }

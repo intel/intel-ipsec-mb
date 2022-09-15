@@ -1481,23 +1481,36 @@ int main(int argc, char **argv)
                 goto exit;
         }
 
+        if (imb_get_version() >= IMB_VERSION(1, 3, 0)) {
+                if ((mb_mgr != NULL) && /* scan-build needs this check */
+                    (mb_mgr->features & IMB_FEATURE_SELF_TEST))
+                        printf("SELF-TEST: PASS\n");
+                else
+                        printf("SELF-TEST: FAIL\n");
+        } else {
+                printf("SELF-TEST: N/A (requires >= v1.3)\n");
+        }
+
         if (imb_get_errno(mb_mgr) != 0) {
                 fprintf(stderr, "Error initializing MB_MGR structure! %s\n",
                         imb_get_strerror(imb_get_errno(mb_mgr)));
-                free_mb_mgr(mb_mgr);
                 goto exit;
         }
 
         /* Parse request file, run crypto tests and write out response file */
         acvp_run_vectors_from_file(ctx, req_filename, resp_filename);
 
-        /* Free MB_MGR and test session */
-        free_mb_mgr(mb_mgr);
+        ret = EXIT_SUCCESS;
 
+exit:
+        /* Free MB_MGR and test session */
+        if (mb_mgr != NULL)
+                free_mb_mgr(mb_mgr);
+
+        if (ctx != NULL)
         acvp_free_test_session(ctx);
 
-        ret = EXIT_SUCCESS;
-exit:
-        free(req_filename);
+        if (req_filename != NULL)
+                free(req_filename);
         return ret;
 }

@@ -1449,6 +1449,13 @@ int main(int argc, const char **argv)
                 break;
         }
 
+        if (imb_get_version() >= IMB_VERSION(1, 3, 0))
+                printf("SELF-TEST: %s\n",
+                       (p_mgr->features & IMB_FEATURE_SELF_TEST) ?
+                       "PASS" : "FAIL");
+        else
+                printf("SELF-TEST: N/A (requires library >= v1.3)\n");
+
         if (imb_get_errno(p_mgr) != 0) {
                 printf("Error initializing MB_MGR structure! %s\n",
                        imb_get_strerror(imb_get_errno(p_mgr)));

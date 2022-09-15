@@ -676,12 +676,25 @@ The self-test consists of Cryptographic algorithm test (known answer test) on fo
 - HMAC-SHA384  
 - HMAC-SHA512  
 
-Detecting library self-test failure in the application:
+Example detection of library self-test completion & error in the application:
 ```
 IMB_ARCH arch;
 IMB_MGR *p_mgr = alloc_mb_mgr(0);
 
 init_mb_mgr_auto(p_mgr, &arch); /* or init_mb_mgr_sse/avx/avx2/avx512 */
+
+/*
+ * check for self-test successful completion
+ * - requires library version v1.3 or newer
+ */
+if (imb_get_version() >= IMB_VERSION(1,3,0))
+        printf("SELF-TEST: %s\n",
+               (p_mgr->features & IMB_FEATURE_SELF_TEST) ?
+               "PASS" : "FAIL");
+else
+        printf("SELF-TEST: N/A (requires library >= v1.3)\n");
+
+/* check for initialization self-test error */
 if (imb_get_errno(p_mgr) == IMB_ERR_SELFTEST) {
         /* self-test error */
         exit(EXIT_FAILURE);
