@@ -1452,9 +1452,9 @@ int main(int argc, const char **argv)
                 break;
         }
 
-        if (imb_get_version() >= IMB_VERSION(1, 3, 0))
+        if (p_mgr->features & IMB_FEATURE_SELF_TEST)
                 printf("SELF-TEST: %s\n",
-                       (p_mgr->features & IMB_FEATURE_SELF_TEST) ?
+                       (p_mgr->features & IMB_FEATURE_SELF_TEST_PASS) ?
                        "PASS" : "FAIL");
         else
                 printf("SELF-TEST: N/A (requires library >= v1.3)\n");

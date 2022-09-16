@@ -1571,17 +1571,28 @@ static int self_test_aead(IMB_MGR *p_mgr)
 
 IMB_DLL_LOCAL int self_test(IMB_MGR *p_mgr)
 {
-        p_mgr->features &= ~IMB_FEATURE_SELF_TEST;
-
-        if (!self_test_ciphers(p_mgr))
-                return 0;
-
-        if (!self_test_hash(p_mgr))
-                return 0;
-
-        if (!self_test_aead(p_mgr))
-                return 0;
+        int ret = 1;
 
         p_mgr->features |= IMB_FEATURE_SELF_TEST;
-        return 1;
+        p_mgr->features &= ~IMB_FEATURE_SELF_TEST_PASS;
+
+        if (!self_test_ciphers(p_mgr))
+                ret = 0;
+
+        if (!self_test_hash(p_mgr))
+                ret = 0;
+
+        if (!self_test_aead(p_mgr))
+                ret = 0;
+
+        if (ret)
+                p_mgr->features |= IMB_FEATURE_SELF_TEST_PASS;
+
+#ifdef NO_SELF_TEST_DEV
+        p_mgr->features &= ~(IMB_FEATURE_SELF_TEST |
+                             IMB_FEATURE_SELF_TEST_PASS);
+        ret = 1;
+#endif
+
+        return ret;
 }

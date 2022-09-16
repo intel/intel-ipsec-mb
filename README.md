@@ -684,15 +684,19 @@ IMB_MGR *p_mgr = alloc_mb_mgr(0);
 init_mb_mgr_auto(p_mgr, &arch); /* or init_mb_mgr_sse/avx/avx2/avx512 */
 
 /*
- * check for self-test successful completion
+ * check for self-test presence and successful
  * - requires library version v1.3 or newer
  */
-if (imb_get_version() >= IMB_VERSION(1,3,0))
-        printf("SELF-TEST: %s\n",
-               (p_mgr->features & IMB_FEATURE_SELF_TEST) ?
-               "PASS" : "FAIL");
-else
+if (p_mgr->features & IMB_FEATURE_SELF_TEST) {
+        /* self-test feature present */
+        if (p_mgr->features & IMB_FEATURE_SELF_TEST_PASS) {
+                printf("SELF-TEST: PASS\n");
+        } else {
+                printf("SELF-TEST: FAIL\n");
+	}
+} else {
         printf("SELF-TEST: N/A (requires library >= v1.3)\n");
+}
 
 /* check for initialization self-test error */
 if (imb_get_errno(p_mgr) == IMB_ERR_SELFTEST) {

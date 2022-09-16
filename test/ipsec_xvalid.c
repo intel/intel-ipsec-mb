@@ -2479,8 +2479,8 @@ run_test(const IMB_ARCH enc_arch, const IMB_ARCH dec_arch,
                 exit(EXIT_FAILURE);
         }
 
-        if (imb_get_version() >= IMB_VERSION(1, 3, 0))
-                if (!(enc_mgr->features & IMB_FEATURE_SELF_TEST))
+        if (enc_mgr->features & IMB_FEATURE_SELF_TEST)
+                if (!(enc_mgr->features & IMB_FEATURE_SELF_TEST_PASS))
                         fprintf(stderr, "SELF-TEST: FAIL\n");
 
         if (imb_get_errno(enc_mgr) != 0) {
@@ -2526,8 +2526,8 @@ run_test(const IMB_ARCH enc_arch, const IMB_ARCH dec_arch,
                 exit(EXIT_FAILURE);
         }
 
-        if (imb_get_version() >= IMB_VERSION(1, 3, 0))
-                if (!(dec_mgr->features & IMB_FEATURE_SELF_TEST))
+        if (dec_mgr->features & IMB_FEATURE_SELF_TEST)
+                if (!(dec_mgr->features & IMB_FEATURE_SELF_TEST_PASS))
                         fprintf(stderr, "SELF-TEST: FAIL\n");
 
         if (imb_get_errno(dec_mgr) != 0) {

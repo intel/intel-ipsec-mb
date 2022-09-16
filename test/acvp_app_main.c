@@ -1481,9 +1481,8 @@ int main(int argc, char **argv)
                 goto exit;
         }
 
-        if (imb_get_version() >= IMB_VERSION(1, 3, 0)) {
-                if ((mb_mgr != NULL) && /* scan-build needs this check */
-                    (mb_mgr->features & IMB_FEATURE_SELF_TEST))
+        if ((mb_mgr != NULL) && (mb_mgr->features & IMB_FEATURE_SELF_TEST)) {
+                if (mb_mgr->features & IMB_FEATURE_SELF_TEST_PASS)
                         printf("SELF-TEST: PASS\n");
                 else
                         printf("SELF-TEST: FAIL\n");
