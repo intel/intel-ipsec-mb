@@ -1022,7 +1022,7 @@ test_hmac_shax(struct IMB_MGR *mb_mgr,
         }
 
         if (jobs_rx != num_jobs) {
-                printf("Expected %d jobs, received %d\n", num_jobs, jobs_rx);
+                printf("Expected %u jobs, received %u\n", num_jobs, jobs_rx);
                 goto end;
         }
         ret = 0;
@@ -1232,7 +1232,7 @@ test_hmac_shax_burst(struct IMB_MGR *mb_mgr,
                 job = jobs[i];
 
                 if (job->status != IMB_STATUS_COMPLETED) {
-                        printf("job %d status not complete!\n", i+1);
+                        printf("job %u status not complete!\n", i+1);
                         goto end;
                 }
 
@@ -1248,7 +1248,7 @@ test_hmac_shax_burst(struct IMB_MGR *mb_mgr,
                                                  num_jobs - completed_jobs,
                                                  jobs);
                 if (completed_jobs == 0) {
-                        printf("Expected %d jobs, received %d\n",
+                        printf("Expected %u jobs, received %u\n",
                                num_jobs, jobs_rx);
                         goto end;
                 }
@@ -1468,7 +1468,7 @@ test_hmac_shax_hash_burst(struct IMB_MGR *mb_mgr,
                 job = &jobs[i];
 
                 if (job->status != IMB_STATUS_COMPLETED) {
-                        printf("job %d status not complete!\n", i+1);
+                        printf("job %u status not complete!\n", i+1);
                         goto end;
                 }
 
@@ -1480,7 +1480,7 @@ test_hmac_shax_hash_burst(struct IMB_MGR *mb_mgr,
         }
 
         if (jobs_rx != num_jobs) {
-                printf("Expected %d jobs, received %d\n", num_jobs, jobs_rx);
+                printf("Expected %u jobs, received %u\n", num_jobs, jobs_rx);
                 goto end;
         }
         ret = 0;
@@ -1507,7 +1507,7 @@ test_hmac_shax_std_vectors(struct IMB_MGR *mb_mgr,
 	const int vectors_cnt = DIM(hmac_sha256_sha512_vectors);
 	int vect;
 
-	printf("HMAC-SHA%d standard test vectors (N jobs = %d):\n",
+	printf("HMAC-SHA%d standard test vectors (N jobs = %u):\n",
                sha_type, num_jobs);
 	for (vect = 1; vect <= vectors_cnt; vect++) {
                 const int idx = vect - 1;

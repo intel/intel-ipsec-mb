@@ -1530,7 +1530,7 @@ test_ctr_burst(struct IMB_MGR *mb_mgr,
                 job = jobs[i];
 
                 if (job->status != IMB_STATUS_COMPLETED) {
-                        printf("job %d status not complete!\n", i+1);
+                        printf("job %u status not complete!\n", i+1);
                         goto end;
                 }
                 if (memcmp(out_text, targets[i] + sizeof(padding),
@@ -1558,7 +1558,7 @@ test_ctr_burst(struct IMB_MGR *mb_mgr,
         }
 
         if (jobs_rx != num_jobs) {
-                printf("Expected %d jobs, received %d\n", num_jobs, jobs_rx);
+                printf("Expected %u jobs, received %u\n", num_jobs, jobs_rx);
                 goto end;
         }
         ret = 0;
@@ -1656,7 +1656,7 @@ test_ctr_cipher_burst(struct IMB_MGR *mb_mgr,
                 job = &jobs[i];
 
                 if (job->status != IMB_STATUS_COMPLETED) {
-                        printf("job %d status not complete!\n", i+1);
+                        printf("job %u status not complete!\n", i+1);
                         goto end;
                 }
                 if (memcmp(out_text, targets[i] + sizeof(padding),
@@ -1684,7 +1684,7 @@ test_ctr_cipher_burst(struct IMB_MGR *mb_mgr,
         }
 
         if (jobs_rx != num_jobs) {
-                printf("Expected %d jobs, received %d\n", num_jobs, jobs_rx);
+                printf("Expected %u jobs, received %u\n", num_jobs, jobs_rx);
                 goto end;
         }
         ret = 0;

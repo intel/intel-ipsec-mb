@@ -457,7 +457,7 @@ test_hmac_sha1(struct IMB_MGR *mb_mgr,
         }
 
         if (jobs_rx != num_jobs) {
-                printf("Expected %d jobs, received %d\n", num_jobs, jobs_rx);
+                printf("Expected %u jobs, received %u\n", num_jobs, jobs_rx);
                 goto end;
         }
         ret = 0;
@@ -580,7 +580,7 @@ check_burst_jobs:
                 job = jobs[i];
 
                 if (job->status != IMB_STATUS_COMPLETED) {
-                        printf("job %d status not complete!\n", i+1);
+                        printf("job %u status not complete!\n", i+1);
                         goto end;
                 }
 
@@ -595,7 +595,7 @@ check_burst_jobs:
                                                  num_jobs - completed_jobs,
                                                  jobs);
                 if (completed_jobs == 0) {
-                        printf("Expected %d jobs, received %d\n",
+                        printf("Expected %u jobs, received %u\n",
                                num_jobs, jobs_rx);
                         goto end;
                 }
@@ -720,7 +720,7 @@ test_hmac_sha1_hash_burst(struct IMB_MGR *mb_mgr,
                 job = &jobs[i];
 
                 if (job->status != IMB_STATUS_COMPLETED) {
-                        printf("job %d status not complete!\n", i+1);
+                        printf("job %u status not complete!\n", i+1);
                         goto end;
                 }
 
@@ -731,7 +731,7 @@ test_hmac_sha1_hash_burst(struct IMB_MGR *mb_mgr,
         }
 
         if (jobs_rx != num_jobs) {
-                printf("Expected %d jobs, received %d\n", num_jobs, jobs_rx);
+                printf("Expected %u jobs, received %u\n", num_jobs, jobs_rx);
                 goto end;
         }
         ret = 0;
@@ -757,7 +757,7 @@ test_hmac_sha1_std_vectors(struct IMB_MGR *mb_mgr,
 	const int vectors_cnt = DIM(hmac_sha1_vectors);
 	int vect;
 
-	printf("HMAC-SHA1 standard test vectors (N jobs = %d):\n", num_jobs);
+	printf("HMAC-SHA1 standard test vectors (N jobs = %u):\n", num_jobs);
 	for (vect = 1; vect <= vectors_cnt; vect++) {
                 const int idx = vect - 1;
 #ifdef DEBUG

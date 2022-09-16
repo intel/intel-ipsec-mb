@@ -1701,7 +1701,7 @@ aes_gcm_burst(IMB_MGR *mb_mgr,
                 job = jobs[i];
 
                 if (job->status != IMB_STATUS_COMPLETED) {
-                        printf("job %d status not complete!\n", i+1);
+                        printf("job %u status not complete!\n", i+1);
                        return -1;
                 }
         }
@@ -2160,7 +2160,8 @@ test_gcm_vectors_burst(struct gcm_ctr_vector const *vector,
 	uint8_t **T_test = NULL;
         const uint8_t *iv = vector->IV;
         uint64_t iv_len = vector->IVlen;
-        uint32_t i, j, num_jobs = GCM_MAX_JOBS;
+        uint32_t i, j;
+        const uint32_t num_jobs = GCM_MAX_JOBS;
 
         /* Allocate space for the calculated ciphertext */
         ct_test = malloc(num_jobs * sizeof(void *));
