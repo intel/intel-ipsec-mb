@@ -18,7 +18,7 @@
 
 # Versions numbers
 %global major        1
-%global minor        2
+%global minor        3
 %global patch        0
 
 # GitHub properties
