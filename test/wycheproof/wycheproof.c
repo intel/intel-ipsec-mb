@@ -1375,7 +1375,9 @@ usage(const char *name)
                "--avx       test AVX interface\n"
                "--sse       test SSE interface\n"
                "--shani-off don't use SHA extensions "
-               "(auto-detect is default)\n", name);
+               "(auto-detect by default)\n"
+               "--gfni-off  don't use GFNI extensions "
+               "(auto-detect by default)\n", name);
 }
 
 int main(int argc, const char **argv)
@@ -1411,6 +1413,8 @@ int main(int argc, const char **argv)
                         arch_to_run = IMB_ARCH_AVX512;
                 } else if (strcmp(argv[i], "--shani-off") == 0) {
                         flags |= IMB_FLAG_SHANI_OFF;
+                } else if (strcmp(argv[i], "--gfni-off") == 0) {
+                        flags |= IMB_FLAG_GFNI_OFF;
                 }
         }
 
