@@ -244,7 +244,7 @@ static int aes_gcm_handler(ACVP_TEST_CASE *test_case)
                         }
                 }
         } else /* DECRYPT */ {
-                uint8_t res_tag[MAX_TAG_LENGTH];
+                uint8_t res_tag[MAX_TAG_LENGTH] = {0};
 
                 if (direct_api == 1) {
                         gcm_init_var_iv(&key, &ctx, tc->iv, tc->iv_len,
@@ -377,7 +377,7 @@ static int aes_gmac_handler(ACVP_TEST_CASE *test_case)
                         }
                 }
         } else /* DECRYPT */ {
-                uint8_t res_tag[MAX_TAG_LENGTH];
+                uint8_t res_tag[MAX_TAG_LENGTH] = {0};
 
                 if (direct_api == 1) {
                         gmac_init_var(&key, &ctx, tc->iv, tc->iv_len);
