@@ -2700,6 +2700,11 @@ test_single_job_sgl(struct IMB_MGR *mb_mgr,
                 last_seg_sz = seg_sz;
 
         sgl_segs = malloc(sizeof(struct IMB_SGL_IOV) * num_segments);
+        if (sgl_segs == NULL) {
+                fprintf(stderr, "Could not allocate memory for SGL segments\n");
+                test_suite_update(ctx, 0, 1);
+                goto exit;
+        }
 
         in_buffer = malloc(buffer_sz);
         if (in_buffer == NULL) {

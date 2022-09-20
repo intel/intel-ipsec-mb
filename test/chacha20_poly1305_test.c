@@ -658,6 +658,11 @@ test_single_job_sgl(struct IMB_MGR *mb_mgr,
         const uint32_t num_segments = DIV_ROUND_UP(buffer_sz, seg_sz);
 
         sgl_segs = malloc(sizeof(struct IMB_SGL_IOV) * num_segments);
+        if (sgl_segs == NULL) {
+                fprintf(stderr, "Could not allocate memory for SGL segments\n");
+                test_suite_update(ctx, 0, 1);
+                goto exit;
+        }
 
         if (last_seg_sz == 0)
                 last_seg_sz = seg_sz;

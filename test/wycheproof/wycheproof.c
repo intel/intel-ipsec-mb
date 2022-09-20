@@ -399,10 +399,10 @@ static int test_hmac_sha1(IMB_MGR *p_mgr)
                 const void *key_ptr = NULL;
                 size_t key_size = 0;
 
-                IMB_ASSERT((v->tagSize / 8) <= sizeof(scratch));
+                IMB_ASSERT((v->tagSize / 8) <= sizeof(tag));
 
                 /* tag too long */
-                if (v->tagSize > (sizeof(scratch) * 8)) {
+                if (v->tagSize > (sizeof(tag) * 8)) {
                         print_mac_test(v);
                         return 0;
                 }
@@ -433,8 +433,7 @@ static int test_hmac_sha1(IMB_MGR *p_mgr)
                         job->auth_tag_output_len_in_bytes =
                                 IMB_SHA1_DIGEST_SIZE_IN_BYTES;
                 else
-                        job->auth_tag_output_len_in_bytes =
-                                v->tagSize / 8;
+                        job->auth_tag_output_len_in_bytes = v->tagSize / 8;
 
                 /* prepare key */
                 if ((v->keySize / 8) <= IMB_SHA1_BLOCK_SIZE) {
@@ -484,10 +483,10 @@ static int test_hmac_sha224(IMB_MGR *p_mgr)
                 const void *key_ptr = NULL;
                 size_t key_size = 0;
 
-                IMB_ASSERT((v->tagSize / 8) <= sizeof(scratch));
+                IMB_ASSERT((v->tagSize / 8) <= sizeof(tag));
 
                 /* tag too long */
-                if (v->tagSize > (sizeof(scratch) * 8)) {
+                if (v->tagSize > (sizeof(tag) * 8)) {
                         print_mac_test(v);
                         return 0;
                 }
@@ -560,10 +559,10 @@ static int test_hmac_sha256(IMB_MGR *p_mgr)
                 const void *key_ptr = NULL;
                 size_t key_size = 0;
 
-                IMB_ASSERT((v->tagSize / 8) <= sizeof(scratch));
+                IMB_ASSERT((v->tagSize / 8) <= sizeof(tag));
 
                 /* tag too long */
-                if (v->tagSize > (sizeof(scratch) * 8)) {
+                if (v->tagSize > (sizeof(tag) * 8)) {
                         print_mac_test(v);
                         return 0;
                 }

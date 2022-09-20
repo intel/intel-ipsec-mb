@@ -450,14 +450,15 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t dataSize)
         IMB_HASH_ALG hash;
         IMB_CIPHER_MODE cipher;
         IMB_CIPHER_DIRECTION dir;
-        char *ar;
-        const char *api;
 
         IMB_MGR *p_mgr = NULL;
         IMB_ARCH arch;
         unsigned i;
+        const char *ar = getenv("ARCH");
+        const char *api = getenv("API");
         const char *n_jobs = getenv("NUM_JOBS");
         const char *key_length = getenv("KEY_LEN");
+        const char *cipher_dir = getenv("DIR");
         unsigned num_jobs;
         unsigned key_len;
         const size_t buffsize = BUFF_SIZE;
@@ -480,11 +481,15 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t dataSize)
         if (num_jobs > 32 || num_jobs == 0 || key_len == 0)
                 return 0;
 
-        if (getenv("DIR")) {
-                if (strcmp(getenv("DIR"), "ENCRYPT") == 0)
+        if (cipher_dir != NULL) {
+                if (strcmp(cipher_dir, "ENCRYPT") == 0)
                         dir = IMB_DIR_ENCRYPT;
-                else if (strcmp(getenv("DIR"), "DECRYPT") == 0)
+                else if (strcmp(cipher_dir, "DECRYPT") == 0)
                         dir = IMB_DIR_DECRYPT;
+                else {
+                        printf("Invalid cipher direction!\n");
+                        return EXIT_FAILURE;
+                }
         } else {
                 dir = IMB_DIR_ENCRYPT;
         }
@@ -495,7 +500,6 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t dataSize)
                 printf("Error allocating MB_MGR structure!\n");
                 return EXIT_FAILURE;
         }
-        ar = getenv("ARCH");
         if (ar == NULL) {
                 init_mb_mgr_auto(p_mgr, &arch);
         } else {
@@ -514,8 +518,6 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t dataSize)
         IMB_JOB *job = NULL;
         /* create job array */
         IMB_JOB *jobs[32] = {NULL};
-
-        api = getenv("API");
 
         if (api == NULL || (strcmp(api, "SINGLE") == 0)) {
                 single = true;
