@@ -1283,7 +1283,7 @@ static const struct gcm_ctr_vector gcm_vectors[] = {
         extra_vector(22),
 };
 
-/* Variable IV vectrors (not 12 bytes) */
+/* Variable IV vectors (not 12 bytes) */
 static const struct gcm_ctr_vector gcm_iv_vectors[] = {
 	/*
          * field order {K, Klen, IV, IVlen, A, Alen, P, Plen, C, T, Tlen};

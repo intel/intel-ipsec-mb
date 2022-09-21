@@ -200,7 +200,7 @@ endstruc
 %endmacro
 
 %macro AES128_CTR_PON_ENC 1
-%define %%CIPH  %1              ; [in] cipher "CTR" or "NO_CTR"
+%define %%CIPHER  %1              ; [in] cipher "CTR" or "NO_CTR"
 
         sub     rsp, STACKFRAME_size
 
@@ -260,7 +260,7 @@ endstruc
         ; get output buffer
         mov     dst, [job + _dst]
 
-%ifidn %%CIPH, CTR
+%ifidn %%CIPHER, CTR
         ; Encrypt buffer and calculate BIP in the same function
         mov     arg2, dst
 
@@ -325,7 +325,7 @@ endstruc
         vpxord  xmm1, xmm0
 
         vmovq   bip, xmm1
-%endif ; CIPH = CTR
+%endif ; CIPHER = CTR
 
         mov     tmp_1, [job + _auth_tag_output]
         mov     [tmp_1], DWORD(bip)
@@ -351,7 +351,7 @@ endstruc
 %endmacro
 
 %macro AES128_CTR_PON_DEC 1
-%define %%CIPH  %1              ; [in] cipher "CTR" or "NO_CTR"
+%define %%CIPHER  %1              ; [in] cipher "CTR" or "NO_CTR"
 
         sub      rsp, STACKFRAME_size
 
@@ -384,7 +384,7 @@ endstruc
         ; Save job pointer
         mov     [rsp + _job_save], job
 
-%ifidn %%CIPH, CTR
+%ifidn %%CIPHER, CTR
         ;; Decrypt message and calculate BIP in same function
         mov     arg2, [job + _dst]
         mov     arg3, [job + _iv]
@@ -410,7 +410,7 @@ endstruc
 %ifndef LINUX
         add     rsp, 8*6
 %endif
-%else ; %%CIPH == CTR
+%else ; %%CIPHER == CTR
 
         ; Calculate BIP (XOR message)
         vmovq   xmm1, bip
@@ -449,7 +449,7 @@ endstruc
 
         vmovd   DWORD(bip), xmm1
 
-%endif ; CIPH == CTR
+%endif ; CIPHER == CTR
 
         cmp     bytes_to_crc, 4
         jle     %%_skip_crc

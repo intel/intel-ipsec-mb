@@ -528,7 +528,7 @@ mksection .text
 
 %ifidn	%%ENC_DEC, DEC
 	vmovdqa	xmm3, xmm1
-	vpxor	xmm9, xmm1			; Cyphertext XOR E(K, Yn)
+	vpxor	xmm9, xmm1			; Ciphertext XOR E(K, Yn)
 
 	mov	r15, %%PLAIN_CYPH_LEN
 	add	r15, r13

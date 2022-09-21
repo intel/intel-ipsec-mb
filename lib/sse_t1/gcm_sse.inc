@@ -565,7 +565,7 @@
 
 %ifidn %%ENC_DEC, DEC
 	movdqa	xmm3, xmm1
-	pxor	xmm9, xmm1			; Cyphertext XOR E(K, Yn)
+	pxor	xmm9, xmm1			; Ciphertext XOR E(K, Yn)
 
 	mov	r15, %%PLAIN_CYPH_LEN
 	add	r15, r13

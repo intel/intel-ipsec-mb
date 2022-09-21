@@ -756,7 +756,7 @@ kasumi_f8_1_buffer(const kasumi_key_sched_t *pCtx, const uint64_t IV,
         uint8_t *pBufferOut = (uint8_t *) pOut;
         uint32_t lengthInBytes = length;
 
-        /* IV Endianity  */
+        /* IV Endianness  */
 	a.b64[0] = BSWAP64(IV);
 
         /* First encryption to create modifier */
@@ -857,7 +857,7 @@ kasumi_f8_1_buffer_bit(const kasumi_key_sched_t *pCtx, const uint64_t IV,
         SafeBuf safeOutBuf = {0};
         SafeBuf safeInBuf = {0};
 
-        /* IV Endianity  */
+        /* IV Endianness  */
         a.b64[0] = BSWAP64(IV);
 
         /* First encryption to create modifier */
@@ -1002,7 +1002,7 @@ kasumi_f8_2_buffer(const kasumi_key_sched_t *pCtx,
 
         kasumi_union_t temp;
 
-        /* IV Endianity  */
+        /* IV Endianness  */
         a1.b64[0] = BSWAP64(IV1);
         a2.b64[0] = BSWAP64(IV2);
 
@@ -1185,7 +1185,7 @@ kasumi_f8_3_buffer(const kasumi_key_sched_t *pCtx,
         kasumi_union_t a2, b2; /* the modifier */
         kasumi_union_t a3, b3; /* the modifier */
 
-        /* IV Endianity  */
+        /* IV Endianness  */
         a1.b64[0] = BSWAP64(IV1);
         a2.b64[0] = BSWAP64(IV2);
         a3.b64[0] = BSWAP64(IV3);
@@ -1304,7 +1304,7 @@ kasumi_f8_4_buffer(const kasumi_key_sched_t *pCtx, const uint64_t IV1,
         kasumi_union_t a4, b4; /* the modifier */
         uint16_t *pTemp[4] = {b1.b16, b2.b16, b3.b16, b4.b16};
 
-        /* IV Endianity  */
+        /* IV Endianness  */
         b1.b64[0] = BSWAP64(IV1);
         b2.b64[0] = BSWAP64(IV2);
         b3.b64[0] = BSWAP64(IV3);

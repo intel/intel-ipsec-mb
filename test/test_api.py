@@ -72,7 +72,7 @@ fixed_end_main = """test_suite_update(&ts, run - errors, errors);
 def ERR(err_str):
     print("ERROR: {}".format(err_str))
 
-# This serches for patterns in header file and returns dict with results
+# This searches for patterns in header file and returns dict with results
 # Functions works only for 3 args exactly
 # lines     :   list of all lines from LIB_HEADER
 # keyword   :   position of keyword in pattern (0/1/2)
@@ -399,7 +399,7 @@ if __name__ == "__main__":
             function_list.append((name, f_type))
 
     # --------------------------------------------------------------------------
-    # Match arg types with arg names and args with ivalid values
+    # Match arg types with arg names and args with invalid values
     full_data = prep_func_arg_type_matches(function_list, defines, prototypes)
     test_cases = assign_errors_to_inv_parameters_by_arg_name(full_data)
 

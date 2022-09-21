@@ -75,7 +75,7 @@ TAGS:
 # -I FILE   -- File containing words to be ignored
 #
 CODESPELL ?= codespell
-CS_IGNORE_WORDS ?= iinclude,struc,fo,ue,od,ba
+CS_IGNORE_WORDS ?= iinclude,struc,fo,ue,od,ba,padd
 
 .PHONY: spellcheck
 spellcheck:
