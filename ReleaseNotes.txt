@@ -1,7 +1,7 @@
 ========================================================================
 Release Notes for Intel(R) Multi-Buffer Crypto for IPsec Library
 
-Unreleased
+v1.3 September 2022
 ========================================================================
 
 Library
@@ -18,6 +18,8 @@ Library
 - Asynchronous burst API added that supports all cipher and hash modes
 - SNOW3G-UEA2 SSE multi-buffer implementation added
 - SNOW3G-UIA2 SSE multi-buffer initialization and key-stream generation added
+- SNOW3G-UEA2 and SNOW3G-UIA2 SSE implementation used in JOB API for
+  AVX and AVX2 architectures
 - API documentation added (doxygen generated)
 - New SGL job API (AES-GCM and CHACHA20-POLY1305 only)
 - Enforced EVEX PMADD52 encoding in AVX512 code
@@ -25,6 +27,13 @@ Library
 - SSE, AVX, AVX2 and AVX512 managers were split to better cover different types
 - Added library self-test functionality
 - enbranch64 not emitted on Windows builds (CET related)
+- use SHANI extensions in AVX2 type-2 and AVX type-2 for SHA224, HMAC-SHA224,
+  SHA256 and HMAC-SHA256
+- use SHANI extensions in AVX type-2 for SHA1, HMAC-SHA1
+- no-GFNI option added to help with testing
+- single buffer SHANI implementation of SHA1 and SHA256 added
+- single buffer SHANI implementation used in HMAC-SHA1, HMAC-SHA224 and
+  HMAC-SHA256 flush operation
 
 Test Applications
 - GHASH JOB API support added in the test application, fuzzing and xvalid tools
@@ -35,6 +44,11 @@ Test Applications
 - Cross validation (xvalid) tool improvements in pattern search functionality
 - FreeBSD added to github CI
 - Added AVX-SSE transition check to the cross validation tool (xvalid)
+- Wycheproof AES-GCM, AES-CCM, CHACHA20-POLY1305, AES-CMAC, AES-GMAC, HMAC-SHA1,
+  HMAC-SHA224, HMAC-SHA256, HMAC-SHA384 and HMAC-SHA512 test vectors added
+  to a new test tool
+- no-GFNI option added
+- Fuzzing application extended to cover new burst API's
 
 Performance Application
 - GHASH support added (through JOB and direct API)
@@ -42,12 +56,15 @@ Performance Application
 - Support added for SHA1/224/256/384/512
 - Burst API support added for supported algorithms
 - SGL support added (AES-GCM and CHACHA20-POLY1305 only)
+- no-GFNI option added
 
 Fixes
 - Fixed 23-byte IV expansion for ZUC-256 (issue #102)
 - Fixed incorrect 8-buffer SNOW3G key-stream generation (issue #104)
 - Numerous AVX-SSE transition fixes with SAFE_OPTIONS=n
 - [ZUC-EIA3] allow unaligned digest load/stores
+- AES-CCM authentication flush may load out of scope data (issue #107)
+- AES-CMAC authentication flush may load out of scope data (similar to issue #107)
 
 v1.2 February 2022
 ========================================================================
