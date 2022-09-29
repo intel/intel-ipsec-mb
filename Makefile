@@ -57,9 +57,6 @@ help:
 doxy:
 	$(MAKE) -C lib doxy
 
-README: README.md
-	pandoc -f markdown -t plain $< -o $@
-
 .PHONY: TAGS
 TAGS:
 	find ./ -name "*.[ch]" -print | etags -
@@ -82,7 +79,7 @@ spellcheck:
 	$(CODESPELL) -d -L $(CS_IGNORE_WORDS) \
 	-S "*.obj,*.o,*.a,*.so,*.lib,*~,*.so,*.so.*,*.d,ipsec_perf" \
 	-S "ipsec_MB_testapp,ipsec_xvalid_test" \
-	./lib ./perf ./test README README.md SECURITY.md CONTRIBUTING \
+	./lib ./perf ./test README.md SECURITY.md CONTRIBUTING \
 	Makefile win_x64.mak ReleaseNotes.txt LICENSE $(CS_EXTRA_OPTS)
 
 # cppcheck analysis check
