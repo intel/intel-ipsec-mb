@@ -1338,15 +1338,15 @@ int main(int argc, char **argv)
                                         "Missing argument for --arch\n");
                                 goto exit;
                         }
-                        if (strcmp(argv[i], "SSE") == 0)
+                        if (strcmp(argv[i + 1], "SSE") == 0)
                                 test_arch = IMB_ARCH_SSE;
-                        else if (strcmp(argv[i], "AVX") == 0)
+                        else if (strcmp(argv[i + 1], "AVX") == 0)
                                 test_arch = IMB_ARCH_AVX;
-                        else if (strcmp(argv[i], "AVX2") == 0)
+                        else if (strcmp(argv[i + 1], "AVX2") == 0)
                                 test_arch = IMB_ARCH_AVX2;
-                        else if (strcmp(argv[i], "AVX512") == 0)
+                        else if (strcmp(argv[i + 1], "AVX512") == 0)
                                 test_arch = IMB_ARCH_AVX512;
-                        else if (strcmp(argv[i], "NO-AESNI") == 0)
+                        else if (strcmp(argv[i + 1], "NO-AESNI") == 0)
                                 test_arch = IMB_ARCH_NOAESNI;
                         else {
                                 fprintf(stderr, "Unsupported architecture\n");
