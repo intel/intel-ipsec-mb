@@ -503,13 +503,13 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t dataSize)
         if (ar == NULL) {
                 init_mb_mgr_auto(p_mgr, &arch);
         } else {
-                if (strcmp(ar, "avx") == 0)
+                if (strcasecmp(ar, "AVX") == 0)
                         init_mb_mgr_avx(p_mgr);
-                else if (strcmp(ar, "avx2") == 0)
+                else if (strcasecmp(ar, "AVX2") == 0)
                         init_mb_mgr_avx2(p_mgr);
-                else if (strcmp(ar, "avx512") == 0)
+                else if (strcasecmp(ar, "AVX512") == 0)
                         init_mb_mgr_avx512(p_mgr);
-                else if (strcmp(ar, "sse") == 0)
+                else if (strcasecmp(ar, "SSE") == 0)
                         init_mb_mgr_sse(p_mgr);
                 else
                         init_mb_mgr_auto(p_mgr, &arch);
