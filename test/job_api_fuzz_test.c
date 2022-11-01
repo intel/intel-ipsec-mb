@@ -35,6 +35,7 @@
 #include <intel-ipsec-mb.h>
 
 #define BUFF_SIZE (32*1024*1024)
+#define MAX_BURST_JOBS 32
 
 int LLVMFuzzerTestOneInput(const uint8_t *, size_t);
 
@@ -478,7 +479,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t dataSize)
         if (dataSize < sizeof(IMB_JOB))
                 return 0;
 
-        if (num_jobs > 32 || num_jobs == 0 || key_len == 0)
+        if (num_jobs > MAX_BURST_JOBS || num_jobs == 0 || key_len == 0)
                 return 0;
 
         if (cipher_dir != NULL) {
@@ -517,7 +518,6 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t dataSize)
 
         IMB_JOB *job = NULL;
         /* create job array */
-        IMB_JOB *jobs[32] = {NULL};
 
         if (api == NULL || (strcmp(api, "SINGLE") == 0)) {
                 single = true;
@@ -560,6 +560,8 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t dataSize)
                         job = IMB_SUBMIT_JOB(p_mgr);
                 }
         } else if (burst) {
+                IMB_JOB *jobs[MAX_BURST_JOBS] = {NULL};
+
                 while (IMB_GET_NEXT_BURST(p_mgr, num_jobs, jobs)
                        < (uint32_t)num_jobs)
                         IMB_FLUSH_BURST(p_mgr, num_jobs, jobs);
@@ -597,12 +599,10 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t dataSize)
 
                 IMB_SUBMIT_BURST(p_mgr, num_jobs, jobs);
         } else if (cipher_burst) {
-                while (IMB_GET_NEXT_BURST(p_mgr, num_jobs, jobs)
-                       < (uint32_t)num_jobs)
-                        IMB_FLUSH_BURST(p_mgr, num_jobs, jobs);
+	        IMB_JOB jobs[MAX_BURST_JOBS] = {0};
 
                 for (i = 0; i < num_jobs; i++) {
-                        job = jobs[i];
+                        job = &jobs[i];
                         cipher = cipher_selection();
                         memcpy(job, data, sizeof(*job));
                         /*
@@ -621,15 +621,13 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t dataSize)
                         fill_job_data(job, buff);
                 }
 
-                IMB_SUBMIT_CIPHER_BURST(p_mgr, job, num_jobs,
+                IMB_SUBMIT_CIPHER_BURST(p_mgr, jobs, num_jobs,
                                         cipher, dir, key_len);
         } else if (hash_burst) {
-                while (IMB_GET_NEXT_BURST(p_mgr, num_jobs, jobs)
-                       < (uint32_t)num_jobs)
-                        IMB_FLUSH_BURST(p_mgr, num_jobs, jobs);
+	        IMB_JOB jobs[MAX_BURST_JOBS] = {0};
 
                 for (i = 0; i < num_jobs; i++) {
-                        job = jobs[i];
+                        job = &jobs[i];
                         hash = hash_selection();
                         memcpy(job, data, sizeof(*job));
                         /*
@@ -648,7 +646,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t dataSize)
                         fill_job_data(job, buff);
                 }
 
-                IMB_SUBMIT_HASH_BURST(p_mgr, jobs[0], num_jobs, hash);
+                IMB_SUBMIT_HASH_BURST(p_mgr, jobs, num_jobs, hash);
         }
 
         free_mb_mgr(p_mgr);
