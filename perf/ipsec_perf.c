@@ -27,6 +27,7 @@
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************/
 
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <inttypes.h>
@@ -890,7 +891,7 @@ const uint32_t auth_tag_length_bytes[] = {
 uint32_t index_limit;
 uint32_t key_idxs[NUM_OFFSETS];
 uint32_t offsets[NUM_OFFSETS];
-uint32_t sha_size_incr = 24;
+uint32_t sha_size_incr = UINT32_MAX;
 
 enum range {
         RANGE_MIN = 0,
@@ -4091,6 +4092,23 @@ int main(int argc, char *argv[])
         if (tsc_detect)
                 fprintf(stderr, "TSC scaling to core cycles: %.3f\n",
                         get_tsc_to_core_scale(turbo_enabled));
+
+        /**
+         * if SHA size increment not specified by user, set to default value
+         * - 24 for CBC-HMAC variants, otherwise 0
+         **/
+        if (sha_size_incr == UINT32_MAX) {
+                if ((custom_job_params.cipher_mode == TEST_CBC) &&
+                    ((custom_job_params.hash_alg == TEST_SHA1_HMAC) ||
+                     (custom_job_params.hash_alg == TEST_SHA_224_HMAC) ||
+                     (custom_job_params.hash_alg == TEST_SHA_256_HMAC) ||
+                     (custom_job_params.hash_alg == TEST_SHA_384_HMAC) ||
+                     (custom_job_params.hash_alg == TEST_SHA_512_HMAC) ||
+                     (custom_job_params.hash_alg == TEST_MD5)))
+                        sha_size_incr = 24;
+                else
+                        sha_size_incr = 0;
+        }
 
         fprintf(stderr,
                 "Authentication size = cipher size + %u\n"
