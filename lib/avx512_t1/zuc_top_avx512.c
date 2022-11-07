@@ -606,7 +606,7 @@ void _zuc_eia3_1_buffer_avx512(const void *pKey,
                 asm_Eia3Round64BAVX512(&T, &keyStream[0], pIn8);
                 /* Copy the last keystream generated
                  * to the first 64 bytes */
-                memcpy(&keyStream[0], &keyStream[16], 64);
+                memmove(&keyStream[0], &keyStream[16], 64);
                 pIn8 = &pIn8[ZUC_KEYSTR_LEN];
         }
 
@@ -715,7 +715,7 @@ void _zuc_eia3_16_buffer_avx512(const void * const pKey[NUM_AVX512_BUFS],
                  * to be in contiguous memory
                  */
                 for (j = 0; j < 8; j++)
-                        memcpy(keyStr32 + j*4,
+                        memmove(keyStr32 + j*4,
                                &keyStr[get_start_key_addr(i) + j*16], 16);
 
                 /* If remaining bits are more than 56 bytes, we need to generate
@@ -756,7 +756,7 @@ void _zuc_eia3_16_buffer_avx512(const void * const pKey[NUM_AVX512_BUFS],
                         asm_Eia3Round64BAVX512(&T[i], &keyStr32[0], pIn8[i]);
                         /* Copy the last keystream generated
                          * to the first 64 bytes */
-                        memcpy(keyStr32, &keyStr32[16], 64);
+                        memmove(keyStr32, &keyStr32[16], 64);
                         pIn8[i] = &pIn8[i][ZUC_KEYSTR_LEN];
                 }
 
