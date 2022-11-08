@@ -119,6 +119,22 @@ SOURCES_STYLE := $(foreach infile,$(SOURCES_ALL),$(infile)_style_check)
 .PHONY: style
 style: $(SOURCES_STYLE)
 
+# cppcheck analysis check
+CPPCHECK ?= cppcheck
+CPPCHECK_OPTS ?= -I./ -I../../lib -I../
+CPPCHECK_FLAGS ?= -j $(shell getconf _NPROCESSORS_ONLN)
+CPPCHECK_FLAGS1 ?= --cppcheck-build-dir=.cppcheck $(CPPCHECK_FLAGS)
+CPPCHECK_FLAGS2 ?= --cppcheck-build-dir=.bughunt $(CPPCHECK_FLAGS)
+.PHONY: cppcheck
+cppcheck:
+	mkdir -p .cppcheck
+	$(CPPCHECK) --force --enable=all $(CPPCHECK_FLAGS1) $(CPPCHECK_OPTS) ./
+
+.PHONY: bughunt
+bughunt:
+	mkdir -p .bughunt
+	$(CPPCHECK) --bug-hunting --inconclusive $(CPPCHECK_FLAGS2) $(CPPCHECK_OPTS) ./
+
 # if target not clean or rinse then make dependencies
 ifneq ($(MAKECMDGOALS),clean)
 ifneq ($(MAKECMDGOALS),style)

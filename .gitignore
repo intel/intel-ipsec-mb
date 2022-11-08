@@ -19,3 +19,5 @@ TAGS
 acvp_app
 test/wycheproof/wycheproof
 !wycheproof.c
+.cppcheck
+.bughunt

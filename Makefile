@@ -83,7 +83,15 @@ spellcheck:
 	Makefile win_x64.mak ReleaseNotes.txt LICENSE $(CS_EXTRA_OPTS)
 
 # cppcheck analysis check
-CPPCHECK ?= cppcheck
-.PHONY: cppcheck
 cppcheck:
-	$(CPPCHECK) ./ --force --enable=all
+	$(MAKE) -C lib cppcheck
+	$(MAKE) -C test cppcheck
+	$(MAKE) -C test/wycheproof cppcheck
+	$(MAKE) -C perf cppcheck
+
+# cppcheck bughunt analysis check
+bughunt:
+	$(MAKE) -C lib bughunt
+	$(MAKE) -C test bughunt
+	$(MAKE) -C test/wycheproof bughunt
+	$(MAKE) -C perf bughunt

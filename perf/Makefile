@@ -128,3 +128,20 @@ style:
 UNSPECIFIED_INT,ARRAY_SIZE,BLOCK_COMMENT_STYLE,GLOBAL_INITIALISERS,\
 COMPLEX_MACRO,SPACING,STORAGE_CLASS,USE_FUNC,NEW_TYPEDEFS,VOLATILE,\
 CONSTANT_COMPARISON $(SOURCES_STYLE)
+
+# cppcheck analysis check
+CPPCHECK ?= cppcheck
+CPPCHECK_OPTS ?= -I../lib -I./
+CPPCHECK_FLAGS ?= -j $(shell getconf _NPROCESSORS_ONLN)
+CPPCHECK_FLAGS1 ?= --cppcheck-build-dir=.cppcheck $(CPPCHECK_FLAGS)
+CPPCHECK_FLAGS2 ?= --cppcheck-build-dir=.bughunt $(CPPCHECK_FLAGS)
+
+.PHONY: cppcheck
+cppcheck:
+	mkdir -p .cppcheck
+	$(CPPCHECK) --force --enable=all $(CPPCHECK_FLAGS1) $(CPPCHECK_OPTS) ./
+
+.PHONY: bughunt
+bughunt:
+	mkdir -p .bughunt
+	$(CPPCHECK) --bug-hunting --inconclusive $(CPPCHECK_FLAGS2) $(CPPCHECK_OPTS) ./
