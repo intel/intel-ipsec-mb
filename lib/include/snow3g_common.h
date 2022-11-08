@@ -3261,7 +3261,7 @@ void SNOW3G_F8_N_BUFFER(const snow3g_key_schedule_t *pCtx,
 
         if (packetCount > NUM_PACKETS_16) {
                 pBufferOut[0] = NULL;
-                printf("packetCount too high (%d)\n", packetCount);
+                printf("packetCount too high (%u)\n", (unsigned) packetCount);
                 return;
         }
 
@@ -3465,7 +3465,7 @@ void SNOW3G_F8_N_BUFFER_MULTIKEY(const snow3g_key_schedule_t * const pCtx[],
 
         if (packetCount > NUM_PACKETS_16) {
                 pBufferOut[0] = NULL;
-                printf("packetCount too high (%d)\n", packetCount);
+                printf("packetCount too high (%u)\n", (unsigned) packetCount);
                 return;
         }
 

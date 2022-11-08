@@ -1427,7 +1427,7 @@ kasumi_f8_n_buffer(const kasumi_key_sched_t *pKeySchedule, const uint64_t IV[],
 
         if (bufCount > 16) {
                 pOut[0] = NULL;
-                printf("dataCount too high (%d)\n", bufCount);
+                printf("dataCount too high (%u)\n", (unsigned) bufCount);
                 return;
         }
 
