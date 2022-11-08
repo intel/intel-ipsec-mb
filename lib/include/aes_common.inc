@@ -29,6 +29,7 @@
 %define _AES_COMMON_INC_
 
 %include "include/reg_sizes.inc"
+%include "include/memcpy.inc"
 
 ;; =============================================================================
 ;; Generic macro to produce code that executes %%OPCODE instruction
@@ -272,6 +273,109 @@
 %elif (blocks_left == 3 || blocks_left == 4)
         vmovdqu8        %%DSTREG{%%MASK}{z}, [%%INP + %%DATA_OFFSET + src_offset]
 %endif
+
+%endmacro
+
+;; =============================================================================
+;; Loads specified number of AES blocks into YMM registers using mask register
+;; for the last loaded register (xmm or ymm).
+;; Loads take place at 1 byte granularity.
+%macro YMM_LOAD_MASKED_BLOCKS_0_16 12
+%define %%NUM_BLOCKS    %1  ; [in] numerical value, number of AES blocks (0 to 16)
+%define %%INP           %2  ; [in] input data pointer to read from
+%define %%DATA_OFFSET   %3  ; [in] offset to the output pointer (GP or numerical)
+%define %%DST0          %4  ; [out] YMM register with loaded data
+%define %%DST1          %5  ; [out] YMM register with loaded data
+%define %%DST2          %6  ; [out] YMM register with loaded data
+%define %%DST3          %7  ; [out] YMM register with loaded data
+%define %%DST4          %8  ; [out] YMM register with loaded data
+%define %%DST5          %9  ; [out] YMM register with loaded data
+%define %%DST6          %10 ; [out] YMM register with loaded data
+%define %%DST7          %11 ; [out] YMM register with loaded data
+%define %%MASK          %12 ; [in] mask register
+
+%assign _src_offset  0
+%assign _dst_idx     0
+%assign _blocks_left %%NUM_BLOCKS
+
+%if %%NUM_BLOCKS > 0
+%rep (((%%NUM_BLOCKS + 1) / 2) - 1)
+%xdefine %%DSTREG %%DST %+ _dst_idx
+        vmovdqu8        %%DSTREG, [%%INP + %%DATA_OFFSET + _src_offset]
+%undef %%DSTREG
+%assign _src_offset  (_src_offset + 32)
+%assign _dst_idx     (_dst_idx + 1)
+%assign _blocks_left (_blocks_left - 2)
+%endrep
+%endif  ; %if %%NUM_BLOCKS > 0
+
+%xdefine %%DSTREG %%DST %+ _dst_idx
+
+%if _blocks_left == 1
+        vmovdqu8        XWORD(%%DSTREG){%%MASK}{z}, [%%INP + %%DATA_OFFSET + _src_offset]
+%elif _blocks_left == 2
+        vmovdqu8        %%DSTREG{%%MASK}{z}, [%%INP + %%DATA_OFFSET + _src_offset]
+%endif
+
+%endmacro
+
+;; =============================================================================
+;; Loads specified number of AES blocks into YMM registers without using mask
+;; register for the last loaded register (xmm or ymm).
+;; Loads take place at 1 byte granularity.
+%macro YMM_LOAD_BLOCKS_PARTIAL_0_16 12
+%define %%NUM_BLOCKS    %1  ; [in] numerical value, number of AES blocks (0 to 16)
+%define %%INP           %2  ; [in] input data pointer to read from
+%define %%DATA_OFFSET   %3  ; [in] offset to the output pointer (GP or numerical)
+%define %%DST0          %4  ; [out] YMM register with loaded data
+%define %%DST1          %5  ; [out] YMM register with loaded data
+%define %%DST2          %6  ; [out] YMM register with loaded data
+%define %%DST3          %7  ; [out] YMM register with loaded data
+%define %%DST4          %8  ; [out] YMM register with loaded data
+%define %%DST5          %9  ; [out] YMM register with loaded data
+%define %%DST6          %10 ; [out] YMM register with loaded data
+%define %%DST7          %11 ; [out] YMM register with loaded data
+%define %%LENGTH        %12 ; [in/clobbered] GP register
+
+%assign _src_offset  0
+%assign _dst_idx     0
+%assign _blocks_left %%NUM_BLOCKS
+%assign _blocks_loaded 0
+
+%if %%NUM_BLOCKS > 0
+%rep (((%%NUM_BLOCKS + 1) / 2) - 1)
+%xdefine %%DSTREG %%DST %+ _dst_idx
+        vmovdqu         %%DSTREG, [%%INP + %%DATA_OFFSET + _src_offset]
+%undef %%DSTREG
+%assign _src_offset  (_src_offset + 32)
+%assign _dst_idx     (_dst_idx + 1)
+%assign _blocks_left (_blocks_left - 2)
+%assign _blocks_loaded (_blocks_loaded + 2)
+%endrep
+%endif  ; %if %%NUM_BLOCKS > 0
+
+%xdefine %%DSTREG %%DST %+ _dst_idx
+
+         sub            %%LENGTH, _blocks_loaded * 16
+         cmp            %%LENGTH, 32
+         jb             %%_load_less_than_32
+         vmovdqu        %%DSTREG, [%%INP + %%DATA_OFFSET + _src_offset]
+         jmp            %%_load_done
+%%_load_less_than_32:
+         cmp            %%LENGTH, 16
+         je             %%_load_16
+         jb             %%_load_less_than_16
+         sub            %%LENGTH, 16
+         simd_load_avx_15_1 XWORD(%%DSTREG), {%%INP + %%DATA_OFFSET + _src_offset + 16}, %%LENGTH
+         vinserti128    %%DSTREG, %%DSTREG, XWORD(%%DSTREG), 1
+         vinserti128    %%DSTREG, %%DSTREG, [%%INP + %%DATA_OFFSET + _src_offset], 0
+         jmp            %%_load_done
+%%_load_16:
+         vmovdqu        XWORD(%%DSTREG), [%%INP + %%DATA_OFFSET + _src_offset]
+         jmp            %%_load_done
+%%_load_less_than_16:
+         simd_load_avx_15_1 XWORD(%%DSTREG), {%%INP + %%DATA_OFFSET + _src_offset}, %%LENGTH
+%%_load_done:
 
 %endmacro
 

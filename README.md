@@ -48,11 +48,7 @@ implementations of the core cryptographic processing for IPsec,
 which provides industry-leading performance on a range of Intel(R) Processors.
 
 For information on how the library works, see the Intel White Paper:
-"Fast Multi-buffer IPsec Implementations on Intel Architecture Processors".
-Jim Guilford, Sean Gulley, et. al.
-
-The easiest way to find it is to search the Internet for the title and
-Intel White Paper.
+["Fast Multi-buffer IPsec Implementations on Intel Architecture Processors". Jim Guilford, Sean Gulley, et. al.](https://github.com/intel/intel-ipsec-mb/wiki/doc/fast-multi-buffer-ipsec-implementations-ia-processors-paper.pdf)
 
 Table 1. List of supported cipher algorithms and their implementations.
 ```
@@ -61,9 +57,9 @@ Table 1. List of supported cipher algorithms and their implementations.
 | Encryption     +-----------------------------------------------------|
 |                | x86_64 | SSE    | AVX    | AVX2   | AVX512 | VAES(5)|
 |----------------+--------+--------+--------+--------+--------+--------|
-| AES128-GCM     | N      | Y  by8 | N      | Y  by8 | Y  by8 | Y by32 |
-| AES192-GCM     | N      | Y  by8 | N      | Y  by8 | Y  by8 | Y by32 |
-| AES256-GCM     | N      | Y  by8 | N      | Y  by8 | Y  by8 | Y by32 |
+| AES128-GCM     | N      | Y  by8 | N      | Y(10)  | Y  by8 | Y by32 |
+| AES192-GCM     | N      | Y  by8 | N      | Y(10)  | Y  by8 | Y by32 |
+| AES256-GCM     | N      | Y  by8 | N      | Y(10)  | Y  by8 | Y by32 |
 | AES128-CCM     | N      | Y  by8 | Y  by8 | N      | N      | Y by16 |
 | AES256-CCM     | N      | Y  by8 | Y  by8 | N      | N      | Y by16 |
 | AES128-CBC     | N      | Y(1)   | Y(3)   | N      | N      | Y(6)   |
