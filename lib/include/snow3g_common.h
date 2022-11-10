@@ -3266,7 +3266,7 @@ void SNOW3G_F8_N_BUFFER(const snow3g_key_schedule_t *pCtx,
         }
 
         uint32_t packet_index, inner_index, pktCnt = packetCount;
-        int sortNeeded = 0, tempLen = 0;
+        int sortNeeded = 0;
         uint8_t *srctempbuff;
         uint8_t *dsttempbuff;
         uint8_t *ivtempbuff;
@@ -3316,7 +3316,9 @@ void SNOW3G_F8_N_BUFFER(const snow3g_key_schedule_t *pCtx,
                                         srctempbuff = pSrcBuf[packet_index];
                                         dsttempbuff = pDstBuf[packet_index];
                                         ivtempbuff = pIV[packet_index];
-                                        tempLen = lensBuf[packet_index];
+
+                                        const int tempLen =
+                                                lensBuf[packet_index];
 
                                         pSrcBuf[packet_index] =
                                                 pSrcBuf[inner_index];
@@ -3470,7 +3472,7 @@ void SNOW3G_F8_N_BUFFER_MULTIKEY(const snow3g_key_schedule_t * const pCtx[],
         }
 
         uint32_t packet_index, inner_index, pktCnt = packetCount;
-        int sortNeeded = 0, tempLen = 0;
+        int sortNeeded = 0;
         uint8_t *srctempbuff;
         uint8_t *dsttempbuff;
         uint8_t *ivtempbuff;
@@ -3519,7 +3521,10 @@ void SNOW3G_F8_N_BUFFER_MULTIKEY(const snow3g_key_schedule_t * const pCtx[],
                                         srctempbuff = pSrcBuf[packet_index];
                                         dsttempbuff = pDstBuf[packet_index];
                                         ivtempbuff = pIV[packet_index];
-                                        tempLen = lensBuf[packet_index];
+
+                                        const int tempLen =
+                                                lensBuf[packet_index];
+
                                         tempCtx = pCtxBuf[packet_index];
 
                                         pSrcBuf[packet_index] =
