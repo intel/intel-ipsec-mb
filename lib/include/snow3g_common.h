@@ -2008,66 +2008,116 @@ snow3gStateInitialize_8_multiKey(snow3gKeyState8_t *pCtx,
                                  const snow3g_key_schedule_t * const KeySched[],
                                  const void * const pIV[])
 {
-        DECLARE_ALIGNED(uint32_t k[8], 32);
-        DECLARE_ALIGNED(uint32_t l[8], 32);
-        __m256i *K = (__m256i *)k;
-        __m256i *L = (__m256i *)l;
-
-        int i, j;
-        __m256i mR, mS, mT, mU, T0, T1;
-
-        /* Initialize the LFSR table from constants, Keys, and IV */
-
-        /* Load complete 256b IV into register (SSE2)*/
         static const __m256i swapMask = {
                 0x0405060700010203ULL, 0x0c0d0e0f08090a0bULL,
                 0x0405060700010203ULL, 0x0c0d0e0f08090a0bULL
         };
-        mR = load_2xm128i_into_m256i(pIV[4], pIV[0]);
-        mS = load_2xm128i_into_m256i(pIV[5], pIV[1]);
-        mT = load_2xm128i_into_m256i(pIV[6], pIV[2]);
-        mU = load_2xm128i_into_m256i(pIV[7], pIV[3]);
+        static const __m256i ALLFS = {
+                0xffffffffffffffffULL, 0xffffffffffffffffULL,
+                0xffffffffffffffffULL, 0xffffffffffffffffULL
+        };
+        __m256i ksR, ksS, ksT, ksU;
+        __m256i ivR, ivS, ivT, ivU;
+        __m256i T0, T1;
+        int i;
 
-        /* initialize the array block (SSE4) */
-        for (i = 0; i < 4; i++) {
-                for (j = 0; j < 8; j++) {
-                        k[j] = KeySched[j]->k[i];
-                        l[j] = ~k[j];
-                }
+        /*
+         * Initialize the LFSR table from constants, Keys, and IV
+         * - First initialize LFSR with the key schedules
+         */
 
-                pCtx->LFSR_X[i + 4] = *K;
-                pCtx->LFSR_X[i + 12] = *K;
-                pCtx->LFSR_X[i + 0] = *L;
-                pCtx->LFSR_X[i + 8] = *L;
-        }
+        /* Transform 8 x (4 x 32-bits) into 4 x (8 x 32-bits) */
 
-        /* Update the schedule structure with IVs */
-        /* Store the 4 IVs in LFSR by a column/row matrix swap
-         * after endianness correction */
+        /* Load complete 256b keyschedule into registers */
+        ksR = load_2xm128i_into_m256i(KeySched[4]->k, KeySched[0]->k);
+        ksS = load_2xm128i_into_m256i(KeySched[5]->k, KeySched[1]->k);
+        ksT = load_2xm128i_into_m256i(KeySched[6]->k, KeySched[2]->k);
+        ksU = load_2xm128i_into_m256i(KeySched[7]->k, KeySched[3]->k);
 
-        /* endianness swap */
-        mR = _mm256_shuffle_epi8(mR, swapMask);
-        mS = _mm256_shuffle_epi8(mS, swapMask);
-        mT = _mm256_shuffle_epi8(mT, swapMask);
-        mU = _mm256_shuffle_epi8(mU, swapMask);
+        /*
+         * Ln -> lane index 'n'
+         * Wn -> 32-bit word index 'n'
+         *
+         * ksR = L4W3L4W2L4W1L4W0|L0W3L0W2L0W1L0W0
+         * ksS = L5W3L5W2L5W1L5W0|L1W3L1W2L1W1L1W0
+         * ksT = L6W3L6W2L6W1L6W0|L2W3L2W2L2W1L2W0
+         * ksU = L7W3L7W2L7W1L7W0|L3W3L3W2L3W1L3W0
+         */
 
-        /* row/column dword inversion */
-        T0 = _mm256_unpacklo_epi32(mR, mS);
-        mR = _mm256_unpackhi_epi32(mR, mS);
-        T1 = _mm256_unpacklo_epi32(mT, mU);
-        mT = _mm256_unpackhi_epi32(mT, mU);
+        T0 = _mm256_unpacklo_epi32(ksR, ksS);
+        ksR = _mm256_unpackhi_epi32(ksR, ksS);
+        T1 = _mm256_unpacklo_epi32(ksT, ksU);
+        ksT = _mm256_unpackhi_epi32(ksT, ksU);
 
-        /* row/column qword inversion  */
-        mU = _mm256_unpackhi_epi64(mR, mT);
-        mT = _mm256_unpacklo_epi64(mR, mT);
-        mS = _mm256_unpackhi_epi64(T0, T1);
-        mR = _mm256_unpacklo_epi64(T0, T1);
+        /*
+         * T0  = L5W1L4W1L5W0L4W0|L1W1L0W1L1W0L0W0
+         * ksR = L5W3L4W3L5W2L4W2|L1W3L0W3L1W2L0W2
+         * T1  = L7W1L6W1L7W0L6W0|L3W1L2W1L3W0L2W0
+         * ksT = L7W3L6W3L7W2L6W2|L3W3L2W3L3W2L2W2
+         */
 
-        /*IV ^ LFSR  */
-        pCtx->LFSR_X[15] = _mm256_xor_si256(pCtx->LFSR_X[15], mU);
-        pCtx->LFSR_X[12] = _mm256_xor_si256(pCtx->LFSR_X[12], mT);
-        pCtx->LFSR_X[10] = _mm256_xor_si256(pCtx->LFSR_X[10], mS);
-        pCtx->LFSR_X[9] = _mm256_xor_si256(pCtx->LFSR_X[9], mR);
+        ksU = _mm256_unpackhi_epi64(ksR, ksT);
+        ksT = _mm256_unpacklo_epi64(ksR, ksT);
+        ksS = _mm256_unpackhi_epi64(T0, T1);
+        ksR = _mm256_unpacklo_epi64(T0, T1);
+
+        /*
+         * ksU = L7W3L6W3L5W3L4W3|L3W3L2W3L1W3L0W3
+         * ksT = L7W2L6W2L5W2L4W2|L3W2L2W2L1W2L0W2
+         * ksS = L7W1L6W1L5W1L4W1|L3W1L2W1L1W1L0W1
+         * ksR = L7W0L6W0L5W0L4W0|L3W0L2W0L1W0L0W0
+         */
+
+        pCtx->LFSR_X[4 + 0] = ksR; /* LFSR[12] set later */
+        pCtx->LFSR_X[4 + 1] = pCtx->LFSR_X[12 + 1] = ksS;
+        pCtx->LFSR_X[4 + 2] = pCtx->LFSR_X[12 + 2] = ksT;
+        pCtx->LFSR_X[4 + 3] = ksU; /* LFSR[15] set later */
+
+        /* keep ksR & ksU and ~ksS & ~ksT for later */
+        ksS = _mm256_xor_si256(ksS, ALLFS);
+        ksT = _mm256_xor_si256(ksT, ALLFS);
+
+        pCtx->LFSR_X[0 + 0] =
+                pCtx->LFSR_X[8 + 0] = _mm256_xor_si256(ksR, ALLFS);
+        pCtx->LFSR_X[0 + 1] = ksS; /* LFSR[9] set later */
+        pCtx->LFSR_X[0 + 2] = ksT; /* LFSR[10] set later */
+        pCtx->LFSR_X[0 + 3] =
+                pCtx->LFSR_X[8 + 3] = _mm256_xor_si256(ksU, ALLFS);
+
+        /*
+         * Update LFSR structure with IVs
+         * - Same transform as above, 8 x (4 x 32-bits) into 4 x (8 x 32-bits)
+         */
+
+        /* Load complete 256b IV into register */
+        ivR = load_2xm128i_into_m256i(pIV[4], pIV[0]);
+        ivS = load_2xm128i_into_m256i(pIV[5], pIV[1]);
+        ivT = load_2xm128i_into_m256i(pIV[6], pIV[2]);
+        ivU = load_2xm128i_into_m256i(pIV[7], pIV[3]);
+
+        /* endianness swap of the double words */
+        ivR = _mm256_shuffle_epi8(ivR, swapMask);
+        ivS = _mm256_shuffle_epi8(ivS, swapMask);
+        ivT = _mm256_shuffle_epi8(ivT, swapMask);
+        ivU = _mm256_shuffle_epi8(ivU, swapMask);
+
+        /* transpose */
+        T0 = _mm256_unpacklo_epi32(ivR, ivS);
+        ivR = _mm256_unpackhi_epi32(ivR, ivS);
+        T1 = _mm256_unpacklo_epi32(ivT, ivU);
+        ivT = _mm256_unpackhi_epi32(ivT, ivU);
+
+        ivU = _mm256_unpackhi_epi64(ivR, ivT);
+        ivT = _mm256_unpacklo_epi64(ivR, ivT);
+        ivS = _mm256_unpackhi_epi64(T0, T1);
+        ivR = _mm256_unpacklo_epi64(T0, T1);
+
+        /* IV ^ LFSR  */
+        pCtx->LFSR_X[15] = _mm256_xor_si256(ksU, ivU); /* ksU ^ ivU */
+        pCtx->LFSR_X[12] = _mm256_xor_si256(ksR, ivT); /* ksR ^ ivT */
+        pCtx->LFSR_X[10] = _mm256_xor_si256(ksT, ivS); /* ~ksT ^ ivS */
+        pCtx->LFSR_X[9] = _mm256_xor_si256(ksS, ivR);  /* ~ksS ^ ivR */
+
         pCtx->iLFSR_X = 0;
 
         /* FSM initialization  */
@@ -2077,12 +2127,12 @@ snow3gStateInitialize_8_multiKey(snow3gKeyState8_t *pCtx,
 
         /* Initialisation rounds */
         for (i = 0; i < 32; i++) {
-                mS = ClockFSM_8(pCtx);
+                T0 = ClockFSM_8(pCtx);
                 ClockLFSR_8(pCtx);
 
                 const uint32_t idx = (pCtx->iLFSR_X + 15) & 15;
 
-                pCtx->LFSR_X[idx] = _mm256_xor_si256(pCtx->LFSR_X[idx], mS);
+                pCtx->LFSR_X[idx] = _mm256_xor_si256(pCtx->LFSR_X[idx], T0);
         }
 }
 
