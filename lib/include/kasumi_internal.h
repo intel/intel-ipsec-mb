@@ -307,27 +307,26 @@ typedef union SafeBuffer {
  ******************************************************************************/
 static void kasumi_1_block(const uint16_t *context, uint16_t *data)
 {
-    const uint16_t *end = context + KASUMI_KEY_SCHEDULE_SIZE;
-    uint16_t temp_l, temp_h;
+        const uint16_t *end = context + KASUMI_KEY_SCHEDULE_SIZE;
 
-    /* 4 iterations odd/even */
-    do {
-        temp_l = data[3];
-        temp_h = data[2];
-        FLp1(context, temp_h, temp_l);
-        FOp1(context, temp_h, temp_l);
-        context += 8;
-        data[1] ^= temp_l;
-        data[0] ^= temp_h;
+        /* 4 iterations odd/even */
+        do {
+                uint16_t temp_l = data[3], temp_h = data[2];
 
-        temp_h = data[1];
-        temp_l = data[0];
-        FOp1(context, temp_h, temp_l);
-        FLp1(context, temp_h, temp_l);
-        context += 8;
-        data[3] ^= temp_h;
-        data[2] ^= temp_l;
-    } while (context < end);
+                FLp1(context, temp_h, temp_l);
+                FOp1(context, temp_h, temp_l);
+                context += 8;
+                data[1] ^= temp_l;
+                data[0] ^= temp_h;
+
+                temp_h = data[1];
+                temp_l = data[0];
+                FOp1(context, temp_h, temp_l);
+                FLp1(context, temp_h, temp_l);
+                context += 8;
+                data[3] ^= temp_h;
+                data[2] ^= temp_l;
+        } while (context < end);
 }
 
 /**
@@ -344,38 +343,35 @@ static void kasumi_1_block(const uint16_t *context, uint16_t *data)
 static void
 kasumi_2_blocks(const uint16_t *context, uint16_t *data1, uint16_t *data2)
 {
-    const uint16_t *end = context + KASUMI_KEY_SCHEDULE_SIZE;
-    uint16_t temp1_l, temp1_h;
-    uint16_t temp2_l, temp2_h;
+        const uint16_t *end = context + KASUMI_KEY_SCHEDULE_SIZE;
 
-    /* 4 iterations odd/even , with fine grain interleave */
-    do {
-        /* even */
-        temp1_l = data1[3];
-        temp1_h = data1[2];
-        temp2_l = data2[3];
-        temp2_h = data2[2];
-        FLp2(context, temp1_h, temp1_l, temp2_h, temp2_l);
-        FOp2(context, temp1_h, temp1_l, temp2_h, temp2_l);
-        context += 8;
-        data1[1] ^= temp1_l;
-        data1[0] ^= temp1_h;
-        data2[1] ^= temp2_l;
-        data2[0] ^= temp2_h;
+        /* 4 iterations odd/even , with fine grain interleave */
+        do {
+                /* even */
+                uint16_t temp1_l = data1[3], temp1_h = data1[2];
+                uint16_t temp2_l = data2[3], temp2_h = data2[2];
 
-        /* odd */
-        temp1_h = data1[1];
-        temp1_l = data1[0];
-        temp2_h = data2[1];
-        temp2_l = data2[0];
-        FOp2(context, temp1_h, temp1_l, temp2_h, temp2_l);
-        FLp2(context, temp1_h, temp1_l, temp2_h, temp2_l);
-        context += 8;
-        data1[3] ^= temp1_h;
-        data1[2] ^= temp1_l;
-        data2[3] ^= temp2_h;
-        data2[2] ^= temp2_l;
-    } while (context < end);
+                FLp2(context, temp1_h, temp1_l, temp2_h, temp2_l);
+                FOp2(context, temp1_h, temp1_l, temp2_h, temp2_l);
+                context += 8;
+                data1[1] ^= temp1_l;
+                data1[0] ^= temp1_h;
+                data2[1] ^= temp2_l;
+                data2[0] ^= temp2_h;
+
+                /* odd */
+                temp1_h = data1[1];
+                temp1_l = data1[0];
+                temp2_h = data2[1];
+                temp2_l = data2[0];
+                FOp2(context, temp1_h, temp1_l, temp2_h, temp2_l);
+                FLp2(context, temp1_h, temp1_l, temp2_h, temp2_l);
+                context += 8;
+                data1[3] ^= temp1_h;
+                data1[2] ^= temp1_l;
+                data2[3] ^= temp2_h;
+                data2[2] ^= temp2_l;
+        } while (context < end);
 }
 
 
@@ -397,18 +393,13 @@ kasumi_3_blocks(const uint16_t *context, uint16_t *data1,
 {
         /* Case when the conmpiler is able to interleave efficiently */
         const uint16_t *end = context + KASUMI_KEY_SCHEDULE_SIZE;
-        uint16_t temp1_l, temp1_h;
-        uint16_t temp2_l, temp2_h;
-        uint16_t temp3_l, temp3_h;
 
         /* 4 iterations odd/even , with fine grain interleave */
         do {
-                temp1_l = data1[3];
-                temp1_h = data1[2];
-                temp2_l = data2[3];
-                temp2_h = data2[2];
-                temp3_l = data3[3];
-                temp3_h = data3[2];
+                uint16_t temp1_l = data1[3], temp1_h = data1[2];
+                uint16_t temp2_l = data2[3], temp2_h = data2[2];
+                uint16_t temp3_l = data3[3], temp3_h = data3[2];
+
                 FLp3(context, temp1_h, temp1_l, temp2_h, temp2_l, temp3_h,
                      temp3_l);
                 FOp3(context, temp1_h, temp1_l, temp2_h, temp2_l, temp3_h,
@@ -454,9 +445,9 @@ kasumi_3_blocks(const uint16_t *context, uint16_t *data1,
 static void
 kasumi_4_blocks(const uint16_t *context, uint16_t **ppData)
 {
-    /* Case when the conmpiler is unable to interleave efficiently */
-    kasumi_2_blocks (context, ppData[0], ppData[1]);
-    kasumi_2_blocks (context, ppData[2], ppData[3]);
+        /* Case when the conmpiler is unable to interleave efficiently */
+        kasumi_2_blocks (context, ppData[0], ppData[1]);
+        kasumi_2_blocks (context, ppData[2], ppData[3]);
 }
 
 /**
@@ -472,8 +463,8 @@ kasumi_4_blocks(const uint16_t *context, uint16_t **ppData)
 static void
 kasumi_8_blocks(const uint16_t *context, uint16_t **ppData)
 {
-    kasumi_4_blocks (context, &ppData[0]);
-    kasumi_4_blocks (context, &ppData[4]);
+        kasumi_4_blocks (context, &ppData[0]);
+        kasumi_4_blocks (context, &ppData[4]);
 }
 
 /******************************************************************************
@@ -1442,7 +1433,7 @@ kasumi_f8_n_buffer(const kasumi_key_sched_t *pKeySchedule, const uint64_t IV[],
         uint32_t blkcnt = 0;
         uint32_t len = 0;
         uint32_t packet_idx, inner_idx, same_size_blocks;
-        int sortNeeded = 0, tempLen = 0;
+        int sortNeeded = 0;
         SafeBuf safeInBuf = {0};
 
         memcpy((void *)dataLen, lengths, dataCount * sizeof(uint32_t));
@@ -1491,7 +1482,8 @@ kasumi_f8_n_buffer(const kasumi_key_sched_t *pKeySchedule, const uint64_t IV[],
                                         srctempbuff = pDataIn[packet_idx];
                                         dsttempbuff = pDataOut[packet_idx];
                                         tempSort = temp[packet_idx];
-                                        tempLen = dataLen[packet_idx];
+
+                                        const int tempLen = dataLen[packet_idx];
 
                                         pDataIn[packet_idx] =
                                             pDataIn[inner_idx];
