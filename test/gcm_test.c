@@ -1637,10 +1637,10 @@ aes_gcm_burst(IMB_MGR *mb_mgr,
               const IMB_CIPHER_DIRECTION cipher_dir,
               const struct gcm_key_data *key,
               const uint64_t key_len,
-              uint8_t **out, const uint8_t *in, const uint64_t len,
+              uint8_t ** const out, const uint8_t *in, const uint64_t len,
               const uint8_t *iv, const uint64_t iv_len, const uint8_t *aad,
-              const uint64_t aad_len, uint8_t **auth_tag,
-              const uint64_t auth_tag_len, struct gcm_context_data **ctx,
+              const uint64_t aad_len, uint8_t ** const auth_tag,
+              const uint64_t auth_tag_len, struct gcm_context_data ** const ctx,
               const IMB_CIPHER_MODE cipher_mode, const IMB_SGL_STATE sgl_state,
               const uint32_t num_jobs)
 {
@@ -2556,9 +2556,7 @@ test_gmac_vector(const struct gcm_ctr_vector *vector,
         const uint64_t iv_len = vector->IVlen;
         const uint64_t nb_segs = (vector->Plen / seg_size);
         const uint64_t last_partial_seg = (vector->Plen % seg_size);
-        uint8_t in_seg[MAX_SEG_SIZE];
         const uint8_t *in_ptr = vector->P;
-        uint32_t i;
         uint8_t T_test[16];
         struct test_suite_context *ts = ts128;
 
@@ -2569,10 +2567,13 @@ test_gmac_vector(const struct gcm_ctr_vector *vector,
                 ts = ts256;
 
         memset(&key, 0, sizeof(struct gcm_key_data));
-        if (job_api)
+        if (job_api) {
                 aes_gmac_job(p_gcm_mgr, vector->K, &key, vector->Klen, in_ptr,
                              seg_size, iv, iv_len, T_test, vector->Tlen);
-        else {
+        } else {
+                uint8_t in_seg[MAX_SEG_SIZE];
+                uint32_t i;
+
                 switch (vector->Klen) {
                 case IMB_KEY_128_BYTES:
                         IMB_AES128_GCM_PRE(p_gcm_mgr, vector->K, &key);

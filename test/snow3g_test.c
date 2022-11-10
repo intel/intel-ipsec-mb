@@ -126,7 +126,8 @@ struct {
  * @param ptr [IN] - pointer to beginning of buffer.
  * @param len [IN] - length of buffer.
  ******************************************************************************/
-static inline void snow3g_hexdump(const char *message, uint8_t *ptr, int len)
+static inline
+void snow3g_hexdump(const char *message, const uint8_t *ptr, int len)
 {
         int ctr;
 
@@ -141,9 +142,10 @@ static inline void snow3g_hexdump(const char *message, uint8_t *ptr, int len)
 }
 
 static inline int
-submit_uea2_jobs(struct IMB_MGR *mb_mgr, uint8_t **keys, uint8_t **ivs,
-                 uint8_t **src, uint8_t **dst, const uint32_t *bitlens,
-                 const uint32_t *bit_offsets, int dir,
+submit_uea2_jobs(struct IMB_MGR *mb_mgr, uint8_t ** const keys,
+                 uint8_t ** const ivs, uint8_t ** const src,
+                 uint8_t ** const dst, const uint32_t *bitlens,
+                 const uint32_t *bit_offsets, const int dir,
                  const unsigned int num_jobs)
 {
         IMB_JOB *job;

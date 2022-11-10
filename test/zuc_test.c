@@ -350,8 +350,9 @@ exit_zuc_test:
 }
 
 static inline int
-submit_eea3_jobs(struct IMB_MGR *mb_mgr, uint8_t **keys, uint8_t **ivs,
-                 uint8_t **src, uint8_t **dst, const uint32_t *lens,
+submit_eea3_jobs(struct IMB_MGR *mb_mgr, uint8_t ** const keys,
+                 uint8_t ** const ivs, uint8_t ** const src,
+                 uint8_t ** const dst, const uint32_t *lens,
                  int dir, const unsigned int num_jobs,
                  const unsigned int key_len,
                  const unsigned int *iv_lens)
@@ -405,8 +406,9 @@ submit_eea3_jobs(struct IMB_MGR *mb_mgr, uint8_t **keys, uint8_t **ivs,
 }
 
 static inline int
-submit_eia3_jobs(struct IMB_MGR *mb_mgr, uint8_t **keys, uint8_t **iv,
-                 uint8_t **src, uint8_t **tags, const uint32_t *lens,
+submit_eia3_jobs(struct IMB_MGR *mb_mgr, uint8_t ** const keys,
+                 uint8_t ** const iv, uint8_t ** const src,
+                 uint8_t ** const tags, const uint32_t *lens,
                  const unsigned int num_jobs,
                  const unsigned int key_sz,
                  const unsigned int tag_sz,

@@ -161,7 +161,8 @@ known_answer_test(IMB_MGR *mb_mgr)
         job->src = cipherCBC128;
         job->cipher_start_src_offset_in_bytes = 0;
         job->msg_len_to_cipher_in_bytes = NUMBYTES;
-        job->hash_start_src_offset_in_bytes = text - job->src;
+        job->hash_start_src_offset_in_bytes =
+                (uintptr_t) text - (uintptr_t) job->src;
         job->msg_len_to_hash_in_bytes = TEXTSIZE;
         job->u.HMAC._hashed_auth_key_xor_ipad = ipad_hash;
         job->u.HMAC._hashed_auth_key_xor_opad = opad_hash;

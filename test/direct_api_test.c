@@ -865,7 +865,7 @@ test_kasumi_api(struct IMB_MGR *mgr)
         }
         printf(".");
 
-        if (IMB_KASUMI_KEY_SCHED_SIZE(mgr) <= 0) {
+        if (IMB_KASUMI_KEY_SCHED_SIZE(mgr) == 0) {
                 printf("%s: IMB_KASUMI_KEY_SCHED_SIZE, invalid "
                        "param test failed!\n", __func__);
                 return 1;
@@ -1047,7 +1047,7 @@ test_snow3g_api(struct IMB_MGR *mgr)
         }
         printf(".");
 
-        if (IMB_SNOW3G_KEY_SCHED_SIZE(mgr) <= 0) {
+        if (IMB_SNOW3G_KEY_SCHED_SIZE(mgr) == 0) {
                 printf("%s: IMB_SNOW3G_KEY_SCHED_SIZE, invalid "
                        "param test failed!\n", __func__);
                 return 1;

@@ -2095,7 +2095,7 @@ test_job_invalid_misc_args(struct IMB_MGR *mb_mgr)
 {
         IMB_HASH_ALG hash;
         IMB_CIPHER_DIRECTION dir;
-        IMB_CIPHER_MODE cipher = IMB_CIPHER_NULL;
+        IMB_CIPHER_MODE cipher;
         IMB_CHAIN_ORDER order;
         struct IMB_JOB template_job;
         struct chacha20_poly1305_context_data chacha_ctx;
@@ -2242,8 +2242,8 @@ submit_reset_check_job(struct IMB_MGR *mb_mgr,
 
         if (next_job->status != IMB_STATUS_COMPLETED) {
                 printf("Returned job's status is not completed\n");
-                printf("cipher = %u\n", cipher);
-                printf("imb errno = %u (%s)\n",
+                printf("cipher = %d\n", cipher);
+                printf("imb errno = %d (%s)\n",
                        mb_mgr->imb_errno,
                        imb_get_strerror(mb_mgr->imb_errno));
                 exit(0);
@@ -2327,7 +2327,7 @@ test_reset_api(struct IMB_MGR *mb_mgr)
         }
 
         /* Test AEAD algorithms */
-        IMB_HASH_ALG aead_hash_algos[] = {
+        const IMB_HASH_ALG aead_hash_algos[] = {
                 IMB_AUTH_AES_GMAC,
                 IMB_AUTH_AES_CCM,
                 IMB_AUTH_CHACHA20_POLY1305,
@@ -2335,7 +2335,7 @@ test_reset_api(struct IMB_MGR *mb_mgr)
                 IMB_AUTH_DOCSIS_CRC32,
                 IMB_AUTH_SNOW_V_AEAD
         };
-        IMB_CIPHER_MODE aead_cipher_algos[] = {
+        const IMB_CIPHER_MODE aead_cipher_algos[] = {
                 IMB_CIPHER_GCM,
                 IMB_CIPHER_CCM,
                 IMB_CIPHER_CHACHA20_POLY1305,

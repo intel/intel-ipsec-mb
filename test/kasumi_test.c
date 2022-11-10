@@ -89,9 +89,10 @@ struct kasumi_test_case kasumi_f9_func_tab[] = {
 
 static int
 submit_kasumi_f8_jobs(struct IMB_MGR *mb_mgr, kasumi_key_sched_t **keys,
-                      uint64_t **ivs, uint8_t **src, uint8_t **dst,
-                      const uint32_t *bitlens, const uint32_t *bit_offsets,
-                      int dir, const unsigned int num_jobs)
+                      uint64_t **ivs, uint8_t ** const src,
+                      uint8_t ** const dst, const uint32_t *bitlens,
+                      const uint32_t *bit_offsets, const int dir,
+                      const unsigned int num_jobs)
 {
         unsigned int i;
         unsigned int jobs_rx = 0;
