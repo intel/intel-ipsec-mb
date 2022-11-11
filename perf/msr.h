@@ -90,7 +90,7 @@ int machine_fini(void);
 int
 msr_read(const unsigned lcore,
          const uint32_t reg,
-         uint64_t *value);
+         uint64_t * const value);
 
 /**
  * @brief Executes WRMSR on \a lcore logical core

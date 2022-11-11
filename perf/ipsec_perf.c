@@ -994,15 +994,14 @@ static void CALLBACK timebox_callback(PVOID lpParam, BOOLEAN TimerFired)
 /* Return rdtsc to core cycle scale factor */
 static double get_tsc_to_core_scale(const int turbo)
 {
-        int i, num_loops = 1;
+        int i;
         /* use enough cycles for accurate measurement */
         const uint64_t expected_cycles = 1000000000;
-        uint64_t tsc_cycles;
+        uint64_t tsc_cycles = 0;
 
         /* if turbo enabled then run longer */
         /* to allow frequency to stabilize */
-        if (turbo)
-                num_loops = 8;
+        const int num_loops = turbo ? 8 : 1;
 
         for (i = 0; i < num_loops; i++)
                 tsc_cycles = measure_tsc(expected_cycles);
@@ -1746,7 +1745,6 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
         uint32_t aux;
         uint8_t gcm_key[32];
         uint8_t next_iv[IMB_AES_BLOCK_SIZE];
-        IMB_JOB jobs[MAX_BURST_SIZE];
         struct gcm_context_data gcm_ctx[MAX_BURST_SIZE];
         struct chacha20_poly1305_context_data cp_ctx[MAX_BURST_SIZE];
         struct IMB_SGL_IOV *sgl[MAX_BURST_SIZE] = {NULL};
@@ -2120,7 +2118,7 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
 
                         /* set all job params */
                         for (i = 0; i < n; i++) {
-                                IMB_JOB *job = jobs[i];
+                                job = jobs[i];
                                 *job = job_template;
 
                                 if (segment_size != 0)
@@ -2158,6 +2156,7 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
 
                 /* test cipher-only burst api */
         } else if (test_api == TEST_API_CIPHER_BURST) {
+                IMB_JOB jobs[MAX_BURST_SIZE];
                 IMB_JOB *jt = &job_template;
                 uint32_t num_jobs = num_iter;
                 uint32_t list_idx;
@@ -2222,6 +2221,7 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
 
                 /* test hash-only burst api */
         } else if (test_api == TEST_API_HASH_BURST) {
+                IMB_JOB jobs[MAX_BURST_SIZE];
                 IMB_JOB *jt = &job_template;
                 uint32_t num_jobs = num_iter;
                 uint32_t list_idx;

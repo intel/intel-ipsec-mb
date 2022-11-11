@@ -206,7 +206,7 @@ msr_file_open(const unsigned lcore)
 int
 msr_read(const unsigned lcore,
          const uint32_t reg,
-         uint64_t *value)
+         uint64_t * const value)
 {
         int ret = MACHINE_RETVAL_OK;
 #ifdef _WIN32
