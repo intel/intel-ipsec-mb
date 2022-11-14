@@ -4,8 +4,6 @@
 ![Linux Build Shared clang](https://github.com/intel/intel-ipsec-mb/actions/workflows/linux_build_shared_clang.yml/badge.svg)
 ![Linux Build Static clang](https://github.com/intel/intel-ipsec-mb/actions/workflows/linux_build_static_clang.yml/badge.svg)
 ![Linux Build Shared clang AESNI emulation](https://github.com/intel/intel-ipsec-mb/actions/workflows/linux_build_shared_clang_aesni_emu.yml/badge.svg)
-![FreeBSD Build Shared clang](https://github.com/intel/intel-ipsec-mb/actions/workflows/freebsd_build_shared_clang.yml/badge.svg)
-![FreeBSD Build Shared gcc](https://github.com/intel/intel-ipsec-mb/actions/workflows/freebsd_build_shared_gcc.yml/badge.svg)
 
 # Intel(R) Multi-Buffer Crypto for IPsec Library
 
