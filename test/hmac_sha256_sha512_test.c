@@ -843,6 +843,18 @@ test_hmac_shax(struct IMB_MGR *mb_mgr,
 
         switch (sha_type) {
         case 224:
+        case 256:
+        case 384:
+        case 512:
+                break;
+        default:
+                fprintf(stderr, "Wrong SHA type selection 'SHA-%d'!\n",
+                        sha_type);
+                goto end2;
+        }
+
+        switch (sha_type) {
+        case 224:
                 digest_len = vec->hmac_sha224_len;
                 block_size = IMB_SHA_256_BLOCK_SIZE;
                 break;
@@ -855,13 +867,10 @@ test_hmac_shax(struct IMB_MGR *mb_mgr,
                 block_size = IMB_SHA_384_BLOCK_SIZE;
                 break;
         case 512:
+        default:
                 digest_len = vec->hmac_sha512_len;
                 block_size = IMB_SHA_512_BLOCK_SIZE;
                 break;
-        default:
-                fprintf(stderr, "Wrong SHA type selection 'SHA-%d'!\n",
-                        sha_type);
-                goto end2;
         }
 
         memset(padding, -1, sizeof(padding));
@@ -899,13 +908,10 @@ test_hmac_shax(struct IMB_MGR *mb_mgr,
                         key_len = IMB_SHA384_DIGEST_SIZE_IN_BYTES;
                         break;
                 case 512:
+                default:
                         IMB_SHA512(mb_mgr, vec->key, vec->key_len, key);
                         key_len = IMB_SHA512_DIGEST_SIZE_IN_BYTES;
                         break;
-                default:
-                        fprintf(stderr, "Wrong SHA type selection 'SHA-%d'!\n",
-                                sha_type);
-                        goto end;
                 }
         }
 
@@ -1066,6 +1072,18 @@ test_hmac_shax_burst(struct IMB_MGR *mb_mgr,
 
         switch (sha_type) {
         case 224:
+        case 256:
+        case 384:
+        case 512:
+                break;
+        default:
+                fprintf(stderr, "Wrong SHA type selection 'SHA-%d'!\n",
+                        sha_type);
+                goto end2;
+        }
+
+        switch (sha_type) {
+        case 224:
                 digest_len = vec->hmac_sha224_len;
                 block_size = IMB_SHA_256_BLOCK_SIZE;
                 break;
@@ -1078,13 +1096,10 @@ test_hmac_shax_burst(struct IMB_MGR *mb_mgr,
                 block_size = IMB_SHA_384_BLOCK_SIZE;
                 break;
         case 512:
+        default:
                 digest_len = vec->hmac_sha512_len;
                 block_size = IMB_SHA_512_BLOCK_SIZE;
                 break;
-        default:
-                fprintf(stderr, "Wrong SHA type selection 'SHA-%d'!\n",
-                        sha_type);
-                goto end2;
         }
 
         memset(padding, -1, sizeof(padding));
@@ -1122,13 +1137,10 @@ test_hmac_shax_burst(struct IMB_MGR *mb_mgr,
                         key_len = IMB_SHA384_DIGEST_SIZE_IN_BYTES;
                         break;
                 case 512:
+                default:
                         IMB_SHA512(mb_mgr, vec->key, vec->key_len, key);
                         key_len = IMB_SHA512_DIGEST_SIZE_IN_BYTES;
                         break;
-                default:
-                        fprintf(stderr, "Wrong SHA type selection 'SHA-%d'!\n",
-                                sha_type);
-                        goto end;
                 }
         }
 
@@ -1299,6 +1311,18 @@ test_hmac_shax_hash_burst(struct IMB_MGR *mb_mgr,
 
         switch (sha_type) {
         case 224:
+        case 256:
+        case 384:
+        case 512:
+                break;
+        default:
+                fprintf(stderr, "Wrong SHA type selection 'SHA-%d'!\n",
+                        sha_type);
+                goto end2;
+        }
+
+        switch (sha_type) {
+        case 224:
                 digest_len = vec->hmac_sha224_len;
                 block_size = IMB_SHA_256_BLOCK_SIZE;
                 break;
@@ -1311,13 +1335,10 @@ test_hmac_shax_hash_burst(struct IMB_MGR *mb_mgr,
                 block_size = IMB_SHA_384_BLOCK_SIZE;
                 break;
         case 512:
+        default:
                 digest_len = vec->hmac_sha512_len;
                 block_size = IMB_SHA_512_BLOCK_SIZE;
                 break;
-        default:
-                fprintf(stderr, "Wrong SHA type selection 'SHA-%d'!\n",
-                        sha_type);
-                goto end2;
         }
 
         memset(padding, -1, sizeof(padding));
@@ -1355,13 +1376,10 @@ test_hmac_shax_hash_burst(struct IMB_MGR *mb_mgr,
                         key_len = IMB_SHA384_DIGEST_SIZE_IN_BYTES;
                         break;
                 case 512:
+                default:
                         IMB_SHA512(mb_mgr, vec->key, vec->key_len, key);
                         key_len = IMB_SHA512_DIGEST_SIZE_IN_BYTES;
                         break;
-                default:
-                        fprintf(stderr, "Wrong SHA type selection 'SHA-%d'!\n",
-                                sha_type);
-                        goto end;
                 }
         }
 
