@@ -26,7 +26,7 @@
 ;;
 
 %include "include/os.asm"
-%include "include/imb_job.asm"
+%include "include/imb_job.inc"
 %include "include/mb_mgr_datastruct.inc"
 %include "include/reg_sizes.asm"
 %include "sse_t1/snow3g_uea2_by4_sse.asm"

@@ -26,7 +26,7 @@
 ;;
 %include "include/mb_mgr_datastruct.inc"
 %include "include/transpose_avx512.asm"
-%include "include/imb_job.asm"
+%include "include/imb_job.inc"
 %include "include/constant_lookup.inc"
 
 mksection .rodata

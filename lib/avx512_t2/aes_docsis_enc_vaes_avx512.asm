@@ -31,7 +31,7 @@
 %use smartalign
 
 %include "include/os.asm"
-%include "include/imb_job.asm"
+%include "include/imb_job.inc"
 %include "include/mb_mgr_datastruct.inc"
 %include "include/reg_sizes.asm"
 %include "include/clear_regs.inc"

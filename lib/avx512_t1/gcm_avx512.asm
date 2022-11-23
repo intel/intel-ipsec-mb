@@ -119,7 +119,7 @@
 %include "include/gcm_common.inc"
 %include "include/cet.inc"
 %include "include/mb_mgr_datastruct.inc"
-%include "include/imb_job.asm"
+%include "include/imb_job.inc"
 %include "include/memcpy.asm"
 %include "include/error.inc"
 

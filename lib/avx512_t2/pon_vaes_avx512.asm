@@ -27,7 +27,7 @@
 
 %use smartalign
 
-%include "include/imb_job.asm"
+%include "include/imb_job.inc"
 %include "include/os.asm"
 %include "include/memcpy.asm"
 %include "include/clear_regs.inc"

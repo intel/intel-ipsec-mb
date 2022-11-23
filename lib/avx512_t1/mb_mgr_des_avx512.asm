@@ -43,7 +43,7 @@
 
 %include "include/os.asm"
 %include "include/reg_sizes.asm"
-%include "include/imb_job.asm"
+%include "include/imb_job.inc"
 %include "include/mb_mgr_datastruct.inc"
 %include "include/constants.inc"
 ;%define DO_DBGPRINT

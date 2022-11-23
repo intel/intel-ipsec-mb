@@ -26,7 +26,7 @@
 ;;
 
 %include "include/os.asm"
-%include "include/imb_job.asm"
+%include "include/imb_job.inc"
 %include "include/memcpy.asm"
 %include "include/clear_regs.inc"
 %include "include/chacha_poly_defines.inc"
