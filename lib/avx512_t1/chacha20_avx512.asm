@@ -32,7 +32,7 @@
 %include "include/reg_sizes.asm"
 %include "include/transpose_avx512.asm"
 %include "include/aes_common.inc"
-%include "include/chacha_poly_defines.asm"
+%include "include/chacha_poly_defines.inc"
 %include "include/cet.inc"
 mksection .rodata
 default rel

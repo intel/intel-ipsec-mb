@@ -25,8 +25,8 @@
 ;; OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;
 
-%ifndef CHACHA_POLY_DEFINES_ASM_INCLUDED
-%define CHACHA_POLY_DEFINES_ASM_INCLUDED
+%ifndef CHACHA_POLY_DEFINES_INC_INCLUDED
+%define CHACHA_POLY_DEFINES_INC_INCLUDED
 
 ;;define the fields of gcm_context_data struct
 ;; struct chacha20_poly1305_context_data {
@@ -55,4 +55,4 @@
 %define RemainCtBytes   (8*21)
 %define IV              (8*22)
 
-%endif ; CHACHA_POLY_DEFINES_ASM_INCLUDED
+%endif ; CHACHA_POLY_DEFINES_INC_INCLUDED

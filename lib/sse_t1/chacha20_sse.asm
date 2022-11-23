@@ -29,7 +29,7 @@
 %include "include/imb_job.asm"
 %include "include/memcpy.asm"
 %include "include/clear_regs.asm"
-%include "include/chacha_poly_defines.asm"
+%include "include/chacha_poly_defines.inc"
 
 mksection .rodata
 default rel
