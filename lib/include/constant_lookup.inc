@@ -25,6 +25,9 @@
 ;; OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;
 
+%ifndef _CONSTANT_LOOKUP_INC_
+%define _CONSTANT_LOOKUP_INC_
+
 extern idx_rows_avx512
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -175,3 +178,5 @@ extern idx_rows_avx512
                                             %%MAP_TAB_0, %%MAP_TAB_1, \
                                             %%MAP_TAB_2, %%MAP_TAB_3, %%KR1
 %endmacro
+
+%endif ;; _CONSTANT_LOOKUP_INC_

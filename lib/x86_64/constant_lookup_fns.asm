@@ -27,7 +27,7 @@
 
 %include "include/os.asm"
 %include "include/reg_sizes.asm"
-%include "include/constant_lookup.asm"
+%include "include/constant_lookup.inc"
 
 mksection .rodata
 default rel
