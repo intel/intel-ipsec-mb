@@ -32,7 +32,7 @@
 %include "include/clear_regs.inc"
 %include "include/mb_mgr_datastruct.inc"
 %include "include/memcpy.inc"
-%include "include/transpose_sse.asm"
+%include "include/transpose_sse.inc"
 
 extern snow3g_table_A_mul
 extern snow3g_table_A_div

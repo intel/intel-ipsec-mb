@@ -25,8 +25,8 @@
 ;; OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;
 
-%ifndef _TRANSPOSE_SSE_ASM_
-%define _TRANSPOSE_SSE_ASM_
+%ifndef _TRANSPOSE_SSE_INC_
+%define _TRANSPOSE_SSE_INC_
 
 ;; transpose r0, r1, r2, r3, t0, t1
 ;; "transpose" data in {r0..r3} using temps {t0..t3}
@@ -67,4 +67,4 @@
         shufps  %%t0, %%t1, 0x88        ; t0 = {d0 c0 b0 a0}
 %endmacro
 
-%endif ;; _TRANSPOSE_SSE_ASM_
+%endif ;; _TRANSPOSE_SSE_INC_
