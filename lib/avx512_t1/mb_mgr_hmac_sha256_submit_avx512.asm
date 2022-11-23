@@ -48,7 +48,7 @@
 %include "include/const.inc"
 %include "include/clear_regs.inc"
 ;; %define DO_DBGPRINT
-%include "include/dbgprint.asm"
+%include "include/dbgprint.inc"
 
 %use smartalign
 

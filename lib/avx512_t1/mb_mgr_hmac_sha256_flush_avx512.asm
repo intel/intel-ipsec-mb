@@ -46,7 +46,7 @@
 %include "include/reg_sizes.asm"
 %include "include/clear_regs.inc"
 ;; %define DO_DBGPRINT
-%include "include/dbgprint.asm"
+%include "include/dbgprint.inc"
 
 extern sha256_x16_avx512
 

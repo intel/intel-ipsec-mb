@@ -31,7 +31,7 @@
 %include "include/reg_sizes.asm"
 %include "include/memcpy.asm"
 ;%define DO_DBGPRINT
-%include "include/dbgprint.asm"
+%include "include/dbgprint.inc"
 %include "include/const.inc"
 extern sha1_x8_avx2
 

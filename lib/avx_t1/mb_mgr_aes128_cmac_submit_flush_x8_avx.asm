@@ -32,7 +32,7 @@
 %include "include/memcpy.asm"
 %include "include/const.inc"
 ;%define DO_DBGPRINT
-%include "include/dbgprint.asm"
+%include "include/dbgprint.inc"
 
 %ifndef AES_CBC_MAC
 %define AES_CBC_MAC aes128_cbc_mac_x8

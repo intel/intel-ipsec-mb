@@ -49,7 +49,7 @@
 %include "include/memcpy.asm"
 
 ;%define DO_DBGPRINT
-%include "include/dbgprint.asm"
+%include "include/dbgprint.inc"
 
 extern sha1_ni
 

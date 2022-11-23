@@ -51,7 +51,7 @@
 %include "include/mb_mgr_datastruct.asm"
 %include "include/constants.inc"
 ;%define DO_DBGPRINT
-%include "include/dbgprint.asm"
+%include "include/dbgprint.inc"
 %include "include/clear_regs.inc"
 
 %ifdef LINUX

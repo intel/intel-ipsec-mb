@@ -33,7 +33,7 @@
 %include "include/memcpy.asm"
 %include "include/const.inc"
 ;%define DO_DBGPRINT
-%include "include/dbgprint.asm"
+%include "include/dbgprint.inc"
 
 %ifndef NUM_LANES
 %define NUM_LANES 4
