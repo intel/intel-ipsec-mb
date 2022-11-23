@@ -26,7 +26,7 @@
 ;;
 
 %include "include/datastruct.asm"
-%include "include/constants.asm"
+%include "include/constants.inc"
 
 %ifndef MB_MGR_DATASTRUCT_ASM_INCLUDED
 %define MB_MGR_DATASTRUCT_ASM_INCLUDED
