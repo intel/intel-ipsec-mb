@@ -118,7 +118,7 @@
 %include "include/reg_sizes.asm"
 %include "include/clear_regs.inc"
 %include "include/gcm_defines.inc"
-%include "include/gcm_keys_vaes_avx512.asm"
+%include "include/gcm_keys_vaes_avx512.inc"
 %include "include/gcm_common.inc"
 %include "include/memcpy.asm"
 %include "include/aes_common.inc"
