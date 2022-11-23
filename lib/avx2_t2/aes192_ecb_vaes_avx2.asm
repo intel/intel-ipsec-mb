@@ -29,5 +29,5 @@
 
 %define AES_ECB_NROUNDS 12
 
-%include "include/os.asm"
+%include "include/os.inc"
 %include "avx2_t2/aes128_ecb_vaes_avx2.asm"

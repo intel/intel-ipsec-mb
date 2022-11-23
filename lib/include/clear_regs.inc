@@ -28,7 +28,7 @@
 %ifndef _CLEAR_REGS_INC_
 %define _CLEAR_REGS_INC_
 
-%include "include/os.asm"
+%include "include/os.inc"
 
 ;
 ; This macro clears any GP registers passed

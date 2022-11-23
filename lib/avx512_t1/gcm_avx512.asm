@@ -111,7 +111,7 @@
 ; throughout the code, one tab and two tab indentations are used. one tab is for GHASH part, two tabs is for AES part.
 ;
 
-%include "include/os.asm"
+%include "include/os.inc"
 %include "include/reg_sizes.asm"
 %include "include/clear_regs.inc"
 %include "include/gcm_defines.inc"

@@ -29,7 +29,7 @@
 
 %include "avx512_t2/gcm_vaes_avx512.inc"
 %include "include/error.inc"
-%include "include/os.asm"
+%include "include/os.inc"
 
 %ifndef GCM_SGL_API_VAES_AVX512_INC
 %define GCM_SGL_API_VAES_AVX512_INC

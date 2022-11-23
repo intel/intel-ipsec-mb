@@ -29,7 +29,7 @@
 %include "include/datastruct.inc"
 %include "include/transpose_avx512.asm"
 %include "include/imb_job.inc"
-%include "include/os.asm"
+%include "include/os.inc"
 %include "include/clear_regs.inc"
 
 %include "avx512_t2/snow3g_uea2_by16_vaes_avx512.asm"

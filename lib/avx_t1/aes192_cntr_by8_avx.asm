@@ -25,7 +25,7 @@
 ;; OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;
 
-%include "include/os.asm"
+%include "include/os.inc"
 %include "include/memcpy.inc"
 %include "include/const.inc"
 %include "include/reg_sizes.asm"

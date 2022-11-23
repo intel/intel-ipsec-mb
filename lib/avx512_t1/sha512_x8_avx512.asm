@@ -39,7 +39,7 @@
 
 ;; code to compute quad SHA512 using AVX512
 
-%include "include/os.asm"
+%include "include/os.inc"
 ;%define DO_DBGPRINT
 %include "include/dbgprint.inc"
 %include "include/mb_mgr_datastruct.inc"

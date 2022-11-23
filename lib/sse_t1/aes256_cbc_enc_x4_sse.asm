@@ -29,7 +29,7 @@
 ;;; process 4 buffers at a time, single data structure as input
 ;;; Updates In and Out pointers at end
 
-%include "include/os.asm"
+%include "include/os.inc"
 %include "include/mb_mgr_datastruct.inc"
 %include "include/clear_regs.inc"
 

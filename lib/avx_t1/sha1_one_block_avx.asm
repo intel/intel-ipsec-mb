@@ -27,7 +27,7 @@
 
 ; SHA1 code, hybrid, rolled, interleaved
 ; Uses AVX instructions
-%include "include/os.asm"
+%include "include/os.inc"
 %include "include/clear_regs.inc"
 
 mksection .rodata

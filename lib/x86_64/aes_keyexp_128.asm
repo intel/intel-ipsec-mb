@@ -26,7 +26,7 @@
 ;;
 
 ; Routine to do AES key expansion
-%include "include/os.asm"
+%include "include/os.inc"
 %define NO_AESNI_RENAME
 %include "include/aesni_emu.inc"
 %include "include/clear_regs.inc"

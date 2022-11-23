@@ -114,7 +114,7 @@
 %ifndef GCM_SSE_INC
 %define GCM_SSE_INC
 
-%include "include/os.asm"
+%include "include/os.inc"
 %include "include/reg_sizes.asm"
 %include "include/clear_regs.inc"
 %include "include/gcm_defines.inc"

@@ -41,7 +41,7 @@
 ;;			-----------------------------------------------------------
 ;; Clobbers ZMM0-31, K1-7 (K1-2 and K4-6 here but DES underneath clobbers K1-7).
 
-%include "include/os.asm"
+%include "include/os.inc"
 %include "include/reg_sizes.asm"
 %include "include/imb_job.inc"
 %include "include/mb_mgr_datastruct.inc"

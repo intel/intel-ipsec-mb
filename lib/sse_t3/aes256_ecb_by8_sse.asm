@@ -29,5 +29,5 @@
 
 %define AES_ECB_NROUNDS 14
 
-%include "include/os.asm"
+%include "include/os.inc"
 %include "sse_t3/aes128_ecb_by8_sse.asm"

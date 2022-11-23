@@ -30,7 +30,7 @@
 
 %define NO_AESNI_RENAME
 %include "include/aesni_emu.inc"
-%include "include/os.asm"
+%include "include/os.inc"
 
 mksection .rodata
 

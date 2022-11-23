@@ -28,7 +28,7 @@
 ; routine to do AES192 CBC decrypt "by8"
 
 ; XMM registers are clobbered. Saving/restoring must be done at a higher level
-%include "include/os.asm"
+%include "include/os.inc"
 %include "include/clear_regs.inc"
 
 %define CONCAT(a,b) a %+ b

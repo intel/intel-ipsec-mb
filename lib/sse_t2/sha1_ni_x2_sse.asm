@@ -38,7 +38,7 @@
 ;;
 ;; Linux/Windows clobbers: xmm0 - xmm15
 
-%include "include/os.asm"
+%include "include/os.inc"
 ;%define DO_DBGPRINT
 %include "include/dbgprint.inc"
 %include "include/clear_regs.inc"

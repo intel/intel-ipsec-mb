@@ -24,8 +24,8 @@
 ;; OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 ;; OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;
-%ifndef OS_ASM_FILE
-%define OS_ASM_FILE
+%ifndef OS_INC_FILE
+%define OS_INC_FILE
 
 %ifndef WIN_ABI
 %ifidn __OUTPUT_FORMAT__, win64
@@ -114,4 +114,4 @@
 %endif ; LINUX
 %endmacro
 
-%endif                          ; OS_ASM_FILE
+%endif                          ; OS_INC_FILE

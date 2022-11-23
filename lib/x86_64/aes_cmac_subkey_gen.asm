@@ -25,7 +25,7 @@
 ;; OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;
 
-%include "include/os.asm"
+%include "include/os.inc"
 %define NO_AESNI_RENAME
 %include "include/aesni_emu.inc"
 %include "include/clear_regs.inc"

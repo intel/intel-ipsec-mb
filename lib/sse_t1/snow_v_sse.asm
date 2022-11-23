@@ -30,7 +30,7 @@
 ;; abstract : 'A new SNOW stream cipher called SNOW-V'
 ;; https://eprint.iacr.org/2018/1143.pdf
 
-%include "include/os.asm"
+%include "include/os.inc"
 %include "include/reg_sizes.asm"
 %include "include/memcpy.inc"
 %include "include/imb_job.inc"

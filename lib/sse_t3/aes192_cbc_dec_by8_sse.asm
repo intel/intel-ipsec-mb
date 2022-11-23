@@ -41,7 +41,7 @@
 ; arg 4: OUT:  pointer to output (plain text)
 ; arg 5: LEN:  length in bytes (multiple of 16)
 ;
-%include "include/os.asm"
+%include "include/os.inc"
 %include "include/clear_regs.inc"
 
 %ifndef AES_CBC_DEC_192

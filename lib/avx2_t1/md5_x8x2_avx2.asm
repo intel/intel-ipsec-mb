@@ -36,7 +36,7 @@
 ;;
 ;; clobbers ymm0-15
 
-%include "include/os.asm"
+%include "include/os.inc"
 %include "include/mb_mgr_datastruct.inc"
 %include "include/transpose_avx2.asm"
 %include "include/clear_regs.inc"

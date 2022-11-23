@@ -35,7 +35,7 @@
 ;;     "Fast CRC Computation for Generic Polynomials Using PCLMULQDQ Instruction"
 ;;     URL: http://download.intel.com/design/intarch/papers/323102.pdf
 
-%include "include/os.asm"
+%include "include/os.inc"
 %include "include/reg_sizes.asm"
 %include "include/clear_regs.inc"
 %include "include/crc32_refl.inc"

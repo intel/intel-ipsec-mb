@@ -25,7 +25,7 @@
 ;; OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;
 
-%include "include/os.asm"
+%include "include/os.inc"
 
 ;%define DO_DBGPRINT
 %include "include/dbgprint.inc"

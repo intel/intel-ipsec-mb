@@ -38,7 +38,7 @@
 ;;
 ;; Linux/Windows clobbers: xmm0 - xmm15
 
-%include "include/os.asm"
+%include "include/os.inc"
 %include "include/cet.inc"
 %include "include/mb_mgr_datastruct.inc"
 %include "include/clear_regs.inc"

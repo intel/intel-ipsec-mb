@@ -32,7 +32,7 @@
 ;void
 ; aes128_ecbenc_x3_avx(void *in, void *keys, void *out1, void *out2, void *out3);
 
-%include "include/os.asm"
+%include "include/os.inc"
 %define NO_AESNI_RENAME
 %include "include/aesni_emu.inc"
 %include "include/clear_regs.inc"

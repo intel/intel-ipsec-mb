@@ -36,7 +36,7 @@
 ;;
 ;; clobbers xmm0-15
 
-%include "include/os.asm"
+%include "include/os.inc"
 %include "include/mb_mgr_datastruct.inc"
 %include "include/clear_regs.inc"
 
