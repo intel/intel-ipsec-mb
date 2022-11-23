@@ -37,7 +37,7 @@
 
 %include "include/os.inc"
 %include "include/memcpy.inc"
-%include "include/reg_sizes.asm"
+%include "include/reg_sizes.inc"
 %include "include/crc32_refl.inc"
 %include "include/clear_regs.inc"
 

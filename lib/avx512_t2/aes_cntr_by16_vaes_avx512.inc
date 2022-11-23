@@ -31,7 +31,7 @@
 %define AES_CNTR_VAES_AVX512_INC
 
 %include "include/os.inc"
-%include "include/reg_sizes.asm"
+%include "include/reg_sizes.inc"
 %include "include/mb_mgr_datastruct.inc"
 %include "include/imb_job.inc"
 %include "include/memcpy.inc"

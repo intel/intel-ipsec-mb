@@ -42,7 +42,7 @@
 %include "include/dbgprint.inc"
 %include "include/mb_mgr_datastruct.inc"
 %include "include/transpose_avx512.asm"
-%include "include/reg_sizes.asm"
+%include "include/reg_sizes.inc"
 %include "include/clear_regs.inc"
 ; re-use K256 from sha256_oct_avx2.asm
 extern K256

@@ -28,7 +28,7 @@
 %include "include/os.inc"
 %include "include/memcpy.inc"
 %include "include/const.inc"
-%include "include/reg_sizes.asm"
+%include "include/reg_sizes.inc"
 %include "include/clear_regs.inc"
 
 ; routine to do AES192 CNTR enc/decrypt "by8"

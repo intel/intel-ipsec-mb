@@ -27,7 +27,7 @@
 %use smartalign
 
 %include "include/imb_job.inc"
-%include "include/reg_sizes.asm"
+%include "include/reg_sizes.inc"
 %include "include/os.inc"
 %include "include/clear_regs.inc"
 %include "include/aes_common.inc"

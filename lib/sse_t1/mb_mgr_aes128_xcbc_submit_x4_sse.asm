@@ -29,7 +29,7 @@
 %include "include/const.inc"
 %include "include/imb_job.inc"
 %include "include/mb_mgr_datastruct.inc"
-%include "include/reg_sizes.asm"
+%include "include/reg_sizes.inc"
 %include "include/memcpy.inc"
 %ifndef AES_XCBC_X4
 %define AES_XCBC_X4 aes_xcbc_mac_128_x4

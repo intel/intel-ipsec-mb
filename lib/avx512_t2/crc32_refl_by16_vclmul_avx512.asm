@@ -36,7 +36,7 @@
 ;;     URL: http://download.intel.com/design/intarch/papers/323102.pdf
 
 %include "include/os.inc"
-%include "include/reg_sizes.asm"
+%include "include/reg_sizes.inc"
 %include "include/clear_regs.inc"
 %include "include/crc32_refl.inc"
 %include "include/cet.inc"

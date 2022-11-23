@@ -29,7 +29,7 @@
 %define _TRANSPOSE_AVX512_ASM_
 
 %include "include/os.inc"
-%include "include/reg_sizes.asm"
+%include "include/reg_sizes.inc"
 
 mksection .rodata
 default rel

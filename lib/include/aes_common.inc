@@ -28,7 +28,7 @@
 %ifndef _AES_COMMON_INC_
 %define _AES_COMMON_INC_
 
-%include "include/reg_sizes.asm"
+%include "include/reg_sizes.inc"
 
 ;; =============================================================================
 ;; Generic macro to produce code that executes %%OPCODE instruction

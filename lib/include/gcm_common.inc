@@ -28,7 +28,7 @@
 %ifndef _GCM_COMMON_INC_
 %define _GCM_COMMON_INC_
 
-%include "include/reg_sizes.asm"
+%include "include/reg_sizes.inc"
 
 ;; ***
 ;; *** SSE and AVX

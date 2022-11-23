@@ -26,7 +26,7 @@
 ;;
 
 %include "include/os.inc"
-%include "include/reg_sizes.asm"
+%include "include/reg_sizes.inc"
 %include "include/zuc_sbox.inc"
 %include "include/transpose_avx2.asm"
 %include "include/memcpy.inc"

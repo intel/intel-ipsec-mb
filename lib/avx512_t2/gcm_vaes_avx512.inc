@@ -115,7 +115,7 @@
 %define GCM_VAES_AVX512_INC
 
 %include "include/os.inc"
-%include "include/reg_sizes.asm"
+%include "include/reg_sizes.inc"
 %include "include/clear_regs.inc"
 %include "include/gcm_defines.inc"
 %include "include/gcm_keys_vaes_avx512.inc"

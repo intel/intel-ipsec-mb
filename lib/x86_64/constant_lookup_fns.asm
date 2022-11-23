@@ -26,7 +26,7 @@
 ;;
 
 %include "include/os.inc"
-%include "include/reg_sizes.asm"
+%include "include/reg_sizes.inc"
 %include "include/constant_lookup.inc"
 
 mksection .rodata

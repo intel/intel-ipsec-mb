@@ -28,7 +28,7 @@
 %ifndef _TRANSPOSE_AVX2_ASM_
 %define _TRANSPOSE_AVX2_ASM_
 
-%include "include/reg_sizes.asm"
+%include "include/reg_sizes.inc"
 
 ; LOAD ALL 8 LANES FOR 8x8 32-BIT TRANSPOSE
 ;

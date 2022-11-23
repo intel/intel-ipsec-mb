@@ -28,7 +28,7 @@
 %ifndef __MEMCPY_INC__
 %define __MEMCPY_INC__
 
-%include "include/reg_sizes.asm"
+%include "include/reg_sizes.inc"
 
 ; This section defines a series of macros to copy small to medium amounts
 ; of data from memory to memory, where the size is variable but limited.

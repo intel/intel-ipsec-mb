@@ -28,7 +28,7 @@
 %include "include/os.inc"
 %include "include/imb_job.inc"
 %include "include/mb_mgr_datastruct.inc"
-%include "include/reg_sizes.asm"
+%include "include/reg_sizes.inc"
 
 %ifndef AES_CBC_ENC_X8
 %define AES_CBC_ENC_X8 aes_cbc_enc_128_x8

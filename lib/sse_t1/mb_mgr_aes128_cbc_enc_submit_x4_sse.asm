@@ -29,7 +29,7 @@
 %include "include/imb_job.inc"
 %include "include/mb_mgr_datastruct.inc"
 
-%include "include/reg_sizes.asm"
+%include "include/reg_sizes.inc"
 %include "include/const.inc"
 %ifndef NUM_LANES
 %define NUM_LANES 4

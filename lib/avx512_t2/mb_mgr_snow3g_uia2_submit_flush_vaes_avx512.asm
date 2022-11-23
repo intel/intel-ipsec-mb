@@ -29,7 +29,7 @@
 %include "include/imb_job.inc"
 %include "include/mb_mgr_datastruct.inc"
 %include "include/constants.inc"
-%include "include/reg_sizes.asm"
+%include "include/reg_sizes.inc"
 %include "include/const.inc"
 %include "include/clear_regs.inc"
 %include "avx512_t2/snow3g_uea2_by16_vaes_avx512.asm"

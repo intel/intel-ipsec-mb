@@ -28,7 +28,7 @@
 %include "include/os.inc"
 %include "include/imb_job.inc"
 %include "include/mb_mgr_datastruct.inc"
-%include "include/reg_sizes.asm"
+%include "include/reg_sizes.inc"
 
 extern md5_x4x2_sse
 

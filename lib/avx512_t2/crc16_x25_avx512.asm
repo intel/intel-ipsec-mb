@@ -26,7 +26,7 @@
 ;;
 
 %include "include/os.inc"
-%include "include/reg_sizes.asm"
+%include "include/reg_sizes.inc"
 %include "include/clear_regs.inc"
 %include "include/crc32_refl_const.inc"
 %include "include/crc32_refl.inc"

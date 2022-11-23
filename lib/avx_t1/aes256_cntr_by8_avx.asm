@@ -29,7 +29,7 @@
 %include "include/imb_job.inc"
 %include "include/memcpy.inc"
 %include "include/const.inc"
-%include "include/reg_sizes.asm"
+%include "include/reg_sizes.inc"
 %include "include/clear_regs.inc"
 
 ; routine to do AES256 CNTR enc/decrypt "by8"
