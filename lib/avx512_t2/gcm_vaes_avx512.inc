@@ -117,7 +117,7 @@
 %include "include/os.asm"
 %include "include/reg_sizes.asm"
 %include "include/clear_regs.asm"
-%include "include/gcm_defines.asm"
+%include "include/gcm_defines.inc"
 %include "include/gcm_keys_vaes_avx512.asm"
 %include "include/gcm_common.inc"
 %include "include/memcpy.asm"
@@ -168,7 +168,7 @@
 %define STACK_LOCAL_OFFSET      (STACK_XMM_OFFSET + XMM_STORAGE)
 %define STACK_FRAME_SIZE        (STACK_LOCAL_OFFSET + LOCAL_STORAGE)
 
-;; for compatibility with stack argument definitions in gcm_defines.asm
+;; for compatibility with stack argument definitions in gcm_defines.inc
 %define STACK_OFFSET 0
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

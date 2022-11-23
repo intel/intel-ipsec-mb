@@ -117,7 +117,7 @@
 %include "include/os.asm"
 %include "include/reg_sizes.asm"
 %include "include/clear_regs.asm"
-%include "include/gcm_defines.asm"
+%include "include/gcm_defines.inc"
 %include "include/gcm_keys_sse_avx.asm"
 %include "include/gcm_common.inc"
 %include "include/memcpy.asm"
