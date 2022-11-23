@@ -26,7 +26,7 @@
 ;;
 
 %include "include/mb_mgr_datastruct.asm"
-%include "include/datastruct.asm"
+%include "include/datastruct.inc"
 %include "include/transpose_avx512.asm"
 %include "include/imb_job.asm"
 %include "include/os.asm"

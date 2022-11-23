@@ -92,8 +92,8 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-%ifndef _DATASTRUCT_ASM_
-%define _DATASTRUCT_ASM_
+%ifndef _DATASTRUCT_INC_
+%define _DATASTRUCT_INC_
 
 ;; START_FIELDS
 %macro START_FIELDS 0
@@ -229,4 +229,4 @@ RES_int %1, 64*(%2), %3
 RES_int	%1, _UNION_SIZE, _UNION_ALIGN
 %endm
 
-%endif ; end ifdef _DATASTRUCT_ASM_
+%endif ; end ifdef _DATASTRUCT_INC_

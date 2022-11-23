@@ -25,7 +25,7 @@
 ;; OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;
 
-%include "include/datastruct.asm"
+%include "include/datastruct.inc"
 %include "include/constants.inc"
 
 %ifndef MB_MGR_DATASTRUCT_ASM_INCLUDED
