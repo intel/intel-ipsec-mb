@@ -43,7 +43,7 @@
 ;
 
 %include "include/os.asm"
-%include "include/clear_regs.asm"
+%include "include/clear_regs.inc"
 
 %ifndef AES_CBC_DEC_256
 %define AES_CBC_DEC_256 aes_cbc_dec_256_sse

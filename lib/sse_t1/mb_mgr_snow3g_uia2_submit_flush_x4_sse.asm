@@ -29,7 +29,7 @@
 %include "include/imb_job.asm"
 %include "include/mb_mgr_datastruct.asm"
 %include "include/reg_sizes.asm"
-%include "include/clear_regs.asm"
+%include "include/clear_regs.inc"
 %include "sse_t1/snow3g_uea2_by4_sse.asm"
 
 %define SUBMIT_JOB_SNOW3G_UIA2 submit_job_snow3g_uia2_sse

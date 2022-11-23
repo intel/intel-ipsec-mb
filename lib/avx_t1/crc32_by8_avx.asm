@@ -39,7 +39,7 @@
 %include "include/memcpy.asm"
 %include "include/reg_sizes.asm"
 %include "include/crc32.inc"
-%include "include/clear_regs.asm"
+%include "include/clear_regs.inc"
 
 [bits 64]
 default rel

@@ -31,7 +31,7 @@
 %include "include/reg_sizes.asm"
 %include "include/memcpy.asm"
 %include "include/const.inc"
-%include "include/clear_regs.asm"
+%include "include/clear_regs.inc"
 
 %ifndef AES_XCBC_X16
 %define AES_XCBC_X16 aes_xcbc_mac_128_vaes_avx512

@@ -46,7 +46,7 @@
 %include "include/transpose_avx2.asm"
 %include "include/dbgprint.asm"
 %include "include/mb_mgr_datastruct.asm"
-%include "include/clear_regs.asm"
+%include "include/clear_regs.inc"
 mksection .rodata
 default rel
 align 64

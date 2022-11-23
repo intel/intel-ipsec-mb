@@ -43,7 +43,7 @@
 ;
 
 %include "include/os.asm"
-%include "include/clear_regs.asm"
+%include "include/clear_regs.inc"
 
 %ifndef AES_ECB_ENC_256
 %ifndef AES_ECB_ENC_192

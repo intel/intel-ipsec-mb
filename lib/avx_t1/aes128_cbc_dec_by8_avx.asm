@@ -30,7 +30,7 @@
 ;; clobbers xmm0-15
 
 %include "include/os.asm"
-%include "include/clear_regs.asm"
+%include "include/clear_regs.inc"
 
 %define CONCAT(a,b) a %+ b
 %define VMOVDQ vmovdqu

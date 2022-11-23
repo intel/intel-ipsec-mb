@@ -40,7 +40,7 @@
 
 %include "include/os.asm"
 %include "include/mb_mgr_datastruct.asm"
-%include "include/clear_regs.asm"
+%include "include/clear_regs.inc"
 
 ;%define DO_DBGPRINT
 %include "include/dbgprint.asm"

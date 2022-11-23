@@ -27,7 +27,7 @@
 
 %include "include/os.asm"
 %include "include/imb_job.asm"
-%include "include/clear_regs.asm"
+%include "include/clear_regs.inc"
 %include "include/const.inc"
 %include "include/reg_sizes.asm"
 %include "include/transpose_avx512.asm"

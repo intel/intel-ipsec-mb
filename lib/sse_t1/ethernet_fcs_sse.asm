@@ -28,7 +28,7 @@
 %include "include/os.asm"
 %include "include/reg_sizes.asm"
 %include "include/crc32_refl_const.inc"
-%include "include/clear_regs.asm"
+%include "include/clear_regs.inc"
 %include "include/cet.inc"
 %include "include/error.inc"
 

@@ -52,7 +52,7 @@
 %include "include/constants.asm"
 ;%define DO_DBGPRINT
 %include "include/dbgprint.asm"
-%include "include/clear_regs.asm"
+%include "include/clear_regs.inc"
 
 %ifdef LINUX
 %define arg1	rdi

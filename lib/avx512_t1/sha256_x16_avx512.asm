@@ -43,7 +43,7 @@
 %include "include/mb_mgr_datastruct.asm"
 %include "include/transpose_avx512.asm"
 %include "include/reg_sizes.asm"
-%include "include/clear_regs.asm"
+%include "include/clear_regs.inc"
 ; re-use K256 from sha256_oct_avx2.asm
 extern K256
 

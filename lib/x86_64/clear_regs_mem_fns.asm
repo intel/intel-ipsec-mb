@@ -26,7 +26,7 @@
 ;;
 
 %include "include/os.asm"
-%include "include/clear_regs.asm"
+%include "include/clear_regs.inc"
 %include "include/cet.inc"
 mksection .text
 ;

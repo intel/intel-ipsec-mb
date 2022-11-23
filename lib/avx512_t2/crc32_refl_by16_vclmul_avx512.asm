@@ -37,10 +37,10 @@
 
 %include "include/os.asm"
 %include "include/reg_sizes.asm"
-%include "include/clear_regs.asm"
+%include "include/clear_regs.inc"
 %include "include/crc32_refl.inc"
 %include "include/cet.inc"
-%include "include/clear_regs.asm"
+%include "include/clear_regs.inc"
 
 [bits 64]
 default rel

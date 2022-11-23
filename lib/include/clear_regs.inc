@@ -25,8 +25,8 @@
 ;; OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;
 
-%ifndef _CLEAR_REGS_ASM_
-%define _CLEAR_REGS_ASM_
+%ifndef _CLEAR_REGS_INC_
+%define _CLEAR_REGS_INC_
 
 %include "include/os.asm"
 
@@ -222,4 +222,4 @@
         vzeroupper
 %endmacro
 
-%endif ;; _CLEAR_REGS_ASM
+%endif ;; _CLEAR_REGS_INC_

@@ -28,7 +28,7 @@
 ; SHA1 code, hybrid, rolled, interleaved
 ; Uses SSE instructions
 %include "include/os.asm"
-%include "include/clear_regs.asm"
+%include "include/clear_regs.inc"
 
 mksection .rodata
 default rel

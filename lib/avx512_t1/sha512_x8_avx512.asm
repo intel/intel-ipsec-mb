@@ -44,7 +44,7 @@
 %include "include/dbgprint.asm"
 %include "include/mb_mgr_datastruct.asm"
 %include "include/transpose_avx512.asm"
-%include "include/clear_regs.asm"
+%include "include/clear_regs.inc"
 %define APPEND(a,b) a %+ b
 
 %ifdef LINUX

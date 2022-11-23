@@ -30,7 +30,7 @@
 %include "include/memcpy.asm"
 %include "include/const.inc"
 %include "include/reg_sizes.asm"
-%include "include/clear_regs.asm"
+%include "include/clear_regs.inc"
 
 ; routine to do AES128 CNTR enc/decrypt "by8"
 ; XMM registers are clobbered. Saving/restoring must be done at a higher level

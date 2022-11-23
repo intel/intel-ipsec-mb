@@ -43,7 +43,7 @@
 ;
 
 %include "include/os.asm"
-%include "include/clear_regs.asm"
+%include "include/clear_regs.inc"
 %include "include/aes_common.inc"
 
 %ifdef LINUX

@@ -36,7 +36,7 @@
 %include "include/imb_job.asm"
 %include "include/mb_mgr_datastruct.asm"
 %include "include/reg_sizes.asm"
-%include "include/clear_regs.asm"
+%include "include/clear_regs.inc"
 
 extern sha512_x8_avx512
 

@@ -28,7 +28,7 @@
 ; This code schedules 1 blocks at a time, with 4 lanes per block
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 %include "include/os.asm"
-%include "include/clear_regs.asm"
+%include "include/clear_regs.inc"
 
 %define	VMOVDQ vmovdqu ;; assume buffers not aligned
 

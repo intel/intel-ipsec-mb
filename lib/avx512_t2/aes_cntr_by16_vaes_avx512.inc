@@ -37,7 +37,7 @@
 %include "include/memcpy.asm"
 %include "include/aes_common.inc"
 %include "include/const.inc"
-%include "include/clear_regs.asm"
+%include "include/clear_regs.inc"
 
 mksection .rodata
 default rel

@@ -41,7 +41,7 @@
 
 %include "include/os.asm"
 %include "include/mb_mgr_datastruct.asm"
-%include "include/clear_regs.asm"
+%include "include/clear_regs.inc"
 extern K512_2
 
 mksection .rodata

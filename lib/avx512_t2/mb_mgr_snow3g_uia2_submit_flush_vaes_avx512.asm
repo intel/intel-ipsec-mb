@@ -31,7 +31,7 @@
 %include "include/constants.asm"
 %include "include/reg_sizes.asm"
 %include "include/const.inc"
-%include "include/clear_regs.asm"
+%include "include/clear_regs.inc"
 %include "avx512_t2/snow3g_uea2_by16_vaes_avx512.asm"
 
 %ifndef SUBMIT_JOB_SNOW3G_UIA2

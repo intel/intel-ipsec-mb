@@ -38,7 +38,7 @@
 %include "include/reg_sizes.asm"
 %include "include/memcpy.asm"
 %include "include/const.inc"
-%include "include/clear_regs.asm"
+%include "include/clear_regs.inc"
 
 %use smartalign
 

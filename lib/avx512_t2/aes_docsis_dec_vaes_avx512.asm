@@ -29,7 +29,7 @@
 %include "include/imb_job.asm"
 %include "include/reg_sizes.asm"
 %include "include/os.asm"
-%include "include/clear_regs.asm"
+%include "include/clear_regs.inc"
 %include "include/aes_common.inc"
 %include "include/mb_mgr_datastruct.asm"
 

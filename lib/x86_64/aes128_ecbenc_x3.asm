@@ -35,7 +35,7 @@
 %include "include/os.asm"
 %define NO_AESNI_RENAME
 %include "include/aesni_emu.inc"
-%include "include/clear_regs.asm"
+%include "include/clear_regs.inc"
 
 %ifdef LINUX
 %define IN	rdi	; arg 1

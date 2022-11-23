@@ -30,7 +30,7 @@
 %include "include/mb_mgr_datastruct.asm"
 %include "include/reg_sizes.asm"
 %include "include/const.inc"
-%include "include/clear_regs.asm"
+%include "include/clear_regs.inc"
 
 %ifndef SUBMIT_JOB_ZUC128_EEA3
 %define SUBMIT_JOB_ZUC128_EEA3 submit_job_zuc_eea3_no_gfni_sse

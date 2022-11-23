@@ -30,7 +30,7 @@
 %include "include/os.asm"
 %include "include/mb_mgr_datastruct.asm"
 %include "include/reg_sizes.asm"
-%include "include/clear_regs.asm"
+%include "include/clear_regs.inc"
 
 %define GPR_SAVE_AREA   rsp + _gpr_save
 

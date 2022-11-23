@@ -31,7 +31,7 @@
 %include "include/reg_sizes.asm"
 %include "include/const.inc"
 %include "include/memcpy.asm"
-%include "include/clear_regs.asm"
+%include "include/clear_regs.inc"
 
 %ifndef AES_CBC_MAC
 %define AES_CBC_MAC aes128_cbc_mac_vaes_avx512

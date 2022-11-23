@@ -42,7 +42,7 @@
 ; arg 5: LEN:  length in bytes (multiple of 16)
 ;
 %include "include/os.asm"
-%include "include/clear_regs.asm"
+%include "include/clear_regs.inc"
 
 %ifndef AES_CBC_DEC_128
 %define AES_CBC_DEC_128 aes_cbc_dec_128_sse

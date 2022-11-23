@@ -30,7 +30,7 @@
 %include "include/mb_mgr_datastruct.asm"
 %include "include/constants.asm"
 %include "include/reg_sizes.asm"
-%include "include/clear_regs.asm"
+%include "include/clear_regs.inc"
 
 %ifndef AES_CBC_ENC_X16
 %define AES_CBC_ENC_X16 aes_cbc_enc_128_flush_vaes_avx512

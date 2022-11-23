@@ -30,7 +30,7 @@
 %include "include/imb_job.asm"
 %include "include/os.asm"
 %include "include/memcpy.asm"
-%include "include/clear_regs.asm"
+%include "include/clear_regs.inc"
 
 extern aes_cntr_pon_enc_128_vaes_avx512
 extern aes_cntr_pon_dec_128_vaes_avx512

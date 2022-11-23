@@ -28,7 +28,7 @@
 %include "include/os.asm"
 %include "include/reg_sizes.asm"
 %include "include/aes_common.inc"
-%include "include/clear_regs.asm"
+%include "include/clear_regs.inc"
 
 %define zIV        zmm0
 %define zBLK_0_3   zmm1

@@ -43,7 +43,7 @@
 ;
 
 %include "include/os.asm"
-%include "include/clear_regs.asm"
+%include "include/clear_regs.inc"
 %include "include/aes_common.inc"
 
 %define AES_ECB_ENC_128 aes_ecb_enc_128_vaes_avx512

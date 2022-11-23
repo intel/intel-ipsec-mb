@@ -29,7 +29,7 @@
 %include "include/os.asm"
 %define NO_AESNI_RENAME
 %include "include/aesni_emu.inc"
-%include "include/clear_regs.asm"
+%include "include/clear_regs.inc"
 %include "include/cet.inc"
 %include "include/error.inc"
 ; Uses the f() function of the aeskeygenassist result

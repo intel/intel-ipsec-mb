@@ -34,7 +34,7 @@
 %include "include/reg_sizes.asm"
 %include "include/memcpy.asm"
 %include "include/imb_job.asm"
-%include "include/clear_regs.asm"
+%include "include/clear_regs.inc"
 %include "include/cet.inc"
 
 %ifndef SNOW_V

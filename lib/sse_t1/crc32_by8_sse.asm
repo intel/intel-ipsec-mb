@@ -39,7 +39,7 @@
 %include "include/memcpy.asm"
 %include "include/reg_sizes.asm"
 %include "include/crc32.inc"
-%include "include/clear_regs.asm"
+%include "include/clear_regs.inc"
 
 %ifndef CRC32_FN
 %define CRC32_FN crc32_by8_sse
