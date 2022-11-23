@@ -40,7 +40,7 @@
 %include "include/os.asm"
 ;%define DO_DBGPRINT
 %include "include/dbgprint.inc"
-%include "include/mb_mgr_datastruct.asm"
+%include "include/mb_mgr_datastruct.inc"
 %include "include/transpose_avx512.asm"
 %include "include/reg_sizes.asm"
 %include "include/clear_regs.inc"

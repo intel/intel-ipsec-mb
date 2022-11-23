@@ -27,7 +27,7 @@
 
 %include "include/os.asm"
 %include "include/imb_job.asm"
-%include "include/mb_mgr_datastruct.asm"
+%include "include/mb_mgr_datastruct.inc"
 %include "include/reg_sizes.asm"
 
 extern sha512_x4_avx2

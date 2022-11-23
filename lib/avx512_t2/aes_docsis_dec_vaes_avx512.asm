@@ -31,7 +31,7 @@
 %include "include/os.asm"
 %include "include/clear_regs.inc"
 %include "include/aes_common.inc"
-%include "include/mb_mgr_datastruct.asm"
+%include "include/mb_mgr_datastruct.inc"
 
 default rel
 

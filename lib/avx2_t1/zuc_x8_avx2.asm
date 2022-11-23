@@ -30,7 +30,7 @@
 %include "include/zuc_sbox.inc"
 %include "include/transpose_avx2.asm"
 %include "include/memcpy.asm"
-%include "include/mb_mgr_datastruct.asm"
+%include "include/mb_mgr_datastruct.inc"
 %include "include/cet.inc"
 
 %ifdef LINUX

@@ -30,7 +30,7 @@
 ;;; Updates In and Out pointers at end
 
 %include "include/os.asm"
-%include "include/mb_mgr_datastruct.asm"
+%include "include/mb_mgr_datastruct.inc"
 %include "include/clear_regs.inc"
 
 %macro PXOR2 2

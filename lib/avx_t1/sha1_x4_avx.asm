@@ -26,7 +26,7 @@
 ;;
 
 %include "include/os.asm"
-%include "include/mb_mgr_datastruct.asm"
+%include "include/mb_mgr_datastruct.inc"
 %include "include/clear_regs.inc"
 
 mksection .rodata

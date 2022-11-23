@@ -28,7 +28,7 @@
 ;;; routines to do 128 bit AES in CBCS mode encryption
 
 %include "include/os.asm"
-%include "include/mb_mgr_datastruct.asm"
+%include "include/mb_mgr_datastruct.inc"
 %include "include/reg_sizes.asm"
 %include "include/clear_regs.inc"
 

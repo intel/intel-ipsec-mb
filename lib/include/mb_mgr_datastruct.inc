@@ -28,8 +28,8 @@
 %include "include/datastruct.inc"
 %include "include/constants.inc"
 
-%ifndef MB_MGR_DATASTRUCT_ASM_INCLUDED
-%define MB_MGR_DATASTRUCT_ASM_INCLUDED
+%ifndef MB_MGR_DATASTRUCT_INC_INCLUDED
+%define MB_MGR_DATASTRUCT_INC_INCLUDED
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;; Define constants
@@ -493,4 +493,4 @@ _snow3g_args_FSM_3   equ _snow3g_args + __snow3g_arg_FSM_3
 _snow3g_args_LD_ST_MASK       equ _snow3g_args + __snow3g_arg_LD_ST_MASK
 _snow3g_args_byte_length      equ _snow3g_args + __snow3g_arg_byte_length
 
-%endif ;; MB_MGR_DATASTRUCT_ASM_INCLUDED
+%endif ;; MB_MGR_DATASTRUCT_INC_INCLUDED

@@ -44,7 +44,7 @@
 ;%define DO_DBGPRINT
 %include "include/dbgprint.inc"
 %include "include/transpose_avx2.asm"
-%include "include/mb_mgr_datastruct.asm"
+%include "include/mb_mgr_datastruct.inc"
 %include "include/clear_regs.inc"
 mksection .rodata
 default rel

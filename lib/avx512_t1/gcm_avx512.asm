@@ -118,7 +118,7 @@
 %include "include/gcm_keys_avx2_avx512.inc"
 %include "include/gcm_common.inc"
 %include "include/cet.inc"
-%include "include/mb_mgr_datastruct.asm"
+%include "include/mb_mgr_datastruct.inc"
 %include "include/imb_job.asm"
 %include "include/memcpy.asm"
 %include "include/error.inc"

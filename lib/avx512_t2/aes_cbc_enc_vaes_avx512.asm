@@ -28,7 +28,7 @@
 ;;; routines to do 128/192/256 bit CBC AES encrypt
 
 %include "include/os.asm"
-%include "include/mb_mgr_datastruct.asm"
+%include "include/mb_mgr_datastruct.inc"
 %include "include/reg_sizes.asm"
 %include "include/clear_regs.inc"
 
