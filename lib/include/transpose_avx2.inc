@@ -25,8 +25,8 @@
 ;; OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;
 
-%ifndef _TRANSPOSE_AVX2_ASM_
-%define _TRANSPOSE_AVX2_ASM_
+%ifndef _TRANSPOSE_AVX2_INC_
+%define _TRANSPOSE_AVX2_INC_
 
 %include "include/reg_sizes.inc"
 
@@ -257,4 +257,4 @@
 	vshufps	%%r3, %%r2, %%r3, 0xEE	; r3 = {d3 c3 b3 a3}
 %endmacro
 
-%endif ;; _TRANSPOSE_AVX2_ASM_
+%endif ;; _TRANSPOSE_AVX2_INC_

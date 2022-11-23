@@ -29,7 +29,7 @@
 %include "include/imb_job.inc"
 %include "include/memcpy.inc"
 %include "include/clear_regs.inc"
-%include "include/transpose_avx2.asm"
+%include "include/transpose_avx2.inc"
 %include "include/chacha_poly_defines.inc"
 %include "include/cet.inc"
 mksection .rodata

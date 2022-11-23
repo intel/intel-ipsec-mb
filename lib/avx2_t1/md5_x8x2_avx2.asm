@@ -38,7 +38,7 @@
 
 %include "include/os.inc"
 %include "include/mb_mgr_datastruct.inc"
-%include "include/transpose_avx2.asm"
+%include "include/transpose_avx2.inc"
 %include "include/clear_regs.inc"
 
 mksection .rodata

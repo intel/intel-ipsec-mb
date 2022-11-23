@@ -43,7 +43,7 @@
 %include "include/os.inc"
 ;%define DO_DBGPRINT
 %include "include/dbgprint.inc"
-%include "include/transpose_avx2.asm"
+%include "include/transpose_avx2.inc"
 %include "include/mb_mgr_datastruct.inc"
 %include "include/clear_regs.inc"
 mksection .rodata
