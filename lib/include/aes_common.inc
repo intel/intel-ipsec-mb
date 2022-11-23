@@ -25,8 +25,8 @@
 ;; OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;
 
-%ifndef _AES_COMMON_ASM_
-%define _AES_COMMON_ASM_
+%ifndef _AES_COMMON_INC_
+%define _AES_COMMON_INC_
 
 %include "include/reg_sizes.asm"
 
@@ -1083,7 +1083,7 @@
 
 %endmacro
 
-%endif ;; _AES_COMMON_ASM
+%endif ;; _AES_COMMON_INC_
 
 ;;; ===========================================================================
 ;;; Handles AES decryption rounds for 0 to 8 blocks on SSE

@@ -29,7 +29,7 @@
 
 %include "include/os.asm"
 %include "include/clear_regs.asm"
-%include "include/aes_common.asm"
+%include "include/aes_common.inc"
 
 %ifdef LINUX
 %define IN              rdi

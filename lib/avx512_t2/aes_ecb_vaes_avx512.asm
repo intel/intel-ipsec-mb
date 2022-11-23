@@ -44,7 +44,7 @@
 
 %include "include/os.asm"
 %include "include/clear_regs.asm"
-%include "include/aes_common.asm"
+%include "include/aes_common.inc"
 
 %define AES_ECB_ENC_128 aes_ecb_enc_128_vaes_avx512
 %define AES_ECB_DEC_128 aes_ecb_dec_128_vaes_avx512

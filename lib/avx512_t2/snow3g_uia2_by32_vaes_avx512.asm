@@ -30,7 +30,7 @@
 %include "include/cet.inc"
 %include "include/memcpy.asm"
 %include "include/const.inc"
-%include "include/aes_common.asm"
+%include "include/aes_common.inc"
 %define APPEND(a,b) a %+ b
 %define APPEND3(a,b,c) a %+ b %+ c
 
