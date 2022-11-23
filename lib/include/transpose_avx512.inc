@@ -25,8 +25,8 @@
 ;; OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;
 
-%ifndef _TRANSPOSE_AVX512_ASM_
-%define _TRANSPOSE_AVX512_ASM_
+%ifndef _TRANSPOSE_AVX512_INC_
+%define _TRANSPOSE_AVX512_INC_
 
 %include "include/os.inc"
 %include "include/reg_sizes.inc"
@@ -732,4 +732,4 @@ PSHUFFLE_TRANSPOSE_MASK2: 	dq 0x0000000000000002
         vshufi64x2      %%r1, %%t0, %%t1, 0x44 ; 1 5 9  13
         vshufi64x2      %%r3, %%t0, %%t1, 0xee ; 3 7 11 15
 %endmacro
-%endif ;; _TRANSPOSE_AVX512_ASM_
+%endif ;; _TRANSPOSE_AVX512_INC_

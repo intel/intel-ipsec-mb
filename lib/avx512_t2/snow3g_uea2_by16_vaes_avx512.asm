@@ -25,7 +25,7 @@
 ;; OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;
 %include "include/mb_mgr_datastruct.inc"
-%include "include/transpose_avx512.asm"
+%include "include/transpose_avx512.inc"
 %include "include/imb_job.inc"
 %include "include/constant_lookup.inc"
 

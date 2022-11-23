@@ -28,7 +28,7 @@
 %include "include/os.inc"
 %include "include/reg_sizes.inc"
 %include "include/zuc_sbox.inc"
-%include "include/transpose_avx512.asm"
+%include "include/transpose_avx512.inc"
 %include "include/const.inc"
 %include "include/mb_mgr_datastruct.inc"
 %include "include/cet.inc"

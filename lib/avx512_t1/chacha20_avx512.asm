@@ -30,7 +30,7 @@
 %include "include/clear_regs.inc"
 %include "include/const.inc"
 %include "include/reg_sizes.inc"
-%include "include/transpose_avx512.asm"
+%include "include/transpose_avx512.inc"
 %include "include/aes_common.inc"
 %include "include/chacha_poly_defines.inc"
 %include "include/cet.inc"

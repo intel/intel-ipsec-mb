@@ -27,7 +27,7 @@
 
 %include "include/mb_mgr_datastruct.inc"
 %include "include/datastruct.inc"
-%include "include/transpose_avx512.asm"
+%include "include/transpose_avx512.inc"
 %include "include/imb_job.inc"
 %include "include/os.inc"
 %include "include/clear_regs.inc"
