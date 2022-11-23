@@ -619,6 +619,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t dataSize)
                                 (uint8_t buff[2*BUFF_SIZE], 64);
 
                         fill_job_data(job, buff);
+			fill_additional_cipher_data(job, buff, buffsize);
                 }
 
                 IMB_SUBMIT_CIPHER_BURST(p_mgr, jobs, num_jobs,
@@ -644,6 +645,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t dataSize)
                                 (uint8_t buff[2*BUFF_SIZE], 64);
 
                         fill_job_data(job, buff);
+			fill_additional_hash_data(job, buff, buffsize);
                 }
 
                 IMB_SUBMIT_HASH_BURST(p_mgr, jobs, num_jobs, hash);
