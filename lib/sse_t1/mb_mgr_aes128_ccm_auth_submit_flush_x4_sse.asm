@@ -30,7 +30,7 @@
 %include "include/mb_mgr_datastruct.inc"
 %include "include/reg_sizes.asm"
 %include "include/const.inc"
-%include "include/memcpy.asm"
+%include "include/memcpy.inc"
 
 %ifndef NUM_LANES
 %define NUM_LANES 4

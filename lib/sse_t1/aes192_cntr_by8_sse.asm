@@ -26,7 +26,7 @@
 ;;
 
 %include "include/os.asm"
-%include "include/memcpy.asm"
+%include "include/memcpy.inc"
 %include "include/const.inc"
 %include "include/reg_sizes.asm"
 %include "include/clear_regs.inc"

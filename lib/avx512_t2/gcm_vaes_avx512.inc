@@ -120,7 +120,7 @@
 %include "include/gcm_defines.inc"
 %include "include/gcm_keys_vaes_avx512.inc"
 %include "include/gcm_common.inc"
-%include "include/memcpy.asm"
+%include "include/memcpy.inc"
 %include "include/aes_common.inc"
 %include "include/cet.inc"
 %ifndef GCM128_MODE

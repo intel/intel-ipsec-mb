@@ -25,8 +25,8 @@
 ;; OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;
 
-%ifndef __MEMCPY_ASM__
-%define __MEMCPY_ASM__
+%ifndef __MEMCPY_INC__
+%define __MEMCPY_INC__
 
 %include "include/reg_sizes.asm"
 
@@ -766,4 +766,4 @@
 %%end:
 %endm
 
-%endif ; ifndef __MEMCPY_ASM__
+%endif ; ifndef __MEMCPY_INC__

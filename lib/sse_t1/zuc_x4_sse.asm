@@ -28,7 +28,7 @@
 %include "include/os.asm"
 %include "include/reg_sizes.asm"
 %include "include/zuc_sbox.inc"
-%include "include/memcpy.asm"
+%include "include/memcpy.inc"
 %include "include/mb_mgr_datastruct.inc"
 %include "include/const.inc"
 

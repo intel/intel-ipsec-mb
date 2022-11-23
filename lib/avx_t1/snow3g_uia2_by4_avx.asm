@@ -28,7 +28,7 @@
 %include "include/os.asm"
 %include "include/reg_sizes.asm"
 %include "include/cet.inc"
-%include "include/memcpy.asm"
+%include "include/memcpy.inc"
 %include "include/const.inc"
 %define APPEND(a,b) a %+ b
 %define APPEND3(a,b,c) a %+ b %+ c

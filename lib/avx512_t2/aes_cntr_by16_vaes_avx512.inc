@@ -34,7 +34,7 @@
 %include "include/reg_sizes.asm"
 %include "include/mb_mgr_datastruct.inc"
 %include "include/imb_job.inc"
-%include "include/memcpy.asm"
+%include "include/memcpy.inc"
 %include "include/aes_common.inc"
 %include "include/const.inc"
 %include "include/clear_regs.inc"

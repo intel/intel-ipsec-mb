@@ -26,7 +26,7 @@
 ;;
 
 %include "include/os.asm"
-%include "include/memcpy.asm"
+%include "include/memcpy.inc"
 
 %ifdef LINUX
 %define arg1    rdi

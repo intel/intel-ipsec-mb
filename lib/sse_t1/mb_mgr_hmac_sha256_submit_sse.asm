@@ -29,7 +29,7 @@
 %include "include/imb_job.inc"
 %include "include/mb_mgr_datastruct.inc"
 %include "include/reg_sizes.asm"
-%include "include/memcpy.asm"
+%include "include/memcpy.inc"
 %include "include/const.inc"
 
 extern sha_256_mult_sse

@@ -30,7 +30,7 @@
 %include "include/imb_job.inc"
 %include "include/mb_mgr_datastruct.inc"
 %include "include/reg_sizes.asm"
-%include "include/memcpy.asm"
+%include "include/memcpy.inc"
 %ifndef AES_XCBC_X4
 %define AES_XCBC_X4 aes_xcbc_mac_128_x4
 %define SUBMIT_JOB_AES_XCBC submit_job_aes_xcbc_sse

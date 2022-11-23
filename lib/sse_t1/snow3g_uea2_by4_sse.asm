@@ -27,11 +27,11 @@
 
 %include "include/os.asm"
 %include "include/reg_sizes.asm"
-%include "include/memcpy.asm"
+%include "include/memcpy.inc"
 %include "include/imb_job.inc"
 %include "include/clear_regs.inc"
 %include "include/mb_mgr_datastruct.inc"
-%include "include/memcpy.asm"
+%include "include/memcpy.inc"
 %include "include/transpose_sse.asm"
 
 extern snow3g_table_A_mul

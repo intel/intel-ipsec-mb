@@ -35,7 +35,7 @@
 
 %include "include/os.asm"
 %include "include/reg_sizes.asm"
-%include "include/memcpy.asm"
+%include "include/memcpy.inc"
 %include "include/imb_job.inc"
 %include "include/clear_regs.inc"
 
