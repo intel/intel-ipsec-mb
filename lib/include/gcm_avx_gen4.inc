@@ -122,7 +122,7 @@
 %ifndef GCM128_MODE
 %ifndef GCM192_MODE
 %ifndef GCM256_MODE
-%error "No GCM mode selected for gcm_avx_gen4.asm!"
+%error "No GCM mode selected for gcm_avx_gen4.inc!"
 %endif
 %endif
 %endif

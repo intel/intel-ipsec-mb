@@ -28,4 +28,4 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 %define GCM128_MODE 1
-%include "avx2_t1/gcm_avx_gen4.asm"
+%include "include/gcm_avx_gen4.inc"
