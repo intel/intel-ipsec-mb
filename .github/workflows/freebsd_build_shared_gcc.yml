@@ -1,4 +1,4 @@
-name: FreeBSD Build Shared clang
+name: FreeBSD Build Shared gcc
 
 on:
   push:
@@ -9,13 +9,13 @@ on:
 jobs:
   testfreebsd:
     runs-on: macos-12
-    name: FreeBSD run
+    name: FreeBSD GCC run
     steps:
       - name: Checkout
         uses: actions/checkout@v3
         with:
           submodules: recursive
-      - name: Test in FreeBSD
+      - name: Test FreeBSD
         id: tests
         uses: vmactions/freebsd-vm@v0
         with:
@@ -24,4 +24,4 @@ jobs:
           prepare: pkg install -y curl nasm llvm gmake
           run: |
             freebsd-version
-            gmake CC=clang -j 4
+            gmake CC=gcc -j 4
