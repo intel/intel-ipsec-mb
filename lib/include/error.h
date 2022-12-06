@@ -32,7 +32,7 @@
  * declare global variable to store
  * process wide error status
  */
-extern int imb_errno;
+extern volatile int imb_errno;
 
 /**
  * @brief API to set error status
@@ -47,8 +47,12 @@ void imb_set_errno(IMB_MGR *mb_mgr, const int errnum)
         if (mb_mgr != NULL)
                 mb_mgr->imb_errno = errnum;
 
-        /* set global error status */
-        imb_errno = errnum;
+        /*
+         * set global error status
+         * (only if different, to limit unneeded stores)
+         */
+        if (imb_errno != errnum)
+                imb_errno = errnum;
 }
 
 #endif /* ERROR_H */

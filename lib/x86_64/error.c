@@ -39,7 +39,7 @@
 #pragma warning(disable : 4996)
 #endif
 
-IMB_DLL_LOCAL int imb_errno;
+IMB_DLL_LOCAL volatile int imb_errno;
 IMB_DLL_LOCAL const int imb_errno_types[] = {
         IMB_ERR_NULL_MBMGR,
         IMB_ERR_JOB_NULL_SRC,
