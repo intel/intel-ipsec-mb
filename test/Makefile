@@ -28,6 +28,7 @@
 TEST_APP := ipsec_MB_testapp
 XVALID_APP := ipsec_xvalid_test
 FUZZ_APP := job_api_fuzz_test
+DIRECT_FUZZ_APP := direct_api_fuzz_test
 ACVP_APP := acvp_app
 INSTPATH ?= /usr/include/intel-ipsec-mb.h
 LIB_DIR ?= ../lib
@@ -132,6 +133,7 @@ XVALID_OBJECTS := $(XVALID_SOURCES:%.c=%.o) $(XVALID_ASM:%.asm=%.o)
 
 # fuzz modules
 FUZZ_SOURCES := job_api_fuzz_test.c
+DIRECT_FUZZ_SOURCES := direct_api_fuzz_test.c
 
 # acvp_app modules
 ACVP_SOURCES := acvp_app_main.c utils.c
@@ -152,7 +154,7 @@ ifeq ($(CC_HAS_CET),1)
 endif
 
 # targets come here
-all: $(TEST_APP) $(XVALID_APP) $(FUZZ_APP) $(ACVP_APP)
+all: $(TEST_APP) $(XVALID_APP) $(FUZZ_APP) $(DIRECT_FUZZ_APP) $(ACVP_APP)
 
 $(TEST_APP): $(OBJECTS)
 	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
@@ -178,10 +180,20 @@ else
 	@echo "Fuzzing not supported on MinGW build. $(FUZZ_APP) is not built"
 endif
 
+$(DIRECT_FUZZ_APP): $(DIRECT_FUZZ_SOURCES)
+ifeq ($(MINGW),0)
+ifneq (, $(shell which clang))
+	clang $(FUZZ_CFLAGS) $(DIRECT_FUZZ_SOURCES) $(LDLIBS) -o $@
+else
+	@echo "Clang is not installed. $(DIRECT_FUZZ_APP) is not built"
+endif
+else
+	@echo "Fuzzing not supported on MinGW build. $(DIRECT_FUZZ_APP) is not built"
+endif
 
 .PHONY: clean
 clean:
-	-rm -f $(OBJECTS) $(TEST_APP) $(DEP_FILES) $(XVALID_OBJECTS) $(XVALID_APP) $(ASM_OBJECTS) $(FUZZ_APP) $(ACVP_APP)
+	-rm -f $(OBJECTS) $(TEST_APP) $(DEP_FILES) $(XVALID_OBJECTS) $(XVALID_APP) $(ASM_OBJECTS) $(FUZZ_APP) $(DIRECT_FUZZ_APP) $(ACVP_APP)
 
 # style check section
 CHECKPATCH?=checkpatch.pl
