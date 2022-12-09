@@ -103,7 +103,10 @@ SET_ERRNO_TYPES \
 ;; Reset global imb_errno to 0
 %macro IMB_ERR_CHECK_RESET 0
 
+        cmp     dword [rel imb_errno], 0
+        jz      %%do_not_reset
         mov     dword [rel imb_errno], 0
+%%do_not_reset:
 %endmacro
 
 ;; Set GP reg and global imb_errno to 0
