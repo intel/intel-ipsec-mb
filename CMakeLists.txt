@@ -13,4 +13,4 @@ if("${CMAKE_BUILD_TYPE}" STREQUAL "")
 endif()
 
 add_subdirectory(lib)
-
+add_subdirectory(test)
