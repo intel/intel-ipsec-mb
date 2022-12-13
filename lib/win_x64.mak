@@ -255,6 +255,7 @@ lib_objs1 = \
 	$(OBJ_DIR)\zuc_x4_gfni_sse.obj \
 	$(OBJ_DIR)\zuc_x4_avx.obj \
 	$(OBJ_DIR)\zuc_x8_avx2.obj \
+	$(OBJ_DIR)\zuc_x8_gfni_avx2.obj \
 	$(OBJ_DIR)\zuc_x16_avx512.obj \
 	$(OBJ_DIR)\zuc_x16_vaes_avx512.obj \
 	$(OBJ_DIR)\zuc_iv.obj \
@@ -444,6 +445,7 @@ lib_objs2 = \
 	$(OBJ_DIR)\mb_mgr_zuc_submit_flush_gfni_sse.obj \
 	$(OBJ_DIR)\mb_mgr_zuc_submit_flush_avx.obj \
 	$(OBJ_DIR)\mb_mgr_zuc_submit_flush_avx2.obj \
+	$(OBJ_DIR)\mb_mgr_zuc_submit_flush_gfni_avx2.obj \
 	$(OBJ_DIR)\mb_mgr_zuc_submit_flush_avx512.obj \
 	$(OBJ_DIR)\mb_mgr_zuc_submit_flush_gfni_avx512.obj \
 	$(OBJ_DIR)\mb_mgr_avx.obj \

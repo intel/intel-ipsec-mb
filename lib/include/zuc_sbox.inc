@@ -273,10 +273,11 @@ Rotl5_matrix:
 ;
 ; Compute 32 S0 box values from 32 bytes, stored in YMM register
 ;
-%macro S0_comput_AVX2 3
+%macro S0_comput_AVX2 4
 %define %%IN_OUT        %1 ; [in/out] YMM reg with input values which will contain the output values
 %define %%YTMP1         %2 ; [clobbered] Temporary YMM register
 %define %%YTMP2         %3 ; [clobbered] Temporary YMM register
+%define %%USE_GFNI      %4 ; [in] If 1, GFNI can be used
 
         vpand    %%YTMP1, %%IN_OUT, [rel High_nibble_mask]
         vpsrlq   %%YTMP1, 4                 ; x1
@@ -299,7 +300,11 @@ Rotl5_matrix:
         vpsllq   %%IN_OUT, 4
         vpor     %%IN_OUT, %%YTMP1 ; t = (s << 4) | r
 
+%if (%%USE_GFNI == 1)
+        vgf2p8affineqb  %%IN_OUT, %%IN_OUT, [rel Rotl5_matrix], 0x00
+%else
         Rotl_5_AVX2   %%IN_OUT, %%YTMP1
+%endif
 %endmacro
 
 ;
@@ -520,12 +525,19 @@ Rotl5_matrix:
 ;
 ; Compute 32 S1 box values from 32 bytes, stored in YMM register
 ;
-%macro S1_comput_AVX2 4
+%macro S1_comput_AVX2 5
 %define %%YIN_OUT       %1 ; [in/out] YMM reg with input values which will contain the output values
 %define %%YTMP1         %2 ; [clobbered] Temporary YMM register
 %define %%YTMP2         %3 ; [clobbered] Temporary YMM register
 %define %%YTMP3         %4 ; [clobbered] Temporary YMM register
+%define %%USE_GFNI      %5 ; [in] If 1, GFNI can be used
 
+%if (%%USE_GFNI == 1)
+        vgf2p8affineqb  %%YIN_OUT, %%YIN_OUT, [rel Aes_to_Zuc], 0x00
+        vpshufb         %%YIN_OUT, [rel Shuf_mask]
+        vaesenclast     %%YIN_OUT, %%YIN_OUT, [rel Cancel_aes]
+        vgf2p8affineqb  %%YIN_OUT, %%YIN_OUT, [rel CombMatrix], 0x55
+%else ; USE_GFNI == 0
         vmovdqa         %%YTMP1, [rel Aes_to_Zuc_mul_low_nibble]
         vmovdqa         %%YTMP2, [rel Aes_to_Zuc_mul_high_nibble]
         MUL_PSHUFB_AVX2 %%YIN_OUT, %%YTMP1, %%YTMP2, %%YTMP3
@@ -540,7 +552,7 @@ Rotl5_matrix:
         vmovdqa         %%YIN_OUT, [rel Comb_matrix_mul_high_nibble]
         MUL_PSHUFB_AVX2 %%YTMP2, %%YTMP1, %%YIN_OUT, %%YTMP3
         vpxor           %%YIN_OUT, [rel Const_comb_matrix]
-
+%endif
 %endmacro
 
 ;

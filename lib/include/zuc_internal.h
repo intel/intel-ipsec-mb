@@ -342,6 +342,9 @@ IMB_DLL_LOCAL void asm_Zuc256Initialization_4_avx(ZucKey4_t *pKeys,
 IMB_DLL_LOCAL void asm_ZucInitialization_8_avx2(ZucKey8_t *pKeys,
                                                 const uint8_t *ivs,
                                                 ZucState8_t *pState);
+IMB_DLL_LOCAL void asm_ZucInitialization_8_gfni_avx2(ZucKey8_t *pKeys,
+                                                const uint8_t *ivs,
+                                                ZucState8_t *pState);
 
 /**
  ******************************************************************************
@@ -373,6 +376,11 @@ IMB_DLL_LOCAL void asm_ZucInitialization_8_avx2(ZucKey8_t *pKeys,
  *
  *****************************************************************************/
 IMB_DLL_LOCAL void asm_Zuc256Initialization_8_avx2(ZucKey8_t *pKeys,
+                                                   const uint8_t *ivs,
+                                                   ZucState8_t *pState,
+                                                   void *tags,
+                                                   const uint64_t tag_sz);
+IMB_DLL_LOCAL void asm_Zuc256Initialization_8_gfni_avx2(ZucKey8_t *pKeys,
                                                    const uint8_t *ivs,
                                                    ZucState8_t *pState,
                                                    void *tags,
@@ -633,6 +641,8 @@ IMB_DLL_LOCAL void asm_ZucGenKeystream16B_4_avx(ZucState4_t *pState,
  *****************************************************************************/
 IMB_DLL_LOCAL void asm_ZucGenKeystream32B_8_avx2(ZucState8_t *pState,
                                                  uint32_t *pKeyStr[8]);
+IMB_DLL_LOCAL void asm_ZucGenKeystream32B_8_gfni_avx2(ZucState8_t *pState,
+                                                 uint32_t *pKeyStr[8]);
 
 /**
  ******************************************************************************
@@ -863,6 +873,8 @@ IMB_DLL_LOCAL void asm_ZucGenKeystream4B_4_avx(ZucState4_t *pState,
  *****************************************************************************/
 IMB_DLL_LOCAL void asm_ZucGenKeystream16B_8_avx2(ZucState8_t *pState,
                                                 uint32_t *pKeyStr[8]);
+IMB_DLL_LOCAL void asm_ZucGenKeystream16B_8_gfni_avx2(ZucState8_t *pState,
+                                                uint32_t *pKeyStr[8]);
 
 /**
  ******************************************************************************
@@ -886,6 +898,8 @@ IMB_DLL_LOCAL void asm_ZucGenKeystream16B_8_avx2(ZucState8_t *pState,
  *****************************************************************************/
 IMB_DLL_LOCAL void asm_ZucGenKeystream8B_8_avx2(ZucState8_t *pState,
                                                 uint32_t *pKeyStr[8]);
+IMB_DLL_LOCAL void asm_ZucGenKeystream8B_8_gfni_avx2(ZucState8_t *pState,
+                                                uint32_t *pKeyStr[8]);
 
 /**
  ******************************************************************************
@@ -908,6 +922,8 @@ IMB_DLL_LOCAL void asm_ZucGenKeystream8B_8_avx2(ZucState8_t *pState,
  *
  *****************************************************************************/
 IMB_DLL_LOCAL void asm_ZucGenKeystream4B_8_avx2(ZucState8_t *pState,
+                                                uint32_t *pKeyStr[8]);
+IMB_DLL_LOCAL void asm_ZucGenKeystream4B_8_gfni_avx2(ZucState8_t *pState,
                                                 uint32_t *pKeyStr[8]);
 
 /**
@@ -1179,6 +1195,11 @@ IMB_DLL_LOCAL void asm_ZucCipher_8_avx2(ZucState8_t *pState,
                                         uint64_t *pOut[8],
                                         const uint16_t lengths[8],
                                         const uint64_t minLength);
+IMB_DLL_LOCAL void asm_ZucCipher_8_gfni_avx2(ZucState8_t *pState,
+                                             const uint64_t *pIn[8],
+                                             uint64_t *pOut[8],
+                                             const uint16_t lengths[8],
+                                             const uint64_t minLength);
 
 /**
  ******************************************************************************
@@ -1485,6 +1506,14 @@ void zuc_eia3_8_buffer_job_avx2(const void * const pKey[8],
                                 const void * const job_in_lane[8]);
 
 IMB_DLL_LOCAL
+void zuc_eia3_8_buffer_job_gfni_avx2(const void * const pKey[8],
+                                const uint8_t *ivs,
+                                const void * const pBufferIn[8],
+                                uint32_t *pMacI[8],
+                                const uint16_t lengthInBits[8],
+                                const void * const job_in_lane[8]);
+
+IMB_DLL_LOCAL
 void zuc256_eia3_8_buffer_job_avx2(const void * const pKey[8],
                                    const uint8_t *ivs,
                                    const void * const pBufferIn[8],
@@ -1493,6 +1522,14 @@ void zuc256_eia3_8_buffer_job_avx2(const void * const pKey[8],
                                    const void * const job_in_lane[8],
                                    const uint64_t tag_size);
 
+IMB_DLL_LOCAL
+void zuc256_eia3_8_buffer_job_gfni_avx2(const void * const pKey[8],
+                                   const uint8_t *ivs,
+                                   const void * const pBufferIn[8],
+                                   void *pMacI[8],
+                                   const uint16_t lengthInBits[8],
+                                   const void * const job_in_lane[8],
+                                   const uint64_t tag_size);
 /* the s-boxes */
 extern const uint8_t S0[256];
 extern const uint8_t S1[256];

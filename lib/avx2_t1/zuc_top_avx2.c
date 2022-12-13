@@ -50,6 +50,47 @@
 
 #define NUM_AVX2_BUFS 8
 
+static inline void
+init_8(ZucKey8_t *keys, const uint8_t *ivs, ZucState8_t *state,
+       const uint64_t key_sz, const uint64_t tag_sz,
+       void *T, const unsigned use_gfni)
+{
+        if (key_sz == 128) {
+                if (use_gfni)
+                        asm_ZucInitialization_8_gfni_avx2(keys, ivs, state);
+                else
+                        asm_ZucInitialization_8_avx2(keys, ivs, state);
+        } else {
+                if (use_gfni)
+                        asm_Zuc256Initialization_8_gfni_avx2(keys, ivs,
+                                                            state, T, tag_sz);
+                else
+                        asm_Zuc256Initialization_8_avx2(keys, ivs, state, T,
+                                                       tag_sz);
+        }
+}
+
+static inline void
+keygen_8(ZucState8_t *state, uint32_t **pKeyStrArr,
+         const uint64_t numKeyStrBytes, const unsigned use_gfni)
+{
+        if (use_gfni) {
+                if (numKeyStrBytes == 4)
+                        asm_ZucGenKeystream4B_8_gfni_avx2(state, pKeyStrArr);
+                else if (numKeyStrBytes == 8)
+                        asm_ZucGenKeystream8B_8_gfni_avx2(state, pKeyStrArr);
+                else /* 16 */
+                        asm_ZucGenKeystream16B_8_gfni_avx2(state, pKeyStrArr);
+        } else {
+                if (numKeyStrBytes == 4)
+                        asm_ZucGenKeystream4B_8_avx2(state, pKeyStrArr);
+                else if (numKeyStrBytes == 8)
+                        asm_ZucGenKeystream8B_8_avx2(state, pKeyStrArr);
+                else /* 16 */
+                        asm_ZucGenKeystream16B_8_avx2(state, pKeyStrArr);
+        }
+}
+
 static inline uint16_t
 find_min_length16(const uint16_t length[NUM_AVX2_BUFS],
                   unsigned int *allCommonBits)
@@ -713,12 +754,14 @@ void zuc_eia3_1_buffer_avx2(const void *pKey,
 #endif
 }
 
-void zuc_eia3_8_buffer_job_avx2(const void * const pKey[NUM_AVX2_BUFS],
-                                const uint8_t *ivs,
-                                const void * const pBufferIn[NUM_AVX2_BUFS],
-                                uint32_t *pMacI[NUM_AVX2_BUFS],
-                                const uint16_t lengthInBits[NUM_AVX2_BUFS],
-                                const void * const job_in_lane[NUM_AVX2_BUFS])
+static inline
+void _zuc_eia3_8_buffer_job(const void * const pKey[NUM_AVX2_BUFS],
+                            const uint8_t *ivs,
+                            const void * const pBufferIn[NUM_AVX2_BUFS],
+                            uint32_t *pMacI[NUM_AVX2_BUFS],
+                            const uint16_t lengthInBits[NUM_AVX2_BUFS],
+                            const void * const job_in_lane[NUM_AVX2_BUFS],
+                            const unsigned use_gfni)
 {
         unsigned int i = 0;
         DECLARE_ALIGNED(ZucState8_t state, 64);
@@ -742,10 +785,16 @@ void zuc_eia3_8_buffer_job_avx2(const void * const pKey[NUM_AVX2_BUFS],
                 keys.pKeys[i] = pKey[i];
         }
 
-        asm_ZucInitialization_8_avx2(&keys, ivs, &state);
+        init_8(&keys, ivs, &state, 128, 0, NULL, use_gfni);
 
         /* Generate 32 bytes at a time */
-        asm_ZucGenKeystream32B_8_avx2(&state, (uint32_t **)pKeyStrArr);
+        if (use_gfni) {
+                /* Generate 32 bytes at a time */
+                asm_ZucGenKeystream32B_8_gfni_avx2(&state, pKeyStrArr);
+        } else {
+                /* Generate 32 bytes at a time */
+                asm_ZucGenKeystream32B_8_avx2(&state, pKeyStrArr);
+        }
 
         /* Point at the next 32 bytes of the key */
         for (i = 0; i < NUM_AVX2_BUFS; i++)
@@ -755,12 +804,21 @@ void zuc_eia3_8_buffer_job_avx2(const void * const pKey[NUM_AVX2_BUFS],
                 remainCommonBits -= keyStreamLengthInBits;
                 numKeyStr++;
                 /* Generate the next key stream 8 bytes or 32 bytes */
-                if (!remainCommonBits && allCommonBits)
-                        asm_ZucGenKeystream8B_8_avx2(&state,
-                                                     (uint32_t **)pKeyStrArr);
-                else
-                        asm_ZucGenKeystream32B_8_avx2(&state,
-                                                      (uint32_t **)pKeyStrArr);
+                if (use_gfni) {
+                        if (!remainCommonBits && allCommonBits)
+                                asm_ZucGenKeystream8B_8_gfni_avx2(&state,
+                                                                 pKeyStrArr);
+                        else
+                                asm_ZucGenKeystream32B_8_gfni_avx2(&state,
+                                                                  pKeyStrArr);
+                } else {
+                        if (!remainCommonBits && allCommonBits)
+                                asm_ZucGenKeystream8B_8_avx2(&state,
+                                                            pKeyStrArr);
+                        else
+                                asm_ZucGenKeystream32B_8_avx2(&state,
+                                                             pKeyStrArr);
+                }
                 for (i = 0; i < NUM_AVX2_BUFS; i++) {
                         if (job_in_lane[i] == NULL)
                                 continue;
@@ -843,13 +901,37 @@ void zuc_eia3_8_buffer_job_avx2(const void * const pKey[NUM_AVX2_BUFS],
 #endif
 }
 
-void zuc256_eia3_8_buffer_job_avx2(const void * const pKey[NUM_AVX2_BUFS],
+void zuc_eia3_8_buffer_job_avx2(const void * const pKey[NUM_AVX2_BUFS],
+                                  const uint8_t *pIv,
+                                  const void * const pBufferIn[NUM_AVX2_BUFS],
+                                  uint32_t *pMacI[NUM_AVX2_BUFS],
+                                  const uint16_t lengthInBits[NUM_AVX2_BUFS],
+                                  const void * const job_in_lane[NUM_AVX2_BUFS])
+{
+        _zuc_eia3_8_buffer_job(pKey, pIv, pBufferIn, pMacI, lengthInBits,
+                               job_in_lane, 0);
+}
+
+void zuc_eia3_8_buffer_job_gfni_avx2(const void * const pKey[NUM_AVX2_BUFS],
+                                  const uint8_t *pIv,
+                                  const void * const pBufferIn[NUM_AVX2_BUFS],
+                                  uint32_t *pMacI[NUM_AVX2_BUFS],
+                                  const uint16_t lengthInBits[NUM_AVX2_BUFS],
+                                  const void * const job_in_lane[NUM_AVX2_BUFS])
+{
+        _zuc_eia3_8_buffer_job(pKey, pIv, pBufferIn, pMacI, lengthInBits,
+                               job_in_lane, 1);
+}
+
+static inline
+void _zuc256_eia3_8_buffer_job(const void * const pKey[NUM_AVX2_BUFS],
                                 const uint8_t *ivs,
                                 const void * const pBufferIn[NUM_AVX2_BUFS],
                                 void *pMacI[NUM_AVX2_BUFS],
                                 const uint16_t lengthInBits[NUM_AVX2_BUFS],
                                 const void * const job_in_lane[NUM_AVX2_BUFS],
-                                const uint64_t tag_size)
+                                const uint64_t tag_size,
+                                const unsigned use_gfni)
 {
         unsigned int i = 0;
         DECLARE_ALIGNED(ZucState8_t state, 64);
@@ -873,10 +955,15 @@ void zuc256_eia3_8_buffer_job_avx2(const void * const pKey[NUM_AVX2_BUFS],
                 keys.pKeys[i] = pKey[i];
         }
 
-        asm_Zuc256Initialization_8_avx2(&keys, ivs, &state, T, tag_size);
+        init_8(&keys, ivs, &state, 256, tag_size, T, use_gfni);
 
         /* Generate 32 bytes at a time */
-        asm_ZucGenKeystream32B_8_avx2(&state, (uint32_t **)pKeyStrArr);
+        if (use_gfni)
+                /* Generate 32 bytes at a time */
+                asm_ZucGenKeystream32B_8_gfni_avx2(&state, pKeyStrArr);
+        else
+                /* Generate 32 bytes at a time */
+                asm_ZucGenKeystream32B_8_avx2(&state, pKeyStrArr);
 
         /* Point at the next 32 bytes of the key */
         for (i = 0; i < NUM_AVX2_BUFS; i++)
@@ -887,15 +974,7 @@ void zuc256_eia3_8_buffer_job_avx2(const void * const pKey[NUM_AVX2_BUFS],
                 numKeyStr++;
                 /* Generate the next key stream 4/8/16 bytes or 32 bytes */
                 if (!remainCommonBits && allCommonBits) {
-                        if (tag_size == 4)
-                                asm_ZucGenKeystream4B_8_avx2(&state,
-                                                             pKeyStrArr);
-                        else if (tag_size == 8)
-                                asm_ZucGenKeystream8B_8_avx2(&state,
-                                                             pKeyStrArr);
-                        else
-                                asm_ZucGenKeystream16B_8_avx2(&state,
-                                                              pKeyStrArr);
+                        keygen_8(&state, pKeyStrArr, tag_size, use_gfni);
                 } else
                         asm_ZucGenKeystream32B_8_avx2(&state,
                                                       (uint32_t **)pKeyStrArr);
@@ -989,6 +1068,30 @@ void zuc256_eia3_8_buffer_job_avx2(const void * const pKey[NUM_AVX2_BUFS],
         clear_mem(&state, sizeof(state));
         clear_mem(&keys, sizeof(keys));
 #endif
+}
+
+void zuc256_eia3_8_buffer_job_avx2(const void * const pKey[NUM_AVX2_BUFS],
+                                  const uint8_t *pIv,
+                                  const void * const pBufferIn[NUM_AVX2_BUFS],
+                                  void *pMacI[NUM_AVX2_BUFS],
+                                  const uint16_t lengthInBits[NUM_AVX2_BUFS],
+                                  const void * const job_in_lane[NUM_AVX2_BUFS],
+                                  const uint64_t tag_size)
+{
+        _zuc256_eia3_8_buffer_job(pKey, pIv, pBufferIn, pMacI, lengthInBits,
+                                  job_in_lane, tag_size, 0);
+}
+
+void zuc256_eia3_8_buffer_job_gfni_avx2(const void * const pKey[NUM_AVX2_BUFS],
+                                  const uint8_t *pIv,
+                                  const void * const pBufferIn[NUM_AVX2_BUFS],
+                                  void *pMacI[NUM_AVX2_BUFS],
+                                  const uint16_t lengthInBits[NUM_AVX2_BUFS],
+                                  const void * const job_in_lane[NUM_AVX2_BUFS],
+                                  const uint64_t tag_size)
+{
+        _zuc256_eia3_8_buffer_job(pKey, pIv, pBufferIn, pMacI, lengthInBits,
+                               job_in_lane, tag_size, 1);
 }
 
 void zuc_eia3_n_buffer_avx2(const void * const pKey[],

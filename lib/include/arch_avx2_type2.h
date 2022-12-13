@@ -48,4 +48,24 @@ void aes_ecb_dec_192_vaes_avx2(const void *in, const void *keys,
 void aes_ecb_dec_128_vaes_avx2(const void *in, const void *keys,
                                void *out, uint64_t len_bytes);
 
+/* moved from MB MGR */
+IMB_JOB *submit_job_zuc_eea3_gfni_avx2(MB_MGR_ZUC_OOO *state,
+                                  IMB_JOB *job);
+IMB_JOB *flush_job_zuc_eea3_gfni_avx2(MB_MGR_ZUC_OOO *state);
+
+IMB_JOB *flush_job_zuc256_eea3_gfni_avx2(MB_MGR_ZUC_OOO *state);
+
+IMB_JOB *submit_job_zuc256_eea3_gfni_avx2(MB_MGR_ZUC_OOO *state,
+                                     IMB_JOB *job);
+
+IMB_JOB *submit_job_zuc_eia3_gfni_avx2(MB_MGR_ZUC_OOO *state,
+                                  IMB_JOB *job);
+IMB_JOB *flush_job_zuc_eia3_gfni_avx2(MB_MGR_ZUC_OOO *state);
+
+IMB_JOB *submit_job_zuc256_eia3_gfni_avx2(MB_MGR_ZUC_OOO *state,
+                                     IMB_JOB *job,
+                                     const uint64_t tag_sz);
+IMB_JOB *flush_job_zuc256_eia3_gfni_avx2(MB_MGR_ZUC_OOO *state,
+                                    const uint64_t tag_sz);
+
 #endif /* IMB_ASM_AVX2_T2_H */

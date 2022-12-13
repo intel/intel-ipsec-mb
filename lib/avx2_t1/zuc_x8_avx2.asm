@@ -33,6 +33,17 @@
 %include "include/mb_mgr_datastruct.inc"
 %include "include/cet.inc"
 
+%ifndef ZUC_CIPHER_8
+%define ZUC_CIPHER_8 asm_ZucCipher_8_avx2
+%define ZUC128_INIT_8 asm_ZucInitialization_8_avx2
+%define ZUC256_INIT_8 asm_Zuc256Initialization_8_avx2
+%define ZUC_KEYGEN32B_8 asm_ZucGenKeystream32B_8_avx2
+%define ZUC_KEYGEN16B_8 asm_ZucGenKeystream16B_8_avx2
+%define ZUC_KEYGEN8B_8 asm_ZucGenKeystream8B_8_avx2
+%define ZUC_KEYGEN4B_8 asm_ZucGenKeystream4B_8_avx2
+%define USE_GFNI 0
+%endif
+
 %ifdef LINUX
 %define arg1    rdi
 %define arg2    rsi
@@ -437,8 +448,8 @@ align 64
         vshufpd %%YTMP4, %%YTMP2, %%YTMP1, 0xFF ; All S1 input values
 
         ; Compute S0 and S1 values
-        S0_comput_AVX2 %%YTMP3, %%YTMP1, %%YTMP2
-        S1_comput_AVX2 %%YTMP4, %%YTMP1, %%YTMP2, %%YTMP5
+        S0_comput_AVX2 %%YTMP3, %%YTMP1, %%YTMP2, USE_GFNI
+        S1_comput_AVX2 %%YTMP4, %%YTMP1, %%YTMP2, %%YTMP5, USE_GFNI
 
         ; Need to shuffle back %%YTMP1 & %%YTMP2 before storing output
         ; (revert what was done before S0 and S1 computations)
@@ -978,15 +989,15 @@ align 64
         FUNC_RESTORE
 %endmacro
 
-MKGLOBAL(asm_ZucInitialization_8_avx2,function,internal)
-asm_ZucInitialization_8_avx2:
+MKGLOBAL(ZUC128_INIT_8,function,internal)
+ZUC128_INIT_8:
         endbranch64
         ZUC_INIT_8 128, 0
 
         ret
 
-MKGLOBAL(asm_Zuc256Initialization_8_avx2,function,internal)
-asm_Zuc256Initialization_8_avx2:
+MKGLOBAL(ZUC256_INIT_8,function,internal)
+ZUC256_INIT_8:
 %define tags   arg4
 %define tag_sz arg5
 
@@ -1142,8 +1153,8 @@ init_for_cipher:
 ;;  RDI    - pSta
 ;;  RSI    - pKeyStr
 ;;
-MKGLOBAL(asm_ZucGenKeystream32B_8_avx2,function,internal)
-asm_ZucGenKeystream32B_8_avx2:
+MKGLOBAL(ZUC_KEYGEN32B_8,function,internal)
+ZUC_KEYGEN32B_8:
         endbranch64
         KEYGEN_8_AVX2 8
         vzeroupper
@@ -1160,8 +1171,8 @@ asm_ZucGenKeystream32B_8_avx2:
 ;;  RDI    - pSta
 ;;  RSI    - pKeyStr
 ;;
-MKGLOBAL(asm_ZucGenKeystream16B_8_avx2,function,internal)
-asm_ZucGenKeystream16B_8_avx2:
+MKGLOBAL(ZUC_KEYGEN16B_8,function,internal)
+ZUC_KEYGEN16B_8:
         endbranch64
         KEYGEN_8_AVX2 4
         vzeroupper
@@ -1178,8 +1189,8 @@ asm_ZucGenKeystream16B_8_avx2:
 ;;  RDI    - pSta
 ;;  RSI    - pKeyStr
 ;;
-MKGLOBAL(asm_ZucGenKeystream8B_8_avx2,function,internal)
-asm_ZucGenKeystream8B_8_avx2:
+MKGLOBAL(ZUC_KEYGEN8B_8,function,internal)
+ZUC_KEYGEN8B_8:
         endbranch64
         KEYGEN_8_AVX2 2
         vzeroupper
@@ -1196,8 +1207,8 @@ asm_ZucGenKeystream8B_8_avx2:
 ;;  RDI    - pSta
 ;;  RSI    - pKeyStr
 ;;
-MKGLOBAL(asm_ZucGenKeystream4B_8_avx2,function,internal)
-asm_ZucGenKeystream4B_8_avx2:
+MKGLOBAL(ZUC_KEYGEN4B_8,function,internal)
+ZUC_KEYGEN4B_8:
         endbranch64
         KEYGEN_8_AVX2 1
         vzeroupper
@@ -1404,8 +1415,8 @@ asm_ZucGenKeystream4B_8_avx2:
 ;;  RCX - lengths
 ;;  R8  - min_length
 ;;
-MKGLOBAL(asm_ZucCipher_8_avx2,function,internal)
-asm_ZucCipher_8_avx2:
+MKGLOBAL(ZUC_CIPHER_8,function,internal)
+ZUC_CIPHER_8:
 %define pState  arg1
 %define pIn     arg2
 %define pOut    arg3

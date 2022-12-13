@@ -33,6 +33,7 @@
 %include "include/const.inc"
 %include "include/clear_regs.inc"
 
+%ifndef SUBMIT_JOB_ZUC128_EEA3
 %define SUBMIT_JOB_ZUC128_EEA3 submit_job_zuc_eea3_avx2
 %define FLUSH_JOB_ZUC128_EEA3 flush_job_zuc_eea3_avx2
 %define SUBMIT_JOB_ZUC256_EEA3 submit_job_zuc256_eea3_avx2
@@ -43,6 +44,10 @@
 %define FLUSH_JOB_ZUC256_EIA3 flush_job_zuc256_eia3_avx2
 %define ZUC128_INIT_8        asm_ZucInitialization_8_avx2
 %define ZUC256_INIT_8        asm_Zuc256Initialization_8_avx2
+%define ZUC_EIA3_8_BUFFER    zuc_eia3_8_buffer_job_avx2
+%define ZUC256_EIA3_8_BUFFER zuc256_eia3_8_buffer_job_avx2
+%define ZUC_CIPHER_8      asm_ZucCipher_8_avx2
+%endif
 
 mksection .rodata
 default rel
@@ -80,11 +85,11 @@ dd      0xFFFFFFFF, 0x00000000, 0xFFFFFFFF, 0xFFFFFFFF
 dd      0x00000000, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF
 dd      0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF
 
-extern zuc_eia3_8_buffer_job_avx2
-extern zuc256_eia3_8_buffer_job_avx2
-extern asm_ZucInitialization_8_avx2
-extern asm_Zuc256Initialization_8_avx2
-extern asm_ZucCipher_8_avx2
+extern ZUC128_INIT_8
+extern ZUC256_INIT_8
+extern ZUC_CIPHER_8
+extern ZUC_EIA3_8_BUFFER
+extern ZUC256_EIA3_8_BUFFER
 
 %ifdef LINUX
 %define arg1    rdi
@@ -382,7 +387,7 @@ mksection .text
         lea     arg4, [r12 + _zuc_lens]
         mov     arg5, min_len
 
-        call    asm_ZucCipher_8_avx2
+        call    ZUC_CIPHER_8
 
         RESTORE_STACK_SPACE 5
 
@@ -651,7 +656,7 @@ APPEND3(%%skip_eea3_copy_,I,J):
         lea     arg4, [r12 + _zuc_lens]
         mov     arg5, min_len
 
-        call    asm_ZucCipher_8_avx2
+        call    ZUC_CIPHER_8
 
         RESTORE_STACK_SPACE 5
 
@@ -878,9 +883,9 @@ FLUSH_JOB_ZUC256_EEA3:
 %endif
 
 %if %%KEY_SIZE == 128
-        call    zuc_eia3_8_buffer_job_avx2
+        call    ZUC_EIA3_8_BUFFER
 %else
-        call    zuc256_eia3_8_buffer_job_avx2
+        call    ZUC256_EIA3_8_BUFFER
 %endif
 
 %if %%KEY_SIZE == 128
@@ -1046,9 +1051,9 @@ APPEND(%%skip_eia3_,I):
 %endif
 
 %if %%KEY_SIZE == 128
-        call    zuc_eia3_8_buffer_job_avx2
+        call    ZUC_EIA3_8_BUFFER
 %else
-        call    zuc256_eia3_8_buffer_job_avx2
+        call    ZUC256_EIA3_8_BUFFER
 %endif
 
 %if %%KEY_SIZE == 128

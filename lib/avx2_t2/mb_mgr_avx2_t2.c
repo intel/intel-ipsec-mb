@@ -205,14 +205,14 @@
 #define POLY1305_MAC                     poly1305_mac_scalar
 
 /* ZUC EEA3 & EIA3 */
-#define SUBMIT_JOB_ZUC_EEA3   submit_job_zuc_eea3_avx2
-#define FLUSH_JOB_ZUC_EEA3    flush_job_zuc_eea3_avx2
-#define SUBMIT_JOB_ZUC_EIA3   submit_job_zuc_eia3_avx2
-#define FLUSH_JOB_ZUC_EIA3    flush_job_zuc_eia3_avx2
-#define SUBMIT_JOB_ZUC256_EEA3   submit_job_zuc256_eea3_avx2
-#define FLUSH_JOB_ZUC256_EEA3    flush_job_zuc256_eea3_avx2
-#define SUBMIT_JOB_ZUC256_EIA3   submit_job_zuc256_eia3_avx2
-#define FLUSH_JOB_ZUC256_EIA3    flush_job_zuc256_eia3_avx2
+#define SUBMIT_JOB_ZUC_EEA3   submit_job_zuc_eea3_gfni_avx2
+#define FLUSH_JOB_ZUC_EEA3    flush_job_zuc_eea3_gfni_avx2
+#define SUBMIT_JOB_ZUC_EIA3   submit_job_zuc_eia3_gfni_avx2
+#define FLUSH_JOB_ZUC_EIA3    flush_job_zuc_eia3_gfni_avx2
+#define SUBMIT_JOB_ZUC256_EEA3   submit_job_zuc256_eea3_gfni_avx2
+#define FLUSH_JOB_ZUC256_EEA3    flush_job_zuc256_eea3_gfni_avx2
+#define SUBMIT_JOB_ZUC256_EIA3   submit_job_zuc256_eia3_gfni_avx2
+#define FLUSH_JOB_ZUC256_EIA3    flush_job_zuc256_eia3_gfni_avx2
 
 /* SNOW-V */
 #define SUBMIT_JOB_SNOW_V      snow_v_avx
