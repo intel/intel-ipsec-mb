@@ -6,6 +6,7 @@ Unreleased
 
 Library
 - QUIC CHACHA20-POLY1305 and CHACHA20 HP API added.
+- AVX2-VAES AES-CTR implementation added.
 
 Test Applications
 - QUIC CHACHA20-POLY1305 and CHACHA20 HP tests added.

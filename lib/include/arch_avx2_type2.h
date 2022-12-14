@@ -70,6 +70,17 @@ submit_job_zuc256_eia3_gfni_avx2(MB_MGR_ZUC_OOO *state, IMB_JOB *job, const uint
 IMB_JOB *
 flush_job_zuc256_eia3_gfni_avx2(MB_MGR_ZUC_OOO *state, const uint64_t tag_sz);
 
+/* AES-CTR */
+void
+aes_cntr_256_vaes_avx2(const void *in, const void *IV, const void *keys, void *out,
+                       uint64_t len_bytes, uint64_t IV_len);
+void
+aes_cntr_192_vaes_avx2(const void *in, const void *IV, const void *keys, void *out,
+                       uint64_t len_bytes, uint64_t IV_len);
+void
+aes_cntr_128_vaes_avx2(const void *in, const void *IV, const void *keys, void *out,
+                       uint64_t len_bytes, uint64_t IV_len);
+
 IMB_DLL_EXPORT void
 set_suite_id_avx2_t2(IMB_MGR *state, IMB_JOB *job);
 

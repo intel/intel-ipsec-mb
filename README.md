@@ -69,9 +69,9 @@ Table 1. List of supported cipher algorithms and their implementations.
 | AES128-CBC     | N      | Y(1)   | Y(3)   | N      | N      | Y(6)   |
 | AES192-CBC     | N      | Y(1)   | Y(3)   | N      | N      | Y(6)   |
 | AES256-CBC     | N      | Y(1)   | Y(3)   | N      | N      | Y(6)   |
-| AES128-CTR     | N      | Y  by8 | Y  by8 | N      | N      | Y by16 |
-| AES192-CTR     | N      | Y  by8 | Y  by8 | N      | N      | Y by16 |
-| AES256-CTR     | N      | Y  by8 | Y  by8 | N      | N      | Y by16 |
+| AES128-CTR     | N      | Y  by8 | Y  by8 | Y(10)  | N      | Y by16 |
+| AES192-CTR     | N      | Y  by8 | Y  by8 | Y(10)  | N      | Y by16 |
+| AES256-CTR     | N      | Y  by8 | Y  by8 | Y(10)  | N      | Y by16 |
 | AES128-ECB     | N      | Y(1)   | Y  by8 | Y(10)  | N      | Y by16 |
 | AES192-ECB     | N      | Y(1)   | Y  by8 | Y(10)  | N      | Y by16 |
 | AES256-ECB     | N      | Y(1)   | Y  by8 | Y(10)  | N      | Y by16 |
