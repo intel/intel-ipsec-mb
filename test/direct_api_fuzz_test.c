@@ -102,7 +102,10 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t dataSize)
                 return 0;
 
 	buff = malloc(dataSize);
+        if (buff == NULL)
+                return EXIT_FAILURE;
 	memcpy(buff, data, dataSize);
+
 
 	const struct gcm_key_data *key = (const struct gcm_key_data *)buff;
 	struct gcm_context_data *ctx = (struct gcm_context_data *)buff;
@@ -119,6 +122,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t dataSize)
         p_mgr = alloc_mb_mgr(0);
         if (p_mgr == NULL) {
                 printf("Error allocating MB_MGR structure!\n");
+                free(buff);
                 return EXIT_FAILURE;
         }
 
