@@ -585,6 +585,7 @@ asm_avx2_lib_objs := \
 	mb_mgr_hmac_sha512_submit_avx2.o \
 	mb_mgr_zuc_submit_flush_avx2.o \
 	mb_mgr_zuc_submit_flush_gfni_avx2.o \
+	poly_fma_avx2.o \
 	chacha20_avx2.o
 
 #
@@ -898,6 +899,20 @@ $(OBJ_DIR)/%.o:avx2_t2/%.c
 	$(CC) -MMD $(OPT_AVX2) -c $(CFLAGS) $< -o $@
 
 $(OBJ_DIR)/%.o:avx2_t2/%.asm
+ifeq ($(USE_YASM),y)
+	$(YASM) $(YASM_FLAGS) $< -o $@
+else
+	$(NASM) -MD $(@:.o=.d) -MT $@ -o $@ $(NASM_FLAGS) $<
+endif
+ifeq ($(CC_HAS_CET),1)
+	$(LD) $(CET_LDFLAGS) -o $@.tmp $@
+	mv $@.tmp $@
+endif
+
+$(OBJ_DIR)/%.o:avx2_t3/%.c
+	$(CC) -MMD $(OPT_AVX2) -c $(CFLAGS) $< -o $@
+
+$(OBJ_DIR)/%.o:avx2_t3/%.asm
 ifeq ($(USE_YASM),y)
 	$(YASM) $(YASM_FLAGS) $< -o $@
 else

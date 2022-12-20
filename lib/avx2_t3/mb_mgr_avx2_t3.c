@@ -1,5 +1,5 @@
 /*******************************************************************************
- Copyright (c) 2022, Intel Corporation
+ Copyright (c) 2023, Intel Corporation
 
  Redistribution and use in source and binary forms, with or without
  modification, are permitted provided that the following conditions are met:
@@ -52,6 +52,7 @@
 #include "include/arch_avx_type1.h"
 #include "include/arch_avx2_type1.h"
 #include "include/arch_avx2_type2.h"
+#include "include/arch_avx2_type3.h"
 
 #include "include/ooo_mgr_reset.h"
 
@@ -59,20 +60,20 @@
 #define RESTORE_XMMS            restore_xmms_avx
 
 /* JOB API */
-#define SUBMIT_JOB         submit_job_avx2_t2
-#define FLUSH_JOB          flush_job_avx2_t2
-#define QUEUE_SIZE         queue_size_avx2_t2
-#define SUBMIT_JOB_NOCHECK submit_job_nocheck_avx2_t2
-#define GET_NEXT_JOB       get_next_job_avx2_t2
-#define GET_COMPLETED_JOB  get_completed_job_avx2_t2
-#define GET_NEXT_BURST     get_next_burst_avx2_t2
-#define SUBMIT_BURST       submit_burst_avx2_t2
-#define SUBMIT_BURST_NOCHECK submit_burst_nocheck_avx2_t2
-#define FLUSH_BURST       flush_burst_avx2_t2
-#define SUBMIT_CIPHER_BURST submit_cipher_burst_avx2_t2
-#define SUBMIT_CIPHER_BURST_NOCHECK submit_cipher_burst_nocheck_avx2_t2
-#define SUBMIT_HASH_BURST submit_hash_burst_avx2_t2
-#define SUBMIT_HASH_BURST_NOCHECK submit_hash_burst_nocheck_avx2_t2
+#define SUBMIT_JOB         submit_job_avx2_t3
+#define FLUSH_JOB          flush_job_avx2_t3
+#define QUEUE_SIZE         queue_size_avx2_t3
+#define SUBMIT_JOB_NOCHECK submit_job_nocheck_avx2_t3
+#define GET_NEXT_JOB       get_next_job_avx2_t3
+#define GET_COMPLETED_JOB  get_completed_job_avx2_t3
+#define GET_NEXT_BURST     get_next_burst_avx2_t3
+#define SUBMIT_BURST       submit_burst_avx2_t3
+#define SUBMIT_BURST_NOCHECK submit_burst_nocheck_avx2_t3
+#define FLUSH_BURST       flush_burst_avx2_t3
+#define SUBMIT_CIPHER_BURST submit_cipher_burst_avx2_t3
+#define SUBMIT_CIPHER_BURST_NOCHECK submit_cipher_burst_nocheck_avx2_t3
+#define SUBMIT_HASH_BURST submit_hash_burst_avx2_t3
+#define SUBMIT_HASH_BURST_NOCHECK submit_hash_burst_nocheck_avx2_t3
 
 /* Hash */
 #define SUBMIT_JOB_HASH    SUBMIT_JOB_HASH_AVX2
@@ -202,7 +203,7 @@
 #define SUBMIT_JOB_CHACHA20_ENC_DEC      submit_job_chacha20_enc_dec_avx2
 #define SUBMIT_JOB_CHACHA20_POLY1305     aead_chacha20_poly1305_avx2
 #define SUBMIT_JOB_CHACHA20_POLY1305_SGL aead_chacha20_poly1305_sgl_avx2
-#define POLY1305_MAC                     poly1305_mac_scalar
+#define POLY1305_MAC                     poly1305_mac_fma_avx2
 
 /* ZUC EEA3 & EIA3 */
 #define SUBMIT_JOB_ZUC_EEA3   submit_job_zuc_eea3_gfni_avx2
@@ -326,7 +327,7 @@ static void reset_ooo_mgrs(IMB_MGR *state)
 }
 
 IMB_DLL_LOCAL void
-init_mb_mgr_avx2_t2_internal(IMB_MGR *state, const int reset_mgrs)
+init_mb_mgr_avx2_t3_internal(IMB_MGR *state, const int reset_mgrs)
 {
         /* Check if CPU flags needed for AVX2 interface are present */
         if ((state->features & IMB_CPUFLAGS_AVX2) != IMB_CPUFLAGS_AVX2) {
@@ -431,10 +432,10 @@ init_mb_mgr_avx2_t2_internal(IMB_MGR *state, const int reset_mgrs)
         state->crc32_wimax_ofdma_data = crc32_wimax_ofdma_data_avx;
         state->crc8_wimax_ofdma_hcs = crc8_wimax_ofdma_hcs_avx;
 
-        state->chacha20_poly1305_init = init_chacha20_poly1305_avx;
-        state->chacha20_poly1305_enc_update = update_enc_chacha20_poly1305_avx2;
-        state->chacha20_poly1305_dec_update = update_dec_chacha20_poly1305_avx2;
-        state->chacha20_poly1305_finalize = finalize_chacha20_poly1305_avx;
+        state->chacha20_poly1305_init = init_chacha20_poly1305_fma_avx2;
+        state->chacha20_poly1305_enc_update = update_enc_chacha20_poly1305_fma_avx2;
+        state->chacha20_poly1305_dec_update = update_dec_chacha20_poly1305_fma_avx2;
+        state->chacha20_poly1305_finalize = finalize_chacha20_poly1305_fma_avx2;
 
         state->gcm128_enc          = aes_gcm_enc_128_avx_gen4;
         state->gcm192_enc          = aes_gcm_enc_192_avx_gen4;

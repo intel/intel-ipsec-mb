@@ -1055,6 +1055,7 @@ typedef uint32_t (*crc32_fn_t)(const void *, const uint64_t);
                                  IMB_FEATURE_GFNI)
 #define IMB_CPUFLAGS_AVX_T2     (IMB_CPUFLAGS_AVX | IMB_FEATURE_SHANI | \
                                  IMB_FEATURE_GFNI)
+#define IMB_CPUFLAGS_AVX2_T3    (IMB_CPUFLAGS_AVX2_T2 | IMB_FEATURE_AVX_IFMA)
 
 /* TOP LEVEL (IMB_MGR) Data structure fields */
 

@@ -678,3 +678,17 @@ EXPORTS
     get_completed_job_avx2_t2            	@652
     get_completed_job_avx512_t1              	@653
     get_completed_job_avx512_t2            	@654
+    get_next_burst_avx2_t3                      @655
+    submit_burst_avx2_t3                        @656
+    submit_burst_nocheck_avx2_t3                @657
+    flush_burst_avx2_t3                         @658
+    submit_cipher_burst_avx2_t3                 @659
+    submit_cipher_burst_nocheck_avx2_t3         @660
+    submit_hash_burst_avx2_t3                   @661
+    submit_hash_burst_nocheck_avx2_t3           @662
+    flush_job_avx2_t3				@663
+    queue_size_avx2_t3				@664
+    submit_job_avx2_t3				@665
+    submit_job_nocheck_avx2_t3			@666
+    get_next_job_avx2_t3                	@667
+    get_completed_job_avx2_t3            	@668

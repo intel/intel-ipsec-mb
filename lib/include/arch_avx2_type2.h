@@ -67,5 +67,4 @@ IMB_JOB *submit_job_zuc256_eia3_gfni_avx2(MB_MGR_ZUC_OOO *state,
                                      const uint64_t tag_sz);
 IMB_JOB *flush_job_zuc256_eia3_gfni_avx2(MB_MGR_ZUC_OOO *state,
                                     const uint64_t tag_sz);
-
 #endif /* IMB_ASM_AVX2_T2_H */
