@@ -282,6 +282,7 @@ print_hw_features(void)
                 { IMB_FEATURE_VPCLMULQDQ, "VPCLMULQDQ" },
                 { IMB_FEATURE_GFNI, "GFNI" },
                 { IMB_FEATURE_AVX512_IFMA, "AVX512-IFMA" },
+                { IMB_FEATURE_AVX_IFMA, "AVX-IFMA" },
                 { IMB_FEATURE_BMI2, "BMI2" },
         };
         IMB_MGR *p_mgr = NULL;

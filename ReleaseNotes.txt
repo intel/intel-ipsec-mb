@@ -1,6 +1,12 @@
 ========================================================================
 Release Notes for Intel(R) Multi-Buffer Crypto for IPsec Library
 
+Unreleased
+==========
+
+Library
+- POLY1305 AVX2 with AVX-IFMA instructions added.
+
 v1.3 September 2022
 ========================================================================
 

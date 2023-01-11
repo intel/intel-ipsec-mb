@@ -152,8 +152,8 @@ Table 2. List of supported integrity algorithms and their implementations.
 | SNOW3G-UIA2(8)    | N      | Y by4  | Y by4  | N      | Y by32 | Y by32 |
 | DOCSIS-CRC32(4)   | N      | Y      | Y      | N      | Y      | Y      |
 | HEC               | N      | Y      | Y      | N      | N      | N      |
-| POLY1305          | Y      | N      | N      | N      | Y      | Y      |
-| POLY1305 AEAD     | Y      | N      | N      | N      | Y      | Y      |
+| POLY1305          | Y      | N      | N      | Y(9)   | Y      | Y      |
+| POLY1305 AEAD     | Y      | N      | N      | Y(9)   | Y      | Y      |
 | SNOW-V AEAD       | N      | Y  by8 | Y  by8 | Y  by8 | Y  by8 | Y by48 |
 | GHASH             | N      | Y  by8 | Y  by8 | Y  by8 | Y  by8 | Y by48 |
 | CRC(6)            | N      | Y  by8 | Y  by8 | N      | N      | Y by16 |
@@ -177,6 +177,7 @@ Notes:
  - CRC6: IUUP header  
 (7) - used only with PON-AES128-CTR cipher  
 (8) - x4/x16 for init keystream generation, then by4/by32  
+(9) - Only if AVX-IFMA instructions are supported
 
 Legend:  
 ` byY`- single buffer Y blocks at a time  

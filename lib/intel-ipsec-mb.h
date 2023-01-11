@@ -1033,6 +1033,7 @@ typedef uint32_t (*crc32_fn_t)(const void *, const uint64_t);
 #define IMB_FEATURE_AESNI_EMU  (1ULL << 19)
 #define IMB_FEATURE_SELF_TEST  (1ULL << 20)     /* self-test feature present */
 #define IMB_FEATURE_SELF_TEST_PASS (1ULL << 21) /* self-test passed */
+#define IMB_FEATURE_AVX_IFMA (1ULL << 22)
 
 /**
  * CPU flags needed for each implementation

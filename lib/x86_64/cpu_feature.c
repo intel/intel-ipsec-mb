@@ -41,6 +41,7 @@ struct cpuid_regs {
 
 static struct cpuid_regs cpuid_1_0;
 static struct cpuid_regs cpuid_7_0;
+static struct cpuid_regs cpuid_7_1;
 
 /*
  * A C wrapper for CPUID opcode
@@ -174,6 +175,12 @@ static uint32_t detect_avx512_ifma(void)
         return (cpuid_7_0.ebx & (1UL << 21));
 }
 
+static uint32_t detect_avx_ifma(void)
+{
+        /* Check presence of AVX-IFMA - bit 23 of EAX */
+        return (cpuid_7_1.eax & (1UL << 23));
+}
+
 static uint32_t detect_bmi2(void)
 {
         /* Check presence of BMI2 - bit 8 of EBX */
@@ -204,6 +211,7 @@ uint64_t cpu_feature_detect(void)
                 { 7, IMB_FEATURE_GFNI, detect_gfni },
                 { 7, IMB_FEATURE_AVX512_IFMA, detect_avx512_ifma },
                 { 7, IMB_FEATURE_BMI2, detect_bmi2 },
+                { 7, IMB_FEATURE_AVX_IFMA, detect_avx_ifma },
         };
         struct cpuid_regs r;
         unsigned hi_leaf_number = 0;
@@ -220,6 +228,9 @@ uint64_t cpu_feature_detect(void)
 
         if (hi_leaf_number >= 7)
                 __mbcpuid(0x7, 0x0, &cpuid_7_0);
+
+        if (hi_leaf_number >= 7)
+                __mbcpuid(0x7, 0x1, &cpuid_7_1);
 
         for (i = 0; i < IMB_DIM(feat_tab); i++) {
                 if (hi_leaf_number < feat_tab[i].req_leaf_number)
