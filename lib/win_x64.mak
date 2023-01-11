@@ -454,7 +454,6 @@ lib_objs2 = \
 	$(OBJ_DIR)\mb_mgr_avx2.obj \
 	$(OBJ_DIR)\mb_mgr_avx2_t1.obj \
 	$(OBJ_DIR)\mb_mgr_avx2_t2.obj \
-	$(OBJ_DIR)\mb_mgr_avx2_t3.obj \
 	$(OBJ_DIR)\mb_mgr_avx512.obj \
 	$(OBJ_DIR)\mb_mgr_avx512_t1.obj \
 	$(OBJ_DIR)\mb_mgr_avx512_t2.obj \
@@ -573,6 +572,11 @@ all_objs = $(lib_objs1) $(lib_objs2) $(gcm_objs) $(no_aesni_objs)
 all_objs = $(lib_objs1) $(lib_objs2) $(gcm_objs)
 !endif
 
+!if "$(AVX_IFMA)" == "y"
+all_objs = $(all_objs) $(OBJ_DIR)\mb_mgr_avx2_t3.obj $(OBJ_DIR)\poly_fma_avx2.obj
+DCFLAGS = $(DCFLAGS) /DAVX_IFMA
+!endif
+
 all: $(LIB_DIR)\$(LIBNAME) $(DEPALL)
 
 $(LIB_DIR)\$(LIBNAME): $(all_objs) $(LIBBASE)_lnk.def
@@ -596,13 +600,26 @@ $(LIB_DIR)\$(LIBNAME): $(all_objs) $(LIBBASE)_lnk.def
 	@echo NOTE:  $(SAFE_OPTIONS_MSG1) $(SAFE_OPTIONS_MSG2)
 !endif
 
+STR_FILTER = ""
+!if "$(AESNI_EMU)" != "y"
+!if "$(AVX_IFMA)" != "y"
+STR_FILTER = "_no_aesni _avx2_t3"
+!else
+STR_FILTER = "_no_aesni"
+!endif
+!else
+!if "$(AVX_IFMA)" != "y"
+STR_FILTER = "_avx2_t3"
+!endif
+!endif
+
 $(all_objs): $(OBJ_DIR) $(LIB_DIR)
 
 $(LIBBASE)_lnk.def: $(LIBBASE).def
-!if "$(AESNI_EMU)" == "y"
+!if $(STR_FILTER) == ""
         copy /Y $(LIBBASE).def $(LIBBASE)_lnk.def
 !else
-	findstr /v _no_aesni $(LIBBASE).def > $(LIBBASE)_lnk.def
+	findstr /v $(STR_FILTER) $(LIBBASE).def > $(LIBBASE)_lnk.def
 !endif
 
 $(DEPALL): $(all_objs)

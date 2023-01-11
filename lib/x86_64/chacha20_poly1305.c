@@ -75,9 +75,11 @@ void poly1305_aead_update(const void *msg, const uint64_t msg_len,
                                                         key);
                 else
                         poly1305_aead_update_avx512(msg, msg_len, hash, key);
-        } else if (arch == IMB_ARCH_AVX2 && ifma)
+#ifdef AVX_IFMA
+        } else if (arch == IMB_ARCH_AVX2 && ifma) {
                 poly1305_aead_update_fma_avx2(msg, msg_len, hash, key);
-        else
+#endif
+        } else
                 poly1305_aead_update_scalar(msg, msg_len, hash, key);
 }
 
@@ -90,8 +92,10 @@ void poly1305_aead_complete(const void *hash, const void *key,
                         poly1305_aead_complete_fma_avx512(hash, key, tag);
                 else
                         poly1305_aead_complete_avx512(hash, key, tag);
+#ifdef AVX_IFMA
         } else if (arch == IMB_ARCH_AVX2 && ifma) {
                 poly1305_aead_complete_fma_avx2(hash, key, tag);
+#endif
         } else
                 poly1305_aead_complete_scalar(hash, key, tag);
 }
@@ -780,6 +784,7 @@ void init_chacha20_poly1305_avx2(const void *key,
                                       aad_len, IMB_ARCH_AVX2, 1, 0);
 }
 
+#ifdef AVX_IFMA
 IMB_DLL_LOCAL
 void init_chacha20_poly1305_fma_avx2(const void *key,
                                 struct chacha20_poly1305_context_data *ctx,
@@ -789,6 +794,7 @@ void init_chacha20_poly1305_fma_avx2(const void *key,
         init_chacha20_poly1305_direct(key, ctx, iv, aad,
                                       aad_len, IMB_ARCH_AVX2, 1, 1);
 }
+#endif
 
 IMB_DLL_LOCAL
 void init_chacha20_poly1305_avx512(const void *key,
@@ -837,6 +843,7 @@ void update_enc_chacha20_poly1305_avx2(const void *key,
                                         IMB_DIR_ENCRYPT, IMB_ARCH_AVX2, 1, 0);
 }
 
+#ifdef AVX_IFMA
 void update_enc_chacha20_poly1305_fma_avx2(const void *key,
                                      struct chacha20_poly1305_context_data *ctx,
                                      void *dst, const void *src,
@@ -845,6 +852,7 @@ void update_enc_chacha20_poly1305_fma_avx2(const void *key,
         update_chacha20_poly1305_direct(key, ctx, dst, src, len,
                                         IMB_DIR_ENCRYPT, IMB_ARCH_AVX2, 1, 1);
 }
+#endif
 
 void update_enc_chacha20_poly1305_avx512(const void *key,
                                      struct chacha20_poly1305_context_data *ctx,
@@ -891,6 +899,7 @@ void update_dec_chacha20_poly1305_avx2(const void *key,
                                         IMB_DIR_DECRYPT, IMB_ARCH_AVX2, 1, 0);
 }
 
+#ifdef AVX_IFMA
 void update_dec_chacha20_poly1305_fma_avx2(const void *key,
                                      struct chacha20_poly1305_context_data *ctx,
                                      void *dst, const void *src,
@@ -899,6 +908,7 @@ void update_dec_chacha20_poly1305_fma_avx2(const void *key,
         update_chacha20_poly1305_direct(key, ctx, dst, src, len,
                                         IMB_DIR_DECRYPT, IMB_ARCH_AVX2, 1, 1);
 }
+#endif
 
 void update_dec_chacha20_poly1305_avx512(const void *key,
                                      struct chacha20_poly1305_context_data *ctx,
@@ -936,11 +946,13 @@ void finalize_chacha20_poly1305_avx2(struct chacha20_poly1305_context_data *ctx,
         finalize_chacha20_poly1305_direct(ctx, tag, tag_len, IMB_ARCH_AVX2, 1, 0);
 }
 
+#ifdef AVX_IFMA
 void finalize_chacha20_poly1305_fma_avx2(struct chacha20_poly1305_context_data *ctx,
                                          void *tag, const uint64_t tag_len)
 {
         finalize_chacha20_poly1305_direct(ctx, tag, tag_len, IMB_ARCH_AVX2, 1, 1);
 }
+#endif
 
 void finalize_chacha20_poly1305_avx512(
                                     struct chacha20_poly1305_context_data *ctx,

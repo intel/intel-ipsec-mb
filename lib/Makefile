@@ -50,38 +50,55 @@ USE_YASM ?= n
 YASM ?= yasm
 NASM ?= nasm
 
+CC ?= gcc
+# MINGW should be non-zero value if detected
+MINGW ?= $(shell $(CC) -dM -E - < /dev/null | grep -i mingw | wc -l | sed 's/^ *//')
+
+ifeq ($(MINGW),0)
+MULT = \*
+else
+MULT = \\*
+endif
+
 # Detect NASM version (minimum version required: 2.14)
 NASM_VERSION = $(shell $(NASM) -v | cut -d " " -f 3)
 
 NASM_MAJOR_REQ = 2
 NASM_MINOR_REQ = 14
+NASM_MIN_REQ = $(shell expr $(NASM_MAJOR_REQ) $(MULT) 100 + $(NASM_MINOR_REQ) )
 
 ifeq ($(NASM_VERSION),)
 $(error "NASM is not installed! Minimum required version: $(NASM_MAJOR_REQ).$(NASM_MINOR_REQ)")
 else
 NASM_MAJOR_VER = $(shell echo $(NASM_VERSION) | cut -d "." -f 1)
 NASM_MINOR_VER = $(shell echo $(NASM_VERSION) | cut -d "." -f 2 | cut -c 1-2)
-NASM_GE_MAJOR = $(shell [ $(NASM_MAJOR_VER) -ge $(NASM_MAJOR_REQ) ] && echo true)
-NASM_GE_MINOR = $(shell [ $(NASM_MINOR_VER) -ge $(NASM_MINOR_REQ) ] && echo true)
-ifneq ($(NASM_GE_MAJOR),true)
+NASM_VER = $(shell expr $(NASM_MAJOR_VER) $(MULT) 100 + $(NASM_MINOR_VER) )
+
+NASM_GE_REQ = $(shell [ $(NASM_VER) -ge $(NASM_MIN_REQ) ] && echo true)
+ifneq ($(NASM_GE_REQ),true)
 $(warning "NASM version found: $(NASM_VERSION)")
 $(error "Minimum required: $(NASM_MAJOR_REQ).$(NASM_MINOR_REQ)")
-endif
-ifneq ($(NASM_GE_MINOR),true)
+endif # NASM_GE_REQ
+endif # NASM_VERSION
+
+# Minimum version of NASM with AVX_IFMA support: 2.16
+AVX_IFMA := y
+NASM_MAJOR_AVX_IFMA = 2
+NASM_MINOR_AVX_IFMA = 16
+NASM_MIN_IFMA_REQ = $(shell expr $(NASM_MAJOR_AVX_IFMA) $(MULT) 100 + $(NASM_MINOR_AVX_IFMA) )
+
+NASM_IFMA_GE_REQ = $(shell [ $(NASM_VER) -ge $(NASM_MIN_IFMA_REQ) ] && echo true)
+ifneq ($(NASM_IFMA_GE_REQ),true)
 $(warning "NASM version found: $(NASM_VERSION)")
-$(error "Minimum required: $(NASM_MAJOR_REQ).$(NASM_MINOR_REQ)")
-endif
-endif
+$(warning "AVX-IFMA not supported. Minimum required: $(NASM_MAJOR_AVX_IFMA).$(NASM_MINOR_AVX_IFMA)")
+AVX_IFMA := n
+endif # NASM_AVX_IFMA_GET_REQ
 
 OBJ_DIR ?= obj
 LIB_DIR ?= .
 
 INCLUDE_DIRS := include . no-aesni
 INCLUDES := $(foreach i,$(INCLUDE_DIRS),-I $i)
-
-CC ?= gcc
-# MINGW should be non-zero value if detected
-MINGW ?= $(shell $(CC) -dM -E - < /dev/null | grep -i mingw | wc -l | sed 's/^ *//')
 
 # if "-z ibt" is supported then assume "-z shstk, -z cet-report=error" are also supported
 # "-fcf-protection" needs to be checked separately
@@ -109,6 +126,10 @@ endif
 
 ifeq ($(CC_HAS_CET),1)
 CFLAGS += -fcf-protection=full
+endif
+
+ifeq ($(AVX_IFMA), y)
+CFLAGS += -DAVX_IFMA
 endif
 
 ASM_INCLUDE_DIRS := .
@@ -300,6 +321,10 @@ c_lib_objs := $(c_lib_objs) \
 	snow3g_sse_no_aesni.o
 endif
 
+ifeq ($(AVX_IFMA), y)
+c_lib_objs := $(c_lib_objs) \
+	mb_mgr_avx2_t3.o
+endif
 #
 # List of ASM modules (root directory/common)
 #
@@ -585,8 +610,13 @@ asm_avx2_lib_objs := \
 	mb_mgr_hmac_sha512_submit_avx2.o \
 	mb_mgr_zuc_submit_flush_avx2.o \
 	mb_mgr_zuc_submit_flush_gfni_avx2.o \
-	poly_fma_avx2.o \
 	chacha20_avx2.o
+
+#
+# List of ASM modules (avx2_t3 directory)
+#
+asm_avx2_ifma_lib_objs := \
+	poly_fma_avx2.o
 
 #
 # List of ASM modules (avx512 directory)
@@ -694,6 +724,10 @@ asm_obj_files := $(asm_generic_lib_objs) \
 ifeq ($(AESNI_EMU), y)
 asm_obj_files := $(asm_obj_files) $(asm_noaesni_lib_objs) $(asm_noaesni_gcm_objs)
 endif
+ifeq ($(AVX_IFMA), y)
+asm_obj_files := $(asm_obj_files) $(asm_avx2_ifma_lib_objs)
+endif
+
 c_obj_files := $(c_lib_objs) $(c_gcm_objs)
 
 #
@@ -720,9 +754,22 @@ dep_target_files := $(dep_files:%=$(OBJ_DIR)/%)
 
 all: $(LIB_DIR)/$(LIBNAME)
 
+STR_FILTER = ""
+ifneq ($(AESNI_EMU),y)
+ifneq ($(AVX_IFMA),y)
+STR_FILTER = "_no_aesni\|_avx2_t3"
+else
+STR_FILTER = "_no_aesni"
+endif
+else
+ifneq ($(AVX_IFMA),y)
+STR_FILTER = "_avx2_t3"
+endif
+endif
+
 $(LIB)_lnk.def: $(LIB).def
-ifneq ($(AESNI_EMU), y)
-	grep -v _no_aesni $(LIB).def > $(LIB)_lnk.def
+ifneq ($(STR_FILTER), "")
+	grep -v $(STR_FILTER) $(LIB).def > $(LIB)_lnk.def
 else
 	cp -f $(LIB).def $(LIB)_lnk.def
 endif

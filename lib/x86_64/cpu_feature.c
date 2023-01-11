@@ -178,7 +178,11 @@ static uint32_t detect_avx512_ifma(void)
 static uint32_t detect_avx_ifma(void)
 {
         /* Check presence of AVX-IFMA - bit 23 of EAX */
+#ifdef AVX_IFMA
         return (cpuid_7_1.eax & (1UL << 23));
+#else
+        return 0;
+#endif
 }
 
 static uint32_t detect_bmi2(void)
