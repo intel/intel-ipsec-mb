@@ -74,6 +74,7 @@ set(TEST_APP_SRC_FILES
   ${CMAKE_CURRENT_SOURCE_DIR}/null_test.c
   ${CMAKE_CURRENT_SOURCE_DIR}/snow_v_test.c
   ${CMAKE_CURRENT_SOURCE_DIR}/direct_api_param_test.c
+  ${CMAKE_CURRENT_SOURCE_DIR}/quic_ecb_test.c
 )
 
 ########################################

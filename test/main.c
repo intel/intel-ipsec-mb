@@ -62,6 +62,7 @@ extern int chacha20_poly1305_test(struct IMB_MGR *mb_mgr);
 extern int null_test(struct IMB_MGR *mb_mgr);
 extern int snow_v_test(struct IMB_MGR *mb_mgr);
 extern int direct_api_param_test(struct IMB_MGR *mb_mgr);
+extern int quic_ecb_test(struct IMB_MGR *mb_mgr);
 
 typedef int (*imb_test_t)(struct IMB_MGR *mb_mgr);
 
@@ -238,6 +239,11 @@ struct imb_test tests[] = {
         {
                 .str = "DIRECT_API_PARAM",
                 .fn = direct_api_param_test,
+                .enabled = 1
+        },
+        {
+                .str = "QUIC",
+                .fn = quic_ecb_test,
                 .enabled = 1
         }
 };
