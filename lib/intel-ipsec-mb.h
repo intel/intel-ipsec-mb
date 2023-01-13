@@ -4118,6 +4118,28 @@ imb_quic_aes_gcm(IMB_MGR *state,
                  const uint64_t tag_len,
                  const uint64_t num_packets);
 
+/**
+ * @brief Batch of AES-ECB encrypt/decrypt operations with the same key
+ *
+ * Sample size is fixed to 16 bytes (read from source pointers).
+ * Mask output size is fixed to 5 bytes (written to destination pointer).
+ * Cipher direction is fixed to ENCRYPT.
+ *
+ * @param [in]  state         pointer to IMB_MGR
+ * @param [in]  exp_key_data  expanded AES encrypt keys
+ * @param [out] dst_ptr_array array with destination pointers
+ * @param [in]  src_ptr_array array with source sample pointers
+ * @param [in]  num_packets   number of packets in this batch
+ * @param [in]  key_size      key size (in bytes, see IMB_KEY_128_BYTES etc.)
+ */
+IMB_DLL_EXPORT void
+imb_quic_hp_aes_ecb(IMB_MGR *state,
+                    const void *exp_key_data,
+                    void *dst_ptr_array[],
+                    const void * const src_ptr_array[],
+                    const uint64_t num_packets,
+                    const IMB_KEY_SIZE_BYTES key_size);
+
 #ifdef __cplusplus
 }
 #endif
