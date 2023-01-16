@@ -102,7 +102,7 @@ static uint32_t createData(uint8_t *pSrcData[MAXBUFS],
                 pSrcData[i] = (uint8_t *)malloc(MAX_BUFFER_LENGTH_IN_BYTES);
 
                 if (!pSrcData[i]) {
-                        uint32_t j = 0;
+                        uint32_t j;
 
                         printf("malloc(pSrcData[i]): failed!\n");
 
@@ -136,7 +136,7 @@ static uint32_t createKeyVecData(uint32_t keyLen, uint8_t *pKeys[MAXBUFS],
         uint32_t i = 0;
 
         for (i = 0; i < numOfBuffs; i++) {
-                uint32_t j = 0;
+                uint32_t j;
 
                 pIV[i] = (uint8_t *)malloc(ivLen);
 
