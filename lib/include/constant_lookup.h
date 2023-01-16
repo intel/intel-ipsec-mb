@@ -38,14 +38,25 @@
 #endif
 
 #ifdef SAFE_LOOKUP
-#define LOOKUP8_SSE(_table, _idx, _size)  lookup_8bit_sse(_table, _idx, _size)
-#define LOOKUP8_AVX(_table, _idx, _size)  lookup_8bit_avx(_table, _idx, _size)
-#define LOOKUP16_SSE(_table, _idx, _size) lookup_16bit_sse(_table, _idx, _size)
-#define LOOKUP16_AVX(_table, _idx, _size) lookup_16bit_avx(_table, _idx, _size)
-#define LOOKUP32_SSE(_table, _idx, _size) lookup_32bit_sse(_table, _idx, _size)
-#define LOOKUP32_AVX(_table, _idx, _size) lookup_32bit_avx(_table, _idx, _size)
-#define LOOKUP64_SSE(_table, _idx, _size) lookup_64bit_sse(_table, _idx, _size)
-#define LOOKUP64_AVX(_table, _idx, _size) lookup_64bit_avx(_table, _idx, _size)
+#define LOOKUP8_SSE(_table, _idx, _size) \
+        lookup_8bit_sse(_table, _idx, _size)
+#define LOOKUP8_AVX(_table, _idx, _size) \
+        lookup_8bit_avx(_table, _idx, _size)
+#define LOOKUP16_SSE(_table, _idx, _size) \
+        lookup_16bit_sse(_table, _idx, _size)
+#define LOOKUP16_AVX(_table, _idx, _size) \
+        lookup_16bit_avx(_table, _idx, _size)
+#define LOOKUP32_SSE(_table, _idx, _size) \
+        lookup_32bit_sse(_table, _idx, _size)
+#define LOOKUP32_AVX(_table, _idx, _size) \
+        lookup_32bit_avx(_table, _idx, _size)
+#define LOOKUP64_SSE(_table, _idx, _size) \
+        lookup_64bit_sse(_table, _idx, _size)
+#define LOOKUP64_AVX(_table, _idx, _size) \
+        lookup_64bit_avx(_table, _idx, _size)
+#define KASUMI_SBOX_AVX2(_num) \
+        kasumi_sbox_avx2(_num)
+
 #else
 #define LOOKUP8_SSE(_table, _idx, _size)  _table[_idx]
 #define LOOKUP8_AVX(_table, _idx, _size)  _table[_idx]
@@ -82,6 +93,9 @@ lookup_8bit_sse(const void *table, const uint32_t idx, const uint32_t size);
  */
 IMB_DLL_LOCAL uint8_t
 lookup_8bit_avx(const void *table, const uint32_t idx, const uint32_t size);
+
+IMB_DLL_LOCAL uint16_t
+kasumi_sbox_avx2(const uint16_t num);
 
 /**
  * @brief Constant time SSE lookup function on variable size table

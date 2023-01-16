@@ -71,6 +71,29 @@ bcast_mask:
         db 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01,
         db 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01
 
+align 32
+y0_mask     dq  0xB3FF347F3AFFDEFF, 0x77FF9DBF93DF756F, 0x6BFF5B7FAFEFABFF, 0x7FFF37FF7FFFEFFF
+y1_mask     dq  0x1ABFEB7F77FF5F6F, 0xFBFF2D7FEF3FC6BF, 0x3EFFBDBF7FFF377F, 0x55FF5FFFDFBFB7FF
+y2_mask     dq  0xBD7FCDBFD6FFF7DF, 0x5DFF7EFF25B77BFF, 0xFF7FAFFFF7FFDFBF, 0x9BBF9ABFAFFF7FFF
+y3_mask     dq  0xEDBF97FFFB7F7BBF, 0xBFFFB6FFCFCF9ACF, 0xB7BFDFFF9BFFDDFF, 0xEFDFE37FBBDFFBFF
+y4_mask     dq  0xCEFFE7DF9FBF9BD7, 0xFEFFDF7FF6EFE37F, 0xDFFFEEFFDEFFE7FF, 0xEEFFFDFFF5FF9DFF
+y5_mask     dq  0xF0FFF9FFE3BFE3E7, 0xCF7FE7BFF8F7FC77, 0xEFFFF7FFED7FF9DF, 0xF3FFFDDFC6EFDF7F
+y6_mask     dq  0xFF3FFE1FFC3FFC07, 0xEFFFF83FFF07FF87, 0xF5FFF9FFF1BFFEFF, 0xFCFFFE7FF8FFE6BF
+y7_mask     dq  0xffffffffffffffff, 0xF1BFffffffffffff, 0xF9FFFEDFFE3FFF3F, 0xFF7FFF9FFF77F8DF
+y8_mask     dq  0xffffffffffffffff, 0xFE3Fffffffffffff, 0xFE3FFF1FFFCFFFDF, 0xFF9FFFEFFF87FF1F
+y_mask_last dq  0xFFC0FFF0FFE0FFF8, 0xFFE0FFC0FFFCFFFC, 0xFFC0FFE0FFF8FFF0, 0xFFE0FFF8FFF8FFF0
+
+align 32
+mask_0    dq  0x0001000100010001, 0x0080000100010001, 0x0080008000800080, 0x0080008000800080
+mask_1    dq  0x0002000200020002, 0x0100000200020002, 0x0100010001000100, 0x0100010001000100
+mask_2    dq  0x0004000400040004, 0x0200000400040004, 0x0200020002000200, 0x0200020002000200
+mask_3    dq  0x0008000800080008, 0x0400000800080008, 0x0400040004000400, 0x0400040004000400
+mask_4    dq  0x0010001000100010, 0x0800001000100010, 0x0800080008000800, 0x0800080008000800
+mask_5    dq  0x0020002000200020, 0x1000002000200020, 0x1000100010001000, 0x1000100010001000
+mask_6    dq  0x0040004000400040, 0x2000004000400040, 0x2000200020002000, 0x2000200020002000
+mask_7    dq  0x0000000000000000, 0x4000000000000000, 0x4000400040004000, 0x4000400040004000
+mask_8    dq  0x0000000000000000, 0x8000000000000000, 0x8000800080008000, 0x8000800080008000
+
 align 64
 idx_rows_avx:
 times 4 dd 0x00000000
@@ -133,6 +156,76 @@ mksection .text
 %define table   arg1
 %define idx     arg2
 %define size    arg3
+
+%define     x0    xmm2
+%define     x1    xmm3
+%define     x2    xmm4
+%define     x3    xmm5
+%define     x4    xmm6
+%define     x5    xmm7
+%define     x6    xmm8
+%define     x7    xmm9
+%define     x8    xmm11
+%define     y0    ymm2
+%define     y1    ymm3
+%define     y2    ymm4
+%define     y3    ymm5
+%define     y4    ymm6
+%define     y5    ymm7
+%define     y6    ymm8
+%define     y7    ymm9
+%define     y8    ymm11
+
+%define     y(n)  y %+ n
+%define     y_mask(n)   y %+ n %+_mask
+
+%define     x(n)  x %+ n
+%define     x_mask(n)   x %+ n %+_mask
+%define     mask(n) mask_ %+ n
+
+align 32
+MKGLOBAL(kasumi_sbox_avx2, function, internal)
+kasumi_sbox_avx2:
+    vpxor       ymm10, ymm10, ymm10
+    vmovd   xmm13, edi          ; copy r10 into lowest byte of xmm2
+    vpbroadcastw ymm13, xmm13     ; broadcast input across all words of xmm2
+%assign i 0
+%rep 9
+    vpand   y(i), ymm13, [rel mask(i)]
+    vpcmpeqw y(i), y(i), [rel mask(i)]  ; fill with 1s if equal to 0, else fill with 0s
+%assign i (i + 1)
+%endrep
+
+%assign i 0
+%rep 9
+    vpor    y(i), y(i), [rel y_mask(i)] ; or the x-masks with the x-values
+%assign i (i + 1)
+%endrep
+
+    vpand   ymm2, ymm3      ; carry out the AND operations to combine all x-masks
+    vpand   ymm4, ymm5
+    vpand   ymm6, ymm7
+    vpand   ymm9, ymm11
+    vpand   ymm2, ymm4
+    vpand   ymm6, ymm8
+    vpand   ymm2, ymm6
+    vpand   ymm2, ymm9
+
+    vpand   ymm2, ymm2, [rel y_mask_last] ; mask which accounts for setting 1s and 0s in set locations
+    vpsllw      ymm10, ymm2, 8
+    vpxor       ymm2, ymm2, ymm10
+    vpsllw      ymm10, ymm2, 4
+    vpxor       ymm2, ymm2, ymm10
+    vpsllw      ymm10, ymm2, 2
+    vpxor       ymm2, ymm2, ymm10
+    vpsllw      ymm10, ymm2, 1
+    vpxor       ymm2, ymm2, ymm10
+
+    vpmovmskb   r9, ymm2
+    mov         r10, 0xAAAAAAAA
+    pext        rax, r9, r10
+
+    ret
 
 ; uint8_t lookup_8bit_sse(const void *table, const uint32_t idx, const uint32_t size);
 ; arg 1 : pointer to table to look up
