@@ -28,6 +28,7 @@
 #include "intel-ipsec-mb.h"
 #include "include/error.h"
 #include <string.h> /* memcpy() */
+#include <include/arch_avx512_type2.h>
 
 IMB_DLL_EXPORT void
 imb_quic_hp_aes_ecb(IMB_MGR *state,
@@ -71,47 +72,24 @@ imb_quic_hp_aes_ecb(IMB_MGR *state,
         default:
                 imb_set_errno(state, IMB_ERR_KEY_LEN);
                 return;
-                break;
         }
 #endif /* SAFE_PARAM */
 
         imb_set_errno(state, 0);
 
-        /*
-         * Very clunky but rather functional version.
-         *
-         * @todo optimisation plan:
-         * - create optimized AES-ECB API for this case in assembly
-         * - puzzle: how to keep this API internal, ARCH specific and without adding to MB_MGR?
-         */
-        for (i = 0; i < num_packets; i++) {
-                const uint64_t sample_len = 16;
-                const size_t mask_len = 5;
-                struct IMB_JOB *job = IMB_GET_NEXT_JOB(state);
-                uint8_t db[16];
-
-                job->cipher_direction = IMB_DIR_ENCRYPT; /* fixed */
-                job->chain_order = IMB_ORDER_CIPHER_HASH;
-                job->dst = db;
-                job->src = src_ptr_array[i],
-                job->cipher_mode = IMB_CIPHER_ECB;
-                job->enc_keys = exp_key_data;
-                job->key_len_in_bytes = key_size;
-
-                job->iv_len_in_bytes = 0;
-                job->cipher_start_src_offset_in_bytes = 0;
-                job->msg_len_to_cipher_in_bytes = sample_len;
-
-                job->hash_alg = IMB_AUTH_NULL;
-
-                job = IMB_SUBMIT_JOB_NOCHECK(state);
-                while (job == NULL) {
-                        /*
-                         * This is not expected to happen (single-buffer)
-                         * - let's flush anyway
-                         */
-                        job = IMB_FLUSH_JOB(state);
-                }
-                memcpy(dst_ptr_array[i], db, mask_len);
-        }
+        switch (key_size) {
+        case IMB_KEY_128_BYTES:
+                aes_ecb_quic_enc_128_vaes_avx512(src_ptr_array, exp_key_data,
+                                                 dst_ptr_array, num_packets);
+                break;
+        case IMB_KEY_192_BYTES:
+                aes_ecb_quic_enc_192_vaes_avx512(src_ptr_array, exp_key_data,
+                                                 dst_ptr_array, num_packets);
+                break;
+        case IMB_KEY_256_BYTES:
+        default:
+                aes_ecb_quic_enc_256_vaes_avx512(src_ptr_array, exp_key_data,
+                                                 dst_ptr_array, num_packets);
+                break;
+        };
 }
