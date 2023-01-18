@@ -199,35 +199,6 @@
 
 ;;; ===========================================================================
 ;;; ===========================================================================
-;;; AVX512 reduction macro
-%macro VCLMUL_REDUCE 6
-%define %%OUT   %1      ; [out] zmm/ymm/xmm: result (must not be %%TMP1 or %%HI128)
-%define %%POLY  %2      ; [in] zmm/ymm/xmm: polynomial
-%define %%HI128 %3      ; [in] zmm/ymm/xmm: high 128b of hash to reduce
-%define %%LO128 %4      ; [in] zmm/ymm/xmm: low 128b of hash to reduce
-%define %%TMP0  %5      ; [in] zmm/ymm/xmm: temporary register
-%define %%TMP1  %6      ; [in] zmm/ymm/xmm: temporary register
-
-        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        ;; first phase of the reduction
-        vpclmulqdq      %%TMP0, %%POLY, %%LO128, 0x01
-        vpslldq         %%TMP0, %%TMP0, 8       ; shift-L 2 DWs
-        vpxorq          %%TMP0, %%LO128, %%TMP0 ; first phase of the reduction complete
-
-        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        ;; second phase of the reduction
-        vpclmulqdq      %%TMP1, %%POLY, %%TMP0, 0x00
-        vpsrldq         %%TMP1, %%TMP1, 4       ; shift-R only 1-DW to obtain 2-DWs shift-R
-
-        vpclmulqdq      %%OUT, %%POLY, %%TMP0, 0x10
-        vpslldq         %%OUT, %%OUT, 4         ; shift-L 1-DW to obtain result with no shifts
-
-        vpternlogq      %%OUT, %%TMP1, %%HI128, 0x96    ; OUT/GHASH = OUT xor TMP1 xor HI128
-        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-%endmacro
-
-;;; ===========================================================================
-;;; ===========================================================================
 ;;; schoolbook multiply of 16 blocks (8 x 16 bytes)
 ;;; - it is assumed that data read from %%INPTR is already shuffled and
 ;;;   %%INPTR address is 64 byte aligned
