@@ -682,6 +682,12 @@
         vmovdqu64       [%%GDATA + HashKey_4], %%T5
         vinserti64x2    %%ZT7, %%T5, 0
 
+        ;; calculate HashKeyX = HashKey x POLY
+        vpclmulqdq      %%ZT1, %%ZT7, [rel POLY], 0x10
+        vpshufd         %%ZT2, %%ZT7, 01001110b   
+        vpxorq          %%ZT1, %%ZT1, %%ZT2  
+        vmovdqu64       [%%GDATA + HashKeyK_4], %%ZT1
+
         ;; switch to 4x128-bit computations now
         vshufi64x2      %%ZT5, %%ZT5, %%ZT5, 0x00       ;; broadcast HashKey^4 across all ZT5
         vmovdqa64       %%ZT8, %%ZT7                    ;; save HashKey^4 to HashKey^1 in ZT8
@@ -689,6 +695,14 @@
         ;; calculate HashKey^5<<1 mod poly, HashKey^6<<1 mod poly, ... HashKey^8<<1 mod poly
         GHASH_MUL       %%ZT7, %%ZT5, %%ZT1, %%ZT3, %%ZT4, %%ZT6, %%ZT2
         vmovdqu64       [%%GDATA + HashKey_8], %%ZT7    ;; HashKey^8 to HashKey^5 in ZT7 now
+        
+        ;; calculate HashKeyX = HashKey x POLY
+        vpclmulqdq      %%ZT1, %%ZT7, [rel POLY], 0x10
+        vpshufd         %%ZT2, %%ZT7, 01001110b   
+        vpxorq          %%ZT1, %%ZT1, %%ZT2  
+        vmovdqu64       [%%GDATA + HashKeyK_8], %%ZT1
+
+        
         vshufi64x2      %%ZT5, %%ZT7, %%ZT7, 0x00       ;; broadcast HashKey^8 across all ZT5
 
         ;; calculate HashKey^9<<1 mod poly, HashKey^10<<1 mod poly, ... HashKey^48<<1 mod poly
@@ -698,14 +712,29 @@
         ;; compute HashKey^(4 + n), HashKey^(3 + n), ... HashKey^(1 + n)
         GHASH_MUL       %%ZT8, %%ZT5, %%ZT1, %%ZT3, %%ZT4, %%ZT6, %%ZT2
         vmovdqu64       [%%GDATA + HashKey_ %+ i], %%ZT8
+
+        ;; calculate HashKeyX = HashKey x POLY
+        vpclmulqdq      %%ZT1, %%ZT8, [rel POLY], 0x10
+        vpshufd         %%ZT2, %%ZT8, 01001110b   
+        vpxorq          %%ZT1, %%ZT1, %%ZT2  
+        vmovdqu64       [%%GDATA + HashKeyK_ %+ i], %%ZT1
+
 %assign i (i + 4)
 
         ;; compute HashKey^(8 + n), HashKey^(7 + n), ... HashKey^(5 + n)
         GHASH_MUL       %%ZT7, %%ZT5, %%ZT1, %%ZT3, %%ZT4, %%ZT6, %%ZT2
         vmovdqu64       [%%GDATA + HashKey_ %+ i], %%ZT7
+
+        ;; calculate HashKeyX = HashKey x POLY
+        vpclmulqdq      %%ZT1, %%ZT7, [rel POLY], 0x10
+        vpshufd         %%ZT2, %%ZT7, 01001110b   
+        vpxorq          %%ZT1, %%ZT1, %%ZT2  
+        vmovdqu64       [%%GDATA + HashKeyK_ %+ i], %%ZT1
+
 %assign i (i + 4)
 %endrep
 %endmacro
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; CALC_AAD_HASH: Calculates the hash of the data which will not be encrypted.
