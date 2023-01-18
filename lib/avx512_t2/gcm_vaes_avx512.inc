@@ -237,25 +237,25 @@
 %define %%TYPE  %1      ; [in] ghash type: start (xor hash), mid, end (same as mid; no reduction),
                         ;      end_reduce (end with reduction), start_reduce
 %define %%GH    %2      ; [in/out] ZMM ghash sum: high 128-bits
-%define %%GM    %3      ; [in/out] ZMM ghash sum: middle 128-bits
-%define %%GL    %4      ; [in/out] ZMM ghash sum: low 128-bits
-%define %%INPTR %5      ; [in] data input pointer
-%define %%INOFF %6      ; [in] data input offset
-%define %%INDIS %7      ; [in] data input displacement
-%define %%HKPTR %8      ; [in] hash key pointer
-%define %%HKOFF %9      ; [in] hash key offset
-%define %%HKDIS %10     ; [in] hash key displacement
-%define %%HASH  %11     ; [in/out] ZMM hash value in/out
-%define %%ZTMP0 %12     ; [clobbered] temporary ZMM
-%define %%ZTMP1 %13     ; [clobbered] temporary ZMM
-%define %%ZTMP2 %14     ; [clobbered] temporary ZMM
-%define %%ZTMP3 %15     ; [clobbered] temporary ZMM
-%define %%ZTMP4 %16     ; [clobbered] temporary ZMM
-%define %%ZTMP5 %17     ; [clobbered] temporary ZMM
-%define %%ZTMP6 %18     ; [clobbered] temporary ZMM
-%define %%ZTMP7 %19     ; [clobbered] temporary ZMM
-%define %%ZTMP8 %20     ; [clobbered] temporary ZMM
-%define %%ZTMP9 %21     ; [clobbered] temporary ZMM
+%define %%GL    %3      ; [in/out] ZMM ghash sum: low 128-bits
+%define %%INPTR %4      ; [in] data input pointer
+%define %%INOFF %5      ; [in] data input offset
+%define %%INDIS %6      ; [in] data input displacement
+%define %%HKPTR %7      ; [in] hash key pointer
+%define %%HKOFF %8      ; [in] hash key offset
+%define %%HKDIS %9      ; [in] hash key displacement
+%define %%HASH  %10     ; [in/out] ZMM hash value in/out
+%define %%ZTMP0 %11     ; [clobbered] temporary ZMM
+%define %%ZTMP1 %12     ; [clobbered] temporary ZMM
+%define %%ZTMP2 %13     ; [clobbered] temporary ZMM
+%define %%ZTMP3 %14     ; [clobbered] temporary ZMM
+%define %%ZTMP4 %15     ; [clobbered] temporary ZMM
+%define %%ZTMP5 %16     ; [clobbered] temporary ZMM
+%define %%ZTMP6 %17     ; [clobbered] temporary ZMM
+%define %%ZTMP7 %18     ; [clobbered] temporary ZMM
+%define %%ZTMP8 %19     ; [clobbered] temporary ZMM
+%define %%ZTMP9 %20     ; [clobbered] temporary ZMM
+%define %%ZTMPA %21     ; [clobbered] temporary ZMM
 %define %%SHUFM %22     ; [in] ZMM with shuffle mask - provided only when input data needs shuffling
 
 %assign start_ghash 0
@@ -286,10 +286,11 @@
         vpxorq          %%ZTMP9, %%ZTMP9, %%HASH
 %endif
         vmovdqu64       %%ZTMP8, [%%HKPTR + %%HKOFF + %%HKDIS]
-        vpclmulqdq      %%ZTMP0, %%ZTMP9, %%ZTMP8, 0x11     ; T0H = a1*b1
-        vpclmulqdq      %%ZTMP1, %%ZTMP9, %%ZTMP8, 0x00     ; T0L = a0*b0
-        vpclmulqdq      %%ZTMP2, %%ZTMP9, %%ZTMP8, 0x01     ; T0M1 = a1*b0
-        vpclmulqdq      %%ZTMP3, %%ZTMP9, %%ZTMP8, 0x10     ; T0M2 = a0*b1
+        vmovdqu64       %%ZTMPA, [%%HKPTR + %%HKOFF + %%HKDIS + HKeyGap]
+        vpclmulqdq      %%ZTMP0, %%ZTMP9, %%ZTMPA, 0x00 ; TLL = ML*KL
+        vpclmulqdq      %%ZTMP1, %%ZTMP9, %%ZTMPA, 0x10 ; TLH = ML*KH
+        vpclmulqdq      %%ZTMP2, %%ZTMP9, %%ZTMP8, 0x01 ; THL = MH*HL
+        vpclmulqdq      %%ZTMP3, %%ZTMP9, %%ZTMP8, 0x11 ; THH = MH*HH
         ;; ghash blocks 4-7
 %if %0 == 22
         vmovdqu64       %%ZTMP9, [%%INPTR + %%INOFF + %%INDIS + 64]
@@ -298,21 +299,18 @@
         vmovdqa64       %%ZTMP9, [%%INPTR + %%INOFF + %%INDIS + 64]
 %endif
         vmovdqu64       %%ZTMP8, [%%HKPTR + %%HKOFF + %%HKDIS + 64]
-        vpclmulqdq      %%ZTMP4, %%ZTMP9, %%ZTMP8, 0x11     ; T1H = a1*b1
-        vpclmulqdq      %%ZTMP5, %%ZTMP9, %%ZTMP8, 0x00     ; T1L = a0*b0
-        vpclmulqdq      %%ZTMP6, %%ZTMP9, %%ZTMP8, 0x01     ; T1M1 = a1*b0
-        vpclmulqdq      %%ZTMP7, %%ZTMP9, %%ZTMP8, 0x10     ; T1M2 = a0*b1
+        vmovdqu64       %%ZTMPA, [%%HKPTR + %%HKOFF + %%HKDIS + HKeyGap + 64]
+        vpclmulqdq      %%ZTMP4, %%ZTMP9, %%ZTMPA, 0x00 ; TLL = ML*KL
+        vpclmulqdq      %%ZTMP5, %%ZTMP9, %%ZTMPA, 0x10 ; TLH = ML*KH
+        vpclmulqdq      %%ZTMP6, %%ZTMP9, %%ZTMP8, 0x01 ; THL = MH*HL
+        vpclmulqdq      %%ZTMP7, %%ZTMP9, %%ZTMP8, 0x11 ; THH = MH*HH
         ;; update sums
 %if start_ghash != 0
-        vpxorq          %%GM, %%ZTMP2, %%ZTMP6              ; GM = T0M1 + T1M1
-        vpxorq          %%GH, %%ZTMP0, %%ZTMP4              ; GH = T0H + T1H
-        vpxorq          %%GL, %%ZTMP1, %%ZTMP5              ; GL = T0L + T1L
-        vpternlogq      %%GM, %%ZTMP3, %%ZTMP7, 0x96        ; GM = T0M2 + T1M1
+        vpxorq          %%GL, %%ZTMP0, %%ZTMP2              ; T2 = THL + TLL
+        vpxorq          %%GH, %%ZTMP1, %%ZTMP3              ; T1 = THH + TLH
 %else ;; mid, end, end_reduce
-        vpternlogq      %%GM, %%ZTMP2, %%ZTMP6, 0x96        ; GM += T0M1 + T1M1
-        vpternlogq      %%GH, %%ZTMP0, %%ZTMP4, 0x96        ; GH += T0H + T1H
-        vpternlogq      %%GL, %%ZTMP1, %%ZTMP5, 0x96        ; GL += T0L + T1L
-        vpternlogq      %%GM, %%ZTMP3, %%ZTMP7, 0x96        ; GM += T0M2 + T1M1
+        vpternlogq      %%GL, %%ZTMP0, %%ZTMP2, 0x96        ; T2 = THL + TLL
+        vpternlogq      %%GH, %%ZTMP1, %%ZTMP3, 0x96        ; T1 = THH + TLH
 %endif
         ;; ghash blocks 8-11
 %if %0 == 22
@@ -322,10 +320,14 @@
         vmovdqa64       %%ZTMP9, [%%INPTR + %%INOFF + %%INDIS + 128]
 %endif
         vmovdqu64       %%ZTMP8, [%%HKPTR + %%HKOFF + %%HKDIS + 128]
-        vpclmulqdq      %%ZTMP0, %%ZTMP9, %%ZTMP8, 0x11     ; T0H = a1*b1
-        vpclmulqdq      %%ZTMP1, %%ZTMP9, %%ZTMP8, 0x00     ; T0L = a0*b0
-        vpclmulqdq      %%ZTMP2, %%ZTMP9, %%ZTMP8, 0x01     ; T0M1 = a1*b0
-        vpclmulqdq      %%ZTMP3, %%ZTMP9, %%ZTMP8, 0x10     ; T0M2 = a0*b1
+        vmovdqu64       %%ZTMPA, [%%HKPTR + %%HKOFF + %%HKDIS + HKeyGap + 128]
+        vpclmulqdq      %%ZTMP0, %%ZTMP9, %%ZTMPA, 0x00 ; TLL = ML*KL
+        vpclmulqdq      %%ZTMP1, %%ZTMP9, %%ZTMPA, 0x10 ; TLH = ML*KH
+        vpclmulqdq      %%ZTMP2, %%ZTMP9, %%ZTMP8, 0x01 ; THL = MH*HL
+        vpclmulqdq      %%ZTMP3, %%ZTMP9, %%ZTMP8, 0x11 ; THH = MH*HH
+        ;; update sums
+        vpternlogq      %%GL, %%ZTMP6, %%ZTMP4, 0x96        ; T2 = THL + TLL
+        vpternlogq      %%GH, %%ZTMP7, %%ZTMP5, 0x96        ; T1 = THH + TLH
         ;; ghash blocks 12-15
 %if %0 == 22
         vmovdqu64       %%ZTMP9, [%%INPTR + %%INOFF + %%INDIS + 192]
@@ -334,31 +336,23 @@
         vmovdqa64       %%ZTMP9, [%%INPTR + %%INOFF + %%INDIS + 192]
 %endif
         vmovdqu64       %%ZTMP8, [%%HKPTR + %%HKOFF + %%HKDIS + 192]
-        vpclmulqdq      %%ZTMP4, %%ZTMP9, %%ZTMP8, 0x11     ; T1H = a1*b1
-        vpclmulqdq      %%ZTMP5, %%ZTMP9, %%ZTMP8, 0x00     ; T1L = a0*b0
-        vpclmulqdq      %%ZTMP6, %%ZTMP9, %%ZTMP8, 0x01     ; T1M1 = a1*b0
-        vpclmulqdq      %%ZTMP7, %%ZTMP9, %%ZTMP8, 0x10     ; T1M2 = a0*b1
+        vmovdqu64       %%ZTMPA, [%%HKPTR + %%HKOFF + %%HKDIS + HKeyGap + 192]
+        vpclmulqdq      %%ZTMP4, %%ZTMP9, %%ZTMPA, 0x00 ; TLL = ML*KL
+        vpclmulqdq      %%ZTMP5, %%ZTMP9, %%ZTMPA, 0x10 ; TLH = ML*KH
+        vpclmulqdq      %%ZTMP6, %%ZTMP9, %%ZTMP8, 0x01 ; THL = MH*HL
+        vpclmulqdq      %%ZTMP7, %%ZTMP9, %%ZTMP8, 0x11 ; THH = MH*HH
         ;; update sums
-        vpternlogq      %%GM, %%ZTMP2, %%ZTMP6, 0x96        ; GM += T0M1 + T1M1
-        vpternlogq      %%GH, %%ZTMP0, %%ZTMP4, 0x96        ; GH += T0H + T1H
-        vpternlogq      %%GL, %%ZTMP1, %%ZTMP5, 0x96        ; GL += T0L + T1L
-        vpternlogq      %%GM, %%ZTMP3, %%ZTMP7, 0x96        ; GM += T0M2 + T1M1
+        vpternlogq      %%GL, %%ZTMP0, %%ZTMP2, 0x96        ; T2 = THL + TLL
+        vpternlogq      %%GH, %%ZTMP1, %%ZTMP3, 0x96        ; T1 = THH + TLH
+        vpternlogq      %%GL, %%ZTMP6, %%ZTMP4, 0x96        ; T2 = THL + TLL
+        vpternlogq      %%GH, %%ZTMP7, %%ZTMP5, 0x96        ; T1 = THH + TLH
 
 %if do_reduction != 0
-        ;; integrate GM into GH and GL
-        vpsrldq         %%ZTMP0, %%GM, 8
-        vpslldq         %%ZTMP1, %%GM, 8
-        vpxorq          %%GH, %%GH, %%ZTMP0
-        vpxorq          %%GL, %%GL, %%ZTMP1
-
-        ;; add GH and GL 128-bit words horizontally
-        VHPXORI4x128    %%GH, %%ZTMP0
-        VHPXORI4x128    %%GL, %%ZTMP1
-
-        ;; reduction
-        vmovdqa64       XWORD(%%ZTMP2), [rel POLY2]
-        VCLMUL_REDUCE   XWORD(%%HASH), XWORD(%%ZTMP2), \
-                        XWORD(%%GH), XWORD(%%GL), XWORD(%%ZTMP0), XWORD(%%ZTMP1)
+        ;; new reduction
+        vpclmulqdq      %%HASH, %%GL, [rel POLY], 0x10
+        vpshufd         %%ZTMP0, %%GL, 01001110b
+        vpternlogq      %%HASH, %%GH, %%ZTMP0, 0x96
+        VHPXORI4x128    %%HASH, %%ZTMP0
 %endif
 %endmacro
 
@@ -369,112 +363,141 @@
 ;;; - it doesn't load the data and it assumed it is already loaded and
 ;;;   shuffled
 ;;; - single_call scenario only
-%macro  GHASH_1_TO_16 17-20
+%macro  GHASH_1_TO_16 18-20
 %define %%KP            %1      ; [in] pointer to expanded keys
 %define %%GHASH         %2      ; [out] ghash output
-%define %%T0H           %3      ; [clobbered] temporary ZMM
-%define %%T0L           %4      ; [clobbered] temporary ZMM
-%define %%T0M1          %5      ; [clobbered] temporary ZMM
-%define %%T0M2          %6      ; [clobbered] temporary ZMM
-%define %%T1H           %7      ; [clobbered] temporary ZMM
-%define %%T1L           %8      ; [clobbered] temporary ZMM
-%define %%T1M1          %9      ; [clobbered] temporary ZMM
-%define %%T1M2          %10     ; [clobbered] temporary ZMM
-%define %%HK            %11     ; [clobbered] temporary ZMM
-%define %%AAD_HASH_IN   %12     ; [in] input hash value
-%define %%CIPHER_IN0    %13     ; [in] ZMM with cipher text blocks 0-3
-%define %%CIPHER_IN1    %14     ; [in] ZMM with cipher text blocks 4-7
-%define %%CIPHER_IN2    %15     ; [in] ZMM with cipher text blocks 8-11
-%define %%CIPHER_IN3    %16     ; [in] ZMM with cipher text blocks 12-15
-%define %%NUM_BLOCKS    %17     ; [in] numerical value, number of blocks
-%define %%GH            %18     ; [in] ZMM with hi product part
-%define %%GM            %19     ; [in] ZMM with mid product part
+%define %%THH1          %3      ; [clobbered] temporary ZMM
+%define %%THL1          %4      ; [clobbered] temporary ZMM
+%define %%TLH1          %5      ; [clobbered] temporary ZMM
+%define %%TLL1          %6      ; [clobbered] temporary ZMM
+%define %%THH2          %7      ; [clobbered] temporary ZMM
+%define %%THL2          %8      ; [clobbered] temporary ZMM
+%define %%TLH2          %9      ; [clobbered] temporary ZMM
+%define %%TLL2          %10     ; [clobbered] temporary ZMM
+%define %%HK1           %11     ; [clobbered] temporary ZMM
+%define %%HK2           %12     ; [clobbered] temporary ZMM
+%define %%AAD_HASH_IN   %13     ; [in] input hash value
+%define %%CIPHER_IN0    %14     ; [in] ZMM with cipher text blocks 0-3
+%define %%CIPHER_IN1    %15     ; [in] ZMM with cipher text blocks 4-7
+%define %%CIPHER_IN2    %16     ; [in] ZMM with cipher text blocks 8-11
+%define %%CIPHER_IN3    %17     ; [in] ZMM with cipher text blocks 12-15
+%define %%NUM_BLOCKS    %18     ; [in] numerical value, number of blocks
+%define %%GH            %19     ; [in] ZMM with hi product part
 %define %%GL            %20     ; [in] ZMM with lo product part
 
 %assign hashk           HashKey_ %+ %%NUM_BLOCKS
 
-%if %0 == 17
+%if %0 == 18
         vpxorq          %%CIPHER_IN0, %%CIPHER_IN0, %%AAD_HASH_IN
 %endif
 
 %if %%NUM_BLOCKS == 16
+        vmovdqu64       %%HK1, [%%KP + hashk]
+        vmovdqu64       %%HK2, [%%KP + hashk + HKeyGap]
+        vpclmulqdq      %%TLL1, %%CIPHER_IN0, %%HK2, 0x00 ; TLL = ML*KL
+        vpclmulqdq      %%TLH1, %%CIPHER_IN0, %%HK2, 0x10 ; TLH = ML*KH
+        vpclmulqdq      %%THL1, %%CIPHER_IN0, %%HK1, 0x01 ; THL = MH*HL
+        vpclmulqdq      %%THH1, %%CIPHER_IN0, %%HK1, 0x11 ; THH = MH*HH
 
-        vmovdqu64       %%HK, [%%KP + hashk]
-        vpclmulqdq      %%T0H,  %%CIPHER_IN0, %%HK, 0x11  ; H = a1*b1
-        vpclmulqdq      %%T0L,  %%CIPHER_IN0, %%HK, 0x00  ; L = a0*b0
-        vpclmulqdq      %%T0M1, %%CIPHER_IN0, %%HK, 0x01  ; M1 = a1*b0
-        vpclmulqdq      %%T0M2, %%CIPHER_IN0, %%HK, 0x10  ; M2 = a0*b1
-        vmovdqu64       %%HK, [%%KP + hashk + (1*64)]
-        vpclmulqdq      %%T1H,  %%CIPHER_IN1, %%HK, 0x11  ; H = a1*b1
-        vpclmulqdq      %%T1L,  %%CIPHER_IN1, %%HK, 0x00  ; L = a0*b0
-        vpclmulqdq      %%T1M1, %%CIPHER_IN1, %%HK, 0x01  ; M1 = a1*b0
-        vpclmulqdq      %%T1M2, %%CIPHER_IN1, %%HK, 0x10  ; M2 = a0*b1
-        vmovdqu64       %%HK, [%%KP + hashk + (2*64)]
-        vpclmulqdq      %%CIPHER_IN0,  %%CIPHER_IN2, %%HK, 0x11  ; H = a1*b1
-        vpclmulqdq      %%CIPHER_IN1,  %%CIPHER_IN2, %%HK, 0x00  ; L = a0*b0
-        vpternlogq      %%T0H, %%CIPHER_IN0, %%T1H, 0x96
-        vpternlogq      %%T0L, %%CIPHER_IN1, %%T1L, 0x96
-        vpclmulqdq      %%CIPHER_IN0, %%CIPHER_IN2, %%HK, 0x01  ; M1 = a1*b0
-        vpclmulqdq      %%CIPHER_IN1, %%CIPHER_IN2, %%HK, 0x10  ; M2 = a0*b1
-        vpternlogq      %%T0M1, %%CIPHER_IN0, %%T1M1, 0x96
-        vpternlogq      %%T0M2, %%CIPHER_IN1, %%T1M2, 0x96
-        vmovdqu64       %%HK, [%%KP + hashk + (3*64)]
-        vpclmulqdq      %%T1H,  %%CIPHER_IN3, %%HK, 0x11  ; H = a1*b1
-        vpclmulqdq      %%T1L,  %%CIPHER_IN3, %%HK, 0x00  ; L = a0*b0
-        vpclmulqdq      %%T1M1, %%CIPHER_IN3, %%HK, 0x01  ; M1 = a1*b0
-        vpclmulqdq      %%T1M2, %%CIPHER_IN3, %%HK, 0x10  ; M2 = a0*b1
-        vpxorq          %%T1H, %%T0H, %%T1H
-        vpxorq          %%T1L, %%T0L, %%T1L
-        vpxorq          %%T1M1, %%T0M1, %%T1M1
-        vpxorq          %%T1M2, %%T0M2, %%T1M2
+        vmovdqu64       %%HK1, [%%KP + hashk + (1*64)]
+        vmovdqu64       %%HK2, [%%KP + hashk + (1*64) + HKeyGap]
+        vpclmulqdq      %%TLL2, %%CIPHER_IN1, %%HK2, 0x00 ; TLL = ML*KL
+        vpclmulqdq      %%TLH2, %%CIPHER_IN1, %%HK2, 0x10 ; TLH = ML*KH
+        vpclmulqdq      %%THL2, %%CIPHER_IN1, %%HK1, 0x01 ; THL = MH*HL
+        vpclmulqdq      %%THH2, %%CIPHER_IN1, %%HK1, 0x11 ; THH = MH*HH
+
+        vmovdqu64       %%HK1, [%%KP + hashk + (2*64)]
+        vmovdqu64       %%HK2, [%%KP + hashk + (2*64) + HKeyGap]
+        vpclmulqdq      %%CIPHER_IN0, %%CIPHER_IN2, %%HK2, 0x00 ; TLL = ML*KL
+        vpclmulqdq      %%CIPHER_IN1, %%CIPHER_IN2, %%HK2, 0x10 ; TLH = ML*KH
+        vpclmulqdq      %%HK2, %%CIPHER_IN2, %%HK1, 0x01 ; THL = MH*HL
+        vpclmulqdq      %%HK1, %%CIPHER_IN2, %%HK1, 0x11 ; THH = MH*HH
+
+        ;; add sums so far
+        vpternlogq      %%TLL1, %%TLL2, %%CIPHER_IN0, 0x96
+        vpternlogq      %%TLH1, %%TLH2, %%CIPHER_IN1, 0x96
+        vpternlogq      %%THL1, %%THL2, %%HK2, 0x96
+        vpternlogq      %%THH1, %%THH2, %%HK1, 0x96
+
+        ;; the last multiply
+        vmovdqu64       %%HK1, [%%KP + hashk + (3*64)]
+        vmovdqu64       %%HK2, [%%KP + hashk + (3*64) + HKeyGap]
+        vpclmulqdq      %%TLL2, %%CIPHER_IN3, %%HK2, 0x00 ; TLL = ML*KL
+        vpclmulqdq      %%TLH2, %%CIPHER_IN3, %%HK2, 0x10 ; TLH = ML*KH
+        vpclmulqdq      %%THL2, %%CIPHER_IN3, %%HK1, 0x01 ; THL = MH*HL
+        vpclmulqdq      %%THH2, %%CIPHER_IN3, %%HK1, 0x11 ; THH = MH*HH
+
+        ;; get all sums into THH1:TLL1
+        vpxorq          %%TLL1, %%TLL1, %%THL1
+        vpxorq          %%THH1, %%THH1, %%TLH1
+        vpternlogq      %%TLL1, %%TLL2, %%THL2, 0x96
+        vpternlogq      %%THH1, %%THH2, %%TLH2, 0x96
 
 %elif %%NUM_BLOCKS >= 12
 
-        vmovdqu64       %%HK, [%%KP + hashk]
-        vpclmulqdq      %%T0H,  %%CIPHER_IN0, %%HK, 0x11  ; H = a1*b1
-        vpclmulqdq      %%T0L,  %%CIPHER_IN0, %%HK, 0x00  ; L = a0*b0
-        vpclmulqdq      %%T0M1, %%CIPHER_IN0, %%HK, 0x01  ; M1 = a1*b0
-        vpclmulqdq      %%T0M2, %%CIPHER_IN0, %%HK, 0x10  ; M2 = a0*b1
-        vmovdqu64       %%HK, [%%KP + hashk + (1*64)]
-        vpclmulqdq      %%T1H,  %%CIPHER_IN1, %%HK, 0x11  ; H = a1*b1
-        vpclmulqdq      %%T1L,  %%CIPHER_IN1, %%HK, 0x00  ; L = a0*b0
-        vpclmulqdq      %%T1M1, %%CIPHER_IN1, %%HK, 0x01  ; M1 = a1*b0
-        vpclmulqdq      %%T1M2, %%CIPHER_IN1, %%HK, 0x10  ; M2 = a0*b1
-        vmovdqu64       %%HK, [%%KP + hashk + (2*64)]
-        vpclmulqdq      %%CIPHER_IN0,  %%CIPHER_IN2, %%HK, 0x11  ; H = a1*b1
-        vpclmulqdq      %%CIPHER_IN1,  %%CIPHER_IN2, %%HK, 0x00  ; L = a0*b0
-        vpternlogq      %%T1H, %%CIPHER_IN0, %%T0H, 0x96
-        vpternlogq      %%T1L, %%CIPHER_IN1, %%T0L, 0x96
-        vpclmulqdq      %%CIPHER_IN0, %%CIPHER_IN2, %%HK, 0x01  ; M1 = a1*b0
-        vpclmulqdq      %%CIPHER_IN1, %%CIPHER_IN2, %%HK, 0x10  ; M2 = a0*b1
-        vpternlogq      %%T1M1, %%CIPHER_IN0, %%T0M1, 0x96
-        vpternlogq      %%T1M2, %%CIPHER_IN1, %%T0M2, 0x96
+        vmovdqu64       %%HK1, [%%KP + hashk]
+        vmovdqu64       %%HK2, [%%KP + hashk + HKeyGap]
+        vpclmulqdq      %%TLL1, %%CIPHER_IN0, %%HK2, 0x00 ; TLL = ML*KL
+        vpclmulqdq      %%TLH1, %%CIPHER_IN0, %%HK2, 0x10 ; TLH = ML*KH
+        vpclmulqdq      %%THL1, %%CIPHER_IN0, %%HK1, 0x01 ; THL = MH*HL
+        vpclmulqdq      %%THH1, %%CIPHER_IN0, %%HK1, 0x11 ; THH = MH*HH
+
+        vmovdqu64       %%HK1, [%%KP + hashk + (1*64)]
+        vmovdqu64       %%HK2, [%%KP + hashk + (1*64) + HKeyGap]
+        vpclmulqdq      %%TLL2, %%CIPHER_IN1, %%HK2, 0x00 ; TLL = ML*KL
+        vpclmulqdq      %%TLH2, %%CIPHER_IN1, %%HK2, 0x10 ; TLH = ML*KH
+        vpclmulqdq      %%THL2, %%CIPHER_IN1, %%HK1, 0x01 ; THL = MH*HL
+        vpclmulqdq      %%THH2, %%CIPHER_IN1, %%HK1, 0x11 ; THH = MH*HH
+
+        vmovdqu64       %%HK1, [%%KP + hashk + (2*64)]
+        vmovdqu64       %%HK2, [%%KP + hashk + (2*64) + HKeyGap]
+        vpclmulqdq      %%CIPHER_IN0, %%CIPHER_IN2, %%HK2, 0x00 ; TLL = ML*KL
+        vpclmulqdq      %%CIPHER_IN1, %%CIPHER_IN2, %%HK2, 0x10 ; TLH = ML*KH
+        vpclmulqdq      %%HK2, %%CIPHER_IN2, %%HK1, 0x01 ; THL = MH*HL
+        vpclmulqdq      %%HK1, %%CIPHER_IN2, %%HK1, 0x11 ; THH = MH*HH
+
+        ;; add sums into THH1:TLL1
+        vpternlogq      %%TLL1, %%TLL2, %%CIPHER_IN0, 0x96
+        vpternlogq      %%TLH1, %%TLH2, %%CIPHER_IN1, 0x96
+        vpternlogq      %%THL1, %%THL2, %%HK2, 0x96
+        vpternlogq      %%THH1, %%THH2, %%HK1, 0x96
+        vpxorq          %%TLL1, %%TLL1, %%THL1
+        vpxorq          %%THH1, %%THH1, %%TLH1
 
 %elif %%NUM_BLOCKS >= 8
 
-        vmovdqu64       %%HK, [%%KP + hashk]
-        vpclmulqdq      %%T0H,  %%CIPHER_IN0, %%HK, 0x11  ; H = a1*b1
-        vpclmulqdq      %%T0L,  %%CIPHER_IN0, %%HK, 0x00  ; L = a0*b0
-        vpclmulqdq      %%T0M1, %%CIPHER_IN0, %%HK, 0x01  ; M1 = a1*b0
-        vpclmulqdq      %%T0M2, %%CIPHER_IN0, %%HK, 0x10  ; M2 = a0*b1
-        vmovdqu64       %%HK, [%%KP + hashk + (1*64)]
-        vpclmulqdq      %%T1H,  %%CIPHER_IN1, %%HK, 0x11  ; H = a1*b1
-        vpclmulqdq      %%T1L,  %%CIPHER_IN1, %%HK, 0x00  ; L = a0*b0
-        vpclmulqdq      %%T1M1, %%CIPHER_IN1, %%HK, 0x01  ; M1 = a1*b0
-        vpclmulqdq      %%T1M2, %%CIPHER_IN1, %%HK, 0x10  ; M2 = a0*b1
-        vpxorq          %%T1H, %%T0H, %%T1H
-        vpxorq          %%T1L, %%T0L, %%T1L
-        vpxorq          %%T1M1, %%T0M1, %%T1M1
-        vpxorq          %%T1M2, %%T0M2, %%T1M2
+        vmovdqu64       %%HK1, [%%KP + hashk]
+        vmovdqu64       %%HK2, [%%KP + hashk + HKeyGap]
+        vpclmulqdq      %%TLL1, %%CIPHER_IN0, %%HK2, 0x00 ; TLL = ML*KL
+        vpclmulqdq      %%TLH1, %%CIPHER_IN0, %%HK2, 0x10 ; TLH = ML*KH
+        vpclmulqdq      %%THL1, %%CIPHER_IN0, %%HK1, 0x01 ; THL = MH*HL
+        vpclmulqdq      %%THH1, %%CIPHER_IN0, %%HK1, 0x11 ; THH = MH*HH
+
+        vmovdqu64       %%HK1, [%%KP + hashk + (1*64)]
+        vmovdqu64       %%HK2, [%%KP + hashk + (1*64) + HKeyGap]
+        vpclmulqdq      %%TLL2, %%CIPHER_IN1, %%HK2, 0x00 ; TLL = ML*KL
+        vpclmulqdq      %%TLH2, %%CIPHER_IN1, %%HK2, 0x10 ; TLH = ML*KH
+        vpclmulqdq      %%THL2, %%CIPHER_IN1, %%HK1, 0x01 ; THL = MH*HL
+        vpclmulqdq      %%THH2, %%CIPHER_IN1, %%HK1, 0x11 ; THH = MH*HH
+
+        ;; add sums into THH1:TLL1
+        vpxorq          %%TLL1, %%TLL1, %%THL1
+        vpxorq          %%THH1, %%THH1, %%TLH1
+        vpternlogq      %%TLL1, %%TLL2, %%THL2, 0x96
+        vpternlogq      %%THH1, %%THH2, %%TLH2, 0x96
 
 %elif %%NUM_BLOCKS >= 4
 
-        vmovdqu64       %%HK, [%%KP + hashk]
-        vpclmulqdq      %%T1H,  %%CIPHER_IN0, %%HK, 0x11  ; H = a1*b1
-        vpclmulqdq      %%T1L,  %%CIPHER_IN0, %%HK, 0x00  ; L = a0*b0
-        vpclmulqdq      %%T1M1, %%CIPHER_IN0, %%HK, 0x01  ; M1 = a1*b0
-        vpclmulqdq      %%T1M2, %%CIPHER_IN0, %%HK, 0x10  ; M2 = a0*b1
+        vmovdqu64       %%HK1, [%%KP + hashk]
+        vmovdqu64       %%HK2, [%%KP + hashk + HKeyGap]
+        vpclmulqdq      %%TLL1, %%CIPHER_IN0, %%HK2, 0x00 ; TLL = ML*KL
+        vpclmulqdq      %%TLH1, %%CIPHER_IN0, %%HK2, 0x10 ; TLH = ML*KH
+        vpclmulqdq      %%THL1, %%CIPHER_IN0, %%HK1, 0x01 ; THL = MH*HL
+        vpclmulqdq      %%THH1, %%CIPHER_IN0, %%HK1, 0x11 ; THH = MH*HH
 
+        ;; add sums into THH1:TLL1
+        vpxorq          %%TLL1, %%TLL1, %%THL1
+        vpxorq          %%THH1, %%THH1, %%TLH1
 %endif
 
         ;; T1H/L/M1/M2 - hold current product sums (provided %%NUM_BLOCKS >= 4)
@@ -492,100 +515,70 @@
 %xdefine %%REG_IN %%CIPHER_IN %+ reg_idx
 
 %if blocks_left == 1
-        vmovdqu64       XWORD(%%HK), [%%KP + hashk]
-        vpclmulqdq      XWORD(%%T0M1), XWORD(%%REG_IN), XWORD(%%HK), 0x01     ; M1 = a1*b0
-        vpclmulqdq      XWORD(%%T0M2), XWORD(%%REG_IN), XWORD(%%HK), 0x10     ; M2 = a0*b1
-        vpclmulqdq      XWORD(%%T0H), XWORD(%%REG_IN), XWORD(%%HK), 0x11      ; H = a1*b1
-        vpclmulqdq      XWORD(%%T0L), XWORD(%%REG_IN), XWORD(%%HK), 0x00      ; L = a0*b0
+        vmovdqu64       XWORD(%%HK1), [%%KP + hashk]
+        vmovdqu64       XWORD(%%HK2), [%%KP + hashk + HKeyGap]
+        vpclmulqdq      XWORD(%%TLL2), XWORD(%%REG_IN), XWORD(%%HK2), 0x00 ; TLL = ML*KL
+        vpclmulqdq      XWORD(%%TLH2), XWORD(%%REG_IN), XWORD(%%HK2), 0x10 ; TLH = ML*KH
+        vpclmulqdq      XWORD(%%THL2), XWORD(%%REG_IN), XWORD(%%HK1), 0x01 ; THL = MH*HL
+        vpclmulqdq      XWORD(%%THH2), XWORD(%%REG_IN), XWORD(%%HK1), 0x11 ; THH = MH*HH
 %elif blocks_left == 2
-        vmovdqu64       YWORD(%%HK), [%%KP + hashk]
-        vpclmulqdq      YWORD(%%T0M1), YWORD(%%REG_IN), YWORD(%%HK), 0x01     ; M1 = a1*b0
-        vpclmulqdq      YWORD(%%T0M2), YWORD(%%REG_IN), YWORD(%%HK), 0x10     ; M2 = a0*b1
-        vpclmulqdq      YWORD(%%T0H), YWORD(%%REG_IN), YWORD(%%HK), 0x11      ; H = a1*b1
-        vpclmulqdq      YWORD(%%T0L), YWORD(%%REG_IN), YWORD(%%HK), 0x00      ; L = a0*b0
+        vmovdqu64       YWORD(%%HK1), [%%KP + hashk]
+        vmovdqu64       YWORD(%%HK2), [%%KP + hashk + HKeyGap]
+        vpclmulqdq      YWORD(%%TLL2), YWORD(%%REG_IN), YWORD(%%HK2), 0x00 ; TLL = ML*KL
+        vpclmulqdq      YWORD(%%TLH2), YWORD(%%REG_IN), YWORD(%%HK2), 0x10 ; TLH = ML*KH
+        vpclmulqdq      YWORD(%%THL2), YWORD(%%REG_IN), YWORD(%%HK1), 0x01 ; THL = MH*HL
+        vpclmulqdq      YWORD(%%THH2), YWORD(%%REG_IN), YWORD(%%HK1), 0x11 ; THH = MH*HH
 %else ; blocks_left == 3
-        vmovdqu64       YWORD(%%HK), [%%KP + hashk]
-        vinserti64x2    %%HK, [%%KP + hashk + 32], 2
-        vpclmulqdq      %%T0M1, %%REG_IN, %%HK, 0x01     ; M1 = a1*b0
-        vpclmulqdq      %%T0M2, %%REG_IN, %%HK, 0x10     ; M2 = a0*b1
-        vpclmulqdq      %%T0H, %%REG_IN, %%HK, 0x11      ; H = a1*b1
-        vpclmulqdq      %%T0L, %%REG_IN, %%HK, 0x00      ; L = a0*b0
+        vmovdqu64       YWORD(%%HK1), [%%KP + hashk]
+        vmovdqu64       YWORD(%%HK2), [%%KP + hashk + HKeyGap]
+        vinserti64x2    %%HK1, [%%KP + hashk + 32], 2
+        vinserti64x2    %%HK2, [%%KP + hashk + HKeyGap + 32], 2
+        vpclmulqdq      %%TLL2, %%REG_IN, %%HK2, 0x00 ; TLL = ML*KL
+        vpclmulqdq      %%TLH2, %%REG_IN, %%HK2, 0x10 ; TLH = ML*KH
+        vpclmulqdq      %%THL2, %%REG_IN, %%HK1, 0x01 ; THL = MH*HL
+        vpclmulqdq      %%THH2, %%REG_IN, %%HK1, 0x11 ; THH = MH*HH
 %endif ; blocks_left
 
-%undef %%REG_IN
-
-%if %0 == 20
-        ;; *** GH/GM/GL passed as arguments
-%if %%NUM_BLOCKS >= 4
-        ;; add ghash product sums from the first 4, 8 or 12 blocks
-        vpxorq          %%T0M1, %%T0M1, %%T1M1
-        vpternlogq      %%T0M2, %%GM, %%T1M2, 0x96
-        vpternlogq      %%T0H, %%GH, %%T1H, 0x96
-        vpternlogq      %%T0L, %%GL, %%T1L, 0x96
+        ;; add sums into THH1:TLL1
+%if %%NUM_BLOCKS > 4
+        vpternlogq      %%TLL1, %%TLL2, %%THL2, 0x96
+        vpternlogq      %%THH1, %%THH2, %%TLH2, 0x96
 %else
-        vpxorq          %%T0M1, %%T0M1, %%GM
-        vpxorq          %%T0H, %%T0H, %%GH
-        vpxorq          %%T0L, %%T0L, %%GL
-%endif ;; %%NUM_BLOCKS >= 4
-%else
-        ;; *** GH/GM/GL NOT passed as arguments
-%if %%NUM_BLOCKS >= 4
-        ;; add ghash product sums from the first 4, 8 or 12 blocks
-        vpxorq          %%T0M1, %%T0M1, %%T1M1
-        vpxorq          %%T0M2, %%T0M2, %%T1M2
-        vpxorq          %%T0H, %%T0H, %%T1H
-        vpxorq          %%T0L, %%T0L, %%T1L
-%endif ;; %%NUM_BLOCKS >= 4
-%endif ;; %0 == 20
-
-        ;; integrate TM into TH and TL
-        vpxorq          %%T0M1, %%T0M1, %%T0M2
-        vpsrldq         %%T1M1, %%T0M1, 8
-        vpslldq         %%T1M2, %%T0M1, 8
-        vpxorq          %%T0H, %%T0H, %%T1M1
-        vpxorq          %%T0L, %%T0L, %%T1M2
-%else
-        ;; =====================================================
-        ;; number of blocks is 4, 8, 12 or 16
-        ;; T1H/L/M1/M2 include product sums not T0H/L/M1/M2
-%if %0 == 20
-        ;; *** GH/GM/GL passed as arguments
-        vpxorq          %%T1M1, %%T1M1, %%GM
-        vpxorq          %%T1H, %%T1H, %%GH
-        vpxorq          %%T1L, %%T1L, %%GL
+        vpxorq          %%TLL1, %%TLL2, %%THL2
+        vpxorq          %%THH1, %%THH2, %%TLH2
 %endif
-        ;; integrate TM into TH and TL
-        vpxorq          %%T1M1, %%T1M1, %%T1M2
-        vpsrldq         %%T0M1, %%T1M1, 8
-        vpslldq         %%T0M2, %%T1M1, 8
-        vpxorq          %%T0H, %%T1H, %%T0M1
-        vpxorq          %%T0L, %%T1L, %%T0M2
+
+%undef %%REG_IN
 %endif ; blocks_left > 0
 
-        ;; add TH and TL 128-bit words horizontally
 %if %0 == 20
-        ;; *** GH/GM/GL passed as arguments
-        ;; always do horizontal xor on 4 blocks
-        VHPXORI4x128    %%T0H, %%T1M1
-        VHPXORI4x128    %%T0L, %%T1M2
+        ;; *** GH/GL passed as arguments
+        vpxorq          %%TLL1, %%TLL1, %%GL
+        vpxorq          %%THH1, %%THH1, %%GH
+        ;; new reduction
+        vpclmulqdq      ZWORD(%%GHASH), %%TLL1, [rel POLY], 0x10
+        vpshufd         %%TLH1, %%TLL1, 01001110b
+        vpternlogq      ZWORD(%%GHASH), %%THH1, %%TLH1, 0x96
+        VHPXORI4x128    ZWORD(%%GHASH), %%TLH1
 %else
-        ;; *** GH/GM/GL NOT passed as arguments
-        ;; - figure out size of horizontal xor
+        ;; new reduction
 %if %%NUM_BLOCKS == 1
-        ;; do nothing
+        vpclmulqdq      XWORD(%%GHASH), XWORD(%%TLL1), [rel POLY], 0x10
+        vpshufd         XWORD(%%TLH1),  XWORD(%%TLL1), 01001110b
+        vpternlogq      XWORD(%%GHASH), XWORD(%%THH1), XWORD(%%TLH1), 0x96
 %elif %%NUM_BLOCKS == 2
-        VHPXORI2x128    %%T0H, %%T1M1
-        VHPXORI2x128    %%T0L, %%T1M2
+        vpclmulqdq      YWORD(%%GHASH), YWORD(%%TLL1), [rel POLY], 0x10
+        vpshufd         YWORD(%%TLH1),  YWORD(%%TLL1), 01001110b
+        vpternlogq      YWORD(%%GHASH), YWORD(%%THH1), YWORD(%%TLH1), 0x96
+        VHPXORI2x128    YWORD(%%GHASH), YWORD(%%TLH1)
 %else
-        VHPXORI4x128    %%T0H, %%T1M1
-        VHPXORI4x128    %%T0L, %%T1M2
+        vpclmulqdq      ZWORD(%%GHASH), %%TLL1, [rel POLY], 0x10
+        vpshufd         %%TLH1, %%TLL1, 01001110b
+        vpternlogq      ZWORD(%%GHASH), %%THH1, %%TLH1, 0x96
+        VHPXORI4x128    ZWORD(%%GHASH), %%TLH1
 %endif
-%endif
+%endif ;; GH/GL passed as arguments
 
-        ;; reduction
-        vmovdqa64       XWORD(%%HK), [rel POLY2]
-        VCLMUL_REDUCE   XWORD(%%GHASH), XWORD(%%HK), \
-                        XWORD(%%T0H), XWORD(%%T0L), XWORD(%%T0M1), XWORD(%%T0M2)
 %endmacro
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -783,23 +776,23 @@
         cmp             %%T2, (48*16)
         jb              %%_exit_AAD_loop48x16
 
-        GHASH_16        start, %%ZT5, %%ZT6, %%ZT7, \
+        GHASH_16        start, %%ZT5, %%ZT6, \
                         %%T1,  (0*64), 0, \
                         %%GDATA_KEY, HashKey_48, 0, ZWORD(%%AAD_HASH), \
                         %%ZT0, %%ZT8, %%ZT9, %%ZT10, %%ZT11, %%ZT12, \
-                        %%ZT14, %%ZT15, %%ZT16, %%ZT1, %%SHFMSK
+                        %%ZT14, %%ZT15, %%ZT16, %%ZT1, %%ZT7, %%SHFMSK
 
-        GHASH_16        mid, %%ZT5, %%ZT6, %%ZT7, \
+        GHASH_16        mid, %%ZT5, %%ZT6, \
                         %%T1,  (4*64), 0, \
                         %%GDATA_KEY, HashKey_32, 0, NO_HASH_IN_OUT, \
                         %%ZT0, %%ZT8, %%ZT9, %%ZT10, %%ZT11, %%ZT12, \
-                        %%ZT14, %%ZT15, %%ZT16, %%ZT1, %%SHFMSK
+                        %%ZT14, %%ZT15, %%ZT16, %%ZT1, %%ZT7, %%SHFMSK
 
-        GHASH_16        end_reduce, %%ZT5, %%ZT6, %%ZT7, \
+        GHASH_16        end_reduce, %%ZT5, %%ZT6, \
                         %%T1,  (8*64), 0, \
                         %%GDATA_KEY, HashKey_16, 0, ZWORD(%%AAD_HASH), \
                         %%ZT0, %%ZT8, %%ZT9, %%ZT10, %%ZT11, %%ZT12, \
-                        %%ZT14, %%ZT15, %%ZT16, %%ZT1, %%SHFMSK
+                        %%ZT14, %%ZT15, %%ZT16, %%ZT1, %%ZT7, %%SHFMSK
 
         sub             %%T2, (12*64)
         je              %%_CALC_AAD_done
@@ -823,34 +816,34 @@
         add             %%T3, HashKey_1 + 16
 
         ; Get next 16 blocks
-        GHASH_16        start, %%ZT5, %%ZT6, %%ZT7, \
+        GHASH_16        start, %%ZT5, %%ZT6, \
                         %%T1,  (0*64), 0, \
                         %%GDATA_KEY, %%T3, 0, ZWORD(%%AAD_HASH), \
                         %%ZT0, %%ZT8, %%ZT9, %%ZT10, %%ZT11, %%ZT12, \
-                        %%ZT14, %%ZT15, %%ZT16, %%ZT1, %%SHFMSK
+                        %%ZT14, %%ZT15, %%ZT16, %%ZT1, %%ZT7, %%SHFMSK
 
-        GHASH_16        mid, %%ZT5, %%ZT6, %%ZT7, \
+        GHASH_16        mid, %%ZT5, %%ZT6, \
                         %%T1,  (4*64), 0, \
                         %%GDATA_KEY, {%%T3 + 16*16}, 0, ZWORD(%%AAD_HASH), \
                         %%ZT0, %%ZT8, %%ZT9, %%ZT10, %%ZT11, %%ZT12, \
-                        %%ZT14, %%ZT15, %%ZT16, %%ZT1, %%SHFMSK
+                        %%ZT14, %%ZT15, %%ZT16, %%ZT1, %%ZT7, %%SHFMSK
 
         sub             %%T2, (32*16)
         add             %%T1, (32*16)
         jmp             %%_less_than_16x16_remain
 
 %%_equal_32x16:
-        GHASH_16        start, %%ZT5, %%ZT6, %%ZT7, \
+        GHASH_16        start, %%ZT5, %%ZT6, \
                         %%T1,  (0*64), 0, \
                         %%GDATA_KEY, HashKey_32, 0, ZWORD(%%AAD_HASH), \
                         %%ZT0, %%ZT8, %%ZT9, %%ZT10, %%ZT11, %%ZT12, \
-                        %%ZT14, %%ZT15, %%ZT16, %%ZT1, %%SHFMSK
+                        %%ZT14, %%ZT15, %%ZT16, %%ZT1, %%ZT7, %%SHFMSK
 
-        GHASH_16        end_reduce, %%ZT5, %%ZT6, %%ZT7, \
+        GHASH_16        end_reduce, %%ZT5, %%ZT6, \
                         %%T1,  (4*64), 0, \
                         %%GDATA_KEY, HashKey_16, 0, ZWORD(%%AAD_HASH), \
                         %%ZT0, %%ZT8, %%ZT9, %%ZT10, %%ZT11, %%ZT12, \
-                        %%ZT14, %%ZT15, %%ZT16, %%ZT1, %%SHFMSK
+                        %%ZT14, %%ZT15, %%ZT16, %%ZT1, %%ZT7, %%SHFMSK
         jmp             %%_CALC_AAD_done
 
 %%_less_than_32x16:
@@ -860,26 +853,26 @@
         neg             %%T3
         add             %%T3, HashKey_1 + 16
 
-        GHASH_16        start, %%ZT5, %%ZT6, %%ZT7, \
+        GHASH_16        start, %%ZT5, %%ZT6, \
                         %%T1,  (0*64), 0, \
                         %%GDATA_KEY, %%T3, 0, ZWORD(%%AAD_HASH), \
                         %%ZT0, %%ZT8, %%ZT9, %%ZT10, %%ZT11, %%ZT12, \
-                        %%ZT14, %%ZT15, %%ZT16, %%ZT1, %%SHFMSK
+                        %%ZT14, %%ZT15, %%ZT16, %%ZT1, %%ZT7, %%SHFMSK
         sub             %%T2, (16*16)
         add             %%T1, (16*16)
         jmp             %%_less_than_16x16_remain
 
 %%_equal_16x16:
-        GHASH_16        start_reduce, %%ZT5, %%ZT6, %%ZT7, \
+        GHASH_16        start_reduce, %%ZT5, %%ZT6, \
                         %%T1,  (0*64), 0, \
                         %%GDATA_KEY, HashKey_16, 0, ZWORD(%%AAD_HASH), \
                         %%ZT0, %%ZT8, %%ZT9, %%ZT10, %%ZT11, %%ZT12, \
-                        %%ZT14, %%ZT15, %%ZT16, %%ZT1, %%SHFMSK
+                        %%ZT14, %%ZT15, %%ZT16, %%ZT1, %%ZT7, %%SHFMSK
         jmp             %%_CALC_AAD_done
 
         ; Less than 16x16 bytes remaining
 %%_less_than_16x16_remain:
-        ;; ZT5 (H), ZT6 (M), ZT7 (L) contain ghash sums
+        ;; ZT5 (H), ZT6 (L) contain ghash sums
         ;; prep mask source address
         lea             %%T3, [rel byte64_len_to_mask_table]
         lea             %%T3, [%%T3 + %%T2*8]
@@ -946,9 +939,9 @@
 
         GHASH_1_TO_16 %%GDATA_KEY, ZWORD(%%AAD_HASH), \
                         %%ZT0, %%ZT1, %%ZT2, %%ZT3, %%ZT4, \
-                        %%ZT9, %%ZT10, %%ZT11, %%ZT12, \
+                        %%ZT9, %%ZT10, %%ZT11, %%ZT12, %%ZT7, \
                         ZWORD(%%AAD_HASH), %%ZT14, %%ZT15, %%ZT16, %%ZT17, I, \
-                        %%ZT5, %%ZT6, %%ZT7
+                        %%ZT5, %%ZT6
         jmp             %%_CALC_AAD_done
 
 %assign I (I - 1)
@@ -1030,7 +1023,7 @@
 
         GHASH_1_TO_16 %%GDATA_KEY, ZWORD(%%AAD_HASH), \
                         %%ZT0, %%ZT5, %%ZT6, %%ZT7, %%ZT8, \
-                        %%ZT9, %%ZT10, %%ZT11, %%ZT12, \
+                        %%ZT9, %%ZT10, %%ZT11, %%ZT12, %%ZT13, \
                         ZWORD(%%AAD_HASH), %%ZT1, %%ZT2, %%ZT3, %%ZT4, I
 %if I > 1
         ;; fall through to CALC_AAD_done in 1 block case
@@ -1351,7 +1344,7 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Computes GHASH on 1 to 16 blocks
-%macro INITIAL_BLOCKS_PARTIAL_GHASH 22-25
+%macro INITIAL_BLOCKS_PARTIAL_GHASH 23-25
 %define %%GDATA_KEY             %1  ; [in] key pointer
 %define %%GDATA_CTX             %2  ; [in] context pointer
 %define %%LENGTH                %3  ; [in/clobbered] length in bytes
@@ -1374,8 +1367,8 @@
 %define %%ZT6                   %20 ; [clobbered] ZMM temporary
 %define %%ZT7                   %21 ; [clobbered] ZMM temporary
 %define %%ZT8                   %22 ; [clobbered] ZMM temporary
-%define %%GH                    %23 ; [in] ZMM with hi product part
-%define %%GM                    %24 ; [in] ZMM with mid prodcut part
+%define %%ZT9                   %23 ; [clobbered] ZMM temporary
+%define %%GH                    %24 ; [in] ZMM with hi product part
 %define %%GL                    %25 ; [in] ZMM with lo product part
 
 %ifidn %%INSTANCE_TYPE, single_call
@@ -1384,18 +1377,18 @@
         ;;; - hash all data including partial block
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-%if %0 == 22
+%if %0 == 23
         ;; start GHASH compute
         GHASH_1_TO_16 %%GDATA_KEY, %%HASH_IN_OUT, \
                         %%ZT0, %%ZT1, %%ZT2, %%ZT3, %%ZT4, \
-                        %%ZT5, %%ZT6, %%ZT7, %%ZT8, ZWORD(%%HASH_IN_OUT), \
+                        %%ZT5, %%ZT6, %%ZT7, %%ZT8, %%ZT9, ZWORD(%%HASH_IN_OUT), \
                         %%DAT0, %%DAT1, %%DAT2, %%DAT3, %%NUM_BLOCKS
 %elif %0 == 25
         ;; continue GHASH compute
         GHASH_1_TO_16 %%GDATA_KEY, %%HASH_IN_OUT, \
                         %%ZT0, %%ZT1, %%ZT2, %%ZT3, %%ZT4, \
-                        %%ZT5, %%ZT6, %%ZT7, %%ZT8, ZWORD(%%HASH_IN_OUT), \
-                        %%DAT0, %%DAT1, %%DAT2, %%DAT3, %%NUM_BLOCKS, %%GH, %%GM, %%GL
+                        %%ZT5, %%ZT6, %%ZT7, %%ZT8, %%ZT9, ZWORD(%%HASH_IN_OUT), \
+                        %%DAT0, %%DAT1, %%DAT2, %%DAT3, %%NUM_BLOCKS, %%GH, %%GL
 %endif
 
 %else
@@ -1424,18 +1417,18 @@
         mov     qword [%%GDATA_CTX + PBlockLen], 0
 
         ;; Hash all of the data
-%if %0 == 22
+%if %0 == 23
         ;; start GHASH compute
         GHASH_1_TO_16 %%GDATA_KEY, %%HASH_IN_OUT, \
                         %%ZT0, %%ZT1, %%ZT2, %%ZT3, %%ZT4, \
-                        %%ZT5, %%ZT6, %%ZT7, %%ZT8, ZWORD(%%HASH_IN_OUT), \
+                        %%ZT5, %%ZT6, %%ZT7, %%ZT8, %%ZT9, ZWORD(%%HASH_IN_OUT), \
                         %%DAT0, %%DAT1, %%DAT2, %%DAT3, %%NUM_BLOCKS
 %elif %0 == 25
         ;; continue GHASH compute
         GHASH_1_TO_16 %%GDATA_KEY, %%HASH_IN_OUT, \
                         %%ZT0, %%ZT1, %%ZT2, %%ZT3, %%ZT4, \
-                        %%ZT5, %%ZT6, %%ZT7, %%ZT8, ZWORD(%%HASH_IN_OUT), \
-                        %%DAT0, %%DAT1, %%DAT2, %%DAT3, %%NUM_BLOCKS, %%GH, %%GM, %%GL
+                        %%ZT5, %%ZT6, %%ZT7, %%ZT8, %%ZT9, ZWORD(%%HASH_IN_OUT), \
+                        %%DAT0, %%DAT1, %%DAT2, %%DAT3, %%NUM_BLOCKS, %%GH, %%GL
 %endif
         jmp             %%_small_initial_compute_done
 %endif                          ; %if %%NUM_BLOCKS < 16
@@ -1460,38 +1453,28 @@
 %if (%%NUM_BLOCKS > last_block_to_hash)
 
         ;; ZT12-ZT20 - temporary registers
-%if %0 == 22
+%if %0 == 23
         ;; start GHASH compute
         GHASH_1_TO_16 %%GDATA_KEY, %%HASH_IN_OUT, \
                         %%ZT0, %%ZT1, %%ZT2, %%ZT3, %%ZT4, \
-                        %%ZT5, %%ZT6, %%ZT7, %%ZT8, ZWORD(%%HASH_IN_OUT), \
+                        %%ZT5, %%ZT6, %%ZT7, %%ZT8, %%ZT9, ZWORD(%%HASH_IN_OUT), \
                         %%DAT0, %%DAT1, %%DAT2, %%DAT3, k
 %elif %0 == 25
         ;; continue GHASH compute
         GHASH_1_TO_16 %%GDATA_KEY, %%HASH_IN_OUT, \
                         %%ZT0, %%ZT1, %%ZT2, %%ZT3, %%ZT4, \
-                        %%ZT5, %%ZT6, %%ZT7, %%ZT8, ZWORD(%%HASH_IN_OUT), \
-                        %%DAT0, %%DAT1, %%DAT2, %%DAT3, k, %%GH, %%GM, %%GL
+                        %%ZT5, %%ZT6, %%ZT7, %%ZT8, %%ZT9, ZWORD(%%HASH_IN_OUT), \
+                        %%DAT0, %%DAT1, %%DAT2, %%DAT3, k, %%GH, %%GL
 %endif
         ;; just fall through no jmp needed
 %else
 
 %if %0 == 25
         ;; Reduction is required in this case.
-        ;; Integrate GM into GH and GL.
-        vpsrldq         %%ZT0, %%GM, 8
-        vpslldq         %%ZT1, %%GM, 8
-        vpxorq          %%GH, %%GH, %%ZT0
-        vpxorq          %%GL, %%GL, %%ZT1
-
-        ;; Add GH and GL 128-bit words horizontally
-        VHPXORI4x128    %%GH, %%ZT0
-        VHPXORI4x128    %%GL, %%ZT1
-
-        ;; 256-bit to 128-bit reduction
-        vmovdqa64       XWORD(%%ZT0), [rel POLY2]
-        VCLMUL_REDUCE   XWORD(%%HASH_IN_OUT), XWORD(%%ZT0), \
-                        XWORD(%%GH), XWORD(%%GL), XWORD(%%ZT1), XWORD(%%ZT2)
+        vpclmulqdq      ZWORD(%%HASH_IN_OUT), %%GL, [rel POLY], 0x10
+        vpshufd         %%ZT0, %%GL, 01001110b
+        vpternlogq      ZWORD(%%HASH_IN_OUT), %%ZT0, %%GH, 0x96
+        VHPXORI4x128    ZWORD(%%HASH_IN_OUT), %%ZT0
 %endif
         ;; Record that a reduction is not needed -
         ;; In this case no hashes are computed because there
@@ -1545,7 +1528,7 @@
 ;;;
 ;;; num_initial_blocks is expected to include the partial final block
 ;;; in the count.
-%macro INITIAL_BLOCKS_PARTIAL 30
+%macro INITIAL_BLOCKS_PARTIAL 31
 %define %%GDATA_KEY             %1  ; [in] key pointer
 %define %%GDATA_CTX             %2  ; [in] context pointer
 %define %%CIPH_PLAIN_OUT        %3  ; [in] text output pointer
@@ -1572,10 +1555,11 @@
 %define %%ZT2                   %24 ; [clobbered] ZMM temporary
 %define %%ZT3                   %25 ; [clobbered] ZMM temporary
 %define %%ZT4                   %26 ; [clobbered] ZMM temporary
-%define %%IA0                   %27 ; [clobbered] GP temporary
-%define %%IA1                   %28 ; [clobbered] GP temporary
-%define %%MASKREG               %29 ; [clobbered] mask register
-%define %%SHUFMASK              %30 ; [clobbered] ZMM for BE/LE shuffle mask
+%define %%ZT5                   %27 ; [clobbered] ZMM temporary
+%define %%IA0                   %28 ; [clobbered] GP temporary
+%define %%IA1                   %29 ; [clobbered] GP temporary
+%define %%MASKREG               %30 ; [clobbered] mask register
+%define %%SHUFMASK              %31 ; [clobbered] ZMM for BE/LE shuffle mask
 
         INITIAL_BLOCKS_PARTIAL_CIPHER \
                         %%GDATA_KEY, %%GDATA_CTX, %%CIPH_PLAIN_OUT, %%PLAIN_CIPH_IN, \
@@ -1591,7 +1575,7 @@
                         %%INSTANCE_TYPE, %%DAT0, %%DAT1, %%DAT2, %%DAT3, \
                         XWORD(%%LAST_CIPHER_BLK), XWORD(%%LAST_GHASH_BLK), \
                         %%CTR0, %%CTR1, %%CTR2, %%CTR3, %%ZT0, %%ZT1, \
-                        %%ZT2, %%ZT3, %%ZT4
+                        %%ZT2, %%ZT3, %%ZT4, %%ZT5
 
 %endmacro                       ; INITIAL_BLOCKS_PARTIAL
 
@@ -1615,18 +1599,18 @@
 %define %%B04_07                %13 ; [clobbered] temporary ZMM
 %define %%B08_11                %14 ; [clobbered] temporary ZMM
 %define %%B12_15                %15 ; [clobbered] temporary ZMM
-%define %%GH1H_UNUSED           %16 ; [clobbered] temporary ZMM
-%define %%GH1L                  %17 ; [clobbered] temporary ZMM
-%define %%GH1M                  %18 ; [clobbered] temporary ZMM
-%define %%GH1T                  %19 ; [clobbered] temporary ZMM
-%define %%GH2H                  %20 ; [clobbered] temporary ZMM
-%define %%GH2L                  %21 ; [clobbered] temporary ZMM
-%define %%GH2M                  %22 ; [clobbered] temporary ZMM
-%define %%GH2T                  %23 ; [clobbered] temporary ZMM
-%define %%GH3H                  %24 ; [clobbered] temporary ZMM
-%define %%GH3L                  %25 ; [clobbered] temporary ZMM
-%define %%GH3M                  %26 ; [clobbered] temporary ZMM
-%define %%GH3T                  %27 ; [clobbered] temporary ZMM
+%define %%GHKEY3                %16 ; [clobbered] temporary ZMM
+%define %%THL1                  %17 ; [clobbered] temporary ZMM
+%define %%TLH1                  %18 ; [clobbered] temporary ZMM
+%define %%TLL1                  %19 ; [clobbered] temporary ZMM
+%define %%THH2                  %20 ; [clobbered] temporary ZMM
+%define %%THL2                  %21 ; [clobbered] temporary ZMM
+%define %%TLH2                  %22 ; [clobbered] temporary ZMM
+%define %%TLL2                  %23 ; [clobbered] temporary ZMM
+%define %%THH3                  %24 ; [clobbered] temporary ZMM
+%define %%THL3                  %25 ; [clobbered] temporary ZMM
+%define %%TLH3                  %26 ; [clobbered] temporary ZMM
+%define %%TLL3                  %27 ; [clobbered] temporary ZMM
 %define %%AESKEY1               %28 ; [clobbered] temporary ZMM
 %define %%AESKEY2               %29 ; [clobbered] temporary ZMM
 %define %%GHKEY1                %30 ; [clobbered] temporary ZMM
@@ -1634,12 +1618,12 @@
 %define %%GHDAT1                %32 ; [clobbered] temporary ZMM
 %define %%GHDAT2                %33 ; [clobbered] temporary ZMM
 %define %%ZT01                  %34 ; [clobbered] temporary ZMM
-%define %%ADDBE_4x4             %35 ; [in] ZMM with 4x128bits 4 in big-endian
-%define %%ADDBE_1234            %36 ; [in] ZMM with 4x128bits 1, 2, 3 and 4 in big-endian
-%define %%GHASH_TYPE            %37 ; [in] "start", "start_reduce", "mid", "end_reduce"
-%define %%TO_REDUCE_L           %38 ; [in] ZMM for low 4x128-bit GHASH sum
-%define %%TO_REDUCE_H           %39 ; [in] ZMM for hi 4x128-bit GHASH sum
-%define %%TO_REDUCE_M           %40 ; [in] ZMM for medium 4x128-bit GHASH sum
+%define %%GHKEY4                %35 ; [clobbered] temporary ZMM
+%define %%ADDBE_4x4             %36 ; [in] ZMM with 4x128bits 4 in big-endian
+%define %%ADDBE_1234            %37 ; [in] ZMM with 4x128bits 1, 2, 3 and 4 in big-endian
+%define %%GHASH_TYPE            %38 ; [in] "start", "start_reduce", "mid", "end_reduce"
+%define %%TO_REDUCE_L           %39 ; [in] ZMM for low 4x128-bit GHASH sum
+%define %%TO_REDUCE_H           %40 ; [in] ZMM for hi 4x128-bit GHASH sum
 %define %%ENC_DEC               %41 ; [in] cipher direction
 %define %%HASH_IN_OUT           %42 ; [in/out] XMM ghash in/out value
 %define %%IA0                   %43 ; [clobbered] GP temporary
@@ -1648,20 +1632,18 @@
 %define %%NUM_BLOCKS            %46 ; [in] numerical value with number of blocks to be encrypted/ghashed (1 to 16)
 %define %%INSTANCE_TYPE         %47 ; [in] multi_call or single_call
 
-%xdefine %%GH1H %%HASH_IN_OUT   ; this is to avoid additional move in do_reduction case
+%xdefine %%THH1 %%HASH_IN_OUT   ; this is to avoid additional move in do_reduction case
 
-%define %%LAST_GHASH_BLK  %%GH1L
-%define %%LAST_CIPHER_BLK %%GH1T
+%define %%LAST_GHASH_BLK  %%THL1
+%define %%LAST_CIPHER_BLK %%TLH1
 
-%define %%RED_POLY %%GH2T
-%define %%RED_P1   %%GH2L
-%define %%RED_T1   %%GH2H
-%define %%RED_T2   %%GH2M
+%define %%RED_T1   %%THH2
+%define %%RED_T2   %%TLL2
 
-%define %%DATA1 %%GH3H
-%define %%DATA2 %%GH3L
-%define %%DATA3 %%GH3M
-%define %%DATA4 %%GH3T
+%define %%DATA1 %%THH3
+%define %%DATA2 %%THL3
+%define %%DATA3 %%TLH3
+%define %%DATA4 %%TLL3
 
 ;; do reduction after the 16 blocks ?
 %assign do_reduction 0
@@ -1738,6 +1720,7 @@
         vmovdqa64       %%GHDAT1, [rsp + %%GHASHIN_BLK_OFFSET + (0*64)]
 %endif
         vmovdqu64       %%GHKEY1, [%%GDATA + %%HASHKEY_OFFSET + (0*64)]
+        vmovdqu64       %%GHKEY2, [%%GDATA + %%HASHKEY_OFFSET + (0*64) + HKeyGap]
 
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;; save counter for the next round
@@ -1758,7 +1741,8 @@
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;; pre-load constants
         vbroadcastf64x2 %%AESKEY2, [%%GDATA + (16 * 1)]
-        vmovdqu64       %%GHKEY2, [%%GDATA + %%HASHKEY_OFFSET + (1*64)]
+        vmovdqu64       %%GHKEY3, [%%GDATA + %%HASHKEY_OFFSET + (1*64)]
+        vmovdqu64       %%GHKEY4, [%%GDATA + %%HASHKEY_OFFSET + (1*64) + HKeyGap]
         vmovdqa64       %%GHDAT2, [rsp + %%GHASHIN_BLK_OFFSET + (1*64)]
 
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1775,12 +1759,13 @@
 
         ;;==================================================
         ;; GHASH 4 blocks (15 to 12)
-        vpclmulqdq      %%GH1H, %%GHDAT1, %%GHKEY1, 0x11     ; a1*b1
-        vpclmulqdq      %%GH1L, %%GHDAT1, %%GHKEY1, 0x00     ; a0*b0
-        vpclmulqdq      %%GH1M, %%GHDAT1, %%GHKEY1, 0x01     ; a1*b0
-        vpclmulqdq      %%GH1T, %%GHDAT1, %%GHKEY1, 0x10     ; a0*b1
+        vpclmulqdq      %%TLL1, %%GHDAT1, %%GHKEY2, 0x00     ; TLL = ML*KL
+        vpclmulqdq      %%TLH1, %%GHDAT1, %%GHKEY2, 0x10     ; TLH = ML*KH
+        vpclmulqdq      %%THL1, %%GHDAT1, %%GHKEY1, 0x01     ; THL = MH*HL
+        vpclmulqdq      %%THH1, %%GHDAT1, %%GHKEY1, 0x11     ; THH = MH*HH
 
         vmovdqu64       %%GHKEY1, [%%GDATA + %%HASHKEY_OFFSET + (2*64)]
+        vmovdqu64       %%GHKEY2, [%%GDATA + %%HASHKEY_OFFSET + (2*64) + HKeyGap]
         vmovdqa64       %%GHDAT1, [rsp + %%GHASHIN_BLK_OFFSET + (2*64)]
 
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1793,12 +1778,13 @@
 
         ;; =================================================
         ;; GHASH 4 blocks (11 to 8)
-        vpclmulqdq      %%GH2M, %%GHDAT2, %%GHKEY2, 0x10     ; a0*b1
-        vpclmulqdq      %%GH2T, %%GHDAT2, %%GHKEY2, 0x01     ; a1*b0
-        vpclmulqdq      %%GH2H, %%GHDAT2, %%GHKEY2, 0x11     ; a1*b1
-        vpclmulqdq      %%GH2L, %%GHDAT2, %%GHKEY2, 0x00     ; a0*b0
+        vpclmulqdq      %%TLL2, %%GHDAT2, %%GHKEY4, 0x00     ; TLL = ML*KL
+        vpclmulqdq      %%TLH2, %%GHDAT2, %%GHKEY4, 0x10     ; TLH = ML*KH
+        vpclmulqdq      %%THL2, %%GHDAT2, %%GHKEY3, 0x01     ; THL = MH*HL
+        vpclmulqdq      %%THH2, %%GHDAT2, %%GHKEY3, 0x11     ; THH = MH*HH
 
-        vmovdqu64       %%GHKEY2, [%%GDATA + %%HASHKEY_OFFSET + (3*64)]
+        vmovdqu64       %%GHKEY3, [%%GDATA + %%HASHKEY_OFFSET + (3*64)]
+        vmovdqu64       %%GHKEY4, [%%GDATA + %%HASHKEY_OFFSET + (3*64) + HKeyGap]
         vmovdqa64       %%GHDAT2, [rsp + %%GHASHIN_BLK_OFFSET + (3*64)]
 
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1811,10 +1797,10 @@
 
         ;; =================================================
         ;; GHASH 4 blocks (7 to 4)
-        vpclmulqdq      %%GH3M, %%GHDAT1, %%GHKEY1, 0x10     ; a0*b1
-        vpclmulqdq      %%GH3T, %%GHDAT1, %%GHKEY1, 0x01     ; a1*b0
-        vpclmulqdq      %%GH3H, %%GHDAT1, %%GHKEY1, 0x11     ; a1*b1
-        vpclmulqdq      %%GH3L, %%GHDAT1, %%GHKEY1, 0x00     ; a0*b0
+        vpclmulqdq      %%TLL3, %%GHDAT1, %%GHKEY2, 0x00     ; TLL = ML*KL
+        vpclmulqdq      %%TLH3, %%GHDAT1, %%GHKEY2, 0x10     ; TLH = ML*KH
+        vpclmulqdq      %%THL3, %%GHDAT1, %%GHKEY1, 0x01     ; THL = MH*HL
+        vpclmulqdq      %%THH3, %%GHDAT1, %%GHKEY1, 0x11     ; THH = MH*HH
 
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;; AES rounds 3
@@ -1826,10 +1812,10 @@
 
         ;; =================================================
         ;; Gather (XOR) GHASH for 12 blocks
-        vpternlogq      %%GH1H, %%GH2H, %%GH3H, 0x96
-        vpternlogq      %%GH1L, %%GH2L, %%GH3L, 0x96
-        vpternlogq      %%GH1T, %%GH2T, %%GH3T, 0x96
-        vpternlogq      %%GH1M, %%GH2M, %%GH3M, 0x96
+        vpternlogq      %%TLL1, %%TLL2, %%TLL3, 0x96
+        vpternlogq      %%TLH1, %%TLH2, %%TLH3, 0x96
+        vpternlogq      %%THL1, %%THL2, %%THL3, 0x96
+        vpternlogq      %%THH1, %%THH2, %%THH3, 0x96
 
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;; AES rounds 4
@@ -1854,10 +1840,10 @@
 
         ;; =================================================
         ;; GHASH 4 blocks (3 to 0)
-        vpclmulqdq      %%GH2M, %%GHDAT2, %%GHKEY2, 0x10     ; a0*b1
-        vpclmulqdq      %%GH2T, %%GHDAT2, %%GHKEY2, 0x01     ; a1*b0
-        vpclmulqdq      %%GH2H, %%GHDAT2, %%GHKEY2, 0x11     ; a1*b1
-        vpclmulqdq      %%GH2L, %%GHDAT2, %%GHKEY2, 0x00     ; a0*b0
+        vpclmulqdq      %%TLL2, %%GHDAT2, %%GHKEY4, 0x00     ; TLL = ML*KL
+        vpclmulqdq      %%TLH2, %%GHDAT2, %%GHKEY4, 0x10     ; TLH = ML*KH
+        vpclmulqdq      %%THL2, %%GHDAT2, %%GHKEY3, 0x01     ; THL = MH*HL
+        vpclmulqdq      %%THH2, %%GHDAT2, %%GHKEY3, 0x11     ; THH = MH*HH
 
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;; AES round 6
@@ -1868,31 +1854,18 @@
         vbroadcastf64x2 %%AESKEY1, [%%GDATA + (16 * 8)]
 
         ;; =================================================
-        ;; gather GHASH in GH1L (low), GH1H (high), GH1M (mid)
-        ;; - add GH2[MTLH] to GH1[MTLH]
-        vpternlogq      %%GH1M, %%GH1T, %%GH2T, 0x96
-%if do_reduction != 0
-
+        ;; gather GHASH sums into TO_REDUCE_[HL]
 %if is_start != 0
-        vpxorq          %%GH1M, %%GH1M, %%GH2M
+        vpxorq          %%TO_REDUCE_L, %%TLL2, %%THL2
+        vpxorq          %%TO_REDUCE_H, %%THH2, %%TLH2
+        vpternlogq      %%TO_REDUCE_L, %%TLL1, %%THL1, 0x96
+        vpternlogq      %%TO_REDUCE_H, %%THH1, %%TLH1, 0x96
 %else
-        vpternlogq      %%GH1H, %%TO_REDUCE_H, %%GH2H, 0x96
-        vpternlogq      %%GH1L, %%TO_REDUCE_L, %%GH2L, 0x96
-        vpternlogq      %%GH1M, %%TO_REDUCE_M, %%GH2M, 0x96
-%endif
-
-%else
-        ;; Update H/M/L hash sums if not carrying reduction
-%if is_start != 0
-        vpxorq          %%TO_REDUCE_H, %%GH1H, %%GH2H
-        vpxorq          %%TO_REDUCE_L, %%GH1L, %%GH2L
-        vpxorq          %%TO_REDUCE_M, %%GH1M, %%GH2M
-%else
-        vpternlogq      %%TO_REDUCE_H, %%GH1H, %%GH2H, 0x96
-        vpternlogq      %%TO_REDUCE_L, %%GH1L, %%GH2L, 0x96
-        vpternlogq      %%TO_REDUCE_M, %%GH1M, %%GH2M, 0x96
-%endif
-
+        ;; not the first round so sums need to be updated
+        vpternlogq      %%TO_REDUCE_L, %%TLL2, %%THL2, 0x96
+        vpternlogq      %%TO_REDUCE_H, %%THH2, %%TLH2, 0x96
+        vpternlogq      %%TO_REDUCE_L, %%TLL1, %%THL1, 0x96
+        vpternlogq      %%TO_REDUCE_H, %%THH1, %%TLH1, 0x96
 %endif
 
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1904,13 +1877,11 @@
         vbroadcastf64x2 %%AESKEY2, [%%GDATA + (16 * 9)]
 
         ;; =================================================
-        ;; prepare mid sum for adding to high & low
-        ;; load polynomial constant for reduction
+        ;; new reduction (result in THH1)
 %if do_reduction != 0
-        vpsrldq         %%GH2M, %%GH1M, 8
-        vpslldq         %%GH1M, %%GH1M, 8
-
-        vmovdqa64       XWORD(%%RED_POLY), [rel POLY2]
+        vpclmulqdq      %%THH1, %%TO_REDUCE_L, [rel POLY], 0x10
+        vpshufd         %%THL1, %%TO_REDUCE_L, 01001110b
+        vpternlogq      %%THH1, %%THL1, %%TO_REDUCE_H, 0x96
 %endif
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;; AES round 8
@@ -1921,15 +1892,9 @@
         vbroadcastf64x2 %%AESKEY1, [%%GDATA + (16 * 10)]
 
         ;; =================================================
-        ;; Add mid product to high and low
+        ;; horizontal xor of 4 reduced hashes
 %if do_reduction != 0
-%if is_start != 0
-        vpternlogq      %%GH1H, %%GH2H, %%GH2M, 0x96    ; TH = TH1 + TH2 + TM>>64
-        vpternlogq      %%GH1L, %%GH2L, %%GH1M, 0x96    ; TL = TL1 + TL2 + TM<<64
-%else
-        vpxorq          %%GH1H, %%GH1H, %%GH2M          ; TH = TH1 + TM>>64
-        vpxorq          %%GH1L, %%GH1L, %%GH1M          ; TL = TL1 + TM<<64
-%endif
+        VHPXORI4x128    %%THH1, %%TLL1
 %endif
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;; AES round 9
@@ -1938,23 +1903,10 @@
                         %%B00_03, %%B04_07, %%B08_11, %%B12_15, \
                         %%AESKEY2, %%AESKEY2, %%AESKEY2, %%AESKEY2
 
-        ;; =================================================
-        ;; horizontal xor of low and high 4x128
-%if do_reduction != 0
-        VHPXORI4x128    %%GH1H, %%GH2H
-        VHPXORI4x128    %%GH1L, %%GH2L
-%endif
-
 %if (NROUNDS >= 11)
         vbroadcastf64x2 %%AESKEY2, [%%GDATA + (16 * 11)]
 %endif
-        ;; =================================================
-        ;; first phase of reduction
-%if do_reduction != 0
-        vpclmulqdq      XWORD(%%RED_P1), XWORD(%%RED_POLY), XWORD(%%GH1L), 0x01
-        vpslldq         XWORD(%%RED_P1), XWORD(%%RED_P1), 8             ; shift-L 2 DWs
-        vpxorq          XWORD(%%RED_P1), XWORD(%%GH1L), XWORD(%%RED_P1) ; first phase of the reduct
-%endif
+
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;; AES rounds up to 11 (AES192) or 13 (AES256)
         ;; AES128 is done
@@ -1985,17 +1937,6 @@
 %endif ; GCM256 / NROUNDS = 13 (15 including the first and the last)
 %endif ; GCM192 / NROUNDS = 11 (13 including the first and the last)
 
-        ;; =================================================
-        ;; second phase of the reduction
-%if do_reduction != 0
-        vpclmulqdq      XWORD(%%RED_T1), XWORD(%%RED_POLY), XWORD(%%RED_P1), 0x00
-        vpsrldq         XWORD(%%RED_T1), XWORD(%%RED_T1), 4 ; shift-R 1-DW to obtain 2-DWs shift-R
-
-        vpclmulqdq      XWORD(%%RED_T2), XWORD(%%RED_POLY), XWORD(%%RED_P1), 0x10
-        vpslldq         XWORD(%%RED_T2), XWORD(%%RED_T2), 4 ; shift-L 1-DW for result without shifts
-        ;; GH1H = GH1H + RED_T1 + RED_T2
-        vpternlogq      XWORD(%%GH1H), XWORD(%%RED_T2), XWORD(%%RED_T1), 0x96
-%endif
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;; the last AES round
         ZMM_OPCODE3_DSTR_SRC1R_SRC2R_BLOCKS_0_16 %%NUM_BLOCKS, vaesenclast, \
@@ -2081,7 +2022,7 @@
 %endif
 
 %if do_reduction != 0
-        ;; GH1H holds reduced hash value
+        ;; THH1 holds reduced hash value
         ;; - normally do "vmovdqa64 XWORD(%%HASH_IN_OUT), XWORD(%%GH1H)"
         ;; - register rename trick obsoletes the above move
 %endif
@@ -2089,7 +2030,7 @@
         ;; =================================================
         ;; GHASH last N blocks
         ;; - current hash value in HASH_IN_OUT or
-        ;;   product parts in TO_REDUCE_H/M/L
+        ;;   product parts in TO_REDUCE_H/L
         ;; - DATA1-DATA4 include blocks for GHASH
 
 %if do_reduction == 0
@@ -2099,8 +2040,8 @@
                         %%INSTANCE_TYPE, %%DATA1, %%DATA2, %%DATA3, %%DATA4, \
                         XWORD(%%LAST_CIPHER_BLK), XWORD(%%LAST_GHASH_BLK), \
                         %%B00_03, %%B04_07, %%B08_11, %%B12_15, %%GHDAT1, %%GHDAT2, \
-                        %%AESKEY1, %%AESKEY2, %%GHKEY1, \
-                        %%TO_REDUCE_H, %%TO_REDUCE_M, %%TO_REDUCE_L
+                        %%AESKEY1, %%AESKEY2, %%GHKEY1, %%GHKEY2, \
+                        %%TO_REDUCE_H, %%TO_REDUCE_L
 %else
         INITIAL_BLOCKS_PARTIAL_GHASH \
                         %%GDATA, %%GCTX, %%LENGTH, \
@@ -2108,7 +2049,7 @@
                         %%INSTANCE_TYPE, %%DATA1, %%DATA2, %%DATA3, %%DATA4, \
                         XWORD(%%LAST_CIPHER_BLK), XWORD(%%LAST_GHASH_BLK), \
                         %%B00_03, %%B04_07, %%B08_11, %%B12_15, %%GHDAT1, %%GHDAT2, \
-                        %%AESKEY1, %%AESKEY2, %%GHKEY1
+                        %%AESKEY1, %%AESKEY2, %%GHKEY1, %%GHKEY2
 %endif
 %endmacro
 
@@ -2151,12 +2092,12 @@
 %define %%ZT20                  %32 ; [clobbered] temporary ZMM
 %define %%ZT21                  %33 ; [clobbered] temporary ZMM
 %define %%ZT22                  %34 ; [clobbered] temporary ZMM
-%define %%ADDBE_4x4             %35 ; [in] ZMM with 4x128bits 4 in big-endian
-%define %%ADDBE_1234            %36 ; [in] ZMM with 4x128bits 1, 2, 3 and 4 in big-endian
-%define %%GHASH_TYPE            %37 ; [in] "start", "start_reduce", "mid", "end_reduce"
-%define %%TO_REDUCE_L           %38 ; [in] ZMM for low 4x128-bit GHASH sum
-%define %%TO_REDUCE_H           %39 ; [in] ZMM for hi 4x128-bit GHASH sum
-%define %%TO_REDUCE_M           %40 ; [in] ZMM for medium 4x128-bit GHASH sum
+%define %%ZT23                  %35 ; [clobbered] temporary ZMM
+%define %%ADDBE_4x4             %36 ; [in] ZMM with 4x128bits 4 in big-endian
+%define %%ADDBE_1234            %37 ; [in] ZMM with 4x128bits 1, 2, 3 and 4 in big-endian
+%define %%GHASH_TYPE            %38 ; [in] "start", "start_reduce", "mid", "end_reduce"
+%define %%TO_REDUCE_L           %39 ; [in] ZMM for low 4x128-bit GHASH sum
+%define %%TO_REDUCE_H           %40 ; [in] ZMM for hi 4x128-bit GHASH sum
 %define %%ENC_DEC               %41 ; [in] cipher direction
 %define %%HASH_IN_OUT           %42 ; [in/out] XMM ghash in/out value
 %define %%IA0                   %43 ; [clobbered] GP temporary
@@ -2220,9 +2161,9 @@
                 %%HASHKEY_OFFSET, %%GHASHIN_BLK_OFFSET, %%SHFMSK, \
                 %%ZT00, %%ZT01, %%ZT02, %%ZT03, %%ZT04, %%ZT05, %%ZT06, %%ZT07, \
                 %%ZT08, %%ZT09, %%ZT10, %%ZT11, %%ZT12, %%ZT13, %%ZT14, %%ZT15, \
-                %%ZT16, %%ZT17, %%ZT18, %%ZT19, %%ZT20, %%ZT21, %%ZT22, \
+                %%ZT16, %%ZT17, %%ZT18, %%ZT19, %%ZT20, %%ZT21, %%ZT22, %%ZT23, \
                 %%ADDBE_4x4, %%ADDBE_1234, %%GHASH_TYPE, \
-                %%TO_REDUCE_L, %%TO_REDUCE_H, %%TO_REDUCE_M, \
+                %%TO_REDUCE_L, %%TO_REDUCE_H, \
                 %%ENC_DEC, %%HASH_IN_OUT, %%IA0, %%IA1, %%MASKREG, \
                 num_blocks, %%INSTANCE_TYPE
 
@@ -2241,9 +2182,10 @@
 %xdefine %%GHASH_TYPE start_reduce
 %endif
 
-        GHASH_16        %%GHASH_TYPE, %%TO_REDUCE_H, %%TO_REDUCE_M, %%TO_REDUCE_L, \
+        GHASH_16        %%GHASH_TYPE, %%TO_REDUCE_H, %%TO_REDUCE_L, \
                         rsp, %%GHASHIN_BLK_OFFSET, 0, %%GDATA, %%HASHKEY_OFFSET, 0, %%HASH_IN_OUT, \
-                        %%ZT00, %%ZT01, %%ZT02, %%ZT03, %%ZT04, %%ZT05, %%ZT06, %%ZT07, %%ZT08, %%ZT09
+                        %%ZT00, %%ZT01, %%ZT02, %%ZT03, %%ZT04, %%ZT05, %%ZT06, %%ZT07, \
+                        %%ZT08, %%ZT09, %%ZT23
 
 %%_last_blocks_done:
 
@@ -2255,7 +2197,7 @@
 ;;; - encrypts 16 blocks at a time
 ;;; - ghash the 16 previously encrypted ciphertext blocks
 ;;; - no partial block or multi_call handling here
-%macro  GHASH_16_ENCRYPT_16_PARALLEL 42
+%macro  GHASH_16_ENCRYPT_16_PARALLEL 41
 %define %%GDATA                 %1  ; [in] key pointer
 %define %%CIPH_PLAIN_OUT        %2  ; [in] pointer to output buffer
 %define %%PLAIN_CIPH_IN         %3  ; [in] pointer to input buffer
@@ -2293,36 +2235,30 @@
 %define %%ADDBE_1234            %35 ; [in] ZMM with 4x128bits 1, 2, 3 and 4 in big-endian
 %define %%TO_REDUCE_L           %36 ; [in/out] ZMM for low 4x128-bit GHASH sum
 %define %%TO_REDUCE_H           %37 ; [in/out] ZMM for hi 4x128-bit GHASH sum
-%define %%TO_REDUCE_M           %38 ; [in/out] ZMM for medium 4x128-bit GHASH sum
-%define %%DO_REDUCTION          %39 ; [in] "no_reduction", "final_reduction", "first_time"
-%define %%ENC_DEC               %40 ; [in] cipher direction
-%define %%DATA_DISPL            %41 ; [in] fixed numerical data displacement/offset
-%define %%GHASH_IN              %42 ; [in] current GHASH value or "no_ghash_in"
+%define %%DO_REDUCTION          %38 ; [in] "no_reduction", "final_reduction", "first_time"
+%define %%ENC_DEC               %39 ; [in] cipher direction
+%define %%DATA_DISPL            %40 ; [in] fixed numerical data displacement/offset
+%define %%GHASH_IN              %41 ; [in] current GHASH value or "no_ghash_in"
 
 %define %%B00_03 %%ZT1
 %define %%B04_07 %%ZT2
 %define %%B08_11 %%ZT3
 %define %%B12_15 %%ZT4
 
-%define %%GH1H  %%ZT5 ; @note: do not change this mapping
-%define %%GH1L  %%ZT6
-%define %%GH1M  %%ZT7
-%define %%GH1T  %%ZT8
+%define %%THH1  %%ZT5 ; @note: do not change this mapping
+%define %%THL1  %%ZT6
+%define %%TLH1  %%ZT7
+%define %%TLL1  %%ZT8
 
-%define %%GH2H  %%ZT9
-%define %%GH2L  %%ZT10
-%define %%GH2M  %%ZT11
-%define %%GH2T  %%ZT12
+%define %%THH2  %%ZT9
+%define %%THL2  %%ZT10
+%define %%TLH2  %%ZT11
+%define %%TLL2  %%ZT12
 
-%define %%RED_POLY %%GH2T
-%define %%RED_P1   %%GH2L
-%define %%RED_T1   %%GH2H
-%define %%RED_T2   %%GH2M
-
-%define %%GH3H  %%ZT13
-%define %%GH3L  %%ZT14
-%define %%GH3M  %%ZT15
-%define %%GH3T  %%ZT16
+%define %%THH3  %%ZT13
+%define %%THL3  %%ZT14
+%define %%TLH3  %%ZT15
+%define %%TLL3  %%ZT16
 
 %define %%DATA1 %%ZT13
 %define %%DATA2 %%ZT14
@@ -2369,6 +2305,7 @@
         vmovdqa64       %%GHDAT1, [rsp + %%GHASHIN_BLK_OFFSET + (0*64)]
 %endif
         vmovdqu64       %%GHKEY1, [%%GDATA + %%HASHKEY_OFFSET + (0*64)]
+        vmovdqu64       %%GHKEY2, [%%GDATA + %%HASHKEY_OFFSET + (0*64) + HKeyGap]
 
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;; save counter for the next round
@@ -2379,7 +2316,6 @@
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;; pre-load constants
         vbroadcastf64x2 %%AESKEY2, [%%GDATA + (16 * 1)]
-        vmovdqu64       %%GHKEY2, [%%GDATA + %%HASHKEY_OFFSET + (1*64)]
         vmovdqa64       %%GHDAT2, [rsp + %%GHASHIN_BLK_OFFSET + (1*64)]
 
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -2396,12 +2332,13 @@
 
         ;;==================================================
         ;; GHASH 4 blocks (15 to 12)
-        vpclmulqdq      %%GH1H, %%GHDAT1, %%GHKEY1, 0x11     ; a1*b1
-        vpclmulqdq      %%GH1L, %%GHDAT1, %%GHKEY1, 0x00     ; a0*b0
-        vpclmulqdq      %%GH1M, %%GHDAT1, %%GHKEY1, 0x01     ; a1*b0
-        vpclmulqdq      %%GH1T, %%GHDAT1, %%GHKEY1, 0x10     ; a0*b1
+        vpclmulqdq      %%TLL1, %%GHDAT1, %%GHKEY2, 0x00     ; TLL = ML*KL
+        vpclmulqdq      %%TLH1, %%GHDAT1, %%GHKEY2, 0x10     ; TLH = ML*KH
+        vpclmulqdq      %%THL1, %%GHDAT1, %%GHKEY1, 0x01     ; THL = MH*HL
+        vpclmulqdq      %%THH1, %%GHDAT1, %%GHKEY1, 0x11     ; THH = MH*HH
 
-        vmovdqu64       %%GHKEY1, [%%GDATA + %%HASHKEY_OFFSET + (2*64)]
+        vmovdqu64       %%GHKEY1, [%%GDATA + %%HASHKEY_OFFSET + (1*64)]
+        vmovdqu64       %%GHKEY2, [%%GDATA + %%HASHKEY_OFFSET + (1*64) + HKeyGap]
         vmovdqa64       %%GHDAT1, [rsp + %%GHASHIN_BLK_OFFSET + (2*64)]
 
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -2414,12 +2351,13 @@
 
         ;; =================================================
         ;; GHASH 4 blocks (11 to 8)
-        vpclmulqdq      %%GH2M, %%GHDAT2, %%GHKEY2, 0x10     ; a0*b1
-        vpclmulqdq      %%GH2T, %%GHDAT2, %%GHKEY2, 0x01     ; a1*b0
-        vpclmulqdq      %%GH2H, %%GHDAT2, %%GHKEY2, 0x11     ; a1*b1
-        vpclmulqdq      %%GH2L, %%GHDAT2, %%GHKEY2, 0x00     ; a0*b0
+        vpclmulqdq      %%TLL2, %%GHDAT2, %%GHKEY2, 0x00     ; TLL = ML*KL
+        vpclmulqdq      %%TLH2, %%GHDAT2, %%GHKEY2, 0x10     ; TLH = ML*KH
+        vpclmulqdq      %%THL2, %%GHDAT2, %%GHKEY1, 0x01     ; THL = MH*HL
+        vpclmulqdq      %%THH2, %%GHDAT2, %%GHKEY1, 0x11     ; THH = MH*HH
 
-        vmovdqu64       %%GHKEY2, [%%GDATA + %%HASHKEY_OFFSET + (3*64)]
+        vmovdqu64       %%GHKEY1, [%%GDATA + %%HASHKEY_OFFSET + (2*64)]
+        vmovdqu64       %%GHKEY2, [%%GDATA + %%HASHKEY_OFFSET + (2*64) + HKeyGap]
         vmovdqa64       %%GHDAT2, [rsp + %%GHASHIN_BLK_OFFSET + (3*64)]
 
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -2432,10 +2370,13 @@
 
         ;; =================================================
         ;; GHASH 4 blocks (7 to 4)
-        vpclmulqdq      %%GH3M, %%GHDAT1, %%GHKEY1, 0x10     ; a0*b1
-        vpclmulqdq      %%GH3T, %%GHDAT1, %%GHKEY1, 0x01     ; a1*b0
-        vpclmulqdq      %%GH3H, %%GHDAT1, %%GHKEY1, 0x11     ; a1*b1
-        vpclmulqdq      %%GH3L, %%GHDAT1, %%GHKEY1, 0x00     ; a0*b0
+        vpclmulqdq      %%TLL3, %%GHDAT1, %%GHKEY2, 0x00     ; TLL = ML*KL
+        vpclmulqdq      %%TLH3, %%GHDAT1, %%GHKEY2, 0x10     ; TLH = ML*KH
+        vpclmulqdq      %%THL3, %%GHDAT1, %%GHKEY1, 0x01     ; THL = MH*HL
+        vpclmulqdq      %%THH3, %%GHDAT1, %%GHKEY1, 0x11     ; THH = MH*HH
+
+        vmovdqu64       %%GHKEY1, [%%GDATA + %%HASHKEY_OFFSET + (3*64)]
+        vmovdqu64       %%GHKEY2, [%%GDATA + %%HASHKEY_OFFSET + (3*64) + HKeyGap]
 
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;; AES rounds 3
@@ -2447,10 +2388,10 @@
 
         ;; =================================================
         ;; Gather (XOR) GHASH for 12 blocks
-        vpternlogq      %%GH1H, %%GH2H, %%GH3H, 0x96
-        vpternlogq      %%GH1L, %%GH2L, %%GH3L, 0x96
-        vpternlogq      %%GH1T, %%GH2T, %%GH3T, 0x96
-        vpternlogq      %%GH1M, %%GH2M, %%GH3M, 0x96
+        vpternlogq      %%TLL1, %%TLL2, %%TLL3, 0x96
+        vpternlogq      %%TLH1, %%TLH2, %%TLH3, 0x96
+        vpternlogq      %%THL1, %%THL2, %%THL3, 0x96
+        vpternlogq      %%THH1, %%THH2, %%THH3, 0x96
 
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;; AES rounds 4
@@ -2477,10 +2418,10 @@
 
         ;; =================================================
         ;; GHASH 4 blocks (3 to 0)
-        vpclmulqdq      %%GH2M, %%GHDAT2, %%GHKEY2, 0x10     ; a0*b1
-        vpclmulqdq      %%GH2T, %%GHDAT2, %%GHKEY2, 0x01     ; a1*b0
-        vpclmulqdq      %%GH2H, %%GHDAT2, %%GHKEY2, 0x11     ; a1*b1
-        vpclmulqdq      %%GH2L, %%GHDAT2, %%GHKEY2, 0x00     ; a0*b0
+        vpclmulqdq      %%TLL2, %%GHDAT2, %%GHKEY2, 0x00     ; TLL = ML*KL
+        vpclmulqdq      %%TLH2, %%GHDAT2, %%GHKEY2, 0x10     ; TLH = ML*KH
+        vpclmulqdq      %%THL2, %%GHDAT2, %%GHKEY1, 0x01     ; THL = MH*HL
+        vpclmulqdq      %%THH2, %%GHDAT2, %%GHKEY1, 0x11     ; THH = MH*HH
 
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;; AES round 6
@@ -2493,27 +2434,16 @@
         ;; =================================================
         ;; gather GHASH in GH1L (low) and GH1H (high)
 %ifidn %%DO_REDUCTION, first_time
-        vpternlogq      %%GH1M, %%GH1T, %%GH2T, 0x96        ; TM
-        vpxorq          %%TO_REDUCE_M, %%GH1M, %%GH2M       ; TM
-        vpxorq          %%TO_REDUCE_H, %%GH1H, %%GH2H       ; TH
-        vpxorq          %%TO_REDUCE_L, %%GH1L, %%GH2L       ; TL
-%endif
-%ifidn %%DO_REDUCTION, no_reduction
-        vpternlogq      %%GH1M, %%GH1T, %%GH2T, 0x96        ; TM
-        vpternlogq      %%TO_REDUCE_M, %%GH1M, %%GH2M, 0x96 ; TM
-        vpternlogq      %%TO_REDUCE_H, %%GH1H, %%GH2H, 0x96 ; TH
-        vpternlogq      %%TO_REDUCE_L, %%GH1L, %%GH2L, 0x96 ; TL
-%endif
-%ifidn %%DO_REDUCTION, final_reduction
-        ;; phase 1: add mid products together
-        ;; also load polynomial constant for reduction
-        vpternlogq      %%GH1M, %%GH1T, %%GH2T, 0x96 ; TM
-        vpternlogq      %%GH1M, %%TO_REDUCE_M, %%GH2M, 0x96
-
-        vpsrldq         %%GH2M, %%GH1M, 8
-        vpslldq         %%GH1M, %%GH1M, 8
-
-        vmovdqa64       XWORD(%%RED_POLY), [rel POLY2]
+        vpxorq          %%TO_REDUCE_L, %%TLL2, %%THL2
+        vpxorq          %%TO_REDUCE_H, %%THH2, %%TLH2
+        vpternlogq      %%TO_REDUCE_L, %%TLL1, %%THL1, 0x96
+        vpternlogq      %%TO_REDUCE_H, %%THH1, %%TLH1, 0x96
+%else
+        ;; not the first round so sums need to be updated
+        vpternlogq      %%TO_REDUCE_L, %%TLL2, %%THL2, 0x96
+        vpternlogq      %%TO_REDUCE_H, %%THH2, %%TLH2, 0x96
+        vpternlogq      %%TO_REDUCE_L, %%TLL1, %%THL1, 0x96
+        vpternlogq      %%TO_REDUCE_H, %%THH1, %%TLH1, 0x96
 %endif
 
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -2525,12 +2455,11 @@
         vbroadcastf64x2 %%AESKEY2, [%%GDATA + (16 * 9)]
 
         ;; =================================================
-        ;; Add mid product to high and low
+        ;; new reduction
 %ifidn %%DO_REDUCTION, final_reduction
-        vpternlogq      %%GH1H, %%GH2H, %%GH2M, 0x96    ; TH = TH1 + TH2 + TM>>64
-        vpxorq          %%GH1H, %%TO_REDUCE_H
-        vpternlogq      %%GH1L, %%GH2L, %%GH1M, 0x96    ; TL = TL1 + TL2 + TM<<64
-        vpxorq          %%GH1L, %%TO_REDUCE_L
+        vpclmulqdq      %%THH1, %%TO_REDUCE_L, [rel POLY], 0x10
+        vpshufd         %%TO_REDUCE_L, %%TO_REDUCE_L, 01001110b
+        vpternlogq      %%THH1, %%TO_REDUCE_H, %%TO_REDUCE_L, 0x96
 %endif
 
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -2541,13 +2470,6 @@
         vaesenc         %%B12_15, %%B12_15, %%AESKEY1
         vbroadcastf64x2 %%AESKEY1, [%%GDATA + (16 * 10)]
 
-        ;; =================================================
-        ;; horizontal xor of low and high 4x128
-%ifidn %%DO_REDUCTION, final_reduction
-        VHPXORI4x128    %%GH1H, %%GH2H
-        VHPXORI4x128    %%GH1L, %%GH2L
-%endif
-
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;; AES round 9
         vaesenc         %%B00_03, %%B00_03, %%AESKEY2
@@ -2556,13 +2478,6 @@
         vaesenc         %%B12_15, %%B12_15, %%AESKEY2
 %if (NROUNDS >= 11)
         vbroadcastf64x2 %%AESKEY2, [%%GDATA + (16 * 11)]
-%endif
-        ;; =================================================
-        ;; first phase of reduction
-%ifidn %%DO_REDUCTION, final_reduction
-        vpclmulqdq      XWORD(%%RED_P1), XWORD(%%RED_POLY), XWORD(%%GH1L), 0x01
-        vpslldq         XWORD(%%RED_P1), XWORD(%%RED_P1), 8             ; shift-L 2 DWs
-        vpxorq          XWORD(%%RED_P1), XWORD(%%GH1L), XWORD(%%RED_P1) ; first phase of the reduct
 %endif
 
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -2596,15 +2511,9 @@
 %endif ; GCM192 / NROUNDS = 11 (13 including the first and the last)
 
         ;; =================================================
-        ;; second phase of the reduction
+        ;; horizontal xor of 4 reduced hashes
 %ifidn %%DO_REDUCTION, final_reduction
-        vpclmulqdq      XWORD(%%RED_T1), XWORD(%%RED_POLY), XWORD(%%RED_P1), 0x00
-        vpsrldq         XWORD(%%RED_T1), XWORD(%%RED_T1), 4 ; shift-R 1-DW to obtain 2-DWs shift-R
-
-        vpclmulqdq      XWORD(%%RED_T2), XWORD(%%RED_POLY), XWORD(%%RED_P1), 0x10
-        vpslldq         XWORD(%%RED_T2), XWORD(%%RED_T2), 4 ; shift-L 1-DW for result without shifts
-        ;; GH1H = GH1H x RED_T1 x RED_T2
-        vpternlogq      XWORD(%%GH1H), XWORD(%%RED_T2), XWORD(%%RED_T1), 0x96
+        VHPXORI4x128    %%THH1, %%TLL1
 %endif
 
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -2651,7 +2560,7 @@
 
 %ifidn %%DO_REDUCTION, final_reduction
         ;; =================================================
-        ;; Return GHASH value  through %%GH1H
+        ;; Return GHASH value  through %%GH1H / %THH1
 %endif
 
 %endmacro                       ; GHASH_16_ENCRYPT_16_PARALLEL
@@ -2997,7 +2906,7 @@
                 %%CTR, %%HASH_IN_OUT, %%ENC_DEC, %%INSTANCE_TYPE, \
                 %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, \
                 %%ZTMP5, %%ZTMP6, %%ZTMP7, %%ZTMP8, %%ZTMP9, \
-                %%ZTMP10, %%ZTMP11, %%ZTMP12, %%ZTMP13, %%ZTMP14, \
+                %%ZTMP10, %%ZTMP11, %%ZTMP12, %%ZTMP13, %%ZTMP14, %%ZTMP15, \
                 %%IA0, %%IA1, %%MASKREG, %%SHUFMASK
 %if num_blocks != 16
         jmp     %%_small_initial_blocks_encrypted
@@ -3072,10 +2981,11 @@
 %define %%ZTMP20                zmm8
 %define %%ZTMP21                zmm22
 %define %%ZTMP22                zmm23
+%define %%ZTMP23                zmm26
 
 %define %%GH                    zmm24
 %define %%GL                    zmm25
-%define %%GM                    zmm26
+
 %define %%SHUF_MASK             zmm29
 
 ;;; Unused in the small packet path
@@ -3234,8 +3144,7 @@
                 %%ZTMP12, %%ZTMP13, %%ZTMP14, %%ZTMP15,\
                 %%ZTMP16, %%ZTMP17, %%ZTMP18, %%ZTMP19, \
                 %%ZTMP20, %%ZTMP21, %%ZTMP22, \
-                %%ADDBE_4x4, %%ADDBE_1234, \
-                %%GL, %%GH, %%GM, \
+                %%ADDBE_4x4, %%ADDBE_1234, %%GL, %%GH, \
                 first_time, %%ENC_DEC, data_in_out_offset, %%AAD_HASHz
 
         ;; ==== AES-CTR + GHASH - 16 blocks, no reduction
@@ -3252,8 +3161,7 @@
                 %%ZTMP12, %%ZTMP13, %%ZTMP14, %%ZTMP15,\
                 %%ZTMP16, %%ZTMP17, %%ZTMP18, %%ZTMP19, \
                 %%ZTMP20, %%ZTMP21, %%ZTMP22, \
-                %%ADDBE_4x4, %%ADDBE_1234, \
-                %%GL, %%GH, %%GM, \
+                %%ADDBE_4x4, %%ADDBE_1234, %%GL, %%GH, \
                 no_reduction, %%ENC_DEC, data_in_out_offset, no_ghash_in
 
         ;; ==== AES-CTR + GHASH - 16 blocks, reduction
@@ -3270,12 +3178,11 @@
                 %%ZTMP12, %%ZTMP13, %%ZTMP14, %%ZTMP15,\
                 %%ZTMP16, %%ZTMP17, %%ZTMP18, %%ZTMP19, \
                 %%ZTMP20, %%ZTMP21, %%ZTMP22, \
-                %%ADDBE_4x4, %%ADDBE_1234, \
-                %%GL, %%GH, %%GM, \
+                %%ADDBE_4x4, %%ADDBE_1234, %%GL, %%GH, \
                 final_reduction, %%ENC_DEC, data_in_out_offset, no_ghash_in
 
         ;; === xor cipher block 0 with GHASH (ZT4)
-        vmovdqa64       %%AAD_HASHz, %%ZTMP4
+        vmovdqa64       %%AAD_HASHx, XWORD(%%ZTMP4)
 
         add             %%DATA_OFFSET, (big_loop_nblocks * 16)
         sub             %%LENGTH, (big_loop_nblocks * 16)
@@ -3307,8 +3214,8 @@
         sub             DWORD(%%HASHK_PTR), DWORD(%%IA0)
 
         ;; ==== GHASH 32 blocks and follow with reduction
-        GHASH_16        start, %%GH, %%GM, %%GL, rsp, STACK_LOCAL_OFFSET, (0 * 16), %%GDATA_KEY, %%HASHK_PTR, 0, %%AAD_HASHz, \
-                        %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, %%ZTMP6, %%ZTMP7, %%ZTMP8, %%ZTMP9
+        GHASH_16        start, %%GH, %%GL, rsp, STACK_LOCAL_OFFSET, (0 * 16), %%GDATA_KEY, %%HASHK_PTR, 0, %%AAD_HASHz, \
+                        %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, %%ZTMP6, %%ZTMP7, %%ZTMP8, %%ZTMP9, %%ZTMP23
 
         ;; ==== GHASH 1 x 16 blocks with reduction + cipher and ghash on the reminder
 %assign ghashin_offset (STACK_LOCAL_OFFSET + (16 * 16))
@@ -3321,8 +3228,8 @@
                 %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, %%ZTMP6, \
                 %%ZTMP7, %%ZTMP8, %%ZTMP9, %%ZTMP10, %%ZTMP11, %%ZTMP12, %%ZTMP13, \
                 %%ZTMP14, %%ZTMP15, %%ZTMP16, %%ZTMP17, %%ZTMP18, %%ZTMP19, %%ZTMP20, \
-                %%ZTMP21, %%ZTMP22, \
-                %%ADDBE_4x4, %%ADDBE_1234, mid, %%GL, %%GH, %%GM, \
+                %%ZTMP21, %%ZTMP22, %%ZTMP23, \
+                %%ADDBE_4x4, %%ADDBE_1234, mid, %%GL, %%GH, \
                 %%ENC_DEC, %%AAD_HASHz, %%IA0, %%IA5, %%MASKREG, %%INSTANCE_TYPE
 
 %ifidn %%INSTANCE_TYPE, multi_call
@@ -3352,8 +3259,7 @@
                 %%ZTMP12, %%ZTMP13, %%ZTMP14, %%ZTMP15,\
                 %%ZTMP16, %%ZTMP17, %%ZTMP18, %%ZTMP19, \
                 %%ZTMP20, %%ZTMP21, %%ZTMP22, \
-                %%ADDBE_4x4, %%ADDBE_1234, \
-                %%GL, %%GH, %%GM, \
+                %%ADDBE_4x4, %%ADDBE_1234, %%GL, %%GH, \
                 first_time, %%ENC_DEC, data_in_out_offset, %%AAD_HASHz
 
         ;; ==== AES-CTR + GHASH - 16 blocks, no reduction
@@ -3370,13 +3276,12 @@
                 %%ZTMP12, %%ZTMP13, %%ZTMP14, %%ZTMP15,\
                 %%ZTMP16, %%ZTMP17, %%ZTMP18, %%ZTMP19, \
                 %%ZTMP20, %%ZTMP21, %%ZTMP22, \
-                %%ADDBE_4x4, %%ADDBE_1234, \
-                %%GL, %%GH, %%GM, \
+                %%ADDBE_4x4, %%ADDBE_1234, %%GL, %%GH, \
                 no_reduction, %%ENC_DEC, data_in_out_offset, no_ghash_in
 
         ;; ==== GHASH 16 blocks with reduction
-        GHASH_16        end_reduce, %%GH, %%GM, %%GL, rsp, STACK_LOCAL_OFFSET, (32 * 16), %%GDATA_KEY, HashKey_16, 0, %%AAD_HASHz, \
-                        %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, %%ZTMP6, %%ZTMP7, %%ZTMP8, %%ZTMP9
+        GHASH_16        end_reduce, %%GH, %%GL, rsp, STACK_LOCAL_OFFSET, (32 * 16), %%GDATA_KEY, HashKey_16, 0, %%AAD_HASHz, \
+                        %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, %%ZTMP6, %%ZTMP7, %%ZTMP8, %%ZTMP9, %%ZTMP23
 
         ;; ==== GHASH 1 x 16 blocks with reduction + cipher and ghash on the reminder
 %assign ghashin_offset (STACK_LOCAL_OFFSET + (0 * 16))
@@ -3401,8 +3306,8 @@
                 %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, %%ZTMP6, \
                 %%ZTMP7, %%ZTMP8, %%ZTMP9, %%ZTMP10, %%ZTMP11, %%ZTMP12, %%ZTMP13, \
                 %%ZTMP14, %%ZTMP15, %%ZTMP16, %%ZTMP17, %%ZTMP18, %%ZTMP19, %%ZTMP20, \
-                %%ZTMP21, %%ZTMP22, \
-                %%ADDBE_4x4, %%ADDBE_1234, start, %%GL, %%GH, %%GM, \
+                %%ZTMP21, %%ZTMP22, %%ZTMP23, \
+                %%ADDBE_4x4, %%ADDBE_1234, start, %%GL, %%GH, \
                 %%ENC_DEC, %%AAD_HASHz, %%IA0, %%IA5, %%MASKREG, %%INSTANCE_TYPE
 
 %ifidn %%INSTANCE_TYPE, multi_call
@@ -3431,13 +3336,12 @@
                 %%ZTMP12, %%ZTMP13, %%ZTMP14, %%ZTMP15,\
                 %%ZTMP16, %%ZTMP17, %%ZTMP18, %%ZTMP19, \
                 %%ZTMP20, %%ZTMP21, %%ZTMP22, \
-                %%ADDBE_4x4, %%ADDBE_1234, \
-                %%GL, %%GH, %%GM, \
+                %%ADDBE_4x4, %%ADDBE_1234, %%GL, %%GH, \
                 first_time, %%ENC_DEC, data_in_out_offset, %%AAD_HASHz
 
         ;; ==== GHASH 1 x 16 blocks
-        GHASH_16        mid, %%GH, %%GM, %%GL, rsp, STACK_LOCAL_OFFSET, (16 * 16), %%GDATA_KEY, HashKey_32, 0, no_hash_input, \
-                        %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, %%ZTMP6, %%ZTMP7, %%ZTMP8, %%ZTMP9
+        GHASH_16        mid, %%GH, %%GL, rsp, STACK_LOCAL_OFFSET, (16 * 16), %%GDATA_KEY, HashKey_32, 0, no_hash_input, \
+                        %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, %%ZTMP6, %%ZTMP7, %%ZTMP8, %%ZTMP9, %%ZTMP23
 
         ;; ==== GHASH 1 x 16 blocks with reduction + cipher and ghash on the reminder
 %assign ghashin_offset (STACK_LOCAL_OFFSET + (32 * 16))
@@ -3452,8 +3356,8 @@
                 %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, %%ZTMP6, \
                 %%ZTMP7, %%ZTMP8, %%ZTMP9, %%ZTMP10, %%ZTMP11, %%ZTMP12, %%ZTMP13, \
                 %%ZTMP14, %%ZTMP15, %%ZTMP16, %%ZTMP17, %%ZTMP18, %%ZTMP19, %%ZTMP20, \
-                %%ZTMP21, %%ZTMP22, \
-                %%ADDBE_4x4, %%ADDBE_1234, end_reduce, %%GL, %%GH, %%GM, \
+                %%ZTMP21, %%ZTMP22, %%ZTMP23, \
+                %%ADDBE_4x4, %%ADDBE_1234, end_reduce, %%GL, %%GH, \
                 %%ENC_DEC, %%AAD_HASHz, %%IA0, %%IA5, %%MASKREG, %%INSTANCE_TYPE
 
 %ifidn %%INSTANCE_TYPE, multi_call
@@ -3486,8 +3390,8 @@
                 %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, %%ZTMP6, \
                 %%ZTMP7, %%ZTMP8, %%ZTMP9, %%ZTMP10, %%ZTMP11, %%ZTMP12, %%ZTMP13, \
                 %%ZTMP14, %%ZTMP15, %%ZTMP16, %%ZTMP17, %%ZTMP18, %%ZTMP19, %%ZTMP20, \
-                %%ZTMP21, %%ZTMP22, \
-                %%ADDBE_4x4, %%ADDBE_1234, start, %%GL, %%GH, %%GM, \
+                %%ZTMP21, %%ZTMP22, %%ZTMP23, \
+                %%ADDBE_4x4, %%ADDBE_1234, start, %%GL, %%GH, \
                 %%ENC_DEC, %%AAD_HASHz, %%IA0, %%IA5, %%MASKREG, %%INSTANCE_TYPE
 
 %ifidn %%INSTANCE_TYPE, multi_call
