@@ -93,4 +93,55 @@
 %define HashKey_1       (16*62)   ; HashKey <<1 mod poly
 %define HashKey         (16*62)   ; HashKey <<1 mod poly
 
+%define HKeyGap (16*48)
+;;
+%define HashKeyK_48      (16*15 + 16*48)   ; HashKey^48 <<1 mod poly
+%define HashKeyK_47      (16*16 + 16*48)   ; HashKey^47 <<1 mod poly
+%define HashKeyK_46      (16*17 + 16*48)   ; HashKey^46 <<1 mod poly
+%define HashKeyK_45      (16*18 + 16*48)   ; HashKey^45 <<1 mod poly
+%define HashKeyK_44      (16*19 + 16*48)   ; HashKey^44 <<1 mod poly
+%define HashKeyK_43      (16*20 + 16*48)   ; HashKey^43 <<1 mod poly
+%define HashKeyK_42      (16*21 + 16*48)   ; HashKey^42 <<1 mod poly
+%define HashKeyK_41      (16*22 + 16*48)   ; HashKey^41 <<1 mod poly
+%define HashKeyK_40      (16*23 + 16*48)   ; HashKey^40 <<1 mod poly
+%define HashKeyK_39      (16*24 + 16*48)   ; HashKey^39 <<1 mod poly
+%define HashKeyK_38      (16*25 + 16*48)   ; HashKey^38 <<1 mod poly
+%define HashKeyK_37      (16*26 + 16*48)   ; HashKey^37 <<1 mod poly
+%define HashKeyK_36      (16*27 + 16*48)   ; HashKey^36 <<1 mod poly
+%define HashKeyK_35      (16*28 + 16*48)   ; HashKey^35 <<1 mod poly
+%define HashKeyK_34      (16*29 + 16*48)   ; HashKey^34 <<1 mod poly
+%define HashKeyK_33      (16*30 + 16*48)   ; HashKey^33 <<1 mod poly
+%define HashKeyK_32      (16*31 + 16*48)   ; HashKey^32 <<1 mod poly
+%define HashKeyK_31      (16*32 + 16*48)   ; HashKey^31 <<1 mod poly
+%define HashKeyK_30      (16*33 + 16*48)   ; HashKey^30 <<1 mod poly
+%define HashKeyK_29      (16*34 + 16*48)   ; HashKey^29 <<1 mod poly
+%define HashKeyK_28      (16*35 + 16*48)   ; HashKey^28 <<1 mod poly
+%define HashKeyK_27      (16*36 + 16*48)   ; HashKey^27 <<1 mod poly
+%define HashKeyK_26      (16*37 + 16*48)   ; HashKey^26 <<1 mod poly
+%define HashKeyK_25      (16*38 + 16*48)   ; HashKey^25 <<1 mod poly
+%define HashKeyK_24      (16*39 + 16*48)   ; HashKey^24 <<1 mod poly
+%define HashKeyK_23      (16*40 + 16*48)   ; HashKey^23 <<1 mod poly
+%define HashKeyK_22      (16*41 + 16*48)   ; HashKey^22 <<1 mod poly
+%define HashKeyK_21      (16*42 + 16*48)   ; HashKey^21 <<1 mod poly
+%define HashKeyK_20      (16*43 + 16*48)   ; HashKey^20 <<1 mod poly
+%define HashKeyK_19      (16*44 + 16*48)   ; HashKey^19 <<1 mod poly
+%define HashKeyK_18      (16*45 + 16*48)   ; HashKey^18 <<1 mod poly
+%define HashKeyK_17      (16*46 + 16*48)   ; HashKey^17 <<1 mod poly
+%define HashKeyK_16      (16*47 + 16*48)   ; HashKey^16 <<1 mod poly
+%define HashKeyK_15      (16*48 + 16*48)   ; HashKey^15 <<1 mod poly
+%define HashKeyK_14      (16*49 + 16*48)   ; HashKey^14 <<1 mod poly
+%define HashKeyK_13      (16*50 + 16*48)   ; HashKey^13 <<1 mod poly
+%define HashKeyK_12      (16*51 + 16*48)   ; HashKey^12 <<1 mod poly
+%define HashKeyK_11      (16*52 + 16*48)   ; HashKey^11 <<1 mod poly
+%define HashKeyK_10      (16*53 + 16*48)   ; HashKey^10 <<1 mod poly
+%define HashKeyK_9       (16*54 + 16*48)   ; HashKey^9 <<1 mod poly
+%define HashKeyK_8       (16*55 + 16*48)   ; HashKey^8 <<1 mod poly
+%define HashKeyK_7       (16*56 + 16*48)   ; HashKey^7 <<1 mod poly
+%define HashKeyK_6       (16*57 + 16*48)   ; HashKey^6 <<1 mod poly
+%define HashKeyK_5       (16*58 + 16*48)   ; HashKey^5 <<1 mod poly
+%define HashKeyK_4       (16*59 + 16*48)   ; HashKey^4 <<1 mod poly
+%define HashKeyK_3       (16*60 + 16*48)   ; HashKey^3 <<1 mod poly
+%define HashKeyK_2       (16*61 + 16*48)   ; HashKey^2 <<1 mod poly
+%define HashKeyK_1       (16*62 + 16*48)   ; HashKey <<1 mod poly
+%define HashKeyK         (16*62 + 16*48)   ; HashKey <<1 mod poly
 %endif ; GCM_KEYS_VAES_AVX512_INCLUDED
