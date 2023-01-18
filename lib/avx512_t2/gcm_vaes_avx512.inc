@@ -603,6 +603,66 @@
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 %endmacro
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; GHASH_MUL2 MACRO to implement: Data*HashKey mod (128,127,126,121,0)
+;;; Input: A and B (128-bits each, bit-reflected)
+;;; Output: C = A*B*x mod poly, (i.e. >>1 )
+;;; To compute GH = GH*HashKey mod poly, give two constants:
+;;;   HK = HashKey<<1 mod poly as input
+;;;   KK = SWAP_H_L( HK_L * POLY) + HK
+;;;   POLY = 0xC2 << 56
+;;;
+;;; Realize four multiplications first, to achieve partially reduced product
+;;;   TLL = GH_L * KK_L
+;;;   TLH = GH_L * KK_H
+;;;   THL = GH_H * HK_L
+;;;   THH = GH_H * HK_H
+;;;
+;;; Accumulate results into 2 registers, with corresponding weights
+;;;   T1 = THH + TLH
+;;;   T2 = THL + TLL
+;;;
+;;; Begin reduction
+;;;    ----------
+;;;    |   T1   |
+;;;    ---------------
+;;;         |   T2   |
+;;;         ----------
+;;;
+;;;   T3 = SWAP_H_L(T2)
+;;;   T5 = T2_L * POLY
+;;;   GH = T1 + T5 + T3
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+%macro  GHASH_MUL2  7
+%define %%GH  %1        ;; [in/out] xmm with multiply operand(s) (128-bits)
+%define %%HK  %2        ;; [in] xmm with hash key value(s) (128-bits)
+%define %%KK  %3        ;; [in] xmm with hash key K value(s) (128-bits)
+%define %%TLL %4        ;; [clobbered] xmm
+%define %%TLH %5        ;; [clobbered] xmm
+%define %%THL %6        ;; [clobbered] xmm
+%define %%THH %7        ;; [clobbered] xmm
+
+        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        vpclmulqdq      %%TLL, %%GH, %%KK, 0x00     ; TLL = GH_L * KK_L
+        vpclmulqdq      %%TLH, %%GH, %%KK, 0x10     ; TLH = GH_L * KK_H
+        vpclmulqdq      %%THL, %%GH, %%HK, 0x01     ; THL = GH_H * HK_L
+        vpclmulqdq      %%THH, %%GH, %%HK, 0x11     ; THH = GH_H * HK_H
+
+        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        ; add products
+        vpxorq          %%TLL, %%TLL, %%THL
+        vpxorq          %%THH, %%THH, %%TLH
+
+        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        ; new reduction
+        vpclmulqdq      %%GH, %%TLL, [rel POLY], 0x10
+        vpshufd         %%TLH, %%TLL, 01001110b
+        vpternlogq      %%GH, %%THH, %%TLH, 0x96
+
+        ; @note: it can support YMM or ZMM but horizontal XOR would be required here
+        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+%endmacro
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; In PRECOMPUTE, the commands filling Hashkey_i_k are not required for avx512
 ;;; functions, but are kept to allow users to switch cpu architectures between calls
@@ -1069,6 +1129,7 @@
         ;; XTMP1 = my_ctx_data.partial_block_enc_key
         vmovdqu64       %%XTMP1, [%%GDATA_CTX + PBlockEncKey]
         vmovdqu64       %%XTMP2, [%%GDATA_KEY + HashKey]
+        vmovdqu64       %%XTMP9, [%%GDATA_KEY + HashKey + HKeyGap]
 
         ;; adjust the shuffle mask pointer to be able to shift right %%LENGTH bytes
         ;; (16 - %%LENGTH) is the number of bytes in plaintext mod 16)
@@ -1114,7 +1175,7 @@
         jl              %%_partial_incomplete
 
         ;; GHASH computation for the last <16 Byte block
-        GHASH_MUL       %%AAD_HASH, %%XTMP2, %%XTMP5, %%XTMP6, %%XTMP7, %%XTMP8, %%XTMP9
+        GHASH_MUL2      %%AAD_HASH, %%XTMP2, %%XTMP9, %%XTMP5, %%XTMP6, %%XTMP7, %%XTMP8
 
         mov             qword [%%GDATA_CTX + PBlockLen], 0
 
@@ -2554,7 +2615,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Save register content for the caller
 %macro FUNC_SAVE 0
-        ;; Required for Update/GMC_ENC
+        ;; Required for Update/GCM_ENC
         ;the number of pushes must equal STACK_OFFSET
         mov     rax, rsp
 
@@ -2613,7 +2674,7 @@
         vmovdqu xmm6, [rsp + STACK_XMM_OFFSET + 0*16]
 %endif
 
-        ;; Required for Update/GMC_ENC
+        ;; Required for Update/GCM_ENC
         mov     rbp, [rsp + STACK_GP_OFFSET + 5*8]
         mov     rbx, [rsp + STACK_GP_OFFSET + 6*8]
 %ifidn __OUTPUT_FORMAT__, win64
@@ -2676,7 +2737,8 @@
         vpxorq          %%J0, XWORD(%%ZT2), %%J0
 
         vmovdqu64       XWORD(%%ZT0), [%%KEY + HashKey_1]
-        GHASH_MUL       %%J0, XWORD(%%ZT0), XWORD(%%ZT1), XWORD(%%ZT2), XWORD(%%ZT3), XWORD(%%ZT4), XWORD(%%ZT5)
+        vmovdqu64       XWORD(%%ZT5), [%%KEY + HashKey_1 + HKeyGap]
+        GHASH_MUL2      %%J0, XWORD(%%ZT0),  XWORD(%%ZT5), XWORD(%%ZT1), XWORD(%%ZT2), XWORD(%%ZT3), XWORD(%%ZT4)
 
         vpshufb         %%J0, [rel SHUF_MASK] ; perform a 16Byte swap
 %endmacro
@@ -2747,11 +2809,12 @@
         mov             %%GPR1, %%A_IN
         vmovdqu8        XWORD(%%AAD_HASH){%%MASKREG}{z}, [%%GPR1]
         vmovdqu8        XWORD(%%ZT0), [%%GDATA_KEY + HashKey_1]
+        vmovdqu8        XWORD(%%ZT5), [%%GDATA_KEY + HashKey_1 + HKeyGap]
         vpshufb         XWORD(%%AAD_HASH), [rel SHUF_MASK]
 
         ;; GHASH 12 bytes of AAD
-        GHASH_MUL       XWORD(%%AAD_HASH), XWORD(%%ZT0), \
-                        XWORD(%%ZT1), XWORD(%%ZT2), XWORD(%%ZT3), XWORD(%%ZT4), XWORD(%%ZT5)
+        GHASH_MUL2      XWORD(%%AAD_HASH), XWORD(%%ZT0), XWORD(%%ZT5), \
+                        XWORD(%%ZT1), XWORD(%%ZT2), XWORD(%%ZT3), XWORD(%%ZT4)
 
         jmp             %%_aad_compute_done
 
@@ -3415,15 +3478,15 @@
 %define %%CTR_CHECK     %7      ; [in/out] GPR with counter overflow check
 %define %%ADDBE_4x4     %8      ; [in] ZMM 4x128bits with value 4 (big endian)
 %define %%ADDBE_1234    %9      ; [in] ZMM 4x128bits with values 1, 2, 3 & 4 (big endian)
-%define %%T0            %10     ; [clobered] temporary ZMM register
-%define %%T1            %11     ; [clobered] temporary ZMM register
-%define %%T2            %12     ; [clobered] temporary ZMM register
-%define %%T3            %13     ; [clobered] temporary ZMM register
-%define %%T4            %14     ; [clobered] temporary ZMM register
-%define %%T5            %15     ; [clobered] temporary ZMM register
-%define %%T6            %16     ; [clobered] temporary ZMM register
-%define %%T7            %17     ; [clobered] temporary ZMM register
-%define %%T8            %18     ; [clobered] temporary ZMM register
+%define %%T0            %10     ; [clobbered] temporary ZMM register
+%define %%T1            %11     ; [clobbered] temporary ZMM register
+%define %%T2            %12     ; [clobbered] temporary ZMM register
+%define %%T3            %13     ; [clobbered] temporary ZMM register
+%define %%T4            %14     ; [clobbered] temporary ZMM register
+%define %%T5            %15     ; [clobbered] temporary ZMM register
+%define %%T6            %16     ; [clobbered] temporary ZMM register
+%define %%T7            %17     ; [clobbered] temporary ZMM register
+%define %%T8            %18     ; [clobbered] temporary ZMM register
 %define %%SHUF_MASK     %19     ; [in] ZMM with BE/LE shuffle mask
 %define %%ENC_DEC       %20     ; [in] ENC (encrypt) or DEC (decrypt) selector
 %define %%BLK_OFFSET    %21     ; [in] stack frame offset to ciphered blocks
@@ -3550,6 +3613,7 @@
         ;; @note: xmm14 is hardcoded for hash input in singe_call case
 
         vmovdqu         xmm13, [%%GDATA_KEY + HashKey]
+        vmovdqu         xmm6, [%%GDATA_KEY + HashKey + HKeyGap]
         ;; Start AES as early as possible
         vmovdqu         xmm9, [%%GDATA_CTX + OrigIV]    ; xmm9 = Y0
         ENCRYPT_SINGLE_BLOCK %%GDATA_KEY, xmm9  ; E(K, Y0)
@@ -3566,7 +3630,7 @@
         je              %%_partial_done
 
         ;; GHASH computation for the last <16 Byte block
-        GHASH_MUL       xmm14, xmm13, xmm0, xmm10, xmm11, xmm5, xmm6
+        GHASH_MUL2      xmm14, xmm13, xmm6, xmm0, xmm10, xmm11, xmm5
 
 %%_partial_done:
 %endif
@@ -3575,7 +3639,7 @@
         vpsllq          xmm15, xmm15, 3                         ; convert bytes into bits
 
         vpxor           xmm14, xmm15
-        GHASH_MUL       xmm14, xmm13, xmm0, xmm10, xmm11, xmm5, xmm6
+        GHASH_MUL2      xmm14, xmm13, xmm6, xmm0, xmm10, xmm11, xmm5
         vpshufb         xmm14, [rel SHUF_MASK]         ; perform a 16Byte swap
 
         vpxor           xmm9, xmm9, xmm14
@@ -3671,6 +3735,7 @@
                                                 %%IA0, %%IA1, %%MASKREG
 
         vmovdqu64       %%XTMP2, [%%GDATA_KEY + HashKey]
+        vmovdqu64       %%XTMP9, [%%GDATA_KEY + HashKey + HKeyGap]
 
         ;; adjust the shuffle mask pointer to be able to shift right %%LENGTH bytes
         ;; (16 - %%LENGTH) is the number of bytes in plaintext mod 16)
@@ -3697,7 +3762,7 @@
         jl              %%_partial_incomplete
 
         ;; GHASH computation for the last <16 Byte block
-        GHASH_MUL       %%AAD_HASH, %%XTMP2, %%XTMP5, %%XTMP6, %%XTMP7, %%XTMP8, %%XTMP9
+        GHASH_MUL2      %%AAD_HASH, %%XTMP2, %%XTMP9, %%XTMP5, %%XTMP6, %%XTMP7, %%XTMP8
 
         mov             qword [%%GDATA_CTX + PBlockLen], 0
 
