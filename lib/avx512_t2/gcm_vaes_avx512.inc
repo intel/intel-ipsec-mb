@@ -204,33 +204,45 @@
 ;;;   %%INPTR address is 64 byte aligned
 ;;; - there is an option to pass ready blocks through ZMM registers too.
 ;;;   4 extra parameters need to passed in such case and 21st argument can be empty
-%macro GHASH_16 21-22
+%macro GHASH_16 22-23
 %define %%TYPE  %1      ; [in] ghash type: start (xor hash), mid, end (same as mid; no reduction),
-                        ;      end_reduce (end with reduction), start_reduce
-%define %%GH    %2      ; [in/out] ZMM ghash sum: high 128-bits
-%define %%GL    %3      ; [in/out] ZMM ghash sum: low 128-bits
-%define %%INPTR %4      ; [in] data input pointer
-%define %%INOFF %5      ; [in] data input offset
-%define %%INDIS %6      ; [in] data input displacement
-%define %%HKPTR %7      ; [in] hash key pointer
-%define %%HKOFF %8      ; [in] hash key offset
-%define %%HKDIS %9      ; [in] hash key displacement
-%define %%HASH  %10     ; [in/out] ZMM hash value in/out
-%define %%ZTMP0 %11     ; [clobbered] temporary ZMM
-%define %%ZTMP1 %12     ; [clobbered] temporary ZMM
-%define %%ZTMP2 %13     ; [clobbered] temporary ZMM
-%define %%ZTMP3 %14     ; [clobbered] temporary ZMM
-%define %%ZTMP4 %15     ; [clobbered] temporary ZMM
-%define %%ZTMP5 %16     ; [clobbered] temporary ZMM
-%define %%ZTMP6 %17     ; [clobbered] temporary ZMM
-%define %%ZTMP7 %18     ; [clobbered] temporary ZMM
-%define %%ZTMP8 %19     ; [clobbered] temporary ZMM
-%define %%ZTMP9 %20     ; [clobbered] temporary ZMM
-%define %%ZTMPA %21     ; [clobbered] temporary ZMM
-%define %%SHUFM %22     ; [in] ZMM with shuffle mask - provided only when input data needs shuffling
+                        ;      end_reduce (end with reduction), start_reduce, end_reduce_no_hxor
+%define %%LOADT %2      ; [in] hash key load type: hk_load or hk_bcast
+%define %%GH    %3      ; [in/out] ZMM ghash sum: high 128-bits
+%define %%GL    %4      ; [in/out] ZMM ghash sum: low 128-bits
+%define %%INPTR %5      ; [in] data input pointer
+%define %%INOFF %6      ; [in] data input offset
+%define %%INDIS %7      ; [in] data input displacement
+%define %%HKPTR %8      ; [in] hash key pointer
+%define %%HKOFF %9      ; [in] hash key offset
+%define %%HKDIS %10     ; [in] hash key displacement
+%define %%HASH  %11     ; [in/out] ZMM hash value in/out
+%define %%ZTMP0 %12     ; [clobbered] temporary ZMM
+%define %%ZTMP1 %13     ; [clobbered] temporary ZMM
+%define %%ZTMP2 %14     ; [clobbered] temporary ZMM
+%define %%ZTMP3 %15     ; [clobbered] temporary ZMM
+%define %%ZTMP4 %16     ; [clobbered] temporary ZMM
+%define %%ZTMP5 %17     ; [clobbered] temporary ZMM
+%define %%ZTMP6 %18     ; [clobbered] temporary ZMM
+%define %%ZTMP7 %19     ; [clobbered] temporary ZMM
+%define %%ZTMP8 %20     ; [clobbered] temporary ZMM
+%define %%ZTMP9 %21     ; [clobbered] temporary ZMM
+%define %%ZTMPA %22     ; [clobbered] temporary ZMM
+%define %%SHUFM %23     ; [in] ZMM with shuffle mask - provided only when input data needs shuffling
 
 %assign start_ghash 0
 %assign do_reduction 0
+%assign uload_and_shuffle 0
+%assign hk_broadcast 0
+%assign do_hxor 1
+
+%if %0 == 23
+%assign uload_and_shuffle 1
+%endif
+
+%ifidn %%LOADT, hk_bcast
+%assign hk_broadcast 1
+%endif
 
 %ifidn %%TYPE, start
 %assign start_ghash 1
@@ -245,8 +257,12 @@
 %assign do_reduction 1
 %endif
 
+%ifidn %%TYPE, end_reduce_no_hxor
+%assign do_reduction 1
+%assign do_hxor 0
+%endif
         ;; ghash blocks 0-3
-%if %0 == 22
+%if uload_and_shuffle != 0
         vmovdqu64       %%ZTMP9, [%%INPTR + %%INOFF + %%INDIS]
         vpshufb         %%ZTMP9, %%ZTMP9, %%SHUFM
 %else
@@ -256,21 +272,31 @@
 %if start_ghash != 0
         vpxorq          %%ZTMP9, %%ZTMP9, %%HASH
 %endif
+%if hk_broadcast != 0
+        vbroadcastf64x2 %%ZTMP8, [%%HKPTR + %%HKOFF + %%HKDIS]
+        vbroadcastf64x2 %%ZTMPA, [%%HKPTR + %%HKOFF + %%HKDIS + HKeyGap]
+%else
         vmovdqu64       %%ZTMP8, [%%HKPTR + %%HKOFF + %%HKDIS]
         vmovdqu64       %%ZTMPA, [%%HKPTR + %%HKOFF + %%HKDIS + HKeyGap]
+%endif
         vpclmulqdq      %%ZTMP0, %%ZTMP9, %%ZTMPA, 0x00 ; TLL = ML*KL
         vpclmulqdq      %%ZTMP1, %%ZTMP9, %%ZTMPA, 0x10 ; TLH = ML*KH
         vpclmulqdq      %%ZTMP2, %%ZTMP9, %%ZTMP8, 0x01 ; THL = MH*HL
         vpclmulqdq      %%ZTMP3, %%ZTMP9, %%ZTMP8, 0x11 ; THH = MH*HH
         ;; ghash blocks 4-7
-%if %0 == 22
+%if uload_and_shuffle != 0
         vmovdqu64       %%ZTMP9, [%%INPTR + %%INOFF + %%INDIS + 64]
         vpshufb         %%ZTMP9, %%ZTMP9, %%SHUFM
 %else
         vmovdqa64       %%ZTMP9, [%%INPTR + %%INOFF + %%INDIS + 64]
 %endif
+%if hk_broadcast != 0
+        vbroadcastf64x2 %%ZTMP8, [%%HKPTR + %%HKOFF + %%HKDIS + 64]
+        vbroadcastf64x2 %%ZTMPA, [%%HKPTR + %%HKOFF + %%HKDIS + HKeyGap + 64]
+%else
         vmovdqu64       %%ZTMP8, [%%HKPTR + %%HKOFF + %%HKDIS + 64]
         vmovdqu64       %%ZTMPA, [%%HKPTR + %%HKOFF + %%HKDIS + HKeyGap + 64]
+%endif
         vpclmulqdq      %%ZTMP4, %%ZTMP9, %%ZTMPA, 0x00 ; TLL = ML*KL
         vpclmulqdq      %%ZTMP5, %%ZTMP9, %%ZTMPA, 0x10 ; TLH = ML*KH
         vpclmulqdq      %%ZTMP6, %%ZTMP9, %%ZTMP8, 0x01 ; THL = MH*HL
@@ -284,14 +310,19 @@
         vpternlogq      %%GH, %%ZTMP1, %%ZTMP3, 0x96        ; T1 = THH + TLH
 %endif
         ;; ghash blocks 8-11
-%if %0 == 22
+%if uload_and_shuffle != 0
         vmovdqu64       %%ZTMP9, [%%INPTR + %%INOFF + %%INDIS + 128]
         vpshufb         %%ZTMP9, %%ZTMP9, %%SHUFM
 %else
         vmovdqa64       %%ZTMP9, [%%INPTR + %%INOFF + %%INDIS + 128]
 %endif
+%if hk_broadcast != 0
+        vbroadcastf64x2 %%ZTMP8, [%%HKPTR + %%HKOFF + %%HKDIS + 128]
+        vbroadcastf64x2 %%ZTMPA, [%%HKPTR + %%HKOFF + %%HKDIS + HKeyGap + 128]
+%else
         vmovdqu64       %%ZTMP8, [%%HKPTR + %%HKOFF + %%HKDIS + 128]
         vmovdqu64       %%ZTMPA, [%%HKPTR + %%HKOFF + %%HKDIS + HKeyGap + 128]
+%endif
         vpclmulqdq      %%ZTMP0, %%ZTMP9, %%ZTMPA, 0x00 ; TLL = ML*KL
         vpclmulqdq      %%ZTMP1, %%ZTMP9, %%ZTMPA, 0x10 ; TLH = ML*KH
         vpclmulqdq      %%ZTMP2, %%ZTMP9, %%ZTMP8, 0x01 ; THL = MH*HL
@@ -300,14 +331,19 @@
         vpternlogq      %%GL, %%ZTMP6, %%ZTMP4, 0x96        ; T2 = THL + TLL
         vpternlogq      %%GH, %%ZTMP7, %%ZTMP5, 0x96        ; T1 = THH + TLH
         ;; ghash blocks 12-15
-%if %0 == 22
+%if uload_and_shuffle != 0
         vmovdqu64       %%ZTMP9, [%%INPTR + %%INOFF + %%INDIS + 192]
         vpshufb         %%ZTMP9, %%ZTMP9, %%SHUFM
 %else
         vmovdqa64       %%ZTMP9, [%%INPTR + %%INOFF + %%INDIS + 192]
 %endif
+%if hk_broadcast != 0
+        vbroadcastf64x2 %%ZTMP8, [%%HKPTR + %%HKOFF + %%HKDIS + 192]
+        vbroadcastf64x2 %%ZTMPA, [%%HKPTR + %%HKOFF + %%HKDIS + HKeyGap + 192]
+%else
         vmovdqu64       %%ZTMP8, [%%HKPTR + %%HKOFF + %%HKDIS + 192]
         vmovdqu64       %%ZTMPA, [%%HKPTR + %%HKOFF + %%HKDIS + HKeyGap + 192]
+%endif
         vpclmulqdq      %%ZTMP4, %%ZTMP9, %%ZTMPA, 0x00 ; TLL = ML*KL
         vpclmulqdq      %%ZTMP5, %%ZTMP9, %%ZTMPA, 0x10 ; TLH = ML*KH
         vpclmulqdq      %%ZTMP6, %%ZTMP9, %%ZTMP8, 0x01 ; THL = MH*HL
@@ -323,7 +359,9 @@
         vpclmulqdq      %%HASH, %%GL, [rel POLY], 0x10
         vpshufd         %%ZTMP0, %%GL, 01001110b
         vpternlogq      %%HASH, %%GH, %%ZTMP0, 0x96
+%if do_hxor != 0
         VHPXORI4x128    %%HASH, %%ZTMP0
+%endif
 %endif
 %endmacro
 
@@ -803,23 +841,49 @@
 
         vmovdqa64       %%SHFMSK, [rel SHUF_MASK]
 
-%%_get_AAD_loop48x16:
-        cmp             %%T2, (48*16)
-        jb              %%_exit_AAD_loop48x16
+%%_get_AAD_loop2x48x16:
+        cmp             %%T2, (2*48*16)
+        jb              %%_get_AAD_loop48x16
 
-        GHASH_16        start, %%ZT5, %%ZT6, \
+        GHASH_16        start, hk_bcast, %%ZT5, %%ZT6, \
                         %%T1,  (0*64), 0, \
                         %%GDATA_KEY, HashKey_48, 0, ZWORD(%%AAD_HASH), \
                         %%ZT0, %%ZT8, %%ZT9, %%ZT10, %%ZT11, %%ZT12, \
                         %%ZT14, %%ZT15, %%ZT16, %%ZT1, %%ZT7, %%SHFMSK
 
-        GHASH_16        mid, %%ZT5, %%ZT6, \
+        GHASH_16        mid, hk_bcast, %%ZT5, %%ZT6, \
                         %%T1,  (4*64), 0, \
                         %%GDATA_KEY, HashKey_32, 0, NO_HASH_IN_OUT, \
                         %%ZT0, %%ZT8, %%ZT9, %%ZT10, %%ZT11, %%ZT12, \
                         %%ZT14, %%ZT15, %%ZT16, %%ZT1, %%ZT7, %%SHFMSK
 
-        GHASH_16        end_reduce, %%ZT5, %%ZT6, \
+        GHASH_16        end_reduce_no_hxor, hk_bcast, %%ZT5, %%ZT6, \
+                        %%T1,  (8*64), 0, \
+                        %%GDATA_KEY, HashKey_16, 0, ZWORD(%%AAD_HASH), \
+                        %%ZT0, %%ZT8, %%ZT9, %%ZT10, %%ZT11, %%ZT12, \
+                        %%ZT14, %%ZT15, %%ZT16, %%ZT1, %%ZT7, %%SHFMSK
+
+        add             %%T1, (48*16)
+        sub             %%T2, (48*16)
+        jmp             %%_get_AAD_loop2x48x16
+
+%%_get_AAD_loop48x16:
+        cmp             %%T2, (48*16)
+        jb              %%_exit_AAD_loop48x16
+
+        GHASH_16        start, hk_load, %%ZT5, %%ZT6, \
+                        %%T1,  (0*64), 0, \
+                        %%GDATA_KEY, HashKey_48, 0, ZWORD(%%AAD_HASH), \
+                        %%ZT0, %%ZT8, %%ZT9, %%ZT10, %%ZT11, %%ZT12, \
+                        %%ZT14, %%ZT15, %%ZT16, %%ZT1, %%ZT7, %%SHFMSK
+
+        GHASH_16        mid, hk_load, %%ZT5, %%ZT6, \
+                        %%T1,  (4*64), 0, \
+                        %%GDATA_KEY, HashKey_32, 0, NO_HASH_IN_OUT, \
+                        %%ZT0, %%ZT8, %%ZT9, %%ZT10, %%ZT11, %%ZT12, \
+                        %%ZT14, %%ZT15, %%ZT16, %%ZT1, %%ZT7, %%SHFMSK
+
+        GHASH_16        end_reduce, hk_load, %%ZT5, %%ZT6, \
                         %%T1,  (8*64), 0, \
                         %%GDATA_KEY, HashKey_16, 0, ZWORD(%%AAD_HASH), \
                         %%ZT0, %%ZT8, %%ZT9, %%ZT10, %%ZT11, %%ZT12, \
@@ -847,13 +911,13 @@
         add             %%T3, HashKey_1 + 16
 
         ; Get next 16 blocks
-        GHASH_16        start, %%ZT5, %%ZT6, \
+        GHASH_16        start, hk_load, %%ZT5, %%ZT6, \
                         %%T1,  (0*64), 0, \
                         %%GDATA_KEY, %%T3, 0, ZWORD(%%AAD_HASH), \
                         %%ZT0, %%ZT8, %%ZT9, %%ZT10, %%ZT11, %%ZT12, \
                         %%ZT14, %%ZT15, %%ZT16, %%ZT1, %%ZT7, %%SHFMSK
 
-        GHASH_16        mid, %%ZT5, %%ZT6, \
+        GHASH_16        mid, hk_load, %%ZT5, %%ZT6, \
                         %%T1,  (4*64), 0, \
                         %%GDATA_KEY, {%%T3 + 16*16}, 0, ZWORD(%%AAD_HASH), \
                         %%ZT0, %%ZT8, %%ZT9, %%ZT10, %%ZT11, %%ZT12, \
@@ -864,13 +928,13 @@
         jmp             %%_less_than_16x16_remain
 
 %%_equal_32x16:
-        GHASH_16        start, %%ZT5, %%ZT6, \
+        GHASH_16        start, hk_load, %%ZT5, %%ZT6, \
                         %%T1,  (0*64), 0, \
                         %%GDATA_KEY, HashKey_32, 0, ZWORD(%%AAD_HASH), \
                         %%ZT0, %%ZT8, %%ZT9, %%ZT10, %%ZT11, %%ZT12, \
                         %%ZT14, %%ZT15, %%ZT16, %%ZT1, %%ZT7, %%SHFMSK
 
-        GHASH_16        end_reduce, %%ZT5, %%ZT6, \
+        GHASH_16        end_reduce, hk_load, %%ZT5, %%ZT6, \
                         %%T1,  (4*64), 0, \
                         %%GDATA_KEY, HashKey_16, 0, ZWORD(%%AAD_HASH), \
                         %%ZT0, %%ZT8, %%ZT9, %%ZT10, %%ZT11, %%ZT12, \
@@ -884,7 +948,7 @@
         neg             %%T3
         add             %%T3, HashKey_1 + 16
 
-        GHASH_16        start, %%ZT5, %%ZT6, \
+        GHASH_16        start, hk_load, %%ZT5, %%ZT6, \
                         %%T1,  (0*64), 0, \
                         %%GDATA_KEY, %%T3, 0, ZWORD(%%AAD_HASH), \
                         %%ZT0, %%ZT8, %%ZT9, %%ZT10, %%ZT11, %%ZT12, \
@@ -894,7 +958,7 @@
         jmp             %%_less_than_16x16_remain
 
 %%_equal_16x16:
-        GHASH_16        start_reduce, %%ZT5, %%ZT6, \
+        GHASH_16        start_reduce, hk_load, %%ZT5, %%ZT6, \
                         %%T1,  (0*64), 0, \
                         %%GDATA_KEY, HashKey_16, 0, ZWORD(%%AAD_HASH), \
                         %%ZT0, %%ZT8, %%ZT9, %%ZT10, %%ZT11, %%ZT12, \
@@ -2214,7 +2278,7 @@
 %xdefine %%GHASH_TYPE start_reduce
 %endif
 
-        GHASH_16        %%GHASH_TYPE, %%TO_REDUCE_H, %%TO_REDUCE_L, \
+        GHASH_16        %%GHASH_TYPE, hk_load, %%TO_REDUCE_H, %%TO_REDUCE_L, \
                         rsp, %%GHASHIN_BLK_OFFSET, 0, %%GDATA, %%HASHKEY_OFFSET, 0, %%HASH_IN_OUT, \
                         %%ZT00, %%ZT01, %%ZT02, %%ZT03, %%ZT04, %%ZT05, %%ZT06, %%ZT07, \
                         %%ZT08, %%ZT09, %%ZT23
@@ -3248,7 +3312,7 @@
         sub             DWORD(%%HASHK_PTR), DWORD(%%IA0)
 
         ;; ==== GHASH 32 blocks and follow with reduction
-        GHASH_16        start, %%GH, %%GL, rsp, STACK_LOCAL_OFFSET, (0 * 16), %%GDATA_KEY, %%HASHK_PTR, 0, %%AAD_HASHz, \
+        GHASH_16        start, hk_load, %%GH, %%GL, rsp, STACK_LOCAL_OFFSET, (0 * 16), %%GDATA_KEY, %%HASHK_PTR, 0, %%AAD_HASHz, \
                         %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, %%ZTMP6, %%ZTMP7, %%ZTMP8, %%ZTMP9, %%ZTMP23
 
         ;; ==== GHASH 1 x 16 blocks with reduction + cipher and ghash on the reminder
@@ -3314,7 +3378,7 @@
                 no_reduction, %%ENC_DEC, data_in_out_offset, no_ghash_in
 
         ;; ==== GHASH 16 blocks with reduction
-        GHASH_16        end_reduce, %%GH, %%GL, rsp, STACK_LOCAL_OFFSET, (32 * 16), %%GDATA_KEY, HashKey_16, 0, %%AAD_HASHz, \
+        GHASH_16        end_reduce, hk_load, %%GH, %%GL, rsp, STACK_LOCAL_OFFSET, (32 * 16), %%GDATA_KEY, HashKey_16, 0, %%AAD_HASHz, \
                         %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, %%ZTMP6, %%ZTMP7, %%ZTMP8, %%ZTMP9, %%ZTMP23
 
         ;; ==== GHASH 1 x 16 blocks with reduction + cipher and ghash on the reminder
@@ -3374,7 +3438,7 @@
                 first_time, %%ENC_DEC, data_in_out_offset, %%AAD_HASHz
 
         ;; ==== GHASH 1 x 16 blocks
-        GHASH_16        mid, %%GH, %%GL, rsp, STACK_LOCAL_OFFSET, (16 * 16), %%GDATA_KEY, HashKey_32, 0, no_hash_input, \
+        GHASH_16        mid, hk_load, %%GH, %%GL, rsp, STACK_LOCAL_OFFSET, (16 * 16), %%GDATA_KEY, HashKey_32, 0, no_hash_input, \
                         %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, %%ZTMP6, %%ZTMP7, %%ZTMP8, %%ZTMP9, %%ZTMP23
 
         ;; ==== GHASH 1 x 16 blocks with reduction + cipher and ghash on the reminder
