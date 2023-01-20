@@ -2119,7 +2119,7 @@
 
 %if do_reduction != 0
         ;; THH1 holds reduced hash value
-        ;; - normally do "vmovdqa64 XWORD(%%HASH_IN_OUT), XWORD(%%GH1H)"
+        ;; - normally do "vmovdqa64 XWORD(%%HASH_IN_OUT), XWORD(%%THH1)"
         ;; - register rename trick obsoletes the above move
 %endif
 
@@ -2293,7 +2293,7 @@
 ;;; - encrypts 16 blocks at a time
 ;;; - ghash the 16 previously encrypted ciphertext blocks
 ;;; - no partial block or multi_call handling here
-%macro  GHASH_16_ENCRYPT_16_PARALLEL 41
+%macro  GHASH_16_ENCRYPT_16_PARALLEL 42
 %define %%GDATA                 %1  ; [in] key pointer
 %define %%CIPH_PLAIN_OUT        %2  ; [in] pointer to output buffer
 %define %%PLAIN_CIPH_IN         %3  ; [in] pointer to input buffer
@@ -2331,10 +2331,12 @@
 %define %%ADDBE_1234            %35 ; [in] ZMM with 4x128bits 1, 2, 3 and 4 in big-endian
 %define %%TO_REDUCE_L           %36 ; [in/out] ZMM for low 4x128-bit GHASH sum
 %define %%TO_REDUCE_H           %37 ; [in/out] ZMM for hi 4x128-bit GHASH sum
-%define %%DO_REDUCTION          %38 ; [in] "no_reduction", "final_reduction", "first_time"
+%define %%DO_REDUCTION          %38 ; [in] "no_reduction", "final_reduction", "first_time" or
+                                    ; "final_reduction_no_hxor"
 %define %%ENC_DEC               %39 ; [in] cipher direction
 %define %%DATA_DISPL            %40 ; [in] fixed numerical data displacement/offset
 %define %%GHASH_IN              %41 ; [in] current GHASH value or "no_ghash_in"
+%define %%HK_LOAD_TYPE          %42 ; [in] hash key load type: hk_load or hk_bcast
 
 %define %%B00_03 %%ZT1
 %define %%B04_07 %%ZT2
@@ -2369,6 +2371,28 @@
 %define %%GHDAT1  %%ZT21
 %define %%GHDAT2  %%ZT22
 
+%assign hk_broadcast 0          ; normal load
+%assign do_hash_reduction 0     ; no reduction
+%assign do_hash_hxor 0          ; no hxor on reduced hash
+%assign is_hash_start 0         ; continue with hash
+
+%ifidn %%HK_LOAD_TYPE, hk_bcast
+%assign hk_broadcast 1
+%endif
+
+%ifidn %%DO_REDUCTION, final_reduction
+%assign do_hash_reduction 1
+%assign do_hash_hxor 1
+%endif
+
+%ifidn %%DO_REDUCTION, final_reduction_no_hxor
+%assign do_hash_reduction 1
+%endif
+
+%ifidn %%DO_REDUCTION, first_time
+%assign is_hash_start 1
+%endif
+
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;; prepare counter blocks
 
@@ -2400,8 +2424,13 @@
 %else
         vmovdqa64       %%GHDAT1, [rsp + %%GHASHIN_BLK_OFFSET + (0*64)]
 %endif
+%if hk_broadcast != 0
+        vbroadcastf64x2 %%GHKEY1, [%%GDATA + %%HASHKEY_OFFSET + (0*64)]
+        vbroadcastf64x2 %%GHKEY2, [%%GDATA + %%HASHKEY_OFFSET + (0*64) + HKeyGap]
+%else
         vmovdqu64       %%GHKEY1, [%%GDATA + %%HASHKEY_OFFSET + (0*64)]
         vmovdqu64       %%GHKEY2, [%%GDATA + %%HASHKEY_OFFSET + (0*64) + HKeyGap]
+%endif
 
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;; save counter for the next round
@@ -2433,8 +2462,13 @@
         vpclmulqdq      %%THL1, %%GHDAT1, %%GHKEY1, 0x01     ; THL = MH*HL
         vpclmulqdq      %%THH1, %%GHDAT1, %%GHKEY1, 0x11     ; THH = MH*HH
 
+%if hk_broadcast != 0
+        vbroadcastf64x2 %%GHKEY1, [%%GDATA + %%HASHKEY_OFFSET + (1*64)]
+        vbroadcastf64x2 %%GHKEY2, [%%GDATA + %%HASHKEY_OFFSET + (1*64) + HKeyGap]
+%else
         vmovdqu64       %%GHKEY1, [%%GDATA + %%HASHKEY_OFFSET + (1*64)]
         vmovdqu64       %%GHKEY2, [%%GDATA + %%HASHKEY_OFFSET + (1*64) + HKeyGap]
+%endif
         vmovdqa64       %%GHDAT1, [rsp + %%GHASHIN_BLK_OFFSET + (2*64)]
 
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -2452,8 +2486,13 @@
         vpclmulqdq      %%THL2, %%GHDAT2, %%GHKEY1, 0x01     ; THL = MH*HL
         vpclmulqdq      %%THH2, %%GHDAT2, %%GHKEY1, 0x11     ; THH = MH*HH
 
+%if hk_broadcast != 0
+        vbroadcastf64x2 %%GHKEY1, [%%GDATA + %%HASHKEY_OFFSET + (2*64)]
+        vbroadcastf64x2 %%GHKEY2, [%%GDATA + %%HASHKEY_OFFSET + (2*64) + HKeyGap]
+%else
         vmovdqu64       %%GHKEY1, [%%GDATA + %%HASHKEY_OFFSET + (2*64)]
         vmovdqu64       %%GHKEY2, [%%GDATA + %%HASHKEY_OFFSET + (2*64) + HKeyGap]
+%endif
         vmovdqa64       %%GHDAT2, [rsp + %%GHASHIN_BLK_OFFSET + (3*64)]
 
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -2471,8 +2510,13 @@
         vpclmulqdq      %%THL3, %%GHDAT1, %%GHKEY1, 0x01     ; THL = MH*HL
         vpclmulqdq      %%THH3, %%GHDAT1, %%GHKEY1, 0x11     ; THH = MH*HH
 
+%if hk_broadcast != 0
+        vbroadcastf64x2 %%GHKEY1, [%%GDATA + %%HASHKEY_OFFSET + (3*64)]
+        vbroadcastf64x2 %%GHKEY2, [%%GDATA + %%HASHKEY_OFFSET + (3*64) + HKeyGap]
+%else
         vmovdqu64       %%GHKEY1, [%%GDATA + %%HASHKEY_OFFSET + (3*64)]
         vmovdqu64       %%GHKEY2, [%%GDATA + %%HASHKEY_OFFSET + (3*64) + HKeyGap]
+%endif
 
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;; AES rounds 3
@@ -2528,8 +2572,8 @@
         vbroadcastf64x2 %%AESKEY1, [%%GDATA + (16 * 8)]
 
         ;; =================================================
-        ;; gather GHASH in GH1L (low) and GH1H (high)
-%ifidn %%DO_REDUCTION, first_time
+        ;; gather GHASH in TO_REDUCE_H/L
+%if is_hash_start != 0
         vpxorq          %%TO_REDUCE_L, %%TLL2, %%THL2
         vpxorq          %%TO_REDUCE_H, %%THH2, %%TLH2
         vpternlogq      %%TO_REDUCE_L, %%TLL1, %%THL1, 0x96
@@ -2552,7 +2596,7 @@
 
         ;; =================================================
         ;; new reduction
-%ifidn %%DO_REDUCTION, final_reduction
+%if do_hash_reduction != 0
         vpclmulqdq      %%THH1, %%TO_REDUCE_L, [rel POLY], 0x10
         vpshufd         %%TO_REDUCE_L, %%TO_REDUCE_L, 01001110b
         vpternlogq      %%THH1, %%TO_REDUCE_H, %%TO_REDUCE_L, 0x96
@@ -2565,6 +2609,12 @@
         vaesenc         %%B08_11, %%B08_11, %%AESKEY1
         vaesenc         %%B12_15, %%B12_15, %%AESKEY1
         vbroadcastf64x2 %%AESKEY1, [%%GDATA + (16 * 10)]
+
+        ;; =================================================
+        ;; horizontal xor of 4 reduced hashes
+%if do_hash_hxor != 0
+        VHPXORI4x128    %%THH1, %%TLL1
+%endif
 
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;; AES round 9
@@ -2605,12 +2655,6 @@
         vaesenc         %%B12_15, %%B12_15, %%AESKEY2
 %endif ; GCM256 / NROUNDS = 13 (15 including the first and the last)
 %endif ; GCM192 / NROUNDS = 11 (13 including the first and the last)
-
-        ;; =================================================
-        ;; horizontal xor of 4 reduced hashes
-%ifidn %%DO_REDUCTION, final_reduction
-        VHPXORI4x128    %%THH1, %%TLL1
-%endif
 
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;; the last AES round
@@ -2654,9 +2698,9 @@
         vmovdqa64       [rsp + %%AESOUT_BLK_OFFSET + (2*64)], %%B08_11
         vmovdqa64       [rsp + %%AESOUT_BLK_OFFSET + (3*64)], %%B12_15
 
-%ifidn %%DO_REDUCTION, final_reduction
+%if do_hash_reduction != 0
         ;; =================================================
-        ;; Return GHASH value  through %%GH1H / %THH1
+        ;; Return GHASH value  through %THH1
 %endif
 
 %endmacro                       ; GHASH_16_ENCRYPT_16_PARALLEL
@@ -3243,7 +3287,7 @@
                 %%ZTMP16, %%ZTMP17, %%ZTMP18, %%ZTMP19, \
                 %%ZTMP20, %%ZTMP21, %%ZTMP22, \
                 %%ADDBE_4x4, %%ADDBE_1234, %%GL, %%GH, \
-                first_time, %%ENC_DEC, data_in_out_offset, %%AAD_HASHz
+                first_time, %%ENC_DEC, data_in_out_offset, %%AAD_HASHz, hk_load
 
         ;; ==== AES-CTR + GHASH - 16 blocks, no reduction
 %assign aesout_offset (STACK_LOCAL_OFFSET + (0 * 16))
@@ -3260,7 +3304,7 @@
                 %%ZTMP16, %%ZTMP17, %%ZTMP18, %%ZTMP19, \
                 %%ZTMP20, %%ZTMP21, %%ZTMP22, \
                 %%ADDBE_4x4, %%ADDBE_1234, %%GL, %%GH, \
-                no_reduction, %%ENC_DEC, data_in_out_offset, no_ghash_in
+                no_reduction, %%ENC_DEC, data_in_out_offset, no_ghash_in, hk_load
 
         ;; ==== AES-CTR + GHASH - 16 blocks, reduction
 %assign aesout_offset (STACK_LOCAL_OFFSET + (16 * 16))
@@ -3277,7 +3321,7 @@
                 %%ZTMP16, %%ZTMP17, %%ZTMP18, %%ZTMP19, \
                 %%ZTMP20, %%ZTMP21, %%ZTMP22, \
                 %%ADDBE_4x4, %%ADDBE_1234, %%GL, %%GH, \
-                final_reduction, %%ENC_DEC, data_in_out_offset, no_ghash_in
+                final_reduction, %%ENC_DEC, data_in_out_offset, no_ghash_in, hk_load
 
         ;; === xor cipher block 0 with GHASH (ZT4)
         vmovdqa64       %%AAD_HASHx, XWORD(%%ZTMP4)
@@ -3358,7 +3402,7 @@
                 %%ZTMP16, %%ZTMP17, %%ZTMP18, %%ZTMP19, \
                 %%ZTMP20, %%ZTMP21, %%ZTMP22, \
                 %%ADDBE_4x4, %%ADDBE_1234, %%GL, %%GH, \
-                first_time, %%ENC_DEC, data_in_out_offset, %%AAD_HASHz
+                first_time, %%ENC_DEC, data_in_out_offset, %%AAD_HASHz, hk_load
 
         ;; ==== AES-CTR + GHASH - 16 blocks, no reduction
 %assign aesout_offset (STACK_LOCAL_OFFSET + (0 * 16))
@@ -3375,7 +3419,7 @@
                 %%ZTMP16, %%ZTMP17, %%ZTMP18, %%ZTMP19, \
                 %%ZTMP20, %%ZTMP21, %%ZTMP22, \
                 %%ADDBE_4x4, %%ADDBE_1234, %%GL, %%GH, \
-                no_reduction, %%ENC_DEC, data_in_out_offset, no_ghash_in
+                no_reduction, %%ENC_DEC, data_in_out_offset, no_ghash_in, hk_load
 
         ;; ==== GHASH 16 blocks with reduction
         GHASH_16        end_reduce, hk_load, %%GH, %%GL, rsp, STACK_LOCAL_OFFSET, (32 * 16), %%GDATA_KEY, HashKey_16, 0, %%AAD_HASHz, \
@@ -3435,7 +3479,7 @@
                 %%ZTMP16, %%ZTMP17, %%ZTMP18, %%ZTMP19, \
                 %%ZTMP20, %%ZTMP21, %%ZTMP22, \
                 %%ADDBE_4x4, %%ADDBE_1234, %%GL, %%GH, \
-                first_time, %%ENC_DEC, data_in_out_offset, %%AAD_HASHz
+                first_time, %%ENC_DEC, data_in_out_offset, %%AAD_HASHz, hk_load
 
         ;; ==== GHASH 1 x 16 blocks
         GHASH_16        mid, hk_load, %%GH, %%GL, rsp, STACK_LOCAL_OFFSET, (16 * 16), %%GDATA_KEY, HashKey_32, 0, no_hash_input, \
