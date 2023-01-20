@@ -260,7 +260,6 @@ lib_objs1 = \
 	$(OBJ_DIR)\zuc_x16_vaes_avx512.obj \
 	$(OBJ_DIR)\zuc_iv.obj \
 	$(OBJ_DIR)\snow3g_sse.obj \
-	$(OBJ_DIR)\snow3g_uea2_by4_sse.obj \
 	$(OBJ_DIR)\snow3g_uia2_by4_sse.obj \
 	$(OBJ_DIR)\snow3g_avx.obj \
 	$(OBJ_DIR)\snow3g_avx2.obj \
