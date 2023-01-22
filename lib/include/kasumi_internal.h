@@ -158,26 +158,7 @@ typedef union SafeBuffer {
 
 #define FIp1(data, key1, key2, key3)                                           \
         do {                                                                   \
-                uint16_t datal, datah, datalh, s7_data, s9_data;        \
-                                                                               \
-                (data) ^= (key1);                                              \
-                datalh = KASUMI_SBOX_AVX2(data);                               \
-                s7_data = datalh & 0x7F;                                       \
-                s9_data = datalh >> 7;   \
-                datah = data >> 7;                                             \
-                datal = data & 0x7F; \
-                datah = s9_data ^ (datal);                                   \
-                datal = s7_data ^ (datah & 0x7F);  \
-                datal ^= (key2 >> 9); \
-                datah ^= (key2 & 0x1ff) ; \
-                (data) = (datah << 7) ^ datal;                                 \
-                datalh = KASUMI_SBOX_AVX2(data);                               \
-                s7_data = datalh & 0x7F;                                       \
-                s9_data = datalh >> 7;                 \
-                datah = s9_data ^ (datal);                                     \
-                datal = s7_data ^ (datah & 0x7f);                            \
-                (data) = (datal << 9) ^ datah;                                 \
-                (data) ^= (key3);\
+                (data) = KASUMI_FI_AVX2(data, key1, key2, key3); \
         } while (0)
 
 #define FLpi(key1, key2, res_h, res_l)                                                             \

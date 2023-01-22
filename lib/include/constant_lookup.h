@@ -56,6 +56,8 @@
         lookup_64bit_avx(_table, _idx, _size)
 #define KASUMI_SBOX_AVX2(_num) \
         kasumi_sbox_avx2(_num)
+#define KASUMI_FI_AVX2(_data, _key1, _key2, _key3) \
+        kasumi_FI_avx2(_data, _key1, _key2, _key3)
 
 #else
 #define LOOKUP8_SSE(_table, _idx, _size)  _table[_idx]
@@ -96,6 +98,9 @@ lookup_8bit_avx(const void *table, const uint32_t idx, const uint32_t size);
 
 IMB_DLL_LOCAL uint16_t
 kasumi_sbox_avx2(const uint16_t num);
+
+IMB_DLL_LOCAL uint16_t
+kasumi_FI_avx2(const uint16_t data, const uint16_t key1, const uint16_t key2, const uint16_t key3);
 
 /**
  * @brief Constant time SSE lookup function on variable size table
