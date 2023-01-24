@@ -36,6 +36,7 @@ if(NOT PROJECT_BUILD)
 endif()
 
 # set default options
+option(AESNI_EMU "AESNI emulation support" OFF)
 option(SAFE_PARAM "Parameter checking" ON)
 option(SAFE_DATA "Clear sensitive data from registers and memory" ON)
 option(SAFE_LOOKUP "Secure table lookups" ON)
@@ -63,13 +64,6 @@ else()
   if(NOT (${CMAKE_GENERATOR_PLATFORM} MATCHES "x64"))
     message(FATAL_ERROR "Only 64-bit platform supported. Re-run with '-A x64' option.")
   endif()
-endif()
-
-# temporarily enable AESNI emulation build by default on Windows
-if(WINDOWS)
-  option(AESNI_EMU "AESNI emulation support" ON)
-else()
-  option(AESNI_EMU "AESNI emulation support" OFF)
 endif()
 
 message(STATUS "AESNI emulation support... ${AESNI_EMU}")
@@ -202,7 +196,7 @@ file(GLOB SRC_FILES_SSE_T3 "${DIR_SSE_T3}/*.c")
 file(GLOB SRC_FILES_X86_64 "${DIR_X86_64}/*.c")
 file(GLOB SRC_FILES_NO_AESNI "${DIR_NO_AESNI}/*.c")
 if(WINDOWS)
-  set(SRC_DEF_FILE libIPSec_MB.def)
+  set(SRC_DEF_FILE ${LIB}_lnk.def)
 endif()
 
 # set compiler flags
@@ -302,7 +296,8 @@ if(AESNI_EMU)
   list(APPEND SRC_FILES_C ${SRC_FILES_NO_AESNI})
 endif()
 
-if(NOT LINUX)
+if(WINDOWS)
+  # set extra windows compiler flags
   foreach(FILE ${SRC_FILES_C})
     set_source_files_properties(${FILE} PROPERTIES
       COMPILE_DEFINITIONS "${LIB_DEFINES}")
@@ -313,6 +308,19 @@ if(NOT LINUX)
       COMPILE_DEFINITIONS "${LIB_DEFINES}"
       COMPILE_OPTIONS "$<$<CONFIG:RELEASE>:/Od>")
   endforeach()
+
+  # generate windows DEF file
+  if(AESNI_EMU)
+    set(GEN_DEF_FILE_CMD "copy /Y ${LIB}.def ${SRC_DEF_FILE}")
+  else()
+    # remove AESNI emulation symbol exports
+    set(GEN_DEF_FILE_CMD "findstr /v _no_aesni ${LIB}.def > ${SRC_DEF_FILE}")
+  endif()
+  execute_process(
+    COMMAND cmd /C ${GEN_DEF_FILE_CMD}
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    OUTPUT_QUIET
+  )
 endif()
 
 # add the library

@@ -37,5 +37,8 @@ if("${CMAKE_BUILD_TYPE}" STREQUAL "")
   set(CMAKE_BUILD_TYPE "Release")
 endif()
 
+# Flag to force full project build
+set(PROJECT_BUILD TRUE)
+
 add_subdirectory(lib)
 add_subdirectory(test)
