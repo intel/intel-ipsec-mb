@@ -30,8 +30,12 @@
 cmake_minimum_required(VERSION 3.16)
 project(intel-ipsec-mb)
 
+# Ensure building entire project
+if(NOT PROJECT_BUILD)
+  message(FATAL_ERROR "Please run CMake from project root directory")
+endif()
+
 # set default options
-option(AESNI_EMU "AESNI emulation support" OFF)
 option(SAFE_PARAM "Parameter checking" ON)
 option(SAFE_DATA "Clear sensitive data from registers and memory" ON)
 option(SAFE_LOOKUP "Secure table lookups" ON)
@@ -39,6 +43,7 @@ option(SAFE_OPTIONS "Library security features" ON)
 option(NO_COMPAT_IMB_API_053 "Disable compatibility with v0.53" ON)
 option(BUILD_SHARED_LIBS "Build shared library" ON)
 set(EXTRA_CFLAGS "" CACHE STRING "Extra compiler flags")
+set(CMAKE_GENERATOR_PLATFORM "x64" CACHE STRING "Platform arch" FORCE)
 
 # disable all SAFE options when SAFE_OPTIONS false
 if(NOT SAFE_OPTIONS)
@@ -46,6 +51,25 @@ if(NOT SAFE_OPTIONS)
   set(SAFE_PARAM OFF)
   set(SAFE_DATA OFF)
   set(SAFE_LOOKUP OFF)
+endif()
+
+# detect Linux or Windows
+if(CMAKE_HOST_UNIX)
+  set(LINUX 1)
+  set(LIB IPSec_MB) # 'lib' prefix assumed on Linux
+else()
+  set(WINDOWS 1)
+  set(LIB libIPSec_MB)
+  if(NOT (${CMAKE_GENERATOR_PLATFORM} MATCHES "x64"))
+    message(FATAL_ERROR "Only 64-bit platform supported. Re-run with '-A x64' option.")
+  endif()
+endif()
+
+# temporarily enable AESNI emulation build by default on Windows
+if(WINDOWS)
+  option(AESNI_EMU "AESNI emulation support" ON)
+else()
+  option(AESNI_EMU "AESNI emulation support" OFF)
 endif()
 
 message(STATUS "AESNI emulation support... ${AESNI_EMU}")
@@ -56,6 +80,9 @@ message(STATUS "SAFE_LOOKUP...             ${SAFE_LOOKUP}")
 message(STATUS "BUILD_SHARED_LIBS...       ${BUILD_SHARED_LIBS}")
 message(STATUS "EXTRA_CFLAGS...            ${EXTRA_CFLAGS}")
 message(STATUS "NO_COMPAT_IMB_API_053...   ${NO_COMPAT_IMB_API_053}")
+message(STATUS "CMAKE_GENERATOR...         ${CMAKE_GENERATOR}")
+message(STATUS "PLATFORM...                ${CMAKE_GENERATOR_PLATFORM}")
+message(STATUS "BUILD_TYPE...              ${CMAKE_BUILD_TYPE}")
 
 # set directories
 set(DIR_CURRENT ${CMAKE_CURRENT_SOURCE_DIR}/)
@@ -90,18 +117,53 @@ if(AESNI_EMU)
 endif()
 
 # set compiler definitions
-set(LIB_DEFINES -DLINUX)
+if(LINUX)
+  set(LIB_DEFINES -DLINUX)
+else()
+  set(LIB_DEFINES )
+endif()
+
+# enable SAFE OPTIONS
 if(SAFE_DATA)
-  list(APPEND LIB_DEFINES -DSAFE_DATA)
+  if(LINUX)
+    list(APPEND LIB_DEFINES -DSAFE_DATA)
+  else()
+    list(APPEND LIB_DEFINES SAFE_DATA)
+  endif()
+  string(APPEND CMAKE_ASM_NASM_FLAGS " -DSAFE_DATA")
 endif()
 if(SAFE_PARAM)
-  list(APPEND LIB_DEFINES -DSAFE_PARAM)
+  if(LINUX)
+    list(APPEND LIB_DEFINES -DSAFE_PARAM)
+  else()
+    list(APPEND LIB_DEFINES SAFE_PARAM)
+  endif()
+  string(APPEND CMAKE_ASM_NASM_FLAGS " -DSAFE_PARAM")
 endif()
 if(SAFE_LOOKUP)
-  list(APPEND LIB_DEFINES -DSAFE_LOOKUP)
+  if(LINUX)
+    list(APPEND LIB_DEFINES -DSAFE_LOOKUP)
+  else()
+    list(APPEND LIB_DEFINES SAFE_LOOKUP)
+  endif()
+  string(APPEND CMAKE_ASM_NASM_FLAGS " -DSAFE_LOOKUP")
 endif()
+if(AESNI_EMU)
+  if(LINUX)
+    list(APPEND LIB_DEFINES -DAESNI_EMU)
+  else()
+    list(APPEND LIB_DEFINES AESNI_EMU)
+  endif()
+  string(APPEND CMAKE_ASM_NASM_FLAGS " -DAESNI_EMU")
+endif()
+
+# enable backward compatibility
 if(NO_COMPAT_IMB_API_053)
-  list(APPEND LIB_DEFINES -DNO_COMPAT_IMB_API_053)
+  if(LINUX)
+    list(APPEND LIB_DEFINES -DNO_COMPAT_IMB_API_053)
+  else()
+    list(APPEND LIB_DEFINES NO_COMPAT_IMB_API_053)
+  endif()
 endif()
 
 # set up NASM compilation
@@ -118,7 +180,14 @@ foreach(DIR ${DIR_SOURCES})
 endforeach()
 
 # set NASM flags
-set(CMAKE_ASM_NASM_FLAGS "-Werror -felf64 -Xgnu -gdwarf -I${DIR_INCLUDE}")
+if(LINUX)
+  string(APPEND CMAKE_ASM_NASM_FLAGS " -Werror -felf64 -Xgnu -gdwarf -I${DIR_INCLUDE}")
+else()
+  # Windows
+  string(APPEND CMAKE_ASM_NASM_FLAGS " -Werror -Xvc -DWIN_ABI")
+  set_source_files_properties(${SRC_FILES_ASM} PROPERTIES
+    COMPILE_FLAGS "$<$<CONFIG:DEBUG>:-gcv8>")
+endif()
 
 # generate list of C source files
 file(GLOB SRC_FILES_AVX_T1 "${DIR_AVX_T1}/*.c")
@@ -132,69 +201,90 @@ file(GLOB SRC_FILES_SSE_T2 "${DIR_SSE_T2}/*.c")
 file(GLOB SRC_FILES_SSE_T3 "${DIR_SSE_T3}/*.c")
 file(GLOB SRC_FILES_X86_64 "${DIR_X86_64}/*.c")
 file(GLOB SRC_FILES_NO_AESNI "${DIR_NO_AESNI}/*.c")
+if(WINDOWS)
+  set(SRC_DEF_FILE libIPSec_MB.def)
+endif()
 
 # set compiler flags
-set_source_files_properties(
-  ${SRC_FILES_AVX_T1} ${SRC_FILES_AVX_T2}
-  PPROPERTIES COMPILE_FLAGS
-  "-march=sandybridge -maes -mpclmul")
-set_source_files_properties(
-  ${SRC_FILES_AVX2_T1} ${SRC_FILES_AVX2_T2}
-  PPROPERTIES COMPILE_FLAGS
-  "-march=haswell -maes -mpclmul")
-set_source_files_properties(
-  ${SRC_FILES_AVX512_T1} ${SRC_FILES_AVX512_T2}
-  PPROPERTIES COMPILE_FLAGS 
-  "-march=broadwell -maes -mpclmul")
-set_source_files_properties(
-  ${SRC_FILES_SSE_T1} ${SRC_FILES_SSE_T2} ${SRC_FILES_SSE_T3} 
-  PROPERTIES COMPILE_FLAGS
-  "-march=nehalem -maes -mpclmul")
-set_source_files_properties(
-  ${SRC_FILES_X86_64}
-  PROPERTIES COMPILE_FLAGS 
-  "-msse4.2")
-if(AESNI_EMU)
+# linux flags
+if(LINUX)
   set_source_files_properties(
-    ${SRC_FILES_NO_AESNI}
+    ${SRC_FILES_AVX_T1} ${SRC_FILES_AVX_T2}
+    PPROPERTIES COMPILE_FLAGS
+    "-march=sandybridge -maes -mpclmul")
+  set_source_files_properties(
+    ${SRC_FILES_AVX2_T1} ${SRC_FILES_AVX2_T2}
+    PPROPERTIES COMPILE_FLAGS
+    "-march=haswell -maes -mpclmul")
+  set_source_files_properties(
+    ${SRC_FILES_AVX512_T1} ${SRC_FILES_AVX512_T2}
+    PPROPERTIES COMPILE_FLAGS
+    "-march=broadwell -maes -mpclmul")
+  set_source_files_properties(
+    ${SRC_FILES_SSE_T1} ${SRC_FILES_SSE_T2} ${SRC_FILES_SSE_T3}
     PROPERTIES COMPILE_FLAGS
-    "-march=nehalem -mno-pclmul")
-  list(APPEND SOURCES ${SRC_FILES_NO_AESNI})
+    "-march=nehalem -maes -mpclmul")
+  set_source_files_properties(
+    ${SRC_FILES_X86_64}
+    PROPERTIES COMPILE_FLAGS
+    "-msse4.2")
+  if(AESNI_EMU)
+    set_source_files_properties(
+      ${SRC_FILES_NO_AESNI}
+      PROPERTIES COMPILE_FLAGS
+      "-march=nehalem -mno-pclmul")
+  endif()
+
+  set(CMAKE_C_FLAGS "
+    -fPIC
+    -W
+    -Wall
+    -Wextra
+    -Wmissing-declarations
+    -Wpointer-arith
+    -Wcast-qual
+    -Wundef
+    -Wwrite-strings
+    -Wformat
+    -Wformat-security
+    -Wunreachable-code
+    -Wmissing-noreturn
+    -Wsign-compare
+    -Wno-endif-labels
+    -Wstrict-prototypes
+    -Wmissing-prototypes
+    -Wold-style-definition
+    -fno-delete-null-pointer-checks
+    -fwrapv"
+    )
+  # -fno-strict-overflow is not supported by clang
+  if(CMAKE_COMPILER_IS_GNUCC)
+    string(APPEND CMAKE_C_FLAGS " -fno-strict-overflow")
+  endif()
+  if(${CMAKE_BUILD_TYPE} STREQUAL "Debug")
+    string(APPEND CMAKE_C_FLAGS " -g -DDEBUG")
+    string(APPEND CMAKE_C_FLAGS " -O0")
+  else()
+    string(APPEND CMAKE_C_FLAGS " -O2 -fstack-protector -d_fortify_source=2")
+  endif()
+else()
+  # Windows flags
+  set(CMAKE_C_FLAGS "/nologo /Y- /W3 /WX- /Gm- /fp:precise /EHsc")
+  set(CMAKE_C_FLAGS_DEBUG "/Od /DDEBUG /Z7")
+  set(CMAKE_C_FLAGS_RELEASE "/O2 /Oi")
+  set(CMAKE_SHARED_LINKER_FLAGS "/nologo")
+  set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "/RELEASE /DEBUG /OPT:REF /OPT:ICF /INCREMENTAL:NO")
+  set(CMAKE_SHARED_LINKER_FLAGS_DEBUG "/DEBUG /INCREMENTAL:NO")
+  set(CMAKE_STATIC "/nologo /nodefaultlib")
+  set_source_files_properties(
+    ${SRC_FILES_AVX_T1} ${SRC_FILES_AVX_T2}
+    ${SRC_FILES_AVX2_T1} ${SRC_FILES_AVX2_T2}
+    ${SRC_FILES_AVX512_T1} ${SRC_FILES_AVX512_T2}
+    PPROPERTIES COMPILE_FLAGS
+    "${CMAKE_C_FLAGS} /arch:AVX")
 endif()
 
-set(CFLAGS "
-  -fPIC
-  -W
-  -Wall
-  -Wextra
-  -Wmissing-declarations
-  -Wpointer-arith
-  -Wcast-qual
-  -Wundef
-  -Wwrite-strings
-  -Wformat
-  -Wformat-security
-  -Wunreachable-code
-  -Wmissing-noreturn
-  -Wsign-compare
-  -Wno-endif-labels
-  -Wstrict-prototypes
-  -Wmissing-prototypes
-  -Wold-style-definition
-  -fno-delete-null-pointer-checks
-  -fwrapv"
-  )
-# -fno-strict-overflow is not supported by clang
-if(CMAKE_COMPILER_IS_GNUCC)
-  list(APPEND CFLAGS "-fno-strict-overflow")
-endif()
-if(${CMAKE_BUILD_TYPE} STREQUAL "Debug")
-  list(APPEND CFLAGS "-g -DDEBUG")
-  list(APPEND CFLAGS "-O0")
-else()
-  list(APPEND CFLAGS "-O2 -fstack-protector -d_fortify_source=2")
-endif()
-list(APPEND CFLAGS ${EXTRA_CFLAGS})
+list(APPEND CMAKE_C_FLAGS ${EXTRA_CFLAGS})
 
 set(SRC_FILES_C
   ${SRC_FILES_AVX_T1}
@@ -212,8 +302,20 @@ if(AESNI_EMU)
   list(APPEND SRC_FILES_C ${SRC_FILES_NO_AESNI})
 endif()
 
+if(NOT LINUX)
+  foreach(FILE ${SRC_FILES_C})
+    set_source_files_properties(${FILE} PROPERTIES
+      COMPILE_DEFINITIONS "${LIB_DEFINES}")
+  endforeach()
+
+  foreach(FILE ${SRC_FILES_NO_AESNI})
+    set_source_files_properties(${FILE} PROPERTIES
+      COMPILE_DEFINITIONS "${LIB_DEFINES}"
+      COMPILE_OPTIONS "$<$<CONFIG:RELEASE>:/Od>")
+  endforeach()
+endif()
+
 # add the library
-add_library(IPSec_MB ${SRC_FILES_ASM} ${SRC_FILES_C})
-target_include_directories(IPSec_MB PRIVATE ${DIR_CURRENT} ${DIR_INCLUDE} ${DIR_NO_AESNI})
-target_compile_definitions(IPSec_MB PRIVATE ${LIB_DEFINES})
+add_library(${LIB} ${SRC_FILES_ASM} ${SRC_FILES_C} ${SRC_DEF_FILE})
+target_include_directories(${LIB} PRIVATE ${DIR_CURRENT} ${DIR_INCLUDE} ${DIR_NO_AESNI})
 
