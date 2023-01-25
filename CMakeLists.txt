@@ -23,21 +23,25 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+# set default CMakeCache.txt values
+set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Set default build to release")
+set(CMAKE_C_FLAGS_RELEASE "" CACHE STRING "Clear default release build C Compiler Flags" FORCE)
+set(CMAKE_C_FLAGS_DEBUG "" CACHE STRING "Clear default debug build C Compiler Flags" FORCE)
+
 cmake_minimum_required(VERSION 3.16)
 project(intel-ipsec-mb VERSION 1.3.0 DESCRIPTION "Intel(R) IPSec Multi-Buffer library")
 
-# Check compiler version
+# flag to force full project build
+set(FULL_PROJECT_BUILD TRUE)
+
+# check compiler version
 if(("${CMAKE_C_COMPILER_ID}" STREQUAL "GNU") AND
     (CMAKE_C_COMPILER_VERSION VERSION_LESS 5.0))
     message(FATAL_ERROR "GNU C Compiler version must be 5.0 or higher")
 endif()
 
-if("${CMAKE_BUILD_TYPE}" STREQUAL "")
-  set(CMAKE_BUILD_TYPE "Release")
-endif()
-
-# Flag to force full project build
-set(PROJECT_BUILD TRUE)
-
+# build library
 add_subdirectory(lib)
+
+# build test applications
 add_subdirectory(test)

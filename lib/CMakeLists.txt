@@ -27,8 +27,8 @@
 # Build IPSec_MB library
 # ##############################################################################
 
-# Ensure building entire project
-if(NOT PROJECT_BUILD)
+# ensure building entire project
+if(NOT FULL_PROJECT_BUILD)
   message(FATAL_ERROR "Please run CMake from project root directory")
 endif()
 
@@ -42,7 +42,6 @@ option(NO_COMPAT_IMB_API_053 "Disable compatibility with v0.53" ON)
 option(BUILD_SHARED_LIBS "Build shared library" ON)
 option(CMAKE_VERBOSE_MAKEFILE "Verbose build output" OFF)
 set(EXTRA_CFLAGS "" CACHE STRING "Extra compiler flags")
-set(CMAKE_GENERATOR_PLATFORM "x64" CACHE STRING "Platform arch" FORCE)
 
 # disable all SAFE options when SAFE_OPTIONS false
 if(NOT SAFE_OPTIONS)
@@ -59,8 +58,10 @@ if(CMAKE_HOST_UNIX)
 else()
   set(WINDOWS 1)
   set(LIB libIPSec_MB)
-  if(NOT (${CMAKE_GENERATOR_PLATFORM} MATCHES "x64"))
-    message(FATAL_ERROR "Only 64-bit platform supported. Re-run with '-A x64' option.")
+  if(CMAKE_GENERATOR MATCHES "Visual Studio")
+    if(NOT (${CMAKE_GENERATOR_PLATFORM} MATCHES "x64"))
+      message(FATAL_ERROR "Only 64-bit platform supported. Re-run with '-A x64' option.")
+    endif()
   endif()
 endif()
 
@@ -118,52 +119,32 @@ endif()
 
 # set compiler definitions
 if(LINUX)
-  set(LIB_DEFINES -DLINUX)
+  set(LIB_DEFINES LINUX)
 else()
   set(LIB_DEFINES )
 endif()
 
 # enable SAFE OPTIONS
 if(SAFE_DATA)
-  if(LINUX)
-    list(APPEND LIB_DEFINES -DSAFE_DATA)
-  else()
-    list(APPEND LIB_DEFINES SAFE_DATA)
-  endif()
+  list(APPEND LIB_DEFINES SAFE_DATA)
   string(APPEND CMAKE_ASM_NASM_FLAGS " -DSAFE_DATA")
 endif()
 if(SAFE_PARAM)
-  if(LINUX)
-    list(APPEND LIB_DEFINES -DSAFE_PARAM)
-  else()
-    list(APPEND LIB_DEFINES SAFE_PARAM)
-  endif()
+  list(APPEND LIB_DEFINES SAFE_PARAM)
   string(APPEND CMAKE_ASM_NASM_FLAGS " -DSAFE_PARAM")
 endif()
 if(SAFE_LOOKUP)
-  if(LINUX)
-    list(APPEND LIB_DEFINES -DSAFE_LOOKUP)
-  else()
-    list(APPEND LIB_DEFINES SAFE_LOOKUP)
-  endif()
+  list(APPEND LIB_DEFINES SAFE_LOOKUP)
   string(APPEND CMAKE_ASM_NASM_FLAGS " -DSAFE_LOOKUP")
 endif()
 if(AESNI_EMU)
-  if(LINUX)
-    list(APPEND LIB_DEFINES -DAESNI_EMU)
-  else()
-    list(APPEND LIB_DEFINES AESNI_EMU)
-  endif()
+  list(APPEND LIB_DEFINES AESNI_EMU)
   string(APPEND CMAKE_ASM_NASM_FLAGS " -DAESNI_EMU")
 endif()
 
 # enable backward compatibility
 if(NO_COMPAT_IMB_API_053)
-  if(LINUX)
-    list(APPEND LIB_DEFINES -DNO_COMPAT_IMB_API_053)
-  else()
-    list(APPEND LIB_DEFINES NO_COMPAT_IMB_API_053)
-  endif()
+  list(APPEND LIB_DEFINES NO_COMPAT_IMB_API_053)
 endif()
 
 if(AVX_IFMA)
@@ -185,7 +166,7 @@ endforeach()
 
 # set NASM flags
 if(LINUX)
-  string(APPEND CMAKE_ASM_NASM_FLAGS " -Werror -felf64 -Xgnu -gdwarf -I${DIR_INCLUDE}")
+  string(APPEND CMAKE_ASM_NASM_FLAGS " -Werror -felf64 -Xgnu -gdwarf -DLINUX -D__linux__")
 else()
   # Windows
   string(APPEND CMAKE_ASM_NASM_FLAGS " -Werror -Xvc -DWIN_ABI")
@@ -241,38 +222,20 @@ if(LINUX)
       "-march=nehalem -mno-pclmul")
   endif()
 
-  set(CMAKE_C_FLAGS "
-    -fPIC
-    -W
-    -Wall
-    -Wextra
-    -Wmissing-declarations
-    -Wpointer-arith
-    -Wcast-qual
-    -Wundef
-    -Wwrite-strings
-    -Wformat
-    -Wformat-security
-    -Wunreachable-code
-    -Wmissing-noreturn
-    -Wsign-compare
-    -Wno-endif-labels
-    -Wstrict-prototypes
-    -Wmissing-prototypes
-    -Wold-style-definition
-    -fno-delete-null-pointer-checks
-    -fwrapv"
-    )
+  set(CMAKE_C_FLAGS "-MMD -fPIC -W -Wall -Wextra -Wmissing-declarations \
+    -Wpointer-arith -Wcast-qual -Wundef -Wwrite-strings -Wformat \
+    -Wformat-security -Wunreachable-code -Wmissing-noreturn \
+    -Wsign-compare -Wno-endif-labels -Wstrict-prototypes \
+    -Wmissing-prototypes -Wold-style-definition \
+    -fno-delete-null-pointer-checks -fwrapv"
+  )
   # -fno-strict-overflow is not supported by clang
   if(CMAKE_COMPILER_IS_GNUCC)
     string(APPEND CMAKE_C_FLAGS " -fno-strict-overflow")
   endif()
-  if(${CMAKE_BUILD_TYPE} STREQUAL "Debug")
-    string(APPEND CMAKE_C_FLAGS " -g -DDEBUG")
-    string(APPEND CMAKE_C_FLAGS " -O0")
-  else()
-    string(APPEND CMAKE_C_FLAGS " -O2 -fstack-protector -d_fortify_source=2")
-  endif()
+  set(CMAKE_C_FLAGS_DEBUG "-g -DDEBUG -O0")
+  set(CMAKE_C_FLAGS_RELEASE "-fstack-protector -D_FORTIFY_SOURCE=2 -O3")
+  set(CMAKE_SHARED_LINKER_FLAGS "-Wl,-z,noexecstack -Wl,-z,relro -Wl,-z,now -lc")
 else()
   # Windows flags
   set(CMAKE_C_FLAGS "/nologo /Y- /W3 /WX- /Gm- /fp:precise /EHsc")
@@ -281,7 +244,7 @@ else()
   set(CMAKE_SHARED_LINKER_FLAGS "/nologo")
   set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "/RELEASE /DEBUG /OPT:REF /OPT:ICF /INCREMENTAL:NO")
   set(CMAKE_SHARED_LINKER_FLAGS_DEBUG "/DEBUG /INCREMENTAL:NO")
-  set(CMAKE_STATIC "/nologo /nodefaultlib")
+  set(CMAKE_STATIC_LINKER_FLAGS "/nologo /nodefaultlib")
   set_source_files_properties(
     ${SRC_FILES_AVX_T1} ${SRC_FILES_AVX_T2}
     ${SRC_FILES_AVX2_T1} ${SRC_FILES_AVX2_T2}
@@ -291,7 +254,7 @@ else()
     "${CMAKE_C_FLAGS} /arch:AVX")
 endif()
 
-list(APPEND CMAKE_C_FLAGS ${EXTRA_CFLAGS})
+string(APPEND CMAKE_C_FLAGS " ${EXTRA_CFLAGS}")
 
 set(SRC_FILES_C
   ${SRC_FILES_AVX_T1}
@@ -312,13 +275,14 @@ if(AVX_IFMA)
   list(APPEND SRC_FILES_C ${SRC_FILES_AVX2_T3})
 endif()
 
+# set C source file compiler definitions
+foreach(FILE ${SRC_FILES_C})
+  set_source_files_properties(${FILE} PROPERTIES
+    COMPILE_DEFINITIONS "${LIB_DEFINES}")
+endforeach()
+
 if(WINDOWS)
   # set extra windows compiler flags
-  foreach(FILE ${SRC_FILES_C})
-    set_source_files_properties(${FILE} PROPERTIES
-      COMPILE_DEFINITIONS "${LIB_DEFINES}")
-  endforeach()
-
   foreach(FILE ${SRC_FILES_NO_AESNI})
     set_source_files_properties(${FILE} PROPERTIES
       COMPILE_DEFINITIONS "${LIB_DEFINES}"
