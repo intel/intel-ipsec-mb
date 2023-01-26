@@ -27,9 +27,6 @@
 # Build IPSec_MB library
 # ##############################################################################
 
-cmake_minimum_required(VERSION 3.16)
-project(intel-ipsec-mb)
-
 # Ensure building entire project
 if(NOT PROJECT_BUILD)
   message(FATAL_ERROR "Please run CMake from project root directory")
@@ -43,6 +40,7 @@ option(SAFE_LOOKUP "Secure table lookups" ON)
 option(SAFE_OPTIONS "Library security features" ON)
 option(NO_COMPAT_IMB_API_053 "Disable compatibility with v0.53" ON)
 option(BUILD_SHARED_LIBS "Build shared library" ON)
+option(CMAKE_VERBOSE_MAKEFILE "Verbose build output" OFF)
 set(EXTRA_CFLAGS "" CACHE STRING "Extra compiler flags")
 set(CMAKE_GENERATOR_PLATFORM "x64" CACHE STRING "Platform arch" FORCE)
 
@@ -77,6 +75,7 @@ message(STATUS "NO_COMPAT_IMB_API_053...   ${NO_COMPAT_IMB_API_053}")
 message(STATUS "CMAKE_GENERATOR...         ${CMAKE_GENERATOR}")
 message(STATUS "PLATFORM...                ${CMAKE_GENERATOR_PLATFORM}")
 message(STATUS "BUILD_TYPE...              ${CMAKE_BUILD_TYPE}")
+message(STATUS "CMAKE_VERBOSE_MAKEFILE...  ${CMAKE_VERBOSE_MAKEFILE}")
 
 # set directories
 set(DIR_CURRENT ${CMAKE_CURRENT_SOURCE_DIR}/)
@@ -92,6 +91,9 @@ set(DIR_SSE_T2 ${CMAKE_CURRENT_SOURCE_DIR}/sse_t2)
 set(DIR_SSE_T3 ${CMAKE_CURRENT_SOURCE_DIR}/sse_t3)
 set(DIR_X86_64 ${CMAKE_CURRENT_SOURCE_DIR}/x86_64)
 set(DIR_NO_AESNI ${CMAKE_CURRENT_SOURCE_DIR}/no-aesni)
+if(AVX_IFMA)
+  set(DIR_AVX2_T3 ${CMAKE_CURRENT_SOURCE_DIR}/avx2_t3)
+endif()
 
 # list all source directories
 set(DIR_SOURCES
@@ -108,6 +110,10 @@ set(DIR_SOURCES
 )
 if(AESNI_EMU)
   list(APPEND DIR_SOURCES ${DIR_NO_AESNI})
+endif()
+
+if(AVX_IFMA)
+  list(APPEND DIR_SOURCES ${DIR_AVX2_T3})
 endif()
 
 # set compiler definitions
@@ -160,6 +166,10 @@ if(NO_COMPAT_IMB_API_053)
   endif()
 endif()
 
+if(AVX_IFMA)
+  list(APPEND LIB_DEFINES AVX_IFMA)
+endif()
+
 # set up NASM compilation
 enable_language(ASM_NASM)
 if(NOT CMAKE_ASM_NASM_COMPILER_LOADED)
@@ -188,6 +198,7 @@ file(GLOB SRC_FILES_AVX_T1 "${DIR_AVX_T1}/*.c")
 file(GLOB SRC_FILES_AVX_T2 "${DIR_AVX_T2}/*.c")
 file(GLOB SRC_FILES_AVX2_T1 "${DIR_AVX2_T1}/*.c")
 file(GLOB SRC_FILES_AVX2_T2 "${DIR_AVX2_T2}/*.c")
+file(GLOB SRC_FILES_AVX2_T3 "${DIR_AVX2_T3}/*.c")
 file(GLOB SRC_FILES_AVX512_T1 "${DIR_AVX512_T1}/*.c")
 file(GLOB SRC_FILES_AVX512_T2 "${DIR_AVX512_T2}/*.c")
 file(GLOB SRC_FILES_SSE_T1 "${DIR_SSE_T1}/*.c")
@@ -208,6 +219,7 @@ if(LINUX)
     "-march=sandybridge -maes -mpclmul")
   set_source_files_properties(
     ${SRC_FILES_AVX2_T1} ${SRC_FILES_AVX2_T2}
+    ${SRC_FILES_AVX2_T3}
     PPROPERTIES COMPILE_FLAGS
     "-march=haswell -maes -mpclmul")
   set_source_files_properties(
@@ -273,7 +285,8 @@ else()
   set_source_files_properties(
     ${SRC_FILES_AVX_T1} ${SRC_FILES_AVX_T2}
     ${SRC_FILES_AVX2_T1} ${SRC_FILES_AVX2_T2}
-    ${SRC_FILES_AVX512_T1} ${SRC_FILES_AVX512_T2}
+    ${SRC_FILES_AVX2_T3} ${SRC_FILES_AVX512_T1}
+    ${SRC_FILES_AVX512_T2}
     PPROPERTIES COMPILE_FLAGS
     "${CMAKE_C_FLAGS} /arch:AVX")
 endif()
@@ -295,6 +308,9 @@ set(SRC_FILES_C
 if(AESNI_EMU)
   list(APPEND SRC_FILES_C ${SRC_FILES_NO_AESNI})
 endif()
+if(AVX_IFMA)
+  list(APPEND SRC_FILES_C ${SRC_FILES_AVX2_T3})
+endif()
 
 if(WINDOWS)
   # set extra windows compiler flags
@@ -310,12 +326,20 @@ if(WINDOWS)
   endforeach()
 
   # generate windows DEF file
-  if(AESNI_EMU)
+  if(NOT AESNI_EMU)
+    set(STR_FILTER "/c:_no_aesni")
+  endif()
+  if(NOT AVX_IFMA)
+    set(STR_FILTER "${STR_FILTER} /c:_avx2_t3")
+  endif()
+
+  # filter unused symbol exports
+  if(NOT STR_FILTER)
     set(GEN_DEF_FILE_CMD "copy /Y ${LIB}.def ${SRC_DEF_FILE}")
   else()
-    # remove AESNI emulation symbol exports
-    set(GEN_DEF_FILE_CMD "findstr /v _no_aesni ${LIB}.def > ${SRC_DEF_FILE}")
+    set(GEN_DEF_FILE_CMD "findstr /v ${STR_FILTER} ${LIB}.def > ${SRC_DEF_FILE}")
   endif()
+
   execute_process(
     COMMAND cmd /C ${GEN_DEF_FILE_CMD}
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}

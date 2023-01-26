@@ -33,7 +33,6 @@ if(("${CMAKE_C_COMPILER_ID}" STREQUAL "GNU") AND
 endif()
 
 if("${CMAKE_BUILD_TYPE}" STREQUAL "")
-  message(STATUS "CMAKE_BUILD_TYPE not set, defaulting to Release")
   set(CMAKE_BUILD_TYPE "Release")
 endif()
 
