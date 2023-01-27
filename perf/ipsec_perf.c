@@ -954,6 +954,8 @@ static uint32_t pb_mod = 0;
 static int silent_progress_bar = 0;
 static int plot_output_option = 0;
 
+static int quic_api_test = 0;
+
 /* API types */
 typedef enum  {
         TEST_API_JOB = 0,
@@ -1723,6 +1725,189 @@ set_size_lists(uint32_t *cipher_size_list, uint32_t *hash_size_list,
                 }
 
         }
+}
+
+/*
+ * =========================================================
+ * QUIC specific benchmarks
+ * =========================================================
+ */
+
+#define MAX_K 32
+#define PKT_SIZE_MAX 16384
+
+#define AAD_LEN 12
+#define IV_LEN 12
+#define TAG_LEN 16
+
+static void
+bench_quic_aes_gcm(IMB_MGR *p_mgr, const uint64_t n_max, uint8_t *blob)
+{
+        void *out[MAX_K];
+        const void *in[MAX_K];
+        const void *iv[MAX_K];
+        const void *aad[MAX_K];
+        void *tag[MAX_K];
+        uint64_t len[MAX_K];
+        const uint8_t kp[16] = {
+                0xaa, 055, 0x11, 0x44, 0x01, 0x02, 0x00, 0x03,
+                0xaa, 055, 0x11, 0x44, 0x01, 0x02, 0x00, 0x03
+        };
+        struct gcm_key_data key;
+        const uint64_t pkt_size = 16384;
+        const int K = MAX_K;
+        uint32_t aux;
+        uint64_t n;
+        int i;
+
+        printf("QUIC-API AES-GCM-128 test start...\n"
+               "    packet-size: %lu\n"
+               "    number of packets : %d\n"
+               "    iterations: %lu\n",
+               (unsigned long) pkt_size, K, (unsigned long) n_max);
+
+        for (n = 0, i = 0; i < K; i++) {
+                iv[i] = &blob[n];
+                n += IV_LEN;
+
+                aad[i] = &blob[n];
+                n += AAD_LEN;
+
+                in[i] = &blob[n];
+                n += pkt_size;
+
+                out[i] = &blob[n];
+                n += pkt_size;
+
+                tag[i] = &blob[n];
+                n += TAG_LEN;
+
+                len[i] = pkt_size;
+        }
+
+        IMB_AES128_GCM_PRE(p_mgr, kp, &key);
+
+        const uint64_t tsc_start = __rdtscp(&aux);
+
+        for (n = 0; n < n_max; n++) {
+                imb_quic_aes_gcm(p_mgr, &key,
+                                 IMB_KEY_128_BYTES, IMB_DIR_ENCRYPT,
+                                 (void **) out, (const void * const*) in, len,
+                                 (const void * const*) iv,
+                                 (const void * const*) &aad, AAD_LEN,
+                                 (void **) tag, TAG_LEN, K);
+        }
+
+        const uint64_t tsc_end = __rdtscp(&aux);
+        const uint64_t cpi = (tsc_end - tsc_start) / n_max;
+        const uint64_t cpp = cpi / (uint64_t) K;
+
+        printf("QUIC-API AES-GCM-128 cycles/iteration = %lu, "
+               "cycles/packet = %lu\n",
+               (unsigned long) cpi, (unsigned long) cpp);
+}
+
+static void
+bench_quic_aes_ecb_hp(IMB_MGR *p_mgr, const uint64_t n_max, uint8_t *blob)
+{
+        void *out[MAX_K];
+        const void *in[MAX_K];
+        const uint8_t kp[16] = {
+                0xaa, 055, 0x11, 0x44, 0x01, 0x02, 0x00, 0x03,
+                0xaa, 055, 0x11, 0x44, 0x01, 0x02, 0x00, 0x03
+        };
+        DECLARE_ALIGNED(uint32_t enc_keys[15*4], 16);
+        DECLARE_ALIGNED(uint32_t dec_keys[15*4], 16);
+        const int K = MAX_K;
+        const uint64_t pkt_size = 16;
+        uint32_t aux;
+        uint64_t n;
+        int i;
+
+        for (n = 0, i = 0; i < K; i++) {
+                in[i] = &blob[n];
+                n += pkt_size;
+
+                out[i] = &blob[n];
+                n += pkt_size;
+        }
+
+        printf("QUIC-API AES-ECB-128 test start...\n"
+               "    packet-size: %lu\n"
+               "    number of packets : %d\n"
+               "    iterations: %lu\n",
+               (unsigned long) pkt_size, K, (unsigned long) n_max);
+
+        IMB_AES_KEYEXP_128(p_mgr, kp, enc_keys, dec_keys);
+
+        const uint64_t tsc_start = __rdtscp(&aux);
+
+        for (n = 0; n < n_max; n++)
+                imb_quic_hp_aes_ecb(p_mgr, enc_keys,
+                                    (void **)out, (const void * const *) in,
+                                    K, IMB_KEY_128_BYTES);
+
+        const uint64_t tsc_end = __rdtscp(&aux);
+        const uint64_t cpi = (tsc_end - tsc_start) / n_max;
+        const uint64_t cpp = cpi / (uint64_t) K;
+
+        printf("QUIC-API AES-ECB-128 cycles/iteration = %lu, "
+               "cycles/packet = %lu\n",
+               (unsigned long) cpi, (unsigned long) cpp);
+}
+
+static void quic_main(IMB_MGR *p_mgr)
+{
+        const size_t blob_sz =
+                (AAD_LEN + IV_LEN + TAG_LEN + PKT_SIZE_MAX) * MAX_K * 2;
+
+        uint8_t *blob_ptr  = (uint8_t *) malloc(blob_sz);
+
+        if (blob_ptr == NULL) {
+                printf("Error allocating QUIC-API test buffer!\n");
+                exit(EXIT_FAILURE);
+        }
+
+        memset(blob_ptr, 0xaa, blob_sz);
+
+        enum arch_type_e arch;
+
+        for (arch = ARCH_SSE; arch <= ARCH_AVX512; arch++) {
+                if (archs[arch] == 0)
+                        continue;
+
+                switch (arch) {
+                case ARCH_SSE:
+                        printf("SSE\n");
+                        init_mb_mgr_sse(p_mgr);
+                        break;
+                case ARCH_AVX:
+                        printf("AVX\n");
+                        init_mb_mgr_avx(p_mgr);
+                        break;
+                case ARCH_AVX2:
+                        printf("AVX2\n");
+                        init_mb_mgr_avx2(p_mgr);
+                        break;
+                default: /* ARCH_AV512 */
+                        printf("AVX512\n");
+                        init_mb_mgr_avx512(p_mgr);
+                        break;
+                }
+
+                if (imb_get_errno(p_mgr) != 0) {
+                        printf("Error initializing MB_MGR! %s\n",
+                               imb_get_strerror(imb_get_errno(p_mgr)));
+                        free(blob_ptr);
+                        exit(EXIT_FAILURE);
+                }
+
+                const uint64_t n_max = 50000;
+
+                bench_quic_aes_ecb_hp(p_mgr, n_max, blob_ptr);
+                bench_quic_aes_gcm(p_mgr, n_max, blob_ptr);
+        }
+        free(blob_ptr);
 }
 
 /* Performs test using AES_HMAC or DOCSIS */
@@ -3070,6 +3255,15 @@ run_tests(void *arg)
 
         p_mgr = info->p_mgr;
 
+        if (quic_api_test) {
+                quic_main(p_mgr);
+#ifndef _WIN32
+                return NULL;
+#else
+                return;
+#endif
+        }
+
         memset(&params, 0, sizeof(params));
 
         if (job_size_count == 0)
@@ -3241,6 +3435,12 @@ exit_failure:
         exit(EXIT_FAILURE);
 }
 
+/*
+ * =========================================================
+ * Utility functions
+ * =========================================================
+ */
+
 static void usage(void)
 {
         fprintf(stderr, "Usage: ipsec_perf <ALGORITHM> [ARGS]\n"
@@ -3304,7 +3504,8 @@ static void usage(void)
                 "--burst-api: use burst API for perf tests\n"
                 "--cipher-burst-api: use cipher-only burst API for perf tests\n"
                 "--hash-burst-api: use hash-only burst API for perf tests\n"
-                "--burst-size: number of jobs to submit per burst\n",
+                "--burst-size: number of jobs to submit per burst\n"
+                "--quic-api: run QUIC-API specific tests only\n",
                 MAX_NUM_THREADS + 1);
 }
 
@@ -3580,6 +3781,7 @@ end_range:
         return (index + 1);
 
 }
+
 
 /**
  * @brief Update table of supported architectures
@@ -3906,6 +4108,8 @@ int main(int argc, char *argv[])
                         }
                 } else if (strcmp(argv[i], "--no-time-box") == 0) {
                         use_timebox = 0;
+                } else if (strcmp(argv[i], "--quic-api") == 0) {
+                        quic_api_test = 1;
                 } else {
                         usage();
                         return EXIT_FAILURE;
@@ -3943,7 +4147,7 @@ int main(int argc, char *argv[])
         }
 
         if (aead_algo_set == 0 && cipher_algo_set == 0 &&
-            hash_algo_set == 0) {
+            hash_algo_set == 0 && quic_api_test == 0) {
                 fprintf(stderr, "No cipher, hash or "
                         "AEAD algorithms selected\n");
                 usage();
