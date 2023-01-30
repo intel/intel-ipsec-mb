@@ -3258,8 +3258,9 @@ FN_NAME(init_var_iv,_):
         push    r15
         mov     r14, rsp
 	; xmm6 needs to be maintained for Windows
-	sub	rsp, 1*16
+	sub	rsp, 2*16
 	vmovdqu	[rsp + 0*16], xmm6
+	vmovdqu	[rsp + 1*16], xmm14
 %endif
 
 %ifdef SAFE_PARAM
@@ -3309,7 +3310,8 @@ skip_iv_len_12_init_IV:
 exit_init_IV:
 
 %ifidn __OUTPUT_FORMAT__, win64
-	vmovdqu	xmm6 , [rsp + 0*16]
+	vmovdqu	xmm6, [rsp + 0*16]
+	vmovdqu	xmm14, [rsp + 1*16]
         mov     rsp, r14
         pop     r15
         pop     r14
