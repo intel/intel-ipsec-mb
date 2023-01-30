@@ -370,6 +370,7 @@ init_mb_mgr_sse_no_aesni_internal(IMB_MGR *state, const int reset_mgrs)
         state->sha512              = sha512_sse;
         state->md5_one_block       = md5_one_block_sse;
         state->aes128_cfb_one      = aes_cfb_128_one_sse_no_aesni;
+        state->aes256_cfb_one      = aes_cfb_256_one_sse_no_aesni;
 
         state->eea3_1_buffer       = zuc_eea3_1_buffer_sse_no_aesni;
         state->eea3_4_buffer       = zuc_eea3_4_buffer_sse_no_aesni;

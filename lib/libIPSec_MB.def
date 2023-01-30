@@ -693,3 +693,8 @@ EXPORTS
     get_next_job_avx2_t3                	@667
     get_completed_job_avx2_t3            	@668
     des_cfb_one					@669
+    aes_cfb_256_one_sse				@670
+    aes_cfb_256_one_avx 			@671
+    aes_cfb_256_one_avx2			@672
+    aes_cfb_256_one_avx512			@673
+    aes_cfb_256_one_sse_no_aesni		@674

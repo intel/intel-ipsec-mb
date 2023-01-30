@@ -58,27 +58,6 @@
 #define IMB_AES_BLOCK_SIZE 16
 #endif
 
-IMB_DLL_LOCAL void aes_cfb_256_one_sse_no_aesni(void *out, const void *in,
-                                                const void *iv,
-                                                const void *keys,
-                                                const uint64_t len);
-
-IMB_DLL_LOCAL void aes_cfb_256_one_sse(void *out, const void *in,
-                                       const void *iv, const void *keys,
-                                       const uint64_t len);
-
-IMB_DLL_LOCAL void aes_cfb_256_one_avx(void *out, const void *in,
-                                       const void *iv, const void *keys,
-                                       const uint64_t len);
-
-IMB_DLL_LOCAL void aes_cfb_256_one_avx2(void *out, const void *in,
-                                       const void *iv, const void *keys,
-                                       const uint64_t len);
-
-IMB_DLL_LOCAL void aes_cfb_256_one_avx512(void *out, const void *in,
-                                          const void *iv, const void *keys,
-                                          const uint64_t len);
-
 /**
  * @brief Encrypts/decrypts the last partial block for DOCSIS SEC v3.1 BPI
  *

@@ -388,6 +388,7 @@ init_mb_mgr_sse_t2_internal(IMB_MGR *state, const int reset_mgrs)
         state->md5_one_block       = md5_one_block_sse;
 
         state->aes128_cfb_one      = aes_cfb_128_one_sse;
+        state->aes256_cfb_one      = aes_cfb_256_one_sse;
 
         state->eea3_1_buffer       = zuc_eea3_1_buffer_sse;
         state->eea3_4_buffer       = zuc_eea3_4_buffer_sse;

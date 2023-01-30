@@ -156,6 +156,11 @@ void call_sha1_x16_avx512_from_c(SHA1_ARGS *args, uint32_t size_in_blocks);
 void call_sha256_x16_avx512_from_c(SHA256_ARGS *args, uint32_t size_in_blocks);
 void call_sha512_x8_avx512_from_c(SHA512_ARGS *args, uint64_t size_in_blocks);
 
+/* AES-CFB */
+IMB_DLL_EXPORT void aes_cfb_256_one_avx512(void *out, const void *in,
+                                           const void *iv, const void *keys,
+                                           uint64_t len);
+
 #endif /* IMB_ASM_AVX512_T1_H */
 
 

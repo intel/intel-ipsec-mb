@@ -1205,6 +1205,7 @@ typedef struct IMB_MGR {
         submit_cipher_burst_t submit_cipher_burst_nocheck;
         submit_hash_burst_t submit_hash_burst;
         submit_hash_burst_t submit_hash_burst_nocheck;
+        aes_cfb_t aes256_cfb_one;
 
         /* in-order scheduler fields */
         int              earliest_job; /**< byte offset, -1 if none */
@@ -1925,6 +1926,22 @@ IMB_DLL_EXPORT void init_mb_mgr_auto(IMB_MGR *state, IMB_ARCH *arch);
  */
 #define IMB_AES128_CFB_ONE(_mgr, _dst, _src, _iv, _exp_key, _len)       \
         ((_mgr)->aes128_cfb_one((_dst), (_src), (_iv), (_exp_key), (_len)))
+
+/**
+ * @brief AES-CFB-256 Encrypt/Decrypt up to one block.
+ *
+ * Processes only one buffer at a time.
+ * Designed to manage partial blocks of DOCSIS 3.1 SEC BPI.
+ *
+ * @param [in] _mgr     Pointer to multi-buffer structure
+ * @param [out] _dst    Plaintext/Ciphertext output
+ * @param [in] _src     Plaintext/Ciphertext input
+ * @param [in] _iv      Pointer to 16 byte IV
+ * @param [in] _exp_key Pointer to expanded AES keys
+ * @param [in] _len     Length of data in bytes
+ */
+#define IMB_AES256_CFB_ONE(_mgr, _dst, _src, _iv, _exp_key, _len)       \
+        ((_mgr)->aes256_cfb_one((_dst), (_src), (_iv), (_exp_key), (_len)))
 
 /* AES-GCM API's */
 #define IMB_AES128_GCM_ENC(_mgr, _exp_key, _ctx, _dst, _src, _len, _iv, _aad,  \

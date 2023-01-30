@@ -97,6 +97,12 @@ void aes_cbcs_1_9_dec_128_avx(const void *in, const uint8_t *IV,
                               const void *keys, void *out,
                               uint64_t len_bytes, void *next_iv);
 
+/* AES-CFB */
+IMB_DLL_EXPORT void aes_cfb_256_one_avx(void *out, const void *in,
+                                        const void *iv, const void *keys,
+                                        uint64_t len);
+
+
 /* stitched AES128-CNTR, CRC32 and BIP */
 IMB_JOB *submit_job_pon_enc_avx(IMB_JOB *job);
 IMB_JOB *submit_job_pon_dec_avx(IMB_JOB *job);
