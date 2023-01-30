@@ -2526,22 +2526,25 @@ FN_NAME(dec,_finalize_):
 
 %ifidn __OUTPUT_FORMAT__, win64
 	; xmm6:xmm15 need to be maintained for Windows
-	sub	rsp, 5*16
-	vmovdqu	[rsp + 0*16],xmm6
-	vmovdqu	[rsp + 1*16],xmm9
-	vmovdqu	[rsp + 2*16],xmm11
-	vmovdqu	[rsp + 3*16],xmm14
-	vmovdqu	[rsp + 4*16],xmm15
+	sub	rsp, 7*16
+        vmovdqu	[rsp + 0*16], xmm6
+        vmovdqu	[rsp + 1*16], xmm9
+        vmovdqu	[rsp + 2*16], xmm10
+        vmovdqu	[rsp + 3*16], xmm11
+        vmovdqu	[rsp + 4*16], xmm13
+        vmovdqu	[rsp + 5*16], xmm14
+        vmovdqu	[rsp + 6*16], xmm15
 %endif
 	GCM_COMPLETE	arg1, arg2, arg3, arg4
-
 %ifidn __OUTPUT_FORMAT__, win64
-	vmovdqu	xmm15  , [rsp + 4*16]
-	vmovdqu	xmm14  , [rsp + 3*16]
-	vmovdqu	xmm11  , [rsp + 2*16]
-	vmovdqu	xmm9 , [rsp + 1*16]
-	vmovdqu	xmm6 , [rsp + 0*16]
-	add	rsp, 5*16
+        vmovdqu	xmm15, [rsp + 6*16]
+        vmovdqu	xmm14, [rsp + 5*16]
+        vmovdqu	xmm13, [rsp + 4*16]
+        vmovdqu	xmm11, [rsp + 3*16]
+        vmovdqu	xmm10, [rsp + 2*16]
+        vmovdqu	xmm9,  [rsp + 1*16]
+        vmovdqu	xmm6,  [rsp + 0*16]
+        add     rsp, 7*16
 %endif
 
 	pop r12
