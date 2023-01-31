@@ -158,6 +158,10 @@ static struct des_vector docsis_vectors[] = {
         {DK3, DIV3, DP3, sizeof(DP3), DC3},
 };
 
+static struct des_vector des_cfb_vectors[] = {
+        {DK3, DIV3, DP3, sizeof(DP3), DC3},
+};
+
 /* 3DES vectors - 2x and 3x keys */
 
 static const uint8_t D3K1_1[] = {
@@ -609,6 +613,76 @@ test_des3_vectors(struct IMB_MGR *mb_mgr,
 	printf("\n");
 }
 
+static int
+des_cfb_validate(struct test_suite_context *ctx)
+{
+        unsigned i;
+
+        printf("DES-CFB standard test vectors:\n");
+        for (i = 0; i < DIM(des_cfb_vectors); i++) {
+                uint8_t output1[8];
+                uint8_t output2[8];
+                uint64_t ks[16];
+
+                des_key_schedule(ks, des_cfb_vectors[i].K);
+
+                /* Out of place */
+
+                /* encrypt test */
+                des_cfb_one(output1, des_cfb_vectors[i].P,
+                            (const uint64_t *)des_cfb_vectors[i].IV, ks,
+                            (int)des_cfb_vectors[i].Plen);
+                if (memcmp(output1, des_cfb_vectors[i].C,
+                            des_cfb_vectors[i].Plen)) {
+                        printf("DES-CFB enc (OOP) vector %d mismatched\n", i);
+                        test_suite_update(ctx, 0, 1);
+                } else {
+                        test_suite_update(ctx, 1, 0);
+                }
+                /* decrypt test */
+                des_cfb_one(output2, output1,
+                            (const uint64_t *)des_cfb_vectors[i].IV, ks,
+                            (int)des_cfb_vectors[i].Plen);
+                if (memcmp(output2, des_cfb_vectors[i].P,
+                            des_cfb_vectors[i].Plen)) {
+                        printf("DES-CFB dec (OOP) vector %d mismatched\n", i);
+                        test_suite_update(ctx, 0, 1);
+                } else {
+                        test_suite_update(ctx, 1, 0);
+                }
+
+                /* In place */
+
+                /* encrypt test */
+                memcpy(output1, des_cfb_vectors[i].P, des_cfb_vectors[i].Plen);
+                des_cfb_one(output1, output1,
+                            (const uint64_t *)des_cfb_vectors[i].IV, ks,
+                            (int)des_cfb_vectors[i].Plen);
+                if (memcmp(output1, des_cfb_vectors[i].C,
+                            des_cfb_vectors[i].Plen)) {
+                        printf("DES-CFB enc (OOP) vector %d mismatched\n", i);
+                        test_suite_update(ctx, 0, 1);
+                } else {
+                        test_suite_update(ctx, 1, 0);
+                }
+                /* decrypt test */
+                memcpy(output1, des_cfb_vectors[i].C, des_cfb_vectors[i].Plen);
+                des_cfb_one(output1, output1,
+                            (const uint64_t *)des_cfb_vectors[i].IV, ks,
+                            (int)des_cfb_vectors[i].Plen);
+                if (memcmp(output1, des_cfb_vectors[i].P,
+                            des_cfb_vectors[i].Plen)) {
+                        printf("DES-CFB dec (OOP) vector %d mismatched\n", i);
+                        test_suite_update(ctx, 0, 1);
+                } else {
+                        test_suite_update(ctx, 1, 0);
+                }
+
+        }
+        printf("\n");
+        return 1;
+}
+
 int
 des_test(struct IMB_MGR *mb_mgr)
 {
@@ -624,6 +698,10 @@ des_test(struct IMB_MGR *mb_mgr)
         test_des_vectors(mb_mgr, DIM(docsis_vectors), docsis_vectors,
                          "DOCSIS DES standard test vectors",
                          IMB_CIPHER_DOCSIS_DES, &ctx);
+        errors += test_suite_end(&ctx);
+
+        test_suite_start(&ctx, "DES-CFB-64");
+        des_cfb_validate(&ctx);
         errors += test_suite_end(&ctx);
 
         test_suite_start(&ctx, "3DES-CBC-192");
