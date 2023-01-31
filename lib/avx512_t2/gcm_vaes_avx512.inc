@@ -151,6 +151,15 @@
 %endif
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Pipeline parameters
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; reduction every 32 or 16 blocks
+%define big_loop_nblocks        32
+;; cipher lead (depth) is 32 blocks
+%define big_loop_depth          32
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Stack frame definition
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 %ifidn __OUTPUT_FORMAT__, win64
@@ -160,7 +169,7 @@
         %define XMM_STORAGE     0
         %define GP_STORAGE      (8*8)   ; space for 7 GP registers + 1 for alignment
 %endif
-%define LOCAL_STORAGE           (48*16) ; space for up to 48 AES blocks
+%define LOCAL_STORAGE           (big_loop_nblocks*16) ; space for cipher text blocks for GHASH
 
 ;;; sequence is (bottom-up): GP, XMM, local
 %define STACK_GP_OFFSET         0
@@ -3136,11 +3145,6 @@
 
 %define %%MASKREG               k1
 
-;; reduction every 48 blocks, depth 32 blocks
-;; @note 48 blocks is the maximum capacity of the stack frame
-%assign big_loop_nblocks        48
-%assign big_loop_depth          32
-
 ;;; Macro flow depending on packet size
 ;;; - LENGTH <= 16 blocks
 ;;;   - cipher followed by hashing (reduction)
@@ -3269,33 +3273,16 @@
         jb              %%_no_more_big_nblocks
 
         ;; ====
-        ;; ==== AES-CTR + GHASH - 48 blocks loop
+        ;; ==== AES-CTR + GHASH - big loop with that uses GHASH limbs (no horizontal XOR applied)
         ;; ====
-%%_encrypt_very_big_nblocks:
-        cmp             %%LENGTH, (2* big_loop_nblocks * 16)
+%%_encrypt_big_nblocks_no_hxor:
+        cmp             %%LENGTH, (2 * big_loop_nblocks * 16)
         jb              %%_encrypt_big_nblocks
 
         ;; ==== AES-CTR + GHASH - 16 blocks, start
-%assign aesout_offset (STACK_LOCAL_OFFSET + (32 * 16))
+%assign aesout_offset (STACK_LOCAL_OFFSET + (0 * 16))
 %assign data_in_out_offset (0 * 16)
 %assign ghashin_offset (STACK_LOCAL_OFFSET + (0 * 16))
-
-        GHASH_16_ENCRYPT_16_PARALLEL  %%GDATA_KEY, %%CIPH_PLAIN_OUT, %%PLAIN_CIPH_IN, %%DATA_OFFSET, \
-                %%CTR_BLOCKz, %%CTR_CHECK, \
-                HashKey_48, aesout_offset, ghashin_offset, %%SHUF_MASK, \
-                %%ZTMP0,  %%ZTMP1,  %%ZTMP2,  %%ZTMP3, \
-                %%ZTMP4,  %%ZTMP5,  %%ZTMP6,  %%ZTMP7, \
-                %%ZTMP8,  %%ZTMP9,  %%ZTMP10, %%ZTMP11,\
-                %%ZTMP12, %%ZTMP13, %%ZTMP14, %%ZTMP15,\
-                %%ZTMP16, %%ZTMP17, %%ZTMP18, %%ZTMP19, \
-                %%ZTMP20, %%ZTMP21, %%ZTMP22, \
-                %%ADDBE_4x4, %%ADDBE_1234, %%GL, %%GH, \
-                first_time, %%ENC_DEC, data_in_out_offset, %%AAD_HASHz, hk_bcast
-
-        ;; ==== AES-CTR + GHASH - 16 blocks, no reduction
-%assign aesout_offset (STACK_LOCAL_OFFSET + (0 * 16))
-%assign data_in_out_offset (16 * 16)
-%assign ghashin_offset (STACK_LOCAL_OFFSET + (16 * 16))
 
         GHASH_16_ENCRYPT_16_PARALLEL  %%GDATA_KEY, %%CIPH_PLAIN_OUT, %%PLAIN_CIPH_IN, %%DATA_OFFSET, \
                 %%CTR_BLOCKz, %%CTR_CHECK, \
@@ -3307,12 +3294,12 @@
                 %%ZTMP16, %%ZTMP17, %%ZTMP18, %%ZTMP19, \
                 %%ZTMP20, %%ZTMP21, %%ZTMP22, \
                 %%ADDBE_4x4, %%ADDBE_1234, %%GL, %%GH, \
-                no_reduction, %%ENC_DEC, data_in_out_offset, no_ghash_in, hk_bcast
+                first_time, %%ENC_DEC, data_in_out_offset, %%AAD_HASHz, hk_bcast
 
         ;; ==== AES-CTR + GHASH - 16 blocks, reduction
 %assign aesout_offset (STACK_LOCAL_OFFSET + (16 * 16))
-%assign data_in_out_offset (32 * 16)
-%assign ghashin_offset (STACK_LOCAL_OFFSET + (32 * 16))
+%assign data_in_out_offset (16 * 16)
+%assign ghashin_offset (STACK_LOCAL_OFFSET + (16 * 16))
 
         GHASH_16_ENCRYPT_16_PARALLEL  %%GDATA_KEY, %%CIPH_PLAIN_OUT, %%PLAIN_CIPH_IN, %%DATA_OFFSET, \
                 %%CTR_BLOCKz, %%CTR_CHECK, \
@@ -3331,30 +3318,17 @@
 
         add             %%DATA_OFFSET, (big_loop_nblocks * 16)
         sub             %%LENGTH, (big_loop_nblocks * 16)
-        jmp             %%_encrypt_very_big_nblocks
+        jmp             %%_encrypt_big_nblocks_no_hxor
 
+        ;; ====
+        ;; ==== AES-CTR + GHASH - code idential to big loop but here normal GHASH is applied
+        ;; ====                 - this corrects GHASH limb values if exiting the loop above
+        ;; ====
 %%_encrypt_big_nblocks:
         ;; ==== AES-CTR + GHASH - 16 blocks, start
-%assign aesout_offset (STACK_LOCAL_OFFSET + (32 * 16))
+%assign aesout_offset (STACK_LOCAL_OFFSET + (0 * 16))
 %assign data_in_out_offset (0 * 16)
 %assign ghashin_offset (STACK_LOCAL_OFFSET + (0 * 16))
-
-        GHASH_16_ENCRYPT_16_PARALLEL  %%GDATA_KEY, %%CIPH_PLAIN_OUT, %%PLAIN_CIPH_IN, %%DATA_OFFSET, \
-                %%CTR_BLOCKz, %%CTR_CHECK, \
-                HashKey_48, aesout_offset, ghashin_offset, %%SHUF_MASK, \
-                %%ZTMP0,  %%ZTMP1,  %%ZTMP2,  %%ZTMP3, \
-                %%ZTMP4,  %%ZTMP5,  %%ZTMP6,  %%ZTMP7, \
-                %%ZTMP8,  %%ZTMP9,  %%ZTMP10, %%ZTMP11,\
-                %%ZTMP12, %%ZTMP13, %%ZTMP14, %%ZTMP15,\
-                %%ZTMP16, %%ZTMP17, %%ZTMP18, %%ZTMP19, \
-                %%ZTMP20, %%ZTMP21, %%ZTMP22, \
-                %%ADDBE_4x4, %%ADDBE_1234, %%GL, %%GH, \
-                first_time, %%ENC_DEC, data_in_out_offset, %%AAD_HASHz, hk_load
-
-        ;; ==== AES-CTR + GHASH - 16 blocks, no reduction
-%assign aesout_offset (STACK_LOCAL_OFFSET + (0 * 16))
-%assign data_in_out_offset (16 * 16)
-%assign ghashin_offset (STACK_LOCAL_OFFSET + (16 * 16))
 
         GHASH_16_ENCRYPT_16_PARALLEL  %%GDATA_KEY, %%CIPH_PLAIN_OUT, %%PLAIN_CIPH_IN, %%DATA_OFFSET, \
                 %%CTR_BLOCKz, %%CTR_CHECK, \
@@ -3366,12 +3340,12 @@
                 %%ZTMP16, %%ZTMP17, %%ZTMP18, %%ZTMP19, \
                 %%ZTMP20, %%ZTMP21, %%ZTMP22, \
                 %%ADDBE_4x4, %%ADDBE_1234, %%GL, %%GH, \
-                no_reduction, %%ENC_DEC, data_in_out_offset, no_ghash_in, hk_load
+                first_time, %%ENC_DEC, data_in_out_offset, %%AAD_HASHz, hk_load
 
         ;; ==== AES-CTR + GHASH - 16 blocks, reduction
 %assign aesout_offset (STACK_LOCAL_OFFSET + (16 * 16))
-%assign data_in_out_offset (32 * 16)
-%assign ghashin_offset (STACK_LOCAL_OFFSET + (32 * 16))
+%assign data_in_out_offset (16 * 16)
+%assign ghashin_offset (STACK_LOCAL_OFFSET + (16 * 16))
 
         GHASH_16_ENCRYPT_16_PARALLEL  %%GDATA_KEY, %%CIPH_PLAIN_OUT, %%PLAIN_CIPH_IN, %%DATA_OFFSET, \
                 %%CTR_BLOCKz, %%CTR_CHECK, \
@@ -3390,13 +3364,9 @@
 
         add             %%DATA_OFFSET, (big_loop_nblocks * 16)
         sub             %%LENGTH, (big_loop_nblocks * 16)
-;        cmp             %%LENGTH, (big_loop_nblocks * 16)
-;        jae             %%_encrypt_big_nblocks
 
+        ;; fall through
 %%_no_more_big_nblocks:
-
-        cmp             %%LENGTH, (32 * 16)
-        jae             %%_encrypt_32_blocks
 
         cmp             %%LENGTH, (16 * 16)
         jae             %%_encrypt_16_blocks
@@ -3406,152 +3376,13 @@
         ;; ==== GHASH 1 x 16 blocks
         ;; ==== GHASH 1 x 16 blocks (reduction) & encrypt N blocks
         ;; ====      then GHASH N blocks
-%%_encrypt_0_blocks_ghash_32:
-        ;; calculate offset to the right hash key
-%ifidn %%INSTANCE_TYPE, multi_call
-        mov             DWORD(%%IA0), DWORD(%%LENGTH)
-%else
-        lea             DWORD(%%IA0), [DWORD(%%LENGTH) + 15]
-%endif
-        and             DWORD(%%IA0), ~15
-        mov             DWORD(%%HASHK_PTR), HashKey_32
-        sub             DWORD(%%HASHK_PTR), DWORD(%%IA0)
-
+%%_encrypt_N_ghash_32_and_N_blocks:
         ;; ==== GHASH 32 blocks and follow with reduction
-        GHASH_16        start, hk_load, %%GH, %%GL, rsp, STACK_LOCAL_OFFSET, (0 * 16), %%GDATA_KEY, %%HASHK_PTR, 0, %%AAD_HASHz, \
+        GHASH_16        start, hk_load, %%GH, %%GL, rsp, STACK_LOCAL_OFFSET, (0 * 16), %%GDATA_KEY, HashKey_32, 0, %%AAD_HASHz, \
                         %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, %%ZTMP6, %%ZTMP7, %%ZTMP8, %%ZTMP9, %%ZTMP23
 
         ;; ==== GHASH 1 x 16 blocks with reduction + cipher and ghash on the reminder
 %assign ghashin_offset (STACK_LOCAL_OFFSET + (16 * 16))
-        add             DWORD(%%HASHK_PTR), (16 * 16)
-
-        GCM_ENC_DEC_LAST \
-                %%GDATA_KEY, %%GDATA_CTX, %%CIPH_PLAIN_OUT, %%PLAIN_CIPH_IN, \
-                %%DATA_OFFSET, %%LENGTH, %%CTR_BLOCKz, %%CTR_CHECK, \
-                %%HASHK_PTR, ghashin_offset, %%SHUF_MASK, \
-                %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, %%ZTMP6, \
-                %%ZTMP7, %%ZTMP8, %%ZTMP9, %%ZTMP10, %%ZTMP11, %%ZTMP12, %%ZTMP13, \
-                %%ZTMP14, %%ZTMP15, %%ZTMP16, %%ZTMP17, %%ZTMP18, %%ZTMP19, %%ZTMP20, \
-                %%ZTMP21, %%ZTMP22, %%ZTMP23, \
-                %%ADDBE_4x4, %%ADDBE_1234, mid, %%GL, %%GH, \
-                %%ENC_DEC, %%AAD_HASHz, %%IA0, %%IA5, %%MASKREG, %%INSTANCE_TYPE
-
-%ifidn %%INSTANCE_TYPE, multi_call
-        vpshufb         %%CTR_BLOCKx, %%CTR_BLOCKx, XWORD(%%SHUF_MASK)
-%endif
-        jmp             %%_ghash_done
-
-        ;; =====================================================
-        ;; =====================================================
-        ;; ==== GHASH & encrypt 1 x 16 blocks
-        ;; ==== GHASH & encrypt 1 x 16 blocks
-        ;; ==== GHASH 1 x 16 blocks (reduction)
-        ;; ==== GHASH 1 x 16 blocks (reduction) & encrypt N blocks
-        ;; ====      then GHASH N blocks
-%%_encrypt_32_blocks:
-        ;; ==== AES-CTR + GHASH - 16 blocks, start
-%assign aesout_offset (STACK_LOCAL_OFFSET + (32 * 16))
-%assign ghashin_offset (STACK_LOCAL_OFFSET + (0 * 16))
-%assign data_in_out_offset (0 * 16)
-
-        GHASH_16_ENCRYPT_16_PARALLEL  %%GDATA_KEY, %%CIPH_PLAIN_OUT, %%PLAIN_CIPH_IN, %%DATA_OFFSET, \
-                %%CTR_BLOCKz, %%CTR_CHECK, \
-                HashKey_48, aesout_offset, ghashin_offset, %%SHUF_MASK, \
-                %%ZTMP0,  %%ZTMP1,  %%ZTMP2,  %%ZTMP3, \
-                %%ZTMP4,  %%ZTMP5,  %%ZTMP6,  %%ZTMP7, \
-                %%ZTMP8,  %%ZTMP9,  %%ZTMP10, %%ZTMP11,\
-                %%ZTMP12, %%ZTMP13, %%ZTMP14, %%ZTMP15,\
-                %%ZTMP16, %%ZTMP17, %%ZTMP18, %%ZTMP19, \
-                %%ZTMP20, %%ZTMP21, %%ZTMP22, \
-                %%ADDBE_4x4, %%ADDBE_1234, %%GL, %%GH, \
-                first_time, %%ENC_DEC, data_in_out_offset, %%AAD_HASHz, hk_load
-
-        ;; ==== AES-CTR + GHASH - 16 blocks, no reduction
-%assign aesout_offset (STACK_LOCAL_OFFSET + (0 * 16))
-%assign ghashin_offset (STACK_LOCAL_OFFSET + (16 * 16))
-%assign data_in_out_offset (16 * 16)
-
-        GHASH_16_ENCRYPT_16_PARALLEL  %%GDATA_KEY, %%CIPH_PLAIN_OUT, %%PLAIN_CIPH_IN, %%DATA_OFFSET, \
-                %%CTR_BLOCKz, %%CTR_CHECK, \
-                HashKey_32, aesout_offset, ghashin_offset, %%SHUF_MASK, \
-                %%ZTMP0,  %%ZTMP1,  %%ZTMP2,  %%ZTMP3, \
-                %%ZTMP4,  %%ZTMP5,  %%ZTMP6,  %%ZTMP7, \
-                %%ZTMP8,  %%ZTMP9,  %%ZTMP10, %%ZTMP11,\
-                %%ZTMP12, %%ZTMP13, %%ZTMP14, %%ZTMP15,\
-                %%ZTMP16, %%ZTMP17, %%ZTMP18, %%ZTMP19, \
-                %%ZTMP20, %%ZTMP21, %%ZTMP22, \
-                %%ADDBE_4x4, %%ADDBE_1234, %%GL, %%GH, \
-                no_reduction, %%ENC_DEC, data_in_out_offset, no_ghash_in, hk_load
-
-        ;; ==== GHASH 16 blocks with reduction
-        GHASH_16        end_reduce, hk_load, %%GH, %%GL, rsp, STACK_LOCAL_OFFSET, (32 * 16), %%GDATA_KEY, HashKey_16, 0, %%AAD_HASHz, \
-                        %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, %%ZTMP6, %%ZTMP7, %%ZTMP8, %%ZTMP9, %%ZTMP23
-
-        ;; ==== GHASH 1 x 16 blocks with reduction + cipher and ghash on the reminder
-%assign ghashin_offset (STACK_LOCAL_OFFSET + (0 * 16))
-
-        sub             %%LENGTH, (32 * 16)
-        add             %%DATA_OFFSET, (32 * 16)
-
-        ;; calculate offset to the right hash key
-%ifidn %%INSTANCE_TYPE, multi_call
-        mov             DWORD(%%IA0), DWORD(%%LENGTH)
-%else
-        lea             DWORD(%%IA0), [DWORD(%%LENGTH) + 15]
-%endif
-        and             DWORD(%%IA0), ~15
-        mov             DWORD(%%HASHK_PTR), HashKey_16
-        sub             DWORD(%%HASHK_PTR), DWORD(%%IA0)
-
-        GCM_ENC_DEC_LAST \
-                %%GDATA_KEY, %%GDATA_CTX, %%CIPH_PLAIN_OUT, %%PLAIN_CIPH_IN, \
-                %%DATA_OFFSET, %%LENGTH, %%CTR_BLOCKz, %%CTR_CHECK, \
-                %%HASHK_PTR, ghashin_offset, %%SHUF_MASK, \
-                %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, %%ZTMP6, \
-                %%ZTMP7, %%ZTMP8, %%ZTMP9, %%ZTMP10, %%ZTMP11, %%ZTMP12, %%ZTMP13, \
-                %%ZTMP14, %%ZTMP15, %%ZTMP16, %%ZTMP17, %%ZTMP18, %%ZTMP19, %%ZTMP20, \
-                %%ZTMP21, %%ZTMP22, %%ZTMP23, \
-                %%ADDBE_4x4, %%ADDBE_1234, start, %%GL, %%GH, \
-                %%ENC_DEC, %%AAD_HASHz, %%IA0, %%IA5, %%MASKREG, %%INSTANCE_TYPE
-
-%ifidn %%INSTANCE_TYPE, multi_call
-        vpshufb         %%CTR_BLOCKx, %%CTR_BLOCKx, XWORD(%%SHUF_MASK)
-%endif
-        jmp             %%_ghash_done
-
-        ;; =====================================================
-        ;; =====================================================
-        ;; ==== GHASH & encrypt 16 blocks (done before)
-        ;; ==== GHASH 1 x 16 blocks
-        ;; ==== GHASH 1 x 16 blocks (reduction) & encrypt N blocks
-        ;; ====      then GHASH N blocks
-%%_encrypt_16_blocks:
-        ;; ==== AES-CTR + GHASH - 16 blocks, start
-%assign aesout_offset (STACK_LOCAL_OFFSET + (32 * 16))
-%assign ghashin_offset (STACK_LOCAL_OFFSET + (0 * 16))
-%assign data_in_out_offset (0 * 16)
-
-        GHASH_16_ENCRYPT_16_PARALLEL  %%GDATA_KEY, %%CIPH_PLAIN_OUT, %%PLAIN_CIPH_IN, %%DATA_OFFSET, \
-                %%CTR_BLOCKz, %%CTR_CHECK, \
-                HashKey_48, aesout_offset, ghashin_offset, %%SHUF_MASK, \
-                %%ZTMP0,  %%ZTMP1,  %%ZTMP2,  %%ZTMP3, \
-                %%ZTMP4,  %%ZTMP5,  %%ZTMP6,  %%ZTMP7, \
-                %%ZTMP8,  %%ZTMP9,  %%ZTMP10, %%ZTMP11,\
-                %%ZTMP12, %%ZTMP13, %%ZTMP14, %%ZTMP15,\
-                %%ZTMP16, %%ZTMP17, %%ZTMP18, %%ZTMP19, \
-                %%ZTMP20, %%ZTMP21, %%ZTMP22, \
-                %%ADDBE_4x4, %%ADDBE_1234, %%GL, %%GH, \
-                first_time, %%ENC_DEC, data_in_out_offset, %%AAD_HASHz, hk_load
-
-        ;; ==== GHASH 1 x 16 blocks
-        GHASH_16        mid, hk_load, %%GH, %%GL, rsp, STACK_LOCAL_OFFSET, (16 * 16), %%GDATA_KEY, HashKey_32, 0, no_hash_input, \
-                        %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, %%ZTMP6, %%ZTMP7, %%ZTMP8, %%ZTMP9, %%ZTMP23
-
-        ;; ==== GHASH 1 x 16 blocks with reduction + cipher and ghash on the reminder
-%assign ghashin_offset (STACK_LOCAL_OFFSET + (32 * 16))
-
-        sub             %%LENGTH, (16 * 16)
-        add             %%DATA_OFFSET, (16 * 16)
 
         GCM_ENC_DEC_LAST \
                 %%GDATA_KEY, %%GDATA_CTX, %%CIPH_PLAIN_OUT, %%PLAIN_CIPH_IN, \
@@ -3569,6 +3400,36 @@
 %endif
         jmp             %%_ghash_done
 
+        ;; =====================================================
+        ;; =====================================================
+        ;; ==== GHASH & encrypt 16 blocks
+        ;; ==== GHASH 1 x 16 blocks
+        ;; ==== GHASH 1 x 16 blocks (reduction) & encrypt N blocks
+        ;; ====      then GHASH N blocks
+%%_encrypt_16_blocks:
+        ;; ==== AES-CTR + GHASH - 16 blocks, start
+%assign aesout_offset (STACK_LOCAL_OFFSET + (0 * 16))
+%assign ghashin_offset (STACK_LOCAL_OFFSET + (0 * 16))
+%assign data_in_out_offset (0 * 16)
+
+        GHASH_16_ENCRYPT_16_PARALLEL  %%GDATA_KEY, %%CIPH_PLAIN_OUT, %%PLAIN_CIPH_IN, %%DATA_OFFSET, \
+                %%CTR_BLOCKz, %%CTR_CHECK, \
+                HashKey_32, aesout_offset, ghashin_offset, %%SHUF_MASK, \
+                %%ZTMP0,  %%ZTMP1,  %%ZTMP2,  %%ZTMP3, \
+                %%ZTMP4,  %%ZTMP5,  %%ZTMP6,  %%ZTMP7, \
+                %%ZTMP8,  %%ZTMP9,  %%ZTMP10, %%ZTMP11,\
+                %%ZTMP12, %%ZTMP13, %%ZTMP14, %%ZTMP15,\
+                %%ZTMP16, %%ZTMP17, %%ZTMP18, %%ZTMP19, \
+                %%ZTMP20, %%ZTMP21, %%ZTMP22, \
+                %%ADDBE_4x4, %%ADDBE_1234, %%GL, %%GH, \
+                first_time, %%ENC_DEC, data_in_out_offset, %%AAD_HASHz, hk_load
+
+        ;; ==== GHASH 1 x 16 blocks
+        GHASH_16        end_reduce, hk_load, %%GH, %%GL, rsp, STACK_LOCAL_OFFSET, (16 * 16), %%GDATA_KEY, HashKey_16, 0, %%AAD_HASHz, \
+                        %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, %%ZTMP6, %%ZTMP7, %%ZTMP8, %%ZTMP9, %%ZTMP23
+
+        ;; fall through here: handling of the rest is identical in both cases
+        
 %%_message_below_32_blocks:
         ;; 32 > number of blocks > 16
 
