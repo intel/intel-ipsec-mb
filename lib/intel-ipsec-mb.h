@@ -2656,6 +2656,23 @@ IMB_DLL_EXPORT void init_mb_mgr_auto(IMB_MGR *state, IMB_ARCH *arch);
 IMB_DLL_EXPORT int
 des_key_schedule(uint64_t *ks, const void *key);
 
+
+/**
+ * @brief DES-CFB Encrypt/Decrypt up to one block.
+ *
+ * Processes only one buffer at a time.
+ * Designed to manage partial blocks of DOCSIS 3.1 SEC BPI.
+ *
+ * @param [out] out Plaintext/Ciphertext output
+ * @param [in] in   Plaintext/Ciphertext input
+ * @param [in] iv   Pointer to 8 byte IV
+ * @param [in] ks   Pointer to DES key schedule
+ * @param [in] len  Length of data in bytes
+ */
+IMB_DLL_EXPORT void
+des_cfb_one(void *out, const void *in, const uint64_t *iv,
+            const uint64_t *ks, const int len);
+
 /**
  * Authenticate variable sized data with SHA1.
  *

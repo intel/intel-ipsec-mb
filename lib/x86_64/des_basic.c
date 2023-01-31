@@ -751,3 +751,11 @@ docsis_des_dec_basic(const void *input, void *output, const int size,
                 iv = in_block;
         }
 }
+
+IMB_DLL_EXPORT
+void
+des_cfb_one(void *output, const void *input, const uint64_t *iv,
+            const uint64_t *ks, const int size)
+{
+        cfb_one_basic(input, output, size, ks, iv);
+}

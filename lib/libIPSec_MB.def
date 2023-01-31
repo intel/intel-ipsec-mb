@@ -692,3 +692,4 @@ EXPORTS
     submit_job_nocheck_avx2_t3			@666
     get_next_job_avx2_t3                	@667
     get_completed_job_avx2_t3            	@668
+    des_cfb_one					@669
