@@ -850,105 +850,53 @@
 
         vmovdqa64       %%SHFMSK, [rel SHUF_MASK]
 
-%%_get_AAD_loop2x48x16:
-        cmp             %%T2, (2*48*16)
-        jb              %%_get_AAD_loop48x16
+%%_get_AAD_loop2x32x16:
+        cmp             %%T2, (2*32*16)
+        jb              %%_get_AAD_loop32x16
 
         GHASH_16        start, hk_bcast, %%ZT5, %%ZT6, \
-                        %%T1,  (0*64), 0, \
-                        %%GDATA_KEY, HashKey_48, 0, ZWORD(%%AAD_HASH), \
-                        %%ZT0, %%ZT8, %%ZT9, %%ZT10, %%ZT11, %%ZT12, \
-                        %%ZT14, %%ZT15, %%ZT16, %%ZT1, %%ZT7, %%SHFMSK
-
-        GHASH_16        mid, hk_bcast, %%ZT5, %%ZT6, \
-                        %%T1,  (4*64), 0, \
-                        %%GDATA_KEY, HashKey_32, 0, NO_HASH_IN_OUT, \
+                        %%T1,  (0*16*16), 0, \
+                        %%GDATA_KEY, HashKey_32, 0, ZWORD(%%AAD_HASH), \
                         %%ZT0, %%ZT8, %%ZT9, %%ZT10, %%ZT11, %%ZT12, \
                         %%ZT14, %%ZT15, %%ZT16, %%ZT1, %%ZT7, %%SHFMSK
 
         GHASH_16        end_reduce_no_hxor, hk_bcast, %%ZT5, %%ZT6, \
-                        %%T1,  (8*64), 0, \
+                        %%T1,  (1*16*16), 0, \
                         %%GDATA_KEY, HashKey_16, 0, ZWORD(%%AAD_HASH), \
                         %%ZT0, %%ZT8, %%ZT9, %%ZT10, %%ZT11, %%ZT12, \
                         %%ZT14, %%ZT15, %%ZT16, %%ZT1, %%ZT7, %%SHFMSK
 
-        add             %%T1, (48*16)
-        sub             %%T2, (48*16)
-        jmp             %%_get_AAD_loop2x48x16
-
-%%_get_AAD_loop48x16:
-        cmp             %%T2, (48*16)
-        jb              %%_exit_AAD_loop48x16
-
-        GHASH_16        start, hk_load, %%ZT5, %%ZT6, \
-                        %%T1,  (0*64), 0, \
-                        %%GDATA_KEY, HashKey_48, 0, ZWORD(%%AAD_HASH), \
-                        %%ZT0, %%ZT8, %%ZT9, %%ZT10, %%ZT11, %%ZT12, \
-                        %%ZT14, %%ZT15, %%ZT16, %%ZT1, %%ZT7, %%SHFMSK
-
-        GHASH_16        mid, hk_load, %%ZT5, %%ZT6, \
-                        %%T1,  (4*64), 0, \
-                        %%GDATA_KEY, HashKey_32, 0, NO_HASH_IN_OUT, \
-                        %%ZT0, %%ZT8, %%ZT9, %%ZT10, %%ZT11, %%ZT12, \
-                        %%ZT14, %%ZT15, %%ZT16, %%ZT1, %%ZT7, %%SHFMSK
-
-        GHASH_16        end_reduce, hk_load, %%ZT5, %%ZT6, \
-                        %%T1,  (8*64), 0, \
-                        %%GDATA_KEY, HashKey_16, 0, ZWORD(%%AAD_HASH), \
-                        %%ZT0, %%ZT8, %%ZT9, %%ZT10, %%ZT11, %%ZT12, \
-                        %%ZT14, %%ZT15, %%ZT16, %%ZT1, %%ZT7, %%SHFMSK
-
-        sub             %%T2, (12*64)
-        je              %%_CALC_AAD_done
-
-        add             %%T1, (12*64)
-        jmp             %%_get_AAD_loop48x16
-
-%%_exit_AAD_loop48x16:
-        ; Less than 48x16 bytes remaining
-        cmp             %%T2, (16*16)
-        jb              %%_less_than_16x16
-        je              %%_equal_16x16
-        cmp             %%T2, (32*16)
-        jb              %%_less_than_32x16
-        je              %%_equal_32x16
-
-        ;; calculate offset to hash key to start with
-        lea             %%T3, [%%T2 + 15]
-        and             %%T3, ~15
-        neg             %%T3
-        add             %%T3, HashKey_1 + 16
-
-        ; Get next 16 blocks
-        GHASH_16        start, hk_load, %%ZT5, %%ZT6, \
-                        %%T1,  (0*64), 0, \
-                        %%GDATA_KEY, %%T3, 0, ZWORD(%%AAD_HASH), \
-                        %%ZT0, %%ZT8, %%ZT9, %%ZT10, %%ZT11, %%ZT12, \
-                        %%ZT14, %%ZT15, %%ZT16, %%ZT1, %%ZT7, %%SHFMSK
-
-        GHASH_16        mid, hk_load, %%ZT5, %%ZT6, \
-                        %%T1,  (4*64), 0, \
-                        %%GDATA_KEY, {%%T3 + 16*16}, 0, ZWORD(%%AAD_HASH), \
-                        %%ZT0, %%ZT8, %%ZT9, %%ZT10, %%ZT11, %%ZT12, \
-                        %%ZT14, %%ZT15, %%ZT16, %%ZT1, %%ZT7, %%SHFMSK
-
-        sub             %%T2, (32*16)
         add             %%T1, (32*16)
-        jmp             %%_less_than_16x16_remain
+        sub             %%T2, (32*16)
+        jmp             %%_get_AAD_loop2x32x16
 
-%%_equal_32x16:
+%%_get_AAD_loop32x16:
+        cmp             %%T2, (32*16)
+        jb              %%_exit_AAD_loop32x16
+
         GHASH_16        start, hk_load, %%ZT5, %%ZT6, \
-                        %%T1,  (0*64), 0, \
+                        %%T1,  (0*16*16), 0, \
                         %%GDATA_KEY, HashKey_32, 0, ZWORD(%%AAD_HASH), \
                         %%ZT0, %%ZT8, %%ZT9, %%ZT10, %%ZT11, %%ZT12, \
                         %%ZT14, %%ZT15, %%ZT16, %%ZT1, %%ZT7, %%SHFMSK
 
         GHASH_16        end_reduce, hk_load, %%ZT5, %%ZT6, \
-                        %%T1,  (4*64), 0, \
+                        %%T1,  (1*16*16), 0, \
                         %%GDATA_KEY, HashKey_16, 0, ZWORD(%%AAD_HASH), \
                         %%ZT0, %%ZT8, %%ZT9, %%ZT10, %%ZT11, %%ZT12, \
                         %%ZT14, %%ZT15, %%ZT16, %%ZT1, %%ZT7, %%SHFMSK
-        jmp             %%_CALC_AAD_done
+
+        sub             %%T2, (32*16)
+        je              %%_CALC_AAD_done
+
+        add             %%T1, (32*16)
+        jmp             %%_get_AAD_loop32x16
+
+%%_exit_AAD_loop32x16:
+        ; Less than 32x16 bytes remaining
+        cmp             %%T2, (16*16)
+        jb              %%_less_than_16x16
+        je              %%_equal_16x16
 
 %%_less_than_32x16:
         ;; calculate offset to hash key to start with
