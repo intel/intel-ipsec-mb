@@ -922,6 +922,8 @@ static const uint8_t CFBC2[] = {
  * Test vectors from
  * https://nvlpubs.nist.gov/nistpubs/Legacy/SP/nistspecialpublication800-38a.pdf
  */
+
+/* 128-Bit */
 static const uint8_t CFBK3[] = {
         0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6,
         0xab, 0xf7, 0x15, 0x88, 0x09, 0xcf, 0x4f, 0x3c
@@ -989,13 +991,116 @@ static const uint8_t CFBC6[] = {
         0xc0, 0x4b, 0x05, 0x35, 0x7c, 0x5d, 0x1c, 0x0e,
         0xea, 0xc4, 0xc6, 0x6f, 0x9f, 0xf7, 0xf2, 0xe6
 };
-static struct aes_vector aes_cfb_128_tab[] = {
-        {CFBK1, CFBIV1, CFBP1, sizeof(CFBP1), CFBC1, sizeof(CFBK1)},
-        {CFBK2, CFBIV2, CFBP2, sizeof(CFBP2), CFBC2, sizeof(CFBK2)},
-        {CFBK3, CFBIV3, CFBP3, sizeof(CFBP3), CFBC3, sizeof(CFBK3)},
-        {CFBK4, CFBIV4, CFBP4, sizeof(CFBP4), CFBC4, sizeof(CFBK4)},
-        {CFBK5, CFBIV5, CFBP5, sizeof(CFBP5), CFBC5, sizeof(CFBK5)},
-        {CFBK6, CFBIV6, CFBP6, sizeof(CFBP6), CFBC6, sizeof(CFBK6)},
+
+static const uint8_t CFBK7[] = {
+        0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6,
+        0xab, 0xf7, 0x15, 0x88, 0x09, 0xcf, 0x4f, 0x3c
+};
+static const uint8_t CFBIV7[] = {
+        0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+        0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f
+};
+static const uint8_t CFBP7[] = {
+        0x6b, 0xc1, 0xbe, 0xe2, 0x2e, 0x40, 0x9f, 0x96
+};
+static const uint8_t CFBC7[] = {
+        0x3b, 0x3f, 0xd9, 0x2e, 0xb7, 0x2d, 0xad, 0x20
+};
+static const uint8_t CFBK8[] = {
+        0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6,
+        0xab, 0xf7, 0x15, 0x88, 0x09, 0xcf, 0x4f, 0x3c
+};
+static const uint8_t CFBIV8[] = {
+        0xc8, 0xa6, 0x45, 0x37, 0xa0, 0xb3, 0xa9, 0x3f,
+        0xcd, 0xe3, 0xcd, 0xad, 0x9f, 0x1c, 0xe5, 0x8b
+};
+static const uint8_t CFBP8[] = {
+        0x30, 0xc8, 0x1c, 0x46, 0xa3, 0x5c, 0xe4, 0x11
+};
+static const uint8_t CFBC8[] = {
+        0x26, 0x75, 0x1f, 0x67, 0xa3, 0xcb, 0xb1, 0x40
+};
+
+/* 256-Bit */
+static const uint8_t CFBK9[] = {
+        0x60, 0x3d, 0xeb, 0x10, 0x15, 0xca, 0x71, 0xbe,
+        0x2b, 0x73, 0xae, 0xf0, 0x85, 0x7d, 0x77, 0x81,
+        0x1f, 0x35, 0x2c, 0x07, 0x3b, 0x61, 0x08, 0xd7,
+        0x2d, 0x98, 0x10, 0xa3, 0x09, 0x14, 0xdf, 0xf4
+};
+static const uint8_t CFBIV9[] = {
+        0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+        0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f
+};
+static const uint8_t CFBP9[] = {
+        0x6b, 0xc1, 0xbe, 0xe2, 0x2e, 0x40, 0x9f, 0x96,
+        0xe9, 0x3d, 0x7e, 0x11, 0x73, 0x93, 0x17, 0x2a
+};
+static const uint8_t CFBC9[] = {
+        0xdc, 0x7e, 0x84, 0xbf, 0xda, 0x79, 0x16, 0x4b,
+        0x7e, 0xcd, 0x84, 0x86, 0x98, 0x5d, 0x38, 0x60
+};
+static const uint8_t CFBIV10[] = {
+        0xdc, 0x7e, 0x84, 0xbf, 0xda, 0x79, 0x16, 0x4b,
+        0x7e, 0xcd, 0x84, 0x86, 0x98, 0x5d, 0x38, 0x60
+};
+static const uint8_t CFBP10[] = {
+        0xae, 0x2d, 0x8a, 0x57, 0x1e, 0x03, 0xac, 0x9c,
+        0x9e, 0xb7, 0x6f, 0xac, 0x45, 0xaf, 0x8e, 0x51
+};
+static const uint8_t CFBC10[] = {
+        0x39, 0xff, 0xed, 0x14, 0x3b, 0x28, 0xb1, 0xc8,
+        0x32, 0x11, 0x3c, 0x63, 0x31, 0xe5, 0x40, 0x7b
+};
+static const uint8_t CFBIV11[] = {
+        0x39, 0xff, 0xed, 0x14, 0x3b, 0x28, 0xb1, 0xc8,
+        0x32, 0x11, 0x3c, 0x63, 0x31, 0xe5, 0x40, 0x7b
+};
+static const uint8_t CFBP11[] = {
+        0x30, 0xc8, 0x1c, 0x46, 0xa3, 0x5c, 0xe4, 0x11,
+        0xe5, 0xfb, 0xc1, 0x19, 0x1a, 0x0a, 0x52, 0xef
+};
+static const uint8_t CFBC11[] = {
+        0xdf, 0x10, 0x13, 0x24, 0x15, 0xe5, 0x4b, 0x92,
+        0xa1, 0x3e, 0xd0, 0xa8, 0x26, 0x7a, 0xe2, 0xf9
+};
+static const uint8_t CFBIV12[] = {
+        0xdf, 0x10, 0x13, 0x24, 0x15, 0xe5, 0x4b, 0x92,
+        0xa1, 0x3e, 0xd0, 0xa8, 0x26, 0x7a, 0xe2, 0xf9
+};
+static const uint8_t CFBP12[] = {
+        0xf6, 0x9f, 0x24, 0x45, 0xdf, 0x4f, 0x9b, 0x17,
+        0xad, 0x2b, 0x41, 0x7b, 0xe6, 0x6c, 0x37, 0x10
+};
+static const uint8_t CFBC12[] = {
+        0x75, 0xa3, 0x85, 0x74, 0x1a, 0xb9, 0xce, 0xf8,
+        0x20, 0x31, 0x62, 0x3d, 0x55, 0xb1, 0xe4, 0x71
+};
+static const uint8_t CFBIV13[] = {
+        0xdc, 0x7e, 0x84, 0xbf, 0xda, 0x79, 0x16, 0x4b,
+        0x7e, 0xcd, 0x84, 0x86, 0x98, 0x5d, 0x38, 0x60
+};
+static const uint8_t CFBP13[] = {
+        0xae, 0x2d, 0x8a, 0x57, 0x1e, 0x03, 0xac, 0x9c
+};
+static const uint8_t CFBC13[] = {
+        0x39, 0xff, 0xed, 0x14, 0x3b, 0x28, 0xb1, 0xc8
+};
+
+static struct aes_vector aes_cfb_tab[] = {
+       {CFBK1, CFBIV1, CFBP1, sizeof(CFBP1), CFBC1, sizeof(CFBK1)},
+       {CFBK2, CFBIV2, CFBP2, sizeof(CFBP2), CFBC2, sizeof(CFBK2)},
+       {CFBK3, CFBIV3, CFBP3, sizeof(CFBP3), CFBC3, sizeof(CFBK3)},
+       {CFBK4, CFBIV4, CFBP4, sizeof(CFBP4), CFBC4, sizeof(CFBK4)},
+       {CFBK5, CFBIV5, CFBP5, sizeof(CFBP5), CFBC5, sizeof(CFBK5)},
+       {CFBK6, CFBIV6, CFBP6, sizeof(CFBP6), CFBC6, sizeof(CFBK6)},
+       {CFBK7, CFBIV7, CFBP7, sizeof(CFBP7), CFBC7, sizeof(CFBK7)},
+       {CFBK8, CFBIV8, CFBP8, sizeof(CFBP8), CFBC8, sizeof(CFBK8)},
+       {CFBK9, CFBIV9, CFBP9, sizeof(CFBP9), CFBC9, sizeof(CFBK9)},
+       {CFBK9, CFBIV10, CFBP10, sizeof(CFBP10), CFBC10, sizeof(CFBK9)},
+       {CFBK9, CFBIV11, CFBP11, sizeof(CFBP11), CFBC11, sizeof(CFBK9)},
+       {CFBK9, CFBIV12, CFBP12, sizeof(CFBP12), CFBC12, sizeof(CFBK9)},
+       {CFBK9, CFBIV13, CFBP13, sizeof(CFBP13), CFBC13, sizeof(CFBK9)},
 };
 
 /* =================================================================== */
@@ -2605,18 +2710,14 @@ test_docrc_vectors(struct IMB_MGR *mb_mgr,
 #else
 		printf(".");
 #endif
-                switch (vec_tab[vect].key_len) {
-                case 16:
+                if (vec_tab[vect].key_len == 16) {
                         IMB_AES_KEYEXP_128(mb_mgr, vec_tab[vect].key, enc_keys,
                                            dec_keys);
                         ctx = ctx128;
-                        break;
-                case 32:
-                default:
+                } else {
                         IMB_AES_KEYEXP_256(mb_mgr, vec_tab[vect].key, enc_keys,
                                            dec_keys);
                         ctx = ctx256;
-                        break;
                 }
 
 
@@ -2645,12 +2746,14 @@ test_docrc_vectors(struct IMB_MGR *mb_mgr,
 }
 
 static int
-cfb128_validate_ok(const uint8_t *output, const uint8_t *in_text,
-                   const size_t plen, const unsigned i, const unsigned is_enc,
-                   const int in_place)
+cfb_validate_ok(const uint8_t *output, const uint8_t *in_text,
+                const size_t plen, const uint32_t klen,
+                const unsigned i, const unsigned is_enc,
+                const int in_place)
 {
         if (memcmp(output, in_text, plen) != 0) {
-                printf("\nAES-CFB128 standard test vector %u %s (%s): fail\n",
+                printf("\nAES-CFB%s standard test vector %u %s (%s): fail\n",
+                       (klen == 16) ? "128" : "256",
                        i + 1, (is_enc) ? "encrypt" : "decrypt",
                        (in_place) ? "in-place" : "out-of-place");
                 return 0;
@@ -2659,70 +2762,114 @@ cfb128_validate_ok(const uint8_t *output, const uint8_t *in_text,
         printf("Standard test vector %u %s %s\n", i + 1,
                (in_place) ? "in-place" : "out-of-place",
                (is_enc) ? "encrypt" : "decrypt");
-#else
-	printf(".");
 #endif
-
         return 1;
 }
 
-
 static int
-cfb128_validate(struct IMB_MGR *mb_mgr)
+cfb_validate(struct IMB_MGR *mb_mgr,
+             const struct aes_vector *p_vec,
+             const unsigned i)
 {
-        unsigned i;
+        uint8_t output1[16];
+        uint8_t output2[16];
+        const uint32_t kLength = p_vec->Klen;
+        DECLARE_ALIGNED(uint32_t keys_enc[15*4], 16);
+        DECLARE_ALIGNED(uint32_t keys_dec[15*4], 16);
 
-        printf("AES-CFB128 standard test vectors:\n");
-        for (i = 0; i < DIM(aes_cfb_128_tab); i++) {
-                uint8_t output1[16];
-                uint8_t output2[16];
-                DECLARE_ALIGNED(uint32_t key[4], 16);
-                DECLARE_ALIGNED(uint32_t keys_enc[11*4], 16);
-                DECLARE_ALIGNED(uint32_t keys_dec[11*4], 16);
+        if (kLength == 16)
+                IMB_AES_KEYEXP_128(mb_mgr, p_vec->K,
+                                   keys_enc, keys_dec);
+        else
+                IMB_AES_KEYEXP_256(mb_mgr, p_vec->K,
+                                   keys_enc, keys_dec);
+        /* Out of place */
 
-                memcpy(key, aes_cfb_128_tab[i].K, aes_cfb_128_tab[i].Klen);
-                IMB_AES_KEYEXP_128(mb_mgr, key, keys_enc, keys_dec);
+        /* encrypt test */
+        if (kLength == 16)
+                IMB_AES128_CFB_ONE(mb_mgr, output1, p_vec->P,
+                                  p_vec->IV, keys_enc,
+                                  p_vec->Plen);
+        else
+                IMB_AES256_CFB_ONE(mb_mgr, output1, p_vec->P,
+                                   p_vec->IV, keys_enc,
+                                   p_vec->Plen);
+        if (!cfb_validate_ok(output1, p_vec->C,
+                             p_vec->Plen, p_vec->Klen, i, 1, 0))
+                return 0;
 
-                /* Out of place */
-
-                /* encrypt test */
-                IMB_AES128_CFB_ONE(mb_mgr, output1, aes_cfb_128_tab[i].P,
-                                   aes_cfb_128_tab[i].IV, keys_enc,
-                                   aes_cfb_128_tab[i].Plen);
-                if (!cfb128_validate_ok(output1, aes_cfb_128_tab[i].C,
-                        aes_cfb_128_tab[i].Plen, i, 1, 0))
-                        return 0;
-
-                /* decrypt test */
+        /* decrypt test */
+        if (kLength == 16)
                 IMB_AES128_CFB_ONE(mb_mgr, output2, output1,
-                                   aes_cfb_128_tab[i].IV, keys_enc,
-                                   aes_cfb_128_tab[i].Plen);
-                if (!cfb128_validate_ok(output2, aes_cfb_128_tab[i].P,
-                        aes_cfb_128_tab[i].Plen, i, 0, 0))
-                        return 0;
+                                   p_vec->IV, keys_enc,
+                                   p_vec->Plen);
+        else
+                IMB_AES256_CFB_ONE(mb_mgr, output2, output1,
+                                   p_vec->IV, keys_enc,
+                                   p_vec->Plen);
+        if (!cfb_validate_ok(output2, p_vec->P,
+                             p_vec->Plen, p_vec->Klen, i, 0, 0))
+                return 0;
+        /* In place */
 
-                /* In place */
-
-                /* encrypt test */
-                memcpy(output1, aes_cfb_128_tab[i].P, aes_cfb_128_tab[i].Plen);
+        /* encrypt test */
+        memcpy(output1, p_vec->P, p_vec->Plen);
+        if (kLength == 16)
                 IMB_AES128_CFB_ONE(mb_mgr, output1, output1,
-                                   aes_cfb_128_tab[i].IV, keys_enc,
-                                   aes_cfb_128_tab[i].Plen);
-                if (!cfb128_validate_ok(output1, aes_cfb_128_tab[i].C,
-                        aes_cfb_128_tab[i].Plen, i, 1, 1))
-                        return 0;
+                                   p_vec->IV, keys_enc,
+                                   p_vec->Plen);
+        else
+                IMB_AES256_CFB_ONE(mb_mgr, output1, output1,
+                                   p_vec->IV, keys_enc,
+                                   p_vec->Plen);
+        if (!cfb_validate_ok(output1, p_vec->C,
+                            p_vec->Plen, p_vec->Klen, i, 1, 1))
+                return 0;
 
-                /* decrypt test */
-                memcpy(output1, aes_cfb_128_tab[i].C, aes_cfb_128_tab[i].Plen);
+        /* decrypt test */
+        memcpy(output1, p_vec->C, p_vec->Plen);
+        if (kLength == 16)
                 IMB_AES128_CFB_ONE(mb_mgr, output1, output1,
-                                   aes_cfb_128_tab[i].IV, keys_enc,
-                                   aes_cfb_128_tab[i].Plen);
-                if (!cfb128_validate_ok(output1, aes_cfb_128_tab[i].P,
-                        aes_cfb_128_tab[i].Plen, i, 0, 1))
-                        return 0;
+                                   p_vec->IV, keys_enc,
+                                   p_vec->Plen);
+        else
+                IMB_AES256_CFB_ONE(mb_mgr, output1, output1,
+                                   p_vec->IV, keys_enc,
+                                   p_vec->Plen);
+        if (!cfb_validate_ok(output1, p_vec->P,
+                             p_vec->Plen, p_vec->Klen, i, 0, 1))
+                return 0;
+        return 1;
+}
+
+static void
+cfb_test_vectors(struct IMB_MGR *mb_mgr, struct test_suite_context *ctx128,
+                 struct test_suite_context *ctx256, const int num_jobs)
+{
+        unsigned vect;
+
+
+        printf("AES-CFB test vectors (N jobs = %d):\n", num_jobs);
+	for (vect = 0; vect < DIM(aes_cfb_tab); vect++) {
+                struct test_suite_context *ctx;
+#ifdef DEBUG
+		printf("[%d/%lu] Standard %s-bit vector\n",
+                       vect + 1,
+                       (unsigned long) DIM(aes_cfb_tab),
+                       (aes_cfb_tab[vect].Klen == 16) ? "128":"256");
+#else
+		printf(".");
+#endif
+                if (aes_cfb_tab[vect].Klen == 16)
+                        ctx = ctx128;
+                else
+                        ctx = ctx256;
+                if (!cfb_validate(mb_mgr, &aes_cfb_tab[vect], vect))
+                        test_suite_update(ctx, 0, 1);
+                else
+                        test_suite_update(ctx, 1, 0);
         }
         printf("\n");
-        return 1;
 }
 
 int
@@ -2763,8 +2910,13 @@ aes_test(struct IMB_MGR *mb_mgr)
         errors += test_suite_end(&ctx128);
         errors += test_suite_end(&ctx256);
 
-        if (!cfb128_validate(mb_mgr))
-                errors++;
+        test_suite_start(&ctx128, "AES-CFB-128");
+        test_suite_start(&ctx256, "AES-CFB-256");
+        for (i = 0; i < DIM(num_jobs_tab); i++)
+                cfb_test_vectors(mb_mgr, &ctx128, &ctx256, num_jobs_tab[i]);
+        errors += test_suite_end(&ctx128);
+        errors += test_suite_end(&ctx256);
+
 
         test_suite_start(&ctx128, "DOCSIS-SEC-128-CRC32");
         test_suite_start(&ctx256, "DOCSIS-SEC-256-CRC32");
