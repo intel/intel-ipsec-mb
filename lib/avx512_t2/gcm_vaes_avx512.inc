@@ -2718,7 +2718,6 @@
 %macro FUNC_RESTORE 0
 
 %ifdef SAFE_DATA
-        clear_scratch_gps_asm
         clear_scratch_zmms_asm
 %else
         vzeroupper
