@@ -234,9 +234,9 @@
 %define %%ZTMP5 %17     ; [clobbered] temporary ZMM
 %define %%ZTMP6 %18     ; [clobbered] temporary ZMM
 %define %%ZTMP7 %19     ; [clobbered] temporary ZMM
-%define %%ZTMP8 %20     ; [clobbered] temporary ZMM
-%define %%ZTMP9 %21     ; [clobbered] temporary ZMM
-%define %%ZTMPA %22     ; [clobbered] temporary ZMM
+%define %%ZTMP8 %20     ; [clobbered**] temporary ZMM
+%define %%ZTMP9 %21     ; [clobbered**] temporary ZMM
+%define %%ZTMPA %22     ; [clobbered**] temporary ZMM
 %define %%SHUFM %23     ; [in] ZMM with shuffle mask - provided only when input data needs shuffling
 
 %assign start_ghash 0
@@ -363,6 +363,7 @@
         vpternlogq      %%GL, %%ZTMP6, %%ZTMP4, 0x96        ; T2 = THL + TLL
         vpternlogq      %%GH, %%ZTMP7, %%ZTMP5, 0x96        ; T1 = THH + TLH
 
+        ;; **ZTMP8 and ZTMPA include hash keys
 %if do_reduction != 0
         ;; new reduction
         vpclmulqdq      %%HASH, %%GL, [rel POLY], 0x10
@@ -395,10 +396,10 @@
 %define %%HK1           %11     ; [clobbered] temporary ZMM
 %define %%HK2           %12     ; [clobbered] temporary ZMM
 %define %%AAD_HASH_IN   %13     ; [in] input hash value
-%define %%CIPHER_IN0    %14     ; [in] ZMM with cipher text blocks 0-3
-%define %%CIPHER_IN1    %15     ; [in] ZMM with cipher text blocks 4-7
-%define %%CIPHER_IN2    %16     ; [in] ZMM with cipher text blocks 8-11
-%define %%CIPHER_IN3    %17     ; [in] ZMM with cipher text blocks 12-15
+%define %%CIPHER_IN0    %14     ; [in**] ZMM with cipher text blocks 0-3
+%define %%CIPHER_IN1    %15     ; [in**] ZMM with cipher text blocks 4-7
+%define %%CIPHER_IN2    %16     ; [in**] ZMM with cipher text blocks 8-11
+%define %%CIPHER_IN3    %17     ; [in**] ZMM with cipher text blocks 12-15
 %define %%NUM_BLOCKS    %18     ; [in] numerical value, number of blocks
 %define %%GH            %19     ; [in] ZMM with hi product part
 %define %%GL            %20     ; [in] ZMM with lo product part
@@ -717,14 +718,14 @@
 %macro  PRECOMPUTE 10
 %define %%GDATA %1      ;; [in/out] GPR, pointer to GCM key data structure, content updated
 %define %%HK    %2      ;; [in] xmm, hash key
-%define %%T1    %3      ;; [clobbered] xmm
-%define %%T2    %4      ;; [clobbered] xmm
+%define %%T1    %3      ;; [clobbered**] xmm
+%define %%T2    %4      ;; [clobbered**] xmm
 %define %%T3    %5      ;; [clobbered] xmm
 %define %%T4    %6      ;; [clobbered] xmm
-%define %%T5    %7      ;; [clobbered] xmm
+%define %%T5    %7      ;; [clobbered**] xmm
 %define %%T6    %8      ;; [clobbered] xmm
-%define %%T7    %9      ;; [clobbered] xmm
-%define %%T8    %10     ;; [clobbered] xmm
+%define %%T7    %9      ;; [clobbered**] xmm
+%define %%T8    %10     ;; [clobbered**] xmm
 
 %xdefine %%ZT1 ZWORD(%%T1)
 %xdefine %%ZT2 ZWORD(%%T2)
@@ -752,16 +753,19 @@
         GHASH_MUL       %%T5, %%HK, %%T1, %%T3, %%T4, %%T6, %%T2
         vmovdqu64       [%%GDATA + HashKey_4], %%T5
         vinserti64x2    %%ZT7, %%T5, 0
+        ;; **ZT5 amd ZT7 to be cleared (hash key)
 
         ;; calculate HashKeyK = HashKey x POLY
         vpclmulqdq      %%ZT1, %%ZT7, [rel POLY], 0x10
         vpshufd         %%ZT2, %%ZT7, 01001110b   
         vpxorq          %%ZT1, %%ZT1, %%ZT2  
         vmovdqu64       [%%GDATA + HashKeyK_4], %%ZT1
+        ;; **ZT1 amd ZT2 to be cleared (hash key)
 
         ;; switch to 4x128-bit computations now
         vshufi64x2      %%ZT5, %%ZT5, %%ZT5, 0x00       ;; broadcast HashKey^4 across all ZT5
         vmovdqa64       %%ZT8, %%ZT7                    ;; save HashKey^4 to HashKey^1 in ZT8
+        ;; **ZT8 to be cleared (hash key)
 
         ;; calculate HashKey^5<<1 mod poly, HashKey^6<<1 mod poly, ... HashKey^8<<1 mod poly
         GHASH_MUL       %%ZT7, %%ZT5, %%ZT1, %%ZT3, %%ZT4, %%ZT6, %%ZT2
@@ -816,10 +820,10 @@
 %define %%AAD_HASH      %3      ; [in/out] xmm ghash value
 %define %%GDATA_KEY     %4      ; [in] pointer to keys
 %define %%ZT0           %5      ; [clobbered] ZMM register
-%define %%ZT1           %6      ; [clobbered] ZMM register
-%define %%ZT2           %7      ; [clobbered] ZMM register
-%define %%ZT3           %8      ; [clobbered] ZMM register
-%define %%ZT4           %9      ; [clobbered] ZMM register
+%define %%ZT1           %6      ; [clobbered**] ZMM register
+%define %%ZT2           %7      ; [clobbered**] ZMM register
+%define %%ZT3           %8      ; [clobbered**] ZMM register
+%define %%ZT4           %9      ; [clobbered**] ZMM register
 %define %%ZT5           %10     ; [clobbered] ZMM register
 %define %%ZT6           %11     ; [clobbered] ZMM register
 %define %%ZT7           %12     ; [clobbered] ZMM register
@@ -863,7 +867,7 @@
                         %%GDATA_KEY, HashKey_16, 0, ZWORD(%%AAD_HASH), \
                         %%ZT0, %%ZT8, %%ZT9, %%ZT10, %%ZT11, %%ZT12, \
                         %%ZT14, %%ZT15, %%ZT16, %%ZT1, %%ZT7, %%SHFMSK
-
+        ;; **ZT1 can potentially include clear text, ZT16 & ZT17 hash key
         add             %%T1, (32*16)
         sub             %%T2, (32*16)
         jmp             %%_get_AAD_loop2x32x16
@@ -883,7 +887,7 @@
                         %%GDATA_KEY, HashKey_16, 0, ZWORD(%%AAD_HASH), \
                         %%ZT0, %%ZT8, %%ZT9, %%ZT10, %%ZT11, %%ZT12, \
                         %%ZT14, %%ZT15, %%ZT16, %%ZT1, %%ZT7, %%SHFMSK
-
+        ;; **ZT1 can potentially include clear text, ZT16 & ZT17 hash key
         sub             %%T2, (32*16)
         je              %%_CALC_AAD_done
 
@@ -908,6 +912,7 @@
                         %%GDATA_KEY, %%T3, 0, ZWORD(%%AAD_HASH), \
                         %%ZT0, %%ZT8, %%ZT9, %%ZT10, %%ZT11, %%ZT12, \
                         %%ZT14, %%ZT15, %%ZT16, %%ZT1, %%ZT7, %%SHFMSK
+        ;; **ZT1 can potentially include clear text, ZT16 & ZT17 hash key
         sub             %%T2, (16*16)
         add             %%T1, (16*16)
         jmp             %%_less_than_16x16_remain
@@ -918,6 +923,7 @@
                         %%GDATA_KEY, HashKey_16, 0, ZWORD(%%AAD_HASH), \
                         %%ZT0, %%ZT8, %%ZT9, %%ZT10, %%ZT11, %%ZT12, \
                         %%ZT14, %%ZT15, %%ZT16, %%ZT1, %%ZT7, %%SHFMSK
+        ;; **ZT1 can potentially include clear text, ZT16 & ZT17 hash key
         jmp             %%_CALC_AAD_done
 
         ; Less than 16x16 bytes remaining
@@ -979,19 +985,21 @@
 
         ZMM_LOAD_MASKED_BLOCKS_0_16 \
                         I, %%T1, 0, \
-                        %%ZT14, %%ZT15, %%ZT16, %%ZT17, %%MASKREG
+                        %%ZT1, %%ZT2, %%ZT3, %%ZT4, %%MASKREG
 
         ZMM_OPCODE3_DSTR_SRC1R_SRC2R_BLOCKS_0_16 \
                         I, vpshufb, \
-                        %%ZT14, %%ZT15, %%ZT16, %%ZT17, \
-                        %%ZT14, %%ZT15, %%ZT16, %%ZT17, \
+                        %%ZT1, %%ZT2, %%ZT3, %%ZT4, \
+                        %%ZT1, %%ZT2, %%ZT3, %%ZT4, \
                         %%SHFMSK, %%SHFMSK, %%SHFMSK, %%SHFMSK
+        ;; **ZT1, ZT2, ZT3, ZT4 contain clear text
 
         GHASH_1_TO_16 %%GDATA_KEY, ZWORD(%%AAD_HASH), \
-                        %%ZT0, %%ZT1, %%ZT2, %%ZT3, %%ZT4, \
+                        %%ZT0, %%ZT14, %%ZT15, %%ZT16, %%ZT17, \
                         %%ZT9, %%ZT10, %%ZT11, %%ZT12, %%ZT7, \
-                        ZWORD(%%AAD_HASH), %%ZT14, %%ZT15, %%ZT16, %%ZT17, I, \
+                        ZWORD(%%AAD_HASH), %%ZT1, %%ZT2, %%ZT3, %%ZT4, I, \
                         %%ZT5, %%ZT6
+        ;; **ZT16 and ZT17 may not get cleared above when number of blocks is below 4
         jmp             %%_CALC_AAD_done
 
 %assign I (I - 1)
@@ -1070,6 +1078,7 @@
                         %%ZT1, %%ZT2, %%ZT3, %%ZT4, \
                         %%ZT1, %%ZT2, %%ZT3, %%ZT4, \
                         %%SHFMSK, %%SHFMSK, %%SHFMSK, %%SHFMSK
+        ;; **ZT1, ZT2, ZT3, ZT4 contain clear text
 
         GHASH_1_TO_16 %%GDATA_KEY, ZWORD(%%AAD_HASH), \
                         %%ZT0, %%ZT5, %%ZT6, %%ZT7, %%ZT8, \
@@ -1110,7 +1119,7 @@
 %define %%GPTMP1                %10 ; [clobbered] GP temporary register
 %define %%GPTMP2                %11 ; [clobbered] GP temporary register
 %define %%ZTMP0                 %12 ; [clobbered] ZMM temporary register
-%define %%ZTMP1                 %13 ; [clobbered] ZMM temporary register
+%define %%ZTMP1                 %13 ; [clobbered**] ZMM temporary register
 %define %%ZTMP2                 %14 ; [clobbered] ZMM temporary register
 %define %%ZTMP3                 %15 ; [clobbered] ZMM temporary register
 %define %%ZTMP4                 %16 ; [clobbered] ZMM temporary register
@@ -1144,6 +1153,7 @@
 
         READ_SMALL_DATA_INPUT_LEN_BT16_AVX512 %%XTMP0, %%PLAIN_CIPH_IN, %%PLAIN_CIPH_LEN, \
                                               %%IA0, %%IA2, %%MASKREG
+        ;; **XTMP0 includes plain text
 
         ;; XTMP1 = my_ctx_data.partial_block_enc_key
         vmovdqu64       %%XTMP1, [%%GDATA_CTX + PBlockEncKey]
@@ -1160,8 +1170,10 @@
 %ifidn  %%ENC_DEC, DEC
         ;;  keep copy of cipher text in %%XTMP4
         vmovdqa64       %%XTMP4, %%XTMP0
+        ;; **XTMP4 includes cipher text (not sensitive)
 %endif
         vpxorq          %%XTMP1, %%XTMP0      ; Ciphertext XOR E(K, Yn)
+        ;; **XTMP1 may contain clear text (decrypt direction)
 
         ;; Set %%IA1 to be the amount of data left in CIPH_PLAIN_IN after filling the block
         ;; Determine if partial block is not being filled and shift mask accordingly
@@ -1178,6 +1190,7 @@
         ;; get the appropriate mask to mask out bottom %%LENGTH bytes of %%XTMP1
         ;; - mask out bottom %%LENGTH bytes of %%XTMP1
         vmovdqu64       %%XTMP0, [%%IA0 + ALL_F - SHIFT_MASK]
+        ;; **XTMP0 (potentially clear text) gets cleared with a shift mask
         vpand           %%XTMP1, %%XTMP0
 
 %ifidn  %%ENC_DEC, DEC
@@ -1250,11 +1263,11 @@
 %define %%DAT3                  %14 ; [out] ZMM with cipher text shuffled for GHASH
 %define %%LAST_CIPHER_BLK       %15 ; [out] XMM to put ciphered counter block partially xor'ed with text
 %define %%LAST_GHASH_BLK        %16 ; [out] XMM to put last cipher text block shuffled for GHASH
-%define %%CTR0                  %17 ; [clobbered] ZMM temporary
-%define %%CTR1                  %18 ; [clobbered] ZMM temporary
-%define %%CTR2                  %19 ; [clobbered] ZMM temporary
-%define %%CTR3                  %20 ; [clobbered] ZMM temporary
-%define %%ZT1                   %21 ; [clobbered] ZMM temporary
+%define %%CTR0                  %17 ; [clobbered**] ZMM temporary
+%define %%CTR1                  %18 ; [clobbered**] ZMM temporary
+%define %%CTR2                  %19 ; [clobbered**] ZMM temporary
+%define %%CTR3                  %20 ; [clobbered**] ZMM temporary
+%define %%ZT1                   %21 ; [clobbered**] ZMM temporary
 %define %%IA0                   %22 ; [clobbered] GP temporary
 %define %%IA1                   %23 ; [clobbered] GP temporary
 %define %%MASKREG               %24 ; [clobbered] mask register
@@ -1331,6 +1344,7 @@
                         %%NUM_BLOCKS, NROUNDS
 %assign j (j + 1)
 %endrep
+        ;; **DAT0, DAT1, DAT2, DAT3 may contain clear text
 
 %ifidn %%INSTANCE_TYPE, multi_call
         ;; retrieve the last cipher counter block (partially XOR'ed with text)
@@ -1348,6 +1362,7 @@
         ;; write cipher/plain text back to output and
         ZMM_STORE_MASKED_BLOCKS_0_16 %%NUM_BLOCKS, %%CIPH_PLAIN_OUT, %%DATA_OFFSET, \
                         %%CTR0, %%CTR1, %%CTR2, %%CTR3, %%MASKREG
+        ;; **CTR0, CTR1, CTR2, CTR3 may contain clear text
 
         ;; zero bytes outside the mask before hashing
 %if %%NUM_BLOCKS <= 4
@@ -1377,6 +1392,7 @@
                         %%CTR0, %%CTR1, %%CTR2, %%CTR3, \
                         %%SHUFMASK, %%SHUFMASK, %%SHUFMASK, %%SHUFMASK
 %endif                          ; Encrypt
+        ;; **DAT0, DAT1, DAT2, DAT3 overwritten with shuffled cipher text
 
 %ifidn %%INSTANCE_TYPE, multi_call
         ;; Extract the last block for partials and multi_call cases
@@ -1441,6 +1457,7 @@
                         %%ZT5, %%ZT6, %%ZT7, %%ZT8, %%ZT9, ZWORD(%%HASH_IN_OUT), \
                         %%DAT0, %%DAT1, %%DAT2, %%DAT3, %%NUM_BLOCKS, %%GH, %%GL
 %endif
+        ;; **DAT0, DAT1, DAT2, DAT3 are OK here - they contain shuffled cipher text
 
 %else
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1484,6 +1501,8 @@
         jmp             %%_small_initial_compute_done
 %endif                          ; %if %%NUM_BLOCKS < 16
 
+        ;; **DAT0, DAT1, DAT2, DAT3 are OK here - they contain shuffled cipher text
+
 %%_small_initial_partial_block:
 
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1517,6 +1536,7 @@
                         %%ZT5, %%ZT6, %%ZT7, %%ZT8, %%ZT9, ZWORD(%%HASH_IN_OUT), \
                         %%DAT0, %%DAT1, %%DAT2, %%DAT3, k, %%GH, %%GL
 %endif
+        ;; **DAT0, DAT1, DAT2, DAT3 are OK here - they contain shuffled cipher text
         ;; just fall through no jmp needed
 %else
 
@@ -1592,16 +1612,16 @@
 %define %%ENC_DEC               %10 ; [in] cipher direction (ENC/DEC)
 %define %%INSTANCE_TYPE         %11 ; [in] multi_call or single_call
 %define %%CTR0                  %12 ; [clobbered] ZMM temporary
-%define %%CTR1                  %13 ; [clobbered] ZMM temporary
-%define %%CTR2                  %14 ; [clobbered] ZMM temporary
-%define %%CTR3                  %15 ; [clobbered] ZMM temporary
+%define %%CTR1                  %13 ; [clobbered**] ZMM temporary
+%define %%CTR2                  %14 ; [clobbered**] ZMM temporary
+%define %%CTR3                  %15 ; [clobbered**] ZMM temporary
 %define %%DAT0                  %16 ; [clobbered] ZMM temporary
 %define %%DAT1                  %17 ; [clobbered] ZMM temporary
 %define %%DAT2                  %18 ; [clobbered] ZMM temporary
 %define %%DAT3                  %19 ; [clobbered] ZMM temporary
 %define %%LAST_CIPHER_BLK       %20 ; [clobbered] ZMM temporary
 %define %%LAST_GHASH_BLK        %21 ; [clobbered] ZMM temporary
-%define %%ZT0                   %22 ; [clobbered] ZMM temporary
+%define %%ZT0                   %22 ; [clobbered**] ZMM temporary
 %define %%ZT1                   %23 ; [clobbered] ZMM temporary
 %define %%ZT2                   %24 ; [clobbered] ZMM temporary
 %define %%ZT3                   %25 ; [clobbered] ZMM temporary
@@ -1619,7 +1639,7 @@
                         XWORD(%%LAST_CIPHER_BLK), XWORD(%%LAST_GHASH_BLK), \
                         %%CTR0, %%CTR1, %%CTR2, %%CTR3, %%ZT0, \
                         %%IA0, %%IA1, %%MASKREG, %%SHUFMASK
-
+        ;; **CTR0, CTR1, CTR2, CTR3, %%ZT0 may contain sensitive data
         INITIAL_BLOCKS_PARTIAL_GHASH \
                         %%GDATA_KEY, %%GDATA_CTX, %%LENGTH, \
                         %%NUM_BLOCKS, %%HASH_IN_OUT, %%ENC_DEC, \
@@ -1627,6 +1647,8 @@
                         XWORD(%%LAST_CIPHER_BLK), XWORD(%%LAST_GHASH_BLK), \
                         %%CTR0, %%CTR1, %%CTR2, %%CTR3, %%ZT0, %%ZT1, \
                         %%ZT2, %%ZT3, %%ZT4, %%ZT5
+        ;; **CTR1 may not get cleared (message below 4 blocks) and it may still contain sensitive data
+        ;; **CTR1, CTR2, CTR3 may not get cleared (message below 16 bytes & SGL) and may still contain sensitive data
 
 %endmacro                       ; INITIAL_BLOCKS_PARTIAL
 
@@ -1647,7 +1669,7 @@
 %define %%GHASHIN_BLK_OFFSET    %10 ; [in] numerical offset for GHASH blocks in
 %define %%SHFMSK                %11 ; [in] ZMM with byte swap mask for pshufb
 %define %%B00_03                %12 ; [clobbered] temporary ZMM
-%define %%B04_07                %13 ; [clobbered] temporary ZMM
+%define %%B04_07                %13 ; [clobbered**] temporary ZMM
 %define %%B08_11                %14 ; [clobbered] temporary ZMM
 %define %%B12_15                %15 ; [clobbered] temporary ZMM
 %define %%GHKEY3                %16 ; [clobbered] temporary ZMM
@@ -1662,8 +1684,8 @@
 %define %%THL3                  %25 ; [clobbered] temporary ZMM
 %define %%TLH3                  %26 ; [clobbered] temporary ZMM
 %define %%TLL3                  %27 ; [clobbered] temporary ZMM
-%define %%AESKEY1               %28 ; [clobbered] temporary ZMM
-%define %%AESKEY2               %29 ; [clobbered] temporary ZMM
+%define %%AESKEY1               %28 ; [clobbered**] temporary ZMM
+%define %%AESKEY2               %29 ; [clobbered**] temporary ZMM
 %define %%GHKEY1                %30 ; [clobbered] temporary ZMM
 %define %%GHKEY2                %31 ; [clobbered] temporary ZMM
 %define %%GHDAT1                %32 ; [clobbered] temporary ZMM
@@ -2001,6 +2023,7 @@
                         %%B00_03, %%B04_07, %%B08_11, %%B12_15, \
                         %%B00_03, %%B04_07, %%B08_11, %%B12_15, \
                         %%DATA1, %%DATA2, %%DATA3, %%DATA4
+        ;; **B00_03, B04_07, B08_11, B12_15 may contain plain text
 
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;; retrieve the last cipher counter block (partially XOR'ed with text)
@@ -2084,6 +2107,8 @@
         ;;   product parts in TO_REDUCE_H/L
         ;; - DATA1-DATA4 include blocks for GHASH
 
+        ;; **AESKEY1 and AESKEY2 contain AES round keys
+
 %if do_reduction == 0
         INITIAL_BLOCKS_PARTIAL_GHASH \
                         %%GDATA, %%GCTX, %%LENGTH, \
@@ -2102,6 +2127,16 @@
                         %%B00_03, %%B04_07, %%B08_11, %%B12_15, %%GHDAT1, %%GHDAT2, \
                         %%AESKEY1, %%AESKEY2, %%GHKEY1, %%GHKEY2
 %endif
+        ;; **B04_07 may not get cleared (message below 4 blocks) and it may still contain sensitive data
+
+        ;; if number of blocks is 4 then AESKEY1 and AESKEY2 do not get cleared in the macro above
+%ifdef SAFE_DATA
+%if %%NUM_BLOCKS == 4
+        vpxorq          %%AESKEY1, %%AESKEY1, %%AESKEY1
+        vpxorq          %%AESKEY2, %%AESKEY2, %%AESKEY2
+%endif
+%endif
+
 %endmacro
 
 ;;; ===========================================================================
@@ -2121,7 +2156,7 @@
 %define %%GHASHIN_BLK_OFFSET    %10 ; [in] numerical offset for GHASH blocks in
 %define %%SHFMSK                %11 ; [in] ZMM with byte swap mask for pshufb
 %define %%ZT00                  %12 ; [clobbered] temporary ZMM
-%define %%ZT01                  %13 ; [clobbered] temporary ZMM
+%define %%ZT01                  %13 ; [clobbered**] temporary ZMM
 %define %%ZT02                  %14 ; [clobbered] temporary ZMM
 %define %%ZT03                  %15 ; [clobbered] temporary ZMM
 %define %%ZT04                  %16 ; [clobbered] temporary ZMM
@@ -2217,7 +2252,7 @@
                 %%TO_REDUCE_L, %%TO_REDUCE_H, \
                 %%ENC_DEC, %%HASH_IN_OUT, %%IA0, %%IA1, %%MASKREG, \
                 num_blocks, %%INSTANCE_TYPE
-
+        ;; **ZT01 may contain sensitive data
         jmp     %%_last_blocks_done
 %assign num_blocks (num_blocks + 1)
 %endrep
@@ -2235,9 +2270,9 @@
 
         GHASH_16        %%GHASH_TYPE, hk_load, %%TO_REDUCE_H, %%TO_REDUCE_L, \
                         rsp, %%GHASHIN_BLK_OFFSET, 0, %%GDATA, %%HASHKEY_OFFSET, 0, %%HASH_IN_OUT, \
-                        %%ZT00, %%ZT01, %%ZT02, %%ZT03, %%ZT04, %%ZT05, %%ZT06, %%ZT07, \
-                        %%ZT08, %%ZT09, %%ZT23
-
+                        %%ZT00, %%ZT09, %%ZT02, %%ZT03, %%ZT04, %%ZT05, %%ZT06, %%ZT07, \
+                        %%ZT08, %%ZT01, %%ZT23
+        ;; **ZT01 may include sensitive data
 %%_last_blocks_done:
 
 %endmacro
@@ -2275,8 +2310,8 @@
 %define %%ZT14                  %24 ; [clobbered] temporary ZMM (ghash)
 %define %%ZT15                  %25 ; [clobbered] temporary ZMM (ghash)
 %define %%ZT16                  %26 ; [clobbered] temporary ZMM (ghash)
-%define %%ZT17                  %27 ; [clobbered] temporary ZMM (ghash)
-%define %%ZT18                  %28 ; [clobbered] temporary ZMM (ghash)
+%define %%ZT17                  %27 ; [clobbered**] temporary ZMM (ghash)
+%define %%ZT18                  %28 ; [clobbered**] temporary ZMM (ghash)
 %define %%ZT19                  %29 ; [clobbered] temporary ZMM
 %define %%ZT20                  %30 ; [clobbered] temporary ZMM
 %define %%ZT21                  %31 ; [clobbered] temporary ZMM
@@ -2617,6 +2652,7 @@
         vaesenclast     %%B04_07, %%B04_07, %%AESKEY1
         vaesenclast     %%B08_11, %%B08_11, %%AESKEY1
         vaesenclast     %%B12_15, %%B12_15, %%AESKEY1
+        ;; **AESKEY1 and AESKEY2 contain AES round keys
 
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;; XOR against plain/cipher text
@@ -2631,6 +2667,7 @@
         VX512STR        [%%CIPH_PLAIN_OUT + %%DATA_OFFSET + %%DATA_DISPL + (1 * 64)], %%B04_07
         VX512STR        [%%CIPH_PLAIN_OUT + %%DATA_OFFSET + %%DATA_DISPL + (2 * 64)], %%B08_11
         VX512STR        [%%CIPH_PLAIN_OUT + %%DATA_OFFSET + %%DATA_DISPL + (3 * 64)], %%B12_15
+        ;; **B00_03, B04_07, B08_011, B12_B15 may contain sensitive data
 
         ;; =================================================
         ;; shuffle cipher text blocks for GHASH computation
@@ -2645,6 +2682,7 @@
         vpshufb         %%B08_11, %%DATA3, %%SHFMSK
         vpshufb         %%B12_15, %%DATA4, %%SHFMSK
 %endif
+        ;; **B00_03, B04_07, B08_011, B12_B15 overwritten with shuffled cipher text
 
         ;; =================================================
         ;; store shuffled cipher text for ghashing
@@ -2717,11 +2755,7 @@
 ;;; Restore register content for the caller
 %macro FUNC_RESTORE 0
 
-%ifdef SAFE_DATA
-        clear_scratch_zmms_asm
-%else
         vzeroupper
-%endif
 
 %ifidn __OUTPUT_FORMAT__, win64
         vmovdqu xmm15, [rsp + STACK_XMM_OFFSET + 9*16]
@@ -2789,6 +2823,7 @@
                         %%ZT4, %%ZT5, %%ZT6, %%ZT7, %%ZT8, %%ZT9, %%ZT10, %%ZT11, \
                         %%ZT12, %%ZT13,  %%ZT14, %%ZT15, %%ZT16, %%ZT17, \
                         %%T1, %%T2, %%T3, %%MASKREG
+        ;; **ZT1, ZT2, ZT3 may contain sensitive data
 
         ;; Calculate GHASH of last 16-byte block (0 || len(IV)64)
         mov             %%T1, %%IV_LEN
@@ -2801,6 +2836,7 @@
         vmovdqu64       XWORD(%%ZT0), [%%KEY + HashKey_1]
         vmovdqu64       XWORD(%%ZT5), [%%KEY + HashKey_1 + HKeyGap]
         GHASH_MUL2      %%J0, XWORD(%%ZT0),  XWORD(%%ZT5), XWORD(%%ZT1), XWORD(%%ZT2), XWORD(%%ZT3), XWORD(%%ZT4)
+        ;; **ZT1, ZT2, ZT3 overwritten with ghash products
 
         vpshufb         %%J0, [rel SHUF_MASK] ; perform a 16Byte swap
 %endmacro
@@ -2886,6 +2922,7 @@
                         %%ZT0, %%ZT1, %%ZT2, %%ZT3, %%ZT4, %%ZT5, %%ZT6, %%ZT7, %%ZT8, %%ZT9, \
                         %%ZT10, %%ZT11, %%ZT12, %%ZT13,  %%ZT14, %%ZT15, %%ZT16, %%ZT17, \
                         %%GPR1, %%GPR2, %%GPR3, %%MASKREG
+        ;; **ZT1, ZT2, ZT3 may contain AAD but AAD is not considered sensitive
 %%_aad_compute_done:
 
         ;; set up context fields
@@ -2923,16 +2960,16 @@
 %define %%HASH_IN_OUT       %11 ; [in/out] XMM GHASH value
 %define %%INSTANCE_TYPE     %12 ; [in] single or multi call
 %define %%ZTMP0             %13 ; [clobbered] ZMM register
-%define %%ZTMP1             %14 ; [clobbered] ZMM register
-%define %%ZTMP2             %15 ; [clobbered] ZMM register
-%define %%ZTMP3             %16 ; [clobbered] ZMM register
+%define %%ZTMP1             %14 ; [clobbered**] ZMM register
+%define %%ZTMP2             %15 ; [clobbered**] ZMM register
+%define %%ZTMP3             %16 ; [clobbered**] ZMM register
 %define %%ZTMP4             %17 ; [clobbered] ZMM register
 %define %%ZTMP5             %18 ; [clobbered] ZMM register
 %define %%ZTMP6             %19 ; [clobbered] ZMM register
 %define %%ZTMP7             %20 ; [clobbered] ZMM register
 %define %%ZTMP8             %21 ; [clobbered] ZMM register
 %define %%ZTMP9             %22 ; [clobbered] ZMM register
-%define %%ZTMP10            %23 ; [clobbered] ZMM register
+%define %%ZTMP10            %23 ; [clobbered**] ZMM register
 %define %%ZTMP11            %24 ; [clobbered] ZMM register
 %define %%ZTMP12            %25 ; [clobbered] ZMM register
 %define %%ZTMP13            %26 ; [clobbered] ZMM register
@@ -3004,6 +3041,7 @@
                 %%ZTMP5, %%ZTMP6, %%ZTMP7, %%ZTMP8, %%ZTMP9, \
                 %%ZTMP10, %%ZTMP11, %%ZTMP12, %%ZTMP13, %%ZTMP14, %%ZTMP15, \
                 %%IA0, %%IA1, %%MASKREG, %%SHUFMASK
+        ;; **ZTMP1, ZTMP2, ZTMP3, ZTMP10 may contain sensitive data
 %if num_blocks != 16
         jmp     %%_small_initial_blocks_encrypted
 %endif
@@ -3054,9 +3092,9 @@
 %define %%AAD_HASHx             xmm14 ; hardcoded in GCM_COMPLETE
 
 %define %%ZTMP0                 zmm0
-%define %%ZTMP1                 zmm3
-%define %%ZTMP2                 zmm4
-%define %%ZTMP3                 zmm5
+%define %%ZTMP1                 zmm3    ; **sensitive
+%define %%ZTMP2                 zmm4    ; **sensitive (small data)
+%define %%ZTMP3                 zmm5    ; **sensitive (small data)
 %define %%ZTMP4                 zmm6
 %define %%ZTMP5                 zmm7
 %define %%ZTMP6                 zmm10
@@ -3143,6 +3181,7 @@
                 %%PLAIN_CIPH_LEN, %%DATA_OFFSET, %%AAD_HASHx, %%ENC_DEC, \
                 %%IA0, %%IA1, %%IA2, %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, \
                 %%ZTMP5, %%ZTMP6, %%ZTMP7, %%ZTMP8, %%ZTMP9, %%MASKREG
+        ;; **ZTMP1 may contain sensitive data
 %else
         xor             %%DATA_OFFSET, %%DATA_OFFSET
 %endif
@@ -3258,6 +3297,7 @@
                 %%ADDBE_4x4, %%ADDBE_1234, %%GL, %%GH, \
                 final_reduction_no_hxor, %%ENC_DEC, data_in_out_offset, no_ghash_in, hk_bcast
 
+        ;; **ZTMP16 and ZTMP17 contain AES round keys
         ;; === xor cipher block 0 with GHASH (ZT4)
         vmovdqa64       %%AAD_HASHz, %%ZTMP4
 
@@ -3304,6 +3344,8 @@
                 %%ADDBE_4x4, %%ADDBE_1234, %%GL, %%GH, \
                 final_reduction, %%ENC_DEC, data_in_out_offset, no_ghash_in, hk_load
 
+        ;; **ZTMP16 and ZTMP17 contain AES round keys
+
         ;; === xor cipher block 0 with GHASH (ZT4)
         vmovdqa64       %%AAD_HASHx, XWORD(%%ZTMP4)
 
@@ -3325,6 +3367,7 @@
         ;; ==== GHASH 32 blocks and follow with reduction
         GHASH_16        start, hk_load, %%GH, %%GL, rsp, STACK_LOCAL_OFFSET, (0 * 16), %%GDATA_KEY, HashKey_32, 0, %%AAD_HASHz, \
                         %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, %%ZTMP6, %%ZTMP7, %%ZTMP8, %%ZTMP9, %%ZTMP23
+        ;; **ZTMP9 may include sensitive data
 
         ;; ==== GHASH 1 x 16 blocks with reduction + cipher and ghash on the reminder
 %assign ghashin_offset (STACK_LOCAL_OFFSET + (16 * 16))
@@ -3339,6 +3382,8 @@
                 %%ZTMP21, %%ZTMP22, %%ZTMP23, \
                 %%ADDBE_4x4, %%ADDBE_1234, end_reduce, %%GL, %%GH, \
                 %%ENC_DEC, %%AAD_HASHz, %%IA0, %%IA5, %%MASKREG, %%INSTANCE_TYPE
+        ;; **ZTMP9 clobbered but ZTMP1 may include sensitive data
+        ;; **ZTMP16 and ZTMP17 clobbered or cleared above
 
 %ifidn %%INSTANCE_TYPE, multi_call
         vpshufb         %%CTR_BLOCKx, %%CTR_BLOCKx, XWORD(%%SHUF_MASK)
@@ -3369,9 +3414,12 @@
                 %%ADDBE_4x4, %%ADDBE_1234, %%GL, %%GH, \
                 first_time, %%ENC_DEC, data_in_out_offset, %%AAD_HASHz, hk_load
 
+        ;; **ZTMP16 and ZTMP17 contain AES round keys
+
         ;; ==== GHASH 1 x 16 blocks
         GHASH_16        end_reduce, hk_load, %%GH, %%GL, rsp, STACK_LOCAL_OFFSET, (16 * 16), %%GDATA_KEY, HashKey_16, 0, %%AAD_HASHz, \
                         %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, %%ZTMP6, %%ZTMP7, %%ZTMP8, %%ZTMP9, %%ZTMP23
+        ;; **ZTMP9 may include sensitive data
 
         ;; fall through here: handling of the rest is identical in both cases
         
@@ -3403,6 +3451,8 @@
                 %%ZTMP21, %%ZTMP22, %%ZTMP23, \
                 %%ADDBE_4x4, %%ADDBE_1234, start, %%GL, %%GH, \
                 %%ENC_DEC, %%AAD_HASHz, %%IA0, %%IA5, %%MASKREG, %%INSTANCE_TYPE
+        ;; **ZTMP9 clobbered but ZTMP1 may include sensitive data
+        ;; **ZTMP16 and ZTMP17 clobbered or cleared above
 
 %ifidn %%INSTANCE_TYPE, multi_call
         vpshufb         %%CTR_BLOCKx, %%CTR_BLOCKx, XWORD(%%SHUF_MASK)
@@ -3428,10 +3478,18 @@
                 %%ZTMP16, %%ZTMP17, %%ZTMP18, %%ZTMP19, \
                 %%ZTMP20, %%ZTMP21, %%ZTMP22, \
                 %%IA0, %%IA3, %%MASKREG, %%SHUF_MASK
-
+        ;; **ZTMP1, ZTMP2, ZTMP3, ZTMP10 may include sensitive data
+%ifdef SAFE_DATA
+       vpxorq   %%ZTMP2, %%ZTMP2, %%ZTMP2
+       vpxorq   %%ZTMP3, %%ZTMP3, %%ZTMP3
+       vpxorq   %%ZTMP10, %%ZTMP10, %%ZTMP10
+%endif
         ;; fall through to exit
 
 %%_ghash_done:
+%ifdef SAFE_DATA
+       vpxorq   %%ZTMP1, %%ZTMP1, %%ZTMP1
+%endif
 %ifidn %%INSTANCE_TYPE, multi_call
         ;; save the last counter block
         vmovdqu64       [%%GDATA_CTX + CurCount], %%CTR_BLOCKx
@@ -3555,6 +3613,7 @@
         vpshufb         %%B08_11, %%B08_11, %%SHUF_MASK
         vpshufb         %%B12_15, %%B12_15, %%SHUF_MASK
 %endif
+        ;; **B00_03, B04_07, B08_11, B12_15 overwritten with shuffled cipher text
 
 %ifnidn %%GHASH, no_ghash
         ;; === xor cipher block 0 with GHASH for the next GHASH round
@@ -3590,6 +3649,8 @@
 
         vmovdqu         xmm13, [%%GDATA_KEY + HashKey]
         vmovdqu         xmm6, [%%GDATA_KEY + HashKey + HKeyGap]
+        ;; **xmm13 and xmm6 contain authentication key
+
         ;; Start AES as early as possible
         vmovdqu         xmm9, [%%GDATA_CTX + OrigIV]    ; xmm9 = Y0
         ENCRYPT_SINGLE_BLOCK %%GDATA_KEY, xmm9  ; E(K, Y0)
@@ -3651,7 +3712,7 @@
 
 %ifdef SAFE_DATA
         ;; Clear sensitive data from context structure
-        vpxor           xmm0, xmm0
+        vpxor           xmm0, xmm0, xmm0
         vmovdqu         [%%GDATA_CTX + AadHash], xmm0
 %ifidn %%INSTANCE_TYPE, multi_call
         vmovdqu         [%%GDATA_CTX + PBlockEncKey], xmm0
@@ -3666,7 +3727,7 @@
 ;;; Output:
 ;;; Updated AAD_HASH, DATA_OFFSET and GDATA_CTX
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-%macro PARTIAL_BLOCK_GMAC 20
+%macro PARTIAL_BLOCK_GMAC 18
 %define %%GDATA_KEY             %1  ; [in] Key pointer
 %define %%GDATA_CTX             %2  ; [in] context pointer
 %define %%PLAIN_IN              %3  ; [in] input buffer
@@ -3684,9 +3745,7 @@
 %define %%ZTMP5                 %15 ; [clobbered] ZMM temporary register
 %define %%ZTMP6                 %16 ; [clobbered] ZMM temporary register
 %define %%ZTMP7                 %17 ; [clobbered] ZMM temporary register
-%define %%ZTMP8                 %18 ; [clobbered] ZMM temporary register
-%define %%ZTMP9                 %19 ; [clobbered] ZMM temporary register
-%define %%MASKREG               %20 ; [clobbered] mask temporary register
+%define %%MASKREG               %18 ; [clobbered] mask temporary register
 
 %define %%XTMP0 XWORD(%%ZTMP0)
 %define %%XTMP1 XWORD(%%ZTMP1)
@@ -3696,8 +3755,6 @@
 %define %%XTMP5 XWORD(%%ZTMP5)
 %define %%XTMP6 XWORD(%%ZTMP6)
 %define %%XTMP7 XWORD(%%ZTMP7)
-%define %%XTMP8 XWORD(%%ZTMP8)
-%define %%XTMP9 XWORD(%%ZTMP9)
 
 %define %%LENGTH        %%GPTMP0
 %define %%IA0           %%GPTMP1
@@ -3711,7 +3768,7 @@
                                                 %%IA0, %%IA1, %%MASKREG
 
         vmovdqu64       %%XTMP2, [%%GDATA_KEY + HashKey]
-        vmovdqu64       %%XTMP9, [%%GDATA_KEY + HashKey + HKeyGap]
+        vmovdqu64       %%XTMP7, [%%GDATA_KEY + HashKey + HKeyGap]
 
         ;; adjust the shuffle mask pointer to be able to shift right %%LENGTH bytes
         ;; (16 - %%LENGTH) is the number of bytes in plaintext mod 16)
@@ -3730,15 +3787,17 @@
         ;; - mask out bottom %%LENGTH bytes of %%XTMP1
         vmovdqu64       %%XTMP0, [%%IA0 + ALL_F - SHIFT_MASK]
 
-        vpand           %%XTMP4, %%XTMP0
-        vpshufb         %%XTMP4, [rel SHUF_MASK]
-        vpshufb         %%XTMP4, %%XTMP3
-        vpxorq          %%AAD_HASH, %%XTMP4
+        vpand           %%XTMP4, %%XTMP4, %%XTMP0
+        vpshufb         %%XTMP4, %%XTMP4, [rel SHUF_MASK]
+        vpshufb         %%XTMP4, %%XTMP4, %%XTMP3
+        vpxorq          %%AAD_HASH, %%AAD_HASH, %%XTMP4
+        ;; **XTMP4 contains plain text
         cmp             %%IA1, 0
         jl              %%_partial_incomplete
 
         ;; GHASH computation for the last <16 Byte block
-        GHASH_MUL2      %%AAD_HASH, %%XTMP2, %%XTMP9, %%XTMP5, %%XTMP6, %%XTMP7, %%XTMP8
+        GHASH_MUL2      %%AAD_HASH, %%XTMP2, %%XTMP7, %%XTMP3, %%XTMP4, %%XTMP5, %%XTMP6
+        ;; **XTMP4 clobbered with temporary compute data
 
         mov             qword [%%GDATA_CTX + PBlockLen], 0
 

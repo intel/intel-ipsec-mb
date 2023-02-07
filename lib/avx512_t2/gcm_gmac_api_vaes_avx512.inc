@@ -29,6 +29,7 @@
 
 %include "avx512_t2/gcm_vaes_avx512.inc"
 %include "include/error.inc"
+%include "include/clear_regs.inc"
 
 %ifndef GCM_GMAC_API_VAES_AVX512_INC
 %define GCM_GMAC_API_VAES_AVX512_INC
@@ -79,7 +80,9 @@ ghash_pre_vaes_avx512:
         vmovdqu  [arg2 + HashKey], xmm6                 ; store HashKey<<1 mod poly
 
         PRECOMPUTE arg2, xmm6, xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm7, xmm8
-
+%ifdef SAFE_DATA
+        clear_zmms_avx512 xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8
+%endif
         FUNC_RESTORE
 exit_ghash_pre:
 
@@ -141,16 +144,19 @@ ghash_vaes_avx512:
 
         ;; copy tag to xmm0
         vmovdqu	xmm0, [arg4]
-        vpshufb xmm0, [rel SHUF_MASK] ; perform a 16Byte swap
+        vpshufb xmm0, xmm0, [rel SHUF_MASK] ; perform a 16Byte swap
 
         CALC_AAD_HASH arg2, arg3, xmm0, arg1, zmm1, zmm2, zmm3, zmm4, zmm5, \
                       zmm6, zmm7, zmm8, zmm9, zmm10, zmm11, zmm12, zmm13, \
                       zmm15, zmm16, zmm17, zmm18, zmm19, r10, r11, r12, k1
+        ;; **zmm2, zmm3, zmm4 and zmm5 may contain clear text
+        ;; **zmm13, zmm15, zmm18 and zmm8 may contain authentication key
 
-        vpshufb xmm0, [rel SHUF_MASK] ; perform a 16Byte swap
-
+        vpshufb xmm0, xmm0, [rel SHUF_MASK] ; perform a 16Byte swap
         simd_store_avx arg4, xmm0, arg5, r12, rax
-
+%ifdef SAFE_DATA
+        clear_zmms_avx512 xmm0, xmm2, xmm3, xmm4, xmm5, xmm13, xmm15, xmm8, xmm18
+%endif
 exit_ghash:
         FUNC_RESTORE
         ret
@@ -227,9 +233,10 @@ GMAC_FN_NAME(update):
 	vmovdqu64	xmm8, [arg2 + AadHash]
 
 	PARTIAL_BLOCK_GMAC arg1, arg2, arg3, arg4, r11, xmm8, r10, r12, rax, \
-                           zmm0, zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, zmm7, \
-                           zmm9, zmm10, k1
-
+                           zmm0, zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, zmm7, k1
+%ifdef SAFE_DATA
+        clear_zmms_avx512 xmm0
+%endif
         ; CALC_AAD_HASH needs to deal with multiple of 16 bytes
         sub     arg4, r11
         add     arg3, r11
@@ -246,6 +253,12 @@ GMAC_FN_NAME(update):
                       zmm16, zmm17, zmm18, zmm19, zmm20, r10, r11, r12, k1
 	vmovdqu64	[arg2 + AadHash], xmm8	; ctx_data.aad hash = aad_hash
 
+        ;; **zmm2, zmm3, zmm4 and zmm5 may contain clear text
+        ;; **zmm19 may contain authentication key
+%ifdef SAFE_DATA
+        clear_zmms_avx512 xmm2, xmm3, xmm4, xmm5, xmm18, xmm19
+%endif
+
 no_full_blocks:
         add     arg3, arg4 ; Point at partial block
 
@@ -256,13 +269,15 @@ no_full_blocks:
         ; Save next partial block
         mov	[arg2 + PBlockLen], arg4
         READ_SMALL_DATA_INPUT_AVX512 xmm1, arg3, arg4, r11, k1
-        vpshufb xmm1, [rel SHUF_MASK]
-        vpxorq   xmm8, xmm1
+        vpshufb xmm1, xmm1, [rel SHUF_MASK]
+        vpxorq  xmm8, xmm8, xmm1
         vmovdqu64 [arg2 + AadHash], xmm8
-
+%ifdef SAFE_DATA
+        ;; **xmm1 may contain some clear text
+        clear_zmms_avx512 xmm1
+%endif
 exit_gmac_update:
-	FUNC_RESTORE
-
+        FUNC_RESTORE
 	ret
 
 %ifdef SAFE_PARAM

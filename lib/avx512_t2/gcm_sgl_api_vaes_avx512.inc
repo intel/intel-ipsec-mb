@@ -30,6 +30,7 @@
 %include "avx512_t2/gcm_vaes_avx512.inc"
 %include "include/error.inc"
 %include "include/os.inc"
+%include "include/clear_regs.inc"
 
 %ifndef GCM_SGL_API_VAES_AVX512_INC
 %define GCM_SGL_API_VAES_AVX512_INC
@@ -256,6 +257,9 @@ FN_NAME(enc,_update_):
         jz      error_update_enc
 %endif
         GCM_ENC_DEC arg1, arg2, arg3, arg4, arg5, ENC, multi_call
+%ifdef SAFE_DATA
+        clear_zmms_avx512 xmm6
+%endif
 
 exit_update_enc:
         FUNC_RESTORE
@@ -339,7 +343,9 @@ FN_NAME(dec,_update_):
 %endif
 
         GCM_ENC_DEC arg1, arg2, arg3, arg4, arg5, DEC, multi_call
-
+%ifdef SAFE_DATA
+        clear_zmms_avx512 xmm6
+%endif
 exit_update_dec:
         FUNC_RESTORE
         ret
@@ -413,9 +419,11 @@ FN_NAME(enc,_finalize_):
 
         FUNC_SAVE
         GCM_COMPLETE    arg1, arg2, arg3, arg4, multi_call, k1, r10, r11, r12
-
+%ifdef SAFE_DATA
+        ;; **xmm5, xmm6, xmm11, xmm13, xmm14 and xmm16 may contain sensitive data
+        clear_zmms_avx512 xmm5, xmm6, xmm11, xmm13, xmm14, xmm16
+%endif
         FUNC_RESTORE
-
 exit_enc_fin:
         ret
 
@@ -483,8 +491,12 @@ FN_NAME(dec,_finalize_):
         FUNC_SAVE
         GCM_COMPLETE    arg1, arg2, arg3, arg4, multi_call, k1, r10, r11, r12
 
-        FUNC_RESTORE
+%ifdef SAFE_DATA
+        ;; **xmm5, xmm6, xmm11, xmm13, xmm14 and xmm16 may contain sensitive data
+        clear_zmms_avx512 xmm5, xmm6, xmm11, xmm13, xmm14, xmm16
+%endif
 
+        FUNC_RESTORE
 exit_dec_fin:
         ret
 

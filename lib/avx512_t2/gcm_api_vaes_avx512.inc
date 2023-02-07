@@ -30,6 +30,7 @@
 %include "avx512_t2/gcm_vaes_avx512.inc"
 %include "include/error.inc"
 %include "include/os.inc"
+%include "include/clear_regs.inc"
 
 %ifndef GCM_API_VAES_AVX512_INC
 %define GCM_API_VAES_AVX512_INC
@@ -79,6 +80,10 @@ FN_NAME(precomp,_):
         vmovdqu  [arg1 + HashKey], xmm6                 ; store HashKey<<1 mod poly
 
         PRECOMPUTE arg1, xmm6, xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm7, xmm8
+
+%ifdef SAFE_DATA
+        clear_zmms_avx512 xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8
+%endif
 
         FUNC_RESTORE
 exit_precomp:
@@ -179,6 +184,9 @@ skip_aad_check_enc:
                 zmm12, zmm13, zmm15, zmm16, zmm17, zmm18, zmm19, zmm20, single_call
         GCM_ENC_DEC  arg1, arg2, arg3, arg4, arg5, ENC, single_call
         GCM_COMPLETE arg1, arg2, arg9, arg10, single_call, k1, r10, r11, r12
+%ifdef SAFE_DATA
+        clear_zmms_avx512 xmm6
+%endif
 
 exit_enc:
         FUNC_RESTORE
@@ -313,7 +321,9 @@ skip_aad_check_dec:
                 zmm12, zmm13, zmm15, zmm16, zmm17, zmm18, zmm19, zmm20, single_call
         GCM_ENC_DEC  arg1, arg2, arg3, arg4, arg5, DEC, single_call
         GCM_COMPLETE arg1, arg2, arg9, arg10, single_call, k1, r10, r11, r12
-
+%ifdef SAFE_DATA
+        clear_zmms_avx512 xmm6
+%endif
 exit_dec:
         FUNC_RESTORE
         ret
@@ -465,7 +475,10 @@ iv_len_12_enc_IV:
 skip_iv_len_12_enc_IV:
         GCM_ENC_DEC  arg1, arg2, arg3, arg4, arg5, ENC, single_call
         GCM_COMPLETE arg1, arg2, arg10, arg11, single_call, k1, r10, r11, r12
-
+%ifdef SAFE_DATA
+        clear_zmms_avx512 xmm1, xmm4, xmm6, xmm7, xmm8, xmm12, xmm13, xmm14, \
+                          xmm16, xmm17, xmm18, xmm19, xmm20, xmm21, xmm26, xmm30, xmm31
+%endif
 exit_enc_IV:
         FUNC_RESTORE
         ret
@@ -620,6 +633,10 @@ skip_iv_len_12_dec_IV:
         GCM_ENC_DEC  arg1, arg2, arg3, arg4, arg5, DEC, single_call
         GCM_COMPLETE arg1, arg2, arg10, arg11, single_call, k1, r10, r11, r12
 
+%ifdef SAFE_DATA
+        clear_zmms_avx512 xmm1, xmm4, xmm6, xmm7, xmm8, xmm12, xmm13, xmm14, \
+                          xmm16, xmm17, xmm18, xmm19, xmm20, xmm21, xmm26, xmm30, xmm31
+%endif
 exit_dec_IV:
         FUNC_RESTORE
         ret
