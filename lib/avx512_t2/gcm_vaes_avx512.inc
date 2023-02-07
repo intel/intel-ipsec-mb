@@ -753,7 +753,7 @@
         vmovdqu64       [%%GDATA + HashKey_4], %%T5
         vinserti64x2    %%ZT7, %%T5, 0
 
-        ;; calculate HashKeyX = HashKey x POLY
+        ;; calculate HashKeyK = HashKey x POLY
         vpclmulqdq      %%ZT1, %%ZT7, [rel POLY], 0x10
         vpshufd         %%ZT2, %%ZT7, 01001110b   
         vpxorq          %%ZT1, %%ZT1, %%ZT2  
@@ -766,25 +766,24 @@
         ;; calculate HashKey^5<<1 mod poly, HashKey^6<<1 mod poly, ... HashKey^8<<1 mod poly
         GHASH_MUL       %%ZT7, %%ZT5, %%ZT1, %%ZT3, %%ZT4, %%ZT6, %%ZT2
         vmovdqu64       [%%GDATA + HashKey_8], %%ZT7    ;; HashKey^8 to HashKey^5 in ZT7 now
-        
+
         ;; calculate HashKeyX = HashKey x POLY
         vpclmulqdq      %%ZT1, %%ZT7, [rel POLY], 0x10
         vpshufd         %%ZT2, %%ZT7, 01001110b   
         vpxorq          %%ZT1, %%ZT1, %%ZT2  
         vmovdqu64       [%%GDATA + HashKeyK_8], %%ZT1
 
-        
         vshufi64x2      %%ZT5, %%ZT7, %%ZT7, 0x00       ;; broadcast HashKey^8 across all ZT5
 
         ;; calculate HashKey^9<<1 mod poly, HashKey^10<<1 mod poly, ... HashKey^48<<1 mod poly
         ;; use HashKey^8 as multiplier against ZT8 and ZT7 - this allows deeper ooo execution
 %assign i 12
-%rep ((48 - 8) / 8)
+%rep ((big_loop_nblocks - 8) / 8)
         ;; compute HashKey^(4 + n), HashKey^(3 + n), ... HashKey^(1 + n)
         GHASH_MUL       %%ZT8, %%ZT5, %%ZT1, %%ZT3, %%ZT4, %%ZT6, %%ZT2
         vmovdqu64       [%%GDATA + HashKey_ %+ i], %%ZT8
 
-        ;; calculate HashKeyX = HashKey x POLY
+        ;; calculate HashKeyK = HashKey x POLY
         vpclmulqdq      %%ZT1, %%ZT8, [rel POLY], 0x10
         vpshufd         %%ZT2, %%ZT8, 01001110b   
         vpxorq          %%ZT1, %%ZT1, %%ZT2  
@@ -796,7 +795,7 @@
         GHASH_MUL       %%ZT7, %%ZT5, %%ZT1, %%ZT3, %%ZT4, %%ZT6, %%ZT2
         vmovdqu64       [%%GDATA + HashKey_ %+ i], %%ZT7
 
-        ;; calculate HashKeyX = HashKey x POLY
+        ;; calculate HashKeyK = HashKey x POLY
         vpclmulqdq      %%ZT1, %%ZT7, [rel POLY], 0x10
         vpshufd         %%ZT2, %%ZT7, 01001110b   
         vpxorq          %%ZT1, %%ZT1, %%ZT2  
@@ -805,7 +804,6 @@
 %assign i (i + 4)
 %endrep
 %endmacro
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; CALC_AAD_HASH: Calculates the hash of the data which will not be encrypted.
@@ -3269,7 +3267,7 @@
         jmp             %%_encrypt_big_nblocks_no_hxor
 
         ;; ====
-        ;; ==== AES-CTR + GHASH - code idential to big loop but here normal GHASH is applied
+        ;; ==== AES-CTR + GHASH - code identical to big loop but here normal GHASH is applied
         ;; ====                 - this corrects GHASH limb values if exiting the loop above
         ;; ====
 %%_encrypt_big_nblocks:
