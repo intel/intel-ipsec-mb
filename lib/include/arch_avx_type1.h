@@ -81,13 +81,12 @@ void aes_ecb_dec_192_avx(const void *in, const void *keys,
 void aes_ecb_dec_128_avx(const void *in, const void *keys,
                          void *out, uint64_t len_bytes);
 
-void aes_ecb_dec_256_vaes_avx512(const void *in, const void *keys,
-                                 void *out, uint64_t len_bytes);
-void aes_ecb_dec_192_vaes_avx512(const void *in, const void *keys,
-                                 void *out, uint64_t len_bytes);
-void aes_ecb_dec_128_vaes_avx512(const void *in, const void *keys,
-                                 void *out, uint64_t len_bytes);
-
+void aes_ecb_quic_enc_128_avx(const void *in, const void *keys,
+                              void *out, uint64_t num_buffers);
+void aes_ecb_quic_enc_192_avx(const void *in, const void *keys,
+                              void *out, uint64_t num_buffers);
+void aes_ecb_quic_enc_256_avx(const void *in, const void *keys,
+                              void *out, uint64_t num_buffers);
 /* AES128-ECBENC */
 void aes128_ecbenc_x3_avx(const void *in, void *keys,
                           void *out1, void *out2, void *out3);

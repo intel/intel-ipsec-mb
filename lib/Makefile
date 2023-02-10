@@ -529,6 +529,7 @@ asm_avx_lib_objs := \
 	aes128_ecb_by8_avx.o \
 	aes192_ecb_by8_avx.o \
 	aes256_ecb_by8_avx.o \
+	aes_ecb_quic_x8_avx.o \
 	aes_cfb_avx.o \
 	aes128_cbc_mac_x8_avx.o \
 	aes256_cbc_mac_x8_avx.o \
