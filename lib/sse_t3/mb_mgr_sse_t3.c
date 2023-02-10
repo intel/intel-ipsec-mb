@@ -485,6 +485,10 @@ init_mb_mgr_sse_t3_internal(IMB_MGR *state, const int reset_mgrs)
         state->gmac128_finalize    = imb_aes_gmac_finalize_128_sse;
         state->gmac192_finalize    = imb_aes_gmac_finalize_192_sse;
         state->gmac256_finalize    = imb_aes_gmac_finalize_256_sse;
+
+        state->aes_ecb_128_quic    = aes_ecb_quic_enc_128_sse;
+        state->aes_ecb_192_quic    = aes_ecb_quic_enc_192_sse;
+        state->aes_ecb_256_quic    = aes_ecb_quic_enc_256_sse;
 }
 
 #include "mb_mgr_code.h"

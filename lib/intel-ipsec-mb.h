@@ -995,6 +995,10 @@ typedef uint32_t (*hec_32_t)(const uint8_t *);
 typedef uint64_t (*hec_64_t)(const uint8_t *);
 
 typedef uint32_t (*crc32_fn_t)(const void *, const uint64_t);
+
+typedef void (*aes_ecb_quic_t)(const void *, const void *,
+                               void *out, uint64_t);
+
 /* Multi-buffer manager flags passed to alloc_mb_mgr() */
 
 #define IMB_FLAG_SHANI_OFF (1ULL << 0) /**< disable use of SHANI extension */
@@ -1206,6 +1210,10 @@ typedef struct IMB_MGR {
         submit_hash_burst_t submit_hash_burst;
         submit_hash_burst_t submit_hash_burst_nocheck;
         aes_cfb_t aes256_cfb_one;
+
+        aes_ecb_quic_t aes_ecb_128_quic;
+        aes_ecb_quic_t aes_ecb_192_quic;
+        aes_ecb_quic_t aes_ecb_256_quic;
 
         /* in-order scheduler fields */
         int              earliest_job; /**< byte offset, -1 if none */

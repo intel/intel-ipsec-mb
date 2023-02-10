@@ -466,6 +466,10 @@ init_mb_mgr_sse_no_aesni_internal(IMB_MGR *state, const int reset_mgrs)
         state->chacha20_poly1305_enc_update = update_enc_chacha20_poly1305_sse;
         state->chacha20_poly1305_dec_update = update_dec_chacha20_poly1305_sse;
         state->chacha20_poly1305_finalize = finalize_chacha20_poly1305_sse;
+
+        state->aes_ecb_128_quic    = aes_ecb_quic_enc_128_sse_no_aesni;
+        state->aes_ecb_192_quic    = aes_ecb_quic_enc_192_sse_no_aesni;
+        state->aes_ecb_256_quic    = aes_ecb_quic_enc_256_sse_no_aesni;
 }
 
 void

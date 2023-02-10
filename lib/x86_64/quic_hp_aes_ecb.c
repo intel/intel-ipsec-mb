@@ -27,8 +27,6 @@
 
 #include "intel-ipsec-mb.h"
 #include "include/error.h"
-#include <string.h> /* memcpy() */
-#include <include/arch_avx512_type2.h>
 
 IMB_DLL_EXPORT void
 imb_quic_hp_aes_ecb(IMB_MGR *state,
@@ -79,17 +77,17 @@ imb_quic_hp_aes_ecb(IMB_MGR *state,
 
         switch (key_size) {
         case IMB_KEY_128_BYTES:
-                aes_ecb_quic_enc_128_vaes_avx512(src_ptr_array, exp_key_data,
-                                                 dst_ptr_array, num_packets);
+                state->aes_ecb_128_quic(src_ptr_array, exp_key_data,
+                                        dst_ptr_array, num_packets);
                 break;
         case IMB_KEY_192_BYTES:
-                aes_ecb_quic_enc_192_vaes_avx512(src_ptr_array, exp_key_data,
-                                                 dst_ptr_array, num_packets);
+                state->aes_ecb_192_quic(src_ptr_array, exp_key_data,
+                                        dst_ptr_array, num_packets);
                 break;
         case IMB_KEY_256_BYTES:
         default:
-                aes_ecb_quic_enc_256_vaes_avx512(src_ptr_array, exp_key_data,
-                                                 dst_ptr_array, num_packets);
+                state->aes_ecb_256_quic(src_ptr_array, exp_key_data,
+                                        dst_ptr_array, num_packets);
                 break;
         };
 }

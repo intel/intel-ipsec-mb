@@ -418,6 +418,7 @@ asm_sse_lib_objs := \
 	aes128_cntr_by8_sse.o \
 	aes192_cntr_by8_sse.o \
 	aes256_cntr_by8_sse.o \
+	aes_ecb_quic_x8_sse.o \
 	aes128_ecb_by4_sse.o \
 	aes192_ecb_by4_sse.o \
 	aes256_ecb_by4_sse.o \
