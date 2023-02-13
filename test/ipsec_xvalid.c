@@ -1371,18 +1371,8 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys,
                 IMB_AES_CMAC_SUBKEY_GEN_256(mb_mgr, k1_expanded, k2, k3);
                 break;
         case IMB_AUTH_HMAC_SHA_1:
-                /* compute ipad hash */
-                nosimd_memset(buf, 0x36, IMB_SHA1_BLOCK_SIZE);
-                for (i = 0; i < IMB_SHA1_BLOCK_SIZE; i++)
-                        buf[i] ^= auth_key[i];
-                IMB_SHA1_ONE_BLOCK(mb_mgr, buf, ipad);
-
-                /* compute opad hash */
-                nosimd_memset(buf, 0x5c, IMB_SHA1_BLOCK_SIZE);
-                for (i = 0; i < IMB_SHA1_BLOCK_SIZE; i++)
-                        buf[i] ^= auth_key[i];
-                IMB_SHA1_ONE_BLOCK(mb_mgr, buf, opad);
-
+                imb_ipad_opad_sha1(mb_mgr, auth_key,
+                                   MAX_KEY_SIZE, ipad, opad);
                 break;
         case IMB_AUTH_HMAC_SHA_224:
                 /* compute ipad hash */

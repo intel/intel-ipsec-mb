@@ -783,21 +783,8 @@ static int self_test_hash(IMB_MGR *p_mgr)
                 job->auth_tag_output_len_in_bytes = v->tag_size;
 
                 if (v->hash_mode == IMB_AUTH_HMAC_SHA_1) {
-                        /* compute IPAD and OPAD */
-                        unsigned j;
-
-                        IMB_ASSERT(sizeof(scratch) >= IMB_SHA1_BLOCK_SIZE);
-
-                        memset(scratch, 0x36, IMB_SHA1_BLOCK_SIZE);
-                        for (j = 0; j < v->hash_key_size; j++)
-                                scratch[j] ^= v->hash_key[j];
-                        IMB_SHA1_ONE_BLOCK(p_mgr, scratch, hmac_ipad);
-
-                        memset(scratch, 0x5c, IMB_SHA1_BLOCK_SIZE);
-                        for (j = 0; j < v->hash_key_size; j++)
-                                scratch[j] ^= v->hash_key[j];
-                        IMB_SHA1_ONE_BLOCK(p_mgr, scratch, hmac_opad);
-
+                        imb_ipad_opad_sha1(p_mgr, v->hash_key, v->hash_key_size,
+                                           hmac_ipad, hmac_opad);
                         job->u.HMAC._hashed_auth_key_xor_ipad = hmac_ipad;
                         job->u.HMAC._hashed_auth_key_xor_opad = hmac_opad;
                 }

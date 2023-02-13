@@ -700,3 +700,4 @@ EXPORTS
     aes_cfb_256_one_sse_no_aesni		@674
     imb_quic_aes_gcm				@675
     imb_quic_hp_aes_ecb				@676
+    imb_ipad_opad_sha1		                @677

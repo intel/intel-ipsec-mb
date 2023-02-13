@@ -665,39 +665,15 @@ static int hmac_sha1_handler(ACVP_TEST_CASE *test_case)
 {
         ACVP_HMAC_TC *tc;
         IMB_JOB *job = NULL;
-        uint32_t i = 0;
         DECLARE_ALIGNED(uint8_t ipad_hash[IMB_SHA1_DIGEST_SIZE_IN_BYTES], 16);
         DECLARE_ALIGNED(uint8_t opad_hash[IMB_SHA1_DIGEST_SIZE_IN_BYTES], 16);
-        uint8_t key[IMB_SHA1_BLOCK_SIZE];
-        uint8_t buf[IMB_SHA1_BLOCK_SIZE];
-        uint32_t key_len = 0;
 
         if (test_case == NULL)
                 return EXIT_FAILURE;
 
         tc = test_case->tc.hmac;
 
-        /* prepare the key */
-        memset(key, 0, sizeof(key));
-        if (tc->key_len <= IMB_SHA1_BLOCK_SIZE) {
-                memcpy(key, tc->key, tc->key_len);
-                key_len = (uint32_t) tc->key_len;
-        } else {
-                IMB_SHA1(mb_mgr, tc->key, tc->key_len, key);
-                key_len = IMB_SHA1_DIGEST_SIZE_IN_BYTES;
-        }
-
-        /* compute ipad hash */
-        memset(buf, 0x36, sizeof(buf));
-        for (i = 0; i < key_len; i++)
-                buf[i] ^= key[i];
-        IMB_SHA1_ONE_BLOCK(mb_mgr, buf, ipad_hash);
-
-        /* compute opad hash */
-        memset(buf, 0x5c, sizeof(buf));
-        for (i = 0; i < key_len; i++)
-                buf[i] ^= key[i];
-        IMB_SHA1_ONE_BLOCK(mb_mgr, buf, opad_hash);
+        imb_ipad_opad_sha1(mb_mgr, tc->key, tc->key_len, ipad_hash, opad_hash);
 
         job = IMB_GET_NEXT_JOB(mb_mgr);
         job->key_len_in_bytes = tc->key_len;

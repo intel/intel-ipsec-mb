@@ -2681,6 +2681,19 @@ IMB_DLL_EXPORT void init_mb_mgr_auto(IMB_MGR *state, IMB_ARCH *arch);
 IMB_DLL_EXPORT int
 des_key_schedule(uint64_t *ks, const void *key);
 
+/**
+ * @brief Ipad Opad padding for sha1
+ *
+ * @param [in] mb_mgr           Pointer to initialized IMB_MGR structure
+ * @param [in] pkey             Pointer to a HMAC key
+ * @param [in] key_len          Length of the HMAC key
+ * @param [out] ipad_hash       Block-sized inner padding
+ * @param [out] opad_hash       Block-sized outer padding
+ */
+IMB_DLL_EXPORT void
+imb_ipad_opad_sha1(struct IMB_MGR *mb_mgr, const void *pkey,
+                   const size_t key_len, void *ipad_hash,
+                   void *opad_hash);
 
 /**
  * @brief DES-CFB Encrypt/Decrypt up to one block.

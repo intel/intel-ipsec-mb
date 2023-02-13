@@ -380,29 +380,14 @@ test_chained_vectors(struct IMB_MGR *mb_mgr,
                      const int vec_cnt,
                      const struct chained_vector *vec_tab, const char *banner,
                      const IMB_CIPHER_MODE cipher,
-                     const IMB_HASH_ALG hash,
-                     unsigned hash_block_size, int num_jobs)
+                     const IMB_HASH_ALG hash, int num_jobs)
 {
         int vect;
         DECLARE_ALIGNED(uint32_t enc_keys[15*4], 16);
         DECLARE_ALIGNED(uint32_t dec_keys[15*4], 16);
-        uint8_t *buf = NULL;
-        uint8_t *hash_key = NULL;
         DECLARE_ALIGNED(uint8_t ipad_hash[128], 16);
         DECLARE_ALIGNED(uint8_t opad_hash[128], 16);
-        unsigned hash_key_len, i;
-
-        buf = malloc(hash_block_size);
-        if (buf == NULL) {
-                fprintf(stderr, "Can't allocate buffer memory\n");
-                goto exit;
-        }
-
-        hash_key = malloc(hash_block_size);
-        if (hash_key == NULL) {
-                fprintf(stderr, "Can't allocate key memory\n");
-                goto exit;
-        }
+        unsigned i;
 
         printf("%s (N jobs = %d):\n", banner, num_jobs);
         for (vect = 0; vect < vec_cnt; vect++) {
@@ -430,29 +415,9 @@ test_chained_vectors(struct IMB_MGR *mb_mgr,
                         break;
                 }
 
-                /* prepare the hash key */
-                memset(hash_key, 0, hash_block_size);
-                if (vec_tab[vect].hash_key_len <= hash_block_size) {
-                        memcpy(hash_key, vec_tab[vect].hash_key,
-                               vec_tab[vect].hash_key_len);
-                        hash_key_len = (int) vec_tab[vect].hash_key_len;
-                } else {
-                        IMB_SHA1(mb_mgr, vec_tab[vect].hash_key,
-                                 vec_tab[vect].hash_key_len, hash_key);
-                        hash_key_len = hash_block_size;
-                }
-
-                /* compute ipad hash */
-                memset(buf, 0x36, hash_block_size);
-                for (i = 0; i < hash_key_len; i++)
-                        buf[i] ^= hash_key[i];
-                IMB_SHA1_ONE_BLOCK(mb_mgr, buf, ipad_hash);
-
-                /* compute opad hash */
-                memset(buf, 0x5c, hash_block_size);
-                for (i = 0; i < hash_key_len; i++)
-                        buf[i] ^= hash_key[i];
-                IMB_SHA1_ONE_BLOCK(mb_mgr, buf, opad_hash);
+                imb_ipad_opad_sha1(mb_mgr, vec_tab[vect].cipher_key,
+                                   vec_tab[vect].cipher_key_len,
+                                   ipad_hash, opad_hash);
 
                 for (i = 0; i < DIM(test_sets); i++) {
                         unsigned in_place;
@@ -478,10 +443,6 @@ test_chained_vectors(struct IMB_MGR *mb_mgr,
                 }
         }
         printf("\n");
-
-exit:
-        free(buf);
-        free(hash_key);
 }
 
 int
@@ -501,7 +462,7 @@ chained_test(struct IMB_MGR *mb_mgr)
                                      chained_vectors,
                                      "AES-CBC + SHA1-HMAC standard test vectors",
                                      IMB_CIPHER_CBC, IMB_AUTH_HMAC_SHA_1,
-                                     IMB_SHA1_BLOCK_SIZE, num_jobs_tab[i]);
+                                     num_jobs_tab[i]);
 
         errors += test_suite_end(&ctx);
 
