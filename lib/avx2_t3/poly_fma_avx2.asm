@@ -652,8 +652,8 @@ mksection .text
 %define %%XTMP2 XWORD(%%YTMP2)
 %define %%XTMP3 XWORD(%%YTMP3)
 
-        ; Minimum of 128 bytes to run vectorized code
-        cmp     %%LEN, POLY1305_BLOCK_SIZE*8
+        ; Minimum of 256 bytes to run vectorized code
+        cmp     %%LEN, POLY1305_BLOCK_SIZE*16
         jb      %%_final_loop
 
         ; Spread accumulator into 44-bit limbs in quadwords
