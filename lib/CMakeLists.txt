@@ -32,7 +32,9 @@ if(NOT FULL_PROJECT_BUILD)
   message(FATAL_ERROR "Please run CMake from project root directory")
 endif()
 
-# set default options
+#######################################
+# set default library options
+#######################################
 option(AESNI_EMU "AESNI emulation support" OFF)
 option(SAFE_PARAM "Parameter checking" ON)
 option(SAFE_DATA "Clear sensitive data from registers and memory" ON)
@@ -51,34 +53,9 @@ if(NOT SAFE_OPTIONS)
   set(SAFE_LOOKUP OFF)
 endif()
 
-# detect Linux or Windows
-if(CMAKE_HOST_UNIX)
-  set(LINUX 1)
-  set(LIB IPSec_MB) # 'lib' prefix assumed on Linux
-else()
-  set(WINDOWS 1)
-  set(LIB libIPSec_MB)
-  if(CMAKE_GENERATOR MATCHES "Visual Studio")
-    if(NOT (${CMAKE_GENERATOR_PLATFORM} MATCHES "x64"))
-      message(FATAL_ERROR "Only 64-bit platform supported. Re-run with '-A x64' option.")
-    endif()
-  endif()
-endif()
-
-message(STATUS "AESNI emulation support... ${AESNI_EMU}")
-message(STATUS "SAFE_OPTIONS...            ${SAFE_OPTIONS}")
-message(STATUS "SAFE_PARAM...              ${SAFE_PARAM}")
-message(STATUS "SAFE_DATA...               ${SAFE_DATA}")
-message(STATUS "SAFE_LOOKUP...             ${SAFE_LOOKUP}")
-message(STATUS "BUILD_SHARED_LIBS...       ${BUILD_SHARED_LIBS}")
-message(STATUS "EXTRA_CFLAGS...            ${EXTRA_CFLAGS}")
-message(STATUS "NO_COMPAT_IMB_API_053...   ${NO_COMPAT_IMB_API_053}")
-message(STATUS "CMAKE_GENERATOR...         ${CMAKE_GENERATOR}")
-message(STATUS "PLATFORM...                ${CMAKE_GENERATOR_PLATFORM}")
-message(STATUS "BUILD_TYPE...              ${CMAKE_BUILD_TYPE}")
-message(STATUS "CMAKE_VERBOSE_MAKEFILE...  ${CMAKE_VERBOSE_MAKEFILE}")
-
-# set directories
+#######################################
+# set library directories
+#######################################
 set(DIR_CURRENT ${CMAKE_CURRENT_SOURCE_DIR}/)
 set(DIR_INCLUDE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 set(DIR_AVX_T1 ${CMAKE_CURRENT_SOURCE_DIR}/avx_t1)
@@ -96,7 +73,9 @@ if(AVX_IFMA)
   set(DIR_AVX2_T3 ${CMAKE_CURRENT_SOURCE_DIR}/avx2_t3)
 endif()
 
-# list all source directories
+########################################
+# create list of all source directories
+########################################
 set(DIR_SOURCES
   ${DIR_AVX_T1}
   ${DIR_AVX_T2}
@@ -117,12 +96,68 @@ if(AVX_IFMA)
   list(APPEND DIR_SOURCES ${DIR_AVX2_T3})
 endif()
 
-# set compiler definitions
-if(LINUX)
-  set(LIB_DEFINES LINUX)
-else()
-  set(LIB_DEFINES )
+########################################
+# find C source files in all directories
+########################################
+file(GLOB SRC_FILES_AVX_T1 "${DIR_AVX_T1}/*.c")
+file(GLOB SRC_FILES_AVX_T2 "${DIR_AVX_T2}/*.c")
+file(GLOB SRC_FILES_AVX2_T1 "${DIR_AVX2_T1}/*.c")
+file(GLOB SRC_FILES_AVX2_T2 "${DIR_AVX2_T2}/*.c")
+file(GLOB SRC_FILES_AVX2_T3 "${DIR_AVX2_T3}/*.c")
+file(GLOB SRC_FILES_AVX512_T1 "${DIR_AVX512_T1}/*.c")
+file(GLOB SRC_FILES_AVX512_T2 "${DIR_AVX512_T2}/*.c")
+file(GLOB SRC_FILES_SSE_T1 "${DIR_SSE_T1}/*.c")
+file(GLOB SRC_FILES_SSE_T2 "${DIR_SSE_T2}/*.c")
+file(GLOB SRC_FILES_SSE_T3 "${DIR_SSE_T3}/*.c")
+file(GLOB SRC_FILES_X86_64 "${DIR_X86_64}/*.c")
+file(GLOB SRC_FILES_NO_AESNI "${DIR_NO_AESNI}/*.c")
+
+# create list of all C source files
+set(SRC_FILES_C
+  ${SRC_FILES_AVX_T1}
+  ${SRC_FILES_AVX_T2}
+  ${SRC_FILES_AVX2_T1}
+  ${SRC_FILES_AVX2_T2}
+  ${SRC_FILES_AVX512_T1}
+  ${SRC_FILES_AVX512_T2}
+  ${SRC_FILES_SSE_T1}
+  ${SRC_FILES_SSE_T2}
+  ${SRC_FILES_SSE_T3}
+  ${SRC_FILES_X86_64}
+)
+if(AESNI_EMU)
+  list(APPEND SRC_FILES_C ${SRC_FILES_NO_AESNI})
 endif()
+if(AVX_IFMA)
+  list(APPEND SRC_FILES_C ${SRC_FILES_AVX2_T3})
+endif()
+
+########################################
+# generate list of assembly source files
+########################################
+foreach(DIR ${DIR_SOURCES})
+  file(GLOB_RECURSE TMP "${DIR}/*.asm")
+  list(APPEND SRC_FILES_ASM ${TMP})
+endforeach()
+
+########################################
+# print build information
+########################################
+message(STATUS "AESNI emulation support... ${AESNI_EMU}")
+message(STATUS "SAFE_OPTIONS...            ${SAFE_OPTIONS}")
+message(STATUS "SAFE_PARAM...              ${SAFE_PARAM}")
+message(STATUS "SAFE_DATA...               ${SAFE_DATA}")
+message(STATUS "SAFE_LOOKUP...             ${SAFE_LOOKUP}")
+message(STATUS "BUILD_SHARED_LIBS...       ${BUILD_SHARED_LIBS}")
+message(STATUS "EXTRA_CFLAGS...            ${EXTRA_CFLAGS}")
+message(STATUS "NO_COMPAT_IMB_API_053...   ${NO_COMPAT_IMB_API_053}")
+message(STATUS "CMAKE_GENERATOR...         ${CMAKE_GENERATOR}")
+message(STATUS "PLATFORM...                ${CMAKE_GENERATOR_PLATFORM}")
+
+########################################
+# set C compiler options
+########################################
+set(LIB_DEFINES)
 
 # enable SAFE OPTIONS
 if(SAFE_DATA)
@@ -147,171 +182,39 @@ if(NO_COMPAT_IMB_API_053)
   list(APPEND LIB_DEFINES NO_COMPAT_IMB_API_053)
 endif()
 
+# enable AVX IFMA support
 if(AVX_IFMA)
   list(APPEND LIB_DEFINES AVX_IFMA)
 endif()
 
-# set up NASM compilation
+# add OS specific options
+if(CMAKE_HOST_UNIX)
+  include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/linux.cmake)
+else()
+  include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/windows.cmake)
+endif()
+
+# add user defined cflags
+string(APPEND CMAKE_C_FLAGS " ${EXTRA_CFLAGS}")
+
+# add library definitions to all C source files
+foreach(FILE ${SRC_FILES_C})
+  set_source_files_properties(${FILE} PROPERTIES
+    COMPILE_DEFINITIONS "${LIB_DEFINES}")
+endforeach()
+
+########################################
+# setup NASM
+########################################
 enable_language(ASM_NASM)
 if(NOT CMAKE_ASM_NASM_COMPILER_LOADED)
   message(FATAL_ERROR "Can't find assembler")
 endif()
 set(CAN_USE_ASSEMBLER 1)
 
-# generate list of assembly source files
-foreach(DIR ${DIR_SOURCES})
-  file(GLOB_RECURSE TMP "${DIR}/*.asm")
-  list(APPEND SRC_FILES_ASM ${TMP})
-endforeach()
-
-# set NASM flags
-if(LINUX)
-  string(APPEND CMAKE_ASM_NASM_FLAGS " -Werror -felf64 -Xgnu -gdwarf -DLINUX -D__linux__")
-else()
-  # Windows
-  string(APPEND CMAKE_ASM_NASM_FLAGS " -Werror -Xvc -DWIN_ABI")
-  set_source_files_properties(${SRC_FILES_ASM} PROPERTIES
-    COMPILE_FLAGS "$<$<CONFIG:DEBUG>:-gcv8>")
-endif()
-
-# generate list of C source files
-file(GLOB SRC_FILES_AVX_T1 "${DIR_AVX_T1}/*.c")
-file(GLOB SRC_FILES_AVX_T2 "${DIR_AVX_T2}/*.c")
-file(GLOB SRC_FILES_AVX2_T1 "${DIR_AVX2_T1}/*.c")
-file(GLOB SRC_FILES_AVX2_T2 "${DIR_AVX2_T2}/*.c")
-file(GLOB SRC_FILES_AVX2_T3 "${DIR_AVX2_T3}/*.c")
-file(GLOB SRC_FILES_AVX512_T1 "${DIR_AVX512_T1}/*.c")
-file(GLOB SRC_FILES_AVX512_T2 "${DIR_AVX512_T2}/*.c")
-file(GLOB SRC_FILES_SSE_T1 "${DIR_SSE_T1}/*.c")
-file(GLOB SRC_FILES_SSE_T2 "${DIR_SSE_T2}/*.c")
-file(GLOB SRC_FILES_SSE_T3 "${DIR_SSE_T3}/*.c")
-file(GLOB SRC_FILES_X86_64 "${DIR_X86_64}/*.c")
-file(GLOB SRC_FILES_NO_AESNI "${DIR_NO_AESNI}/*.c")
-if(WINDOWS)
-  set(SRC_DEF_FILE ${LIB}_lnk.def)
-endif()
-
-# set compiler flags
-# linux flags
-if(LINUX)
-  set_source_files_properties(
-    ${SRC_FILES_AVX_T1} ${SRC_FILES_AVX_T2}
-    PPROPERTIES COMPILE_FLAGS
-    "-march=sandybridge -maes -mpclmul")
-  set_source_files_properties(
-    ${SRC_FILES_AVX2_T1} ${SRC_FILES_AVX2_T2}
-    ${SRC_FILES_AVX2_T3}
-    PPROPERTIES COMPILE_FLAGS
-    "-march=haswell -maes -mpclmul")
-  set_source_files_properties(
-    ${SRC_FILES_AVX512_T1} ${SRC_FILES_AVX512_T2}
-    PPROPERTIES COMPILE_FLAGS
-    "-march=broadwell -maes -mpclmul")
-  set_source_files_properties(
-    ${SRC_FILES_SSE_T1} ${SRC_FILES_SSE_T2} ${SRC_FILES_SSE_T3}
-    PROPERTIES COMPILE_FLAGS
-    "-march=nehalem -maes -mpclmul")
-  set_source_files_properties(
-    ${SRC_FILES_X86_64}
-    PROPERTIES COMPILE_FLAGS
-    "-msse4.2")
-  if(AESNI_EMU)
-    set_source_files_properties(
-      ${SRC_FILES_NO_AESNI}
-      PROPERTIES COMPILE_FLAGS
-      "-march=nehalem -mno-pclmul")
-  endif()
-
-  set(CMAKE_C_FLAGS "-MMD -fPIC -W -Wall -Wextra -Wmissing-declarations \
-    -Wpointer-arith -Wcast-qual -Wundef -Wwrite-strings -Wformat \
-    -Wformat-security -Wunreachable-code -Wmissing-noreturn \
-    -Wsign-compare -Wno-endif-labels -Wstrict-prototypes \
-    -Wmissing-prototypes -Wold-style-definition \
-    -fno-delete-null-pointer-checks -fwrapv"
-  )
-  # -fno-strict-overflow is not supported by clang
-  if(CMAKE_COMPILER_IS_GNUCC)
-    string(APPEND CMAKE_C_FLAGS " -fno-strict-overflow")
-  endif()
-  set(CMAKE_C_FLAGS_DEBUG "-g -DDEBUG -O0")
-  set(CMAKE_C_FLAGS_RELEASE "-fstack-protector -D_FORTIFY_SOURCE=2 -O3")
-  set(CMAKE_SHARED_LINKER_FLAGS "-Wl,-z,noexecstack -Wl,-z,relro -Wl,-z,now -lc")
-else()
-  # Windows flags
-  set(CMAKE_C_FLAGS "/nologo /Y- /W3 /WX- /Gm- /fp:precise /EHsc")
-  set(CMAKE_C_FLAGS_DEBUG "/Od /DDEBUG /Z7")
-  set(CMAKE_C_FLAGS_RELEASE "/O2 /Oi")
-  set(CMAKE_SHARED_LINKER_FLAGS "/nologo")
-  set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "/RELEASE /DEBUG /OPT:REF /OPT:ICF /INCREMENTAL:NO")
-  set(CMAKE_SHARED_LINKER_FLAGS_DEBUG "/DEBUG /INCREMENTAL:NO")
-  set(CMAKE_STATIC_LINKER_FLAGS "/nologo /nodefaultlib")
-  set_source_files_properties(
-    ${SRC_FILES_AVX_T1} ${SRC_FILES_AVX_T2}
-    ${SRC_FILES_AVX2_T1} ${SRC_FILES_AVX2_T2}
-    ${SRC_FILES_AVX2_T3} ${SRC_FILES_AVX512_T1}
-    ${SRC_FILES_AVX512_T2}
-    PPROPERTIES COMPILE_FLAGS
-    "${CMAKE_C_FLAGS} /arch:AVX")
-endif()
-
-string(APPEND CMAKE_C_FLAGS " ${EXTRA_CFLAGS}")
-
-set(SRC_FILES_C
-  ${SRC_FILES_AVX_T1}
-  ${SRC_FILES_AVX_T2}
-  ${SRC_FILES_AVX2_T1}
-  ${SRC_FILES_AVX2_T2}
-  ${SRC_FILES_AVX512_T1}
-  ${SRC_FILES_AVX512_T2}
-  ${SRC_FILES_SSE_T1}
-  ${SRC_FILES_SSE_T2}
-  ${SRC_FILES_SSE_T3}
-  ${SRC_FILES_X86_64}
-)
-if(AESNI_EMU)
-  list(APPEND SRC_FILES_C ${SRC_FILES_NO_AESNI})
-endif()
-if(AVX_IFMA)
-  list(APPEND SRC_FILES_C ${SRC_FILES_AVX2_T3})
-endif()
-
-# set C source file compiler definitions
-foreach(FILE ${SRC_FILES_C})
-  set_source_files_properties(${FILE} PROPERTIES
-    COMPILE_DEFINITIONS "${LIB_DEFINES}")
-endforeach()
-
-if(WINDOWS)
-  # set extra windows compiler flags
-  foreach(FILE ${SRC_FILES_NO_AESNI})
-    set_source_files_properties(${FILE} PROPERTIES
-      COMPILE_DEFINITIONS "${LIB_DEFINES}"
-      COMPILE_OPTIONS "$<$<CONFIG:RELEASE>:/Od>")
-  endforeach()
-
-  # generate windows DEF file
-  if(NOT AESNI_EMU)
-    set(STR_FILTER "/c:_no_aesni")
-  endif()
-  if(NOT AVX_IFMA)
-    set(STR_FILTER "${STR_FILTER} /c:_avx2_t3")
-  endif()
-
-  # filter unused symbol exports
-  if(NOT STR_FILTER)
-    set(GEN_DEF_FILE_CMD "copy /Y ${LIB}.def ${SRC_DEF_FILE}")
-  else()
-    set(GEN_DEF_FILE_CMD "findstr /v ${STR_FILTER} ${LIB}.def > ${SRC_DEF_FILE}")
-  endif()
-
-  execute_process(
-    COMMAND cmd /C ${GEN_DEF_FILE_CMD}
-    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    OUTPUT_QUIET
-  )
-endif()
-
-# add the library
+########################################
+# add library target
+########################################
 add_library(${LIB} ${SRC_FILES_ASM} ${SRC_FILES_C} ${SRC_DEF_FILE})
 target_include_directories(${LIB} PRIVATE ${DIR_CURRENT} ${DIR_INCLUDE} ${DIR_NO_AESNI})
 
