@@ -31,36 +31,16 @@ if(NOT FULL_PROJECT_BUILD)
   message(FATAL_ERROR "Please run CMake from project root directory")
 endif()
 
-# #################
-# Test Applications
-# #################
-
+########################################
+# set test and library names
+########################################
 set(TEST_APP ipsec_MB_testapp)
 set(XVALID_APP ipsec_xvalid_test)
 set(LIB_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../lib)
 
-# detect Linux or Windows system
-if(CMAKE_HOST_UNIX)
-  set(LINUX 1)
-  set(IPSEC_MB_LIB IPSec_MB)
-else()
-  set(WINDOWS 1)
-  set(IPSEC_MB_LIB libIPSec_MB)
-endif()
-
-# set up NASM compilation
-enable_language(ASM_NASM)
-if(NOT CMAKE_ASM_NASM_COMPILER_LOADED)
-  message(FATAL_ERROR "Can't find assembler")
-endif()
-set(CAN_USE_ASSEMBLER TRUE)
-if(LINUX)
-  set(CMAKE_ASM_NASM_FLAGS "-felf64 -Xgnu -gdwarf -DLINUX -D__linux__")
-else()
-  set(CMAKE_ASM_NASM_FLAGS "-Werror -fwin64 -Xvc -DWIN_ABI")
-endif()
-
+########################################
 # set ipsec_MB_test source files
+########################################
 set(TEST_APP_SRC_FILES
   ${CMAKE_CURRENT_SOURCE_DIR}/main.c
   ${CMAKE_CURRENT_SOURCE_DIR}/gcm_test.c
@@ -96,7 +76,9 @@ set(TEST_APP_SRC_FILES
   ${CMAKE_CURRENT_SOURCE_DIR}/direct_api_param_test.c
 )
 
+########################################
 # set ipsec_xvalid_test source files
+########################################
 set(XVALID_APP_SRC_FILES_C
   ${CMAKE_CURRENT_SOURCE_DIR}/ipsec_xvalid.c
   ${CMAKE_CURRENT_SOURCE_DIR}/utils.c
@@ -105,34 +87,29 @@ set(XVALID_APP_SRC_FILES_ASM
   ${CMAKE_CURRENT_SOURCE_DIR}/misc.asm
 )
 
-# set flags for different OS's
-if(LINUX)
-  set(CMAKE_C_FLAGS "-MMD -W -Wall -Wextra -Wmissing-declarations \
-    -Wpointer-arith -Wcast-qual -Wundef -Wwrite-strings -Wformat \
-    -Wformat-security -Wunreachable-code -Wmissing-noreturn -Wsign-compare \
-    -Wno-endif-labels -Wstrict-prototypes -Wmissing-prototypes \
-    -Wold-style-definition -fno-delete-null-pointer-checks -fwrapv"
-  )
-  set(CMAKE_C_FLAGS_DEBUG "-O0 -DDEBUG -g")
-  set(CMAKE_C_FLAGS_RELEASE "-O3")
-  set(CMAKE_EXE_LINKER_FLAGS_DEBUG "-g")
+########################################
+# setup NASM
+########################################
+enable_language(ASM_NASM)
+if(NOT CMAKE_ASM_NASM_COMPILER_LOADED)
+  message(FATAL_ERROR "Can't find assembler")
+endif()
+set(CAN_USE_ASSEMBLER TRUE)
 
-  # -fno-strict-overflow is not supported by clang
-  if(CMAKE_COMPILER_IS_GNUCC)
-    string(APPEND CMAKE_C_FLAGS " -fno-strict-overflow")
-  endif()
+########################################
+# set C compiler and NASM options
+########################################
+# add OS specific options
+if(CMAKE_HOST_UNIX)
+  include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/linux.cmake)
 else()
-  # windows
-  set(CMAKE_C_FLAGS "/nologo /DNO_COMPAT_IMB_API_053 /D_CRT_SECURE_NO_WARNINGS /Y- /W3 /WX- /Gm- /fp:precise /EHsc ${EXTRA_CFLAGS}")
-  set(CMAKE_C_FLAGS_DEBUG "/Od /DDEBUG /Z7")
-  set(CMAKE_C_FLAGS_RELEASE "/O2 /Oi")
-  set(CMAKE_EXE_LINKER_FLAGS_DEBUG "/debug")
+  include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/windows.cmake)
 endif()
 
-if(LINUX)
-  set(APP_DEFINES LINUX _GNU_SOURCE NO_COMPAT_IMB_API_053)
-endif()
 
+########################################
+# add targets
+########################################
 include_directories(${CMAKE_CURRENT_SOURCE_DIR} ${LIB_DIR})
 link_directories(${LIB_DIR})
 
@@ -142,3 +119,4 @@ target_compile_definitions(${TEST_APP} PRIVATE ${APP_DEFINES})
 
 add_executable(${XVALID_APP} ${XVALID_APP_SRC_FILES_C} ${XVALID_APP_SRC_FILES_ASM})
 target_link_libraries(${XVALID_APP} PRIVATE ${IPSEC_MB_LIB})
+
