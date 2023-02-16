@@ -24,7 +24,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 # ##############################################################################
-# Test application CMake Linux config
+# Test application CMake Unix config
 # ##############################################################################
 
 set(LINUX 1)
@@ -38,11 +38,14 @@ set(APP_DEFINES LINUX _GNU_SOURCE NO_COMPAT_IMB_API_053)
 
 # set C compiler flags
 set(CMAKE_C_FLAGS
-    "-MMD -W -Wall -Wextra -Wmissing-declarations \
+    "-W -Wall -Wextra -Wmissing-declarations \
 -Wpointer-arith -Wcast-qual -Wundef -Wwrite-strings -Wformat \
 -Wformat-security -Wunreachable-code -Wmissing-noreturn -Wsign-compare \
 -Wno-endif-labels -Wstrict-prototypes -Wmissing-prototypes \
 -Wold-style-definition -fno-delete-null-pointer-checks -fwrapv")
+if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+    string(APPEND CMAKE_C_FLAGS " -MMD")
+endif()
 set(CMAKE_C_FLAGS_DEBUG "-O0 -DDEBUG -g")
 set(CMAKE_C_FLAGS_RELEASE "-O3")
 set(CMAKE_EXE_LINKER_FLAGS_DEBUG "-g")

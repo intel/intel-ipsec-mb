@@ -24,7 +24,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 # ##############################################################################
-# IPSec_MB library CMake Linux config
+# IPSec_MB library CMake Unix config
 # ##############################################################################
 
 set(LINUX 1)
@@ -42,12 +42,15 @@ string(APPEND CMAKE_ASM_NASM_FLAGS
 
 # set C compiler flags
 set(CMAKE_C_FLAGS
-    "-MMD -fPIC -W -Wall -Wextra -Wmissing-declarations \
+    "-fPIC -W -Wall -Wextra -Wmissing-declarations \
 -Wpointer-arith -Wcast-qual -Wundef -Wwrite-strings -Wformat \
 -Wformat-security -Wunreachable-code -Wmissing-noreturn \
 -Wsign-compare -Wno-endif-labels -Wstrict-prototypes \
 -Wmissing-prototypes -Wold-style-definition \
 -fno-delete-null-pointer-checks -fwrapv")
+if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+    string(APPEND CMAKE_C_FLAGS " -MMD")
+endif()
 set(CMAKE_C_FLAGS_DEBUG "-g -DDEBUG -O0")
 set(CMAKE_C_FLAGS_RELEASE "-fstack-protector -D_FORTIFY_SOURCE=2 -O3")
 set(CMAKE_SHARED_LINKER_FLAGS "-Wl,-z,noexecstack -Wl,-z,relro -Wl,-z,now -lc")

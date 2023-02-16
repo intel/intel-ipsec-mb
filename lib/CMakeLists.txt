@@ -189,7 +189,7 @@ endif()
 
 # add OS specific options
 if(CMAKE_HOST_UNIX)
-  include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/linux.cmake)
+  include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/unix.cmake)
 else()
   include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/windows.cmake)
 endif()
