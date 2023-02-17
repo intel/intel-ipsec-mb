@@ -29,7 +29,7 @@
 
 set(WINDOWS 1)
 set(LIB libIPSec_MB)
-set(SRC_DEF_FILE ${LIB}_lnk.def)
+set(SRC_DEF_FILE ${CMAKE_CURRENT_BINARY_DIR}/${LIB}_lnk.def)
 
 if(CMAKE_GENERATOR MATCHES "Visual Studio")
   if(NOT (${CMAKE_GENERATOR_PLATFORM} MATCHES "x64"))
