@@ -94,8 +94,37 @@ mask_6    dq  0x0040004000400040, 0x2000004000400040, 0x2000200020002000, 0x2000
 mask_7    dq  0x0000000000000000, 0x4000000000000000, 0x4000400040004000, 0x4000400040004000
 mask_8    dq  0x0000000000000000, 0x8000000000000000, 0x8000800080008000, 0x8000800080008000
 
+align 32
+new_msk0  dq  0x0000000000000000, 0x0707000000000000, 0x0707070707070707, 0x0707070707070707
+new_msk1  dq  0x0101010101010101, 0x0808010101010101, 0x0808080808080808, 0x0808080808080808
+new_msk2  dq  0x0202020202020202, 0x0909020202020202, 0x0909090909090909, 0x0909090909090909
+new_msk3  dq  0x0303030303030303, 0x0a0a030303030303, 0x0a0a0a0a0a0a0a0a, 0x0a0a0a0a0a0a0a0a
+new_msk4  dq  0x0404040404040404, 0x0b0b040404040404, 0x0b0b0b0b0b0b0b0b, 0x0b0b0b0b0b0b0b0b
+new_msk5  dq  0x0505050505050505, 0x0c0c050505050505, 0x0c0c0c0c0c0c0c0c, 0x0c0c0c0c0c0c0c0c
+new_msk6  dq  0x0606060606060606, 0x0d0d060606060606, 0x0d0d0d0d0d0d0d0d, 0x0d0d0d0d0d0d0d0d
+new_msk7  dq  0xffffffffffffffff, 0x0e0effffffffffff, 0x0e0e0e0e0e0e0e0e, 0x0e0e0e0e0e0e0e0e
+new_msk8  dq  0xffffffffffffffff, 0x0f0fffffffffffff, 0x0f0f0f0f0f0f0f0f, 0x0f0f0f0f0f0f0f0f
+
+align 32
+new_wmsk0  dq  0x0000000000000000, 0x0007000000000000, 0x0007000700070007, 0x0007000700070007
+new_wmsk1  dq  0x0001000100010001, 0x0008000100010001, 0x0008000800080008, 0x0008000800080008
+new_wmsk2  dq  0x0002000200020002, 0x0009000200020002, 0x0009000900090009, 0x0009000900090009
+new_wmsk3  dq  0x0003000300030003, 0x000a000300030003, 0x000a000a000a000a, 0x000a000a000a000a
+new_wmsk4  dq  0x0004000400040004, 0x000b000400040004, 0x000b000b000b000b, 0x000b000b000b000b
+new_wmsk5  dq  0x0005000500050005, 0x000c000500050005, 0x000c000c000c000c, 0x000c000c000c000c
+new_wmsk6  dq  0x0006000600060006, 0x000d000600060006, 0x000d000d000d000d, 0x000d000d000d000d
+new_wmsk7  dq  0xffffffffffffffff, 0x000effffffffffff, 0x000e000e000e000e, 0x000e000e000e000e
+new_wmsk8  dq  0xffffffffffffffff, 0x000fffffffffffff, 0x000f000f000f000f, 0x000f000f000f000f
+
+align 32
+least_sig_bit_word dq 0x0001000100010001, 0x0001000100010001, 0x0001000100010001, 0x0001000100010001
+vpermb_mask        dq 0x0000000000000000, 0x0000000000000000, 0x0004000300020001, 0x0000000000060005
+vpermw_mask        dq 0x000a000900080007, 0x000f000d000c000b, 0x000f000f000f000f, 0x000f000f000f000f
+
 align 8
 high_7    dq  0x3F80
+zero      dq  0x7F
+mid       dq  0x3F80
 align 8
 test_t    dq  0xAAAAAAAA
 
@@ -182,45 +211,25 @@ mksection .text
 %define     x(n)  x %+ n
 %define     x_mask(n)   x %+ n %+_mask
 %define     mask(n) mask_ %+ n
+%define     new_msk(x) new_msk %+ x
+%define     new_wmsk(x) new_wmsk %+ x
 
 %macro KASUMI_SBOX_AVX2 0
-    vpxor       ymm10, ymm10, ymm10
-    vmovd   xmm13, edi          ; copy r10 into lowest byte of xmm2
-    vpbroadcastw ymm13, xmm13     ; broadcast input across all words of xmm2
+    ; vpand with kmask will give words full of corresponding bit values
 %assign i 0
 %rep 9
-    vpand   y(i), ymm13, [rel mask(i)]
-    vpcmpeqw y(i), y(i), [rel mask(i)]  ; fill with 1s if equal to 0, else fill with 0s
+    vmovdqa     y(i), [rel new_wmsk(i)]
+    vpermw      y(i), y(i), ymm10    ; fill register with the word value
 %assign i (i + 1)
 %endrep
-
-%assign i 0
-%rep 9
-    vpor    y(i), y(i), [rel y_mask(i)] ; or the x-masks with the x-values
+    vpor        y0, y0, [rel y_mask(0)]
+%assign i 1
+%rep 8
+    vpternlogq  y0, y(i), [rel y_mask(i)], 0xE0 ; or the x-masks with the x-values
 %assign i (i + 1)
 %endrep
-
-    vpand   ymm2, ymm3      ; carry out the AND operations to combine all x-masks
-    vpand   ymm4, ymm5
-    vpand   ymm6, ymm7
-    vpand   ymm9, ymm11
-    vpand   ymm2, ymm4
-    vpand   ymm6, ymm8
-    vpand   ymm2, ymm6
-    vpand   ymm2, ymm9
-
-    vpand   ymm2, ymm2, [rel y_mask_last] ; mask which accounts for setting 1s and 0s in set locations
-    vpsllw      ymm10, ymm2, 8
-    vpxor       ymm2, ymm2, ymm10
-    vpsllw      ymm10, ymm2, 4
-    vpxor       ymm2, ymm2, ymm10
-    vpsllw      ymm10, ymm2, 2
-    vpxor       ymm2, ymm2, ymm10
-    vpsllw      ymm10, ymm2, 1
-    vpxor       ymm2, ymm2, ymm10
-
-    vpmovmskb   r9, ymm2
-    pext        rax, r9, [rel test_t]
+    vpandd      ymm2, ymm2, [rel y_mask_last] ; mask which accounts for setting 1s and 0s in set locations
+    vpopcntw    ymm2, ymm2
 %endmacro
 
 ;; arg1: data
@@ -231,14 +240,29 @@ align 32
 MKGLOBAL(kasumi_FI_avx2, function, internal)
 kasumi_FI_avx2:
     xor     arg1, arg2
+    kmovd       k4, [rel zero]
+    kmovd       k5, [rel mid]
+    vmovdqa     ymm1, [rel vpermb_mask]         ;; ***
+    vmovdqa     ymm0, [rel vpermw_mask]
+    kmovd       k1, edi
+    vpmovm2w    ymm10, k1
     KASUMI_SBOX_AVX2
-    pdep    arg1, arg1, [rel high_7]
-    xor     arg1, rax
-    pext    r8, arg1, [rel high_7]
-    xor     arg1, r8
-    ror     dx, 9
-    xor     arg1, arg3
+    vpermw      ymm10 {k5}{z}, ymm1, ymm10      ; rearrange arg1
+    vpxord      ymm10, ymm10, ymm2      ; xor arg1, rax
+    vpermw      ymm3 {k4}{z}, ymm0, ymm10       ; rearrange arg1
+    vpxord      ymm10, ymm10, ymm3      ; xor arg1, r8
+    ror         dx, 9
+    kmovd       k6, edx
+    vpmovm2w    ymm11, k6
+    vpxord      ymm10, ymm10, ymm11
+    vpand       ymm10, ymm10, [rel least_sig_bit_word]
+    vpcmpw      k2, ymm10, [rel least_sig_bit_word], 0
+    vpcmpeqw    ymm10, ymm10, [rel least_sig_bit_word]
     KASUMI_SBOX_AVX2
+    vpand       ymm2, ymm2, [rel least_sig_bit_word]
+    vpcmpw      k1, ymm2, [rel least_sig_bit_word], 0
+    kmovd       edi, k2
+    kmovd       eax, k1
     pdep    arg1, arg1, [rel high_7]
     xor     rax, arg1
     pext    r8, rax, [rel high_7]
