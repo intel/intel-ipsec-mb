@@ -39,60 +39,6 @@
 int LLVMFuzzerTestOneInput(const uint8_t *, size_t);
 int LLVMFuzzerInitialize(int *, char ***);
 
-/* SNOW3G */
-void test_snow3g_init_key_sched(IMB_MGR *p_mgr, uint8_t *buff, size_t dataSize);
-void test_snow3g_f8_1_buff_bit(IMB_MGR *p_mgr, uint8_t *buff, size_t dataSize);
-void test_snow3g_f8_1_buff(IMB_MGR *p_mgr, uint8_t *buff, size_t dataSize);
-void test_snow3g_f8_2_buff(IMB_MGR *p_mgr, uint8_t *buff, size_t dataSize);
-void test_snow3g_f8_4_buff(IMB_MGR *p_mgr, uint8_t *buff, size_t dataSize);
-void test_snow3g_f8_8_buff(IMB_MGR *p_mgr, uint8_t *buff, size_t dataSize);
-void test_snow3g_f8_n_buff(IMB_MGR *p_mgr, uint8_t *buff, size_t dataSize);
-void test_snow3g_f8_8_multikey(IMB_MGR *p_mgr, uint8_t *buff, size_t dataSize);
-void test_snow3g_f8_n_multikey(IMB_MGR *p_mgr, uint8_t *buff, size_t dataSize);
-void test_snow3g_f9_1_buff(IMB_MGR *p_mgr, uint8_t *buff, size_t dataSize);
-/* GCM-SGL */
-void test_aes128_gcm_enc_sgl(IMB_MGR *p_mgr, uint8_t *buff, size_t dataSize);
-void test_aes128_gcm_dec_sgl(IMB_MGR *p_mgr, uint8_t *buff, size_t dataSize);
-void test_aes192_gcm_enc_sgl(IMB_MGR *p_mgr, uint8_t *buff, size_t dataSize);
-void test_aes192_gcm_dec_sgl(IMB_MGR *p_mgr, uint8_t *buff, size_t dataSize);
-void test_aes256_gcm_enc_sgl(IMB_MGR *p_mgr, uint8_t *buff, size_t dataSize);
-void test_aes256_gcm_dec_sgl(IMB_MGR *p_mgr, uint8_t *buff, size_t dataSize);
-/* GCM */
-void test_aes128_gcm_enc(IMB_MGR *p_mgr, uint8_t *buff, size_t dataSize);
-void test_aes128_gcm_dec(IMB_MGR *p_mgr, uint8_t *buff, size_t dataSize);
-void test_aes192_gcm_enc(IMB_MGR *p_mgr, uint8_t *buff, size_t dataSize);
-void test_aes192_gcm_dec(IMB_MGR *p_mgr, uint8_t *buff, size_t dataSize);
-void test_aes256_gcm_enc(IMB_MGR *p_mgr, uint8_t *buff, size_t dataSize);
-void test_aes256_gcm_dec(IMB_MGR *p_mgr, uint8_t *buff, size_t dataSize);
-
-struct {
-        void (*func)(IMB_MGR *mb_mgr, uint8_t *buff, size_t dataSize);
-        const char *func_name;
-} direct_apis[] = {
-        {test_snow3g_init_key_sched, "test_snow3g_init_key_sched"},
-        {test_snow3g_f8_1_buff_bit, "test_snow3g_f8_1_buff_bit"},
-        {test_snow3g_f8_1_buff, "test_snow3g_f8_1_buff"},
-        {test_snow3g_f8_2_buff, "test_snow3g_f8_2_buff"},
-        {test_snow3g_f8_4_buff, "test_snow3g_f8_4_buff"},
-        {test_snow3g_f8_8_buff, "test_snow3g_f8_8_buff"},
-        {test_snow3g_f8_n_buff, "test_snow3g_f8_n_buff"},
-        {test_snow3g_f8_8_multikey, "test_snow3g_f8_8_multikey"},
-        {test_snow3g_f8_n_multikey, "test_snow3g_f8_n_multikey"},
-        {test_snow3g_f9_1_buff, "test_snow3g_f9_1_buff"},
-        {test_aes128_gcm_enc_sgl, "test_aes128_gcm_enc_sgl"},
-        {test_aes128_gcm_dec_sgl, "test_aes128_gcm_dec_sgl"},
-        {test_aes192_gcm_enc_sgl, "test_aes192_gcm_enc_sgl"},
-        {test_aes192_gcm_dec_sgl, "test_aes192_gcm_dec_sgl"},
-        {test_aes256_gcm_enc_sgl, "test_aes256_gcm_enc_sgl"},
-        {test_aes256_gcm_dec_sgl, "test_aes256_gcm_dec_sgl"},
-        {test_aes128_gcm_enc, "test_aes128_gcm_enc"},
-        {test_aes128_gcm_dec, "test_aes128_gcm_dec"},
-        {test_aes192_gcm_enc, "test_aes192_gcm_enc"},
-        {test_aes192_gcm_dec, "test_aes192_gcm_dec"},
-        {test_aes256_gcm_enc, "test_aes256_gcm_enc"},
-        {test_aes256_gcm_dec, "test_aes256_gcm_dec"},
-};
-
 enum ar {
         SSE = 1,
         AVX,
@@ -102,7 +48,7 @@ enum ar {
 
 enum ar arch;
 
-const uint32_t count = 8;
+int count = 8;
 
 static void parse_matched(int argc, char **argv)
 {
@@ -143,7 +89,7 @@ int LLVMFuzzerInitialize(int *argc, char ***argv)
         return 0;
 }
 
-void test_snow3g_init_key_sched(IMB_MGR *p_mgr, uint8_t *buff,
+static void test_snow3g_init_key_sched(IMB_MGR *p_mgr, uint8_t *buff,
                                 size_t dataSize)
 {
         const void *init_key = buff;
@@ -156,7 +102,8 @@ void test_snow3g_init_key_sched(IMB_MGR *p_mgr, uint8_t *buff,
         IMB_SNOW3G_INIT_KEY_SCHED(p_mgr, init_key, exp_key);
 }
 
-void test_snow3g_f8_1_buff_bit(IMB_MGR *p_mgr, uint8_t *buff, size_t dataSize)
+static void test_snow3g_f8_1_buff_bit(IMB_MGR *p_mgr, uint8_t *buff,
+                                      size_t dataSize)
 {
         const snow3g_key_schedule_t exp_key_s;
         const snow3g_key_schedule_t *exp_key = &exp_key_s;
@@ -175,7 +122,8 @@ void test_snow3g_f8_1_buff_bit(IMB_MGR *p_mgr, uint8_t *buff, size_t dataSize)
         IMB_SNOW3G_F8_1_BUFFER_BIT(p_mgr, exp_key, iv, in, out, len, offset);
 }
 
-void test_snow3g_f8_1_buff(IMB_MGR *p_mgr, uint8_t *buff, size_t dataSize)
+static void test_snow3g_f8_1_buff(IMB_MGR *p_mgr, uint8_t *buff,
+                                  size_t dataSize)
 {
         const snow3g_key_schedule_t exp_key_s;
         const snow3g_key_schedule_t *exp_key = &exp_key_s;
@@ -191,7 +139,8 @@ void test_snow3g_f8_1_buff(IMB_MGR *p_mgr, uint8_t *buff, size_t dataSize)
         IMB_SNOW3G_F8_1_BUFFER(p_mgr, exp_key, iv, in, out, len);
 }
 
-void test_snow3g_f8_2_buff(IMB_MGR *p_mgr, uint8_t *buff, size_t dataSize)
+static void test_snow3g_f8_2_buff(IMB_MGR *p_mgr, uint8_t *buff,
+                                  size_t dataSize)
 {
         const snow3g_key_schedule_t exp_key_s;
         const snow3g_key_schedule_t *exp_key = &exp_key_s;
@@ -208,7 +157,8 @@ void test_snow3g_f8_2_buff(IMB_MGR *p_mgr, uint8_t *buff, size_t dataSize)
                                out, len, in, out, len);
 }
 
-void test_snow3g_f8_4_buff(IMB_MGR *p_mgr, uint8_t *buff,  size_t dataSize)
+static void test_snow3g_f8_4_buff(IMB_MGR *p_mgr, uint8_t *buff,
+                                  size_t dataSize)
 {
         const snow3g_key_schedule_t exp_key_s;
         const snow3g_key_schedule_t *exp_key = &exp_key_s;
@@ -227,7 +177,8 @@ void test_snow3g_f8_4_buff(IMB_MGR *p_mgr, uint8_t *buff,  size_t dataSize)
                                in, out, len);
 }
 
-void test_snow3g_f8_8_buff(IMB_MGR *p_mgr, uint8_t *buff, size_t dataSize)
+static void test_snow3g_f8_8_buff(IMB_MGR *p_mgr, uint8_t *buff,
+                                  size_t dataSize)
 {
         const snow3g_key_schedule_t exp_key_s;
         const snow3g_key_schedule_t *exp_key = &exp_key_s;
@@ -249,7 +200,8 @@ void test_snow3g_f8_8_buff(IMB_MGR *p_mgr, uint8_t *buff, size_t dataSize)
                                out, len, in, out, len);
 }
 
-void test_snow3g_f8_n_buff(IMB_MGR *p_mgr, uint8_t *buff, size_t dataSize)
+static void test_snow3g_f8_n_buff(IMB_MGR *p_mgr, uint8_t *buff,
+                                  size_t dataSize)
 {
         const snow3g_key_schedule_t exp_key_s;
         const snow3g_key_schedule_t *exp_key = &exp_key_s;
@@ -272,7 +224,8 @@ void test_snow3g_f8_n_buff(IMB_MGR *p_mgr, uint8_t *buff, size_t dataSize)
         IMB_SNOW3G_F8_N_BUFFER(p_mgr, exp_key, iv, in, out, len, count);
 }
 
-void test_snow3g_f8_8_multikey(IMB_MGR *p_mgr, uint8_t *buff,  size_t dataSize)
+static void test_snow3g_f8_8_multikey(IMB_MGR *p_mgr, uint8_t *buff,
+                                      size_t dataSize)
 {
         const snow3g_key_schedule_t exp_key_s;
         const snow3g_key_schedule_t *exp_key = &exp_key_s;
@@ -295,7 +248,8 @@ void test_snow3g_f8_8_multikey(IMB_MGR *p_mgr, uint8_t *buff,  size_t dataSize)
         IMB_SNOW3G_F8_8_BUFFER_MULTIKEY(p_mgr, &exp_key, iv, in, out, len);
 }
 
-void test_snow3g_f8_n_multikey(IMB_MGR *p_mgr, uint8_t *buff, size_t dataSize)
+static void test_snow3g_f8_n_multikey(IMB_MGR *p_mgr, uint8_t *buff,
+                                      size_t dataSize)
 {
         const snow3g_key_schedule_t exp_key_s;
         const snow3g_key_schedule_t *exp_key = &exp_key_s;
@@ -319,7 +273,8 @@ void test_snow3g_f8_n_multikey(IMB_MGR *p_mgr, uint8_t *buff, size_t dataSize)
                                         count);
 }
 
-void test_snow3g_f9_1_buff(IMB_MGR *p_mgr, uint8_t *buff, size_t dataSize)
+static void test_snow3g_f9_1_buff(IMB_MGR *p_mgr, uint8_t *buff,
+                                  size_t dataSize)
 {
         const snow3g_key_schedule_t exp_key_s;
         const snow3g_key_schedule_t *exp_key = &exp_key_s;
@@ -335,7 +290,7 @@ void test_snow3g_f9_1_buff(IMB_MGR *p_mgr, uint8_t *buff, size_t dataSize)
         IMB_SNOW3G_F9_1_BUFFER(p_mgr, exp_key, iv, in, len, auth_tag);
 }
 
-void test_aes128_gcm_enc(IMB_MGR *p_mgr, uint8_t *buff, size_t dataSize)
+static void test_aes128_gcm_enc(IMB_MGR *p_mgr, uint8_t *buff, size_t dataSize)
 {
         if ((dataSize < sizeof(struct gcm_key_data)) ||
             (dataSize < sizeof(struct gcm_context_data)))
@@ -357,7 +312,7 @@ void test_aes128_gcm_enc(IMB_MGR *p_mgr, uint8_t *buff, size_t dataSize)
                            aad_len, auth_tag, tag_len);
 }
 
-void test_aes128_gcm_dec(IMB_MGR *p_mgr, uint8_t *buff, size_t dataSize)
+static void test_aes128_gcm_dec(IMB_MGR *p_mgr, uint8_t *buff, size_t dataSize)
 {
         if ((dataSize < sizeof(struct gcm_key_data)) ||
             (dataSize < sizeof(struct gcm_context_data)))
@@ -378,7 +333,7 @@ void test_aes128_gcm_dec(IMB_MGR *p_mgr, uint8_t *buff, size_t dataSize)
                            aad_len, auth_tag, tag_len);
 }
 
-void test_aes192_gcm_enc(IMB_MGR *p_mgr, uint8_t *buff, size_t dataSize)
+static void test_aes192_gcm_enc(IMB_MGR *p_mgr, uint8_t *buff, size_t dataSize)
 {
         if ((dataSize < sizeof(struct gcm_key_data)) ||
             (dataSize < sizeof(struct gcm_context_data)))
@@ -399,7 +354,7 @@ void test_aes192_gcm_enc(IMB_MGR *p_mgr, uint8_t *buff, size_t dataSize)
                            aad_len, auth_tag, tag_len);
 }
 
-void test_aes192_gcm_dec(IMB_MGR *p_mgr, uint8_t *buff,  size_t dataSize)
+static void test_aes192_gcm_dec(IMB_MGR *p_mgr, uint8_t *buff,  size_t dataSize)
 {
         if ((dataSize < sizeof(struct gcm_key_data)) ||
             (dataSize < sizeof(struct gcm_context_data)))
@@ -420,7 +375,7 @@ void test_aes192_gcm_dec(IMB_MGR *p_mgr, uint8_t *buff,  size_t dataSize)
                            aad_len, auth_tag, tag_len);
 }
 
-void test_aes256_gcm_enc(IMB_MGR *p_mgr, uint8_t *buff, size_t dataSize)
+static void test_aes256_gcm_enc(IMB_MGR *p_mgr, uint8_t *buff, size_t dataSize)
 {
         if ((dataSize < sizeof(struct gcm_key_data)) ||
             (dataSize < sizeof(struct gcm_context_data)))
@@ -441,7 +396,7 @@ void test_aes256_gcm_enc(IMB_MGR *p_mgr, uint8_t *buff, size_t dataSize)
                            aad_len, auth_tag, tag_len);
 }
 
-void test_aes256_gcm_dec(IMB_MGR *p_mgr, uint8_t *buff, size_t dataSize)
+static void test_aes256_gcm_dec(IMB_MGR *p_mgr, uint8_t *buff, size_t dataSize)
 {
         if ((dataSize < sizeof(struct gcm_key_data)) ||
             (dataSize < sizeof(struct gcm_context_data)))
@@ -462,7 +417,8 @@ void test_aes256_gcm_dec(IMB_MGR *p_mgr, uint8_t *buff, size_t dataSize)
                            aad_len, auth_tag, tag_len);
 }
 
-void test_aes128_gcm_enc_sgl(IMB_MGR *p_mgr, uint8_t *buff, size_t dataSize)
+static void test_aes128_gcm_enc_sgl(IMB_MGR *p_mgr, uint8_t *buff,
+                                    size_t dataSize)
 {
         if ((dataSize < sizeof(struct gcm_key_data)) ||
             (dataSize < sizeof(struct gcm_context_data)))
@@ -484,7 +440,8 @@ void test_aes128_gcm_enc_sgl(IMB_MGR *p_mgr, uint8_t *buff, size_t dataSize)
         IMB_AES128_GCM_ENC_FINALIZE(p_mgr, key, ctx, auth_tag, tag_len);
 }
 
-void test_aes128_gcm_dec_sgl(IMB_MGR *p_mgr, uint8_t *buff,  size_t dataSize)
+static void test_aes128_gcm_dec_sgl(IMB_MGR *p_mgr, uint8_t *buff,
+                                    size_t dataSize)
 {
         if ((dataSize < sizeof(struct gcm_key_data)) ||
             (dataSize < sizeof(struct gcm_context_data)))
@@ -506,7 +463,8 @@ void test_aes128_gcm_dec_sgl(IMB_MGR *p_mgr, uint8_t *buff,  size_t dataSize)
         IMB_AES128_GCM_DEC_FINALIZE(p_mgr, key, ctx, auth_tag, tag_len);
 }
 
-void test_aes192_gcm_enc_sgl(IMB_MGR *p_mgr, uint8_t *buff, size_t dataSize)
+static void test_aes192_gcm_enc_sgl(IMB_MGR *p_mgr, uint8_t *buff,
+                                    size_t dataSize)
 {
         if ((dataSize < sizeof(struct gcm_key_data)) ||
             (dataSize < sizeof(struct gcm_context_data)))
@@ -528,7 +486,8 @@ void test_aes192_gcm_enc_sgl(IMB_MGR *p_mgr, uint8_t *buff, size_t dataSize)
         IMB_AES192_GCM_ENC_FINALIZE(p_mgr, key, ctx, auth_tag, tag_len);
 }
 
-void test_aes192_gcm_dec_sgl(IMB_MGR *p_mgr, uint8_t *buff, size_t dataSize)
+static void test_aes192_gcm_dec_sgl(IMB_MGR *p_mgr, uint8_t *buff,
+                                    size_t dataSize)
 {
         if ((dataSize < sizeof(struct gcm_key_data)) ||
             (dataSize < sizeof(struct gcm_context_data)))
@@ -550,7 +509,8 @@ void test_aes192_gcm_dec_sgl(IMB_MGR *p_mgr, uint8_t *buff, size_t dataSize)
         IMB_AES192_GCM_DEC_FINALIZE(p_mgr, key, ctx, auth_tag, tag_len);
 }
 
-void test_aes256_gcm_enc_sgl(IMB_MGR *p_mgr, uint8_t *buff, size_t dataSize)
+static void test_aes256_gcm_enc_sgl(IMB_MGR *p_mgr, uint8_t *buff,
+                                    size_t dataSize)
 {
         if ((dataSize < sizeof(struct gcm_key_data)) ||
             (dataSize < sizeof(struct gcm_context_data)))
@@ -571,7 +531,8 @@ void test_aes256_gcm_enc_sgl(IMB_MGR *p_mgr, uint8_t *buff, size_t dataSize)
         IMB_AES256_GCM_ENC_FINALIZE(p_mgr, key, ctx, auth_tag, tag_len);
 }
 
-void test_aes256_gcm_dec_sgl(IMB_MGR *p_mgr, uint8_t *buff, size_t dataSize)
+static void test_aes256_gcm_dec_sgl(IMB_MGR *p_mgr, uint8_t *buff,
+                                    size_t dataSize)
 {
         if ((dataSize < sizeof(struct gcm_key_data)) ||
             (dataSize < sizeof(struct gcm_context_data)))
@@ -592,6 +553,140 @@ void test_aes256_gcm_dec_sgl(IMB_MGR *p_mgr, uint8_t *buff, size_t dataSize)
         IMB_AES256_GCM_DEC_UPDATE(p_mgr, key, ctx, out, in, len);
         IMB_AES256_GCM_DEC_FINALIZE(p_mgr, key, ctx, auth_tag, tag_len);
 }
+
+static void test_zuc_eea3_1_buff(IMB_MGR *p_mgr, uint8_t *buff, size_t dataSize)
+{
+        const void *key = buff;
+
+        if (dataSize < 16)
+                return;
+
+        void *out = buff;
+        const void *in = buff;
+	const uint32_t len = dataSize;
+	const void *iv = (const void *) buff;
+
+        IMB_ZUC_EEA3_1_BUFFER(p_mgr, key, iv, in, out, len);
+}
+
+static void test_zuc_eea3_4_buff(IMB_MGR *p_mgr, uint8_t *buff, size_t dataSize)
+{
+        const void *key[4];
+
+        if (dataSize < 16)
+                return;
+
+        const void *iv[4];
+        const void *in[4];
+        void *out[4];
+        uint32_t len[4];
+
+        for (int i = 0; i < 4; i++) {
+                key[i] = buff;
+                iv[i] = buff;
+                in[i] = buff;
+                out[i] = buff;
+                len[i] = dataSize;
+        }
+
+        IMB_ZUC_EEA3_4_BUFFER(p_mgr, key, iv, in, out, len);
+}
+
+static void test_zuc_eea3_n_buff(IMB_MGR *p_mgr, uint8_t *buff, size_t dataSize)
+{
+        const void *key[8];
+
+        if (dataSize < 16)
+                return;
+
+        const void *iv[8];
+        const void *in[8];
+        void *out[8];
+        uint32_t len[8];
+
+        for (int i = 0; i < count; i++) {
+                key[i] = buff;
+                iv[i] = buff;
+                in[i] = buff;
+                out[i] = buff;
+                len[i] = dataSize;
+        }
+
+        IMB_ZUC_EEA3_N_BUFFER(p_mgr, key, iv, in, out, len, count);
+}
+
+static void test_zuc_eia3_1_buff(IMB_MGR *p_mgr, uint8_t *buff, size_t dataSize)
+{
+        const void *key = buff;
+
+        if (dataSize < 16)
+                return;
+
+        const void *in = buff;
+	uint32_t len = dataSize * 8;
+	const void *iv = (const void *) buff;
+        uint32_t *tag = (uint32_t *)buff;
+
+        IMB_ZUC_EIA3_1_BUFFER(p_mgr, key, iv, in, len, tag);
+}
+
+static void test_zuc_eia3_n_buff(IMB_MGR *p_mgr, uint8_t *buff, size_t dataSize)
+{
+        const void *key[8];
+
+        if (dataSize < 16)
+                return;
+
+        const void *iv[8];
+        const void *in[8];
+        void *tag_ptr_array[8];
+        uint32_t len[8];
+        uint32_t *tag[8];
+
+        for (int i = 0; i < count; i++) {
+                key[i] = buff;
+                iv[i] = buff;
+                in[i] = buff;
+                tag_ptr_array[i] = buff;
+                tag[i] = (uint32_t *)buff;
+                len[i] = dataSize * 8;
+        }
+
+        IMB_ZUC_EIA3_N_BUFFER(p_mgr, key, iv, in, len, tag, count);
+}
+
+struct {
+        void (*func)(IMB_MGR *mb_mgr, uint8_t *buff, size_t dataSize);
+        const char *func_name;
+} direct_apis[] = {
+        {test_snow3g_init_key_sched, "test_snow3g_init_key_sched"},
+        {test_snow3g_f8_1_buff_bit, "test_snow3g_f8_1_buff_bit"},
+        {test_snow3g_f8_1_buff, "test_snow3g_f8_1_buff"},
+        {test_snow3g_f8_2_buff, "test_snow3g_f8_2_buff"},
+        {test_snow3g_f8_4_buff, "test_snow3g_f8_4_buff"},
+        {test_snow3g_f8_8_buff, "test_snow3g_f8_8_buff"},
+        {test_snow3g_f8_n_buff, "test_snow3g_f8_n_buff"},
+        {test_snow3g_f8_8_multikey, "test_snow3g_f8_8_multikey"},
+        {test_snow3g_f8_n_multikey, "test_snow3g_f8_n_multikey"},
+        {test_snow3g_f9_1_buff, "test_snow3g_f9_1_buff"},
+        {test_aes128_gcm_enc_sgl, "test_aes128_gcm_enc_sgl"},
+        {test_aes128_gcm_dec_sgl, "test_aes128_gcm_dec_sgl"},
+        {test_aes192_gcm_enc_sgl, "test_aes192_gcm_enc_sgl"},
+        {test_aes192_gcm_dec_sgl, "test_aes192_gcm_dec_sgl"},
+        {test_aes256_gcm_enc_sgl, "test_aes256_gcm_enc_sgl"},
+        {test_aes256_gcm_dec_sgl, "test_aes256_gcm_dec_sgl"},
+        {test_aes128_gcm_enc, "test_aes128_gcm_enc"},
+        {test_aes128_gcm_dec, "test_aes128_gcm_dec"},
+        {test_aes192_gcm_enc, "test_aes192_gcm_enc"},
+        {test_aes192_gcm_dec, "test_aes192_gcm_dec"},
+        {test_aes256_gcm_enc, "test_aes256_gcm_enc"},
+        {test_aes256_gcm_dec, "test_aes256_gcm_dec"},
+        {test_zuc_eea3_1_buff, "test_zuc_eea3_1_buff"},
+        {test_zuc_eea3_4_buff, "test_zuc_eea3_4_buff"},
+        {test_zuc_eea3_n_buff, "test_zuc_eea3_n_buff"},
+        {test_zuc_eia3_1_buff, "test_zuc_eia3_1_buff"},
+        {test_zuc_eia3_n_buff, "test_zuc_eia3_n_buff"},
+};
 
 int LLVMFuzzerTestOneInput(const uint8_t *data, size_t dataSize)
 {
