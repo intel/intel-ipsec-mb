@@ -3134,39 +3134,6 @@ IMB_DLL_EXPORT void aes_cmac_subkey_gen_avx2(const void *key_exp, void *key1,
  */
 IMB_DLL_EXPORT void aes_cmac_subkey_gen_avx512(const void *key_exp, void *key1,
                                                void *key2);
-/**
- * @brief AES-CFB-128 Encrypt/Decrypt up to one block.
- *
- * Processes only one buffer at a time.
- * Designed to manage partial blocks of DOCSIS 3.1 SEC BPI.
- *
- * @param [out] out Plaintext/Ciphertext output
- * @param [in] in   Plaintext/Ciphertext input
- * @param [in] iv   Pointer to 16 byte IV
- * @param [in] keys Pointer to expanded AES keys
- * @param [in] len  Length of data in bytes
- */
-IMB_DLL_EXPORT void aes_cfb_128_one_sse(void *out, const void *in,
-                                        const void *iv, const void *keys,
-                                        uint64_t len);
-/**
- * @copydoc aes_cfb_128_one_sse
- */
-IMB_DLL_EXPORT void aes_cfb_128_one_avx(void *out, const void *in,
-                                        const void *iv, const void *keys,
-                                        uint64_t len);
-/**
- * @copydoc aes_cfb_128_one_sse
- */
-IMB_DLL_EXPORT void aes_cfb_128_one_avx2(void *out, const void *in,
-                                         const void *iv, const void *keys,
-                                         uint64_t len);
-/**
- * @copydoc aes_cfb_128_one_sse
- */
-IMB_DLL_EXPORT void aes_cfb_128_one_avx512(void *out, const void *in,
-                                           const void *iv, const void *keys,
-                                           uint64_t len);
 
 /*
  * Direct GCM API.
