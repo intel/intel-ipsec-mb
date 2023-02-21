@@ -206,6 +206,7 @@ AES_CFB_128_ONE:
 MKGLOBAL(AES_CFB_256_ONE,function,)
 align 32
 AES_CFB_256_ONE:
+        endbranch64
         do_cfb 13
 
 	ret
