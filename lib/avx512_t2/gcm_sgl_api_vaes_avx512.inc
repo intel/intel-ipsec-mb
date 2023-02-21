@@ -49,7 +49,7 @@ default rel
 MKGLOBAL(FN_NAME(init,_),function,)
 FN_NAME(init,_):
         endbranch64
-        FUNC_SAVE
+        FUNC_SAVE small_frame
 
 %ifdef SAFE_PARAM
         ;; Reset imb_errno
@@ -127,7 +127,7 @@ skip_aad_check_error_init:
 MKGLOBAL(FN_NAME(init_var_iv,_),function,)
 FN_NAME(init_var_iv,_):
         endbranch64
-        FUNC_SAVE
+        FUNC_SAVE small_frame
 
 %ifdef SAFE_PARAM
         ;; Reset imb_errno
@@ -417,7 +417,7 @@ FN_NAME(enc,_finalize_):
         ja      error_enc_fin
 %endif
 
-        FUNC_SAVE
+        FUNC_SAVE small_frame
         GCM_COMPLETE    arg1, arg2, arg3, arg4, multi_call, k1, r10, r11, r12
 %ifdef SAFE_DATA
         ;; **xmm5, xmm6, xmm11, xmm13, xmm14 and xmm16 may contain sensitive data
@@ -488,7 +488,7 @@ FN_NAME(dec,_finalize_):
         ja      error_dec_fin
 %endif
 
-        FUNC_SAVE
+        FUNC_SAVE small_frame
         GCM_COMPLETE    arg1, arg2, arg3, arg4, multi_call, k1, r10, r11, r12
 
 %ifdef SAFE_DATA

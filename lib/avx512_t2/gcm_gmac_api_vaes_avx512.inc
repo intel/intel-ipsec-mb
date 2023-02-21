@@ -59,7 +59,7 @@ ghash_pre_vaes_avx512:
         jz      error_ghash_pre
 %endif
 
-        FUNC_SAVE
+        FUNC_SAVE small_frame
 
         vmovdqu xmm6, [arg1]
         vpshufb  xmm6, [rel SHUF_MASK]
@@ -115,7 +115,7 @@ error_ghash_pre:
 MKGLOBAL(ghash_vaes_avx512,function,)
 ghash_vaes_avx512:
         endbranch64
-        FUNC_SAVE
+        FUNC_SAVE small_frame
 
 %ifdef SAFE_PARAM
         ;; Reset imb_errno
@@ -201,7 +201,7 @@ error_ghash:
 MKGLOBAL(GMAC_FN_NAME(update),function,)
 GMAC_FN_NAME(update):
         endbranch64
-	FUNC_SAVE
+	FUNC_SAVE small_frame
 
 %ifdef SAFE_PARAM
         ;; Reset imb_errno

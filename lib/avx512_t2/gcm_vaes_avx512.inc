@@ -176,6 +176,7 @@
 %define STACK_XMM_OFFSET        (STACK_GP_OFFSET + GP_STORAGE)
 %define STACK_LOCAL_OFFSET      (STACK_XMM_OFFSET + XMM_STORAGE)
 %define STACK_FRAME_SIZE        (STACK_LOCAL_OFFSET + LOCAL_STORAGE)
+%define STACK_FRAME_SIZE_SMALL  (STACK_LOCAL_OFFSET)
 
 ;; for compatibility with stack argument definitions in gcm_defines.inc
 %define STACK_OFFSET 0
@@ -2715,20 +2716,31 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Save register content for the caller
-%macro FUNC_SAVE 0
-        ;; Required for Update/GCM_ENC
-        ;the number of pushes must equal STACK_OFFSET
+%macro FUNC_SAVE 0-1
+
+%assign use_big_frame 1
+
+%if %0 > 0
+%ifidni %1, small_frame
+%assign use_big_frame 0
+%endif
+%endif
+        ;; Required for Update/GMC_ENC
         mov     rax, rsp
 
+%if use_big_frame > 0
         sub     rsp, STACK_FRAME_SIZE
+%else
+        sub     rsp, STACK_FRAME_SIZE_SMALL
+%endif
         and     rsp, ~63
 
         mov     [rsp + STACK_GP_OFFSET + 0*8], r12
         mov     [rsp + STACK_GP_OFFSET + 1*8], r13
         mov     [rsp + STACK_GP_OFFSET + 2*8], r14
         mov     [rsp + STACK_GP_OFFSET + 3*8], r15
-        mov     [rsp + STACK_GP_OFFSET + 4*8], rax ; stack
-        mov     r14, rax                               ; r14 is used to retrieve stack args
+        mov     [rsp + STACK_GP_OFFSET + 4*8], rax      ; stack
+        mov     r14, rax                                ; r14 is used to retrieve stack args
         mov     [rsp + STACK_GP_OFFSET + 5*8], rbp
         mov     [rsp + STACK_GP_OFFSET + 6*8], rbx
 %ifidn __OUTPUT_FORMAT__, win64

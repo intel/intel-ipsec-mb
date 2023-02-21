@@ -57,7 +57,7 @@ FN_NAME(precomp,_):
         jz      error_precomp
 %endif
 
-        FUNC_SAVE
+        FUNC_SAVE small_frame
 
         vpxor   xmm6, xmm6
         ENCRYPT_SINGLE_BLOCK    arg1, xmm6              ; xmm6 = HashKey
