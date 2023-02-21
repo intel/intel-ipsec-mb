@@ -64,6 +64,39 @@
 %endmacro
 
 ;
+; This macro clears any ZMM registers passed on
+;
+%macro clear_zmms_avx512 1-32
+
+%assign num_reg %0
+%assign num_xors 3
+
+; clear up to 3 registers with vpxorq
+%if num_reg < 3
+%assign num_xors num_reg
+%endif
+
+; save 1st register for later
+%xdefine %%SAVE_XMM XWORD(%1)
+
+%rep num_xors
+        vpxorq          XWORD(%1), XWORD(%1), XWORD(%1)
+%rotate 1
+%endrep
+
+; clear the rest of the registers with move from the 1st register
+%assign num_reg (num_reg - num_xors)
+
+%rep num_reg
+        vmovdqa64       XWORD(%1), %%SAVE_XMM
+%rotate 1
+%endrep
+
+%undef %%SAVE_XMM
+
+%endmacro
+
+;
 ; This macro clears scratch GP registers
 ; for Windows or Linux
 ;
