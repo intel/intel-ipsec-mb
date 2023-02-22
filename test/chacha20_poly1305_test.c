@@ -588,13 +588,15 @@ test_aead_vectors(struct IMB_MGR *mb_mgr,
 
 	printf("%s (N jobs = %d):\n", banner, num_jobs);
 	for (vect = 0; vect < vec_array_size; vect++) {
+                if (!quiet_mode) {
 #ifdef DEBUG
-		printf("Vector [%d/%d], M len: %d\n",
-                       (int) vect + 1, (int) vec_array_size,
-                       (int) vec_array[vect].msg_len);
+                        printf("Vector [%d/%d], M len: %d\n",
+                               (int) vect + 1, (int) vec_array_size,
+                               (int) vec_array[vect].msg_len);
 #else
-		printf(".");
+                        printf(".");
 #endif
+                }
 
                 if (test_aead(mb_mgr, &vec_array[vect],
                               IMB_DIR_ENCRYPT, num_jobs, 1)) {
@@ -632,7 +634,8 @@ test_aead_vectors(struct IMB_MGR *mb_mgr,
                         test_suite_update(ctx, 1, 0);
                 }
 	}
-	printf("\n");
+        if (!quiet_mode)
+                printf("\n");
 
 }
 
