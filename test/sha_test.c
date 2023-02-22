@@ -554,15 +554,19 @@ test_sha_vectors(struct IMB_MGR *mb_mgr,
 	printf("SHA standard test vectors (N jobs = %d):\n", num_jobs);
 	for (vect = 1; vect <= vectors_cnt; vect++) {
                 const int idx = vect - 1;
+
 #ifdef DEBUG
-		printf("[%d/%d] SHA%d Test Case %s data_len:%d "
-                       "digest_len:%d\n",
-                       vect, vectors_cnt,
-                       sha_vectors[idx].sha_type,
-                       sha_vectors[idx].test_case,
-                       (int) sha_vectors[idx].data_len,
-                       (int) sha_vectors[idx].digest_len);
+                if (!quiet_mode) {
+                        printf("[%d/%d] SHA%d Test Case %s data_len:%d "
+                               "digest_len:%d\n",
+                               vect, vectors_cnt,
+                               sha_vectors[idx].sha_type,
+                               sha_vectors[idx].test_case,
+                               (int) sha_vectors[idx].data_len,
+                               (int) sha_vectors[idx].digest_len);
+                }
 #endif
+
                 switch (sha_vectors[idx].sha_type) {
                 case 1:
                         ctx = sha1_ctx;
