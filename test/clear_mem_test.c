@@ -139,9 +139,11 @@ int clear_mem_test(struct IMB_MGR *mb_mgr)
 
                 free(buf);
 
-                printf(".");
+                if (!quiet_mode)
+                        printf(".");
         }
-        printf("\n");
+        if (!quiet_mode)
+                printf("\n");
 
         errors = test_suite_end(&ctx);
 
