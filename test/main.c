@@ -248,25 +248,57 @@ struct imb_test tests[] = {
         }
 };
 
+static char *get_test_types(void)
+{
+        const size_t separator_length = 2;
+        size_t buffer_sz = 1; /* 1 for NULL termination */
+
+        for (unsigned i = 0; i < DIM(tests); i++)
+                buffer_sz += strlen(tests[i].str) + separator_length;
+
+        char *ret_str = malloc(buffer_sz);
+
+        if (ret_str == NULL) {
+                fprintf(stderr, "Error allocating memory!\n");
+                exit(EXIT_FAILURE);
+        }
+
+        memset(ret_str, 0, buffer_sz);
+
+        for (unsigned i = 0; i < DIM(tests); i++) {
+                if (i != 0)
+                        strcat(ret_str, ", ");
+
+                strcat(ret_str, tests[i].str);
+        }
+
+        return ret_str;
+}
+
 static void
 usage(const char *name)
 {
+        char *test_types = get_test_types();
+
 	fprintf(stderr,
                 "Usage: %s [args], where args are zero or more\n"
-                "--test-type TEST_NAME : Run single test type\n"
+                "--help: Prints this page\n"
+                "--test-type <TEST_NAME>: Run selected test type. <TEST_NAME> is one of %s.\n"
                 "--stop-on-fail: Stop test execution if a test fails\n"
                 "--no-aesni-emu: Don't do AESNI emulation\n"
                 "--no-avx512: Don't do AVX512\n"
 		"--no-avx2: Don't do AVX2\n"
 		"--no-avx: Don't do AVX\n"
 		"--no-sse: Don't do SSE\n"
-                "--auto-detect: auto detects current architecture "
+                "--auto-detect: Auto detects current architecture "
                 "to run the tests\n  Note: Auto detection "
                 "option now run by default and will be removed in the future\n"
-                "--gfni-on: use Galois Field extensions, default: auto-detect\n"
-                "--gfni-off: don't use Galois Field extensions\n"
-		"--shani-on: use SHA extensions, default: auto-detect\n"
-		"--shani-off: don't use SHA extensions\n", name);
+                "--gfni-on: Use Galois Field extensions, default: auto-detect\n"
+                "--gfni-off: Don't use Galois Field extensions\n"
+		"--shani-on: Use SHA extensions, default: auto-detect\n"
+		"--shani-off: Don't use SHA extensions\n", name, test_types);
+
+        free(test_types);
 }
 
 static void
@@ -366,7 +398,8 @@ main(int argc, char **argv)
         memset(arch_select, 0xff, sizeof(arch_select));
 
 	for (i = 1; i < argc; i++) {
-		if (strcmp(argv[i], "-h") == 0) {
+		if (strcmp(argv[i], "-h") == 0 ||
+                    strcmp(argv[i], "--help") == 0) {
 			usage(argv[0]);
 			return EXIT_SUCCESS;
 		} else if (update_flags_and_archs(argv[i],
