@@ -1715,24 +1715,27 @@ test_ctr_vectors(struct IMB_MGR *mb_mgr,
 	printf("AES-CTR standard test vectors:\n");
 	for (vect = 0; vect < vectors_cnt; vect++) {
                 struct test_suite_context *ctx;
+
+                if (!quiet_mode) {
 #ifdef DEBUG
-                if (alg == IMB_CIPHER_CNTR)
-		        printf("Standard vector %u/%u  Keylen:%d "
-                               "IVlen:%d PTLen:%d\n",
-                               vect, vectors_cnt - 1,
-                               (int) vectors[vect].Klen,
-                               (int) vectors[vect].IVlen,
-                               (int) vectors[vect].Plen);
-                else
-		        printf("Bit vector %u/%u  Keylen:%d "
-                               "IVlen:%d PTLen:%d\n",
-                               vect, vectors_cnt - 1,
-                               (int) vectors[vect].Klen,
-                               (int) vectors[vect].IVlen,
-                               (int) vectors[vect].Plen);
+                        if (alg == IMB_CIPHER_CNTR)
+                                printf("Standard vector %u/%u  Keylen:%d "
+                                       "IVlen:%d PTLen:%d\n",
+                                       vect, vectors_cnt - 1,
+                                       (int) vectors[vect].Klen,
+                                       (int) vectors[vect].IVlen,
+                                       (int) vectors[vect].Plen);
+                        else
+                                printf("Bit vector %u/%u  Keylen:%d "
+                                       "IVlen:%d PTLen:%d\n",
+                                       vect, vectors_cnt - 1,
+                                       (int) vectors[vect].Klen,
+                                       (int) vectors[vect].IVlen,
+                                       (int) vectors[vect].Plen);
 #else
-		printf(".");
+                        printf(".");
 #endif
+                }
 
                 switch (vectors[vect].Klen) {
                 case IMB_KEY_128_BYTES:
@@ -1824,7 +1827,8 @@ test_ctr_vectors(struct IMB_MGR *mb_mgr,
                         }
                 }
 	}
-	printf("\n");
+        if (!quiet_mode)
+                printf("\n");
 }
 
 static void
@@ -1843,24 +1847,27 @@ test_ctr_vectors_burst(struct IMB_MGR *mb_mgr,
 	printf("AES-CTR standard test vectors - Burst API:\n");
 	for (vect = 0; vect < vectors_cnt; vect++) {
                 struct test_suite_context *ctx;
+
+                if (!quiet_mode) {
 #ifdef DEBUG
-                if (alg == IMB_CIPHER_CNTR)
-		        printf("Standard vector %u/%u  Keylen:%d "
-                               "IVlen:%d PTLen:%d (burst)\n",
-                               vect, vectors_cnt - 1,
-                               (int) vectors[vect].Klen,
-                               (int) vectors[vect].IVlen,
-                               (int) vectors[vect].Plen);
-                else
-		        printf("Bit vector %u/%u  Keylen:%d "
-                               "IVlen:%d PTLen:%d (burst)\n",
-                               vect, vectors_cnt - 1,
-                               (int) vectors[vect].Klen,
-                               (int) vectors[vect].IVlen,
-                               (int) vectors[vect].Plen);
+                        if (alg == IMB_CIPHER_CNTR)
+                                printf("Standard vector %u/%u  Keylen:%d "
+                                       "IVlen:%d PTLen:%d (burst)\n",
+                                       vect, vectors_cnt - 1,
+                                       (int) vectors[vect].Klen,
+                                       (int) vectors[vect].IVlen,
+                                       (int) vectors[vect].Plen);
+                        else
+                                printf("Bit vector %u/%u  Keylen:%d "
+                                       "IVlen:%d PTLen:%d (burst)\n",
+                                       vect, vectors_cnt - 1,
+                                       (int) vectors[vect].Klen,
+                                       (int) vectors[vect].IVlen,
+                                       (int) vectors[vect].Plen);
 #else
-		printf(".");
+                        printf(".");
 #endif
+                }
 
                 switch (vectors[vect].Klen) {
                 case IMB_KEY_128_BYTES:
@@ -2046,7 +2053,8 @@ test_ctr_vectors_burst(struct IMB_MGR *mb_mgr,
                         }
                 }
         }
-	printf("\n");
+        if (!quiet_mode)
+                printf("\n");
 }
 
 int
