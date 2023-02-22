@@ -526,8 +526,10 @@ test_pon(struct IMB_MGR *mb_mgr,
         crc_output = (uint32_t) (tag_output >> 32);
 
 #ifdef DEBUG
-        printf("CRC received 0x%08x\n", crc_output);
-        printf("BIP received 0x%08x\n", bip_output);
+        if (!quiet_mode) {
+                printf("CRC received 0x%08x\n", crc_output);
+                printf("BIP received 0x%08x\n", bip_output);
+        }
 #endif
 
 #ifdef DEBUG
@@ -640,14 +642,16 @@ test_pon_std_vectors(struct IMB_MGR *mb_mgr, struct test_suite_context *ctx)
 	printf("PON (AES128-CTR/CRC/BIP) test vectors:\n");
 
 	for (vect = 0; vect < vectors_cnt; vect++) {
+                if (!quiet_mode) {
 #ifdef DEBUG
-		printf("Vector %d/%d CIPHLen:%d BIPLen:%d\n",
-                       vect + 1, vectors_cnt,
-                       (int) pon_vectors[vect].length_to_cipher,
-                       (int) pon_vectors[vect].length_to_bip);
+                        printf("Vector %d/%d CIPHLen:%d BIPLen:%d\n",
+                               vect + 1, vectors_cnt,
+                               (int) pon_vectors[vect].length_to_cipher,
+                               (int) pon_vectors[vect].length_to_bip);
 #else
-		printf(".");
+                        printf(".");
 #endif
+                }
 
                 if (pon_vectors[vect].key != NULL)
                         IMB_AES_KEYEXP_128(mb_mgr, pon_vectors[vect].key,
@@ -683,7 +687,8 @@ test_pon_std_vectors(struct IMB_MGR *mb_mgr, struct test_suite_context *ctx)
                 } else
                         test_suite_update(ctx, 1, 0);
 	}
-	printf("\n");
+        if (!quiet_mode)
+                printf("\n");
 	return errors;
 }
 
