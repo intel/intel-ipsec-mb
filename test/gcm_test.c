@@ -2478,18 +2478,21 @@ test_gcm_std_vectors(struct test_suite_context *ts128,
 	printf("AES-GCM (%s API) standard test vectors:\n",
                test_sgl_api ? "SGL" : "Direct/JOB");
 	for (vect = 0; vect < vectors_cnt; vect++) {
+                if (!quiet_mode) {
 #ifdef DEBUG
-		printf("Standard vector %d/%d  Keylen:%d IVlen:%d PTLen:%d "
-                       "AADlen:%d Tlen:%d\n",
-                       vect + 1, vectors_cnt,
-                       (int) vectors[vect].Klen,
-                       (int) vectors[vect].IVlen,
-                       (int) vectors[vect].Plen,
-                       (int) vectors[vect].Alen,
-                       (int) vectors[vect].Tlen);
+                        printf("Standard vector %d/%d  Keylen:%d IVlen:%d "
+                               "PTLen:%d AADlen:%d Tlen:%d\n",
+                               vect + 1, vectors_cnt,
+                               (int) vectors[vect].Klen,
+                               (int) vectors[vect].IVlen,
+                               (int) vectors[vect].Plen,
+                               (int) vectors[vect].Alen,
+                               (int) vectors[vect].Tlen);
 #else
-		printf(".");
+                        printf(".");
 #endif
+                }
+
                 switch (vectors[vect].Klen) {
                 case IMB_KEY_128_BYTES:
                         if (test_sgl_api) {
@@ -2608,7 +2611,8 @@ test_gcm_std_vectors(struct test_suite_context *ts128,
                         return;
 		}
 	}
-	printf("\n");
+        if (!quiet_mode)
+                printf("\n");
 }
 
 static void
