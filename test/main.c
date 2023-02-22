@@ -296,7 +296,9 @@ usage(const char *name)
                 "--gfni-on: Use Galois Field extensions, default: auto-detect\n"
                 "--gfni-off: Don't use Galois Field extensions\n"
 		"--shani-on: Use SHA extensions, default: auto-detect\n"
-		"--shani-off: Don't use SHA extensions\n", name, test_types);
+		"--shani-off: Don't use SHA extensions\n"
+		"--quiet: Enable quiet mode with reduced text output\n",
+                name, test_types);
 
         free(test_types);
 }
@@ -407,6 +409,8 @@ main(int argc, char **argv)
                         (void) auto_detect; /* legacy option - to be removed */
 		else if (strcmp(argv[i], "--stop-on-fail") == 0)
                         stop_on_fail = 1;
+		else if (strcmp(argv[i], "--quiet") == 0)
+                        quiet_mode = 1;
                 else if (strcmp(argv[i], "--test-type") == 0) {
                         unsigned selected_test;
 
