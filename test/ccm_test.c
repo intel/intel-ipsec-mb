@@ -2448,17 +2448,19 @@ test_ccm_128_std_vectors(struct IMB_MGR *mb_mgr,
 	for (vect = 1; vect <= vectors_cnt; vect++) {
                 const int idx = vect - 1;
 
+                if (!quiet_mode) {
 #ifdef DEBUG
-		printf("Standard vector [%d/%d] NONCELen:%d PktLen:%d "
-                       "AADLen:%d AUTHlen:%d\n",
-                       vect, vectors_cnt,
-                       (int) ccm_vectors[idx].nonce_len,
-                       (int) ccm_vectors[idx].packet_len,
-                       (int) ccm_vectors[idx].clear_len,
-                       (int) ccm_vectors[idx].auth_len);
+                        printf("Standard vector [%d/%d] NONCELen:%d PktLen:%d "
+                               "AADLen:%d AUTHlen:%d\n",
+                               vect, vectors_cnt,
+                               (int) ccm_vectors[idx].nonce_len,
+                               (int) ccm_vectors[idx].packet_len,
+                               (int) ccm_vectors[idx].clear_len,
+                               (int) ccm_vectors[idx].auth_len);
 #else
-		printf(".");
+                        printf(".");
 #endif
+                }
 
                 if (test_ccm(mb_mgr, &ccm_vectors[idx], IMB_DIR_ENCRYPT, 1,
                              num_jobs, 16)) {
@@ -2492,7 +2494,8 @@ test_ccm_128_std_vectors(struct IMB_MGR *mb_mgr,
                         test_suite_update(ctx, 1, 0);
                 }
 	}
-	printf("\n");
+        if (!quiet_mode)
+                printf("\n");
 }
 
 static void
@@ -2506,17 +2509,20 @@ test_ccm_256_std_vectors(struct IMB_MGR *mb_mgr,
 	printf("AES-CCM-256 standard test vectors (N jobs = %d):\n", num_jobs);
 	for (vect = 1; vect <= vectors_cnt; vect++) {
                 const int idx = vect - 1;
+
+                if (!quiet_mode) {
 #ifdef DEBUG
-		printf("Standard vector [%d/%d] NONCELen:%d PktLen:%d "
-                       "AADLen:%d AUTHlen:%d\n",
-                       vect, vectors_cnt,
-                       (int) ccm_256_vectors[idx].nonce_len,
-                       (int) ccm_256_vectors[idx].packet_len,
-                       (int) ccm_256_vectors[idx].clear_len,
-                       (int) ccm_256_vectors[idx].auth_len);
+                        printf("Standard vector [%d/%d] NONCELen:%d PktLen:%d "
+                               "AADLen:%d AUTHlen:%d\n",
+                               vect, vectors_cnt,
+                               (int) ccm_256_vectors[idx].nonce_len,
+                               (int) ccm_256_vectors[idx].packet_len,
+                               (int) ccm_256_vectors[idx].clear_len,
+                               (int) ccm_256_vectors[idx].auth_len);
 #else
-		printf(".");
+                        printf(".");
 #endif
+                }
 
                 if (test_ccm(mb_mgr, &ccm_256_vectors[idx], IMB_DIR_ENCRYPT, 1,
                              num_jobs, 32)) {
@@ -2550,7 +2556,8 @@ test_ccm_256_std_vectors(struct IMB_MGR *mb_mgr,
                         test_suite_update(ctx, 1, 0);
                 }
 	}
-	printf("\n");
+        if (!quiet_mode)
+                printf("\n");
 }
 
 
