@@ -36,11 +36,13 @@
 
 #ifdef DEBUG
 #ifdef _WIN32
-#define TRACE(fmt, ...)	fprintf(stderr, "%s:%d "fmt, \
-                                __FUNCTION__, __LINE__, __VA_ARGS__)
+#define TRACE(fmt, ...)	if (!quiet_mode)                                \
+                fprintf(stderr, "%s:%d "fmt,                            \
+                        __FUNCTION__, __LINE__, __VA_ARGS__)
 #else
-#define TRACE(fmt, ...)	fprintf(stderr, "%s:%d "fmt, \
-                                __func__, __LINE__, __VA_ARGS__)
+#define TRACE(fmt, ...)	if (!quiet_mode)                                \
+                fprintf(stderr, "%s:%d "fmt,                            \
+                        __func__, __LINE__, __VA_ARGS__)
 #endif
 #else
 # define TRACE(fmt, ...)
