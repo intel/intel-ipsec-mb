@@ -1537,20 +1537,26 @@ test_hmac_shax_std_vectors(struct IMB_MGR *mb_mgr,
                          hmac_sha256_sha512_vectors[idx].hmac_sha384 == NULL) ||
                         (sha_type == 512 &&
                          hmac_sha256_sha512_vectors[idx].hmac_sha512 == NULL);
+
+                if (!quiet_mode) {
 #ifdef DEBUG
-		printf("[%d/%d] RFC4231 Test Case %d key_len:%d data_len:%d\n",
-                       vect, vectors_cnt,
-                       hmac_sha256_sha512_vectors[idx].test_case_num,
-                       (int) hmac_sha256_sha512_vectors[idx].key_len,
-                       (int) hmac_sha256_sha512_vectors[idx].data_len);
+                        printf("[%d/%d] RFC4231 Test Case %d key_len:%d "
+                               "data_len:%d\n",
+                               vect, vectors_cnt,
+                               hmac_sha256_sha512_vectors[idx].test_case_num,
+                               (int) hmac_sha256_sha512_vectors[idx].key_len,
+                               (int) hmac_sha256_sha512_vectors[idx].data_len);
 #else
-		printf(".");
+                        printf(".");
 #endif
+                }
 
                 if (flag) {
 #ifdef DEBUG
-                        printf("Skipped vector %d, N/A for HMAC-SHA%d\n",
-                               vect, sha_type);
+                        if (!quiet_mode)
+                                printf("Skipped vector %d, "
+                                       "N/A for HMAC-SHA%d\n",
+                                       vect, sha_type);
 #endif
                         continue;
                 }
@@ -1580,7 +1586,8 @@ test_hmac_shax_std_vectors(struct IMB_MGR *mb_mgr,
                 }
 
         }
-	printf("\n");
+        if (!quiet_mode)
+                printf("\n");
 }
 
 int
