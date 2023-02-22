@@ -3644,13 +3644,16 @@ test_aes_vectors(struct IMB_MGR *mb_mgr,
 
 	printf("%s (N jobs = %d):\n", banner, num_jobs);
 	for (vect = 0; vect < vec_cnt; vect++) {
+                if (!quiet_mode) {
 #ifdef DEBUG
-		printf("[%d/%d] Standard vector key_len:%d\n",
-                       vect + 1, vec_cnt,
-                       (int) vec_tab[vect].Klen);
+                        printf("[%d/%d] Standard vector key_len:%d\n",
+                               vect + 1, vec_cnt,
+                               (int) vec_tab[vect].Klen);
 #else
-		printf(".");
+                        printf(".");
 #endif
+                }
+
                 IMB_AES_KEYEXP_128(mb_mgr, vec_tab[vect].K, enc_keys,
                                            dec_keys);
 
@@ -3706,7 +3709,8 @@ test_aes_vectors(struct IMB_MGR *mb_mgr,
                         test_suite_update(ctx, 1, 0);
                 }
 	}
-	printf("\n");
+        if (!quiet_mode)
+                printf("\n");
 }
 
 int
