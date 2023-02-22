@@ -391,13 +391,16 @@ test_chained_vectors(struct IMB_MGR *mb_mgr,
 
         printf("%s (N jobs = %d):\n", banner, num_jobs);
         for (vect = 0; vect < vec_cnt; vect++) {
+                if (!quiet_mode) {
 #ifdef DEBUG
-                printf("[%d/%d] Standard vector key_len:%d\n",
-                       vect + 1, vec_cnt,
-                       (int) vec_tab[vect].cipher_key_len);
+                        printf("[%d/%d] Standard vector key_len:%d\n",
+                               vect + 1, vec_cnt,
+                               (int) vec_tab[vect].cipher_key_len);
 #else
-                printf(".");
+                        printf(".");
 #endif
+                }
+
                 /* prepare the cipher key */
                 switch (vec_tab[vect].cipher_key_len) {
                 case 16:
@@ -442,7 +445,8 @@ test_chained_vectors(struct IMB_MGR *mb_mgr,
                         }
                 }
         }
-        printf("\n");
+        if (!quiet_mode)
+                printf("\n");
 }
 
 int

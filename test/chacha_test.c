@@ -359,13 +359,16 @@ test_chacha_vectors(struct IMB_MGR *mb_mgr,
 
 	printf("%s (N jobs = %d):\n", banner, num_jobs);
 	for (vect = 0; vect < vec_cnt; vect++) {
+                if (!quiet_mode) {
 #ifdef DEBUG
-		printf("[%d/%d] Standard vector key_len:%d\n",
-                       vect + 1, vec_cnt,
-                       (int) vec_tab[vect].Klen);
+                        printf("[%d/%d] Standard vector key_len:%d\n",
+                               vect + 1, vec_cnt,
+                               (int) vec_tab[vect].Klen);
 #else
-		printf(".");
+                        printf(".");
 #endif
+                }
+
                 memcpy(enc_keys, vec_tab[vect].K, vec_tab[vect].Klen);
                 memcpy(dec_keys, vec_tab[vect].K, vec_tab[vect].Klen);
 
@@ -421,7 +424,8 @@ test_chacha_vectors(struct IMB_MGR *mb_mgr,
                         test_suite_update(ctx, 1, 0);
                 }
 	}
-	printf("\n");
+        if (!quiet_mode)
+                printf("\n");
 }
 
 int
