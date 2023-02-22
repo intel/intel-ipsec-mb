@@ -356,31 +356,21 @@ int
 main(int argc, char **argv)
 {
         uint8_t arch_support[IMB_ARCH_NUM];
+        uint8_t arch_select[IMB_ARCH_NUM];
         int i, atype, auto_detect = 0;
         uint64_t flags = 0;
         int errors = 0;
         unsigned int stop_on_fail = 0;
         const uint64_t feat_flags = imb_get_feature_flags();
 
-        /* Check version number */
-        if (imb_get_version() < IMB_VERSION(0, 50, 0))
-                printf("Library version detection unsupported!\n");
-        else
-                printf("Detected library version: %s\n", imb_get_version_str());
-
-        /* Print available CPU features */
-        print_hw_features();
-
-        /* Detect available architectures and features */
-        if (detect_arch(arch_support) < 0)
-                return EXIT_FAILURE;
+        memset(arch_select, 0xff, sizeof(arch_select));
 
 	for (i = 1; i < argc; i++) {
 		if (strcmp(argv[i], "-h") == 0) {
 			usage(argv[0]);
 			return EXIT_SUCCESS;
 		} else if (update_flags_and_archs(argv[i],
-                                                  arch_support,
+                                                  arch_select,
                                                   &flags))
 			continue;
 		else if (strcmp(argv[i], "--auto-detect") == 0)
@@ -406,6 +396,25 @@ main(int argc, char **argv)
                         i++;
                 }
         }
+
+        /* Check version number */
+        if (imb_get_version() < IMB_VERSION(0, 50, 0)) {
+                printf("Library version detection unsupported!\n");
+        } else {
+                printf("Detected library version: %s\n", imb_get_version_str());
+                printf("Tool version: %s\n", IMB_VERSION_STR);
+        }
+
+        /* Print available CPU features */
+        print_hw_features();
+
+        /* Detect available architectures and features */
+        if (detect_arch(arch_support) < 0)
+                return EXIT_FAILURE;
+
+        /* Combine user arch selection with HW capabilities */
+        for (unsigned j = 0; j < DIM(arch_support); j++)
+                arch_support[j] = arch_support[j] & arch_select[j];
 
         /* Go through architectures */
         for (atype = IMB_ARCH_NOAESNI; atype < IMB_ARCH_NUM; atype++) {
