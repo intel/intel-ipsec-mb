@@ -351,24 +351,21 @@ print_hw_features(void)
 static unsigned
 check_test_string_arg(const char *param, const char *arg)
 {
-        unsigned test_idx;
+        if (arg != NULL) {
+                for (unsigned test_idx = 0; test_idx < DIM(tests); test_idx++)
+                        if (strcasecmp(arg, tests[test_idx].str) == 0)
+                                return test_idx;
 
-        if (arg == NULL) {
-                fprintf(stderr, "%s requires an argument\n", param);
-                goto exit;
+                /* Argument is not listed in the available options */
+                fprintf(stderr, "Invalid test type \"%s\"\n", arg);
+        } else {
+                fprintf(stderr, "%s requires test type argument\n", param);
         }
 
-        for (test_idx = 0; test_idx < DIM(tests); test_idx++)
-                if (strcasecmp(arg, tests[test_idx].str) == 0)
-                        return test_idx;
+        char *test_types = get_test_types();
 
-        /* Argument is not listed in the available options */
-        fprintf(stderr, "Invalid argument for %s\n", param);
-exit:
-        fprintf(stderr, "Accepted arguments: ");
-        for (test_idx = 0; test_idx < DIM(tests); test_idx++)
-                fprintf(stderr, "%s ", tests[test_idx].str);
-        fprintf(stderr, "\n");
+        fprintf(stderr, "Accepted test types: %s\n", test_types);
+        free(test_types);
 
         return DIM(tests);
 }
