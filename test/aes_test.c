@@ -2319,13 +2319,17 @@ test_aes_vectors(struct IMB_MGR *mb_mgr,
 	printf("%s (N jobs = %d):\n", banner, num_jobs);
 	for (vect = 0; vect < vec_cnt; vect++) {
                 struct test_suite_context *ctx;
+
+                if (!quiet_mode) {
 #ifdef DEBUG
-		printf("[%d/%d] Standard vector key_len:%d\n",
-                       vect + 1, vec_cnt,
-                       (int) vec_tab[vect].Klen);
+                        printf("[%d/%d] Standard vector key_len:%d\n",
+                               vect + 1, vec_cnt,
+                               (int) vec_tab[vect].Klen);
 #else
-		printf(".");
+                        printf(".");
 #endif
+                }
+
                 switch (vec_tab[vect].Klen) {
                 case 16:
                         IMB_AES_KEYEXP_128(mb_mgr, vec_tab[vect].K, enc_keys,
@@ -2506,7 +2510,8 @@ test_aes_vectors(struct IMB_MGR *mb_mgr,
                         test_suite_update(ctx, 1, 0);
                 }
 	}
-	printf("\n");
+        if (!quiet_mode)
+                printf("\n");
 }
 
 static int
@@ -2704,12 +2709,16 @@ test_docrc_vectors(struct IMB_MGR *mb_mgr,
 	printf("%s (N jobs = %d):\n", banner, num_jobs);
 	for (vect = 0; vect < vec_cnt; vect++) {
                 struct test_suite_context *ctx;
+
+                if (!quiet_mode) {
 #ifdef DEBUG
-		printf("[%d/%d] Standard vector\n",
-                       vect + 1, vec_cnt);
+                        printf("[%d/%d] Standard vector\n",
+                               vect + 1, vec_cnt);
 #else
-		printf(".");
+                        printf(".");
 #endif
+                }
+
                 if (vec_tab[vect].key_len == 16) {
                         IMB_AES_KEYEXP_128(mb_mgr, vec_tab[vect].key, enc_keys,
                                            dec_keys);
@@ -2742,7 +2751,8 @@ test_docrc_vectors(struct IMB_MGR *mb_mgr,
                 }
 
 	}
-	printf("\n");
+        if (!quiet_mode)
+                printf("\n");
 }
 
 static int
@@ -2758,10 +2768,13 @@ cfb_validate_ok(const uint8_t *output, const uint8_t *in_text,
                        (in_place) ? "in-place" : "out-of-place");
                 return 0;
         }
+
 #ifdef DEBUG
-        printf("Standard test vector %u %s %s\n", i + 1,
-               (in_place) ? "in-place" : "out-of-place",
-               (is_enc) ? "encrypt" : "decrypt");
+        if (!quiet_mode) {
+                printf("Standard test vector %u %s %s\n", i + 1,
+                       (in_place) ? "in-place" : "out-of-place",
+                       (is_enc) ? "encrypt" : "decrypt");
+        }
 #endif
         return 1;
 }
@@ -2852,14 +2865,18 @@ cfb_test_vectors(struct IMB_MGR *mb_mgr, struct test_suite_context *ctx128,
         printf("AES-CFB test vectors (N jobs = %d):\n", num_jobs);
 	for (vect = 0; vect < DIM(aes_cfb_tab); vect++) {
                 struct test_suite_context *ctx;
+
+                if (!quiet_mode) {
 #ifdef DEBUG
-		printf("[%d/%lu] Standard %s-bit vector\n",
-                       vect + 1,
-                       (unsigned long) DIM(aes_cfb_tab),
-                       (aes_cfb_tab[vect].Klen == 16) ? "128":"256");
+                        printf("[%d/%lu] Standard %s-bit vector\n",
+                               vect + 1,
+                               (unsigned long) DIM(aes_cfb_tab),
+                               (aes_cfb_tab[vect].Klen == 16) ? "128" : "256");
 #else
-		printf(".");
+                        printf(".");
 #endif
+                }
+
                 if (aes_cfb_tab[vect].Klen == 16)
                         ctx = ctx128;
                 else
@@ -2869,7 +2886,8 @@ cfb_test_vectors(struct IMB_MGR *mb_mgr, struct test_suite_context *ctx128,
                 else
                         test_suite_update(ctx, 1, 0);
         }
-        printf("\n");
+        if (!quiet_mode)
+                printf("\n");
 }
 
 int
