@@ -477,13 +477,16 @@ test_des_vectors(struct IMB_MGR *mb_mgr,
 
 	printf("%s:\n", banner);
 	for (vect = 0; vect < vec_cnt; vect++) {
+                if (!quiet_mode) {
 #ifdef DEBUG
-		printf("Standard vector %d/%d  PTLen:%d\n",
-                       vect + 1, vec_cnt,
-                       (int) vec_tab[vect].Plen);
+                        printf("Standard vector %d/%d  PTLen:%d\n",
+                               vect + 1, vec_cnt,
+                               (int) vec_tab[vect].Plen);
 #else
-		printf(".");
+                        printf(".");
 #endif
+                }
+
                 des_key_schedule(ks, vec_tab[vect].K);
 
                 if (test_des(mb_mgr, ks, NULL, NULL,
@@ -534,7 +537,8 @@ test_des_vectors(struct IMB_MGR *mb_mgr,
                         test_suite_update(ctx, 1, 0);
                 }
 	}
-	printf("\n");
+        if (!quiet_mode)
+                printf("\n");
 }
 
 static void
@@ -551,13 +555,15 @@ test_des3_vectors(struct IMB_MGR *mb_mgr,
 
 	printf("%s:\n", banner);
 	for (vect = 0; vect < vec_cnt; vect++) {
+                if (!quiet_mode) {
 #ifdef DEBUG
-		printf("Standard vector %d/%d  PTLen:%d\n",
-                       vect + 1, vec_cnt,
-                       (int) vec_tab[vect].Plen);
+                        printf("Standard vector %d/%d  PTLen:%d\n",
+                               vect + 1, vec_cnt,
+                               (int) vec_tab[vect].Plen);
 #else
-		printf(".");
+                        printf(".");
 #endif
+                }
                 des_key_schedule(ks1, vec_tab[vect].K1);
                 des_key_schedule(ks2, vec_tab[vect].K2);
                 des_key_schedule(ks3, vec_tab[vect].K3);
@@ -610,7 +616,8 @@ test_des3_vectors(struct IMB_MGR *mb_mgr,
                         test_suite_update(ctx, 1, 0);
                 }
 	}
-	printf("\n");
+        if (!quiet_mode)
+                printf("\n");
 }
 
 static int
@@ -679,7 +686,8 @@ des_cfb_validate(struct test_suite_context *ctx)
                 }
 
         }
-        printf("\n");
+        if (!quiet_mode)
+                printf("\n");
         return 1;
 }
 
