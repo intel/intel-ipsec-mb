@@ -505,13 +505,17 @@ test_output(const uint8_t *out, const uint8_t *ref, const uint32_t bytelen,
                         ret = -1;
                 }
 #ifdef DEBUG
-                else
-                        printf("%s : PASS\n", err_msg);
+                else {
+                        if (!quiet_mode)
+                                printf("%s : PASS\n", err_msg);
+                }
 #endif
         }
 #ifdef DEBUG
-        else
-                printf("%s : PASS\n", err_msg);
+        else {
+                if (!quiet_mode)
+                        printf("%s : PASS\n", err_msg);
+        }
 #endif
         fflush(stdout);
 
@@ -894,9 +898,12 @@ int validate_zuc_EIA_1_block(struct IMB_MGR *mb_mgr, uint8_t *pSrcData,
                         ret = retTmp;
                 }
 #ifdef DEBUG
-                else
-                        printf("Validate ZUC 1 block  test %u (Int): PASS\n",
-                               i + 1);
+                else {
+                        if (!quiet_mode)
+                                printf("Validate ZUC 1 block  test %u (Int): "
+                                       "PASS\n",
+                                       i + 1);
+                }
 #endif
                 fflush(stdout);
         }
@@ -954,9 +961,12 @@ int validate_zuc_EIA_n_block(struct IMB_MGR *mb_mgr, uint8_t **pSrcData,
                                 ret = retTmp;
                         }
 #ifdef DEBUG
-                        else
-                                printf("Validate ZUC n block test %u, index %u "
-                                       "(Int): PASS\n", i + 1, j);
+                        else {
+                                if (!quiet_mode)
+                                        printf("Validate ZUC n block test %u, "
+                                               "index %u (Int): PASS\n",
+                                               i + 1, j);
+                        }
 #endif
                         fflush(stdout);
                 }
@@ -1007,10 +1017,12 @@ int validate_zuc_EIA_n_block(struct IMB_MGR *mb_mgr, uint8_t **pSrcData,
                         ret = retTmp;
                 }
 #ifdef DEBUG
-                else
-                        printf("Validate ZUC n block multi-vector test, "
-                               "# jobs = %u, index %u (Int): PASS\n",
-                               numBuffs, i);
+                else {
+                        if (!quiet_mode)
+                                printf("Validate ZUC n block multi-vector test,"
+                                       " #jobs = %u, index %u (Int): PASS\n",
+                                       numBuffs, i);
+                }
 #endif
                 fflush(stdout);
         }
@@ -1051,15 +1063,18 @@ verify_tag_256(void *mac, const struct test256EIA3_vectors_t *vector,
         }
 #ifdef DEBUG
         else {
-                if (multi_vector) {
-                        printf("Validate ZUC-256 n block multi-vector test "
-                               "# jobs = %u, index %u (Int - %u bytes): PASS\n",
-                               test_idx, vector_idx, tag_sz);
+                if (!quiet_mode) {
+                        if (multi_vector) {
+                                printf("Validate ZUC-256 n block multi-vector "
+                                       "test #jobs = %u, index %u "
+                                       "(Int - %u bytes): PASS\n",
+                                       test_idx, vector_idx, tag_sz);
 
-                } else {
-                        printf("Validate ZUC-256 n block test %u, "
-                               "index %u (Int - %u bytes): PASS\n",
-                               test_idx + 1, vector_idx, tag_sz);
+                        } else {
+                                printf("Validate ZUC-256 n block test %u, "
+                                       "index %u (Int - %u bytes): PASS\n",
+                                       test_idx + 1, vector_idx, tag_sz);
+                        }
                 }
         }
 #endif
@@ -1161,8 +1176,10 @@ int validate_zuc_algorithm(struct IMB_MGR *mb_mgr, uint8_t *pSrcData,
                 if (ret)
                         printf("ZUC 1 algorithm test %u: FAIL\n", i);
 #ifdef DEBUG
-                else
-                        printf("ZUC 1 algorithm test %u: PASS\n", i);
+                else {
+                        if (!quiet_mode)
+                                printf("ZUC 1 algorithm test %u: PASS\n", i);
+                }
 #endif
         }
         return ret;
