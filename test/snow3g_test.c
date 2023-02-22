@@ -336,8 +336,7 @@ validate_snow3g_f8_1_block(struct IMB_MGR *mb_mgr, uint32_t job_api,
 
         pKeySched = malloc(size);
         if (!pKeySched) {
-                printf("malloc(IMB_SNOW3G_KEY_SCHED_SIZE(mb_mgr)): failed ! "
-                       "\n");
+                printf("malloc(IMB_SNOW3G_KEY_SCHED_SIZE(mb_mgr)): failed!\n");
                 goto snow3g_f8_1_buffer_exit;
         }
 
@@ -511,8 +510,7 @@ validate_snow3g_f8_1_bitblock(struct IMB_MGR *mb_mgr,
 
         pKeySched = malloc(size);
         if (!pKeySched) {
-                printf("malloc(IMB_SNOW3G_KEY_SCHED_SIZE(mb_mgr)): failed ! "
-                       "\n");
+                printf("malloc(IMB_SNOW3G_KEY_SCHED_SIZE(mb_mgr)): failed!\n");
                 goto snow3g_f8_1_buffer_bit_exit;
         }
 
