@@ -36,6 +36,12 @@
 #include <intel-ipsec-mb.h>
 
 /**
+ * If not zero then modules need to limit amount of printed information
+ * (even in debug compilation mode).
+ */
+int quiet_mode = 0;
+
+/**
  * @brief Simplistic memory copy (intentionally not using libc)
  *
  * @param dst destination buffer pointer

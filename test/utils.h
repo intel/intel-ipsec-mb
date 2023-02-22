@@ -34,6 +34,8 @@
 #define DIM(_x) (sizeof(_x)/sizeof(_x[0]))
 #define DIV_ROUND_UP(x, y) ((x + y - 1) / y)
 
+extern int quiet_mode;
+
 void hexdump(FILE *fp, const char *msg, const void *p, size_t len);
 void hexdump_ex(FILE *fp, const char *msg, const void *p, size_t len,
                 const void *start_ptr);
