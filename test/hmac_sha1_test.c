@@ -690,17 +690,20 @@ test_hmac_sha1_std_vectors(struct IMB_MGR *mb_mgr,
 	printf("HMAC-SHA1 standard test vectors (N jobs = %u):\n", num_jobs);
 	for (vect = 1; vect <= vectors_cnt; vect++) {
                 const int idx = vect - 1;
+
+                if (!quiet_mode) {
 #ifdef DEBUG
-		printf("[%d/%d] RFC2202 Test Case %s key_len:%d data_len:%d "
-                       "digest_len:%d\n",
-                       vect, vectors_cnt,
-                       hmac_sha1_vectors[idx].test_case,
-                       (int) hmac_sha1_vectors[idx].key_len,
-                       (int) hmac_sha1_vectors[idx].data_len,
-                       (int) hmac_sha1_vectors[idx].digest_len);
+                        printf("[%d/%d] RFC2202 Test Case %s key_len:%d "
+                               "data_len:%d digest_len:%d\n",
+                               vect, vectors_cnt,
+                               hmac_sha1_vectors[idx].test_case,
+                               (int) hmac_sha1_vectors[idx].key_len,
+                               (int) hmac_sha1_vectors[idx].data_len,
+                               (int) hmac_sha1_vectors[idx].digest_len);
 #else
-		printf(".");
+                        printf(".");
 #endif
+                }
 
                 if (test_hmac_sha1(mb_mgr, &hmac_sha1_vectors[idx], num_jobs)) {
                         printf("error #%d\n", vect);
@@ -723,7 +726,8 @@ test_hmac_sha1_std_vectors(struct IMB_MGR *mb_mgr,
                         test_suite_update(ts, 1, 0);
                 }
 	}
-	printf("\n");
+        if (!quiet_mode)
+                printf("\n");
 }
 
 int
