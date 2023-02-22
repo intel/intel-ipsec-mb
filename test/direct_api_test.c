@@ -64,6 +64,12 @@ seg_handler(int signum)
 }
 #endif /* DEBUG */
 
+static void print_progress(void)
+{
+        if (!quiet_mode)
+                printf(".");
+}
+
 /*
  * @brief Performs direct GCM API invalid param tests
  */
@@ -102,7 +108,7 @@ test_gcm_api(struct IMB_MGR *mgr)
                        "param test failed!\n", __func__);
                 return 1;
         }
-        printf(".");
+        print_progress();
 
         IMB_AES192_GCM_ENC(mgr, NULL, NULL, NULL, NULL, -1,
                            NULL, NULL, -1, NULL, -1);
@@ -113,7 +119,7 @@ test_gcm_api(struct IMB_MGR *mgr)
                        "param test failed!\n", __func__);
                 return 1;
         }
-        printf(".");
+        print_progress();
 
         IMB_AES256_GCM_ENC(mgr, NULL, NULL, NULL, NULL, -1,
                            NULL, NULL, -1, NULL, -1);
@@ -124,7 +130,7 @@ test_gcm_api(struct IMB_MGR *mgr)
                        "param test failed!\n", __func__);
                 return 1;
         }
-        printf(".");
+        print_progress();
 
         /* GCM Decrypt API tests */
         IMB_AES128_GCM_DEC(mgr, NULL, NULL, NULL, NULL, -1,
@@ -136,7 +142,7 @@ test_gcm_api(struct IMB_MGR *mgr)
                        "param test failed!\n", __func__);
                 return 1;
         }
-        printf(".");
+        print_progress();
 
         IMB_AES192_GCM_ENC(mgr, NULL, NULL, NULL, NULL, -1,
                            NULL, NULL, -1, NULL, -1);
@@ -147,7 +153,7 @@ test_gcm_api(struct IMB_MGR *mgr)
                        "param test failed!\n", __func__);
                 return 1;
         }
-        printf(".");
+        print_progress();
 
         IMB_AES256_GCM_DEC(mgr, NULL, NULL, NULL, NULL, -1,
                            NULL, NULL, -1, NULL, -1);
@@ -158,7 +164,7 @@ test_gcm_api(struct IMB_MGR *mgr)
                        "param test failed!\n", __func__);
                 return 1;
         }
-        printf(".");
+        print_progress();
 
         /* GCM Init tests */
         IMB_AES128_GCM_INIT(mgr, NULL, NULL, NULL, NULL, -1);
@@ -169,7 +175,7 @@ test_gcm_api(struct IMB_MGR *mgr)
                        "param test failed!\n", __func__);
                 return 1;
         }
-        printf(".");
+        print_progress();
 
         IMB_AES192_GCM_INIT(mgr, NULL, NULL, NULL, NULL, -1);
         IMB_AES192_GCM_INIT(mgr, NULL, (struct gcm_context_data *)out_buf,
@@ -179,7 +185,7 @@ test_gcm_api(struct IMB_MGR *mgr)
                        "param test failed!\n", __func__);
                 return 1;
         }
-        printf(".");
+        print_progress();
 
         IMB_AES256_GCM_INIT(mgr, NULL, NULL, NULL, NULL, -1);
         IMB_AES256_GCM_INIT(mgr, NULL, (struct gcm_context_data *)out_buf,
@@ -189,7 +195,7 @@ test_gcm_api(struct IMB_MGR *mgr)
                        "param test failed!\n", __func__);
                 return 1;
         }
-        printf(".");
+        print_progress();
 
         /* GCM Encrypt update tests */
         IMB_AES128_GCM_ENC_UPDATE(mgr, NULL, NULL, NULL, NULL, -1);
@@ -199,7 +205,7 @@ test_gcm_api(struct IMB_MGR *mgr)
                        "param test failed!\n", __func__);
                 return 1;
         }
-        printf(".");
+        print_progress();
 
         IMB_AES192_GCM_ENC_UPDATE(mgr, NULL, NULL, NULL, NULL, -1);
         IMB_AES192_GCM_ENC_UPDATE(mgr, NULL, NULL, out_buf, zero_buf, -1);
@@ -208,7 +214,7 @@ test_gcm_api(struct IMB_MGR *mgr)
                        "param test failed!\n", __func__);
                 return 1;
         }
-        printf(".");
+        print_progress();
 
         IMB_AES256_GCM_ENC_UPDATE(mgr, NULL, NULL, NULL, NULL, -1);
         IMB_AES256_GCM_ENC_UPDATE(mgr, NULL, NULL, out_buf, zero_buf, -1);
@@ -217,7 +223,7 @@ test_gcm_api(struct IMB_MGR *mgr)
                        "param test failed!\n", __func__);
                 return 1;
         }
-        printf(".");
+        print_progress();
 
         /* GCM Decrypt update tests */
         IMB_AES128_GCM_DEC_UPDATE(mgr, NULL, NULL, NULL, NULL, -1);
@@ -227,7 +233,7 @@ test_gcm_api(struct IMB_MGR *mgr)
                        "param test failed!\n", __func__);
                 return 1;
         }
-        printf(".");
+        print_progress();
 
         IMB_AES192_GCM_DEC_UPDATE(mgr, NULL, NULL, NULL, NULL, -1);
         IMB_AES192_GCM_DEC_UPDATE(mgr, NULL, NULL, out_buf, zero_buf, -1);
@@ -236,7 +242,7 @@ test_gcm_api(struct IMB_MGR *mgr)
                        "param test failed!\n", __func__);
                 return 1;
         }
-        printf(".");
+        print_progress();
 
         IMB_AES256_GCM_DEC_UPDATE(mgr, NULL, NULL, NULL, NULL, -1);
         IMB_AES256_GCM_DEC_UPDATE(mgr, NULL, NULL, out_buf, zero_buf, -1);
@@ -245,7 +251,7 @@ test_gcm_api(struct IMB_MGR *mgr)
                        "param test failed!\n", __func__);
                 return 1;
         }
-        printf(".");
+        print_progress();
 
         /* GCM Encrypt complete tests */
         IMB_AES128_GCM_ENC_FINALIZE(mgr, NULL, NULL, NULL, -1);
@@ -255,7 +261,7 @@ test_gcm_api(struct IMB_MGR *mgr)
                        "param test failed!\n", __func__);
                 return 1;
         }
-        printf(".");
+        print_progress();
 
         IMB_AES192_GCM_ENC_FINALIZE(mgr, NULL, NULL, NULL, -1);
         IMB_AES192_GCM_ENC_FINALIZE(mgr, NULL, NULL, out_buf, -1);
@@ -264,7 +270,7 @@ test_gcm_api(struct IMB_MGR *mgr)
                        "param test failed!\n", __func__);
                 return 1;
         }
-        printf(".");
+        print_progress();
 
         IMB_AES256_GCM_ENC_FINALIZE(mgr, NULL, NULL, NULL, -1);
         IMB_AES256_GCM_ENC_FINALIZE(mgr, NULL, NULL, out_buf, -1);
@@ -273,7 +279,7 @@ test_gcm_api(struct IMB_MGR *mgr)
                        "param test failed!\n", __func__);
                 return 1;
         }
-        printf(".");
+        print_progress();
 
         /* GCM Decrypt complete tests */
         IMB_AES128_GCM_DEC_FINALIZE(mgr, NULL, NULL, NULL, -1);
@@ -283,7 +289,7 @@ test_gcm_api(struct IMB_MGR *mgr)
                        "param test failed!\n", __func__);
                 return 1;
         }
-        printf(".");
+        print_progress();
 
         IMB_AES192_GCM_DEC_FINALIZE(mgr, NULL, NULL, NULL, -1);
         IMB_AES192_GCM_DEC_FINALIZE(mgr, NULL, NULL, out_buf, -1);
@@ -292,7 +298,7 @@ test_gcm_api(struct IMB_MGR *mgr)
                        "param test failed!\n", __func__);
                 return 1;
         }
-        printf(".");
+        print_progress();
 
         IMB_AES256_GCM_DEC_FINALIZE(mgr, NULL, NULL, NULL, -1);
         IMB_AES256_GCM_DEC_FINALIZE(mgr, NULL, NULL, out_buf, -1);
@@ -301,17 +307,17 @@ test_gcm_api(struct IMB_MGR *mgr)
                        "param test failed!\n", __func__);
                 return 1;
         }
-        printf(".");
+        print_progress();
 
         /* GCM key data pre-processing tests */
         IMB_AES128_GCM_PRECOMP(mgr, NULL);
-        printf(".");
+        print_progress();
 
         IMB_AES192_GCM_PRECOMP(mgr, NULL);
-        printf(".");
+        print_progress();
 
         IMB_AES256_GCM_PRECOMP(mgr, NULL);
-        printf(".");
+        print_progress();
 
         IMB_AES128_GCM_PRE(mgr, NULL, NULL);
         IMB_AES128_GCM_PRE(mgr, NULL, key_data);
@@ -320,7 +326,7 @@ test_gcm_api(struct IMB_MGR *mgr)
                        "param test failed!\n", __func__);
                 return 1;
         }
-        printf(".");
+        print_progress();
 
         IMB_AES192_GCM_PRE(mgr, NULL, NULL);
         IMB_AES192_GCM_PRE(mgr, NULL, key_data);
@@ -329,7 +335,7 @@ test_gcm_api(struct IMB_MGR *mgr)
                        "param test failed!\n", __func__);
                 return 1;
         }
-        printf(".");
+        print_progress();
 
         IMB_AES256_GCM_PRE(mgr, NULL, NULL);
         IMB_AES256_GCM_PRE(mgr, NULL, key_data);
@@ -338,9 +344,10 @@ test_gcm_api(struct IMB_MGR *mgr)
                        "param test failed!\n", __func__);
                 return 1;
         }
-        printf(".");
+        print_progress();
 
-        printf("\n");
+        if (!quiet_mode)
+                printf("\n");
         return 0;
 }
 
@@ -379,7 +386,7 @@ test_key_exp_gen_api(struct IMB_MGR *mgr)
                        "param test failed!\n", __func__);
                 return 1;
         }
-        printf(".");
+        print_progress();
 
         IMB_AES_KEYEXP_192(mgr, NULL, NULL, NULL);
         IMB_AES_KEYEXP_192(mgr, NULL, out_buf, zero_buf);
@@ -388,7 +395,7 @@ test_key_exp_gen_api(struct IMB_MGR *mgr)
                        "param test failed!\n", __func__);
                 return 1;
         }
-        printf(".");
+        print_progress();
 
         IMB_AES_KEYEXP_256(mgr, NULL, NULL, NULL);
         IMB_AES_KEYEXP_256(mgr, NULL, out_buf, zero_buf);
@@ -397,7 +404,7 @@ test_key_exp_gen_api(struct IMB_MGR *mgr)
                        "param test failed!\n", __func__);
                 return 1;
         }
-        printf(".");
+        print_progress();
 
         IMB_AES_CMAC_SUBKEY_GEN_128(mgr, NULL, NULL, NULL);
         IMB_AES_CMAC_SUBKEY_GEN_128(mgr, NULL, out_buf, zero_buf);
@@ -406,7 +413,7 @@ test_key_exp_gen_api(struct IMB_MGR *mgr)
                        "param test failed!\n", __func__);
                 return 1;
         }
-        printf(".");
+        print_progress();
 
         IMB_AES_XCBC_KEYEXP(mgr, NULL, NULL, NULL, NULL);
         IMB_AES_XCBC_KEYEXP(mgr, NULL, out_buf, out_buf, out_buf);
@@ -415,7 +422,7 @@ test_key_exp_gen_api(struct IMB_MGR *mgr)
                        "param test failed!\n", __func__);
                 return 1;
         }
-        printf(".");
+        print_progress();
 
         IMB_DES_KEYSCHED(mgr, NULL, NULL);
         IMB_DES_KEYSCHED(mgr, (uint64_t *)out_buf, NULL);
@@ -424,9 +431,10 @@ test_key_exp_gen_api(struct IMB_MGR *mgr)
                        "param test failed!\n", __func__);
                 return 1;
         }
-        printf(".");
+        print_progress();
 
-        printf("\n");
+        if (!quiet_mode)
+                printf("\n");
         return 0;
 }
 
@@ -464,7 +472,7 @@ test_hash_api(struct IMB_MGR *mgr)
                        "param test failed!\n", __func__);
                 return 1;
         }
-        printf(".");
+        print_progress();
 
         IMB_SHA1(mgr, NULL, -1, NULL);
         IMB_SHA1(mgr, NULL, BUF_SIZE, out_buf);
@@ -473,7 +481,7 @@ test_hash_api(struct IMB_MGR *mgr)
                        "param test failed!\n", __func__);
                 return 1;
         }
-        printf(".");
+        print_progress();
 
         IMB_SHA224_ONE_BLOCK(mgr, NULL, NULL);
         IMB_SHA224_ONE_BLOCK(mgr, NULL, out_buf);
@@ -482,7 +490,7 @@ test_hash_api(struct IMB_MGR *mgr)
                        "param test failed!\n", __func__);
                 return 1;
         }
-        printf(".");
+        print_progress();
 
         IMB_SHA224(mgr, NULL, -1, NULL);
         IMB_SHA224(mgr, NULL, BUF_SIZE, out_buf);
@@ -491,7 +499,7 @@ test_hash_api(struct IMB_MGR *mgr)
                        "param test failed!\n", __func__);
                 return 1;
         }
-        printf(".");
+        print_progress();
 
         IMB_SHA256_ONE_BLOCK(mgr, NULL, NULL);
         IMB_SHA256_ONE_BLOCK(mgr, NULL, out_buf);
@@ -500,7 +508,7 @@ test_hash_api(struct IMB_MGR *mgr)
                        "param test failed!\n", __func__);
                 return 1;
         }
-        printf(".");
+        print_progress();
 
         IMB_SHA256(mgr, NULL, -1, NULL);
         IMB_SHA256(mgr, NULL, BUF_SIZE, out_buf);
@@ -509,7 +517,7 @@ test_hash_api(struct IMB_MGR *mgr)
                        "param test failed!\n", __func__);
                 return 1;
         }
-        printf(".");
+        print_progress();
 
         IMB_SHA384_ONE_BLOCK(mgr, NULL, NULL);
         IMB_SHA384_ONE_BLOCK(mgr, NULL, out_buf);
@@ -518,7 +526,7 @@ test_hash_api(struct IMB_MGR *mgr)
                        "param test failed!\n", __func__);
                 return 1;
         }
-        printf(".");
+        print_progress();
 
         IMB_SHA384(mgr, NULL, -1, NULL);
         IMB_SHA384(mgr, NULL, BUF_SIZE, out_buf);
@@ -527,7 +535,7 @@ test_hash_api(struct IMB_MGR *mgr)
                        "param test failed!\n", __func__);
                 return 1;
         }
-        printf(".");
+        print_progress();
 
         IMB_SHA512_ONE_BLOCK(mgr, NULL, NULL);
         IMB_SHA512_ONE_BLOCK(mgr, NULL, out_buf);
@@ -536,7 +544,7 @@ test_hash_api(struct IMB_MGR *mgr)
                        "param test failed!\n", __func__);
                 return 1;
         }
-        printf(".");
+        print_progress();
 
         IMB_SHA512(mgr, NULL, -1, NULL);
         IMB_SHA512(mgr, NULL, BUF_SIZE, out_buf);
@@ -545,7 +553,7 @@ test_hash_api(struct IMB_MGR *mgr)
                        "param test failed!\n", __func__);
                 return 1;
         }
-        printf(".");
+        print_progress();
 
         IMB_MD5_ONE_BLOCK(mgr, NULL, NULL);
         IMB_MD5_ONE_BLOCK(mgr, NULL, out_buf);
@@ -554,9 +562,10 @@ test_hash_api(struct IMB_MGR *mgr)
                        "param test failed!\n", __func__);
                 return 1;
         }
-        printf(".");
+        print_progress();
 
-        printf("\n");
+        if (!quiet_mode)
+                printf("\n");
         return 0;
 }
 
@@ -594,9 +603,10 @@ test_aes_api(struct IMB_MGR *mgr)
                        "param test failed!\n", __func__);
                 return 1;
         }
-        printf(".");
+        print_progress();
 
-        printf("\n");
+        if (!quiet_mode)
+                printf("\n");
         return 0;
 }
 
@@ -645,7 +655,7 @@ test_zuc_api(struct IMB_MGR *mgr)
                        "param test failed!\n", __func__);
                 return 1;
         }
-        printf(".");
+        print_progress();
 
         ret1 = zuc_eia3_iv_gen(inv_len, (const uint8_t)inv_len,
                                (const uint8_t)inv_len, NULL);
@@ -657,7 +667,7 @@ test_zuc_api(struct IMB_MGR *mgr)
                        "param test failed!\n", __func__);
                 return 1;
         }
-        printf(".");
+        print_progress();
 
         IMB_ZUC_EEA3_1_BUFFER(mgr, NULL, NULL, NULL, NULL, inv_len);
         IMB_ZUC_EEA3_1_BUFFER(mgr, NULL, NULL, NULL, out_buf, text_len);
@@ -666,7 +676,7 @@ test_zuc_api(struct IMB_MGR *mgr)
                        "param test failed!\n", __func__);
                 return 1;
         }
-        printf(".");
+        print_progress();
 
         IMB_ZUC_EEA3_4_BUFFER(mgr, NULL, NULL, NULL, NULL, NULL);
         IMB_ZUC_EEA3_4_BUFFER(mgr, NULL, NULL, NULL, out_bufs, lens);
@@ -675,7 +685,7 @@ test_zuc_api(struct IMB_MGR *mgr)
                        "param test failed!\n", __func__);
                 return 1;
         }
-        printf(".");
+        print_progress();
 
         IMB_ZUC_EEA3_N_BUFFER(mgr, NULL, NULL, NULL,
                               NULL, NULL, inv_len);
@@ -686,7 +696,7 @@ test_zuc_api(struct IMB_MGR *mgr)
                        "param test failed!\n", __func__);
                 return 1;
         }
-        printf(".");
+        print_progress();
 
         IMB_ZUC_EIA3_1_BUFFER(mgr, NULL, NULL, NULL, inv_len, NULL);
         IMB_ZUC_EIA3_1_BUFFER(mgr, NULL, NULL, NULL, text_len, out_bufs[0]);
@@ -695,9 +705,10 @@ test_zuc_api(struct IMB_MGR *mgr)
                        "param test failed!\n", __func__);
                 return 1;
         }
-        printf(".");
+        print_progress();
 
-        printf("\n");
+        if (!quiet_mode)
+                printf("\n");
         return 0;
 }
 
@@ -747,7 +758,7 @@ test_kasumi_api(struct IMB_MGR *mgr)
                        "param test failed!\n", __func__);
                 return 1;
         }
-        printf(".");
+        print_progress();
 
         ret1 = kasumi_f9_iv_gen(inv_len, inv_len, NULL);
         if ((memcmp(out_buf, zero_buf, text_len) != 0) || ret1 == 0) {
@@ -755,7 +766,7 @@ test_kasumi_api(struct IMB_MGR *mgr)
                        "param test failed!\n", __func__);
                 return 1;
         }
-        printf(".");
+        print_progress();
 
         IMB_KASUMI_F8_1_BUFFER(mgr, NULL, inv_iv, NULL, NULL, inv_len);
         IMB_KASUMI_F8_1_BUFFER(mgr, NULL, inv_iv, NULL, out_buf, text_len);
@@ -764,7 +775,7 @@ test_kasumi_api(struct IMB_MGR *mgr)
                        "param test failed!\n", __func__);
                 return 1;
         }
-        printf(".");
+        print_progress();
 
         IMB_KASUMI_F8_1_BUFFER_BIT(mgr, NULL, inv_iv, NULL,
                                    NULL, inv_len, inv_len);
@@ -775,7 +786,7 @@ test_kasumi_api(struct IMB_MGR *mgr)
                        "param test failed!\n", __func__);
                 return 1;
         }
-        printf(".");
+        print_progress();
 
         IMB_KASUMI_F8_2_BUFFER(mgr, NULL, inv_iv, inv_iv, NULL,
                                NULL, inv_len, NULL, NULL, inv_len);
@@ -786,7 +797,7 @@ test_kasumi_api(struct IMB_MGR *mgr)
                        "param test failed!\n", __func__);
                 return 1;
         }
-        printf(".");
+        print_progress();
 
         IMB_KASUMI_F8_3_BUFFER(mgr, NULL, inv_iv, inv_iv, inv_iv, NULL,
                                NULL, NULL, NULL, NULL, NULL, inv_len);
@@ -797,7 +808,7 @@ test_kasumi_api(struct IMB_MGR *mgr)
                        "param test failed!\n", __func__);
                 return 1;
         }
-        printf(".");
+        print_progress();
 
         IMB_KASUMI_F8_4_BUFFER(mgr, NULL, inv_iv, inv_iv, inv_iv, inv_iv,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
@@ -810,7 +821,7 @@ test_kasumi_api(struct IMB_MGR *mgr)
                        "param test failed!\n", __func__);
                 return 1;
         }
-        printf(".");
+        print_progress();
 
         IMB_KASUMI_F8_N_BUFFER(mgr, NULL, NULL, NULL,
                                NULL, NULL, inv_len);
@@ -821,7 +832,7 @@ test_kasumi_api(struct IMB_MGR *mgr)
                        "param test failed!\n", __func__);
                 return 1;
         }
-        printf(".");
+        print_progress();
 
         IMB_KASUMI_F9_1_BUFFER(mgr, NULL, NULL, inv_len, NULL);
         IMB_KASUMI_F9_1_BUFFER(mgr, NULL, NULL, text_len, out_buf);
@@ -830,7 +841,7 @@ test_kasumi_api(struct IMB_MGR *mgr)
                        "param test failed!\n", __func__);
                 return 1;
         }
-        printf(".");
+        print_progress();
 
         IMB_KASUMI_F9_1_BUFFER_USER(mgr, NULL, inv_iv, NULL,
                                     inv_len, NULL, inv_len);
@@ -841,7 +852,7 @@ test_kasumi_api(struct IMB_MGR *mgr)
                        "param test failed!\n", __func__);
                 return 1;
         }
-        printf(".");
+        print_progress();
 
         ret1 = IMB_KASUMI_INIT_F8_KEY_SCHED(mgr, NULL, NULL);
         ret2 = IMB_KASUMI_INIT_F8_KEY_SCHED(mgr, NULL,
@@ -852,7 +863,7 @@ test_kasumi_api(struct IMB_MGR *mgr)
                        "param test failed!\n", __func__);
                 return 1;
         }
-        printf(".");
+        print_progress();
 
         ret1 = IMB_KASUMI_INIT_F9_KEY_SCHED(mgr, NULL, NULL);
         ret2 = IMB_KASUMI_INIT_F9_KEY_SCHED(mgr, NULL,
@@ -863,16 +874,17 @@ test_kasumi_api(struct IMB_MGR *mgr)
                        "param test failed!\n", __func__);
                 return 1;
         }
-        printf(".");
+        print_progress();
 
         if (IMB_KASUMI_KEY_SCHED_SIZE(mgr) == 0) {
                 printf("%s: IMB_KASUMI_KEY_SCHED_SIZE, invalid "
                        "param test failed!\n", __func__);
                 return 1;
         }
-        printf(".");
+        print_progress();
 
-        printf("\n");
+        if (!quiet_mode)
+                printf("\n");
         return 0;
 }
 
@@ -921,7 +933,7 @@ test_snow3g_api(struct IMB_MGR *mgr)
                        "param test failed!\n", __func__);
                 return 1;
         }
-        printf(".");
+        print_progress();
 
         ret1 = snow3g_f9_iv_gen(inv_len, (const uint8_t)inv_len,
                                 (const uint8_t)inv_len, NULL);
@@ -933,7 +945,7 @@ test_snow3g_api(struct IMB_MGR *mgr)
                        "param test failed!\n", __func__);
                 return 1;
         }
-        printf(".");
+        print_progress();
 
         IMB_SNOW3G_F8_1_BUFFER(mgr, NULL, NULL, NULL, NULL, inv_len);
         IMB_SNOW3G_F8_1_BUFFER(mgr, NULL, NULL, NULL, out_buf, text_len);
@@ -942,7 +954,7 @@ test_snow3g_api(struct IMB_MGR *mgr)
                        "param test failed!\n", __func__);
                 return 1;
         }
-        printf(".");
+        print_progress();
 
         IMB_SNOW3G_F8_1_BUFFER_BIT(mgr, NULL, NULL, NULL, NULL,
                                    inv_len, inv_len);
@@ -953,7 +965,7 @@ test_snow3g_api(struct IMB_MGR *mgr)
                        "param test failed!\n", __func__);
                 return 1;
         }
-        printf(".");
+        print_progress();
 
         IMB_SNOW3G_F8_2_BUFFER(mgr, NULL, NULL, NULL, NULL,
                                NULL, inv_len, NULL, NULL, inv_len);
@@ -964,7 +976,7 @@ test_snow3g_api(struct IMB_MGR *mgr)
                        "param test failed!\n", __func__);
                 return 1;
         }
-        printf(".");
+        print_progress();
 
         IMB_SNOW3G_F8_4_BUFFER(mgr, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, inv_len, NULL, NULL, inv_len,
@@ -977,7 +989,7 @@ test_snow3g_api(struct IMB_MGR *mgr)
                        "param test failed!\n", __func__);
                 return 1;
         }
-        printf(".");
+        print_progress();
 
         IMB_SNOW3G_F8_8_BUFFER(mgr, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL,
@@ -996,7 +1008,7 @@ test_snow3g_api(struct IMB_MGR *mgr)
                        "param test failed!\n", __func__);
                 return 1;
         }
-        printf(".");
+        print_progress();
 
         IMB_SNOW3G_F8_8_BUFFER_MULTIKEY(mgr, NULL, NULL, NULL, NULL, &inv_len);
         IMB_SNOW3G_F8_8_BUFFER_MULTIKEY(mgr, NULL, NULL, NULL, out_bufs, lens);
@@ -1005,7 +1017,7 @@ test_snow3g_api(struct IMB_MGR *mgr)
                        "param test failed!\n", __func__);
                 return 1;
         }
-        printf(".");
+        print_progress();
 
         IMB_SNOW3G_F8_N_BUFFER(mgr, NULL, NULL, NULL, NULL, NULL, inv_len);
         IMB_SNOW3G_F8_N_BUFFER(mgr, NULL, NULL, NULL, out_bufs, lens, NUM_BUFS);
@@ -1014,7 +1026,7 @@ test_snow3g_api(struct IMB_MGR *mgr)
                        "param test failed!\n", __func__);
                 return 1;
         }
-        printf(".");
+        print_progress();
 
         IMB_SNOW3G_F8_N_BUFFER_MULTIKEY(mgr, NULL, NULL, NULL, NULL,
                                         NULL, inv_len);
@@ -1025,7 +1037,7 @@ test_snow3g_api(struct IMB_MGR *mgr)
                        "param test failed!\n", __func__);
                 return 1;
         }
-        printf(".");
+        print_progress();
 
         IMB_SNOW3G_F9_1_BUFFER(mgr, NULL, NULL, NULL, inv_len, NULL);
         IMB_SNOW3G_F9_1_BUFFER(mgr, NULL, NULL, NULL, text_len, out_buf);
@@ -1034,7 +1046,7 @@ test_snow3g_api(struct IMB_MGR *mgr)
                        "param test failed!\n", __func__);
                 return 1;
         }
-        printf(".");
+        print_progress();
 
         ret1 = IMB_SNOW3G_INIT_KEY_SCHED(mgr, NULL, NULL);
         ret2 = IMB_SNOW3G_INIT_KEY_SCHED(mgr, NULL,
@@ -1045,16 +1057,17 @@ test_snow3g_api(struct IMB_MGR *mgr)
                        "param test failed!\n", __func__);
                 return 1;
         }
-        printf(".");
+        print_progress();
 
         if (IMB_SNOW3G_KEY_SCHED_SIZE(mgr) == 0) {
                 printf("%s: IMB_SNOW3G_KEY_SCHED_SIZE, invalid "
                        "param test failed!\n", __func__);
                 return 1;
         }
-        printf(".");
+        print_progress();
 
-        printf("\n");
+        if (!quiet_mode)
+                printf("\n");
         return 0;
 }
 
@@ -1091,7 +1104,7 @@ test_clear_mem_api(void)
                        "param test failed!\n", __func__);
                 return 1;
         }
-        printf(".");
+        print_progress();
 
         imb_clear_mem(out_buf, 0);
         if (memcmp(out_buf, cmp_buf, text_len) != 0) {
@@ -1099,7 +1112,7 @@ test_clear_mem_api(void)
                        "param test failed!\n", __func__);
                 return 1;
         }
-        printf(".");
+        print_progress();
 
         imb_clear_mem(out_buf, text_len);
         if (memcmp(out_buf, cmp_buf, text_len) == 0) {
@@ -1107,9 +1120,10 @@ test_clear_mem_api(void)
                        "param test failed!\n", __func__);
                 return 1;
         }
-        printf(".");
+        print_progress();
 
-        printf("\n");
+        if (!quiet_mode)
+                printf("\n");
         return 0;
 }
 
