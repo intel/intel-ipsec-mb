@@ -1332,14 +1332,18 @@ test_cmac_std_vectors(struct IMB_MGR *mb_mgr,
 	printf("AES-CMAC-128 standard test vectors (N jobs = %d):\n", num_jobs);
 	for (vect = 1; vect <= vectors_cnt; vect++) {
                 const int idx = vect - 1;
+
+                if (!quiet_mode) {
 #ifdef DEBUG
-		printf("Standard CMAC-128 vector [%d/%d] M len: %d, T len:%d\n",
-                       vect, vectors_cnt,
-                       (int) cmac_vectors[idx].len,
-                       (int) cmac_vectors[idx].T_len);
+                        printf("Standard CMAC-128 vector [%d/%d] M len: %d, "
+                               "T len:%d\n",
+                               vect, vectors_cnt,
+                               (int) cmac_vectors[idx].len,
+                               (int) cmac_vectors[idx].T_len);
 #else
-		printf(".");
+                        printf(".");
 #endif
+                }
 
                 if (test_cmac(mb_mgr, &cmac_vectors[idx],
                               IMB_DIR_ENCRYPT, num_jobs, CMAC_128)) {
@@ -1357,7 +1361,8 @@ test_cmac_std_vectors(struct IMB_MGR *mb_mgr,
                         test_suite_update(ctx, 1, 0);
                 }
 	}
-	printf("\n");
+        if (!quiet_mode)
+                printf("\n");
 }
 
 static void
@@ -1371,14 +1376,18 @@ test_cmac_256_std_vectors(struct IMB_MGR *mb_mgr,
 	printf("AES-CMAC-256 standard test vectors (N jobs = %d):\n", num_jobs);
 	for (vect = 1; vect <= vectors_cnt; vect++) {
                 const int idx = vect - 1;
+
+                if (!quiet_mode) {
 #ifdef DEBUG
-		printf("Standard CMAC-256 vector [%d/%d] M len: %d, T len:%d\n",
-                       vect, vectors_cnt,
-                       (int) cmac_256_vectors[idx].len,
-                       (int) cmac_256_vectors[idx].T_len);
+                        printf("Standard CMAC-256 vector [%d/%d] M len: %d, "
+                               "T len:%d\n",
+                               vect, vectors_cnt,
+                               (int) cmac_256_vectors[idx].len,
+                               (int) cmac_256_vectors[idx].T_len);
 #else
-		printf(".");
+                        printf(".");
 #endif
+                }
 
                 if (test_cmac(mb_mgr, &cmac_256_vectors[idx],
                               IMB_DIR_ENCRYPT, num_jobs, CMAC_256)) {
@@ -1395,7 +1404,8 @@ test_cmac_256_std_vectors(struct IMB_MGR *mb_mgr,
                         test_suite_update(ctx, 1, 0);
                 }
 	}
-	printf("\n");
+        if (!quiet_mode)
+                printf("\n");
 }
 
 static void
@@ -1410,15 +1420,18 @@ test_cmac_bitlen_std_vectors(struct IMB_MGR *mb_mgr,
                "(N jobs = %d):\n", num_jobs);
 	for (vect = 1; vect <= vectors_cnt; vect++) {
                 const int idx = vect - 1;
+
+                if (!quiet_mode) {
 #ifdef DEBUG
-		printf("Standard vector [%d/%d] M len: %d (bits), "
-                       "T len:%d\n",
-                       vect, vectors_cnt,
-                       (int) cmac_vectors[idx].len * 8,
-                       (int) cmac_vectors[idx].T_len);
+                        printf("Standard vector [%d/%d] M len: %d (bits), "
+                               "T len:%d\n",
+                               vect, vectors_cnt,
+                               (int) cmac_vectors[idx].len * 8,
+                               (int) cmac_vectors[idx].T_len);
 #else
-		printf(".");
+                        printf(".");
 #endif
+                }
 
                 if (test_cmac(mb_mgr, &cmac_vectors[idx],
                               IMB_DIR_ENCRYPT, num_jobs, CMAC_128_BITLEN)) {
@@ -1437,7 +1450,8 @@ test_cmac_bitlen_std_vectors(struct IMB_MGR *mb_mgr,
                 }
 
 	}
-        printf("\n");
+        if (!quiet_mode)
+                printf("\n");
 }
 
 static void
@@ -1453,15 +1467,18 @@ test_cmac_bitlen_3gpp_vectors(struct IMB_MGR *mb_mgr,
                num_jobs);
 	for (vect = 1; vect <= vectors_cnt; vect++) {
                 const int idx = vect - 1;
+
+                if (!quiet_mode) {
 #ifdef DEBUG
-		printf("3GPP vector [%d/%d] M len: %d (bits), "
-                       "T len:%d (bytes)\n",
-                       vect, vectors_cnt,
-                       (int) cmac_3gpp_vectors[idx].len,
-                       (int) cmac_3gpp_vectors[idx].T_len);
+                        printf("3GPP vector [%d/%d] M len: %d (bits), "
+                               "T len:%d (bytes)\n",
+                               vect, vectors_cnt,
+                               (int) cmac_3gpp_vectors[idx].len,
+                               (int) cmac_3gpp_vectors[idx].T_len);
 #else
-		printf(".");
+                        printf(".");
 #endif
+                }
 
                 if (test_cmac(mb_mgr, &cmac_3gpp_vectors[idx],
                               IMB_DIR_ENCRYPT, num_jobs, CMAC_128_BITLEN)) {
@@ -1480,7 +1497,8 @@ test_cmac_bitlen_3gpp_vectors(struct IMB_MGR *mb_mgr,
                 }
 
 	}
-	printf("\n");
+        if (!quiet_mode)
+                printf("\n");
 }
 
 int
