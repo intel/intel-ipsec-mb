@@ -496,14 +496,18 @@ test_xcbc_std_vectors(struct IMB_MGR *mb_mgr,
 	printf("AES-XCBC-128 standard test vectors (N jobs = %d):\n", num_jobs);
 	for (vect = 1; vect <= vectors_cnt; vect++) {
                 const int idx = vect - 1;
+
+                if (!quiet_mode) {
 #ifdef DEBUG
-		printf("Standard XCBC-128 vector [%d/%d] M len: %d, T len:%d\n",
-                       vect, vectors_cnt,
-                       (int) xcbc_vectors[idx].len,
-                       (int) xcbc_vectors[idx].T_len);
+                        printf("Standard XCBC-128 vector [%d/%d] M len: %d, "
+                               "T len:%d\n",
+                               vect, vectors_cnt,
+                               (int) xcbc_vectors[idx].len,
+                               (int) xcbc_vectors[idx].T_len);
 #else
-		printf(".");
+                        printf(".");
 #endif
+                }
 
                 if (test_xcbc(mb_mgr, &xcbc_vectors[idx],
                               IMB_DIR_ENCRYPT, num_jobs)) {
@@ -522,7 +526,8 @@ test_xcbc_std_vectors(struct IMB_MGR *mb_mgr,
                 }
 
 	}
-	printf("\n");
+        if (!quiet_mode)
+                printf("\n");
 }
 
 int
