@@ -44,6 +44,7 @@
 %include "include/os.inc"
 %include "include/clear_regs.inc"
 %include "include/aes_common.inc"
+%include "include/cet.inc"
 
 %ifndef AES_ECB_QUIC_ENC_128
 %define AES_ECB_QUIC_ENC_128 aes_ecb_quic_enc_128_sse
@@ -230,7 +231,7 @@ align 16
 align 16
 MKGLOBAL(AES_ECB_QUIC_ENC_128,function,internal)
 AES_ECB_QUIC_ENC_128:
-
+        endbranch64
         AES_ECB_QUIC 10
 
 %endif
@@ -239,7 +240,7 @@ AES_ECB_QUIC_ENC_128:
 align 16
 MKGLOBAL(AES_ECB_QUIC_ENC_192,function,internal)
 AES_ECB_QUIC_ENC_192:
-
+        endbranch64
         AES_ECB_QUIC 12
 
 %endif
@@ -248,7 +249,7 @@ AES_ECB_QUIC_ENC_192:
 align 16
 MKGLOBAL(AES_ECB_QUIC_ENC_256,function,internal)
 AES_ECB_QUIC_ENC_256:
-
+        endbranch64
         AES_ECB_QUIC 14
 
 %endif
