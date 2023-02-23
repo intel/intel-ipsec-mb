@@ -655,6 +655,51 @@ static void test_zuc_eia3_n_buff(IMB_MGR *p_mgr, uint8_t *buff, size_t dataSize)
         IMB_ZUC_EIA3_N_BUFFER(p_mgr, key, iv, in, len, tag, count);
 }
 
+static void test_chacha_poly_enc(IMB_MGR *p_mgr, uint8_t *buff, size_t dataSize)
+{
+        if (dataSize < sizeof(struct chacha20_poly1305_context_data))
+                return;
+
+        struct chacha20_poly1305_context_data *ctx =
+                (struct chacha20_poly1305_context_data *)buff;
+        const void *key = buff;
+        uint8_t *out = buff;
+        const uint8_t *in = buff;
+        uint64_t len = dataSize;
+        const uint8_t *iv = buff;
+        const uint8_t *aad = buff;
+        uint64_t aad_len = dataSize;
+        uint8_t *auth_tag = buff;
+        uint64_t tag_len = (uint64_t) *buff;
+
+        IMB_CHACHA20_POLY1305_INIT(p_mgr, key, ctx, iv, aad, aad_len);
+        IMB_CHACHA20_POLY1305_ENC_UPDATE(p_mgr, key, ctx, out, in, len);
+        IMB_CHACHA20_POLY1305_ENC_FINALIZE(p_mgr, ctx, auth_tag, tag_len);
+}
+
+static void test_chacha_poly_dec(IMB_MGR *p_mgr, uint8_t *buff, size_t dataSize)
+{
+        if (dataSize < sizeof(struct chacha20_poly1305_context_data))
+                return;
+
+        struct chacha20_poly1305_context_data *ctx =
+                (struct chacha20_poly1305_context_data *)buff;
+        const void *key = buff;
+        uint8_t *out = buff;
+        const uint8_t *in = buff;
+        uint64_t len = dataSize;
+        const uint8_t *iv = buff;
+        const uint8_t *aad = buff;
+        uint64_t aad_len = dataSize;
+        uint8_t *auth_tag = buff;
+        uint64_t tag_len = (uint64_t) *buff;
+
+        IMB_CHACHA20_POLY1305_INIT(p_mgr, key, ctx, iv, aad, aad_len);
+        IMB_CHACHA20_POLY1305_DEC_UPDATE(p_mgr, key, ctx, out, in, len);
+        IMB_CHACHA20_POLY1305_DEC_FINALIZE(p_mgr, ctx, auth_tag, tag_len);
+}
+
+
 struct {
         void (*func)(IMB_MGR *mb_mgr, uint8_t *buff, size_t dataSize);
         const char *func_name;
@@ -686,6 +731,8 @@ struct {
         {test_zuc_eea3_n_buff, "test_zuc_eea3_n_buff"},
         {test_zuc_eia3_1_buff, "test_zuc_eia3_1_buff"},
         {test_zuc_eia3_n_buff, "test_zuc_eia3_n_buff"},
+        {test_chacha_poly_enc, "test_chacha_poly_enc"},
+        {test_chacha_poly_dec, "test_chacha_poly_dec"},
 };
 
 int LLVMFuzzerTestOneInput(const uint8_t *data, size_t dataSize)
