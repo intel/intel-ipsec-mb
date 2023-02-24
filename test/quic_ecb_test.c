@@ -291,14 +291,14 @@ quic_ecb_test(struct IMB_MGR *mb_mgr)
         unsigned i;
         int errors = 0;
 
-        test_suite_start(&ts128, "QUIC HP AES-ECB-128");
-        test_suite_start(&ts192, "QUIC HP AES-ECB-192");
-        test_suite_start(&ts256, "QUIC HP AES-ECB-256");
+        test_suite_start(&ts128, "QUIC-HP-AES-ECB-128");
+        test_suite_start(&ts192, "QUIC-HP-AES-ECB-192");
+        test_suite_start(&ts256, "QUIC-HP-AES-ECB-256");
 
         for (i = 0; i < DIM(num_jobs_tab); i++)
                 test_quic_ecb_vectors(mb_mgr, DIM(quic_ecb_vectors),
                                       quic_ecb_vectors,
-                                      "QUIC HP AES-ECB test vectors",
+                                      "QUIC-HP-AES-ECB test vectors",
                                       num_jobs_tab[i],
                                       &ts128, &ts192, &ts256);
 
