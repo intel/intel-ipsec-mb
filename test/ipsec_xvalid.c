@@ -1219,7 +1219,6 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys,
              const struct params_s *params,
              const unsigned int force_pattern)
 {
-        uint8_t *buf = keys->temp_buf;
         uint32_t *dust = keys->dust;
         uint32_t *k1_expanded = keys->k1_expanded;
         uint8_t *k2 = keys->k2;
@@ -1229,7 +1228,6 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys,
         uint8_t *ipad = keys->ipad;
         uint8_t *opad = keys->opad;
         struct gcm_key_data *gdata_key = &keys->gdata_key;
-        uint8_t i;
 
         /* Set all expanded keys to pattern_cipher_key/pattern_auth_key
          * if flag is set */
@@ -1371,78 +1369,13 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys,
                 IMB_AES_CMAC_SUBKEY_GEN_256(mb_mgr, k1_expanded, k2, k3);
                 break;
         case IMB_AUTH_HMAC_SHA_1:
-                imb_ipad_opad_sha1(mb_mgr, auth_key,
-                                   MAX_KEY_SIZE, ipad, opad);
-                break;
         case IMB_AUTH_HMAC_SHA_224:
-                /* compute ipad hash */
-                nosimd_memset(buf, 0x36, IMB_SHA_256_BLOCK_SIZE);
-                for (i = 0; i < IMB_SHA_256_BLOCK_SIZE; i++)
-                        buf[i] ^= auth_key[i];
-                IMB_SHA224_ONE_BLOCK(mb_mgr, buf, ipad);
-
-                /* compute opad hash */
-                nosimd_memset(buf, 0x5c, IMB_SHA_256_BLOCK_SIZE);
-                for (i = 0; i < IMB_SHA_256_BLOCK_SIZE; i++)
-                        buf[i] ^= auth_key[i];
-                IMB_SHA224_ONE_BLOCK(mb_mgr, buf, opad);
-
-                break;
         case IMB_AUTH_HMAC_SHA_256:
-                /* compute ipad hash */
-                nosimd_memset(buf, 0x36, IMB_SHA_256_BLOCK_SIZE);
-                for (i = 0; i < IMB_SHA_256_BLOCK_SIZE; i++)
-                        buf[i] ^= auth_key[i];
-                IMB_SHA256_ONE_BLOCK(mb_mgr, buf, ipad);
-
-                /* compute opad hash */
-                nosimd_memset(buf, 0x5c, IMB_SHA_256_BLOCK_SIZE);
-                for (i = 0; i < IMB_SHA_256_BLOCK_SIZE; i++)
-                        buf[i] ^= auth_key[i];
-                IMB_SHA256_ONE_BLOCK(mb_mgr, buf, opad);
-
-                break;
         case IMB_AUTH_HMAC_SHA_384:
-                /* compute ipad hash */
-                nosimd_memset(buf, 0x36, IMB_SHA_384_BLOCK_SIZE);
-                for (i = 0; i < IMB_SHA_384_BLOCK_SIZE; i++)
-                        buf[i] ^= auth_key[i];
-                IMB_SHA384_ONE_BLOCK(mb_mgr, buf, ipad);
-
-                /* compute opad hash */
-                nosimd_memset(buf, 0x5c, IMB_SHA_384_BLOCK_SIZE);
-                for (i = 0; i < IMB_SHA_384_BLOCK_SIZE; i++)
-                        buf[i] ^= auth_key[i];
-                IMB_SHA384_ONE_BLOCK(mb_mgr, buf, opad);
-
-                break;
         case IMB_AUTH_HMAC_SHA_512:
-                /* compute ipad hash */
-                nosimd_memset(buf, 0x36, IMB_SHA_512_BLOCK_SIZE);
-                for (i = 0; i < IMB_SHA_512_BLOCK_SIZE; i++)
-                        buf[i] ^= auth_key[i];
-                IMB_SHA512_ONE_BLOCK(mb_mgr, buf, ipad);
-
-                /* compute opad hash */
-                nosimd_memset(buf, 0x5c, IMB_SHA_512_BLOCK_SIZE);
-                for (i = 0; i < IMB_SHA_512_BLOCK_SIZE; i++)
-                        buf[i] ^= auth_key[i];
-                IMB_SHA512_ONE_BLOCK(mb_mgr, buf, opad);
-
-                break;
         case IMB_AUTH_MD5:
-                /* compute ipad hash */
-                nosimd_memset(buf, 0x36, 64);
-                for (i = 0; i < 64; i++)
-                        buf[i] ^= auth_key[i];
-                IMB_MD5_ONE_BLOCK(mb_mgr, buf, ipad);
-
-                /* compute opad hash */
-                nosimd_memset(buf, 0x5c, 64);
-                for (i = 0; i < 64; i++)
-                        buf[i] ^= auth_key[i];
-                IMB_MD5_ONE_BLOCK(mb_mgr, buf, opad);
-
+                imb_hmac_ipad_opad(mb_mgr, params->hash_alg, auth_key,
+                                   MAX_KEY_SIZE, ipad, opad);
                 break;
         case IMB_AUTH_ZUC_EIA3_BITLEN:
         case IMB_AUTH_ZUC256_EIA3_BITLEN:

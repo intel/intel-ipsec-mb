@@ -418,7 +418,8 @@ test_chained_vectors(struct IMB_MGR *mb_mgr,
                         break;
                 }
 
-                imb_ipad_opad_sha1(mb_mgr, vec_tab[vect].cipher_key,
+                imb_hmac_ipad_opad(mb_mgr, IMB_AUTH_HMAC_SHA_1,
+                                   vec_tab[vect].cipher_key,
                                    vec_tab[vect].cipher_key_len,
                                    ipad_hash, opad_hash);
 

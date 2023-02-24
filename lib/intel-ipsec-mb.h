@@ -140,10 +140,15 @@ typedef enum {
 #define IMB_SHA384_DIGEST_SIZE_IN_BYTES 48
 #define IMB_SHA512_DIGEST_SIZE_IN_BYTES 64
 
+#define IMB_MD5_DIGEST_SIZE_IN_BYTES 16
+
 #define IMB_SHA1_BLOCK_SIZE 64    /**< 512 bits is 64 byte blocks */
+#define IMB_SHA_224_BLOCK_SIZE 64 /**< 512 bits is 64 byte blocks */
 #define IMB_SHA_256_BLOCK_SIZE 64 /**< 512 bits is 64 byte blocks */
 #define IMB_SHA_384_BLOCK_SIZE 128
 #define IMB_SHA_512_BLOCK_SIZE 128
+
+#define IMB_MD5_BLOCK_SIZE 64
 
 #define IMB_KASUMI_KEY_SIZE         16
 #define IMB_KASUMI_IV_SIZE          8
@@ -2682,18 +2687,19 @@ IMB_DLL_EXPORT int
 des_key_schedule(uint64_t *ks, const void *key);
 
 /**
- * @brief Ipad Opad padding for sha1
+ * @brief Ipad Opad padding for HMAC
  *
  * @param [in] mb_mgr           Pointer to initialized IMB_MGR structure
+ * @param [in] sha_type         Type of HMAC_SHA from IMB_HASH_ALG enum
  * @param [in] pkey             Pointer to a HMAC key
  * @param [in] key_len          Length of the HMAC key
  * @param [out] ipad_hash       Block-sized inner padding
  * @param [out] opad_hash       Block-sized outer padding
  */
 IMB_DLL_EXPORT void
-imb_ipad_opad_sha1(struct IMB_MGR *mb_mgr, const void *pkey,
-                   const size_t key_len, void *ipad_hash,
-                   void *opad_hash);
+imb_hmac_ipad_opad(struct IMB_MGR *mb_mgr, const IMB_HASH_ALG sha_type,
+                   const void *pkey, const size_t key_len,
+                   void *ipad_hash, void *opad_hash);
 
 /**
  * @brief DES-CFB Encrypt/Decrypt up to one block.

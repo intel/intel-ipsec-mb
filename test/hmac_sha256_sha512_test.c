@@ -828,13 +828,10 @@ test_hmac_shax(struct IMB_MGR *mb_mgr,
         uint8_t **auths = malloc(num_jobs * sizeof(void *));
         uint32_t i = 0, jobs_rx = 0;
         int ret = -1;
-        uint8_t key[IMB_SHA_512_BLOCK_SIZE];
-        uint8_t buf[IMB_SHA_512_BLOCK_SIZE];
         DECLARE_ALIGNED(uint8_t ipad_hash[IMB_SHA512_DIGEST_SIZE_IN_BYTES], 16);
         DECLARE_ALIGNED(uint8_t opad_hash[IMB_SHA512_DIGEST_SIZE_IN_BYTES], 16);
-        uint32_t key_len = 0;
         size_t digest_len = 0;
-        size_t block_size = 0;
+        IMB_HASH_ALG hash_type;
 
         if (auths == NULL) {
 		fprintf(stderr, "Can't allocate buffer memory\n");
@@ -856,20 +853,20 @@ test_hmac_shax(struct IMB_MGR *mb_mgr,
         switch (sha_type) {
         case 224:
                 digest_len = vec->hmac_sha224_len;
-                block_size = IMB_SHA_256_BLOCK_SIZE;
+                hash_type = IMB_AUTH_HMAC_SHA_224;
                 break;
         case 256:
                 digest_len = vec->hmac_sha256_len;
-                block_size = IMB_SHA_256_BLOCK_SIZE;
+                hash_type = IMB_AUTH_HMAC_SHA_256;
                 break;
         case 384:
                 digest_len = vec->hmac_sha384_len;
-                block_size = IMB_SHA_384_BLOCK_SIZE;
+                hash_type = IMB_AUTH_HMAC_SHA_384;
                 break;
         case 512:
         default:
                 digest_len = vec->hmac_sha512_len;
-                block_size = IMB_SHA_512_BLOCK_SIZE;
+                hash_type = IMB_AUTH_HMAC_SHA_512;
                 break;
         }
 
@@ -887,75 +884,8 @@ test_hmac_shax(struct IMB_MGR *mb_mgr,
                 }
                 memset(auths[i], -1, alloc_len);
         }
-
-        /* prepare the key */
-        memset(key, 0, sizeof(key));
-        if (vec->key_len <= block_size) {
-                memcpy(key, vec->key, vec->key_len);
-                key_len = (int) vec->key_len;
-        } else {
-                switch (sha_type) {
-                case 224:
-                        IMB_SHA224(mb_mgr, vec->key, vec->key_len, key);
-                        key_len = IMB_SHA224_DIGEST_SIZE_IN_BYTES;
-                        break;
-                case 256:
-                        IMB_SHA256(mb_mgr, vec->key, vec->key_len, key);
-                        key_len = IMB_SHA256_DIGEST_SIZE_IN_BYTES;
-                        break;
-                case 384:
-                        IMB_SHA384(mb_mgr, vec->key, vec->key_len, key);
-                        key_len = IMB_SHA384_DIGEST_SIZE_IN_BYTES;
-                        break;
-                case 512:
-                default:
-                        IMB_SHA512(mb_mgr, vec->key, vec->key_len, key);
-                        key_len = IMB_SHA512_DIGEST_SIZE_IN_BYTES;
-                        break;
-                }
-        }
-
-        /* compute ipad hash */
-        memset(buf, 0x36, sizeof(buf));
-        for (i = 0; i < key_len; i++)
-                buf[i] ^= key[i];
-
-        switch (sha_type) {
-        case 224:
-                IMB_SHA224_ONE_BLOCK(mb_mgr, buf, ipad_hash);
-                break;
-        case 256:
-                IMB_SHA256_ONE_BLOCK(mb_mgr, buf, ipad_hash);
-                break;
-        case 384:
-                IMB_SHA384_ONE_BLOCK(mb_mgr, buf, ipad_hash);
-                break;
-        case 512:
-        default:
-                IMB_SHA512_ONE_BLOCK(mb_mgr, buf, ipad_hash);
-                break;
-        }
-
-        /* compute opad hash */
-        memset(buf, 0x5c, sizeof(buf));
-        for (i = 0; i < key_len; i++)
-                buf[i] ^= key[i];
-
-        switch (sha_type) {
-        case 224:
-                IMB_SHA224_ONE_BLOCK(mb_mgr, buf, opad_hash);
-                break;
-        case 256:
-                IMB_SHA256_ONE_BLOCK(mb_mgr, buf, opad_hash);
-                break;
-        case 384:
-                IMB_SHA384_ONE_BLOCK(mb_mgr, buf, opad_hash);
-                break;
-        case 512:
-        default:
-                IMB_SHA512_ONE_BLOCK(mb_mgr, buf, opad_hash);
-                break;
-        }
+        imb_hmac_ipad_opad(mb_mgr, hash_type, vec->key,
+                           vec->key_len, ipad_hash, opad_hash);
 
         /* empty the manager */
         while (IMB_FLUSH_JOB(mb_mgr) != NULL)
@@ -1057,13 +987,10 @@ test_hmac_shax_burst(struct IMB_MGR *mb_mgr,
         uint8_t **auths = malloc(num_jobs * sizeof(void *));
         uint32_t i = 0, jobs_rx = 0, completed_jobs = 0;
         int ret = -1, err;
-        uint8_t key[IMB_SHA_512_BLOCK_SIZE];
-        uint8_t buf[IMB_SHA_512_BLOCK_SIZE];
         DECLARE_ALIGNED(uint8_t ipad_hash[IMB_SHA512_DIGEST_SIZE_IN_BYTES], 16);
         DECLARE_ALIGNED(uint8_t opad_hash[IMB_SHA512_DIGEST_SIZE_IN_BYTES], 16);
-        uint32_t key_len = 0;
         size_t digest_len = 0;
-        size_t block_size = 0;
+        IMB_HASH_ALG hash_type;
 
         if (auths == NULL) {
 		fprintf(stderr, "Can't allocate buffer memory\n");
@@ -1085,20 +1012,20 @@ test_hmac_shax_burst(struct IMB_MGR *mb_mgr,
         switch (sha_type) {
         case 224:
                 digest_len = vec->hmac_sha224_len;
-                block_size = IMB_SHA_256_BLOCK_SIZE;
+                hash_type = IMB_AUTH_HMAC_SHA_224;
                 break;
         case 256:
                 digest_len = vec->hmac_sha256_len;
-                block_size = IMB_SHA_256_BLOCK_SIZE;
+                hash_type = IMB_AUTH_HMAC_SHA_256;
                 break;
         case 384:
                 digest_len = vec->hmac_sha384_len;
-                block_size = IMB_SHA_384_BLOCK_SIZE;
+                hash_type = IMB_AUTH_HMAC_SHA_384;
                 break;
         case 512:
         default:
                 digest_len = vec->hmac_sha512_len;
-                block_size = IMB_SHA_512_BLOCK_SIZE;
+                hash_type = IMB_AUTH_HMAC_SHA_512;
                 break;
         }
 
@@ -1117,74 +1044,8 @@ test_hmac_shax_burst(struct IMB_MGR *mb_mgr,
                 memset(auths[i], -1, alloc_len);
         }
 
-        /* prepare the key */
-        memset(key, 0, sizeof(key));
-        if (vec->key_len <= block_size) {
-                memcpy(key, vec->key, vec->key_len);
-                key_len = (int) vec->key_len;
-        } else {
-                switch (sha_type) {
-                case 224:
-                        IMB_SHA224(mb_mgr, vec->key, vec->key_len, key);
-                        key_len = IMB_SHA224_DIGEST_SIZE_IN_BYTES;
-                        break;
-                case 256:
-                        IMB_SHA256(mb_mgr, vec->key, vec->key_len, key);
-                        key_len = IMB_SHA256_DIGEST_SIZE_IN_BYTES;
-                        break;
-                case 384:
-                        IMB_SHA384(mb_mgr, vec->key, vec->key_len, key);
-                        key_len = IMB_SHA384_DIGEST_SIZE_IN_BYTES;
-                        break;
-                case 512:
-                default:
-                        IMB_SHA512(mb_mgr, vec->key, vec->key_len, key);
-                        key_len = IMB_SHA512_DIGEST_SIZE_IN_BYTES;
-                        break;
-                }
-        }
-
-        /* compute ipad hash */
-        memset(buf, 0x36, sizeof(buf));
-        for (i = 0; i < key_len; i++)
-                buf[i] ^= key[i];
-
-        switch (sha_type) {
-        case 224:
-                IMB_SHA224_ONE_BLOCK(mb_mgr, buf, ipad_hash);
-                break;
-        case 256:
-                IMB_SHA256_ONE_BLOCK(mb_mgr, buf, ipad_hash);
-                break;
-        case 384:
-                IMB_SHA384_ONE_BLOCK(mb_mgr, buf, ipad_hash);
-                break;
-        case 512:
-        default:
-                IMB_SHA512_ONE_BLOCK(mb_mgr, buf, ipad_hash);
-                break;
-        }
-
-        /* compute opad hash */
-        memset(buf, 0x5c, sizeof(buf));
-        for (i = 0; i < key_len; i++)
-                buf[i] ^= key[i];
-
-        switch (sha_type) {
-        case 224:
-                IMB_SHA224_ONE_BLOCK(mb_mgr, buf, opad_hash);
-                break;
-        case 256:
-                IMB_SHA256_ONE_BLOCK(mb_mgr, buf, opad_hash);
-                break;
-        case 384:
-                IMB_SHA384_ONE_BLOCK(mb_mgr, buf, opad_hash);
-                break;
-        case 512:
-        default:
-                IMB_SHA512_ONE_BLOCK(mb_mgr, buf, opad_hash);
-                break;
-        }
+        imb_hmac_ipad_opad(mb_mgr, hash_type, vec->key,
+                           vec->key_len, ipad_hash, opad_hash);
 
         while (IMB_GET_NEXT_BURST(mb_mgr, num_jobs, jobs) < num_jobs)
                 IMB_FLUSH_BURST(mb_mgr, num_jobs, jobs);
@@ -1292,13 +1153,10 @@ test_hmac_shax_hash_burst(struct IMB_MGR *mb_mgr,
         uint8_t **auths = NULL;
         uint32_t i = 0, jobs_rx = 0, completed_jobs = 0;
         int ret = -1;
-        uint8_t key[IMB_SHA_512_BLOCK_SIZE];
-        uint8_t buf[IMB_SHA_512_BLOCK_SIZE];
         DECLARE_ALIGNED(uint8_t ipad_hash[IMB_SHA512_DIGEST_SIZE_IN_BYTES], 16);
         DECLARE_ALIGNED(uint8_t opad_hash[IMB_SHA512_DIGEST_SIZE_IN_BYTES], 16);
-        uint32_t key_len = 0;
         size_t digest_len = 0;
-        size_t block_size = 0;
+        IMB_HASH_ALG hash_type;
 
         if (num_jobs == 0)
                 return 0;
@@ -1324,20 +1182,20 @@ test_hmac_shax_hash_burst(struct IMB_MGR *mb_mgr,
         switch (sha_type) {
         case 224:
                 digest_len = vec->hmac_sha224_len;
-                block_size = IMB_SHA_256_BLOCK_SIZE;
+                hash_type = IMB_AUTH_HMAC_SHA_224;
                 break;
         case 256:
                 digest_len = vec->hmac_sha256_len;
-                block_size = IMB_SHA_256_BLOCK_SIZE;
+                hash_type = IMB_AUTH_HMAC_SHA_256;
                 break;
         case 384:
                 digest_len = vec->hmac_sha384_len;
-                block_size = IMB_SHA_384_BLOCK_SIZE;
+                hash_type = IMB_AUTH_HMAC_SHA_384;
                 break;
         case 512:
         default:
                 digest_len = vec->hmac_sha512_len;
-                block_size = IMB_SHA_512_BLOCK_SIZE;
+                hash_type = IMB_AUTH_HMAC_SHA_512;
                 break;
         }
 
@@ -1356,74 +1214,8 @@ test_hmac_shax_hash_burst(struct IMB_MGR *mb_mgr,
                 memset(auths[i], -1, alloc_len);
         }
 
-        /* prepare the key */
-        memset(key, 0, sizeof(key));
-        if (vec->key_len <= block_size) {
-                memcpy(key, vec->key, vec->key_len);
-                key_len = (int) vec->key_len;
-        } else {
-                switch (sha_type) {
-                case 224:
-                        IMB_SHA224(mb_mgr, vec->key, vec->key_len, key);
-                        key_len = IMB_SHA224_DIGEST_SIZE_IN_BYTES;
-                        break;
-                case 256:
-                        IMB_SHA256(mb_mgr, vec->key, vec->key_len, key);
-                        key_len = IMB_SHA256_DIGEST_SIZE_IN_BYTES;
-                        break;
-                case 384:
-                        IMB_SHA384(mb_mgr, vec->key, vec->key_len, key);
-                        key_len = IMB_SHA384_DIGEST_SIZE_IN_BYTES;
-                        break;
-                case 512:
-                default:
-                        IMB_SHA512(mb_mgr, vec->key, vec->key_len, key);
-                        key_len = IMB_SHA512_DIGEST_SIZE_IN_BYTES;
-                        break;
-                }
-        }
-
-        /* compute ipad hash */
-        memset(buf, 0x36, sizeof(buf));
-        for (i = 0; i < key_len; i++)
-                buf[i] ^= key[i];
-
-        switch (sha_type) {
-        case 224:
-                IMB_SHA224_ONE_BLOCK(mb_mgr, buf, ipad_hash);
-                break;
-        case 256:
-                IMB_SHA256_ONE_BLOCK(mb_mgr, buf, ipad_hash);
-                break;
-        case 384:
-                IMB_SHA384_ONE_BLOCK(mb_mgr, buf, ipad_hash);
-                break;
-        case 512:
-        default:
-                IMB_SHA512_ONE_BLOCK(mb_mgr, buf, ipad_hash);
-                break;
-        }
-
-        /* compute opad hash */
-        memset(buf, 0x5c, sizeof(buf));
-        for (i = 0; i < key_len; i++)
-                buf[i] ^= key[i];
-
-        switch (sha_type) {
-        case 224:
-                IMB_SHA224_ONE_BLOCK(mb_mgr, buf, opad_hash);
-                break;
-        case 256:
-                IMB_SHA256_ONE_BLOCK(mb_mgr, buf, opad_hash);
-                break;
-        case 384:
-                IMB_SHA384_ONE_BLOCK(mb_mgr, buf, opad_hash);
-                break;
-        case 512:
-        default:
-                IMB_SHA512_ONE_BLOCK(mb_mgr, buf, opad_hash);
-                break;
-        }
+        imb_hmac_ipad_opad(mb_mgr, hash_type, vec->key,
+                           vec->key_len, ipad_hash, opad_hash);
 
         for (i = 0; i < num_jobs; i++) {
                 job = &jobs[i];

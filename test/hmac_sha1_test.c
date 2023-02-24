@@ -376,8 +376,8 @@ test_hmac_sha1(struct IMB_MGR *mb_mgr,
                 memset(auths[i], -1, alloc_len);
         }
 
-        imb_ipad_opad_sha1(mb_mgr, vec->key, vec->key_len,
-                           ipad_hash, opad_hash);
+        imb_hmac_ipad_opad(mb_mgr, IMB_AUTH_HMAC_SHA_1,
+                           vec->key, vec->key_len, ipad_hash, opad_hash);
 
         for (i = 0; i < num_jobs; i++) {
                 job = IMB_GET_NEXT_JOB(mb_mgr);
@@ -485,8 +485,8 @@ test_hmac_sha1_burst(struct IMB_MGR *mb_mgr,
                 memset(auths[i], -1, alloc_len);
         }
 
-        imb_ipad_opad_sha1(mb_mgr, vec->key, vec->key_len,
-                           ipad_hash, opad_hash);
+        imb_hmac_ipad_opad(mb_mgr, IMB_AUTH_HMAC_SHA_1,
+                           vec->key, vec->key_len, ipad_hash, opad_hash);
 
         while (IMB_GET_NEXT_BURST(mb_mgr, num_jobs, jobs) < num_jobs)
                 IMB_FLUSH_BURST(mb_mgr, num_jobs, jobs);
@@ -601,8 +601,8 @@ test_hmac_sha1_hash_burst(struct IMB_MGR *mb_mgr,
                 memset(auths[i], -1, alloc_len);
         }
 
-        imb_ipad_opad_sha1(mb_mgr, vec->key, vec->key_len,
-                           ipad_hash, opad_hash);
+        imb_hmac_ipad_opad(mb_mgr, IMB_AUTH_HMAC_SHA_1,
+                           vec->key, vec->key_len, ipad_hash, opad_hash);
 
         for (i = 0; i < num_jobs; i++) {
                 job = &jobs[i];

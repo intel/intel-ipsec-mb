@@ -67,22 +67,6 @@ static int process_job(IMB_MGR *p_mgr)
         return 1;
 }
 
-static void
-prep_iopad(const size_t scratch_size, void *scratch,
-           const size_t key_size, const void *key,
-           const int pattern)
-{
-        uint8_t *cb = (uint8_t *) scratch;
-        const uint8_t *kp = (const uint8_t *) key;
-        const size_t max_j =
-                (key_size > scratch_size) ? scratch_size : key_size;
-        size_t j;
-
-        memset(scratch, pattern, scratch_size);
-        for (j = 0; j < max_j; j++)
-                cb[j] ^= kp[j];
-}
-
 #define PUTS_ONCE(_s) { \
         static int _ran_already = 0;            \
                                                 \
@@ -431,7 +415,8 @@ static int test_hmac_sha1(IMB_MGR *p_mgr)
                 else
                         job->auth_tag_output_len_in_bytes = v->tagSize / 8;
 
-                imb_ipad_opad_sha1(p_mgr, v->key, v->keySize / 8, hmac_ipad, hmac_opad);
+                imb_hmac_ipad_opad(p_mgr, IMB_AUTH_HMAC_SHA_1,
+                                   v->key, v->keySize / 8, hmac_ipad, hmac_opad);
 
                 job->u.HMAC._hashed_auth_key_xor_ipad = hmac_ipad;
                 job->u.HMAC._hashed_auth_key_xor_opad = hmac_opad;
@@ -453,17 +438,12 @@ static int test_hmac_sha224(IMB_MGR *p_mgr)
         const struct mac_test *v = hmac_sha224_test_json;
         DECLARE_ALIGNED(uint8_t hmac_ipad[IMB_SHA256_DIGEST_SIZE_IN_BYTES], 16);
         DECLARE_ALIGNED(uint8_t hmac_opad[IMB_SHA256_DIGEST_SIZE_IN_BYTES], 16);
-        uint8_t scratch[IMB_SHA_256_BLOCK_SIZE];
-        uint8_t key[IMB_SHA256_DIGEST_SIZE_IN_BYTES];
         uint8_t tag[IMB_SHA256_DIGEST_SIZE_IN_BYTES];
 
         while (IMB_FLUSH_JOB(p_mgr) != NULL)
                 ;
 
         for ( ; v->msg != NULL; v++, run_vectors++) {
-                const void *key_ptr = NULL;
-                size_t key_size = 0;
-
                 IMB_ASSERT((v->tagSize / 8) <= sizeof(tag));
 
                 /* tag too long */
@@ -493,21 +473,8 @@ static int test_hmac_sha224(IMB_MGR *p_mgr)
                 job->auth_tag_output = tag;
                 job->auth_tag_output_len_in_bytes = v->tagSize / 8;
 
-                /* prepare key */
-                if ((v->keySize / 8) <= IMB_SHA_256_BLOCK_SIZE) {
-                        key_ptr = v->key;
-                        key_size = v->keySize / 8;
-                } else {
-                        IMB_SHA224(p_mgr, v->key, v->keySize / 8, key);
-                        key_ptr = key;
-                        key_size = IMB_SHA224_DIGEST_SIZE_IN_BYTES;
-                }
-                /* compute IPAD and OPAD */
-                prep_iopad(sizeof(scratch), scratch, key_size, key_ptr, 0x36);
-                IMB_SHA224_ONE_BLOCK(p_mgr, scratch, hmac_ipad);
-
-                prep_iopad(sizeof(scratch), scratch, key_size, key_ptr, 0x5c);
-                IMB_SHA224_ONE_BLOCK(p_mgr, scratch, hmac_opad);
+                imb_hmac_ipad_opad(p_mgr, IMB_AUTH_HMAC_SHA_224,
+                                   v->key, v->keySize / 8, hmac_ipad, hmac_opad);
 
                 job->u.HMAC._hashed_auth_key_xor_ipad = hmac_ipad;
                 job->u.HMAC._hashed_auth_key_xor_opad = hmac_opad;
@@ -529,17 +496,12 @@ static int test_hmac_sha256(IMB_MGR *p_mgr)
         const struct mac_test *v = hmac_sha256_test_json;
         DECLARE_ALIGNED(uint8_t hmac_ipad[IMB_SHA256_DIGEST_SIZE_IN_BYTES], 16);
         DECLARE_ALIGNED(uint8_t hmac_opad[IMB_SHA256_DIGEST_SIZE_IN_BYTES], 16);
-        uint8_t scratch[IMB_SHA_256_BLOCK_SIZE];
-        uint8_t key[IMB_SHA256_DIGEST_SIZE_IN_BYTES];
         uint8_t tag[IMB_SHA256_DIGEST_SIZE_IN_BYTES];
 
         while (IMB_FLUSH_JOB(p_mgr) != NULL)
                 ;
 
         for ( ; v->msg != NULL; v++, run_vectors++) {
-                const void *key_ptr = NULL;
-                size_t key_size = 0;
-
                 IMB_ASSERT((v->tagSize / 8) <= sizeof(tag));
 
                 /* tag too long */
@@ -569,22 +531,8 @@ static int test_hmac_sha256(IMB_MGR *p_mgr)
                 job->auth_tag_output = tag;
                 job->auth_tag_output_len_in_bytes = v->tagSize / 8;
 
-                /* prepare key */
-                if ((v->keySize / 8) <= IMB_SHA_256_BLOCK_SIZE) {
-                        key_ptr = v->key;
-                        key_size = v->keySize / 8;
-                } else {
-                        IMB_SHA256(p_mgr, v->key, v->keySize / 8, key);
-                        key_ptr = key;
-                        key_size = IMB_SHA256_DIGEST_SIZE_IN_BYTES;
-                }
-
-                /* compute IPAD and OPAD */
-                prep_iopad(sizeof(scratch), scratch, key_size, key_ptr, 0x36);
-                IMB_SHA256_ONE_BLOCK(p_mgr, scratch, hmac_ipad);
-
-                prep_iopad(sizeof(scratch), scratch, key_size, key_ptr, 0x5c);
-                IMB_SHA256_ONE_BLOCK(p_mgr, scratch, hmac_opad);
+                imb_hmac_ipad_opad(p_mgr, IMB_AUTH_HMAC_SHA_256,
+                                   v->key, v->keySize / 8, hmac_ipad, hmac_opad);
 
                 job->u.HMAC._hashed_auth_key_xor_ipad = hmac_ipad;
                 job->u.HMAC._hashed_auth_key_xor_opad = hmac_opad;
@@ -606,7 +554,7 @@ static int test_hmac_sha384(IMB_MGR *p_mgr)
         const struct mac_test *v = hmac_sha384_test_json;
         DECLARE_ALIGNED(uint8_t hmac_ipad[IMB_SHA512_DIGEST_SIZE_IN_BYTES], 16);
         DECLARE_ALIGNED(uint8_t hmac_opad[IMB_SHA512_DIGEST_SIZE_IN_BYTES], 16);
-        uint8_t scratch[IMB_SHA_512_BLOCK_SIZE];
+        uint8_t scratch[IMB_SHA_384_BLOCK_SIZE];
 
         while (IMB_FLUSH_JOB(p_mgr) != NULL)
                 ;
@@ -641,14 +589,8 @@ static int test_hmac_sha384(IMB_MGR *p_mgr)
                 job->auth_tag_output = scratch;
                 job->auth_tag_output_len_in_bytes = v->tagSize / 8;
 
-                /* compute IPAD and OPAD */
-                prep_iopad(sizeof(scratch), scratch,
-                           v->keySize / 8, v->key, 0x36);
-                IMB_SHA384_ONE_BLOCK(p_mgr, scratch, hmac_ipad);
-
-                prep_iopad(sizeof(scratch), scratch,
-                           v->keySize / 8, v->key, 0x5c);
-                IMB_SHA384_ONE_BLOCK(p_mgr, scratch, hmac_opad);
+                imb_hmac_ipad_opad(p_mgr, IMB_AUTH_HMAC_SHA_384,
+                                   v->key, v->keySize / 8, hmac_ipad, hmac_opad);
 
                 job->u.HMAC._hashed_auth_key_xor_ipad = hmac_ipad;
                 job->u.HMAC._hashed_auth_key_xor_opad = hmac_opad;
@@ -705,14 +647,8 @@ static int test_hmac_sha512(IMB_MGR *p_mgr)
                 job->auth_tag_output = scratch;
                 job->auth_tag_output_len_in_bytes = v->tagSize / 8;
 
-                /* compute IPAD and OPAD */
-                prep_iopad(sizeof(scratch), scratch,
-                           v->keySize / 8, v->key, 0x36);
-                IMB_SHA512_ONE_BLOCK(p_mgr, scratch, hmac_ipad);
-
-                prep_iopad(sizeof(scratch), scratch,
-                           v->keySize / 8, v->key, 0x5c);
-                IMB_SHA512_ONE_BLOCK(p_mgr, scratch, hmac_opad);
+                imb_hmac_ipad_opad(p_mgr, IMB_AUTH_HMAC_SHA_512,
+                                   v->key, v->keySize / 8, hmac_ipad, hmac_opad);
 
                 job->u.HMAC._hashed_auth_key_xor_ipad = hmac_ipad;
                 job->u.HMAC._hashed_auth_key_xor_opad = hmac_opad;

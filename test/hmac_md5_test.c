@@ -36,8 +36,6 @@
 
 int hmac_md5_test(struct IMB_MGR *mb_mgr);
 
-#define block_size    64
-#define digest_size   16
 #define digest96_size 12
 
 /*
@@ -64,7 +62,7 @@ int hmac_md5_test(struct IMB_MGR *mb_mgr);
 #define key_len1        16
 #define data_len1       8
 #define digest_len1     digest96_size
-#define digest_len_l1   digest_size
+#define digest_len_l1   IMB_MD5_DIGEST_SIZE_IN_BYTES
 static const uint8_t key1[key_len1] = {
         0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b,
         0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b
@@ -95,7 +93,7 @@ static const uint8_t digest1[digest_len_l1] = {
 #define key_len2      4
 #define data_len2     28
 #define digest_len2   digest96_size
-#define digest_len_l2 digest_size
+#define digest_len_l2 IMB_MD5_DIGEST_SIZE_IN_BYTES
 static const char key2[] = "Jefe";
 static const char data2[] = "what do ya want for nothing?";
 static const uint8_t digest2[digest_len_l2] = {
@@ -123,7 +121,7 @@ static const uint8_t digest2[digest_len_l2] = {
 #define key_len3      16
 #define data_len3     50
 #define digest_len3   digest96_size
-#define digest_len_l3 digest_size
+#define digest_len_l3 IMB_MD5_DIGEST_SIZE_IN_BYTES
 static const uint8_t key3[key_len3] = {
         0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa,
         0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa
@@ -162,7 +160,7 @@ static const uint8_t digest3[digest_len_l3] = {
 #define key_len4      25
 #define data_len4     50
 #define digest_len4   digest96_size
-#define digest_len_l4 digest_size
+#define digest_len_l4 IMB_MD5_DIGEST_SIZE_IN_BYTES
 static const uint8_t key4[key_len4] = {
         0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
         0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10,
@@ -203,7 +201,7 @@ static const uint8_t digest4[digest_len_l4] = {
 #define key_len5      16
 #define data_len5     20
 #define digest_len5   digest96_size
-#define digest_len_l5 digest_size
+#define digest_len_l5 IMB_MD5_DIGEST_SIZE_IN_BYTES
 static const uint8_t key5[key_len5] = {
         0x0c, 0x0c, 0x0c, 0x0c, 0x0c, 0x0c, 0x0c, 0x0c,
         0x0c, 0x0c, 0x0c, 0x0c, 0x0c, 0x0c, 0x0c, 0x0c
@@ -373,11 +371,8 @@ test_hmac_md5(struct IMB_MGR *mb_mgr,
         uint8_t padding[16];
         uint8_t **auths = malloc(num_jobs * sizeof(void *));
         int i = 0, jobs_rx = 0, ret = -1;
-        uint8_t key[block_size];
-        uint8_t buf[block_size];
-        DECLARE_ALIGNED(uint8_t ipad_hash[digest_size], 16);
-        DECLARE_ALIGNED(uint8_t opad_hash[digest_size], 16);
-        int key_len = 0;
+        DECLARE_ALIGNED(uint8_t ipad_hash[IMB_MD5_DIGEST_SIZE_IN_BYTES], 16);
+        DECLARE_ALIGNED(uint8_t opad_hash[IMB_MD5_DIGEST_SIZE_IN_BYTES], 16);
 
         if (auths == NULL) {
 		fprintf(stderr, "Can't allocate buffer memory\n");
@@ -399,29 +394,8 @@ test_hmac_md5(struct IMB_MGR *mb_mgr,
                 memset(auths[i], -1, alloc_len);
         }
 
-        /* prepare the key */
-        memset(key, 0, sizeof(key));
-        if (vec->key_len <= block_size) {
-                memcpy(key, vec->key, vec->key_len);
-                key_len = (int) vec->key_len;
-        } else {
-                printf("Key length longer than block size is not supported "
-                       "by MD5\n");
-                ret = 0;
-                goto end;
-        }
-
-        /* compute ipad hash */
-        memset(buf, 0x36, sizeof(buf));
-        for (i = 0; i < key_len; i++)
-                buf[i] ^= key[i];
-        IMB_MD5_ONE_BLOCK(mb_mgr, buf, ipad_hash);
-
-        /* compute opad hash */
-        memset(buf, 0x5c, sizeof(buf));
-        for (i = 0; i < key_len; i++)
-                buf[i] ^= key[i];
-        IMB_MD5_ONE_BLOCK(mb_mgr, buf, opad_hash);
+        imb_hmac_ipad_opad(mb_mgr, IMB_AUTH_MD5, vec->key, vec->key_len,
+                           ipad_hash, opad_hash);
 
         /* empty the manager */
         while (IMB_FLUSH_JOB(mb_mgr) != NULL)
