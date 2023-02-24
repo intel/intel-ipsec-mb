@@ -38,6 +38,11 @@
 #include <sys/time.h>
 #endif
 
+#ifdef _MSC_VER
+/* disable C5105 warning produced by standard headers C11 C standard */
+#pragma warning(disable : 5105)
+#endif
+
 #ifdef _WIN32
 #include <malloc.h> /* memalign() or _aligned_malloc()/aligned_free() */
 #include <windows.h>

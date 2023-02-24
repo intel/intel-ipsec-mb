@@ -46,7 +46,7 @@ set_source_files_properties(${SRC_FILES_ASM} PROPERTIES
   COMPILE_FLAGS "$<$<CONFIG:DEBUG>:-gcv8>")
 
 # set C compiler flags
-set(CMAKE_C_FLAGS "/nologo /Y- /W3 /WX- /Gm- /fp:precise /EHsc")
+set(CMAKE_C_FLAGS "/nologo /Y- /W3 /WX- /Gm- /fp:precise /EHsc /std:c11")
 set(CMAKE_C_FLAGS_DEBUG "/Od /DDEBUG /Z7")
 set(CMAKE_C_FLAGS_RELEASE "/O2 /Oi")
 set(CMAKE_SHARED_LINKER_FLAGS "/nologo")

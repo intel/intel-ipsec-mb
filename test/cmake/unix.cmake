@@ -42,7 +42,7 @@ set(CMAKE_C_FLAGS
 -Wpointer-arith -Wcast-qual -Wundef -Wwrite-strings -Wformat \
 -Wformat-security -Wunreachable-code -Wmissing-noreturn -Wsign-compare \
 -Wno-endif-labels -Wstrict-prototypes -Wmissing-prototypes \
--Wold-style-definition -fno-delete-null-pointer-checks -fwrapv")
+-Wold-style-definition -fno-delete-null-pointer-checks -fwrapv -std=c99")
 if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
     string(APPEND CMAKE_C_FLAGS " -MMD")
 endif()

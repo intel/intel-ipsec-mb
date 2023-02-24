@@ -35,6 +35,11 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef _MSC_VER
+/* disable C5105 warning produced by standard headers C11 C standard */
+#pragma warning(disable : 5105)
+#endif
+
 #ifndef _WIN32
 #include <unistd.h>
 #include <sys/types.h>

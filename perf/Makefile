@@ -36,7 +36,7 @@ CFLAGS = -D_GNU_SOURCE -DNO_COMPAT_IMB_API_053 $(INCLUDES) \
 	-Wformat -Wformat-security \
 	-Wunreachable-code -Wmissing-noreturn -Wsign-compare -Wno-endif-labels \
 	-Wstrict-prototypes -Wmissing-prototypes -Wold-style-definition \
-	-pthread -fno-delete-null-pointer-checks -fwrapv
+	-pthread -fno-delete-null-pointer-checks -fwrapv -std=c99
 
 # -fno-strict-overflow is not supported by clang
 ifneq ($(CC),clang)

@@ -113,7 +113,7 @@ CFLAGS := -fPIC -DNO_COMPAT_IMB_API_053 $(EXTRA_CFLAGS) $(INCLUDES) \
 	-Wformat -Wformat-security \
 	-Wunreachable-code -Wmissing-noreturn -Wsign-compare -Wno-endif-labels \
 	-Wstrict-prototypes -Wmissing-prototypes -Wold-style-definition \
-	-fno-delete-null-pointer-checks -fwrapv
+	-fno-delete-null-pointer-checks -fwrapv -std=c99
 
 # -fno-strict-overflow is not supported by clang
 ifneq ($(CC),clang)
