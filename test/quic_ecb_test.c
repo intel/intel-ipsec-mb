@@ -233,13 +233,15 @@ test_quic_ecb_vectors(struct IMB_MGR *mb_mgr, const int vec_cnt,
 	for (vect = 0; vect < vec_cnt; vect++) {
                 struct test_suite_context *ctx = NULL;
 
+                if (!quiet_mode) {
 #ifdef DEBUG
-		printf("[%d/%d] Standard vector key_len:%d\n",
-                       vect + 1, vec_cnt,
-                       (int) vec_tab[vect].Klen);
+                        printf("[%d/%d] Standard vector key_len:%d\n",
+                               vect + 1, vec_cnt,
+                               (int) vec_tab[vect].Klen);
 #else
-		printf(".");
+                        printf(".");
 #endif
+                }
 
                 switch (vec_tab[vect].Klen) {
                 case 16:
@@ -278,7 +280,9 @@ test_quic_ecb_vectors(struct IMB_MGR *mb_mgr, const int vec_cnt,
                         test_suite_update(ctx, 1, 0);
                 }
 	}
-	printf("\n");
+
+        if (!quiet_mode)
+                printf("\n");
 }
 
 int
