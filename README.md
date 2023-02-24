@@ -349,11 +349,11 @@ Windows MSVS (x64 only)
 ------------------
 
 Required tools:  
-- Microsoft (R) Visual Studio 2015:  
-  - NMAKE: Microsoft (R) Program Maintenance Utility Version 14.00.24210.0  
-  - CL: Microsoft (R) C/C++ Optimizing Compiler Version 19.00.24215.1 for x64  
-  - LIB: Microsoft (R) Library Manager Version 14.00.24215.1  
-  - LINK: Microsoft (R) Incremental Linker Version 14.00.24215.1  
+- Microsoft (R) Visual Studio 2019:  
+  - NMAKE: Microsoft (R) Program Maintenance Utility Version 14.29.30148.0  
+  - CL: Microsoft (R) C/C++ Optimizing Compiler Version 19.29.30148 for x64  
+  - LIB: Microsoft (R) Library Manager Version 14.29.30148.0  
+  - LINK: Microsoft (R) Incremental Linker Version 14.29.30148.0  
   - Note: Building on later versions should work but is not verified  
 - NASM version 2.14 (or newer)  
 
