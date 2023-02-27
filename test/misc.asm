@@ -36,10 +36,15 @@
 %define MKGLOBAL(name,type,scope) global name %+ : %+ type scope
 
 ;;; ABI function arguments
-%define arg1 rdi
-%define arg2 rsi
-%define arg3 rdx
-%define arg4 rcx
+%define arg1    rdi
+%define arg2    rsi
+%define arg3    rdx
+%define arg4    rcx
+
+%define arg1d   edi
+%define arg2d   esi
+%define arg3d   edx
+%define arg4d   ecx
 %endif
 
 %ifdef WIN_ABI
@@ -50,10 +55,15 @@
 %define MKGLOBAL(name,type,scope) global name
 
 ;;; ABI function arguments
-%define arg1 rcx
-%define arg2 rdx
-%define arg3 r8
-%define arg4 r9
+%define arg1    rcx
+%define arg2    rdx
+%define arg3    r8
+%define arg4    r9
+
+%define arg1d   ecx
+%define arg2d   edx
+%define arg3d   r8d
+%define arg4d   r9d
 %endif
 
 section .bss
@@ -340,6 +350,34 @@ clr_scratch_zmms:
 %endrep
 %endif ; LINUX
 
+        ret
+
+;;
+;; Wrapper for CPUID opcode
+;;
+;; Parameters:
+;;    [in] leaf    - CPUID leaf number (EAX)
+;;    [in] subleaf - CPUID sub-leaf number (ECX)
+;;    [out] out    - registers structure to store results of CPUID into
+;;
+;; void misc_cpuid(const unsigned leaf, const unsigned subleaf, struct cpuid_regs *out)
+
+MKGLOBAL(misc_cpuid,function,internal)
+misc_cpuid:
+        push    rbx
+
+        mov     r11, arg3       ;; arg3 will get overwritten by cpuid on sysv
+        mov     eax, arg1d
+        mov     ecx, arg2d
+
+        cpuid
+
+        mov     [r11 + 0*4], eax
+        mov     [r11 + 1*4], ebx
+        mov     [r11 + 2*4], ecx
+        mov     [r11 + 3*4], edx
+
+        pop     rbx
         ret
 
 %ifdef LINUX

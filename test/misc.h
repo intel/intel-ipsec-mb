@@ -25,10 +25,6 @@
  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 *****************************************************************************/
 
-#ifdef __WIN32
-#include <intrin.h>
-#endif
-
 #include <intel-ipsec-mb.h>
 
 #ifndef XVALIDAPP_MISC_H
@@ -94,34 +90,8 @@ struct misc_cpuid_regs {
  * @param subleaf[in] CPUID sub-leaf number (ECX)
  * @param out[out]    registers structure to store results of CPUID into
  */
-static void
-misc_cpuid(const unsigned leaf, const unsigned subleaf,
-           struct misc_cpuid_regs *out)
-{
-#ifdef _WIN32
-        /* Windows */
-        int regs[4];
-
-        __cpuidex(regs, leaf, subleaf);
-        out->eax = regs[0];
-        out->ebx = regs[1];
-        out->ecx = regs[2];
-        out->edx = regs[3];
-#else
-        /* Linux */
-        asm volatile("mov %4, %%eax\n\t"
-                     "mov %5, %%ecx\n\t"
-                     "cpuid\n\t"
-                     "mov %%eax, %0\n\t"
-                     "mov %%ebx, %1\n\t"
-                     "mov %%ecx, %2\n\t"
-                     "mov %%edx, %3\n\t"
-                     : "=g" (out->eax), "=g" (out->ebx), "=g" (out->ecx),
-                       "=g" (out->edx)
-                     : "g" (leaf), "g" (subleaf)
-                     : "%eax", "%ebx", "%ecx", "%edx");
-#endif /* Linux */
-}
+void misc_cpuid(const unsigned leaf, const unsigned subleaf,
+                struct misc_cpuid_regs *out);
 
 /**
  * @brief Detects if XGETBV instruction is available to use.
