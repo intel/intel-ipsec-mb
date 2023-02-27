@@ -699,6 +699,107 @@ static void test_chacha_poly_dec(IMB_MGR *p_mgr, uint8_t *buff, size_t dataSize)
         IMB_CHACHA20_POLY1305_DEC_FINALIZE(p_mgr, ctx, auth_tag, tag_len);
 }
 
+static void test_crc32_ethernet_fcs(IMB_MGR *p_mgr, uint8_t *buff,
+                                    size_t dataSize)
+{
+        const void *in = buff;
+        const uint64_t len = dataSize;
+
+        IMB_CRC32_ETHERNET_FCS(p_mgr, in, len);
+}
+
+static void test_crc16_x25(IMB_MGR *p_mgr, uint8_t *buff, size_t dataSize)
+{
+        const void *in = buff;
+        const uint64_t len = dataSize;
+
+        IMB_CRC16_X25(p_mgr, in, len);
+}
+
+static void test_crc32_sctp(IMB_MGR *p_mgr, uint8_t *buff, size_t dataSize)
+{
+        const void *in = buff;
+        const uint64_t len = dataSize;
+
+        IMB_CRC32_SCTP(p_mgr, in, len);
+}
+
+static void test_crc24_lte_a(IMB_MGR *p_mgr, uint8_t *buff, size_t dataSize)
+{
+        const void *in = buff;
+        const uint64_t len = dataSize;
+
+        IMB_CRC24_LTE_A(p_mgr, in, len);
+}
+
+static void test_crc24_lte_b(IMB_MGR *p_mgr, uint8_t *buff, size_t dataSize)
+{
+        const void *in = buff;
+        const uint64_t len = dataSize;
+
+        IMB_CRC24_LTE_B(p_mgr, in, len);
+}
+
+static void test_crc16_fp_data(IMB_MGR *p_mgr, uint8_t *buff, size_t dataSize)
+{
+        const void *in = buff;
+        const uint64_t len = dataSize;
+
+        IMB_CRC16_FP_DATA(p_mgr, in, len);
+}
+
+static void test_crc11_fp_header(IMB_MGR *p_mgr, uint8_t *buff,
+                                 size_t dataSize)
+{
+        const void *in = buff;
+        const uint64_t len = dataSize;
+
+        IMB_CRC11_FP_HEADER(p_mgr, in, len);
+}
+
+static void test_crc7_fp_header(IMB_MGR *p_mgr, uint8_t *buff, size_t dataSize)
+{
+        const void *in = buff;
+        const uint64_t len = dataSize;
+
+        IMB_CRC7_FP_HEADER(p_mgr, in, len);
+}
+
+static void test_crc10_iuup_data(IMB_MGR *p_mgr, uint8_t *buff,
+                                 size_t dataSize)
+{
+        const void *in = buff;
+        const uint64_t len = dataSize;
+
+        IMB_CRC10_IUUP_DATA(p_mgr, in, len);
+}
+
+static void test_crc6_iuup_header(IMB_MGR *p_mgr, uint8_t *buff,
+                                  size_t dataSize)
+{
+        const void *in = buff;
+        const uint64_t len = dataSize;
+
+        IMB_CRC6_IUUP_HEADER(p_mgr, in, len);
+}
+
+static void test_crc32_wimax_ofdma_data(IMB_MGR *p_mgr, uint8_t *buff,
+                                        size_t dataSize)
+{
+        const void *in = buff;
+        const uint64_t len = dataSize;
+
+        IMB_CRC32_WIMAX_OFDMA_DATA(p_mgr, in, len);
+}
+
+static void test_crc8_wimax_ofdma_hcs(IMB_MGR *p_mgr, uint8_t *buff,
+                                      size_t dataSize)
+{
+        const void *in = buff;
+        const uint64_t len = dataSize;
+
+        IMB_CRC8_WIMAX_OFDMA_HCS(p_mgr, in, len);
+}
 
 struct {
         void (*func)(IMB_MGR *mb_mgr, uint8_t *buff, size_t dataSize);
@@ -733,6 +834,18 @@ struct {
         {test_zuc_eia3_n_buff, "test_zuc_eia3_n_buff"},
         {test_chacha_poly_enc, "test_chacha_poly_enc"},
         {test_chacha_poly_dec, "test_chacha_poly_dec"},
+        {test_crc32_ethernet_fcs, "test_crc32_ethernet_fcs"},
+        {test_crc16_x25, "test_crc16_x25"},
+        {test_crc32_sctp, "test_crc32_sctp"},
+        {test_crc16_fp_data, "test_crc16_fp_data"},
+        {test_crc11_fp_header, "test_crc11_fp_header"},
+        {test_crc24_lte_a, "test_crc24_lte_a"},
+        {test_crc24_lte_b, "test_crc24_lte_b"},
+        {test_crc7_fp_header, "test_crc7_fp_header"},
+        {test_crc10_iuup_data, "test_crc10_iuup_data"},
+        {test_crc6_iuup_header, "test_crc6_iuup_header"},
+        {test_crc32_wimax_ofdma_data, "test_crc32_wimax_ofdma_data"},
+        {test_crc8_wimax_ofdma_hcs, "test_crc8_wimax_ofdma_hcs"},
 };
 
 int LLVMFuzzerTestOneInput(const uint8_t *data, size_t dataSize)
