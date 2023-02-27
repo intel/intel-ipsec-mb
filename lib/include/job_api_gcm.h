@@ -32,9 +32,9 @@
 
 __forceinline
 IMB_JOB *
-submit_gcm_sgl_enc(IMB_MGR *state, IMB_JOB *job)
+submit_gcm_sgl_enc(IMB_MGR *state, IMB_JOB *job, const uint64_t key_sz)
 {
-        switch (job->key_len_in_bytes) {
+        switch (key_sz) {
         case IMB_KEY_128_BYTES:
                 if (job->sgl_state == IMB_SGL_INIT)
                         IMB_AES128_GCM_INIT_VAR_IV(state, job->enc_keys,
@@ -162,9 +162,9 @@ submit_gcm_sgl_enc(IMB_MGR *state, IMB_JOB *job)
 
 __forceinline
 IMB_JOB *
-submit_gcm_sgl_dec(IMB_MGR *state, IMB_JOB *job)
+submit_gcm_sgl_dec(IMB_MGR *state, IMB_JOB *job, const uint64_t key_sz)
 {
-        switch (job->key_len_in_bytes) {
+        switch (key_sz) {
         case IMB_KEY_128_BYTES:
                 if (job->sgl_state == IMB_SGL_INIT)
                         IMB_AES128_GCM_INIT_VAR_IV(state, job->enc_keys,

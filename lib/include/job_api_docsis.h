@@ -33,9 +33,9 @@
 
 __forceinline
 IMB_JOB *
-submit_docsis_enc_job(IMB_MGR *state, IMB_JOB *job)
+submit_docsis_enc_job(IMB_MGR *state, IMB_JOB *job, const uint64_t key_sz)
 {
-        if (16 == job->key_len_in_bytes) {
+        if (16 == key_sz) {
                 if (job->hash_alg == IMB_AUTH_DOCSIS_CRC32) {
                         MB_MGR_DOCSIS_AES_OOO *p_ooo =
                                 state->docsis128_crc32_sec_ooo;
@@ -64,9 +64,9 @@ submit_docsis_enc_job(IMB_MGR *state, IMB_JOB *job)
 
 __forceinline
 IMB_JOB *
-flush_docsis_enc_job(IMB_MGR *state, IMB_JOB *job)
+flush_docsis_enc_job(IMB_MGR *state, IMB_JOB *job, const uint64_t key_sz)
 {
-        if (16 == job->key_len_in_bytes) {
+        if (16 == key_sz) {
                 if (job->hash_alg == IMB_AUTH_DOCSIS_CRC32) {
                         MB_MGR_DOCSIS_AES_OOO *p_ooo =
                                 state->docsis128_crc32_sec_ooo;
@@ -95,9 +95,9 @@ flush_docsis_enc_job(IMB_MGR *state, IMB_JOB *job)
 
 __forceinline
 IMB_JOB *
-submit_docsis_dec_job(IMB_MGR *state, IMB_JOB *job)
+submit_docsis_dec_job(IMB_MGR *state, IMB_JOB *job, const uint64_t key_sz)
 {
-        if (16 == job->key_len_in_bytes) {
+        if (16 == key_sz) {
                 if (job->hash_alg == IMB_AUTH_DOCSIS_CRC32) {
                         MB_MGR_DOCSIS_AES_OOO *p_ooo =
                                 state->docsis128_crc32_sec_ooo;
