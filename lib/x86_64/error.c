@@ -95,13 +95,12 @@ IMB_DLL_LOCAL const int imb_errno_types[] = {
         IMB_ERR_SELFTEST
 };
 
-#ifdef DEBUG
-static_assert((IMB_DIM(imb_errno_types) + 1) == (IMB_ERR_MAX - IMB_ERR_MIN),
-              "imb_errno_types[] mismatch vs enum IMB_ERR");
-#endif
-
 int imb_get_errno(IMB_MGR *mb_mgr)
 {
+        /* check for imb_errno_types[] mismatch vs enum IMB_ERR */
+        IMB_ASSERT((IMB_DIM(imb_errno_types) + 1) ==
+                   (IMB_ERR_MAX - IMB_ERR_MIN));
+
         /* try get IMB_MGR error status first */
         if (mb_mgr != NULL && mb_mgr->imb_errno)
                 return mb_mgr->imb_errno;
