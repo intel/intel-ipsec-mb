@@ -26,9 +26,6 @@
 *******************************************************************************/
 
 #include <stdint.h>
-#ifdef __WIN32
-#include <intrin.h>
-#endif
 
 #include "cpu_feature.h"
 
@@ -51,33 +48,7 @@ static struct cpuid_regs cpuid_7_1;
  *    [in] subleaf - CPUID sub-leaf number (ECX)
  *    [out] out    - registers structure to store results of CPUID into
  */
-static void
-__mbcpuid(const unsigned leaf, const unsigned subleaf, struct cpuid_regs *out)
-{
-#ifdef _WIN32
-        /* Windows */
-        int regs[4];
-
-        __cpuidex(regs, leaf, subleaf);
-        out->eax = regs[0];
-        out->ebx = regs[1];
-        out->ecx = regs[2];
-        out->edx = regs[3];
-#else
-        /* Linux */
-        asm volatile("mov %4, %%eax\n\t"
-                     "mov %5, %%ecx\n\t"
-                     "cpuid\n\t"
-                     "mov %%eax, %0\n\t"
-                     "mov %%ebx, %1\n\t"
-                     "mov %%ecx, %2\n\t"
-                     "mov %%edx, %3\n\t"
-                     : "=g" (out->eax), "=g" (out->ebx), "=g" (out->ecx),
-                       "=g" (out->edx)
-                     : "g" (leaf), "g" (subleaf)
-                     : "%eax", "%ebx", "%ecx", "%edx");
-#endif /* Linux */
-}
+void mbcpuid(const unsigned leaf, const unsigned subleaf, struct cpuid_regs *out);
 
 static uint32_t detect_shani(void)
 {
@@ -223,18 +194,18 @@ uint64_t cpu_feature_detect(void)
         unsigned i;
 
         /* Get highest supported CPUID leaf number */
-        __mbcpuid(0x0, 0x0, &r);
+        mbcpuid(0x0, 0x0, &r);
         hi_leaf_number = r.eax;
 
         /* Get the most common CPUID leafs to speed up the detection */
         if (hi_leaf_number >= 1)
-                __mbcpuid(0x1, 0x0, &cpuid_1_0);
+                mbcpuid(0x1, 0x0, &cpuid_1_0);
 
         if (hi_leaf_number >= 7)
-                __mbcpuid(0x7, 0x0, &cpuid_7_0);
+                mbcpuid(0x7, 0x0, &cpuid_7_0);
 
         if (hi_leaf_number >= 7)
-                __mbcpuid(0x7, 0x1, &cpuid_7_1);
+                mbcpuid(0x7, 0x1, &cpuid_7_1);
 
         for (i = 0; i < IMB_DIM(feat_tab); i++) {
                 if (hi_leaf_number < feat_tab[i].req_leaf_number)
