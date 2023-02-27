@@ -27,7 +27,8 @@
 
 #include <stdint.h>
 #ifdef LINUX
-#include <stdlib.h> /* posix_memalign() and free() */
+#include <stdlib.h> /* free() */
+#include <malloc.h> /* memalign() */
 #else
 #include <malloc.h> /* _aligned_malloc() and aligned_free() */
 #endif
@@ -247,13 +248,10 @@ alloc_aligned_mem(const size_t size)
         void *ptr;
 
 #ifdef LINUX
-        if (posix_memalign((void **)&ptr, ALIGNMENT, size))
-                return NULL;
+        ptr = memalign(ALIGNMENT, size);
 #else
         ptr = _aligned_malloc(size, ALIGNMENT);
 #endif
-
-        IMB_ASSERT(ptr != NULL);
 
         return ptr;
 }
