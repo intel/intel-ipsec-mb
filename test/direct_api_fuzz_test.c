@@ -801,6 +801,143 @@ static void test_crc8_wimax_ofdma_hcs(IMB_MGR *p_mgr, uint8_t *buff,
         IMB_CRC8_WIMAX_OFDMA_HCS(p_mgr, in, len);
 }
 
+static void test_kasumi_f8_init_key_sched(IMB_MGR *p_mgr, uint8_t *buff,
+                                          size_t dataSize)
+{
+        const void *key = buff;
+        kasumi_key_sched_t exp_key_s;
+        kasumi_key_sched_t *exp_key = &exp_key_s;
+
+        if (dataSize < IMB_KASUMI_KEY_SIZE)
+                return;
+
+        IMB_KASUMI_INIT_F8_KEY_SCHED(p_mgr, key, exp_key);
+}
+
+static void test_kasumi_f8_1_buff_bit(IMB_MGR *p_mgr, uint8_t *buff, size_t dataSize)
+{
+        const kasumi_key_sched_t exp_key_s;
+        const kasumi_key_sched_t *exp_key = &exp_key_s;
+        const uint32_t offset = (uint32_t) *buff * 8;
+
+        if (offset >= (dataSize * 8))
+                return;
+
+        uint8_t *out = buff;
+        const uint8_t *in = buff;
+	uint64_t len = (dataSize * 8) - offset;
+        const uint64_t iv = *((uint64_t *) buff);
+
+        IMB_KASUMI_F8_1_BUFFER_BIT(p_mgr, exp_key, iv, in, out, len, offset);
+}
+
+static void test_kasumi_f8_1_buff(IMB_MGR *p_mgr, uint8_t *buff, size_t dataSize)
+{
+        const kasumi_key_sched_t exp_key_s;
+        const kasumi_key_sched_t *exp_key = &exp_key_s;
+        uint8_t *out = buff;
+        const uint8_t *in = buff;
+	uint64_t len = dataSize;
+        const uint64_t iv = *((uint64_t *) buff);
+
+        IMB_KASUMI_F8_1_BUFFER(p_mgr, exp_key, iv, in, out, len);
+}
+
+static void test_kasumi_f8_2_buff(IMB_MGR *p_mgr, uint8_t *buff, size_t dataSize)
+{
+        const kasumi_key_sched_t exp_key_s;
+        const kasumi_key_sched_t *exp_key = &exp_key_s;
+        uint8_t *out = buff;
+        const uint8_t *in = buff;
+	uint64_t len = dataSize;
+        const uint64_t iv = *((uint64_t *) buff);
+
+        IMB_KASUMI_F8_2_BUFFER(p_mgr, exp_key, iv, iv, in,
+                               out, len, in, out, len);
+}
+
+static void test_kasumi_f8_3_buff(IMB_MGR *p_mgr, uint8_t *buff,  size_t dataSize)
+{
+        const kasumi_key_sched_t exp_key_s;
+        const kasumi_key_sched_t *exp_key = &exp_key_s;
+        uint8_t *out = buff;
+        const uint8_t *in = buff;
+	uint64_t len = dataSize;
+        const uint64_t iv = *((uint64_t *) buff);
+
+        IMB_KASUMI_F8_3_BUFFER(p_mgr, exp_key, iv, iv, iv, in, out,
+                               in, out, in, out, len);
+}
+
+static void test_kasumi_f8_4_buff(IMB_MGR *p_mgr, uint8_t *buff,  size_t dataSize)
+{
+        const kasumi_key_sched_t exp_key_s;
+        const kasumi_key_sched_t *exp_key = &exp_key_s;
+        uint8_t *out = buff;
+        const uint8_t *in = buff;
+	uint64_t len = dataSize;
+        const uint64_t iv = *((uint64_t *) buff);
+
+        IMB_KASUMI_F8_4_BUFFER(p_mgr, exp_key, iv, iv, iv,
+                               iv, in, out, in, out,
+                               in, out, in, out, len);
+}
+
+static void test_kasumi_f8_n_buff(IMB_MGR *p_mgr, uint8_t *buff,  size_t dataSize)
+{
+        const kasumi_key_sched_t exp_key_s;
+        const kasumi_key_sched_t *exp_key = &exp_key_s;
+        const uint64_t *iv = (uint64_t *) buff;
+        const void *in[8];
+        void *out[8];
+        uint32_t len[8];
+
+        for (int i = 0; i < count; i++) {
+                in[i] = buff;
+                out[i] = buff;
+                len[i] = dataSize;
+        }
+
+        IMB_KASUMI_F8_N_BUFFER(p_mgr, exp_key, iv, in, out, len, count);
+}
+
+static void test_kasumi_f9_1_buff(IMB_MGR *p_mgr, uint8_t *buff, size_t dataSize)
+{
+        const kasumi_key_sched_t exp_key_s;
+        const kasumi_key_sched_t *exp_key = &exp_key_s;
+        const uint8_t *in = buff;
+	uint64_t len = dataSize;
+        uint8_t *tag = buff;
+
+        IMB_KASUMI_F9_1_BUFFER(p_mgr, exp_key, in, len, tag);
+}
+
+static void test_kasumi_f9_1_buff_user(IMB_MGR *p_mgr, uint8_t *buff, size_t dataSize)
+{
+        const kasumi_key_sched_t exp_key_s;
+        const kasumi_key_sched_t *exp_key = &exp_key_s;
+        const uint8_t *in = buff;
+	uint64_t len = dataSize * 8;
+        uint8_t *tag = buff;
+        const uint64_t iv = (uint64_t) buff;
+        const uint32_t dir = (uint32_t) *buff * 8;
+
+        IMB_KASUMI_F9_1_BUFFER_USER(p_mgr, exp_key, iv, in, len, tag, dir);
+}
+
+static void test_kasumi_f9_init_key_sched(IMB_MGR *p_mgr, uint8_t *buff,
+                                          size_t dataSize)
+{
+        const void *key = buff;
+        kasumi_key_sched_t exp_key_s;
+        kasumi_key_sched_t *exp_key = &exp_key_s;
+
+        if (dataSize < IMB_KASUMI_KEY_SIZE)
+                return;
+
+        IMB_KASUMI_INIT_F9_KEY_SCHED(p_mgr, key, exp_key);
+}
+
 struct {
         void (*func)(IMB_MGR *mb_mgr, uint8_t *buff, size_t dataSize);
         const char *func_name;
@@ -846,6 +983,16 @@ struct {
         {test_crc6_iuup_header, "test_crc6_iuup_header"},
         {test_crc32_wimax_ofdma_data, "test_crc32_wimax_ofdma_data"},
         {test_crc8_wimax_ofdma_hcs, "test_crc8_wimax_ofdma_hcs"},
+        {test_kasumi_f8_init_key_sched, "test_kasumi_f8_init_key_sched"},
+        {test_kasumi_f8_1_buff_bit, "test_kasumi_f8_1_buff_bit"},
+        {test_kasumi_f8_1_buff, "test_kasumi_f8_1_buff"},
+        {test_kasumi_f8_2_buff, "test_kasumi_f8_2_buff"},
+        {test_kasumi_f8_3_buff, "test_kasumi_f8_3_buff"},
+        {test_kasumi_f8_4_buff, "test_kasumi_f8_4_buff"},
+        {test_kasumi_f8_n_buff, "test_kasumi_f8_n_buff"},
+        {test_kasumi_f9_1_buff, "test_kasumi_f9_1_buff"},
+        {test_kasumi_f9_1_buff_user, "test_kasumi_f9_1_buff_user"},
+        {test_kasumi_f9_init_key_sched, "test_kasumi_f9_init_key_sched"},
 };
 
 int LLVMFuzzerTestOneInput(const uint8_t *data, size_t dataSize)
