@@ -26,7 +26,7 @@
 # *****************************************************************************
 import os, re
 
-LIB_PATH = "../lib/"
+LIB_PATH = "../../lib/"
 LIB_NAME = "libIPSec_MB.so"
 LIB_HEADER = "intel-ipsec-mb.h"
 COMMON_TOP_LINES = "direct_api_param_test.c_template"

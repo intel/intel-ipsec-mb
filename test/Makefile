@@ -25,8 +25,8 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-TEST_APP := ipsec_MB_testapp
 XVALID_APP := ipsec_xvalid_test
+TEST_APP := test-app
 FUZZ_APP := job_api_fuzz_test
 DIRECT_FUZZ_APP := direct_api_fuzz_test
 ACVP_APP := acvp_app
@@ -113,15 +113,6 @@ ACVP_CFLAGS = -I$(ACVP_HDR) $(CFLAGS)
 ACVP_LDFLAGS = -L$(ACVP_LIB) $(LDFLAGS)
 ACVP_LDLIBS = -lacvp $(LDLIBS)
 
-# ipsec_MB_testapp modules
-SOURCES := main.c gcm_test.c ctr_test.c customop_test.c des_test.c ccm_test.c \
-	cmac_test.c utils.c hmac_sha1_test.c hmac_sha256_sha512_test.c \
-	hmac_md5_test.c aes_test.c sha_test.c chained_test.c api_test.c pon_test.c \
-	ecb_test.c zuc_test.c kasumi_test.c snow3g_test.c direct_api_test.c clear_mem_test.c \
-	hec_test.c xcbc_test.c aes_cbcs_test.c crc_test.c chacha_test.c poly1305_test.c \
-	chacha20_poly1305_test.c null_test.c snow_v_test.c direct_api_param_test.c quic_ecb_test.c
-OBJECTS := $(SOURCES:%.c=%.o)
-
 ifneq ($(PIN_CEC_ROOT),)
 CFLAGS += -I$(PIN_CEC_ROOT)/include -DPIN_BASED_CEC
 endif
@@ -156,8 +147,10 @@ endif
 # targets come here
 all: $(TEST_APP) $(XVALID_APP) $(FUZZ_APP) $(DIRECT_FUZZ_APP) $(ACVP_APP)
 
-$(TEST_APP): $(OBJECTS)
-	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
+.PHONY: $(TEST_APP)
+
+$(TEST_APP):
+	$(MAKE) -C test-app
 
 $(XVALID_APP): $(XVALID_OBJECTS)
 	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
@@ -193,7 +186,8 @@ endif
 
 .PHONY: clean
 clean:
-	-rm -f $(OBJECTS) $(TEST_APP) $(DEP_FILES) $(XVALID_OBJECTS) $(XVALID_APP) $(ASM_OBJECTS) $(FUZZ_APP) $(DIRECT_FUZZ_APP) $(ACVP_APP)
+	$(MAKE) -C test-app clean
+	-rm -f $(DEP_FILES) $(XVALID_OBJECTS) $(XVALID_APP) $(ASM_OBJECTS) $(FUZZ_APP) $(DIRECT_FUZZ_APP) $(ACVP_APP)
 
 # style check section
 CHECKPATCH?=checkpatch.pl
