@@ -132,6 +132,8 @@ if(AVX_IFMA)
   list(APPEND SRC_FILES_C ${SRC_FILES_AVX2_T3})
 endif()
 
+list(SORT SRC_FILES_C)
+
 ########################################
 # generate list of assembly source files
 ########################################
@@ -139,6 +141,8 @@ foreach(DIR ${DIR_SOURCES})
   file(GLOB_RECURSE TMP "${DIR}/*.asm")
   list(APPEND SRC_FILES_ASM ${TMP})
 endforeach()
+
+list(SORT SRC_FILES_ASM)
 
 ########################################
 # print build information
