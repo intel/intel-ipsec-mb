@@ -459,6 +459,7 @@ typedef enum {
 } IMB_CHAIN_ORDER;
 
 typedef enum {
+        IMB_KEY_64_BYTES = 8,
         IMB_KEY_128_BYTES = 16,
         IMB_KEY_192_BYTES = 24,
         IMB_KEY_256_BYTES = 32
