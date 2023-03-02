@@ -25,17 +25,13 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-XVALID_APP := ipsec_xvalid_test
 TEST_APP := test-app
+XVALID_APP := xvalid-app
 FUZZ_APP := job_api_fuzz_test
 DIRECT_FUZZ_APP := direct_api_fuzz_test
 ACVP_APP := acvp_app
 INSTPATH ?= /usr/include/intel-ipsec-mb.h
 LIB_DIR ?= ../lib
-
-USE_YASM ?= n
-YASM ?= yasm
-NASM ?= nasm
 
 MINGW ?= $(shell $(CC) -dM -E - < /dev/null | grep -i mingw | wc -l | sed 's/^ *//')
 
@@ -62,14 +58,6 @@ endif
 
 ifeq ($(CC_HAS_CET),1)
 CFLAGS += -fcf-protection=full
-endif
-
-YASM_FLAGS := -f x64 -f elf64 -X gnu -g dwarf2 -DLINUX -D__linux__
-ifeq ($(MINGW),0)
-CFLAGS += -DLINUX
-NASM_FLAGS := -Werror -felf64 -Xgnu -gdwarf -DLINUX -D__linux__
-else
-NASM_FLAGS := -Werror -fwin64 -Xvc -gcv8 -DWIN_ABI
 endif
 
 ifeq ($(MINGW),0)
@@ -117,11 +105,6 @@ ifneq ($(PIN_CEC_ROOT),)
 CFLAGS += -I$(PIN_CEC_ROOT)/include -DPIN_BASED_CEC
 endif
 
-# ipsec_xvalid_test modules
-XVALID_ASM := misc.asm
-XVALID_SOURCES := ipsec_xvalid.c utils.c
-XVALID_OBJECTS := $(XVALID_SOURCES:%.c=%.o) $(XVALID_ASM:%.asm=%.o)
-
 # fuzz modules
 FUZZ_SOURCES := job_api_fuzz_test.c
 DIRECT_FUZZ_SOURCES := direct_api_fuzz_test.c
@@ -132,28 +115,16 @@ ACVP_SOURCES := acvp_app_main.c utils.c
 # list of present dependency files
 DEP_FILES = $(wildcard ./*.d)
 
-# rule for compiling assembly code with producing dependencies
-%.o:%.asm
-ifeq ($(USE_YASM),y)
-	$(YASM) $(YASM_FLAGS) $< -o $@
-else
-	$(NASM) -MD $(@:.o=.d) -MT $@ -o $@ $(NASM_FLAGS) $<
-endif
-ifeq ($(CC_HAS_CET),1)
-	$(LD) $(CET_LDFLAGS) -o $@.tmp $@
-	mv $@.tmp $@
-endif
-
 # targets come here
 all: $(TEST_APP) $(XVALID_APP) $(FUZZ_APP) $(DIRECT_FUZZ_APP) $(ACVP_APP)
 
-.PHONY: $(TEST_APP)
+.PHONY: $(TEST_APP) $(XVALID_APP)
 
 $(TEST_APP):
 	$(MAKE) -C test-app
 
-$(XVALID_APP): $(XVALID_OBJECTS)
-	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
+$(XVALID_APP):
+	$(MAKE) -C xvalid-app
 
 $(ACVP_APP): $(ACVP_SOURCES)
 ifneq ("$(wildcard $(ACVP_HDR))","")
@@ -187,7 +158,8 @@ endif
 .PHONY: clean
 clean:
 	$(MAKE) -C test-app clean
-	-rm -f $(DEP_FILES) $(XVALID_OBJECTS) $(XVALID_APP) $(ASM_OBJECTS) $(FUZZ_APP) $(DIRECT_FUZZ_APP) $(ACVP_APP)
+	$(MAKE) -C xvalid-app clean
+	-rm -f $(DEP_FILES) $(FUZZ_APP) $(DIRECT_FUZZ_APP) $(ACVP_APP)
 
 # style check section
 CHECKPATCH?=checkpatch.pl
