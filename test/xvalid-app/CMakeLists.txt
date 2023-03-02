@@ -1,4 +1,4 @@
-# Copyright (c) 2022, Intel Corporation
+# Copyright (c) 2023, Intel Corporation
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -31,9 +31,51 @@ if(NOT FULL_PROJECT_BUILD)
   message(FATAL_ERROR "Please run CMake from project root directory")
 endif()
 
-# build ipsec_MB_testapp
-add_subdirectory(test-app)
+########################################
+# set test and library names
+########################################
+set(XVALID_APP ipsec_xvalid_test)
+set(LIB_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../lib)
+set(TEST_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../include)
 
-# build ipsec_xvalid_app
-add_subdirectory(xvalid-app)
+########################################
+# set ipsec_xvalid_test source files
+########################################
+set(XVALID_APP_SRC_FILES_C
+  ${CMAKE_CURRENT_SOURCE_DIR}/ipsec_xvalid.c
+  ${CMAKE_CURRENT_SOURCE_DIR}/../common/utils.c
+)
+set(XVALID_APP_SRC_FILES_ASM
+  ${CMAKE_CURRENT_SOURCE_DIR}/misc.asm
+)
+
+########################################
+# setup NASM
+########################################
+enable_language(ASM_NASM)
+if(NOT CMAKE_ASM_NASM_COMPILER_LOADED)
+  message(FATAL_ERROR "Can't find assembler")
+endif()
+set(CAN_USE_ASSEMBLER TRUE)
+
+########################################
+# set C compiler and NASM options
+########################################
+# add OS specific options
+if(CMAKE_HOST_UNIX)
+  include(${CMAKE_CURRENT_SOURCE_DIR}/../cmake/unix.cmake)
+else()
+  include(${CMAKE_CURRENT_SOURCE_DIR}/../cmake/windows.cmake)
+endif()
+
+
+########################################
+# add targets
+########################################
+include_directories(${CMAKE_CURRENT_SOURCE_DIR} ${LIB_DIR} ${TEST_INCLUDE_DIR})
+link_directories(${LIB_DIR})
+
+add_executable(${XVALID_APP} ${XVALID_APP_SRC_FILES_C} ${XVALID_APP_SRC_FILES_ASM})
+target_link_libraries(${XVALID_APP} PRIVATE ${IPSEC_MB_LIB})
+target_compile_definitions(${XVALID_APP} PRIVATE ${APP_DEFINES})
 
