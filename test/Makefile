@@ -27,8 +27,7 @@
 
 TEST_APP := test-app
 XVALID_APP := xvalid-app
-FUZZ_APP := job_api_fuzz_test
-DIRECT_FUZZ_APP := direct_api_fuzz_test
+FUZZ_APP := fuzz-app
 ACVP_APP := acvp_app
 INSTPATH ?= /usr/include/intel-ipsec-mb.h
 LIB_DIR ?= ../lib
@@ -80,8 +79,6 @@ CFLAGS +=  -I../lib/include -I../lib
 LDFLAGS += -L$(LIB_DIR)
 endif
 
-FUZZ_CFLAGS = -I../lib -L../lib $(CFLAGS) -g -fsanitize=fuzzer,address,leak
-
 DEBUG_OPT ?= -O0
 ifeq ($(DEBUG),y)
 CFLAGS += $(DEBUG_OPT) -DDEBUG -g
@@ -105,10 +102,6 @@ ifneq ($(PIN_CEC_ROOT),)
 CFLAGS += -I$(PIN_CEC_ROOT)/include -DPIN_BASED_CEC
 endif
 
-# fuzz modules
-FUZZ_SOURCES := job_api_fuzz_test.c
-DIRECT_FUZZ_SOURCES := direct_api_fuzz_test.c
-
 # acvp_app modules
 ACVP_SOURCES := acvp_app_main.c utils.c
 
@@ -118,7 +111,7 @@ DEP_FILES = $(wildcard ./*.d)
 # targets come here
 all: $(TEST_APP) $(XVALID_APP) $(FUZZ_APP) $(DIRECT_FUZZ_APP) $(ACVP_APP)
 
-.PHONY: $(TEST_APP) $(XVALID_APP)
+.PHONY: $(TEST_APP) $(XVALID_APP) $(FUZZ_APP)
 
 $(TEST_APP):
 	$(MAKE) -C test-app
@@ -133,33 +126,15 @@ else
 	@echo "No libacvp header found at $(ACVP_HDR), $(ACVP_APP) is not built"
 endif
 
-$(FUZZ_APP): $(FUZZ_SOURCES)
-ifeq ($(MINGW),0)
-ifneq (, $(shell which clang))
-	clang $(FUZZ_CFLAGS) $(FUZZ_SOURCES) $(LDLIBS) -o $@
-else
-	@echo "Clang is not installed. $(FUZZ_APP) is not built"
-endif
-else
-	@echo "Fuzzing not supported on MinGW build. $(FUZZ_APP) is not built"
-endif
-
-$(DIRECT_FUZZ_APP): $(DIRECT_FUZZ_SOURCES)
-ifeq ($(MINGW),0)
-ifneq (, $(shell which clang))
-	clang $(FUZZ_CFLAGS) $(DIRECT_FUZZ_SOURCES) $(LDLIBS) -o $@
-else
-	@echo "Clang is not installed. $(DIRECT_FUZZ_APP) is not built"
-endif
-else
-	@echo "Fuzzing not supported on MinGW build. $(DIRECT_FUZZ_APP) is not built"
-endif
+$(FUZZ_APP):
+	$(MAKE) -C fuzz-app
 
 .PHONY: clean
 clean:
 	$(MAKE) -C test-app clean
 	$(MAKE) -C xvalid-app clean
-	-rm -f $(DEP_FILES) $(FUZZ_APP) $(DIRECT_FUZZ_APP) $(ACVP_APP)
+	$(MAKE) -C fuzz-app clean
+	-rm -f $(DEP_FILES) $(ACVP_APP)
 
 # style check section
 CHECKPATCH?=checkpatch.pl
