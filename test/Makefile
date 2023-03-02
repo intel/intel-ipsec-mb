@@ -135,7 +135,11 @@ CHECKPATCH_FLAGS = --no-tree --no-signoff --emacs --no-color --max-line-length=1
 %.inc_style_check : %.inc
 	$(CHECKPATCH) $(CHECKPATCH_FLAGS) -f $<
 
-SOURCES_ALL := $(wildcard *.[ch]) $(wildcard *.asm) $(wildcard *.inc)
+TEST_APP_SOURCES := $(wildcard $(TEST_APP)/*.[ch]) $(wildcard $(TEST_APP)/*.asm) $(wildcard $(TEST_APP)/*.inc)
+XVALID_APP_SOURCES := $(wildcard $(XVALID_APP)/*.[ch]) $(wildcard $(XVALID_APP)/*.asm) $(wildcard $(XVALID_APP)/*.inc)
+FUZZ_APP_SOURCES := $(wildcard $(FUZZ_APP)/*.[ch]) $(wildcard $(FUZZ_APP)/*.asm) $(wildcard $(FUZZ_APP)/*.inc)
+ACVP_APP_SOURCES := $(wildcard $(ACVP_APP)/*.[ch]) $(wildcard $(ACVP_APP)/*.asm) $(wildcard $(ACVP_APP)/*.inc)
+SOURCES_ALL := $(TEST_APP_SOURCES) $(XVALID_APP_SOURCES) $(FUZZ_APP_SOURCES) $(ACVP_APP_SOURCES)
 SOURCES_STYLE := $(foreach infile,$(SOURCES_ALL),$(infile)_style_check)
 
 .PHONY: style
@@ -150,12 +154,12 @@ CPPCHECK_FLAGS2 ?= --cppcheck-build-dir=.bughunt $(CPPCHECK_FLAGS)
 .PHONY: cppcheck
 cppcheck:
 	mkdir -p .cppcheck
-	$(CPPCHECK) --force --enable=all $(CPPCHECK_FLAGS1) $(CPPCHECK_OPTS) ./
+	$(CPPCHECK) --force --enable=all $(CPPCHECK_FLAGS1) $(CPPCHECK_OPTS) ./test-app ./xvalid-app ./fuzz-app ./acvp-app
 
 .PHONY: bughunt
 bughunt:
 	mkdir -p .bughunt
-	$(CPPCHECK) --bug-hunting --inconclusive $(CPPCHECK_FLAGS2) $(CPPCHECK_OPTS) ./
+	$(CPPCHECK) --bug-hunting --inconclusive $(CPPCHECK_FLAGS2) $(CPPCHECK_OPTS) ./test-app ./xvalid-app ./fuzz-app ./acvp-app
 
 # if target not clean or rinse then make dependencies
 ifneq ($(MAKECMDGOALS),clean)
