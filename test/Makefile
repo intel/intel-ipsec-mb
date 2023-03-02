@@ -28,7 +28,7 @@
 TEST_APP := test-app
 XVALID_APP := xvalid-app
 FUZZ_APP := fuzz-app
-ACVP_APP := acvp_app
+ACVP_APP := acvp-app
 INSTPATH ?= /usr/include/intel-ipsec-mb.h
 LIB_DIR ?= ../lib
 
@@ -91,19 +91,9 @@ CFLAGS += -O2
 endif
 endif
 
-ACVP_LOC ?= /usr/local/acvp
-ACVP_HDR ?= $(ACVP_LOC)/include
-ACVP_LIB ?= $(ACVP_LOC)/lib
-ACVP_CFLAGS = -I$(ACVP_HDR) $(CFLAGS)
-ACVP_LDFLAGS = -L$(ACVP_LIB) $(LDFLAGS)
-ACVP_LDLIBS = -lacvp $(LDLIBS)
-
 ifneq ($(PIN_CEC_ROOT),)
 CFLAGS += -I$(PIN_CEC_ROOT)/include -DPIN_BASED_CEC
 endif
-
-# acvp_app modules
-ACVP_SOURCES := acvp_app_main.c utils.c
 
 # list of present dependency files
 DEP_FILES = $(wildcard ./*.d)
@@ -111,7 +101,7 @@ DEP_FILES = $(wildcard ./*.d)
 # targets come here
 all: $(TEST_APP) $(XVALID_APP) $(FUZZ_APP) $(DIRECT_FUZZ_APP) $(ACVP_APP)
 
-.PHONY: $(TEST_APP) $(XVALID_APP) $(FUZZ_APP)
+.PHONY: $(TEST_APP) $(XVALID_APP) $(FUZZ_APP) $(ACVP_APP)
 
 $(TEST_APP):
 	$(MAKE) -C test-app
@@ -119,22 +109,15 @@ $(TEST_APP):
 $(XVALID_APP):
 	$(MAKE) -C xvalid-app
 
-$(ACVP_APP): $(ACVP_SOURCES)
-ifneq ("$(wildcard $(ACVP_HDR))","")
-	$(CC) $(ACVP_CFLAGS) $(ACVP_LDFLAGS) $^ $(ACVP_LDLIBS) -o $@
-else
-	@echo "No libacvp header found at $(ACVP_HDR), $(ACVP_APP) is not built"
-endif
-
-$(FUZZ_APP):
-	$(MAKE) -C fuzz-app
+$(ACVP_APP):
+	$(MAKE) -C acvp-app
 
 .PHONY: clean
 clean:
 	$(MAKE) -C test-app clean
 	$(MAKE) -C xvalid-app clean
 	$(MAKE) -C fuzz-app clean
-	-rm -f $(DEP_FILES) $(ACVP_APP)
+	$(MAKE) -C acvp-app clean
 
 # style check section
 CHECKPATCH?=checkpatch.pl
