@@ -2384,7 +2384,7 @@ static const submit_flush_cipher_fn_t tab_flush_cipher[] = {
 
 __forceinline
 IMB_JOB *
-SUBMIT_JOB_HASH(IMB_MGR *state, IMB_JOB *job)
+SUBMIT_JOB_HASH_EX(IMB_MGR *state, IMB_JOB *job, const IMB_HASH_ALG hash_alg)
 {
         MB_MGR_HMAC_SHA_1_OOO *hmac_sha_1_ooo = state->hmac_sha_1_ooo;
         MB_MGR_HMAC_SHA_256_OOO *hmac_sha_224_ooo = state->hmac_sha_224_ooo;
@@ -2408,8 +2408,7 @@ SUBMIT_JOB_HASH(IMB_MGR *state, IMB_JOB *job)
         MB_MGR_SNOW3G_OOO *snow3g_uia2_ooo = state->snow3g_uia2_ooo;
 #endif
 
-
-        switch (job->hash_alg) {
+        switch (hash_alg) {
         case IMB_AUTH_HMAC_SHA_1:
                 return SUBMIT_JOB_HMAC(hmac_sha_1_ooo, job);
         case IMB_AUTH_HMAC_SHA_224:
@@ -2560,7 +2559,7 @@ SUBMIT_JOB_HASH(IMB_MGR *state, IMB_JOB *job)
 
 __forceinline
 IMB_JOB *
-FLUSH_JOB_HASH(IMB_MGR *state, IMB_JOB *job)
+FLUSH_JOB_HASH_EX(IMB_MGR *state, IMB_JOB *job, const IMB_HASH_ALG hash_alg)
 {
         MB_MGR_HMAC_SHA_1_OOO *hmac_sha_1_ooo = state->hmac_sha_1_ooo;
         MB_MGR_HMAC_SHA_256_OOO *hmac_sha_224_ooo = state->hmac_sha_224_ooo;
@@ -2584,7 +2583,7 @@ FLUSH_JOB_HASH(IMB_MGR *state, IMB_JOB *job)
         MB_MGR_SNOW3G_OOO *snow3g_uia2_ooo = state->snow3g_uia2_ooo;
 #endif
 
-        switch (job->hash_alg) {
+        switch (hash_alg) {
         case IMB_AUTH_HMAC_SHA_1:
                 return FLUSH_JOB_HMAC(hmac_sha_1_ooo);
         case IMB_AUTH_HMAC_SHA_224:
@@ -2639,6 +2638,20 @@ FLUSH_JOB_HASH(IMB_MGR *state, IMB_JOB *job)
                 /* if HMAC is complete then return NULL */
                 return NULL;
         }
+}
+
+__forceinline
+IMB_JOB *
+SUBMIT_JOB_HASH(IMB_MGR *state, IMB_JOB *job)
+{
+        return SUBMIT_JOB_HASH_EX(state, job, job->hash_alg);
+}
+
+__forceinline
+IMB_JOB *
+FLUSH_JOB_HASH(IMB_MGR *state, IMB_JOB *job)
+{
+        return FLUSH_JOB_HASH_EX(state, job, job->hash_alg);
 }
 
 /* ========================================================================= */
