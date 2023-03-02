@@ -29,11 +29,12 @@ TEST_APP := test-app
 XVALID_APP := xvalid-app
 FUZZ_APP := fuzz-app
 ACVP_APP := acvp-app
+WYCHEPROOF_APP := wycheproof-app
 
 # targets come here
-all: $(TEST_APP) $(XVALID_APP) $(FUZZ_APP) $(ACVP_APP)
+all: $(TEST_APP) $(XVALID_APP) $(FUZZ_APP) $(ACVP_APP) $(WYCHEPROOF_APP)
 
-.PHONY: $(TEST_APP) $(XVALID_APP) $(FUZZ_APP) $(ACVP_APP)
+.PHONY: $(TEST_APP) $(XVALID_APP) $(FUZZ_APP) $(ACVP_APP) $(WYCHEPROOF_APP)
 
 $(TEST_APP):
 	$(MAKE) -C test-app
@@ -41,8 +42,14 @@ $(TEST_APP):
 $(XVALID_APP):
 	$(MAKE) -C xvalid-app
 
+$(FUZZ_APP):
+	$(MAKE) -C fuzz-app
+
 $(ACVP_APP):
 	$(MAKE) -C acvp-app
+
+$(WYCHEPROOF_APP):
+	$(MAKE) -C wycheproof-app
 
 .PHONY: clean
 clean:
@@ -50,6 +57,7 @@ clean:
 	$(MAKE) -C xvalid-app clean
 	$(MAKE) -C fuzz-app clean
 	$(MAKE) -C acvp-app clean
+	$(MAKE) -C wycheproof-app clean
 
 # style check section
 CHECKPATCH?=checkpatch.pl
@@ -67,11 +75,15 @@ CHECKPATCH_FLAGS = --no-tree --no-signoff --emacs --no-color --max-line-length=1
 %.inc_style_check : %.inc
 	$(CHECKPATCH) $(CHECKPATCH_FLAGS) -f $<
 
-TEST_APP_SOURCES := $(wildcard $(TEST_APP)/*.[ch]) $(wildcard $(TEST_APP)/*.asm) $(wildcard $(TEST_APP)/*.inc)
-XVALID_APP_SOURCES := $(wildcard $(XVALID_APP)/*.[ch]) $(wildcard $(XVALID_APP)/*.asm) $(wildcard $(XVALID_APP)/*.inc)
-FUZZ_APP_SOURCES := $(wildcard $(FUZZ_APP)/*.[ch]) $(wildcard $(FUZZ_APP)/*.asm) $(wildcard $(FUZZ_APP)/*.inc)
-ACVP_APP_SOURCES := $(wildcard $(ACVP_APP)/*.[ch]) $(wildcard $(ACVP_APP)/*.asm) $(wildcard $(ACVP_APP)/*.inc)
-SOURCES_ALL := $(TEST_APP_SOURCES) $(XVALID_APP_SOURCES) $(FUZZ_APP_SOURCES) $(ACVP_APP_SOURCES)
+TEST_APP_SOURCES := $(wildcard $(TEST_APP)/*.[ch])
+FUZZ_APP_SOURCES := $(wildcard $(FUZZ_APP)/*.[ch])
+ACVP_APP_SOURCES := $(wildcard $(ACVP_APP)/*.[ch])
+WYCHEPROOF_APP_SOURCES := $(wildcard $(WYCHEPROOF_APP)/*.[ch])
+XVALID_APP_SOURCES := $(wildcard $(XVALID_APP)/*.[ch]) \
+		      $(wildcard $(XVALID_APP)/*.asm) \
+		      $(wildcard $(XVALID_APP)/*.inc)
+SOURCES_ALL := $(TEST_APP_SOURCES) $(XVALID_APP_SOURCES) \
+	       $(FUZZ_APP_SOURCES) $(ACVP_APP_SOURCES) $(WYCHEPROOF_APP_SOURCES)
 SOURCES_STYLE := $(foreach infile,$(SOURCES_ALL),$(infile)_style_check)
 
 .PHONY: style
@@ -86,10 +98,12 @@ CPPCHECK_FLAGS2 ?= --cppcheck-build-dir=.bughunt $(CPPCHECK_FLAGS)
 .PHONY: cppcheck
 cppcheck:
 	mkdir -p .cppcheck
-	$(CPPCHECK) --force --enable=all $(CPPCHECK_FLAGS1) $(CPPCHECK_OPTS) ./test-app ./xvalid-app ./fuzz-app ./acvp-app
+	$(CPPCHECK) --force --enable=all $(CPPCHECK_FLAGS1) $(CPPCHECK_OPTS) \
+		./test-app ./xvalid-app ./fuzz-app ./acvp-app ./wycheproof-app
 
 .PHONY: bughunt
 bughunt:
 	mkdir -p .bughunt
-	$(CPPCHECK) --bug-hunting --inconclusive $(CPPCHECK_FLAGS2) $(CPPCHECK_OPTS) ./test-app ./xvalid-app ./fuzz-app ./acvp-app
+	$(CPPCHECK) --bug-hunting --inconclusive $(CPPCHECK_FLAGS2) $(CPPCHECK_OPTS) \
+		./test-app ./xvalid-app ./fuzz-app ./acvp-app ./wycheproof-app
 
