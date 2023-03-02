@@ -2640,16 +2640,344 @@ FLUSH_JOB_HASH_EX(IMB_MGR *state, IMB_JOB *job, const IMB_HASH_ALG hash_alg)
         }
 }
 
-__forceinline
-IMB_JOB *
-SUBMIT_JOB_HASH(IMB_MGR *state, IMB_JOB *job)
+/* ========================================================================= */
+/* Generate specialized hash submit functions and create a table */
+/* ========================================================================= */
+
+static IMB_JOB *submit_hash_hmac_sha1(IMB_MGR *state, IMB_JOB *job)
 {
-        return SUBMIT_JOB_HASH_EX(state, job, job->hash_alg);
+        return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_HMAC_SHA_1);
 }
 
-__forceinline
-IMB_JOB *
-FLUSH_JOB_HASH(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *submit_hash_hmac_sha224(IMB_MGR *state, IMB_JOB *job)
+{
+        return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_HMAC_SHA_224);
+}
+
+static IMB_JOB *submit_hash_hmac_sha256(IMB_MGR *state, IMB_JOB *job)
+{
+        return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_HMAC_SHA_256);
+}
+
+static IMB_JOB *submit_hash_hmac_sha384(IMB_MGR *state, IMB_JOB *job)
+{
+        return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_HMAC_SHA_384);
+}
+
+static IMB_JOB *submit_hash_hmac_sha512(IMB_MGR *state, IMB_JOB *job)
+{
+        return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_HMAC_SHA_512);
+}
+
+static IMB_JOB *submit_hash_aes_xcbc(IMB_MGR *state, IMB_JOB *job)
+{
+        return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_AES_XCBC);
+}
+
+static IMB_JOB *submit_hash_hmac_md5(IMB_MGR *state, IMB_JOB *job)
+{
+        return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_MD5);
+}
+
+static IMB_JOB *submit_hash_null(IMB_MGR *state, IMB_JOB *job)
+{
+        return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_NULL);
+}
+
+static IMB_JOB *submit_hash_aes_gmac(IMB_MGR *state, IMB_JOB *job)
+{
+        return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_AES_GMAC);
+}
+
+static IMB_JOB *submit_hash_custom(IMB_MGR *state, IMB_JOB *job)
+{
+        return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_CUSTOM);
+}
+
+static IMB_JOB *submit_hash_aes_ccm(IMB_MGR *state, IMB_JOB *job)
+{
+        return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_AES_CCM);
+}
+
+static IMB_JOB *submit_hash_aes_cmac(IMB_MGR *state, IMB_JOB *job)
+{
+        return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_AES_CMAC);
+}
+
+static IMB_JOB *submit_hash_sha1(IMB_MGR *state, IMB_JOB *job)
+{
+        return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_SHA_1);
+}
+
+static IMB_JOB *submit_hash_sha224(IMB_MGR *state, IMB_JOB *job)
+{
+        return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_SHA_224);
+}
+
+static IMB_JOB *submit_hash_sha256(IMB_MGR *state, IMB_JOB *job)
+{
+        return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_SHA_256);
+}
+
+static IMB_JOB *submit_hash_sha384(IMB_MGR *state, IMB_JOB *job)
+{
+        return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_SHA_384);
+}
+
+static IMB_JOB *submit_hash_sha512(IMB_MGR *state, IMB_JOB *job)
+{
+        return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_SHA_512);
+}
+
+static IMB_JOB *submit_hash_aes_cmac_bit(IMB_MGR *state, IMB_JOB *job)
+{
+        return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_AES_CMAC_BITLEN);
+}
+
+static IMB_JOB *submit_hash_pon_crc_bip(IMB_MGR *state, IMB_JOB *job)
+{
+        return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_PON_CRC_BIP);
+}
+
+static IMB_JOB *submit_hash_zuc_eia3_bit(IMB_MGR *state, IMB_JOB *job)
+{
+        return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_ZUC_EIA3_BITLEN);
+}
+
+static IMB_JOB *submit_hash_docsis_crc32(IMB_MGR *state, IMB_JOB *job)
+{
+        return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_DOCSIS_CRC32);
+}
+
+static IMB_JOB *submit_hash_snow3g_uia2_bit(IMB_MGR *state, IMB_JOB *job)
+{
+        return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_SNOW3G_UIA2_BITLEN);
+}
+
+static IMB_JOB *submit_hash_kasumi_uia1(IMB_MGR *state, IMB_JOB *job)
+{
+        return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_KASUMI_UIA1);
+}
+
+static IMB_JOB *submit_hash_aes_gmac_128(IMB_MGR *state, IMB_JOB *job)
+{
+        return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_AES_GMAC_128);
+}
+
+static IMB_JOB *submit_hash_aes_gmac_192(IMB_MGR *state, IMB_JOB *job)
+{
+        return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_AES_GMAC_192);
+}
+
+static IMB_JOB *submit_hash_aes_gmac_256(IMB_MGR *state, IMB_JOB *job)
+{
+        return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_AES_GMAC_256);
+}
+
+static IMB_JOB *submit_hash_aes_cmac_256(IMB_MGR *state, IMB_JOB *job)
+{
+        return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_AES_CMAC_256);
+}
+
+static IMB_JOB *submit_hash_poly1305(IMB_MGR *state, IMB_JOB *job)
+{
+        return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_POLY1305);
+}
+
+static IMB_JOB *submit_hash_chacha20_poly1305(IMB_MGR *state, IMB_JOB *job)
+{
+        return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_CHACHA20_POLY1305);
+}
+
+static IMB_JOB *submit_hash_chacha20_poly1305_sgl(IMB_MGR *state, IMB_JOB *job)
+{
+        return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_CHACHA20_POLY1305_SGL);
+}
+
+static IMB_JOB *submit_hash_zuc256_eia3_bit(IMB_MGR *state, IMB_JOB *job)
+{
+        return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_ZUC256_EIA3_BITLEN);
+}
+
+static IMB_JOB *submit_hash_snow_v_aead(IMB_MGR *state, IMB_JOB *job)
+{
+        return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_SNOW_V_AEAD);
+}
+
+static IMB_JOB *submit_hash_gcm_sgl(IMB_MGR *state, IMB_JOB *job)
+{
+        return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_GCM_SGL);
+}
+
+static IMB_JOB *submit_hash_crc32_ethernet_fcs(IMB_MGR *state, IMB_JOB *job)
+{
+        return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_CRC32_ETHERNET_FCS);
+}
+
+static IMB_JOB *submit_hash_crc32_sctp(IMB_MGR *state, IMB_JOB *job)
+{
+        return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_CRC32_SCTP);
+}
+
+static IMB_JOB *submit_hash_crc32_wimax_ofdma(IMB_MGR *state, IMB_JOB *job)
+{
+        return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_CRC32_WIMAX_OFDMA_DATA);
+}
+
+static IMB_JOB *submit_hash_crc24_lte_a(IMB_MGR *state, IMB_JOB *job)
+{
+        return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_CRC24_LTE_A);
+}
+
+static IMB_JOB *submit_hash_crc24_lte_b(IMB_MGR *state, IMB_JOB *job)
+{
+        return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_CRC24_LTE_B);
+}
+
+static IMB_JOB *submit_hash_crc16_x25(IMB_MGR *state, IMB_JOB *job)
+{
+        return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_CRC16_X25);
+}
+
+static IMB_JOB *submit_hash_crc16_fp_data(IMB_MGR *state, IMB_JOB *job)
+{
+        return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_CRC16_FP_DATA);
+}
+
+static IMB_JOB *submit_hash_crc11_fp_header(IMB_MGR *state, IMB_JOB *job)
+{
+        return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_CRC11_FP_HEADER);
+}
+
+static IMB_JOB *submit_hash_crc10_iuup_data(IMB_MGR *state, IMB_JOB *job)
+{
+        return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_CRC10_IUUP_DATA);
+}
+
+static IMB_JOB *submit_hash_crc8_wimax_odma(IMB_MGR *state, IMB_JOB *job)
+{
+        return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_CRC8_WIMAX_OFDMA_HCS);
+}
+
+static IMB_JOB *submit_hash_crc7_fp_header(IMB_MGR *state, IMB_JOB *job)
+{
+        return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_CRC7_FP_HEADER);
+}
+
+static IMB_JOB *submit_hash_crc6_iuup_header(IMB_MGR *state, IMB_JOB *job)
+{
+        return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_CRC6_IUUP_HEADER);
+}
+
+static IMB_JOB *submit_hash_ghash(IMB_MGR *state, IMB_JOB *job)
+{
+        return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_GHASH);
+}
+
+static const submit_flush_cipher_fn_t tab_submit_hash[] = {
+        /* [0] invalid entry */
+        NULL,
+        /* [1] HMAC-SHA1 */
+        submit_hash_hmac_sha1,
+        /* [2] HMAC-SHA224 */
+        submit_hash_hmac_sha224,
+        /* [3] HMAC-SHA256 */
+        submit_hash_hmac_sha256,
+        /* [4] HMAC-SHA384 */
+        submit_hash_hmac_sha384,
+        /* [5] HMAC-SHA512 */
+        submit_hash_hmac_sha512,
+        /* [6] AES-XCBC */
+        submit_hash_aes_xcbc,
+        /* [7] HMAC-MD5 */
+        submit_hash_hmac_md5,
+        /* [8] NULL */
+        submit_hash_null,
+        /* [9] AES-GMAC */
+        submit_hash_aes_gmac,
+        /* [10] CUSTOM */
+        submit_hash_custom,
+        /* [11] AES-CCM */
+        submit_hash_aes_ccm,
+        /* [12] AES-CMAC */
+        submit_hash_aes_cmac,
+        /* [13] SHA1 */
+        submit_hash_sha1,
+        /* [14] SHA224 */
+        submit_hash_sha224,
+        /* [15] SHA256 */
+        submit_hash_sha256,
+        /* [16] SHA384 */
+        submit_hash_sha384,
+        /* [17] SHA512 */
+        submit_hash_sha512,
+        /* [18] AES-CMAC BIT */
+        submit_hash_aes_cmac_bit,
+        /* [19] PON CRC BIP */
+        submit_hash_pon_crc_bip,
+        /* [20] ZUC EIA3 BIT */
+        submit_hash_zuc_eia3_bit,
+        /* [21] DOCSIS CRC32 */
+        submit_hash_docsis_crc32,
+        /* [22] SNOW3G UIA2 BIT */
+        submit_hash_snow3g_uia2_bit,
+        /* [23] KASUMI UIA1 */
+        submit_hash_kasumi_uia1,
+        /* [24] AES-GMAC-128 */
+        submit_hash_aes_gmac_128,
+        /* [25] AES-GMAC-192 */
+        submit_hash_aes_gmac_192,
+        /* [26] AES-GMAC-256 */
+        submit_hash_aes_gmac_256,
+        /* [27] AES-CMAC-256 */
+        submit_hash_aes_cmac_256,
+        /* [28] POLY1305 */
+        submit_hash_poly1305,
+        /* [29] CHACHA20-POLY1305 */
+        submit_hash_chacha20_poly1305,
+        /* [30] CHACHA20-POLY1305 SGL */
+        submit_hash_chacha20_poly1305_sgl,
+        /* [31] ZUC256 EIA3 */
+        submit_hash_zuc256_eia3_bit,
+        /* [32] SNOW-V AEAD */
+        submit_hash_snow_v_aead,
+        /* [33] GCM SGL */
+        submit_hash_gcm_sgl,
+        /* [34] CRC32 ETHERNET FCS */
+        submit_hash_crc32_ethernet_fcs,
+        /* [35] CRC32 SCTP */
+        submit_hash_crc32_sctp,
+        /* [36] CRC32 WIMAX OFDMA DATA */
+        submit_hash_crc32_wimax_ofdma,
+        /* [37] CRC24 LTE A */
+        submit_hash_crc24_lte_a,
+        /* [38] CRC24 LTE B */
+        submit_hash_crc24_lte_b,
+        /* [39] CRC16 X25 */
+        submit_hash_crc16_x25,
+        /* [40] CRC16 FP DATA */
+        submit_hash_crc16_fp_data,
+        /* [41] CRC11 FP HEADER */
+        submit_hash_crc11_fp_header,
+        /* [42] CRC10 IUUP DATA */
+        submit_hash_crc10_iuup_data,
+        /* [43] CRC8 WIMAX OFDMA HCS */
+        submit_hash_crc8_wimax_odma,
+        /* [44] CRC7 FP HEADER */
+        submit_hash_crc7_fp_header,
+        /* [45] CRC6 IUUP HEADER */
+        submit_hash_crc6_iuup_header,
+        /* [46] GHASH */
+        submit_hash_ghash,
+        /* add new hash algorithms here */
+};
+
+__forceinline IMB_JOB *SUBMIT_JOB_HASH(IMB_MGR *state, IMB_JOB *job)
+{
+        return tab_submit_hash[job->hash_alg](state, job);
+}
+
+__forceinline IMB_JOB *FLUSH_JOB_HASH(IMB_MGR *state, IMB_JOB *job)
 {
         return FLUSH_JOB_HASH_EX(state, job, job->hash_alg);
 }
@@ -2668,7 +2996,6 @@ __forceinline unsigned calc_cipher_tab_index(const IMB_JOB *job)
         return (job->cipher_mode << 2) +
                 (((job->key_len_in_bytes - 1) >> 3) & 3) +
                 ((job->cipher_direction & IMB_DIR_ENCRYPT) << 7);
-
 }
 
 __forceinline
