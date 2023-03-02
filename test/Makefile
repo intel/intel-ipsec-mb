@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2012-2022, Intel Corporation
+# Copyright (c) 2012-2023, Intel Corporation
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -29,77 +29,9 @@ TEST_APP := test-app
 XVALID_APP := xvalid-app
 FUZZ_APP := fuzz-app
 ACVP_APP := acvp-app
-INSTPATH ?= /usr/include/intel-ipsec-mb.h
-LIB_DIR ?= ../lib
-
-MINGW ?= $(shell $(CC) -dM -E - < /dev/null | grep -i mingw | wc -l | sed 's/^ *//')
-
-CFLAGS = -MMD -D_GNU_SOURCE -DNO_COMPAT_IMB_API_053 \
-	-W -Wall -Wextra -Wmissing-declarations -Wpointer-arith \
-	-Wcast-qual -Wundef -Wwrite-strings  \
-	-Wformat -Wformat-security \
-	-Wunreachable-code -Wmissing-noreturn -Wsign-compare -Wno-endif-labels \
-	-Wstrict-prototypes -Wmissing-prototypes -Wold-style-definition \
-	-fno-delete-null-pointer-checks -fwrapv -std=c99
-
-# -fno-strict-overflow is not supported by clang
-ifneq ($(CC),clang)
-CFLAGS += -fno-strict-overflow
-endif
-
-# if "-z ibt" is supported then assume "-z shstk, -z cet-report=error" are also supported
-# "-fcf-protection" needs to be checked separately
-ifeq ($(MINGW),0)
-CC_HAS_CET = $(and $(shell $(CC) --target-help 2> /dev/null | grep -m1 -e "-z ibt" | wc -l), \
-	$(shell $(CC) --help=common 2> /dev/null | grep -m1 -e "-fcf-protection" | wc -l))
-CET_LDFLAGS=-r -z ibt -z shstk
-endif
-
-ifeq ($(CC_HAS_CET),1)
-CFLAGS += -fcf-protection=full
-endif
-
-ifeq ($(MINGW),0)
-LDFLAGS = -fPIE -z noexecstack -z relro -z now
-else
-LDFLAGS = -fPIE
-endif
-
-ifeq ($(CC_HAS_CET),1)
-LDFLAGS += -fcf-protection=full -Wl,-z,ibt -Wl,-z,shstk -Wl,-z,cet-report=error
-endif
-LDLIBS = -lIPSec_MB
-
-ifeq ("$(shell test -r $(INSTPATH) && echo -n yes)","yes")
-# library installed
-CFLAGS +=
-else
-# library not installed
-CFLAGS +=  -I../lib/include -I../lib
-LDFLAGS += -L$(LIB_DIR)
-endif
-
-DEBUG_OPT ?= -O0
-ifeq ($(DEBUG),y)
-CFLAGS += $(DEBUG_OPT) -DDEBUG -g
-LDFLAGS += -g
-else
-ifeq ($(MINGW),0)
-CFLAGS += -O3
-else
-CFLAGS += -O2
-endif
-endif
-
-ifneq ($(PIN_CEC_ROOT),)
-CFLAGS += -I$(PIN_CEC_ROOT)/include -DPIN_BASED_CEC
-endif
-
-# list of present dependency files
-DEP_FILES = $(wildcard ./*.d)
 
 # targets come here
-all: $(TEST_APP) $(XVALID_APP) $(FUZZ_APP) $(DIRECT_FUZZ_APP) $(ACVP_APP)
+all: $(TEST_APP) $(XVALID_APP) $(FUZZ_APP) $(ACVP_APP)
 
 .PHONY: $(TEST_APP) $(XVALID_APP) $(FUZZ_APP) $(ACVP_APP)
 
@@ -161,9 +93,3 @@ bughunt:
 	mkdir -p .bughunt
 	$(CPPCHECK) --bug-hunting --inconclusive $(CPPCHECK_FLAGS2) $(CPPCHECK_OPTS) ./test-app ./xvalid-app ./fuzz-app ./acvp-app
 
-# if target not clean or rinse then make dependencies
-ifneq ($(MAKECMDGOALS),clean)
-ifneq ($(MAKECMDGOALS),style)
--include $(wildcard *.d)
-endif
-endif
