@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2020-2022, Intel Corporation
+# Copyright (c) 2023, Intel Corporation
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -25,21 +25,32 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-all:
-	cd lib & $(MAKE) /f win_x64.mak
-	cd test & $(MAKE) /f win_x64.mak
-	cd perf & $(MAKE) /f win_x64.mak
+TEST_APP = ipsec_MB_testapp
+
+include ..\common\win_x64_common.mk
+
+TEST_OBJS = utils.obj main.obj gcm_test.obj ctr_test.obj customop_test.obj des_test.obj ccm_test.obj cmac_test.obj hmac_sha1_test.obj hmac_sha256_sha512_test.obj hmac_md5_test.obj aes_test.obj sha_test.obj chained_test.obj api_test.obj pon_test.obj ecb_test.obj zuc_test.obj kasumi_test.obj snow3g_test.obj direct_api_test.obj clear_mem_test.obj hec_test.obj xcbc_test.obj aes_cbcs_test.obj crc_test.obj chacha_test.obj poly1305_test.obj chacha20_poly1305_test.obj null_test.obj snow_v_test.obj direct_api_param_test.obj quic_ecb_test.obj
+TEST_LFLAGS = /out:$(TEST_APP).exe $(DLFLAGS)
+
+all: $(TEST_APP).exe tests.dep
+
+$(TEST_APP).exe: $(TEST_OBJS) $(IPSECLIB)
+        $(LNK) $(TEST_LFLAGS) $(TEST_OBJS) $(IPSECLIB)
+
+tests.dep: $(TEST_OBJS)
+        @type *.obj.dep > $@ 2> nul
+
+.c.obj:
+	$(CC) /c $(CFLAGS) $<
+        $(DEPTOOL) $< $@ "$(DEPFLAGS)" > $@.dep
+
+{..\common\}.c.obj:
+	$(CC) /c $(CFLAGS) $<
+        $(DEPTOOL) $< $@ "$(DEPFLAGS)" > $@.dep
 
 clean:
-	cd lib & $(MAKE) /f win_x64.mak clean
-	cd test & $(MAKE) /f win_x64.mak clean
-	cd perf & $(MAKE) /f win_x64.mak clean
+        del /q $(TEST_OBJS) tests.dep *.obj.dep $(TEST_APP).*
 
-install:
-	cd lib & $(MAKE) /f win_x64.mak install
-
-uninstall:
-	cd lib & $(MAKE) /f win_x64.mak uninstall
-
-help:
-	cd lib & $(MAKE) /f win_x64.mak help
+!if exist(tests.dep)
+!include tests.dep
+!endif

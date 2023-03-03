@@ -26,50 +26,8 @@
 #
 
 APP = wycheproof
-INSTNAME = intel-ipsec-mb
 
-!if !defined(PREFIX)
-PREFIX = C:\Program Files
-!endif
-
-!if exist("$(PREFIX)\$(INSTNAME)\libIPSec_MB.lib")
-IPSECLIB = "$(PREFIX)\$(INSTNAME)\libIPSec_MB.lib"
-INCDIR = -I"$(PREFIX)\$(INSTNAME)"
-!else
-!if !defined(LIB_DIR)
-LIB_DIR = ..\..\lib
-!endif
-IPSECLIB = "$(LIB_DIR)\libIPSec_MB.lib"
-INCDIR = -I$(LIB_DIR) -I.\
-!endif
-
-!if !defined(DEBUG_OPT)
-DEBUG_OPT = /Od
-!endif
-
-!ifdef DEBUG
-DCFLAGS = $(DEBUG_OPT) /DDEBUG /Z7
-DLFLAGS = /debug
-!else
-DCFLAGS = /O2 /Oi
-DLFLAGS =
-!endif
-
-# compiler
-CC = cl
-
-# _CRT_SECURE_NO_WARNINGS disables warning C4996 about insecure snprintf() being used
-CFLAGS = /nologo /DNO_COMPAT_IMB_API_053 /D_CRT_SECURE_NO_WARNINGS $(DCFLAGS) /Y- /W3 /WX- /Gm- /fp:precise /EHsc $(EXTRA_CFLAGS) $(INCDIR)
-
-#linker
-LNK = link
-LFLAGS = /out:$(APP).exe $(DLFLAGS)
-
-# dependency
-!ifndef DEPTOOL
-DEPTOOL = ..\..\mkdep.bat
-!endif
-DEPFLAGS = $(INCDIR)
+include ..\common\win_x64_common.mk
 
 OBJS = aes_gcm_test.json.obj aes_ccm_test.json.obj \
 	chacha20_poly1305_test.json.obj \
@@ -77,6 +35,7 @@ OBJS = aes_gcm_test.json.obj aes_ccm_test.json.obj \
 	hmac_sha1_test.json.obj hmac_sha224_test.json.obj \
 	hmac_sha256_test.json.obj hmac_sha384_test.json.obj \
 	hmac_sha512_test.json.obj wycheproof.obj
+LFLAGS = /out:$(APP).exe $(DLFLAGS)
 
 all: $(APP).exe
 

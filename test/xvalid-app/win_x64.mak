@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2020-2022, Intel Corporation
+# Copyright (c) 2023, Intel Corporation
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -25,21 +25,38 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-all:
-	cd lib & $(MAKE) /f win_x64.mak
-	cd test & $(MAKE) /f win_x64.mak
-	cd perf & $(MAKE) /f win_x64.mak
+XVALID_APP = ipsec_xvalid_test
+
+include ..\common\win_x64_common.mk
+
+AS = nasm
+AFLAGS = -Werror -fwin64 -Xvc -DWIN_ABI
+
+XVALID_OBJS = ipsec_xvalid.obj misc.obj utils.obj
+XVALID_LFLAGS = /out:$(XVALID_APP).exe $(DLFLAGS)
+
+all: $(XVALID_APP).exe tests.dep
+
+$(XVALID_APP).exe: $(XVALID_OBJS) $(IPSECLIB)
+        $(LNK) $(XVALID_LFLAGS) $(XVALID_OBJS) $(IPSECLIB)
+
+tests.dep: $(TEST_OBJS) $(XVALID_OBJS)
+        @type *.obj.dep > $@ 2> nul
+
+.c.obj:
+	$(CC) /c $(CFLAGS) $<
+        $(DEPTOOL) $< $@ "$(DEPFLAGS)" > $@.dep
+
+{..\common\}.c.obj:
+	$(CC) /c $(CFLAGS) $<
+        $(DEPTOOL) $< $@ "$(DEPFLAGS)" > $@.dep
+
+.asm.obj:
+	$(AS) -MD $@.dep -o $@ $(AFLAGS) $<
 
 clean:
-	cd lib & $(MAKE) /f win_x64.mak clean
-	cd test & $(MAKE) /f win_x64.mak clean
-	cd perf & $(MAKE) /f win_x64.mak clean
+        del /q tests.dep *.obj.dep $(XVALID_OBJS) $(XVALID_APP).*
 
-install:
-	cd lib & $(MAKE) /f win_x64.mak install
-
-uninstall:
-	cd lib & $(MAKE) /f win_x64.mak uninstall
-
-help:
-	cd lib & $(MAKE) /f win_x64.mak help
+!if exist(tests.dep)
+!include tests.dep
+!endif

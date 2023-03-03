@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2020-2022, Intel Corporation
+# Copyright (c) 2017-2022, Intel Corporation
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -25,21 +25,51 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-all:
-	cd lib & $(MAKE) /f win_x64.mak
-	cd test & $(MAKE) /f win_x64.mak
-	cd perf & $(MAKE) /f win_x64.mak
+INSTNAME = intel-ipsec-mb
 
-clean:
-	cd lib & $(MAKE) /f win_x64.mak clean
-	cd test & $(MAKE) /f win_x64.mak clean
-	cd perf & $(MAKE) /f win_x64.mak clean
+!if !defined(PREFIX)
+PREFIX = C:\Program Files
+!endif
 
-install:
-	cd lib & $(MAKE) /f win_x64.mak install
+!if exist("$(PREFIX)\$(INSTNAME)\libIPSec_MB.lib")
+IPSECLIB = "$(PREFIX)\$(INSTNAME)\libIPSec_MB.lib"
+INCDIR = -I"$(PREFIX)\$(INSTNAME)"
+!else
+!if !defined(LIB_DIR)
+LIB_DIR = ..\..\lib
+!endif
+IPSECLIB = "$(LIB_DIR)\libIPSec_MB.lib"
+INCDIR = -I$(LIB_DIR) -I..\include
+!endif
 
-uninstall:
-	cd lib & $(MAKE) /f win_x64.mak uninstall
+!if !defined(DEBUG_OPT)
+DEBUG_OPT = /Od
+!endif
 
-help:
-	cd lib & $(MAKE) /f win_x64.mak help
+!ifdef DEBUG
+DCFLAGS = $(DEBUG_OPT) /DDEBUG /Z7
+DLFLAGS = /debug
+!else
+DCFLAGS = /O2 /Oi
+DLFLAGS =
+!endif
+
+# compiler
+CC = cl
+
+# _CRT_SECURE_NO_WARNINGS disables warning C4996 about insecure snprintf() being used
+CFLAGS = /nologo /DNO_COMPAT_IMB_API_053 /D_CRT_SECURE_NO_WARNINGS $(DCFLAGS) /Y- /W3 /WX- /Gm- /fp:precise /EHsc $(EXTRA_CFLAGS) $(INCDIR) /std:c11
+
+#linker
+LNK = link
+# XVALID_LFLAGS = /out:$(XVALID_APP).exe $(DLFLAGS)
+
+AS = nasm
+AFLAGS = -Werror -fwin64 -Xvc -DWIN_ABI
+
+# dependency
+!ifndef DEPTOOL
+DEPTOOL = ..\..\mkdep.bat
+!endif
+DEPFLAGS = $(INCDIR)
+
