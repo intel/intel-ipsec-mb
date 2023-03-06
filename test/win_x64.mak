@@ -26,11 +26,11 @@
 #
 
 all:
-	cd test-app & $(MAKE) /f win_x64.mak
+	cd kat-app & $(MAKE) /f win_x64.mak
 	cd xvalid-app & $(MAKE) /f win_x64.mak
 	cd wycheproof-app & $(MAKE) /f win_x64.mak
 
 clean:
-	cd test-app & $(MAKE) /f win_x64.mak clean
+	cd kat-app & $(MAKE) /f win_x64.mak clean
 	cd xvalid-app & $(MAKE) /f win_x64.mak clean
 	cd wycheproof-app & $(MAKE) /f win_x64.mak clean

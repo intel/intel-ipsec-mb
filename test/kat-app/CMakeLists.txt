@@ -32,14 +32,14 @@ if(NOT FULL_PROJECT_BUILD)
 endif()
 
 ########################################
-# set test and library names
+# set app and library names
 ########################################
-set(TEST_APP ipsec_MB_testapp)
+set(TEST_APP imb-kat)
 set(LIB_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../lib)
 set(TEST_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../include)
 
 ########################################
-# set ipsec_MB_test source files
+# set imb-kat source files
 ########################################
 set(TEST_APP_SRC_FILES
   ${CMAKE_CURRENT_SOURCE_DIR}/main.c

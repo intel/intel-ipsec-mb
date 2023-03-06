@@ -25,12 +25,12 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-TEST_APP := ipsec_MB_testapp
+APP := imb-kat
 
 # include common options
 include ../common/common.mk
 
-# ipsec_MB_testapp modules
+# imb-kat modules
 SOURCES := main.c gcm_test.c ctr_test.c customop_test.c des_test.c ccm_test.c \
 	cmac_test.c hmac_sha1_test.c hmac_sha256_sha512_test.c \
 	hmac_md5_test.c aes_test.c sha_test.c chained_test.c api_test.c pon_test.c \
@@ -41,14 +41,14 @@ SOURCES := main.c gcm_test.c ctr_test.c customop_test.c des_test.c ccm_test.c \
 OBJECTS := $(SOURCES:%.c=%.o)
 
 # targets come here
-all: $(TEST_APP)
+all: $(APP)
 
-$(TEST_APP): $(OBJECTS)
+$(APP): $(OBJECTS)
 	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
 
 .PHONY: clean
 clean:
-	-rm -f $(OBJECTS) $(TEST_APP) $(DEP_FILES)
+	-rm -f $(OBJECTS) $(APP) $(DEP_FILES)
 
 # if target not clean then make dependencies
 ifneq ($(MAKECMDGOALS),clean)
