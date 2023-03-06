@@ -31,9 +31,9 @@ if(NOT FULL_PROJECT_BUILD)
   message(FATAL_ERROR "Please run CMake from project root directory")
 endif()
 
-# build ipsec_MB_testapp
-add_subdirectory(test-app)
+# build imb-kat application
+add_subdirectory(kat-app)
 
-# build ipsec_xvalid_app
+# build imb-xvalid application
 add_subdirectory(xvalid-app)
 
