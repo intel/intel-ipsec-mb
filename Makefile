@@ -75,7 +75,7 @@ CS_IGNORE_WORDS ?= iinclude,struc,fo,ue,od,ba,padd
 spellcheck:
 	$(CODESPELL) -d -L $(CS_IGNORE_WORDS) \
 	-S "*.obj,*.o,*.a,*.so,*.lib,*~,*.so,*.so.*,*.d,ipsec_perf" \
-	-S "ipsec_MB_testapp,ipsec_xvalid_test" \
+	-S "imb-kat,imb-xvalid" \
 	./lib ./perf ./test README.md SECURITY.md CONTRIBUTING \
 	Makefile win_x64.mak ReleaseNotes.txt LICENSE $(CS_EXTRA_OPTS)
 
@@ -83,12 +83,10 @@ spellcheck:
 cppcheck:
 	$(MAKE) -C lib cppcheck
 	$(MAKE) -C test cppcheck
-	$(MAKE) -C test/wycheproof cppcheck
 	$(MAKE) -C perf cppcheck
 
 # cppcheck bughunt analysis check
 bughunt:
 	$(MAKE) -C lib bughunt
 	$(MAKE) -C test bughunt
-	$(MAKE) -C test/wycheproof bughunt
 	$(MAKE) -C perf bughunt
