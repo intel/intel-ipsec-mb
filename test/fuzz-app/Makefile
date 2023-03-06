@@ -25,8 +25,8 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-FUZZ_APP := job_api_fuzz_test
-DIRECT_FUZZ_APP := direct_api_fuzz_test
+FUZZ_APP := imb-fuzz-api
+DIRECT_FUZZ_APP := imb-fuzz-direct-api
 
 # include common options
 include ../common/common.mk
