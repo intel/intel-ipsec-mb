@@ -32,14 +32,14 @@ if(NOT FULL_PROJECT_BUILD)
 endif()
 
 ########################################
-# set test and library names
+# set app and library names
 ########################################
-set(XVALID_APP ipsec_xvalid_test)
+set(XVALID_APP imb-xvalid)
 set(LIB_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../lib)
 set(TEST_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../include)
 
 ########################################
-# set ipsec_xvalid_test source files
+# set imb-xvalid source files
 ########################################
 set(XVALID_APP_SRC_FILES_C
   ${CMAKE_CURRENT_SOURCE_DIR}/ipsec_xvalid.c

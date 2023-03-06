@@ -25,7 +25,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-XVALID_APP = ipsec_xvalid_test
+APP = imb-xvalid
 
 include ..\common\win_x64_common.mk
 
@@ -33,11 +33,11 @@ AS = nasm
 AFLAGS = -Werror -fwin64 -Xvc -DWIN_ABI
 
 XVALID_OBJS = ipsec_xvalid.obj misc.obj utils.obj
-XVALID_LFLAGS = /out:$(XVALID_APP).exe $(DLFLAGS)
+XVALID_LFLAGS = /out:$(APP).exe $(DLFLAGS)
 
-all: $(XVALID_APP).exe tests.dep
+all: $(APP).exe tests.dep
 
-$(XVALID_APP).exe: $(XVALID_OBJS) $(IPSECLIB)
+$(APP).exe: $(XVALID_OBJS) $(IPSECLIB)
         $(LNK) $(XVALID_LFLAGS) $(XVALID_OBJS) $(IPSECLIB)
 
 tests.dep: $(TEST_OBJS) $(XVALID_OBJS)
@@ -55,7 +55,7 @@ tests.dep: $(TEST_OBJS) $(XVALID_OBJS)
 	$(AS) -MD $@.dep -o $@ $(AFLAGS) $<
 
 clean:
-        del /q tests.dep *.obj.dep $(XVALID_OBJS) $(XVALID_APP).*
+        del /q tests.dep *.obj.dep $(XVALID_OBJS) $(APP).*
 
 !if exist(tests.dep)
 !include tests.dep

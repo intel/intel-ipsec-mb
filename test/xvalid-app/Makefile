@@ -25,15 +25,15 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-XVALID_APP := ipsec_xvalid_test
+APP := imb-xvalid
 
 # include common options
 include ../common/common.mk
 
-# ipsec_xvalid_test modules
-XVALID_ASM := misc.asm
-XVALID_SOURCES := ipsec_xvalid.c ../common/utils.c
-XVALID_OBJECTS := $(XVALID_SOURCES:%.c=%.o) $(XVALID_ASM:%.asm=%.o)
+# imb-xvalid modules
+ASM := misc.asm
+SOURCES := ipsec_xvalid.c ../common/utils.c
+OBJECTS := $(SOURCES:%.c=%.o) $(ASM:%.asm=%.o)
 
 # rule for compiling assembly code with producing dependencies
 %.o:%.asm
@@ -48,14 +48,14 @@ ifeq ($(CC_HAS_CET),1)
 endif
 
 # targets come here
-all: $(XVALID_APP)
+all: $(APP)
 
-$(XVALID_APP): $(XVALID_OBJECTS)
+$(APP): $(OBJECTS)
 	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
 
 .PHONY: clean
 clean:
-	-rm -f $(DEP_FILES) $(XVALID_OBJECTS) $(XVALID_APP) $(ASM_OBJECTS)
+	-rm -f $(DEP_FILES) $(OBJECTS) $(APP) $(ASM_OBJECTS)
 
 # if target not clean then make dependencies
 ifneq ($(MAKECMDGOALS),clean)
