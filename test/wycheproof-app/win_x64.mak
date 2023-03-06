@@ -25,7 +25,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-APP = wycheproof
+APP = imb-wycheproof
 
 include ..\common\win_x64_common.mk
 

@@ -25,7 +25,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-APP := wycheproof
+APP := imb-wycheproof
 
 # include common options
 include ../common/common.mk
