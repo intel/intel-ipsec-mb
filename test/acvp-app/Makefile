@@ -25,7 +25,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-ACVP_APP := acvp_app
+APP := imb-acvp
 
 # include common options
 include ../common/common.mk
@@ -41,18 +41,18 @@ ACVP_LDLIBS = -lacvp $(LDLIBS)
 ACVP_SOURCES := acvp_app_main.c ../common/utils.c
 
 # targets come here
-all: $(ACVP_APP)
+all: $(APP)
 
-$(ACVP_APP): $(ACVP_SOURCES)
+$(APP): $(ACVP_SOURCES)
 ifneq ("$(wildcard $(ACVP_HDR))","")
 	$(CC) $(ACVP_CFLAGS) $(ACVP_LDFLAGS) $^ $(ACVP_LDLIBS) -o $@
 else
-	@echo "No libacvp header found at $(ACVP_HDR), $(ACVP_APP) is not built"
+	@echo "No libacvp header found at $(ACVP_HDR), $(APP) is not built"
 endif
 
 .PHONY: clean
 clean:
-	-rm -f $(DEP_FILES) $(ACVP_APP)
+	-rm -f $(DEP_FILES) $(APP)
 
 # if target not clean then make dependencies
 ifneq ($(MAKECMDGOALS),clean)
