@@ -558,7 +558,7 @@ static void test_zuc_eea3_1_buff(IMB_MGR *p_mgr, uint8_t *buff, size_t dataSize)
 {
         const void *key = buff;
 
-        if (dataSize < 16)
+        if (dataSize < IMB_ZUC_KEY_LEN_IN_BYTES)
                 return;
 
         void *out = buff;
@@ -573,7 +573,7 @@ static void test_zuc_eea3_4_buff(IMB_MGR *p_mgr, uint8_t *buff, size_t dataSize)
 {
         const void *key[4];
 
-        if (dataSize < 16)
+        if (dataSize < IMB_ZUC_KEY_LEN_IN_BYTES)
                 return;
 
         const void *iv[4];
@@ -596,7 +596,7 @@ static void test_zuc_eea3_n_buff(IMB_MGR *p_mgr, uint8_t *buff, size_t dataSize)
 {
         const void *key[8];
 
-        if (dataSize < 16)
+        if (dataSize < IMB_ZUC_KEY_LEN_IN_BYTES)
                 return;
 
         const void *iv[8];
@@ -619,7 +619,7 @@ static void test_zuc_eia3_1_buff(IMB_MGR *p_mgr, uint8_t *buff, size_t dataSize)
 {
         const void *key = buff;
 
-        if (dataSize < 16)
+        if (dataSize < IMB_ZUC_KEY_LEN_IN_BYTES)
                 return;
 
         const void *in = buff;
@@ -634,7 +634,7 @@ static void test_zuc_eia3_n_buff(IMB_MGR *p_mgr, uint8_t *buff, size_t dataSize)
 {
         const void *key[8];
 
-        if (dataSize < 16)
+        if (dataSize < IMB_ZUC_KEY_LEN_IN_BYTES)
                 return;
 
         const void *iv[8];

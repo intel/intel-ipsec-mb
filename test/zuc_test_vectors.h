@@ -35,11 +35,6 @@
 #define NUM_ZUC_256_EEA3_TESTS 10
 #define NUM_ZUC_256_EIA3_TESTS 12
 #define NUM_ZUC_EIA3_TESTS 10
-#define ZUC_KEY_LEN_IN_BYTES 16
-#define ZUC_IV_LEN_IN_BYTES 16
-#define ZUC256_KEY_LEN_IN_BYTES 32
-#define ZUC256_IV_LEN_IN_BYTES 25
-#define ZUC_DIGEST_LEN 4
 
 typedef struct testZUC_vectors_t {
 	uint8_t CK[16];
