@@ -181,12 +181,13 @@ __forceinline IMB_JOB * SUBMIT_JOB_AES128_CBCS_1_9_DEC(IMB_JOB *job)
 /* ========================================================================= */
 /* AES-GCM */
 /* ========================================================================= */
-__forceinline IMB_JOB *SUBMIT_JOB_AES_GCM_DEC(IMB_MGR *state, IMB_JOB *job)
+__forceinline IMB_JOB *SUBMIT_JOB_AES_GCM_DEC(IMB_MGR *state, IMB_JOB *job,
+                                              const uint64_t key_sz)
 {
         DECLARE_ALIGNED(struct gcm_context_data ctx, 16);
         (void) state;
 
-        if (16 == job->key_len_in_bytes) {
+        if (16 == key_sz) {
                 AES_GCM_DEC_IV_128(job->dec_keys,
                                    &ctx, job->dst,
                                    job->src +
@@ -197,7 +198,7 @@ __forceinline IMB_JOB *SUBMIT_JOB_AES_GCM_DEC(IMB_MGR *state, IMB_JOB *job)
                                    job->u.GCM.aad_len_in_bytes,
                                    job->auth_tag_output,
                                    job->auth_tag_output_len_in_bytes);
-        } else if (24 == job->key_len_in_bytes) {
+        } else if (24 == key_sz) {
                 AES_GCM_DEC_IV_192(job->dec_keys,
                                    &ctx, job->dst,
                                    job->src +
@@ -594,7 +595,7 @@ __forceinline IMB_JOB *SUBMIT_JOB_CIPHER_DEC(IMB_MGR *state, IMB_JOB *job,
                                              const uint64_t key_sz)
 {
         if (IMB_CIPHER_GCM == cipher_mode) {
-                return SUBMIT_JOB_AES_GCM_DEC(state, job);
+                return SUBMIT_JOB_AES_GCM_DEC(state, job, key_sz);
         } else if (IMB_CIPHER_GCM_SGL == cipher_mode) {
                 return submit_gcm_sgl_dec(state, job, key_sz);
         } else if (IMB_CIPHER_CBC == cipher_mode) {
