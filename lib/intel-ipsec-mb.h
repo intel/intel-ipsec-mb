@@ -155,6 +155,15 @@ typedef enum {
 #define IMB_KASUMI_BLOCK_SIZE       8
 #define IMB_KASUMI_DIGEST_SIZE      4
 
+#define IMB_ZUC_KEY_LEN_IN_BYTES                16
+#define IMB_ZUC_IV_LEN_IN_BYTES                 16
+#define IMB_ZUC256_KEY_LEN_IN_BYTES             32
+#define IMB_ZUC256_IV_LEN_IN_BYTES_MIN          23
+#define IMB_ZUC256_IV_LEN_IN_BYTES_MAX          25
+#define IMB_ZUC_DIGEST_LEN_IN_BYTES             4
+#define IMB_ZUC256_DIGEST_LEN_IN_BYTES_MIN      4
+#define IMB_ZUC256_DIGEST_LEN_IN_BYTES_MAX      16
+
 /**
  * Minimum Ethernet frame size to calculate CRC32
  * Source Address (6 bytes) + Destination Address (6 bytes) + Type/Len (2 bytes)
