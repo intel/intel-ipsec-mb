@@ -3366,6 +3366,9 @@ IMB_JOB *RESUBMIT_JOB(IMB_MGR *state, IMB_JOB *job)
 __forceinline
 IMB_JOB *submit_new_job(IMB_MGR *state, IMB_JOB *job)
 {
+        if (job->cipher_mode == IMB_CIPHER_GCM)
+                return SUBMIT_JOB_CIPHER(state, job);
+
 	if (job->chain_order == IMB_ORDER_CIPHER_HASH)
 		job = SUBMIT_JOB_CIPHER(state, job);
 	else
