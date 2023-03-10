@@ -714,9 +714,9 @@ asm_avx2_gcm_objs := \
 	aes128_gcm_by8_avx2.o aes192_gcm_by8_avx2.o aes256_gcm_by8_avx2.o
 
 asm_avx512_gcm_objs := \
-	aes128_gcm_by48_api_vaes_avx512.o aes192_gcm_by48_api_vaes_avx512.o aes256_gcm_by48_api_vaes_avx512.o \
-	aes128_gcm_by48_sgl_api_vaes_avx512.o aes192_gcm_by48_sgl_api_vaes_avx512.o aes256_gcm_by48_sgl_api_vaes_avx512.o \
-	aes128_gmac_by48_api_vaes_avx512.o aes192_gmac_by48_api_vaes_avx512.o aes256_gmac_by48_api_vaes_avx512.o \
+	aes128_gcm_api_vaes_avx512.o aes192_gcm_api_vaes_avx512.o aes256_gcm_api_vaes_avx512.o \
+	aes128_gcm_sgl_api_vaes_avx512.o aes192_gcm_sgl_api_vaes_avx512.o aes256_gcm_sgl_api_vaes_avx512.o \
+	aes128_gmac_api_vaes_avx512.o aes192_gmac_api_vaes_avx512.o aes256_gmac_api_vaes_avx512.o \
 	aes128_gcm_by8_avx512.o aes192_gcm_by8_avx512.o aes256_gcm_by8_avx512.o
 
 #

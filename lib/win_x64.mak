@@ -547,21 +547,21 @@ gcm_objs = \
 	$(OBJ_DIR)\aes128_gcm_by8_avx.obj \
 	$(OBJ_DIR)\aes128_gcm_by8_avx2.obj \
 	$(OBJ_DIR)\aes128_gcm_by8_avx512.obj \
-	$(OBJ_DIR)\aes128_gcm_by48_api_vaes_avx512.obj \
-	$(OBJ_DIR)\aes128_gcm_by48_sgl_api_vaes_avx512.obj \
-	$(OBJ_DIR)\aes128_gmac_by48_api_vaes_avx512.obj \
+	$(OBJ_DIR)\aes128_gcm_api_vaes_avx512.obj \
+	$(OBJ_DIR)\aes128_gcm_sgl_api_vaes_avx512.obj \
+	$(OBJ_DIR)\aes128_gmac_api_vaes_avx512.obj \
 	$(OBJ_DIR)\aes192_gcm_by8_avx.obj \
 	$(OBJ_DIR)\aes192_gcm_by8_avx2.obj \
 	$(OBJ_DIR)\aes192_gcm_by8_avx512.obj \
-	$(OBJ_DIR)\aes192_gcm_by48_api_vaes_avx512.obj \
-	$(OBJ_DIR)\aes192_gcm_by48_sgl_api_vaes_avx512.obj \
-	$(OBJ_DIR)\aes192_gmac_by48_api_vaes_avx512.obj \
+	$(OBJ_DIR)\aes192_gcm_api_vaes_avx512.obj \
+	$(OBJ_DIR)\aes192_gcm_sgl_api_vaes_avx512.obj \
+	$(OBJ_DIR)\aes192_gmac_api_vaes_avx512.obj \
 	$(OBJ_DIR)\aes256_gcm_by8_avx.obj \
 	$(OBJ_DIR)\aes256_gcm_by8_avx2.obj \
 	$(OBJ_DIR)\aes256_gcm_by8_avx512.obj \
-	$(OBJ_DIR)\aes256_gcm_by48_api_vaes_avx512.obj \
-	$(OBJ_DIR)\aes256_gcm_by48_sgl_api_vaes_avx512.obj \
-	$(OBJ_DIR)\aes256_gmac_by48_api_vaes_avx512.obj \
+	$(OBJ_DIR)\aes256_gcm_api_vaes_avx512.obj \
+	$(OBJ_DIR)\aes256_gcm_sgl_api_vaes_avx512.obj \
+	$(OBJ_DIR)\aes256_gmac_api_vaes_avx512.obj \
 	$(OBJ_DIR)\gcm128_api_by8_sse.obj \
 	$(OBJ_DIR)\gcm128_sgl_api_by8_sse.obj \
 	$(OBJ_DIR)\gcm128_gmac_api_by8_sse.obj \
