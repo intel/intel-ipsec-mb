@@ -205,6 +205,6 @@ submit_job_aes_docsis256_enc_crc32_vaes_avx512(MB_MGR_DOCSIS_AES_OOO *state,
 IMB_JOB *
 flush_job_aes_docsis256_enc_crc32_vaes_avx512(MB_MGR_DOCSIS_AES_OOO *state);
 
+IMB_DLL_EXPORT void set_suite_id_avx512_t2(IMB_MGR *state, IMB_JOB *job);
 
 #endif /* IMB_ASM_AVX512_T2_H */
-

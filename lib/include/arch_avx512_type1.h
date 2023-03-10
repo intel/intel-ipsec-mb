@@ -164,6 +164,7 @@ IMB_DLL_EXPORT void aes_cfb_256_one_avx512(void *out, const void *in,
                                            const void *iv, const void *keys,
                                            uint64_t len);
 
-#endif /* IMB_ASM_AVX512_T1_H */
+IMB_DLL_EXPORT void set_suite_id_avx512_t1(IMB_MGR *state, IMB_JOB *job);
 
+#endif /* IMB_ASM_AVX512_T1_H */
 

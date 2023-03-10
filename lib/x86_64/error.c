@@ -92,7 +92,8 @@ IMB_DLL_LOCAL const int imb_errno_types[] = {
         IMB_ERR_NULL_BURST,
         IMB_ERR_BURST_SIZE,
         IMB_ERR_BURST_OOO,
-        IMB_ERR_SELFTEST
+        IMB_ERR_SELFTEST,
+        IMB_ERR_BURST_SUITE_ID
 };
 
 int imb_get_errno(IMB_MGR *mb_mgr)
@@ -225,6 +226,8 @@ imb_get_strerror(int errnum)
                 return "Burst jobs out of order";
         case IMB_ERR_SELFTEST:
                 return "Self-test failed";
+        case IMB_ERR_BURST_SUITE_ID:
+                return "Invalid cipher suite ID (async burst API)";
         default:
                 return strerror(errnum);
         }

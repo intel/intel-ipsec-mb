@@ -262,4 +262,6 @@ IMB_JOB *submit_job_snow3g_uia2_sse(MB_MGR_SNOW3G_OOO *state,
                                     IMB_JOB *job);
 IMB_JOB *flush_job_snow3g_uia2_sse(MB_MGR_SNOW3G_OOO *state);
 
+IMB_DLL_EXPORT void set_suite_id_sse_t1(IMB_MGR *state, IMB_JOB *job);
+
 #endif /* IMB_ARCH_SSE_TYPE1_H */

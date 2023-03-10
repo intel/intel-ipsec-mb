@@ -25,16 +25,13 @@
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 *******************************************************************************/
 
-/* AVX_IFMA */
+/* AVX TYPE1 + SHANI + GFNI */
 
-#ifndef IMB_ASM_AVX2_T3_H
-#define IMB_ASM_AVX2_T3_H
+#ifndef IMB_ASM_AVX_T2_H
+#define IMB_ASM_AVX_T2_H
 
 #include "intel-ipsec-mb.h"
-#include "ipsec_ooo_mgr.h"
 
-void poly1305_mac_fma_avx2(IMB_JOB *job);
+IMB_DLL_EXPORT void set_suite_id_avx_t2(IMB_MGR *state, IMB_JOB *job);
 
-IMB_DLL_EXPORT void set_suite_id_avx2_t3(IMB_MGR *state, IMB_JOB *job);
-
-#endif /* IMB_ASM_AVX2_T3_H */
+#endif /* IMB_ASM_AVX_T2_H */

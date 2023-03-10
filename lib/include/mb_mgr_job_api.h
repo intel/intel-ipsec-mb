@@ -3322,6 +3322,7 @@ __forceinline IMB_JOB *FLUSH_JOB_HASH(IMB_MGR *state, IMB_JOB *job)
 __forceinline unsigned calc_cipher_tab_index(const IMB_JOB *job)
 {
         /*
+         * See include/mb_mgr_job_api.h for cipher table organization
          * - cipher_mode x 4, four key sizes per cipher mode
          * - map key_len_in_bytes into 0, 1, 2 & 3 index values
          * - encrypt_direction_bit x (ENCRYPT_DECRYPT_GAP x 4)
@@ -3533,6 +3534,96 @@ FLUSH_JOB(IMB_MGR *state)
         RESTORE_XMMS(xmm_save);
 #endif
         return job;
+}
+
+/* ========================================================================= */
+/* Async burst job submit & flush functions */
+/* ========================================================================= */
+
+__forceinline void set_cipher_suite_id(IMB_JOB *job, void **id)
+{
+        const unsigned c_idx = calc_cipher_tab_index(job);
+        const unsigned h_idx = (unsigned) job->hash_alg;
+
+        id[0] = (void *) tab_submit_cipher[c_idx];
+        id[1] = (void *) tab_submit_hash[h_idx];
+        id[2] = (void *) tab_flush_cipher[c_idx];
+        id[3] = (void *) tab_flush_hash[h_idx];
+}
+
+#define CALL_SUBMIT_CIPHER(s, j) ((submit_flush_fn_t) (j)->suite_id[0])(s, j)
+#define CALL_FLUSH_CIPHER(s, j) ((submit_flush_fn_t) (j)->suite_id[2])(s, j)
+#define CALL_SUBMIT_HASH(s, j) ((submit_flush_fn_t) (j)->suite_id[1])(s, j)
+#define CALL_FLUSH_HASH(s, j) ((submit_flush_fn_t) (j)->suite_id[3])(s, j)
+
+IMB_DLL_EXPORT void SET_SUITE_ID_FN(IMB_MGR *state, IMB_JOB *job)
+{
+        (void) state;
+        set_cipher_suite_id(job, job->suite_id);
+}
+
+__forceinline
+IMB_JOB *RESUBMIT_BURST_JOB(IMB_MGR *state, IMB_JOB *job)
+{
+        while (job != NULL && job->status < IMB_STATUS_COMPLETED) {
+                if (job->status == IMB_STATUS_COMPLETED_AUTH)
+                        job = CALL_SUBMIT_CIPHER(state, job);
+                else /* assumed job->status = IMB_STATUS_COMPLETED_CIPHER */
+                        job = CALL_SUBMIT_HASH(state, job);
+        }
+
+	return job;
+}
+
+__forceinline
+IMB_JOB *submit_new_burst_job(IMB_MGR *state, IMB_JOB *job)
+{
+        if (job->cipher_mode == IMB_CIPHER_GCM)
+                return CALL_SUBMIT_CIPHER(state, job);
+
+	if (job->chain_order == IMB_ORDER_CIPHER_HASH)
+		job = CALL_SUBMIT_CIPHER(state, job);
+	else
+		job = CALL_SUBMIT_HASH(state, job);
+
+        job = RESUBMIT_BURST_JOB(state, job);
+	return job;
+}
+
+__forceinline
+uint32_t complete_burst_job(IMB_MGR *state, IMB_JOB *job)
+{
+        uint32_t completed_jobs = 0;
+
+        /**
+         * complete as many jobs as necessary
+         * until specified 'job' has completed
+         */
+        if (job->chain_order == IMB_ORDER_CIPHER_HASH) {
+                /* while() loop optimized for cipher_hash order */
+                while (job->status < IMB_STATUS_COMPLETED) {
+                        IMB_JOB *tmp = CALL_FLUSH_CIPHER(state, job);
+
+                        if (tmp == NULL)
+                                tmp = CALL_FLUSH_HASH(state, job);
+
+                        (void) RESUBMIT_BURST_JOB(state, tmp);
+                        completed_jobs++;
+                }
+        } else {
+                /* while() loop optimized for hash_cipher order */
+                while (job->status < IMB_STATUS_COMPLETED) {
+                        IMB_JOB *tmp = CALL_FLUSH_HASH(state, job);
+
+                        if (tmp == NULL)
+                                tmp = CALL_FLUSH_CIPHER(state, job);
+
+                        (void) RESUBMIT_BURST_JOB(state, tmp);
+                        completed_jobs++;
+                }
+        }
+
+        return completed_jobs;
 }
 
 /* ========================================================================= */

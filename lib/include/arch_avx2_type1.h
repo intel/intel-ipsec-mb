@@ -120,4 +120,6 @@ IMB_JOB *submit_job_hmac_md5_avx2(MB_MGR_HMAC_MD5_OOO *state,
                                   IMB_JOB *job);
 IMB_JOB *flush_job_hmac_md5_avx2(MB_MGR_HMAC_MD5_OOO *state);
 
+IMB_DLL_EXPORT void set_suite_id_avx2_t1(IMB_MGR *state, IMB_JOB *job);
+
 #endif /* IMB_ASM_AVX2_T1_H */

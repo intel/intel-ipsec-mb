@@ -112,4 +112,6 @@ IMB_JOB *submit_job_zuc256_eia3_gfni_sse(MB_MGR_ZUC_OOO *state,
 IMB_JOB *flush_job_zuc256_eia3_gfni_sse(MB_MGR_ZUC_OOO *state,
                                         const uint64_t tag_sz);
 
+IMB_DLL_EXPORT void set_suite_id_sse_t3(IMB_MGR *state, IMB_JOB *job);
+
 #endif /* IMB_ASM_SSE_T3_H */

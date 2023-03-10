@@ -64,4 +64,6 @@ IMB_JOB *submit_job_sha256_ni_sse(MB_MGR_SHA_256_OOO *state, IMB_JOB *job);
 
 IMB_JOB *flush_job_sha256_ni_sse(MB_MGR_SHA_256_OOO *state, IMB_JOB *job);
 
+IMB_DLL_EXPORT void set_suite_id_sse_t2(IMB_MGR *state, IMB_JOB *job);
+
 #endif /* IMB_ARCH_SSE_TYPE2_H */

@@ -25,16 +25,21 @@
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 *******************************************************************************/
 
-/* AVX_IFMA */
-
-#ifndef IMB_ASM_AVX2_T3_H
-#define IMB_ASM_AVX2_T3_H
-
 #include "intel-ipsec-mb.h"
-#include "ipsec_ooo_mgr.h"
+#include "include/error.h"
 
-void poly1305_mac_fma_avx2(IMB_JOB *job);
+IMB_DLL_EXPORT void imb_set_cipher_suite_id(IMB_MGR *state, IMB_JOB *job)
+{
+#ifdef SAFE_PARAM
+        if (state == NULL) {
+                imb_set_errno(NULL, IMB_ERR_NULL_MBMGR);
+                return;
+        }
+        if (job == NULL) {
+                imb_set_errno(state, IMB_ERR_NULL_JOB);
+                return;
+        }
+#endif
 
-IMB_DLL_EXPORT void set_suite_id_avx2_t3(IMB_MGR *state, IMB_JOB *job);
-
-#endif /* IMB_ASM_AVX2_T3_H */
+        state->set_suite_id(state, job);
+}

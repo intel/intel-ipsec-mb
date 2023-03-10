@@ -73,6 +73,7 @@
 #define SUBMIT_CIPHER_BURST_NOCHECK submit_cipher_burst_nocheck_avx2_t2
 #define SUBMIT_HASH_BURST submit_hash_burst_avx2_t2
 #define SUBMIT_HASH_BURST_NOCHECK submit_hash_burst_nocheck_avx2_t2
+#define SET_SUITE_ID_FN   set_suite_id_avx2_t2
 
 /* Hash */
 #define SUBMIT_JOB_HASH    SUBMIT_JOB_HASH_AVX2
@@ -360,6 +361,7 @@ init_mb_mgr_avx2_t2_internal(IMB_MGR *state, const int reset_mgrs)
         state->submit_cipher_burst_nocheck = SUBMIT_CIPHER_BURST_NOCHECK;
         state->submit_hash_burst   = SUBMIT_HASH_BURST;
         state->submit_hash_burst_nocheck = SUBMIT_HASH_BURST_NOCHECK;
+        state->set_suite_id        = SET_SUITE_ID_FN;
 
         state->keyexp_128          = aes_keyexp_128_avx2;
         state->keyexp_192          = aes_keyexp_192_avx2;

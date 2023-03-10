@@ -243,6 +243,7 @@ typedef enum {
         IMB_ERR_BURST_SIZE,
         IMB_ERR_BURST_OOO,
         IMB_ERR_SELFTEST,
+        IMB_ERR_BURST_SUITE_ID,
         /* add new error types above this comment */
         IMB_ERR_MAX       /* don't move this one */
 } IMB_ERR;
@@ -659,6 +660,8 @@ typedef struct IMB_JOB {
                         /**< Pointer to next IV (last ciphertext block) */
                 } CBCS; /**< CBCS specific fields */
         } cipher_fields; /**< Cipher algorithm-specific fields */
+
+        void *suite_id[4]; /**< see imb_set_cipher_suite_id() */
 } IMB_JOB;
 
 
@@ -1235,6 +1238,8 @@ typedef struct IMB_MGR {
         aes_ecb_quic_t aes_ecb_128_quic;
         aes_ecb_quic_t aes_ecb_192_quic;
         aes_ecb_quic_t aes_ecb_256_quic;
+
+        void (*set_suite_id)(struct IMB_MGR *, IMB_JOB *);
 
         /* in-order scheduler fields */
         int              earliest_job; /**< byte offset, -1 if none */
@@ -4182,6 +4187,19 @@ imb_quic_hp_aes_ecb(IMB_MGR *state,
                     const void * const src_ptr_array[],
                     const uint64_t num_packets,
                     const IMB_KEY_SIZE_BYTES key_size);
+
+/**
+ * @brief Sets up ID structure for selected cipher suite in
+ *        provided \a job structure
+ *
+ * This is for use ONLY in BURST API to speed up dispatch process.
+ *
+ * @param [in]     state   pointer to IMB_MGR
+ * @param [in/out] job     pointer to prepared JOB structure
+ *
+ */
+IMB_DLL_EXPORT void
+imb_set_cipher_suite_id(IMB_MGR *state, IMB_JOB *job);
 
 #ifdef __cplusplus
 }

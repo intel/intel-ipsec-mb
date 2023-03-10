@@ -314,7 +314,8 @@ c_lib_objs := \
 	self_test.o \
 	quic_aes_gcm.o \
 	quic_hp_aes_ecb.o \
-	hmac_ipad_opad.o
+	hmac_ipad_opad.o \
+	cipher_suite_id.o
 
 ifeq ($(AESNI_EMU), y)
 c_lib_objs := $(c_lib_objs) \

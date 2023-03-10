@@ -48,6 +48,7 @@
 #include "include/arch_sse_type1.h" /* snow3g */
 #include "include/arch_sse_type2.h" /* shani */
 #include "include/arch_avx_type1.h"
+#include "include/arch_avx_type2.h"
 
 #include "include/ooo_mgr_reset.h"
 
@@ -69,6 +70,7 @@
 #define SUBMIT_CIPHER_BURST_NOCHECK submit_cipher_burst_nocheck_avx_t2
 #define SUBMIT_HASH_BURST submit_hash_burst_avx_t2
 #define SUBMIT_HASH_BURST_NOCHECK submit_hash_burst_nocheck_avx_t2
+#define SET_SUITE_ID_FN   set_suite_id_avx_t2
 
 /* Hash */
 #define SUBMIT_JOB_HASH    SUBMIT_JOB_HASH_AVX_T2
@@ -328,7 +330,7 @@ IMB_DLL_LOCAL void
 init_mb_mgr_avx_t2_internal(IMB_MGR *state, const int reset_mgrs)
 {
         /* Check if CPU flags needed for AVX interface are present */
-        if ((state->features & IMB_CPUFLAGS_AVX) != IMB_CPUFLAGS_AVX) {
+        if ((state->features & IMB_CPUFLAGS_AVX_T2) != IMB_CPUFLAGS_AVX_T2) {
                 imb_set_errno(state, IMB_ERR_MISSING_CPUFLAGS_INIT_MGR);
                 return;
         }
@@ -359,6 +361,7 @@ init_mb_mgr_avx_t2_internal(IMB_MGR *state, const int reset_mgrs)
         state->submit_cipher_burst_nocheck = SUBMIT_CIPHER_BURST_NOCHECK;
         state->submit_hash_burst   = SUBMIT_HASH_BURST;
         state->submit_hash_burst_nocheck = SUBMIT_HASH_BURST_NOCHECK;
+        state->set_suite_id        = SET_SUITE_ID_FN;
 
         state->keyexp_128          = aes_keyexp_128_avx;
         state->keyexp_192          = aes_keyexp_192_avx;
