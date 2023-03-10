@@ -2299,6 +2299,8 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
                 uint32_t num_jobs = num_iter;
                 IMB_JOB *jobs[IMB_MAX_BURST_SIZE] = {NULL};
 
+                imb_set_cipher_suite_id(mb_mgr, &job_template);
+
                 while (num_jobs && timebox_on) {
                         uint32_t n = (num_jobs / burst_size) ?
                                 burst_size : num_jobs;

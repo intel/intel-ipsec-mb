@@ -2144,6 +2144,8 @@ test_aes_many_burst(struct IMB_MGR *mb_mgr,
                 job->msg_len_to_cipher_in_bytes = text_len;
                 job->user_data = targets[i];
                 job->user_data2 = (void *)((uint64_t)i);
+
+                imb_set_cipher_suite_id(mb_mgr, job);
         }
 
         completed_jobs = IMB_SUBMIT_BURST(mb_mgr, num_jobs, jobs);

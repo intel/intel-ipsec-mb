@@ -502,6 +502,8 @@ test_aead(struct IMB_MGR *mb_mgr,
                 job->auth_tag_output_len_in_bytes = 16;
 
                 job->user_data = auths[i];
+
+                imb_set_cipher_suite_id(mb_mgr, job);
         }
 
         uint32_t completed_jobs = IMB_SUBMIT_BURST(mb_mgr, num_jobs, jobs);

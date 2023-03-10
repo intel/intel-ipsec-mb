@@ -1089,6 +1089,7 @@ test_hmac_shax_burst(struct IMB_MGR *mb_mgr,
 
                 job->user_data = auths[i];
 
+                imb_set_cipher_suite_id(mb_mgr, job);
         }
 
         completed_jobs = IMB_SUBMIT_BURST(mb_mgr, num_jobs, jobs);

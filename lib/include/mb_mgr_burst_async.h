@@ -156,6 +156,19 @@ submit_burst_and_check(IMB_MGR *state, const uint32_t n_jobs,
                                            jobs[i]->key_len_in_bytes)) {
                                 goto return_invalid_job;
                         }
+
+                        /* validate job->suite_id */
+                        void *t[4];
+
+                        set_cipher_suite_id(jobs[i], t);
+
+                        if(jobs[i]->suite_id[0] != t[0] ||
+                           jobs[i]->suite_id[1] != t[1] ||
+                           jobs[i]->suite_id[2] != t[2] ||
+                           jobs[i]->suite_id[3] != t[3]) {
+                                imb_set_errno(state, IMB_ERR_BURST_SUITE_ID);
+                                goto return_invalid_job;
+                        }
                 }
         }
 
@@ -166,7 +179,7 @@ submit_burst_and_check(IMB_MGR *state, const uint32_t n_jobs,
         /* submit all jobs */
         for (i = 0; i < n_jobs; i++) {
                 jobs[i]->status = IMB_STATUS_BEING_PROCESSED;
-                submit_new_job(state, jobs[i]);
+                submit_new_burst_job(state, jobs[i]);
         }
         ADV_N_JOBS(&state->next_job, n_jobs);
 
@@ -253,7 +266,7 @@ FLUSH_BURST(IMB_MGR *state, const uint32_t max_jobs, IMB_JOB **jobs)
                 IMB_JOB *job = JOBS(state, state->earliest_job);
 
                 if (job->status < IMB_STATUS_COMPLETED)
-                        complete_job(state, job);
+                        complete_burst_job(state, job);
 
                 jobs[n_ret_jobs++] = job;
                 ADV_JOBS(&state->earliest_job);

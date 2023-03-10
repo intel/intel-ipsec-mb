@@ -1665,12 +1665,16 @@ IMB_DLL_EXPORT void init_mb_mgr_auto(IMB_MGR *state, IMB_ARCH *arch);
         ((_mgr)->get_next_burst((_mgr), (_n_jobs), (_jobs)))
 
 /**
- * Submit multiple jobs to be processed after validating.
+ * @brief Submit multiple jobs to be processed after validating.
+ *
+ * Prior to submission, \a _jobs need to be initialized with correct
+ * crypto job parameters and followed with a call to imb_set_cipher_suite_id().
  *
  * @param [in,out] _mgr         Pointer to initialized IMB_MGR structure
  * @param [in] _n_jobs          Number of jobs to submit for processing
  * @param [in,out] _jobs        In:  List of pointers to jobs for submission
  *                              Out: List of pointers to completed jobs
+ * @see imb_set_cipher_suite_id()
  *
  * @return Number of completed jobs or zero on error.
  *         If zero, imb_get_errno() can be used to check for potential
@@ -1680,12 +1684,16 @@ IMB_DLL_EXPORT void init_mb_mgr_auto(IMB_MGR *state, IMB_ARCH *arch);
         ((_mgr)->submit_burst((_mgr), (_n_jobs), (_jobs)))
 
 /**
- * Submit multiple jobs to be processed without validating.
+ * @brief Submit multiple jobs to be processed without validating.
+ *
+ * Prior to submission \a _jobs need to be initialized with correct
+ * crypto job parameters and followed with call to imb_set_cipher_suite_id().
  *
  * @param [in,out] _mgr         Pointer to initialized IMB_MGR structure
  * @param [in] _n_jobs          Number of jobs to submit for processing
  * @param [in,out] _jobs        In:  List of pointers to jobs for submission
  *                              Out: List of pointers to completed jobs
+ * @see imb_set_cipher_suite_id()
  *
  * @return Number of completed jobs or zero on error
  */
@@ -4193,6 +4201,13 @@ imb_quic_hp_aes_ecb(IMB_MGR *state,
  *        provided \a job structure
  *
  * This is for use ONLY in BURST API to speed up dispatch process.
+ * For given set of parameters: cipher type, cipher key size,
+ * cipher direction and authentication type, suite_id field be the same.
+ * In connection oriented applications, template filled-in job structure
+ * can be cached within connection structure and reused in submit operations.
+ *
+ * @see IMB_SUBMIT_BURST()
+ * @see IMB_SUBMIT_BURST_NOCHECK()
  *
  * @param [in]     state   pointer to IMB_MGR
  * @param [in/out] job     pointer to prepared JOB structure

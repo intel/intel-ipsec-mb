@@ -1747,6 +1747,8 @@ aes_gcm_burst(IMB_MGR *mb_mgr,
                         job->hash_alg = IMB_AUTH_GCM_SGL;
                 } else
                         job->hash_alg = IMB_AUTH_AES_GMAC;
+
+                imb_set_cipher_suite_id(mb_mgr, job);
         }
 
         const uint32_t completed_jobs =
