@@ -72,53 +72,66 @@ bcast_mask:
         db 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01
 
 align 32
-y0_mask     dq  0xB3FF347F3AFFDEFF, 0x77FF9DBF93DF756F, 0x6BFF5B7FAFEFABFF, 0x7FFF37FF7FFFEFFF
-y1_mask     dq  0x1ABFEB7F77FF5F6F, 0xFBFF2D7FEF3FC6BF, 0x3EFFBDBF7FFF377F, 0x55FF5FFFDFBFB7FF
-y2_mask     dq  0xBD7FCDBFD6FFF7DF, 0x5DFF7EFF25B77BFF, 0xFF7FAFFFF7FFDFBF, 0x9BBF9ABFAFFF7FFF
-y3_mask     dq  0xEDBF97FFFB7F7BBF, 0xBFFFB6FFCFCF9ACF, 0xB7BFDFFF9BFFDDFF, 0xEFDFE37FBBDFFBFF
-y4_mask     dq  0xCEFFE7DF9FBF9BD7, 0xFEFFDF7FF6EFE37F, 0xDFFFEEFFDEFFE7FF, 0xEEFFFDFFF5FF9DFF
-y5_mask     dq  0xF0FFF9FFE3BFE3E7, 0xCF7FE7BFF8F7FC77, 0xEFFFF7FFED7FF9DF, 0xF3FFFDDFC6EFDF7F
-y6_mask     dq  0xFF3FFE1FFC3FFC07, 0xEFFFF83FFF07FF87, 0xF5FFF9FFF1BFFEFF, 0xFCFFFE7FF8FFE6BF
-y7_mask     dq  0xffffffffffffffff, 0xF1BFffffffffffff, 0xF9FFFEDFFE3FFF3F, 0xFF7FFF9FFF77F8DF
-y8_mask     dq  0xffffffffffffffff, 0xFE3Fffffffffffff, 0xFE3FFF1FFFCFFFDF, 0xFF9FFFEFFF87FF1F
-y_mask_last dq  0xFFC0FFF0FFE0FFF8, 0xFFE0FFC0FFFCFFFC, 0xFFC0FFE0FFF8FFF0, 0xFFE0FFF8FFF8FFF0
+;; Masks representing the (stitched) S(7/9)-box Boolean equations
+;; Mask bits in positions where corresponding input bit is not a part of the y-equation
+sbox_mask_x0     dq  0xB3FF347F3AFFDEFF, 0x77FF9DBF93DF756F, 0x6BFF5B7FAFEFABFF, 0x7FFF37FF7FFFEFFF
+sbox_mask_x1     dq  0x1ABFEB7F77FF5F6F, 0xFBFF2D7FEF3FC6BF, 0x3EFFBDBF7FFF377F, 0x55FF5FFFDFBFB7FF
+sbox_mask_x2     dq  0xBD7FCDBFD6FFF7DF, 0x5DFF7EFF25B77BFF, 0xFF7FAFFFF7FFDFBF, 0x9BBF9ABFAFFF7FFF
+sbox_mask_x3     dq  0xEDBF97FFFB7F7BBF, 0xBFFFB6FFCFCF9ACF, 0xB7BFDFFF9BFFDDFF, 0xEFDFE37FBBDFFBFF
+sbox_mask_x4     dq  0xCEFFE7DF9FBF9BD7, 0xFEFFDF7FF6EFE37F, 0xDFFFEEFFDEFFE7FF, 0xEEFFFDFFF5FF9DFF
+sbox_mask_x5     dq  0xF0FFF9FFE3BFE3E7, 0xCF7FE7BFF8F7FC77, 0xEFFFF7FFED7FF9DF, 0xF3FFFDDFC6EFDF7F
+sbox_mask_x6     dq  0xFF3FFE1FFC3FFC07, 0xEFFFF83FFF07FF87, 0xF5FFF9FFF1BFFEFF, 0xFCFFFE7FF8FFE6BF
+sbox_mask_x7     dq  0xffffffffffffffff, 0xF1BFffffffffffff, 0xF9FFFEDFFE3FFF3F, 0xFF7FFF9FFF77F8DF
+sbox_mask_x8     dq  0xffffffffffffffff, 0xFE3Fffffffffffff, 0xFE3FFF1FFFCFFFDF, 0xFF9FFFEFFF87FF1F
+sbox_mask_last   dq  0xFFC0FFF0FFE0FFF8, 0xFFE0FFC0FFFCFFFC, 0xFFC0FFE0FFF8FFF0, 0xFFE0FFF8FFF8FFF0
 
 align 32
-mask_0    dq  0x0001000100010001, 0x0080000100010001, 0x0080008000800080, 0x0080008000800080
-mask_1    dq  0x0002000200020002, 0x0100000200020002, 0x0100010001000100, 0x0100010001000100
-mask_2    dq  0x0004000400040004, 0x0200000400040004, 0x0200020002000200, 0x0200020002000200
-mask_3    dq  0x0008000800080008, 0x0400000800080008, 0x0400040004000400, 0x0400040004000400
-mask_4    dq  0x0010001000100010, 0x0800001000100010, 0x0800080008000800, 0x0800080008000800
-mask_5    dq  0x0020002000200020, 0x1000002000200020, 0x1000100010001000, 0x1000100010001000
-mask_6    dq  0x0040004000400040, 0x2000004000400040, 0x2000200020002000, 0x2000200020002000
-mask_7    dq  0x0000000000000000, 0x4000000000000000, 0x4000400040004000, 0x4000400040004000
-mask_8    dq  0x0000000000000000, 0x8000000000000000, 0x8000800080008000, 0x8000800080008000
+;; Masks which isolate the relevant input bits in each word
+;; e.g. ith iteration isolates ith bit in each of the low 7 words and the (i+7)th bit
+;; in each of the high 9 words.
+;; Therefore in isolate_input_bits_i, the ith bit in each of low 7 words is set, and
+;; the (i+7)th bit in each of the high 9 words is set.
+isolate_input_bits_0    dq  0x0001000100010001, 0x0080000100010001, 0x0080008000800080, 0x0080008000800080
+isolate_input_bits_1    dq  0x0002000200020002, 0x0100000200020002, 0x0100010001000100, 0x0100010001000100
+isolate_input_bits_2    dq  0x0004000400040004, 0x0200000400040004, 0x0200020002000200, 0x0200020002000200
+isolate_input_bits_3    dq  0x0008000800080008, 0x0400000800080008, 0x0400040004000400, 0x0400040004000400
+isolate_input_bits_4    dq  0x0010001000100010, 0x0800001000100010, 0x0800080008000800, 0x0800080008000800
+isolate_input_bits_5    dq  0x0020002000200020, 0x1000002000200020, 0x1000100010001000, 0x1000100010001000
+isolate_input_bits_6    dq  0x0040004000400040, 0x2000004000400040, 0x2000200020002000, 0x2000200020002000
+isolate_input_bits_7    dq  0x0000000000000000, 0x4000000000000000, 0x4000400040004000, 0x4000400040004000
+isolate_input_bits_8    dq  0x0000000000000000, 0x8000000000000000, 0x8000800080008000, 0x8000800080008000
 
 align 32
-new_msk0  dq  0x0000000000000000, 0x0707000000000000, 0x0707070707070707, 0x0707070707070707
-new_msk1  dq  0x0101010101010101, 0x0808010101010101, 0x0808080808080808, 0x0808080808080808
-new_msk2  dq  0x0202020202020202, 0x0909020202020202, 0x0909090909090909, 0x0909090909090909
-new_msk3  dq  0x0303030303030303, 0x0a0a030303030303, 0x0a0a0a0a0a0a0a0a, 0x0a0a0a0a0a0a0a0a
-new_msk4  dq  0x0404040404040404, 0x0b0b040404040404, 0x0b0b0b0b0b0b0b0b, 0x0b0b0b0b0b0b0b0b
-new_msk5  dq  0x0505050505050505, 0x0c0c050505050505, 0x0c0c0c0c0c0c0c0c, 0x0c0c0c0c0c0c0c0c
-new_msk6  dq  0x0606060606060606, 0x0d0d060606060606, 0x0d0d0d0d0d0d0d0d, 0x0d0d0d0d0d0d0d0d
-new_msk7  dq  0xffffffffffffffff, 0x0e0effffffffffff, 0x0e0e0e0e0e0e0e0e, 0x0e0e0e0e0e0e0e0e
-new_msk8  dq  0xffffffffffffffff, 0x0f0fffffffffffff, 0x0f0f0f0f0f0f0f0f, 0x0f0f0f0f0f0f0f0f
+;; Masks used in 1st AVX512 S-box calculation. Permute bytes of register so that in iteration i,
+;; the ith input bit is present as the lowest bit of each of the low 7 words 
+;; and the (i+7)th input bit is present as the lowest bit of each of the high 9 words 
+permute_bytes_input_0  dq  0x0000000000000000, 0x0707000000000000, 0x0707070707070707, 0x0707070707070707
+permute_bytes_input_1  dq  0x0101010101010101, 0x0808010101010101, 0x0808080808080808, 0x0808080808080808
+permute_bytes_input_2  dq  0x0202020202020202, 0x0909020202020202, 0x0909090909090909, 0x0909090909090909
+permute_bytes_input_3  dq  0x0303030303030303, 0x0a0a030303030303, 0x0a0a0a0a0a0a0a0a, 0x0a0a0a0a0a0a0a0a
+permute_bytes_input_4  dq  0x0404040404040404, 0x0b0b040404040404, 0x0b0b0b0b0b0b0b0b, 0x0b0b0b0b0b0b0b0b
+permute_bytes_input_5  dq  0x0505050505050505, 0x0c0c050505050505, 0x0c0c0c0c0c0c0c0c, 0x0c0c0c0c0c0c0c0c
+permute_bytes_input_6  dq  0x0606060606060606, 0x0d0d060606060606, 0x0d0d0d0d0d0d0d0d, 0x0d0d0d0d0d0d0d0d
+permute_bytes_input_7  dq  0xffffffffffffffff, 0x0e0effffffffffff, 0x0e0e0e0e0e0e0e0e, 0x0e0e0e0e0e0e0e0e
+permute_bytes_input_8  dq  0xffffffffffffffff, 0x0f0fffffffffffff, 0x0f0f0f0f0f0f0f0f, 0x0f0f0f0f0f0f0f0f
 
 align 32
-new_wmsk0  dq  0x0000000000000000, 0x0007000000000000, 0x0007000700070007, 0x0007000700070007
-new_wmsk1  dq  0x0001000100010001, 0x0008000100010001, 0x0008000800080008, 0x0008000800080008
-new_wmsk2  dq  0x0002000200020002, 0x0009000200020002, 0x0009000900090009, 0x0009000900090009
-new_wmsk3  dq  0x0003000300030003, 0x000a000300030003, 0x000a000a000a000a, 0x000a000a000a000a
-new_wmsk4  dq  0x0004000400040004, 0x000b000400040004, 0x000b000b000b000b, 0x000b000b000b000b
-new_wmsk5  dq  0x0005000500050005, 0x000c000500050005, 0x000c000c000c000c, 0x000c000c000c000c
-new_wmsk6  dq  0x0006000600060006, 0x000d000600060006, 0x000d000d000d000d, 0x000d000d000d000d
-new_wmsk7  dq  0xffffffffffffffff, 0x000effffffffffff, 0x000e000e000e000e, 0x000e000e000e000e
-new_wmsk8  dq  0xffffffffffffffff, 0x000fffffffffffff, 0x000f000f000f000f, 0x000f000f000f000f
+;; Masks used in 2nd AVX512 S-box calculation. Permute words of register so that in iteration i,
+;; the ith input bit is present as the lowest bit of each of the low 7 words 
+;; and the (i+7)th input bit is present as the lowest bit of each of the high 9 words 
+permute_words_input_0  dq  0x0000000000000000, 0x0007000000000000, 0x0007000700070007, 0x0007000700070007
+permute_words_input_1  dq  0x0001000100010001, 0x0008000100010001, 0x0008000800080008, 0x0008000800080008
+permute_words_input_2  dq  0x0002000200020002, 0x0009000200020002, 0x0009000900090009, 0x0009000900090009
+permute_words_input_3  dq  0x0003000300030003, 0x000a000300030003, 0x000a000a000a000a, 0x000a000a000a000a
+permute_words_input_4  dq  0x0004000400040004, 0x000b000400040004, 0x000b000b000b000b, 0x000b000b000b000b
+permute_words_input_5  dq  0x0005000500050005, 0x000c000500050005, 0x000c000c000c000c, 0x000c000c000c000c
+permute_words_input_6  dq  0x0006000600060006, 0x000d000600060006, 0x000d000d000d000d, 0x000d000d000d000d
+permute_words_input_7  dq  0xffffffffffffffff, 0x000effffffffffff, 0x000e000e000e000e, 0x000e000e000e000e
+permute_words_input_8  dq  0xffffffffffffffff, 0x000fffffffffffff, 0x000f000f000f000f, 0x000f000f000f000f
 
 align 32
 least_sig_bit_word dq 0x0001000100010001, 0x0001000100010001, 0x0001000100010001, 0x0001000100010001
-vpermb_mask        dq 0x0000000000000000, 0x0000000000000000, 0x0004000300020001, 0x0000000000060005
+vpermb_mask        dq 0x1010101010101010, 0x0000101010101010, 0x0404030302020101, 0x1010101006060505
 vpermw_mask        dq 0x000a000900080007, 0x000f000d000c000b, 0x000f000f000f000f, 0x000f000f000f000f
 
 align 8
@@ -206,30 +219,49 @@ mksection .text
 %define     y8    ymm11
 
 %define     y(n)  y %+ n
-%define     y_mask(n)   y %+ n %+_mask
+%define     sbox_mask_x(n)   sbox_mask_x %+ n
 
 %define     x(n)  x %+ n
 %define     x_mask(n)   x %+ n %+_mask
-%define     mask(n) mask_ %+ n
-%define     new_msk(x) new_msk %+ x
-%define     new_wmsk(x) new_wmsk %+ x
+%define     isolate_input_bits(n) isolate_input_bits_ %+ n
+%define     permute_bytes_input_(x) permute_bytes_input_ %+ x
+%define     permute_words_input_(x) permute_words_input_ %+ x
 
 %macro KASUMI_SBOX_AVX2 0
-    ; vpand with kmask will give words full of corresponding bit values
+    vpxor       ymm10, ymm10, ymm10
+    vmovd   xmm13, edi
+    vpbroadcastw ymm13, xmm13     ; broadcast input across all words of ymm13
 %assign i 0
 %rep 9
-    vmovdqa     y(i), [rel new_wmsk(i)]
-    vpermw      y(i), y(i), ymm10    ; fill register with the word value
+    vpand   y(i), ymm13, [rel isolate_input_bits(i)]
+    vpcmpeqw y(i), y(i), [rel isolate_input_bits(i)]  ; fill with 1s if equal to 0, else fill with 0s
 %assign i (i + 1)
 %endrep
-    vpor        y0, y0, [rel y_mask(0)]
-%assign i 1
-%rep 8
-    vpternlogq  y0, y(i), [rel y_mask(i)], 0xE0 ; or the x-masks with the x-values
+%assign i 0
+%rep 9
+    vpor    y(i), y(i), [rel sbox_mask_x(i)] ; or the x-masks with the x-values
 %assign i (i + 1)
 %endrep
-    vpandd      ymm2, ymm2, [rel y_mask_last] ; mask which accounts for setting 1s and 0s in set locations
-    vpopcntw    ymm2, ymm2
+    vpand   ymm2, ymm3      ; carry out the AND operations to combine all x-masks
+    vpand   ymm4, ymm5
+    vpand   ymm6, ymm7
+    vpand   ymm9, ymm11
+    vpand   ymm2, ymm4
+    vpand   ymm6, ymm8
+    vpand   ymm2, ymm6
+    vpand   ymm2, ymm9
+    vpand   ymm2, ymm2, [rel sbox_mask_last] ; mask which accounts for setting 1s and 0s in set locations
+    vpsllw      ymm10, ymm2, 8
+    vpxor       ymm2, ymm2, ymm10
+    vpsllw      ymm10, ymm2, 4
+    vpxor       ymm2, ymm2, ymm10
+    vpsllw      ymm10, ymm2, 2
+    vpxor       ymm2, ymm2, ymm10
+    vpsllw      ymm10, ymm2, 1
+    vpxor       ymm2, ymm2, ymm10
+
+    vpmovmskb   r9, ymm2
+    pext        rax, r9, [rel test_t]
 %endmacro
 
 ;; arg1: data
@@ -240,17 +272,74 @@ align 32
 MKGLOBAL(kasumi_FI_avx2, function, internal)
 kasumi_FI_avx2:
     xor     arg1, arg2
+    KASUMI_SBOX_AVX2
+    pdep    arg1, arg1, [rel high_7]
+    xor     arg1, rax
+    pext    r8, arg1, [rel high_7]
+    xor     arg1, r8
+    ror     dx, 9
+    xor     arg1, arg3
+    KASUMI_SBOX_AVX2
+    pdep    arg1, arg1, [rel high_7]
+    xor     rax, arg1
+    pext    r8, rax, [rel high_7]
+    xor     rax, r8
+    ror     ax, 7
+    xor     rax, arg4
+    ret
+
+%macro KASUMI_SBOX_AVX512a 0
+%assign i 0
+%rep 9
+    vmovdqa     y(i), [rel permute_bytes_input_(i)]
+    vpermb      y(i), y(i), ymm10
+%assign i (i + 1)
+%endrep
+    vpor        y0, y0, [rel sbox_mask_x(0)]
+%assign i 1
+%rep 8
+    vpternlogq  y0, y(i), [rel sbox_mask_x(i)], 0xE0
+%assign i (i + 1)
+%endrep
+    vpandd      ymm2, ymm2, [rel sbox_mask_last]
+    vpopcntw    ymm2, ymm2
+%endmacro
+
+%macro KASUMI_SBOX_AVX512b 0
+%assign i 0
+%rep 9
+    vmovdqa     y(i), [rel permute_words_input_(i)]
+    vpermw      y(i), y(i), ymm10
+%assign i (i + 1)
+%endrep
+    vpor        y0, y0, [rel sbox_mask_x(0)]
+%assign i 1
+%rep 8
+    vpternlogq  y0, y(i), [rel sbox_mask_x(i)], 0xE0
+%assign i (i + 1)
+%endrep
+    vpandd      ymm2, ymm2, [rel sbox_mask_last]
+    vpopcntw    ymm2, ymm2
+%endmacro
+
+;; arg1: data
+;; arg2: key1
+;; arg3: key2
+;; arg4: key3    
+align 32
+MKGLOBAL(kasumi_FI_avx512, function, internal)
+kasumi_FI_avx512:
+    xor     arg1, arg2
     kmovd       k4, [rel zero]
-    kmovd       k5, [rel mid]
-    vmovdqa     ymm1, [rel vpermb_mask]         ;; ***
+    vmovdqa     ymm1, [rel vpermb_mask]
     vmovdqa     ymm0, [rel vpermw_mask]
     kmovd       k1, edi
-    vpmovm2w    ymm10, k1
-    KASUMI_SBOX_AVX2
-    vpermw      ymm10 {k5}{z}, ymm1, ymm10      ; rearrange arg1
-    vpxord      ymm10, ymm10, ymm2      ; xor arg1, rax
-    vpermw      ymm3 {k4}{z}, ymm0, ymm10       ; rearrange arg1
-    vpxord      ymm10, ymm10, ymm3      ; xor arg1, r8
+    vpmovm2b    ymm10, k1
+    KASUMI_SBOX_AVX512a
+    vpermb      ymm10, ymm1, ymm10
+    vpxord      ymm10, ymm10, ymm2
+    vpermw      ymm3 {k4}{z}, ymm0, ymm10
+    vpxord      ymm10, ymm10, ymm3
     ror         dx, 9
     kmovd       k6, edx
     vpmovm2w    ymm11, k6
@@ -258,7 +347,7 @@ kasumi_FI_avx2:
     vpand       ymm10, ymm10, [rel least_sig_bit_word]
     vpcmpw      k2, ymm10, [rel least_sig_bit_word], 0
     vpcmpeqw    ymm10, ymm10, [rel least_sig_bit_word]
-    KASUMI_SBOX_AVX2
+    KASUMI_SBOX_AVX512b
     vpand       ymm2, ymm2, [rel least_sig_bit_word]
     vpcmpw      k1, ymm2, [rel least_sig_bit_word], 0
     kmovd       edi, k2
