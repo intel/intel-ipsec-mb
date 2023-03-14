@@ -43,5 +43,8 @@ endif()
 # build library
 add_subdirectory(lib)
 
+# build perf application
+add_subdirectory(perf)
+
 # build test applications
 add_subdirectory(test)
