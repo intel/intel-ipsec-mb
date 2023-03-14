@@ -1,5 +1,5 @@
 ;;
-;; Copyright (c) 2021-2022, Intel Corporation
+;; Copyright (c) 2021-2023, Intel Corporation
 ;;
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
@@ -83,6 +83,12 @@ dq 0x6d6f6854676E694a
 %endif
 
 %define job     arg1
+
+;; stack frame for saving registers (windows only)
+struc STACK
+_xmm_save:      resq    10 * 2  ; space for 10 xmm registers
+_rsp_save:      resq    1       ; space for rsp pointer
+endstruc
 
 mksection .text
 
@@ -249,22 +255,62 @@ mksection .text
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+%macro FUNC_START 0
+%ifidn __OUTPUT_FORMAT__, win64
+        ; xmm6:xmm15 need to be maintained for Windows
+        mov     rax, rsp
+        sub     rsp, STACK_size
+        and     rsp, -16
+        mov     [rsp + _rsp_save], rax
+        movdqa  [rsp + _xmm_save + 0*16], xmm6
+        movdqa  [rsp + _xmm_save + 1*16], xmm7
+        movdqa  [rsp + _xmm_save + 2*16], xmm8
+        movdqa  [rsp + _xmm_save + 3*16], xmm9
+        movdqa  [rsp + _xmm_save + 4*16], xmm10
+        movdqa  [rsp + _xmm_save + 5*16], xmm11
+        movdqa  [rsp + _xmm_save + 6*16], xmm12
+        movdqa  [rsp + _xmm_save + 7*16], xmm13
+        movdqa  [rsp + _xmm_save + 8*16], xmm14
+        movdqa  [rsp + _xmm_save + 9*16], xmm15
+%endif
+%endmacro
+
+%macro FUNC_END 0
+%ifidn __OUTPUT_FORMAT__, win64
+        movdqa  xmm6, [rsp + _xmm_save + 0*16]
+        movdqa  xmm7, [rsp + _xmm_save + 1*16]
+        movdqa  xmm8, [rsp + _xmm_save + 2*16]
+        movdqa  xmm9, [rsp + _xmm_save + 3*16]
+        movdqa  xmm10, [rsp + _xmm_save + 4*16]
+        movdqa  xmm11, [rsp + _xmm_save + 5*16]
+        movdqa  xmm12, [rsp + _xmm_save + 6*16]
+        movdqa  xmm13, [rsp + _xmm_save + 7*16]
+        movdqa  xmm14, [rsp + _xmm_save + 8*16]
+        movdqa  xmm15, [rsp + _xmm_save + 9*16]
+        mov     rsp, [rsp + _rsp_save]
+%endif
+%endmacro
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 MKGLOBAL(SNOW_V_AEAD_INIT,function,)
 SNOW_V_AEAD_INIT:
-      endbranch64
-      ;; use offset to indicate AEAD mode
-      mov DWORD(offset), 1
-      movdqa LFSR_B_LDQ, [rel aead_lsfr_b_lo]
-      jmp snow_v_common_init
+        endbranch64
+        FUNC_START
+        ;; use offset to indicate AEAD mode
+        mov     DWORD(offset), 1
+        movdqa  LFSR_B_LDQ, [rel aead_lsfr_b_lo]
+        jmp     snow_v_common_init
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 MKGLOBAL(SNOW_V,function,)
 SNOW_V:
-      endbranch64
-      ;; use offset to indicate AEAD mode
-      xor DWORD(offset), DWORD(offset)
-      pxor LFSR_B_LDQ, LFSR_B_LDQ
+        endbranch64
+        FUNC_START
+        ;; use offset to indicate AEAD mode
+        xor     DWORD(offset), DWORD(offset)
+        pxor    LFSR_B_LDQ, LFSR_B_LDQ
 
 snow_v_common_init:
 
@@ -389,9 +435,9 @@ no_partial_block_left:
       clear_scratch_xmms_sse_asm
 %endif
 
-      mov   rax, job
-      or    dword [rax + _status], IMB_STATUS_COMPLETED_CIPHER
-
-ret
+        mov   rax, job
+        or    dword [rax + _status], IMB_STATUS_COMPLETED_CIPHER
+        FUNC_END
+        ret
 
 mksection stack-noexec
