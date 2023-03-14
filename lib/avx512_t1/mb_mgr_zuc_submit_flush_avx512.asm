@@ -1,5 +1,5 @@
 ;;
-;; Copyright (c) 2020-2022, Intel Corporation
+;; Copyright (c) 2020-2023, Intel Corporation
 ;;
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
@@ -331,7 +331,7 @@ mksection .text
 
 %%return_submit_eea3:
 %ifdef SAFE_DATA
-        clear_all_zmms_asm
+        clear_scratch_zmms_asm
 %else
         vzeroupper
 %endif
@@ -554,7 +554,7 @@ mksection .text
 %endif
 
 %ifdef SAFE_DATA
-        clear_all_zmms_asm
+        clear_scratch_zmms_asm
 %else
         vzeroupper
 %endif
@@ -701,6 +701,8 @@ FLUSH_JOB_ZUC256_EEA3:
 
         call    ZUC_KEYGEN_16
 
+        RESERVE_STACK_SPACE 5
+
         ; Digest 64 bytes of data
         lea     arg1, [%%OOO + _zuc_args_digest]
         lea     arg2, [%%OOO + _zuc_args_KS]
@@ -709,6 +711,8 @@ FLUSH_JOB_ZUC256_EEA3:
         mov     arg5, %%TAG_SIZE
 
         call    ZUC_ROUND64B
+
+        RESTORE_STACK_SPACE 5
 
         sub     %%REMAIN_BITS, 64*8
         jmp     %%_exit
@@ -989,7 +993,7 @@ FLUSH_JOB_ZUC256_EEA3:
 
 %%return_submit_eia3:
 %ifdef SAFE_DATA
-        clear_all_zmms_asm
+        clear_scratch_zmms_asm
 %else
         vzeroupper
 %endif
@@ -1190,13 +1194,12 @@ FLUSH_JOB_ZUC256_EEA3:
 %endif
 
 %ifdef SAFE_DATA
-        clear_all_zmms_asm
+        clear_scratch_zmms_asm
 %else
         vzeroupper
 %endif
 
 %%return_flush_eia3:
-
         mov     rbx, [rsp + _gpr_save + 8*0]
         mov     rbp, [rsp + _gpr_save + 8*1]
         mov     r12, [rsp + _gpr_save + 8*2]
