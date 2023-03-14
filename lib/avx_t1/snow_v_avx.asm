@@ -1,5 +1,5 @@
 ;;
-;; Copyright (c) 2021-2022, Intel Corporation
+;; Copyright (c) 2021-2023, Intel Corporation
 ;;
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
@@ -75,14 +75,20 @@ dq 0x20646b4578656c41
 dq 0x6d6f6854676E694a
 
 %ifdef LINUX
-      %define arg1      rdi
-      %define offset    rcx
+        %define arg1    rdi
+        %define offset  rcx
 %else
-      %define arg1      rcx
-      %define offset    r8
+        %define arg1    rcx
+        %define offset  r8
 %endif
 
-%define job             arg1
+%define job     arg1
+
+;; stack frame for saving registers (windows only)
+struc STACK
+_xmm_save:      resq    10 * 2  ; space for 10 xmm registers
+_rsp_save:      resq    1       ; space for rsp pointer
+endstruc
 
 mksection .text
 
@@ -121,13 +127,13 @@ mksection .text
 %macro SNOW_V_KEYSTREAM 4
 
 ;; all input is expected to be xmm registers
-%define %%KEYSTREAM   %1  ;; [out]  128 bit keystream
-%define %%LFSR_B_HDQ  %2  ;; [in]  128 bit LFSR_B_HDQ (b15, ..., b8)
-%define %%FSM_R1      %3  ;; [in]  128 bit FSM: R1
-%define %%FSM_R2      %4  ;; [in]  128 bit FSM: R2
+%define %%KEYSTREAM     %1  ;; [out]  128 bit keystream
+%define %%LFSR_B_HDQ    %2  ;; [in]  128 bit LFSR_B_HDQ (b15, ..., b8)
+%define %%FSM_R1        %3  ;; [in]  128 bit FSM: R1
+%define %%FSM_R2        %4  ;; [in]  128 bit FSM: R2
 
-      vpaddd      %%KEYSTREAM, %%LFSR_B_HDQ, %%FSM_R1
-      vpxor       %%KEYSTREAM, %%KEYSTREAM, %%FSM_R2
+        vpaddd  %%KEYSTREAM, %%LFSR_B_HDQ, %%FSM_R1
+        vpxor   %%KEYSTREAM, %%KEYSTREAM, %%FSM_R2
 
 %endmacro ;; SNOW_V_KEYSTREAM
 
@@ -147,14 +153,14 @@ mksection .text
 %define %%TEMP1         %5  ;; [clobbered] 128 bit register
 %define %%TEMP2         %6  ;; [clobbered] 128 bit register
 
-      vpxor       %%TEMP2, %%LFSR_A_LDQ, %%FSM_R3   ;; TEMP2 = R3 XOR LSFR_A [0:7]
-      vpaddd      %%TEMP2, %%TEMP2, %%FSM_R2        ;; TEMP2 += R2
+        vpxor   %%TEMP2, %%LFSR_A_LDQ, %%FSM_R3   ;; TEMP2 = R3 XOR LSFR_A [0:7]
+        vpaddd  %%TEMP2, %%TEMP2, %%FSM_R2        ;; TEMP2 += R2
 
-      vpxor       %%TEMP1, %%TEMP1, %%TEMP1         ;; TEMP1 = 0
+        vpxor   %%TEMP1, %%TEMP1, %%TEMP1         ;; TEMP1 = 0
 
-      vaesenc     %%FSM_R3, %%FSM_R2, %%TEMP1      ;; R3 = AESR(R2) (encryption round key C1 = 0)
-      vaesenc     %%FSM_R2, %%FSM_R1, %%TEMP1      ;; R2 = AESR(R1) (encryption round key C2 = 0)
-      vpshufb     %%FSM_R1, %%TEMP2, [rel sigma]   ;; R1 = sigma(TEMP2)
+        vaesenc %%FSM_R3, %%FSM_R2, %%TEMP1      ;; R3 = AESR(R2) (encryption round key C1 = 0)
+        vaesenc %%FSM_R2, %%FSM_R1, %%TEMP1      ;; R2 = AESR(R1) (encryption round key C2 = 0)
+        vpshufb %%FSM_R1, %%TEMP2, [rel sigma]   ;; R1 = sigma(TEMP2)
 
 %endmacro ;; SNOW_V_FSM_UPDATE
 
@@ -192,193 +198,233 @@ mksection .text
 ;;                else:            (x >> 1)
 ;;              = (x >> 1) xor signw(inv_gA, x << 15)
 
-      ;; calculate mulx_A = (alpha*a7, ..., alpha*a0)
-      vpsraw      %%TEMP1, %%LFSR_A_LDQ, 15  ;; 16-bit mask with sign bits preserved
-      vpand       %%TEMP1, %%TEMP1, %%gA
-      vpsllw      %%TEMP2, %%LFSR_A_LDQ, 1
-      vpxor       %%TEMP2, %%TEMP2, %%TEMP1   ;; TEMP2 = mulx_A
+        ;; calculate mulx_A = (alpha*a7, ..., alpha*a0)
+        vpsraw          %%TEMP1, %%LFSR_A_LDQ, 15  ;; 16-bit mask with sign bits preserved
+        vpand           %%TEMP1, %%TEMP1, %%gA
+        vpsllw          %%TEMP2, %%LFSR_A_LDQ, 1
+        vpxor           %%TEMP2, %%TEMP2, %%TEMP1   ;; TEMP2 = mulx_A
 
-      ;; calculate invx_A = (alpha^-1*a15, ..., alpha^-1*a8)
-      vpsllw      %%TEMP1, %%LFSR_A_HDQ, 15
-      vpsignw     %%TEMP1, %%inv_gA, %%TEMP1    ;; negate bits in inv_gA depending on LFSR_A_HDQ << 15
-      vpxor       %%TEMP2, %%TEMP1, %%TEMP2
-      vpsrlw      %%TEMP1, %%LFSR_A_HDQ, 1
-      vpxor       %%TEMP1, %%TEMP1, %%TEMP2  ;; TEMP1 = invx_A xor mulx_A
+        ;; calculate invx_A = (alpha^-1*a15, ..., alpha^-1*a8)
+        vpsllw          %%TEMP1, %%LFSR_A_HDQ, 15
+        vpsignw         %%TEMP1, %%inv_gA, %%TEMP1    ;; negate bits in inv_gA depending on LFSR_A_HDQ << 15
+        vpxor           %%TEMP2, %%TEMP1, %%TEMP2
+        vpsrlw          %%TEMP1, %%LFSR_A_HDQ, 1
+        vpxor           %%TEMP1, %%TEMP1, %%TEMP2  ;; TEMP1 = invx_A xor mulx_A
 
-      ;; LFSR_A_HDQ = mulx_A XOR invx_A XOR (b7, ..., b0) XOR (a8, ..., a1)
-      vpalignr    %%TEMP2, %%LFSR_A_HDQ, %%LFSR_A_LDQ, 2  ;; T2 = (tmpa_8, ..., tmpa_1)
-      vpxor       %%TEMP2, %%TEMP2, %%LFSR_B_LDQ
-      vpxor       %%T2, %%TEMP2, %%TEMP1
+        ;; LFSR_A_HDQ = mulx_A XOR invx_A XOR (b7, ..., b0) XOR (a8, ..., a1)
+        vpalignr        %%TEMP2, %%LFSR_A_HDQ, %%LFSR_A_LDQ, 2  ;; T2 = (tmpa_8, ..., tmpa_1)
+        vpxor           %%TEMP2, %%TEMP2, %%LFSR_B_LDQ
+        vpxor           %%T2, %%TEMP2, %%TEMP1
 
-      ;; calculate mulx_B
-      vpsraw      %%TEMP1, %%LFSR_B_LDQ, 15
-      vpand       %%TEMP1, %%TEMP1, %%gB
-      vpsllw      %%TEMP2, %%LFSR_B_LDQ, 1
-      vpxor       %%TEMP1, %%TEMP1, %%TEMP2
+        ;; calculate mulx_B
+        vpsraw          %%TEMP1, %%LFSR_B_LDQ, 15
+        vpand           %%TEMP1, %%TEMP1, %%gB
+        vpsllw          %%TEMP2, %%LFSR_B_LDQ, 1
+        vpxor           %%TEMP1, %%TEMP1, %%TEMP2
 
-      ;; T2 = mulx_B XOR (a7, ..., a0) XOR (b10, ..., b3)
-      vpxor       %%TEMP1, %%TEMP1, %%LFSR_A_LDQ
-      vmovdqa     %%LFSR_A_LDQ, %%LFSR_A_HDQ           ;; LFSR_A_LDQ = LFSR_A_HDQ
-      vmovdqa     %%LFSR_A_HDQ, %%T2
+        ;; T2 = mulx_B XOR (a7, ..., a0) XOR (b10, ..., b3)
+        vpxor           %%TEMP1, %%TEMP1, %%LFSR_A_LDQ
+        vmovdqa         %%LFSR_A_LDQ, %%LFSR_A_HDQ           ;; LFSR_A_LDQ = LFSR_A_HDQ
+        vmovdqa         %%LFSR_A_HDQ, %%T2
 
-      vpalignr    %%TEMP2, %%LFSR_B_HDQ, %%LFSR_B_LDQ, 6    ;; (b10, ..., b3)
-      vmovdqa     %%LFSR_B_LDQ, %%LFSR_B_HDQ                 ;; LFSR_B_LDQ = LFSR_B_HDQ
-      vpxor       %%TEMP2, %%TEMP2, %%TEMP1
+        vpalignr        %%TEMP2, %%LFSR_B_HDQ, %%LFSR_B_LDQ, 6    ;; (b10, ..., b3)
+        vmovdqa         %%LFSR_B_LDQ, %%LFSR_B_HDQ                 ;; LFSR_B_LDQ = LFSR_B_HDQ
+        vpxor           %%TEMP2, %%TEMP2, %%TEMP1
 
-      ;; calculate invx_B
-      vpsllw      %%TEMP1, %%LFSR_B_HDQ, 15
-      vpsrlw      %%LFSR_B_HDQ, %%LFSR_B_HDQ, 1
-      vpsignw     %%TEMP1,inv_gB, %%TEMP1
+        ;; calculate invx_B
+        vpsllw          %%TEMP1, %%LFSR_B_HDQ, 15
+        vpsrlw          %%LFSR_B_HDQ, %%LFSR_B_HDQ, 1
+        vpsignw         %%TEMP1,inv_gB, %%TEMP1
 
-      ;; LFSR_B_HDQ = mulx_B XOR invx_B XOR (a7, ..., a0) XOR (b10, ..., b3)
-      vpxor       %%LFSR_B_HDQ, %%LFSR_B_HDQ, %%TEMP1
-      vpxor       %%LFSR_B_HDQ, %%LFSR_B_HDQ, %%TEMP2
+        ;; LFSR_B_HDQ = mulx_B XOR invx_B XOR (a7, ..., a0) XOR (b10, ..., b3)
+        vpxor           %%LFSR_B_HDQ, %%LFSR_B_HDQ, %%TEMP1
+        vpxor           %%LFSR_B_HDQ, %%LFSR_B_HDQ, %%TEMP2
 
 %endmacro ;; SNOW_V_LFSR_UPDATE
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+%macro FUNC_START 0
+%ifidn __OUTPUT_FORMAT__, win64
+        ; xmm6:xmm15 need to be maintained for Windows
+        mov             rax, rsp
+        sub             rsp, STACK_size
+        and             rsp, -16
+        mov             [rsp + _rsp_save], rax
+        vmovdqa         [rsp + _xmm_save + 0*16], xmm6
+        vmovdqa         [rsp + _xmm_save + 1*16], xmm7
+        vmovdqa         [rsp + _xmm_save + 2*16], xmm8
+        vmovdqa         [rsp + _xmm_save + 3*16], xmm9
+        vmovdqa         [rsp + _xmm_save + 4*16], xmm10
+        vmovdqa         [rsp + _xmm_save + 5*16], xmm11
+        vmovdqa         [rsp + _xmm_save + 6*16], xmm12
+        vmovdqa         [rsp + _xmm_save + 7*16], xmm13
+        vmovdqa         [rsp + _xmm_save + 8*16], xmm14
+        vmovdqa         [rsp + _xmm_save + 9*16], xmm15
+%endif
+%endmacro
+
+%macro FUNC_END 0
+%ifidn __OUTPUT_FORMAT__, win64
+        vmovdqa         xmm6, [rsp + _xmm_save + 0*16]
+        vmovdqa         xmm7, [rsp + _xmm_save + 1*16]
+        vmovdqa         xmm8, [rsp + _xmm_save + 2*16]
+        vmovdqa         xmm9, [rsp + _xmm_save + 3*16]
+        vmovdqa         xmm10, [rsp + _xmm_save + 4*16]
+        vmovdqa         xmm11, [rsp + _xmm_save + 5*16]
+        vmovdqa         xmm12, [rsp + _xmm_save + 6*16]
+        vmovdqa         xmm13, [rsp + _xmm_save + 7*16]
+        vmovdqa         xmm14, [rsp + _xmm_save + 8*16]
+        vmovdqa         xmm15, [rsp + _xmm_save + 9*16]
+        mov             rsp, [rsp + _rsp_save]
+%endif
+%endmacro
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 MKGLOBAL(SNOW_V_AEAD_INIT,function,)
 SNOW_V_AEAD_INIT:
       endbranch64
+      FUNC_START
       ;; use offset to indicate AEAD mode
-      mov         DWORD(offset), 1
-      vmovdqa     LFSR_B_LDQ, [rel aead_lsfr_b_lo]
-      jmp         snow_v_common_init
+      mov               DWORD(offset), 1
+      vmovdqa           LFSR_B_LDQ, [rel aead_lsfr_b_lo]
+      jmp               snow_v_common_init
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 MKGLOBAL(SNOW_V,function,)
 SNOW_V:
-      endbranch64
-      ;; use offset to indicate AEAD mode
-      xor         DWORD(offset), DWORD(offset)
-      vpxor       LFSR_B_LDQ, LFSR_B_LDQ, LFSR_B_LDQ
+        endbranch64
+        FUNC_START
+        ;; use offset to indicate AEAD mode
+        xor             DWORD(offset), DWORD(offset)
+        vpxor           LFSR_B_LDQ, LFSR_B_LDQ, LFSR_B_LDQ
 
 snow_v_common_init:
 
-      ;; Init LSFR
-      mov         rax, [job + _enc_keys]
-      vmovdqu     LFSR_A_HDQ, [rax]
-      vmovdqu     LFSR_B_HDQ, [rax + 16]
-      mov         rax, [job + _iv]
-      vmovdqu     LFSR_A_LDQ, [rax]
+        ;; Init LSFR
+        mov             rax, [job + _enc_keys]
+        vmovdqu         LFSR_A_HDQ, [rax]
+        vmovdqu         LFSR_B_HDQ, [rax + 16]
+        mov             rax, [job + _iv]
+        vmovdqu         LFSR_A_LDQ, [rax]
 
-      ;; Init FSM: R1 = R2 = R3 = 0
-      vpxor       FSM_R1, FSM_R1, FSM_R1
-      vpxor       FSM_R2, FSM_R2, FSM_R2
-      vpxor       FSM_R3, FSM_R3, FSM_R3
+        ;; Init FSM: R1 = R2 = R3 = 0
+        vpxor           FSM_R1, FSM_R1, FSM_R1
+        vpxor           FSM_R2, FSM_R2, FSM_R2
+        vpxor           FSM_R3, FSM_R3, FSM_R3
 
-      vmovdqa     gA, [rel alpha]
-      vmovdqa     gB, [rel beta]
-      vmovdqa     inv_gA, [rel alpha_inv]
-      vmovdqa     inv_gB, [rel beta_inv]
+        vmovdqa         gA, [rel alpha]
+        vmovdqa         gB, [rel beta]
+        vmovdqa         inv_gA, [rel alpha_inv]
+        vmovdqa         inv_gB, [rel beta_inv]
 
-      mov   eax, 15
+        mov             eax, 15
 
 init_fsm_lfsr_loop:
 
-      SNOW_V_KEYSTREAM   KEYSTREAM, LFSR_B_HDQ, FSM_R1, FSM_R2
-      SNOW_V_FSM_UPDATE  FSM_R1, FSM_R2, FSM_R3, LFSR_A_LDQ, temp1, temp2
-      SNOW_V_LFSR_UPDATE LFSR_A_LDQ, LFSR_A_HDQ, LFSR_B_LDQ, LFSR_B_HDQ, \
-                         inv_gB, temp1, temp2, temp3, gA, gB, inv_gA
-      vpxor LFSR_A_HDQ, LFSR_A_HDQ, KEYSTREAM
-      dec         eax
-      jnz         init_fsm_lfsr_loop
+        SNOW_V_KEYSTREAM   KEYSTREAM, LFSR_B_HDQ, FSM_R1, FSM_R2
+        SNOW_V_FSM_UPDATE  FSM_R1, FSM_R2, FSM_R3, LFSR_A_LDQ, temp1, temp2
+        SNOW_V_LFSR_UPDATE LFSR_A_LDQ, LFSR_A_HDQ, LFSR_B_LDQ, LFSR_B_HDQ, \
+                           inv_gB, temp1, temp2, temp3, gA, gB, inv_gA
+        vpxor           LFSR_A_HDQ, LFSR_A_HDQ, KEYSTREAM
+        dec             eax
+        jnz             init_fsm_lfsr_loop
 
-      mov         rax, [job + _enc_keys]
-      vmovdqu     temp4, [rax]
-      vpxor       FSM_R1, FSM_R1, temp4
+        mov             rax, [job + _enc_keys]
+        vmovdqu         temp4, [rax]
+        vpxor           FSM_R1, FSM_R1, temp4
 
-      SNOW_V_KEYSTREAM   KEYSTREAM, LFSR_B_HDQ, FSM_R1, FSM_R2
-      SNOW_V_FSM_UPDATE  FSM_R1, FSM_R2, FSM_R3, LFSR_A_LDQ, temp1, temp2
-      SNOW_V_LFSR_UPDATE LFSR_A_LDQ, LFSR_A_HDQ,LFSR_B_LDQ, LFSR_B_HDQ, \
-                         inv_gB, temp1, temp2, temp3, gA, gB, inv_gA
-      vpxor       LFSR_A_HDQ, LFSR_A_HDQ, KEYSTREAM
-      vmovdqu     temp4, [rax + 16]
-      vpxor       FSM_R1, FSM_R1, temp4
+        SNOW_V_KEYSTREAM   KEYSTREAM, LFSR_B_HDQ, FSM_R1, FSM_R2
+        SNOW_V_FSM_UPDATE  FSM_R1, FSM_R2, FSM_R3, LFSR_A_LDQ, temp1, temp2
+        SNOW_V_LFSR_UPDATE LFSR_A_LDQ, LFSR_A_HDQ,LFSR_B_LDQ, LFSR_B_HDQ, \
+                           inv_gB, temp1, temp2, temp3, gA, gB, inv_gA
+        vpxor           LFSR_A_HDQ, LFSR_A_HDQ, KEYSTREAM
+        vmovdqu         temp4, [rax + 16]
+        vpxor           FSM_R1, FSM_R1, temp4
 
-      ;; At this point FSM and LSFR are initialized
+        ;; At this point FSM and LSFR are initialized
 
-      or          DWORD(offset), DWORD(offset)
-      jz          no_aead
+        or              DWORD(offset), DWORD(offset)
+        jz              no_aead
 
-      ;; in AEAD mode hkey = keystream_0 and endpad = keystream_1
-      mov         r11,    [job + _snow_v_reserved]
+        ;; in AEAD mode hkey = keystream_0 and endpad = keystream_1
+        mov             r11, [job + _snow_v_reserved]
 
-      ;; generate hkey
-      SNOW_V_KEYSTREAM KEYSTREAM, LFSR_B_HDQ, FSM_R1, FSM_R2
-      vmovdqu     [r11], KEYSTREAM
+        ;; generate hkey
+        SNOW_V_KEYSTREAM KEYSTREAM, LFSR_B_HDQ, FSM_R1, FSM_R2
+        vmovdqu         [r11], KEYSTREAM
 
-      ;; generate endpad
-      SNOW_V_FSM_UPDATE  FSM_R1, FSM_R2, FSM_R3, LFSR_A_LDQ, temp1, temp2
-      SNOW_V_LFSR_UPDATE LFSR_A_LDQ, LFSR_A_HDQ,LFSR_B_LDQ, LFSR_B_HDQ, \
-                         inv_gB, temp1, temp2, temp3, gA, gB, inv_gA
-      SNOW_V_KEYSTREAM   KEYSTREAM, LFSR_B_HDQ, FSM_R1, FSM_R2
+        ;; generate endpad
+        SNOW_V_FSM_UPDATE  FSM_R1, FSM_R2, FSM_R3, LFSR_A_LDQ, temp1, temp2
+        SNOW_V_LFSR_UPDATE LFSR_A_LDQ, LFSR_A_HDQ,LFSR_B_LDQ, LFSR_B_HDQ, \
+                           inv_gB, temp1, temp2, temp3, gA, gB, inv_gA
+        SNOW_V_KEYSTREAM   KEYSTREAM, LFSR_B_HDQ, FSM_R1, FSM_R2
 
-      SNOW_V_FSM_UPDATE  FSM_R1, FSM_R2, FSM_R3, LFSR_A_LDQ, temp1, temp2
-      SNOW_V_LFSR_UPDATE LFSR_A_LDQ, LFSR_A_HDQ,LFSR_B_LDQ, LFSR_B_HDQ, \
-                         inv_gB, temp1, temp2, temp3, gA, gB, inv_gA
+        SNOW_V_FSM_UPDATE  FSM_R1, FSM_R2, FSM_R3, LFSR_A_LDQ, temp1, temp2
+        SNOW_V_LFSR_UPDATE LFSR_A_LDQ, LFSR_A_HDQ,LFSR_B_LDQ, LFSR_B_HDQ, \
+                           inv_gB, temp1, temp2, temp3, gA, gB, inv_gA
 
-      mov         offset, [r11 + 24]
-      vmovdqu     [r11 + 16], KEYSTREAM
-      or          offset, offset
-      ;; if last 8 bytes endpad are not 0 skip encrypt/decrypt operation
-      ;; option used to calculate auth tag for decrypt and not overwrite
-      ;; cipher by plain when the same src/dst pointer is used
-      jnz         no_partial_block_left
+        mov             offset, [r11 + 24]
+        vmovdqu         [r11 + 16], KEYSTREAM
+        or              offset, offset
+        ;; if last 8 bytes endpad are not 0 skip encrypt/decrypt operation
+        ;; option used to calculate auth tag for decrypt and not overwrite
+        ;; cipher by plain when the same src/dst pointer is used
+        jnz             no_partial_block_left
 
 no_aead:
 
-      ;; Process input
-      mov         r10, [job + _src]
-      add         r10, [job + _cipher_start_src_offset_in_bytes]
-      mov         r11, [job + _dst]
-      mov         rax, [job + _msg_len_to_cipher_in_bytes]
-      xor         offset, offset
-      ;; deal with partial block less than 16b outside main loop
-      and         rax, 0xfffffffffffffff0
-      jz          final_bytes
+        ;; Process input
+        mov             r10, [job + _src]
+        add             r10, [job + _cipher_start_src_offset_in_bytes]
+        mov             r11, [job + _dst]
+        mov             rax, [job + _msg_len_to_cipher_in_bytes]
+        xor             offset, offset
+        ;; deal with partial block less than 16b outside main loop
+        and             rax, 0xfffffffffffffff0
+        jz              final_bytes
 
 encrypt_loop:
 
-      vmovdqu     temp4, [r10 + offset]
+        vmovdqu         temp4, [r10 + offset]
 
-      SNOW_V_KEYSTREAM   KEYSTREAM, LFSR_B_HDQ, FSM_R1, FSM_R2
-      SNOW_V_FSM_UPDATE  FSM_R1, FSM_R2, FSM_R3, LFSR_A_LDQ, temp1, temp2
-      SNOW_V_LFSR_UPDATE LFSR_A_LDQ, LFSR_A_HDQ, LFSR_B_LDQ, LFSR_B_HDQ, \
-                         inv_gB, temp1, temp2, temp3, gA, gB, inv_gA
+        SNOW_V_KEYSTREAM   KEYSTREAM, LFSR_B_HDQ, FSM_R1, FSM_R2
+        SNOW_V_FSM_UPDATE  FSM_R1, FSM_R2, FSM_R3, LFSR_A_LDQ, temp1, temp2
+        SNOW_V_LFSR_UPDATE LFSR_A_LDQ, LFSR_A_HDQ, LFSR_B_LDQ, LFSR_B_HDQ, \
+                           inv_gB, temp1, temp2, temp3, gA, gB, inv_gA
 
-      vpxor       temp4, temp4, KEYSTREAM
-      vmovdqu     [r11 + offset], temp4
-      add         offset, 16
-      sub         rax, 16
-      jnz         encrypt_loop
+        vpxor           temp4, temp4, KEYSTREAM
+        vmovdqu         [r11 + offset], temp4
+        add             offset, 16
+        sub             rax, 16
+        jnz             encrypt_loop
 
 final_bytes:
-      mov         rax, [job + _msg_len_to_cipher_in_bytes]
-      and         rax, 0xf
-      jz          no_partial_block_left
+        mov             rax, [job + _msg_len_to_cipher_in_bytes]
+        and             rax, 0xf
+        jz              no_partial_block_left
 
-      ;; load partial block into XMM register
-      add         r10, offset
-      simd_load_avx_15_1 temp4, r10, rax
-      SNOW_V_KEYSTREAM KEYSTREAM, LFSR_B_HDQ, FSM_R1, FSM_R2
-      vpxor       temp4, temp4, KEYSTREAM
-      add         r11, offset
+        ;; load partial block into XMM register
+        add             r10, offset
+        simd_load_avx_15_1 temp4, r10, rax
+        SNOW_V_KEYSTREAM KEYSTREAM, LFSR_B_HDQ, FSM_R1, FSM_R2
+        vpxor           temp4, temp4, KEYSTREAM
+        add             r11, offset
 
-      ;; use r10 and offset as temp [clobbered]
-      simd_store_avx_15 r11, temp4, rax, r10, offset
+        ;; use r10 and offset as temp [clobbered]
+        simd_store_avx_15 r11, temp4, rax, r10, offset
 
 no_partial_block_left:
-      ;; Clear registers and return data
+        ;; Clear registers and return data
 %ifdef SAFE_DATA
-      clear_scratch_xmms_avx_asm
+        clear_scratch_xmms_avx_asm
 %endif
 
-      mov         rax, job
-      or          dword [rax + _status], IMB_STATUS_COMPLETED_CIPHER
-
-      ret
+        mov             rax, job
+        or              dword [rax + _status], IMB_STATUS_COMPLETED_CIPHER
+        FUNC_END
+        ret
 
 mksection stack-noexec
