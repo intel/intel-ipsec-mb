@@ -900,7 +900,7 @@ fill_job(IMB_JOB *job, const struct params_s *params,
          const uint32_t buf_size, const uint8_t tag_size,
          IMB_CIPHER_DIRECTION cipher_dir,
          struct cipher_auth_keys *keys, uint8_t *cipher_iv,
-         uint8_t *auth_iv, unsigned index, uint8_t *next_iv)
+         uint8_t *auth_iv, const unsigned index, uint8_t *next_iv)
 {
         static const void *ks_ptr[3];
         uint32_t *k1_expanded = keys->k1_expanded;
@@ -1916,7 +1916,7 @@ do_test(IMB_MGR *enc_mb_mgr, const IMB_ARCH enc_arch,
                               (unsigned) params->cipher_mode);
 
                 if (job) {
-                        unsigned idx = (unsigned)((uintptr_t) job->user_data);
+                        const unsigned idx = (unsigned)((uintptr_t) job->user_data);
 
                         if (job->status != IMB_STATUS_COMPLETED) {
                                 int errc = imb_get_errno(enc_mb_mgr);
@@ -1929,7 +1929,10 @@ do_test(IMB_MGR *enc_mb_mgr, const IMB_ARCH enc_arch,
                                 goto exit;
                         }
                         if (idx != num_processed_jobs) {
-                                fprintf(stderr, "job returned out of order\n");
+                                fprintf(stderr,
+                                        "enc-submit job returned out of order, "
+                                        "received %u, expected %u\n",
+                                        idx, num_processed_jobs);
                                 goto exit;
                         }
                         num_processed_jobs++;
@@ -1954,7 +1957,7 @@ do_test(IMB_MGR *enc_mb_mgr, const IMB_ARCH enc_arch,
                               (unsigned) params->cipher_mode);
 
                 while (job != NULL) {
-                        unsigned idx = (unsigned)((uintptr_t) job->user_data);
+                        const unsigned idx = (unsigned)((uintptr_t) job->user_data);
 
                         if (job->status != IMB_STATUS_COMPLETED) {
                                 int errc = imb_get_errno(enc_mb_mgr);
@@ -1967,7 +1970,10 @@ do_test(IMB_MGR *enc_mb_mgr, const IMB_ARCH enc_arch,
                                 goto exit;
                         }
                         if (idx != num_processed_jobs) {
-                                fprintf(stderr, "job returned out of order\n");
+                                fprintf(stderr,
+                                        "enc-flush job returned out of order, "
+                                        "received %u, expected %u\n",
+                                        idx, num_processed_jobs);
                                 goto exit;
                         }
                         num_processed_jobs++;
@@ -2042,7 +2048,7 @@ do_test(IMB_MGR *enc_mb_mgr, const IMB_ARCH enc_arch,
                               (unsigned) params->cipher_mode);
 
                 if (job != NULL) {
-                        unsigned idx = (unsigned)((uintptr_t) job->user_data);
+                        const unsigned idx = (unsigned)((uintptr_t) job->user_data);
 
                         if (job->status != IMB_STATUS_COMPLETED) {
                                 int errc = imb_get_errno(dec_mb_mgr);
@@ -2056,7 +2062,10 @@ do_test(IMB_MGR *enc_mb_mgr, const IMB_ARCH enc_arch,
                         }
 
                         if (idx != num_processed_jobs) {
-                                fprintf(stderr, "job returned out of order\n");
+                                fprintf(stderr,
+                                        "dec-submit job returned out of order, "
+                                        "received %u, expected %u\n",
+                                        idx, num_processed_jobs);
                                 goto exit;
                         }
                         num_processed_jobs++;
@@ -2071,7 +2080,7 @@ do_test(IMB_MGR *enc_mb_mgr, const IMB_ARCH enc_arch,
                               (unsigned) params->cipher_mode);
 
                 while (job != NULL) {
-                        unsigned idx = (unsigned)((uintptr_t) job->user_data);
+                        const unsigned idx = (unsigned)((uintptr_t) job->user_data);
 
                         if (job->status != IMB_STATUS_COMPLETED) {
                                 int errc = imb_get_errno(enc_mb_mgr);
@@ -2084,7 +2093,10 @@ do_test(IMB_MGR *enc_mb_mgr, const IMB_ARCH enc_arch,
                                 goto exit;
                         }
                         if (idx != num_processed_jobs) {
-                                fprintf(stderr, "job returned out of order\n");
+                                fprintf(stderr,
+                                        "dec-flush job returned out of order, "
+                                        "received %u, expected %u\n",
+                                        idx, num_processed_jobs);
                                 goto exit;
                         }
                         num_processed_jobs++;
