@@ -32,6 +32,8 @@
 #include "intel-ipsec-mb.h"
 #include "arch_x86_64.h"
 
+#ifndef NO_SELF_TEST_DEV
+
 static int process_job(IMB_MGR *p_mgr)
 {
         IMB_JOB *job = IMB_SUBMIT_JOB(p_mgr);
@@ -1495,6 +1497,8 @@ static int self_test_aead(IMB_MGR *p_mgr)
         return 1;
 }
 
+#endif /* NO_SELF_TEST_DEV */
+
 /*
  * =============================================================================
  * SELF-TEST INTERNAL API
@@ -1505,6 +1509,10 @@ IMB_DLL_LOCAL int self_test(IMB_MGR *p_mgr)
 {
         int ret = 1;
 
+#ifdef NO_SELF_TEST_DEV
+        p_mgr->features &= ~(IMB_FEATURE_SELF_TEST |
+                             IMB_FEATURE_SELF_TEST_PASS);
+#else
         p_mgr->features |= IMB_FEATURE_SELF_TEST;
         p_mgr->features &= ~IMB_FEATURE_SELF_TEST_PASS;
 
@@ -1520,10 +1528,6 @@ IMB_DLL_LOCAL int self_test(IMB_MGR *p_mgr)
         if (ret)
                 p_mgr->features |= IMB_FEATURE_SELF_TEST_PASS;
 
-#ifdef NO_SELF_TEST_DEV
-        p_mgr->features &= ~(IMB_FEATURE_SELF_TEST |
-                             IMB_FEATURE_SELF_TEST_PASS);
-        ret = 1;
 #endif
 
         return ret;
