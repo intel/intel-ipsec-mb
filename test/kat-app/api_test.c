@@ -911,6 +911,43 @@ test_burst_api(struct IMB_MGR *mb_mgr)
                 return 1;
         }
         print_progress();
+
+        /* ======== test 8 : invalid suite_id */
+
+        while (IMB_GET_NEXT_BURST(mb_mgr, n_jobs, jobs) < n_jobs)
+                IMB_FLUSH_BURST(mb_mgr, n_jobs, jobs);
+
+        /* fill in valid jobs */
+        for (i = 0; i < n_jobs; i++) {
+                job = jobs[i];
+                fill_in_job(job, IMB_CIPHER_CBC, IMB_DIR_ENCRYPT, IMB_AUTH_NULL,
+                            IMB_ORDER_CIPHER_HASH, NULL, NULL);
+
+                if (i == (n_jobs - 1))
+                        memset(job->suite_id, 0, sizeof(job->suite_id)); /* bad suite_id */
+                else
+                        imb_set_cipher_suite_id(mb_mgr, job);
+        }
+
+        completed_jobs = IMB_SUBMIT_BURST(mb_mgr, n_jobs, jobs);
+        if (completed_jobs != 0) {
+                printf("%s: test %d, unexpected number of completed "
+                       "jobs\n", __func__, TEST_INVALID_BURST);
+                return 1;
+        }
+        print_progress();
+
+        err = imb_get_errno(mb_mgr);
+        if (err != IMB_ERR_BURST_SUITE_ID) {
+                printf("%s: test %d, unexpected error: %s\n",
+                       __func__, TEST_INVALID_BURST,
+                       imb_get_strerror(err));
+                return 1;
+        }
+        print_progress();
+
+        /* ======== end */
+
         if (!quiet_mode)
                 printf("\n");
 
