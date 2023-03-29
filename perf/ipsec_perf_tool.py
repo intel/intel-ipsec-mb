@@ -359,7 +359,6 @@ def parse_args():
     global QUIET
     cores = None
     directions = ['encrypt', 'decrypt']
-    offset = 24
     alg_types = ['cipher-only', 'hash-only', 'aead-only', 'cipher-hash-all']
 
     parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter,
@@ -374,8 +373,8 @@ def parse_args():
                         help="list/range of cores e.g. 2-8 or 3,4,5")
     parser.add_argument("-d", "--direction", default=None,
                         choices=directions, help="Cipher direction")
-    parser.add_argument("-o", "--offset", default=offset, type=int,
-                        help="offset for the SHA size increment, default is 24")
+    parser.add_argument("-o", "--offset", default=None, type=int,
+                        help="offset for the SHA size increment")
     parser.add_argument("-t", "--alg-type", default=None, action='append', choices=alg_types,
                         help="algorithm types to test")
     parser.add_argument("-s", "--job-size", default=None,
