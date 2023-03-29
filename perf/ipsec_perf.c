@@ -3448,7 +3448,7 @@ exit_failure:
 
 static void usage(void)
 {
-        fprintf(stderr, "Usage: ipsec_perf <ALGORITHM> [ARGS]\n"
+        fprintf(stderr, "Usage: imb-perf <ALGORITHM> [ARGS]\n"
                 "\nALGORITHM can be one or more of:\n"
                 "--cipher-algo: Select cipher algorithm to run on the custom test\n"
                 "--hash-algo: Select hash algorithm to run on the custom test\n"

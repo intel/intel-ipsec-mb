@@ -74,7 +74,7 @@ CS_IGNORE_WORDS ?= iinclude,struc,fo,ue,od,ba,padd
 .PHONY: spellcheck
 spellcheck:
 	$(CODESPELL) -d -L $(CS_IGNORE_WORDS) \
-	-S "*.obj,*.o,*.a,*.so,*.lib,*~,*.so,*.so.*,*.d,ipsec_perf" \
+	-S "*.obj,*.o,*.a,*.so,*.lib,*~,*.so,*.so.*,*.d,imb-perf" \
 	-S "imb-kat,imb-xvalid" \
 	./lib ./perf ./test README.md SECURITY.md CONTRIBUTING \
 	Makefile win_x64.mak ReleaseNotes.txt LICENSE $(CS_EXTRA_OPTS)

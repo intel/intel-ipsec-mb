@@ -34,7 +34,7 @@ endif()
 ########################################
 # set app and library names
 ########################################
-set(PERF_APP ipsec_perf)
+set(PERF_APP imb-perf)
 set(LIB_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../lib)
 
 ########################################

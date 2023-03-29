@@ -10,7 +10,7 @@
 *.d
 *.dep
 *~
-ipsec_perf*
+imb-perf*
 imb-kat*
 imb-xvalid*
 imb-fuzz-*

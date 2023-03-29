@@ -327,7 +327,7 @@ class DiffTool(object):
         print("\t-c - takes packet size as argument and then it will calculate cycle cost")
         print("\t-t - takes packet size and clock speed as arguments and then it will calculate throughput in Mbps")
         print("\t-s - calculates the slope and intercept")
-        print("\tfile_a, file_b - text files containing output from ipsec_perf tool")
+        print("\tfile_a, file_b - text files containing output from imb-perf tool")
         print("\ttol - tolerance [%], must be >= 0, default 5\n")
         print("Examples:")
         print("\tdefault no arguments prints slope and intercept")

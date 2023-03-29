@@ -258,9 +258,9 @@ def init_global_vars():
 
     # detect OS and select app name
     if platform.system() == 'Windows':
-        PERF_APP = 'ipsec_perf.exe'
+        PERF_APP = 'imb-perf.exe'
     else:
-        PERF_APP = 'ipsec_perf'
+        PERF_APP = 'imb-perf'
 
 
 def get_info():

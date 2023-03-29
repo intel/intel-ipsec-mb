@@ -58,10 +58,10 @@ Usage
 =====
 
 You can simply check list of arguments by typing:
-	./ipsec_perf -h
+	./imb-perf -h
 
 Usage example:
-	./ipsec_perf -c --no-avx512 --no-gcm -o 24
+	./imb-perf -c --no-avx512 --no-gcm -o 24
 
 Later you can pass output to ipsec_diff_tool.py for data
 analysis:

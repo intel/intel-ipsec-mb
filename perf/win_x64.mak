@@ -25,7 +25,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-APP = ipsec_perf
+APP = imb-perf
 INSTNAME = intel-ipsec-mb
 
 !if !defined(PREFIX)
