@@ -45,3 +45,17 @@ set(CMAKE_C_FLAGS_DEBUG "/Od /DDEBUG /Z7")
 set(CMAKE_C_FLAGS_RELEASE "/O2 /Oi")
 set(CMAKE_EXE_LINKER_FLAGS_DEBUG "/debug")
 
+# copy perf scripts to binary directory
+add_custom_command(
+  TARGET ${PERF_APP}
+  POST_BUILD
+  COMMAND
+    ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/ipsec_diff_tool.py"
+    $<TARGET_FILE_DIR:${PERF_APP}>)
+add_custom_command(
+  TARGET ${PERF_APP}
+  POST_BUILD
+  COMMAND
+    ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/ipsec_perf_tool.py"
+    $<TARGET_FILE_DIR:${PERF_APP}>)
+

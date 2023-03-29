@@ -50,6 +50,11 @@ set(PERF_APP_SRC_FILES_ASM
 )
 
 ########################################
+# add target
+########################################
+add_executable(${PERF_APP} ${PERF_APP_SRC_FILES} ${PERF_APP_SRC_FILES_ASM})
+
+########################################
 # setup NASM
 ########################################
 enable_language(ASM_NASM)
@@ -69,12 +74,11 @@ else()
 endif()
 
 ########################################
-# add targets
+# extra target properties
 ########################################
 include_directories(${CMAKE_CURRENT_SOURCE_DIR} ${LIB_DIR})
 link_directories(${LIB_DIR})
 
-add_executable(${PERF_APP} ${PERF_APP_SRC_FILES} ${PERF_APP_SRC_FILES_ASM})
 target_link_libraries(${PERF_APP} PRIVATE ${IPSEC_MB_LIB})
 target_compile_definitions(${PERF_APP} PRIVATE ${APP_DEFINES})
 

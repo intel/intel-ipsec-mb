@@ -52,3 +52,8 @@ if(CMAKE_COMPILER_IS_GNUCC)
   string(APPEND CMAKE_C_FLAGS " -fno-strict-overflow")
 endif()
 
+# copy perf scripts to binary directory
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/ipsec_diff_tool.py
+               ${CMAKE_CURRENT_BINARY_DIR} COPYONLY)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/ipsec_perf_tool.py
+               ${CMAKE_CURRENT_BINARY_DIR} COPYONLY)
