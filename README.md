@@ -443,6 +443,71 @@ Build with debugging information:
 For more build options and their explanation run:   
 `> gmake help`
 
+Building with CMake (experimental)
+-------------------
+
+Minimum CMake version:
+- 3.16
+
+Create build directory:
+```
+mkdir build
+cd build
+```
+
+### Unix Makefiles (Linux and FreeBSD)
+
+Shared library (default):
+```
+cmake ..
+cmake --build . --parallel
+```
+
+Static library:
+```
+cmake -DBUILD_SHARED_LIBS=OFF ..
+cmake --build . --parallel
+```
+
+Debug build:
+```
+cmake -DCMAKE_BUILD_TYPE=Debug ..
+cmake --build . --parallel
+```
+
+### Windows MSVS (x64 only)
+
+Shared library with debugging information (default for MSVS)
+```
+cmake -Ax64 ..
+cmake --build .
+```
+
+Release build:
+```
+cmake -Ax64 ..
+cmake --build . --config Release
+```
+
+Static library:
+```
+cmake -Ax64 -DBUILD_SHARED_LIBS=OFF ..
+cmake --build . --config Release
+```
+
+###  Ninja (Linux, FreeBSD and Windows):
+```
+cmake -G Ninja ..
+cmake --build .
+```
+
+Library and applications can be found in:
+```
+build/lib
+build/test
+build/perf
+```
+
 7\. Security Considerations & Options for Increased Security
 ============================================================
 

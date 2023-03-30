@@ -4,6 +4,9 @@ Release Notes for Intel(R) Multi-Buffer Crypto for IPsec Library
 Unreleased
 ==========
 
+General
+- Experimental CMake support for Linux, FreeBSD and Windows added
+
 Library
 - POLY1305 AVX2 with AVX-IFMA instructions added.
 
