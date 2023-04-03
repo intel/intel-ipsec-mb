@@ -51,6 +51,11 @@ YASM ?= yasm
 NASM ?= nasm
 
 CC ?= gcc
+
+# skip version detection with clean or style target
+ifneq ($(MAKECMDGOALS),clean)
+ifneq ($(MAKECMDGOALS),style)
+
 # MINGW should be non-zero value if detected
 MINGW ?= $(shell $(CC) -dM -E - < /dev/null | grep -i mingw | wc -l | sed 's/^ *//')
 
@@ -75,9 +80,11 @@ NASM_MINOR_VER = $(shell echo $(NASM_VERSION) | cut -d "." -f 2 | cut -c 1-2)
 NASM_VER = $(shell expr $(NASM_MAJOR_VER) $(MULT) 100 + $(NASM_MINOR_VER) )
 
 NASM_GE_REQ = $(shell [ $(NASM_VER) -ge $(NASM_MIN_REQ) ] && echo true)
+
+$(info NASM '$(NASM)' version: $(NASM_VERSION))
+
 ifneq ($(NASM_GE_REQ),true)
-$(warning "NASM version found: $(NASM_VERSION)")
-$(error "Minimum required: $(NASM_MAJOR_REQ).$(NASM_MINOR_REQ)")
+$(error "Minimum required NASM version: $(NASM_MAJOR_REQ).$(NASM_MINOR_REQ)")
 endif # NASM_GE_REQ
 endif # NASM_VERSION
 
@@ -89,8 +96,7 @@ NASM_MIN_IFMA_REQ = $(shell expr $(NASM_MAJOR_AVX_IFMA) $(MULT) 100 + $(NASM_MIN
 
 NASM_IFMA_GE_REQ = $(shell [ $(NASM_VER) -ge $(NASM_MIN_IFMA_REQ) ] && echo true)
 ifneq ($(NASM_IFMA_GE_REQ),true)
-$(warning "NASM version found: $(NASM_VERSION)")
-$(warning "AVX-IFMA not supported. Minimum required: $(NASM_MAJOR_AVX_IFMA).$(NASM_MINOR_AVX_IFMA)")
+$(warning Minimum required NASM version for AVX-IFMA: $(NASM_MAJOR_AVX_IFMA).$(NASM_MINOR_AVX_IFMA). AVX-IFMA code not compiled - update NASM.)
 AVX_IFMA := n
 endif # NASM_AVX_IFMA_GET_REQ
 
@@ -205,6 +211,7 @@ OPT_NOAESNI := -msse4.2 -mno-aes -mno-pclmul
 ifeq ($(CC),$(filter $(CC),gcc cc))
 GCC_VERSION = $(shell $(CC) -dumpversion | cut -d. -f1)
 GCC_GE_V5 = $(shell [ $(GCC_VERSION) -ge 5 ] && echo true)
+$(info CC '$(CC)' version: $(GCC_VERSION))
 ifeq ($(GCC_GE_V5),true)
 OPT_SSE := -march=nehalem -maes -mpclmul
 OPT_AVX := -march=sandybridge -maes -mpclmul
@@ -218,6 +225,7 @@ endif
 ifeq ($(CC),$(filter $(CC),clang))
 CLANG_VERSION = $(shell $(CC) --version | head -n 1 | cut -d ' ' -f 3)
 CLANG_GE_V381 = $(shell test "$(CLANG_VERSION)" \> "3.8.0" && echo true)
+$(info CLANG '$(CC)' version: $(CLANG_VERSION))
 ifeq ($(CLANG_GE_V381),true)
 OPT_SSE := -march=nehalem -maes -mpclmul
 OPT_AVX := -march=sandybridge -maes -mpclmul
@@ -249,6 +257,9 @@ ifeq ($(CC_HAS_CET),1)
 LDFLAGS += -fcf-protection=full
 endif
 endif
+
+endif # style target
+endif # clean target
 
 # warning messages
 SAFE_PARAM_MSG1="SAFE_PARAM option not set."
