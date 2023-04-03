@@ -193,6 +193,8 @@ uint32_t
 ethernet_fcs_sse_no_aesni_local(const void *msg, const uint64_t len,
                                 const void *tag_ouput);
 
+IMB_DLL_EXPORT void set_suite_id_sse_no_aesni(IMB_MGR *state, IMB_JOB *job);
+
 #endif /* IMB_ARCH_NOAESNI_H */
 
 
