@@ -341,7 +341,6 @@ fill_in_job(struct IMB_JOB *job,
                 break;
         case IMB_CIPHER_ECB:
                 job->key_len_in_bytes = UINT64_C(16);
-                job->iv_len_in_bytes = 0;
                 break;
         case IMB_CIPHER_ZUC_EEA3:
                 job->key_len_in_bytes = UINT64_C(16);
@@ -2011,9 +2010,6 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                 /* CCM IV must be 13 to 7 bytes */
                 { IMB_CIPHER_CCM, 6 },
                 { IMB_CIPHER_CCM, 14 },
-                /* ECB IV must be 0 bytes */
-                { IMB_CIPHER_ECB, 1 },
-                { IMB_CIPHER_ECB, -1 },
                 /* CNTR IV must be 12 or 16 bytes */
                 { IMB_CIPHER_CNTR, 11 },
                 { IMB_CIPHER_CNTR, 14 },
