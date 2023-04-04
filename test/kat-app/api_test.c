@@ -779,7 +779,7 @@ test_burst_api(struct IMB_MGR *mb_mgr)
                 job = jobs[i];
                 fill_in_job(job, IMB_CIPHER_CBC, IMB_DIR_ENCRYPT, IMB_AUTH_NULL,
                             IMB_ORDER_CIPHER_HASH, NULL, NULL);
-                imb_set_cipher_suite_id(mb_mgr, job);
+                imb_set_session(mb_mgr, job);
         }
 
         /* set invalid job order */
@@ -812,7 +812,7 @@ test_burst_api(struct IMB_MGR *mb_mgr)
                 job = jobs[i];
                 fill_in_job(job, IMB_CIPHER_CBC, IMB_DIR_ENCRYPT, IMB_AUTH_NULL,
                             IMB_ORDER_CIPHER_HASH, NULL, NULL);
-                imb_set_cipher_suite_id(mb_mgr, job);
+                imb_set_session(mb_mgr, job);
         }
 
         /* set a single invalid field */
@@ -925,7 +925,7 @@ test_burst_api(struct IMB_MGR *mb_mgr)
                 if (i == (n_jobs - 1))
                         memset(job->suite_id, 0, sizeof(job->suite_id)); /* bad suite_id */
                 else
-                        imb_set_cipher_suite_id(mb_mgr, job);
+                        imb_set_session(mb_mgr, job);
         }
 
         completed_jobs = IMB_SUBMIT_BURST(mb_mgr, n_jobs, jobs);
@@ -1030,7 +1030,7 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
                                                        IMB_ERR_JOB_NULL_SRC))
                                         return 1;
 
-                                imb_set_cipher_suite_id(mb_mgr, &template_job);
+                                imb_set_session(mb_mgr, &template_job);
                                 if (!is_submit_burst_invalid(mb_mgr,
                                                              &template_job,
                                                              TEST_AUTH_SRC_NULL,
@@ -1069,7 +1069,7 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
                                                        IMB_ERR_JOB_NULL_AUTH))
                                         return 1;
 
-                                imb_set_cipher_suite_id(mb_mgr, &template_job);
+                                imb_set_session(mb_mgr, &template_job);
                                 if (!is_submit_burst_invalid(mb_mgr,
                                                              &template_job,
                                                              TEST_AUTH_AUTH_TAG_OUTPUT_NULL,
@@ -1107,7 +1107,7 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
                                                        TEST_AUTH_TAG_OUTPUT_LEN_ZERO,
                                                        IMB_ERR_JOB_AUTH_TAG_LEN))
                                         return 1;
-                                imb_set_cipher_suite_id(mb_mgr, &template_job);
+                                imb_set_session(mb_mgr, &template_job);
                                 if (!is_submit_burst_invalid(mb_mgr,
                                                              &template_job,
                                                              TEST_AUTH_TAG_OUTPUT_LEN_ZERO,
@@ -1192,7 +1192,7 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
                                                        IMB_ERR_JOB_AUTH_LEN))
                                         return 1;
 
-                                imb_set_cipher_suite_id(mb_mgr, &template_job);
+                                imb_set_session(mb_mgr, &template_job);
                                 if (!is_submit_burst_invalid(mb_mgr,
                                                              &template_job,
                                                              TEST_AUTH_MSG_LEN_GT_MAX,
@@ -1248,7 +1248,7 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
                                                        IMB_ERR_JOB_AUTH_LEN))
                                         return 1;
 
-                                imb_set_cipher_suite_id(mb_mgr, &template_job);
+                                imb_set_session(mb_mgr, &template_job);
                                 if (!is_submit_burst_invalid(mb_mgr,
                                                              &template_job,
                                                              TEST_AUTH_MSG_LEN_ZERO,
@@ -1292,7 +1292,7 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
                                                        IMB_ERR_JOB_IV_LEN))
                                         return 1;
 
-                                imb_set_cipher_suite_id(mb_mgr, job);
+                                imb_set_session(mb_mgr, job);
                                 if (!is_submit_burst_invalid(mb_mgr, job,
                                                              TEST_AUTH_IV_LEN,
                                                              IMB_ERR_JOB_IV_LEN))
@@ -1339,7 +1339,7 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
                                                        err_ipad))
                                         return 1;
 
-                                imb_set_cipher_suite_id(mb_mgr, job);
+                                imb_set_session(mb_mgr, job);
                                 if (!is_submit_burst_invalid(mb_mgr, job,
                                                              TEST_AUTH_NULL_HMAC_IPAD,
                                                              err_ipad))
@@ -1358,7 +1358,7 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
                                                        err_opad))
                                         return 1;
 
-                                imb_set_cipher_suite_id(mb_mgr, job);
+                                imb_set_session(mb_mgr, job);
                                 if (!is_submit_burst_invalid(mb_mgr, job,
                                                              TEST_AUTH_NULL_HMAC_OPAD,
                                                              err_opad))
@@ -1386,7 +1386,7 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
                                                IMB_ERR_JOB_NULL_XCBC_K1_EXP))
                                 return 1;
 
-                        imb_set_cipher_suite_id(mb_mgr, job);
+                        imb_set_session(mb_mgr, job);
                         if (!is_submit_burst_invalid(mb_mgr, job,
                                                      TEST_AUTH_NULL_XCBC_K1_EXP,
                                                      IMB_ERR_JOB_NULL_XCBC_K1_EXP))
@@ -1402,7 +1402,7 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
                                                IMB_ERR_JOB_NULL_XCBC_K2))
                                 return 1;
 
-                        imb_set_cipher_suite_id(mb_mgr, job);
+                        imb_set_session(mb_mgr, job);
                         if (!is_submit_burst_invalid(mb_mgr, job,
                                                      TEST_AUTH_NULL_XCBC_K2,
                                                      IMB_ERR_JOB_NULL_XCBC_K2))
@@ -1417,7 +1417,7 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
                                                TEST_AUTH_NULL_XCBC_K3,
                                                IMB_ERR_JOB_NULL_XCBC_K3))
                                 return 1;
-                        imb_set_cipher_suite_id(mb_mgr, job);
+                        imb_set_session(mb_mgr, job);
                         if (!is_submit_burst_invalid(mb_mgr, job,
                                                      TEST_AUTH_NULL_XCBC_K3,
                                                      IMB_ERR_JOB_NULL_XCBC_K3))
@@ -1444,7 +1444,7 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
                                                IMB_ERR_JOB_NULL_AUTH_KEY))
                                 return 1;
 
-                        imb_set_cipher_suite_id(mb_mgr, job);
+                        imb_set_session(mb_mgr, job);
                         if (!is_submit_burst_invalid(mb_mgr, job,
                                                      TEST_AUTH_NULL_GHASH_KEY,
                                                      IMB_ERR_JOB_NULL_AUTH_KEY))
@@ -1460,7 +1460,7 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
                                                IMB_ERR_JOB_NULL_GHASH_INIT_TAG))
                                 return 1;
 
-                        imb_set_cipher_suite_id(mb_mgr, job);
+                        imb_set_session(mb_mgr, job);
                         if (!is_submit_burst_invalid(mb_mgr, job,
                                                      TEST_AUTH_NULL_GHASH_INIT_TAG,
                                                      IMB_ERR_JOB_NULL_GHASH_INIT_TAG))
@@ -1488,7 +1488,7 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
                                                        IMB_ERR_JOB_NULL_AUTH_KEY))
                                         return 1;
 
-                                imb_set_cipher_suite_id(mb_mgr, job);
+                                imb_set_session(mb_mgr, job);
                                 if (!is_submit_burst_invalid(mb_mgr, job,
                                                              TEST_AUTH_NULL_GMAC_KEY,
                                                              IMB_ERR_JOB_NULL_AUTH_KEY))
@@ -1504,7 +1504,7 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
                                                        IMB_ERR_JOB_NULL_IV))
                                         return 1;
 
-                                imb_set_cipher_suite_id(mb_mgr, job);
+                                imb_set_session(mb_mgr, job);
                                 if (!is_submit_burst_invalid(mb_mgr, job,
                                                              TEST_AUTH_NULL_GMAC_IV,
                                                              IMB_ERR_JOB_NULL_IV))
@@ -1520,7 +1520,7 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
                                                        IMB_ERR_JOB_IV_LEN))
                                         return 1;
 
-                                imb_set_cipher_suite_id(mb_mgr, job);
+                                imb_set_session(mb_mgr, job);
                                 if (!is_submit_burst_invalid(mb_mgr, job,
                                                              TEST_AUTH_GMAC_IV_LEN,
                                                              IMB_ERR_JOB_IV_LEN))
@@ -1585,7 +1585,7 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                                                        IMB_ERR_JOB_NULL_SRC))
                                         return 1;
 
-                                imb_set_cipher_suite_id(mb_mgr, &template_job);
+                                imb_set_session(mb_mgr, &template_job);
                                 if (!is_submit_burst_invalid(mb_mgr,
                                                              &template_job,
                                                              TEST_CIPH_SRC_NULL,
@@ -1621,7 +1621,7 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                                                        IMB_ERR_JOB_NULL_DST))
                                         return 1;
 
-                                imb_set_cipher_suite_id(mb_mgr, &template_job);
+                                imb_set_session(mb_mgr, &template_job);
                                 if (!is_submit_burst_invalid(mb_mgr,
                                                              &template_job,
                                                              TEST_CIPH_DST_NULL,
@@ -1661,7 +1661,7 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                                                        IMB_ERR_JOB_NULL_IV))
                                         return 1;
 
-                                imb_set_cipher_suite_id(mb_mgr, &template_job);
+                                imb_set_session(mb_mgr, &template_job);
                                 if (!is_submit_burst_invalid(mb_mgr,
                                                              &template_job,
                                                              TEST_CIPH_IV_NULL,
@@ -1701,7 +1701,7 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                                                IMB_ERR_JOB_CIPH_DIR))
                                 return 1;
 
-                        imb_set_cipher_suite_id(mb_mgr, &template_job);
+                        imb_set_session(mb_mgr, &template_job);
                         if (!is_submit_burst_invalid(mb_mgr, &template_job,
                                                      TEST_CIPH_DIR,
                                                      IMB_ERR_JOB_CIPH_DIR))
@@ -1739,7 +1739,7 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                                                        IMB_ERR_JOB_NULL_KEY))
                                         return 1;
 
-                                imb_set_cipher_suite_id(mb_mgr, &template_job);
+                                imb_set_session(mb_mgr, &template_job);
                                 if (!is_submit_burst_invalid(mb_mgr,
                                                              &template_job,
                                                              TEST_CIPH_ENC_KEY_NULL,
@@ -1781,7 +1781,7 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                                                        IMB_ERR_JOB_NULL_KEY))
                                         return 1;
 
-                                imb_set_cipher_suite_id(mb_mgr, &template_job);
+                                imb_set_session(mb_mgr, &template_job);
                                 if (!is_submit_burst_invalid(mb_mgr,
                                                              &template_job,
                                                              TEST_CIPH_DEC_KEY_NULL,
@@ -1802,7 +1802,7 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                                                        IMB_ERR_JOB_NULL_KEY))
                                         return 1;
 
-                                imb_set_cipher_suite_id(mb_mgr, &template_job);
+                                imb_set_session(mb_mgr, &template_job);
                                 if (!is_submit_burst_invalid(mb_mgr,
                                                              &template_job,
                                                              TEST_CIPH_DEC_KEY_NULL,
@@ -1816,7 +1816,7 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                                                        IMB_ERR_JOB_NULL_KEY))
                                         return 1;
 
-                                imb_set_cipher_suite_id(mb_mgr, &template_job);
+                                imb_set_session(mb_mgr, &template_job);
                                 if (!is_submit_burst_invalid(mb_mgr,
                                                              &template_job,
                                                              TEST_CIPH_DEC_KEY_NULL,
@@ -1830,7 +1830,7 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                                                        IMB_ERR_JOB_NULL_KEY))
                                         return 1;
 
-                                imb_set_cipher_suite_id(mb_mgr, &template_job);
+                                imb_set_session(mb_mgr, &template_job);
                                 if (!is_submit_burst_invalid(mb_mgr,
                                                              &template_job,
                                                              TEST_CIPH_DEC_KEY_NULL,
@@ -1889,7 +1889,7 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                                                                IMB_ERR_JOB_CIPH_LEN))
                                                 return 1;
 
-                                        imb_set_cipher_suite_id(mb_mgr, job);
+                                        imb_set_session(mb_mgr, job);
                                         if (!is_submit_burst_invalid(mb_mgr,
                                                                      job,
                                                                      TEST_CIPH_MSG_LEN_ZERO,
@@ -1974,7 +1974,7 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                                                        IMB_ERR_JOB_CIPH_LEN))
                                         return 1;
 
-                                imb_set_cipher_suite_id(mb_mgr, job);
+                                imb_set_session(mb_mgr, job);
                                 if (!is_submit_burst_invalid(mb_mgr, job,
                                                              TEST_CIPH_MSG_LEN_GT_MAX,
                                                              IMB_ERR_JOB_CIPH_LEN))
@@ -2110,7 +2110,7 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                                                        IMB_ERR_JOB_IV_LEN))
                                         return 1;
 
-                                imb_set_cipher_suite_id(mb_mgr, job);
+                                imb_set_session(mb_mgr, job);
                                 if (!is_submit_burst_invalid(mb_mgr, job,
                                                              TEST_CIPH_IV_LEN,
                                                              IMB_ERR_JOB_IV_LEN))
@@ -2149,7 +2149,7 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                                                IMB_ERR_JOB_NULL_NEXT_IV))
                                 return 1;
 
-                        imb_set_cipher_suite_id(mb_mgr, job);
+                        imb_set_session(mb_mgr, job);
                         if (!is_submit_burst_invalid(mb_mgr, job,
                                                      TEST_CIPH_NEXT_IV_NULL,
                                                      IMB_ERR_JOB_NULL_NEXT_IV))
@@ -2211,7 +2211,7 @@ test_job_invalid_misc_args(struct IMB_MGR *mb_mgr)
                                                IMB_ERR_JOB_PON_PLI))
                                 return 1;
 
-                        imb_set_cipher_suite_id(mb_mgr, &template_job);
+                        imb_set_session(mb_mgr, &template_job);
 
                         if (!is_submit_burst_invalid(mb_mgr, &template_job,
                                                      TEST_INVALID_PON_PLI,
@@ -2263,7 +2263,7 @@ test_job_invalid_misc_args(struct IMB_MGR *mb_mgr)
                                                        IMB_ERR_JOB_CIPH_LEN))
                                         return 1;
 
-                                imb_set_cipher_suite_id(mb_mgr, job);
+                                imb_set_session(mb_mgr, job);
                                 if (!is_submit_burst_invalid(mb_mgr, job,
                                                              TEST_CIPH_MSG_LEN_GT_MAX,
                                                              IMB_ERR_JOB_CIPH_LEN))

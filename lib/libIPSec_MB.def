@@ -701,4 +701,4 @@ EXPORTS
     imb_quic_aes_gcm				@675
     imb_quic_hp_aes_ecb				@676
     imb_hmac_ipad_opad                          @677
-    imb_set_cipher_suite_id                     @678
+    imb_set_session                             @678

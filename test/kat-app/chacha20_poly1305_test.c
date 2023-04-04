@@ -503,7 +503,7 @@ test_aead(struct IMB_MGR *mb_mgr,
 
                 job->user_data = auths[i];
 
-                imb_set_cipher_suite_id(mb_mgr, job);
+                imb_set_session(mb_mgr, job);
         }
 
         uint32_t completed_jobs = IMB_SUBMIT_BURST(mb_mgr, num_jobs, jobs);

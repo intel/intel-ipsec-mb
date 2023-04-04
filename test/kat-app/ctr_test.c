@@ -1509,7 +1509,7 @@ test_ctr_burst(struct IMB_MGR *mb_mgr,
                 job->hash_alg = IMB_AUTH_NULL;
                 job->user_data = targets[i];
                 job->user_data2 = (void *)((uint64_t)i);
-                imb_set_cipher_suite_id(mb_mgr, job);
+                imb_set_session(mb_mgr, job);
         }
 
         completed_jobs = IMB_SUBMIT_BURST(mb_mgr, num_jobs, jobs);

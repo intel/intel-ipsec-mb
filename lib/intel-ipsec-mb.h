@@ -1,5 +1,5 @@
 /*******************************************************************************
-  Copyright (c) 2012-2022, Intel Corporation
+  Copyright (c) 2012-2023, Intel Corporation
 
   Redistribution and use in source and binary forms, with or without
   modification, are permitted provided that the following conditions are met:
@@ -661,7 +661,8 @@ typedef struct IMB_JOB {
                 } CBCS; /**< CBCS specific fields */
         } cipher_fields; /**< Cipher algorithm-specific fields */
 
-        void *suite_id[4]; /**< see imb_set_cipher_suite_id() */
+        void *suite_id[4]; /**< see imb_set_session() */
+        uint32_t session_id;  /**< see imb_set_session() */
 } IMB_JOB;
 
 
@@ -1668,13 +1669,13 @@ IMB_DLL_EXPORT void init_mb_mgr_auto(IMB_MGR *state, IMB_ARCH *arch);
  * @brief Submit multiple jobs to be processed after validating.
  *
  * Prior to submission, \a _jobs need to be initialized with correct
- * crypto job parameters and followed with a call to imb_set_cipher_suite_id().
+ * crypto job parameters and followed with a call to imb_set_session().
  *
  * @param [in,out] _mgr         Pointer to initialized IMB_MGR structure
  * @param [in] _n_jobs          Number of jobs to submit for processing
  * @param [in,out] _jobs        In:  List of pointers to jobs for submission
  *                              Out: List of pointers to completed jobs
- * @see imb_set_cipher_suite_id()
+ * @see imb_set_session()
  *
  * @return Number of completed jobs or zero on error.
  *         If zero, imb_get_errno() can be used to check for potential
@@ -1687,13 +1688,13 @@ IMB_DLL_EXPORT void init_mb_mgr_auto(IMB_MGR *state, IMB_ARCH *arch);
  * @brief Submit multiple jobs to be processed without validating.
  *
  * Prior to submission \a _jobs need to be initialized with correct
- * crypto job parameters and followed with call to imb_set_cipher_suite_id().
+ * crypto job parameters and followed with call to imb_set_session().
  *
  * @param [in,out] _mgr         Pointer to initialized IMB_MGR structure
  * @param [in] _n_jobs          Number of jobs to submit for processing
  * @param [in,out] _jobs        In:  List of pointers to jobs for submission
  *                              Out: List of pointers to completed jobs
- * @see imb_set_cipher_suite_id()
+ * @see imb_set_session()
  *
  * @return Number of completed jobs or zero on error
  */
@@ -4197,24 +4198,45 @@ imb_quic_hp_aes_ecb(IMB_MGR *state,
                     const IMB_KEY_SIZE_BYTES key_size);
 
 /**
- * @brief Sets up ID structure for selected cipher suite in
+ * @brief Sets up suite_id and session_id fields for selected cipher suite in
  *        provided \a job structure
  *
- * This is for use ONLY in BURST API to speed up dispatch process.
- * For given set of parameters: cipher type, cipher key size,
- * cipher direction and authentication type, suite_id field be the same.
- * In connection oriented applications, template filled-in job structure
+ * This is mandatory operation for BURST API as suite_id is used to speed up
+ * job dispatch process.
+ * This operation is optional but helpful for JOB API use case.
+ *
+ * 'session_id' field is for application use to optimize job set up process.
+ * If JOB structure provided by library for a new operation has same session ID
+ * as required for the next operation then only message pointers and sizes
+ * need to be set up by the application. All other session fields are guaranteed
+ * to be unmodified by the library:
+ * - cipher mode
+ * - cipher direction
+ * - hash algorithm
+ * - key size
+ * - encrypt & decrypt key pointers
+ * - suite_id
+ * If allocated JOB structure contains different session ID then
+ * all required session and crypto operation fields need to be set up.
+ *
+ * In connection oriented applications, a template filled-in job structure
  * can be cached within connection structure and reused in submit operations.
+ *
+ * For given set of parameters: cipher mode, cipher key size,
+ * cipher direction and authentication mode, suite_id field is the same.
  *
  * @see IMB_SUBMIT_BURST()
  * @see IMB_SUBMIT_BURST_NOCHECK()
+ * @see IMB_SUBMIT_JOB()
+ * @see IMB_SUBMIT_JOB_NOCHECK()
  *
  * @param [in]     state   pointer to IMB_MGR
  * @param [in/out] job     pointer to prepared JOB structure
  *
+ * @return Session ID value
+ * @retval 0 on error
  */
-IMB_DLL_EXPORT void
-imb_set_cipher_suite_id(IMB_MGR *state, IMB_JOB *job);
+IMB_DLL_EXPORT uint32_t imb_set_session(IMB_MGR *state, IMB_JOB *job);
 
 #ifdef __cplusplus
 }

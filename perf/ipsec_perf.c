@@ -2299,7 +2299,7 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
                 uint32_t num_jobs = num_iter;
                 IMB_JOB *jobs[IMB_MAX_BURST_SIZE] = {NULL};
 
-                imb_set_cipher_suite_id(mb_mgr, &job_template);
+                imb_set_session(mb_mgr, &job_template);
 
                 while (num_jobs && timebox_on) {
                         uint32_t n = (num_jobs / burst_size) ?
@@ -2311,7 +2311,9 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
                         /* set all job params */
                         for (i = 0; i < n; i++) {
                                 job = jobs[i];
-                                *job = job_template;
+
+                                if (job->session_id != job_template.session_id)
+                                        *job = job_template;
 
                                 if (segment_size != 0)
                                         set_sgl_job_fields(job, p_buffer,
@@ -2473,10 +2475,14 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
                 }
                 jobs_done = num_iter - num_jobs;
 
-        } else { /* test job api */
+        } else { /* TEST_API_JOB */
+                imb_set_session(mb_mgr, &job_template);
+
                 for (i = 0; (i < num_iter) && timebox_on; i++) {
                         job = IMB_GET_NEXT_JOB(mb_mgr);
-                        *job = job_template;
+
+                        if (job->session_id != job_template.session_id)
+                                *job = job_template;
 
                         if (segment_size != 0)
                                 set_sgl_job_fields(job, p_buffer, p_keys,
@@ -2495,9 +2501,12 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
                         while (job) {
 #ifdef DEBUG
                                 if (job->status != IMB_STATUS_COMPLETED) {
+                                        const int err = imb_get_errno(mb_mgr);
+
                                         fprintf(stderr,
-                                                "failed job, status:%d\n",
-                                                job->status);
+                                                "failed job, status:%d, %s\n",
+                                                job->status,
+                                                imb_get_strerror(err));
                                         goto exit;
                                 }
 #endif
@@ -2512,9 +2521,9 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
                                 const int errc = imb_get_errno(mb_mgr);
 
                                 fprintf(stderr,
-                                        "failed job, status:%d, "
-                                        "error code:%d, %s\n", job->status,
-                                        errc, imb_get_strerror(errc));
+                                        "failed job, status:%d, error:%d, %s\n",
+                                        job->status, errc,
+                                        imb_get_strerror(errc));
                                 goto exit;
                         }
 #else
