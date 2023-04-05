@@ -52,6 +52,9 @@ NASM ?= nasm
 
 CC ?= gcc
 
+OBJ_DIR ?= obj
+LIB_DIR ?= .
+
 # skip version detection with clean or style target
 ifneq ($(MAKECMDGOALS),clean)
 ifneq ($(MAKECMDGOALS),style)
@@ -99,9 +102,6 @@ ifneq ($(NASM_IFMA_GE_REQ),true)
 $(warning Minimum required NASM version for AVX-IFMA: $(NASM_MAJOR_AVX_IFMA).$(NASM_MINOR_AVX_IFMA). AVX-IFMA code not compiled - update NASM.)
 AVX_IFMA := n
 endif # NASM_AVX_IFMA_GET_REQ
-
-OBJ_DIR ?= obj
-LIB_DIR ?= .
 
 INCLUDE_DIRS := include . no-aesni
 INCLUDES := $(foreach i,$(INCLUDE_DIRS),-I $i)
@@ -1045,10 +1045,9 @@ TAGS:
 
 .PHONY: clean
 clean:
-	rm -Rf $(target_obj_files)
-	rm -Rf $(dep_target_files)
-	rm -f $(LIB_DIR)/$(LIB)_lnk.def
-	rm -f $(LIB_DIR)/$(LIB).a $(LIB_DIR)/$(LIB).so* $(LIB_DIR)/$(LIB).dll
+	-rm -Rf $(OBJ_DIR)
+	-rm -f $(LIB_DIR)/$(LIB)_lnk.def
+	-rm -f $(LIB_DIR)/$(LIB).a $(LIB_DIR)/$(LIB).so* $(LIB_DIR)/$(LIB).dll
 
 .PHONY: doxy
 doxy:
