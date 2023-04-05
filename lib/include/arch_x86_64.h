@@ -132,4 +132,15 @@ void docsis_des_dec_basic(const void *input, void *output, const int size,
  */
 IMB_DLL_LOCAL int self_test(IMB_MGR *p_mgr);
 
+/**
+ * @brief Atomic 64-bit counter increment
+ *
+ * This implements counter post increment.
+ *
+ * @param counter pointer to a 64-bit counter
+ *
+ * @return Counter value prior to increment
+ */
+IMB_DLL_LOCAL uint64_t atomic_uint64_inc(uint64_t *counter);
+
 #endif /* IMB_ARCH_X86_64_H */

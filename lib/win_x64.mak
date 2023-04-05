@@ -220,6 +220,7 @@ lib_objs1 = \
 	$(OBJ_DIR)\md5_x8x2_avx2.obj \
 	$(OBJ_DIR)\save_xmms.obj \
 	$(OBJ_DIR)\mbcpuid.obj \
+	$(OBJ_DIR)\atomic.obj \
 	$(OBJ_DIR)\clear_regs_mem_fns.obj \
 	$(OBJ_DIR)\sha1_x4_avx.obj \
 	$(OBJ_DIR)\sha1_x4_sse.obj \

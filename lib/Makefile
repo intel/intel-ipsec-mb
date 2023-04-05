@@ -360,6 +360,7 @@ asm_generic_lib_objs := \
 	poly1305.o \
 	chacha20_poly1305.o \
 	mbcpuid.o \
+	atomic.o
 
 #
 # List of ASM modules (no-aesni directory)
