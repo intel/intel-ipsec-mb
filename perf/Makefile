@@ -1,4 +1,4 @@
-# Copyright (c) 2017-2022, Intel Corporation
+# Copyright (c) 2017-2023, Intel Corporation
 # 
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -74,7 +74,7 @@ ifeq ("$(shell test -e $(INSTPATH) && echo -n yes)","yes")
 CFLAGS +=
 else
 # library not installed
-CFLAGS +=  -I../lib/include -I../lib
+CFLAGS += -I../lib
 LDFLAGS += -L$(LIB_DIR)
 endif
 
@@ -93,6 +93,7 @@ endif
 SOURCES := ipsec_perf.c msr.c
 ASM_SOURCES := misc.asm
 OBJECTS := $(SOURCES:%.c=%.o) $(ASM_SOURCES:%.asm=%.o)
+DEPFILES := $(OBJECTS:%.o=%.d)
 
 CHECKPATCH ?= checkpatch.pl
 CPPCHECK ?= cppcheck
@@ -112,11 +113,10 @@ all: $(EXE)
 $(EXE): $(OBJECTS)
 	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
 
-ipsec_perf.o: $(SOURCES)
-
 .PHONY: clean
 clean:
 	-rm -f $(OBJECTS)
+	-rm -f $(DEPFILES)
 	-rm -f $(EXE)
 
 SOURCES_STYLE := $(foreach infile,$(SOURCES),-f $(infile))
