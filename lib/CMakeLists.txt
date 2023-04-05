@@ -219,6 +219,12 @@ set(CAN_USE_ASSEMBLER 1)
 ########################################
 # add library target
 ########################################
+string(REPLACE "." ";" VERSION_LIST ${IPSEC_MB_VERSION})
+list(GET VERSION_LIST 0 SO_MAJOR_VER)
+
 add_library(${LIB} ${SRC_FILES_ASM} ${SRC_FILES_C} ${SRC_DEF_FILE})
+set_target_properties(${LIB} PROPERTIES
+  VERSION ${IPSEC_MB_VERSION}
+  SOVERSION ${SO_MAJOR_VER})
 target_include_directories(${LIB} PRIVATE ${DIR_CURRENT} ${DIR_INCLUDE} ${DIR_NO_AESNI})
 

@@ -28,8 +28,15 @@ set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Set default build to release")
 set(CMAKE_C_FLAGS_RELEASE "" CACHE STRING "Clear default release build C Compiler Flags" FORCE)
 set(CMAKE_C_FLAGS_DEBUG "" CACHE STRING "Clear default debug build C Compiler Flags" FORCE)
 
+# get version from public header file
+set(IMB_HDR "${CMAKE_CURRENT_SOURCE_DIR}/lib/intel-ipsec-mb.h")
+file(STRINGS ${IMB_HDR} VER_STR REGEX "^.*IMB_VERSION_STR.*$")
+string(REGEX MATCH "[0-9]+.[0-9]+.[0-9]+" IPSEC_MB_VERSION ${VER_STR})
+message(STATUS "Project Version: ${IPSEC_MB_VERSION}")
+
 cmake_minimum_required(VERSION 3.16)
-project(intel-ipsec-mb VERSION 1.3.0 DESCRIPTION "Intel(R) IPSec Multi-Buffer library")
+project(intel-ipsec-mb VERSION ${IPSEC_MB_VERSION}
+    DESCRIPTION "Intel(R) IPsec Multi-Buffer library")
 
 # flag to force full project build
 set(FULL_PROJECT_BUILD TRUE)
