@@ -32,8 +32,8 @@ include ../common/common.mk
 
 # imb-xvalid modules
 ASM := misc.asm
-SOURCES := ipsec_xvalid.c ../common/utils.c
-OBJECTS := $(SOURCES:%.c=%.o) $(ASM:%.asm=%.o)
+SOURCES := ipsec_xvalid.c
+OBJECTS := $(SOURCES:%.c=%.o) $(ASM:%.asm=%.o) utils.o
 
 # rule for compiling assembly code with producing dependencies
 %.o:%.asm
@@ -52,6 +52,9 @@ all: $(APP)
 
 $(APP): $(OBJECTS)
 	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
+
+utils.o: ../common/utils.c
+	$(CC) -c $(CFLAGS) $< -o $@
 
 .PHONY: clean
 clean:

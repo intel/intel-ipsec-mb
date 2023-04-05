@@ -38,7 +38,7 @@ ACVP_LDFLAGS = -L$(ACVP_LIB) $(LDFLAGS)
 ACVP_LDLIBS = -lacvp $(LDLIBS)
 
 # acvp_app modules
-ACVP_SOURCES := acvp_app_main.c ../common/utils.c
+ACVP_SOURCES := acvp_app_main.c utils.o
 
 # targets come here
 all: $(APP)
@@ -49,6 +49,9 @@ ifneq ("$(wildcard $(ACVP_HDR))","")
 else
 	@echo "No libacvp header found at $(ACVP_HDR), $(APP) is not built"
 endif
+
+utils.o: ../common/utils.c
+	$(CC) -c $(CFLAGS) $< -o $@
 
 .PHONY: clean
 clean:
