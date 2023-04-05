@@ -191,7 +191,18 @@ if(AVX_IFMA)
   list(APPEND LIB_DEFINES AVX_IFMA)
 endif()
 
+########################################
+# setup NASM
+########################################
+enable_language(ASM_NASM)
+if(NOT CMAKE_ASM_NASM_COMPILER_LOADED)
+  message(FATAL_ERROR "Can't find assembler")
+endif()
+set(CAN_USE_ASSEMBLER 1)
+
+########################################
 # add OS specific options
+########################################
 if(CMAKE_HOST_UNIX)
   include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/unix.cmake)
 else()
@@ -207,24 +218,7 @@ foreach(FILE ${SRC_FILES_C})
     COMPILE_DEFINITIONS "${LIB_DEFINES}")
 endforeach()
 
-########################################
-# setup NASM
-########################################
-enable_language(ASM_NASM)
-if(NOT CMAKE_ASM_NASM_COMPILER_LOADED)
-  message(FATAL_ERROR "Can't find assembler")
-endif()
-set(CAN_USE_ASSEMBLER 1)
-
-########################################
-# add library target
-########################################
-string(REPLACE "." ";" VERSION_LIST ${IPSEC_MB_VERSION})
-list(GET VERSION_LIST 0 SO_MAJOR_VER)
-
-add_library(${LIB} ${SRC_FILES_ASM} ${SRC_FILES_C} ${SRC_DEF_FILE})
-set_target_properties(${LIB} PROPERTIES
-  VERSION ${IPSEC_MB_VERSION}
-  SOVERSION ${SO_MAJOR_VER})
-target_include_directories(${LIB} PRIVATE ${DIR_CURRENT} ${DIR_INCLUDE} ${DIR_NO_AESNI})
+# add include directories
+target_include_directories(${LIB} PRIVATE
+  ${DIR_CURRENT} ${DIR_INCLUDE} ${DIR_NO_AESNI})
 

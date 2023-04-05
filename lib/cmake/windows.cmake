@@ -83,6 +83,31 @@ else()
   set(GEN_DEF_FILE_CMD "findstr /v ${STR_FILTER} ${LIB}.def > ${SRC_DEF_FILE}")
 endif()
 
+########################################
+# add library target
+########################################
+
+add_library(${LIB} ${SRC_FILES_ASM} ${SRC_FILES_C} ${SRC_DEF_FILE})
+
+# set install rules
+set(CMAKE_INSTALL_PREFIX "c:/Program Files"
+  CACHE STRING "Set default installation directory" FORCE)
+install(TARGETS ${LIB}
+  DESTINATION ${CMAKE_INSTALL_PREFIX}/${CMAKE_PROJECT_NAME})
+install(FILES
+  ${IMB_HDR}
+  ${SRC_DEF_FILE}
+  DESTINATION ${CMAKE_INSTALL_PREFIX}/${CMAKE_PROJECT_NAME})
+if(BUILD_SHARED_LIBS)
+  install(FILES
+    $<TARGET_FILE_DIR:${LIB}>/${LIB}.exp
+    $<TARGET_FILE_DIR:${LIB}>/${LIB}.pdb
+    DESTINATION ${CMAKE_INSTALL_PREFIX}/${CMAKE_PROJECT_NAME})
+  install(FILES
+    $<TARGET_FILE_DIR:${LIB}>/${LIB}.dll
+    DESTINATION $ENV{WINDIR}/system32)
+endif()
+
 execute_process(
   COMMAND cmd /C ${GEN_DEF_FILE_CMD}
   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}

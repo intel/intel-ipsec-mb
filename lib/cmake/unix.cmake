@@ -84,3 +84,25 @@ if(AESNI_EMU)
     "-march=nehalem -mno-pclmul")
 endif()
 
+########################################
+# add library target
+########################################
+
+add_library(${LIB} ${SRC_FILES_ASM} ${SRC_FILES_C})
+
+# set library SO version
+string(REPLACE "." ";" VERSION_LIST ${IPSEC_MB_VERSION})
+list(GET VERSION_LIST 0 SO_MAJOR_VER)
+set_target_properties(${LIB} PROPERTIES
+  VERSION ${IPSEC_MB_VERSION}
+  SOVERSION ${SO_MAJOR_VER})
+
+# set install rules
+set(CMAKE_INSTALL_PREFIX "/usr"
+  CACHE STRING "Set default installation directory" FORCE)
+install(TARGETS ${LIB} DESTINATION lib)
+install(FILES ${IMB_HDR} DESTINATION include)
+install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/libipsec-mb.7
+              ${CMAKE_CURRENT_SOURCE_DIR}/libipsec-mb-dev.7
+              DESTINATION man/man7)
+
