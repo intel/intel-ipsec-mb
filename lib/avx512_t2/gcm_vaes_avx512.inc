@@ -3396,7 +3396,10 @@
                 %%ENC_DEC, %%AAD_HASHz, %%IA0, %%IA5, %%MASKREG, %%INSTANCE_TYPE
         ;; **ZTMP9 clobbered but ZTMP1 may include sensitive data
         ;; **ZTMP16 and ZTMP17 clobbered or cleared above
-
+        ;; **ZTMP21 may include part of cipher key
+%ifdef SAFE_DATA
+       vpxorq   %%ZTMP21, %%ZTMP21, %%ZTMP21
+%endif
 %ifidn %%INSTANCE_TYPE, multi_call
         vpshufb         %%CTR_BLOCKx, %%CTR_BLOCKx, XWORD(%%SHUF_MASK)
 %endif
@@ -3465,7 +3468,10 @@
                 %%ENC_DEC, %%AAD_HASHz, %%IA0, %%IA5, %%MASKREG, %%INSTANCE_TYPE
         ;; **ZTMP9 clobbered but ZTMP1 may include sensitive data
         ;; **ZTMP16 and ZTMP17 clobbered or cleared above
-
+        ;; **ZTMP21 may include part of cipher key
+%ifdef SAFE_DATA
+       vpxorq   %%ZTMP21, %%ZTMP21, %%ZTMP21
+%endif
 %ifidn %%INSTANCE_TYPE, multi_call
         vpshufb         %%CTR_BLOCKx, %%CTR_BLOCKx, XWORD(%%SHUF_MASK)
 %endif

@@ -273,8 +273,8 @@ no_full_blocks:
         vpxorq  xmm8, xmm8, xmm1
         vmovdqu64 [arg2 + AadHash], xmm8
 %ifdef SAFE_DATA
-        ;; **xmm1 may contain some clear text
-        clear_zmms_avx512 xmm1
+        ;; **xmm1 and xmm8 may contain some clear text
+        clear_zmms_avx512 xmm1, xmm8
 %endif
 exit_gmac_update:
         FUNC_RESTORE
