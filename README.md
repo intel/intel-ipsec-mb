@@ -655,6 +655,37 @@ If there is no need to run ldconfig at install stage please use NOLDCONFIG=y opt
 If library was compiled as an archive (not a default option) then install it using SHARED=n option:   
 `> sudo gmake install SHARED=n`
 
+Installing with CMake (experimental)
+-------------------
+
+### Unix (Linux and FreeBSD)
+
+First compile the library and then install:   
+```
+cmake --build .
+sudo cmake --install .
+```
+
+To uninstall the library run:   
+`sudo cmake --build . --target uninstall`
+
+If you want to change install location then define PREFIX:   
+`sudo cmake --install . --prefix=<path>`
+
+### Windows (x64 only)
+
+First compile the library and then install from a command prompt in administrator mode:   
+```
+cmake --build . --config Release
+cmake --install . --config Release
+```
+
+To uninstall the library run:   
+`cmake --build . --target uninstall`
+
+If you want to change install location then define PREFIX (default C:\Program Files):   
+`cmake --install . --config Release --prefix=<path>`
+
 9\. Backwards compatibility
 ===========================
 
