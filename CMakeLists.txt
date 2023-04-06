@@ -1,4 +1,5 @@
 # Copyright (c) 2022, Intel Corporation
+# Copyright 2000-2023 Kitware, Inc. and Contributors
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -56,3 +57,13 @@ add_subdirectory(perf)
 
 # build test applications
 add_subdirectory(test)
+
+# add custom target to uninstall library
+configure_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/lib/cmake/uninstall.cmake.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake"
+    IMMEDIATE @ONLY)
+
+add_custom_target(uninstall
+    COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake)
+
