@@ -94,7 +94,7 @@ add_library(${LIB} ${SRC_FILES_ASM} ${SRC_FILES_C})
 string(REPLACE "." ";" VERSION_LIST ${IPSEC_MB_VERSION})
 list(GET VERSION_LIST 0 SO_MAJOR_VER)
 set_target_properties(${LIB} PROPERTIES
-  VERSION ${IPSEC_MB_VERSION}
+  VERSION ${IPSEC_MB_VERSION_FULL}
   SOVERSION ${SO_MAJOR_VER})
 
 # set install rules

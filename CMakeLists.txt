@@ -31,8 +31,9 @@ set(CMAKE_C_FLAGS_DEBUG "" CACHE STRING "Clear default debug build C Compiler Fl
 # get version from public header file
 set(IMB_HDR "${CMAKE_CURRENT_SOURCE_DIR}/lib/intel-ipsec-mb.h")
 file(STRINGS ${IMB_HDR} VER_STR REGEX "^.*IMB_VERSION_STR.*$")
-string(REGEX MATCH "[0-9]+.[0-9]+.[0-9]+" IPSEC_MB_VERSION ${VER_STR})
-message(STATUS "Project Version: ${IPSEC_MB_VERSION}")
+string(REGEX MATCH "[0-9]+.[0-9]+.[0-9]+(-[a-z]+)?" IPSEC_MB_VERSION_FULL ${VER_STR})
+string(REGEX MATCH "[0-9]+.[0-9]+.[0-9]+" IPSEC_MB_VERSION ${IPSEC_MB_VERSION_FULL})
+message(STATUS "Project Version: ${IPSEC_MB_VERSION_FULL}")
 
 cmake_minimum_required(VERSION 3.16)
 project(intel-ipsec-mb VERSION ${IPSEC_MB_VERSION}
