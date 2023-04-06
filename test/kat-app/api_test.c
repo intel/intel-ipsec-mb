@@ -945,6 +945,72 @@ test_burst_api(struct IMB_MGR *mb_mgr)
         }
         print_progress();
 
+        /* ======== test 9 : session_d */
+
+        while (IMB_GET_NEXT_BURST(mb_mgr, n_jobs, jobs) < n_jobs)
+                IMB_FLUSH_BURST(mb_mgr, n_jobs, jobs);
+
+        /* fill in valid jobs */
+        for (i = 0; i < n_jobs; i++) {
+                job = jobs[i];
+                fill_in_job(job, IMB_CIPHER_CBC, IMB_DIR_ENCRYPT, IMB_AUTH_HMAC_SHA_256,
+                            IMB_ORDER_CIPHER_HASH, NULL, NULL);
+                if (i > 0) {
+                        /*
+                         * Check if each call to session ID for the same cipher suite gives
+                         * different ID.
+                         */
+                        imb_set_session(mb_mgr, job);
+                        if (job->session_id == jobs[i - 1]->session_id) {
+                                printf("%s: test %d, unexpected/duplicate session_id value\n",
+                                       __func__, TEST_INVALID_BURST);
+                                return 1;
+                        }
+                } else {
+                        /* NULL MB MGR pointer */
+                        imb_set_session(NULL, job);
+                        err = imb_get_errno(mb_mgr);
+                        if (err != IMB_ERR_NULL_MBMGR) {
+                                printf("%s: test %d, unexpected error: %s\n",
+                                       __func__, TEST_INVALID_BURST,
+                                       imb_get_strerror(err));
+                                return 1;
+                        }
+                        print_progress();
+
+                        /* NULL JOB pointer */
+                        imb_set_session(mb_mgr, NULL);
+                        err = imb_get_errno(mb_mgr);
+                        if (err != IMB_ERR_NULL_JOB) {
+                                printf("%s: test %d, unexpected error: %s\n",
+                                       __func__, TEST_INVALID_BURST,
+                                       imb_get_strerror(err));
+                                return 1;
+                        }
+                        print_progress();
+
+                        /* correct call at the end */
+                        imb_set_session(mb_mgr, job);
+                        err = imb_get_errno(mb_mgr);
+                        if (err != 0) {
+                                printf("%s: test %d, unexpected error: %s\n",
+                                       __func__, TEST_INVALID_BURST,
+                                       imb_get_strerror(err));
+                                return 1;
+                        }
+                }
+        }
+
+        completed_jobs = IMB_SUBMIT_BURST(mb_mgr, n_jobs, jobs);
+        completed_jobs += IMB_FLUSH_BURST(mb_mgr, n_jobs, jobs);
+        if (completed_jobs != n_jobs) {
+                printf("%s: test %d, unexpected number of completed jobs\n",
+                       __func__, TEST_INVALID_BURST);
+                return 1;
+        }
+        print_progress();
+
+
         /* ======== end */
 
         if (!quiet_mode)
