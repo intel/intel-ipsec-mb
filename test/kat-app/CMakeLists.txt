@@ -75,6 +75,10 @@ set(TEST_APP_SRC_FILES
   ${CMAKE_CURRENT_SOURCE_DIR}/direct_api_param_test.c
   ${CMAKE_CURRENT_SOURCE_DIR}/quic_ecb_test.c
   ${CMAKE_CURRENT_SOURCE_DIR}/hmac_sha1.json.c
+  ${CMAKE_CURRENT_SOURCE_DIR}/hmac_sha224.json.c
+  ${CMAKE_CURRENT_SOURCE_DIR}/hmac_sha256.json.c
+  ${CMAKE_CURRENT_SOURCE_DIR}/hmac_sha384.json.c
+  ${CMAKE_CURRENT_SOURCE_DIR}/hmac_sha512.json.c
   ${CMAKE_CURRENT_SOURCE_DIR}/../common/utils.c
 )
 
