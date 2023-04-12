@@ -214,3 +214,5 @@ END_FIELDS
 %assign	_snow_v_aad_len 		_u + __snow_v_aad_len
 %assign	_snow_v_reserved		_u + __snow_v_reserved
 %assign	_cbcs_next_iv 		        _cipher_fields + __cbcs_next_iv
+%assign _gcm_aad                        _u + __gcm_aad
+%assign _gcm_aad_len                    _u + __gcm_aad_len
