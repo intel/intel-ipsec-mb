@@ -64,14 +64,9 @@ ghash_pre_sse_no_aesni:
 %endif
 
 %ifidn __OUTPUT_FORMAT__, win64
-        push    r14
-        mov     r14, rsp
-
-        sub     rsp, VARIABLE_OFFSET
-        and     rsp, ~63                                 ; align rsp to 64 bytes
-
+        sub     rsp, 1*16
         ; only xmm6 needs to be maintained
-        movdqa [rsp + LOCAL_STORAGE + 0*16],xmm6
+        movdqu [rsp + 0*16], xmm6
 %endif
         movdqu xmm6, [arg1]
         pshufb  xmm6, [rel SHUF_MASK]
@@ -98,10 +93,8 @@ ghash_pre_sse_no_aesni:
         clear_scratch_xmms_sse_asm
 %endif
 %ifidn __OUTPUT_FORMAT__, win64
-        movdqu xmm6, [rsp + LOCAL_STORAGE + 0*16]
-        mov     rsp, r14
-        pop     r14
-
+        movdqu  xmm6, [rsp + 0*16]
+        add     rsp, 1*16
 %endif
 exit_ghash_pre:
         ret

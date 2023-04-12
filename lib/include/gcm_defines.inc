@@ -244,13 +244,13 @@ mksection .text
 	%xdefine arg2 rdx
 	%xdefine arg3 r8
 	%xdefine arg4 r9
-	%xdefine arg5  qword [r14 + STACK_OFFSET + 8*5]
-	%xdefine arg6  qword [r14 + STACK_OFFSET + 8*6]
-	%xdefine arg7  qword [r14 + STACK_OFFSET + 8*7]
-	%xdefine arg8  qword [r14 + STACK_OFFSET + 8*8]
-	%xdefine arg9  qword [r14 + STACK_OFFSET + 8*9]
-	%xdefine arg10 qword [r14 + STACK_OFFSET + 8*10]
-	%xdefine arg11 qword [r14 + STACK_OFFSET + 8*11]
+	%xdefine arg5  qword [r14 + 8*5]
+	%xdefine arg6  qword [r14 + 8*6]
+	%xdefine arg7  qword [r14 + 8*7]
+	%xdefine arg8  qword [r14 + 8*8]
+	%xdefine arg9  qword [r14 + 8*9]
+	%xdefine arg10 qword [r14 + 8*10]
+	%xdefine arg11 qword [r14 + 8*11]
 %else
 	%xdefine arg1 rdi
 	%xdefine arg2 rsi
@@ -258,11 +258,11 @@ mksection .text
 	%xdefine arg4 rcx
 	%xdefine arg5 r8
 	%xdefine arg6 r9
-	%xdefine arg7  qword [r14 + STACK_OFFSET + 8*1]
-	%xdefine arg8  qword [r14 + STACK_OFFSET + 8*2]
-	%xdefine arg9  qword [r14 + STACK_OFFSET + 8*3]
-	%xdefine arg10 qword [r14 + STACK_OFFSET + 8*4]
-	%xdefine arg11 qword [r14 + STACK_OFFSET + 8*5]
+	%xdefine arg7  qword [r14 + 8*1]
+	%xdefine arg8  qword [r14 + 8*2]
+	%xdefine arg9  qword [r14 + 8*3]
+	%xdefine arg10 qword [r14 + 8*4]
+	%xdefine arg11 qword [r14 + 8*5]
 %endif
 
 %ifdef NT_LDST

@@ -147,8 +147,9 @@
 %endif
 
 default rel
-; need to push 4 registers into stack to maintain
-%define STACK_OFFSET 8*4
+
+; need to store 5 GP registers on stack (align to 16 bytes)
+%define GP_STORAGE 8*6
 
 %define	TMP2	16*0    ; Temporary storage for AES State 2 (State 1 is stored in an XMM register)
 %define	TMP3	16*1    ; Temporary storage for AES State 3
@@ -166,7 +167,24 @@ default rel
 	%define	XMM_STORAGE	0
 %endif
 
-%define	VARIABLE_OFFSET	LOCAL_STORAGE + XMM_STORAGE
+%define GP_OFFSET (LOCAL_STORAGE + XMM_STORAGE)
+
+%define	VARIABLE_OFFSET	(GP_STORAGE + LOCAL_STORAGE + XMM_STORAGE)
+
+;; extra memory for GCM context structure
+%define CONTEXT_SIZE    6*16
+%define CONTEXT_OFFSET  VARIABLE_OFFSET
+
+;; Full stack frame layout:
+;; + 16*6  -> ---------------------------
+;;            GCM CONTEXT (JOB API only)
+;; + 6*8   -> ---------------------------
+;;            GP STORAGE
+;; + 16*10 -> --------------------------
+;;            XMM STORAGE (windows only)
+;; + 16*7  -> --------------------------
+;;            LOCAL STORAGE
+;; RSP/R14 -> --------------------------
 
 mksection .text
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1496,58 +1514,65 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
 
 ;; Start of Stack Setup
 
-%macro FUNC_SAVE 0
-	;; Required for Update/GMC_ENC
-	;the number of pushes must equal STACK_OFFSET
-	push    r12
-	push    r13
-	push    r14
-	push    r15
-	mov     r14, rsp
+%macro FUNC_SAVE 0-1
+	;; Required for Update/GCM_ENC
+        mov     rax, rsp
 
+%if %0 == 0
 	sub     rsp, VARIABLE_OFFSET
+%else
+%ifidni %1, alloc_context
+        sub     rsp, VARIABLE_OFFSET + CONTEXT_SIZE
+%endif
+%endif
 	and     rsp, ~63
+
+        mov     [rsp + GP_OFFSET + 0*8], rax ; original rsp pointer
+        mov     [rsp + GP_OFFSET + 1*8], r12
+        mov     [rsp + GP_OFFSET + 2*8], r13
+        mov     [rsp + GP_OFFSET + 3*8], r14
+        mov     [rsp + GP_OFFSET + 4*8], r15
+        mov     r14, rax
 
 %ifidn __OUTPUT_FORMAT__, win64
         ; xmm6:xmm15 need to be maintained for Windows
-	vmovdqu [rsp + LOCAL_STORAGE + 0*16],xmm6
-	vmovdqu [rsp + LOCAL_STORAGE + 1*16],xmm7
-	vmovdqu [rsp + LOCAL_STORAGE + 2*16],xmm8
-	vmovdqu [rsp + LOCAL_STORAGE + 3*16],xmm9
-	vmovdqu [rsp + LOCAL_STORAGE + 4*16],xmm10
-	vmovdqu [rsp + LOCAL_STORAGE + 5*16],xmm11
-	vmovdqu [rsp + LOCAL_STORAGE + 6*16],xmm12
-	vmovdqu [rsp + LOCAL_STORAGE + 7*16],xmm13
-	vmovdqu [rsp + LOCAL_STORAGE + 8*16],xmm14
-	vmovdqu [rsp + LOCAL_STORAGE + 9*16],xmm15
+        vmovdqu [rsp + LOCAL_STORAGE + 0*16], xmm6
+        vmovdqu [rsp + LOCAL_STORAGE + 1*16], xmm7
+        vmovdqu [rsp + LOCAL_STORAGE + 2*16], xmm8
+        vmovdqu [rsp + LOCAL_STORAGE + 3*16], xmm9
+        vmovdqu [rsp + LOCAL_STORAGE + 4*16], xmm10
+        vmovdqu [rsp + LOCAL_STORAGE + 5*16], xmm11
+        vmovdqu [rsp + LOCAL_STORAGE + 6*16], xmm12
+        vmovdqu [rsp + LOCAL_STORAGE + 7*16], xmm13
+        vmovdqu [rsp + LOCAL_STORAGE + 8*16], xmm14
+        vmovdqu [rsp + LOCAL_STORAGE + 9*16], xmm15
 %endif
 %endmacro
 
 %macro FUNC_RESTORE 0
 
 %ifdef SAFE_DATA
-        clear_scratch_gps_asm
         clear_scratch_xmms_avx_asm
 %endif
 %ifidn __OUTPUT_FORMAT__, win64
-	vmovdqu xmm15  , [rsp + LOCAL_STORAGE + 9*16]
-	vmovdqu xmm14  , [rsp + LOCAL_STORAGE + 8*16]
-	vmovdqu xmm13  , [rsp + LOCAL_STORAGE + 7*16]
-	vmovdqu xmm12  , [rsp + LOCAL_STORAGE + 6*16]
-	vmovdqu xmm11  , [rsp + LOCAL_STORAGE + 5*16]
-	vmovdqu xmm10  , [rsp + LOCAL_STORAGE + 4*16]
-	vmovdqu xmm9 , [rsp + LOCAL_STORAGE + 3*16]
-	vmovdqu xmm8 , [rsp + LOCAL_STORAGE + 2*16]
-	vmovdqu xmm7 , [rsp + LOCAL_STORAGE + 1*16]
-	vmovdqu xmm6 , [rsp + LOCAL_STORAGE + 0*16]
+        vmovdqu xmm15, [rsp + LOCAL_STORAGE + 9*16]
+        vmovdqu xmm14, [rsp + LOCAL_STORAGE + 8*16]
+        vmovdqu xmm13, [rsp + LOCAL_STORAGE + 7*16]
+        vmovdqu xmm12, [rsp + LOCAL_STORAGE + 6*16]
+        vmovdqu xmm11, [rsp + LOCAL_STORAGE + 5*16]
+        vmovdqu xmm10, [rsp + LOCAL_STORAGE + 4*16]
+        vmovdqu xmm9,  [rsp + LOCAL_STORAGE + 3*16]
+        vmovdqu xmm8,  [rsp + LOCAL_STORAGE + 2*16]
+        vmovdqu xmm7,  [rsp + LOCAL_STORAGE + 1*16]
+        vmovdqu xmm6,  [rsp + LOCAL_STORAGE + 0*16]
 %endif
 
-;; Required for Update/GMC_ENC
-	mov     rsp, r14
-	pop     r15
-	pop     r14
-	pop     r13
-	pop     r12
+        ;; Required for Update/GCM_ENC
+        mov     r12, [rsp + GP_OFFSET + 1*8]
+        mov     r13, [rsp + GP_OFFSET + 2*8]
+        mov     r14, [rsp + GP_OFFSET + 3*8]
+        mov     r15, [rsp + GP_OFFSET + 4*8]
+        mov     rsp, [rsp + GP_OFFSET + 0*8]
 %endmacro
 
 %macro CALC_J0 15
@@ -1959,25 +1984,16 @@ FN_NAME(precomp,_):
         jz      error_precomp
 %endif
 
-        push    r12
-        push    r13
-        push    r14
-        push    r15
-
-        mov     r14, rsp
-
-        sub     rsp, VARIABLE_OFFSET
-        and     rsp, ~63                                ; align rsp to 64 bytes
-
 %ifidn __OUTPUT_FORMAT__, win64
+        sub     rsp, 1*16
         ; only xmm6 needs to be maintained
-        vmovdqu [rsp + LOCAL_STORAGE + 0*16],xmm6
+        vmovdqu [rsp + 0*16], xmm6
 %endif
 
 	vpxor	xmm6, xmm6
 	ENCRYPT_SINGLE_BLOCK	arg1, xmm6		; xmm6 = HashKey
 
-        vpshufb  xmm6, [SHUF_MASK]
+        vpshufb xmm6, [SHUF_MASK]
         ;;;;;;;;;;;;;;;  PRECOMPUTATION of HashKey<<1 mod poly from the HashKey;;;;;;;;;;;;;;;
         vmovdqa  xmm2, xmm6
         vpsllq   xmm6, 1
@@ -1997,14 +2013,9 @@ FN_NAME(precomp,_):
         PRECOMPUTE arg1, xmm6, xmm0, xmm1, xmm2, xmm3, xmm4, xmm5
 
 %ifidn __OUTPUT_FORMAT__, win64
-        vmovdqu xmm6, [rsp + LOCAL_STORAGE + 0*16]
+        vmovdqu xmm6, [rsp + 0*16]
+        add     rsp, 1*16
 %endif
-        mov     rsp, r14
-
-        pop     r15
-        pop     r14
-        pop     r13
-        pop     r12
 
 %ifdef SAFE_DATA
         clear_scratch_gps_asm
@@ -2044,7 +2055,7 @@ FN_NAME(init,_):
 %ifidn __OUTPUT_FORMAT__, win64
         push    r14
         push    r15
-        mov     r14, rsp
+        lea     r14, [rsp + 4*8]
 	; xmm6 needs to be maintained for Windows
 	sub	rsp, 1*16
 	vmovdqu	[rsp + 0*16], xmm6
@@ -2086,7 +2097,7 @@ exit_init:
 
 %ifidn __OUTPUT_FORMAT__, win64
 	vmovdqu	xmm6 , [rsp + 0*16]
-        mov     rsp, r14
+        add     rsp, 1*16
         pop     r15
         pop     r14
 %endif
@@ -2140,7 +2151,7 @@ FN_NAME(init_var_iv,_):
 %ifidn __OUTPUT_FORMAT__, win64
         push    r14
         push    r15
-        mov     r14, rsp
+        lea     r14, [rsp + 4*8]
 	; xmm6 need to be maintained for Windows
 	sub	rsp, 1*16
 	vmovdqu	[rsp + 0*16], xmm6
@@ -2194,7 +2205,7 @@ exit_init_IV:
 
 %ifidn __OUTPUT_FORMAT__, win64
 	vmovdqu	xmm6 , [rsp + 0*16]
-        mov     rsp, r14
+        add     rsp, 1*16
         pop     r15
         pop     r14
 %endif
@@ -2947,16 +2958,12 @@ ghash_pre_avx_gen2:
 %endif
 
 %ifidn __OUTPUT_FORMAT__, win64
-        push    r14
-        mov     r14, rsp
-
-        sub     rsp, VARIABLE_OFFSET
-        and     rsp, ~63                                 ; align rsp to 64 bytes
+        sub     rsp, 1*16
 
         ; only xmm6 needs to be maintained
-        vmovdqa [rsp + LOCAL_STORAGE + 0*16],xmm6
+        vmovdqu [rsp + 0*16], xmm6
 %endif
-        vmovdqu xmm6, [arg1]
+        vmovdqu  xmm6, [arg1]
         vpshufb  xmm6, [rel SHUF_MASK]
         ;;;;;;;;;;;;;;;  PRECOMPUTATION of HashKey<<1 mod poly from the HashKey;;;;;;;;;;;;;;;
         vmovdqa  xmm2, xmm6
@@ -2981,10 +2988,8 @@ ghash_pre_avx_gen2:
         clear_scratch_xmms_avx_asm
 %endif
 %ifidn __OUTPUT_FORMAT__, win64
-        vmovdqu xmm6, [rsp + LOCAL_STORAGE + 0*16]
-        mov     rsp, r14
-        pop     r14
-
+        vmovdqu xmm6, [rsp + 0*16]
+        add     rsp, 1*16
 %endif
 exit_ghash_pre:
         ret

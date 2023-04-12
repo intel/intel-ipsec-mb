@@ -53,19 +53,10 @@ FN_NAME(precomp,_):
         jz      error_precomp
 %endif
 
-        push    r12
-        push    r13
-        push    r14
-        push    r15
-
-        mov     r14, rsp
-
-        sub     rsp, VARIABLE_OFFSET
-        and     rsp, ~63                                ; align rsp to 64 bytes
-
 %ifidn __OUTPUT_FORMAT__, win64
+        sub     rsp, 1*16
         ; only xmm6 needs to be maintained
-        movdqu [rsp + LOCAL_STORAGE + 0*16],xmm6
+        movdqu [rsp +  0*16], xmm6
 %endif
 
 	pxor	xmm6, xmm6
@@ -95,14 +86,9 @@ FN_NAME(precomp,_):
         clear_scratch_xmms_sse_asm
 %endif
 %ifidn __OUTPUT_FORMAT__, win64
-       movdqu xmm6, [rsp + LOCAL_STORAGE + 0*16]
+        movdqu  xmm6, [rsp + 0*16]
+        add     rsp, 1*16
 %endif
-        mov     rsp, r14
-
-        pop     r15
-        pop     r14
-        pop     r13
-        pop     r12
 
 exit_precomp:
 

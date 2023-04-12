@@ -51,7 +51,7 @@ FN_NAME(init,_):
 %ifidn __OUTPUT_FORMAT__, win64
         push    r14
         push    r15
-        mov     r14, rsp
+        lea     r14, [rsp + 4*8]
 	; xmm6 needs to be maintained for Windows
 	sub	rsp, 1*16
 	movdqu	[rsp + 0*16], xmm6
@@ -93,7 +93,7 @@ exit_init:
 
 %ifidn __OUTPUT_FORMAT__, win64
 	movdqu	xmm6 , [rsp + 0*16]
-        mov     rsp, r14
+        add     rsp, 16
         pop     r15
         pop     r14
 %endif
@@ -147,7 +147,7 @@ FN_NAME(init_var_iv,_):
 %ifidn __OUTPUT_FORMAT__, win64
         push    r14
         push    r15
-        mov     r14, rsp
+        lea     r14, [rsp + 4*8]
 	; xmm6 needs to be maintained for Windows
 	sub	rsp, 1*16
 	movdqu	[rsp + 0*16], xmm6
@@ -201,7 +201,7 @@ exit_init_IV:
 
 %ifidn __OUTPUT_FORMAT__, win64
 	movdqu	xmm6 , [rsp + 0*16]
-        mov     rsp, r14
+        add     rsp, 1*16
         pop     r15
         pop     r14
 %endif

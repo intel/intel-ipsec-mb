@@ -178,8 +178,20 @@
 %define STACK_FRAME_SIZE        (STACK_LOCAL_OFFSET + LOCAL_STORAGE)
 %define STACK_FRAME_SIZE_SMALL  (STACK_LOCAL_OFFSET)
 
-;; for compatibility with stack argument definitions in gcm_defines.inc
-%define STACK_OFFSET 0
+;; extra memory for GCM context structure
+%define CONTEXT_SIZE    6*16
+%define CONTEXT_OFFSET  STACK_FRAME_SIZE
+
+;; Full stack frame layout:
+;; + 16*6  -> ---------------------------
+;;            GCM CONTEXT (JOB API only)
+;; + 32*16 -> ---------------------------
+;;            LOCAL STORAGE
+;; + 16*10 -> --------------------------
+;;            XMM STORAGE (windows only)
+;; + 8*8   -> --------------------------
+;;            GP STORAGE
+;; RSP/R14 -> --------------------------
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Utility Macros
@@ -2719,17 +2731,25 @@
 %macro FUNC_SAVE 0-1
 
 %assign use_big_frame 1
+%assign alloc_context 0
 
 %if %0 > 0
 %ifidni %1, small_frame
 %assign use_big_frame 0
+%endif
+%ifidni %1, alloc_context
+%assign alloc_context 1
 %endif
 %endif
         ;; Required for Update/GMC_ENC
         mov     rax, rsp
 
 %if use_big_frame > 0
+%if alloc_context > 1
+        sub     rsp, STACK_FRAME_SIZE + CONTEXT_SIZE
+%else
         sub     rsp, STACK_FRAME_SIZE
+%endif
 %else
         sub     rsp, STACK_FRAME_SIZE_SMALL
 %endif
