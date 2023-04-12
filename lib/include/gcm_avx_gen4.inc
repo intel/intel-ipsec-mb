@@ -119,6 +119,8 @@
 %include "include/memcpy.inc"
 %include "include/cet.inc"
 %include "include/error.inc"
+%include "include/imb_job.inc"
+
 %ifndef GCM128_MODE
 %ifndef GCM192_MODE
 %ifndef GCM256_MODE
@@ -177,15 +179,16 @@ default rel
 %define CONTEXT_OFFSET  VARIABLE_OFFSET
 
 ;; Full stack frame layout:
-;; + 16*6  -> ---------------------------
-;;            GCM CONTEXT (JOB API only)
-;; + 6*8   -> ---------------------------
-;;            GP STORAGE
-;; + 16*10 -> --------------------------
-;;            XMM STORAGE (windows only)
-;; + 16*7  -> --------------------------
-;;            LOCAL STORAGE
-;; RSP/R14 -> --------------------------
+;;                   RETURN ADDRESS + ARGS
+;; R14 =  + 16*6  -> ---------------------------
+;;                   GCM CONTEXT (JOB API only)
+;;        + 6*8   -> ---------------------------
+;;                   GP STORAGE
+;;        + 16*10 -> --------------------------
+;;                   XMM STORAGE (windows only)
+;;        + 16*7  -> --------------------------
+;;                   LOCAL STORAGE
+;; RSP =          -> --------------------------
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Utility Macros
@@ -3987,72 +3990,96 @@ skip_aad_check_error_dec:
 ;
 ; NOTE: THIS API IS USED BY JOB-API ONLY, NO NEED FOR 2ND SAFE PARAM CHECK
 ;
-;void   aes_gcm_enc_var_iv_128_avx_gen4 / aes_gcm_enc_var_iv_192_avx_gen4 /
-;       aes_gcm_enc_var_iv_256_avx_gen4
-;        const struct gcm_key_data *key_data,
-;        struct gcm_context_data *context_data,
-;        u8        *out,
-;        const u8  *in,
-;        u64       msg_len,
-;        u8        *iv,
-;        const u64 iv_len,
-;        const u8  *aad,
-;        const u64 aad_len,
-;        u8        *auth_tag,
-;        const u64 auth_tag_len);
+;IMB_JOB *aes_gcm_enc_var_iv_128_avx_gen4 / aes_gcm_enc_var_iv_192_avx_gen4 /
+;       aes_gcm_enc_var_iv_256_avx_gen4(IMB_MGR *state, IMB_JOB *job)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-MKGLOBAL(FN_NAME(enc_var_iv,_),function,)
+MKGLOBAL(FN_NAME(enc_var_iv,_),function,internal)
 FN_NAME(enc_var_iv,_):
-	FUNC_SAVE
-        cmp     arg7, 12
+        endbranch64
+	FUNC_SAVE alloc_context
+
+        mov     arg1, [arg2 + _enc_keys]
+
+        cmp     qword [arg2 + _iv_len_in_bytes], 12
         je      iv_len_12_enc_IV
 
-	GCM_INIT arg1, arg2, arg6, arg8, arg9, arg7
+        GCM_INIT arg1, {rsp + CONTEXT_OFFSET}, {[arg2 + _iv]}, \
+                 {[arg2 + _gcm_aad]}, {[arg2 + _gcm_aad_len]}, \
+                 {[arg2 + _iv_len_in_bytes]}
+
         jmp     skip_iv_len_12_enc_IV
 
 iv_len_12_enc_IV:
-	GCM_INIT arg1, arg2, arg6, arg8, arg9
+	GCM_INIT arg1, {rsp + CONTEXT_OFFSET}, {[arg2 + _iv]}, \
+                 {[arg2 + _gcm_aad]}, {[arg2 + _gcm_aad_len]}
 
 skip_iv_len_12_enc_IV:
-        GCM_ENC_DEC  arg1, arg2, arg3, arg4, arg5, ENC, single_call
-        GCM_COMPLETE arg1, arg2, arg10, arg11, single_call
-	FUNC_RESTORE
+        mov     arg3, [arg2 + _src]
+        add     arg3, [arg2 + _cipher_start_src_offset]
+        mov     arg4, [arg2 + _dst]
+        mov     [rsp + GP_OFFSET + 5*8], arg2   ; preserve job pointer
+        mov     arg2, [arg2 + _msg_len_to_cipher]
+	GCM_ENC_DEC  arg1, {rsp + CONTEXT_OFFSET}, arg4, arg3, arg2, ENC, single_call
+
+        mov     arg2, [rsp + GP_OFFSET + 5*8]
+        GCM_COMPLETE arg1, {rsp + CONTEXT_OFFSET}, \
+                     {[arg2 + _auth_tag_output]}, {[arg2 + _auth_tag_output_len_in_bytes]}, \
+                     single_call
+
+        ;; mark job complete
+        mov     dword [arg2 + _status], IMB_STATUS_COMPLETED
+
+        mov     rax, arg2       ;; return the job
+
+        FUNC_RESTORE
 	ret
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;
 ; NOTE: THIS API IS USED BY JOB-API ONLY, NO NEED FOR 2ND SAFE PARAM CHECK
 ;
-;void   aes_gcm_dec_var_iv_128_avx_gen4 / aes_gcm_dec_var_iv_192_avx_gen4 /
-;       aes_gcm_dec_var_iv_256_avx_gen4
-;        const struct gcm_key_data *key_data,
-;        struct gcm_context_data *context_data,
-;        u8        *out,
-;        const u8  *in,
-;        u64       msg_len,
-;        u8        *iv,
-;        const u64 iv_len,
-;        const u8  *aad,
-;        const u64 aad_len,
-;        u8        *auth_tag,
-;        const u64 auth_tag_len);
+;IMB_JOB *aes_gcm_dec_var_iv_128_avx_gen4 / aes_gcm_dec_var_iv_192_avx_gen4 /
+;       aes_gcm_dec_var_iv_256_avx_gen4(IMB_MGR *state, IMB_JOB *job)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-MKGLOBAL(FN_NAME(dec_var_iv,_),function,)
+MKGLOBAL(FN_NAME(dec_var_iv,_),function,internal)
 FN_NAME(dec_var_iv,_):
-	FUNC_SAVE
-        cmp     arg7, 12
+        endbranch64
+	FUNC_SAVE alloc_context
+
+        mov     arg1, [arg2 + _dec_keys]
+
+        cmp     qword [arg2 + _iv_len_in_bytes], 12
         je      iv_len_12_dec_IV
 
-	GCM_INIT arg1, arg2, arg6, arg8, arg9, arg7
+        GCM_INIT arg1, {rsp + CONTEXT_OFFSET}, {[arg2 + _iv]}, \
+                 {[arg2 + _gcm_aad]}, {[arg2 + _gcm_aad_len]}, \
+                 {[arg2 + _iv_len_in_bytes]}
+
         jmp     skip_iv_len_12_dec_IV
 
 iv_len_12_dec_IV:
-	GCM_INIT arg1, arg2, arg6, arg8, arg9
+	GCM_INIT arg1, {rsp + CONTEXT_OFFSET}, {[arg2 + _iv]}, \
+                 {[arg2 + _gcm_aad]}, {[arg2 + _gcm_aad_len]}
 
 skip_iv_len_12_dec_IV:
-        GCM_ENC_DEC  arg1, arg2, arg3, arg4, arg5, DEC, single_call
-        GCM_COMPLETE arg1, arg2, arg10, arg11, single_call
-	FUNC_RESTORE
+        mov     arg3, [arg2 + _src]
+        add     arg3, [arg2 + _cipher_start_src_offset]
+        mov     arg4, [arg2 + _dst]
+        mov     [rsp + GP_OFFSET + 5*8], arg2   ; preserve job pointer
+        mov     arg2, [arg2 + _msg_len_to_cipher]
+	GCM_ENC_DEC  arg1, {rsp + CONTEXT_OFFSET}, arg4, arg3, arg2, DEC, single_call
+
+        mov     arg2, [rsp + GP_OFFSET + 5*8]
+        GCM_COMPLETE arg1, {rsp + CONTEXT_OFFSET}, \
+                     {[arg2 + _auth_tag_output]}, {[arg2 + _auth_tag_output_len_in_bytes]}, \
+                     single_call
+
+        ;; mark job complete
+        mov     dword [arg2 + _status], IMB_STATUS_COMPLETED
+
+        mov     rax, arg2       ;; return the job
+
+        FUNC_RESTORE
 	ret
 
 %ifdef GCM128_MODE

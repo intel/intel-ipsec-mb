@@ -179,19 +179,20 @@
 %define STACK_FRAME_SIZE_SMALL  (STACK_LOCAL_OFFSET)
 
 ;; extra memory for GCM context structure
-%define CONTEXT_SIZE    6*16
+%define CONTEXT_SIZE    (6*16)
 %define CONTEXT_OFFSET  STACK_FRAME_SIZE
 
 ;; Full stack frame layout:
-;; + 16*6  -> ---------------------------
-;;            GCM CONTEXT (JOB API only)
-;; + 32*16 -> ---------------------------
-;;            LOCAL STORAGE
-;; + 16*10 -> --------------------------
-;;            XMM STORAGE (windows only)
-;; + 8*8   -> --------------------------
-;;            GP STORAGE
-;; RSP/R14 -> --------------------------
+;;                    RETURN ADDRESS + ARGS
+;; R14 =   + 16*6  -> ---------------------------
+;;                    GCM CONTEXT (JOB API only)
+;;         + 32*16 -> ---------------------------
+;;                    LOCAL STORAGE
+;;         + 16*10 -> --------------------------
+;;                    XMM STORAGE (windows only)
+;;         + 8*8   -> --------------------------
+;;                    GP STORAGE
+;; RSP =           -> --------------------------
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Utility Macros
@@ -2730,29 +2731,21 @@
 ;;; Save register content for the caller
 %macro FUNC_SAVE 0-1
 
-%assign use_big_frame 1
-%assign alloc_context 0
+%assign my_frame_size (STACK_FRAME_SIZE)
 
 %if %0 > 0
 %ifidni %1, small_frame
-%assign use_big_frame 0
+%assign my_frame_size (STACK_FRAME_SIZE_SMALL)
 %endif
+
 %ifidni %1, alloc_context
-%assign alloc_context 1
+%assign my_frame_size (my_frame_size + CONTEXT_SIZE)
 %endif
 %endif
         ;; Required for Update/GMC_ENC
         mov     rax, rsp
 
-%if use_big_frame > 0
-%if alloc_context > 1
-        sub     rsp, STACK_FRAME_SIZE + CONTEXT_SIZE
-%else
-        sub     rsp, STACK_FRAME_SIZE
-%endif
-%else
-        sub     rsp, STACK_FRAME_SIZE_SMALL
-%endif
+        sub     rsp, my_frame_size
         and     rsp, ~63
 
         mov     [rsp + STACK_GP_OFFSET + 0*8], r12

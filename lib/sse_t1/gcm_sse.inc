@@ -183,15 +183,16 @@
 %define CONTEXT_OFFSET  VARIABLE_OFFSET
 
 ;; Full stack frame layout:
-;; + 16*6  -> ---------------------------
-;;            GCM CONTEXT (JOB API only)
-;; + 6*8   -> ---------------------------
-;;            GP STORAGE
-;; + 16*10 -> --------------------------
-;;            XMM STORAGE (windows only)
-;; + 16*7  -> --------------------------
-;;            LOCAL STORAGE
-;; RSP/R14 -> --------------------------
+;;                   RETURN ADDRESS + ARGS
+;; R14 =  + 16*6  -> ---------------------------
+;;                   GCM CONTEXT (JOB API only)
+;;        + 6*8   -> ---------------------------
+;;                   GP STORAGE
+;;        + 16*10 -> --------------------------
+;;                   XMM STORAGE (windows only)
+;;        + 16*7  -> --------------------------
+;;                   LOCAL STORAGE
+;; RSP =          -> --------------------------
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Utility Macros

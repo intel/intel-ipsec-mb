@@ -31,6 +31,7 @@
 %include "include/error.inc"
 %include "include/os.inc"
 %include "include/clear_regs.inc"
+%include "include/imb_job.inc"
 
 %ifndef GCM_API_VAES_AVX512_INC
 %define GCM_API_VAES_AVX512_INC
@@ -382,43 +383,54 @@ skip_aad_check_error_dec:
 ;
 ; NOTE: THIS API IS USED BY JOB-API ONLY, NO NEED FOR 2ND SAFE PARAM CHECK
 ;
-;void   aes_gcm_enc_var_iv_128_vaes_avx512 / aes_gcm_enc_var_iv_192_vaes_avx512 /
-;       aes_gcm_enc_var_iv_256_vaes_avx512
-;       (const struct gcm_key_data *key_data,
-;        struct gcm_context_data *context_data,
-;        u8        *out,
-;        const u8  *in,
-;        u64       msg_len,
-;        u8        *iv,
-;        const u64 iv_len,
-;        const u8  *aad,
-;        const u64 aad_len,
-;        u8        *auth_tag,
-;        const u64 auth_tag_len);
+;IMB_JOB *aes_gcm_enc_var_iv_128_vaes_avx512 / aes_gcm_enc_var_iv_192_vaes_avx512 /
+;       aes_gcm_enc_var_iv_256_vaes_avx512(IMB_MGR *state, IMB_JOB *job)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-MKGLOBAL(FN_NAME(enc_var_iv,_),function,)
+MKGLOBAL(FN_NAME(enc_var_iv,_),function,internal)
 FN_NAME(enc_var_iv,_):
-        FUNC_SAVE
-        cmp     arg7, 12
+        endbranch64
+	FUNC_SAVE alloc_context
+
+        mov     arg1, [arg2 + _enc_keys]
+
+        cmp     qword [arg2 + _iv_len_in_bytes], 12
         je      iv_len_12_enc_IV
 
-        GCM_INIT arg1, arg2, arg6, arg8, arg9, r10, r11, r12, k1, xmm14, xmm2, \
-                zmm1, zmm11, zmm3, zmm4, zmm5, zmm6, zmm7, zmm8, zmm9, zmm10, \
-                zmm12, zmm13, zmm15, zmm16, zmm17, zmm18, zmm19, zmm20, single_call, arg7
+        GCM_INIT arg1, {rsp + CONTEXT_OFFSET}, {[arg2 + _iv]}, \
+                 {[arg2 + _gcm_aad]}, {qword [arg2 + _gcm_aad_len]}, \
+                 r10, r11, r12, k1, xmm14, xmm2, \
+                 zmm1, zmm11, zmm3, zmm4, zmm5,   zmm6, zmm7, zmm8, zmm9, zmm10, \
+                 zmm12, zmm13, zmm15, zmm16, zmm17, zmm18, zmm19, zmm20, single_call, \
+                 {[arg2 + _iv_len_in_bytes]}
         jmp     skip_iv_len_12_enc_IV
 
 iv_len_12_enc_IV:
-        GCM_INIT arg1, arg2, arg6, arg8, arg9, r10, r11, r12, k1, xmm14, xmm2, \
-                zmm1, zmm11, zmm3, zmm4, zmm5, zmm6, zmm7, zmm8, zmm9, zmm10, \
-                zmm12, zmm13, zmm15, zmm16, zmm17, zmm18, zmm19, zmm20, single_call
+        GCM_INIT arg1, {rsp + CONTEXT_OFFSET}, {[arg2 + _iv]}, \
+                 {[arg2 + _gcm_aad]}, {qword [arg2 + _gcm_aad_len]}, \
+                 r10, r11, r12, k1, xmm14, xmm2, \
+                 zmm1, zmm11, zmm3, zmm4, zmm5,   zmm6, zmm7, zmm8, zmm9, zmm10, \
+                 zmm12, zmm13, zmm15, zmm16, zmm17, zmm18, zmm19, zmm20, single_call
 
 skip_iv_len_12_enc_IV:
-        GCM_ENC_DEC  arg1, arg2, arg3, arg4, arg5, ENC, single_call
-        GCM_COMPLETE arg1, arg2, arg10, arg11, single_call, k1, r10, r11, r12
+        mov     arg3, [arg2 + _src]
+        add     arg3, [arg2 + _cipher_start_src_offset]
+        mov     arg4, [arg2 + _dst]
+        mov     rbp, [arg2 + _msg_len_to_cipher]
+        GCM_ENC_DEC  arg1, {rsp + CONTEXT_OFFSET}, arg4, arg3, rbp, ENC, single_call
+
+        GCM_COMPLETE arg1, {rsp + CONTEXT_OFFSET}, \
+                     {[arg2 + _auth_tag_output]}, {[arg2 + _auth_tag_output_len_in_bytes]}, \
+                     single_call, k1, r10, r11, r12
+
 %ifdef SAFE_DATA
         clear_zmms_avx512 xmm1, xmm4, xmm6, xmm7, xmm8, xmm12, xmm13, xmm14, \
                           xmm16, xmm17, xmm18, xmm19, xmm20, xmm21, xmm26, xmm30, xmm31
 %endif
+        ;; mark job complete
+        mov     dword [arg2 + _status], IMB_STATUS_COMPLETED
+
+        mov     rax, arg2       ;; return the job
+
         FUNC_RESTORE
         ret
 
@@ -426,43 +438,54 @@ skip_iv_len_12_enc_IV:
 ;
 ; NOTE: THIS API IS USED BY JOB-API ONLY, NO NEED FOR 2ND SAFE PARAM CHECK
 ;
-;void   aes_gcm_dec_var_iv_128_vaes_avx512 / aes_gcm_dec_var_iv_192_vaes_avx512 /
-;       aes_gcm_dec_var_iv_256_vaes_avx512
-;       (const struct gcm_key_data *key_data,
-;        struct gcm_context_data *context_data,
-;        u8        *out,
-;        const u8  *in,
-;        u64       msg_len,
-;        u8        *iv,
-;        const u64 iv_len,
-;        const u8  *aad,
-;        const u64 aad_len,
-;        u8        *auth_tag,
-;        const u64 auth_tag_len);
+;IMB_JOB *aes_gcm_dec_var_iv_128_vaes_avx512 / aes_gcm_dec_var_iv_192_vaes_avx512 /
+;       aes_gcm_dec_var_iv_256_vaes_avx512(IMB_MGR *state, IMB_JOB *job)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-MKGLOBAL(FN_NAME(dec_var_iv,_),function,)
+MKGLOBAL(FN_NAME(dec_var_iv,_),function,internal)
 FN_NAME(dec_var_iv,_):
-        FUNC_SAVE
-        cmp     arg7, 12
+        endbranch64
+	FUNC_SAVE alloc_context
+
+        mov     arg1, [arg2 + _dec_keys]
+
+        cmp     qword [arg2 + _iv_len_in_bytes], 12
         je      iv_len_12_dec_IV
 
-        GCM_INIT arg1, arg2, arg6, arg8, arg9, r10, r11, r12, k1, xmm14, xmm2, \
-                zmm1, zmm11, zmm3, zmm4, zmm5, zmm6, zmm7, zmm8, zmm9, zmm10, zmm12, \
-                zmm13, zmm15, zmm16, zmm17, zmm18, zmm19, zmm20, single_call, arg7
+        GCM_INIT arg1, {rsp + CONTEXT_OFFSET}, {[arg2 + _iv]}, \
+                 {[arg2 + _gcm_aad]}, {qword [arg2 + _gcm_aad_len]}, \
+                 r10, r11, r12, k1, xmm14, xmm2, \
+                 zmm1, zmm11, zmm3, zmm4, zmm5,   zmm6, zmm7, zmm8, zmm9, zmm10, \
+                 zmm12, zmm13, zmm15, zmm16, zmm17, zmm18, zmm19, zmm20, single_call, \
+                 {qword [arg2 + _iv_len_in_bytes]}
         jmp     skip_iv_len_12_dec_IV
 
 iv_len_12_dec_IV:
-        GCM_INIT arg1, arg2, arg6, arg8, arg9, r10, r11, r12, k1, xmm14, xmm2, \
-                zmm1, zmm11, zmm3, zmm4, zmm5, zmm6, zmm7, zmm8, zmm9, zmm10, \
-                zmm12, zmm13, zmm15, zmm16, zmm17, zmm18, zmm19, zmm20, single_call
+        GCM_INIT arg1, {rsp + CONTEXT_OFFSET}, {[arg2 + _iv]}, \
+                 {[arg2 + _gcm_aad]}, {qword [arg2 + _gcm_aad_len]}, \
+                 r10, r11, r12, k1, xmm14, xmm2, \
+                 zmm1, zmm11, zmm3, zmm4, zmm5,   zmm6, zmm7, zmm8, zmm9, zmm10, \
+                 zmm12, zmm13, zmm15, zmm16, zmm17, zmm18, zmm19, zmm20, single_call
 
 skip_iv_len_12_dec_IV:
-        GCM_ENC_DEC  arg1, arg2, arg3, arg4, arg5, DEC, single_call
-        GCM_COMPLETE arg1, arg2, arg10, arg11, single_call, k1, r10, r11, r12
+        mov     arg3, [arg2 + _src]
+        add     arg3, [arg2 + _cipher_start_src_offset]
+        mov     arg4, [arg2 + _dst]
+        mov     rbp, [arg2 + _msg_len_to_cipher]
+        GCM_ENC_DEC  arg1, {rsp + CONTEXT_OFFSET}, arg4, arg3, rbp, DEC, single_call
+
+        GCM_COMPLETE arg1, {rsp + CONTEXT_OFFSET}, \
+                     {[arg2 + _auth_tag_output]}, {[arg2 + _auth_tag_output_len_in_bytes]}, \
+                     single_call, k1, r10, r11, r12
+
 %ifdef SAFE_DATA
         clear_zmms_avx512 xmm1, xmm4, xmm6, xmm7, xmm8, xmm12, xmm13, xmm14, \
                           xmm16, xmm17, xmm18, xmm19, xmm20, xmm21, xmm26, xmm30, xmm31
 %endif
+        ;; mark job complete
+        mov     dword [arg2 + _status], IMB_STATUS_COMPLETED
+
+        mov     rax, arg2       ;; return the job
+
         FUNC_RESTORE
         ret
 
