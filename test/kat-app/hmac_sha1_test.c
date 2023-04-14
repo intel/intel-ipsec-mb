@@ -424,18 +424,13 @@ test_hmac_sha1_std_vectors(struct IMB_MGR *mb_mgr,
                            struct test_suite_context *ts)
 {
         const struct mac_test *v = hmac_sha1_test_kat_json;
-	int vectors_cnt;
-        /* Calculate vectors_cnt */
-        for (vectors_cnt = 0; v->msg != NULL; vectors_cnt++, v++)
-                ;
-        v -= vectors_cnt;
+
 	printf("HMAC-SHA1 standard test vectors (N jobs = %u):\n", num_jobs);
 	while (v->msg != NULL) {
                 if (!quiet_mode) {
 #ifdef DEBUG
-                        printf("[%lu/%lu] RFC2202 Test Case %lu keySize:%lu "
+                        printf("RFC2202 Test Case %lu keySize:%lu "
                                "msgSize:%lu tagSize:%lu\n",
-                               v->tcId, vectors_cnt,
                                v->tcId,
                                v->keySize,
                                v->msgSize / 8,
