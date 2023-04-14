@@ -36,14 +36,22 @@ endif()
 # set default library options
 #######################################
 option(AESNI_EMU "AESNI emulation support" OFF)
-option(SAFE_PARAM "Parameter checking" ON)
-option(SAFE_DATA "Clear sensitive data from registers and memory" ON)
-option(SAFE_LOOKUP "Secure table lookups" ON)
-option(SAFE_OPTIONS "Library security features" ON)
+option(SAFE_PARAM "API input parameter checking" ON)
+option(SAFE_DATA "Sensitive data cleared from registers and memory at operation end" ON)
+option(SAFE_LOOKUP "Lookups depending on sensitive data are constant time" ON)
+option(SAFE_OPTIONS "Enable all safe options" ON)
 option(NO_COMPAT_IMB_API_053 "Disable compatibility with v0.53" ON)
 option(BUILD_SHARED_LIBS "Build shared library" ON)
 option(CMAKE_VERBOSE_MAKEFILE "Verbose build output" OFF)
 set(EXTRA_CFLAGS "" CACHE STRING "Extra compiler flags")
+
+# add library options to options list (used by print_help target)
+list(APPEND IPSEC_MB_OPTIONS
+  AESNI_EMU SAFE_PARAM SAFE_DATA SAFE_LOOKUP
+  SAFE_OPTIONS NO_COMPAT_IMB_API_053 BUILD_SHARED_LIBS
+  CMAKE_VERBOSE_MAKEFILE EXTRA_CFLAGS
+)
+set(IPSEC_MB_OPTIONS ${IPSEC_MB_OPTIONS} PARENT_SCOPE)
 
 # disable all SAFE options when SAFE_OPTIONS false
 if(NOT SAFE_OPTIONS)

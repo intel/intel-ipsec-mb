@@ -25,9 +25,11 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 # set default CMakeCache.txt values
-set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Set default build to release")
-set(CMAKE_C_FLAGS_RELEASE "" CACHE STRING "Clear default release build C Compiler Flags" FORCE)
-set(CMAKE_C_FLAGS_DEBUG "" CACHE STRING "Clear default debug build C Compiler Flags" FORCE)
+set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Selected build type")
+# clear default release build C Compiler Flags
+set(CMAKE_C_FLAGS_RELEASE "" CACHE STRING "" FORCE)
+# clear default debug build C Compiler Flags
+set(CMAKE_C_FLAGS_DEBUG "" CACHE STRING "" FORCE)
 
 # get version from public header file
 set(IMB_HDR "${CMAKE_CURRENT_SOURCE_DIR}/lib/intel-ipsec-mb.h")
@@ -39,6 +41,9 @@ message(STATUS "Project Version: ${IPSEC_MB_VERSION_FULL}")
 cmake_minimum_required(VERSION 3.16)
 project(intel-ipsec-mb VERSION ${IPSEC_MB_VERSION}
     DESCRIPTION "Intel(R) IPsec Multi-Buffer library")
+
+# project options list (used by print_help target)
+set(IPSEC_MB_OPTIONS CMAKE_BUILD_TYPE)
 
 # flag to force full project build
 set(FULL_PROJECT_BUILD TRUE)
@@ -58,6 +63,10 @@ add_subdirectory(perf)
 # build test applications
 add_subdirectory(test)
 
+#######################################
+# configure custom targets
+#######################################
+
 # add custom target to uninstall library
 configure_file(
     "${CMAKE_CURRENT_SOURCE_DIR}/lib/cmake/uninstall.cmake.in"
@@ -66,4 +75,21 @@ configure_file(
 
 add_custom_target(uninstall
     COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake)
+
+# add custom target to print help information
+add_custom_target(
+  print_help
+  COMMAND ${CMAKE_COMMAND} -E echo "Available build options:"
+  VERBATIM
+)
+
+foreach (OPTION ${IPSEC_MB_OPTIONS})
+  get_property(HELP_TEXT CACHE ${OPTION} PROPERTY HELPSTRING)
+  if(HELP_TEXT)
+    add_custom_command(TARGET print_help
+      COMMAND
+      ${CMAKE_COMMAND} -E echo "    ${OPTION}=${${OPTION}} - ${HELP_TEXT}"
+    )
+  endif()
+endforeach()
 
