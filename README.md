@@ -475,6 +475,11 @@ cmake -DCMAKE_BUILD_TYPE=Debug ..
 cmake --build . --parallel
 ```
 
+For more build options and their explanation run:
+```
+cmake --build . --target print_help
+```
+
 ### Windows MSVS (x64 only)
 
 Shared library with debugging information (default for MSVS)
@@ -495,10 +500,20 @@ cmake -Ax64 -DBUILD_SHARED_LIBS=OFF ..
 cmake --build . --config Release
 ```
 
+For more build options and their explanation run:
+```
+cmake --build . --target print_help
+```
+
 ###  Ninja (Linux, FreeBSD and Windows):
 ```
 cmake -G Ninja ..
 cmake --build .
+```
+
+For more build options and their explanation run:
+```
+cmake --build . --target print_help
 ```
 
 Library and applications can be found in:
