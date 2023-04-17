@@ -52,7 +52,8 @@ void ADV_JOBS(int *ptr)
 __forceinline uint32_t
 get_queue_sz(IMB_MGR *state)
 {
-        const int a = (state->next_job - state->earliest_job) / sizeof(IMB_JOB);
+        const int a = (state->next_job - state->earliest_job) /
+                        (int) sizeof(IMB_JOB);
 
         return a & (IMB_MAX_JOBS-1);
 }
