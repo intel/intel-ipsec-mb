@@ -2297,6 +2297,10 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
         /* test burst api */
         if (test_api == TEST_API_BURST) {
                 uint32_t num_jobs = num_iter;
+#ifdef DEBUG
+                uint32_t jobs_submitted = 0;
+#endif
+
                 IMB_JOB *jobs[IMB_MAX_BURST_SIZE] = {NULL};
 
                 imb_set_session(mb_mgr, &job_template);
@@ -2330,8 +2334,9 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
                         }
                         /* submit burst */
 #ifdef DEBUG
-                        jobs_done += IMB_SUBMIT_BURST(mb_mgr, n, jobs);
-                        if (jobs_done == 0) {
+                        const uint32_t ret = IMB_SUBMIT_BURST(mb_mgr, n, jobs);
+
+                        if (ret == 0) {
                                 const int err = imb_get_errno(mb_mgr);
 
                                 if (err != 0) {
@@ -2339,6 +2344,8 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
                                                err, imb_get_strerror(err));
                                 }
                         }
+                        jobs_done += ret;
+                        jobs_submitted += n;
 #else
                         jobs_done +=
                                 IMB_SUBMIT_BURST_NOCHECK(mb_mgr, n, jobs);
@@ -2347,6 +2354,15 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
                 }
                 jobs_done +=
                         IMB_FLUSH_BURST(mb_mgr, IMB_MAX_BURST_SIZE, jobs);
+
+#ifdef DEBUG
+                if (jobs_done != jobs_submitted) {
+                        printf("Number of jobs completed (%u) not equal to "
+                               "jobs submitted (%u)\n",
+                               jobs_done, jobs_submitted);
+                        goto exit;
+                 }
+#endif
 
                 /* test cipher-only burst api */
         } else if (test_api == TEST_API_CIPHER_BURST) {
@@ -4191,6 +4207,8 @@ int main(int argc, char *argv[])
                 }
         }
 
+        srand(ITER_SCALE_LONG + ITER_SCALE_SHORT + ITER_SCALE_SMOKE);
+
         if ((imix_list_count != 0)) {
                 if (imix_list_count != job_size_count) {
                         fprintf(stderr,
@@ -4215,8 +4233,6 @@ int main(int argc, char *argv[])
 			distribution_total[i] = imix_list[i] +
 				distribution_total[i-1];
 
-                /* Use always same seed */
-                srand(0);
 		/* Calculate a random sequence of packet sizes,
                    based on distribution */
 		for (i = 0; i < (int)JOB_SIZE_IMIX_LIST; i++) {
@@ -4368,8 +4384,6 @@ int main(int argc, char *argv[])
 
         memset(t_info, 0, sizeof(t_info));
         init_offsets(cache_type);
-
-        srand(ITER_SCALE_LONG + ITER_SCALE_SHORT + ITER_SCALE_SMOKE);
 
 #ifdef LINUX
         if (use_timebox) {
