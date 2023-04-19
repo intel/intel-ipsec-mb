@@ -598,8 +598,7 @@ test_hmac_shax_std_vectors(struct IMB_MGR *mb_mgr,
         }
 	printf("HMAC-SHA%d standard test vectors (N jobs = %u):\n",
                sha_type, num_jobs);
-	while (v->msg != NULL) {
-                v++;
+	for (; v->msg != NULL; v++) {
                 if (!quiet_mode) {
 #ifdef DEBUG
                         printf("RFC4231 Test Case %lu key_len:%lu "
