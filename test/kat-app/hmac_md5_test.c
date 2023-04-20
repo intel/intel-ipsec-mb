@@ -33,297 +33,14 @@
 #include <intel-ipsec-mb.h>
 #include "gcm_ctr_vectors_test.h"
 #include "utils.h"
+#include "mac_test.h"
 
 int hmac_md5_test(struct IMB_MGR *mb_mgr);
 
-#define digest96_size 12
-
-/*
- * Test vectors from https://tools.ietf.org/html/rfc2202
- */
-
-/*
- * 2.  Test Case 1
- *
- *    Key =          0x0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b
- *
- *    Key length =   16
- *
- *    Data =         "Hi There"
- *
- *    Data length =  8
- *
- *    Digest =       0x9294727a3638bb1c13f48ef8158bfc9d
- *
- *    Digest96 =     0x9294727a3638bb1c13f48ef8
- */
-#define test_case1      "1"
-#define test_case_l1    "1_long"
-#define key_len1        16
-#define data_len1       8
-#define digest_len1     digest96_size
-#define digest_len_l1   IMB_MD5_DIGEST_SIZE_IN_BYTES
-static const uint8_t key1[key_len1] = {
-        0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b,
-        0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b
-};
-static const char data1[] = "Hi There";
-static const uint8_t digest1[digest_len_l1] = {
-        0x92, 0x94, 0x72, 0x7a, 0x36, 0x38, 0xbb, 0x1c,
-        0x13, 0xf4, 0x8e, 0xf8, 0x15, 0x8b, 0xfc, 0x9d
-};
-
-/*
- * 2.  Test Case 2
- *
- *    Key =          "Jefe"
- *
- *    Key length =   4
- *
- *    Data =         "what do ya want for nothing?"
- *
- *    Data length =  28
- *
- *    Digest =       0x750c783e6ab0b503eaa86e310a5db738
- *
- *    Digest96 =     0x750c783e6ab0b503eaa86e31
- */
-#define test_case2    "2"
-#define test_case_l2  "2_long"
-#define key_len2      4
-#define data_len2     28
-#define digest_len2   digest96_size
-#define digest_len_l2 IMB_MD5_DIGEST_SIZE_IN_BYTES
-static const char key2[] = "Jefe";
-static const char data2[] = "what do ya want for nothing?";
-static const uint8_t digest2[digest_len_l2] = {
-        0x75, 0x0c, 0x78, 0x3e, 0x6a, 0xb0, 0xb5, 0x03,
-        0xea, 0xa8, 0x6e, 0x31, 0x0a, 0x5d, 0xb7, 0x38
-};
-
-/*
- * 2.  Test Case 3
- *
- *    Key =          0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
- *
- *    Key length =   16
- *
- *    Data =         0xdd (repeated 50 times)
- *
- *    Data length =  50
- *
- *    Digest =       0x56be34521d144c88dbb8c733f0e8b3f6
- *
- *    Digest96 =     0x56be34521d144c88dbb8c733
- */
-#define test_case3    "3"
-#define test_case_l3  "3_long"
-#define key_len3      16
-#define data_len3     50
-#define digest_len3   digest96_size
-#define digest_len_l3 IMB_MD5_DIGEST_SIZE_IN_BYTES
-static const uint8_t key3[key_len3] = {
-        0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa,
-        0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa
-};
-static const uint8_t data3[data_len3] = {
-        0xdd, 0xdd, 0xdd, 0xdd, 0xdd, 0xdd, 0xdd, 0xdd,
-        0xdd, 0xdd, 0xdd, 0xdd, 0xdd, 0xdd, 0xdd, 0xdd,
-        0xdd, 0xdd, 0xdd, 0xdd, 0xdd, 0xdd, 0xdd, 0xdd,
-        0xdd, 0xdd, 0xdd, 0xdd, 0xdd, 0xdd, 0xdd, 0xdd,
-        0xdd, 0xdd, 0xdd, 0xdd, 0xdd, 0xdd, 0xdd, 0xdd,
-        0xdd, 0xdd, 0xdd, 0xdd, 0xdd, 0xdd, 0xdd, 0xdd,
-        0xdd, 0xdd
-};
-static const uint8_t digest3[digest_len_l3] = {
-        0x56, 0xbe, 0x34, 0x52, 0x1d, 0x14, 0x4c, 0x88,
-        0xdb, 0xb8, 0xc7, 0x33, 0xf0, 0xe8, 0xb3, 0xf6
-};
-
-/*
- * 2.  Test Case 4
- *
- *    Key =          0x0102030405060708090a0b0c0d0e0f10111213141516171819
- *
- *    Key length =   25
- *
- *    Data =         0xcd (repeated 50 times)
- *
- *    Data length =  50
- *
- *    Digest =       0x697eaf0aca3a3aea3a75164746ffaa79
- *
- *    Digest96 =     0x697eaf0aca3a3aea3a751647
- */
-#define test_case4    "4"
-#define test_case_l4  "4_long"
-#define key_len4      25
-#define data_len4     50
-#define digest_len4   digest96_size
-#define digest_len_l4 IMB_MD5_DIGEST_SIZE_IN_BYTES
-static const uint8_t key4[key_len4] = {
-        0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
-        0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10,
-        0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18,
-        0x19
-};
-static const uint8_t data4[data_len4] = {
-        0xcd, 0xcd, 0xcd, 0xcd, 0xcd, 0xcd, 0xcd, 0xcd,
-        0xcd, 0xcd, 0xcd, 0xcd, 0xcd, 0xcd, 0xcd, 0xcd,
-        0xcd, 0xcd, 0xcd, 0xcd, 0xcd, 0xcd, 0xcd, 0xcd,
-        0xcd, 0xcd, 0xcd, 0xcd, 0xcd, 0xcd, 0xcd, 0xcd,
-        0xcd, 0xcd, 0xcd, 0xcd, 0xcd, 0xcd, 0xcd, 0xcd,
-        0xcd, 0xcd, 0xcd, 0xcd, 0xcd, 0xcd, 0xcd, 0xcd,
-        0xcd, 0xcd
-};
-static const uint8_t digest4[digest_len_l4] = {
-        0x69, 0x7e, 0xaf, 0x0a, 0xca, 0x3a, 0x3a, 0xea,
-        0x3a, 0x75, 0x16, 0x47, 0x46, 0xff, 0xaa, 0x79
-};
-
-/*
- * 2.  Test Case 5
- *
- *    Key =          0x0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c
- *
- *    Key length =   16
- *
- *    Data =         "Test With Truncation"
- *
- *    Data length =  20
- *
- *    Digest =       0x56461ef2342edc00f9bab995690efd4c
- *
- *    Digest96 =     0x56461ef2342edc00f9bab995
- */
-#define test_case5    "5"
-#define test_case_l5  "5_long"
-#define key_len5      16
-#define data_len5     20
-#define digest_len5   digest96_size
-#define digest_len_l5 IMB_MD5_DIGEST_SIZE_IN_BYTES
-static const uint8_t key5[key_len5] = {
-        0x0c, 0x0c, 0x0c, 0x0c, 0x0c, 0x0c, 0x0c, 0x0c,
-        0x0c, 0x0c, 0x0c, 0x0c, 0x0c, 0x0c, 0x0c, 0x0c
-};
-static const char data5[] = "Test With Truncation";
-static const uint8_t digest5[digest_len_l5] = {
-        0x56, 0x46, 0x1e, 0xf2, 0x34, 0x2e, 0xdc, 0x00,
-        0xf9, 0xba, 0xb9, 0x95, 0x69, 0x0e, 0xfd, 0x4c
-};
-
-/*
- * 2.  Test Case 6
- *
- *    Key =          0xaa (repeated 80 times)
- *
- *    Key length =   80
- *
- *    Data =         "Test Using Larger Than Block-Size Key - Hash Key First"
- *
- *    Data length =  54
- *
- *    Digest =       0x6b1ab7fe4bd7bf8f0b62e6ce61b9d0cd
- *
- *    Digest96 =     0x6b1ab7fe4bd7bf8f0b62e6ce
- */
-/* #define test_case6  "6" */
-/* #define key_len6    80 */
-/* #define data_len6   54 */
-/* #define digest_len6 digest96_size */
-/* static const uint8_t key6[key_len6] = { */
-/*         0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, */
-/*         0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, */
-/*         0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, */
-/*         0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, */
-/*         0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, */
-/*         0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, */
-/*         0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, */
-/*         0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, */
-/*         0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, */
-/*         0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa */
-/* }; */
-/* static const char data6[] = "Test Using Larger Than Block-Size " */
-/*         "Key - Hash Key First"; */
-/* static const uint8_t digest6[digest_len6] = { */
-/*         0x6b, 0x1a, 0xb7, 0xfe, 0x4b, 0xd7, 0xbf, 0x8f, */
-/*         0x0b, 0x62, 0xe6, 0xce */
-/* }; */
-
-/*
- * 2.  Test Case 7
- *
- *    Key =          0xaa (repeated 80 times)
- *
- *    Key length =   80
- *
- *    Data =         "Test Using Larger Than Block-Size Key and Larger"
- *
- *    Data length =  73
- *
- *    Digest =       0x6f630fad67cda0ee1fb1f562db3aa53e
- *
- *    Digest96 =     0x6f630fad67cda0ee1fb1f562
- */
-/* #define test_case7  "7" */
-/* #define key_len7    80 */
-/* #define data_len7   73 */
-/* #define digest_len7 digest96_size */
-/* static const uint8_t key7[key_len7] = { */
-/*         0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, */
-/*         0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, */
-/*         0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, */
-/*         0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, */
-/*         0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, */
-/*         0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, */
-/*         0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, */
-/*         0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, */
-/*         0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, */
-/*         0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa */
-/* }; */
-/* static const char data7[] = "Test Using Larger Than Block-Size " */
-/*         "Key and Larger Than One Block-Size Data"; */
-/* static const uint8_t digest7[digest_len7] = { */
-/*         0x6f, 0x63, 0x0f, 0xad, 0x67, 0xcd, 0xa0, 0xee, */
-/*         0x1f, 0xb1, 0xf5, 0x62 */
-/* }; */
-
-#define HMAC_MD5_TEST_VEC(num)                                          \
-        { test_case##num,                                               \
-                        (const uint8_t *) key##num, key_len##num,       \
-                        (const uint8_t *) data##num, data_len##num,     \
-                        (const uint8_t *) digest##num, digest_len##num }
-#define HMAC_MD5_TEST_VEC_LONG(num)                                     \
-        { test_case_l##num,                                             \
-                        (const uint8_t *) key##num, key_len##num,       \
-                        (const uint8_t *) data##num, data_len##num,     \
-                        (const uint8_t *) digest##num, digest_len_l##num }
-
-static const struct hmac_md5_rfc2202_vector {
-        const char *test_case;
-        const uint8_t *key;
-        size_t key_len;
-        const uint8_t *data;
-        size_t data_len;
-        const uint8_t *digest;
-        size_t digest_len;
-} hmac_md5_vectors[] = {
-        HMAC_MD5_TEST_VEC(1),
-        HMAC_MD5_TEST_VEC(2),
-        HMAC_MD5_TEST_VEC(3),
-        HMAC_MD5_TEST_VEC(4),
-        HMAC_MD5_TEST_VEC(5),
-        /* HMAC_MD5_TEST_VEC(6), */
-        /* HMAC_MD5_TEST_VEC(7), */
-        HMAC_MD5_TEST_VEC_LONG(1),
-        HMAC_MD5_TEST_VEC_LONG(2),
-        HMAC_MD5_TEST_VEC_LONG(3),
-        HMAC_MD5_TEST_VEC_LONG(4),
-        HMAC_MD5_TEST_VEC_LONG(5),
-};
+extern const struct mac_test hmac_md5_test_json[];
 
 static int
-hmac_md5_job_ok(const struct hmac_md5_rfc2202_vector *vec,
+hmac_md5_job_ok(const struct mac_test *vec,
                  const struct IMB_JOB *job,
                  const uint8_t *auth,
                  const uint8_t *padding,
@@ -335,11 +52,11 @@ hmac_md5_job_ok(const struct hmac_md5_rfc2202_vector *vec,
         }
 
         /* hash checks */
-        if (memcmp(padding, &auth[sizeof_padding + vec->digest_len],
+        if (memcmp(padding, &auth[sizeof_padding + vec->tagSize],
                    sizeof_padding)) {
                 printf("hash overwrite tail\n");
                 hexdump(stderr, "Target",
-                        &auth[sizeof_padding + vec->digest_len],
+                        &auth[sizeof_padding + vec->tagSize],
                         sizeof_padding);
                 return 0;
         }
@@ -350,13 +67,13 @@ hmac_md5_job_ok(const struct hmac_md5_rfc2202_vector *vec,
                 return 0;
         }
 
-        if (memcmp(vec->digest, &auth[sizeof_padding],
-                   vec->digest_len)) {
+        if (memcmp(vec->tag, &auth[sizeof_padding],
+                   vec->tagSize)) {
                 printf("hash mismatched\n");
                 hexdump(stderr, "Received", &auth[sizeof_padding],
-                        vec->digest_len);
-                hexdump(stderr, "Expected", vec->digest,
-                        vec->digest_len);
+                        vec->tagSize);
+                hexdump(stderr, "Expected", vec->tag,
+                        vec->tagSize);
                 return 0;
         }
         return 1;
@@ -364,7 +81,7 @@ hmac_md5_job_ok(const struct hmac_md5_rfc2202_vector *vec,
 
 static int
 test_hmac_md5(struct IMB_MGR *mb_mgr,
-               const struct hmac_md5_rfc2202_vector *vec,
+               const struct mac_test *vec,
                const int num_jobs)
 {
         struct IMB_JOB *job;
@@ -384,7 +101,7 @@ test_hmac_md5(struct IMB_MGR *mb_mgr,
 
         for (i = 0; i < num_jobs; i++) {
                 const size_t alloc_len =
-                        vec->digest_len + (sizeof(padding) * 2);
+                        vec->tagSize + (sizeof(padding) * 2);
 
                 auths[i] = malloc(alloc_len);
                 if (auths[i] == NULL) {
@@ -394,7 +111,7 @@ test_hmac_md5(struct IMB_MGR *mb_mgr,
                 memset(auths[i], -1, alloc_len);
         }
 
-        imb_hmac_ipad_opad(mb_mgr, IMB_AUTH_MD5, vec->key, vec->key_len,
+        imb_hmac_ipad_opad(mb_mgr, IMB_AUTH_MD5, vec->key, vec->keySize,
                            ipad_hash, opad_hash);
 
         /* empty the manager */
@@ -410,14 +127,14 @@ test_hmac_md5(struct IMB_MGR *mb_mgr,
                 job->dst = NULL;
                 job->key_len_in_bytes = 0;
                 job->auth_tag_output = auths[i] + sizeof(padding);
-                job->auth_tag_output_len_in_bytes = vec->digest_len;
+                job->auth_tag_output_len_in_bytes = vec->tagSize;
                 job->iv = NULL;
                 job->iv_len_in_bytes = 0;
-                job->src = vec->data;
+                job->src = (const void *) vec->msg;
                 job->cipher_start_src_offset_in_bytes = 0;
                 job->msg_len_to_cipher_in_bytes = 0;
                 job->hash_start_src_offset_in_bytes = 0;
-                job->msg_len_to_hash_in_bytes = vec->data_len;
+                job->msg_len_to_hash_in_bytes = vec->msgSize / 8;
                 job->u.HMAC._hashed_auth_key_xor_ipad = ipad_hash;
                 job->u.HMAC._hashed_auth_key_xor_opad = opad_hash;
                 job->cipher_mode = IMB_CIPHER_NULL;
@@ -477,29 +194,35 @@ test_hmac_md5_std_vectors(struct IMB_MGR *mb_mgr,
                           const int num_jobs,
                           struct test_suite_context *ts)
 {
-	const int vectors_cnt = DIM(hmac_md5_vectors);
-	int vect;
+
+        const struct mac_test *v = hmac_md5_test_json;
 
 	printf("HMAC-MD5 standard test vectors (N jobs = %d):\n", num_jobs);
-	for (vect = 1; vect <= vectors_cnt; vect++) {
-                const int idx = vect - 1;
-
+	for (; v->msg != NULL; v++) {
                 if (!quiet_mode) {
 #ifdef DEBUG
-                        printf("[%d/%d] RFC2202 Test Case %s key_len:%d "
-                               "data_len:%d digest_len:%d\n",
-                               vect, vectors_cnt,
-                               hmac_md5_vectors[idx].test_case,
-                               (int) hmac_md5_vectors[idx].key_len,
-                               (int) hmac_md5_vectors[idx].data_len,
-                               (int) hmac_md5_vectors[idx].digest_len);
+                        printf("RFC2202 Test Case %lu key_len:%lu "
+                               "data_len:%lu digest_len:%lu\n",
+                               v->tcId,
+                               v->keySize,
+                               v->msgSize / 8,
+                               v->tagSize);
 #else
                         printf(".");
 #endif
                 }
-
-                if (test_hmac_md5(mb_mgr, &hmac_md5_vectors[idx], num_jobs)) {
-                        printf("error #%d\n", vect);
+                /* No functionality for keys larger than block size */
+                if (v->keySize > IMB_MD5_BLOCK_SIZE) {
+#ifdef DEBUG
+                        if (!quiet_mode)
+                                printf("Skipped vector %lu, "
+                                       "Key size larger than block size\n",
+                                       v->tcId);
+#endif
+                        continue;
+                }
+                if (test_hmac_md5(mb_mgr, v, num_jobs)) {
+                        printf("error #%lu\n", v->tcId);
                         test_suite_update(ts, 0, 1);
                 } else {
                         test_suite_update(ts, 1, 0);
