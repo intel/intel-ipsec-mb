@@ -3196,7 +3196,6 @@ FN_NAME(precomp,_):
         PRECOMPUTE arg1, xmm6, xmm0, xmm1, xmm2, xmm3, xmm4, xmm5
 
 %ifdef SAFE_DATA
-        clear_scratch_gps_asm
         clear_scratch_xmms_avx_asm
 %endif
 
@@ -3275,7 +3274,6 @@ skip_aad_check_init:
         GCM_INIT arg1, arg2, arg3, arg4, arg5, r10, r11, r12
 
 %ifdef SAFE_DATA
-        clear_scratch_gps_asm
         clear_scratch_xmms_avx_asm
 %endif
 exit_init:
@@ -3386,7 +3384,6 @@ iv_len_12_init_IV:
 
 skip_iv_len_12_init_IV:
 %ifdef SAFE_DATA
-        clear_scratch_gps_asm
         clear_scratch_xmms_avx_asm
 %endif
 exit_init_IV:
@@ -3655,7 +3652,6 @@ FN_NAME(enc,_finalize_):
         GCM_COMPLETE    arg1, arg2, arg3, arg4, multi_call
 
 %ifdef SAFE_DATA
-        clear_scratch_gps_asm
         clear_scratch_xmms_avx_asm
 %endif
 
