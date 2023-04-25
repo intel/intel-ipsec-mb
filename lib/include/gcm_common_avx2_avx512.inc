@@ -483,7 +483,7 @@ default rel
 
         vmovdqu         %%XTMP0, [%%GDATA_KEY + HashKey]
 %ifdef IS_AVX2_GCM
-        READ_SMALL_DATA_INPUT_AVX %%XTMP1, %%T1, %%T2, %%T3, %%T4, %%T5
+        READ_SMALL_DATA_INPUT_AVX %%XTMP1, %%T1, %%T2, %%T3
 %else
         READ_SMALL_DATA_INPUT_AVX512 %%XTMP1, %%T1, %%T2, %%T3, k1
 %endif
@@ -527,7 +527,7 @@ default rel
 
 %%_fewer_than_16_bytes:
         lea     r10, [%%PLAIN_CYPH_IN + %%DATA_OFFSET]
-        READ_SMALL_DATA_INPUT_AVX   xmm1, r10, %%PLAIN_CYPH_LEN, rax, r12, r15
+        READ_SMALL_DATA_INPUT_AVX   xmm1, r10, %%PLAIN_CYPH_LEN, rax
 
 %%_data_read:                           ;Finished reading in data
 %else
@@ -601,22 +601,10 @@ default rel
 %%_partial_fill:
         mov     r13, %%PLAIN_CYPH_LEN
 %%_count_set:
-%ifdef IS_AVX2_GCM
-        vmovq   rax, xmm9
-        cmp     r13, 8
-        jle     %%_less_than_8_bytes_left
 
-        mov     [%%CYPH_PLAIN_OUT+ %%DATA_OFFSET], rax
-        add     %%DATA_OFFSET, 8
-        vpsrldq xmm9, xmm9, 8
-        vmovq   rax, xmm9
-        sub     r13, 8
-%%_less_than_8_bytes_left:
-        mov     BYTE [%%CYPH_PLAIN_OUT + %%DATA_OFFSET], al
-        add     %%DATA_OFFSET, 1
-        shr     rax, 8
-        sub     r13, 1
-        jne     %%_less_than_8_bytes_left
+%ifdef IS_AVX2_GCM
+        simd_store_avx  %%CYPH_PLAIN_OUT, xmm9, r13, rax, r12, %%DATA_OFFSET
+        add             %%DATA_OFFSET, r13
 %else
         lea             rax, [rel byte_len_to_mask_table]
         kmovw           k1, [rax + r13*2]
@@ -2407,7 +2395,7 @@ default rel
         ;; r10           - input data address
         ;; r13           - input data length
         ;; r12, r15, rax - temp registers
-        READ_SMALL_DATA_INPUT_AVX   %%T1, r10, r13, r12, r15, rax
+        READ_SMALL_DATA_INPUT_AVX   %%T1, r10, r13, r12
 
         lea      r12, [SHIFT_MASK + 16]
         sub      r12, r13
@@ -2455,27 +2443,13 @@ default rel
 
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;; Output r13 Bytes
-        vmovq   rax, %%KEY
-        cmp     r13, 8
-        jle     %%_less_than_8_bytes_left
-
-        mov     [%%CYPH_PLAIN_OUT + %%DATA_OFFSET], rax
-        add     %%DATA_OFFSET, 8
-        vpsrldq %%T1, %%KEY, 8
-        vmovq   rax, %%T1
-        sub     r13, 8
-
-%%_less_than_8_bytes_left:
-        mov     BYTE [%%CYPH_PLAIN_OUT + %%DATA_OFFSET], al
-        add     %%DATA_OFFSET, 1
-        shr     rax, 8
-        sub     r13, 1
-        jne     %%_less_than_8_bytes_left
+        vmovdqa         %%T1, %%KEY
+        simd_store_avx  %%CYPH_PLAIN_OUT, %%T1, r13, rax, r12, %%DATA_OFFSET
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 %ifidn  %%ENC_DEC, DEC
         ;; If decrypt, restore the ciphertext into %%KEY
-        vmovdqu %%KEY, %%T2
+        vmovdqa %%KEY, %%T2
 %endif
 
 %else ;; IS_AVX512_GCM
@@ -4282,7 +4256,7 @@ error_ghash:
 
 %%_fewer_than_16_bytes:
 	lea	r10, [%%PLAIN_IN]
-	READ_SMALL_DATA_INPUT_AVX	xmm1, r10, %%PLAIN_LEN, rax, r12, r15
+	READ_SMALL_DATA_INPUT_AVX	xmm1, r10, %%PLAIN_LEN, rax
 %else
         ; Read in input data without over reading
         READ_SMALL_DATA_INPUT_LEN_BT16_AVX512	xmm1, %%PLAIN_IN, %%PLAIN_LEN, r12, rax, k1
@@ -4425,7 +4399,7 @@ no_full_blocks:
         ; Save next partial block
         mov	[arg2 + PBlockLen], arg4
 %ifdef IS_AVX2_GCM
-        READ_SMALL_DATA_INPUT_AVX xmm1, arg3, arg4, r11, r12, r13
+        READ_SMALL_DATA_INPUT_AVX xmm1, arg3, arg4, r11
 %else
         READ_SMALL_DATA_INPUT_AVX512 xmm1, arg3, arg4, r11, k1
 %endif

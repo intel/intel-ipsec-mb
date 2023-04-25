@@ -38,69 +38,31 @@
 ; READ_SMALL_DATA_INPUT: Packs xmm register with data when data input is less than 16 bytes.
 ; Returns 0 if data has length 0.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-%macro READ_SMALL_DATA_INPUT 7
+%macro READ_SMALL_DATA_INPUT 5
 %define	%%OUTPUT		%1 ; [out] xmm register
 %define	%%INPUT			%2 ; [in] gp with input address
 %define	%%LENGTH		%3 ; [in] gp with data length (0 to 16 bytes)
-%define	%%UNUSED	        %4 ; [unused] gp register
-%define	%%COUNTER		%5 ; [clobbered] gp register
-%define	%%TMP1			%6 ; [clobbered] gp register
-%define %%ARCH                  %7 ; [in] "SSE" or "AVX"
+%define	%%TMP1     		%4 ; [clobbered] temporary gp register
+%define %%ARCH                  %5 ; [in] "SSE" or "AVX"
+
+        mov             DWORD(%%TMP1), 16
+        cmp             %%LENGTH, %%TMP1
+        cmovb           %%TMP1, %%LENGTH
 
 %ifidn %%ARCH, SSE
-	pxor	%%OUTPUT, %%OUTPUT
+        simd_load_sse_16        %%OUTPUT, %%INPUT, %%TMP1
 %else
-	vpxor	%%OUTPUT, %%OUTPUT
+        simd_load_avx_16        %%OUTPUT, %%INPUT, %%TMP1
 %endif
-	mov	%%COUNTER, %%LENGTH
-        or      %%COUNTER, %%COUNTER
-        jz      %%_done
-
-	xor	%%TMP1, %%TMP1
-
-	cmp	%%COUNTER, 8
-	jb	%%_byte_loop_2
-%ifidn %%ARCH, SSE
-	movq	%%OUTPUT, [%%INPUT]
-%else
-	vmovq	%%OUTPUT, [%%INPUT]
-%endif
-	je	%%_done
-
-	sub	%%COUNTER, 8
-
-%%_byte_loop_1:					;Read 1 byte at a time
-	shl	%%TMP1, 8			;This loop handles case when 8 bytes were read in
-	dec	%%COUNTER
-	mov	BYTE(%%TMP1), BYTE [%%INPUT + %%COUNTER + 8]
-	jnz	%%_byte_loop_1
-%ifidn %%ARCH, SSE
-	pinsrq	%%OUTPUT, %%TMP1, 1
-%else
-	vpinsrq	%%OUTPUT, %%TMP1, 1
-%endif
-	jmp	%%_done
-
-%%_byte_loop_2:					;Read 1 byte at a time
-	shl	%%TMP1, 8			;This loop handles case when no bytes were read in
-	dec	%%COUNTER
-	mov	BYTE(%%TMP1), BYTE [%%INPUT + %%COUNTER]
-	jnz	%%_byte_loop_2
-%ifidn %%ARCH, SSE
-	movq	%%OUTPUT, %%TMP1
-%else
-	vmovq	%%OUTPUT, %%TMP1
-%endif
-%%_done:
 
 %endmacro ; READ_SMALL_DATA_INPUT
 
-%macro READ_SMALL_DATA_INPUT_SSE 6
-        READ_SMALL_DATA_INPUT %1, %2, %3, %4, %5, %6, SSE
+%macro READ_SMALL_DATA_INPUT_SSE 4
+        READ_SMALL_DATA_INPUT %1, %2, %3, %4, SSE
 %endmacro ; READ_SMALL_DATA_INPUT_SSE
 
-%macro READ_SMALL_DATA_INPUT_AVX 6
-        READ_SMALL_DATA_INPUT %1, %2, %3, %4, %5, %6, AVX
+%macro READ_SMALL_DATA_INPUT_AVX 4
+        READ_SMALL_DATA_INPUT %1, %2, %3, %4, AVX
 %endmacro ; READ_SMALL_DATA_INPUT_AVX
 
 ;; ***

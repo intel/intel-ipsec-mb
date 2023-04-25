@@ -530,7 +530,7 @@
         je      %%_CALC_AAD_done
 
         movdqu          %%XTMP0, [%%GDATA_KEY + HashKey]
-        READ_SMALL_DATA_INPUT_SSE   %%XTMP1, %%T1, %%T2, %%T3, %%T4, %%T5
+        READ_SMALL_DATA_INPUT_SSE   %%XTMP1, %%T1, %%T2, %%T3
         ;byte-reflect the AAD data
         pshufb          %%XTMP1, [rel SHUF_MASK]
         pxor            %%AAD_HASH, %%XTMP1
@@ -569,7 +569,7 @@
 
 %%_fewer_than_16_bytes:
 	lea	r10, [%%PLAIN_CYPH_IN + %%DATA_OFFSET]
-	READ_SMALL_DATA_INPUT_SSE	xmm1, r10, %%PLAIN_CYPH_LEN, rax, r12, r15
+	READ_SMALL_DATA_INPUT_SSE	xmm1, r10, %%PLAIN_CYPH_LEN, rax
 
 %%_data_read:				;Finished reading in data
 
@@ -1887,7 +1887,7 @@ movdqu  %%T_key, [%%GDATA_KEY+16*j]				; encrypt with last (14th) key round (12 
 	jge	%%_large_enough_update
 
 	lea	r10, [%%PLAIN_CYPH_IN + %%DATA_OFFSET]
-	READ_SMALL_DATA_INPUT_SSE	xmm1, r10, r13, r12, r15, rax
+	READ_SMALL_DATA_INPUT_SSE	xmm1, r10, r13, r12
 	lea	r12, [SHIFT_MASK + 16]
 	sub	r12, r13
 	jmp	%%_data_read
@@ -2069,7 +2069,7 @@ movdqu  %%T_key, [%%GDATA_KEY+16*j]				; encrypt with last (14th) key round (12 
 
 %%_fewer_than_16_bytes:
 	lea	r10, [%%PLAIN_IN]
-	READ_SMALL_DATA_INPUT_SSE	xmm1, r10, %%PLAIN_LEN, rax, r12, r15
+	READ_SMALL_DATA_INPUT_SSE	xmm1, r10, %%PLAIN_LEN, rax
 
         ; Finished reading in data
 %%_data_read:

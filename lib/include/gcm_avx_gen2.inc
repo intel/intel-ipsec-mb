@@ -490,7 +490,7 @@ mksection .text
         je      %%_CALC_AAD_done
 
         vmovdqu         %%XTMP0, [%%GDATA_KEY + HashKey]
-        READ_SMALL_DATA_INPUT_AVX   %%XTMP1, %%T1, %%T2, %%T3, %%T4, %%T5
+        READ_SMALL_DATA_INPUT_AVX   %%XTMP1, %%T1, %%T2, %%T3
         ;byte-reflect the AAD data
         vpshufb         %%XTMP1, [rel SHUF_MASK]
         vpxor           %%AAD_HASH, %%XTMP1
@@ -534,7 +534,7 @@ mksection .text
 
 %%_fewer_than_16_bytes:
 	lea	r10, [%%PLAIN_CYPH_IN + %%DATA_OFFSET]
-	READ_SMALL_DATA_INPUT_AVX	xmm1, r10, %%PLAIN_CYPH_LEN, rax, r12, r15
+	READ_SMALL_DATA_INPUT_AVX	xmm1, r10, %%PLAIN_CYPH_LEN, rax
 
 %%_data_read:				;Finished reading in data
 
@@ -1820,7 +1820,7 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
 	jge	%%_large_enough_update
 
 	lea	r10, [%%PLAIN_CYPH_IN + %%DATA_OFFSET]
-	READ_SMALL_DATA_INPUT_AVX	xmm1, r10, r13, r12, r15, rax
+	READ_SMALL_DATA_INPUT_AVX	xmm1, r10, r13, r12
 	lea	r12, [SHIFT_MASK + 16]
         sub     r12, r13
 	jmp	%%_data_read
@@ -3146,7 +3146,7 @@ error_ghash:
 
 %%_fewer_than_16_bytes:
 	lea	r10, [%%PLAIN_IN]
-	READ_SMALL_DATA_INPUT_AVX	xmm1, r10, %%PLAIN_LEN, rax, r12, r15
+	READ_SMALL_DATA_INPUT_AVX	xmm1, r10, %%PLAIN_LEN, rax
 
         ; Finished reading in data
 %%_data_read:
@@ -3278,7 +3278,7 @@ no_full_blocks:
 
         ; Save next partial block
         mov	[arg2 + PBlockLen], arg4
-        READ_SMALL_DATA_INPUT_AVX xmm1, arg3, arg4, r11, r12, r13
+        READ_SMALL_DATA_INPUT_AVX xmm1, arg3, arg4, r11
         vpshufb xmm1, [rel SHUF_MASK]
         vpxor   xmm8, xmm1
         vmovdqu [arg2 + AadHash], xmm8

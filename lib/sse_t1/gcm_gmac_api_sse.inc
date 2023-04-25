@@ -270,7 +270,7 @@ no_full_blocks:
 
         ; Save next partial block
         mov	[arg2 + PBlockLen], arg4
-        READ_SMALL_DATA_INPUT_SSE xmm1, arg3, arg4, r11, r12, r13
+        READ_SMALL_DATA_INPUT_SSE xmm1, arg3, arg4, r11
         pshufb  xmm1, [rel SHUF_MASK]
         pxor    xmm8, xmm1
         movdqu  [arg2 + AadHash], xmm8
