@@ -897,6 +897,7 @@ uint32_t index_limit;
 uint32_t key_idxs[NUM_OFFSETS];
 uint32_t offsets[NUM_OFFSETS];
 uint32_t sha_size_incr = UINT32_MAX;
+uint32_t buffer_offset = 0;
 
 enum range {
         RANGE_MIN = 0,
@@ -1293,12 +1294,12 @@ get_key_pointer(const uint32_t index, const imb_uint128_t *p_keys)
 
 static uint8_t *get_src_buffer(const uint32_t index, uint8_t *p_buffer)
 {
-        return &p_buffer[offsets[index]];
+        return &p_buffer[offsets[index] + buffer_offset];
 }
 
 static uint8_t *get_dst_buffer(const uint32_t index, uint8_t *p_buffer)
 {
-        return &p_buffer[offsets[index] + sha_size_incr];
+        return &p_buffer[offsets[index] + buffer_offset + sha_size_incr];
 }
 
 static uint32_t get_next_index(uint32_t index)
@@ -3537,7 +3538,9 @@ static void usage(void)
                 "--cipher-burst-api: use cipher-only burst API for perf tests\n"
                 "--hash-burst-api: use hash-only burst API for perf tests\n"
                 "--burst-size: number of jobs to submit per burst\n"
-                "--quic-api: run QUIC-API specific tests only\n",
+                "--quic-api: run QUIC-API specific tests only\n"
+                "--buffer-offset val: val is 0 by default, valid range is 0 to 15.\n"
+                "                     This option allows to test unaligned buffer cases\n",
                 MAX_NUM_THREADS + 1);
 }
 
@@ -4142,6 +4145,17 @@ int main(int argc, char *argv[])
                         use_timebox = 0;
                 } else if (strcmp(argv[i], "--quic-api") == 0) {
                         quic_api_test = 1;
+                } else if (strcmp(argv[i], "--buffer-offset") == 0) {
+                        i = get_next_num_arg((const char * const *)argv, i,
+                                             argc, &buffer_offset,
+                                             sizeof(buffer_offset));
+                        if (buffer_offset > 15) {
+                                fprintf(stderr,
+                                        "Invalid --buffer-offset %u setting."
+                                        "Valid range is 0 to 15!\n",
+                                        (unsigned) buffer_offset);
+                                return EXIT_FAILURE;
+                        }
                 } else {
                         usage();
                         return EXIT_FAILURE;
@@ -4348,9 +4362,11 @@ int main(int argc, char *argv[])
 
         fprintf(stderr,
                 "Authentication size = cipher size + %u\n"
+                "Buffer offset = %u\n"
                 "Tool version: %s\n"
                 "Library version: %s\n",
-                sha_size_incr, IMB_VERSION_STR, imb_get_version_str());
+                sha_size_incr, buffer_offset,
+                IMB_VERSION_STR, imb_get_version_str());
 
         if (!use_job_api)
                 fprintf(stderr, "API type: direct\n");
