@@ -1,5 +1,5 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;  Copyright(c) 2011-2022 Intel Corporation All rights reserved.
+;  Copyright(c) 2011-2023 Intel Corporation All rights reserved.
 ;
 ;  Redistribution and use in source and binary forms, with or without
 ;  modification, are permitted provided that the following conditions
@@ -732,16 +732,18 @@
 %assign i (i+1)
 %endrep
 
-movdqu  %%T_key, [%%GDATA_KEY+16*0]
+                ;; ARK
+                movdqu  %%T_key, [%%GDATA_KEY+16*0]
 %assign i (9-%%num_initial_blocks)
 %rep %%num_initial_blocks
                 pxor    reg(i),%%T_key
 %assign i (i+1)
 %endrep
 
+                ;; encrypt N blocks (13 rounds for AES-256, 11 for AES-192 and 9 for AES-128)
 %assign j 1
-%rep NROUNDS							; encrypt N blocks with 13 key rounds (11 for GCM192)
-movdqu  %%T_key, [%%GDATA_KEY+16*j]
+%rep NROUNDS
+                movdqu  %%T_key, [%%GDATA_KEY+16*j]
 %assign i (9-%%num_initial_blocks)
 %rep %%num_initial_blocks
                 aesenc  reg(i),%%T_key
@@ -750,26 +752,57 @@ movdqu  %%T_key, [%%GDATA_KEY+16*j]
 
 %assign j (j+1)
 %endrep
-
-movdqu  %%T_key, [%%GDATA_KEY+16*j]				; encrypt with last (14th) key round (12 for GCM192)
+		;; last encryption round (14th for AES-256, 12th for AES-192 and 10th for AES-128)
+                movdqu  %%T_key, [%%GDATA_KEY+16*j]
 %assign i (9-%%num_initial_blocks)
 %rep %%num_initial_blocks
-                aesenclast      reg(i),%%T_key
+                aesenclast      reg(i), %%T_key
 %assign i (i+1)
 %endrep
 
-%assign i (9-%%num_initial_blocks)
+                ;; - load source buffer block
+                ;; - XOR AES result with plain/cipher text block
+                ;; - store to destination is postponed for later
+%assign i (9 - %%num_initial_blocks)
+%assign k 0
 %rep %%num_initial_blocks
-                XLDR  %%T1, [%%PLAIN_CYPH_IN + %%DATA_OFFSET]
+                XLDR    %%T1, [%%PLAIN_CYPH_IN + %%DATA_OFFSET + k*16]
                 pxor    reg(i), %%T1
-                XSTR  [%%CYPH_PLAIN_OUT + %%DATA_OFFSET], reg(i)            ; write back ciphertext for %%num_initial_blocks blocks
-                add     %%DATA_OFFSET, 16
-                %ifidn  %%ENC_DEC, DEC
-                movdqa  reg(i), %%T1
-                %endif
-                pshufb  reg(i), [SHUF_MASK]     ; prepare ciphertext for GHASH computations
-%assign i (i+1)
+%ifidn %%ENC_DEC, DEC
+                ;; DECRYPT
+%if k == 0
+                movdqa   %%T6, %%T1              ; save cipher text block 0 in a register
+%else
+                movdqa   [rsp + TMP %+ i], %%T1  ; aligned store of cipher text into stack
+%endif
+%endif
+
+%assign i (i + 1)
+%assign k (k + 1)
 %endrep
+
+                ;; Note: Loads done first and then stores.
+                ;;       This is to avoid potential loads being blocked on
+                ;;       false store-to-load condition.
+%assign i (9 - %%num_initial_blocks)
+%assign k 0
+%rep %%num_initial_blocks
+                XSTR    [%%CYPH_PLAIN_OUT + %%DATA_OFFSET + k*16], reg(i)
+%ifidn %%ENC_DEC, DEC
+                ;; DECRYPT
+                ;; - restore cipher text blocks into XMM1:XMM8
+%if k == 0
+                movdqa  reg(i), %%T6
+%else
+                movdqa  reg(i), [rsp + TMP %+ i]
+%endif
+%endif
+                pshufb  reg(i), [rel SHUF_MASK]     ; prepare ciphertext for GHASH computations
+%assign i (i + 1)
+%assign k (k + 1)
+%endrep
+
+                add     %%DATA_OFFSET, (16 * %%num_initial_blocks)
 
 %assign i (8-%%num_initial_blocks)
 %assign j (9-%%num_initial_blocks)
@@ -848,82 +881,58 @@ movdqu  %%T_key, [%%GDATA_KEY+16*j]				; encrypt with last (14th) key round (12 
 %endrep
 
                 movdqu          %%T_key, [%%GDATA_KEY+16*i]		; do final key round
-                aesenclast      %%XMM1, %%T_key
-                aesenclast      %%XMM2, %%T_key
-                aesenclast      %%XMM3, %%T_key
-                aesenclast      %%XMM4, %%T_key
-                aesenclast      %%XMM5, %%T_key
-                aesenclast      %%XMM6, %%T_key
-                aesenclast      %%XMM7, %%T_key
-                aesenclast      %%XMM8, %%T_key
 
-                XLDR  %%T1, [%%PLAIN_CYPH_IN + %%DATA_OFFSET + 16*0]
-                pxor    %%XMM1, %%T1
-                XSTR  [%%CYPH_PLAIN_OUT + %%DATA_OFFSET + 16*0], %%XMM1
-                %ifidn  %%ENC_DEC, DEC
-                movdqa  %%XMM1, %%T1
-                %endif
+                ;; - load source buffer block
+                ;; - do the last AES encryption round
+                ;; - XOR AES result with plain/cipher text block
+                ;; - store to destination is postponed for later
+%assign i 0
+%assign j 1
+%rep 8
+                XLDR            %%T1, [%%PLAIN_CYPH_IN + %%DATA_OFFSET + 16*i]
+                aesenclast      reg(j), %%T_key          ; XMM1:XMM8
+                pxor            reg(j), %%T1
+%ifidn %%ENC_DEC, DEC
+                ;; DECRYPT
+%if j == 1
+                movdqa          %%T6, %%T1              ; save cipher text block 0 in a register
+%else
+                movdqa          [rsp + TMP %+ j], %%T1  ; aligned store of cipher text into stack
+%endif
+%endif
 
-                XLDR  %%T1, [%%PLAIN_CYPH_IN + %%DATA_OFFSET + 16*1]
-                pxor    %%XMM2, %%T1
-                XSTR  [%%CYPH_PLAIN_OUT + %%DATA_OFFSET + 16*1], %%XMM2
-                %ifidn  %%ENC_DEC, DEC
-                movdqa  %%XMM2, %%T1
-                %endif
+%assign i (i+1)
+%assign j (j+1)
+%endrep
 
-                XLDR  %%T1, [%%PLAIN_CYPH_IN + %%DATA_OFFSET + 16*2]
-                pxor    %%XMM3, %%T1
-                XSTR  [%%CYPH_PLAIN_OUT + %%DATA_OFFSET + 16*2], %%XMM3
-                %ifidn  %%ENC_DEC, DEC
-                movdqa  %%XMM3, %%T1
-                %endif
+                ;; Note: Loads done first and then stores.
+                ;;       This is to avoid potential loads being blocked on
+                ;;       false store-to-load condition.
+%assign i 0
+%assign j 1
+%rep 8
+                ;; store cipher/plain text block
+                XSTR    [%%CYPH_PLAIN_OUT + %%DATA_OFFSET + 16*i], reg(j)
 
-                XLDR  %%T1, [%%PLAIN_CYPH_IN + %%DATA_OFFSET + 16*3]
-                pxor    %%XMM4, %%T1
-                XSTR  [%%CYPH_PLAIN_OUT + %%DATA_OFFSET + 16*3], %%XMM4
-                %ifidn  %%ENC_DEC, DEC
-                movdqa  %%XMM4, %%T1
-                %endif
+%ifidn %%ENC_DEC, DEC
+                ;; DECRYPT
+                ;; - restore cipher text blocks into XMM1:XMM8
+%if j == 1
+                movdqa  reg(j), %%T6
+%else
+                movdqa  reg(j), [rsp + TMP %+ j]
+%endif
+%endif
+                ;; prepare cipher text block for GHASH
+                pshufb  reg(j), [rel SHUF_MASK] ; perform a 16Byte swap
 
-                XLDR  %%T1, [%%PLAIN_CYPH_IN + %%DATA_OFFSET + 16*4]
-                pxor    %%XMM5, %%T1
-                XSTR  [%%CYPH_PLAIN_OUT + %%DATA_OFFSET + 16*4], %%XMM5
-                %ifidn  %%ENC_DEC, DEC
-                movdqa  %%XMM5, %%T1
-                %endif
-
-                XLDR  %%T1, [%%PLAIN_CYPH_IN + %%DATA_OFFSET + 16*5]
-                pxor    %%XMM6, %%T1
-                XSTR  [%%CYPH_PLAIN_OUT + %%DATA_OFFSET + 16*5], %%XMM6
-                %ifidn  %%ENC_DEC, DEC
-                movdqa  %%XMM6, %%T1
-                %endif
-
-                XLDR  %%T1, [%%PLAIN_CYPH_IN + %%DATA_OFFSET + 16*6]
-                pxor    %%XMM7, %%T1
-                XSTR  [%%CYPH_PLAIN_OUT + %%DATA_OFFSET + 16*6], %%XMM7
-                %ifidn  %%ENC_DEC, DEC
-                movdqa  %%XMM7, %%T1
-                %endif
-
-                XLDR  %%T1, [%%PLAIN_CYPH_IN + %%DATA_OFFSET + 16*7]
-                pxor    %%XMM8, %%T1
-                XSTR  [%%CYPH_PLAIN_OUT + %%DATA_OFFSET + 16*7], %%XMM8
-                %ifidn  %%ENC_DEC, DEC
-                movdqa  %%XMM8, %%T1
-                %endif
+%assign i (i+1)
+%assign j (j+1)
+%endrep
 
                 add     %%DATA_OFFSET, 128
 
-                pshufb  %%XMM1, [SHUF_MASK]             ; perform a 16Byte swap
                 pxor    %%XMM1, %%T3                    ; combine GHASHed value with the corresponding ciphertext
-                pshufb  %%XMM2, [SHUF_MASK]             ; perform a 16Byte swap
-                pshufb  %%XMM3, [SHUF_MASK]             ; perform a 16Byte swap
-                pshufb  %%XMM4, [SHUF_MASK]             ; perform a 16Byte swap
-                pshufb  %%XMM5, [SHUF_MASK]             ; perform a 16Byte swap
-                pshufb  %%XMM6, [SHUF_MASK]             ; perform a 16Byte swap
-                pshufb  %%XMM7, [SHUF_MASK]             ; perform a 16Byte swap
-                pshufb  %%XMM8, [SHUF_MASK]             ; perform a 16Byte swap
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -1239,6 +1248,17 @@ movdqu  %%T_key, [%%GDATA_KEY+16*j]				; encrypt with last (14th) key round (12 
                 aesenc  %%XMM7, %%T1
                 aesenc  %%XMM8, %%T1
 
+        ;; accumulate product into %%T4:%%T7
+        pxor    %%T2, %%T6
+        pxor    %%T2, %%T4
+        pxor    %%T2, %%T7
+
+        movdqa  %%T3, %%T2
+        pslldq  %%T3, 8                                 ; shift-L %%T3 2 DWs
+        psrldq  %%T2, 8                                 ; shift-R %%T2 2 DWs
+        pxor    %%T7, %%T3
+        pxor    %%T4, %%T2                              ; accumulate the results in %%T4:%%T7
+
 %ifdef GCM128_MODE
 		movdqu	%%T5, [%%GDATA + 16*10]
 %endif
@@ -1309,37 +1329,30 @@ movdqu  %%T_key, [%%GDATA_KEY+16*j]				; encrypt with last (14th) key round (12 
 	        movdqu	%%T5, [%%GDATA + 16*14]        ; finish last key round
 %endif
 
+                ;; - load source buffer block
+                ;; - do the last AES encryption round
+                ;; - XOR AES result with plain/cipher text block
+                ;; - store to destination is postponed for later
 %assign i 0
 %assign j 1
 %rep 8
-                XLDR  %%T1, [%%PLAIN_CYPH_IN+%%DATA_OFFSET+16*i]
-
+                XLDR            %%T1, [%%PLAIN_CYPH_IN+%%DATA_OFFSET+16*i]
+                aesenclast      reg(j), %%T5          ; XMM1:XMM8
+                pxor            reg(j), %%T1
 %ifidn %%ENC_DEC, DEC
-                movdqa  %%T3, %%T1
+                ;; DECRYPT
+%if j == 1
+                movdqa          %%T6, %%T1              ; save cipher text block 0 in a register
+%else
+                movdqa          [rsp + TMP %+ j], %%T1  ; aligned store of cipher text into stack
+%endif
 %endif
 
-                pxor    %%T1, %%T5
-                aesenclast      reg(j), %%T1          ; XMM1:XMM8
-                XSTR  [%%CYPH_PLAIN_OUT+%%DATA_OFFSET+16*i], reg(j)       ; Write to the Output buffer
-
-%ifidn %%ENC_DEC, DEC
-                movdqa  reg(j), %%T3
-%endif
 %assign i (i+1)
 %assign j (j+1)
 %endrep
 
-        pxor    %%T2, %%T6
-        pxor    %%T2, %%T4
-        pxor    %%T2, %%T7
-
-        movdqa  %%T3, %%T2
-        pslldq  %%T3, 8                                 ; shift-L %%T3 2 DWs
-        psrldq  %%T2, 8                                 ; shift-R %%T2 2 DWs
-        pxor    %%T7, %%T3
-        pxor    %%T4, %%T2                              ; accumulate the results in %%T4:%%T7
-
-        ;first phase of the reduction
+        ;; first phase of the reduction
         movdqa  %%T2, %%T7
         movdqa  %%T3, %%T7
         movdqa  %%T1, %%T7                              ; move %%T7 into %%T2, %%T3, %%T1 in order to perform the three shifts independently
@@ -1355,18 +1368,35 @@ movdqu  %%T_key, [%%GDATA_KEY+16*j]				; encrypt with last (14th) key round (12 
 
         pslldq  %%T2, 12                                ; shift-L %%T2 3 DWs
         pxor    %%T7, %%T2                              ; first phase of the reduction complete
+
+                ;; Note: Loads done first and then stores.
+                ;;       This is to avoid potential loads being blocked on
+                ;;       false store-to-load condition.
+%assign i 0
+%assign j 1
+%rep 8
+                ;; store cipher/plain text block
+                XSTR    [%%CYPH_PLAIN_OUT + %%DATA_OFFSET + 16*i], reg(j)
+
+%ifidn %%ENC_DEC, DEC
+                ;; DECRYPT
+                ;; - restore cipher text blocks into XMM1:XMM8
+%if j == 1
+                movdqa  reg(j), %%T6
+%else
+                movdqa  reg(j), [rsp + TMP %+ j]
+%endif
+%endif
+                ;; prepare cipher text block for GHASH
+                pshufb  reg(j), [rel SHUF_MASK] ; perform a 16Byte swap
+
+%assign i (i+1)
+%assign j (j+1)
+%endrep
+
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-                pshufb  %%XMM1, [SHUF_MASK]     ; perform a 16Byte swap
-                pshufb  %%XMM2, [SHUF_MASK]     ; perform a 16Byte swap
-                pshufb  %%XMM3, [SHUF_MASK]     ; perform a 16Byte swap
-                pshufb  %%XMM4, [SHUF_MASK]     ; perform a 16Byte swap
-                pshufb  %%XMM5, [SHUF_MASK]     ; perform a 16Byte swap
-                pshufb  %%XMM6, [SHUF_MASK]     ; perform a 16Byte swap
-                pshufb  %%XMM7, [SHUF_MASK]     ; perform a 16Byte swap
-                pshufb  %%XMM8, [SHUF_MASK]     ; perform a 16Byte swap
-
-        ;second phase of the reduction
+        ;; second phase of the reduction
         movdqa  %%T2,%%T7                               ; make 3 copies of %%T7 (in in %%T2, %%T3, %%T1) for doing three shift operations
         movdqa  %%T3,%%T7
         movdqa  %%T1,%%T7
