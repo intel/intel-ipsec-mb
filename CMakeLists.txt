@@ -42,6 +42,9 @@ cmake_minimum_required(VERSION 3.16)
 project(intel-ipsec-mb VERSION ${IPSEC_MB_VERSION}
     DESCRIPTION "Intel(R) IPsec Multi-Buffer library")
 
+# add testing support
+include(CTest)
+
 # project options list (used by print_help target)
 set(IPSEC_MB_OPTIONS CMAKE_BUILD_TYPE)
 
