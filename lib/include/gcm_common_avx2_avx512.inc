@@ -725,20 +725,43 @@ default rel
 %endif ; %if(%%num_initial_blocks>0)
 
 %assign i (9 - %%num_initial_blocks)
+%assign k 0
 %rep %%num_initial_blocks
-                VXLDR  %%T1, [%%PLAIN_CYPH_IN + %%DATA_OFFSET]
-                vpxor    reg(i), reg(i), %%T1
+                VXLDR   %%T1, [%%PLAIN_CYPH_IN + %%DATA_OFFSET + k*16]
+                vpxor   reg(i), reg(i), %%T1
+
+%ifidn  %%ENC_DEC, DEC
+%if k == 0
+                vmovdqa %%T6, %%T1
+%else
+                vmovdqa [rsp + TMP %+ i], %%T1
+%endif
+%endif
+
+%assign i (i + 1)
+%assign k (k + 1)
+%endrep
+
+%assign i (9 - %%num_initial_blocks)
+%assign k 0
+%rep %%num_initial_blocks
                 ;; Write back ciphertext for %%num_initial_blocks blocks
-                VXSTR  [%%CYPH_PLAIN_OUT + %%DATA_OFFSET], reg(i)
-                add     %%DATA_OFFSET, 16
+                VXSTR  [%%CYPH_PLAIN_OUT + %%DATA_OFFSET + k*16], reg(i)
                 ;; Prepare ciphertext for GHASH computations
 %ifidn  %%ENC_DEC, DEC
-                vpshufb  reg(i), %%T1, [rel SHUF_MASK]
+%if k == 0
+                vpshufb reg(i), %%T6, [rel SHUF_MASK]
+%else
+                vmovdqa %%T1, [rsp + TMP %+ i]
+                vpshufb reg(i), %%T1, [rel SHUF_MASK]
+%endif
 %else
                 vpshufb  reg(i), reg(i), [rel SHUF_MASK]
 %endif
-%assign i (i+1)
+%assign i (i + 1)
+%assign k (k + 1)
 %endrep
+                add     %%DATA_OFFSET, (16 * %%num_initial_blocks)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -1090,65 +1113,15 @@ default rel
         vpxor           %%T3, %%T1, %%T4
 %else
         ;; The hash should end up in T3
-        vmovdqa  %%T3, %%T2
+        vmovdqa         %%T3, %%T2
 %endif
 
         ;; Final hash is now in T3
-%if %%num_initial_blocks > 0
-        ;; NOTE: obsolete in case %%num_initial_blocks = 0
-        sub     %%LENGTH, 16*%%num_initial_blocks
-%endif
-
-                VXLDR  %%T1, [%%PLAIN_CYPH_IN + %%DATA_OFFSET + 16*0]
-                vpxor    %%XMM1, %%XMM1, %%T1
-                VXSTR  [%%CYPH_PLAIN_OUT + %%DATA_OFFSET + 16*0], %%XMM1
-                %ifidn  %%ENC_DEC, DEC
-                vmovdqa  %%XMM1, %%T1
-                %endif
-
-                VXLDR  %%T1, [%%PLAIN_CYPH_IN + %%DATA_OFFSET + 16*1]
-                vpxor    %%XMM2, %%XMM2, %%T1
-                VXSTR  [%%CYPH_PLAIN_OUT + %%DATA_OFFSET + 16*1], %%XMM2
-                %ifidn  %%ENC_DEC, DEC
-                vmovdqa  %%XMM2, %%T1
-                %endif
-
-                VXLDR  %%T1, [%%PLAIN_CYPH_IN + %%DATA_OFFSET + 16*2]
-                vpxor    %%XMM3, %%XMM3, %%T1
-                VXSTR  [%%CYPH_PLAIN_OUT + %%DATA_OFFSET + 16*2], %%XMM3
-                %ifidn  %%ENC_DEC, DEC
-                vmovdqa  %%XMM3, %%T1
-                %endif
-
-                VXLDR  %%T1, [%%PLAIN_CYPH_IN + %%DATA_OFFSET + 16*3]
-                vpxor    %%XMM4, %%XMM4, %%T1
-                VXSTR  [%%CYPH_PLAIN_OUT + %%DATA_OFFSET + 16*3], %%XMM4
-                %ifidn  %%ENC_DEC, DEC
-                vmovdqa  %%XMM4, %%T1
-                %endif
-
-                VXLDR  %%T1, [%%PLAIN_CYPH_IN + %%DATA_OFFSET + 16*4]
-                vpxor    %%XMM5, %%XMM5, %%T1
-                VXSTR  [%%CYPH_PLAIN_OUT + %%DATA_OFFSET + 16*4], %%XMM5
-                %ifidn  %%ENC_DEC, DEC
-                vmovdqa  %%XMM5, %%T1
-                %endif
-
-                VXLDR  %%T1, [%%PLAIN_CYPH_IN + %%DATA_OFFSET + 16*5]
-                vpxor    %%XMM6, %%XMM6, %%T1
-                VXSTR  [%%CYPH_PLAIN_OUT + %%DATA_OFFSET + 16*5], %%XMM6
-                %ifidn  %%ENC_DEC, DEC
-                vmovdqa  %%XMM6, %%T1
-                %endif
-
-               VXLDR  %%T1, [%%PLAIN_CYPH_IN + %%DATA_OFFSET + 16*6]
-                vpxor    %%XMM7, %%XMM7, %%T1
-                VXSTR  [%%CYPH_PLAIN_OUT + %%DATA_OFFSET + 16*6], %%XMM7
-                %ifidn  %%ENC_DEC, DEC
-                vmovdqa  %%XMM7, %%T1
-                %endif
 
 %if %%num_initial_blocks > 0
+                ;; NOTE: obsolete in case %%num_initial_blocks = 0
+                sub     %%LENGTH, 16 * %%num_initial_blocks
+
                 ;; NOTE: 'jl' is never taken for %%num_initial_blocks = 0
                 ;;      This macro is executed for length 128 and up,
                 ;;      zero length is checked in GCM_ENC_DEC.
@@ -1158,30 +1131,97 @@ default rel
                 cmp %%LENGTH, 128
                 jl %%_initial_skip_last_word_write
 %endif
-                VXLDR  %%T1, [%%PLAIN_CYPH_IN + %%DATA_OFFSET + 16*7]
-                vpxor    %%XMM8, %%XMM8, %%T1
-                VXSTR  [%%CYPH_PLAIN_OUT + %%DATA_OFFSET + 16*7], %%XMM8
-                %ifidn  %%ENC_DEC, DEC
-                vmovdqa  %%XMM8, %%T1
-                %endif
+
+                ;; Load 8 plain/cipher text blocks and XOR them against AES blocks
+%assign i 1
+%rep 8
+%assign k (i - 1)
+
+                VXLDR   %%T1, [%%PLAIN_CYPH_IN + %%DATA_OFFSET + 16*k]
+                vpxor   reg(i), reg(i), %%T1
+%ifidn  %%ENC_DEC, DEC
+%if i == 1
+                vmovdqa %%T6, %%T1
+%else
+                vmovdqa [rsp + TMP %+ i], %%T1
+%endif
+%endif
+%assign i (i + 1)
+%endrep
+
+                ;; Store 8 cipher/plain text blocks and prepare cipher text blocks for GHASH
+%assign i 1
+%rep 8
+%assign k (i - 1)
+                VXSTR  [%%CYPH_PLAIN_OUT + %%DATA_OFFSET + 16*k], reg(i)
+%ifidn  %%ENC_DEC, DEC
+%if i == 1
+                vmovdqa reg(i), %%T6
+%else
+                vmovdqa reg(i), [rsp + TMP %+ i]
+%endif
+%endif
+%assign i (i + 1)
+%endrep
 
                 ;; Update %%LENGTH with the number of blocks processed
-                sub     %%LENGTH, 16
-                add     %%DATA_OFFSET, 16
-%%_initial_skip_last_word_write:
-                sub     %%LENGTH, 128-16
-                add     %%DATA_OFFSET, 128-16
+                sub     %%LENGTH, 8*16
+                add     %%DATA_OFFSET, 8*16
 
-                vpshufb  %%XMM1, [rel SHUF_MASK]             ; perform a 16Byte swap
+%if %%num_initial_blocks > 0
+                ;; jmp and %%_initial_skip_last_word_write not required for %%num_initial_blocks=0 case
+                jmp     %%_initial_words_done
+
+%%_initial_skip_last_word_write:
+                ;; Load 7 plain/cipher text blocks and XOR them against AES blocks
+%assign i 1
+%rep 7
+%assign k (i - 1)
+
+                VXLDR   %%T1, [%%PLAIN_CYPH_IN + %%DATA_OFFSET + 16*k]
+                vpxor   reg(i), reg(i), %%T1
+%ifidn  %%ENC_DEC, DEC
+%if i == 1
+                vmovdqa %%T6, %%T1
+%else
+                vmovdqa [rsp + TMP %+ i], %%T1
+%endif
+%endif
+%assign i (i + 1)
+%endrep
+
+                ;; Store 7 cipher/plain text blocks and prepare cipher text blocks for GHASH
+%assign i 1
+%rep 7
+%assign k (i - 1)
+                VXSTR  [%%CYPH_PLAIN_OUT + %%DATA_OFFSET + 16*k], reg(i)
+%ifidn  %%ENC_DEC, DEC
+%if i == 1
+                vmovdqa reg(i), %%T6
+%else
+                vmovdqa reg(i), [rsp + TMP %+ i]
+%endif
+%endif
+%assign i (i + 1)
+%endrep
+
+                ;; Update %%LENGTH with the number of blocks processed
+                sub     %%LENGTH, 7*16
+                add     %%DATA_OFFSET, 7*16
+
+%%_initial_words_done:
+%endif ;; %%num_initial_blocks > 0
+
+                vpshufb %%XMM1, [rel SHUF_MASK]             ; perform a 16Byte swap
                 ;; Combine GHASHed value with the corresponding ciphertext
-                vpxor    %%XMM1, %%XMM1, %%T3
-                vpshufb  %%XMM2, [rel SHUF_MASK]             ; perform a 16Byte swap
-                vpshufb  %%XMM3, [rel SHUF_MASK]             ; perform a 16Byte swap
-                vpshufb  %%XMM4, [rel SHUF_MASK]             ; perform a 16Byte swap
-                vpshufb  %%XMM5, [rel SHUF_MASK]             ; perform a 16Byte swap
-                vpshufb  %%XMM6, [rel SHUF_MASK]             ; perform a 16Byte swap
-                vpshufb  %%XMM7, [rel SHUF_MASK]             ; perform a 16Byte swap
-                vpshufb  %%XMM8, [rel SHUF_MASK]             ; perform a 16Byte swap
+                vpxor   %%XMM1, %%XMM1, %%T3
+                vpshufb %%XMM2, [rel SHUF_MASK]             ; perform a 16Byte swap
+                vpshufb %%XMM3, [rel SHUF_MASK]             ; perform a 16Byte swap
+                vpshufb %%XMM4, [rel SHUF_MASK]             ; perform a 16Byte swap
+                vpshufb %%XMM5, [rel SHUF_MASK]             ; perform a 16Byte swap
+                vpshufb %%XMM6, [rel SHUF_MASK]             ; perform a 16Byte swap
+                vpshufb %%XMM7, [rel SHUF_MASK]             ; perform a 16Byte swap
+                vpshufb %%XMM8, [rel SHUF_MASK]             ; perform a 16Byte swap
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -1264,21 +1304,43 @@ default rel
 ;;; Hash all but the last block of data
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-%assign i (9-%%num_initial_blocks)
-%rep %%num_initial_blocks-1
+%assign k 0
+%assign i (9 - %%num_initial_blocks)
+%rep %%num_initial_blocks - 1
                 ;; Encrypt the message for all but the last block
-                VXLDR  %%T1, [%%PLAIN_CYPH_IN + %%DATA_OFFSET]
-                vpxor    reg(i), reg(i), %%T1
-                ;; write back ciphertext for %%num_initial_blocks blocks
-                VXSTR  [%%CYPH_PLAIN_OUT + %%DATA_OFFSET], reg(i)
-                add     %%DATA_OFFSET, 16
-                %ifidn  %%ENC_DEC, DEC
-                    vmovdqa  reg(i), %%T1
-                %endif
-                ;; Prepare ciphertext for GHASH computations
-                vpshufb  reg(i), [rel SHUF_MASK]
-%assign i (i+1)
+                VXLDR   %%T1, [%%PLAIN_CYPH_IN + %%DATA_OFFSET + 16*k]
+                vpxor   reg(i), reg(i), %%T1
+%ifidn  %%ENC_DEC, DEC
+%if k == 0
+                vmovdqa %%T6, %%T1
+%else
+                vmovdqa [rsp + TMP %+ i], %%T1
+%endif
+%endif
+%assign i (i + 1)
+%assign k (k + 1)
 %endrep
+
+%assign k 0
+%assign i (9 - %%num_initial_blocks)
+%rep %%num_initial_blocks - 1
+                ;; write back ciphertext for %%num_initial_blocks blocks
+                VXSTR   [%%CYPH_PLAIN_OUT + %%DATA_OFFSET + 16*k], reg(i)
+                ;; Prepare ciphertext for GHASH computations
+%ifidn  %%ENC_DEC, DEC
+%if k == 0
+                vpshufb reg(i), %%T6, [rel SHUF_MASK]
+%else
+                vmovdqa reg(i), [rsp + TMP %+ i]
+                vpshufb reg(i), reg(i), [rel SHUF_MASK]
+%endif
+%else ; ENC
+                vpshufb reg(i), reg(i), [rel SHUF_MASK]
+%endif
+%assign i (i + 1)
+%assign k (k + 1)
+%endrep
+                add     %%DATA_OFFSET, (16 * (%%num_initial_blocks - 1))
 
 %if %%num_initial_blocks > 1
                 ;; The final block of data may be <16B
@@ -1877,75 +1939,47 @@ default rel
                 vmovdqu %%T5, [%%GDATA + 16*14]
 %endif                          ; GCM256
 
-%assign i 0
-%assign j 1
-%rep 8
-
-        ;; SNP TBD: This is pretty ugly - consider whether just XORing the
-        ;; data in after vaesenclast is simpler and performant. Would
-        ;; also have to ripple it through partial block and ghash_mul_8.
-%ifidn %%FULL_PARTIAL, full
-    %ifdef  NT_LD
-        VXLDR   %%T2, [%%PLAIN_CYPH_IN+%%DATA_OFFSET+16*i]
-        vpxor   %%T2, %%T2, %%T5
-    %else
-        vpxor   %%T2, %%T5, [%%PLAIN_CYPH_IN+%%DATA_OFFSET+16*i]
-    %endif
-
-    %ifidn %%ENC_DEC, ENC
-        vaesenclast     reg(j), reg(j), %%T2
-    %else
-        vaesenclast     %%T3, reg(j), %%T2
-        vpxor   reg(j), %%T2, %%T5
-        VXSTR [%%CYPH_PLAIN_OUT+%%DATA_OFFSET+16*i], %%T3
-    %endif
-
-%else
-    ; Don't read the final data during partial block processing
-    %ifdef  NT_LD
-        %if (i<7)
-            VXLDR   %%T2, [%%PLAIN_CYPH_IN+%%DATA_OFFSET+16*i]
-            vpxor   %%T2, %%T2, %%T5
-        %else
-            ;; Stage the key directly in T2 rather than hash it with plaintext
-            vmovdqu %%T2, %%T5
-        %endif
-    %else
-        %if (i<7)
-            vpxor   %%T2, %%T5, [%%PLAIN_CYPH_IN+%%DATA_OFFSET+16*i]
-        %else
-            ;; Stage the key directly in T2 rather than hash it with plaintext
-            vmovdqu %%T2, %%T5
-        %endif
-    %endif
-
-    %ifidn %%ENC_DEC, ENC
-        vaesenclast     reg(j), reg(j), %%T2
-    %else
-        %if (i<7)
-            vaesenclast     %%T3, reg(j), %%T2
-            vpxor   reg(j), %%T2, %%T5
-            ;; Do not read the data since it could fault
-            VXSTR [%%CYPH_PLAIN_OUT+%%DATA_OFFSET+16*i], %%T3
-        %else
-            vaesenclast     reg(j), reg(j), %%T2
-        %endif
-    %endif
-%endif
-
-%assign i (i+1)
-%assign j (j+1)
-%endrep
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        ;; accumulate product into %%T1:%%T7
 
         vpslldq %%T3, %%T6, 8                                   ; shift-L %%T3 2 DWs
         vpsrldq %%T6, %%T6, 8                                   ; shift-R %%T2 2 DWs
         vpxor   %%T7, %%T7, %%T3
         vpxor   %%T1, %%T1, %%T6                                ; accumulate the results in %%T1:%%T7
 
+%assign i 0
+%assign j 1
+%rep 8
+
+%assign skip_load_and_xor 0
+%ifnidn %%FULL_PARTIAL, full
+%if i >= 7
+;; if partial case and dealing with the last block then skip load and xor
+%assign skip_load_and_xor 1
+%endif
+%endif
+
+%if skip_load_and_xor == 0
+                VXLDR           %%T2, [%%PLAIN_CYPH_IN + %%DATA_OFFSET + 16*i]
+%endif
+                vaesenclast     reg(j), reg(j), %%T5
+%if skip_load_and_xor == 0
+                vpxor           reg(j), reg(j), %%T2
+%ifidn %%ENC_DEC, DEC
+%if i == 0
+                vmovdqa         %%T6, %%T2
+%else
+                vmovdqa         [rsp + TMP %+ j], %%T2
+%endif ; i
+%endif ; DEC
+%endif ; skip_load_and_xor
+
+%assign i (i + 1)
+%assign j (j + 1)
+%endrep
+
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        ;first phase of the reduction
+        ;; first phase of the reduction
         vmovdqa         %%T3, [rel POLY2]
 
         vpclmulqdq      %%T2, %%T3, %%T7, 0x01
@@ -1954,23 +1988,34 @@ default rel
         vpxor           %%T7, %%T7, %%T2                        ; first phase of the reduction complete
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-    %ifidn %%ENC_DEC, ENC
-        ; Write to the Ciphertext buffer
-        VXSTR   [%%CYPH_PLAIN_OUT+%%DATA_OFFSET+16*0], %%XMM1
-        VXSTR   [%%CYPH_PLAIN_OUT+%%DATA_OFFSET+16*1], %%XMM2
-        VXSTR   [%%CYPH_PLAIN_OUT+%%DATA_OFFSET+16*2], %%XMM3
-        VXSTR   [%%CYPH_PLAIN_OUT+%%DATA_OFFSET+16*3], %%XMM4
-        VXSTR   [%%CYPH_PLAIN_OUT+%%DATA_OFFSET+16*4], %%XMM5
-        VXSTR   [%%CYPH_PLAIN_OUT+%%DATA_OFFSET+16*5], %%XMM6
-        VXSTR   [%%CYPH_PLAIN_OUT+%%DATA_OFFSET+16*6], %%XMM7
-        %ifidn %%FULL_PARTIAL, full
-            ;; Avoid writing past the buffer if handling a partial block
-            VXSTR   [%%CYPH_PLAIN_OUT+%%DATA_OFFSET+16*7], %%XMM8
-        %endif
-    %endif
+%assign i 0
+%assign j 1
+%rep 8
+%assign skip_store 0
+%ifnidn %%FULL_PARTIAL, full
+%if i >= 7
+;; if partial case and dealing with the last block then skip store
+%assign skip_store 1
+%endif
+%endif
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        ;second phase of the reduction
+%if skip_store == 0
+                VXSTR           [%%CYPH_PLAIN_OUT + %%DATA_OFFSET + 16*i], reg(j)
+%ifidn %%ENC_DEC, DEC
+%if i == 0
+                vmovdqa         reg(j), %%T6
+%else
+                vmovdqa         reg(j), [rsp + TMP %+ j]
+%endif ; i
+%endif ; DEC
+%endif ; skip_store
+
+%assign i (i + 1)
+%assign j (j + 1)
+%endrep
+
+        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        ;; second phase of the reduction
         vpclmulqdq      %%T2, %%T3, %%T7, 0x00
         vpsrldq         %%T2, %%T2, 4                                   ; shift-R xmm2 1 DW (Shift-R only 1-DW to obtain 2-DWs shift-R)
 
@@ -1988,7 +2033,7 @@ default rel
                 vpshufb %%XMM5, [rel SHUF_MASK]             ; perform a 16Byte swap
                 vpshufb %%XMM6, [rel SHUF_MASK]             ; perform a 16Byte swap
                 vpshufb %%XMM7, [rel SHUF_MASK]             ; perform a 16Byte swap
-        vpshufb %%XMM8, [rel SHUF_MASK]             ; perform a 16Byte swap
+                vpshufb %%XMM8, [rel SHUF_MASK]             ; perform a 16Byte swap
 
         vpxor   %%XMM1, %%T1
 
