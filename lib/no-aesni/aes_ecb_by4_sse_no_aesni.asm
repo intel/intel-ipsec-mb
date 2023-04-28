@@ -33,7 +33,6 @@
 %define AES_ECB_DEC_192 aes_ecb_dec_192_sse_no_aesni
 %define AES_ECB_DEC_256 aes_ecb_dec_256_sse_no_aesni
 %define AES_ECB_QUIC_ENC_128 aes_ecb_quic_enc_128_sse_no_aesni
-%define AES_ECB_QUIC_ENC_192 aes_ecb_quic_enc_192_sse_no_aesni
 %define AES_ECB_QUIC_ENC_256 aes_ecb_quic_enc_256_sse_no_aesni
 %include "sse_t1/aes128_ecb_by4_sse.asm"
 %include "sse_t1/aes_ecb_quic_x8_sse.asm"

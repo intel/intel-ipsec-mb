@@ -34,7 +34,7 @@
 ;                             void    *out,
 ;                             UINT64   num_buffers);
 ;
-; x = key size (128/192/256)
+; x = key size (128/256)
 ; arg 1: IN: array of pointers to input buffers
 ; arg 2: KEYS: pointer to keys (common for all buffers)
 ; arg 3: OUT: array of pointers to output buffers)
@@ -47,7 +47,6 @@
 %include "include/cet.inc"
 
 %define AES_ECB_QUIC_ENC_128 aes_ecb_quic_enc_128_avx
-%define AES_ECB_QUIC_ENC_192 aes_ecb_quic_enc_192_avx
 %define AES_ECB_QUIC_ENC_256 aes_ecb_quic_enc_256_avx
 
 ;; =============================================================================
@@ -178,8 +177,8 @@ mksection .text
                 XDATA1, XDATA2, XDATA3, XDATA4, XDATA5,\
                 XDATA6, XDATA7
 %assign %%I 0
-; Perform aesenc encryption/decryption on initial blocks
-%rep (%%NROUNDS + 1)          ; 10/12/14
+; Perform aesenc encryption on initial blocks
+%rep (%%NROUNDS + 1)          ; 10/14
         movdqu      XKEY1, [KEYS + %%I*16]
         XMM_AESENC_ROUND_BLOCKS_AVX_0_8 XDATA0, XDATA1, XDATA2, XDATA3, XDATA4,\
                 XDATA5, XDATA6, XDATA7, XKEY1, %%I, no_data,\
@@ -204,7 +203,7 @@ align 16
                 XDATA6, XDATA7
 %assign %%I 0
 ; Perform AES encryption/decryption on 8 blocks
-%rep (%%NROUNDS + 1)          ; 10/12/14
+%rep (%%NROUNDS + 1)          ; 10/14
         movdqu      XKEY1, [KEYS + %%I*16]
         XMM_AESENC_ROUND_BLOCKS_AVX_0_8 XDATA0, XDATA1, XDATA2, XDATA3, XDATA4,\
                 XDATA5, XDATA6, XDATA7, XKEY1, %%I, no_data,\
@@ -230,12 +229,6 @@ MKGLOBAL(AES_ECB_QUIC_ENC_128,function,internal)
 AES_ECB_QUIC_ENC_128:
         endbranch64
         AES_ECB_QUIC 10
-
-align 16
-MKGLOBAL(AES_ECB_QUIC_ENC_192,function,internal)
-AES_ECB_QUIC_ENC_192:
-        endbranch64
-        AES_ECB_QUIC 12
 
 align 16
 MKGLOBAL(AES_ECB_QUIC_ENC_256,function,internal)

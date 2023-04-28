@@ -1237,7 +1237,6 @@ typedef struct IMB_MGR {
         aes_cfb_t aes256_cfb_one;
 
         aes_ecb_quic_t aes_ecb_128_quic;
-        aes_ecb_quic_t aes_ecb_192_quic;
         aes_ecb_quic_t aes_ecb_256_quic;
 
         void (*set_suite_id)(struct IMB_MGR *, IMB_JOB *);

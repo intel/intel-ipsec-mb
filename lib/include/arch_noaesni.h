@@ -85,8 +85,6 @@ void aes_ecb_dec_128_sse_no_aesni(const void *in, const void *keys,
 
 void aes_ecb_quic_enc_128_sse_no_aesni(const void *in, const void *keys,
                                        void *out, uint64_t num_buffers);
-void aes_ecb_quic_enc_192_sse_no_aesni(const void *in, const void *keys,
-                                       void *out, uint64_t num_buffers);
 void aes_ecb_quic_enc_256_sse_no_aesni(const void *in, const void *keys,
                                        void *out, uint64_t num_buffers);
 

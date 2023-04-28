@@ -34,7 +34,7 @@
 ;                                     void    *out,
 ;                                     UINT64   num_buffers);
 ;
-; x = key size (128/192/256)
+; x = key size (128/256)
 ; arg 1: IN: array of pointers to input buffers
 ; arg 2: KEYS: pointer to keys (common for all buffers)
 ; arg 3: OUT: array of pointers to output buffers)
@@ -47,7 +47,6 @@
 %include "include/cet.inc"
 
 %define AES_ECB_QUIC_ENC_128 aes_ecb_quic_enc_128_vaes_avx512
-%define AES_ECB_QUIC_ENC_192 aes_ecb_quic_enc_192_vaes_avx512
 %define AES_ECB_QUIC_ENC_256 aes_ecb_quic_enc_256_vaes_avx512
 
 %ifdef LINUX
@@ -217,7 +216,7 @@ mksection .text
                 YDATA6, YDATA7
 
 ; Perform AES encryption on blocks
-%rep (%%NROUNDS + 1)          ; 10/12/14
+%rep (%%NROUNDS + 1)          ; 10/14
         vbroadcasti128      YKEY1, [KEYS + %%I*16]
         YMM_AESENC_ROUND_BLOCKS_0_16 YDATA0, YDATA1, YDATA2, YDATA3, YDATA4,\
                 YDATA5, YDATA6, YDATA7, YKEY1, %%I, no_data,\
@@ -247,9 +246,9 @@ align 16
                 YDATA1, YDATA2, YDATA3, YDATA4, YDATA5,\
                 YDATA6, YDATA7
 
-        ; Perform AES encryption/decryption on 16 blocks
+        ; Perform AES encryption on 16 blocks
 %assign %%ROUNDNO 0        ; current key number
-%rep (%%NROUNDS + 1)          ; 10/12/14
+%rep (%%NROUNDS + 1)          ; 10/14
         vbroadcasti128      YKEY1, [KEYS + %%ROUNDNO*16]
         YMM_AESENC_ROUND_BLOCKS_0_16 YDATA0, YDATA1, YDATA2, YDATA3, YDATA4,\
                 YDATA5, YDATA6, YDATA7, YKEY1, %%ROUNDNO, no_data,\
@@ -283,13 +282,6 @@ MKGLOBAL(AES_ECB_QUIC_ENC_128,function,internal)
 AES_ECB_QUIC_ENC_128:
         endbranch64
         AES_ECB_QUIC 10
-        ret
-
-align 16
-MKGLOBAL(AES_ECB_QUIC_ENC_192,function,internal)
-AES_ECB_QUIC_ENC_192:
-        endbranch64
-        AES_ECB_QUIC 12
         ret
 
 align 16
