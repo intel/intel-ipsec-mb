@@ -38,6 +38,11 @@ if(CLANG_FORMAT)
     COMMENT "Checking style using clang-format"
     COMMAND clang-format -style=file --dry-run --Werror ${CLANG_FORMAT_SRC_FILES}
   )
+
+  add_custom_target(style-fix
+    COMMENT "Fixing style issues using clang-format"
+    COMMAND clang-format -style=file -i ${CLANG_FORMAT_SRC_FILES}
+  )
 endif()
 
 
