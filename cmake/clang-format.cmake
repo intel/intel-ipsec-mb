@@ -1,5 +1,4 @@
-# Copyright (c) 2022, Intel Corporation
-# Copyright 2000-2023 Kitware, Inc. and Contributors
+# Copyright (c) 2023, Intel Corporation
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -24,43 +23,21 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/utils.cmake")
+# set clang-format binary name
+if(NOT CLANG_FORMAT_BIN)
+  set(CLANG_FORMAT_BIN clang-format)
+endif()
 
-# get version from public header file
-imb_get_version("${CMAKE_CURRENT_SOURCE_DIR}/lib/intel-ipsec-mb.h")
-message(STATUS "Project Version: ${IPSEC_MB_VERSION_FULL}")
+find_program(CLANG_FORMAT NAMES ${CLANG_FORMAT_BIN})
 
-cmake_minimum_required(VERSION 3.16)
-project(intel-ipsec-mb VERSION ${IPSEC_MB_VERSION}
-    DESCRIPTION "Intel(R) IPsec Multi-Buffer library")
+# set up target if clang-format available
+if(CLANG_FORMAT)
+  file(GLOB_RECURSE CLANG_FORMAT_SRC_FILES "${CMAKE_CURRENT_SOURCE_DIR}/*.[ch]")
 
-# set default project values
-imb_set_proj_defaults()
+  add_custom_target(style
+    COMMENT "Checking style using clang-format"
+    COMMAND clang-format -style=file --dry-run --Werror ${CLANG_FORMAT_SRC_FILES}
+  )
+endif()
 
-# do compiler checks
-imb_compiler_check()
 
-# add testing support
-include(CTest)
-
-# build library
-add_subdirectory(lib)
-
-# build perf application
-add_subdirectory(perf)
-
-# build test applications
-add_subdirectory(test)
-
-#######################################
-# configure custom targets
-#######################################
-
-# add custom target to uninstall library
-imb_add_target_uninstall("${CMAKE_CURRENT_SOURCE_DIR}/lib/cmake/uninstall.cmake.in")
-
-# add custom target to print help information
-imb_add_target_print_help("${IPSEC_MB_OPTIONS}")
-
-# style check target
-imb_add_target_style_check()

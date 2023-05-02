@@ -81,3 +81,9 @@ macro(imb_add_target_print_help OPTIONS)
     endif()
   endforeach()
 endmacro()
+
+# style check using clang format
+macro(imb_add_target_style_check)
+  include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/clang-format.cmake")
+endmacro()
+
