@@ -85,6 +85,9 @@ add_subdirectory(perf)
 # build test applications
 add_subdirectory(test)
 
+# build example applications
+add_subdirectory(examples)
+
 #######################################
 # configure post gen custom targets
 #######################################

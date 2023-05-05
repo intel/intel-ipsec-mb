@@ -16,6 +16,7 @@ imb-xvalid*
 imb-fuzz-*
 imb-acvp*
 imb-wycheproof*
+imb-burst*
 *_lnk.def
 TAGS
 !wycheproof.c
