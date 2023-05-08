@@ -38,6 +38,10 @@ void call_sha1_ni_x2_sse_from_c(SHA1_ARGS *args, uint32_t size_in_blocks);
 void call_sha224_ni_x2_sse_from_c(SHA256_ARGS *args, uint32_t size_in_blocks);
 void call_sha256_ni_x2_sse_from_c(SHA256_ARGS *args, uint32_t size_in_blocks);
 
+IMB_DLL_EXPORT void sha1_sse_shani(const void *data, const uint64_t length,
+                                   void *digest);
+IMB_DLL_EXPORT void sha1_one_block_sse_shani(const void *data, void *digest);
+
 /* Moved from MB MGR */
 
 IMB_JOB *submit_job_hmac_ni_sse(MB_MGR_HMAC_SHA_1_OOO *state,

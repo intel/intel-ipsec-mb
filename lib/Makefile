@@ -295,6 +295,7 @@ c_lib_objs := \
 	aes_xcbc_expand_key.o \
 	md5_one_block.o \
 	sha_sse.o \
+	sha_ni_sse.o \
 	sha_mb_sse.o \
 	sha_ni_mb_sse.o \
 	sha_avx.o \
@@ -457,6 +458,7 @@ asm_sse_lib_objs := \
 	sha256_one_block_sse.o \
 	sha384_one_block_sse.o \
 	sha512_one_block_sse.o \
+	sha1_ni_one_block_sse.o \
 	sha512_x2_sse.o \
 	sha256_mult_sse.o \
 	sha1_ni_x2_sse.o \

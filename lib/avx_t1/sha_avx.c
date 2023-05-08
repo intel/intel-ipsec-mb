@@ -33,7 +33,7 @@
 
 void sha1_one_block_avx(const void *data, void *digest)
 {
-        sha_generic_1block(data, digest, 1 /* AVX */, 1 /* SHA1 */);
+        sha_generic_1block(data, digest, ARCH_AVX, 1 /* SHA1 */);
 }
 
 /* ========================================================================== */
@@ -43,7 +43,7 @@ void sha1_one_block_avx(const void *data, void *digest)
 
 void sha1_avx(const void *data, const uint64_t length, void *digest)
 {
-        sha_generic(data, length, digest, 1 /* AVX */, 1, IMB_SHA1_BLOCK_SIZE,
+        sha_generic(data, length, digest, ARCH_AVX, 1, IMB_SHA1_BLOCK_SIZE,
                     SHA1_PAD_SIZE);
 }
 
@@ -52,7 +52,7 @@ void sha1_avx(const void *data, const uint64_t length, void *digest)
 
 void sha224_one_block_avx(const void *data, void *digest)
 {
-        sha_generic_1block(data, digest, 1 /* AVX */, 224 /* SHA224 */);
+        sha_generic_1block(data, digest, ARCH_AVX, 224 /* SHA224 */);
 }
 
 /* ========================================================================== */
@@ -61,7 +61,7 @@ void sha224_one_block_avx(const void *data, void *digest)
  */
 void sha224_avx(const void *data, const uint64_t length, void *digest)
 {
-        sha_generic(data, length, digest, 1 /* AVX */, 224,
+        sha_generic(data, length, digest, ARCH_AVX, 224,
                     IMB_SHA_256_BLOCK_SIZE, SHA224_PAD_SIZE);
 }
 
@@ -69,7 +69,7 @@ void sha224_avx(const void *data, const uint64_t length, void *digest)
 /* One block SHA256 computation for IPAD / OPAD usage only */
 void sha256_one_block_avx(const void *data, void *digest)
 {
-        sha_generic_1block(data, digest, 1 /* AVX */, 256 /* SHA256 */);
+        sha_generic_1block(data, digest, ARCH_AVX, 256 /* SHA256 */);
 }
 
 /* ========================================================================== */
@@ -78,7 +78,7 @@ void sha256_one_block_avx(const void *data, void *digest)
  */
 void sha256_avx(const void *data, const uint64_t length, void *digest)
 {
-        sha_generic(data, length, digest, 1 /* AVX */, 256,
+        sha_generic(data, length, digest, ARCH_AVX, 256,
                     IMB_SHA_256_BLOCK_SIZE, SHA256_PAD_SIZE);
 }
 
@@ -86,7 +86,7 @@ void sha256_avx(const void *data, const uint64_t length, void *digest)
 /* One block SHA384 computation for IPAD / OPAD usage only */
 void sha384_one_block_avx(const void *data, void *digest)
 {
-        sha_generic_1block(data, digest, 1 /* AVX */, 384 /* SHA384 */);
+        sha_generic_1block(data, digest, ARCH_AVX, 384 /* SHA384 */);
 }
 
 /* ========================================================================== */
@@ -95,7 +95,7 @@ void sha384_one_block_avx(const void *data, void *digest)
  */
 void sha384_avx(const void *data, const uint64_t length, void *digest)
 {
-        sha_generic(data, length, digest, 1 /* AVX */, 384,
+        sha_generic(data, length, digest, ARCH_AVX, 384,
                     IMB_SHA_384_BLOCK_SIZE, SHA384_PAD_SIZE);
 }
 
@@ -103,7 +103,7 @@ void sha384_avx(const void *data, const uint64_t length, void *digest)
 /* One block SHA512 computation for IPAD / OPAD usage only */
 void sha512_one_block_avx(const void *data, void *digest)
 {
-        sha_generic_1block(data, digest, 1 /* AVX */, 512 /* SHA512 */);
+        sha_generic_1block(data, digest, ARCH_AVX, 512 /* SHA512 */);
 }
 
 /* ========================================================================== */
@@ -112,6 +112,6 @@ void sha512_one_block_avx(const void *data, void *digest)
  */
 void sha512_avx(const void *data, const uint64_t length, void *digest)
 {
-        sha_generic(data, length, digest, 1 /* AVX */, 512,
+        sha_generic(data, length, digest, ARCH_AVX, 512,
                     IMB_SHA_512_BLOCK_SIZE, SHA512_PAD_SIZE);
 }

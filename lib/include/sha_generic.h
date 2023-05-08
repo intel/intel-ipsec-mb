@@ -39,6 +39,7 @@
 
 extern void sha1_block_sse(const void *, void *);
 extern void sha1_block_avx(const void *, void *);
+extern void sha1_ni_block_sse(const void *, void *);
 
 extern void sha224_block_sse(const void *, void *);
 extern void sha224_block_avx(const void *, void *);
@@ -52,6 +53,11 @@ extern void sha384_block_avx(const void *, void *);
 extern void sha512_block_sse(const void *, void *);
 extern void sha512_block_avx(const void *, void *);
 
+enum arch_type {
+        ARCH_SSE = 0,
+        ARCH_SSE_SHANI,
+        ARCH_AVX
+};
 
 /* ========================================================================== */
 /*
@@ -116,30 +122,32 @@ void copy_bswap8_array(void *dst, const void *src, const size_t num)
 __forceinline
 void
 sha_generic_one_block(const void *inp, void *digest,
-                      const int is_avx, const int sha_type)
+                      const enum arch_type arch, const int sha_type)
 {
         if (sha_type == 1) {
-                if (is_avx)
+                if (arch == ARCH_AVX)
                         sha1_block_avx(inp, digest);
-                else
+                else if (arch == ARCH_SSE)
                         sha1_block_sse(inp, digest);
+                else /* arch == ARCH_SSE_SHANI */
+                        sha1_ni_block_sse(inp, digest);
         } else if (sha_type == 224) {
-                if (is_avx)
+                if (arch == ARCH_AVX)
                         sha224_block_avx(inp, digest);
                 else
                         sha224_block_sse(inp, digest);
         } else if (sha_type == 256) {
-                if (is_avx)
+                if (arch == ARCH_AVX)
                         sha256_block_avx(inp, digest);
                 else
                         sha256_block_sse(inp, digest);
         } else if (sha_type == 384) {
-                if (is_avx)
+                if (arch == ARCH_AVX)
                         sha384_block_avx(inp, digest);
                 else
                         sha384_block_sse(inp, digest);
         } else if (sha_type == 512) {
-                if (is_avx)
+                if (arch == ARCH_AVX)
                         sha512_block_avx(inp, digest);
                 else
                         sha512_block_sse(inp, digest);
@@ -252,8 +260,8 @@ void sha_generic_write_digest(void *dst, const void *src, const int sha_type)
 __forceinline
 void
 sha_generic(const void *data, const uint64_t length, void *digest,
-            const int is_avx, const int sha_type, const uint64_t blk_size,
-            const uint64_t pad_size)
+            const enum arch_type arch, const int sha_type,
+            const uint64_t blk_size, const uint64_t pad_size)
 {
 #ifdef SAFE_PARAM
         imb_set_errno(NULL, 0);
@@ -279,7 +287,7 @@ sha_generic(const void *data, const uint64_t length, void *digest,
         sha_generic_init(ld, sha_type);
 
         for (idx = 0; (idx + blk_size) <= length; idx += blk_size)
-                sha_generic_one_block(&inp[idx], ld, is_avx, sha_type);
+                sha_generic_one_block(&inp[idx], ld, arch, sha_type);
 
         r = length % blk_size;
 
@@ -289,19 +297,19 @@ sha_generic(const void *data, const uint64_t length, void *digest,
 
         if (r >= (blk_size - pad_size)) {
                 /* length will be encoded in the next block */
-                sha_generic_one_block(cb, ld, is_avx, sha_type);
+                sha_generic_one_block(cb, ld, arch, sha_type);
                 memset(cb, 0, sizeof(cb));
         }
 
         store8_be(&cb[blk_size - 8], length * 8 /* bit length */);
-        sha_generic_one_block(cb, ld, is_avx, sha_type);
+        sha_generic_one_block(cb, ld, arch, sha_type);
 
         sha_generic_write_digest(digest, ld, sha_type);
 #ifdef SAFE_DATA
         clear_mem(cb, sizeof(cb));
         clear_mem(&local_digest, sizeof(local_digest));
         clear_scratch_gps();
-        if (is_avx)
+        if (arch == ARCH_AVX)
                 clear_scratch_xmms_avx();
         else
                 clear_scratch_xmms_sse();
@@ -310,7 +318,7 @@ sha_generic(const void *data, const uint64_t length, void *digest,
 
 __forceinline
 void sha_generic_1block(const void *data, void *digest,
-                        const int is_avx, const int sha_type)
+                        const enum arch_type arch, const int sha_type)
 {
 #ifdef SAFE_PARAM
         imb_set_errno(NULL, 0);
@@ -324,10 +332,10 @@ void sha_generic_1block(const void *data, void *digest,
         }
 #endif
         sha_generic_init(digest, sha_type);
-        sha_generic_one_block(data, digest, is_avx, sha_type);
+        sha_generic_one_block(data, digest, arch, sha_type);
 #ifdef SAFE_DATA
         clear_scratch_gps();
-        if (is_avx)
+        if (arch == ARCH_AVX)
                 clear_scratch_xmms_avx();
         else
                 clear_scratch_xmms_sse();

@@ -228,6 +228,7 @@ lib_objs1 = \
 	$(OBJ_DIR)\sha1_ni_x1_sse.obj \
 	$(OBJ_DIR)\sha1_one_block_avx.obj \
 	$(OBJ_DIR)\sha1_one_block_sse.obj \
+	$(OBJ_DIR)\sha1_ni_one_block_sse.obj \
 	$(OBJ_DIR)\sha1_x8_avx2.obj \
 	$(OBJ_DIR)\sha1_x16_avx512.obj \
 	$(OBJ_DIR)\sha224_one_block_avx.obj \
@@ -280,6 +281,7 @@ lib_objs1 = \
 	$(OBJ_DIR)\aes_xcbc_expand_key.obj \
 	$(OBJ_DIR)\md5_one_block.obj \
 	$(OBJ_DIR)\sha_sse.obj \
+	$(OBJ_DIR)\sha_ni_sse.obj \
 	$(OBJ_DIR)\sha_avx.obj \
 	$(OBJ_DIR)\sha_avx2.obj \
 	$(OBJ_DIR)\sha_avx512.obj \

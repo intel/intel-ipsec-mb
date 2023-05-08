@@ -48,6 +48,7 @@
 #include "include/aesni_emu.h"
 #include "include/error.h"
 
+#include "include/arch_sse_type2.h" /* SHA-NI */
 #include "include/arch_avx_type1.h" /* AESNI */
 #include "include/arch_avx2_type1.h" /* MD5 */
 #include "include/arch_avx512_type1.h"
@@ -484,8 +485,8 @@ init_mb_mgr_avx512_t2_internal(IMB_MGR *state, const int reset_mgrs)
 
         state->des_key_sched       = des_key_schedule;
 
-        state->sha1_one_block      = sha1_one_block_avx512;
-        state->sha1                = sha1_avx512;
+        state->sha1_one_block      = sha1_one_block_sse_shani;
+        state->sha1                = sha1_sse_shani;
         state->sha224_one_block    = sha224_one_block_avx512;
         state->sha224              = sha224_avx512;
         state->sha256_one_block    = sha256_one_block_avx512;

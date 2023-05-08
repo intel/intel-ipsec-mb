@@ -704,3 +704,5 @@ EXPORTS
     imb_set_session                             @678
     ghash_pre_avx_gen4                          @679
     ghash_pre_avx512                            @680
+    sha1_sse_shani                              @681
+    sha1_one_block_sse_shani                    @682
