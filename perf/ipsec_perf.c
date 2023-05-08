@@ -1528,7 +1528,7 @@ get_next_size(const uint32_t index)
 
 static inline void
 set_job_fields(IMB_JOB *job, uint8_t *p_buffer, imb_uint128_t *p_keys,
-               const uint32_t i, const uint32_t index)
+               const uint32_t i, const uint32_t index, const IMB_JOB *template)
 {
         uint32_t list_idx;
 
@@ -1539,6 +1539,11 @@ set_job_fields(IMB_JOB *job, uint8_t *p_buffer, imb_uint128_t *p_keys,
 
                 job->msg_len_to_cipher_in_bytes = cipher_size_list[list_idx];
                 job->msg_len_to_hash_in_bytes = hash_size_list[list_idx];
+        } else {
+                job->msg_len_to_hash_in_bytes =
+                        template->msg_len_to_hash_in_bytes;
+                job->msg_len_to_cipher_in_bytes =
+                        template->msg_len_to_cipher_in_bytes;
         }
 
         if (job->hash_alg == IMB_AUTH_PON_CRC_BIP) {
@@ -1605,10 +1610,11 @@ set_sgl_job_fields(IMB_JOB *job, uint8_t *p_buffer, imb_uint128_t *p_keys,
         /* If IMIX testing is being done, set the buffer size to cipher and hash
          * going through the list of sizes precalculated */
         if (imix_list_count != 0) {
-                uint32_t list_idx = size_idx & (JOB_SIZE_IMIX_LIST - 1);
+                const uint32_t list_idx = size_idx & (JOB_SIZE_IMIX_LIST - 1);
 
                 job->msg_len_to_cipher_in_bytes = cipher_size_list[list_idx];
         }
+
         buf_size = (uint32_t) job->msg_len_to_cipher_in_bytes;
         if (job->cipher_mode == IMB_CIPHER_GCM_SGL) {
                 job->u.GCM.aad = aad;
@@ -2328,7 +2334,7 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
                                                            &cp_ctx[i]);
                                 else
                                         set_job_fields(job, p_buffer, p_keys,
-                                                       i, index);
+                                                       i, index, &job_template);
 
                                 index = get_next_index(index);
 
@@ -2507,7 +2513,8 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
                                                    sgl[0], &gcm_ctx[0],
                                                    &cp_ctx[0]);
                         else
-                                set_job_fields(job, p_buffer, p_keys, i, index);
+                                set_job_fields(job, p_buffer, p_keys, i, index,
+                                               &job_template);
 
                         index = get_next_index(index);
 #ifdef DEBUG
