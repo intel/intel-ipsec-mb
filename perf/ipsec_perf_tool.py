@@ -62,7 +62,7 @@ class Variant:
                  hash_alg=None, aead_alg=None, sizes=None, offset=None,
                  cold_cache=False, shani_off=False, force_job_api=False,
                  unhalted_cycles=False, quick_test=False, smoke_test=False,
-                 imix=None, aad_size=None, job_iter=None, no_time_box=False):
+                 imix=None, aad_size=None, job_iter=None, no_time_box=False, buffer_offset=None):
         """Build perf app command line"""
         global PERF_APP
 
@@ -88,6 +88,7 @@ class Variant:
         self.aad_size = aad_size
         self.job_iter = job_iter
         self.no_time_box = no_time_box
+        self.buffer_offset = buffer_offset
 
         if self.arch is not None:
             self.cmd += ' --arch {}'.format(self.arch)
@@ -152,6 +153,8 @@ class Variant:
         if self.job_iter is not None:
             self.cmd += ' --job-iter {}'.format(self.job_iter)
 
+        if self.buffer_offset is not None:
+            self.cmd += ' --buffer-offset {}'.format(self.buffer_offset)
 
     def run(self):
         """Run perf app and store output"""
@@ -420,6 +423,8 @@ def parse_args():
                         help="number of tests iterations for each job size")
     parser.add_argument("--no-time-box", default=False, action='store_true',
                         help="disables time box feature for single packet size test duration (100ms)")
+    parser.add_argument("--buffer-offset", default=None, type=int,
+                        help="buffer start address offset value 0-15, default 0")
 
     args = parser.parse_args()
 
@@ -458,7 +463,7 @@ def parse_args():
         alg_types, args.job_size, args.cold_cache, args.arch_best, \
         args.shani_off, args.force_job_api, args.unhalted_cycles, \
         args.quick, args.smoke, args.imix, \
-        args.aad_size, args.job_iter, args.no_time_box
+        args.aad_size, args.job_iter, args.no_time_box, args.buffer_offset
 
 
 def run_test(core=None):
@@ -528,7 +533,7 @@ def main():
     # parse command line args
     archs, cores, directions, offset, alg_types, sizes, cold_cache, arch_best, \
         shani_off, force_job_api, unhalted_cycles, quick_test, smoke_test, \
-        imix, aad_size, job_iter, no_time_box = parse_args()
+        imix, aad_size, job_iter, no_time_box, buffer_offset = parse_args()
 
     # validate requested archs are supported
     if arch_best is True:
@@ -579,7 +584,8 @@ def main():
                                        cold_cache=cold_cache, shani_off=shani_off,
                                        force_job_api=force_job_api, unhalted_cycles=unhalted_cycles,
                                        quick_test=quick_test, smoke_test=smoke_test, imix=imix,
-                                       aad_size=aad_size, job_iter=job_iter, no_time_box=no_time_box))
+                                       aad_size=aad_size, job_iter=job_iter, no_time_box=no_time_box,
+				       buffer_offset=buffer_offset))
                     TOTAL_VARIANTS += 1
 
         if 'hash-only' in alg_types:
@@ -590,7 +596,8 @@ def main():
                                    cold_cache=cold_cache, shani_off=shani_off,
                                    force_job_api=force_job_api, unhalted_cycles=unhalted_cycles,
                                    quick_test=quick_test, smoke_test=smoke_test, imix=imix,
-                                   aad_size=aad_size, job_iter=job_iter, no_time_box=no_time_box))
+                                   aad_size=aad_size, job_iter=job_iter, no_time_box=no_time_box,
+			       	   buffer_offset=buffer_offset))
                 TOTAL_VARIANTS += 1
 
         if 'aead-only' in alg_types:
@@ -601,7 +608,8 @@ def main():
                                        cold_cache=cold_cache, shani_off=shani_off,
                                        force_job_api=force_job_api, unhalted_cycles=unhalted_cycles,
                                        quick_test=quick_test, smoke_test=smoke_test, imix=imix,
-                                       aad_size=aad_size, job_iter=job_iter, no_time_box=no_time_box))
+                                       aad_size=aad_size, job_iter=job_iter, no_time_box=no_time_box,
+				       buffer_offset=buffer_offset))
                     TOTAL_VARIANTS += 1
 
         if 'cipher-hash-all' in alg_types:
@@ -615,7 +623,8 @@ def main():
                                            shani_off=shani_off, force_job_api=force_job_api,
                                            unhalted_cycles=unhalted_cycles, quick_test=quick_test,
                                            smoke_test=smoke_test, imix=imix, aad_size=aad_size,
-                                           job_iter=job_iter, no_time_box=no_time_box))
+                                           job_iter=job_iter, no_time_box=no_time_box,
+					   buffer_offset=buffer_offset))
                         TOTAL_VARIANTS += 1
 
     # take starting timestamp
