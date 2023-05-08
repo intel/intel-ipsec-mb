@@ -119,15 +119,14 @@ clean:
 	-rm -f $(DEPFILES)
 	-rm -f $(EXE)
 
-SOURCES_STYLE := $(foreach infile,$(SOURCES),-f $(infile))
-CHECKPATCH?=checkpatch.pl
+CLANGFORMAT?=clang-format
 .PHONY: style
 style:
-	$(CHECKPATCH) --no-tree --no-signoff --emacs --no-color \
---ignore CODE_INDENT,INITIALISED_STATIC,LEADING_SPACE,SPLIT_STRING,\
-UNSPECIFIED_INT,ARRAY_SIZE,BLOCK_COMMENT_STYLE,GLOBAL_INITIALISERS,\
-COMPLEX_MACRO,SPACING,STORAGE_CLASS,USE_FUNC,NEW_TYPEDEFS,VOLATILE,\
-CONSTANT_COMPARISON $(SOURCES_STYLE)
+	@for file in $(wildcard *.[ch]); do \
+		echo "Checking style $$file"; \
+		$(CLANGFORMAT) -style=file "$$file" | diff "$$file" - | tee /dev/stderr | [ $$(wc -c) -eq 0 ] || \
+		{ echo "ERROR: $$file has style problems"; exit 1; } \
+	done
 
 # cppcheck analysis check
 CPPCHECK ?= cppcheck
