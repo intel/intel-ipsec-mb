@@ -64,6 +64,7 @@ extern int snow_v_test(struct IMB_MGR *mb_mgr);
 extern int direct_api_param_test(struct IMB_MGR *mb_mgr);
 extern int quic_ecb_test(struct IMB_MGR *mb_mgr);
 extern int gmac_test(struct IMB_MGR *mb_mgr);
+extern int ghash_test(struct IMB_MGR *mb_mgr);
 
 typedef int (*imb_test_t)(struct IMB_MGR *mb_mgr);
 
@@ -115,6 +116,11 @@ struct imb_test tests[] = {
         {
                 .str = "GMAC",
                 .fn = gmac_test,
+                .enabled = 1
+        },
+        {
+                .str = "GHASH",
+                .fn = ghash_test,
                 .enabled = 1
         },
         {
