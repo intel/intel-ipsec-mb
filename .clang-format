@@ -44,3 +44,4 @@ ColumnLimit: 100
 Cpp11BracedListStyle: false
 MaxEmptyLinesToKeep: 1
 ContinuationIndentWidth: 8
+SpaceAfterCStyleCast: true
