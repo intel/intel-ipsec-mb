@@ -50,7 +50,6 @@
 #include "include/arch_sse_type1.h" /* poly1305, snow3g */
 #include "include/arch_avx_type1.h"
 #include "include/arch_avx2_type1.h"
-#include "include/arch_avx512_type2.h"
 
 #include "include/ooo_mgr_reset.h"
 
