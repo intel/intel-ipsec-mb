@@ -65,9 +65,9 @@ Table 1. List of supported cipher algorithms and their implementations.
 | Encryption     +-----------------------------------------------------|
 |                | x86_64 | SSE    | AVX    | AVX2   | AVX512 | VAES(5)|
 |----------------+--------+--------+--------+--------+--------+--------|
-| AES128-GCM     | N      | Y  by8 | Y  by8 | Y  by8 | Y  by8 | Y by32 |
-| AES192-GCM     | N      | Y  by8 | Y  by8 | Y  by8 | Y  by8 | Y by32 |
-| AES256-GCM     | N      | Y  by8 | Y  by8 | Y  by8 | Y  by8 | Y by32 |
+| AES128-GCM     | N      | Y  by8 | N      | Y  by8 | Y  by8 | Y by32 |
+| AES192-GCM     | N      | Y  by8 | N      | Y  by8 | Y  by8 | Y by32 |
+| AES256-GCM     | N      | Y  by8 | N      | Y  by8 | Y  by8 | Y by32 |
 | AES128-CCM     | N      | Y  by8 | Y  by8 | N      | N      | Y by16 |
 | AES256-CCM     | N      | Y  by8 | Y  by8 | N      | N      | Y by16 |
 | AES128-CBC     | N      | Y(1)   | Y(3)   | N      | N      | Y(6)   |
@@ -138,9 +138,9 @@ Table 2. List of supported integrity algorithms and their implementations.
 | SHA2-256          | N      | Y(2)x4 | Y   x4 | Y   x8 | Y  x16 | N      |
 | SHA2-384          | N      | Y   x2 | Y   x2 | Y   x4 | Y   x8 | N      |
 | SHA2-512          | N      | Y   x2 | Y   x2 | Y   x4 | Y   x8 | N      |
-| AES128-GMAC       | N      | Y  by8 | Y  by8 | Y  by8 | Y  by8 | Y by32 |
-| AES192-GMAC       | N      | Y  by8 | Y  by8 | Y  by8 | Y  by8 | Y by32 |
-| AES256-GMAC       | N      | Y  by8 | Y  by8 | Y  by8 | Y  by8 | Y by32 |
+| AES128-GMAC       | N      | Y  by8 | N      | Y  by8 | Y  by8 | Y by32 |
+| AES192-GMAC       | N      | Y  by8 | N      | Y  by8 | Y  by8 | Y by32 |
+| AES256-GMAC       | N      | Y  by8 | N      | Y  by8 | Y  by8 | Y by32 |
 | NULL              | Y      | N      | N      | N      | N      | N      |
 | AES128-CCM        | N      | Y(5)x4 | Y   x8 | N      | N      | Y x16  |
 | AES256-CCM        | N      | Y(5)x4 | Y   x8 | N      | N      | Y x16  |
@@ -155,7 +155,7 @@ Table 2. List of supported integrity algorithms and their implementations.
 | POLY1305          | Y      | N      | N      | Y(9)   | Y      | Y      |
 | POLY1305 AEAD     | Y      | N      | N      | Y(9)   | Y      | Y      |
 | SNOW-V AEAD       | N      | Y  by8 | Y  by8 | Y  by8 | Y  by8 | Y by32 |
-| GHASH             | N      | Y  by8 | Y  by8 | Y  by8 | Y  by8 | Y by32 |
+| GHASH             | N      | Y  by8 | N      | Y  by8 | Y  by8 | Y by32 |
 | CRC(6)            | N      | Y  by8 | Y  by8 | N      | N      | Y by16 |
 | PON-CRC-BIP(7)    | N      | Y      | Y      | N      | N      | Y      |
 +-------------------------------------------------------------------------+
