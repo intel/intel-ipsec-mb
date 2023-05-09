@@ -67,3 +67,6 @@ imb_add_target_print_help("${IPSEC_MB_OPTIONS}")
 
 # style check target
 imb_add_target_style_check()
+
+# TAGS target
+imb_add_target_tags()

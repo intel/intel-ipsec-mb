@@ -100,3 +100,17 @@ macro(imb_add_target_style_check)
   include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/clang-format.cmake")
 endmacro()
 
+# add TAGS target
+if(NOT WINDOWS)
+  macro(imb_add_target_tags)
+    add_custom_target(
+      TAGS
+      COMMAND ${CMAKE_COMMAND} -E echo "Building Tags table"
+      COMMAND bash -c "find . -name *.[ch] -print | etags -"
+      COMMAND bash -c "find ./ -name '*.asm'  | etags -a -"
+      COMMAND bash -c "find ./ -name '*.inc'  | etags -a -"
+      WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+      VERBATIM
+      )
+  endmacro()
+endif()
