@@ -470,7 +470,7 @@ init_mb_mgr_avx2_t1_internal(IMB_MGR *state, const int reset_mgrs)
         state->gcm256_pre          = aes_gcm_pre_256_avx_gen4;
 
         state->ghash               = ghash_avx_gen4;
-        state->ghash_pre           = ghash_pre_avx_gen2;
+        state->ghash_pre           = ghash_pre_avx_gen4;
 
         state->gmac128_init        = imb_aes_gmac_init_128_avx_gen4;
         state->gmac192_init        = imb_aes_gmac_init_192_avx_gen4;

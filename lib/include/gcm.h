@@ -639,6 +639,12 @@ IMB_DLL_EXPORT void
 ghash_pre_avx_gen2(const void *key, struct gcm_key_data *key_data);
 
 IMB_DLL_EXPORT void
+ghash_pre_avx_gen4(const void *key, struct gcm_key_data *key_data);
+
+IMB_DLL_EXPORT void
+ghash_pre_avx512(const void *key, struct gcm_key_data *key_data);
+
+IMB_DLL_EXPORT void
 ghash_pre_vaes_avx512(const void *key, struct gcm_key_data *key_data);
 
 /*
