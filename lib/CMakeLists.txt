@@ -211,10 +211,10 @@ set(CAN_USE_ASSEMBLER 1)
 ########################################
 # add OS specific options
 ########################################
-if(CMAKE_HOST_UNIX)
-  include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/unix.cmake)
-else()
+if(WINDOWS)
   include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/windows.cmake)
+else()
+  include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/unix.cmake)
 endif()
 
 # add user defined cflags

@@ -34,6 +34,9 @@ cmake_minimum_required(VERSION 3.16)
 project(intel-ipsec-mb VERSION ${IPSEC_MB_VERSION}
     DESCRIPTION "Intel(R) IPsec Multi-Buffer library")
 
+# detect OS
+imb_detect_os()
+
 # set default project values
 imb_set_proj_defaults()
 

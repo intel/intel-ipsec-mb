@@ -27,7 +27,6 @@
 # IPSec_MB library CMake Windows config
 # ##############################################################################
 
-set(WINDOWS 1)
 set(LIB libIPSec_MB)
 set(SRC_DEF_FILE ${CMAKE_CURRENT_BINARY_DIR}/${LIB}_lnk.def)
 

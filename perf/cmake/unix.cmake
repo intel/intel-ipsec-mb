@@ -27,7 +27,6 @@
 # Performance application CMake Unix config
 # ##############################################################################
 
-set(LINUX 1)
 set(IPSEC_MB_LIB IPSec_MB)
 
 # set NASM flags

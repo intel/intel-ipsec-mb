@@ -27,7 +27,6 @@
 # IPSec_MB library CMake Unix config
 # ##############################################################################
 
-set(LINUX 1)
 set(LIB IPSec_MB) # 'lib' prefix assumed on Linux
 
 message(STATUS "BUILD_TYPE...              ${CMAKE_BUILD_TYPE}")

@@ -27,7 +27,6 @@
 # Performance application CMake Windows config
 # ##############################################################################
 
-set(WINDOWS 1)
 set(IPSEC_MB_LIB libIPSec_MB)
 
 # set NASM flags
