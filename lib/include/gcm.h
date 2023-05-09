@@ -517,7 +517,6 @@ aes_gcm_init_var_iv_256_sse(const struct gcm_key_data *key_data,
                             struct gcm_context_data *context_data,
                             const uint8_t *iv, const uint64_t iv_len,
                             const uint8_t *aad, const uint64_t aad_len);
-
 IMB_DLL_EXPORT void
 aes_gcm_init_var_iv_256_avx_gen2(const struct gcm_key_data *key_data,
                                  struct gcm_context_data *context_data,
@@ -546,20 +545,6 @@ IMB_DLL_LOCAL IMB_JOB *
 aes_gcm_dec_var_iv_192_sse(IMB_MGR *state, IMB_JOB *job);
 IMB_DLL_LOCAL IMB_JOB *
 aes_gcm_dec_var_iv_256_sse(IMB_MGR *state, IMB_JOB *job);
-
-IMB_DLL_LOCAL IMB_JOB *
-aes_gcm_enc_var_iv_128_avx_gen2(IMB_MGR *state, IMB_JOB *job);
-IMB_DLL_LOCAL IMB_JOB *
-aes_gcm_enc_var_iv_192_avx_gen2(IMB_MGR *state, IMB_JOB *job);
-IMB_DLL_LOCAL IMB_JOB *
-aes_gcm_enc_var_iv_256_avx_gen2(IMB_MGR *state, IMB_JOB *job);
-
-IMB_DLL_LOCAL IMB_JOB *
-aes_gcm_dec_var_iv_128_avx_gen2(IMB_MGR *state, IMB_JOB *job);
-IMB_DLL_LOCAL IMB_JOB *
-aes_gcm_dec_var_iv_192_avx_gen2(IMB_MGR *state, IMB_JOB *job);
-IMB_DLL_LOCAL IMB_JOB *
-aes_gcm_dec_var_iv_256_avx_gen2(IMB_MGR *state, IMB_JOB *job);
 
 IMB_DLL_LOCAL IMB_JOB *
 aes_gcm_enc_var_iv_128_avx_gen4(IMB_MGR *state, IMB_JOB *job);

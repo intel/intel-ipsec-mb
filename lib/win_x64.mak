@@ -546,19 +546,16 @@ no_aesni_objs = \
 
 gcm_objs = \
 	$(OBJ_DIR)\gcm.obj \
-	$(OBJ_DIR)\aes128_gcm_by8_avx.obj \
 	$(OBJ_DIR)\aes128_gcm_by8_avx2.obj \
 	$(OBJ_DIR)\aes128_gcm_by8_avx512.obj \
 	$(OBJ_DIR)\aes128_gcm_api_vaes_avx512.obj \
 	$(OBJ_DIR)\aes128_gcm_sgl_api_vaes_avx512.obj \
 	$(OBJ_DIR)\aes128_gmac_api_vaes_avx512.obj \
-	$(OBJ_DIR)\aes192_gcm_by8_avx.obj \
 	$(OBJ_DIR)\aes192_gcm_by8_avx2.obj \
 	$(OBJ_DIR)\aes192_gcm_by8_avx512.obj \
 	$(OBJ_DIR)\aes192_gcm_api_vaes_avx512.obj \
 	$(OBJ_DIR)\aes192_gcm_sgl_api_vaes_avx512.obj \
 	$(OBJ_DIR)\aes192_gmac_api_vaes_avx512.obj \
-	$(OBJ_DIR)\aes256_gcm_by8_avx.obj \
 	$(OBJ_DIR)\aes256_gcm_by8_avx2.obj \
 	$(OBJ_DIR)\aes256_gcm_by8_avx512.obj \
 	$(OBJ_DIR)\aes256_gcm_api_vaes_avx512.obj \

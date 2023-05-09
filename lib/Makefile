@@ -720,8 +720,7 @@ asm_sse_gcm_objs := \
 	gcm128_sgl_api_by8_sse.o gcm192_sgl_api_by8_sse.o gcm256_sgl_api_by8_sse.o \
 	gcm128_gmac_api_by8_sse.o gcm192_gmac_api_by8_sse.o gcm256_gmac_api_by8_sse.o
 
-asm_avx_gcm_objs := \
-	aes128_gcm_by8_avx.o aes192_gcm_by8_avx.o aes256_gcm_by8_avx.o
+asm_avx_gcm_objs :=
 
 asm_avx2_gcm_objs := \
 	aes128_gcm_by8_avx2.o aes192_gcm_by8_avx2.o aes256_gcm_by8_avx2.o

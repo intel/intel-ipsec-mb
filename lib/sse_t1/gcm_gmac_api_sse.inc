@@ -41,7 +41,10 @@ default rel
 ;void   ghash_pre_sse / ghash_sse_no_aesni
 ;       (const void *key, struct gcm_key_data *key_data)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+align 32
 %ifndef NO_AESNI
+MKGLOBAL(ghash_pre_avx_gen2,function,)
+ghash_pre_avx_gen2:
 MKGLOBAL(ghash_pre_sse,function,)
 ghash_pre_sse:
 %else
@@ -123,7 +126,10 @@ error_ghash_pre:
 ;        void         *io_tag,
 ;        const u64    tag_len);
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+align 32
 %ifndef NO_AESNI
+MKGLOBAL(ghash_avx_gen2,function,)
+ghash_avx_gen2:
 MKGLOBAL(ghash_sse,function,)
 ghash_sse:
 %else
@@ -209,6 +215,9 @@ error_ghash:
 ;        const   u8 *in,
 ;        const   u64 msg_len);
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+align 32
+MKGLOBAL(GMAC_FN_NAME_AVX(update),function,)
+GMAC_FN_NAME_AVX(update):
 MKGLOBAL(GMAC_FN_NAME(update),function,)
 GMAC_FN_NAME(update):
         endbranch64
