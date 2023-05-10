@@ -706,3 +706,7 @@ EXPORTS
     ghash_pre_avx512                            @680
     sha1_sse_shani                              @681
     sha1_one_block_sse_shani                    @682
+    sha224_sse_shani                            @683
+    sha224_one_block_sse_shani                  @684
+    sha256_sse_shani                            @685
+    sha256_one_block_sse_shani                  @686

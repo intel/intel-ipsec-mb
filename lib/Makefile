@@ -459,6 +459,7 @@ asm_sse_lib_objs := \
 	sha384_one_block_sse.o \
 	sha512_one_block_sse.o \
 	sha1_ni_one_block_sse.o \
+	sha256_ni_one_block_sse.o \
 	sha512_x2_sse.o \
 	sha256_mult_sse.o \
 	sha1_ni_x2_sse.o \

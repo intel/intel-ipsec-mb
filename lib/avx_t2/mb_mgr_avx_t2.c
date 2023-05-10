@@ -376,10 +376,10 @@ init_mb_mgr_avx_t2_internal(IMB_MGR *state, const int reset_mgrs)
 
         state->sha1_one_block      = sha1_one_block_sse_shani;
         state->sha1                = sha1_sse_shani;
-        state->sha224_one_block    = sha224_one_block_avx;
-        state->sha224              = sha224_avx;
-        state->sha256_one_block    = sha256_one_block_avx;
-        state->sha256              = sha256_avx;
+        state->sha224_one_block    = sha224_one_block_sse_shani;
+        state->sha224              = sha224_sse_shani;
+        state->sha256_one_block    = sha256_one_block_sse_shani;
+        state->sha256              = sha256_sse_shani;
         state->sha384_one_block    = sha384_one_block_avx;
         state->sha384              = sha384_avx;
         state->sha512_one_block    = sha512_one_block_avx;

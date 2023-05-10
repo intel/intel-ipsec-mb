@@ -46,6 +46,7 @@ extern void sha224_block_avx(const void *, void *);
 
 extern void sha256_block_sse(const void *, void *);
 extern void sha256_block_avx(const void *, void *);
+extern void sha256_ni_block_sse(const void *, void *);
 
 extern void sha384_block_sse(const void *, void *);
 extern void sha384_block_avx(const void *, void *);
@@ -134,13 +135,18 @@ sha_generic_one_block(const void *inp, void *digest,
         } else if (sha_type == 224) {
                 if (arch == ARCH_AVX)
                         sha224_block_avx(inp, digest);
-                else
+                else if (arch == ARCH_SSE)
                         sha224_block_sse(inp, digest);
+                else /* arch == ARCH_SSE_SHANI */
+                        /* Same as SHA-224 */
+                        sha256_ni_block_sse(inp, digest);
         } else if (sha_type == 256) {
                 if (arch == ARCH_AVX)
                         sha256_block_avx(inp, digest);
-                else
+                else if (arch == ARCH_SSE)
                         sha256_block_sse(inp, digest);
+                else /* arch == ARCH_SSE_SHANI */
+                        sha256_ni_block_sse(inp, digest);
         } else if (sha_type == 384) {
                 if (arch == ARCH_AVX)
                         sha384_block_avx(inp, digest);

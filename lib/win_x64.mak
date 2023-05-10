@@ -236,6 +236,7 @@ lib_objs1 = \
 	$(OBJ_DIR)\sha256_oct_avx2.obj \
 	$(OBJ_DIR)\sha256_one_block_avx.obj \
 	$(OBJ_DIR)\sha256_one_block_sse.obj \
+	$(OBJ_DIR)\sha256_ni_one_block_sse.obj \
 	$(OBJ_DIR)\sha256_ni_x2_sse.obj \
 	$(OBJ_DIR)\sha256_ni_x1_sse.obj \
 	$(OBJ_DIR)\sha256_x16_avx512.obj \

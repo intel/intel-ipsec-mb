@@ -42,6 +42,14 @@ IMB_DLL_EXPORT void sha1_sse_shani(const void *data, const uint64_t length,
                                    void *digest);
 IMB_DLL_EXPORT void sha1_one_block_sse_shani(const void *data, void *digest);
 
+IMB_DLL_EXPORT void sha224_sse_shani(const void *data, const uint64_t length,
+                                   void *digest);
+IMB_DLL_EXPORT void sha224_one_block_sse_shani(const void *data, void *digest);
+
+IMB_DLL_EXPORT void sha256_sse_shani(const void *data, const uint64_t length,
+                                   void *digest);
+IMB_DLL_EXPORT void sha256_one_block_sse_shani(const void *data, void *digest);
+
 /* Moved from MB MGR */
 
 IMB_JOB *submit_job_hmac_ni_sse(MB_MGR_HMAC_SHA_1_OOO *state,

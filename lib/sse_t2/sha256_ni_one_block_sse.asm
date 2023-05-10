@@ -1,5 +1,5 @@
 ;
-;; Copyright (c) 2022, Intel Corporation
+;; Copyright (c) 2023, Intel Corporation
 ;;
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
@@ -25,48 +25,28 @@
 ;; OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;
 
-;; Stack must be aligned to 32 bytes before call
-;;
-;; Registers:		RAX RBX RCX RDX RBP RSI RDI R8  R9  R10 R11 R12 R13 R14 R15
-;;			-----------------------------------------------------------
-;; Windows clobbers:	        RCX RDX     RSI RDI             R11
-;; Windows preserves:	RAX RBX         RBP         R8  R9  R10     R12 R13 R14 R15
-;;			-----------------------------------------------------------
-;; Linux clobbers:	        RCX RDX     RSI RDI             R11
-;; Linux preserves:	RAX RBX         RBP         R8  R9  R10     R12 R13 R14 R15
-;;			-----------------------------------------------------------
-;;
-;; Linux/Windows clobbers: xmm0 - xmm15
-
 %include "include/os.inc"
-%include "include/cet.inc"
-%include "include/mb_mgr_datastruct.inc"
 %include "include/clear_regs.inc"
 
 ; resdq = res0 => 16 bytes
 struc frame
 .ABEF_SAVE	reso	1
 .CDGH_SAVE	reso	1
+.XMM_SAVE	reso	3
 .align		resq	1
 endstruc
 
 %ifdef LINUX
-%define arg1	rdi
-%define arg2	rsi
-%define arg3	rdx
-%define arg4	rcx
+%define INP	rdi ; 1st arg
+%define CTX     rsi ; 2nd arg
+%define REG3	edx
+%define REG4	ecx
 %else
-%define arg1	rcx
-%define arg2	rdx
-%define arg3	r8
-%define arg4	r9
+%define INP	rcx ; 1st arg
+%define CTX     rdx ; 2nd arg
+%define REG3	edi
+%define REG4	esi
 %endif
-
-%define args            arg1
-%define NUM_BLKS 	arg2
-%define lane            arg3
-
-%define INP		r10
 
 ;; MSG MUST be xmm0 (implicit argument)
 %define MSG		xmm0
@@ -89,102 +69,30 @@ align 64
 PSHUFFLE_BYTE_FLIP_MASK:
 	dq 0x0405060700010203, 0x0c0d0e0f08090a0b
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; void sha256_ni_x1(SHA256_ARGS *args, UINT32 size_in_blocks)
-;; arg1 : pointer to args
-;; arg2 : size (in blocks) ;; assumed to be >= 1
 mksection .text
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; void sha256_ni_block_sse(void *input_data, UINT32 digest[8])
+;; arg 1 : (in) pointer to one block of data
+;; arg 2 : (in/out) pointer to read/write digest
 
-%define XMM_STORAGE     10*16
-%define GP_STORAGE      6*8
-
-%define VARIABLE_OFFSET XMM_STORAGE + GP_STORAGE
-%define GP_OFFSET XMM_STORAGE
-
-%macro FUNC_SAVE 0
-    mov     r11, rsp
-    sub     rsp, VARIABLE_OFFSET
-    and     rsp, ~15	; align rsp to 16 bytes
-
-    mov     [rsp + 0*8],  rbx
-    mov     [rsp + 1*8],  rbp
-    mov     [rsp + 2*8],  r12
-%ifndef LINUX
-    mov     [rsp + 3*8], rsi
-    mov     [rsp + 4*8], rdi
-    movdqa  [rsp + 3*16], xmm6
-    movdqa  [rsp + 4*16], xmm7
-    movdqa  [rsp + 5*16], xmm8
-    movdqa  [rsp + 6*16], xmm9
-    movdqa  [rsp + 7*16], xmm10
-    movdqa  [rsp + 8*16], xmm11
-    movdqa  [rsp + 9*16], xmm12
-    movdqa  [rsp + 10*16], xmm13
-    movdqa  [rsp + 11*16], xmm14
-    movdqa  [rsp + 12*16], xmm15
-%endif ; LINUX
-    mov     [rsp + 5*8], r11 ;; rsp pointer
-%endmacro
-
-%macro FUNC_RESTORE 0
-    mov     rbx, [rsp + 0*8]
-    mov     rbp, [rsp + 1*8]
-    mov     r12, [rsp + 2*8]
-%ifndef LINUX
-    mov     rsi,   [rsp + 3*8]
-    mov     rdi,   [rsp + 4*8]
-    movdqa  xmm6,  [rsp + 3*16]
-    movdqa  xmm7,  [rsp + 4*16]
-    movdqa  xmm8,  [rsp + 5*16]
-    movdqa  xmm9,  [rsp + 6*16]
-    movdqa  xmm10, [rsp + 7*16]
-    movdqa  xmm11, [rsp + 8*16]
-    movdqa  xmm12, [rsp + 9*16]
-    movdqa  xmm13, [rsp + 10*16]
-    movdqa  xmm14, [rsp + 11*16]
-    movdqa  xmm15, [rsp + 12*16]
-
-%ifdef SAFE_DATA
-    pxor    xmm5, xmm5
-    movdqa [rsp + 3*16], xmm5
-    movdqa [rsp + 4*16], xmm5
-    movdqa [rsp + 5*16], xmm5
-    movdqa [rsp + 6*16], xmm5
-    movdqa [rsp + 7*16], xmm5
-    movdqa [rsp + 8*16], xmm5
-    movdqa [rsp + 9*16], xmm5
-    movdqa [rsp + 10*16], xmm5
-    movdqa [rsp + 11*16], xmm5
-    movdqa [rsp + 12*16], xmm5
-
-%endif
-%endif ; LINUX
-    mov     rsp,   [rsp + 5*8] ;; rsp pointer
-%endmacro
-
-MKGLOBAL(sha256_ni_x1,function,internal)
+MKGLOBAL(sha256_ni_block_sse,function,internal)
 align 32
-sha256_ni_x1:
+sha256_ni_block_sse:
 	sub		rsp, frame_size
 
-	shl		NUM_BLKS, 6	; convert to bytes
-	jz		done_hash
-
-	;; load input pointers
-	mov		INP, [args + _data_ptr_sha256 + lane*PTR_SZ]
-
-	add		NUM_BLKS, INP	; pointer to end of data
+%ifndef LINUX
+	movdqa		[rsp + frame.XMM_SAVE], xmm6
+	movdqa		[rsp + frame.XMM_SAVE + 16], xmm14
+	movdqa		[rsp + frame.XMM_SAVE + 16*2], xmm15
+%endif
 
 	;; load initial digest
 	;; Probably need to reorder these appropriately
 	;; DCBA, HGFE -> ABEF, CDGH
-        shl             lane, 5
-	movdqu		STATE0, [args + lane]
-	movdqu		STATE1,	[args + lane + 16]
- 
+	movdqu		STATE0, [CTX]
+	movdqu		STATE1,	[CTX + 16]
+
 	pshufd		STATE0, STATE0, 0xB1	; CDAB
 	pshufd		STATE1, STATE1, 0x1B	; EFGH
 	movdqa		MSGTMP4, STATE0
@@ -193,7 +101,6 @@ sha256_ni_x1:
 
 	movdqa		SHUF_MASK, [rel PSHUFFLE_BYTE_FLIP_MASK]
 
-.loop0:
 	;; Save digests
 	movdqa		[rsp + frame.ABEF_SAVE], STATE0
 	movdqa		[rsp + frame.CDGH_SAVE], STATE1
@@ -381,11 +288,6 @@ sha256_ni_x1:
 	paddd		STATE0, [rsp + frame.ABEF_SAVE]
 	paddd		STATE1, [rsp + frame.CDGH_SAVE]
 
-	add		INP, 64
-	cmp		INP, NUM_BLKS
-	jne		.loop0
-
-
 	; Reorder for writeback
 	pshufd		STATE0, STATE0, 0x1B	; FEBA
 	pshufd		STATE1, STATE1, 0xB1	; DCHG
@@ -394,31 +296,28 @@ sha256_ni_x1:
 	palignr		STATE1, MSGTMP4,  8	; HGFE
 
 	;; update digests
-	movdqu		[args + lane + 0*16], STATE0
-	movdqu		[args + lane + 1*16], STATE1
-        shr             lane, 5
-
-        ;; update data pointers
-	mov		[args + _data_ptr_sha256 + lane*PTR_SZ], INP
-
-done_hash:
+	movdqu		[CTX], STATE0
+	movdqu		[CTX + 16], STATE1
 
         ;; Clear stack frame (2*16 bytes)
 %ifdef SAFE_DATA
-        clear_all_xmms_sse_asm
-        movdqa [rsp + frame.ABEF_SAVE], xmm0
-        movdqa [rsp + frame.CDGH_SAVE], xmm0
+        pxor            MSGTMP0, MSGTMP0
+        pxor            MSGTMP1, MSGTMP1
+        pxor            MSGTMP2, MSGTMP2
+        pxor            MSGTMP3, MSGTMP3
+        pxor            MSGTMP4, MSGTMP4
+        pxor            MSGTMP, MSGTMP
+
+        movdqa          [rsp + frame.ABEF_SAVE], MSGTMP0
+        movdqa          [rsp + frame.CDGH_SAVE], MSGTMP0
 %endif
 
+%ifndef LINUX
+	movdqa		xmm6, [rsp + frame.XMM_SAVE]
+	movdqa		xmm14, [rsp + frame.XMM_SAVE + 16]
+	movdqa		xmm15, [rsp + frame.XMM_SAVE + 16*2]
+%endif
         add		rsp, frame_size
-	ret
-
-; void call_sha256_ni_x1_sse_from_c(SHA256_ARGS *args, UINT32 size_in_blocks);
-MKGLOBAL(call_sha256_ni_x1_sse_from_c,function,internal)
-call_sha256_ni_x1_sse_from_c:
-	FUNC_SAVE
-	call sha256_ni_x1
-	FUNC_RESTORE
 	ret
 
 mksection stack-noexec
