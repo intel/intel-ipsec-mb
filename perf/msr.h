@@ -44,18 +44,17 @@
 extern "C" {
 #endif
 
-
 #ifdef DEBUG
 #define ASSERT assert
 #else
 #define ASSERT(x)
 #endif
 
-#define MACHINE_DEFAULT_MAX_COREID  255       /**< max core id */
+#define MACHINE_DEFAULT_MAX_COREID 255 /**< max core id */
 
-#define MACHINE_RETVAL_OK           0         /**< everything OK */
-#define MACHINE_RETVAL_ERROR        1         /**< generic error */
-#define MACHINE_RETVAL_PARAM        2         /**< parameter error */
+#define MACHINE_RETVAL_OK    0 /**< everything OK */
+#define MACHINE_RETVAL_ERROR 1 /**< generic error */
+#define MACHINE_RETVAL_PARAM 2 /**< parameter error */
 
 /**
  * @brief Initializes machine module
@@ -67,7 +66,8 @@ extern "C" {
  * @return Operation status
  * @retval MACHINE_RETVAL_OK on success
  */
-int machine_init(const unsigned max_core_id);
+int
+machine_init(const unsigned max_core_id);
 
 /**
  * @brief Shuts down machine module
@@ -75,7 +75,8 @@ int machine_init(const unsigned max_core_id);
  * @return Operation status
  * @retval MACHINE_RETVAL_OK on success
  */
-int machine_fini(void);
+int
+machine_fini(void);
 
 /**
  * @brief Executes RDMSR on \a lcore logical core
@@ -88,9 +89,7 @@ int machine_fini(void);
  * @retval MACHINE_RETVAL_OK on success
  */
 int
-msr_read(const unsigned lcore,
-         const uint32_t reg,
-         uint64_t * const value);
+msr_read(const unsigned lcore, const uint32_t reg, uint64_t *const value);
 
 /**
  * @brief Executes WRMSR on \a lcore logical core
@@ -103,9 +102,7 @@ msr_read(const unsigned lcore,
  * @retval MACHINE_RETVAL_OK on success
  */
 int
-msr_write(const unsigned lcore,
-          const uint32_t reg,
-          const uint64_t value);
+msr_write(const unsigned lcore, const uint32_t reg, const uint64_t value);
 
 #ifdef __cplusplus
 }

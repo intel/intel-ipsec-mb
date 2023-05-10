@@ -33,4 +33,5 @@
  *
  * @return Number of TSC cycles measured while in fixed cost loop
  */
-uint64_t measure_tsc(const uint64_t cycles);
+uint64_t
+measure_tsc(const uint64_t cycles);

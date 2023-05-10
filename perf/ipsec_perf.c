@@ -59,7 +59,7 @@
 #define __forceinline static inline __attribute__((always_inline))
 #include <unistd.h>
 #include <pthread.h>
-#if defined (__FreeBSD__)
+#if defined(__FreeBSD__)
 #include <sys/cpuset.h>
 typedef cpuset_t cpu_set_t;
 #else
@@ -87,20 +87,19 @@ typedef cpuset_t cpu_set_t;
 /* max offset applied to a buffer - this is to avoid collisions in L1 */
 #define MAX_BUFFER_OFFSET 4096
 /* max value of sha_size_incr */
-#define MAX_SHA_SIZE_INCR  128
+#define MAX_SHA_SIZE_INCR 128
 /* region size for one buffer rounded up to 4K page size */
-#define REGION_SIZE (((JOB_SIZE_TOP + (MAX_BUFFER_OFFSET + \
-                                       MAX_SHA_SIZE_INCR)) + 4095) & (~4095))
+#define REGION_SIZE (((JOB_SIZE_TOP + (MAX_BUFFER_OFFSET + MAX_SHA_SIZE_INCR)) + 4095) & (~4095))
 /* number of test buffers */
 #define NUM_OFFSETS (BUFSIZE / REGION_SIZE)
-#define NUM_RUNS 16
+#define NUM_RUNS    16
 /* maximum number of 128-bit expanded keys */
 #define KEYS_PER_JOB 15
 
-#define AAD_SIZE_MAX JOB_SIZE_TOP
-#define CCM_AAD_SIZE_MAX 46
-#define DEFAULT_GCM_AAD_SIZE 12
-#define DEFAULT_CCM_AAD_SIZE 8
+#define AAD_SIZE_MAX                 JOB_SIZE_TOP
+#define CCM_AAD_SIZE_MAX             46
+#define DEFAULT_GCM_AAD_SIZE         12
+#define DEFAULT_CCM_AAD_SIZE         8
 #define DEFAULT_CHACHA_POLY_AAD_SIZE 12
 #define DEFAULT_SNOW_V_AEAD_AAD_SIZE 16
 
@@ -108,8 +107,8 @@ typedef cpuset_t cpu_set_t;
 #define ITER_SCALE_SHORT 200000
 #define ITER_SCALE_LONG  2000000
 
-#define BITS(x) (sizeof(x) * 8)
-#define DIM(x) (sizeof(x)/sizeof(x[0]))
+#define BITS(x)            (sizeof(x) * 8)
+#define DIM(x)             (sizeof(x) / sizeof(x[0]))
 #define DIV_ROUND_UP(x, y) ((x + y - 1) / y)
 
 #define MAX_NUM_THREADS 16 /* Maximum number of threads that can be created */
@@ -119,23 +118,17 @@ typedef cpuset_t cpu_set_t;
 #define IA32_MSR_CPU_UNHALTED_THREAD 0x30A
 
 #define DEFAULT_BURST_SIZE 32
-#define MAX_BURST_SIZE 256
+#define MAX_BURST_SIZE     256
 
-enum arch_type_e {
-        ARCH_SSE = 0,
-        ARCH_AVX,
-        ARCH_AVX2,
-        ARCH_AVX512,
-        NUM_ARCHS
-};
+enum arch_type_e { ARCH_SSE = 0, ARCH_AVX, ARCH_AVX2, ARCH_AVX512, NUM_ARCHS };
 
 /* This enum will be mostly translated to IMB_CIPHER_MODE
  * (make sure to update c_mode_names list in print_times function)  */
 enum test_cipher_mode_e {
         TEST_CBC = 1,
         TEST_CNTR,
-        TEST_CNTR8, /* CNTR with increased buffer by 8 */
-        TEST_CNTR_BITLEN, /* CNTR-BITLEN */
+        TEST_CNTR8,        /* CNTR with increased buffer by 8 */
+        TEST_CNTR_BITLEN,  /* CNTR-BITLEN */
         TEST_CNTR_BITLEN4, /* CNTR-BITLEN with 4 less bits in the last byte */
         TEST_ECB,
         TEST_CBCS_1_9,
@@ -144,7 +137,7 @@ enum test_cipher_mode_e {
         TEST_AESDOCSIS8, /* AES DOCSIS with increased buffer size by 8 */
         TEST_DESDOCSIS,
         TEST_DESDOCSIS4, /* DES DOCSIS with increased buffer size by 4 */
-        TEST_GCM, /* Additional field used by GCM, not translated */
+        TEST_GCM,        /* Additional field used by GCM, not translated */
         TEST_CCM,
         TEST_DES,
         TEST_3DES,
@@ -180,7 +173,7 @@ enum test_hash_alg_e {
         TEST_HASH_CMAC_256,
         TEST_NULL_HASH,
         TEST_DOCSIS_CRC32,
-        TEST_HASH_GCM, /* Additional field used by GCM, not translated */
+        TEST_HASH_GCM,    /* Additional field used by GCM, not translated */
         TEST_CUSTOM_HASH, /* unused */
         TEST_HASH_CCM,
         TEST_PON_CRC_BIP,
@@ -212,279 +205,117 @@ enum test_hash_alg_e {
 
 /* Struct storing cipher parameters */
 struct params_s {
-        IMB_CIPHER_DIRECTION	cipher_dir;
-        enum test_cipher_mode_e	cipher_mode;
-        enum test_hash_alg_e	hash_alg;
-        uint32_t		aes_key_size;
-        uint32_t		size_aes;
-        uint64_t		aad_size;
-        uint32_t		num_sizes;
-        uint32_t                core;
+        IMB_CIPHER_DIRECTION cipher_dir;
+        enum test_cipher_mode_e cipher_mode;
+        enum test_hash_alg_e hash_alg;
+        uint32_t aes_key_size;
+        uint32_t size_aes;
+        uint64_t aad_size;
+        uint32_t num_sizes;
+        uint32_t core;
 };
 
 struct custom_job_params {
         enum test_cipher_mode_e cipher_mode;
-        enum test_hash_alg_e    hash_alg;
-        uint32_t                aes_key_size;
-        IMB_CIPHER_DIRECTION    cipher_dir;
+        enum test_hash_alg_e hash_alg;
+        uint32_t aes_key_size;
+        IMB_CIPHER_DIRECTION cipher_dir;
 };
 
 union params {
-        enum arch_type_e         arch_type;
+        enum arch_type_e arch_type;
         struct custom_job_params job_params;
 };
 
 struct str_value_mapping {
-        const char      *name;
-        union params    values;
+        const char *name;
+        union params values;
 };
 
-const struct str_value_mapping arch_str_map[] = {
-        {.name = "SSE",    .values.arch_type = ARCH_SSE },
-        {.name = "AVX",    .values.arch_type = ARCH_AVX },
-        {.name = "AVX2",   .values.arch_type = ARCH_AVX2 },
-        {.name = "AVX512", .values.arch_type = ARCH_AVX512 }
-};
+const struct str_value_mapping arch_str_map[] = { { .name = "SSE", .values.arch_type = ARCH_SSE },
+                                                  { .name = "AVX", .values.arch_type = ARCH_AVX },
+                                                  { .name = "AVX2", .values.arch_type = ARCH_AVX2 },
+                                                  { .name = "AVX512",
+                                                    .values.arch_type = ARCH_AVX512 } };
 
 const struct str_value_mapping cipher_algo_str_map[] = {
-        {
-                .name = "aes-cbc-128",
-                .values.job_params = {
-                        .cipher_mode = TEST_CBC,
-                        .aes_key_size = IMB_KEY_128_BYTES
-                }
-        },
-        {
-                .name = "aes-cbc-192",
-                .values.job_params = {
-                        .cipher_mode = TEST_CBC,
-                        .aes_key_size = IMB_KEY_192_BYTES
-                }
-        },
-        {
-                .name = "aes-cbc-256",
-                .values.job_params = {
-                        .cipher_mode = TEST_CBC,
-                        .aes_key_size = IMB_KEY_256_BYTES
-                }
-        },
-        {
-                .name = "aes-ctr-128",
-                .values.job_params = {
-                        .cipher_mode = TEST_CNTR,
-                        .aes_key_size = IMB_KEY_128_BYTES
-                }
-        },
-        {
-                .name = "aes-ctr-192",
-                .values.job_params = {
-                        .cipher_mode = TEST_CNTR,
-                        .aes_key_size = IMB_KEY_192_BYTES
-                }
-        },
-        {
-                .name = "aes-ctr-256",
-                .values.job_params = {
-                        .cipher_mode = TEST_CNTR,
-                        .aes_key_size = IMB_KEY_256_BYTES
-                }
-        },
-        {
-                .name = "aes-ctr8-128",
-                .values.job_params = {
-                        .cipher_mode = TEST_CNTR8,
-                        .aes_key_size = IMB_KEY_128_BYTES
-                }
-        },
-        {
-                .name = "aes-ctr8-192",
-                .values.job_params = {
-                        .cipher_mode = TEST_CNTR8,
-                        .aes_key_size = IMB_KEY_192_BYTES
-                }
-        },
-        {
-                .name = "aes-ctr8-256",
-                .values.job_params = {
-                        .cipher_mode = TEST_CNTR8,
-                        .aes_key_size = IMB_KEY_256_BYTES
-                }
-        },
-        {
-                .name = "aes-ctr-bit-128",
-                .values.job_params = {
-                        .cipher_mode = TEST_CNTR_BITLEN,
-                        .aes_key_size = IMB_KEY_128_BYTES
-                }
-        },
-        {
-                .name = "aes-ctr-bit-192",
-                .values.job_params = {
-                        .cipher_mode = TEST_CNTR_BITLEN,
-                        .aes_key_size = IMB_KEY_192_BYTES
-                }
-        },
-        {
-                .name = "aes-ctr-bit-256",
-                .values.job_params = {
-                        .cipher_mode = TEST_CNTR_BITLEN,
-                        .aes_key_size = IMB_KEY_256_BYTES
-                }
-        },
-        {
-                .name = "aes-ctr-bit4-128",
-                .values.job_params = {
-                        .cipher_mode = TEST_CNTR_BITLEN4,
-                        .aes_key_size = IMB_KEY_128_BYTES
-                }
-        },
-        {
-                .name = "aes-ctr-bit4-192",
-                .values.job_params = {
-                        .cipher_mode = TEST_CNTR_BITLEN4,
-                        .aes_key_size = IMB_KEY_192_BYTES
-                }
-        },
-        {
-                .name = "aes-ctr-bit4-256",
-                .values.job_params = {
-                        .cipher_mode = TEST_CNTR_BITLEN4,
-                        .aes_key_size = IMB_KEY_256_BYTES
-                }
-        },
-        {
-                .name = "aes-ecb-128",
-                .values.job_params = {
-                        .cipher_mode = TEST_ECB,
-                        .aes_key_size = IMB_KEY_128_BYTES
-                }
-        },
-        {
-                .name = "aes-ecb-192",
-                .values.job_params = {
-                        .cipher_mode = TEST_ECB,
-                        .aes_key_size = IMB_KEY_192_BYTES
-                }
-        },
-        {
-                .name = "aes-ecb-256",
-                .values.job_params = {
-                        .cipher_mode = TEST_ECB,
-                        .aes_key_size = IMB_KEY_256_BYTES
-                }
-        },
-        {
-                .name = "aes-docsis-128",
-                .values.job_params = {
-                        .cipher_mode = TEST_AESDOCSIS,
-                        .aes_key_size = IMB_KEY_128_BYTES
-                }
-        },
-        {
-                .name = "aes-docsis8-128",
-                .values.job_params = {
-                        .cipher_mode = TEST_AESDOCSIS8,
-                        .aes_key_size = IMB_KEY_128_BYTES
-                }
-        },
-        {
-                .name = "aes-docsis-256",
-                .values.job_params = {
-                        .cipher_mode = TEST_AESDOCSIS,
-                        .aes_key_size = IMB_KEY_256_BYTES
-                }
-        },
-        {
-                .name = "aes-docsis8-256",
-                .values.job_params = {
-                        .cipher_mode = TEST_AESDOCSIS8,
-                        .aes_key_size = IMB_KEY_256_BYTES
-                }
-        },
-        {
-                .name = "des-docsis",
-                .values.job_params = {
-                        .cipher_mode = TEST_DESDOCSIS,
-                        .aes_key_size = 8
-                }
-        },
-        {
-                .name = "des-docsis4",
-                .values.job_params = {
-                        .cipher_mode = TEST_DESDOCSIS4,
-                        .aes_key_size = 8
-                }
-        },
-        {
-                .name = "des-cbc",
-                .values.job_params = {
-                        .cipher_mode = TEST_DES,
-                        .aes_key_size = 8
-                }
-        },
-        {
-                .name = "3des-cbc",
-                .values.job_params = {
-                        .cipher_mode = TEST_3DES,
-                        .aes_key_size = 8
-                }
-        },
-        {
-                .name = "zuc-eea3",
-                .values.job_params = {
-                        .cipher_mode = TEST_ZUC_EEA3,
-                        .aes_key_size = 16
-                }
-        },
-        {
-                .name = "zuc-eea3-256",
-                .values.job_params = {
-                        .cipher_mode = TEST_ZUC_EEA3,
-                        .aes_key_size = 32
-                }
-        },
-        {
-                .name = "snow3g-uea2",
-                .values.job_params = {
-                        .cipher_mode = TEST_SNOW3G_UEA2,
-                        .aes_key_size = 16
-                }
-        },
-        {
-                .name = "kasumi-uea1",
-                .values.job_params = {
-                        .cipher_mode = TEST_KASUMI_UEA1,
-                        .aes_key_size = 16
-                }
-        },
-        {
-                .name = "aes-cbcs-1-9",
-                .values.job_params = {
-                        .cipher_mode = TEST_CBCS_1_9,
-                        .aes_key_size = 16
-                }
-        },
-        {
-                .name = "chacha20",
-                .values.job_params = {
-                        .cipher_mode = TEST_CHACHA20,
-                        .aes_key_size = 32
-                }
-        },
-        {
-                .name = "snow-v",
-                .values.job_params = {
-                        .cipher_mode = TEST_SNOW_V,
-                        .aes_key_size = 32
-                }
-        },
-        {
-                .name = "null",
-                .values.job_params = {
-                        .cipher_mode = TEST_NULL_CIPHER,
-                        .aes_key_size = 0
-                }
-        }
+        { .name = "aes-cbc-128",
+          .values.job_params = { .cipher_mode = TEST_CBC, .aes_key_size = IMB_KEY_128_BYTES } },
+        { .name = "aes-cbc-192",
+          .values.job_params = { .cipher_mode = TEST_CBC, .aes_key_size = IMB_KEY_192_BYTES } },
+        { .name = "aes-cbc-256",
+          .values.job_params = { .cipher_mode = TEST_CBC, .aes_key_size = IMB_KEY_256_BYTES } },
+        { .name = "aes-ctr-128",
+          .values.job_params = { .cipher_mode = TEST_CNTR, .aes_key_size = IMB_KEY_128_BYTES } },
+        { .name = "aes-ctr-192",
+          .values.job_params = { .cipher_mode = TEST_CNTR, .aes_key_size = IMB_KEY_192_BYTES } },
+        { .name = "aes-ctr-256",
+          .values.job_params = { .cipher_mode = TEST_CNTR, .aes_key_size = IMB_KEY_256_BYTES } },
+        { .name = "aes-ctr8-128",
+          .values.job_params = { .cipher_mode = TEST_CNTR8, .aes_key_size = IMB_KEY_128_BYTES } },
+        { .name = "aes-ctr8-192",
+          .values.job_params = { .cipher_mode = TEST_CNTR8, .aes_key_size = IMB_KEY_192_BYTES } },
+        { .name = "aes-ctr8-256",
+          .values.job_params = { .cipher_mode = TEST_CNTR8, .aes_key_size = IMB_KEY_256_BYTES } },
+        { .name = "aes-ctr-bit-128",
+          .values.job_params = { .cipher_mode = TEST_CNTR_BITLEN,
+                                 .aes_key_size = IMB_KEY_128_BYTES } },
+        { .name = "aes-ctr-bit-192",
+          .values.job_params = { .cipher_mode = TEST_CNTR_BITLEN,
+                                 .aes_key_size = IMB_KEY_192_BYTES } },
+        { .name = "aes-ctr-bit-256",
+          .values.job_params = { .cipher_mode = TEST_CNTR_BITLEN,
+                                 .aes_key_size = IMB_KEY_256_BYTES } },
+        { .name = "aes-ctr-bit4-128",
+          .values.job_params = { .cipher_mode = TEST_CNTR_BITLEN4,
+                                 .aes_key_size = IMB_KEY_128_BYTES } },
+        { .name = "aes-ctr-bit4-192",
+          .values.job_params = { .cipher_mode = TEST_CNTR_BITLEN4,
+                                 .aes_key_size = IMB_KEY_192_BYTES } },
+        { .name = "aes-ctr-bit4-256",
+          .values.job_params = { .cipher_mode = TEST_CNTR_BITLEN4,
+                                 .aes_key_size = IMB_KEY_256_BYTES } },
+        { .name = "aes-ecb-128",
+          .values.job_params = { .cipher_mode = TEST_ECB, .aes_key_size = IMB_KEY_128_BYTES } },
+        { .name = "aes-ecb-192",
+          .values.job_params = { .cipher_mode = TEST_ECB, .aes_key_size = IMB_KEY_192_BYTES } },
+        { .name = "aes-ecb-256",
+          .values.job_params = { .cipher_mode = TEST_ECB, .aes_key_size = IMB_KEY_256_BYTES } },
+        { .name = "aes-docsis-128",
+          .values.job_params = { .cipher_mode = TEST_AESDOCSIS,
+                                 .aes_key_size = IMB_KEY_128_BYTES } },
+        { .name = "aes-docsis8-128",
+          .values.job_params = { .cipher_mode = TEST_AESDOCSIS8,
+                                 .aes_key_size = IMB_KEY_128_BYTES } },
+        { .name = "aes-docsis-256",
+          .values.job_params = { .cipher_mode = TEST_AESDOCSIS,
+                                 .aes_key_size = IMB_KEY_256_BYTES } },
+        { .name = "aes-docsis8-256",
+          .values.job_params = { .cipher_mode = TEST_AESDOCSIS8,
+                                 .aes_key_size = IMB_KEY_256_BYTES } },
+        { .name = "des-docsis",
+          .values.job_params = { .cipher_mode = TEST_DESDOCSIS, .aes_key_size = 8 } },
+        { .name = "des-docsis4",
+          .values.job_params = { .cipher_mode = TEST_DESDOCSIS4, .aes_key_size = 8 } },
+        { .name = "des-cbc", .values.job_params = { .cipher_mode = TEST_DES, .aes_key_size = 8 } },
+        { .name = "3des-cbc",
+          .values.job_params = { .cipher_mode = TEST_3DES, .aes_key_size = 8 } },
+        { .name = "zuc-eea3",
+          .values.job_params = { .cipher_mode = TEST_ZUC_EEA3, .aes_key_size = 16 } },
+        { .name = "zuc-eea3-256",
+          .values.job_params = { .cipher_mode = TEST_ZUC_EEA3, .aes_key_size = 32 } },
+        { .name = "snow3g-uea2",
+          .values.job_params = { .cipher_mode = TEST_SNOW3G_UEA2, .aes_key_size = 16 } },
+        { .name = "kasumi-uea1",
+          .values.job_params = { .cipher_mode = TEST_KASUMI_UEA1, .aes_key_size = 16 } },
+        { .name = "aes-cbcs-1-9",
+          .values.job_params = { .cipher_mode = TEST_CBCS_1_9, .aes_key_size = 16 } },
+        { .name = "chacha20",
+          .values.job_params = { .cipher_mode = TEST_CHACHA20, .aes_key_size = 32 } },
+        { .name = "snow-v",
+          .values.job_params = { .cipher_mode = TEST_SNOW_V, .aes_key_size = 32 } },
+        { .name = "null",
+          .values.job_params = { .cipher_mode = TEST_NULL_CIPHER, .aes_key_size = 0 } }
 };
 
 const struct str_value_mapping hash_algo_str_map[] = {
@@ -713,115 +544,63 @@ const struct str_value_mapping hash_algo_str_map[] = {
 };
 
 const struct str_value_mapping aead_algo_str_map[] = {
-        {
-                .name = "aes-gcm-128",
-                .values.job_params = {
-                        .cipher_mode = TEST_GCM,
-                        .hash_alg = TEST_HASH_GCM,
-                        .aes_key_size = IMB_KEY_128_BYTES
-                }
-        },
-        {
-                .name = "aes-gcm-192",
-                .values.job_params = {
-                        .cipher_mode = TEST_GCM,
-                        .hash_alg = TEST_HASH_GCM,
-                        .aes_key_size = IMB_KEY_192_BYTES
-                }
-        },
-        {
-                .name = "aes-gcm-256",
-                .values.job_params = {
-                        .cipher_mode = TEST_GCM,
-                        .hash_alg = TEST_HASH_GCM,
-                        .aes_key_size = IMB_KEY_256_BYTES
-                }
-        },
-        {
-                .name = "aes-ccm-128",
-                .values.job_params = {
-                        .cipher_mode = TEST_CCM,
-                        .hash_alg = TEST_HASH_CCM,
-                        .aes_key_size = IMB_KEY_128_BYTES
-                }
-        },
-        {
-                .name = "aes-ccm-256",
-                .values.job_params = {
-                        .cipher_mode = TEST_CCM,
-                        .hash_alg = TEST_HASH_CCM,
-                        .aes_key_size = IMB_KEY_256_BYTES
-                }
-        },
-        {
-                .name = "pon-128",
-                .values.job_params = {
-                        .cipher_mode = TEST_PON_CNTR,
-                        .hash_alg = TEST_PON_CRC_BIP,
-                        .aes_key_size = IMB_KEY_128_BYTES
-                }
-        },
-        {
-                .name = "pon-128-no-ctr",
-                .values.job_params = {
-                        .cipher_mode = TEST_PON_NO_CNTR,
-                        .hash_alg = TEST_PON_CRC_BIP,
-                        .aes_key_size = 0
-                }
-        },
-        {
-                .name = "chacha20-poly1305",
-                .values.job_params = {
-                        .cipher_mode = TEST_AEAD_CHACHA20,
-                        .hash_alg = TEST_AEAD_POLY1305,
-                        .aes_key_size = IMB_KEY_256_BYTES
-                }
-        },
-        {
-                .name = "aes-docsis-128-crc32",
-                .values.job_params = {
-                        .cipher_mode = TEST_AESDOCSIS,
-                        .hash_alg = TEST_DOCSIS_CRC32,
-                        .aes_key_size = IMB_KEY_128_BYTES
-                }
-        },
-                {
-                .name = "aes-docsis8-128-crc32",
-                .values.job_params = {
-                        .cipher_mode = TEST_AESDOCSIS8,
-                        .hash_alg = TEST_DOCSIS_CRC32,
-                        .aes_key_size = IMB_KEY_128_BYTES
-                }
-        },
-        {
-                .name = "aes-docsis-256-crc32",
-                .values.job_params = {
-                        .cipher_mode = TEST_AESDOCSIS,
-                        .hash_alg = TEST_DOCSIS_CRC32,
-                        .aes_key_size = IMB_KEY_256_BYTES
-                }
-        },
-        {
-                .name = "aes-docsis8-256-crc32",
-                .values.job_params = {
-                        .cipher_mode = TEST_AESDOCSIS8,
-                        .hash_alg = TEST_DOCSIS_CRC32,
-                        .aes_key_size = IMB_KEY_256_BYTES
-                }
-        },
-        {
-                .name = "snow-v-aead",
-                .values.job_params = {
-                        .cipher_mode = TEST_SNOW_V_AEAD,
-                        .aes_key_size = 32,
-                        .hash_alg = TEST_AUTH_SNOW_V_AEAD
-                }
-        },
+        { .name = "aes-gcm-128",
+          .values.job_params = { .cipher_mode = TEST_GCM,
+                                 .hash_alg = TEST_HASH_GCM,
+                                 .aes_key_size = IMB_KEY_128_BYTES } },
+        { .name = "aes-gcm-192",
+          .values.job_params = { .cipher_mode = TEST_GCM,
+                                 .hash_alg = TEST_HASH_GCM,
+                                 .aes_key_size = IMB_KEY_192_BYTES } },
+        { .name = "aes-gcm-256",
+          .values.job_params = { .cipher_mode = TEST_GCM,
+                                 .hash_alg = TEST_HASH_GCM,
+                                 .aes_key_size = IMB_KEY_256_BYTES } },
+        { .name = "aes-ccm-128",
+          .values.job_params = { .cipher_mode = TEST_CCM,
+                                 .hash_alg = TEST_HASH_CCM,
+                                 .aes_key_size = IMB_KEY_128_BYTES } },
+        { .name = "aes-ccm-256",
+          .values.job_params = { .cipher_mode = TEST_CCM,
+                                 .hash_alg = TEST_HASH_CCM,
+                                 .aes_key_size = IMB_KEY_256_BYTES } },
+        { .name = "pon-128",
+          .values.job_params = { .cipher_mode = TEST_PON_CNTR,
+                                 .hash_alg = TEST_PON_CRC_BIP,
+                                 .aes_key_size = IMB_KEY_128_BYTES } },
+        { .name = "pon-128-no-ctr",
+          .values.job_params = { .cipher_mode = TEST_PON_NO_CNTR,
+                                 .hash_alg = TEST_PON_CRC_BIP,
+                                 .aes_key_size = 0 } },
+        { .name = "chacha20-poly1305",
+          .values.job_params = { .cipher_mode = TEST_AEAD_CHACHA20,
+                                 .hash_alg = TEST_AEAD_POLY1305,
+                                 .aes_key_size = IMB_KEY_256_BYTES } },
+        { .name = "aes-docsis-128-crc32",
+          .values.job_params = { .cipher_mode = TEST_AESDOCSIS,
+                                 .hash_alg = TEST_DOCSIS_CRC32,
+                                 .aes_key_size = IMB_KEY_128_BYTES } },
+        { .name = "aes-docsis8-128-crc32",
+          .values.job_params = { .cipher_mode = TEST_AESDOCSIS8,
+                                 .hash_alg = TEST_DOCSIS_CRC32,
+                                 .aes_key_size = IMB_KEY_128_BYTES } },
+        { .name = "aes-docsis-256-crc32",
+          .values.job_params = { .cipher_mode = TEST_AESDOCSIS,
+                                 .hash_alg = TEST_DOCSIS_CRC32,
+                                 .aes_key_size = IMB_KEY_256_BYTES } },
+        { .name = "aes-docsis8-256-crc32",
+          .values.job_params = { .cipher_mode = TEST_AESDOCSIS8,
+                                 .hash_alg = TEST_DOCSIS_CRC32,
+                                 .aes_key_size = IMB_KEY_256_BYTES } },
+        { .name = "snow-v-aead",
+          .values.job_params = { .cipher_mode = TEST_SNOW_V_AEAD,
+                                 .aes_key_size = 32,
+                                 .hash_alg = TEST_AUTH_SNOW_V_AEAD } },
 };
 
 const struct str_value_mapping cipher_dir_str_map[] = {
-        {.name = "encrypt", .values.job_params.cipher_dir = IMB_DIR_ENCRYPT},
-        {.name = "decrypt", .values.job_params.cipher_dir = IMB_DIR_DECRYPT}
+        { .name = "encrypt", .values.job_params.cipher_dir = IMB_DIR_ENCRYPT },
+        { .name = "decrypt", .values.job_params.cipher_dir = IMB_DIR_DECRYPT }
 };
 
 /* This struct stores all information about performed test case */
@@ -838,60 +617,57 @@ struct thread_info {
         IMB_MGR *p_mgr;
 } t_info[MAX_NUM_THREADS];
 
-enum cache_type_e {
-        WARM = 0,
-        COLD = 1
-};
+enum cache_type_e { WARM = 0, COLD = 1 };
 
 enum cache_type_e cache_type = WARM;
 
 const uint32_t auth_tag_length_bytes[] = {
-                12, /* SHA1_HMAC */
-                14, /* SHA_224_HMAC */
-                16, /* SHA_256_HMAC */
-                24, /* SHA_384_HMAC */
-                32, /* SHA_512_HMAC */
-                12, /* AES_XCBC */
-                12, /* MD5 */
-                0,  /* NULL_HASH */
-                16, /* AES_GMAC */
-                0,  /* CUSTOM HASH */
-                16, /* AES_CCM */
-                16, /* AES_CMAC */
-                20, /* PLAIN_SHA1 */
-                28, /* PLAIN_SHA_224 */
-                32, /* PLAIN_SHA_256 */
-                48, /* PLAIN_SHA_384 */
-                64, /* PLAIN_SHA_512 */
-                4,  /* AES_CMAC_BITLEN (3GPP) */
-                8,  /* PON */
-                4,  /* ZUC-EIA3 */
-                IMB_DOCSIS_CRC32_TAG_SIZE, /* DOCSIS_CRC32 */
-                4,  /* SNOW3G-UIA2 */
-                4,  /* KASUMI-UIA1 */
-                16, /* IMB_AUTH_AES_GMAC_128 */
-                16, /* IMB_AUTH_AES_GMAC_192 */
-                16, /* IMB_AUTH_AES_GMAC_256 */
-                16, /* AES_CMAC_256 */
-                16, /* POLY1305 */
-                16, /* AEAD CHACHA20-POLY1305 */
-                16, /* AEAD CHACHA20 with SGL support*/
-                4,  /* ZUC-256-EIA3 */
-                16,  /* SNOW-V AEAD */
-                16, /* AES-GCM with SGL support */
-                4,  /* IMB_AUTH_CRC32_ETHERNET_FCS */
-                4,  /* IMB_AUTH_CRC32_SCTP */
-                4,  /* IMB_AUTH_CRC32_WIMAX_OFDMA_DATA */
-                4,  /* IMB_AUTH_CRC24_LTE_A */
-                4,  /* IMB_AUTH_CRC24_LTE_B */
-                4,  /* IMB_AUTH_CRC16_X25 */
-                4,  /* IMB_AUTH_CRC16_FP_DATA */
-                4,  /* IMB_AUTH_CRC11_FP_HEADER */
-                4,  /* IMB_AUTH_CRC10_IUUP_DATA */
-                4,  /* IMB_AUTH_CRC8_WIMAX_OFDMA_HCS */
-                4,  /* IMB_AUTH_CRC7_FP_HEADER */
-                4,  /* IMB_AUTH_CRC6_IUUP_HEADER */
-                16, /* IMB_AUTH_GHASH */
+        12,                        /* SHA1_HMAC */
+        14,                        /* SHA_224_HMAC */
+        16,                        /* SHA_256_HMAC */
+        24,                        /* SHA_384_HMAC */
+        32,                        /* SHA_512_HMAC */
+        12,                        /* AES_XCBC */
+        12,                        /* MD5 */
+        0,                         /* NULL_HASH */
+        16,                        /* AES_GMAC */
+        0,                         /* CUSTOM HASH */
+        16,                        /* AES_CCM */
+        16,                        /* AES_CMAC */
+        20,                        /* PLAIN_SHA1 */
+        28,                        /* PLAIN_SHA_224 */
+        32,                        /* PLAIN_SHA_256 */
+        48,                        /* PLAIN_SHA_384 */
+        64,                        /* PLAIN_SHA_512 */
+        4,                         /* AES_CMAC_BITLEN (3GPP) */
+        8,                         /* PON */
+        4,                         /* ZUC-EIA3 */
+        IMB_DOCSIS_CRC32_TAG_SIZE, /* DOCSIS_CRC32 */
+        4,                         /* SNOW3G-UIA2 */
+        4,                         /* KASUMI-UIA1 */
+        16,                        /* IMB_AUTH_AES_GMAC_128 */
+        16,                        /* IMB_AUTH_AES_GMAC_192 */
+        16,                        /* IMB_AUTH_AES_GMAC_256 */
+        16,                        /* AES_CMAC_256 */
+        16,                        /* POLY1305 */
+        16,                        /* AEAD CHACHA20-POLY1305 */
+        16,                        /* AEAD CHACHA20 with SGL support*/
+        4,                         /* ZUC-256-EIA3 */
+        16,                        /* SNOW-V AEAD */
+        16,                        /* AES-GCM with SGL support */
+        4,                         /* IMB_AUTH_CRC32_ETHERNET_FCS */
+        4,                         /* IMB_AUTH_CRC32_SCTP */
+        4,                         /* IMB_AUTH_CRC32_WIMAX_OFDMA_DATA */
+        4,                         /* IMB_AUTH_CRC24_LTE_A */
+        4,                         /* IMB_AUTH_CRC24_LTE_B */
+        4,                         /* IMB_AUTH_CRC16_X25 */
+        4,                         /* IMB_AUTH_CRC16_FP_DATA */
+        4,                         /* IMB_AUTH_CRC11_FP_HEADER */
+        4,                         /* IMB_AUTH_CRC10_IUUP_DATA */
+        4,                         /* IMB_AUTH_CRC8_WIMAX_OFDMA_HCS */
+        4,                         /* IMB_AUTH_CRC7_FP_HEADER */
+        4,                         /* IMB_AUTH_CRC6_IUUP_HEADER */
+        16,                        /* IMB_AUTH_GHASH */
 };
 uint32_t index_limit;
 uint32_t key_idxs[NUM_OFFSETS];
@@ -899,16 +675,10 @@ uint32_t offsets[NUM_OFFSETS];
 uint32_t sha_size_incr = UINT32_MAX;
 uint32_t buffer_offset = 0;
 
-enum range {
-        RANGE_MIN = 0,
-        RANGE_STEP,
-        RANGE_MAX,
-        NUM_RANGE
-};
+enum range { RANGE_MIN = 0, RANGE_STEP, RANGE_MAX, NUM_RANGE };
 
-uint32_t job_sizes[NUM_RANGE] = {DEFAULT_JOB_SIZE_MIN,
-                                 DEFAULT_JOB_SIZE_STEP,
-                                 DEFAULT_JOB_SIZE_MAX};
+uint32_t job_sizes[NUM_RANGE] = { DEFAULT_JOB_SIZE_MIN, DEFAULT_JOB_SIZE_STEP,
+                                  DEFAULT_JOB_SIZE_MAX };
 uint32_t job_size_list[MAX_LIST];
 uint32_t job_size_count = 0;
 uint32_t imix_list[MAX_LIST];
@@ -931,19 +701,17 @@ uint64_t ccm_aad_size = DEFAULT_CCM_AAD_SIZE;
 uint64_t chacha_poly_aad_size = DEFAULT_CHACHA_POLY_AAD_SIZE;
 uint64_t snow_v_aad_size = DEFAULT_SNOW_V_AEAD_AAD_SIZE;
 
-struct custom_job_params custom_job_params = {
-        .cipher_mode  = TEST_NULL_CIPHER,
-        .hash_alg     = TEST_NULL_HASH,
-        .aes_key_size = 0,
-        .cipher_dir   = IMB_DIR_ENCRYPT
-};
+struct custom_job_params custom_job_params = { .cipher_mode = TEST_NULL_CIPHER,
+                                               .hash_alg = TEST_NULL_HASH,
+                                               .aes_key_size = 0,
+                                               .cipher_dir = IMB_DIR_ENCRYPT };
 
-uint8_t archs[NUM_ARCHS] = {1, 1, 1, 1}; /* uses all function sets */
+uint8_t archs[NUM_ARCHS] = { 1, 1, 1, 1 }; /* uses all function sets */
 int use_job_api = 0;
 int use_gcm_sgl_api = 0;
 int use_unhalted_cycles = 0; /* read unhalted cycles instead of tsc */
 uint64_t rd_cycles_cost = 0; /* cost of reading unhalted cycles */
-uint64_t core_mask = 0; /* bitmap of selected cores */
+uint64_t core_mask = 0;      /* bitmap of selected cores */
 
 uint64_t flags = 0; /* flags passed to alloc_mb_mgr() */
 
@@ -963,7 +731,7 @@ static int plot_output_option = 0;
 static int quic_api_test = 0;
 
 /* API types */
-typedef enum  {
+typedef enum {
         TEST_API_JOB = 0,
         TEST_API_BURST,
         TEST_API_CIPHER_BURST,
@@ -971,19 +739,19 @@ typedef enum  {
         TEST_API_NUMOF
 } TEST_API;
 
-const char *str_api_list[TEST_API_NUMOF] = {"single job", "burst",
-                                            "cipher-only burst",
-                                            "hash-only burst"};
+const char *str_api_list[TEST_API_NUMOF] = { "single job", "burst", "cipher-only burst",
+                                             "hash-only burst" };
 
 static TEST_API test_api = TEST_API_JOB; /* test job API by default */
-static uint32_t burst_size = 0; /* num jobs to pass to burst API */
-static uint32_t segment_size = 0; /* segment size to test SGL (0 = no SGL) */
+static uint32_t burst_size = 0;          /* num jobs to pass to burst API */
+static uint32_t segment_size = 0;        /* segment size to test SGL (0 = no SGL) */
 
 static volatile int timebox_on = 1; /* flag to stop the test loop */
 static int use_timebox = 1;         /* time-box feature on/off flag */
 
 #ifdef LINUX
-static void timebox_callback(int sig)
+static void
+timebox_callback(int sig)
 {
         (void) sig;
         timebox_on = 0;
@@ -991,7 +759,8 @@ static void timebox_callback(int sig)
 #endif
 
 #ifdef _WIN32
-static void CALLBACK timebox_callback(PVOID lpParam, BOOLEAN TimerFired)
+static void CALLBACK
+timebox_callback(PVOID lpParam, BOOLEAN TimerFired)
 {
         (void) lpParam;
         (void) TimerFired;
@@ -1000,7 +769,8 @@ static void CALLBACK timebox_callback(PVOID lpParam, BOOLEAN TimerFired)
 #endif
 
 /* Return rdtsc to core cycle scale factor */
-static double get_tsc_to_core_scale(const int turbo)
+static double
+get_tsc_to_core_scale(const int turbo)
 {
         int i;
         /* use enough cycles for accurate measurement */
@@ -1014,10 +784,11 @@ static double get_tsc_to_core_scale(const int turbo)
         for (i = 0; i < num_loops; i++)
                 tsc_cycles = measure_tsc(expected_cycles);
 
-        return ((double)tsc_cycles / (double)expected_cycles);
+        return ((double) tsc_cycles / (double) expected_cycles);
 }
 
-static void prog_bar_init(const uint32_t total_num)
+static void
+prog_bar_init(const uint32_t total_num)
 {
         if (silent_progress_bar)
                 return;
@@ -1039,7 +810,8 @@ static void prog_bar_init(const uint32_t total_num)
         fputs(prog_bar, stderr);
 }
 
-static void prog_bar_fini(void)
+static void
+prog_bar_fini(void)
 {
         if (silent_progress_bar)
                 return;
@@ -1048,7 +820,8 @@ static void prog_bar_fini(void)
         fputs(prog_bar, stderr);
 }
 
-static void prog_bar_update(const uint32_t num)
+static void
+prog_bar_update(const uint32_t num)
 {
         if (silent_progress_bar)
                 return;
@@ -1062,7 +835,7 @@ static void prog_bar_update(const uint32_t num)
                 if (pb_idx < (PB_SIZE + 1))
                         pb_idx++;
         } else {
-                const char pb_inter_chars[] = {'|', '/', '-', '\\'};
+                const char pb_inter_chars[] = { '|', '/', '-', '\\' };
                 /* print intermediate chars */
                 prog_bar[pb_idx] = pb_inter_chars[num % DIM(pb_inter_chars)];
                 fputs(prog_bar, stderr);
@@ -1070,14 +843,16 @@ static void prog_bar_update(const uint32_t num)
 }
 
 /* Read unhalted cycles */
-__forceinline uint64_t read_cycles(const uint32_t core)
+__forceinline uint64_t
+read_cycles(const uint32_t core)
 {
         uint64_t val = 0;
 
-        if (msr_read(core, IA32_MSR_CPU_UNHALTED_THREAD,
-                     &val) != MACHINE_RETVAL_OK) {
-                fprintf(stderr, "Error reading cycles "
-                        "counter on core %u!\n", core);
+        if (msr_read(core, IA32_MSR_CPU_UNHALTED_THREAD, &val) != MACHINE_RETVAL_OK) {
+                fprintf(stderr,
+                        "Error reading cycles "
+                        "counter on core %u!\n",
+                        core);
                 exit(EXIT_FAILURE);
         }
 
@@ -1085,13 +860,15 @@ __forceinline uint64_t read_cycles(const uint32_t core)
 }
 
 /* Method used by qsort to compare 2 values */
-static int compare_uint64_t(const void *a, const void *b)
+static int
+compare_uint64_t(const void *a, const void *b)
 {
-        return (int)(int64_t)(*(const uint64_t *)a - *(const uint64_t *)b);
+        return (int) (int64_t) (*(const uint64_t *) a - *(const uint64_t *) b);
 }
 
 /* Get number of bits set in value */
-static unsigned bitcount(const uint64_t val)
+static unsigned
+bitcount(const uint64_t val)
 {
         unsigned i, bits = 0;
 
@@ -1104,8 +881,8 @@ static unsigned bitcount(const uint64_t val)
 
 /* Get the next core in core mask
    Set last_core to negative to start from beginning of core_mask */
-static int next_core(const uint64_t core_mask,
-                     const int last_core)
+static int
+next_core(const uint64_t core_mask, const int last_core)
 {
         int core = 0;
 
@@ -1115,7 +892,7 @@ static int next_core(const uint64_t core_mask,
         while (((core_mask >> core) & 1) == 0) {
                 core++;
 
-                if (core >= (int)BITS(core_mask))
+                if (core >= (int) BITS(core_mask))
                         return -1;
         }
 
@@ -1123,7 +900,8 @@ static int next_core(const uint64_t core_mask,
 }
 
 /* Set CPU affinity for current thread */
-static int set_affinity(const int cpu)
+static int
+set_affinity(const int cpu)
 {
         int ret = 0;
         int num_cpus = 0;
@@ -1144,15 +922,16 @@ static int set_affinity(const int cpu)
 
         /* Check if selected core is valid */
         if (cpu < 0 || cpu >= num_cpus) {
-                fprintf(stderr, "Invalid CPU selected! "
-                        "Max valid CPU is %d\n", num_cpus - 1);
+                fprintf(stderr,
+                        "Invalid CPU selected! "
+                        "Max valid CPU is %d\n",
+                        num_cpus - 1);
                 return 1;
         }
 
 #ifdef _WIN32
         NewGroupAffinity.Mask = 1ULL << cpu;
-        ret = !SetThreadGroupAffinity(GetCurrentThread(),
-                                      &NewGroupAffinity, NULL);
+        ret = !SetThreadGroupAffinity(GetCurrentThread(), &NewGroupAffinity, NULL);
 #else
         cpu_set_t cpuset;
 
@@ -1161,8 +940,7 @@ static int set_affinity(const int cpu)
 
         /* Set affinity of current process to cpu */
 #if defined(__FreeBSD__)
-	ret = cpuset_setaffinity(CPU_LEVEL_WHICH, CPU_WHICH_TID, -1,
-				sizeof(cpuset), &cpuset);
+        ret = cpuset_setaffinity(CPU_LEVEL_WHICH, CPU_WHICH_TID, -1, sizeof(cpuset), &cpuset);
 #else
         ret = sched_setaffinity(0, sizeof(cpuset), &cpuset);
 #endif
@@ -1172,7 +950,8 @@ static int set_affinity(const int cpu)
 }
 
 /* Start counting unhalted cycles */
-static int start_cycles_ctr(const uint32_t core)
+static int
+start_cycles_ctr(const uint32_t core)
 {
         int ret;
 
@@ -1195,11 +974,12 @@ static int start_cycles_ctr(const uint32_t core)
                 return ret;
 
         /* Enable cycles counter */
-        return  msr_write(core, IA32_MSR_PERF_GLOBAL_CTR, (1ULL << 33));
+        return msr_write(core, IA32_MSR_PERF_GLOBAL_CTR, (1ULL << 33));
 }
 
 /* Init MSR module */
-static int init_msr_mod(void)
+static int
+init_msr_mod(void)
 {
         unsigned max_core_count = 0;
 #ifdef _WIN32
@@ -1216,7 +996,8 @@ static int init_msr_mod(void)
 }
 
 /* Set the cost of reading unhalted cycles using RDMSR */
-static int set_unhalted_cycle_cost(const int core, uint64_t *value)
+static int
+set_unhalted_cycle_cost(const int core, uint64_t *value)
 {
         uint64_t time1, time2;
 
@@ -1233,7 +1014,8 @@ static int set_unhalted_cycle_cost(const int core, uint64_t *value)
 }
 
 /* Calculate the general cost of reading unhalted cycles (median) */
-static int set_avg_unhalted_cycle_cost(const int core, uint64_t *value)
+static int
+set_avg_unhalted_cycle_cost(const int core, uint64_t *value)
 {
         unsigned i;
         uint64_t cycles[10];
@@ -1250,13 +1032,14 @@ static int set_avg_unhalted_cycle_cost(const int core, uint64_t *value)
         qsort(cycles, DIM(cycles), sizeof(uint64_t), compare_uint64_t);
 
         /* set median cost */
-        *value = cycles[DIM(cycles)/2];
+        *value = cycles[DIM(cycles) / 2];
 
         return 0;
 }
 
 /* Freeing allocated memory */
-static void free_mem(uint8_t **p_buffer, imb_uint128_t **p_keys)
+static void
+free_mem(uint8_t **p_buffer, imb_uint128_t **p_keys)
 {
         imb_uint128_t *keys = NULL;
         uint8_t *buf = NULL;
@@ -1292,24 +1075,28 @@ get_key_pointer(const uint32_t index, const imb_uint128_t *p_keys)
         return (const void *) &p_keys[key_idxs[index]];
 }
 
-static uint8_t *get_src_buffer(const uint32_t index, uint8_t *p_buffer)
+static uint8_t *
+get_src_buffer(const uint32_t index, uint8_t *p_buffer)
 {
         return &p_buffer[offsets[index] + buffer_offset];
 }
 
-static uint8_t *get_dst_buffer(const uint32_t index, uint8_t *p_buffer)
+static uint8_t *
+get_dst_buffer(const uint32_t index, uint8_t *p_buffer)
 {
         return &p_buffer[offsets[index] + buffer_offset + sha_size_incr];
 }
 
-static uint32_t get_next_index(uint32_t index)
+static uint32_t
+get_next_index(uint32_t index)
 {
         if (++index >= index_limit)
                 index = 0;
         return index;
 }
 
-static void init_buf(void *pb, const size_t length)
+static void
+init_buf(void *pb, const size_t length)
 {
         const size_t n = length / sizeof(uint64_t);
         size_t i = 0;
@@ -1318,7 +1105,7 @@ static void init_buf(void *pb, const size_t length)
                 return;
 
         for (i = 0; i < n; i++)
-                ((uint64_t *)pb)[i] = (uint64_t) rand();
+                ((uint64_t *) pb)[i] = (uint64_t) rand();
 }
 
 /*
@@ -1326,16 +1113,16 @@ static void init_buf(void *pb, const size_t length)
  * init_offsets() needs to be called prior to that so that
  * index_limit is set up accordingly to hot/cold selection.
  */
-static void init_mem(uint8_t **p_buffer, imb_uint128_t **p_keys)
+static void
+init_mem(uint8_t **p_buffer, imb_uint128_t **p_keys)
 {
         const size_t bufs_size = index_limit * REGION_SIZE;
-        const size_t keys_size =
-                index_limit * KEYS_PER_JOB * sizeof(imb_uint128_t);
+        const size_t keys_size = index_limit * KEYS_PER_JOB * sizeof(imb_uint128_t);
         const size_t alignment = 64;
         uint8_t *buf = NULL;
         imb_uint128_t *keys = NULL;
 #ifdef LINUX
-	int ret;
+        int ret;
 #endif
 
         if (p_keys == NULL || p_buffer == NULL) {
@@ -1346,7 +1133,7 @@ static void init_mem(uint8_t **p_buffer, imb_uint128_t **p_keys)
 #ifdef LINUX
         ret = posix_memalign((void **) &buf, alignment, bufs_size);
 
-	if (ret != 0) {
+        if (ret != 0) {
                 fprintf(stderr, "Could not malloc buf\n");
                 exit(EXIT_FAILURE);
         }
@@ -1360,7 +1147,7 @@ static void init_mem(uint8_t **p_buffer, imb_uint128_t **p_keys)
 
 #ifdef LINUX
         ret = posix_memalign((void **) &keys, alignment, keys_size);
-	if (ret != 0) {
+        if (ret != 0) {
                 fprintf(stderr, "Could not allocate memory for keys!\n");
                 free_mem(&buf, &keys);
                 exit(EXIT_FAILURE);
@@ -1385,7 +1172,8 @@ static void init_mem(uint8_t **p_buffer, imb_uint128_t **p_keys)
  * Initialize packet buffer and keys offsets from
  * the start of the respective buffers
  */
-static void init_offsets(const enum cache_type_e ctype)
+static void
+init_offsets(const enum cache_type_e ctype)
 {
         if (ctype == COLD) {
                 uint32_t i;
@@ -1424,8 +1212,7 @@ static void init_offsets(const enum cache_type_e ctype)
                         const uint32_t L1_way_size = 4096;
 
                         key_idxs[i] = i * KEYS_PER_JOB;
-                        offsets[i] = i * REGION_SIZE +
-                                ((i * offset_step) & (L1_way_size - 1));
+                        offsets[i] = i * REGION_SIZE + ((i * offset_step) & (L1_way_size - 1));
                 }
         }
 }
@@ -1527,8 +1314,8 @@ get_next_size(const uint32_t index)
 }
 
 static inline void
-set_job_fields(IMB_JOB *job, uint8_t *p_buffer, imb_uint128_t *p_keys,
-               const uint32_t i, const uint32_t index, const IMB_JOB *template)
+set_job_fields(IMB_JOB *job, uint8_t *p_buffer, imb_uint128_t *p_keys, const uint32_t i,
+               const uint32_t index, const IMB_JOB *template)
 {
         uint32_t list_idx;
 
@@ -1540,17 +1327,14 @@ set_job_fields(IMB_JOB *job, uint8_t *p_buffer, imb_uint128_t *p_keys,
                 job->msg_len_to_cipher_in_bytes = cipher_size_list[list_idx];
                 job->msg_len_to_hash_in_bytes = hash_size_list[list_idx];
         } else {
-                job->msg_len_to_hash_in_bytes =
-                        template->msg_len_to_hash_in_bytes;
-                job->msg_len_to_cipher_in_bytes =
-                        template->msg_len_to_cipher_in_bytes;
+                job->msg_len_to_hash_in_bytes = template->msg_len_to_hash_in_bytes;
+                job->msg_len_to_cipher_in_bytes = template->msg_len_to_cipher_in_bytes;
         }
 
         if (job->hash_alg == IMB_AUTH_PON_CRC_BIP) {
-                uint64_t *p_src =
-                        (uint64_t *) get_src_buffer(index, p_buffer);
+                uint64_t *p_src = (uint64_t *) get_src_buffer(index, p_buffer);
 
-                job->src = (const uint8_t *)p_src;
+                job->src = (const uint8_t *) p_src;
                 if (imix_list_count != 0)
                         p_src[0] = xgem_hdr_list[list_idx];
                 else
@@ -1563,41 +1347,30 @@ set_job_fields(IMB_JOB *job, uint8_t *p_buffer, imb_uint128_t *p_keys,
                 job->u.GCM.aad = job->src;
         } else if (job->cipher_mode == IMB_CIPHER_CCM) {
                 job->u.CCM.aad = job->src;
-                job->enc_keys = job->dec_keys =
-                        (const uint32_t *) get_key_pointer(index,
-                                                           p_keys);
+                job->enc_keys = job->dec_keys = (const uint32_t *) get_key_pointer(index, p_keys);
         } else if (job->cipher_mode == IMB_CIPHER_DES3) {
                 static const void *ks_ptr[3];
 
-                ks_ptr[0] = ks_ptr[1] = ks_ptr[2] =
-                        get_key_pointer(index, p_keys);
-                job->enc_keys =
-                        job->dec_keys = ks_ptr;
+                ks_ptr[0] = ks_ptr[1] = ks_ptr[2] = get_key_pointer(index, p_keys);
+                job->enc_keys = job->dec_keys = ks_ptr;
         } else if (job->cipher_mode == IMB_CIPHER_CHACHA20_POLY1305) {
                 job->u.CHACHA20_POLY1305.aad = job->src;
         } else if (job->cipher_mode == IMB_CIPHER_SNOW_V_AEAD) {
                 job->u.SNOW_V_AEAD.aad = job->src;
-                job->enc_keys = job->dec_keys =
-                        (const uint32_t *) get_key_pointer(index,
-                                                           p_keys);
-        /* Force destination buffer to start 8 bytes after source */
+                job->enc_keys = job->dec_keys = (const uint32_t *) get_key_pointer(index, p_keys);
+                /* Force destination buffer to start 8 bytes after source */
         } else if (job->cipher_mode == IMB_CIPHER_PON_AES_CNTR) {
                 job->dst = get_src_buffer(index, p_buffer) + 8;
-                job->enc_keys = job->dec_keys =
-                        (const uint32_t *) get_key_pointer(index,
-                                                           p_keys);
+                job->enc_keys = job->dec_keys = (const uint32_t *) get_key_pointer(index, p_keys);
         } else {
-                job->enc_keys = job->dec_keys =
-                        (const uint32_t *) get_key_pointer(index,
-                                                           p_keys);
+                job->enc_keys = job->dec_keys = (const uint32_t *) get_key_pointer(index, p_keys);
         }
 }
 
 static inline void
-set_sgl_job_fields(IMB_JOB *job, uint8_t *p_buffer, imb_uint128_t *p_keys,
-                   const uint32_t size_idx, const uint32_t buf_index,
-                   struct IMB_SGL_IOV *sgl, struct gcm_context_data *gcm_ctx,
-                   struct chacha20_poly1305_context_data *cp_ctx)
+set_sgl_job_fields(IMB_JOB *job, uint8_t *p_buffer, imb_uint128_t *p_keys, const uint32_t size_idx,
+                   const uint32_t buf_index, struct IMB_SGL_IOV *sgl,
+                   struct gcm_context_data *gcm_ctx, struct chacha20_poly1305_context_data *cp_ctx)
 {
         uint8_t *src = get_src_buffer(buf_index, p_buffer);
         uint8_t *dst = get_dst_buffer(buf_index, p_buffer);
@@ -1623,9 +1396,7 @@ set_sgl_job_fields(IMB_JOB *job, uint8_t *p_buffer, imb_uint128_t *p_keys,
                 job->u.CHACHA20_POLY1305.aad = aad;
                 job->u.CHACHA20_POLY1305.ctx = cp_ctx;
         }
-        job->enc_keys = job->dec_keys =
-                (const uint32_t *) get_key_pointer(buf_index,
-                                   p_keys);
+        job->enc_keys = job->dec_keys = (const uint32_t *) get_key_pointer(buf_index, p_keys);
         job->sgl_state = IMB_SGL_ALL;
 
         const uint32_t num_segs = buf_size / segment_size;
@@ -1649,8 +1420,8 @@ set_sgl_job_fields(IMB_JOB *job, uint8_t *p_buffer, imb_uint128_t *p_keys,
 };
 
 static void
-set_size_lists(uint32_t *cipher_size_list, uint32_t *hash_size_list,
-               uint64_t *xgem_hdr_list, struct params_s *params)
+set_size_lists(uint32_t *cipher_size_list, uint32_t *hash_size_list, uint64_t *xgem_hdr_list,
+               struct params_s *params)
 {
         unsigned int i, list_size;
         uint32_t job_size;
@@ -1666,8 +1437,7 @@ set_size_lists(uint32_t *cipher_size_list, uint32_t *hash_size_list,
                 else
                         job_size = params->size_aes;
 
-                if ((params->cipher_mode == TEST_AESDOCSIS8) ||
-                    (params->cipher_mode == TEST_CNTR8))
+                if ((params->cipher_mode == TEST_AESDOCSIS8) || (params->cipher_mode == TEST_CNTR8))
                         cipher_size_list[i] = job_size + 8;
                 else if (params->cipher_mode == TEST_DESDOCSIS4)
                         cipher_size_list[i] = job_size + 4;
@@ -1684,13 +1454,11 @@ set_size_lists(uint32_t *cipher_size_list, uint32_t *hash_size_list,
                         if (job_size < 8)
                                 cipher_size_list[i] = 8;
                         else
-                                cipher_size_list[i] =
-                                        (job_size + 3) & 0xfffffffc;
+                                cipher_size_list[i] = (job_size + 3) & 0xfffffffc;
                 } else
                         cipher_size_list[i] = job_size;
 
-                if ((params->hash_alg == TEST_HASH_CCM) ||
-                    (params->hash_alg == TEST_HASH_GCM))
+                if ((params->hash_alg == TEST_HASH_CCM) || (params->hash_alg == TEST_HASH_GCM))
                         hash_size_list[i] = job_size;
                 else
                         hash_size_list[i] = job_size + sha_size_incr;
@@ -1717,11 +1485,11 @@ set_size_lists(uint32_t *cipher_size_list, uint32_t *hash_size_list,
                         hash_size_list[i] = 0;
 
                 if (((params->cipher_mode == TEST_AESDOCSIS) ||
-                    (params->cipher_mode == TEST_AESDOCSIS8)) &&
+                     (params->cipher_mode == TEST_AESDOCSIS8)) &&
                     (params->hash_alg == TEST_DOCSIS_CRC32)) {
                         const uint32_t ciph_adjust = /* SA + DA */
-                               IMB_DOCSIS_CRC32_MIN_ETH_PDU_SIZE - 2;
-                               /* ETH TYPE */
+                                IMB_DOCSIS_CRC32_MIN_ETH_PDU_SIZE - 2;
+                        /* ETH TYPE */
 
                         hash_size_list[i] = cipher_size_list[i] + ciph_adjust;
                         cipher_size_list[i] -= IMB_DOCSIS_CRC32_TAG_SIZE;
@@ -1729,13 +1497,10 @@ set_size_lists(uint32_t *cipher_size_list, uint32_t *hash_size_list,
 
                 if (params->hash_alg == TEST_PON_CRC_BIP) {
                         /* create XGEM header template */
-                        const uint64_t pli =
-                                (job_size << 2) & 0xffff;
+                        const uint64_t pli = (job_size << 2) & 0xffff;
 
-                        xgem_hdr_list[i] = ((pli >> 8) & 0xff) |
-                                        ((pli & 0xff) << 8);
+                        xgem_hdr_list[i] = ((pli >> 8) & 0xff) | ((pli & 0xff) << 8);
                 }
-
         }
 }
 
@@ -1745,11 +1510,11 @@ set_size_lists(uint32_t *cipher_size_list, uint32_t *hash_size_list,
  * =========================================================
  */
 
-#define MAX_K 32
+#define MAX_K        32
 #define PKT_SIZE_MAX 16384
 
 #define AAD_LEN 12
-#define IV_LEN 12
+#define IV_LEN  12
 #define TAG_LEN 16
 
 static void
@@ -1761,10 +1526,8 @@ bench_quic_aes_gcm(IMB_MGR *p_mgr, const uint64_t n_max, uint8_t *blob)
         const void *aad[MAX_K];
         void *tag[MAX_K];
         uint64_t len[MAX_K];
-        const uint8_t kp[16] = {
-                0xaa, 055, 0x11, 0x44, 0x01, 0x02, 0x00, 0x03,
-                0xaa, 055, 0x11, 0x44, 0x01, 0x02, 0x00, 0x03
-        };
+        const uint8_t kp[16] = { 0xaa, 055, 0x11, 0x44, 0x01, 0x02, 0x00, 0x03,
+                                 0xaa, 055, 0x11, 0x44, 0x01, 0x02, 0x00, 0x03 };
         struct gcm_key_data key;
         const uint64_t pkt_size = 16384;
         const int K = MAX_K;
@@ -1802,12 +1565,9 @@ bench_quic_aes_gcm(IMB_MGR *p_mgr, const uint64_t n_max, uint8_t *blob)
         const uint64_t tsc_start = __rdtscp(&aux);
 
         for (n = 0; n < n_max; n++) {
-                imb_quic_aes_gcm(p_mgr, &key,
-                                 IMB_KEY_128_BYTES, IMB_DIR_ENCRYPT,
-                                 (void **) out, (const void * const*) in, len,
-                                 (const void * const*) iv,
-                                 (const void * const*) &aad, AAD_LEN,
-                                 (void **) tag, TAG_LEN, K);
+                imb_quic_aes_gcm(p_mgr, &key, IMB_KEY_128_BYTES, IMB_DIR_ENCRYPT, (void **) out,
+                                 (const void *const *) in, len, (const void *const *) iv,
+                                 (const void *const *) &aad, AAD_LEN, (void **) tag, TAG_LEN, K);
         }
 
         const uint64_t tsc_end = __rdtscp(&aux);
@@ -1824,12 +1584,10 @@ bench_quic_aes_ecb_hp(IMB_MGR *p_mgr, const uint64_t n_max, uint8_t *blob)
 {
         void *out[MAX_K];
         const void *in[MAX_K];
-        const uint8_t kp[16] = {
-                0xaa, 055, 0x11, 0x44, 0x01, 0x02, 0x00, 0x03,
-                0xaa, 055, 0x11, 0x44, 0x01, 0x02, 0x00, 0x03
-        };
-        DECLARE_ALIGNED(uint32_t enc_keys[15*4], 16);
-        DECLARE_ALIGNED(uint32_t dec_keys[15*4], 16);
+        const uint8_t kp[16] = { 0xaa, 055, 0x11, 0x44, 0x01, 0x02, 0x00, 0x03,
+                                 0xaa, 055, 0x11, 0x44, 0x01, 0x02, 0x00, 0x03 };
+        DECLARE_ALIGNED(uint32_t enc_keys[15 * 4], 16);
+        DECLARE_ALIGNED(uint32_t dec_keys[15 * 4], 16);
         const int K = MAX_K;
         const uint64_t pkt_size = 16;
         uint32_t aux;
@@ -1855,9 +1613,8 @@ bench_quic_aes_ecb_hp(IMB_MGR *p_mgr, const uint64_t n_max, uint8_t *blob)
         const uint64_t tsc_start = __rdtscp(&aux);
 
         for (n = 0; n < n_max; n++)
-                imb_quic_hp_aes_ecb(p_mgr, enc_keys,
-                                    (void **)out, (const void * const *) in,
-                                    K, IMB_KEY_128_BYTES);
+                imb_quic_hp_aes_ecb(p_mgr, enc_keys, (void **) out, (const void *const *) in, K,
+                                    IMB_KEY_128_BYTES);
 
         const uint64_t tsc_end = __rdtscp(&aux);
         const uint64_t cpi = (tsc_end - tsc_start) / n_max;
@@ -1868,12 +1625,12 @@ bench_quic_aes_ecb_hp(IMB_MGR *p_mgr, const uint64_t n_max, uint8_t *blob)
                (unsigned long) cpi, (unsigned long) cpp);
 }
 
-static void quic_main(IMB_MGR *p_mgr)
+static void
+quic_main(IMB_MGR *p_mgr)
 {
-        const size_t blob_sz =
-                (AAD_LEN + IV_LEN + TAG_LEN + PKT_SIZE_MAX) * MAX_K * 2;
+        const size_t blob_sz = (AAD_LEN + IV_LEN + TAG_LEN + PKT_SIZE_MAX) * MAX_K * 2;
 
-        uint8_t *blob_ptr  = (uint8_t *) malloc(blob_sz);
+        uint8_t *blob_ptr = (uint8_t *) malloc(blob_sz);
 
         if (blob_ptr == NULL) {
                 printf("Error allocating QUIC-API test buffer!\n");
@@ -1924,8 +1681,8 @@ static void quic_main(IMB_MGR *p_mgr)
 
 /* Performs test using AES_HMAC or DOCSIS */
 static uint64_t
-do_test(IMB_MGR *mb_mgr, struct params_s *params,
-        const uint32_t num_iter, uint8_t *p_buffer, imb_uint128_t *p_keys)
+do_test(IMB_MGR *mb_mgr, struct params_s *params, const uint32_t num_iter, uint8_t *p_buffer,
+        imb_uint128_t *p_keys)
 {
         IMB_JOB *job;
         IMB_JOB job_template;
@@ -1935,8 +1692,8 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
         static DECLARE_ALIGNED(imb_uint128_t auth_iv, 16);
         static uint32_t ipad[5], opad[5], digest[3];
         static DECLARE_ALIGNED(uint32_t k1_expanded[11 * 4], 16);
-        static DECLARE_ALIGNED(uint8_t	k2[16], 16);
-        static DECLARE_ALIGNED(uint8_t	k3[16], 16);
+        static DECLARE_ALIGNED(uint8_t k2[16], 16);
+        static DECLARE_ALIGNED(uint8_t k3[16], 16);
         static DECLARE_ALIGNED(struct gcm_key_data gdata_key, 512);
         uint64_t time = 0;
         uint32_t aux;
@@ -1944,7 +1701,7 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
         uint8_t next_iv[IMB_AES_BLOCK_SIZE];
         struct gcm_context_data gcm_ctx[MAX_BURST_SIZE];
         struct chacha20_poly1305_context_data cp_ctx[MAX_BURST_SIZE];
-        struct IMB_SGL_IOV *sgl[MAX_BURST_SIZE] = {NULL};
+        struct IMB_SGL_IOV *sgl[MAX_BURST_SIZE] = { NULL };
         uint32_t max_num_segs = 1;
 
         memset(&job_template, 0, sizeof(IMB_JOB));
@@ -1954,12 +1711,10 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
         set_size_lists(cipher_size_list, hash_size_list, xgem_hdr_list, params);
 
         if (segment_size != 0)
-                max_num_segs = DIV_ROUND_UP(job_sizes[RANGE_MAX],
-                                            segment_size);
+                max_num_segs = DIV_ROUND_UP(job_sizes[RANGE_MAX], segment_size);
 
         for (i = 0; i < MAX_BURST_SIZE; i++) {
-                sgl[i] = malloc(sizeof(struct IMB_SGL_IOV) *
-                                max_num_segs);
+                sgl[i] = malloc(sizeof(struct IMB_SGL_IOV) * max_num_segs);
                 if (sgl[i] == NULL) {
                         fprintf(stderr, "malloc() failed\n");
                         goto exit;
@@ -2063,7 +1818,7 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
         case TEST_SNOW3G_UIA2:
                 job_template.hash_alg = IMB_AUTH_SNOW3G_UIA2_BITLEN;
                 job_template.u.SNOW3G_UIA2._key = k3;
-                job_template.u.SNOW3G_UIA2._iv = (uint8_t *)&auth_iv;
+                job_template.u.SNOW3G_UIA2._iv = (uint8_t *) &auth_iv;
                 break;
         case TEST_KASUMI_UIA1:
                 job_template.hash_alg = IMB_AUTH_KASUMI_UIA1;
@@ -2137,16 +1892,14 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
                 break;
         default:
                 /* HMAC hash alg is SHA1 or MD5 */
-                job_template.u.HMAC._hashed_auth_key_xor_ipad =
-                        (uint8_t *) ipad;
-                job_template.u.HMAC._hashed_auth_key_xor_opad =
-                        (uint8_t *) opad;
+                job_template.u.HMAC._hashed_auth_key_xor_ipad = (uint8_t *) ipad;
+                job_template.u.HMAC._hashed_auth_key_xor_opad = (uint8_t *) opad;
                 job_template.hash_alg = (IMB_HASH_ALG) params->hash_alg;
                 break;
         }
         if (tag_size == 0)
                 job_template.auth_tag_output_len_in_bytes =
-                    (uint64_t) auth_tag_length_bytes[job_template.hash_alg - 1];
+                        (uint64_t) auth_tag_length_bytes[job_template.hash_alg - 1];
         else
                 job_template.auth_tag_output_len_in_bytes = tag_size;
 
@@ -2154,10 +1907,9 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
 
         if (params->cipher_mode == TEST_NULL_CIPHER) {
                 job_template.chain_order = IMB_ORDER_HASH_CIPHER;
-        } else if (params->cipher_mode == TEST_CCM ||
-                   ((params->cipher_mode == TEST_AESDOCSIS ||
-                     params->cipher_mode == TEST_AESDOCSIS8) &&
-                    params->hash_alg == TEST_DOCSIS_CRC32)) {
+        } else if (params->cipher_mode == TEST_CCM || ((params->cipher_mode == TEST_AESDOCSIS ||
+                                                        params->cipher_mode == TEST_AESDOCSIS8) &&
+                                                       params->hash_alg == TEST_DOCSIS_CRC32)) {
                 if (job_template.cipher_direction == IMB_DIR_ENCRYPT)
                         job_template.chain_order = IMB_ORDER_HASH_CIPHER;
                 else
@@ -2238,17 +1990,15 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
                 job_template.cipher_start_src_offset_in_bytes = 0;
                 job_template.enc_keys = k1_expanded;
                 job_template.dec_keys = k1_expanded;
-                job_template.u.CHACHA20_POLY1305.aad_len_in_bytes =
-                        params->aad_size;
+                job_template.u.CHACHA20_POLY1305.aad_len_in_bytes = params->aad_size;
                 job_template.iv_len_in_bytes = 12;
         } else if (job_template.cipher_mode == IMB_CIPHER_SNOW_V)
                 job_template.iv_len_in_bytes = 16;
         else if (job_template.cipher_mode == IMB_CIPHER_SNOW_V_AEAD &&
-                job_template.hash_alg == IMB_AUTH_SNOW_V_AEAD) {
+                 job_template.hash_alg == IMB_AUTH_SNOW_V_AEAD) {
                 job_template.key_len_in_bytes = 32;
                 job_template.iv_len_in_bytes = 16;
-                job_template.u.SNOW_V_AEAD.aad_len_in_bytes =
-                        params->aad_size;
+                job_template.u.SNOW_V_AEAD.aad_len_in_bytes = params->aad_size;
         }
 
 #define TIMEOUT_MS 100 /*< max time for one packet size to be tested for */
@@ -2276,16 +2026,14 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
                 /* create the timer queue */
                 hTimeboxQueue = CreateTimerQueue();
                 if (NULL == hTimeboxQueue) {
-                        fprintf(stderr, "CreateTimerQueue() error %u\n",
-                                (unsigned) GetLastError());
+                        fprintf(stderr, "CreateTimerQueue() error %u\n", (unsigned) GetLastError());
                         goto exit;
                 }
 
                 /* set a timer to call the timebox */
                 if (!CreateTimerQueueTimer(&hTimebox, hTimeboxQueue,
-                                           (WAITORTIMERCALLBACK)
-                                           timebox_callback,
-                                           NULL, TIMEOUT_MS, 0, 0)) {
+                                           (WAITORTIMERCALLBACK) timebox_callback, NULL, TIMEOUT_MS,
+                                           0, 0)) {
                         fprintf(stderr, "CreateTimerQueueTimer() error %u\n",
                                 (unsigned) GetLastError());
                         goto exit;
@@ -2308,13 +2056,12 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
                 uint32_t jobs_submitted = 0;
 #endif
 
-                IMB_JOB *jobs[IMB_MAX_BURST_SIZE] = {NULL};
+                IMB_JOB *jobs[IMB_MAX_BURST_SIZE] = { NULL };
 
                 imb_set_session(mb_mgr, &job_template);
 
                 while (num_jobs && timebox_on) {
-                        uint32_t n = (num_jobs / burst_size) ?
-                                burst_size : num_jobs;
+                        uint32_t n = (num_jobs / burst_size) ? burst_size : num_jobs;
 
                         while (IMB_GET_NEXT_BURST(mb_mgr, n, jobs) < n)
                                 IMB_FLUSH_BURST(mb_mgr, n, jobs);
@@ -2327,17 +2074,13 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
                                         *job = job_template;
 
                                 if (segment_size != 0)
-                                        set_sgl_job_fields(job, p_buffer,
-                                                           p_keys, i,
-                                                           index, sgl[i],
-                                                           &gcm_ctx[i],
-                                                           &cp_ctx[i]);
+                                        set_sgl_job_fields(job, p_buffer, p_keys, i, index, sgl[i],
+                                                           &gcm_ctx[i], &cp_ctx[i]);
                                 else
-                                        set_job_fields(job, p_buffer, p_keys,
-                                                       i, index, &job_template);
+                                        set_job_fields(job, p_buffer, p_keys, i, index,
+                                                       &job_template);
 
                                 index = get_next_index(index);
-
                         }
                         /* submit burst */
 #ifdef DEBUG
@@ -2347,20 +2090,18 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
                                 const int err = imb_get_errno(mb_mgr);
 
                                 if (err != 0) {
-                                        printf("submit_burst error %d : '%s'\n",
-                                               err, imb_get_strerror(err));
+                                        printf("submit_burst error %d : '%s'\n", err,
+                                               imb_get_strerror(err));
                                 }
                         }
                         jobs_done += ret;
                         jobs_submitted += n;
 #else
-                        jobs_done +=
-                                IMB_SUBMIT_BURST_NOCHECK(mb_mgr, n, jobs);
+                        jobs_done += IMB_SUBMIT_BURST_NOCHECK(mb_mgr, n, jobs);
 #endif
                         num_jobs -= n;
                 }
-                jobs_done +=
-                        IMB_FLUSH_BURST(mb_mgr, IMB_MAX_BURST_SIZE, jobs);
+                jobs_done += IMB_FLUSH_BURST(mb_mgr, IMB_MAX_BURST_SIZE, jobs);
 
 #ifdef DEBUG
                 if (jobs_done != jobs_submitted) {
@@ -2368,7 +2109,7 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
                                "jobs submitted (%u)\n",
                                jobs_done, jobs_submitted);
                         goto exit;
-                 }
+                }
 #endif
 
                 /* test cipher-only burst api */
@@ -2379,8 +2120,7 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
                 uint32_t list_idx;
 
                 while (num_jobs && timebox_on) {
-                        uint32_t n_jobs =
-                                (num_jobs / burst_size) ? burst_size : num_jobs;
+                        uint32_t n_jobs = (num_jobs / burst_size) ? burst_size : num_jobs;
 
                         /* set all job params */
                         for (i = 0; i < n_jobs; i++) {
@@ -2400,8 +2140,7 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
                                 job->src = get_src_buffer(index, p_buffer);
                                 job->dst = get_dst_buffer(index, p_buffer);
                                 job->enc_keys = job->dec_keys =
-                                        (const uint32_t *)
-                                        get_key_pointer(index, p_keys);
+                                        (const uint32_t *) get_key_pointer(index, p_keys);
                                 job->cipher_start_src_offset_in_bytes =
                                         jt->cipher_start_src_offset_in_bytes;
                                 job->iv = jt->iv;
@@ -2412,25 +2151,21 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
                         /* submit cipher-only burst */
 #ifdef DEBUG
                         const uint32_t completed_jobs =
-                                IMB_SUBMIT_CIPHER_BURST(mb_mgr, jobs, n_jobs,
-                                                        jt->cipher_mode,
-                                                        jt->cipher_direction,
-                                                        jt->key_len_in_bytes);
+                                IMB_SUBMIT_CIPHER_BURST(mb_mgr, jobs, n_jobs, jt->cipher_mode,
+                                                        jt->cipher_direction, jt->key_len_in_bytes);
 
                         if (completed_jobs != n_jobs) {
                                 const int err = imb_get_errno(mb_mgr);
 
                                 if (err != 0) {
                                         printf("submit_cipher_burst error "
-                                               "%d : '%s'\n", err,
-                                               imb_get_strerror(err));
+                                               "%d : '%s'\n",
+                                               err, imb_get_strerror(err));
                                 }
                         }
 #else
-                        IMB_SUBMIT_CIPHER_BURST_NOCHECK(mb_mgr, jobs, n_jobs,
-                                                        jt->cipher_mode,
-                                                        jt->cipher_direction,
-                                                        jt->key_len_in_bytes);
+                        IMB_SUBMIT_CIPHER_BURST_NOCHECK(mb_mgr, jobs, n_jobs, jt->cipher_mode,
+                                                        jt->cipher_direction, jt->key_len_in_bytes);
 #endif
                         num_jobs -= n_jobs;
                 }
@@ -2444,8 +2179,7 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
                 uint32_t list_idx;
 
                 while (num_jobs && timebox_on) {
-                        uint32_t n_jobs =
-                                (num_jobs / burst_size) ? burst_size : num_jobs;
+                        uint32_t n_jobs = (num_jobs / burst_size) ? burst_size : num_jobs;
 
                         /* set all job params */
                         for (i = 0; i < n_jobs; i++) {
@@ -2456,8 +2190,7 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
                                  * list of sizes precalculated */
                                 if (imix_list_count != 0) {
                                         list_idx = i & (JOB_SIZE_IMIX_LIST - 1);
-                                        job->msg_len_to_hash_in_bytes =
-                                                hash_size_list[list_idx];
+                                        job->msg_len_to_hash_in_bytes = hash_size_list[list_idx];
                                 } else
                                         job->msg_len_to_hash_in_bytes =
                                                 jt->msg_len_to_hash_in_bytes;
@@ -2478,21 +2211,19 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
                         /* submit hash-only burst */
 #ifdef DEBUG
                         const uint32_t completed_jobs =
-                                IMB_SUBMIT_HASH_BURST(mb_mgr, jobs, n_jobs,
-                                                      jt->hash_alg);
+                                IMB_SUBMIT_HASH_BURST(mb_mgr, jobs, n_jobs, jt->hash_alg);
 
                         if (completed_jobs != n_jobs) {
                                 const int err = imb_get_errno(mb_mgr);
 
                                 if (err != 0) {
                                         printf("submit_hash_burst error "
-                                               "%d : '%s'\n", err,
-                                               imb_get_strerror(err));
+                                               "%d : '%s'\n",
+                                               err, imb_get_strerror(err));
                                 }
                         }
 #else
-                        IMB_SUBMIT_HASH_BURST_NOCHECK(mb_mgr, jobs, n_jobs,
-                                                        jt->hash_alg);
+                        IMB_SUBMIT_HASH_BURST_NOCHECK(mb_mgr, jobs, n_jobs, jt->hash_alg);
 #endif
                         num_jobs -= n_jobs;
                 }
@@ -2508,13 +2239,10 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
                                 *job = job_template;
 
                         if (segment_size != 0)
-                                set_sgl_job_fields(job, p_buffer, p_keys,
-                                                   i, index,
-                                                   sgl[0], &gcm_ctx[0],
-                                                   &cp_ctx[0]);
+                                set_sgl_job_fields(job, p_buffer, p_keys, i, index, sgl[0],
+                                                   &gcm_ctx[0], &cp_ctx[0]);
                         else
-                                set_job_fields(job, p_buffer, p_keys, i, index,
-                                               &job_template);
+                                set_job_fields(job, p_buffer, p_keys, i, index, &job_template);
 
                         index = get_next_index(index);
 #ifdef DEBUG
@@ -2527,9 +2255,7 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
                                 if (job->status != IMB_STATUS_COMPLETED) {
                                         const int err = imb_get_errno(mb_mgr);
 
-                                        fprintf(stderr,
-                                                "failed job, status:%d, %s\n",
-                                                job->status,
+                                        fprintf(stderr, "failed job, status:%d, %s\n", job->status,
                                                 imb_get_strerror(err));
                                         goto exit;
                                 }
@@ -2544,14 +2270,12 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
                         if (job->status != IMB_STATUS_COMPLETED) {
                                 const int errc = imb_get_errno(mb_mgr);
 
-                                fprintf(stderr,
-                                        "failed job, status:%d, error:%d, %s\n",
-                                        job->status, errc,
-                                        imb_get_strerror(errc));
+                                fprintf(stderr, "failed job, status:%d, error:%d, %s\n",
+                                        job->status, errc, imb_get_strerror(errc));
                                 goto exit;
                         }
 #else
-                        (void)job;
+                        (void) job;
 #endif
                 }
 
@@ -2583,8 +2307,7 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
 #else /* _WIN32 */
                 /* delete all timeboxes in the timer queue */
                 if (!DeleteTimerQueue(hTimeboxQueue))
-                        fprintf(stderr, "DeleteTimerQueue() error %u\n",
-                                (unsigned) GetLastError());
+                        fprintf(stderr, "DeleteTimerQueue() error %u\n", (unsigned) GetLastError());
 #endif
 
                 /* calculate return value */
@@ -2608,12 +2331,9 @@ exit:
 
 static void
 run_gcm_sgl(aes_gcm_init_t init, aes_gcm_enc_dec_update_t update,
-            aes_gcm_enc_dec_finalize_t finalize,
-            struct gcm_key_data *gdata_key,
-            struct gcm_context_data *gdata_ctx,
-            uint8_t *p_buffer, uint32_t buf_size,
-            const void *aad, const uint64_t aad_size,
-            const uint32_t num_iter)
+            aes_gcm_enc_dec_finalize_t finalize, struct gcm_key_data *gdata_key,
+            struct gcm_context_data *gdata_ctx, uint8_t *p_buffer, uint32_t buf_size,
+            const void *aad, const uint64_t aad_size, const uint32_t num_iter)
 {
         uint32_t i;
         static uint32_t index = 0;
@@ -2634,17 +2354,12 @@ run_gcm_sgl(aes_gcm_init_t init, aes_gcm_enc_dec_update_t update,
 
                         init(gdata_key, gdata_ctx, iv, aad, aad_size);
                         for (j = 0; j < num_segs; j++)
-                                update(gdata_key, gdata_ctx,
-                                       &pb[j*segment_size],
-                                       &pb[j*segment_size],
-                                       segment_size);
+                                update(gdata_key, gdata_ctx, &pb[j * segment_size],
+                                       &pb[j * segment_size], segment_size);
                         if (final_seg_sz != 0)
-                                update(gdata_key, gdata_ctx,
-                                       &pb[j*segment_size],
-                                       &pb[j*segment_size],
-                                       final_seg_sz);
-                        finalize(gdata_key, gdata_ctx, auth_tag,
-                                 sizeof(auth_tag));
+                                update(gdata_key, gdata_ctx, &pb[j * segment_size],
+                                       &pb[j * segment_size], final_seg_sz);
+                        finalize(gdata_key, gdata_ctx, auth_tag, sizeof(auth_tag));
 
                         index = get_next_index(index);
                 }
@@ -2657,8 +2372,7 @@ run_gcm_sgl(aes_gcm_init_t init, aes_gcm_enc_dec_update_t update,
 
                         init(gdata_key, gdata_ctx, iv, aad, aad_size);
                         update(gdata_key, gdata_ctx, pb, pb, buf_size);
-                        finalize(gdata_key, gdata_ctx, auth_tag,
-                                 sizeof(auth_tag));
+                        finalize(gdata_key, gdata_ctx, auth_tag, sizeof(auth_tag));
 
                         index = get_next_index(index);
                 }
@@ -2666,12 +2380,9 @@ run_gcm_sgl(aes_gcm_init_t init, aes_gcm_enc_dec_update_t update,
 }
 
 static void
-run_gcm(aes_gcm_enc_dec_t enc_dec,
-        struct gcm_key_data *gdata_key,
-        struct gcm_context_data *gdata_ctx,
-        uint8_t *p_buffer, uint32_t buf_size,
-        const void *aad, const uint64_t aad_size,
-        const uint32_t num_iter)
+run_gcm(aes_gcm_enc_dec_t enc_dec, struct gcm_key_data *gdata_key,
+        struct gcm_context_data *gdata_ctx, uint8_t *p_buffer, uint32_t buf_size, const void *aad,
+        const uint64_t aad_size, const uint32_t num_iter)
 {
         uint32_t i;
         uint32_t index = 0;
@@ -2684,9 +2395,8 @@ run_gcm(aes_gcm_enc_dec_t enc_dec,
                 if (imix_list_count != 0)
                         buf_size = get_next_size(i);
 
-                enc_dec(gdata_key, gdata_ctx, pb, pb,
-                        buf_size, iv, aad, aad_size,
-                        auth_tag, sizeof(auth_tag));
+                enc_dec(gdata_key, gdata_ctx, pb, pb, buf_size, iv, aad, aad_size, auth_tag,
+                        sizeof(auth_tag));
 
                 index = get_next_index(index);
         }
@@ -2694,9 +2404,8 @@ run_gcm(aes_gcm_enc_dec_t enc_dec,
 
 /* Performs test using GCM */
 static uint64_t
-do_test_gcm(struct params_s *params,
-            const uint32_t num_iter, IMB_MGR *mb_mgr,
-            uint8_t *p_buffer, imb_uint128_t *p_keys)
+do_test_gcm(struct params_s *params, const uint32_t num_iter, IMB_MGR *mb_mgr, uint8_t *p_buffer,
+            imb_uint128_t *p_keys)
 {
         static DECLARE_ALIGNED(struct gcm_key_data gdata_key, 512);
         static DECLARE_ALIGNED(struct gcm_context_data gdata_ctx, 64);
@@ -2748,54 +2457,35 @@ do_test_gcm(struct params_s *params,
 
                 if (params->aes_key_size == IMB_KEY_128_BYTES) {
                         if (use_gcm_sgl_api)
-                                run_gcm_sgl(mb_mgr->gcm128_init,
-                                            mb_mgr->gcm128_enc_update,
-                                            mb_mgr->gcm128_enc_finalize,
-                                            &gdata_key, &gdata_ctx,
-                                            p_buffer, params->size_aes,
-                                            aad, params->aad_size,
+                                run_gcm_sgl(mb_mgr->gcm128_init, mb_mgr->gcm128_enc_update,
+                                            mb_mgr->gcm128_enc_finalize, &gdata_key, &gdata_ctx,
+                                            p_buffer, params->size_aes, aad, params->aad_size,
                                             num_iter);
                         else
-                                run_gcm(mb_mgr->gcm128_enc,
-                                        &gdata_key, &gdata_ctx,
-                                        p_buffer, params->size_aes,
-                                        aad, params->aad_size,
-                                        num_iter);
+                                run_gcm(mb_mgr->gcm128_enc, &gdata_key, &gdata_ctx, p_buffer,
+                                        params->size_aes, aad, params->aad_size, num_iter);
                 } else if (params->aes_key_size == IMB_KEY_192_BYTES) {
                         if (use_gcm_sgl_api)
-                                run_gcm_sgl(mb_mgr->gcm192_init,
-                                            mb_mgr->gcm192_enc_update,
-                                            mb_mgr->gcm192_enc_finalize,
-                                            &gdata_key, &gdata_ctx,
-                                            p_buffer, params->size_aes,
-                                            aad, params->aad_size,
+                                run_gcm_sgl(mb_mgr->gcm192_init, mb_mgr->gcm192_enc_update,
+                                            mb_mgr->gcm192_enc_finalize, &gdata_key, &gdata_ctx,
+                                            p_buffer, params->size_aes, aad, params->aad_size,
                                             num_iter);
                         else
-                                run_gcm(mb_mgr->gcm192_enc,
-                                        &gdata_key, &gdata_ctx,
-                                        p_buffer, params->size_aes,
-                                        aad, params->aad_size,
-                                        num_iter);
+                                run_gcm(mb_mgr->gcm192_enc, &gdata_key, &gdata_ctx, p_buffer,
+                                        params->size_aes, aad, params->aad_size, num_iter);
                 } else { /* 256 */
                         if (use_gcm_sgl_api)
-                                run_gcm_sgl(mb_mgr->gcm256_init,
-                                            mb_mgr->gcm256_enc_update,
-                                            mb_mgr->gcm256_enc_finalize,
-                                            &gdata_key, &gdata_ctx,
-                                            p_buffer, params->size_aes,
-                                            aad, params->aad_size,
+                                run_gcm_sgl(mb_mgr->gcm256_init, mb_mgr->gcm256_enc_update,
+                                            mb_mgr->gcm256_enc_finalize, &gdata_key, &gdata_ctx,
+                                            p_buffer, params->size_aes, aad, params->aad_size,
                                             num_iter);
                         else
-                                run_gcm(mb_mgr->gcm256_enc,
-                                        &gdata_key, &gdata_ctx,
-                                        p_buffer, params->size_aes,
-                                        aad, params->aad_size,
-                                        num_iter);
+                                run_gcm(mb_mgr->gcm256_enc, &gdata_key, &gdata_ctx, p_buffer,
+                                        params->size_aes, aad, params->aad_size, num_iter);
                 }
 #ifndef _WIN32
                 if (use_unhalted_cycles)
-                        time = (read_cycles(params->core) -
-                                rd_cycles_cost) - time;
+                        time = (read_cycles(params->core) - rd_cycles_cost) - time;
                 else
 #endif
                         time = __rdtscp(&aux) - time;
@@ -2809,54 +2499,35 @@ do_test_gcm(struct params_s *params,
 
                 if (params->aes_key_size == IMB_KEY_128_BYTES) {
                         if (use_gcm_sgl_api)
-                                run_gcm_sgl(mb_mgr->gcm128_init,
-                                            mb_mgr->gcm128_dec_update,
-                                            mb_mgr->gcm128_dec_finalize,
-                                            &gdata_key, &gdata_ctx,
-                                            p_buffer, params->size_aes,
-                                            aad, params->aad_size,
+                                run_gcm_sgl(mb_mgr->gcm128_init, mb_mgr->gcm128_dec_update,
+                                            mb_mgr->gcm128_dec_finalize, &gdata_key, &gdata_ctx,
+                                            p_buffer, params->size_aes, aad, params->aad_size,
                                             num_iter);
                         else
-                                run_gcm(mb_mgr->gcm128_dec,
-                                        &gdata_key, &gdata_ctx,
-                                        p_buffer, params->size_aes,
-                                        aad, params->aad_size,
-                                        num_iter);
+                                run_gcm(mb_mgr->gcm128_dec, &gdata_key, &gdata_ctx, p_buffer,
+                                        params->size_aes, aad, params->aad_size, num_iter);
                 } else if (params->aes_key_size == IMB_KEY_192_BYTES) {
                         if (use_gcm_sgl_api)
-                                run_gcm_sgl(mb_mgr->gcm192_init,
-                                            mb_mgr->gcm192_dec_update,
-                                            mb_mgr->gcm192_dec_finalize,
-                                            &gdata_key, &gdata_ctx,
-                                            p_buffer, params->size_aes,
-                                            aad, params->aad_size,
+                                run_gcm_sgl(mb_mgr->gcm192_init, mb_mgr->gcm192_dec_update,
+                                            mb_mgr->gcm192_dec_finalize, &gdata_key, &gdata_ctx,
+                                            p_buffer, params->size_aes, aad, params->aad_size,
                                             num_iter);
                         else
-                                run_gcm(mb_mgr->gcm192_dec,
-                                        &gdata_key, &gdata_ctx,
-                                        p_buffer, params->size_aes,
-                                        aad, params->aad_size,
-                                        num_iter);
+                                run_gcm(mb_mgr->gcm192_dec, &gdata_key, &gdata_ctx, p_buffer,
+                                        params->size_aes, aad, params->aad_size, num_iter);
                 } else { /* 256 */
                         if (use_gcm_sgl_api)
-                                run_gcm_sgl(mb_mgr->gcm256_init,
-                                            mb_mgr->gcm256_dec_update,
-                                            mb_mgr->gcm256_dec_finalize,
-                                            &gdata_key, &gdata_ctx,
-                                            p_buffer, params->size_aes,
-                                            aad, params->aad_size,
+                                run_gcm_sgl(mb_mgr->gcm256_init, mb_mgr->gcm256_dec_update,
+                                            mb_mgr->gcm256_dec_finalize, &gdata_key, &gdata_ctx,
+                                            p_buffer, params->size_aes, aad, params->aad_size,
                                             num_iter);
                         else
-                                run_gcm(mb_mgr->gcm256_dec,
-                                        &gdata_key, &gdata_ctx,
-                                        p_buffer, params->size_aes,
-                                        aad, params->aad_size,
-                                        num_iter);
+                                run_gcm(mb_mgr->gcm256_dec, &gdata_key, &gdata_ctx, p_buffer,
+                                        params->size_aes, aad, params->aad_size, num_iter);
                 }
 #ifndef _WIN32
                 if (use_unhalted_cycles)
-                        time = (read_cycles(params->core) -
-                                rd_cycles_cost) - time;
+                        time = (read_cycles(params->core) - rd_cycles_cost) - time;
                 else
 #endif
                         time = __rdtscp(&aux) - time;
@@ -2873,8 +2544,7 @@ do_test_gcm(struct params_s *params,
 
 /* Performs test using CHACHA20-POLY1305 direct API */
 static uint64_t
-do_test_chacha_poly(struct params_s *params,
-                    const uint32_t num_iter, IMB_MGR *mb_mgr,
+do_test_chacha_poly(struct params_s *params, const uint32_t num_iter, IMB_MGR *mb_mgr,
                     uint8_t *p_buffer, imb_uint128_t *p_keys)
 {
         uint8_t key[32];
@@ -2926,50 +2596,36 @@ do_test_chacha_poly(struct params_s *params,
                         }
                 }
 
-                IMB_CHACHA20_POLY1305_INIT(mb_mgr, key, &chacha_ctx, iv,
-                                           aad, params->aad_size);
+                IMB_CHACHA20_POLY1305_INIT(mb_mgr, key, &chacha_ctx, iv, aad, params->aad_size);
 
                 if (params->cipher_dir == IMB_DIR_ENCRYPT) {
                         for (j = 0; j < num_segs; j++)
-                                IMB_CHACHA20_POLY1305_ENC_UPDATE(mb_mgr, key,
-                                                         &chacha_ctx,
-                                                         &pb[j*segment_size],
-                                                         &pb[j*segment_size],
-                                                         segment_size);
+                                IMB_CHACHA20_POLY1305_ENC_UPDATE(
+                                        mb_mgr, key, &chacha_ctx, &pb[j * segment_size],
+                                        &pb[j * segment_size], segment_size);
                         if (final_seg_sz != 0)
-                                IMB_CHACHA20_POLY1305_ENC_UPDATE(mb_mgr, key,
-                                                         &chacha_ctx,
-                                                         &pb[j*segment_size],
-                                                         &pb[j*segment_size],
-                                                         final_seg_sz);
-                        IMB_CHACHA20_POLY1305_ENC_FINALIZE(mb_mgr,
-                                                           &chacha_ctx,
-                                                           auth_tag,
+                                IMB_CHACHA20_POLY1305_ENC_UPDATE(
+                                        mb_mgr, key, &chacha_ctx, &pb[j * segment_size],
+                                        &pb[j * segment_size], final_seg_sz);
+                        IMB_CHACHA20_POLY1305_ENC_FINALIZE(mb_mgr, &chacha_ctx, auth_tag,
                                                            sizeof(auth_tag));
                 } else { /* IMB_DIR_DECRYPT */
                         for (j = 0; j < num_segs; j++)
-                                IMB_CHACHA20_POLY1305_ENC_UPDATE(mb_mgr, key,
-                                                         &chacha_ctx,
-                                                         &pb[j*segment_size],
-                                                         &pb[j*segment_size],
-                                                         segment_size);
+                                IMB_CHACHA20_POLY1305_ENC_UPDATE(
+                                        mb_mgr, key, &chacha_ctx, &pb[j * segment_size],
+                                        &pb[j * segment_size], segment_size);
                         if (final_seg_sz != 0)
-                                IMB_CHACHA20_POLY1305_DEC_UPDATE(mb_mgr, key,
-                                                         &chacha_ctx,
-                                                         &pb[j*segment_size],
-                                                         &pb[j*segment_size],
-                                                         final_seg_sz);
-                        IMB_CHACHA20_POLY1305_DEC_FINALIZE(mb_mgr,
-                                                           &chacha_ctx,
-                                                           auth_tag,
+                                IMB_CHACHA20_POLY1305_DEC_UPDATE(
+                                        mb_mgr, key, &chacha_ctx, &pb[j * segment_size],
+                                        &pb[j * segment_size], final_seg_sz);
+                        IMB_CHACHA20_POLY1305_DEC_FINALIZE(mb_mgr, &chacha_ctx, auth_tag,
                                                            sizeof(auth_tag));
                 }
                 index = get_next_index(index);
         }
 #ifndef _WIN32
         if (use_unhalted_cycles)
-                time = (read_cycles(params->core) -
-                        rd_cycles_cost) - time;
+                time = (read_cycles(params->core) - rd_cycles_cost) - time;
         else
 #endif
                 time = __rdtscp(&aux) - time;
@@ -2984,9 +2640,8 @@ do_test_chacha_poly(struct params_s *params,
 
 /* Performs test using GCM */
 static uint64_t
-do_test_ghash(struct params_s *params,
-              const uint32_t num_iter, IMB_MGR *mb_mgr,
-              uint8_t *p_buffer, imb_uint128_t *p_keys)
+do_test_ghash(struct params_s *params, const uint32_t num_iter, IMB_MGR *mb_mgr, uint8_t *p_buffer,
+              imb_uint128_t *p_keys)
 {
         static DECLARE_ALIGNED(struct gcm_key_data gdata_key, 512);
         uint64_t time = 0;
@@ -3008,8 +2663,7 @@ do_test_ghash(struct params_s *params,
                         uint8_t *pb = get_dst_buffer(index, p_buffer);
                         const uint32_t buf_size = get_next_size(i);
 
-                        IMB_GHASH(mb_mgr, &gdata_key, pb, buf_size,
-                                  auth_tag, sizeof(auth_tag));
+                        IMB_GHASH(mb_mgr, &gdata_key, pb, buf_size, auth_tag, sizeof(auth_tag));
                         index = get_next_index(index);
                 }
         } else {
@@ -3017,16 +2671,14 @@ do_test_ghash(struct params_s *params,
                         uint8_t *pb = get_dst_buffer(index, p_buffer);
                         const uint32_t buf_size = params->size_aes;
 
-                        IMB_GHASH(mb_mgr, &gdata_key, pb, buf_size,
-                                  auth_tag, sizeof(auth_tag));
+                        IMB_GHASH(mb_mgr, &gdata_key, pb, buf_size, auth_tag, sizeof(auth_tag));
                         index = get_next_index(index);
                 }
         }
 
 #ifndef _WIN32
         if (use_unhalted_cycles)
-                time = (read_cycles(params->core) -
-                        rd_cycles_cost) - time;
+                time = (read_cycles(params->core) - rd_cycles_cost) - time;
         else
 #endif
                 time = __rdtscp(&aux) - time;
@@ -3039,8 +2691,7 @@ do_test_ghash(struct params_s *params,
 
 /* Computes mean of set of times after dropping bottom and top quarters */
 static uint64_t
-mean_median(uint64_t *array, uint32_t size,
-            uint8_t *p_buffer, imb_uint128_t *p_keys)
+mean_median(uint64_t *array, uint32_t size, uint8_t *p_buffer, imb_uint128_t *p_keys)
 {
         const uint32_t quarter = size / 4;
         uint32_t i;
@@ -3060,7 +2711,6 @@ mean_median(uint64_t *array, uint32_t size,
         array += quarter;
         size -= quarter * 2;
 
-
         if ((size == 0) || (size & 0x80000000)) {
                 fprintf(stderr, "Not enough data points!\n");
                 free_mem(&p_buffer, &p_keys);
@@ -3076,10 +2726,9 @@ mean_median(uint64_t *array, uint32_t size,
 
 /* Runs test for each buffer size and stores averaged execution time */
 static void
-process_variant(IMB_MGR *mgr, const enum arch_type_e arch,
-                struct params_s *params,
-                struct variant_s *variant_ptr, const uint32_t run,
-                uint8_t *p_buffer, imb_uint128_t *p_keys)
+process_variant(IMB_MGR *mgr, const enum arch_type_e arch, struct params_s *params,
+                struct variant_s *variant_ptr, const uint32_t run, uint8_t *p_buffer,
+                imb_uint128_t *p_keys)
 {
         uint32_t sizes = params->num_sizes;
         uint64_t *times = &variant_ptr->avg_times[run];
@@ -3091,8 +2740,7 @@ process_variant(IMB_MGR *mgr, const enum arch_type_e arch,
 
         for (sz = 0; sz < sizes; sz++) {
                 if (job_size_count == 0)
-                        size_aes = job_sizes[RANGE_MIN] +
-                                        (sz * job_sizes[RANGE_STEP]);
+                        size_aes = job_sizes[RANGE_MIN] + (sz * job_sizes[RANGE_STEP]);
                 else
                         size_aes = job_size_list[sz];
 
@@ -3116,48 +2764,37 @@ process_variant(IMB_MGR *mgr, const enum arch_type_e arch,
                  * (only allowed for GCM/CCM)
                  */
                 if (size_aes == 0 && params->aad_size != 0)
-                        num_iter = (iter_scale >= (uint32_t)params->aad_size) ?
-                                   (iter_scale / (uint32_t)params->aad_size) :
-                                   1;
+                        num_iter = (iter_scale >= (uint32_t) params->aad_size)
+                                           ? (iter_scale / (uint32_t) params->aad_size)
+                                           : 1;
                 else if (size_aes != 0)
-                        num_iter = (iter_scale >= size_aes) ?
-                                   (iter_scale / size_aes) : 1;
+                        num_iter = (iter_scale >= size_aes) ? (iter_scale / size_aes) : 1;
                 else
                         num_iter = iter_scale;
 
                 params->size_aes = size_aes;
                 if (params->cipher_mode == TEST_GCM && (!use_job_api)) {
                         if (job_iter == 0)
-                                *times = do_test_gcm(params, 2 * num_iter, mgr,
-                                                     p_buffer, p_keys);
+                                *times = do_test_gcm(params, 2 * num_iter, mgr, p_buffer, p_keys);
                         else
-                                *times = do_test_gcm(params, job_iter, mgr,
-                                                     p_buffer, p_keys);
-                } else if (params->cipher_mode == TEST_AEAD_CHACHA20 &&
-                           (!use_job_api)) {
+                                *times = do_test_gcm(params, job_iter, mgr, p_buffer, p_keys);
+                } else if (params->cipher_mode == TEST_AEAD_CHACHA20 && (!use_job_api)) {
                         if (job_iter == 0)
-                                *times = do_test_chacha_poly(params,
-                                                     2 * num_iter, mgr,
-                                                     p_buffer, p_keys);
+                                *times = do_test_chacha_poly(params, 2 * num_iter, mgr, p_buffer,
+                                                             p_keys);
                         else
-                                *times = do_test_chacha_poly(params,
-                                                     job_iter, mgr,
-                                                     p_buffer, p_keys);
-                } else if (params->hash_alg == TEST_AUTH_GHASH &&
-                           (!use_job_api)) {
+                                *times = do_test_chacha_poly(params, job_iter, mgr, p_buffer,
+                                                             p_keys);
+                } else if (params->hash_alg == TEST_AUTH_GHASH && (!use_job_api)) {
                         if (job_iter == 0)
-                                *times = do_test_ghash(params, 2 * num_iter,
-                                                       mgr, p_buffer, p_keys);
+                                *times = do_test_ghash(params, 2 * num_iter, mgr, p_buffer, p_keys);
                         else
-                                *times = do_test_ghash(params, job_iter, mgr,
-                                                       p_buffer, p_keys);
+                                *times = do_test_ghash(params, job_iter, mgr, p_buffer, p_keys);
                 } else {
                         if (job_iter == 0)
-                                *times = do_test(mgr, params, num_iter,
-                                                 p_buffer, p_keys);
+                                *times = do_test(mgr, params, num_iter, p_buffer, p_keys);
                         else
-                                *times = do_test(mgr, params, job_iter,
-                                                 p_buffer, p_keys);
+                                *times = do_test(mgr, params, job_iter, p_buffer, p_keys);
                 }
                 times += NUM_RUNS;
         }
@@ -3168,9 +2805,8 @@ process_variant(IMB_MGR *mgr, const enum arch_type_e arch,
 
 /* Generates output containing averaged times for each test variant */
 static void
-print_times(struct variant_s *variant_list, struct params_s *params,
-            const uint32_t total_variants, uint8_t *p_buffer,
-            imb_uint128_t *p_keys)
+print_times(struct variant_s *variant_list, struct params_s *params, const uint32_t total_variants,
+            uint8_t *p_buffer, imb_uint128_t *p_keys)
 {
         /* If IMIX is used, only show the average size */
         const uint32_t sizes = (imix_list_count != 0) ? 1 : params->num_sizes;
@@ -3178,35 +2814,77 @@ print_times(struct variant_s *variant_list, struct params_s *params,
         uint32_t sz;
 
         if (plot_output_option == 0) {
-                const char *func_names[4] = {
-                        "SSE", "AVX", "AVX2", "AVX512"
-                };
-                const char *c_mode_names[TEST_NUM_CIPHER_TESTS - 1] = {
-                        "CBC", "CNTR", "CNTR+8", "CNTR_BITLEN", "CNTR_BITLEN4",
-                        "ECB", "CBCS_1_9", "NULL_CIPHER", "DOCAES", "DOCAES+8",
-                        "DOCDES", "DOCDES+4", "GCM", "CCM", "DES", "3DES",
-                        "PON", "PON_NO_CTR", "ZUC_EEA3", "SNOW3G_UEA2_BITLEN",
-                        "KASUMI_UEA1_BITLEN", "CHACHA20", "CHACHA20_AEAD",
-                        "SNOW_V", "SNOW_V_AEAD"
-                };
-                const char *c_dir_names[2] = {
-                        "ENCRYPT", "DECRYPT"
-                };
-                const char *h_alg_names[TEST_NUM_HASH_TESTS - 1] = {
-                        "SHA1_HMAC", "SHA_224_HMAC", "SHA_256_HMAC",
-                        "SHA_384_HMAC", "SHA_512_HMAC", "XCBC",
-                        "MD5", "CMAC", "SHA1", "SHA_224", "SHA_256",
-                        "SHA_384", "SHA_512", "CMAC_BITLEN", "CMAC_256",
-                        "NULL_HASH", "CRC32", "GCM", "CUSTOM", "CCM",
-                        "BIP-CRC32", "ZUC_EIA3_BITLEN", "SNOW3G_UIA2_BITLEN",
-                        "KASUMI_UIA1", "GMAC-128", "GMAC-192", "GMAC-256",
-                        "POLY1305", "POLY1305_AEAD", "ZUC256_EIA3",
-                        "SNOW_V_AEAD", "CRC32_ETH_FCS", "CRC32_SCTP",
-                        "CRC32_WIMAX_DATA", "CRC24_LTE_A", "CR24_LTE_B",
-                        "CR16_X25", "CRC16_FP_DATA", "CRC11_FP_HEADER",
-                        "CRC10_IUUP_DATA", "CRC8_WIMAX_HCS", "CRC7_FP_HEADER",
-                        "CRC6_IUUP_HEADER", "GHASH"
-                };
+                const char *func_names[4] = { "SSE", "AVX", "AVX2", "AVX512" };
+                const char *c_mode_names[TEST_NUM_CIPHER_TESTS - 1] = { "CBC",
+                                                                        "CNTR",
+                                                                        "CNTR+8",
+                                                                        "CNTR_BITLEN",
+                                                                        "CNTR_BITLEN4",
+                                                                        "ECB",
+                                                                        "CBCS_1_9",
+                                                                        "NULL_CIPHER",
+                                                                        "DOCAES",
+                                                                        "DOCAES+8",
+                                                                        "DOCDES",
+                                                                        "DOCDES+4",
+                                                                        "GCM",
+                                                                        "CCM",
+                                                                        "DES",
+                                                                        "3DES",
+                                                                        "PON",
+                                                                        "PON_NO_CTR",
+                                                                        "ZUC_EEA3",
+                                                                        "SNOW3G_UEA2_BITLEN",
+                                                                        "KASUMI_UEA1_BITLEN",
+                                                                        "CHACHA20",
+                                                                        "CHACHA20_AEAD",
+                                                                        "SNOW_V",
+                                                                        "SNOW_V_AEAD" };
+                const char *c_dir_names[2] = { "ENCRYPT", "DECRYPT" };
+                const char *h_alg_names[TEST_NUM_HASH_TESTS - 1] = { "SHA1_HMAC",
+                                                                     "SHA_224_HMAC",
+                                                                     "SHA_256_HMAC",
+                                                                     "SHA_384_HMAC",
+                                                                     "SHA_512_HMAC",
+                                                                     "XCBC",
+                                                                     "MD5",
+                                                                     "CMAC",
+                                                                     "SHA1",
+                                                                     "SHA_224",
+                                                                     "SHA_256",
+                                                                     "SHA_384",
+                                                                     "SHA_512",
+                                                                     "CMAC_BITLEN",
+                                                                     "CMAC_256",
+                                                                     "NULL_HASH",
+                                                                     "CRC32",
+                                                                     "GCM",
+                                                                     "CUSTOM",
+                                                                     "CCM",
+                                                                     "BIP-CRC32",
+                                                                     "ZUC_EIA3_BITLEN",
+                                                                     "SNOW3G_UIA2_BITLEN",
+                                                                     "KASUMI_UIA1",
+                                                                     "GMAC-128",
+                                                                     "GMAC-192",
+                                                                     "GMAC-256",
+                                                                     "POLY1305",
+                                                                     "POLY1305_AEAD",
+                                                                     "ZUC256_EIA3",
+                                                                     "SNOW_V_AEAD",
+                                                                     "CRC32_ETH_FCS",
+                                                                     "CRC32_SCTP",
+                                                                     "CRC32_WIMAX_DATA",
+                                                                     "CRC24_LTE_A",
+                                                                     "CR24_LTE_B",
+                                                                     "CR16_X25",
+                                                                     "CRC16_FP_DATA",
+                                                                     "CRC11_FP_HEADER",
+                                                                     "CRC10_IUUP_DATA",
+                                                                     "CRC8_WIMAX_HCS",
+                                                                     "CRC7_FP_HEADER",
+                                                                     "CRC6_IUUP_HEADER",
+                                                                     "GHASH" };
                 struct params_s par;
 
                 printf("ARCH");
@@ -3252,16 +2930,13 @@ print_times(struct variant_s *variant_list, struct params_s *params,
                 if (imix_list_count != 0)
                         printf("%u", average_job_size);
                 else if (job_size_count == 0)
-                        printf("%d", job_sizes[RANGE_MIN] +
-                                     (sz * job_sizes[RANGE_STEP]));
+                        printf("%d", job_sizes[RANGE_MIN] + (sz * job_sizes[RANGE_STEP]));
                 else
                         printf("%d", job_size_list[sz]);
                 for (col = 0; col < total_variants; col++) {
-                        uint64_t *time_ptr =
-                                &variant_list[col].avg_times[sz * NUM_RUNS];
+                        uint64_t *time_ptr = &variant_list[col].avg_times[sz * NUM_RUNS];
                         const unsigned long long val =
-                                mean_median(time_ptr, NUM_RUNS,
-                                            p_buffer, p_keys);
+                                mean_median(time_ptr, NUM_RUNS, p_buffer, p_keys);
 
                         printf("\t%llu", val);
                 }
@@ -3278,7 +2953,7 @@ static void *
 run_tests(void *arg)
 {
         uint32_t i;
-        struct thread_info *info = (struct thread_info *)arg;
+        struct thread_info *info = (struct thread_info *) arg;
         IMB_MGR *p_mgr = NULL;
         struct params_s params;
         enum arch_type_e arch;
@@ -3311,13 +2986,15 @@ run_tests(void *arg)
         else
                 params.num_sizes = job_size_count;
 
-        params.core = (uint32_t)info->core;
+        params.core = (uint32_t) info->core;
 
         /* if cores selected then set affinity */
         if (core_mask)
                 if (set_affinity(info->core) != 0) {
-                        fprintf(stderr, "Failed to set cpu "
-                                "affinity on core %d\n", info->core);
+                        fprintf(stderr,
+                                "Failed to set cpu "
+                                "affinity on core %d\n",
+                                info->core);
                         goto exit_failure;
                 }
 
@@ -3328,21 +3005,24 @@ run_tests(void *arg)
 
                 ret = start_cycles_ctr(params.core);
                 if (ret != 0) {
-                        fprintf(stderr, "Failed to start cycles "
-                                "counter on core %u\n", params.core);
+                        fprintf(stderr,
+                                "Failed to start cycles "
+                                "counter on core %u\n",
+                                params.core);
                         goto exit_failure;
                 }
                 /* Get average cost of reading counter */
                 ret = set_avg_unhalted_cycle_cost(params.core, &rd_cycles_cost);
                 if (ret != 0 || rd_cycles_cost == 0) {
                         fprintf(stderr, "Error calculating unhalted "
-                                "cycles read overhead!\n");
+                                        "cycles read overhead!\n");
                         goto exit_failure;
                 } else
-                        fprintf(stderr, "Started counting unhalted cycles on "
+                        fprintf(stderr,
+                                "Started counting unhalted cycles on "
                                 "core %u\nUnhalted cycles read cost = %lu "
-                                "cycles\n", params.core,
-                                (unsigned long)rd_cycles_cost);
+                                "cycles\n",
+                                params.core, (unsigned long) rd_cycles_cost);
         }
 
         init_mem(&buf, &keys);
@@ -3360,12 +3040,12 @@ run_tests(void *arg)
         }
 
         if (info->print_info && !silent_progress_bar)
-                fprintf(stderr, "Total number of combinations (algos, "
+                fprintf(stderr,
+                        "Total number of combinations (algos, "
                         "key sizes, cipher directions) to test = %u\n",
                         total_variants);
 
-        variant_list = (struct variant_s *)
-                malloc(total_variants * sizeof(struct variant_s));
+        variant_list = (struct variant_s *) malloc(total_variants * sizeof(struct variant_s));
         if (variant_list == NULL) {
                 fprintf(stderr, "Cannot allocate memory\n");
                 goto exit_failure;
@@ -3373,8 +3053,7 @@ run_tests(void *arg)
         memset(variant_list, 0, total_variants * sizeof(struct variant_s));
 
         at_size = NUM_RUNS * params.num_sizes * sizeof(uint64_t);
-        for (variant = 0, variant_ptr = variant_list;
-             variant < total_variants;
+        for (variant = 0, variant_ptr = variant_list; variant < total_variants;
              variant++, variant_ptr++) {
                 variant_ptr->avg_times = (uint64_t *) malloc(at_size);
                 if (!variant_ptr->avg_times) {
@@ -3385,9 +3064,8 @@ run_tests(void *arg)
 
         for (run = 0; run < NUM_RUNS; run++) {
                 if (info->print_info)
-                        fprintf(stderr, "\nStarting run %u of %d%c",
-                                run + 1, NUM_RUNS,
-                                silent_progress_bar ? '\r' : '\n' );
+                        fprintf(stderr, "\nStarting run %u of %d%c", run + 1, NUM_RUNS,
+                                silent_progress_bar ? '\r' : '\n');
 
                 variant = 0;
                 variant_ptr = variant_list;
@@ -3429,8 +3107,7 @@ run_tests(void *arg)
                                 goto exit_failure;
                         }
 
-                        process_variant(p_mgr, arch, &params,
-                                        variant_ptr, run, buf, keys);
+                        process_variant(p_mgr, arch, &params, variant_ptr, run, buf, keys);
 
                         /* update and print progress bar */
                         if (info->print_info)
@@ -3481,9 +3158,11 @@ exit_failure:
  * =========================================================
  */
 
-static void usage(void)
+static void
+usage(void)
 {
-        fprintf(stderr, "Usage: imb-perf <ALGORITHM> [ARGS]\n"
+        fprintf(stderr,
+                "Usage: imb-perf <ALGORITHM> [ARGS]\n"
                 "\nALGORITHM can be one or more of:\n"
                 "--cipher-algo: Select cipher algorithm to run on the custom test\n"
                 "--hash-algo: Select hash algorithm to run on the custom test\n"
@@ -3552,8 +3231,8 @@ static void usage(void)
 }
 
 static int
-get_next_num_arg(const char * const *argv, const int index, const int argc,
-                 void *dst, const size_t dst_size)
+get_next_num_arg(const char *const *argv, const int index, const int argc, void *dst,
+                 const size_t dst_size)
 {
         char *endptr = NULL;
         uint64_t val;
@@ -3574,27 +3253,26 @@ get_next_num_arg(const char * const *argv, const int index, const int argc,
         val = strtoull(argv[index + 1], &endptr, 0);
 #endif
         if (endptr == argv[index + 1] || (endptr != NULL && *endptr != '\0')) {
-                fprintf(stderr, "Error converting '%s' as value for '%s'!\n",
-                        argv[index + 1], argv[index]);
+                fprintf(stderr, "Error converting '%s' as value for '%s'!\n", argv[index + 1],
+                        argv[index]);
                 exit(EXIT_FAILURE);
         }
 
         switch (dst_size) {
         case (sizeof(uint8_t)):
-                *((uint8_t *)dst) = (uint8_t) val;
+                *((uint8_t *) dst) = (uint8_t) val;
                 break;
         case (sizeof(uint16_t)):
-                *((uint16_t *)dst) = (uint16_t) val;
+                *((uint16_t *) dst) = (uint16_t) val;
                 break;
         case (sizeof(uint32_t)):
-                *((uint32_t *)dst) = (uint32_t) val;
+                *((uint32_t *) dst) = (uint32_t) val;
                 break;
         case (sizeof(uint64_t)):
-                *((uint64_t *)dst) = val;
+                *((uint64_t *) dst) = val;
                 break;
         default:
-                fprintf(stderr, "%s() invalid dst_size %u!\n",
-                        __func__, (unsigned) dst_size);
+                fprintf(stderr, "%s() invalid dst_size %u!\n", __func__, (unsigned) dst_size);
                 exit(EXIT_FAILURE);
                 break;
         }
@@ -3605,10 +3283,8 @@ get_next_num_arg(const char * const *argv, const int index, const int argc,
 static int
 detect_arch(unsigned int arch_support[NUM_ARCHS])
 {
-        const uint64_t detect_sse =
-                IMB_FEATURE_SSE4_2 | IMB_FEATURE_CMOV | IMB_FEATURE_AESNI;
-        const uint64_t detect_avx =
-                IMB_FEATURE_AVX | IMB_FEATURE_CMOV | IMB_FEATURE_AESNI;
+        const uint64_t detect_sse = IMB_FEATURE_SSE4_2 | IMB_FEATURE_CMOV | IMB_FEATURE_AESNI;
+        const uint64_t detect_avx = IMB_FEATURE_AVX | IMB_FEATURE_CMOV | IMB_FEATURE_AESNI;
         const uint64_t detect_avx2 = IMB_FEATURE_AVX2 | detect_avx;
         const uint64_t detect_avx512 = IMB_FEATURE_AVX512_SKX | detect_avx2;
         IMB_MGR *p_mgr = NULL;
@@ -3650,8 +3326,7 @@ detect_arch(unsigned int arch_support[NUM_ARCHS])
  * with it.
  */
 static const union params *
-check_string_arg(const char *param, const char *arg,
-                 const struct str_value_mapping *map,
+check_string_arg(const char *param, const char *arg, const struct str_value_mapping *map,
                  const unsigned int num_avail_opts)
 {
         unsigned int i;
@@ -3677,8 +3352,8 @@ exit:
 }
 
 static int
-parse_list(const char * const *argv, const int index, const int argc,
-           uint32_t *list, uint32_t *min, uint32_t *max)
+parse_list(const char *const *argv, const int index, const int argc, uint32_t *list, uint32_t *min,
+           uint32_t *max)
 {
         char *token;
         uint32_t number;
@@ -3721,8 +3396,7 @@ parse_list(const char * const *argv, const int index, const int argc,
 
         while (token != NULL) {
                 if (count == MAX_LIST) {
-                        fprintf(stderr, "Using only the first %d sizes\n",
-                                MAX_LIST);
+                        fprintf(stderr, "Using only the first %d sizes\n", MAX_LIST);
                         break;
                 }
 
@@ -3756,13 +3430,12 @@ err_list:
 }
 
 static int
-parse_range(const char * const *argv, const int index, const int argc,
+parse_range(const char *const *argv, const int index, const int argc,
             uint32_t range_values[NUM_RANGE])
 {
         char *token;
         uint32_t number;
         unsigned int i;
-
 
         if (range_values == NULL || argv == NULL || index < 0 || argc < 0) {
                 fprintf(stderr, "%s() internal error!\n", __func__);
@@ -3803,7 +3476,7 @@ parse_range(const char * const *argv, const int index, const int argc,
 
         if (range_values[RANGE_MAX] < range_values[RANGE_MIN]) {
                 fprintf(stderr, "Maximum value of range cannot be lower "
-                        "than minimum value\n");
+                                "than minimum value\n");
                 exit(EXIT_FAILURE);
         }
 
@@ -3815,15 +3488,12 @@ parse_range(const char * const *argv, const int index, const int argc,
         goto end_range;
 no_range:
         /* Try parsing as a list/single value */
-        job_size_count = parse_list(argv, index, argc, job_size_list,
-                                    &job_sizes[RANGE_MIN],
+        job_size_count = parse_list(argv, index, argc, job_size_list, &job_sizes[RANGE_MIN],
                                     &job_sizes[RANGE_MAX]);
 end_range:
         free(copy_arg);
         return (index + 1);
-
 }
-
 
 /**
  * @brief Update table of supported architectures
@@ -3836,10 +3506,8 @@ end_range:
 static int
 detect_best_arch(uint8_t arch_support[NUM_ARCHS])
 {
-        const uint64_t detect_sse =
-                IMB_FEATURE_SSE4_2 | IMB_FEATURE_CMOV | IMB_FEATURE_AESNI;
-        const uint64_t detect_avx =
-                IMB_FEATURE_AVX | IMB_FEATURE_CMOV | IMB_FEATURE_AESNI;
+        const uint64_t detect_sse = IMB_FEATURE_SSE4_2 | IMB_FEATURE_CMOV | IMB_FEATURE_AESNI;
+        const uint64_t detect_avx = IMB_FEATURE_AVX | IMB_FEATURE_CMOV | IMB_FEATURE_AESNI;
         const uint64_t detect_avx2 = IMB_FEATURE_AVX2 | detect_avx;
         const uint64_t detect_avx512 = IMB_FEATURE_AVX512_SKX | detect_avx2;
         IMB_MGR *p_mgr = NULL;
@@ -3889,7 +3557,8 @@ detect_best_arch(uint8_t arch_support[NUM_ARCHS])
 /**
  * @brief Print system and application information
  */
-static void print_info(void)
+static void
+print_info(void)
 {
         uint32_t i;
         uint32_t supported_archs[NUM_ARCHS];
@@ -3911,8 +3580,7 @@ static void print_info(void)
 
         for (i = 0; i < DIM(arch_str_map); i++)
                 if (arch_tab[i]) {
-                        printf("Best architecture: %s\n",
-                               arch_str_map[i].name);
+                        printf("Best architecture: %s\n", arch_str_map[i].name);
                         break;
                 }
 
@@ -3934,12 +3602,13 @@ static void print_info(void)
 
         return;
 
- print_info_err:
+print_info_err:
         fprintf(stderr, "%s() error!\n", __func__);
         exit(EXIT_FAILURE);
 }
 
-int main(int argc, char *argv[])
+int
+main(int argc, char *argv[])
 {
         uint32_t num_t = 0;
         int i, core = 0;
@@ -3991,8 +3660,7 @@ int main(int argc, char *argv[])
                 } else if (strcmp(argv[i], "--plot") == 0) {
                         plot_output_option = 1;
                 } else if (strcmp(argv[i], "--arch") == 0) {
-                        values = check_string_arg(argv[i], argv[i+1],
-                                                  arch_str_map,
+                        values = check_string_arg(argv[i], argv[i + 1], arch_str_map,
                                                   DIM(arch_str_map));
                         if (values == NULL)
                                 return EXIT_FAILURE;
@@ -4008,107 +3676,87 @@ int main(int argc, char *argv[])
                         if (detect_best_arch(archs) != 0)
                                 return EXIT_FAILURE;
                 } else if (strcmp(argv[i], "--cipher-algo") == 0) {
-                        values = check_string_arg(argv[i], argv[i+1],
-                                        cipher_algo_str_map,
-                                        DIM(cipher_algo_str_map));
+                        values = check_string_arg(argv[i], argv[i + 1], cipher_algo_str_map,
+                                                  DIM(cipher_algo_str_map));
                         if (values == NULL)
                                 return EXIT_FAILURE;
 
-                        custom_job_params.cipher_mode =
-                                        values->job_params.cipher_mode;
-                        custom_job_params.aes_key_size =
-                                        values->job_params.aes_key_size;
+                        custom_job_params.cipher_mode = values->job_params.cipher_mode;
+                        custom_job_params.aes_key_size = values->job_params.aes_key_size;
                         cipher_algo_set = 1;
                         i++;
                 } else if (strcmp(argv[i], "--cipher-dir") == 0) {
-                        values = check_string_arg(argv[i], argv[i+1],
-                                        cipher_dir_str_map,
-                                        DIM(cipher_dir_str_map));
+                        values = check_string_arg(argv[i], argv[i + 1], cipher_dir_str_map,
+                                                  DIM(cipher_dir_str_map));
                         if (values == NULL)
                                 return EXIT_FAILURE;
 
-                        custom_job_params.cipher_dir =
-                                        values->job_params.cipher_dir;
+                        custom_job_params.cipher_dir = values->job_params.cipher_dir;
                         cipher_dir_set = 1;
                         i++;
                 } else if (strcmp(argv[i], "--hash-algo") == 0) {
-                        values = check_string_arg(argv[i], argv[i+1],
-                                        hash_algo_str_map,
-                                        DIM(hash_algo_str_map));
+                        values = check_string_arg(argv[i], argv[i + 1], hash_algo_str_map,
+                                                  DIM(hash_algo_str_map));
                         if (values == NULL)
                                 return EXIT_FAILURE;
 
-                        custom_job_params.hash_alg =
-                                        values->job_params.hash_alg;
+                        custom_job_params.hash_alg = values->job_params.hash_alg;
                         hash_algo_set = 1;
                         i++;
                 } else if (strcmp(argv[i], "--aead-algo") == 0) {
-                        values = check_string_arg(argv[i], argv[i+1],
-                                        aead_algo_str_map,
-                                        DIM(aead_algo_str_map));
+                        values = check_string_arg(argv[i], argv[i + 1], aead_algo_str_map,
+                                                  DIM(aead_algo_str_map));
                         if (values == NULL)
                                 return EXIT_FAILURE;
 
-                        custom_job_params.cipher_mode =
-                                        values->job_params.cipher_mode;
-                        custom_job_params.aes_key_size =
-                                        values->job_params.aes_key_size;
-                        custom_job_params.hash_alg =
-                                        values->job_params.hash_alg;
+                        custom_job_params.cipher_mode = values->job_params.cipher_mode;
+                        custom_job_params.aes_key_size = values->job_params.aes_key_size;
+                        custom_job_params.hash_alg = values->job_params.hash_alg;
                         aead_algo_set = 1;
                         i++;
                 } else if (strcmp(argv[i], "-o") == 0) {
-                        i = get_next_num_arg((const char * const *)argv, i,
-                                             argc, &sha_size_incr,
+                        i = get_next_num_arg((const char *const *) argv, i, argc, &sha_size_incr,
                                              sizeof(sha_size_incr));
                 } else if (strcmp(argv[i], "--job-size") == 0) {
                         /* Try parsing the argument as a range first */
-                        i = parse_range((const char * const *)argv, i, argc,
-                                          job_sizes);
+                        i = parse_range((const char *const *) argv, i, argc, job_sizes);
                         if (job_sizes[RANGE_MAX] > JOB_SIZE_TOP) {
-                                fprintf(stderr,
-                                       "Invalid job size %u (max %d)\n",
-                                       (unsigned) job_sizes[RANGE_MAX],
-                                       JOB_SIZE_TOP);
+                                fprintf(stderr, "Invalid job size %u (max %d)\n",
+                                        (unsigned) job_sizes[RANGE_MAX], JOB_SIZE_TOP);
                                 return EXIT_FAILURE;
                         }
                 } else if (strcmp(argv[i], "--imix") == 0) {
-                        imix_list_count = parse_list((const char * const *)argv,
-                                          i, argc, imix_list, NULL, NULL);
+                        imix_list_count = parse_list((const char *const *) argv, i, argc, imix_list,
+                                                     NULL, NULL);
                         if (imix_list_count == 0) {
-                                fprintf(stderr,
-                                       "Invalid IMIX distribution list\n");
+                                fprintf(stderr, "Invalid IMIX distribution list\n");
                                 return EXIT_FAILURE;
                         }
                         i++;
                 } else if (strcmp(argv[i], "--aad-size") == 0) {
                         /* Get AAD size for both GCM and CCM */
-                        i = get_next_num_arg((const char * const *)argv, i,
-                                             argc, &gcm_aad_size,
+                        i = get_next_num_arg((const char *const *) argv, i, argc, &gcm_aad_size,
                                              sizeof(gcm_aad_size));
                         if (gcm_aad_size > AAD_SIZE_MAX) {
-                                fprintf(stderr,
-                                        "Invalid AAD size %u (max %d)!\n",
-                                        (unsigned) gcm_aad_size,
-                                        AAD_SIZE_MAX);
+                                fprintf(stderr, "Invalid AAD size %u (max %d)!\n",
+                                        (unsigned) gcm_aad_size, AAD_SIZE_MAX);
                                 return EXIT_FAILURE;
                         }
                         ccm_aad_size = gcm_aad_size;
                         chacha_poly_aad_size = gcm_aad_size;
                         snow_v_aad_size = gcm_aad_size;
                 } else if (strcmp(argv[i], "--job-iter") == 0) {
-                        i = get_next_num_arg((const char * const *)argv, i,
-                                             argc, &job_iter, sizeof(job_iter));
+                        i = get_next_num_arg((const char *const *) argv, i, argc, &job_iter,
+                                             sizeof(job_iter));
                 } else if (strcmp(argv[i], "--threads") == 0) {
-                        i = get_next_num_arg((const char * const *)argv, i,
-                                             argc, &num_t, sizeof(num_t));
+                        i = get_next_num_arg((const char *const *) argv, i, argc, &num_t,
+                                             sizeof(num_t));
                         if (num_t > (MAX_NUM_THREADS + 1)) {
                                 fprintf(stderr, "Invalid number of threads!\n");
                                 return EXIT_FAILURE;
                         }
                 } else if (strcmp(argv[i], "--cores") == 0) {
-                        i = get_next_num_arg((const char * const *)argv, i,
-                                             argc, &core_mask,
+                        i = get_next_num_arg((const char *const *) argv, i, argc, &core_mask,
                                              sizeof(core_mask));
                 } else if (strcmp(argv[i], "--unhalted-cycles") == 0) {
                         use_unhalted_cycles = 1;
@@ -4122,8 +3770,8 @@ int main(int argc, char *argv[])
                 } else if (strcmp(argv[i], "--no-tsc-detect") == 0) {
                         tsc_detect = 0;
                 } else if (strcmp(argv[i], "--tag-size") == 0) {
-                        i = get_next_num_arg((const char * const *)argv, i,
-                                             argc, &tag_size, sizeof(tag_size));
+                        i = get_next_num_arg((const char *const *) argv, i, argc, &tag_size,
+                                             sizeof(tag_size));
                 } else if (strcmp(argv[i], "--burst-api") == 0) {
                         test_api = TEST_API_BURST;
                 } else if (strcmp(argv[i], "--cipher-burst-api") == 0) {
@@ -4131,21 +3779,23 @@ int main(int argc, char *argv[])
                 } else if (strcmp(argv[i], "--hash-burst-api") == 0) {
                         test_api = TEST_API_HASH_BURST;
                 } else if (strcmp(argv[i], "--burst-size") == 0) {
-                        i = get_next_num_arg((const char * const *)argv, i,
-                                             argc, &burst_size,
+                        i = get_next_num_arg((const char *const *) argv, i, argc, &burst_size,
                                              sizeof(burst_size));
                         if (burst_size > (MAX_BURST_SIZE)) {
-                                fprintf(stderr, "Burst size cannot be "
-                                        "more than %d\n", MAX_BURST_SIZE);
+                                fprintf(stderr,
+                                        "Burst size cannot be "
+                                        "more than %d\n",
+                                        MAX_BURST_SIZE);
                                 return EXIT_FAILURE;
                         }
                 } else if (strcmp(argv[i], "--segment-size") == 0) {
-                        i = get_next_num_arg((const char * const *)argv, i,
-                                             argc, &segment_size,
+                        i = get_next_num_arg((const char *const *) argv, i, argc, &segment_size,
                                              sizeof(segment_size));
                         if (segment_size > (JOB_SIZE_TOP)) {
-                                fprintf(stderr, "Segment size cannot be "
-                                        "more than %d\n", JOB_SIZE_TOP);
+                                fprintf(stderr,
+                                        "Segment size cannot be "
+                                        "more than %d\n",
+                                        JOB_SIZE_TOP);
                                 return EXIT_FAILURE;
                         }
                 } else if (strcmp(argv[i], "--no-time-box") == 0) {
@@ -4153,8 +3803,7 @@ int main(int argc, char *argv[])
                 } else if (strcmp(argv[i], "--quic-api") == 0) {
                         quic_api_test = 1;
                 } else if (strcmp(argv[i], "--buffer-offset") == 0) {
-                        i = get_next_num_arg((const char * const *)argv, i,
-                                             argc, &buffer_offset,
+                        i = get_next_num_arg((const char *const *) argv, i, argc, &buffer_offset,
                                              sizeof(buffer_offset));
                         if (buffer_offset > 15) {
                                 fprintf(stderr,
@@ -4170,8 +3819,8 @@ int main(int argc, char *argv[])
 
         if (burst_size != 0 && test_api == TEST_API_JOB) {
                 fprintf(stderr, "--burst-size can only be used with "
-                        "--burst-api, --cipher-burst-api or "
-                        "--hash-burst-api options\n");
+                                "--burst-api, --cipher-burst-api or "
+                                "--hash-burst-api options\n");
                 return EXIT_FAILURE;
         }
 
@@ -4179,11 +3828,10 @@ int main(int argc, char *argv[])
                 burst_size = DEFAULT_BURST_SIZE;
 
         /* currently only AES-CBC & CTR supported by cipher-only burst API */
-        if (test_api == TEST_API_CIPHER_BURST &&
-            (custom_job_params.cipher_mode != TEST_CBC &&
-             custom_job_params.cipher_mode != TEST_CNTR)) {
+        if (test_api == TEST_API_CIPHER_BURST && (custom_job_params.cipher_mode != TEST_CBC &&
+                                                  custom_job_params.cipher_mode != TEST_CNTR)) {
                 fprintf(stderr, "Unsupported cipher-only burst "
-                        "API algorithm selected\n");
+                                "API algorithm selected\n");
                 return EXIT_FAILURE;
         }
 
@@ -4194,23 +3842,22 @@ int main(int argc, char *argv[])
              (custom_job_params.hash_alg != TEST_SHA_256_HMAC) &&
              (custom_job_params.hash_alg != TEST_SHA_384_HMAC) &&
              (custom_job_params.hash_alg != TEST_SHA_512_HMAC))) {
-                fprintf(stderr,
-                        "Unsupported hash-only burst API algorithm selected\n");
+                fprintf(stderr, "Unsupported hash-only burst API algorithm selected\n");
                 return EXIT_FAILURE;
         }
 
-        if (aead_algo_set == 0 && cipher_algo_set == 0 &&
-            hash_algo_set == 0 && quic_api_test == 0) {
+        if (aead_algo_set == 0 && cipher_algo_set == 0 && hash_algo_set == 0 &&
+            quic_api_test == 0) {
                 fprintf(stderr, "No cipher, hash or "
-                        "AEAD algorithms selected\n");
+                                "AEAD algorithms selected\n");
                 usage();
                 return EXIT_FAILURE;
         }
 
         if (aead_algo_set && (cipher_algo_set || hash_algo_set)) {
                 fprintf(stderr, "AEAD algorithm cannot be used "
-                        "combined with another cipher/hash "
-                        "algorithm\n");
+                                "combined with another cipher/hash "
+                                "algorithm\n");
                 return EXIT_FAILURE;
         }
 
@@ -4222,8 +3869,7 @@ int main(int argc, char *argv[])
 
         if (custom_job_params.cipher_mode == TEST_CCM) {
                 if (ccm_aad_size > CCM_AAD_SIZE_MAX) {
-                        fprintf(stderr, "AAD cannot be higher than %d in CCM\n",
-                                CCM_AAD_SIZE_MAX);
+                        fprintf(stderr, "AAD cannot be higher than %d in CCM\n", CCM_AAD_SIZE_MAX);
                         return EXIT_FAILURE;
                 }
         }
@@ -4232,64 +3878,55 @@ int main(int argc, char *argv[])
 
         if ((imix_list_count != 0)) {
                 if (imix_list_count != job_size_count) {
-                        fprintf(stderr,
-                                "IMIX distribution list must have the same "
-                                "number of items as the job list\n");
+                        fprintf(stderr, "IMIX distribution list must have the same "
+                                        "number of items as the job list\n");
                         return EXIT_FAILURE;
                 }
-                job_size_imix_list = malloc(JOB_SIZE_IMIX_LIST*4);
+                job_size_imix_list = malloc(JOB_SIZE_IMIX_LIST * 4);
                 if (job_size_imix_list == NULL) {
-                        fprintf(stderr,
-                                "Memory allocation for IMIX list failed\n");
+                        fprintf(stderr, "Memory allocation for IMIX list failed\n");
                         return EXIT_FAILURE;
                 }
 
                 num_sizes_list = JOB_SIZE_IMIX_LIST;
-		/*
-		 * Calculate accumulated distribution of
-		 * probabilities per job size
-		 */
-		distribution_total[0] = imix_list[0];
-		for (i = 1; i < (int)imix_list_count; i++)
-			distribution_total[i] = imix_list[i] +
-				distribution_total[i-1];
+                /*
+                 * Calculate accumulated distribution of
+                 * probabilities per job size
+                 */
+                distribution_total[0] = imix_list[0];
+                for (i = 1; i < (int) imix_list_count; i++)
+                        distribution_total[i] = imix_list[i] + distribution_total[i - 1];
 
-		/* Calculate a random sequence of packet sizes,
+                /* Calculate a random sequence of packet sizes,
                    based on distribution */
-		for (i = 0; i < (int)JOB_SIZE_IMIX_LIST; i++) {
-			uint16_t random_number = rand() %
-				distribution_total[imix_list_count - 1];
+                for (i = 0; i < (int) JOB_SIZE_IMIX_LIST; i++) {
+                        uint16_t random_number = rand() % distribution_total[imix_list_count - 1];
                         uint16_t j;
 
-			for (j = 0; j < imix_list_count; j++)
-				if (random_number < distribution_total[j])
-					break;
+                        for (j = 0; j < imix_list_count; j++)
+                                if (random_number < distribution_total[j])
+                                        break;
 
-			job_size_imix_list[i] = job_size_list[j];
-		}
+                        job_size_imix_list[i] = job_size_list[j];
+                }
 
-		/* Calculate average buffer size for the IMIX distribution */
-		for (i = 0; i < (int)imix_list_count; i++)
-			average_job_size += job_size_list[i] *
-				imix_list[i];
+                /* Calculate average buffer size for the IMIX distribution */
+                for (i = 0; i < (int) imix_list_count; i++)
+                        average_job_size += job_size_list[i] * imix_list[i];
 
-		average_job_size /=
-				distribution_total[imix_list_count - 1];
+                average_job_size /= distribution_total[imix_list_count - 1];
         }
-        cipher_size_list = (uint32_t *) malloc(sizeof(uint32_t) *
-                                num_sizes_list);
+        cipher_size_list = (uint32_t *) malloc(sizeof(uint32_t) * num_sizes_list);
         if (cipher_size_list == NULL) {
                 fprintf(stderr, "Could not malloc cipher size list\n");
                 exit(EXIT_FAILURE);
         }
-        hash_size_list = (uint32_t *) malloc(sizeof(uint32_t) *
-                                num_sizes_list);
+        hash_size_list = (uint32_t *) malloc(sizeof(uint32_t) * num_sizes_list);
         if (hash_size_list == NULL) {
                 fprintf(stderr, "Could not malloc hash size list\n");
                 exit(EXIT_FAILURE);
         }
-        xgem_hdr_list = (uint64_t *) malloc(sizeof(uint64_t) *
-                                num_sizes_list);
+        xgem_hdr_list = (uint64_t *) malloc(sizeof(uint64_t) * num_sizes_list);
         if (xgem_hdr_list == NULL) {
                 fprintf(stderr, "Could not malloc xgem hdr list\n");
                 exit(EXIT_FAILURE);
@@ -4297,13 +3934,14 @@ int main(int argc, char *argv[])
 
         if (job_sizes[RANGE_MIN] == 0 && aead_algo_set == 0) {
                 fprintf(stderr, "Buffer size cannot be 0 unless only "
-                        "an AEAD algorithm is tested\n");
+                                "an AEAD algorithm is tested\n");
                 return EXIT_FAILURE;
         }
 
         /* Check num cores >= number of threads */
         if ((core_mask != 0 && num_t != 0) && (num_t > bitcount(core_mask))) {
-                fprintf(stderr, "Insufficient number of cores in "
+                fprintf(stderr,
+                        "Insufficient number of cores in "
                         "core mask (0x%lx) to run %u threads!\n",
                         (unsigned long) core_mask, num_t);
                 return EXIT_FAILURE;
@@ -4311,10 +3949,9 @@ int main(int argc, char *argv[])
 
         /* Check timebox option vs number of threads bigger than 1 */
         if (use_timebox && num_t > 1) {
-                fprintf(stderr,
-                        "Time-box feature, enabled by default, doesn't work "
-                        "safely with number of threads bigger than one! Please "
-                        "use '--no-time-box' option to disable\n");
+                fprintf(stderr, "Time-box feature, enabled by default, doesn't work "
+                                "safely with number of threads bigger than one! Please "
+                                "use '--no-time-box' option to disable\n");
                 return EXIT_FAILURE;
         }
 
@@ -4322,7 +3959,7 @@ int main(int argc, char *argv[])
         if (use_unhalted_cycles) {
                 if (core_mask == 0) {
                         fprintf(stderr, "Must specify core mask "
-                                "when reading unhalted cycles!\n");
+                                        "when reading unhalted cycles!\n");
                         return EXIT_FAILURE;
                 }
 
@@ -4339,10 +3976,8 @@ int main(int argc, char *argv[])
         for (arch_id = 0; arch_id < NUM_ARCHS; arch_id++) {
                 if (archs[arch_id] == 1 && arch_support[arch_id] == 0) {
                         archs[arch_id] = 0;
-                        fprintf(stderr,
-                                "%s not supported. Disabling %s tests\n",
-                                arch_str_map[arch_id].name,
-                                arch_str_map[arch_id].name);
+                        fprintf(stderr, "%s not supported. Disabling %s tests\n",
+                                arch_str_map[arch_id].name, arch_str_map[arch_id].name);
                 }
         }
 
@@ -4372,8 +4007,7 @@ int main(int argc, char *argv[])
                 "Buffer offset = %u\n"
                 "Tool version: %s\n"
                 "Library version: %s\n",
-                sha_size_incr, buffer_offset,
-                IMB_VERSION_STR, imb_get_version_str());
+                sha_size_incr, buffer_offset, IMB_VERSION_STR, imb_get_version_str());
 
         if (!use_job_api)
                 fprintf(stderr, "API type: direct\n");
@@ -4386,10 +4020,10 @@ int main(int argc, char *argv[])
         }
 
         if (custom_job_params.cipher_mode == TEST_GCM)
-                fprintf(stderr, "GCM AAD = %"PRIu64"\n", gcm_aad_size);
+                fprintf(stderr, "GCM AAD = %" PRIu64 "\n", gcm_aad_size);
 
         if (custom_job_params.cipher_mode == TEST_CCM)
-                fprintf(stderr, "CCM AAD = %"PRIu64"\n", ccm_aad_size);
+                fprintf(stderr, "CCM AAD = %" PRIu64 "\n", ccm_aad_size);
 
         if (archs[ARCH_SSE]) {
                 IMB_MGR *p_mgr = alloc_mb_mgr(flags);
@@ -4400,8 +4034,7 @@ int main(int argc, char *argv[])
                 }
                 init_mb_mgr_sse(p_mgr);
                 fprintf(stderr, "%s SHA extensions (shani) for SSE arch\n",
-                        (p_mgr->features & IMB_FEATURE_SHANI) ?
-                        "Using" : "Not using");
+                        (p_mgr->features & IMB_FEATURE_SHANI) ? "Using" : "Not using");
                 free_mb_mgr(p_mgr);
         }
 
@@ -4431,21 +4064,19 @@ int main(int argc, char *argv[])
                         /* Allocate MB manager for each thread */
                         thread_info_p->p_mgr = alloc_mb_mgr(flags);
                         if (thread_info_p->p_mgr == NULL) {
-                                fprintf(stderr, "Failed to allocate MB_MGR "
+                                fprintf(stderr,
+                                        "Failed to allocate MB_MGR "
                                         "structure for thread %u!\n",
-                                        (unsigned)(n + 1));
+                                        (unsigned) (n + 1));
                                 exit(EXIT_FAILURE);
                         }
 #ifdef _WIN32
-                        threads[n] = (HANDLE)
-                                _beginthread(&run_tests, 0,
-                                             (void *)thread_info_p);
+                        threads[n] = (HANDLE) _beginthread(&run_tests, 0, (void *) thread_info_p);
 #else
                         pthread_attr_t attr;
 
                         pthread_attr_init(&attr);
-                        pthread_create(&tids[n], &attr, run_tests,
-                                       (void *)thread_info_p);
+                        pthread_create(&tids[n], &attr, run_tests, (void *) thread_info_p);
 #endif
                 }
         }
@@ -4454,7 +4085,7 @@ int main(int argc, char *argv[])
         thread_info_p->p_mgr = alloc_mb_mgr(flags);
         if (thread_info_p->p_mgr == NULL) {
                 fprintf(stderr, "Failed to allocate MB_MGR "
-                        "structure for main thread!\n");
+                                "structure for main thread!\n");
                 exit(EXIT_FAILURE);
         }
         if (core_mask) {
@@ -4462,7 +4093,7 @@ int main(int argc, char *argv[])
                 thread_info_p->core = core;
         }
 
-        run_tests((void *)thread_info_p);
+        run_tests((void *) thread_info_p);
         if (num_t > 1) {
                 uint32_t n;
 
@@ -4470,8 +4101,7 @@ int main(int argc, char *argv[])
                 WaitForMultipleObjects(num_t, threads, FALSE, INFINITE);
 #endif
                 for (n = 0; n < (num_t - 1); n++) {
-                        fprintf(stderr, "Waiting on thread %u to finish...\n",
-                                (unsigned)(n + 2));
+                        fprintf(stderr, "Waiting on thread %u to finish...\n", (unsigned) (n + 2));
 #ifdef _WIN32
                         CloseHandle(threads[n]);
 #else
