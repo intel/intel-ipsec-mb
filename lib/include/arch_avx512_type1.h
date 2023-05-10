@@ -156,6 +156,22 @@ void call_sha1_x16_avx512_from_c(SHA1_ARGS *args, uint32_t size_in_blocks);
 void call_sha256_x16_avx512_from_c(SHA256_ARGS *args, uint32_t size_in_blocks);
 void call_sha512_x8_avx512_from_c(SHA512_ARGS *args, uint64_t size_in_blocks);
 
+IMB_DLL_EXPORT void sha1_avx512(const void *data, const uint64_t length,
+                                 void *digest);
+IMB_DLL_EXPORT void sha1_one_block_avx512(const void *data, void *digest);
+IMB_DLL_EXPORT void sha224_avx512(const void *data, const uint64_t length,
+                                  void *digest);
+IMB_DLL_EXPORT void sha224_one_block_avx512(const void *data, void *digest);
+IMB_DLL_EXPORT void sha256_avx512(const void *data, const uint64_t length,
+                                  void *digest);
+IMB_DLL_EXPORT void sha256_one_block_avx512(const void *data, void *digest);
+IMB_DLL_EXPORT void sha384_avx512(const void *data, const uint64_t length,
+                                  void *digest);
+IMB_DLL_EXPORT void sha384_one_block_avx512(const void *data, void *digest);
+IMB_DLL_EXPORT void sha512_avx512(const void *data, const uint64_t length,
+                                  void *digest);
+IMB_DLL_EXPORT void sha512_one_block_avx512(const void *data, void *digest);
+
 /* AES-CFB */
 IMB_DLL_EXPORT void aes_cfb_128_one_avx512(void *out, const void *in,
                                            const void *iv, const void *keys,

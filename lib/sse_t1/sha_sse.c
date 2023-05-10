@@ -26,6 +26,7 @@
 *******************************************************************************/
 
 #include "include/sha_generic.h"
+#include "include/arch_sse_type1.h"
 
 /* ========================================================================== */
 /* One block SHA1 computation for IPAD / OPAD usage only */

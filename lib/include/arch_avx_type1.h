@@ -255,6 +255,22 @@ void call_sha1_mult_avx_from_c(SHA1_ARGS *args, uint32_t size_in_blocks);
 void call_sha_256_mult_avx_from_c(SHA256_ARGS *args, uint32_t size_in_blocks);
 void call_sha512_x2_avx_from_c(SHA512_ARGS *args, uint64_t size_in_blocks);
 
+IMB_DLL_EXPORT void sha1_avx(const void *data, const uint64_t length,
+                             void *digest);
+IMB_DLL_EXPORT void sha1_one_block_avx(const void *data, void *digest);
+IMB_DLL_EXPORT void sha224_avx(const void *data, const uint64_t length,
+                               void *digest);
+IMB_DLL_EXPORT void sha224_one_block_avx(const void *data, void *digest);
+IMB_DLL_EXPORT void sha256_avx(const void *data, const uint64_t length,
+                               void *digest);
+IMB_DLL_EXPORT void sha256_one_block_avx(const void *data, void *digest);
+IMB_DLL_EXPORT void sha384_avx(const void *data, const uint64_t length,
+                               void *digest);
+IMB_DLL_EXPORT void sha384_one_block_avx(const void *data, void *digest);
+IMB_DLL_EXPORT void sha512_avx(const void *data, const uint64_t length,
+                               void *digest);
+IMB_DLL_EXPORT void sha512_one_block_avx(const void *data, void *digest);
+
 IMB_DLL_EXPORT void set_suite_id_avx_t1(IMB_MGR *state, IMB_JOB *job);
 
 #endif /* IMB_ASM_AVX_T1_H */

@@ -133,6 +133,22 @@ void call_sha1_mult_sse_from_c(SHA1_ARGS *args, uint32_t size_in_blocks);
 void call_sha_256_mult_sse_from_c(SHA256_ARGS *args, uint32_t size_in_blocks);
 void call_sha512_x2_sse_from_c(SHA512_ARGS *args, uint64_t size_in_blocks);
 
+IMB_DLL_EXPORT void sha1_sse(const void *data, const uint64_t length,
+                             void *digest);
+IMB_DLL_EXPORT void sha1_one_block_sse(const void *data, void *digest);
+IMB_DLL_EXPORT void sha224_sse(const void *data, const uint64_t length,
+                               void *digest);
+IMB_DLL_EXPORT void sha224_one_block_sse(const void *data, void *digest);
+IMB_DLL_EXPORT void sha256_sse(const void *data, const uint64_t length,
+                               void *digest);
+IMB_DLL_EXPORT void sha256_one_block_sse(const void *data, void *digest);
+IMB_DLL_EXPORT void sha384_sse(const void *data, const uint64_t length,
+                               void *digest);
+IMB_DLL_EXPORT void sha384_one_block_sse(const void *data, void *digest);
+IMB_DLL_EXPORT void sha512_sse(const void *data, const uint64_t length,
+                               void *digest);
+IMB_DLL_EXPORT void sha512_one_block_sse(const void *data, void *digest);
+
 /* moved from MB MGR */
 IMB_JOB *submit_job_aes128_enc_sse(MB_MGR_AES_OOO *state,
                                    IMB_JOB *job);
