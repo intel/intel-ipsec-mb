@@ -110,15 +110,12 @@ aes_gmac_job(IMB_MGR *mb_mgr,
         job->auth_tag_output_len_in_bytes     = auth_tag_len;
 
         job = IMB_SUBMIT_JOB(mb_mgr);
-        while (job) {
-                if (job->status != IMB_STATUS_COMPLETED)
-                        fprintf(stderr, "failed job, status:%d\n", job->status);
-                job = IMB_GET_COMPLETED_JOB(mb_mgr);
-        }
-        while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL) {
-                if (job->status != IMB_STATUS_COMPLETED)
-                        fprintf(stderr, "failed job, status:%d\n", job->status);
-        }
+        if (job == NULL)
+                job = IMB_FLUSH_JOB(mb_mgr);
+	if (job == NULL)
+                fprintf(stderr, "No job retrieved\n");
+	else if (job->status != IMB_STATUS_COMPLETED)
+                fprintf(stderr, "failed job, status:%d\n", job->status);
 }
 
 #define MAX_SEG_SIZE 64
