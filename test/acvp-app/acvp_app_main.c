@@ -1343,6 +1343,8 @@ int main(int argc, char **argv)
                 goto exit;
         }
 
+        printf("ACVP library: %s\n", acvp_version());
+
         /* Create test session and enable supported algorithms */
         acvp_ret = acvp_create_test_session(&ctx, logger, ACVP_LOG_LVL_INFO);
         if (acvp_ret != ACVP_SUCCESS)
