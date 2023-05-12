@@ -55,14 +55,14 @@ static int aes_cbc_handler(ACVP_TEST_CASE *test_case)
         static uint8_t next_iv[16];
 
         if (test_case == NULL)
-                return EXIT_FAILURE;
+                return ACVP_CRYPTO_MODULE_FAIL;
 
         tc = test_case->tc.symmetric;
 
         if (tc->direction != ACVP_SYM_CIPH_DIR_ENCRYPT &&
             tc->direction != ACVP_SYM_CIPH_DIR_DECRYPT) {
                 fprintf(stderr, "Unsupported direction\n");
-                return EXIT_FAILURE;
+                return ACVP_CRYPTO_MODULE_FAIL;
         }
 
         switch (tc->key_len) {
@@ -77,7 +77,7 @@ static int aes_cbc_handler(ACVP_TEST_CASE *test_case)
                 break;
         default:
                 fprintf(stderr, "Unsupported AES key length\n");
-                return EXIT_FAILURE;
+                return ACVP_CRYPTO_MODULE_FAIL;
         }
 
         job = IMB_GET_NEXT_JOB(mb_mgr);
@@ -112,7 +112,7 @@ static int aes_cbc_handler(ACVP_TEST_CASE *test_case)
                         job = IMB_FLUSH_JOB(mb_mgr);
                 if (job->status != IMB_STATUS_COMPLETED) {
                         fprintf(stderr, "Invalid job\n");
-                        return EXIT_FAILURE;
+                        return ACVP_CRYPTO_MODULE_FAIL;
                 }
         } else /* DECRYPT */ {
                 job->cipher_direction = IMB_DIR_DECRYPT;
@@ -127,7 +127,7 @@ static int aes_cbc_handler(ACVP_TEST_CASE *test_case)
                         job = IMB_FLUSH_JOB(mb_mgr);
                 if (job->status != IMB_STATUS_COMPLETED) {
                         fprintf(stderr, "Invalid job\n");
-                        return EXIT_FAILURE;
+                        return ACVP_CRYPTO_MODULE_FAIL;
                 }
         }
         /*
@@ -137,7 +137,7 @@ static int aes_cbc_handler(ACVP_TEST_CASE *test_case)
         if (tc->test_type == ACVP_SYM_TEST_TYPE_MCT)
                 memcpy(next_iv, tc->ct, 16);
 
-        return EXIT_SUCCESS;
+        return ACVP_SUCCESS;
 }
 
 static int aes_ecb_handler(ACVP_TEST_CASE *test_case)
@@ -148,14 +148,14 @@ static int aes_ecb_handler(ACVP_TEST_CASE *test_case)
         DECLARE_ALIGNED(uint32_t dec_keys[15*4], 16);
 
         if (test_case == NULL)
-                return EXIT_FAILURE;
+                return ACVP_CRYPTO_MODULE_FAIL;
 
         tc = test_case->tc.symmetric;
 
         if (tc->direction != ACVP_SYM_CIPH_DIR_ENCRYPT &&
             tc->direction != ACVP_SYM_CIPH_DIR_DECRYPT) {
                 fprintf(stderr, "Unsupported direction\n");
-                return EXIT_FAILURE;
+                return ACVP_CRYPTO_MODULE_FAIL;
         }
 
         switch (tc->key_len) {
@@ -170,7 +170,7 @@ static int aes_ecb_handler(ACVP_TEST_CASE *test_case)
                 break;
         default:
                 fprintf(stderr, "Unsupported AES key length\n");
-                return EXIT_FAILURE;
+                return ACVP_CRYPTO_MODULE_FAIL;
         }
 
         job = IMB_GET_NEXT_JOB(mb_mgr);
@@ -197,7 +197,7 @@ static int aes_ecb_handler(ACVP_TEST_CASE *test_case)
                         const char *err_str = imb_get_strerror(err);
 
                         fprintf(stderr, "Invalid encrypt job: %s\n", err_str);
-                        return EXIT_FAILURE;
+                        return ACVP_CRYPTO_MODULE_FAIL;
                 }
         } else /* DECRYPT */ {
                 job->cipher_direction = IMB_DIR_DECRYPT;
@@ -215,11 +215,11 @@ static int aes_ecb_handler(ACVP_TEST_CASE *test_case)
                         const char *err_str = imb_get_strerror(err);
 
                         fprintf(stderr, "Invalid decrypt job: %s\n", err_str);
-                        return EXIT_FAILURE;
+                        return ACVP_CRYPTO_MODULE_FAIL;
                 }
         }
 
-        return EXIT_SUCCESS;
+        return ACVP_SUCCESS;
 }
 
 static int aes_gcm_handler(ACVP_TEST_CASE *test_case)
@@ -237,13 +237,13 @@ static int aes_gcm_handler(ACVP_TEST_CASE *test_case)
         struct gcm_context_data ctx;
 
         if (test_case == NULL)
-                return EXIT_FAILURE;
+                return ACVP_CRYPTO_MODULE_FAIL;
 
         tc = test_case->tc.symmetric;
 
         if (tc->direction != ACVP_SYM_CIPH_DIR_ENCRYPT &&
             tc->direction != ACVP_SYM_CIPH_DIR_DECRYPT) {
-                return EXIT_FAILURE;
+                return ACVP_CRYPTO_MODULE_FAIL;
         }
 
         switch (tc->key_len) {
@@ -258,7 +258,7 @@ static int aes_gcm_handler(ACVP_TEST_CASE *test_case)
                 break;
         default:
                 fprintf(stderr, "Unsupported AES key length\n");
-                return EXIT_FAILURE;
+                return ACVP_CRYPTO_MODULE_FAIL;
         }
 
         if (direct_api == 1) {
@@ -282,7 +282,7 @@ static int aes_gcm_handler(ACVP_TEST_CASE *test_case)
                         break;
                 default:
                         fprintf(stderr, "Unsupported AES key length\n");
-                        return EXIT_FAILURE;
+                        return ACVP_CRYPTO_MODULE_FAIL;
                 }
         } else {
                 job = IMB_GET_NEXT_JOB(mb_mgr);
@@ -322,7 +322,7 @@ static int aes_gcm_handler(ACVP_TEST_CASE *test_case)
                                 job = IMB_FLUSH_JOB(mb_mgr);
                         if (job->status != IMB_STATUS_COMPLETED) {
                                 fprintf(stderr, "Invalid job\n");
-                                return EXIT_FAILURE;
+                                return ACVP_CRYPTO_MODULE_FAIL;
                         }
                 }
         } else /* DECRYPT */ {
@@ -349,7 +349,7 @@ static int aes_gcm_handler(ACVP_TEST_CASE *test_case)
                                 job = IMB_FLUSH_JOB(mb_mgr);
                         if (job->status != IMB_STATUS_COMPLETED) {
                                 fprintf(stderr, "Invalid job\n");
-                                return EXIT_FAILURE;
+                                return ACVP_CRYPTO_MODULE_FAIL;
                         }
                 }
                 if (memcmp(res_tag, tc->tag, tc->tag_len) != 0) {
@@ -358,12 +358,12 @@ static int aes_gcm_handler(ACVP_TEST_CASE *test_case)
                                         res_tag, tc->tag_len);
                                 hexdump(stdout, "reference tag: ",
                                         tc->tag, tc->tag_len);
-                                fprintf(stderr, "Invalid tag\n");
+                                fprintf(stderr, "Tag mismatch\n");
                         }
-                        return EXIT_FAILURE;
+                        return ACVP_CRYPTO_MODULE_FAIL;
                 }
         }
-        return EXIT_SUCCESS;
+        return ACVP_SUCCESS;
 }
 
 static int aes_gmac_handler(ACVP_TEST_CASE *test_case)
@@ -378,13 +378,13 @@ static int aes_gmac_handler(ACVP_TEST_CASE *test_case)
         IMB_HASH_ALG hash_mode;
 
         if (test_case == NULL)
-                return EXIT_FAILURE;
+                return ACVP_CRYPTO_MODULE_FAIL;
 
         tc = test_case->tc.symmetric;
 
         if (tc->direction != ACVP_SYM_CIPH_DIR_ENCRYPT &&
             tc->direction != ACVP_SYM_CIPH_DIR_DECRYPT) {
-                return EXIT_FAILURE;
+                return ACVP_CRYPTO_MODULE_FAIL;
         }
 
         switch (tc->key_len) {
@@ -402,7 +402,7 @@ static int aes_gmac_handler(ACVP_TEST_CASE *test_case)
                 break;
         default:
                 fprintf(stderr, "Unsupported AES key length\n");
-                return EXIT_FAILURE;
+                return ACVP_CRYPTO_MODULE_FAIL;
         }
 
         if (direct_api == 1) {
@@ -422,7 +422,7 @@ static int aes_gmac_handler(ACVP_TEST_CASE *test_case)
                         break;
                 default:
                         fprintf(stderr, "Unsupported AES key length\n");
-                        return EXIT_FAILURE;
+                        return ACVP_CRYPTO_MODULE_FAIL;
                 }
         } else {
                 job = IMB_GET_NEXT_JOB(mb_mgr);
@@ -455,7 +455,7 @@ static int aes_gmac_handler(ACVP_TEST_CASE *test_case)
                                 job = IMB_FLUSH_JOB(mb_mgr);
                         if (job->status != IMB_STATUS_COMPLETED) {
                                 fprintf(stderr, "Invalid job\n");
-                                return EXIT_FAILURE;
+                                return ACVP_CRYPTO_MODULE_FAIL;
                         }
                 }
         } else /* DECRYPT */ {
@@ -477,7 +477,7 @@ static int aes_gmac_handler(ACVP_TEST_CASE *test_case)
                                 job = IMB_FLUSH_JOB(mb_mgr);
                         if (job->status != IMB_STATUS_COMPLETED) {
                                 fprintf(stderr, "Invalid job\n");
-                                return EXIT_FAILURE;
+                                return ACVP_CRYPTO_MODULE_FAIL;
                         }
                 }
                 if (memcmp(res_tag, tc->tag, tc->tag_len) != 0) {
@@ -486,12 +486,12 @@ static int aes_gmac_handler(ACVP_TEST_CASE *test_case)
                                         res_tag, tc->tag_len);
                                 hexdump(stdout, "reference tag: ",
                                         tc->tag, tc->tag_len);
-                                fprintf(stderr, "Invalid tag\n");
+                                fprintf(stderr, "Tag mismatch\n");
                         }
-                        return EXIT_FAILURE;
+                        return ACVP_CRYPTO_MODULE_FAIL;
                 }
         }
-        return EXIT_SUCCESS;
+        return ACVP_SUCCESS;
 }
 
 static int aes_ctr_handler(ACVP_TEST_CASE *test_case)
@@ -502,14 +502,14 @@ static int aes_ctr_handler(ACVP_TEST_CASE *test_case)
         DECLARE_ALIGNED(uint32_t dec_keys[15*4], 16);
 
         if (test_case == NULL)
-                return EXIT_FAILURE;
+                return ACVP_CRYPTO_MODULE_FAIL;
 
         tc = test_case->tc.symmetric;
 
         if (tc->direction != ACVP_SYM_CIPH_DIR_ENCRYPT &&
             tc->direction != ACVP_SYM_CIPH_DIR_DECRYPT) {
                 fprintf(stderr, "Unsupported direction\n");
-                return EXIT_FAILURE;
+                return ACVP_CRYPTO_MODULE_FAIL;
         }
 
         switch (tc->key_len) {
@@ -524,7 +524,7 @@ static int aes_ctr_handler(ACVP_TEST_CASE *test_case)
                 break;
         default:
                 fprintf(stderr, "Unsupported AES key length\n");
-                return EXIT_FAILURE;
+                return ACVP_CRYPTO_MODULE_FAIL;
         }
 
         job = IMB_GET_NEXT_JOB(mb_mgr);
@@ -551,7 +551,7 @@ static int aes_ctr_handler(ACVP_TEST_CASE *test_case)
                         job = IMB_FLUSH_JOB(mb_mgr);
                 if (job->status != IMB_STATUS_COMPLETED) {
                         fprintf(stderr, "Invalid job\n");
-                        return EXIT_FAILURE;
+                        return ACVP_CRYPTO_MODULE_FAIL;
                 }
         } else /* DECRYPT */ {
                 job->cipher_direction = IMB_DIR_DECRYPT;
@@ -566,10 +566,10 @@ static int aes_ctr_handler(ACVP_TEST_CASE *test_case)
                         job = IMB_FLUSH_JOB(mb_mgr);
                 if (job->status != IMB_STATUS_COMPLETED) {
                         fprintf(stderr, "Invalid job\n");
-                        return EXIT_FAILURE;
+                        return ACVP_CRYPTO_MODULE_FAIL;
                 }
         }
-        return EXIT_SUCCESS;
+        return ACVP_SUCCESS;
 }
 
 static int tdes_cbc_handler(ACVP_TEST_CASE *test_case)
@@ -583,19 +583,19 @@ static int tdes_cbc_handler(ACVP_TEST_CASE *test_case)
         static uint8_t next_iv[8];
 
         if (test_case == NULL)
-                return EXIT_FAILURE;
+                return ACVP_CRYPTO_MODULE_FAIL;
 
         tc = test_case->tc.symmetric;
 
         if (tc->direction != ACVP_SYM_CIPH_DIR_ENCRYPT &&
             tc->direction != ACVP_SYM_CIPH_DIR_DECRYPT) {
                 fprintf(stderr, "Unsupported direction\n");
-                return EXIT_FAILURE;
+                return ACVP_CRYPTO_MODULE_FAIL;
         }
 
         if (tc->keyingOption != 1) {
                 fprintf(stderr, "Unsupported keyingOption\n");
-                return EXIT_FAILURE;
+                return ACVP_CRYPTO_MODULE_FAIL;
         }
 
         /*
@@ -603,7 +603,7 @@ static int tdes_cbc_handler(ACVP_TEST_CASE *test_case)
          */
         if (tc->key_len != 192) {
                 fprintf(stderr, "Unsupported DES key length\n");
-                return EXIT_FAILURE;
+                return ACVP_CRYPTO_MODULE_FAIL;
         }
 
         /*
@@ -613,12 +613,12 @@ static int tdes_cbc_handler(ACVP_TEST_CASE *test_case)
 
         if (alg == 0) {
                 fprintf(stderr, "Invalid cipher value");
-                return EXIT_FAILURE;
+                return ACVP_CRYPTO_MODULE_FAIL;
         }
 
         if (alg != ACVP_SUB_TDES_CBC) {
                 fprintf(stderr, "Error: Unsupported DES mode requested by ACVP server\n");
-                return EXIT_FAILURE;
+                return ACVP_CRYPTO_MODULE_FAIL;
         }
 
         /* Create key schedules */
@@ -676,7 +676,7 @@ static int tdes_cbc_handler(ACVP_TEST_CASE *test_case)
                 job = IMB_FLUSH_JOB(mb_mgr);
         if (job->status != IMB_STATUS_COMPLETED) {
                 fprintf(stderr, "Invalid job\n");
-                return EXIT_FAILURE;
+                return ACVP_CRYPTO_MODULE_FAIL;
         }
 
         /*
@@ -692,7 +692,7 @@ static int tdes_cbc_handler(ACVP_TEST_CASE *test_case)
                         memcpy(next_iv, tc->ct, 8);
         }
 
-        return EXIT_SUCCESS;
+        return ACVP_SUCCESS;
 }
 
 static int aes_ccm_handler(ACVP_TEST_CASE *test_case)
@@ -704,14 +704,14 @@ static int aes_ccm_handler(ACVP_TEST_CASE *test_case)
         uint8_t res_tag[MAX_TAG_LENGTH] = {0};
 
         if (test_case == NULL)
-                return EXIT_FAILURE;
+                return ACVP_CRYPTO_MODULE_FAIL;
 
         tc = test_case->tc.symmetric;
 
         if (tc->direction != ACVP_SYM_CIPH_DIR_ENCRYPT &&
             tc->direction != ACVP_SYM_CIPH_DIR_DECRYPT) {
                 fprintf(stderr, "Unsupported direction\n");
-                return EXIT_FAILURE;
+                return ACVP_CRYPTO_MODULE_FAIL;
         }
 
         switch (tc->key_len) {
@@ -726,7 +726,7 @@ static int aes_ccm_handler(ACVP_TEST_CASE *test_case)
                 break;
         default:
                 fprintf(stderr, "Unsupported AES key length\n");
-                return EXIT_FAILURE;
+                return ACVP_CRYPTO_MODULE_FAIL;
         }
 
         job = IMB_GET_NEXT_JOB(mb_mgr);
@@ -770,7 +770,7 @@ static int aes_ccm_handler(ACVP_TEST_CASE *test_case)
                 job = IMB_FLUSH_JOB(mb_mgr);
         if (job->status != IMB_STATUS_COMPLETED) {
                 fprintf(stderr, "Invalid job\n");
-                return EXIT_FAILURE;
+                return ACVP_CRYPTO_MODULE_FAIL;
         }
 
         if (tc->direction == ACVP_SYM_CIPH_DIR_DECRYPT) {
@@ -783,12 +783,12 @@ static int aes_ccm_handler(ACVP_TEST_CASE *test_case)
                                         res_tag, tc->tag_len);
                                 hexdump(stdout, "reference tag: ",
                                         ref_tag, tc->tag_len);
-                                fprintf(stderr, "Invalid tag\n");
+                                fprintf(stderr, "Tag mismatch\n");
                         }
-                        return EXIT_FAILURE;
+                        return ACVP_CRYPTO_MODULE_FAIL;
                 }
         }
-        return EXIT_SUCCESS;
+        return ACVP_SUCCESS;
 }
 
 static int aes_cmac_handler(ACVP_TEST_CASE *test_case)
@@ -801,7 +801,7 @@ static int aes_cmac_handler(ACVP_TEST_CASE *test_case)
         uint8_t res_tag[MAX_TAG_LENGTH] = {0};
 
         if (test_case == NULL)
-                return EXIT_FAILURE;
+                return ACVP_CRYPTO_MODULE_FAIL;
 
         tc = test_case->tc.cmac;
 
@@ -816,7 +816,7 @@ static int aes_cmac_handler(ACVP_TEST_CASE *test_case)
                 break;
         default:
                 fprintf(stderr, "Unsupported AES key length\n");
-                return EXIT_FAILURE;
+                return ACVP_CRYPTO_MODULE_FAIL;
         }
 
         job = IMB_GET_NEXT_JOB(mb_mgr);
@@ -847,7 +847,7 @@ static int aes_cmac_handler(ACVP_TEST_CASE *test_case)
                 job = IMB_FLUSH_JOB(mb_mgr);
         if (job->status != IMB_STATUS_COMPLETED) {
                 fprintf(stderr, "Invalid job\n");
-                return EXIT_FAILURE;
+                return ACVP_CRYPTO_MODULE_FAIL;
         }
 
         if (tc->verify == 1) {
@@ -857,13 +857,13 @@ static int aes_cmac_handler(ACVP_TEST_CASE *test_case)
                                         res_tag, (tc->mac_len));
                                 hexdump(stdout, "reference tag: ",
                                         tc->mac, tc->mac_len);
-                                fprintf(stderr, "Invalid tag\n");
+                                fprintf(stderr, "Tag mismatch\n");
                         }
                         tc->ver_disposition = ACVP_TEST_DISPOSITION_FAIL;
                 } else
                         tc->ver_disposition = ACVP_TEST_DISPOSITION_PASS;
         }
-        return EXIT_SUCCESS;
+        return ACVP_SUCCESS;
 }
 
 static int hmac_sha1_handler(ACVP_TEST_CASE *test_case)
@@ -874,7 +874,7 @@ static int hmac_sha1_handler(ACVP_TEST_CASE *test_case)
         DECLARE_ALIGNED(uint8_t opad_hash[IMB_SHA1_DIGEST_SIZE_IN_BYTES], 16);
 
         if (test_case == NULL)
-                return EXIT_FAILURE;
+                return ACVP_CRYPTO_MODULE_FAIL;
 
         tc = test_case->tc.hmac;
 
@@ -904,9 +904,9 @@ static int hmac_sha1_handler(ACVP_TEST_CASE *test_case)
                 job = IMB_FLUSH_JOB(mb_mgr);
         if (job->status != IMB_STATUS_COMPLETED) {
                 fprintf(stderr, "Invalid job\n");
-                return EXIT_FAILURE;
+                return ACVP_CRYPTO_MODULE_FAIL;
         }
-        return EXIT_SUCCESS;
+        return ACVP_SUCCESS;
 }
 
 static int hmac_sha256_handler(ACVP_TEST_CASE *test_case)
@@ -917,7 +917,7 @@ static int hmac_sha256_handler(ACVP_TEST_CASE *test_case)
         DECLARE_ALIGNED(uint8_t opad_hash[IMB_SHA256_DIGEST_SIZE_IN_BYTES], 16);
 
         if (test_case == NULL)
-                return EXIT_FAILURE;
+                return ACVP_CRYPTO_MODULE_FAIL;
 
         tc = test_case->tc.hmac;
 
@@ -947,9 +947,9 @@ static int hmac_sha256_handler(ACVP_TEST_CASE *test_case)
                 job = IMB_FLUSH_JOB(mb_mgr);
         if (job->status != IMB_STATUS_COMPLETED) {
                 fprintf(stderr, "Invalid job\n");
-                return EXIT_FAILURE;
+                return ACVP_CRYPTO_MODULE_FAIL;
         }
-        return EXIT_SUCCESS;
+        return ACVP_SUCCESS;
 }
 
 static int hmac_sha224_handler(ACVP_TEST_CASE *test_case)
@@ -960,7 +960,7 @@ static int hmac_sha224_handler(ACVP_TEST_CASE *test_case)
         DECLARE_ALIGNED(uint8_t opad_hash[IMB_SHA224_DIGEST_SIZE_IN_BYTES], 16);
 
         if (test_case == NULL)
-                return EXIT_FAILURE;
+                return ACVP_CRYPTO_MODULE_FAIL;
 
         tc = test_case->tc.hmac;
 
@@ -990,9 +990,9 @@ static int hmac_sha224_handler(ACVP_TEST_CASE *test_case)
                 job = IMB_FLUSH_JOB(mb_mgr);
         if (job->status != IMB_STATUS_COMPLETED) {
                 fprintf(stderr, "Invalid job\n");
-                return EXIT_FAILURE;
+                return ACVP_CRYPTO_MODULE_FAIL;
         }
-        return EXIT_SUCCESS;
+        return ACVP_SUCCESS;
 }
 
 static int hmac_sha384_handler(ACVP_TEST_CASE *test_case)
@@ -1003,7 +1003,7 @@ static int hmac_sha384_handler(ACVP_TEST_CASE *test_case)
         DECLARE_ALIGNED(uint8_t opad_hash[IMB_SHA512_DIGEST_SIZE_IN_BYTES], 16);
 
         if (test_case == NULL)
-                return EXIT_FAILURE;
+                return ACVP_CRYPTO_MODULE_FAIL;
 
         tc = test_case->tc.hmac;
 
@@ -1033,9 +1033,9 @@ static int hmac_sha384_handler(ACVP_TEST_CASE *test_case)
                 job = IMB_FLUSH_JOB(mb_mgr);
         if (job->status != IMB_STATUS_COMPLETED) {
                 fprintf(stderr, "Invalid job\n");
-                return EXIT_FAILURE;
+                return ACVP_CRYPTO_MODULE_FAIL;
         }
-        return EXIT_SUCCESS;
+        return ACVP_SUCCESS;
 }
 
 static int hmac_sha512_handler(ACVP_TEST_CASE *test_case)
@@ -1046,7 +1046,7 @@ static int hmac_sha512_handler(ACVP_TEST_CASE *test_case)
         DECLARE_ALIGNED(uint8_t opad_hash[IMB_SHA512_DIGEST_SIZE_IN_BYTES], 16);
 
         if (test_case == NULL)
-                return EXIT_FAILURE;
+                return ACVP_CRYPTO_MODULE_FAIL;
 
         tc = test_case->tc.hmac;
 
@@ -1076,9 +1076,9 @@ static int hmac_sha512_handler(ACVP_TEST_CASE *test_case)
                 job = IMB_FLUSH_JOB(mb_mgr);
         if (job->status != IMB_STATUS_COMPLETED) {
                 fprintf(stderr, "Invalid job\n");
-                return EXIT_FAILURE;
+                return ACVP_CRYPTO_MODULE_FAIL;
         }
-        return EXIT_SUCCESS;
+        return ACVP_SUCCESS;
 }
 
 static int sha1_handler(ACVP_TEST_CASE *test_case)
@@ -1089,7 +1089,7 @@ static int sha1_handler(ACVP_TEST_CASE *test_case)
         uint8_t *m;
 
         if (test_case == NULL)
-                return EXIT_FAILURE;
+                return ACVP_CRYPTO_MODULE_FAIL;
 
         tc = test_case->tc.hash;
 
@@ -1099,7 +1099,7 @@ static int sha1_handler(ACVP_TEST_CASE *test_case)
 
                 if (m == NULL) {
                         printf("Can't allocate buffer memory\n");
-                        return EXIT_FAILURE;
+                        return ACVP_CRYPTO_MODULE_FAIL;
                 }
                 memcpy(m, tc->m1, tc->msg_len);
                 memcpy(m + tc->msg_len, tc->m2, tc->msg_len);
@@ -1130,13 +1130,13 @@ static int sha1_handler(ACVP_TEST_CASE *test_case)
                         job = IMB_FLUSH_JOB(mb_mgr);
                 if (job->status != IMB_STATUS_COMPLETED) {
                         fprintf(stderr, "Invalid job\n");
-                        return EXIT_FAILURE;
+                        return ACVP_CRYPTO_MODULE_FAIL;
                 }
         }
         if (tc->test_type == ACVP_HASH_TEST_TYPE_MCT)
                 free(m);
         tc->md_len = IMB_SHA1_DIGEST_SIZE_IN_BYTES;
-        return EXIT_SUCCESS;
+        return ACVP_SUCCESS;
 }
 
 static int sha2_224_handler(ACVP_TEST_CASE *test_case)
@@ -1147,7 +1147,7 @@ static int sha2_224_handler(ACVP_TEST_CASE *test_case)
         uint8_t *m;
 
         if (test_case == NULL)
-                return EXIT_FAILURE;
+                return ACVP_CRYPTO_MODULE_FAIL;
 
         tc = test_case->tc.hash;
 
@@ -1157,7 +1157,7 @@ static int sha2_224_handler(ACVP_TEST_CASE *test_case)
 
                 if (m == NULL) {
                         printf("Can't allocate buffer memory\n");
-                        return EXIT_FAILURE;
+                        return ACVP_CRYPTO_MODULE_FAIL;
                 }
                 memcpy(m, tc->m1, tc->msg_len);
                 memcpy(m + tc->msg_len, tc->m2, tc->msg_len);
@@ -1188,13 +1188,13 @@ static int sha2_224_handler(ACVP_TEST_CASE *test_case)
                         job = IMB_FLUSH_JOB(mb_mgr);
                 if (job->status != IMB_STATUS_COMPLETED) {
                         fprintf(stderr, "Invalid job\n");
-                        return EXIT_FAILURE;
+                        return ACVP_CRYPTO_MODULE_FAIL;
                 }
         }
         if (tc->test_type == ACVP_HASH_TEST_TYPE_MCT)
                 free(m);
         tc->md_len = IMB_SHA224_DIGEST_SIZE_IN_BYTES;
-        return EXIT_SUCCESS;
+        return ACVP_SUCCESS;
 }
 
 static int sha2_256_handler(ACVP_TEST_CASE *test_case)
@@ -1205,7 +1205,7 @@ static int sha2_256_handler(ACVP_TEST_CASE *test_case)
         uint8_t *m;
 
         if (test_case == NULL)
-                return EXIT_FAILURE;
+                return ACVP_CRYPTO_MODULE_FAIL;
 
         tc = test_case->tc.hash;
 
@@ -1215,7 +1215,7 @@ static int sha2_256_handler(ACVP_TEST_CASE *test_case)
 
                 if (m == NULL) {
                         printf("Can't allocate buffer memory\n");
-                        return EXIT_FAILURE;
+                        return ACVP_CRYPTO_MODULE_FAIL;
                 }
                 memcpy(m, tc->m1, tc->msg_len);
                 memcpy(m + tc->msg_len, tc->m2, tc->msg_len);
@@ -1246,13 +1246,13 @@ static int sha2_256_handler(ACVP_TEST_CASE *test_case)
                         job = IMB_FLUSH_JOB(mb_mgr);
                 if (job->status != IMB_STATUS_COMPLETED) {
                         fprintf(stderr, "Invalid job\n");
-                        return EXIT_FAILURE;
+                        return ACVP_CRYPTO_MODULE_FAIL;
                 }
         }
         if (tc->test_type == ACVP_HASH_TEST_TYPE_MCT)
                 free(m);
         tc->md_len = IMB_SHA256_DIGEST_SIZE_IN_BYTES;
-        return EXIT_SUCCESS;
+        return ACVP_SUCCESS;
 }
 
 static int sha2_384_handler(ACVP_TEST_CASE *test_case)
@@ -1263,7 +1263,7 @@ static int sha2_384_handler(ACVP_TEST_CASE *test_case)
         uint8_t *m;
 
         if (test_case == NULL)
-                return EXIT_FAILURE;
+                return ACVP_CRYPTO_MODULE_FAIL;
 
         tc = test_case->tc.hash;
 
@@ -1273,7 +1273,7 @@ static int sha2_384_handler(ACVP_TEST_CASE *test_case)
 
                 if (m == NULL) {
                         printf("Can't allocate buffer memory\n");
-                        return EXIT_FAILURE;
+                        return ACVP_CRYPTO_MODULE_FAIL;
                 }
                 memcpy(m, tc->m1, tc->msg_len);
                 memcpy(m + tc->msg_len, tc->m2, tc->msg_len);
@@ -1304,13 +1304,13 @@ static int sha2_384_handler(ACVP_TEST_CASE *test_case)
                         job = IMB_FLUSH_JOB(mb_mgr);
                 if (job->status != IMB_STATUS_COMPLETED) {
                         fprintf(stderr, "Invalid job\n");
-                        return EXIT_FAILURE;
+                        return ACVP_CRYPTO_MODULE_FAIL;
                 }
         }
         if (tc->test_type == ACVP_HASH_TEST_TYPE_MCT)
                 free(m);
         tc->md_len = IMB_SHA384_DIGEST_SIZE_IN_BYTES;
-        return EXIT_SUCCESS;
+        return ACVP_SUCCESS;
 }
 
 static int sha2_512_handler(ACVP_TEST_CASE *test_case)
@@ -1321,7 +1321,7 @@ static int sha2_512_handler(ACVP_TEST_CASE *test_case)
         uint8_t *m;
 
         if (test_case == NULL)
-                return EXIT_FAILURE;
+                return ACVP_CRYPTO_MODULE_FAIL;
 
         tc = test_case->tc.hash;
 
@@ -1331,7 +1331,7 @@ static int sha2_512_handler(ACVP_TEST_CASE *test_case)
 
                 if (m == NULL) {
                         printf("Can't allocate buffer memory\n");
-                        return EXIT_FAILURE;
+                        return ACVP_CRYPTO_MODULE_FAIL;
                 }
                 memcpy(m, tc->m1, tc->msg_len);
                 memcpy(m + tc->msg_len, tc->m2, tc->msg_len);
@@ -1362,13 +1362,13 @@ static int sha2_512_handler(ACVP_TEST_CASE *test_case)
                         job = IMB_FLUSH_JOB(mb_mgr);
                 if (job->status != IMB_STATUS_COMPLETED) {
                         fprintf(stderr, "Invalid job\n");
-                        return EXIT_FAILURE;
+                        return ACVP_CRYPTO_MODULE_FAIL;
                 }
         }
         if (tc->test_type == ACVP_HASH_TEST_TYPE_MCT)
                 free(m);
         tc->md_len = IMB_SHA512_DIGEST_SIZE_IN_BYTES;
-        return EXIT_SUCCESS;
+        return ACVP_SUCCESS;
 }
 
 static void usage(const char *app_name)
@@ -1469,7 +1469,11 @@ int main(int argc, char **argv)
         printf("ACVP library: %s\n", acvp_version());
 
         /* Create test session and enable supported algorithms */
-        acvp_ret = acvp_create_test_session(&ctx, logger, ACVP_LOG_LVL_INFO);
+        if (verbose)
+                acvp_ret = acvp_create_test_session(&ctx, logger, ACVP_LOG_LVL_VERBOSE);
+        else
+                acvp_ret = acvp_create_test_session(&ctx, logger, ACVP_LOG_LVL_INFO);
+
         if (acvp_ret != ACVP_SUCCESS)
                 goto exit;
 
