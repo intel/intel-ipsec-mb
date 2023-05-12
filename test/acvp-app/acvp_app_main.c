@@ -572,6 +572,129 @@ static int aes_ctr_handler(ACVP_TEST_CASE *test_case)
         return EXIT_SUCCESS;
 }
 
+static int tdes_cbc_handler(ACVP_TEST_CASE *test_case)
+{
+        ACVP_SYM_CIPHER_TC *tc;
+        IMB_JOB *job = NULL;
+        static DECLARE_ALIGNED(uint64_t keys1[IMB_DES_KEY_SCHED_SIZE / sizeof(uint64_t)], 16);
+        static DECLARE_ALIGNED(uint64_t keys2[IMB_DES_KEY_SCHED_SIZE / sizeof(uint64_t)], 16);
+        static DECLARE_ALIGNED(uint64_t keys3[IMB_DES_KEY_SCHED_SIZE / sizeof(uint64_t)], 16);
+        static const void *ks_ptr[3];
+        static uint8_t next_iv[8];
+
+        if (test_case == NULL)
+                return EXIT_FAILURE;
+
+        tc = test_case->tc.symmetric;
+
+        if (tc->direction != ACVP_SYM_CIPH_DIR_ENCRYPT &&
+            tc->direction != ACVP_SYM_CIPH_DIR_DECRYPT) {
+                fprintf(stderr, "Unsupported direction\n");
+                return EXIT_FAILURE;
+        }
+
+        if (tc->keyingOption != 1) {
+                fprintf(stderr, "Unsupported keyingOption\n");
+                return EXIT_FAILURE;
+        }
+
+        /*
+         * Only 3 key DES supported
+         */
+        if (tc->key_len != 192) {
+                fprintf(stderr, "Unsupported DES key length\n");
+                return EXIT_FAILURE;
+        }
+
+        /*
+         * Only TDES CBC supported
+         */
+        const ACVP_SUB_TDES alg = acvp_get_tdes_alg(tc->cipher);
+
+        if (alg == 0) {
+                fprintf(stderr, "Invalid cipher value");
+                return EXIT_FAILURE;
+        }
+
+        if (alg != ACVP_SUB_TDES_CBC) {
+                fprintf(stderr, "Error: Unsupported DES mode requested by ACVP server\n");
+                return EXIT_FAILURE;
+        }
+
+        /* Create key schedules */
+        if (tc->test_type != ACVP_SYM_TEST_TYPE_MCT ||
+            (tc->test_type == ACVP_SYM_TEST_TYPE_MCT && tc->mct_index == 0)) {
+                /*
+                 * Always create key schedules unless this is continuation of
+                 * Monte Carlo inner loop.
+                 * Not creating key schedules every time in MCT test
+                 * improves performance.
+                 */
+                IMB_DES_KEYSCHED(mb_mgr, keys1, &tc->key[0]);
+                IMB_DES_KEYSCHED(mb_mgr, keys2, &tc->key[8]);
+                IMB_DES_KEYSCHED(mb_mgr, keys3, &tc->key[16]);
+                ks_ptr[0] = keys1;
+                ks_ptr[1] = keys2;
+                ks_ptr[2] = keys3;
+        }
+
+        job = IMB_GET_NEXT_JOB(mb_mgr);
+        job->key_len_in_bytes = 192 / 8;
+        job->cipher_mode = IMB_CIPHER_DES3;
+        job->hash_alg = IMB_AUTH_NULL;
+
+        job->iv = tc->iv;
+
+        if (tc->test_type == ACVP_SYM_TEST_TYPE_MCT &&
+            tc->direction == ACVP_SYM_CIPH_DIR_DECRYPT &&
+            tc->mct_index != 0)
+                job->iv = next_iv;
+
+        job->iv_len_in_bytes = tc->iv_len;
+        job->cipher_start_src_offset_in_bytes = 0;
+        job->enc_keys = ks_ptr;
+        job->dec_keys = ks_ptr;
+
+        if (tc->direction == ACVP_SYM_CIPH_DIR_ENCRYPT) {
+                job->cipher_direction = IMB_DIR_ENCRYPT;
+                job->chain_order = IMB_ORDER_CIPHER_HASH;
+                job->src = tc->pt;
+                job->dst = tc->ct;
+                job->msg_len_to_cipher_in_bytes = tc->pt_len;
+                tc->ct_len = tc->pt_len;
+        } else /* DECRYPT */ {
+                job->cipher_direction = IMB_DIR_DECRYPT;
+                job->chain_order = IMB_ORDER_HASH_CIPHER;
+                job->src = tc->ct;
+                job->dst = tc->pt;
+                job->msg_len_to_cipher_in_bytes = tc->ct_len;
+                tc->pt_len = tc->ct_len;
+        }
+
+        job = IMB_SUBMIT_JOB(mb_mgr);
+        if (job == NULL)
+                job = IMB_FLUSH_JOB(mb_mgr);
+        if (job->status != IMB_STATUS_COMPLETED) {
+                fprintf(stderr, "Invalid job\n");
+                return EXIT_FAILURE;
+        }
+
+        /*
+         * If Monte Carlo test:
+         *   encrypt/decrypt - set IV for the next outer iteration
+         *   decrypt - copy the ciphertext as IV for the next inner iteration
+         */
+        if (tc->test_type == ACVP_SYM_TEST_TYPE_MCT) {
+                if (tc->mct_index == ACVP_DES_MCT_INNER - 1)
+                        memcpy(tc->iv_ret_after, tc->ct, 8);
+
+                if (tc->direction == ACVP_SYM_CIPH_DIR_DECRYPT)
+                        memcpy(next_iv, tc->ct, 8);
+        }
+
+        return EXIT_SUCCESS;
+}
+
 static int aes_ccm_handler(ACVP_TEST_CASE *test_case)
 {
         ACVP_SYM_CIPHER_TC *tc;
@@ -1365,8 +1488,13 @@ int main(int argc, char **argv)
         if (acvp_cap_sym_cipher_enable(ctx, ACVP_AES_CTR,
                                        &aes_ctr_handler) != ACVP_SUCCESS)
                 goto exit;
+
         if (acvp_cap_sym_cipher_enable(ctx, ACVP_AES_GMAC,
                                        &aes_gmac_handler) != ACVP_SUCCESS)
+                goto exit;
+
+        if (acvp_cap_sym_cipher_enable(ctx, ACVP_TDES_CBC,
+                                       &tdes_cbc_handler) != ACVP_SUCCESS)
                 goto exit;
 
         if (acvp_cap_sym_cipher_enable(ctx, ACVP_AES_CCM,
