@@ -601,8 +601,8 @@ test_hmac_shax_std_vectors(struct IMB_MGR *mb_mgr,
 	for (; v->msg != NULL; v++) {
                 if (!quiet_mode) {
 #ifdef DEBUG
-                        printf("RFC4231 Test Case %lu key_len:%lu "
-                               "data_len:%lu\n",
+                        printf("RFC4231 Test Case %zu key_len:%zu "
+                               "data_len:%zu\n",
                                v->tcId,
                                v->keySize,
                                v->msgSize / 8);
@@ -620,26 +620,26 @@ test_hmac_shax_std_vectors(struct IMB_MGR *mb_mgr,
                 if (flag) {
 #ifdef DEBUG
                         if (!quiet_mode)
-                                printf("Skipped vector %lu, "
+                                printf("Skipped vector %zu, "
                                        "N/A for HMAC-SHA%d\n",
                                        v->tcId, sha_type);
 #endif
                         continue;
                 }
                 if (test_hmac_shax(mb_mgr, v, num_jobs, sha_type)) {
-                        printf("error #%lu\n", v->tcId);
+                        printf("error #%zu\n", v->tcId);
                         test_suite_update(ts, 0, 1);
                 } else {
                         test_suite_update(ts, 1, 0);
                 }
                 if (test_hmac_shax_burst(mb_mgr, v, num_jobs, sha_type)) {
-                        printf("error #%lu - burst API\n", v->tcId);
+                        printf("error #%zu - burst API\n", v->tcId);
                         test_suite_update(ts, 0, 1);
                 } else {
                         test_suite_update(ts, 1, 0);
                 }
                 if (test_hmac_shax_hash_burst(mb_mgr, v, num_jobs, sha_type)) {
-                        printf("error #%lu - hash-only burst API\n", v->tcId);
+                        printf("error #%zu - hash-only burst API\n", v->tcId);
                         test_suite_update(ts, 0, 1);
                 } else {
                         test_suite_update(ts, 1, 0);

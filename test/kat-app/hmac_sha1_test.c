@@ -429,8 +429,8 @@ test_hmac_sha1_std_vectors(struct IMB_MGR *mb_mgr,
 	while (v->msg != NULL) {
                 if (!quiet_mode) {
 #ifdef DEBUG
-                        printf("RFC2202 Test Case %lu keySize:%lu "
-                               "msgSize:%lu tagSize:%lu\n",
+                        printf("RFC2202 Test Case %zu keySize:%zu "
+                               "msgSize:%zu tagSize:%zu\n",
                                v->tcId,
                                v->keySize,
                                v->msgSize / 8,
@@ -441,21 +441,21 @@ test_hmac_sha1_std_vectors(struct IMB_MGR *mb_mgr,
                 }
 
                 if (test_hmac_sha1(mb_mgr, v, num_jobs)) {
-                        printf("error #%lu\n", v->tcId);
+                        printf("error #%zu\n", v->tcId);
                         test_suite_update(ts, 0, 1);
                 } else {
                         test_suite_update(ts, 1, 0);
                 }
                 if (test_hmac_sha1_burst(mb_mgr, v,
                                          num_jobs)) {
-                        printf("error #%lu - burst API\n", v->tcId);
+                        printf("error #%zu - burst API\n", v->tcId);
                         test_suite_update(ts, 0, 1);
                 } else {
                         test_suite_update(ts, 1, 0);
                 }
                 if (test_hmac_sha1_hash_burst(mb_mgr, v,
                                               num_jobs)) {
-                        printf("error #%lu - hash-only burst API\n", v->tcId);
+                        printf("error #%zu - hash-only burst API\n", v->tcId);
                         test_suite_update(ts, 0, 1);
                 } else {
                         test_suite_update(ts, 1, 0);

@@ -201,8 +201,8 @@ test_hmac_md5_std_vectors(struct IMB_MGR *mb_mgr,
 	for (; v->msg != NULL; v++) {
                 if (!quiet_mode) {
 #ifdef DEBUG
-                        printf("RFC2202 Test Case %lu key_len:%lu "
-                               "data_len:%lu digest_len:%lu\n",
+                        printf("RFC2202 Test Case %zu key_len:%zu "
+                               "data_len:%zu digest_len:%zu\n",
                                v->tcId,
                                v->keySize,
                                v->msgSize / 8,
@@ -215,14 +215,14 @@ test_hmac_md5_std_vectors(struct IMB_MGR *mb_mgr,
                 if (v->keySize > IMB_MD5_BLOCK_SIZE) {
 #ifdef DEBUG
                         if (!quiet_mode)
-                                printf("Skipped vector %lu, "
+                                printf("Skipped vector %zu, "
                                        "Key size larger than block size\n",
                                        v->tcId);
 #endif
                         continue;
                 }
                 if (test_hmac_md5(mb_mgr, v, num_jobs)) {
-                        printf("error #%lu\n", v->tcId);
+                        printf("error #%zu\n", v->tcId);
                         test_suite_update(ts, 0, 1);
                 } else {
                         test_suite_update(ts, 1, 0);
