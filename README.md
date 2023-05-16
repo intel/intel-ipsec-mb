@@ -786,6 +786,9 @@ ACVP test application located in `test` directory is to support CAVP process. It
 |                     |           | Direction: encrypt and decrypt                           |
 |                     |           | payloadLen: [min = 8, max = 128, increment = 8]          |
 |---------------------+-----------+----------------------------------------------------------|
+| AES-ECB             | SP800-38A | Key size: 128, 192, 256                                  |
+|                     |           | Direction: encrypt and decrypt                           |
+|---------------------+-----------+----------------------------------------------------------|
 | SHA1 (SHA-1)        | FIPS180-4 | messageLength: [min = 0, max = 65528, increment = 8]     |
 |---------------------+-----------+----------------------------------------------------------|
 | SHA224 (SHA2-224)   | FIPS180-4 | messageLength: [min = 0, max = 65528, increment = 8]     |
@@ -840,6 +843,7 @@ The self-test consists of Cryptographic algorithm test (known answer test) on fo
 - AES-CCM  
 - AES-CBC  
 - AES-CTR  
+- AES-ECB  
 - AES-CMAC  
 - SHA1  
 - SHA224  
