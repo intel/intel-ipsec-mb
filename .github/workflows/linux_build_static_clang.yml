@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - run: sudo apt install -y nasm clang
+    - run: sudo apt-get install -y nasm clang
     - uses: actions/checkout@v2
       with:
         repository: intel/intel-ipsec-mb
