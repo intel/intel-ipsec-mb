@@ -315,6 +315,28 @@ static const uint8_t aes_ecb_256_cipher_text[] = {
 };
 static const uint8_t null_iv[] = { 0x00 };
 
+/*
+ * Triple DES test vector TDES_EDE_CBC
+ */
+static const uint8_t tdes_ede_cbc_key[] = {
+        0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+        0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f,
+        0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17
+};
+
+static const uint8_t tdes_ede_cbc_iv[] = {
+        0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07
+};
+
+static const uint8_t tdes_ede_cbc_plain_text[] = {
+        0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+        0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f
+};
+
+static const uint8_t tdes_ede_cbc_cipher_text[] = {
+        0x89, 0x4b, 0xc3, 0x08, 0x54, 0x26, 0xa4, 0x41,
+        0xf2, 0x7f, 0x73, 0xae, 0x26, 0xab, 0xbf, 0x74
+};
 
 #define ADD_CIPHER_VECTOR(_cmode,_key,_iv,_plain,_cipher) \
         {_cmode, _key, sizeof(_key), _iv, sizeof(_iv), \
@@ -339,13 +361,27 @@ struct self_test_cipher_vector cipher_vectors[] = {
                           aes_ecb_192_plain_text, aes_ecb_192_cipher_text),
         ADD_CIPHER_VECTOR(IMB_CIPHER_ECB, aes_ecb_256_key, null_iv,
                           aes_ecb_256_plain_text, aes_ecb_256_cipher_text),
+        ADD_CIPHER_VECTOR(IMB_CIPHER_DES3, tdes_ede_cbc_key, tdes_ede_cbc_iv,
+                          tdes_ede_cbc_plain_text, tdes_ede_cbc_cipher_text),
 };
+
+#define DES_KEY_SCHED_WORDS (IMB_DES_KEY_SCHED_SIZE / sizeof(uint64_t))
 
 static int self_test_ciphers(IMB_MGR *p_mgr)
 {
+        union {
+                struct {
+                        DECLARE_ALIGNED(uint32_t expkey_enc[4*15], 16);
+                        DECLARE_ALIGNED(uint32_t expkey_dec[4*15], 16);
+                } aes;
+                struct {
+                        uint64_t key_sched1[DES_KEY_SCHED_WORDS];
+                        uint64_t key_sched2[DES_KEY_SCHED_WORDS];
+                        uint64_t key_sched3[DES_KEY_SCHED_WORDS];
+                        void *keys[3];
+                } tdes;
+        } ks;
         uint8_t scratch[256];
-        DECLARE_ALIGNED(uint32_t expkey_enc[4*15], 16);
-        DECLARE_ALIGNED(uint32_t expkey_dec[4*15], 16);
         unsigned i;
 
         while (IMB_FLUSH_JOB(p_mgr) != NULL)
@@ -360,22 +396,39 @@ static int self_test_ciphers(IMB_MGR *p_mgr)
                 if (v->plain_text_size > sizeof(scratch))
                         return 0;
 
-                switch (v->cipher_key_size) {
-                case IMB_KEY_128_BYTES:
-                        IMB_AES_KEYEXP_128(p_mgr, v->cipher_key,
-                                           expkey_enc, expkey_dec);
-                        break;
-                case IMB_KEY_192_BYTES:
-                        IMB_AES_KEYEXP_192(p_mgr, v->cipher_key,
-                                           expkey_enc, expkey_dec);
-                        break;
-                case IMB_KEY_256_BYTES:
-                        IMB_AES_KEYEXP_256(p_mgr, v->cipher_key,
-                                           expkey_enc, expkey_dec);
-                        break;
-                default:
-                        /* invalid key size */
-                        return 0;
+                if (v->cipher_mode == IMB_CIPHER_DES3) {
+                        if (v->cipher_key_size != IMB_KEY_192_BYTES) {
+                                /* invalid key size */
+                                return 0;
+                        }
+                        des_key_schedule(ks.tdes.key_sched1, &v->cipher_key[0]);
+                        des_key_schedule(ks.tdes.key_sched2, &v->cipher_key[8]);
+                        des_key_schedule(ks.tdes.key_sched3,
+                                         &v->cipher_key[16]);
+                        ks.tdes.keys[0] = ks.tdes.key_sched1;
+                        ks.tdes.keys[1] = ks.tdes.key_sched2;
+                        ks.tdes.keys[2] = ks.tdes.key_sched3;
+                } else {
+                        switch (v->cipher_key_size) {
+                        case IMB_KEY_128_BYTES:
+                                IMB_AES_KEYEXP_128(p_mgr, v->cipher_key,
+                                                   ks.aes.expkey_enc,
+                                                   ks.aes.expkey_dec);
+                                break;
+                        case IMB_KEY_192_BYTES:
+                                IMB_AES_KEYEXP_192(p_mgr, v->cipher_key,
+                                                   ks.aes.expkey_enc,
+                                                   ks.aes.expkey_dec);
+                                break;
+                        case IMB_KEY_256_BYTES:
+                                IMB_AES_KEYEXP_256(p_mgr, v->cipher_key,
+                                                   ks.aes.expkey_enc,
+                                                   ks.aes.expkey_dec);
+                                break;
+                        default:
+                                /* invalid key size */
+                                return 0;
+                        }
                 }
 
                 /* test encrypt direction */
@@ -387,12 +440,18 @@ static int self_test_ciphers(IMB_MGR *p_mgr)
                 job->src = v->plain_text;
                 job->dst = scratch;
                 job->cipher_mode = v->cipher_mode;
-                job->enc_keys = expkey_enc;
-                if (v->cipher_mode != IMB_CIPHER_CNTR)
-                        job->dec_keys = expkey_dec;
+                if (v->cipher_mode == IMB_CIPHER_DES3) {
+                        job->enc_keys = ks.tdes.keys;
+                } else {
+                        job->enc_keys = ks.aes.expkey_enc;
+                        if (v->cipher_mode != IMB_CIPHER_CNTR)
+                                job->dec_keys = ks.aes.expkey_dec;
+                }
                 job->key_len_in_bytes = v->cipher_key_size;
-                job->iv = v->cipher_iv;
-                job->iv_len_in_bytes = v->cipher_iv_size;
+                if (v->cipher_mode != IMB_CIPHER_ECB) {
+                        job->iv = v->cipher_iv;
+                        job->iv_len_in_bytes = v->cipher_iv_size;
+                }
                 job->cipher_start_src_offset_in_bytes = 0;
                 job->msg_len_to_cipher_in_bytes = v->plain_text_size;
 
@@ -415,12 +474,18 @@ static int self_test_ciphers(IMB_MGR *p_mgr)
                 job->src = v->cipher_text;
                 job->dst = scratch;
                 job->cipher_mode = v->cipher_mode;
-                job->dec_keys = expkey_dec;
-                if (v->cipher_mode == IMB_CIPHER_CNTR)
-                        job->enc_keys = expkey_enc;
+                if (v->cipher_mode == IMB_CIPHER_DES3) {
+                        job->dec_keys = ks.tdes.keys;
+                } else {
+                        job->dec_keys = ks.aes.expkey_dec;
+                        if (v->cipher_mode == IMB_CIPHER_CNTR)
+                                job->enc_keys = ks.aes.expkey_enc;
+                }
                 job->key_len_in_bytes = v->cipher_key_size;
-                job->iv = v->cipher_iv;
-                job->iv_len_in_bytes = v->cipher_iv_size;
+                if (v->cipher_mode != IMB_CIPHER_ECB) {
+                        job->iv = v->cipher_iv;
+                        job->iv_len_in_bytes = v->cipher_iv_size;
+                }
                 job->cipher_start_src_offset_in_bytes = 0;
                 job->msg_len_to_cipher_in_bytes = v->plain_text_size;
 
