@@ -97,9 +97,10 @@ imb_quic_aes_gcm(IMB_MGR *state,
         }
         switch (key_size) {
         case IMB_KEY_128_BYTES:
-        case IMB_KEY_192_BYTES:
         case IMB_KEY_256_BYTES:
                 break;
+        case IMB_KEY_192_BYTES:
+                /* AES-192 is not supported by QUIC */
         default:
                 imb_set_errno(state, IMB_ERR_KEY_LEN);
                 return;
@@ -127,21 +128,9 @@ imb_quic_aes_gcm(IMB_MGR *state,
 						   tag_ptr_array[n],
 						   tag_len);
 			}
-		} else if (key_size == IMB_KEY_256_BYTES) {
+		} else /* assume 256-bits key */ {
 			for (n = 0; n < num_packets; n++) {
 				IMB_AES256_GCM_ENC(state, key_data, &ctx,
-						   dst_ptr_array[n],
-						   src_ptr_array[n],
-						   len_array[n],
-						   iv_ptr_array[n],
-						   aad_ptr_array[n],
-						   aad_len,
-						   tag_ptr_array[n],
-						   tag_len);
-			}
-		} else /* assume 192-bits key */ {
-			for (n = 0; n < num_packets; n++) {
-				IMB_AES192_GCM_ENC(state, key_data, &ctx,
 						   dst_ptr_array[n],
 						   src_ptr_array[n],
 						   len_array[n],
@@ -165,21 +154,9 @@ imb_quic_aes_gcm(IMB_MGR *state,
 						   tag_ptr_array[n],
 						   tag_len);
 			}
-		} else if (key_size == IMB_KEY_256_BYTES) {
+		} else /* assume 256-bits key */ {
 			for (n = 0; n < num_packets; n++) {
 				IMB_AES256_GCM_DEC(state, key_data, &ctx,
-						   dst_ptr_array[n],
-						   src_ptr_array[n],
-						   len_array[n],
-						   iv_ptr_array[n],
-						   aad_ptr_array[n],
-						   aad_len,
-						   tag_ptr_array[n],
-						   tag_len);
-			}
-		} else /* assume 192-bits key */ {
-			for (n = 0; n < num_packets; n++) {
-				IMB_AES192_GCM_DEC(state, key_data, &ctx,
 						   dst_ptr_array[n],
 						   src_ptr_array[n],
 						   len_array[n],

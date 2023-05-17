@@ -12,6 +12,8 @@ Library
 - Optimized GHASH component in AVX512 VAES (type2) AES-GCM implementation.
 - Implemented a workaround for false load-block condition in SSE and AVX2 AES-GCM implementations.
 - Removed AVX AES-GCM implementation, its API symbols map to the SSE implementation.
+- QUIC header protection API added
+- QUIC AES-GCM-128/256 AEAD API added
 
 v1.3 September 2022
 ========================================================================

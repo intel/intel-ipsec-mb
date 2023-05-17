@@ -2349,14 +2349,7 @@ test_gcm_std_vectors(struct test_suite_context *ts128,
                                                        burst_aes_gcm_enc,
                                                        burst_aes_gcm_dec,
                                                        ts192);
-                                test_gcm_vectors(&vectors[vect],
-						 quic_aes_gcm_enc,
-						 quic_aes_gcm_dec,
-						 ts192);
-                                test_gcm_vectors_burst(&vectors[vect],
-                                                       burst_quic_gcm_enc,
-                                                       burst_quic_gcm_dec,
-                                                       ts192);
+                                /* AES-192 is not supported by QUIC */
                         }
                         break;
                 case IMB_KEY_256_BYTES:
