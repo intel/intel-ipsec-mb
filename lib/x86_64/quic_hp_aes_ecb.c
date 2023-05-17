@@ -61,20 +61,7 @@ imb_quic_hp_aes_ecb(IMB_MGR *state,
                         return;
                 }
         }
-
-        switch (key_size) {
-        case IMB_KEY_128_BYTES:
-        case IMB_KEY_256_BYTES:
-                break;
-        /* AES-192 is not supported by QUIC */
-        case IMB_KEY_192_BYTES:
-        default:
-                imb_set_errno(state, IMB_ERR_KEY_LEN);
-                return;
-        }
 #endif /* SAFE_PARAM */
-
-        imb_set_errno(state, 0);
 
         switch (key_size) {
         case IMB_KEY_128_BYTES:
@@ -85,8 +72,12 @@ imb_quic_hp_aes_ecb(IMB_MGR *state,
                 state->aes_ecb_256_quic(src_ptr_array, exp_key_data,
                                         dst_ptr_array, num_packets);
                 break;
+        /* AES-192 is not supported by QUIC */
+        case IMB_KEY_192_BYTES:
         default:
                 imb_set_errno(state, IMB_ERR_KEY_LEN);
                 return;
         };
+
+        imb_set_errno(state, 0);
 }
