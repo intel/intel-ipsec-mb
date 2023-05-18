@@ -101,8 +101,8 @@ macro(imb_add_target_style_check)
 endmacro()
 
 # add TAGS target
-if(NOT WINDOWS)
-  macro(imb_add_target_tags)
+macro(imb_add_target_tags)
+  if(NOT WINDOWS)
     add_custom_target(
       TAGS
       COMMAND ${CMAKE_COMMAND} -E echo "Building Tags table"
@@ -112,5 +112,87 @@ if(NOT WINDOWS)
       WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
       VERBATIM
       )
-  endmacro()
-endif()
+  endif()
+endmacro()
+
+# add cppcheck targets
+macro(imb_add_target_cppcheck_bughunt)
+  if(NOT WINDOWS)
+    # set cppcheck binary name
+    if(NOT CPPCHECK_BIN)
+      set(CPPCHECK_BIN cppcheck)
+    endif()
+
+    find_program(CPPCHECK NAMES ${CPPCHECK_BIN})
+
+    # add targets if cppcheck available
+    if(CPPCHECK)
+      # output compilation database
+      set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+      execute_process(
+        COMMAND bash -c "getconf _NPROCESSORS_ONLN"
+        OUTPUT_VARIABLE nprocs
+        OUTPUT_STRIP_TRAILING_WHITESPACE)
+
+      # set flags
+      set(CPPCHECK_FLAGS "-j ${nprocs}")
+      set(CPPCHECK_FLAGS1 "--cppcheck-build-dir=.cppcheck ${CPPCHECK_FLAGS}")
+      set(CPPCHECK_FLAGS2 "--cppcheck-build-dir=.bughunt ${CPPCHECK_FLAGS}")
+
+      # add cppcheck target
+      add_custom_target(
+        cppcheck
+        COMMAND ${CMAKE_COMMAND} -E echo "Running cppcheck:"
+        COMMAND bash -c "mkdir -p .cppcheck"
+        COMMAND
+        bash -c
+        "${CPPCHECK} --force --enable=all ${CPPCHECK_FLAGS1} --project=./compile_commands.json"
+        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+        VERBATIM)
+
+      # add bughunt target
+      add_custom_target(
+        bughunt
+        COMMAND ${CMAKE_COMMAND} -E echo "Running cppcheck bughunt:"
+        COMMAND bash -c "mkdir -p .bughunt"
+        COMMAND
+        bash -c
+        "${CPPCHECK} --bug-hunting --inconclusive ${CPPCHECK_FLAGS2} --project=./compile_commands.json"
+        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+        VERBATIM)
+    endif(CPPCHECK)
+  endif(NOT WINDOWS)
+endmacro()
+
+# add spellcheck target
+#
+# Check spelling in the code with codespell. See
+# https://github.com/codespell-project/codespell for more details. Codespell
+# options explained: -d        -- disable colours (emacs colours it anyway) -L
+# -- List of words to be ignored -S <skip> -- skip file types -I FILE   -- File
+# containing words to be ignored
+macro(imb_add_target_spellcheck)
+  # set cppcheck binary name
+  if(NOT CODESPELL_BIN)
+    set(CODESPELL_BIN codespell)
+  endif()
+
+  find_program(CODESPELL NAMES ${CODESPELL_BIN})
+
+  # ignore some needed words
+  set(CS_IGNORE_WORDS "iinclude,struc,fo,ue,od,ba,padd")
+
+  if(CODESPELL)
+    add_custom_target(
+      spellcheck
+      COMMAND ${CMAKE_COMMAND} -E echo "Running spellcheck:"
+      COMMAND
+        bash -c "${CODESPELL} -d -L ${CS_IGNORE_WORDS} \
+	      -S '*.obj,*.o,*.a,*.so,*.lib,*~,*.so,*.so.*,*.d,imb-perf' \
+	      -S 'imb-kat,imb-xvalid' \
+	      ./lib ./perf ./test README.md SECURITY.md CONTRIBUTING \
+	      Makefile win_x64.mak ReleaseNotes.txt LICENSE ${CS_EXTRA_OPTS}"
+      WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+      VERBATIM)
+  endif()
+endmacro()

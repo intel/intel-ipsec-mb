@@ -70,3 +70,9 @@ imb_add_target_style_check()
 
 # TAGS target
 imb_add_target_tags()
+
+# cppcheck and bughunt targets
+imb_add_target_cppcheck_bughunt()
+
+# spellcheck target
+imb_add_target_spellcheck()
