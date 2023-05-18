@@ -1329,7 +1329,9 @@ test_cmac_std_vectors(struct IMB_MGR *mb_mgr,
 	const int vectors_cnt = DIM(cmac_vectors);
 	int vect;
 
-	printf("AES-CMAC-128 standard test vectors (N jobs = %d):\n", num_jobs);
+        if (!quiet_mode)
+	        printf("AES-CMAC-128 standard test vectors (N jobs = %d):\n",
+                       num_jobs);
 	for (vect = 1; vect <= vectors_cnt; vect++) {
                 const int idx = vect - 1;
 
@@ -1373,7 +1375,9 @@ test_cmac_256_std_vectors(struct IMB_MGR *mb_mgr,
 	const int vectors_cnt = DIM(cmac_256_vectors);
 	int vect;
 
-	printf("AES-CMAC-256 standard test vectors (N jobs = %d):\n", num_jobs);
+        if (!quiet_mode)
+	        printf("AES-CMAC-256 standard test vectors (N jobs = %d):\n",
+                       num_jobs);
 	for (vect = 1; vect <= vectors_cnt; vect++) {
                 const int idx = vect - 1;
 
@@ -1416,8 +1420,9 @@ test_cmac_bitlen_std_vectors(struct IMB_MGR *mb_mgr,
 	const int vectors_cnt = sizeof(cmac_vectors) / sizeof(cmac_vectors[0]);
 	int vect;
 
-        printf("AES-CMAC-128 BITLEN standard test vectors "
-               "(N jobs = %d):\n", num_jobs);
+        if (!quiet_mode)
+                printf("AES-CMAC-128 BITLEN standard test vectors "
+                       "(N jobs = %d):\n", num_jobs);
 	for (vect = 1; vect <= vectors_cnt; vect++) {
                 const int idx = vect - 1;
 
@@ -1463,8 +1468,9 @@ test_cmac_bitlen_3gpp_vectors(struct IMB_MGR *mb_mgr,
                 sizeof(cmac_3gpp_vectors) / sizeof(cmac_3gpp_vectors[0]);
 	int vect;
 
-	printf("AES-CMAC-128 BITLEN 3GPP test vectors (N jobs = %d):\n",
-               num_jobs);
+        if (!quiet_mode)
+	        printf("AES-CMAC-128 BITLEN 3GPP test vectors (N jobs = %d):\n",
+                       num_jobs);
 	for (vect = 1; vect <= vectors_cnt; vect++) {
                 const int idx = vect - 1;
 

@@ -197,7 +197,9 @@ test_hmac_md5_std_vectors(struct IMB_MGR *mb_mgr,
 
         const struct mac_test *v = hmac_md5_test_json;
 
-	printf("HMAC-MD5 standard test vectors (N jobs = %d):\n", num_jobs);
+        if (!quiet_mode)
+	        printf("HMAC-MD5 standard test vectors (N jobs = %d):\n",
+                       num_jobs);
 	for (; v->msg != NULL; v++) {
                 if (!quiet_mode) {
 #ifdef DEBUG

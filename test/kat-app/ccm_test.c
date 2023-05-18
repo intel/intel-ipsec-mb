@@ -2444,7 +2444,8 @@ test_ccm_128_std_vectors(struct IMB_MGR *mb_mgr,
 	const int vectors_cnt = sizeof(ccm_vectors) / sizeof(ccm_vectors[0]);
 	int vect;
 
-	printf("AES-CCM-128 standard test vectors (N jobs = %d):\n", num_jobs);
+        if (!quiet_mode)
+	        printf("AES-CCM-128 standard test vectors (N jobs = %d):\n", num_jobs);
 	for (vect = 1; vect <= vectors_cnt; vect++) {
                 const int idx = vect - 1;
 
@@ -2506,7 +2507,9 @@ test_ccm_256_std_vectors(struct IMB_MGR *mb_mgr,
 	const int vectors_cnt = DIM(ccm_256_vectors);
 	int vect;
 
-	printf("AES-CCM-256 standard test vectors (N jobs = %d):\n", num_jobs);
+        if (!quiet_mode)
+	        printf("AES-CCM-256 standard test vectors (N jobs = %d):\n",
+                       num_jobs);
 	for (vect = 1; vect <= vectors_cnt; vect++) {
                 const int idx = vect - 1;
 

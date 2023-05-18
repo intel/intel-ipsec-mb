@@ -389,7 +389,8 @@ test_chained_vectors(struct IMB_MGR *mb_mgr,
         DECLARE_ALIGNED(uint8_t opad_hash[128], 16);
         unsigned i;
 
-        printf("%s (N jobs = %d):\n", banner, num_jobs);
+        if (!quiet_mode)
+                printf("%s (N jobs = %d):\n", banner, num_jobs);
         for (vect = 0; vect < vec_cnt; vect++) {
                 if (!quiet_mode) {
 #ifdef DEBUG

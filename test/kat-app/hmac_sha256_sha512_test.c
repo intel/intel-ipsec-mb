@@ -596,8 +596,9 @@ test_hmac_shax_std_vectors(struct IMB_MGR *mb_mgr,
                 v = hmac_sha512_test_kat_json;
                 break;
         }
-	printf("HMAC-SHA%d standard test vectors (N jobs = %u):\n",
-               sha_type, num_jobs);
+        if (!quiet_mode)
+	        printf("HMAC-SHA%d standard test vectors (N jobs = %u):\n",
+                       sha_type, num_jobs);
 	for (; v->msg != NULL; v++) {
                 if (!quiet_mode) {
 #ifdef DEBUG

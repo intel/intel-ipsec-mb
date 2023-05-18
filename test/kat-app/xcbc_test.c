@@ -493,7 +493,8 @@ test_xcbc_std_vectors(struct IMB_MGR *mb_mgr,
 	const int vectors_cnt = DIM(xcbc_vectors);
 	int vect;
 
-	printf("AES-XCBC-128 standard test vectors (N jobs = %d):\n", num_jobs);
+        if (!quiet_mode)
+	        printf("AES-XCBC-128 standard test vectors (N jobs = %d):\n", num_jobs);
 	for (vect = 1; vect <= vectors_cnt; vect++) {
                 const int idx = vect - 1;
 

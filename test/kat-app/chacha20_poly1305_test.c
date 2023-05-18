@@ -588,7 +588,8 @@ test_aead_vectors(struct IMB_MGR *mb_mgr,
 {
 	size_t vect;
 
-	printf("%s (N jobs = %d):\n", banner, num_jobs);
+        if (!quiet_mode)
+	        printf("%s (N jobs = %d):\n", banner, num_jobs);
 	for (vect = 0; vect < vec_array_size; vect++) {
                 if (!quiet_mode) {
 #ifdef DEBUG

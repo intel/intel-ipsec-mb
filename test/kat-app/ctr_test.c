@@ -1845,7 +1845,9 @@ test_ctr_vectors_burst(struct IMB_MGR *mb_mgr,
         DECLARE_ALIGNED(uint32_t expkey[4*15], 16);
         DECLARE_ALIGNED(uint32_t dust[4*15], 16);
 
-	printf("AES-CTR standard test vectors - Burst API (N jobs = %u):\n", num_jobs);
+        if (!quiet_mode)
+	        printf("AES-CTR standard test vectors - Burst API (N jobs = %u):\n",
+                       num_jobs);
 	for (vect = 0; vect < vectors_cnt; vect++) {
                 struct test_suite_context *ctx;
 

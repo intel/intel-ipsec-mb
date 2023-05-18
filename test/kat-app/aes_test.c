@@ -2318,7 +2318,8 @@ test_aes_vectors(struct IMB_MGR *mb_mgr,
         DECLARE_ALIGNED(uint32_t enc_keys[15*4], 16);
         DECLARE_ALIGNED(uint32_t dec_keys[15*4], 16);
 
-	printf("%s (N jobs = %d):\n", banner, num_jobs);
+        if (!quiet_mode)
+	        printf("%s (N jobs = %d):\n", banner, num_jobs);
 	for (vect = 0; vect < vec_cnt; vect++) {
                 struct test_suite_context *ctx;
 
@@ -2708,7 +2709,8 @@ test_docrc_vectors(struct IMB_MGR *mb_mgr,
         DECLARE_ALIGNED(uint32_t enc_keys[15*4], 16);
         DECLARE_ALIGNED(uint32_t dec_keys[15*4], 16);
 
-	printf("%s (N jobs = %d):\n", banner, num_jobs);
+        if (!quiet_mode)
+	        printf("%s (N jobs = %d):\n", banner, num_jobs);
 	for (vect = 0; vect < vec_cnt; vect++) {
                 struct test_suite_context *ctx;
 
@@ -2863,8 +2865,8 @@ cfb_test_vectors(struct IMB_MGR *mb_mgr, struct test_suite_context *ctx128,
 {
         unsigned vect;
 
-
-        printf("AES-CFB test vectors (N jobs = %d):\n", num_jobs);
+        if (!quiet_mode)
+                printf("AES-CFB test vectors (N jobs = %d):\n", num_jobs);
 	for (vect = 0; vect < DIM(aes_cfb_tab); vect++) {
                 struct test_suite_context *ctx;
 

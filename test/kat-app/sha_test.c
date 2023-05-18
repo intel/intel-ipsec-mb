@@ -551,7 +551,8 @@ test_sha_vectors(struct IMB_MGR *mb_mgr,
 	int vect;
         struct test_suite_context *ctx;
 
-	printf("SHA standard test vectors (N jobs = %d):\n", num_jobs);
+        if (!quiet_mode)
+	        printf("SHA standard test vectors (N jobs = %d):\n", num_jobs);
 	for (vect = 1; vect <= vectors_cnt; vect++) {
                 const int idx = vect - 1;
 

@@ -425,7 +425,8 @@ test_hmac_sha1_std_vectors(struct IMB_MGR *mb_mgr,
 {
         const struct mac_test *v = hmac_sha1_test_kat_json;
 
-	printf("HMAC-SHA1 standard test vectors (N jobs = %u):\n", num_jobs);
+        if (!quiet_mode)
+	        printf("HMAC-SHA1 standard test vectors (N jobs = %u):\n", num_jobs);
 	while (v->msg != NULL) {
                 if (!quiet_mode) {
 #ifdef DEBUG
