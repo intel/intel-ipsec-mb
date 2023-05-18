@@ -13,7 +13,7 @@ jobs:
 
     steps:
     - run: sudo apt install -y nasm clang
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
       with:
         repository: intel/intel-ipsec-mb
     - name: make aesni
