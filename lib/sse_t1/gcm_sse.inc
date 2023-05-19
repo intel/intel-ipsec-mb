@@ -140,24 +140,30 @@
 %ifdef GCM128_MODE
 %define FN_NAME(x,y) aes_gcm_ %+ x %+ _128 %+ y %+ SSE
 %define GMAC_FN_NAME(x) imb_aes_gmac_ %+ x %+ _128_ %+ SSE
+%ifndef NO_AESNI
 %define FN_NAME_AVX(x,y) aes_gcm_ %+ x %+ _128 %+ y %+ avx_gen2
 %define GMAC_FN_NAME_AVX(x) imb_aes_gmac_ %+ x %+ _128_avx_gen2
+%endif
 %define NROUNDS 9
 %endif
 
 %ifdef GCM192_MODE
 %define FN_NAME(x,y) aes_gcm_ %+ x %+ _192 %+ y %+ SSE
 %define GMAC_FN_NAME(x) imb_aes_gmac_ %+ x %+ _192_ %+ SSE
+%ifndef NO_AESNI
 %define FN_NAME_AVX(x,y) aes_gcm_ %+ x %+ _192 %+ y %+ avx_gen2
 %define GMAC_FN_NAME_AVX(x) imb_aes_gmac_ %+ x %+ _192_avx_gen2
+%endif
 %define NROUNDS 11
 %endif
 
 %ifdef GCM256_MODE
 %define FN_NAME(x,y) aes_gcm_ %+ x %+ _256 %+ y %+ SSE
 %define GMAC_FN_NAME(x) imb_aes_gmac_ %+ x %+ _256_ %+ SSE
+%ifndef NO_AESNI
 %define FN_NAME_AVX(x,y) aes_gcm_ %+ x %+ _256 %+ y %+ avx_gen2
 %define GMAC_FN_NAME_AVX(x) imb_aes_gmac_ %+ x %+ _256_avx_gen2
+%endif
 %define NROUNDS 13
 %endif
 

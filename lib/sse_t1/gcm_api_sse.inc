@@ -43,8 +43,10 @@ default rel
 ;        (struct gcm_key_data *key_data);
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 align 32
+%ifndef NO_AESNI
 MKGLOBAL(FN_NAME_AVX(precomp,_),function,)
 FN_NAME_AVX(precomp,_):
+%endif
 MKGLOBAL(FN_NAME(precomp,_),function,)
 FN_NAME(precomp,_):
         endbranch64
@@ -126,8 +128,10 @@ error_precomp:
 ;        u64     auth_tag_len);
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 align 32
+%ifndef NO_AESNI
 MKGLOBAL(FN_NAME_AVX(enc,_),function,)
 FN_NAME_AVX(enc,_):
+%endif
 MKGLOBAL(FN_NAME(enc,_),function,)
 FN_NAME(enc,_):
         endbranch64
@@ -264,8 +268,10 @@ skip_aad_check_error_enc:
 ;        u64     auth_tag_len);
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 align 32
+%ifndef NO_AESNI
 MKGLOBAL(FN_NAME_AVX(dec,_),function,)
 FN_NAME_AVX(dec,_):
+%endif
 MKGLOBAL(FN_NAME(dec,_),function,)
 FN_NAME(dec,_):
         endbranch64
@@ -398,8 +404,10 @@ skip_aad_check_error_dec:
 ;       aes_gcm_enc_var_iv_256_sse(IMB_MGR *state, IMB_JOB *job)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 align 32
+%ifndef NO_AESNI
 MKGLOBAL(FN_NAME_AVX(enc_var_iv,_),function,internal)
 FN_NAME_AVX(enc_var_iv,_):
+%endif
 MKGLOBAL(FN_NAME(enc_var_iv,_),function,internal)
 FN_NAME(enc_var_iv,_):
         endbranch64
@@ -448,8 +456,10 @@ skip_iv_len_12_enc_IV:
 ;       aes_gcm_dec_var_iv_256_sse(IMB_MGR *state, IMB_JOB *job)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 align 32
+%ifndef NO_AESNI
 MKGLOBAL(FN_NAME_AVX(dec_var_iv,_),function,internal)
 FN_NAME_AVX(dec_var_iv,_):
+%endif
 MKGLOBAL(FN_NAME(dec_var_iv,_),function,internal)
 FN_NAME(dec_var_iv,_):
         endbranch64

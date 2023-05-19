@@ -216,8 +216,10 @@ error_ghash:
 ;        const   u64 msg_len);
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 align 32
+%ifndef NO_AESNI
 MKGLOBAL(GMAC_FN_NAME_AVX(update),function,)
 GMAC_FN_NAME_AVX(update):
+%endif
 MKGLOBAL(GMAC_FN_NAME(update),function,)
 GMAC_FN_NAME(update):
         endbranch64
