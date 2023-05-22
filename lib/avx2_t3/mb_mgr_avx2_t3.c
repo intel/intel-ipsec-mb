@@ -485,6 +485,9 @@ init_mb_mgr_avx2_t3_internal(IMB_MGR *state, const int reset_mgrs)
         state->gmac128_finalize    = imb_aes_gmac_finalize_128_avx_gen4;
         state->gmac192_finalize    = imb_aes_gmac_finalize_192_avx_gen4;
         state->gmac256_finalize    = imb_aes_gmac_finalize_256_avx_gen4;
+
+        state->aes_ecb_128_quic    = aes_ecb_quic_enc_128_avx;
+        state->aes_ecb_256_quic    = aes_ecb_quic_enc_256_avx;
 }
 
 #include "mb_mgr_code.h"
