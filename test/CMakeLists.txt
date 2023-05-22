@@ -37,3 +37,6 @@ add_subdirectory(kat-app)
 # build imb-xvalid application
 add_subdirectory(xvalid-app)
 
+# build imb-wycheproof application
+add_subdirectory(wycheproof-app)
+
