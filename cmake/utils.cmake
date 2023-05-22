@@ -56,6 +56,15 @@ macro(imb_set_proj_defaults)
 
   # flag to force full project build
   set(FULL_PROJECT_BUILD TRUE)
+
+  # place all binaries in a single bin directory
+  if(USE_BIN_DIR)
+    set(BIN_DIR "${PROJECT_BINARY_DIR}/bin")
+    message(STATUS "BINARY DIRECTORY...        ${BIN_DIR}")
+    set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${BIN_DIR})
+    set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${BIN_DIR})
+    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${BIN_DIR})
+  endif()
 endmacro()
 
 # compiler checks
