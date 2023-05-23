@@ -84,6 +84,7 @@ set(TEST_APP_SRC_FILES
   ${CMAKE_CURRENT_SOURCE_DIR}/hmac_md5.json.c
   ${CMAKE_CURRENT_SOURCE_DIR}/gmac_test.json.c
   ${CMAKE_CURRENT_SOURCE_DIR}/ghash_test.json.c
+  ${CMAKE_CURRENT_SOURCE_DIR}/poly1305_test.json.c
   ${CMAKE_CURRENT_SOURCE_DIR}/../common/utils.c
 )
 
