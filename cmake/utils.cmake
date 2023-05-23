@@ -45,7 +45,16 @@ endmacro()
 
 # set default project settings
 macro(imb_set_proj_defaults)
-  set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Selected build type")
+  # set default build type if not specified and not a multi-config generator
+  get_property(multi_config_gen GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
+  if(NOT CMAKE_BUILD_TYPE
+     AND NOT CMAKE_CONFIGURATION_TYPES
+     AND NOT multi_config_gen)
+    set(CMAKE_BUILD_TYPE
+        "Release"
+        CACHE STRING "Selected build type" FORCE)
+  endif()
+
   # clear default release build C Compiler Flags
   set(CMAKE_C_FLAGS_RELEASE "" CACHE STRING "" FORCE)
   # clear default debug build C Compiler Flags
