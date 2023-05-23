@@ -34,6 +34,9 @@ cmake_minimum_required(VERSION 3.16)
 project(intel-ipsec-mb VERSION ${IPSEC_MB_VERSION}
     DESCRIPTION "Intel(R) IPsec Multi-Buffer library")
 
+# add testing support
+include(CTest)
+
 # detect OS
 imb_detect_os()
 
@@ -43,8 +46,28 @@ imb_set_proj_defaults()
 # do compiler checks
 imb_compiler_check()
 
-# add testing support
-include(CTest)
+#######################################
+# configure pre gen custom targets
+#######################################
+
+# add custom target to uninstall library
+imb_add_target_uninstall("${CMAKE_CURRENT_SOURCE_DIR}/lib/cmake/uninstall.cmake.in")
+
+# style check target
+imb_add_target_style_check()
+
+# TAGS target
+imb_add_target_tags()
+
+# spellcheck target
+imb_add_target_spellcheck()
+
+# cppcheck and bughunt targets
+imb_add_target_cppcheck_bughunt()
+
+#######################################
+# configure main project targets
+#######################################
 
 # build library
 add_subdirectory(lib)
@@ -56,23 +79,9 @@ add_subdirectory(perf)
 add_subdirectory(test)
 
 #######################################
-# configure custom targets
+# configure post gen custom targets
 #######################################
-
-# add custom target to uninstall library
-imb_add_target_uninstall("${CMAKE_CURRENT_SOURCE_DIR}/lib/cmake/uninstall.cmake.in")
 
 # add custom target to print help information
 imb_add_target_print_help("${IPSEC_MB_OPTIONS}")
 
-# style check target
-imb_add_target_style_check()
-
-# TAGS target
-imb_add_target_tags()
-
-# cppcheck and bughunt targets
-imb_add_target_cppcheck_bughunt()
-
-# spellcheck target
-imb_add_target_spellcheck()
