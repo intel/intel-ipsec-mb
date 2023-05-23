@@ -79,3 +79,17 @@ add_executable(${XVALID_APP} ${XVALID_APP_SRC_FILES_C} ${XVALID_APP_SRC_FILES_AS
 target_link_libraries(${XVALID_APP} PRIVATE ${IPSEC_MB_LIB})
 target_compile_definitions(${XVALID_APP} PRIVATE ${APP_DEFINES})
 
+########################################
+# add tests
+########################################
+
+add_test(NAME XVALID-64B
+  COMMAND ${XVALID_APP} --job-size 64)
+
+# run safe check only when SAFE_DATA is enabled and only run on release build
+if (SAFE_DATA)
+  add_test(NAME XVALID-64B-SAFE-CHECK
+    COMMAND ${XVALID_APP} --safe-check --job-size 64
+    CONFIGURATIONS Release)
+endif()
+
