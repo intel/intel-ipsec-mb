@@ -25,7 +25,16 @@
 ;; OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;
 
-;;; Routine to compute CBC-MAC. It is based on 256 bit CBC AES encrypt code.
+;; AES-CMAC-256
 
-%define CBC_MAC 1
-%include "avx_t1/aes256_cbc_enc_x8_avx.asm"
+%include "include/aes_cbc_enc_x8_avx.inc"
+
+mksection .text
+
+align 64
+MKGLOBAL(aes256_cbc_mac_x8,function,internal)
+aes256_cbc_mac_x8:
+        AES_CBC_X8 CBC_XCBC_MAC, 13, 16, {arg1 + _aesarg_IV}, {arg1 + _aesarg_keys}, {arg1 + _aesarg_in}
+        ret
+
+mksection stack-noexec

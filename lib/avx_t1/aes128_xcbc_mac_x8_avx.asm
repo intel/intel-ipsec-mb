@@ -25,13 +25,16 @@
 ;; OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;
 
-;;; routine to do 128 bit AES XCBC
+;; AES-XCBC-128
 
-%define FUNC     aes_xcbc_mac_128_x8
-%define MODE     CBC_XCBC_MAC
-%define OFFSET   16
-%define ARG_IN   _aesxcbcarg_in
-%define ARG_KEYS _aesxcbcarg_keys
-%define ARG_IV   _aesxcbcarg_ICV
+%include "include/aes_cbc_enc_x8_avx.inc"
 
-%include "avx_t1/aes128_cbc_enc_x8_avx.asm"
+mksection .text
+
+align 64
+MKGLOBAL(aes_xcbc_mac_128_x8,function,internal)
+aes_xcbc_mac_128_x8:
+        AES_CBC_X8 CBC_XCBC_MAC, 9, 16, {arg1 + _aesxcbcarg_ICV}, {arg1 + _aesxcbcarg_keys}, {arg1 + _aesxcbcarg_in}
+        ret
+
+mksection stack-noexec
