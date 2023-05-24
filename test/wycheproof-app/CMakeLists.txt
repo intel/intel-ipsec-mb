@@ -78,7 +78,7 @@ target_compile_definitions(${WYCHEPROOF_APP} PRIVATE ${APP_DEFINES})
 # add tests
 ########################################
 
-add_test(WYCHEPROOF ${WYCHEPROOF_APP})
-add_test(WYCHEPROOF-SHANI-OFF ${WYCHEPROOF_APP} --shani-off)
-add_test(WYCHEPROOF-GFNI-OFF ${WYCHEPROOF_APP} --gfni-off)
+add_test(NAME WYCHEPROOF COMMAND ${WYCHEPROOF_APP})
+add_test(NAME WYCHEPROOF-SHANI-OFF COMMAND ${WYCHEPROOF_APP} --shani-off)
+add_test(NAME WYCHEPROOF-GFNI-OFF COMMAND ${WYCHEPROOF_APP} --gfni-off)
 

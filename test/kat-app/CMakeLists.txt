@@ -110,26 +110,64 @@ target_compile_definitions(${TEST_APP} PRIVATE ${APP_DEFINES})
 # add tests
 ########################################
 
+# set working directory for tests
+if(IMB_BIN_DIR)
+  set(TEST_APP_BIN_DIR "${IMB_BIN_DIR}")
+else()
+  set(TEST_APP_BIN_DIR "${CMAKE_CURRENT_BINARY_DIR}")
+endif()
+
+# append config type for multi-config generators
+get_property(multi_config_gen GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
+if (multi_config_gen)
+  STRING(APPEND TEST_APP_BIN_DIR "/$<IF:$<CONFIG:Debug>,Debug,Release>")
+endif()
+
 # set arch options
 set(ARCH_SSE "--no-avx --no-avx2 --no-avx512")
 set(ARCH_AVX "--no-sse --no-avx2 --no-avx512")
 set(ARCH_AVX2 "--no-sse --no-avx --no-avx512")
 set(ARCH_AVX512 "--no-sse --no-avx --no-avx2")
 
-add_test(KAT-SSE-T1 ${TEST_APP} ${ARCH_SSE} --shani-off)
-add_test(KAT-SSE-T2 ${TEST_APP} ${ARCH_SSE} --gfni-off)
-add_test(KAT-SSE-T3 ${TEST_APP} ${ARCH_SSE})
-add_test(KAT-AVX-T1 ${TEST_APP} ${ARCH_AVX} --shani-off)
-add_test(KAT-AVX-T2 ${TEST_APP} ${ARCH_AVX})
-add_test(KAT-AVX2-T1 ${TEST_APP} ${ARCH_AVX2} --shani-off --gfni-off)
-add_test(KAT-AVX2-T2 ${TEST_APP} ${ARCH_AVX2})
-add_test(KAT-AVX512-T1 ${TEST_APP} ${ARCH_AVX512} --shani-off --gfni-off)
-add_test(KAT-AVX512-T2 ${TEST_APP} ${ARCH_AVX512})
-
-find_program(SDE64 NAMES sde64)
-# find_program(SDE NAMES sde)
-if(SDE64)
-  add_test(NAME KAT-AVX-T3
-    COMMAND ${SDE64} -cmt -- ./${TEST_APP} ${ARCH_AVX}
-    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+# check for SDE
+if (WINDOWS)
+  find_program(SDE NAMES sde)
+else()
+  find_program(SDE NAMES sde64)
 endif()
+
+add_test(NAME KAT-SSE-T1
+  COMMAND ${TEST_APP} ${ARCH_SSE} --shani-off
+  WORKING_DIRECTORY ${TEST_APP_BIN_DIR})
+add_test(NAME KAT-SSE-T2
+  COMMAND ${TEST_APP} ${ARCH_SSE} --gfni-off
+  WORKING_DIRECTORY ${TEST_APP_BIN_DIR})
+add_test(NAME KAT-SSE-T3
+  COMMAND ${TEST_APP} ${ARCH_SSE}
+  WORKING_DIRECTORY ${TEST_APP_BIN_DIR})
+add_test(NAME KAT-AVX-T1
+  COMMAND ${TEST_APP} ${ARCH_AVX} --shani-off
+  WORKING_DIRECTORY ${TEST_APP_BIN_DIR})
+add_test(NAME KAT-AVX-T2
+  COMMAND ${TEST_APP} ${ARCH_AVX}
+  WORKING_DIRECTORY ${TEST_APP_BIN_DIR})
+add_test(NAME KAT-AVX2-T1
+  COMMAND ${TEST_APP} ${ARCH_AVX2} --shani-off --gfni-off
+  WORKING_DIRECTORY ${TEST_APP_BIN_DIR})
+add_test(NAME KAT-AVX2-T2
+  COMMAND ${TEST_APP} ${ARCH_AVX2}
+  WORKING_DIRECTORY ${TEST_APP_BIN_DIR})
+add_test(NAME KAT-AVX512-T1
+  COMMAND ${TEST_APP} ${ARCH_AVX512} --shani-off --gfni-off
+  WORKING_DIRECTORY ${TEST_APP_BIN_DIR})
+add_test(NAME KAT-AVX512-T2
+  COMMAND ${TEST_APP} ${ARCH_AVX512}
+  WORKING_DIRECTORY ${TEST_APP_BIN_DIR})
+
+# SDE tests
+if(SDE)
+  add_test(NAME KAT-AVX-T3
+    COMMAND ${SDE} -cmt -- ./${TEST_APP} ${ARCH_AVX}
+    WORKING_DIRECTORY ${TEST_APP_BIN_DIR})
+endif()
+
