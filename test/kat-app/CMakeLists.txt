@@ -129,3 +129,10 @@ add_test(KAT-AVX2-T2 ${TEST_APP} ${ARCH_AVX2})
 add_test(KAT-AVX512-T1 ${TEST_APP} ${ARCH_AVX512} --shani-off --gfni-off)
 add_test(KAT-AVX512-T2 ${TEST_APP} ${ARCH_AVX512})
 
+find_program(SDE64 NAMES sde64)
+# find_program(SDE NAMES sde)
+if(SDE64)
+  add_test(NAME KAT-AVX-T3
+    COMMAND ${SDE64} -cmt -- ./${TEST_APP} ${ARCH_AVX}
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+endif()
