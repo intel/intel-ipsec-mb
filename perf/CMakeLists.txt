@@ -23,9 +23,6 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-cmake_minimum_required(VERSION 3.16)
-project(intel-ipsec-mb)
-
 # Ensure building entire project
 if(NOT FULL_PROJECT_BUILD)
   message(FATAL_ERROR "Please run CMake from project root directory")
