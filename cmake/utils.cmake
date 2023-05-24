@@ -66,13 +66,17 @@ macro(imb_set_proj_defaults)
   # flag to force full project build
   set(FULL_PROJECT_BUILD TRUE)
 
-  # place all binaries in a single bin directory
-  if(USE_BIN_DIR)
-    set(BIN_DIR "${PROJECT_BINARY_DIR}/bin")
-    message(STATUS "BINARY DIRECTORY...        ${BIN_DIR}")
-    set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${BIN_DIR})
-    set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${BIN_DIR})
-    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${BIN_DIR})
+endmacro()
+
+# set binary output directory if specified
+macro(imb_set_binary_dir)
+  # place all binaries in ${IMB_BIN_DIR}
+  if(IMB_BIN_DIR)
+    message(STATUS "BINARY DIRECTORY...        ${IMB_BIN_DIR}")
+    get_property(multi_config_gen GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
+    set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${IMB_BIN_DIR})
+    set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${IMB_BIN_DIR})
+    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${IMB_BIN_DIR})
   endif()
 endmacro()
 

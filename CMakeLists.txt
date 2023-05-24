@@ -41,6 +41,9 @@ project(intel-ipsec-mb VERSION ${IPSEC_MB_VERSION}
 # add testing support
 include(CTest)
 
+# set binary output directory if specified
+imb_set_binary_dir()
+
 # detect OS
 imb_detect_os()
 
