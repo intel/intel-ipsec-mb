@@ -31,6 +31,10 @@ imb_get_version("${CMAKE_CURRENT_SOURCE_DIR}/lib/intel-ipsec-mb.h")
 message(STATUS "Project Version: ${IPSEC_MB_VERSION_FULL}")
 
 cmake_minimum_required(VERSION 3.16)
+
+# set default project values
+imb_set_proj_defaults()
+
 project(intel-ipsec-mb VERSION ${IPSEC_MB_VERSION}
     DESCRIPTION "Intel(R) IPsec Multi-Buffer library")
 
@@ -39,9 +43,6 @@ include(CTest)
 
 # detect OS
 imb_detect_os()
-
-# set default project values
-imb_set_proj_defaults()
 
 # do compiler checks
 imb_compiler_check()

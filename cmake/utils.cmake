@@ -52,7 +52,7 @@ macro(imb_set_proj_defaults)
      AND NOT multi_config_gen)
     set(CMAKE_BUILD_TYPE
         "Release"
-        CACHE STRING "Selected build type" FORCE)
+        CACHE STRING "Selected build type")
   endif()
 
   # clear default release build C Compiler Flags
