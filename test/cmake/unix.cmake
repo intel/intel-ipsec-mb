@@ -33,7 +33,7 @@ set(IPSEC_MB_LIB IPSec_MB)
 set(CMAKE_ASM_NASM_FLAGS "-felf64 -Xgnu -gdwarf -DLINUX -D__linux__")
 
 # set compiler definitions
-set(APP_DEFINES LINUX _GNU_SOURCE NO_COMPAT_IMB_API_053)
+set(APP_DEFINES LINUX _GNU_SOURCE)
 
 # set C compiler flags
 set(CMAKE_C_FLAGS

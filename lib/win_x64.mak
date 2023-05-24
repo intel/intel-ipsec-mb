@@ -112,7 +112,7 @@ DAFLAGS = $(DAFLAGS) -DAESNI_EMU
 
 CC = cl
 
-CFLAGS_ALL = $(EXTRA_CFLAGS) /DNO_COMPAT_IMB_API_053 /I. /Iinclude /Ino-aesni \
+CFLAGS_ALL = $(EXTRA_CFLAGS) /I. /Iinclude /Ino-aesni \
 	/nologo /Y- /W3 /WX- /Gm- /fp:precise /EHsc /Z7 /std:c11
 
 CFLAGS = $(CFLAGS_ALL) $(OPT) $(DCFLAGS)

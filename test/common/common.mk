@@ -34,7 +34,7 @@ NASM ?= nasm
 
 MINGW ?= $(shell $(CC) -dM -E - < /dev/null | grep -i mingw | wc -l | sed 's/^ *//')
 
-CFLAGS = -MMD -D_GNU_SOURCE -DNO_COMPAT_IMB_API_053 \
+CFLAGS = -MMD -D_GNU_SOURCE \
 	-W -Wall -Wextra -Wmissing-declarations -Wpointer-arith \
 	-Wcast-qual -Wundef -Wwrite-strings  \
 	-Wformat -Wformat-security \

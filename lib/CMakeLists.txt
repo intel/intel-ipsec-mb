@@ -40,7 +40,6 @@ option(SAFE_PARAM "API input parameter checking" ON)
 option(SAFE_DATA "Sensitive data cleared from registers and memory at operation end" ON)
 option(SAFE_LOOKUP "Lookups depending on sensitive data are constant time" ON)
 option(SAFE_OPTIONS "Enable all safe options" ON)
-option(NO_COMPAT_IMB_API_053 "Disable compatibility with v0.53" ON)
 option(BUILD_SHARED_LIBS "Build shared library" ON)
 option(CMAKE_VERBOSE_MAKEFILE "Verbose build output" OFF)
 set(EXTRA_CFLAGS "" CACHE STRING "Extra compiler flags")
@@ -48,7 +47,7 @@ set(EXTRA_CFLAGS "" CACHE STRING "Extra compiler flags")
 # add library options to options list (used by print_help target)
 list(APPEND IPSEC_MB_OPTIONS
   AESNI_EMU SAFE_PARAM SAFE_DATA SAFE_LOOKUP
-  SAFE_OPTIONS NO_COMPAT_IMB_API_053 BUILD_SHARED_LIBS
+  SAFE_OPTIONS BUILD_SHARED_LIBS
   CMAKE_VERBOSE_MAKEFILE EXTRA_CFLAGS
 )
 set(IPSEC_MB_OPTIONS ${IPSEC_MB_OPTIONS} PARENT_SCOPE)
@@ -162,7 +161,6 @@ message(STATUS "SAFE_DATA...               ${SAFE_DATA}")
 message(STATUS "SAFE_LOOKUP...             ${SAFE_LOOKUP}")
 message(STATUS "BUILD_SHARED_LIBS...       ${BUILD_SHARED_LIBS}")
 message(STATUS "EXTRA_CFLAGS...            ${EXTRA_CFLAGS}")
-message(STATUS "NO_COMPAT_IMB_API_053...   ${NO_COMPAT_IMB_API_053}")
 message(STATUS "CMAKE_GENERATOR...         ${CMAKE_GENERATOR}")
 message(STATUS "PLATFORM...                ${CMAKE_GENERATOR_PLATFORM}")
 
@@ -187,11 +185,6 @@ endif()
 if(AESNI_EMU)
   list(APPEND LIB_DEFINES AESNI_EMU)
   string(APPEND CMAKE_ASM_NASM_FLAGS " -DAESNI_EMU")
-endif()
-
-# enable backward compatibility
-if(NO_COMPAT_IMB_API_053)
-  list(APPEND LIB_DEFINES NO_COMPAT_IMB_API_053)
 endif()
 
 # enable AVX IFMA support

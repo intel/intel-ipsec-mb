@@ -704,18 +704,14 @@ If you want to change install location then define PREFIX (default C:\Program Fi
 9\. Backwards compatibility
 ===========================
 
-In version 0.54, some symbols have been renamed to avoid too generic names (such as cipher modes or
-hash algorithms).
+In version 1.4, backward compile time symbol compatibility with
+library version 0.53 has been removed.
 
-When building an application and linking it against the IPSec Multi Buffer library,
-by default the old symbols (up to v0.53) are exported, to maintain backwards compatibility.
+Applications are encouraged to use new symbol names introduced in version 0.54.
 
-Applications should move to the new API as soon as possible, as the old symbols
-are marked as deprecated and will be removed in a future release.
-
-For applications which face symbol conflicts due to these old generic names,
-they should be compiled with the flag -DNO_COMPAT_IMB_API_053, which will
-not export the old symbols.
+If required, compatibility symbol mapping can be implemented in the application.
+See compatibility symbol mapping in v1.3 header file:
+https://github.com/intel/intel-ipsec-mb/blob/v1.3/lib/intel-ipsec-mb.h#L246
 
 10\. Disclaimer (ZUC, KASUMI, SNOW3G)
 ====================================

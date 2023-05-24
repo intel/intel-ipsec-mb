@@ -38,7 +38,7 @@ endif()
 
 # set C compiler flags
 set(CMAKE_C_FLAGS
-    "/nologo /DNO_COMPAT_IMB_API_053 /D_CRT_SECURE_NO_WARNINGS /Y- /W3 /WX- /Gm- /fp:precise /EHsc /std:c11 ${EXTRA_CFLAGS}"
+    "/nologo /D_CRT_SECURE_NO_WARNINGS /Y- /W3 /WX- /Gm- /fp:precise /EHsc /std:c11 ${EXTRA_CFLAGS}"
 )
 set(CMAKE_C_FLAGS_DEBUG "/Od /DDEBUG /Z7")
 set(CMAKE_C_FLAGS_RELEASE "/O2 /Oi")
