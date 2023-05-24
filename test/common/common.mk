@@ -80,10 +80,11 @@ LDLIBS = -lIPSec_MB
 
 ifeq ("$(shell test -r $(INSTPATH) && echo -n yes)","yes")
 # library installed
-CFLAGS +=
+$(info INFO: Using system installed library version.)
+CFLAGS += -I../include/
 else
 # library not installed
-CFLAGS +=  -I../../lib/include -I../../lib -I../include/
+CFLAGS += -I../../lib -I../include/
 LDFLAGS += -L$(LIB_DIR)
 endif
 
