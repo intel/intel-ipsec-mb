@@ -45,6 +45,9 @@ endmacro()
 
 # set default project settings
 macro(imb_set_proj_defaults)
+  # flag to force full project build
+  set(FULL_PROJECT_BUILD TRUE)
+
   # set default build type if not specified and not a multi-config generator
   get_property(multi_config_gen GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
   if(NOT CMAKE_BUILD_TYPE
@@ -55,16 +58,60 @@ macro(imb_set_proj_defaults)
         CACHE STRING "Selected build type")
   endif()
 
+  #######################################
+  # set default library options
+  #######################################
+  option(AESNI_EMU "AESNI emulation support" OFF)
+  option(SAFE_PARAM "API input parameter checking" ON)
+  option(SAFE_DATA "Sensitive data cleared from registers and memory at operation end" ON)
+  option(SAFE_LOOKUP "Lookups depending on sensitive data are constant time" ON)
+  option(SAFE_OPTIONS "Enable all safe options" ON)
+  option(NO_COMPAT_IMB_API_053 "Disable compatibility with v0.53" ON)
+  option(BUILD_SHARED_LIBS "Build shared library" ON)
+  option(CMAKE_VERBOSE_MAKEFILE "Verbose build output" OFF)
+  set(EXTRA_CFLAGS "" CACHE STRING "Extra compiler flags")
+
+  # disable all SAFE options when SAFE_OPTIONS false
+  if(NOT SAFE_OPTIONS)
+    message(STATUS "SAFE_OPTIONS disabled")
+    set(SAFE_PARAM OFF)
+    set(SAFE_DATA OFF)
+    set(SAFE_LOOKUP OFF)
+  endif()
+
+  # project options list (used by print_help target)
+  set(IPSEC_MB_OPTIONS CMAKE_BUILD_TYPE IPSEC_MB_OPTIONS
+    AESNI_EMU SAFE_PARAM SAFE_DATA SAFE_LOOKUP
+    SAFE_OPTIONS NO_COMPAT_IMB_API_053 BUILD_SHARED_LIBS
+    CMAKE_VERBOSE_MAKEFILE EXTRA_CFLAGS
+    )
+
   # clear default release build C Compiler Flags
   set(CMAKE_C_FLAGS_RELEASE "" CACHE STRING "" FORCE)
   # clear default debug build C Compiler Flags
   set(CMAKE_C_FLAGS_DEBUG "" CACHE STRING "" FORCE)
 
-  # project options list (used by print_help target)
-  set(IPSEC_MB_OPTIONS CMAKE_BUILD_TYPE)
-
-  # flag to force full project build
-  set(FULL_PROJECT_BUILD TRUE)
+  ########################################
+  # print build information
+  ########################################
+  message(STATUS "AESNI emulation support... ${AESNI_EMU}")
+  message(STATUS "SAFE_OPTIONS...            ${SAFE_OPTIONS}")
+  message(STATUS "SAFE_PARAM...              ${SAFE_PARAM}")
+  message(STATUS "SAFE_DATA...               ${SAFE_DATA}")
+  message(STATUS "SAFE_LOOKUP...             ${SAFE_LOOKUP}")
+  message(STATUS "BUILD_SHARED_LIBS...       ${BUILD_SHARED_LIBS}")
+  message(STATUS "NO_COMPAT_IMB_API_053...   ${NO_COMPAT_IMB_API_053}")
+  message(STATUS "CMAKE_GENERATOR...         ${CMAKE_GENERATOR}")
+  if(${CMAKE_GENERATOR_PLATFORM})
+    message(STATUS "GENERATOR PLATFORM...      ${CMAKE_GENERATOR_PLATFORM}")
+  endif()
+  if (NOT multi_config_gen)
+    message(STATUS "BUILD_TYPE...              ${CMAKE_BUILD_TYPE}")
+    message(STATUS "CMAKE_VERBOSE_MAKEFILE...  ${CMAKE_VERBOSE_MAKEFILE}")
+  endif()
+  if (EXTRA_CFLAGS)
+    message(STATUS "EXTRA_CFLAGS...            ${EXTRA_CFLAGS}")
+  endif()
 
 endmacro()
 

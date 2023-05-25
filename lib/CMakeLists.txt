@@ -33,34 +33,6 @@ if(NOT FULL_PROJECT_BUILD)
 endif()
 
 #######################################
-# set default library options
-#######################################
-option(AESNI_EMU "AESNI emulation support" OFF)
-option(SAFE_PARAM "API input parameter checking" ON)
-option(SAFE_DATA "Sensitive data cleared from registers and memory at operation end" ON)
-option(SAFE_LOOKUP "Lookups depending on sensitive data are constant time" ON)
-option(SAFE_OPTIONS "Enable all safe options" ON)
-option(BUILD_SHARED_LIBS "Build shared library" ON)
-option(CMAKE_VERBOSE_MAKEFILE "Verbose build output" OFF)
-set(EXTRA_CFLAGS "" CACHE STRING "Extra compiler flags")
-
-# add library options to options list (used by print_help target)
-list(APPEND IPSEC_MB_OPTIONS
-  AESNI_EMU SAFE_PARAM SAFE_DATA SAFE_LOOKUP
-  SAFE_OPTIONS BUILD_SHARED_LIBS
-  CMAKE_VERBOSE_MAKEFILE EXTRA_CFLAGS
-)
-set(IPSEC_MB_OPTIONS ${IPSEC_MB_OPTIONS} PARENT_SCOPE)
-
-# disable all SAFE options when SAFE_OPTIONS false
-if(NOT SAFE_OPTIONS)
-  message(STATUS "SAFE_OPTIONS disabled")
-  set(SAFE_PARAM OFF)
-  set(SAFE_DATA OFF)
-  set(SAFE_LOOKUP OFF)
-endif()
-
-#######################################
 # set library directories
 #######################################
 set(DIR_CURRENT ${CMAKE_CURRENT_SOURCE_DIR}/)
@@ -150,19 +122,6 @@ foreach(DIR ${DIR_SOURCES})
 endforeach()
 
 list(SORT SRC_FILES_ASM)
-
-########################################
-# print build information
-########################################
-message(STATUS "AESNI emulation support... ${AESNI_EMU}")
-message(STATUS "SAFE_OPTIONS...            ${SAFE_OPTIONS}")
-message(STATUS "SAFE_PARAM...              ${SAFE_PARAM}")
-message(STATUS "SAFE_DATA...               ${SAFE_DATA}")
-message(STATUS "SAFE_LOOKUP...             ${SAFE_LOOKUP}")
-message(STATUS "BUILD_SHARED_LIBS...       ${BUILD_SHARED_LIBS}")
-message(STATUS "EXTRA_CFLAGS...            ${EXTRA_CFLAGS}")
-message(STATUS "CMAKE_GENERATOR...         ${CMAKE_GENERATOR}")
-message(STATUS "PLATFORM...                ${CMAKE_GENERATOR_PLATFORM}")
 
 ########################################
 # set C compiler options

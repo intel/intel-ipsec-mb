@@ -29,9 +29,6 @@
 
 set(LIB IPSec_MB) # 'lib' prefix assumed on Linux
 
-message(STATUS "BUILD_TYPE...              ${CMAKE_BUILD_TYPE}")
-message(STATUS "CMAKE_VERBOSE_MAKEFILE...  ${CMAKE_VERBOSE_MAKEFILE}")
-
 # set compiler definitions
 list(APPEND LIB_DEFINES LINUX)
 

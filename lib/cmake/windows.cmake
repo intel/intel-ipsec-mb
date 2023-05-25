@@ -34,9 +34,6 @@ if(CMAKE_GENERATOR MATCHES "Visual Studio")
   if(NOT (${CMAKE_GENERATOR_PLATFORM} MATCHES "x64"))
     message(FATAL_ERROR "Only 64-bit platform supported. Re-run with '-A x64' option.")
   endif()
-else()
-  message(STATUS "BUILD_TYPE...              ${CMAKE_BUILD_TYPE}")
-  message(STATUS "CMAKE_VERBOSE_MAKEFILE...  ${CMAKE_VERBOSE_MAKEFILE}")
 endif()
 
 # set NASM flags
