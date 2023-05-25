@@ -44,24 +44,31 @@ set_source_files_properties(${SRC_FILES_ASM} PROPERTIES
 # set C compiler flags
 set(CMAKE_C_FLAGS "/nologo /Y- /W3 /WX- /Gm- /fp:precise /EHsc /std:c11")
 set(CMAKE_C_FLAGS_DEBUG "/Od /DDEBUG /Z7")
-set(CMAKE_C_FLAGS_RELEASE "/O2 /Oi")
 set(CMAKE_SHARED_LINKER_FLAGS "/nologo")
 set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "/RELEASE /DEBUG /OPT:REF /OPT:ICF /INCREMENTAL:NO")
 set(CMAKE_SHARED_LINKER_FLAGS_DEBUG "/DEBUG /INCREMENTAL:NO")
 set(CMAKE_STATIC_LINKER_FLAGS "/nologo /nodefaultlib")
+
+# set compiler optimizaton flags
 set_source_files_properties(
   ${SRC_FILES_AVX_T1} ${SRC_FILES_AVX_T2}
   ${SRC_FILES_AVX2_T1} ${SRC_FILES_AVX2_T2}
   ${SRC_FILES_AVX2_T3} ${SRC_FILES_AVX512_T1}
   ${SRC_FILES_AVX512_T2}
-  PPROPERTIES COMPILE_FLAGS
-  "${CMAKE_C_FLAGS} /arch:AVX")
+  PROPERTIES COMPILE_FLAGS
+  "/arch:AVX $<$<CONFIG:RELEASE>:/Oi /O2>")
+
+set_source_files_properties(
+  ${SRC_FILES_SSE_T1} ${SRC_FILES_SSE_T2}
+  ${SRC_FILES_SSE_T3} ${SRC_FILES_X86_64}
+  PROPERTIES COMPILE_FLAGS
+  "$<$<CONFIG:RELEASE>:/Oi /O2>")
 
 # set AESNI_EMU specific compiler flags
 foreach(FILE ${SRC_FILES_NO_AESNI})
   set_source_files_properties(${FILE} PROPERTIES
     COMPILE_DEFINITIONS "${LIB_DEFINES}"
-    COMPILE_OPTIONS "$<$<CONFIG:RELEASE>:/Od>")
+    COMPILE_FLAGS "$<$<CONFIG:RELEASE>:/Od /Oi>")
 endforeach()
 
 # generate windows DEF file
