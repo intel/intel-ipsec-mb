@@ -69,6 +69,9 @@ imb_add_target_spellcheck()
 # cppcheck and bughunt targets
 imb_add_target_cppcheck_bughunt()
 
+# doxy target to generate documentation
+imb_add_target_doxy()
+
 #######################################
 # configure main project targets
 #######################################

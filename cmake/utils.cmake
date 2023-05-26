@@ -263,3 +263,15 @@ macro(imb_add_target_spellcheck)
       VERBATIM)
   endif()
 endmacro()
+
+# add doxy target
+macro(imb_add_target_doxy)
+  if(NOT WINDOWS)
+    add_custom_target(
+      doxy
+      COMMAND ${CMAKE_COMMAND} -E echo "Generating documentation..."
+      COMMAND bash -c "doxygen api_doxygen.conf"
+      WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/lib
+      VERBATIM)
+  endif()
+endmacro()
