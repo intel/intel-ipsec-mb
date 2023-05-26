@@ -29,7 +29,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;
 
-%include "sse_t1/gcm_sse.inc"
+%include "include/gcm_sse.inc"
 %include "include/imb_job.inc"
 
 %ifndef GCM_API_SSE_INC

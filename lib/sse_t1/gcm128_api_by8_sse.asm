@@ -27,4 +27,4 @@
 ;  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 %define GCM128_MODE 1
-%include "sse_t1/gcm_api_sse.inc"
+%include "include/gcm_api_sse.inc"

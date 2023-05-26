@@ -28,4 +28,4 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 %define GCM192_MODE 1
-%include "sse_t1/gcm_api_sse.inc"
+%include "include/gcm_api_sse.inc"

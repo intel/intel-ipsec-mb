@@ -27,7 +27,7 @@
 ;  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-%include "sse_t1/gcm_sse.inc"
+%include "include/gcm_sse.inc"
 
 %ifndef GCM_SGL_API_SSE_INC
 %define GCM_SGL_API_SSE_INC

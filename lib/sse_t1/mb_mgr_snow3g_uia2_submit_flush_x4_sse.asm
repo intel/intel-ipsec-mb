@@ -30,7 +30,7 @@
 %include "include/mb_mgr_datastruct.inc"
 %include "include/reg_sizes.inc"
 %include "include/clear_regs.inc"
-%include "sse_t1/snow3g_uea2_by4_sse.inc"
+%include "include/snow3g_uea2_by4_sse.inc"
 
 %define SUBMIT_JOB_SNOW3G_UIA2 submit_job_snow3g_uia2_sse
 %define FLUSH_JOB_SNOW3G_UIA2 flush_job_snow3g_uia2_sse

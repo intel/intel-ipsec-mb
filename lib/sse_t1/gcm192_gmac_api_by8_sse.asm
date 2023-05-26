@@ -27,4 +27,4 @@
 ;  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 %define GCM192_MODE 1
-%include "sse_t1/gcm_gmac_api_sse.inc"
+%include "include/gcm_gmac_api_sse.inc"
