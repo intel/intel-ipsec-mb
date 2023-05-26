@@ -32,7 +32,7 @@
 %include "include/reg_sizes.inc"
 %include "include/const.inc"
 %include "include/clear_regs.inc"
-%include "avx512_t2/snow3g_uea2_by16_vaes_avx512.inc"
+%include "include/snow3g_uea2_by16_vaes_avx512.inc"
 
 %ifndef SUBMIT_JOB_SNOW3G_UIA2
 %define SUBMIT_JOB_SNOW3G_UIA2_GEN2     submit_job_snow3g_uia2_vaes_avx512

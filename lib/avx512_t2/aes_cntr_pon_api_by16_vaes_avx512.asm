@@ -28,7 +28,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
-%include "avx512_t2/aes_cntr_by16_vaes_avx512.inc"
+%include "include/aes_cntr_by16_vaes_avx512.inc"
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;void aes_cntr_pon_enc_128_vaes_avx512 (void *src, void *dst, void *iv, void *keys, uint64_t length, uint32_t *bip)

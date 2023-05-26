@@ -28,4 +28,4 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 %define GCM128_MODE 1
-%include "avx512_t2/gcm_gmac_api_vaes_avx512.inc"
+%include "include/gcm_gmac_api_vaes_avx512.inc"

@@ -27,7 +27,7 @@
 ;  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-%include "avx512_t2/gcm_vaes_avx512.inc"
+%include "include/gcm_vaes_avx512.inc"
 %include "include/error.inc"
 %include "include/clear_regs.inc"
 

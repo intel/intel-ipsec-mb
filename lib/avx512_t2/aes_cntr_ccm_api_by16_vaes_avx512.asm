@@ -27,7 +27,7 @@
 ;  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-%include "avx512_t2/aes_cntr_by16_vaes_avx512.inc"
+%include "include/aes_cntr_by16_vaes_avx512.inc"
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;IMB_JOB * aes_cntr_ccm_128_vaes_avx512(IMB_JOB *job)

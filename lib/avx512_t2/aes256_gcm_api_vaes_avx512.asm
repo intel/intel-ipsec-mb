@@ -28,4 +28,4 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 %define GCM256_MODE 1
-%include "avx512_t2/gcm_api_vaes_avx512.inc"
+%include "include/gcm_api_vaes_avx512.inc"
