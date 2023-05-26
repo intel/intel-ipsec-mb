@@ -66,7 +66,6 @@ macro(imb_set_proj_defaults)
   option(SAFE_DATA "Sensitive data cleared from registers and memory at operation end" ON)
   option(SAFE_LOOKUP "Lookups depending on sensitive data are constant time" ON)
   option(SAFE_OPTIONS "Enable all safe options" ON)
-  option(NO_COMPAT_IMB_API_053 "Disable compatibility with v0.53" ON)
   option(BUILD_SHARED_LIBS "Build shared library" ON)
   option(CMAKE_VERBOSE_MAKEFILE "Verbose build output" OFF)
   set(EXTRA_CFLAGS "" CACHE STRING "Extra compiler flags")
@@ -82,7 +81,7 @@ macro(imb_set_proj_defaults)
   # project options list (used by print_help target)
   set(IPSEC_MB_OPTIONS CMAKE_BUILD_TYPE IPSEC_MB_OPTIONS
     AESNI_EMU SAFE_PARAM SAFE_DATA SAFE_LOOKUP
-    SAFE_OPTIONS NO_COMPAT_IMB_API_053 BUILD_SHARED_LIBS
+    SAFE_OPTIONS BUILD_SHARED_LIBS
     CMAKE_VERBOSE_MAKEFILE EXTRA_CFLAGS
     )
 
@@ -100,7 +99,6 @@ macro(imb_set_proj_defaults)
   message(STATUS "SAFE_DATA...               ${SAFE_DATA}")
   message(STATUS "SAFE_LOOKUP...             ${SAFE_LOOKUP}")
   message(STATUS "BUILD_SHARED_LIBS...       ${BUILD_SHARED_LIBS}")
-  message(STATUS "NO_COMPAT_IMB_API_053...   ${NO_COMPAT_IMB_API_053}")
   message(STATUS "CMAKE_GENERATOR...         ${CMAKE_GENERATOR}")
   if(${CMAKE_GENERATOR_PLATFORM})
     message(STATUS "GENERATOR PLATFORM...      ${CMAKE_GENERATOR_PLATFORM}")

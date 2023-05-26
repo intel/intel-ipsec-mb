@@ -49,7 +49,7 @@ set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "/RELEASE /DEBUG /OPT:REF /OPT:ICF /INCREM
 set(CMAKE_SHARED_LINKER_FLAGS_DEBUG "/DEBUG /INCREMENTAL:NO")
 set(CMAKE_STATIC_LINKER_FLAGS "/nologo /nodefaultlib")
 
-# set compiler optimizaton flags
+# set compiler optimization flags
 set_source_files_properties(
   ${SRC_FILES_AVX_T1} ${SRC_FILES_AVX_T2}
   ${SRC_FILES_AVX2_T1} ${SRC_FILES_AVX2_T2}
