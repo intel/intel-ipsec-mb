@@ -666,16 +666,16 @@ mksection .text
 %define %%B0      %4  ; [in/out] ZMM register containing 1st 44-bit limb of the 8 blocks
 %define %%B1      %5  ; [in/out] ZMM register containing 2nd 44-bit limb of the 8 blocks
 %define %%B2      %6  ; [in/out] ZMM register containing 3rd 44-bit limb of the 8 blocks
-%define %%R0      %7  ; [in] ZMM register (R0) to include the 1st limb in IDX
-%define %%R1      %8  ; [in] ZMM register (R1) to include the 2nd limb in IDX
-%define %%R2      %9  ; [in] ZMM register (R2) to include the 3rd limb in IDX
-%define %%R1P     %10 ; [in] ZMM register (R1') to include the 2nd limb (multiplied by 5) in IDX
-%define %%R2P     %11 ; [in] ZMM register (R2') to include the 3rd limb (multiplied by 5) in IDX
-%define %%S0      %12 ; [in] ZMM register (R0) to include the 1st limb in IDX
-%define %%S1      %13 ; [in] ZMM register (R1) to include the 2nd limb in IDX
-%define %%S2      %14 ; [in] ZMM register (R2) to include the 3rd limb in IDX
-%define %%S1P     %15 ; [in] ZMM register (R1') to include the 2nd limb (multiplied by 5) in IDX
-%define %%S2P     %16 ; [in] ZMM register (R2') to include the 3rd limb (multiplied by 5) in IDX
+%define %%R0      %7  ; [in] ZMM register (R0) to include the 1st limb in R
+%define %%R1      %8  ; [in] ZMM register (R1) to include the 2nd limb in R
+%define %%R2      %9  ; [in] ZMM register (R2) to include the 3rd limb in R
+%define %%R1P     %10 ; [in] ZMM register (R1') to include the 2nd limb (multiplied by 5) in R
+%define %%R2P     %11 ; [in] ZMM register (R2') to include the 3rd limb (multiplied by 5) in R
+%define %%S0      %12 ; [in] ZMM register (S0) to include the 1st limb in S
+%define %%S1      %13 ; [in] ZMM register (S1) to include the 2nd limb in S
+%define %%S2      %14 ; [in] ZMM register (S2) to include the 3rd limb in S
+%define %%S1P     %15 ; [in] ZMM register (S1') to include the 2nd limb (multiplied by 5) in S
+%define %%S2P     %16 ; [in] ZMM register (S2') to include the 3rd limb (multiplied by 5) in S
 %define %%P0_L    %17 ; [clobbered] ZMM register to contain p[0] of the 8 blocks
 %define %%P0_H    %18 ; [clobbered] ZMM register to contain p[0] of the 8 blocks
 %define %%P1_L    %19 ; [clobbered] ZMM register to contain p[1] of the 8 blocks
