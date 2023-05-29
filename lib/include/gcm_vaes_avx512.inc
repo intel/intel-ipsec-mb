@@ -771,8 +771,8 @@
 
         ;; calculate HashKeyK = HashKey x POLY
         vpclmulqdq      %%ZT1, %%ZT7, [rel POLY], 0x10
-        vpshufd         %%ZT2, %%ZT7, 01001110b   
-        vpxorq          %%ZT1, %%ZT1, %%ZT2  
+        vpshufd         %%ZT2, %%ZT7, 01001110b
+        vpxorq          %%ZT1, %%ZT1, %%ZT2
         vmovdqu64       [%%GDATA + HashKeyK_4], %%ZT1
         ;; **ZT1 amd ZT2 to be cleared (hash key)
 
@@ -787,8 +787,8 @@
 
         ;; calculate HashKeyX = HashKey x POLY
         vpclmulqdq      %%ZT1, %%ZT7, [rel POLY], 0x10
-        vpshufd         %%ZT2, %%ZT7, 01001110b   
-        vpxorq          %%ZT1, %%ZT1, %%ZT2  
+        vpshufd         %%ZT2, %%ZT7, 01001110b
+        vpxorq          %%ZT1, %%ZT1, %%ZT2
         vmovdqu64       [%%GDATA + HashKeyK_8], %%ZT1
 
         vshufi64x2      %%ZT5, %%ZT7, %%ZT7, 0x00       ;; broadcast HashKey^8 across all ZT5
@@ -803,8 +803,8 @@
 
         ;; calculate HashKeyK = HashKey x POLY
         vpclmulqdq      %%ZT1, %%ZT8, [rel POLY], 0x10
-        vpshufd         %%ZT2, %%ZT8, 01001110b   
-        vpxorq          %%ZT1, %%ZT1, %%ZT2  
+        vpshufd         %%ZT2, %%ZT8, 01001110b
+        vpxorq          %%ZT1, %%ZT1, %%ZT2
         vmovdqu64       [%%GDATA + HashKeyK_ %+ i], %%ZT1
 
 %assign i (i + 4)
@@ -815,8 +815,8 @@
 
         ;; calculate HashKeyK = HashKey x POLY
         vpclmulqdq      %%ZT1, %%ZT7, [rel POLY], 0x10
-        vpshufd         %%ZT2, %%ZT7, 01001110b   
-        vpxorq          %%ZT1, %%ZT1, %%ZT2  
+        vpshufd         %%ZT2, %%ZT7, 01001110b
+        vpxorq          %%ZT1, %%ZT1, %%ZT2
         vmovdqu64       [%%GDATA + HashKeyK_ %+ i], %%ZT1
 
 %assign i (i + 4)
@@ -3450,7 +3450,7 @@
         ;; **ZTMP9 may include sensitive data
 
         ;; fall through here: handling of the rest is identical in both cases
-        
+
 %%_message_below_32_blocks:
         ;; 32 > number of blocks > 16
 
