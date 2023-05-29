@@ -267,99 +267,6 @@ mksection .text
 ;; =============================================================================
 ;; =============================================================================
 ;; Computes hash for 4 16-byte message blocks,
-;; and adds new message blocks to accumulator.
-;;
-;; It first multiplies all 4 blocks with powers of R:
-;;
-;;      a2      a1      a0
-;; ×    b2      b1      b0
-;; ---------------------------------------
-;;     a2×b0   a1×b0   a0×b0
-;; +   a1×b1   a0×b1 5×a2×b1
-;; +   a0×b2 5×a2×b2 5×a1×b2
-;; ---------------------------------------
-;;        p2      p1      p0
-;;
-;; Then, it propagates the carry (higher bits after bit 43) from lower limbs into higher limbs,
-;; multiplying by 5 in case of the carry of p2.
-;;
-%macro POLY1305_MUL_REDUCE_VEC 15
-%define %%A0      %1  ; [in/out] YMM register containing 1st 44-bit limb of the 4 blocks
-%define %%A1      %2  ; [in/out] YMM register containing 2nd 44-bit limb of the 4 blocks
-%define %%A2      %3  ; [in/out] YMM register containing 3rd 44-bit limb of the 4 blocks
-%define %%R0      %4  ; [in] YMM register (R0) to include the 1st limb of R
-%define %%R1      %5  ; [in] YMM register (R1) to include the 2nd limb of R
-%define %%R2      %6  ; [in] YMM register (R2) to include the 3rd limb of R
-%define %%R1P     %7  ; [in] YMM register (R1') to include the 2nd limb of R (multiplied by 5)
-%define %%R2P     %8  ; [in] YMM register (R2') to include the 3rd limb of R (multiplied by 5)
-%define %%P0_L    %9  ; [clobbered] YMM register to contain p[0] of the 4 blocks
-%define %%P0_H    %10 ; [clobbered] YMM register to contain p[0] of the 4 blocks
-%define %%P1_L    %11 ; [clobbered] YMM register to contain p[1] of the 4 blocks
-%define %%P1_H    %12 ; [clobbered] YMM register to contain p[1] of the 4 blocks
-%define %%P2_L    %13 ; [clobbered] YMM register to contain p[2] of the 4 blocks
-%define %%P2_H    %14 ; [clobbered] YMM register to contain p[2] of the 4 blocks
-%define %%YTMP1   %15 ; [clobbered] Temporary YMM register
-
-        ;; Reset accumulator
-        vpxor   %%P0_L, %%P0_L
-        vpxor   %%P0_H, %%P0_H
-        vpxor   %%P1_L, %%P1_L
-        vpxor   %%P1_H, %%P1_H
-        vpxor   %%P2_L, %%P2_L
-        vpxor   %%P2_H, %%P2_H
-
-        ; Reset accumulator and calculate products
-        vpmadd52luq %%P0_L, %%A2, %%R1P
-        vpmadd52huq %%P0_H, %%A2, %%R1P
-        vpmadd52luq %%P1_L, %%A2, %%R2P
-        vpmadd52huq %%P1_H, %%A2, %%R2P
-        vpmadd52luq %%P2_L, %%A2, %%R0
-        vpmadd52huq %%P2_H, %%A2, %%R0
-
-        vpmadd52luq %%P1_L, %%A0, %%R1
-        vpmadd52huq %%P1_H, %%A0, %%R1
-        vpmadd52luq %%P2_L, %%A0, %%R2
-        vpmadd52huq %%P2_H, %%A0, %%R2
-        vpmadd52luq %%P0_L, %%A0, %%R0
-        vpmadd52huq %%P0_H, %%A0, %%R0
-
-        vpmadd52luq %%P0_L, %%A1, %%R2P
-        vpmadd52huq %%P0_H, %%A1, %%R2P
-        vpmadd52luq %%P1_L, %%A1, %%R0
-        vpmadd52huq %%P1_H, %%A1, %%R0
-        vpmadd52luq %%P2_L, %%A1, %%R1
-        vpmadd52huq %%P2_H, %%A1, %%R1
-
-        ; Carry propagation (first pass)
-        vpsrlq  %%YTMP1, %%P0_L, 44
-        vpand   %%A0, %%P0_L, [rel mask_44] ; Clear top 20 bits
-        vpsllq  %%P0_H, 8
-        vpaddq  %%P0_H, %%YTMP1
-        vpaddq  %%P1_L, %%P0_H
-        vpand   %%A1, %%P1_L, [rel mask_44] ; Clear top 20 bits
-        vpsrlq  %%YTMP1, %%P1_L, 44
-        vpsllq  %%P1_H, 8
-        vpaddq  %%P1_H, %%YTMP1
-        vpaddq  %%P2_L, %%P1_H
-        vpand   %%A2, %%P2_L, [rel mask_42] ; Clear top 22 bits
-        vpsrlq  %%YTMP1, %%P2_L, 42
-        vpsllq  %%P2_H, 10
-        vpaddq  %%P2_H, %%YTMP1
-
-        ; Carry propagation (second pass)
-
-        ; Multiply by 5 the highest bits (above 130 bits)
-        vpaddq  %%A0, %%P2_H
-        vpsllq  %%P2_H, 2
-        vpaddq  %%A0, %%P2_H
-        vpsrlq  %%YTMP1, %%A0, 44
-        vpand   %%A0, [rel mask_44]
-        vpaddq  %%A1, %%YTMP1
-%endmacro
-
-;; =============================================================================
-;; =============================================================================
-;; Computes hash for 4 16-byte message blocks,
 ;; and adds new message blocks to accumulator,
 ;; interleaving this computation with the loading and splatting
 ;; of new data.
@@ -522,11 +429,11 @@ mksection .text
 %define %%A0      %1  ; [in/out] YMM register containing 1st 44-bit limb of the 4 blocks
 %define %%A1      %2  ; [in/out] YMM register containing 2nd 44-bit limb of the 4 blocks
 %define %%A2      %3  ; [in/out] YMM register containing 3rd 44-bit limb of the 4 blocks
-%define %%R0      %4  ; [in] YMM register (R0) to include the 1st limb in IDX
-%define %%R1      %5  ; [in] YMM register (R1) to include the 2nd limb in IDX
-%define %%R2      %6  ; [in] YMM register (R2) to include the 3rd limb in IDX
-%define %%R1P     %7  ; [in] YMM register (R1') to include the 2nd limb (multiplied by 5) in IDX
-%define %%R2P     %8  ; [in] YMM register (R2') to include the 3rd limb (multiplied by 5) in IDX
+%define %%R0      %4  ; [in] YMM register/memory (R0) to include the 1st limb of R
+%define %%R1      %5  ; [in] YMM register/memory (R1) to include the 2nd limb of R
+%define %%R2      %6  ; [in] YMM register/memory (R2) to include the 3rd limb of R
+%define %%R1P     %7  ; [in] YMM register/memory (R1') to include the 2nd limb of R (multiplied by 5)
+%define %%R2P     %8  ; [in] YMM register/memory (R2') to include the 3rd limb of R (multiplied by 5)
 %define %%P0_L    %9  ; [clobbered] YMM register to contain p[0] of the 4 blocks
 %define %%P0_H    %10 ; [clobbered] YMM register to contain p[0] of the 4 blocks
 %define %%P1_L    %11 ; [clobbered] YMM register to contain p[1] of the 4 blocks
