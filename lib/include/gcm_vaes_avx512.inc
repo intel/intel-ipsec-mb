@@ -1171,8 +1171,8 @@
 
         ;; XTMP1 = my_ctx_data.partial_block_enc_key
         vmovdqu64       %%XTMP1, [%%GDATA_CTX + PBlockEncKey]
-        vmovdqu64       %%XTMP2, [%%GDATA_KEY + HashKey]
-        vmovdqu64       %%XTMP9, [%%GDATA_KEY + HashKey + HKeyGap]
+        vmovdqu64       %%XTMP2, [%%GDATA_KEY + HashKey_1]
+        vmovdqu64       %%XTMP9, [%%GDATA_KEY + HashKey_1 + HKeyGap]
 
         ;; adjust the shuffle mask pointer to be able to shift right %%LENGTH bytes
         ;; (16 - %%LENGTH) is the number of bytes in plaintext mod 16)
@@ -3678,8 +3678,8 @@
 
         ;; @note: xmm14 is hardcoded for hash input in singe_call case
 
-        vmovdqu         xmm13, [%%GDATA_KEY + HashKey]
-        vmovdqu         xmm6, [%%GDATA_KEY + HashKey + HKeyGap]
+        vmovdqu         xmm13, [%%GDATA_KEY + HashKey_1]
+        vmovdqu         xmm6, [%%GDATA_KEY + HashKey_1 + HKeyGap]
         ;; **xmm13 and xmm6 contain authentication key
 
         ;; Start AES as early as possible
@@ -3798,8 +3798,8 @@
         READ_SMALL_DATA_INPUT_LEN_BT16_AVX512   %%XTMP4, %%PLAIN_IN, %%PLAIN_LEN, \
                                                 %%IA0, %%IA1, %%MASKREG
 
-        vmovdqu64       %%XTMP2, [%%GDATA_KEY + HashKey]
-        vmovdqu64       %%XTMP7, [%%GDATA_KEY + HashKey + HKeyGap]
+        vmovdqu64       %%XTMP2, [%%GDATA_KEY + HashKey_1]
+        vmovdqu64       %%XTMP7, [%%GDATA_KEY + HashKey_1 + HKeyGap]
 
         ;; adjust the shuffle mask pointer to be able to shift right %%LENGTH bytes
         ;; (16 - %%LENGTH) is the number of bytes in plaintext mod 16)

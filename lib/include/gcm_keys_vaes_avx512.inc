@@ -66,7 +66,6 @@
 %xdefine HashKey_3      ((16 * 29) + HKeyStart) ; HashKey^3 <<1 mod poly
 %xdefine HashKey_2      ((16 * 30) + HKeyStart) ; HashKey^2 <<1 mod poly
 %xdefine HashKey_1      ((16 * 31) + HKeyStart) ; HashKey <<1 mod poly
-%xdefine HashKey        ((16 * 31) + HKeyStart) ; HashKey <<1 mod poly
 
 %xdefine HKeyGap (16 * 32)
 ;; (HashKey^n mode POLY) x POLY constants
@@ -103,6 +102,5 @@
 %xdefine HashKeyK_3     (HashKey_3 + HKeyGap)  ; (HashKey^3 <<1 mod poly) x POLY
 %xdefine HashKeyK_2     (HashKey_2 + HKeyGap)  ; (HashKey^2 <<1 mod poly) x POLY
 %xdefine HashKeyK_1     (HashKey_1 + HKeyGap)  ; (HashKey <<1 mod poly) x POLY
-%xdefine HashKeyK       (HashKey + HKeyGap)    ; (HashKey <<1 mod poly) x POLY
 
 %endif ; GCM_KEYS_VAES_AVX512_INCLUDED
