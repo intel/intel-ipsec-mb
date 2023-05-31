@@ -8,12 +8,26 @@
 
 ## Overview
 
-TBD
+The [ACVP](https://pages.nist.gov/ACVP/draft-fussell-acvp-spec.html)
+(Automated Cryptographic Validation Protocol) test application performs
+validation of NIST-approved cryptographic algorithms as part of the
+[CAVP](https://csrc.nist.gov/projects/cryptographic-algorithm-validation-program)
+(Cryptographic Algorithm Validation Program).
 
 ## Usage
 
-Usage:
-    `./imb-acvp --help`   This option will display extensive help page.
-    Please refer to "--help" option for usage details
+Before running the application, ensure the library is installed by following the instructions
+in the [README](https://github.com/intel/intel-ipsec-mb/tree/main/test#library-installation).
 
+### Linux
+To perform AES-GCM validation:  
+`./imb-acvp --req AES-GCM-req.json --resp AES-GCM-resp.json`  
 
+To perform AES-GCM validation for AVX512 architecture only:  
+`./imb-acvp --req AES-GCM-req.json --resp AES-GCM-resp.json --arch AVX512`  
+
+To display an extensive help page:  
+`./imb-acvp --help` 
+
+### Windows
+Not currently supported.
