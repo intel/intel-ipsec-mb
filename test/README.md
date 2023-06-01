@@ -9,7 +9,7 @@
 
 The test directory contains multiple applications for testing the Intel(R) Multi-Buffer Crypto for IPsec Library.
 Applications perform various types of testing such as Known Answer Tests (KAT), API input validation, fuzz testing and more.
-Test application usage is documented in their README files, and assume the library installed.
+Test application usage is documented in their README files, and assume the library is installed.
 For instructions to install the library, see the Library Installation section below.
 
 ## Library Installation
