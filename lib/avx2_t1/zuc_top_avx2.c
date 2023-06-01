@@ -79,15 +79,19 @@ keygen_8(ZucState8_t *state, uint32_t **pKeyStrArr,
                         asm_ZucGenKeystream4B_8_gfni_avx2(state, pKeyStrArr);
                 else if (numKeyStrBytes == 8)
                         asm_ZucGenKeystream8B_8_gfni_avx2(state, pKeyStrArr);
-                else /* 16 */
+                else if (numKeyStrBytes == 16)
                         asm_ZucGenKeystream16B_8_gfni_avx2(state, pKeyStrArr);
+                else /* 32 */
+                        asm_ZucGenKeystream32B_8_gfni_avx2(state, pKeyStrArr);
         } else {
                 if (numKeyStrBytes == 4)
                         asm_ZucGenKeystream4B_8_avx2(state, pKeyStrArr);
                 else if (numKeyStrBytes == 8)
                         asm_ZucGenKeystream8B_8_avx2(state, pKeyStrArr);
-                else /* 16 */
+                else if (numKeyStrBytes == 16)
                         asm_ZucGenKeystream16B_8_avx2(state, pKeyStrArr);
+                else /* 32 */
+                        asm_ZucGenKeystream32B_8_avx2(state, pKeyStrArr);
         }
 }
 
@@ -788,13 +792,7 @@ void _zuc_eia3_8_buffer_job(const void * const pKey[NUM_AVX2_BUFS],
         init_8(&keys, ivs, &state, 128, 0, NULL, use_gfni);
 
         /* Generate 32 bytes at a time */
-        if (use_gfni) {
-                /* Generate 32 bytes at a time */
-                asm_ZucGenKeystream32B_8_gfni_avx2(&state, pKeyStrArr);
-        } else {
-                /* Generate 32 bytes at a time */
-                asm_ZucGenKeystream32B_8_avx2(&state, pKeyStrArr);
-        }
+        keygen_8(&state, pKeyStrArr, 32, use_gfni);
 
         /* Point at the next 32 bytes of the key */
         for (i = 0; i < NUM_AVX2_BUFS; i++)
@@ -804,21 +802,11 @@ void _zuc_eia3_8_buffer_job(const void * const pKey[NUM_AVX2_BUFS],
                 remainCommonBits -= keyStreamLengthInBits;
                 numKeyStr++;
                 /* Generate the next key stream 8 bytes or 32 bytes */
-                if (use_gfni) {
-                        if (!remainCommonBits && allCommonBits)
-                                asm_ZucGenKeystream8B_8_gfni_avx2(&state,
-                                                                 pKeyStrArr);
-                        else
-                                asm_ZucGenKeystream32B_8_gfni_avx2(&state,
-                                                                  pKeyStrArr);
-                } else {
-                        if (!remainCommonBits && allCommonBits)
-                                asm_ZucGenKeystream8B_8_avx2(&state,
-                                                            pKeyStrArr);
-                        else
-                                asm_ZucGenKeystream32B_8_avx2(&state,
-                                                             pKeyStrArr);
-                }
+                if (!remainCommonBits && allCommonBits)
+                        keygen_8(&state, pKeyStrArr, 8, use_gfni);
+                else
+                        keygen_8(&state, pKeyStrArr, 32, use_gfni);
+
                 for (i = 0; i < NUM_AVX2_BUFS; i++) {
                         if (job_in_lane[i] == NULL)
                                 continue;
@@ -958,12 +946,7 @@ void _zuc256_eia3_8_buffer_job(const void * const pKey[NUM_AVX2_BUFS],
         init_8(&keys, ivs, &state, 256, tag_size, T, use_gfni);
 
         /* Generate 32 bytes at a time */
-        if (use_gfni)
-                /* Generate 32 bytes at a time */
-                asm_ZucGenKeystream32B_8_gfni_avx2(&state, pKeyStrArr);
-        else
-                /* Generate 32 bytes at a time */
-                asm_ZucGenKeystream32B_8_avx2(&state, pKeyStrArr);
+        keygen_8(&state, pKeyStrArr, 32, use_gfni);
 
         /* Point at the next 32 bytes of the key */
         for (i = 0; i < NUM_AVX2_BUFS; i++)
@@ -973,11 +956,10 @@ void _zuc256_eia3_8_buffer_job(const void * const pKey[NUM_AVX2_BUFS],
                 remainCommonBits -= keyStreamLengthInBits;
                 numKeyStr++;
                 /* Generate the next key stream 4/8/16 bytes or 32 bytes */
-                if (!remainCommonBits && allCommonBits) {
+                if (!remainCommonBits && allCommonBits)
                         keygen_8(&state, pKeyStrArr, tag_size, use_gfni);
-                } else
-                        asm_ZucGenKeystream32B_8_avx2(&state,
-                                                      (uint32_t **)pKeyStrArr);
+                else
+                        keygen_8(&state, (uint32_t **)pKeyStrArr, 32, use_gfni);
                 for (i = 0; i < NUM_AVX2_BUFS; i++) {
                         void *tag = (void *) &T[i*tag_size];
 
