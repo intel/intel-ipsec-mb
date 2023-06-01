@@ -89,7 +89,7 @@ int ghash_test(struct IMB_MGR *mb_mgr)
 
 			if (!use_job_api) {
 				IMB_GHASH(mb_mgr, &gdata_key, vec->msg,
-					  (vec->msgSize / 8), T_test, vec->tagSize);
+					  (vec->msgSize / 8), T_test, vec->tagSize / 8);
 			} else {
 				IMB_JOB *job = IMB_GET_NEXT_JOB(mb_mgr);
 
@@ -107,7 +107,7 @@ int ghash_test(struct IMB_MGR *mb_mgr)
 				job->msg_len_to_hash_in_bytes = (vec->msgSize / 8);
 				job->hash_start_src_offset_in_bytes = UINT64_C(0);
 				job->auth_tag_output = T_test;
-				job->auth_tag_output_len_in_bytes = vec->tagSize;
+				job->auth_tag_output_len_in_bytes = vec->tagSize / 8;
 
 				job = IMB_SUBMIT_JOB(mb_mgr);
 
@@ -119,7 +119,7 @@ int ghash_test(struct IMB_MGR *mb_mgr)
 					fprintf(stderr, "failed job, status:%d\n", job->status);
 			}
 
-			if (check_data(T_test, vec->tag, vec->tagSize, "generated tag (T)"))
+			if (check_data(T_test, vec->tag, vec->tagSize / 8, "generated tag (T)"))
 				test_suite_update(&ts, 0, 1);
 			else
 				test_suite_update(&ts, 1, 0);

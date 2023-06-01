@@ -52,11 +52,11 @@ hmac_md5_job_ok(const struct mac_test *vec,
         }
 
         /* hash checks */
-        if (memcmp(padding, &auth[sizeof_padding + vec->tagSize],
+        if (memcmp(padding, &auth[sizeof_padding + (vec->tagSize / 8)],
                    sizeof_padding)) {
                 printf("hash overwrite tail\n");
                 hexdump(stderr, "Target",
-                        &auth[sizeof_padding + vec->tagSize],
+                        &auth[sizeof_padding + (vec->tagSize / 8)],
                         sizeof_padding);
                 return 0;
         }
@@ -68,12 +68,12 @@ hmac_md5_job_ok(const struct mac_test *vec,
         }
 
         if (memcmp(vec->tag, &auth[sizeof_padding],
-                   vec->tagSize)) {
+                   vec->tagSize / 8)) {
                 printf("hash mismatched\n");
                 hexdump(stderr, "Received", &auth[sizeof_padding],
-                        vec->tagSize);
+                        vec->tagSize / 8);
                 hexdump(stderr, "Expected", vec->tag,
-                        vec->tagSize);
+                        vec->tagSize / 8);
                 return 0;
         }
         return 1;
@@ -101,7 +101,7 @@ test_hmac_md5(struct IMB_MGR *mb_mgr,
 
         for (i = 0; i < num_jobs; i++) {
                 const size_t alloc_len =
-                        vec->tagSize + (sizeof(padding) * 2);
+                        (vec->tagSize / 8) + (sizeof(padding) * 2);
 
                 auths[i] = malloc(alloc_len);
                 if (auths[i] == NULL) {
@@ -111,7 +111,7 @@ test_hmac_md5(struct IMB_MGR *mb_mgr,
                 memset(auths[i], -1, alloc_len);
         }
 
-        imb_hmac_ipad_opad(mb_mgr, IMB_AUTH_MD5, vec->key, vec->keySize,
+        imb_hmac_ipad_opad(mb_mgr, IMB_AUTH_MD5, vec->key, vec->keySize / 8,
                            ipad_hash, opad_hash);
 
         /* empty the manager */
@@ -127,7 +127,7 @@ test_hmac_md5(struct IMB_MGR *mb_mgr,
                 job->dst = NULL;
                 job->key_len_in_bytes = 0;
                 job->auth_tag_output = auths[i] + sizeof(padding);
-                job->auth_tag_output_len_in_bytes = vec->tagSize;
+                job->auth_tag_output_len_in_bytes = vec->tagSize / 8;
                 job->iv = NULL;
                 job->iv_len_in_bytes = 0;
                 job->src = (const void *) vec->msg;
@@ -206,15 +206,15 @@ test_hmac_md5_std_vectors(struct IMB_MGR *mb_mgr,
                         printf("RFC2202 Test Case %zu key_len:%zu "
                                "data_len:%zu digest_len:%zu\n",
                                v->tcId,
-                               v->keySize,
+                               v->keySize / 8,
                                v->msgSize / 8,
-                               v->tagSize);
+                               v->tagSize / 8);
 #else
                         printf(".");
 #endif
                 }
                 /* No functionality for keys larger than block size */
-                if (v->keySize > IMB_MD5_BLOCK_SIZE) {
+                if ((v->keySize / 8) > IMB_MD5_BLOCK_SIZE) {
 #ifdef DEBUG
                         if (!quiet_mode)
                                 printf("Skipped vector %zu, "

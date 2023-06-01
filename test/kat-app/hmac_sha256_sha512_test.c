@@ -73,11 +73,11 @@ hmac_shax_job_ok(const struct mac_test *vec,
         }
 
         /* hash checks */
-        if (memcmp(padding, &auth[sizeof_padding + vec->tagSize],
+        if (memcmp(padding, &auth[sizeof_padding + (vec->tagSize / 8)],
                    sizeof_padding)) {
                 printf("hash overwrite tail\n");
                 hexdump(stderr, "Target",
-                        &auth[sizeof_padding + vec->tagSize],
+                        &auth[sizeof_padding + (vec->tagSize / 8)],
                         sizeof_padding);
                 return 0;
         }
@@ -88,10 +88,10 @@ hmac_shax_job_ok(const struct mac_test *vec,
                 return 0;
         }
 
-        if (memcmp(p_digest, &auth[sizeof_padding], vec->tagSize)) {
+        if (memcmp(p_digest, &auth[sizeof_padding], vec->tagSize / 8)) {
                 printf("hash mismatched\n");
-                hexdump(stderr, "Received", &auth[sizeof_padding], vec->tagSize);
-                hexdump(stderr, "Expected", p_digest, vec->tagSize);
+                hexdump(stderr, "Received", &auth[sizeof_padding], vec->tagSize / 8);
+                hexdump(stderr, "Expected", p_digest, vec->tagSize / 8);
                 return 0;
         }
         return 1;
@@ -150,7 +150,7 @@ test_hmac_shax(struct IMB_MGR *mb_mgr,
 
         for (i = 0; i < num_jobs; i++) {
                 const size_t alloc_len =
-                        vec->tagSize + (sizeof(padding) * 2);
+                        (vec->tagSize / 8) + (sizeof(padding) * 2);
 
                 auths[i] = malloc(alloc_len);
                 if (auths[i] == NULL) {
@@ -160,7 +160,7 @@ test_hmac_shax(struct IMB_MGR *mb_mgr,
                 memset(auths[i], -1, alloc_len);
         }
         imb_hmac_ipad_opad(mb_mgr, hash_type, vec->key,
-                           vec->keySize, ipad_hash, opad_hash);
+                           vec->keySize / 8, ipad_hash, opad_hash);
 
         /* empty the manager */
         while (IMB_FLUSH_JOB(mb_mgr) != NULL)
@@ -175,7 +175,7 @@ test_hmac_shax(struct IMB_MGR *mb_mgr,
                 job->dst = NULL;
                 job->key_len_in_bytes = 0;
                 job->auth_tag_output = auths[i] + sizeof(padding);
-                job->auth_tag_output_len_in_bytes = vec->tagSize;
+                job->auth_tag_output_len_in_bytes = vec->tagSize / 8;
                 job->iv = NULL;
                 job->iv_len_in_bytes = 0;
                 job->src = (const void *) vec->msg;
@@ -304,7 +304,7 @@ test_hmac_shax_burst(struct IMB_MGR *mb_mgr,
 
         for (i = 0; i < num_jobs; i++) {
                 const size_t alloc_len =
-                        vec->tagSize + (sizeof(padding) * 2);
+                        (vec->tagSize / 8) + (sizeof(padding) * 2);
 
                 auths[i] = malloc(alloc_len);
                 if (auths[i] == NULL) {
@@ -315,7 +315,7 @@ test_hmac_shax_burst(struct IMB_MGR *mb_mgr,
         }
 
         imb_hmac_ipad_opad(mb_mgr, hash_type, vec->key,
-                           vec->keySize, ipad_hash, opad_hash);
+                           vec->keySize / 8, ipad_hash, opad_hash);
 
         while (IMB_GET_NEXT_BURST(mb_mgr, num_jobs, jobs) < num_jobs)
                 IMB_FLUSH_BURST(mb_mgr, num_jobs, jobs);
@@ -329,7 +329,7 @@ test_hmac_shax_burst(struct IMB_MGR *mb_mgr,
                 job->dst = NULL;
                 job->key_len_in_bytes = 0;
                 job->auth_tag_output = auths[i] + sizeof(padding);
-                job->auth_tag_output_len_in_bytes = vec->tagSize;
+                job->auth_tag_output_len_in_bytes = vec->tagSize / 8;
                 job->iv = NULL;
                 job->iv_len_in_bytes = 0;
                 job->src = (const void *) vec->msg;
@@ -470,7 +470,7 @@ test_hmac_shax_hash_burst(struct IMB_MGR *mb_mgr,
 
         for (i = 0; i < num_jobs; i++) {
                 const size_t alloc_len =
-                        vec->tagSize + (sizeof(padding) * 2);
+                        (vec->tagSize / 8) + (sizeof(padding) * 2);
 
                 auths[i] = malloc(alloc_len);
                 if (auths[i] == NULL) {
@@ -481,7 +481,7 @@ test_hmac_shax_hash_burst(struct IMB_MGR *mb_mgr,
         }
 
         imb_hmac_ipad_opad(mb_mgr, hash_type, vec->key,
-                           vec->keySize, ipad_hash, opad_hash);
+                           vec->keySize / 8, ipad_hash, opad_hash);
 
         for (i = 0; i < num_jobs; i++) {
                 job = &jobs[i];
@@ -492,7 +492,7 @@ test_hmac_shax_hash_burst(struct IMB_MGR *mb_mgr,
                 job->dst = NULL;
                 job->key_len_in_bytes = 0;
                 job->auth_tag_output = auths[i] + sizeof(padding);
-                job->auth_tag_output_len_in_bytes = vec->tagSize;
+                job->auth_tag_output_len_in_bytes = vec->tagSize / 8;
                 job->iv = NULL;
                 job->iv_len_in_bytes = 0;
                 job->src = (const void *) vec->msg;
@@ -605,7 +605,7 @@ test_hmac_shax_std_vectors(struct IMB_MGR *mb_mgr,
                         printf("RFC4231 Test Case %zu key_len:%zu "
                                "data_len:%zu\n",
                                v->tcId,
-                               v->keySize,
+                               v->keySize / 8,
                                v->msgSize / 8);
 #else
                         printf(".");
@@ -613,10 +613,10 @@ test_hmac_shax_std_vectors(struct IMB_MGR *mb_mgr,
                 }
                 /* @todo add truncation functionality to hmac_sha224 to hmac_sha 512*/
                 const int flag =
-                        ((sha_type == 224 && v->tagSize != IMB_SHA224_DIGEST_SIZE_IN_BYTES) ||
-                        (sha_type == 256 && v->tagSize != IMB_SHA256_DIGEST_SIZE_IN_BYTES) ||
-                        (sha_type == 384 && v->tagSize != IMB_SHA384_DIGEST_SIZE_IN_BYTES) ||
-                        (sha_type == 512 && v->tagSize != IMB_SHA512_DIGEST_SIZE_IN_BYTES));
+                        ((sha_type == 224 && (v->tagSize / 8) != IMB_SHA224_DIGEST_SIZE_IN_BYTES) ||
+                        (sha_type == 256 && (v->tagSize / 8) != IMB_SHA256_DIGEST_SIZE_IN_BYTES) ||
+                        (sha_type == 384 && (v->tagSize / 8) != IMB_SHA384_DIGEST_SIZE_IN_BYTES) ||
+                        (sha_type == 512 && (v->tagSize / 8) != IMB_SHA512_DIGEST_SIZE_IN_BYTES));
 
                 if (flag) {
 #ifdef DEBUG

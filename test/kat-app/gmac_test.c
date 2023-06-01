@@ -131,28 +131,28 @@ gmac_test_vector(IMB_MGR *mb_mgr,
         struct gcm_key_data key;
         struct gcm_context_data ctx;
         const uint8_t *iv = (const void *) vector->iv;
-        const uint64_t iv_len = vector->ivSize;
+        const uint64_t iv_len = vector->ivSize / 8;
         const uint64_t nb_segs = ((vector->msgSize / 8) / seg_size);
         const uint64_t last_partial_seg = ((vector->msgSize / 8) % seg_size);
         const uint8_t *in_ptr = (const void *) vector->msg;
         uint8_t T_test[16];
         struct test_suite_context *ts = ts128;
 
-        if (vector->keySize ==  IMB_KEY_192_BYTES)
+        if ((vector->keySize / 8) ==  IMB_KEY_192_BYTES)
                 ts = ts192;
 
-        if (vector->keySize ==  IMB_KEY_256_BYTES)
+        if ((vector->keySize / 8) ==  IMB_KEY_256_BYTES)
                 ts = ts256;
 
         memset(&key, 0, sizeof(struct gcm_key_data));
         if (job_api) {
-                aes_gmac_job(mb_mgr, (const void *) vector->key, &key, vector->keySize, in_ptr,
-                             seg_size, iv, iv_len, T_test, vector->tagSize);
+                aes_gmac_job(mb_mgr, (const void *) vector->key, &key, vector->keySize / 8, in_ptr,
+                             seg_size, iv, iv_len, T_test, vector->tagSize / 8);
         } else {
                 uint8_t in_seg[MAX_SEG_SIZE];
                 uint32_t i;
 
-                switch (vector->keySize) {
+                switch (vector->keySize / 8) {
                 case IMB_KEY_128_BYTES:
                         IMB_AES128_GCM_PRE(mb_mgr, vector->key, &key);
                         IMB_AES128_GMAC_INIT(mb_mgr, &key, &ctx, iv, iv_len);
@@ -173,7 +173,7 @@ gmac_test_vector(IMB_MGR *mb_mgr,
                         }
 
                         IMB_AES128_GMAC_FINALIZE(mb_mgr, &key, &ctx, T_test,
-                                                 vector->tagSize);
+                                                 vector->tagSize / 8);
                         break;
                 case IMB_KEY_192_BYTES:
                         IMB_AES192_GCM_PRE(mb_mgr, vector->key, &key);
@@ -195,7 +195,7 @@ gmac_test_vector(IMB_MGR *mb_mgr,
                         }
 
                         IMB_AES192_GMAC_FINALIZE(mb_mgr, &key, &ctx, T_test,
-                                                 vector->tagSize);
+                                                 vector->tagSize / 8);
                         break;
                 case IMB_KEY_256_BYTES:
                 default:
@@ -218,12 +218,13 @@ gmac_test_vector(IMB_MGR *mb_mgr,
                         }
 
                         IMB_AES256_GMAC_FINALIZE(mb_mgr, &key, &ctx, T_test,
-                                                 vector->tagSize);
+                                                 vector->tagSize / 8);
                         break;
                 }
         }
 
-        if (check_data(T_test, (const void *) vector->tag, vector->tagSize, "generated tag (T)"))
+        if (check_data(T_test, (const void *) vector->tag,
+            vector->tagSize / 8, "generated tag (T)"))
                 test_suite_update(ts, 0, 1);
         else
                 test_suite_update(ts, 1, 0);
