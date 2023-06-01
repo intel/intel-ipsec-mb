@@ -556,11 +556,13 @@ IMB_JOB *aead_chacha20_poly1305_sgl(IMB_JOB *job, const IMB_ARCH arch,
                 break;
         case IMB_SGL_ALL:
         default:
-                init_chacha20_poly1305_direct(job->enc_keys,
-                                              ctx,
-                                              job->iv, job->u.CHACHA20_POLY1305.aad,
-                                              job->u.CHACHA20_POLY1305.aad_len_in_bytes,
-                                              arch, 0, ifma);
+                init_chacha20_poly1305_direct(
+                                      job->enc_keys,
+                                      ctx,
+                                      job->iv,
+                                      job->u.CHACHA20_POLY1305.aad,
+                                      job->u.CHACHA20_POLY1305.aad_len_in_bytes,
+                                      arch, 0, ifma);
                 for (i = 0; i < job->num_sgl_io_segs; i++)
                         update_chacha20_poly1305_direct(job->enc_keys,
                                                         ctx,
@@ -572,9 +574,9 @@ IMB_JOB *aead_chacha20_poly1305_sgl(IMB_JOB *job, const IMB_ARCH arch,
                                                         0, ifma);
 
                 finalize_chacha20_poly1305_direct(ctx,
-                                                  job->auth_tag_output,
-                                                  job->auth_tag_output_len_in_bytes,
-                                                  arch, 0, ifma);
+                                              job->auth_tag_output,
+                                              job->auth_tag_output_len_in_bytes,
+                                              arch, 0, ifma);
                 /* Clear sensitive data from the context */
 #ifdef SAFE_DATA
                 clear_mem(ctx->last_ks, sizeof(ctx->last_ks));
@@ -931,26 +933,31 @@ void update_dec_chacha20_poly1305_fma_avx512(const void *key,
 void finalize_chacha20_poly1305_sse(struct chacha20_poly1305_context_data *ctx,
                                     void *tag, const uint64_t tag_len)
 {
-        finalize_chacha20_poly1305_direct(ctx, tag, tag_len, IMB_ARCH_SSE, 1, 0);
+        finalize_chacha20_poly1305_direct(ctx, tag, tag_len,
+                                          IMB_ARCH_SSE, 1, 0);
 }
 
 void finalize_chacha20_poly1305_avx(struct chacha20_poly1305_context_data *ctx,
                                     void *tag, const uint64_t tag_len)
 {
-        finalize_chacha20_poly1305_direct(ctx, tag, tag_len, IMB_ARCH_AVX, 1, 0);
+        finalize_chacha20_poly1305_direct(ctx, tag, tag_len,
+                                          IMB_ARCH_AVX, 1, 0);
 }
 
 void finalize_chacha20_poly1305_avx2(struct chacha20_poly1305_context_data *ctx,
                                          void *tag, const uint64_t tag_len)
 {
-        finalize_chacha20_poly1305_direct(ctx, tag, tag_len, IMB_ARCH_AVX2, 1, 0);
+        finalize_chacha20_poly1305_direct(ctx, tag, tag_len,
+                                          IMB_ARCH_AVX2, 1, 0);
 }
 
 #ifdef AVX_IFMA
-void finalize_chacha20_poly1305_fma_avx2(struct chacha20_poly1305_context_data *ctx,
+void finalize_chacha20_poly1305_fma_avx2(struct
+                                         chacha20_poly1305_context_data *ctx,
                                          void *tag, const uint64_t tag_len)
 {
-        finalize_chacha20_poly1305_direct(ctx, tag, tag_len, IMB_ARCH_AVX2, 1, 1);
+        finalize_chacha20_poly1305_direct(ctx, tag, tag_len,
+                                          IMB_ARCH_AVX2, 1, 1);
 }
 #endif
 

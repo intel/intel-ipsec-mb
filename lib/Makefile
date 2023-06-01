@@ -1120,7 +1120,7 @@ CHECKPATCH_FLAGS = --no-tree --no-signoff --emacs --no-color --ignore CODE_INDEN
 	$(CHECKPATCH) $(CHECKPATCH_FLAGS) -f $<
 
 SOURCES_DIRS := . sse avx avx2 avx512 include no-aesni
-SOURCES := $(foreach dir,$(SOURCES_DIRS),$(wildcard $(dir)/*.[ch]) $(wildcard $(dir)/*.asm) $(wildcard $(dir)/*.inc))
+SOURCES := $(foreach dir,$(SOURCES_DIRS),$(wildcard $(dir)/**/*.[ch]) $(wildcard $(dir)/**/*.asm) $(wildcard $(dir)/**/*.inc))
 SOURCES_STYLE := $(foreach infile,$(SOURCES),$(infile)_style_check)
 
 .PHONY: style

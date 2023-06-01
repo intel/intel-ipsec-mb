@@ -436,10 +436,14 @@ init_mb_mgr_avx2_t3_internal(IMB_MGR *state, const int reset_mgrs)
         state->crc8_wimax_ofdma_hcs = crc8_wimax_ofdma_hcs_avx;
 
 #ifdef AVX_IFMA
-        state->chacha20_poly1305_init = init_chacha20_poly1305_fma_avx2;
-        state->chacha20_poly1305_enc_update = update_enc_chacha20_poly1305_fma_avx2;
-        state->chacha20_poly1305_dec_update = update_dec_chacha20_poly1305_fma_avx2;
-        state->chacha20_poly1305_finalize = finalize_chacha20_poly1305_fma_avx2;
+        state->chacha20_poly1305_init =
+                init_chacha20_poly1305_fma_avx2;
+        state->chacha20_poly1305_enc_update =
+                update_enc_chacha20_poly1305_fma_avx2;
+        state->chacha20_poly1305_dec_update =
+                update_dec_chacha20_poly1305_fma_avx2;
+        state->chacha20_poly1305_finalize =
+                finalize_chacha20_poly1305_fma_avx2;
 #endif
 
         state->gcm128_enc          = aes_gcm_enc_128_avx_gen4;

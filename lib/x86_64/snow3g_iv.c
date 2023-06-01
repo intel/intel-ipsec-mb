@@ -83,10 +83,12 @@ snow3g_f9_iv_gen(const uint32_t count, const uint32_t fresh,
          */
         /* IV[3] = FRESH ^ (DIRECTION[0] << 17) */
         const uint32_t dir_b15 = dir ? (1UL << 15) : 0;
-        iv32[3] = bswap4(fresh ^ dir_b15);
 
         /* IV[2] = DIRECTION[0] ^ COUNT[0-31] */
         const uint32_t dir_b31 = dir ? (1UL << 31) : 0;
+
+        iv32[3] = bswap4(fresh ^ dir_b15);
+
         iv32[2] = bswap4(count ^ dir_b31);
 
         /* IV[1] = FRESH */

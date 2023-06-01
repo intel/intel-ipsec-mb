@@ -184,7 +184,7 @@ sha256_ni_x1:
         shl             lane, 5
 	movdqu		STATE0, [args + lane]
 	movdqu		STATE1,	[args + lane + 16]
- 
+
 	pshufd		STATE0, STATE0, 0xB1	; CDAB
 	pshufd		STATE1, STATE1, 0x1B	; EFGH
 	movdqa		MSGTMP4, STATE0

@@ -120,10 +120,13 @@
 #define AES_CBC_DEC_256       aes_cbc_dec_256_vaes_avx512
 
 /* AES-CBCS */
-#define SUBMIT_JOB_AES128_CBCS_1_9_ENC submit_job_aes128_cbcs_1_9_enc_vaes_avx512
-#define FLUSH_JOB_AES128_CBCS_1_9_ENC  flush_job_aes128_cbcs_1_9_enc_vaes_avx512
-#define SUBMIT_JOB_AES128_CBCS_1_9_DEC submit_job_aes128_cbcs_1_9_dec_vaes_avx512
-#define AES_CBCS_1_9_DEC_128           aes_cbcs_1_9_dec_128_vaes_avx512
+#define SUBMIT_JOB_AES128_CBCS_1_9_ENC \
+        submit_job_aes128_cbcs_1_9_enc_vaes_avx512
+#define FLUSH_JOB_AES128_CBCS_1_9_ENC  \
+        flush_job_aes128_cbcs_1_9_enc_vaes_avx512
+#define SUBMIT_JOB_AES128_CBCS_1_9_DEC \
+        submit_job_aes128_cbcs_1_9_dec_vaes_avx512
+#define AES_CBCS_1_9_DEC_128 aes_cbcs_1_9_dec_128_vaes_avx512
 
 /* AES-ECB */
 #define SUBMIT_JOB_AES_ECB_128_ENC submit_job_aes_ecb_128_enc_avx512
@@ -341,12 +344,18 @@ submit_job_docsis256_sec_crc_dec_vaes_avx512(MB_MGR_DOCSIS_AES_OOO *state,
         return job;
 }
 
-#define SUBMIT_JOB_DOCSIS128_SEC_CRC_ENC submit_job_aes_docsis128_enc_crc32_vaes_avx512
-#define SUBMIT_JOB_DOCSIS256_SEC_CRC_ENC submit_job_aes_docsis256_enc_crc32_vaes_avx512
-#define FLUSH_JOB_DOCSIS128_SEC_CRC_ENC flush_job_aes_docsis128_enc_crc32_vaes_avx512
-#define FLUSH_JOB_DOCSIS256_SEC_CRC_ENC flush_job_aes_docsis256_enc_crc32_vaes_avx512
-#define SUBMIT_JOB_DOCSIS128_SEC_CRC_DEC submit_job_docsis128_sec_crc_dec_vaes_avx512
-#define SUBMIT_JOB_DOCSIS256_SEC_CRC_DEC submit_job_docsis256_sec_crc_dec_vaes_avx512
+#define SUBMIT_JOB_DOCSIS128_SEC_CRC_ENC \
+        submit_job_aes_docsis128_enc_crc32_vaes_avx512
+#define SUBMIT_JOB_DOCSIS256_SEC_CRC_ENC \
+        submit_job_aes_docsis256_enc_crc32_vaes_avx512
+#define FLUSH_JOB_DOCSIS128_SEC_CRC_ENC \
+        flush_job_aes_docsis128_enc_crc32_vaes_avx512
+#define FLUSH_JOB_DOCSIS256_SEC_CRC_ENC \
+        flush_job_aes_docsis256_enc_crc32_vaes_avx512
+#define SUBMIT_JOB_DOCSIS128_SEC_CRC_DEC \
+        submit_job_docsis128_sec_crc_dec_vaes_avx512
+#define SUBMIT_JOB_DOCSIS256_SEC_CRC_DEC \
+        submit_job_docsis256_sec_crc_dec_vaes_avx512
 
 /* ====================================================================== */
 

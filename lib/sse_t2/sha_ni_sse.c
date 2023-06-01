@@ -58,8 +58,8 @@ void sha256_one_block_sse_shani(const void *data, void *digest)
 
 void sha1_sse_shani(const void *data, const uint64_t length, void *digest)
 {
-        sha_generic(data, length, digest, ARCH_SSE_SHANI, 1, IMB_SHA1_BLOCK_SIZE,
-                    SHA1_PAD_SIZE);
+        sha_generic(data, length, digest, ARCH_SSE_SHANI, 1,
+                    IMB_SHA1_BLOCK_SIZE, SHA1_PAD_SIZE);
 }
 
 /* ========================================================================== */
@@ -68,8 +68,8 @@ void sha1_sse_shani(const void *data, const uint64_t length, void *digest)
  */
 void sha224_sse_shani(const void *data, const uint64_t length, void *digest)
 {
-        sha_generic(data, length, digest, ARCH_SSE_SHANI, 224, IMB_SHA_256_BLOCK_SIZE,
-                    SHA224_PAD_SIZE);
+        sha_generic(data, length, digest, ARCH_SSE_SHANI, 224,
+                    IMB_SHA_256_BLOCK_SIZE, SHA224_PAD_SIZE);
 }
 /* ========================================================================== */
 /*
@@ -77,6 +77,6 @@ void sha224_sse_shani(const void *data, const uint64_t length, void *digest)
  */
 void sha256_sse_shani(const void *data, const uint64_t length, void *digest)
 {
-        sha_generic(data, length, digest, ARCH_SSE_SHANI, 256, IMB_SHA_256_BLOCK_SIZE,
-                    SHA256_PAD_SIZE);
+        sha_generic(data, length, digest, ARCH_SSE_SHANI, 256,
+                    IMB_SHA_256_BLOCK_SIZE, SHA256_PAD_SIZE);
 }

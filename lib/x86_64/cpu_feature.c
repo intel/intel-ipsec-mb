@@ -48,7 +48,9 @@ static struct cpuid_regs cpuid_7_1;
  *    [in] subleaf - CPUID sub-leaf number (ECX)
  *    [out] out    - registers structure to store results of CPUID into
  */
-void mbcpuid(const unsigned leaf, const unsigned subleaf, struct cpuid_regs *out);
+void mbcpuid(const unsigned leaf,
+             const unsigned subleaf,
+             struct cpuid_regs *out);
 
 static uint32_t detect_shani(void)
 {

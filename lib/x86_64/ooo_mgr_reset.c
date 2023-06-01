@@ -104,7 +104,7 @@ void ooo_mgr_aes_xcbc_reset(void *p_ooo_mgr, const unsigned num_lanes)
 {
         MB_MGR_AES_XCBC_OOO *p_mgr = (MB_MGR_AES_XCBC_OOO *) p_ooo_mgr;
         unsigned i;
-        
+
         memset(p_mgr, 0, offsetof(MB_MGR_AES_XCBC_OOO,road_block));
         memset(p_mgr->lens, 0xff, sizeof(p_mgr->lens));
 
@@ -124,7 +124,7 @@ void ooo_mgr_hmac_sha1_reset(void *p_ooo_mgr, const unsigned num_lanes)
 {
         MB_MGR_HMAC_SHA_1_OOO *p_mgr = (MB_MGR_HMAC_SHA_1_OOO *) p_ooo_mgr;
         unsigned i;
-        
+
         memset(p_mgr, 0, offsetof(MB_MGR_HMAC_SHA_1_OOO,road_block));
         memset(p_mgr->lens, 0xff, sizeof(p_mgr->lens));
 
@@ -154,7 +154,7 @@ void ooo_mgr_hmac_sha224_reset(void *p_ooo_mgr, const unsigned num_lanes)
 {
         MB_MGR_HMAC_SHA_256_OOO *p_mgr = (MB_MGR_HMAC_SHA_256_OOO *) p_ooo_mgr;
         unsigned i;
-        
+
         memset(p_mgr, 0, offsetof(MB_MGR_HMAC_SHA_256_OOO,road_block));
         memset(p_mgr->lens, 0xff, sizeof(p_mgr->lens));
 
@@ -184,7 +184,7 @@ void ooo_mgr_hmac_sha256_reset(void *p_ooo_mgr, const unsigned num_lanes)
 {
         MB_MGR_HMAC_SHA_256_OOO *p_mgr = (MB_MGR_HMAC_SHA_256_OOO *) p_ooo_mgr;
         unsigned i;
-        
+
         memset(p_mgr, 0, offsetof(MB_MGR_HMAC_SHA_256_OOO,road_block));
         memset(p_mgr->lens, 0xff, sizeof(p_mgr->lens));
 
@@ -214,7 +214,7 @@ void ooo_mgr_hmac_sha384_reset(void *p_ooo_mgr, const unsigned num_lanes)
 {
         MB_MGR_HMAC_SHA_512_OOO *p_mgr = (MB_MGR_HMAC_SHA_512_OOO *) p_ooo_mgr;
         unsigned i;
-        
+
         memset(p_mgr, 0, offsetof(MB_MGR_HMAC_SHA_512_OOO,road_block));
         memset(p_mgr->lens, 0xff, sizeof(p_mgr->lens));
 
@@ -250,7 +250,7 @@ void ooo_mgr_hmac_sha512_reset(void *p_ooo_mgr, const unsigned num_lanes)
 {
         MB_MGR_HMAC_SHA_512_OOO *p_mgr = (MB_MGR_HMAC_SHA_512_OOO *) p_ooo_mgr;
         unsigned i;
-        
+
         memset(p_mgr, 0, offsetof(MB_MGR_HMAC_SHA_512_OOO,road_block));
         memset(p_mgr->lens, 0xff, sizeof(p_mgr->lens));
 
@@ -286,7 +286,7 @@ void ooo_mgr_hmac_md5_reset(void *p_ooo_mgr, const unsigned num_lanes)
 {
         MB_MGR_HMAC_MD5_OOO *p_mgr = (MB_MGR_HMAC_MD5_OOO *) p_ooo_mgr;
         unsigned i;
-        
+
         memset(p_mgr, 0, offsetof(MB_MGR_HMAC_MD5_OOO,road_block));
         memset(p_mgr->lens, 0xff, sizeof(p_mgr->lens));
 
@@ -310,7 +310,7 @@ IMB_DLL_LOCAL
 void ooo_mgr_zuc_reset(void *p_ooo_mgr, const unsigned num_lanes)
 {
         MB_MGR_ZUC_OOO *p_mgr = (MB_MGR_ZUC_OOO *) p_ooo_mgr;
-        
+
         memset(p_mgr, 0, offsetof(MB_MGR_ZUC_OOO,road_block));
         memset(p_mgr->lens, 0xff, sizeof(p_mgr->lens));
 
@@ -330,7 +330,7 @@ IMB_DLL_LOCAL
 void ooo_mgr_sha1_reset(void *p_ooo_mgr, const unsigned num_lanes)
 {
         MB_MGR_SHA_1_OOO *p_mgr = (MB_MGR_SHA_1_OOO *) p_ooo_mgr;
-        
+
         memset(p_mgr, 0, offsetof(MB_MGR_SHA_1_OOO,road_block));
 
         if (num_lanes == 2)
@@ -379,7 +379,7 @@ IMB_DLL_LOCAL
 void ooo_mgr_des_reset(void *p_ooo_mgr, const unsigned num_lanes)
 {
         MB_MGR_DES_OOO *p_mgr = (MB_MGR_DES_OOO *) p_ooo_mgr;
-        
+
         memset(p_mgr, 0, offsetof(MB_MGR_DES_OOO,road_block));
 
         if (num_lanes == 16)

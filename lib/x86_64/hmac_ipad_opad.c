@@ -78,7 +78,10 @@ imb_hmac_ipad_opad(struct IMB_MGR *mb_mgr, const IMB_HASH_ALG sha_type,
                 if (key_len <= IMB_MD5_BLOCK_SIZE)
                         local_key_len = key_len;
                 else {
-                        /* Key lengths longer than MD5 block size not supported */
+                        /**
+                         * Key lengths longer than MD5 block
+                         * size not supported
+                         */
                         imb_set_errno(NULL, IMB_ERR_KEY_LEN);
                         return;
                 }

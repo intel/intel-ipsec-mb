@@ -43,8 +43,11 @@ imb_quic_aes_gcm(IMB_MGR *state,
                  const uint64_t tag_len,
                  const uint64_t num_packets)
 {
-	/* @note 12 byte IV is assumed */
-	/* @note it can be out of place operation but AAD needs to be copied by the caller */
+        /**
+         * @note 12 byte IV is assumed
+         * @note it can be out of place operation
+         * but AAD needs to be copied by the caller
+         */
 	struct gcm_context_data ctx;
 	uint64_t n;
 

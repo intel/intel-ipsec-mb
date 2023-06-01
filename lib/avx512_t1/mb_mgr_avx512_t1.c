@@ -335,12 +335,18 @@ submit_aes_docsis256_dec_crc32_avx512(MB_MGR_DOCSIS_AES_OOO *state,
         return job;
 }
 
-#define SUBMIT_JOB_DOCSIS128_SEC_CRC_ENC submit_job_aes_docsis128_enc_crc32_avx512
-#define SUBMIT_JOB_DOCSIS256_SEC_CRC_ENC submit_job_aes_docsis256_enc_crc32_avx512
-#define FLUSH_JOB_DOCSIS128_SEC_CRC_ENC flush_job_aes_docsis128_enc_crc32_avx512
-#define FLUSH_JOB_DOCSIS256_SEC_CRC_ENC flush_job_aes_docsis256_enc_crc32_avx512
-#define SUBMIT_JOB_DOCSIS128_SEC_CRC_DEC submit_aes_docsis128_dec_crc32_avx512
-#define SUBMIT_JOB_DOCSIS256_SEC_CRC_DEC submit_aes_docsis256_dec_crc32_avx512
+#define SUBMIT_JOB_DOCSIS128_SEC_CRC_ENC \
+        submit_job_aes_docsis128_enc_crc32_avx512
+#define SUBMIT_JOB_DOCSIS256_SEC_CRC_ENC \
+        submit_job_aes_docsis256_enc_crc32_avx512
+#define FLUSH_JOB_DOCSIS128_SEC_CRC_ENC \
+        flush_job_aes_docsis128_enc_crc32_avx512
+#define FLUSH_JOB_DOCSIS256_SEC_CRC_ENC \
+        flush_job_aes_docsis256_enc_crc32_avx512
+#define SUBMIT_JOB_DOCSIS128_SEC_CRC_DEC \
+        submit_aes_docsis128_dec_crc32_avx512
+#define SUBMIT_JOB_DOCSIS256_SEC_CRC_DEC \
+        submit_aes_docsis256_dec_crc32_avx512
 
 /* ====================================================================== */
 
@@ -351,7 +357,7 @@ reset_ooo_mgrs(IMB_MGR *state)
         ooo_mgr_aes_reset(state->aes128_ooo, 8);
         ooo_mgr_aes_reset(state->aes192_ooo, 8);
         ooo_mgr_aes_reset(state->aes256_ooo, 8);
-        
+
         /* DOCSIS SEC BPI (AES CBC + AES CFB for partial block)
          * uses same settings as AES CBC.
          */

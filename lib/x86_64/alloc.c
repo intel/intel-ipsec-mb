@@ -166,7 +166,8 @@ static void set_ooo_mgr_road_block(IMB_MGR *mgr)
  *     IMB_FLAG_SHANI_OFF - disable use (and detection) of SHA extensions,
  *                          currently SHANI is only available for SSE
  *     IMB_FLAG_AESNI_OFF - disable use (and detection) of AES extensions.
- *     IMB_FLAG_GFNI_OFF - disable use (and detection) of Galois Field extensions.
+ *     IMB_FLAG_GFNI_OFF - disable use (and detection) of
+ *                         Galois Field extensions.
  *
  * @param reset_mgr if 0, IMB_MGR structure is not cleared, else it is.
  *
@@ -276,7 +277,8 @@ free_mem(void *ptr)
  *     IMB_FLAG_SHANI_OFF - disable use (and detection) of SHA extensions,
  *                          currently SHANI is only available for SSE
  *     IMB_FLAG_AESNI_OFF - disable use (and detection) of AES extensions.
- *     IMB_FLAG_GFNI_OFF - disable use (and detection) of Galois Field extensions.
+ *     IMB_FLAG_GFNI_OFF - disable use (and detection) of
+ *                         Galois Field extensions.
  *
  * @return Pointer to allocated memory for MB_MGR structure
  * @retval NULL on allocation error

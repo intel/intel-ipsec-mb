@@ -47,7 +47,7 @@ static int process_job(IMB_MGR *p_mgr)
 
                 /* flush to get the job processed */
                 job = IMB_FLUSH_JOB(p_mgr);
-                
+
                 /* if flush returns nothing then it's an error */
                 if (!job)
                         return 0;
@@ -498,7 +498,7 @@ static int self_test_ciphers(IMB_MGR *p_mgr)
                 /* check for plain text mismatch */
                 if (memcmp(scratch, v->plain_text, v->plain_text_size))
                         return 0;
-                
+
         } /* for(cipher_vectors) */
 
         return 1;
@@ -940,13 +940,15 @@ static int self_test_hash(IMB_MGR *p_mgr)
                 if (v->hash_mode >= IMB_AUTH_HMAC_SHA_1 &&
                     v->hash_mode <= IMB_AUTH_HMAC_SHA_512) {
                         imb_hmac_ipad_opad(p_mgr, v->hash_mode, v->hash_key,
-                                           v->hash_key_size, hmac_ipad, hmac_opad);
+                                           v->hash_key_size,
+                                           hmac_ipad, hmac_opad);
                         job->u.HMAC._hashed_auth_key_xor_ipad = hmac_ipad;
                         job->u.HMAC._hashed_auth_key_xor_opad = hmac_opad;
                 }
                 if (v->hash_mode == IMB_AUTH_AES_CMAC) {
                         IMB_AES_KEYEXP_128(p_mgr, v->hash_key, expkey, dust);
-                        IMB_AES_CMAC_SUBKEY_GEN_128(p_mgr, expkey, skey1, skey2);
+                        IMB_AES_CMAC_SUBKEY_GEN_128(p_mgr, expkey,
+                                                    skey1, skey2);
                         job->u.CMAC._key_expanded = expkey;
                         job->u.CMAC._skey1 = skey1;
                         job->u.CMAC._skey2 = skey2;
@@ -954,7 +956,8 @@ static int self_test_hash(IMB_MGR *p_mgr)
 
                 if (v->hash_mode == IMB_AUTH_AES_CMAC_256) {
                         IMB_AES_KEYEXP_256(p_mgr, v->hash_key, expkey, dust);
-                        IMB_AES_CMAC_SUBKEY_GEN_256(p_mgr, expkey, skey1, skey2);
+                        IMB_AES_CMAC_SUBKEY_GEN_256(p_mgr, expkey,
+                                                    skey1, skey2);
                         job->u.CMAC._key_expanded = expkey;
                         job->u.CMAC._skey1 = skey1;
                         job->u.CMAC._skey2 = skey2;
@@ -966,7 +969,7 @@ static int self_test_hash(IMB_MGR *p_mgr)
                         job->u.GMAC._iv = v->hash_iv;
                         job->u.GMAC.iv_len_in_bytes = v->hash_iv_size;
                 }
-                
+
                 if (v->hash_mode == IMB_AUTH_AES_GMAC_192) {
                         IMB_AES192_GCM_PRE(p_mgr, v->hash_key, &gmac_key);
                         job->u.GMAC._key = &gmac_key;
