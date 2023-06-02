@@ -3804,6 +3804,7 @@ IMB_DLL_EXPORT void imb_clear_mem(void *mem, const size_t size);
  *
  * @note IV length of 12 bytes is assumed.
  * @note If used out of place then AAD needs to be copied by the caller.
+ * @note For more info on key_data refer to IMB_AES128/192/256_GCM_PRE() API’s
  *
  * @param [in]  state         pointer to IMB_MGR
  * @param [in]  key_data      initialized key data (AES keys and hash keys)
@@ -3890,7 +3891,7 @@ imb_quic_hp_aes_ecb(IMB_MGR *state,
  * @see IMB_SUBMIT_JOB_NOCHECK()
  *
  * @param [in]     state   pointer to IMB_MGR
- * @param [in/out] job     pointer to prepared JOB structure
+ * @param [in,out] job     pointer to prepared JOB structure
  *
  * @return Session ID value
  * @retval 0 on error
