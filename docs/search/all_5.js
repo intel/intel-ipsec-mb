@@ -1,20 +1,12 @@
 var searchData=
 [
-  ['f8_5f1_5fbuffer_0',['f8_1_buffer',['../structIMB__MGR.html#af854e664cef84cb8be4495a1af5e9cb5',1,'IMB_MGR']]],
-  ['f8_5f1_5fbuffer_5fbit_1',['f8_1_buffer_bit',['../structIMB__MGR.html#aacf6ce3f508fef115dcd2dc415ca7379',1,'IMB_MGR']]],
-  ['f8_5f2_5fbuffer_2',['f8_2_buffer',['../structIMB__MGR.html#ac733fc4c5ee6e80e8e71b20a9bb2dc6e',1,'IMB_MGR']]],
-  ['f8_5f3_5fbuffer_3',['f8_3_buffer',['../structIMB__MGR.html#a929b9c50bc98bf37daec7a1603f10118',1,'IMB_MGR']]],
-  ['f8_5f4_5fbuffer_4',['f8_4_buffer',['../structIMB__MGR.html#af0b1c5d3b269b252a75a55df8bdf472c',1,'IMB_MGR']]],
-  ['f8_5fn_5fbuffer_5',['f8_n_buffer',['../structIMB__MGR.html#ae0f2316d96e46b64d08e3cf73a93b39d',1,'IMB_MGR']]],
-  ['f9_5f1_5fbuffer_6',['f9_1_buffer',['../structIMB__MGR.html#afafb95a00fe6633fb6901855928b08bb',1,'IMB_MGR']]],
-  ['f9_5f1_5fbuffer_5fuser_7',['f9_1_buffer_user',['../structIMB__MGR.html#a4fbdac066c9d0fbd1d586a2e5b2319c3',1,'IMB_MGR']]],
-  ['features_8',['features',['../structIMB__MGR.html#af877c7669265775604857c6b81063bdb',1,'IMB_MGR']]],
-  ['flags_9',['flags',['../structIMB__MGR.html#ae1a596c9c9d6ca1292c6116575021c14',1,'IMB_MGR']]],
-  ['flush_5fjob_10',['flush_job',['../structIMB__MGR.html#a225e3b35eef8e18fd09c429fbb2f70b5',1,'IMB_MGR']]],
-  ['flush_5fjob_5favx_11',['flush_job_avx',['../intel-ipsec-mb_8h.html#abc6b0f1c857f26b834f22b6bd8f51846',1,'intel-ipsec-mb.h']]],
-  ['flush_5fjob_5favx2_12',['flush_job_avx2',['../intel-ipsec-mb_8h.html#ae242d142065172898129f30e6bc40d8c',1,'intel-ipsec-mb.h']]],
-  ['flush_5fjob_5favx512_13',['flush_job_avx512',['../intel-ipsec-mb_8h.html#ac7aec54f653aeee2554ba980d62fd491',1,'intel-ipsec-mb.h']]],
-  ['flush_5fjob_5fsse_14',['flush_job_sse',['../intel-ipsec-mb_8h.html#a96b880b8a32b0466f880d4f22d95cc3b',1,'intel-ipsec-mb.h']]],
-  ['flush_5fjob_5ft_15',['flush_job_t',['../intel-ipsec-mb_8h.html#ae64d0f677e42b8f8d50289113cf5e01e',1,'intel-ipsec-mb.h']]],
-  ['free_5fmb_5fmgr_16',['free_mb_mgr',['../intel-ipsec-mb_8h.html#a238b96cc36c0dc64798a1244b94add8b',1,'intel-ipsec-mb.h']]]
+  ['earliest_5fjob_0',['earliest_job',['../structIMB__MGR.html#ac5cd33ac3bf985dc31ccc716fb3a7747',1,'IMB_MGR']]],
+  ['eea3_5f1_5fbuffer_1',['eea3_1_buffer',['../structIMB__MGR.html#aeff54b370fbe495ce96370811d280140',1,'IMB_MGR']]],
+  ['eea3_5f4_5fbuffer_2',['eea3_4_buffer',['../structIMB__MGR.html#ac5ad1bf8ecdcfc51eaf681fb353c9621',1,'IMB_MGR']]],
+  ['eea3_5fn_5fbuffer_3',['eea3_n_buffer',['../structIMB__MGR.html#a67d8a55ba87742b8cf282d23ed9e3ef5',1,'IMB_MGR']]],
+  ['eia3_5f1_5fbuffer_4',['eia3_1_buffer',['../structIMB__MGR.html#a3ed58bdf37ab6d5f0d28271882d52327',1,'IMB_MGR']]],
+  ['eia3_5fn_5fbuffer_5',['eia3_n_buffer',['../structIMB__MGR.html#ab515c5aec39b1a9a31454b945e5ccd35',1,'IMB_MGR']]],
+  ['enc_5fkeys_6',['enc_keys',['../structIMB__JOB.html#ac656e2d98f36bd5547cc9fa297c1de62',1,'IMB_JOB']]],
+  ['end_5fooo_7',['end_ooo',['../structIMB__MGR.html#a6e1ab772182b97f931af3d4685785353',1,'IMB_MGR']]],
+  ['expanded_5fkeys_8',['expanded_keys',['../structgcm__key__data.html#aa5bda4f55b8393be151cfe28a9dc1ca9',1,'gcm_key_data']]]
 ];

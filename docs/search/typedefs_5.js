@@ -1,7 +1,6 @@
 var searchData=
 [
-  ['hash_5ffn_5ft_0',['hash_fn_t',['../intel-ipsec-mb_8h.html#afacacc8b74c05c80a0ee255c68637490',1,'intel-ipsec-mb.h']]],
-  ['hash_5fone_5fblock_5ft_1',['hash_one_block_t',['../intel-ipsec-mb_8h.html#aade58eb541a45650ed7d875dc2be97fa',1,'intel-ipsec-mb.h']]],
-  ['hec_5f32_5ft_2',['hec_32_t',['../intel-ipsec-mb_8h.html#aa34b11bf4be97c764b283aedc0589575',1,'intel-ipsec-mb.h']]],
-  ['hec_5f64_5ft_3',['hec_64_t',['../intel-ipsec-mb_8h.html#aa9afd4ee91f0d82729afcf5f1cdcb808',1,'intel-ipsec-mb.h']]]
+  ['get_5fcompleted_5fjob_5ft_0',['get_completed_job_t',['../intel-ipsec-mb_8h.html#ac8cb9a545cdef14f60f36fe8888e6e7c',1,'intel-ipsec-mb.h']]],
+  ['get_5fnext_5fjob_5ft_1',['get_next_job_t',['../intel-ipsec-mb_8h.html#a5a533d852e3b65e9e5978fec37da43b5',1,'intel-ipsec-mb.h']]],
+  ['ghash_5ft_2',['ghash_t',['../intel-ipsec-mb_8h.html#a12e0c05f0ecec8d75d4b288a7ec11c84',1,'intel-ipsec-mb.h']]]
 ];

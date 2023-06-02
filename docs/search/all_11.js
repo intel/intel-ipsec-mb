@@ -1,7 +1,9 @@
 var searchData=
 [
-  ['readme_2emd_0',['README.md',['../README_8md.html',1,'']]],
-  ['remain_5fct_5fbytes_1',['remain_ct_bytes',['../structchacha20__poly1305__context__data.html#a74e971fe76c8b946e30e8f0c8cce111a',1,'chacha20_poly1305_context_data']]],
-  ['remain_5fks_5fbytes_2',['remain_ks_bytes',['../structchacha20__poly1305__context__data.html#a84693b96048f6130a749b633c65e2105',1,'chacha20_poly1305_context_data']]],
-  ['reserved_3',['reserved',['../structIMB__JOB.html#a9d5e67861edf38dfa23160b650c7caa9',1,'IMB_JOB::reserved()'],['../structIMB__MGR.html#a136697eb37d5a06eeada0f338abd8b51',1,'IMB_MGR::reserved()']]]
+  ['queue_5fsize_0',['queue_size',['../structIMB__MGR.html#a5a35c9c2a1c8eb5b4aa239a3b04f4fbf',1,'IMB_MGR']]],
+  ['queue_5fsize_5favx_1',['queue_size_avx',['../intel-ipsec-mb_8h.html#a800c395d326e718a2b520d0bb91cbb89',1,'intel-ipsec-mb.h']]],
+  ['queue_5fsize_5favx2_2',['queue_size_avx2',['../intel-ipsec-mb_8h.html#a8a540000c08366ad47d95e23ed5b2918',1,'intel-ipsec-mb.h']]],
+  ['queue_5fsize_5favx512_3',['queue_size_avx512',['../intel-ipsec-mb_8h.html#a51c0426a4b57c9e7db2b091692dff472',1,'intel-ipsec-mb.h']]],
+  ['queue_5fsize_5fsse_4',['queue_size_sse',['../intel-ipsec-mb_8h.html#a80f792744558de173ea97d722c58e5c1',1,'intel-ipsec-mb.h']]],
+  ['queue_5fsize_5ft_5',['queue_size_t',['../intel-ipsec-mb_8h.html#a9884ae92b598dd504f7d0ef8be5051d6',1,'intel-ipsec-mb.h']]]
 ];

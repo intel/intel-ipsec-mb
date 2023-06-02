@@ -7,10 +7,14 @@ var searchData=
   ['imb_5fget_5fstrerror_4',['imb_get_strerror',['../intel-ipsec-mb_8h.html#a61f664448a862fbb02e728ce518ff8e4',1,'intel-ipsec-mb.h']]],
   ['imb_5fget_5fversion_5',['imb_get_version',['../intel-ipsec-mb_8h.html#aee02bcb3a5e5eaee3632086f75c3d78d',1,'intel-ipsec-mb.h']]],
   ['imb_5fget_5fversion_5fstr_6',['imb_get_version_str',['../intel-ipsec-mb_8h.html#a4490e7b324236315f1a9e141b39f99f2',1,'intel-ipsec-mb.h']]],
-  ['imb_5fset_5fpointers_5fmb_5fmgr_7',['imb_set_pointers_mb_mgr',['../intel-ipsec-mb_8h.html#a3a825e903d1f8f8611b98b60fcaa5a81',1,'intel-ipsec-mb.h']]],
-  ['init_5fmb_5fmgr_5fauto_8',['init_mb_mgr_auto',['../intel-ipsec-mb_8h.html#a2cbbd032835837fd0aa83b04f5337638',1,'intel-ipsec-mb.h']]],
-  ['init_5fmb_5fmgr_5favx_9',['init_mb_mgr_avx',['../intel-ipsec-mb_8h.html#aee547b1b9e70e12c84d9949317e41c6c',1,'intel-ipsec-mb.h']]],
-  ['init_5fmb_5fmgr_5favx2_10',['init_mb_mgr_avx2',['../intel-ipsec-mb_8h.html#a71b6563b6b4c0c504cd9b8302a242cfa',1,'intel-ipsec-mb.h']]],
-  ['init_5fmb_5fmgr_5favx512_11',['init_mb_mgr_avx512',['../intel-ipsec-mb_8h.html#a98932a3c61d798b0c8a560dcc3dce16f',1,'intel-ipsec-mb.h']]],
-  ['init_5fmb_5fmgr_5fsse_12',['init_mb_mgr_sse',['../intel-ipsec-mb_8h.html#a2ad1941fe5d77b8bb2d6445679e3b0c5',1,'intel-ipsec-mb.h']]]
+  ['imb_5fhmac_5fipad_5fopad_7',['imb_hmac_ipad_opad',['../intel-ipsec-mb_8h.html#ab5ecb9fd270d0bfc42e46c5a3a9225fe',1,'intel-ipsec-mb.h']]],
+  ['imb_5fquic_5faes_5fgcm_8',['imb_quic_aes_gcm',['../intel-ipsec-mb_8h.html#a8faae8f9387983904125d862c4cac9ab',1,'intel-ipsec-mb.h']]],
+  ['imb_5fquic_5fhp_5faes_5fecb_9',['imb_quic_hp_aes_ecb',['../intel-ipsec-mb_8h.html#a89f9807d10f3459444bb649caf9b64ca',1,'intel-ipsec-mb.h']]],
+  ['imb_5fset_5fpointers_5fmb_5fmgr_10',['imb_set_pointers_mb_mgr',['../intel-ipsec-mb_8h.html#a3a825e903d1f8f8611b98b60fcaa5a81',1,'intel-ipsec-mb.h']]],
+  ['imb_5fset_5fsession_11',['imb_set_session',['../intel-ipsec-mb_8h.html#ada304337e78ef5a462c97c1f8151ef67',1,'intel-ipsec-mb.h']]],
+  ['init_5fmb_5fmgr_5fauto_12',['init_mb_mgr_auto',['../intel-ipsec-mb_8h.html#a2cbbd032835837fd0aa83b04f5337638',1,'intel-ipsec-mb.h']]],
+  ['init_5fmb_5fmgr_5favx_13',['init_mb_mgr_avx',['../intel-ipsec-mb_8h.html#aee547b1b9e70e12c84d9949317e41c6c',1,'intel-ipsec-mb.h']]],
+  ['init_5fmb_5fmgr_5favx2_14',['init_mb_mgr_avx2',['../intel-ipsec-mb_8h.html#a71b6563b6b4c0c504cd9b8302a242cfa',1,'intel-ipsec-mb.h']]],
+  ['init_5fmb_5fmgr_5favx512_15',['init_mb_mgr_avx512',['../intel-ipsec-mb_8h.html#a98932a3c61d798b0c8a560dcc3dce16f',1,'intel-ipsec-mb.h']]],
+  ['init_5fmb_5fmgr_5fsse_16',['init_mb_mgr_sse',['../intel-ipsec-mb_8h.html#a2ad1941fe5d77b8bb2d6445679e3b0c5',1,'intel-ipsec-mb.h']]]
 ];

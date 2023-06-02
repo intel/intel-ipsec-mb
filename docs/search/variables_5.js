@@ -10,5 +10,6 @@ var searchData=
   ['f9_5f1_5fbuffer_5fuser_7',['f9_1_buffer_user',['../structIMB__MGR.html#a4fbdac066c9d0fbd1d586a2e5b2319c3',1,'IMB_MGR']]],
   ['features_8',['features',['../structIMB__MGR.html#af877c7669265775604857c6b81063bdb',1,'IMB_MGR']]],
   ['flags_9',['flags',['../structIMB__MGR.html#ae1a596c9c9d6ca1292c6116575021c14',1,'IMB_MGR']]],
-  ['flush_5fjob_10',['flush_job',['../structIMB__MGR.html#a225e3b35eef8e18fd09c429fbb2f70b5',1,'IMB_MGR']]]
+  ['flush_5fburst_10',['flush_burst',['../structIMB__MGR.html#aa0283df1a5cd7a6dfc78c8f9896ea3ec',1,'IMB_MGR']]],
+  ['flush_5fjob_11',['flush_job',['../structIMB__MGR.html#a225e3b35eef8e18fd09c429fbb2f70b5',1,'IMB_MGR']]]
 ];
