@@ -29,8 +29,8 @@ Key differentiating features:
 - multi-buffer and function stitching innovations
 - low level implementations using latest instruction extensions
 
-Contents
-========
+## Contents
+
 1. Overview
 2. Processor Extensions
 3. Recommendations
@@ -45,8 +45,8 @@ Contents
 12. FIPS Compliance
 13. DLL Injection
 
-1\. Overview
-============
+## 1. Overview
+
 Intel Multi-Buffer Crypto for IPsec Library is highly-optimized software
 implementations of the core cryptographic processing for IPsec,
 which provides industry-leading performance on a range of Intel(R) Processors.
@@ -231,8 +231,7 @@ Table 3. Encryption and integrity algorithm combinations
 +---------------+-----------------------------------------------------+
 ```
 
-2\. Processor Extensions
-========================
+## 2. Processor Extensions
 
 Table 4. Processor extensions used in the library
 ```
@@ -256,8 +255,7 @@ Table 4. Processor extensions used in the library
 +-------------------+-----------+-----------------------------------------+
 ```
 
-3\. Recommendations
-===================
+## 3. Recommendations
 
 Legacy or to be avoided algorithms listed in the table below are implemented
 in the library in order to support legacy applications. Please use corresponding
@@ -285,8 +283,7 @@ Operating System to provide process isolation.
 As the result, it is recommended to use latest Operating System patches and
 security updates.
 
-4\. Package Content
-===================
+## 4. Package Content
 
 - test - Library test applications
 - perf - Library performance application
@@ -304,19 +301,16 @@ Code taken from the tip of the master branch should not be considered fit for pr
 Refer to the releases tab for stable code versions:  
 https://github.com/intel/intel-ipsec-mb/releases
 
-5\. Documentation
-===============
+## 5. Documentation
 
 Full documentation can be found at: https://intel.github.io/intel-ipsec-mb
 
 To generate documentation locally, run:  
 `> make doxy`
 
-6\. Compilation
-===============
+## 6. Compilation
 
-Linux (64-bit only)
--------------------
+### Linux (64-bit only)
 
 Required tools:  
 - GNU make  
@@ -345,8 +339,7 @@ Build with AESNI emulation support (disabled by default):
 For more build options and their explanation run:   
 `> make help`
 
-Windows MSVS (x64 only)
-------------------
+### Windows MSVS (x64 only)
 
 Required tools:  
 - Microsoft (R) Visual Studio 2019:  
@@ -389,8 +382,7 @@ Build with AESNI emulation support (disabled by default):
 For more build options and their explanation run:   
 `> nmake /f win_x64.mak help`
 
-Windows Mingw-w64 (64-bit only)
--------------------
+### Windows Mingw-w64 (64-bit only)
 
 Required tools:  
 - GNU mingw32-make.exe  
@@ -416,8 +408,7 @@ Build with debugging information:
 For more build options and their explanation run:   
 `> mingw32-make.exe help`
 
-FreeBSD (64-bit only)
----------------------
+### FreeBSD (64-bit only)
 
 Required tools:  
 - GNU make  
@@ -443,11 +434,9 @@ Build with debugging information:
 For more build options and their explanation run:   
 `> gmake help`
 
-Building with CMake (experimental)
--------------------
+### Building with CMake (experimental)
 
-Minimum CMake version:
-- 3.16
+Minimum CMake version: 3.16
 
 Create build directory:
 ```
@@ -455,7 +444,7 @@ mkdir build
 cd build
 ```
 
-### Unix Makefiles (Linux and FreeBSD)
+#### Unix Makefiles (Linux and FreeBSD)
 
 Shared library (default):
 ```
@@ -476,11 +465,9 @@ cmake --build . --parallel
 ```
 
 For more build options and their explanation run:
-```
-cmake --build . --target print_help
-```
+`cmake --build . --target print_help`
 
-### Windows MSVS (x64 only)
+#### Windows MSVS (x64 only)
 
 Shared library with debugging information (default for MSVS)
 ```
@@ -501,11 +488,9 @@ cmake --build . --config Release
 ```
 
 For more build options and their explanation run:
-```
-cmake --build . --target print_help
-```
+`cmake --build . --target print_help`
 
-###  Ninja (Linux, FreeBSD and Windows):
+####  Ninja (Linux, FreeBSD and Windows):
 ```
 cmake -G Ninja ..
 cmake --build .
@@ -523,8 +508,7 @@ build/test
 build/perf
 ```
 
-7\. Security Considerations & Options for Increased Security
-============================================================
+## 7. Security Considerations & Options for Increased Security
 
 ### Security Considerations
 The security of a system that uses cryptography depends on the strength of
@@ -560,6 +544,7 @@ options are listed below as the "Options for Increased Security" and are
 enabled through various build flags.
 
 ### Options for Increased Security
+
 There are three build options that are used to increase safety in
 the code and help protect external functions from incorrect input data.
 The SAFE_DATA, SAFE_PARAM and SAFE_LOOKUP options are enabled by default.
@@ -571,14 +556,17 @@ tests have been performed to help protect against or check for side-channel
 attacks.
 
 ### SAFE_DATA
+
 Stack and registers containing sensitive information, such as keys or IVs, are
 cleared upon completion of a function call.
 
 ### SAFE_PARAM
+
 Input parameters are checked, looking generally for NULL pointers or an 
 incorrect input length.
 
 ### SAFE_LOOKUP
+
 Lookups which depend on sensitive information are implemented with constant
 time functions.
 
@@ -593,12 +581,14 @@ algorithms listed above may be susceptible to timing attacks which could expose
 the cryptographic key.
 
 ### SAFE_OPTIONS
+
 SAFE_OPTIONS is a parameter that can be used to disable/enable
 all supported safe options (i.e. SAFE_DATA, SAFE_PARAM, SAFE_LOOKUP).
 It is set to `y` by default and all safe options are enabled.
 `SAFE_OPTIONS=n` disables all safe options.
 
 ### Security API
+
 **Force clearing/zeroing of memory**
 ```c
 IMB_DLL_EXPORT void imb_clear_mem(void *mem, const size_t size);
@@ -609,15 +599,14 @@ of memory pointed to by _'mem'_ followed by the _sfence_ instruction to
 ensure memory is cleared before the function returns.
 
 ### Galois Counter Mode (GCM) TAG Size
+
 The library GCM and GMAC implementation provides flexibility as to tag size selection.
 As explained in [NIST Special Publication 800-38D](https://csrc.nist.gov/publications/detail/sp/800-38d/final) section 5.2.1.2 and Appendix C, using tag sizes shorter than 96 bits can be insecure.
 Please refer to the aforementioned sections to understand the details, trade offs and mitigations of using shorter tag sizes.
 
-8\. Installation
-================
+## 8. Installation
 
-Linux (64-bit only)
--------------------
+### Linux (64-bit only)
 
 First compile the library and then install:   
 `> make`  
@@ -635,8 +624,7 @@ If there is no need to run ldconfig at install stage please use NOLDCONFIG=y opt
 If library was compiled as an archive (not a default option) then install it using SHARED=n option:   
 `> sudo make install SHARED=n`
 
-Windows (x64 only)
-------------------
+### Windows (x64 only)
 
 First compile the library and then install from a command prompt in administrator mode:   
 `> nmake /f win_x64.mak`  
@@ -651,8 +639,7 @@ If you want to change install location then define PREFIX (default C:\Program Fi
 If library was compiled as a static library (not a default option) then install it using SHARED=n option:   
 `> nmake /f win_x64.mak install SHARED=n`
 
-FreeBSD (64-bit only)
--------------------
+### FreeBSD (64-bit only)
 
 First compile the library and then install:   
 `> gmake`  
@@ -670,8 +657,7 @@ If there is no need to run ldconfig at install stage please use NOLDCONFIG=y opt
 If library was compiled as an archive (not a default option) then install it using SHARED=n option:   
 `> sudo gmake install SHARED=n`
 
-Installing with CMake (experimental)
--------------------
+## Installing with CMake (experimental)
 
 ### Unix (Linux and FreeBSD)
 
@@ -701,8 +687,7 @@ To uninstall the library run:
 If you want to change install location then define PREFIX (default C:\Program Files):   
 `cmake --install . --config Release --prefix=<path>`
 
-9\. Backwards compatibility
-===========================
+## 9. Backwards compatibility
 
 In version 1.4, backward compile time symbol compatibility with
 library version 0.53 has been removed.
@@ -713,8 +698,7 @@ If required, compatibility symbol mapping can be implemented in the application.
 See compatibility symbol mapping in v1.3 header file:
 https://github.com/intel/intel-ipsec-mb/blob/v1.3/lib/intel-ipsec-mb.h#L246
 
-10\. Disclaimer (ZUC, KASUMI, SNOW3G)
-====================================
+## 10. Disclaimer (ZUC, KASUMI, SNOW3G)
 
 Please note that cryptographic material, such as ciphering algorithms, may be
 subject to national regulations. What is more, use of some algorithms in
@@ -725,8 +709,7 @@ For more details please see:
 - GSMA https://www.gsma.com/security/security-algorithms/  
 - ETSI https://www.etsi.org/security-algorithms-and-codes/cellular-algorithm-licences
 
-11\. Legal Disclaimer
-====================
+## 11. Legal Disclaimer
 
 THIS SOFTWARE IS PROVIDED BY INTEL"AS IS". NO LICENSE, EXPRESS OR   
 IMPLIED, BY ESTOPPEL OR OTHERWISE, TO ANY INTELLECTUAL PROPERTY RIGHTS   
@@ -737,12 +720,12 @@ USE OF INTEL PRODUCTS INCLUDING LIABILITY OR WARRANTIES RELATING TO
 FITNESS FOR A PARTICULAR PURPOSE, MERCHANTABILITY, OR INFRINGEMENT   
 OF ANY PATENT, COPYRIGHT OR OTHER INTELLECTUAL PROPERTY RIGHT.  
 
-12\. FIPS Compliance
-===================
+## 12. FIPS Compliance
 
 The library does not fulfill technical requirements to achieve Cryptographic Module (CMVP) certification as a standalone component. It is fit for Cryptographic Algorithm validation and certification (CAVP) and it can be part of CMVP as one of the components.
 
 ### CAVP
+
 ACVP test application located in `test` directory is to support CAVP process. It implements validation of the following algorithms:  
 - AES-GCM  
 - AES-GMAC  
@@ -887,8 +870,7 @@ if (imb_get_errno(p_mgr) == IMB_ERR_SELFTEST) {
 }
 ```
 
-13\.DLL Injection Attack
-=======================
+## 13.DLL Injection Attack
 
 ### Problem
 
