@@ -25,7 +25,7 @@
 
 # Versions numbers
 %global major        1
-%global minor        3
+%global minor        4
 %global patch        0
 %global fullversion  %{major}.%{minor}.%{patch}
 
@@ -109,6 +109,9 @@ ln -s libIPSec_MB.so.%{fullversion} libIPSec_MB.so
 %{_libdir}/libIPSec_MB.so
 
 %changelog
+* Tue Jun 06 2023 Pablo de Lara Guarch <pablo.de.lara.guarch@intel.com> 1.4.0-1
+- Update for release package v1.4
+
 * Tue Sep 20 2022 Stephen Mcintyre <stephen.mcintyre@intel.com> 1.3.0-1
 - Update for release package v1.3
 

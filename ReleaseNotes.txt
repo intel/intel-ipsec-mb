@@ -1,8 +1,8 @@
 ========================================================================
 Release Notes for Intel(R) Multi-Buffer Crypto for IPsec Library
 
-Unreleased
-==========
+v1.4 June 2023
+==============
 
 General
 - Experimental CMake support for Linux, FreeBSD and Windows added
@@ -15,6 +15,8 @@ Library
 - QUIC header protection API added.
 - QUIC AES-GCM-128/256 AEAD API added.
 - Removed v0.53 (and older) compatibility symbol mapping (NO_COMPAT_IMB_API_053 not defined).
+
+Test Applications
 
 v1.3 September 2022
 ========================================================================
