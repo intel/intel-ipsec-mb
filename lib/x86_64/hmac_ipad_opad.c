@@ -35,20 +35,20 @@
 
 IMB_DLL_EXPORT
 void
-imb_hmac_ipad_opad(struct IMB_MGR *mb_mgr, const IMB_HASH_ALG sha_type,
-                   const void *pkey,const size_t key_len,
+imb_hmac_ipad_opad(IMB_MGR *mb_mgr, const IMB_HASH_ALG sha_type,
+                   const void *pkey, const size_t key_len,
                    void *ipad_hash, void *opad_hash)
 {
 #ifdef SAFE_PARAM
-        imb_set_errno(NULL, 0);
-        if (pkey == NULL) {
-                imb_set_errno(NULL, IMB_ERR_NULL_KEY);
-                return;
-        }
         if (mb_mgr == NULL) {
                 imb_set_errno(NULL, IMB_ERR_NULL_MBMGR);
                 return;
         }
+        if (pkey == NULL) {
+                imb_set_errno(mb_mgr, IMB_ERR_NULL_KEY);
+                return;
+        }
+        imb_set_errno(mb_mgr, 0);
 #endif
         uint32_t i = 0;
         size_t local_key_len = 0;

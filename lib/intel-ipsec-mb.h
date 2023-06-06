@@ -2612,7 +2612,7 @@ des_key_schedule(uint64_t *ks, const void *key);
  * @param [out] opad_hash       Block-sized outer padding
  */
 IMB_DLL_EXPORT void
-imb_hmac_ipad_opad(struct IMB_MGR *mb_mgr, const IMB_HASH_ALG sha_type,
+imb_hmac_ipad_opad(IMB_MGR *mb_mgr, const IMB_HASH_ALG sha_type,
                    const void *pkey, const size_t key_len,
                    void *ipad_hash, void *opad_hash);
 
