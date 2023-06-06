@@ -52,6 +52,10 @@ imb_quic_aes_gcm(IMB_MGR *state,
 	uint64_t n;
 
 #ifdef SAFE_PARAM
+        if (state == NULL) {
+                imb_set_errno(NULL, IMB_ERR_NULL_MBMGR);
+                return;
+        }
         if (key_data == NULL) {
                 imb_set_errno(state, IMB_ERR_NULL_EXP_KEY);
                 return;

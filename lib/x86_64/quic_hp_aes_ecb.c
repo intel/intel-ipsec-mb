@@ -39,6 +39,10 @@ imb_quic_hp_aes_ecb(IMB_MGR *state,
 #ifdef SAFE_PARAM
         uint64_t i;
 
+        if (state == NULL) {
+                imb_set_errno(NULL, IMB_ERR_NULL_MBMGR);
+                return;
+        }
         if (exp_key_data == NULL) {
                 imb_set_errno(state, IMB_ERR_NULL_EXP_KEY);
                 return;
