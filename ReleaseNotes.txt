@@ -2,7 +2,7 @@
 Release Notes for Intel(R) Multi-Buffer Crypto for IPsec Library
 
 v1.4 June 2023
-==============
+========================================================================
 
 General
 - Experimental CMake support for Linux, FreeBSD and Windows added
@@ -15,8 +15,27 @@ Library
 - QUIC header protection API added.
 - QUIC AES-GCM-128/256 AEAD API added.
 - Removed v0.53 (and older) compatibility symbol mapping (NO_COMPAT_IMB_API_053 not defined).
+- ZUC AVX2-GFNI implementation added.
+- SHA-NI instructions enabled to use in SHA1/224/256 direct API
+- New API (imb_set_session) added to be used with burst API, helping speeding up the crypto scheduling.
+- New API added to calculate IPAD/OPAD for SHAx-HMAC.
+- New direct API added to calculate DES-CFB and AES-CFB-256 on a single block.
 
 Test Applications
+- ACVP test application extended to support: AES-ECB and 3DES-CBC.
+- Added sample applications showcasing how to use the new burst API.
+- CMake support added, including ability to run tests with it.
+- Extended fuzzing app to cover remaining direct APIs.
+- Test vector standardized for various algorithms (SHA/XCBC/POLY1305/CMAC/GMAC/GHASH/HMAC-SHAx/MD5).
+- Changed `test` directory structure and test application names. Each test application has its own subdirectory.
+
+Performance Application
+- New parameter added to benchmark crypto on unaligned buffers
+- Renamed performance application to `imb-perf`
+
+Fixes
+- Fixed MB_MGR initialization corruption (issue #115)
+- Fixed performance scaling issue resulting from the misuse of global `errno` variable (issue #112)
 
 v1.3 September 2022
 ========================================================================
