@@ -748,6 +748,8 @@ ACVP test application located in `test` directory is to support CAVP process. It
 - AES-GMAC  
 - AES-CCM  
 - AES-CBC  
+- AES-EBC  
+- TDES-EDE-CBC  
 - AES-CTR  
 - AES-CMAC  
 - SHA1 (SHA-1)  
