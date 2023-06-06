@@ -1,5 +1,5 @@
 @echo off
-REM // Copyright (c) 2020-2022, Intel Corporation
+REM // Copyright (c) 2020-2023, Intel Corporation
 REM // 
 REM // Redistribution and use in source and binary forms, with or without
 REM // modification, are permitted provided that the following conditions are met:
