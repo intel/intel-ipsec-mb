@@ -1504,6 +1504,67 @@ set_size_lists(uint32_t *cipher_size_list, uint32_t *hash_size_list, uint64_t *x
 #define TAG_LEN 16
 
 static void
+bench_quic_chacha20_poly1305(IMB_MGR *p_mgr, const uint64_t n_max, uint8_t *blob)
+{
+        void *out[MAX_K];
+        const void *in[MAX_K];
+        const void *iv[MAX_K];
+        const void *aad[MAX_K];
+        void *tag[MAX_K];
+        uint64_t len[MAX_K];
+        const uint8_t kp[32] = { 0xaa, 0x55, 0x11, 0x44, 0x01, 0x02, 0x00, 0x03, 0xaa, 0x55, 0x11,
+                                 0x44, 0x01, 0x02, 0x00, 0x03, 0xaa, 0x55, 0x11, 0x44, 0x01, 0x02,
+                                 0x00, 0x03, 0xaa, 0x55, 0x11, 0x44, 0x01, 0x02, 0x00, 0x03 };
+        const uint64_t pkt_size = 16384;
+        const int K = MAX_K;
+        uint32_t aux;
+        uint64_t n;
+        int i;
+
+        printf("QUIC-API CHACHA20-POLY1305 test start...\n"
+               "    packet-size: %lu\n"
+               "    number of packets : %d\n"
+               "    iterations: %lu\n",
+               (unsigned long) pkt_size, K, (unsigned long) n_max);
+
+        for (n = 0, i = 0; i < K; i++) {
+                iv[i] = &blob[n];
+                n += IV_LEN;
+
+                aad[i] = &blob[n];
+                n += AAD_LEN;
+
+                in[i] = &blob[n];
+                n += pkt_size;
+
+                out[i] = &blob[n];
+                n += pkt_size;
+
+                tag[i] = &blob[n];
+                n += TAG_LEN;
+
+                len[i] = pkt_size;
+        }
+
+        const uint64_t tsc_start = __rdtscp(&aux);
+
+        for (n = 0; n < n_max; n++) {
+                imb_quic_chacha20_poly1305(p_mgr, kp, IMB_DIR_ENCRYPT, (void **) out,
+                                           (const void *const *) in, len, (const void *const *) iv,
+                                           (const void *const *) &aad, AAD_LEN, (void **) tag,
+                                           TAG_LEN, K);
+        }
+
+        const uint64_t tsc_end = __rdtscp(&aux);
+        const uint64_t cpi = (tsc_end - tsc_start) / n_max;
+        const uint64_t cpp = cpi / (uint64_t) K;
+
+        printf("QUIC-API CHACHA20-POLY1305 cycles/iteration = %lu, "
+               "cycles/packet = %lu\n",
+               (unsigned long) cpi, (unsigned long) cpp);
+}
+
+static void
 bench_quic_aes_gcm(IMB_MGR *p_mgr, const uint64_t n_max, uint8_t *blob)
 {
         void *out[MAX_K];
@@ -1512,8 +1573,8 @@ bench_quic_aes_gcm(IMB_MGR *p_mgr, const uint64_t n_max, uint8_t *blob)
         const void *aad[MAX_K];
         void *tag[MAX_K];
         uint64_t len[MAX_K];
-        const uint8_t kp[16] = { 0xaa, 055, 0x11, 0x44, 0x01, 0x02, 0x00, 0x03,
-                                 0xaa, 055, 0x11, 0x44, 0x01, 0x02, 0x00, 0x03 };
+        const uint8_t kp[16] = { 0xaa, 0x55, 0x11, 0x44, 0x01, 0x02, 0x00, 0x03,
+                                 0xaa, 0x55, 0x11, 0x44, 0x01, 0x02, 0x00, 0x03 };
         struct gcm_key_data key;
         const uint64_t pkt_size = 16384;
         const int K = MAX_K;
@@ -1661,6 +1722,7 @@ quic_main(IMB_MGR *p_mgr)
 
                 bench_quic_aes_ecb_hp(p_mgr, n_max, blob_ptr);
                 bench_quic_aes_gcm(p_mgr, n_max, blob_ptr);
+                bench_quic_chacha20_poly1305(p_mgr, n_max, blob_ptr);
         }
         free(blob_ptr);
 }
