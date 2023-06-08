@@ -3858,6 +3858,38 @@ imb_quic_hp_aes_ecb(IMB_MGR *state,
                     const IMB_KEY_SIZE_BYTES key_size);
 
 /**
+ * @brief Batch of CHACHA20-POLY1305 encrypt/decrypt operations with the same key
+ *
+ * @note If used out of place then AAD needs to be copied by the caller.
+ *
+ * @param [in]  state         pointer to IMB_MGR
+ * @param [in]  key           pointer to key
+ * @param [in]  cipher_dir    cipher direction (IMB_DIR_ENCRYPT / DECRYPT)
+ * @param [out] dst_ptr_array array with destination pointers
+ * @param [in]  src_ptr_array array with source pointers
+ * @param [in]  len_array     array with message lengths in bytes
+ * @param [in]  iv_ptr_array  array with IV pointers
+ * @param [in]  aad_ptr_array array with AAD pointers
+ * @param [in]  aad_len       AAD length in bytes
+ * @param [out] tag_ptr_array array with authentication TAG pointers
+ * @param [in]  tag_len       authentication TAG length in bytes
+ * @param [in]  num_packets   number of packets in this batch
+ */
+IMB_DLL_EXPORT void
+imb_quic_chacha20_poly1305(IMB_MGR *state,
+                           const void *key,
+                           const IMB_CIPHER_DIRECTION cipher_dir,
+                           void *dst_ptr_array[],
+                           const void * const src_ptr_array[],
+                           const uint64_t len_array[],
+                           const void * const iv_ptr_array[],
+                           const void * const aad_ptr_array[],
+                           const uint64_t aad_len,
+                           void *tag_ptr_array[],
+                           const uint64_t tag_len,
+                           const uint64_t num_packets);
+
+/**
  * @brief Sets up suite_id and session_id fields for selected cipher suite in
  *        provided \a job structure
  *
