@@ -78,7 +78,8 @@ CS_IGNORE_WORDS ?= iinclude,struc,fo,ue,od,ba,padd
 spellcheck:
 	$(CODESPELL) -d -L $(CS_IGNORE_WORDS) \
 	-S "*.obj,*.o,*.a,*.so,*.lib,*~,*.so,*.so.*,*.d,imb-perf" \
-	-S "imb-kat,imb-xvalid" \
+	-S "imb-kat,imb-xvalid,imb-acvp,imb-fuzz-api,imb-fuzz-direct-api" \
+	-S "imb-wycheproof" \
 	./lib ./perf ./test README.md SECURITY.md CONTRIBUTING \
 	Makefile win_x64.mak ReleaseNotes.txt LICENSE $(CS_EXTRA_OPTS)
 
