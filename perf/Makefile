@@ -95,7 +95,6 @@ ASM_SOURCES := misc.asm
 OBJECTS := $(SOURCES:%.c=%.o) $(ASM_SOURCES:%.asm=%.o)
 DEPFILES := $(OBJECTS:%.o=%.d)
 
-CHECKPATCH ?= checkpatch.pl
 CPPCHECK ?= cppcheck
 
 .PHONY: all clean style cppcheck
