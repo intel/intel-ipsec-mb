@@ -291,7 +291,7 @@ align 32
 align 32
 %%_do_return:
 %ifdef SAFE_DATA
-	clear_all_xmms_sse_asm
+        clear_xmms_sse xdata0, xdata1, xdata2, xdata3, xdata4, xdata5, xdata6, xdata7, xkeytmp
 %endif ;; SAFE_DATA
 
        ;; restore the stack pointer
