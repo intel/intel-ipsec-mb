@@ -69,7 +69,7 @@ endstruc
 ;; - ZF (zero-flag) gets updated
 ;;   - ZF means this is the end of the message
 
-%macro DO_AES_DEC 6-7
+%macro DO_AES_DEC 7
 %define %%p_in          %1      ;; [in/out] GP register with input pointer
 %define %%p_out         %2      ;; [in/out] GP register with output pointer
 %define %%p_keys        %3      ;; [in] GP register with pointer to AES round keys
@@ -77,6 +77,21 @@ endstruc
 %define %%num_rounds    %5      ;; [in] numeric - number fo aesdec rounds (ark / declast not included)
 %define %%length        %6      ;; [in/out] GP register with message length
 %define %%type          %7      ;; [in] "main" or "last" selector of 8 block invocation
+                                ;;      "short" or "start" selector for < 8 blocks
+
+%assign is_1_to_7_short_or_8_last 0
+
+%if %%by < 8
+%ifidni %%type, short
+%assign is_1_to_7_short_or_8_last 1
+%endif
+%endif
+
+%if %%by == 8
+%ifidni %%type, last
+%assign is_1_to_7_short_or_8_last 1
+%endif
+%endif
 
         ;; load cipher text
 %assign i 0
@@ -132,9 +147,11 @@ endstruc
 %endrep
 %endif
 
+%if is_1_to_7_short_or_8_last == 0
         ;; prepare IV for the next round
         movdqa	        xkeytmp, [rsp + _IV_new]
         movdqa          [rsp + _IV], xkeytmp
+%endif
 
         ;; store plain text blocks
 
@@ -147,6 +164,7 @@ endstruc
 
 %if %%by < 8
         ;; 1 to 7 block case:
+%ifidni %%type, start
         ;; - check if message length is more than %%by blocks
         ;;     yes: load 1st block for the next round and then store the last block of this round
         ;;      no: store the last block of this round
@@ -160,7 +178,13 @@ endstruc
         jmp             %%_update_pointers
 
 %%_just_finish_stores:
-	movdqu	        [%%p_out  + (i * 16)], CONCAT(xdata,i)
+        movdqu	        [%%p_out  + (i * 16)], CONCAT(xdata,i)
+%endif
+
+%ifidni %%type, short
+        ;; short message - just store
+        movdqu	        [%%p_out  + (i * 16)], CONCAT(xdata,i)
+%endif
 
 %else
         ;; 8 block case
@@ -179,6 +203,8 @@ endstruc
 %endif
 
 %%_update_pointers:
+
+%if is_1_to_7_short_or_8_last == 0
         add	        %%p_in, (16 * %%by)
         add	        %%p_out, (16 * %%by)
 
@@ -189,6 +215,8 @@ endstruc
 %endif
         ;; Z-Flag gets updated
         ;; - ZF means this is the end of the message
+%endif
+
 %endmacro
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -213,6 +241,64 @@ endstruc
         movdqu	        xmm0, [%%p_IV]
         movdqa          [rsp + _IV], xmm0
 
+        cmp             %%length, 8 * 16
+        jae             %%_longer_than_8_blocks
+
+        ;; process 1 to 7 blocks first
+	mov	        DWORD(%%tmp), DWORD(%%length)
+	and	        DWORD(%%tmp), (7 * 16)
+
+	;; 1 <= %%tmp <= 7
+	cmp	        DWORD(%%tmp), 4 * 16
+	ja	        %%_sgt4
+	je	        %%_seq4
+%%_slt4:
+	cmp	        DWORD(%%tmp), 2 * 16
+	ja	        %%_seq3
+	je	        %%_seq2
+%%_seq1:
+	DO_AES_DEC      %%p_in, %%p_out, %%p_keys, 1, %%num_rounds, %%length, short
+	jmp	        %%_do_return
+
+align 32
+%%_seq2:
+	DO_AES_DEC      %%p_in, %%p_out, %%p_keys, 2, %%num_rounds, %%length, short
+	jmp	        %%_do_return
+
+align 32
+%%_seq3:
+	DO_AES_DEC      %%p_in, %%p_out, %%p_keys, 3, %%num_rounds, %%length, short
+	jmp	        %%_do_return
+
+align 32
+%%_seq4:
+	DO_AES_DEC      %%p_in, %%p_out, %%p_keys, 4, %%num_rounds, %%length, short
+	jmp	        %%_do_return
+
+align 32
+%%_sgt4:
+	cmp	        DWORD(%%tmp), 6 * 16
+	ja	        %%_seq7
+	je	        %%_seq6
+%%_seq5:
+	DO_AES_DEC      %%p_in, %%p_out, %%p_keys, 5, %%num_rounds, %%length, short
+	jmp	        %%_do_return
+
+align 32
+%%_seq6:
+	DO_AES_DEC      %%p_in, %%p_out, %%p_keys, 6, %%num_rounds, %%length, short
+	jmp	        %%_do_return
+
+align 32
+%%_seq7:
+	DO_AES_DEC      %%p_in, %%p_out, %%p_keys, 7, %%num_rounds, %%length, short
+	jmp	        %%_do_return
+
+        ;; =====================================================================
+        ;; message longer than 8 blocks
+
+align 32
+%%_longer_than_8_blocks:
         ;; process 1 to 7 blocks first
 	mov	        DWORD(%%tmp), DWORD(%%length)
 	and	        DWORD(%%tmp), (7 * 16)
@@ -220,54 +306,54 @@ endstruc
 
 	;; 1 <= %%tmp <= 7
 	cmp	        DWORD(%%tmp), 4 * 16
-	jg	        %%_gt4
+	ja	        %%_gt4
 	je	        %%_eq4
 %%_lt4:
 	cmp	        DWORD(%%tmp), 2 * 16
-	jg	        %%_eq3
+	ja	        %%_eq3
 	je	        %%_eq2
 %%_eq1:
-	DO_AES_DEC      %%p_in, %%p_out, %%p_keys, 1, %%num_rounds, %%length
+	DO_AES_DEC      %%p_in, %%p_out, %%p_keys, 1, %%num_rounds, %%length, start
 	jz	        %%_do_return
 	jmp	        %%_main_loop
 
 align 32
 %%_eq2:
-	DO_AES_DEC      %%p_in, %%p_out, %%p_keys, 2, %%num_rounds, %%length
+	DO_AES_DEC      %%p_in, %%p_out, %%p_keys, 2, %%num_rounds, %%length, start
 	jz	        %%_do_return
 	jmp	        %%_main_loop
 
 align 32
 %%_eq3:
-	DO_AES_DEC      %%p_in, %%p_out, %%p_keys, 3, %%num_rounds, %%length
+	DO_AES_DEC      %%p_in, %%p_out, %%p_keys, 3, %%num_rounds, %%length, start
 	jz	        %%_do_return
 	jmp	        %%_main_loop
 
 align 32
 %%_eq4:
-	DO_AES_DEC      %%p_in, %%p_out, %%p_keys, 4, %%num_rounds, %%length
+	DO_AES_DEC      %%p_in, %%p_out, %%p_keys, 4, %%num_rounds, %%length, start
 	jz	        %%_do_return
 	jmp	        %%_main_loop
 
 align 32
 %%_gt4:
 	cmp	        DWORD(%%tmp), 6 * 16
-	jg	        %%_eq7
+	ja	        %%_eq7
 	je	        %%_eq6
 %%_eq5:
-	DO_AES_DEC      %%p_in, %%p_out, %%p_keys, 5, %%num_rounds, %%length
+	DO_AES_DEC      %%p_in, %%p_out, %%p_keys, 5, %%num_rounds, %%length, start
 	jz	        %%_do_return
 	jmp	        %%_main_loop
 
 align 32
 %%_eq6:
-	DO_AES_DEC      %%p_in, %%p_out, %%p_keys, 6, %%num_rounds, %%length
+	DO_AES_DEC      %%p_in, %%p_out, %%p_keys, 6, %%num_rounds, %%length, start
 	jz	        %%_do_return
 	jmp	        %%_main_loop
 
 align 32
 %%_eq7:
-	DO_AES_DEC      %%p_in, %%p_out, %%p_keys, 7, %%num_rounds, %%length
+	DO_AES_DEC      %%p_in, %%p_out, %%p_keys, 7, %%num_rounds, %%length, start
 	jz	        %%_do_return
 	jmp	        %%_main_loop
 
