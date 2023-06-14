@@ -27,6 +27,7 @@
 
 #include "intel-ipsec-mb.h"
 #include "include/error.h"
+#include "include/chacha20_poly1305.h"
 
 IMB_DLL_EXPORT void
 imb_quic_chacha20_poly1305(IMB_MGR *state,
@@ -46,7 +47,6 @@ imb_quic_chacha20_poly1305(IMB_MGR *state,
          * @note it can be out of place operation
          * but AAD needs to be copied by the caller
          */
-        struct chacha20_poly1305_context_data ctx;
         uint64_t n;
 
 #ifdef SAFE_PARAM
@@ -110,34 +110,26 @@ imb_quic_chacha20_poly1305(IMB_MGR *state,
         }
 #endif /* SAFE_PARAM */
 
-        if (cipher_dir == IMB_DIR_ENCRYPT) {
-                for (n = 0; n < num_packets; n++) {
-                        IMB_CHACHA20_POLY1305_INIT(state, key, &ctx,
-                                                   iv_ptr_array[n],
-                                                   aad_ptr_array[n],
-                                                   aad_len);
-                        IMB_CHACHA20_POLY1305_ENC_UPDATE(state, key, &ctx,
-                                                         dst_ptr_array[n],
-                                                         src_ptr_array[n],
-                                                         len_array[n]);
-                        IMB_CHACHA20_POLY1305_ENC_FINALIZE(state, &ctx,
-                                                           tag_ptr_array[n],
-                                                           tag_len);
-                }
-        } else /* decrypt direction */ {
-                for (n = 0; n < num_packets; n++) {
-                        IMB_CHACHA20_POLY1305_INIT(state, key, &ctx,
-                                                   iv_ptr_array[n],
-                                                   aad_ptr_array[n],
-                                                   aad_len);
-                        IMB_CHACHA20_POLY1305_DEC_UPDATE(state, key, &ctx,
-                                                         dst_ptr_array[n],
-                                                         src_ptr_array[n],
-                                                         len_array[n]);
-                        IMB_CHACHA20_POLY1305_DEC_FINALIZE(state, &ctx,
-                                                           tag_ptr_array[n],
-                                                           tag_len);
-                }
+        IMB_JOB job;
+
+        job.key_len_in_bytes = 32;
+        job.enc_keys = key;
+        job.iv_len_in_bytes = 12;
+        job.cipher_start_src_offset_in_bytes = 0;
+        job.hash_start_src_offset_in_bytes = 0;
+        job.auth_tag_output_len_in_bytes = tag_len;
+        job.u.CHACHA20_POLY1305.aad_len_in_bytes = aad_len;
+
+        job.cipher_direction = cipher_dir;
+        for (n = 0; n < num_packets; n++) {
+                job.src = src_ptr_array[n];
+                job.dst = dst_ptr_array[n];
+                job.iv = iv_ptr_array[n];
+                job.msg_len_to_cipher_in_bytes = len_array[n];
+                job.msg_len_to_hash_in_bytes = len_array[n];
+                job.auth_tag_output = tag_ptr_array[n];
+                job.u.CHACHA20_POLY1305.aad = aad_ptr_array[n];
+                state->chacha20_poly1305_quic(state, &job);
         }
 }
 

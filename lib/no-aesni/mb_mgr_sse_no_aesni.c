@@ -471,6 +471,8 @@ init_mb_mgr_sse_no_aesni_internal(IMB_MGR *state, const int reset_mgrs)
         state->aes_ecb_128_quic    = aes_ecb_quic_enc_128_sse_no_aesni;
         state->aes_ecb_256_quic    = aes_ecb_quic_enc_256_sse_no_aesni;
 
+        state->chacha20_poly1305_quic = aead_chacha20_poly1305_sse;
+
         state->set_suite_id        = SET_SUITE_ID_FN;
 }
 
