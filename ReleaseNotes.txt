@@ -7,6 +7,9 @@ Unreleased
 Library
 - QUIC CHACHA20-POLY1305 API added.
 
+Test Applications
+- QUIC CHACHA20-POLY1305 tests added.
+
 v1.4 June 2023
 ========================================================================
 

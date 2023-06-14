@@ -86,18 +86,18 @@ static const uint8_t aad_vec0[] = {
         0xc4, 0xc5, 0xc6, 0xc7
 };
 
-static const uint8_t key_vec0[32] = {
+static const uint8_t key_vec0[KEY_SZ] = {
         0x80, 0x81, 0x82, 0x83, 0x84, 0x85, 0x86, 0x87,
         0x88, 0x89, 0x8a, 0x8b, 0x8c, 0x8d, 0x8e, 0x8f,
         0x90, 0x91, 0x92, 0x93, 0x94, 0x95, 0x96, 0x97,
         0x98, 0x99, 0x9a, 0x9b, 0x9c, 0x9d, 0x9e, 0x9f
 };
 
-static const uint8_t iv_vec0[12] = {
+static const uint8_t iv_vec0[IV_SZ] = {
         0x07, 0x00, 0x00, 0x00,
         0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47,
 };
-static const uint8_t tag_vec0[16] = {
+static const uint8_t tag_vec0[DIGEST_SZ] = {
         0x1a, 0xe1, 0x0b, 0x59, 0x4f, 0x09, 0xe2, 0x6a,
         0x7e, 0x90, 0x2e, 0xcb, 0xd0, 0x60, 0x06, 0x91
 };
@@ -105,7 +105,7 @@ static const uint8_t tag_vec0[16] = {
 /* A.5.  ChaCha20-Poly1305 AEAD Decryption */
 
 
-static const uint8_t key_vec1[32] = {
+static const uint8_t key_vec1[KEY_SZ] = {
         0x1c, 0x92, 0x40, 0xa5, 0xeb, 0x55, 0xd3, 0x8a,
         0xf3, 0x33, 0x88, 0x86, 0x04, 0xf6, 0xb5, 0xf0,
         0x47, 0x39, 0x17, 0xc1, 0x40, 0x2b, 0x80, 0x09,
@@ -149,7 +149,7 @@ static const uint8_t cipher_vec1[] = {
         0x9b
 };
 
-static const uint8_t iv_vec1[12] = {
+static const uint8_t iv_vec1[IV_SZ] = {
         0x00, 0x00, 0x00, 0x00, 0x01, 0x02, 0x03, 0x04,
         0x05, 0x06, 0x07, 0x08
 };
@@ -159,7 +159,7 @@ static const uint8_t aad_vec1[] = {
         0x00, 0x00, 0x4e, 0x91
 };
 
-static const uint8_t tag_vec1[16] = {
+static const uint8_t tag_vec1[DIGEST_SZ] = {
         0xee, 0xad, 0x9d, 0x67, 0x89, 0x0c, 0xbb, 0x22,
         0x39, 0x23, 0x36, 0xfe, 0xa1, 0x85, 0x1f, 0x38
 };
@@ -201,14 +201,14 @@ static const uint8_t plain_vec1[] = {
         0x9d
 };
 
-static const uint8_t key_vec2[] = {
+static const uint8_t key_vec2[KEY_SZ] = {
     0x80, 0x81, 0x82, 0x83, 0x84, 0x85, 0x86, 0x87,
     0x88, 0x89, 0x8a, 0x8b, 0x8c, 0x8d, 0x8e, 0x8f,
     0x60, 0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67,
     0x68, 0x66, 0x6a, 0x6b, 0x6c, 0x6d, 0x6e, 0x6f
 };
 
-static const uint8_t iv_vec2[] = {
+static const uint8_t iv_vec2[IV_SZ] = {
     0x01, 0x02, 0x04, 0x08, 0x0b, 0x0d, 0x0f, 0x10,
     0x10, 0x11, 0x12, 0x13
 };
@@ -218,7 +218,7 @@ static const uint8_t aad_vec2[] = {
     0x10, 0x12, 0x14, 0x16
 };
 
-static const uint8_t tag_vec2[] = {
+static const uint8_t tag_vec2[DIGEST_SZ] = {
     0x32, 0x08, 0x45, 0xB8, 0x85, 0xDD, 0xB5, 0x81,
     0x74, 0x36, 0xE3, 0x11, 0x3F, 0x51, 0x6D, 0xBF
 };
@@ -246,24 +246,14 @@ struct aead_vector {
 };
 
 static int
-aead_job_ok(struct IMB_MGR *mb_mgr,
-            const struct aead_vector *vec,
-            const struct IMB_JOB *job,
+aead_ok(const struct aead_vector *vec,
+            const size_t auth_len,
+            const uint8_t *out_text,
+            const IMB_CIPHER_DIRECTION cipher_dir,
             const uint8_t *auth,
             const uint8_t *padding,
             const size_t sizeof_padding)
 {
-        const size_t auth_len = job->auth_tag_output_len_in_bytes;
-        const uint8_t *out_text = (const uint8_t *) job->dst;
-
-        if (job->status != IMB_STATUS_COMPLETED) {
-                const int errcode = imb_get_errno(mb_mgr);
-
-                printf("Error!: job status %d, errno %d => %s\n",
-                       job->status, errcode, imb_get_strerror(errcode));
-                return 0;
-        }
-
         /* hash checks */
         if (memcmp(padding, &auth[sizeof_padding + auth_len],
                    sizeof_padding)) {
@@ -286,17 +276,17 @@ aead_job_ok(struct IMB_MGR *mb_mgr,
                 return 0;
         }
 
-        if (job->cipher_direction == IMB_DIR_ENCRYPT) {
-                if (memcmp(vec->cipher, job->dst, vec->msg_len)) {
+        if (cipher_dir == IMB_DIR_ENCRYPT) {
+                if (memcmp(vec->cipher, out_text, vec->msg_len)) {
                         printf("cipher text mismatched\n");
-                        hexdump(stderr, "Received", job->dst, vec->msg_len);
+                        hexdump(stderr, "Received", out_text, vec->msg_len);
                         hexdump(stderr, "Expected", vec->cipher, vec->msg_len);
                         return 0;
                 }
         } else {
-                if (memcmp(vec->plain, job->dst, vec->msg_len)) {
+                if (memcmp(vec->plain, out_text, vec->msg_len)) {
                         printf("plain text mismatched\n");
-                        hexdump(stderr, "Received", job->dst, vec->msg_len);
+                        hexdump(stderr, "Received", out_text, vec->msg_len);
                         hexdump(stderr, "Expected", vec->plain, vec->msg_len);
                         return 0;
                 }
@@ -340,13 +330,13 @@ test_aead(struct IMB_MGR *mb_mgr,
         memset(targets, 0, num_jobs * sizeof(void *));
 
         for (i = 0; i < num_jobs; i++) {
-                auths[i] = malloc(16 + (sizeof(padding) * 2));
+                auths[i] = malloc(DIGEST_SZ + (sizeof(padding) * 2));
                 if (auths[i] == NULL) {
                         fprintf(stderr, "Can't allocate buffer memory\n");
                         goto end;
                 }
 
-                memset(auths[i], -1, 16 + (sizeof(padding) * 2));
+                memset(auths[i], -1, DIGEST_SZ + (sizeof(padding) * 2));
         }
 
         for (i = 0; i < num_jobs; i++) {
@@ -355,6 +345,64 @@ test_aead(struct IMB_MGR *mb_mgr,
                         fprintf(stderr, "Can't allocate buffer memory\n");
                         goto end;
                 }
+                memset(targets[i], -1, vec->msg_len + (sizeof(padding) * 2));
+
+                if (in_place) {
+                        if (dir == IMB_DIR_ENCRYPT)
+                                memcpy(targets[i] + sizeof(padding),
+                                       vec->plain, vec->msg_len);
+                        else
+                                memcpy(targets[i] + sizeof(padding),
+                                       vec->cipher, vec->msg_len);
+                }
+        }
+
+        /* QUIC API */
+        const void *src_ptr_array[IMB_MAX_JOBS];
+        void *dst_ptr_array[IMB_MAX_JOBS];
+        const void *aad_ptr_array[IMB_MAX_JOBS];
+        void *tag_ptr_array[IMB_MAX_JOBS];
+        const void *iv_ptr_array[IMB_MAX_JOBS];
+        uint64_t len_array[IMB_MAX_JOBS];
+
+        for (i = 0; i < num_jobs; i++) {
+                if (in_place)
+                        src_ptr_array[i] = targets[i] + sizeof(padding);
+                else
+                        if (dir == IMB_DIR_ENCRYPT)
+                                src_ptr_array[i] = vec->plain;
+                        else
+                                src_ptr_array[i] = vec->cipher;
+
+                dst_ptr_array[i] = targets[i] + sizeof(padding);
+
+                aad_ptr_array[i] = vec->aad;
+                iv_ptr_array[i] = vec->iv;
+                tag_ptr_array[i] = auths[i] + sizeof(padding);
+                len_array[i] = vec->msg_len;
+        }
+
+        imb_quic_chacha20_poly1305(mb_mgr,
+                                   vec->key,
+                                   dir,
+                                   dst_ptr_array,
+                                   src_ptr_array,
+                                   len_array,
+                                   iv_ptr_array,
+                                   aad_ptr_array,
+                                   vec->aad_len,
+                                   tag_ptr_array,
+                                   DIGEST_SZ,
+                                   num_jobs);
+
+        for (i = 0; i < num_jobs; i++) {
+                if (!aead_ok(vec, DIGEST_SZ, dst_ptr_array[i], dir, auths[i],
+                                 padding, sizeof(padding)))
+                        goto end;
+        }
+
+        /* Reset the source buffers */
+        for (i = 0; i < num_jobs; i++) {
                 memset(targets[i], -1, vec->msg_len + (sizeof(padding) * 2));
 
                 if (in_place) {
@@ -381,7 +429,7 @@ test_aead(struct IMB_MGR *mb_mgr,
                 job->hash_alg = IMB_AUTH_CHACHA20_POLY1305;
                 job->enc_keys = vec->key;
                 job->dec_keys = vec->key;
-                job->key_len_in_bytes = 32;
+                job->key_len_in_bytes = KEY_SZ;
 
                 job->u.CHACHA20_POLY1305.aad = vec->aad;
                 job->u.CHACHA20_POLY1305.aad_len_in_bytes = vec->aad_len;
@@ -396,22 +444,31 @@ test_aead(struct IMB_MGR *mb_mgr,
                 job->dst = targets[i] + sizeof(padding);
 
                 job->iv = vec->iv;
-                job->iv_len_in_bytes = 12;
+                job->iv_len_in_bytes = IV_SZ;
                 job->msg_len_to_cipher_in_bytes = vec->msg_len;
                 job->cipher_start_src_offset_in_bytes = 0;
 
                 job->msg_len_to_hash_in_bytes = vec->msg_len;
                 job->hash_start_src_offset_in_bytes = 0;
                 job->auth_tag_output = auths[i] + sizeof(padding);
-                job->auth_tag_output_len_in_bytes = 16;
+                job->auth_tag_output_len_in_bytes = DIGEST_SZ;
 
                 job->user_data = auths[i];
 
                 job = IMB_SUBMIT_JOB(mb_mgr);
                 if (job) {
                         jobs_rx++;
-                        if (!aead_job_ok(mb_mgr, vec, job, job->user_data,
-                                         padding, sizeof(padding)))
+                        if (job->status != IMB_STATUS_COMPLETED) {
+                                const int errcode = imb_get_errno(mb_mgr);
+
+                                printf("Error!: job status %d, errno %d => %s\n",
+                                       job->status, errcode, imb_get_strerror(errcode));
+                                goto end;
+                        }
+
+                        if (!aead_ok(vec, job->auth_tag_output_len_in_bytes,
+                                     job->dst, dir, job->user_data,
+                                     padding, sizeof(padding)))
                                 goto end;
                 } else {
                         int err = imb_get_errno(mb_mgr);
@@ -427,7 +484,15 @@ test_aead(struct IMB_MGR *mb_mgr,
         while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL) {
                 jobs_rx++;
 
-                if (!aead_job_ok(mb_mgr, vec, job, job->user_data,
+                if (job->status != IMB_STATUS_COMPLETED) {
+                        const int errcode = imb_get_errno(mb_mgr);
+
+                        printf("Error!: job status %d, errno %d => %s\n",
+                               job->status, errcode, imb_get_strerror(errcode));
+                        goto end;
+                }
+
+                if (!aead_ok(vec, job->auth_tag_output_len_in_bytes, job->dst, dir, job->user_data,
                                  padding, sizeof(padding)))
                         goto end;
         }
@@ -450,7 +515,7 @@ test_aead(struct IMB_MGR *mb_mgr,
 
         /* reset buffers */
         for (i = 0; i < num_jobs; i++) {
-                memset(auths[i], -1, 16 + (sizeof(padding) * 2));
+                memset(auths[i], -1, DIGEST_SZ + (sizeof(padding) * 2));
                 memset(targets[i], -1, vec->msg_len + (sizeof(padding) * 2));
 
                 if (in_place) {
@@ -477,7 +542,7 @@ test_aead(struct IMB_MGR *mb_mgr,
                 job->hash_alg = IMB_AUTH_CHACHA20_POLY1305;
                 job->enc_keys = vec->key;
                 job->dec_keys = vec->key;
-                job->key_len_in_bytes = 32;
+                job->key_len_in_bytes = KEY_SZ;
 
                 job->u.CHACHA20_POLY1305.aad = vec->aad;
                 job->u.CHACHA20_POLY1305.aad_len_in_bytes = vec->aad_len;
@@ -492,14 +557,14 @@ test_aead(struct IMB_MGR *mb_mgr,
                 job->dst = targets[i] + sizeof(padding);
 
                 job->iv = vec->iv;
-                job->iv_len_in_bytes = 12;
+                job->iv_len_in_bytes = IV_SZ;
                 job->msg_len_to_cipher_in_bytes = vec->msg_len;
                 job->cipher_start_src_offset_in_bytes = 0;
 
                 job->msg_len_to_hash_in_bytes = vec->msg_len;
                 job->hash_start_src_offset_in_bytes = 0;
                 job->auth_tag_output = auths[i] + sizeof(padding);
-                job->auth_tag_output_len_in_bytes = 16;
+                job->auth_tag_output_len_in_bytes = DIGEST_SZ;
 
                 job->user_data = auths[i];
 
@@ -530,7 +595,15 @@ test_aead(struct IMB_MGR *mb_mgr,
                         goto end;
                 }
 
-                if (!aead_job_ok(mb_mgr, vec, job, job->user_data,
+                if (job->status != IMB_STATUS_COMPLETED) {
+                        const int errcode = imb_get_errno(mb_mgr);
+
+                        printf("Error!: job status %d, errno %d => %s\n",
+                               job->status, errcode, imb_get_strerror(errcode));
+                        goto end;
+                }
+
+                if (!aead_ok(vec, job->auth_tag_output_len_in_bytes, job->dst, dir, job->user_data,
                                  padding, sizeof(padding)))
                         goto end;
                 jobs_rx++;
@@ -1129,7 +1202,7 @@ test_sgl(struct IMB_MGR *mb_mgr,
                         hexdump(stderr, "SGL output", segments[i], last_seg_sz);
                         test_suite_update(ctx, 0, 1);
                 }
-                if (memcmp(sgl_digest, linear_digest, 16) != 0) {
+                if (memcmp(sgl_digest, linear_digest, DIGEST_SZ) != 0) {
                         printf("hash mismatched (segment size = %u)\n",
                                seg_sz);
                         hexdump(stderr, "Linear digest",
