@@ -39,7 +39,7 @@ SOURCES := main.c gcm_test.c ctr_test.c customop_test.c des_test.c ccm_test.c \
 	chacha20_poly1305_test.c null_test.c snow_v_test.c direct_api_param_test.c quic_ecb_test.c \
 	hmac_sha1.json.c hmac_sha224.json.c hmac_sha256.json.c hmac_sha384.json.c hmac_sha512.json.c \
 	hmac_md5.json.c gmac_test.json.c ghash_test.c ghash_test.json.c poly1305_test.json.c \
-	cmac_test.json.c xcbc_test.json.c sha_test.json.c gmac_test.c
+	cmac_test.json.c xcbc_test.json.c sha_test.json.c aes_cbcs_test.json.c gmac_test.c
 OBJECTS := $(SOURCES:%.c=%.o) utils.o
 
 # targets come here

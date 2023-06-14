@@ -85,6 +85,7 @@ set(TEST_APP_SRC_FILES
   ${CMAKE_CURRENT_SOURCE_DIR}/cmac_test.json.c
   ${CMAKE_CURRENT_SOURCE_DIR}/xcbc_test.json.c
   ${CMAKE_CURRENT_SOURCE_DIR}/sha_test.json.c
+  ${CMAKE_CURRENT_SOURCE_DIR}/aes_cbcs_test.json.c
   ${CMAKE_CURRENT_SOURCE_DIR}/../common/utils.c
 )
 
