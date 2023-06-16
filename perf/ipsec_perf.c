@@ -2911,7 +2911,7 @@ print_times(struct variant_s *variant_list, struct params_s *params, const uint3
                 printf("KEY_SIZE");
                 for (col = 0; col < total_variants; col++) {
                         par = variant_list[col].params;
-                        printf("\tAES-%u", par.key_size * 8);
+                        printf("\t%u", par.key_size * 8);
                 }
                 printf("\n");
         }
