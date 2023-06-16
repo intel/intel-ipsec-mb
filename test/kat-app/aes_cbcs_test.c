@@ -33,7 +33,6 @@
 
 #include <intel-ipsec-mb.h>
 
-#include "gcm_ctr_vectors_test.h"
 #include "utils.h"
 #include "cipher_test.h"
 
@@ -250,11 +249,11 @@ test_aes_vectors(struct IMB_MGR *mb_mgr,
         DECLARE_ALIGNED(uint32_t dec_keys[15*4], 16);
 
         if (!quiet_mode)
-	        printf("AES-CBC Test (N jobs = %d):\n", num_jobs);
+	        printf("AES-CBCS Test (N jobs = %d):\n", num_jobs);
 	for (; v->msg != NULL; v++) {
                 if (!quiet_mode) {
 #ifdef DEBUG
-                        printf("AES-CBC Test Case %zu key_len:%zu\n",
+                        printf("AES-CBCS Test Case %zu key_len:%zu\n",
                                v->tcId, v->keySize);
 #else
                         printf(".");

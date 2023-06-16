@@ -73,6 +73,7 @@ set(TEST_APP_SRC_FILES
   ${CMAKE_CURRENT_SOURCE_DIR}/quic_ecb_test.c
   ${CMAKE_CURRENT_SOURCE_DIR}/gmac_test.c
   ${CMAKE_CURRENT_SOURCE_DIR}/ghash_test.c
+  ${CMAKE_CURRENT_SOURCE_DIR}/aes_cbc_test.c
   ${CMAKE_CURRENT_SOURCE_DIR}/hmac_sha1.json.c
   ${CMAKE_CURRENT_SOURCE_DIR}/hmac_sha224.json.c
   ${CMAKE_CURRENT_SOURCE_DIR}/hmac_sha256.json.c
@@ -86,6 +87,7 @@ set(TEST_APP_SRC_FILES
   ${CMAKE_CURRENT_SOURCE_DIR}/xcbc_test.json.c
   ${CMAKE_CURRENT_SOURCE_DIR}/sha_test.json.c
   ${CMAKE_CURRENT_SOURCE_DIR}/aes_cbcs_test.json.c
+  ${CMAKE_CURRENT_SOURCE_DIR}/aes_cbc_test.json.c
   ${CMAKE_CURRENT_SOURCE_DIR}/../common/utils.c
 )
 

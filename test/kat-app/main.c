@@ -65,6 +65,7 @@ extern int direct_api_param_test(struct IMB_MGR *mb_mgr);
 extern int quic_ecb_test(struct IMB_MGR *mb_mgr);
 extern int gmac_test(struct IMB_MGR *mb_mgr);
 extern int ghash_test(struct IMB_MGR *mb_mgr);
+extern int cbc_test(struct IMB_MGR *mb_mg);
 
 typedef int (*imb_test_t)(struct IMB_MGR *mb_mgr);
 
@@ -91,6 +92,11 @@ struct imb_test tests[] = {
         {
                 .str = "DO_TEST",
                 .fn = do_test,
+                .enabled = 1
+        },
+        {
+                .str = "CBC",
+                .fn = cbc_test,
                 .enabled = 1
         },
         {
