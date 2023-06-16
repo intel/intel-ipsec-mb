@@ -208,8 +208,8 @@ struct params_s {
         IMB_CIPHER_DIRECTION cipher_dir;
         enum test_cipher_mode_e cipher_mode;
         enum test_hash_alg_e hash_alg;
-        uint32_t aes_key_size;
-        uint32_t size_aes;
+        uint32_t key_size;
+        uint32_t job_size;
         uint64_t aad_size;
         uint32_t num_sizes;
         uint32_t core;
@@ -218,7 +218,7 @@ struct params_s {
 struct custom_job_params {
         enum test_cipher_mode_e cipher_mode;
         enum test_hash_alg_e hash_alg;
-        uint32_t aes_key_size;
+        uint32_t key_size;
         IMB_CIPHER_DIRECTION cipher_dir;
 };
 
@@ -240,82 +240,72 @@ const struct str_value_mapping arch_str_map[] = { { .name = "SSE", .values.arch_
 
 const struct str_value_mapping cipher_algo_str_map[] = {
         { .name = "aes-cbc-128",
-          .values.job_params = { .cipher_mode = TEST_CBC, .aes_key_size = IMB_KEY_128_BYTES } },
+          .values.job_params = { .cipher_mode = TEST_CBC, .key_size = IMB_KEY_128_BYTES } },
         { .name = "aes-cbc-192",
-          .values.job_params = { .cipher_mode = TEST_CBC, .aes_key_size = IMB_KEY_192_BYTES } },
+          .values.job_params = { .cipher_mode = TEST_CBC, .key_size = IMB_KEY_192_BYTES } },
         { .name = "aes-cbc-256",
-          .values.job_params = { .cipher_mode = TEST_CBC, .aes_key_size = IMB_KEY_256_BYTES } },
+          .values.job_params = { .cipher_mode = TEST_CBC, .key_size = IMB_KEY_256_BYTES } },
         { .name = "aes-ctr-128",
-          .values.job_params = { .cipher_mode = TEST_CNTR, .aes_key_size = IMB_KEY_128_BYTES } },
+          .values.job_params = { .cipher_mode = TEST_CNTR, .key_size = IMB_KEY_128_BYTES } },
         { .name = "aes-ctr-192",
-          .values.job_params = { .cipher_mode = TEST_CNTR, .aes_key_size = IMB_KEY_192_BYTES } },
+          .values.job_params = { .cipher_mode = TEST_CNTR, .key_size = IMB_KEY_192_BYTES } },
         { .name = "aes-ctr-256",
-          .values.job_params = { .cipher_mode = TEST_CNTR, .aes_key_size = IMB_KEY_256_BYTES } },
+          .values.job_params = { .cipher_mode = TEST_CNTR, .key_size = IMB_KEY_256_BYTES } },
         { .name = "aes-ctr8-128",
-          .values.job_params = { .cipher_mode = TEST_CNTR8, .aes_key_size = IMB_KEY_128_BYTES } },
+          .values.job_params = { .cipher_mode = TEST_CNTR8, .key_size = IMB_KEY_128_BYTES } },
         { .name = "aes-ctr8-192",
-          .values.job_params = { .cipher_mode = TEST_CNTR8, .aes_key_size = IMB_KEY_192_BYTES } },
+          .values.job_params = { .cipher_mode = TEST_CNTR8, .key_size = IMB_KEY_192_BYTES } },
         { .name = "aes-ctr8-256",
-          .values.job_params = { .cipher_mode = TEST_CNTR8, .aes_key_size = IMB_KEY_256_BYTES } },
+          .values.job_params = { .cipher_mode = TEST_CNTR8, .key_size = IMB_KEY_256_BYTES } },
         { .name = "aes-ctr-bit-128",
-          .values.job_params = { .cipher_mode = TEST_CNTR_BITLEN,
-                                 .aes_key_size = IMB_KEY_128_BYTES } },
+          .values.job_params = { .cipher_mode = TEST_CNTR_BITLEN, .key_size = IMB_KEY_128_BYTES } },
         { .name = "aes-ctr-bit-192",
-          .values.job_params = { .cipher_mode = TEST_CNTR_BITLEN,
-                                 .aes_key_size = IMB_KEY_192_BYTES } },
+          .values.job_params = { .cipher_mode = TEST_CNTR_BITLEN, .key_size = IMB_KEY_192_BYTES } },
         { .name = "aes-ctr-bit-256",
-          .values.job_params = { .cipher_mode = TEST_CNTR_BITLEN,
-                                 .aes_key_size = IMB_KEY_256_BYTES } },
+          .values.job_params = { .cipher_mode = TEST_CNTR_BITLEN, .key_size = IMB_KEY_256_BYTES } },
         { .name = "aes-ctr-bit4-128",
           .values.job_params = { .cipher_mode = TEST_CNTR_BITLEN4,
-                                 .aes_key_size = IMB_KEY_128_BYTES } },
+                                 .key_size = IMB_KEY_128_BYTES } },
         { .name = "aes-ctr-bit4-192",
           .values.job_params = { .cipher_mode = TEST_CNTR_BITLEN4,
-                                 .aes_key_size = IMB_KEY_192_BYTES } },
+                                 .key_size = IMB_KEY_192_BYTES } },
         { .name = "aes-ctr-bit4-256",
           .values.job_params = { .cipher_mode = TEST_CNTR_BITLEN4,
-                                 .aes_key_size = IMB_KEY_256_BYTES } },
+                                 .key_size = IMB_KEY_256_BYTES } },
         { .name = "aes-ecb-128",
-          .values.job_params = { .cipher_mode = TEST_ECB, .aes_key_size = IMB_KEY_128_BYTES } },
+          .values.job_params = { .cipher_mode = TEST_ECB, .key_size = IMB_KEY_128_BYTES } },
         { .name = "aes-ecb-192",
-          .values.job_params = { .cipher_mode = TEST_ECB, .aes_key_size = IMB_KEY_192_BYTES } },
+          .values.job_params = { .cipher_mode = TEST_ECB, .key_size = IMB_KEY_192_BYTES } },
         { .name = "aes-ecb-256",
-          .values.job_params = { .cipher_mode = TEST_ECB, .aes_key_size = IMB_KEY_256_BYTES } },
+          .values.job_params = { .cipher_mode = TEST_ECB, .key_size = IMB_KEY_256_BYTES } },
         { .name = "aes-docsis-128",
-          .values.job_params = { .cipher_mode = TEST_AESDOCSIS,
-                                 .aes_key_size = IMB_KEY_128_BYTES } },
+          .values.job_params = { .cipher_mode = TEST_AESDOCSIS, .key_size = IMB_KEY_128_BYTES } },
         { .name = "aes-docsis8-128",
-          .values.job_params = { .cipher_mode = TEST_AESDOCSIS8,
-                                 .aes_key_size = IMB_KEY_128_BYTES } },
+          .values.job_params = { .cipher_mode = TEST_AESDOCSIS8, .key_size = IMB_KEY_128_BYTES } },
         { .name = "aes-docsis-256",
-          .values.job_params = { .cipher_mode = TEST_AESDOCSIS,
-                                 .aes_key_size = IMB_KEY_256_BYTES } },
+          .values.job_params = { .cipher_mode = TEST_AESDOCSIS, .key_size = IMB_KEY_256_BYTES } },
         { .name = "aes-docsis8-256",
-          .values.job_params = { .cipher_mode = TEST_AESDOCSIS8,
-                                 .aes_key_size = IMB_KEY_256_BYTES } },
+          .values.job_params = { .cipher_mode = TEST_AESDOCSIS8, .key_size = IMB_KEY_256_BYTES } },
         { .name = "des-docsis",
-          .values.job_params = { .cipher_mode = TEST_DESDOCSIS, .aes_key_size = 8 } },
+          .values.job_params = { .cipher_mode = TEST_DESDOCSIS, .key_size = 8 } },
         { .name = "des-docsis4",
-          .values.job_params = { .cipher_mode = TEST_DESDOCSIS4, .aes_key_size = 8 } },
-        { .name = "des-cbc", .values.job_params = { .cipher_mode = TEST_DES, .aes_key_size = 8 } },
-        { .name = "3des-cbc",
-          .values.job_params = { .cipher_mode = TEST_3DES, .aes_key_size = 8 } },
+          .values.job_params = { .cipher_mode = TEST_DESDOCSIS4, .key_size = 8 } },
+        { .name = "des-cbc", .values.job_params = { .cipher_mode = TEST_DES, .key_size = 8 } },
+        { .name = "3des-cbc", .values.job_params = { .cipher_mode = TEST_3DES, .key_size = 8 } },
         { .name = "zuc-eea3",
-          .values.job_params = { .cipher_mode = TEST_ZUC_EEA3, .aes_key_size = 16 } },
+          .values.job_params = { .cipher_mode = TEST_ZUC_EEA3, .key_size = 16 } },
         { .name = "zuc-eea3-256",
-          .values.job_params = { .cipher_mode = TEST_ZUC_EEA3, .aes_key_size = 32 } },
+          .values.job_params = { .cipher_mode = TEST_ZUC_EEA3, .key_size = 32 } },
         { .name = "snow3g-uea2",
-          .values.job_params = { .cipher_mode = TEST_SNOW3G_UEA2, .aes_key_size = 16 } },
+          .values.job_params = { .cipher_mode = TEST_SNOW3G_UEA2, .key_size = 16 } },
         { .name = "kasumi-uea1",
-          .values.job_params = { .cipher_mode = TEST_KASUMI_UEA1, .aes_key_size = 16 } },
+          .values.job_params = { .cipher_mode = TEST_KASUMI_UEA1, .key_size = 16 } },
         { .name = "aes-cbcs-1-9",
-          .values.job_params = { .cipher_mode = TEST_CBCS_1_9, .aes_key_size = 16 } },
+          .values.job_params = { .cipher_mode = TEST_CBCS_1_9, .key_size = 16 } },
         { .name = "chacha20",
-          .values.job_params = { .cipher_mode = TEST_CHACHA20, .aes_key_size = 32 } },
-        { .name = "snow-v",
-          .values.job_params = { .cipher_mode = TEST_SNOW_V, .aes_key_size = 32 } },
-        { .name = "null",
-          .values.job_params = { .cipher_mode = TEST_NULL_CIPHER, .aes_key_size = 0 } }
+          .values.job_params = { .cipher_mode = TEST_CHACHA20, .key_size = 32 } },
+        { .name = "snow-v", .values.job_params = { .cipher_mode = TEST_SNOW_V, .key_size = 32 } },
+        { .name = "null", .values.job_params = { .cipher_mode = TEST_NULL_CIPHER, .key_size = 0 } }
 };
 
 const struct str_value_mapping hash_algo_str_map[] = {
@@ -547,54 +537,54 @@ const struct str_value_mapping aead_algo_str_map[] = {
         { .name = "aes-gcm-128",
           .values.job_params = { .cipher_mode = TEST_GCM,
                                  .hash_alg = TEST_HASH_GCM,
-                                 .aes_key_size = IMB_KEY_128_BYTES } },
+                                 .key_size = IMB_KEY_128_BYTES } },
         { .name = "aes-gcm-192",
           .values.job_params = { .cipher_mode = TEST_GCM,
                                  .hash_alg = TEST_HASH_GCM,
-                                 .aes_key_size = IMB_KEY_192_BYTES } },
+                                 .key_size = IMB_KEY_192_BYTES } },
         { .name = "aes-gcm-256",
           .values.job_params = { .cipher_mode = TEST_GCM,
                                  .hash_alg = TEST_HASH_GCM,
-                                 .aes_key_size = IMB_KEY_256_BYTES } },
+                                 .key_size = IMB_KEY_256_BYTES } },
         { .name = "aes-ccm-128",
           .values.job_params = { .cipher_mode = TEST_CCM,
                                  .hash_alg = TEST_HASH_CCM,
-                                 .aes_key_size = IMB_KEY_128_BYTES } },
+                                 .key_size = IMB_KEY_128_BYTES } },
         { .name = "aes-ccm-256",
           .values.job_params = { .cipher_mode = TEST_CCM,
                                  .hash_alg = TEST_HASH_CCM,
-                                 .aes_key_size = IMB_KEY_256_BYTES } },
+                                 .key_size = IMB_KEY_256_BYTES } },
         { .name = "pon-128",
           .values.job_params = { .cipher_mode = TEST_PON_CNTR,
                                  .hash_alg = TEST_PON_CRC_BIP,
-                                 .aes_key_size = IMB_KEY_128_BYTES } },
+                                 .key_size = IMB_KEY_128_BYTES } },
         { .name = "pon-128-no-ctr",
           .values.job_params = { .cipher_mode = TEST_PON_NO_CNTR,
                                  .hash_alg = TEST_PON_CRC_BIP,
-                                 .aes_key_size = 0 } },
+                                 .key_size = 0 } },
         { .name = "chacha20-poly1305",
           .values.job_params = { .cipher_mode = TEST_AEAD_CHACHA20,
                                  .hash_alg = TEST_AEAD_POLY1305,
-                                 .aes_key_size = IMB_KEY_256_BYTES } },
+                                 .key_size = IMB_KEY_256_BYTES } },
         { .name = "aes-docsis-128-crc32",
           .values.job_params = { .cipher_mode = TEST_AESDOCSIS,
                                  .hash_alg = TEST_DOCSIS_CRC32,
-                                 .aes_key_size = IMB_KEY_128_BYTES } },
+                                 .key_size = IMB_KEY_128_BYTES } },
         { .name = "aes-docsis8-128-crc32",
           .values.job_params = { .cipher_mode = TEST_AESDOCSIS8,
                                  .hash_alg = TEST_DOCSIS_CRC32,
-                                 .aes_key_size = IMB_KEY_128_BYTES } },
+                                 .key_size = IMB_KEY_128_BYTES } },
         { .name = "aes-docsis-256-crc32",
           .values.job_params = { .cipher_mode = TEST_AESDOCSIS,
                                  .hash_alg = TEST_DOCSIS_CRC32,
-                                 .aes_key_size = IMB_KEY_256_BYTES } },
+                                 .key_size = IMB_KEY_256_BYTES } },
         { .name = "aes-docsis8-256-crc32",
           .values.job_params = { .cipher_mode = TEST_AESDOCSIS8,
                                  .hash_alg = TEST_DOCSIS_CRC32,
-                                 .aes_key_size = IMB_KEY_256_BYTES } },
+                                 .key_size = IMB_KEY_256_BYTES } },
         { .name = "snow-v-aead",
           .values.job_params = { .cipher_mode = TEST_SNOW_V_AEAD,
-                                 .aes_key_size = 32,
+                                 .key_size = 32,
                                  .hash_alg = TEST_AUTH_SNOW_V_AEAD } },
 };
 
@@ -703,7 +693,7 @@ uint64_t snow_v_aad_size = DEFAULT_SNOW_V_AEAD_AAD_SIZE;
 
 struct custom_job_params custom_job_params = { .cipher_mode = TEST_NULL_CIPHER,
                                                .hash_alg = TEST_NULL_HASH,
-                                               .aes_key_size = 0,
+                                               .key_size = 0,
                                                .cipher_dir = IMB_DIR_ENCRYPT };
 
 uint8_t archs[NUM_ARCHS] = { 1, 1, 1, 1 }; /* uses all function sets */
@@ -1435,7 +1425,7 @@ set_size_lists(uint32_t *cipher_size_list, uint32_t *hash_size_list, uint64_t *x
                 if (imix_list_count != 0)
                         job_size = job_size_imix_list[i];
                 else
-                        job_size = params->size_aes;
+                        job_size = params->job_size;
 
                 if ((params->cipher_mode == TEST_AESDOCSIS8) || (params->cipher_mode == TEST_CNTR8))
                         cipher_size_list[i] = job_size + 8;
@@ -1923,10 +1913,10 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params, const uint32_t num_iter, uint8
 
         /* Translating enum to the API's one */
         job_template.cipher_mode = translate_cipher_mode(params->cipher_mode);
-        job_template.key_len_in_bytes = params->aes_key_size;
+        job_template.key_len_in_bytes = params->key_size;
         if (job_template.cipher_mode == IMB_CIPHER_GCM ||
             job_template.cipher_mode == IMB_CIPHER_GCM_SGL) {
-                switch (params->aes_key_size) {
+                switch (params->key_size) {
                 case IMB_KEY_128_BYTES:
                         IMB_AES128_GCM_PRE(mb_mgr, gcm_key, &gdata_key);
                         break;
@@ -1955,7 +1945,7 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params, const uint32_t num_iter, uint8
                 job_template.key_len_in_bytes = 24;
                 job_template.iv_len_in_bytes = 8;
         } else if (job_template.cipher_mode == IMB_CIPHER_ZUC_EEA3) {
-                if (params->aes_key_size == 16) {
+                if (params->key_size == 16) {
                         job_template.key_len_in_bytes = 16;
                         job_template.iv_len_in_bytes = 16;
                 } else {
@@ -2418,7 +2408,7 @@ do_test_gcm(struct params_s *params, const uint32_t num_iter, IMB_MGR *mb_mgr, u
         if (segment_size != 0)
                 use_gcm_sgl_api = 1;
 
-        key = (uint8_t *) malloc(sizeof(uint8_t) * params->aes_key_size);
+        key = (uint8_t *) malloc(sizeof(uint8_t) * params->key_size);
         if (!key) {
                 fprintf(stderr, "Could not malloc key\n");
                 free_mem(&p_buffer, &p_keys);
@@ -2432,9 +2422,9 @@ do_test_gcm(struct params_s *params, const uint32_t num_iter, IMB_MGR *mb_mgr, u
                 free_mem(&p_buffer, &p_keys);
                 exit(EXIT_FAILURE);
         }
-        memset(key, 0, params->aes_key_size);
+        memset(key, 0, params->key_size);
 
-        switch (params->aes_key_size) {
+        switch (params->key_size) {
         case IMB_KEY_128_BYTES:
                 IMB_AES128_GCM_PRE(mb_mgr, key, &gdata_key);
                 break;
@@ -2455,33 +2445,33 @@ do_test_gcm(struct params_s *params, const uint32_t num_iter, IMB_MGR *mb_mgr, u
 #endif
                         time = __rdtscp(&aux);
 
-                if (params->aes_key_size == IMB_KEY_128_BYTES) {
+                if (params->key_size == IMB_KEY_128_BYTES) {
                         if (use_gcm_sgl_api)
                                 run_gcm_sgl(mb_mgr->gcm128_init, mb_mgr->gcm128_enc_update,
                                             mb_mgr->gcm128_enc_finalize, &gdata_key, &gdata_ctx,
-                                            p_buffer, params->size_aes, aad, params->aad_size,
+                                            p_buffer, params->job_size, aad, params->aad_size,
                                             num_iter);
                         else
                                 run_gcm(mb_mgr->gcm128_enc, &gdata_key, &gdata_ctx, p_buffer,
-                                        params->size_aes, aad, params->aad_size, num_iter);
-                } else if (params->aes_key_size == IMB_KEY_192_BYTES) {
+                                        params->job_size, aad, params->aad_size, num_iter);
+                } else if (params->key_size == IMB_KEY_192_BYTES) {
                         if (use_gcm_sgl_api)
                                 run_gcm_sgl(mb_mgr->gcm192_init, mb_mgr->gcm192_enc_update,
                                             mb_mgr->gcm192_enc_finalize, &gdata_key, &gdata_ctx,
-                                            p_buffer, params->size_aes, aad, params->aad_size,
+                                            p_buffer, params->job_size, aad, params->aad_size,
                                             num_iter);
                         else
                                 run_gcm(mb_mgr->gcm192_enc, &gdata_key, &gdata_ctx, p_buffer,
-                                        params->size_aes, aad, params->aad_size, num_iter);
+                                        params->job_size, aad, params->aad_size, num_iter);
                 } else { /* 256 */
                         if (use_gcm_sgl_api)
                                 run_gcm_sgl(mb_mgr->gcm256_init, mb_mgr->gcm256_enc_update,
                                             mb_mgr->gcm256_enc_finalize, &gdata_key, &gdata_ctx,
-                                            p_buffer, params->size_aes, aad, params->aad_size,
+                                            p_buffer, params->job_size, aad, params->aad_size,
                                             num_iter);
                         else
                                 run_gcm(mb_mgr->gcm256_enc, &gdata_key, &gdata_ctx, p_buffer,
-                                        params->size_aes, aad, params->aad_size, num_iter);
+                                        params->job_size, aad, params->aad_size, num_iter);
                 }
 #ifndef _WIN32
                 if (use_unhalted_cycles)
@@ -2497,33 +2487,33 @@ do_test_gcm(struct params_s *params, const uint32_t num_iter, IMB_MGR *mb_mgr, u
 #endif
                         time = __rdtscp(&aux);
 
-                if (params->aes_key_size == IMB_KEY_128_BYTES) {
+                if (params->key_size == IMB_KEY_128_BYTES) {
                         if (use_gcm_sgl_api)
                                 run_gcm_sgl(mb_mgr->gcm128_init, mb_mgr->gcm128_dec_update,
                                             mb_mgr->gcm128_dec_finalize, &gdata_key, &gdata_ctx,
-                                            p_buffer, params->size_aes, aad, params->aad_size,
+                                            p_buffer, params->job_size, aad, params->aad_size,
                                             num_iter);
                         else
                                 run_gcm(mb_mgr->gcm128_dec, &gdata_key, &gdata_ctx, p_buffer,
-                                        params->size_aes, aad, params->aad_size, num_iter);
-                } else if (params->aes_key_size == IMB_KEY_192_BYTES) {
+                                        params->job_size, aad, params->aad_size, num_iter);
+                } else if (params->key_size == IMB_KEY_192_BYTES) {
                         if (use_gcm_sgl_api)
                                 run_gcm_sgl(mb_mgr->gcm192_init, mb_mgr->gcm192_dec_update,
                                             mb_mgr->gcm192_dec_finalize, &gdata_key, &gdata_ctx,
-                                            p_buffer, params->size_aes, aad, params->aad_size,
+                                            p_buffer, params->job_size, aad, params->aad_size,
                                             num_iter);
                         else
                                 run_gcm(mb_mgr->gcm192_dec, &gdata_key, &gdata_ctx, p_buffer,
-                                        params->size_aes, aad, params->aad_size, num_iter);
+                                        params->job_size, aad, params->aad_size, num_iter);
                 } else { /* 256 */
                         if (use_gcm_sgl_api)
                                 run_gcm_sgl(mb_mgr->gcm256_init, mb_mgr->gcm256_dec_update,
                                             mb_mgr->gcm256_dec_finalize, &gdata_key, &gdata_ctx,
-                                            p_buffer, params->size_aes, aad, params->aad_size,
+                                            p_buffer, params->job_size, aad, params->aad_size,
                                             num_iter);
                         else
                                 run_gcm(mb_mgr->gcm256_dec, &gdata_key, &gdata_ctx, p_buffer,
-                                        params->size_aes, aad, params->aad_size, num_iter);
+                                        params->job_size, aad, params->aad_size, num_iter);
                 }
 #ifndef _WIN32
                 if (use_unhalted_cycles)
@@ -2567,11 +2557,11 @@ do_test_chacha_poly(struct params_s *params, const uint32_t num_iter, IMB_MGR *m
         }
 
         if (segment_size != 0) {
-                num_segs = params->size_aes / segment_size;
-                final_seg_sz = params->size_aes % segment_size;
+                num_segs = params->job_size / segment_size;
+                final_seg_sz = params->job_size % segment_size;
         } else {
                 num_segs = 0;
-                final_seg_sz = params->size_aes;
+                final_seg_sz = params->job_size;
         }
 
 #ifndef _WIN32
@@ -2669,7 +2659,7 @@ do_test_ghash(struct params_s *params, const uint32_t num_iter, IMB_MGR *mb_mgr,
         } else {
                 for (i = 0; i < num_iter; i++) {
                         uint8_t *pb = get_dst_buffer(index, p_buffer);
-                        const uint32_t buf_size = params->size_aes;
+                        const uint32_t buf_size = params->job_size;
 
                         IMB_GHASH(mb_mgr, &gdata_key, pb, buf_size, auth_tag, sizeof(auth_tag));
                         index = get_next_index(index);
@@ -2733,16 +2723,16 @@ process_variant(IMB_MGR *mgr, const enum arch_type_e arch, struct params_s *para
         uint32_t sizes = params->num_sizes;
         uint64_t *times = &variant_ptr->avg_times[run];
         uint32_t sz;
-        uint32_t size_aes;
+        uint32_t job_size;
 
         if (imix_list_count != 0)
                 sizes = 1;
 
         for (sz = 0; sz < sizes; sz++) {
                 if (job_size_count == 0)
-                        size_aes = job_sizes[RANGE_MIN] + (sz * job_sizes[RANGE_STEP]);
+                        job_size = job_sizes[RANGE_MIN] + (sz * job_sizes[RANGE_STEP]);
                 else
-                        size_aes = job_size_list[sz];
+                        job_size = job_size_list[sz];
 
                 uint32_t num_iter;
 
@@ -2763,16 +2753,16 @@ process_variant(IMB_MGR *mgr, const enum arch_type_e arch, struct params_s *para
                  * If job size == 0, check AAD size
                  * (only allowed for GCM/CCM)
                  */
-                if (size_aes == 0 && params->aad_size != 0)
+                if (job_size == 0 && params->aad_size != 0)
                         num_iter = (iter_scale >= (uint32_t) params->aad_size)
                                            ? (iter_scale / (uint32_t) params->aad_size)
                                            : 1;
-                else if (size_aes != 0)
-                        num_iter = (iter_scale >= size_aes) ? (iter_scale / size_aes) : 1;
+                else if (job_size != 0)
+                        num_iter = (iter_scale >= job_size) ? (iter_scale / job_size) : 1;
                 else
                         num_iter = iter_scale;
 
-                params->size_aes = size_aes;
+                params->job_size = job_size;
                 if (params->cipher_mode == TEST_GCM && (!use_job_api)) {
                         if (job_iter == 0)
                                 *times = do_test_gcm(params, 2 * num_iter, mgr, p_buffer, p_keys);
@@ -2921,7 +2911,7 @@ print_times(struct variant_s *variant_list, struct params_s *params, const uint3
                 printf("KEY_SIZE");
                 for (col = 0; col < total_variants; col++) {
                         par = variant_list[col].params;
-                        printf("\tAES-%u", par.aes_key_size * 8);
+                        printf("\tAES-%u", par.key_size * 8);
                 }
                 printf("\n");
         }
@@ -3077,7 +3067,7 @@ run_tests(void *arg)
                         prog_bar_init(total_variants);
 
                 params.cipher_dir = custom_job_params.cipher_dir;
-                params.aes_key_size = custom_job_params.aes_key_size;
+                params.key_size = custom_job_params.key_size;
                 params.cipher_mode = custom_job_params.cipher_mode;
                 params.hash_alg = custom_job_params.hash_alg;
 
@@ -3682,7 +3672,7 @@ main(int argc, char *argv[])
                                 return EXIT_FAILURE;
 
                         custom_job_params.cipher_mode = values->job_params.cipher_mode;
-                        custom_job_params.aes_key_size = values->job_params.aes_key_size;
+                        custom_job_params.key_size = values->job_params.key_size;
                         cipher_algo_set = 1;
                         i++;
                 } else if (strcmp(argv[i], "--cipher-dir") == 0) {
@@ -3710,7 +3700,7 @@ main(int argc, char *argv[])
                                 return EXIT_FAILURE;
 
                         custom_job_params.cipher_mode = values->job_params.cipher_mode;
-                        custom_job_params.aes_key_size = values->job_params.aes_key_size;
+                        custom_job_params.key_size = values->job_params.key_size;
                         custom_job_params.hash_alg = values->job_params.hash_alg;
                         aead_algo_set = 1;
                         i++;
