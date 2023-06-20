@@ -25,12 +25,43 @@
 ;; OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;
 
-%ifndef AES_CBC_DEC_128_X8
-;; aes_cbcs_1_9_dec_128_avx(void *in, void *IV, void *keys, void *out,
-;;                          UINT64 num_bytes, void *next_iv)
-%define AES_CBC_DEC_128_X8 aes_cbcs_1_9_dec_128_avx
-%define OFFSET 160
-%define CBCS
+;; AES-CBCS-128_1-9 decrypt by8
+
+; arg 1: IN:   pointer to input (cipher text)
+; arg 2: IV:   pointer to IV
+; arg 3: KEYS: pointer to keys
+; arg 4: OUT:  pointer to output (plain text)
+; arg 5: LEN:  length in bytes (multiple of 16)
+; arg 6: NEXT_IV:  pointer to buffer for IV
+
+%ifdef LINUX
+%define arg1	rdi
+%define arg2	rsi
+%define arg3	rdx
+%define arg4	rcx
+%define arg5    r8
+%define arg6    r9
+%else
+%define arg1	rcx
+%define arg2	rdx
+%define arg3	r8
+%define arg4	r9
+%define arg5    rax
+%define arg6    r11
 %endif
 
-%include "avx_t1/aes128_cbc_dec_by8_avx.asm"
+%include "include/aes_cbcs_dec_by8_avx.inc"
+
+mksection .text
+
+align 64
+MKGLOBAL(aes_cbcs_1_9_dec_128_avx,function,internal)
+aes_cbcs_1_9_dec_128_avx:
+%ifndef LINUX
+        mov     arg5, [rsp + 5*8]
+        mov     arg6, [rsp + 6*8]
+%endif
+        AES_CBCS_DEC arg1, arg2, arg3, arg4, arg5, r10, 9, 160, arg6
+        ret
+
+mksection stack-noexec
