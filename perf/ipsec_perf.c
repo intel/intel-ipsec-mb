@@ -210,7 +210,6 @@ struct params_s {
         enum test_hash_alg_e hash_alg;
         uint32_t key_size;
         uint32_t job_size;
-        uint64_t aad_size;
         uint32_t num_sizes;
         uint32_t core;
 };
@@ -686,10 +685,7 @@ uint32_t max_job_size = 0;
 
 uint32_t job_iter = 0;
 uint32_t tag_size = 0;
-uint64_t gcm_aad_size = DEFAULT_GCM_AAD_SIZE;
-uint64_t ccm_aad_size = DEFAULT_CCM_AAD_SIZE;
-uint64_t chacha_poly_aad_size = DEFAULT_CHACHA_POLY_AAD_SIZE;
-uint64_t snow_v_aad_size = DEFAULT_SNOW_V_AEAD_AAD_SIZE;
+uint64_t aad_size = AAD_SIZE_MAX + 1;
 
 struct custom_job_params custom_job_params = { .cipher_mode = TEST_NULL_CIPHER,
                                                .hash_alg = TEST_NULL_HASH,
@@ -1930,12 +1926,12 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params, const uint32_t num_iter, uint8
                 }
                 job_template.enc_keys = &gdata_key;
                 job_template.dec_keys = &gdata_key;
-                job_template.u.GCM.aad_len_in_bytes = params->aad_size;
+                job_template.u.GCM.aad_len_in_bytes = aad_size;
                 job_template.iv_len_in_bytes = 12;
         } else if (job_template.cipher_mode == IMB_CIPHER_CCM) {
                 job_template.hash_start_src_offset_in_bytes = 0;
                 job_template.cipher_start_src_offset_in_bytes = 0;
-                job_template.u.CCM.aad_len_in_bytes = params->aad_size;
+                job_template.u.CCM.aad_len_in_bytes = aad_size;
                 job_template.iv_len_in_bytes = 13;
         } else if (job_template.cipher_mode == IMB_CIPHER_DES ||
                    job_template.cipher_mode == IMB_CIPHER_DOCSIS_DES) {
@@ -1980,7 +1976,7 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params, const uint32_t num_iter, uint8
                 job_template.cipher_start_src_offset_in_bytes = 0;
                 job_template.enc_keys = k1_expanded;
                 job_template.dec_keys = k1_expanded;
-                job_template.u.CHACHA20_POLY1305.aad_len_in_bytes = params->aad_size;
+                job_template.u.CHACHA20_POLY1305.aad_len_in_bytes = aad_size;
                 job_template.iv_len_in_bytes = 12;
         } else if (job_template.cipher_mode == IMB_CIPHER_SNOW_V)
                 job_template.iv_len_in_bytes = 16;
@@ -1988,7 +1984,7 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params, const uint32_t num_iter, uint8
                  job_template.hash_alg == IMB_AUTH_SNOW_V_AEAD) {
                 job_template.key_len_in_bytes = 32;
                 job_template.iv_len_in_bytes = 16;
-                job_template.u.SNOW_V_AEAD.aad_len_in_bytes = params->aad_size;
+                job_template.u.SNOW_V_AEAD.aad_len_in_bytes = aad_size;
         }
 
 #define TIMEOUT_MS 100 /*< max time for one packet size to be tested for */
@@ -2323,7 +2319,7 @@ static void
 run_gcm_sgl(aes_gcm_init_t init, aes_gcm_enc_dec_update_t update,
             aes_gcm_enc_dec_finalize_t finalize, struct gcm_key_data *gdata_key,
             struct gcm_context_data *gdata_ctx, uint8_t *p_buffer, uint32_t buf_size,
-            const void *aad, const uint64_t aad_size, const uint32_t num_iter)
+            const void *aad, const uint32_t num_iter)
 {
         uint32_t i;
         static uint32_t index = 0;
@@ -2372,7 +2368,7 @@ run_gcm_sgl(aes_gcm_init_t init, aes_gcm_enc_dec_update_t update,
 static void
 run_gcm(aes_gcm_enc_dec_t enc_dec, struct gcm_key_data *gdata_key,
         struct gcm_context_data *gdata_ctx, uint8_t *p_buffer, uint32_t buf_size, const void *aad,
-        const uint64_t aad_size, const uint32_t num_iter)
+        const uint32_t num_iter)
 {
         uint32_t i;
         uint32_t index = 0;
@@ -2415,7 +2411,7 @@ do_test_gcm(struct params_s *params, const uint32_t num_iter, IMB_MGR *mb_mgr, u
                 exit(EXIT_FAILURE);
         }
 
-        aad = (uint8_t *) malloc(sizeof(uint8_t) * params->aad_size);
+        aad = (uint8_t *) malloc(sizeof(uint8_t) * aad_size);
         if (!aad) {
                 free(key);
                 fprintf(stderr, "Could not malloc AAD\n");
@@ -2449,29 +2445,26 @@ do_test_gcm(struct params_s *params, const uint32_t num_iter, IMB_MGR *mb_mgr, u
                         if (use_gcm_sgl_api)
                                 run_gcm_sgl(mb_mgr->gcm128_init, mb_mgr->gcm128_enc_update,
                                             mb_mgr->gcm128_enc_finalize, &gdata_key, &gdata_ctx,
-                                            p_buffer, params->job_size, aad, params->aad_size,
-                                            num_iter);
+                                            p_buffer, params->job_size, aad, num_iter);
                         else
                                 run_gcm(mb_mgr->gcm128_enc, &gdata_key, &gdata_ctx, p_buffer,
-                                        params->job_size, aad, params->aad_size, num_iter);
+                                        params->job_size, aad, num_iter);
                 } else if (params->key_size == IMB_KEY_192_BYTES) {
                         if (use_gcm_sgl_api)
                                 run_gcm_sgl(mb_mgr->gcm192_init, mb_mgr->gcm192_enc_update,
                                             mb_mgr->gcm192_enc_finalize, &gdata_key, &gdata_ctx,
-                                            p_buffer, params->job_size, aad, params->aad_size,
-                                            num_iter);
+                                            p_buffer, params->job_size, aad, num_iter);
                         else
                                 run_gcm(mb_mgr->gcm192_enc, &gdata_key, &gdata_ctx, p_buffer,
-                                        params->job_size, aad, params->aad_size, num_iter);
+                                        params->job_size, aad, num_iter);
                 } else { /* 256 */
                         if (use_gcm_sgl_api)
                                 run_gcm_sgl(mb_mgr->gcm256_init, mb_mgr->gcm256_enc_update,
                                             mb_mgr->gcm256_enc_finalize, &gdata_key, &gdata_ctx,
-                                            p_buffer, params->job_size, aad, params->aad_size,
-                                            num_iter);
+                                            p_buffer, params->job_size, aad, num_iter);
                         else
                                 run_gcm(mb_mgr->gcm256_enc, &gdata_key, &gdata_ctx, p_buffer,
-                                        params->job_size, aad, params->aad_size, num_iter);
+                                        params->job_size, aad, num_iter);
                 }
 #ifndef _WIN32
                 if (use_unhalted_cycles)
@@ -2491,29 +2484,26 @@ do_test_gcm(struct params_s *params, const uint32_t num_iter, IMB_MGR *mb_mgr, u
                         if (use_gcm_sgl_api)
                                 run_gcm_sgl(mb_mgr->gcm128_init, mb_mgr->gcm128_dec_update,
                                             mb_mgr->gcm128_dec_finalize, &gdata_key, &gdata_ctx,
-                                            p_buffer, params->job_size, aad, params->aad_size,
-                                            num_iter);
+                                            p_buffer, params->job_size, aad, num_iter);
                         else
                                 run_gcm(mb_mgr->gcm128_dec, &gdata_key, &gdata_ctx, p_buffer,
-                                        params->job_size, aad, params->aad_size, num_iter);
+                                        params->job_size, aad, num_iter);
                 } else if (params->key_size == IMB_KEY_192_BYTES) {
                         if (use_gcm_sgl_api)
                                 run_gcm_sgl(mb_mgr->gcm192_init, mb_mgr->gcm192_dec_update,
                                             mb_mgr->gcm192_dec_finalize, &gdata_key, &gdata_ctx,
-                                            p_buffer, params->job_size, aad, params->aad_size,
-                                            num_iter);
+                                            p_buffer, params->job_size, aad, num_iter);
                         else
                                 run_gcm(mb_mgr->gcm192_dec, &gdata_key, &gdata_ctx, p_buffer,
-                                        params->job_size, aad, params->aad_size, num_iter);
+                                        params->job_size, aad, num_iter);
                 } else { /* 256 */
                         if (use_gcm_sgl_api)
                                 run_gcm_sgl(mb_mgr->gcm256_init, mb_mgr->gcm256_dec_update,
                                             mb_mgr->gcm256_dec_finalize, &gdata_key, &gdata_ctx,
-                                            p_buffer, params->job_size, aad, params->aad_size,
-                                            num_iter);
+                                            p_buffer, params->job_size, aad, num_iter);
                         else
                                 run_gcm(mb_mgr->gcm256_dec, &gdata_key, &gdata_ctx, p_buffer,
-                                        params->job_size, aad, params->aad_size, num_iter);
+                                        params->job_size, aad, num_iter);
                 }
 #ifndef _WIN32
                 if (use_unhalted_cycles)
@@ -2549,7 +2539,7 @@ do_test_chacha_poly(struct params_s *params, const uint32_t num_iter, IMB_MGR *m
         uint32_t final_seg_sz;
         unsigned i, j;
 
-        aad = (uint8_t *) malloc(sizeof(uint8_t) * params->aad_size);
+        aad = (uint8_t *) malloc(sizeof(uint8_t) * aad_size);
         if (!aad) {
                 fprintf(stderr, "Could not malloc AAD\n");
                 free_mem(&p_buffer, &p_keys);
@@ -2586,7 +2576,7 @@ do_test_chacha_poly(struct params_s *params, const uint32_t num_iter, IMB_MGR *m
                         }
                 }
 
-                IMB_CHACHA20_POLY1305_INIT(mb_mgr, key, &chacha_ctx, iv, aad, params->aad_size);
+                IMB_CHACHA20_POLY1305_INIT(mb_mgr, key, &chacha_ctx, iv, aad, aad_size);
 
                 if (params->cipher_dir == IMB_DIR_ENCRYPT) {
                         for (j = 0; j < num_segs; j++)
@@ -2736,26 +2726,13 @@ process_variant(IMB_MGR *mgr, const enum arch_type_e arch, struct params_s *para
 
                 uint32_t num_iter;
 
-                params->aad_size = 0;
-                if (params->cipher_mode == TEST_GCM)
-                        params->aad_size = gcm_aad_size;
-
-                if (params->cipher_mode == TEST_CCM)
-                        params->aad_size = ccm_aad_size;
-
-                if (params->cipher_mode == TEST_AEAD_CHACHA20)
-                        params->aad_size = chacha_poly_aad_size;
-
-                if (params->cipher_mode == TEST_SNOW_V_AEAD)
-                        params->aad_size = snow_v_aad_size;
-
                 /*
                  * If job size == 0, check AAD size
-                 * (only allowed for GCM/CCM)
+                 * (only allowed for GCM/CCM/CHACHA_POLY1305/SNOW_V_AEAD)
                  */
-                if (job_size == 0 && params->aad_size != 0)
-                        num_iter = (iter_scale >= (uint32_t) params->aad_size)
-                                           ? (iter_scale / (uint32_t) params->aad_size)
+                if (job_size == 0 && aad_size != 0)
+                        num_iter = (iter_scale >= (uint32_t) aad_size)
+                                           ? (iter_scale / (uint32_t) aad_size)
                                            : 1;
                 else if (job_size != 0)
                         num_iter = (iter_scale >= job_size) ? (iter_scale / job_size) : 1;
@@ -3724,17 +3701,14 @@ main(int argc, char *argv[])
                         }
                         i++;
                 } else if (strcmp(argv[i], "--aad-size") == 0) {
-                        /* Get AAD size for both GCM and CCM */
-                        i = get_next_num_arg((const char *const *) argv, i, argc, &gcm_aad_size,
-                                             sizeof(gcm_aad_size));
-                        if (gcm_aad_size > AAD_SIZE_MAX) {
+                        /* Get AAD size for both GCM, CCM, CHACHA20-POLY1305 and SNOW-V-AEAD */
+                        i = get_next_num_arg((const char *const *) argv, i, argc, &aad_size,
+                                             sizeof(aad_size));
+                        if (aad_size > AAD_SIZE_MAX) {
                                 fprintf(stderr, "Invalid AAD size %u (max %d)!\n",
-                                        (unsigned) gcm_aad_size, AAD_SIZE_MAX);
+                                        (unsigned) aad_size, AAD_SIZE_MAX);
                                 return EXIT_FAILURE;
                         }
-                        ccm_aad_size = gcm_aad_size;
-                        chacha_poly_aad_size = gcm_aad_size;
-                        snow_v_aad_size = gcm_aad_size;
                 } else if (strcmp(argv[i], "--job-iter") == 0) {
                         i = get_next_num_arg((const char *const *) argv, i, argc, &job_iter,
                                              sizeof(job_iter));
@@ -3855,13 +3829,6 @@ main(int argc, char *argv[])
                 fprintf(stderr, "--cipher-dir can only be used with "
                                 "--cipher-algo or --aead-algo\n");
                 return EXIT_FAILURE;
-        }
-
-        if (custom_job_params.cipher_mode == TEST_CCM) {
-                if (ccm_aad_size > CCM_AAD_SIZE_MAX) {
-                        fprintf(stderr, "AAD cannot be higher than %d in CCM\n", CCM_AAD_SIZE_MAX);
-                        return EXIT_FAILURE;
-                }
         }
 
         srand(ITER_SCALE_LONG + ITER_SCALE_SHORT + ITER_SCALE_SMOKE);
@@ -4009,11 +3976,30 @@ main(int argc, char *argv[])
                         fprintf(stderr, "\n");
         }
 
-        if (custom_job_params.cipher_mode == TEST_GCM)
-                fprintf(stderr, "GCM AAD = %" PRIu64 "\n", gcm_aad_size);
+        /* If AAD size is not set from command line, set default value */
+        if (aad_size == AAD_SIZE_MAX + 1) {
+                if (custom_job_params.cipher_mode == TEST_GCM)
+                        aad_size = DEFAULT_GCM_AAD_SIZE;
+                else if (custom_job_params.cipher_mode == TEST_CCM)
+                        aad_size = DEFAULT_CCM_AAD_SIZE;
+                else if (custom_job_params.cipher_mode == TEST_AEAD_CHACHA20)
+                        aad_size = DEFAULT_CHACHA_POLY_AAD_SIZE;
+                else if (custom_job_params.cipher_mode == TEST_SNOW_V_AEAD)
+                        aad_size = DEFAULT_SNOW_V_AEAD_AAD_SIZE;
+                else
+                        aad_size = 0;
+        }
 
-        if (custom_job_params.cipher_mode == TEST_CCM)
-                fprintf(stderr, "CCM AAD = %" PRIu64 "\n", ccm_aad_size);
+        if (custom_job_params.cipher_mode == TEST_CCM) {
+                if (aad_size > IMB_CCM_AAD_MAX_SIZE) {
+                        fprintf(stderr, "AAD cannot be higher than %d in CCM\n",
+                                IMB_CCM_AAD_MAX_SIZE);
+                        return EXIT_FAILURE;
+                }
+        }
+
+        if (aad_size != 0)
+                fprintf(stderr, "AAD size = %" PRIu64 "\n", aad_size);
 
         if (archs[ARCH_SSE]) {
                 IMB_MGR *p_mgr = alloc_mb_mgr(flags);
