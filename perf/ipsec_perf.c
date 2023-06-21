@@ -693,7 +693,6 @@ struct custom_job_params custom_job_params = { .cipher_mode = TEST_NULL_CIPHER,
                                                .cipher_dir = IMB_DIR_ENCRYPT };
 
 uint8_t archs[NUM_ARCHS] = { 1, 1, 1, 1 }; /* uses all function sets */
-int use_job_api = 0;
 int use_gcm_sgl_api = 0;
 int use_unhalted_cycles = 0; /* read unhalted cycles instead of tsc */
 uint64_t rd_cycles_cost = 0; /* cost of reading unhalted cycles */
@@ -722,11 +721,12 @@ typedef enum {
         TEST_API_BURST,
         TEST_API_CIPHER_BURST,
         TEST_API_HASH_BURST,
+        TEST_API_DIRECT,
         TEST_API_NUMOF
 } TEST_API;
 
 const char *str_api_list[TEST_API_NUMOF] = { "single job", "burst", "cipher-only burst",
-                                             "hash-only burst" };
+                                             "hash-only burst", "direct" };
 
 static TEST_API test_api = TEST_API_JOB; /* test job API by default */
 static uint32_t burst_size = 0;          /* num jobs to pass to burst API */
@@ -2739,30 +2739,26 @@ process_variant(IMB_MGR *mgr, const enum arch_type_e arch, struct params_s *para
                 else
                         num_iter = iter_scale;
 
+                if (job_iter != 0)
+                        num_iter = job_iter;
+
                 params->job_size = job_size;
-                if (params->cipher_mode == TEST_GCM && (!use_job_api)) {
-                        if (job_iter == 0)
-                                *times = do_test_gcm(params, 2 * num_iter, mgr, p_buffer, p_keys);
-                        else
-                                *times = do_test_gcm(params, job_iter, mgr, p_buffer, p_keys);
-                } else if (params->cipher_mode == TEST_AEAD_CHACHA20 && (!use_job_api)) {
-                        if (job_iter == 0)
-                                *times = do_test_chacha_poly(params, 2 * num_iter, mgr, p_buffer,
+
+                if (test_api == TEST_API_DIRECT) {
+                        if (params->cipher_mode == TEST_GCM)
+                                *times = do_test_gcm(params, num_iter, mgr, p_buffer, p_keys);
+                        else if (params->cipher_mode == TEST_AEAD_CHACHA20)
+                                *times = do_test_chacha_poly(params, num_iter, mgr, p_buffer,
                                                              p_keys);
-                        else
-                                *times = do_test_chacha_poly(params, job_iter, mgr, p_buffer,
-                                                             p_keys);
-                } else if (params->hash_alg == TEST_AUTH_GHASH && (!use_job_api)) {
-                        if (job_iter == 0)
-                                *times = do_test_ghash(params, 2 * num_iter, mgr, p_buffer, p_keys);
-                        else
-                                *times = do_test_ghash(params, job_iter, mgr, p_buffer, p_keys);
-                } else {
-                        if (job_iter == 0)
-                                *times = do_test(mgr, params, num_iter, p_buffer, p_keys);
-                        else
-                                *times = do_test(mgr, params, job_iter, p_buffer, p_keys);
-                }
+                        else if (params->hash_alg == TEST_AUTH_GHASH)
+                                *times = do_test_ghash(params, num_iter, mgr, p_buffer, p_keys);
+                        else {
+                                fprintf(stderr, "Algorithm not supported with direct API\n");
+                                exit(EXIT_FAILURE);
+                        }
+                } else
+                        *times = do_test(mgr, params, num_iter, p_buffer, p_keys);
+
                 times += NUM_RUNS;
         }
 
@@ -3149,8 +3145,8 @@ usage(void)
                 "--shani-off: don't use SHA extensions\n"
                 "--gfni-on: use Galois Field extensions, default: auto-detect\n"
                 "--gfni-off: don't use Galois Field extensions\n"
-                "--force-job-api: use JOB API"
-                " (direct API used for GCM/GHASH/CHACHA20_POLY1305 API by default)\n"
+                "--job-api: use JOB API"
+                "--direct-api: use direct API when available\n"
                 "--gcm-sgl-api: use direct SGL API for GCM perf tests"
                 " (direct GCM API is default)\n"
                 "--threads num: <num> for the number of threads to run"
@@ -3616,8 +3612,10 @@ main(int argc, char *argv[])
                         flags &= (~IMB_FLAG_GFNI_OFF);
                 } else if (strcmp(argv[i], "--gfni-off") == 0) {
                         flags |= IMB_FLAG_GFNI_OFF;
-                } else if (strcmp(argv[i], "--force-job-api") == 0) {
-                        use_job_api = 1;
+                } else if (strcmp(argv[i], "--job-api") == 0) {
+                        test_api = TEST_API_JOB;
+                } else if (strcmp(argv[i], "--direct-api") == 0) {
+                        test_api = TEST_API_DIRECT;
                 } else if (strcmp(argv[i], "--gcm-sgl-api") == 0) {
                         use_gcm_sgl_api = 1;
                 } else if (strcmp(argv[i], "--quick") == 0) {
@@ -3810,6 +3808,12 @@ main(int argc, char *argv[])
                 return EXIT_FAILURE;
         }
 
+        if (test_api == TEST_API_DIRECT && ((custom_job_params.cipher_mode != TEST_GCM) &&
+                                            (custom_job_params.cipher_mode != TEST_AEAD_CHACHA20) &&
+                                            (custom_job_params.hash_alg != TEST_AUTH_GHASH))) {
+                fprintf(stderr, "Unsupported direct API algorithm selected\n");
+                return EXIT_FAILURE;
+        }
         if (aead_algo_set == 0 && cipher_algo_set == 0 && hash_algo_set == 0 &&
             quic_api_test == 0) {
                 fprintf(stderr, "No cipher, hash or "
@@ -3966,15 +3970,11 @@ main(int argc, char *argv[])
                 "Library version: %s\n",
                 sha_size_incr, buffer_offset, IMB_VERSION_STR, imb_get_version_str());
 
-        if (!use_job_api)
-                fprintf(stderr, "API type: direct\n");
-        else {
-                fprintf(stderr, "API type: %s", str_api_list[test_api]);
-                if (test_api != TEST_API_JOB)
-                        fprintf(stderr, " (burst size = %u)\n", burst_size);
-                else
-                        fprintf(stderr, "\n");
-        }
+        fprintf(stderr, "API type: %s", str_api_list[test_api]);
+        if (test_api != TEST_API_JOB && test_api != TEST_API_DIRECT)
+                fprintf(stderr, " (burst size = %u)\n", burst_size);
+        else
+                fprintf(stderr, "\n");
 
         /* If AAD size is not set from command line, set default value */
         if (aad_size == AAD_SIZE_MAX + 1) {
@@ -3997,9 +3997,6 @@ main(int argc, char *argv[])
                         return EXIT_FAILURE;
                 }
         }
-
-        if (aad_size != 0)
-                fprintf(stderr, "AAD size = %" PRIu64 "\n", aad_size);
 
         if (archs[ARCH_SSE]) {
                 IMB_MGR *p_mgr = alloc_mb_mgr(flags);
