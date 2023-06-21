@@ -1084,7 +1084,7 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job,
                         imb_set_errno(state, IMB_ERR_JOB_NULL_SRC);
                         return 1;
                 }
-                if (job->u.CCM.aad_len_in_bytes > 46) {
+                if (job->u.CCM.aad_len_in_bytes > IMB_CCM_AAD_MAX_SIZE) {
                         /* 3 x AES_BLOCK - 2 bytes for AAD len */
                         imb_set_errno(state, IMB_ERR_JOB_AAD_LEN);
                         return 1;

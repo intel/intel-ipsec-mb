@@ -627,6 +627,7 @@ struct chacha20_poly1305_context_data {
 #define IMB_GCM_ENC_KEY_LEN 16
 #define IMB_GCM_KEY_SETS    (15) /**< exp key + 14 exp round keys*/
 
+#define IMB_CCM_AAD_MAX_SIZE (46) /* Maximum CCM AAD size */
 /**
  * @brief holds intermediate key data needed to improve performance
  *
