@@ -728,9 +728,9 @@ typedef enum {
 const char *str_api_list[TEST_API_NUMOF] = { "single job", "burst", "cipher-only burst",
                                              "hash-only burst", "direct" };
 
-static TEST_API test_api = TEST_API_JOB; /* test job API by default */
-static uint32_t burst_size = 0;          /* num jobs to pass to burst API */
-static uint32_t segment_size = 0;        /* segment size to test SGL (0 = no SGL) */
+static TEST_API test_api = TEST_API_BURST; /* test burst API by default */
+static uint32_t burst_size = 0;            /* num jobs to pass to burst API */
+static uint32_t segment_size = 0;          /* segment size to test SGL (0 = no SGL) */
 
 static volatile int timebox_on = 1; /* flag to stop the test loop */
 static int use_timebox = 1;         /* time-box feature on/off flag */
@@ -3183,7 +3183,7 @@ usage(void)
                 "--plot: Adjust text output for direct use with plot output\n"
                 "--no-time-box: disables 100ms watchdog timer on "
                 "an algorithm@packet-size performance test\n"
-                "--burst-api: use burst API for perf tests\n"
+                "--burst-api: use burst API for perf tests (default)\n"
                 "--cipher-burst-api: use cipher-only burst API for perf tests\n"
                 "--hash-burst-api: use hash-only burst API for perf tests\n"
                 "--burst-size: number of jobs to submit per burst\n"
