@@ -605,10 +605,9 @@ struct chacha20_poly1305_context_data {
 };
 
 /**
- * Authenticated Tag Length in bytes.
- * Valid values are 16 (most likely), 12 or 8.
+ * Maximum Authenticated Tag Length in bytes.
  */
-#define IMB_MAX_TAG_LEN (16)
+#define IMB_MAX_TAG_LEN (64)
 
 /**
  * IV data is limited to 16 bytes as follows:
