@@ -67,6 +67,7 @@ extern int gmac_test(struct IMB_MGR *mb_mgr);
 extern int ghash_test(struct IMB_MGR *mb_mgr);
 extern int cbc_test(struct IMB_MGR *mb_mg);
 extern int cfb_test(struct IMB_MGR *mb_mg);
+extern int ctr_test(struct IMB_MGR *mb_mg);
 
 typedef int (*imb_test_t)(struct IMB_MGR *mb_mgr);
 
