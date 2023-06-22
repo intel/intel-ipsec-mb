@@ -328,6 +328,7 @@ c_lib_objs := \
 	self_test.o \
 	quic_aes_gcm.o \
 	quic_hp_aes_ecb.o \
+	quic_hp_chacha20.o \
 	quic_chacha20_poly1305.o \
 	hmac_ipad_opad.o \
 	cipher_suite_id.o

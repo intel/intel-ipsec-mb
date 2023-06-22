@@ -711,3 +711,4 @@ EXPORTS
     sha256_sse_shani                            @685
     sha256_one_block_sse_shani                  @686
     imb_quic_chacha20_poly1305			@687
+    imb_quic_hp_chacha20			@688

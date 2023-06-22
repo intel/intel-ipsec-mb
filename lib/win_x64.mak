@@ -364,6 +364,7 @@ lib_objs1 = \
 	$(OBJ_DIR)\self_test.obj \
 	$(OBJ_DIR)\quic_aes_gcm.obj \
 	$(OBJ_DIR)\quic_hp_aes_ecb.obj \
+	$(OBJ_DIR)\quic_hp_chacha20.obj \
 	$(OBJ_DIR)\quic_chacha20_poly1305.obj \
 	$(OBJ_DIR)\hmac_ipad_opad.obj \
 	$(OBJ_DIR)\cipher_suite_id.obj

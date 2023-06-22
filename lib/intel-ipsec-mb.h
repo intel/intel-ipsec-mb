@@ -3894,6 +3894,26 @@ imb_quic_chacha20_poly1305(IMB_MGR *state,
                            const uint64_t num_packets);
 
 /**
+ * @brief Batch of ChaCha20 encrypt operations with the same key
+ *
+ * Sample size is fixed to 16 bytes (read from source pointers).
+ * Mask output size is fixed to 5 bytes (written to destination pointer).
+ * Cipher direction is fixed to ENCRYPT.
+ *
+ * @param [in]  state         pointer to IMB_MGR
+ * @param [in]  key           Cipher key
+ * @param [out] dst_ptr_array array with destination pointers
+ * @param [in]  src_ptr_array array with source sample pointers
+ * @param [in]  num_packets   number of packets in this batch
+ */
+IMB_DLL_EXPORT void
+imb_quic_hp_chacha20(IMB_MGR *state,
+                     const void *key,
+                     void *dst_ptr_array[],
+                     const void * const src_ptr_array[],
+                     const uint64_t num_packets);
+
+/**
  * @brief Sets up suite_id and session_id fields for selected cipher suite in
  *        provided \a job structure
  *
