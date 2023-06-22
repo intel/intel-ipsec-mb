@@ -10,6 +10,10 @@ Library
 Test Applications
 - QUIC CHACHA20-POLY1305 tests added.
 
+Performance Applications
+- New parameter added to benchmark QUIC `--quic-api`.
+- Burst API is benchmarked by default now.
+
 v1.4 June 2023
 ========================================================================
 
