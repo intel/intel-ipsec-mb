@@ -1665,6 +1665,10 @@ do_test_quic_aes_ecb_hp(struct params_s *params, const uint32_t num_iter, IMB_MG
         uint64_t n;
         int i;
 
+#ifndef _WIN32
+        (void) params; /* unused for Windows */
+#endif
+
         if (burst_size != 0 && burst_size < MAX_K)
                 K = burst_size;
 
@@ -1695,6 +1699,60 @@ do_test_quic_aes_ecb_hp(struct params_s *params, const uint32_t num_iter, IMB_MG
         if (last_iter != 0)
                 imb_quic_hp_aes_ecb(p_mgr, enc_keys, (void **) out, (const void *const *) in,
                                     last_iter, IMB_KEY_128_BYTES);
+#ifndef _WIN32
+        if (use_unhalted_cycles)
+                time = (read_cycles(params->core) - rd_cycles_cost) - time;
+        else
+#endif
+                time = __rdtscp(&aux) - time;
+
+        return time / num_iter;
+}
+
+static uint64_t
+do_test_quic_chacha20_hp(struct params_s *params, const uint32_t num_iter, IMB_MGR *p_mgr,
+                         uint8_t *blob)
+{
+        void *out[MAX_K];
+        const void *in[MAX_K];
+        const uint8_t kp[32];
+        int K = MAX_K;
+        uint64_t time = 0;
+        const uint64_t pkt_size = 16; /* Fixed packet size for this API */
+        uint32_t aux;
+        uint64_t n;
+        int i;
+
+#ifndef _WIN32
+        (void) params; /* unused for Windows */
+#endif
+
+        for (n = 0, i = 0; i < K; i++) {
+                in[i] = &blob[n];
+                n += pkt_size;
+
+                out[i] = &blob[n];
+                n += pkt_size;
+        }
+
+        if (burst_size != 0 && burst_size < MAX_K)
+                K = burst_size;
+
+        const uint32_t full_num_iter = num_iter / K;
+        const uint32_t last_iter = num_iter % K;
+
+#ifndef _WIN32
+        if (use_unhalted_cycles)
+                time = read_cycles(params->core);
+        else
+#endif
+                time = __rdtscp(&aux);
+
+        for (n = 0; n < full_num_iter; n++)
+                imb_quic_hp_chacha20(p_mgr, kp, (void **) out, (const void *const *) in, K);
+
+        if (last_iter != 0)
+                imb_quic_hp_chacha20(p_mgr, kp, (void **) out, (const void *const *) in, last_iter);
 #ifndef _WIN32
         if (use_unhalted_cycles)
                 time = (read_cycles(params->core) - rd_cycles_cost) - time;
@@ -2803,6 +2861,8 @@ process_variant(IMB_MGR *mgr, const enum arch_type_e arch, struct params_s *para
                                 *times = do_test_quic_aes_gcm(params, num_iter, mgr, quic_blob);
                         else if (params->cipher_mode == TEST_ECB)
                                 *times = do_test_quic_aes_ecb_hp(params, num_iter, mgr, quic_blob);
+                        else if (params->cipher_mode == TEST_CHACHA20)
+                                *times = do_test_quic_chacha20_hp(params, num_iter, mgr, quic_blob);
                         else {
                                 fprintf(stderr, "Algorithm not supported with QUIC API\n");
                                 exit(EXIT_FAILURE);
