@@ -1414,7 +1414,6 @@ check_burst_jobs:
 static void
 test_aes_vectors(struct IMB_MGR *mb_mgr,
                  struct test_suite_context *ctx128,
-                 struct test_suite_context *ctx192,
                  struct test_suite_context *ctx256,
                  const int vec_cnt,
                  const struct aes_vector *vec_tab, const char *banner,
@@ -1444,11 +1443,6 @@ test_aes_vectors(struct IMB_MGR *mb_mgr,
                         IMB_AES_KEYEXP_128(mb_mgr, vec_tab[vect].K, enc_keys,
                                            dec_keys);
                         ctx = ctx128;
-                        break;
-                case 24:
-                        IMB_AES_KEYEXP_192(mb_mgr, vec_tab[vect].K, enc_keys,
-                                           dec_keys);
-                        ctx = ctx192;
                         break;
                 case 32:
                 default:
@@ -1817,13 +1811,12 @@ aes_test(struct IMB_MGR *mb_mgr)
         unsigned i;
         int errors = 0;
         struct test_suite_context ctx128;
-        struct test_suite_context ctx192;
         struct test_suite_context ctx256;
 
         test_suite_start(&ctx128, "DOCSIS-SEC-128");
         test_suite_start(&ctx256, "DOCSIS-SEC-256");
         for (i = 0; i < DIM(num_jobs_tab); i++)
-                test_aes_vectors(mb_mgr, &ctx128, &ctx192, &ctx256,
+                test_aes_vectors(mb_mgr, &ctx128, &ctx256,
                                  DIM(docsis_vectors),
                                  docsis_vectors,
                                  "AES-DOCSIS standard test vectors",
