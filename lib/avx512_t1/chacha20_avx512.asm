@@ -191,7 +191,7 @@ mksection .text
 ; Macro adding original state values to processed state values
 ; and transposing 16x16 u32 from first 16 ZMM registers,
 ; creating keystreams.
-; Note that the registers are tranposed in a different
+; Note that the registers are transposed in a different
 ; order, so first register (IN00) containing row 0
 ; will not contain the first column of the matrix, but
 ; row 1 and same with other registers.
@@ -453,6 +453,206 @@ mksection .text
 
 %endmacro
 
+;
+; Macro adding original state values to processed state values
+; and transposing 16x16 u32 from first 16 ZMM registers,
+; creating keystreams.
+; Note that the registers are transposed in a different
+; order, so first register (IN00) containing row 0
+; will not contain the first column of the matrix, but
+; row 1 and same with other registers.
+; This is done to minimize the number of registers clobbered.
+; Once transposition is done, keystream is XOR'd with the plaintext
+; and output buffer is written.
+;
+%macro GENERATE_1K_KS_AND_ENCRYPT_QUIC 36
+%define %%IN00_KS01  %1 ; [in/clobbered] Input row 0 of state, bytes 64-127 of keystream
+%define %%IN01_KS02  %2 ; [in/clobbered] Input row 1 of state, bytes 128-191 of keystream
+%define %%IN02_KS15  %3 ; [in/clobbered] Input row 2 of state, bytes 960-1023 of keystream
+%define %%IN03_KS04  %4 ; [in/clobbered] Input row 3 of state, bytes 256-319 of keystream
+%define %%IN04_KS08  %5 ; [in/clobbered] Input row 4 of state, bytes 512-575 of keystream
+%define %%IN05       %6 ; [in/clobbered] Input row 5 of state, bytes 576-639 of keystream
+%define %%IN06_KS13  %7 ; [in/clobbered] Input row 6 of state, bytes 832-895 of keystream
+%define %%IN07_KS07  %8 ; [in/clobbered] Input row 7 of state, bytes 448-511 of keystream
+%define %%IN08_KS05  %9 ; [in/clobbered] Input row 8 of state, bytes 320-383 of keystream
+%define %%IN09_KS00 %10 ; [in/clobbered] Input row 9 of state, bytes 0-63 of keystream
+%define %%IN10_KS06 %11 ; [in/clobbered] Input row 10 of state, bytes 384-447 of keystream
+%define %%IN11_KS11 %12 ; [in/clobbered] Input row 11 of state, bytes 704-767 of keystream
+%define %%IN12_KS12 %13 ; [in/clobbered] Input row 12 of state, bytes 768-831 of keystream
+%define %%IN13_KS03 %14 ; [in/clobbered] Input row 13 of state, bytes 192-255 of keystream
+%define %%IN14_KS14 %15 ; [in/clobbered] Input row 14 of state, bytes 896-959 of keystream
+%define %%IN15      %16 ; [in/clobbered] Input row 15 of state, bytes 640-703 of keystream
+%define %%IN_ORIG00_KS09  %17 ; [in/clobbered] Original input row 0, bytes 576-639 of keystream
+%define %%IN_ORIG01_KS10  %18 ; [in/clobbered] Original input row 1, bytes 640-703 of keystream
+%define %%IN_ORIG02  %19 ; [in] Original input row 2
+%define %%IN_ORIG03  %20 ; [in] Original input row 3
+%define %%IN_ORIG04  %21 ; [in] Original input row 4
+%define %%IN_ORIG05  %22 ; [in] Original input row 5
+%define %%IN_ORIG06  %23 ; [in] Original input row 6
+%define %%IN_ORIG07  %24 ; [in] Original input row 7
+%define %%IN_ORIG08  %25 ; [in] Original input row 8
+%define %%IN_ORIG09  %26 ; [in] Original input row 9
+%define %%IN_ORIG10  %27 ; [in] Original input row 10
+%define %%IN_ORIG11  %28 ; [in] Original input row 11
+%define %%IN_ORIG12  %29 ; [in] Original input row 12
+%define %%IN_ORIG13  %30 ; [in] Original input row 13
+%define %%IN_ORIG14  %31 ; [in] Original input row 14
+%define %%IN_ORIG15  %32 ; [in] Original input row 15
+%define %%DST        %33 ; [in] Array of destination pointers
+%define %%OFF        %34 ; [in] Offset into destination array
+%define %%TMP        %35 ; [clobbered] Temporary GP register
+%define %%KMASK      %36 ; [in] Mask register
+
+        vpaddd %%IN00_KS01, %%IN_ORIG00_KS09
+        vpaddd %%IN01_KS02, %%IN_ORIG01_KS10
+        vpaddd %%IN02_KS15, %%IN_ORIG02
+        vpaddd %%IN03_KS04, %%IN_ORIG03
+
+        ;; Deal with first lanes 0-7
+        ; T0, T1 free
+        vpunpckldq      %%IN_ORIG00_KS09, %%IN00_KS01, %%IN01_KS02
+        vpunpckhdq      %%IN00_KS01, %%IN00_KS01, %%IN01_KS02
+        vpunpckldq      %%IN_ORIG01_KS10, %%IN02_KS15, %%IN03_KS04
+        vpunpckhdq      %%IN02_KS15, %%IN02_KS15, %%IN03_KS04
+
+        ; IN01_KS02, IN03_KS04 free
+        vpunpcklqdq     %%IN03_KS04, %%IN_ORIG00_KS09, %%IN_ORIG01_KS10
+        vpunpckhqdq     %%IN01_KS02, %%IN_ORIG00_KS09, %%IN_ORIG01_KS10
+        vpunpcklqdq     %%IN_ORIG00_KS09, %%IN00_KS01, %%IN02_KS15
+        vpunpckhqdq     %%IN00_KS01, %%IN00_KS01, %%IN02_KS15
+
+        vpaddd %%IN04_KS08, %%IN_ORIG04
+        vpaddd %%IN05, %%IN_ORIG05
+        vpaddd %%IN06_KS13, %%IN_ORIG06
+        vpaddd %%IN07_KS07, %%IN_ORIG07
+
+        ; IN02_KS15, T1 free
+        vpunpckldq      %%IN_ORIG01_KS10, %%IN04_KS08, %%IN05
+        vpunpckhdq      %%IN04_KS08, %%IN04_KS08, %%IN05
+        vpunpckldq      %%IN02_KS15, %%IN06_KS13, %%IN07_KS07
+        vpunpckhdq      %%IN06_KS13, %%IN06_KS13, %%IN07_KS07
+
+        ; IN07_KS07, IN05 free
+        vpunpcklqdq     %%IN07_KS07, %%IN_ORIG01_KS10, %%IN02_KS15
+        vpunpckhqdq     %%IN05, %%IN_ORIG01_KS10, %%IN02_KS15
+        vpunpcklqdq     %%IN02_KS15, %%IN04_KS08, %%IN06_KS13
+        vpunpckhqdq     %%IN04_KS08, %%IN04_KS08, %%IN06_KS13
+
+        ; T1, IN06_KS13 free
+        vshufi64x2      %%IN_ORIG01_KS10, %%IN03_KS04, %%IN07_KS07, 0x44
+        vshufi64x2      %%IN03_KS04, %%IN03_KS04, %%IN07_KS07, 0xee
+        vshufi64x2      %%IN06_KS13, %%IN01_KS02, %%IN05, 0x44
+        vshufi64x2      %%IN01_KS02, %%IN01_KS02, %%IN05, 0xee
+        vshufi64x2      %%IN07_KS07, %%IN_ORIG00_KS09, %%IN02_KS15, 0x44
+        vshufi64x2      %%IN02_KS15, %%IN_ORIG00_KS09, %%IN02_KS15, 0xee
+        vshufi64x2      %%IN05, %%IN00_KS01, %%IN04_KS08, 0x44
+        vshufi64x2      %%IN00_KS01, %%IN00_KS01, %%IN04_KS08, 0xee
+
+        ;; Deal with lanes 8-15
+        vpaddd %%IN08_KS05, %%IN_ORIG08
+        vpaddd %%IN09_KS00, %%IN_ORIG09
+        vpaddd %%IN10_KS06, %%IN_ORIG10
+        vpaddd %%IN11_KS11, %%IN_ORIG11
+
+        vpunpckldq      %%IN_ORIG00_KS09, %%IN08_KS05, %%IN09_KS00
+        vpunpckhdq      %%IN08_KS05, %%IN08_KS05, %%IN09_KS00
+        vpunpckldq      %%IN04_KS08, %%IN10_KS06, %%IN11_KS11
+        vpunpckhdq      %%IN10_KS06, %%IN10_KS06, %%IN11_KS11
+
+        vpunpcklqdq     %%IN09_KS00, %%IN_ORIG00_KS09, %%IN04_KS08
+        vpunpckhqdq     %%IN04_KS08, %%IN_ORIG00_KS09, %%IN04_KS08
+        vpunpcklqdq     %%IN11_KS11, %%IN08_KS05, %%IN10_KS06
+        vpunpckhqdq     %%IN08_KS05, %%IN08_KS05, %%IN10_KS06
+
+        vpaddd %%IN12_KS12, %%IN_ORIG12
+        vpaddd %%IN13_KS03, %%IN_ORIG13
+        vpaddd %%IN14_KS14, %%IN_ORIG14
+        vpaddd %%IN15, %%IN_ORIG15
+
+        vpunpckldq      %%IN_ORIG00_KS09, %%IN12_KS12, %%IN13_KS03
+        vpunpckhdq      %%IN12_KS12, %%IN12_KS12, %%IN13_KS03
+        vpunpckldq      %%IN10_KS06, %%IN14_KS14, %%IN15
+        vpunpckhdq      %%IN14_KS14, %%IN14_KS14, %%IN15
+
+        vpunpcklqdq     %%IN13_KS03, %%IN_ORIG00_KS09, %%IN10_KS06
+        vpunpckhqdq     %%IN10_KS06, %%IN_ORIG00_KS09, %%IN10_KS06
+        vpunpcklqdq     %%IN15, %%IN12_KS12, %%IN14_KS14
+        vpunpckhqdq     %%IN12_KS12, %%IN12_KS12, %%IN14_KS14
+
+        vshufi64x2      %%IN14_KS14, %%IN09_KS00, %%IN13_KS03, 0x44
+        vshufi64x2      %%IN09_KS00, %%IN09_KS00, %%IN13_KS03, 0xee
+        vshufi64x2      %%IN_ORIG00_KS09, %%IN04_KS08, %%IN10_KS06, 0x44
+        vshufi64x2      %%IN10_KS06, %%IN04_KS08, %%IN10_KS06, 0xee
+        vshufi64x2      %%IN13_KS03, %%IN11_KS11, %%IN15, 0x44
+        vshufi64x2      %%IN11_KS11, %%IN11_KS11, %%IN15, 0xee
+        vshufi64x2      %%IN15, %%IN08_KS05, %%IN12_KS12, 0x44
+        vshufi64x2      %%IN08_KS05, %%IN08_KS05, %%IN12_KS12, 0xee
+
+        mov             %%TMP, [%%DST + %%OFF+ 8*12]
+        vshufi64x2      %%IN12_KS12, %%IN03_KS04, %%IN09_KS00, 0xdd
+        vmovdqu8        [%%TMP]{%%KMASK}, %%IN12_KS12
+
+        mov             %%TMP, [%%DST + %%OFF + 8*8]
+        vshufi64x2      %%IN04_KS08, %%IN03_KS04, %%IN09_KS00, 0x88
+        vmovdqu8        [%%TMP]{%%KMASK}, %%IN04_KS08
+
+        mov             %%TMP, [%%DST + %%OFF]
+        vshufi64x2      %%IN09_KS00, %%IN_ORIG01_KS10, %%IN14_KS14, 0x88
+        vmovdqu8        [%%TMP]{%%KMASK}, %%IN09_KS00
+
+        mov             %%TMP, [%%DST + %%OFF + 8*4]
+        vshufi64x2      %%IN03_KS04, %%IN_ORIG01_KS10, %%IN14_KS14, 0xdd
+        vmovdqu8        [%%TMP]{%%KMASK}, %%IN03_KS04
+
+        mov             %%TMP, [%%DST + %%OFF + 8*14]
+        vshufi64x2      %%IN14_KS14, %%IN02_KS15, %%IN11_KS11, 0xdd
+        vmovdqu8        [%%TMP]{%%KMASK}, %%IN14_KS14
+
+        mov             %%TMP, [%%DST + %%OFF + 8*10]
+        vshufi64x2      %%IN_ORIG01_KS10, %%IN02_KS15, %%IN11_KS11, 0x88
+        vmovdqu8        [%%TMP]{%%KMASK}, %%IN_ORIG01_KS10
+
+        mov             %%TMP, [%%DST + %%OFF + 8*11]
+        vshufi64x2      %%IN11_KS11, %%IN00_KS01, %%IN08_KS05, 0x88
+        vmovdqu8        [%%TMP]{%%KMASK}, %%IN11_KS11
+
+        mov             %%TMP, [%%DST + %%OFF + 8*15]
+        vshufi64x2      %%IN02_KS15, %%IN00_KS01, %%IN08_KS05, 0xdd
+        vmovdqu8        [%%TMP]{%%KMASK}, %%IN02_KS15
+
+        mov             %%TMP, [%%DST + %%OFF + 8]
+        vshufi64x2      %%IN00_KS01, %%IN06_KS13, %%IN_ORIG00_KS09, 0x88
+        vmovdqu8        [%%TMP]{%%KMASK}, %%IN00_KS01
+
+        mov             %%TMP, [%%DST + %%OFF + 8*5]
+        vshufi64x2      %%IN08_KS05, %%IN06_KS13, %%IN_ORIG00_KS09, 0xdd
+        vmovdqu8        [%%TMP]{%%KMASK}, %%IN08_KS05
+
+        mov             %%TMP, [%%DST + %%OFF + 8*9]
+        vshufi64x2      %%IN_ORIG00_KS09, %%IN01_KS02, %%IN10_KS06, 0x88
+        vmovdqu8        [%%TMP]{%%KMASK}, %%IN_ORIG00_KS09
+
+        mov             %%TMP, [%%DST + %%OFF + 8*13]
+        vshufi64x2      %%IN06_KS13, %%IN01_KS02, %%IN10_KS06, 0xdd
+        vmovdqu8        [%%TMP]{%%KMASK}, %%IN06_KS13
+
+        mov             %%TMP, [%%DST + %%OFF + 8*2]
+        vshufi64x2      %%IN01_KS02, %%IN07_KS07, %%IN13_KS03, 0x88
+        vmovdqu8        [%%TMP]{%%KMASK}, %%IN01_KS02
+
+        mov             %%TMP, [%%DST + %%OFF + 8*6]
+        vshufi64x2      %%IN10_KS06, %%IN07_KS07, %%IN13_KS03, 0xdd
+        vmovdqu8        [%%TMP]{%%KMASK}, %%IN10_KS06
+
+        mov             %%TMP, [%%DST + %%OFF + 8*3]
+        vshufi64x2      %%IN13_KS03, %%IN05, %%IN15, 0x88
+        vmovdqu8        [%%TMP]{%%KMASK}, %%IN13_KS03
+
+        mov             %%TMP, [%%DST + %%OFF + 8*7]
+        vshufi64x2      %%IN07_KS07, %%IN05, %%IN15, 0xdd
+        vmovdqu8        [%%TMP]{%%KMASK}, %%IN07_KS07
+%endmacro
+
 ;;
 ;; Performs a quarter round on all 4 columns,
 ;; resulting in a full round
@@ -644,7 +844,7 @@ mksection .text
 ;;
 ;; Generates 64*16 bytes of keystream and encrypt up to 1KB of input data
 ;;
-%macro ENCRYPT_1K 36
+%macro ENCRYPT_1K 36-38
 %define %%ZMM_DWORD0       %1   ;; [clobbered] ZMM to contain dword 0 of all states
 %define %%ZMM_DWORD1       %2   ;; [clobbered] ZMM to contain dword 1 of all states
 %define %%ZMM_DWORD2       %3   ;; [clobbered] ZMM to contain dword 2 of all states
@@ -680,7 +880,9 @@ mksection .text
 %define %%SRC              %33  ;; [in] Source pointer
 %define %%DST              %34  ;; [in] Destination pointer
 %define %%OFF              %35  ;; [in] Offset into src/dst pointers
-%define %%GEN_KEY          %36  ;; [in] Generate poly key
+%define %%TYPE             %36  ;; [in] "gen_poly_key", "QUIC", "none"
+%define %%TMP              %37  ;; [clobbered] Temporary GP register
+%define %%KMASK            %38  ;; [in] Mask register
 
 %assign i 0
 %rep 16
@@ -707,6 +909,18 @@ mksection .text
                        %%ZMM_DWORD15, %%ZMM_DWORD12, %%ZMM_DWORD13, %%ZMM_DWORD14
 %endrep
 
+%ifidn %%TYPE, QUIC
+        GENERATE_1K_KS_AND_ENCRYPT_QUIC %%ZMM_DWORD0, %%ZMM_DWORD1, %%ZMM_DWORD2, %%ZMM_DWORD3, \
+                                   %%ZMM_DWORD4, %%ZMM_DWORD5, %%ZMM_DWORD6, %%ZMM_DWORD7, \
+                                   %%ZMM_DWORD8, %%ZMM_DWORD9, %%ZMM_DWORD10, %%ZMM_DWORD11, \
+                                   %%ZMM_DWORD12, %%ZMM_DWORD13, %%ZMM_DWORD14, %%ZMM_DWORD15, \
+                                   %%ZMM_DWORD_ORIG0, %%ZMM_DWORD_ORIG1, %%ZMM_DWORD_ORIG2, \
+                                   %%ZMM_DWORD_ORIG3,%%ZMM_DWORD_ORIG4, %%ZMM_DWORD_ORIG5, \
+                                   %%ZMM_DWORD_ORIG6, %%ZMM_DWORD_ORIG7, %%ZMM_DWORD_ORIG8, \
+                                   %%ZMM_DWORD_ORIG9, %%ZMM_DWORD_ORIG10, %%ZMM_DWORD_ORIG11, \
+                                   %%ZMM_DWORD_ORIG12, %%ZMM_DWORD_ORIG13, %%ZMM_DWORD_ORIG14, \
+                                   %%ZMM_DWORD_ORIG15, %%DST, %%OFF, %%TMP, %%KMASK
+%else ;;
         ;; Add original states to processed states, transpose
         ;; these states to form the 64*16 bytes of keystream,
         ;; XOR with plaintext and write ciphertext out
@@ -719,14 +933,15 @@ mksection .text
                                    %%ZMM_DWORD_ORIG6, %%ZMM_DWORD_ORIG7, %%ZMM_DWORD_ORIG8, \
                                    %%ZMM_DWORD_ORIG9, %%ZMM_DWORD_ORIG10, %%ZMM_DWORD_ORIG11, \
                                    %%ZMM_DWORD_ORIG12, %%ZMM_DWORD_ORIG13, %%ZMM_DWORD_ORIG14, \
-                                   %%ZMM_DWORD_ORIG15, %%SRC, %%DST, %%OFF, %%GEN_KEY
+                                   %%ZMM_DWORD_ORIG15, %%SRC, %%DST, %%OFF, %%TYPE
+%endif
 %endmacro
 
 ;
 ; Macro adding original state values to processed state values
 ; and transposing 16x16 u32 from first 16 ZMM registers,
 ; creating keystreams.
-; Note that the registers are tranposed in a different
+; Note that the registers are transposed in a different
 ; order, so first register (IN00) containing row 0
 ; will not contain the first column of the matrix, but
 ; row 1 and same with other registers.
@@ -1032,6 +1247,38 @@ mksection .text
 
 %endmacro
 
+; Macro outputting 5 bytes of KS for every buffers
+%macro OUTPUT_KS_1_16_BUFFERS_QUIC 21
+%define %%KS0          %1 ; [in/clobbered] Bytes 0-63 of keystream
+%define %%KS1          %2 ; [in/clobbered] Bytes 64-127 of keystream
+%define %%KS2          %3 ; [in/clobbered] Bytes 128-191 of keystream
+%define %%KS3          %4 ; [in/clobbered] Bytes 192-255 of keystream
+%define %%KS4          %5 ; [in/clobbered] Bytes 256-319 of keystream
+%define %%KS5          %6 ; [in/clobbered] Bytes 320-383 of keystream
+%define %%KS6          %7 ; [in/clobbered] Bytes 384-447 of keystream
+%define %%KS7          %8 ; [in/clobbered] Bytes 448-511 of keystream
+%define %%KS8          %9 ; [in/clobbered] Bytes 512-575 of keystream
+%define %%KS9         %10 ; [in/clobbered] Bytes 576-639 of keystream
+%define %%KS10        %11 ; [in/clobbered] Bytes 640-703 of keystream
+%define %%KS11        %12 ; [in/clobbered] Bytes 704-767 of keystream
+%define %%KS12        %13 ; [in/clobbered] Bytes 768-831 of keystream
+%define %%KS13        %14 ; [in/clobbered] Bytes 832-895 of keystream
+%define %%KS14        %15 ; [in/clobbered] Bytes 896-959 of keystream
+%define %%KS15        %16 ; [in/clobbered] Bytes 960-1023 of keystream
+%define %%DST         %17 ; [in] Pointer to array with destination pointers
+%define %%OFF         %18 ; [in] Offset into destinatation pointers
+%define %%TMP         %19 ; [clobbered] Temporary register
+%define %%KMASK       %20 ; [in] Mask register for final block
+%define %%NUM_BUFFERS %21 ; [in] Number of blocks to encrypt
+
+%assign %%I 0
+%rep (%%NUM_BUFFERS)
+        mov     %%TMP, [%%DST + %%OFF + %%I*8]
+        vmovdqu8 [%%TMP]{%%KMASK}, APPEND(%%KS, %%I)
+%assign %%I (%%I + 1)
+%endrep
+%endmacro
+
 %macro PREPARE_NEXT_STATES_4_TO_8 13
 %define %%STATE_IN_A_L   %1  ;; [out] ZMM containing state "A" part for states 1-4
 %define %%STATE_IN_B_L   %2  ;; [out] ZMM containing state "B" part for states 1-4
@@ -1092,6 +1339,50 @@ mksection .text
         vporq   %%STATE_IN_D_H, %%ZTMP1
 %endif
 %endif ; %%GEN == gen_poly_key
+%endmacro
+
+%macro PREPARE_NEXT_STATES_1_TO_8_QUIC 9
+%define %%STATE_IN_A_L   %1  ;; [out] ZMM containing state "A" part for states 1-4
+%define %%STATE_IN_B_L   %2  ;; [out] ZMM containing state "B" part for states 1-4
+%define %%STATE_IN_C_L   %3  ;; [out] ZMM containing state "C" part for states 1-4
+%define %%STATE_IN_D_L   %4  ;; [out] ZMM containing state "D" part for states 1-4
+%define %%STATE_IN_D_H   %5  ;; [out] ZMM containing state "D" part for states 5-8 (or "none" in NUM_BLOCKS <= 4)
+%define %%KEY            %6  ;; [in] Pointer to key
+%define %%SRC            %7  ;; [in] Pointer to source buffers
+%define %%OFF            %8  ;; [in] Offset into source array
+%define %%NUM_BLOCKS     %9  ;; [in] Number of state blocks to prepare (numerical)
+
+        ;; Prepare next 1-8 states
+        vbroadcastf64x2 %%STATE_IN_B_L, [%%KEY]            ; Load key bytes 0-15
+        vbroadcastf64x2 %%STATE_IN_C_L, [%%KEY + 16]       ; Load key bytes 16-31
+        vbroadcastf64x2 %%STATE_IN_A_L, [rel constants]
+
+%if %%NUM_BLOCKS <= 4
+%assign %%I 0
+%rep %%NUM_BLOCKS
+        mov     rax, [%%SRC + %%OFF + 8*%%I]
+        vinserti32x4 %%STATE_IN_D_L, [rax], %%I
+%assign %%I (%%I + 1)
+%endrep
+
+%else ; %%NUM_BLOCKS > 4
+
+%assign %%I 0
+%rep 4
+        mov     rax, [%%SRC + %%OFF + 8*%%I]
+        vinserti32x4 %%STATE_IN_D_L, [rax], %%I
+%assign %%I (%%I + 1)
+%endrep
+
+%assign %%I 0
+%rep (%%NUM_BLOCKS - 4)
+        mov     rax, [%%SRC + %%OFF + 8*(%%I + 4)]
+        ;; Prepare chacha states 4-7 (A-C same as states 0-3)
+        vinserti32x4 %%STATE_IN_D_H, [rax], %%I
+%assign %%I (%%I + 1)
+%endrep
+%endif
+
 %endmacro
 
 align 32
@@ -2360,6 +2651,241 @@ no_partial_block_ks:
 %endif
 
 exit_ks:
+        ret
+
+;;
+;; quic_chacha20_avx512(void *key, const uint8_t *src_ptr_array,
+;;                      void *dst_ptr_array, const uint64_t num_buffers);
+align 32
+MKGLOBAL(quic_chacha20_avx512,function,internal)
+quic_chacha20_avx512:
+        endbranch64
+
+%define tmp     rax
+%define src     r10
+%define off     r11
+
+%define key             arg1
+%define src_array       arg2
+%define dst_array       arg3
+%define num_buffers     arg4
+
+%ifndef LINUX
+        mov     rax, rsp
+        sub     rsp, STACK_SIZE
+        and     rsp, -16
+%assign i 0
+%assign j 6
+%rep 10
+	vmovdqa	[rsp + _XMM_WIN_SAVE + i*16], APPEND(xmm, j)
+%assign i (i + 1)
+%assign j (j + 1)
+%endrep
+        mov     [rsp + _RSP_SAVE], rax ; save RSP
+%endif
+
+        xor     off, off
+        ; Set up k-mask to write out 5 bytes for all buffers
+        mov     tmp, 0x1f
+        kmovq   k1, tmp
+
+        cmp     num_buffers, 8
+        jbe     exit_loop_quic
+
+        ; Prepare first 16 chacha20 states from IV, key, constants and counter values
+        vpbroadcastd zmm0, [rel constants]
+        vpbroadcastd zmm1, [rel constants + 4]
+        vpbroadcastd zmm2, [rel constants + 8]
+        vpbroadcastd zmm3, [rel constants + 12]
+
+        vpbroadcastd zmm4, [key]
+        vpbroadcastd zmm5, [key + 4]
+        vpbroadcastd zmm6, [key + 8]
+        vpbroadcastd zmm7, [key + 12]
+        vpbroadcastd zmm8, [key + 16]
+        vpbroadcastd zmm9, [key + 20]
+        vpbroadcastd zmm10, [key + 24]
+        vpbroadcastd zmm11, [key + 28]
+
+        cmp     num_buffers, 16
+        jb      exit_loop_quic
+
+align 32
+start_loop_quic:
+
+        ; Load counter + nonce values from the 16 samples (src)
+%assign i 0
+%rep 4
+        mov     src, [src_array + off + i*32]
+        vmovd   xmm16, [src]
+        vmovd   xmm17, [src + 4]
+        vmovd   xmm18, [src + 4*2]
+        vmovd   xmm19, [src + 4*3]
+        mov     src, [src_array + off + i*32 + 8]
+        vpinsrd xmm16, [src], 1
+        vpinsrd xmm17, [src + 4], 1
+        vpinsrd xmm18, [src + 4*2], 1
+        vpinsrd xmm19, [src + 4*3], 1
+        mov     src, [src_array + off + i*32 + 8*2]
+        vpinsrd xmm16, [src], 2
+        vpinsrd xmm17, [src + 4], 2
+        vpinsrd xmm18, [src + 4*2], 2
+        vpinsrd xmm19, [src + 4*3], 2
+        mov     src, [src_array + off + i*32 + 8*3]
+        vpinsrd xmm16, [src], 3
+        vpinsrd xmm17, [src + 4], 3
+        vpinsrd xmm18, [src + 4*2], 3
+        vpinsrd xmm19, [src + 4*3], 3
+
+%if i == 0
+        vmovdqa64 xmm12, xmm16
+        vmovdqa64 xmm13, xmm17
+        vmovdqa64 xmm14, xmm18
+        vmovdqa64 xmm15, xmm19
+%else
+        vinserti32x4 zmm12, xmm16, i
+        vinserti32x4 zmm13, xmm17, i
+        vinserti32x4 zmm14, xmm18, i
+        vinserti32x4 zmm15, xmm19, i
+%endif
+%assign i (i + 1)
+%endrep
+
+        ENCRYPT_1K zmm16, zmm17, zmm18, zmm19, zmm20, zmm21, zmm22, zmm23, \
+                   zmm24, zmm25, zmm26, zmm27, zmm28, zmm29, zmm30, zmm31, \
+                   zmm0, zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, zmm7, zmm8, \
+                   zmm9, zmm10, zmm11, zmm12, zmm13, zmm14, zmm15, none , \
+                   dst_array, off, QUIC, tmp, k1
+
+        ; Update remaining length
+        sub     num_buffers, 16
+        add     off, 16*8
+
+        ; Reload first two registers zmm0 and 1,
+        ; as they have been overwritten by the previous macros
+        vpbroadcastd zmm0, [rel constants]
+        vpbroadcastd zmm1, [rel constants + 4]
+
+        cmp     num_buffers, 16
+        jae     start_loop_quic
+
+exit_loop_quic:
+
+        ; Check if there are no buffers left
+        or      num_buffers, num_buffers
+        jz      end_quic
+
+        cmp     num_buffers, 8
+        je      final_num_buffers_is_8
+        jb      final_num_buffers_is_1_7
+
+        ; Final buffers 9-15
+        cmp     num_buffers, 12
+        je      final_num_buffers_is_12
+        jb      final_num_buffers_is_9_11
+
+        ; Final buffers 13-15
+        cmp     num_buffers, 14
+        je      final_num_buffers_is_14
+        jb      final_num_buffers_is_13
+        jmp     final_num_buffers_is_15
+
+final_num_buffers_is_9_11:
+        cmp     num_buffers, 10
+        je      final_num_buffers_is_10
+        jb      final_num_buffers_is_9
+        ja      final_num_buffers_is_11
+
+final_num_buffers_is_1_7:
+        ; Final buffers 1-7
+        cmp     num_buffers, 4
+        je      final_num_buffers_is_4
+        jb      final_num_buffers_is_1_3
+
+        ; Final buffers 5-7
+        cmp     num_buffers, 6
+        je      final_num_buffers_is_6
+        jb      final_num_buffers_is_5
+        ja      final_num_buffers_is_7
+
+final_num_buffers_is_1_3:
+        cmp     num_buffers, 2
+        je      final_num_buffers_is_2
+        ja      final_num_buffers_is_3
+
+        ; 1 final buffer if no jump
+%assign BUFFERS_LEFT 1
+%rep 15
+APPEND(final_num_buffers_is_, BUFFERS_LEFT):
+
+%if (BUFFERS_LEFT <= 8)
+        PREPARE_NEXT_STATES_1_TO_8_QUIC zmm0, zmm1, zmm2, zmm3, zmm4, key, src_array, off, BUFFERS_LEFT
+%if (BUFFERS_LEFT <= 4)
+        GENERATE_512_KS zmm25, zmm16, zmm17, zmm29, none, none, none, none, \
+                        zmm0, zmm1, zmm2, zmm3, none, \
+                        zmm8, zmm9, zmm10, zmm11, 4
+%else
+        GENERATE_512_KS zmm25, zmm16, zmm17, zmm29, zmm19, zmm24, zmm26, zmm23, \
+                        zmm0, zmm1, zmm2, zmm3, zmm4, \
+                        zmm8, zmm9, zmm10, zmm11, 8
+%endif
+
+%else ; BUFFERS_LEFT > 8
+%assign i 0
+%rep 4
+%assign j 0
+%rep 4
+%if ((i*4 + j) < BUFFERS_LEFT)
+        mov     src, [src_array + off + i*32 + 8*j]
+        vpinsrd xmm16, [src], j
+        vpinsrd xmm17, [src + 4], j
+        vpinsrd xmm18, [src + 4*2], j
+        vpinsrd xmm19, [src + 4*3], j
+%endif
+%assign j (j + 1)
+%endrep
+
+%if ((i*4) < BUFFERS_LEFT)
+        vinserti32x4 zmm12, xmm16, i
+        vinserti32x4 zmm13, xmm17, i
+        vinserti32x4 zmm14, xmm18, i
+        vinserti32x4 zmm15, xmm19, i
+%endif
+%assign i (i + 1)
+%endrep
+        ; Generate another 64*16 bytes of keystream and XOR only the leftover plaintext
+        GENERATE_1K_KS zmm16, zmm17, zmm18, zmm19, zmm20, zmm21, zmm22, zmm23, \
+                       zmm24, zmm25, zmm26, zmm27, zmm28, zmm29, zmm30, zmm31, \
+                       zmm0, zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, zmm7, zmm8, \
+                       zmm9, zmm10, zmm11, zmm12, zmm13, zmm14, zmm15
+%endif ; BUFFERS_LEFT <= 8
+
+        OUTPUT_KS_1_16_BUFFERS_QUIC zmm25, zmm16, zmm17, zmm29, zmm19, zmm24, zmm26, zmm23, \
+                                  zmm20, zmm21, zmm31, zmm27, zmm28, zmm22, zmm30, zmm18, \
+                                  dst_array, off, tmp, k1, BUFFERS_LEFT
+        jmp     end_quic
+
+%assign BUFFERS_LEFT (BUFFERS_LEFT + 1)
+%endrep
+
+end_quic:
+
+%ifdef SAFE_DATA
+        clear_all_zmms_asm
+%else
+        vzeroupper
+%endif
+
+%ifndef LINUX
+%assign i 0
+%assign j 6
+%rep 10
+	vmovdqa	APPEND(xmm, j), [rsp + _XMM_WIN_SAVE + i*16]
+%assign i (i + 1)
+%assign j (j + 1)
+%endrep
+        mov     rsp, [rsp + _RSP_SAVE]
+%endif
         ret
 
 mksection stack-noexec

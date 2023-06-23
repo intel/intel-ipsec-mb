@@ -68,19 +68,7 @@ imb_quic_hp_chacha20(IMB_MGR *state,
 
 #endif /* SAFE_PARAM */
 
-        IMB_JOB job;
-        uint8_t src[5] = {0, 0, 0, 0, 0};
-
-        job.msg_len_to_cipher_in_bytes = 5;
-        job.cipher_start_src_offset_in_bytes = 0;
-        job.src = src;
-        job.enc_keys = key;
-
-        for (i = 0; i < num_packets; i++) {
-                job.iv = src_ptr_array[i];
-                job.dst = dst_ptr_array[i];
-                submit_job_chacha20_enc_dec_avx512(&job);
-        }
+        quic_chacha20_avx512(key, src_ptr_array, dst_ptr_array, num_packets);
 
         imb_set_errno(state, 0);
 }
