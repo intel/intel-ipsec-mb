@@ -8,7 +8,7 @@ Library
 - QUIC CHACHA20-POLY1305 and CHACHA20 HP API added.
 
 Test Applications
-- QUIC CHACHA20-POLY1305 tests added.
+- QUIC CHACHA20-POLY1305 and CHACHA20 HP tests added.
 
 Performance Applications
 - New parameter added to benchmark QUIC `--quic-api`.

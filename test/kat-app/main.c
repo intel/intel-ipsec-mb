@@ -63,6 +63,7 @@ extern int null_test(struct IMB_MGR *mb_mgr);
 extern int snow_v_test(struct IMB_MGR *mb_mgr);
 extern int direct_api_param_test(struct IMB_MGR *mb_mgr);
 extern int quic_ecb_test(struct IMB_MGR *mb_mgr);
+extern int quic_chacha20_test(struct IMB_MGR *mb_mgr);
 extern int gmac_test(struct IMB_MGR *mb_mgr);
 extern int ghash_test(struct IMB_MGR *mb_mgr);
 extern int cbc_test(struct IMB_MGR *mb_mg);
@@ -267,8 +268,13 @@ struct imb_test tests[] = {
                 .enabled = 1
         },
         {
-                .str = "QUIC",
+                .str = "QUIC-ECB",
                 .fn = quic_ecb_test,
+                .enabled = 1
+        },
+        {
+                .str = "QUIC-CHACHA20",
+                .fn = quic_chacha20_test,
                 .enabled = 1
         }
 };
