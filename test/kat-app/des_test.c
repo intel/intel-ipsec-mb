@@ -33,252 +33,15 @@
 
 #include <intel-ipsec-mb.h>
 
-#include "gcm_ctr_vectors_test.h"
 #include "utils.h"
+#include "cipher_test.h"
 
 int des_test(struct IMB_MGR *mb_mgr);
 
-struct des_vector {
-	const uint8_t *K;          /* key */
-	const uint8_t *IV;         /* initialization vector */
-	const uint8_t *P;          /* plain text */
-	uint64_t       Plen;       /* plain text length */
-	const uint8_t *C;          /* cipher text - same length as plain text */
-};
-
-struct des3_vector {
-	const uint8_t *K1;         /* key */
-	const uint8_t *K2;         /* key */
-	const uint8_t *K3;         /* key */
-	const uint8_t *IV;         /* initialization vector */
-	const uint8_t *P;          /* plain text */
-	uint64_t       Plen;       /* plain text length */
-	const uint8_t *C;          /* cipher text - same length as plain text */
-};
-
-/* CM-SP-SECv3.1-I07-170111 I.7 */
-static const uint8_t K1[] = {
-        0xe6, 0x60, 0x0f, 0xd8, 0x85, 0x2e, 0xf5, 0xab
-};
-static const uint8_t IV1[] = {
-        0x81, 0x0e, 0x52, 0x8e, 0x1c, 0x5f, 0xda, 0x1a
-};
-static const uint8_t P1[] = {
-        0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
-        0x08, 0x09, 0x0a, 0x0b, 0x88, 0x41, 0x65, 0x06
-};
-static const uint8_t C1[] = {
-        0x0d, 0xda, 0x5a, 0xcb, 0xd0, 0x5e, 0x55, 0x67,
-        0x9f, 0x04, 0xd1, 0xb6, 0x41, 0x3d, 0x4e, 0xed
-};
-
-static const uint8_t K2[] = {
-        0x3b, 0x38, 0x98, 0x37, 0x15, 0x20, 0xf7, 0x5e
-};
-static const uint8_t IV2[] = {
-        0x02, 0xa8, 0x11, 0x77, 0x4d, 0xcd, 0xe1, 0x3b
-};
-static const uint8_t P2[] = {
-        0x05, 0xef, 0xf7, 0x00, 0xe9, 0xa1, 0x3a, 0xe5,
-        0xca, 0x0b, 0xcb, 0xd0, 0x48, 0x47, 0x64, 0xbd,
-        0x1f, 0x23, 0x1e, 0xa8, 0x1c, 0x7b, 0x64, 0xc5,
-        0x14, 0x73, 0x5a, 0xc5, 0x5e, 0x4b, 0x79, 0x63,
-        0x3b, 0x70, 0x64, 0x24, 0x11, 0x9e, 0x09, 0xdc,
-        0xaa, 0xd4, 0xac, 0xf2, 0x1b, 0x10, 0xaf, 0x3b,
-        0x33, 0xcd, 0xe3, 0x50, 0x48, 0x47, 0x15, 0x5c,
-        0xbb, 0x6f, 0x22, 0x19, 0xba, 0x9b, 0x7d, 0xf5
-
-};
-static const uint8_t C2[] = {
-        0xf3, 0x31, 0x8d, 0x01, 0x19, 0x4d, 0xa8, 0x00,
-        0xa4, 0x2c, 0x10, 0xb5, 0x33, 0xd6, 0xbc, 0x11,
-        0x97, 0x59, 0x2d, 0xcc, 0x9b, 0x5d, 0x35, 0x9a,
-        0xc3, 0x04, 0x5d, 0x07, 0x4c, 0x86, 0xbf, 0x72,
-        0xe5, 0x1a, 0x72, 0x25, 0x82, 0x22, 0x54, 0x03,
-        0xde, 0x8b, 0x7a, 0x58, 0x5c, 0x6c, 0x28, 0xdf,
-        0x41, 0x0e, 0x38, 0xd6, 0x2a, 0x86, 0xe3, 0x4f,
-        0xa2, 0x7c, 0x22, 0x39, 0x60, 0x06, 0x03, 0x6f
-};
-
-static struct des_vector vectors[] = {
-        {K1, IV1, P1, sizeof(P1), C1},
-        {K2, IV2, P2, sizeof(P2), C2},
-};
-
-/* CM-SP-SECv3.1-I07-170111 I.7 */
-static const uint8_t DK1[] = {
-        0xe6, 0x60, 0x0f, 0xd8, 0x85, 0x2e, 0xf5, 0xab
-};
-static const uint8_t DIV1[] = {
-        0x81, 0x0e, 0x52, 0x8e, 0x1c, 0x5f, 0xda, 0x1a
-};
-static const uint8_t DP1[] = {
-        0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
-        0x08, 0x09, 0x0a, 0x0b, 0x88, 0x41, 0x65, 0x06
-};
-static const uint8_t DC1[] = {
-        0x0d, 0xda, 0x5a, 0xcb, 0xd0, 0x5e, 0x55, 0x67,
-        0x9f, 0x04, 0xd1, 0xb6, 0x41, 0x3d, 0x4e, 0xed
-};
-
-static const uint8_t DK2[] = {
-        0xe6, 0x60, 0x0f, 0xd8, 0x85, 0x2e, 0xf5, 0xab
-};
-static const uint8_t DIV2[] = {
-        0x81, 0x0e, 0x52, 0x8e, 0x1c, 0x5f, 0xda, 0x1a
-};
-static const uint8_t DP2[] = {
-        0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
-        0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x91,
-        0xd2, 0xd1, 0x9f
-};
-static const uint8_t DC2[] = {
-        0x0d, 0xda, 0x5a, 0xcb, 0xd0, 0x5e, 0x55, 0x67,
-        0x51, 0x47, 0x46, 0x86, 0x8a, 0x71, 0xe5, 0x77,
-        0xef, 0xac, 0x88
-};
-
-static const uint8_t DK3[] = {
-        0xe6, 0x60, 0x0f, 0xd8, 0x85, 0x2e, 0xf5, 0xab
-};
-static const uint8_t DIV3[] = {
-        0x51, 0x47, 0x46, 0x86, 0x8a, 0x71, 0xe5, 0x77
-};
-static const uint8_t DP3[] = {
-        0xd2, 0xd1, 0x9f
-};
-static const uint8_t DC3[] = {
-        0xef, 0xac, 0x88
-};
-
-
-static struct des_vector docsis_vectors[] = {
-        {DK1, DIV1, DP1, sizeof(DP1), DC1},
-        {DK2, DIV2, DP2, sizeof(DP2), DC2},
-        {DK3, DIV3, DP3, sizeof(DP3), DC3},
-};
-
-static struct des_vector des_cfb_vectors[] = {
-        {DK3, DIV3, DP3, sizeof(DP3), DC3},
-};
-
-/* 3DES vectors - 2x and 3x keys */
-
-static const uint8_t D3K1_1[] = {
-        0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07
-};
-
-static const uint8_t D3K2_1[] = {
-        0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f
-};
-
-static const uint8_t D3K3_1[] = {
-        0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07
-};
-
-static const uint8_t D3IV_1[] = {
-        0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07
-};
-
-
-static const uint8_t D3PT_1[] = {
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
-};
-
-static const uint8_t D3CT_1[] = {
-        0xdf, 0x0b, 0x6c, 0x9c, 0x31, 0xcd, 0x0c, 0xe4
-};
-
-#define D3PT_LEN_1 8
-
-static const uint8_t D3K1_2[] = {
-        0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07
-};
-
-static const uint8_t D3K2_2[] = {
-        0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f
-};
-
-static const uint8_t D3K3_2[] = {
-        0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07
-};
-
-static const uint8_t D3IV_2[] = {
-        0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07
-};
-
-static const uint8_t D3PT_2[] = {
-        0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
-        0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f
-};
-
-static const uint8_t D3CT_2[] = {
-        0xdd, 0xad, 0xa1, 0x61, 0xe8, 0xd7, 0x96, 0x73,
-        0xed, 0x75, 0x32, 0xe5, 0x92, 0x23, 0xcd, 0x0d
-};
-
-#define D3PT_LEN_2 16
-
-static const uint8_t D3K1_3[] = {
-        0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07
-};
-
-static const uint8_t D3K2_3[] = {
-        0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f
-};
-
-static const uint8_t D3K3_3[] = {
-        0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17
-};
-
-static const uint8_t D3IV_3[] = {
-        0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07
-};
-
-static const uint8_t D3PT_3[] = {
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
-};
-
-static const uint8_t D3CT_3[] = {
-        0x58, 0xed, 0x24, 0x8f, 0x77, 0xf6, 0xb1, 0x9e
-};
-
-#define D3PT_LEN_3 8
-
-static const uint8_t D3K1_4[] = {
-        0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07
-};
-
-static const uint8_t D3K2_4[] = {
-        0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f
-};
-
-static const uint8_t D3K3_4[] = {
-        0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17
-};
-
-static const uint8_t D3IV_4[] = {
-        0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07
-};
-
-static const uint8_t D3PT_4[] = {
-        0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
-        0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f
-};
-
-static const uint8_t D3CT_4[] = {
-        0x89, 0x4b, 0xc3, 0x08, 0x54, 0x26, 0xa4, 0x41,
-        0xf2, 0x7f, 0x73, 0xae, 0x26, 0xab, 0xbf, 0x74
-};
-
-#define D3PT_LEN_4 16
-
-static struct des3_vector des3_vectors[] = {
-        { D3K1_1, D3K2_1, D3K3_1, D3IV_1, D3PT_1, D3PT_LEN_1, D3CT_1 },
-        { D3K1_2, D3K2_2, D3K3_2, D3IV_2, D3PT_2, D3PT_LEN_2, D3CT_2 },
-        { D3K1_3, D3K2_3, D3K3_3, D3IV_3, D3PT_3, D3PT_LEN_3, D3CT_3 },
-        { D3K1_4, D3K2_4, D3K3_4, D3IV_4, D3PT_4, D3PT_LEN_4, D3CT_4 },
-};
+extern const struct cipher_test des_test_json[];
+extern const struct cipher_test des_docsis_test_json[];
+extern const struct cipher_test des_cfb_test_json[];
+extern const struct cipher_test des3_test_json[];
 
 static int
 test_des_many(struct IMB_MGR *mb_mgr,
@@ -466,72 +229,58 @@ test_des(struct IMB_MGR *mb_mgr,
 
 static void
 test_des_vectors(struct IMB_MGR *mb_mgr,
-                 const int vec_cnt,
-                 const struct des_vector *vec_tab,
+                 const struct cipher_test *v,
                  const char *banner,
                  const IMB_CIPHER_MODE cipher,
                  struct test_suite_context *ctx)
 {
-	int vect;
+
         uint64_t ks[16];
 
 	printf("%s:\n", banner);
-	for (vect = 0; vect < vec_cnt; vect++) {
+	for (; v->msg != NULL; v++) {
                 if (!quiet_mode) {
 #ifdef DEBUG
-                        printf("Standard vector %d/%d  PTLen:%d\n",
-                               vect + 1, vec_cnt,
-                               (int) vec_tab[vect].Plen);
+                        printf("Standard vector %zu  PTLen:%zu\n",
+                               v->tcId, v->msgSize / 8);
 #else
                         printf(".");
 #endif
                 }
 
-                des_key_schedule(ks, vec_tab[vect].K);
+                des_key_schedule(ks, v->key);
 
-                if (test_des(mb_mgr, ks, NULL, NULL,
-                             vec_tab[vect].IV,
-                             vec_tab[vect].P, vec_tab[vect].C,
-                             (unsigned) vec_tab[vect].Plen,
-                             IMB_DIR_ENCRYPT, IMB_ORDER_CIPHER_HASH,
-                             cipher, 0)) {
-                        printf("error #%d encrypt\n", vect + 1);
+                if (test_des(mb_mgr, ks, NULL, NULL, v->iv, (const void *) v->msg,
+                             (const void *) v->ct, (unsigned) v->msgSize / 8,
+                             IMB_DIR_ENCRYPT, IMB_ORDER_CIPHER_HASH, cipher, 0)) {
+                        printf("error #%zu encrypt\n", v->tcId);
                         test_suite_update(ctx, 0, 1);
                 } else {
                         test_suite_update(ctx, 1, 0);
                 }
 
-                if (test_des(mb_mgr, ks, NULL, NULL,
-                             vec_tab[vect].IV,
-                             vec_tab[vect].C, vec_tab[vect].P,
-                             (unsigned) vec_tab[vect].Plen,
-                             IMB_DIR_DECRYPT, IMB_ORDER_HASH_CIPHER,
-                             cipher, 0)) {
-                        printf("error #%d decrypt\n", vect + 1);
+                if (test_des(mb_mgr, ks, NULL, NULL, v->iv, (const void *) v->ct,
+                             (const void *) v->msg, (unsigned) v->msgSize / 8,
+                             IMB_DIR_DECRYPT, IMB_ORDER_HASH_CIPHER, cipher, 0)) {
+                        printf("error #%zu decrypt\n", v->tcId);
                         test_suite_update(ctx, 0, 1);
                 } else {
                         test_suite_update(ctx, 1, 0);
                 }
 
-                if (test_des(mb_mgr, ks, NULL, NULL,
-                             vec_tab[vect].IV,
-                             vec_tab[vect].P, vec_tab[vect].C,
-                             (unsigned) vec_tab[vect].Plen,
-                             IMB_DIR_ENCRYPT, IMB_ORDER_CIPHER_HASH,
-                             cipher, 1)) {
-                        printf("error #%d encrypt in-place\n", vect + 1);
+                if (test_des(mb_mgr, ks, NULL, NULL, v->iv, (const void *) v->msg,
+                             (const void *) v->ct, (unsigned) v->msgSize / 8,
+                             IMB_DIR_ENCRYPT, IMB_ORDER_CIPHER_HASH, cipher, 1)) {
+                        printf("error #%zu encrypt in-place\n", v->tcId);
                         test_suite_update(ctx, 0, 1);
                 } else {
                         test_suite_update(ctx, 1, 0);
                 }
 
-                if (test_des(mb_mgr, ks, NULL, NULL,
-                             vec_tab[vect].IV,
-                             vec_tab[vect].C, vec_tab[vect].P,
-                             (unsigned) vec_tab[vect].Plen,
-                             IMB_DIR_DECRYPT, IMB_ORDER_HASH_CIPHER,
-                             cipher, 1)) {
-                        printf("error #%d decrypt in-place\n", vect + 1);
+                if (test_des(mb_mgr, ks, NULL, NULL, v->iv, (const void *) v->ct,
+                             (const void *) v->msg, (unsigned) v->msgSize / 8,
+                             IMB_DIR_DECRYPT, IMB_ORDER_HASH_CIPHER, cipher, 1)) {
+                        printf("error #%zu decrypt in-place\n", v->tcId);
                         test_suite_update(ctx, 0, 1);
                 } else {
                         test_suite_update(ctx, 1, 0);
@@ -543,74 +292,67 @@ test_des_vectors(struct IMB_MGR *mb_mgr,
 
 static void
 test_des3_vectors(struct IMB_MGR *mb_mgr,
-                  const int vec_cnt,
-                  const struct des3_vector *vec_tab,
+                  const struct cipher_test *v,
                   const char *banner,
                   struct test_suite_context *ctx)
 {
-	int vect;
         uint64_t ks1[16];
         uint64_t ks2[16];
         uint64_t ks3[16];
 
 	printf("%s:\n", banner);
-	for (vect = 0; vect < vec_cnt; vect++) {
+	for (; v->msg != NULL; v++) {
                 if (!quiet_mode) {
 #ifdef DEBUG
-                        printf("Standard vector %d/%d  PTLen:%d\n",
-                               vect + 1, vec_cnt,
-                               (int) vec_tab[vect].Plen);
+                        printf("Standard vector %zu  PTLen:%zu\n",
+                               v->tcId, v->msgSize / 8);
 #else
                         printf(".");
 #endif
                 }
-                des_key_schedule(ks1, vec_tab[vect].K1);
-                des_key_schedule(ks2, vec_tab[vect].K2);
-                des_key_schedule(ks3, vec_tab[vect].K3);
+                des_key_schedule(ks1, v->key);
+                des_key_schedule(ks2, v->key + 8);
+                des_key_schedule(ks3, v->key + 16);
 
-                if (test_des(mb_mgr, ks1, ks2, ks3,
-                             vec_tab[vect].IV,
-                             vec_tab[vect].P, vec_tab[vect].C,
-                             (unsigned) vec_tab[vect].Plen,
+                if (test_des(mb_mgr, ks1, ks2, ks3, v->iv,
+                             (const void *) v->msg, (const void *) v->ct,
+                             (unsigned) v->msgSize / 8,
                              IMB_DIR_ENCRYPT, IMB_ORDER_CIPHER_HASH,
                              IMB_CIPHER_DES3, 0)) {
-                        printf("error #%d encrypt\n", vect + 1);
+                        printf("error #%zu encrypt\n", v->tcId);
                         test_suite_update(ctx, 0, 1);
                 } else {
                         test_suite_update(ctx, 1, 0);
                 }
 
-                if (test_des(mb_mgr, ks1, ks2, ks3,
-                             vec_tab[vect].IV,
-                             vec_tab[vect].C, vec_tab[vect].P,
-                             (unsigned) vec_tab[vect].Plen,
+                if (test_des(mb_mgr, ks1, ks2, ks3, v->iv,
+                             (const void *) v->ct, (const void *) v->msg,
+                             (unsigned) v->msgSize / 8,
                              IMB_DIR_DECRYPT, IMB_ORDER_HASH_CIPHER,
                              IMB_CIPHER_DES3, 0)) {
-                        printf("error #%d decrypt\n", vect + 1);
+                        printf("error #%zu decrypt\n", v->tcId);
                         test_suite_update(ctx, 0, 1);
                 } else {
                         test_suite_update(ctx, 1, 0);
                 }
 
-                if (test_des(mb_mgr, ks1, ks2, ks3,
-                             vec_tab[vect].IV,
-                             vec_tab[vect].P, vec_tab[vect].C,
-                             (unsigned) vec_tab[vect].Plen,
+                if (test_des(mb_mgr, ks1, ks2, ks3, v->iv,
+                             (const void *) v->msg, (const void *) v->ct,
+                             (unsigned) v->msgSize / 8,
                              IMB_DIR_ENCRYPT, IMB_ORDER_CIPHER_HASH,
                              IMB_CIPHER_DES3, 1)) {
-                        printf("error #%d encrypt in-place\n", vect + 1);
+                        printf("error #%zu encrypt in-place\n", v->tcId);
                         test_suite_update(ctx, 0, 1);
                 } else {
                         test_suite_update(ctx, 1, 0);
                 }
 
-                if (test_des(mb_mgr, ks1, ks2, ks3,
-                             vec_tab[vect].IV,
-                             vec_tab[vect].C, vec_tab[vect].P,
-                             (unsigned) vec_tab[vect].Plen,
+                if (test_des(mb_mgr, ks1, ks2, ks3, v->iv,
+                             (const void *) v->ct, (const void *) v->msg,
+                             (unsigned) v->msgSize / 8,
                              IMB_DIR_DECRYPT, IMB_ORDER_HASH_CIPHER,
                              IMB_CIPHER_DES3, 1)) {
-                        printf("error #%d decrypt in-place\n", vect + 1);
+                        printf("error #%zu decrypt in-place\n", v->tcId);
                         test_suite_update(ctx, 0, 1);
                 } else {
                         test_suite_update(ctx, 1, 0);
@@ -623,36 +365,32 @@ test_des3_vectors(struct IMB_MGR *mb_mgr,
 static int
 des_cfb_validate(struct test_suite_context *ctx)
 {
-        unsigned i;
+        const struct cipher_test *v = des_cfb_test_json;
 
         printf("DES-CFB standard test vectors:\n");
-        for (i = 0; i < DIM(des_cfb_vectors); i++) {
+        for (; v->msg != NULL; v++) {
                 uint8_t output1[8];
                 uint8_t output2[8];
                 uint64_t ks[16];
 
-                des_key_schedule(ks, des_cfb_vectors[i].K);
+                des_key_schedule(ks, v->key);
 
                 /* Out of place */
 
                 /* encrypt test */
-                des_cfb_one(output1, des_cfb_vectors[i].P,
-                            (const uint64_t *)des_cfb_vectors[i].IV, ks,
-                            (int)des_cfb_vectors[i].Plen);
-                if (memcmp(output1, des_cfb_vectors[i].C,
-                            des_cfb_vectors[i].Plen)) {
-                        printf("DES-CFB enc (OOP) vector %d mismatched\n", i);
+                des_cfb_one(output1, (const void *) v->msg, (const uint64_t *) v->iv,
+                            ks, (int) v->msgSize / 8);
+                if (memcmp(output1, (const void *) v->ct, v->msgSize / 8)) {
+                        printf("DES-CFB enc (OOP) vector %zu mismatched\n", v->tcId);
                         test_suite_update(ctx, 0, 1);
                 } else {
                         test_suite_update(ctx, 1, 0);
                 }
                 /* decrypt test */
-                des_cfb_one(output2, output1,
-                            (const uint64_t *)des_cfb_vectors[i].IV, ks,
-                            (int)des_cfb_vectors[i].Plen);
-                if (memcmp(output2, des_cfb_vectors[i].P,
-                            des_cfb_vectors[i].Plen)) {
-                        printf("DES-CFB dec (OOP) vector %d mismatched\n", i);
+                des_cfb_one(output2, (const void *) v->ct, (const uint64_t *) v->iv,
+                            ks, (int) v->msgSize / 8);
+                if (memcmp(output2, (const void *) v->msg, v->msgSize / 8)) {
+                        printf("DES-CFB dec (OOP) vector %zu mismatched\n", v->tcId);
                         test_suite_update(ctx, 0, 1);
                 } else {
                         test_suite_update(ctx, 1, 0);
@@ -661,25 +399,21 @@ des_cfb_validate(struct test_suite_context *ctx)
                 /* In place */
 
                 /* encrypt test */
-                memcpy(output1, des_cfb_vectors[i].P, des_cfb_vectors[i].Plen);
-                des_cfb_one(output1, output1,
-                            (const uint64_t *)des_cfb_vectors[i].IV, ks,
-                            (int)des_cfb_vectors[i].Plen);
-                if (memcmp(output1, des_cfb_vectors[i].C,
-                            des_cfb_vectors[i].Plen)) {
-                        printf("DES-CFB enc (OOP) vector %d mismatched\n", i);
+                memcpy(output1, (const void *) v->msg, v->msgSize / 8);
+                des_cfb_one(output2, output1, (const uint64_t *) v->iv, ks,
+                            (int) v->msgSize / 8);
+                if (memcmp(output2, (const void *) v->ct, v->msgSize / 8)) {
+                        printf("DES-CFB enc (IP) vector %zu mismatched\n", v->tcId);
                         test_suite_update(ctx, 0, 1);
                 } else {
                         test_suite_update(ctx, 1, 0);
                 }
                 /* decrypt test */
-                memcpy(output1, des_cfb_vectors[i].C, des_cfb_vectors[i].Plen);
-                des_cfb_one(output1, output1,
-                            (const uint64_t *)des_cfb_vectors[i].IV, ks,
-                            (int)des_cfb_vectors[i].Plen);
-                if (memcmp(output1, des_cfb_vectors[i].P,
-                            des_cfb_vectors[i].Plen)) {
-                        printf("DES-CFB dec (OOP) vector %d mismatched\n", i);
+                memcpy(output1, (const void *) v->ct, v->msgSize / 8);
+                des_cfb_one(output2, output1, (const uint64_t *) v->iv,
+                            ks, (int) v->msgSize / 8);
+                if (memcmp(output2, (const void *) v->msg, v->msgSize / 8)) {
+                        printf("DES-CFB dec (IP) vector %zu mismatched\n", v->tcId);
                         test_suite_update(ctx, 0, 1);
                 } else {
                         test_suite_update(ctx, 1, 0);
@@ -698,13 +432,12 @@ des_test(struct IMB_MGR *mb_mgr)
         int errors;
 
         test_suite_start(&ctx, "DES-CBC-64");
-        test_des_vectors(mb_mgr, DIM(vectors), vectors,
-                         "DES standard test vectors", IMB_CIPHER_DES, &ctx);
+        test_des_vectors(mb_mgr, des_test_json, "DES standard test vectors",
+                         IMB_CIPHER_DES, &ctx);
         errors = test_suite_end(&ctx);
 
         test_suite_start(&ctx, "DOCSIS-DES-64");
-        test_des_vectors(mb_mgr, DIM(docsis_vectors), docsis_vectors,
-                         "DOCSIS DES standard test vectors",
+        test_des_vectors(mb_mgr, des_docsis_test_json, "DOCSIS DES standard test vectors",
                          IMB_CIPHER_DOCSIS_DES, &ctx);
         errors += test_suite_end(&ctx);
 
@@ -713,10 +446,10 @@ des_test(struct IMB_MGR *mb_mgr)
         errors += test_suite_end(&ctx);
 
         test_suite_start(&ctx, "3DES-CBC-192");
-        test_des_vectors(mb_mgr, DIM(vectors), vectors,
+        test_des_vectors(mb_mgr, des_test_json,
                          "3DES (single key) standard test vectors",
                          IMB_CIPHER_DES3, &ctx);
-        test_des3_vectors(mb_mgr, DIM(des3_vectors), des3_vectors,
+        test_des3_vectors(mb_mgr, des3_test_json,
                           "3DES (multiple keys) test vectors", &ctx);
         errors += test_suite_end(&ctx);
 
