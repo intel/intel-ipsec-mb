@@ -27,7 +27,8 @@
 include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/utils.cmake")
 
 # get version from public header file
-imb_get_version("${CMAKE_CURRENT_SOURCE_DIR}/lib/intel-ipsec-mb.h")
+set(IMB_HDR "${CMAKE_CURRENT_SOURCE_DIR}/lib/intel-ipsec-mb.h")
+imb_get_version(${IMB_HDR})
 message(STATUS "Project Version: ${IPSEC_MB_VERSION_FULL}")
 
 cmake_minimum_required(VERSION 3.16)
