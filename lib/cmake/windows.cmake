@@ -93,8 +93,12 @@ endif()
 add_library(${LIB} ${SRC_FILES_ASM} ${SRC_FILES_C} ${SRC_DEF_FILE})
 
 # set install rules
-set(CMAKE_INSTALL_PREFIX "c:/Program Files"
-  CACHE STRING "Set default installation directory" FORCE)
+if(NOT CMAKE_INSTALL_PREFIX)
+  set(CMAKE_INSTALL_PREFIX "c:/Program Files"
+    CACHE STRING "Set default installation directory" FORCE)
+endif()
+message(STATUS "CMAKE_INSTALL_PREFIX...    ${CMAKE_INSTALL_PREFIX}")
+
 install(TARGETS ${LIB}
   DESTINATION ${CMAKE_INSTALL_PREFIX}/${CMAKE_PROJECT_NAME})
 install(FILES

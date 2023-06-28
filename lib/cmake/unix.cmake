@@ -94,11 +94,27 @@ set_target_properties(${LIB} PROPERTIES
   SOVERSION ${SO_MAJOR_VER})
 
 # set install rules
-set(CMAKE_INSTALL_PREFIX "/usr"
-  CACHE STRING "Set default installation directory" FORCE)
-install(TARGETS ${LIB} DESTINATION lib)
-install(FILES ${IMB_HDR} DESTINATION include)
+if(NOT CMAKE_INSTALL_PREFIX)
+  set(CMAKE_INSTALL_PREFIX "/usr"
+    CACHE STRING "Set default installation directory" FORCE)
+endif()
+if(NOT LIB_INSTALL_DIR)
+  set(LIB_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/lib")
+endif()
+if(NOT INCLUDE_INSTALL_DIR)
+  set(INCLUDE_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/include")
+endif()
+if(NOT MAN_INSTALL_DIR)
+  set(MAN_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/man/man7")
+endif()
+
+message(STATUS "LIB_INSTALL_DIR...         ${LIB_INSTALL_DIR}")
+message(STATUS "INCLUDE_INSTALL_DIR...     ${INCLUDE_INSTALL_DIR}")
+message(STATUS "MAN_INSTALL_DIR...         ${MAN_INSTALL_DIR}")
+
+install(TARGETS ${LIB} DESTINATION ${LIB_INSTALL_DIR})
+install(FILES ${IMB_HDR} DESTINATION ${INCLUDE_INSTALL_DIR})
 install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/libipsec-mb.7
               ${CMAKE_CURRENT_SOURCE_DIR}/libipsec-mb-dev.7
-              DESTINATION man/man7)
+              DESTINATION ${MAN_INSTALL_DIR})
 
