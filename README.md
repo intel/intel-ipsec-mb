@@ -673,6 +673,13 @@ To uninstall the library run:
 If you want to change install location then define PREFIX:   
 `sudo cmake --install . --prefix=<path>`
 
+Or set install directory variables during configuration:
+```
+cmake -DLIB_INSTALL_DIR=/usr/lib64 -DINCLUDE_INSTALL_DIR=/usr/include ..
+cmake --build . --parallel
+sudo cmake --install .
+```
+
 ### Windows (x64 only)
 
 First compile the library and then install from a command prompt in administrator mode:   
