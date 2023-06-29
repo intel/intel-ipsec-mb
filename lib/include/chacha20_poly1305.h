@@ -187,6 +187,8 @@ void finalize_chacha20_poly1305_fma_avx512(
                                     struct chacha20_poly1305_context_data *ctx,
                                     void *tag, const uint64_t tag_len);
 
+void quic_chacha20_sse(const void *key, const void * const src_ptr_array[],
+                       void *dst_ptr_array[], const uint64_t num_buffers);
 void quic_chacha20_avx512(const void *key, const void * const src_ptr_array[],
                           void *dst_ptr_array[], const uint64_t num_buffers);
 

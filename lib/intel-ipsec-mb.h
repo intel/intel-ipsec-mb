@@ -912,6 +912,9 @@ typedef void (*aes_ecb_quic_t)(const void *, const void *,
 
 typedef IMB_JOB * (*chacha20_poly1305_quic_t)(struct IMB_MGR *, IMB_JOB *);
 
+typedef void (*chacha20_hp_quic_t)(const void *, const void * const *,
+                                   void **, const uint64_t);
+
 /* Multi-buffer manager flags passed to alloc_mb_mgr() */
 
 #define IMB_FLAG_SHANI_OFF (1ULL << 0) /**< disable use of SHANI extension */
@@ -1130,6 +1133,7 @@ typedef struct IMB_MGR {
         void (*set_suite_id)(struct IMB_MGR *, IMB_JOB *);
 
         chacha20_poly1305_quic_t chacha20_poly1305_quic;
+        chacha20_hp_quic_t chacha20_hp_quic;
 
         /* in-order scheduler fields */
         int              earliest_job; /**< byte offset, -1 if none */

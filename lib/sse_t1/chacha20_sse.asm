@@ -2920,4 +2920,257 @@ exit_gen:
 %endif
         jmp	restore_gen_keystr
 
+align 32
+MKGLOBAL(quic_chacha20_sse,function,internal)
+quic_chacha20_sse:
+
+%define tmp     rax
+%define off     r11
+
+%define key             arg1
+%define src_array       arg2
+%define dst_array       arg3
+%define num_buffers     arg4
+
+        xor     off, off
+
+        ; Check if there are no buffers
+        or      num_buffers, num_buffers
+        jz      exit_quic
+
+        mov     rax, rsp
+        sub     rsp, STACK_SIZE
+        and     rsp, -16
+        mov     [rsp + _RSP_SAVE], rax ; save RSP
+
+%ifndef LINUX
+%assign i 0
+%assign j 6
+%rep 10
+        movdqa	[rsp + _XMM_WIN_SAVE + i*16], APPEND(xmm, j)
+%assign i (i + 1)
+%assign j (j + 1)
+%endrep
+%endif
+
+        ; If less than or equal to 2 buffers, prepare directly states for
+        ; up to 2 blocks
+        cmp     num_buffers, 2
+        je      two_buffers_left
+        jb      one_buffer_left
+
+        ; Prepare first 4 chacha states
+        movdqa  xmm0, [rel constants0]
+        movdqa  xmm1, [rel constants1]
+        movdqa  xmm2, [rel constants2]
+        movdqa  xmm3, [rel constants3]
+
+        ; Broadcast 8 dwords from key into XMM4-11
+        movdqu  xmm12, [key]
+        movdqu  xmm15, [key + 16]
+        pshufd  xmm4, xmm12, 0x0
+        pshufd  xmm5, xmm12, 0x55
+        pshufd  xmm6, xmm12, 0xAA
+        pshufd  xmm7, xmm12, 0xFF
+        pshufd  xmm8, xmm15, 0x0
+        pshufd  xmm9, xmm15, 0x55
+        pshufd  xmm10, xmm15, 0xAA
+        pshufd  xmm11, xmm15, 0xFF
+
+%assign i 0
+%rep 12
+        movdqa  [rsp + _STATE + 16*i], xmm %+ i
+%assign i (i + 1)
+%endrep
+
+        cmp     num_buffers, 4
+        jb      three_buffers_left
+
+align 32
+start_loop_quic:
+
+        ; Load 16-byte samples from 4 buffers
+        mov     tmp, [src_array + off]
+        movd    xmm12, [tmp]
+        movd    xmm13, [tmp + 4]
+        movd    xmm14, [tmp + 4*2]
+        movd    xmm15, [tmp + 4*3]
+        mov     tmp, [src_array + off + 8]
+        pinsrd  xmm12, [tmp], 1
+        pinsrd  xmm13, [tmp + 4], 1
+        pinsrd  xmm14, [tmp + 4*2], 1
+        pinsrd  xmm15, [tmp + 4*3], 1
+        mov     tmp, [src_array + off + 8*2]
+        pinsrd  xmm12, [tmp], 2
+        pinsrd  xmm13, [tmp + 4], 2
+        pinsrd  xmm14, [tmp + 4*2], 2
+        pinsrd  xmm15, [tmp + 4*3], 2
+        mov     tmp, [src_array + off + 8*3]
+        pinsrd  xmm12, [tmp], 3
+        pinsrd  xmm13, [tmp + 4], 3
+        pinsrd  xmm14, [tmp + 4*2], 3
+        pinsrd  xmm15, [tmp + 4*3], 3
+
+        movdqa  [rsp + _STATE + 16*12], xmm12
+        movdqa  [rsp + _STATE + 16*13], xmm13
+        movdqa  [rsp + _STATE + 16*14], xmm14
+        movdqa  [rsp + _STATE + 16*15], xmm15
+
+        ; Generate 256 bytes of keystream
+        GENERATE_256_KS xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, \
+                        xmm8, xmm9, xmm10, xmm11, xmm12, xmm13, xmm14, xmm15, tmp
+
+        ;; Transpose state to get keystream and write 5-byte output per buffer
+
+        ; Transpose to get 0-15, 64-95, 128-143, 192-207 bytes of KS
+        ; Output: xmm14, xmm1, xmm0, xmm3
+        TRANSPOSE4_U32 xmm0, xmm1, xmm2, xmm3, xmm14, xmm15
+
+        mov     tmp, [dst_array + off]
+        movd    [tmp], xmm14
+        pextrb  [tmp + 4], xmm14, 4
+        mov     tmp, [dst_array + off + 8]
+        movd    [tmp], xmm1
+        pextrb  [tmp + 4], xmm1, 4
+
+        mov     tmp, [dst_array + off + 8*2]
+        movd    [tmp], xmm0
+        pextrb  [tmp + 4], xmm0, 4
+        mov     tmp, [dst_array + off + 8*3]
+        movd    [tmp], xmm3
+        pextrb  [tmp + 4], xmm3, 4
+
+        sub     num_buffers, 4
+        add     off, 8*4
+
+        cmp     num_buffers, 4
+        jae     start_loop_quic
+
+exit_loop_quic:
+
+        ; Check if there are no more buffers
+        or      num_buffers, num_buffers
+        jz      no_more_buffers
+
+        cmp     num_buffers, 2
+        ja      three_buffers_left
+        je      two_buffers_left
+
+        ; fall-through for one buffer
+
+one_buffer_left:
+        ; Prepare next chacha state
+        movdqu  xmm1, [key]          ; Load key bytes 0-15
+        movdqu  xmm2, [key + 16]     ; Load key bytes 16-31
+        movdqa  xmm0, [rel constants]
+        mov     tmp, [src_array + off]
+        movdqu  xmm3, [tmp]
+
+        ; Generate 64 bytes of keystream
+        GENERATE_64_128_KS xmm0, xmm1, xmm2, xmm3, xmm9, xmm10, xmm11, \
+                           xmm12, xmm13
+
+        ; Write 5-byte output for single buffer
+        mov     tmp, [dst_array + off]
+        movd    [tmp], xmm9
+        pextrb  [tmp + 4], xmm9, 4
+
+        jmp     no_more_buffers
+
+two_buffers_left:
+        ; Prepare next 2 chacha states from IV, key
+        movdqu  xmm1, [key]          ; Load key bytes 0-15
+        movdqu  xmm2, [key + 16]     ; Load key bytes 16-31
+        mov     tmp, [src_array + off]
+        movdqu  xmm3, [tmp]
+        movdqa  xmm0, [rel constants]
+
+        mov     tmp, [src_array + off + 8]
+        movdqu  xmm8, [tmp]
+
+        ; Generate 128 bytes of keystream
+        GENERATE_64_128_KS xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, \
+                           xmm13, xmm8, xmm9, xmm10, xmm11, xmm12
+
+        ; Write 5-byte output for two buffers
+        mov     tmp, [dst_array + off]
+        movd    [tmp], xmm4
+        pextrb  [tmp + 4], xmm4, 4
+        mov     tmp, [dst_array + off + 8]
+        movd    [tmp], xmm9
+        pextrb  [tmp + 4], xmm9, 4
+
+        jmp     no_more_buffers
+
+three_buffers_left:
+
+        mov     tmp, [src_array + off]
+        movd    xmm12, [tmp]
+        movd    xmm13, [tmp + 4]
+        movd    xmm14, [tmp + 4*2]
+        movd    xmm15, [tmp + 4*3]
+        mov     tmp, [src_array + off + 8]
+        pinsrd  xmm12, [tmp], 1
+        pinsrd  xmm13, [tmp + 4], 1
+        pinsrd  xmm14, [tmp + 4*2], 1
+        pinsrd  xmm15, [tmp + 4*3], 1
+        mov     tmp, [src_array + off + 8*2]
+        pinsrd  xmm12, [tmp], 2
+        pinsrd  xmm13, [tmp + 4], 2
+        pinsrd  xmm14, [tmp + 4*2], 2
+        pinsrd  xmm15, [tmp + 4*3], 2
+
+%assign i 12
+%rep 4
+        movdqa  [rsp + _STATE + 16*i], xmm %+ i
+%assign i (i + 1)
+%endrep
+
+        ; Generate 256 bytes of keystream
+        GENERATE_256_KS xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, \
+                        xmm8, xmm9, xmm10, xmm11, xmm12, xmm13, xmm14, xmm15, tmp
+
+        ; Transpose to get 0-15, 64-95, 128-143, 192-207 bytes of KS
+        ; Output: xmm14, xmm1, xmm0, xmm3
+        TRANSPOSE4_U32 xmm0, xmm1, xmm2, xmm3, xmm14, xmm15
+
+        ; Write 5-byte output for three buffers
+        mov     tmp, [dst_array + off]
+        movd    [tmp], xmm14
+        pextrb  [tmp + 4], xmm14, 4
+        mov     tmp, [dst_array + off + 8]
+        movd    [tmp], xmm1
+        pextrb  [tmp + 4], xmm1, 4
+
+        mov     tmp, [dst_array + off + 8*2]
+        movd    [tmp], xmm0
+        pextrb  [tmp + 4], xmm0, 4
+
+no_more_buffers:
+
+%ifdef SAFE_DATA
+        clear_all_xmms_sse_asm
+        ; Clear stack frame
+%assign i 0
+%rep 16
+        movdqa  [rsp + _STATE + 16*i], xmm0
+%assign i (i + 1)
+%endrep
+%endif
+
+%ifndef LINUX
+%assign i 0
+%assign j 6
+%rep 10
+        movdqa	APPEND(xmm, j), [rsp + _XMM_WIN_SAVE + i*16]
+%assign i (i + 1)
+%assign j (j + 1)
+%endrep
+%endif
+        mov     rsp, [rsp + _RSP_SAVE]
+
+exit_quic:
+
+        ret
+
 mksection stack-noexec

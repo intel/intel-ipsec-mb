@@ -68,7 +68,7 @@ imb_quic_hp_chacha20(IMB_MGR *state,
 
 #endif /* SAFE_PARAM */
 
-        quic_chacha20_avx512(key, src_ptr_array, dst_ptr_array, num_packets);
+        state->chacha20_hp_quic(key, src_ptr_array, dst_ptr_array, num_packets);
 
         imb_set_errno(state, 0);
 }

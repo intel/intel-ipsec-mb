@@ -614,6 +614,7 @@ init_mb_mgr_avx512_t2_internal(IMB_MGR *state, const int reset_mgrs)
         state->aes_ecb_128_quic = aes_ecb_quic_enc_128_vaes_avx512;
         state->aes_ecb_256_quic = aes_ecb_quic_enc_256_vaes_avx512;
         state->chacha20_poly1305_quic = aead_chacha20_poly1305_avx512;
+        state->chacha20_hp_quic = quic_chacha20_avx512;
 }
 
 #include "mb_mgr_code.h"
