@@ -793,7 +793,7 @@
 
         vshufi64x2      %%ZT5, %%ZT7, %%ZT7, 0x00       ;; broadcast HashKey^8 across all ZT5
 
-        ;; calculate HashKey^9<<1 mod poly, HashKey^10<<1 mod poly, ... HashKey^48<<1 mod poly
+        ;; calculate HashKey^9<<1 mod poly, HashKey^10<<1 mod poly, ... HashKey^32<<1 mod poly
         ;; use HashKey^8 as multiplier against ZT8 and ZT7 - this allows deeper ooo execution
 %assign i 12
 %rep ((big_loop_nblocks - 8) / 8)
@@ -3159,22 +3159,15 @@
 ;;; - 16 blocks < LENGTH < 32 blocks
 ;;;   - cipher 16 blocks
 ;;;   - cipher N blocks & hash 16 blocks, hash N blocks (reduction)
-;;; - 32 blocks < LENGTH < 48 blocks
+;;; - LENGTH >= 32 blocks
 ;;;   - cipher 2 x 16 blocks
-;;;   - hash 16 blocks
-;;;   - cipher N blocks & hash 16 blocks, hash N blocks (reduction)
-;;; - LENGTH >= 48 blocks
-;;;   - cipher 2 x 16 blocks
-;;;   - while (data_to_cipher >= 48 blocks):
+;;;   - while (data_to_cipher >= 2 x 32 blocks):
 ;;;     - cipher 16 blocks & hash 16 blocks
-;;;     - cipher 16 blocks & hash 16 blocks
-;;;     - cipher 16 blocks & hash 16 blocks (reduction)
+;;;     - cipher 16 blocks & hash 16 blocks (parallel reduction)
 ;;;   - if (data_to_cipher >= 32 blocks):
 ;;;     - cipher 16 blocks & hash 16 blocks
-;;;     - cipher 16 blocks & hash 16 blocks
-;;;     - hash 16 blocks (reduction)
-;;;     - cipher N blocks & hash 16 blocks, hash N blocks (reduction)
-;;;   - elif (data_to_cipher >= 16 blocks):
+;;;     - cipher 16 blocks & hash 16 blocks (reduction)
+;;;   - if (data_to_cipher >= 16 blocks):
 ;;;     - cipher 16 blocks & hash 16 blocks
 ;;;     - hash 16 blocks
 ;;;     - cipher N blocks & hash 16 blocks, hash N blocks (reduction)
