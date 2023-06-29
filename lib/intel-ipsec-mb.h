@@ -661,9 +661,14 @@ struct gcm_key_data {
                         /**
                          * This is needed for schoolbook multiply purposes.
                          * (HashKey<<1 mod poly), (HashKey^2<<1 mod poly), ...,
-                         * (Hashkey^48<<1 mod poly)
+                         * (Hashkey^8<<1 mod poly)
+                         *
+                         * Followed by:
+                         * (HashKey<<1 mod poly) x POLY,
+                         * (HashKey^2<<1 mod poly) x POLY, ...,
+                         * (Hashkey^8<<1 mod poly) x POLY
                          */
-                        uint8_t shifted_hkey[IMB_GCM_ENC_KEY_LEN * 8];
+                        uint8_t shifted_hkey[IMB_GCM_ENC_KEY_LEN * 8 * 2];
                 } avx2_avx512;
                 struct {
                         /**
