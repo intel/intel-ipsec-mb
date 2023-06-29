@@ -262,6 +262,65 @@ default rel
 
 %endmacro
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; GHASH_MUL2 MACRO to implement: Data*HashKey mod (128,127,126,121,0)
+;;; Input: A and B (128-bits each, bit-reflected)
+;;; Output: C = A*B*x mod poly, (i.e. >>1 )
+;;; To compute GH = GH*HashKey mod poly, give two constants:
+;;;   HK = HashKey<<1 mod poly as input
+;;;   KK = SWAP_H_L( HK_L * POLY) + HK
+;;;   POLY = 0xC2 << 56
+;;;
+;;; Realize four multiplications first, to achieve partially reduced product
+;;;   TLL = GH_L * KK_L
+;;;   TLH = GH_L * KK_H
+;;;   THL = GH_H * HK_L
+;;;   THH = GH_H * HK_H
+;;;
+;;; Accumulate results into 2 registers, with corresponding weights
+;;;   T1 = THH + TLH
+;;;   T2 = THL + TLL
+;;;
+;;; Begin reduction
+;;;    ----------
+;;;    |   T1   |
+;;;    ---------------
+;;;         |   T2   |
+;;;         ----------
+;;;
+;;;   T3 = SWAP_H_L(T2)
+;;;   T5 = T2_L * POLY
+;;;   GH = T1 + T5 + T3
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+%macro  GHASH_MUL2  7
+%define %%GH  %1        ;; [in/out] xmm with multiply operand(s) (128-bits)
+%define %%HK  %2        ;; [in] xmm with hash key value(s) (128-bits)
+%define %%KK  %3        ;; [in] xmm with hash key K value(s) (128-bits)
+%define %%TLL %4        ;; [clobbered] xmm
+%define %%TLH %5        ;; [clobbered] xmm
+%define %%THL %6        ;; [clobbered] xmm
+%define %%THH %7        ;; [clobbered] xmm
+
+        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        vpclmulqdq      %%TLL, %%GH, %%KK, 0x00     ; TLL = GH_L * KK_L
+        vpclmulqdq      %%TLH, %%GH, %%KK, 0x10     ; TLH = GH_L * KK_H
+        vpclmulqdq      %%THL, %%GH, %%HK, 0x01     ; THL = GH_H * HK_L
+        vpclmulqdq      %%THH, %%GH, %%HK, 0x11     ; THH = GH_H * HK_H
+
+        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        ; add products
+        vpxorq          %%TLL, %%TLL, %%THL
+        vpxorq          %%THH, %%THH, %%TLH
+
+        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        ; new reduction
+        vpclmulqdq      %%GH, %%TLL, [rel POLY], 0x10
+        vpshufd         %%TLH, %%TLL, 01001110b
+        vpxor           %%GH, %%GH, %%THH
+        vpxor           %%GH, %%GH, %%TLH
+        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+%endmacro
+
 %macro  PRECOMPUTE 8
 %define %%GDATA %1      ;; [in/out] pointer to GCM key data structure
 %define %%HK    %2      ;; [in] Hash Key
@@ -272,28 +331,28 @@ default rel
 %define %%T5    %7      ;; [clobbered] temporary XMM register
 %define %%T6    %8      ;; [clobbered] temporary XMM register
 
-        vmovdqa  %%T5, %%HK
+        vmovdqa         %%T5, %%HK
 
-        GHASH_MUL %%T5, %%HK, %%T1, %%T3, %%T4, %%T6, %%T2      ;  %%T5 = HashKey^2<<1 mod poly
-        vmovdqu  [%%GDATA + HashKey_2], %%T5                    ;  [HashKey_2] = HashKey^2<<1 mod poly
+        ;; calculate HashKeyX = HashKey x POLY
+        vpclmulqdq      %%T1, %%T5, [rel POLY], 0x10
+        vpshufd         %%T2, %%T5, 01001110b
+        vpxor           %%T1, %%T1, %%T2
+        vmovdqu         [%%GDATA + HashKeyK_1], %%T1
 
-        GHASH_MUL %%T5, %%HK, %%T1, %%T3, %%T4, %%T6, %%T2      ;  %%T5 = HashKey^3<<1 mod poly
-        vmovdqu  [%%GDATA + HashKey_3], %%T5
+%assign i 2
+%rep 7
+        GHASH_MUL %%T5, %%HK, %%T1, %%T3, %%T4, %%T6, %%T2      ;  %%T5 = HashKey^i<<1 mod poly
+        vmovdqu  [%%GDATA + HashKey_ %+ i], %%T5                ;  [HashKey_i] = HashKey^i<<1 mod poly
 
-        GHASH_MUL %%T5, %%HK, %%T1, %%T3, %%T4, %%T6, %%T2      ;  %%T5 = HashKey^4<<1 mod poly
-        vmovdqu  [%%GDATA + HashKey_4], %%T5
+        ;; calculate HashKeyX = HashKey x POLY
+        vpclmulqdq      %%T1, %%T5, [rel POLY], 0x10
+        vpshufd         %%T2, %%T5, 01001110b
+        vpxor           %%T1, %%T1, %%T2
+        vmovdqu         [%%GDATA + HashKeyK_ %+ i], %%T1
 
-        GHASH_MUL %%T5, %%HK, %%T1, %%T3, %%T4, %%T6, %%T2      ;  %%T5 = HashKey^5<<1 mod poly
-        vmovdqu  [%%GDATA + HashKey_5], %%T5
+%assign i (i + 1)
+%endrep
 
-        GHASH_MUL %%T5, %%HK, %%T1, %%T3, %%T4, %%T6, %%T2      ;  %%T5 = HashKey^6<<1 mod poly
-        vmovdqu  [%%GDATA + HashKey_6], %%T5
-
-        GHASH_MUL %%T5, %%HK, %%T1, %%T3, %%T4, %%T6, %%T2      ;  %%T5 = HashKey^7<<1 mod poly
-        vmovdqu  [%%GDATA + HashKey_7], %%T5
-
-        GHASH_MUL %%T5, %%HK, %%T1, %%T3, %%T4, %%T6, %%T2      ;  %%T5 = HashKey^8<<1 mod poly
-        vmovdqu  [%%GDATA + HashKey_8], %%T5
 %endmacro
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -481,16 +540,17 @@ default rel
         or      %%T2, %%T2
         je      %%_CALC_AAD_done
 
-        vmovdqu         %%XTMP0, [%%GDATA_KEY + HashKey]
+        vmovdqu         %%XTMP0, [%%GDATA_KEY + HashKey_1]
+        vmovdqu         %%XTMP1, [%%GDATA_KEY + HashKeyK_1]
 %ifdef IS_AVX2_GCM
-        READ_SMALL_DATA_INPUT_AVX %%XTMP1, %%T1, %%T2, %%T3
+        READ_SMALL_DATA_INPUT_AVX %%XTMP2, %%T1, %%T2, %%T3
 %else
-        READ_SMALL_DATA_INPUT_AVX512 %%XTMP1, %%T1, %%T2, %%T3, k1
+        READ_SMALL_DATA_INPUT_AVX512 %%XTMP2, %%T1, %%T2, %%T3, k1
 %endif
         ;byte-reflect the AAD data
-        vpshufb         %%XTMP1, [rel SHUF_MASK]
-        vpxor           %%AAD_HASH, %%XTMP1
-        GHASH_MUL       %%AAD_HASH, %%XTMP0, %%XTMP1, %%XTMP2, %%XTMP3, %%XTMP4, %%XTMP5
+        vpshufb         %%XTMP2, %%XTMP2, [rel SHUF_MASK]
+        vpxor           %%AAD_HASH, %%XTMP2
+        GHASH_MUL2      %%AAD_HASH, %%XTMP0, %%XTMP1, %%XTMP2, %%XTMP3, %%XTMP4, %%XTMP5
 
 %%_CALC_AAD_done:
 
@@ -512,7 +572,7 @@ default rel
 %define %%PLAIN_CYPH_LEN        %4
 %define %%DATA_OFFSET           %5
 %define %%AAD_HASH              %6
-%define %%HASH_SUBKEY           %7
+%define %%GDATA_KEY             %7
 %define %%ENC_DEC               %8
 
         mov     r13, [%%GDATA_CTX + PBlockLen]
@@ -570,7 +630,9 @@ default rel
         or      r15, r15
         jl      %%_partial_incomplete
 
-        GHASH_MUL       %%AAD_HASH, %%HASH_SUBKEY, xmm0, xmm10, xmm11, xmm5, xmm6       ;GHASH computation for the last <16 Byte block
+        vmovdqa xmm3, [%%GDATA_KEY + HashKey_1]
+        vmovdqa xmm1, [%%GDATA_KEY + HashKeyK_1]
+        GHASH_MUL2      %%AAD_HASH, xmm3, xmm1, xmm0, xmm10, xmm11, xmm5       ;GHASH computation for the last <16 Byte block
         xor     rax, rax
         mov     [%%GDATA_CTX + PBlockLen], rax
         jmp     %%_enc_dec_done
@@ -2625,7 +2687,7 @@ default rel
         ;; s = 16 * RoundUp(len(IV)/16) -  len(IV) */
 
         ;; Calculate GHASH of (IV || 0s)
-        vpxor   %%J0, %%J0
+        vpxor   %%J0, %%J0, %%J0
 %ifdef IS_AVX2_GCM
         CALC_AAD_HASH %%IV, %%IV_LEN, %%J0, %%KEY, %%XTMP0, %%XTMP1, %%XTMP2, \
                       %%XTMP3, %%XTMP4, %%XTMP5, %%TMP0, %%TMP1, %%TMP2, %%TMP3, %%TMP4
@@ -2635,14 +2697,15 @@ default rel
 %endif
 
         ;; Calculate GHASH of last 16-byte block (0 || len(IV)64)
-        vmovdqu %%XTMP0, [%%KEY + HashKey]
+        vmovdqu %%XTMP0, [%%KEY + HashKey_1]
+        vmovdqu %%XTMP1, [%%KEY + HashKeyK_1]
         mov     %%TMP2, %%IV_LEN
-        shl     %%TMP2, 3 ;; IV length in bits
-        vmovq   %%XTMP1, %%TMP2
-        vpxor   %%J0, %%XTMP1
-        GHASH_MUL %%J0, %%XTMP0, %%XTMP1, %%XTMP2, %%XTMP3, %%XTMP4, %%XTMP5
+        shl     %%TMP2, 3       ;; IV length in bits
+        vmovq   %%XTMP2, %%TMP2
+        vpxor   %%J0, %%J0, %%XTMP2
+        GHASH_MUL2 %%J0, %%XTMP0, %%XTMP1, %%XTMP2, %%XTMP3, %%XTMP4, %%XTMP5
 
-        vpshufb %%J0, [rel SHUF_MASK] ; perform a 16Byte swap
+        vpshufb %%J0, %%J0, [rel SHUF_MASK] ; perform a 16Byte swap
 %endmacro
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -2835,19 +2898,18 @@ default rel
 %else
         add    [%%GDATA_CTX + InLen], %%PLAIN_CYPH_LEN
 %endif
-        vmovdqu xmm13, [%%GDATA_KEY + HashKey]
         vmovdqu xmm8, [%%GDATA_CTX + AadHash]
 
 %ifidn %%INSTANCE_TYPE, multi_call
         ;; NOTE: partial block processing makes only sense for multi_call here.
         ;; Used for the update flow - if there was a previous partial
         ;; block fill the remaining bytes here.
-        PARTIAL_BLOCK %%GDATA_CTX, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, %%PLAIN_CYPH_LEN, %%DATA_OFFSET, xmm8, xmm13, %%ENC_DEC
+        PARTIAL_BLOCK %%GDATA_CTX, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, %%PLAIN_CYPH_LEN, %%DATA_OFFSET, xmm8, %%GDATA_KEY, %%ENC_DEC
 %endif
 
         ;;  lift CTR set from initial_blocks to here
 %ifidn %%INSTANCE_TYPE, single_call
-        vmovdqu xmm9, xmm2
+        vmovdqa xmm9, xmm2
 %else
         vmovdqu xmm9, [%%GDATA_CTX + CurCount]
 %endif
@@ -3084,7 +3146,8 @@ default rel
 %define %%INSTANCE_TYPE         %5
 %define %%PLAIN_CYPH_LEN        rax
 
-        vmovdqu xmm13, [%%GDATA_KEY + HashKey]
+        vmovdqu xmm13, [%%GDATA_KEY + HashKey_1]
+        vmovdqu xmm0, [%%GDATA_KEY + HashKeyK_1]
         ;; Start AES as early as possible
         vmovdqu xmm9, [%%GDATA_CTX + OrigIV]    ; xmm9 = Y0
         ENCRYPT_SINGLE_BLOCK %%GDATA_KEY, xmm9  ; E(K, Y0)
@@ -3102,7 +3165,7 @@ default rel
 
 	je %%_partial_done
 
-	GHASH_MUL xmm14, xmm13, xmm0, xmm10, xmm11, xmm5, xmm6 ;GHASH computation for the last <16 Byte block
+	GHASH_MUL2 xmm14, xmm13, xmm0, xmm10, xmm11, xmm5, xmm6 ;GHASH computation for the last <16 Byte block
 	vmovdqu [%%GDATA_CTX + AadHash], xmm14
 
 %%_partial_done:
@@ -3121,7 +3184,7 @@ default rel
         vpxor   xmm15, xmm15, xmm1          ; xmm15 = len(A)||len(C)
 
         vpxor   xmm14, xmm15
-        GHASH_MUL       xmm14, xmm13, xmm0, xmm10, xmm11, xmm5, xmm6
+        GHASH_MUL2 xmm14, xmm13, xmm0, xmm10, xmm11, xmm5, xmm6
         vpshufb  xmm14, [rel SHUF_MASK]         ; perform a 16Byte swap
 
         vpxor   xmm9, xmm9, xmm14
