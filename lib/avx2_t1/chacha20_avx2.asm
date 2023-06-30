@@ -482,10 +482,10 @@ mksection .text
 %define %%YMM_DWORD_14 %15  ;; [out] YMM register to contain encoded dword 14 of the 8 Chacha20 states
 %define %%YMM_DWORD_15 %16  ;; [out] YMM register to contain encoded dword 15 of the 8 Chacha20 states
 
-%assign i 0
+%assign %%i 0
 %rep 16
-        vmovdqa APPEND(%%YMM_DWORD_, i), [rsp + _STATE + 32*i]
-%assign i (i + 1)
+        vmovdqa APPEND(%%YMM_DWORD_, %%i), [rsp + _STATE + 32*%%i]
+%assign %%i (%%i + 1)
 %endrep
 
 %rep 10
@@ -500,10 +500,10 @@ mksection .text
                        %%YMM_DWORD_15, %%YMM_DWORD_12, %%YMM_DWORD_13, %%YMM_DWORD_14
 %endrep
 
-%assign i 0
+%assign %%i 0
 %rep 16
-        vpaddd  APPEND(%%YMM_DWORD_, i), [rsp + _STATE + 32*i]
-%assign i (i + 1)
+        vpaddd  APPEND(%%YMM_DWORD_, %%i), [rsp + _STATE + 32*%%i]
+%assign %%i (%%i + 1)
 %endrep
 %endmacro
 
@@ -551,6 +551,46 @@ mksection .text
         vpaddd  %%YTMP1, [rel add_3_4]
         vpor    %%STATE_IN_D_L, %%YTMP0
         vpor    %%STATE_IN_D_H, %%YTMP1
+%endif
+%endmacro
+
+%macro PREPARE_NEXT_STATES_1_TO_4_QUIC 12
+%define %%STATE_IN_A_L   %1  ;; [out] YMM containing state "A" part for states 1-2
+%define %%STATE_IN_B_L   %2  ;; [out] YMM containing state "B" part for states 1-2
+%define %%STATE_IN_C_L   %3  ;; [out] YMM containing state "C" part for states 1-2
+%define %%STATE_IN_D_L   %4  ;; [out] YMM containing state "D" part for states 1-2
+%define %%STATE_IN_D_H   %5  ;; [out] YMM containing state "D" part for states 3-4 (or "none" in NUM_BUFFERS <= 2)
+%define %%YTMP0          %6  ;; [clobbered] YMM temp reg
+%define %%YTMP1          %7  ;; [clobbered] YMM temp reg
+%define %%SRC            %8  ;; [in] Pointer to array of source pointers
+%define %%OFF            %9  ;; [in] Offset into array of source pointers
+%define %%TMP            %10 ;; [in] Temporary GP register
+%define %%KEY            %11 ;; [in] Pointer to key
+%define %%NUM_BUFFERS    %12 ;; [in] Number of ChaCha states to prepare (numerical)
+
+        ;; Prepare next 4 states (or 2, if 2 or less blocks left)
+        vmovdqu %%STATE_IN_B_L, [%%KEY]      ; Load key bytes 0-15
+        vmovdqu %%STATE_IN_C_L, [%%KEY + 16] ; Load key bytes 16-31
+        vperm2i128 %%STATE_IN_B_L,%%STATE_IN_B_L, 0x0
+        vperm2i128 %%STATE_IN_C_L, %%STATE_IN_C_L, 0x0
+        mov     %%TMP, [%%SRC + %%OFF]
+        vmovdqu XWORD(%%STATE_IN_D_L), [%%TMP]
+        vmovdqa %%STATE_IN_A_L, [rel constants]
+%if %%NUM_BUFFERS > 1
+        mov     %%TMP, [%%SRC + %%OFF + 8]
+        vinserti128 %%STATE_IN_D_L, [%%TMP], 1
+%endif
+
+%if %%NUM_BUFFERS > 2
+        ;; Prepare chacha states 2-3 (A-C same as states 0-3)
+        mov     %%TMP, [%%SRC + %%OFF + 8*2]
+        vmovdqu XWORD(%%STATE_IN_D_H), [%%TMP]
+%endif
+
+%if %%NUM_BUFFERS > 3
+        ;; Prepare chacha states 2-3 (A-C same as states 0-3)
+        mov     %%TMP, [%%SRC + %%OFF + 8*3]
+        vinserti128 %%STATE_IN_D_H, [%%TMP], 1
 %endif
 %endmacro
 
@@ -1421,6 +1461,358 @@ no_partial_block_ks:
 
 exit_ks:
 
+        ret
+
+align 32
+MKGLOBAL(quic_chacha20_avx2,function,internal)
+quic_chacha20_avx2:
+        endbranch64
+%define tmp     rax
+%define off     r11
+
+%define key             arg1
+%define src_array       arg2
+%define dst_array       arg3
+%define num_buffers     arg4
+
+        ; Check if there are no buffers
+        or      num_buffers, num_buffers
+        jz      exit_quic
+
+        mov     rax, rsp
+        sub     rsp, STACK_SIZE
+        and     rsp, -32
+%ifndef LINUX
+%assign i 0
+%assign j 6
+%rep 10
+	vmovdqa	[rsp + _XMM_WIN_SAVE + i*16], APPEND(xmm, j)
+%assign i (i + 1)
+%assign j (j + 1)
+%endrep
+%endif
+        mov     [rsp + _RSP_SAVE], rax ; save RSP
+
+        xor     off, off
+
+        ; If less than or equal to 4 buffers, prepare directly states for
+        ; up to 4 blocks
+        cmp     num_buffers, 4
+        jbe     exit_loop_quic
+
+        ; Prepare first 8 chacha states from key
+        vbroadcastss ymm4, [key]
+        vbroadcastss ymm5, [key + 4]
+        vbroadcastss ymm6, [key + 8]
+        vbroadcastss ymm7, [key + 12]
+        vbroadcastss ymm8, [key + 16]
+        vbroadcastss ymm9, [key + 20]
+        vbroadcastss ymm10, [key + 24]
+        vbroadcastss ymm11, [key + 28]
+
+%assign i 4
+%rep 8
+        vmovdqa [rsp + _STATE + 32*i], ymm %+ i
+%assign i (i + 1)
+%endrep
+
+        cmp     num_buffers, 8
+        jb      exit_loop_quic
+
+align 32
+start_loop_quic:
+
+        ; Load counter + nonce values from the 8 samples (src)
+%assign i 0
+%rep 2
+        mov     tmp, [src_array + off + i*32]
+        vmovd   xmm0, [tmp]
+        vmovd   xmm1, [tmp + 4]
+        vmovd   xmm2, [tmp + 4*2]
+        vmovd   xmm3, [tmp + 4*3]
+        mov     tmp, [src_array + off + i*32 + 8]
+        vpinsrd xmm0, [tmp], 1
+        vpinsrd xmm1, [tmp + 4], 1
+        vpinsrd xmm2, [tmp + 4*2], 1
+        vpinsrd xmm3, [tmp + 4*3], 1
+        mov     tmp, [src_array + off + i*32 + 8*2]
+        vpinsrd xmm0, [tmp], 2
+        vpinsrd xmm1, [tmp + 4], 2
+        vpinsrd xmm2, [tmp + 4*2], 2
+        vpinsrd xmm3, [tmp + 4*3], 2
+        mov     tmp, [src_array + off + i*32 + 8*3]
+        vpinsrd xmm0, [tmp], 3
+        vpinsrd xmm1, [tmp + 4], 3
+        vpinsrd xmm2, [tmp + 4*2], 3
+        vpinsrd xmm3, [tmp + 4*3], 3
+
+%if i == 0
+        vmovdqa xmm12, xmm0
+        vmovdqa xmm13, xmm1
+        vmovdqa xmm14, xmm2
+        vmovdqa xmm15, xmm3
+%else
+        vinserti128 ymm12, xmm0, 1
+        vinserti128 ymm13, xmm1, 1
+        vinserti128 ymm14, xmm2, 1
+        vinserti128 ymm15, xmm3, 1
+%endif
+%assign i (i + 1)
+%endrep
+
+        ; Load constants
+        vbroadcastss ymm0, [rel constants]
+        vbroadcastss ymm1, [rel constants + 4]
+        vbroadcastss ymm2, [rel constants + 8]
+        vbroadcastss ymm3, [rel constants + 12]
+
+        ; Save rest of the chacha states
+        vmovdqa [rsp + _STATE], ymm0
+        vmovdqa [rsp + _STATE + 32], ymm1
+        vmovdqa [rsp + _STATE + 32*2], ymm2
+        vmovdqa [rsp + _STATE + 32*3], ymm3
+        vmovdqa [rsp + _STATE + 32*12], ymm12
+        vmovdqa [rsp + _STATE + 32*13], ymm13
+        vmovdqa [rsp + _STATE + 32*14], ymm14
+        vmovdqa [rsp + _STATE + 32*15], ymm15
+
+        ; Generate 512 bytes of keystream
+        GENERATE_512_KS ymm0, ymm1, ymm2, ymm3, ymm4, ymm5, ymm6, ymm7, \
+                        ymm8, ymm9, ymm10, ymm11, ymm12, ymm13, ymm14, ymm15
+
+        ;; Transpose state to get keystream and write 5-byte output per buffer
+
+        ; Transpose to get [64*I : 64*I + 31] (I = 0-7) bytes of KS
+        TRANSPOSE8_U32 ymm0, ymm1, ymm2, ymm3, ymm4, ymm5, ymm6, ymm7, ymm14, ymm15
+
+%assign i 0
+%rep 8
+
+        mov     tmp, [dst_array + off + 8*i]
+        vmovd   [tmp], xmm %+ i
+        vpextrb [tmp + 4], xmm %+i, 4
+%assign i (i+1)
+%endrep
+
+        sub     num_buffers, 8
+        add     off, 8*8
+
+        cmp     num_buffers, 8
+        jae     start_loop_quic
+
+exit_loop_quic:
+
+        ; Check if there are no more buffers
+        or      num_buffers, num_buffers
+        jz      no_more_buffers
+
+        cmp     num_buffers, 4
+        je      four_buffers_left
+        ja      more_than_4_buffers_left
+
+        ;; up to 4 buffers left
+        cmp     num_buffers, 2
+        je      two_buffers_left
+        ja      three_buffers_left
+
+one_buffer_left:
+        PREPARE_NEXT_STATES_1_TO_4_QUIC ymm4, ymm5, ymm6, ymm7, ymm12, \
+                                   ymm8, ymm9, src_array, off, tmp, key, 1
+
+        ; Generate 128 bytes of keystream
+        GENERATE_256_KS ymm0, ymm1, ymm8, ymm9, none, none, none, none, \
+                        ymm4, ymm5, ymm6, ymm7, none, ymm10, 2
+
+        ; Write 5-byte output for single buffer
+        mov     tmp, [dst_array + off]
+        vmovd   [tmp], xmm0
+        vpextrb [tmp + 4], xmm0, 4
+
+        jmp     no_more_buffers
+
+two_buffers_left:
+
+        PREPARE_NEXT_STATES_1_TO_4_QUIC ymm4, ymm5, ymm6, ymm7, ymm12, \
+                                   ymm8, ymm9, src_array, off, tmp, key, 2
+
+        ; Generate 128 bytes of keystream
+        GENERATE_256_KS ymm0, ymm1, ymm8, ymm9, none, none, none, none, \
+                        ymm4, ymm5, ymm6, ymm7, none, ymm10, 2
+
+        ; Write 5-byte output for two buffers
+        mov     tmp, [dst_array + off]
+        vmovd   [tmp], xmm0
+        vpextrb [tmp + 4], xmm0, 4
+        mov     tmp, [dst_array + off + 8]
+        vmovd   [tmp], xmm1
+        vpextrb [tmp + 4], xmm1, 4
+
+        jmp     no_more_buffers
+
+four_buffers_left:
+
+        PREPARE_NEXT_STATES_1_TO_4_QUIC ymm4, ymm5, ymm6, ymm7, ymm12, \
+                                   ymm8, ymm9, src_array, off, tmp, key, 4
+
+        ; Generate 256 bytes of keystream
+        GENERATE_256_KS ymm0, ymm1, ymm8, ymm9, ymm2, ymm3, ymm10, ymm11, \
+                        ymm4, ymm5, ymm6, ymm7, ymm12, ymm13, 4
+
+        ; Write 5-byte output for two buffers
+        mov     tmp, [dst_array + off]
+        vmovd   [tmp], xmm0
+        vpextrb [tmp + 4], xmm0, 4
+        mov     tmp, [dst_array + off + 8]
+        vmovd   [tmp], xmm1
+        vpextrb [tmp + 4], xmm1, 4
+        mov     tmp, [dst_array + off + 8*2]
+        vmovd   [tmp], xmm2
+        vpextrb [tmp + 4], xmm2, 4
+        mov     tmp, [dst_array + off + 8*3]
+        vmovd   [tmp], xmm3
+        vpextrb [tmp + 4], xmm3, 4
+
+        jmp     no_more_buffers
+
+three_buffers_left:
+
+        PREPARE_NEXT_STATES_1_TO_4_QUIC ymm4, ymm5, ymm6, ymm7, ymm12, \
+                                   ymm8, ymm9, src_array, off, tmp, key, 3
+
+        ; Generate 256 bytes of keystream
+        GENERATE_256_KS ymm0, ymm1, ymm8, ymm9, ymm2, ymm3, ymm10, ymm11, \
+                        ymm4, ymm5, ymm6, ymm7, ymm12, ymm13, 4
+
+        ; Write 5-byte output for two buffers
+        mov     tmp, [dst_array + off]
+        vmovd   [tmp], xmm0
+        vpextrb [tmp + 4], xmm0, 4
+        mov     tmp, [dst_array + off + 8]
+        vmovd   [tmp], xmm1
+        vpextrb [tmp + 4], xmm1, 4
+        mov     tmp, [dst_array + off + 8*2]
+        vmovd   [tmp], xmm2
+        vpextrb [tmp + 4], xmm2, 4
+
+        jmp     no_more_buffers
+
+more_than_4_buffers_left:
+
+        ; Load counter + nonce values from the next 4 samples (src)
+        mov     tmp, [src_array + off]
+        vmovd   xmm0, [tmp]
+        vmovd   xmm1, [tmp + 4]
+        vmovd   xmm2, [tmp + 4*2]
+        vmovd   xmm3, [tmp + 4*3]
+        mov     tmp, [src_array + off + 8]
+        vpinsrd xmm0, [tmp], 1
+        vpinsrd xmm1, [tmp + 4], 1
+        vpinsrd xmm2, [tmp + 4*2], 1
+        vpinsrd xmm3, [tmp + 4*3], 1
+        mov     tmp, [src_array + off + 8*2]
+        vpinsrd xmm0, [tmp], 2
+        vpinsrd xmm1, [tmp + 4], 2
+        vpinsrd xmm2, [tmp + 4*2], 2
+        vpinsrd xmm3, [tmp + 4*3], 2
+        mov     tmp, [src_array + off + 8*3]
+        vpinsrd xmm0, [tmp], 3
+        vpinsrd xmm1, [tmp + 4], 3
+        vpinsrd xmm2, [tmp + 4*2], 3
+        vpinsrd xmm3, [tmp + 4*3], 3
+
+        vmovdqa xmm12, xmm0
+        vmovdqa xmm13, xmm1
+        vmovdqa xmm14, xmm2
+        vmovdqa xmm15, xmm3
+
+        cmp     num_buffers, 6
+        je      buffers_left_6
+        ja      buffers_left_7
+
+%assign i 5
+%rep 3
+APPEND(buffers_left_, i):
+
+        ; Load counter + nonce values from the final 1-3 samples (src)
+%assign j 4
+%rep (i - 4)
+        mov     tmp, [src_array + off + j*8]
+        vpinsrd xmm0, [tmp], (j-4)
+        vpinsrd xmm1, [tmp + 4], (j-4)
+        vpinsrd xmm2, [tmp + 4*2], (j-4)
+        vpinsrd xmm3, [tmp + 4*3], (j-4)
+%assign j (j + 1)
+%endrep
+        vinserti128 ymm12, xmm0, 1
+        vinserti128 ymm13, xmm1, 1
+        vinserti128 ymm14, xmm2, 1
+        vinserti128 ymm15, xmm3, 1
+
+        ; Load constants
+        vbroadcastss ymm0, [rel constants]
+        vbroadcastss ymm1, [rel constants + 4]
+        vbroadcastss ymm2, [rel constants + 8]
+        vbroadcastss ymm3, [rel constants + 12]
+
+        ; Save rest of the chacha states
+        vmovdqa [rsp + _STATE], ymm0
+        vmovdqa [rsp + _STATE + 32], ymm1
+        vmovdqa [rsp + _STATE + 32*2], ymm2
+        vmovdqa [rsp + _STATE + 32*3], ymm3
+        vmovdqa [rsp + _STATE + 32*12], ymm12
+        vmovdqa [rsp + _STATE + 32*13], ymm13
+        vmovdqa [rsp + _STATE + 32*14], ymm14
+        vmovdqa [rsp + _STATE + 32*15], ymm15
+
+        ; Generate 512 bytes of keystream
+        GENERATE_512_KS ymm0, ymm1, ymm2, ymm3, ymm4, ymm5, ymm6, ymm7, \
+                        ymm8, ymm9, ymm10, ymm11, ymm12, ymm13, ymm14, ymm15
+
+        ; Transpose to get [64*I : 64*I + 31] (I = 0-7) bytes of KS
+        TRANSPOSE8_U32 ymm0, ymm1, ymm2, ymm3, ymm4, ymm5, ymm6, ymm7, ymm14, ymm15
+
+%assign j 0
+%rep i
+        mov     tmp, [dst_array + off + 8*j]
+        vmovd   [tmp], xmm %+ j
+        vpextrb [tmp + 4], xmm %+ j, 4
+%assign j (j + 1)
+%endrep
+
+        jmp     no_more_buffers
+
+%assign i (i + 1)
+%endrep
+
+no_more_buffers:
+%ifdef SAFE_DATA
+        vpxor   ymm0, ymm0
+        ; Clear stack frame
+%assign i 0
+%rep 16
+        vmovdqa [rsp + _STATE + 32*i], ymm0
+%assign i (i + 1)
+%endrep
+%endif ; SAFE_DATA
+
+%ifndef LINUX
+%assign i 0
+%assign j 6
+%rep 10
+	vmovdqa	APPEND(xmm, j), [rsp + _XMM_WIN_SAVE + i*16]
+%assign i (i + 1)
+%assign j (j + 1)
+%endrep
+%endif ; LINUX
+        mov     rsp, [rsp + _RSP_SAVE]
+
+%ifdef SAFE_DATA
+        clear_scratch_ymms_asm
+%else
+        vzeroupper
+%endif
+
+exit_quic:
         ret
 
 mksection stack-noexec
