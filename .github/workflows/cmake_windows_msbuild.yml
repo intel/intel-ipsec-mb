@@ -1,0 +1,70 @@
+name: CMake - Windows-MSBuild
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  Release:
+    env:
+      BUILD_TYPE: Release
+    runs-on: windows-latest
+
+    steps:
+    - uses: ilammy/setup-nasm@v1
+    - uses: actions/checkout@v3
+      with:
+        repository: 'intel/intel-ipsec-mb'
+
+    - name: Add MSBuild to PATH
+      uses: microsoft/setup-msbuild@v1.0.2
+
+    - name: Setup environment
+      run: |
+        New-Item -ItemType Directory -Path "$pwd\build"
+        New-Item -ItemType Directory -Path "$pwd\build\bin"
+        "BUILD_DIR=$pwd\build" >> $env:GITHUB_ENV
+        "BINARY_DIR=$pwd\build\bin" >> $env:GITHUB_ENV
+        $env:PATH += "$pwd\build\bin;"
+
+    - name: Configure CMake
+      run: cmake -A x64 -DIMB_BIN_DIR=${{env.BINARY_DIR}} -B ${{env.BUILD_DIR}}
+
+    - name: Build
+      run: cmake --build ${{env.BUILD_DIR}} --config ${{env.BUILD_TYPE}}
+
+    - name: Test
+      run: ctest -j 5 -C ${{env.BUILD_TYPE}} --test-dir ${{env.BUILD_DIR}}
+      
+  Debug:
+    env:
+      BUILD_TYPE: Debug
+    runs-on: windows-latest
+
+    steps:
+    - uses: ilammy/setup-nasm@v1
+    - uses: actions/checkout@v3
+      with:
+        repository: 'intel/intel-ipsec-mb'
+
+    - name: Add MSBuild to PATH
+      uses: microsoft/setup-msbuild@v1.0.2
+
+    - name: Setup environment
+      run: |
+        New-Item -ItemType Directory -Path "$pwd\build"
+        New-Item -ItemType Directory -Path "$pwd\build\bin"
+        "BUILD_DIR=$pwd\build" >> $env:GITHUB_ENV
+        "BINARY_DIR=$pwd\build\bin" >> $env:GITHUB_ENV
+        $env:PATH += "$pwd\build\bin;"
+
+    - name: Configure CMake
+      run: cmake -A x64 -DIMB_BIN_DIR=${{env.BINARY_DIR}} -B ${{env.BUILD_DIR}}
+
+    - name: Build
+      run: cmake --build ${{env.BUILD_DIR}} --config ${{env.BUILD_TYPE}}
+
+    - name: Test
+      run: ctest -j 5 -C ${{env.BUILD_TYPE}} --test-dir ${{env.BUILD_DIR}}
