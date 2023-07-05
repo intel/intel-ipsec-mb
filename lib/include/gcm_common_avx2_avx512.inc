@@ -401,12 +401,14 @@ default rel
 
         vpxor           %%XTMP0, %%AAD_HASH
 
-        vmovdqu         %%XTMP5, [%%GDATA_KEY + HashKey_8]
-        vpclmulqdq      %%XTMP1, %%XTMP0, %%XTMP5, 0x11                 ; %%T1 = a1*b1
-        vpclmulqdq      %%XTMP2, %%XTMP0, %%XTMP5, 0x00                 ; %%T2 = a0*b0
-        vpclmulqdq      %%XTMP3, %%XTMP0, %%XTMP5, 0x01                 ; %%T3 = a1*b0
-        vpclmulqdq      %%XTMP4, %%XTMP0, %%XTMP5, 0x10                 ; %%T4 = a0*b1
-        vpxor           %%XTMP3, %%XTMP3, %%XTMP4                       ; %%T3 = a1*b0 + a0*b1
+        vmovdqa         %%XTMP5, [%%GDATA_KEY + HashKeyK_8]
+        vpclmulqdq      %%XTMP1, %%XTMP0, %%XTMP5, 0x00 ; XTMP1 = XTMP_L * KK_L
+        vpclmulqdq      %%XTMP2, %%XTMP0, %%XTMP5, 0x10 ; XTMP2 = XTMP_L * KK_H
+        vmovdqa         %%XTMP5, [%%GDATA_KEY + HashKey_8]
+        vpclmulqdq      %%XTMP3, %%XTMP0, %%XTMP5, 0x01 ; XTMP3 = XTMP_H * HK_L
+        vpclmulqdq      %%XTMP4, %%XTMP0, %%XTMP5, 0x11 ; XTMP4 = XTMP_H * HK_H
+        vpxor           %%XTMP1, %%XTMP1, %%XTMP3       ; XTMP1 = XTMP1 + XTMP3
+        vpxor           %%XTMP2, %%XTMP2, %%XTMP4       ; XTMP2 = XTMP2 + XTMP4
 
 %assign i 1
 %assign j 7
@@ -414,44 +416,27 @@ default rel
         vmovdqu         %%XTMP0, [%%T1 + 16*i]
         vpshufb         %%XTMP0, [rel SHUF_MASK]
 
-        vmovdqu         %%XTMP5, [%%GDATA_KEY + HashKey_ %+ j]
-        vpclmulqdq      %%XTMP4, %%XTMP0, %%XTMP5, 0x11                 ; %%T1 = T1 + a1*b1
-        vpxor           %%XTMP1, %%XTMP1, %%XTMP4
-
-        vpclmulqdq      %%XTMP4, %%XTMP0, %%XTMP5, 0x00                 ; %%T2 = T2 + a0*b0
+        vmovdqa         %%XTMP5, [%%GDATA_KEY + HashKeyK_ %+ j]
+        vpclmulqdq      %%XTMP3, %%XTMP0, %%XTMP5, 0x00 ; XTMP1 = XTMP_L * KK_L
+        vpclmulqdq      %%XTMP4, %%XTMP0, %%XTMP5, 0x10 ; XTMP2 = XTMP_L * KK_H
+        vmovdqa         %%XTMP5, [%%GDATA_KEY + HashKey_ %+ j]
+        vpxor           %%XTMP1, %%XTMP1, %%XTMP3
+        vpxor           %%XTMP2, %%XTMP2, %%XTMP4
+        vpclmulqdq      %%XTMP3, %%XTMP0, %%XTMP5, 0x01 ; XTMP3 = XTMP_H * HK_L
+        vpclmulqdq      %%XTMP4, %%XTMP0, %%XTMP5, 0x11 ; XTMP4 = XTMP_H * HK_H
+        vpxor           %%XTMP1, %%XTMP1, %%XTMP3
         vpxor           %%XTMP2, %%XTMP2, %%XTMP4
 
-        vpclmulqdq      %%XTMP4, %%XTMP0, %%XTMP5, 0x01                 ; %%T3 = T3 + a1*b0 + a0*b1
-        vpxor           %%XTMP3, %%XTMP3, %%XTMP4
-        vpclmulqdq      %%XTMP4, %%XTMP0, %%XTMP5, 0x10
-        vpxor           %%XTMP3, %%XTMP3, %%XTMP4
 %assign i (i + 1)
 %assign j (j - 1)
 %endrep
 
-        vpslldq         %%XTMP4, %%XTMP3, 8                             ; shift-L 2 DWs
-        vpsrldq         %%XTMP3, %%XTMP3, 8                             ; shift-R 2 DWs
-        vpxor           %%XTMP2, %%XTMP2, %%XTMP4
-        vpxor           %%XTMP1, %%XTMP1, %%XTMP3                       ; accumulate the results in %%T1(M):%%T2(L)
-
-        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        ;first phase of the reduction
-        vmovdqa         %%XTMP5, [rel POLY2]
-        vpclmulqdq      %%XTMP0, %%XTMP5, %%XTMP2, 0x01
-        vpslldq         %%XTMP0, %%XTMP0, 8                             ; shift-L xmm2 2 DWs
-        vpxor           %%XTMP2, %%XTMP2, %%XTMP0                       ; first phase of the reduction complete
-
-        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        ;second phase of the reduction
-        vpclmulqdq      %%XTMP3, %%XTMP5, %%XTMP2, 0x00
-        vpsrldq         %%XTMP3, %%XTMP3, 4                             ; shift-R 1 DW (Shift-R only 1-DW to obtain 2-DWs shift-R)
-
-        vpclmulqdq      %%XTMP4, %%XTMP5, %%XTMP2, 0x10
-        vpslldq         %%XTMP4, %%XTMP4, 4                             ; shift-L 1 DW (Shift-L 1-DW to obtain result with no shifts)
-
-        vpxor           %%XTMP4, %%XTMP4, %%XTMP3                       ; second phase of the reduction complete
-        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        vpxor           %%AAD_HASH, %%XTMP1, %%XTMP4                    ; the result is in %%T1
+        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        ; new reduction
+        vpclmulqdq      %%AAD_HASH, %%XTMP1, [rel POLY], 0x10
+        vpshufd         %%XTMP3, %%XTMP1, 01001110b
+        vpxor           %%AAD_HASH, %%AAD_HASH, %%XTMP2
+        vpxor           %%AAD_HASH, %%AAD_HASH, %%XTMP3 ; the result is in %%AAD_HASH
 
         sub     %%T2, 128
         je      %%_CALC_AAD_done
@@ -461,7 +446,7 @@ default rel
 
 %%_exit_AAD_loop128:
         cmp     %%T2, 16
-        jl      %%_get_small_AAD_block
+        jb      %%_get_small_AAD_block
 
         ;; calculate hash_key position to start with
         mov     %%T3, %%T2
@@ -473,75 +458,58 @@ default rel
         vmovdqu         %%XTMP0, [%%T1]
         vpshufb         %%XTMP0, [rel SHUF_MASK]
 
-        vpxor           %%XTMP0, %%AAD_HASH
+        vpxor           %%XTMP0, %%XTMP0, %%AAD_HASH
 
-        vmovdqu         %%XTMP5, [%%T3]
-        vpclmulqdq      %%XTMP1, %%XTMP0, %%XTMP5, 0x11                 ; %%T1 = a1*b1
-        vpclmulqdq      %%XTMP2, %%XTMP0, %%XTMP5, 0x00                 ; %%T2 = a0*b0
-        vpclmulqdq      %%XTMP3, %%XTMP0, %%XTMP5, 0x01                 ; %%T3 = a1*b0
-        vpclmulqdq      %%XTMP4, %%XTMP0, %%XTMP5, 0x10                 ; %%T4 = a0*b1
-        vpxor           %%XTMP3, %%XTMP3, %%XTMP4                       ; %%T3 = a1*b0 + a0*b1
+        vmovdqa         %%XTMP5, [%%T3 + HKeyGap]
+        vpclmulqdq      %%XTMP1, %%XTMP0, %%XTMP5, 0x00 ; XTMP1 = XTMP_L * KK_L
+        vpclmulqdq      %%XTMP2, %%XTMP0, %%XTMP5, 0x10 ; XTMP2 = XTMP_L * KK_H
+        vmovdqa         %%XTMP5, [%%T3]
+        vpclmulqdq      %%XTMP3, %%XTMP0, %%XTMP5, 0x01 ; XTMP3 = XTMP_H * HK_L
+        vpclmulqdq      %%XTMP4, %%XTMP0, %%XTMP5, 0x11 ; XTMP4 = XTMP_H * HK_H
+        vpxor           %%XTMP1, %%XTMP1, %%XTMP3       ; XTMP1 = XTMP1 + XTMP3
+        vpxor           %%XTMP2, %%XTMP2, %%XTMP4       ; XTMP2 = XTMP2 + XTMP4
 
         add     %%T3, 16        ; move to next hashkey
         add     %%T1, 16        ; move to next data block
         sub     %%T2, 16
         cmp     %%T2, 16
-        jl      %%_AAD_reduce
+        jb      %%_AAD_reduce
 
 %%_AAD_blocks:
         vmovdqu         %%XTMP0, [%%T1]
         vpshufb         %%XTMP0, [rel SHUF_MASK]
 
-        vmovdqu         %%XTMP5, [%%T3]
-        vpclmulqdq      %%XTMP4, %%XTMP0, %%XTMP5, 0x11                 ; %%T1 = T1 + a1*b1
-        vpxor           %%XTMP1, %%XTMP1, %%XTMP4
-
-        vpclmulqdq      %%XTMP4, %%XTMP0, %%XTMP5, 0x00                 ; %%T2 = T2 + a0*b0
+        vmovdqa         %%XTMP5, [%%T3 + HKeyGap]
+        vpclmulqdq      %%XTMP3, %%XTMP0, %%XTMP5, 0x00 ; XTMP1 = XTMP_L * KK_L
+        vpclmulqdq      %%XTMP4, %%XTMP0, %%XTMP5, 0x10 ; XTMP2 = XTMP_L * KK_H
+        vmovdqa         %%XTMP5, [%%T3]
+        vpxor           %%XTMP1, %%XTMP1, %%XTMP3
         vpxor           %%XTMP2, %%XTMP2, %%XTMP4
-
-        vpclmulqdq      %%XTMP4, %%XTMP0, %%XTMP5, 0x01                 ; %%T3 = T3 + a1*b0 + a0*b1
-        vpxor           %%XTMP3, %%XTMP3, %%XTMP4
-        vpclmulqdq      %%XTMP4, %%XTMP0, %%XTMP5, 0x10
-        vpxor           %%XTMP3, %%XTMP3, %%XTMP4
+        vpclmulqdq      %%XTMP3, %%XTMP0, %%XTMP5, 0x01 ; XTMP3 = XTMP_H * HK_L
+        vpclmulqdq      %%XTMP4, %%XTMP0, %%XTMP5, 0x11 ; XTMP4 = XTMP_H * HK_H
+        vpxor           %%XTMP1, %%XTMP1, %%XTMP3
+        vpxor           %%XTMP2, %%XTMP2, %%XTMP4
 
         add     %%T3, 16        ; move to next hashkey
         add     %%T1, 16
         sub     %%T2, 16
         cmp     %%T2, 16
-        jl      %%_AAD_reduce
-        jmp     %%_AAD_blocks
+        jae     %%_AAD_blocks
 
 %%_AAD_reduce:
-        vpslldq         %%XTMP4, %%XTMP3, 8                             ; shift-L 2 DWs
-        vpsrldq         %%XTMP3, %%XTMP3, 8                             ; shift-R 2 DWs
-        vpxor           %%XTMP2, %%XTMP2, %%XTMP4
-        vpxor           %%XTMP1, %%XTMP1, %%XTMP3                       ; accumulate the results in %%T1(M):%%T2(L)
-
-        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        ;first phase of the reduction
-        vmovdqa         %%XTMP5, [rel POLY2]
-        vpclmulqdq      %%XTMP0, %%XTMP5, %%XTMP2, 0x01
-        vpslldq         %%XTMP0, %%XTMP0, 8                             ; shift-L xmm2 2 DWs
-        vpxor           %%XTMP2, %%XTMP2, %%XTMP0                       ; first phase of the reduction complete
-
-        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        ;second phase of the reduction
-        vpclmulqdq      %%XTMP3, %%XTMP5, %%XTMP2, 0x00
-        vpsrldq         %%XTMP3, %%XTMP3, 4                             ; shift-R 1 DW (Shift-R only 1-DW to obtain 2-DWs shift-R)
-
-        vpclmulqdq      %%XTMP4, %%XTMP5, %%XTMP2, 0x10
-        vpslldq         %%XTMP4, %%XTMP4, 4                             ; shift-L 1 DW (Shift-L 1-DW to obtain result with no shifts)
-
-        vpxor           %%XTMP4, %%XTMP4, %%XTMP3                       ; second phase of the reduction complete
-        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        vpxor           %%AAD_HASH, %%XTMP1, %%XTMP4                    ; the result is in %%T1
+        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        ; new reduction
+        vpclmulqdq      %%AAD_HASH, %%XTMP1, [rel POLY], 0x10
+        vpshufd         %%XTMP3, %%XTMP1, 01001110b
+        vpxor           %%AAD_HASH, %%AAD_HASH, %%XTMP2
+        vpxor           %%AAD_HASH, %%AAD_HASH, %%XTMP3 ; the result is in %%AAD_HASH
 
 %%_get_small_AAD_block:
         or      %%T2, %%T2
         je      %%_CALC_AAD_done
 
-        vmovdqu         %%XTMP0, [%%GDATA_KEY + HashKey_1]
-        vmovdqu         %%XTMP1, [%%GDATA_KEY + HashKeyK_1]
+        vmovdqa         %%XTMP0, [%%GDATA_KEY + HashKey_1]
+        vmovdqa         %%XTMP1, [%%GDATA_KEY + HashKeyK_1]
 %ifdef IS_AVX2_GCM
         READ_SMALL_DATA_INPUT_AVX %%XTMP2, %%T1, %%T2, %%T3
 %else
