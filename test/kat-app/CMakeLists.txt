@@ -96,6 +96,7 @@ set(TEST_APP_SRC_FILES
   ${CMAKE_CURRENT_SOURCE_DIR}/chacha_test.json.c
   ${CMAKE_CURRENT_SOURCE_DIR}/des_test.json.c
   ${CMAKE_CURRENT_SOURCE_DIR}/gcm_test.json.c
+  ${CMAKE_CURRENT_SOURCE_DIR}/chacha20_poly1305_test.json.c
   ${CMAKE_CURRENT_SOURCE_DIR}/../common/utils.c
 )
 
