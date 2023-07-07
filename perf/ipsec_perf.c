@@ -290,7 +290,7 @@ const struct str_value_mapping cipher_algo_str_map[] = {
         { .name = "des-docsis4",
           .values.job_params = { .cipher_mode = TEST_DESDOCSIS4, .key_size = 8 } },
         { .name = "des-cbc", .values.job_params = { .cipher_mode = TEST_DES, .key_size = 8 } },
-        { .name = "3des-cbc", .values.job_params = { .cipher_mode = TEST_3DES, .key_size = 8 } },
+        { .name = "3des-cbc", .values.job_params = { .cipher_mode = TEST_3DES, .key_size = 24 } },
         { .name = "zuc-eea3",
           .values.job_params = { .cipher_mode = TEST_ZUC_EEA3, .key_size = 16 } },
         { .name = "zuc-eea3-256",
