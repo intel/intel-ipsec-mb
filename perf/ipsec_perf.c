@@ -1665,7 +1665,7 @@ do_test_quic_aes_ecb_hp(struct params_s *params, const uint32_t num_iter, IMB_MG
         uint64_t n;
         int i;
 
-#ifndef _WIN32
+#ifdef _WIN32
         (void) params; /* unused for Windows */
 #endif
 
@@ -1723,7 +1723,7 @@ do_test_quic_chacha20_hp(struct params_s *params, const uint32_t num_iter, IMB_M
         uint64_t n;
         int i;
 
-#ifndef _WIN32
+#ifdef _WIN32
         (void) params; /* unused for Windows */
 #endif
 
