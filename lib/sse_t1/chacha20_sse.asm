@@ -30,6 +30,7 @@
 %include "include/memcpy.inc"
 %include "include/clear_regs.inc"
 %include "include/chacha_poly_defines.inc"
+%include "include/cet.inc"
 
 mksection .rodata
 default rel
@@ -2923,6 +2924,7 @@ exit_gen:
 align 32
 MKGLOBAL(quic_chacha20_sse,function,internal)
 quic_chacha20_sse:
+        endbranch64
 
 %define tmp     rax
 %define off     r11
