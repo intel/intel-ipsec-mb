@@ -1,4 +1,4 @@
-name: CMake - Windows-MSBuild
+name: Windows
 
 on:
   push:
@@ -7,14 +7,18 @@ on:
     branches: [ main ]
 
 jobs:
-  Release:
+  # CMake release build with shared library (msbuild)
+  release-cmake-msvc-msbuild:
     env:
       BUILD_TYPE: Release
     runs-on: windows-latest
 
     steps:
-    - uses: ilammy/setup-nasm@v1
-    - uses: actions/checkout@v3
+    - name: Setup NASM
+      uses: ilammy/setup-nasm@v1
+
+    - name: Checkout repo
+      uses: actions/checkout@v3
       with:
         repository: 'intel/intel-ipsec-mb'
 
@@ -37,15 +41,19 @@ jobs:
 
     - name: Test
       run: ctest -j 5 -C ${{env.BUILD_TYPE}} --test-dir ${{env.BUILD_DIR}}
-      
-  Debug:
+
+  # CMake debug build with shared library (msbuild)
+  debug-cmake-msvc-msbuild:
     env:
       BUILD_TYPE: Debug
     runs-on: windows-latest
 
     steps:
-    - uses: ilammy/setup-nasm@v1
-    - uses: actions/checkout@v3
+    - name: Setup NASM
+      uses: ilammy/setup-nasm@v1
+
+    - name: Checkout repo
+      uses: actions/checkout@v3
       with:
         repository: 'intel/intel-ipsec-mb'
 
