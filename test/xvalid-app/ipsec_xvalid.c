@@ -498,6 +498,66 @@ struct str_value_mapping hash_algo_str_map[] = {
                         .hash_alg = IMB_AUTH_GHASH,
                 }
         },
+        {       .name = "CRC32-ETHERNET-FCS",
+                .values.job_params = {
+                        .hash_alg = IMB_AUTH_CRC32_ETHERNET_FCS,
+                }
+        },
+        {       .name = "CRC32-SCTP",
+                .values.job_params = {
+                        .hash_alg = IMB_AUTH_CRC32_SCTP,
+                }
+        },
+        {       .name = "CRC32-WIMAX-OFDMA-DATA",
+                .values.job_params = {
+                        .hash_alg = IMB_AUTH_CRC32_WIMAX_OFDMA_DATA,
+                }
+        },
+        {       .name = "CRC24-LTE-A",
+                .values.job_params = {
+                        .hash_alg = IMB_AUTH_CRC24_LTE_A,
+                }
+        },
+        {       .name = "CRC24-LTE-B",
+                .values.job_params = {
+                        .hash_alg = IMB_AUTH_CRC24_LTE_B,
+                }
+        },
+        {       .name = "CRC16-X25",
+                .values.job_params = {
+                        .hash_alg = IMB_AUTH_CRC16_X25,
+                }
+        },
+        {       .name = "CRC16-FP-DATA",
+                .values.job_params = {
+                        .hash_alg = IMB_AUTH_CRC16_FP_DATA,
+                }
+        },
+        {       .name = "CRC11-FP-HEADER",
+                .values.job_params = {
+                        .hash_alg = IMB_AUTH_CRC11_FP_HEADER,
+                }
+        },
+        {       .name = "CRC10-IUUP-DATA",
+                .values.job_params = {
+                        .hash_alg = IMB_AUTH_CRC10_IUUP_DATA,
+                }
+        },
+        {       .name = "CRC8-WIMAX-OFDMA-HCS",
+                .values.job_params = {
+                        .hash_alg = IMB_AUTH_CRC8_WIMAX_OFDMA_HCS,
+                }
+        },
+        {       .name = "CRC7-FP-HEADER",
+                .values.job_params = {
+                        .hash_alg = IMB_AUTH_CRC7_FP_HEADER,
+                }
+        },
+        {       .name = "CRC6-IUUP-HEADER",
+                .values.job_params = {
+                        .hash_alg = IMB_AUTH_CRC6_IUUP_HEADER,
+                }
+        }
 };
 
 struct str_value_mapping aead_algo_str_map[] = {
