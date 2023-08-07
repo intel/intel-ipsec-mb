@@ -323,7 +323,7 @@ align 32
 
 	cmp	len, 16
 	je	.exact_16_left
-	jl	.less_than_16_left
+	jb	.less_than_16_left
 
 	vmovdqu	xmm7, [msg]		; load the plaintext
         vpshufb xmm7, xmm18
@@ -342,7 +342,7 @@ align 32
 	vpxor	xmm7, xmm0	; xor the initial crc value
 
         cmp	len, 4
-	jl	.only_less_than_4
+	jb	.only_less_than_4
 
 	lea	r11, [rel pshufb_shf_table + 16]
         sub     r11, len
@@ -352,23 +352,11 @@ align 32
 	jmp	.done_128
 
 .only_less_than_4:
-	cmp	len, 3
-	jl	.only_less_than_3
-
-	vpsrldq	xmm7, 5
-	jmp	.barrett
-
-.only_less_than_3:
-	cmp	len, 2
-	jl	.only_less_than_2
-
-	vpsrldq	xmm7, 6
-	jmp	.barrett
-
-.only_less_than_2:
-	vpsrldq	xmm7, 7
-	jmp	.barrett
-
+        lea     r11, [rel pshufb_shift_table + 3]
+        sub     r11, len
+        vmovdqu	xmm0, [r11]
+        vpshufb	xmm7, xmm0
+        jmp	.barrett
 align 32
 .exact_16_left:
 	vmovdqu	xmm7, [msg]
@@ -380,9 +368,16 @@ mksection .rodata
 
 align 16
 pshufb_shf_table:
-        ;; use these values for shift constants for the pshufb instruction
+        ;; use these values to shift constants for the pshufb instruction
         dq 0x8786858483828100, 0x8f8e8d8c8b8a8988
         dq 0x0706050403020100, 0x000e0d0c0b0a0908
+
+align 16
+pshufb_shift_table:
+        ;; use these values to shift data for the pshufb instruction
+        db 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B,
+        db 0x0C, 0x0D, 0x0E, 0x0F, 0xFF, 0xFF, 0xFF, 0xFF
+        db 0xFF, 0xFF
 
 align 16
 mask1: dq 0x8080808080808080, 0x8080808080808080
