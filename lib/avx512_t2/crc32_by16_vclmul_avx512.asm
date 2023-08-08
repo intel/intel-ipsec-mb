@@ -79,7 +79,7 @@ crc32_by16_vclmul_avx512:
 
         ;; check if smaller than 256B
 	cmp		len, 256
-	jl		.less_than_256
+	jb		.less_than_256
 
 	;; load the initial crc value
         vmovd		xmm10, DWORD(arg1)
@@ -147,7 +147,7 @@ crc32_by16_vclmul_avx512:
 	vmovdqa32	zmm4, zmm8
 
 	add		len, 128
-	jmp		.fold_128_B_register
+        jmp             .less_than_128_B
 
         ;; In this section of the code, there is ((128 * x) + y) bytes of buffer
         ;; where, 0 <= y < 128.
@@ -175,6 +175,24 @@ crc32_by16_vclmul_avx512:
 
 	add		msg, 128
 
+.less_than_128_B:
+        ;; At this point, the buffer pointer is pointing at the last
+        ;; y bytes of the buffer, where 0 <= y < 128.
+        ;; The 128 bytes of folded data is in 2 of the zmm registers:
+        ;;     zmm0 and zmm4
+
+        cmp             len, -64
+        jl              .fold_128_B_register
+
+        vbroadcasti32x4 zmm10, [arg4 + crc32_const_fold_4x128b]
+        ;; If there are still 64 bytes left, folds from 128 bytes to 64 bytes
+        ;; and handles the next 64 bytes
+        vpclmulqdq      zmm2, zmm0, zmm10, 0x11
+        vpclmulqdq      zmm0, zmm0, zmm10, 0x00
+        vpternlogq      zmm0, zmm2, zmm4, 0x96
+        add             len, 128
+
+        jmp             .fold_64B_loop
         ;; At this point, the buffer pointer is pointing at the last
         ;; y bytes of the buffer, where 0 <= y < 128.
         ;; The 128 bytes of folded data is in 2 of the zmm registers:
@@ -291,19 +309,67 @@ crc32_by16_vclmul_avx512:
 
 align 32
 .less_than_256:
-	vmovd	xmm0, DWORD(arg1)	; get the initial crc value
-        vpslldq xmm0, 12
+	vmovd	        xmm1, DWORD(arg1)	; get the initial crc value
+        vpslldq         xmm1, 12
 
-	;; check if there is enough buffer to be able to fold 16B at a time
-	cmp	len, 32
-	jl	.less_than_32
+        ;; check if there is enough buffer to be able to fold 16B at a time
+        cmp	        len, 32
+        jb	        .less_than_32
 
+        cmp             len, 64
+        jb              .less_than_64
+
+        ;; receive the initial 64B data, xor the initial crc value
+        vmovdqu8        zmm0, [msg]
+        vpshufb         zmm0, zmm0, zmm18
+        vpxorq          zmm0, zmm1
+        add             msg, 64
+        sub             len, 64
+
+        cmp             len, 64
+        jb              .reduce_64B
+
+        vbroadcasti32x4 zmm10, [arg4 + crc32_const_fold_4x128b]
+
+.fold_64B_loop:
+        vmovdqu8        zmm4, [msg]
+        vpshufb         zmm4, zmm4, zmm18
+        vpclmulqdq      zmm2, zmm0, zmm10, 0x11
+        vpclmulqdq      zmm0, zmm0, zmm10, 0x00
+        vpternlogq      zmm0, zmm2, zmm4, 0x96
+
+        add             msg, 64
+        sub             len, 64
+
+        cmp             len, 64
+        jge             .fold_64B_loop
+
+.reduce_64B:
+        ; Reduce from 64 bytes to 16 bytes
+	vmovdqu8	zmm11, [arg4 + crc32_const_fold_3x128b]
+	vpclmulqdq	zmm1, zmm0, zmm11, 0x11
+	vpclmulqdq	zmm2, zmm0, zmm11, 0x00
+	vextracti64x2	xmm7, zmm0, 3		; save last that has no multiplicand
+        vpternlogq      zmm1, zmm2, zmm7, 0x96
+
+	vmovdqa		xmm10, [arg4 + crc32_const_fold_1x128b] ; Needed later in reduction loop
+
+	vshufi64x2      zmm8, zmm1, zmm1, 0x4e ; Swap 1,0,3,2 - 01 00 11 10
+	vpxorq          ymm8, ymm8, ymm1
+	vextracti64x2   xmm5, ymm8, 1
+	vpxorq          xmm7, xmm5, xmm8
+
+        sub             len, 16
+        jns             .reduction_loop_16B ; At least 16 bytes of data to digest
+	jmp	        .final_reduction_for_128
+
+.less_than_64:
 	;; if there is, load the constants
 	vmovdqa	xmm10, [arg4 + crc32_const_fold_1x128b]
 
-        vmovdqu	xmm7, [msg]		; load the plaintext
+	vmovdqu	xmm7, [msg]		; load the plaintext
         vpshufb xmm7, xmm18
-        vpxor	xmm7, xmm0
+	vpxor	xmm7, xmm1              ; xmm1 already has initial crc value
 
 	;; update the buffer pointer
 	add	msg, 16
@@ -327,7 +393,7 @@ align 32
 
 	vmovdqu	xmm7, [msg]		; load the plaintext
         vpshufb xmm7, xmm18
-	vpxor	xmm7, xmm0		; xor the initial crc value
+	vpxor	xmm7, xmm1		; xor the initial crc value
 	add	msg, 16
 	sub	len, 16
 	vmovdqa	xmm10, [arg4 + crc32_const_fold_1x128b]
@@ -339,7 +405,7 @@ align 32
         kmovw   k2, [r11 + len*2]
         vmovdqu8 xmm7{k2}{z}, [msg]
         vpshufb xmm7, xmm18
-	vpxor	xmm7, xmm0	; xor the initial crc value
+	vpxor	xmm7, xmm1	; xor the initial crc value
 
         cmp	len, 4
 	jb	.only_less_than_4
@@ -361,7 +427,7 @@ align 32
 .exact_16_left:
 	vmovdqu	xmm7, [msg]
         vpshufb xmm7, xmm18
-	vpxor	xmm7, xmm0      ; xor the initial crc value
+	vpxor	xmm7, xmm1      ; xor the initial crc value
 	jmp	.done_128
 
 mksection .rodata
