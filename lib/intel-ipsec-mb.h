@@ -914,6 +914,9 @@ typedef int (*imb_self_test_cb_t)(void *cb_arg, const IMB_SELF_TEST_CALLBACK_DAT
 #define IMB_FEATURE_SELF_TEST_PASS (1ULL << 21) /* self-test passed */
 #define IMB_FEATURE_AVX_IFMA       (1ULL << 22)
 #define IMB_FEATURE_HYBRID         (1ULL << 23) /* Hybrid core */
+#define IMB_FEATURE_SM3NI          (1ULL << 24)
+#define IMB_FEATURE_SM4NI          (1ULL << 25)
+#define IMB_FEATURE_SHA512NI       (1ULL << 26)
 
 /**
  * Self test defines

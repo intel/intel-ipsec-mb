@@ -188,6 +188,27 @@ detect_hybrid(void)
         return (cpuid_7_0.edx & (1UL << 15));
 }
 
+static uint32_t
+detect_sha512ni(void)
+{
+        /* Check presence of SHA512NI - bit 0 of EAX */
+        return (cpuid_7_1.eax & (1UL << 0));
+}
+
+static uint32_t
+detect_sm3ni(void)
+{
+        /* Check presence of SM3NI - bit 1 of EAX */
+        return (cpuid_7_1.eax & (1UL << 1));
+}
+
+static uint32_t
+detect_sm4ni(void)
+{
+        /* Check presence of SM3NI - bit 2 of EAX */
+        return (cpuid_7_1.eax & (1UL << 2));
+}
+
 uint64_t
 cpu_feature_detect(void)
 {
@@ -195,27 +216,28 @@ cpu_feature_detect(void)
                 unsigned req_leaf_number;
                 uint64_t feat;
                 uint32_t (*detect_fn)(void);
-        } feat_tab[] = {
-                { 7, IMB_FEATURE_SHANI, detect_shani },
-                { 1, IMB_FEATURE_AESNI, detect_aesni },
-                { 1, IMB_FEATURE_PCLMULQDQ, detect_pclmulqdq },
-                { 1, IMB_FEATURE_CMOV, detect_cmov },
-                { 1, IMB_FEATURE_SSE4_2, detect_sse42 },
-                { 1, IMB_FEATURE_AVX, detect_avx },
-                { 7, IMB_FEATURE_AVX2, detect_avx2 },
-                { 7, IMB_FEATURE_AVX512F, detect_avx512f },
-                { 7, IMB_FEATURE_AVX512DQ, detect_avx512dq },
-                { 7, IMB_FEATURE_AVX512CD, detect_avx512cd },
-                { 7, IMB_FEATURE_AVX512BW, detect_avx512bw },
-                { 7, IMB_FEATURE_AVX512VL, detect_avx512vl },
-                { 7, IMB_FEATURE_VAES, detect_vaes },
-                { 7, IMB_FEATURE_VPCLMULQDQ, detect_vpclmulqdq },
-                { 7, IMB_FEATURE_GFNI, detect_gfni },
-                { 7, IMB_FEATURE_AVX512_IFMA, detect_avx512_ifma },
-                { 7, IMB_FEATURE_BMI2, detect_bmi2 },
-                { 7, IMB_FEATURE_AVX_IFMA, detect_avx_ifma },
-                { 7, IMB_FEATURE_HYBRID, detect_hybrid },
-        };
+        } feat_tab[] = { { 7, IMB_FEATURE_SHANI, detect_shani },
+                         { 1, IMB_FEATURE_AESNI, detect_aesni },
+                         { 1, IMB_FEATURE_PCLMULQDQ, detect_pclmulqdq },
+                         { 1, IMB_FEATURE_CMOV, detect_cmov },
+                         { 1, IMB_FEATURE_SSE4_2, detect_sse42 },
+                         { 1, IMB_FEATURE_AVX, detect_avx },
+                         { 7, IMB_FEATURE_AVX2, detect_avx2 },
+                         { 7, IMB_FEATURE_AVX512F, detect_avx512f },
+                         { 7, IMB_FEATURE_AVX512DQ, detect_avx512dq },
+                         { 7, IMB_FEATURE_AVX512CD, detect_avx512cd },
+                         { 7, IMB_FEATURE_AVX512BW, detect_avx512bw },
+                         { 7, IMB_FEATURE_AVX512VL, detect_avx512vl },
+                         { 7, IMB_FEATURE_VAES, detect_vaes },
+                         { 7, IMB_FEATURE_VPCLMULQDQ, detect_vpclmulqdq },
+                         { 7, IMB_FEATURE_GFNI, detect_gfni },
+                         { 7, IMB_FEATURE_AVX512_IFMA, detect_avx512_ifma },
+                         { 7, IMB_FEATURE_BMI2, detect_bmi2 },
+                         { 7, IMB_FEATURE_AVX_IFMA, detect_avx_ifma },
+                         { 7, IMB_FEATURE_HYBRID, detect_hybrid },
+                         { 7, IMB_FEATURE_SM3NI, detect_sm3ni },
+                         { 7, IMB_FEATURE_SM4NI, detect_sm4ni },
+                         { 7, IMB_FEATURE_SHA512NI, detect_sha512ni } };
         struct cpuid_regs r;
         unsigned hi_leaf_number = 0;
         uint64_t features = 0;
