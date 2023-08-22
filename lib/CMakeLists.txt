@@ -42,12 +42,13 @@ endif()
 
 set(NASM_VERSION_REQUIRED "2.14")
 set(NASM_VERSION_AVX_IFMA "2.16")
+set(NASM_VERSION_SMX_NI "2.16.02")
 
 execute_process(
   COMMAND ${CMAKE_ASM_NASM_COMPILER} -v
   OUTPUT_VARIABLE NASM_VERSION_OUTPUT
   OUTPUT_STRIP_TRAILING_WHITESPACE)
-string(REGEX MATCH "NASM version ([0-9]*.[0-9]*)" NASM_VERSION
+string(REGEX MATCH "NASM version ([0-9]*.[0-9]*.[0-9]*)" NASM_VERSION
              "${NASM_VERSION_OUTPUT}")
 if(NASM_VERSION)
   if(NASM_VERSION_REQUIRED VERSION_GREATER ${CMAKE_MATCH_1})
@@ -57,12 +58,21 @@ if(NASM_VERSION)
   message(STATUS "NASM version: ${CMAKE_MATCH_1}")
   if(NASM_VERSION_AVX_IFMA VERSION_GREATER ${CMAKE_MATCH_1})
     message(
-      WARNING
+      NOTICE
       "Minimum required NASM version for AVX-IFMA: ${NASM_VERSION_AVX_IFMA}. AVX-IFMA code not compiled - update NASM."
     )
   else()
     # AVX IFMA supported by NASM
     set(AVX_IFMA 1)
+  endif()
+  if(NASM_VERSION_SMX_NI VERSION_GREATER ${CMAKE_MATCH_1})
+    message(
+      NOTICE
+      "Minimum required NASM version for SM3/SM4/SHA512-NI: ${NASM_VERSION_SMX_NI}. SM3/SHA/SHA512-NI code not compiled - update NASM."
+    )
+  else()
+    # SM3/SM4/SHA512-NI supported by NASM
+    set(SMX_NI 1)
   endif()
 else()
   message(
@@ -92,7 +102,9 @@ set(DIR_NO_AESNI ${CMAKE_CURRENT_SOURCE_DIR}/no-aesni)
 if(AVX_IFMA)
   set(DIR_AVX2_T3 ${CMAKE_CURRENT_SOURCE_DIR}/avx2_t3)
 endif()
-
+if(SMX_NI)
+  set(DIR_AVX2_T4 ${CMAKE_CURRENT_SOURCE_DIR}/avx2_t4)
+endif()
 ########################################
 # create list of all source directories
 ########################################
@@ -101,6 +113,7 @@ set(DIR_SOURCES
   ${DIR_AVX_T2}
   ${DIR_AVX2_T1}
   ${DIR_AVX2_T2}
+  ${DIR_AVX2_T4}
   ${DIR_AVX512_T1}
   ${DIR_AVX512_T2}
   ${DIR_SSE_T1}
@@ -124,6 +137,7 @@ file(GLOB SRC_FILES_AVX_T2 "${DIR_AVX_T2}/*.c")
 file(GLOB SRC_FILES_AVX2_T1 "${DIR_AVX2_T1}/*.c")
 file(GLOB SRC_FILES_AVX2_T2 "${DIR_AVX2_T2}/*.c")
 file(GLOB SRC_FILES_AVX2_T3 "${DIR_AVX2_T3}/*.c")
+file(GLOB SRC_FILES_AVX2_T4 "${DIR_AVX2_T4}/*.c")
 file(GLOB SRC_FILES_AVX512_T1 "${DIR_AVX512_T1}/*.c")
 file(GLOB SRC_FILES_AVX512_T2 "${DIR_AVX512_T2}/*.c")
 file(GLOB SRC_FILES_SSE_T1 "${DIR_SSE_T1}/*.c")
@@ -144,6 +158,7 @@ set(SRC_FILES_C
   ${SRC_FILES_SSE_T2}
   ${SRC_FILES_SSE_T3}
   ${SRC_FILES_X86_64}
+  ${SRC_FILES_AVX2_T4}
 )
 if(AESNI_EMU)
   list(APPEND SRC_FILES_C ${SRC_FILES_NO_AESNI})
@@ -151,6 +166,10 @@ endif()
 if(AVX_IFMA)
   list(APPEND SRC_FILES_C ${SRC_FILES_AVX2_T3})
 endif()
+if(SMX_NI)
+  list(APPEND SRC_FILES_C ${SRC_FILES_AVX2_T4})
+endif()
+
 
 list(SORT SRC_FILES_C)
 

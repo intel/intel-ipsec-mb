@@ -78,6 +78,9 @@ endif()
 if(NOT AVX_IFMA)
   set(STR_FILTER "${STR_FILTER} /c:_avx2_t3")
 endif()
+if(NOT SMX_NI)
+  set(STR_FILTER "${STR_FILTER} /c:_avx2_t4")
+endif()
 
 # filter unused symbol exports
 if(NOT STR_FILTER)

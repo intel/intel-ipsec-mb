@@ -585,6 +585,9 @@ gcm_objs = \
 	$(OBJ_DIR)\gcm256_sgl_api_by8_sse.obj \
 	$(OBJ_DIR)\gcm256_gmac_api_by8_sse.obj
 
+avx2_t4_objs = \
+	$(OBJ_DIR)\mb_mgr_avx2_t4.obj
+
 !if "$(AESNI_EMU)" == "y"
 all_objs = $(lib_objs1) $(lib_objs2) $(gcm_objs) $(no_aesni_objs)
 !else
@@ -594,6 +597,11 @@ all_objs = $(lib_objs1) $(lib_objs2) $(gcm_objs)
 !if "$(AVX_IFMA)" == "y"
 all_objs = $(all_objs) $(OBJ_DIR)\mb_mgr_avx2_t3.obj $(OBJ_DIR)\poly_fma_avx2.obj
 DCFLAGS = $(DCFLAGS) /DAVX_IFMA
+!endif
+
+!if "$(SMX_NI)" == "y"
+all_objs = $(all_objs) $(avx2_t4_objs)
+DCFLAGS = $(DCFLAGS) /DSMX_NI
 !endif
 
 all: $(LIB_DIR)\$(LIBNAME) $(DEPALL)
@@ -622,15 +630,32 @@ $(LIB_DIR)\$(LIBNAME): $(all_objs) $(LIBBASE)_lnk.def
 STR_FILTER = ""
 !if "$(AESNI_EMU)" != "y"
 !if "$(AVX_IFMA)" != "y"
+!if "$(SMX_NI)" != "y"
+STR_FILTER = "_no_aesni _avx2_t3 _avx2_t4"
+!else # SMX_NI = y
 STR_FILTER = "_no_aesni _avx2_t3"
-!else
-STR_FILTER = "_no_aesni"
 !endif
-!else
+!else # AVX_IFMA = y
+!if "$(SMX_NI)" != "y"
+STR_FILTER = "_no_aesni _avx2_t4"
+!else # SMX_NI = y
+STR_FILTER = "_no_aesni"
+!endif # SMX_NI
+!endif # AVX_IFMA
+
+!else # AESNI_EMU = y
 !if "$(AVX_IFMA)" != "y"
+!if "$(SMX_NI)" != "y"
+STR_FILTER = "_avx2_t3 _avx2_t4"
+!else # SMX_NI = y
 STR_FILTER = "_avx2_t3"
 !endif
-!endif
+!else # AVX_IFMA = y
+!if "$(SMX_NI)" != "y"
+STR_FILTER = "_avx2_t4"
+!endif # SMX_NI
+!endif # AVX_IFMA
+!endif # AESNI_EMU
 
 $(all_objs): $(OBJ_DIR) $(LIB_DIR)
 
@@ -705,6 +730,13 @@ $(DEPALL): $(all_objs)
         $(DEPTOOL) $< $@ "$(DEPFLAGS)" > $@.dep
 
 {avx2_t3\}.asm{$(OBJ_DIR)}.obj:
+	$(AS) -MD $@.dep -o $@ $(AFLAGS) $<
+
+{avx2_t4\}.c{$(OBJ_DIR)}.obj:
+	$(CC) /arch:AVX /Fo$@ /c $(CFLAGS) $<
+        $(DEPTOOL) $< $@ "$(DEPFLAGS)" > $@.dep
+
+{avx2_t4\}.asm{$(OBJ_DIR)}.obj:
 	$(AS) -MD $@.dep -o $@ $(AFLAGS) $<
 
 {avx512_t1\}.c{$(OBJ_DIR)}.obj:

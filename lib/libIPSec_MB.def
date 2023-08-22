@@ -714,3 +714,17 @@ EXPORTS
     imb_quic_hp_chacha20			@688
     imb_self_test_set_cb			@689
     imb_self_test_get_cb			@690
+    get_next_burst_avx2_t4                      @691
+    submit_burst_avx2_t4                        @692
+    submit_burst_nocheck_avx2_t4                @693
+    flush_burst_avx2_t4                         @694
+    submit_cipher_burst_avx2_t4                 @695
+    submit_cipher_burst_nocheck_avx2_t4         @696
+    submit_hash_burst_avx2_t4                   @697
+    submit_hash_burst_nocheck_avx2_t4           @698
+    flush_job_avx2_t4				@699
+    queue_size_avx2_t4				@700
+    submit_job_avx2_t4				@701
+    submit_job_nocheck_avx2_t4			@702
+    get_next_job_avx2_t4                	@703
+    get_completed_job_avx2_t4            	@704

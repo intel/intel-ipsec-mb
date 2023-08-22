@@ -52,6 +52,12 @@ init_mb_mgr_avx2_internal(IMB_MGR *state, const int reset_mgrs)
 
         state->features = cpu_feature_adjust(state->flags, cpu_feature_detect());
 
+#ifdef SMX_NI
+        if ((state->features & IMB_CPUFLAGS_AVX2_T4) == IMB_CPUFLAGS_AVX2_T4) {
+                init_mb_mgr_avx2_t4_internal(state, reset_mgrs);
+                return;
+        }
+#endif
 #ifdef AVX_IFMA
         if ((state->features & IMB_CPUFLAGS_AVX2_T3) == IMB_CPUFLAGS_AVX2_T3) {
                 init_mb_mgr_avx2_t3_internal(state, reset_mgrs);

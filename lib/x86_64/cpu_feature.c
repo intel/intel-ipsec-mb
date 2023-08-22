@@ -191,22 +191,34 @@ detect_hybrid(void)
 static uint32_t
 detect_sha512ni(void)
 {
+#ifdef SMX_NI
         /* Check presence of SHA512NI - bit 0 of EAX */
         return (cpuid_7_1.eax & (1UL << 0));
+#else
+        return 0;
+#endif
 }
 
 static uint32_t
 detect_sm3ni(void)
 {
+#ifdef SMX_NI
         /* Check presence of SM3NI - bit 1 of EAX */
         return (cpuid_7_1.eax & (1UL << 1));
+#else
+        return 0;
+#endif
 }
 
 static uint32_t
 detect_sm4ni(void)
 {
+#ifdef SMX_NI
         /* Check presence of SM3NI - bit 2 of EAX */
         return (cpuid_7_1.eax & (1UL << 2));
+#else
+        return 0;
+#endif
 }
 
 uint64_t

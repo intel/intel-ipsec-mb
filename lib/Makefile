@@ -71,14 +71,18 @@ NASM_VERSION = $(shell $(NASM) -v | cut -d " " -f 3)
 
 NASM_MAJOR_REQ = 2
 NASM_MINOR_REQ = 14
-NASM_MIN_REQ = $(shell expr $(NASM_MAJOR_REQ) $(MULT) 100 + $(NASM_MINOR_REQ) )
+NASM_MIN_REQ = $(shell expr $(NASM_MAJOR_REQ) $(MULT) 10000 + $(NASM_MINOR_REQ) $(MULT) 100)
 
 ifeq ($(NASM_VERSION),)
 $(error "NASM is not installed! Minimum required version: $(NASM_MAJOR_REQ).$(NASM_MINOR_REQ)")
 else
 NASM_MAJOR_VER = $(shell echo $(NASM_VERSION) | cut -d "." -f 1)
 NASM_MINOR_VER = $(shell echo $(NASM_VERSION) | cut -d "." -f 2 | cut -c 1-2)
-NASM_VER = $(shell expr $(NASM_MAJOR_VER) $(MULT) 100 + $(NASM_MINOR_VER) )
+NASM_REV_VER   = $(shell echo $(NASM_VERSION) | cut -d "." -f 3 | cut -c 1-2)
+ifeq ($(NASM_REV_VER),)
+NASM_REV_VER   = 0
+endif
+NASM_VER = $(shell expr $(NASM_MAJOR_VER) $(MULT) 10000 + $(NASM_MINOR_VER) $(MULT) 100 + $(NASM_REV_VER))
 
 NASM_GE_REQ = $(shell [ $(NASM_VER) -ge $(NASM_MIN_REQ) ] && echo true)
 
@@ -93,13 +97,26 @@ endif # NASM_VERSION
 AVX_IFMA := y
 NASM_MAJOR_AVX_IFMA = 2
 NASM_MINOR_AVX_IFMA = 16
-NASM_MIN_IFMA_REQ = $(shell expr $(NASM_MAJOR_AVX_IFMA) $(MULT) 100 + $(NASM_MINOR_AVX_IFMA) )
+NASM_MIN_IFMA_REQ = $(shell expr $(NASM_MAJOR_AVX_IFMA) $(MULT) 10000 + $(NASM_MINOR_AVX_IFMA) $(MULT) 100)
 
 NASM_IFMA_GE_REQ = $(shell [ $(NASM_VER) -ge $(NASM_MIN_IFMA_REQ) ] && echo true)
 ifneq ($(NASM_IFMA_GE_REQ),true)
 $(warning Minimum required NASM version for AVX-IFMA: $(NASM_MAJOR_AVX_IFMA).$(NASM_MINOR_AVX_IFMA). AVX-IFMA code not compiled - update NASM.)
 AVX_IFMA := n
 endif # NASM_AVX_IFMA_GET_REQ
+
+# Minimum version of NASM with SM3/SM4/SHA512-NI support: 2.16.02
+SMX_NI := y
+NASM_MAJOR_SMX_NI = 2
+NASM_MINOR_SMX_NI = 16
+NASM_REV_SMX_NI = 02
+NASM_MIN_SMX_REQ = $(shell expr $(NASM_MAJOR_SMX_NI) $(MULT) 10000 + $(NASM_MINOR_SMX_NI) $(MULT) 100 + $(NASM_REV_SMX_NI))
+
+NASM_SMX_GE_REQ = $(shell [ $(NASM_VER) -ge $(NASM_MIN_SMX_REQ) ] && echo true)
+ifneq ($(NASM_SMX_GE_REQ),true)
+$(warning Minimum required NASM version for SM3/SM4/SHA512-NI: $(NASM_MAJOR_SMX_NI).$(NASM_MINOR_SMX_NI).$(NASM_REV_SMX_NI) SM3/SM4/SHA512-NI code not compiled - update NASM.)
+SMX_NI := n
+endif # NASM_SMX_NI_GET_REQ
 
 INCLUDE_DIRS := include . no-aesni
 INCLUDES := $(foreach i,$(INCLUDE_DIRS),-I $i)
@@ -133,6 +150,10 @@ endif
 
 ifeq ($(AVX_IFMA), y)
 CFLAGS += -DAVX_IFMA
+endif
+
+ifeq ($(SMX_NI), y)
+CFLAGS += -DSMX_NI
 endif
 
 ASM_INCLUDE_DIRS := .
@@ -332,6 +353,12 @@ ifeq ($(AVX_IFMA), y)
 c_lib_objs := $(c_lib_objs) \
 	mb_mgr_avx2_t3.o
 endif
+
+ifeq ($(SMX_NI), y)
+c_lib_objs := $(c_lib_objs) \
+        mb_mgr_avx2_t4.o
+endif
+
 #
 # List of ASM modules (root directory/common)
 #
@@ -777,16 +804,25 @@ all: $(LIB_DIR)/$(LIBNAME)
 
 STR_FILTER = ""
 ifneq ($(AESNI_EMU),y)
-ifneq ($(AVX_IFMA),y)
-STR_FILTER = "_no_aesni\|_avx2_t3"
-else
+
+ifneq ($(AVX_IFMA),y) # No AESNI_EMU, AVX2 Type 3 and Type 4
+STR_FILTER = "_no_aesni\|_avx2_t3\|_avx2_t4"
+else # AVX_IFMA
+ifneq ($(SMX_NI),y) # No AESNI_EMU and AVX2 Type4
+STR_FILTER = "_no_aesni\|_avx2_t4"
+else # No AESNI EMU only
 STR_FILTER = "_no_aesni"
-endif
-else
-ifneq ($(AVX_IFMA),y)
-STR_FILTER = "_avx2_t3"
-endif
-endif
+endif # SMX_NI
+endif # AVX_IFMA
+
+else # AESNI_EMU = y
+ifneq ($(AVX_IFMA),y) # No AVX2 Type 3 and Type 4
+STR_FILTER = "_avx2_t3\|_avx2_t4"
+else # No AVX2 Type 4
+STR_FILTER = "_avx2_t4"
+endif # AVX_IFMA
+
+endif # AESNI_EMU
 
 $(LIB)_lnk.def: $(LIB).def
 ifneq ($(STR_FILTER), "")
@@ -918,6 +954,16 @@ $(OBJ_DIR)/%.o:avx2_t3/%.c
 
 $(OBJ_DIR)/%.o:avx2_t3/%.asm
 	$(NASM) -MD $(@:.o=.d) -MT $@ -o $@ $(NASM_FLAGS) $<
+
+$(OBJ_DIR)/%.o:avx2_t4/%.c
+	$(CC) -MMD $(OPT_AVX2) -c $(CFLAGS) $< -o $@
+
+$(OBJ_DIR)/%.o:avx2_t4/%.asm
+ifeq ($(USE_YASM),y)
+	$(YASM) $(YASM_FLAGS) $< -o $@
+else
+	$(NASM) -MD $(@:.o=.d) -MT $@ -o $@ $(NASM_FLAGS) $<
+endif
 
 $(OBJ_DIR)/%.o:avx512_t1/%.c
 	$(CC) -MMD $(OPT_AVX512) -c $(CFLAGS) $< -o $@
