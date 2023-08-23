@@ -250,7 +250,7 @@ flush_snow3g_uea2_job_avx2_t2(IMB_MGR *state)
 #define ETHERNET_FCS ethernet_fcs_avx_local
 
 /* SM4 */
-#define SM4_ECB     sm4_ecb_sse
+#define SM4_ECB     sm4_ecb_ni_avx2
 #define SM4_CBC_ENC sm4_cbc_enc_sse
 #define SM4_CBC_DEC sm4_cbc_dec_sse
 
@@ -497,7 +497,7 @@ init_mb_mgr_avx2_t4_internal(IMB_MGR *state, const int reset_mgrs)
         state->chacha20_poly1305_quic = aead_chacha20_poly1305_avx2;
         state->chacha20_hp_quic = quic_hp_chacha20_avx2;
 
-        state->sm4_keyexp = sm4_set_key_sse;
+        state->sm4_keyexp = sm4_set_key_ni_avx2;
 }
 
 #include "mb_mgr_code.h"

@@ -665,6 +665,12 @@ asm_avx2_ifma_lib_objs := \
 	poly_fma_avx2.o
 
 #
+# List of ASM modules (avx2_t4 directory)
+#
+asm_avx2_t4_lib_objs := \
+        sm4_ni_avx2.o
+
+#
 # List of ASM modules (avx512 directory)
 #
 asm_avx512_lib_objs := \
@@ -774,6 +780,9 @@ asm_obj_files := $(asm_obj_files) $(asm_noaesni_lib_objs) $(asm_noaesni_gcm_objs
 endif
 ifeq ($(AVX_IFMA), y)
 asm_obj_files := $(asm_obj_files) $(asm_avx2_ifma_lib_objs)
+endif
+ifeq ($(SMX_NI), y)
+asm_obj_files := $(asm_obj_files) $(asm_avx2_t4_lib_objs)
 endif
 
 c_obj_files := $(c_lib_objs) $(c_gcm_objs)

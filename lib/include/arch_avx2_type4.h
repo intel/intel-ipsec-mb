@@ -33,4 +33,11 @@
 
 IMB_DLL_EXPORT void
 set_suite_id_avx2_t4(IMB_MGR *state, IMB_JOB *job);
+
+/* SM4 */
+void
+sm4_ecb_ni_avx2(const void *in, void *out, const int size, const void *exp_keys);
+
+void
+sm4_set_key_ni_avx2(const void *pKey, void *exp_enc_keys, void *exp_dec_keys);
 #endif /* IMB_ASM_AVX2_T4_H */
