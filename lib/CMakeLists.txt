@@ -36,7 +36,7 @@ endif()
 # set library directories
 #######################################
 set(DIR_CURRENT ${CMAKE_CURRENT_SOURCE_DIR}/)
-set(DIR_INCLUDE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+set(DIR_INCLUDE ${CMAKE_CURRENT_SOURCE_DIR}/include/)
 set(DIR_AVX_T1 ${CMAKE_CURRENT_SOURCE_DIR}/avx_t1)
 set(DIR_AVX_T2 ${CMAKE_CURRENT_SOURCE_DIR}/avx_t2)
 set(DIR_AVX2_T1 ${CMAKE_CURRENT_SOURCE_DIR}/avx2_t1)
@@ -47,7 +47,7 @@ set(DIR_SSE_T1 ${CMAKE_CURRENT_SOURCE_DIR}/sse_t1)
 set(DIR_SSE_T2 ${CMAKE_CURRENT_SOURCE_DIR}/sse_t2)
 set(DIR_SSE_T3 ${CMAKE_CURRENT_SOURCE_DIR}/sse_t3)
 set(DIR_X86_64 ${CMAKE_CURRENT_SOURCE_DIR}/x86_64)
-set(DIR_NO_AESNI ${CMAKE_CURRENT_SOURCE_DIR}/no-aesni)
+set(DIR_NO_AESNI ${CMAKE_CURRENT_SOURCE_DIR}/no-aesni/)
 if(AVX_IFMA)
   set(DIR_AVX2_T3 ${CMAKE_CURRENT_SOURCE_DIR}/avx2_t3)
 endif()
@@ -180,4 +180,4 @@ endforeach()
 
 # add include directories
 target_include_directories(${LIB} PRIVATE
-  ${DIR_CURRENT}// ${DIR_INCLUDE}// ${DIR_NO_AESNI}//)
+  "${DIR_CURRENT}//" "${DIR_INCLUDE}//" "${DIR_NO_AESNI}//")
