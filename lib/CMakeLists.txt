@@ -180,5 +180,4 @@ endforeach()
 
 # add include directories
 target_include_directories(${LIB} PRIVATE
-  ${DIR_CURRENT} ${DIR_INCLUDE} ${DIR_NO_AESNI})
-
+  ${DIR_CURRENT}// ${DIR_INCLUDE}// ${DIR_NO_AESNI}//)
