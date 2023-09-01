@@ -47,7 +47,8 @@
 #define BUFF_SIZE 4
 #define MAX_BUFFS 17
 
-int direct_api_param_test(struct IMB_MGR *mb_mgr);
+int
+direct_api_param_test(struct IMB_MGR *mb_mgr);
 
 /* Check if imb_errno contains unexpected value */
 static int
@@ -56,8 +57,8 @@ unexpected_err(IMB_MGR *mgr, const IMB_ERR expected_err, const char *func_desc)
         const IMB_ERR err = imb_get_errno(mgr);
 
         if (err != expected_err) {
-                printf("%s error: expected %s, got %s\n", func_desc,
-                       imb_get_strerror(expected_err), imb_get_strerror(err));
+                printf("%s error: expected %s, got %s\n", func_desc, imb_get_strerror(expected_err),
+                       imb_get_strerror(err));
                 return 1;
         }
         return 0;
@@ -72,13 +73,14 @@ jmp_buf dir_api_param_env;
 
 #ifndef DEBUG
 #ifndef _WIN32
-static void seg_handler(int signum) __attribute__((noreturn));
+static void
+seg_handler(int signum) __attribute__((noreturn));
 #endif
 /* Signal handler to handle segfaults */
 static void
 seg_handler(int signum)
 {
-        (void)signum; /* unused */
+        (void) signum; /* unused */
 
         signal(SIGSEGV, seg_handler);  /* reset handler */
         longjmp(dir_api_param_env, 1); /* reset dir_api_param_env */
@@ -115,8 +117,7 @@ test_IMB_AES_KEYEXP_128(struct IMB_MGR *mgr)
         for (i = 0; i < DIM(fn_args); i++) {
                 const struct fn_args *ap = &fn_args[i];
 
-                IMB_AES_KEYEXP_128(mgr, ap->key, ap->enc_exp_key,
-                                   ap->dec_exp_key);
+                IMB_AES_KEYEXP_128(mgr, ap->key, ap->enc_exp_key, ap->dec_exp_key);
                 if (unexpected_err(mgr, ap->exp_err, "IMB_AES_KEYEXP_128"))
                         return 1;
         }
@@ -153,8 +154,7 @@ test_IMB_AES_KEYEXP_192(struct IMB_MGR *mgr)
         for (i = 0; i < DIM(fn_args); i++) {
                 const struct fn_args *ap = &fn_args[i];
 
-                IMB_AES_KEYEXP_192(mgr, ap->key, ap->enc_exp_key,
-                                   ap->dec_exp_key);
+                IMB_AES_KEYEXP_192(mgr, ap->key, ap->enc_exp_key, ap->dec_exp_key);
                 if (unexpected_err(mgr, ap->exp_err, "IMB_AES_KEYEXP_192"))
                         return 1;
         }
@@ -191,8 +191,7 @@ test_IMB_AES_KEYEXP_256(struct IMB_MGR *mgr)
         for (i = 0; i < DIM(fn_args); i++) {
                 const struct fn_args *ap = &fn_args[i];
 
-                IMB_AES_KEYEXP_256(mgr, ap->key, ap->enc_exp_key,
-                                   ap->dec_exp_key);
+                IMB_AES_KEYEXP_256(mgr, ap->key, ap->enc_exp_key, ap->dec_exp_key);
                 if (unexpected_err(mgr, ap->exp_err, "IMB_AES_KEYEXP_256"))
                         return 1;
         }
@@ -230,10 +229,8 @@ test_IMB_AES_CMAC_SUBKEY_GEN_128(struct IMB_MGR *mgr)
         for (i = 0; i < DIM(fn_args); i++) {
                 const struct fn_args *ap = &fn_args[i];
 
-                IMB_AES_CMAC_SUBKEY_GEN_128(mgr, ap->exp_key, ap->key1,
-                                            ap->key2);
-                if (unexpected_err(mgr, ap->exp_err,
-                                   "IMB_AES_CMAC_SUBKEY_GEN_128"))
+                IMB_AES_CMAC_SUBKEY_GEN_128(mgr, ap->exp_key, ap->key1, ap->key2);
+                if (unexpected_err(mgr, ap->exp_err, "IMB_AES_CMAC_SUBKEY_GEN_128"))
                         return 1;
         }
         return 0;
@@ -266,15 +263,13 @@ test_IMB_AES_XCBC_KEYEXP(struct IMB_MGR *mgr)
         } fn_args[] = { { NULL, exp_key, exp_key2, exp_key3, IMB_ERR_NULL_KEY },
                         { key, NULL, exp_key2, exp_key3, IMB_ERR_NULL_EXP_KEY },
                         { key, exp_key, NULL, exp_key3, IMB_ERR_NULL_EXP_KEY },
-                        { key, exp_key, exp_key2, NULL,
-                          IMB_ERR_NULL_EXP_KEY } };
+                        { key, exp_key, exp_key2, NULL, IMB_ERR_NULL_EXP_KEY } };
 
         /* Iterate over args */
         for (i = 0; i < DIM(fn_args); i++) {
                 const struct fn_args *ap = &fn_args[i];
 
-                IMB_AES_XCBC_KEYEXP(mgr, ap->key, ap->exp_key, ap->exp_key2,
-                                    ap->exp_key3);
+                IMB_AES_XCBC_KEYEXP(mgr, ap->key, ap->exp_key, ap->exp_key2, ap->exp_key3);
                 if (unexpected_err(mgr, ap->exp_err, "IMB_AES_XCBC_KEYEXP"))
                         return 1;
         }
@@ -301,8 +296,7 @@ test_IMB_DES_KEYSCHED(struct IMB_MGR *mgr)
                 uint64_t *exp_key;
                 const void *key;
                 const IMB_ERR exp_err;
-        } fn_args[] = { { NULL, key, IMB_ERR_NULL_EXP_KEY },
-                        { exp_key, NULL, IMB_ERR_NULL_KEY } };
+        } fn_args[] = { { NULL, key, IMB_ERR_NULL_EXP_KEY }, { exp_key, NULL, IMB_ERR_NULL_KEY } };
 
         /* Iterate over args */
         for (i = 0; i < DIM(fn_args); i++) {
@@ -335,8 +329,7 @@ test_IMB_SHA1_ONE_BLOCK(struct IMB_MGR *mgr)
                 const void *src;
                 void *tag;
                 const IMB_ERR exp_err;
-        } fn_args[] = { { NULL, tag, IMB_ERR_NULL_SRC },
-                        { src, NULL, IMB_ERR_NULL_AUTH } };
+        } fn_args[] = { { NULL, tag, IMB_ERR_NULL_SRC }, { src, NULL, IMB_ERR_NULL_AUTH } };
 
         /* Iterate over args */
         for (i = 0; i < DIM(fn_args); i++) {
@@ -369,8 +362,7 @@ test_IMB_SHA224_ONE_BLOCK(struct IMB_MGR *mgr)
                 const void *src;
                 void *tag;
                 const IMB_ERR exp_err;
-        } fn_args[] = { { NULL, tag, IMB_ERR_NULL_SRC },
-                        { src, NULL, IMB_ERR_NULL_AUTH } };
+        } fn_args[] = { { NULL, tag, IMB_ERR_NULL_SRC }, { src, NULL, IMB_ERR_NULL_AUTH } };
 
         /* Iterate over args */
         for (i = 0; i < DIM(fn_args); i++) {
@@ -403,8 +395,7 @@ test_IMB_SHA256_ONE_BLOCK(struct IMB_MGR *mgr)
                 const void *src;
                 void *tag;
                 const IMB_ERR exp_err;
-        } fn_args[] = { { NULL, tag, IMB_ERR_NULL_SRC },
-                        { src, NULL, IMB_ERR_NULL_AUTH } };
+        } fn_args[] = { { NULL, tag, IMB_ERR_NULL_SRC }, { src, NULL, IMB_ERR_NULL_AUTH } };
 
         /* Iterate over args */
         for (i = 0; i < DIM(fn_args); i++) {
@@ -437,8 +428,7 @@ test_IMB_SHA384_ONE_BLOCK(struct IMB_MGR *mgr)
                 const void *src;
                 void *tag;
                 const IMB_ERR exp_err;
-        } fn_args[] = { { NULL, tag, IMB_ERR_NULL_SRC },
-                        { src, NULL, IMB_ERR_NULL_AUTH } };
+        } fn_args[] = { { NULL, tag, IMB_ERR_NULL_SRC }, { src, NULL, IMB_ERR_NULL_AUTH } };
 
         /* Iterate over args */
         for (i = 0; i < DIM(fn_args); i++) {
@@ -471,8 +461,7 @@ test_IMB_SHA512_ONE_BLOCK(struct IMB_MGR *mgr)
                 const void *src;
                 void *tag;
                 const IMB_ERR exp_err;
-        } fn_args[] = { { NULL, tag, IMB_ERR_NULL_SRC },
-                        { src, NULL, IMB_ERR_NULL_AUTH } };
+        } fn_args[] = { { NULL, tag, IMB_ERR_NULL_SRC }, { src, NULL, IMB_ERR_NULL_AUTH } };
 
         /* Iterate over args */
         for (i = 0; i < DIM(fn_args); i++) {
@@ -505,8 +494,7 @@ test_IMB_MD5_ONE_BLOCK(struct IMB_MGR *mgr)
                 const void *src;
                 void *tag;
                 const IMB_ERR exp_err;
-        } fn_args[] = { { NULL, tag, IMB_ERR_NULL_SRC },
-                        { src, NULL, IMB_ERR_NULL_AUTH } };
+        } fn_args[] = { { NULL, tag, IMB_ERR_NULL_SRC }, { src, NULL, IMB_ERR_NULL_AUTH } };
 
         /* Iterate over args */
         for (i = 0; i < DIM(fn_args); i++) {
@@ -734,8 +722,7 @@ test_IMB_AES128_CFB_ONE(struct IMB_MGR *mgr)
         for (i = 0; i < DIM(fn_args); i++) {
                 const struct fn_args *ap = &fn_args[i];
 
-                IMB_AES128_CFB_ONE(mgr, ap->dst, ap->src, ap->iv,
-                                   ap->enc_exp_key, ap->len);
+                IMB_AES128_CFB_ONE(mgr, ap->dst, ap->src, ap->iv, ap->enc_exp_key, ap->len);
                 if (unexpected_err(mgr, ap->exp_err, "IMB_AES128_CFB_ONE"))
                         return 1;
         }
@@ -780,32 +767,26 @@ test_IMB_AES128_GCM_ENC(struct IMB_MGR *mgr)
                 uint8_t *tag;
                 uint64_t tagl;
                 const IMB_ERR exp_err;
-        } fn_args[] = { { NULL, ctx, dst, src, len, iv, aad, aadl, tag, tagl,
-                          IMB_ERR_NULL_EXP_KEY },
-                        { exp_key, NULL, dst, src, len, iv, aad, aadl, tag,
-                          tagl, IMB_ERR_NULL_CTX },
-                        { exp_key, ctx, NULL, src, len, iv, aad, aadl, tag,
-                          tagl, IMB_ERR_NULL_DST },
-                        { exp_key, ctx, dst, NULL, len, iv, aad, aadl, tag,
-                          tagl, IMB_ERR_NULL_SRC },
-                        { exp_key, ctx, dst, src, ((1ULL << 39) - 256), iv, aad,
-                          aadl, tag, tagl, IMB_ERR_CIPH_LEN },
-                        { exp_key, ctx, dst, src, len, NULL, aad, aadl, tag,
-                          tagl, IMB_ERR_NULL_IV },
-                        { exp_key, ctx, dst, src, len, iv, NULL, aadl, tag,
-                          tagl, IMB_ERR_NULL_AAD },
-                        { exp_key, ctx, dst, src, len, iv, aad, aadl, NULL,
-                          tagl, IMB_ERR_NULL_AUTH },
-                        { exp_key, ctx, dst, src, len, iv, aad, aadl, tag,
-                          ((1ULL << 39) - 256), IMB_ERR_AUTH_TAG_LEN } };
+        } fn_args[] = {
+                { NULL, ctx, dst, src, len, iv, aad, aadl, tag, tagl, IMB_ERR_NULL_EXP_KEY },
+                { exp_key, NULL, dst, src, len, iv, aad, aadl, tag, tagl, IMB_ERR_NULL_CTX },
+                { exp_key, ctx, NULL, src, len, iv, aad, aadl, tag, tagl, IMB_ERR_NULL_DST },
+                { exp_key, ctx, dst, NULL, len, iv, aad, aadl, tag, tagl, IMB_ERR_NULL_SRC },
+                { exp_key, ctx, dst, src, ((1ULL << 39) - 256), iv, aad, aadl, tag, tagl,
+                  IMB_ERR_CIPH_LEN },
+                { exp_key, ctx, dst, src, len, NULL, aad, aadl, tag, tagl, IMB_ERR_NULL_IV },
+                { exp_key, ctx, dst, src, len, iv, NULL, aadl, tag, tagl, IMB_ERR_NULL_AAD },
+                { exp_key, ctx, dst, src, len, iv, aad, aadl, NULL, tagl, IMB_ERR_NULL_AUTH },
+                { exp_key, ctx, dst, src, len, iv, aad, aadl, tag, ((1ULL << 39) - 256),
+                  IMB_ERR_AUTH_TAG_LEN }
+        };
 
         /* Iterate over args */
         for (i = 0; i < DIM(fn_args); i++) {
                 const struct fn_args *ap = &fn_args[i];
 
-                IMB_AES128_GCM_ENC(mgr, ap->exp_key, ap->ctx, ap->dst, ap->src,
-                                   ap->len, ap->iv, ap->aad, ap->aadl, ap->tag,
-                                   ap->tagl);
+                IMB_AES128_GCM_ENC(mgr, ap->exp_key, ap->ctx, ap->dst, ap->src, ap->len, ap->iv,
+                                   ap->aad, ap->aadl, ap->tag, ap->tagl);
                 if (unexpected_err(mgr, ap->exp_err, "IMB_AES128_GCM_ENC"))
                         return 1;
         }
@@ -850,32 +831,26 @@ test_IMB_AES192_GCM_ENC(struct IMB_MGR *mgr)
                 uint8_t *tag;
                 uint64_t tagl;
                 const IMB_ERR exp_err;
-        } fn_args[] = { { NULL, ctx, dst, src, len, iv, aad, aadl, tag, tagl,
-                          IMB_ERR_NULL_EXP_KEY },
-                        { exp_key, NULL, dst, src, len, iv, aad, aadl, tag,
-                          tagl, IMB_ERR_NULL_CTX },
-                        { exp_key, ctx, NULL, src, len, iv, aad, aadl, tag,
-                          tagl, IMB_ERR_NULL_DST },
-                        { exp_key, ctx, dst, NULL, len, iv, aad, aadl, tag,
-                          tagl, IMB_ERR_NULL_SRC },
-                        { exp_key, ctx, dst, src, ((1ULL << 39) - 256), iv, aad,
-                          aadl, tag, tagl, IMB_ERR_CIPH_LEN },
-                        { exp_key, ctx, dst, src, len, NULL, aad, aadl, tag,
-                          tagl, IMB_ERR_NULL_IV },
-                        { exp_key, ctx, dst, src, len, iv, NULL, aadl, tag,
-                          tagl, IMB_ERR_NULL_AAD },
-                        { exp_key, ctx, dst, src, len, iv, aad, aadl, NULL,
-                          tagl, IMB_ERR_NULL_AUTH },
-                        { exp_key, ctx, dst, src, len, iv, aad, aadl, tag,
-                          ((1ULL << 39) - 256), IMB_ERR_AUTH_TAG_LEN } };
+        } fn_args[] = {
+                { NULL, ctx, dst, src, len, iv, aad, aadl, tag, tagl, IMB_ERR_NULL_EXP_KEY },
+                { exp_key, NULL, dst, src, len, iv, aad, aadl, tag, tagl, IMB_ERR_NULL_CTX },
+                { exp_key, ctx, NULL, src, len, iv, aad, aadl, tag, tagl, IMB_ERR_NULL_DST },
+                { exp_key, ctx, dst, NULL, len, iv, aad, aadl, tag, tagl, IMB_ERR_NULL_SRC },
+                { exp_key, ctx, dst, src, ((1ULL << 39) - 256), iv, aad, aadl, tag, tagl,
+                  IMB_ERR_CIPH_LEN },
+                { exp_key, ctx, dst, src, len, NULL, aad, aadl, tag, tagl, IMB_ERR_NULL_IV },
+                { exp_key, ctx, dst, src, len, iv, NULL, aadl, tag, tagl, IMB_ERR_NULL_AAD },
+                { exp_key, ctx, dst, src, len, iv, aad, aadl, NULL, tagl, IMB_ERR_NULL_AUTH },
+                { exp_key, ctx, dst, src, len, iv, aad, aadl, tag, ((1ULL << 39) - 256),
+                  IMB_ERR_AUTH_TAG_LEN }
+        };
 
         /* Iterate over args */
         for (i = 0; i < DIM(fn_args); i++) {
                 const struct fn_args *ap = &fn_args[i];
 
-                IMB_AES192_GCM_ENC(mgr, ap->exp_key, ap->ctx, ap->dst, ap->src,
-                                   ap->len, ap->iv, ap->aad, ap->aadl, ap->tag,
-                                   ap->tagl);
+                IMB_AES192_GCM_ENC(mgr, ap->exp_key, ap->ctx, ap->dst, ap->src, ap->len, ap->iv,
+                                   ap->aad, ap->aadl, ap->tag, ap->tagl);
                 if (unexpected_err(mgr, ap->exp_err, "IMB_AES192_GCM_ENC"))
                         return 1;
         }
@@ -920,32 +895,26 @@ test_IMB_AES256_GCM_ENC(struct IMB_MGR *mgr)
                 uint8_t *tag;
                 uint64_t tagl;
                 const IMB_ERR exp_err;
-        } fn_args[] = { { NULL, ctx, dst, src, len, iv, aad, aadl, tag, tagl,
-                          IMB_ERR_NULL_EXP_KEY },
-                        { exp_key, NULL, dst, src, len, iv, aad, aadl, tag,
-                          tagl, IMB_ERR_NULL_CTX },
-                        { exp_key, ctx, NULL, src, len, iv, aad, aadl, tag,
-                          tagl, IMB_ERR_NULL_DST },
-                        { exp_key, ctx, dst, NULL, len, iv, aad, aadl, tag,
-                          tagl, IMB_ERR_NULL_SRC },
-                        { exp_key, ctx, dst, src, ((1ULL << 39) - 256), iv, aad,
-                          aadl, tag, tagl, IMB_ERR_CIPH_LEN },
-                        { exp_key, ctx, dst, src, len, NULL, aad, aadl, tag,
-                          tagl, IMB_ERR_NULL_IV },
-                        { exp_key, ctx, dst, src, len, iv, NULL, aadl, tag,
-                          tagl, IMB_ERR_NULL_AAD },
-                        { exp_key, ctx, dst, src, len, iv, aad, aadl, NULL,
-                          tagl, IMB_ERR_NULL_AUTH },
-                        { exp_key, ctx, dst, src, len, iv, aad, aadl, tag,
-                          ((1ULL << 39) - 256), IMB_ERR_AUTH_TAG_LEN } };
+        } fn_args[] = {
+                { NULL, ctx, dst, src, len, iv, aad, aadl, tag, tagl, IMB_ERR_NULL_EXP_KEY },
+                { exp_key, NULL, dst, src, len, iv, aad, aadl, tag, tagl, IMB_ERR_NULL_CTX },
+                { exp_key, ctx, NULL, src, len, iv, aad, aadl, tag, tagl, IMB_ERR_NULL_DST },
+                { exp_key, ctx, dst, NULL, len, iv, aad, aadl, tag, tagl, IMB_ERR_NULL_SRC },
+                { exp_key, ctx, dst, src, ((1ULL << 39) - 256), iv, aad, aadl, tag, tagl,
+                  IMB_ERR_CIPH_LEN },
+                { exp_key, ctx, dst, src, len, NULL, aad, aadl, tag, tagl, IMB_ERR_NULL_IV },
+                { exp_key, ctx, dst, src, len, iv, NULL, aadl, tag, tagl, IMB_ERR_NULL_AAD },
+                { exp_key, ctx, dst, src, len, iv, aad, aadl, NULL, tagl, IMB_ERR_NULL_AUTH },
+                { exp_key, ctx, dst, src, len, iv, aad, aadl, tag, ((1ULL << 39) - 256),
+                  IMB_ERR_AUTH_TAG_LEN }
+        };
 
         /* Iterate over args */
         for (i = 0; i < DIM(fn_args); i++) {
                 const struct fn_args *ap = &fn_args[i];
 
-                IMB_AES256_GCM_ENC(mgr, ap->exp_key, ap->ctx, ap->dst, ap->src,
-                                   ap->len, ap->iv, ap->aad, ap->aadl, ap->tag,
-                                   ap->tagl);
+                IMB_AES256_GCM_ENC(mgr, ap->exp_key, ap->ctx, ap->dst, ap->src, ap->len, ap->iv,
+                                   ap->aad, ap->aadl, ap->tag, ap->tagl);
                 if (unexpected_err(mgr, ap->exp_err, "IMB_AES256_GCM_ENC"))
                         return 1;
         }
@@ -990,32 +959,26 @@ test_IMB_AES128_GCM_DEC(struct IMB_MGR *mgr)
                 uint8_t *tag;
                 uint64_t tagl;
                 const IMB_ERR exp_err;
-        } fn_args[] = { { NULL, ctx, dst, src, len, iv, aad, aadl, tag, tagl,
-                          IMB_ERR_NULL_EXP_KEY },
-                        { exp_key, NULL, dst, src, len, iv, aad, aadl, tag,
-                          tagl, IMB_ERR_NULL_CTX },
-                        { exp_key, ctx, NULL, src, len, iv, aad, aadl, tag,
-                          tagl, IMB_ERR_NULL_DST },
-                        { exp_key, ctx, dst, NULL, len, iv, aad, aadl, tag,
-                          tagl, IMB_ERR_NULL_SRC },
-                        { exp_key, ctx, dst, src, ((1ULL << 39) - 256), iv, aad,
-                          aadl, tag, tagl, IMB_ERR_CIPH_LEN },
-                        { exp_key, ctx, dst, src, len, NULL, aad, aadl, tag,
-                          tagl, IMB_ERR_NULL_IV },
-                        { exp_key, ctx, dst, src, len, iv, NULL, aadl, tag,
-                          tagl, IMB_ERR_NULL_AAD },
-                        { exp_key, ctx, dst, src, len, iv, aad, aadl, NULL,
-                          tagl, IMB_ERR_NULL_AUTH },
-                        { exp_key, ctx, dst, src, len, iv, aad, aadl, tag,
-                          ((1ULL << 39) - 256), IMB_ERR_AUTH_TAG_LEN } };
+        } fn_args[] = {
+                { NULL, ctx, dst, src, len, iv, aad, aadl, tag, tagl, IMB_ERR_NULL_EXP_KEY },
+                { exp_key, NULL, dst, src, len, iv, aad, aadl, tag, tagl, IMB_ERR_NULL_CTX },
+                { exp_key, ctx, NULL, src, len, iv, aad, aadl, tag, tagl, IMB_ERR_NULL_DST },
+                { exp_key, ctx, dst, NULL, len, iv, aad, aadl, tag, tagl, IMB_ERR_NULL_SRC },
+                { exp_key, ctx, dst, src, ((1ULL << 39) - 256), iv, aad, aadl, tag, tagl,
+                  IMB_ERR_CIPH_LEN },
+                { exp_key, ctx, dst, src, len, NULL, aad, aadl, tag, tagl, IMB_ERR_NULL_IV },
+                { exp_key, ctx, dst, src, len, iv, NULL, aadl, tag, tagl, IMB_ERR_NULL_AAD },
+                { exp_key, ctx, dst, src, len, iv, aad, aadl, NULL, tagl, IMB_ERR_NULL_AUTH },
+                { exp_key, ctx, dst, src, len, iv, aad, aadl, tag, ((1ULL << 39) - 256),
+                  IMB_ERR_AUTH_TAG_LEN }
+        };
 
         /* Iterate over args */
         for (i = 0; i < DIM(fn_args); i++) {
                 const struct fn_args *ap = &fn_args[i];
 
-                IMB_AES128_GCM_DEC(mgr, ap->exp_key, ap->ctx, ap->dst, ap->src,
-                                   ap->len, ap->iv, ap->aad, ap->aadl, ap->tag,
-                                   ap->tagl);
+                IMB_AES128_GCM_DEC(mgr, ap->exp_key, ap->ctx, ap->dst, ap->src, ap->len, ap->iv,
+                                   ap->aad, ap->aadl, ap->tag, ap->tagl);
                 if (unexpected_err(mgr, ap->exp_err, "IMB_AES128_GCM_DEC"))
                         return 1;
         }
@@ -1060,32 +1023,26 @@ test_IMB_AES192_GCM_DEC(struct IMB_MGR *mgr)
                 uint8_t *tag;
                 uint64_t tagl;
                 const IMB_ERR exp_err;
-        } fn_args[] = { { NULL, ctx, dst, src, len, iv, aad, aadl, tag, tagl,
-                          IMB_ERR_NULL_EXP_KEY },
-                        { exp_key, NULL, dst, src, len, iv, aad, aadl, tag,
-                          tagl, IMB_ERR_NULL_CTX },
-                        { exp_key, ctx, NULL, src, len, iv, aad, aadl, tag,
-                          tagl, IMB_ERR_NULL_DST },
-                        { exp_key, ctx, dst, NULL, len, iv, aad, aadl, tag,
-                          tagl, IMB_ERR_NULL_SRC },
-                        { exp_key, ctx, dst, src, ((1ULL << 39) - 256), iv, aad,
-                          aadl, tag, tagl, IMB_ERR_CIPH_LEN },
-                        { exp_key, ctx, dst, src, len, NULL, aad, aadl, tag,
-                          tagl, IMB_ERR_NULL_IV },
-                        { exp_key, ctx, dst, src, len, iv, NULL, aadl, tag,
-                          tagl, IMB_ERR_NULL_AAD },
-                        { exp_key, ctx, dst, src, len, iv, aad, aadl, NULL,
-                          tagl, IMB_ERR_NULL_AUTH },
-                        { exp_key, ctx, dst, src, len, iv, aad, aadl, tag,
-                          ((1ULL << 39) - 256), IMB_ERR_AUTH_TAG_LEN } };
+        } fn_args[] = {
+                { NULL, ctx, dst, src, len, iv, aad, aadl, tag, tagl, IMB_ERR_NULL_EXP_KEY },
+                { exp_key, NULL, dst, src, len, iv, aad, aadl, tag, tagl, IMB_ERR_NULL_CTX },
+                { exp_key, ctx, NULL, src, len, iv, aad, aadl, tag, tagl, IMB_ERR_NULL_DST },
+                { exp_key, ctx, dst, NULL, len, iv, aad, aadl, tag, tagl, IMB_ERR_NULL_SRC },
+                { exp_key, ctx, dst, src, ((1ULL << 39) - 256), iv, aad, aadl, tag, tagl,
+                  IMB_ERR_CIPH_LEN },
+                { exp_key, ctx, dst, src, len, NULL, aad, aadl, tag, tagl, IMB_ERR_NULL_IV },
+                { exp_key, ctx, dst, src, len, iv, NULL, aadl, tag, tagl, IMB_ERR_NULL_AAD },
+                { exp_key, ctx, dst, src, len, iv, aad, aadl, NULL, tagl, IMB_ERR_NULL_AUTH },
+                { exp_key, ctx, dst, src, len, iv, aad, aadl, tag, ((1ULL << 39) - 256),
+                  IMB_ERR_AUTH_TAG_LEN }
+        };
 
         /* Iterate over args */
         for (i = 0; i < DIM(fn_args); i++) {
                 const struct fn_args *ap = &fn_args[i];
 
-                IMB_AES192_GCM_DEC(mgr, ap->exp_key, ap->ctx, ap->dst, ap->src,
-                                   ap->len, ap->iv, ap->aad, ap->aadl, ap->tag,
-                                   ap->tagl);
+                IMB_AES192_GCM_DEC(mgr, ap->exp_key, ap->ctx, ap->dst, ap->src, ap->len, ap->iv,
+                                   ap->aad, ap->aadl, ap->tag, ap->tagl);
                 if (unexpected_err(mgr, ap->exp_err, "IMB_AES192_GCM_DEC"))
                         return 1;
         }
@@ -1130,32 +1087,26 @@ test_IMB_AES256_GCM_DEC(struct IMB_MGR *mgr)
                 uint8_t *tag;
                 uint64_t tagl;
                 const IMB_ERR exp_err;
-        } fn_args[] = { { NULL, ctx, dst, src, len, iv, aad, aadl, tag, tagl,
-                          IMB_ERR_NULL_EXP_KEY },
-                        { exp_key, NULL, dst, src, len, iv, aad, aadl, tag,
-                          tagl, IMB_ERR_NULL_CTX },
-                        { exp_key, ctx, NULL, src, len, iv, aad, aadl, tag,
-                          tagl, IMB_ERR_NULL_DST },
-                        { exp_key, ctx, dst, NULL, len, iv, aad, aadl, tag,
-                          tagl, IMB_ERR_NULL_SRC },
-                        { exp_key, ctx, dst, src, ((1ULL << 39) - 256), iv, aad,
-                          aadl, tag, tagl, IMB_ERR_CIPH_LEN },
-                        { exp_key, ctx, dst, src, len, NULL, aad, aadl, tag,
-                          tagl, IMB_ERR_NULL_IV },
-                        { exp_key, ctx, dst, src, len, iv, NULL, aadl, tag,
-                          tagl, IMB_ERR_NULL_AAD },
-                        { exp_key, ctx, dst, src, len, iv, aad, aadl, NULL,
-                          tagl, IMB_ERR_NULL_AUTH },
-                        { exp_key, ctx, dst, src, len, iv, aad, aadl, tag,
-                          ((1ULL << 39) - 256), IMB_ERR_AUTH_TAG_LEN } };
+        } fn_args[] = {
+                { NULL, ctx, dst, src, len, iv, aad, aadl, tag, tagl, IMB_ERR_NULL_EXP_KEY },
+                { exp_key, NULL, dst, src, len, iv, aad, aadl, tag, tagl, IMB_ERR_NULL_CTX },
+                { exp_key, ctx, NULL, src, len, iv, aad, aadl, tag, tagl, IMB_ERR_NULL_DST },
+                { exp_key, ctx, dst, NULL, len, iv, aad, aadl, tag, tagl, IMB_ERR_NULL_SRC },
+                { exp_key, ctx, dst, src, ((1ULL << 39) - 256), iv, aad, aadl, tag, tagl,
+                  IMB_ERR_CIPH_LEN },
+                { exp_key, ctx, dst, src, len, NULL, aad, aadl, tag, tagl, IMB_ERR_NULL_IV },
+                { exp_key, ctx, dst, src, len, iv, NULL, aadl, tag, tagl, IMB_ERR_NULL_AAD },
+                { exp_key, ctx, dst, src, len, iv, aad, aadl, NULL, tagl, IMB_ERR_NULL_AUTH },
+                { exp_key, ctx, dst, src, len, iv, aad, aadl, tag, ((1ULL << 39) - 256),
+                  IMB_ERR_AUTH_TAG_LEN }
+        };
 
         /* Iterate over args */
         for (i = 0; i < DIM(fn_args); i++) {
                 const struct fn_args *ap = &fn_args[i];
 
-                IMB_AES256_GCM_DEC(mgr, ap->exp_key, ap->ctx, ap->dst, ap->src,
-                                   ap->len, ap->iv, ap->aad, ap->aadl, ap->tag,
-                                   ap->tagl);
+                IMB_AES256_GCM_DEC(mgr, ap->exp_key, ap->ctx, ap->dst, ap->src, ap->len, ap->iv,
+                                   ap->aad, ap->aadl, ap->tag, ap->tagl);
                 if (unexpected_err(mgr, ap->exp_err, "IMB_AES256_GCM_DEC"))
                         return 1;
         }
@@ -1199,8 +1150,7 @@ test_IMB_AES128_GCM_INIT(struct IMB_MGR *mgr)
         for (i = 0; i < DIM(fn_args); i++) {
                 const struct fn_args *ap = &fn_args[i];
 
-                IMB_AES128_GCM_INIT(mgr, ap->exp_key, ap->ctx, ap->iv, ap->aad,
-                                    ap->aadl);
+                IMB_AES128_GCM_INIT(mgr, ap->exp_key, ap->ctx, ap->iv, ap->aad, ap->aadl);
                 if (unexpected_err(mgr, ap->exp_err, "IMB_AES128_GCM_INIT"))
                         return 1;
         }
@@ -1244,8 +1194,7 @@ test_IMB_AES192_GCM_INIT(struct IMB_MGR *mgr)
         for (i = 0; i < DIM(fn_args); i++) {
                 const struct fn_args *ap = &fn_args[i];
 
-                IMB_AES192_GCM_INIT(mgr, ap->exp_key, ap->ctx, ap->iv, ap->aad,
-                                    ap->aadl);
+                IMB_AES192_GCM_INIT(mgr, ap->exp_key, ap->ctx, ap->iv, ap->aad, ap->aadl);
                 if (unexpected_err(mgr, ap->exp_err, "IMB_AES192_GCM_INIT"))
                         return 1;
         }
@@ -1289,8 +1238,7 @@ test_IMB_AES256_GCM_INIT(struct IMB_MGR *mgr)
         for (i = 0; i < DIM(fn_args); i++) {
                 const struct fn_args *ap = &fn_args[i];
 
-                IMB_AES256_GCM_INIT(mgr, ap->exp_key, ap->ctx, ap->iv, ap->aad,
-                                    ap->aadl);
+                IMB_AES256_GCM_INIT(mgr, ap->exp_key, ap->ctx, ap->iv, ap->aad, ap->aadl);
                 if (unexpected_err(mgr, ap->exp_err, "IMB_AES256_GCM_INIT"))
                         return 1;
         }
@@ -1330,17 +1278,14 @@ test_IMB_AES128_GCM_ENC_UPDATE(struct IMB_MGR *mgr)
                         { exp_key, NULL, dst, src, len, IMB_ERR_NULL_CTX },
                         { exp_key, ctx, NULL, src, len, IMB_ERR_NULL_DST },
                         { exp_key, ctx, dst, NULL, len, IMB_ERR_NULL_SRC },
-                        { exp_key, ctx, dst, src, ((1ULL << 39) - 256),
-                          IMB_ERR_CIPH_LEN } };
+                        { exp_key, ctx, dst, src, ((1ULL << 39) - 256), IMB_ERR_CIPH_LEN } };
 
         /* Iterate over args */
         for (i = 0; i < DIM(fn_args); i++) {
                 const struct fn_args *ap = &fn_args[i];
 
-                IMB_AES128_GCM_ENC_UPDATE(mgr, ap->exp_key, ap->ctx, ap->dst,
-                                          ap->src, ap->len);
-                if (unexpected_err(mgr, ap->exp_err,
-                                   "IMB_AES128_GCM_ENC_UPDATE"))
+                IMB_AES128_GCM_ENC_UPDATE(mgr, ap->exp_key, ap->ctx, ap->dst, ap->src, ap->len);
+                if (unexpected_err(mgr, ap->exp_err, "IMB_AES128_GCM_ENC_UPDATE"))
                         return 1;
         }
         return 0;
@@ -1379,17 +1324,14 @@ test_IMB_AES192_GCM_ENC_UPDATE(struct IMB_MGR *mgr)
                         { exp_key, NULL, dst, src, len, IMB_ERR_NULL_CTX },
                         { exp_key, ctx, NULL, src, len, IMB_ERR_NULL_DST },
                         { exp_key, ctx, dst, NULL, len, IMB_ERR_NULL_SRC },
-                        { exp_key, ctx, dst, src, ((1ULL << 39) - 256),
-                          IMB_ERR_CIPH_LEN } };
+                        { exp_key, ctx, dst, src, ((1ULL << 39) - 256), IMB_ERR_CIPH_LEN } };
 
         /* Iterate over args */
         for (i = 0; i < DIM(fn_args); i++) {
                 const struct fn_args *ap = &fn_args[i];
 
-                IMB_AES192_GCM_ENC_UPDATE(mgr, ap->exp_key, ap->ctx, ap->dst,
-                                          ap->src, ap->len);
-                if (unexpected_err(mgr, ap->exp_err,
-                                   "IMB_AES192_GCM_ENC_UPDATE"))
+                IMB_AES192_GCM_ENC_UPDATE(mgr, ap->exp_key, ap->ctx, ap->dst, ap->src, ap->len);
+                if (unexpected_err(mgr, ap->exp_err, "IMB_AES192_GCM_ENC_UPDATE"))
                         return 1;
         }
         return 0;
@@ -1428,17 +1370,14 @@ test_IMB_AES256_GCM_ENC_UPDATE(struct IMB_MGR *mgr)
                         { exp_key, NULL, dst, src, len, IMB_ERR_NULL_CTX },
                         { exp_key, ctx, NULL, src, len, IMB_ERR_NULL_DST },
                         { exp_key, ctx, dst, NULL, len, IMB_ERR_NULL_SRC },
-                        { exp_key, ctx, dst, src, ((1ULL << 39) - 256),
-                          IMB_ERR_CIPH_LEN } };
+                        { exp_key, ctx, dst, src, ((1ULL << 39) - 256), IMB_ERR_CIPH_LEN } };
 
         /* Iterate over args */
         for (i = 0; i < DIM(fn_args); i++) {
                 const struct fn_args *ap = &fn_args[i];
 
-                IMB_AES256_GCM_ENC_UPDATE(mgr, ap->exp_key, ap->ctx, ap->dst,
-                                          ap->src, ap->len);
-                if (unexpected_err(mgr, ap->exp_err,
-                                   "IMB_AES256_GCM_ENC_UPDATE"))
+                IMB_AES256_GCM_ENC_UPDATE(mgr, ap->exp_key, ap->ctx, ap->dst, ap->src, ap->len);
+                if (unexpected_err(mgr, ap->exp_err, "IMB_AES256_GCM_ENC_UPDATE"))
                         return 1;
         }
         return 0;
@@ -1477,17 +1416,14 @@ test_IMB_AES128_GCM_DEC_UPDATE(struct IMB_MGR *mgr)
                         { exp_key, NULL, dst, src, len, IMB_ERR_NULL_CTX },
                         { exp_key, ctx, NULL, src, len, IMB_ERR_NULL_DST },
                         { exp_key, ctx, dst, NULL, len, IMB_ERR_NULL_SRC },
-                        { exp_key, ctx, dst, src, ((1ULL << 39) - 256),
-                          IMB_ERR_CIPH_LEN } };
+                        { exp_key, ctx, dst, src, ((1ULL << 39) - 256), IMB_ERR_CIPH_LEN } };
 
         /* Iterate over args */
         for (i = 0; i < DIM(fn_args); i++) {
                 const struct fn_args *ap = &fn_args[i];
 
-                IMB_AES128_GCM_DEC_UPDATE(mgr, ap->exp_key, ap->ctx, ap->dst,
-                                          ap->src, ap->len);
-                if (unexpected_err(mgr, ap->exp_err,
-                                   "IMB_AES128_GCM_DEC_UPDATE"))
+                IMB_AES128_GCM_DEC_UPDATE(mgr, ap->exp_key, ap->ctx, ap->dst, ap->src, ap->len);
+                if (unexpected_err(mgr, ap->exp_err, "IMB_AES128_GCM_DEC_UPDATE"))
                         return 1;
         }
         return 0;
@@ -1526,17 +1462,14 @@ test_IMB_AES192_GCM_DEC_UPDATE(struct IMB_MGR *mgr)
                         { exp_key, NULL, dst, src, len, IMB_ERR_NULL_CTX },
                         { exp_key, ctx, NULL, src, len, IMB_ERR_NULL_DST },
                         { exp_key, ctx, dst, NULL, len, IMB_ERR_NULL_SRC },
-                        { exp_key, ctx, dst, src, ((1ULL << 39) - 256),
-                          IMB_ERR_CIPH_LEN } };
+                        { exp_key, ctx, dst, src, ((1ULL << 39) - 256), IMB_ERR_CIPH_LEN } };
 
         /* Iterate over args */
         for (i = 0; i < DIM(fn_args); i++) {
                 const struct fn_args *ap = &fn_args[i];
 
-                IMB_AES192_GCM_DEC_UPDATE(mgr, ap->exp_key, ap->ctx, ap->dst,
-                                          ap->src, ap->len);
-                if (unexpected_err(mgr, ap->exp_err,
-                                   "IMB_AES192_GCM_DEC_UPDATE"))
+                IMB_AES192_GCM_DEC_UPDATE(mgr, ap->exp_key, ap->ctx, ap->dst, ap->src, ap->len);
+                if (unexpected_err(mgr, ap->exp_err, "IMB_AES192_GCM_DEC_UPDATE"))
                         return 1;
         }
         return 0;
@@ -1575,17 +1508,14 @@ test_IMB_AES256_GCM_DEC_UPDATE(struct IMB_MGR *mgr)
                         { exp_key, NULL, dst, src, len, IMB_ERR_NULL_CTX },
                         { exp_key, ctx, NULL, src, len, IMB_ERR_NULL_DST },
                         { exp_key, ctx, dst, NULL, len, IMB_ERR_NULL_SRC },
-                        { exp_key, ctx, dst, src, ((1ULL << 39) - 256),
-                          IMB_ERR_CIPH_LEN } };
+                        { exp_key, ctx, dst, src, ((1ULL << 39) - 256), IMB_ERR_CIPH_LEN } };
 
         /* Iterate over args */
         for (i = 0; i < DIM(fn_args); i++) {
                 const struct fn_args *ap = &fn_args[i];
 
-                IMB_AES256_GCM_DEC_UPDATE(mgr, ap->exp_key, ap->ctx, ap->dst,
-                                          ap->src, ap->len);
-                if (unexpected_err(mgr, ap->exp_err,
-                                   "IMB_AES256_GCM_DEC_UPDATE"))
+                IMB_AES256_GCM_DEC_UPDATE(mgr, ap->exp_key, ap->ctx, ap->dst, ap->src, ap->len);
+                if (unexpected_err(mgr, ap->exp_err, "IMB_AES256_GCM_DEC_UPDATE"))
                         return 1;
         }
         return 0;
@@ -1627,10 +1557,8 @@ test_IMB_AES128_GCM_ENC_FINALIZE(struct IMB_MGR *mgr)
         for (i = 0; i < DIM(fn_args); i++) {
                 const struct fn_args *ap = &fn_args[i];
 
-                IMB_AES128_GCM_ENC_FINALIZE(mgr, ap->exp_key, ap->ctx, ap->tag,
-                                            ap->tagl);
-                if (unexpected_err(mgr, ap->exp_err,
-                                   "IMB_AES128_GCM_ENC_FINALIZE"))
+                IMB_AES128_GCM_ENC_FINALIZE(mgr, ap->exp_key, ap->ctx, ap->tag, ap->tagl);
+                if (unexpected_err(mgr, ap->exp_err, "IMB_AES128_GCM_ENC_FINALIZE"))
                         return 1;
         }
         return 0;
@@ -1672,10 +1600,8 @@ test_IMB_AES192_GCM_ENC_FINALIZE(struct IMB_MGR *mgr)
         for (i = 0; i < DIM(fn_args); i++) {
                 const struct fn_args *ap = &fn_args[i];
 
-                IMB_AES192_GCM_ENC_FINALIZE(mgr, ap->exp_key, ap->ctx, ap->tag,
-                                            ap->tagl);
-                if (unexpected_err(mgr, ap->exp_err,
-                                   "IMB_AES192_GCM_ENC_FINALIZE"))
+                IMB_AES192_GCM_ENC_FINALIZE(mgr, ap->exp_key, ap->ctx, ap->tag, ap->tagl);
+                if (unexpected_err(mgr, ap->exp_err, "IMB_AES192_GCM_ENC_FINALIZE"))
                         return 1;
         }
         return 0;
@@ -1717,10 +1643,8 @@ test_IMB_AES256_GCM_ENC_FINALIZE(struct IMB_MGR *mgr)
         for (i = 0; i < DIM(fn_args); i++) {
                 const struct fn_args *ap = &fn_args[i];
 
-                IMB_AES256_GCM_ENC_FINALIZE(mgr, ap->exp_key, ap->ctx, ap->tag,
-                                            ap->tagl);
-                if (unexpected_err(mgr, ap->exp_err,
-                                   "IMB_AES256_GCM_ENC_FINALIZE"))
+                IMB_AES256_GCM_ENC_FINALIZE(mgr, ap->exp_key, ap->ctx, ap->tag, ap->tagl);
+                if (unexpected_err(mgr, ap->exp_err, "IMB_AES256_GCM_ENC_FINALIZE"))
                         return 1;
         }
         return 0;
@@ -1762,10 +1686,8 @@ test_IMB_AES128_GCM_DEC_FINALIZE(struct IMB_MGR *mgr)
         for (i = 0; i < DIM(fn_args); i++) {
                 const struct fn_args *ap = &fn_args[i];
 
-                IMB_AES128_GCM_DEC_FINALIZE(mgr, ap->exp_key, ap->ctx, ap->tag,
-                                            ap->tagl);
-                if (unexpected_err(mgr, ap->exp_err,
-                                   "IMB_AES128_GCM_DEC_FINALIZE"))
+                IMB_AES128_GCM_DEC_FINALIZE(mgr, ap->exp_key, ap->ctx, ap->tag, ap->tagl);
+                if (unexpected_err(mgr, ap->exp_err, "IMB_AES128_GCM_DEC_FINALIZE"))
                         return 1;
         }
         return 0;
@@ -1807,10 +1729,8 @@ test_IMB_AES192_GCM_DEC_FINALIZE(struct IMB_MGR *mgr)
         for (i = 0; i < DIM(fn_args); i++) {
                 const struct fn_args *ap = &fn_args[i];
 
-                IMB_AES192_GCM_DEC_FINALIZE(mgr, ap->exp_key, ap->ctx, ap->tag,
-                                            ap->tagl);
-                if (unexpected_err(mgr, ap->exp_err,
-                                   "IMB_AES192_GCM_DEC_FINALIZE"))
+                IMB_AES192_GCM_DEC_FINALIZE(mgr, ap->exp_key, ap->ctx, ap->tag, ap->tagl);
+                if (unexpected_err(mgr, ap->exp_err, "IMB_AES192_GCM_DEC_FINALIZE"))
                         return 1;
         }
         return 0;
@@ -1852,10 +1772,8 @@ test_IMB_AES256_GCM_DEC_FINALIZE(struct IMB_MGR *mgr)
         for (i = 0; i < DIM(fn_args); i++) {
                 const struct fn_args *ap = &fn_args[i];
 
-                IMB_AES256_GCM_DEC_FINALIZE(mgr, ap->exp_key, ap->ctx, ap->tag,
-                                            ap->tagl);
-                if (unexpected_err(mgr, ap->exp_err,
-                                   "IMB_AES256_GCM_DEC_FINALIZE"))
+                IMB_AES256_GCM_DEC_FINALIZE(mgr, ap->exp_key, ap->ctx, ap->tag, ap->tagl);
+                if (unexpected_err(mgr, ap->exp_err, "IMB_AES256_GCM_DEC_FINALIZE"))
                         return 1;
         }
         return 0;
@@ -1882,8 +1800,7 @@ test_IMB_AES128_GCM_PRE(struct IMB_MGR *mgr)
                 const void *key;
                 struct gcm_key_data *exp_key;
                 const IMB_ERR exp_err;
-        } fn_args[] = { { NULL, exp_key, IMB_ERR_NULL_KEY },
-                        { key, NULL, IMB_ERR_NULL_EXP_KEY } };
+        } fn_args[] = { { NULL, exp_key, IMB_ERR_NULL_KEY }, { key, NULL, IMB_ERR_NULL_EXP_KEY } };
 
         /* Iterate over args */
         for (i = 0; i < DIM(fn_args); i++) {
@@ -1917,8 +1834,7 @@ test_IMB_AES192_GCM_PRE(struct IMB_MGR *mgr)
                 const void *key;
                 struct gcm_key_data *exp_key;
                 const IMB_ERR exp_err;
-        } fn_args[] = { { NULL, exp_key, IMB_ERR_NULL_KEY },
-                        { key, NULL, IMB_ERR_NULL_EXP_KEY } };
+        } fn_args[] = { { NULL, exp_key, IMB_ERR_NULL_KEY }, { key, NULL, IMB_ERR_NULL_EXP_KEY } };
 
         /* Iterate over args */
         for (i = 0; i < DIM(fn_args); i++) {
@@ -1952,8 +1868,7 @@ test_IMB_AES256_GCM_PRE(struct IMB_MGR *mgr)
                 const void *key;
                 struct gcm_key_data *exp_key;
                 const IMB_ERR exp_err;
-        } fn_args[] = { { NULL, exp_key, IMB_ERR_NULL_KEY },
-                        { key, NULL, IMB_ERR_NULL_EXP_KEY } };
+        } fn_args[] = { { NULL, exp_key, IMB_ERR_NULL_KEY }, { key, NULL, IMB_ERR_NULL_EXP_KEY } };
 
         /* Iterate over args */
         for (i = 0; i < DIM(fn_args); i++) {
@@ -2002,8 +1917,7 @@ test_IMB_ZUC_EEA3_1_BUFFER(struct IMB_MGR *mgr)
         for (i = 0; i < DIM(fn_args); i++) {
                 const struct fn_args *ap = &fn_args[i];
 
-                IMB_ZUC_EEA3_1_BUFFER(mgr, ap->key, ap->iv, ap->src, ap->dst,
-                                      ap->len);
+                IMB_ZUC_EEA3_1_BUFFER(mgr, ap->key, ap->iv, ap->src, ap->dst, ap->len);
                 if (unexpected_err(mgr, ap->exp_err, "IMB_ZUC_EEA3_1_BUFFER"))
                         return 1;
         }
@@ -2028,10 +1942,10 @@ test_IMB_ZUC_EEA3_4_BUFFER(struct IMB_MGR *mgr)
         void *dst[MAX_BUFFS];
         void *dst_NULL_pts[MAX_BUFFS];
         uint8_t dst_s[MAX_BUFFS][BUFF_SIZE];
-        const uint32_t len_all_zero[MAX_BUFFS] = { 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                                                   0, 0, 0, 0, 0, 0, 0, 0 };
-        const uint32_t len[MAX_BUFFS] = { 1, 1, 1, 1, 1, 1, 1, 1, 1,
-                                          1, 1, 1, 1, 1, 1, 1, 1 };
+        const uint32_t len_all_zero[MAX_BUFFS] = {
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        };
+        const uint32_t len[MAX_BUFFS] = { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };
         int seg_err; /* segfault flag */
 
         seg_err = setjmp(dir_api_param_env);
@@ -2072,8 +1986,7 @@ test_IMB_ZUC_EEA3_4_BUFFER(struct IMB_MGR *mgr)
         for (i = 0; i < DIM(fn_args); i++) {
                 const struct fn_args *ap = &fn_args[i];
 
-                IMB_ZUC_EEA3_4_BUFFER(mgr, ap->key, ap->iv, ap->src, ap->dst,
-                                      ap->len);
+                IMB_ZUC_EEA3_4_BUFFER(mgr, ap->key, ap->iv, ap->src, ap->dst, ap->len);
                 if (unexpected_err(mgr, ap->exp_err, "IMB_ZUC_EEA3_4_BUFFER"))
                         return 1;
         }
@@ -2098,10 +2011,10 @@ test_IMB_ZUC_EEA3_N_BUFFER(struct IMB_MGR *mgr)
         void *dst[MAX_BUFFS];
         void *dst_NULL_pts[MAX_BUFFS];
         uint8_t dst_s[MAX_BUFFS][BUFF_SIZE];
-        const uint32_t len_all_zero[MAX_BUFFS] = { 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                                                   0, 0, 0, 0, 0, 0, 0, 0 };
-        const uint32_t len[MAX_BUFFS] = { 1, 1, 1, 1, 1, 1, 1, 1, 1,
-                                          1, 1, 1, 1, 1, 1, 1, 1 };
+        const uint32_t len_all_zero[MAX_BUFFS] = {
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        };
+        const uint32_t len[MAX_BUFFS] = { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };
         const uint32_t count = MAX_BUFFS;
         int seg_err; /* segfault flag */
 
@@ -2130,24 +2043,21 @@ test_IMB_ZUC_EEA3_N_BUFFER(struct IMB_MGR *mgr)
                 const uint32_t *len;
                 const uint32_t count;
                 const IMB_ERR exp_err;
-        } fn_args[] = {
-                { key_NULL_pts, iv, src, dst, len, count, IMB_ERR_NULL_KEY },
-                { NULL, iv, src, dst, len, count, IMB_ERR_NULL_KEY },
-                { key, iv_NULL_pts, src, dst, len, count, IMB_ERR_NULL_IV },
-                { key, NULL, src, dst, len, count, IMB_ERR_NULL_IV },
-                { key, iv, src_NULL_pts, dst, len, count, IMB_ERR_NULL_SRC },
-                { key, iv, NULL, dst, len, count, IMB_ERR_NULL_SRC },
-                { key, iv, src, dst_NULL_pts, len, count, IMB_ERR_NULL_DST },
-                { key, iv, src, NULL, len, count, IMB_ERR_NULL_DST },
-                { key, iv, src, dst, len_all_zero, count, IMB_ERR_CIPH_LEN }
-        };
+        } fn_args[] = { { key_NULL_pts, iv, src, dst, len, count, IMB_ERR_NULL_KEY },
+                        { NULL, iv, src, dst, len, count, IMB_ERR_NULL_KEY },
+                        { key, iv_NULL_pts, src, dst, len, count, IMB_ERR_NULL_IV },
+                        { key, NULL, src, dst, len, count, IMB_ERR_NULL_IV },
+                        { key, iv, src_NULL_pts, dst, len, count, IMB_ERR_NULL_SRC },
+                        { key, iv, NULL, dst, len, count, IMB_ERR_NULL_SRC },
+                        { key, iv, src, dst_NULL_pts, len, count, IMB_ERR_NULL_DST },
+                        { key, iv, src, NULL, len, count, IMB_ERR_NULL_DST },
+                        { key, iv, src, dst, len_all_zero, count, IMB_ERR_CIPH_LEN } };
 
         /* Iterate over args */
         for (i = 0; i < DIM(fn_args); i++) {
                 const struct fn_args *ap = &fn_args[i];
 
-                IMB_ZUC_EEA3_N_BUFFER(mgr, ap->key, ap->iv, ap->src, ap->dst,
-                                      ap->len, ap->count);
+                IMB_ZUC_EEA3_N_BUFFER(mgr, ap->key, ap->iv, ap->src, ap->dst, ap->len, ap->count);
                 if (unexpected_err(mgr, ap->exp_err, "IMB_ZUC_EEA3_N_BUFFER"))
                         return 1;
         }
@@ -2190,8 +2100,7 @@ test_IMB_ZUC_EIA3_1_BUFFER(struct IMB_MGR *mgr)
         for (i = 0; i < DIM(fn_args); i++) {
                 const struct fn_args *ap = &fn_args[i];
 
-                IMB_ZUC_EIA3_1_BUFFER(mgr, ap->key, ap->iv, ap->src, ap->len,
-                                      ap->tag);
+                IMB_ZUC_EIA3_1_BUFFER(mgr, ap->key, ap->iv, ap->src, ap->len, ap->tag);
                 if (unexpected_err(mgr, ap->exp_err, "IMB_ZUC_EIA3_1_BUFFER"))
                         return 1;
         }
@@ -2234,8 +2143,7 @@ test_IMB_KASUMI_F8_1_BUFFER(struct IMB_MGR *mgr)
         for (i = 0; i < DIM(fn_args); i++) {
                 const struct fn_args *ap = &fn_args[i];
 
-                IMB_KASUMI_F8_1_BUFFER(mgr, ap->exp_key, ap->iv, ap->src,
-                                       ap->dst, ap->len);
+                IMB_KASUMI_F8_1_BUFFER(mgr, ap->exp_key, ap->iv, ap->src, ap->dst, ap->len);
                 if (unexpected_err(mgr, ap->exp_err, "IMB_KASUMI_F8_1_BUFFER"))
                         return 1;
         }
@@ -2272,21 +2180,18 @@ test_IMB_KASUMI_F8_1_BUFFER_BIT(struct IMB_MGR *mgr)
                 const uint32_t len;
                 const uint32_t offset;
                 const IMB_ERR exp_err;
-        } fn_args[] = {
-                { NULL, iv, src, dst, len, offset, IMB_ERR_NULL_EXP_KEY },
-                { exp_key, iv, NULL, dst, len, offset, IMB_ERR_NULL_SRC },
-                { exp_key, iv, src, NULL, len, offset, IMB_ERR_NULL_DST },
-                { exp_key, iv, src, dst, 0, offset, IMB_ERR_CIPH_LEN }
-        };
+        } fn_args[] = { { NULL, iv, src, dst, len, offset, IMB_ERR_NULL_EXP_KEY },
+                        { exp_key, iv, NULL, dst, len, offset, IMB_ERR_NULL_SRC },
+                        { exp_key, iv, src, NULL, len, offset, IMB_ERR_NULL_DST },
+                        { exp_key, iv, src, dst, 0, offset, IMB_ERR_CIPH_LEN } };
 
         /* Iterate over args */
         for (i = 0; i < DIM(fn_args); i++) {
                 const struct fn_args *ap = &fn_args[i];
 
-                IMB_KASUMI_F8_1_BUFFER_BIT(mgr, ap->exp_key, ap->iv, ap->src,
-                                           ap->dst, ap->len, ap->offset);
-                if (unexpected_err(mgr, ap->exp_err,
-                                   "IMB_KASUMI_F8_1_BUFFER_BIT"))
+                IMB_KASUMI_F8_1_BUFFER_BIT(mgr, ap->exp_key, ap->iv, ap->src, ap->dst, ap->len,
+                                           ap->offset);
+                if (unexpected_err(mgr, ap->exp_err, "IMB_KASUMI_F8_1_BUFFER_BIT"))
                         return 1;
         }
         return 0;
@@ -2329,26 +2234,19 @@ test_IMB_KASUMI_F8_2_BUFFER(struct IMB_MGR *mgr)
                 const IMB_ERR exp_err;
         } fn_args[] = { { NULL, iv1, iv2, src1, dst1, len1, src2, dst2, len2,
                           IMB_ERR_NULL_EXP_KEY },
-                        { exp_key, iv1, iv2, NULL, dst1, len1, src2, dst2, len2,
-                          IMB_ERR_NULL_SRC },
-                        { exp_key, iv1, iv2, src1, NULL, len1, src2, dst2, len2,
-                          IMB_ERR_NULL_DST },
-                        { exp_key, iv1, iv2, src1, dst1, 0, src2, dst2, len2,
-                          IMB_ERR_CIPH_LEN },
-                        { exp_key, iv1, iv2, src1, dst1, len1, NULL, dst2, len2,
-                          IMB_ERR_NULL_SRC },
-                        { exp_key, iv1, iv2, src1, dst1, len1, src2, NULL, len2,
-                          IMB_ERR_NULL_DST },
-                        { exp_key, iv1, iv2, src1, dst1, len1, src2, dst2, 0,
-                          IMB_ERR_CIPH_LEN } };
+                        { exp_key, iv1, iv2, NULL, dst1, len1, src2, dst2, len2, IMB_ERR_NULL_SRC },
+                        { exp_key, iv1, iv2, src1, NULL, len1, src2, dst2, len2, IMB_ERR_NULL_DST },
+                        { exp_key, iv1, iv2, src1, dst1, 0, src2, dst2, len2, IMB_ERR_CIPH_LEN },
+                        { exp_key, iv1, iv2, src1, dst1, len1, NULL, dst2, len2, IMB_ERR_NULL_SRC },
+                        { exp_key, iv1, iv2, src1, dst1, len1, src2, NULL, len2, IMB_ERR_NULL_DST },
+                        { exp_key, iv1, iv2, src1, dst1, len1, src2, dst2, 0, IMB_ERR_CIPH_LEN } };
 
         /* Iterate over args */
         for (i = 0; i < DIM(fn_args); i++) {
                 const struct fn_args *ap = &fn_args[i];
 
-                IMB_KASUMI_F8_2_BUFFER(mgr, ap->exp_key, ap->iv1, ap->iv2,
-                                       ap->src1, ap->dst1, ap->len1, ap->src2,
-                                       ap->dst2, ap->len2);
+                IMB_KASUMI_F8_2_BUFFER(mgr, ap->exp_key, ap->iv1, ap->iv2, ap->src1, ap->dst1,
+                                       ap->len1, ap->src2, ap->dst2, ap->len2);
                 if (unexpected_err(mgr, ap->exp_err, "IMB_KASUMI_F8_2_BUFFER"))
                         return 1;
         }
@@ -2394,30 +2292,29 @@ test_IMB_KASUMI_F8_3_BUFFER(struct IMB_MGR *mgr)
                 void *dst3;
                 const uint32_t len;
                 const IMB_ERR exp_err;
-        } fn_args[] = { { NULL, iv1, iv2, iv3, src1, dst1, src2, dst2, src3,
-                          dst3, len, IMB_ERR_NULL_EXP_KEY },
-                        { exp_key, iv1, iv2, iv3, NULL, dst1, src2, dst2, src3,
-                          dst3, len, IMB_ERR_NULL_SRC },
-                        { exp_key, iv1, iv2, iv3, src1, NULL, src2, dst2, src3,
-                          dst3, len, IMB_ERR_NULL_DST },
-                        { exp_key, iv1, iv2, iv3, src1, dst1, NULL, dst2, src3,
-                          dst3, len, IMB_ERR_NULL_SRC },
-                        { exp_key, iv1, iv2, iv3, src1, dst1, src2, NULL, src3,
-                          dst3, len, IMB_ERR_NULL_DST },
-                        { exp_key, iv1, iv2, iv3, src1, dst1, src2, dst2, NULL,
-                          dst3, len, IMB_ERR_NULL_SRC },
-                        { exp_key, iv1, iv2, iv3, src1, dst1, src2, dst2, src3,
-                          NULL, len, IMB_ERR_NULL_DST },
-                        { exp_key, iv1, iv2, iv3, src1, dst1, src2, dst2, src3,
-                          dst3, 0, IMB_ERR_CIPH_LEN } };
+        } fn_args[] = { { NULL, iv1, iv2, iv3, src1, dst1, src2, dst2, src3, dst3, len,
+                          IMB_ERR_NULL_EXP_KEY },
+                        { exp_key, iv1, iv2, iv3, NULL, dst1, src2, dst2, src3, dst3, len,
+                          IMB_ERR_NULL_SRC },
+                        { exp_key, iv1, iv2, iv3, src1, NULL, src2, dst2, src3, dst3, len,
+                          IMB_ERR_NULL_DST },
+                        { exp_key, iv1, iv2, iv3, src1, dst1, NULL, dst2, src3, dst3, len,
+                          IMB_ERR_NULL_SRC },
+                        { exp_key, iv1, iv2, iv3, src1, dst1, src2, NULL, src3, dst3, len,
+                          IMB_ERR_NULL_DST },
+                        { exp_key, iv1, iv2, iv3, src1, dst1, src2, dst2, NULL, dst3, len,
+                          IMB_ERR_NULL_SRC },
+                        { exp_key, iv1, iv2, iv3, src1, dst1, src2, dst2, src3, NULL, len,
+                          IMB_ERR_NULL_DST },
+                        { exp_key, iv1, iv2, iv3, src1, dst1, src2, dst2, src3, dst3, 0,
+                          IMB_ERR_CIPH_LEN } };
 
         /* Iterate over args */
         for (i = 0; i < DIM(fn_args); i++) {
                 const struct fn_args *ap = &fn_args[i];
 
-                IMB_KASUMI_F8_3_BUFFER(mgr, ap->exp_key, ap->iv1, ap->iv2,
-                                       ap->iv3, ap->src1, ap->dst1, ap->src2,
-                                       ap->dst2, ap->src3, ap->dst3, ap->len);
+                IMB_KASUMI_F8_3_BUFFER(mgr, ap->exp_key, ap->iv1, ap->iv2, ap->iv3, ap->src1,
+                                       ap->dst1, ap->src2, ap->dst2, ap->src3, ap->dst3, ap->len);
                 if (unexpected_err(mgr, ap->exp_err, "IMB_KASUMI_F8_3_BUFFER"))
                         return 1;
         }
@@ -2469,34 +2366,33 @@ test_IMB_KASUMI_F8_4_BUFFER(struct IMB_MGR *mgr)
                 void *dst4;
                 const uint32_t len;
                 const IMB_ERR exp_err;
-        } fn_args[] = { { NULL, iv1, iv2, iv3, iv4, src1, dst1, src2, dst2,
-                          src3, dst3, src4, dst4, len, IMB_ERR_NULL_EXP_KEY },
-                        { exp_key, iv1, iv2, iv3, iv4, NULL, dst1, src2, dst2,
-                          src3, dst3, src4, dst4, len, IMB_ERR_NULL_SRC },
-                        { exp_key, iv1, iv2, iv3, iv4, src1, NULL, src2, dst2,
-                          src3, dst3, src4, dst4, len, IMB_ERR_NULL_DST },
-                        { exp_key, iv1, iv2, iv3, iv4, src1, dst1, NULL, dst2,
-                          src3, dst3, src4, dst4, len, IMB_ERR_NULL_SRC },
-                        { exp_key, iv1, iv2, iv3, iv4, src1, dst1, src2, NULL,
-                          src3, dst3, src4, dst4, len, IMB_ERR_NULL_DST },
-                        { exp_key, iv1, iv2, iv3, iv4, src1, dst1, src2, dst2,
-                          NULL, dst3, src4, dst4, len, IMB_ERR_NULL_SRC },
-                        { exp_key, iv1, iv2, iv3, iv4, src1, dst1, src2, dst2,
-                          src3, NULL, src4, dst4, len, IMB_ERR_NULL_DST },
-                        { exp_key, iv1, iv2, iv3, iv4, src1, dst1, src2, dst2,
-                          src3, dst3, NULL, dst4, len, IMB_ERR_NULL_SRC },
-                        { exp_key, iv1, iv2, iv3, iv4, src1, dst1, src2, dst2,
-                          src3, dst3, src4, NULL, len, IMB_ERR_NULL_DST },
-                        { exp_key, iv1, iv2, iv3, iv4, src1, dst1, src2, dst2,
-                          src3, dst3, src4, dst4, 0, IMB_ERR_CIPH_LEN } };
+        } fn_args[] = { { NULL, iv1, iv2, iv3, iv4, src1, dst1, src2, dst2, src3, dst3, src4, dst4,
+                          len, IMB_ERR_NULL_EXP_KEY },
+                        { exp_key, iv1, iv2, iv3, iv4, NULL, dst1, src2, dst2, src3, dst3, src4,
+                          dst4, len, IMB_ERR_NULL_SRC },
+                        { exp_key, iv1, iv2, iv3, iv4, src1, NULL, src2, dst2, src3, dst3, src4,
+                          dst4, len, IMB_ERR_NULL_DST },
+                        { exp_key, iv1, iv2, iv3, iv4, src1, dst1, NULL, dst2, src3, dst3, src4,
+                          dst4, len, IMB_ERR_NULL_SRC },
+                        { exp_key, iv1, iv2, iv3, iv4, src1, dst1, src2, NULL, src3, dst3, src4,
+                          dst4, len, IMB_ERR_NULL_DST },
+                        { exp_key, iv1, iv2, iv3, iv4, src1, dst1, src2, dst2, NULL, dst3, src4,
+                          dst4, len, IMB_ERR_NULL_SRC },
+                        { exp_key, iv1, iv2, iv3, iv4, src1, dst1, src2, dst2, src3, NULL, src4,
+                          dst4, len, IMB_ERR_NULL_DST },
+                        { exp_key, iv1, iv2, iv3, iv4, src1, dst1, src2, dst2, src3, dst3, NULL,
+                          dst4, len, IMB_ERR_NULL_SRC },
+                        { exp_key, iv1, iv2, iv3, iv4, src1, dst1, src2, dst2, src3, dst3, src4,
+                          NULL, len, IMB_ERR_NULL_DST },
+                        { exp_key, iv1, iv2, iv3, iv4, src1, dst1, src2, dst2, src3, dst3, src4,
+                          dst4, 0, IMB_ERR_CIPH_LEN } };
 
         /* Iterate over args */
         for (i = 0; i < DIM(fn_args); i++) {
                 const struct fn_args *ap = &fn_args[i];
 
-                IMB_KASUMI_F8_4_BUFFER(mgr, ap->exp_key, ap->iv1, ap->iv2,
-                                       ap->iv3, ap->iv4, ap->src1, ap->dst1,
-                                       ap->src2, ap->dst2, ap->src3, ap->dst3,
+                IMB_KASUMI_F8_4_BUFFER(mgr, ap->exp_key, ap->iv1, ap->iv2, ap->iv3, ap->iv4,
+                                       ap->src1, ap->dst1, ap->src2, ap->dst2, ap->src3, ap->dst3,
                                        ap->src4, ap->dst4, ap->len);
                 if (unexpected_err(mgr, ap->exp_err, "IMB_KASUMI_F8_4_BUFFER"))
                         return 1;
@@ -2519,10 +2415,10 @@ test_IMB_KASUMI_F8_N_BUFFER(struct IMB_MGR *mgr)
         void *dst[MAX_BUFFS];
         void *dst_NULL_pts[MAX_BUFFS];
         uint8_t dst_s[MAX_BUFFS][BUFF_SIZE];
-        const uint32_t len_all_zero[MAX_BUFFS] = { 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                                                   0, 0, 0, 0, 0, 0, 0, 0 };
-        const uint32_t len[MAX_BUFFS] = { 1, 1, 1, 1, 1, 1, 1, 1, 1,
-                                          1, 1, 1, 1, 1, 1, 1, 1 };
+        const uint32_t len_all_zero[MAX_BUFFS] = {
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        };
+        const uint32_t len[MAX_BUFFS] = { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };
         const uint32_t count = MAX_BUFFS;
         int seg_err; /* segfault flag */
 
@@ -2547,23 +2443,19 @@ test_IMB_KASUMI_F8_N_BUFFER(struct IMB_MGR *mgr)
                 const uint32_t *len;
                 const uint32_t count;
                 const IMB_ERR exp_err;
-        } fn_args[] = {
-                { NULL, iv, src, dst, len, count, IMB_ERR_NULL_EXP_KEY },
-                { exp_key, iv, src_NULL_pts, dst, len, count,
-                  IMB_ERR_NULL_SRC },
-                { exp_key, iv, NULL, dst, len, count, IMB_ERR_NULL_SRC },
-                { exp_key, iv, src, dst_NULL_pts, len, count,
-                  IMB_ERR_NULL_DST },
-                { exp_key, iv, src, NULL, len, count, IMB_ERR_NULL_DST },
-                { exp_key, iv, src, dst, len_all_zero, count, IMB_ERR_CIPH_LEN }
-        };
+        } fn_args[] = { { NULL, iv, src, dst, len, count, IMB_ERR_NULL_EXP_KEY },
+                        { exp_key, iv, src_NULL_pts, dst, len, count, IMB_ERR_NULL_SRC },
+                        { exp_key, iv, NULL, dst, len, count, IMB_ERR_NULL_SRC },
+                        { exp_key, iv, src, dst_NULL_pts, len, count, IMB_ERR_NULL_DST },
+                        { exp_key, iv, src, NULL, len, count, IMB_ERR_NULL_DST },
+                        { exp_key, iv, src, dst, len_all_zero, count, IMB_ERR_CIPH_LEN } };
 
         /* Iterate over args */
         for (i = 0; i < DIM(fn_args); i++) {
                 const struct fn_args *ap = &fn_args[i];
 
-                IMB_KASUMI_F8_N_BUFFER(mgr, ap->exp_key, ap->iv, ap->src,
-                                       ap->dst, ap->len, ap->count);
+                IMB_KASUMI_F8_N_BUFFER(mgr, ap->exp_key, ap->iv, ap->src, ap->dst, ap->len,
+                                       ap->count);
                 if (unexpected_err(mgr, ap->exp_err, "IMB_KASUMI_F8_N_BUFFER"))
                         return 1;
         }
@@ -2604,8 +2496,7 @@ test_IMB_KASUMI_F9_1_BUFFER(struct IMB_MGR *mgr)
         for (i = 0; i < DIM(fn_args); i++) {
                 const struct fn_args *ap = &fn_args[i];
 
-                IMB_KASUMI_F9_1_BUFFER(mgr, ap->exp_key, ap->src, ap->len,
-                                       ap->tag);
+                IMB_KASUMI_F9_1_BUFFER(mgr, ap->exp_key, ap->src, ap->len, ap->tag);
                 if (unexpected_err(mgr, ap->exp_err, "IMB_KASUMI_F9_1_BUFFER"))
                         return 1;
         }
@@ -2645,17 +2536,15 @@ test_IMB_KASUMI_F9_1_BUFFER_USER(struct IMB_MGR *mgr)
         } fn_args[] = { { NULL, iv, src, len, tag, dir, IMB_ERR_NULL_EXP_KEY },
                         { exp_key, iv, NULL, len, tag, dir, IMB_ERR_NULL_SRC },
                         { exp_key, iv, src, 0, tag, dir, IMB_ERR_AUTH_LEN },
-                        { exp_key, iv, src, len, NULL, dir,
-                          IMB_ERR_NULL_AUTH } };
+                        { exp_key, iv, src, len, NULL, dir, IMB_ERR_NULL_AUTH } };
 
         /* Iterate over args */
         for (i = 0; i < DIM(fn_args); i++) {
                 const struct fn_args *ap = &fn_args[i];
 
-                IMB_KASUMI_F9_1_BUFFER_USER(mgr, ap->exp_key, ap->iv, ap->src,
-                                            ap->len, ap->tag, ap->dir);
-                if (unexpected_err(mgr, ap->exp_err,
-                                   "IMB_KASUMI_F9_1_BUFFER_USER"))
+                IMB_KASUMI_F9_1_BUFFER_USER(mgr, ap->exp_key, ap->iv, ap->src, ap->len, ap->tag,
+                                            ap->dir);
+                if (unexpected_err(mgr, ap->exp_err, "IMB_KASUMI_F9_1_BUFFER_USER"))
                         return 1;
         }
         return 0;
@@ -2683,16 +2572,14 @@ test_IMB_KASUMI_INIT_F8_KEY_SCHED(struct IMB_MGR *mgr)
                 const void *key;
                 kasumi_key_sched_t *exp_key;
                 const IMB_ERR exp_err;
-        } fn_args[] = { { NULL, exp_key, IMB_ERR_NULL_KEY },
-                        { key, NULL, IMB_ERR_NULL_EXP_KEY } };
+        } fn_args[] = { { NULL, exp_key, IMB_ERR_NULL_KEY }, { key, NULL, IMB_ERR_NULL_EXP_KEY } };
 
         /* Iterate over args */
         for (i = 0; i < DIM(fn_args); i++) {
                 const struct fn_args *ap = &fn_args[i];
 
                 IMB_KASUMI_INIT_F8_KEY_SCHED(mgr, ap->key, ap->exp_key);
-                if (unexpected_err(mgr, ap->exp_err,
-                                   "IMB_KASUMI_INIT_F8_KEY_SCHED"))
+                if (unexpected_err(mgr, ap->exp_err, "IMB_KASUMI_INIT_F8_KEY_SCHED"))
                         return 1;
         }
         return 0;
@@ -2720,16 +2607,14 @@ test_IMB_KASUMI_INIT_F9_KEY_SCHED(struct IMB_MGR *mgr)
                 const void *key;
                 kasumi_key_sched_t *exp_key;
                 const IMB_ERR exp_err;
-        } fn_args[] = { { NULL, exp_key, IMB_ERR_NULL_KEY },
-                        { key, NULL, IMB_ERR_NULL_EXP_KEY } };
+        } fn_args[] = { { NULL, exp_key, IMB_ERR_NULL_KEY }, { key, NULL, IMB_ERR_NULL_EXP_KEY } };
 
         /* Iterate over args */
         for (i = 0; i < DIM(fn_args); i++) {
                 const struct fn_args *ap = &fn_args[i];
 
                 IMB_KASUMI_INIT_F9_KEY_SCHED(mgr, ap->key, ap->exp_key);
-                if (unexpected_err(mgr, ap->exp_err,
-                                   "IMB_KASUMI_INIT_F9_KEY_SCHED"))
+                if (unexpected_err(mgr, ap->exp_err, "IMB_KASUMI_INIT_F9_KEY_SCHED"))
                         return 1;
         }
         return 0;
@@ -2765,22 +2650,19 @@ test_IMB_SNOW3G_F8_1_BUFFER_BIT(struct IMB_MGR *mgr)
                 const uint32_t len;
                 const uint32_t offset;
                 const IMB_ERR exp_err;
-        } fn_args[] = {
-                { NULL, iv, src, dst, len, offset, IMB_ERR_NULL_EXP_KEY },
-                { exp_key, NULL, src, dst, len, offset, IMB_ERR_NULL_IV },
-                { exp_key, iv, NULL, dst, len, offset, IMB_ERR_NULL_SRC },
-                { exp_key, iv, src, NULL, len, offset, IMB_ERR_NULL_DST },
-                { exp_key, iv, src, dst, 0, offset, IMB_ERR_CIPH_LEN }
-        };
+        } fn_args[] = { { NULL, iv, src, dst, len, offset, IMB_ERR_NULL_EXP_KEY },
+                        { exp_key, NULL, src, dst, len, offset, IMB_ERR_NULL_IV },
+                        { exp_key, iv, NULL, dst, len, offset, IMB_ERR_NULL_SRC },
+                        { exp_key, iv, src, NULL, len, offset, IMB_ERR_NULL_DST },
+                        { exp_key, iv, src, dst, 0, offset, IMB_ERR_CIPH_LEN } };
 
         /* Iterate over args */
         for (i = 0; i < DIM(fn_args); i++) {
                 const struct fn_args *ap = &fn_args[i];
 
-                IMB_SNOW3G_F8_1_BUFFER_BIT(mgr, ap->exp_key, ap->iv, ap->src,
-                                           ap->dst, ap->len, ap->offset);
-                if (unexpected_err(mgr, ap->exp_err,
-                                   "IMB_SNOW3G_F8_1_BUFFER_BIT"))
+                IMB_SNOW3G_F8_1_BUFFER_BIT(mgr, ap->exp_key, ap->iv, ap->src, ap->dst, ap->len,
+                                           ap->offset);
+                if (unexpected_err(mgr, ap->exp_err, "IMB_SNOW3G_F8_1_BUFFER_BIT"))
                         return 1;
         }
         return 0;
@@ -2823,8 +2705,7 @@ test_IMB_SNOW3G_F8_1_BUFFER(struct IMB_MGR *mgr)
         for (i = 0; i < DIM(fn_args); i++) {
                 const struct fn_args *ap = &fn_args[i];
 
-                IMB_SNOW3G_F8_1_BUFFER(mgr, ap->exp_key, ap->iv, ap->src,
-                                       ap->dst, ap->len);
+                IMB_SNOW3G_F8_1_BUFFER(mgr, ap->exp_key, ap->iv, ap->src, ap->dst, ap->len);
                 if (unexpected_err(mgr, ap->exp_err, "IMB_SNOW3G_F8_1_BUFFER"))
                         return 1;
         }
@@ -2868,30 +2749,21 @@ test_IMB_SNOW3G_F8_2_BUFFER(struct IMB_MGR *mgr)
                 const IMB_ERR exp_err;
         } fn_args[] = { { NULL, iv1, iv2, src1, dst1, len1, src2, dst2, len2,
                           IMB_ERR_NULL_EXP_KEY },
-                        { exp_key, NULL, iv2, src1, dst1, len1, src2, dst2,
-                          len2, IMB_ERR_NULL_IV },
-                        { exp_key, iv1, NULL, src1, dst1, len1, src2, dst2,
-                          len2, IMB_ERR_NULL_IV },
-                        { exp_key, iv1, iv2, NULL, dst1, len1, src2, dst2, len2,
-                          IMB_ERR_NULL_SRC },
-                        { exp_key, iv1, iv2, src1, NULL, len1, src2, dst2, len2,
-                          IMB_ERR_NULL_DST },
-                        { exp_key, iv1, iv2, src1, dst1, 0, src2, dst2, len2,
-                          IMB_ERR_CIPH_LEN },
-                        { exp_key, iv1, iv2, src1, dst1, len1, NULL, dst2, len2,
-                          IMB_ERR_NULL_SRC },
-                        { exp_key, iv1, iv2, src1, dst1, len1, src2, NULL, len2,
-                          IMB_ERR_NULL_DST },
-                        { exp_key, iv1, iv2, src1, dst1, len1, src2, dst2, 0,
-                          IMB_ERR_CIPH_LEN } };
+                        { exp_key, NULL, iv2, src1, dst1, len1, src2, dst2, len2, IMB_ERR_NULL_IV },
+                        { exp_key, iv1, NULL, src1, dst1, len1, src2, dst2, len2, IMB_ERR_NULL_IV },
+                        { exp_key, iv1, iv2, NULL, dst1, len1, src2, dst2, len2, IMB_ERR_NULL_SRC },
+                        { exp_key, iv1, iv2, src1, NULL, len1, src2, dst2, len2, IMB_ERR_NULL_DST },
+                        { exp_key, iv1, iv2, src1, dst1, 0, src2, dst2, len2, IMB_ERR_CIPH_LEN },
+                        { exp_key, iv1, iv2, src1, dst1, len1, NULL, dst2, len2, IMB_ERR_NULL_SRC },
+                        { exp_key, iv1, iv2, src1, dst1, len1, src2, NULL, len2, IMB_ERR_NULL_DST },
+                        { exp_key, iv1, iv2, src1, dst1, len1, src2, dst2, 0, IMB_ERR_CIPH_LEN } };
 
         /* Iterate over args */
         for (i = 0; i < DIM(fn_args); i++) {
                 const struct fn_args *ap = &fn_args[i];
 
-                IMB_SNOW3G_F8_2_BUFFER(mgr, ap->exp_key, ap->iv1, ap->iv2,
-                                       ap->src1, ap->dst1, ap->len1, ap->src2,
-                                       ap->dst2, ap->len2);
+                IMB_SNOW3G_F8_2_BUFFER(mgr, ap->exp_key, ap->iv1, ap->iv2, ap->src1, ap->dst1,
+                                       ap->len1, ap->src2, ap->dst2, ap->len2);
                 if (unexpected_err(mgr, ap->exp_err, "IMB_SNOW3G_F8_2_BUFFER"))
                         return 1;
         }
@@ -2949,51 +2821,48 @@ test_IMB_SNOW3G_F8_4_BUFFER(struct IMB_MGR *mgr)
                 void *dst4;
                 const uint32_t len4;
                 const IMB_ERR exp_err;
-        } fn_args[] = {
-                { NULL, iv1, iv2, iv3, iv4, src1, dst1, len1, src2, dst2, len2,
-                  src3, dst3, len3, src4, dst4, len4, IMB_ERR_NULL_EXP_KEY },
-                { exp_key, NULL, iv2, iv3, iv4, src1, dst1, len1, src2, dst2,
-                  len2, src3, dst3, len3, src4, dst4, len4, IMB_ERR_NULL_IV },
-                { exp_key, iv1, NULL, iv3, iv4, src1, dst1, len1, src2, dst2,
-                  len2, src3, dst3, len3, src4, dst4, len4, IMB_ERR_NULL_IV },
-                { exp_key, iv1, iv2, NULL, iv4, src1, dst1, len1, src2, dst2,
-                  len2, src3, dst3, len3, src4, dst4, len4, IMB_ERR_NULL_IV },
-                { exp_key, iv1, iv2, iv3, NULL, src1, dst1, len1, src2, dst2,
-                  len2, src3, dst3, len3, src4, dst4, len4, IMB_ERR_NULL_IV },
-                { exp_key, iv1, iv2, iv3, iv4, NULL, dst1, len1, src2, dst2,
-                  len2, src3, dst3, len3, src4, dst4, len4, IMB_ERR_NULL_SRC },
-                { exp_key, iv1, iv2, iv3, iv4, src1, NULL, len1, src2, dst2,
-                  len2, src3, dst3, len3, src4, dst4, len4, IMB_ERR_NULL_DST },
-                { exp_key, iv1, iv2, iv3, iv4, src1, dst1, 0, src2, dst2, len2,
-                  src3, dst3, len3, src4, dst4, len4, IMB_ERR_CIPH_LEN },
-                { exp_key, iv1, iv2, iv3, iv4, src1, dst1, len1, NULL, dst2,
-                  len2, src3, dst3, len3, src4, dst4, len4, IMB_ERR_NULL_SRC },
-                { exp_key, iv1, iv2, iv3, iv4, src1, dst1, len1, src2, NULL,
-                  len2, src3, dst3, len3, src4, dst4, len4, IMB_ERR_NULL_DST },
-                { exp_key, iv1, iv2, iv3, iv4, src1, dst1, len1, src2, dst2, 0,
-                  src3, dst3, len3, src4, dst4, len4, IMB_ERR_CIPH_LEN },
-                { exp_key, iv1, iv2, iv3, iv4, src1, dst1, len1, src2, dst2,
-                  len2, NULL, dst3, len3, src4, dst4, len4, IMB_ERR_NULL_SRC },
-                { exp_key, iv1, iv2, iv3, iv4, src1, dst1, len1, src2, dst2,
-                  len2, src3, NULL, len3, src4, dst4, len4, IMB_ERR_NULL_DST },
-                { exp_key, iv1, iv2, iv3, iv4, src1, dst1, len1, src2, dst2,
-                  len2, src3, dst3, 0, src4, dst4, len4, IMB_ERR_CIPH_LEN },
-                { exp_key, iv1, iv2, iv3, iv4, src1, dst1, len1, src2, dst2,
-                  len2, src3, dst3, len3, NULL, dst4, len4, IMB_ERR_NULL_SRC },
-                { exp_key, iv1, iv2, iv3, iv4, src1, dst1, len1, src2, dst2,
-                  len2, src3, dst3, len3, src4, NULL, len4, IMB_ERR_NULL_DST },
-                { exp_key, iv1, iv2, iv3, iv4, src1, dst1, len1, src2, dst2,
-                  len2, src3, dst3, len3, src4, dst4, 0, IMB_ERR_CIPH_LEN }
-        };
+        } fn_args[] = { { NULL, iv1, iv2, iv3, iv4, src1, dst1, len1, src2, dst2, len2, src3, dst3,
+                          len3, src4, dst4, len4, IMB_ERR_NULL_EXP_KEY },
+                        { exp_key, NULL, iv2, iv3, iv4, src1, dst1, len1, src2, dst2, len2, src3,
+                          dst3, len3, src4, dst4, len4, IMB_ERR_NULL_IV },
+                        { exp_key, iv1, NULL, iv3, iv4, src1, dst1, len1, src2, dst2, len2, src3,
+                          dst3, len3, src4, dst4, len4, IMB_ERR_NULL_IV },
+                        { exp_key, iv1, iv2, NULL, iv4, src1, dst1, len1, src2, dst2, len2, src3,
+                          dst3, len3, src4, dst4, len4, IMB_ERR_NULL_IV },
+                        { exp_key, iv1, iv2, iv3, NULL, src1, dst1, len1, src2, dst2, len2, src3,
+                          dst3, len3, src4, dst4, len4, IMB_ERR_NULL_IV },
+                        { exp_key, iv1, iv2, iv3, iv4, NULL, dst1, len1, src2, dst2, len2, src3,
+                          dst3, len3, src4, dst4, len4, IMB_ERR_NULL_SRC },
+                        { exp_key, iv1, iv2, iv3, iv4, src1, NULL, len1, src2, dst2, len2, src3,
+                          dst3, len3, src4, dst4, len4, IMB_ERR_NULL_DST },
+                        { exp_key, iv1, iv2, iv3, iv4, src1, dst1, 0, src2, dst2, len2, src3, dst3,
+                          len3, src4, dst4, len4, IMB_ERR_CIPH_LEN },
+                        { exp_key, iv1, iv2, iv3, iv4, src1, dst1, len1, NULL, dst2, len2, src3,
+                          dst3, len3, src4, dst4, len4, IMB_ERR_NULL_SRC },
+                        { exp_key, iv1, iv2, iv3, iv4, src1, dst1, len1, src2, NULL, len2, src3,
+                          dst3, len3, src4, dst4, len4, IMB_ERR_NULL_DST },
+                        { exp_key, iv1, iv2, iv3, iv4, src1, dst1, len1, src2, dst2, 0, src3, dst3,
+                          len3, src4, dst4, len4, IMB_ERR_CIPH_LEN },
+                        { exp_key, iv1, iv2, iv3, iv4, src1, dst1, len1, src2, dst2, len2, NULL,
+                          dst3, len3, src4, dst4, len4, IMB_ERR_NULL_SRC },
+                        { exp_key, iv1, iv2, iv3, iv4, src1, dst1, len1, src2, dst2, len2, src3,
+                          NULL, len3, src4, dst4, len4, IMB_ERR_NULL_DST },
+                        { exp_key, iv1, iv2, iv3, iv4, src1, dst1, len1, src2, dst2, len2, src3,
+                          dst3, 0, src4, dst4, len4, IMB_ERR_CIPH_LEN },
+                        { exp_key, iv1, iv2, iv3, iv4, src1, dst1, len1, src2, dst2, len2, src3,
+                          dst3, len3, NULL, dst4, len4, IMB_ERR_NULL_SRC },
+                        { exp_key, iv1, iv2, iv3, iv4, src1, dst1, len1, src2, dst2, len2, src3,
+                          dst3, len3, src4, NULL, len4, IMB_ERR_NULL_DST },
+                        { exp_key, iv1, iv2, iv3, iv4, src1, dst1, len1, src2, dst2, len2, src3,
+                          dst3, len3, src4, dst4, 0, IMB_ERR_CIPH_LEN } };
 
         /* Iterate over args */
         for (i = 0; i < DIM(fn_args); i++) {
                 const struct fn_args *ap = &fn_args[i];
 
-                IMB_SNOW3G_F8_4_BUFFER(
-                    mgr, ap->exp_key, ap->iv1, ap->iv2, ap->iv3, ap->iv4,
-                    ap->src1, ap->dst1, ap->len1, ap->src2, ap->dst2, ap->len2,
-                    ap->src3, ap->dst3, ap->len3, ap->src4, ap->dst4, ap->len4);
+                IMB_SNOW3G_F8_4_BUFFER(mgr, ap->exp_key, ap->iv1, ap->iv2, ap->iv3, ap->iv4,
+                                       ap->src1, ap->dst1, ap->len1, ap->src2, ap->dst2, ap->len2,
+                                       ap->src3, ap->dst3, ap->len3, ap->src4, ap->dst4, ap->len4);
                 if (unexpected_err(mgr, ap->exp_err, "IMB_SNOW3G_F8_4_BUFFER"))
                         return 1;
         }
@@ -3101,107 +2970,38 @@ test_IMB_SNOW3G_F8_8_BUFFER(struct IMB_MGR *mgr)
                   dst7, len7,
                   src8, dst8,
                   len8, IMB_ERR_NULL_EXP_KEY },
-                { exp_key, NULL,           iv2,  iv3,  iv4,  iv5,  iv6,  iv7,
-                  iv8,     src1,           dst1, len1, src2, dst2, len2, src3,
-                  dst3,    len3,           src4, dst4, len4, src5, dst5, len5,
-                  src6,    dst6,           len6, src7, dst7, len7, src8, dst8,
-                  len8,    IMB_ERR_NULL_IV },
-                { exp_key, iv1,
-                  NULL,    iv3,
-                  iv4,     iv5,
-                  iv6,     iv7,
-                  iv8,     src1,
-                  dst1,    len1,
-                  src2,    dst2,
-                  len2,    src3,
-                  dst3,    len3,
-                  src4,    dst4,
-                  len4,    src5,
-                  dst5,    len5,
-                  src6,    dst6,
-                  len6,    src7,
-                  dst7,    len7,
-                  src8,    dst8,
-                  len8,    IMB_ERR_NULL_IV },
-                { exp_key, iv1,  iv2,  NULL,           iv4,  iv5,
-                  iv6,     iv7,  iv8,  src1,           dst1, len1,
-                  src2,    dst2, len2, src3,           dst3, len3,
-                  src4,    dst4, len4, src5,           dst5, len5,
-                  src6,    dst6, len6, src7,           dst7, len7,
+                { exp_key,        NULL, iv2,  iv3,  iv4,  iv5,  iv6,  iv7,  iv8,  src1, dst1,
+                  len1,           src2, dst2, len2, src3, dst3, len3, src4, dst4, len4, src5,
+                  dst5,           len5, src6, dst6, len6, src7, dst7, len7, src8, dst8, len8,
+                  IMB_ERR_NULL_IV },
+                { exp_key,        iv1,  NULL, iv3,  iv4,  iv5,  iv6,  iv7,  iv8,  src1, dst1,
+                  len1,           src2, dst2, len2, src3, dst3, len3, src4, dst4, len4, src5,
+                  dst5,           len5, src6, dst6, len6, src7, dst7, len7, src8, dst8, len8,
+                  IMB_ERR_NULL_IV },
+                { exp_key, iv1,  iv2,  NULL,           iv4,  iv5,  iv6,  iv7,  iv8,  src1,
+                  dst1,    len1, src2, dst2,           len2, src3, dst3, len3, src4, dst4,
+                  len4,    src5, dst5, len5,           src6, dst6, len6, src7, dst7, len7,
                   src8,    dst8, len8, IMB_ERR_NULL_IV },
-                { exp_key, iv1,
-                  iv2,     iv3,
-                  NULL,    iv5,
-                  iv6,     iv7,
-                  iv8,     src1,
-                  dst1,    len1,
-                  src2,    dst2,
-                  len2,    src3,
-                  dst3,    len3,
-                  src4,    dst4,
-                  len4,    src5,
-                  dst5,    len5,
-                  src6,    dst6,
-                  len6,    src7,
-                  dst7,    len7,
-                  src8,    dst8,
-                  len8,    IMB_ERR_NULL_IV },
-                { exp_key, iv1,  iv2,  iv3,  iv4,  NULL,           iv6,
-                  iv7,     iv8,  src1, dst1, len1, src2,           dst2,
-                  len2,    src3, dst3, len3, src4, dst4,           len4,
-                  src5,    dst5, len5, src6, dst6, len6,           src7,
-                  dst7,    len7, src8, dst8, len8, IMB_ERR_NULL_IV },
-                { exp_key, iv1,
-                  iv2,     iv3,
-                  iv4,     iv5,
-                  NULL,    iv7,
-                  iv8,     src1,
-                  dst1,    len1,
-                  src2,    dst2,
-                  len2,    src3,
-                  dst3,    len3,
-                  src4,    dst4,
-                  len4,    src5,
-                  dst5,    len5,
-                  src6,    dst6,
-                  len6,    src7,
-                  dst7,    len7,
-                  src8,    dst8,
-                  len8,    IMB_ERR_NULL_IV },
-                { exp_key, iv1,
-                  iv2,     iv3,
-                  iv4,     iv5,
-                  iv6,     NULL,
-                  iv8,     src1,
-                  dst1,    len1,
-                  src2,    dst2,
-                  len2,    src3,
-                  dst3,    len3,
-                  src4,    dst4,
-                  len4,    src5,
-                  dst5,    len5,
-                  src6,    dst6,
-                  len6,    src7,
-                  dst7,    len7,
-                  src8,    dst8,
-                  len8,    IMB_ERR_NULL_IV },
-                { exp_key, iv1,
-                  iv2,     iv3,
-                  iv4,     iv5,
-                  iv6,     iv7,
-                  NULL,    src1,
-                  dst1,    len1,
-                  src2,    dst2,
-                  len2,    src3,
-                  dst3,    len3,
-                  src4,    dst4,
-                  len4,    src5,
-                  dst5,    len5,
-                  src6,    dst6,
-                  len6,    src7,
-                  dst7,    len7,
-                  src8,    dst8,
-                  len8,    IMB_ERR_NULL_IV },
+                { exp_key,        iv1,  iv2,  iv3,  NULL, iv5,  iv6,  iv7,  iv8,  src1, dst1,
+                  len1,           src2, dst2, len2, src3, dst3, len3, src4, dst4, len4, src5,
+                  dst5,           len5, src6, dst6, len6, src7, dst7, len7, src8, dst8, len8,
+                  IMB_ERR_NULL_IV },
+                { exp_key,        iv1,  iv2,  iv3,  iv4,  NULL, iv6,  iv7,  iv8,  src1, dst1,
+                  len1,           src2, dst2, len2, src3, dst3, len3, src4, dst4, len4, src5,
+                  dst5,           len5, src6, dst6, len6, src7, dst7, len7, src8, dst8, len8,
+                  IMB_ERR_NULL_IV },
+                { exp_key, iv1,  iv2,  iv3,  iv4,  iv5,  NULL,           iv7,  iv8,
+                  src1,    dst1, len1, src2, dst2, len2, src3,           dst3, len3,
+                  src4,    dst4, len4, src5, dst5, len5, src6,           dst6, len6,
+                  src7,    dst7, len7, src8, dst8, len8, IMB_ERR_NULL_IV },
+                { exp_key,        iv1,  iv2,  iv3,  iv4,  iv5,  iv6,  NULL, iv8,  src1, dst1,
+                  len1,           src2, dst2, len2, src3, dst3, len3, src4, dst4, len4, src5,
+                  dst5,           len5, src6, dst6, len6, src7, dst7, len7, src8, dst8, len8,
+                  IMB_ERR_NULL_IV },
+                { exp_key,        iv1,  iv2,  iv3,  iv4,  iv5,  iv6,  iv7,  NULL, src1, dst1,
+                  len1,           src2, dst2, len2, src3, dst3, len3, src4, dst4, len4, src5,
+                  dst5,           len5, src6, dst6, len6, src7, dst7, len7, src8, dst8, len8,
+                  IMB_ERR_NULL_IV },
                 { exp_key, iv1,
                   iv2,     iv3,
                   iv4,     iv5,
@@ -3616,13 +3416,12 @@ test_IMB_SNOW3G_F8_8_BUFFER(struct IMB_MGR *mgr)
         for (i = 0; i < DIM(fn_args); i++) {
                 const struct fn_args *ap = &fn_args[i];
 
-                IMB_SNOW3G_F8_8_BUFFER(
-                    mgr, ap->exp_key, ap->iv1, ap->iv2, ap->iv3, ap->iv4,
-                    ap->iv5, ap->iv6, ap->iv7, ap->iv8, ap->src1, ap->dst1,
-                    ap->len1, ap->src2, ap->dst2, ap->len2, ap->src3, ap->dst3,
-                    ap->len3, ap->src4, ap->dst4, ap->len4, ap->src5, ap->dst5,
-                    ap->len5, ap->src6, ap->dst6, ap->len6, ap->src7, ap->dst7,
-                    ap->len7, ap->src8, ap->dst8, ap->len8);
+                IMB_SNOW3G_F8_8_BUFFER(mgr, ap->exp_key, ap->iv1, ap->iv2, ap->iv3, ap->iv4,
+                                       ap->iv5, ap->iv6, ap->iv7, ap->iv8, ap->src1, ap->dst1,
+                                       ap->len1, ap->src2, ap->dst2, ap->len2, ap->src3, ap->dst3,
+                                       ap->len3, ap->src4, ap->dst4, ap->len4, ap->src5, ap->dst5,
+                                       ap->len5, ap->src6, ap->dst6, ap->len6, ap->src7, ap->dst7,
+                                       ap->len7, ap->src8, ap->dst8, ap->len8);
                 if (unexpected_err(mgr, ap->exp_err, "IMB_SNOW3G_F8_8_BUFFER"))
                         return 1;
         }
@@ -3646,8 +3445,7 @@ test_IMB_SNOW3G_F8_N_BUFFER(struct IMB_MGR *mgr)
         void *dst[MAX_BUFFS];
         void *dst_NULL_pts[MAX_BUFFS];
         uint8_t dst_s[MAX_BUFFS][BUFF_SIZE];
-        const uint32_t len[MAX_BUFFS] = { 1, 1, 1, 1, 1, 1, 1, 1, 1,
-                                          1, 1, 1, 1, 1, 1, 1, 1 };
+        const uint32_t len[MAX_BUFFS] = { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };
         const uint32_t count = MAX_BUFFS;
         int seg_err; /* segfault flag */
 
@@ -3674,25 +3472,21 @@ test_IMB_SNOW3G_F8_N_BUFFER(struct IMB_MGR *mgr)
                 const uint32_t *len;
                 const uint32_t count;
                 const IMB_ERR exp_err;
-        } fn_args[] = {
-                { NULL, iv, src, dst, len, count, IMB_ERR_NULL_EXP_KEY },
-                { exp_key, iv_NULL_pts, src, dst, len, count, IMB_ERR_NULL_IV },
-                { exp_key, NULL, src, dst, len, count, IMB_ERR_NULL_IV },
-                { exp_key, iv, src_NULL_pts, dst, len, count,
-                  IMB_ERR_NULL_SRC },
-                { exp_key, iv, NULL, dst, len, count, IMB_ERR_NULL_SRC },
-                { exp_key, iv, src, dst_NULL_pts, len, count,
-                  IMB_ERR_NULL_DST },
-                { exp_key, iv, src, NULL, len, count, IMB_ERR_NULL_DST },
-                { exp_key, iv, src, dst, 0, count, IMB_ERR_CIPH_LEN }
-        };
+        } fn_args[] = { { NULL, iv, src, dst, len, count, IMB_ERR_NULL_EXP_KEY },
+                        { exp_key, iv_NULL_pts, src, dst, len, count, IMB_ERR_NULL_IV },
+                        { exp_key, NULL, src, dst, len, count, IMB_ERR_NULL_IV },
+                        { exp_key, iv, src_NULL_pts, dst, len, count, IMB_ERR_NULL_SRC },
+                        { exp_key, iv, NULL, dst, len, count, IMB_ERR_NULL_SRC },
+                        { exp_key, iv, src, dst_NULL_pts, len, count, IMB_ERR_NULL_DST },
+                        { exp_key, iv, src, NULL, len, count, IMB_ERR_NULL_DST },
+                        { exp_key, iv, src, dst, 0, count, IMB_ERR_CIPH_LEN } };
 
         /* Iterate over args */
         for (i = 0; i < DIM(fn_args); i++) {
                 const struct fn_args *ap = &fn_args[i];
 
-                IMB_SNOW3G_F8_N_BUFFER(mgr, ap->exp_key, ap->iv, ap->src,
-                                       ap->dst, ap->len, ap->count);
+                IMB_SNOW3G_F8_N_BUFFER(mgr, ap->exp_key, ap->iv, ap->src, ap->dst, ap->len,
+                                       ap->count);
                 if (unexpected_err(mgr, ap->exp_err, "IMB_SNOW3G_F8_N_BUFFER"))
                         return 1;
         }
@@ -3718,8 +3512,7 @@ test_IMB_SNOW3G_F8_8_BUFFER_MULTIKEY(struct IMB_MGR *mgr)
         void *dst[MAX_BUFFS];
         void *dst_NULL_pts[MAX_BUFFS];
         uint8_t dst_s[MAX_BUFFS][BUFF_SIZE];
-        const uint32_t len[MAX_BUFFS] = { 1, 1, 1, 1, 1, 1, 1, 1, 1,
-                                          1, 1, 1, 1, 1, 1, 1, 1 };
+        const uint32_t len[MAX_BUFFS] = { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };
         int seg_err; /* segfault flag */
 
         seg_err = setjmp(dir_api_param_env);
@@ -3746,26 +3539,23 @@ test_IMB_SNOW3G_F8_8_BUFFER_MULTIKEY(struct IMB_MGR *mgr)
                 void **dst;
                 const uint32_t *len;
                 const IMB_ERR exp_err;
-        } fn_args[] = {
-                { exp_key_NULL_pts, iv, src, dst, len, IMB_ERR_NULL_EXP_KEY },
-                { NULL, iv, src, dst, len, IMB_ERR_NULL_EXP_KEY },
-                { exp_key, iv_NULL_pts, src, dst, len, IMB_ERR_NULL_IV },
-                { exp_key, NULL, src, dst, len, IMB_ERR_NULL_IV },
-                { exp_key, iv, src_NULL_pts, dst, len, IMB_ERR_NULL_SRC },
-                { exp_key, iv, NULL, dst, len, IMB_ERR_NULL_SRC },
-                { exp_key, iv, src, dst_NULL_pts, len, IMB_ERR_NULL_DST },
-                { exp_key, iv, src, NULL, len, IMB_ERR_NULL_DST },
-                { exp_key, iv, src, dst, 0, IMB_ERR_CIPH_LEN }
-        };
+        } fn_args[] = { { exp_key_NULL_pts, iv, src, dst, len, IMB_ERR_NULL_EXP_KEY },
+                        { NULL, iv, src, dst, len, IMB_ERR_NULL_EXP_KEY },
+                        { exp_key, iv_NULL_pts, src, dst, len, IMB_ERR_NULL_IV },
+                        { exp_key, NULL, src, dst, len, IMB_ERR_NULL_IV },
+                        { exp_key, iv, src_NULL_pts, dst, len, IMB_ERR_NULL_SRC },
+                        { exp_key, iv, NULL, dst, len, IMB_ERR_NULL_SRC },
+                        { exp_key, iv, src, dst_NULL_pts, len, IMB_ERR_NULL_DST },
+                        { exp_key, iv, src, NULL, len, IMB_ERR_NULL_DST },
+                        { exp_key, iv, src, dst, 0, IMB_ERR_CIPH_LEN } };
 
         /* Iterate over args */
         for (i = 0; i < DIM(fn_args); i++) {
                 const struct fn_args *ap = &fn_args[i];
 
-                IMB_SNOW3G_F8_8_BUFFER_MULTIKEY(mgr, ap->exp_key, ap->iv,
-                                                ap->src, ap->dst, ap->len);
-                if (unexpected_err(mgr, ap->exp_err,
-                                   "IMB_SNOW3G_F8_8_BUFFER_MULTIKEY"))
+                IMB_SNOW3G_F8_8_BUFFER_MULTIKEY(mgr, ap->exp_key, ap->iv, ap->src, ap->dst,
+                                                ap->len);
+                if (unexpected_err(mgr, ap->exp_err, "IMB_SNOW3G_F8_8_BUFFER_MULTIKEY"))
                         return 1;
         }
         return 0;
@@ -3790,8 +3580,7 @@ test_IMB_SNOW3G_F8_N_BUFFER_MULTIKEY(struct IMB_MGR *mgr)
         void *dst[MAX_BUFFS];
         void *dst_NULL_pts[MAX_BUFFS];
         uint8_t dst_s[MAX_BUFFS][BUFF_SIZE];
-        const uint32_t len[MAX_BUFFS] = { 1, 1, 1, 1, 1, 1, 1, 1, 1,
-                                          1, 1, 1, 1, 1, 1, 1, 1 };
+        const uint32_t len[MAX_BUFFS] = { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };
         const uint32_t count = MAX_BUFFS;
         int seg_err; /* segfault flag */
 
@@ -3820,30 +3609,23 @@ test_IMB_SNOW3G_F8_N_BUFFER_MULTIKEY(struct IMB_MGR *mgr)
                 const uint32_t *len;
                 const uint32_t count;
                 const IMB_ERR exp_err;
-        } fn_args[] = {
-                { exp_key_NULL_pts, iv, src, dst, len, count,
-                  IMB_ERR_NULL_EXP_KEY },
-                { NULL, iv, src, dst, len, count, IMB_ERR_NULL_EXP_KEY },
-                { exp_key, iv_NULL_pts, src, dst, len, count, IMB_ERR_NULL_IV },
-                { exp_key, NULL, src, dst, len, count, IMB_ERR_NULL_IV },
-                { exp_key, iv, src_NULL_pts, dst, len, count,
-                  IMB_ERR_NULL_SRC },
-                { exp_key, iv, NULL, dst, len, count, IMB_ERR_NULL_SRC },
-                { exp_key, iv, src, dst_NULL_pts, len, count,
-                  IMB_ERR_NULL_DST },
-                { exp_key, iv, src, NULL, len, count, IMB_ERR_NULL_DST },
-                { exp_key, iv, src, dst, 0, count, IMB_ERR_CIPH_LEN }
-        };
+        } fn_args[] = { { exp_key_NULL_pts, iv, src, dst, len, count, IMB_ERR_NULL_EXP_KEY },
+                        { NULL, iv, src, dst, len, count, IMB_ERR_NULL_EXP_KEY },
+                        { exp_key, iv_NULL_pts, src, dst, len, count, IMB_ERR_NULL_IV },
+                        { exp_key, NULL, src, dst, len, count, IMB_ERR_NULL_IV },
+                        { exp_key, iv, src_NULL_pts, dst, len, count, IMB_ERR_NULL_SRC },
+                        { exp_key, iv, NULL, dst, len, count, IMB_ERR_NULL_SRC },
+                        { exp_key, iv, src, dst_NULL_pts, len, count, IMB_ERR_NULL_DST },
+                        { exp_key, iv, src, NULL, len, count, IMB_ERR_NULL_DST },
+                        { exp_key, iv, src, dst, 0, count, IMB_ERR_CIPH_LEN } };
 
         /* Iterate over args */
         for (i = 0; i < DIM(fn_args); i++) {
                 const struct fn_args *ap = &fn_args[i];
 
-                IMB_SNOW3G_F8_N_BUFFER_MULTIKEY(mgr, ap->exp_key, ap->iv,
-                                                ap->src, ap->dst, ap->len,
+                IMB_SNOW3G_F8_N_BUFFER_MULTIKEY(mgr, ap->exp_key, ap->iv, ap->src, ap->dst, ap->len,
                                                 ap->count);
-                if (unexpected_err(mgr, ap->exp_err,
-                                   "IMB_SNOW3G_F8_N_BUFFER_MULTIKEY"))
+                if (unexpected_err(mgr, ap->exp_err, "IMB_SNOW3G_F8_N_BUFFER_MULTIKEY"))
                         return 1;
         }
         return 0;
@@ -3886,8 +3668,7 @@ test_IMB_SNOW3G_F9_1_BUFFER(struct IMB_MGR *mgr)
         for (i = 0; i < DIM(fn_args); i++) {
                 const struct fn_args *ap = &fn_args[i];
 
-                IMB_SNOW3G_F9_1_BUFFER(mgr, ap->exp_key, ap->iv, ap->src,
-                                       ap->len, ap->tag);
+                IMB_SNOW3G_F9_1_BUFFER(mgr, ap->exp_key, ap->iv, ap->src, ap->len, ap->tag);
                 if (unexpected_err(mgr, ap->exp_err, "IMB_SNOW3G_F9_1_BUFFER"))
                         return 1;
         }
@@ -3916,16 +3697,14 @@ test_IMB_SNOW3G_INIT_KEY_SCHED(struct IMB_MGR *mgr)
                 const void *key;
                 snow3g_key_schedule_t *exp_key;
                 const IMB_ERR exp_err;
-        } fn_args[] = { { NULL, exp_key, IMB_ERR_NULL_KEY },
-                        { key, NULL, IMB_ERR_NULL_EXP_KEY } };
+        } fn_args[] = { { NULL, exp_key, IMB_ERR_NULL_KEY }, { key, NULL, IMB_ERR_NULL_EXP_KEY } };
 
         /* Iterate over args */
         for (i = 0; i < DIM(fn_args); i++) {
                 const struct fn_args *ap = &fn_args[i];
 
                 IMB_SNOW3G_INIT_KEY_SCHED(mgr, ap->key, ap->exp_key);
-                if (unexpected_err(mgr, ap->exp_err,
-                                   "IMB_SNOW3G_INIT_KEY_SCHED"))
+                if (unexpected_err(mgr, ap->exp_err, "IMB_SNOW3G_INIT_KEY_SCHED"))
                         return 1;
         }
         return 0;
@@ -3968,8 +3747,7 @@ test_IMB_GHASH(struct IMB_MGR *mgr)
         for (i = 0; i < DIM(fn_args); i++) {
                 const struct fn_args *ap = &fn_args[i];
 
-                IMB_GHASH(mgr, ap->exp_key, ap->src, ap->len, ap->tag,
-                          ap->tagl);
+                IMB_GHASH(mgr, ap->exp_key, ap->src, ap->len, ap->tag, ap->tagl);
                 if (unexpected_err(mgr, ap->exp_err, "IMB_GHASH"))
                         return 1;
         }
@@ -3991,10 +3769,10 @@ test_IMB_ZUC_EIA3_N_BUFFER(struct IMB_MGR *mgr)
         const void *src[MAX_BUFFS];
         const void *src_NULL_pts[MAX_BUFFS];
         const uint8_t src_s[MAX_BUFFS][BUFF_SIZE];
-        const uint32_t len_all_zero[MAX_BUFFS] = { 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                                                   0, 0, 0, 0, 0, 0, 0, 0 };
-        const uint32_t len[MAX_BUFFS] = { 1, 1, 1, 1, 1, 1, 1, 1, 1,
-                                          1, 1, 1, 1, 1, 1, 1, 1 };
+        const uint32_t len_all_zero[MAX_BUFFS] = {
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        };
+        const uint32_t len[MAX_BUFFS] = { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };
         uint32_t *tag[MAX_BUFFS];
         uint32_t *tag_NULL_pts[MAX_BUFFS];
         uint32_t tag_s[MAX_BUFFS][BUFF_SIZE];
@@ -4026,24 +3804,21 @@ test_IMB_ZUC_EIA3_N_BUFFER(struct IMB_MGR *mgr)
                 uint32_t **tag;
                 const uint32_t count;
                 const IMB_ERR exp_err;
-        } fn_args[] = {
-                { key_NULL_pts, iv, src, len, tag, count, IMB_ERR_NULL_KEY },
-                { NULL, iv, src, len, tag, count, IMB_ERR_NULL_KEY },
-                { key, iv_NULL_pts, src, len, tag, count, IMB_ERR_NULL_IV },
-                { key, NULL, src, len, tag, count, IMB_ERR_NULL_IV },
-                { key, iv, src_NULL_pts, len, tag, count, IMB_ERR_NULL_SRC },
-                { key, iv, NULL, len, tag, count, IMB_ERR_NULL_SRC },
-                { key, iv, src, len_all_zero, tag, count, IMB_ERR_AUTH_LEN },
-                { key, iv, src, len, tag_NULL_pts, count, IMB_ERR_NULL_AUTH },
-                { key, iv, src, len, NULL, count, IMB_ERR_NULL_AUTH }
-        };
+        } fn_args[] = { { key_NULL_pts, iv, src, len, tag, count, IMB_ERR_NULL_KEY },
+                        { NULL, iv, src, len, tag, count, IMB_ERR_NULL_KEY },
+                        { key, iv_NULL_pts, src, len, tag, count, IMB_ERR_NULL_IV },
+                        { key, NULL, src, len, tag, count, IMB_ERR_NULL_IV },
+                        { key, iv, src_NULL_pts, len, tag, count, IMB_ERR_NULL_SRC },
+                        { key, iv, NULL, len, tag, count, IMB_ERR_NULL_SRC },
+                        { key, iv, src, len_all_zero, tag, count, IMB_ERR_AUTH_LEN },
+                        { key, iv, src, len, tag_NULL_pts, count, IMB_ERR_NULL_AUTH },
+                        { key, iv, src, len, NULL, count, IMB_ERR_NULL_AUTH } };
 
         /* Iterate over args */
         for (i = 0; i < DIM(fn_args); i++) {
                 const struct fn_args *ap = &fn_args[i];
 
-                IMB_ZUC_EIA3_N_BUFFER(mgr, ap->key, ap->iv, ap->src, ap->len,
-                                      ap->tag, ap->count);
+                IMB_ZUC_EIA3_N_BUFFER(mgr, ap->key, ap->iv, ap->src, ap->len, ap->tag, ap->count);
                 if (unexpected_err(mgr, ap->exp_err, "IMB_ZUC_EIA3_N_BUFFER"))
                         return 1;
         }
@@ -4085,17 +3860,15 @@ test_IMB_AES128_GCM_INIT_VAR_IV(struct IMB_MGR *mgr)
                         { exp_key, NULL, iv, ivl, aad, aadl, IMB_ERR_NULL_CTX },
                         { exp_key, ctx, NULL, ivl, aad, aadl, IMB_ERR_NULL_IV },
                         { exp_key, ctx, iv, 0, aad, aadl, IMB_ERR_IV_LEN },
-                        { exp_key, ctx, iv, ivl, NULL, aadl,
-                          IMB_ERR_NULL_AAD } };
+                        { exp_key, ctx, iv, ivl, NULL, aadl, IMB_ERR_NULL_AAD } };
 
         /* Iterate over args */
         for (i = 0; i < DIM(fn_args); i++) {
                 const struct fn_args *ap = &fn_args[i];
 
-                IMB_AES128_GCM_INIT_VAR_IV(mgr, ap->exp_key, ap->ctx, ap->iv,
-                                           ap->ivl, ap->aad, ap->aadl);
-                if (unexpected_err(mgr, ap->exp_err,
-                                   "IMB_AES128_GCM_INIT_VAR_IV"))
+                IMB_AES128_GCM_INIT_VAR_IV(mgr, ap->exp_key, ap->ctx, ap->iv, ap->ivl, ap->aad,
+                                           ap->aadl);
+                if (unexpected_err(mgr, ap->exp_err, "IMB_AES128_GCM_INIT_VAR_IV"))
                         return 1;
         }
         return 0;
@@ -4136,17 +3909,15 @@ test_IMB_AES192_GCM_INIT_VAR_IV(struct IMB_MGR *mgr)
                         { exp_key, NULL, iv, ivl, aad, aadl, IMB_ERR_NULL_CTX },
                         { exp_key, ctx, NULL, ivl, aad, aadl, IMB_ERR_NULL_IV },
                         { exp_key, ctx, iv, 0, aad, aadl, IMB_ERR_IV_LEN },
-                        { exp_key, ctx, iv, ivl, NULL, aadl,
-                          IMB_ERR_NULL_AAD } };
+                        { exp_key, ctx, iv, ivl, NULL, aadl, IMB_ERR_NULL_AAD } };
 
         /* Iterate over args */
         for (i = 0; i < DIM(fn_args); i++) {
                 const struct fn_args *ap = &fn_args[i];
 
-                IMB_AES192_GCM_INIT_VAR_IV(mgr, ap->exp_key, ap->ctx, ap->iv,
-                                           ap->ivl, ap->aad, ap->aadl);
-                if (unexpected_err(mgr, ap->exp_err,
-                                   "IMB_AES192_GCM_INIT_VAR_IV"))
+                IMB_AES192_GCM_INIT_VAR_IV(mgr, ap->exp_key, ap->ctx, ap->iv, ap->ivl, ap->aad,
+                                           ap->aadl);
+                if (unexpected_err(mgr, ap->exp_err, "IMB_AES192_GCM_INIT_VAR_IV"))
                         return 1;
         }
         return 0;
@@ -4187,17 +3958,15 @@ test_IMB_AES256_GCM_INIT_VAR_IV(struct IMB_MGR *mgr)
                         { exp_key, NULL, iv, ivl, aad, aadl, IMB_ERR_NULL_CTX },
                         { exp_key, ctx, NULL, ivl, aad, aadl, IMB_ERR_NULL_IV },
                         { exp_key, ctx, iv, 0, aad, aadl, IMB_ERR_IV_LEN },
-                        { exp_key, ctx, iv, ivl, NULL, aadl,
-                          IMB_ERR_NULL_AAD } };
+                        { exp_key, ctx, iv, ivl, NULL, aadl, IMB_ERR_NULL_AAD } };
 
         /* Iterate over args */
         for (i = 0; i < DIM(fn_args); i++) {
                 const struct fn_args *ap = &fn_args[i];
 
-                IMB_AES256_GCM_INIT_VAR_IV(mgr, ap->exp_key, ap->ctx, ap->iv,
-                                           ap->ivl, ap->aad, ap->aadl);
-                if (unexpected_err(mgr, ap->exp_err,
-                                   "IMB_AES256_GCM_INIT_VAR_IV"))
+                IMB_AES256_GCM_INIT_VAR_IV(mgr, ap->exp_key, ap->ctx, ap->iv, ap->ivl, ap->aad,
+                                           ap->aadl);
+                if (unexpected_err(mgr, ap->exp_err, "IMB_AES256_GCM_INIT_VAR_IV"))
                         return 1;
         }
         return 0;
@@ -4238,8 +4007,7 @@ test_IMB_AES128_GMAC_INIT(struct IMB_MGR *mgr)
         for (i = 0; i < DIM(fn_args); i++) {
                 const struct fn_args *ap = &fn_args[i];
 
-                IMB_AES128_GMAC_INIT(mgr, ap->exp_key, ap->ctx, ap->iv,
-                                     ap->ivl);
+                IMB_AES128_GMAC_INIT(mgr, ap->exp_key, ap->ctx, ap->iv, ap->ivl);
                 if (unexpected_err(mgr, ap->exp_err, "IMB_AES128_GMAC_INIT"))
                         return 1;
         }
@@ -4281,8 +4049,7 @@ test_IMB_AES192_GMAC_INIT(struct IMB_MGR *mgr)
         for (i = 0; i < DIM(fn_args); i++) {
                 const struct fn_args *ap = &fn_args[i];
 
-                IMB_AES192_GMAC_INIT(mgr, ap->exp_key, ap->ctx, ap->iv,
-                                     ap->ivl);
+                IMB_AES192_GMAC_INIT(mgr, ap->exp_key, ap->ctx, ap->iv, ap->ivl);
                 if (unexpected_err(mgr, ap->exp_err, "IMB_AES192_GMAC_INIT"))
                         return 1;
         }
@@ -4324,8 +4091,7 @@ test_IMB_AES256_GMAC_INIT(struct IMB_MGR *mgr)
         for (i = 0; i < DIM(fn_args); i++) {
                 const struct fn_args *ap = &fn_args[i];
 
-                IMB_AES256_GMAC_INIT(mgr, ap->exp_key, ap->ctx, ap->iv,
-                                     ap->ivl);
+                IMB_AES256_GMAC_INIT(mgr, ap->exp_key, ap->ctx, ap->iv, ap->ivl);
                 if (unexpected_err(mgr, ap->exp_err, "IMB_AES256_GMAC_INIT"))
                         return 1;
         }
@@ -4366,8 +4132,7 @@ test_IMB_AES128_GMAC_UPDATE(struct IMB_MGR *mgr)
         for (i = 0; i < DIM(fn_args); i++) {
                 const struct fn_args *ap = &fn_args[i];
 
-                IMB_AES128_GMAC_UPDATE(mgr, ap->exp_key, ap->ctx, ap->src,
-                                       ap->len);
+                IMB_AES128_GMAC_UPDATE(mgr, ap->exp_key, ap->ctx, ap->src, ap->len);
                 if (unexpected_err(mgr, ap->exp_err, "IMB_AES128_GMAC_UPDATE"))
                         return 1;
         }
@@ -4408,8 +4173,7 @@ test_IMB_AES192_GMAC_UPDATE(struct IMB_MGR *mgr)
         for (i = 0; i < DIM(fn_args); i++) {
                 const struct fn_args *ap = &fn_args[i];
 
-                IMB_AES192_GMAC_UPDATE(mgr, ap->exp_key, ap->ctx, ap->src,
-                                       ap->len);
+                IMB_AES192_GMAC_UPDATE(mgr, ap->exp_key, ap->ctx, ap->src, ap->len);
                 if (unexpected_err(mgr, ap->exp_err, "IMB_AES192_GMAC_UPDATE"))
                         return 1;
         }
@@ -4450,8 +4214,7 @@ test_IMB_AES256_GMAC_UPDATE(struct IMB_MGR *mgr)
         for (i = 0; i < DIM(fn_args); i++) {
                 const struct fn_args *ap = &fn_args[i];
 
-                IMB_AES256_GMAC_UPDATE(mgr, ap->exp_key, ap->ctx, ap->src,
-                                       ap->len);
+                IMB_AES256_GMAC_UPDATE(mgr, ap->exp_key, ap->ctx, ap->src, ap->len);
                 if (unexpected_err(mgr, ap->exp_err, "IMB_AES256_GMAC_UPDATE"))
                         return 1;
         }
@@ -4494,10 +4257,8 @@ test_IMB_AES128_GMAC_FINALIZE(struct IMB_MGR *mgr)
         for (i = 0; i < DIM(fn_args); i++) {
                 const struct fn_args *ap = &fn_args[i];
 
-                IMB_AES128_GMAC_FINALIZE(mgr, ap->exp_key, ap->ctx, ap->tag,
-                                         ap->tagl);
-                if (unexpected_err(mgr, ap->exp_err,
-                                   "IMB_AES128_GMAC_FINALIZE"))
+                IMB_AES128_GMAC_FINALIZE(mgr, ap->exp_key, ap->ctx, ap->tag, ap->tagl);
+                if (unexpected_err(mgr, ap->exp_err, "IMB_AES128_GMAC_FINALIZE"))
                         return 1;
         }
         return 0;
@@ -4539,10 +4300,8 @@ test_IMB_AES192_GMAC_FINALIZE(struct IMB_MGR *mgr)
         for (i = 0; i < DIM(fn_args); i++) {
                 const struct fn_args *ap = &fn_args[i];
 
-                IMB_AES192_GMAC_FINALIZE(mgr, ap->exp_key, ap->ctx, ap->tag,
-                                         ap->tagl);
-                if (unexpected_err(mgr, ap->exp_err,
-                                   "IMB_AES192_GMAC_FINALIZE"))
+                IMB_AES192_GMAC_FINALIZE(mgr, ap->exp_key, ap->ctx, ap->tag, ap->tagl);
+                if (unexpected_err(mgr, ap->exp_err, "IMB_AES192_GMAC_FINALIZE"))
                         return 1;
         }
         return 0;
@@ -4584,10 +4343,8 @@ test_IMB_AES256_GMAC_FINALIZE(struct IMB_MGR *mgr)
         for (i = 0; i < DIM(fn_args); i++) {
                 const struct fn_args *ap = &fn_args[i];
 
-                IMB_AES256_GMAC_FINALIZE(mgr, ap->exp_key, ap->ctx, ap->tag,
-                                         ap->tagl);
-                if (unexpected_err(mgr, ap->exp_err,
-                                   "IMB_AES256_GMAC_FINALIZE"))
+                IMB_AES256_GMAC_FINALIZE(mgr, ap->exp_key, ap->ctx, ap->tag, ap->tagl);
+                if (unexpected_err(mgr, ap->exp_err, "IMB_AES256_GMAC_FINALIZE"))
                         return 1;
         }
         return 0;
@@ -4624,10 +4381,8 @@ test_IMB_AES_CMAC_SUBKEY_GEN_256(struct IMB_MGR *mgr)
         for (i = 0; i < DIM(fn_args); i++) {
                 const struct fn_args *ap = &fn_args[i];
 
-                IMB_AES_CMAC_SUBKEY_GEN_256(mgr, ap->exp_key, ap->key1,
-                                            ap->key2);
-                if (unexpected_err(mgr, ap->exp_err,
-                                   "IMB_AES_CMAC_SUBKEY_GEN_256"))
+                IMB_AES_CMAC_SUBKEY_GEN_256(mgr, ap->exp_key, ap->key1, ap->key2);
+                if (unexpected_err(mgr, ap->exp_err, "IMB_AES_CMAC_SUBKEY_GEN_256"))
                         return 1;
         }
         return 0;
@@ -4654,8 +4409,7 @@ test_IMB_GHASH_PRE(struct IMB_MGR *mgr)
                 const void *key;
                 struct gcm_key_data *exp_key;
                 const IMB_ERR exp_err;
-        } fn_args[] = { { NULL, exp_key, IMB_ERR_NULL_KEY },
-                        { key, NULL, IMB_ERR_NULL_EXP_KEY } };
+        } fn_args[] = { { NULL, exp_key, IMB_ERR_NULL_KEY }, { key, NULL, IMB_ERR_NULL_EXP_KEY } };
 
         /* Iterate over args */
         for (i = 0; i < DIM(fn_args); i++) {
@@ -5015,8 +4769,7 @@ test_IMB_CRC32_WIMAX_OFDMA_DATA(struct IMB_MGR *mgr)
                 const struct fn_args *ap = &fn_args[i];
 
                 IMB_CRC32_WIMAX_OFDMA_DATA(mgr, ap->src, ap->len);
-                if (unexpected_err(mgr, ap->exp_err,
-                                   "IMB_CRC32_WIMAX_OFDMA_DATA"))
+                if (unexpected_err(mgr, ap->exp_err, "IMB_CRC32_WIMAX_OFDMA_DATA"))
                         return 1;
         }
         return 0;
@@ -5049,8 +4802,7 @@ test_IMB_CRC8_WIMAX_OFDMA_HCS(struct IMB_MGR *mgr)
                 const struct fn_args *ap = &fn_args[i];
 
                 IMB_CRC8_WIMAX_OFDMA_HCS(mgr, ap->src, ap->len);
-                if (unexpected_err(mgr, ap->exp_err,
-                                   "IMB_CRC8_WIMAX_OFDMA_HCS"))
+                if (unexpected_err(mgr, ap->exp_err, "IMB_CRC8_WIMAX_OFDMA_HCS"))
                         return 1;
         }
         return 0;
@@ -5093,10 +4845,8 @@ test_IMB_CHACHA20_POLY1305_INIT(struct IMB_MGR *mgr)
         for (i = 0; i < DIM(fn_args); i++) {
                 const struct fn_args *ap = &fn_args[i];
 
-                IMB_CHACHA20_POLY1305_INIT(mgr, ap->key, ap->ctx, ap->iv,
-                                           ap->aad, ap->aadl);
-                if (unexpected_err(mgr, ap->exp_err,
-                                   "IMB_CHACHA20_POLY1305_INIT"))
+                IMB_CHACHA20_POLY1305_INIT(mgr, ap->key, ap->ctx, ap->iv, ap->aad, ap->aadl);
+                if (unexpected_err(mgr, ap->exp_err, "IMB_CHACHA20_POLY1305_INIT"))
                         return 1;
         }
         return 0;
@@ -5139,10 +4889,8 @@ test_IMB_CHACHA20_POLY1305_ENC_UPDATE(struct IMB_MGR *mgr)
         for (i = 0; i < DIM(fn_args); i++) {
                 const struct fn_args *ap = &fn_args[i];
 
-                IMB_CHACHA20_POLY1305_ENC_UPDATE(mgr, ap->key, ap->ctx, ap->dst,
-                                                 ap->src, ap->len);
-                if (unexpected_err(mgr, ap->exp_err,
-                                   "IMB_CHACHA20_POLY1305_ENC_UPDATE"))
+                IMB_CHACHA20_POLY1305_ENC_UPDATE(mgr, ap->key, ap->ctx, ap->dst, ap->src, ap->len);
+                if (unexpected_err(mgr, ap->exp_err, "IMB_CHACHA20_POLY1305_ENC_UPDATE"))
                         return 1;
         }
         return 0;
@@ -5185,10 +4933,8 @@ test_IMB_CHACHA20_POLY1305_DEC_UPDATE(struct IMB_MGR *mgr)
         for (i = 0; i < DIM(fn_args); i++) {
                 const struct fn_args *ap = &fn_args[i];
 
-                IMB_CHACHA20_POLY1305_DEC_UPDATE(mgr, ap->key, ap->ctx, ap->dst,
-                                                 ap->src, ap->len);
-                if (unexpected_err(mgr, ap->exp_err,
-                                   "IMB_CHACHA20_POLY1305_DEC_UPDATE"))
+                IMB_CHACHA20_POLY1305_DEC_UPDATE(mgr, ap->key, ap->ctx, ap->dst, ap->src, ap->len);
+                if (unexpected_err(mgr, ap->exp_err, "IMB_CHACHA20_POLY1305_DEC_UPDATE"))
                         return 1;
         }
         return 0;
@@ -5226,10 +4972,8 @@ test_IMB_CHACHA20_POLY1305_DEC_FINALIZE(struct IMB_MGR *mgr)
         for (i = 0; i < DIM(fn_args); i++) {
                 const struct fn_args *ap = &fn_args[i];
 
-                IMB_CHACHA20_POLY1305_DEC_FINALIZE(mgr, ap->ctx, ap->tag,
-                                                   ap->tagl);
-                if (unexpected_err(mgr, ap->exp_err,
-                                   "IMB_CHACHA20_POLY1305_DEC_FINALIZE"))
+                IMB_CHACHA20_POLY1305_DEC_FINALIZE(mgr, ap->ctx, ap->tag, ap->tagl);
+                if (unexpected_err(mgr, ap->exp_err, "IMB_CHACHA20_POLY1305_DEC_FINALIZE"))
                         return 1;
         }
         return 0;

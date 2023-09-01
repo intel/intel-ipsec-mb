@@ -32,7 +32,7 @@
 #include <stddef.h>
 
 struct aead_test {
-        size_t ivSize; /* bits */
+        size_t ivSize;  /* bits */
         size_t keySize; /* bits */
         size_t tagSize; /* bits */
         size_t tcId;

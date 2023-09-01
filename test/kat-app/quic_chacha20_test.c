@@ -35,40 +35,31 @@
 
 #include "utils.h"
 
-int quic_chacha20_test(struct IMB_MGR *mb_mgr);
+int
+quic_chacha20_test(struct IMB_MGR *mb_mgr);
 
 struct quic_chacha20_vector {
-	const uint8_t *K;          /* key */
-	const uint8_t *P;          /* plain text (16 bytes) */
-        const uint8_t *C;          /* cipher text - same length as plain text */
+        const uint8_t *K; /* key */
+        const uint8_t *P; /* plain text (16 bytes) */
+        const uint8_t *C; /* cipher text - same length as plain text */
 };
 
 /* From section A.5 of https://www.rfc-editor.org/rfc/rfc9001.pdf */
-static const uint8_t chacha20_256_K1[] = {
-        0x25, 0xa2, 0x82, 0xb9, 0xe8, 0x2f, 0x06, 0xf2,
-        0x1f, 0x48, 0x89, 0x17, 0xa4, 0xfc, 0x8f, 0x1b,
-        0x73, 0x57, 0x36, 0x85, 0x60, 0x85, 0x97, 0xd0,
-        0xef, 0xcb, 0x07, 0x6b, 0x0a, 0xb7, 0xa7, 0xa4
-};
-static const uint8_t chacha20_256_P1[] = {
-        0x5e, 0x5c, 0xd5, 0x5c, 0x41, 0xf6, 0x90, 0x80,
-        0x57, 0x5d, 0x79, 0x99, 0xc2, 0x5a, 0x5b, 0xfb
-};
-static const uint8_t chacha20_256_C1[] = {
-        0xae, 0xfe, 0xfe, 0x7d, 0x03
-};
+static const uint8_t chacha20_256_K1[] = { 0x25, 0xa2, 0x82, 0xb9, 0xe8, 0x2f, 0x06, 0xf2,
+                                           0x1f, 0x48, 0x89, 0x17, 0xa4, 0xfc, 0x8f, 0x1b,
+                                           0x73, 0x57, 0x36, 0x85, 0x60, 0x85, 0x97, 0xd0,
+                                           0xef, 0xcb, 0x07, 0x6b, 0x0a, 0xb7, 0xa7, 0xa4 };
+static const uint8_t chacha20_256_P1[] = { 0x5e, 0x5c, 0xd5, 0x5c, 0x41, 0xf6, 0x90, 0x80,
+                                           0x57, 0x5d, 0x79, 0x99, 0xc2, 0x5a, 0x5b, 0xfb };
+static const uint8_t chacha20_256_C1[] = { 0xae, 0xfe, 0xfe, 0x7d, 0x03 };
 
 static const struct quic_chacha20_vector quic_chacha20_vectors[] = {
-        {chacha20_256_K1,  chacha20_256_P1, chacha20_256_C1},
+        { chacha20_256_K1, chacha20_256_P1, chacha20_256_C1 },
 };
 
 static int
-test_quic_chacha20_many(struct IMB_MGR *mb_mgr,
-                   const void *key,
-                   const uint8_t *in_text,
-                   const uint8_t *out_text,
-                   const int in_place,
-                   const int num_jobs)
+test_quic_chacha20_many(struct IMB_MGR *mb_mgr, const void *key, const uint8_t *in_text,
+                        const uint8_t *out_text, const int in_place, const int num_jobs)
 {
         const unsigned text_len = 16;
         const unsigned out_len = 5;
@@ -85,22 +76,17 @@ test_quic_chacha20_many(struct IMB_MGR *mb_mgr,
         }
 
         if (in_place) {
-                imb_quic_hp_chacha20(mb_mgr, key,
-                                    (void **) src_bufs,
-                                    (const void * const*) src_bufs,
-                                    num_jobs);
+                imb_quic_hp_chacha20(mb_mgr, key, (void **) src_bufs,
+                                     (const void *const *) src_bufs, num_jobs);
         } else {
-                imb_quic_hp_chacha20(mb_mgr, key,
-                                    (void **) dst_bufs,
-                                    (const void * const*) src_bufs,
-                                    num_jobs);
+                imb_quic_hp_chacha20(mb_mgr, key, (void **) dst_bufs,
+                                     (const void *const *) src_bufs, num_jobs);
         }
 
         const int err = imb_get_errno(mb_mgr);
 
         if (err != 0) {
-                printf("QUIC CHACHA20 error status:%d, %s\n", err,
-                       imb_get_strerror(err));
+                printf("QUIC CHACHA20 error status:%d, %s\n", err, imb_get_strerror(err));
                 goto end;
         }
 
@@ -109,17 +95,15 @@ test_quic_chacha20_many(struct IMB_MGR *mb_mgr,
 
                 if (memcmp(d, out_text, out_len) != 0) {
                         printf("QUIC CHACHA20 %d vector mismatched\n", i);
-                        hexdump(stderr, "Expected",
-                                out_text, out_len);
-                        hexdump(stderr, "Received",
-                                d, out_len);
+                        hexdump(stderr, "Expected", out_text, out_len);
+                        hexdump(stderr, "Received", d, out_len);
                         goto end;
                 }
         }
 
         ret = 0;
 
- end:
+end:
         for (i = 0; i < num_jobs; i++) {
                 free(src_bufs[i]);
                 free(dst_bufs[i]);
@@ -131,42 +115,38 @@ test_quic_chacha20_many(struct IMB_MGR *mb_mgr,
 
 static void
 test_quic_chacha20_vectors(struct IMB_MGR *mb_mgr, const int vec_cnt,
-                      const struct quic_chacha20_vector *vec_tab, const char *banner,
-                      const int num_jobs,
-                      struct test_suite_context *ts256)
+                           const struct quic_chacha20_vector *vec_tab, const char *banner,
+                           const int num_jobs, struct test_suite_context *ts256)
 {
-	int vect;
+        int vect;
 
         if (!quiet_mode)
-	        printf("%s (N jobs = %d):\n", banner, num_jobs);
-	for (vect = 0; vect < vec_cnt; vect++) {
+                printf("%s (N jobs = %d):\n", banner, num_jobs);
+        for (vect = 0; vect < vec_cnt; vect++) {
                 if (!quiet_mode) {
 #ifdef DEBUG
-                        printf("[%d/%d] Standard vector\n",
-                               vect + 1, vec_cnt);
+                        printf("[%d/%d] Standard vector\n", vect + 1, vec_cnt);
 #else
                         printf(".");
 #endif
                 }
 
-                if (test_quic_chacha20_many(mb_mgr, vec_tab[vect].K,
-                                       vec_tab[vect].P, vec_tab[vect].C, 0,
-                                       num_jobs)) {
+                if (test_quic_chacha20_many(mb_mgr, vec_tab[vect].K, vec_tab[vect].P,
+                                            vec_tab[vect].C, 0, num_jobs)) {
                         printf("error #%d encrypt\n", vect + 1);
                         test_suite_update(ts256, 0, 1);
                 } else {
                         test_suite_update(ts256, 1, 0);
                 }
 
-                if (test_quic_chacha20_many(mb_mgr, vec_tab[vect].K,
-                                       vec_tab[vect].P, vec_tab[vect].C, 1,
-                                       num_jobs)) {
+                if (test_quic_chacha20_many(mb_mgr, vec_tab[vect].K, vec_tab[vect].P,
+                                            vec_tab[vect].C, 1, num_jobs)) {
                         printf("error #%d encrypt in-place\n", vect + 1);
                         test_suite_update(ts256, 0, 1);
                 } else {
                         test_suite_update(ts256, 1, 0);
                 }
-	}
+        }
 
         if (!quiet_mode)
                 printf("\n");
@@ -183,12 +163,10 @@ quic_chacha20_test(struct IMB_MGR *mb_mgr)
 
         for (i = 1; i <= 32; i++)
                 test_quic_chacha20_vectors(mb_mgr, DIM(quic_chacha20_vectors),
-                                           quic_chacha20_vectors,
-                                           "QUIC-HP-CHACHA20 test vectors",
-                                           i,
-                                           &ts256);
+                                           quic_chacha20_vectors, "QUIC-HP-CHACHA20 test vectors",
+                                           i, &ts256);
 
         errors = test_suite_end(&ts256);
 
-	return errors;
+        return errors;
 }

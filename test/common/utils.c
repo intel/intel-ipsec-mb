@@ -48,7 +48,8 @@ int quiet_mode = 0;
  * @param src source buffer pointer
  * @param length length of the buffer to copy in bytes
  */
-void memory_copy(void *dst, const void *src, size_t length)
+void
+memory_copy(void *dst, const void *src, size_t length)
 {
         uint8_t *d = (uint8_t *) dst;
         const uint8_t *s = (const uint8_t *) src;
@@ -64,7 +65,8 @@ void memory_copy(void *dst, const void *src, size_t length)
  * @param val value to set each byte in destination buffer
  * @param length length of the buffer to copy in bytes
  */
-void memory_set(void *dst, const int val, size_t length)
+void
+memory_set(void *dst, const int val, size_t length)
 {
         uint8_t *d = (uint8_t *) dst;
 
@@ -88,11 +90,7 @@ void memory_set(void *dst, const int val, size_t length)
  *          - NULL pointer then first column witll display indexes
  */
 void
-hexdump_ex(FILE *fp,
-           const char *msg,
-           const void *p,
-           size_t len,
-           const void *start_ptr)
+hexdump_ex(FILE *fp, const char *msg, const void *p, size_t len, const void *start_ptr)
 {
         static uint8_t hex_buffer[16 * 1024];
         size_t ofs = 0;
@@ -146,10 +144,7 @@ hexdump_ex(FILE *fp,
  * @param len size of the data block to dump in bytes
  */
 void
-hexdump(FILE *fp,
-        const char *msg,
-        const void *p,
-        size_t len)
+hexdump(FILE *fp, const char *msg, const void *p, size_t len)
 {
         hexdump_ex(fp, msg, p, len, NULL);
 }
@@ -168,9 +163,7 @@ hexdump(FILE *fp,
  * @retval -1 argument error
  */
 int
-update_flags_and_archs(const char *arg,
-                       uint8_t arch_support[IMB_ARCH_NUM],
-                       uint64_t *flags)
+update_flags_and_archs(const char *arg, uint8_t arch_support[IMB_ARCH_NUM], uint64_t *flags)
 {
         int match = 1;
 
@@ -216,10 +209,8 @@ update_flags_and_archs(const char *arg,
 int
 detect_arch(uint8_t arch_support[IMB_ARCH_NUM])
 {
-        const uint64_t detect_sse =
-                IMB_FEATURE_SSE4_2 | IMB_FEATURE_CMOV | IMB_FEATURE_AESNI;
-        const uint64_t detect_avx =
-                IMB_FEATURE_AVX | IMB_FEATURE_CMOV | IMB_FEATURE_AESNI;
+        const uint64_t detect_sse = IMB_FEATURE_SSE4_2 | IMB_FEATURE_CMOV | IMB_FEATURE_AESNI;
+        const uint64_t detect_avx = IMB_FEATURE_AVX | IMB_FEATURE_CMOV | IMB_FEATURE_AESNI;
         const uint64_t detect_avx2 = IMB_FEATURE_AVX2 | detect_avx;
         const uint64_t detect_avx512 = IMB_FEATURE_AVX512_SKX | detect_avx2;
         const uint64_t detect_noaesni = IMB_FEATURE_SSE4_2 | IMB_FEATURE_CMOV;
@@ -258,10 +249,8 @@ detect_arch(uint8_t arch_support[IMB_ARCH_NUM])
 
         free_mb_mgr(p_mgr);
 
-        if (arch_support[IMB_ARCH_NOAESNI] == 0 &&
-            arch_support[IMB_ARCH_SSE] == 0 &&
-            arch_support[IMB_ARCH_AVX] == 0 &&
-            arch_support[IMB_ARCH_AVX2] == 0 &&
+        if (arch_support[IMB_ARCH_NOAESNI] == 0 && arch_support[IMB_ARCH_SSE] == 0 &&
+            arch_support[IMB_ARCH_AVX] == 0 && arch_support[IMB_ARCH_AVX2] == 0 &&
             arch_support[IMB_ARCH_AVX512] == 0) {
                 fprintf(stderr, "No available architecture detected!\n");
                 return -1;
@@ -279,9 +268,8 @@ detect_arch(uint8_t arch_support[IMB_ARCH_NUM])
 void
 print_tested_arch(const uint64_t features, const IMB_ARCH arch)
 {
-        static const char *arch_str_tab[IMB_ARCH_NUM] = {
-                "NONE", "NO-AESNI", "SSE", "AVX", "AVX2", "AVX512"
-        };
+        static const char *arch_str_tab[IMB_ARCH_NUM] = { "NONE", "NO-AESNI", "SSE",
+                                                          "AVX",  "AVX2",     "AVX512" };
         const char *feat = "";
 
         switch (arch) {
@@ -296,8 +284,7 @@ print_tested_arch(const uint64_t features, const IMB_ARCH arch)
                 }
                 break;
         case IMB_ARCH_AVX512:
-                if ((features & IMB_FEATURE_VAES) &&
-                    (features & IMB_FEATURE_GFNI) &&
+                if ((features & IMB_FEATURE_VAES) && (features & IMB_FEATURE_GFNI) &&
                     (features & IMB_FEATURE_VPCLMULQDQ))
                         feat = "-VAES-GFNI-VCLMUL";
                 break;
@@ -306,11 +293,8 @@ print_tested_arch(const uint64_t features, const IMB_ARCH arch)
                 return;
         }
 
-        printf("[INFO] [ARCH] using %s interface [%s%s]\n",
-                arch_str_tab[arch],
-                arch_str_tab[arch],
-                feat);
-
+        printf("[INFO] [ARCH] using %s interface [%s%s]\n", arch_str_tab[arch], arch_str_tab[arch],
+               feat);
 }
 
 /* =================================================================== */
@@ -326,8 +310,7 @@ print_tested_arch(const uint64_t features, const IMB_ARCH arch)
  * @param alg_name name of the algorithm being tested
  */
 void
-test_suite_start(struct test_suite_context *ctx,
-                 const char *alg_name)
+test_suite_start(struct test_suite_context *ctx, const char *alg_name)
 {
         assert(ctx != NULL);
         assert(alg_name != NULL);
@@ -346,9 +329,7 @@ test_suite_start(struct test_suite_context *ctx,
  * @param failed number of tests that failed
  */
 void
-test_suite_update(struct test_suite_context *ctx,
-                  const unsigned passed,
-                  const unsigned failed)
+test_suite_update(struct test_suite_context *ctx, const unsigned passed, const unsigned failed)
 {
         assert(ctx != NULL);
 
@@ -367,7 +348,8 @@ test_suite_update(struct test_suite_context *ctx,
  * @retval 0 all tests passed
  * @retval >0 failed tests detected, returning number of fails
  */
-int test_suite_end(struct test_suite_context *ctx)
+int
+test_suite_end(struct test_suite_context *ctx)
 {
         const char *result = "PASS";
         int ret = 0;
@@ -398,11 +380,12 @@ generate_random_buf(uint8_t *buf, const uint32_t length)
 }
 
 /** Compare two buffers at bit-level */
-int membitcmp(const uint8_t *input, const uint8_t *output,
-              const uint32_t bitlength, const uint32_t bitoffset)
+int
+membitcmp(const uint8_t *input, const uint8_t *output, const uint32_t bitlength,
+          const uint32_t bitoffset)
 {
         uint32_t bitresoffset;
-        const uint8_t bitresMask = ~((uint8_t)-1 << (8 - (bitoffset % 8)));
+        const uint8_t bitresMask = ~((uint8_t) -1 << (8 - (bitoffset % 8)));
         uint32_t res = 0;
         uint32_t bytelengthfl = bitlength / 8;
         const uint8_t *buf1fl = input + bitoffset / 8;
@@ -425,7 +408,7 @@ int membitcmp(const uint8_t *input, const uint8_t *output,
                 index++;
         }
         if ((bitresoffset) && (0 == bytelengthfl)) {
-                res &= (uint8_t)-1 << (8 - bitresoffset);
+                res &= (uint8_t) -1 << (8 - bitresoffset);
                 if (res)
                         return index;
         }

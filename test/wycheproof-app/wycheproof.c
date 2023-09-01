@@ -41,7 +41,8 @@ static unsigned skip_vectors = 0;
 static unsigned total_run_vectors = 0;
 static unsigned total_skip_vectors = 0;
 
-static int process_job(IMB_MGR *p_mgr)
+static int
+process_job(IMB_MGR *p_mgr)
 {
         IMB_JOB *job = IMB_SUBMIT_JOB(p_mgr);
 
@@ -67,13 +68,14 @@ static int process_job(IMB_MGR *p_mgr)
         return 1;
 }
 
-#define PUTS_ONCE(_s) { \
-        static int _ran_already = 0;            \
-                                                \
-        if (!_ran_already) {                    \
-                _ran_already = 1;               \
-                printf("\t@note %s\n", _s);       \
-        }                                       \
+#define PUTS_ONCE(_s)                                                                              \
+        {                                                                                          \
+                static int _ran_already = 0;                                                       \
+                                                                                                   \
+                if (!_ran_already) {                                                               \
+                        _ran_already = 1;                                                          \
+                        printf("\t@note %s\n", _s);                                                \
+                }                                                                                  \
         }
 
 /*
@@ -81,7 +83,8 @@ static int process_job(IMB_MGR *p_mgr)
  * MAC TESTS
  * =============================================================================
  */
-static void print_mac_test(const struct mac_test *v)
+static void
+print_mac_test(const struct mac_test *v)
 {
         if (v->iv != NULL) {
                 printf("MAC vector details:\n"
@@ -91,9 +94,8 @@ static void print_mac_test(const struct mac_test *v)
                        "    msgSize = %u [bits]\n"
                        "    ivSize = %u [bits]\n"
                        "    resultValid = %d\n",
-                       (unsigned)v->tcId, (unsigned)v->keySize,
-                       (unsigned)v->tagSize, (unsigned)v->msgSize,
-                       (unsigned)v->ivSize, (int)v->resultValid);
+                       (unsigned) v->tcId, (unsigned) v->keySize, (unsigned) v->tagSize,
+                       (unsigned) v->msgSize, (unsigned) v->ivSize, (int) v->resultValid);
         } else {
                 printf("MAC vector details:\n"
                        "    tcId = %u\n"
@@ -101,18 +103,15 @@ static void print_mac_test(const struct mac_test *v)
                        "    tagSize = %u [bits]\n"
                        "    msgSize = %u [bits]\n"
                        "    resultValid = %d\n",
-                       (unsigned)v->tcId, (unsigned)v->keySize,
-                       (unsigned)v->tagSize, (unsigned)v->msgSize,
-                       (int)v->resultValid);
+                       (unsigned) v->tcId, (unsigned) v->keySize, (unsigned) v->tagSize,
+                       (unsigned) v->msgSize, (int) v->resultValid);
         }
 }
 
 static int err_code = 0;
 
 static int
-mac_submit_and_check(IMB_MGR *p_mgr,
-                     const struct mac_test *v,
-                     const void *res_tag,
+mac_submit_and_check(IMB_MGR *p_mgr, const struct mac_test *v, const void *res_tag,
                      const int job_api)
 {
         if (job_api) {
@@ -121,8 +120,7 @@ mac_submit_and_check(IMB_MGR *p_mgr,
                         if (v->resultValid) {
                                 print_mac_test(v);
                                 printf("JOB-API submit/flush error!\n");
-                                printf("ERROR: %s\n",
-                                       imb_get_strerror(imb_get_errno(p_mgr)));
+                                printf("ERROR: %s\n", imb_get_strerror(imb_get_errno(p_mgr)));
                                 return 0;
                         } else {
                                 /* error was expected */
@@ -134,8 +132,7 @@ mac_submit_and_check(IMB_MGR *p_mgr,
                         if (v->resultValid) {
                                 print_mac_test(v);
                                 printf("DIRECT-API error!\n");
-                                printf("ERROR: %s\n",
-                                       imb_get_strerror(err_code));
+                                printf("ERROR: %s\n", imb_get_strerror(err_code));
                                 return 0;
                         } else {
                                 /* error was expected */
@@ -153,8 +150,7 @@ mac_submit_and_check(IMB_MGR *p_mgr,
 
         /* check for TAG mismatch */
         if (tag_mismatch) {
-                printf("%s: TAG mismatch!\n",
-                       job_api ? "JOB-API" : "DIRECT-API");
+                printf("%s: TAG mismatch!\n", job_api ? "JOB-API" : "DIRECT-API");
                 print_mac_test(v);
                 return 0;
         }
@@ -162,7 +158,8 @@ mac_submit_and_check(IMB_MGR *p_mgr,
         return 1;
 }
 
-static void errno_update(IMB_MGR *p_mgr)
+static void
+errno_update(IMB_MGR *p_mgr)
 {
         const int new_code = imb_get_errno(p_mgr);
 
@@ -170,25 +167,27 @@ static void errno_update(IMB_MGR *p_mgr)
                 err_code = new_code;
 }
 
-static void errno_reset(void)
+static void
+errno_reset(void)
 {
         errno = 0;
 }
 
 extern const struct mac_test aes_cmac_test_json[];
 
-static int test_cmac(IMB_MGR *p_mgr)
+static int
+test_cmac(IMB_MGR *p_mgr)
 {
         const struct mac_test *v = aes_cmac_test_json;
-        DECLARE_ALIGNED(uint32_t expkey[4*15], 16);
-        DECLARE_ALIGNED(uint32_t dust[4*15], 16);
+        DECLARE_ALIGNED(uint32_t expkey[4 * 15], 16);
+        DECLARE_ALIGNED(uint32_t dust[4 * 15], 16);
         uint32_t skey1[4], skey2[4];
         uint8_t scratch[IMB_SHA_512_BLOCK_SIZE];
 
         while (IMB_FLUSH_JOB(p_mgr) != NULL)
                 ;
 
-        for ( ; v->msg != NULL; v++, run_vectors++) {
+        for (; v->msg != NULL; v++, run_vectors++) {
                 IMB_ASSERT((v->tagSize / 8) <= sizeof(scratch));
 
                 /* tag too long */
@@ -220,16 +219,14 @@ static int test_cmac(IMB_MGR *p_mgr)
                 if ((v->keySize / 8) == IMB_KEY_128_BYTES) {
                         job->hash_alg = IMB_AUTH_AES_CMAC;
                         IMB_AES_KEYEXP_128(p_mgr, v->key, expkey, dust);
-                        IMB_AES_CMAC_SUBKEY_GEN_128(p_mgr, expkey, skey1,
-                                                    skey2);
+                        IMB_AES_CMAC_SUBKEY_GEN_128(p_mgr, expkey, skey1, skey2);
                         job->u.CMAC._key_expanded = expkey;
                         job->u.CMAC._skey1 = skey1;
                         job->u.CMAC._skey2 = skey2;
                 } else if ((v->keySize / 8) == IMB_KEY_256_BYTES) {
                         job->hash_alg = IMB_AUTH_AES_CMAC_256;
                         IMB_AES_KEYEXP_256(p_mgr, v->key, expkey, dust);
-                        IMB_AES_CMAC_SUBKEY_GEN_256(p_mgr, expkey, skey1,
-                                                    skey2);
+                        IMB_AES_CMAC_SUBKEY_GEN_256(p_mgr, expkey, skey1, skey2);
                         job->u.CMAC._key_expanded = expkey;
                         job->u.CMAC._skey1 = skey1;
                         job->u.CMAC._skey2 = skey2;
@@ -247,7 +244,8 @@ static int test_cmac(IMB_MGR *p_mgr)
 
 extern const struct mac_test gmac_test_json[];
 
-static int test_gmac(IMB_MGR *p_mgr)
+static int
+test_gmac(IMB_MGR *p_mgr)
 {
         const struct mac_test *v = gmac_test_json;
         struct gcm_key_data gmac_key;
@@ -256,7 +254,7 @@ static int test_gmac(IMB_MGR *p_mgr)
         while (IMB_FLUSH_JOB(p_mgr) != NULL)
                 ;
 
-        for ( ; v->msg != NULL; v++, run_vectors++) {
+        for (; v->msg != NULL; v++, run_vectors++) {
                 IMB_ASSERT((v->tagSize / 8) <= sizeof(scratch));
 
                 /* tag too long */
@@ -311,16 +309,13 @@ static int test_gmac(IMB_MGR *p_mgr)
 
                         IMB_AES128_GCM_PRE(p_mgr, v->key, &gmac_key);
                         errno_update(p_mgr);
-                        IMB_AES128_GMAC_INIT(p_mgr, &gmac_key, &ctx,
-                                             (const void *) v->iv,
+                        IMB_AES128_GMAC_INIT(p_mgr, &gmac_key, &ctx, (const void *) v->iv,
                                              v->ivSize / 8);
                         errno_update(p_mgr);
-                        IMB_AES128_GMAC_UPDATE(p_mgr, &gmac_key, &ctx,
-                                               (const void *) v->msg,
+                        IMB_AES128_GMAC_UPDATE(p_mgr, &gmac_key, &ctx, (const void *) v->msg,
                                                v->msgSize / 8);
                         errno_update(p_mgr);
-                        IMB_AES128_GMAC_FINALIZE(p_mgr, &gmac_key, &ctx,
-                                                 scratch, v->tagSize / 8);
+                        IMB_AES128_GMAC_FINALIZE(p_mgr, &gmac_key, &ctx, scratch, v->tagSize / 8);
                         errno_update(p_mgr);
                 }
                 if ((v->keySize / 8) == IMB_KEY_192_BYTES) {
@@ -328,16 +323,13 @@ static int test_gmac(IMB_MGR *p_mgr)
 
                         IMB_AES192_GCM_PRE(p_mgr, v->key, &gmac_key);
                         errno_update(p_mgr);
-                        IMB_AES192_GMAC_INIT(p_mgr, &gmac_key, &ctx,
-                                             (const void *) v->iv,
+                        IMB_AES192_GMAC_INIT(p_mgr, &gmac_key, &ctx, (const void *) v->iv,
                                              v->ivSize / 8);
                         errno_update(p_mgr);
-                        IMB_AES192_GMAC_UPDATE(p_mgr, &gmac_key, &ctx,
-                                               (const void *) v->msg,
+                        IMB_AES192_GMAC_UPDATE(p_mgr, &gmac_key, &ctx, (const void *) v->msg,
                                                v->msgSize / 8);
                         errno_update(p_mgr);
-                        IMB_AES192_GMAC_FINALIZE(p_mgr, &gmac_key, &ctx,
-                                                 scratch, v->tagSize / 8);
+                        IMB_AES192_GMAC_FINALIZE(p_mgr, &gmac_key, &ctx, scratch, v->tagSize / 8);
                         errno_update(p_mgr);
                 }
                 if ((v->keySize / 8) == IMB_KEY_256_BYTES) {
@@ -345,16 +337,13 @@ static int test_gmac(IMB_MGR *p_mgr)
 
                         IMB_AES256_GCM_PRE(p_mgr, v->key, &gmac_key);
                         errno_update(p_mgr);
-                        IMB_AES256_GMAC_INIT(p_mgr, &gmac_key, &ctx,
-                                             (const void *) v->iv,
+                        IMB_AES256_GMAC_INIT(p_mgr, &gmac_key, &ctx, (const void *) v->iv,
                                              v->ivSize / 8);
                         errno_update(p_mgr);
-                        IMB_AES256_GMAC_UPDATE(p_mgr, &gmac_key, &ctx,
-                                               (const void *) v->msg,
+                        IMB_AES256_GMAC_UPDATE(p_mgr, &gmac_key, &ctx, (const void *) v->msg,
                                                v->msgSize / 8);
                         errno_update(p_mgr);
-                        IMB_AES256_GMAC_FINALIZE(p_mgr, &gmac_key, &ctx,
-                                                 scratch, v->tagSize / 8);
+                        IMB_AES256_GMAC_FINALIZE(p_mgr, &gmac_key, &ctx, scratch, v->tagSize / 8);
                         errno_update(p_mgr);
                 }
 
@@ -367,7 +356,8 @@ static int test_gmac(IMB_MGR *p_mgr)
 
 extern const struct mac_test hmac_sha1_test_json[];
 
-static int test_hmac_sha1(IMB_MGR *p_mgr)
+static int
+test_hmac_sha1(IMB_MGR *p_mgr)
 {
         const struct mac_test *v = hmac_sha1_test_json;
         DECLARE_ALIGNED(uint8_t hmac_ipad[IMB_SHA1_DIGEST_SIZE_IN_BYTES], 16);
@@ -377,7 +367,7 @@ static int test_hmac_sha1(IMB_MGR *p_mgr)
         while (IMB_FLUSH_JOB(p_mgr) != NULL)
                 ;
 
-        for ( ; v->msg != NULL; v++, run_vectors++) {
+        for (; v->msg != NULL; v++, run_vectors++) {
 
                 IMB_ASSERT((v->tagSize / 8) <= sizeof(tag));
 
@@ -408,15 +398,13 @@ static int test_hmac_sha1(IMB_MGR *p_mgr)
                 job->auth_tag_output = tag;
 
                 /* @note smaller tags sizes can be rejected */
-                if ((v->tagSize / 8) > 0 &&
-                    (v->tagSize / 8) <= IMB_SHA1_DIGEST_SIZE_IN_BYTES)
-                        job->auth_tag_output_len_in_bytes =
-                                IMB_SHA1_DIGEST_SIZE_IN_BYTES;
+                if ((v->tagSize / 8) > 0 && (v->tagSize / 8) <= IMB_SHA1_DIGEST_SIZE_IN_BYTES)
+                        job->auth_tag_output_len_in_bytes = IMB_SHA1_DIGEST_SIZE_IN_BYTES;
                 else
                         job->auth_tag_output_len_in_bytes = v->tagSize / 8;
 
-                imb_hmac_ipad_opad(p_mgr, IMB_AUTH_HMAC_SHA_1,
-                                   v->key, v->keySize / 8, hmac_ipad, hmac_opad);
+                imb_hmac_ipad_opad(p_mgr, IMB_AUTH_HMAC_SHA_1, v->key, v->keySize / 8, hmac_ipad,
+                                   hmac_opad);
 
                 job->u.HMAC._hashed_auth_key_xor_ipad = hmac_ipad;
                 job->u.HMAC._hashed_auth_key_xor_opad = hmac_opad;
@@ -433,7 +421,8 @@ static int test_hmac_sha1(IMB_MGR *p_mgr)
 
 extern const struct mac_test hmac_sha224_test_json[];
 
-static int test_hmac_sha224(IMB_MGR *p_mgr)
+static int
+test_hmac_sha224(IMB_MGR *p_mgr)
 {
         const struct mac_test *v = hmac_sha224_test_json;
         DECLARE_ALIGNED(uint8_t hmac_ipad[IMB_SHA256_DIGEST_SIZE_IN_BYTES], 16);
@@ -443,7 +432,7 @@ static int test_hmac_sha224(IMB_MGR *p_mgr)
         while (IMB_FLUSH_JOB(p_mgr) != NULL)
                 ;
 
-        for ( ; v->msg != NULL; v++, run_vectors++) {
+        for (; v->msg != NULL; v++, run_vectors++) {
                 IMB_ASSERT((v->tagSize / 8) <= sizeof(tag));
 
                 /* tag too long */
@@ -473,8 +462,8 @@ static int test_hmac_sha224(IMB_MGR *p_mgr)
                 job->auth_tag_output = tag;
                 job->auth_tag_output_len_in_bytes = v->tagSize / 8;
 
-                imb_hmac_ipad_opad(p_mgr, IMB_AUTH_HMAC_SHA_224,
-                                   v->key, v->keySize / 8, hmac_ipad, hmac_opad);
+                imb_hmac_ipad_opad(p_mgr, IMB_AUTH_HMAC_SHA_224, v->key, v->keySize / 8, hmac_ipad,
+                                   hmac_opad);
 
                 job->u.HMAC._hashed_auth_key_xor_ipad = hmac_ipad;
                 job->u.HMAC._hashed_auth_key_xor_opad = hmac_opad;
@@ -491,7 +480,8 @@ static int test_hmac_sha224(IMB_MGR *p_mgr)
 
 extern const struct mac_test hmac_sha256_test_json[];
 
-static int test_hmac_sha256(IMB_MGR *p_mgr)
+static int
+test_hmac_sha256(IMB_MGR *p_mgr)
 {
         const struct mac_test *v = hmac_sha256_test_json;
         DECLARE_ALIGNED(uint8_t hmac_ipad[IMB_SHA256_DIGEST_SIZE_IN_BYTES], 16);
@@ -501,7 +491,7 @@ static int test_hmac_sha256(IMB_MGR *p_mgr)
         while (IMB_FLUSH_JOB(p_mgr) != NULL)
                 ;
 
-        for ( ; v->msg != NULL; v++, run_vectors++) {
+        for (; v->msg != NULL; v++, run_vectors++) {
                 IMB_ASSERT((v->tagSize / 8) <= sizeof(tag));
 
                 /* tag too long */
@@ -531,8 +521,8 @@ static int test_hmac_sha256(IMB_MGR *p_mgr)
                 job->auth_tag_output = tag;
                 job->auth_tag_output_len_in_bytes = v->tagSize / 8;
 
-                imb_hmac_ipad_opad(p_mgr, IMB_AUTH_HMAC_SHA_256,
-                                   v->key, v->keySize / 8, hmac_ipad, hmac_opad);
+                imb_hmac_ipad_opad(p_mgr, IMB_AUTH_HMAC_SHA_256, v->key, v->keySize / 8, hmac_ipad,
+                                   hmac_opad);
 
                 job->u.HMAC._hashed_auth_key_xor_ipad = hmac_ipad;
                 job->u.HMAC._hashed_auth_key_xor_opad = hmac_opad;
@@ -549,7 +539,8 @@ static int test_hmac_sha256(IMB_MGR *p_mgr)
 
 extern const struct mac_test hmac_sha384_test_json[];
 
-static int test_hmac_sha384(IMB_MGR *p_mgr)
+static int
+test_hmac_sha384(IMB_MGR *p_mgr)
 {
         const struct mac_test *v = hmac_sha384_test_json;
         DECLARE_ALIGNED(uint8_t hmac_ipad[IMB_SHA512_DIGEST_SIZE_IN_BYTES], 16);
@@ -559,7 +550,7 @@ static int test_hmac_sha384(IMB_MGR *p_mgr)
         while (IMB_FLUSH_JOB(p_mgr) != NULL)
                 ;
 
-        for ( ; v->msg != NULL; v++, run_vectors++) {
+        for (; v->msg != NULL; v++, run_vectors++) {
                 IMB_ASSERT((v->tagSize / 8) <= sizeof(scratch));
 
                 /* tag too long */
@@ -589,8 +580,8 @@ static int test_hmac_sha384(IMB_MGR *p_mgr)
                 job->auth_tag_output = scratch;
                 job->auth_tag_output_len_in_bytes = v->tagSize / 8;
 
-                imb_hmac_ipad_opad(p_mgr, IMB_AUTH_HMAC_SHA_384,
-                                   v->key, v->keySize / 8, hmac_ipad, hmac_opad);
+                imb_hmac_ipad_opad(p_mgr, IMB_AUTH_HMAC_SHA_384, v->key, v->keySize / 8, hmac_ipad,
+                                   hmac_opad);
 
                 job->u.HMAC._hashed_auth_key_xor_ipad = hmac_ipad;
                 job->u.HMAC._hashed_auth_key_xor_opad = hmac_opad;
@@ -607,7 +598,8 @@ static int test_hmac_sha384(IMB_MGR *p_mgr)
 
 extern const struct mac_test hmac_sha512_test_json[];
 
-static int test_hmac_sha512(IMB_MGR *p_mgr)
+static int
+test_hmac_sha512(IMB_MGR *p_mgr)
 {
         const struct mac_test *v = hmac_sha512_test_json;
         DECLARE_ALIGNED(uint8_t hmac_ipad[IMB_SHA512_DIGEST_SIZE_IN_BYTES], 16);
@@ -617,7 +609,7 @@ static int test_hmac_sha512(IMB_MGR *p_mgr)
         while (IMB_FLUSH_JOB(p_mgr) != NULL)
                 ;
 
-        for ( ; v->msg != NULL; v++, run_vectors++) {
+        for (; v->msg != NULL; v++, run_vectors++) {
                 IMB_ASSERT((v->tagSize / 8) <= sizeof(scratch));
 
                 /* tag too long */
@@ -647,8 +639,8 @@ static int test_hmac_sha512(IMB_MGR *p_mgr)
                 job->auth_tag_output = scratch;
                 job->auth_tag_output_len_in_bytes = v->tagSize / 8;
 
-                imb_hmac_ipad_opad(p_mgr, IMB_AUTH_HMAC_SHA_512,
-                                   v->key, v->keySize / 8, hmac_ipad, hmac_opad);
+                imb_hmac_ipad_opad(p_mgr, IMB_AUTH_HMAC_SHA_512, v->key, v->keySize / 8, hmac_ipad,
+                                   hmac_opad);
 
                 job->u.HMAC._hashed_auth_key_xor_ipad = hmac_ipad;
                 job->u.HMAC._hashed_auth_key_xor_opad = hmac_opad;
@@ -669,7 +661,8 @@ static int test_hmac_sha512(IMB_MGR *p_mgr)
  * =============================================================================
  */
 
-static void print_aead_test(const struct aead_test *v)
+static void
+print_aead_test(const struct aead_test *v)
 {
         printf("AEAD vector details:\n"
                "    tcId = %u\n"
@@ -679,19 +672,14 @@ static void print_aead_test(const struct aead_test *v)
                "    aadSize = %u [bits]\n"
                "    msgSize = %u [bits]\n"
                "    resultValid = %d\n",
-               (unsigned)v->tcId, (unsigned)v->ivSize,
-               (unsigned)v->keySize, (unsigned)v->tagSize,
-               (unsigned)v->aadSize, (unsigned)v->msgSize,
-               (int)v->resultValid);
+               (unsigned) v->tcId, (unsigned) v->ivSize, (unsigned) v->keySize,
+               (unsigned) v->tagSize, (unsigned) v->aadSize, (unsigned) v->msgSize,
+               (int) v->resultValid);
 }
 
 static int
-aead_submit_and_check(IMB_MGR *p_mgr,
-                      const struct aead_test *v,
-                      const void *res_tag,
-                      const void *res_text,
-                      const int job_api,
-                      const int is_encrypt)
+aead_submit_and_check(IMB_MGR *p_mgr, const struct aead_test *v, const void *res_tag,
+                      const void *res_text, const int job_api, const int is_encrypt)
 {
         if (job_api) {
                 /* submit job and get it processed */
@@ -710,8 +698,7 @@ aead_submit_and_check(IMB_MGR *p_mgr,
                         if (v->resultValid) {
                                 print_aead_test(v);
                                 printf("DIRECT-API error!\n");
-                                printf("ERROR: %s\n",
-                                       imb_get_strerror(err_code));
+                                printf("ERROR: %s\n", imb_get_strerror(err_code));
                                 return 0;
                         } else {
                                 /* error was expected */
@@ -722,17 +709,15 @@ aead_submit_and_check(IMB_MGR *p_mgr,
         }
 
         const int tag_mismatch = memcmp(res_tag, v->tag, v->tagSize / 8);
-        const int text_mismatch = is_encrypt ?
-                memcmp(res_text, v->ct, v->msgSize / 8) :
-                memcmp(res_text, v->msg, v->msgSize / 8);
+        const int text_mismatch = is_encrypt ? memcmp(res_text, v->ct, v->msgSize / 8)
+                                             : memcmp(res_text, v->msg, v->msgSize / 8);
 
         if (v->resultValid == 0 && (tag_mismatch || text_mismatch))
                 return 1;
 
         /* check for TAG mismatch */
         if (tag_mismatch) {
-                printf("%s %s: TAG mismatch!\n",
-                       job_api ? "JOB-API" : "DIRECT-API",
+                printf("%s %s: TAG mismatch!\n", job_api ? "JOB-API" : "DIRECT-API",
                        is_encrypt ? "encrypt" : "decrypt");
                 print_aead_test(v);
                 return 0;
@@ -740,10 +725,8 @@ aead_submit_and_check(IMB_MGR *p_mgr,
 
         /* check for text mismatch */
         if (text_mismatch) {
-                printf("%s %s mismatch!\n",
-                       job_api ? "JOB-API" : "DIRECT-API",
-                       is_encrypt ? "encrypt: cipher-text" :
-                       "decrypt: plain-text");
+                printf("%s %s mismatch!\n", job_api ? "JOB-API" : "DIRECT-API",
+                       is_encrypt ? "encrypt: cipher-text" : "decrypt: plain-text");
                 print_aead_test(v);
                 return 0;
         }
@@ -753,7 +736,8 @@ aead_submit_and_check(IMB_MGR *p_mgr,
 
 extern const struct aead_test aes_gcm_test_json[];
 
-static int test_aead_gcm(IMB_MGR *p_mgr)
+static int
+test_aead_gcm(IMB_MGR *p_mgr)
 {
         const struct aead_test *v = NULL;
         struct gcm_key_data gcm_key;
@@ -789,8 +773,7 @@ static int test_aead_gcm(IMB_MGR *p_mgr)
                         IMB_AES256_GCM_PRE(p_mgr, v->key, &gcm_key);
                         break;
                 default:
-                        printf("Invalid key size: %u bytes!\n",
-                               (unsigned)v->keySize / 8);
+                        printf("Invalid key size: %u bytes!\n", (unsigned) v->keySize / 8);
                         print_aead_test(v);
                         return 0;
                 }
@@ -861,53 +844,40 @@ static int test_aead_gcm(IMB_MGR *p_mgr)
 
                 switch (v->keySize / 8) {
                 case IMB_KEY_128_BYTES:
-                        IMB_AES128_GCM_INIT_VAR_IV(p_mgr, &gcm_key, &ctx,
-                                                   (const void *) v->iv,
-                                                   v->ivSize / 8,
-                                                   (const void *) v->aad,
+                        IMB_AES128_GCM_INIT_VAR_IV(p_mgr, &gcm_key, &ctx, (const void *) v->iv,
+                                                   v->ivSize / 8, (const void *) v->aad,
                                                    v->aadSize / 8);
                         errno_update(p_mgr);
                         IMB_AES128_GCM_ENC_UPDATE(p_mgr, &gcm_key, &ctx, text,
-                                                  (const void *) v->msg,
-                                                  v->msgSize / 8);
+                                                  (const void *) v->msg, v->msgSize / 8);
                         errno_update(p_mgr);
-                        IMB_AES128_GCM_ENC_FINALIZE(p_mgr, &gcm_key, &ctx, tag,
-                                                    v->tagSize / 8);
+                        IMB_AES128_GCM_ENC_FINALIZE(p_mgr, &gcm_key, &ctx, tag, v->tagSize / 8);
                         errno_update(p_mgr);
                         break;
                 case IMB_KEY_192_BYTES:
-                        IMB_AES192_GCM_INIT_VAR_IV(p_mgr, &gcm_key, &ctx,
-                                                   (const void *) v->iv,
-                                                   v->ivSize / 8,
-                                                   (const void *) v->aad,
+                        IMB_AES192_GCM_INIT_VAR_IV(p_mgr, &gcm_key, &ctx, (const void *) v->iv,
+                                                   v->ivSize / 8, (const void *) v->aad,
                                                    v->aadSize / 8);
                         errno_update(p_mgr);
                         IMB_AES192_GCM_ENC_UPDATE(p_mgr, &gcm_key, &ctx, text,
-                                                  (const void *) v->msg,
-                                                  v->msgSize / 8);
+                                                  (const void *) v->msg, v->msgSize / 8);
                         errno_update(p_mgr);
-                        IMB_AES192_GCM_ENC_FINALIZE(p_mgr, &gcm_key, &ctx, tag,
-                                                    v->tagSize / 8);
+                        IMB_AES192_GCM_ENC_FINALIZE(p_mgr, &gcm_key, &ctx, tag, v->tagSize / 8);
                         errno_update(p_mgr);
                         break;
                 case IMB_KEY_256_BYTES:
-                        IMB_AES256_GCM_INIT_VAR_IV(p_mgr, &gcm_key, &ctx,
-                                                   (const void *) v->iv,
-                                                   v->ivSize / 8,
-                                                   (const void *) v->aad,
+                        IMB_AES256_GCM_INIT_VAR_IV(p_mgr, &gcm_key, &ctx, (const void *) v->iv,
+                                                   v->ivSize / 8, (const void *) v->aad,
                                                    v->aadSize / 8);
                         errno_update(p_mgr);
                         IMB_AES256_GCM_ENC_UPDATE(p_mgr, &gcm_key, &ctx, text,
-                                                  (const void *) v->msg,
-                                                  v->msgSize / 8);
+                                                  (const void *) v->msg, v->msgSize / 8);
                         errno_update(p_mgr);
-                        IMB_AES256_GCM_ENC_FINALIZE(p_mgr, &gcm_key, &ctx, tag,
-                                                    v->tagSize / 8);
+                        IMB_AES256_GCM_ENC_FINALIZE(p_mgr, &gcm_key, &ctx, tag, v->tagSize / 8);
                         errno_update(p_mgr);
                         break;
                 default:
-                        printf("Invalid key size: %u bytes!\n",
-                               (unsigned)v->keySize / 8);
+                        printf("Invalid key size: %u bytes!\n", (unsigned) v->keySize / 8);
                         print_aead_test(v);
                         return 0;
                 }
@@ -921,53 +891,40 @@ static int test_aead_gcm(IMB_MGR *p_mgr)
                 errno_reset();
                 switch (v->keySize / 8) {
                 case IMB_KEY_128_BYTES:
-                        IMB_AES128_GCM_INIT_VAR_IV(p_mgr, &gcm_key, &ctx,
-                                                   (const void *) v->iv,
-                                                   v->ivSize / 8,
-                                                   (const void *) v->aad,
+                        IMB_AES128_GCM_INIT_VAR_IV(p_mgr, &gcm_key, &ctx, (const void *) v->iv,
+                                                   v->ivSize / 8, (const void *) v->aad,
                                                    v->aadSize / 8);
                         errno_update(p_mgr);
-                        IMB_AES128_GCM_DEC_UPDATE(p_mgr, &gcm_key, &ctx, text,
-                                                  (const void *) v->ct,
+                        IMB_AES128_GCM_DEC_UPDATE(p_mgr, &gcm_key, &ctx, text, (const void *) v->ct,
                                                   v->msgSize / 8);
                         errno_update(p_mgr);
-                        IMB_AES128_GCM_DEC_FINALIZE(p_mgr, &gcm_key, &ctx, tag,
-                                                    v->tagSize / 8);
+                        IMB_AES128_GCM_DEC_FINALIZE(p_mgr, &gcm_key, &ctx, tag, v->tagSize / 8);
                         errno_update(p_mgr);
                         break;
                 case IMB_KEY_192_BYTES:
-                        IMB_AES192_GCM_INIT_VAR_IV(p_mgr, &gcm_key, &ctx,
-                                                   (const void *) v->iv,
-                                                   v->ivSize / 8,
-                                                   (const void *) v->aad,
+                        IMB_AES192_GCM_INIT_VAR_IV(p_mgr, &gcm_key, &ctx, (const void *) v->iv,
+                                                   v->ivSize / 8, (const void *) v->aad,
                                                    v->aadSize / 8);
                         errno_update(p_mgr);
-                        IMB_AES192_GCM_DEC_UPDATE(p_mgr, &gcm_key, &ctx, text,
-                                                  (const void *) v->ct,
+                        IMB_AES192_GCM_DEC_UPDATE(p_mgr, &gcm_key, &ctx, text, (const void *) v->ct,
                                                   v->msgSize / 8);
                         errno_update(p_mgr);
-                        IMB_AES192_GCM_DEC_FINALIZE(p_mgr, &gcm_key, &ctx, tag,
-                                                    v->tagSize / 8);
+                        IMB_AES192_GCM_DEC_FINALIZE(p_mgr, &gcm_key, &ctx, tag, v->tagSize / 8);
                         errno_update(p_mgr);
                         break;
                 case IMB_KEY_256_BYTES:
-                        IMB_AES256_GCM_INIT_VAR_IV(p_mgr, &gcm_key, &ctx,
-                                                   (const void *) v->iv,
-                                                   v->ivSize / 8,
-                                                   (const void *) v->aad,
+                        IMB_AES256_GCM_INIT_VAR_IV(p_mgr, &gcm_key, &ctx, (const void *) v->iv,
+                                                   v->ivSize / 8, (const void *) v->aad,
                                                    v->aadSize / 8);
                         errno_update(p_mgr);
-                        IMB_AES256_GCM_DEC_UPDATE(p_mgr, &gcm_key, &ctx, text,
-                                                  (const void *) v->ct,
+                        IMB_AES256_GCM_DEC_UPDATE(p_mgr, &gcm_key, &ctx, text, (const void *) v->ct,
                                                   v->msgSize / 8);
                         errno_update(p_mgr);
-                        IMB_AES256_GCM_DEC_FINALIZE(p_mgr, &gcm_key, &ctx, tag,
-                                                    v->tagSize / 8);
+                        IMB_AES256_GCM_DEC_FINALIZE(p_mgr, &gcm_key, &ctx, tag, v->tagSize / 8);
                         errno_update(p_mgr);
                         break;
                 default:
-                        printf("Invalid key size: %u bytes!\n",
-                               (unsigned)v->keySize / 8);
+                        printf("Invalid key size: %u bytes!\n", (unsigned) v->keySize / 8);
                         print_aead_test(v);
                         return 0;
                 }
@@ -981,7 +938,8 @@ static int test_aead_gcm(IMB_MGR *p_mgr)
 
 extern const struct aead_test chacha20_poly1305_test_json[];
 
-static int test_aead_chacha20_poly1305(IMB_MGR *p_mgr)
+static int
+test_aead_chacha20_poly1305(IMB_MGR *p_mgr)
 {
         const struct aead_test *v = NULL;
         struct chacha20_poly1305_context_data ctx;
@@ -990,8 +948,7 @@ static int test_aead_chacha20_poly1305(IMB_MGR *p_mgr)
         while (IMB_FLUSH_JOB(p_mgr) != NULL)
                 ;
 
-        for (v = chacha20_poly1305_test_json; v->msg != NULL;
-             v++, run_vectors++) {
+        for (v = chacha20_poly1305_test_json; v->msg != NULL; v++, run_vectors++) {
                 IMB_ASSERT(v->tagSize <= (sizeof(tag) * 8));
                 IMB_ASSERT(v->msgSize <= (sizeof(text) * 8));
 
@@ -1074,18 +1031,13 @@ static int test_aead_chacha20_poly1305(IMB_MGR *p_mgr)
                 memset(tag, 0, sizeof(tag));
                 errno_reset();
 
-                IMB_CHACHA20_POLY1305_INIT(p_mgr, (const void *) v->key, &ctx,
-                                           (const void *) v->iv,
-                                           (const void *) v->aad,
-                                           v->aadSize / 8);
+                IMB_CHACHA20_POLY1305_INIT(p_mgr, (const void *) v->key, &ctx, (const void *) v->iv,
+                                           (const void *) v->aad, v->aadSize / 8);
                 errno_update(p_mgr);
-                IMB_CHACHA20_POLY1305_ENC_UPDATE(p_mgr, (const void *) v->key,
-                                                 &ctx, text,
-                                                 (const void *) v->msg,
-                                                 v->msgSize / 8);
+                IMB_CHACHA20_POLY1305_ENC_UPDATE(p_mgr, (const void *) v->key, &ctx, text,
+                                                 (const void *) v->msg, v->msgSize / 8);
                 errno_update(p_mgr);
-                IMB_CHACHA20_POLY1305_ENC_FINALIZE(p_mgr, &ctx, tag,
-                                                   v->tagSize / 8);
+                IMB_CHACHA20_POLY1305_ENC_FINALIZE(p_mgr, &ctx, tag, v->tagSize / 8);
                 errno_update(p_mgr);
 
                 /* submit job and check */
@@ -1097,18 +1049,13 @@ static int test_aead_chacha20_poly1305(IMB_MGR *p_mgr)
                 memset(tag, 0, sizeof(tag));
                 errno_reset();
 
-                IMB_CHACHA20_POLY1305_INIT(p_mgr, (const void *) v->key, &ctx,
-                                           (const void *) v->iv,
-                                           (const void *) v->aad,
-                                           v->aadSize / 8);
+                IMB_CHACHA20_POLY1305_INIT(p_mgr, (const void *) v->key, &ctx, (const void *) v->iv,
+                                           (const void *) v->aad, v->aadSize / 8);
                 errno_update(p_mgr);
-                IMB_CHACHA20_POLY1305_DEC_UPDATE(p_mgr, (const void *) v->key,
-                                                 &ctx, text,
-                                                 (const void *) v->ct,
-                                                 v->msgSize / 8);
+                IMB_CHACHA20_POLY1305_DEC_UPDATE(p_mgr, (const void *) v->key, &ctx, text,
+                                                 (const void *) v->ct, v->msgSize / 8);
                 errno_update(p_mgr);
-                IMB_CHACHA20_POLY1305_DEC_FINALIZE(p_mgr, &ctx, tag,
-                                                   v->tagSize / 8);
+                IMB_CHACHA20_POLY1305_DEC_FINALIZE(p_mgr, &ctx, tag, v->tagSize / 8);
                 errno_update(p_mgr);
 
                 /* submit job and check */
@@ -1121,11 +1068,12 @@ static int test_aead_chacha20_poly1305(IMB_MGR *p_mgr)
 
 extern const struct aead_test aes_ccm_test_json[];
 
-static int test_aead_ccm(IMB_MGR *p_mgr)
+static int
+test_aead_ccm(IMB_MGR *p_mgr)
 {
         const struct aead_test *v = NULL;
-        DECLARE_ALIGNED(uint32_t expkey[4*15], 16);
-        DECLARE_ALIGNED(uint32_t dust[4*15], 16);
+        DECLARE_ALIGNED(uint32_t expkey[4 * 15], 16);
+        DECLARE_ALIGNED(uint32_t dust[4 * 15], 16);
         uint8_t text[512], tag[16];
 
         while (IMB_FLUSH_JOB(p_mgr) != NULL)
@@ -1168,8 +1116,7 @@ static int test_aead_ccm(IMB_MGR *p_mgr)
                         skip_vectors++;
                         continue;
                 default:
-                        printf("Invalid key size: %u bytes!\n",
-                               (unsigned)v->keySize / 8);
+                        printf("Invalid key size: %u bytes!\n", (unsigned) v->keySize / 8);
                         print_aead_test(v);
                         return 0;
                 }
@@ -1233,28 +1180,27 @@ static int test_aead_ccm(IMB_MGR *p_mgr)
                 /* submit job and check */
                 if (!aead_submit_and_check(p_mgr, v, tag, text, 1, 0))
                         return 0;
-        }  /* for(ccm_vectors) */
+        } /* for(ccm_vectors) */
 
         return 1;
 }
 
-static int test_all(IMB_MGR *p_mgr)
+static int
+test_all(IMB_MGR *p_mgr)
 {
         const struct {
                 int (*fn)(IMB_MGR *);
                 const char *name;
-        } test_tab[] = {
-                { test_aead_gcm, "AEAD AES-GCM" },
-                { test_aead_ccm, "AEAD AES-CCM" },
-                { test_aead_chacha20_poly1305, "AEAD CHACHA20-POLY1305" },
-                { test_cmac, "AES-CMAC" },
-                { test_gmac, "GMAC" },
-                { test_hmac_sha1, "HMAC-SHA1" },
-                { test_hmac_sha224, "HMAC-SHA224" },
-                { test_hmac_sha256, "HMAC-SHA256" },
-                { test_hmac_sha384, "HMAC-SHA384" },
-                { test_hmac_sha512, "HMAC-SHA512" }
-        };
+        } test_tab[] = { { test_aead_gcm, "AEAD AES-GCM" },
+                         { test_aead_ccm, "AEAD AES-CCM" },
+                         { test_aead_chacha20_poly1305, "AEAD CHACHA20-POLY1305" },
+                         { test_cmac, "AES-CMAC" },
+                         { test_gmac, "GMAC" },
+                         { test_hmac_sha1, "HMAC-SHA1" },
+                         { test_hmac_sha224, "HMAC-SHA224" },
+                         { test_hmac_sha256, "HMAC-SHA256" },
+                         { test_hmac_sha384, "HMAC-SHA384" },
+                         { test_hmac_sha512, "HMAC-SHA512" } };
         unsigned i;
         int ret = 1;
 
@@ -1265,15 +1211,14 @@ static int test_all(IMB_MGR *p_mgr)
                         printf("Testing %s: FAILED\n", test_tab[i].name);
                         ret = 0;
                 } else {
-                        printf("Testing %s: PASSED (run: %u, skipped: %u)\n",
-                               test_tab[i].name, run_vectors, skip_vectors);
+                        printf("Testing %s: PASSED (run: %u, skipped: %u)\n", test_tab[i].name,
+                               run_vectors, skip_vectors);
                 }
                 total_run_vectors += run_vectors;
                 total_skip_vectors += skip_vectors;
         }
         return ret;
 }
-
 
 /*
  * =============================================================================
@@ -1284,7 +1229,7 @@ static int test_all(IMB_MGR *p_mgr)
 static void
 usage(const char *name)
 {
-	printf("Usage: %s [args], where args are zero or more\n"
+        printf("Usage: %s [args], where args are zero or more\n"
                "--aesni-emu test AESNI emulation interface\n"
                "--avx512    test AVX512 interface\n"
                "--avx2      test AVX2 interface\n"
@@ -1293,10 +1238,12 @@ usage(const char *name)
                "--shani-off don't use SHA extensions "
                "(auto-detect by default)\n"
                "--gfni-off  don't use GFNI extensions "
-               "(auto-detect by default)\n", name);
+               "(auto-detect by default)\n",
+               name);
 }
 
-int main(int argc, const char **argv)
+int
+main(int argc, const char **argv)
 {
         IMB_ARCH arch_to_run = IMB_ARCH_NUM;
         uint64_t flags = 0;
@@ -1311,11 +1258,10 @@ int main(int argc, const char **argv)
                 printf("Library version: %s\n", imb_get_version_str());
         }
 
-	for (i = 1; i < argc; i++) {
-		if ((strcmp(argv[i], "-h") == 0) ||
-                    (strcmp(argv[i], "--help") == 0)) {
-			usage(argv[0]);
-			return EXIT_SUCCESS;
+        for (i = 1; i < argc; i++) {
+                if ((strcmp(argv[i], "-h") == 0) || (strcmp(argv[i], "--help") == 0)) {
+                        usage(argv[0]);
+                        return EXIT_SUCCESS;
                 } else if (strcmp(argv[i], "--aesni-emu") == 0) {
                         flags |= IMB_FLAG_AESNI_OFF;
                         arch_to_run = IMB_ARCH_NOAESNI;
@@ -1371,8 +1317,7 @@ int main(int argc, const char **argv)
 
         if (p_mgr->features & IMB_FEATURE_SELF_TEST)
                 printf("SELF-TEST: %s\n",
-                       (p_mgr->features & IMB_FEATURE_SELF_TEST_PASS) ?
-                       "PASS" : "FAIL");
+                       (p_mgr->features & IMB_FEATURE_SELF_TEST_PASS) ? "PASS" : "FAIL");
         else
                 printf("SELF-TEST: N/A (requires library >= v1.3)\n");
 
@@ -1389,8 +1334,8 @@ int main(int argc, const char **argv)
                 return EXIT_FAILURE;
         }
 
-        printf("Test complete: PASSED (run: %u, skipped: %u)\n",
-               total_run_vectors, total_skip_vectors);
+        printf("Test complete: PASSED (run: %u, skipped: %u)\n", total_run_vectors,
+               total_skip_vectors);
 
         free_mb_mgr(p_mgr);
         return EXIT_SUCCESS;

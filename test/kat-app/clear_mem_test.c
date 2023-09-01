@@ -35,9 +35,10 @@
 #include "utils.h"
 
 #define MAX_RAND 1024
-#define PATTERN 0x66
+#define PATTERN  0x66
 
-int clear_mem_test(struct IMB_MGR *mb_mgr);
+int
+clear_mem_test(struct IMB_MGR *mb_mgr);
 
 /* validate expected bytes */
 static int
@@ -50,7 +51,8 @@ validate_bytes_zero(const uint8_t *ptr, const int mem_size)
 
                 if (*p != 0) {
                         printf("Byte mismatch -- found 0x%x!\n"
-                               "Byte Offset = %u\n", *p, (unsigned)(p - ptr));
+                               "Byte Offset = %u\n",
+                               *p, (unsigned) (p - ptr));
                         return 1;
                 }
                 p++;
@@ -60,7 +62,8 @@ validate_bytes_zero(const uint8_t *ptr, const int mem_size)
 }
 
 /* print bytes */
-static void print_bytes(uint8_t *ptr, int size)
+static void
+print_bytes(uint8_t *ptr, int size)
 {
         int i;
 
@@ -70,10 +73,11 @@ static void print_bytes(uint8_t *ptr, int size)
         printf("\n");
 }
 
-int clear_mem_test(struct IMB_MGR *mb_mgr)
+int
+clear_mem_test(struct IMB_MGR *mb_mgr)
 {
         struct test_suite_context ctx;
-        (void)mb_mgr;
+        (void) mb_mgr;
 
         int i, errors;
         uint8_t *buf, padding[16];
@@ -86,8 +90,7 @@ int clear_mem_test(struct IMB_MGR *mb_mgr)
 
         test_suite_start(&ctx, "CLEAR-MEM");
         for (i = 0; i < 100; i++) {
-                const unsigned r = (rand() % MAX_RAND) +
-                        sizeof(padding) * 2 + 1;
+                const unsigned r = (rand() % MAX_RAND) + sizeof(padding) * 2 + 1;
                 const int sz = r - (sizeof(padding) * 2);
                 uint8_t *clear_zn;
 
@@ -128,11 +131,9 @@ int clear_mem_test(struct IMB_MGR *mb_mgr)
                         test_suite_update(&ctx, 1, 0);
 
                 /* validate tail */
-                if (memcmp(buf + sizeof(padding) + sz,
-                           padding, sizeof(padding)) != 0) {
+                if (memcmp(buf + sizeof(padding) + sz, padding, sizeof(padding)) != 0) {
                         printf("Found mismatch in tail!\n");
-                        print_bytes(buf + sizeof(padding) + sz,
-                                    sizeof(padding));
+                        print_bytes(buf + sizeof(padding) + sz, sizeof(padding));
                         test_suite_update(&ctx, 0, 1);
                 } else
                         test_suite_update(&ctx, 1, 0);

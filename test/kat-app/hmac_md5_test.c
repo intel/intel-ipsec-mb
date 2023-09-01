@@ -35,16 +35,14 @@
 #include "utils.h"
 #include "mac_test.h"
 
-int hmac_md5_test(struct IMB_MGR *mb_mgr);
+int
+hmac_md5_test(struct IMB_MGR *mb_mgr);
 
 extern const struct mac_test hmac_md5_test_json[];
 
 static int
-hmac_md5_job_ok(const struct mac_test *vec,
-                 const struct IMB_JOB *job,
-                 const uint8_t *auth,
-                 const uint8_t *padding,
-                 const size_t sizeof_padding)
+hmac_md5_job_ok(const struct mac_test *vec, const struct IMB_JOB *job, const uint8_t *auth,
+                const uint8_t *padding, const size_t sizeof_padding)
 {
         if (job->status != IMB_STATUS_COMPLETED) {
                 printf("line:%d job error status:%d ", __LINE__, job->status);
@@ -52,11 +50,9 @@ hmac_md5_job_ok(const struct mac_test *vec,
         }
 
         /* hash checks */
-        if (memcmp(padding, &auth[sizeof_padding + (vec->tagSize / 8)],
-                   sizeof_padding)) {
+        if (memcmp(padding, &auth[sizeof_padding + (vec->tagSize / 8)], sizeof_padding)) {
                 printf("hash overwrite tail\n");
-                hexdump(stderr, "Target",
-                        &auth[sizeof_padding + (vec->tagSize / 8)],
+                hexdump(stderr, "Target", &auth[sizeof_padding + (vec->tagSize / 8)],
                         sizeof_padding);
                 return 0;
         }
@@ -67,22 +63,17 @@ hmac_md5_job_ok(const struct mac_test *vec,
                 return 0;
         }
 
-        if (memcmp(vec->tag, &auth[sizeof_padding],
-                   vec->tagSize / 8)) {
+        if (memcmp(vec->tag, &auth[sizeof_padding], vec->tagSize / 8)) {
                 printf("hash mismatched\n");
-                hexdump(stderr, "Received", &auth[sizeof_padding],
-                        vec->tagSize / 8);
-                hexdump(stderr, "Expected", vec->tag,
-                        vec->tagSize / 8);
+                hexdump(stderr, "Received", &auth[sizeof_padding], vec->tagSize / 8);
+                hexdump(stderr, "Expected", vec->tag, vec->tagSize / 8);
                 return 0;
         }
         return 1;
 }
 
 static int
-test_hmac_md5(struct IMB_MGR *mb_mgr,
-               const struct mac_test *vec,
-               const int num_jobs)
+test_hmac_md5(struct IMB_MGR *mb_mgr, const struct mac_test *vec, const int num_jobs)
 {
         struct IMB_JOB *job;
         uint8_t padding[16];
@@ -92,16 +83,15 @@ test_hmac_md5(struct IMB_MGR *mb_mgr,
         DECLARE_ALIGNED(uint8_t opad_hash[IMB_MD5_DIGEST_SIZE_IN_BYTES], 16);
 
         if (auths == NULL) {
-		fprintf(stderr, "Can't allocate buffer memory\n");
-		goto end2;
+                fprintf(stderr, "Can't allocate buffer memory\n");
+                goto end2;
         }
 
         memset(padding, -1, sizeof(padding));
         memset(auths, 0, num_jobs * sizeof(void *));
 
         for (i = 0; i < num_jobs; i++) {
-                const size_t alloc_len =
-                        (vec->tagSize / 8) + (sizeof(padding) * 2);
+                const size_t alloc_len = (vec->tagSize / 8) + (sizeof(padding) * 2);
 
                 auths[i] = malloc(alloc_len);
                 if (auths[i] == NULL) {
@@ -111,8 +101,7 @@ test_hmac_md5(struct IMB_MGR *mb_mgr,
                 memset(auths[i], -1, alloc_len);
         }
 
-        imb_hmac_ipad_opad(mb_mgr, IMB_AUTH_MD5, vec->key, vec->keySize / 8,
-                           ipad_hash, opad_hash);
+        imb_hmac_ipad_opad(mb_mgr, IMB_AUTH_MD5, vec->key, vec->keySize / 8, ipad_hash, opad_hash);
 
         /* empty the manager */
         while (IMB_FLUSH_JOB(mb_mgr) != NULL)
@@ -149,20 +138,17 @@ test_hmac_md5(struct IMB_MGR *mb_mgr,
                          * HMAC-MD5 requires 8 submissions to get one back
                          */
                         if (num_jobs < 8) {
-                                printf("%d Unexpected return from submit_job\n",
-                                       __LINE__);
+                                printf("%d Unexpected return from submit_job\n", __LINE__);
                                 goto end;
                         }
-                        if (!hmac_md5_job_ok(vec, job, job->user_data,
-                                              padding, sizeof(padding)))
+                        if (!hmac_md5_job_ok(vec, job, job->user_data, padding, sizeof(padding)))
                                 goto end;
                 }
         }
 
         while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL) {
                 jobs_rx++;
-                if (!hmac_md5_job_ok(vec, job, job->user_data,
-                                      padding, sizeof(padding)))
+                if (!hmac_md5_job_ok(vec, job, job->user_data, padding, sizeof(padding)))
                         goto end;
         }
 
@@ -172,7 +158,7 @@ test_hmac_md5(struct IMB_MGR *mb_mgr,
         }
         ret = 0;
 
- end:
+end:
         /* empty the manager before next tests */
         while (IMB_FLUSH_JOB(mb_mgr) != NULL)
                 ;
@@ -182,7 +168,7 @@ test_hmac_md5(struct IMB_MGR *mb_mgr,
                         free(auths[i]);
         }
 
- end2:
+end2:
         if (auths != NULL)
                 free(auths);
 
@@ -190,25 +176,19 @@ test_hmac_md5(struct IMB_MGR *mb_mgr,
 }
 
 static void
-test_hmac_md5_std_vectors(struct IMB_MGR *mb_mgr,
-                          const int num_jobs,
-                          struct test_suite_context *ts)
+test_hmac_md5_std_vectors(struct IMB_MGR *mb_mgr, const int num_jobs, struct test_suite_context *ts)
 {
 
         const struct mac_test *v = hmac_md5_test_json;
 
         if (!quiet_mode)
-	        printf("HMAC-MD5 standard test vectors (N jobs = %d):\n",
-                       num_jobs);
-	for (; v->msg != NULL; v++) {
+                printf("HMAC-MD5 standard test vectors (N jobs = %d):\n", num_jobs);
+        for (; v->msg != NULL; v++) {
                 if (!quiet_mode) {
 #ifdef DEBUG
                         printf("RFC2202 Test Case %zu key_len:%zu "
                                "data_len:%zu digest_len:%zu\n",
-                               v->tcId,
-                               v->keySize / 8,
-                               v->msgSize / 8,
-                               v->tagSize / 8);
+                               v->tcId, v->keySize / 8, v->msgSize / 8, v->tagSize / 8);
 #else
                         printf(".");
 #endif
@@ -229,7 +209,7 @@ test_hmac_md5_std_vectors(struct IMB_MGR *mb_mgr,
                 } else {
                         test_suite_update(ts, 1, 0);
                 }
-	}
+        }
         if (!quiet_mode)
                 printf("\n");
 }
@@ -245,5 +225,5 @@ hmac_md5_test(struct IMB_MGR *mb_mgr)
                 test_hmac_md5_std_vectors(mb_mgr, num_jobs, &ts);
         errors = test_suite_end(&ts);
 
-	return errors;
+        return errors;
 }

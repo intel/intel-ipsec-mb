@@ -31,48 +31,60 @@
 #define XVALIDAPP_MISC_H
 
 /* RAX, RBX, RCX, RDX, RDI, RSI, R8-R15 */
-#define GP_MEM_SIZE 14*8
+#define GP_MEM_SIZE 14 * 8
 
-#define XMM_MEM_SIZE 16*16
-#define YMM_MEM_SIZE 16*32
-#define ZMM_MEM_SIZE 32*64
+#define XMM_MEM_SIZE 16 * 16
+#define YMM_MEM_SIZE 16 * 32
+#define ZMM_MEM_SIZE 32 * 64
 
 /* Memory allocated in BSS section in misc.asm */
 extern uint8_t gps[GP_MEM_SIZE];
 extern uint8_t simd_regs[ZMM_MEM_SIZE];
 
 /* Read RSP pointer */
-void *rdrsp(void);
+void *
+rdrsp(void);
 
 /* Functions to dump all registers into predefined memory */
-void dump_gps(void);
-void dump_xmms_sse(void);
-void dump_xmms_avx(void);
-void dump_ymms(void);
-void dump_zmms(void);
+void
+dump_gps(void);
+void
+dump_xmms_sse(void);
+void
+dump_xmms_avx(void);
+void
+dump_ymms(void);
+void
+dump_zmms(void);
 
 /* Functions to clear all scratch SIMD registers */
-void clr_scratch_xmms_sse(void);
-void clr_scratch_xmms_avx(void);
-void clr_scratch_ymms(void);
-void clr_scratch_zmms(void);
+void
+clr_scratch_xmms_sse(void);
+void
+clr_scratch_xmms_avx(void);
+void
+clr_scratch_ymms(void);
+void
+clr_scratch_zmms(void);
 
 /* custom replacement for memset() */
-void *nosimd_memset(void *p, int c, size_t n);
+void *
+nosimd_memset(void *p, int c, size_t n);
 
 /* custom replacement for memcpy() */
-void *nosimd_memcpy(void *dst, const void *src, size_t n);
+void *
+nosimd_memcpy(void *dst, const void *src, size_t n);
 
 /*
  * Detects if SIMD registers are in the state that
  * can cause AVX-SSE transition penalty
  */
-uint32_t avx_sse_transition_check(void);
+uint32_t
+avx_sse_transition_check(void);
 
-#define MISC_AVX_SSE_YMM0_15_ISSUE  (1 << 2)
-#define MISC_AVX_SSE_ZMM0_15_ISSUE  (1 << 6)
-#define MISC_AVX_SSE_ISSUE          (MISC_AVX_SSE_YMM0_15_ISSUE | \
-                                     MISC_AVX_SSE_ZMM0_15_ISSUE)
+#define MISC_AVX_SSE_YMM0_15_ISSUE (1 << 2)
+#define MISC_AVX_SSE_ZMM0_15_ISSUE (1 << 6)
+#define MISC_AVX_SSE_ISSUE         (MISC_AVX_SSE_YMM0_15_ISSUE | MISC_AVX_SSE_ZMM0_15_ISSUE)
 
 /* CPUID feature detection code follows here */
 
@@ -90,8 +102,8 @@ struct misc_cpuid_regs {
  * @param subleaf[in] CPUID sub-leaf number (ECX)
  * @param out[out]    registers structure to store results of CPUID into
  */
-void misc_cpuid(const unsigned leaf, const unsigned subleaf,
-                struct misc_cpuid_regs *out);
+void
+misc_cpuid(const unsigned leaf, const unsigned subleaf, struct misc_cpuid_regs *out);
 
 /**
  * @brief Detects if XGETBV instruction is available to use.
@@ -100,7 +112,8 @@ void misc_cpuid(const unsigned leaf, const unsigned subleaf,
  * @retval 0 XGETBV NOT available
  * @retval 1 XGETBV available
  */
-static int avx_sse_detectability(void)
+static int
+avx_sse_detectability(void)
 {
         struct misc_cpuid_regs r;
 
@@ -120,7 +133,8 @@ static int avx_sse_detectability(void)
 }
 
 /* decodes cipher mode to string */
-static const char *misc_cipher_mode_to_str(const IMB_CIPHER_MODE mode)
+static const char *
+misc_cipher_mode_to_str(const IMB_CIPHER_MODE mode)
 {
         static char cb[64];
 
@@ -182,7 +196,8 @@ static const char *misc_cipher_mode_to_str(const IMB_CIPHER_MODE mode)
 }
 
 /* decodes hash algorithm to string */
-static const char *misc_hash_alg_to_str(const IMB_HASH_ALG mode)
+static const char *
+misc_hash_alg_to_str(const IMB_HASH_ALG mode)
 {
         static char cb[64];
 

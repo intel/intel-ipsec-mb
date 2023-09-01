@@ -34,29 +34,25 @@
 #include "utils.h"
 #include "aead_test.h"
 
-#define AAD_SZ 24
-#define IV_SZ 12
-#define KEY_SZ 32
+#define AAD_SZ    24
+#define IV_SZ     12
+#define KEY_SZ    32
 #define DIGEST_SZ 16
 
-int chacha20_poly1305_test(struct IMB_MGR *mb_mgr);
+int
+chacha20_poly1305_test(struct IMB_MGR *mb_mgr);
 
 extern const struct aead_test chacha20_poly1305_test_json[];
 
 static int
-aead_ok(const struct aead_test *vec,
-            const size_t auth_len,
-            const uint8_t *out_text,
-            const IMB_CIPHER_DIRECTION cipher_dir,
-            const uint8_t *auth,
-            const uint8_t *padding,
-            const size_t sizeof_padding)
+aead_ok(const struct aead_test *vec, const size_t auth_len, const uint8_t *out_text,
+        const IMB_CIPHER_DIRECTION cipher_dir, const uint8_t *auth, const uint8_t *padding,
+        const size_t sizeof_padding)
 {
         /* hash checks */
         if (memcmp(padding, &auth[sizeof_padding + auth_len], sizeof_padding)) {
                 printf("hash overwrite tail\n");
-                hexdump(stderr, "Target",
-                        &auth[sizeof_padding + auth_len], sizeof_padding);
+                hexdump(stderr, "Target", &auth[sizeof_padding + auth_len], sizeof_padding);
                 return 0;
         }
 
@@ -104,10 +100,7 @@ aead_ok(const struct aead_test *vec,
 }
 
 static int
-test_aead(struct IMB_MGR *mb_mgr,
-          const struct aead_test *vec,
-          const int dir,
-          const int num_jobs,
+test_aead(struct IMB_MGR *mb_mgr, const struct aead_test *vec, const int dir, const int num_jobs,
           const int in_place)
 {
         struct IMB_JOB *job;
@@ -117,8 +110,8 @@ test_aead(struct IMB_MGR *mb_mgr,
         int i = 0, jobs_rx = 0, ret = -1;
 
         if (auths == NULL || targets == NULL) {
-		fprintf(stderr, "Can't allocate buffer memory\n");
-		goto end2;
+                fprintf(stderr, "Can't allocate buffer memory\n");
+                goto end2;
         }
         memset(padding, -1, sizeof(padding));
         memset(auths, 0, num_jobs * sizeof(void *));
@@ -163,11 +156,10 @@ test_aead(struct IMB_MGR *mb_mgr,
         for (i = 0; i < num_jobs; i++) {
                 if (in_place)
                         src_ptr_array[i] = targets[i] + sizeof(padding);
+                else if (dir == IMB_DIR_ENCRYPT)
+                        src_ptr_array[i] = (const void *) vec->msg;
                 else
-                        if (dir == IMB_DIR_ENCRYPT)
-                                src_ptr_array[i] = (const void *) vec->msg;
-                        else
-                                src_ptr_array[i] = (const void *) vec->ct;
+                        src_ptr_array[i] = (const void *) vec->ct;
 
                 dst_ptr_array[i] = targets[i] + sizeof(padding);
 
@@ -182,8 +174,8 @@ test_aead(struct IMB_MGR *mb_mgr,
                                    DIGEST_SZ, num_jobs);
 
         for (i = 0; i < num_jobs; i++) {
-                if (!aead_ok(vec, DIGEST_SZ, dst_ptr_array[i], dir, auths[i],
-                             padding, sizeof(padding)))
+                if (!aead_ok(vec, DIGEST_SZ, dst_ptr_array[i], dir, auths[i], padding,
+                             sizeof(padding)))
                         goto end;
         }
 
@@ -217,16 +209,15 @@ test_aead(struct IMB_MGR *mb_mgr,
                 job->dec_keys = vec->key;
                 job->key_len_in_bytes = KEY_SZ;
 
-                job->u.CHACHA20_POLY1305.aad = (const void *)vec->aad;
+                job->u.CHACHA20_POLY1305.aad = (const void *) vec->aad;
                 job->u.CHACHA20_POLY1305.aad_len_in_bytes = vec->aadSize / 8;
 
                 if (in_place)
                         job->src = targets[i] + sizeof(padding);
+                else if (dir == IMB_DIR_ENCRYPT)
+                        job->src = (const void *) vec->msg;
                 else
-                        if (dir == IMB_DIR_ENCRYPT)
-                                job->src = (const void *) vec->msg;
-                        else
-                                job->src = (const void *) vec->ct;
+                        job->src = (const void *) vec->ct;
                 job->dst = targets[i] + sizeof(padding);
 
                 job->iv = (const void *) vec->iv;
@@ -247,21 +238,19 @@ test_aead(struct IMB_MGR *mb_mgr,
                         if (job->status != IMB_STATUS_COMPLETED) {
                                 const int errcode = imb_get_errno(mb_mgr);
 
-                                printf("Error!: job status %d, errno %d => %s\n",
-                                       job->status, errcode, imb_get_strerror(errcode));
+                                printf("Error!: job status %d, errno %d => %s\n", job->status,
+                                       errcode, imb_get_strerror(errcode));
                                 goto end;
                         }
 
-                        if (!aead_ok(vec, job->auth_tag_output_len_in_bytes,
-                                     job->dst, dir, job->user_data,
-                                     padding, sizeof(padding)))
+                        if (!aead_ok(vec, job->auth_tag_output_len_in_bytes, job->dst, dir,
+                                     job->user_data, padding, sizeof(padding)))
                                 goto end;
                 } else {
                         int err = imb_get_errno(mb_mgr);
 
                         if (err != 0) {
-                                printf("submit_job error %d : '%s'\n", err,
-                                       imb_get_strerror(err));
+                                printf("submit_job error %d : '%s'\n", err, imb_get_strerror(err));
                                 goto end;
                         }
                 }
@@ -273,13 +262,13 @@ test_aead(struct IMB_MGR *mb_mgr,
                 if (job->status != IMB_STATUS_COMPLETED) {
                         const int errcode = imb_get_errno(mb_mgr);
 
-                        printf("Error!: job status %d, errno %d => %s\n",
-                               job->status, errcode, imb_get_strerror(errcode));
+                        printf("Error!: job status %d, errno %d => %s\n", job->status, errcode,
+                               imb_get_strerror(errcode));
                         goto end;
                 }
 
                 if (!aead_ok(vec, job->auth_tag_output_len_in_bytes, job->dst, dir, job->user_data,
-                                 padding, sizeof(padding)))
+                             padding, sizeof(padding)))
                         goto end;
         }
 
@@ -295,7 +284,7 @@ test_aead(struct IMB_MGR *mb_mgr,
          */
 
         /* create job array */
-        IMB_JOB * jobs[32] = {NULL};
+        IMB_JOB *jobs[32] = { NULL };
 
         jobs_rx = 0;
 
@@ -314,7 +303,7 @@ test_aead(struct IMB_MGR *mb_mgr,
                 }
         }
 
-        while (IMB_GET_NEXT_BURST(mb_mgr, num_jobs, jobs) < (uint32_t)num_jobs)
+        while (IMB_GET_NEXT_BURST(mb_mgr, num_jobs, jobs) < (uint32_t) num_jobs)
                 IMB_FLUSH_BURST(mb_mgr, num_jobs, jobs);
 
         /**
@@ -335,11 +324,10 @@ test_aead(struct IMB_MGR *mb_mgr,
 
                 if (in_place)
                         job->src = targets[i] + sizeof(padding);
+                else if (dir == IMB_DIR_ENCRYPT)
+                        job->src = (const void *) vec->msg;
                 else
-                        if (dir == IMB_DIR_ENCRYPT)
-                                job->src = (const void *) vec->msg;
-                        else
-                                job->src = (const void *) vec->ct;
+                        job->src = (const void *) vec->ct;
                 job->dst = targets[i] + sizeof(padding);
 
                 job->iv = (const void *) vec->iv;
@@ -359,12 +347,11 @@ test_aead(struct IMB_MGR *mb_mgr,
 
         uint32_t completed_jobs = IMB_SUBMIT_BURST(mb_mgr, num_jobs, jobs);
 
-        if (completed_jobs != (uint32_t)num_jobs) {
+        if (completed_jobs != (uint32_t) num_jobs) {
                 int err = imb_get_errno(mb_mgr);
 
                 if (err != 0) {
-                        printf("submit_burst error %d : '%s'\n", err,
-                               imb_get_strerror(err));
+                        printf("submit_burst error %d : '%s'\n", err, imb_get_strerror(err));
                         goto end;
                 } else {
                         printf("submit_burst error: not enough "
@@ -377,27 +364,28 @@ test_aead(struct IMB_MGR *mb_mgr,
                 job = jobs[i];
 
                 if (job->status != IMB_STATUS_COMPLETED) {
-                        printf("job %d status not complete!\n", i+1);
+                        printf("job %d status not complete!\n", i + 1);
                         goto end;
                 }
 
                 if (job->status != IMB_STATUS_COMPLETED) {
                         const int errcode = imb_get_errno(mb_mgr);
 
-                        printf("Error!: job status %d, errno %d => %s\n",
-                               job->status, errcode, imb_get_strerror(errcode));
+                        printf("Error!: job status %d, errno %d => %s\n", job->status, errcode,
+                               imb_get_strerror(errcode));
                         goto end;
                 }
 
                 if (!aead_ok(vec, job->auth_tag_output_len_in_bytes, job->dst, dir, job->user_data,
-                                 padding, sizeof(padding)))
+                             padding, sizeof(padding)))
                         goto end;
                 jobs_rx++;
         }
 
         if (jobs_rx != num_jobs) {
                 printf("Expected %d jobs after burst, "
-                       "received %d\n", num_jobs, jobs_rx);
+                       "received %d\n",
+                       num_jobs, jobs_rx);
                 goto end;
         }
 
@@ -409,7 +397,7 @@ test_aead(struct IMB_MGR *mb_mgr,
 
         ret = 0;
 
- end:
+end:
         while (IMB_FLUSH_JOB(mb_mgr) != NULL)
                 ;
 
@@ -427,7 +415,7 @@ test_aead(struct IMB_MGR *mb_mgr,
                 }
         }
 
- end2:
+end2:
         if (auths != NULL)
                 free(auths);
 
@@ -438,14 +426,12 @@ test_aead(struct IMB_MGR *mb_mgr,
 }
 
 static void
-test_aead_vectors(struct IMB_MGR *mb_mgr,
-                  struct test_suite_context *ctx,
-                  const int num_jobs,
+test_aead_vectors(struct IMB_MGR *mb_mgr, struct test_suite_context *ctx, const int num_jobs,
                   const struct aead_test *v)
 {
         if (!quiet_mode)
-	        printf("AEAD Chacha20-Poly1305 vectors (N jobs = %d):\n", num_jobs);
-	for (; v->msg != NULL; v++) {
+                printf("AEAD Chacha20-Poly1305 vectors (N jobs = %d):\n", num_jobs);
+        for (; v->msg != NULL; v++) {
                 if (!quiet_mode) {
 #ifdef DEBUG
                         printf("Vector %zu, M len: %zu\n", v->tcId, v->msgSize / 8);
@@ -478,17 +464,14 @@ test_aead_vectors(struct IMB_MGR *mb_mgr,
                 } else {
                         test_suite_update(ctx, 1, 0);
                 }
-	}
+        }
         if (!quiet_mode)
                 printf("\n");
-
 }
 
 static void
-test_single_job_sgl(struct IMB_MGR *mb_mgr,
-                    struct test_suite_context *ctx,
-                    const uint32_t buffer_sz,
-                    const uint32_t seg_sz,
+test_single_job_sgl(struct IMB_MGR *mb_mgr, struct test_suite_context *ctx,
+                    const uint32_t buffer_sz, const uint32_t seg_sz,
                     const IMB_CIPHER_DIRECTION cipher_dir)
 {
         struct IMB_JOB *job;
@@ -536,8 +519,7 @@ test_single_job_sgl(struct IMB_MGR *mb_mgr,
 
         segments = malloc(num_segments * sizeof(*segments));
         if (segments == NULL) {
-                fprintf(stderr,
-                        "Could not allocate memory for segments array\n");
+                fprintf(stderr, "Could not allocate memory for segments array\n");
                 test_suite_update(ctx, 0, 1);
                 goto exit;
         }
@@ -546,9 +528,7 @@ test_single_job_sgl(struct IMB_MGR *mb_mgr,
         for (i = 0; i < (num_segments - 1); i++) {
                 segments[i] = malloc(seg_sz);
                 if (segments[i] == NULL) {
-                        fprintf(stderr,
-                                "Could not allocate memory for segment %u\n",
-                                i);
+                        fprintf(stderr, "Could not allocate memory for segment %u\n", i);
                         test_suite_update(ctx, 0, 1);
                         goto exit;
                 }
@@ -559,8 +539,7 @@ test_single_job_sgl(struct IMB_MGR *mb_mgr,
         }
         segments[i] = malloc(last_seg_sz);
         if (segments[i] == NULL) {
-                fprintf(stderr, "Could not allocate memory for segment %u\n",
-                        i);
+                fprintf(stderr, "Could not allocate memory for segment %u\n", i);
                 test_suite_update(ctx, 0, 1);
                 goto exit;
         }
@@ -634,36 +613,29 @@ test_single_job_sgl(struct IMB_MGR *mb_mgr,
 
         if (job->status == IMB_STATUS_COMPLETED) {
                 for (i = 0; i < (num_segments - 1); i++) {
-                        if (memcmp(in_buffer + i*seg_sz, segments[i],
-                                   seg_sz) != 0) {
+                        if (memcmp(in_buffer + i * seg_sz, segments[i], seg_sz) != 0) {
                                 printf("ciphertext mismatched "
                                        "in segment number %u "
                                        "(segment size = %u)\n",
                                        i, seg_sz);
-                                hexdump(stderr, "Linear output",
-                                        in_buffer + i*seg_sz, seg_sz);
-                                hexdump(stderr, "SGL output", segments[i],
-                                        seg_sz);
+                                hexdump(stderr, "Linear output", in_buffer + i * seg_sz, seg_sz);
+                                hexdump(stderr, "SGL output", segments[i], seg_sz);
                                 test_suite_update(ctx, 0, 1);
                                 goto exit;
                         }
                 }
                 /* Check last segment */
-                if (memcmp(in_buffer + i*seg_sz, segments[i],
-                           last_seg_sz) != 0) {
+                if (memcmp(in_buffer + i * seg_sz, segments[i], last_seg_sz) != 0) {
                         printf("ciphertext mismatched "
                                "in segment number %u (segment size = %u)\n",
                                i, seg_sz);
-                        hexdump(stderr, "Linear output",
-                                in_buffer + i*seg_sz, last_seg_sz);
+                        hexdump(stderr, "Linear output", in_buffer + i * seg_sz, last_seg_sz);
                         hexdump(stderr, "SGL output", segments[i], last_seg_sz);
                         test_suite_update(ctx, 0, 1);
                 }
                 if (memcmp(sgl_digest, linear_digest, 16) != 0) {
-                        printf("hash mismatched (segment size = %u)\n",
-                               seg_sz);
-                        hexdump(stderr, "Linear digest",
-                                linear_digest, DIGEST_SZ);
+                        printf("hash mismatched (segment size = %u)\n", seg_sz);
+                        hexdump(stderr, "Linear digest", linear_digest, DIGEST_SZ);
                         hexdump(stderr, "SGL digest", sgl_digest, DIGEST_SZ);
                         test_suite_update(ctx, 0, 1);
                 } else {
@@ -686,12 +658,8 @@ exit:
 }
 
 static void
-test_sgl(struct IMB_MGR *mb_mgr,
-         struct test_suite_context *ctx,
-         const uint32_t buffer_sz,
-         const uint32_t seg_sz,
-         const IMB_CIPHER_DIRECTION cipher_dir,
-         const unsigned job_api,
+test_sgl(struct IMB_MGR *mb_mgr, struct test_suite_context *ctx, const uint32_t buffer_sz,
+         const uint32_t seg_sz, const IMB_CIPHER_DIRECTION cipher_dir, const unsigned job_api,
          const unsigned encrypt_on_update_only)
 {
         struct IMB_JOB *job;
@@ -733,8 +701,7 @@ test_sgl(struct IMB_MGR *mb_mgr,
 
         segments = malloc(num_segments * sizeof(*segments));
         if (segments == NULL) {
-                fprintf(stderr,
-                        "Could not allocate memory for segments array\n");
+                fprintf(stderr, "Could not allocate memory for segments array\n");
                 test_suite_update(ctx, 0, 1);
                 goto exit;
         }
@@ -742,8 +709,7 @@ test_sgl(struct IMB_MGR *mb_mgr,
 
         segment_sizes = malloc(num_segments * sizeof(*segment_sizes));
         if (segment_sizes == NULL) {
-                fprintf(stderr,
-                        "Could not allocate memory for array of sizes\n");
+                fprintf(stderr, "Could not allocate memory for array of sizes\n");
                 test_suite_update(ctx, 0, 1);
                 goto exit;
         }
@@ -751,9 +717,7 @@ test_sgl(struct IMB_MGR *mb_mgr,
         for (i = 0; i < (num_segments - 1); i++) {
                 segments[i] = malloc(seg_sz);
                 if (segments[i] == NULL) {
-                        fprintf(stderr,
-                                "Could not allocate memory for segment %u\n",
-                                i);
+                        fprintf(stderr, "Could not allocate memory for segment %u\n", i);
                         test_suite_update(ctx, 0, 1);
                         goto exit;
                 }
@@ -762,8 +726,7 @@ test_sgl(struct IMB_MGR *mb_mgr,
         }
         segments[i] = malloc(last_seg_sz);
         if (segments[i] == NULL) {
-                fprintf(stderr, "Could not allocate memory for segment %u\n",
-                        i);
+                fprintf(stderr, "Could not allocate memory for segment %u\n", i);
                 test_suite_update(ctx, 0, 1);
                 goto exit;
         }
@@ -847,8 +810,7 @@ test_sgl(struct IMB_MGR *mb_mgr,
                 job->sgl_state = IMB_SGL_INIT;
                 job = IMB_SUBMIT_JOB(mb_mgr);
         } else {
-                IMB_CHACHA20_POLY1305_INIT(mb_mgr, key, &chacha_ctx, iv,
-                                           aad, AAD_SZ);
+                IMB_CHACHA20_POLY1305_INIT(mb_mgr, key, &chacha_ctx, iv, aad, AAD_SZ);
                 i = 0; /* Start update from segment 0 */
                 segments_to_update = num_segments;
         }
@@ -929,49 +891,38 @@ test_sgl(struct IMB_MGR *mb_mgr,
                 job = IMB_SUBMIT_JOB(mb_mgr);
         } else {
                 if (cipher_dir == IMB_DIR_ENCRYPT)
-                        IMB_CHACHA20_POLY1305_ENC_FINALIZE(mb_mgr,
-                                                           &chacha_ctx,
-                                                           sgl_digest,
+                        IMB_CHACHA20_POLY1305_ENC_FINALIZE(mb_mgr, &chacha_ctx, sgl_digest,
                                                            DIGEST_SZ);
                 else
-                        IMB_CHACHA20_POLY1305_DEC_FINALIZE(mb_mgr,
-                                                           &chacha_ctx,
-                                                           sgl_digest,
+                        IMB_CHACHA20_POLY1305_DEC_FINALIZE(mb_mgr, &chacha_ctx, sgl_digest,
                                                            DIGEST_SZ);
         }
 
         if (job->status == IMB_STATUS_COMPLETED) {
                 for (i = 0; i < (num_segments - 1); i++) {
-                        if (memcmp(in_buffer + i*seg_sz, segments[i],
-                                   seg_sz) != 0) {
+                        if (memcmp(in_buffer + i * seg_sz, segments[i], seg_sz) != 0) {
                                 printf("ciphertext mismatched "
                                        "in segment number %u "
                                        "(segment size = %u)\n",
                                        i, seg_sz);
-                                hexdump(stderr, "Linear output",
-                                        in_buffer + i*seg_sz, seg_sz);
-                                hexdump(stderr, "SGL output", segments[i],
-                                        seg_sz);
+                                hexdump(stderr, "Linear output", in_buffer + i * seg_sz, seg_sz);
+                                hexdump(stderr, "SGL output", segments[i], seg_sz);
                                 test_suite_update(ctx, 0, 1);
                                 goto exit;
                         }
                 }
                 /* Check last segment */
-                if (memcmp(in_buffer + i*seg_sz, segments[i],
-                           last_seg_sz) != 0) {
+                if (memcmp(in_buffer + i * seg_sz, segments[i], last_seg_sz) != 0) {
                         printf("ciphertext mismatched "
                                "in segment number %u (segment size = %u)\n",
                                i, seg_sz);
-                        hexdump(stderr, "Linear output",
-                                in_buffer + i*seg_sz, last_seg_sz);
+                        hexdump(stderr, "Linear output", in_buffer + i * seg_sz, last_seg_sz);
                         hexdump(stderr, "SGL output", segments[i], last_seg_sz);
                         test_suite_update(ctx, 0, 1);
                 }
                 if (memcmp(sgl_digest, linear_digest, DIGEST_SZ) != 0) {
-                        printf("hash mismatched (segment size = %u)\n",
-                               seg_sz);
-                        hexdump(stderr, "Linear digest",
-                                linear_digest, DIGEST_SZ);
+                        printf("hash mismatched (segment size = %u)\n", seg_sz);
+                        hexdump(stderr, "Linear digest", linear_digest, DIGEST_SZ);
                         hexdump(stderr, "SGL digest", sgl_digest, DIGEST_SZ);
                         test_suite_update(ctx, 0, 1);
                 } else {
@@ -993,9 +944,9 @@ exit:
         free(segment_sizes);
 }
 
-#define BUF_SZ 2032
+#define BUF_SZ      2032
 #define SEG_SZ_STEP 4
-#define MAX_SEG_SZ 2048
+#define MAX_SEG_SZ  2048
 int
 chacha20_poly1305_test(struct IMB_MGR *mb_mgr)
 {
@@ -1022,5 +973,5 @@ chacha20_poly1305_test(struct IMB_MGR *mb_mgr)
 
         errors = test_suite_end(&ctx);
 
-	return errors;
+        return errors;
 }

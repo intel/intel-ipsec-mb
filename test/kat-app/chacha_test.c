@@ -36,27 +36,22 @@
 #include "utils.h"
 #include "cipher_test.h"
 
-int chacha_test(struct IMB_MGR *mb_mgr);
+int
+chacha_test(struct IMB_MGR *mb_mgr);
 
 extern const struct cipher_test chacha_test_json[];
 
 static int
-chacha_job_ok(const struct IMB_JOB *job,
-           const uint8_t *out_text,
-           const uint8_t *target,
-           const uint8_t *padding,
-           const size_t sizeof_padding,
-           const unsigned text_len)
+chacha_job_ok(const struct IMB_JOB *job, const uint8_t *out_text, const uint8_t *target,
+              const uint8_t *padding, const size_t sizeof_padding, const unsigned text_len)
 {
-        const int num = (const int)((uint64_t)job->user_data2);
+        const int num = (const int) ((uint64_t) job->user_data2);
 
         if (job->status != IMB_STATUS_COMPLETED) {
-                printf("%d error status:%d, job %d",
-                       __LINE__, job->status, num);
+                printf("%d error status:%d, job %d", __LINE__, job->status, num);
                 return 0;
         }
-        if (memcmp(out_text, target + sizeof_padding,
-                   text_len)) {
+        if (memcmp(out_text, target + sizeof_padding, text_len)) {
                 printf("%d mismatched\n", num);
                 return 0;
         }
@@ -64,9 +59,7 @@ chacha_job_ok(const struct IMB_JOB *job,
                 printf("%d overwrite head\n", num);
                 return 0;
         }
-        if (memcmp(padding,
-                   target + sizeof_padding + text_len,
-                   sizeof_padding)) {
+        if (memcmp(padding, target + sizeof_padding + text_len, sizeof_padding)) {
                 printf("%d overwrite tail\n", num);
                 return 0;
         }
@@ -74,19 +67,10 @@ chacha_job_ok(const struct IMB_JOB *job,
 }
 
 static int
-test_chacha_many(struct IMB_MGR *mb_mgr,
-              const void *enc_keys,
-              const void *dec_keys,
-              const void *iv,
-              const uint8_t *in_text,
-              const uint8_t *out_text,
-              const unsigned text_len,
-              const int dir,
-              const int order,
-              const IMB_CIPHER_MODE cipher,
-              const int in_place,
-              const int key_len,
-              const int num_jobs)
+test_chacha_many(struct IMB_MGR *mb_mgr, const void *enc_keys, const void *dec_keys, const void *iv,
+                 const uint8_t *in_text, const uint8_t *out_text, const unsigned text_len,
+                 const int dir, const int order, const IMB_CIPHER_MODE cipher, const int in_place,
+                 const int key_len, const int num_jobs)
 {
         struct IMB_JOB *job;
         uint8_t padding[16];
@@ -135,23 +119,23 @@ test_chacha_many(struct IMB_MGR *mb_mgr,
                 job->cipher_start_src_offset_in_bytes = 0;
                 job->msg_len_to_cipher_in_bytes = text_len;
                 job->user_data = targets[i];
-                job->user_data2 = (void *)((uint64_t)i);
+                job->user_data2 = (void *) ((uint64_t) i);
 
                 job->hash_alg = IMB_AUTH_NULL;
 
                 job = IMB_SUBMIT_JOB(mb_mgr);
                 if (job != NULL) {
                         jobs_rx++;
-                        if (!chacha_job_ok(job, out_text, job->user_data,
-                                           padding, sizeof(padding), text_len))
+                        if (!chacha_job_ok(job, out_text, job->user_data, padding, sizeof(padding),
+                                           text_len))
                                 goto end;
                 }
         }
 
         while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL) {
                 jobs_rx++;
-                if (!chacha_job_ok(job, out_text, job->user_data, padding,
-                               sizeof(padding), text_len))
+                if (!chacha_job_ok(job, out_text, job->user_data, padding, sizeof(padding),
+                                   text_len))
                         goto end;
         }
 
@@ -161,7 +145,7 @@ test_chacha_many(struct IMB_MGR *mb_mgr,
         }
         ret = 0;
 
- end:
+end:
         while (IMB_FLUSH_JOB(mb_mgr) != NULL)
                 ;
 
@@ -176,19 +160,17 @@ end_alloc:
 }
 
 static void
-test_chacha_vectors(struct IMB_MGR *mb_mgr,
-                    struct test_suite_context *ctx,
+test_chacha_vectors(struct IMB_MGR *mb_mgr, struct test_suite_context *ctx,
                     const IMB_CIPHER_MODE cipher, const int num_jobs)
 {
         const struct cipher_test *v = chacha_test_json;
 
         if (!quiet_mode)
-	        printf("CHACHA20 standard test vectors (N jobs = %d):\n", num_jobs);
-	for (; v->msg != NULL; v++) {
+                printf("CHACHA20 standard test vectors (N jobs = %d):\n", num_jobs);
+        for (; v->msg != NULL; v++) {
                 if (!quiet_mode) {
 #ifdef DEBUG
-                        printf("%zu Standard vector key_len:%zu\n",
-                               v->tcId, v->keySize / 8);
+                        printf("%zu Standard vector key_len:%zu\n", v->tcId, v->keySize / 8);
 #else
                         printf(".");
 #endif
@@ -196,8 +178,8 @@ test_chacha_vectors(struct IMB_MGR *mb_mgr,
 
                 if (test_chacha_many(mb_mgr, v->key, v->key, v->iv, (const void *) v->msg,
                                      (const void *) v->ct, (unsigned) v->msgSize / 8,
-                                     IMB_DIR_ENCRYPT, IMB_ORDER_CIPHER_HASH,
-                                     cipher, 0, IMB_KEY_256_BYTES, num_jobs)) {
+                                     IMB_DIR_ENCRYPT, IMB_ORDER_CIPHER_HASH, cipher, 0,
+                                     IMB_KEY_256_BYTES, num_jobs)) {
                         printf("error #%zu encrypt\n", v->tcId);
                         test_suite_update(ctx, 0, 1);
                 } else {
@@ -206,8 +188,8 @@ test_chacha_vectors(struct IMB_MGR *mb_mgr,
 
                 if (test_chacha_many(mb_mgr, v->key, v->key, v->iv, (const void *) v->ct,
                                      (const void *) v->msg, (unsigned) v->msgSize / 8,
-                                     IMB_DIR_DECRYPT, IMB_ORDER_HASH_CIPHER,
-                                     cipher, 0, IMB_KEY_256_BYTES, num_jobs)) {
+                                     IMB_DIR_DECRYPT, IMB_ORDER_HASH_CIPHER, cipher, 0,
+                                     IMB_KEY_256_BYTES, num_jobs)) {
                         printf("error #%zu decrypt\n", v->tcId);
                         test_suite_update(ctx, 0, 1);
                 } else {
@@ -216,8 +198,8 @@ test_chacha_vectors(struct IMB_MGR *mb_mgr,
 
                 if (test_chacha_many(mb_mgr, v->key, v->key, v->iv, (const void *) v->msg,
                                      (const void *) v->ct, (unsigned) v->msgSize / 8,
-                                     IMB_DIR_ENCRYPT, IMB_ORDER_CIPHER_HASH,
-                                     cipher, 1, IMB_KEY_256_BYTES, num_jobs)) {
+                                     IMB_DIR_ENCRYPT, IMB_ORDER_CIPHER_HASH, cipher, 1,
+                                     IMB_KEY_256_BYTES, num_jobs)) {
                         printf("error #%zu encrypt in-place\n", v->tcId);
                         test_suite_update(ctx, 0, 1);
                 } else {
@@ -226,14 +208,14 @@ test_chacha_vectors(struct IMB_MGR *mb_mgr,
 
                 if (test_chacha_many(mb_mgr, v->key, v->key, v->iv, (const void *) v->ct,
                                      (const void *) v->msg, (unsigned) v->msgSize / 8,
-                                     IMB_DIR_DECRYPT, IMB_ORDER_HASH_CIPHER,
-                                     cipher, 1, IMB_KEY_256_BYTES, num_jobs)) {
+                                     IMB_DIR_DECRYPT, IMB_ORDER_HASH_CIPHER, cipher, 1,
+                                     IMB_KEY_256_BYTES, num_jobs)) {
                         printf("error #%zu decrypt in-place\n", v->tcId);
                         test_suite_update(ctx, 0, 1);
                 } else {
                         test_suite_update(ctx, 1, 0);
                 }
-	}
+        }
         if (!quiet_mode)
                 printf("\n");
 }
@@ -241,9 +223,7 @@ test_chacha_vectors(struct IMB_MGR *mb_mgr,
 int
 chacha_test(struct IMB_MGR *mb_mgr)
 {
-        const int num_jobs_tab[] = {
-                1, 3, 4, 5, 7, 8, 9, 15, 16, 17
-        };
+        const int num_jobs_tab[] = { 1, 3, 4, 5, 7, 8, 9, 15, 16, 17 };
         unsigned i;
         int errors = 0;
         struct test_suite_context ctx;
@@ -253,5 +233,5 @@ chacha_test(struct IMB_MGR *mb_mgr)
                 test_chacha_vectors(mb_mgr, &ctx, IMB_CIPHER_CHACHA20, num_jobs_tab[i]);
         errors = test_suite_end(&ctx);
 
-	return errors;
+        return errors;
 }

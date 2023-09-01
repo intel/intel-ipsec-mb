@@ -35,16 +35,14 @@
 #include "utils.h"
 #include "mac_test.h"
 
-int sha_test(struct IMB_MGR *mb_mgr);
+int
+sha_test(struct IMB_MGR *mb_mgr);
 
 extern const struct mac_test sha_test_json[];
 
 static int
-sha_job_ok(const struct mac_test *vec,
-           const struct IMB_JOB *job,
-           const uint8_t *auth,
-           const uint8_t *padding,
-           const size_t sizeof_padding)
+sha_job_ok(const struct mac_test *vec, const struct IMB_JOB *job, const uint8_t *auth,
+           const uint8_t *padding, const size_t sizeof_padding)
 {
         if (job->status != IMB_STATUS_COMPLETED) {
                 printf("line:%d job error status:%d ", __LINE__, job->status);
@@ -52,11 +50,9 @@ sha_job_ok(const struct mac_test *vec,
         }
 
         /* hash checks */
-        if (memcmp(padding, &auth[sizeof_padding + (vec->tagSize / 8)],
-                   sizeof_padding)) {
+        if (memcmp(padding, &auth[sizeof_padding + (vec->tagSize / 8)], sizeof_padding)) {
                 printf("hash overwrite tail\n");
-                hexdump(stderr, "Target",
-                        &auth[sizeof_padding + (vec->tagSize / 8)],
+                hexdump(stderr, "Target", &auth[sizeof_padding + (vec->tagSize / 8)],
                         sizeof_padding);
                 return 0;
         }
@@ -67,23 +63,17 @@ sha_job_ok(const struct mac_test *vec,
                 return 0;
         }
 
-        if (memcmp((const void *) vec->tag, &auth[sizeof_padding],
-                   vec->tagSize / 8)) {
+        if (memcmp((const void *) vec->tag, &auth[sizeof_padding], vec->tagSize / 8)) {
                 printf("hash mismatched\n");
-                hexdump(stderr, "Received", &auth[sizeof_padding],
-                        vec->tagSize / 8);
-                hexdump(stderr, "Expected", (const void *) vec->tag,
-                        vec->tagSize / 8);
+                hexdump(stderr, "Received", &auth[sizeof_padding], vec->tagSize / 8);
+                hexdump(stderr, "Expected", (const void *) vec->tag, vec->tagSize / 8);
                 return 0;
         }
         return 1;
 }
 
 static int
-test_sha(struct IMB_MGR *mb_mgr,
-         const struct mac_test *vec,
-         const int num_jobs,
-         const int sha_type)
+test_sha(struct IMB_MGR *mb_mgr, const struct mac_test *vec, const int num_jobs, const int sha_type)
 {
         struct IMB_JOB *job;
         uint8_t padding[16];
@@ -91,16 +81,15 @@ test_sha(struct IMB_MGR *mb_mgr,
         int i = 0, jobs_rx = 0, ret = -1;
 
         if (auths == NULL) {
-		fprintf(stderr, "Can't allocate buffer memory\n");
-		goto end2;
+                fprintf(stderr, "Can't allocate buffer memory\n");
+                goto end2;
         }
 
         memset(padding, -1, sizeof(padding));
         memset(auths, 0, num_jobs * sizeof(void *));
 
         for (i = 0; i < num_jobs; i++) {
-                const size_t alloc_len =
-                        vec->tagSize / 8 + (sizeof(padding) * 2);
+                const size_t alloc_len = vec->tagSize / 8 + (sizeof(padding) * 2);
 
                 auths[i] = malloc(alloc_len);
                 if (auths[i] == NULL) {
@@ -149,16 +138,14 @@ test_sha(struct IMB_MGR *mb_mgr,
                 job = IMB_SUBMIT_JOB(mb_mgr);
                 if (job) {
                         jobs_rx++;
-                        if (!sha_job_ok(vec, job, job->user_data,
-                                        padding, sizeof(padding)))
+                        if (!sha_job_ok(vec, job, job->user_data, padding, sizeof(padding)))
                                 goto end;
                 }
         }
 
         while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL) {
                 jobs_rx++;
-                if (!sha_job_ok(vec, job, job->user_data,
-                                padding, sizeof(padding)))
+                if (!sha_job_ok(vec, job, job->user_data, padding, sizeof(padding)))
                         goto end;
         }
 
@@ -168,7 +155,7 @@ test_sha(struct IMB_MGR *mb_mgr,
         }
         ret = 0;
 
- end:
+end:
         /* empty the manager before next tests */
         while (IMB_FLUSH_JOB(mb_mgr) != NULL)
                 ;
@@ -178,7 +165,7 @@ test_sha(struct IMB_MGR *mb_mgr,
                         free(auths[i]);
         }
 
- end2:
+end2:
         if (auths != NULL)
                 free(auths);
 
@@ -186,12 +173,9 @@ test_sha(struct IMB_MGR *mb_mgr,
 }
 
 static void
-test_sha_vectors(struct IMB_MGR *mb_mgr,
-                 struct test_suite_context *sha1_ctx,
-                 struct test_suite_context *sha224_ctx,
-                 struct test_suite_context *sha256_ctx,
-                 struct test_suite_context *sha384_ctx,
-                 struct test_suite_context *sha512_ctx,
+test_sha_vectors(struct IMB_MGR *mb_mgr, struct test_suite_context *sha1_ctx,
+                 struct test_suite_context *sha224_ctx, struct test_suite_context *sha256_ctx,
+                 struct test_suite_context *sha384_ctx, struct test_suite_context *sha512_ctx,
                  const int num_jobs)
 {
         struct test_suite_context *ctx;
@@ -199,8 +183,8 @@ test_sha_vectors(struct IMB_MGR *mb_mgr,
         int sha_type;
 
         if (!quiet_mode)
-	        printf("SHA standard test vectors (N jobs = %d):\n", num_jobs);
-	for (; v->msg != NULL; v++) {
+                printf("SHA standard test vectors (N jobs = %d):\n", num_jobs);
+        for (; v->msg != NULL; v++) {
 
                 switch (v->tagSize) {
                 case 160:
@@ -232,8 +216,8 @@ test_sha_vectors(struct IMB_MGR *mb_mgr,
 #ifdef DEBUG
                 if (!quiet_mode) {
                         printf("SHA%d Test Case %zu "
-                        "data_len:%zu digest_len:%zu\n",
-                        sha_type, v->tcId, v->msgSize / 8, v->tagSize / 8);
+                               "data_len:%zu digest_len:%zu\n",
+                               sha_type, v->tcId, v->msgSize / 8, v->tagSize / 8);
                 }
 #endif
                 if (test_sha(mb_mgr, v, num_jobs, sha_type)) {
@@ -242,7 +226,7 @@ test_sha_vectors(struct IMB_MGR *mb_mgr,
                 } else {
                         test_suite_update(ctx, 1, 0);
                 }
-	}
+        }
 }
 
 int
@@ -259,8 +243,8 @@ sha_test(struct IMB_MGR *mb_mgr)
         test_suite_start(&sha384_ctx, "SHA384");
         test_suite_start(&sha512_ctx, "SHA512");
         for (i = 1; i <= 17; i++) {
-                test_sha_vectors(mb_mgr, &sha1_ctx, &sha224_ctx,
-                                &sha256_ctx, &sha384_ctx, &sha512_ctx, i);
+                test_sha_vectors(mb_mgr, &sha1_ctx, &sha224_ctx, &sha256_ctx, &sha384_ctx,
+                                 &sha512_ctx, i);
         }
         errors = test_suite_end(&sha1_ctx);
         errors += test_suite_end(&sha224_ctx);
@@ -268,5 +252,5 @@ sha_test(struct IMB_MGR *mb_mgr)
         errors += test_suite_end(&sha384_ctx);
         errors += test_suite_end(&sha512_ctx);
 
-	return errors;
+        return errors;
 }

@@ -40,7 +40,8 @@
 
 #define MAX_BURST_JOBS 32
 
-int api_test(struct IMB_MGR *mb_mgr);
+int
+api_test(struct IMB_MGR *mb_mgr);
 
 enum {
         TEST_UNEXPECTED_JOB = 1,
@@ -75,7 +76,8 @@ enum {
         TEST_INVALID_PON_PLI = 300,
 };
 
-static void print_progress(void)
+static void
+print_progress(void)
 {
         if (!quiet_mode)
                 printf(".");
@@ -90,20 +92,19 @@ test_job_api(struct IMB_MGR *mb_mgr)
         struct IMB_JOB *job, *job_next;
         int err;
 
-	printf("JOB API behavior test:\n");
+        printf("JOB API behavior test:\n");
 
         /* ======== test 1 */
         job = IMB_GET_NEXT_JOB(mb_mgr);
         if (job == NULL) {
-                printf("%s: test %d, unexpected job = NULL\n",
-                       __func__, TEST_UNEXPECTED_JOB);
+                printf("%s: test %d, unexpected job = NULL\n", __func__, TEST_UNEXPECTED_JOB);
                 return 1;
         }
         print_progress();
         err = imb_get_errno(mb_mgr);
         if (err != 0) {
-                printf("%s: test %d, unexpected error: %s\n",
-                       __func__, TEST_UNEXPECTED_JOB, imb_get_strerror(err));
+                printf("%s: test %d, unexpected error: %s\n", __func__, TEST_UNEXPECTED_JOB,
+                       imb_get_strerror(err));
                 return 1;
         }
         print_progress();
@@ -113,15 +114,14 @@ test_job_api(struct IMB_MGR *mb_mgr)
         job_next = IMB_SUBMIT_JOB(mb_mgr);
         if (job != job_next) {
                 /* Invalid job should be returned straight away */
-                printf("%s: test %d, unexpected job != job_next\n",
-                       __func__, TEST_INVALID_JOB);
+                printf("%s: test %d, unexpected job != job_next\n", __func__, TEST_INVALID_JOB);
                 return 1;
         }
         print_progress();
         err = imb_get_errno(mb_mgr);
         if (err == 0) {
-                printf("%s: test %d, unexpected error: %s\n",
-                       __func__, TEST_INVALID_JOB, imb_get_strerror(err));
+                printf("%s: test %d, unexpected error: %s\n", __func__, TEST_INVALID_JOB,
+                       imb_get_strerror(err));
                 return 1;
         }
         print_progress();
@@ -129,7 +129,8 @@ test_job_api(struct IMB_MGR *mb_mgr)
         if (job_next->status != IMB_STATUS_INVALID_ARGS) {
                 /* Invalid job is returned, and status should be INVALID_ARGS */
                 printf("%s: test %d, unexpected job->status != "
-                       "IMB_STATUS_INVALID_ARGS\n", __func__, TEST_INVALID_JOB);
+                       "IMB_STATUS_INVALID_ARGS\n",
+                       __func__, TEST_INVALID_JOB);
                 return 1;
         }
         print_progress();
@@ -137,15 +138,15 @@ test_job_api(struct IMB_MGR *mb_mgr)
         job_next = IMB_GET_NEXT_JOB(mb_mgr);
         if (job == job_next) {
                 /* get next job should point to a new job slot */
-                printf("%s: test %d, unexpected job == get_next_job()\n",
-                       __func__, TEST_INVALID_JOB);
+                printf("%s: test %d, unexpected job == get_next_job()\n", __func__,
+                       TEST_INVALID_JOB);
                 return 1;
         }
         print_progress();
         err = imb_get_errno(mb_mgr);
         if (err != 0) {
-                printf("%s: test %d, unexpected error: %s\n",
-                       __func__, TEST_INVALID_JOB, imb_get_strerror(err));
+                printf("%s: test %d, unexpected error: %s\n", __func__, TEST_INVALID_JOB,
+                       imb_get_strerror(err));
                 return 1;
         }
         print_progress();
@@ -153,15 +154,14 @@ test_job_api(struct IMB_MGR *mb_mgr)
         job = IMB_GET_COMPLETED_JOB(mb_mgr);
         if (job) {
                 /* there should not be any completed jobs left */
-                printf("%s: test %d, unexpected completed job\n",
-                       __func__, TEST_INVALID_JOB);
+                printf("%s: test %d, unexpected completed job\n", __func__, TEST_INVALID_JOB);
                 return 1;
         }
         print_progress();
         err = imb_get_errno(mb_mgr);
         if (err != 0) {
-                printf("%s: test %d, unexpected error: %s\n",
-                       __func__, TEST_INVALID_JOB, imb_get_strerror(err));
+                printf("%s: test %d, unexpected error: %s\n", __func__, TEST_INVALID_JOB,
+                       imb_get_strerror(err));
                 return 1;
         }
         print_progress();
@@ -178,7 +178,8 @@ test_job_api(struct IMB_MGR *mb_mgr)
 /*
  * @brief Dummy function for custom hash and cipher modes
  */
-static int dummy_cipher_hash_func(struct IMB_JOB *job)
+static int
+dummy_cipher_hash_func(struct IMB_JOB *job)
 {
         (void) job;
         return 0;
@@ -188,12 +189,9 @@ static int dummy_cipher_hash_func(struct IMB_JOB *job)
  * @brief Fills in job structure with valid settings
  */
 static void
-fill_in_job(struct IMB_JOB *job,
-            const IMB_CIPHER_MODE cipher_mode,
-            const IMB_CIPHER_DIRECTION cipher_direction,
-            const IMB_HASH_ALG hash_alg,
-            const IMB_CHAIN_ORDER chain_order,
-            struct chacha20_poly1305_context_data *chacha_ctx,
+fill_in_job(struct IMB_JOB *job, const IMB_CIPHER_MODE cipher_mode,
+            const IMB_CIPHER_DIRECTION cipher_direction, const IMB_HASH_ALG hash_alg,
+            const IMB_CHAIN_ORDER chain_order, struct chacha20_poly1305_context_data *chacha_ctx,
             struct gcm_context_data *gcm_ctx)
 {
         const uint64_t tag_len_tab[] = {
@@ -332,12 +330,10 @@ fill_in_job(struct IMB_JOB *job,
                 job->iv_len_in_bytes = 16;
 
                 /* create XGEM header template */
-                const uint64_t pli =
-                        (msg_len_to_cipher << 2) & 0xffff;
+                const uint64_t pli = (msg_len_to_cipher << 2) & 0xffff;
                 uint64_t *ptr64 = (uint64_t *) dust_bin;
 
-                ptr64[0] = ((pli >> 8) & 0xff) |
-                        ((pli & 0xff) << 8);
+                ptr64[0] = ((pli >> 8) & 0xff) | ((pli & 0xff) << 8);
                 break;
         case IMB_CIPHER_ECB:
                 job->key_len_in_bytes = UINT64_C(16);
@@ -435,8 +431,7 @@ fill_in_job(struct IMB_JOB *job,
         case IMB_AUTH_AES_CCM:
                 job->u.CCM.aad = dust_bin;
                 job->u.CCM.aad_len_in_bytes = 16;
-                job->hash_start_src_offset_in_bytes =
-                        job->cipher_start_src_offset_in_bytes;
+                job->hash_start_src_offset_in_bytes = job->cipher_start_src_offset_in_bytes;
                 job->msg_len_to_hash_in_bytes = msg_len_to_cipher;
                 /* set required cipher mode fields */
                 job->cipher_mode = IMB_CIPHER_CCM;
@@ -471,11 +466,9 @@ fill_in_job(struct IMB_JOB *job,
         case IMB_AUTH_DOCSIS_CRC32:
                 job->auth_tag_output_len_in_bytes = 4;
                 job->hash_start_src_offset_in_bytes = 32;
-                job->cipher_start_src_offset_in_bytes =
-                        job->hash_start_src_offset_in_bytes + 12;
+                job->cipher_start_src_offset_in_bytes = job->hash_start_src_offset_in_bytes + 12;
                 job->msg_len_to_hash_in_bits = 64;
-                job->msg_len_to_cipher_in_bytes =
-                        job->msg_len_to_hash_in_bytes - 12 + 4;
+                job->msg_len_to_cipher_in_bytes = job->msg_len_to_hash_in_bytes - 12 + 4;
                 /* set required cipher mode fields */
                 job->cipher_mode = IMB_CIPHER_DOCSIS_SEC_BPI;
                 job->key_len_in_bytes = UINT64_C(16);
@@ -550,8 +543,8 @@ fill_in_job(struct IMB_JOB *job,
  *        invalid arguments status.
  */
 static int
-is_submit_invalid(struct IMB_MGR *mb_mgr, const struct IMB_JOB *job,
-                  const int test_num, int expected_errnum)
+is_submit_invalid(struct IMB_MGR *mb_mgr, const struct IMB_JOB *job, const int test_num,
+                  int expected_errnum)
 {
         struct IMB_JOB *mb_job = NULL, *job_ret = NULL;
         int err;
@@ -562,9 +555,8 @@ is_submit_invalid(struct IMB_MGR *mb_mgr, const struct IMB_JOB *job,
                 printf("%s : test %d, hash_alg %d, chain_order %d, "
                        "cipher_dir %d, cipher_mode %d : "
                        "unexpected get_next_job() == NULL\n",
-                       __func__, test_num, (int) job->hash_alg,
-                       (int) job->chain_order, (int) job->cipher_direction,
-                       (int) job->cipher_mode);
+                       __func__, test_num, (int) job->hash_alg, (int) job->chain_order,
+                       (int) job->cipher_direction, (int) job->cipher_mode);
                 return 0;
         }
         err = imb_get_errno(mb_mgr);
@@ -572,9 +564,8 @@ is_submit_invalid(struct IMB_MGR *mb_mgr, const struct IMB_JOB *job,
                 printf("%s : test %d, hash_alg %d, chain_order %d, "
                        "cipher_dir %d, cipher_mode %d : "
                        "unexpected error: %s\n",
-                       __func__, test_num, (int) job->hash_alg,
-                       (int) job->chain_order, (int) job->cipher_direction,
-                       (int) job->cipher_mode, imb_get_strerror(err));
+                       __func__, test_num, (int) job->hash_alg, (int) job->chain_order,
+                       (int) job->cipher_direction, (int) job->cipher_mode, imb_get_strerror(err));
                 return 0;
         }
 
@@ -588,9 +579,8 @@ is_submit_invalid(struct IMB_MGR *mb_mgr, const struct IMB_JOB *job,
                 printf("%s : test %d, hash_alg %d, chain_order %d, "
                        "cipher_dir %d, cipher_mode %d : "
                        "unexpected error: %s\n",
-                       __func__, test_num, (int) job->hash_alg,
-                       (int) job->chain_order, (int) job->cipher_direction,
-                       (int) job->cipher_mode, imb_get_strerror(err));
+                       __func__, test_num, (int) job->hash_alg, (int) job->chain_order,
+                       (int) job->cipher_direction, (int) job->cipher_mode, imb_get_strerror(err));
                 return 0;
         }
 
@@ -607,10 +597,8 @@ is_submit_invalid(struct IMB_MGR *mb_mgr, const struct IMB_JOB *job,
                                "unexpected job_ret == NULL "
                                "(most likely job passed checks and got "
                                "submitted)\n",
-                               __func__, test_num, (int) job->hash_alg,
-                               (int) job->chain_order,
-                               (int) job->cipher_direction,
-                               (int) job->cipher_mode);
+                               __func__, test_num, (int) job->hash_alg, (int) job->chain_order,
+                               (int) job->cipher_direction, (int) job->cipher_mode);
                         return 0;
                 }
                 err = imb_get_errno(mb_mgr);
@@ -618,10 +606,8 @@ is_submit_invalid(struct IMB_MGR *mb_mgr, const struct IMB_JOB *job,
                         printf("%s : test %d, hash_alg %d, chain_order %d, "
                                "cipher_dir %d, cipher_mode %d : "
                                "unexpected error: %s\n",
-                               __func__, test_num, (int) job->hash_alg,
-                               (int) job->chain_order,
-                               (int) job->cipher_direction,
-                               (int) job->cipher_mode,
+                               __func__, test_num, (int) job->hash_alg, (int) job->chain_order,
+                               (int) job->cipher_direction, (int) job->cipher_mode,
                                imb_get_strerror(err));
                         return 0;
                 }
@@ -631,10 +617,9 @@ is_submit_invalid(struct IMB_MGR *mb_mgr, const struct IMB_JOB *job,
                 printf("%s : test %d, hash_alg %d, chain_order %d, "
                        "cipher_dir %d, cipher_mode %d : "
                        "unexpected job->status %d != IMB_STATUS_INVALID_ARGS\n",
-                       __func__, test_num, (int) job_ret->hash_alg,
-                       (int) job_ret->chain_order,
-                       (int) job_ret->cipher_direction,
-                       (int) job_ret->cipher_mode, (int) job_ret->status);
+                       __func__, test_num, (int) job_ret->hash_alg, (int) job_ret->chain_order,
+                       (int) job_ret->cipher_direction, (int) job_ret->cipher_mode,
+                       (int) job_ret->status);
                 return 0;
         }
 
@@ -646,10 +631,10 @@ is_submit_invalid(struct IMB_MGR *mb_mgr, const struct IMB_JOB *job,
  *        invalid arguments status and error value
  */
 static int
-is_submit_burst_invalid(struct IMB_MGR *mb_mgr, const struct IMB_JOB *job,
-                        const int test_num, int expected_errnum)
+is_submit_burst_invalid(struct IMB_MGR *mb_mgr, const struct IMB_JOB *job, const int test_num,
+                        int expected_errnum)
 {
-        IMB_JOB * jobs[MAX_BURST_JOBS] = {NULL};
+        IMB_JOB *jobs[MAX_BURST_JOBS] = { NULL };
         uint32_t i, completed_jobs, n_jobs = MAX_BURST_JOBS;
         int err;
 
@@ -666,9 +651,8 @@ is_submit_burst_invalid(struct IMB_MGR *mb_mgr, const struct IMB_JOB *job,
                 printf("%s : test %d, hash_alg %d, chain_order %d, "
                        "cipher_dir %d, cipher_mode %d : "
                        "unexpected number of completed jobs: %u\n",
-                       __func__, test_num, (int) job->hash_alg,
-                       (int) job->chain_order, (int) job->cipher_direction,
-                       (int) job->cipher_mode, completed_jobs);
+                       __func__, test_num, (int) job->hash_alg, (int) job->chain_order,
+                       (int) job->cipher_direction, (int) job->cipher_mode, completed_jobs);
         }
 
         err = imb_get_errno(mb_mgr);
@@ -676,9 +660,8 @@ is_submit_burst_invalid(struct IMB_MGR *mb_mgr, const struct IMB_JOB *job,
                 printf("%s : test %d, hash_alg %d, chain_order %d, "
                        "cipher_dir %d, cipher_mode %d : "
                        "unexpected error: %s\n",
-                       __func__, test_num, (int) job->hash_alg,
-                       (int) job->chain_order, (int) job->cipher_direction,
-                       (int) job->cipher_mode, imb_get_strerror(err));
+                       __func__, test_num, (int) job->hash_alg, (int) job->chain_order,
+                       (int) job->cipher_direction, (int) job->cipher_mode, imb_get_strerror(err));
                 return 0;
         }
 
@@ -686,10 +669,8 @@ is_submit_burst_invalid(struct IMB_MGR *mb_mgr, const struct IMB_JOB *job,
                 printf("%s : test %d, hash_alg %d, chain_order %d, "
                        "cipher_dir %d, cipher_mode %d : "
                        "unexpected job->status %d != IMB_STATUS_INVALID_ARGS\n",
-                       __func__, test_num, (int) job->hash_alg,
-                       (int) job->chain_order,
-                       (int) job->cipher_direction,
-                       (int) job->cipher_mode, (int) job->status);
+                       __func__, test_num, (int) job->hash_alg, (int) job->chain_order,
+                       (int) job->cipher_direction, (int) job->cipher_mode, (int) job->status);
                 return 0;
         }
 
@@ -702,12 +683,12 @@ is_submit_burst_invalid(struct IMB_MGR *mb_mgr, const struct IMB_JOB *job,
 static int
 test_burst_api(struct IMB_MGR *mb_mgr)
 {
-        struct IMB_JOB *job = NULL, *jobs[MAX_BURST_JOBS] = {NULL};
+        struct IMB_JOB *job = NULL, *jobs[MAX_BURST_JOBS] = { NULL };
         uint32_t i, completed_jobs, n_jobs = MAX_BURST_JOBS;
         struct IMB_JOB **null_jobs = NULL;
         int err;
 
-	printf("SUBMIT_BURST() API behavior test:\n");
+        printf("SUBMIT_BURST() API behavior test:\n");
 
         /* ======== test 1 : NULL pointer to jobs array */
 
@@ -715,15 +696,15 @@ test_burst_api(struct IMB_MGR *mb_mgr)
                 completed_jobs = IMB_SUBMIT_BURST(mb_mgr, n_jobs, null_jobs);
                 if (completed_jobs != 0) {
                         printf("%s: test %d, unexpected number of completed "
-                               "jobs\n", __func__, TEST_INVALID_BURST);
+                               "jobs\n",
+                               __func__, TEST_INVALID_BURST);
                         return 1;
                 }
                 print_progress();
 
                 err = imb_get_errno(mb_mgr);
                 if (err != IMB_ERR_NULL_BURST) {
-                        printf("%s: test %d, unexpected error: %s\n",
-                               __func__, TEST_INVALID_BURST,
+                        printf("%s: test %d, unexpected error: %s\n", __func__, TEST_INVALID_BURST,
                                imb_get_strerror(err));
                         return 1;
                 }
@@ -734,15 +715,15 @@ test_burst_api(struct IMB_MGR *mb_mgr)
                 completed_jobs = IMB_SUBMIT_BURST(mb_mgr, n_jobs, jobs);
                 if (completed_jobs != 0) {
                         printf("%s: test %d, unexpected number of completed "
-                               "jobs\n", __func__, TEST_INVALID_BURST);
+                               "jobs\n",
+                               __func__, TEST_INVALID_BURST);
                         return 1;
                 }
                 print_progress();
 
                 err = imb_get_errno(mb_mgr);
                 if (err != IMB_ERR_NULL_JOB) {
-                        printf("%s: test %d, unexpected error: %s\n",
-                               __func__, TEST_INVALID_BURST,
+                        printf("%s: test %d, unexpected error: %s\n", __func__, TEST_INVALID_BURST,
                                imb_get_strerror(err));
                         return 1;
                 }
@@ -750,19 +731,18 @@ test_burst_api(struct IMB_MGR *mb_mgr)
 
                 /* ========== test 3: invalid burst size */
 
-                completed_jobs = IMB_SUBMIT_BURST(mb_mgr,
-                                                  IMB_MAX_BURST_SIZE + 1, jobs);
+                completed_jobs = IMB_SUBMIT_BURST(mb_mgr, IMB_MAX_BURST_SIZE + 1, jobs);
                 if (completed_jobs != 0) {
                         printf("%s: test %d, unexpected number of completed "
-                               "jobs\n", __func__, TEST_INVALID_BURST);
+                               "jobs\n",
+                               __func__, TEST_INVALID_BURST);
                         return 1;
                 }
                 print_progress();
 
                 err = imb_get_errno(mb_mgr);
                 if (err != IMB_ERR_BURST_SIZE) {
-                        printf("%s: test %d, unexpected error: %s\n",
-                               __func__, TEST_INVALID_BURST,
+                        printf("%s: test %d, unexpected error: %s\n", __func__, TEST_INVALID_BURST,
                                imb_get_strerror(err));
                         return 1;
                 }
@@ -788,15 +768,15 @@ test_burst_api(struct IMB_MGR *mb_mgr)
         completed_jobs = IMB_SUBMIT_BURST(mb_mgr, n_jobs, jobs);
         if (completed_jobs != 0) {
                 printf("%s: test %d, unexpected number of completed "
-                       "jobs\n", __func__, TEST_INVALID_BURST);
+                       "jobs\n",
+                       __func__, TEST_INVALID_BURST);
                 return 1;
         }
         print_progress();
 
         err = imb_get_errno(mb_mgr);
         if (err != IMB_ERR_BURST_OOO) {
-                printf("%s: test %d, unexpected error: %s\n",
-                       __func__, TEST_INVALID_BURST,
+                printf("%s: test %d, unexpected error: %s\n", __func__, TEST_INVALID_BURST,
                        imb_get_strerror(err));
                 return 1;
         }
@@ -821,24 +801,23 @@ test_burst_api(struct IMB_MGR *mb_mgr)
         /* no jobs should complete if any job is invalid */
         completed_jobs = IMB_SUBMIT_BURST(mb_mgr, n_jobs, jobs);
         if (completed_jobs != 0) {
-                printf("%s: test %d, unexpected number of completed jobs\n",
-                       __func__, TEST_INVALID_BURST);
+                printf("%s: test %d, unexpected number of completed jobs\n", __func__,
+                       TEST_INVALID_BURST);
                 return 1;
         }
         print_progress();
 
         err = imb_get_errno(mb_mgr);
         if (err != IMB_ERR_JOB_NULL_KEY) {
-                printf("%s: test %d, unexpected error: %s\n",
-                       __func__, TEST_INVALID_BURST, imb_get_strerror(err));
+                printf("%s: test %d, unexpected error: %s\n", __func__, TEST_INVALID_BURST,
+                       imb_get_strerror(err));
                 return 1;
         }
         print_progress();
 
         /* check invalid job returned in jobs[0] */
         if (jobs[0] != jobs[n_jobs - 1]) {
-                printf("%s: test %d, unexpected error: %s\n",
-                       __func__, TEST_INVALID_BURST,
+                printf("%s: test %d, unexpected error: %s\n", __func__, TEST_INVALID_BURST,
                        "invalid job not returned in burst_job[0]");
                 return 1;
         }
@@ -855,16 +834,15 @@ test_burst_api(struct IMB_MGR *mb_mgr)
 
         completed_jobs = IMB_GET_NEXT_BURST(mb_mgr, n_jobs, null_jobs);
         if (completed_jobs != 0) {
-                printf("%s: test %d, unexpected number of completed jobs\n",
-                       __func__, TEST_INVALID_BURST);
+                printf("%s: test %d, unexpected number of completed jobs\n", __func__,
+                       TEST_INVALID_BURST);
                 return 1;
         }
         print_progress();
 
         err = imb_get_errno(mb_mgr);
         if (err != IMB_ERR_NULL_BURST) {
-                printf("%s: test %d, unexpected error: %s\n",
-                       __func__, TEST_INVALID_BURST,
+                printf("%s: test %d, unexpected error: %s\n", __func__, TEST_INVALID_BURST,
                        imb_get_strerror(err));
                 return 1;
         }
@@ -872,19 +850,17 @@ test_burst_api(struct IMB_MGR *mb_mgr)
 
         /* ======== test 7 : Invalid burst size */
 
-        completed_jobs = IMB_GET_NEXT_BURST(mb_mgr,
-                                            IMB_MAX_BURST_SIZE + 1, jobs);
+        completed_jobs = IMB_GET_NEXT_BURST(mb_mgr, IMB_MAX_BURST_SIZE + 1, jobs);
         if (completed_jobs != 0) {
-                printf("%s: test %d, unexpected number of completed jobs\n",
-                       __func__, TEST_INVALID_BURST);
+                printf("%s: test %d, unexpected number of completed jobs\n", __func__,
+                       TEST_INVALID_BURST);
                 return 1;
         }
         print_progress();
 
         err = imb_get_errno(mb_mgr);
         if (err != IMB_ERR_BURST_SIZE) {
-                printf("%s: test %d, unexpected error: %s\n",
-                       __func__, TEST_INVALID_BURST,
+                printf("%s: test %d, unexpected error: %s\n", __func__, TEST_INVALID_BURST,
                        imb_get_strerror(err));
                 return 1;
         }
@@ -896,16 +872,15 @@ test_burst_api(struct IMB_MGR *mb_mgr)
 
         completed_jobs = IMB_FLUSH_BURST(mb_mgr, n_jobs, null_jobs);
         if (completed_jobs != 0) {
-                printf("%s: test %d, unexpected number of completed jobs\n",
-                       __func__, TEST_INVALID_BURST);
+                printf("%s: test %d, unexpected number of completed jobs\n", __func__,
+                       TEST_INVALID_BURST);
                 return 1;
         }
         print_progress();
 
         err = imb_get_errno(mb_mgr);
         if (err != IMB_ERR_NULL_BURST) {
-                printf("%s: test %d, unexpected error: %s\n",
-                       __func__, TEST_INVALID_BURST,
+                printf("%s: test %d, unexpected error: %s\n", __func__, TEST_INVALID_BURST,
                        imb_get_strerror(err));
                 return 1;
         }
@@ -931,15 +906,15 @@ test_burst_api(struct IMB_MGR *mb_mgr)
         completed_jobs = IMB_SUBMIT_BURST(mb_mgr, n_jobs, jobs);
         if (completed_jobs != 0) {
                 printf("%s: test %d, unexpected number of completed "
-                       "jobs\n", __func__, TEST_INVALID_BURST);
+                       "jobs\n",
+                       __func__, TEST_INVALID_BURST);
                 return 1;
         }
         print_progress();
 
         err = imb_get_errno(mb_mgr);
         if (err != IMB_ERR_BURST_SUITE_ID) {
-                printf("%s: test %d, unexpected error: %s\n",
-                       __func__, TEST_INVALID_BURST,
+                printf("%s: test %d, unexpected error: %s\n", __func__, TEST_INVALID_BURST,
                        imb_get_strerror(err));
                 return 1;
         }
@@ -971,9 +946,8 @@ test_burst_api(struct IMB_MGR *mb_mgr)
                         imb_set_session(NULL, job);
                         err = imb_get_errno(mb_mgr);
                         if (err != IMB_ERR_NULL_MBMGR) {
-                                printf("%s: test %d, unexpected error: %s\n",
-                                       __func__, TEST_INVALID_BURST,
-                                       imb_get_strerror(err));
+                                printf("%s: test %d, unexpected error: %s\n", __func__,
+                                       TEST_INVALID_BURST, imb_get_strerror(err));
                                 return 1;
                         }
                         print_progress();
@@ -982,9 +956,8 @@ test_burst_api(struct IMB_MGR *mb_mgr)
                         imb_set_session(mb_mgr, NULL);
                         err = imb_get_errno(mb_mgr);
                         if (err != IMB_ERR_NULL_JOB) {
-                                printf("%s: test %d, unexpected error: %s\n",
-                                       __func__, TEST_INVALID_BURST,
-                                       imb_get_strerror(err));
+                                printf("%s: test %d, unexpected error: %s\n", __func__,
+                                       TEST_INVALID_BURST, imb_get_strerror(err));
                                 return 1;
                         }
                         print_progress();
@@ -993,9 +966,8 @@ test_burst_api(struct IMB_MGR *mb_mgr)
                         imb_set_session(mb_mgr, job);
                         err = imb_get_errno(mb_mgr);
                         if (err != 0) {
-                                printf("%s: test %d, unexpected error: %s\n",
-                                       __func__, TEST_INVALID_BURST,
-                                       imb_get_strerror(err));
+                                printf("%s: test %d, unexpected error: %s\n", __func__,
+                                       TEST_INVALID_BURST, imb_get_strerror(err));
                                 return 1;
                         }
                 }
@@ -1004,12 +976,11 @@ test_burst_api(struct IMB_MGR *mb_mgr)
         completed_jobs = IMB_SUBMIT_BURST(mb_mgr, n_jobs, jobs);
         completed_jobs += IMB_FLUSH_BURST(mb_mgr, n_jobs, jobs);
         if (completed_jobs != n_jobs) {
-                printf("%s: test %d, unexpected number of completed jobs\n",
-                       __func__, TEST_INVALID_BURST);
+                printf("%s: test %d, unexpected number of completed jobs\n", __func__,
+                       TEST_INVALID_BURST);
                 return 1;
         }
         print_progress();
-
 
         /* ======== end */
 
@@ -1025,24 +996,16 @@ test_burst_api(struct IMB_MGR *mb_mgr)
 static int
 check_aead(IMB_HASH_ALG hash, IMB_CIPHER_MODE cipher)
 {
-        if (hash == IMB_AUTH_CHACHA20_POLY1305 ||
-            hash == IMB_AUTH_CHACHA20_POLY1305_SGL ||
-            hash == IMB_AUTH_DOCSIS_CRC32 ||
-            hash == IMB_AUTH_GCM_SGL ||
-            hash == IMB_AUTH_AES_GMAC ||
-            hash == IMB_AUTH_AES_CCM ||
-            hash == IMB_AUTH_SNOW_V_AEAD ||
+        if (hash == IMB_AUTH_CHACHA20_POLY1305 || hash == IMB_AUTH_CHACHA20_POLY1305_SGL ||
+            hash == IMB_AUTH_DOCSIS_CRC32 || hash == IMB_AUTH_GCM_SGL ||
+            hash == IMB_AUTH_AES_GMAC || hash == IMB_AUTH_AES_CCM || hash == IMB_AUTH_SNOW_V_AEAD ||
             hash == IMB_AUTH_PON_CRC_BIP)
                 return 1;
 
-        if (cipher == IMB_CIPHER_CHACHA20_POLY1305 ||
-            cipher == IMB_CIPHER_CHACHA20_POLY1305_SGL ||
-            cipher == IMB_CIPHER_DOCSIS_SEC_BPI ||
-            cipher == IMB_CIPHER_GCM_SGL ||
-            cipher == IMB_CIPHER_GCM ||
-            cipher == IMB_CIPHER_CCM ||
-            cipher == IMB_CIPHER_SNOW_V_AEAD ||
-            cipher == IMB_CIPHER_PON_AES_CNTR)
+        if (cipher == IMB_CIPHER_CHACHA20_POLY1305 || cipher == IMB_CIPHER_CHACHA20_POLY1305_SGL ||
+            cipher == IMB_CIPHER_DOCSIS_SEC_BPI || cipher == IMB_CIPHER_GCM_SGL ||
+            cipher == IMB_CIPHER_GCM || cipher == IMB_CIPHER_CCM ||
+            cipher == IMB_CIPHER_SNOW_V_AEAD || cipher == IMB_CIPHER_PON_AES_CNTR)
                 return 1;
         return 0;
 }
@@ -1061,7 +1024,7 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
         struct chacha20_poly1305_context_data chacha_ctx;
         struct gcm_context_data gcm_ctx;
 
-	printf("Invalid JOB MAC arguments test:\n");
+        printf("Invalid JOB MAC arguments test:\n");
 
         /* prep */
         while (IMB_FLUSH_JOB(mb_mgr) != NULL)
@@ -1070,13 +1033,10 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
         /*
          * SRC = NULL test
          */
-        for (order = IMB_ORDER_CIPHER_HASH; order <= IMB_ORDER_HASH_CIPHER;
-             order++)
+        for (order = IMB_ORDER_CIPHER_HASH; order <= IMB_ORDER_HASH_CIPHER; order++)
                 for (dir = IMB_DIR_ENCRYPT; dir <= IMB_DIR_DECRYPT; dir++)
-                        for (hash = IMB_AUTH_HMAC_SHA_1;
-                             hash < IMB_AUTH_NUM; hash++) {
-                                if (hash == IMB_AUTH_NULL ||
-                                    hash == IMB_AUTH_CUSTOM)
+                        for (hash = IMB_AUTH_HMAC_SHA_1; hash < IMB_AUTH_NUM; hash++) {
+                                if (hash == IMB_AUTH_NULL || hash == IMB_AUTH_CUSTOM)
                                         continue;
 
                                 /*
@@ -1087,18 +1047,15 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
                                 if (check_aead(hash, cipher))
                                         continue;
 
-                                fill_in_job(&template_job, cipher, dir,
-                                            hash, order, &chacha_ctx, &gcm_ctx);
+                                fill_in_job(&template_job, cipher, dir, hash, order, &chacha_ctx,
+                                            &gcm_ctx);
                                 template_job.src = NULL;
-                                if (!is_submit_invalid(mb_mgr,
-                                                       &template_job,
-                                                       TEST_AUTH_SRC_NULL,
+                                if (!is_submit_invalid(mb_mgr, &template_job, TEST_AUTH_SRC_NULL,
                                                        IMB_ERR_JOB_NULL_SRC))
                                         return 1;
 
                                 imb_set_session(mb_mgr, &template_job);
-                                if (!is_submit_burst_invalid(mb_mgr,
-                                                             &template_job,
+                                if (!is_submit_burst_invalid(mb_mgr, &template_job,
                                                              TEST_AUTH_SRC_NULL,
                                                              IMB_ERR_JOB_NULL_SRC))
                                         return 1;
@@ -1108,13 +1065,10 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
         /*
          * AUTH_TAG_OUTPUT = NULL test
          */
-        for (order = IMB_ORDER_CIPHER_HASH; order <= IMB_ORDER_HASH_CIPHER;
-             order++)
+        for (order = IMB_ORDER_CIPHER_HASH; order <= IMB_ORDER_HASH_CIPHER; order++)
                 for (dir = IMB_DIR_ENCRYPT; dir <= IMB_DIR_DECRYPT; dir++)
-                        for (hash = IMB_AUTH_HMAC_SHA_1;
-                             hash < IMB_AUTH_NUM; hash++) {
-                                if (hash == IMB_AUTH_NULL ||
-                                    hash == IMB_AUTH_CUSTOM)
+                        for (hash = IMB_AUTH_HMAC_SHA_1; hash < IMB_AUTH_NUM; hash++) {
+                                if (hash == IMB_AUTH_NULL || hash == IMB_AUTH_CUSTOM)
                                         continue;
 
                                 /*
@@ -1124,20 +1078,18 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
                                 if (check_aead(hash, cipher))
                                         continue;
 
-                                fill_in_job(&template_job, cipher, dir,
-                                            hash, order, &chacha_ctx, &gcm_ctx);
+                                fill_in_job(&template_job, cipher, dir, hash, order, &chacha_ctx,
+                                            &gcm_ctx);
                                 template_job.auth_tag_output = NULL;
                                 if (hash == IMB_AUTH_GCM_SGL)
-                                        template_job.sgl_state =
-                                                IMB_SGL_COMPLETE;
+                                        template_job.sgl_state = IMB_SGL_COMPLETE;
                                 if (!is_submit_invalid(mb_mgr, &template_job,
                                                        TEST_AUTH_AUTH_TAG_OUTPUT_NULL,
                                                        IMB_ERR_JOB_NULL_AUTH))
                                         return 1;
 
                                 imb_set_session(mb_mgr, &template_job);
-                                if (!is_submit_burst_invalid(mb_mgr,
-                                                             &template_job,
+                                if (!is_submit_burst_invalid(mb_mgr, &template_job,
                                                              TEST_AUTH_AUTH_TAG_OUTPUT_NULL,
                                                              IMB_ERR_JOB_NULL_AUTH))
                                         return 1;
@@ -1147,13 +1099,10 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
         /*
          * AUTH_TAG_OUTPUT_LEN = 0 test
          */
-        for (order = IMB_ORDER_CIPHER_HASH; order <= IMB_ORDER_HASH_CIPHER;
-             order++)
+        for (order = IMB_ORDER_CIPHER_HASH; order <= IMB_ORDER_HASH_CIPHER; order++)
                 for (dir = IMB_DIR_ENCRYPT; dir <= IMB_DIR_DECRYPT; dir++)
-                        for (hash = IMB_AUTH_HMAC_SHA_1;
-                             hash < IMB_AUTH_NUM; hash++) {
-                                if (hash == IMB_AUTH_NULL ||
-                                    hash == IMB_AUTH_CUSTOM)
+                        for (hash = IMB_AUTH_HMAC_SHA_1; hash < IMB_AUTH_NUM; hash++) {
+                                if (hash == IMB_AUTH_NULL || hash == IMB_AUTH_CUSTOM)
                                         continue;
 
                                 /*
@@ -1163,19 +1112,17 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
                                 if (check_aead(hash, cipher))
                                         continue;
 
-                                fill_in_job(&template_job, cipher, dir,
-                                            hash, order, &chacha_ctx, &gcm_ctx);
+                                fill_in_job(&template_job, cipher, dir, hash, order, &chacha_ctx,
+                                            &gcm_ctx);
                                 template_job.auth_tag_output_len_in_bytes = 0;
                                 if (hash == IMB_AUTH_GCM_SGL)
-                                        template_job.sgl_state =
-                                                IMB_SGL_COMPLETE;
+                                        template_job.sgl_state = IMB_SGL_COMPLETE;
                                 if (!is_submit_invalid(mb_mgr, &template_job,
                                                        TEST_AUTH_TAG_OUTPUT_LEN_ZERO,
                                                        IMB_ERR_JOB_AUTH_TAG_LEN))
                                         return 1;
                                 imb_set_session(mb_mgr, &template_job);
-                                if (!is_submit_burst_invalid(mb_mgr,
-                                                             &template_job,
+                                if (!is_submit_burst_invalid(mb_mgr, &template_job,
                                                              TEST_AUTH_TAG_OUTPUT_LEN_ZERO,
                                                              IMB_ERR_JOB_AUTH_TAG_LEN))
                                         return 1;
@@ -1185,34 +1132,26 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
         /*
          * AUTH_MSG_LEN > MAX
          */
-        for (order = IMB_ORDER_CIPHER_HASH; order <= IMB_ORDER_HASH_CIPHER;
-             order++)
+        for (order = IMB_ORDER_CIPHER_HASH; order <= IMB_ORDER_HASH_CIPHER; order++)
                 for (dir = IMB_DIR_ENCRYPT; dir <= IMB_DIR_DECRYPT; dir++)
-                        for (hash = IMB_AUTH_HMAC_SHA_1;
-                             hash < IMB_AUTH_NUM; hash++) {
+                        for (hash = IMB_AUTH_HMAC_SHA_1; hash < IMB_AUTH_NUM; hash++) {
                                 /* skip algorithms with no max length limit */
-                                if (hash == IMB_AUTH_NULL ||
-                                    hash == IMB_AUTH_CUSTOM ||
-                                    hash == IMB_AUTH_PON_CRC_BIP ||
-                                    hash == IMB_AUTH_AES_GMAC ||
+                                if (hash == IMB_AUTH_NULL || hash == IMB_AUTH_CUSTOM ||
+                                    hash == IMB_AUTH_PON_CRC_BIP || hash == IMB_AUTH_AES_GMAC ||
                                     hash == IMB_AUTH_AES_GMAC_128 ||
                                     hash == IMB_AUTH_AES_GMAC_192 ||
-                                    hash == IMB_AUTH_AES_GMAC_256 ||
-                                    hash == IMB_AUTH_SNOW_V_AEAD ||
+                                    hash == IMB_AUTH_AES_GMAC_256 || hash == IMB_AUTH_SNOW_V_AEAD ||
                                     hash == IMB_AUTH_CRC32_ETHERNET_FCS ||
                                     hash == IMB_AUTH_CRC32_SCTP ||
                                     hash == IMB_AUTH_CRC32_WIMAX_OFDMA_DATA ||
-                                    hash == IMB_AUTH_CRC24_LTE_A ||
-                                    hash == IMB_AUTH_CRC24_LTE_B ||
-                                    hash == IMB_AUTH_CRC16_X25 ||
-                                    hash == IMB_AUTH_CRC16_FP_DATA ||
+                                    hash == IMB_AUTH_CRC24_LTE_A || hash == IMB_AUTH_CRC24_LTE_B ||
+                                    hash == IMB_AUTH_CRC16_X25 || hash == IMB_AUTH_CRC16_FP_DATA ||
                                     hash == IMB_AUTH_CRC11_FP_HEADER ||
                                     hash == IMB_AUTH_CRC10_IUUP_DATA ||
                                     hash == IMB_AUTH_CRC8_WIMAX_OFDMA_HCS ||
                                     hash == IMB_AUTH_CRC7_FP_HEADER ||
                                     hash == IMB_AUTH_CRC6_IUUP_HEADER ||
-                                    hash == IMB_AUTH_POLY1305 ||
-                                    hash == IMB_AUTH_GHASH)
+                                    hash == IMB_AUTH_POLY1305 || hash == IMB_AUTH_GHASH)
                                         continue;
 
                                 /*
@@ -1222,20 +1161,18 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
                                 if (check_aead(hash, cipher))
                                         continue;
 
-                                fill_in_job(&template_job, cipher, dir,
-                                            hash, order, &chacha_ctx, &gcm_ctx);
+                                fill_in_job(&template_job, cipher, dir, hash, order, &chacha_ctx,
+                                            &gcm_ctx);
 
                                 switch (hash) {
                                 case IMB_AUTH_ZUC_EIA3_BITLEN:
                                 case IMB_AUTH_ZUC256_EIA3_BITLEN:
                                         /* (2^32) - 32 is max */
-                                        template_job.msg_len_to_hash_in_bytes =
-                                                ((1ULL << 32) - 31);
+                                        template_job.msg_len_to_hash_in_bytes = ((1ULL << 32) - 31);
                                         break;
                                 case IMB_AUTH_SNOW3G_UIA2_BITLEN:
                                         /* (2^32) is max */
-                                        template_job.msg_len_to_hash_in_bits =
-                                                ((1ULL << 32) + 1);
+                                        template_job.msg_len_to_hash_in_bits = ((1ULL << 32) + 1);
                                         break;
                                 case IMB_AUTH_KASUMI_UIA1:
                                         /* 20000 bits (2500 bytes) is max */
@@ -1249,8 +1186,7 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
                                                 ((1ULL << 38) - 64) + 1;
                                         break;
                                 default:
-                                        template_job.msg_len_to_hash_in_bytes =
-                                                ((1 << 16) - 1);
+                                        template_job.msg_len_to_hash_in_bytes = ((1 << 16) - 1);
                                         break;
                                 }
                                 if (!is_submit_invalid(mb_mgr, &template_job,
@@ -1259,8 +1195,7 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
                                         return 1;
 
                                 imb_set_session(mb_mgr, &template_job);
-                                if (!is_submit_burst_invalid(mb_mgr,
-                                                             &template_job,
+                                if (!is_submit_burst_invalid(mb_mgr, &template_job,
                                                              TEST_AUTH_MSG_LEN_GT_MAX,
                                                              IMB_ERR_JOB_AUTH_LEN))
                                         return 1;
@@ -1270,11 +1205,9 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
         /*
          * AUTH_MSG_LEN = 0
          */
-        for (order = IMB_ORDER_CIPHER_HASH; order <= IMB_ORDER_HASH_CIPHER;
-             order++)
+        for (order = IMB_ORDER_CIPHER_HASH; order <= IMB_ORDER_HASH_CIPHER; order++)
                 for (dir = IMB_DIR_ENCRYPT; dir <= IMB_DIR_DECRYPT; dir++)
-                        for (hash = IMB_AUTH_HMAC_SHA_1;
-                             hash < IMB_AUTH_NUM; hash++) {
+                        for (hash = IMB_AUTH_HMAC_SHA_1; hash < IMB_AUTH_NUM; hash++) {
 
                                 switch (hash) {
                                         /*
@@ -1288,11 +1221,9 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
                                 case IMB_AUTH_HMAC_SHA_512:
                                 case IMB_AUTH_MD5:
                                 case IMB_AUTH_KASUMI_UIA1:
-                                        fill_in_job(&template_job, cipher, dir,
-                                                    hash, order, &chacha_ctx,
-                                                    &gcm_ctx);
-                                        template_job.msg_len_to_hash_in_bytes
-                                                = 0;
+                                        fill_in_job(&template_job, cipher, dir, hash, order,
+                                                    &chacha_ctx, &gcm_ctx);
+                                        template_job.msg_len_to_hash_in_bytes = 0;
                                         break;
                                 default:
                                         /*
@@ -1315,8 +1246,7 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
                                         return 1;
 
                                 imb_set_session(mb_mgr, &template_job);
-                                if (!is_submit_burst_invalid(mb_mgr,
-                                                             &template_job,
+                                if (!is_submit_burst_invalid(mb_mgr, &template_job,
                                                              TEST_AUTH_MSG_LEN_ZERO,
                                                              IMB_ERR_JOB_AUTH_LEN))
                                         return 1;
@@ -1326,16 +1256,12 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
         /*
          * Invalid auth IV length test
          */
-        for (order = IMB_ORDER_CIPHER_HASH; order <= IMB_ORDER_HASH_CIPHER;
-             order++)
+        for (order = IMB_ORDER_CIPHER_HASH; order <= IMB_ORDER_HASH_CIPHER; order++)
                 for (dir = IMB_DIR_ENCRYPT; dir <= IMB_DIR_DECRYPT; dir++)
-                        for (hash = IMB_AUTH_HMAC_SHA_1;
-                             hash < IMB_AUTH_NUM; hash++) {
+                        for (hash = IMB_AUTH_HMAC_SHA_1; hash < IMB_AUTH_NUM; hash++) {
                                 IMB_JOB *job = &template_job;
 
-                                fill_in_job(job, cipher, dir,
-                                            hash, order, &chacha_ctx,
-                                            &gcm_ctx);
+                                fill_in_job(job, cipher, dir, hash, order, &chacha_ctx, &gcm_ctx);
                                 /*
                                  * Set invalid IV lengths
                                  * for relevant algos
@@ -1353,14 +1279,12 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
                                          */
                                         continue;
                                 }
-                                if (!is_submit_invalid(mb_mgr, job,
-                                                       TEST_AUTH_IV_LEN,
+                                if (!is_submit_invalid(mb_mgr, job, TEST_AUTH_IV_LEN,
                                                        IMB_ERR_JOB_IV_LEN))
                                         return 1;
 
                                 imb_set_session(mb_mgr, job);
-                                if (!is_submit_burst_invalid(mb_mgr, job,
-                                                             TEST_AUTH_IV_LEN,
+                                if (!is_submit_burst_invalid(mb_mgr, job, TEST_AUTH_IV_LEN,
                                                              IMB_ERR_JOB_IV_LEN))
                                         return 1;
                                 print_progress();
@@ -1369,11 +1293,9 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
         /*
          * Invalid HMAC IPAD & OPAD
          */
-        for (order = IMB_ORDER_CIPHER_HASH; order <= IMB_ORDER_HASH_CIPHER;
-             order++)
+        for (order = IMB_ORDER_CIPHER_HASH; order <= IMB_ORDER_HASH_CIPHER; order++)
                 for (dir = IMB_DIR_ENCRYPT; dir <= IMB_DIR_DECRYPT; dir++)
-                        for (hash = IMB_AUTH_HMAC_SHA_1;
-                             hash < IMB_AUTH_NUM; hash++) {
+                        for (hash = IMB_AUTH_HMAC_SHA_1; hash < IMB_AUTH_NUM; hash++) {
                                 IMB_JOB *job = &template_job;
                                 int skip = 1;
 
@@ -1393,99 +1315,77 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
                                 if (skip)
                                         continue;
 
-                                fill_in_job(job, cipher, dir,
-                                            hash, order, &chacha_ctx,
-                                            &gcm_ctx);
+                                fill_in_job(job, cipher, dir, hash, order, &chacha_ctx, &gcm_ctx);
                                 job->u.HMAC._hashed_auth_key_xor_ipad = NULL;
 
                                 const int err_ipad = IMB_ERR_JOB_NULL_HMAC_IPAD;
 
-                                if (!is_submit_invalid(mb_mgr, job,
-                                                       TEST_AUTH_NULL_HMAC_IPAD,
+                                if (!is_submit_invalid(mb_mgr, job, TEST_AUTH_NULL_HMAC_IPAD,
                                                        err_ipad))
                                         return 1;
 
                                 imb_set_session(mb_mgr, job);
-                                if (!is_submit_burst_invalid(mb_mgr, job,
-                                                             TEST_AUTH_NULL_HMAC_IPAD,
+                                if (!is_submit_burst_invalid(mb_mgr, job, TEST_AUTH_NULL_HMAC_IPAD,
                                                              err_ipad))
                                         return 1;
                                 print_progress();
 
-                                fill_in_job(job, cipher, dir,
-                                            hash, order, &chacha_ctx,
-                                            &gcm_ctx);
+                                fill_in_job(job, cipher, dir, hash, order, &chacha_ctx, &gcm_ctx);
                                 job->u.HMAC._hashed_auth_key_xor_opad = NULL;
 
                                 const int err_opad = IMB_ERR_JOB_NULL_HMAC_OPAD;
 
-                                if (!is_submit_invalid(mb_mgr, job,
-                                                       TEST_AUTH_NULL_HMAC_OPAD,
+                                if (!is_submit_invalid(mb_mgr, job, TEST_AUTH_NULL_HMAC_OPAD,
                                                        err_opad))
                                         return 1;
 
                                 imb_set_session(mb_mgr, job);
-                                if (!is_submit_burst_invalid(mb_mgr, job,
-                                                             TEST_AUTH_NULL_HMAC_OPAD,
+                                if (!is_submit_burst_invalid(mb_mgr, job, TEST_AUTH_NULL_HMAC_OPAD,
                                                              err_opad))
                                         return 1;
                                 print_progress();
-
                         }
 
         /*
          * Invalid XCBC key parameters
          */
-        for (order = IMB_ORDER_CIPHER_HASH; order <= IMB_ORDER_HASH_CIPHER;
-             order++)
+        for (order = IMB_ORDER_CIPHER_HASH; order <= IMB_ORDER_HASH_CIPHER; order++)
                 for (dir = IMB_DIR_ENCRYPT; dir <= IMB_DIR_DECRYPT; dir++) {
                         IMB_JOB *job = &template_job;
 
                         hash = IMB_AUTH_AES_XCBC;
 
-                        fill_in_job(job, cipher, dir,
-                                    hash, order, &chacha_ctx,
-                                    &gcm_ctx);
+                        fill_in_job(job, cipher, dir, hash, order, &chacha_ctx, &gcm_ctx);
                         job->u.XCBC._k1_expanded = NULL;
-                        if (!is_submit_invalid(mb_mgr, job,
-                                               TEST_AUTH_NULL_XCBC_K1_EXP,
+                        if (!is_submit_invalid(mb_mgr, job, TEST_AUTH_NULL_XCBC_K1_EXP,
                                                IMB_ERR_JOB_NULL_XCBC_K1_EXP))
                                 return 1;
 
                         imb_set_session(mb_mgr, job);
-                        if (!is_submit_burst_invalid(mb_mgr, job,
-                                                     TEST_AUTH_NULL_XCBC_K1_EXP,
+                        if (!is_submit_burst_invalid(mb_mgr, job, TEST_AUTH_NULL_XCBC_K1_EXP,
                                                      IMB_ERR_JOB_NULL_XCBC_K1_EXP))
                                 return 1;
                         print_progress();
 
-                        fill_in_job(job, cipher, dir,
-                                    hash, order, &chacha_ctx,
-                                    &gcm_ctx);
+                        fill_in_job(job, cipher, dir, hash, order, &chacha_ctx, &gcm_ctx);
                         job->u.XCBC._k2 = NULL;
-                        if (!is_submit_invalid(mb_mgr, job,
-                                               TEST_AUTH_NULL_XCBC_K2,
+                        if (!is_submit_invalid(mb_mgr, job, TEST_AUTH_NULL_XCBC_K2,
                                                IMB_ERR_JOB_NULL_XCBC_K2))
                                 return 1;
 
                         imb_set_session(mb_mgr, job);
-                        if (!is_submit_burst_invalid(mb_mgr, job,
-                                                     TEST_AUTH_NULL_XCBC_K2,
+                        if (!is_submit_burst_invalid(mb_mgr, job, TEST_AUTH_NULL_XCBC_K2,
                                                      IMB_ERR_JOB_NULL_XCBC_K2))
                                 return 1;
                         print_progress();
 
-                        fill_in_job(job, cipher, dir,
-                                    hash, order, &chacha_ctx,
-                                    &gcm_ctx);
+                        fill_in_job(job, cipher, dir, hash, order, &chacha_ctx, &gcm_ctx);
                         job->u.XCBC._k3 = NULL;
-                        if (!is_submit_invalid(mb_mgr, job,
-                                               TEST_AUTH_NULL_XCBC_K3,
+                        if (!is_submit_invalid(mb_mgr, job, TEST_AUTH_NULL_XCBC_K3,
                                                IMB_ERR_JOB_NULL_XCBC_K3))
                                 return 1;
                         imb_set_session(mb_mgr, job);
-                        if (!is_submit_burst_invalid(mb_mgr, job,
-                                                     TEST_AUTH_NULL_XCBC_K3,
+                        if (!is_submit_burst_invalid(mb_mgr, job, TEST_AUTH_NULL_XCBC_K3,
                                                      IMB_ERR_JOB_NULL_XCBC_K3))
                                 return 1;
                         print_progress();
@@ -1494,41 +1394,32 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
         /*
          * Invalid GHASH parameters
          */
-        for (order = IMB_ORDER_CIPHER_HASH; order <= IMB_ORDER_HASH_CIPHER;
-             order++)
+        for (order = IMB_ORDER_CIPHER_HASH; order <= IMB_ORDER_HASH_CIPHER; order++)
                 for (dir = IMB_DIR_ENCRYPT; dir <= IMB_DIR_DECRYPT; dir++) {
                         IMB_JOB *job = &template_job;
 
                         hash = IMB_AUTH_GHASH;
 
-                        fill_in_job(job, cipher, dir,
-                                    hash, order, &chacha_ctx,
-                                    &gcm_ctx);
+                        fill_in_job(job, cipher, dir, hash, order, &chacha_ctx, &gcm_ctx);
                         job->u.GHASH._key = NULL;
-                        if (!is_submit_invalid(mb_mgr, job,
-                                               TEST_AUTH_NULL_GHASH_KEY,
+                        if (!is_submit_invalid(mb_mgr, job, TEST_AUTH_NULL_GHASH_KEY,
                                                IMB_ERR_JOB_NULL_AUTH_KEY))
                                 return 1;
 
                         imb_set_session(mb_mgr, job);
-                        if (!is_submit_burst_invalid(mb_mgr, job,
-                                                     TEST_AUTH_NULL_GHASH_KEY,
+                        if (!is_submit_burst_invalid(mb_mgr, job, TEST_AUTH_NULL_GHASH_KEY,
                                                      IMB_ERR_JOB_NULL_AUTH_KEY))
                                 return 1;
                         print_progress();
 
-                        fill_in_job(job, cipher, dir,
-                                    hash, order, &chacha_ctx,
-                                    &gcm_ctx);
+                        fill_in_job(job, cipher, dir, hash, order, &chacha_ctx, &gcm_ctx);
                         job->u.GHASH._init_tag = NULL;
-                        if (!is_submit_invalid(mb_mgr, job,
-                                               TEST_AUTH_NULL_GHASH_INIT_TAG,
+                        if (!is_submit_invalid(mb_mgr, job, TEST_AUTH_NULL_GHASH_INIT_TAG,
                                                IMB_ERR_JOB_NULL_GHASH_INIT_TAG))
                                 return 1;
 
                         imb_set_session(mb_mgr, job);
-                        if (!is_submit_burst_invalid(mb_mgr, job,
-                                                     TEST_AUTH_NULL_GHASH_INIT_TAG,
+                        if (!is_submit_burst_invalid(mb_mgr, job, TEST_AUTH_NULL_GHASH_INIT_TAG,
                                                      IMB_ERR_JOB_NULL_GHASH_INIT_TAG))
                                 return 1;
                         print_progress();
@@ -1537,58 +1428,44 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
         /*
          * Invalid GMAC parameters
          */
-        for (order = IMB_ORDER_CIPHER_HASH; order <= IMB_ORDER_HASH_CIPHER;
-             order++)
+        for (order = IMB_ORDER_CIPHER_HASH; order <= IMB_ORDER_HASH_CIPHER; order++)
                 for (dir = IMB_DIR_ENCRYPT; dir <= IMB_DIR_DECRYPT; dir++) {
-                        for (hash = IMB_AUTH_AES_GMAC_128;
-                             hash <= IMB_AUTH_AES_GMAC_256; hash++) {
+                        for (hash = IMB_AUTH_AES_GMAC_128; hash <= IMB_AUTH_AES_GMAC_256; hash++) {
                                 IMB_JOB *job = &template_job;
 
-                                fill_in_job(job, cipher, dir,
-                                            hash, order, &chacha_ctx,
-                                            &gcm_ctx);
+                                fill_in_job(job, cipher, dir, hash, order, &chacha_ctx, &gcm_ctx);
                                 job->u.GMAC._key = NULL;
 
-                                if (!is_submit_invalid(mb_mgr, job,
-                                                       TEST_AUTH_NULL_GMAC_KEY,
+                                if (!is_submit_invalid(mb_mgr, job, TEST_AUTH_NULL_GMAC_KEY,
                                                        IMB_ERR_JOB_NULL_AUTH_KEY))
                                         return 1;
 
                                 imb_set_session(mb_mgr, job);
-                                if (!is_submit_burst_invalid(mb_mgr, job,
-                                                             TEST_AUTH_NULL_GMAC_KEY,
+                                if (!is_submit_burst_invalid(mb_mgr, job, TEST_AUTH_NULL_GMAC_KEY,
                                                              IMB_ERR_JOB_NULL_AUTH_KEY))
                                         return 1;
                                 print_progress();
 
-                                fill_in_job(job, cipher, dir,
-                                            hash, order, &chacha_ctx,
-                                            &gcm_ctx);
+                                fill_in_job(job, cipher, dir, hash, order, &chacha_ctx, &gcm_ctx);
                                 job->u.GMAC._iv = NULL;
-                                if (!is_submit_invalid(mb_mgr, job,
-                                                       TEST_AUTH_NULL_GMAC_IV,
+                                if (!is_submit_invalid(mb_mgr, job, TEST_AUTH_NULL_GMAC_IV,
                                                        IMB_ERR_JOB_NULL_IV))
                                         return 1;
 
                                 imb_set_session(mb_mgr, job);
-                                if (!is_submit_burst_invalid(mb_mgr, job,
-                                                             TEST_AUTH_NULL_GMAC_IV,
+                                if (!is_submit_burst_invalid(mb_mgr, job, TEST_AUTH_NULL_GMAC_IV,
                                                              IMB_ERR_JOB_NULL_IV))
                                         return 1;
                                 print_progress();
 
-                                fill_in_job(job, cipher, dir,
-                                            hash, order, &chacha_ctx,
-                                            &gcm_ctx);
+                                fill_in_job(job, cipher, dir, hash, order, &chacha_ctx, &gcm_ctx);
                                 job->u.GMAC.iv_len_in_bytes = 0;
-                                if (!is_submit_invalid(mb_mgr, job,
-                                                       TEST_AUTH_GMAC_IV_LEN,
+                                if (!is_submit_invalid(mb_mgr, job, TEST_AUTH_GMAC_IV_LEN,
                                                        IMB_ERR_JOB_IV_LEN))
                                         return 1;
 
                                 imb_set_session(mb_mgr, job);
-                                if (!is_submit_burst_invalid(mb_mgr, job,
-                                                             TEST_AUTH_GMAC_IV_LEN,
+                                if (!is_submit_burst_invalid(mb_mgr, job, TEST_AUTH_GMAC_IV_LEN,
                                                              IMB_ERR_JOB_IV_LEN))
                                         return 1;
                                 print_progress();
@@ -1618,7 +1495,7 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
         struct chacha20_poly1305_context_data chacha_ctx;
         struct gcm_context_data gcm_ctx;
 
-	printf("Invalid JOB CIPHER arguments test:\n");
+        printf("Invalid JOB CIPHER arguments test:\n");
 
         /* prep */
         while (IMB_FLUSH_JOB(mb_mgr) != NULL)
@@ -1627,13 +1504,10 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
         /*
          * SRC = NULL test
          */
-        for (order = IMB_ORDER_CIPHER_HASH; order <= IMB_ORDER_HASH_CIPHER;
-             order++)
+        for (order = IMB_ORDER_CIPHER_HASH; order <= IMB_ORDER_HASH_CIPHER; order++)
                 for (dir = IMB_DIR_ENCRYPT; dir <= IMB_DIR_DECRYPT; dir++)
-                        for (cipher = IMB_CIPHER_CBC;
-                             cipher < IMB_CIPHER_NUM; cipher++) {
-                                if (cipher == IMB_CIPHER_NULL ||
-                                    cipher == IMB_CIPHER_CUSTOM)
+                        for (cipher = IMB_CIPHER_CBC; cipher < IMB_CIPHER_NUM; cipher++) {
+                                if (cipher == IMB_CIPHER_NULL || cipher == IMB_CIPHER_CUSTOM)
                                         continue;
 
                                 /*
@@ -1643,17 +1517,15 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                                 if (check_aead(hash, cipher))
                                         continue;
 
-                                fill_in_job(&template_job, cipher, dir,
-                                            hash, order, &chacha_ctx, &gcm_ctx);
+                                fill_in_job(&template_job, cipher, dir, hash, order, &chacha_ctx,
+                                            &gcm_ctx);
                                 template_job.src = NULL;
-                                if (!is_submit_invalid(mb_mgr, &template_job,
-                                                       TEST_CIPH_SRC_NULL,
+                                if (!is_submit_invalid(mb_mgr, &template_job, TEST_CIPH_SRC_NULL,
                                                        IMB_ERR_JOB_NULL_SRC))
                                         return 1;
 
                                 imb_set_session(mb_mgr, &template_job);
-                                if (!is_submit_burst_invalid(mb_mgr,
-                                                             &template_job,
+                                if (!is_submit_burst_invalid(mb_mgr, &template_job,
                                                              TEST_CIPH_SRC_NULL,
                                                              IMB_ERR_JOB_NULL_SRC))
                                         return 1;
@@ -1663,13 +1535,10 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
         /*
          * DST = NULL test
          */
-        for (order = IMB_ORDER_CIPHER_HASH; order <= IMB_ORDER_HASH_CIPHER;
-             order++)
+        for (order = IMB_ORDER_CIPHER_HASH; order <= IMB_ORDER_HASH_CIPHER; order++)
                 for (dir = IMB_DIR_ENCRYPT; dir <= IMB_DIR_DECRYPT; dir++)
-                        for (cipher = IMB_CIPHER_CBC;
-                             cipher < IMB_CIPHER_NUM; cipher++) {
-                                if (cipher == IMB_CIPHER_NULL ||
-                                    cipher == IMB_CIPHER_CUSTOM)
+                        for (cipher = IMB_CIPHER_CBC; cipher < IMB_CIPHER_NUM; cipher++) {
+                                if (cipher == IMB_CIPHER_NULL || cipher == IMB_CIPHER_CUSTOM)
                                         continue;
 
                                 /*
@@ -1679,17 +1548,15 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                                 if (check_aead(hash, cipher))
                                         continue;
 
-                                fill_in_job(&template_job, cipher, dir,
-                                            hash, order, &chacha_ctx, &gcm_ctx);
+                                fill_in_job(&template_job, cipher, dir, hash, order, &chacha_ctx,
+                                            &gcm_ctx);
                                 template_job.dst = NULL;
-                                if (!is_submit_invalid(mb_mgr, &template_job,
-                                                       TEST_CIPH_DST_NULL,
+                                if (!is_submit_invalid(mb_mgr, &template_job, TEST_CIPH_DST_NULL,
                                                        IMB_ERR_JOB_NULL_DST))
                                         return 1;
 
                                 imb_set_session(mb_mgr, &template_job);
-                                if (!is_submit_burst_invalid(mb_mgr,
-                                                             &template_job,
+                                if (!is_submit_burst_invalid(mb_mgr, &template_job,
                                                              TEST_CIPH_DST_NULL,
                                                              IMB_ERR_JOB_NULL_DST))
                                         return 1;
@@ -1699,13 +1566,10 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
         /*
          * IV = NULL test
          */
-        for (order = IMB_ORDER_CIPHER_HASH; order <= IMB_ORDER_HASH_CIPHER;
-             order++)
+        for (order = IMB_ORDER_CIPHER_HASH; order <= IMB_ORDER_HASH_CIPHER; order++)
                 for (dir = IMB_DIR_ENCRYPT; dir <= IMB_DIR_DECRYPT; dir++)
-                        for (cipher = IMB_CIPHER_CBC;
-                             cipher < IMB_CIPHER_NUM; cipher++) {
-                                if (cipher == IMB_CIPHER_NULL ||
-                                    cipher == IMB_CIPHER_CUSTOM)
+                        for (cipher = IMB_CIPHER_CBC; cipher < IMB_CIPHER_NUM; cipher++) {
+                                if (cipher == IMB_CIPHER_NULL || cipher == IMB_CIPHER_CUSTOM)
                                         continue;
 
                                 /*
@@ -1719,17 +1583,15 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                                 if (cipher == IMB_CIPHER_ECB)
                                         continue;
 
-                                fill_in_job(&template_job, cipher, dir,
-                                            hash, order, &chacha_ctx, &gcm_ctx);
+                                fill_in_job(&template_job, cipher, dir, hash, order, &chacha_ctx,
+                                            &gcm_ctx);
                                 template_job.iv = NULL;
-                                if (!is_submit_invalid(mb_mgr, &template_job,
-                                                       TEST_CIPH_IV_NULL,
+                                if (!is_submit_invalid(mb_mgr, &template_job, TEST_CIPH_IV_NULL,
                                                        IMB_ERR_JOB_NULL_IV))
                                         return 1;
 
                                 imb_set_session(mb_mgr, &template_job);
-                                if (!is_submit_burst_invalid(mb_mgr,
-                                                             &template_job,
+                                if (!is_submit_burst_invalid(mb_mgr, &template_job,
                                                              TEST_CIPH_IV_NULL,
                                                              IMB_ERR_JOB_NULL_IV))
                                         return 1;
@@ -1743,11 +1605,9 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                 if (dir == IMB_DIR_ENCRYPT || dir == IMB_DIR_DECRYPT)
                         continue;
 
-                for (cipher = IMB_CIPHER_CBC;
-                     cipher < IMB_CIPHER_NUM; cipher++) {
+                for (cipher = IMB_CIPHER_CBC; cipher < IMB_CIPHER_NUM; cipher++) {
 
-                        if (cipher == IMB_CIPHER_NULL ||
-                            cipher == IMB_CIPHER_CUSTOM)
+                        if (cipher == IMB_CIPHER_NULL || cipher == IMB_CIPHER_CUSTOM)
                                 continue;
 
                         /*
@@ -1759,17 +1619,14 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
 
                         order = IMB_ORDER_CIPHER_HASH;
 
-                        fill_in_job(&template_job, cipher, dir,
-                                    hash, order, &chacha_ctx, &gcm_ctx);
+                        fill_in_job(&template_job, cipher, dir, hash, order, &chacha_ctx, &gcm_ctx);
 
-                        if (!is_submit_invalid(mb_mgr, &template_job,
-                                               TEST_CIPH_DIR,
+                        if (!is_submit_invalid(mb_mgr, &template_job, TEST_CIPH_DIR,
                                                IMB_ERR_JOB_CIPH_DIR))
                                 return 1;
 
                         imb_set_session(mb_mgr, &template_job);
-                        if (!is_submit_burst_invalid(mb_mgr, &template_job,
-                                                     TEST_CIPH_DIR,
+                        if (!is_submit_burst_invalid(mb_mgr, &template_job, TEST_CIPH_DIR,
                                                      IMB_ERR_JOB_CIPH_DIR))
                                 return 1;
                         print_progress();
@@ -1780,12 +1637,10 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
          * AES_ENC_KEY_EXPANDED = NULL
          * AES_DEC_KEY_EXPANDED = NULL
          */
-        for (order = IMB_ORDER_CIPHER_HASH; order <= IMB_ORDER_HASH_CIPHER;
-             order++)
-                for (cipher = IMB_CIPHER_CBC; cipher < IMB_CIPHER_NUM;
-                     cipher++) {
-                        fill_in_job(&template_job, cipher, IMB_DIR_ENCRYPT,
-                                    hash, order, &chacha_ctx, &gcm_ctx);
+        for (order = IMB_ORDER_CIPHER_HASH; order <= IMB_ORDER_HASH_CIPHER; order++)
+                for (cipher = IMB_CIPHER_CBC; cipher < IMB_CIPHER_NUM; cipher++) {
+                        fill_in_job(&template_job, cipher, IMB_DIR_ENCRYPT, hash, order,
+                                    &chacha_ctx, &gcm_ctx);
 
                         /*
                          * Skip cipher algorithms belonging to AEAD
@@ -1806,8 +1661,7 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                                         return 1;
 
                                 imb_set_session(mb_mgr, &template_job);
-                                if (!is_submit_burst_invalid(mb_mgr,
-                                                             &template_job,
+                                if (!is_submit_burst_invalid(mb_mgr, &template_job,
                                                              TEST_CIPH_ENC_KEY_NULL,
                                                              IMB_ERR_JOB_NULL_KEY))
                                         return 1;
@@ -1820,10 +1674,8 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
          * AES_ENC_KEY_EXPANDED = NULL
          * AES_DEC_KEY_EXPANDED = NULL
          */
-        for (order = IMB_ORDER_CIPHER_HASH; order <= IMB_ORDER_HASH_CIPHER;
-             order++)
-                for (cipher = IMB_CIPHER_CBC; cipher < IMB_CIPHER_NUM;
-                     cipher++) {
+        for (order = IMB_ORDER_CIPHER_HASH; order <= IMB_ORDER_HASH_CIPHER; order++)
+                for (cipher = IMB_CIPHER_CBC; cipher < IMB_CIPHER_NUM; cipher++) {
                         /*
                          * Skip cipher algorithms belonging to AEAD
                          * algorithms, as the test is for cipher
@@ -1831,8 +1683,8 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                         if (check_aead(hash, cipher))
                                 continue;
 
-                        fill_in_job(&template_job, cipher, IMB_DIR_DECRYPT,
-                                    hash, order, &chacha_ctx, &gcm_ctx);
+                        fill_in_job(&template_job, cipher, IMB_DIR_DECRYPT, hash, order,
+                                    &chacha_ctx, &gcm_ctx);
                         switch (cipher) {
                         case IMB_CIPHER_GCM:
                         case IMB_CIPHER_CBC:
@@ -1848,8 +1700,7 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                                         return 1;
 
                                 imb_set_session(mb_mgr, &template_job);
-                                if (!is_submit_burst_invalid(mb_mgr,
-                                                             &template_job,
+                                if (!is_submit_burst_invalid(mb_mgr, &template_job,
                                                              TEST_CIPH_DEC_KEY_NULL,
                                                              IMB_ERR_JOB_NULL_KEY))
                                         return 1;
@@ -1869,8 +1720,7 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                                         return 1;
 
                                 imb_set_session(mb_mgr, &template_job);
-                                if (!is_submit_burst_invalid(mb_mgr,
-                                                             &template_job,
+                                if (!is_submit_burst_invalid(mb_mgr, &template_job,
                                                              TEST_CIPH_DEC_KEY_NULL,
                                                              IMB_ERR_JOB_NULL_KEY))
                                         return 1;
@@ -1883,13 +1733,11 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                                         return 1;
 
                                 imb_set_session(mb_mgr, &template_job);
-                                if (!is_submit_burst_invalid(mb_mgr,
-                                                             &template_job,
+                                if (!is_submit_burst_invalid(mb_mgr, &template_job,
                                                              TEST_CIPH_DEC_KEY_NULL,
                                                              IMB_ERR_JOB_NULL_KEY))
                                         return 1;
-                                template_job.enc_keys =
-                                        template_job.dec_keys;
+                                template_job.enc_keys = template_job.dec_keys;
                                 template_job.dec_keys = NULL;
                                 if (!is_submit_invalid(mb_mgr, &template_job,
                                                        TEST_CIPH_DEC_KEY_NULL,
@@ -1897,8 +1745,7 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                                         return 1;
 
                                 imb_set_session(mb_mgr, &template_job);
-                                if (!is_submit_burst_invalid(mb_mgr,
-                                                             &template_job,
+                                if (!is_submit_burst_invalid(mb_mgr, &template_job,
                                                              TEST_CIPH_DEC_KEY_NULL,
                                                              IMB_ERR_JOB_NULL_KEY))
                                         return 1;
@@ -1914,13 +1761,10 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
         /*
          * CIPHER_MSG_LEN = 0
          */
-        for (order = IMB_ORDER_CIPHER_HASH; order <= IMB_ORDER_HASH_CIPHER;
-             order++)
+        for (order = IMB_ORDER_CIPHER_HASH; order <= IMB_ORDER_HASH_CIPHER; order++)
                 for (dir = IMB_DIR_ENCRYPT; dir <= IMB_DIR_DECRYPT; dir++)
-                        for (cipher = IMB_CIPHER_CBC;
-                             cipher < IMB_CIPHER_NUM; cipher++) {
-                                if (cipher == IMB_CIPHER_NULL ||
-                                    cipher == IMB_CIPHER_CUSTOM)
+                        for (cipher = IMB_CIPHER_CBC; cipher < IMB_CIPHER_NUM; cipher++) {
+                                if (cipher == IMB_CIPHER_NULL || cipher == IMB_CIPHER_CUSTOM)
                                         continue;
 
                                 /*
@@ -1932,8 +1776,7 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
 
                                 IMB_JOB *job = &template_job;
 
-                                fill_in_job(job, cipher, dir, hash, order,
-                                            &chacha_ctx, &gcm_ctx);
+                                fill_in_job(job, cipher, dir, hash, order, &chacha_ctx, &gcm_ctx);
 
                                 switch (cipher) {
                                         /* skip ciphers that allow msg length 0 */
@@ -1950,14 +1793,12 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                                         break;
                                 default:
                                         job->msg_len_to_cipher_in_bytes = 0;
-                                        if (!is_submit_invalid(mb_mgr, job,
-                                                               TEST_CIPH_MSG_LEN_ZERO,
+                                        if (!is_submit_invalid(mb_mgr, job, TEST_CIPH_MSG_LEN_ZERO,
                                                                IMB_ERR_JOB_CIPH_LEN))
                                                 return 1;
 
                                         imb_set_session(mb_mgr, job);
-                                        if (!is_submit_burst_invalid(mb_mgr,
-                                                                     job,
+                                        if (!is_submit_burst_invalid(mb_mgr, job,
                                                                      TEST_CIPH_MSG_LEN_ZERO,
                                                                      IMB_ERR_JOB_CIPH_LEN))
                                                 return 1;
@@ -1968,13 +1809,10 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
         /*
          * CIPHER_MSG_LEN > MAX
          */
-        for (order = IMB_ORDER_CIPHER_HASH; order <= IMB_ORDER_HASH_CIPHER;
-             order++)
+        for (order = IMB_ORDER_CIPHER_HASH; order <= IMB_ORDER_HASH_CIPHER; order++)
                 for (dir = IMB_DIR_ENCRYPT; dir <= IMB_DIR_DECRYPT; dir++)
-                        for (cipher = IMB_CIPHER_CBC;
-                             cipher < IMB_CIPHER_NUM; cipher++) {
-                                if (cipher == IMB_CIPHER_NULL ||
-                                    cipher == IMB_CIPHER_CUSTOM)
+                        for (cipher = IMB_CIPHER_CBC; cipher < IMB_CIPHER_NUM; cipher++) {
+                                if (cipher == IMB_CIPHER_NULL || cipher == IMB_CIPHER_CUSTOM)
                                         continue;
 
                                 /*
@@ -1986,8 +1824,7 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
 
                                 IMB_JOB *job = &template_job;
 
-                                fill_in_job(job, cipher, dir, hash, order,
-                                            &chacha_ctx, &gcm_ctx);
+                                fill_in_job(job, cipher, dir, hash, order, &chacha_ctx, &gcm_ctx);
 
                                 switch (cipher) {
                                         /* skip ciphers with no max limit */
@@ -2011,38 +1848,31 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                                         break;
                                 case IMB_CIPHER_SNOW3G_UEA2_BITLEN:
                                         /* max is 2^32 bits */
-                                        job->msg_len_to_cipher_in_bits =
-                                                ((1ULL << 32));
+                                        job->msg_len_to_cipher_in_bits = ((1ULL << 32));
                                         break;
                                 case IMB_CIPHER_KASUMI_UEA1_BITLEN:
                                         /* max is 20000 bits */
-                                        job->msg_len_to_cipher_in_bits =
-                                                20008;
+                                        job->msg_len_to_cipher_in_bits = 20008;
                                         break;
                                 case IMB_CIPHER_CBCS_1_9:
                                         /* max is 2^60 bytes */
-                                        job->msg_len_to_cipher_in_bytes =
-                                                ((1ULL << 60) + 1);
+                                        job->msg_len_to_cipher_in_bytes = ((1ULL << 60) + 1);
                                         break;
                                 case IMB_CIPHER_CHACHA20:
                                         /* Chacha20 limit (2^32 - 1) x 64 */
-                                        job->msg_len_to_cipher_in_bytes =
-                                                ((1ULL << 38) - 64) + 1;
+                                        job->msg_len_to_cipher_in_bytes = ((1ULL << 38) - 64) + 1;
                                         break;
                                 default:
                                         /* most MB max len is 2^16 - 2 */
-                                        job->msg_len_to_cipher_in_bytes =
-                                                ((1 << 16) - 1);
+                                        job->msg_len_to_cipher_in_bytes = ((1 << 16) - 1);
                                         break;
                                 }
-                                if (!is_submit_invalid(mb_mgr, job,
-                                                       TEST_CIPH_MSG_LEN_GT_MAX,
+                                if (!is_submit_invalid(mb_mgr, job, TEST_CIPH_MSG_LEN_GT_MAX,
                                                        IMB_ERR_JOB_CIPH_LEN))
                                         return 1;
 
                                 imb_set_session(mb_mgr, job);
-                                if (!is_submit_burst_invalid(mb_mgr, job,
-                                                             TEST_CIPH_MSG_LEN_GT_MAX,
+                                if (!is_submit_burst_invalid(mb_mgr, job, TEST_CIPH_MSG_LEN_GT_MAX,
                                                              IMB_ERR_JOB_CIPH_LEN))
                                         return 1;
 
@@ -2110,12 +1940,10 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
 
         dir = IMB_DIR_ENCRYPT;
 
-        for (order = IMB_ORDER_CIPHER_HASH; order <= IMB_ORDER_HASH_CIPHER;
-             order++) {
+        for (order = IMB_ORDER_CIPHER_HASH; order <= IMB_ORDER_HASH_CIPHER; order++) {
                 uint64_t key_len;
 
-                for (key_len = IMB_KEY_128_BYTES; key_len <= IMB_KEY_256_BYTES;
-                     key_len += 8) {
+                for (key_len = IMB_KEY_128_BYTES; key_len <= IMB_KEY_256_BYTES; key_len += 8) {
                         uint32_t i;
 
                         for (i = 0; i < DIM(invalid_iv_lens); i++) {
@@ -2125,15 +1953,13 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                                 cipher = invalid_iv_lens[i].cipher_mode;
 
                                 /* set up job fields */
-                                fill_in_job(job, cipher, dir, hash, order,
-                                            &chacha_ctx, &gcm_ctx);
+                                fill_in_job(job, cipher, dir, hash, order, &chacha_ctx, &gcm_ctx);
 
                                 /* set key length */
                                 job->key_len_in_bytes = key_len;
 
                                 /* set invalid IV length */
-                                job->iv_len_in_bytes =
-                                        invalid_iv_lens[i].invalid_iv_len;
+                                job->iv_len_in_bytes = invalid_iv_lens[i].invalid_iv_len;
 
                                 /* skip some key lengths for specific ciphers */
                                 switch (cipher) {
@@ -2171,14 +1997,12 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                                         break;
                                 }
 
-                                if (!is_submit_invalid(mb_mgr, job,
-                                                       TEST_CIPH_IV_LEN,
+                                if (!is_submit_invalid(mb_mgr, job, TEST_CIPH_IV_LEN,
                                                        IMB_ERR_JOB_IV_LEN))
                                         return 1;
 
                                 imb_set_session(mb_mgr, job);
-                                if (!is_submit_burst_invalid(mb_mgr, job,
-                                                             TEST_CIPH_IV_LEN,
+                                if (!is_submit_burst_invalid(mb_mgr, job, TEST_CIPH_IV_LEN,
                                                              IMB_ERR_JOB_IV_LEN))
                                         return 1;
                                 print_progress();
@@ -2191,8 +2015,7 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
          */
 
         /* CBCS NULL NEXT IV TEST */
-        for (order = IMB_ORDER_CIPHER_HASH; order <= IMB_ORDER_HASH_CIPHER;
-             order++)
+        for (order = IMB_ORDER_CIPHER_HASH; order <= IMB_ORDER_HASH_CIPHER; order++)
                 for (dir = IMB_DIR_ENCRYPT; dir <= IMB_DIR_DECRYPT; dir++) {
                         cipher = IMB_CIPHER_CBCS_1_9;
 
@@ -2205,19 +2028,16 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
 
                         IMB_JOB *job = &template_job;
 
-                        fill_in_job(job, cipher, dir, hash, order, &chacha_ctx,
-                                    &gcm_ctx);
+                        fill_in_job(job, cipher, dir, hash, order, &chacha_ctx, &gcm_ctx);
 
                         job->cipher_fields.CBCS.next_iv = NULL;
 
-                        if (!is_submit_invalid(mb_mgr, job,
-                                               TEST_CIPH_NEXT_IV_NULL,
+                        if (!is_submit_invalid(mb_mgr, job, TEST_CIPH_NEXT_IV_NULL,
                                                IMB_ERR_JOB_NULL_NEXT_IV))
                                 return 1;
 
                         imb_set_session(mb_mgr, job);
-                        if (!is_submit_burst_invalid(mb_mgr, job,
-                                                     TEST_CIPH_NEXT_IV_NULL,
+                        if (!is_submit_burst_invalid(mb_mgr, job, TEST_CIPH_NEXT_IV_NULL,
                                                      IMB_ERR_JOB_NULL_NEXT_IV))
                                 return 1;
                         print_progress();
@@ -2246,7 +2066,7 @@ test_job_invalid_misc_args(struct IMB_MGR *mb_mgr)
         struct chacha20_poly1305_context_data chacha_ctx;
         struct gcm_context_data gcm_ctx;
 
-	printf("Invalid MISC JOB arguments test:\n");
+        printf("Invalid MISC JOB arguments test:\n");
 
         /* prep */
         while (IMB_FLUSH_JOB(mb_mgr) != NULL)
@@ -2255,8 +2075,7 @@ test_job_invalid_misc_args(struct IMB_MGR *mb_mgr)
         /*
          * Invalid PLI for PON
          */
-        for (order = IMB_ORDER_CIPHER_HASH; order <= IMB_ORDER_HASH_CIPHER;
-             order++)
+        for (order = IMB_ORDER_CIPHER_HASH; order <= IMB_ORDER_HASH_CIPHER; order++)
                 for (dir = IMB_DIR_ENCRYPT; dir <= IMB_DIR_DECRYPT; dir++) {
                         cipher = IMB_CIPHER_PON_AES_CNTR;
                         hash = IMB_AUTH_PON_CRC_BIP;
@@ -2265,36 +2084,29 @@ test_job_invalid_misc_args(struct IMB_MGR *mb_mgr)
                          * XGEM header is set to all 1s in fill_in_job()
                          * This will result in an invalid PLI field
                          */
-                        fill_in_job(&template_job, cipher, dir,
-                                    hash, order, &chacha_ctx,
-                                    &gcm_ctx);
+                        fill_in_job(&template_job, cipher, dir, hash, order, &chacha_ctx, &gcm_ctx);
 
                         /* Set msg len to ensure PLI error */
                         template_job.msg_len_to_cipher_in_bytes = 8;
 
-                        if (!is_submit_invalid(mb_mgr, &template_job,
-                                               TEST_INVALID_PON_PLI,
+                        if (!is_submit_invalid(mb_mgr, &template_job, TEST_INVALID_PON_PLI,
                                                IMB_ERR_JOB_PON_PLI))
                                 return 1;
 
                         imb_set_session(mb_mgr, &template_job);
 
-                        if (!is_submit_burst_invalid(mb_mgr, &template_job,
-                                                     TEST_INVALID_PON_PLI,
+                        if (!is_submit_burst_invalid(mb_mgr, &template_job, TEST_INVALID_PON_PLI,
                                                      IMB_ERR_JOB_PON_PLI))
                                 return 1;
                         print_progress();
                 }
 
-
         /*
          * AEAD MSG_LEN > MAX
          */
-        for (order = IMB_ORDER_CIPHER_HASH; order <= IMB_ORDER_HASH_CIPHER;
-             order++)
+        for (order = IMB_ORDER_CIPHER_HASH; order <= IMB_ORDER_HASH_CIPHER; order++)
                 for (dir = IMB_DIR_ENCRYPT; dir <= IMB_DIR_DECRYPT; dir++)
-                        for (cipher = IMB_CIPHER_CBC;
-                             cipher < IMB_CIPHER_NUM; cipher++) {
+                        for (cipher = IMB_CIPHER_CBC; cipher < IMB_CIPHER_NUM; cipher++) {
                                 /* reset hash alg */
                                 hash = IMB_AUTH_NULL;
 
@@ -2304,8 +2116,7 @@ test_job_invalid_misc_args(struct IMB_MGR *mb_mgr)
 
                                 IMB_JOB *job = &template_job;
 
-                                fill_in_job(job, cipher, dir, hash, order,
-                                            &chacha_ctx, &gcm_ctx);
+                                fill_in_job(job, cipher, dir, hash, order, &chacha_ctx, &gcm_ctx);
 
                                 switch (cipher) {
                                         /* skip algos with no max limit */
@@ -2318,20 +2129,17 @@ test_job_invalid_misc_args(struct IMB_MGR *mb_mgr)
                                 case IMB_CIPHER_GCM:
                                 case IMB_CIPHER_GCM_SGL:
                                         /* must be < ((2^39) - 256)  bytes */
-                                        job->msg_len_to_cipher_in_bytes =
-                                                ((1ULL << 39) - 256);
+                                        job->msg_len_to_cipher_in_bytes = ((1ULL << 39) - 256);
                                         break;
                                 default:
                                         continue;
                                 }
-                                if (!is_submit_invalid(mb_mgr, job,
-                                                       TEST_CIPH_MSG_LEN_GT_MAX,
+                                if (!is_submit_invalid(mb_mgr, job, TEST_CIPH_MSG_LEN_GT_MAX,
                                                        IMB_ERR_JOB_CIPH_LEN))
                                         return 1;
 
                                 imb_set_session(mb_mgr, job);
-                                if (!is_submit_burst_invalid(mb_mgr, job,
-                                                             TEST_CIPH_MSG_LEN_GT_MAX,
+                                if (!is_submit_burst_invalid(mb_mgr, job, TEST_CIPH_MSG_LEN_GT_MAX,
                                                              IMB_ERR_JOB_CIPH_LEN))
                                         return 1;
 
@@ -2353,8 +2161,7 @@ test_job_invalid_misc_args(struct IMB_MGR *mb_mgr)
  * should remain, so after a flush, a job should be retrieved.
  */
 static int
-submit_reset_check_job(struct IMB_MGR *mb_mgr,
-                       IMB_CIPHER_MODE cipher, IMB_CIPHER_DIRECTION dir,
+submit_reset_check_job(struct IMB_MGR *mb_mgr, IMB_CIPHER_MODE cipher, IMB_CIPHER_DIRECTION dir,
                        IMB_HASH_ALG hash, IMB_CHAIN_ORDER order)
 {
         struct IMB_JOB *job, *next_job;
@@ -2363,8 +2170,7 @@ submit_reset_check_job(struct IMB_MGR *mb_mgr,
 
         job = IMB_GET_NEXT_JOB(mb_mgr);
 
-        fill_in_job(job, cipher, dir,
-                    hash, order, &chacha_ctx, &gcm_ctx);
+        fill_in_job(job, cipher, dir, hash, order, &chacha_ctx, &gcm_ctx);
 
         next_job = IMB_SUBMIT_JOB(mb_mgr);
 
@@ -2392,8 +2198,7 @@ submit_reset_check_job(struct IMB_MGR *mb_mgr,
         if (next_job->status != IMB_STATUS_COMPLETED) {
                 printf("Returned job's status is not completed\n");
                 printf("cipher = %d\n", cipher);
-                printf("imb errno = %d (%s)\n",
-                       mb_mgr->imb_errno,
+                printf("imb errno = %d (%s)\n", mb_mgr->imb_errno,
                        imb_get_strerror(mb_mgr->imb_errno));
                 exit(0);
         }
@@ -2412,7 +2217,7 @@ test_reset_api(struct IMB_MGR *mb_mgr)
         IMB_CIPHER_MODE cipher;
         IMB_CHAIN_ORDER order;
 
-	printf("Reset API test:\n");
+        printf("Reset API test:\n");
 
         /* prep */
         while (IMB_FLUSH_JOB(mb_mgr) != NULL)
@@ -2423,11 +2228,9 @@ test_reset_api(struct IMB_MGR *mb_mgr)
                 return 1;
 
         /* Loop around all cipher algorithms */
-        for (order = IMB_ORDER_CIPHER_HASH; order <= IMB_ORDER_HASH_CIPHER;
-             order++) {
+        for (order = IMB_ORDER_CIPHER_HASH; order <= IMB_ORDER_HASH_CIPHER; order++) {
                 for (dir = IMB_DIR_ENCRYPT; dir <= IMB_DIR_DECRYPT; dir++) {
-                        for (cipher = IMB_CIPHER_CBC;
-                             cipher < IMB_CIPHER_NUM; cipher++) {
+                        for (cipher = IMB_CIPHER_CBC; cipher < IMB_CIPHER_NUM; cipher++) {
                                 /* Cipher only */
                                 hash = IMB_AUTH_NULL;
 
@@ -2439,21 +2242,16 @@ test_reset_api(struct IMB_MGR *mb_mgr)
                                 if (check_aead(hash, cipher))
                                         continue;
 
-                                if (submit_reset_check_job(mb_mgr,
-                                                           cipher, dir,
-                                                           hash, order) > 0)
+                                if (submit_reset_check_job(mb_mgr, cipher, dir, hash, order) > 0)
                                         return 1;
                         }
                 }
         }
         /* Loop around all authentication algorithms */
-        for (order = IMB_ORDER_CIPHER_HASH; order <= IMB_ORDER_HASH_CIPHER;
-             order++) {
+        for (order = IMB_ORDER_CIPHER_HASH; order <= IMB_ORDER_HASH_CIPHER; order++) {
                 for (dir = IMB_DIR_ENCRYPT; dir <= IMB_DIR_DECRYPT; dir++) {
-                        for (hash = IMB_AUTH_HMAC_SHA_1;
-                             hash < IMB_AUTH_NUM; hash++) {
-                                if (hash == IMB_AUTH_NULL ||
-                                    hash == IMB_AUTH_CUSTOM)
+                        for (hash = IMB_AUTH_HMAC_SHA_1; hash < IMB_AUTH_NUM; hash++) {
+                                if (hash == IMB_AUTH_NULL || hash == IMB_AUTH_CUSTOM)
                                         continue;
 
                                 /* Hash only */
@@ -2467,31 +2265,22 @@ test_reset_api(struct IMB_MGR *mb_mgr)
                                 if (check_aead(hash, cipher))
                                         continue;
 
-                                if (submit_reset_check_job(mb_mgr,
-                                                           cipher, dir,
-                                                           hash, order) > 0)
+                                if (submit_reset_check_job(mb_mgr, cipher, dir, hash, order) > 0)
                                         return 1;
                         }
                 }
         }
 
         /* Test AEAD algorithms */
-        const IMB_HASH_ALG aead_hash_algos[] = {
-                IMB_AUTH_AES_GMAC,
-                IMB_AUTH_AES_CCM,
-                IMB_AUTH_CHACHA20_POLY1305,
-                IMB_AUTH_PON_CRC_BIP,
-                IMB_AUTH_DOCSIS_CRC32,
-                IMB_AUTH_SNOW_V_AEAD
-        };
-        const IMB_CIPHER_MODE aead_cipher_algos[] = {
-                IMB_CIPHER_GCM,
-                IMB_CIPHER_CCM,
-                IMB_CIPHER_CHACHA20_POLY1305,
-                IMB_CIPHER_PON_AES_CNTR,
-                IMB_CIPHER_DOCSIS_SEC_BPI,
-                IMB_CIPHER_SNOW_V_AEAD
-        };
+        const IMB_HASH_ALG aead_hash_algos[] = { IMB_AUTH_AES_GMAC,          IMB_AUTH_AES_CCM,
+                                                 IMB_AUTH_CHACHA20_POLY1305, IMB_AUTH_PON_CRC_BIP,
+                                                 IMB_AUTH_DOCSIS_CRC32,      IMB_AUTH_SNOW_V_AEAD };
+        const IMB_CIPHER_MODE aead_cipher_algos[] = { IMB_CIPHER_GCM,
+                                                      IMB_CIPHER_CCM,
+                                                      IMB_CIPHER_CHACHA20_POLY1305,
+                                                      IMB_CIPHER_PON_AES_CNTR,
+                                                      IMB_CIPHER_DOCSIS_SEC_BPI,
+                                                      IMB_CIPHER_SNOW_V_AEAD };
 
         unsigned int i;
 
@@ -2499,28 +2288,23 @@ test_reset_api(struct IMB_MGR *mb_mgr)
                 hash = aead_hash_algos[i];
                 cipher = aead_cipher_algos[i];
 
-                if (cipher == IMB_CIPHER_CCM ||
-                    cipher == IMB_CIPHER_DOCSIS_SEC_BPI)
+                if (cipher == IMB_CIPHER_CCM || cipher == IMB_CIPHER_DOCSIS_SEC_BPI)
                         order = IMB_ORDER_HASH_CIPHER;
                 else
                         order = IMB_ORDER_CIPHER_HASH;
                 dir = IMB_DIR_ENCRYPT;
 
-                if (submit_reset_check_job(mb_mgr, cipher,
-                                           dir, hash, order) > 0)
+                if (submit_reset_check_job(mb_mgr, cipher, dir, hash, order) > 0)
                         return 1;
 
-                if (cipher == IMB_CIPHER_CCM ||
-                    cipher == IMB_CIPHER_DOCSIS_SEC_BPI)
+                if (cipher == IMB_CIPHER_CCM || cipher == IMB_CIPHER_DOCSIS_SEC_BPI)
                         order = IMB_ORDER_CIPHER_HASH;
                 else
                         order = IMB_ORDER_HASH_CIPHER;
                 dir = IMB_DIR_DECRYPT;
 
-                if (submit_reset_check_job(mb_mgr, cipher,
-                                           dir, hash, order) > 0)
+                if (submit_reset_check_job(mb_mgr, cipher, dir, hash, order) > 0)
                         return 1;
-
         }
 
         /* clean up */

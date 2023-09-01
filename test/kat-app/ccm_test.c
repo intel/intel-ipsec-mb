@@ -30,25 +30,20 @@
 #include <stdio.h>
 #include <string.h>
 
-
 #include <intel-ipsec-mb.h>
 #include "gcm_ctr_vectors_test.h"
 #include "utils.h"
 #include "aead_test.h"
 
-int ccm_test(struct IMB_MGR *mb_mgr);
+int
+ccm_test(struct IMB_MGR *mb_mgr);
 
 extern const struct aead_test ccm_128_test_json[];
 extern const struct aead_test ccm_256_test_json[];
 
 static int
-ccm_job_ok(const struct aead_test *vec,
-           const struct IMB_JOB *job,
-           const uint8_t *target,
-           const uint8_t *padding,
-           const uint8_t *auth,
-           const size_t sizeof_padding,
-           const int dir,
+ccm_job_ok(const struct aead_test *vec, const struct IMB_JOB *job, const uint8_t *target,
+           const uint8_t *padding, const uint8_t *auth, const size_t sizeof_padding, const int dir,
            const int in_place)
 {
         if (job->status != IMB_STATUS_COMPLETED) {
@@ -60,7 +55,7 @@ ccm_job_ok(const struct aead_test *vec,
         if (in_place) {
                 if (dir == IMB_DIR_ENCRYPT) {
                         if (memcmp((const void *) vec->ct, target + sizeof_padding,
-                            vec->msgSize / 8)) {
+                                   vec->msgSize / 8)) {
                                 printf("cipher mismatched\n");
                                 hexdump(stderr, "Received", target + sizeof_padding,
                                         vec->msgSize / 8);
@@ -112,27 +107,25 @@ ccm_job_ok(const struct aead_test *vec,
         if (in_place) {
                 if (memcmp(padding, target + sizeof_padding + vec->msgSize / 8, sizeof_padding)) {
                         printf("cipher overwrite tail\n");
-                        hexdump(stderr, "Target",
-                                target + sizeof_padding + vec->msgSize / 8, sizeof_padding);
+                        hexdump(stderr, "Target", target + sizeof_padding + vec->msgSize / 8,
+                                sizeof_padding);
                         return 0;
                 }
         } else {
                 if (memcmp(padding, target + sizeof_padding + vec->msgSize / 8 - vec->aadSize / 8,
                            sizeof_padding)) {
                         printf("cipher overwrite tail\n");
-                        hexdump(stderr, "Target", target + sizeof_padding + vec->msgSize / 8
-                                - vec->aadSize / 8,
+                        hexdump(stderr, "Target",
+                                target + sizeof_padding + vec->msgSize / 8 - vec->aadSize / 8,
                                 sizeof_padding);
                         return 0;
                 }
         }
 
         /* hash checks */
-        if (memcmp(padding, &auth[sizeof_padding + vec->tagSize / 8],
-                   sizeof_padding)) {
+        if (memcmp(padding, &auth[sizeof_padding + vec->tagSize / 8], sizeof_padding)) {
                 printf("hash overwrite tail\n");
-                hexdump(stderr, "Target", &auth[sizeof_padding + vec->tagSize / 8],
-                        sizeof_padding);
+                hexdump(stderr, "Target", &auth[sizeof_padding + vec->tagSize / 8], sizeof_padding);
                 return 0;
         }
 
@@ -142,26 +135,21 @@ ccm_job_ok(const struct aead_test *vec,
                 return 0;
         }
 
-        if (memcmp(vec->ct + vec->msgSize / 8, &auth[sizeof_padding],
-                   vec->tagSize / 8)) {
+        if (memcmp(vec->ct + vec->msgSize / 8, &auth[sizeof_padding], vec->tagSize / 8)) {
                 printf("hash mismatched\n");
                 hexdump(stderr, "Received", &auth[sizeof_padding], vec->tagSize / 8);
-                hexdump(stderr, "Expected", vec->ct + vec->msgSize / 8,
-                        vec->tagSize / 8);
+                hexdump(stderr, "Expected", vec->ct + vec->msgSize / 8, vec->tagSize / 8);
                 return 0;
         }
         return 1;
 }
 
 static int
-test_ccm(struct IMB_MGR *mb_mgr,
-         const struct aead_test *vec,
-         const int dir, const int in_place,
-         const int num_jobs,
-         const uint64_t key_length)
+test_ccm(struct IMB_MGR *mb_mgr, const struct aead_test *vec, const int dir, const int in_place,
+         const int num_jobs, const uint64_t key_length)
 {
-        DECLARE_ALIGNED(uint32_t expkey[4*15], 16);
-        DECLARE_ALIGNED(uint32_t dust[4*15], 16);
+        DECLARE_ALIGNED(uint32_t expkey[4 * 15], 16);
+        DECLARE_ALIGNED(uint32_t dust[4 * 15], 16);
         struct IMB_JOB *job;
         uint8_t padding[16];
         uint8_t **targets = malloc(num_jobs * sizeof(void *));
@@ -170,8 +158,8 @@ test_ccm(struct IMB_MGR *mb_mgr,
         const int order = (dir == IMB_DIR_ENCRYPT) ? IMB_ORDER_HASH_CIPHER : IMB_ORDER_CIPHER_HASH;
 
         if (targets == NULL || auths == NULL) {
-		fprintf(stderr, "Can't allocate buffer memory\n");
-		goto end2;
+                fprintf(stderr, "Can't allocate buffer memory\n");
+                goto end2;
         }
 
         memset(padding, -1, sizeof(padding));
@@ -204,7 +192,6 @@ test_ccm(struct IMB_MGR *mb_mgr,
         else
                 IMB_AES_KEYEXP_256(mb_mgr, vec->key, expkey, dust);
 
-
         while (IMB_FLUSH_JOB(mb_mgr) != NULL)
                 ;
 
@@ -213,8 +200,7 @@ test_ccm(struct IMB_MGR *mb_mgr,
                 job->cipher_direction = dir;
                 job->chain_order = order;
                 if (in_place) {
-                        job->dst =
-                                targets[i] + sizeof(padding) + vec->aadSize / 8;
+                        job->dst = targets[i] + sizeof(padding) + vec->aadSize / 8;
                         job->src = targets[i] + sizeof(padding);
                 } else {
                         if (dir == IMB_DIR_ENCRYPT) {
@@ -232,13 +218,11 @@ test_ccm(struct IMB_MGR *mb_mgr,
                 job->iv = (const void *) vec->iv;
                 job->iv_len_in_bytes = vec->ivSize / 8;
                 job->cipher_start_src_offset_in_bytes = vec->aadSize / 8;
-                job->msg_len_to_cipher_in_bytes =
-                        vec->msgSize / 8 - vec->aadSize / 8;
+                job->msg_len_to_cipher_in_bytes = vec->msgSize / 8 - vec->aadSize / 8;
 
                 job->hash_alg = IMB_AUTH_AES_CCM;
                 job->hash_start_src_offset_in_bytes = vec->aadSize / 8;
-                job->msg_len_to_hash_in_bytes =
-                        vec->msgSize / 8 - vec->aadSize / 8;
+                job->msg_len_to_hash_in_bytes = vec->msgSize / 8 - vec->aadSize / 8;
                 job->auth_tag_output = auths[i] + sizeof(padding);
                 job->auth_tag_output_len_in_bytes = vec->tagSize / 8;
 
@@ -255,9 +239,8 @@ test_ccm(struct IMB_MGR *mb_mgr,
                                 printf("%d Unexpected return from submit_job\n", __LINE__);
                                 goto end;
                         }
-                        if (!ccm_job_ok(vec, job, job->user_data, padding,
-                                        job->user_data2, sizeof(padding),
-                                        dir, in_place))
+                        if (!ccm_job_ok(vec, job, job->user_data, padding, job->user_data2,
+                                        sizeof(padding), dir, in_place))
                                 goto end;
                 }
         }
@@ -265,8 +248,8 @@ test_ccm(struct IMB_MGR *mb_mgr,
         while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL) {
                 jobs_rx++;
 
-                if (!ccm_job_ok(vec, job, job->user_data, padding, job->user_data2,
-                                sizeof(padding), dir, in_place))
+                if (!ccm_job_ok(vec, job, job->user_data, padding, job->user_data2, sizeof(padding),
+                                dir, in_place))
                         goto end;
         }
 
@@ -276,7 +259,7 @@ test_ccm(struct IMB_MGR *mb_mgr,
         }
         ret = 0;
 
- end:
+end:
         while (IMB_FLUSH_JOB(mb_mgr) != NULL)
                 ;
 
@@ -287,7 +270,7 @@ test_ccm(struct IMB_MGR *mb_mgr,
                         free(auths[i]);
         }
 
- end2:
+end2:
         if (targets != NULL)
                 free(targets);
 
@@ -298,21 +281,20 @@ test_ccm(struct IMB_MGR *mb_mgr,
 }
 
 static void
-test_ccm_128_std_vectors(struct IMB_MGR *mb_mgr,
-                         struct test_suite_context *ctx,
-                         const int num_jobs)
+test_ccm_128_std_vectors(struct IMB_MGR *mb_mgr, struct test_suite_context *ctx, const int num_jobs)
 {
-	const struct aead_test *v = ccm_128_test_json;
+        const struct aead_test *v = ccm_128_test_json;
 
         if (!quiet_mode)
-	        printf("AES-CCM-128 standard test vectors (N jobs = %d):\n", num_jobs);
-	for (; v->msg != NULL; v++) {
+                printf("AES-CCM-128 standard test vectors (N jobs = %d):\n", num_jobs);
+        for (; v->msg != NULL; v++) {
 
                 if (!quiet_mode) {
 #ifdef DEBUG
                         printf("Standard vector %zu NONCELen:%zu PktLen:%zu AADLen:%zu "
-                               "Digestlen:%zu\n", v->tcId, v->ivSize / 8, v->msgSize / 8,
-                               v->aadSize / 8, v->tagSize / 8);
+                               "Digestlen:%zu\n",
+                               v->tcId, v->ivSize / 8, v->msgSize / 8, v->aadSize / 8,
+                               v->tagSize / 8);
 #else
                         printf(".");
 #endif
@@ -345,28 +327,26 @@ test_ccm_128_std_vectors(struct IMB_MGR *mb_mgr,
                 } else {
                         test_suite_update(ctx, 1, 0);
                 }
-	}
+        }
         if (!quiet_mode)
                 printf("\n");
 }
 
 static void
-test_ccm_256_std_vectors(struct IMB_MGR *mb_mgr,
-                         struct test_suite_context *ctx,
-                         const int num_jobs)
+test_ccm_256_std_vectors(struct IMB_MGR *mb_mgr, struct test_suite_context *ctx, const int num_jobs)
 {
         const struct aead_test *v = ccm_256_test_json;
 
         if (!quiet_mode)
-	        printf("AES-CCM-256 standard test vectors (N jobs = %d):\n",
-                       num_jobs);
-	for (; v->msg != NULL; v++) {
+                printf("AES-CCM-256 standard test vectors (N jobs = %d):\n", num_jobs);
+        for (; v->msg != NULL; v++) {
 
                 if (!quiet_mode) {
 #ifdef DEBUG
                         printf("Standard vector %zu NONCELen:%zu PktLen:%zu AADLen:%zu "
-                               "Digestlen:%zu\n", v->tcId, v->ivSize / 8, v->msgSize / 8,
-                               v->aadSize / 8, v->tagSize / 8);
+                               "Digestlen:%zu\n",
+                               v->tcId, v->ivSize / 8, v->msgSize / 8, v->aadSize / 8,
+                               v->tagSize / 8);
 #else
                         printf(".");
 #endif
@@ -399,11 +379,10 @@ test_ccm_256_std_vectors(struct IMB_MGR *mb_mgr,
                 } else {
                         test_suite_update(ctx, 1, 0);
                 }
-	}
+        }
         if (!quiet_mode)
                 printf("\n");
 }
-
 
 int
 ccm_test(struct IMB_MGR *mb_mgr)
@@ -423,5 +402,5 @@ ccm_test(struct IMB_MGR *mb_mgr)
                 test_ccm_256_std_vectors(mb_mgr, &ctx, i);
         errors += test_suite_end(&ctx);
 
-	return errors;
+        return errors;
 }

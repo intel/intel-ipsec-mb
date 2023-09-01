@@ -34,18 +34,21 @@
 #include <stdbool.h>
 #include <intel-ipsec-mb.h>
 
-#define BUFF_SIZE (32*1024*1024)
+#define BUFF_SIZE      (32 * 1024 * 1024)
 #define MAX_BURST_JOBS 32
 
-int LLVMFuzzerTestOneInput(const uint8_t *, size_t);
+int
+LLVMFuzzerTestOneInput(const uint8_t *, size_t);
 
-static int custom_op(struct IMB_JOB *job)
+static int
+custom_op(struct IMB_JOB *job)
 {
         (void) job;
         return 0;
 }
 
-static void clamp_lengths(struct IMB_JOB *job, const uint64_t buffsize)
+static void
+clamp_lengths(struct IMB_JOB *job, const uint64_t buffsize)
 {
         if (job->msg_len_to_cipher_in_bytes > buffsize)
                 job->msg_len_to_cipher_in_bytes = buffsize;
@@ -60,24 +63,25 @@ static void clamp_lengths(struct IMB_JOB *job, const uint64_t buffsize)
                 job->hash_start_src_offset_in_bytes = buffsize;
 }
 
-static void fill_job_data(struct IMB_JOB *job, void *buff)
+static void
+fill_job_data(struct IMB_JOB *job, void *buff)
 {
         if (job->src != NULL)
-                job->src = (uint8_t *)buff;
+                job->src = (uint8_t *) buff;
         if (job->dst != NULL)
-                job->dst = (uint8_t *)buff;
+                job->dst = (uint8_t *) buff;
         if (job->enc_keys != NULL)
                 job->enc_keys = buff;
         if (job->dec_keys != NULL)
                 job->dec_keys = buff;
         if (job->iv != NULL)
-                job->iv = (uint8_t *)buff;
+                job->iv = (uint8_t *) buff;
         if (job->auth_tag_output != NULL)
-                job->auth_tag_output = (uint8_t *)buff;
+                job->auth_tag_output = (uint8_t *) buff;
 }
 
-static void fill_additional_cipher_data(struct IMB_JOB *job,
-                                        void *buff, const uint64_t buffsize)
+static void
+fill_additional_cipher_data(struct IMB_JOB *job, void *buff, const uint64_t buffsize)
 {
         const IMB_CIPHER_MODE cipherMode = job->cipher_mode;
 
@@ -114,10 +118,8 @@ static void fill_additional_cipher_data(struct IMB_JOB *job,
         case IMB_CIPHER_CHACHA20_POLY1305:
                 if (job->u.CHACHA20_POLY1305.aad != NULL)
                         job->u.CHACHA20_POLY1305.aad = buff;
-                if (job->u.CHACHA20_POLY1305.aad_len_in_bytes >
-                    buffsize)
-                        job->u.CHACHA20_POLY1305.aad_len_in_bytes =
-                                buffsize;
+                if (job->u.CHACHA20_POLY1305.aad_len_in_bytes > buffsize)
+                        job->u.CHACHA20_POLY1305.aad_len_in_bytes = buffsize;
                 break;
         case IMB_CIPHER_CHACHA20_POLY1305_SGL:
                 if (job->u.CHACHA20_POLY1305.aad != NULL)
@@ -127,20 +129,16 @@ static void fill_additional_cipher_data(struct IMB_JOB *job,
                         job->u.CHACHA20_POLY1305.ctx->remain_ks_bytes &= 63;
                         job->u.CHACHA20_POLY1305.ctx->remain_ct_bytes &= 15;
                 }
-                if (job->u.CHACHA20_POLY1305.aad_len_in_bytes >
-                    buffsize)
-                        job->u.CHACHA20_POLY1305.aad_len_in_bytes =
-                                buffsize;
+                if (job->u.CHACHA20_POLY1305.aad_len_in_bytes > buffsize)
+                        job->u.CHACHA20_POLY1305.aad_len_in_bytes = buffsize;
                 break;
         case IMB_CIPHER_SNOW_V_AEAD:
                 if (job->u.SNOW_V_AEAD.aad != NULL)
                         job->u.SNOW_V_AEAD.aad = buff;
                 if (job->u.SNOW_V_AEAD.reserved != NULL)
                         job->u.SNOW_V_AEAD.reserved = buff;
-                if (job->u.SNOW_V_AEAD.aad_len_in_bytes >
-                    buffsize)
-                        job->u.SNOW_V_AEAD.aad_len_in_bytes =
-                                buffsize;
+                if (job->u.SNOW_V_AEAD.aad_len_in_bytes > buffsize)
+                        job->u.SNOW_V_AEAD.aad_len_in_bytes = buffsize;
                 break;
         case IMB_CIPHER_CBCS_1_9:
                 if (job->cipher_fields.CBCS.next_iv != NULL)
@@ -151,8 +149,8 @@ static void fill_additional_cipher_data(struct IMB_JOB *job,
         }
 }
 
-static void fill_additional_hash_data(struct IMB_JOB *job,
-                                      void *buff, uint64_t buffsize)
+static void
+fill_additional_hash_data(struct IMB_JOB *job, void *buff, uint64_t buffsize)
 {
         const IMB_HASH_ALG hashMode = job->hash_alg;
 
@@ -167,17 +165,17 @@ static void fill_additional_hash_data(struct IMB_JOB *job,
         case IMB_AUTH_HMAC_SHA_512:
         case IMB_AUTH_MD5:
                 if (job->u.HMAC._hashed_auth_key_xor_ipad != NULL)
-                        job->u.HMAC._hashed_auth_key_xor_ipad = (uint8_t *)buff;
+                        job->u.HMAC._hashed_auth_key_xor_ipad = (uint8_t *) buff;
                 if (job->u.HMAC._hashed_auth_key_xor_opad != NULL)
-                        job->u.HMAC._hashed_auth_key_xor_opad = (uint8_t *)buff;
+                        job->u.HMAC._hashed_auth_key_xor_opad = (uint8_t *) buff;
                 break;
         case IMB_AUTH_AES_XCBC:
                 if (job->u.XCBC._k1_expanded != NULL)
-                        job->u.XCBC._k1_expanded = (uint32_t *)buff;
+                        job->u.XCBC._k1_expanded = (uint32_t *) buff;
                 if (job->u.XCBC._k2 != NULL)
-                        job->u.XCBC._k2 = (uint8_t *)buff;
+                        job->u.XCBC._k2 = (uint8_t *) buff;
                 if (job->u.XCBC._k3 != NULL)
-                        job->u.XCBC._k3 = (uint8_t *)buff;
+                        job->u.XCBC._k3 = (uint8_t *) buff;
                 break;
         case IMB_AUTH_AES_CCM:
                 if (job->u.CCM.aad != NULL)
@@ -197,13 +195,13 @@ static void fill_additional_hash_data(struct IMB_JOB *job,
                 break;
         case IMB_AUTH_ZUC256_EIA3_BITLEN:
                 if (job->u.ZUC_EIA3._iv23 != NULL)
-                        job->u.ZUC_EIA3._iv23 = (uint8_t *)buff;
+                        job->u.ZUC_EIA3._iv23 = (uint8_t *) buff;
                 /* fall through */
         case IMB_AUTH_ZUC_EIA3_BITLEN:
                 if (job->u.ZUC_EIA3._key != NULL)
-                        job->u.ZUC_EIA3._key = (uint8_t *)buff;
+                        job->u.ZUC_EIA3._key = (uint8_t *) buff;
                 if (job->u.ZUC_EIA3._iv != NULL)
-                        job->u.ZUC_EIA3._iv = (uint8_t *)buff;
+                        job->u.ZUC_EIA3._iv = (uint8_t *) buff;
                 break;
         case IMB_AUTH_SNOW3G_UIA2_BITLEN:
                 if (job->u.SNOW3G_UIA2._key != NULL)
@@ -239,10 +237,8 @@ static void fill_additional_hash_data(struct IMB_JOB *job,
         case IMB_AUTH_CHACHA20_POLY1305:
                 if (job->u.CHACHA20_POLY1305.aad != NULL)
                         job->u.CHACHA20_POLY1305.aad = buff;
-                if (job->u.CHACHA20_POLY1305.aad_len_in_bytes >
-                    buffsize)
-                        job->u.CHACHA20_POLY1305.aad_len_in_bytes =
-                                buffsize;
+                if (job->u.CHACHA20_POLY1305.aad_len_in_bytes > buffsize)
+                        job->u.CHACHA20_POLY1305.aad_len_in_bytes = buffsize;
                 break;
         case IMB_AUTH_CHACHA20_POLY1305_SGL:
                 if (job->u.CHACHA20_POLY1305.aad != NULL)
@@ -252,18 +248,14 @@ static void fill_additional_hash_data(struct IMB_JOB *job,
                         job->u.CHACHA20_POLY1305.ctx->remain_ks_bytes &= 63;
                         job->u.CHACHA20_POLY1305.ctx->remain_ct_bytes &= 15;
                 }
-                if (job->u.CHACHA20_POLY1305.aad_len_in_bytes >
-                    buffsize)
-                        job->u.CHACHA20_POLY1305.aad_len_in_bytes =
-                                buffsize;
-                 break;
+                if (job->u.CHACHA20_POLY1305.aad_len_in_bytes > buffsize)
+                        job->u.CHACHA20_POLY1305.aad_len_in_bytes = buffsize;
+                break;
         case IMB_AUTH_SNOW_V_AEAD:
                 if (job->u.SNOW_V_AEAD.aad != NULL)
                         job->u.SNOW_V_AEAD.aad = buff;
-                if (job->u.SNOW_V_AEAD.aad_len_in_bytes >
-                    buffsize)
-                        job->u.SNOW_V_AEAD.aad_len_in_bytes =
-                                buffsize;
+                if (job->u.SNOW_V_AEAD.aad_len_in_bytes > buffsize)
+                        job->u.SNOW_V_AEAD.aad_len_in_bytes = buffsize;
                 break;
         case IMB_AUTH_GCM_SGL:
                 if (job->u.GCM.aad != NULL)
@@ -283,14 +275,15 @@ static void fill_additional_hash_data(struct IMB_JOB *job,
 }
 
 /* function to read env variables to import specific hash mode */
-static IMB_HASH_ALG hash_selection(void)
+static IMB_HASH_ALG
+hash_selection(void)
 {
         const char *a = getenv("HASH");
 
         if (a == NULL) {
                 return 0;
         } else {
-                if  (strcmp(a, "IMB_AUTH_HMAC_SHA_1") == 0)
+                if (strcmp(a, "IMB_AUTH_HMAC_SHA_1") == 0)
                         return IMB_AUTH_HMAC_SHA_1;
                 else if (strcmp(a, "IMB_AUTH_HMAC_SHA_224") == 0)
                         return IMB_AUTH_HMAC_SHA_224;
@@ -388,14 +381,15 @@ static IMB_HASH_ALG hash_selection(void)
 }
 
 /* function to read env variables to import specific cipher mode */
-static IMB_CIPHER_MODE cipher_selection(void)
+static IMB_CIPHER_MODE
+cipher_selection(void)
 {
         const char *a = getenv("CIPHER");
 
         if (a == NULL) {
                 return 0;
         } else {
-                if  (strcmp(a, "IMB_CIPHER_CBC") == 0)
+                if (strcmp(a, "IMB_CIPHER_CBC") == 0)
                         return IMB_CIPHER_CBC;
                 else if (strcmp(a, "IMB_CIPHER_CNTR") == 0)
                         return IMB_CIPHER_CNTR;
@@ -446,7 +440,8 @@ static IMB_CIPHER_MODE cipher_selection(void)
         }
 }
 
-int LLVMFuzzerTestOneInput(const uint8_t *data, size_t dataSize)
+int
+LLVMFuzzerTestOneInput(const uint8_t *data, size_t dataSize)
 {
         IMB_HASH_ALG hash;
         IMB_CIPHER_MODE cipher;
@@ -463,8 +458,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t dataSize)
         unsigned num_jobs;
         unsigned key_len;
         const size_t buffsize = BUFF_SIZE;
-        bool single = false, cipher_burst = false,
-                hash_burst = false, burst = false;
+        bool single = false, cipher_burst = false, hash_burst = false, burst = false;
 
         if (n_jobs == NULL)
                 num_jobs = 10;
@@ -552,7 +546,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t dataSize)
                         else
                                 job->cipher_mode = cipher;
                         clamp_lengths(job, buffsize);
-                        static DECLARE_ALIGNED(uint8_t buff[2*BUFF_SIZE], 64);
+                        static DECLARE_ALIGNED(uint8_t buff[2 * BUFF_SIZE], 64);
 
                         fill_job_data(job, buff);
                         fill_additional_cipher_data(job, buff, buffsize);
@@ -560,10 +554,9 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t dataSize)
                         job = IMB_SUBMIT_JOB(p_mgr);
                 }
         } else if (burst) {
-                IMB_JOB *jobs[MAX_BURST_JOBS] = {NULL};
+                IMB_JOB *jobs[MAX_BURST_JOBS] = { NULL };
 
-                while (IMB_GET_NEXT_BURST(p_mgr, num_jobs, jobs)
-                       < (uint32_t)num_jobs)
+                while (IMB_GET_NEXT_BURST(p_mgr, num_jobs, jobs) < (uint32_t) num_jobs)
                         IMB_FLUSH_BURST(p_mgr, num_jobs, jobs);
 
                 for (i = 0; i < num_jobs; i++) {
@@ -582,24 +575,20 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t dataSize)
                         else
                                 job->hash_alg = hash;
                         if (cipher == 0)
-                                job->cipher_mode %=
-                                        (IMB_CIPHER_NUM + 1);
+                                job->cipher_mode %= (IMB_CIPHER_NUM + 1);
                         else
                                 job->cipher_mode = cipher;
                         clamp_lengths(job, buffsize);
-                        static DECLARE_ALIGNED
-                                (uint8_t buff[2*BUFF_SIZE], 64);
+                        static DECLARE_ALIGNED(uint8_t buff[2 * BUFF_SIZE], 64);
 
                         fill_job_data(job, buff);
-                        fill_additional_cipher_data
-                                (job, buff, buffsize);
-                        fill_additional_hash_data
-                                (job, buff, buffsize);
+                        fill_additional_cipher_data(job, buff, buffsize);
+                        fill_additional_hash_data(job, buff, buffsize);
                 }
 
                 IMB_SUBMIT_BURST(p_mgr, num_jobs, jobs);
         } else if (cipher_burst) {
-	        IMB_JOB jobs[MAX_BURST_JOBS] = {0};
+                IMB_JOB jobs[MAX_BURST_JOBS] = { 0 };
 
                 for (i = 0; i < num_jobs; i++) {
                         job = &jobs[i];
@@ -612,20 +601,17 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t dataSize)
                          * selected to fuzz.
                          */
                         if (cipher == 0)
-                                cipher = (job->cipher_mode %
-                                          (IMB_CIPHER_NUM + 1));
+                                cipher = (job->cipher_mode % (IMB_CIPHER_NUM + 1));
                         clamp_lengths(job, buffsize);
-                        static DECLARE_ALIGNED
-                                (uint8_t buff[2*BUFF_SIZE], 64);
+                        static DECLARE_ALIGNED(uint8_t buff[2 * BUFF_SIZE], 64);
 
                         fill_job_data(job, buff);
-			fill_additional_cipher_data(job, buff, buffsize);
+                        fill_additional_cipher_data(job, buff, buffsize);
                 }
 
-                IMB_SUBMIT_CIPHER_BURST(p_mgr, jobs, num_jobs,
-                                        cipher, dir, key_len);
+                IMB_SUBMIT_CIPHER_BURST(p_mgr, jobs, num_jobs, cipher, dir, key_len);
         } else if (hash_burst) {
-	        IMB_JOB jobs[MAX_BURST_JOBS] = {0};
+                IMB_JOB jobs[MAX_BURST_JOBS] = { 0 };
 
                 for (i = 0; i < num_jobs; i++) {
                         job = &jobs[i];
@@ -638,14 +624,12 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t dataSize)
                          * been selected to fuzz.
                          */
                         if (hash == 0)
-                                hash = (job->hash_alg %
-                                        (IMB_AUTH_NUM + 1));
+                                hash = (job->hash_alg % (IMB_AUTH_NUM + 1));
                         clamp_lengths(job, buffsize);
-                        static DECLARE_ALIGNED
-                                (uint8_t buff[2*BUFF_SIZE], 64);
+                        static DECLARE_ALIGNED(uint8_t buff[2 * BUFF_SIZE], 64);
 
                         fill_job_data(job, buff);
-			fill_additional_hash_data(job, buff, buffsize);
+                        fill_additional_hash_data(job, buff, buffsize);
                 }
 
                 IMB_SUBMIT_HASH_BURST(p_mgr, jobs, num_jobs, hash);

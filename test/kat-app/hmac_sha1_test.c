@@ -35,18 +35,16 @@
 #include "utils.h"
 #include "mac_test.h"
 
-int hmac_sha1_test(struct IMB_MGR *mb_mgr);
+int
+hmac_sha1_test(struct IMB_MGR *mb_mgr);
 
-#define DIGEST96_SIZE 12
+#define DIGEST96_SIZE  12
 #define MAX_BURST_JOBS 32
 
 extern const struct mac_test hmac_sha1_test_kat_json[];
 static int
-hmac_sha1_job_ok(const struct mac_test *vec,
-                 const struct IMB_JOB *job,
-                 const uint8_t *auth,
-                 const uint8_t *padding,
-                 const size_t sizeof_padding)
+hmac_sha1_job_ok(const struct mac_test *vec, const struct IMB_JOB *job, const uint8_t *auth,
+                 const uint8_t *padding, const size_t sizeof_padding)
 {
         if (job->status != IMB_STATUS_COMPLETED) {
                 printf("line:%d job error status:%d ", __LINE__, job->status);
@@ -54,11 +52,9 @@ hmac_sha1_job_ok(const struct mac_test *vec,
         }
 
         /* hash checks */
-        if (memcmp(padding, &auth[sizeof_padding + (vec->tagSize / 8)],
-                   sizeof_padding)) {
+        if (memcmp(padding, &auth[sizeof_padding + (vec->tagSize / 8)], sizeof_padding)) {
                 printf("hash overwrite tail\n");
-                hexdump(stderr, "Target",
-                        &auth[sizeof_padding + (vec->tagSize / 8)],
+                hexdump(stderr, "Target", &auth[sizeof_padding + (vec->tagSize / 8)],
                         sizeof_padding);
                 return 0;
         }
@@ -69,22 +65,17 @@ hmac_sha1_job_ok(const struct mac_test *vec,
                 return 0;
         }
 
-        if (memcmp(vec->tag, &auth[sizeof_padding],
-                   vec->tagSize / 8)) {
+        if (memcmp(vec->tag, &auth[sizeof_padding], vec->tagSize / 8)) {
                 printf("hash mismatched\n");
-                hexdump(stderr, "Received", &auth[sizeof_padding],
-                        vec->tagSize / 8);
-                hexdump(stderr, "Expected", vec->tag,
-                        vec->tagSize / 8);
+                hexdump(stderr, "Received", &auth[sizeof_padding], vec->tagSize / 8);
+                hexdump(stderr, "Expected", vec->tag, vec->tagSize / 8);
                 return 0;
         }
         return 1;
 }
 
 static int
-test_hmac_sha1(struct IMB_MGR *mb_mgr,
-               const struct mac_test *vec,
-               const uint32_t num_jobs)
+test_hmac_sha1(struct IMB_MGR *mb_mgr, const struct mac_test *vec, const uint32_t num_jobs)
 {
         struct IMB_JOB *job;
         uint8_t padding[16];
@@ -95,16 +86,15 @@ test_hmac_sha1(struct IMB_MGR *mb_mgr,
         DECLARE_ALIGNED(uint8_t opad_hash[IMB_SHA1_DIGEST_SIZE_IN_BYTES], 16);
 
         if (auths == NULL) {
-		fprintf(stderr, "Can't allocate buffer memory\n");
-		goto end2;
+                fprintf(stderr, "Can't allocate buffer memory\n");
+                goto end2;
         }
 
         memset(padding, -1, sizeof(padding));
         memset(auths, 0, num_jobs * sizeof(void *));
 
         for (i = 0; i < num_jobs; i++) {
-                const size_t alloc_len =
-                        (vec->tagSize / 8) + (sizeof(padding) * 2);
+                const size_t alloc_len = (vec->tagSize / 8) + (sizeof(padding) * 2);
 
                 auths[i] = malloc(alloc_len);
                 if (auths[i] == NULL) {
@@ -114,8 +104,8 @@ test_hmac_sha1(struct IMB_MGR *mb_mgr,
                 memset(auths[i], -1, alloc_len);
         }
 
-        imb_hmac_ipad_opad(mb_mgr, IMB_AUTH_HMAC_SHA_1,
-                           vec->key, vec->keySize / 8, ipad_hash, opad_hash);
+        imb_hmac_ipad_opad(mb_mgr, IMB_AUTH_HMAC_SHA_1, vec->key, vec->keySize / 8, ipad_hash,
+                           opad_hash);
 
         for (i = 0; i < num_jobs; i++) {
                 job = IMB_GET_NEXT_JOB(mb_mgr);
@@ -149,20 +139,17 @@ test_hmac_sha1(struct IMB_MGR *mb_mgr,
                          * job after 2nd submission
                          */
                         if (num_jobs < 2) {
-                                printf("%d Unexpected return from submit_job\n",
-                                       __LINE__);
+                                printf("%d Unexpected return from submit_job\n", __LINE__);
                                 goto end;
                         }
-                        if (!hmac_sha1_job_ok(vec, job, job->user_data,
-                                              padding, sizeof(padding)))
+                        if (!hmac_sha1_job_ok(vec, job, job->user_data, padding, sizeof(padding)))
                                 goto end;
                 }
         }
 
         while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL) {
                 jobs_rx++;
-                if (!hmac_sha1_job_ok(vec, job, job->user_data,
-                                      padding, sizeof(padding)))
+                if (!hmac_sha1_job_ok(vec, job, job->user_data, padding, sizeof(padding)))
                         goto end;
         }
 
@@ -172,7 +159,7 @@ test_hmac_sha1(struct IMB_MGR *mb_mgr,
         }
         ret = 0;
 
- end:
+end:
         /* empty the manager before next tests */
         while (IMB_FLUSH_JOB(mb_mgr) != NULL)
                 ;
@@ -182,7 +169,7 @@ test_hmac_sha1(struct IMB_MGR *mb_mgr,
                         free(auths[i]);
         }
 
- end2:
+end2:
         if (auths != NULL)
                 free(auths);
 
@@ -190,11 +177,9 @@ test_hmac_sha1(struct IMB_MGR *mb_mgr,
 }
 
 static int
-test_hmac_sha1_burst(struct IMB_MGR *mb_mgr,
-                     const struct mac_test *vec,
-                     const uint32_t num_jobs)
+test_hmac_sha1_burst(struct IMB_MGR *mb_mgr, const struct mac_test *vec, const uint32_t num_jobs)
 {
-        struct IMB_JOB *job, *jobs[MAX_BURST_JOBS] = {NULL};
+        struct IMB_JOB *job, *jobs[MAX_BURST_JOBS] = { NULL };
         uint8_t padding[16];
         uint8_t **auths = malloc(num_jobs * sizeof(void *));
         uint32_t i = 0, jobs_rx = 0;
@@ -204,16 +189,15 @@ test_hmac_sha1_burst(struct IMB_MGR *mb_mgr,
         uint32_t completed_jobs = 0;
 
         if (auths == NULL) {
-		fprintf(stderr, "Can't allocate buffer memory\n");
-		goto end2;
+                fprintf(stderr, "Can't allocate buffer memory\n");
+                goto end2;
         }
 
         memset(padding, -1, sizeof(padding));
         memset(auths, 0, num_jobs * sizeof(void *));
 
         for (i = 0; i < num_jobs; i++) {
-                const size_t alloc_len =
-                        (vec->tagSize / 8) + (sizeof(padding) * 2);
+                const size_t alloc_len = (vec->tagSize / 8) + (sizeof(padding) * 2);
 
                 auths[i] = malloc(alloc_len);
                 if (auths[i] == NULL) {
@@ -223,8 +207,8 @@ test_hmac_sha1_burst(struct IMB_MGR *mb_mgr,
                 memset(auths[i], -1, alloc_len);
         }
 
-        imb_hmac_ipad_opad(mb_mgr, IMB_AUTH_HMAC_SHA_1,
-                           vec->key, vec->keySize / 8, ipad_hash, opad_hash);
+        imb_hmac_ipad_opad(mb_mgr, IMB_AUTH_HMAC_SHA_1, vec->key, vec->keySize / 8, ipad_hash,
+                           opad_hash);
 
         while (IMB_GET_NEXT_BURST(mb_mgr, num_jobs, jobs) < num_jobs)
                 IMB_FLUSH_BURST(mb_mgr, num_jobs, jobs);
@@ -260,8 +244,7 @@ test_hmac_sha1_burst(struct IMB_MGR *mb_mgr,
         err = imb_get_errno(mb_mgr);
 
         if (err != 0) {
-                printf("submit_burst error %d : '%s'\n", err,
-                       imb_get_strerror(err));
+                printf("submit_burst error %d : '%s'\n", err, imb_get_strerror(err));
                 goto end;
         }
 
@@ -270,36 +253,32 @@ check_burst_jobs:
                 job = jobs[i];
 
                 if (job->status != IMB_STATUS_COMPLETED) {
-                        printf("job %u status not complete!\n", i+1);
+                        printf("job %u status not complete!\n", i + 1);
                         goto end;
                 }
 
-                if (!hmac_sha1_job_ok(vec, job, job->user_data,
-                                      padding, sizeof(padding)))
+                if (!hmac_sha1_job_ok(vec, job, job->user_data, padding, sizeof(padding)))
                         goto end;
                 jobs_rx++;
         }
 
         if (jobs_rx != num_jobs) {
-                completed_jobs = IMB_FLUSH_BURST(mb_mgr,
-                                                 num_jobs - completed_jobs,
-                                                 jobs);
+                completed_jobs = IMB_FLUSH_BURST(mb_mgr, num_jobs - completed_jobs, jobs);
                 if (completed_jobs == 0) {
-                        printf("Expected %u jobs, received %u\n",
-                               num_jobs, jobs_rx);
+                        printf("Expected %u jobs, received %u\n", num_jobs, jobs_rx);
                         goto end;
                 }
                 goto check_burst_jobs;
         }
         ret = 0;
 
- end:
+end:
         for (i = 0; i < num_jobs; i++) {
                 if (auths[i] != NULL)
                         free(auths[i]);
         }
 
- end2:
+end2:
         if (auths != NULL)
                 free(auths);
 
@@ -307,11 +286,10 @@ check_burst_jobs:
 }
 
 static int
-test_hmac_sha1_hash_burst(struct IMB_MGR *mb_mgr,
-                          const struct mac_test *vec,
+test_hmac_sha1_hash_burst(struct IMB_MGR *mb_mgr, const struct mac_test *vec,
                           const uint32_t num_jobs)
 {
-        struct IMB_JOB *job, jobs[MAX_BURST_JOBS] = {0};
+        struct IMB_JOB *job, jobs[MAX_BURST_JOBS] = { 0 };
         uint8_t padding[16];
         uint8_t **auths = malloc(num_jobs * sizeof(void *));
         uint32_t i = 0, jobs_rx = 0;
@@ -321,16 +299,15 @@ test_hmac_sha1_hash_burst(struct IMB_MGR *mb_mgr,
         uint32_t completed_jobs = 0;
 
         if (auths == NULL) {
-		fprintf(stderr, "Can't allocate buffer memory\n");
-		goto end2;
+                fprintf(stderr, "Can't allocate buffer memory\n");
+                goto end2;
         }
 
         memset(padding, -1, sizeof(padding));
         memset(auths, 0, num_jobs * sizeof(void *));
 
         for (i = 0; i < num_jobs; i++) {
-                const size_t alloc_len =
-                        (vec->tagSize / 8) + (sizeof(padding) * 2);
+                const size_t alloc_len = (vec->tagSize / 8) + (sizeof(padding) * 2);
 
                 auths[i] = malloc(alloc_len);
                 if (auths[i] == NULL) {
@@ -340,8 +317,8 @@ test_hmac_sha1_hash_burst(struct IMB_MGR *mb_mgr,
                 memset(auths[i], -1, alloc_len);
         }
 
-        imb_hmac_ipad_opad(mb_mgr, IMB_AUTH_HMAC_SHA_1,
-                           vec->key, vec->keySize / 8, ipad_hash, opad_hash);
+        imb_hmac_ipad_opad(mb_mgr, IMB_AUTH_HMAC_SHA_1, vec->key, vec->keySize / 8, ipad_hash,
+                           opad_hash);
 
         for (i = 0; i < num_jobs; i++) {
                 job = &jobs[i];
@@ -366,17 +343,14 @@ test_hmac_sha1_hash_burst(struct IMB_MGR *mb_mgr,
                 job->hash_alg = IMB_AUTH_HMAC_SHA_1;
 
                 job->user_data = auths[i];
-
         }
 
-        completed_jobs = IMB_SUBMIT_HASH_BURST(mb_mgr, jobs, num_jobs,
-                                               IMB_AUTH_HMAC_SHA_1);
+        completed_jobs = IMB_SUBMIT_HASH_BURST(mb_mgr, jobs, num_jobs, IMB_AUTH_HMAC_SHA_1);
         if (completed_jobs != num_jobs) {
                 int err = imb_get_errno(mb_mgr);
 
                 if (err != 0) {
-                        printf("submit_burst error %d : '%s'\n", err,
-                               imb_get_strerror(err));
+                        printf("submit_burst error %d : '%s'\n", err, imb_get_strerror(err));
                         goto end;
                 } else {
                         printf("submit_burst error: not enough "
@@ -389,12 +363,11 @@ test_hmac_sha1_hash_burst(struct IMB_MGR *mb_mgr,
                 job = &jobs[i];
 
                 if (job->status != IMB_STATUS_COMPLETED) {
-                        printf("job %u status not complete!\n", i+1);
+                        printf("job %u status not complete!\n", i + 1);
                         goto end;
                 }
 
-                if (!hmac_sha1_job_ok(vec, job, job->user_data,
-                                      padding, sizeof(padding)))
+                if (!hmac_sha1_job_ok(vec, job, job->user_data, padding, sizeof(padding)))
                         goto end;
                 jobs_rx++;
         }
@@ -405,13 +378,13 @@ test_hmac_sha1_hash_burst(struct IMB_MGR *mb_mgr,
         }
         ret = 0;
 
- end:
+end:
         for (i = 0; i < num_jobs; i++) {
                 if (auths[i] != NULL)
                         free(auths[i]);
         }
 
- end2:
+end2:
         if (auths != NULL)
                 free(auths);
 
@@ -419,23 +392,19 @@ test_hmac_sha1_hash_burst(struct IMB_MGR *mb_mgr,
 }
 
 static void
-test_hmac_sha1_std_vectors(struct IMB_MGR *mb_mgr,
-                           const uint32_t num_jobs,
+test_hmac_sha1_std_vectors(struct IMB_MGR *mb_mgr, const uint32_t num_jobs,
                            struct test_suite_context *ts)
 {
         const struct mac_test *v = hmac_sha1_test_kat_json;
 
         if (!quiet_mode)
-	        printf("HMAC-SHA1 standard test vectors (N jobs = %u):\n", num_jobs);
-	while (v->msg != NULL) {
+                printf("HMAC-SHA1 standard test vectors (N jobs = %u):\n", num_jobs);
+        while (v->msg != NULL) {
                 if (!quiet_mode) {
 #ifdef DEBUG
                         printf("RFC2202 Test Case %zu keySize:%zu "
                                "msgSize:%zu tagSize:%zu\n",
-                               v->tcId,
-                               v->keySize / 8,
-                               v->msgSize / 8,
-                               v->tagSize / 8);
+                               v->tcId, v->keySize / 8, v->msgSize / 8, v->tagSize / 8);
 #else
                         printf(".");
 #endif
@@ -447,15 +416,13 @@ test_hmac_sha1_std_vectors(struct IMB_MGR *mb_mgr,
                 } else {
                         test_suite_update(ts, 1, 0);
                 }
-                if (test_hmac_sha1_burst(mb_mgr, v,
-                                         num_jobs)) {
+                if (test_hmac_sha1_burst(mb_mgr, v, num_jobs)) {
                         printf("error #%zu - burst API\n", v->tcId);
                         test_suite_update(ts, 0, 1);
                 } else {
                         test_suite_update(ts, 1, 0);
                 }
-                if (test_hmac_sha1_hash_burst(mb_mgr, v,
-                                              num_jobs)) {
+                if (test_hmac_sha1_hash_burst(mb_mgr, v, num_jobs)) {
                         printf("error #%zu - hash-only burst API\n", v->tcId);
                         test_suite_update(ts, 0, 1);
                 } else {
@@ -463,7 +430,7 @@ test_hmac_sha1_std_vectors(struct IMB_MGR *mb_mgr,
                 }
 
                 v++;
-	}
+        }
         if (!quiet_mode)
                 printf("\n");
 }
@@ -480,5 +447,5 @@ hmac_sha1_test(struct IMB_MGR *mb_mgr)
                 test_hmac_sha1_std_vectors(mb_mgr, num_jobs, &ts);
         errors = test_suite_end(&ts);
 
-	return errors;
+        return errors;
 }

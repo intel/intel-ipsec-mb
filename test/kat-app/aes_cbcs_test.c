@@ -36,29 +36,23 @@
 #include "utils.h"
 #include "cipher_test.h"
 
-int aes_cbcs_test(struct IMB_MGR *mb_mgr);
+int
+aes_cbcs_test(struct IMB_MGR *mb_mgr);
 
 extern const struct cipher_test aes_cbcs_test_json[];
 
 static int
-aes_job_ok(const struct IMB_JOB *job,
-           const uint8_t *out_text,
-           const uint8_t *target,
-           const uint8_t *padding,
-           const size_t sizeof_padding,
-           const unsigned text_len,
-           const uint8_t *last_cipher_block,
-           const uint8_t *next_iv)
+aes_job_ok(const struct IMB_JOB *job, const uint8_t *out_text, const uint8_t *target,
+           const uint8_t *padding, const size_t sizeof_padding, const unsigned text_len,
+           const uint8_t *last_cipher_block, const uint8_t *next_iv)
 {
-        const int num = (const int)((uint64_t)job->user_data2);
+        const int num = (const int) ((uint64_t) job->user_data2);
 
         if (job->status != IMB_STATUS_COMPLETED) {
-                printf("%d error status:%d, job %d",
-                       __LINE__, job->status, num);
+                printf("%d error status:%d, job %d", __LINE__, job->status, num);
                 return 0;
         }
-        if (memcmp(out_text, target + sizeof_padding,
-                   text_len)) {
+        if (memcmp(out_text, target + sizeof_padding, text_len)) {
                 printf("%d mismatched\n", num);
                 return 0;
         }
@@ -66,9 +60,7 @@ aes_job_ok(const struct IMB_JOB *job,
                 printf("%d overwrite head\n", num);
                 return 0;
         }
-        if (memcmp(padding,
-                   target + sizeof_padding + text_len,
-                   sizeof_padding)) {
+        if (memcmp(padding, target + sizeof_padding + text_len, sizeof_padding)) {
                 printf("%d overwrite tail\n", num);
                 return 0;
         }
@@ -80,19 +72,10 @@ aes_job_ok(const struct IMB_JOB *job,
 }
 
 static int
-test_aes_many(struct IMB_MGR *mb_mgr,
-              void *enc_keys,
-              void *dec_keys,
-              const void *iv,
-              const uint8_t *in_text,
-              const uint8_t *out_text,
-              const size_t text_len,
-              const int dir,
-              const int order,
-              const IMB_CIPHER_MODE cipher,
-              const int in_place,
-              const size_t key_len,
-              const int num_jobs)
+test_aes_many(struct IMB_MGR *mb_mgr, void *enc_keys, void *dec_keys, const void *iv,
+              const uint8_t *in_text, const uint8_t *out_text, const size_t text_len, const int dir,
+              const int order, const IMB_CIPHER_MODE cipher, const int in_place,
+              const size_t key_len, const int num_jobs)
 {
         struct IMB_JOB *job;
         uint8_t padding[16];
@@ -118,16 +101,13 @@ test_aes_many(struct IMB_MGR *mb_mgr,
         /* get offset of last AES block to be processed */
         if (text_len >= 16)
                 /* last block offset = (number of blocks - 1) * 160 */
-                last_block_offset =
-                        (((text_len + 9 * IMB_AES_BLOCK_SIZE) / 160) - 1) * 160;
+                last_block_offset = (((text_len + 9 * IMB_AES_BLOCK_SIZE) / 160) - 1) * 160;
 
         /* store copy of last ciphertext block to validate context */
         if (dir == IMB_DIR_ENCRYPT)
-                memcpy(last_cipher_block, out_text + last_block_offset,
-                       IMB_AES_BLOCK_SIZE);
+                memcpy(last_cipher_block, out_text + last_block_offset, IMB_AES_BLOCK_SIZE);
         else
-                memcpy(last_cipher_block, in_text + last_block_offset,
-                       IMB_AES_BLOCK_SIZE);
+                memcpy(last_cipher_block, in_text + last_block_offset, IMB_AES_BLOCK_SIZE);
 
         for (i = 0; i < num_jobs; i++) {
                 targets[i] = malloc(text_len + (sizeof(padding) * 2));
@@ -138,8 +118,7 @@ test_aes_many(struct IMB_MGR *mb_mgr,
                 memset(targets[i], 0, text_len + (sizeof(padding) * 2));
 
                 memcpy(targets[i], padding, sizeof(padding));
-                memcpy(targets[i] + sizeof(padding) + text_len,
-                       padding, sizeof(padding));
+                memcpy(targets[i] + sizeof(padding) + text_len, padding, sizeof(padding));
 
                 if (in_place) {
                         /* copy input text to the allocated buffer */
@@ -179,7 +158,7 @@ test_aes_many(struct IMB_MGR *mb_mgr,
                 job->cipher_start_src_offset_in_bytes = 0;
                 job->msg_len_to_cipher_in_bytes = text_len;
                 job->user_data = targets[i];
-                job->user_data2 = (void *)((uint64_t)i);
+                job->user_data2 = (void *) ((uint64_t) i);
 
                 job->hash_alg = IMB_AUTH_NULL;
 
@@ -188,10 +167,9 @@ test_aes_many(struct IMB_MGR *mb_mgr,
                 job = IMB_SUBMIT_JOB(mb_mgr);
                 if (job != NULL) {
                         jobs_rx++;
-                        if (!aes_job_ok(job, out_text, job->user_data, padding,
-                                        sizeof(padding), (unsigned) text_len,
-                                        (uint8_t *)&last_cipher_block,
-                                        next_ivs[(uint64_t)job->user_data2]))
+                        if (!aes_job_ok(job, out_text, job->user_data, padding, sizeof(padding),
+                                        (unsigned) text_len, (uint8_t *) &last_cipher_block,
+                                        next_ivs[(uint64_t) job->user_data2]))
                                 goto end;
                         /* reset job next_iv pointer */
                         job->cipher_fields.CBCS.next_iv = NULL;
@@ -203,10 +181,9 @@ test_aes_many(struct IMB_MGR *mb_mgr,
 
         while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL) {
                 jobs_rx++;
-                if (!aes_job_ok(job, out_text, job->user_data, padding,
-                                sizeof(padding), (unsigned) text_len,
-                                (uint8_t *)&last_cipher_block,
-                                next_ivs[(uint64_t)job->user_data2]))
+                if (!aes_job_ok(job, out_text, job->user_data, padding, sizeof(padding),
+                                (unsigned) text_len, (uint8_t *) &last_cipher_block,
+                                next_ivs[(uint64_t) job->user_data2]))
                         goto end;
                 /* reset job next_iv pointer */
                 job->cipher_fields.CBCS.next_iv = NULL;
@@ -218,7 +195,7 @@ test_aes_many(struct IMB_MGR *mb_mgr,
         }
         ret = 0;
 
- end:
+end:
         while (IMB_FLUSH_JOB(mb_mgr) != NULL)
                 ;
 
@@ -240,71 +217,65 @@ end_alloc:
 }
 
 static void
-test_aes_vectors(struct IMB_MGR *mb_mgr,
-                 struct test_suite_context *ctx,
+test_aes_vectors(struct IMB_MGR *mb_mgr, struct test_suite_context *ctx,
                  const IMB_CIPHER_MODE cipher, const int num_jobs)
 {
         const struct cipher_test *v = aes_cbcs_test_json;
-        DECLARE_ALIGNED(uint32_t enc_keys[15*4], 16);
-        DECLARE_ALIGNED(uint32_t dec_keys[15*4], 16);
+        DECLARE_ALIGNED(uint32_t enc_keys[15 * 4], 16);
+        DECLARE_ALIGNED(uint32_t dec_keys[15 * 4], 16);
 
         if (!quiet_mode)
-	        printf("AES-CBCS Test (N jobs = %d):\n", num_jobs);
-	for (; v->msg != NULL; v++) {
+                printf("AES-CBCS Test (N jobs = %d):\n", num_jobs);
+        for (; v->msg != NULL; v++) {
                 if (!quiet_mode) {
 #ifdef DEBUG
-                        printf("AES-CBCS Test Case %zu key_len:%zu\n",
-                               v->tcId, v->keySize);
+                        printf("AES-CBCS Test Case %zu key_len:%zu\n", v->tcId, v->keySize);
 #else
                         printf(".");
 #endif
                 }
                 IMB_AES_KEYEXP_128(mb_mgr, v->key, enc_keys, dec_keys);
 
-                if (test_aes_many(mb_mgr, enc_keys, dec_keys,
-                                  (const void *) v->iv, (const void *) v->msg,
-                                  (const void *) v->ct, v->msgSize / 8,
-                                  IMB_DIR_ENCRYPT, IMB_ORDER_CIPHER_HASH,
-                                  cipher, 0, v->keySize / 8, num_jobs)) {
+                if (test_aes_many(mb_mgr, enc_keys, dec_keys, (const void *) v->iv,
+                                  (const void *) v->msg, (const void *) v->ct, v->msgSize / 8,
+                                  IMB_DIR_ENCRYPT, IMB_ORDER_CIPHER_HASH, cipher, 0, v->keySize / 8,
+                                  num_jobs)) {
                         printf("error #%zu encrypt\n", v->tcId);
                         test_suite_update(ctx, 0, 1);
                 } else {
                         test_suite_update(ctx, 1, 0);
                 }
 
-                if (test_aes_many(mb_mgr, enc_keys, dec_keys,
-                                  (const void *) v->iv, (const void *) v->ct,
-                                  (const void *) v->msg, v->msgSize / 8,
-                                  IMB_DIR_DECRYPT, IMB_ORDER_HASH_CIPHER,
-                                  cipher, 0, v->keySize / 8, num_jobs)) {
+                if (test_aes_many(mb_mgr, enc_keys, dec_keys, (const void *) v->iv,
+                                  (const void *) v->ct, (const void *) v->msg, v->msgSize / 8,
+                                  IMB_DIR_DECRYPT, IMB_ORDER_HASH_CIPHER, cipher, 0, v->keySize / 8,
+                                  num_jobs)) {
                         printf("error #%zu decrypt\n", v->tcId);
                         test_suite_update(ctx, 0, 1);
                 } else {
                         test_suite_update(ctx, 1, 0);
                 }
 
-                if (test_aes_many(mb_mgr, enc_keys, dec_keys,
-                                  (const void *) v->iv, (const void *) v->msg,
-                                  (const void *) v->ct, v->msgSize / 8,
-                                  IMB_DIR_ENCRYPT, IMB_ORDER_CIPHER_HASH,
-                                  cipher, 1, v->keySize / 8, num_jobs)) {
+                if (test_aes_many(mb_mgr, enc_keys, dec_keys, (const void *) v->iv,
+                                  (const void *) v->msg, (const void *) v->ct, v->msgSize / 8,
+                                  IMB_DIR_ENCRYPT, IMB_ORDER_CIPHER_HASH, cipher, 1, v->keySize / 8,
+                                  num_jobs)) {
                         printf("error #%zu encrypt in-place\n", v->tcId);
                         test_suite_update(ctx, 0, 1);
                 } else {
                         test_suite_update(ctx, 1, 0);
                 }
 
-                if (test_aes_many(mb_mgr, enc_keys, dec_keys,
-                                  (const void *) v->iv, (const void *) v->ct,
-                                  (const void *) v->msg, v->msgSize / 8,
-                                  IMB_DIR_DECRYPT, IMB_ORDER_HASH_CIPHER,
-                                  cipher, 1, v->keySize / 8, num_jobs)) {
+                if (test_aes_many(mb_mgr, enc_keys, dec_keys, (const void *) v->iv,
+                                  (const void *) v->ct, (const void *) v->msg, v->msgSize / 8,
+                                  IMB_DIR_DECRYPT, IMB_ORDER_HASH_CIPHER, cipher, 1, v->keySize / 8,
+                                  num_jobs)) {
                         printf("error #%zu decrypt in-place\n", v->tcId);
                         test_suite_update(ctx, 0, 1);
                 } else {
                         test_suite_update(ctx, 1, 0);
                 }
-	}
+        }
         if (!quiet_mode)
                 printf("\n");
 }
@@ -312,18 +283,15 @@ test_aes_vectors(struct IMB_MGR *mb_mgr,
 int
 aes_cbcs_test(struct IMB_MGR *mb_mgr)
 {
-        const int num_jobs_tab[] = {
-                1, 3, 4, 5, 7, 8, 9, 15, 16, 17
-        };
+        const int num_jobs_tab[] = { 1, 3, 4, 5, 7, 8, 9, 15, 16, 17 };
         unsigned i;
         int errors = 0;
         struct test_suite_context ctx;
 
         test_suite_start(&ctx, "AES-CBCS-128");
         for (i = 0; i < DIM(num_jobs_tab); i++)
-                test_aes_vectors(mb_mgr, &ctx, IMB_CIPHER_CBCS_1_9,
-                                 num_jobs_tab[i]);
+                test_aes_vectors(mb_mgr, &ctx, IMB_CIPHER_CBCS_1_9, num_jobs_tab[i]);
         errors = test_suite_end(&ctx);
 
-	return errors;
+        return errors;
 }

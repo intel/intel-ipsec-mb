@@ -34,7 +34,8 @@
 
 #include "utils.h"
 
-int crc_test(struct IMB_MGR *mb_mgr);
+int
+crc_test(struct IMB_MGR *mb_mgr);
 
 static uint32_t m_lut[256];
 static struct IMB_MGR *p_mgr;
@@ -107,10 +108,7 @@ crc32_ref_init_lut(const uint32_t poly, uint32_t *rlut)
  * @return New CRC value
  */
 static uint32_t
-crc32_ref_calc_lut(const uint8_t *data,
-                   uint64_t data_len,
-                   uint32_t crc,
-                   const uint32_t *rlut)
+crc32_ref_calc_lut(const uint8_t *data, uint64_t data_len, uint32_t crc, const uint32_t *rlut)
 {
         if (data == NULL || rlut == NULL)
                 return crc;
@@ -159,10 +157,7 @@ crc32_init_lut(const uint32_t poly, uint32_t *lut)
  * @return New CRC value
  */
 static uint32_t
-crc32_calc_lut(const uint8_t *data,
-               uint64_t data_len,
-               uint32_t crc,
-               const uint32_t *lut)
+crc32_calc_lut(const uint8_t *data, uint64_t data_len, uint32_t crc, const uint32_t *lut)
 {
         if (data == NULL || lut == NULL)
                 return crc;
@@ -201,18 +196,15 @@ randomize_buffer(void *p, size_t len)
  * @retval 1 error
  */
 static int
-test_crc_polynomial(void (*fn_crc_setup)(void),
-                    uint32_t (*fn_crc_calc)(const void *, uint64_t),
-                    uint32_t (*fn_crc)(const void *, uint64_t, const unsigned),
-                    const char *title,
+test_crc_polynomial(void (*fn_crc_setup)(void), uint32_t (*fn_crc_calc)(const void *, uint64_t),
+                    uint32_t (*fn_crc)(const void *, uint64_t, const unsigned), const char *title,
                     struct test_suite_context *ctx)
 {
         uint8_t buffer[2048];
         size_t n;
         unsigned job_api;
 
-        if (fn_crc_setup == NULL || fn_crc_calc == NULL ||
-            fn_crc == NULL || title == NULL) {
+        if (fn_crc_setup == NULL || fn_crc_calc == NULL || fn_crc == NULL || title == NULL) {
                 printf("crc_test: NULL parameter passed!\n");
                 test_suite_update(ctx, 0, 1);
                 return 1;
@@ -238,8 +230,7 @@ test_crc_polynomial(void (*fn_crc_setup)(void),
                         if (reference_crc != received_crc) {
                                 printf("! CRC mismatch for buffer size %lu, "
                                        "received = 0x%lx, expected = 0x%lx\n",
-                                       (unsigned long) n,
-                                       (unsigned long) received_crc,
+                                       (unsigned long) n, (unsigned long) received_crc,
                                        (unsigned long) reference_crc);
                                 hexdump(stdout, "buffer content", buffer, n);
                                 test_suite_update(ctx, 0, 1);
@@ -289,14 +280,14 @@ crc_job(const void *p, const uint64_t len, IMB_HASH_ALG hash_alg)
                 return 0;
         }
 
-        job->cipher_mode                    = IMB_CIPHER_NULL;
-        job->hash_alg                       = hash_alg;
-        job->src                            = p;
-        job->dst                            = NULL;
-        job->msg_len_to_hash_in_bytes       = len;
+        job->cipher_mode = IMB_CIPHER_NULL;
+        job->hash_alg = hash_alg;
+        job->src = p;
+        job->dst = NULL;
+        job->msg_len_to_hash_in_bytes = len;
         job->hash_start_src_offset_in_bytes = UINT64_C(0);
-        job->auth_tag_output                = (uint8_t *) &auth_tag;
-        job->auth_tag_output_len_in_bytes   = sizeof(auth_tag);
+        job->auth_tag_output = (uint8_t *) &auth_tag;
+        job->auth_tag_output_len_in_bytes = sizeof(auth_tag);
 
         job = IMB_SUBMIT_JOB(p_mgr);
         while (job) {
@@ -321,8 +312,7 @@ crc_job(const void *p, const uint64_t len, IMB_HASH_ALG hash_alg)
  * @return CRC value
  */
 static uint32_t
-crc32_ethernet_fcs_tested_calc(const void *p, uint64_t len,
-                               const unsigned job_api)
+crc32_ethernet_fcs_tested_calc(const void *p, uint64_t len, const unsigned job_api)
 {
         if (job_api)
                 return crc_job(p, len, IMB_AUTH_CRC32_ETHERNET_FCS);
@@ -493,7 +483,7 @@ crc32_lte24b_tested_calc(const void *p, uint64_t len, const unsigned job_api)
         if (job_api)
                 return crc_job(p, len, IMB_AUTH_CRC24_LTE_B);
         else
-               return IMB_CRC24_LTE_B(p_mgr, p, len);
+                return IMB_CRC24_LTE_B(p_mgr, p, len);
 }
 
 /**
@@ -625,7 +615,7 @@ crc7_fp_header_tested_calc(const void *p, uint64_t len, const unsigned job_api)
         if (job_api)
                 return crc_job(p, len, IMB_AUTH_CRC7_FP_HEADER);
         else
-               return IMB_CRC7_FP_HEADER(p_mgr, p, len);
+                return IMB_CRC7_FP_HEADER(p_mgr, p, len);
 }
 
 /**
@@ -708,13 +698,12 @@ crc6_iuup_header_calc(const void *p, uint64_t len)
  * @return CRC value
  */
 static uint32_t
-crc6_iuup_header_tested_calc(const void *p, uint64_t len,
-                             const unsigned job_api)
+crc6_iuup_header_tested_calc(const void *p, uint64_t len, const unsigned job_api)
 {
         if (job_api)
                 return crc_job(p, len, IMB_AUTH_CRC6_IUUP_HEADER);
         else
-               return IMB_CRC6_IUUP_HEADER(p_mgr, p, len);
+                return IMB_CRC6_IUUP_HEADER(p_mgr, p, len);
 }
 
 /**
@@ -751,8 +740,7 @@ crc32_wimax_ofdma_data_calc(const void *p, uint64_t len)
  * @return CRC value
  */
 static uint32_t
-crc32_wimax_ofdma_data_tested_calc(const void *p, uint64_t len,
-                                   const unsigned job_api)
+crc32_wimax_ofdma_data_tested_calc(const void *p, uint64_t len, const unsigned job_api)
 {
         if (job_api)
                 return crc_job(p, len, IMB_AUTH_CRC32_WIMAX_OFDMA_DATA);
@@ -794,8 +782,7 @@ crc8_wimax_ofdma_hcs_calc(const void *p, uint64_t len)
  * @return CRC value
  */
 static uint32_t
-crc8_wimax_ofdma_hcs_tested_calc(const void *p, uint64_t len,
-                                 const unsigned job_api)
+crc8_wimax_ofdma_hcs_tested_calc(const void *p, uint64_t len, const unsigned job_api)
 {
         if (job_api)
                 return crc_job(p, len, IMB_AUTH_CRC8_WIMAX_OFDMA_HCS);
@@ -816,90 +803,68 @@ crc_test(struct IMB_MGR *mb_mgr)
         /* reflected CRC32 functions */
 
         test_suite_start(&ctx, "ETH-CRC32");
-        test_crc_polynomial(crc32_ethernet_fcs_setup,
-                            crc32_ethernet_fcs_ref_calc,
-                            crc32_ethernet_fcs_tested_calc,
-                            "CRC32 ETHERNET FCS 0x04c11db7", &ctx);
+        test_crc_polynomial(crc32_ethernet_fcs_setup, crc32_ethernet_fcs_ref_calc,
+                            crc32_ethernet_fcs_tested_calc, "CRC32 ETHERNET FCS 0x04c11db7", &ctx);
         errors += test_suite_end(&ctx);
 
         test_suite_start(&ctx, "X25-CRC16");
-        test_crc_polynomial(crc16_x25_setup,
-                            crc16_x25_ref_calc,
-                            crc16_x25_tested_calc,
+        test_crc_polynomial(crc16_x25_setup, crc16_x25_ref_calc, crc16_x25_tested_calc,
                             "CRC16 X25 0x1021", &ctx);
         errors += test_suite_end(&ctx);
 
         /* CRC32 functions */
 
         test_suite_start(&ctx, "SCTP-CRC32");
-        test_crc_polynomial(crc32_sctp_setup,
-                            crc32_sctp_calc,
-                            crc32_sctp_tested_calc,
+        test_crc_polynomial(crc32_sctp_setup, crc32_sctp_calc, crc32_sctp_tested_calc,
                             "CRC32 SCTP 0x1edc6f41 (Castagnoli93)", &ctx);
         errors += test_suite_end(&ctx);
 
         test_suite_start(&ctx, "LTE-A-CRC24");
-        test_crc_polynomial(crc32_lte24a_setup,
-                            crc32_lte24a_calc,
-                            crc32_lte24a_tested_calc,
+        test_crc_polynomial(crc32_lte24a_setup, crc32_lte24a_calc, crc32_lte24a_tested_calc,
                             "LTE CRC24A 0x864cFB", &ctx);
         errors += test_suite_end(&ctx);
 
         test_suite_start(&ctx, "LTE-B-CRC24");
-        test_crc_polynomial(crc32_lte24b_setup,
-                            crc32_lte24b_calc,
-                            crc32_lte24b_tested_calc,
+        test_crc_polynomial(crc32_lte24b_setup, crc32_lte24b_calc, crc32_lte24b_tested_calc,
                             "LTE CRC24B 0x800063", &ctx);
         errors += test_suite_end(&ctx);
 
         test_suite_start(&ctx, "FP-CRC16");
-        test_crc_polynomial(crc16_fp_data_setup,
-                            crc16_fp_data_calc,
-                            crc16_fp_data_tested_calc,
+        test_crc_polynomial(crc16_fp_data_setup, crc16_fp_data_calc, crc16_fp_data_tested_calc,
                             "Framing Protocol Data CRC16 0x8005", &ctx);
         errors += test_suite_end(&ctx);
 
         test_suite_start(&ctx, "FP-CRC11");
-        test_crc_polynomial(crc11_fp_header_setup,
-                            crc11_fp_header_calc,
-                            crc11_fp_header_tested_calc,
-                            "Framing Protocol Header CRC11 0x307", &ctx);
+        test_crc_polynomial(crc11_fp_header_setup, crc11_fp_header_calc,
+                            crc11_fp_header_tested_calc, "Framing Protocol Header CRC11 0x307",
+                            &ctx);
         errors += test_suite_end(&ctx);
 
         test_suite_start(&ctx, "FP-CRC7");
-        test_crc_polynomial(crc7_fp_header_setup,
-                            crc7_fp_header_calc,
-                            crc7_fp_header_tested_calc,
+        test_crc_polynomial(crc7_fp_header_setup, crc7_fp_header_calc, crc7_fp_header_tested_calc,
                             "Framing Protocol Header CRC7 0x45", &ctx);
         errors += test_suite_end(&ctx);
 
         test_suite_start(&ctx, "IUUP-CRC10");
-        test_crc_polynomial(crc10_iuup_data_setup,
-                            crc10_iuup_data_calc,
-                            crc10_iuup_data_tested_calc,
-                            "IUUP Data CRC10 0x233", &ctx);
+        test_crc_polynomial(crc10_iuup_data_setup, crc10_iuup_data_calc,
+                            crc10_iuup_data_tested_calc, "IUUP Data CRC10 0x233", &ctx);
         errors += test_suite_end(&ctx);
 
         test_suite_start(&ctx, "IUUP-CRC6");
-        test_crc_polynomial(crc6_iuup_header_setup,
-                            crc6_iuup_header_calc,
-                            crc6_iuup_header_tested_calc,
-                            "IUUP Header CRC6 0x2f", &ctx);
+        test_crc_polynomial(crc6_iuup_header_setup, crc6_iuup_header_calc,
+                            crc6_iuup_header_tested_calc, "IUUP Header CRC6 0x2f", &ctx);
         errors += test_suite_end(&ctx);
 
         test_suite_start(&ctx, "WIMAX-OFDMA-CRC32");
-        test_crc_polynomial(crc32_wimax_ofdma_data_setup,
-                            crc32_wimax_ofdma_data_calc,
-                            crc32_wimax_ofdma_data_tested_calc,
-                            "WIMAX OFDMA CRC32 0x04c11db7", &ctx);
+        test_crc_polynomial(crc32_wimax_ofdma_data_setup, crc32_wimax_ofdma_data_calc,
+                            crc32_wimax_ofdma_data_tested_calc, "WIMAX OFDMA CRC32 0x04c11db7",
+                            &ctx);
         errors += test_suite_end(&ctx);
 
         test_suite_start(&ctx, "WIMAX-OFDMA-CRC8");
-        test_crc_polynomial(crc8_wimax_ofdma_hcs_setup,
-                            crc8_wimax_ofdma_hcs_calc,
-                            crc8_wimax_ofdma_hcs_tested_calc,
-                            "WIMAX OFDMA CRC8 HCS 0x07", &ctx);
+        test_crc_polynomial(crc8_wimax_ofdma_hcs_setup, crc8_wimax_ofdma_hcs_calc,
+                            crc8_wimax_ofdma_hcs_tested_calc, "WIMAX OFDMA CRC8 HCS 0x07", &ctx);
         errors += test_suite_end(&ctx);
 
-	return errors;
+        return errors;
 }

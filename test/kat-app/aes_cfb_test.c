@@ -38,21 +38,18 @@
 
 #define MAX_BURST_JOBS 64
 
-
-int cfb_test(struct IMB_MGR *mb_mgr);
+int
+cfb_test(struct IMB_MGR *mb_mgr);
 
 extern const struct cipher_test cfb_test_json[];
 
 static int
-cfb_validate_ok(const uint8_t *output, const uint8_t *in_text,
-                const size_t plen, const uint32_t klen,
-                const unsigned i, const unsigned is_enc,
-                const int in_place)
+cfb_validate_ok(const uint8_t *output, const uint8_t *in_text, const size_t plen,
+                const uint32_t klen, const unsigned i, const unsigned is_enc, const int in_place)
 {
         if (memcmp(output, in_text, plen) != 0) {
                 printf("\nAES-CFB%s standard test vector %u %s (%s): fail\n",
-                       (klen == 16) ? "128" : "256",
-                       i + 1, (is_enc) ? "encrypt" : "decrypt",
+                       (klen == 16) ? "128" : "256", i + 1, (is_enc) ? "encrypt" : "decrypt",
                        (in_place) ? "in-place" : "out-of-place");
                 return 0;
         }
@@ -60,8 +57,7 @@ cfb_validate_ok(const uint8_t *output, const uint8_t *in_text,
 #ifdef DEBUG
         if (!quiet_mode) {
                 printf("Standard test vector %u %s %s\n", i + 1,
-                       (in_place) ? "in-place" : "out-of-place",
-                       (is_enc) ? "encrypt" : "decrypt");
+                       (in_place) ? "in-place" : "out-of-place", (is_enc) ? "encrypt" : "decrypt");
         }
 #endif
         return 1;
@@ -73,8 +69,8 @@ cfb_validate(struct IMB_MGR *mb_mgr, const struct cipher_test *p_vec)
         uint8_t output1[16];
         uint8_t output2[16];
         const uint32_t kLength = (unsigned) p_vec->keySize / 8;
-        DECLARE_ALIGNED(uint32_t keys_enc[15*4], 16);
-        DECLARE_ALIGNED(uint32_t keys_dec[15*4], 16);
+        DECLARE_ALIGNED(uint32_t keys_enc[15 * 4], 16);
+        DECLARE_ALIGNED(uint32_t keys_dec[15 * 4], 16);
 
         if (kLength == 16)
                 IMB_AES_KEYEXP_128(mb_mgr, p_vec->key, keys_enc, keys_dec);
@@ -84,22 +80,22 @@ cfb_validate(struct IMB_MGR *mb_mgr, const struct cipher_test *p_vec)
 
         /* encrypt test */
         if (kLength == 16)
-                IMB_AES128_CFB_ONE(mb_mgr, output1, (const void *) p_vec->msg,
-                                   p_vec->iv, keys_enc, p_vec->msgSize / 8);
+                IMB_AES128_CFB_ONE(mb_mgr, output1, (const void *) p_vec->msg, p_vec->iv, keys_enc,
+                                   p_vec->msgSize / 8);
         else
-                IMB_AES256_CFB_ONE(mb_mgr, output1, (const void *) p_vec->msg,
-                                   p_vec->iv, keys_enc, p_vec->msgSize / 8);
+                IMB_AES256_CFB_ONE(mb_mgr, output1, (const void *) p_vec->msg, p_vec->iv, keys_enc,
+                                   p_vec->msgSize / 8);
         if (!cfb_validate_ok(output1, (const void *) p_vec->ct, p_vec->msgSize / 8,
                              (unsigned) p_vec->keySize / 8, (unsigned) p_vec->tcId, 1, 0))
                 return 0;
 
         /* decrypt test */
         if (kLength == 16)
-                IMB_AES128_CFB_ONE(mb_mgr, output2, output1, p_vec->iv,
-                                   keys_enc, p_vec->msgSize / 8);
+                IMB_AES128_CFB_ONE(mb_mgr, output2, output1, p_vec->iv, keys_enc,
+                                   p_vec->msgSize / 8);
         else
-                IMB_AES256_CFB_ONE(mb_mgr, output2, output1, p_vec->iv,
-                                   keys_enc, p_vec->msgSize / 8);
+                IMB_AES256_CFB_ONE(mb_mgr, output2, output1, p_vec->iv, keys_enc,
+                                   p_vec->msgSize / 8);
         if (!cfb_validate_ok(output2, (const void *) p_vec->msg, p_vec->msgSize / 8,
                              (unsigned) p_vec->keySize / 8, (unsigned) p_vec->tcId, 0, 0))
                 return 0;
@@ -108,11 +104,11 @@ cfb_validate(struct IMB_MGR *mb_mgr, const struct cipher_test *p_vec)
         /* encrypt test */
         memcpy(output1, (const void *) p_vec->msg, p_vec->msgSize / 8);
         if (kLength == 16)
-                IMB_AES128_CFB_ONE(mb_mgr, output1, output1, p_vec->iv,
-                                   keys_enc, p_vec->msgSize / 8);
+                IMB_AES128_CFB_ONE(mb_mgr, output1, output1, p_vec->iv, keys_enc,
+                                   p_vec->msgSize / 8);
         else
-                IMB_AES256_CFB_ONE(mb_mgr, output1, output1, p_vec->iv,
-                                   keys_enc, p_vec->msgSize / 8);
+                IMB_AES256_CFB_ONE(mb_mgr, output1, output1, p_vec->iv, keys_enc,
+                                   p_vec->msgSize / 8);
         if (!cfb_validate_ok(output1, (const void *) p_vec->ct, p_vec->msgSize / 8,
                              (unsigned) p_vec->keySize / 8, (unsigned) p_vec->tcId, 1, 1))
                 return 0;
@@ -120,11 +116,11 @@ cfb_validate(struct IMB_MGR *mb_mgr, const struct cipher_test *p_vec)
         /* decrypt test */
         memcpy(output1, (const void *) p_vec->ct, p_vec->msgSize / 8);
         if (kLength == 16)
-                IMB_AES128_CFB_ONE(mb_mgr, output1, output1, p_vec->iv,
-                                   keys_enc, p_vec->msgSize / 8);
+                IMB_AES128_CFB_ONE(mb_mgr, output1, output1, p_vec->iv, keys_enc,
+                                   p_vec->msgSize / 8);
         else
-                IMB_AES256_CFB_ONE(mb_mgr, output1, output1, p_vec->iv,
-                                   keys_enc, p_vec->msgSize / 8);
+                IMB_AES256_CFB_ONE(mb_mgr, output1, output1, p_vec->iv, keys_enc,
+                                   p_vec->msgSize / 8);
         if (!cfb_validate_ok(output1, (const void *) p_vec->msg, p_vec->msgSize / 8,
                              (unsigned) p_vec->keySize / 8, (unsigned) p_vec->tcId, 0, 1))
                 return 0;
@@ -137,13 +133,12 @@ cfb_test_vectors(struct IMB_MGR *mb_mgr, struct test_suite_context *ctx128,
 {
         const struct cipher_test *v = cfb_test_json;
 
-	for (; v->msg != NULL; v++) {
+        for (; v->msg != NULL; v++) {
                 struct test_suite_context *ctx;
 
                 if (!quiet_mode) {
 #ifdef DEBUG
-                        printf("AES-CFB Test Case %zu key_len:%zu\n",
-                               v->tcId, v->keySize);
+                        printf("AES-CFB Test Case %zu key_len:%zu\n", v->tcId, v->keySize);
 #else
                         printf(".");
 #endif

@@ -35,21 +35,18 @@
 #include "gcm_ctr_vectors_test.h"
 #include "utils.h"
 
-int hec_test(struct IMB_MGR *mb_mgr);
+int
+hec_test(struct IMB_MGR *mb_mgr);
 
 static void
 test_32_bit(IMB_MGR *mgr, struct test_suite_context *ctx)
 {
-        static const uint32_t pf19_hec13[] = {
-                0x660e4758, 0xcc076e69, 0xcb1f206b,
-                0xa611502d, 0x4e1b7320, 0x0a196148,
-                0xda034e4f, 0x5e116970, 0xea11646a,
-                0xd70a6820, 0xa3186574, 0x41156375,
-                0x0d077061, 0x9b1e6f20, 0x6601657a,
-                0x5d1d6570, 0x130f2066, 0x631f696e,
-                0x6013656e, 0x2e02614d, 0x1b012e61,
-                0xd4182064, 0x9a0a6572, 0x2f162020
-        };
+        static const uint32_t pf19_hec13[] = { 0x660e4758, 0xcc076e69, 0xcb1f206b, 0xa611502d,
+                                               0x4e1b7320, 0x0a196148, 0xda034e4f, 0x5e116970,
+                                               0xea11646a, 0xd70a6820, 0xa3186574, 0x41156375,
+                                               0x0d077061, 0x9b1e6f20, 0x6601657a, 0x5d1d6570,
+                                               0x130f2066, 0x631f696e, 0x6013656e, 0x2e02614d,
+                                               0x1b012e61, 0xd4182064, 0x9a0a6572, 0x2f162020 };
         unsigned i;
 
         for (i = 0; i < DIM(pf19_hec13); i++) {
@@ -65,8 +62,7 @@ test_32_bit(IMB_MGR *mgr, struct test_suite_context *ctx)
                 out = IMB_HEC_32(mgr, in_p);
 
                 if (out != expected_out) {
-                        printf("\tHEC 32 - mismatch!\t0x%08lx\n",
-                               (unsigned long) out);
+                        printf("\tHEC 32 - mismatch!\t0x%08lx\n", (unsigned long) out);
                         test_suite_update(ctx, 0, 1);
                 } else {
                         test_suite_update(ctx, 1, 0);
@@ -82,17 +78,15 @@ static void
 test_64_bit(IMB_MGR *mgr, struct test_suite_context *ctx)
 {
         static const uint64_t pf51_hec13[] = {
-                0x550a4e4f502d4758, 0x48172c696e614b20, 0x8b0c696b616f7269,
-                0x7415702073617720, 0x47025320656f4a20, 0x220a69616b754d20,
-                0x8e12656375646f72, 0x231a202c6874696d, 0x731a65766144202c,
-                0x181a6e6168742064, 0x6e0a726168636952, 0x790f2c646f6f4820,
-                0x0517206f7420736b, 0x6e17646f6f472064, 0xf2044c2069655720,
-                0x15094320616e6e41, 0x000f44202c6e6f73, 0xe9056e61202c6e69,
-                0x9f156146202c6975, 0x80174b2073696e65, 0x471c6320666f2064,
-                0x7203206563697262, 0x441f736d69746f68, 0x05042c657372756f,
-                0x3d03616772756f42, 0x5f157559202c796b, 0x01066b6e61724620,
-                0x6017754a202c7472, 0xe805207569716e61, 0x97186e6566664520,
-                0xa808696863692d6e, 0xd21748202c6f754c, 0x8604726567726562
+                0x550a4e4f502d4758, 0x48172c696e614b20, 0x8b0c696b616f7269, 0x7415702073617720,
+                0x47025320656f4a20, 0x220a69616b754d20, 0x8e12656375646f72, 0x231a202c6874696d,
+                0x731a65766144202c, 0x181a6e6168742064, 0x6e0a726168636952, 0x790f2c646f6f4820,
+                0x0517206f7420736b, 0x6e17646f6f472064, 0xf2044c2069655720, 0x15094320616e6e41,
+                0x000f44202c6e6f73, 0xe9056e61202c6e69, 0x9f156146202c6975, 0x80174b2073696e65,
+                0x471c6320666f2064, 0x7203206563697262, 0x441f736d69746f68, 0x05042c657372756f,
+                0x3d03616772756f42, 0x5f157559202c796b, 0x01066b6e61724620, 0x6017754a202c7472,
+                0xe805207569716e61, 0x97186e6566664520, 0xa808696863692d6e, 0xd21748202c6f754c,
+                0x8604726567726562
         };
         unsigned i;
 
@@ -104,13 +98,12 @@ test_64_bit(IMB_MGR *mgr, struct test_suite_context *ctx)
 #ifdef DEBUG
                 if (!quiet_mode)
                         printf("[64-bit %u] PF | HEC:\t0x%016llx", i + 1,
-                               (unsigned long long)expected_out);
+                               (unsigned long long) expected_out);
 #endif
                 out = IMB_HEC_64(mgr, in_p);
 
                 if (out != expected_out) {
-                        printf("\tHEC 64 - mismatch!\t0x%016llx\n",
-                               (unsigned long long) out);
+                        printf("\tHEC 64 - mismatch!\t0x%016llx\n", (unsigned long long) out);
                         test_suite_update(ctx, 0, 1);
                 } else {
                         test_suite_update(ctx, 1, 0);

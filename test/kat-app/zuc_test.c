@@ -25,14 +25,13 @@
  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 *****************************************************************************/
 
-
 /*-----------------------------------------------------------------------
-* Zuc functional test
-*-----------------------------------------------------------------------
-*
-* A simple functional test for ZUC
-*
-*-----------------------------------------------------------------------*/
+ * Zuc functional test
+ *-----------------------------------------------------------------------
+ *
+ * A simple functional test for ZUC
+ *
+ *-----------------------------------------------------------------------*/
 
 #include <assert.h>
 #include <stdio.h>
@@ -45,47 +44,47 @@
 #include "gcm_ctr_vectors_test.h"
 #include "utils.h"
 
-#define MAXBUFS 17
+#define MAXBUFS     17
 #define PASS_STATUS 0
 #define FAIL_STATUS -1
-#define DIM(_x) (sizeof(_x)/sizeof(_x[0]))
+#define DIM(_x)     (sizeof(_x) / sizeof(_x[0]))
 
 #define MAX_BURST_JOBS 32
 
-enum api_type {
-        TEST_DIRECT_API,
-        TEST_SINGLE_JOB_API,
-        TEST_BURST_JOB_API
-};
+enum api_type { TEST_DIRECT_API, TEST_SINGLE_JOB_API, TEST_BURST_JOB_API };
 
-int zuc_test(struct IMB_MGR *mb_mgr);
+int
+zuc_test(struct IMB_MGR *mb_mgr);
 
-int validate_zuc_algorithm(struct IMB_MGR *mb_mgr, uint8_t *pSrcData,
-                           uint8_t *pDstData, uint8_t *pKeys, uint8_t *pIV);
-int validate_zuc_EEA_1_block(struct IMB_MGR *mb_mgr, uint8_t *pSrcData,
-                             uint8_t *pDstData, uint8_t *pKeys, uint8_t *pIV,
-                             const enum api_type type);
-int validate_zuc_EEA_4_block(struct IMB_MGR *mb_mgr, uint8_t **pSrcData,
-                             uint8_t **pDstData, uint8_t **pKeys,
-                             uint8_t **pIV, enum api_type type);
-int validate_zuc_EEA_n_block(struct IMB_MGR *mb_mgr, uint8_t **pSrcData,
-                             uint8_t **pDstData, uint8_t **pKeys, uint8_t **pIV,
-                             uint32_t numBuffs, const enum api_type type);
-int validate_zuc_EIA_1_block(struct IMB_MGR *mb_mgr, uint8_t *pSrcData,
-                             uint8_t *pDstData, uint8_t *pKeys, uint8_t *pIV,
-                             const enum api_type type);
-int validate_zuc_EIA_n_block(struct IMB_MGR *mb_mgr, uint8_t **pSrcData,
-                             uint8_t **pDstData, uint8_t **pKeys,
-                             uint8_t **pIV, uint32_t numBuffs,
-                             const enum api_type type);
-int validate_zuc256_EEA3(struct IMB_MGR *mb_mgr, uint8_t **pSrcData,
-                         uint8_t **pDstData, uint8_t **pKeys, uint8_t **pIV,
-                         uint32_t numBuffs, const enum api_type type);
-int validate_zuc256_EIA3(struct IMB_MGR *mb_mgr, uint8_t **pSrcData,
-                         uint8_t **pDstData, uint8_t **pKeys, uint8_t **pIV,
-                         uint32_t numBuffs, const enum api_type type);
+int
+validate_zuc_algorithm(struct IMB_MGR *mb_mgr, uint8_t *pSrcData, uint8_t *pDstData, uint8_t *pKeys,
+                       uint8_t *pIV);
+int
+validate_zuc_EEA_1_block(struct IMB_MGR *mb_mgr, uint8_t *pSrcData, uint8_t *pDstData,
+                         uint8_t *pKeys, uint8_t *pIV, const enum api_type type);
+int
+validate_zuc_EEA_4_block(struct IMB_MGR *mb_mgr, uint8_t **pSrcData, uint8_t **pDstData,
+                         uint8_t **pKeys, uint8_t **pIV, enum api_type type);
+int
+validate_zuc_EEA_n_block(struct IMB_MGR *mb_mgr, uint8_t **pSrcData, uint8_t **pDstData,
+                         uint8_t **pKeys, uint8_t **pIV, uint32_t numBuffs,
+                         const enum api_type type);
+int
+validate_zuc_EIA_1_block(struct IMB_MGR *mb_mgr, uint8_t *pSrcData, uint8_t *pDstData,
+                         uint8_t *pKeys, uint8_t *pIV, const enum api_type type);
+int
+validate_zuc_EIA_n_block(struct IMB_MGR *mb_mgr, uint8_t **pSrcData, uint8_t **pDstData,
+                         uint8_t **pKeys, uint8_t **pIV, uint32_t numBuffs,
+                         const enum api_type type);
+int
+validate_zuc256_EEA3(struct IMB_MGR *mb_mgr, uint8_t **pSrcData, uint8_t **pDstData,
+                     uint8_t **pKeys, uint8_t **pIV, uint32_t numBuffs, const enum api_type type);
+int
+validate_zuc256_EIA3(struct IMB_MGR *mb_mgr, uint8_t **pSrcData, uint8_t **pDstData,
+                     uint8_t **pKeys, uint8_t **pIV, uint32_t numBuffs, const enum api_type type);
 
-static void byte_hexdump(const char *message, const uint8_t *ptr, int len);
+static void
+byte_hexdump(const char *message, const uint8_t *ptr, int len);
 
 /******************************************************************************
  * @ingroup zuc_functionalTest_app
@@ -96,13 +95,13 @@ static void byte_hexdump(const char *message, const uint8_t *ptr, int len);
  * pSrcData = pointers to the new source buffers
  * numOfBuffs = number of buffers
  * ************************************************/
-static uint32_t createData(uint8_t *pSrcData[MAXBUFS],
-                                 uint32_t numOfBuffs)
+static uint32_t
+createData(uint8_t *pSrcData[MAXBUFS], uint32_t numOfBuffs)
 {
         uint32_t i = 0;
 
         for (i = 0; i < numOfBuffs; i++) {
-                pSrcData[i] = (uint8_t *)malloc(MAX_BUFFER_LENGTH_IN_BYTES);
+                pSrcData[i] = (uint8_t *) malloc(MAX_BUFFER_LENGTH_IN_BYTES);
 
                 if (!pSrcData[i]) {
                         uint32_t j;
@@ -131,17 +130,17 @@ static uint32_t createData(uint8_t *pSrcData[MAXBUFS],
  * ivLen = vector length
  * pIV = array of pointers to the new vector buffers
  * numOfBuffs = number of buffers
-************************************************/
-static uint32_t createKeyVecData(uint32_t keyLen, uint8_t *pKeys[MAXBUFS],
-                                 uint32_t ivLen, uint8_t *pIV[MAXBUFS],
-                                 uint32_t numOfBuffs)
+ ************************************************/
+static uint32_t
+createKeyVecData(uint32_t keyLen, uint8_t *pKeys[MAXBUFS], uint32_t ivLen, uint8_t *pIV[MAXBUFS],
+                 uint32_t numOfBuffs)
 {
         uint32_t i = 0;
 
         for (i = 0; i < numOfBuffs; i++) {
                 uint32_t j;
 
-                pIV[i] = (uint8_t *)malloc(ivLen);
+                pIV[i] = (uint8_t *) malloc(ivLen);
 
                 if (!pIV[i]) {
                         printf("malloc(pIV[i]): failed!\n");
@@ -182,7 +181,8 @@ static uint32_t createKeyVecData(uint32_t keyLen, uint8_t *pKeys[MAXBUFS],
  * length = length of pointer array (or number of pointers whose buffers
  * should be freed)
  * ************************************************/
-static void freePtrArray(uint8_t *pArr[MAXBUFS], uint32_t arrayLength)
+static void
+freePtrArray(uint8_t *pArr[MAXBUFS], uint32_t arrayLength)
 {
         uint32_t i = 0;
 
@@ -190,7 +190,8 @@ static void freePtrArray(uint8_t *pArr[MAXBUFS], uint32_t arrayLength)
                 free(pArr[i]);
 }
 
-static uint32_t bswap4(const uint32_t val)
+static uint32_t
+bswap4(const uint32_t val)
 {
         return ((val >> 24) |             /**< A*/
                 ((val & 0xff0000) >> 8) | /**< B*/
@@ -198,16 +199,17 @@ static uint32_t bswap4(const uint32_t val)
                 (val << 24));             /**< D*/
 }
 
-int zuc_test(struct IMB_MGR *mb_mgr)
+int
+zuc_test(struct IMB_MGR *mb_mgr)
 {
 
-        const uint32_t numBuffs[] = {4, 8, 9, 16, 17};
+        const uint32_t numBuffs[] = { 4, 8, 9, 16, 17 };
         uint32_t i;
         int errors = 0;
-        uint8_t *pKeys[MAXBUFS] = {0};
-        uint8_t *pIV[MAXBUFS] = {0};
-        uint8_t *pSrcData[MAXBUFS] = {0};
-        uint8_t *pDstData[MAXBUFS] = {0};
+        uint8_t *pKeys[MAXBUFS] = { 0 };
+        uint8_t *pIV[MAXBUFS] = { 0 };
+        uint8_t *pSrcData[MAXBUFS] = { 0 };
+        uint8_t *pDstData[MAXBUFS] = { 0 };
         struct test_suite_context eea3_ctx;
         struct test_suite_context eia3_ctx;
         struct test_suite_context eea3_256_ctx;
@@ -234,8 +236,7 @@ int zuc_test(struct IMB_MGR *mb_mgr)
         }
 
         /* Create random keys and vectors */
-        if (createKeyVecData(IMB_ZUC256_KEY_LEN_IN_BYTES, pKeys,
-                             IMB_ZUC256_IV_LEN_IN_BYTES_MAX,
+        if (createKeyVecData(IMB_ZUC256_KEY_LEN_IN_BYTES, pKeys, IMB_ZUC256_IV_LEN_IN_BYTES_MAX,
                              pIV, MAXBUFS)) {
                 printf("createKeyVecData() error\n");
                 freePtrArray(pSrcData, MAXBUFS);
@@ -245,93 +246,90 @@ int zuc_test(struct IMB_MGR *mb_mgr)
                 goto exit_zuc_test;
         }
 
-        if (validate_zuc_algorithm(mb_mgr, pSrcData[0], pSrcData[0], pKeys[0],
-                                   pIV[0]))
+        if (validate_zuc_algorithm(mb_mgr, pSrcData[0], pSrcData[0], pKeys[0], pIV[0]))
                 test_suite_update(&eea3_ctx, 0, 1);
         else
                 test_suite_update(&eea3_ctx, 1, 0);
 
         /* Direct API tests */
-        if (validate_zuc_EEA_1_block(mb_mgr, pSrcData[0], pSrcData[0], pKeys[0],
-                                     pIV[0], TEST_DIRECT_API))
-                test_suite_update(&eea3_ctx, 0, 1);
-        else
-                test_suite_update(&eea3_ctx, 1, 0);
-
-        if (validate_zuc_EEA_4_block(mb_mgr, pSrcData, pSrcData, pKeys, pIV,
+        if (validate_zuc_EEA_1_block(mb_mgr, pSrcData[0], pSrcData[0], pKeys[0], pIV[0],
                                      TEST_DIRECT_API))
                 test_suite_update(&eea3_ctx, 0, 1);
         else
                 test_suite_update(&eea3_ctx, 1, 0);
 
+        if (validate_zuc_EEA_4_block(mb_mgr, pSrcData, pSrcData, pKeys, pIV, TEST_DIRECT_API))
+                test_suite_update(&eea3_ctx, 0, 1);
+        else
+                test_suite_update(&eea3_ctx, 1, 0);
+
         for (i = 0; i < DIM(numBuffs); i++) {
-                if (validate_zuc_EEA_n_block(mb_mgr, pSrcData, pDstData, pKeys,
-                                             pIV, numBuffs[i], TEST_DIRECT_API))
+                if (validate_zuc_EEA_n_block(mb_mgr, pSrcData, pDstData, pKeys, pIV, numBuffs[i],
+                                             TEST_DIRECT_API))
                         test_suite_update(&eea3_ctx, 0, 1);
                 else
                         test_suite_update(&eea3_ctx, 1, 0);
         }
 
-        if (validate_zuc_EIA_1_block(mb_mgr, pSrcData[0], pDstData[0], pKeys[0],
-                                     pIV[0], TEST_DIRECT_API))
+        if (validate_zuc_EIA_1_block(mb_mgr, pSrcData[0], pDstData[0], pKeys[0], pIV[0],
+                                     TEST_DIRECT_API))
                 test_suite_update(&eia3_ctx, 0, 1);
         else
                 test_suite_update(&eia3_ctx, 1, 0);
 
         for (i = 0; i < DIM(numBuffs); i++) {
-                if (validate_zuc_EIA_n_block(mb_mgr, pSrcData, pDstData, pKeys,
-                                             pIV, numBuffs[i], TEST_DIRECT_API))
+                if (validate_zuc_EIA_n_block(mb_mgr, pSrcData, pDstData, pKeys, pIV, numBuffs[i],
+                                             TEST_DIRECT_API))
                         test_suite_update(&eia3_ctx, 0, 1);
                 else
                         test_suite_update(&eia3_ctx, 1, 0);
         }
 
         /* Job API tests */
-        if (validate_zuc_EEA_1_block(mb_mgr, pSrcData[0], pSrcData[0], pKeys[0],
-                                     pIV[0], TEST_SINGLE_JOB_API))
-                test_suite_update(&eea3_ctx, 0, 1);
-        else
-                test_suite_update(&eea3_ctx, 1, 0);
-
-        if (validate_zuc_EEA_4_block(mb_mgr, pSrcData, pSrcData, pKeys, pIV,
+        if (validate_zuc_EEA_1_block(mb_mgr, pSrcData[0], pSrcData[0], pKeys[0], pIV[0],
                                      TEST_SINGLE_JOB_API))
                 test_suite_update(&eea3_ctx, 0, 1);
         else
                 test_suite_update(&eea3_ctx, 1, 0);
 
+        if (validate_zuc_EEA_4_block(mb_mgr, pSrcData, pSrcData, pKeys, pIV, TEST_SINGLE_JOB_API))
+                test_suite_update(&eea3_ctx, 0, 1);
+        else
+                test_suite_update(&eea3_ctx, 1, 0);
+
         for (i = 0; i < DIM(numBuffs); i++) {
-                if (validate_zuc_EEA_n_block(mb_mgr, pSrcData, pDstData, pKeys,
-                                             pIV, numBuffs[i], TEST_SINGLE_JOB_API))
+                if (validate_zuc_EEA_n_block(mb_mgr, pSrcData, pDstData, pKeys, pIV, numBuffs[i],
+                                             TEST_SINGLE_JOB_API))
                         test_suite_update(&eea3_ctx, 0, 1);
                 else
                         test_suite_update(&eea3_ctx, 1, 0);
         }
 
         for (i = 0; i < DIM(numBuffs); i++) {
-                if (validate_zuc256_EEA3(mb_mgr, pSrcData, pDstData, pKeys,
-                                         pIV, numBuffs[i], TEST_SINGLE_JOB_API))
+                if (validate_zuc256_EEA3(mb_mgr, pSrcData, pDstData, pKeys, pIV, numBuffs[i],
+                                         TEST_SINGLE_JOB_API))
                         test_suite_update(&eea3_256_ctx, 0, 1);
                 else
                         test_suite_update(&eea3_256_ctx, 1, 0);
         }
 
-        if (validate_zuc_EIA_1_block(mb_mgr, pSrcData[0], pDstData[0], pKeys[0],
-                                     pIV[0], TEST_SINGLE_JOB_API))
+        if (validate_zuc_EIA_1_block(mb_mgr, pSrcData[0], pDstData[0], pKeys[0], pIV[0],
+                                     TEST_SINGLE_JOB_API))
                 test_suite_update(&eia3_ctx, 0, 1);
         else
                 test_suite_update(&eia3_ctx, 1, 0);
 
         for (i = 0; i < DIM(numBuffs); i++) {
-                if (validate_zuc_EIA_n_block(mb_mgr, pSrcData, pDstData, pKeys,
-                                             pIV, numBuffs[i], TEST_SINGLE_JOB_API))
+                if (validate_zuc_EIA_n_block(mb_mgr, pSrcData, pDstData, pKeys, pIV, numBuffs[i],
+                                             TEST_SINGLE_JOB_API))
                         test_suite_update(&eia3_ctx, 0, 1);
                 else
                         test_suite_update(&eia3_ctx, 1, 0);
         }
 
         for (i = 0; i < DIM(numBuffs); i++) {
-                if (validate_zuc256_EIA3(mb_mgr, pSrcData, pDstData, pKeys,
-                                         pIV, numBuffs[i], TEST_SINGLE_JOB_API))
+                if (validate_zuc256_EIA3(mb_mgr, pSrcData, pDstData, pKeys, pIV, numBuffs[i],
+                                         TEST_SINGLE_JOB_API))
                         test_suite_update(&eia3_256_ctx, 0, 1);
                 else
                         test_suite_update(&eia3_256_ctx, 1, 0);
@@ -339,29 +337,28 @@ int zuc_test(struct IMB_MGR *mb_mgr)
 
         /* Burst job API tests */
         for (i = 0; i < DIM(numBuffs); i++) {
-                if (validate_zuc_EEA_n_block(mb_mgr, pSrcData, pDstData, pKeys,
-                                             pIV, numBuffs[i], TEST_BURST_JOB_API))
+                if (validate_zuc_EEA_n_block(mb_mgr, pSrcData, pDstData, pKeys, pIV, numBuffs[i],
+                                             TEST_BURST_JOB_API))
                         test_suite_update(&eea3_ctx, 0, 1);
                 else
                         test_suite_update(&eea3_ctx, 1, 0);
         }
 
         for (i = 0; i < DIM(numBuffs); i++) {
-                if (validate_zuc256_EEA3(mb_mgr, pSrcData, pDstData, pKeys,
-                                         pIV, numBuffs[i], TEST_BURST_JOB_API))
+                if (validate_zuc256_EEA3(mb_mgr, pSrcData, pDstData, pKeys, pIV, numBuffs[i],
+                                         TEST_BURST_JOB_API))
                         test_suite_update(&eea3_256_ctx, 0, 1);
                 else
                         test_suite_update(&eea3_256_ctx, 1, 0);
         }
 
         for (i = 0; i < DIM(numBuffs); i++) {
-                if (validate_zuc256_EIA3(mb_mgr, pSrcData, pDstData, pKeys,
-                                         pIV, numBuffs[i], TEST_BURST_JOB_API))
+                if (validate_zuc256_EIA3(mb_mgr, pSrcData, pDstData, pKeys, pIV, numBuffs[i],
+                                         TEST_BURST_JOB_API))
                         test_suite_update(&eia3_256_ctx, 0, 1);
                 else
                         test_suite_update(&eia3_256_ctx, 1, 0);
         }
-
 
 exit_zuc_test:
         freePtrArray(pKeys, MAXBUFS);    /*Free the key buffers*/
@@ -378,14 +375,12 @@ exit_zuc_test:
 }
 
 static inline int
-submit_burst_eea3_jobs(struct IMB_MGR *mb_mgr, uint8_t ** const keys,
-                       uint8_t ** const ivs, uint8_t ** const src,
-                       uint8_t ** const dst, const uint32_t *lens,
-                       int dir, const unsigned int num_jobs,
-                       const unsigned int key_len,
+submit_burst_eea3_jobs(struct IMB_MGR *mb_mgr, uint8_t **const keys, uint8_t **const ivs,
+                       uint8_t **const src, uint8_t **const dst, const uint32_t *lens, int dir,
+                       const unsigned int num_jobs, const unsigned int key_len,
                        const unsigned int *iv_lens)
 {
-        IMB_JOB *job, *jobs[MAX_BURST_JOBS] = {NULL};
+        IMB_JOB *job, *jobs[MAX_BURST_JOBS] = { NULL };
         unsigned int i;
         unsigned int jobs_rx = 0;
         uint32_t completed_jobs = 0;
@@ -417,8 +412,7 @@ submit_burst_eea3_jobs(struct IMB_MGR *mb_mgr, uint8_t ** const keys,
         err = imb_get_errno(mb_mgr);
 
         if (err != 0) {
-                printf("submit_burst error %d : '%s'\n", err,
-                       imb_get_strerror(err));
+                printf("submit_burst error %d : '%s'\n", err, imb_get_strerror(err));
                 return -1;
         }
 
@@ -427,7 +421,7 @@ check_eea3_burst_jobs:
                 job = jobs[i];
 
                 if (job->status != IMB_STATUS_COMPLETED) {
-                        printf("job %u status not complete!\n", i+1);
+                        printf("job %u status not complete!\n", i + 1);
                         return -1;
                 }
 
@@ -435,12 +429,9 @@ check_eea3_burst_jobs:
         }
 
         if (jobs_rx != num_jobs) {
-                completed_jobs = IMB_FLUSH_BURST(mb_mgr,
-                                                 num_jobs - completed_jobs,
-                                                 jobs);
+                completed_jobs = IMB_FLUSH_BURST(mb_mgr, num_jobs - completed_jobs, jobs);
                 if (completed_jobs == 0) {
-                        printf("Expected %u jobs, received %u\n",
-                               num_jobs, jobs_rx);
+                        printf("Expected %u jobs, received %u\n", num_jobs, jobs_rx);
                         return -1;
                 }
                 goto check_eea3_burst_jobs;
@@ -450,11 +441,9 @@ check_eea3_burst_jobs:
 }
 
 static inline int
-submit_eea3_jobs(struct IMB_MGR *mb_mgr, uint8_t ** const keys,
-                 uint8_t ** const ivs, uint8_t ** const src,
-                 uint8_t ** const dst, const uint32_t *lens,
-                 int dir, const unsigned int num_jobs,
-                 const unsigned int key_len,
+submit_eea3_jobs(struct IMB_MGR *mb_mgr, uint8_t **const keys, uint8_t **const ivs,
+                 uint8_t **const src, uint8_t **const dst, const uint32_t *lens, int dir,
+                 const unsigned int num_jobs, const unsigned int key_len,
                  const unsigned int *iv_lens)
 {
         IMB_JOB *job;
@@ -481,8 +470,7 @@ submit_eea3_jobs(struct IMB_MGR *mb_mgr, uint8_t ** const keys,
                 if (job != NULL) {
                         jobs_rx++;
                         if (job->status != IMB_STATUS_COMPLETED) {
-                                printf("%d error status:%d, job %u",
-                                       __LINE__, job->status, i);
+                                printf("%d error status:%d, job %u", __LINE__, job->status, i);
                                 return -1;
                         }
                 }
@@ -491,8 +479,7 @@ submit_eea3_jobs(struct IMB_MGR *mb_mgr, uint8_t ** const keys,
         while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL) {
                 jobs_rx++;
                 if (job->status != IMB_STATUS_COMPLETED) {
-                        printf("%d error status:%d, job %u",
-                               __LINE__, job->status, i);
+                        printf("%d error status:%d, job %u", __LINE__, job->status, i);
                         return -1;
                 }
         }
@@ -506,15 +493,12 @@ submit_eea3_jobs(struct IMB_MGR *mb_mgr, uint8_t ** const keys,
 }
 
 static inline int
-submit_burst_eia3_jobs(struct IMB_MGR *mb_mgr, uint8_t ** const keys,
-                       uint8_t ** const iv, uint8_t ** const src,
-                       uint8_t ** const tags, const uint32_t *lens,
-                       const unsigned int num_jobs,
-                       const unsigned int key_sz,
-                       const unsigned int tag_sz,
-                       const unsigned int *iv_lens)
+submit_burst_eia3_jobs(struct IMB_MGR *mb_mgr, uint8_t **const keys, uint8_t **const iv,
+                       uint8_t **const src, uint8_t **const tags, const uint32_t *lens,
+                       const unsigned int num_jobs, const unsigned int key_sz,
+                       const unsigned int tag_sz, const unsigned int *iv_lens)
 {
-        IMB_JOB *job, *jobs[MAX_BURST_JOBS] = {NULL};
+        IMB_JOB *job, *jobs[MAX_BURST_JOBS] = { NULL };
         unsigned int i;
         unsigned int jobs_rx = 0;
         uint32_t completed_jobs = 0;
@@ -553,8 +537,7 @@ submit_burst_eia3_jobs(struct IMB_MGR *mb_mgr, uint8_t ** const keys,
         err = imb_get_errno(mb_mgr);
 
         if (err != 0) {
-                printf("submit_burst error %d : '%s'\n", err,
-                       imb_get_strerror(err));
+                printf("submit_burst error %d : '%s'\n", err, imb_get_strerror(err));
                 return -1;
         }
 
@@ -563,7 +546,7 @@ check_eia3_burst_jobs:
                 job = jobs[i];
 
                 if (job->status != IMB_STATUS_COMPLETED) {
-                        printf("job %u status not complete!\n", i+1);
+                        printf("job %u status not complete!\n", i + 1);
                         return -1;
                 }
 
@@ -571,12 +554,9 @@ check_eia3_burst_jobs:
         }
 
         if (jobs_rx != num_jobs) {
-                completed_jobs = IMB_FLUSH_BURST(mb_mgr,
-                                                 num_jobs - completed_jobs,
-                                                 jobs);
+                completed_jobs = IMB_FLUSH_BURST(mb_mgr, num_jobs - completed_jobs, jobs);
                 if (completed_jobs == 0) {
-                        printf("Expected %u jobs, received %u\n",
-                               num_jobs, jobs_rx);
+                        printf("Expected %u jobs, received %u\n", num_jobs, jobs_rx);
                         return -1;
                 }
                 goto check_eia3_burst_jobs;
@@ -585,12 +565,9 @@ check_eia3_burst_jobs:
 }
 
 static inline int
-submit_eia3_jobs(struct IMB_MGR *mb_mgr, uint8_t ** const keys,
-                 uint8_t ** const iv, uint8_t ** const src,
-                 uint8_t ** const tags, const uint32_t *lens,
-                 const unsigned int num_jobs,
-                 const unsigned int key_sz,
-                 const unsigned int tag_sz,
+submit_eia3_jobs(struct IMB_MGR *mb_mgr, uint8_t **const keys, uint8_t **const iv,
+                 uint8_t **const src, uint8_t **const tags, const uint32_t *lens,
+                 const unsigned int num_jobs, const unsigned int key_sz, const unsigned int tag_sz,
                  const unsigned int *iv_lens)
 {
         IMB_JOB *job;
@@ -624,8 +601,7 @@ submit_eia3_jobs(struct IMB_MGR *mb_mgr, uint8_t ** const keys,
                 if (job != NULL) {
                         jobs_rx++;
                         if (job->status != IMB_STATUS_COMPLETED) {
-                                printf("%d error status:%d, job %u",
-                                       __LINE__, job->status, i);
+                                printf("%d error status:%d, job %u", __LINE__, job->status, i);
                                 return -1;
                         }
                 }
@@ -634,8 +610,7 @@ submit_eia3_jobs(struct IMB_MGR *mb_mgr, uint8_t ** const keys,
         while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL) {
                 jobs_rx++;
                 if (job->status != IMB_STATUS_COMPLETED) {
-                        printf("%d error status:%d, job %u",
-                               __LINE__, job->status, i);
+                        printf("%d error status:%d, job %u", __LINE__, job->status, i);
                         return -1;
                 }
         }
@@ -649,8 +624,8 @@ submit_eia3_jobs(struct IMB_MGR *mb_mgr, uint8_t ** const keys,
 }
 
 static int
-test_output(const uint8_t *out, const uint8_t *ref, const uint32_t bytelen,
-            const uint32_t bitlen, const char *err_msg)
+test_output(const uint8_t *out, const uint8_t *ref, const uint32_t bytelen, const uint32_t bitlen,
+            const char *err_msg)
 {
         int ret = 0;
         uint32_t byteResidue;
@@ -668,19 +643,17 @@ test_output(const uint8_t *out, const uint8_t *ref, const uint32_t bytelen,
                 byte_hexdump("Expected", ref, bytelen);
                 byte_hexdump("Found", out, bytelen);
                 ret = -1;
-        /*
-         * Check last partial byte if there is one and
-         * all previous full bytes are correct
-         */
+                /*
+                 * Check last partial byte if there is one and
+                 * all previous full bytes are correct
+                 */
         } else if (bitlen % 8) {
                 bitResidue = (0xFF00 >> (bitlen % 8)) & 0x00FF;
                 byteResidue = (ref[bitlen / 8] ^ out[bitlen / 8]) & bitResidue;
                 if (byteResidue) {
                         printf("%s : FAIL\n", err_msg);
-                        printf("Expected: 0x%02X (last byte)\n",
-                               0xFF & ref[bitlen / 8]);
-                        printf("Found: 0x%02X (last byte)\n",
-                               0xFF & out[bitlen / 8]);
+                        printf("Expected: 0x%02X (last byte)\n", 0xFF & ref[bitlen / 8]);
+                        printf("Found: 0x%02X (last byte)\n", 0xFF & out[bitlen / 8]);
                         ret = -1;
                 }
 #ifdef DEBUG
@@ -702,9 +675,8 @@ test_output(const uint8_t *out, const uint8_t *ref, const uint32_t bytelen,
 }
 
 int
-validate_zuc_EEA_1_block(struct IMB_MGR *mb_mgr, uint8_t *pSrcData,
-                         uint8_t *pDstData, uint8_t *pKeys, uint8_t *pIV,
-                         const enum api_type type)
+validate_zuc_EEA_1_block(struct IMB_MGR *mb_mgr, uint8_t *pSrcData, uint8_t *pDstData,
+                         uint8_t *pKeys, uint8_t *pIV, const enum api_type type)
 {
         uint32_t i;
         int ret = 0;
@@ -717,26 +689,18 @@ validate_zuc_EEA_1_block(struct IMB_MGR *mb_mgr, uint8_t *pSrcData,
                 const unsigned int iv_len = IMB_ZUC_IV_LEN_IN_BYTES;
 
                 memcpy(pKeys, testEEA3_vectors[i].CK, IMB_ZUC_KEY_LEN_IN_BYTES);
-                zuc_eea3_iv_gen(testEEA3_vectors[i].count,
-                                testEEA3_vectors[i].Bearer,
-                                testEEA3_vectors[i].Direction,
-                                pIV);
+                zuc_eea3_iv_gen(testEEA3_vectors[i].count, testEEA3_vectors[i].Bearer,
+                                testEEA3_vectors[i].Direction, pIV);
                 byteLength = (testEEA3_vectors[i].length_in_bits + 7) / 8;
                 memcpy(pSrcData, testEEA3_vectors[i].plaintext, byteLength);
                 if (type == TEST_SINGLE_JOB_API)
-                        submit_eea3_jobs(mb_mgr, &pKeys, &pIV, &pSrcData,
-                                         &pDstData, &byteLength,
-                                         IMB_DIR_ENCRYPT, 1,
-                                         IMB_ZUC_KEY_LEN_IN_BYTES,
-                                         &iv_len);
+                        submit_eea3_jobs(mb_mgr, &pKeys, &pIV, &pSrcData, &pDstData, &byteLength,
+                                         IMB_DIR_ENCRYPT, 1, IMB_ZUC_KEY_LEN_IN_BYTES, &iv_len);
                 else
-                        IMB_ZUC_EEA3_1_BUFFER(mb_mgr, pKeys, pIV, pSrcData,
-                                              pDstData, byteLength);
+                        IMB_ZUC_EEA3_1_BUFFER(mb_mgr, pKeys, pIV, pSrcData, pDstData, byteLength);
 
-                snprintf(msg, sizeof(msg),
-                         "Validate ZUC 1 block test %u (Enc):", i + 1);
-                retTmp = test_output(pDstData, testEEA3_vectors[i].ciphertext,
-                                     byteLength,
+                snprintf(msg, sizeof(msg), "Validate ZUC 1 block test %u (Enc):", i + 1);
+                retTmp = test_output(pDstData, testEEA3_vectors[i].ciphertext, byteLength,
                                      testEEA3_vectors[i].length_in_bits, msg);
                 if (retTmp < 0)
                         ret = retTmp;
@@ -746,11 +710,10 @@ validate_zuc_EEA_1_block(struct IMB_MGR *mb_mgr, uint8_t *pSrcData,
 };
 
 static int
-submit_and_verify(struct IMB_MGR *mb_mgr, uint8_t **pSrcData,
-                  uint8_t **pDstData, uint8_t **pKeys, uint8_t **pIV,
-                  const enum api_type type, IMB_CIPHER_DIRECTION dir,
-                  const unsigned int var_bufs,
-                  const unsigned int num_buffers, const uint32_t *buf_idx)
+submit_and_verify(struct IMB_MGR *mb_mgr, uint8_t **pSrcData, uint8_t **pDstData, uint8_t **pKeys,
+                  uint8_t **pIV, const enum api_type type, IMB_CIPHER_DIRECTION dir,
+                  const unsigned int var_bufs, const unsigned int num_buffers,
+                  const uint32_t *buf_idx)
 {
         unsigned int i;
         uint32_t packetLen[MAXBUFS];
@@ -762,8 +725,7 @@ submit_and_verify(struct IMB_MGR *mb_mgr, uint8_t **pSrcData,
                 vector = &testEEA3_vectors[buf_idx[i]];
                 packetLen[i] = (vector->length_in_bits + 7) / 8;
                 memcpy(pKeys[i], vector->CK, IMB_ZUC_KEY_LEN_IN_BYTES);
-                zuc_eea3_iv_gen(vector->count, vector->Bearer,
-                        vector->Direction, pIV[i]);
+                zuc_eea3_iv_gen(vector->count, vector->Bearer, vector->Direction, pIV[i]);
                 iv_lens[i] = IMB_ZUC_IV_LEN_IN_BYTES;
                 if (dir == IMB_DIR_ENCRYPT)
                         memcpy(pSrcData[i], vector->plaintext, packetLen[i]);
@@ -772,58 +734,46 @@ submit_and_verify(struct IMB_MGR *mb_mgr, uint8_t **pSrcData,
         }
 
         if (type == TEST_SINGLE_JOB_API)
-                submit_eea3_jobs(mb_mgr, pKeys, pIV, pSrcData,
-                                 pDstData, packetLen, dir, num_buffers,
-                                 IMB_ZUC_KEY_LEN_IN_BYTES, iv_lens);
+                submit_eea3_jobs(mb_mgr, pKeys, pIV, pSrcData, pDstData, packetLen, dir,
+                                 num_buffers, IMB_ZUC_KEY_LEN_IN_BYTES, iv_lens);
         else if (type == TEST_BURST_JOB_API)
-                submit_burst_eea3_jobs(mb_mgr, pKeys, pIV, pSrcData,
-                                 pDstData, packetLen, dir, num_buffers,
-                                 IMB_ZUC_KEY_LEN_IN_BYTES, iv_lens);
+                submit_burst_eea3_jobs(mb_mgr, pKeys, pIV, pSrcData, pDstData, packetLen, dir,
+                                       num_buffers, IMB_ZUC_KEY_LEN_IN_BYTES, iv_lens);
         else {
                 if (num_buffers == 4)
-                        IMB_ZUC_EEA3_4_BUFFER(mb_mgr,
-                                              (const void * const *)pKeys,
-                                              (const void * const *)pIV,
-                                              (const void * const *)pSrcData,
-                                              (void **)pDstData, packetLen);
+                        IMB_ZUC_EEA3_4_BUFFER(
+                                mb_mgr, (const void *const *) pKeys, (const void *const *) pIV,
+                                (const void *const *) pSrcData, (void **) pDstData, packetLen);
                 else
-                        IMB_ZUC_EEA3_N_BUFFER(mb_mgr,
-                                              (const void * const *)pKeys,
-                                              (const void * const *)pIV,
-                                              (const void * const *)pSrcData,
-                                              (void **)pDstData, packetLen,
-                                              num_buffers);
+                        IMB_ZUC_EEA3_N_BUFFER(mb_mgr, (const void *const *) pKeys,
+                                              (const void *const *) pIV,
+                                              (const void *const *) pSrcData, (void **) pDstData,
+                                              packetLen, num_buffers);
         }
 
         for (i = 0; i < num_buffers; i++) {
-                uint8_t *pDst8 = (uint8_t *)pDstData[i];
+                uint8_t *pDst8 = (uint8_t *) pDstData[i];
                 int retTmp;
                 char msg_start[50];
                 char msg[100];
 
                 vector = &testEEA3_vectors[buf_idx[i]];
                 if (var_bufs)
-                        snprintf(msg_start, sizeof(msg_start),
-                                 "Validate ZUC %c block multi-vector",
+                        snprintf(msg_start, sizeof(msg_start), "Validate ZUC %c block multi-vector",
                                  num_buffers == 4 ? '4' : 'N');
                 else
-                        snprintf(msg_start, sizeof(msg_start),
-                                 "Validate ZUC %c block",
+                        snprintf(msg_start, sizeof(msg_start), "Validate ZUC %c block",
                                  num_buffers == 4 ? '4' : 'N');
 
                 if (dir == IMB_DIR_ENCRYPT) {
-                        snprintf(msg, sizeof(msg),
-                                 "%s test %u, index %u (Enc):",
-                                 msg_start, buf_idx[i] + 1, i);
-                        retTmp = test_output(pDst8, vector->ciphertext,
-                                             packetLen[i],
+                        snprintf(msg, sizeof(msg), "%s test %u, index %u (Enc):", msg_start,
+                                 buf_idx[i] + 1, i);
+                        retTmp = test_output(pDst8, vector->ciphertext, packetLen[i],
                                              vector->length_in_bits, msg);
                 } else { /* DECRYPT */
-                        snprintf(msg, sizeof(msg),
-                                 "%s test %u, index %u (Dec):",
-                                 msg_start, buf_idx[i] + 1, i);
-                        retTmp = test_output(pDst8, vector->plaintext,
-                                             packetLen[i],
+                        snprintf(msg, sizeof(msg), "%s test %u, index %u (Dec):", msg_start,
+                                 buf_idx[i] + 1, i);
+                        retTmp = test_output(pDst8, vector->plaintext, packetLen[i],
                                              vector->length_in_bits, msg);
                 }
                 if (retTmp < 0)
@@ -834,12 +784,10 @@ submit_and_verify(struct IMB_MGR *mb_mgr, uint8_t **pSrcData,
 }
 
 static int
-submit_and_verify_zuc256(struct IMB_MGR *mb_mgr, uint8_t **pSrcData,
-                         uint8_t **pDstData, uint8_t **pKeys, uint8_t **pIV,
-                         const enum api_type type, IMB_CIPHER_DIRECTION dir,
-                         const unsigned int var_bufs,
-                         const unsigned int num_buffers,
-                         const uint32_t *buf_idx)
+submit_and_verify_zuc256(struct IMB_MGR *mb_mgr, uint8_t **pSrcData, uint8_t **pDstData,
+                         uint8_t **pKeys, uint8_t **pIV, const enum api_type type,
+                         IMB_CIPHER_DIRECTION dir, const unsigned int var_bufs,
+                         const unsigned int num_buffers, const uint32_t *buf_idx)
 {
         unsigned int i;
         uint32_t packetLen[MAXBUFS];
@@ -860,41 +808,33 @@ submit_and_verify_zuc256(struct IMB_MGR *mb_mgr, uint8_t **pSrcData,
         }
 
         if (type == TEST_SINGLE_JOB_API)
-                submit_eea3_jobs(mb_mgr, pKeys, pIV, pSrcData,
-                                 pDstData, packetLen, dir, num_buffers,
-                                 IMB_ZUC256_KEY_LEN_IN_BYTES, iv_lens);
+                submit_eea3_jobs(mb_mgr, pKeys, pIV, pSrcData, pDstData, packetLen, dir,
+                                 num_buffers, IMB_ZUC256_KEY_LEN_IN_BYTES, iv_lens);
         else if (type == TEST_BURST_JOB_API)
-                submit_burst_eea3_jobs(mb_mgr, pKeys, pIV, pSrcData,
-                                 pDstData, packetLen, dir, num_buffers,
-                                 IMB_ZUC256_KEY_LEN_IN_BYTES, iv_lens);
+                submit_burst_eea3_jobs(mb_mgr, pKeys, pIV, pSrcData, pDstData, packetLen, dir,
+                                       num_buffers, IMB_ZUC256_KEY_LEN_IN_BYTES, iv_lens);
 
         for (i = 0; i < num_buffers; i++) {
-                uint8_t *pDst8 = (uint8_t *)pDstData[i];
+                uint8_t *pDst8 = (uint8_t *) pDstData[i];
                 int retTmp;
                 char msg_start[50];
                 char msg[100];
 
                 vector = &test256EEA3_vectors[buf_idx[i]];
                 if (var_bufs)
-                        snprintf(msg_start, sizeof(msg_start),
-                                 "Validate ZUC-256 multi-vector");
+                        snprintf(msg_start, sizeof(msg_start), "Validate ZUC-256 multi-vector");
                 else
-                        snprintf(msg_start, sizeof(msg_start),
-                                 "Validate ZUC-256");
+                        snprintf(msg_start, sizeof(msg_start), "Validate ZUC-256");
 
                 if (dir == IMB_DIR_ENCRYPT) {
-                        snprintf(msg, sizeof(msg),
-                                 "%s test %u, index %u (Enc):",
-                                 msg_start, buf_idx[i] + 1, i);
-                        retTmp = test_output(pDst8, vector->ciphertext,
-                                             packetLen[i],
+                        snprintf(msg, sizeof(msg), "%s test %u, index %u (Enc):", msg_start,
+                                 buf_idx[i] + 1, i);
+                        retTmp = test_output(pDst8, vector->ciphertext, packetLen[i],
                                              vector->length_in_bits, msg);
                 } else { /* DECRYPT */
-                        snprintf(msg, sizeof(msg),
-                                 "%s test %u, index %u (Dec):",
-                                 msg_start, buf_idx[i] + 1, i);
-                        retTmp = test_output(pDst8, vector->plaintext,
-                                             packetLen[i],
+                        snprintf(msg, sizeof(msg), "%s test %u, index %u (Dec):", msg_start,
+                                 buf_idx[i] + 1, i);
+                        retTmp = test_output(pDst8, vector->plaintext, packetLen[i],
                                              vector->length_in_bits, msg);
                 }
                 if (retTmp < 0)
@@ -904,9 +844,9 @@ submit_and_verify_zuc256(struct IMB_MGR *mb_mgr, uint8_t **pSrcData,
         return ret;
 }
 
-int validate_zuc_EEA_4_block(struct IMB_MGR *mb_mgr, uint8_t **pSrcData,
-                             uint8_t **pDstData, uint8_t **pKeys, uint8_t **pIV,
-                             const enum api_type type)
+int
+validate_zuc_EEA_4_block(struct IMB_MGR *mb_mgr, uint8_t **pSrcData, uint8_t **pDstData,
+                         uint8_t **pKeys, uint8_t **pIV, const enum api_type type)
 {
         uint32_t i, j;
         int ret = 0;
@@ -917,14 +857,12 @@ int validate_zuc_EEA_4_block(struct IMB_MGR *mb_mgr, uint8_t **pSrcData,
                 for (j = 0; j < 4; j++)
                         buf_idx[j] = i;
 
-                retTmp = submit_and_verify(mb_mgr, pSrcData, pDstData, pKeys,
-                                           pIV, type, IMB_DIR_ENCRYPT,
-                                           0, 4, buf_idx);
+                retTmp = submit_and_verify(mb_mgr, pSrcData, pDstData, pKeys, pIV, type,
+                                           IMB_DIR_ENCRYPT, 0, 4, buf_idx);
                 if (retTmp < 0)
                         ret = retTmp;
-                retTmp = submit_and_verify(mb_mgr, pSrcData, pDstData, pKeys,
-                                           pIV, type, IMB_DIR_DECRYPT,
-                                           0, 4, buf_idx);
+                retTmp = submit_and_verify(mb_mgr, pSrcData, pDstData, pKeys, pIV, type,
+                                           IMB_DIR_DECRYPT, 0, 4, buf_idx);
                 if (retTmp < 0)
                         ret = retTmp;
         }
@@ -933,16 +871,14 @@ int validate_zuc_EEA_4_block(struct IMB_MGR *mb_mgr, uint8_t **pSrcData,
          * in groups of 4 */
         for (i = 0; i < (NUM_ZUC_EEA3_TESTS - 4); i++) {
                 for (j = 0; j < 4; j++)
-                        buf_idx[j] = i+j;
+                        buf_idx[j] = i + j;
 
-                retTmp = submit_and_verify(mb_mgr, pSrcData, pDstData, pKeys,
-                                           pIV, type, IMB_DIR_ENCRYPT,
-                                           1, 4, buf_idx);
+                retTmp = submit_and_verify(mb_mgr, pSrcData, pDstData, pKeys, pIV, type,
+                                           IMB_DIR_ENCRYPT, 1, 4, buf_idx);
                 if (retTmp < 0)
                         ret = retTmp;
-                retTmp = submit_and_verify(mb_mgr, pSrcData, pDstData, pKeys,
-                                           pIV, type, IMB_DIR_DECRYPT,
-                                           1, 4, buf_idx);
+                retTmp = submit_and_verify(mb_mgr, pSrcData, pDstData, pKeys, pIV, type,
+                                           IMB_DIR_DECRYPT, 1, 4, buf_idx);
                 if (retTmp < 0)
                         ret = retTmp;
         }
@@ -950,9 +886,10 @@ int validate_zuc_EEA_4_block(struct IMB_MGR *mb_mgr, uint8_t **pSrcData,
         return ret;
 };
 
-int validate_zuc_EEA_n_block(struct IMB_MGR *mb_mgr, uint8_t **pSrcData,
-                             uint8_t **pDstData, uint8_t **pKeys, uint8_t **pIV,
-                             uint32_t numBuffs, const enum api_type type)
+int
+validate_zuc_EEA_n_block(struct IMB_MGR *mb_mgr, uint8_t **pSrcData, uint8_t **pDstData,
+                         uint8_t **pKeys, uint8_t **pIV, uint32_t numBuffs,
+                         const enum api_type type)
 {
         uint32_t i, j;
         int ret = 0;
@@ -964,16 +901,13 @@ int validate_zuc_EEA_n_block(struct IMB_MGR *mb_mgr, uint8_t **pSrcData,
                 for (j = 0; j < numBuffs; j++)
                         buf_idx[j] = i;
 
-                retTmp = submit_and_verify(mb_mgr, pSrcData, pDstData, pKeys,
-                                           pIV, type,
-                                           IMB_DIR_ENCRYPT,
-                                           0, numBuffs, buf_idx);
+                retTmp = submit_and_verify(mb_mgr, pSrcData, pDstData, pKeys, pIV, type,
+                                           IMB_DIR_ENCRYPT, 0, numBuffs, buf_idx);
                 if (retTmp < 0)
                         ret = retTmp;
 
-                retTmp = submit_and_verify(mb_mgr, pSrcData, pDstData, pKeys,
-                                           pIV, type, IMB_DIR_DECRYPT,
-                                           0, numBuffs, buf_idx);
+                retTmp = submit_and_verify(mb_mgr, pSrcData, pDstData, pKeys, pIV, type,
+                                           IMB_DIR_DECRYPT, 0, numBuffs, buf_idx);
                 if (retTmp < 0)
                         ret = retTmp;
         }
@@ -982,24 +916,22 @@ int validate_zuc_EEA_n_block(struct IMB_MGR *mb_mgr, uint8_t **pSrcData,
         for (i = 0; i < numBuffs; i++)
                 buf_idx[i] = i % NUM_ZUC_EEA3_TESTS;
 
-        retTmp = submit_and_verify(mb_mgr, pSrcData, pDstData, pKeys,
-                                   pIV, type, IMB_DIR_ENCRYPT,
-                                   1, numBuffs, buf_idx);
+        retTmp = submit_and_verify(mb_mgr, pSrcData, pDstData, pKeys, pIV, type, IMB_DIR_ENCRYPT, 1,
+                                   numBuffs, buf_idx);
         if (retTmp < 0)
                 ret = retTmp;
 
-        retTmp = submit_and_verify(mb_mgr, pSrcData, pDstData, pKeys,
-                                   pIV, type, IMB_DIR_DECRYPT,
-                                   1, numBuffs, buf_idx);
+        retTmp = submit_and_verify(mb_mgr, pSrcData, pDstData, pKeys, pIV, type, IMB_DIR_DECRYPT, 1,
+                                   numBuffs, buf_idx);
         if (retTmp < 0)
                 ret = retTmp;
 
         return ret;
 };
 
-int validate_zuc256_EEA3(struct IMB_MGR *mb_mgr, uint8_t **pSrcData,
-                         uint8_t **pDstData, uint8_t **pKeys, uint8_t **pIV,
-                         uint32_t numBuffs, const enum api_type type)
+int
+validate_zuc256_EEA3(struct IMB_MGR *mb_mgr, uint8_t **pSrcData, uint8_t **pDstData,
+                     uint8_t **pKeys, uint8_t **pIV, uint32_t numBuffs, const enum api_type type)
 {
         uint32_t i, j;
         int ret = 0;
@@ -1011,15 +943,13 @@ int validate_zuc256_EEA3(struct IMB_MGR *mb_mgr, uint8_t **pSrcData,
                 for (j = 0; j < numBuffs; j++)
                         buf_idx[j] = i;
 
-                retTmp = submit_and_verify_zuc256(mb_mgr, pSrcData, pDstData,
-                                                  pKeys, pIV, type, IMB_DIR_ENCRYPT,
-                                                  0, numBuffs, buf_idx);
+                retTmp = submit_and_verify_zuc256(mb_mgr, pSrcData, pDstData, pKeys, pIV, type,
+                                                  IMB_DIR_ENCRYPT, 0, numBuffs, buf_idx);
                 if (retTmp < 0)
                         ret = retTmp;
 
-                retTmp = submit_and_verify_zuc256(mb_mgr, pSrcData, pDstData,
-                                                  pKeys, pIV, type, IMB_DIR_DECRYPT,
-                                                  0, numBuffs, buf_idx);
+                retTmp = submit_and_verify_zuc256(mb_mgr, pSrcData, pDstData, pKeys, pIV, type,
+                                                  IMB_DIR_DECRYPT, 0, numBuffs, buf_idx);
                 if (retTmp < 0)
                         ret = retTmp;
         }
@@ -1028,24 +958,22 @@ int validate_zuc256_EEA3(struct IMB_MGR *mb_mgr, uint8_t **pSrcData,
         for (i = 0; i < numBuffs; i++)
                 buf_idx[i] = i % NUM_ZUC_256_EEA3_TESTS;
 
-        retTmp = submit_and_verify_zuc256(mb_mgr, pSrcData, pDstData, pKeys,
-                                          pIV, type, IMB_DIR_ENCRYPT,
-                                          1, numBuffs, buf_idx);
+        retTmp = submit_and_verify_zuc256(mb_mgr, pSrcData, pDstData, pKeys, pIV, type,
+                                          IMB_DIR_ENCRYPT, 1, numBuffs, buf_idx);
         if (retTmp < 0)
                 ret = retTmp;
 
-        retTmp = submit_and_verify_zuc256(mb_mgr, pSrcData, pDstData, pKeys,
-                                          pIV, type, IMB_DIR_DECRYPT,
-                                          1, numBuffs, buf_idx);
+        retTmp = submit_and_verify_zuc256(mb_mgr, pSrcData, pDstData, pKeys, pIV, type,
+                                          IMB_DIR_DECRYPT, 1, numBuffs, buf_idx);
         if (retTmp < 0)
                 ret = retTmp;
 
         return ret;
 }
 
-int validate_zuc_EIA_1_block(struct IMB_MGR *mb_mgr, uint8_t *pSrcData,
-                             uint8_t *pDstData, uint8_t *pKeys, uint8_t *pIV,
-                             const enum api_type type)
+int
+validate_zuc_EIA_1_block(struct IMB_MGR *mb_mgr, uint8_t *pSrcData, uint8_t *pDstData,
+                         uint8_t *pKeys, uint8_t *pIV, const enum api_type type)
 {
         uint32_t i;
         int ret = 0;
@@ -1056,31 +984,25 @@ int validate_zuc_EIA_1_block(struct IMB_MGR *mb_mgr, uint8_t *pSrcData,
 
                 memcpy(pKeys, testEIA3_vectors[i].CK, IMB_ZUC_KEY_LEN_IN_BYTES);
 
-                zuc_eia3_iv_gen(testEIA3_vectors[i].count,
-                                testEIA3_vectors[i].Bearer,
-                                testEIA3_vectors[i].Direction,
-                                pIV);
+                zuc_eia3_iv_gen(testEIA3_vectors[i].count, testEIA3_vectors[i].Bearer,
+                                testEIA3_vectors[i].Direction, pIV);
                 bitLength = testEIA3_vectors[i].length_in_bits;
 
                 const uint32_t byteLength = (bitLength + 7) / 8;
 
                 memcpy(pSrcData, testEIA3_vectors[i].message, byteLength);
                 if (type == TEST_SINGLE_JOB_API)
-                        submit_eia3_jobs(mb_mgr, &pKeys, &pIV,
-                                         &pSrcData, &pDstData,
-                                         &bitLength, 1, IMB_ZUC_KEY_LEN_IN_BYTES,
-                                         IMB_ZUC_DIGEST_LEN_IN_BYTES, &iv_len);
+                        submit_eia3_jobs(mb_mgr, &pKeys, &pIV, &pSrcData, &pDstData, &bitLength, 1,
+                                         IMB_ZUC_KEY_LEN_IN_BYTES, IMB_ZUC_DIGEST_LEN_IN_BYTES,
+                                         &iv_len);
                 else /* TEST_DIRECT_API */
-                        IMB_ZUC_EIA3_1_BUFFER(mb_mgr, pKeys, pIV, pSrcData,
-                                              bitLength, (uint32_t *)pDstData);
-                const int retTmp =
-                    memcmp(pDstData, &testEIA3_vectors[i].mac,
-                           sizeof(((struct test128EIA3_vectors_t *)0)->mac));
+                        IMB_ZUC_EIA3_1_BUFFER(mb_mgr, pKeys, pIV, pSrcData, bitLength,
+                                              (uint32_t *) pDstData);
+                const int retTmp = memcmp(pDstData, &testEIA3_vectors[i].mac,
+                                          sizeof(((struct test128EIA3_vectors_t *) 0)->mac));
                 if (retTmp) {
-                        printf("Validate ZUC 1 block  test %u (Int): FAIL\n",
-                               i + 1);
-                        byte_hexdump("Expected",
-                                     (const uint8_t *)&testEIA3_vectors[i].mac,
+                        printf("Validate ZUC 1 block  test %u (Int): FAIL\n", i + 1);
+                        byte_hexdump("Expected", (const uint8_t *) &testEIA3_vectors[i].mac,
                                      IMB_ZUC_DIGEST_LEN_IN_BYTES);
                         byte_hexdump("Found", pDstData, IMB_ZUC_DIGEST_LEN_IN_BYTES);
                         ret = retTmp;
@@ -1098,9 +1020,10 @@ int validate_zuc_EIA_1_block(struct IMB_MGR *mb_mgr, uint8_t *pSrcData,
         return ret;
 };
 
-int validate_zuc_EIA_n_block(struct IMB_MGR *mb_mgr, uint8_t **pSrcData,
-                             uint8_t **pDstData, uint8_t **pKeys, uint8_t **pIV,
-                             uint32_t numBuffs, const enum api_type type)
+int
+validate_zuc_EIA_n_block(struct IMB_MGR *mb_mgr, uint8_t **pSrcData, uint8_t **pDstData,
+                         uint8_t **pKeys, uint8_t **pIV, uint32_t numBuffs,
+                         const enum api_type type)
 {
         uint32_t i, j;
         int retTmp, ret = 0;
@@ -1114,46 +1037,35 @@ int validate_zuc_EIA_n_block(struct IMB_MGR *mb_mgr, uint8_t **pSrcData,
                 for (j = 0; j < numBuffs; j++) {
                         memcpy(pKeys[j], vector.CK, IMB_ZUC_KEY_LEN_IN_BYTES);
 
-                        zuc_eia3_iv_gen(vector.count, vector.Bearer,
-                                        vector.Direction, pIV[j]);
+                        zuc_eia3_iv_gen(vector.count, vector.Bearer, vector.Direction, pIV[j]);
                         bitLength[j] = vector.length_in_bits;
                         byteLength = (bitLength[j] + 7) / 8;
                         memcpy(pSrcData[j], vector.message, byteLength);
                         iv_lens[j] = IMB_ZUC_IV_LEN_IN_BYTES;
                 }
                 if (type == TEST_SINGLE_JOB_API)
-                        submit_eia3_jobs(mb_mgr, pKeys, pIV,
-                                         pSrcData, pDstData,
-                                         bitLength, numBuffs,
-                                         IMB_ZUC_KEY_LEN_IN_BYTES,
-                                         IMB_ZUC_DIGEST_LEN_IN_BYTES,
-                                         iv_lens);
+                        submit_eia3_jobs(mb_mgr, pKeys, pIV, pSrcData, pDstData, bitLength,
+                                         numBuffs, IMB_ZUC_KEY_LEN_IN_BYTES,
+                                         IMB_ZUC_DIGEST_LEN_IN_BYTES, iv_lens);
                 else if (type == TEST_BURST_JOB_API)
-                        submit_burst_eia3_jobs(mb_mgr, pKeys, pIV,
-                                               pSrcData, pDstData,
-                                               bitLength, numBuffs,
-                                               IMB_ZUC_KEY_LEN_IN_BYTES,
-                                               IMB_ZUC_DIGEST_LEN_IN_BYTES,
-                                               iv_lens);
+                        submit_burst_eia3_jobs(mb_mgr, pKeys, pIV, pSrcData, pDstData, bitLength,
+                                               numBuffs, IMB_ZUC_KEY_LEN_IN_BYTES,
+                                               IMB_ZUC_DIGEST_LEN_IN_BYTES, iv_lens);
                 else /* TEST_BURST_JOB_API */
-                        IMB_ZUC_EIA3_N_BUFFER(mb_mgr,
-                                              (const void * const *)pKeys,
-                                              (const void * const *)pIV,
-                                              (const void * const *)pSrcData,
-                                              bitLength, (uint32_t **)pDstData,
-                                              numBuffs);
+                        IMB_ZUC_EIA3_N_BUFFER(mb_mgr, (const void *const *) pKeys,
+                                              (const void *const *) pIV,
+                                              (const void *const *) pSrcData, bitLength,
+                                              (uint32_t **) pDstData, numBuffs);
 
                 for (j = 0; j < numBuffs; j++) {
-                        retTmp =
-                            memcmp(pDstData[j], &vector.mac, IMB_ZUC_DIGEST_LEN_IN_BYTES);
+                        retTmp = memcmp(pDstData[j], &vector.mac, IMB_ZUC_DIGEST_LEN_IN_BYTES);
                         if (retTmp) {
                                 printf("Validate ZUC n block test %u, index %u "
-                                       "(Int): FAIL\n", i + 1, j);
-                                byte_hexdump("Expected",
-                                             (const uint8_t *)&vector.mac,
+                                       "(Int): FAIL\n",
+                                       i + 1, j);
+                                byte_hexdump("Expected", (const uint8_t *) &vector.mac,
                                              IMB_ZUC_DIGEST_LEN_IN_BYTES);
-                                byte_hexdump("Found", pDstData[j],
-                                             IMB_ZUC_DIGEST_LEN_IN_BYTES);
+                                byte_hexdump("Found", pDstData[j], IMB_ZUC_DIGEST_LEN_IN_BYTES);
                                 ret = retTmp;
                         }
 #ifdef DEBUG
@@ -1172,11 +1084,9 @@ int validate_zuc_EIA_n_block(struct IMB_MGR *mb_mgr, uint8_t **pSrcData,
          * grouping all available tests vectors in groups of N buffers */
         for (i = 0; i < numBuffs; i++) {
                 vector = testEIA3_vectors[i % NUM_ZUC_EIA3_TESTS];
-                memcpy(pKeys[i], vector.CK,
-                       IMB_ZUC_KEY_LEN_IN_BYTES);
+                memcpy(pKeys[i], vector.CK, IMB_ZUC_KEY_LEN_IN_BYTES);
 
-                zuc_eia3_iv_gen(vector.count, vector.Bearer,
-                                vector.Direction, pIV[i]);
+                zuc_eia3_iv_gen(vector.count, vector.Bearer, vector.Direction, pIV[i]);
                 bitLength[i] = vector.length_in_bits;
                 byteLength = (bitLength[i] + 7) / 8;
                 memcpy(pSrcData[i], vector.message, byteLength);
@@ -1184,38 +1094,26 @@ int validate_zuc_EIA_n_block(struct IMB_MGR *mb_mgr, uint8_t **pSrcData,
         }
 
         if (type == TEST_SINGLE_JOB_API)
-                submit_eia3_jobs(mb_mgr, pKeys, pIV,
-                                 pSrcData, pDstData,
-                                 bitLength, numBuffs,
-                                 IMB_ZUC_KEY_LEN_IN_BYTES,
-                                 IMB_ZUC_DIGEST_LEN_IN_BYTES,
-                                 iv_lens);
+                submit_eia3_jobs(mb_mgr, pKeys, pIV, pSrcData, pDstData, bitLength, numBuffs,
+                                 IMB_ZUC_KEY_LEN_IN_BYTES, IMB_ZUC_DIGEST_LEN_IN_BYTES, iv_lens);
         else if (type == TEST_BURST_JOB_API)
-                submit_burst_eia3_jobs(mb_mgr, pKeys, pIV,
-                                       pSrcData, pDstData,
-                                       bitLength, numBuffs,
-                                       IMB_ZUC_KEY_LEN_IN_BYTES,
-                                       IMB_ZUC_DIGEST_LEN_IN_BYTES,
+                submit_burst_eia3_jobs(mb_mgr, pKeys, pIV, pSrcData, pDstData, bitLength, numBuffs,
+                                       IMB_ZUC_KEY_LEN_IN_BYTES, IMB_ZUC_DIGEST_LEN_IN_BYTES,
                                        iv_lens);
         else /* TEST_BURST_JOB_API */
-                IMB_ZUC_EIA3_N_BUFFER(mb_mgr,
-                                      (const void * const *)pKeys,
-                                      (const void * const *)pIV,
-                                      (const void * const *)pSrcData,
-                                      bitLength, (uint32_t **)pDstData,
-                                      numBuffs);
+                IMB_ZUC_EIA3_N_BUFFER(mb_mgr, (const void *const *) pKeys,
+                                      (const void *const *) pIV, (const void *const *) pSrcData,
+                                      bitLength, (uint32_t **) pDstData, numBuffs);
 
         for (i = 0; i < numBuffs; i++) {
                 vector = testEIA3_vectors[i % NUM_ZUC_EIA3_TESTS];
-                retTmp =
-                    memcmp(pDstData[i], &vector.mac,
-                           sizeof(((struct test128EIA3_vectors_t *)0)->mac));
+                retTmp = memcmp(pDstData[i], &vector.mac,
+                                sizeof(((struct test128EIA3_vectors_t *) 0)->mac));
                 if (retTmp) {
                         printf("Validate ZUC n block multi-vector test "
                                "# jobs = %u, index %u (Int): FAIL\n",
                                numBuffs, i);
-                        byte_hexdump("Expected",
-                                     (const uint8_t *)&vector.mac,
+                        byte_hexdump("Expected", (const uint8_t *) &vector.mac,
                                      IMB_ZUC_DIGEST_LEN_IN_BYTES);
                         byte_hexdump("Found", pDstData[i], IMB_ZUC_DIGEST_LEN_IN_BYTES);
                         ret = retTmp;
@@ -1234,9 +1132,8 @@ int validate_zuc_EIA_n_block(struct IMB_MGR *mb_mgr, uint8_t **pSrcData,
 };
 
 static int
-verify_tag_256(void *mac, const struct test256EIA3_vectors_t *vector,
-               const unsigned tag_sz, const uint32_t test_idx,
-               const uint32_t vector_idx, const int multi_vector)
+verify_tag_256(void *mac, const struct test256EIA3_vectors_t *vector, const unsigned tag_sz,
+               const uint32_t test_idx, const uint32_t vector_idx, const int multi_vector)
 {
         const void *ref_mac = NULL;
         int ret;
@@ -1260,9 +1157,7 @@ verify_tag_256(void *mac, const struct test256EIA3_vectors_t *vector,
                                "index %u (Int - %u bytes): FAIL\n",
                                test_idx + 1, vector_idx, tag_sz);
                 }
-                byte_hexdump("Expected",
-                             (const uint8_t *)ref_mac,
-                             tag_sz);
+                byte_hexdump("Expected", (const uint8_t *) ref_mac, tag_sz);
                 byte_hexdump("Found", mac, tag_sz);
         }
 #ifdef DEBUG
@@ -1287,9 +1182,9 @@ verify_tag_256(void *mac, const struct test256EIA3_vectors_t *vector,
         return ret;
 }
 
-int validate_zuc256_EIA3(struct IMB_MGR *mb_mgr, uint8_t **pSrcData,
-                         uint8_t **pDstData, uint8_t **pKeys, uint8_t **pIV,
-                         uint32_t numBuffs, const enum api_type type)
+int
+validate_zuc256_EIA3(struct IMB_MGR *mb_mgr, uint8_t **pSrcData, uint8_t **pDstData,
+                     uint8_t **pKeys, uint8_t **pIV, uint32_t numBuffs, const enum api_type type)
 {
         uint32_t i, j;
         int retTmp, ret = 0;
@@ -1311,21 +1206,16 @@ int validate_zuc256_EIA3(struct IMB_MGR *mb_mgr, uint8_t **pSrcData,
                 }
                 for (tag_sz = 4; tag_sz <= 16; tag_sz *= 2) {
                         if (type == TEST_SINGLE_JOB_API)
-                                submit_eia3_jobs(mb_mgr, pKeys, pIV,
-                                                 pSrcData, pDstData,
-                                                 bitLength, numBuffs,
-                                                 IMB_ZUC256_KEY_LEN_IN_BYTES,
-                                                 tag_sz, iv_lens);
+                                submit_eia3_jobs(mb_mgr, pKeys, pIV, pSrcData, pDstData, bitLength,
+                                                 numBuffs, IMB_ZUC256_KEY_LEN_IN_BYTES, tag_sz,
+                                                 iv_lens);
                         else /* TEST_BURST_JOB_API */
-                                submit_burst_eia3_jobs(mb_mgr, pKeys, pIV,
-                                                       pSrcData, pDstData,
-                                                       bitLength, numBuffs,
-                                                       IMB_ZUC256_KEY_LEN_IN_BYTES,
-                                                       tag_sz, iv_lens);
+                                submit_burst_eia3_jobs(
+                                        mb_mgr, pKeys, pIV, pSrcData, pDstData, bitLength, numBuffs,
+                                        IMB_ZUC256_KEY_LEN_IN_BYTES, tag_sz, iv_lens);
 
                         for (j = 0; j < numBuffs; j++) {
-                                retTmp = verify_tag_256(pDstData[j], vector,
-                                                        tag_sz, i, j, 0);
+                                retTmp = verify_tag_256(pDstData[j], vector, tag_sz, i, j, 0);
                                 if (retTmp)
                                         ret = retTmp;
                         }
@@ -1347,24 +1237,18 @@ int validate_zuc256_EIA3(struct IMB_MGR *mb_mgr, uint8_t **pSrcData,
 
         for (tag_sz = 4; tag_sz <= 16; tag_sz *= 2) {
                 if (type == TEST_SINGLE_JOB_API)
-                        submit_eia3_jobs(mb_mgr, pKeys, pIV,
-                                        pSrcData, pDstData,
-                                        bitLength, numBuffs,
-                                        IMB_ZUC256_KEY_LEN_IN_BYTES,
-                                        tag_sz, iv_lens);
+                        submit_eia3_jobs(mb_mgr, pKeys, pIV, pSrcData, pDstData, bitLength,
+                                         numBuffs, IMB_ZUC256_KEY_LEN_IN_BYTES, tag_sz, iv_lens);
                 else /* TEST_BURST_JOB_API */
-                        submit_burst_eia3_jobs(mb_mgr, pKeys, pIV,
-                                               pSrcData, pDstData,
-                                               bitLength, numBuffs,
-                                               IMB_ZUC256_KEY_LEN_IN_BYTES,
-                                               tag_sz, iv_lens);
+                        submit_burst_eia3_jobs(mb_mgr, pKeys, pIV, pSrcData, pDstData, bitLength,
+                                               numBuffs, IMB_ZUC256_KEY_LEN_IN_BYTES, tag_sz,
+                                               iv_lens);
 
                 for (i = 0; i < numBuffs; i++) {
                         const uint32_t vector_idx = i % NUM_ZUC_256_EIA3_TESTS;
 
                         vector = &test256EIA3_vectors[vector_idx];
-                        retTmp = verify_tag_256(pDstData[i], vector,
-                                                tag_sz, numBuffs, i, 1);
+                        retTmp = verify_tag_256(pDstData[i], vector, tag_sz, numBuffs, i, 1);
                         if (retTmp)
                                 ret = retTmp;
                 }
@@ -1372,8 +1256,9 @@ int validate_zuc256_EIA3(struct IMB_MGR *mb_mgr, uint8_t **pSrcData,
         return ret;
 };
 
-int validate_zuc_algorithm(struct IMB_MGR *mb_mgr, uint8_t *pSrcData,
-                           uint8_t *pDstData, uint8_t *pKeys, uint8_t *pIV)
+int
+validate_zuc_algorithm(struct IMB_MGR *mb_mgr, uint8_t *pSrcData, uint8_t *pDstData, uint8_t *pKeys,
+                       uint8_t *pIV)
 {
         uint32_t i;
         int ret = 0;
@@ -1386,8 +1271,7 @@ int validate_zuc_algorithm(struct IMB_MGR *mb_mgr, uint8_t *pSrcData,
                 memcpy(pKeys, testZUC_vectors[i].CK, IMB_ZUC_KEY_LEN_IN_BYTES);
                 memcpy(pIV, testZUC_vectors[i].IV, IMB_ZUC_IV_LEN_IN_BYTES);
                 memset(pSrcData, 0, 8);
-                IMB_ZUC_EEA3_1_BUFFER(mb_mgr, pKeys, pIV, pSrcData, pDstData,
-                                      8);
+                IMB_ZUC_EEA3_1_BUFFER(mb_mgr, pKeys, pIV, pSrcData, pDstData, 8);
                 swapBytes.sbw[0] = bswap4(testZUC_vectors[i].Z[0]);
                 swapBytes.sbw[1] = bswap4(testZUC_vectors[i].Z[1]);
                 ret = memcmp(pDstData, swapBytes.sbb, 8);
@@ -1409,7 +1293,8 @@ int validate_zuc_algorithm(struct IMB_MGR *mb_mgr, uint8_t *pSrcData,
  ** @param ptr [IN] - pointer to beginning of buffer.$
  ** @param len [IN] - length of buffer.$
  *****************************************************************************/
-static void byte_hexdump(const char *message, const uint8_t *ptr, int len)
+static void
+byte_hexdump(const char *message, const uint8_t *ptr, int len)
 {
         int ctr;
 

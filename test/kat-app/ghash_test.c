@@ -30,45 +30,47 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdint.h>
-#include <string.h>		/* for memcmp() */
+#include <string.h> /* for memcmp() */
 
 #include <intel-ipsec-mb.h>
 #include "utils.h"
 #include "mac_test.h"
 
-int ghash_test(struct IMB_MGR *mb_mgr);
+int
+ghash_test(struct IMB_MGR *mb_mgr);
 
 extern const struct mac_test ghash_test_json[];
 
-static int check_data(const uint8_t *test, const char *expected,
-                      uint64_t len, const char *data_name)
+static int
+check_data(const uint8_t *test, const char *expected, uint64_t len, const char *data_name)
 {
-	int mismatch;
-	int is_error = 0;
+        int mismatch;
+        int is_error = 0;
 
-	if (len == 0)
-		return is_error;
+        if (len == 0)
+                return is_error;
 
-	if (test == NULL || expected == NULL || data_name == NULL)
-		return 1;
+        if (test == NULL || expected == NULL || data_name == NULL)
+                return 1;
 
-	mismatch = memcmp(test, expected, len);
-	if (mismatch) {
-		uint64_t a;
+        mismatch = memcmp(test, expected, len);
+        if (mismatch) {
+                uint64_t a;
 
-		is_error = 1;
-		printf("  expected results don't match %s \t\t", data_name);
-		for (a = 0; a < len; a++)
-			if (test[a] != expected[a]) {
-				printf(" '%x' != '%x' at %llx of %llx\n", test[a], expected[a],
-					(unsigned long long) a, (unsigned long long) len);
-				break;
-			}
-	}
-	return is_error;
+                is_error = 1;
+                printf("  expected results don't match %s \t\t", data_name);
+                for (a = 0; a < len; a++)
+                        if (test[a] != expected[a]) {
+                                printf(" '%x' != '%x' at %llx of %llx\n", test[a], expected[a],
+                                       (unsigned long long) a, (unsigned long long) len);
+                                break;
+                        }
+        }
+        return is_error;
 }
 
-int ghash_test(struct IMB_MGR *mb_mgr)
+int
+ghash_test(struct IMB_MGR *mb_mgr)
 {
         struct test_suite_context ts;
         int use_job_api = 0;
@@ -76,56 +78,56 @@ int ghash_test(struct IMB_MGR *mb_mgr)
         test_suite_start(&ts, "GHASH");
 
         while (use_job_api < 2) {
-		const struct mac_test *vec = ghash_test_json;
+                const struct mac_test *vec = ghash_test_json;
 
-		printf("GHASH test vectors (%s API):\n", use_job_api ? "job" : "direct");
-		while (vec->msg != NULL) {
-			struct gcm_key_data gdata_key;
-			uint8_t T_test[16];
+                printf("GHASH test vectors (%s API):\n", use_job_api ? "job" : "direct");
+                while (vec->msg != NULL) {
+                        struct gcm_key_data gdata_key;
+                        uint8_t T_test[16];
 
-			memset(&gdata_key, 0, sizeof(struct gcm_key_data));
-			memset(T_test, 0, sizeof(T_test));
-			IMB_GHASH_PRE(mb_mgr, vec->key, &gdata_key);
+                        memset(&gdata_key, 0, sizeof(struct gcm_key_data));
+                        memset(T_test, 0, sizeof(T_test));
+                        IMB_GHASH_PRE(mb_mgr, vec->key, &gdata_key);
 
-			if (!use_job_api) {
-				IMB_GHASH(mb_mgr, &gdata_key, vec->msg,
-					  (vec->msgSize / 8), T_test, vec->tagSize / 8);
-			} else {
-				IMB_JOB *job = IMB_GET_NEXT_JOB(mb_mgr);
+                        if (!use_job_api) {
+                                IMB_GHASH(mb_mgr, &gdata_key, vec->msg, (vec->msgSize / 8), T_test,
+                                          vec->tagSize / 8);
+                        } else {
+                                IMB_JOB *job = IMB_GET_NEXT_JOB(mb_mgr);
 
-				if (!job) {
-					fprintf(stderr, "failed to get job for ghash\n");
-					test_suite_update(&ts, 0, 1);
-					return test_suite_end(&ts);
-				}
+                                if (!job) {
+                                        fprintf(stderr, "failed to get job for ghash\n");
+                                        test_suite_update(&ts, 0, 1);
+                                        return test_suite_end(&ts);
+                                }
 
-				job->cipher_mode = IMB_CIPHER_NULL;
-				job->hash_alg = IMB_AUTH_GHASH;
-				job->u.GHASH._key = &gdata_key;
-				job->u.GHASH._init_tag = T_test;
-				job->src = (const void *) vec->msg;
-				job->msg_len_to_hash_in_bytes = (vec->msgSize / 8);
-				job->hash_start_src_offset_in_bytes = UINT64_C(0);
-				job->auth_tag_output = T_test;
-				job->auth_tag_output_len_in_bytes = vec->tagSize / 8;
+                                job->cipher_mode = IMB_CIPHER_NULL;
+                                job->hash_alg = IMB_AUTH_GHASH;
+                                job->u.GHASH._key = &gdata_key;
+                                job->u.GHASH._init_tag = T_test;
+                                job->src = (const void *) vec->msg;
+                                job->msg_len_to_hash_in_bytes = (vec->msgSize / 8);
+                                job->hash_start_src_offset_in_bytes = UINT64_C(0);
+                                job->auth_tag_output = T_test;
+                                job->auth_tag_output_len_in_bytes = vec->tagSize / 8;
 
-				job = IMB_SUBMIT_JOB(mb_mgr);
+                                job = IMB_SUBMIT_JOB(mb_mgr);
 
-				if (job == NULL)
-					job = IMB_FLUSH_JOB(mb_mgr);
-				if (job == NULL)
-					fprintf(stderr, "No job retrieved\n");
-				else if (job->status != IMB_STATUS_COMPLETED)
-					fprintf(stderr, "failed job, status:%d\n", job->status);
-			}
+                                if (job == NULL)
+                                        job = IMB_FLUSH_JOB(mb_mgr);
+                                if (job == NULL)
+                                        fprintf(stderr, "No job retrieved\n");
+                                else if (job->status != IMB_STATUS_COMPLETED)
+                                        fprintf(stderr, "failed job, status:%d\n", job->status);
+                        }
 
-			if (check_data(T_test, vec->tag, vec->tagSize / 8, "generated tag (T)"))
-				test_suite_update(&ts, 0, 1);
-			else
-				test_suite_update(&ts, 1, 0);
-			vec++;
-		}
-		use_job_api++;
+                        if (check_data(T_test, vec->tag, vec->tagSize / 8, "generated tag (T)"))
+                                test_suite_update(&ts, 0, 1);
+                        else
+                                test_suite_update(&ts, 1, 0);
+                        vec++;
+                }
+                use_job_api++;
         }
 
         return test_suite_end(&ts);

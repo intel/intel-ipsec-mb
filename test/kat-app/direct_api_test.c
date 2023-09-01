@@ -36,7 +36,7 @@
 #include "gcm_ctr_vectors_test.h"
 #include "utils.h"
 
-#define BUF_SIZE ((uint32_t)sizeof(struct gcm_key_data))
+#define BUF_SIZE ((uint32_t) sizeof(struct gcm_key_data))
 #define NUM_BUFS 8
 
 #ifdef _WIN32
@@ -51,7 +51,8 @@ jmp_buf env;
 
 #ifndef DEBUG
 #ifndef _WIN32
-static void seg_handler(int signum) __attribute__((noreturn));
+static void
+seg_handler(int signum) __attribute__((noreturn));
 #endif
 /* Signal handler to handle segfaults */
 static void
@@ -60,11 +61,12 @@ seg_handler(int signum)
         (void) signum; /* unused */
 
         signal(SIGSEGV, seg_handler); /* reset handler */
-        longjmp(env, 1); /* reset env */
+        longjmp(env, 1);              /* reset env */
 }
 #endif /* DEBUG */
 
-static void print_progress(void)
+static void
+print_progress(void)
 {
         if (!quiet_mode)
                 printf(".");
@@ -79,7 +81,7 @@ test_gcm_api(struct IMB_MGR *mgr)
         const uint32_t text_len = BUF_SIZE;
         uint8_t out_buf[BUF_SIZE];
         uint8_t zero_buf[BUF_SIZE];
-        struct gcm_key_data *key_data = (struct gcm_key_data *)out_buf;
+        struct gcm_key_data *key_data = (struct gcm_key_data *) out_buf;
         int seg_err; /* segfault flag */
 
         seg_err = setjmp(env);
@@ -99,100 +101,94 @@ test_gcm_api(struct IMB_MGR *mgr)
          */
 
         /* GCM Encrypt API tests */
-        IMB_AES128_GCM_ENC(mgr, NULL, NULL, NULL, NULL, -1,
-                           NULL, NULL, -1, NULL, -1);
-        IMB_AES128_GCM_ENC(mgr, NULL, NULL, out_buf, zero_buf,
-                           text_len, NULL, NULL, -1, NULL, -1);
+        IMB_AES128_GCM_ENC(mgr, NULL, NULL, NULL, NULL, -1, NULL, NULL, -1, NULL, -1);
+        IMB_AES128_GCM_ENC(mgr, NULL, NULL, out_buf, zero_buf, text_len, NULL, NULL, -1, NULL, -1);
         if (memcmp(out_buf, zero_buf, text_len) != 0) {
                 printf("%s: IMB_AES128_GCM_ENC, invalid "
-                       "param test failed!\n", __func__);
+                       "param test failed!\n",
+                       __func__);
                 return 1;
         }
         print_progress();
 
-        IMB_AES192_GCM_ENC(mgr, NULL, NULL, NULL, NULL, -1,
-                           NULL, NULL, -1, NULL, -1);
-        IMB_AES192_GCM_ENC(mgr, NULL, NULL, out_buf, zero_buf,
-                           text_len, NULL, NULL, -1, NULL, -1);
+        IMB_AES192_GCM_ENC(mgr, NULL, NULL, NULL, NULL, -1, NULL, NULL, -1, NULL, -1);
+        IMB_AES192_GCM_ENC(mgr, NULL, NULL, out_buf, zero_buf, text_len, NULL, NULL, -1, NULL, -1);
         if (memcmp(out_buf, zero_buf, text_len) != 0) {
                 printf("%s: IMB_AES192_GCM_ENC, invalid "
-                       "param test failed!\n", __func__);
+                       "param test failed!\n",
+                       __func__);
                 return 1;
         }
         print_progress();
 
-        IMB_AES256_GCM_ENC(mgr, NULL, NULL, NULL, NULL, -1,
-                           NULL, NULL, -1, NULL, -1);
-        IMB_AES256_GCM_ENC(mgr, NULL, NULL, out_buf, zero_buf,
-                           text_len, NULL, NULL, -1, NULL, -1);
+        IMB_AES256_GCM_ENC(mgr, NULL, NULL, NULL, NULL, -1, NULL, NULL, -1, NULL, -1);
+        IMB_AES256_GCM_ENC(mgr, NULL, NULL, out_buf, zero_buf, text_len, NULL, NULL, -1, NULL, -1);
         if (memcmp(out_buf, zero_buf, text_len) != 0) {
                 printf("%s: IMB_AES256_GCM_ENC, invalid "
-                       "param test failed!\n", __func__);
+                       "param test failed!\n",
+                       __func__);
                 return 1;
         }
         print_progress();
 
         /* GCM Decrypt API tests */
-        IMB_AES128_GCM_DEC(mgr, NULL, NULL, NULL, NULL, -1,
-                           NULL, NULL, -1, NULL, -1);
-        IMB_AES128_GCM_DEC(mgr, NULL, NULL, out_buf, zero_buf,
-                           text_len, NULL, NULL, -1, NULL, -1);
+        IMB_AES128_GCM_DEC(mgr, NULL, NULL, NULL, NULL, -1, NULL, NULL, -1, NULL, -1);
+        IMB_AES128_GCM_DEC(mgr, NULL, NULL, out_buf, zero_buf, text_len, NULL, NULL, -1, NULL, -1);
         if (memcmp(out_buf, zero_buf, text_len) != 0) {
                 printf("%s: IMB_AES128_GCM_DEC, invalid "
-                       "param test failed!\n", __func__);
+                       "param test failed!\n",
+                       __func__);
                 return 1;
         }
         print_progress();
 
-        IMB_AES192_GCM_ENC(mgr, NULL, NULL, NULL, NULL, -1,
-                           NULL, NULL, -1, NULL, -1);
-        IMB_AES192_GCM_ENC(mgr, NULL, NULL, out_buf, zero_buf,
-                           text_len, NULL, NULL, -1, NULL, -1);
+        IMB_AES192_GCM_ENC(mgr, NULL, NULL, NULL, NULL, -1, NULL, NULL, -1, NULL, -1);
+        IMB_AES192_GCM_ENC(mgr, NULL, NULL, out_buf, zero_buf, text_len, NULL, NULL, -1, NULL, -1);
         if (memcmp(out_buf, zero_buf, text_len) != 0) {
                 printf("%s: IMB_AES192_GCM_DEC, invalid "
-                       "param test failed!\n", __func__);
+                       "param test failed!\n",
+                       __func__);
                 return 1;
         }
         print_progress();
 
-        IMB_AES256_GCM_DEC(mgr, NULL, NULL, NULL, NULL, -1,
-                           NULL, NULL, -1, NULL, -1);
-        IMB_AES256_GCM_DEC(mgr, NULL, NULL, out_buf, zero_buf,
-                           text_len, NULL, NULL, -1, NULL, -1);
+        IMB_AES256_GCM_DEC(mgr, NULL, NULL, NULL, NULL, -1, NULL, NULL, -1, NULL, -1);
+        IMB_AES256_GCM_DEC(mgr, NULL, NULL, out_buf, zero_buf, text_len, NULL, NULL, -1, NULL, -1);
         if (memcmp(out_buf, zero_buf, text_len) != 0) {
                 printf("%s: IMB_AES256_GCM_DEC, invalid "
-                       "param test failed!\n", __func__);
+                       "param test failed!\n",
+                       __func__);
                 return 1;
         }
         print_progress();
 
         /* GCM Init tests */
         IMB_AES128_GCM_INIT(mgr, NULL, NULL, NULL, NULL, -1);
-        IMB_AES128_GCM_INIT(mgr, NULL, (struct gcm_context_data *)out_buf,
-                            NULL, NULL, text_len);
+        IMB_AES128_GCM_INIT(mgr, NULL, (struct gcm_context_data *) out_buf, NULL, NULL, text_len);
         if (memcmp(out_buf, zero_buf, text_len) != 0) {
                 printf("%s: IMB_AES128_GCM_INIT, invalid "
-                       "param test failed!\n", __func__);
+                       "param test failed!\n",
+                       __func__);
                 return 1;
         }
         print_progress();
 
         IMB_AES192_GCM_INIT(mgr, NULL, NULL, NULL, NULL, -1);
-        IMB_AES192_GCM_INIT(mgr, NULL, (struct gcm_context_data *)out_buf,
-                            NULL, NULL, text_len);
+        IMB_AES192_GCM_INIT(mgr, NULL, (struct gcm_context_data *) out_buf, NULL, NULL, text_len);
         if (memcmp(out_buf, zero_buf, text_len) != 0) {
                 printf("%s: IMB_AES192_GCM_INIT, invalid "
-                       "param test failed!\n", __func__);
+                       "param test failed!\n",
+                       __func__);
                 return 1;
         }
         print_progress();
 
         IMB_AES256_GCM_INIT(mgr, NULL, NULL, NULL, NULL, -1);
-        IMB_AES256_GCM_INIT(mgr, NULL, (struct gcm_context_data *)out_buf,
-                            NULL, NULL, text_len);
+        IMB_AES256_GCM_INIT(mgr, NULL, (struct gcm_context_data *) out_buf, NULL, NULL, text_len);
         if (memcmp(out_buf, zero_buf, text_len) != 0) {
                 printf("%s: IMB_AES256_GCM_INIT, invalid "
-                       "param test failed!\n", __func__);
+                       "param test failed!\n",
+                       __func__);
                 return 1;
         }
         print_progress();
@@ -202,7 +198,8 @@ test_gcm_api(struct IMB_MGR *mgr)
         IMB_AES128_GCM_ENC_UPDATE(mgr, NULL, NULL, out_buf, zero_buf, -1);
         if (memcmp(out_buf, zero_buf, text_len) != 0) {
                 printf("%s: IMB_AES128_GCM_ENC_UPDATE, invalid "
-                       "param test failed!\n", __func__);
+                       "param test failed!\n",
+                       __func__);
                 return 1;
         }
         print_progress();
@@ -211,7 +208,8 @@ test_gcm_api(struct IMB_MGR *mgr)
         IMB_AES192_GCM_ENC_UPDATE(mgr, NULL, NULL, out_buf, zero_buf, -1);
         if (memcmp(out_buf, zero_buf, text_len) != 0) {
                 printf("%s: IMB_AES192_GCM_ENC_UPDATE, invalid "
-                       "param test failed!\n", __func__);
+                       "param test failed!\n",
+                       __func__);
                 return 1;
         }
         print_progress();
@@ -220,7 +218,8 @@ test_gcm_api(struct IMB_MGR *mgr)
         IMB_AES256_GCM_ENC_UPDATE(mgr, NULL, NULL, out_buf, zero_buf, -1);
         if (memcmp(out_buf, zero_buf, text_len) != 0) {
                 printf("%s: IMB_AES256_GCM_ENC_UPDATE, invalid "
-                       "param test failed!\n", __func__);
+                       "param test failed!\n",
+                       __func__);
                 return 1;
         }
         print_progress();
@@ -230,7 +229,8 @@ test_gcm_api(struct IMB_MGR *mgr)
         IMB_AES128_GCM_DEC_UPDATE(mgr, NULL, NULL, out_buf, zero_buf, -1);
         if (memcmp(out_buf, zero_buf, text_len) != 0) {
                 printf("%s: IMB_AES128_GCM_DEC_UPDATE, invalid "
-                       "param test failed!\n", __func__);
+                       "param test failed!\n",
+                       __func__);
                 return 1;
         }
         print_progress();
@@ -239,7 +239,8 @@ test_gcm_api(struct IMB_MGR *mgr)
         IMB_AES192_GCM_DEC_UPDATE(mgr, NULL, NULL, out_buf, zero_buf, -1);
         if (memcmp(out_buf, zero_buf, text_len) != 0) {
                 printf("%s: IMB_AES192_GCM_DEC_UPDATE, invalid "
-                       "param test failed!\n", __func__);
+                       "param test failed!\n",
+                       __func__);
                 return 1;
         }
         print_progress();
@@ -248,7 +249,8 @@ test_gcm_api(struct IMB_MGR *mgr)
         IMB_AES256_GCM_DEC_UPDATE(mgr, NULL, NULL, out_buf, zero_buf, -1);
         if (memcmp(out_buf, zero_buf, text_len) != 0) {
                 printf("%s: IMB_AES256_GCM_DEC_UPDATE, invalid "
-                       "param test failed!\n", __func__);
+                       "param test failed!\n",
+                       __func__);
                 return 1;
         }
         print_progress();
@@ -258,7 +260,8 @@ test_gcm_api(struct IMB_MGR *mgr)
         IMB_AES128_GCM_ENC_FINALIZE(mgr, NULL, NULL, out_buf, -1);
         if (memcmp(out_buf, zero_buf, text_len) != 0) {
                 printf("%s: IMB_AES128_GCM_ENC_FINALIZE, invalid "
-                       "param test failed!\n", __func__);
+                       "param test failed!\n",
+                       __func__);
                 return 1;
         }
         print_progress();
@@ -267,7 +270,8 @@ test_gcm_api(struct IMB_MGR *mgr)
         IMB_AES192_GCM_ENC_FINALIZE(mgr, NULL, NULL, out_buf, -1);
         if (memcmp(out_buf, zero_buf, text_len) != 0) {
                 printf("%s: IMB_AES192_GCM_ENC_FINALIZE, invalid "
-                       "param test failed!\n", __func__);
+                       "param test failed!\n",
+                       __func__);
                 return 1;
         }
         print_progress();
@@ -276,7 +280,8 @@ test_gcm_api(struct IMB_MGR *mgr)
         IMB_AES256_GCM_ENC_FINALIZE(mgr, NULL, NULL, out_buf, -1);
         if (memcmp(out_buf, zero_buf, text_len) != 0) {
                 printf("%s: IMB_AES256_GCM_ENC_FINALIZE, invalid "
-                       "param test failed!\n", __func__);
+                       "param test failed!\n",
+                       __func__);
                 return 1;
         }
         print_progress();
@@ -286,7 +291,8 @@ test_gcm_api(struct IMB_MGR *mgr)
         IMB_AES128_GCM_DEC_FINALIZE(mgr, NULL, NULL, out_buf, -1);
         if (memcmp(out_buf, zero_buf, text_len) != 0) {
                 printf("%s: IMB_AES128_GCM_DEC_FINALIZE, invalid "
-                       "param test failed!\n", __func__);
+                       "param test failed!\n",
+                       __func__);
                 return 1;
         }
         print_progress();
@@ -295,7 +301,8 @@ test_gcm_api(struct IMB_MGR *mgr)
         IMB_AES192_GCM_DEC_FINALIZE(mgr, NULL, NULL, out_buf, -1);
         if (memcmp(out_buf, zero_buf, text_len) != 0) {
                 printf("%s: IMB_AES192_GCM_DEC_FINALIZE, invalid "
-                       "param test failed!\n", __func__);
+                       "param test failed!\n",
+                       __func__);
                 return 1;
         }
         print_progress();
@@ -304,7 +311,8 @@ test_gcm_api(struct IMB_MGR *mgr)
         IMB_AES256_GCM_DEC_FINALIZE(mgr, NULL, NULL, out_buf, -1);
         if (memcmp(out_buf, zero_buf, text_len) != 0) {
                 printf("%s: IMB_AES256_GCM_DEC_FINALIZE, invalid "
-                       "param test failed!\n", __func__);
+                       "param test failed!\n",
+                       __func__);
                 return 1;
         }
         print_progress();
@@ -323,7 +331,8 @@ test_gcm_api(struct IMB_MGR *mgr)
         IMB_AES128_GCM_PRE(mgr, NULL, key_data);
         if (memcmp(out_buf, zero_buf, text_len) != 0) {
                 printf("%s: IMB_AES128_GCM_PRE, invalid "
-                       "param test failed!\n", __func__);
+                       "param test failed!\n",
+                       __func__);
                 return 1;
         }
         print_progress();
@@ -332,7 +341,8 @@ test_gcm_api(struct IMB_MGR *mgr)
         IMB_AES192_GCM_PRE(mgr, NULL, key_data);
         if (memcmp(out_buf, zero_buf, text_len) != 0) {
                 printf("%s: IMB_AES192_GCM_PRE, invalid "
-                       "param test failed!\n", __func__);
+                       "param test failed!\n",
+                       __func__);
                 return 1;
         }
         print_progress();
@@ -341,7 +351,8 @@ test_gcm_api(struct IMB_MGR *mgr)
         IMB_AES256_GCM_PRE(mgr, NULL, key_data);
         if (memcmp(out_buf, zero_buf, text_len) != 0) {
                 printf("%s: IMB_AES256_GCM_PRE, invalid "
-                       "param test failed!\n", __func__);
+                       "param test failed!\n",
+                       __func__);
                 return 1;
         }
         print_progress();
@@ -383,7 +394,8 @@ test_key_exp_gen_api(struct IMB_MGR *mgr)
         IMB_AES_KEYEXP_128(mgr, NULL, out_buf, zero_buf);
         if (memcmp(out_buf, zero_buf, text_len) != 0) {
                 printf("%s: IMB_AES_KEYEXP_128, invalid "
-                       "param test failed!\n", __func__);
+                       "param test failed!\n",
+                       __func__);
                 return 1;
         }
         print_progress();
@@ -392,7 +404,8 @@ test_key_exp_gen_api(struct IMB_MGR *mgr)
         IMB_AES_KEYEXP_192(mgr, NULL, out_buf, zero_buf);
         if (memcmp(out_buf, zero_buf, text_len) != 0) {
                 printf("%s: IMB_AES_KEYEXP_192, invalid "
-                       "param test failed!\n", __func__);
+                       "param test failed!\n",
+                       __func__);
                 return 1;
         }
         print_progress();
@@ -401,7 +414,8 @@ test_key_exp_gen_api(struct IMB_MGR *mgr)
         IMB_AES_KEYEXP_256(mgr, NULL, out_buf, zero_buf);
         if (memcmp(out_buf, zero_buf, text_len) != 0) {
                 printf("%s: IMB_AES_KEYEXP_256, invalid "
-                       "param test failed!\n", __func__);
+                       "param test failed!\n",
+                       __func__);
                 return 1;
         }
         print_progress();
@@ -410,7 +424,8 @@ test_key_exp_gen_api(struct IMB_MGR *mgr)
         IMB_AES_CMAC_SUBKEY_GEN_128(mgr, NULL, out_buf, zero_buf);
         if (memcmp(out_buf, zero_buf, text_len) != 0) {
                 printf("%s: IMB_AES_CMAC_SUBKEY_GEN_128, invalid "
-                       "param test failed!\n", __func__);
+                       "param test failed!\n",
+                       __func__);
                 return 1;
         }
         print_progress();
@@ -419,16 +434,18 @@ test_key_exp_gen_api(struct IMB_MGR *mgr)
         IMB_AES_XCBC_KEYEXP(mgr, NULL, out_buf, out_buf, out_buf);
         if (memcmp(out_buf, zero_buf, text_len) != 0) {
                 printf("%s: IMB_AES_XCBC_KEYEXP, invalid "
-                       "param test failed!\n", __func__);
+                       "param test failed!\n",
+                       __func__);
                 return 1;
         }
         print_progress();
 
         IMB_DES_KEYSCHED(mgr, NULL, NULL);
-        IMB_DES_KEYSCHED(mgr, (uint64_t *)out_buf, NULL);
+        IMB_DES_KEYSCHED(mgr, (uint64_t *) out_buf, NULL);
         if (memcmp(out_buf, zero_buf, text_len) != 0) {
                 printf("%s: IMB_DES_KEYSCHED, invalid "
-                       "param test failed!\n", __func__);
+                       "param test failed!\n",
+                       __func__);
                 return 1;
         }
         print_progress();
@@ -469,7 +486,8 @@ test_hash_api(struct IMB_MGR *mgr)
         IMB_SHA1_ONE_BLOCK(mgr, NULL, out_buf);
         if (memcmp(out_buf, zero_buf, text_len) != 0) {
                 printf("%s: IMB_SHA1_ONE_BLOCK, invalid "
-                       "param test failed!\n", __func__);
+                       "param test failed!\n",
+                       __func__);
                 return 1;
         }
         print_progress();
@@ -478,7 +496,8 @@ test_hash_api(struct IMB_MGR *mgr)
         IMB_SHA1(mgr, NULL, BUF_SIZE, out_buf);
         if (memcmp(out_buf, zero_buf, text_len) != 0) {
                 printf("%s: IMB_SHA1, invalid "
-                       "param test failed!\n", __func__);
+                       "param test failed!\n",
+                       __func__);
                 return 1;
         }
         print_progress();
@@ -487,7 +506,8 @@ test_hash_api(struct IMB_MGR *mgr)
         IMB_SHA224_ONE_BLOCK(mgr, NULL, out_buf);
         if (memcmp(out_buf, zero_buf, text_len) != 0) {
                 printf("%s: IMB_SHA224_ONE_BLOCK, invalid "
-                       "param test failed!\n", __func__);
+                       "param test failed!\n",
+                       __func__);
                 return 1;
         }
         print_progress();
@@ -496,7 +516,8 @@ test_hash_api(struct IMB_MGR *mgr)
         IMB_SHA224(mgr, NULL, BUF_SIZE, out_buf);
         if (memcmp(out_buf, zero_buf, text_len) != 0) {
                 printf("%s: IMB_SHA224, invalid "
-                       "param test failed!\n", __func__);
+                       "param test failed!\n",
+                       __func__);
                 return 1;
         }
         print_progress();
@@ -505,7 +526,8 @@ test_hash_api(struct IMB_MGR *mgr)
         IMB_SHA256_ONE_BLOCK(mgr, NULL, out_buf);
         if (memcmp(out_buf, zero_buf, text_len) != 0) {
                 printf("%s: IMB_SHA256_ONE_BLOCK, invalid "
-                       "param test failed!\n", __func__);
+                       "param test failed!\n",
+                       __func__);
                 return 1;
         }
         print_progress();
@@ -514,7 +536,8 @@ test_hash_api(struct IMB_MGR *mgr)
         IMB_SHA256(mgr, NULL, BUF_SIZE, out_buf);
         if (memcmp(out_buf, zero_buf, text_len) != 0) {
                 printf("%s: IMB_SHA256, invalid "
-                       "param test failed!\n", __func__);
+                       "param test failed!\n",
+                       __func__);
                 return 1;
         }
         print_progress();
@@ -523,7 +546,8 @@ test_hash_api(struct IMB_MGR *mgr)
         IMB_SHA384_ONE_BLOCK(mgr, NULL, out_buf);
         if (memcmp(out_buf, zero_buf, text_len) != 0) {
                 printf("%s: IMB_SHA384_ONE_BLOCK, invalid "
-                       "param test failed!\n", __func__);
+                       "param test failed!\n",
+                       __func__);
                 return 1;
         }
         print_progress();
@@ -532,7 +556,8 @@ test_hash_api(struct IMB_MGR *mgr)
         IMB_SHA384(mgr, NULL, BUF_SIZE, out_buf);
         if (memcmp(out_buf, zero_buf, text_len) != 0) {
                 printf("%s: IMB_SHA384, invalid "
-                       "param test failed!\n", __func__);
+                       "param test failed!\n",
+                       __func__);
                 return 1;
         }
         print_progress();
@@ -541,7 +566,8 @@ test_hash_api(struct IMB_MGR *mgr)
         IMB_SHA512_ONE_BLOCK(mgr, NULL, out_buf);
         if (memcmp(out_buf, zero_buf, text_len) != 0) {
                 printf("%s: IMB_SHA512_ONE_BLOCK, invalid "
-                       "param test failed!\n", __func__);
+                       "param test failed!\n",
+                       __func__);
                 return 1;
         }
         print_progress();
@@ -550,7 +576,8 @@ test_hash_api(struct IMB_MGR *mgr)
         IMB_SHA512(mgr, NULL, BUF_SIZE, out_buf);
         if (memcmp(out_buf, zero_buf, text_len) != 0) {
                 printf("%s: IMB_SHA512, invalid "
-                       "param test failed!\n", __func__);
+                       "param test failed!\n",
+                       __func__);
                 return 1;
         }
         print_progress();
@@ -559,7 +586,8 @@ test_hash_api(struct IMB_MGR *mgr)
         IMB_MD5_ONE_BLOCK(mgr, NULL, out_buf);
         if (memcmp(out_buf, zero_buf, text_len) != 0) {
                 printf("%s: IMB_MD5_ONE_BLOCK, invalid "
-                       "param test failed!\n", __func__);
+                       "param test failed!\n",
+                       __func__);
                 return 1;
         }
         print_progress();
@@ -600,7 +628,8 @@ test_aes_api(struct IMB_MGR *mgr)
         IMB_AES128_CFB_ONE(mgr, out_buf, NULL, NULL, NULL, -1);
         if (memcmp(out_buf, zero_buf, text_len) != 0) {
                 printf("%s: IMB_AES128_CFB_ONE, invalid "
-                       "param test failed!\n", __func__);
+                       "param test failed!\n",
+                       __func__);
                 return 1;
         }
         print_progress();
@@ -631,7 +660,7 @@ test_zuc_api(struct IMB_MGR *mgr)
         }
 
         for (i = 0; i < NUM_BUFS; i++) {
-                out_bufs[i] = (void *)&out_buf;
+                out_bufs[i] = (void *) &out_buf;
                 lens[i] = text_len;
         }
 
@@ -645,26 +674,22 @@ test_zuc_api(struct IMB_MGR *mgr)
          *    and verify output buffer is not modified
          */
 
-        ret1 = zuc_eea3_iv_gen(inv_len, (const uint8_t)inv_len,
-                               (const uint8_t)inv_len, NULL);
-        ret2 = zuc_eea3_iv_gen(inv_len, (const uint8_t)inv_len,
-                               (const uint8_t)inv_len, out_buf);
-        if ((memcmp(out_buf, zero_buf, text_len) != 0) ||
-            ret1 == 0 || ret2 == 0) {
+        ret1 = zuc_eea3_iv_gen(inv_len, (const uint8_t) inv_len, (const uint8_t) inv_len, NULL);
+        ret2 = zuc_eea3_iv_gen(inv_len, (const uint8_t) inv_len, (const uint8_t) inv_len, out_buf);
+        if ((memcmp(out_buf, zero_buf, text_len) != 0) || ret1 == 0 || ret2 == 0) {
                 printf("%s: zuc_eea3_iv_gen, invalid "
-                       "param test failed!\n", __func__);
+                       "param test failed!\n",
+                       __func__);
                 return 1;
         }
         print_progress();
 
-        ret1 = zuc_eia3_iv_gen(inv_len, (const uint8_t)inv_len,
-                               (const uint8_t)inv_len, NULL);
-        ret2 = zuc_eia3_iv_gen(inv_len, (const uint8_t)inv_len,
-                               (const uint8_t)inv_len, out_buf);
-        if ((memcmp(out_buf, zero_buf, text_len) != 0) ||
-            ret1 == 0 || ret2 == 0) {
+        ret1 = zuc_eia3_iv_gen(inv_len, (const uint8_t) inv_len, (const uint8_t) inv_len, NULL);
+        ret2 = zuc_eia3_iv_gen(inv_len, (const uint8_t) inv_len, (const uint8_t) inv_len, out_buf);
+        if ((memcmp(out_buf, zero_buf, text_len) != 0) || ret1 == 0 || ret2 == 0) {
                 printf("%s: zuc_eia3_iv_gen, invalid "
-                       "param test failed!\n", __func__);
+                       "param test failed!\n",
+                       __func__);
                 return 1;
         }
         print_progress();
@@ -673,7 +698,8 @@ test_zuc_api(struct IMB_MGR *mgr)
         IMB_ZUC_EEA3_1_BUFFER(mgr, NULL, NULL, NULL, out_buf, text_len);
         if (memcmp(out_buf, zero_buf, text_len) != 0) {
                 printf("%s: IMB_ZUC_EEA3_1_BUFFER, invalid "
-                       "param test failed!\n", __func__);
+                       "param test failed!\n",
+                       __func__);
                 return 1;
         }
         print_progress();
@@ -682,18 +708,18 @@ test_zuc_api(struct IMB_MGR *mgr)
         IMB_ZUC_EEA3_4_BUFFER(mgr, NULL, NULL, NULL, out_bufs, lens);
         if (memcmp(out_buf, zero_buf, text_len) != 0) {
                 printf("%s: IMB_ZUC_EEA3_4_BUFFER, invalid "
-                       "param test failed!\n", __func__);
+                       "param test failed!\n",
+                       __func__);
                 return 1;
         }
         print_progress();
 
-        IMB_ZUC_EEA3_N_BUFFER(mgr, NULL, NULL, NULL,
-                              NULL, NULL, inv_len);
-        IMB_ZUC_EEA3_N_BUFFER(mgr, NULL, NULL, NULL,
-                              out_bufs, lens, NUM_BUFS);
+        IMB_ZUC_EEA3_N_BUFFER(mgr, NULL, NULL, NULL, NULL, NULL, inv_len);
+        IMB_ZUC_EEA3_N_BUFFER(mgr, NULL, NULL, NULL, out_bufs, lens, NUM_BUFS);
         if (memcmp(out_buf, zero_buf, text_len) != 0) {
                 printf("%s: IMB_ZUC_EEA3_N_BUFFER, invalid "
-                       "param test failed!\n", __func__);
+                       "param test failed!\n",
+                       __func__);
                 return 1;
         }
         print_progress();
@@ -702,7 +728,8 @@ test_zuc_api(struct IMB_MGR *mgr)
         IMB_ZUC_EIA3_1_BUFFER(mgr, NULL, NULL, NULL, text_len, out_bufs[0]);
         if (memcmp(out_buf, zero_buf, text_len) != 0) {
                 printf("%s: IMB_ZUC_EIA3_1_BUFFER, invalid "
-                       "param test failed!\n", __func__);
+                       "param test failed!\n",
+                       __func__);
                 return 1;
         }
         print_progress();
@@ -734,7 +761,7 @@ test_kasumi_api(struct IMB_MGR *mgr)
         }
 
         for (i = 0; i < NUM_BUFS; i++) {
-                out_bufs[i] = (void *)&out_buf;
+                out_bufs[i] = (void *) &out_buf;
                 lens[i] = text_len;
         }
 
@@ -748,14 +775,12 @@ test_kasumi_api(struct IMB_MGR *mgr)
          *    and verify output buffer is not modified
          */
 
-        ret1 = kasumi_f8_iv_gen(inv_len, (const uint8_t)inv_len,
-                                (const uint8_t)inv_len, NULL);
-        ret2 = kasumi_f8_iv_gen(inv_len, (const uint8_t)inv_len,
-                                (const uint8_t)inv_len, out_buf);
-        if ((memcmp(out_buf, zero_buf, text_len) != 0) ||
-            ret1 == 0 || ret2 == 0) {
+        ret1 = kasumi_f8_iv_gen(inv_len, (const uint8_t) inv_len, (const uint8_t) inv_len, NULL);
+        ret2 = kasumi_f8_iv_gen(inv_len, (const uint8_t) inv_len, (const uint8_t) inv_len, out_buf);
+        if ((memcmp(out_buf, zero_buf, text_len) != 0) || ret1 == 0 || ret2 == 0) {
                 printf("%s: kasumi_f8_iv_gen, invalid "
-                       "param test failed!\n", __func__);
+                       "param test failed!\n",
+                       __func__);
                 return 1;
         }
         print_progress();
@@ -763,7 +788,8 @@ test_kasumi_api(struct IMB_MGR *mgr)
         ret1 = kasumi_f9_iv_gen(inv_len, inv_len, NULL);
         if ((memcmp(out_buf, zero_buf, text_len) != 0) || ret1 == 0) {
                 printf("%s: kasumi_f9_iv_gen, invalid "
-                       "param test failed!\n", __func__);
+                       "param test failed!\n",
+                       __func__);
                 return 1;
         }
         print_progress();
@@ -772,64 +798,63 @@ test_kasumi_api(struct IMB_MGR *mgr)
         IMB_KASUMI_F8_1_BUFFER(mgr, NULL, inv_iv, NULL, out_buf, text_len);
         if (memcmp(out_buf, zero_buf, text_len) != 0) {
                 printf("%s: IMB_KASUMI_F8_1_BUFFER, invalid "
-                       "param test failed!\n", __func__);
+                       "param test failed!\n",
+                       __func__);
                 return 1;
         }
         print_progress();
 
-        IMB_KASUMI_F8_1_BUFFER_BIT(mgr, NULL, inv_iv, NULL,
-                                   NULL, inv_len, inv_len);
-        IMB_KASUMI_F8_1_BUFFER_BIT(mgr, NULL, inv_iv, NULL,
-                                   out_buf, text_len, 0);
+        IMB_KASUMI_F8_1_BUFFER_BIT(mgr, NULL, inv_iv, NULL, NULL, inv_len, inv_len);
+        IMB_KASUMI_F8_1_BUFFER_BIT(mgr, NULL, inv_iv, NULL, out_buf, text_len, 0);
         if (memcmp(out_buf, zero_buf, text_len) != 0) {
                 printf("%s: IMB_KASUMI_F8_1_BUFFER_BIT, invalid "
-                       "param test failed!\n", __func__);
+                       "param test failed!\n",
+                       __func__);
                 return 1;
         }
         print_progress();
 
-        IMB_KASUMI_F8_2_BUFFER(mgr, NULL, inv_iv, inv_iv, NULL,
-                               NULL, inv_len, NULL, NULL, inv_len);
-        IMB_KASUMI_F8_2_BUFFER(mgr, NULL, inv_iv, inv_iv, NULL,
-                               out_buf, text_len, NULL, out_buf, text_len);
+        IMB_KASUMI_F8_2_BUFFER(mgr, NULL, inv_iv, inv_iv, NULL, NULL, inv_len, NULL, NULL, inv_len);
+        IMB_KASUMI_F8_2_BUFFER(mgr, NULL, inv_iv, inv_iv, NULL, out_buf, text_len, NULL, out_buf,
+                               text_len);
         if (memcmp(out_buf, zero_buf, text_len) != 0) {
                 printf("%s: IMB_KASUMI_F8_2_BUFFER, invalid "
-                       "param test failed!\n", __func__);
+                       "param test failed!\n",
+                       __func__);
                 return 1;
         }
         print_progress();
 
-        IMB_KASUMI_F8_3_BUFFER(mgr, NULL, inv_iv, inv_iv, inv_iv, NULL,
-                               NULL, NULL, NULL, NULL, NULL, inv_len);
-        IMB_KASUMI_F8_3_BUFFER(mgr, NULL, inv_iv, inv_iv, inv_iv, NULL,
-                               out_buf, NULL, out_buf, NULL, out_buf, text_len);
+        IMB_KASUMI_F8_3_BUFFER(mgr, NULL, inv_iv, inv_iv, inv_iv, NULL, NULL, NULL, NULL, NULL,
+                               NULL, inv_len);
+        IMB_KASUMI_F8_3_BUFFER(mgr, NULL, inv_iv, inv_iv, inv_iv, NULL, out_buf, NULL, out_buf,
+                               NULL, out_buf, text_len);
         if (memcmp(out_buf, zero_buf, text_len) != 0) {
                 printf("%s: IMB_KASUMI_F8_3_BUFFER, invalid "
-                       "param test failed!\n", __func__);
+                       "param test failed!\n",
+                       __func__);
                 return 1;
         }
         print_progress();
 
-        IMB_KASUMI_F8_4_BUFFER(mgr, NULL, inv_iv, inv_iv, inv_iv, inv_iv,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               inv_len);
-        IMB_KASUMI_F8_4_BUFFER(mgr, NULL, inv_iv, inv_iv, inv_iv, inv_iv,
-                               NULL, out_buf, NULL, out_buf, NULL, out_buf,
-                               NULL, out_buf, inv_len);
+        IMB_KASUMI_F8_4_BUFFER(mgr, NULL, inv_iv, inv_iv, inv_iv, inv_iv, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, inv_len);
+        IMB_KASUMI_F8_4_BUFFER(mgr, NULL, inv_iv, inv_iv, inv_iv, inv_iv, NULL, out_buf, NULL,
+                               out_buf, NULL, out_buf, NULL, out_buf, inv_len);
         if (memcmp(out_buf, zero_buf, text_len) != 0) {
                 printf("%s: IMB_KASUMI_F8_4_BUFFER, invalid "
-                       "param test failed!\n", __func__);
+                       "param test failed!\n",
+                       __func__);
                 return 1;
         }
         print_progress();
 
-        IMB_KASUMI_F8_N_BUFFER(mgr, NULL, NULL, NULL,
-                               NULL, NULL, inv_len);
-        IMB_KASUMI_F8_N_BUFFER(mgr, NULL, NULL, NULL,
-                               out_bufs, lens, NUM_BUFS);
+        IMB_KASUMI_F8_N_BUFFER(mgr, NULL, NULL, NULL, NULL, NULL, inv_len);
+        IMB_KASUMI_F8_N_BUFFER(mgr, NULL, NULL, NULL, out_bufs, lens, NUM_BUFS);
         if (memcmp(out_buf, zero_buf, text_len) != 0) {
                 printf("%s: IMB_KASUMI_F8_N_BUFFER, invalid "
-                       "param test failed!\n", __func__);
+                       "param test failed!\n",
+                       __func__);
                 return 1;
         }
         print_progress();
@@ -838,47 +863,46 @@ test_kasumi_api(struct IMB_MGR *mgr)
         IMB_KASUMI_F9_1_BUFFER(mgr, NULL, NULL, text_len, out_buf);
         if (memcmp(out_buf, zero_buf, text_len) != 0) {
                 printf("%s: IMB_KASUMI_F9_1_BUFFER, invalid "
-                       "param test failed!\n", __func__);
+                       "param test failed!\n",
+                       __func__);
                 return 1;
         }
         print_progress();
 
-        IMB_KASUMI_F9_1_BUFFER_USER(mgr, NULL, inv_iv, NULL,
-                                    inv_len, NULL, inv_len);
-        IMB_KASUMI_F9_1_BUFFER_USER(mgr, NULL, inv_iv, NULL,
-                                    text_len, out_buf, 0);
+        IMB_KASUMI_F9_1_BUFFER_USER(mgr, NULL, inv_iv, NULL, inv_len, NULL, inv_len);
+        IMB_KASUMI_F9_1_BUFFER_USER(mgr, NULL, inv_iv, NULL, text_len, out_buf, 0);
         if (memcmp(out_buf, zero_buf, text_len) != 0) {
                 printf("%s: IMB_KASUMI_F9_1_BUFFER_USER, invalid "
-                       "param test failed!\n", __func__);
+                       "param test failed!\n",
+                       __func__);
                 return 1;
         }
         print_progress();
 
         ret1 = IMB_KASUMI_INIT_F8_KEY_SCHED(mgr, NULL, NULL);
-        ret2 = IMB_KASUMI_INIT_F8_KEY_SCHED(mgr, NULL,
-                                            (kasumi_key_sched_t *)out_buf);
-        if ((memcmp(out_buf, zero_buf, text_len) != 0) ||
-            ret1 == 0 || ret2 == 0) {
+        ret2 = IMB_KASUMI_INIT_F8_KEY_SCHED(mgr, NULL, (kasumi_key_sched_t *) out_buf);
+        if ((memcmp(out_buf, zero_buf, text_len) != 0) || ret1 == 0 || ret2 == 0) {
                 printf("%s: IMB_KASUMI_INIT_F8_KEY_SCHED, invalid "
-                       "param test failed!\n", __func__);
+                       "param test failed!\n",
+                       __func__);
                 return 1;
         }
         print_progress();
 
         ret1 = IMB_KASUMI_INIT_F9_KEY_SCHED(mgr, NULL, NULL);
-        ret2 = IMB_KASUMI_INIT_F9_KEY_SCHED(mgr, NULL,
-                                            (kasumi_key_sched_t *)out_buf);
-        if ((memcmp(out_buf, zero_buf, text_len) != 0) ||
-            ret1 == 0 || ret2 == 0) {
+        ret2 = IMB_KASUMI_INIT_F9_KEY_SCHED(mgr, NULL, (kasumi_key_sched_t *) out_buf);
+        if ((memcmp(out_buf, zero_buf, text_len) != 0) || ret1 == 0 || ret2 == 0) {
                 printf("%s: IMB_KASUMI_INIT_F9_KEY_SCHED, invalid "
-                       "param test failed!\n", __func__);
+                       "param test failed!\n",
+                       __func__);
                 return 1;
         }
         print_progress();
 
         if (IMB_KASUMI_KEY_SCHED_SIZE(mgr) == 0) {
                 printf("%s: IMB_KASUMI_KEY_SCHED_SIZE, invalid "
-                       "param test failed!\n", __func__);
+                       "param test failed!\n",
+                       __func__);
                 return 1;
         }
         print_progress();
@@ -909,7 +933,7 @@ test_snow3g_api(struct IMB_MGR *mgr)
         }
 
         for (i = 0; i < NUM_BUFS; i++) {
-                out_bufs[i] = (void *)&out_buf;
+                out_bufs[i] = (void *) &out_buf;
                 lens[i] = text_len;
         }
 
@@ -923,26 +947,22 @@ test_snow3g_api(struct IMB_MGR *mgr)
          *    and verify output buffer is not modified
          */
 
-        ret1 = snow3g_f8_iv_gen(inv_len, (const uint8_t)inv_len,
-                                (const uint8_t)inv_len, NULL);
-        ret2 = snow3g_f8_iv_gen(inv_len, (const uint8_t)inv_len,
-                                (const uint8_t)inv_len, out_buf);
-        if ((memcmp(out_buf, zero_buf, text_len) != 0) ||
-            ret1 == 0 || ret2 == 0) {
+        ret1 = snow3g_f8_iv_gen(inv_len, (const uint8_t) inv_len, (const uint8_t) inv_len, NULL);
+        ret2 = snow3g_f8_iv_gen(inv_len, (const uint8_t) inv_len, (const uint8_t) inv_len, out_buf);
+        if ((memcmp(out_buf, zero_buf, text_len) != 0) || ret1 == 0 || ret2 == 0) {
                 printf("%s: snow3g_f8_iv_gen, invalid "
-                       "param test failed!\n", __func__);
+                       "param test failed!\n",
+                       __func__);
                 return 1;
         }
         print_progress();
 
-        ret1 = snow3g_f9_iv_gen(inv_len, (const uint8_t)inv_len,
-                                (const uint8_t)inv_len, NULL);
-        ret2 = snow3g_f9_iv_gen(inv_len, (const uint8_t)inv_len,
-                                (const uint8_t)inv_len, out_buf);
-        if ((memcmp(out_buf, zero_buf, text_len) != 0) ||
-            ret1 == 0 || ret2 == 0) {
+        ret1 = snow3g_f9_iv_gen(inv_len, (const uint8_t) inv_len, (const uint8_t) inv_len, NULL);
+        ret2 = snow3g_f9_iv_gen(inv_len, (const uint8_t) inv_len, (const uint8_t) inv_len, out_buf);
+        if ((memcmp(out_buf, zero_buf, text_len) != 0) || ret1 == 0 || ret2 == 0) {
                 printf("%s: snow3g_f9_iv_gen, invalid "
-                       "param test failed!\n", __func__);
+                       "param test failed!\n",
+                       __func__);
                 return 1;
         }
         print_progress();
@@ -951,61 +971,57 @@ test_snow3g_api(struct IMB_MGR *mgr)
         IMB_SNOW3G_F8_1_BUFFER(mgr, NULL, NULL, NULL, out_buf, text_len);
         if (memcmp(out_buf, zero_buf, text_len) != 0) {
                 printf("%s: IMB_SNOW3G_F8_1_BUFFER, invalid "
-                       "param test failed!\n", __func__);
+                       "param test failed!\n",
+                       __func__);
                 return 1;
         }
         print_progress();
 
-        IMB_SNOW3G_F8_1_BUFFER_BIT(mgr, NULL, NULL, NULL, NULL,
-                                   inv_len, inv_len);
-        IMB_SNOW3G_F8_1_BUFFER_BIT(mgr, NULL, NULL, NULL, out_buf,
-                                   text_len, 0);
+        IMB_SNOW3G_F8_1_BUFFER_BIT(mgr, NULL, NULL, NULL, NULL, inv_len, inv_len);
+        IMB_SNOW3G_F8_1_BUFFER_BIT(mgr, NULL, NULL, NULL, out_buf, text_len, 0);
         if (memcmp(out_buf, zero_buf, text_len) != 0) {
                 printf("%s: IMB_SNOW3G_F8_1_BUFFER_BIT, invalid "
-                       "param test failed!\n", __func__);
+                       "param test failed!\n",
+                       __func__);
                 return 1;
         }
         print_progress();
 
-        IMB_SNOW3G_F8_2_BUFFER(mgr, NULL, NULL, NULL, NULL,
-                               NULL, inv_len, NULL, NULL, inv_len);
-        IMB_SNOW3G_F8_2_BUFFER(mgr, NULL, NULL, NULL, NULL,
-                               out_buf, text_len, NULL, out_buf, text_len);
+        IMB_SNOW3G_F8_2_BUFFER(mgr, NULL, NULL, NULL, NULL, NULL, inv_len, NULL, NULL, inv_len);
+        IMB_SNOW3G_F8_2_BUFFER(mgr, NULL, NULL, NULL, NULL, out_buf, text_len, NULL, out_buf,
+                               text_len);
         if (memcmp(out_buf, zero_buf, text_len) != 0) {
                 printf("%s: IMB_SNOW3G_F8_2_BUFFER, invalid "
-                       "param test failed!\n", __func__);
+                       "param test failed!\n",
+                       __func__);
                 return 1;
         }
         print_progress();
 
-        IMB_SNOW3G_F8_4_BUFFER(mgr, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, inv_len, NULL, NULL, inv_len,
-                               NULL, NULL, inv_len, NULL, NULL, inv_len);
-        IMB_SNOW3G_F8_4_BUFFER(mgr, NULL, NULL, NULL, NULL, NULL,
-                               NULL, out_buf, inv_len, NULL, out_buf, inv_len,
-                               NULL, out_buf, inv_len, NULL, out_buf, inv_len);
+        IMB_SNOW3G_F8_4_BUFFER(mgr, NULL, NULL, NULL, NULL, NULL, NULL, NULL, inv_len, NULL, NULL,
+                               inv_len, NULL, NULL, inv_len, NULL, NULL, inv_len);
+        IMB_SNOW3G_F8_4_BUFFER(mgr, NULL, NULL, NULL, NULL, NULL, NULL, out_buf, inv_len, NULL,
+                               out_buf, inv_len, NULL, out_buf, inv_len, NULL, out_buf, inv_len);
         if (memcmp(out_buf, zero_buf, text_len) != 0) {
                 printf("%s: IMB_SNOW3G_F8_4_BUFFER, invalid "
-                       "param test failed!\n", __func__);
+                       "param test failed!\n",
+                       __func__);
                 return 1;
         }
         print_progress();
 
-        IMB_SNOW3G_F8_8_BUFFER(mgr, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, inv_len, NULL, NULL, inv_len,
-                               NULL, NULL, inv_len, NULL, NULL, inv_len,
-                               NULL, NULL, inv_len, NULL, NULL, inv_len,
-                               NULL, NULL, inv_len, NULL, NULL, inv_len);
-        IMB_SNOW3G_F8_8_BUFFER(mgr, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL,
-                               NULL, out_buf, inv_len, NULL, out_buf, inv_len,
-                               NULL, out_buf, inv_len, NULL, out_buf, inv_len,
-                               NULL, out_buf, inv_len, NULL, out_buf, inv_len,
-                               NULL, out_buf, inv_len, NULL, out_buf, inv_len);
+        IMB_SNOW3G_F8_8_BUFFER(mgr, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, inv_len, NULL, NULL, inv_len, NULL, NULL, inv_len, NULL, NULL,
+                               inv_len, NULL, NULL, inv_len, NULL, NULL, inv_len, NULL, NULL,
+                               inv_len, NULL, NULL, inv_len);
+        IMB_SNOW3G_F8_8_BUFFER(mgr, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               out_buf, inv_len, NULL, out_buf, inv_len, NULL, out_buf, inv_len,
+                               NULL, out_buf, inv_len, NULL, out_buf, inv_len, NULL, out_buf,
+                               inv_len, NULL, out_buf, inv_len, NULL, out_buf, inv_len);
         if (memcmp(out_buf, zero_buf, text_len) != 0) {
                 printf("%s: IMB_SNOW3G_F8_8_BUFFER, invalid "
-                       "param test failed!\n", __func__);
+                       "param test failed!\n",
+                       __func__);
                 return 1;
         }
         print_progress();
@@ -1014,7 +1030,8 @@ test_snow3g_api(struct IMB_MGR *mgr)
         IMB_SNOW3G_F8_8_BUFFER_MULTIKEY(mgr, NULL, NULL, NULL, out_bufs, lens);
         if (memcmp(out_buf, zero_buf, text_len) != 0) {
                 printf("%s: IMB_SNOW3G_F8_8_BUFFER_MULTIKEY, invalid "
-                       "param test failed!\n", __func__);
+                       "param test failed!\n",
+                       __func__);
                 return 1;
         }
         print_progress();
@@ -1023,18 +1040,18 @@ test_snow3g_api(struct IMB_MGR *mgr)
         IMB_SNOW3G_F8_N_BUFFER(mgr, NULL, NULL, NULL, out_bufs, lens, NUM_BUFS);
         if (memcmp(out_buf, zero_buf, text_len) != 0) {
                 printf("%s: IMB_SNOW3G_F8_N_BUFFER, invalid "
-                       "param test failed!\n", __func__);
+                       "param test failed!\n",
+                       __func__);
                 return 1;
         }
         print_progress();
 
-        IMB_SNOW3G_F8_N_BUFFER_MULTIKEY(mgr, NULL, NULL, NULL, NULL,
-                                        NULL, inv_len);
-        IMB_SNOW3G_F8_N_BUFFER_MULTIKEY(mgr, NULL, NULL, NULL, out_bufs,
-                                        lens, NUM_BUFS);
+        IMB_SNOW3G_F8_N_BUFFER_MULTIKEY(mgr, NULL, NULL, NULL, NULL, NULL, inv_len);
+        IMB_SNOW3G_F8_N_BUFFER_MULTIKEY(mgr, NULL, NULL, NULL, out_bufs, lens, NUM_BUFS);
         if (memcmp(out_buf, zero_buf, text_len) != 0) {
                 printf("%s: IMB_SNOW3G_F8_N_BUFFER_MULTIKEY, invalid "
-                       "param test failed!\n", __func__);
+                       "param test failed!\n",
+                       __func__);
                 return 1;
         }
         print_progress();
@@ -1043,25 +1060,26 @@ test_snow3g_api(struct IMB_MGR *mgr)
         IMB_SNOW3G_F9_1_BUFFER(mgr, NULL, NULL, NULL, text_len, out_buf);
         if (memcmp(out_buf, zero_buf, text_len) != 0) {
                 printf("%s: IMB_SNOW3G_F9_1_BUFFER, invalid "
-                       "param test failed!\n", __func__);
+                       "param test failed!\n",
+                       __func__);
                 return 1;
         }
         print_progress();
 
         ret1 = IMB_SNOW3G_INIT_KEY_SCHED(mgr, NULL, NULL);
-        ret2 = IMB_SNOW3G_INIT_KEY_SCHED(mgr, NULL,
-                                         (snow3g_key_schedule_t *)out_buf);
-        if ((memcmp(out_buf, zero_buf, text_len) != 0) ||
-            ret1 == 0 || ret2 == 0) {
+        ret2 = IMB_SNOW3G_INIT_KEY_SCHED(mgr, NULL, (snow3g_key_schedule_t *) out_buf);
+        if ((memcmp(out_buf, zero_buf, text_len) != 0) || ret1 == 0 || ret2 == 0) {
                 printf("%s: IMB_SNOW3G_INIT_KEY_SCHED, invalid "
-                       "param test failed!\n", __func__);
+                       "param test failed!\n",
+                       __func__);
                 return 1;
         }
         print_progress();
 
         if (IMB_SNOW3G_KEY_SCHED_SIZE(mgr) == 0) {
                 printf("%s: IMB_SNOW3G_KEY_SCHED_SIZE, invalid "
-                       "param test failed!\n", __func__);
+                       "param test failed!\n",
+                       __func__);
                 return 1;
         }
         print_progress();
@@ -1101,7 +1119,8 @@ test_clear_mem_api(void)
         imb_clear_mem(NULL, text_len);
         if (memcmp(out_buf, cmp_buf, text_len) != 0) {
                 printf("%s: imb_clear_mem, invalid "
-                       "param test failed!\n", __func__);
+                       "param test failed!\n",
+                       __func__);
                 return 1;
         }
         print_progress();
@@ -1109,7 +1128,8 @@ test_clear_mem_api(void)
         imb_clear_mem(out_buf, 0);
         if (memcmp(out_buf, cmp_buf, text_len) != 0) {
                 printf("%s: imb_clear_mem, invalid "
-                       "param test failed!\n", __func__);
+                       "param test failed!\n",
+                       __func__);
                 return 1;
         }
         print_progress();
@@ -1117,7 +1137,8 @@ test_clear_mem_api(void)
         imb_clear_mem(out_buf, text_len);
         if (memcmp(out_buf, cmp_buf, text_len) == 0) {
                 printf("%s: imb_clear_mem, invalid "
-                       "param test failed!\n", __func__);
+                       "param test failed!\n",
+                       __func__);
                 return 1;
         }
         print_progress();
@@ -1178,11 +1199,11 @@ direct_api_test(struct IMB_MGR *mb_mgr)
 
         test_suite_update(&ts, run - errors, errors);
 
- dir_api_exit:
+dir_api_exit:
         errors = test_suite_end(&ts);
 
 #ifndef DEBUG
         signal(SIGSEGV, handler);
 #endif
-	return errors;
+        return errors;
 }

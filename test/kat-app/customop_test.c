@@ -36,16 +36,16 @@
 
 #ifdef DEBUG
 #ifdef _WIN32
-#define TRACE(fmt, ...)	if (!quiet_mode)                                \
-                fprintf(stderr, "%s:%d "fmt,                            \
-                        __FUNCTION__, __LINE__, __VA_ARGS__)
+#define TRACE(fmt, ...)                                                                            \
+        if (!quiet_mode)                                                                           \
+        fprintf(stderr, "%s:%d " fmt, __FUNCTION__, __LINE__, __VA_ARGS__)
 #else
-#define TRACE(fmt, ...)	if (!quiet_mode)                                \
-                fprintf(stderr, "%s:%d "fmt,                            \
-                        __func__, __LINE__, __VA_ARGS__)
+#define TRACE(fmt, ...)                                                                            \
+        if (!quiet_mode)                                                                           \
+        fprintf(stderr, "%s:%d " fmt, __func__, __LINE__, __VA_ARGS__)
 #endif
 #else
-# define TRACE(fmt, ...)
+#define TRACE(fmt, ...)
 #endif
 
 struct cipher_attr_s {
@@ -67,8 +67,8 @@ struct test_vec_s {
         uint8_t tag[32];
         uint8_t verify[32];
 
-        DECLARE_ALIGNED(uint8_t enc_key[16*16], 64);
-        DECLARE_ALIGNED(uint8_t dec_key[16*16], 64);
+        DECLARE_ALIGNED(uint8_t enc_key[16 * 16], 64);
+        DECLARE_ALIGNED(uint8_t dec_key[16 * 16], 64);
         uint8_t ipad[256];
         uint8_t opad[256];
         const struct cipher_attr_s *cipher;
@@ -87,15 +87,15 @@ cipher_addon(struct IMB_JOB *job)
         struct test_vec_s *node = job->user_data;
 #endif
 
-        TRACE("Seq:%u Cipher Addon cipher:%s auth:%s\n",
-              node->seq, node->cipher->name, node->auth->name);
+        TRACE("Seq:%u Cipher Addon cipher:%s auth:%s\n", node->seq, node->cipher->name,
+              node->auth->name);
 
         if (job->cipher_direction == IMB_DIR_ENCRYPT)
                 memset(job->dst, 1, job->msg_len_to_cipher_in_bytes);
         else
                 memset(job->dst, 2, job->msg_len_to_cipher_in_bytes);
 
-        return 0;	/* success */
+        return 0; /* success */
 }
 
 /*
@@ -108,49 +108,41 @@ hash_addon(struct IMB_JOB *job)
         struct test_vec_s *node = job->user_data;
 #endif
 
-        TRACE("Seq:%u Auth Addon cipher:%s auth:%s\n",
-              node->seq, node->cipher->name, node->auth->name);
+        TRACE("Seq:%u Auth Addon cipher:%s auth:%s\n", node->seq, node->cipher->name,
+              node->auth->name);
 
         memset(job->auth_tag_output, 3, job->auth_tag_output_len_in_bytes);
-        return 0;	/* success */
+        return 0; /* success */
 }
 
 /*
  * test cipher functions
  */
 static const struct auth_attr_s auth_attr_tab[] = {
-        { "SHA1",        IMB_AUTH_HMAC_SHA_1,   12 },
-        { "SHA224",      IMB_AUTH_HMAC_SHA_224, 14 },
-        { "SHA256",      IMB_AUTH_HMAC_SHA_256, 16 },
-        { "SHA384",      IMB_AUTH_HMAC_SHA_384, 24 },
-        { "SHA512",      IMB_AUTH_HMAC_SHA_512, 32 },
-        { "MD5",         IMB_AUTH_MD5,     12 },
-        { "CUSTOM_HASH", IMB_AUTH_CUSTOM,  16 }
+        { "SHA1", IMB_AUTH_HMAC_SHA_1, 12 },     { "SHA224", IMB_AUTH_HMAC_SHA_224, 14 },
+        { "SHA256", IMB_AUTH_HMAC_SHA_256, 16 }, { "SHA384", IMB_AUTH_HMAC_SHA_384, 24 },
+        { "SHA512", IMB_AUTH_HMAC_SHA_512, 32 }, { "MD5", IMB_AUTH_MD5, 12 },
+        { "CUSTOM_HASH", IMB_AUTH_CUSTOM, 16 }
 };
 
 /*
  * test hash functions
  */
 static const struct cipher_attr_s cipher_attr_tab[] = {
-        { "CBC128",        IMB_CIPHER_CBC,    16, 16 },
-        { "CBC192",        IMB_CIPHER_CBC,    24, 16 },
-        { "CBC256",        IMB_CIPHER_CBC,    32, 16 },
-        { "CUSTOM_CIPHER", IMB_CIPHER_CUSTOM, 32, 12 },
-        { "CTR128",        IMB_CIPHER_CNTR,   16, 12 },
-        { "CTR192",        IMB_CIPHER_CNTR,   24, 12 },
-        { "CTR256",        IMB_CIPHER_CNTR,   32, 12 }
+        { "CBC128", IMB_CIPHER_CBC, 16, 16 },  { "CBC192", IMB_CIPHER_CBC, 24, 16 },
+        { "CBC256", IMB_CIPHER_CBC, 32, 16 },  { "CUSTOM_CIPHER", IMB_CIPHER_CUSTOM, 32, 12 },
+        { "CTR128", IMB_CIPHER_CNTR, 16, 12 }, { "CTR192", IMB_CIPHER_CNTR, 24, 12 },
+        { "CTR256", IMB_CIPHER_CNTR, 32, 12 }
 };
 
 static int
-job_check(const struct IMB_JOB *job,
-          struct test_suite_context *ctx)
+job_check(const struct IMB_JOB *job, struct test_suite_context *ctx)
 {
 #ifdef DEBUG
         struct test_vec_s *done = job->user_data;
 #endif
 
-        TRACE("done Seq:%u Cipher:%s Auth:%s\n",
-              done->seq, done->cipher->name, done->auth->name);
+        TRACE("done Seq:%u Cipher:%s Auth:%s\n", done->seq, done->cipher->name, done->auth->name);
 
         if (job->status != IMB_STATUS_COMPLETED) {
                 TRACE("failed job status:%d\n", job->status);
@@ -200,7 +192,6 @@ job_check(const struct IMB_JOB *job,
         return 0;
 }
 
-
 int
 customop_test(struct IMB_MGR *mgr)
 {
@@ -242,8 +233,7 @@ customop_test(struct IMB_MGR *mgr)
                 job->cipher_start_src_offset_in_bytes = 16;
                 job->msg_len_to_cipher_in_bytes = sizeof(node->txt);
                 job->hash_start_src_offset_in_bytes = 0;
-                job->msg_len_to_hash_in_bytes =
-                        sizeof(node->txt) + sizeof(node->iv);
+                job->msg_len_to_hash_in_bytes = sizeof(node->txt) + sizeof(node->iv);
                 job->iv = node->iv;
                 job->iv_len_in_bytes = node->cipher->iv_len;
                 job->auth_tag_output = node->tag;
@@ -287,8 +277,7 @@ customop_test(struct IMB_MGR *mgr)
                 job->cipher_start_src_offset_in_bytes = 16;
                 job->msg_len_to_cipher_in_bytes = sizeof(node->txt);
                 job->hash_start_src_offset_in_bytes = 0;
-                job->msg_len_to_hash_in_bytes =
-                        sizeof(node->txt) + sizeof(node->iv);
+                job->msg_len_to_hash_in_bytes = sizeof(node->txt) + sizeof(node->iv);
                 job->iv = node->iv;
                 job->iv_len_in_bytes = node->cipher->iv_len;
                 job->auth_tag_output = node->tag;

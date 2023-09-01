@@ -31,19 +31,22 @@
 #include <stdio.h>
 #include <intel-ipsec-mb.h>
 
-#define DIM(_x) (sizeof(_x)/sizeof(_x[0]))
+#define DIM(_x)            (sizeof(_x) / sizeof(_x[0]))
 #define DIV_ROUND_UP(x, y) ((x + y - 1) / y)
 
 extern int quiet_mode;
 
-void hexdump(FILE *fp, const char *msg, const void *p, size_t len);
-void hexdump_ex(FILE *fp, const char *msg, const void *p, size_t len,
-                const void *start_ptr);
+void
+hexdump(FILE *fp, const char *msg, const void *p, size_t len);
+void
+hexdump_ex(FILE *fp, const char *msg, const void *p, size_t len, const void *start_ptr);
 
-int update_flags_and_archs(const char *arg, uint8_t arch_support[IMB_ARCH_NUM],
-                            uint64_t *flags);
-int detect_arch(uint8_t arch_support[IMB_ARCH_NUM]);
-void print_tested_arch(const uint64_t features, const IMB_ARCH arch);
+int
+update_flags_and_archs(const char *arg, uint8_t arch_support[IMB_ARCH_NUM], uint64_t *flags);
+int
+detect_arch(uint8_t arch_support[IMB_ARCH_NUM]);
+void
+print_tested_arch(const uint64_t features, const IMB_ARCH arch);
 
 struct test_suite_context {
         unsigned pass;
@@ -51,16 +54,22 @@ struct test_suite_context {
         const char *alg_name;
 };
 
-void test_suite_start(struct test_suite_context *ctx, const char *alg_name);
-void test_suite_update(struct test_suite_context *ctx, const unsigned passed,
-                      const unsigned failed);
-int test_suite_end(struct test_suite_context *ctx);
+void
+test_suite_start(struct test_suite_context *ctx, const char *alg_name);
+void
+test_suite_update(struct test_suite_context *ctx, const unsigned passed, const unsigned failed);
+int
+test_suite_end(struct test_suite_context *ctx);
 
-void generate_random_buf(uint8_t *buf, const uint32_t length);
+void
+generate_random_buf(uint8_t *buf, const uint32_t length);
 
-int membitcmp(const uint8_t *input, const uint8_t *output,
-              const uint32_t bitlength, const uint32_t bitoffset);
-void memory_copy(void *dst, const void *src, size_t length);
-void memory_set(void *dst, const int val, size_t length);
+int
+membitcmp(const uint8_t *input, const uint8_t *output, const uint32_t bitlength,
+          const uint32_t bitoffset);
+void
+memory_copy(void *dst, const void *src, size_t length);
+void
+memory_set(void *dst, const int val, size_t length);
 
 #endif /* TESTAPP_UTILS_H */

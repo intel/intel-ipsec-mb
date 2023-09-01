@@ -36,7 +36,8 @@
 #include "utils.h"
 #include "cipher_test.h"
 
-int des_test(struct IMB_MGR *mb_mgr);
+int
+des_test(struct IMB_MGR *mb_mgr);
 
 extern const struct cipher_test des_test_json[];
 extern const struct cipher_test des_docsis_test_json[];
@@ -44,19 +45,9 @@ extern const struct cipher_test des_cfb_test_json[];
 extern const struct cipher_test des3_test_json[];
 
 static int
-test_des_many(struct IMB_MGR *mb_mgr,
-              const uint64_t *ks,
-              const uint64_t *ks2,
-              const uint64_t *ks3,
-              const void *iv,
-              const uint8_t *in_text,
-              const uint8_t *out_text,
-              unsigned text_len,
-              int dir,
-              int order,
-              IMB_CIPHER_MODE cipher,
-              const int in_place,
-              const int num_jobs)
+test_des_many(struct IMB_MGR *mb_mgr, const uint64_t *ks, const uint64_t *ks2, const uint64_t *ks3,
+              const void *iv, const uint8_t *in_text, const uint8_t *out_text, unsigned text_len,
+              int dir, int order, IMB_CIPHER_MODE cipher, const int in_place, const int num_jobs)
 {
         const void *ks_ptr[3]; /* 3DES */
         struct IMB_JOB *job;
@@ -111,22 +102,20 @@ test_des_many(struct IMB_MGR *mb_mgr,
                 job->iv_len_in_bytes = 8;
                 job->cipher_start_src_offset_in_bytes = 0;
                 job->msg_len_to_cipher_in_bytes = text_len;
-                job->user_data = (void *)((uint64_t)i);
+                job->user_data = (void *) ((uint64_t) i);
 
                 job->hash_alg = IMB_AUTH_NULL;
 
                 job = IMB_SUBMIT_JOB(mb_mgr);
                 if (job != NULL) {
-                        const int num = (const int)((uint64_t)job->user_data);
+                        const int num = (const int) ((uint64_t) job->user_data);
 
                         jobs_rx++;
                         if (job->status != IMB_STATUS_COMPLETED) {
-                                printf("%d error status:%d, job %d",
-                                       __LINE__, job->status, num);
+                                printf("%d error status:%d, job %d", __LINE__, job->status, num);
                                 goto end;
                         }
-                        if (memcmp(out_text, targets[num] + sizeof(padding),
-                                   text_len)) {
+                        if (memcmp(out_text, targets[num] + sizeof(padding), text_len)) {
                                 printf("%d mismatched\n", num);
                                 goto end;
                         }
@@ -134,8 +123,7 @@ test_des_many(struct IMB_MGR *mb_mgr,
                                 printf("%d overwrite head\n", num);
                                 goto end;
                         }
-                        if (memcmp(padding,
-                                   targets[num] + sizeof(padding) + text_len,
+                        if (memcmp(padding, targets[num] + sizeof(padding) + text_len,
                                    sizeof(padding))) {
                                 printf("%d overwrite tail\n", num);
                                 goto end;
@@ -144,16 +132,14 @@ test_des_many(struct IMB_MGR *mb_mgr,
         }
 
         while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL) {
-                const int num = (const int)((uint64_t)job->user_data);
+                const int num = (const int) ((uint64_t) job->user_data);
 
                 jobs_rx++;
                 if (job->status != IMB_STATUS_COMPLETED) {
-                        printf("%d Error status:%d, job %d",
-                               __LINE__, job->status, num);
+                        printf("%d Error status:%d, job %d", __LINE__, job->status, num);
                         goto end;
                 }
-                if (memcmp(out_text, targets[num] + sizeof(padding),
-                           text_len)) {
+                if (memcmp(out_text, targets[num] + sizeof(padding), text_len)) {
                         printf("%d mismatched\n", num);
                         goto end;
                 }
@@ -161,8 +147,7 @@ test_des_many(struct IMB_MGR *mb_mgr,
                         printf("%d overwrite head\n", num);
                         goto end;
                 }
-                if (memcmp(padding, targets[num] + sizeof(padding) + text_len,
-                           sizeof(padding))) {
+                if (memcmp(padding, targets[num] + sizeof(padding) + text_len, sizeof(padding))) {
                         printf("%d overwrite tail\n", num);
                         goto end;
                 }
@@ -174,7 +159,7 @@ test_des_many(struct IMB_MGR *mb_mgr,
         }
         ret = 0;
 
- end:
+end:
         while (IMB_FLUSH_JOB(mb_mgr) != NULL)
                 ;
 
@@ -185,64 +170,45 @@ test_des_many(struct IMB_MGR *mb_mgr,
 }
 
 static int
-test_des(struct IMB_MGR *mb_mgr,
-         const uint64_t *ks,
-         const uint64_t *ks2,
-         const uint64_t *ks3,
-         const void *iv,
-         const uint8_t *in_text,
-         const uint8_t *out_text,
-         unsigned text_len,
-         int dir,
-         int order,
-         IMB_CIPHER_MODE cipher,
-         const int in_place)
+test_des(struct IMB_MGR *mb_mgr, const uint64_t *ks, const uint64_t *ks2, const uint64_t *ks3,
+         const void *iv, const uint8_t *in_text, const uint8_t *out_text, unsigned text_len,
+         int dir, int order, IMB_CIPHER_MODE cipher, const int in_place)
 {
         int ret = 0;
 
         if (cipher == IMB_CIPHER_DES3) {
                 if (ks2 == NULL && ks3 == NULL) {
-                        ret |= test_des_many(mb_mgr, ks, ks, ks, iv, in_text,
-                                             out_text, text_len, dir, order,
-                                             cipher, in_place, 1);
-                        ret |= test_des_many(mb_mgr, ks, ks, ks, iv, in_text,
-                                             out_text, text_len, dir, order,
-                                             cipher, in_place, 32);
+                        ret |= test_des_many(mb_mgr, ks, ks, ks, iv, in_text, out_text, text_len,
+                                             dir, order, cipher, in_place, 1);
+                        ret |= test_des_many(mb_mgr, ks, ks, ks, iv, in_text, out_text, text_len,
+                                             dir, order, cipher, in_place, 32);
                 } else {
-                        ret |= test_des_many(mb_mgr, ks, ks2, ks3, iv, in_text,
-                                             out_text, text_len, dir, order,
-                                             cipher, in_place, 1);
-                        ret |= test_des_many(mb_mgr, ks, ks2, ks3, iv, in_text,
-                                             out_text, text_len, dir, order,
-                                             cipher, in_place, 32);
+                        ret |= test_des_many(mb_mgr, ks, ks2, ks3, iv, in_text, out_text, text_len,
+                                             dir, order, cipher, in_place, 1);
+                        ret |= test_des_many(mb_mgr, ks, ks2, ks3, iv, in_text, out_text, text_len,
+                                             dir, order, cipher, in_place, 32);
                 }
         } else {
-                ret |= test_des_many(mb_mgr, ks, NULL, NULL, iv, in_text,
-                                     out_text, text_len, dir, order, cipher,
-                                     in_place, 1);
-                ret |= test_des_many(mb_mgr, ks, NULL, NULL, iv, in_text,
-                                     out_text, text_len, dir, order, cipher,
-                                     in_place, 32);
+                ret |= test_des_many(mb_mgr, ks, NULL, NULL, iv, in_text, out_text, text_len, dir,
+                                     order, cipher, in_place, 1);
+                ret |= test_des_many(mb_mgr, ks, NULL, NULL, iv, in_text, out_text, text_len, dir,
+                                     order, cipher, in_place, 32);
         }
         return ret;
 }
 
 static void
-test_des_vectors(struct IMB_MGR *mb_mgr,
-                 const struct cipher_test *v,
-                 const char *banner,
-                 const IMB_CIPHER_MODE cipher,
-                 struct test_suite_context *ctx)
+test_des_vectors(struct IMB_MGR *mb_mgr, const struct cipher_test *v, const char *banner,
+                 const IMB_CIPHER_MODE cipher, struct test_suite_context *ctx)
 {
 
         uint64_t ks[16];
 
-	printf("%s:\n", banner);
-	for (; v->msg != NULL; v++) {
+        printf("%s:\n", banner);
+        for (; v->msg != NULL; v++) {
                 if (!quiet_mode) {
 #ifdef DEBUG
-                        printf("Standard vector %zu  PTLen:%zu\n",
-                               v->tcId, v->msgSize / 8);
+                        printf("Standard vector %zu  PTLen:%zu\n", v->tcId, v->msgSize / 8);
 #else
                         printf(".");
 #endif
@@ -251,8 +217,8 @@ test_des_vectors(struct IMB_MGR *mb_mgr,
                 des_key_schedule(ks, v->key);
 
                 if (test_des(mb_mgr, ks, NULL, NULL, v->iv, (const void *) v->msg,
-                             (const void *) v->ct, (unsigned) v->msgSize / 8,
-                             IMB_DIR_ENCRYPT, IMB_ORDER_CIPHER_HASH, cipher, 0)) {
+                             (const void *) v->ct, (unsigned) v->msgSize / 8, IMB_DIR_ENCRYPT,
+                             IMB_ORDER_CIPHER_HASH, cipher, 0)) {
                         printf("error #%zu encrypt\n", v->tcId);
                         test_suite_update(ctx, 0, 1);
                 } else {
@@ -260,8 +226,8 @@ test_des_vectors(struct IMB_MGR *mb_mgr,
                 }
 
                 if (test_des(mb_mgr, ks, NULL, NULL, v->iv, (const void *) v->ct,
-                             (const void *) v->msg, (unsigned) v->msgSize / 8,
-                             IMB_DIR_DECRYPT, IMB_ORDER_HASH_CIPHER, cipher, 0)) {
+                             (const void *) v->msg, (unsigned) v->msgSize / 8, IMB_DIR_DECRYPT,
+                             IMB_ORDER_HASH_CIPHER, cipher, 0)) {
                         printf("error #%zu decrypt\n", v->tcId);
                         test_suite_update(ctx, 0, 1);
                 } else {
@@ -269,8 +235,8 @@ test_des_vectors(struct IMB_MGR *mb_mgr,
                 }
 
                 if (test_des(mb_mgr, ks, NULL, NULL, v->iv, (const void *) v->msg,
-                             (const void *) v->ct, (unsigned) v->msgSize / 8,
-                             IMB_DIR_ENCRYPT, IMB_ORDER_CIPHER_HASH, cipher, 1)) {
+                             (const void *) v->ct, (unsigned) v->msgSize / 8, IMB_DIR_ENCRYPT,
+                             IMB_ORDER_CIPHER_HASH, cipher, 1)) {
                         printf("error #%zu encrypt in-place\n", v->tcId);
                         test_suite_update(ctx, 0, 1);
                 } else {
@@ -278,34 +244,31 @@ test_des_vectors(struct IMB_MGR *mb_mgr,
                 }
 
                 if (test_des(mb_mgr, ks, NULL, NULL, v->iv, (const void *) v->ct,
-                             (const void *) v->msg, (unsigned) v->msgSize / 8,
-                             IMB_DIR_DECRYPT, IMB_ORDER_HASH_CIPHER, cipher, 1)) {
+                             (const void *) v->msg, (unsigned) v->msgSize / 8, IMB_DIR_DECRYPT,
+                             IMB_ORDER_HASH_CIPHER, cipher, 1)) {
                         printf("error #%zu decrypt in-place\n", v->tcId);
                         test_suite_update(ctx, 0, 1);
                 } else {
                         test_suite_update(ctx, 1, 0);
                 }
-	}
+        }
         if (!quiet_mode)
                 printf("\n");
 }
 
 static void
-test_des3_vectors(struct IMB_MGR *mb_mgr,
-                  const struct cipher_test *v,
-                  const char *banner,
+test_des3_vectors(struct IMB_MGR *mb_mgr, const struct cipher_test *v, const char *banner,
                   struct test_suite_context *ctx)
 {
         uint64_t ks1[16];
         uint64_t ks2[16];
         uint64_t ks3[16];
 
-	printf("%s:\n", banner);
-	for (; v->msg != NULL; v++) {
+        printf("%s:\n", banner);
+        for (; v->msg != NULL; v++) {
                 if (!quiet_mode) {
 #ifdef DEBUG
-                        printf("Standard vector %zu  PTLen:%zu\n",
-                               v->tcId, v->msgSize / 8);
+                        printf("Standard vector %zu  PTLen:%zu\n", v->tcId, v->msgSize / 8);
 #else
                         printf(".");
 #endif
@@ -314,50 +277,42 @@ test_des3_vectors(struct IMB_MGR *mb_mgr,
                 des_key_schedule(ks2, v->key + 8);
                 des_key_schedule(ks3, v->key + 16);
 
-                if (test_des(mb_mgr, ks1, ks2, ks3, v->iv,
-                             (const void *) v->msg, (const void *) v->ct,
-                             (unsigned) v->msgSize / 8,
-                             IMB_DIR_ENCRYPT, IMB_ORDER_CIPHER_HASH,
-                             IMB_CIPHER_DES3, 0)) {
+                if (test_des(mb_mgr, ks1, ks2, ks3, v->iv, (const void *) v->msg,
+                             (const void *) v->ct, (unsigned) v->msgSize / 8, IMB_DIR_ENCRYPT,
+                             IMB_ORDER_CIPHER_HASH, IMB_CIPHER_DES3, 0)) {
                         printf("error #%zu encrypt\n", v->tcId);
                         test_suite_update(ctx, 0, 1);
                 } else {
                         test_suite_update(ctx, 1, 0);
                 }
 
-                if (test_des(mb_mgr, ks1, ks2, ks3, v->iv,
-                             (const void *) v->ct, (const void *) v->msg,
-                             (unsigned) v->msgSize / 8,
-                             IMB_DIR_DECRYPT, IMB_ORDER_HASH_CIPHER,
-                             IMB_CIPHER_DES3, 0)) {
+                if (test_des(mb_mgr, ks1, ks2, ks3, v->iv, (const void *) v->ct,
+                             (const void *) v->msg, (unsigned) v->msgSize / 8, IMB_DIR_DECRYPT,
+                             IMB_ORDER_HASH_CIPHER, IMB_CIPHER_DES3, 0)) {
                         printf("error #%zu decrypt\n", v->tcId);
                         test_suite_update(ctx, 0, 1);
                 } else {
                         test_suite_update(ctx, 1, 0);
                 }
 
-                if (test_des(mb_mgr, ks1, ks2, ks3, v->iv,
-                             (const void *) v->msg, (const void *) v->ct,
-                             (unsigned) v->msgSize / 8,
-                             IMB_DIR_ENCRYPT, IMB_ORDER_CIPHER_HASH,
-                             IMB_CIPHER_DES3, 1)) {
+                if (test_des(mb_mgr, ks1, ks2, ks3, v->iv, (const void *) v->msg,
+                             (const void *) v->ct, (unsigned) v->msgSize / 8, IMB_DIR_ENCRYPT,
+                             IMB_ORDER_CIPHER_HASH, IMB_CIPHER_DES3, 1)) {
                         printf("error #%zu encrypt in-place\n", v->tcId);
                         test_suite_update(ctx, 0, 1);
                 } else {
                         test_suite_update(ctx, 1, 0);
                 }
 
-                if (test_des(mb_mgr, ks1, ks2, ks3, v->iv,
-                             (const void *) v->ct, (const void *) v->msg,
-                             (unsigned) v->msgSize / 8,
-                             IMB_DIR_DECRYPT, IMB_ORDER_HASH_CIPHER,
-                             IMB_CIPHER_DES3, 1)) {
+                if (test_des(mb_mgr, ks1, ks2, ks3, v->iv, (const void *) v->ct,
+                             (const void *) v->msg, (unsigned) v->msgSize / 8, IMB_DIR_DECRYPT,
+                             IMB_ORDER_HASH_CIPHER, IMB_CIPHER_DES3, 1)) {
                         printf("error #%zu decrypt in-place\n", v->tcId);
                         test_suite_update(ctx, 0, 1);
                 } else {
                         test_suite_update(ctx, 1, 0);
                 }
-	}
+        }
         if (!quiet_mode)
                 printf("\n");
 }
@@ -378,8 +333,8 @@ des_cfb_validate(struct test_suite_context *ctx)
                 /* Out of place */
 
                 /* encrypt test */
-                des_cfb_one(output1, (const void *) v->msg, (const uint64_t *) v->iv,
-                            ks, (int) v->msgSize / 8);
+                des_cfb_one(output1, (const void *) v->msg, (const uint64_t *) v->iv, ks,
+                            (int) v->msgSize / 8);
                 if (memcmp(output1, (const void *) v->ct, v->msgSize / 8)) {
                         printf("DES-CFB enc (OOP) vector %zu mismatched\n", v->tcId);
                         test_suite_update(ctx, 0, 1);
@@ -387,8 +342,8 @@ des_cfb_validate(struct test_suite_context *ctx)
                         test_suite_update(ctx, 1, 0);
                 }
                 /* decrypt test */
-                des_cfb_one(output2, (const void *) v->ct, (const uint64_t *) v->iv,
-                            ks, (int) v->msgSize / 8);
+                des_cfb_one(output2, (const void *) v->ct, (const uint64_t *) v->iv, ks,
+                            (int) v->msgSize / 8);
                 if (memcmp(output2, (const void *) v->msg, v->msgSize / 8)) {
                         printf("DES-CFB dec (OOP) vector %zu mismatched\n", v->tcId);
                         test_suite_update(ctx, 0, 1);
@@ -400,8 +355,7 @@ des_cfb_validate(struct test_suite_context *ctx)
 
                 /* encrypt test */
                 memcpy(output1, (const void *) v->msg, v->msgSize / 8);
-                des_cfb_one(output2, output1, (const uint64_t *) v->iv, ks,
-                            (int) v->msgSize / 8);
+                des_cfb_one(output2, output1, (const uint64_t *) v->iv, ks, (int) v->msgSize / 8);
                 if (memcmp(output2, (const void *) v->ct, v->msgSize / 8)) {
                         printf("DES-CFB enc (IP) vector %zu mismatched\n", v->tcId);
                         test_suite_update(ctx, 0, 1);
@@ -410,15 +364,13 @@ des_cfb_validate(struct test_suite_context *ctx)
                 }
                 /* decrypt test */
                 memcpy(output1, (const void *) v->ct, v->msgSize / 8);
-                des_cfb_one(output2, output1, (const uint64_t *) v->iv,
-                            ks, (int) v->msgSize / 8);
+                des_cfb_one(output2, output1, (const uint64_t *) v->iv, ks, (int) v->msgSize / 8);
                 if (memcmp(output2, (const void *) v->msg, v->msgSize / 8)) {
                         printf("DES-CFB dec (IP) vector %zu mismatched\n", v->tcId);
                         test_suite_update(ctx, 0, 1);
                 } else {
                         test_suite_update(ctx, 1, 0);
                 }
-
         }
         if (!quiet_mode)
                 printf("\n");
@@ -432,8 +384,7 @@ des_test(struct IMB_MGR *mb_mgr)
         int errors;
 
         test_suite_start(&ctx, "DES-CBC-64");
-        test_des_vectors(mb_mgr, des_test_json, "DES standard test vectors",
-                         IMB_CIPHER_DES, &ctx);
+        test_des_vectors(mb_mgr, des_test_json, "DES standard test vectors", IMB_CIPHER_DES, &ctx);
         errors = test_suite_end(&ctx);
 
         test_suite_start(&ctx, "DOCSIS-DES-64");
@@ -446,12 +397,10 @@ des_test(struct IMB_MGR *mb_mgr)
         errors += test_suite_end(&ctx);
 
         test_suite_start(&ctx, "3DES-CBC-192");
-        test_des_vectors(mb_mgr, des_test_json,
-                         "3DES (single key) standard test vectors",
+        test_des_vectors(mb_mgr, des_test_json, "3DES (single key) standard test vectors",
                          IMB_CIPHER_DES3, &ctx);
-        test_des3_vectors(mb_mgr, des3_test_json,
-                          "3DES (multiple keys) test vectors", &ctx);
+        test_des3_vectors(mb_mgr, des3_test_json, "3DES (multiple keys) test vectors", &ctx);
         errors += test_suite_end(&ctx);
 
-	return errors;
+        return errors;
 }

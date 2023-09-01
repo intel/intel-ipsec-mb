@@ -30,21 +30,22 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdint.h>
-#include <string.h>		/* for memcmp() */
+#include <string.h> /* for memcmp() */
 
 #include <intel-ipsec-mb.h>
 #include "utils.h"
 #include "mac_test.h"
 
-int gmac_test(struct IMB_MGR *mb_mgr);
+int
+gmac_test(struct IMB_MGR *mb_mgr);
 
 extern const struct mac_test gmac_test_kat_json[];
 
-static int check_data(const uint8_t *test, const uint8_t *expected,
-                      uint64_t len, const char *data_name)
+static int
+check_data(const uint8_t *test, const uint8_t *expected, uint64_t len, const char *data_name)
 {
-	int mismatch;
-	int is_error = 0;
+        int mismatch;
+        int is_error = 0;
 
         if (len == 0)
                 return is_error;
@@ -52,33 +53,27 @@ static int check_data(const uint8_t *test, const uint8_t *expected,
         if (test == NULL || expected == NULL || data_name == NULL)
                 return 1;
 
-	mismatch = memcmp(test, expected, len);
-	if (mismatch) {
+        mismatch = memcmp(test, expected, len);
+        if (mismatch) {
                 uint64_t a;
 
-		is_error = 1;
-		printf("  expected results don't match %s \t\t", data_name);
+                is_error = 1;
+                printf("  expected results don't match %s \t\t", data_name);
                 for (a = 0; a < len; a++) {
                         if (test[a] != expected[a]) {
-                                printf(" '%x' != '%x' at %llx of %llx\n",
-                                       test[a], expected[a],
-                                       (unsigned long long) a,
-                                       (unsigned long long) len);
+                                printf(" '%x' != '%x' at %llx of %llx\n", test[a], expected[a],
+                                       (unsigned long long) a, (unsigned long long) len);
                                 break;
                         }
                 }
-	}
-	return is_error;
+        }
+        return is_error;
 }
 
 static void
-aes_gmac_job(IMB_MGR *mb_mgr,
-             const uint8_t *k,
-             struct gcm_key_data *gmac_key,
-             const uint64_t key_len,
-             const uint8_t *in, const uint64_t len,
-             const uint8_t *iv, const uint64_t iv_len,
-             uint8_t *auth_tag, const uint64_t auth_tag_len)
+aes_gmac_job(IMB_MGR *mb_mgr, const uint8_t *k, struct gcm_key_data *gmac_key,
+             const uint64_t key_len, const uint8_t *in, const uint64_t len, const uint8_t *iv,
+             const uint64_t iv_len, uint8_t *auth_tag, const uint64_t auth_tag_len)
 {
         IMB_JOB *job;
 
@@ -106,27 +101,23 @@ aes_gmac_job(IMB_MGR *mb_mgr,
         job->src = in;
         job->msg_len_to_hash_in_bytes = len;
         job->hash_start_src_offset_in_bytes = UINT64_C(0);
-        job->auth_tag_output                  = auth_tag;
-        job->auth_tag_output_len_in_bytes     = auth_tag_len;
+        job->auth_tag_output = auth_tag;
+        job->auth_tag_output_len_in_bytes = auth_tag_len;
 
         job = IMB_SUBMIT_JOB(mb_mgr);
         if (job == NULL)
                 job = IMB_FLUSH_JOB(mb_mgr);
-	if (job == NULL)
+        if (job == NULL)
                 fprintf(stderr, "No job retrieved\n");
-	else if (job->status != IMB_STATUS_COMPLETED)
+        else if (job->status != IMB_STATUS_COMPLETED)
                 fprintf(stderr, "failed job, status:%d\n", job->status);
 }
 
 #define MAX_SEG_SIZE 64
 static void
-gmac_test_vector(IMB_MGR *mb_mgr,
-                 const struct mac_test *vector,
-                 const uint64_t seg_size,
-                 const unsigned job_api,
-                 struct test_suite_context *ts128,
-                 struct test_suite_context *ts192,
-                 struct test_suite_context *ts256)
+gmac_test_vector(IMB_MGR *mb_mgr, const struct mac_test *vector, const uint64_t seg_size,
+                 const unsigned job_api, struct test_suite_context *ts128,
+                 struct test_suite_context *ts192, struct test_suite_context *ts256)
 {
         struct gcm_key_data key;
         struct gcm_context_data ctx;
@@ -138,10 +129,10 @@ gmac_test_vector(IMB_MGR *mb_mgr,
         uint8_t T_test[16];
         struct test_suite_context *ts = ts128;
 
-        if ((vector->keySize / 8) ==  IMB_KEY_192_BYTES)
+        if ((vector->keySize / 8) == IMB_KEY_192_BYTES)
                 ts = ts192;
 
-        if ((vector->keySize / 8) ==  IMB_KEY_256_BYTES)
+        if ((vector->keySize / 8) == IMB_KEY_256_BYTES)
                 ts = ts256;
 
         memset(&key, 0, sizeof(struct gcm_key_data));
@@ -159,21 +150,17 @@ gmac_test_vector(IMB_MGR *mb_mgr,
                         in_ptr = (const void *) vector->msg;
                         for (i = 0; i < nb_segs; i++) {
                                 memcpy(in_seg, in_ptr, seg_size);
-                                IMB_AES128_GMAC_UPDATE(mb_mgr, &key, &ctx,
-                                                       in_seg,
-                                                       seg_size);
+                                IMB_AES128_GMAC_UPDATE(mb_mgr, &key, &ctx, in_seg, seg_size);
                                 in_ptr += seg_size;
                         }
 
                         if (last_partial_seg != 0) {
                                 memcpy(in_seg, in_ptr, last_partial_seg);
-                                IMB_AES128_GMAC_UPDATE(mb_mgr, &key, &ctx,
-                                                       in_seg,
+                                IMB_AES128_GMAC_UPDATE(mb_mgr, &key, &ctx, in_seg,
                                                        last_partial_seg);
                         }
 
-                        IMB_AES128_GMAC_FINALIZE(mb_mgr, &key, &ctx, T_test,
-                                                 vector->tagSize / 8);
+                        IMB_AES128_GMAC_FINALIZE(mb_mgr, &key, &ctx, T_test, vector->tagSize / 8);
                         break;
                 case IMB_KEY_192_BYTES:
                         IMB_AES192_GCM_PRE(mb_mgr, vector->key, &key);
@@ -181,21 +168,17 @@ gmac_test_vector(IMB_MGR *mb_mgr,
                         in_ptr = (const void *) vector->msg;
                         for (i = 0; i < nb_segs; i++) {
                                 memcpy(in_seg, in_ptr, seg_size);
-                                IMB_AES192_GMAC_UPDATE(mb_mgr, &key, &ctx,
-                                                       in_seg,
-                                                       seg_size);
+                                IMB_AES192_GMAC_UPDATE(mb_mgr, &key, &ctx, in_seg, seg_size);
                                 in_ptr += seg_size;
                         }
 
                         if (last_partial_seg != 0) {
                                 memcpy(in_seg, in_ptr, last_partial_seg);
-                                IMB_AES192_GMAC_UPDATE(mb_mgr, &key, &ctx,
-                                                       in_seg,
+                                IMB_AES192_GMAC_UPDATE(mb_mgr, &key, &ctx, in_seg,
                                                        last_partial_seg);
                         }
 
-                        IMB_AES192_GMAC_FINALIZE(mb_mgr, &key, &ctx, T_test,
-                                                 vector->tagSize / 8);
+                        IMB_AES192_GMAC_FINALIZE(mb_mgr, &key, &ctx, T_test, vector->tagSize / 8);
                         break;
                 case IMB_KEY_256_BYTES:
                 default:
@@ -204,54 +187,49 @@ gmac_test_vector(IMB_MGR *mb_mgr,
                         in_ptr = (const void *) vector->msg;
                         for (i = 0; i < nb_segs; i++) {
                                 memcpy(in_seg, in_ptr, seg_size);
-                                IMB_AES256_GMAC_UPDATE(mb_mgr, &key, &ctx,
-                                                       in_seg,
-                                                       seg_size);
+                                IMB_AES256_GMAC_UPDATE(mb_mgr, &key, &ctx, in_seg, seg_size);
                                 in_ptr += seg_size;
                         }
 
                         if (last_partial_seg != 0) {
                                 memcpy(in_seg, in_ptr, last_partial_seg);
-                                IMB_AES256_GMAC_UPDATE(mb_mgr, &key, &ctx,
-                                                       in_seg,
+                                IMB_AES256_GMAC_UPDATE(mb_mgr, &key, &ctx, in_seg,
                                                        last_partial_seg);
                         }
 
-                        IMB_AES256_GMAC_FINALIZE(mb_mgr, &key, &ctx, T_test,
-                                                 vector->tagSize / 8);
+                        IMB_AES256_GMAC_FINALIZE(mb_mgr, &key, &ctx, T_test, vector->tagSize / 8);
                         break;
                 }
         }
 
-        if (check_data(T_test, (const void *) vector->tag,
-            vector->tagSize / 8, "generated tag (T)"))
+        if (check_data(T_test, (const void *) vector->tag, vector->tagSize / 8,
+                       "generated tag (T)"))
                 test_suite_update(ts, 0, 1);
         else
                 test_suite_update(ts, 1, 0);
 }
 
-int gmac_test(IMB_MGR *mb_mgr)
+int
+gmac_test(IMB_MGR *mb_mgr)
 {
         struct test_suite_context ts128, ts192, ts256;
-	int errors = 0;
+        int errors = 0;
 
         test_suite_start(&ts128, "AES-GMAC-128");
         test_suite_start(&ts192, "AES-GMAC-192");
         test_suite_start(&ts256, "AES-GMAC-256");
 
-	printf("GMAC test vectors:\n");
+        printf("GMAC test vectors:\n");
         const struct mac_test *vec = gmac_test_kat_json;
-	while (vec->msg != NULL) {
+        while (vec->msg != NULL) {
                 uint64_t seg_size;
 
                 /* Using direct API, which allows SGL */
                 for (seg_size = 1; seg_size <= MAX_SEG_SIZE; seg_size++)
-                        gmac_test_vector(mb_mgr, vec, seg_size, 0,
-                                         &ts128, &ts192, &ts256);
+                        gmac_test_vector(mb_mgr, vec, seg_size, 0, &ts128, &ts192, &ts256);
 
                 /* Using job API */
-                gmac_test_vector(mb_mgr, vec, (vec->msgSize / 8), 1,
-                                 &ts128, &ts192, &ts256);
+                gmac_test_vector(mb_mgr, vec, (vec->msgSize / 8), 1, &ts128, &ts192, &ts256);
                 vec++;
         }
         errors += test_suite_end(&ts128);

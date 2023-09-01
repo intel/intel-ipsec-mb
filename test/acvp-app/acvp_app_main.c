@@ -36,7 +36,8 @@
 
 #define MAX_TAG_LENGTH 16
 
-static ACVP_RESULT logger(char *msg)
+static ACVP_RESULT
+logger(char *msg)
 {
         printf("%s", msg);
         return ACVP_SUCCESS;
@@ -46,12 +47,13 @@ IMB_MGR *mb_mgr = NULL;
 int verbose = 0;
 int direct_api = 0; /* job API by default */
 
-static int aes_cbc_handler(ACVP_TEST_CASE *test_case)
+static int
+aes_cbc_handler(ACVP_TEST_CASE *test_case)
 {
         ACVP_SYM_CIPHER_TC *tc;
         IMB_JOB *job = NULL;
-        DECLARE_ALIGNED(uint32_t enc_keys[15*4], 16);
-        DECLARE_ALIGNED(uint32_t dec_keys[15*4], 16);
+        DECLARE_ALIGNED(uint32_t enc_keys[15 * 4], 16);
+        DECLARE_ALIGNED(uint32_t dec_keys[15 * 4], 16);
         static uint8_t next_iv[16];
 
         if (test_case == NULL)
@@ -88,8 +90,7 @@ static int aes_cbc_handler(ACVP_TEST_CASE *test_case)
          * If Monte-carlo test, use the IV from the ciphertext of
          * the previous iteration
          */
-        if (tc->test_type == ACVP_SYM_TEST_TYPE_MCT &&
-            tc->mct_index != 0)
+        if (tc->test_type == ACVP_SYM_TEST_TYPE_MCT && tc->mct_index != 0)
                 job->iv = next_iv;
         else
                 job->iv = tc->iv;
@@ -140,12 +141,13 @@ static int aes_cbc_handler(ACVP_TEST_CASE *test_case)
         return ACVP_SUCCESS;
 }
 
-static int aes_ecb_handler(ACVP_TEST_CASE *test_case)
+static int
+aes_ecb_handler(ACVP_TEST_CASE *test_case)
 {
         ACVP_SYM_CIPHER_TC *tc;
         IMB_JOB *job = NULL;
-        DECLARE_ALIGNED(uint32_t enc_keys[15*4], 16);
-        DECLARE_ALIGNED(uint32_t dec_keys[15*4], 16);
+        DECLARE_ALIGNED(uint32_t enc_keys[15 * 4], 16);
+        DECLARE_ALIGNED(uint32_t dec_keys[15 * 4], 16);
 
         if (test_case == NULL)
                 return ACVP_CRYPTO_MODULE_FAIL;
@@ -222,17 +224,16 @@ static int aes_ecb_handler(ACVP_TEST_CASE *test_case)
         return ACVP_SUCCESS;
 }
 
-static int aes_gcm_handler(ACVP_TEST_CASE *test_case)
+static int
+aes_gcm_handler(ACVP_TEST_CASE *test_case)
 {
         ACVP_SYM_CIPHER_TC *tc;
         IMB_JOB *job = NULL;
         aes_gcm_init_var_iv_t gcm_init_var_iv = mb_mgr->gcm128_init_var_iv;
         aes_gcm_enc_dec_update_t gcm_update_enc = mb_mgr->gcm128_enc_update;
-        aes_gcm_enc_dec_finalize_t gcm_finalize_enc =
-                mb_mgr->gcm128_enc_finalize;
+        aes_gcm_enc_dec_finalize_t gcm_finalize_enc = mb_mgr->gcm128_enc_finalize;
         aes_gcm_enc_dec_update_t gcm_update_dec = mb_mgr->gcm128_dec_update;
-        aes_gcm_enc_dec_finalize_t gcm_finalize_dec =
-                mb_mgr->gcm128_dec_finalize;
+        aes_gcm_enc_dec_finalize_t gcm_finalize_dec = mb_mgr->gcm128_dec_finalize;
         struct gcm_key_data key;
         struct gcm_context_data ctx;
 
@@ -302,12 +303,9 @@ static int aes_gcm_handler(ACVP_TEST_CASE *test_case)
 
         if (tc->direction == ACVP_SYM_CIPH_DIR_ENCRYPT) {
                 if (direct_api == 1) {
-                        gcm_init_var_iv(&key, &ctx, tc->iv, tc->iv_len,
-                                    tc->aad, tc->aad_len);
-                        gcm_update_enc(&key, &ctx, tc->ct,
-                                   tc->pt, tc->pt_len);
-                        gcm_finalize_enc(&key, &ctx, tc->tag,
-                                         tc->tag_len);
+                        gcm_init_var_iv(&key, &ctx, tc->iv, tc->iv_len, tc->aad, tc->aad_len);
+                        gcm_update_enc(&key, &ctx, tc->ct, tc->pt, tc->pt_len);
+                        gcm_finalize_enc(&key, &ctx, tc->tag, tc->tag_len);
                 } else {
                         job->src = tc->pt;
                         job->dst = tc->ct;
@@ -326,15 +324,12 @@ static int aes_gcm_handler(ACVP_TEST_CASE *test_case)
                         }
                 }
         } else /* DECRYPT */ {
-                uint8_t res_tag[MAX_TAG_LENGTH] = {0};
+                uint8_t res_tag[MAX_TAG_LENGTH] = { 0 };
 
                 if (direct_api == 1) {
-                        gcm_init_var_iv(&key, &ctx, tc->iv, tc->iv_len,
-                                        tc->aad, tc->aad_len);
-                        gcm_update_dec(&key, &ctx, tc->pt,
-                                       tc->ct, tc->ct_len);
-                        gcm_finalize_dec(&key, &ctx,
-                                         res_tag, tc->tag_len);
+                        gcm_init_var_iv(&key, &ctx, tc->iv, tc->iv_len, tc->aad, tc->aad_len);
+                        gcm_update_dec(&key, &ctx, tc->pt, tc->ct, tc->ct_len);
+                        gcm_finalize_dec(&key, &ctx, res_tag, tc->tag_len);
                 } else {
                         job->src = tc->ct;
                         job->dst = tc->pt;
@@ -354,10 +349,8 @@ static int aes_gcm_handler(ACVP_TEST_CASE *test_case)
                 }
                 if (memcmp(res_tag, tc->tag, tc->tag_len) != 0) {
                         if (verbose) {
-                                hexdump(stdout, "result tag: ",
-                                        res_tag, tc->tag_len);
-                                hexdump(stdout, "reference tag: ",
-                                        tc->tag, tc->tag_len);
+                                hexdump(stdout, "result tag: ", res_tag, tc->tag_len);
+                                hexdump(stdout, "reference tag: ", tc->tag, tc->tag_len);
                                 fprintf(stderr, "Tag mismatch\n");
                         }
                         return ACVP_CRYPTO_MODULE_FAIL;
@@ -366,7 +359,8 @@ static int aes_gcm_handler(ACVP_TEST_CASE *test_case)
         return ACVP_SUCCESS;
 }
 
-static int aes_gmac_handler(ACVP_TEST_CASE *test_case)
+static int
+aes_gmac_handler(ACVP_TEST_CASE *test_case)
 {
         ACVP_SYM_CIPHER_TC *tc;
         IMB_JOB *job = NULL;
@@ -441,8 +435,7 @@ static int aes_gmac_handler(ACVP_TEST_CASE *test_case)
                 if (direct_api == 1) {
                         gmac_init_var(&key, &ctx, tc->iv, tc->iv_len);
                         gmac_update(&key, &ctx, tc->aad, tc->aad_len);
-                        gmac_finalize(&key, &ctx, tc->tag,
-                                              tc->tag_len);
+                        gmac_finalize(&key, &ctx, tc->tag, tc->tag_len);
                 } else {
                         job->src = tc->aad;
                         job->msg_len_to_hash_in_bytes = tc->aad_len;
@@ -459,7 +452,7 @@ static int aes_gmac_handler(ACVP_TEST_CASE *test_case)
                         }
                 }
         } else /* DECRYPT */ {
-                uint8_t res_tag[MAX_TAG_LENGTH] = {0};
+                uint8_t res_tag[MAX_TAG_LENGTH] = { 0 };
 
                 if (direct_api == 1) {
                         gmac_init_var(&key, &ctx, tc->iv, tc->iv_len);
@@ -482,10 +475,8 @@ static int aes_gmac_handler(ACVP_TEST_CASE *test_case)
                 }
                 if (memcmp(res_tag, tc->tag, tc->tag_len) != 0) {
                         if (verbose) {
-                                hexdump(stdout, "result tag: ",
-                                        res_tag, tc->tag_len);
-                                hexdump(stdout, "reference tag: ",
-                                        tc->tag, tc->tag_len);
+                                hexdump(stdout, "result tag: ", res_tag, tc->tag_len);
+                                hexdump(stdout, "reference tag: ", tc->tag, tc->tag_len);
                                 fprintf(stderr, "Tag mismatch\n");
                         }
                         return ACVP_CRYPTO_MODULE_FAIL;
@@ -494,12 +485,13 @@ static int aes_gmac_handler(ACVP_TEST_CASE *test_case)
         return ACVP_SUCCESS;
 }
 
-static int aes_ctr_handler(ACVP_TEST_CASE *test_case)
+static int
+aes_ctr_handler(ACVP_TEST_CASE *test_case)
 {
         ACVP_SYM_CIPHER_TC *tc;
         IMB_JOB *job = NULL;
-        DECLARE_ALIGNED(uint32_t enc_keys[15*4], 16);
-        DECLARE_ALIGNED(uint32_t dec_keys[15*4], 16);
+        DECLARE_ALIGNED(uint32_t enc_keys[15 * 4], 16);
+        DECLARE_ALIGNED(uint32_t dec_keys[15 * 4], 16);
 
         if (test_case == NULL)
                 return ACVP_CRYPTO_MODULE_FAIL;
@@ -572,7 +564,8 @@ static int aes_ctr_handler(ACVP_TEST_CASE *test_case)
         return ACVP_SUCCESS;
 }
 
-static int tdes_cbc_handler(ACVP_TEST_CASE *test_case)
+static int
+tdes_cbc_handler(ACVP_TEST_CASE *test_case)
 {
         ACVP_SYM_CIPHER_TC *tc;
         IMB_JOB *job = NULL;
@@ -645,8 +638,7 @@ static int tdes_cbc_handler(ACVP_TEST_CASE *test_case)
 
         job->iv = tc->iv;
 
-        if (tc->test_type == ACVP_SYM_TEST_TYPE_MCT &&
-            tc->direction == ACVP_SYM_CIPH_DIR_DECRYPT &&
+        if (tc->test_type == ACVP_SYM_TEST_TYPE_MCT && tc->direction == ACVP_SYM_CIPH_DIR_DECRYPT &&
             tc->mct_index != 0)
                 job->iv = next_iv;
 
@@ -695,13 +687,14 @@ static int tdes_cbc_handler(ACVP_TEST_CASE *test_case)
         return ACVP_SUCCESS;
 }
 
-static int aes_ccm_handler(ACVP_TEST_CASE *test_case)
+static int
+aes_ccm_handler(ACVP_TEST_CASE *test_case)
 {
         ACVP_SYM_CIPHER_TC *tc;
         IMB_JOB *job = NULL;
-        DECLARE_ALIGNED(uint32_t enc_keys[15*4], 16);
-        DECLARE_ALIGNED(uint32_t dec_keys[15*4], 16);
-        uint8_t res_tag[MAX_TAG_LENGTH] = {0};
+        DECLARE_ALIGNED(uint32_t enc_keys[15 * 4], 16);
+        DECLARE_ALIGNED(uint32_t dec_keys[15 * 4], 16);
+        uint8_t res_tag[MAX_TAG_LENGTH] = { 0 };
 
         if (test_case == NULL)
                 return ACVP_CRYPTO_MODULE_FAIL;
@@ -779,10 +772,8 @@ static int aes_ccm_handler(ACVP_TEST_CASE *test_case)
 
                 if (memcmp(res_tag, ref_tag, tc->tag_len) != 0) {
                         if (verbose) {
-                                hexdump(stdout, "result tag: ",
-                                        res_tag, tc->tag_len);
-                                hexdump(stdout, "reference tag: ",
-                                        ref_tag, tc->tag_len);
+                                hexdump(stdout, "result tag: ", res_tag, tc->tag_len);
+                                hexdump(stdout, "reference tag: ", ref_tag, tc->tag_len);
                                 fprintf(stderr, "Tag mismatch\n");
                         }
                         return ACVP_CRYPTO_MODULE_FAIL;
@@ -791,14 +782,15 @@ static int aes_ccm_handler(ACVP_TEST_CASE *test_case)
         return ACVP_SUCCESS;
 }
 
-static int aes_cmac_handler(ACVP_TEST_CASE *test_case)
+static int
+aes_cmac_handler(ACVP_TEST_CASE *test_case)
 {
         ACVP_CMAC_TC *tc;
         IMB_JOB *job = NULL;
-        DECLARE_ALIGNED(uint32_t expkey[4*15], 16);
-        DECLARE_ALIGNED(uint32_t dust[4*15], 16);
+        DECLARE_ALIGNED(uint32_t expkey[4 * 15], 16);
+        DECLARE_ALIGNED(uint32_t dust[4 * 15], 16);
         uint32_t skey1[4], skey2[4];
-        uint8_t res_tag[MAX_TAG_LENGTH] = {0};
+        uint8_t res_tag[MAX_TAG_LENGTH] = { 0 };
 
         if (test_case == NULL)
                 return ACVP_CRYPTO_MODULE_FAIL;
@@ -853,10 +845,8 @@ static int aes_cmac_handler(ACVP_TEST_CASE *test_case)
         if (tc->verify == 1) {
                 if (memcmp(res_tag, tc->mac, tc->mac_len) != 0) {
                         if (verbose) {
-                                hexdump(stdout, "result tag: ",
-                                        res_tag, (tc->mac_len));
-                                hexdump(stdout, "reference tag: ",
-                                        tc->mac, tc->mac_len);
+                                hexdump(stdout, "result tag: ", res_tag, (tc->mac_len));
+                                hexdump(stdout, "reference tag: ", tc->mac, tc->mac_len);
                                 fprintf(stderr, "Tag mismatch\n");
                         }
                         tc->ver_disposition = ACVP_TEST_DISPOSITION_FAIL;
@@ -866,7 +856,8 @@ static int aes_cmac_handler(ACVP_TEST_CASE *test_case)
         return ACVP_SUCCESS;
 }
 
-static int hmac_sha1_handler(ACVP_TEST_CASE *test_case)
+static int
+hmac_sha1_handler(ACVP_TEST_CASE *test_case)
 {
         ACVP_HMAC_TC *tc;
         IMB_JOB *job = NULL;
@@ -878,8 +869,7 @@ static int hmac_sha1_handler(ACVP_TEST_CASE *test_case)
 
         tc = test_case->tc.hmac;
 
-        imb_hmac_ipad_opad(mb_mgr, IMB_AUTH_HMAC_SHA_1,
-                           tc->key, tc->key_len, ipad_hash, opad_hash);
+        imb_hmac_ipad_opad(mb_mgr, IMB_AUTH_HMAC_SHA_1, tc->key, tc->key_len, ipad_hash, opad_hash);
 
         job = IMB_GET_NEXT_JOB(mb_mgr);
         job->key_len_in_bytes = tc->key_len;
@@ -895,7 +885,7 @@ static int hmac_sha1_handler(ACVP_TEST_CASE *test_case)
         /*
          * The library only supports 12 or 20-byte tags and therefore,
          * we are outputting 20 bytes always
-        */
+         */
         job->auth_tag_output_len_in_bytes = IMB_SHA1_DIGEST_SIZE_IN_BYTES;
         job->auth_tag_output = tc->mac;
 
@@ -909,7 +899,8 @@ static int hmac_sha1_handler(ACVP_TEST_CASE *test_case)
         return ACVP_SUCCESS;
 }
 
-static int hmac_sha256_handler(ACVP_TEST_CASE *test_case)
+static int
+hmac_sha256_handler(ACVP_TEST_CASE *test_case)
 {
         ACVP_HMAC_TC *tc;
         IMB_JOB *job = NULL;
@@ -921,8 +912,8 @@ static int hmac_sha256_handler(ACVP_TEST_CASE *test_case)
 
         tc = test_case->tc.hmac;
 
-        imb_hmac_ipad_opad(mb_mgr, IMB_AUTH_HMAC_SHA_256,
-                           tc->key, tc->key_len, ipad_hash, opad_hash);
+        imb_hmac_ipad_opad(mb_mgr, IMB_AUTH_HMAC_SHA_256, tc->key, tc->key_len, ipad_hash,
+                           opad_hash);
 
         job = IMB_GET_NEXT_JOB(mb_mgr);
         job->key_len_in_bytes = tc->key_len;
@@ -938,7 +929,7 @@ static int hmac_sha256_handler(ACVP_TEST_CASE *test_case)
         /*
          * The library only supports 16 or 32-byte tags and therefore,
          * we are outputting 32 bytes always
-        */
+         */
         job->auth_tag_output_len_in_bytes = IMB_SHA256_DIGEST_SIZE_IN_BYTES;
         job->auth_tag_output = tc->mac;
 
@@ -952,7 +943,8 @@ static int hmac_sha256_handler(ACVP_TEST_CASE *test_case)
         return ACVP_SUCCESS;
 }
 
-static int hmac_sha224_handler(ACVP_TEST_CASE *test_case)
+static int
+hmac_sha224_handler(ACVP_TEST_CASE *test_case)
 {
         ACVP_HMAC_TC *tc;
         IMB_JOB *job = NULL;
@@ -964,8 +956,8 @@ static int hmac_sha224_handler(ACVP_TEST_CASE *test_case)
 
         tc = test_case->tc.hmac;
 
-        imb_hmac_ipad_opad(mb_mgr, IMB_AUTH_HMAC_SHA_224,
-                           tc->key, tc->key_len, ipad_hash, opad_hash);
+        imb_hmac_ipad_opad(mb_mgr, IMB_AUTH_HMAC_SHA_224, tc->key, tc->key_len, ipad_hash,
+                           opad_hash);
 
         job = IMB_GET_NEXT_JOB(mb_mgr);
         job->key_len_in_bytes = tc->key_len;
@@ -981,7 +973,7 @@ static int hmac_sha224_handler(ACVP_TEST_CASE *test_case)
         /*
          * The library only supports 14 or 28-byte tags and therefore,
          * we are outputting 28 bytes always
-        */
+         */
         job->auth_tag_output_len_in_bytes = IMB_SHA224_DIGEST_SIZE_IN_BYTES;
         job->auth_tag_output = tc->mac;
 
@@ -995,7 +987,8 @@ static int hmac_sha224_handler(ACVP_TEST_CASE *test_case)
         return ACVP_SUCCESS;
 }
 
-static int hmac_sha384_handler(ACVP_TEST_CASE *test_case)
+static int
+hmac_sha384_handler(ACVP_TEST_CASE *test_case)
 {
         ACVP_HMAC_TC *tc;
         IMB_JOB *job = NULL;
@@ -1007,8 +1000,8 @@ static int hmac_sha384_handler(ACVP_TEST_CASE *test_case)
 
         tc = test_case->tc.hmac;
 
-        imb_hmac_ipad_opad(mb_mgr, IMB_AUTH_HMAC_SHA_384,
-                           tc->key, tc->key_len, ipad_hash, opad_hash);
+        imb_hmac_ipad_opad(mb_mgr, IMB_AUTH_HMAC_SHA_384, tc->key, tc->key_len, ipad_hash,
+                           opad_hash);
 
         job = IMB_GET_NEXT_JOB(mb_mgr);
         job->key_len_in_bytes = tc->key_len;
@@ -1024,7 +1017,7 @@ static int hmac_sha384_handler(ACVP_TEST_CASE *test_case)
         /*
          * The library only supports 24 or 48-byte tags and therefore,
          * we are outputting 48 bytes always
-        */
+         */
         job->auth_tag_output_len_in_bytes = IMB_SHA384_DIGEST_SIZE_IN_BYTES;
         job->auth_tag_output = tc->mac;
 
@@ -1038,7 +1031,8 @@ static int hmac_sha384_handler(ACVP_TEST_CASE *test_case)
         return ACVP_SUCCESS;
 }
 
-static int hmac_sha512_handler(ACVP_TEST_CASE *test_case)
+static int
+hmac_sha512_handler(ACVP_TEST_CASE *test_case)
 {
         ACVP_HMAC_TC *tc;
         IMB_JOB *job = NULL;
@@ -1050,8 +1044,8 @@ static int hmac_sha512_handler(ACVP_TEST_CASE *test_case)
 
         tc = test_case->tc.hmac;
 
-        imb_hmac_ipad_opad(mb_mgr, IMB_AUTH_HMAC_SHA_512,
-                           tc->key, tc->key_len, ipad_hash, opad_hash);
+        imb_hmac_ipad_opad(mb_mgr, IMB_AUTH_HMAC_SHA_512, tc->key, tc->key_len, ipad_hash,
+                           opad_hash);
 
         job = IMB_GET_NEXT_JOB(mb_mgr);
         job->key_len_in_bytes = tc->key_len;
@@ -1067,7 +1061,7 @@ static int hmac_sha512_handler(ACVP_TEST_CASE *test_case)
         /*
          * The library only supports 32 or 64-byte tags and therefore,
          * we are outputting 64 bytes always
-        */
+         */
         job->auth_tag_output_len_in_bytes = IMB_SHA512_DIGEST_SIZE_IN_BYTES;
         job->auth_tag_output = tc->mac;
 
@@ -1081,7 +1075,8 @@ static int hmac_sha512_handler(ACVP_TEST_CASE *test_case)
         return ACVP_SUCCESS;
 }
 
-static int sha1_handler(ACVP_TEST_CASE *test_case)
+static int
+sha1_handler(ACVP_TEST_CASE *test_case)
 {
         ACVP_HASH_TC *tc;
         IMB_JOB *job = NULL;
@@ -1121,8 +1116,7 @@ static int sha1_handler(ACVP_TEST_CASE *test_case)
                 job->hash_start_src_offset_in_bytes = 0;
                 job->src = m;
                 job->msg_len_to_hash_in_bytes = len;
-                job->auth_tag_output_len_in_bytes =
-                        IMB_SHA1_DIGEST_SIZE_IN_BYTES;
+                job->auth_tag_output_len_in_bytes = IMB_SHA1_DIGEST_SIZE_IN_BYTES;
                 job->auth_tag_output = tc->md;
 
                 job = IMB_SUBMIT_JOB(mb_mgr);
@@ -1139,7 +1133,8 @@ static int sha1_handler(ACVP_TEST_CASE *test_case)
         return ACVP_SUCCESS;
 }
 
-static int sha2_224_handler(ACVP_TEST_CASE *test_case)
+static int
+sha2_224_handler(ACVP_TEST_CASE *test_case)
 {
         ACVP_HASH_TC *tc;
         IMB_JOB *job = NULL;
@@ -1179,8 +1174,7 @@ static int sha2_224_handler(ACVP_TEST_CASE *test_case)
                 job->hash_start_src_offset_in_bytes = 0;
                 job->src = m;
                 job->msg_len_to_hash_in_bytes = len;
-                job->auth_tag_output_len_in_bytes =
-                        IMB_SHA224_DIGEST_SIZE_IN_BYTES;
+                job->auth_tag_output_len_in_bytes = IMB_SHA224_DIGEST_SIZE_IN_BYTES;
                 job->auth_tag_output = tc->md;
 
                 job = IMB_SUBMIT_JOB(mb_mgr);
@@ -1197,7 +1191,8 @@ static int sha2_224_handler(ACVP_TEST_CASE *test_case)
         return ACVP_SUCCESS;
 }
 
-static int sha2_256_handler(ACVP_TEST_CASE *test_case)
+static int
+sha2_256_handler(ACVP_TEST_CASE *test_case)
 {
         ACVP_HASH_TC *tc;
         IMB_JOB *job = NULL;
@@ -1237,8 +1232,7 @@ static int sha2_256_handler(ACVP_TEST_CASE *test_case)
                 job->hash_start_src_offset_in_bytes = 0;
                 job->src = m;
                 job->msg_len_to_hash_in_bytes = len;
-                job->auth_tag_output_len_in_bytes =
-                        IMB_SHA256_DIGEST_SIZE_IN_BYTES;
+                job->auth_tag_output_len_in_bytes = IMB_SHA256_DIGEST_SIZE_IN_BYTES;
                 job->auth_tag_output = tc->md;
 
                 job = IMB_SUBMIT_JOB(mb_mgr);
@@ -1255,7 +1249,8 @@ static int sha2_256_handler(ACVP_TEST_CASE *test_case)
         return ACVP_SUCCESS;
 }
 
-static int sha2_384_handler(ACVP_TEST_CASE *test_case)
+static int
+sha2_384_handler(ACVP_TEST_CASE *test_case)
 {
         ACVP_HASH_TC *tc;
         IMB_JOB *job = NULL;
@@ -1295,8 +1290,7 @@ static int sha2_384_handler(ACVP_TEST_CASE *test_case)
                 job->hash_start_src_offset_in_bytes = 0;
                 job->src = m;
                 job->msg_len_to_hash_in_bytes = len;
-                job->auth_tag_output_len_in_bytes =
-                        IMB_SHA384_DIGEST_SIZE_IN_BYTES;
+                job->auth_tag_output_len_in_bytes = IMB_SHA384_DIGEST_SIZE_IN_BYTES;
                 job->auth_tag_output = tc->md;
 
                 job = IMB_SUBMIT_JOB(mb_mgr);
@@ -1313,7 +1307,8 @@ static int sha2_384_handler(ACVP_TEST_CASE *test_case)
         return ACVP_SUCCESS;
 }
 
-static int sha2_512_handler(ACVP_TEST_CASE *test_case)
+static int
+sha2_512_handler(ACVP_TEST_CASE *test_case)
 {
         ACVP_HASH_TC *tc;
         IMB_JOB *job = NULL;
@@ -1353,8 +1348,7 @@ static int sha2_512_handler(ACVP_TEST_CASE *test_case)
                 job->hash_start_src_offset_in_bytes = 0;
                 job->src = m;
                 job->msg_len_to_hash_in_bytes = len;
-                job->auth_tag_output_len_in_bytes =
-                        IMB_SHA512_DIGEST_SIZE_IN_BYTES;
+                job->auth_tag_output_len_in_bytes = IMB_SHA512_DIGEST_SIZE_IN_BYTES;
                 job->auth_tag_output = tc->md;
 
                 job = IMB_SUBMIT_JOB(mb_mgr);
@@ -1371,9 +1365,11 @@ static int sha2_512_handler(ACVP_TEST_CASE *test_case)
         return ACVP_SUCCESS;
 }
 
-static void usage(const char *app_name)
+static void
+usage(const char *app_name)
 {
-        fprintf(stderr, "Usage: %s --req FILENAME --resp FILENAME [opt args], "
+        fprintf(stderr,
+                "Usage: %s --req FILENAME --resp FILENAME [opt args], "
                 "where args are two or more\n"
                 "--req FILENAME: request file in JSON format (required)\n"
                 "--resp FILENAME: response file in JSON format (required)\n"
@@ -1385,7 +1381,8 @@ static void usage(const char *app_name)
                 app_name, app_name);
 }
 
-int main(int argc, char **argv)
+int
+main(int argc, char **argv)
 {
         ACVP_RESULT acvp_ret = ACVP_SUCCESS;
         ACVP_CTX *ctx = NULL;
@@ -1409,23 +1406,20 @@ int main(int argc, char **argv)
                         req_filename = realpath(argv[i + 1], NULL);
 
                         if (req_filename == NULL) {
-                                fprintf(stderr,
-                                        "Request file does not exist\n");
+                                fprintf(stderr, "Request file does not exist\n");
                                 goto exit;
                         }
                         i++;
                 } else if (strcmp(argv[i], "--resp") == 0) {
                         if (argv[i + 1] == NULL) {
-                                fprintf(stderr,
-                                        "Missing argument for --resp\n");
+                                fprintf(stderr, "Missing argument for --resp\n");
                                 goto exit;
                         }
                         resp_filename = argv[i + 1];
                         i++;
                 } else if (strcmp(argv[i], "--arch") == 0) {
                         if (argv[i + 1] == NULL) {
-                                fprintf(stderr,
-                                        "Missing argument for --arch\n");
+                                fprintf(stderr, "Missing argument for --arch\n");
                                 goto exit;
                         }
                         if (strcmp(argv[i + 1], "SSE") == 0)
@@ -1477,76 +1471,58 @@ int main(int argc, char **argv)
         if (acvp_ret != ACVP_SUCCESS)
                 goto exit;
 
-        if (acvp_cap_sym_cipher_enable(ctx, ACVP_AES_GCM,
-                                       &aes_gcm_handler) != ACVP_SUCCESS)
+        if (acvp_cap_sym_cipher_enable(ctx, ACVP_AES_GCM, &aes_gcm_handler) != ACVP_SUCCESS)
                 goto exit;
 
-        if (acvp_cap_sym_cipher_enable(ctx, ACVP_AES_CBC,
-                                       &aes_cbc_handler) != ACVP_SUCCESS)
+        if (acvp_cap_sym_cipher_enable(ctx, ACVP_AES_CBC, &aes_cbc_handler) != ACVP_SUCCESS)
                 goto exit;
 
-        if (acvp_cap_sym_cipher_enable(ctx, ACVP_AES_ECB,
-                                       &aes_ecb_handler) != ACVP_SUCCESS)
+        if (acvp_cap_sym_cipher_enable(ctx, ACVP_AES_ECB, &aes_ecb_handler) != ACVP_SUCCESS)
                 goto exit;
 
-        if (acvp_cap_sym_cipher_enable(ctx, ACVP_AES_CTR,
-                                       &aes_ctr_handler) != ACVP_SUCCESS)
+        if (acvp_cap_sym_cipher_enable(ctx, ACVP_AES_CTR, &aes_ctr_handler) != ACVP_SUCCESS)
                 goto exit;
 
-        if (acvp_cap_sym_cipher_enable(ctx, ACVP_AES_GMAC,
-                                       &aes_gmac_handler) != ACVP_SUCCESS)
+        if (acvp_cap_sym_cipher_enable(ctx, ACVP_AES_GMAC, &aes_gmac_handler) != ACVP_SUCCESS)
                 goto exit;
 
-        if (acvp_cap_sym_cipher_enable(ctx, ACVP_TDES_CBC,
-                                       &tdes_cbc_handler) != ACVP_SUCCESS)
+        if (acvp_cap_sym_cipher_enable(ctx, ACVP_TDES_CBC, &tdes_cbc_handler) != ACVP_SUCCESS)
                 goto exit;
 
-        if (acvp_cap_sym_cipher_enable(ctx, ACVP_AES_CCM,
-                                       &aes_ccm_handler) != ACVP_SUCCESS)
+        if (acvp_cap_sym_cipher_enable(ctx, ACVP_AES_CCM, &aes_ccm_handler) != ACVP_SUCCESS)
                 goto exit;
 
-        if (acvp_cap_cmac_enable(ctx, ACVP_CMAC_AES,
-                                &aes_cmac_handler) != ACVP_SUCCESS)
+        if (acvp_cap_cmac_enable(ctx, ACVP_CMAC_AES, &aes_cmac_handler) != ACVP_SUCCESS)
                 goto exit;
 
-        if (acvp_cap_hmac_enable(ctx, ACVP_HMAC_SHA1,
-                                &hmac_sha1_handler) != ACVP_SUCCESS)
+        if (acvp_cap_hmac_enable(ctx, ACVP_HMAC_SHA1, &hmac_sha1_handler) != ACVP_SUCCESS)
                 goto exit;
 
-        if (acvp_cap_hmac_enable(ctx, ACVP_HMAC_SHA2_256,
-                                &hmac_sha256_handler) != ACVP_SUCCESS)
+        if (acvp_cap_hmac_enable(ctx, ACVP_HMAC_SHA2_256, &hmac_sha256_handler) != ACVP_SUCCESS)
                 goto exit;
 
-        if (acvp_cap_hmac_enable(ctx, ACVP_HMAC_SHA2_224,
-                                &hmac_sha224_handler) != ACVP_SUCCESS)
+        if (acvp_cap_hmac_enable(ctx, ACVP_HMAC_SHA2_224, &hmac_sha224_handler) != ACVP_SUCCESS)
                 goto exit;
 
-        if (acvp_cap_hmac_enable(ctx, ACVP_HMAC_SHA2_384,
-                                &hmac_sha384_handler) != ACVP_SUCCESS)
+        if (acvp_cap_hmac_enable(ctx, ACVP_HMAC_SHA2_384, &hmac_sha384_handler) != ACVP_SUCCESS)
                 goto exit;
 
-        if (acvp_cap_hmac_enable(ctx, ACVP_HMAC_SHA2_512,
-                                &hmac_sha512_handler) != ACVP_SUCCESS)
+        if (acvp_cap_hmac_enable(ctx, ACVP_HMAC_SHA2_512, &hmac_sha512_handler) != ACVP_SUCCESS)
                 goto exit;
 
-        if (acvp_cap_hash_enable(ctx, ACVP_HASH_SHA1,
-                                &sha1_handler) != ACVP_SUCCESS)
+        if (acvp_cap_hash_enable(ctx, ACVP_HASH_SHA1, &sha1_handler) != ACVP_SUCCESS)
                 goto exit;
 
-        if (acvp_cap_hash_enable(ctx, ACVP_HASH_SHA224,
-                                &sha2_224_handler) != ACVP_SUCCESS)
+        if (acvp_cap_hash_enable(ctx, ACVP_HASH_SHA224, &sha2_224_handler) != ACVP_SUCCESS)
                 goto exit;
 
-        if (acvp_cap_hash_enable(ctx, ACVP_HASH_SHA256,
-                                &sha2_256_handler) != ACVP_SUCCESS)
+        if (acvp_cap_hash_enable(ctx, ACVP_HASH_SHA256, &sha2_256_handler) != ACVP_SUCCESS)
                 goto exit;
 
-        if (acvp_cap_hash_enable(ctx, ACVP_HASH_SHA384,
-                                &sha2_384_handler) != ACVP_SUCCESS)
+        if (acvp_cap_hash_enable(ctx, ACVP_HASH_SHA384, &sha2_384_handler) != ACVP_SUCCESS)
                 goto exit;
 
-        if (acvp_cap_hash_enable(ctx, ACVP_HASH_SHA512,
-                                &sha2_512_handler) != ACVP_SUCCESS)
+        if (acvp_cap_hash_enable(ctx, ACVP_HASH_SHA512, &sha2_512_handler) != ACVP_SUCCESS)
                 goto exit;
 
         /* Allocate and initialize MB_MGR */
@@ -1612,7 +1588,7 @@ exit:
                 free_mb_mgr(mb_mgr);
 
         if (ctx != NULL)
-        acvp_free_test_session(ctx);
+                acvp_free_test_session(ctx);
 
         if (req_filename != NULL)
                 free(req_filename);

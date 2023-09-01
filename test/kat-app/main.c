@@ -35,40 +35,74 @@
 #include "customop_test.h"
 #include "utils.h"
 
-extern int des_test(struct IMB_MGR *mb_mgr);
-extern int ccm_test(struct IMB_MGR *mb_mgr);
-extern int cmac_test(struct IMB_MGR *mb_mgr);
-extern int hmac_sha1_test(struct IMB_MGR *mb_mgr);
-extern int hmac_sha256_sha512_test(struct IMB_MGR *mb_mgr);
-extern int hmac_md5_test(struct IMB_MGR *mb_mgr);
-extern int aes_test(struct IMB_MGR *mb_mgr);
-extern int ecb_test(struct IMB_MGR *mb_mgr);
-extern int sha_test(struct IMB_MGR *mb_mgr);
-extern int chained_test(struct IMB_MGR *mb_mgr);
-extern int api_test(struct IMB_MGR *mb_mgr);
-extern int pon_test(struct IMB_MGR *mb_mgr);
-extern int zuc_test(struct IMB_MGR *mb_mgr);
-extern int kasumi_test(struct IMB_MGR *mb_mgr);
-extern int snow3g_test(struct IMB_MGR *mb_mgr);
-extern int direct_api_test(struct IMB_MGR *mb_mgr);
-extern int clear_mem_test(struct IMB_MGR *mb_mgr);
-extern int hec_test(struct IMB_MGR *mb_mgr);
-extern int xcbc_test(struct IMB_MGR *mb_mgr);
-extern int aes_cbcs_test(struct IMB_MGR *mb_mgr);
-extern int crc_test(struct IMB_MGR *mb_mgr);
-extern int chacha_test(struct IMB_MGR *mb_mgr);
-extern int poly1305_test(struct IMB_MGR *mb_mgr);
-extern int chacha20_poly1305_test(struct IMB_MGR *mb_mgr);
-extern int null_test(struct IMB_MGR *mb_mgr);
-extern int snow_v_test(struct IMB_MGR *mb_mgr);
-extern int direct_api_param_test(struct IMB_MGR *mb_mgr);
-extern int quic_ecb_test(struct IMB_MGR *mb_mgr);
-extern int quic_chacha20_test(struct IMB_MGR *mb_mgr);
-extern int gmac_test(struct IMB_MGR *mb_mgr);
-extern int ghash_test(struct IMB_MGR *mb_mgr);
-extern int cbc_test(struct IMB_MGR *mb_mg);
-extern int cfb_test(struct IMB_MGR *mb_mg);
-extern int ctr_test(struct IMB_MGR *mb_mg);
+extern int
+des_test(struct IMB_MGR *mb_mgr);
+extern int
+ccm_test(struct IMB_MGR *mb_mgr);
+extern int
+cmac_test(struct IMB_MGR *mb_mgr);
+extern int
+hmac_sha1_test(struct IMB_MGR *mb_mgr);
+extern int
+hmac_sha256_sha512_test(struct IMB_MGR *mb_mgr);
+extern int
+hmac_md5_test(struct IMB_MGR *mb_mgr);
+extern int
+aes_test(struct IMB_MGR *mb_mgr);
+extern int
+ecb_test(struct IMB_MGR *mb_mgr);
+extern int
+sha_test(struct IMB_MGR *mb_mgr);
+extern int
+chained_test(struct IMB_MGR *mb_mgr);
+extern int
+api_test(struct IMB_MGR *mb_mgr);
+extern int
+pon_test(struct IMB_MGR *mb_mgr);
+extern int
+zuc_test(struct IMB_MGR *mb_mgr);
+extern int
+kasumi_test(struct IMB_MGR *mb_mgr);
+extern int
+snow3g_test(struct IMB_MGR *mb_mgr);
+extern int
+direct_api_test(struct IMB_MGR *mb_mgr);
+extern int
+clear_mem_test(struct IMB_MGR *mb_mgr);
+extern int
+hec_test(struct IMB_MGR *mb_mgr);
+extern int
+xcbc_test(struct IMB_MGR *mb_mgr);
+extern int
+aes_cbcs_test(struct IMB_MGR *mb_mgr);
+extern int
+crc_test(struct IMB_MGR *mb_mgr);
+extern int
+chacha_test(struct IMB_MGR *mb_mgr);
+extern int
+poly1305_test(struct IMB_MGR *mb_mgr);
+extern int
+chacha20_poly1305_test(struct IMB_MGR *mb_mgr);
+extern int
+null_test(struct IMB_MGR *mb_mgr);
+extern int
+snow_v_test(struct IMB_MGR *mb_mgr);
+extern int
+direct_api_param_test(struct IMB_MGR *mb_mgr);
+extern int
+quic_ecb_test(struct IMB_MGR *mb_mgr);
+extern int
+quic_chacha20_test(struct IMB_MGR *mb_mgr);
+extern int
+gmac_test(struct IMB_MGR *mb_mgr);
+extern int
+ghash_test(struct IMB_MGR *mb_mgr);
+extern int
+cbc_test(struct IMB_MGR *mb_mg);
+extern int
+cfb_test(struct IMB_MGR *mb_mg);
+extern int
+ctr_test(struct IMB_MGR *mb_mg);
 
 typedef int (*imb_test_t)(struct IMB_MGR *mb_mgr);
 
@@ -87,199 +121,48 @@ struct imb_test {
 };
 
 struct imb_test tests[] = {
-        {
-                .str = "KAT",
-                .fn = known_answer_test,
-                .enabled = 1
-        },
-        {
-                .str = "DO_TEST",
-                .fn = do_test,
-                .enabled = 1
-        },
-        {
-                .str = "CBC",
-                .fn = cbc_test,
-                .enabled = 1
-        },
-        {
-                .str = "CFB",
-                .fn = cfb_test,
-                .enabled = 1
-        },
-        {
-		.str = "CTR",
-                .fn = ctr_test,
-                .enabled = 1
-        },
-        {
-                .str = "PON",
-                .fn = pon_test,
-                .enabled = 1
-        },
-        {
-		.str = "XCBC",
-                .fn = xcbc_test,
-                .enabled = 1
-        },
-        {
-                .str = "GCM",
-                .fn = gcm_test,
-                .enabled = 1
-        },
-        {
-                .str = "GMAC",
-                .fn = gmac_test,
-                .enabled = 1
-        },
-        {
-                .str = "GHASH",
-                .fn = ghash_test,
-                .enabled = 1
-        },
-        {
-                .str = "CUSTOMOP",
-                .fn = customop_test,
-                .enabled = 1
-        },
-        {
-                .str = "DES",
-                .fn = des_test,
-                .enabled = 1
-        },
-        {
-                .str = "CCM",
-                .fn = ccm_test,
-                .enabled = 1
-        },
-        {
-                .str = "CMAC",
-                .fn = cmac_test,
-                .enabled = 1
-        },
-        {
-                .str = "ZUC",
-                .fn = zuc_test,
-                .enabled = 1
-        },
-        {
-                .str = "KASUMI",
-                .fn = kasumi_test,
-                .enabled = 1
-        },
-        {
-                .str = "SNOW3G",
-                .fn = snow3g_test,
-                .enabled = 1
-        },
-        {
-                .str = "HMAC_SHA1",
-                .fn = hmac_sha1_test,
-                .enabled = 1
-        },
-        {
-                .str = "HMAC_SHA256",
-                .fn = hmac_sha256_sha512_test,
-                .enabled = 1
-        },
-        {
-                .str = "HMAC_MD5",
-                .fn = hmac_md5_test,
-                .enabled = 1
-        },
-        {
-                .str = "AES",
-                .fn = aes_test,
-                .enabled = 1
-        },
-        {
-                .str = "ECB",
-                .fn = ecb_test,
-                .enabled = 1
-        },
-        {
-                .str = "SHA",
-                .fn = sha_test,
-                .enabled = 1
-        },
-        {
-		.str = "CHAINED",
-                .fn = chained_test,
-                .enabled = 1
-        },
-        {
-                .str = "HEC",
-                .fn = hec_test,
-                .enabled = 1
-        },
-        {
-                .str = "AES_CBCS",
-                .fn = aes_cbcs_test,
-                .enabled = 1
-        },
-        {
-                .str = "CHACHA",
-                .fn = chacha_test,
-                .enabled = 1
-        },
-        {
-                .str = "POLY1305",
-                .fn = poly1305_test,
-                .enabled = 1
-        },
-        {
-                .str = "API",
-                .fn = api_test,
-                .enabled = 1
-        },
-        {
-                .str = "DIRECT_API",
-                .fn = direct_api_test,
-                .enabled = 1
-        },
-        {
-                .str = "CLEAR_MEM",
-                .fn = clear_mem_test,
-                .enabled = 1
-        },
-        {
-                .str = "CRC",
-                .fn = crc_test,
-                .enabled = 1
-        },
-        {
-                .str = "CHACHA20_POLY1305",
-                .fn = chacha20_poly1305_test,
-                .enabled = 1
-        },
-        {
-                .str = "NULL",
-                .fn = null_test,
-                .enabled = 1
-        },
-        {
-                .str = "SNOW_V",
-                .fn = snow_v_test,
-                .enabled = 1
-        },
-        {
-                .str = "DIRECT_API_PARAM",
-                .fn = direct_api_param_test,
-                .enabled = 1
-        },
-        {
-                .str = "QUIC-ECB",
-                .fn = quic_ecb_test,
-                .enabled = 1
-        },
-        {
-                .str = "QUIC-CHACHA20",
-                .fn = quic_chacha20_test,
-                .enabled = 1
-        }
+        { .str = "KAT", .fn = known_answer_test, .enabled = 1 },
+        { .str = "DO_TEST", .fn = do_test, .enabled = 1 },
+        { .str = "CBC", .fn = cbc_test, .enabled = 1 },
+        { .str = "CFB", .fn = cfb_test, .enabled = 1 },
+        { .str = "CTR", .fn = ctr_test, .enabled = 1 },
+        { .str = "PON", .fn = pon_test, .enabled = 1 },
+        { .str = "XCBC", .fn = xcbc_test, .enabled = 1 },
+        { .str = "GCM", .fn = gcm_test, .enabled = 1 },
+        { .str = "GMAC", .fn = gmac_test, .enabled = 1 },
+        { .str = "GHASH", .fn = ghash_test, .enabled = 1 },
+        { .str = "CUSTOMOP", .fn = customop_test, .enabled = 1 },
+        { .str = "DES", .fn = des_test, .enabled = 1 },
+        { .str = "CCM", .fn = ccm_test, .enabled = 1 },
+        { .str = "CMAC", .fn = cmac_test, .enabled = 1 },
+        { .str = "ZUC", .fn = zuc_test, .enabled = 1 },
+        { .str = "KASUMI", .fn = kasumi_test, .enabled = 1 },
+        { .str = "SNOW3G", .fn = snow3g_test, .enabled = 1 },
+        { .str = "HMAC_SHA1", .fn = hmac_sha1_test, .enabled = 1 },
+        { .str = "HMAC_SHA256", .fn = hmac_sha256_sha512_test, .enabled = 1 },
+        { .str = "HMAC_MD5", .fn = hmac_md5_test, .enabled = 1 },
+        { .str = "AES", .fn = aes_test, .enabled = 1 },
+        { .str = "ECB", .fn = ecb_test, .enabled = 1 },
+        { .str = "SHA", .fn = sha_test, .enabled = 1 },
+        { .str = "CHAINED", .fn = chained_test, .enabled = 1 },
+        { .str = "HEC", .fn = hec_test, .enabled = 1 },
+        { .str = "AES_CBCS", .fn = aes_cbcs_test, .enabled = 1 },
+        { .str = "CHACHA", .fn = chacha_test, .enabled = 1 },
+        { .str = "POLY1305", .fn = poly1305_test, .enabled = 1 },
+        { .str = "API", .fn = api_test, .enabled = 1 },
+        { .str = "DIRECT_API", .fn = direct_api_test, .enabled = 1 },
+        { .str = "CLEAR_MEM", .fn = clear_mem_test, .enabled = 1 },
+        { .str = "CRC", .fn = crc_test, .enabled = 1 },
+        { .str = "CHACHA20_POLY1305", .fn = chacha20_poly1305_test, .enabled = 1 },
+        { .str = "NULL", .fn = null_test, .enabled = 1 },
+        { .str = "SNOW_V", .fn = snow_v_test, .enabled = 1 },
+        { .str = "DIRECT_API_PARAM", .fn = direct_api_param_test, .enabled = 1 },
+        { .str = "QUIC-ECB", .fn = quic_ecb_test, .enabled = 1 },
+        { .str = "QUIC-CHACHA20", .fn = quic_chacha20_test, .enabled = 1 }
 };
 
-static char *get_test_types(void)
+static char *
+get_test_types(void)
 {
         const size_t separator_length = 2;
         size_t buffer_sz = 1; /* 1 for NULL termination */
@@ -311,24 +194,24 @@ usage(const char *name)
 {
         char *test_types = get_test_types();
 
-	fprintf(stderr,
+        fprintf(stderr,
                 "Usage: %s [args], where args are zero or more\n"
                 "--help: Prints this page\n"
                 "--test-type <TEST_NAME>: Run selected test type. <TEST_NAME> is one of %s.\n"
                 "--stop-on-fail: Stop test execution if a test fails\n"
                 "--no-aesni-emu: Don't do AESNI emulation\n"
                 "--no-avx512: Don't do AVX512\n"
-		"--no-avx2: Don't do AVX2\n"
-		"--no-avx: Don't do AVX\n"
-		"--no-sse: Don't do SSE\n"
+                "--no-avx2: Don't do AVX2\n"
+                "--no-avx: Don't do AVX\n"
+                "--no-sse: Don't do SSE\n"
                 "--auto-detect: Auto detects current architecture "
                 "to run the tests\n  Note: Auto detection "
                 "option now run by default and will be removed in the future\n"
                 "--gfni-on: Use Galois Field extensions, default: auto-detect\n"
                 "--gfni-off: Don't use Galois Field extensions\n"
-		"--shani-on: Use SHA extensions, default: auto-detect\n"
-		"--shani-off: Don't use SHA extensions\n"
-		"--quiet: Enable quiet mode with reduced text output\n",
+                "--shani-on: Use SHA extensions, default: auto-detect\n"
+                "--shani-off: Don't use SHA extensions\n"
+                "--quiet: Enable quiet mode with reduced text output\n",
                 name, test_types);
 
         free(test_types);
@@ -341,20 +224,13 @@ print_hw_features(void)
                 uint64_t feat_val;
                 const char *feat_name;
         } feat_tab[] = {
-                { IMB_FEATURE_SHANI, "SHANI" },
-                { IMB_FEATURE_AESNI, "AESNI" },
-                { IMB_FEATURE_PCLMULQDQ, "PCLMULQDQ" },
-                { IMB_FEATURE_CMOV, "CMOV" },
-                { IMB_FEATURE_SSE4_2, "SSE4.2" },
-                { IMB_FEATURE_AVX, "AVX" },
-                { IMB_FEATURE_AVX2, "AVX2" },
-                { IMB_FEATURE_AVX512_SKX, "AVX512(SKX)" },
-                { IMB_FEATURE_VAES, "VAES" },
-                { IMB_FEATURE_VPCLMULQDQ, "VPCLMULQDQ" },
-                { IMB_FEATURE_GFNI, "GFNI" },
-                { IMB_FEATURE_AVX512_IFMA, "AVX512-IFMA" },
-                { IMB_FEATURE_AVX_IFMA, "AVX-IFMA" },
-                { IMB_FEATURE_BMI2, "BMI2" },
+                { IMB_FEATURE_SHANI, "SHANI" },         { IMB_FEATURE_AESNI, "AESNI" },
+                { IMB_FEATURE_PCLMULQDQ, "PCLMULQDQ" }, { IMB_FEATURE_CMOV, "CMOV" },
+                { IMB_FEATURE_SSE4_2, "SSE4.2" },       { IMB_FEATURE_AVX, "AVX" },
+                { IMB_FEATURE_AVX2, "AVX2" },           { IMB_FEATURE_AVX512_SKX, "AVX512(SKX)" },
+                { IMB_FEATURE_VAES, "VAES" },           { IMB_FEATURE_VPCLMULQDQ, "VPCLMULQDQ" },
+                { IMB_FEATURE_GFNI, "GFNI" },           { IMB_FEATURE_AVX512_IFMA, "AVX512-IFMA" },
+                { IMB_FEATURE_AVX_IFMA, "AVX-IFMA" },   { IMB_FEATURE_BMI2, "BMI2" },
         };
         IMB_MGR *p_mgr = NULL;
         unsigned i;
@@ -427,34 +303,29 @@ main(int argc, char **argv)
 
         memset(arch_select, 0xff, sizeof(arch_select));
 
-	for (i = 1; i < argc; i++) {
-		if (strcmp(argv[i], "-h") == 0 ||
-                    strcmp(argv[i], "--help") == 0) {
-			usage(argv[0]);
-			return EXIT_SUCCESS;
-		} else if (update_flags_and_archs(argv[i],
-                                                  arch_select,
-                                                  &flags))
-			continue;
-		else if (strcmp(argv[i], "--auto-detect") == 0)
+        for (i = 1; i < argc; i++) {
+                if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
+                        usage(argv[0]);
+                        return EXIT_SUCCESS;
+                } else if (update_flags_and_archs(argv[i], arch_select, &flags))
+                        continue;
+                else if (strcmp(argv[i], "--auto-detect") == 0)
                         (void) auto_detect; /* legacy option - to be removed */
-		else if (strcmp(argv[i], "--stop-on-fail") == 0)
+                else if (strcmp(argv[i], "--stop-on-fail") == 0)
                         stop_on_fail = 1;
-		else if (strcmp(argv[i], "--quiet") == 0)
+                else if (strcmp(argv[i], "--quiet") == 0)
                         quiet_mode = 1;
                 else if (strcmp(argv[i], "--test-type") == 0) {
                         unsigned selected_test;
 
-                        selected_test = check_test_string_arg(argv[i],
-                                                              argv[i+1]);
+                        selected_test = check_test_string_arg(argv[i], argv[i + 1]);
                         if (selected_test == DIM(tests))
                                 return EXIT_FAILURE;
                         else {
                                 /* Disable all tests except the one passed */
                                 unsigned test_idx;
 
-                                for (test_idx = 0; test_idx < DIM(tests);
-                                     test_idx++)
+                                for (test_idx = 0; test_idx < DIM(tests); test_idx++)
                                         if (test_idx != selected_test)
                                                 tests[test_idx].enabled = 0;
                         }
@@ -527,8 +398,7 @@ main(int argc, char **argv)
 
                 if (p_mgr->features & IMB_FEATURE_SELF_TEST)
                         printf("SELF-TEST: %s\n",
-                               (p_mgr->features & IMB_FEATURE_SELF_TEST_PASS) ?
-                               "PASS" : "FAIL");
+                               (p_mgr->features & IMB_FEATURE_SELF_TEST_PASS) ? "PASS" : "FAIL");
                 else
                         printf("SELF-TEST: N/A (requires library >= v1.3)\n");
 

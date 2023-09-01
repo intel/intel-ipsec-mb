@@ -36,23 +36,22 @@
 #define PAD_SIZE 16
 #define BUF_SIZE 32
 
-int null_test(struct IMB_MGR *mb_mgr);
+int
+null_test(struct IMB_MGR *mb_mgr);
 
 static void
-test_null_hash(struct IMB_MGR *mb_mgr,
-               struct test_suite_context *ctx,
-               IMB_CIPHER_DIRECTION cipher_dir,
-               IMB_CHAIN_ORDER chain_order)
+test_null_hash(struct IMB_MGR *mb_mgr, struct test_suite_context *ctx,
+               IMB_CIPHER_DIRECTION cipher_dir, IMB_CHAIN_ORDER chain_order)
 {
-        DECLARE_ALIGNED(uint8_t cipher_key[16], 16) = {0};
-        DECLARE_ALIGNED(uint32_t expkey[4*15], 16);
-        DECLARE_ALIGNED(uint32_t dust[4*15], 16);
+        DECLARE_ALIGNED(uint8_t cipher_key[16], 16) = { 0 };
+        DECLARE_ALIGNED(uint32_t expkey[4 * 15], 16);
+        DECLARE_ALIGNED(uint32_t dust[4 * 15], 16);
         DECLARE_ALIGNED(uint8_t iv[16], 16);
-        DECLARE_ALIGNED(uint8_t digest[16], 16) = {0};
-        DECLARE_ALIGNED(uint8_t all_zeros[16], 16) = {0};
+        DECLARE_ALIGNED(uint8_t digest[16], 16) = { 0 };
+        DECLARE_ALIGNED(uint8_t all_zeros[16], 16) = { 0 };
         struct IMB_JOB *job;
         uint8_t padding[PAD_SIZE];
-        uint8_t target[BUF_SIZE + 2*PAD_SIZE];
+        uint8_t target[BUF_SIZE + 2 * PAD_SIZE];
         uint8_t in_text[BUF_SIZE];
         int ret = -1;
 
@@ -86,21 +85,19 @@ test_null_hash(struct IMB_MGR *mb_mgr,
                 job = IMB_FLUSH_JOB(mb_mgr);
 
         if (!job) {
-                printf("%d Unexpected null return from submit/flush_job\n",
-                       __LINE__);
+                printf("%d Unexpected null return from submit/flush_job\n", __LINE__);
                 goto end;
         }
 
         /* Check that padding has not been changed */
         if (memcmp(padding, target, PAD_SIZE)) {
                 printf("overwrite head\n");
-                hexdump(stderr, "Target", target, BUF_SIZE + PAD_SIZE*2);
+                hexdump(stderr, "Target", target, BUF_SIZE + PAD_SIZE * 2);
                 goto end;
         }
-        if (memcmp(padding, target + PAD_SIZE + BUF_SIZE,
-                   PAD_SIZE)) {
+        if (memcmp(padding, target + PAD_SIZE + BUF_SIZE, PAD_SIZE)) {
                 printf("overwrite tail\n");
-                hexdump(stderr, "Target", target, BUF_SIZE + PAD_SIZE*2);
+                hexdump(stderr, "Target", target, BUF_SIZE + PAD_SIZE * 2);
                 goto end;
         }
         /* Check that authentication tag has not been modified */
@@ -121,19 +118,17 @@ end:
 }
 
 static void
-test_null_cipher(struct IMB_MGR *mb_mgr,
-                 struct test_suite_context *ctx,
-                 IMB_CIPHER_DIRECTION cipher_dir,
-                 IMB_CHAIN_ORDER chain_order)
+test_null_cipher(struct IMB_MGR *mb_mgr, struct test_suite_context *ctx,
+                 IMB_CIPHER_DIRECTION cipher_dir, IMB_CHAIN_ORDER chain_order)
 {
         DECLARE_ALIGNED(uint8_t auth_key[16], 16);
-        DECLARE_ALIGNED(uint32_t expkey[4*15], 16);
-        DECLARE_ALIGNED(uint32_t dust[4*15], 16);
+        DECLARE_ALIGNED(uint32_t expkey[4 * 15], 16);
+        DECLARE_ALIGNED(uint32_t dust[4 * 15], 16);
         uint32_t skey1[4], skey2[4];
-        DECLARE_ALIGNED(uint8_t digest[16], 16) = {0};
+        DECLARE_ALIGNED(uint8_t digest[16], 16) = { 0 };
         struct IMB_JOB *job;
-        uint8_t in_text[BUF_SIZE] = {0};
-        DECLARE_ALIGNED(uint8_t all_zeros[BUF_SIZE], 16) = {0};
+        uint8_t in_text[BUF_SIZE] = { 0 };
+        DECLARE_ALIGNED(uint8_t all_zeros[BUF_SIZE], 16) = { 0 };
         int ret = -1;
 
         memset(auth_key, 0x55, sizeof(auth_key));
@@ -164,8 +159,7 @@ test_null_cipher(struct IMB_MGR *mb_mgr,
                 job = IMB_FLUSH_JOB(mb_mgr);
 
         if (!job) {
-                printf("%d Unexpected null return from submit/flush_job\n",
-                       __LINE__);
+                printf("%d Unexpected null return from submit/flush_job\n", __LINE__);
                 goto end;
         }
         if (job->status != IMB_STATUS_COMPLETED) {
@@ -218,5 +212,5 @@ null_test(struct IMB_MGR *mb_mgr)
         test_null_cipher(mb_mgr, &ctx, IMB_DIR_DECRYPT, IMB_ORDER_HASH_CIPHER);
         errors += test_suite_end(&ctx);
 
-	return errors;
+        return errors;
 }

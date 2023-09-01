@@ -38,23 +38,16 @@
 
 #define BYTE_ROUND_UP(x) ((x + 7) / 8)
 
-int ctr_test(struct IMB_MGR *);
+int
+ctr_test(struct IMB_MGR *);
 
 extern const struct cipher_test ctr_test_json[];
 extern const struct cipher_test ctr_bit_test_json[];
 
 static int
-test_ctr(struct IMB_MGR *mb_mgr,
-         const void *expkey,
-         unsigned key_len,
-         const void *iv,
-         unsigned iv_len,
-         const uint8_t *in_text,
-         const uint8_t *out_text,
-         unsigned text_len,
-         const IMB_CIPHER_DIRECTION dir,
-         const IMB_CHAIN_ORDER order,
-         const IMB_CIPHER_MODE alg)
+test_ctr(struct IMB_MGR *mb_mgr, const void *expkey, unsigned key_len, const void *iv,
+         unsigned iv_len, const uint8_t *in_text, const uint8_t *out_text, unsigned text_len,
+         const IMB_CIPHER_DIRECTION dir, const IMB_CHAIN_ORDER order, const IMB_CIPHER_MODE alg)
 {
         uint32_t text_byte_len;
         struct IMB_JOB *job;
@@ -70,8 +63,8 @@ test_ctr(struct IMB_MGR *mb_mgr,
 
         target = malloc(text_byte_len + (sizeof(padding) * 2));
         if (target == NULL) {
-		fprintf(stderr, "Can't allocate buffer memory\n");
-		goto end;
+                fprintf(stderr, "Can't allocate buffer memory\n");
+                goto end;
         }
 
         memset(target, -1, text_byte_len + (sizeof(padding) * 2));
@@ -111,8 +104,8 @@ test_ctr(struct IMB_MGR *mb_mgr,
         if (job->status != IMB_STATUS_COMPLETED) {
                 const int err = imb_get_errno(mb_mgr);
 
-                printf("%d job status: %d, error code %d, %s\n",
-                       __LINE__, job->status, err, imb_get_strerror(err));
+                printf("%d job status: %d, error code %d, %s\n", __LINE__, job->status, err,
+                       imb_get_strerror(err));
                 goto end;
         }
         job = IMB_FLUSH_JOB(mb_mgr);
@@ -132,8 +125,7 @@ test_ctr(struct IMB_MGR *mb_mgr,
                 hexdump(stderr, "Target", target, text_byte_len + 32);
                 goto end;
         }
-        if (memcmp(padding, target + sizeof(padding) + text_byte_len,
-                   sizeof(padding))) {
+        if (memcmp(padding, target + sizeof(padding) + text_byte_len, sizeof(padding))) {
                 printf("overwrite tail\n");
                 hexdump(stderr, "Target", target, text_byte_len + 32);
                 goto end;
@@ -141,25 +133,17 @@ test_ctr(struct IMB_MGR *mb_mgr,
         ret = 0;
         while (IMB_FLUSH_JOB(mb_mgr) != NULL)
                 ;
- end:
+end:
         if (target != NULL)
                 free(target);
         return ret;
 }
 
 static int
-test_ctr_burst(struct IMB_MGR *mb_mgr,
-               const void *expkey,
-               unsigned key_len,
-               const void *iv,
-               unsigned iv_len,
-               const uint8_t *in_text,
-               const uint8_t *out_text,
-               unsigned text_len,
-               const IMB_CIPHER_DIRECTION dir,
-               const IMB_CHAIN_ORDER order,
-               const IMB_CIPHER_MODE alg,
-               const uint32_t num_jobs)
+test_ctr_burst(struct IMB_MGR *mb_mgr, const void *expkey, unsigned key_len, const void *iv,
+               unsigned iv_len, const uint8_t *in_text, const uint8_t *out_text, unsigned text_len,
+               const IMB_CIPHER_DIRECTION dir, const IMB_CHAIN_ORDER order,
+               const IMB_CIPHER_MODE alg, const uint32_t num_jobs)
 {
         uint32_t text_byte_len, i, completed_jobs, jobs_rx = 0;
         struct IMB_JOB *job, *jobs[MAX_CTR_JOBS];
@@ -208,7 +192,7 @@ test_ctr_burst(struct IMB_MGR *mb_mgr,
                         job->msg_len_to_cipher_in_bits = text_len;
                 job->hash_alg = IMB_AUTH_NULL;
                 job->user_data = targets[i];
-                job->user_data2 = (void *)((uint64_t)i);
+                job->user_data2 = (void *) ((uint64_t) i);
                 imb_set_session(mb_mgr, job);
         }
 
@@ -217,8 +201,7 @@ test_ctr_burst(struct IMB_MGR *mb_mgr,
                 int err = imb_get_errno(mb_mgr);
 
                 if (err != 0) {
-                        printf("submit_burst error %d : '%s'\n", err,
-                               imb_get_strerror(err));
+                        printf("submit_burst error %d : '%s'\n", err, imb_get_strerror(err));
                         goto end;
                 } else {
                         printf("submit_burst error: not enough "
@@ -231,28 +214,26 @@ test_ctr_burst(struct IMB_MGR *mb_mgr,
                 job = jobs[i];
 
                 if (job->status != IMB_STATUS_COMPLETED) {
-                        printf("job %u status not complete!\n", i+1);
+                        printf("job %u status not complete!\n", i + 1);
                         goto end;
                 }
-                if (memcmp(out_text, targets[i] + sizeof(padding),
-                           text_byte_len)) {
+                if (memcmp(out_text, targets[i] + sizeof(padding), text_byte_len)) {
                         printf("mismatched\n");
-                        hexdump(stderr, "Target", targets[i] + sizeof(padding),
-                                text_byte_len);
+                        hexdump(stderr, "Target", targets[i] + sizeof(padding), text_byte_len);
                         hexdump(stderr, "Expected", out_text, text_byte_len);
                         goto end;
                 }
                 if (memcmp(padding, targets[i], sizeof(padding))) {
                         printf("overwrite head\n");
-                        hexdump(stderr, "Target", targets[i], text_byte_len +
-                                (sizeof(padding) * 2));
+                        hexdump(stderr, "Target", targets[i],
+                                text_byte_len + (sizeof(padding) * 2));
                         goto end;
                 }
-                if (memcmp(padding, targets[i] + sizeof(padding) +
-                           text_byte_len, sizeof(padding))) {
+                if (memcmp(padding, targets[i] + sizeof(padding) + text_byte_len,
+                           sizeof(padding))) {
                         printf("overwrite tail\n");
-                        hexdump(stderr, "Target", targets[i], text_byte_len +
-                                (sizeof(padding) * 2));
+                        hexdump(stderr, "Target", targets[i],
+                                text_byte_len + (sizeof(padding) * 2));
                         goto end;
                 }
                 jobs_rx++;
@@ -263,9 +244,9 @@ test_ctr_burst(struct IMB_MGR *mb_mgr,
                 goto end;
         }
         ret = 0;
- end:
+end:
 
- end_alloc:
+end_alloc:
         if (targets != NULL) {
                 for (i = 0; i < num_jobs; i++)
                         free(targets[i]);
@@ -276,17 +257,10 @@ test_ctr_burst(struct IMB_MGR *mb_mgr,
 }
 
 static int
-test_ctr_cipher_burst(struct IMB_MGR *mb_mgr,
-                      const void *expkey,
-                      unsigned key_len,
-                      const void *iv,
-                      unsigned iv_len,
-                      const uint8_t *in_text,
-                      const uint8_t *out_text,
-                      unsigned text_len,
-                      const IMB_CIPHER_DIRECTION dir,
-                      const IMB_CHAIN_ORDER order,
-                      const IMB_CIPHER_MODE alg,
+test_ctr_cipher_burst(struct IMB_MGR *mb_mgr, const void *expkey, unsigned key_len, const void *iv,
+                      unsigned iv_len, const uint8_t *in_text, const uint8_t *out_text,
+                      unsigned text_len, const IMB_CIPHER_DIRECTION dir,
+                      const IMB_CHAIN_ORDER order, const IMB_CIPHER_MODE alg,
                       const uint32_t num_jobs)
 {
         uint32_t text_byte_len, i, completed_jobs, jobs_rx = 0;
@@ -333,18 +307,15 @@ test_ctr_cipher_burst(struct IMB_MGR *mb_mgr,
                         job->msg_len_to_cipher_in_bits = text_len;
                 job->hash_alg = IMB_AUTH_NULL;
                 job->user_data = targets[i];
-                job->user_data2 = (void *)((uint64_t)i);
+                job->user_data2 = (void *) ((uint64_t) i);
         }
 
-
-        completed_jobs = IMB_SUBMIT_CIPHER_BURST(mb_mgr, jobs, num_jobs,
-                                                 alg, dir, key_len);
+        completed_jobs = IMB_SUBMIT_CIPHER_BURST(mb_mgr, jobs, num_jobs, alg, dir, key_len);
         if (completed_jobs != num_jobs) {
                 int err = imb_get_errno(mb_mgr);
 
                 if (err != 0) {
-                        printf("submit_burst error %d : '%s'\n", err,
-                               imb_get_strerror(err));
+                        printf("submit_burst error %d : '%s'\n", err, imb_get_strerror(err));
                         goto end;
                 } else {
                         printf("submit_burst error: not enough "
@@ -357,28 +328,26 @@ test_ctr_cipher_burst(struct IMB_MGR *mb_mgr,
                 job = &jobs[i];
 
                 if (job->status != IMB_STATUS_COMPLETED) {
-                        printf("job %u status not complete!\n", i+1);
+                        printf("job %u status not complete!\n", i + 1);
                         goto end;
                 }
-                if (memcmp(out_text, targets[i] + sizeof(padding),
-                           text_byte_len)) {
+                if (memcmp(out_text, targets[i] + sizeof(padding), text_byte_len)) {
                         printf("mismatched\n");
-                        hexdump(stderr, "Target", targets[i] + sizeof(padding),
-                                text_byte_len);
+                        hexdump(stderr, "Target", targets[i] + sizeof(padding), text_byte_len);
                         hexdump(stderr, "Expected", out_text, text_byte_len);
                         goto end;
                 }
                 if (memcmp(padding, targets[i], sizeof(padding))) {
                         printf("overwrite head\n");
-                        hexdump(stderr, "Target", targets[i], text_byte_len +
-                                (sizeof(padding) * 2));
+                        hexdump(stderr, "Target", targets[i],
+                                text_byte_len + (sizeof(padding) * 2));
                         goto end;
                 }
-                if (memcmp(padding, targets[i] + sizeof(padding) +
-                           text_byte_len, sizeof(padding))) {
+                if (memcmp(padding, targets[i] + sizeof(padding) + text_byte_len,
+                           sizeof(padding))) {
                         printf("overwrite tail\n");
-                        hexdump(stderr, "Target", targets[i], text_byte_len +
-                                (sizeof(padding) * 2));
+                        hexdump(stderr, "Target", targets[i],
+                                text_byte_len + (sizeof(padding) * 2));
                         goto end;
                 }
                 jobs_rx++;
@@ -389,9 +358,9 @@ test_ctr_cipher_burst(struct IMB_MGR *mb_mgr,
                 goto end;
         }
         ret = 0;
- end:
+end:
 
- end_alloc:
+end_alloc:
         if (targets != NULL) {
                 for (i = 0; i < num_jobs; i++)
                         free(targets[i]);
@@ -402,18 +371,15 @@ test_ctr_cipher_burst(struct IMB_MGR *mb_mgr,
 }
 
 static void
-test_ctr_vectors(struct IMB_MGR *mb_mgr,
-                 struct test_suite_context *ctx128,
-                 struct test_suite_context *ctx192,
-                 struct test_suite_context *ctx256,
-                 const struct cipher_test *v,
-                 const IMB_CIPHER_MODE alg)
+test_ctr_vectors(struct IMB_MGR *mb_mgr, struct test_suite_context *ctx128,
+                 struct test_suite_context *ctx192, struct test_suite_context *ctx256,
+                 const struct cipher_test *v, const IMB_CIPHER_MODE alg)
 {
-        DECLARE_ALIGNED(uint32_t expkey[4*15], 16);
-        DECLARE_ALIGNED(uint32_t dust[4*15], 16);
+        DECLARE_ALIGNED(uint32_t expkey[4 * 15], 16);
+        DECLARE_ALIGNED(uint32_t dust[4 * 15], 16);
 
-	printf("AES-CTR standard test vectors:\n");
-	for (; v->msg != NULL; v++) {
+        printf("AES-CTR standard test vectors:\n");
+        for (; v->msg != NULL; v++) {
                 struct test_suite_context *ctx;
 
                 if (!quiet_mode) {
@@ -447,9 +413,8 @@ test_ctr_vectors(struct IMB_MGR *mb_mgr,
                 }
 
                 if (test_ctr(mb_mgr, expkey, (unsigned) v->keySize / 8, v->iv,
-                             (unsigned) v->ivSize / 8, (const void *) v->msg,
-                             (const void *) v->ct, (unsigned) v->msgSize,
-                             IMB_DIR_ENCRYPT, IMB_ORDER_CIPHER_HASH, alg)) {
+                             (unsigned) v->ivSize / 8, (const void *) v->msg, (const void *) v->ct,
+                             (unsigned) v->msgSize, IMB_DIR_ENCRYPT, IMB_ORDER_CIPHER_HASH, alg)) {
                         printf("error #%zu encrypt\n", v->tcId);
                         test_suite_update(ctx, 0, 1);
                 } else {
@@ -457,9 +422,8 @@ test_ctr_vectors(struct IMB_MGR *mb_mgr,
                 }
 
                 if (test_ctr(mb_mgr, expkey, (unsigned) v->keySize / 8, v->iv,
-                             (unsigned) v->ivSize / 8, (const void *) v->ct,
-                             (const void *) v->msg, (unsigned) v->msgSize,
-                             IMB_DIR_DECRYPT, IMB_ORDER_HASH_CIPHER, alg)) {
+                             (unsigned) v->ivSize / 8, (const void *) v->ct, (const void *) v->msg,
+                             (unsigned) v->msgSize, IMB_DIR_DECRYPT, IMB_ORDER_HASH_CIPHER, alg)) {
                         printf("error #%zu decrypt\n", v->tcId);
                         test_suite_update(ctx, 0, 1);
                 } else {
@@ -482,47 +446,43 @@ test_ctr_vectors(struct IMB_MGR *mb_mgr,
                         local_iv[14] = 0x00;
                         local_iv[15] = 0x01;
 
-                        if (test_ctr(mb_mgr, expkey, (unsigned) v->keySize / 8,
-                                     local_iv, new_iv_len, (const void *) v->msg,
-                                     (const void *) v->ct, (unsigned) v->msgSize,
-                                     IMB_DIR_ENCRYPT, IMB_ORDER_CIPHER_HASH, alg)) {
+                        if (test_ctr(mb_mgr, expkey, (unsigned) v->keySize / 8, local_iv,
+                                     new_iv_len, (const void *) v->msg, (const void *) v->ct,
+                                     (unsigned) v->msgSize, IMB_DIR_ENCRYPT, IMB_ORDER_CIPHER_HASH,
+                                     alg)) {
                                 printf("error #%zu encrypt\n", v->tcId);
                                 test_suite_update(ctx, 0, 1);
                         } else {
                                 test_suite_update(ctx, 1, 0);
                         }
 
-                        if (test_ctr(mb_mgr, expkey, (unsigned) v->keySize / 8,
-                                     local_iv, new_iv_len, (const void *) v->ct,
-                                     (const void *) v->msg, (unsigned) v->msgSize,
-                                     IMB_DIR_DECRYPT, IMB_ORDER_HASH_CIPHER, alg)) {
+                        if (test_ctr(mb_mgr, expkey, (unsigned) v->keySize / 8, local_iv,
+                                     new_iv_len, (const void *) v->ct, (const void *) v->msg,
+                                     (unsigned) v->msgSize, IMB_DIR_DECRYPT, IMB_ORDER_HASH_CIPHER,
+                                     alg)) {
                                 printf("error #%zu decrypt\n", v->tcId);
                                 test_suite_update(ctx, 0, 1);
                         } else {
                                 test_suite_update(ctx, 1, 0);
                         }
                 }
-	}
+        }
         if (!quiet_mode)
                 printf("\n");
 }
 
 static void
-test_ctr_vectors_burst(struct IMB_MGR *mb_mgr,
-                       struct test_suite_context *ctx128,
-                       struct test_suite_context *ctx192,
-                       struct test_suite_context *ctx256,
-                       const struct cipher_test *v,
-                       const IMB_CIPHER_MODE alg,
+test_ctr_vectors_burst(struct IMB_MGR *mb_mgr, struct test_suite_context *ctx128,
+                       struct test_suite_context *ctx192, struct test_suite_context *ctx256,
+                       const struct cipher_test *v, const IMB_CIPHER_MODE alg,
                        const uint32_t num_jobs)
 {
-        DECLARE_ALIGNED(uint32_t expkey[4*15], 16);
-        DECLARE_ALIGNED(uint32_t dust[4*15], 16);
+        DECLARE_ALIGNED(uint32_t expkey[4 * 15], 16);
+        DECLARE_ALIGNED(uint32_t dust[4 * 15], 16);
 
         if (!quiet_mode)
-	        printf("AES-CTR standard test vectors - Burst API (N jobs = %u):\n",
-                       num_jobs);
-	for (; v->msg != NULL; v++) {
+                printf("AES-CTR standard test vectors - Burst API (N jobs = %u):\n", num_jobs);
+        for (; v->msg != NULL; v++) {
                 struct test_suite_context *ctx;
 
                 if (!quiet_mode) {
@@ -557,9 +517,8 @@ test_ctr_vectors_burst(struct IMB_MGR *mb_mgr,
 
                 if (test_ctr_burst(mb_mgr, expkey, (unsigned) v->keySize / 8, v->iv,
                                    (unsigned) v->ivSize / 8, (const void *) v->msg,
-                                   (const void *) v->ct, (unsigned) v->msgSize,
-                                   IMB_DIR_ENCRYPT, IMB_ORDER_CIPHER_HASH, alg,
-                                   num_jobs)) {
+                                   (const void *) v->ct, (unsigned) v->msgSize, IMB_DIR_ENCRYPT,
+                                   IMB_ORDER_CIPHER_HASH, alg, num_jobs)) {
                         printf("error #%zu encrypt burst\n", v->tcId);
                         test_suite_update(ctx, 0, 1);
                 } else {
@@ -568,17 +527,15 @@ test_ctr_vectors_burst(struct IMB_MGR *mb_mgr,
 
                 if (test_ctr_burst(mb_mgr, expkey, (unsigned) v->keySize / 8, v->iv,
                                    (unsigned) v->ivSize / 8, (const void *) v->ct,
-                                   (const void *) v->msg, (unsigned) v->msgSize,
-                                   IMB_DIR_DECRYPT, IMB_ORDER_HASH_CIPHER, alg,
-                                   num_jobs)) {
+                                   (const void *) v->msg, (unsigned) v->msgSize, IMB_DIR_DECRYPT,
+                                   IMB_ORDER_HASH_CIPHER, alg, num_jobs)) {
                         printf("error #%zu decrypt burst\n", v->tcId);
                         test_suite_update(ctx, 0, 1);
                 } else {
                         test_suite_update(ctx, 1, 0);
                 }
 
-                if (v->ivSize / 8 == 12 &&
-                    alg == IMB_CIPHER_CNTR) {
+                if (v->ivSize / 8 == 12 && alg == IMB_CIPHER_CNTR) {
                         /* IV in the table didn't include block counter (12 bytes).
                          * Let's encrypt & decrypt the same but
                          * with 16 byte IV that includes block counter.
@@ -594,22 +551,20 @@ test_ctr_vectors_burst(struct IMB_MGR *mb_mgr,
                         local_iv[14] = 0x00;
                         local_iv[15] = 0x01;
 
-                        if (test_ctr_burst(mb_mgr, expkey, (unsigned) v->keySize / 8,
-                                           local_iv, new_iv_len, (const void *) v->msg,
-                                           (const void *) v->ct, (unsigned) v->msgSize,
-                                           IMB_DIR_ENCRYPT, IMB_ORDER_CIPHER_HASH, alg,
-                                           num_jobs)) {
+                        if (test_ctr_burst(mb_mgr, expkey, (unsigned) v->keySize / 8, local_iv,
+                                           new_iv_len, (const void *) v->msg, (const void *) v->ct,
+                                           (unsigned) v->msgSize, IMB_DIR_ENCRYPT,
+                                           IMB_ORDER_CIPHER_HASH, alg, num_jobs)) {
                                 printf("error #%zu encrypt burst\n", v->tcId);
                                 test_suite_update(ctx, 0, 1);
                         } else {
                                 test_suite_update(ctx, 1, 0);
                         }
 
-                        if (test_ctr_burst(mb_mgr, expkey, (unsigned) v->keySize / 8,
-                                           local_iv, new_iv_len, (const void *) v->ct,
-                                           (const void *) v->msg, (unsigned) v->msgSize,
-                                           IMB_DIR_DECRYPT, IMB_ORDER_HASH_CIPHER, alg,
-                                           num_jobs)) {
+                        if (test_ctr_burst(mb_mgr, expkey, (unsigned) v->keySize / 8, local_iv,
+                                           new_iv_len, (const void *) v->ct, (const void *) v->msg,
+                                           (unsigned) v->msgSize, IMB_DIR_DECRYPT,
+                                           IMB_ORDER_HASH_CIPHER, alg, num_jobs)) {
                                 printf("error #%zu decrypt burst\n", v->tcId);
                                 test_suite_update(ctx, 0, 1);
                         } else {
@@ -624,8 +579,7 @@ test_ctr_vectors_burst(struct IMB_MGR *mb_mgr,
                 if (test_ctr_cipher_burst(mb_mgr, expkey, (unsigned) v->keySize / 8, v->iv,
                                           (unsigned) v->ivSize / 8, (const void *) v->msg,
                                           (const void *) v->ct, (unsigned) v->msgSize,
-                                          IMB_DIR_ENCRYPT, IMB_ORDER_CIPHER_HASH, alg,
-                                          num_jobs)) {
+                                          IMB_DIR_ENCRYPT, IMB_ORDER_CIPHER_HASH, alg, num_jobs)) {
                         printf("error #%zu encrypt cipher-only burst\n", v->tcId);
                         test_suite_update(ctx, 0, 1);
                 } else {
@@ -635,16 +589,14 @@ test_ctr_vectors_burst(struct IMB_MGR *mb_mgr,
                 if (test_ctr_cipher_burst(mb_mgr, expkey, (unsigned) v->keySize / 8, v->iv,
                                           (unsigned) v->ivSize / 8, (const void *) v->ct,
                                           (const void *) v->msg, (unsigned) v->msgSize,
-                                          IMB_DIR_DECRYPT, IMB_ORDER_HASH_CIPHER, alg,
-                                          num_jobs)) {
+                                          IMB_DIR_DECRYPT, IMB_ORDER_HASH_CIPHER, alg, num_jobs)) {
                         printf("error #%zu decrypt cipher-only burst\n", v->tcId);
                         test_suite_update(ctx, 0, 1);
                 } else {
                         test_suite_update(ctx, 1, 0);
                 }
 
-                if (v->ivSize / 8 == 12 &&
-                    alg == IMB_CIPHER_CNTR) {
+                if (v->ivSize / 8 == 12 && alg == IMB_CIPHER_CNTR) {
                         /* IV in the table didn't include block counter (12 bytes).
                          * Let's encrypt & decrypt the same but
                          * with 16 byte IV that includes block counter.
@@ -700,11 +652,10 @@ ctr_test(struct IMB_MGR *mb_mgr)
         test_suite_start(&ctx128, "AES-CTR-128");
         test_suite_start(&ctx192, "AES-CTR-192");
         test_suite_start(&ctx256, "AES-CTR-256");
-        test_ctr_vectors(mb_mgr, &ctx128, &ctx192, &ctx256,
-                         ctr_test_json, IMB_CIPHER_CNTR);
+        test_ctr_vectors(mb_mgr, &ctx128, &ctx192, &ctx256, ctr_test_json, IMB_CIPHER_CNTR);
         for (i = 1; i <= MAX_CTR_JOBS; i++)
-                test_ctr_vectors_burst(mb_mgr, &ctx128, &ctx192, &ctx256,
-                                       ctr_test_json, IMB_CIPHER_CNTR, i);
+                test_ctr_vectors_burst(mb_mgr, &ctx128, &ctx192, &ctx256, ctr_test_json,
+                                       IMB_CIPHER_CNTR, i);
         errors += test_suite_end(&ctx128);
         errors += test_suite_end(&ctx192);
         errors += test_suite_end(&ctx256);
@@ -713,15 +664,14 @@ ctr_test(struct IMB_MGR *mb_mgr)
         test_suite_start(&ctx128, "AES-CTR-128-BIT-LENGTH");
         test_suite_start(&ctx192, "AES-CTR-192-BIT-LENGTH");
         test_suite_start(&ctx256, "AES-CTR-256-BIT-LENGTH");
-        test_ctr_vectors(mb_mgr, &ctx128, &ctx192, &ctx256,
-                         ctr_bit_test_json, IMB_CIPHER_CNTR_BITLEN);
+        test_ctr_vectors(mb_mgr, &ctx128, &ctx192, &ctx256, ctr_bit_test_json,
+                         IMB_CIPHER_CNTR_BITLEN);
         for (i = 1; i <= MAX_CTR_JOBS; i++)
-                test_ctr_vectors_burst(mb_mgr, &ctx128, &ctx192, &ctx256,
-                                       ctr_bit_test_json, IMB_CIPHER_CNTR_BITLEN, i);
+                test_ctr_vectors_burst(mb_mgr, &ctx128, &ctx192, &ctx256, ctr_bit_test_json,
+                                       IMB_CIPHER_CNTR_BITLEN, i);
         errors += test_suite_end(&ctx128);
         errors += test_suite_end(&ctx192);
         errors += test_suite_end(&ctx256);
 
-
-	return errors;
+        return errors;
 }
