@@ -59,35 +59,27 @@ clean:
 	$(MAKE) -C acvp-app clean
 	$(MAKE) -C wycheproof-app clean
 
+.PHONY: style
+style: clang-format checkpatch
+
 # style check section
 CHECKPATCH?=checkpatch.pl
 CHECKPATCH_FLAGS = --no-tree --no-signoff --emacs --no-color --max-line-length=100 --ignore CODE_INDENT,INITIALISED_STATIC,LEADING_SPACE,SPLIT_STRING,UNSPECIFIED_INT,ARRAY_SIZE,BLOCK_COMMENT_STYLE,GLOBAL_INITIALISERS,AVOID_EXTERNS,COMPLEX_MACRO,USE_FUNC,CONSTANT_COMPARISON,MISSING_SPACE,NEW_TYPEDEFS
 
-%.c_style_check : %.c
-	$(CHECKPATCH) $(CHECKPATCH_FLAGS) -f $<
+ASM_SOURCES := $(wildcard ./**/*.asm) $(wildcard ./**/*.inc)
 
-%.h_style_check : %.h
-	$(CHECKPATCH) $(CHECKPATCH_FLAGS) -f $<
+.PHONY: checkpatch
+checkpatch:
+	$(CHECKPATCH) $(CHECKPATCH_FLAGS) -f $(ASM_SOURCES)
 
-%.asm_style_check : %.asm
-	$(CHECKPATCH) $(CHECKPATCH_FLAGS) -f $<
-
-%.inc_style_check : %.inc
-	$(CHECKPATCH) $(CHECKPATCH_FLAGS) -f $<
-
-KAT_APP_SOURCES := $(wildcard $(KAT_APP)/*.[ch])
-FUZZ_APP_SOURCES := $(wildcard $(FUZZ_APP)/*.[ch])
-ACVP_APP_SOURCES := $(wildcard $(ACVP_APP)/*.[ch])
-WYCHEPROOF_APP_SOURCES := $(wildcard $(WYCHEPROOF_APP)/*.[ch])
-XVALID_APP_SOURCES := $(wildcard $(XVALID_APP)/*.[ch]) \
-		      $(wildcard $(XVALID_APP)/*.asm) \
-		      $(wildcard $(XVALID_APP)/*.inc)
-SOURCES_ALL := $(KAT_APP_SOURCES) $(XVALID_APP_SOURCES) \
-	       $(FUZZ_APP_SOURCES) $(ACVP_APP_SOURCES) $(WYCHEPROOF_APP_SOURCES)
-SOURCES_STYLE := $(foreach infile,$(SOURCES_ALL),$(infile)_style_check)
-
-.PHONY: style
-style: $(SOURCES_STYLE)
+CLANGFORMAT?=clang-format
+.PHONY: clang-format
+clang-format:
+	@for file in $(wildcard ./**/*.[ch]); do \
+		echo "Checking style $$file"; \
+		$(CLANGFORMAT) -style=file "$$file" | diff "$$file" - | tee /dev/stderr | [ $$(wc -c) -eq 0 ] || \
+		{ echo "ERROR: $$file has style problems"; exit 1; } \
+	done
 
 # cppcheck analysis check
 CPPCHECK ?= cppcheck
