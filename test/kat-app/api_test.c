@@ -336,6 +336,7 @@ fill_in_job(struct IMB_JOB *job, const IMB_CIPHER_MODE cipher_mode,
                 ptr64[0] = ((pli >> 8) & 0xff) | ((pli & 0xff) << 8);
                 break;
         case IMB_CIPHER_ECB:
+        case IMB_CIPHER_SM4_ECB:
                 job->key_len_in_bytes = UINT64_C(16);
                 break;
         case IMB_CIPHER_ZUC_EEA3:
@@ -1580,7 +1581,7 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                                         continue;
 
                                 /* Skip AES-ECB, as it doesn't use any IV */
-                                if (cipher == IMB_CIPHER_ECB)
+                                if (cipher == IMB_CIPHER_ECB || cipher == IMB_CIPHER_SM4_ECB)
                                         continue;
 
                                 fill_in_job(&template_job, cipher, dir, hash, order, &chacha_ctx,
@@ -1692,6 +1693,7 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                         case IMB_CIPHER_DES:
                         case IMB_CIPHER_DES3:
                         case IMB_CIPHER_DOCSIS_DES:
+                        case IMB_CIPHER_SM4_ECB:
                         case IMB_CIPHER_ECB:
                                 template_job.dec_keys = NULL;
                                 if (!is_submit_invalid(mb_mgr, &template_job,

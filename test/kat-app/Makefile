@@ -42,7 +42,9 @@ SOURCES := main.c gcm_test.c ctr_test.c customop_test.c des_test.c ccm_test.c \
 	cmac_test.json.c xcbc_test.json.c sha_test.json.c aes_cbcs_test.json.c gmac_test.c aes_cfb_test.c \
 	ecb_test.json.c aes_cfb_test.json.c aes_cbc_test.c aes_cbc_test.json.c ctr_test.json.c \
 	des_test.json.c chacha_test.json.c gcm_test.json.c ccm_test.json.c quic_chacha20_test.c \
-	chacha20_poly1305_test.json.c snow3g_test_f8_vectors.json.c snow3g_test_f9_vectors.json.c
+	chacha20_poly1305_test.json.c snow3g_test_f8_vectors.json.c snow3g_test_f9_vectors.json.c \
+        sm4_ecb_test.c sm4_ecb_test.json.c
+
 OBJECTS := $(SOURCES:%.c=%.o) utils.o
 
 # targets come here

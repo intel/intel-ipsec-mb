@@ -98,11 +98,13 @@ gmac_test(struct IMB_MGR *mb_mgr);
 extern int
 ghash_test(struct IMB_MGR *mb_mgr);
 extern int
-cbc_test(struct IMB_MGR *mb_mg);
+cbc_test(struct IMB_MGR *mb_mgr);
 extern int
-cfb_test(struct IMB_MGR *mb_mg);
+cfb_test(struct IMB_MGR *mb_mgr);
 extern int
-ctr_test(struct IMB_MGR *mb_mg);
+ctr_test(struct IMB_MGR *mb_mgr);
+extern int
+sm4_ecb_test(struct IMB_MGR *mb_mgr);
 
 typedef int (*imb_test_t)(struct IMB_MGR *mb_mgr);
 
@@ -158,7 +160,8 @@ struct imb_test tests[] = {
         { .str = "SNOW_V", .fn = snow_v_test, .enabled = 1 },
         { .str = "DIRECT_API_PARAM", .fn = direct_api_param_test, .enabled = 1 },
         { .str = "QUIC-ECB", .fn = quic_ecb_test, .enabled = 1 },
-        { .str = "QUIC-CHACHA20", .fn = quic_chacha20_test, .enabled = 1 }
+        { .str = "QUIC-CHACHA20", .fn = quic_chacha20_test, .enabled = 1 },
+        { .str = "SM4-ECB", .fn = sm4_ecb_test, .enabled = 1 }
 };
 
 static char *

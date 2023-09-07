@@ -100,6 +100,8 @@ set(TEST_APP_SRC_FILES
   ${CMAKE_CURRENT_SOURCE_DIR}/ccm_test.json.c
   ${CMAKE_CURRENT_SOURCE_DIR}/snow3g_test_f8_vectors.json.c
   ${CMAKE_CURRENT_SOURCE_DIR}/snow3g_test_f9_vectors.json.c
+  ${CMAKE_CURRENT_SOURCE_DIR}/sm4_ecb_test.c
+  ${CMAKE_CURRENT_SOURCE_DIR}/sm4_ecb_test.json.c
   ${CMAKE_CURRENT_SOURCE_DIR}/../common/utils.c
 )
 
