@@ -32,7 +32,13 @@ find_program(CLANG_FORMAT NAMES ${CLANG_FORMAT_BIN})
 
 # set up target if clang-format available
 if(CLANG_FORMAT)
-  file(GLOB_RECURSE CLANG_FORMAT_SRC_FILES "${CMAKE_CURRENT_SOURCE_DIR}/*.[ch]")
+  file(
+    GLOB_RECURSE
+    CLANG_FORMAT_SRC_FILES
+    "${CMAKE_CURRENT_SOURCE_DIR}/lib/*.[ch]"
+    "${CMAKE_CURRENT_SOURCE_DIR}/perf/*.[ch]"
+    "${CMAKE_CURRENT_SOURCE_DIR}/test/*.[ch]"
+    "${CMAKE_CURRENT_SOURCE_DIR}/examples/*.[ch]")
 
   add_custom_target(style
     COMMENT "Checking style using clang-format"
@@ -44,5 +50,3 @@ if(CLANG_FORMAT)
     COMMAND clang-format -style=file -i ${CLANG_FORMAT_SRC_FILES}
   )
 endif()
-
-
