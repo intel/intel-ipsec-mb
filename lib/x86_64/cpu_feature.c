@@ -48,107 +48,123 @@ static struct cpuid_regs cpuid_7_1;
  *    [in] subleaf - CPUID sub-leaf number (ECX)
  *    [out] out    - registers structure to store results of CPUID into
  */
-void mbcpuid(const unsigned leaf,
-             const unsigned subleaf,
-             struct cpuid_regs *out);
+void
+mbcpuid(const unsigned leaf, const unsigned subleaf, struct cpuid_regs *out);
 
-static uint32_t detect_shani(void)
+static uint32_t
+detect_shani(void)
 {
         /* Check presence of SHANI - bit 29 of EBX */
         return (cpuid_7_0.ebx & (1UL << 29));
 }
 
-static uint32_t detect_aesni(void)
+static uint32_t
+detect_aesni(void)
 {
         /* Check presence of AESNI - bit 25 of ECX */
         return (cpuid_1_0.ecx & (1UL << 25));
 }
 
-static uint32_t detect_pclmulqdq(void)
+static uint32_t
+detect_pclmulqdq(void)
 {
         /* Check presence of PCLMULQDQ - bit 1 of ECX */
         return (cpuid_1_0.ecx & (1UL << 1));
 }
 
-static uint32_t detect_cmov(void)
+static uint32_t
+detect_cmov(void)
 {
         /* Check presence of CMOV - bit 15 of EDX */
         return (cpuid_1_0.edx & (1UL << 15));
 }
 
-static uint32_t detect_sse42(void)
+static uint32_t
+detect_sse42(void)
 {
         /* Check presence of SSE4.2 - bit 20 of ECX */
         return (cpuid_1_0.ecx & (1UL << 20));
 }
 
-static uint32_t detect_avx(void)
+static uint32_t
+detect_avx(void)
 {
         /* Check presence of AVX - bit 28 of ECX */
         return (cpuid_1_0.ecx & (1UL << 28));
 }
 
-static uint32_t detect_avx2(void)
+static uint32_t
+detect_avx2(void)
 {
         /* Check presence of AVX2 - bit 5 of EBX */
         return (cpuid_7_0.ebx & (1UL << 5));
 }
 
-static uint32_t detect_avx512f(void)
+static uint32_t
+detect_avx512f(void)
 {
         /* Check presence of AVX512F - bit 16 of EBX */
         return (cpuid_7_0.ebx & (1UL << 16));
 }
 
-static uint32_t detect_avx512dq(void)
+static uint32_t
+detect_avx512dq(void)
 {
         /* Check presence of AVX512DQ - bit 17 of EBX */
         return (cpuid_7_0.ebx & (1UL << 17));
 }
 
-static uint32_t detect_avx512cd(void)
+static uint32_t
+detect_avx512cd(void)
 {
         /* Check presence of AVX512CD - bit 28 of EBX */
         return (cpuid_7_0.ebx & (1UL << 28));
 }
 
-static uint32_t detect_avx512bw(void)
+static uint32_t
+detect_avx512bw(void)
 {
         /* Check presence of AVX512BW - bit 30 of EBX */
         return (cpuid_7_0.ebx & (1UL << 30));
 }
 
-static uint32_t detect_avx512vl(void)
+static uint32_t
+detect_avx512vl(void)
 {
         /* Check presence of AVX512VL - bit 31 of EBX */
         return (cpuid_7_0.ebx & (1UL << 31));
 }
 
-static uint32_t detect_vaes(void)
+static uint32_t
+detect_vaes(void)
 {
         /* Check presence of VAES - bit 9 of ECX */
         return (cpuid_7_0.ecx & (1UL << 9));
 }
 
-static uint32_t detect_vpclmulqdq(void)
+static uint32_t
+detect_vpclmulqdq(void)
 {
         /* Check presence of VAES - bit 10 of ECX */
         return (cpuid_7_0.ecx & (1UL << 10));
 }
 
-static uint32_t detect_gfni(void)
+static uint32_t
+detect_gfni(void)
 {
         /* Check presence of GFNI - bit 8 of ECX */
         return (cpuid_7_0.ecx & (1UL << 8));
 }
 
-static uint32_t detect_avx512_ifma(void)
+static uint32_t
+detect_avx512_ifma(void)
 {
         /* Check presence of AVX512-IFMA - bit 21 of EBX */
         return (cpuid_7_0.ebx & (1UL << 21));
 }
 
-static uint32_t detect_avx_ifma(void)
+static uint32_t
+detect_avx_ifma(void)
 {
         /* Check presence of AVX-IFMA - bit 23 of EAX */
 #ifdef AVX_IFMA
@@ -158,13 +174,15 @@ static uint32_t detect_avx_ifma(void)
 #endif
 }
 
-static uint32_t detect_bmi2(void)
+static uint32_t
+detect_bmi2(void)
 {
         /* Check presence of BMI2 - bit 8 of EBX */
         return (cpuid_7_0.ebx & (1UL << 8));
 }
 
-uint64_t cpu_feature_detect(void)
+uint64_t
+cpu_feature_detect(void)
 {
         static const struct {
                 unsigned req_leaf_number;
@@ -230,7 +248,8 @@ uint64_t cpu_feature_detect(void)
         return features;
 }
 
-uint64_t cpu_feature_adjust(const uint64_t flags, uint64_t features)
+uint64_t
+cpu_feature_adjust(const uint64_t flags, uint64_t features)
 {
         if (flags & IMB_FLAG_SHANI_OFF)
                 features &= ~IMB_FEATURE_SHANI;
@@ -245,7 +264,8 @@ uint64_t cpu_feature_adjust(const uint64_t flags, uint64_t features)
 }
 
 /* External function to retrieve feature flags */
-uint64_t imb_get_feature_flags(void)
+uint64_t
+imb_get_feature_flags(void)
 {
         return cpu_feature_detect();
 }

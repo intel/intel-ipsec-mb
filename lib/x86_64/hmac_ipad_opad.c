@@ -35,9 +35,8 @@
 
 IMB_DLL_EXPORT
 void
-imb_hmac_ipad_opad(IMB_MGR *mb_mgr, const IMB_HASH_ALG sha_type,
-                   const void *pkey, const size_t key_len,
-                   void *ipad_hash, void *opad_hash)
+imb_hmac_ipad_opad(IMB_MGR *mb_mgr, const IMB_HASH_ALG sha_type, const void *pkey,
+                   const size_t key_len, void *ipad_hash, void *opad_hash)
 {
 #ifdef SAFE_PARAM
         if (mb_mgr == NULL) {
@@ -55,24 +54,28 @@ imb_hmac_ipad_opad(IMB_MGR *mb_mgr, const IMB_HASH_ALG sha_type,
 
         switch (sha_type) {
         case IMB_AUTH_HMAC_SHA_1:
-                local_key_len = (key_len <= IMB_SHA1_BLOCK_SIZE) ?
-                                 key_len : IMB_SHA1_DIGEST_SIZE_IN_BYTES;
+                local_key_len =
+                        (key_len <= IMB_SHA1_BLOCK_SIZE) ? key_len : IMB_SHA1_DIGEST_SIZE_IN_BYTES;
                 break;
         case IMB_AUTH_HMAC_SHA_224:
-                local_key_len = (key_len <= IMB_SHA_224_BLOCK_SIZE) ?
-                                 key_len : IMB_SHA224_DIGEST_SIZE_IN_BYTES;
+                local_key_len = (key_len <= IMB_SHA_224_BLOCK_SIZE)
+                                        ? key_len
+                                        : IMB_SHA224_DIGEST_SIZE_IN_BYTES;
                 break;
         case IMB_AUTH_HMAC_SHA_256:
-                local_key_len = (key_len <= IMB_SHA_256_BLOCK_SIZE) ?
-                                 key_len : IMB_SHA256_DIGEST_SIZE_IN_BYTES;
+                local_key_len = (key_len <= IMB_SHA_256_BLOCK_SIZE)
+                                        ? key_len
+                                        : IMB_SHA256_DIGEST_SIZE_IN_BYTES;
                 break;
         case IMB_AUTH_HMAC_SHA_384:
-                local_key_len = (key_len <= IMB_SHA_384_BLOCK_SIZE) ?
-                                 key_len : IMB_SHA384_DIGEST_SIZE_IN_BYTES;
+                local_key_len = (key_len <= IMB_SHA_384_BLOCK_SIZE)
+                                        ? key_len
+                                        : IMB_SHA384_DIGEST_SIZE_IN_BYTES;
                 break;
         case IMB_AUTH_HMAC_SHA_512:
-                local_key_len = (key_len <= IMB_SHA_512_BLOCK_SIZE) ?
-                                 key_len : IMB_SHA512_DIGEST_SIZE_IN_BYTES;
+                local_key_len = (key_len <= IMB_SHA_512_BLOCK_SIZE)
+                                        ? key_len
+                                        : IMB_SHA512_DIGEST_SIZE_IN_BYTES;
                 break;
         case IMB_AUTH_MD5:
                 if (key_len <= IMB_MD5_BLOCK_SIZE)
@@ -167,7 +170,7 @@ imb_hmac_ipad_opad(IMB_MGR *mb_mgr, const IMB_HASH_ALG sha_type,
         }
 
 #ifdef SAFE_DATA
-       imb_clear_mem(key, sizeof(key));
-       imb_clear_mem(buf, sizeof(buf));
+        imb_clear_mem(key, sizeof(key));
+        imb_clear_mem(buf, sizeof(buf));
 #endif
 }

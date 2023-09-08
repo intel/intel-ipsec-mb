@@ -51,43 +51,38 @@
 #include "include/job_api_kasumi.h"
 #include "include/mb_mgr_job_check.h" /* is_job_invalid() */
 
-#define CRC(func, state, job) *((uint32_t *)job->auth_tag_output) = \
-                func(state, job->src + job->hash_start_src_offset_in_bytes, \
+#define CRC(func, state, job)                                                                      \
+        *((uint32_t *) job->auth_tag_output) =                                                     \
+                func(state, job->src + job->hash_start_src_offset_in_bytes,                        \
                      job->msg_len_to_hash_in_bytes)
 
 /* ========================================================================= */
 /* AES-CBC */
 /* ========================================================================= */
 
-__forceinline IMB_JOB *SUBMIT_JOB_AES_CBC_128_DEC(IMB_JOB *job)
+__forceinline IMB_JOB *
+SUBMIT_JOB_AES_CBC_128_DEC(IMB_JOB *job)
 {
-        AES_CBC_DEC_128(job->src + job->cipher_start_src_offset_in_bytes,
-                        job->iv,
-                        job->dec_keys,
-                        job->dst,
-                        job->msg_len_to_cipher_in_bytes & (~15));
+        AES_CBC_DEC_128(job->src + job->cipher_start_src_offset_in_bytes, job->iv, job->dec_keys,
+                        job->dst, job->msg_len_to_cipher_in_bytes & (~15));
         job->status |= IMB_STATUS_COMPLETED_CIPHER;
         return job;
 }
 
-__forceinline IMB_JOB *SUBMIT_JOB_AES_CBC_192_DEC(IMB_JOB *job)
+__forceinline IMB_JOB *
+SUBMIT_JOB_AES_CBC_192_DEC(IMB_JOB *job)
 {
-        AES_CBC_DEC_192(job->src + job->cipher_start_src_offset_in_bytes,
-                        job->iv,
-                        job->dec_keys,
-                        job->dst,
-                        job->msg_len_to_cipher_in_bytes);
+        AES_CBC_DEC_192(job->src + job->cipher_start_src_offset_in_bytes, job->iv, job->dec_keys,
+                        job->dst, job->msg_len_to_cipher_in_bytes);
         job->status |= IMB_STATUS_COMPLETED_CIPHER;
         return job;
 }
 
-__forceinline IMB_JOB *SUBMIT_JOB_AES_CBC_256_DEC(IMB_JOB *job)
+__forceinline IMB_JOB *
+SUBMIT_JOB_AES_CBC_256_DEC(IMB_JOB *job)
 {
-        AES_CBC_DEC_256(job->src + job->cipher_start_src_offset_in_bytes,
-                        job->iv,
-                        job->dec_keys,
-                        job->dst,
-                        job->msg_len_to_cipher_in_bytes & (~15));
+        AES_CBC_DEC_256(job->src + job->cipher_start_src_offset_in_bytes, job->iv, job->dec_keys,
+                        job->dst, job->msg_len_to_cipher_in_bytes & (~15));
         job->status |= IMB_STATUS_COMPLETED_CIPHER;
         return job;
 }
@@ -96,61 +91,55 @@ __forceinline IMB_JOB *SUBMIT_JOB_AES_CBC_256_DEC(IMB_JOB *job)
 /* AES-ECB */
 /* ========================================================================= */
 
-__forceinline IMB_JOB *SUBMIT_JOB_AES_ECB_128_ENC(IMB_JOB *job)
+__forceinline IMB_JOB *
+SUBMIT_JOB_AES_ECB_128_ENC(IMB_JOB *job)
 {
-        AES_ECB_ENC_128(job->src + job->cipher_start_src_offset_in_bytes,
-                        job->enc_keys,
-                        job->dst,
+        AES_ECB_ENC_128(job->src + job->cipher_start_src_offset_in_bytes, job->enc_keys, job->dst,
                         job->msg_len_to_cipher_in_bytes & (~15));
         job->status |= IMB_STATUS_COMPLETED_CIPHER;
         return job;
 }
 
-__forceinline IMB_JOB *SUBMIT_JOB_AES_ECB_192_ENC(IMB_JOB *job)
+__forceinline IMB_JOB *
+SUBMIT_JOB_AES_ECB_192_ENC(IMB_JOB *job)
 {
-        AES_ECB_ENC_192(job->src + job->cipher_start_src_offset_in_bytes,
-                        job->enc_keys,
-                        job->dst,
+        AES_ECB_ENC_192(job->src + job->cipher_start_src_offset_in_bytes, job->enc_keys, job->dst,
                         job->msg_len_to_cipher_in_bytes & (~15));
         job->status |= IMB_STATUS_COMPLETED_CIPHER;
         return job;
 }
 
-__forceinline IMB_JOB *SUBMIT_JOB_AES_ECB_256_ENC(IMB_JOB *job)
+__forceinline IMB_JOB *
+SUBMIT_JOB_AES_ECB_256_ENC(IMB_JOB *job)
 {
-        AES_ECB_ENC_256(job->src + job->cipher_start_src_offset_in_bytes,
-                        job->enc_keys,
-                        job->dst,
+        AES_ECB_ENC_256(job->src + job->cipher_start_src_offset_in_bytes, job->enc_keys, job->dst,
                         job->msg_len_to_cipher_in_bytes & (~15));
         job->status |= IMB_STATUS_COMPLETED_CIPHER;
         return job;
 }
 
-__forceinline IMB_JOB *SUBMIT_JOB_AES_ECB_128_DEC(IMB_JOB *job)
+__forceinline IMB_JOB *
+SUBMIT_JOB_AES_ECB_128_DEC(IMB_JOB *job)
 {
-        AES_ECB_DEC_128(job->src + job->cipher_start_src_offset_in_bytes,
-                        job->dec_keys,
-                        job->dst,
+        AES_ECB_DEC_128(job->src + job->cipher_start_src_offset_in_bytes, job->dec_keys, job->dst,
                         job->msg_len_to_cipher_in_bytes & (~15));
         job->status |= IMB_STATUS_COMPLETED_CIPHER;
         return job;
 }
 
-__forceinline IMB_JOB *SUBMIT_JOB_AES_ECB_192_DEC(IMB_JOB *job)
+__forceinline IMB_JOB *
+SUBMIT_JOB_AES_ECB_192_DEC(IMB_JOB *job)
 {
-        AES_ECB_DEC_192(job->src + job->cipher_start_src_offset_in_bytes,
-                        job->dec_keys,
-                        job->dst,
+        AES_ECB_DEC_192(job->src + job->cipher_start_src_offset_in_bytes, job->dec_keys, job->dst,
                         job->msg_len_to_cipher_in_bytes & (~15));
         job->status |= IMB_STATUS_COMPLETED_CIPHER;
         return job;
 }
 
-__forceinline IMB_JOB *SUBMIT_JOB_AES_ECB_256_DEC(IMB_JOB *job)
+__forceinline IMB_JOB *
+SUBMIT_JOB_AES_ECB_256_DEC(IMB_JOB *job)
 {
-        AES_ECB_DEC_256(job->src + job->cipher_start_src_offset_in_bytes,
-                        job->dec_keys,
-                        job->dst,
+        AES_ECB_DEC_256(job->src + job->cipher_start_src_offset_in_bytes, job->dec_keys, job->dst,
                         job->msg_len_to_cipher_in_bytes & (~15));
         job->status |= IMB_STATUS_COMPLETED_CIPHER;
         return job;
@@ -160,13 +149,11 @@ __forceinline IMB_JOB *SUBMIT_JOB_AES_ECB_256_DEC(IMB_JOB *job)
 /* AES-CBCS */
 /* ========================================================================= */
 
-__forceinline IMB_JOB * SUBMIT_JOB_AES128_CBCS_1_9_DEC(IMB_JOB *job)
+__forceinline IMB_JOB *
+SUBMIT_JOB_AES128_CBCS_1_9_DEC(IMB_JOB *job)
 {
-        AES_CBCS_1_9_DEC_128(job->src + job->cipher_start_src_offset_in_bytes,
-                             job->iv,
-                             job->dec_keys,
-                             job->dst,
-                             job->msg_len_to_cipher_in_bytes & (~15),
+        AES_CBCS_1_9_DEC_128(job->src + job->cipher_start_src_offset_in_bytes, job->iv,
+                             job->dec_keys, job->dst, job->msg_len_to_cipher_in_bytes & (~15),
                              job->cipher_fields.CBCS.next_iv);
         job->status |= IMB_STATUS_COMPLETED_CIPHER;
         return job;
@@ -181,8 +168,8 @@ __forceinline IMB_JOB * SUBMIT_JOB_AES128_CBCS_1_9_DEC(IMB_JOB *job)
 /* ========================================================================= */
 /* AES-GCM */
 /* ========================================================================= */
-__forceinline IMB_JOB *SUBMIT_JOB_AES_GCM_DEC(IMB_MGR *state, IMB_JOB *job,
-                                              const uint64_t key_sz)
+__forceinline IMB_JOB *
+SUBMIT_JOB_AES_GCM_DEC(IMB_MGR *state, IMB_JOB *job, const uint64_t key_sz)
 {
         if (16 == key_sz)
                 return AES_GCM_DEC_IV_128(state, job);
@@ -192,8 +179,8 @@ __forceinline IMB_JOB *SUBMIT_JOB_AES_GCM_DEC(IMB_MGR *state, IMB_JOB *job,
                 return AES_GCM_DEC_IV_256(state, job);
 }
 
-__forceinline IMB_JOB *SUBMIT_JOB_AES_GCM_ENC(IMB_MGR *state, IMB_JOB *job,
-                                              const uint64_t key_sz)
+__forceinline IMB_JOB *
+SUBMIT_JOB_AES_GCM_ENC(IMB_MGR *state, IMB_JOB *job, const uint64_t key_sz)
 {
         if (16 == key_sz)
                 return AES_GCM_ENC_IV_128(state, job);
@@ -206,40 +193,31 @@ __forceinline IMB_JOB *SUBMIT_JOB_AES_GCM_ENC(IMB_MGR *state, IMB_JOB *job,
 /* ========================================================================= */
 /* AES-CTR */
 /* ========================================================================= */
-__forceinline IMB_JOB *SUBMIT_JOB_AES_CTR(IMB_JOB *job,
-                                          const uint64_t key_sz)
+__forceinline IMB_JOB *
+SUBMIT_JOB_AES_CTR(IMB_JOB *job, const uint64_t key_sz)
 {
         if (IMB_KEY_128_BYTES == key_sz) {
 #ifdef SUBMIT_JOB_AES_CTR_128
                 SUBMIT_JOB_AES_CTR_128(job);
 #else
-                AES_CTR_128(job->src + job->cipher_start_src_offset_in_bytes,
-                            job->iv,
-                            job->enc_keys,
-                            job->dst,
-                            job->msg_len_to_cipher_in_bytes,
+                AES_CTR_128(job->src + job->cipher_start_src_offset_in_bytes, job->iv,
+                            job->enc_keys, job->dst, job->msg_len_to_cipher_in_bytes,
                             job->iv_len_in_bytes);
 #endif
         } else if (IMB_KEY_192_BYTES == key_sz) {
 #ifdef SUBMIT_JOB_AES_CTR_192
                 SUBMIT_JOB_AES_CTR_192(job);
 #else
-                AES_CTR_192(job->src + job->cipher_start_src_offset_in_bytes,
-                            job->iv,
-                            job->enc_keys,
-                            job->dst,
-                            job->msg_len_to_cipher_in_bytes,
+                AES_CTR_192(job->src + job->cipher_start_src_offset_in_bytes, job->iv,
+                            job->enc_keys, job->dst, job->msg_len_to_cipher_in_bytes,
                             job->iv_len_in_bytes);
 #endif
         } else /* assume 256-bit key */ {
 #ifdef SUBMIT_JOB_AES_CTR_256
                 SUBMIT_JOB_AES_CTR_256(job);
 #else
-                AES_CTR_256(job->src + job->cipher_start_src_offset_in_bytes,
-                            job->iv,
-                            job->enc_keys,
-                            job->dst,
-                            job->msg_len_to_cipher_in_bytes,
+                AES_CTR_256(job->src + job->cipher_start_src_offset_in_bytes, job->iv,
+                            job->enc_keys, job->dst, job->msg_len_to_cipher_in_bytes,
                             job->iv_len_in_bytes);
 #endif
         }
@@ -248,43 +226,31 @@ __forceinline IMB_JOB *SUBMIT_JOB_AES_CTR(IMB_JOB *job,
         return job;
 }
 
-__forceinline IMB_JOB *SUBMIT_JOB_AES_CTR_BIT(IMB_JOB *job,
-                                              const uint64_t key_sz)
+__forceinline IMB_JOB *
+SUBMIT_JOB_AES_CTR_BIT(IMB_JOB *job, const uint64_t key_sz)
 {
         if (IMB_KEY_128_BYTES == key_sz) {
 #ifdef SUBMIT_JOB_AES_CTR_128_BIT
                 SUBMIT_JOB_AES_CTR_128_BIT(job);
 #else
-                AES_CTR_128_BIT(job->src +
-                                job->cipher_start_src_offset_in_bytes,
-                                job->iv,
-                                job->enc_keys,
-                                job->dst,
-                                job->msg_len_to_cipher_in_bits,
+                AES_CTR_128_BIT(job->src + job->cipher_start_src_offset_in_bytes, job->iv,
+                                job->enc_keys, job->dst, job->msg_len_to_cipher_in_bits,
                                 job->iv_len_in_bytes);
 #endif
         } else if (IMB_KEY_192_BYTES == key_sz) {
 #ifdef SUBMIT_JOB_AES_CTR_192_BIT
                 SUBMIT_JOB_AES_CTR_192_BIT(job);
 #else
-                AES_CTR_192_BIT(job->src +
-                                job->cipher_start_src_offset_in_bytes,
-                                job->iv,
-                                job->enc_keys,
-                                job->dst,
-                                job->msg_len_to_cipher_in_bits,
+                AES_CTR_192_BIT(job->src + job->cipher_start_src_offset_in_bytes, job->iv,
+                                job->enc_keys, job->dst, job->msg_len_to_cipher_in_bits,
                                 job->iv_len_in_bytes);
 #endif
         } else /* assume 256-bit key */ {
 #ifdef SUBMIT_JOB_AES_CTR_256_BIT
                 SUBMIT_JOB_AES_CTR_256_BIT(job);
 #else
-                AES_CTR_256_BIT(job->src +
-                                job->cipher_start_src_offset_in_bytes,
-                                job->iv,
-                                job->enc_keys,
-                                job->dst,
-                                job->msg_len_to_cipher_in_bits,
+                AES_CTR_256_BIT(job->src + job->cipher_start_src_offset_in_bytes, job->iv,
+                                job->enc_keys, job->dst, job->msg_len_to_cipher_in_bits,
                                 job->iv_len_in_bytes);
 #endif
         }
@@ -297,7 +263,8 @@ __forceinline IMB_JOB *SUBMIT_JOB_AES_CTR_BIT(IMB_JOB *job,
 /* Custom hash / cipher */
 /* ========================================================================= */
 
-__forceinline IMB_JOB *JOB_CUSTOM_CIPHER(IMB_JOB *job)
+__forceinline IMB_JOB *
+JOB_CUSTOM_CIPHER(IMB_JOB *job)
 {
         if (!(job->status & IMB_STATUS_COMPLETED_CIPHER)) {
                 if (job->cipher_func(job))
@@ -308,17 +275,20 @@ __forceinline IMB_JOB *JOB_CUSTOM_CIPHER(IMB_JOB *job)
         return job;
 }
 
-__forceinline IMB_JOB *SUBMIT_JOB_CUSTOM_CIPHER(IMB_JOB *job)
+__forceinline IMB_JOB *
+SUBMIT_JOB_CUSTOM_CIPHER(IMB_JOB *job)
 {
         return JOB_CUSTOM_CIPHER(job);
 }
 
-__forceinline IMB_JOB *FLUSH_JOB_CUSTOM_CIPHER(IMB_JOB *job)
+__forceinline IMB_JOB *
+FLUSH_JOB_CUSTOM_CIPHER(IMB_JOB *job)
 {
         return JOB_CUSTOM_CIPHER(job);
 }
 
-__forceinline IMB_JOB *JOB_CUSTOM_HASH(IMB_JOB *job)
+__forceinline IMB_JOB *
+JOB_CUSTOM_HASH(IMB_JOB *job)
 {
         if (!(job->status & IMB_STATUS_COMPLETED_AUTH)) {
                 if (job->hash_func(job))
@@ -329,12 +299,14 @@ __forceinline IMB_JOB *JOB_CUSTOM_HASH(IMB_JOB *job)
         return job;
 }
 
-__forceinline IMB_JOB *SUBMIT_JOB_CUSTOM_HASH(IMB_JOB *job)
+__forceinline IMB_JOB *
+SUBMIT_JOB_CUSTOM_HASH(IMB_JOB *job)
 {
         return JOB_CUSTOM_HASH(job);
 }
 
-__forceinline IMB_JOB *FLUSH_JOB_CUSTOM_HASH(IMB_JOB *job)
+__forceinline IMB_JOB *
+FLUSH_JOB_CUSTOM_HASH(IMB_JOB *job)
 {
         return JOB_CUSTOM_HASH(job);
 }
@@ -342,9 +314,9 @@ __forceinline IMB_JOB *FLUSH_JOB_CUSTOM_HASH(IMB_JOB *job)
 /* ========================================================================= */
 /* Cipher submit & flush functions */
 /* ========================================================================= */
-__forceinline IMB_JOB *SUBMIT_JOB_CIPHER_ENC(IMB_MGR *state, IMB_JOB *job,
-                                             const IMB_CIPHER_MODE cipher_mode,
-                                             const uint64_t key_sz)
+__forceinline IMB_JOB *
+SUBMIT_JOB_CIPHER_ENC(IMB_MGR *state, IMB_JOB *job, const IMB_CIPHER_MODE cipher_mode,
+                      const uint64_t key_sz)
 {
         if (IMB_CIPHER_GCM == cipher_mode) {
                 return SUBMIT_JOB_AES_GCM_ENC(state, job, key_sz);
@@ -403,8 +375,7 @@ __forceinline IMB_JOB *SUBMIT_JOB_CIPHER_ENC(IMB_MGR *state, IMB_JOB *job,
 #ifdef SUBMIT_JOB_DOCSIS_DES_ENC
                 MB_MGR_DES_OOO *docsis_des_enc_ooo = state->docsis_des_enc_ooo;
 
-                return SUBMIT_JOB_DOCSIS_DES_ENC(docsis_des_enc_ooo,
-                                                 job);
+                return SUBMIT_JOB_DOCSIS_DES_ENC(docsis_des_enc_ooo, job);
 #else
                 return DOCSIS_DES_ENC(job);
 #endif /* SUBMIT_JOB_DOCSIS_DES_ENC */
@@ -428,8 +399,7 @@ __forceinline IMB_JOB *SUBMIT_JOB_CIPHER_ENC(IMB_MGR *state, IMB_JOB *job,
 
                         return SUBMIT_JOB_ZUC_EEA3(zuc_eea3_ooo, job);
                 } else { /* assume 32 */
-                        MB_MGR_ZUC_OOO *zuc256_eea3_ooo =
-                                state->zuc256_eea3_ooo;
+                        MB_MGR_ZUC_OOO *zuc256_eea3_ooo = state->zuc256_eea3_ooo;
 
                         return SUBMIT_JOB_ZUC256_EEA3(zuc256_eea3_ooo, job);
                 }
@@ -455,9 +425,9 @@ __forceinline IMB_JOB *SUBMIT_JOB_CIPHER_ENC(IMB_MGR *state, IMB_JOB *job,
         }
 }
 
-__forceinline IMB_JOB *FLUSH_JOB_CIPHER_ENC(IMB_MGR *state, IMB_JOB *job,
-                                            const IMB_CIPHER_MODE cipher_mode,
-                                            const uint64_t key_sz)
+__forceinline IMB_JOB *
+FLUSH_JOB_CIPHER_ENC(IMB_MGR *state, IMB_JOB *job, const IMB_CIPHER_MODE cipher_mode,
+                     const uint64_t key_sz)
 {
         if (IMB_CIPHER_CBC == cipher_mode) {
                 if (16 == key_sz) {
@@ -468,7 +438,7 @@ __forceinline IMB_JOB *FLUSH_JOB_CIPHER_ENC(IMB_MGR *state, IMB_JOB *job,
                         MB_MGR_AES_OOO *aes192_ooo = state->aes192_ooo;
 
                         return FLUSH_JOB_AES_CBC_192_ENC(aes192_ooo);
-                } else  { /* assume 32 */
+                } else { /* assume 32 */
                         MB_MGR_AES_OOO *aes256_ooo = state->aes256_ooo;
 
                         return FLUSH_JOB_AES_CBC_256_ENC(aes256_ooo);
@@ -501,8 +471,7 @@ __forceinline IMB_JOB *FLUSH_JOB_CIPHER_ENC(IMB_MGR *state, IMB_JOB *job,
 
                         return FLUSH_JOB_ZUC_EEA3(zuc_eea3_ooo);
                 } else { /* assume 32 */
-                        MB_MGR_ZUC_OOO *zuc256_eea3_ooo =
-                                state->zuc256_eea3_ooo;
+                        MB_MGR_ZUC_OOO *zuc256_eea3_ooo = state->zuc256_eea3_ooo;
 
                         return FLUSH_JOB_ZUC256_EEA3(zuc256_eea3_ooo);
                 }
@@ -514,18 +483,18 @@ __forceinline IMB_JOB *FLUSH_JOB_CIPHER_ENC(IMB_MGR *state, IMB_JOB *job,
         } else if (IMB_CIPHER_SNOW3G_UEA2_BITLEN == cipher_mode) {
                 return FLUSH_JOB_SNOW3G_UEA2(state);
 #endif
-        /**
-         * assume IMB_CIPHER_CNTR/CNTR_BITLEN, IMB_CIPHER_ECB,
-         * IMB_CIPHER_CCM, IMB_CIPHER_NULL or IMB_CIPHER_GCM
-         */
+                /**
+                 * assume IMB_CIPHER_CNTR/CNTR_BITLEN, IMB_CIPHER_ECB,
+                 * IMB_CIPHER_CCM, IMB_CIPHER_NULL or IMB_CIPHER_GCM
+                 */
         } else {
                 return NULL;
         }
 }
 
-__forceinline IMB_JOB *SUBMIT_JOB_CIPHER_DEC(IMB_MGR *state, IMB_JOB *job,
-                                             const IMB_CIPHER_MODE cipher_mode,
-                                             const uint64_t key_sz)
+__forceinline IMB_JOB *
+SUBMIT_JOB_CIPHER_DEC(IMB_MGR *state, IMB_JOB *job, const IMB_CIPHER_MODE cipher_mode,
+                      const uint64_t key_sz)
 {
         if (IMB_CIPHER_GCM == cipher_mode) {
                 return SUBMIT_JOB_AES_GCM_DEC(state, job, key_sz);
@@ -577,8 +546,7 @@ __forceinline IMB_JOB *SUBMIT_JOB_CIPHER_DEC(IMB_MGR *state, IMB_JOB *job,
 #ifdef SUBMIT_JOB_DOCSIS_DES_DEC
                 MB_MGR_DES_OOO *docsis_des_dec_ooo = state->docsis_des_dec_ooo;
 
-                return SUBMIT_JOB_DOCSIS_DES_DEC(docsis_des_dec_ooo,
-                                                 job);
+                return SUBMIT_JOB_DOCSIS_DES_DEC(docsis_des_dec_ooo, job);
 #else
                 return DOCSIS_DES_DEC(job);
 #endif /* SUBMIT_JOB_DOCSIS_DES_DEC */
@@ -604,8 +572,7 @@ __forceinline IMB_JOB *SUBMIT_JOB_CIPHER_DEC(IMB_MGR *state, IMB_JOB *job,
 
                         return SUBMIT_JOB_ZUC_EEA3(zuc_eea3_ooo, job);
                 } else { /* assume 32 */
-                        MB_MGR_ZUC_OOO *zuc256_eea3_ooo =
-                                state->zuc256_eea3_ooo;
+                        MB_MGR_ZUC_OOO *zuc256_eea3_ooo = state->zuc256_eea3_ooo;
 
                         return SUBMIT_JOB_ZUC256_EEA3(zuc256_eea3_ooo, job);
                 }
@@ -630,9 +597,9 @@ __forceinline IMB_JOB *SUBMIT_JOB_CIPHER_DEC(IMB_MGR *state, IMB_JOB *job,
         }
 }
 
-__forceinline IMB_JOB *FLUSH_JOB_CIPHER_DEC(IMB_MGR *state, IMB_JOB *job,
-                                            const IMB_CIPHER_MODE cipher_mode,
-                                            const uint64_t key_sz)
+__forceinline IMB_JOB *
+FLUSH_JOB_CIPHER_DEC(IMB_MGR *state, IMB_JOB *job, const IMB_CIPHER_MODE cipher_mode,
+                     const uint64_t key_sz)
 {
         (void) job;
 
@@ -672,8 +639,7 @@ __forceinline IMB_JOB *FLUSH_JOB_CIPHER_DEC(IMB_MGR *state, IMB_JOB *job,
 
                         return FLUSH_JOB_ZUC_EEA3(zuc_eea3_ooo);
                 } else { /* assume 32 */
-                        MB_MGR_ZUC_OOO *zuc256_eea3_ooo =
-                                state->zuc256_eea3_ooo;
+                        MB_MGR_ZUC_OOO *zuc256_eea3_ooo = state->zuc256_eea3_ooo;
 
                         return FLUSH_JOB_ZUC256_EEA3(zuc256_eea3_ooo);
                 }
@@ -691,61 +657,61 @@ __forceinline IMB_JOB *FLUSH_JOB_CIPHER_DEC(IMB_MGR *state, IMB_JOB *job,
 /* ========================= */
 
 /* AES-CBC */
-static IMB_JOB *submit_cipher_dec_aes_cbc_128(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_cipher_dec_aes_cbc_128(IMB_MGR *state, IMB_JOB *job)
 {
-        return SUBMIT_JOB_CIPHER_DEC(state, job, IMB_CIPHER_CBC,
-                                     IMB_KEY_128_BYTES);
+        return SUBMIT_JOB_CIPHER_DEC(state, job, IMB_CIPHER_CBC, IMB_KEY_128_BYTES);
 }
 
-static IMB_JOB *submit_cipher_dec_aes_cbc_192(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_cipher_dec_aes_cbc_192(IMB_MGR *state, IMB_JOB *job)
 {
-        return SUBMIT_JOB_CIPHER_DEC(state, job, IMB_CIPHER_CBC,
-                                     IMB_KEY_192_BYTES);
+        return SUBMIT_JOB_CIPHER_DEC(state, job, IMB_CIPHER_CBC, IMB_KEY_192_BYTES);
 }
 
-static IMB_JOB *submit_cipher_dec_aes_cbc_256(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_cipher_dec_aes_cbc_256(IMB_MGR *state, IMB_JOB *job)
 {
-        return SUBMIT_JOB_CIPHER_DEC(state, job, IMB_CIPHER_CBC,
-                                     IMB_KEY_256_BYTES);
+        return SUBMIT_JOB_CIPHER_DEC(state, job, IMB_CIPHER_CBC, IMB_KEY_256_BYTES);
 }
 
 /* AES-CTR */
-static IMB_JOB *submit_cipher_dec_aes_ctr_128(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_cipher_dec_aes_ctr_128(IMB_MGR *state, IMB_JOB *job)
 {
-        return SUBMIT_JOB_CIPHER_DEC(state, job, IMB_CIPHER_CNTR,
-                                     IMB_KEY_128_BYTES);
+        return SUBMIT_JOB_CIPHER_DEC(state, job, IMB_CIPHER_CNTR, IMB_KEY_128_BYTES);
 }
 
-static IMB_JOB *submit_cipher_dec_aes_ctr_192(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_cipher_dec_aes_ctr_192(IMB_MGR *state, IMB_JOB *job)
 {
-        return SUBMIT_JOB_CIPHER_DEC(state, job, IMB_CIPHER_CNTR,
-                                     IMB_KEY_192_BYTES);
+        return SUBMIT_JOB_CIPHER_DEC(state, job, IMB_CIPHER_CNTR, IMB_KEY_192_BYTES);
 }
 
-static IMB_JOB *submit_cipher_dec_aes_ctr_256(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_cipher_dec_aes_ctr_256(IMB_MGR *state, IMB_JOB *job)
 {
-        return SUBMIT_JOB_CIPHER_DEC(state, job, IMB_CIPHER_CNTR,
-                                     IMB_KEY_256_BYTES);
+        return SUBMIT_JOB_CIPHER_DEC(state, job, IMB_CIPHER_CNTR, IMB_KEY_256_BYTES);
 }
 
 /* NULL */
-static IMB_JOB *submit_cipher_dec_null(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_cipher_dec_null(IMB_MGR *state, IMB_JOB *job)
 {
-        return SUBMIT_JOB_CIPHER_DEC(state, job, IMB_CIPHER_NULL,
-                                     IMB_KEY_128_BYTES);
+        return SUBMIT_JOB_CIPHER_DEC(state, job, IMB_CIPHER_NULL, IMB_KEY_128_BYTES);
 }
 
 /* AES DOCSIS */
-static IMB_JOB *submit_cipher_dec_aes_docsis_128(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_cipher_dec_aes_docsis_128(IMB_MGR *state, IMB_JOB *job)
 {
-        return SUBMIT_JOB_CIPHER_DEC(state, job, IMB_CIPHER_DOCSIS_SEC_BPI,
-                                     IMB_KEY_128_BYTES);
+        return SUBMIT_JOB_CIPHER_DEC(state, job, IMB_CIPHER_DOCSIS_SEC_BPI, IMB_KEY_128_BYTES);
 }
 
-static IMB_JOB *submit_cipher_dec_aes_docsis_256(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_cipher_dec_aes_docsis_256(IMB_MGR *state, IMB_JOB *job)
 {
-        return SUBMIT_JOB_CIPHER_DEC(state, job, IMB_CIPHER_DOCSIS_SEC_BPI,
-                                     IMB_KEY_256_BYTES);
+        return SUBMIT_JOB_CIPHER_DEC(state, job, IMB_CIPHER_DOCSIS_SEC_BPI, IMB_KEY_256_BYTES);
 }
 
 /* AES-GCM */
@@ -754,180 +720,178 @@ static IMB_JOB *submit_cipher_dec_aes_docsis_256(IMB_MGR *state, IMB_JOB *job)
 #define submit_cipher_dec_aes_gcm_256 AES_GCM_DEC_IV_256
 
 /* CUSTOM */
-static IMB_JOB *submit_cipher_dec_custom(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_cipher_dec_custom(IMB_MGR *state, IMB_JOB *job)
 {
-        return SUBMIT_JOB_CIPHER_DEC(state, job, IMB_CIPHER_CUSTOM,
-                                     IMB_KEY_128_BYTES);
+        return SUBMIT_JOB_CIPHER_DEC(state, job, IMB_CIPHER_CUSTOM, IMB_KEY_128_BYTES);
 }
 
 /* DES */
-static IMB_JOB *submit_cipher_dec_des_cbc_64(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_cipher_dec_des_cbc_64(IMB_MGR *state, IMB_JOB *job)
 {
-        return SUBMIT_JOB_CIPHER_DEC(state, job, IMB_CIPHER_DES,
-                                     IMB_KEY_64_BYTES);
+        return SUBMIT_JOB_CIPHER_DEC(state, job, IMB_CIPHER_DES, IMB_KEY_64_BYTES);
 }
 
 /* DES DOCSIS */
-static IMB_JOB *submit_cipher_dec_des_docsis_64(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_cipher_dec_des_docsis_64(IMB_MGR *state, IMB_JOB *job)
 {
-        return SUBMIT_JOB_CIPHER_DEC(state, job, IMB_CIPHER_DOCSIS_DES,
-                                     IMB_KEY_64_BYTES);
+        return SUBMIT_JOB_CIPHER_DEC(state, job, IMB_CIPHER_DOCSIS_DES, IMB_KEY_64_BYTES);
 }
 
 /* AES-CCM */
-static IMB_JOB *submit_cipher_dec_aes_ccm_128(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_cipher_dec_aes_ccm_128(IMB_MGR *state, IMB_JOB *job)
 {
-        return SUBMIT_JOB_CIPHER_DEC(state, job, IMB_CIPHER_CCM,
-                                     IMB_KEY_128_BYTES);
+        return SUBMIT_JOB_CIPHER_DEC(state, job, IMB_CIPHER_CCM, IMB_KEY_128_BYTES);
 }
 
-static IMB_JOB *submit_cipher_dec_aes_ccm_256(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_cipher_dec_aes_ccm_256(IMB_MGR *state, IMB_JOB *job)
 {
-        return SUBMIT_JOB_CIPHER_DEC(state, job, IMB_CIPHER_CCM,
-                                     IMB_KEY_256_BYTES);
+        return SUBMIT_JOB_CIPHER_DEC(state, job, IMB_CIPHER_CCM, IMB_KEY_256_BYTES);
 }
 
 /* 3DES */
-static IMB_JOB *submit_cipher_dec_des3_cbc_192(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_cipher_dec_des3_cbc_192(IMB_MGR *state, IMB_JOB *job)
 {
-        return SUBMIT_JOB_CIPHER_DEC(state, job, IMB_CIPHER_DES3,
-                                     IMB_KEY_192_BYTES);
+        return SUBMIT_JOB_CIPHER_DEC(state, job, IMB_CIPHER_DES3, IMB_KEY_192_BYTES);
 }
 
 /* PON AES-CTR */
-static IMB_JOB *submit_cipher_dec_aes_ctr_pon_128(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_cipher_dec_aes_ctr_pon_128(IMB_MGR *state, IMB_JOB *job)
 {
-        return SUBMIT_JOB_CIPHER_DEC(state, job, IMB_CIPHER_PON_AES_CNTR,
-                                     IMB_KEY_128_BYTES);
+        return SUBMIT_JOB_CIPHER_DEC(state, job, IMB_CIPHER_PON_AES_CNTR, IMB_KEY_128_BYTES);
 }
 
 /* AES-ECB */
-static IMB_JOB *submit_cipher_dec_aes_ecb_128(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_cipher_dec_aes_ecb_128(IMB_MGR *state, IMB_JOB *job)
 {
-        return SUBMIT_JOB_CIPHER_DEC(state, job, IMB_CIPHER_ECB,
-                                     IMB_KEY_128_BYTES);
+        return SUBMIT_JOB_CIPHER_DEC(state, job, IMB_CIPHER_ECB, IMB_KEY_128_BYTES);
 }
 
-static IMB_JOB *submit_cipher_dec_aes_ecb_192(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_cipher_dec_aes_ecb_192(IMB_MGR *state, IMB_JOB *job)
 {
-        return SUBMIT_JOB_CIPHER_DEC(state, job, IMB_CIPHER_ECB,
-                                     IMB_KEY_192_BYTES);
+        return SUBMIT_JOB_CIPHER_DEC(state, job, IMB_CIPHER_ECB, IMB_KEY_192_BYTES);
 }
 
-static IMB_JOB *submit_cipher_dec_aes_ecb_256(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_cipher_dec_aes_ecb_256(IMB_MGR *state, IMB_JOB *job)
 {
-        return SUBMIT_JOB_CIPHER_DEC(state, job, IMB_CIPHER_ECB,
-                                     IMB_KEY_256_BYTES);
+        return SUBMIT_JOB_CIPHER_DEC(state, job, IMB_CIPHER_ECB, IMB_KEY_256_BYTES);
 }
 
 /* AES-CTR BITS */
-static IMB_JOB *submit_cipher_dec_aes_ctr_128_bit(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_cipher_dec_aes_ctr_128_bit(IMB_MGR *state, IMB_JOB *job)
 {
-        return SUBMIT_JOB_CIPHER_DEC(state, job, IMB_CIPHER_CNTR_BITLEN,
-                                     IMB_KEY_128_BYTES);
+        return SUBMIT_JOB_CIPHER_DEC(state, job, IMB_CIPHER_CNTR_BITLEN, IMB_KEY_128_BYTES);
 }
 
-static IMB_JOB *submit_cipher_dec_aes_ctr_192_bit(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_cipher_dec_aes_ctr_192_bit(IMB_MGR *state, IMB_JOB *job)
 {
-        return SUBMIT_JOB_CIPHER_DEC(state, job, IMB_CIPHER_CNTR_BITLEN,
-                                     IMB_KEY_192_BYTES);
+        return SUBMIT_JOB_CIPHER_DEC(state, job, IMB_CIPHER_CNTR_BITLEN, IMB_KEY_192_BYTES);
 }
 
-static IMB_JOB *submit_cipher_dec_aes_ctr_256_bit(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_cipher_dec_aes_ctr_256_bit(IMB_MGR *state, IMB_JOB *job)
 {
-        return SUBMIT_JOB_CIPHER_DEC(state, job, IMB_CIPHER_CNTR_BITLEN,
-                                     IMB_KEY_256_BYTES);
+        return SUBMIT_JOB_CIPHER_DEC(state, job, IMB_CIPHER_CNTR_BITLEN, IMB_KEY_256_BYTES);
 }
 
 /* ZUC EEA3 */
-static IMB_JOB *submit_cipher_dec_zuc_eea3_128(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_cipher_dec_zuc_eea3_128(IMB_MGR *state, IMB_JOB *job)
 {
-        return SUBMIT_JOB_CIPHER_DEC(state, job, IMB_CIPHER_ZUC_EEA3,
-                                     IMB_KEY_128_BYTES);
+        return SUBMIT_JOB_CIPHER_DEC(state, job, IMB_CIPHER_ZUC_EEA3, IMB_KEY_128_BYTES);
 }
 
-static IMB_JOB *submit_cipher_dec_zuc_eea3_256(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_cipher_dec_zuc_eea3_256(IMB_MGR *state, IMB_JOB *job)
 {
-        return SUBMIT_JOB_CIPHER_DEC(state, job, IMB_CIPHER_ZUC_EEA3,
-                                     IMB_KEY_256_BYTES);
+        return SUBMIT_JOB_CIPHER_DEC(state, job, IMB_CIPHER_ZUC_EEA3, IMB_KEY_256_BYTES);
 }
 
 /* SNOW3G UEA2 */
-static IMB_JOB *submit_cipher_dec_snow3g_uea2_bit(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_cipher_dec_snow3g_uea2_bit(IMB_MGR *state, IMB_JOB *job)
 {
-        return SUBMIT_JOB_CIPHER_DEC(state, job, IMB_CIPHER_SNOW3G_UEA2_BITLEN,
-                                     IMB_KEY_128_BYTES);
+        return SUBMIT_JOB_CIPHER_DEC(state, job, IMB_CIPHER_SNOW3G_UEA2_BITLEN, IMB_KEY_128_BYTES);
 }
 
 /* KASUMI F8 UEA1 */
-static IMB_JOB *submit_cipher_dec_kasumi_uea1_bit(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_cipher_dec_kasumi_uea1_bit(IMB_MGR *state, IMB_JOB *job)
 {
-        return SUBMIT_JOB_CIPHER_DEC(state, job, IMB_CIPHER_KASUMI_UEA1_BITLEN,
-                                     IMB_KEY_128_BYTES);
+        return SUBMIT_JOB_CIPHER_DEC(state, job, IMB_CIPHER_KASUMI_UEA1_BITLEN, IMB_KEY_128_BYTES);
 }
 
 /* AES-CBCS-1-9 */
-static IMB_JOB *submit_cipher_dec_aes_cbcs_1_9(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_cipher_dec_aes_cbcs_1_9(IMB_MGR *state, IMB_JOB *job)
 {
-        return SUBMIT_JOB_CIPHER_DEC(state, job, IMB_CIPHER_CBCS_1_9,
-                                     IMB_KEY_128_BYTES);
+        return SUBMIT_JOB_CIPHER_DEC(state, job, IMB_CIPHER_CBCS_1_9, IMB_KEY_128_BYTES);
 }
 
 /* CHACHA20 */
-static IMB_JOB *submit_cipher_dec_chacha20(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_cipher_dec_chacha20(IMB_MGR *state, IMB_JOB *job)
 {
-        return SUBMIT_JOB_CIPHER_DEC(state, job, IMB_CIPHER_CHACHA20,
-                                     IMB_KEY_256_BYTES);
+        return SUBMIT_JOB_CIPHER_DEC(state, job, IMB_CIPHER_CHACHA20, IMB_KEY_256_BYTES);
 }
 
 /* CHACHA20-POLY1305 */
 static IMB_JOB *
 submit_cipher_dec_chacha20_poly1305(IMB_MGR *state, IMB_JOB *job)
 {
-        return SUBMIT_JOB_CIPHER_DEC(state, job, IMB_CIPHER_CHACHA20_POLY1305,
-                                     IMB_KEY_256_BYTES);
+        return SUBMIT_JOB_CIPHER_DEC(state, job, IMB_CIPHER_CHACHA20_POLY1305, IMB_KEY_256_BYTES);
 }
 
 /* CHACHA20-POLY1305 SGL */
 static IMB_JOB *
 submit_cipher_dec_chacha20_poly1305_sgl(IMB_MGR *state, IMB_JOB *job)
 {
-        return SUBMIT_JOB_CIPHER_DEC(state, job,
-                                     IMB_CIPHER_CHACHA20_POLY1305_SGL,
+        return SUBMIT_JOB_CIPHER_DEC(state, job, IMB_CIPHER_CHACHA20_POLY1305_SGL,
                                      IMB_KEY_256_BYTES);
 }
 
 /* SNOW-V */
-static IMB_JOB *submit_cipher_dec_snow_v(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_cipher_dec_snow_v(IMB_MGR *state, IMB_JOB *job)
 {
-        return SUBMIT_JOB_CIPHER_DEC(state, job, IMB_CIPHER_SNOW_V,
-                                     IMB_KEY_256_BYTES);
+        return SUBMIT_JOB_CIPHER_DEC(state, job, IMB_CIPHER_SNOW_V, IMB_KEY_256_BYTES);
 }
 
 /* SNOW-V AEAD */
-static IMB_JOB *submit_cipher_dec_snow_v_aead(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_cipher_dec_snow_v_aead(IMB_MGR *state, IMB_JOB *job)
 {
-        return SUBMIT_JOB_CIPHER_DEC(state, job, IMB_CIPHER_SNOW_V_AEAD,
-                                     IMB_KEY_256_BYTES);
+        return SUBMIT_JOB_CIPHER_DEC(state, job, IMB_CIPHER_SNOW_V_AEAD, IMB_KEY_256_BYTES);
 }
 
 /* AES-GCM SGL */
-static IMB_JOB *submit_cipher_dec_aes_gcm_128_sgl(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_cipher_dec_aes_gcm_128_sgl(IMB_MGR *state, IMB_JOB *job)
 {
-        return SUBMIT_JOB_CIPHER_DEC(state, job, IMB_CIPHER_GCM_SGL,
-                                     IMB_KEY_128_BYTES);
+        return SUBMIT_JOB_CIPHER_DEC(state, job, IMB_CIPHER_GCM_SGL, IMB_KEY_128_BYTES);
 }
 
-static IMB_JOB *submit_cipher_dec_aes_gcm_192_sgl(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_cipher_dec_aes_gcm_192_sgl(IMB_MGR *state, IMB_JOB *job)
 {
-        return SUBMIT_JOB_CIPHER_DEC(state, job, IMB_CIPHER_GCM_SGL,
-                                     IMB_KEY_192_BYTES);
+        return SUBMIT_JOB_CIPHER_DEC(state, job, IMB_CIPHER_GCM_SGL, IMB_KEY_192_BYTES);
 }
 
-static IMB_JOB *submit_cipher_dec_aes_gcm_256_sgl(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_cipher_dec_aes_gcm_256_sgl(IMB_MGR *state, IMB_JOB *job)
 {
-        return SUBMIT_JOB_CIPHER_DEC(state, job, IMB_CIPHER_GCM_SGL,
-                                     IMB_KEY_256_BYTES);
+        return SUBMIT_JOB_CIPHER_DEC(state, job, IMB_CIPHER_GCM_SGL, IMB_KEY_256_BYTES);
 }
 
 /* ========================= */
@@ -935,61 +899,61 @@ static IMB_JOB *submit_cipher_dec_aes_gcm_256_sgl(IMB_MGR *state, IMB_JOB *job)
 /* ========================= */
 
 /* AES-CBC */
-static IMB_JOB *submit_cipher_enc_aes_cbc_128(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_cipher_enc_aes_cbc_128(IMB_MGR *state, IMB_JOB *job)
 {
-        return SUBMIT_JOB_CIPHER_ENC(state, job, IMB_CIPHER_CBC,
-                                     IMB_KEY_128_BYTES);
+        return SUBMIT_JOB_CIPHER_ENC(state, job, IMB_CIPHER_CBC, IMB_KEY_128_BYTES);
 }
 
-static IMB_JOB *submit_cipher_enc_aes_cbc_192(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_cipher_enc_aes_cbc_192(IMB_MGR *state, IMB_JOB *job)
 {
-        return SUBMIT_JOB_CIPHER_ENC(state, job, IMB_CIPHER_CBC,
-                                     IMB_KEY_192_BYTES);
+        return SUBMIT_JOB_CIPHER_ENC(state, job, IMB_CIPHER_CBC, IMB_KEY_192_BYTES);
 }
 
-static IMB_JOB *submit_cipher_enc_aes_cbc_256(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_cipher_enc_aes_cbc_256(IMB_MGR *state, IMB_JOB *job)
 {
-        return SUBMIT_JOB_CIPHER_ENC(state, job, IMB_CIPHER_CBC,
-                                     IMB_KEY_256_BYTES);
+        return SUBMIT_JOB_CIPHER_ENC(state, job, IMB_CIPHER_CBC, IMB_KEY_256_BYTES);
 }
 
 /* AES-CTR */
-static IMB_JOB *submit_cipher_enc_aes_ctr_128(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_cipher_enc_aes_ctr_128(IMB_MGR *state, IMB_JOB *job)
 {
-        return SUBMIT_JOB_CIPHER_ENC(state, job, IMB_CIPHER_CNTR,
-                                     IMB_KEY_128_BYTES);
+        return SUBMIT_JOB_CIPHER_ENC(state, job, IMB_CIPHER_CNTR, IMB_KEY_128_BYTES);
 }
 
-static IMB_JOB *submit_cipher_enc_aes_ctr_192(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_cipher_enc_aes_ctr_192(IMB_MGR *state, IMB_JOB *job)
 {
-        return SUBMIT_JOB_CIPHER_ENC(state, job, IMB_CIPHER_CNTR,
-                                     IMB_KEY_192_BYTES);
+        return SUBMIT_JOB_CIPHER_ENC(state, job, IMB_CIPHER_CNTR, IMB_KEY_192_BYTES);
 }
 
-static IMB_JOB *submit_cipher_enc_aes_ctr_256(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_cipher_enc_aes_ctr_256(IMB_MGR *state, IMB_JOB *job)
 {
-        return SUBMIT_JOB_CIPHER_ENC(state, job, IMB_CIPHER_CNTR,
-                                     IMB_KEY_256_BYTES);
+        return SUBMIT_JOB_CIPHER_ENC(state, job, IMB_CIPHER_CNTR, IMB_KEY_256_BYTES);
 }
 
 /* NULL */
-static IMB_JOB *submit_cipher_enc_null(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_cipher_enc_null(IMB_MGR *state, IMB_JOB *job)
 {
-        return SUBMIT_JOB_CIPHER_ENC(state, job, IMB_CIPHER_NULL,
-                                     IMB_KEY_128_BYTES);
+        return SUBMIT_JOB_CIPHER_ENC(state, job, IMB_CIPHER_NULL, IMB_KEY_128_BYTES);
 }
 
 /* AES DOCSIS */
-static IMB_JOB *submit_cipher_enc_aes_docsis_128(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_cipher_enc_aes_docsis_128(IMB_MGR *state, IMB_JOB *job)
 {
-        return SUBMIT_JOB_CIPHER_ENC(state, job, IMB_CIPHER_DOCSIS_SEC_BPI,
-                                     IMB_KEY_128_BYTES);
+        return SUBMIT_JOB_CIPHER_ENC(state, job, IMB_CIPHER_DOCSIS_SEC_BPI, IMB_KEY_128_BYTES);
 }
 
-static IMB_JOB *submit_cipher_enc_aes_docsis_256(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_cipher_enc_aes_docsis_256(IMB_MGR *state, IMB_JOB *job)
 {
-        return SUBMIT_JOB_CIPHER_ENC(state, job, IMB_CIPHER_DOCSIS_SEC_BPI,
-                                     IMB_KEY_256_BYTES);
+        return SUBMIT_JOB_CIPHER_ENC(state, job, IMB_CIPHER_DOCSIS_SEC_BPI, IMB_KEY_256_BYTES);
 }
 
 /* AES-GCM */
@@ -998,180 +962,178 @@ static IMB_JOB *submit_cipher_enc_aes_docsis_256(IMB_MGR *state, IMB_JOB *job)
 #define submit_cipher_enc_aes_gcm_256 AES_GCM_ENC_IV_256
 
 /* CUSTOM */
-static IMB_JOB *submit_cipher_enc_custom(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_cipher_enc_custom(IMB_MGR *state, IMB_JOB *job)
 {
-        return SUBMIT_JOB_CIPHER_ENC(state, job, IMB_CIPHER_CUSTOM,
-                                     IMB_KEY_128_BYTES);
+        return SUBMIT_JOB_CIPHER_ENC(state, job, IMB_CIPHER_CUSTOM, IMB_KEY_128_BYTES);
 }
 
 /* DES */
-static IMB_JOB *submit_cipher_enc_des_cbc_64(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_cipher_enc_des_cbc_64(IMB_MGR *state, IMB_JOB *job)
 {
-        return SUBMIT_JOB_CIPHER_ENC(state, job, IMB_CIPHER_DES,
-                                     IMB_KEY_64_BYTES);
+        return SUBMIT_JOB_CIPHER_ENC(state, job, IMB_CIPHER_DES, IMB_KEY_64_BYTES);
 }
 
 /* DES DOCSIS */
-static IMB_JOB *submit_cipher_enc_des_docsis_64(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_cipher_enc_des_docsis_64(IMB_MGR *state, IMB_JOB *job)
 {
-        return SUBMIT_JOB_CIPHER_ENC(state, job, IMB_CIPHER_DOCSIS_DES,
-                                     IMB_KEY_64_BYTES);
+        return SUBMIT_JOB_CIPHER_ENC(state, job, IMB_CIPHER_DOCSIS_DES, IMB_KEY_64_BYTES);
 }
 
 /* AES-CCM */
-static IMB_JOB *submit_cipher_enc_aes_ccm_128(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_cipher_enc_aes_ccm_128(IMB_MGR *state, IMB_JOB *job)
 {
-        return SUBMIT_JOB_CIPHER_ENC(state, job, IMB_CIPHER_CCM,
-                                     IMB_KEY_128_BYTES);
+        return SUBMIT_JOB_CIPHER_ENC(state, job, IMB_CIPHER_CCM, IMB_KEY_128_BYTES);
 }
 
-static IMB_JOB *submit_cipher_enc_aes_ccm_256(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_cipher_enc_aes_ccm_256(IMB_MGR *state, IMB_JOB *job)
 {
-        return SUBMIT_JOB_CIPHER_ENC(state, job, IMB_CIPHER_CCM,
-                                     IMB_KEY_256_BYTES);
+        return SUBMIT_JOB_CIPHER_ENC(state, job, IMB_CIPHER_CCM, IMB_KEY_256_BYTES);
 }
 
 /* 3DES */
-static IMB_JOB *submit_cipher_enc_des3_cbc_192(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_cipher_enc_des3_cbc_192(IMB_MGR *state, IMB_JOB *job)
 {
-        return SUBMIT_JOB_CIPHER_ENC(state, job, IMB_CIPHER_DES3,
-                                     IMB_KEY_192_BYTES);
+        return SUBMIT_JOB_CIPHER_ENC(state, job, IMB_CIPHER_DES3, IMB_KEY_192_BYTES);
 }
 
 /* PON AES-CTR */
-static IMB_JOB *submit_cipher_enc_aes_ctr_pon_128(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_cipher_enc_aes_ctr_pon_128(IMB_MGR *state, IMB_JOB *job)
 {
-        return SUBMIT_JOB_CIPHER_ENC(state, job, IMB_CIPHER_PON_AES_CNTR,
-                                     IMB_KEY_128_BYTES);
+        return SUBMIT_JOB_CIPHER_ENC(state, job, IMB_CIPHER_PON_AES_CNTR, IMB_KEY_128_BYTES);
 }
 
 /* AES-ECB */
-static IMB_JOB *submit_cipher_enc_aes_ecb_128(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_cipher_enc_aes_ecb_128(IMB_MGR *state, IMB_JOB *job)
 {
-        return SUBMIT_JOB_CIPHER_ENC(state, job, IMB_CIPHER_ECB,
-                                     IMB_KEY_128_BYTES);
+        return SUBMIT_JOB_CIPHER_ENC(state, job, IMB_CIPHER_ECB, IMB_KEY_128_BYTES);
 }
 
-static IMB_JOB *submit_cipher_enc_aes_ecb_192(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_cipher_enc_aes_ecb_192(IMB_MGR *state, IMB_JOB *job)
 {
-        return SUBMIT_JOB_CIPHER_ENC(state, job, IMB_CIPHER_ECB,
-                                     IMB_KEY_192_BYTES);
+        return SUBMIT_JOB_CIPHER_ENC(state, job, IMB_CIPHER_ECB, IMB_KEY_192_BYTES);
 }
 
-static IMB_JOB *submit_cipher_enc_aes_ecb_256(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_cipher_enc_aes_ecb_256(IMB_MGR *state, IMB_JOB *job)
 {
-        return SUBMIT_JOB_CIPHER_ENC(state, job, IMB_CIPHER_ECB,
-                                     IMB_KEY_256_BYTES);
+        return SUBMIT_JOB_CIPHER_ENC(state, job, IMB_CIPHER_ECB, IMB_KEY_256_BYTES);
 }
 
 /* AES-CTR BITS */
-static IMB_JOB *submit_cipher_enc_aes_ctr_128_bit(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_cipher_enc_aes_ctr_128_bit(IMB_MGR *state, IMB_JOB *job)
 {
-        return SUBMIT_JOB_CIPHER_ENC(state, job, IMB_CIPHER_CNTR_BITLEN,
-                                     IMB_KEY_128_BYTES);
+        return SUBMIT_JOB_CIPHER_ENC(state, job, IMB_CIPHER_CNTR_BITLEN, IMB_KEY_128_BYTES);
 }
 
-static IMB_JOB *submit_cipher_enc_aes_ctr_192_bit(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_cipher_enc_aes_ctr_192_bit(IMB_MGR *state, IMB_JOB *job)
 {
-        return SUBMIT_JOB_CIPHER_ENC(state, job, IMB_CIPHER_CNTR_BITLEN,
-                                     IMB_KEY_192_BYTES);
+        return SUBMIT_JOB_CIPHER_ENC(state, job, IMB_CIPHER_CNTR_BITLEN, IMB_KEY_192_BYTES);
 }
 
-static IMB_JOB *submit_cipher_enc_aes_ctr_256_bit(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_cipher_enc_aes_ctr_256_bit(IMB_MGR *state, IMB_JOB *job)
 {
-        return SUBMIT_JOB_CIPHER_ENC(state, job, IMB_CIPHER_CNTR_BITLEN,
-                                     IMB_KEY_256_BYTES);
+        return SUBMIT_JOB_CIPHER_ENC(state, job, IMB_CIPHER_CNTR_BITLEN, IMB_KEY_256_BYTES);
 }
 
 /* ZUC EEA3 */
-static IMB_JOB *submit_cipher_enc_zuc_eea3_128(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_cipher_enc_zuc_eea3_128(IMB_MGR *state, IMB_JOB *job)
 {
-        return SUBMIT_JOB_CIPHER_ENC(state, job, IMB_CIPHER_ZUC_EEA3,
-                                     IMB_KEY_128_BYTES);
+        return SUBMIT_JOB_CIPHER_ENC(state, job, IMB_CIPHER_ZUC_EEA3, IMB_KEY_128_BYTES);
 }
 
-static IMB_JOB *submit_cipher_enc_zuc_eea3_256(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_cipher_enc_zuc_eea3_256(IMB_MGR *state, IMB_JOB *job)
 {
-        return SUBMIT_JOB_CIPHER_ENC(state, job, IMB_CIPHER_ZUC_EEA3,
-                                     IMB_KEY_256_BYTES);
+        return SUBMIT_JOB_CIPHER_ENC(state, job, IMB_CIPHER_ZUC_EEA3, IMB_KEY_256_BYTES);
 }
 
 /* SNOW3G UEA2 */
-static IMB_JOB *submit_cipher_enc_snow3g_uea2_bit(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_cipher_enc_snow3g_uea2_bit(IMB_MGR *state, IMB_JOB *job)
 {
-        return SUBMIT_JOB_CIPHER_ENC(state, job, IMB_CIPHER_SNOW3G_UEA2_BITLEN,
-                                     IMB_KEY_128_BYTES);
+        return SUBMIT_JOB_CIPHER_ENC(state, job, IMB_CIPHER_SNOW3G_UEA2_BITLEN, IMB_KEY_128_BYTES);
 }
 
 /* KASUMI F8 UEA1 */
-static IMB_JOB *submit_cipher_enc_kasumi_uea1_bit(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_cipher_enc_kasumi_uea1_bit(IMB_MGR *state, IMB_JOB *job)
 {
-        return SUBMIT_JOB_CIPHER_ENC(state, job, IMB_CIPHER_KASUMI_UEA1_BITLEN,
-                                     IMB_KEY_128_BYTES);
+        return SUBMIT_JOB_CIPHER_ENC(state, job, IMB_CIPHER_KASUMI_UEA1_BITLEN, IMB_KEY_128_BYTES);
 }
 
 /* AES-CBCS-1-9 */
-static IMB_JOB *submit_cipher_enc_aes_cbcs_1_9(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_cipher_enc_aes_cbcs_1_9(IMB_MGR *state, IMB_JOB *job)
 {
-        return SUBMIT_JOB_CIPHER_ENC(state, job, IMB_CIPHER_CBCS_1_9,
-                                     IMB_KEY_128_BYTES);
+        return SUBMIT_JOB_CIPHER_ENC(state, job, IMB_CIPHER_CBCS_1_9, IMB_KEY_128_BYTES);
 }
 
 /* CHACHA20 */
-static IMB_JOB *submit_cipher_enc_chacha20(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_cipher_enc_chacha20(IMB_MGR *state, IMB_JOB *job)
 {
-        return SUBMIT_JOB_CIPHER_ENC(state, job, IMB_CIPHER_CHACHA20,
-                                     IMB_KEY_256_BYTES);
+        return SUBMIT_JOB_CIPHER_ENC(state, job, IMB_CIPHER_CHACHA20, IMB_KEY_256_BYTES);
 }
 
 /* CHACHA20-POLY1305 */
 static IMB_JOB *
 submit_cipher_enc_chacha20_poly1305(IMB_MGR *state, IMB_JOB *job)
 {
-        return SUBMIT_JOB_CIPHER_ENC(state, job, IMB_CIPHER_CHACHA20_POLY1305,
-                                     IMB_KEY_256_BYTES);
+        return SUBMIT_JOB_CIPHER_ENC(state, job, IMB_CIPHER_CHACHA20_POLY1305, IMB_KEY_256_BYTES);
 }
 
 /* CHACHA20-POLY1305 SGL */
 static IMB_JOB *
 submit_cipher_enc_chacha20_poly1305_sgl(IMB_MGR *state, IMB_JOB *job)
 {
-        return SUBMIT_JOB_CIPHER_ENC(state, job,
-                                     IMB_CIPHER_CHACHA20_POLY1305_SGL,
+        return SUBMIT_JOB_CIPHER_ENC(state, job, IMB_CIPHER_CHACHA20_POLY1305_SGL,
                                      IMB_KEY_256_BYTES);
 }
 
 /* SNOW-V */
-static IMB_JOB *submit_cipher_enc_snow_v(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_cipher_enc_snow_v(IMB_MGR *state, IMB_JOB *job)
 {
-        return SUBMIT_JOB_CIPHER_ENC(state, job, IMB_CIPHER_SNOW_V,
-                                     IMB_KEY_256_BYTES);
+        return SUBMIT_JOB_CIPHER_ENC(state, job, IMB_CIPHER_SNOW_V, IMB_KEY_256_BYTES);
 }
 
 /* SNOW-V AEAD */
-static IMB_JOB *submit_cipher_enc_snow_v_aead(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_cipher_enc_snow_v_aead(IMB_MGR *state, IMB_JOB *job)
 {
-        return SUBMIT_JOB_CIPHER_ENC(state, job, IMB_CIPHER_SNOW_V_AEAD,
-                                     IMB_KEY_256_BYTES);
+        return SUBMIT_JOB_CIPHER_ENC(state, job, IMB_CIPHER_SNOW_V_AEAD, IMB_KEY_256_BYTES);
 }
 
 /* AES-GCM SGL */
-static IMB_JOB *submit_cipher_enc_aes_gcm_128_sgl(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_cipher_enc_aes_gcm_128_sgl(IMB_MGR *state, IMB_JOB *job)
 {
-        return SUBMIT_JOB_CIPHER_ENC(state, job, IMB_CIPHER_GCM_SGL,
-                                     IMB_KEY_128_BYTES);
+        return SUBMIT_JOB_CIPHER_ENC(state, job, IMB_CIPHER_GCM_SGL, IMB_KEY_128_BYTES);
 }
 
-static IMB_JOB *submit_cipher_enc_aes_gcm_192_sgl(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_cipher_enc_aes_gcm_192_sgl(IMB_MGR *state, IMB_JOB *job)
 {
-        return SUBMIT_JOB_CIPHER_ENC(state, job, IMB_CIPHER_GCM_SGL,
-                                     IMB_KEY_192_BYTES);
+        return SUBMIT_JOB_CIPHER_ENC(state, job, IMB_CIPHER_GCM_SGL, IMB_KEY_192_BYTES);
 }
 
-static IMB_JOB *submit_cipher_enc_aes_gcm_256_sgl(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_cipher_enc_aes_gcm_256_sgl(IMB_MGR *state, IMB_JOB *job)
 {
-        return SUBMIT_JOB_CIPHER_ENC(state, job, IMB_CIPHER_GCM_SGL,
-                                     IMB_KEY_256_BYTES);
+        return SUBMIT_JOB_CIPHER_ENC(state, job, IMB_CIPHER_GCM_SGL, IMB_KEY_256_BYTES);
 }
 
 /*
@@ -1192,7 +1154,10 @@ static const submit_flush_fn_t tab_submit_cipher[] = {
         /* ========================= */
 
         /* [0] keep empty - enums start from value 1 */
-        NULL, NULL, NULL, NULL,
+        NULL,
+        NULL,
+        NULL,
+        NULL,
         /* [1] AES-CBC */
         submit_cipher_dec_null,
         submit_cipher_dec_aes_cbc_128,
@@ -1312,28 +1277,55 @@ static const submit_flush_fn_t tab_submit_cipher[] = {
         /* add new cipher decrypt here */
 
         /* [24] NULL */
-        NULL, NULL, NULL, NULL,
+        NULL,
+        NULL,
+        NULL,
+        NULL,
         /* [25] NULL */
-        NULL, NULL, NULL, NULL,
+        NULL,
+        NULL,
+        NULL,
+        NULL,
         /* [26] NULL */
-        NULL, NULL, NULL, NULL,
+        NULL,
+        NULL,
+        NULL,
+        NULL,
         /* [27] NULL */
-        NULL, NULL, NULL, NULL,
+        NULL,
+        NULL,
+        NULL,
+        NULL,
         /* [28] NULL */
-        NULL, NULL, NULL, NULL,
+        NULL,
+        NULL,
+        NULL,
+        NULL,
         /* [29] NULL */
-        NULL, NULL, NULL, NULL,
+        NULL,
+        NULL,
+        NULL,
+        NULL,
         /* [30] NULL */
-        NULL, NULL, NULL, NULL,
+        NULL,
+        NULL,
+        NULL,
+        NULL,
         /* [31] NULL */
-        NULL, NULL, NULL, NULL,
+        NULL,
+        NULL,
+        NULL,
+        NULL,
 
         /* ========================= */
         /* === ENCRYPT DIRECTION === */
         /* ========================= */
 
         /* [0] keep empty - enums start from value 1 */
-        NULL, NULL, NULL, NULL,
+        NULL,
+        NULL,
+        NULL,
+        NULL,
         /* [1] AES-CBC */
         submit_cipher_enc_null,
         submit_cipher_enc_aes_cbc_128,
@@ -1453,21 +1445,45 @@ static const submit_flush_fn_t tab_submit_cipher[] = {
         /* add new cipher encrypt here */
 
         /* [24] NULL */
-        NULL, NULL, NULL, NULL,
+        NULL,
+        NULL,
+        NULL,
+        NULL,
         /* [25] NULL */
-        NULL, NULL, NULL, NULL,
+        NULL,
+        NULL,
+        NULL,
+        NULL,
         /* [26] NULL */
-        NULL, NULL, NULL, NULL,
+        NULL,
+        NULL,
+        NULL,
+        NULL,
         /* [27] NULL */
-        NULL, NULL, NULL, NULL,
+        NULL,
+        NULL,
+        NULL,
+        NULL,
         /* [28] NULL */
-        NULL, NULL, NULL, NULL,
+        NULL,
+        NULL,
+        NULL,
+        NULL,
         /* [29] NULL */
-        NULL, NULL, NULL, NULL,
+        NULL,
+        NULL,
+        NULL,
+        NULL,
         /* [30] NULL */
-        NULL, NULL, NULL, NULL,
+        NULL,
+        NULL,
+        NULL,
+        NULL,
         /* [31] NULL */
-        NULL, NULL, NULL, NULL,
+        NULL,
+        NULL,
+        NULL,
+        NULL,
 
 };
 
@@ -1480,257 +1496,255 @@ static const submit_flush_fn_t tab_submit_cipher[] = {
 /* ========================= */
 
 /* AES-CBC */
-static IMB_JOB *flush_cipher_dec_aes_cbc_128(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_cipher_dec_aes_cbc_128(IMB_MGR *state, IMB_JOB *job)
 {
-        return FLUSH_JOB_CIPHER_DEC(state, job, IMB_CIPHER_CBC,
-                                    IMB_KEY_128_BYTES);
+        return FLUSH_JOB_CIPHER_DEC(state, job, IMB_CIPHER_CBC, IMB_KEY_128_BYTES);
 }
 
-static IMB_JOB *flush_cipher_dec_aes_cbc_192(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_cipher_dec_aes_cbc_192(IMB_MGR *state, IMB_JOB *job)
 {
-        return FLUSH_JOB_CIPHER_DEC(state, job, IMB_CIPHER_CBC,
-                                    IMB_KEY_192_BYTES);
+        return FLUSH_JOB_CIPHER_DEC(state, job, IMB_CIPHER_CBC, IMB_KEY_192_BYTES);
 }
 
-static IMB_JOB *flush_cipher_dec_aes_cbc_256(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_cipher_dec_aes_cbc_256(IMB_MGR *state, IMB_JOB *job)
 {
-        return FLUSH_JOB_CIPHER_DEC(state, job, IMB_CIPHER_CBC,
-                                    IMB_KEY_256_BYTES);
+        return FLUSH_JOB_CIPHER_DEC(state, job, IMB_CIPHER_CBC, IMB_KEY_256_BYTES);
 }
 
 /* AES-CTR */
-static IMB_JOB *flush_cipher_dec_aes_ctr_128(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_cipher_dec_aes_ctr_128(IMB_MGR *state, IMB_JOB *job)
 {
-        return FLUSH_JOB_CIPHER_DEC(state, job, IMB_CIPHER_CNTR,
-                                    IMB_KEY_128_BYTES);
+        return FLUSH_JOB_CIPHER_DEC(state, job, IMB_CIPHER_CNTR, IMB_KEY_128_BYTES);
 }
 
-static IMB_JOB *flush_cipher_dec_aes_ctr_192(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_cipher_dec_aes_ctr_192(IMB_MGR *state, IMB_JOB *job)
 {
-        return FLUSH_JOB_CIPHER_DEC(state, job, IMB_CIPHER_CNTR,
-                                    IMB_KEY_192_BYTES);
+        return FLUSH_JOB_CIPHER_DEC(state, job, IMB_CIPHER_CNTR, IMB_KEY_192_BYTES);
 }
 
-static IMB_JOB *flush_cipher_dec_aes_ctr_256(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_cipher_dec_aes_ctr_256(IMB_MGR *state, IMB_JOB *job)
 {
-        return FLUSH_JOB_CIPHER_DEC(state, job, IMB_CIPHER_CNTR,
-                                    IMB_KEY_256_BYTES);
+        return FLUSH_JOB_CIPHER_DEC(state, job, IMB_CIPHER_CNTR, IMB_KEY_256_BYTES);
 }
 
 /* NULL */
-static IMB_JOB *flush_cipher_dec_null(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_cipher_dec_null(IMB_MGR *state, IMB_JOB *job)
 {
-        return FLUSH_JOB_CIPHER_DEC(state, job, IMB_CIPHER_NULL,
-                                    IMB_KEY_128_BYTES);
+        return FLUSH_JOB_CIPHER_DEC(state, job, IMB_CIPHER_NULL, IMB_KEY_128_BYTES);
 }
 
 /* AES DOCSIS */
-static IMB_JOB *flush_cipher_dec_aes_docsis_128(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_cipher_dec_aes_docsis_128(IMB_MGR *state, IMB_JOB *job)
 {
-        return FLUSH_JOB_CIPHER_DEC(state, job, IMB_CIPHER_DOCSIS_SEC_BPI,
-                                    IMB_KEY_128_BYTES);
+        return FLUSH_JOB_CIPHER_DEC(state, job, IMB_CIPHER_DOCSIS_SEC_BPI, IMB_KEY_128_BYTES);
 }
 
-static IMB_JOB *flush_cipher_dec_aes_docsis_256(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_cipher_dec_aes_docsis_256(IMB_MGR *state, IMB_JOB *job)
 {
-        return FLUSH_JOB_CIPHER_DEC(state, job, IMB_CIPHER_DOCSIS_SEC_BPI,
-                                    IMB_KEY_256_BYTES);
+        return FLUSH_JOB_CIPHER_DEC(state, job, IMB_CIPHER_DOCSIS_SEC_BPI, IMB_KEY_256_BYTES);
 }
 
 /* AES-GCM */
-static IMB_JOB *flush_cipher_dec_aes_gcm_128(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_cipher_dec_aes_gcm_128(IMB_MGR *state, IMB_JOB *job)
 {
-        return FLUSH_JOB_CIPHER_DEC(state, job, IMB_CIPHER_GCM,
-                                    IMB_KEY_128_BYTES);
+        return FLUSH_JOB_CIPHER_DEC(state, job, IMB_CIPHER_GCM, IMB_KEY_128_BYTES);
 }
 
-static IMB_JOB *flush_cipher_dec_aes_gcm_192(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_cipher_dec_aes_gcm_192(IMB_MGR *state, IMB_JOB *job)
 {
-        return FLUSH_JOB_CIPHER_DEC(state, job, IMB_CIPHER_GCM,
-                                    IMB_KEY_192_BYTES);
+        return FLUSH_JOB_CIPHER_DEC(state, job, IMB_CIPHER_GCM, IMB_KEY_192_BYTES);
 }
 
-static IMB_JOB *flush_cipher_dec_aes_gcm_256(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_cipher_dec_aes_gcm_256(IMB_MGR *state, IMB_JOB *job)
 {
-        return FLUSH_JOB_CIPHER_DEC(state, job, IMB_CIPHER_GCM,
-                                    IMB_KEY_256_BYTES);
+        return FLUSH_JOB_CIPHER_DEC(state, job, IMB_CIPHER_GCM, IMB_KEY_256_BYTES);
 }
 
 /* CUSTOM */
-static IMB_JOB *flush_cipher_dec_custom(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_cipher_dec_custom(IMB_MGR *state, IMB_JOB *job)
 {
-        return FLUSH_JOB_CIPHER_DEC(state, job, IMB_CIPHER_CUSTOM,
-                                    IMB_KEY_128_BYTES);
+        return FLUSH_JOB_CIPHER_DEC(state, job, IMB_CIPHER_CUSTOM, IMB_KEY_128_BYTES);
 }
 
 /* DES */
-static IMB_JOB *flush_cipher_dec_des_cbc_64(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_cipher_dec_des_cbc_64(IMB_MGR *state, IMB_JOB *job)
 {
-        return FLUSH_JOB_CIPHER_DEC(state, job, IMB_CIPHER_DES,
-                                    IMB_KEY_64_BYTES);
+        return FLUSH_JOB_CIPHER_DEC(state, job, IMB_CIPHER_DES, IMB_KEY_64_BYTES);
 }
 
 /* DES DOCSIS */
-static IMB_JOB *flush_cipher_dec_des_docsis_64(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_cipher_dec_des_docsis_64(IMB_MGR *state, IMB_JOB *job)
 {
-        return FLUSH_JOB_CIPHER_DEC(state, job, IMB_CIPHER_DOCSIS_DES,
-                                    IMB_KEY_64_BYTES);
+        return FLUSH_JOB_CIPHER_DEC(state, job, IMB_CIPHER_DOCSIS_DES, IMB_KEY_64_BYTES);
 }
 
 /* AES-CCM */
-static IMB_JOB *flush_cipher_dec_aes_ccm_128(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_cipher_dec_aes_ccm_128(IMB_MGR *state, IMB_JOB *job)
 {
-        return FLUSH_JOB_CIPHER_DEC(state, job, IMB_CIPHER_CCM,
-                                    IMB_KEY_128_BYTES);
+        return FLUSH_JOB_CIPHER_DEC(state, job, IMB_CIPHER_CCM, IMB_KEY_128_BYTES);
 }
 
-static IMB_JOB *flush_cipher_dec_aes_ccm_256(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_cipher_dec_aes_ccm_256(IMB_MGR *state, IMB_JOB *job)
 {
-        return FLUSH_JOB_CIPHER_DEC(state, job, IMB_CIPHER_CCM,
-                                    IMB_KEY_256_BYTES);
+        return FLUSH_JOB_CIPHER_DEC(state, job, IMB_CIPHER_CCM, IMB_KEY_256_BYTES);
 }
 
 /* 3DES */
-static IMB_JOB *flush_cipher_dec_des3_cbc_192(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_cipher_dec_des3_cbc_192(IMB_MGR *state, IMB_JOB *job)
 {
-        return FLUSH_JOB_CIPHER_DEC(state, job, IMB_CIPHER_DES3,
-                                    IMB_KEY_192_BYTES);
+        return FLUSH_JOB_CIPHER_DEC(state, job, IMB_CIPHER_DES3, IMB_KEY_192_BYTES);
 }
 
 /* PON AES-CTR */
-static IMB_JOB *flush_cipher_dec_aes_ctr_pon_128(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_cipher_dec_aes_ctr_pon_128(IMB_MGR *state, IMB_JOB *job)
 {
-        return FLUSH_JOB_CIPHER_DEC(state, job, IMB_CIPHER_PON_AES_CNTR,
-                                    IMB_KEY_128_BYTES);
+        return FLUSH_JOB_CIPHER_DEC(state, job, IMB_CIPHER_PON_AES_CNTR, IMB_KEY_128_BYTES);
 }
 
 /* AES-ECB */
-static IMB_JOB *flush_cipher_dec_aes_ecb_128(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_cipher_dec_aes_ecb_128(IMB_MGR *state, IMB_JOB *job)
 {
-        return FLUSH_JOB_CIPHER_DEC(state, job, IMB_CIPHER_ECB,
-                                    IMB_KEY_128_BYTES);
+        return FLUSH_JOB_CIPHER_DEC(state, job, IMB_CIPHER_ECB, IMB_KEY_128_BYTES);
 }
 
-static IMB_JOB *flush_cipher_dec_aes_ecb_192(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_cipher_dec_aes_ecb_192(IMB_MGR *state, IMB_JOB *job)
 {
-        return FLUSH_JOB_CIPHER_DEC(state, job, IMB_CIPHER_ECB,
-                                    IMB_KEY_192_BYTES);
+        return FLUSH_JOB_CIPHER_DEC(state, job, IMB_CIPHER_ECB, IMB_KEY_192_BYTES);
 }
 
-static IMB_JOB *flush_cipher_dec_aes_ecb_256(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_cipher_dec_aes_ecb_256(IMB_MGR *state, IMB_JOB *job)
 {
-        return FLUSH_JOB_CIPHER_DEC(state, job, IMB_CIPHER_ECB,
-                                    IMB_KEY_256_BYTES);
+        return FLUSH_JOB_CIPHER_DEC(state, job, IMB_CIPHER_ECB, IMB_KEY_256_BYTES);
 }
 
 /* AES-CTR BITS */
-static IMB_JOB *flush_cipher_dec_aes_ctr_128_bit(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_cipher_dec_aes_ctr_128_bit(IMB_MGR *state, IMB_JOB *job)
 {
-        return FLUSH_JOB_CIPHER_DEC(state, job, IMB_CIPHER_CNTR_BITLEN,
-                                    IMB_KEY_128_BYTES);
+        return FLUSH_JOB_CIPHER_DEC(state, job, IMB_CIPHER_CNTR_BITLEN, IMB_KEY_128_BYTES);
 }
 
-static IMB_JOB *flush_cipher_dec_aes_ctr_192_bit(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_cipher_dec_aes_ctr_192_bit(IMB_MGR *state, IMB_JOB *job)
 {
-        return FLUSH_JOB_CIPHER_DEC(state, job, IMB_CIPHER_CNTR_BITLEN,
-                                    IMB_KEY_192_BYTES);
+        return FLUSH_JOB_CIPHER_DEC(state, job, IMB_CIPHER_CNTR_BITLEN, IMB_KEY_192_BYTES);
 }
 
-static IMB_JOB *flush_cipher_dec_aes_ctr_256_bit(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_cipher_dec_aes_ctr_256_bit(IMB_MGR *state, IMB_JOB *job)
 {
-        return FLUSH_JOB_CIPHER_DEC(state, job, IMB_CIPHER_CNTR_BITLEN,
-                                    IMB_KEY_256_BYTES);
+        return FLUSH_JOB_CIPHER_DEC(state, job, IMB_CIPHER_CNTR_BITLEN, IMB_KEY_256_BYTES);
 }
 
 /* ZUC EEA3 */
-static IMB_JOB *flush_cipher_dec_zuc_eea3_128(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_cipher_dec_zuc_eea3_128(IMB_MGR *state, IMB_JOB *job)
 {
-        return FLUSH_JOB_CIPHER_DEC(state, job, IMB_CIPHER_ZUC_EEA3,
-                                    IMB_KEY_128_BYTES);
+        return FLUSH_JOB_CIPHER_DEC(state, job, IMB_CIPHER_ZUC_EEA3, IMB_KEY_128_BYTES);
 }
 
-static IMB_JOB *flush_cipher_dec_zuc_eea3_256(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_cipher_dec_zuc_eea3_256(IMB_MGR *state, IMB_JOB *job)
 {
-        return FLUSH_JOB_CIPHER_DEC(state, job, IMB_CIPHER_ZUC_EEA3,
-                                    IMB_KEY_256_BYTES);
+        return FLUSH_JOB_CIPHER_DEC(state, job, IMB_CIPHER_ZUC_EEA3, IMB_KEY_256_BYTES);
 }
 
 /* SNOW3G UEA2 */
-static IMB_JOB *flush_cipher_dec_snow3g_uea2_bit(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_cipher_dec_snow3g_uea2_bit(IMB_MGR *state, IMB_JOB *job)
 {
-        return FLUSH_JOB_CIPHER_DEC(state, job, IMB_CIPHER_SNOW3G_UEA2_BITLEN,
-                                    IMB_KEY_128_BYTES);
+        return FLUSH_JOB_CIPHER_DEC(state, job, IMB_CIPHER_SNOW3G_UEA2_BITLEN, IMB_KEY_128_BYTES);
 }
 
 /* KASUMI F8 UEA1 */
-static IMB_JOB *flush_cipher_dec_kasumi_uea1_bit(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_cipher_dec_kasumi_uea1_bit(IMB_MGR *state, IMB_JOB *job)
 {
-        return FLUSH_JOB_CIPHER_DEC(state, job, IMB_CIPHER_KASUMI_UEA1_BITLEN,
-                                    IMB_KEY_128_BYTES);
+        return FLUSH_JOB_CIPHER_DEC(state, job, IMB_CIPHER_KASUMI_UEA1_BITLEN, IMB_KEY_128_BYTES);
 }
 
 /* AES-CBCS-1-9 */
-static IMB_JOB *flush_cipher_dec_aes_cbcs_1_9(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_cipher_dec_aes_cbcs_1_9(IMB_MGR *state, IMB_JOB *job)
 {
-        return FLUSH_JOB_CIPHER_DEC(state, job, IMB_CIPHER_CBCS_1_9,
-                                    IMB_KEY_128_BYTES);
+        return FLUSH_JOB_CIPHER_DEC(state, job, IMB_CIPHER_CBCS_1_9, IMB_KEY_128_BYTES);
 }
 
 /* CHACHA20 */
-static IMB_JOB *flush_cipher_dec_chacha20(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_cipher_dec_chacha20(IMB_MGR *state, IMB_JOB *job)
 {
-        return FLUSH_JOB_CIPHER_DEC(state, job, IMB_CIPHER_CHACHA20,
-                                    IMB_KEY_256_BYTES);
+        return FLUSH_JOB_CIPHER_DEC(state, job, IMB_CIPHER_CHACHA20, IMB_KEY_256_BYTES);
 }
 
 /* CHACHA20-POLY1305 */
 static IMB_JOB *
 flush_cipher_dec_chacha20_poly1305(IMB_MGR *state, IMB_JOB *job)
 {
-        return FLUSH_JOB_CIPHER_DEC(state, job, IMB_CIPHER_CHACHA20_POLY1305,
-                                    IMB_KEY_256_BYTES);
+        return FLUSH_JOB_CIPHER_DEC(state, job, IMB_CIPHER_CHACHA20_POLY1305, IMB_KEY_256_BYTES);
 }
 
 /* CHACHA20-POLY1305 SGL */
 static IMB_JOB *
 flush_cipher_dec_chacha20_poly1305_sgl(IMB_MGR *state, IMB_JOB *job)
 {
-        return FLUSH_JOB_CIPHER_DEC(state, job,
-                                    IMB_CIPHER_CHACHA20_POLY1305_SGL,
+        return FLUSH_JOB_CIPHER_DEC(state, job, IMB_CIPHER_CHACHA20_POLY1305_SGL,
                                     IMB_KEY_256_BYTES);
 }
 
 /* SNOW-V */
-static IMB_JOB *flush_cipher_dec_snow_v(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_cipher_dec_snow_v(IMB_MGR *state, IMB_JOB *job)
 {
-        return FLUSH_JOB_CIPHER_DEC(state, job, IMB_CIPHER_SNOW_V,
-                                    IMB_KEY_256_BYTES);
+        return FLUSH_JOB_CIPHER_DEC(state, job, IMB_CIPHER_SNOW_V, IMB_KEY_256_BYTES);
 }
 
 /* SNOW-V AEAD */
-static IMB_JOB *flush_cipher_dec_snow_v_aead(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_cipher_dec_snow_v_aead(IMB_MGR *state, IMB_JOB *job)
 {
-        return FLUSH_JOB_CIPHER_DEC(state, job, IMB_CIPHER_SNOW_V_AEAD,
-                                    IMB_KEY_256_BYTES);
+        return FLUSH_JOB_CIPHER_DEC(state, job, IMB_CIPHER_SNOW_V_AEAD, IMB_KEY_256_BYTES);
 }
 
 /* AES-GCM SGL */
-static IMB_JOB *flush_cipher_dec_aes_gcm_128_sgl(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_cipher_dec_aes_gcm_128_sgl(IMB_MGR *state, IMB_JOB *job)
 {
-        return FLUSH_JOB_CIPHER_DEC(state, job, IMB_CIPHER_GCM_SGL,
-                                    IMB_KEY_128_BYTES);
+        return FLUSH_JOB_CIPHER_DEC(state, job, IMB_CIPHER_GCM_SGL, IMB_KEY_128_BYTES);
 }
 
-static IMB_JOB *flush_cipher_dec_aes_gcm_192_sgl(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_cipher_dec_aes_gcm_192_sgl(IMB_MGR *state, IMB_JOB *job)
 {
-        return FLUSH_JOB_CIPHER_DEC(state, job, IMB_CIPHER_GCM_SGL,
-                                    IMB_KEY_192_BYTES);
+        return FLUSH_JOB_CIPHER_DEC(state, job, IMB_CIPHER_GCM_SGL, IMB_KEY_192_BYTES);
 }
 
-static IMB_JOB *flush_cipher_dec_aes_gcm_256_sgl(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_cipher_dec_aes_gcm_256_sgl(IMB_MGR *state, IMB_JOB *job)
 {
-        return FLUSH_JOB_CIPHER_DEC(state, job, IMB_CIPHER_GCM_SGL,
-                                    IMB_KEY_256_BYTES);
+        return FLUSH_JOB_CIPHER_DEC(state, job, IMB_CIPHER_GCM_SGL, IMB_KEY_256_BYTES);
 }
 
 /* ========================= */
@@ -1738,257 +1752,255 @@ static IMB_JOB *flush_cipher_dec_aes_gcm_256_sgl(IMB_MGR *state, IMB_JOB *job)
 /* ========================= */
 
 /* AES-CBC */
-static IMB_JOB *flush_cipher_enc_aes_cbc_128(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_cipher_enc_aes_cbc_128(IMB_MGR *state, IMB_JOB *job)
 {
-        return FLUSH_JOB_CIPHER_ENC(state, job, IMB_CIPHER_CBC,
-                                    IMB_KEY_128_BYTES);
+        return FLUSH_JOB_CIPHER_ENC(state, job, IMB_CIPHER_CBC, IMB_KEY_128_BYTES);
 }
 
-static IMB_JOB *flush_cipher_enc_aes_cbc_192(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_cipher_enc_aes_cbc_192(IMB_MGR *state, IMB_JOB *job)
 {
-        return FLUSH_JOB_CIPHER_ENC(state, job, IMB_CIPHER_CBC,
-                                    IMB_KEY_192_BYTES);
+        return FLUSH_JOB_CIPHER_ENC(state, job, IMB_CIPHER_CBC, IMB_KEY_192_BYTES);
 }
 
-static IMB_JOB *flush_cipher_enc_aes_cbc_256(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_cipher_enc_aes_cbc_256(IMB_MGR *state, IMB_JOB *job)
 {
-        return FLUSH_JOB_CIPHER_ENC(state, job, IMB_CIPHER_CBC,
-                                    IMB_KEY_256_BYTES);
+        return FLUSH_JOB_CIPHER_ENC(state, job, IMB_CIPHER_CBC, IMB_KEY_256_BYTES);
 }
 
 /* AES-CTR */
-static IMB_JOB *flush_cipher_enc_aes_ctr_128(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_cipher_enc_aes_ctr_128(IMB_MGR *state, IMB_JOB *job)
 {
-        return FLUSH_JOB_CIPHER_ENC(state, job, IMB_CIPHER_CNTR,
-                                    IMB_KEY_128_BYTES);
+        return FLUSH_JOB_CIPHER_ENC(state, job, IMB_CIPHER_CNTR, IMB_KEY_128_BYTES);
 }
 
-static IMB_JOB *flush_cipher_enc_aes_ctr_192(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_cipher_enc_aes_ctr_192(IMB_MGR *state, IMB_JOB *job)
 {
-        return FLUSH_JOB_CIPHER_ENC(state, job, IMB_CIPHER_CNTR,
-                                    IMB_KEY_192_BYTES);
+        return FLUSH_JOB_CIPHER_ENC(state, job, IMB_CIPHER_CNTR, IMB_KEY_192_BYTES);
 }
 
-static IMB_JOB *flush_cipher_enc_aes_ctr_256(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_cipher_enc_aes_ctr_256(IMB_MGR *state, IMB_JOB *job)
 {
-        return FLUSH_JOB_CIPHER_ENC(state, job, IMB_CIPHER_CNTR,
-                                    IMB_KEY_256_BYTES);
+        return FLUSH_JOB_CIPHER_ENC(state, job, IMB_CIPHER_CNTR, IMB_KEY_256_BYTES);
 }
 
 /* NULL */
-static IMB_JOB *flush_cipher_enc_null(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_cipher_enc_null(IMB_MGR *state, IMB_JOB *job)
 {
-        return FLUSH_JOB_CIPHER_ENC(state, job, IMB_CIPHER_NULL,
-                                    IMB_KEY_128_BYTES);
+        return FLUSH_JOB_CIPHER_ENC(state, job, IMB_CIPHER_NULL, IMB_KEY_128_BYTES);
 }
 
 /* AES DOCSIS */
-static IMB_JOB *flush_cipher_enc_aes_docsis_128(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_cipher_enc_aes_docsis_128(IMB_MGR *state, IMB_JOB *job)
 {
-        return FLUSH_JOB_CIPHER_ENC(state, job, IMB_CIPHER_DOCSIS_SEC_BPI,
-                                    IMB_KEY_128_BYTES);
+        return FLUSH_JOB_CIPHER_ENC(state, job, IMB_CIPHER_DOCSIS_SEC_BPI, IMB_KEY_128_BYTES);
 }
 
-static IMB_JOB *flush_cipher_enc_aes_docsis_256(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_cipher_enc_aes_docsis_256(IMB_MGR *state, IMB_JOB *job)
 {
-        return FLUSH_JOB_CIPHER_ENC(state, job, IMB_CIPHER_DOCSIS_SEC_BPI,
-                                    IMB_KEY_256_BYTES);
+        return FLUSH_JOB_CIPHER_ENC(state, job, IMB_CIPHER_DOCSIS_SEC_BPI, IMB_KEY_256_BYTES);
 }
 
 /* AES-GCM */
-static IMB_JOB *flush_cipher_enc_aes_gcm_128(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_cipher_enc_aes_gcm_128(IMB_MGR *state, IMB_JOB *job)
 {
-        return FLUSH_JOB_CIPHER_ENC(state, job, IMB_CIPHER_GCM,
-                                    IMB_KEY_128_BYTES);
+        return FLUSH_JOB_CIPHER_ENC(state, job, IMB_CIPHER_GCM, IMB_KEY_128_BYTES);
 }
 
-static IMB_JOB *flush_cipher_enc_aes_gcm_192(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_cipher_enc_aes_gcm_192(IMB_MGR *state, IMB_JOB *job)
 {
-        return FLUSH_JOB_CIPHER_ENC(state, job, IMB_CIPHER_GCM,
-                                    IMB_KEY_192_BYTES);
+        return FLUSH_JOB_CIPHER_ENC(state, job, IMB_CIPHER_GCM, IMB_KEY_192_BYTES);
 }
 
-static IMB_JOB *flush_cipher_enc_aes_gcm_256(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_cipher_enc_aes_gcm_256(IMB_MGR *state, IMB_JOB *job)
 {
-        return FLUSH_JOB_CIPHER_ENC(state, job, IMB_CIPHER_GCM,
-                                    IMB_KEY_256_BYTES);
+        return FLUSH_JOB_CIPHER_ENC(state, job, IMB_CIPHER_GCM, IMB_KEY_256_BYTES);
 }
 
 /* CUSTOM */
-static IMB_JOB *flush_cipher_enc_custom(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_cipher_enc_custom(IMB_MGR *state, IMB_JOB *job)
 {
-        return FLUSH_JOB_CIPHER_ENC(state, job, IMB_CIPHER_CUSTOM,
-                                    IMB_KEY_128_BYTES);
+        return FLUSH_JOB_CIPHER_ENC(state, job, IMB_CIPHER_CUSTOM, IMB_KEY_128_BYTES);
 }
 
 /* DES */
-static IMB_JOB *flush_cipher_enc_des_cbc_64(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_cipher_enc_des_cbc_64(IMB_MGR *state, IMB_JOB *job)
 {
-        return FLUSH_JOB_CIPHER_ENC(state, job, IMB_CIPHER_DES,
-                                    IMB_KEY_64_BYTES);
+        return FLUSH_JOB_CIPHER_ENC(state, job, IMB_CIPHER_DES, IMB_KEY_64_BYTES);
 }
 
 /* DES DOCSIS */
-static IMB_JOB *flush_cipher_enc_des_docsis_64(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_cipher_enc_des_docsis_64(IMB_MGR *state, IMB_JOB *job)
 {
-        return FLUSH_JOB_CIPHER_ENC(state, job, IMB_CIPHER_DOCSIS_DES,
-                                    IMB_KEY_64_BYTES);
+        return FLUSH_JOB_CIPHER_ENC(state, job, IMB_CIPHER_DOCSIS_DES, IMB_KEY_64_BYTES);
 }
 
 /* AES-CCM */
-static IMB_JOB *flush_cipher_enc_aes_ccm_128(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_cipher_enc_aes_ccm_128(IMB_MGR *state, IMB_JOB *job)
 {
-        return FLUSH_JOB_CIPHER_ENC(state, job, IMB_CIPHER_CCM,
-                                    IMB_KEY_128_BYTES);
+        return FLUSH_JOB_CIPHER_ENC(state, job, IMB_CIPHER_CCM, IMB_KEY_128_BYTES);
 }
 
-static IMB_JOB *flush_cipher_enc_aes_ccm_256(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_cipher_enc_aes_ccm_256(IMB_MGR *state, IMB_JOB *job)
 {
-        return FLUSH_JOB_CIPHER_ENC(state, job, IMB_CIPHER_CCM,
-                                    IMB_KEY_256_BYTES);
+        return FLUSH_JOB_CIPHER_ENC(state, job, IMB_CIPHER_CCM, IMB_KEY_256_BYTES);
 }
 
 /* 3DES */
-static IMB_JOB *flush_cipher_enc_des3_cbc_192(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_cipher_enc_des3_cbc_192(IMB_MGR *state, IMB_JOB *job)
 {
-        return FLUSH_JOB_CIPHER_ENC(state, job, IMB_CIPHER_DES3,
-                                    IMB_KEY_192_BYTES);
+        return FLUSH_JOB_CIPHER_ENC(state, job, IMB_CIPHER_DES3, IMB_KEY_192_BYTES);
 }
 
 /* PON AES-CTR */
-static IMB_JOB *flush_cipher_enc_aes_ctr_pon_128(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_cipher_enc_aes_ctr_pon_128(IMB_MGR *state, IMB_JOB *job)
 {
-        return FLUSH_JOB_CIPHER_ENC(state, job, IMB_CIPHER_PON_AES_CNTR,
-                                    IMB_KEY_128_BYTES);
+        return FLUSH_JOB_CIPHER_ENC(state, job, IMB_CIPHER_PON_AES_CNTR, IMB_KEY_128_BYTES);
 }
 
 /* AES-ECB */
-static IMB_JOB *flush_cipher_enc_aes_ecb_128(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_cipher_enc_aes_ecb_128(IMB_MGR *state, IMB_JOB *job)
 {
-        return FLUSH_JOB_CIPHER_ENC(state, job, IMB_CIPHER_ECB,
-                                    IMB_KEY_128_BYTES);
+        return FLUSH_JOB_CIPHER_ENC(state, job, IMB_CIPHER_ECB, IMB_KEY_128_BYTES);
 }
 
-static IMB_JOB *flush_cipher_enc_aes_ecb_192(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_cipher_enc_aes_ecb_192(IMB_MGR *state, IMB_JOB *job)
 {
-        return FLUSH_JOB_CIPHER_ENC(state, job, IMB_CIPHER_ECB,
-                                    IMB_KEY_192_BYTES);
+        return FLUSH_JOB_CIPHER_ENC(state, job, IMB_CIPHER_ECB, IMB_KEY_192_BYTES);
 }
 
-static IMB_JOB *flush_cipher_enc_aes_ecb_256(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_cipher_enc_aes_ecb_256(IMB_MGR *state, IMB_JOB *job)
 {
-        return FLUSH_JOB_CIPHER_ENC(state, job, IMB_CIPHER_ECB,
-                                    IMB_KEY_256_BYTES);
+        return FLUSH_JOB_CIPHER_ENC(state, job, IMB_CIPHER_ECB, IMB_KEY_256_BYTES);
 }
 
 /* AES-CTR BITS */
-static IMB_JOB *flush_cipher_enc_aes_ctr_128_bit(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_cipher_enc_aes_ctr_128_bit(IMB_MGR *state, IMB_JOB *job)
 {
-        return FLUSH_JOB_CIPHER_ENC(state, job, IMB_CIPHER_CNTR_BITLEN,
-                                    IMB_KEY_128_BYTES);
+        return FLUSH_JOB_CIPHER_ENC(state, job, IMB_CIPHER_CNTR_BITLEN, IMB_KEY_128_BYTES);
 }
 
-static IMB_JOB *flush_cipher_enc_aes_ctr_192_bit(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_cipher_enc_aes_ctr_192_bit(IMB_MGR *state, IMB_JOB *job)
 {
-        return FLUSH_JOB_CIPHER_ENC(state, job, IMB_CIPHER_CNTR_BITLEN,
-                                    IMB_KEY_192_BYTES);
+        return FLUSH_JOB_CIPHER_ENC(state, job, IMB_CIPHER_CNTR_BITLEN, IMB_KEY_192_BYTES);
 }
 
-static IMB_JOB *flush_cipher_enc_aes_ctr_256_bit(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_cipher_enc_aes_ctr_256_bit(IMB_MGR *state, IMB_JOB *job)
 {
-        return FLUSH_JOB_CIPHER_ENC(state, job, IMB_CIPHER_CNTR_BITLEN,
-                                    IMB_KEY_256_BYTES);
+        return FLUSH_JOB_CIPHER_ENC(state, job, IMB_CIPHER_CNTR_BITLEN, IMB_KEY_256_BYTES);
 }
 
 /* ZUC EEA3 */
-static IMB_JOB *flush_cipher_enc_zuc_eea3_128(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_cipher_enc_zuc_eea3_128(IMB_MGR *state, IMB_JOB *job)
 {
-        return FLUSH_JOB_CIPHER_ENC(state, job, IMB_CIPHER_ZUC_EEA3,
-                                    IMB_KEY_128_BYTES);
+        return FLUSH_JOB_CIPHER_ENC(state, job, IMB_CIPHER_ZUC_EEA3, IMB_KEY_128_BYTES);
 }
 
-static IMB_JOB *flush_cipher_enc_zuc_eea3_256(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_cipher_enc_zuc_eea3_256(IMB_MGR *state, IMB_JOB *job)
 {
-        return FLUSH_JOB_CIPHER_ENC(state, job, IMB_CIPHER_ZUC_EEA3,
-                                    IMB_KEY_256_BYTES);
+        return FLUSH_JOB_CIPHER_ENC(state, job, IMB_CIPHER_ZUC_EEA3, IMB_KEY_256_BYTES);
 }
 
 /* SNOW3G UEA2 */
-static IMB_JOB *flush_cipher_enc_snow3g_uea2_bit(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_cipher_enc_snow3g_uea2_bit(IMB_MGR *state, IMB_JOB *job)
 {
-        return FLUSH_JOB_CIPHER_ENC(state, job, IMB_CIPHER_SNOW3G_UEA2_BITLEN,
-                                    IMB_KEY_128_BYTES);
+        return FLUSH_JOB_CIPHER_ENC(state, job, IMB_CIPHER_SNOW3G_UEA2_BITLEN, IMB_KEY_128_BYTES);
 }
 
 /* KASUMI F8 UEA1 */
-static IMB_JOB *flush_cipher_enc_kasumi_uea1_bit(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_cipher_enc_kasumi_uea1_bit(IMB_MGR *state, IMB_JOB *job)
 {
-        return FLUSH_JOB_CIPHER_ENC(state, job, IMB_CIPHER_KASUMI_UEA1_BITLEN,
-                                    IMB_KEY_128_BYTES);
+        return FLUSH_JOB_CIPHER_ENC(state, job, IMB_CIPHER_KASUMI_UEA1_BITLEN, IMB_KEY_128_BYTES);
 }
 
 /* AES-CBCS-1-9 */
-static IMB_JOB *flush_cipher_enc_aes_cbcs_1_9(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_cipher_enc_aes_cbcs_1_9(IMB_MGR *state, IMB_JOB *job)
 {
-        return FLUSH_JOB_CIPHER_ENC(state, job, IMB_CIPHER_CBCS_1_9,
-                                    IMB_KEY_128_BYTES);
+        return FLUSH_JOB_CIPHER_ENC(state, job, IMB_CIPHER_CBCS_1_9, IMB_KEY_128_BYTES);
 }
 
 /* CHACHA20 */
-static IMB_JOB *flush_cipher_enc_chacha20(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_cipher_enc_chacha20(IMB_MGR *state, IMB_JOB *job)
 {
-        return FLUSH_JOB_CIPHER_ENC(state, job, IMB_CIPHER_CHACHA20,
-                                    IMB_KEY_256_BYTES);
+        return FLUSH_JOB_CIPHER_ENC(state, job, IMB_CIPHER_CHACHA20, IMB_KEY_256_BYTES);
 }
 
 /* CHACHA20-POLY1305 */
 static IMB_JOB *
 flush_cipher_enc_chacha20_poly1305(IMB_MGR *state, IMB_JOB *job)
 {
-        return FLUSH_JOB_CIPHER_ENC(state, job, IMB_CIPHER_CHACHA20_POLY1305,
-                                    IMB_KEY_256_BYTES);
+        return FLUSH_JOB_CIPHER_ENC(state, job, IMB_CIPHER_CHACHA20_POLY1305, IMB_KEY_256_BYTES);
 }
 
 /* CHACHA20-POLY1305 SGL */
 static IMB_JOB *
 flush_cipher_enc_chacha20_poly1305_sgl(IMB_MGR *state, IMB_JOB *job)
 {
-        return FLUSH_JOB_CIPHER_ENC(state, job,
-                                    IMB_CIPHER_CHACHA20_POLY1305_SGL,
+        return FLUSH_JOB_CIPHER_ENC(state, job, IMB_CIPHER_CHACHA20_POLY1305_SGL,
                                     IMB_KEY_256_BYTES);
 }
 
 /* SNOW-V */
-static IMB_JOB *flush_cipher_enc_snow_v(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_cipher_enc_snow_v(IMB_MGR *state, IMB_JOB *job)
 {
-        return FLUSH_JOB_CIPHER_ENC(state, job, IMB_CIPHER_SNOW_V,
-                                    IMB_KEY_256_BYTES);
+        return FLUSH_JOB_CIPHER_ENC(state, job, IMB_CIPHER_SNOW_V, IMB_KEY_256_BYTES);
 }
 
 /* SNOW-V AEAD */
-static IMB_JOB *flush_cipher_enc_snow_v_aead(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_cipher_enc_snow_v_aead(IMB_MGR *state, IMB_JOB *job)
 {
-        return FLUSH_JOB_CIPHER_ENC(state, job, IMB_CIPHER_SNOW_V_AEAD,
-                                    IMB_KEY_256_BYTES);
+        return FLUSH_JOB_CIPHER_ENC(state, job, IMB_CIPHER_SNOW_V_AEAD, IMB_KEY_256_BYTES);
 }
 
 /* AES-GCM SGL */
-static IMB_JOB *flush_cipher_enc_aes_gcm_128_sgl(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_cipher_enc_aes_gcm_128_sgl(IMB_MGR *state, IMB_JOB *job)
 {
-        return FLUSH_JOB_CIPHER_ENC(state, job, IMB_CIPHER_GCM_SGL,
-                                    IMB_KEY_128_BYTES);
+        return FLUSH_JOB_CIPHER_ENC(state, job, IMB_CIPHER_GCM_SGL, IMB_KEY_128_BYTES);
 }
 
-static IMB_JOB *flush_cipher_enc_aes_gcm_192_sgl(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_cipher_enc_aes_gcm_192_sgl(IMB_MGR *state, IMB_JOB *job)
 {
-        return FLUSH_JOB_CIPHER_ENC(state, job, IMB_CIPHER_GCM_SGL,
-                                    IMB_KEY_192_BYTES);
+        return FLUSH_JOB_CIPHER_ENC(state, job, IMB_CIPHER_GCM_SGL, IMB_KEY_192_BYTES);
 }
 
-static IMB_JOB *flush_cipher_enc_aes_gcm_256_sgl(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_cipher_enc_aes_gcm_256_sgl(IMB_MGR *state, IMB_JOB *job)
 {
-        return FLUSH_JOB_CIPHER_ENC(state, job, IMB_CIPHER_GCM_SGL,
-                                    IMB_KEY_256_BYTES);
+        return FLUSH_JOB_CIPHER_ENC(state, job, IMB_CIPHER_GCM_SGL, IMB_KEY_256_BYTES);
 }
 
 /*
@@ -2005,7 +2017,10 @@ static const submit_flush_fn_t tab_flush_cipher[] = {
         /* ========================= */
 
         /* [0] keep empty - enums start from value 1 */
-        NULL, NULL, NULL, NULL,
+        NULL,
+        NULL,
+        NULL,
+        NULL,
         /* [1] AES-CBC */
         flush_cipher_dec_null,
         flush_cipher_dec_aes_cbc_128,
@@ -2125,28 +2140,55 @@ static const submit_flush_fn_t tab_flush_cipher[] = {
         /* add new cipher decrypt here */
 
         /* [24] NULL */
-        NULL, NULL, NULL, NULL,
+        NULL,
+        NULL,
+        NULL,
+        NULL,
         /* [25] NULL */
-        NULL, NULL, NULL, NULL,
+        NULL,
+        NULL,
+        NULL,
+        NULL,
         /* [26] NULL */
-        NULL, NULL, NULL, NULL,
+        NULL,
+        NULL,
+        NULL,
+        NULL,
         /* [27] NULL */
-        NULL, NULL, NULL, NULL,
+        NULL,
+        NULL,
+        NULL,
+        NULL,
         /* [28] NULL */
-        NULL, NULL, NULL, NULL,
+        NULL,
+        NULL,
+        NULL,
+        NULL,
         /* [29] NULL */
-        NULL, NULL, NULL, NULL,
+        NULL,
+        NULL,
+        NULL,
+        NULL,
         /* [30] NULL */
-        NULL, NULL, NULL, NULL,
+        NULL,
+        NULL,
+        NULL,
+        NULL,
         /* [31] NULL */
-        NULL, NULL, NULL, NULL,
+        NULL,
+        NULL,
+        NULL,
+        NULL,
 
         /* ========================= */
         /* === ENCRYPT DIRECTION === */
         /* ========================= */
 
         /* [0] keep empty - enums start from value 1 */
-        NULL, NULL, NULL, NULL,
+        NULL,
+        NULL,
+        NULL,
+        NULL,
         /* [1] AES-CBC */
         flush_cipher_enc_null,
         flush_cipher_enc_aes_cbc_128,
@@ -2266,21 +2308,45 @@ static const submit_flush_fn_t tab_flush_cipher[] = {
         /* add new cipher encrypt here */
 
         /* [24] NULL */
-        NULL, NULL, NULL, NULL,
+        NULL,
+        NULL,
+        NULL,
+        NULL,
         /* [25] NULL */
-        NULL, NULL, NULL, NULL,
+        NULL,
+        NULL,
+        NULL,
+        NULL,
         /* [26] NULL */
-        NULL, NULL, NULL, NULL,
+        NULL,
+        NULL,
+        NULL,
+        NULL,
         /* [27] NULL */
-        NULL, NULL, NULL, NULL,
+        NULL,
+        NULL,
+        NULL,
+        NULL,
         /* [28] NULL */
-        NULL, NULL, NULL, NULL,
+        NULL,
+        NULL,
+        NULL,
+        NULL,
         /* [29] NULL */
-        NULL, NULL, NULL, NULL,
+        NULL,
+        NULL,
+        NULL,
+        NULL,
         /* [30] NULL */
-        NULL, NULL, NULL, NULL,
+        NULL,
+        NULL,
+        NULL,
+        NULL,
         /* [31] NULL */
-        NULL, NULL, NULL, NULL,
+        NULL,
+        NULL,
+        NULL,
+        NULL,
 
 };
 
@@ -2288,8 +2354,7 @@ static const submit_flush_fn_t tab_flush_cipher[] = {
 /* Hash submit & flush functions */
 /* ========================================================================= */
 
-__forceinline
-IMB_JOB *
+__forceinline IMB_JOB *
 SUBMIT_JOB_HASH_EX(IMB_MGR *state, IMB_JOB *job, const IMB_HASH_ALG hash_alg)
 {
         MB_MGR_HMAC_SHA_1_OOO *hmac_sha_1_ooo = state->hmac_sha_1_ooo;
@@ -2300,9 +2365,9 @@ SUBMIT_JOB_HASH_EX(IMB_MGR *state, IMB_JOB *job, const IMB_HASH_ALG hash_alg)
         MB_MGR_HMAC_MD5_OOO *hmac_md5_ooo = state->hmac_md5_ooo;
         MB_MGR_AES_XCBC_OOO *aes_xcbc_ooo = state->aes_xcbc_ooo;
         MB_MGR_CCM_OOO *aes_ccm_ooo = state->aes_ccm_ooo;
-	MB_MGR_CCM_OOO *aes256_ccm_ooo = state->aes256_ccm_ooo;
+        MB_MGR_CCM_OOO *aes256_ccm_ooo = state->aes256_ccm_ooo;
         MB_MGR_CMAC_OOO *aes_cmac_ooo = state->aes_cmac_ooo;
-	MB_MGR_CMAC_OOO *aes256_cmac_ooo = state->aes256_cmac_ooo;
+        MB_MGR_CMAC_OOO *aes256_cmac_ooo = state->aes256_cmac_ooo;
         MB_MGR_ZUC_OOO *zuc_eia3_ooo = state->zuc_eia3_ooo;
         MB_MGR_ZUC_OOO *zuc256_eia3_ooo = state->zuc256_eia3_ooo;
         MB_MGR_SHA_1_OOO *sha_1_ooo = state->sha_1_ooo;
@@ -2342,14 +2407,12 @@ SUBMIT_JOB_HASH_EX(IMB_MGR *state, IMB_JOB *job, const IMB_HASH_ALG hash_alg)
                  * CMAC OOO MGR assumes job len in bits
                  * (for CMAC length is provided in bytes)
                  */
-                job->msg_len_to_hash_in_bits =
-                        job->msg_len_to_hash_in_bytes * 8;
+                job->msg_len_to_hash_in_bits = job->msg_len_to_hash_in_bytes * 8;
                 return SUBMIT_JOB_AES128_CMAC_AUTH(aes_cmac_ooo, job);
         case IMB_AUTH_AES_CMAC_BITLEN:
                 return SUBMIT_JOB_AES128_CMAC_AUTH(aes_cmac_ooo, job);
         case IMB_AUTH_AES_CMAC_256:
-                job->msg_len_to_hash_in_bits =
-                        job->msg_len_to_hash_in_bytes * 8;
+                job->msg_len_to_hash_in_bits = job->msg_len_to_hash_in_bytes * 8;
                 return SUBMIT_JOB_AES256_CMAC_AUTH(aes256_cmac_ooo, job);
         case IMB_AUTH_SHA_1:
                 return SUBMIT_JOB_SHA1(sha_1_ooo, job);
@@ -2365,26 +2428,23 @@ SUBMIT_JOB_HASH_EX(IMB_MGR *state, IMB_JOB *job, const IMB_HASH_ALG hash_alg)
                 return SUBMIT_JOB_ZUC_EIA3(zuc_eia3_ooo, job);
         case IMB_AUTH_ZUC256_EIA3_BITLEN:
                 return SUBMIT_JOB_ZUC256_EIA3(zuc256_eia3_ooo, job,
-                                        job->auth_tag_output_len_in_bytes);
+                                              job->auth_tag_output_len_in_bytes);
         case IMB_AUTH_SNOW3G_UIA2_BITLEN:
 #if (defined(SAFE_LOOKUP) || defined(AVX512)) && !defined(SSE_AESNI_EMU)
                 return SUBMIT_JOB_SNOW3G_UIA2(snow3g_uia2_ooo, job);
 #else
-                IMB_SNOW3G_F9_1_BUFFER(state, (const snow3g_key_schedule_t *)
-                               job->u.SNOW3G_UIA2._key,
-                               job->u.SNOW3G_UIA2._iv,
-                               job->src + job->hash_start_src_offset_in_bytes,
-                               job->msg_len_to_hash_in_bits,
-                               job->auth_tag_output);
+                IMB_SNOW3G_F9_1_BUFFER(
+                        state, (const snow3g_key_schedule_t *) job->u.SNOW3G_UIA2._key,
+                        job->u.SNOW3G_UIA2._iv, job->src + job->hash_start_src_offset_in_bytes,
+                        job->msg_len_to_hash_in_bits, job->auth_tag_output);
                 job->status |= IMB_STATUS_COMPLETED_AUTH;
                 return job;
 #endif
         case IMB_AUTH_KASUMI_UIA1:
-                IMB_KASUMI_F9_1_BUFFER(state, (const kasumi_key_sched_t *)
-                               job->u.KASUMI_UIA1._key,
-                               job->src + job->hash_start_src_offset_in_bytes,
-                               (const uint32_t) job->msg_len_to_hash_in_bytes,
-                               job->auth_tag_output);
+                IMB_KASUMI_F9_1_BUFFER(state, (const kasumi_key_sched_t *) job->u.KASUMI_UIA1._key,
+                                       job->src + job->hash_start_src_offset_in_bytes,
+                                       (const uint32_t) job->msg_len_to_hash_in_bytes,
+                                       job->auth_tag_output);
                 job->status |= IMB_STATUS_COMPLETED_AUTH;
                 return job;
         case IMB_AUTH_AES_GMAC_128:
@@ -2463,8 +2523,7 @@ SUBMIT_JOB_HASH_EX(IMB_MGR *state, IMB_JOB *job, const IMB_HASH_ALG hash_alg)
         }
 }
 
-__forceinline
-IMB_JOB *
+__forceinline IMB_JOB *
 FLUSH_JOB_HASH_EX(IMB_MGR *state, IMB_JOB *job, const IMB_HASH_ALG hash_alg)
 {
         MB_MGR_HMAC_SHA_1_OOO *hmac_sha_1_ooo = state->hmac_sha_1_ooo;
@@ -2475,9 +2534,9 @@ FLUSH_JOB_HASH_EX(IMB_MGR *state, IMB_JOB *job, const IMB_HASH_ALG hash_alg)
         MB_MGR_HMAC_MD5_OOO *hmac_md5_ooo = state->hmac_md5_ooo;
         MB_MGR_AES_XCBC_OOO *aes_xcbc_ooo = state->aes_xcbc_ooo;
         MB_MGR_CCM_OOO *aes_ccm_ooo = state->aes_ccm_ooo;
-	MB_MGR_CCM_OOO *aes256_ccm_ooo = state->aes256_ccm_ooo;
+        MB_MGR_CCM_OOO *aes256_ccm_ooo = state->aes256_ccm_ooo;
         MB_MGR_CMAC_OOO *aes_cmac_ooo = state->aes_cmac_ooo;
-	MB_MGR_CMAC_OOO *aes256_cmac_ooo = state->aes256_cmac_ooo;
+        MB_MGR_CMAC_OOO *aes256_cmac_ooo = state->aes256_cmac_ooo;
         MB_MGR_ZUC_OOO *zuc_eia3_ooo = state->zuc_eia3_ooo;
         MB_MGR_ZUC_OOO *zuc256_eia3_ooo = state->zuc256_eia3_ooo;
         MB_MGR_SHA_1_OOO *sha_1_ooo = state->sha_1_ooo;
@@ -2530,8 +2589,7 @@ FLUSH_JOB_HASH_EX(IMB_MGR *state, IMB_JOB *job, const IMB_HASH_ALG hash_alg)
         case IMB_AUTH_ZUC_EIA3_BITLEN:
                 return FLUSH_JOB_ZUC_EIA3(zuc_eia3_ooo);
         case IMB_AUTH_ZUC256_EIA3_BITLEN:
-                return FLUSH_JOB_ZUC256_EIA3(zuc256_eia3_ooo,
-                                             job->auth_tag_output_len_in_bytes);
+                return FLUSH_JOB_ZUC256_EIA3(zuc256_eia3_ooo, job->auth_tag_output_len_in_bytes);
 #if (defined(SAFE_LOOKUP) || defined(AVX512)) && !defined(SSE_AESNI_EMU)
         case IMB_AUTH_SNOW3G_UIA2_BITLEN:
                 return FLUSH_JOB_SNOW3G_UIA2(snow3g_uia2_ooo);
@@ -2550,232 +2608,278 @@ FLUSH_JOB_HASH_EX(IMB_MGR *state, IMB_JOB *job, const IMB_HASH_ALG hash_alg)
 /* Generate specialized hash submit functions and create a table */
 /* ========================================================================= */
 
-static IMB_JOB *submit_hash_hmac_sha1(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_hash_hmac_sha1(IMB_MGR *state, IMB_JOB *job)
 {
         return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_HMAC_SHA_1);
 }
 
-static IMB_JOB *submit_hash_hmac_sha224(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_hash_hmac_sha224(IMB_MGR *state, IMB_JOB *job)
 {
         return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_HMAC_SHA_224);
 }
 
-static IMB_JOB *submit_hash_hmac_sha256(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_hash_hmac_sha256(IMB_MGR *state, IMB_JOB *job)
 {
         return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_HMAC_SHA_256);
 }
 
-static IMB_JOB *submit_hash_hmac_sha384(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_hash_hmac_sha384(IMB_MGR *state, IMB_JOB *job)
 {
         return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_HMAC_SHA_384);
 }
 
-static IMB_JOB *submit_hash_hmac_sha512(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_hash_hmac_sha512(IMB_MGR *state, IMB_JOB *job)
 {
         return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_HMAC_SHA_512);
 }
 
-static IMB_JOB *submit_hash_aes_xcbc(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_hash_aes_xcbc(IMB_MGR *state, IMB_JOB *job)
 {
         return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_AES_XCBC);
 }
 
-static IMB_JOB *submit_hash_hmac_md5(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_hash_hmac_md5(IMB_MGR *state, IMB_JOB *job)
 {
         return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_MD5);
 }
 
-static IMB_JOB *submit_hash_null(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_hash_null(IMB_MGR *state, IMB_JOB *job)
 {
         return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_NULL);
 }
 
-static IMB_JOB *submit_hash_aes_gmac(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_hash_aes_gmac(IMB_MGR *state, IMB_JOB *job)
 {
         return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_AES_GMAC);
 }
 
-static IMB_JOB *submit_hash_custom(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_hash_custom(IMB_MGR *state, IMB_JOB *job)
 {
         return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_CUSTOM);
 }
 
-static IMB_JOB *submit_hash_aes_ccm(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_hash_aes_ccm(IMB_MGR *state, IMB_JOB *job)
 {
         return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_AES_CCM);
 }
 
-static IMB_JOB *submit_hash_aes_cmac(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_hash_aes_cmac(IMB_MGR *state, IMB_JOB *job)
 {
         return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_AES_CMAC);
 }
 
-static IMB_JOB *submit_hash_sha1(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_hash_sha1(IMB_MGR *state, IMB_JOB *job)
 {
         return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_SHA_1);
 }
 
-static IMB_JOB *submit_hash_sha224(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_hash_sha224(IMB_MGR *state, IMB_JOB *job)
 {
         return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_SHA_224);
 }
 
-static IMB_JOB *submit_hash_sha256(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_hash_sha256(IMB_MGR *state, IMB_JOB *job)
 {
         return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_SHA_256);
 }
 
-static IMB_JOB *submit_hash_sha384(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_hash_sha384(IMB_MGR *state, IMB_JOB *job)
 {
         return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_SHA_384);
 }
 
-static IMB_JOB *submit_hash_sha512(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_hash_sha512(IMB_MGR *state, IMB_JOB *job)
 {
         return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_SHA_512);
 }
 
-static IMB_JOB *submit_hash_aes_cmac_bit(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_hash_aes_cmac_bit(IMB_MGR *state, IMB_JOB *job)
 {
         return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_AES_CMAC_BITLEN);
 }
 
-static IMB_JOB *submit_hash_pon_crc_bip(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_hash_pon_crc_bip(IMB_MGR *state, IMB_JOB *job)
 {
         return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_PON_CRC_BIP);
 }
 
-static IMB_JOB *submit_hash_zuc_eia3_bit(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_hash_zuc_eia3_bit(IMB_MGR *state, IMB_JOB *job)
 {
         return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_ZUC_EIA3_BITLEN);
 }
 
-static IMB_JOB *submit_hash_docsis_crc32(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_hash_docsis_crc32(IMB_MGR *state, IMB_JOB *job)
 {
         return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_DOCSIS_CRC32);
 }
 
-static IMB_JOB *submit_hash_snow3g_uia2_bit(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_hash_snow3g_uia2_bit(IMB_MGR *state, IMB_JOB *job)
 {
         return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_SNOW3G_UIA2_BITLEN);
 }
 
-static IMB_JOB *submit_hash_kasumi_uia1(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_hash_kasumi_uia1(IMB_MGR *state, IMB_JOB *job)
 {
         return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_KASUMI_UIA1);
 }
 
-static IMB_JOB *submit_hash_aes_gmac_128(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_hash_aes_gmac_128(IMB_MGR *state, IMB_JOB *job)
 {
         return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_AES_GMAC_128);
 }
 
-static IMB_JOB *submit_hash_aes_gmac_192(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_hash_aes_gmac_192(IMB_MGR *state, IMB_JOB *job)
 {
         return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_AES_GMAC_192);
 }
 
-static IMB_JOB *submit_hash_aes_gmac_256(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_hash_aes_gmac_256(IMB_MGR *state, IMB_JOB *job)
 {
         return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_AES_GMAC_256);
 }
 
-static IMB_JOB *submit_hash_aes_cmac_256(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_hash_aes_cmac_256(IMB_MGR *state, IMB_JOB *job)
 {
         return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_AES_CMAC_256);
 }
 
-static IMB_JOB *submit_hash_poly1305(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_hash_poly1305(IMB_MGR *state, IMB_JOB *job)
 {
         return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_POLY1305);
 }
 
-static IMB_JOB *submit_hash_chacha20_poly1305(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_hash_chacha20_poly1305(IMB_MGR *state, IMB_JOB *job)
 {
         return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_CHACHA20_POLY1305);
 }
 
-static IMB_JOB *submit_hash_chacha20_poly1305_sgl(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_hash_chacha20_poly1305_sgl(IMB_MGR *state, IMB_JOB *job)
 {
         return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_CHACHA20_POLY1305_SGL);
 }
 
-static IMB_JOB *submit_hash_zuc256_eia3_bit(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_hash_zuc256_eia3_bit(IMB_MGR *state, IMB_JOB *job)
 {
         return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_ZUC256_EIA3_BITLEN);
 }
 
-static IMB_JOB *submit_hash_snow_v_aead(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_hash_snow_v_aead(IMB_MGR *state, IMB_JOB *job)
 {
         return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_SNOW_V_AEAD);
 }
 
-static IMB_JOB *submit_hash_gcm_sgl(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_hash_gcm_sgl(IMB_MGR *state, IMB_JOB *job)
 {
         return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_GCM_SGL);
 }
 
-static IMB_JOB *submit_hash_crc32_ethernet_fcs(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_hash_crc32_ethernet_fcs(IMB_MGR *state, IMB_JOB *job)
 {
         return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_CRC32_ETHERNET_FCS);
 }
 
-static IMB_JOB *submit_hash_crc32_sctp(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_hash_crc32_sctp(IMB_MGR *state, IMB_JOB *job)
 {
         return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_CRC32_SCTP);
 }
 
-static IMB_JOB *submit_hash_crc32_wimax_ofdma(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_hash_crc32_wimax_ofdma(IMB_MGR *state, IMB_JOB *job)
 {
         return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_CRC32_WIMAX_OFDMA_DATA);
 }
 
-static IMB_JOB *submit_hash_crc24_lte_a(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_hash_crc24_lte_a(IMB_MGR *state, IMB_JOB *job)
 {
         return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_CRC24_LTE_A);
 }
 
-static IMB_JOB *submit_hash_crc24_lte_b(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_hash_crc24_lte_b(IMB_MGR *state, IMB_JOB *job)
 {
         return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_CRC24_LTE_B);
 }
 
-static IMB_JOB *submit_hash_crc16_x25(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_hash_crc16_x25(IMB_MGR *state, IMB_JOB *job)
 {
         return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_CRC16_X25);
 }
 
-static IMB_JOB *submit_hash_crc16_fp_data(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_hash_crc16_fp_data(IMB_MGR *state, IMB_JOB *job)
 {
         return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_CRC16_FP_DATA);
 }
 
-static IMB_JOB *submit_hash_crc11_fp_header(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_hash_crc11_fp_header(IMB_MGR *state, IMB_JOB *job)
 {
         return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_CRC11_FP_HEADER);
 }
 
-static IMB_JOB *submit_hash_crc10_iuup_data(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_hash_crc10_iuup_data(IMB_MGR *state, IMB_JOB *job)
 {
         return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_CRC10_IUUP_DATA);
 }
 
-static IMB_JOB *submit_hash_crc8_wimax_odma(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_hash_crc8_wimax_odma(IMB_MGR *state, IMB_JOB *job)
 {
         return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_CRC8_WIMAX_OFDMA_HCS);
 }
 
-static IMB_JOB *submit_hash_crc7_fp_header(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_hash_crc7_fp_header(IMB_MGR *state, IMB_JOB *job)
 {
         return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_CRC7_FP_HEADER);
 }
 
-static IMB_JOB *submit_hash_crc6_iuup_header(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_hash_crc6_iuup_header(IMB_MGR *state, IMB_JOB *job)
 {
         return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_CRC6_IUUP_HEADER);
 }
 
-static IMB_JOB *submit_hash_ghash(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+submit_hash_ghash(IMB_MGR *state, IMB_JOB *job)
 {
         return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_GHASH);
 }
@@ -2882,232 +2986,278 @@ static const submit_flush_fn_t tab_submit_hash[] = {
 /* Generate specialized hash flush functions and create a table */
 /* ========================================================================= */
 
-static IMB_JOB *flush_hash_hmac_sha1(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_hash_hmac_sha1(IMB_MGR *state, IMB_JOB *job)
 {
         return FLUSH_JOB_HASH_EX(state, job, IMB_AUTH_HMAC_SHA_1);
 }
 
-static IMB_JOB *flush_hash_hmac_sha224(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_hash_hmac_sha224(IMB_MGR *state, IMB_JOB *job)
 {
         return FLUSH_JOB_HASH_EX(state, job, IMB_AUTH_HMAC_SHA_224);
 }
 
-static IMB_JOB *flush_hash_hmac_sha256(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_hash_hmac_sha256(IMB_MGR *state, IMB_JOB *job)
 {
         return FLUSH_JOB_HASH_EX(state, job, IMB_AUTH_HMAC_SHA_256);
 }
 
-static IMB_JOB *flush_hash_hmac_sha384(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_hash_hmac_sha384(IMB_MGR *state, IMB_JOB *job)
 {
         return FLUSH_JOB_HASH_EX(state, job, IMB_AUTH_HMAC_SHA_384);
 }
 
-static IMB_JOB *flush_hash_hmac_sha512(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_hash_hmac_sha512(IMB_MGR *state, IMB_JOB *job)
 {
         return FLUSH_JOB_HASH_EX(state, job, IMB_AUTH_HMAC_SHA_512);
 }
 
-static IMB_JOB *flush_hash_aes_xcbc(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_hash_aes_xcbc(IMB_MGR *state, IMB_JOB *job)
 {
         return FLUSH_JOB_HASH_EX(state, job, IMB_AUTH_AES_XCBC);
 }
 
-static IMB_JOB *flush_hash_hmac_md5(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_hash_hmac_md5(IMB_MGR *state, IMB_JOB *job)
 {
         return FLUSH_JOB_HASH_EX(state, job, IMB_AUTH_MD5);
 }
 
-static IMB_JOB *flush_hash_null(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_hash_null(IMB_MGR *state, IMB_JOB *job)
 {
         return FLUSH_JOB_HASH_EX(state, job, IMB_AUTH_NULL);
 }
 
-static IMB_JOB *flush_hash_aes_gmac(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_hash_aes_gmac(IMB_MGR *state, IMB_JOB *job)
 {
         return FLUSH_JOB_HASH_EX(state, job, IMB_AUTH_AES_GMAC);
 }
 
-static IMB_JOB *flush_hash_custom(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_hash_custom(IMB_MGR *state, IMB_JOB *job)
 {
         return FLUSH_JOB_HASH_EX(state, job, IMB_AUTH_CUSTOM);
 }
 
-static IMB_JOB *flush_hash_aes_ccm(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_hash_aes_ccm(IMB_MGR *state, IMB_JOB *job)
 {
         return FLUSH_JOB_HASH_EX(state, job, IMB_AUTH_AES_CCM);
 }
 
-static IMB_JOB *flush_hash_aes_cmac(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_hash_aes_cmac(IMB_MGR *state, IMB_JOB *job)
 {
         return FLUSH_JOB_HASH_EX(state, job, IMB_AUTH_AES_CMAC);
 }
 
-static IMB_JOB *flush_hash_sha1(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_hash_sha1(IMB_MGR *state, IMB_JOB *job)
 {
         return FLUSH_JOB_HASH_EX(state, job, IMB_AUTH_SHA_1);
 }
 
-static IMB_JOB *flush_hash_sha224(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_hash_sha224(IMB_MGR *state, IMB_JOB *job)
 {
         return FLUSH_JOB_HASH_EX(state, job, IMB_AUTH_SHA_224);
 }
 
-static IMB_JOB *flush_hash_sha256(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_hash_sha256(IMB_MGR *state, IMB_JOB *job)
 {
         return FLUSH_JOB_HASH_EX(state, job, IMB_AUTH_SHA_256);
 }
 
-static IMB_JOB *flush_hash_sha384(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_hash_sha384(IMB_MGR *state, IMB_JOB *job)
 {
         return FLUSH_JOB_HASH_EX(state, job, IMB_AUTH_SHA_384);
 }
 
-static IMB_JOB *flush_hash_sha512(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_hash_sha512(IMB_MGR *state, IMB_JOB *job)
 {
         return FLUSH_JOB_HASH_EX(state, job, IMB_AUTH_SHA_512);
 }
 
-static IMB_JOB *flush_hash_aes_cmac_bit(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_hash_aes_cmac_bit(IMB_MGR *state, IMB_JOB *job)
 {
         return FLUSH_JOB_HASH_EX(state, job, IMB_AUTH_AES_CMAC_BITLEN);
 }
 
-static IMB_JOB *flush_hash_pon_crc_bip(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_hash_pon_crc_bip(IMB_MGR *state, IMB_JOB *job)
 {
         return FLUSH_JOB_HASH_EX(state, job, IMB_AUTH_PON_CRC_BIP);
 }
 
-static IMB_JOB *flush_hash_zuc_eia3_bit(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_hash_zuc_eia3_bit(IMB_MGR *state, IMB_JOB *job)
 {
         return FLUSH_JOB_HASH_EX(state, job, IMB_AUTH_ZUC_EIA3_BITLEN);
 }
 
-static IMB_JOB *flush_hash_docsis_crc32(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_hash_docsis_crc32(IMB_MGR *state, IMB_JOB *job)
 {
         return FLUSH_JOB_HASH_EX(state, job, IMB_AUTH_DOCSIS_CRC32);
 }
 
-static IMB_JOB *flush_hash_snow3g_uia2_bit(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_hash_snow3g_uia2_bit(IMB_MGR *state, IMB_JOB *job)
 {
         return FLUSH_JOB_HASH_EX(state, job, IMB_AUTH_SNOW3G_UIA2_BITLEN);
 }
 
-static IMB_JOB *flush_hash_kasumi_uia1(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_hash_kasumi_uia1(IMB_MGR *state, IMB_JOB *job)
 {
         return FLUSH_JOB_HASH_EX(state, job, IMB_AUTH_KASUMI_UIA1);
 }
 
-static IMB_JOB *flush_hash_aes_gmac_128(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_hash_aes_gmac_128(IMB_MGR *state, IMB_JOB *job)
 {
         return FLUSH_JOB_HASH_EX(state, job, IMB_AUTH_AES_GMAC_128);
 }
 
-static IMB_JOB *flush_hash_aes_gmac_192(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_hash_aes_gmac_192(IMB_MGR *state, IMB_JOB *job)
 {
         return FLUSH_JOB_HASH_EX(state, job, IMB_AUTH_AES_GMAC_192);
 }
 
-static IMB_JOB *flush_hash_aes_gmac_256(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_hash_aes_gmac_256(IMB_MGR *state, IMB_JOB *job)
 {
         return FLUSH_JOB_HASH_EX(state, job, IMB_AUTH_AES_GMAC_256);
 }
 
-static IMB_JOB *flush_hash_aes_cmac_256(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_hash_aes_cmac_256(IMB_MGR *state, IMB_JOB *job)
 {
         return FLUSH_JOB_HASH_EX(state, job, IMB_AUTH_AES_CMAC_256);
 }
 
-static IMB_JOB *flush_hash_poly1305(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_hash_poly1305(IMB_MGR *state, IMB_JOB *job)
 {
         return FLUSH_JOB_HASH_EX(state, job, IMB_AUTH_POLY1305);
 }
 
-static IMB_JOB *flush_hash_chacha20_poly1305(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_hash_chacha20_poly1305(IMB_MGR *state, IMB_JOB *job)
 {
         return FLUSH_JOB_HASH_EX(state, job, IMB_AUTH_CHACHA20_POLY1305);
 }
 
-static IMB_JOB *flush_hash_chacha20_poly1305_sgl(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_hash_chacha20_poly1305_sgl(IMB_MGR *state, IMB_JOB *job)
 {
         return FLUSH_JOB_HASH_EX(state, job, IMB_AUTH_CHACHA20_POLY1305_SGL);
 }
 
-static IMB_JOB *flush_hash_zuc256_eia3_bit(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_hash_zuc256_eia3_bit(IMB_MGR *state, IMB_JOB *job)
 {
         return FLUSH_JOB_HASH_EX(state, job, IMB_AUTH_ZUC256_EIA3_BITLEN);
 }
 
-static IMB_JOB *flush_hash_snow_v_aead(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_hash_snow_v_aead(IMB_MGR *state, IMB_JOB *job)
 {
         return FLUSH_JOB_HASH_EX(state, job, IMB_AUTH_SNOW_V_AEAD);
 }
 
-static IMB_JOB *flush_hash_gcm_sgl(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_hash_gcm_sgl(IMB_MGR *state, IMB_JOB *job)
 {
         return FLUSH_JOB_HASH_EX(state, job, IMB_AUTH_GCM_SGL);
 }
 
-static IMB_JOB *flush_hash_crc32_ethernet_fcs(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_hash_crc32_ethernet_fcs(IMB_MGR *state, IMB_JOB *job)
 {
         return FLUSH_JOB_HASH_EX(state, job, IMB_AUTH_CRC32_ETHERNET_FCS);
 }
 
-static IMB_JOB *flush_hash_crc32_sctp(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_hash_crc32_sctp(IMB_MGR *state, IMB_JOB *job)
 {
         return FLUSH_JOB_HASH_EX(state, job, IMB_AUTH_CRC32_SCTP);
 }
 
-static IMB_JOB *flush_hash_crc32_wimax_ofdma(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_hash_crc32_wimax_ofdma(IMB_MGR *state, IMB_JOB *job)
 {
         return FLUSH_JOB_HASH_EX(state, job, IMB_AUTH_CRC32_WIMAX_OFDMA_DATA);
 }
 
-static IMB_JOB *flush_hash_crc24_lte_a(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_hash_crc24_lte_a(IMB_MGR *state, IMB_JOB *job)
 {
         return FLUSH_JOB_HASH_EX(state, job, IMB_AUTH_CRC24_LTE_A);
 }
 
-static IMB_JOB *flush_hash_crc24_lte_b(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_hash_crc24_lte_b(IMB_MGR *state, IMB_JOB *job)
 {
         return FLUSH_JOB_HASH_EX(state, job, IMB_AUTH_CRC24_LTE_B);
 }
 
-static IMB_JOB *flush_hash_crc16_x25(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_hash_crc16_x25(IMB_MGR *state, IMB_JOB *job)
 {
         return FLUSH_JOB_HASH_EX(state, job, IMB_AUTH_CRC16_X25);
 }
 
-static IMB_JOB *flush_hash_crc16_fp_data(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_hash_crc16_fp_data(IMB_MGR *state, IMB_JOB *job)
 {
         return FLUSH_JOB_HASH_EX(state, job, IMB_AUTH_CRC16_FP_DATA);
 }
 
-static IMB_JOB *flush_hash_crc11_fp_header(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_hash_crc11_fp_header(IMB_MGR *state, IMB_JOB *job)
 {
         return FLUSH_JOB_HASH_EX(state, job, IMB_AUTH_CRC11_FP_HEADER);
 }
 
-static IMB_JOB *flush_hash_crc10_iuup_data(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_hash_crc10_iuup_data(IMB_MGR *state, IMB_JOB *job)
 {
         return FLUSH_JOB_HASH_EX(state, job, IMB_AUTH_CRC10_IUUP_DATA);
 }
 
-static IMB_JOB *flush_hash_crc8_wimax_odma(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_hash_crc8_wimax_odma(IMB_MGR *state, IMB_JOB *job)
 {
         return FLUSH_JOB_HASH_EX(state, job, IMB_AUTH_CRC8_WIMAX_OFDMA_HCS);
 }
 
-static IMB_JOB *flush_hash_crc7_fp_header(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_hash_crc7_fp_header(IMB_MGR *state, IMB_JOB *job)
 {
         return FLUSH_JOB_HASH_EX(state, job, IMB_AUTH_CRC7_FP_HEADER);
 }
 
-static IMB_JOB *flush_hash_crc6_iuup_header(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_hash_crc6_iuup_header(IMB_MGR *state, IMB_JOB *job)
 {
         return FLUSH_JOB_HASH_EX(state, job, IMB_AUTH_CRC6_IUUP_HEADER);
 }
 
-static IMB_JOB *flush_hash_ghash(IMB_MGR *state, IMB_JOB *job)
+static IMB_JOB *
+flush_hash_ghash(IMB_MGR *state, IMB_JOB *job)
 {
         return FLUSH_JOB_HASH_EX(state, job, IMB_AUTH_GHASH);
 }
@@ -3210,12 +3360,14 @@ static const submit_flush_fn_t tab_flush_hash[] = {
         /* add new hash algorithms here */
 };
 
-__forceinline IMB_JOB *SUBMIT_JOB_HASH(IMB_MGR *state, IMB_JOB *job)
+__forceinline IMB_JOB *
+SUBMIT_JOB_HASH(IMB_MGR *state, IMB_JOB *job)
 {
         return tab_submit_hash[job->hash_alg](state, job);
 }
 
-__forceinline IMB_JOB *FLUSH_JOB_HASH(IMB_MGR *state, IMB_JOB *job)
+__forceinline IMB_JOB *
+FLUSH_JOB_HASH(IMB_MGR *state, IMB_JOB *job)
 {
         return tab_flush_hash[job->hash_alg](state, job);
 }
@@ -3224,7 +3376,8 @@ __forceinline IMB_JOB *FLUSH_JOB_HASH(IMB_MGR *state, IMB_JOB *job)
 /* Job submit & flush functions */
 /* ========================================================================= */
 
-__forceinline unsigned calc_cipher_tab_index(const IMB_JOB *job)
+__forceinline unsigned
+calc_cipher_tab_index(const IMB_JOB *job)
 {
         /*
          * See include/mb_mgr_job_api.h for cipher table organization
@@ -3232,13 +3385,12 @@ __forceinline unsigned calc_cipher_tab_index(const IMB_JOB *job)
          * - map key_len_in_bytes into 0, 1, 2 & 3 index values
          * - encrypt_direction_bit x (ENCRYPT_DECRYPT_GAP x 4)
          */
-        return (job->cipher_mode << 2) +
-                (((job->key_len_in_bytes - 1) >> 3) & 3) +
-                ((job->cipher_direction & IMB_DIR_ENCRYPT) << 7);
+        return (job->cipher_mode << 2) + (((job->key_len_in_bytes - 1) >> 3) & 3) +
+               ((job->cipher_direction & IMB_DIR_ENCRYPT) << 7);
 }
 
-__forceinline
-IMB_JOB *SUBMIT_JOB_CIPHER(IMB_MGR *state, IMB_JOB *job)
+__forceinline IMB_JOB *
+SUBMIT_JOB_CIPHER(IMB_MGR *state, IMB_JOB *job)
 {
         const unsigned idx = calc_cipher_tab_index(job);
 
@@ -3247,8 +3399,8 @@ IMB_JOB *SUBMIT_JOB_CIPHER(IMB_MGR *state, IMB_JOB *job)
         return tab_submit_cipher[idx](state, job);
 }
 
-__forceinline
-IMB_JOB *FLUSH_JOB_CIPHER(IMB_MGR *state, IMB_JOB *job)
+__forceinline IMB_JOB *
+FLUSH_JOB_CIPHER(IMB_MGR *state, IMB_JOB *job)
 {
         const unsigned idx = calc_cipher_tab_index(job);
 
@@ -3256,8 +3408,8 @@ IMB_JOB *FLUSH_JOB_CIPHER(IMB_MGR *state, IMB_JOB *job)
 }
 
 /* submit a half-completed job, based on the status */
-__forceinline
-IMB_JOB *RESUBMIT_JOB(IMB_MGR *state, IMB_JOB *job)
+__forceinline IMB_JOB *
+RESUBMIT_JOB(IMB_MGR *state, IMB_JOB *job)
 {
         while (job != NULL && job->status < IMB_STATUS_COMPLETED) {
                 if (job->status == IMB_STATUS_COMPLETED_AUTH)
@@ -3266,26 +3418,26 @@ IMB_JOB *RESUBMIT_JOB(IMB_MGR *state, IMB_JOB *job)
                         job = SUBMIT_JOB_HASH(state, job);
         }
 
-	return job;
+        return job;
 }
 
-__forceinline
-IMB_JOB *submit_new_job(IMB_MGR *state, IMB_JOB *job)
+__forceinline IMB_JOB *
+submit_new_job(IMB_MGR *state, IMB_JOB *job)
 {
         if (job->cipher_mode == IMB_CIPHER_GCM)
                 return SUBMIT_JOB_CIPHER(state, job);
 
-	if (job->chain_order == IMB_ORDER_CIPHER_HASH)
-		job = SUBMIT_JOB_CIPHER(state, job);
-	else
-		job = SUBMIT_JOB_HASH(state, job);
+        if (job->chain_order == IMB_ORDER_CIPHER_HASH)
+                job = SUBMIT_JOB_CIPHER(state, job);
+        else
+                job = SUBMIT_JOB_HASH(state, job);
 
         job = RESUBMIT_JOB(state, job);
-	return job;
+        return job;
 }
 
-__forceinline
-uint32_t complete_job(IMB_MGR *state, IMB_JOB *job)
+__forceinline uint32_t
+complete_job(IMB_MGR *state, IMB_JOB *job)
 {
         uint32_t completed_jobs = 0;
 
@@ -3320,8 +3472,7 @@ uint32_t complete_job(IMB_MGR *state, IMB_JOB *job)
         return completed_jobs;
 }
 
-__forceinline
-IMB_JOB *
+__forceinline IMB_JOB *
 submit_job_and_check(IMB_MGR *state, const int run_check)
 {
         IMB_JOB *job = NULL;
@@ -3345,10 +3496,8 @@ submit_job_and_check(IMB_MGR *state, const int run_check)
         job = JOBS(state, state->next_job);
 
         if (run_check) {
-                if (is_job_invalid(state, job,
-                                   job->cipher_mode, job->hash_alg,
-                                   job->cipher_direction,
-                                   job->key_len_in_bytes)) {
+                if (is_job_invalid(state, job, job->cipher_mode, job->hash_alg,
+                                   job->cipher_direction, job->key_len_in_bytes)) {
                         job->status = IMB_STATUS_INVALID_ARGS;
                 } else {
                         job->status = IMB_STATUS_BEING_PROCESSED;
@@ -3445,7 +3594,8 @@ FLUSH_JOB(IMB_MGR *state)
 /* Async burst job submit & flush functions */
 /* ========================================================================= */
 
-__forceinline void set_cipher_suite_id(IMB_JOB *job, void **id)
+__forceinline void
+set_cipher_suite_id(IMB_JOB *job, void **id)
 {
         const unsigned c_idx = calc_cipher_tab_index(job);
         const unsigned h_idx = (unsigned) job->hash_alg;
@@ -3457,18 +3607,19 @@ __forceinline void set_cipher_suite_id(IMB_JOB *job, void **id)
 }
 
 #define CALL_SUBMIT_CIPHER(s, j) ((submit_flush_fn_t) (j)->suite_id[0])(s, j)
-#define CALL_FLUSH_CIPHER(s, j) ((submit_flush_fn_t) (j)->suite_id[2])(s, j)
-#define CALL_SUBMIT_HASH(s, j) ((submit_flush_fn_t) (j)->suite_id[1])(s, j)
-#define CALL_FLUSH_HASH(s, j) ((submit_flush_fn_t) (j)->suite_id[3])(s, j)
+#define CALL_FLUSH_CIPHER(s, j)  ((submit_flush_fn_t) (j)->suite_id[2])(s, j)
+#define CALL_SUBMIT_HASH(s, j)   ((submit_flush_fn_t) (j)->suite_id[1])(s, j)
+#define CALL_FLUSH_HASH(s, j)    ((submit_flush_fn_t) (j)->suite_id[3])(s, j)
 
-IMB_DLL_EXPORT void SET_SUITE_ID_FN(IMB_MGR *state, IMB_JOB *job)
+IMB_DLL_EXPORT void
+SET_SUITE_ID_FN(IMB_MGR *state, IMB_JOB *job)
 {
         (void) state;
         set_cipher_suite_id(job, job->suite_id);
 }
 
-__forceinline
-IMB_JOB *RESUBMIT_BURST_JOB(IMB_MGR *state, IMB_JOB *job)
+__forceinline IMB_JOB *
+RESUBMIT_BURST_JOB(IMB_MGR *state, IMB_JOB *job)
 {
         while (job != NULL && job->status < IMB_STATUS_COMPLETED) {
                 if (job->status == IMB_STATUS_COMPLETED_AUTH)
@@ -3477,26 +3628,26 @@ IMB_JOB *RESUBMIT_BURST_JOB(IMB_MGR *state, IMB_JOB *job)
                         job = CALL_SUBMIT_HASH(state, job);
         }
 
-	return job;
+        return job;
 }
 
-__forceinline
-IMB_JOB *submit_new_burst_job(IMB_MGR *state, IMB_JOB *job)
+__forceinline IMB_JOB *
+submit_new_burst_job(IMB_MGR *state, IMB_JOB *job)
 {
         if (job->cipher_mode == IMB_CIPHER_GCM)
                 return CALL_SUBMIT_CIPHER(state, job);
 
-	if (job->chain_order == IMB_ORDER_CIPHER_HASH)
-		job = CALL_SUBMIT_CIPHER(state, job);
-	else
-		job = CALL_SUBMIT_HASH(state, job);
+        if (job->chain_order == IMB_ORDER_CIPHER_HASH)
+                job = CALL_SUBMIT_CIPHER(state, job);
+        else
+                job = CALL_SUBMIT_HASH(state, job);
 
         job = RESUBMIT_BURST_JOB(state, job);
-	return job;
+        return job;
 }
 
-__forceinline
-uint32_t complete_burst_job(IMB_MGR *state, IMB_JOB *job)
+__forceinline uint32_t
+complete_burst_job(IMB_MGR *state, IMB_JOB *job)
 {
         uint32_t completed_jobs = 0;
 

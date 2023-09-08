@@ -34,12 +34,9 @@
 #include "include/error.h"
 #include "include/mb_mgr_job_check.h" /* is_job_invalid() */
 
-__forceinline
-uint32_t submit_aes_cbc_burst_enc(IMB_MGR *state,
-                                  IMB_JOB *jobs,
-                                  const uint32_t n_jobs,
-                                  const IMB_KEY_SIZE_BYTES key_size,
-                                  const int run_check)
+__forceinline uint32_t
+submit_aes_cbc_burst_enc(IMB_MGR *state, IMB_JOB *jobs, const uint32_t n_jobs,
+                         const IMB_KEY_SIZE_BYTES key_size, const int run_check)
 {
         uint32_t completed_jobs = 0;
 
@@ -51,8 +48,7 @@ uint32_t submit_aes_cbc_burst_enc(IMB_MGR *state,
                         IMB_JOB *job = &jobs[i];
 
                         /* validate job */
-                        if (is_job_invalid(state, job,
-                                           IMB_CIPHER_CBC, IMB_AUTH_NULL,
+                        if (is_job_invalid(state, job, IMB_CIPHER_CBC, IMB_AUTH_NULL,
                                            IMB_DIR_ENCRYPT, key_size)) {
                                 job->status = IMB_STATUS_INVALID_ARGS;
                                 return 0;
@@ -77,8 +73,7 @@ uint32_t submit_aes_cbc_burst_enc(IMB_MGR *state,
                 if (completed_jobs != n_jobs) {
                         IMB_JOB *job = NULL;
 
-                        while((job = FLUSH_JOB_AES_CBC_128_ENC(aes_ooo))
-                              != NULL) {
+                        while ((job = FLUSH_JOB_AES_CBC_128_ENC(aes_ooo)) != NULL) {
                                 job->status = IMB_STATUS_COMPLETED;
                                 completed_jobs++;
                         }
@@ -100,8 +95,7 @@ uint32_t submit_aes_cbc_burst_enc(IMB_MGR *state,
                 if (completed_jobs != n_jobs) {
                         IMB_JOB *job = NULL;
 
-                        while((job = FLUSH_JOB_AES_CBC_192_ENC(aes_ooo))
-                              != NULL) {
+                        while ((job = FLUSH_JOB_AES_CBC_192_ENC(aes_ooo)) != NULL) {
                                 job->status = IMB_STATUS_COMPLETED;
                                 completed_jobs++;
                         }
@@ -123,8 +117,7 @@ uint32_t submit_aes_cbc_burst_enc(IMB_MGR *state,
                 if (completed_jobs != n_jobs) {
                         IMB_JOB *job = NULL;
 
-                        while((job = FLUSH_JOB_AES_CBC_256_ENC(aes_ooo))
-                              != NULL) {
+                        while ((job = FLUSH_JOB_AES_CBC_256_ENC(aes_ooo)) != NULL) {
                                 job->status = IMB_STATUS_COMPLETED;
                                 completed_jobs++;
                         }
@@ -134,12 +127,9 @@ uint32_t submit_aes_cbc_burst_enc(IMB_MGR *state,
         return completed_jobs;
 }
 
-__forceinline
-uint32_t submit_aes_cbc_burst_dec(IMB_MGR *state,
-                                  IMB_JOB *jobs,
-                                  const uint32_t n_jobs,
-                                  const IMB_KEY_SIZE_BYTES key_size,
-                                  const int run_check)
+__forceinline uint32_t
+submit_aes_cbc_burst_dec(IMB_MGR *state, IMB_JOB *jobs, const uint32_t n_jobs,
+                         const IMB_KEY_SIZE_BYTES key_size, const int run_check)
 {
         (void) state;
 
@@ -151,8 +141,7 @@ uint32_t submit_aes_cbc_burst_dec(IMB_MGR *state,
                         IMB_JOB *job = &jobs[i];
 
                         /* validate job */
-                        if (is_job_invalid(state, job,
-                                           IMB_CIPHER_CBC, IMB_AUTH_NULL,
+                        if (is_job_invalid(state, job, IMB_CIPHER_CBC, IMB_AUTH_NULL,
                                            IMB_DIR_DECRYPT, key_size)) {
                                 job->status = IMB_STATUS_INVALID_ARGS;
                                 return 0;
@@ -166,13 +155,9 @@ uint32_t submit_aes_cbc_burst_dec(IMB_MGR *state,
                 for (i = 0; i < n_jobs; i++) {
                         IMB_JOB *job = &jobs[i];
 
-                        AES_CBC_DEC_128(job->src +
-                                        job->cipher_start_src_offset_in_bytes,
-                                        job->iv,
-                                        job->dec_keys,
-                                        job->dst,
-                                        job->msg_len_to_cipher_in_bytes &
-                                        (~15));
+                        AES_CBC_DEC_128(job->src + job->cipher_start_src_offset_in_bytes, job->iv,
+                                        job->dec_keys, job->dst,
+                                        job->msg_len_to_cipher_in_bytes & (~15));
                         job->status = IMB_STATUS_COMPLETED;
                 }
         } else if (key_size == IMB_KEY_192_BYTES) {
@@ -181,28 +166,20 @@ uint32_t submit_aes_cbc_burst_dec(IMB_MGR *state,
                 for (i = 0; i < n_jobs; i++) {
                         IMB_JOB *job = &jobs[i];
 
-                        AES_CBC_DEC_192(job->src +
-                                        job->cipher_start_src_offset_in_bytes,
-                                        job->iv,
-                                        job->dec_keys,
-                                        job->dst,
-                                        job->msg_len_to_cipher_in_bytes &
-                                        (~15));
+                        AES_CBC_DEC_192(job->src + job->cipher_start_src_offset_in_bytes, job->iv,
+                                        job->dec_keys, job->dst,
+                                        job->msg_len_to_cipher_in_bytes & (~15));
                         job->status = IMB_STATUS_COMPLETED;
                 }
-        } else  /* assume 256-bit key */ {
+        } else /* assume 256-bit key */ {
                 uint32_t i;
 
                 for (i = 0; i < n_jobs; i++) {
                         IMB_JOB *job = &jobs[i];
 
-                        AES_CBC_DEC_256(job->src +
-                                        job->cipher_start_src_offset_in_bytes,
-                                        job->iv,
-                                        job->dec_keys,
-                                        job->dst,
-                                        job->msg_len_to_cipher_in_bytes &
-                                        (~15));
+                        AES_CBC_DEC_256(job->src + job->cipher_start_src_offset_in_bytes, job->iv,
+                                        job->dec_keys, job->dst,
+                                        job->msg_len_to_cipher_in_bytes & (~15));
                         job->status = IMB_STATUS_COMPLETED;
                 }
         }
@@ -210,12 +187,9 @@ uint32_t submit_aes_cbc_burst_dec(IMB_MGR *state,
         return n_jobs;
 }
 
-__forceinline
-uint32_t submit_aes_ctr_burst(IMB_MGR *state,
-                              IMB_JOB *jobs,
-                              const uint32_t n_jobs,
-                              const IMB_KEY_SIZE_BYTES key_size,
-                              const int run_check)
+__forceinline uint32_t
+submit_aes_ctr_burst(IMB_MGR *state, IMB_JOB *jobs, const uint32_t n_jobs,
+                     const IMB_KEY_SIZE_BYTES key_size, const int run_check)
 {
         if (run_check) {
                 uint32_t i;
@@ -225,8 +199,7 @@ uint32_t submit_aes_ctr_burst(IMB_MGR *state,
                         IMB_JOB *job = &jobs[i];
 
                         /* validate job */
-                        if (is_job_invalid(state, job,
-                                           IMB_CIPHER_CNTR, IMB_AUTH_NULL,
+                        if (is_job_invalid(state, job, IMB_CIPHER_CNTR, IMB_AUTH_NULL,
                                            IMB_DIR_ENCRYPT, key_size)) {
                                 job->status = IMB_STATUS_INVALID_ARGS;
                                 return 0;
@@ -243,12 +216,8 @@ uint32_t submit_aes_ctr_burst(IMB_MGR *state,
 #ifdef SUBMIT_JOB_AES_CTR_128
                         SUBMIT_JOB_AES_CTR_128(job);
 #else
-                        AES_CTR_128(job->src +
-                                    job->cipher_start_src_offset_in_bytes,
-                                    job->iv,
-                                    job->enc_keys,
-                                    job->dst,
-                                    job->msg_len_to_cipher_in_bytes,
+                        AES_CTR_128(job->src + job->cipher_start_src_offset_in_bytes, job->iv,
+                                    job->enc_keys, job->dst, job->msg_len_to_cipher_in_bytes,
                                     job->iv_len_in_bytes);
 #endif
                         job->status = IMB_STATUS_COMPLETED;
@@ -262,17 +231,13 @@ uint32_t submit_aes_ctr_burst(IMB_MGR *state,
 #ifdef SUBMIT_JOB_AES_CTR_192
                         SUBMIT_JOB_AES_CTR_192(job);
 #else
-                        AES_CTR_192(job->src +
-                                    job->cipher_start_src_offset_in_bytes,
-                                    job->iv,
-                                    job->enc_keys,
-                                    job->dst,
-                                    job->msg_len_to_cipher_in_bytes,
+                        AES_CTR_192(job->src + job->cipher_start_src_offset_in_bytes, job->iv,
+                                    job->enc_keys, job->dst, job->msg_len_to_cipher_in_bytes,
                                     job->iv_len_in_bytes);
 #endif
                         job->status = IMB_STATUS_COMPLETED;
                 }
-        } else  /* assume 256-bit key */ {
+        } else /* assume 256-bit key */ {
                 uint32_t i;
 
                 for (i = 0; i < n_jobs; i++) {
@@ -281,12 +246,8 @@ uint32_t submit_aes_ctr_burst(IMB_MGR *state,
 #ifdef SUBMIT_JOB_AES_CTR_256
                         SUBMIT_JOB_AES_CTR_256(job);
 #else
-                        AES_CTR_256(job->src +
-                                    job->cipher_start_src_offset_in_bytes,
-                                    job->iv,
-                                    job->enc_keys,
-                                    job->dst,
-                                    job->msg_len_to_cipher_in_bytes,
+                        AES_CTR_256(job->src + job->cipher_start_src_offset_in_bytes, job->iv,
+                                    job->enc_keys, job->dst, job->msg_len_to_cipher_in_bytes,
                                     job->iv_len_in_bytes);
 #endif
                         job->status = IMB_STATUS_COMPLETED;
@@ -296,13 +257,10 @@ uint32_t submit_aes_ctr_burst(IMB_MGR *state,
         return n_jobs;
 }
 
-__forceinline
-uint32_t submit_cipher_burst_and_check(IMB_MGR *state, IMB_JOB *jobs,
-                                       const uint32_t n_jobs,
-                                       const IMB_CIPHER_MODE cipher,
-                                       const IMB_CIPHER_DIRECTION dir,
-                                       const IMB_KEY_SIZE_BYTES key_size,
-                                       const int run_check)
+__forceinline uint32_t
+submit_cipher_burst_and_check(IMB_MGR *state, IMB_JOB *jobs, const uint32_t n_jobs,
+                              const IMB_CIPHER_MODE cipher, const IMB_CIPHER_DIRECTION dir,
+                              const IMB_KEY_SIZE_BYTES key_size, const int run_check)
 {
         /* reset error status */
         imb_set_errno(state, 0);
@@ -316,14 +274,11 @@ uint32_t submit_cipher_burst_and_check(IMB_MGR *state, IMB_JOB *jobs,
         switch (cipher) {
         case IMB_CIPHER_CBC:
                 if (dir == IMB_DIR_ENCRYPT)
-                        return submit_aes_cbc_burst_enc(state, jobs, n_jobs,
-                                                        key_size, run_check);
+                        return submit_aes_cbc_burst_enc(state, jobs, n_jobs, key_size, run_check);
                 else
-                        return submit_aes_cbc_burst_dec(state, jobs, n_jobs,
-                                                        key_size, run_check);
+                        return submit_aes_cbc_burst_dec(state, jobs, n_jobs, key_size, run_check);
         case IMB_CIPHER_CNTR:
-                return submit_aes_ctr_burst(state, jobs, n_jobs,
-                                            key_size, run_check);
+                return submit_aes_ctr_burst(state, jobs, n_jobs, key_size, run_check);
         default:
                 break;
         }
@@ -335,33 +290,24 @@ uint32_t submit_cipher_burst_and_check(IMB_MGR *state, IMB_JOB *jobs,
 }
 
 uint32_t
-SUBMIT_CIPHER_BURST(IMB_MGR *state, IMB_JOB *jobs,
-                    const uint32_t n_jobs,
-                    const IMB_CIPHER_MODE cipher,
-                    const IMB_CIPHER_DIRECTION dir,
+SUBMIT_CIPHER_BURST(IMB_MGR *state, IMB_JOB *jobs, const uint32_t n_jobs,
+                    const IMB_CIPHER_MODE cipher, const IMB_CIPHER_DIRECTION dir,
                     const IMB_KEY_SIZE_BYTES key_size)
 {
-        return submit_cipher_burst_and_check(state, jobs, n_jobs,
-                                             cipher, dir, key_size, 1);
+        return submit_cipher_burst_and_check(state, jobs, n_jobs, cipher, dir, key_size, 1);
 }
 
 uint32_t
-SUBMIT_CIPHER_BURST_NOCHECK(IMB_MGR *state, IMB_JOB *jobs,
-                            const uint32_t n_jobs,
-                            const IMB_CIPHER_MODE cipher,
-                            const IMB_CIPHER_DIRECTION dir,
+SUBMIT_CIPHER_BURST_NOCHECK(IMB_MGR *state, IMB_JOB *jobs, const uint32_t n_jobs,
+                            const IMB_CIPHER_MODE cipher, const IMB_CIPHER_DIRECTION dir,
                             const IMB_KEY_SIZE_BYTES key_size)
 {
-        return submit_cipher_burst_and_check(state, jobs, n_jobs,
-                                             cipher, dir, key_size, 0);
+        return submit_cipher_burst_and_check(state, jobs, n_jobs, cipher, dir, key_size, 0);
 }
 
-__forceinline
-uint32_t submit_burst_hmac_sha_x(IMB_MGR *state,
-                                 IMB_JOB *jobs,
-                                 const uint32_t n_jobs,
-                                 const int run_check,
-                                 const IMB_HASH_ALG hash_alg)
+__forceinline uint32_t
+submit_burst_hmac_sha_x(IMB_MGR *state, IMB_JOB *jobs, const uint32_t n_jobs, const int run_check,
+                        const IMB_HASH_ALG hash_alg)
 {
         uint32_t i, completed_jobs = 0;
 
@@ -371,10 +317,7 @@ uint32_t submit_burst_hmac_sha_x(IMB_MGR *state,
                         IMB_JOB *job = &jobs[i];
 
                         /* validate job */
-                        if (is_job_invalid(state, job,
-                                           IMB_CIPHER_NULL,
-                                           hash_alg,
-                                           IMB_DIR_ENCRYPT,
+                        if (is_job_invalid(state, job, IMB_CIPHER_NULL, hash_alg, IMB_DIR_ENCRYPT,
                                            job->key_len_in_bytes)) {
                                 job->status = IMB_STATUS_INVALID_ARGS;
                                 return 0;
@@ -397,8 +340,7 @@ uint32_t submit_burst_hmac_sha_x(IMB_MGR *state,
                 if (completed_jobs != n_jobs) {
                         IMB_JOB *job = NULL;
 
-                        while ((job = FLUSH_JOB_HMAC(state->hmac_sha_1_ooo))
-                               != NULL) {
+                        while ((job = FLUSH_JOB_HMAC(state->hmac_sha_1_ooo)) != NULL) {
                                 job->status = IMB_STATUS_COMPLETED;
                                 completed_jobs++;
                         }
@@ -408,8 +350,7 @@ uint32_t submit_burst_hmac_sha_x(IMB_MGR *state,
                 for (i = 0; i < n_jobs; i++) {
                         IMB_JOB *job = &jobs[i];
 
-                        job = SUBMIT_JOB_HMAC_SHA_224(state->hmac_sha_224_ooo,
-                                                      job);
+                        job = SUBMIT_JOB_HMAC_SHA_224(state->hmac_sha_224_ooo, job);
                         if (job != NULL) {
                                 job->status = IMB_STATUS_COMPLETED;
                                 completed_jobs++;
@@ -419,9 +360,7 @@ uint32_t submit_burst_hmac_sha_x(IMB_MGR *state,
                 if (completed_jobs != n_jobs) {
                         IMB_JOB *job = NULL;
 
-                        while ((job =
-                                FLUSH_JOB_HMAC_SHA_224(state->hmac_sha_224_ooo))
-                               != NULL) {
+                        while ((job = FLUSH_JOB_HMAC_SHA_224(state->hmac_sha_224_ooo)) != NULL) {
                                 job->status = IMB_STATUS_COMPLETED;
                                 completed_jobs++;
                         }
@@ -431,8 +370,7 @@ uint32_t submit_burst_hmac_sha_x(IMB_MGR *state,
                 for (i = 0; i < n_jobs; i++) {
                         IMB_JOB *job = &jobs[i];
 
-                        job = SUBMIT_JOB_HMAC_SHA_256(state->hmac_sha_256_ooo,
-                                                      job);
+                        job = SUBMIT_JOB_HMAC_SHA_256(state->hmac_sha_256_ooo, job);
                         if (job != NULL) {
                                 job->status = IMB_STATUS_COMPLETED;
                                 completed_jobs++;
@@ -442,9 +380,7 @@ uint32_t submit_burst_hmac_sha_x(IMB_MGR *state,
                 if (completed_jobs != n_jobs) {
                         IMB_JOB *job = NULL;
 
-                        while ((job =
-                                FLUSH_JOB_HMAC_SHA_256(state->hmac_sha_256_ooo))
-                               != NULL) {
+                        while ((job = FLUSH_JOB_HMAC_SHA_256(state->hmac_sha_256_ooo)) != NULL) {
                                 job->status = IMB_STATUS_COMPLETED;
                                 completed_jobs++;
                         }
@@ -454,8 +390,7 @@ uint32_t submit_burst_hmac_sha_x(IMB_MGR *state,
                 for (i = 0; i < n_jobs; i++) {
                         IMB_JOB *job = &jobs[i];
 
-                        job = SUBMIT_JOB_HMAC_SHA_384(state->hmac_sha_384_ooo,
-                                                      job);
+                        job = SUBMIT_JOB_HMAC_SHA_384(state->hmac_sha_384_ooo, job);
                         if (job != NULL) {
                                 job->status = IMB_STATUS_COMPLETED;
                                 completed_jobs++;
@@ -465,9 +400,7 @@ uint32_t submit_burst_hmac_sha_x(IMB_MGR *state,
                 if (completed_jobs != n_jobs) {
                         IMB_JOB *job = NULL;
 
-                        while ((job =
-                                FLUSH_JOB_HMAC_SHA_384(state->hmac_sha_384_ooo))
-                               != NULL) {
+                        while ((job = FLUSH_JOB_HMAC_SHA_384(state->hmac_sha_384_ooo)) != NULL) {
                                 job->status = IMB_STATUS_COMPLETED;
                                 completed_jobs++;
                         }
@@ -477,8 +410,7 @@ uint32_t submit_burst_hmac_sha_x(IMB_MGR *state,
                 for (i = 0; i < n_jobs; i++) {
                         IMB_JOB *job = &jobs[i];
 
-                        job = SUBMIT_JOB_HMAC_SHA_512(state->hmac_sha_512_ooo,
-                                                      job);
+                        job = SUBMIT_JOB_HMAC_SHA_512(state->hmac_sha_512_ooo, job);
                         if (job != NULL) {
                                 job->status = IMB_STATUS_COMPLETED;
                                 completed_jobs++;
@@ -488,9 +420,7 @@ uint32_t submit_burst_hmac_sha_x(IMB_MGR *state,
                 if (completed_jobs != n_jobs) {
                         IMB_JOB *job = NULL;
 
-                        while ((job =
-                                FLUSH_JOB_HMAC_SHA_512(state->hmac_sha_512_ooo))
-                               != NULL) {
+                        while ((job = FLUSH_JOB_HMAC_SHA_512(state->hmac_sha_512_ooo)) != NULL) {
                                 job->status = IMB_STATUS_COMPLETED;
                                 completed_jobs++;
                         }
@@ -500,11 +430,9 @@ uint32_t submit_burst_hmac_sha_x(IMB_MGR *state,
         return completed_jobs;
 }
 
-__forceinline
-uint32_t submit_hash_burst_and_check(IMB_MGR *state, IMB_JOB *jobs,
-                                     const uint32_t n_jobs,
-                                     const IMB_HASH_ALG hash,
-                                     const int run_check)
+__forceinline uint32_t
+submit_hash_burst_and_check(IMB_MGR *state, IMB_JOB *jobs, const uint32_t n_jobs,
+                            const IMB_HASH_ALG hash, const int run_check)
 {
         /* reset error status */
         imb_set_errno(state, 0);
@@ -518,8 +446,7 @@ uint32_t submit_hash_burst_and_check(IMB_MGR *state, IMB_JOB *jobs,
 
         switch (hash) {
         case IMB_AUTH_HMAC_SHA_1:
-                return submit_burst_hmac_sha_x(state, jobs, n_jobs, run_check,
-                                               IMB_AUTH_HMAC_SHA_1);
+                return submit_burst_hmac_sha_x(state, jobs, n_jobs, run_check, IMB_AUTH_HMAC_SHA_1);
         case IMB_AUTH_HMAC_SHA_224:
                 return submit_burst_hmac_sha_x(state, jobs, n_jobs, run_check,
                                                IMB_AUTH_HMAC_SHA_224);
@@ -543,16 +470,13 @@ uint32_t submit_hash_burst_and_check(IMB_MGR *state, IMB_JOB *jobs,
 }
 
 uint32_t
-SUBMIT_HASH_BURST(IMB_MGR *state, IMB_JOB *jobs,
-                  const uint32_t n_jobs,
-                  const IMB_HASH_ALG hash)
+SUBMIT_HASH_BURST(IMB_MGR *state, IMB_JOB *jobs, const uint32_t n_jobs, const IMB_HASH_ALG hash)
 {
         return submit_hash_burst_and_check(state, jobs, n_jobs, hash, 1);
 }
 
 uint32_t
-SUBMIT_HASH_BURST_NOCHECK(IMB_MGR *state, IMB_JOB *jobs,
-                          const uint32_t n_jobs,
+SUBMIT_HASH_BURST_NOCHECK(IMB_MGR *state, IMB_JOB *jobs, const uint32_t n_jobs,
                           const IMB_HASH_ALG hash)
 {
         return submit_hash_burst_and_check(state, jobs, n_jobs, hash, 0);

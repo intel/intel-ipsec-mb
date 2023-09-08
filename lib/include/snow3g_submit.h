@@ -30,7 +30,8 @@
 
 #include "intel-ipsec-mb.h"
 
-static inline IMB_JOB *def_submit_snow3g_uea2_job(IMB_MGR *state, IMB_JOB *job)
+static inline IMB_JOB *
+def_submit_snow3g_uea2_job(IMB_MGR *state, IMB_JOB *job)
 {
         const snow3g_key_schedule_t *key = job->enc_keys;
         const uint32_t bitlen = (uint32_t) job->msg_len_to_cipher_in_bits;
@@ -41,8 +42,7 @@ static inline IMB_JOB *def_submit_snow3g_uea2_job(IMB_MGR *state, IMB_JOB *job)
          * - bit offset is not a multiple of bytes
          */
         if ((bitlen & 0x07) || (bitoff & 0x07)) {
-                IMB_SNOW3G_F8_1_BUFFER_BIT(state, key, job->iv, job->src,
-                                           job->dst, bitlen, bitoff);
+                IMB_SNOW3G_F8_1_BUFFER_BIT(state, key, job->iv, job->src, job->dst, bitlen, bitoff);
         } else {
                 const uint32_t bytelen = bitlen >> 3;
                 const uint32_t byteoff = bitoff >> 3;
@@ -56,7 +56,8 @@ static inline IMB_JOB *def_submit_snow3g_uea2_job(IMB_MGR *state, IMB_JOB *job)
         return job;
 }
 
-static inline IMB_JOB *def_flush_snow3g_uea2_job(IMB_MGR *state)
+static inline IMB_JOB *
+def_flush_snow3g_uea2_job(IMB_MGR *state)
 {
         (void) state;
         return NULL;

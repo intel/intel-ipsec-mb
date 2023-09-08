@@ -29,7 +29,8 @@
 #include "include/error.h"
 #include "include/arch_x86_64.h"
 
-IMB_DLL_EXPORT uint32_t imb_set_session(IMB_MGR *state, IMB_JOB *job)
+IMB_DLL_EXPORT uint32_t
+imb_set_session(IMB_MGR *state, IMB_JOB *job)
 {
         struct {
                 uint16_t key_len;
@@ -64,12 +65,11 @@ IMB_DLL_EXPORT uint32_t imb_set_session(IMB_MGR *state, IMB_JOB *job)
          */
         extract.key_len = (uint16_t) job->key_len_in_bytes;
         extract.hash_alg = (uint16_t) job->hash_alg;
-        extract.cipher_mode = (uint16_t) job->cipher_mode ;
+        extract.cipher_mode = (uint16_t) job->cipher_mode;
         extract.cipher_dir = (uint16_t) job->cipher_direction;
         extract.counter = atomic_uint64_inc(&counter);
 
-        const uint32_t id =
-                IMB_CRC32_WIMAX_OFDMA_DATA(state, &extract, sizeof(extract));
+        const uint32_t id = IMB_CRC32_WIMAX_OFDMA_DATA(state, &extract, sizeof(extract));
 
         job->session_id = id;
         return id;

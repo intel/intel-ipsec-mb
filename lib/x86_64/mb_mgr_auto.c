@@ -74,8 +74,7 @@ init_mb_mgr_auto(IMB_MGR *state, IMB_ARCH *arch)
         }
 
 #ifdef AESNI_EMU
-        if ((state->features & IMB_CPUFLAGS_NO_AESNI)
-            == IMB_CPUFLAGS_NO_AESNI) {
+        if ((state->features & IMB_CPUFLAGS_NO_AESNI) == IMB_CPUFLAGS_NO_AESNI) {
                 init_mb_mgr_sse_no_aesni(state);
                 arch_detected = IMB_ARCH_NOAESNI;
                 goto init_mb_mgr_auto_ret;
@@ -83,7 +82,7 @@ init_mb_mgr_auto(IMB_MGR *state, IMB_ARCH *arch)
 #endif
         imb_set_errno(state, ENODEV);
 
- init_mb_mgr_auto_ret:
+init_mb_mgr_auto_ret:
         if (arch != NULL)
                 *arch = arch_detected;
 }

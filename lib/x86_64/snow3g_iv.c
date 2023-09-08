@@ -31,8 +31,7 @@
 #include "include/wireless_common.h"
 
 int
-snow3g_f8_iv_gen(const uint32_t count, const uint8_t bearer,
-                 const uint8_t dir, void *iv_ptr)
+snow3g_f8_iv_gen(const uint32_t count, const uint8_t bearer, const uint8_t dir, void *iv_ptr)
 {
         uint32_t *iv32 = (uint32_t *) iv_ptr;
 
@@ -40,7 +39,7 @@ snow3g_f8_iv_gen(const uint32_t count, const uint8_t bearer,
                 return -1;
 
         /* Bearer must contain 5 bits only */
-        if (bearer >= (1<<5))
+        if (bearer >= (1 << 5))
                 return -1;
 
         /* Direction must contain 1 bit only */
@@ -66,8 +65,7 @@ snow3g_f8_iv_gen(const uint32_t count, const uint8_t bearer,
 }
 
 int
-snow3g_f9_iv_gen(const uint32_t count, const uint32_t fresh,
-                 const uint8_t dir, void *iv_ptr)
+snow3g_f9_iv_gen(const uint32_t count, const uint32_t fresh, const uint8_t dir, void *iv_ptr)
 {
         uint32_t *iv32 = (uint32_t *) iv_ptr;
 

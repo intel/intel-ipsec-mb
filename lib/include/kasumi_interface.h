@@ -25,7 +25,6 @@
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 *******************************************************************************/
 
-
 #ifndef _KASUMI_INTERFACE_H_
 #define _KASUMI_INTERFACE_H_
 
@@ -33,109 +32,102 @@
 #include "intel-ipsec-mb.h"
 
 /* Range of input data for KASUMI is from 1 to 20000 bits */
-#define KASUMI_MIN_LEN     1
-#define KASUMI_MAX_LEN     20000
+#define KASUMI_MIN_LEN 1
+#define KASUMI_MAX_LEN 20000
 
-#define BYTESIZE     (8)
-#define BITSIZE(x)   ((int)(sizeof(x)*BYTESIZE))
+#define BYTESIZE   (8)
+#define BITSIZE(x) ((int) (sizeof(x) * BYTESIZE))
 
 /* SSE */
-size_t kasumi_key_sched_size_sse(void);
-int kasumi_init_f8_key_sched_sse(const void *pKey, kasumi_key_sched_t *pCtx);
-int kasumi_init_f9_key_sched_sse(const void *pKey, kasumi_key_sched_t *pCtx);
+size_t
+kasumi_key_sched_size_sse(void);
+int
+kasumi_init_f8_key_sched_sse(const void *pKey, kasumi_key_sched_t *pCtx);
+int
+kasumi_init_f9_key_sched_sse(const void *pKey, kasumi_key_sched_t *pCtx);
 
-void kasumi_f8_1_buffer_sse(const kasumi_key_sched_t *pCtx, const uint64_t IV,
-                            const void *pBufferIn, void *pBufferOut,
-                            const uint32_t cipherLengthInBytes);
+void
+kasumi_f8_1_buffer_sse(const kasumi_key_sched_t *pCtx, const uint64_t IV, const void *pBufferIn,
+                       void *pBufferOut, const uint32_t cipherLengthInBytes);
 
-void kasumi_f8_1_buffer_bit_sse(const kasumi_key_sched_t *pCtx,
-                                const uint64_t IV,
-                                const void *pBufferIn, void *pBufferOut,
-                                const uint32_t cipherLengthInBits,
-                                const uint32_t offsetInBits);
+void
+kasumi_f8_1_buffer_bit_sse(const kasumi_key_sched_t *pCtx, const uint64_t IV, const void *pBufferIn,
+                           void *pBufferOut, const uint32_t cipherLengthInBits,
+                           const uint32_t offsetInBits);
 
-void kasumi_f8_2_buffer_sse(const kasumi_key_sched_t *pCtx,
-                            const uint64_t IV1, const uint64_t IV2,
-                            const void *pBufferIn1, void *pBufferOut1,
-                            const uint32_t lengthInBytes1,
-                            const void *pBufferIn2, void *pBufferOut2,
-                            const uint32_t lengthInBytes2);
+void
+kasumi_f8_2_buffer_sse(const kasumi_key_sched_t *pCtx, const uint64_t IV1, const uint64_t IV2,
+                       const void *pBufferIn1, void *pBufferOut1, const uint32_t lengthInBytes1,
+                       const void *pBufferIn2, void *pBufferOut2, const uint32_t lengthInBytes2);
 
-void kasumi_f8_3_buffer_sse(const kasumi_key_sched_t *pCtx, const uint64_t IV1,
-                            const uint64_t IV2, const uint64_t IV3,
-                            const void *pBufferIn1, void *pBufferOut1,
-                            const void *pBufferIn2, void *pBufferOut2,
-                            const void *pBufferIn3, void *pBufferOut3,
-                            const uint32_t lengthInBytes);
+void
+kasumi_f8_3_buffer_sse(const kasumi_key_sched_t *pCtx, const uint64_t IV1, const uint64_t IV2,
+                       const uint64_t IV3, const void *pBufferIn1, void *pBufferOut1,
+                       const void *pBufferIn2, void *pBufferOut2, const void *pBufferIn3,
+                       void *pBufferOut3, const uint32_t lengthInBytes);
 
-void kasumi_f8_4_buffer_sse(const kasumi_key_sched_t *pCtx,
-                            const uint64_t IV1, const uint64_t IV2,
-                            const uint64_t IV3, const uint64_t IV4,
-                            const void *pBufferIn1, void *pBufferOut1,
-                            const void *pBufferIn2, void *pBufferOut2,
-                            const void *pBufferIn3, void *pBufferOut3,
-                            const void *pBufferIn4, void *pBufferOut4,
-                            const uint32_t lengthInBytes);
+void
+kasumi_f8_4_buffer_sse(const kasumi_key_sched_t *pCtx, const uint64_t IV1, const uint64_t IV2,
+                       const uint64_t IV3, const uint64_t IV4, const void *pBufferIn1,
+                       void *pBufferOut1, const void *pBufferIn2, void *pBufferOut2,
+                       const void *pBufferIn3, void *pBufferOut3, const void *pBufferIn4,
+                       void *pBufferOut4, const uint32_t lengthInBytes);
 
-void kasumi_f8_n_buffer_sse(const kasumi_key_sched_t *pKeySchedule,
-                            const uint64_t IV[],
-                            const void * const pDataIn[], void *pDataOut[],
-                            const uint32_t dataLen[], const uint32_t dataCount);
+void
+kasumi_f8_n_buffer_sse(const kasumi_key_sched_t *pKeySchedule, const uint64_t IV[],
+                       const void *const pDataIn[], void *pDataOut[], const uint32_t dataLen[],
+                       const uint32_t dataCount);
 
-void kasumi_f9_1_buffer_sse(const kasumi_key_sched_t *pCtx,
-                            const void *pBufferIn,
-                            const uint32_t lengthInBytes, void *pDigest);
+void
+kasumi_f9_1_buffer_sse(const kasumi_key_sched_t *pCtx, const void *pBufferIn,
+                       const uint32_t lengthInBytes, void *pDigest);
 
-void kasumi_f9_1_buffer_user_sse(const kasumi_key_sched_t *pCtx,
-                                 const uint64_t IV, const void *pBufferIn,
-                                 const uint32_t lengthInBits,
-                                 void *pDigest, const uint32_t direction);
+void
+kasumi_f9_1_buffer_user_sse(const kasumi_key_sched_t *pCtx, const uint64_t IV,
+                            const void *pBufferIn, const uint32_t lengthInBits, void *pDigest,
+                            const uint32_t direction);
 
 /* AVX */
-size_t kasumi_key_sched_size_avx(void);
-int kasumi_init_f8_key_sched_avx(const void *pKey, kasumi_key_sched_t *pCtx);
-int kasumi_init_f9_key_sched_avx(const void *pKey, kasumi_key_sched_t *pCtx);
+size_t
+kasumi_key_sched_size_avx(void);
+int
+kasumi_init_f8_key_sched_avx(const void *pKey, kasumi_key_sched_t *pCtx);
+int
+kasumi_init_f9_key_sched_avx(const void *pKey, kasumi_key_sched_t *pCtx);
 
-void kasumi_f8_1_buffer_avx(const kasumi_key_sched_t *pCtx, const uint64_t IV,
-                            const void *pBufferIn, void *pBufferOut,
-                            const uint32_t cipherLengthInBytes);
-void kasumi_f8_1_buffer_bit_avx(const kasumi_key_sched_t *pCtx,
-                                const uint64_t IV,
-                                const void *pBufferIn, void *pBufferOut,
-                                const uint32_t cipherLengthInBits,
-                                const uint32_t offsetInBits);
-void kasumi_f8_2_buffer_avx(const kasumi_key_sched_t *pCtx,
-                            const uint64_t IV1, const uint64_t IV2,
-                            const void *pBufferIn1, void *pBufferOut1,
-                            const uint32_t lengthInBytes1,
-                            const void *pBufferIn2, void *pBufferOut2,
-                            const uint32_t lengthInBytes2);
-void kasumi_f8_3_buffer_avx(const kasumi_key_sched_t *pCtx, const uint64_t IV1,
-                            const uint64_t IV2, const uint64_t IV3,
-                            const void *pBufferIn1, void *pBufferOut1,
-                            const void *pBufferIn2, void *pBufferOut2,
-                            const void *pBufferIn3, void *pBufferOut3,
-                            const uint32_t lengthInBytes);
-void kasumi_f8_4_buffer_avx(const kasumi_key_sched_t *pCtx,
-                            const uint64_t IV1, const uint64_t IV2,
-                            const uint64_t IV3, const uint64_t IV4,
-                            const void *pBufferIn1, void *pBufferOut1,
-                            const void *pBufferIn2, void *pBufferOut2,
-                            const void *pBufferIn3, void *pBufferOut3,
-                            const void *pBufferIn4, void *pBufferOut4,
-                            const uint32_t lengthInBytes);
-void kasumi_f8_n_buffer_avx(const kasumi_key_sched_t *pKeySchedule,
-                            const uint64_t IV[],
-                            const void * const pDataIn[], void *pDataOut[],
-                            const uint32_t dataLen[], const uint32_t dataCount);
+void
+kasumi_f8_1_buffer_avx(const kasumi_key_sched_t *pCtx, const uint64_t IV, const void *pBufferIn,
+                       void *pBufferOut, const uint32_t cipherLengthInBytes);
+void
+kasumi_f8_1_buffer_bit_avx(const kasumi_key_sched_t *pCtx, const uint64_t IV, const void *pBufferIn,
+                           void *pBufferOut, const uint32_t cipherLengthInBits,
+                           const uint32_t offsetInBits);
+void
+kasumi_f8_2_buffer_avx(const kasumi_key_sched_t *pCtx, const uint64_t IV1, const uint64_t IV2,
+                       const void *pBufferIn1, void *pBufferOut1, const uint32_t lengthInBytes1,
+                       const void *pBufferIn2, void *pBufferOut2, const uint32_t lengthInBytes2);
+void
+kasumi_f8_3_buffer_avx(const kasumi_key_sched_t *pCtx, const uint64_t IV1, const uint64_t IV2,
+                       const uint64_t IV3, const void *pBufferIn1, void *pBufferOut1,
+                       const void *pBufferIn2, void *pBufferOut2, const void *pBufferIn3,
+                       void *pBufferOut3, const uint32_t lengthInBytes);
+void
+kasumi_f8_4_buffer_avx(const kasumi_key_sched_t *pCtx, const uint64_t IV1, const uint64_t IV2,
+                       const uint64_t IV3, const uint64_t IV4, const void *pBufferIn1,
+                       void *pBufferOut1, const void *pBufferIn2, void *pBufferOut2,
+                       const void *pBufferIn3, void *pBufferOut3, const void *pBufferIn4,
+                       void *pBufferOut4, const uint32_t lengthInBytes);
+void
+kasumi_f8_n_buffer_avx(const kasumi_key_sched_t *pKeySchedule, const uint64_t IV[],
+                       const void *const pDataIn[], void *pDataOut[], const uint32_t dataLen[],
+                       const uint32_t dataCount);
 
-void kasumi_f9_1_buffer_avx(const kasumi_key_sched_t *pCtx,
-                            const void *pBufferIn,
-                            const uint32_t lengthInBytes, void *pDigest);
+void
+kasumi_f9_1_buffer_avx(const kasumi_key_sched_t *pCtx, const void *pBufferIn,
+                       const uint32_t lengthInBytes, void *pDigest);
 
-void kasumi_f9_1_buffer_user_avx(const kasumi_key_sched_t *pCtx,
-                                 const uint64_t IV, const void *pBufferIn,
-                                 const uint32_t lengthInBits,
-                                 void *pDigest, const uint32_t direction);
+void
+kasumi_f9_1_buffer_user_avx(const kasumi_key_sched_t *pCtx, const uint64_t IV,
+                            const void *pBufferIn, const uint32_t lengthInBits, void *pDigest,
+                            const uint32_t direction);
 #endif /*_KASUMI_INTERFACE_H_*/
-

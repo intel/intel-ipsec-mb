@@ -30,10 +30,14 @@
 
 #include "intel-ipsec-mb.h"
 
-void save_xmms(imb_uint128_t array[10]);
-void restore_xmms(imb_uint128_t array[10]);
+void
+save_xmms(imb_uint128_t array[10]);
+void
+restore_xmms(imb_uint128_t array[10]);
 
-void save_xmms_avx(imb_uint128_t array[10]);
-void restore_xmms_avx(imb_uint128_t array[10]);
+void
+save_xmms_avx(imb_uint128_t array[10]);
+void
+restore_xmms_avx(imb_uint128_t array[10]);
 
 #endif /* SAVE_XMMS_H */

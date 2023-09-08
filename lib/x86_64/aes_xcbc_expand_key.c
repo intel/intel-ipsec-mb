@@ -25,7 +25,6 @@
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 *******************************************************************************/
 
-
 #include <stdio.h>
 #include "intel-ipsec-mb.h"
 #ifdef AESNI_EMU
@@ -37,11 +36,9 @@
 #include "include/arch_sse_type1.h"
 #include "include/arch_avx_type1.h"
 
-static uint32_t in[4*3] = {
-        0x01010101, 0x01010101, 0x01010101, 0x01010101,
-        0x02020202, 0x02020202, 0x02020202, 0x02020202,
-        0x03030303, 0x03030303, 0x03030303, 0x03030303
-};
+static uint32_t in[4 * 3] = { 0x01010101, 0x01010101, 0x01010101, 0x01010101,
+                              0x02020202, 0x02020202, 0x02020202, 0x02020202,
+                              0x03030303, 0x03030303, 0x03030303, 0x03030303 };
 
 void
 aes_xcbc_expand_key_sse(const void *key, void *k1_exp, void *k2, void *k3)
@@ -57,7 +54,7 @@ aes_xcbc_expand_key_sse(const void *key, void *k1_exp, void *k2, void *k3)
                 return;
         }
 #endif
-        DECLARE_ALIGNED(uint32_t keys_exp_enc[11*4], 16);
+        DECLARE_ALIGNED(uint32_t keys_exp_enc[11 * 4], 16);
 
         aes_keyexp_128_enc_sse(key, keys_exp_enc);
 
@@ -72,8 +69,7 @@ aes_xcbc_expand_key_sse(const void *key, void *k1_exp, void *k2, void *k3)
 
 #ifdef AESNI_EMU
 void
-aes_xcbc_expand_key_sse_no_aesni(const void *key, void *k1_exp,
-                                 void *k2, void *k3)
+aes_xcbc_expand_key_sse_no_aesni(const void *key, void *k1_exp, void *k2, void *k3)
 {
 #ifdef SAFE_PARAM
         imb_set_errno(NULL, 0);
@@ -86,7 +82,7 @@ aes_xcbc_expand_key_sse_no_aesni(const void *key, void *k1_exp,
                 return;
         }
 #endif
-        DECLARE_ALIGNED(uint32_t keys_exp_enc[11*4], 16);
+        DECLARE_ALIGNED(uint32_t keys_exp_enc[11 * 4], 16);
 
         aes_keyexp_128_enc_sse_no_aesni(key, keys_exp_enc);
 
@@ -100,10 +96,8 @@ aes_xcbc_expand_key_sse_no_aesni(const void *key, void *k1_exp,
 }
 #endif /* AESNI_EMU */
 
-__forceinline
-void
-aes_xcbc_expand_key_avx_common(const void *key,
-                               void *k1_exp, void *k2, void *k3)
+__forceinline void
+aes_xcbc_expand_key_avx_common(const void *key, void *k1_exp, void *k2, void *k3)
 {
 #ifdef SAFE_PARAM
         imb_set_errno(NULL, 0);
@@ -116,7 +110,7 @@ aes_xcbc_expand_key_avx_common(const void *key,
                 return;
         }
 #endif
-        DECLARE_ALIGNED(uint32_t keys_exp_enc[11*4], 16);
+        DECLARE_ALIGNED(uint32_t keys_exp_enc[11 * 4], 16);
 
         aes_keyexp_128_enc_avx(key, keys_exp_enc);
 

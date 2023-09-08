@@ -29,11 +29,8 @@
 #include "include/error.h"
 
 IMB_DLL_EXPORT void
-imb_quic_hp_aes_ecb(IMB_MGR *state,
-                    const void *exp_key_data,
-                    void *dst_ptr_array[],
-                    const void * const src_ptr_array[],
-                    const uint64_t num_packets,
+imb_quic_hp_aes_ecb(IMB_MGR *state, const void *exp_key_data, void *dst_ptr_array[],
+                    const void *const src_ptr_array[], const uint64_t num_packets,
                     const IMB_KEY_SIZE_BYTES key_size)
 {
 #ifdef SAFE_PARAM
@@ -69,12 +66,10 @@ imb_quic_hp_aes_ecb(IMB_MGR *state,
 
         switch (key_size) {
         case IMB_KEY_128_BYTES:
-                state->aes_ecb_128_quic(src_ptr_array, exp_key_data,
-                                        dst_ptr_array, num_packets);
+                state->aes_ecb_128_quic(src_ptr_array, exp_key_data, dst_ptr_array, num_packets);
                 break;
         case IMB_KEY_256_BYTES:
-                state->aes_ecb_256_quic(src_ptr_array, exp_key_data,
-                                        dst_ptr_array, num_packets);
+                state->aes_ecb_256_quic(src_ptr_array, exp_key_data, dst_ptr_array, num_packets);
                 break;
         /* AES-192 is not supported by QUIC */
         case IMB_KEY_192_BYTES:

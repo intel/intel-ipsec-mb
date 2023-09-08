@@ -34,40 +34,43 @@
 #include "ipsec_ooo_mgr.h"
 
 /* AES-ECB */
-void aes_ecb_enc_256_vaes_avx2(const void *in, const void *keys,
-                               void *out, uint64_t len_bytes);
-void aes_ecb_enc_192_vaes_avx2(const void *in, const void *keys,
-                               void *out, uint64_t len_bytes);
-void aes_ecb_enc_128_vaes_avx2(const void *in, const void *keys,
-                               void *out, uint64_t len_bytes);
+void
+aes_ecb_enc_256_vaes_avx2(const void *in, const void *keys, void *out, uint64_t len_bytes);
+void
+aes_ecb_enc_192_vaes_avx2(const void *in, const void *keys, void *out, uint64_t len_bytes);
+void
+aes_ecb_enc_128_vaes_avx2(const void *in, const void *keys, void *out, uint64_t len_bytes);
 
-void aes_ecb_dec_256_vaes_avx2(const void *in, const void *keys,
-                               void *out, uint64_t len_bytes);
-void aes_ecb_dec_192_vaes_avx2(const void *in, const void *keys,
-                               void *out, uint64_t len_bytes);
-void aes_ecb_dec_128_vaes_avx2(const void *in, const void *keys,
-                               void *out, uint64_t len_bytes);
+void
+aes_ecb_dec_256_vaes_avx2(const void *in, const void *keys, void *out, uint64_t len_bytes);
+void
+aes_ecb_dec_192_vaes_avx2(const void *in, const void *keys, void *out, uint64_t len_bytes);
+void
+aes_ecb_dec_128_vaes_avx2(const void *in, const void *keys, void *out, uint64_t len_bytes);
 
 /* moved from MB MGR */
-IMB_JOB *submit_job_zuc_eea3_gfni_avx2(MB_MGR_ZUC_OOO *state,
-                                  IMB_JOB *job);
-IMB_JOB *flush_job_zuc_eea3_gfni_avx2(MB_MGR_ZUC_OOO *state);
+IMB_JOB *
+submit_job_zuc_eea3_gfni_avx2(MB_MGR_ZUC_OOO *state, IMB_JOB *job);
+IMB_JOB *
+flush_job_zuc_eea3_gfni_avx2(MB_MGR_ZUC_OOO *state);
 
-IMB_JOB *flush_job_zuc256_eea3_gfni_avx2(MB_MGR_ZUC_OOO *state);
+IMB_JOB *
+flush_job_zuc256_eea3_gfni_avx2(MB_MGR_ZUC_OOO *state);
 
-IMB_JOB *submit_job_zuc256_eea3_gfni_avx2(MB_MGR_ZUC_OOO *state,
-                                     IMB_JOB *job);
+IMB_JOB *
+submit_job_zuc256_eea3_gfni_avx2(MB_MGR_ZUC_OOO *state, IMB_JOB *job);
 
-IMB_JOB *submit_job_zuc_eia3_gfni_avx2(MB_MGR_ZUC_OOO *state,
-                                  IMB_JOB *job);
-IMB_JOB *flush_job_zuc_eia3_gfni_avx2(MB_MGR_ZUC_OOO *state);
+IMB_JOB *
+submit_job_zuc_eia3_gfni_avx2(MB_MGR_ZUC_OOO *state, IMB_JOB *job);
+IMB_JOB *
+flush_job_zuc_eia3_gfni_avx2(MB_MGR_ZUC_OOO *state);
 
-IMB_JOB *submit_job_zuc256_eia3_gfni_avx2(MB_MGR_ZUC_OOO *state,
-                                     IMB_JOB *job,
-                                     const uint64_t tag_sz);
-IMB_JOB *flush_job_zuc256_eia3_gfni_avx2(MB_MGR_ZUC_OOO *state,
-                                    const uint64_t tag_sz);
+IMB_JOB *
+submit_job_zuc256_eia3_gfni_avx2(MB_MGR_ZUC_OOO *state, IMB_JOB *job, const uint64_t tag_sz);
+IMB_JOB *
+flush_job_zuc256_eia3_gfni_avx2(MB_MGR_ZUC_OOO *state, const uint64_t tag_sz);
 
-IMB_DLL_EXPORT void set_suite_id_avx2_t2(IMB_MGR *state, IMB_JOB *job);
+IMB_DLL_EXPORT void
+set_suite_id_avx2_t2(IMB_MGR *state, IMB_JOB *job);
 
 #endif /* IMB_ASM_AVX2_T2_H */

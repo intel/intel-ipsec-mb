@@ -35,11 +35,11 @@
 #include <intrin.h>
 #endif
 
-#define NUM_PACKETS_1 1
-#define NUM_PACKETS_2 2
-#define NUM_PACKETS_3 3
-#define NUM_PACKETS_4 4
-#define NUM_PACKETS_8 8
+#define NUM_PACKETS_1  1
+#define NUM_PACKETS_2  2
+#define NUM_PACKETS_3  3
+#define NUM_PACKETS_4  4
+#define NUM_PACKETS_8  8
 #define NUM_PACKETS_16 16
 
 #ifdef LINUX
@@ -65,28 +65,28 @@ typedef union _m64_u {
         uint64_t m;
 } m64_t;
 
-static inline uint32_t bswap4(const uint32_t val)
+static inline uint32_t
+bswap4(const uint32_t val)
 {
         return BSWAP32(val);
 }
 
 /*************************************************************************
-* @description - this function is used to copy the right number of bytes
-*                from the source to destination buffer
-*
-* @param pSrc [IN] - pointer to an input Byte array (at least len bytes
-*                    available)
-* @param pDst [IN] - pointer to the output buffer (at least len bytes available)
-* @param len  [IN] - length in bytes to copy (0 to 4)
-*
-*************************************************************************/
-static inline void memcpy_keystream_32(uint8_t *pDst,
-                                       const uint8_t *pSrc,
-                                       const uint32_t len)
+ * @description - this function is used to copy the right number of bytes
+ *                from the source to destination buffer
+ *
+ * @param pSrc [IN] - pointer to an input Byte array (at least len bytes
+ *                    available)
+ * @param pDst [IN] - pointer to the output buffer (at least len bytes available)
+ * @param len  [IN] - length in bytes to copy (0 to 4)
+ *
+ *************************************************************************/
+static inline void
+memcpy_keystream_32(uint8_t *pDst, const uint8_t *pSrc, const uint32_t len)
 {
         switch (len) {
         case 4:
-                *(uint32_t *)pDst = *(const uint32_t *)pSrc;
+                *(uint32_t *) pDst = *(const uint32_t *) pSrc;
                 break;
         case 3:
                 pDst[2] = pSrc[2];
@@ -101,20 +101,19 @@ static inline void memcpy_keystream_32(uint8_t *pDst,
 }
 
 /*************************************************************************
-* @description - this function is used to XOR the right number of bytes
-*                from a keystrea and a source into a destination buffer
-*
-* @param pSrc [IN] - pointer to an input Byte array (at least 4 bytes available)
-* @param pDst [IN] - pointer to the output buffer (at least 4 bytes available)
-* @param KS  [IN]  - 4 bytes of keystream number, must be reversed
-*                    into network byte order before XOR
-*
-*************************************************************************/
-static inline void xor_keystream_reverse_32(uint8_t *pDst,
-                                            const uint8_t *pSrc,
-                                            const uint32_t KS)
+ * @description - this function is used to XOR the right number of bytes
+ *                from a keystrea and a source into a destination buffer
+ *
+ * @param pSrc [IN] - pointer to an input Byte array (at least 4 bytes available)
+ * @param pDst [IN] - pointer to the output buffer (at least 4 bytes available)
+ * @param KS  [IN]  - 4 bytes of keystream number, must be reversed
+ *                    into network byte order before XOR
+ *
+ *************************************************************************/
+static inline void
+xor_keystream_reverse_32(uint8_t *pDst, const uint8_t *pSrc, const uint32_t KS)
 {
-        *(uint32_t *)pDst = (*(const uint32_t *)pSrc) ^ BSWAP32(KS);
+        *(uint32_t *) pDst = (*(const uint32_t *) pSrc) ^ BSWAP32(KS);
 }
 
 /******************************************************************************
@@ -128,10 +127,10 @@ static inline const uint8_t *
 xor_keystrm_rev(uint8_t *pDst, const uint8_t *pSrc, uint64_t keyStream)
 {
         /* default: XOR ONLY, read the input buffer, update the output buffer */
-        const uint64_t *pSrc64 = (const uint64_t *)pSrc;
-        uint64_t *pDst64 = (uint64_t *)pDst;
+        const uint64_t *pSrc64 = (const uint64_t *) pSrc;
+        uint64_t *pDst64 = (uint64_t *) pDst;
         *pDst64 = *pSrc64 ^ BSWAP64(keyStream);
-        return (const uint8_t *)(pSrc64 + 1);
+        return (const uint8_t *) (pSrc64 + 1);
 }
 
 /******************************************************************************
@@ -148,7 +147,7 @@ memcpy_keystrm(uint8_t *pDst, const uint8_t *pSrc, const uint32_t len)
 {
         switch (len) {
         case 8:
-                *(uint64_t *)pDst = *(const uint64_t *)pSrc;
+                *(uint64_t *) pDst = *(const uint64_t *) pSrc;
                 break;
         case 7:
                 pDst[6] = pSrc[6];
@@ -160,7 +159,7 @@ memcpy_keystrm(uint8_t *pDst, const uint8_t *pSrc, const uint32_t len)
                 pDst[4] = pSrc[4];
                 /* fall-through */
         case 4:
-                *(uint32_t *)pDst = *(const uint32_t *)pSrc;
+                *(uint32_t *) pDst = *(const uint32_t *) pSrc;
                 break;
         case 3:
                 pDst[2] = pSrc[2];
@@ -184,14 +183,12 @@ memcpy_keystrm(uint8_t *pDst, const uint8_t *pSrc, const uint32_t len)
  * @param save_end place to store end byte
  */
 static inline void
-save_msg_start_end(const void *msg,
-                   const size_t bit_offset, const size_t bit_length,
+save_msg_start_end(const void *msg, const size_t bit_offset, const size_t bit_length,
                    uint8_t *save_start, uint8_t *save_end)
 {
         const uint8_t *msg_ptr = (const uint8_t *) msg;
-        const size_t mstart_bit = bit_offset & 7; /* inclusive */
-        const size_t mend_bit =
-                (mstart_bit + bit_length) & 7; /* non-inclusive */
+        const size_t mstart_bit = bit_offset & 7;              /* inclusive */
+        const size_t mend_bit = (mstart_bit + bit_length) & 7; /* non-inclusive */
 
         *save_start = 0;
         *save_end = 0;
@@ -222,8 +219,7 @@ save_msg_start_end(const void *msg,
  * @param save_end saved end byte to be restored
  */
 static inline void
-restore_msg_start_end(void *msg,
-                      const size_t bit_offset, const size_t bit_length,
+restore_msg_start_end(void *msg, const size_t bit_offset, const size_t bit_length,
                       const uint8_t save_start, const uint8_t save_end)
 {
         uint8_t *msg_ptr = (uint8_t *) msg;
@@ -247,8 +243,7 @@ restore_msg_start_end(void *msg,
  * @param bit_length message length in bits
  */
 static inline void
-copy_bits(void *dst, const void *src,
-          const size_t bit_offset, const size_t bit_length)
+copy_bits(void *dst, const void *src, const size_t bit_offset, const size_t bit_length)
 {
         uint8_t *dp = (uint8_t *) dst;
         const uint8_t *sp = &((const uint8_t *) src)[bit_offset >> 3];
@@ -259,12 +254,11 @@ copy_bits(void *dst, const void *src,
         if (bit_length == 0)
                 return;
 
-        for ( ; byte_length >= 1; byte_length--) {
+        for (; byte_length >= 1; byte_length--) {
                 if (mstart_bit == 0) {
                         *dp++ = *sp++;
                 } else {
-                        *dp++ = (sp[0] << mstart_bit) |
-                                (sp[1] >> (8 - mstart_bit));
+                        *dp++ = (sp[0] << mstart_bit) | (sp[1] >> (8 - mstart_bit));
                         sp++;
                 }
         }
@@ -316,7 +310,7 @@ shift_bits(void *msg, const size_t bit_offset, const size_t bit_length)
                         return;
                 }
 
-                for ( ; byte_length >= 1; byte_length--) {
+                for (; byte_length >= 1; byte_length--) {
                         const uint8_t c = *dst;
 
                         *dst++ = (c >> mstart_bit) | byte_save;
@@ -329,7 +323,6 @@ shift_bits(void *msg, const size_t bit_offset, const size_t bit_length)
                         dst[byte_length] &= (0xff << (8 - mend_bit));
         }
 }
-
 
 /**
  ******************************************************************************
@@ -346,8 +339,8 @@ shift_bits(void *msg, const size_t bit_offset, const size_t bit_length)
  *      None
  *
  *****************************************************************************/
-IMB_DLL_LOCAL void asm_XorKeyStream16B_sse(const void *pIn, void *pOut,
-                                           const void *pKey);
+IMB_DLL_LOCAL void
+asm_XorKeyStream16B_sse(const void *pIn, void *pOut, const void *pKey);
 
 /**
  ******************************************************************************
@@ -364,8 +357,8 @@ IMB_DLL_LOCAL void asm_XorKeyStream16B_sse(const void *pIn, void *pOut,
  *      None
  *
  *****************************************************************************/
-IMB_DLL_LOCAL void asm_XorKeyStream16B_avx(const void *pIn, void *pOut,
-                                           const void *pKey);
+IMB_DLL_LOCAL void
+asm_XorKeyStream16B_avx(const void *pIn, void *pOut, const void *pKey);
 
 /**
  ******************************************************************************
@@ -382,8 +375,8 @@ IMB_DLL_LOCAL void asm_XorKeyStream16B_avx(const void *pIn, void *pOut,
  *      None
  *
  *****************************************************************************/
-IMB_DLL_LOCAL void asm_XorKeyStream32B_avx2(const void *pIn, void *pOut,
-                                            const void *pKey);
+IMB_DLL_LOCAL void
+asm_XorKeyStream32B_avx2(const void *pIn, void *pOut, const void *pKey);
 
 /**
  ******************************************************************************
@@ -400,7 +393,7 @@ IMB_DLL_LOCAL void asm_XorKeyStream32B_avx2(const void *pIn, void *pOut,
  *      None
  *
  *****************************************************************************/
-IMB_DLL_LOCAL void asm_XorKeyStream64B_avx512(const void *pIn, void *pOut,
-                                              const void *pKey);
+IMB_DLL_LOCAL void
+asm_XorKeyStream64B_avx512(const void *pIn, void *pOut, const void *pKey);
 
 #endif /* _WIRELESS_COMMON_H_ */

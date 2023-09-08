@@ -44,14 +44,13 @@
  *
  * @return val rotated by nshift bits
  */
-__forceinline
-uint32_t rotate28(const uint32_t val, const unsigned nshift)
+__forceinline uint32_t
+rotate28(const uint32_t val, const unsigned nshift)
 {
         const uint32_t mask = (UINT32_C(1) << 28) - UINT32_C(1);
 
         IMB_ASSERT(nshift <= 28);
-        return ((val >> nshift) & mask) |
-                ((val << (28 - nshift)) & mask);
+        return ((val >> nshift) & mask) | ((val << (28 - nshift)) & mask);
 }
 
 /**
@@ -61,50 +60,36 @@ uint32_t rotate28(const uint32_t val, const unsigned nshift)
  *
  * @return 64-bit word with 8 groups of 8bits
  */
-__forceinline
-uint64_t expand_8x6_to_8x8(const uint64_t in)
+__forceinline uint64_t
+expand_8x6_to_8x8(const uint64_t in)
 {
         return (((in >> (6 * 0)) & UINT64_C(63)) << (8 * 0)) |
-                (((in >> (6 * 1)) & UINT64_C(63)) << (8 * 1)) |
-                (((in >> (6 * 2)) & UINT64_C(63)) << (8 * 2)) |
-                (((in >> (6 * 3)) & UINT64_C(63)) << (8 * 3)) |
-                (((in >> (6 * 4)) & UINT64_C(63)) << (8 * 4)) |
-                (((in >> (6 * 5)) & UINT64_C(63)) << (8 * 5)) |
-                (((in >> (6 * 6)) & UINT64_C(63)) << (8 * 6)) |
-                (((in >> (6 * 7)) & UINT64_C(63)) << (8 * 7));
+               (((in >> (6 * 1)) & UINT64_C(63)) << (8 * 1)) |
+               (((in >> (6 * 2)) & UINT64_C(63)) << (8 * 2)) |
+               (((in >> (6 * 3)) & UINT64_C(63)) << (8 * 3)) |
+               (((in >> (6 * 4)) & UINT64_C(63)) << (8 * 4)) |
+               (((in >> (6 * 5)) & UINT64_C(63)) << (8 * 5)) |
+               (((in >> (6 * 6)) & UINT64_C(63)) << (8 * 6)) |
+               (((in >> (6 * 7)) & UINT64_C(63)) << (8 * 7));
 }
 
-static const uint8_t pc1c_table_fips46_3[28] = {
-        57, 49, 41, 33, 25, 17,  9,
-        1,  58, 50, 42, 34, 26, 18,
-        10,  2, 59, 51, 43, 35, 27,
-        19, 11,  3, 60, 52, 44, 36
-};
+static const uint8_t pc1c_table_fips46_3[28] = { 57, 49, 41, 33, 25, 17, 9,  1,  58, 50,
+                                                 42, 34, 26, 18, 10, 2,  59, 51, 43, 35,
+                                                 27, 19, 11, 3,  60, 52, 44, 36 };
 
-static const uint8_t pc1d_table_fips46_3[28] = {
-        63, 55, 47, 39, 31, 23, 15,
-         7, 62, 54, 46, 38, 30, 22,
-        14,  6, 61, 53, 45, 37, 29,
-        21, 13,  5, 28, 20, 12, 4
-};
+static const uint8_t pc1d_table_fips46_3[28] = { 63, 55, 47, 39, 31, 23, 15, 7,  62, 54,
+                                                 46, 38, 30, 22, 14, 6,  61, 53, 45, 37,
+                                                 29, 21, 13, 5,  28, 20, 12, 4 };
 
-static const uint8_t pc2_table_fips46_3[48] = {
-        14, 17, 11, 24,  1,  5,
-         3, 28, 15,  6, 21, 10,
-        23, 19, 12,  4, 26,  8,
-        16,  7, 27, 20, 13,  2,
-        41, 52, 31, 37, 47, 55,
-        30, 40, 51, 45, 33, 48,
-        44, 49, 39, 56, 34, 53,
-        46, 42, 50, 36, 29, 32
-};
+static const uint8_t pc2_table_fips46_3[48] = { 14, 17, 11, 24, 1,  5,  3,  28, 15, 6,  21, 10,
+                                                23, 19, 12, 4,  26, 8,  16, 7,  27, 20, 13, 2,
+                                                41, 52, 31, 37, 47, 55, 30, 40, 51, 45, 33, 48,
+                                                44, 49, 39, 56, 34, 53, 46, 42, 50, 36, 29, 32 };
 
-static const uint8_t shift_tab_fips46_3[16] = {
-        1, 1, 2, 2, 2, 2, 2, 2,
-        1, 2, 2, 2, 2, 2, 2, 1
-};
+static const uint8_t shift_tab_fips46_3[16] = { 1, 1, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 1 };
 
-int des_key_schedule(uint64_t *ks, const void *key)
+int
+des_key_schedule(uint64_t *ks, const void *key)
 {
 #ifdef SAFE_PARAM
         imb_set_errno(NULL, 0);
@@ -116,7 +101,6 @@ int des_key_schedule(uint64_t *ks, const void *key)
                 imb_set_errno(NULL, IMB_ERR_NULL_EXP_KEY);
                 return -1;
         }
-
 
 #endif
 
@@ -141,12 +125,11 @@ int des_key_schedule(uint64_t *ks, const void *key)
 
         /* KS rounds */
         for (n = 0; n < 16; n++) {
-                c = rotate28((uint32_t)c, (unsigned) shift_tab_fips46_3[n]);
-                d = rotate28((uint32_t)d, (unsigned) shift_tab_fips46_3[n]);
+                c = rotate28((uint32_t) c, (unsigned) shift_tab_fips46_3[n]);
+                d = rotate28((uint32_t) d, (unsigned) shift_tab_fips46_3[n]);
 
                 /* PC2 */
-                t = permute_64b(c | (d << 28), pc2_table_fips46_3,
-                                IMB_DIM(pc2_table_fips46_3));
+                t = permute_64b(c | (d << 28), pc2_table_fips46_3, IMB_DIM(pc2_table_fips46_3));
 
                 /* store KS as 6 bits per byte and keep LE */
                 ks[n] = expand_8x6_to_8x8(t);

@@ -34,13 +34,12 @@
 #include "include/clear_regs_mem.h"
 #include "include/error.h"
 
-#define SAVE_XMMS               save_xmms
-#define RESTORE_XMMS            restore_xmms
+#define SAVE_XMMS    save_xmms
+#define RESTORE_XMMS restore_xmms
 
 void
-kasumi_f8_1_buffer_sse(const kasumi_key_sched_t *pCtx, const uint64_t IV,
-                       const void *pBufferIn, void *pBufferOut,
-                       const uint32_t cipherLengthInBytes)
+kasumi_f8_1_buffer_sse(const kasumi_key_sched_t *pCtx, const uint64_t IV, const void *pBufferIn,
+                       void *pBufferOut, const uint32_t cipherLengthInBytes)
 {
 #ifndef LINUX
         DECLARE_ALIGNED(imb_uint128_t xmm_save[10], 16);
@@ -50,7 +49,7 @@ kasumi_f8_1_buffer_sse(const kasumi_key_sched_t *pCtx, const uint64_t IV,
 #ifdef SAFE_PARAM
         /* Check for NULL pointers */
         imb_set_errno(NULL, 0);
-        if (pCtx ==  NULL) {
+        if (pCtx == NULL) {
                 imb_set_errno(NULL, IMB_ERR_NULL_EXP_KEY);
                 return;
         }
@@ -63,14 +62,12 @@ kasumi_f8_1_buffer_sse(const kasumi_key_sched_t *pCtx, const uint64_t IV,
                 return;
         }
         /* Check input data is in range of supported length */
-        if (cipherLengthInBytes == 0 ||
-            cipherLengthInBytes > (KASUMI_MAX_LEN / CHAR_BIT)) {
+        if (cipherLengthInBytes == 0 || cipherLengthInBytes > (KASUMI_MAX_LEN / CHAR_BIT)) {
                 imb_set_errno(NULL, IMB_ERR_CIPH_LEN);
                 return;
         }
 #endif
-        kasumi_f8_1_buffer(pCtx, IV, pBufferIn, pBufferOut,
-                           cipherLengthInBytes);
+        kasumi_f8_1_buffer(pCtx, IV, pBufferIn, pBufferOut, cipherLengthInBytes);
 #ifdef SAFE_DATA
         /* Clear sensitive data in registers */
         CLEAR_SCRATCH_GPS();
@@ -82,10 +79,8 @@ kasumi_f8_1_buffer_sse(const kasumi_key_sched_t *pCtx, const uint64_t IV,
 }
 
 void
-kasumi_f8_1_buffer_bit_sse(const kasumi_key_sched_t *pCtx,
-                           const uint64_t IV,
-                           const void *pBufferIn, void *pBufferOut,
-                           const uint32_t cipherLengthInBits,
+kasumi_f8_1_buffer_bit_sse(const kasumi_key_sched_t *pCtx, const uint64_t IV, const void *pBufferIn,
+                           void *pBufferOut, const uint32_t cipherLengthInBits,
                            const uint32_t offsetInBits)
 {
 #ifndef LINUX
@@ -96,7 +91,7 @@ kasumi_f8_1_buffer_bit_sse(const kasumi_key_sched_t *pCtx,
 #ifdef SAFE_PARAM
         /* Check for NULL pointers */
         imb_set_errno(NULL, 0);
-        if (pCtx ==  NULL) {
+        if (pCtx == NULL) {
                 imb_set_errno(NULL, IMB_ERR_NULL_EXP_KEY);
                 return;
         }
@@ -109,14 +104,12 @@ kasumi_f8_1_buffer_bit_sse(const kasumi_key_sched_t *pCtx,
                 return;
         }
         /* Check input data is in range of supported length */
-        if (cipherLengthInBits == 0 ||
-            cipherLengthInBits > KASUMI_MAX_LEN) {
+        if (cipherLengthInBits == 0 || cipherLengthInBits > KASUMI_MAX_LEN) {
                 imb_set_errno(NULL, IMB_ERR_CIPH_LEN);
                 return;
         }
 #endif
-        kasumi_f8_1_buffer_bit(pCtx, IV, pBufferIn, pBufferOut,
-                               cipherLengthInBits, offsetInBits);
+        kasumi_f8_1_buffer_bit(pCtx, IV, pBufferIn, pBufferOut, cipherLengthInBits, offsetInBits);
 #ifdef SAFE_DATA
         /* Clear sensitive data in registers */
         CLEAR_SCRATCH_GPS();
@@ -128,11 +121,9 @@ kasumi_f8_1_buffer_bit_sse(const kasumi_key_sched_t *pCtx,
 }
 
 void
-kasumi_f8_2_buffer_sse(const kasumi_key_sched_t *pCtx, const uint64_t IV1,
-                       const uint64_t IV2, const void *pBufferIn1,
-                       void *pBufferOut1, const uint32_t lengthInBytes1,
-                       const void *pBufferIn2, void *pBufferOut2,
-                       const uint32_t lengthInBytes2)
+kasumi_f8_2_buffer_sse(const kasumi_key_sched_t *pCtx, const uint64_t IV1, const uint64_t IV2,
+                       const void *pBufferIn1, void *pBufferOut1, const uint32_t lengthInBytes1,
+                       const void *pBufferIn2, void *pBufferOut2, const uint32_t lengthInBytes2)
 {
 #ifndef LINUX
         DECLARE_ALIGNED(imb_uint128_t xmm_save[10], 16);
@@ -155,21 +146,18 @@ kasumi_f8_2_buffer_sse(const kasumi_key_sched_t *pCtx, const uint64_t IV1,
                 return;
         }
         /* Check input data is in range of supported length */
-        if (lengthInBytes1 == 0 ||
-            lengthInBytes1 > (KASUMI_MAX_LEN / CHAR_BIT)) {
+        if (lengthInBytes1 == 0 || lengthInBytes1 > (KASUMI_MAX_LEN / CHAR_BIT)) {
                 imb_set_errno(NULL, IMB_ERR_CIPH_LEN);
                 return;
         }
 
-        if (lengthInBytes2 == 0 ||
-            lengthInBytes2 > (KASUMI_MAX_LEN / CHAR_BIT)) {
+        if (lengthInBytes2 == 0 || lengthInBytes2 > (KASUMI_MAX_LEN / CHAR_BIT)) {
                 imb_set_errno(NULL, IMB_ERR_CIPH_LEN);
                 return;
         }
 #endif
-        kasumi_f8_2_buffer(pCtx, IV1, IV2,
-                           pBufferIn1, pBufferOut1, lengthInBytes1,
-                           pBufferIn2, pBufferOut2, lengthInBytes2);
+        kasumi_f8_2_buffer(pCtx, IV1, IV2, pBufferIn1, pBufferOut1, lengthInBytes1, pBufferIn2,
+                           pBufferOut2, lengthInBytes2);
 #ifdef SAFE_DATA
         /* Clear sensitive data in registers */
         CLEAR_SCRATCH_GPS();
@@ -181,12 +169,10 @@ kasumi_f8_2_buffer_sse(const kasumi_key_sched_t *pCtx, const uint64_t IV1,
 }
 
 void
-kasumi_f8_3_buffer_sse(const kasumi_key_sched_t *pCtx, const uint64_t IV1,
-                       const uint64_t IV2, const uint64_t IV3,
-                       const void *pBufferIn1, void *pBufferOut1,
-                       const void *pBufferIn2, void *pBufferOut2,
-                       const void *pBufferIn3, void *pBufferOut3,
-                       const uint32_t lengthInBytes)
+kasumi_f8_3_buffer_sse(const kasumi_key_sched_t *pCtx, const uint64_t IV1, const uint64_t IV2,
+                       const uint64_t IV3, const void *pBufferIn1, void *pBufferOut1,
+                       const void *pBufferIn2, void *pBufferOut2, const void *pBufferIn3,
+                       void *pBufferOut3, const uint32_t lengthInBytes)
 {
 #ifndef LINUX
         DECLARE_ALIGNED(imb_uint128_t xmm_save[10], 16);
@@ -214,9 +200,7 @@ kasumi_f8_3_buffer_sse(const kasumi_key_sched_t *pCtx, const uint64_t IV1,
                 return;
         }
 #endif
-        kasumi_f8_3_buffer(pCtx, IV1, IV2, IV3,
-                           pBufferIn1, pBufferOut1,
-                           pBufferIn2, pBufferOut2,
+        kasumi_f8_3_buffer(pCtx, IV1, IV2, IV3, pBufferIn1, pBufferOut1, pBufferIn2, pBufferOut2,
                            pBufferIn3, pBufferOut3, lengthInBytes);
 #ifdef SAFE_DATA
         /* Clear sensitive data in registers */
@@ -229,14 +213,11 @@ kasumi_f8_3_buffer_sse(const kasumi_key_sched_t *pCtx, const uint64_t IV1,
 }
 
 void
-kasumi_f8_4_buffer_sse(const kasumi_key_sched_t *pCtx,
-                       const uint64_t IV1, const uint64_t IV2,
-                       const uint64_t IV3, const uint64_t IV4,
-                       const void *pBufferIn1, void *pBufferOut1,
-                       const void *pBufferIn2, void *pBufferOut2,
-                       const void *pBufferIn3, void *pBufferOut3,
-                       const void *pBufferIn4, void *pBufferOut4,
-                       const uint32_t lengthInBytes)
+kasumi_f8_4_buffer_sse(const kasumi_key_sched_t *pCtx, const uint64_t IV1, const uint64_t IV2,
+                       const uint64_t IV3, const uint64_t IV4, const void *pBufferIn1,
+                       void *pBufferOut1, const void *pBufferIn2, void *pBufferOut2,
+                       const void *pBufferIn3, void *pBufferOut3, const void *pBufferIn4,
+                       void *pBufferOut4, const uint32_t lengthInBytes)
 {
 #ifndef LINUX
         DECLARE_ALIGNED(imb_uint128_t xmm_save[10], 16);
@@ -250,8 +231,7 @@ kasumi_f8_4_buffer_sse(const kasumi_key_sched_t *pCtx,
                 imb_set_errno(NULL, IMB_ERR_NULL_EXP_KEY);
                 return;
         }
-        if (pBufferIn1 == NULL || pBufferIn2 == NULL || pBufferIn3 == NULL ||
-            pBufferIn4 == NULL) {
+        if (pBufferIn1 == NULL || pBufferIn2 == NULL || pBufferIn3 == NULL || pBufferIn4 == NULL) {
                 imb_set_errno(NULL, IMB_ERR_NULL_SRC);
                 return;
         }
@@ -266,11 +246,8 @@ kasumi_f8_4_buffer_sse(const kasumi_key_sched_t *pCtx,
                 return;
         }
 #endif
-        kasumi_f8_4_buffer(pCtx, IV1, IV2, IV3, IV4,
-                           pBufferIn1, pBufferOut1,
-                           pBufferIn2, pBufferOut2,
-                           pBufferIn3, pBufferOut3,
-                           pBufferIn4, pBufferOut4,
+        kasumi_f8_4_buffer(pCtx, IV1, IV2, IV3, IV4, pBufferIn1, pBufferOut1, pBufferIn2,
+                           pBufferOut2, pBufferIn3, pBufferOut3, pBufferIn4, pBufferOut4,
                            lengthInBytes);
 #ifdef SAFE_DATA
         /* Clear sensitive data in registers */
@@ -283,10 +260,9 @@ kasumi_f8_4_buffer_sse(const kasumi_key_sched_t *pCtx,
 }
 
 void
-kasumi_f8_n_buffer_sse(const kasumi_key_sched_t *pKeySchedule,
-                       const uint64_t IV[],
-                       const void * const pDataIn[], void *pDataOut[],
-                       const uint32_t dataLen[], const uint32_t dataCount)
+kasumi_f8_n_buffer_sse(const kasumi_key_sched_t *pKeySchedule, const uint64_t IV[],
+                       const void *const pDataIn[], void *pDataOut[], const uint32_t dataLen[],
+                       const uint32_t dataCount)
 {
 #ifndef LINUX
         DECLARE_ALIGNED(imb_uint128_t xmm_save[10], 16);
@@ -332,8 +308,7 @@ kasumi_f8_n_buffer_sse(const kasumi_key_sched_t *pKeySchedule,
                         return;
                 }
                 /* Check input data is in range of supported length */
-                if (dataLen[i] == 0 ||
-                    dataLen[i] > (KASUMI_MAX_LEN / CHAR_BIT)) {
+                if (dataLen[i] == 0 || dataLen[i] > (KASUMI_MAX_LEN / CHAR_BIT)) {
                         imb_set_errno(NULL, IMB_ERR_CIPH_LEN);
                         return;
                 }
@@ -345,13 +320,13 @@ kasumi_f8_n_buffer_sse(const kasumi_key_sched_t *pKeySchedule,
         /* KASUMI F8 n buffer function can handle up to 16 buffers */
         while (numLeft > 0) {
                 const uint64_t *IVPtr = &IV[i];
-                const void * const *pDataInPtr = &pDataIn[i];
+                const void *const *pDataInPtr = &pDataIn[i];
                 void **pDataOutPtr = &pDataOut[i];
                 const uint32_t *dataLenPtr = &dataLen[i];
                 const uint32_t numBuffs = (numLeft > 16) ? 16 : numLeft;
 
-                kasumi_f8_n_buffer(pKeySchedule, IVPtr, pDataInPtr, pDataOutPtr,
-                                   dataLenPtr, numBuffs);
+                kasumi_f8_n_buffer(pKeySchedule, IVPtr, pDataInPtr, pDataOutPtr, dataLenPtr,
+                                   numBuffs);
                 i += numBuffs;
                 numLeft -= numBuffs;
         }
@@ -364,7 +339,6 @@ kasumi_f8_n_buffer_sse(const kasumi_key_sched_t *pKeySchedule,
         RESTORE_XMMS(xmm_save);
 #endif
 }
-
 
 void
 kasumi_f9_1_buffer_sse(const kasumi_key_sched_t *pCtx, const void *pBufferIn,
@@ -411,8 +385,8 @@ kasumi_f9_1_buffer_sse(const kasumi_key_sched_t *pCtx, const void *pBufferIn,
 
 void
 kasumi_f9_1_buffer_user_sse(const kasumi_key_sched_t *pCtx, const uint64_t IV,
-                            const void *pBufferIn, const uint32_t lengthInBits,
-                            void *pDigest, const uint32_t direction)
+                            const void *pBufferIn, const uint32_t lengthInBits, void *pDigest,
+                            const uint32_t direction)
 {
 #ifndef LINUX
         DECLARE_ALIGNED(imb_uint128_t xmm_save[10], 16);
@@ -442,8 +416,7 @@ kasumi_f9_1_buffer_user_sse(const kasumi_key_sched_t *pCtx, const uint64_t IV,
                 return;
         }
 #endif
-        kasumi_f9_1_buffer_user(pCtx, IV, pBufferIn, lengthInBits,
-                                pDigest, direction);
+        kasumi_f9_1_buffer_user(pCtx, IV, pBufferIn, lengthInBits, pDigest, direction);
 #ifdef SAFE_DATA
         /* Clear sensitive data in registers */
         CLEAR_SCRATCH_GPS();
@@ -455,15 +428,13 @@ kasumi_f9_1_buffer_user_sse(const kasumi_key_sched_t *pCtx, const uint64_t IV,
 }
 
 int
-kasumi_init_f8_key_sched_sse(const void *const pKey,
-                             kasumi_key_sched_t *pCtx)
+kasumi_init_f8_key_sched_sse(const void *const pKey, kasumi_key_sched_t *pCtx)
 {
         return kasumi_init_f8_key_sched(pKey, pCtx);
 }
 
 int
-kasumi_init_f9_key_sched_sse(const void *const pKey,
-                             kasumi_key_sched_t *pCtx)
+kasumi_init_f9_key_sched_sse(const void *const pKey, kasumi_key_sched_t *pCtx)
 {
         return kasumi_init_f9_key_sched(pKey, pCtx);
 }

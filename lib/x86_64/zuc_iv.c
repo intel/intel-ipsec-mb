@@ -31,8 +31,7 @@
 #include "include/wireless_common.h"
 
 int
-zuc_eea3_iv_gen(const uint32_t count, const uint8_t bearer,
-                const uint8_t dir, void *iv_ptr)
+zuc_eea3_iv_gen(const uint32_t count, const uint8_t bearer, const uint8_t dir, void *iv_ptr)
 {
         uint8_t *iv = (uint8_t *) iv_ptr;
         uint32_t *iv32 = (uint32_t *) iv_ptr;
@@ -41,7 +40,7 @@ zuc_eea3_iv_gen(const uint32_t count, const uint8_t bearer,
                 return -1;
 
         /* Bearer must contain 5 bits only */
-        if (bearer >= (1<<5))
+        if (bearer >= (1 << 5))
                 return -1;
 
         /* Direction must contain 1 bit only */
@@ -64,8 +63,7 @@ zuc_eea3_iv_gen(const uint32_t count, const uint8_t bearer,
 }
 
 int
-zuc_eia3_iv_gen(const uint32_t count, const uint8_t bearer,
-                const uint8_t dir, void *iv_ptr)
+zuc_eia3_iv_gen(const uint32_t count, const uint8_t bearer, const uint8_t dir, void *iv_ptr)
 {
         uint8_t *iv = (uint8_t *) iv_ptr;
         uint32_t *iv32 = (uint32_t *) iv_ptr;
@@ -74,7 +72,7 @@ zuc_eia3_iv_gen(const uint32_t count, const uint8_t bearer,
                 return -1;
 
         /* Bearer must contain 5 bits only */
-        if (bearer >= (1<<5))
+        if (bearer >= (1 << 5))
                 return -1;
 
         /* Direction must contain 1 bit only */

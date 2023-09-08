@@ -34,14 +34,13 @@
 #include "include/error.h"
 #include "include/mb_mgr_job_check.h" /* is_job_invalid() */
 
-__forceinline
-void ADV_N_JOBS(int *ptr, const uint32_t n_jobs)
+__forceinline void
+ADV_N_JOBS(int *ptr, const uint32_t n_jobs)
 {
         *ptr += (sizeof(IMB_JOB) * n_jobs);
         if (*ptr >= (int) (IMB_MAX_JOBS * sizeof(IMB_JOB)))
                 *ptr -= (int) (IMB_MAX_JOBS * sizeof(IMB_JOB));
 }
-
 
 /* get number of jobs between job_offset and the end of the queue */
 __forceinline uint32_t
@@ -111,8 +110,7 @@ GET_NEXT_BURST(IMB_MGR *state, const uint32_t n_req_jobs, IMB_JOB **jobs)
 }
 
 __forceinline uint32_t
-submit_burst_and_check(IMB_MGR *state, const uint32_t n_jobs,
-                       IMB_JOB **jobs, const int run_check)
+submit_burst_and_check(IMB_MGR *state, const uint32_t n_jobs, IMB_JOB **jobs, const int run_check)
 {
         uint32_t i, n_ret_jobs = 0, num_jobs = n_jobs;
         IMB_JOB *job = NULL;
@@ -149,11 +147,8 @@ submit_burst_and_check(IMB_MGR *state, const uint32_t n_jobs,
                         ADV_JOBS(&job_offset);
 
                         /* validate job */
-                        if (is_job_invalid(state, jobs[i],
-                                           jobs[i]->cipher_mode,
-                                           jobs[i]->hash_alg,
-                                           jobs[i]->cipher_direction,
-                                           jobs[i]->key_len_in_bytes)) {
+                        if (is_job_invalid(state, jobs[i], jobs[i]->cipher_mode, jobs[i]->hash_alg,
+                                           jobs[i]->cipher_direction, jobs[i]->key_len_in_bytes)) {
                                 goto return_invalid_job;
                         }
 
@@ -162,10 +157,8 @@ submit_burst_and_check(IMB_MGR *state, const uint32_t n_jobs,
 
                         set_cipher_suite_id(jobs[i], t);
 
-                        if(jobs[i]->suite_id[0] != t[0] ||
-                           jobs[i]->suite_id[1] != t[1] ||
-                           jobs[i]->suite_id[2] != t[2] ||
-                           jobs[i]->suite_id[3] != t[3]) {
+                        if (jobs[i]->suite_id[0] != t[0] || jobs[i]->suite_id[1] != t[1] ||
+                            jobs[i]->suite_id[2] != t[2] || jobs[i]->suite_id[3] != t[3]) {
                                 imb_set_errno(state, IMB_ERR_BURST_SUITE_ID);
                                 goto return_invalid_job;
                         }

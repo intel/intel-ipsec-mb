@@ -30,11 +30,8 @@
 #include "include/chacha20_poly1305.h"
 
 IMB_DLL_EXPORT void
-imb_quic_hp_chacha20(IMB_MGR *state,
-                     const void *key,
-                     void *dst_ptr_array[],
-                     const void * const src_ptr_array[],
-                     const uint64_t num_packets)
+imb_quic_hp_chacha20(IMB_MGR *state, const void *key, void *dst_ptr_array[],
+                     const void *const src_ptr_array[], const uint64_t num_packets)
 {
 #ifdef SAFE_PARAM
         uint64_t i;

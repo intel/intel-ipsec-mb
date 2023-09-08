@@ -30,8 +30,7 @@
 #ifndef JOB_API_SNOWV_H
 #define JOB_API_SNOWV_H
 
-__forceinline
-IMB_JOB *
+__forceinline IMB_JOB *
 submit_snow_v_aead_job(IMB_MGR *state, IMB_JOB *job)
 {
         struct gcm_key_data gdata_key;
@@ -49,7 +48,7 @@ submit_snow_v_aead_job(IMB_MGR *state, IMB_JOB *job)
          *      SUBMIT_JOB_SNOW_V_AEAD fills hkey_endpad with first
          *      2 keystreams (no operations on src vector are done)
          */
-        if(job->cipher_direction == IMB_DIR_ENCRYPT)
+        if (job->cipher_direction == IMB_DIR_ENCRYPT)
                 hkey_endpad[1].high = 0;
         else
                 hkey_endpad[1].high = 1;
@@ -60,24 +59,21 @@ submit_snow_v_aead_job(IMB_MGR *state, IMB_JOB *job)
         memset(auth, 0, sizeof(imb_uint128_t));
 
         /* GHASH key H */
-        IMB_GHASH_PRE(state, (void *)hkey_endpad,  &gdata_key);
+        IMB_GHASH_PRE(state, (void *) hkey_endpad, &gdata_key);
 
         /* push AAD into GHASH */
-        IMB_GHASH(state, &gdata_key, job->u.SNOW_V_AEAD.aad,
-                  job->u.SNOW_V_AEAD.aad_len_in_bytes,
-                  (void *)auth, sizeof(imb_uint128_t));
+        IMB_GHASH(state, &gdata_key, job->u.SNOW_V_AEAD.aad, job->u.SNOW_V_AEAD.aad_len_in_bytes,
+                  (void *) auth, sizeof(imb_uint128_t));
 
         if (job->cipher_direction == IMB_DIR_ENCRYPT)
-                IMB_GHASH(state, &gdata_key, job->dst,
-                          job->msg_len_to_cipher_in_bytes,
-                          (void *)auth, sizeof(imb_uint128_t));
+                IMB_GHASH(state, &gdata_key, job->dst, job->msg_len_to_cipher_in_bytes,
+                          (void *) auth, sizeof(imb_uint128_t));
         else
-                IMB_GHASH(state, &gdata_key, job->src,
-                          job->msg_len_to_cipher_in_bytes,
-                          (void *)auth, sizeof(imb_uint128_t));
+                IMB_GHASH(state, &gdata_key, job->src, job->msg_len_to_cipher_in_bytes,
+                          (void *) auth, sizeof(imb_uint128_t));
 
-        IMB_GHASH(state, &gdata_key, (void *)&temp, sizeof(temp),
-                  (void *)auth, sizeof(imb_uint128_t));
+        IMB_GHASH(state, &gdata_key, (void *) &temp, sizeof(temp), (void *) auth,
+                  sizeof(imb_uint128_t));
 
         /* The resulting AuthTag */
         auth->low = auth->low ^ hkey_endpad[1].low;

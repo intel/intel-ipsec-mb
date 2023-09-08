@@ -37,13 +37,13 @@
 
 /* XMM type definitions and constants */
 
-#define MAX_BYTES_PER_XMM   16
-#define MAX_WORDS_PER_XMM   8
-#define MAX_DWORDS_PER_XMM  4
-#define MAX_QWORDS_PER_XMM  2
+#define MAX_BYTES_PER_XMM  16
+#define MAX_WORDS_PER_XMM  8
+#define MAX_DWORDS_PER_XMM 4
+#define MAX_QWORDS_PER_XMM 2
 
 union xmm_reg {
-        uint8_t  byte[MAX_BYTES_PER_XMM];
+        uint8_t byte[MAX_BYTES_PER_XMM];
         uint16_t word[MAX_WORDS_PER_XMM];
         uint32_t dword[MAX_DWORDS_PER_XMM];
         uint64_t qword[MAX_QWORDS_PER_XMM];
@@ -61,9 +61,8 @@ union xmm_reg {
  * @param src pointer to 128 bit src key
  * @param imm8 round constant used to generate key
  */
-IMB_DLL_LOCAL void emulate_AESKEYGENASSIST(union xmm_reg *dst,
-                                           const union xmm_reg *src,
-                                           const uint32_t imm8);
+IMB_DLL_LOCAL void
+emulate_AESKEYGENASSIST(union xmm_reg *dst, const union xmm_reg *src, const uint32_t imm8);
 
 /**
  * @brief AESENC instruction emulation function
@@ -73,8 +72,8 @@ IMB_DLL_LOCAL void emulate_AESKEYGENASSIST(union xmm_reg *dst,
  * @param dst pointer to 128 bit data (state) to operate on
  * @param src pointer to 128 bit round key
  */
-IMB_DLL_LOCAL void emulate_AESENC(union xmm_reg *dst,
-                                  const union xmm_reg *src);
+IMB_DLL_LOCAL void
+emulate_AESENC(union xmm_reg *dst, const union xmm_reg *src);
 
 /**
  * @brief AESENCLAST instruction emulation function
@@ -84,8 +83,8 @@ IMB_DLL_LOCAL void emulate_AESENC(union xmm_reg *dst,
  * @param dst pointer to 128 bit data (state) to operate on
  * @param src pointer to 128 bit round key
  */
-IMB_DLL_LOCAL void emulate_AESENCLAST(union xmm_reg *dst,
-                                      const union xmm_reg *src);
+IMB_DLL_LOCAL void
+emulate_AESENCLAST(union xmm_reg *dst, const union xmm_reg *src);
 
 /**
  * @brief AESDEC instruction emulation function
@@ -95,8 +94,8 @@ IMB_DLL_LOCAL void emulate_AESENCLAST(union xmm_reg *dst,
  * @param dst pointer to 128 bit data (state) to operate on
  * @param src pointer to 128 bit round key
  */
-IMB_DLL_LOCAL void emulate_AESDEC(union xmm_reg *dst,
-                                  const union xmm_reg *src);
+IMB_DLL_LOCAL void
+emulate_AESDEC(union xmm_reg *dst, const union xmm_reg *src);
 
 /**
  * @brief AESDECLAST instruction emulation function
@@ -106,8 +105,8 @@ IMB_DLL_LOCAL void emulate_AESDEC(union xmm_reg *dst,
  * @param dst pointer to 128 bit data (state) to operate on
  * @param src pointer to 128 bit round key
  */
-IMB_DLL_LOCAL void emulate_AESDECLAST(union xmm_reg *dst,
-                                      const union xmm_reg *src);
+IMB_DLL_LOCAL void
+emulate_AESDECLAST(union xmm_reg *dst, const union xmm_reg *src);
 
 /**
  * @brief AESIMC instruction emulation function
@@ -118,8 +117,8 @@ IMB_DLL_LOCAL void emulate_AESDECLAST(union xmm_reg *dst,
  * @param dst pointer to 128 bit buffer to store result
  * @param src pointer to 128 bit round key
  */
-IMB_DLL_LOCAL void emulate_AESIMC(union xmm_reg *dst,
-                                  const union xmm_reg *src);
+IMB_DLL_LOCAL void
+emulate_AESIMC(union xmm_reg *dst, const union xmm_reg *src);
 
 /**
  * @brief PCLMULQDQ instruction emulation function
@@ -131,19 +130,18 @@ IMB_DLL_LOCAL void emulate_AESIMC(union xmm_reg *dst,
  * @param src2     pointer to 128 bit input number
  * @param imm8     constant for selecting quadword
  */
-IMB_DLL_LOCAL void emulate_PCLMULQDQ(union xmm_reg *src1_dst,
-                                     const union xmm_reg *src2,
-                                     const uint32_t imm8);
+IMB_DLL_LOCAL void
+emulate_PCLMULQDQ(union xmm_reg *src1_dst, const union xmm_reg *src2, const uint32_t imm8);
 
 #endif /* AESNI_EMU */
 static inline void
 fallback_no_aesni(IMB_MGR *state, const int reset_mgrs)
 {
 #ifdef AESNI_EMU
-                init_mb_mgr_sse_no_aesni_internal(state, reset_mgrs);
+        init_mb_mgr_sse_no_aesni_internal(state, reset_mgrs);
 #else
-                (void) reset_mgrs; /* Unused */
-                imb_set_errno(state, IMB_ERR_NO_AESNI_EMU);
+        (void) reset_mgrs; /* Unused */
+        imb_set_errno(state, IMB_ERR_NO_AESNI_EMU);
 #endif
 }
 #endif /* _AESNI_EMU_H_ */

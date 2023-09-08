@@ -30,10 +30,10 @@
 
 #include "intel-ipsec-mb.h"
 
-IMB_DLL_LOCAL void *poly1305_mac_scalar(IMB_JOB *job);
+IMB_DLL_LOCAL void *
+poly1305_mac_scalar(IMB_JOB *job);
 IMB_DLL_LOCAL void
-poly1305_aead_update_scalar(const void *msg, const uint64_t msg_len,
-                            void *hash, const void *key);
+poly1305_aead_update_scalar(const void *msg, const uint64_t msg_len, void *hash, const void *key);
 IMB_DLL_LOCAL void
 poly1305_aead_complete_scalar(const void *hash, const void *key, void *tag);
 
@@ -47,8 +47,9 @@ poly1305_aead_complete_scalar(const void *hash, const void *key, void *tag);
  * @param ivec pointer to initialization vector
  */
 IMB_DLL_LOCAL
-void des_enc_cbc_basic(const void *input, void *output, const int size,
-                       const uint64_t *ks, const uint64_t *ivec);
+void
+des_enc_cbc_basic(const void *input, void *output, const int size, const uint64_t *ks,
+                  const uint64_t *ivec);
 
 /**
  * @brief DES CBC decryption
@@ -60,8 +61,9 @@ void des_enc_cbc_basic(const void *input, void *output, const int size,
  * @param ivec pointer to initialization vector
  */
 IMB_DLL_LOCAL
-void des_dec_cbc_basic(const void *input, void *output, const int size,
-                       const uint64_t *ks, const uint64_t *ivec);
+void
+des_dec_cbc_basic(const void *input, void *output, const int size, const uint64_t *ks,
+                  const uint64_t *ivec);
 
 /**
  * @brief 3DES CBC encryption
@@ -75,9 +77,9 @@ void des_dec_cbc_basic(const void *input, void *output, const int size,
  * @param ivec pointer to initialization vector
  */
 IMB_DLL_LOCAL
-void des3_enc_cbc_basic(const void *input, void *output, const int size,
-                        const uint64_t *ks1, const uint64_t *ks2,
-                        const uint64_t *ks3, const uint64_t *ivec);
+void
+des3_enc_cbc_basic(const void *input, void *output, const int size, const uint64_t *ks1,
+                   const uint64_t *ks2, const uint64_t *ks3, const uint64_t *ivec);
 
 /**
  * @brief 3DES CBC decryption
@@ -91,9 +93,9 @@ void des3_enc_cbc_basic(const void *input, void *output, const int size,
  * @param ivec pointer to initialization vector
  */
 IMB_DLL_LOCAL
-void des3_dec_cbc_basic(const void *input, void *output, const int size,
-                        const uint64_t *ks1, const uint64_t *ks2,
-                        const uint64_t *ks3, const uint64_t *ivec);
+void
+des3_dec_cbc_basic(const void *input, void *output, const int size, const uint64_t *ks1,
+                   const uint64_t *ks2, const uint64_t *ks3, const uint64_t *ivec);
 
 /**
  * @brief DOCSIS DES encryption
@@ -105,8 +107,9 @@ void des3_dec_cbc_basic(const void *input, void *output, const int size,
  * @param ivec pointer to initialization vector
  */
 IMB_DLL_LOCAL
-void docsis_des_enc_basic(const void *input, void *output, const int size,
-                          const uint64_t *ks, const uint64_t *ivec);
+void
+docsis_des_enc_basic(const void *input, void *output, const int size, const uint64_t *ks,
+                     const uint64_t *ivec);
 
 /**
  * @brief DOCSIS DES decryption
@@ -118,8 +121,9 @@ void docsis_des_enc_basic(const void *input, void *output, const int size,
  * @param ivec pointer to initialization vector
  */
 IMB_DLL_LOCAL
-void docsis_des_dec_basic(const void *input, void *output, const int size,
-                          const uint64_t *ks, const uint64_t *ivec);
+void
+docsis_des_dec_basic(const void *input, void *output, const int size, const uint64_t *ks,
+                     const uint64_t *ivec);
 
 /**
  * @brief Runs self test on selected CAVP algorithms
@@ -130,7 +134,8 @@ void docsis_des_dec_basic(const void *input, void *output, const int size,
  * @retval 0 self test failed
  * @retval 1 self test passed
  */
-IMB_DLL_LOCAL int self_test(IMB_MGR *p_mgr);
+IMB_DLL_LOCAL int
+self_test(IMB_MGR *p_mgr);
 
 /**
  * @brief Atomic 64-bit counter increment
@@ -141,6 +146,7 @@ IMB_DLL_LOCAL int self_test(IMB_MGR *p_mgr);
  *
  * @return Counter value prior to increment
  */
-IMB_DLL_LOCAL uint64_t atomic_uint64_inc(uint64_t *counter);
+IMB_DLL_LOCAL uint64_t
+atomic_uint64_inc(uint64_t *counter);
 
 #endif /* IMB_ARCH_X86_64_H */

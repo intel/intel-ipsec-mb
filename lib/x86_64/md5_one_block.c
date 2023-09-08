@@ -43,30 +43,34 @@
 #define H2 0x98badcfe
 #define H3 0x10325476
 
-#define	F1(b, c, d)	((((c) ^ (d)) & (b)) ^ (d))
-#define	F2(b, c, d)	((((b) ^ (c)) & (d)) ^ (c))
-#define	F3(b, c, d)	((b) ^ (c) ^ (d))
-#define	F4(b, c, d)	(((~(d)) | (b)) ^ (c))
+#define F1(b, c, d) ((((c) ^ (d)) & (b)) ^ (d))
+#define F2(b, c, d) ((((b) ^ (c)) & (d)) ^ (c))
+#define F3(b, c, d) ((b) ^ (c) ^ (d))
+#define F4(b, c, d) (((~(d)) | (b)) ^ (c))
 
-#define STEP1(a, b, c, d, k, w, r) {            \
-                a += w + k + F1(b, c, d);       \
-                a = ROTATE(a, r);               \
-                a += b;                         \
+#define STEP1(a, b, c, d, k, w, r)                                                                 \
+        {                                                                                          \
+                a += w + k + F1(b, c, d);                                                          \
+                a = ROTATE(a, r);                                                                  \
+                a += b;                                                                            \
         }
-#define STEP2(a, b, c, d, k, w, r) {            \
-                a += w + k + F2(b, c, d);       \
-                a = ROTATE(a, r);               \
-                a += b;                         \
+#define STEP2(a, b, c, d, k, w, r)                                                                 \
+        {                                                                                          \
+                a += w + k + F2(b, c, d);                                                          \
+                a = ROTATE(a, r);                                                                  \
+                a += b;                                                                            \
         }
-#define STEP3(a, b, c, d, k, w, r) {            \
-                a += w + k + F3(b, c, d);       \
-                a = ROTATE(a, r);               \
-                a += b;                         \
+#define STEP3(a, b, c, d, k, w, r)                                                                 \
+        {                                                                                          \
+                a += w + k + F3(b, c, d);                                                          \
+                a = ROTATE(a, r);                                                                  \
+                a += b;                                                                            \
         }
-#define STEP4(a, b, c, d, k, w, r) {            \
-                a += w + k + F4(b, c, d);       \
-                a = ROTATE(a, r);               \
-                a += b;                         \
+#define STEP4(a, b, c, d, k, w, r)                                                                 \
+        {                                                                                          \
+                a += w + k + F4(b, c, d);                                                          \
+                a = ROTATE(a, r);                                                                  \
+                a += b;                                                                            \
         }
 
 enum arch_type {
@@ -76,10 +80,8 @@ enum arch_type {
         ARCH_AVX512,
 };
 
-__forceinline
-void
-md5_one_block_common(const uint8_t *data, uint32_t digest[4],
-                     const enum arch_type arch)
+__forceinline void
+md5_one_block_common(const uint8_t *data, uint32_t digest[4], const enum arch_type arch)
 {
 #ifdef SAFE_PARAM
         imb_set_errno(NULL, 0);
@@ -94,7 +96,7 @@ md5_one_block_common(const uint8_t *data, uint32_t digest[4],
 #endif
         uint32_t a, b, c, d;
         uint32_t w[16];
-        const uint32_t *data32 = (const uint32_t *)data;
+        const uint32_t *data32 = (const uint32_t *) data;
 
         a = H0;
         b = H1;
@@ -194,7 +196,7 @@ md5_one_block_common(const uint8_t *data, uint32_t digest[4],
         clear_var(&d, sizeof(d));
         clear_mem(w, sizeof(w));
         clear_scratch_gps();
-        switch(arch) {
+        switch (arch) {
         case ARCH_SSE:
                 clear_scratch_xmms_sse();
                 break;
@@ -211,7 +213,7 @@ md5_one_block_common(const uint8_t *data, uint32_t digest[4],
                 break;
         }
 #else
-        (void) arch;  /* unused */
+        (void) arch; /* unused */
 #endif
 }
 

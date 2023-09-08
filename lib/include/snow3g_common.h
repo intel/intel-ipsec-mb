@@ -35,7 +35,7 @@
 #ifndef SNOW3G_COMMON_H
 #define SNOW3G_COMMON_H
 
-#include <stdio.h> /* printf() */
+#include <stdio.h>  /* printf() */
 #include <string.h> /* memset(), memcpy() */
 #include <stdint.h>
 
@@ -55,23 +55,23 @@
 #define CLEAR_MEM clear_mem
 #define CLEAR_VAR clear_var
 
-#define MAX_KEY_LEN (16)
-#define SNOW3G_4_BYTES (4)
-#define SNOW3G_8_BYTES (8)
-#define SNOW3G_8_BITS (8)
+#define MAX_KEY_LEN     (16)
+#define SNOW3G_4_BYTES  (4)
+#define SNOW3G_8_BYTES  (8)
+#define SNOW3G_8_BITS   (8)
 #define SNOW3G_16_BYTES (16)
-#define SNOW3G_16_BITS (16)
+#define SNOW3G_16_BITS  (16)
 
 #define SNOW3G_BLOCK_SIZE (8)
 
 #define SNOW3G_KEY_LEN_IN_BYTES (16) /* 128b */
-#define SNOW3G_IV_LEN_IN_BYTES (16)  /* 128b */
+#define SNOW3G_IV_LEN_IN_BYTES  (16) /* 128b */
 
 #define SNOW3GCONSTANT (0x1b)
 
 /* Range of input data for SNOW3G is from 1 to 2^32 bits */
-#define SNOW3G_MIN_LEN 1
-#define SNOW3G_MAX_BITLEN (UINT32_MAX)
+#define SNOW3G_MIN_LEN     1
+#define SNOW3G_MAX_BITLEN  (UINT32_MAX)
 #define SNOW3G_MAX_BYTELEN (UINT32_MAX / 8)
 
 typedef union SafeBuffer {
@@ -118,7 +118,7 @@ length_find_min(const uint32_t *out_array, const size_t dim_array)
         uint32_t min = 0;
 
         if (dim_array > 0)
-                min  = out_array[0];
+                min = out_array[0];
 
         for (i = 1; i < dim_array; i++)
                 if (out_array[i] < min)
@@ -156,11 +156,10 @@ length_check(const uint32_t *out_array, const size_t dim_array)
         }
 
         for (i = 0; i < dim_array; i++) {
-                if ((out_array[i] == 0) ||
-                    (out_array[i] > SNOW3G_MAX_BYTELEN)) {
+                if ((out_array[i] == 0) || (out_array[i] > SNOW3G_MAX_BYTELEN)) {
                         imb_set_errno(NULL, IMB_ERR_CIPH_LEN);
                         return 0;
-                    }
+                }
         }
 
         return 1;
@@ -170,8 +169,7 @@ length_check(const uint32_t *out_array, const size_t dim_array)
  * @brief Copies 4 32-bit length values into an array
  */
 static inline void
-length_copy_4(uint32_t *out_array,
-              const uint32_t length1, const uint32_t length2,
+length_copy_4(uint32_t *out_array, const uint32_t length1, const uint32_t length2,
               const uint32_t length3, const uint32_t length4)
 {
         out_array[0] = length1;
@@ -184,11 +182,9 @@ length_copy_4(uint32_t *out_array,
  * @brief Copies 8 32-bit length values into an array
  */
 static inline void
-length_copy_8(uint32_t *out_array,
-              const uint32_t length1, const uint32_t length2,
-              const uint32_t length3, const uint32_t length4,
-              const uint32_t length5, const uint32_t length6,
-              const uint32_t length7, const uint32_t length8)
+length_copy_8(uint32_t *out_array, const uint32_t length1, const uint32_t length2,
+              const uint32_t length3, const uint32_t length4, const uint32_t length5,
+              const uint32_t length6, const uint32_t length7, const uint32_t length8)
 {
         out_array[0] = length1;
         out_array[1] = length2;
@@ -230,9 +226,7 @@ ptr_check(void *out_array[], const size_t dim_array, const int errnum)
  * @retval 1 all OK
  */
 static inline int
-cptr_check(const void * const out_array[],
-           const size_t dim_array,
-           const int errnum)
+cptr_check(const void *const out_array[], const size_t dim_array, const int errnum)
 {
         size_t i;
 
@@ -254,8 +248,7 @@ cptr_check(const void * const out_array[],
  * @brief Copies 4 pointers into an array
  */
 static inline void
-ptr_copy_4(void *out_array[],
-           void *ptr1, void *ptr2, void *ptr3, void *ptr4)
+ptr_copy_4(void *out_array[], void *ptr1, void *ptr2, void *ptr3, void *ptr4)
 {
         out_array[0] = ptr1;
         out_array[1] = ptr2;
@@ -267,9 +260,8 @@ ptr_copy_4(void *out_array[],
  * @brief Copies 4 const pointers into an array
  */
 static inline void
-cptr_copy_4(const void *out_array[],
-            const void *ptr1, const void *ptr2,
-            const void *ptr3, const void *ptr4)
+cptr_copy_4(const void *out_array[], const void *ptr1, const void *ptr2, const void *ptr3,
+            const void *ptr4)
 {
         out_array[0] = ptr1;
         out_array[1] = ptr2;
@@ -281,9 +273,8 @@ cptr_copy_4(const void *out_array[],
  * @brief Copies 8 pointers into an array
  */
 static inline void
-ptr_copy_8(void *out_array[],
-           void *ptr1, void *ptr2, void *ptr3, void *ptr4,
-           void *ptr5, void *ptr6, void *ptr7, void *ptr8)
+ptr_copy_8(void *out_array[], void *ptr1, void *ptr2, void *ptr3, void *ptr4, void *ptr5,
+           void *ptr6, void *ptr7, void *ptr8)
 {
         out_array[0] = ptr1;
         out_array[1] = ptr2;
@@ -299,11 +290,9 @@ ptr_copy_8(void *out_array[],
  * @brief Copies 8 const pointers into an array
  */
 static inline void
-cptr_copy_8(const void *out_array[],
-            const void *ptr1, const void *ptr2,
-            const void *ptr3, const void *ptr4,
-            const void *ptr5, const void *ptr6,
-            const void *ptr7, const void *ptr8)
+cptr_copy_8(const void *out_array[], const void *ptr1, const void *ptr2, const void *ptr3,
+            const void *ptr4, const void *ptr5, const void *ptr6, const void *ptr7,
+            const void *ptr8)
 {
         out_array[0] = ptr1;
         out_array[1] = ptr2;
@@ -322,7 +311,8 @@ cptr_copy_8(const void *out_array[],
  * @param[in] lo  pointer to 128-bit vector (low)
  * @return 256-bit vector
  */
-static inline __m256i load_2xm128i_into_m256i(const void *hi, const void *lo)
+static inline __m256i
+load_2xm128i_into_m256i(const void *hi, const void *lo)
 {
         const __m128i lo128 = _mm_loadu_si128((const __m128i *) lo);
         const __m128i hi128 = _mm_loadu_si128((const __m128i *) hi);
@@ -335,9 +325,10 @@ static inline __m256i load_2xm128i_into_m256i(const void *hi, const void *lo)
  * @param[in] ptr  pointer to a 128-bit vector
  * @return 256-bit vector
  */
-static inline __m256i broadcast_m128i_to_m256i(const void *ptr)
+static inline __m256i
+broadcast_m128i_to_m256i(const void *ptr)
 {
-        return _mm256_castps_si256(_mm256_broadcast_ps((const __m128 *)ptr));
+        return _mm256_castps_si256(_mm256_broadcast_ps((const __m128 *) ptr));
 }
 #endif /* AVX2 */
 
@@ -347,7 +338,8 @@ static inline __m256i broadcast_m128i_to_m256i(const void *ptr)
  * @param[in] lut      pointer to a 256x8-bit table
  * @return 16x8-bit values looked in \a lut using 16x8-bit \a indexes
  */
-static inline __m128i lut16x8b_256(const __m128i indexes, const void *lut)
+static inline __m128i
+lut16x8b_256(const __m128i indexes, const void *lut)
 {
 #if defined(AVX2) || defined(AVX)
         return lookup_16x8bit_avx(indexes, lut);
@@ -360,7 +352,8 @@ static inline __m128i lut16x8b_256(const __m128i indexes, const void *lut)
  * @brief LFSR array shift by 2 positions
  * @param[in/out] pCtx  key state context structure
  */
-static inline void ShiftTwiceLFSR_1(snow3gKeyState1_t *pCtx)
+static inline void
+ShiftTwiceLFSR_1(snow3gKeyState1_t *pCtx)
 {
         int i;
 
@@ -404,10 +397,10 @@ static inline void ShiftTwiceLFSR_1(snow3gKeyState1_t *pCtx)
  *
  * @return corrected \a mixc for SNOW3G S2, 4 x 32-bit words
  */
-static inline __m128i s2_mixc_fixup_4(const __m128i no_mixc, const __m128i mixc)
+static inline __m128i
+s2_mixc_fixup_4(const __m128i no_mixc, const __m128i mixc)
 {
-        const __m128i m_shuf = _mm_set_epi32(0x0c0f0e0d, 0x080b0a09,
-                                             0x04070605, 0x00030201);
+        const __m128i m_shuf = _mm_set_epi32(0x0c0f0e0d, 0x080b0a09, 0x04070605, 0x00030201);
         const __m128i m_zero = _mm_setzero_si128();
         const __m128i m_mask = _mm_set1_epi32(0x72727272);
         __m128i pattern, pattern_shuf, fixup;
@@ -427,11 +420,8 @@ static inline __m128i s2_mixc_fixup_4(const __m128i no_mixc, const __m128i mixc)
 static inline __m256i
 s2_mixc_fixup_avx2(const __m256i no_mixc, const __m256i mixc)
 {
-        const __m256i m_shuf =
-                _mm256_set_epi32(0x0c0f0e0d, 0x080b0a09,
-                                 0x04070605, 0x00030201,
-                                 0x0c0f0e0d, 0x080b0a09,
-                                 0x04070605, 0x00030201);
+        const __m256i m_shuf = _mm256_set_epi32(0x0c0f0e0d, 0x080b0a09, 0x04070605, 0x00030201,
+                                                0x0c0f0e0d, 0x080b0a09, 0x04070605, 0x00030201);
         const __m256i m_zero = _mm256_setzero_si256();
         const __m256i m_mask = _mm256_set1_epi32(0x72727272);
         __m256i pattern, pattern_shuf, fixup;
@@ -470,15 +460,15 @@ s2_mixc_fixup_scalar(const __m128i no_mixc, const __m128i mixc)
  *
  * @return \a x transformed through S1 box
  */
-static inline uint32_t S1_box(const uint32_t x)
+static inline uint32_t
+S1_box(const uint32_t x)
 {
 #ifdef NO_AESNI
         union xmm_reg key, v;
 
         key.qword[0] = key.qword[1] = 0;
 
-        v.dword[0] = v.dword[1] =
-                v.dword[2] = v.dword[3] = x;
+        v.dword[0] = v.dword[1] = v.dword[2] = v.dword[3] = x;
 
         emulate_AESENC(&v, &key);
         return v.dword[0];
@@ -501,7 +491,8 @@ static inline uint32_t S1_box(const uint32_t x)
  * @param[in] x1  32-bit word to be passed through S1 box
  * @param[in] x2  32-bit word to be passed through S1 box
  */
-static inline void S1_box_2(uint32_t *x1, uint32_t *x2)
+static inline void
+S1_box_2(uint32_t *x1, uint32_t *x2)
 {
 #ifdef NO_AESNI
         /* reuse S1_box() for NO_AESNI path */
@@ -527,10 +518,10 @@ static inline void S1_box_2(uint32_t *x1, uint32_t *x2)
  *
  * @return 4x32-bits from \a x transformed through S1 box
  */
-static inline __m128i S1_box_4(const __m128i x)
+static inline __m128i
+S1_box_4(const __m128i x)
 {
-        const __m128i m_shuf_r = _mm_set_epi32(0x0306090c, 0x0f020508,
-                                               0x0b0e0104, 0x070a0d00);
+        const __m128i m_shuf_r = _mm_set_epi32(0x0306090c, 0x0f020508, 0x0b0e0104, 0x070a0d00);
         const __m128i m1 = _mm_shuffle_epi8(x, m_shuf_r);
         const __m128i m_zero = _mm_setzero_si128();
 
@@ -563,13 +554,13 @@ static inline __m128i S1_box_4(const __m128i x)
  *
  * @return 8x32-bits from \a x transformed through S1 box
  */
-static inline __m256i S1_box_8(const __m256i x)
+static inline __m256i
+S1_box_8(const __m256i x)
 {
         const __m128i x1 = _mm256_castsi256_si128(x);
         const __m128i x2 = _mm256_extractf128_si256(x, 1);
         const __m128i m_zero = _mm_setzero_si128();
-        const __m128i m_shuf_r = _mm_set_epi32(0x0306090c, 0x0f020508,
-                                               0x0b0e0104, 0x070a0d00);
+        const __m128i m_shuf_r = _mm_set_epi32(0x0306090c, 0x0f020508, 0x0b0e0104, 0x070a0d00);
         __m128i m1, m2;
 
         m1 = _mm_shuffle_epi8(x1, m_shuf_r);
@@ -590,43 +581,38 @@ static inline __m256i S1_box_8(const __m256i x)
  *
  * @return \a x transformed through S2 box
  */
-static inline uint32_t S2_box(const uint32_t x)
+static inline uint32_t
+S2_box(const uint32_t x)
 {
 #ifdef NO_AESNI
         /* Perform invSR(SQ(x)) transform */
-        const __m128i par_lut =
-                lut16x8b_256(_mm_cvtsi32_si128(x), snow3g_invSR_SQ);
+        const __m128i par_lut = lut16x8b_256(_mm_cvtsi32_si128(x), snow3g_invSR_SQ);
         const uint32_t new_x = _mm_cvtsi128_si32(par_lut);
         union xmm_reg key, v, v_fixup;
 
         key.qword[0] = key.qword[1] = 0;
 
-        v.dword[0] = v.dword[1] =
-                v.dword[2] = v.dword[3] = new_x;
+        v.dword[0] = v.dword[1] = v.dword[2] = v.dword[3] = new_x;
 
         v_fixup = v;
 
         emulate_AESENC(&v, &key);
         emulate_AESENCLAST(&v_fixup, &key);
 
-        const __m128i ret_mixc =
-                _mm_loadu_si128((const __m128i *) &v.qword[0]);
-        const __m128i ret_nomixc =
-                _mm_loadu_si128((const __m128i *) &v_fixup.qword[0]);
+        const __m128i ret_mixc = _mm_loadu_si128((const __m128i *) &v.qword[0]);
+        const __m128i ret_nomixc = _mm_loadu_si128((const __m128i *) &v_fixup.qword[0]);
 
         return s2_mixc_fixup_scalar(ret_nomixc, ret_mixc);
 #else
 
 #ifndef SAFE_LOOKUP
-        const uint8_t *w3 = (const uint8_t *)&snow3g_table_S2[x & 0xff];
-        const uint8_t *w1 = (const uint8_t *)&snow3g_table_S2[(x >> 16) & 0xff];
-        const uint8_t *w2 = (const uint8_t *)&snow3g_table_S2[(x >> 8) & 0xff];
-        const uint8_t *w0 = (const uint8_t *)&snow3g_table_S2[(x >> 24) & 0xff];
+        const uint8_t *w3 = (const uint8_t *) &snow3g_table_S2[x & 0xff];
+        const uint8_t *w1 = (const uint8_t *) &snow3g_table_S2[(x >> 16) & 0xff];
+        const uint8_t *w2 = (const uint8_t *) &snow3g_table_S2[(x >> 8) & 0xff];
+        const uint8_t *w0 = (const uint8_t *) &snow3g_table_S2[(x >> 24) & 0xff];
 
-        return *((const uint32_t *)&w3[3]) ^
-                *((const uint32_t *)&w1[1]) ^
-                *((const uint32_t *)&w2[2]) ^
-                *((const uint32_t *)&w0[0]);
+        return *((const uint32_t *) &w3[3]) ^ *((const uint32_t *) &w1[1]) ^
+               *((const uint32_t *) &w2[2]) ^ *((const uint32_t *) &w0[0]);
 
 #else
         /*
@@ -634,8 +620,7 @@ static inline uint32_t S2_box(const uint32_t x)
          * broadcasted across the 128-bit vector register for S1/AESENC
          */
         /* Perform invSR(SQ(x)) transform */
-        const __m128i par_lut =
-                lut16x8b_256(_mm_cvtsi32_si128(x), snow3g_invSR_SQ);
+        const __m128i par_lut = lut16x8b_256(_mm_cvtsi32_si128(x), snow3g_invSR_SQ);
         const __m128i m = _mm_shuffle_epi32(par_lut, 0);
 
         /*
@@ -643,10 +628,8 @@ static inline uint32_t S2_box(const uint32_t x)
          * allows to determine the fix-up value to be applied
          * on result of aesenc to produce correct result for SNOW3G.
          */
-        const __m128i ret_nomixc =
-                _mm_aesenclast_si128(m, _mm_setzero_si128());
-        const __m128i ret_mixc =
-                _mm_aesenc_si128(m, _mm_setzero_si128());
+        const __m128i ret_nomixc = _mm_aesenclast_si128(m, _mm_setzero_si128());
+        const __m128i ret_mixc = _mm_aesenc_si128(m, _mm_setzero_si128());
 
         return s2_mixc_fixup_scalar(ret_nomixc, ret_mixc);
 #endif
@@ -660,7 +643,8 @@ static inline uint32_t S2_box(const uint32_t x)
  * @param[in/out] x1  32-bit word to be passed through S2 box
  * @param[in/out] x2  32-bit word to be passed through S2 box
  */
-static inline void S2_box_2(uint32_t *x1, uint32_t *x2)
+static inline void
+S2_box_2(uint32_t *x1, uint32_t *x2)
 {
 #ifdef NO_AESNI
         *x1 = S2_box(*x1);
@@ -713,11 +697,11 @@ static inline void S2_box_2(uint32_t *x1, uint32_t *x2)
  *
  * @return 4x32-bits from \a x transformed through S2 box
  */
-static inline __m128i S2_box_4(const __m128i x)
+static inline __m128i
+S2_box_4(const __m128i x)
 {
         const __m128i m_zero = _mm_setzero_si128();
-        const __m128i m_shuf_r = _mm_set_epi32(0x0306090c, 0x0f020508,
-                                               0x0b0e0104, 0x070a0d00);
+        const __m128i m_shuf_r = _mm_set_epi32(0x0306090c, 0x0f020508, 0x0b0e0104, 0x070a0d00);
 
         /* Perform invSR(SQ(x)) transform through a lookup table */
         const __m128i new_x = lut16x8b_256(x, snow3g_invSR_SQ);
@@ -752,7 +736,8 @@ static inline __m128i S2_box_4(const __m128i x)
  * @param[in/out] in_out1  vector of 4 32-bit words to be passed through S2 box
  * @param[in/out] in_out2  vector of 4 32-bit words to be passed through S2 box
  */
-static inline void S2_box_2x4(__m128i *in_out1, __m128i *in_out2)
+static inline void
+S2_box_2x4(__m128i *in_out1, __m128i *in_out2)
 {
 #ifdef NO_AESNI
         *in_out1 = S2_box_4(*in_out1);
@@ -765,8 +750,7 @@ static inline void S2_box_2x4(__m128i *in_out1, __m128i *in_out2)
         const __m128i m_zero = _mm_setzero_si128();
         const __m128i x1 = lut16x8b_256(*in_out1, snow3g_invSR_SQ);
         const __m128i x2 = lut16x8b_256(*in_out2, snow3g_invSR_SQ);
-        const __m128i m_shuf_r = _mm_set_epi32(0x0306090c, 0x0f020508,
-                                               0x0b0e0104, 0x070a0d00);
+        const __m128i m_shuf_r = _mm_set_epi32(0x0306090c, 0x0f020508, 0x0b0e0104, 0x070a0d00);
         __m128i m1, m2, f1, f2;
 
         m1 = _mm_shuffle_epi8(x1, m_shuf_r);
@@ -790,7 +774,8 @@ static inline void S2_box_2x4(__m128i *in_out1, __m128i *in_out2)
  *
  * @return 8x32-bits from \a x transformed through S2 box
  */
-static inline __m256i S2_box_8(const __m256i x)
+static inline __m256i
+S2_box_8(const __m256i x)
 {
         /* Perform invSR(SQ(x)) transform through a lookup table */
         const __m256i new_x = lookup_32x8bit_avx2(x, snow3g_invSR_SQ);
@@ -799,8 +784,7 @@ static inline __m256i S2_box_8(const __m256i x)
         const __m128i m_zero = _mm_setzero_si128();
         const __m128i x1 = (__m128i) _mm256_castsi256_si128(new_x);
         const __m128i x2 = (__m128i) _mm256_extractf128_si256(new_x, 1);
-        const __m128i m_shuf_r = _mm_set_epi32(0x0306090c, 0x0f020508,
-                                               0x0b0e0104, 0x070a0d00);
+        const __m128i m_shuf_r = _mm_set_epi32(0x0306090c, 0x0f020508, 0x0b0e0104, 0x070a0d00);
         __m128i m1, m2, f1, f2;
         __m256i m, f;
 
@@ -835,23 +819,22 @@ static inline __m256i S2_box_8(const __m256i x)
  * @param [in] L0       4 x 32-bit LFSR[0]
  * @return 4 x 32-bit MULalpha(L0 >> 24)
  */
-static inline
-__m128i MULa_4(const __m128i L0)
+static inline __m128i
+MULa_4(const __m128i L0)
 {
 #ifdef SAFE_LOOKUP
-        const __m128i gather_clear_mask =
-                _mm_set_epi8(0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80,
-                             0x80, 0x80, 0x80, 0x80, 15, 11, 7, 3);
+        const __m128i gather_clear_mask = _mm_set_epi8(0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80,
+                                                       0x80, 0x80, 0x80, 0x80, 0x80, 15, 11, 7, 3);
         const __m128i low_nibble_mask = _mm_set1_epi32(0x0f0f0f0f);
         __m128i b0, b1, b2, b3, tl, th;
 
         th = _mm_shuffle_epi8(L0, gather_clear_mask);
 
         tl = _mm_and_si128(th, low_nibble_mask);
-        b0 = _mm_loadu_si128((const __m128i *)snow3g_MULa_byte0_low);
-        b1 = _mm_loadu_si128((const __m128i *)snow3g_MULa_byte1_low);
-        b2 = _mm_loadu_si128((const __m128i *)snow3g_MULa_byte2_low);
-        b3 = _mm_loadu_si128((const __m128i *)snow3g_MULa_byte3_low);
+        b0 = _mm_loadu_si128((const __m128i *) snow3g_MULa_byte0_low);
+        b1 = _mm_loadu_si128((const __m128i *) snow3g_MULa_byte1_low);
+        b2 = _mm_loadu_si128((const __m128i *) snow3g_MULa_byte2_low);
+        b3 = _mm_loadu_si128((const __m128i *) snow3g_MULa_byte3_low);
 
         b0 = _mm_shuffle_epi8(b0, tl);
         b1 = _mm_shuffle_epi8(b1, tl);
@@ -862,10 +845,10 @@ __m128i MULa_4(const __m128i L0)
         b2 = _mm_unpacklo_epi8(b2, b3);
         tl = _mm_unpacklo_epi16(b0, b2);
 
-        b0 = _mm_loadu_si128((const __m128i *)snow3g_MULa_byte0_hi);
-        b1 = _mm_loadu_si128((const __m128i *)snow3g_MULa_byte1_hi);
-        b2 = _mm_loadu_si128((const __m128i *)snow3g_MULa_byte2_hi);
-        b3 = _mm_loadu_si128((const __m128i *)snow3g_MULa_byte3_hi);
+        b0 = _mm_loadu_si128((const __m128i *) snow3g_MULa_byte0_hi);
+        b1 = _mm_loadu_si128((const __m128i *) snow3g_MULa_byte1_hi);
+        b2 = _mm_loadu_si128((const __m128i *) snow3g_MULa_byte2_hi);
+        b3 = _mm_loadu_si128((const __m128i *) snow3g_MULa_byte3_hi);
 
         th = _mm_and_si128(_mm_srli_epi32(th, 4), low_nibble_mask);
 
@@ -885,10 +868,8 @@ __m128i MULa_4(const __m128i L0)
         const uint8_t L0IDX2 = _mm_extract_epi8(L0, 11);
         const uint8_t L0IDX3 = _mm_extract_epi8(L0, 15);
 
-        return _mm_setr_epi32(snow3g_table_A_mul[L0IDX0],
-                              snow3g_table_A_mul[L0IDX1],
-                              snow3g_table_A_mul[L0IDX2],
-                              snow3g_table_A_mul[L0IDX3]);
+        return _mm_setr_epi32(snow3g_table_A_mul[L0IDX0], snow3g_table_A_mul[L0IDX1],
+                              snow3g_table_A_mul[L0IDX2], snow3g_table_A_mul[L0IDX3]);
 #endif
 }
 
@@ -900,8 +881,8 @@ __m128i MULa_4(const __m128i L0)
  * @param [in/out] L0_2  On input, 32-bit LFSR[0].
  *                       On output, 32-bit MULalpha(L0 >> 24)
  */
-static inline
-void MULa_2(uint32_t *L0_1, uint32_t *L0_2)
+static inline void
+MULa_2(uint32_t *L0_1, uint32_t *L0_2)
 {
 #ifdef SAFE_LOOKUP
         __m128i in, out;
@@ -924,8 +905,8 @@ void MULa_2(uint32_t *L0_1, uint32_t *L0_2)
  * @param [in] L0       32-bit LFSR[0]
  * @return 32-bit MULalpha(L0 >> 24)
  */
-static inline
-uint32_t MULa(const uint32_t L0)
+static inline uint32_t
+MULa(const uint32_t L0)
 {
 #ifdef SAFE_LOOKUP
         const __m128i L0_vec = _mm_cvtsi32_si128(L0);
@@ -950,8 +931,8 @@ uint32_t MULa(const uint32_t L0)
  * @param [in] L0       8 x 32-bit LFSR[0]
  * @return 8 x 32-bit MULalpha(L0 >> 24)
  */
-static inline
-__m256i MULa_8(const __m256i L0)
+static inline __m256i
+MULa_8(const __m256i L0)
 {
 #ifdef SAFE_LOOKUP
         const __m256i byte0_mask = _mm256_set1_epi64x(0x000000ff000000ffULL);
@@ -959,10 +940,9 @@ __m256i MULa_8(const __m256i L0)
         const __m256i byte2_mask = _mm256_set1_epi64x(0x00ff000000ff0000ULL);
         const __m256i byte3_mask = _mm256_set1_epi64x(0xff000000ff000000ULL);
         const __m256i gather_clear_mask =
-                _mm256_set_epi8(0x0f, 0x0f, 0x0f, 0x0f, 0x0b, 0x0b, 0x0b, 0x0b,
-                                0x07, 0x07, 0x07, 0x07, 0x03, 0x03, 0x03, 0x03,
-                                0x0f, 0x0f, 0x0f, 0x0f, 0x0b, 0x0b, 0x0b, 0x0b,
-                                0x07, 0x07, 0x07, 0x07, 0x03, 0x03, 0x03, 0x03);
+                _mm256_set_epi8(0x0f, 0x0f, 0x0f, 0x0f, 0x0b, 0x0b, 0x0b, 0x0b, 0x07, 0x07, 0x07,
+                                0x07, 0x03, 0x03, 0x03, 0x03, 0x0f, 0x0f, 0x0f, 0x0f, 0x0b, 0x0b,
+                                0x0b, 0x0b, 0x07, 0x07, 0x07, 0x07, 0x03, 0x03, 0x03, 0x03);
         const __m256i low_nibble_mask = _mm256_set1_epi32(0x0f0f0f0f);
         __m256i b0, b1, b2, b3, tl, th;
 
@@ -1012,13 +992,10 @@ __m256i MULa_8(const __m256i L0)
 
         return _mm256_xor_si256(th, tl);
 #else
-        static const __m256i mask = {
-                0x8080800780808003ULL, 0x8080800F8080800BULL,
-                0x8080800780808003ULL, 0x8080800F8080800BULL
-        };
+        static const __m256i mask = { 0x8080800780808003ULL, 0x8080800F8080800BULL,
+                                      0x8080800780808003ULL, 0x8080800F8080800BULL };
 
-        return _mm256_i32gather_epi32(snow3g_table_A_mul,
-                                      _mm256_shuffle_epi8(L0, mask), 4);
+        return _mm256_i32gather_epi32(snow3g_table_A_mul, _mm256_shuffle_epi8(L0, mask), 4);
 #endif
 }
 #endif /* AVX2 */
@@ -1036,23 +1013,23 @@ __m256i MULa_8(const __m256i L0)
  * @param [in] L11      4 x 32-bit LFSR[11]
  * @return 4 x 32-bit DIValpha(L11 & 0xff)
  */
-static inline
-__m128i DIVa_4(const __m128i L11)
+static inline __m128i
+DIVa_4(const __m128i L11)
 {
 #ifdef SAFE_LOOKUP
         const __m128i gather_clear_mask =
-                _mm_set_epi8(0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80,
-                             0x80, 0x80, 0x80, 0x80, 0x0c, 0x08, 0x04, 0x00);
+                _mm_set_epi8(0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80,
+                             0x0c, 0x08, 0x04, 0x00);
         const __m128i low_nibble_mask = _mm_set1_epi32(0x0f0f0f0f);
         __m128i b0, b1, b2, b3, tl, th;
 
         th = _mm_shuffle_epi8(L11, gather_clear_mask);
 
         tl = _mm_and_si128(th, low_nibble_mask);
-        b0 = _mm_loadu_si128((const __m128i *)snow3g_DIVa_byte0_low);
-        b1 = _mm_loadu_si128((const __m128i *)snow3g_DIVa_byte1_low);
-        b2 = _mm_loadu_si128((const __m128i *)snow3g_DIVa_byte2_low);
-        b3 = _mm_loadu_si128((const __m128i *)snow3g_DIVa_byte3_low);
+        b0 = _mm_loadu_si128((const __m128i *) snow3g_DIVa_byte0_low);
+        b1 = _mm_loadu_si128((const __m128i *) snow3g_DIVa_byte1_low);
+        b2 = _mm_loadu_si128((const __m128i *) snow3g_DIVa_byte2_low);
+        b3 = _mm_loadu_si128((const __m128i *) snow3g_DIVa_byte3_low);
 
         b0 = _mm_shuffle_epi8(b0, tl);
         b1 = _mm_shuffle_epi8(b1, tl);
@@ -1063,10 +1040,10 @@ __m128i DIVa_4(const __m128i L11)
         b2 = _mm_unpacklo_epi8(b2, b3);
         tl = _mm_unpacklo_epi16(b0, b2);
 
-        b0 = _mm_loadu_si128((const __m128i *)snow3g_DIVa_byte0_hi);
-        b1 = _mm_loadu_si128((const __m128i *)snow3g_DIVa_byte1_hi);
-        b2 = _mm_loadu_si128((const __m128i *)snow3g_DIVa_byte2_hi);
-        b3 = _mm_loadu_si128((const __m128i *)snow3g_DIVa_byte3_hi);
+        b0 = _mm_loadu_si128((const __m128i *) snow3g_DIVa_byte0_hi);
+        b1 = _mm_loadu_si128((const __m128i *) snow3g_DIVa_byte1_hi);
+        b2 = _mm_loadu_si128((const __m128i *) snow3g_DIVa_byte2_hi);
+        b3 = _mm_loadu_si128((const __m128i *) snow3g_DIVa_byte3_hi);
 
         th = _mm_and_si128(_mm_srli_epi32(th, 4), low_nibble_mask);
 
@@ -1086,10 +1063,8 @@ __m128i DIVa_4(const __m128i L11)
         const uint8_t L11IDX2 = _mm_extract_epi8(L11, 8);
         const uint8_t L11IDX3 = _mm_extract_epi8(L11, 12);
 
-        return _mm_setr_epi32(snow3g_table_A_div[L11IDX0],
-                              snow3g_table_A_div[L11IDX1],
-                              snow3g_table_A_div[L11IDX2],
-                              snow3g_table_A_div[L11IDX3]);
+        return _mm_setr_epi32(snow3g_table_A_div[L11IDX0], snow3g_table_A_div[L11IDX1],
+                              snow3g_table_A_div[L11IDX2], snow3g_table_A_div[L11IDX3]);
 #endif
 }
 
@@ -1101,8 +1076,8 @@ __m128i DIVa_4(const __m128i L11)
  * @param [in/out] L11_2 On input, 32-bit LFSR[11].
  *                       On output, 32-bit DIValpha(L11 & 0xff)
  */
-static inline
-void DIVa_2(uint32_t *L11_1, uint32_t *L11_2)
+static inline void
+DIVa_2(uint32_t *L11_1, uint32_t *L11_2)
 {
 #ifdef SAFE_LOOKUP
         __m128i in, out;
@@ -1125,8 +1100,8 @@ void DIVa_2(uint32_t *L11_1, uint32_t *L11_2)
  * @param [in] L11       32-bit LFSR[11]
  * @return 32-bit DIValpha(L11 & 0xff)
  */
-static inline
-uint32_t DIVa(const uint32_t L11)
+static inline uint32_t
+DIVa(const uint32_t L11)
 {
 #ifdef SAFE_LOOKUP
         const __m128i L11_vec = _mm_cvtsi32_si128(L11);
@@ -1151,8 +1126,8 @@ uint32_t DIVa(const uint32_t L11)
  * @param [in] L11       8 x 32-bit LFSR[11]
  * @return 8 x 32-bit DIValpha(L11 & 0xff)
  */
-static inline
-__m256i DIVa_8(const __m256i L11)
+static inline __m256i
+DIVa_8(const __m256i L11)
 {
 #ifdef SAFE_LOOKUP
         const __m256i byte0_mask = _mm256_set1_epi64x(0x000000ff000000ffULL);
@@ -1160,10 +1135,9 @@ __m256i DIVa_8(const __m256i L11)
         const __m256i byte2_mask = _mm256_set1_epi64x(0x00ff000000ff0000ULL);
         const __m256i byte3_mask = _mm256_set1_epi64x(0xff000000ff000000ULL);
         const __m256i gather_clear_mask =
-                _mm256_set_epi8(0x0c, 0x0c, 0x0c, 0x0c, 0x08, 0x08, 0x08, 0x08,
-                                0x04, 0x04, 0x04, 0x04, 0x00, 0x00, 0x00, 0x00,
-                                0x0c, 0x0c, 0x0c, 0x0c, 0x08, 0x08, 0x08, 0x08,
-                                0x04, 0x04, 0x04, 0x04, 0x00, 0x00, 0x00, 0x00);
+                _mm256_set_epi8(0x0c, 0x0c, 0x0c, 0x0c, 0x08, 0x08, 0x08, 0x08, 0x04, 0x04, 0x04,
+                                0x04, 0x00, 0x00, 0x00, 0x00, 0x0c, 0x0c, 0x0c, 0x0c, 0x08, 0x08,
+                                0x08, 0x08, 0x04, 0x04, 0x04, 0x04, 0x00, 0x00, 0x00, 0x00);
         const __m256i low_nibble_mask = _mm256_set1_epi32(0x0f0f0f0f);
         __m256i b0, b1, b2, b3, tl, th;
 
@@ -1213,13 +1187,10 @@ __m256i DIVa_8(const __m256i L11)
 
         return _mm256_xor_si256(th, tl);
 #else
-        static const __m256i mask = {
-                0x8080800480808000ULL, 0x8080800C80808008ULL,
-                0x8080800480808000ULL, 0x8080800C80808008ULL
-        };
+        static const __m256i mask = { 0x8080800480808000ULL, 0x8080800C80808008ULL,
+                                      0x8080800480808000ULL, 0x8080800C80808008ULL };
 
-        return _mm256_i32gather_epi32(snow3g_table_A_div,
-                                      _mm256_shuffle_epi8(L11, mask), 4);
+        return _mm256_i32gather_epi32(snow3g_table_A_div, _mm256_shuffle_epi8(L11, mask), 4);
 #endif
 }
 #endif /* AVX2 */
@@ -1232,7 +1203,8 @@ __m256i DIVa_8(const __m256i L11)
  *
  * @param[in/out] pCtx  context structure
  */
-static inline uint32_t ClockFSM_1(snow3gKeyState1_t *pCtx)
+static inline uint32_t
+ClockFSM_1(snow3gKeyState1_t *pCtx)
 {
         const uint32_t F = (pCtx->LFSR_S[15] + pCtx->FSM_R1) ^ pCtx->FSM_R2;
         const uint32_t R = (pCtx->FSM_R3 ^ pCtx->LFSR_S[5]) + pCtx->FSM_R2;
@@ -1248,15 +1220,12 @@ static inline uint32_t ClockFSM_1(snow3gKeyState1_t *pCtx)
  * @brief ClockLFSR function as defined in SNOW3G standard
  * @param[in/out] pCtx  context structure
  */
-static inline void ClockLFSR_1(snow3gKeyState1_t *pCtx)
+static inline void
+ClockLFSR_1(snow3gKeyState1_t *pCtx)
 {
         const uint32_t S0 = pCtx->LFSR_S[0];
         const uint32_t S11 = pCtx->LFSR_S[11];
-        const uint32_t V = pCtx->LFSR_S[2] ^
-                MULa(S0) ^
-                DIVa(S11) ^
-                (S0 << 8) ^
-                (S11 >> 8);
+        const uint32_t V = pCtx->LFSR_S[2] ^ MULa(S0) ^ DIVa(S11) ^ (S0 << 8) ^ (S11 >> 8);
         unsigned i;
 
         /* LFSR array shift by 1 position */
@@ -1274,8 +1243,7 @@ static inline void ClockLFSR_1(snow3gKeyState1_t *pCtx)
  * @param[in]      pIV         IV
  */
 static inline void
-snow3gStateInitialize_1(snow3gKeyState1_t *pCtx,
-                        const snow3g_key_schedule_t *pKeySched,
+snow3gStateInitialize_1(snow3gKeyState1_t *pCtx, const snow3g_key_schedule_t *pKeySched,
                         const void *pIV)
 {
         uint32_t FSM1, FSM2, FSM3;
@@ -1317,19 +1285,15 @@ snow3gStateInitialize_1(snow3gKeyState1_t *pCtx,
                 DIVa_2(&DIVa_L11, &DIVa_L12);
 
                 /* clock FSM + clock LFSR + clockFSM + clock LFSR */
-                const uint32_t F0 =
-                        (pCtx->LFSR_S[15] + FSM1) ^ FSM2; /* (s15 + R1) ^ R2 */
+                const uint32_t F0 = (pCtx->LFSR_S[15] + FSM1) ^ FSM2; /* (s15 + R1) ^ R2 */
 
-                const uint32_t V0 =
-                        pCtx->LFSR_S[2] ^
-                        MULa_L0 ^ /* MUL(s0,0 ) */
-                        DIVa_L11 ^ /* DIV(s11,3 )*/
-                        (L0 << 8) ^ /*  (s0,1 || s0,2 || s0,3 || 0x00) */
-                        (L11 >> 8) ^ /* (0x00 || s11,0 || s11,1 || s11,2 ) */
-                        F0;
+                const uint32_t V0 = pCtx->LFSR_S[2] ^ MULa_L0 ^ /* MUL(s0,0 ) */
+                                    DIVa_L11 ^                  /* DIV(s11,3 )*/
+                                    (L0 << 8) ^  /*  (s0,1 || s0,2 || s0,3 || 0x00) */
+                                    (L11 >> 8) ^ /* (0x00 || s11,0 || s11,1 || s11,2 ) */
+                                    F0;
 
-                const uint32_t R0 =
-                        (FSM3 ^ pCtx->LFSR_S[5]) + FSM2; /* R2 + (R3 ^ s5 ) */
+                const uint32_t R0 = (FSM3 ^ pCtx->LFSR_S[5]) + FSM2; /* R2 + (R3 ^ s5 ) */
 
                 uint32_t s1_box_step1 = FSM1;
                 uint32_t s1_box_step2 = R0;
@@ -1345,10 +1309,8 @@ snow3gStateInitialize_1(snow3gKeyState1_t *pCtx,
 
                 const uint32_t F1 = (V0 + R0) ^ s1_box_step1;
 
-                const uint32_t V1 = pCtx->LFSR_S[3] ^
-                             MULa_L1 ^
-                             DIVa_L12 ^
-                             (L1 << 8) ^ (L12 >> 8) ^ F1;
+                const uint32_t V1 =
+                        pCtx->LFSR_S[3] ^ MULa_L1 ^ DIVa_L12 ^ (L1 << 8) ^ (L12 >> 8) ^ F1;
 
                 FSM2 = s1_box_step2;
                 FSM3 = s2_box_step2;
@@ -1372,8 +1334,8 @@ snow3gStateInitialize_1(snow3gKeyState1_t *pCtx,
  * @param[in]     pCtx        Context where the scheduled keys are stored
  * @param[in/out] pKeyStream  Pointer to the generated keystream
  */
-static inline void snow3g_f9_keystream_words(snow3gKeyState1_t *pCtx,
-                                             uint32_t *pKeyStream)
+static inline void
+snow3g_f9_keystream_words(snow3gKeyState1_t *pCtx, uint32_t *pKeyStream)
 {
         int i;
 
@@ -1391,7 +1353,8 @@ static inline void snow3g_f9_keystream_words(snow3gKeyState1_t *pCtx,
  * @brief LFSR array shift by one (8 lanes)
  * @param[in]     pCtx       Context where the scheduled keys are stored
  */
-static inline void ShiftLFSR_8(snow3gKeyState8_t *pCtx)
+static inline void
+ShiftLFSR_8(snow3gKeyState8_t *pCtx)
 {
         pCtx->iLFSR_X = (pCtx->iLFSR_X + 1) & 15;
 }
@@ -1401,7 +1364,8 @@ static inline void ShiftLFSR_8(snow3gKeyState8_t *pCtx)
  * @brief LFSR array shift by one (4 lanes)
  * @param[in]     pCtx       Context where the scheduled keys are stored
  */
-static inline void ShiftLFSR_4(snow3gKeyState4_t *pCtx)
+static inline void
+ShiftLFSR_4(snow3gKeyState4_t *pCtx)
 {
         pCtx->iLFSR_X = (pCtx->iLFSR_X + 1) & 15;
 }
@@ -1414,7 +1378,8 @@ static inline void ShiftLFSR_4(snow3gKeyState4_t *pCtx)
  * @param[in] L11       LFSR[11]
  * @return table_Alpha_div[LFSR[11] & 0xff] ^ table_Alpha_mul[LFSR[0] & 0xff]
  */
-static inline __m256i C0_C11_8(const __m256i L0, const __m256i L11)
+static inline __m256i
+C0_C11_8(const __m256i L0, const __m256i L11)
 {
         const __m256i S1 = DIVa_8(L11);
         const __m256i S2 = MULa_8(L0);
@@ -1430,7 +1395,8 @@ static inline __m256i C0_C11_8(const __m256i L0, const __m256i L11)
  * @param[in] L11       LFSR[11]
  * @return table_Alpha_div[LFSR[11] & 0xff] ^ table_Alpha_mul[LFSR[0] & 0xff]
  */
-static inline __m128i C0_C11_4(const __m128i L0, const __m128i L11)
+static inline __m128i
+C0_C11_4(const __m128i L0, const __m128i L11)
 {
         const __m128i SL11 = DIVa_4(L11);
         const __m128i SL0 = MULa_4(L0);
@@ -1448,7 +1414,8 @@ static inline __m128i C0_C11_4(const __m128i L0, const __m128i L11)
  *
  * @param[in]     pCtx       Context where the scheduled keys are stored
  */
-static inline void ClockLFSR_8(snow3gKeyState8_t *pCtx)
+static inline void
+ClockLFSR_8(snow3gKeyState8_t *pCtx)
 {
         __m256i X2;
         __m256i S, T, U;
@@ -1479,7 +1446,8 @@ static inline void ClockLFSR_8(snow3gKeyState8_t *pCtx)
  *
  * @param[in]     pCtx       Context where the scheduled keys are stored
  */
-static inline void ClockLFSR_4(snow3gKeyState4_t *pCtx)
+static inline void
+ClockLFSR_4(snow3gKeyState4_t *pCtx)
 {
         __m128i S, T, U;
 
@@ -1506,20 +1474,18 @@ static inline void ClockLFSR_4(snow3gKeyState4_t *pCtx)
  * @param[in]     pCtx       Context where the scheduled keys are stored
  * @return 8 x 4bytes of key stream
  */
-static inline __m256i ClockFSM_8(snow3gKeyState8_t *pCtx)
+static inline __m256i
+ClockFSM_8(snow3gKeyState8_t *pCtx)
 {
         const uint32_t iLFSR_X_5 = (pCtx->iLFSR_X + 5) & 15;
         const uint32_t iLFSR_X_15 = (pCtx->iLFSR_X + 15) & 15;
 
-        const __m256i F =
-                _mm256_add_epi32(pCtx->LFSR_X[iLFSR_X_15], pCtx->FSM_X[0]);
+        const __m256i F = _mm256_add_epi32(pCtx->LFSR_X[iLFSR_X_15], pCtx->FSM_X[0]);
 
         const __m256i ret = _mm256_xor_si256(F, pCtx->FSM_X[1]);
 
-        const __m256i R =
-                _mm256_add_epi32(_mm256_xor_si256(pCtx->LFSR_X[iLFSR_X_5],
-                                                  pCtx->FSM_X[2]),
-                                 pCtx->FSM_X[1]);
+        const __m256i R = _mm256_add_epi32(
+                _mm256_xor_si256(pCtx->LFSR_X[iLFSR_X_5], pCtx->FSM_X[2]), pCtx->FSM_X[1]);
 
         pCtx->FSM_X[2] = S2_box_8(pCtx->FSM_X[1]);
         pCtx->FSM_X[1] = S1_box_8(pCtx->FSM_X[0]);
@@ -1537,16 +1503,13 @@ static inline __m256i ClockFSM_8(snow3gKeyState8_t *pCtx)
  * @param[in]     pCtx       Context where the scheduled keys are stored
  * @return 4 x 4bytes of key stream
  */
-static inline __m128i ClockFSM_4(snow3gKeyState4_t *pCtx)
+static inline __m128i
+ClockFSM_4(snow3gKeyState4_t *pCtx)
 {
         const uint32_t iLFSR_X = pCtx->iLFSR_X;
-        const __m128i F =
-                _mm_add_epi32(pCtx->LFSR_X[(iLFSR_X + 15) & 15],
-                              pCtx->FSM_X[0]);
-        const __m128i R =
-                _mm_add_epi32(_mm_xor_si128(pCtx->LFSR_X[(iLFSR_X + 5) & 15],
-                                            pCtx->FSM_X[2]),
-                              pCtx->FSM_X[1]);
+        const __m128i F = _mm_add_epi32(pCtx->LFSR_X[(iLFSR_X + 15) & 15], pCtx->FSM_X[0]);
+        const __m128i R = _mm_add_epi32(
+                _mm_xor_si128(pCtx->LFSR_X[(iLFSR_X + 5) & 15], pCtx->FSM_X[2]), pCtx->FSM_X[1]);
 
         const __m128i ret = _mm_xor_si128(F, pCtx->FSM_X[1]);
 
@@ -1563,7 +1526,8 @@ static inline __m128i ClockFSM_4(snow3gKeyState4_t *pCtx)
  * @param[in]     pCtx       Context where the scheduled keys are stored
  * @return 4 bytes of key stream
  */
-static inline uint32_t snow3g_keystream_1_4(snow3gKeyState1_t *pCtx)
+static inline uint32_t
+snow3g_keystream_1_4(snow3gKeyState1_t *pCtx)
 {
         const uint32_t F = ClockFSM_1(pCtx);
         const uint32_t ks = F ^ pCtx->LFSR_S[0];
@@ -1578,7 +1542,8 @@ static inline uint32_t snow3g_keystream_1_4(snow3gKeyState1_t *pCtx)
  * @param[in] pCtx Context where the scheduled keys are stored
  * @return 8 bytes of a key stream
  */
-static inline uint64_t snow3g_keystream_1_8(snow3gKeyState1_t *pCtx)
+static inline uint64_t
+snow3g_keystream_1_8(snow3gKeyState1_t *pCtx)
 {
         /*
          * Merged clock FSM + clock LFSR + clock FSM + clockLFSR
@@ -1597,24 +1562,12 @@ static inline uint64_t snow3g_keystream_1_8(snow3gKeyState1_t *pCtx)
         MULa_2(&MULa_L0, &MULa_L1);
         DIVa_2(&DIVa_L11, &DIVa_L12);
 
-        const uint32_t V0 =
-                pCtx->LFSR_S[2] ^
-                MULa_L0 ^
-                DIVa_L11 ^
-                (L0 << 8) ^
-                (L11 >> 8);
+        const uint32_t V0 = pCtx->LFSR_S[2] ^ MULa_L0 ^ DIVa_L11 ^ (L0 << 8) ^ (L11 >> 8);
 
-        const uint32_t V1 =
-                pCtx->LFSR_S[3] ^
-                MULa_L1 ^
-                DIVa_L12 ^
-                (L1 << 8) ^
-                (L12 >> 8);
+        const uint32_t V1 = pCtx->LFSR_S[3] ^ MULa_L1 ^ DIVa_L12 ^ (L1 << 8) ^ (L12 >> 8);
 
-        const uint32_t F0 =
-                (pCtx->LFSR_S[15] + pCtx->FSM_R1) ^ L0 ^ pCtx->FSM_R2;
-        const uint32_t R0 =
-                (pCtx->FSM_R3 ^ pCtx->LFSR_S[5]) + pCtx->FSM_R2;
+        const uint32_t F0 = (pCtx->LFSR_S[15] + pCtx->FSM_R1) ^ L0 ^ pCtx->FSM_R2;
+        const uint32_t R0 = (pCtx->FSM_R3 ^ pCtx->LFSR_S[5]) + pCtx->FSM_R2;
 
         uint32_t s1_box_step1 = pCtx->FSM_R1;
         uint32_t s1_box_step2 = R0;
@@ -1655,18 +1608,15 @@ static inline uint64_t snow3g_keystream_1_8(snow3gKeyState1_t *pCtx)
  * @param[in/out]  pKeyStreamLo Pointer to generated key stream
  * @param[in/out]  pKeyStreamHi Pointer to generated key stream
  */
-static inline void snow3g_keystream_8_8(snow3gKeyState8_t *pCtx,
-                                        __m256i *pKeyStreamLo,
-                                        __m256i *pKeyStreamHi)
+static inline void
+snow3g_keystream_8_8(snow3gKeyState8_t *pCtx, __m256i *pKeyStreamLo, __m256i *pKeyStreamHi)
 {
         /* first set of 4 bytes */
-        const __m256i L = _mm256_xor_si256(ClockFSM_8(pCtx),
-                                           pCtx->LFSR_X[pCtx->iLFSR_X]);
+        const __m256i L = _mm256_xor_si256(ClockFSM_8(pCtx), pCtx->LFSR_X[pCtx->iLFSR_X]);
         ClockLFSR_8(pCtx);
 
         /* second set of 4 bytes */
-        const __m256i H = _mm256_xor_si256(ClockFSM_8(pCtx),
-                                           pCtx->LFSR_X[pCtx->iLFSR_X]);
+        const __m256i H = _mm256_xor_si256(ClockFSM_8(pCtx), pCtx->LFSR_X[pCtx->iLFSR_X]);
         ClockLFSR_8(pCtx);
 
         /* merge the 2 sets */
@@ -1680,10 +1630,10 @@ static inline void snow3g_keystream_8_8(snow3gKeyState8_t *pCtx,
  * @param[in]      pCtx         Context where the scheduled keys are stored
  * @return 8 x 4 bytes vaector with key stream data
  */
-static inline __m256i snow3g_keystream_8_4(snow3gKeyState8_t *pCtx)
+static inline __m256i
+snow3g_keystream_8_4(snow3gKeyState8_t *pCtx)
 {
-        const __m256i keyStream = _mm256_xor_si256(ClockFSM_8(pCtx),
-                                                   pCtx->LFSR_X[pCtx->iLFSR_X]);
+        const __m256i keyStream = _mm256_xor_si256(ClockFSM_8(pCtx), pCtx->LFSR_X[pCtx->iLFSR_X]);
 
         ClockLFSR_8(pCtx);
         return keyStream;
@@ -1700,50 +1650,34 @@ transpose8xu32_avx2(__m256i in[8], __m256i out[8])
 {
         __m256i tmp[2];
 
-        tmp[0] = (__m256i) _mm256_shuffle_ps((__m256)in[0], (__m256)in[1],
-                                             0x44);
-        in[0]  = (__m256i) _mm256_shuffle_ps((__m256)in[0], (__m256)in[1],
-                                             0xEE);
-        tmp[1] = (__m256i) _mm256_shuffle_ps((__m256)in[2], (__m256)in[3],
-                                             0x44);
-        in[2]  = (__m256i) _mm256_shuffle_ps((__m256)in[2], (__m256)in[3],
-                                             0xEE);
+        tmp[0] = (__m256i) _mm256_shuffle_ps((__m256) in[0], (__m256) in[1], 0x44);
+        in[0] = (__m256i) _mm256_shuffle_ps((__m256) in[0], (__m256) in[1], 0xEE);
+        tmp[1] = (__m256i) _mm256_shuffle_ps((__m256) in[2], (__m256) in[3], 0x44);
+        in[2] = (__m256i) _mm256_shuffle_ps((__m256) in[2], (__m256) in[3], 0xEE);
 
-        in[3]  = (__m256i) _mm256_shuffle_ps((__m256)tmp[0],(__m256) tmp[1],
-                                             0xDD);
-        in[1]  = (__m256i) _mm256_shuffle_ps((__m256)in[0], (__m256) in[2],
-                                             0x88);
-        in[0]  = (__m256i) _mm256_shuffle_ps((__m256)in[0], (__m256) in[2],
-                                             0xDD);
-        tmp[0] = (__m256i) _mm256_shuffle_ps((__m256)tmp[0],(__m256) tmp[1],
-                                             0x88);
+        in[3] = (__m256i) _mm256_shuffle_ps((__m256) tmp[0], (__m256) tmp[1], 0xDD);
+        in[1] = (__m256i) _mm256_shuffle_ps((__m256) in[0], (__m256) in[2], 0x88);
+        in[0] = (__m256i) _mm256_shuffle_ps((__m256) in[0], (__m256) in[2], 0xDD);
+        tmp[0] = (__m256i) _mm256_shuffle_ps((__m256) tmp[0], (__m256) tmp[1], 0x88);
 
-        in[2]  = (__m256i) _mm256_shuffle_ps((__m256)in[4], (__m256)in[5],
-                                             0x44);
-        in[4]  = (__m256i) _mm256_shuffle_ps((__m256)in[4], (__m256)in[5],
-                                             0xEE);
-        tmp[1] = (__m256i) _mm256_shuffle_ps((__m256)in[6], (__m256)in[7],
-                                             0x44);
-        in[6]  = (__m256i) _mm256_shuffle_ps((__m256)in[6], (__m256)in[7],
-                                             0xEE);
+        in[2] = (__m256i) _mm256_shuffle_ps((__m256) in[4], (__m256) in[5], 0x44);
+        in[4] = (__m256i) _mm256_shuffle_ps((__m256) in[4], (__m256) in[5], 0xEE);
+        tmp[1] = (__m256i) _mm256_shuffle_ps((__m256) in[6], (__m256) in[7], 0x44);
+        in[6] = (__m256i) _mm256_shuffle_ps((__m256) in[6], (__m256) in[7], 0xEE);
 
-        in[7]  = (__m256i) _mm256_shuffle_ps((__m256)in[2],(__m256) tmp[1],
-                                             0xDD);
-        in[5]  = (__m256i) _mm256_shuffle_ps((__m256)in[4], (__m256) in[6],
-                                             0x88);
-        in[4]  = (__m256i) _mm256_shuffle_ps((__m256)in[4], (__m256) in[6],
-                                             0xDD);
-        tmp[1] = (__m256i) _mm256_shuffle_ps((__m256)in[2],(__m256) tmp[1],
-                                             0x88);
+        in[7] = (__m256i) _mm256_shuffle_ps((__m256) in[2], (__m256) tmp[1], 0xDD);
+        in[5] = (__m256i) _mm256_shuffle_ps((__m256) in[4], (__m256) in[6], 0x88);
+        in[4] = (__m256i) _mm256_shuffle_ps((__m256) in[4], (__m256) in[6], 0xDD);
+        tmp[1] = (__m256i) _mm256_shuffle_ps((__m256) in[2], (__m256) tmp[1], 0x88);
 
-        out[6]  = _mm256_permute2f128_si256(in[5], in[1], 0x13);
-        out[2]  = _mm256_permute2f128_si256(in[5], in[1], 0x02);
-        out[5]  = _mm256_permute2f128_si256(in[7], in[3], 0x13);
-        out[1]  = _mm256_permute2f128_si256(in[7], in[3], 0x02);
-        out[7]  = _mm256_permute2f128_si256(in[4], in[0], 0x13);
-        out[3]  = _mm256_permute2f128_si256(in[4], in[0], 0x02);
-        out[4]  = _mm256_permute2f128_si256(tmp[1], tmp[0], 0x13);
-        out[0]  = _mm256_permute2f128_si256(tmp[1], tmp[0], 0x02);
+        out[6] = _mm256_permute2f128_si256(in[5], in[1], 0x13);
+        out[2] = _mm256_permute2f128_si256(in[5], in[1], 0x02);
+        out[5] = _mm256_permute2f128_si256(in[7], in[3], 0x13);
+        out[1] = _mm256_permute2f128_si256(in[7], in[3], 0x02);
+        out[7] = _mm256_permute2f128_si256(in[4], in[0], 0x13);
+        out[3] = _mm256_permute2f128_si256(in[4], in[0], 0x02);
+        out[4] = _mm256_permute2f128_si256(tmp[1], tmp[0], 0x13);
+        out[0] = _mm256_permute2f128_si256(tmp[1], tmp[0], 0x02);
 }
 
 /**
@@ -1752,17 +1686,15 @@ transpose8xu32_avx2(__m256i in[8], __m256i out[8])
  * @param[in]     pCtx         Context where the scheduled keys are stored
  * @param[in/out] pKeyStream   Array of generated key streams
  */
-static inline void snow3g_keystream_8_32(snow3gKeyState8_t *pCtx,
-                                         __m256i *pKeyStream)
+static inline void
+snow3g_keystream_8_32(snow3gKeyState8_t *pCtx, __m256i *pKeyStream)
 {
         __m256i in[8];
         unsigned int i;
 
         /** Byte reversal on each KS */
-        static const __m256i mask = {
-                0x0405060700010203ULL, 0x0c0d0e0f08090a0bULL,
-                0x0405060700010203ULL, 0x0c0d0e0f08090a0bULL
-        };
+        static const __m256i mask = { 0x0405060700010203ULL, 0x0c0d0e0f08090a0bULL,
+                                      0x0405060700010203ULL, 0x0c0d0e0f08090a0bULL };
 
         /** produces the next 4 bytes for each buffer */
         for (i = 0; i < 8; i++)
@@ -1771,8 +1703,6 @@ static inline void snow3g_keystream_8_32(snow3gKeyState8_t *pCtx,
         /* Transposes the dwords of KS for all buffers into
          * 32 consecutive KS bytes for each buffer */
         transpose8xu32_avx2(in, pKeyStream);
-
-
 }
 #endif /* AVX2 */
 
@@ -1782,10 +1712,10 @@ static inline void snow3g_keystream_8_32(snow3gKeyState8_t *pCtx,
  * @param[in]      pCtx         Context where the scheduled keys are stored
  * @param[in/out]  pKeyStream   Pointer to generated key stream
  */
-static inline __m128i snow3g_keystream_4_4(snow3gKeyState4_t *pCtx)
+static inline __m128i
+snow3g_keystream_4_4(snow3gKeyState4_t *pCtx)
 {
-        const __m128i keyStream = _mm_xor_si128(ClockFSM_4(pCtx),
-                                                pCtx->LFSR_X[pCtx->iLFSR_X]);
+        const __m128i keyStream = _mm_xor_si128(ClockFSM_4(pCtx), pCtx->LFSR_X[pCtx->iLFSR_X]);
 
         ClockLFSR_4(pCtx);
         return keyStream;
@@ -1798,9 +1728,8 @@ static inline __m128i snow3g_keystream_4_4(snow3gKeyState4_t *pCtx)
  * @param[in/out]  pKeyStreamLo Pointer to lower end of generated key stream
  * @param[in/out]  pKeyStreamHi Pointer to higher end of generated key stream
  */
-static inline void snow3g_keystream_4_8(snow3gKeyState4_t *pCtx,
-                                        __m128i *pKeyStreamLo,
-                                        __m128i *pKeyStreamHi)
+static inline void
+snow3g_keystream_4_8(snow3gKeyState4_t *pCtx, __m128i *pKeyStreamLo, __m128i *pKeyStreamHi)
 {
         const __m128i L0 = pCtx->LFSR_X[pCtx->iLFSR_X];
         const __m128i L2 = pCtx->LFSR_X[(pCtx->iLFSR_X + 2) & 15];
@@ -1814,23 +1743,21 @@ static inline void snow3g_keystream_4_8(snow3gKeyState4_t *pCtx,
         const __m128i L6 = pCtx->LFSR_X[(pCtx->iLFSR_X + 6) & 15];
         const __m128i L15 = pCtx->LFSR_X[(pCtx->iLFSR_X + 15) & 15];
 
-        const __m128i V0 = _mm_xor_si128(_mm_xor_si128(C0_C11_4(L0, L11), L2),
-                                         _mm_xor_si128(_mm_slli_epi32(L0, 8),
-                                                       _mm_srli_epi32(L11, 8)));
+        const __m128i V0 =
+                _mm_xor_si128(_mm_xor_si128(C0_C11_4(L0, L11), L2),
+                              _mm_xor_si128(_mm_slli_epi32(L0, 8), _mm_srli_epi32(L11, 8)));
 
-        const __m128i V1 = _mm_xor_si128(_mm_xor_si128(C0_C11_4(L1, L12), L3),
-                                         _mm_xor_si128(_mm_slli_epi32(L1, 8),
-                                                       _mm_srli_epi32(L12, 8)));
+        const __m128i V1 =
+                _mm_xor_si128(_mm_xor_si128(C0_C11_4(L1, L12), L3),
+                              _mm_xor_si128(_mm_slli_epi32(L1, 8), _mm_srli_epi32(L12, 8)));
 
         /* ======== first set of 4 bytes */
 
         const __m128i s1_box_step1 = S1_box_4(pCtx->FSM_X[0]); /* do early */
 
-        const __m128i R0 = _mm_add_epi32(_mm_xor_si128(L5, pCtx->FSM_X[2]),
-                                         pCtx->FSM_X[1]);
+        const __m128i R0 = _mm_add_epi32(_mm_xor_si128(L5, pCtx->FSM_X[2]), pCtx->FSM_X[1]);
 
-        const __m128i F0 = _mm_xor_si128(_mm_add_epi32(L15, pCtx->FSM_X[0]),
-                                         pCtx->FSM_X[1]);
+        const __m128i F0 = _mm_xor_si128(_mm_add_epi32(L15, pCtx->FSM_X[0]), pCtx->FSM_X[1]);
         const __m128i L = _mm_xor_si128(F0, L0);
 
         const __m128i F1 = _mm_xor_si128(_mm_add_epi32(V0, R0), s1_box_step1);
@@ -1861,8 +1788,7 @@ static inline void snow3g_keystream_4_8(snow3gKeyState4_t *pCtx,
 
         const __m128i s1_box_step2 = S1_box_4(R0);
 
-        const __m128i R1 = _mm_add_epi32(_mm_xor_si128(L6, s2_box_step1),
-                                         s1_box_step1);
+        const __m128i R1 = _mm_add_epi32(_mm_xor_si128(L6, s2_box_step1), s1_box_step1);
 
         /* Final FSM_X update
          *    FSM_X[2] = s2_box_step2
@@ -1880,28 +1806,23 @@ static inline void snow3g_keystream_4_8(snow3gKeyState4_t *pCtx,
  * @param[in]     pCtx         Context where the scheduled keys are stored
  * @param[in/out] pKeyStream   Pointer to store generated key stream
  */
-static inline void snow3g_keystream_4_16(snow3gKeyState4_t *pCtx,
-                                         __m128i pKeyStream[4])
+static inline void
+snow3g_keystream_4_16(snow3gKeyState4_t *pCtx, __m128i pKeyStream[4])
 {
-        static const uint64_t sm[2] = {
-                /* mask for byte swapping 64-bit words */
-                0x0001020304050607ULL, 0x08090a0b0c0d0e0fULL
+        static const uint64_t sm[2] = { /* mask for byte swapping 64-bit words */
+                                        0x0001020304050607ULL, 0x08090a0b0c0d0e0fULL
         };
         __m128i ksL1, ksL2, ksH1, ksH2;
 
         snow3g_keystream_4_8(pCtx, &ksL1, &ksH1);
         snow3g_keystream_4_8(pCtx, &ksL2, &ksH2);
 
-        const __m128i swapMask = _mm_loadu_si128((const __m128i *)sm);
+        const __m128i swapMask = _mm_loadu_si128((const __m128i *) sm);
 
-        pKeyStream[0] = _mm_shuffle_epi8(_mm_unpacklo_epi64(ksL1, ksL2),
-                                         swapMask);
-        pKeyStream[1] = _mm_shuffle_epi8(_mm_unpackhi_epi64(ksL1, ksL2),
-                                         swapMask);
-        pKeyStream[2] = _mm_shuffle_epi8(_mm_unpacklo_epi64(ksH1, ksH2),
-                                         swapMask);
-        pKeyStream[3] = _mm_shuffle_epi8(_mm_unpackhi_epi64(ksH1, ksH2),
-                                         swapMask);
+        pKeyStream[0] = _mm_shuffle_epi8(_mm_unpacklo_epi64(ksL1, ksL2), swapMask);
+        pKeyStream[1] = _mm_shuffle_epi8(_mm_unpackhi_epi64(ksL1, ksL2), swapMask);
+        pKeyStream[2] = _mm_shuffle_epi8(_mm_unpacklo_epi64(ksH1, ksH2), swapMask);
+        pKeyStream[3] = _mm_shuffle_epi8(_mm_unpackhi_epi64(ksH1, ksH2), swapMask);
 }
 
 /**
@@ -1915,10 +1836,8 @@ static inline void snow3g_keystream_4_16(snow3gKeyState4_t *pCtx,
  * @param [in]      pIV4        IV for buffer 4
  */
 static inline void
-snow3gStateInitialize_4(snow3gKeyState4_t *pCtx,
-                        const snow3g_key_schedule_t *pKeySched,
-                        const void *pIV1, const void *pIV2,
-                        const void *pIV3, const void *pIV4)
+snow3gStateInitialize_4(snow3gKeyState4_t *pCtx, const snow3g_key_schedule_t *pKeySched,
+                        const void *pIV1, const void *pIV2, const void *pIV3, const void *pIV4)
 {
         __m128i R, S, T, U;
         __m128i T0, T1;
@@ -1927,14 +1846,12 @@ snow3gStateInitialize_4(snow3gKeyState4_t *pCtx,
         /* Initialize the LFSR table from constants, Keys, and IV */
 
         /* Load complete 128b IV into register (SSE2)*/
-        static const uint64_t sm[2] = {
-                0x0405060700010203ULL, 0x0c0d0e0f08090a0bULL
-        };
+        static const uint64_t sm[2] = { 0x0405060700010203ULL, 0x0c0d0e0f08090a0bULL };
 
-        R = _mm_loadu_si128((const __m128i *)pIV1);
-        S = _mm_loadu_si128((const __m128i *)pIV2);
-        T = _mm_loadu_si128((const __m128i *)pIV3);
-        U = _mm_loadu_si128((const __m128i *)pIV4);
+        R = _mm_loadu_si128((const __m128i *) pIV1);
+        S = _mm_loadu_si128((const __m128i *) pIV2);
+        T = _mm_loadu_si128((const __m128i *) pIV3);
+        U = _mm_loadu_si128((const __m128i *) pIV4);
 
         /* initialize the array block (SSE4) */
         for (i = 0; i < 4; i++) {
@@ -1943,10 +1860,8 @@ snow3gStateInitialize_4(snow3gKeyState4_t *pCtx,
                 const __m128i VK = _mm_set1_epi32(K);
                 const __m128i VL = _mm_set1_epi32(L);
 
-                pCtx->LFSR_X[i + 4] =
-                        pCtx->LFSR_X[i + 12] = VK;
-                pCtx->LFSR_X[i + 0] =
-                        pCtx->LFSR_X[i + 8] = VL;
+                pCtx->LFSR_X[i + 4] = pCtx->LFSR_X[i + 12] = VK;
+                pCtx->LFSR_X[i + 0] = pCtx->LFSR_X[i + 8] = VL;
         }
         /* Update the schedule structure with IVs */
         /* Store the 4 IVs in LFSR by a column/row matrix swap
@@ -1980,16 +1895,14 @@ snow3gStateInitialize_4(snow3gKeyState4_t *pCtx,
         pCtx->iLFSR_X = 0;
 
         /* FSM initialization (SSE2) */
-        pCtx->FSM_X[0] = pCtx->FSM_X[1] =
-                pCtx->FSM_X[2] = _mm_setzero_si128();
+        pCtx->FSM_X[0] = pCtx->FSM_X[1] = pCtx->FSM_X[2] = _mm_setzero_si128();
 
         /* Initialisation rounds */
         for (i = 0; i < 32; i++) {
                 T1 = ClockFSM_4(pCtx);
                 ClockLFSR_4(pCtx);
                 pCtx->LFSR_X[(pCtx->iLFSR_X + 15) & 15] =
-                        _mm_xor_si128(pCtx->LFSR_X[(pCtx->iLFSR_X + 15) & 15],
-                                      T1);
+                        _mm_xor_si128(pCtx->LFSR_X[(pCtx->iLFSR_X + 15) & 15], T1);
         }
 }
 
@@ -2005,17 +1918,13 @@ snow3gStateInitialize_4(snow3gKeyState4_t *pCtx,
  */
 static inline void
 snow3gStateInitialize_8_multiKey(snow3gKeyState8_t *pCtx,
-                                 const snow3g_key_schedule_t * const KeySched[],
-                                 const void * const pIV[])
+                                 const snow3g_key_schedule_t *const KeySched[],
+                                 const void *const pIV[])
 {
-        static const __m256i swapMask = {
-                0x0405060700010203ULL, 0x0c0d0e0f08090a0bULL,
-                0x0405060700010203ULL, 0x0c0d0e0f08090a0bULL
-        };
-        static const __m256i ALLFS = {
-                0xffffffffffffffffULL, 0xffffffffffffffffULL,
-                0xffffffffffffffffULL, 0xffffffffffffffffULL
-        };
+        static const __m256i swapMask = { 0x0405060700010203ULL, 0x0c0d0e0f08090a0bULL,
+                                          0x0405060700010203ULL, 0x0c0d0e0f08090a0bULL };
+        static const __m256i ALLFS = { 0xffffffffffffffffULL, 0xffffffffffffffffULL,
+                                       0xffffffffffffffffULL, 0xffffffffffffffffULL };
         __m256i ksR, ksS, ksT, ksU;
         __m256i ivR, ivS, ivT, ivU;
         __m256i T0, T1;
@@ -2077,12 +1986,10 @@ snow3gStateInitialize_8_multiKey(snow3gKeyState8_t *pCtx,
         ksS = _mm256_xor_si256(ksS, ALLFS);
         ksT = _mm256_xor_si256(ksT, ALLFS);
 
-        pCtx->LFSR_X[0 + 0] =
-                pCtx->LFSR_X[8 + 0] = _mm256_xor_si256(ksR, ALLFS);
+        pCtx->LFSR_X[0 + 0] = pCtx->LFSR_X[8 + 0] = _mm256_xor_si256(ksR, ALLFS);
         pCtx->LFSR_X[0 + 1] = ksS; /* LFSR[9] set later */
         pCtx->LFSR_X[0 + 2] = ksT; /* LFSR[10] set later */
-        pCtx->LFSR_X[0 + 3] =
-                pCtx->LFSR_X[8 + 3] = _mm256_xor_si256(ksU, ALLFS);
+        pCtx->LFSR_X[0 + 3] = pCtx->LFSR_X[8 + 3] = _mm256_xor_si256(ksU, ALLFS);
 
         /*
          * Update LFSR structure with IVs
@@ -2121,9 +2028,7 @@ snow3gStateInitialize_8_multiKey(snow3gKeyState8_t *pCtx,
         pCtx->iLFSR_X = 0;
 
         /* FSM initialization  */
-        pCtx->FSM_X[0] =
-                pCtx->FSM_X[1] =
-                pCtx->FSM_X[2] = _mm256_setzero_si256();
+        pCtx->FSM_X[0] = pCtx->FSM_X[1] = pCtx->FSM_X[2] = _mm256_setzero_si256();
 
         /* Initialisation rounds */
         for (i = 0; i < 32; i++) {
@@ -2151,12 +2056,9 @@ snow3gStateInitialize_8_multiKey(snow3gKeyState8_t *pCtx,
  * @param [in]     pIV8         IV for buffer 8
  */
 static inline void
-snow3gStateInitialize_8(snow3gKeyState8_t *pCtx,
-                        const snow3g_key_schedule_t *pKeySched,
-                        const void *pIV1, const void *pIV2,
-                        const void *pIV3, const void *pIV4,
-                        const void *pIV5, const void *pIV6,
-                        const void *pIV7, const void *pIV8)
+snow3gStateInitialize_8(snow3gKeyState8_t *pCtx, const snow3g_key_schedule_t *pKeySched,
+                        const void *pIV1, const void *pIV2, const void *pIV3, const void *pIV4,
+                        const void *pIV5, const void *pIV6, const void *pIV7, const void *pIV8)
 {
         __m256i mR, mS, mT, mU, T0, T1;
         int i;
@@ -2164,10 +2066,8 @@ snow3gStateInitialize_8(snow3gKeyState8_t *pCtx,
         /* Initialize the LFSR table from constants, Keys, and IV */
 
         /* Load complete 256b IV into register (SSE2)*/
-        static const __m256i swapMask = {
-                0x0405060700010203ULL, 0x0c0d0e0f08090a0bULL,
-                0x0405060700010203ULL, 0x0c0d0e0f08090a0bULL
-        };
+        static const __m256i swapMask = { 0x0405060700010203ULL, 0x0c0d0e0f08090a0bULL,
+                                          0x0405060700010203ULL, 0x0c0d0e0f08090a0bULL };
 
         mR = load_2xm128i_into_m256i(pIV5, pIV1);
         mS = load_2xm128i_into_m256i(pIV6, pIV2);
@@ -2181,10 +2081,8 @@ snow3gStateInitialize_8(snow3gKeyState8_t *pCtx,
                 const __m256i V0 = _mm256_set1_epi32(K);
                 const __m256i V1 = _mm256_set1_epi32(L);
 
-                pCtx->LFSR_X[i + 4] =
-                        pCtx->LFSR_X[i + 12] = V0;
-                pCtx->LFSR_X[i + 0] =
-                        pCtx->LFSR_X[i + 8] = V1;
+                pCtx->LFSR_X[i + 4] = pCtx->LFSR_X[i + 12] = V0;
+                pCtx->LFSR_X[i + 0] = pCtx->LFSR_X[i + 8] = V1;
         }
 
         /* Update the schedule structure with IVs */
@@ -2217,9 +2115,7 @@ snow3gStateInitialize_8(snow3gKeyState8_t *pCtx,
         pCtx->iLFSR_X = 0;
 
         /* FSM initialization (SSE2) */
-        pCtx->FSM_X[0] =
-                pCtx->FSM_X[1] =
-                pCtx->FSM_X[2] = _mm256_setzero_si256();
+        pCtx->FSM_X[0] = pCtx->FSM_X[1] = pCtx->FSM_X[2] = _mm256_setzero_si256();
 
         /* Initialisation rounds */
         for (i = 0; i < 32; i++) {
@@ -2241,16 +2137,14 @@ snow3gStateInitialize_8(snow3gKeyState8_t *pCtx,
  * @param[out] pOut           Output buffer
  * @param[in]  lengthInBytes  length in bytes of the data to be encrypted
  */
-static inline void f8_snow3g(snow3gKeyState1_t *pCtx,
-                             const void *pIn,
-                             void *pOut,
-                             const uint32_t lengthInBytes)
+static inline void
+f8_snow3g(snow3gKeyState1_t *pCtx, const void *pIn, void *pOut, const uint32_t lengthInBytes)
 {
         uint32_t qwords = lengthInBytes / SNOW3G_8_BYTES; /* number of qwords */
-        const uint32_t words = lengthInBytes & 4; /* remaining word if not 0 */
-        const uint32_t bytes = lengthInBytes & 3; /* remaining bytes */
-        uint32_t KS4;                       /* 4 bytes of key stream */
-        uint64_t KS8;                       /* 8 bytes of key stream */
+        const uint32_t words = lengthInBytes & 4;         /* remaining word if not 0 */
+        const uint32_t bytes = lengthInBytes & 3;         /* remaining bytes */
+        uint32_t KS4;                                     /* 4 bytes of key stream */
+        uint64_t KS8;                                     /* 8 bytes of key stream */
         const uint8_t *pBufferIn = pIn;
         uint8_t *pBufferOut = pOut;
 
@@ -2315,24 +2209,23 @@ static inline void f8_snow3g(snow3gKeyState1_t *pCtx,
  * @param[in]  pDstState   Pointer to the destination state
  * @param[in]  NumBuffer   Buffer number
  */
-static inline void snow3gStateConvert_8(const snow3gKeyState8_t *pSrcState,
-                                        snow3gKeyState1_t *pDstState,
-                                        const uint32_t NumBuffer)
+static inline void
+snow3gStateConvert_8(const snow3gKeyState8_t *pSrcState, snow3gKeyState1_t *pDstState,
+                     const uint32_t NumBuffer)
 {
         const uint32_t iLFSR_X = pSrcState->iLFSR_X;
         const __m256i *LFSR_X = pSrcState->LFSR_X;
         uint32_t i;
 
         for (i = 0; i < 16; i++) {
-                const uint32_t *pLFSR_X =
-                        (const uint32_t *) &LFSR_X[(i + iLFSR_X) & 15];
+                const uint32_t *pLFSR_X = (const uint32_t *) &LFSR_X[(i + iLFSR_X) & 15];
 
                 pDstState->LFSR_S[i] = pLFSR_X[NumBuffer];
         }
 
-        const uint32_t *pFSM_X0 = (const uint32_t *)&pSrcState->FSM_X[0];
-        const uint32_t *pFSM_X1 = (const uint32_t *)&pSrcState->FSM_X[1];
-        const uint32_t *pFSM_X2 = (const uint32_t *)&pSrcState->FSM_X[2];
+        const uint32_t *pFSM_X0 = (const uint32_t *) &pSrcState->FSM_X[0];
+        const uint32_t *pFSM_X1 = (const uint32_t *) &pSrcState->FSM_X[1];
+        const uint32_t *pFSM_X2 = (const uint32_t *) &pSrcState->FSM_X[2];
 
         pDstState->FSM_R1 = pFSM_X0[NumBuffer];
         pDstState->FSM_R2 = pFSM_X1[NumBuffer];
@@ -2347,24 +2240,23 @@ static inline void snow3gStateConvert_8(const snow3gKeyState8_t *pSrcState,
  * @param[in]  pDstState   Pointer to the destination state
  * @param[in]  NumBuffer   Buffer number
  */
-static inline void snow3gStateConvert_4(const snow3gKeyState4_t *pSrcState,
-                                        snow3gKeyState1_t *pDstState,
-                                        const uint32_t NumBuffer)
+static inline void
+snow3gStateConvert_4(const snow3gKeyState4_t *pSrcState, snow3gKeyState1_t *pDstState,
+                     const uint32_t NumBuffer)
 {
         const uint32_t iLFSR_X = pSrcState->iLFSR_X;
         const __m128i *LFSR_X = pSrcState->LFSR_X;
         uint32_t i;
 
         for (i = 0; i < 16; i++) {
-                const uint32_t *pLFSR_X =
-                        (const uint32_t *) &LFSR_X[(i + iLFSR_X) & 15];
+                const uint32_t *pLFSR_X = (const uint32_t *) &LFSR_X[(i + iLFSR_X) & 15];
 
                 pDstState->LFSR_S[i] = pLFSR_X[NumBuffer];
         }
 
-        const uint32_t *pFSM_X0 = (const uint32_t *)&pSrcState->FSM_X[0];
-        const uint32_t *pFSM_X1 = (const uint32_t *)&pSrcState->FSM_X[1];
-        const uint32_t *pFSM_X2 = (const uint32_t *)&pSrcState->FSM_X[2];
+        const uint32_t *pFSM_X0 = (const uint32_t *) &pSrcState->FSM_X[0];
+        const uint32_t *pFSM_X1 = (const uint32_t *) &pSrcState->FSM_X[1];
+        const uint32_t *pFSM_X2 = (const uint32_t *) &pSrcState->FSM_X[2];
 
         pDstState->FSM_R1 = pFSM_X0[NumBuffer];
         pDstState->FSM_R2 = pFSM_X1[NumBuffer];
@@ -2375,7 +2267,8 @@ static inline void snow3gStateConvert_4(const snow3gKeyState4_t *pSrcState,
  * @brief Provides size of key schedule structure
  * @return Key schedule structure in bytes
  */
-size_t SNOW3G_KEY_SCHED_SIZE(void)
+size_t
+SNOW3G_KEY_SCHED_SIZE(void)
 {
         return sizeof(snow3g_key_schedule_t);
 }
@@ -2388,12 +2281,13 @@ size_t SNOW3G_KEY_SCHED_SIZE(void)
  * @retval 0 all OK
  * @retval -1 parameter error
  */
-int SNOW3G_INIT_KEY_SCHED(const void *pKey, snow3g_key_schedule_t *pCtx)
+int
+SNOW3G_INIT_KEY_SCHED(const void *pKey, snow3g_key_schedule_t *pCtx)
 {
 #ifdef SAFE_PARAM
         if ((pKey == NULL) || (pCtx == NULL))
-        /* reset error status */
-        imb_set_errno(NULL, 0);
+                /* reset error status */
+                imb_set_errno(NULL, 0);
 
         if (pKey == NULL) {
                 imb_set_errno(NULL, IMB_ERR_NULL_KEY);
@@ -2426,11 +2320,9 @@ int SNOW3G_INIT_KEY_SCHED(const void *pKey, snow3g_key_schedule_t *pCtx)
  * @param[out] pBufferOut    pointer to an output buffer
  * @param[in]  lengthInBytes message length in bits
  */
-void SNOW3G_F8_1_BUFFER(const snow3g_key_schedule_t *pHandle,
-                        const void *pIV,
-                        const void *pBufferIn,
-                        void  *pBufferOut,
-                        const uint32_t lengthInBytes)
+void
+SNOW3G_F8_1_BUFFER(const snow3g_key_schedule_t *pHandle, const void *pIV, const void *pBufferIn,
+                   void *pBufferOut, const uint32_t lengthInBytes)
 {
 #ifdef SAFE_PARAM
 
@@ -2489,12 +2381,9 @@ void SNOW3G_F8_1_BUFFER(const snow3g_key_schedule_t *pHandle,
  * @param[in] lengthInBits message length in bits
  * @param[in] offsetInBits message offset in bits
  */
-void SNOW3G_F8_1_BUFFER_BIT(const snow3g_key_schedule_t *pHandle,
-                            const void *pIV,
-                            const void *pBufferIn,
-                            void *pBufferOut,
-                            const uint32_t lengthInBits,
-                            const uint32_t offsetInBits)
+void
+SNOW3G_F8_1_BUFFER_BIT(const snow3g_key_schedule_t *pHandle, const void *pIV, const void *pBufferIn,
+                       void *pBufferOut, const uint32_t lengthInBits, const uint32_t offsetInBits)
 {
 #ifdef SAFE_PARAM
         /* reset error status */
@@ -2525,15 +2414,13 @@ void SNOW3G_F8_1_BUFFER_BIT(const snow3g_key_schedule_t *pHandle,
         uint8_t save_start = 0, save_end = 0;
         uint8_t *dst = &((uint8_t *) pBufferOut)[offsetInBits >> 3];
 
-        save_msg_start_end(dst, offsetInBits & 7, lengthInBits, &save_start,
-                           &save_end);
+        save_msg_start_end(dst, offsetInBits & 7, lengthInBits, &save_start, &save_end);
         copy_bits(dst, pBufferIn, offsetInBits, lengthInBits);
 
         SNOW3G_F8_1_BUFFER(pHandle, pIV, dst, dst, (lengthInBits + 7) / 8);
 
         shift_bits(dst, offsetInBits & 7, lengthInBits);
-        restore_msg_start_end(dst, offsetInBits & 7, lengthInBits, save_start,
-                              save_end);
+        restore_msg_start_end(dst, offsetInBits & 7, lengthInBits, save_start, save_end);
 }
 
 /**
@@ -2553,15 +2440,10 @@ void SNOW3G_F8_1_BUFFER_BIT(const snow3g_key_schedule_t *pHandle,
  * @param[in] pBufOut2     pointer to an output buffer
  * @param[in] lenInBytes2  message size in bytes
  */
-void SNOW3G_F8_2_BUFFER(const snow3g_key_schedule_t *pHandle,
-                        const void *pIV1,
-                        const void *pIV2,
-                        const void *pBufIn1,
-                        void *pBufOut1,
-                        const uint32_t lenInBytes1,
-                        const void *pBufIn2,
-                        void *pBufOut2,
-                        const uint32_t lenInBytes2)
+void
+SNOW3G_F8_2_BUFFER(const snow3g_key_schedule_t *pHandle, const void *pIV1, const void *pIV2,
+                   const void *pBufIn1, void *pBufOut1, const uint32_t lenInBytes1,
+                   const void *pBufIn2, void *pBufOut2, const uint32_t lenInBytes2)
 {
 #ifdef SAFE_PARAM
         /* reset error status */
@@ -2584,8 +2466,8 @@ void SNOW3G_F8_2_BUFFER(const snow3g_key_schedule_t *pHandle,
                 imb_set_errno(NULL, IMB_ERR_NULL_DST);
                 return;
         }
-        if ((lenInBytes1 == 0) || (lenInBytes1 > SNOW3G_MAX_BYTELEN) ||
-            (lenInBytes2 == 0) || (lenInBytes2 > SNOW3G_MAX_BYTELEN)) {
+        if ((lenInBytes1 == 0) || (lenInBytes1 > SNOW3G_MAX_BYTELEN) || (lenInBytes2 == 0) ||
+            (lenInBytes2 > SNOW3G_MAX_BYTELEN)) {
                 imb_set_errno(NULL, IMB_ERR_CIPH_LEN);
                 return;
         }
@@ -2620,7 +2502,6 @@ void SNOW3G_F8_2_BUFFER(const snow3g_key_schedule_t *pHandle,
         CLEAR_SCRATCH_GPS();
         CLEAR_SCRATCH_SIMD_REGS();
 #endif /* SAFE_DATA */
-
 }
 
 /**
@@ -2648,23 +2529,13 @@ void SNOW3G_F8_2_BUFFER(const snow3g_key_schedule_t *pHandle,
  * @param[in] pBufferOut4     pointer to an output buffer
  * @param[in] lengthInBytes4  message size in bytes
  */
-void SNOW3G_F8_4_BUFFER(const snow3g_key_schedule_t *pHandle,
-                        const void *pIV1,
-                        const void *pIV2,
-                        const void *pIV3,
-                        const void *pIV4,
-                        const void *pBufferIn1,
-                        void *pBufferOut1,
-                        const uint32_t lengthInBytes1,
-                        const void *pBufferIn2,
-                        void *pBufferOut2,
-                        const uint32_t lengthInBytes2,
-                        const void *pBufferIn3,
-                        void *pBufferOut3,
-                        const uint32_t lengthInBytes3,
-                        const void *pBufferIn4,
-                        void *pBufferOut4,
-                        const uint32_t lengthInBytes4)
+void
+SNOW3G_F8_4_BUFFER(const snow3g_key_schedule_t *pHandle, const void *pIV1, const void *pIV2,
+                   const void *pIV3, const void *pIV4, const void *pBufferIn1, void *pBufferOut1,
+                   const uint32_t lengthInBytes1, const void *pBufferIn2, void *pBufferOut2,
+                   const uint32_t lengthInBytes2, const void *pBufferIn3, void *pBufferOut3,
+                   const uint32_t lengthInBytes3, const void *pBufferIn4, void *pBufferOut4,
+                   const uint32_t lengthInBytes4)
 {
         const size_t num_lanes = 4;
         snow3gKeyState4_t ctx;
@@ -2673,12 +2544,9 @@ void SNOW3G_F8_4_BUFFER(const snow3g_key_schedule_t *pHandle,
         const uint8_t *pBufferIn[4];
         uint32_t bytes, qwords, i;
 
-        cptr_copy_4((const void **)pBufferIn,
-                    pBufferIn1, pBufferIn2, pBufferIn3, pBufferIn4);
-        ptr_copy_4((void **)pBufferOut, pBufferOut1, pBufferOut2,
-                   pBufferOut3, pBufferOut4);
-        length_copy_4(lenInBytes, lengthInBytes1, lengthInBytes2,
-                      lengthInBytes3, lengthInBytes4);
+        cptr_copy_4((const void **) pBufferIn, pBufferIn1, pBufferIn2, pBufferIn3, pBufferIn4);
+        ptr_copy_4((void **) pBufferOut, pBufferOut1, pBufferOut2, pBufferOut3, pBufferOut4);
+        length_copy_4(lenInBytes, lengthInBytes1, lengthInBytes2, lengthInBytes3, lengthInBytes4);
 
 #ifdef SAFE_PARAM
         /* reset error status */
@@ -2688,15 +2556,13 @@ void SNOW3G_F8_4_BUFFER(const snow3g_key_schedule_t *pHandle,
                 imb_set_errno(NULL, IMB_ERR_NULL_EXP_KEY);
                 return;
         }
-        if ((pIV1 == NULL) || pIV2 == NULL ||
-            (pIV3 == NULL) || (pIV4 == NULL)) {
+        if ((pIV1 == NULL) || pIV2 == NULL || (pIV3 == NULL) || (pIV4 == NULL)) {
                 imb_set_errno(NULL, IMB_ERR_NULL_IV);
                 return;
         }
-        if (!cptr_check((const void * const *)pBufferIn, num_lanes,
-                        IMB_ERR_NULL_SRC))
+        if (!cptr_check((const void *const *) pBufferIn, num_lanes, IMB_ERR_NULL_SRC))
                 return;
-        if (!ptr_check((void **)pBufferOut, num_lanes, IMB_ERR_NULL_DST))
+        if (!ptr_check((void **) pBufferOut, num_lanes, IMB_ERR_NULL_DST))
                 return;
         if (!length_check(lenInBytes, num_lanes))
                 return;
@@ -2726,11 +2592,9 @@ void SNOW3G_F8_4_BUFFER(const snow3g_key_schedule_t *pHandle,
                 snow3g_keystream_4_16(&ctx, ks);
 
                 for (i = 0; i < num_lanes; i++) {
-                        const __m128i in =
-                                _mm_loadu_si128((const __m128i *)pBufferIn[i]);
+                        const __m128i in = _mm_loadu_si128((const __m128i *) pBufferIn[i]);
 
-                        _mm_storeu_si128((__m128i *)pBufferOut[i],
-                                         _mm_xor_si128(in, ks[i]));
+                        _mm_storeu_si128((__m128i *) pBufferOut[i], _mm_xor_si128(in, ks[i]));
 
                         pBufferOut[i] += (2 * SNOW3G_8_BYTES);
                         pBufferIn[i] += (2 * SNOW3G_8_BYTES);
@@ -2744,14 +2608,14 @@ void SNOW3G_F8_4_BUFFER(const snow3g_key_schedule_t *pHandle,
 
                 snow3g_keystream_4_8(&ctx, &L, &H);
 
-                pBufferIn[0] = xor_keystrm_rev(pBufferOut[0], pBufferIn[0],
-                                               _mm_extract_epi64(L, 0));
-                pBufferIn[1] = xor_keystrm_rev(pBufferOut[1], pBufferIn[1],
-                                               _mm_extract_epi64(L, 1));
-                pBufferIn[2] = xor_keystrm_rev(pBufferOut[2], pBufferIn[2],
-                                               _mm_extract_epi64(H, 0));
-                pBufferIn[3] = xor_keystrm_rev(pBufferOut[3], pBufferIn[3],
-                                               _mm_extract_epi64(H, 1));
+                pBufferIn[0] =
+                        xor_keystrm_rev(pBufferOut[0], pBufferIn[0], _mm_extract_epi64(L, 0));
+                pBufferIn[1] =
+                        xor_keystrm_rev(pBufferOut[1], pBufferIn[1], _mm_extract_epi64(L, 1));
+                pBufferIn[2] =
+                        xor_keystrm_rev(pBufferOut[2], pBufferIn[2], _mm_extract_epi64(H, 0));
+                pBufferIn[3] =
+                        xor_keystrm_rev(pBufferOut[3], pBufferIn[3], _mm_extract_epi64(H, 1));
 
                 for (i = 0; i < num_lanes; i++)
                         pBufferOut[i] += SNOW3G_8_BYTES;
@@ -2791,10 +2655,8 @@ void SNOW3G_F8_4_BUFFER(const snow3g_key_schedule_t *pHandle,
  * @param[in] lengthInBytes pointer to an array of message lengths in bytes
  */
 static inline void
-snow3g_8_buffer_ks_32_8_multi(const snow3g_key_schedule_t * const pKey[],
-                              const void * const IV[],
-                              const void * const pBufferIn[],
-                              void *pBufferOut[],
+snow3g_8_buffer_ks_32_8_multi(const snow3g_key_schedule_t *const pKey[], const void *const IV[],
+                              const void *const pBufferIn[], void *pBufferOut[],
                               const uint32_t *lengthInBytes)
 {
         const size_t num_lanes = 8;
@@ -2808,12 +2670,9 @@ snow3g_8_buffer_ks_32_8_multi(const snow3g_key_schedule_t * const pKey[],
         uint32_t bytes_left = bytes & (~(small_block_size - 1));
         size_t i;
 
-        memcpy((void *)tBufferIn, (const void *)pBufferIn,
-               sizeof(tBufferIn));
-        memcpy((void *)tBufferOut, (const void *)pBufferOut,
-               sizeof(tBufferOut));
-        memcpy((void *)tLenInBytes, (const void *)lengthInBytes,
-               sizeof(tLenInBytes));
+        memcpy((void *) tBufferIn, (const void *) pBufferIn, sizeof(tBufferIn));
+        memcpy((void *) tBufferOut, (const void *) pBufferOut, sizeof(tBufferOut));
+        memcpy((void *) tLenInBytes, (const void *) lengthInBytes, sizeof(tLenInBytes));
 
         /* Initialize the schedule from the IV */
         snow3gStateInitialize_8_multiKey(&ctx, pKey, IV);
@@ -2839,15 +2698,11 @@ snow3g_8_buffer_ks_32_8_multi(const snow3g_key_schedule_t * const pKey[],
                         snow3g_keystream_8_32(&ctx, ks);
 
                         for (j = 0; j < num_lanes; j++) {
-                                const __m256i *in_ptr =
-                                        (const __m256i *)tBufferIn[j];
-                                const __m256i in_val =
-                                        _mm256_loadu_si256(in_ptr);
-                                const __m256i xor_val =
-                                        _mm256_xor_si256(in_val, ks[j]);
+                                const __m256i *in_ptr = (const __m256i *) tBufferIn[j];
+                                const __m256i in_val = _mm256_loadu_si256(in_ptr);
+                                const __m256i xor_val = _mm256_xor_si256(in_val, ks[j]);
 
-                                _mm256_storeu_si256((__m256i *)tBufferOut[j],
-                                                    xor_val);
+                                _mm256_storeu_si256((__m256i *) tBufferOut[j], xor_val);
 
                                 tBufferOut[j] += big_block_size;
                                 tBufferIn[j] += big_block_size;
@@ -2871,30 +2726,22 @@ snow3g_8_buffer_ks_32_8_multi(const snow3g_key_schedule_t * const pKey[],
 
                         snow3g_keystream_8_8(&ctx, &L, &H);
 
-                        tBufferIn[0] =
-                                xor_keystrm_rev(tBufferOut[0], tBufferIn[0],
-                                                _mm256_extract_epi64(L, 0));
-                        tBufferIn[1] =
-                                xor_keystrm_rev(tBufferOut[1], tBufferIn[1],
-                                                _mm256_extract_epi64(L, 1));
-                        tBufferIn[2] =
-                                xor_keystrm_rev(tBufferOut[2], tBufferIn[2],
-                                                _mm256_extract_epi64(H, 0));
-                        tBufferIn[3] =
-                                xor_keystrm_rev(tBufferOut[3], tBufferIn[3],
-                                                _mm256_extract_epi64(H, 1));
-                        tBufferIn[4] =
-                                xor_keystrm_rev(tBufferOut[4], tBufferIn[4],
-                                                _mm256_extract_epi64(L, 2));
-                        tBufferIn[5] =
-                                xor_keystrm_rev(tBufferOut[5], tBufferIn[5],
-                                                _mm256_extract_epi64(L, 3));
-                        tBufferIn[6] =
-                                xor_keystrm_rev(tBufferOut[6], tBufferIn[6],
-                                                _mm256_extract_epi64(H, 2));
-                        tBufferIn[7] =
-                                xor_keystrm_rev(tBufferOut[7], tBufferIn[7],
-                                                _mm256_extract_epi64(H, 3));
+                        tBufferIn[0] = xor_keystrm_rev(tBufferOut[0], tBufferIn[0],
+                                                       _mm256_extract_epi64(L, 0));
+                        tBufferIn[1] = xor_keystrm_rev(tBufferOut[1], tBufferIn[1],
+                                                       _mm256_extract_epi64(L, 1));
+                        tBufferIn[2] = xor_keystrm_rev(tBufferOut[2], tBufferIn[2],
+                                                       _mm256_extract_epi64(H, 0));
+                        tBufferIn[3] = xor_keystrm_rev(tBufferOut[3], tBufferIn[3],
+                                                       _mm256_extract_epi64(H, 1));
+                        tBufferIn[4] = xor_keystrm_rev(tBufferOut[4], tBufferIn[4],
+                                                       _mm256_extract_epi64(L, 2));
+                        tBufferIn[5] = xor_keystrm_rev(tBufferOut[5], tBufferIn[5],
+                                                       _mm256_extract_epi64(L, 3));
+                        tBufferIn[6] = xor_keystrm_rev(tBufferOut[6], tBufferIn[6],
+                                                       _mm256_extract_epi64(H, 2));
+                        tBufferIn[7] = xor_keystrm_rev(tBufferOut[7], tBufferIn[7],
+                                                       _mm256_extract_epi64(H, 3));
 
                         for (j = 0; j < num_lanes; j++)
                                 tBufferOut[j] += small_block_size;
@@ -2933,11 +2780,8 @@ snow3g_8_buffer_ks_32_8_multi(const snow3g_key_schedule_t * const pKey[],
  * @param[in] lengthInBytes pointer to an array of message lengths in bytes
  */
 static inline void
-snow3g_8_buffer_ks_32_8(const snow3g_key_schedule_t *pKey,
-                        const void * const IV[],
-                        const uint8_t *pBufferIn[],
-                        uint8_t *pBufferOut[],
-                        uint32_t *lengthInBytes)
+snow3g_8_buffer_ks_32_8(const snow3g_key_schedule_t *pKey, const void *const IV[],
+                        const uint8_t *pBufferIn[], uint8_t *pBufferOut[], uint32_t *lengthInBytes)
 {
         const size_t num_lanes = 8;
         const size_t big_block_size = 32;
@@ -2947,8 +2791,7 @@ snow3g_8_buffer_ks_32_8(const snow3g_key_schedule_t *pKey,
         uint32_t i, bytes_left = bytes & (~(small_block_size - 1));
 
         /* Initialize the schedule from the IV */
-        snow3gStateInitialize_8(&ctx, pKey, IV[0], IV[1], IV[2],
-                                IV[3], IV[4], IV[5], IV[6], IV[7]);
+        snow3gStateInitialize_8(&ctx, pKey, IV[0], IV[1], IV[2], IV[3], IV[4], IV[5], IV[6], IV[7]);
 
         /* Clock FSM and LFSR once, ignore the key stream */
         (void) snow3g_keystream_8_4(&ctx);
@@ -2967,15 +2810,11 @@ snow3g_8_buffer_ks_32_8(const snow3g_key_schedule_t *pKey,
                         snow3g_keystream_8_32(&ctx, ks);
 
                         for (j = 0; j < num_lanes; j++) {
-                                const __m256i *in_ptr =
-                                        (const __m256i *)pBufferIn[j];
-                                const __m256i in_val =
-                                        _mm256_loadu_si256(in_ptr);
-                                const __m256i xor_val =
-                                        _mm256_xor_si256(in_val, ks[j]);
+                                const __m256i *in_ptr = (const __m256i *) pBufferIn[j];
+                                const __m256i in_val = _mm256_loadu_si256(in_ptr);
+                                const __m256i xor_val = _mm256_xor_si256(in_val, ks[j]);
 
-                                _mm256_storeu_si256((__m256i *)pBufferOut[j],
-                                                    xor_val);
+                                _mm256_storeu_si256((__m256i *) pBufferOut[j], xor_val);
 
                                 pBufferOut[j] += big_block_size;
                                 pBufferIn[j] += big_block_size;
@@ -2999,30 +2838,22 @@ snow3g_8_buffer_ks_32_8(const snow3g_key_schedule_t *pKey,
 
                         snow3g_keystream_8_8(&ctx, &L, &H);
 
-                        pBufferIn[0] =
-                                xor_keystrm_rev(pBufferOut[0], pBufferIn[0],
-                                                _mm256_extract_epi64(L, 0));
-                        pBufferIn[1] =
-                                xor_keystrm_rev(pBufferOut[1], pBufferIn[1],
-                                                _mm256_extract_epi64(L, 1));
-                        pBufferIn[2] =
-                                xor_keystrm_rev(pBufferOut[2], pBufferIn[2],
-                                                _mm256_extract_epi64(H, 0));
-                        pBufferIn[3] =
-                                xor_keystrm_rev(pBufferOut[3], pBufferIn[3],
-                                                _mm256_extract_epi64(H, 1));
-                        pBufferIn[4] =
-                                xor_keystrm_rev(pBufferOut[4], pBufferIn[4],
-                                                _mm256_extract_epi64(L, 2));
-                        pBufferIn[5] =
-                                xor_keystrm_rev(pBufferOut[5], pBufferIn[5],
-                                                _mm256_extract_epi64(L, 3));
-                        pBufferIn[6] =
-                                xor_keystrm_rev(pBufferOut[6], pBufferIn[6],
-                                                _mm256_extract_epi64(H, 2));
-                        pBufferIn[7] =
-                                xor_keystrm_rev(pBufferOut[7], pBufferIn[7],
-                                                _mm256_extract_epi64(H, 3));
+                        pBufferIn[0] = xor_keystrm_rev(pBufferOut[0], pBufferIn[0],
+                                                       _mm256_extract_epi64(L, 0));
+                        pBufferIn[1] = xor_keystrm_rev(pBufferOut[1], pBufferIn[1],
+                                                       _mm256_extract_epi64(L, 1));
+                        pBufferIn[2] = xor_keystrm_rev(pBufferOut[2], pBufferIn[2],
+                                                       _mm256_extract_epi64(H, 0));
+                        pBufferIn[3] = xor_keystrm_rev(pBufferOut[3], pBufferIn[3],
+                                                       _mm256_extract_epi64(H, 1));
+                        pBufferIn[4] = xor_keystrm_rev(pBufferOut[4], pBufferIn[4],
+                                                       _mm256_extract_epi64(L, 2));
+                        pBufferIn[5] = xor_keystrm_rev(pBufferOut[5], pBufferIn[5],
+                                                       _mm256_extract_epi64(L, 3));
+                        pBufferIn[6] = xor_keystrm_rev(pBufferOut[6], pBufferIn[6],
+                                                       _mm256_extract_epi64(H, 2));
+                        pBufferIn[7] = xor_keystrm_rev(pBufferOut[7], pBufferIn[7],
+                                                       _mm256_extract_epi64(H, 3));
 
                         for (j = 0; j < num_lanes; j++)
                                 pBufferOut[j] += small_block_size;
@@ -3040,8 +2871,7 @@ snow3g_8_buffer_ks_32_8(const snow3g_key_schedule_t *pKey,
                         continue;
 
                 snow3gStateConvert_8(&ctx, &ctx_t, i);
-                f8_snow3g(&ctx_t, pBufferIn[i], pBufferOut[i],
-                          lengthInBytes[i]);
+                f8_snow3g(&ctx_t, pBufferIn[i], pBufferOut[i], lengthInBytes[i]);
         }
 
 #ifdef SAFE_DATA
@@ -3064,11 +2894,10 @@ snow3g_8_buffer_ks_32_8(const snow3g_key_schedule_t *pKey,
  * @param[out] pBufferOut   pointer to an array of output buffers
  * @param[in] lengthInBytes pointer to an array of message lengths in bytes
  */
-void SNOW3G_F8_8_BUFFER_MULTIKEY(const snow3g_key_schedule_t * const pKey[],
-                                 const void * const IV[],
-                                 const void * const BufferIn[],
-                                 void *BufferOut[],
-                                 const uint32_t lengthInBytes[])
+void
+SNOW3G_F8_8_BUFFER_MULTIKEY(const snow3g_key_schedule_t *const pKey[], const void *const IV[],
+                            const void *const BufferIn[], void *BufferOut[],
+                            const uint32_t lengthInBytes[])
 {
         const size_t num_lanes = 8;
 
@@ -3076,19 +2905,13 @@ void SNOW3G_F8_8_BUFFER_MULTIKEY(const snow3g_key_schedule_t * const pKey[],
         /* reset error status */
         imb_set_errno(NULL, 0);
 
-        if (!cptr_check((const void * const *)pKey,
-                        num_lanes,
-                        IMB_ERR_NULL_EXP_KEY))
+        if (!cptr_check((const void *const *) pKey, num_lanes, IMB_ERR_NULL_EXP_KEY))
                 return;
-        if (!cptr_check((const void * const *)IV,
-                        num_lanes,
-                        IMB_ERR_NULL_IV))
+        if (!cptr_check((const void *const *) IV, num_lanes, IMB_ERR_NULL_IV))
                 return;
-        if (!cptr_check((const void * const *)BufferIn,
-                        num_lanes,
-                        IMB_ERR_NULL_SRC))
+        if (!cptr_check((const void *const *) BufferIn, num_lanes, IMB_ERR_NULL_SRC))
                 return;
-        if (!ptr_check((void **)BufferOut, num_lanes, IMB_ERR_NULL_DST))
+        if (!ptr_check((void **) BufferOut, num_lanes, IMB_ERR_NULL_DST))
                 return;
         if (!length_check(lengthInBytes, num_lanes))
                 return;
@@ -3099,8 +2922,7 @@ void SNOW3G_F8_8_BUFFER_MULTIKEY(const snow3g_key_schedule_t * const pKey[],
         size_t i;
 
         for (i = 0; i < num_lanes; i++)
-                SNOW3G_F8_1_BUFFER(pKey[i], IV[i], BufferIn[i], BufferOut[i],
-                                   lengthInBytes[i]);
+                SNOW3G_F8_1_BUFFER(pKey[i], IV[i], BufferIn[i], BufferOut[i], lengthInBytes[i]);
 #else
 
 #ifdef SAFE_DATA
@@ -3108,8 +2930,7 @@ void SNOW3G_F8_8_BUFFER_MULTIKEY(const snow3g_key_schedule_t * const pKey[],
 #endif /* SAFE_DATA */
 
         (void) num_lanes; /* avoid compiler warning */
-        snow3g_8_buffer_ks_32_8_multi(pKey, IV, BufferIn,
-                                      BufferOut, lengthInBytes);
+        snow3g_8_buffer_ks_32_8_multi(pKey, IV, BufferIn, BufferOut, lengthInBytes);
 
 #ifdef SAFE_DATA
         CLEAR_SCRATCH_GPS();
@@ -3159,58 +2980,34 @@ void SNOW3G_F8_8_BUFFER_MULTIKEY(const snow3g_key_schedule_t * const pKey[],
  * @param[in] pBufOut8        pointer to an output buffer
  * @param[in] lenInBytes8     message size in bytes
  */
-void SNOW3G_F8_8_BUFFER(const snow3g_key_schedule_t *pHandle,
-                        const void *pIV1,
-                        const void *pIV2,
-                        const void *pIV3,
-                        const void *pIV4,
-                        const void *pIV5,
-                        const void *pIV6,
-                        const void *pIV7,
-                        const void *pIV8,
-                        const void *pBufIn1,
-                        void *pBufOut1,
-                        const uint32_t lenInBytes1,
-                        const void *pBufIn2,
-                        void *pBufOut2,
-                        const uint32_t lenInBytes2,
-                        const void *pBufIn3,
-                        void *pBufOut3,
-                        const uint32_t lenInBytes3,
-                        const void *pBufIn4,
-                        void *pBufOut4,
-                        const uint32_t lenInBytes4,
-                        const void *pBufIn5,
-                        void *pBufOut5,
-                        const uint32_t lenInBytes5,
-                        const void *pBufIn6,
-                        void *pBufOut6,
-                        const uint32_t lenInBytes6,
-                        const void *pBufIn7,
-                        void *pBufOut7,
-                        const uint32_t lenInBytes7,
-                        const void *pBufIn8,
-                        void *pBufOut8,
-                        const uint32_t lenInBytes8)
+void
+SNOW3G_F8_8_BUFFER(const snow3g_key_schedule_t *pHandle, const void *pIV1, const void *pIV2,
+                   const void *pIV3, const void *pIV4, const void *pIV5, const void *pIV6,
+                   const void *pIV7, const void *pIV8, const void *pBufIn1, void *pBufOut1,
+                   const uint32_t lenInBytes1, const void *pBufIn2, void *pBufOut2,
+                   const uint32_t lenInBytes2, const void *pBufIn3, void *pBufOut3,
+                   const uint32_t lenInBytes3, const void *pBufIn4, void *pBufOut4,
+                   const uint32_t lenInBytes4, const void *pBufIn5, void *pBufOut5,
+                   const uint32_t lenInBytes5, const void *pBufIn6, void *pBufOut6,
+                   const uint32_t lenInBytes6, const void *pBufIn7, void *pBufOut7,
+                   const uint32_t lenInBytes7, const void *pBufIn8, void *pBufOut8,
+                   const uint32_t lenInBytes8)
 {
         uint32_t lengthInBytes[8];
         const uint8_t *pBufferIn[8];
         const void *pIV[8];
         uint8_t *pBufferOut[8];
 
-        length_copy_8(lengthInBytes,
-                      lenInBytes1, lenInBytes2, lenInBytes3, lenInBytes4,
+        length_copy_8(lengthInBytes, lenInBytes1, lenInBytes2, lenInBytes3, lenInBytes4,
                       lenInBytes5, lenInBytes6, lenInBytes7, lenInBytes8);
 
-        cptr_copy_8((const void **)pBufferIn,
-                    pBufIn1, pBufIn2, pBufIn3, pBufIn4,
-                    pBufIn5, pBufIn6, pBufIn7, pBufIn8);
+        cptr_copy_8((const void **) pBufferIn, pBufIn1, pBufIn2, pBufIn3, pBufIn4, pBufIn5, pBufIn6,
+                    pBufIn7, pBufIn8);
 
         cptr_copy_8(pIV, pIV1, pIV2, pIV3, pIV4, pIV5, pIV6, pIV7, pIV8);
 
-        ptr_copy_8((void **)pBufferOut,
-                   pBufOut1, pBufOut2, pBufOut3, pBufOut4,
-                   pBufOut5, pBufOut6, pBufOut7, pBufOut8);
+        ptr_copy_8((void **) pBufferOut, pBufOut1, pBufOut2, pBufOut3, pBufOut4, pBufOut5, pBufOut6,
+                   pBufOut7, pBufOut8);
 
 #ifdef SAFE_PARAM
         const size_t num_lanes = 8;
@@ -3224,11 +3021,9 @@ void SNOW3G_F8_8_BUFFER(const snow3g_key_schedule_t *pHandle,
         }
         if (!cptr_check(pIV, num_lanes, IMB_ERR_NULL_IV))
                 return;
-        if (!cptr_check((const void * const *)pBufferIn,
-                        num_lanes,
-                        IMB_ERR_NULL_SRC))
+        if (!cptr_check((const void *const *) pBufferIn, num_lanes, IMB_ERR_NULL_SRC))
                 return;
-        if (!ptr_check((void **)pBufferOut, num_lanes, IMB_ERR_NULL_DST))
+        if (!ptr_check((void **) pBufferOut, num_lanes, IMB_ERR_NULL_DST))
                 return;
         if (!length_check(lengthInBytes, num_lanes))
                 return;
@@ -3240,27 +3035,22 @@ void SNOW3G_F8_8_BUFFER(const snow3g_key_schedule_t *pHandle,
         CLEAR_SCRATCH_SIMD_REGS();
 #endif /* SAFE_DATA */
 
-        snow3g_8_buffer_ks_32_8(pHandle, pIV, pBufferIn,
-                                pBufferOut, lengthInBytes);
+        snow3g_8_buffer_ks_32_8(pHandle, pIV, pBufferIn, pBufferOut, lengthInBytes);
 
 #ifdef SAFE_DATA
         CLEAR_SCRATCH_GPS();
         CLEAR_SCRATCH_SIMD_REGS();
 #endif
 #else  /* ~AVX2 */
-        SNOW3G_F8_4_BUFFER(pHandle,
-                           pIV[0], pIV[1], pIV[2], pIV[3],
-                           pBufferIn[0], pBufferOut[0], lengthInBytes[0],
-                           pBufferIn[1], pBufferOut[1], lengthInBytes[1],
-                           pBufferIn[2], pBufferOut[2], lengthInBytes[2],
-                           pBufferIn[3], pBufferOut[3], lengthInBytes[3]);
+        SNOW3G_F8_4_BUFFER(pHandle, pIV[0], pIV[1], pIV[2], pIV[3], pBufferIn[0], pBufferOut[0],
+                           lengthInBytes[0], pBufferIn[1], pBufferOut[1], lengthInBytes[1],
+                           pBufferIn[2], pBufferOut[2], lengthInBytes[2], pBufferIn[3],
+                           pBufferOut[3], lengthInBytes[3]);
 
-        SNOW3G_F8_4_BUFFER(pHandle,
-                           pIV[4], pIV[5], pIV[6], pIV[7],
-                           pBufferIn[4], pBufferOut[4], lengthInBytes[4],
-                           pBufferIn[5], pBufferOut[5], lengthInBytes[5],
-                           pBufferIn[6], pBufferOut[6], lengthInBytes[6],
-                           pBufferIn[7], pBufferOut[7], lengthInBytes[7]);
+        SNOW3G_F8_4_BUFFER(pHandle, pIV[4], pIV[5], pIV[6], pIV[7], pBufferIn[4], pBufferOut[4],
+                           lengthInBytes[4], pBufferIn[5], pBufferOut[5], lengthInBytes[5],
+                           pBufferIn[6], pBufferOut[6], lengthInBytes[6], pBufferIn[7],
+                           pBufferOut[7], lengthInBytes[7]);
 #endif /* AVX */
 }
 
@@ -3278,12 +3068,10 @@ void SNOW3G_F8_8_BUFFER(const snow3g_key_schedule_t *pHandle,
  * @param[in] bufLenInBytes pointer to an array of message lengths in bytes
  * @param[in] packetCount   number of packets to process (N)
  */
-void SNOW3G_F8_N_BUFFER(const snow3g_key_schedule_t *pCtx,
-                        const void * const IV[],
-                        const void * const pBufferIn[],
-                        void *pBufferOut[],
-                        const uint32_t bufLenInBytes[],
-                        const uint32_t packetCount)
+void
+SNOW3G_F8_N_BUFFER(const snow3g_key_schedule_t *pCtx, const void *const IV[],
+                   const void *const pBufferIn[], void *pBufferOut[],
+                   const uint32_t bufLenInBytes[], const uint32_t packetCount)
 {
 #ifdef SAFE_PARAM
         /* reset error status */
@@ -3295,11 +3083,9 @@ void SNOW3G_F8_N_BUFFER(const snow3g_key_schedule_t *pCtx,
         }
         if (!cptr_check(IV, packetCount, IMB_ERR_NULL_IV))
                 return;
-        if (!cptr_check((const void * const *)pBufferIn,
-                        packetCount,
-                        IMB_ERR_NULL_SRC))
+        if (!cptr_check((const void *const *) pBufferIn, packetCount, IMB_ERR_NULL_SRC))
                 return;
-        if (!ptr_check((void **)pBufferOut, packetCount, IMB_ERR_NULL_DST))
+        if (!ptr_check((void **) pBufferOut, packetCount, IMB_ERR_NULL_DST))
                 return;
         if (!length_check(bufLenInBytes, packetCount))
                 return;
@@ -3320,23 +3106,22 @@ void SNOW3G_F8_N_BUFFER(const snow3g_key_schedule_t *pCtx,
         uint8_t *srctempbuff;
         uint8_t *dsttempbuff;
         uint8_t *ivtempbuff;
-        uint8_t *pSrcBuf[NUM_PACKETS_16] = {NULL};
-        uint8_t *pDstBuf[NUM_PACKETS_16] = {NULL};
-        uint8_t *pIV[NUM_PACKETS_16] = {NULL};
-        uint32_t lensBuf[NUM_PACKETS_16] = {0};
+        uint8_t *pSrcBuf[NUM_PACKETS_16] = { NULL };
+        uint8_t *pDstBuf[NUM_PACKETS_16] = { NULL };
+        uint8_t *pIV[NUM_PACKETS_16] = { NULL };
+        uint32_t lensBuf[NUM_PACKETS_16] = { 0 };
 
-        memcpy((void *)lensBuf, bufLenInBytes, packetCount * sizeof(uint32_t));
-        memcpy((void *)pSrcBuf, pBufferIn, packetCount * sizeof(void *));
-        memcpy((void *)pDstBuf, pBufferOut, packetCount * sizeof(void *));
-        memcpy((void *)pIV, IV, packetCount * sizeof(void *));
+        memcpy((void *) lensBuf, bufLenInBytes, packetCount * sizeof(uint32_t));
+        memcpy((void *) pSrcBuf, pBufferIn, packetCount * sizeof(void *));
+        memcpy((void *) pDstBuf, pBufferOut, packetCount * sizeof(void *));
+        memcpy((void *) pIV, IV, packetCount * sizeof(void *));
 
         packet_index = packetCount;
 
         while (packet_index--) {
 
                 /* check if all packets are sorted by decreasing length */
-                if (packet_index > 0 && lensBuf[packet_index - 1] <
-                    lensBuf[packet_index]) {
+                if (packet_index > 0 && lensBuf[packet_index - 1] < lensBuf[packet_index]) {
                         /* this packet array is not correctly sorted */
                         sortNeeded = 1;
                 }
@@ -3358,8 +3143,7 @@ void SNOW3G_F8_N_BUFFER(const snow3g_key_schedule_t *pCtx,
                         inner_index = packet_index;
                         while (inner_index--) {
 
-                                if (lensBuf[packet_index] >
-                                    lensBuf[inner_index]) {
+                                if (lensBuf[packet_index] > lensBuf[inner_index]) {
 
                                         /* swap buffers to arrange in
                                            descending order from [0]. */
@@ -3367,16 +3151,12 @@ void SNOW3G_F8_N_BUFFER(const snow3g_key_schedule_t *pCtx,
                                         dsttempbuff = pDstBuf[packet_index];
                                         ivtempbuff = pIV[packet_index];
 
-                                        const int tempLen =
-                                                lensBuf[packet_index];
+                                        const int tempLen = lensBuf[packet_index];
 
-                                        pSrcBuf[packet_index] =
-                                                pSrcBuf[inner_index];
-                                        pDstBuf[packet_index] =
-                                                pDstBuf[inner_index];
+                                        pSrcBuf[packet_index] = pSrcBuf[inner_index];
+                                        pDstBuf[packet_index] = pDstBuf[inner_index];
                                         pIV[packet_index] = pIV[inner_index];
-                                        lensBuf[packet_index] =
-                                                lensBuf[inner_index];
+                                        lensBuf[packet_index] = lensBuf[inner_index];
 
                                         pSrcBuf[inner_index] = srctempbuff;
                                         pDstBuf[inner_index] = dsttempbuff;
@@ -3392,83 +3172,52 @@ void SNOW3G_F8_N_BUFFER(const snow3g_key_schedule_t *pCtx,
 #ifdef AVX2
         while (pktCnt >= 8) {
                 pktCnt -= 8;
-                SNOW3G_F8_8_BUFFER(pCtx, pIV[packet_index],
-                                   pIV[packet_index + 1],
-                                   pIV[packet_index + 2],
-                                   pIV[packet_index + 3],
-                                   pIV[packet_index + 4],
-                                   pIV[packet_index + 5],
-                                   pIV[packet_index + 6],
-                                   pIV[packet_index + 7],
-                                   pSrcBuf[packet_index],
-                                   pDstBuf[packet_index],
-                                   lensBuf[packet_index],
-                                   pSrcBuf[packet_index + 1],
-                                   pDstBuf[packet_index + 1],
-                                   lensBuf[packet_index + 1],
-                                   pSrcBuf[packet_index + 2],
-                                   pDstBuf[packet_index + 2],
-                                   lensBuf[packet_index + 2],
-                                   pSrcBuf[packet_index + 3],
-                                   pDstBuf[packet_index + 3],
-                                   lensBuf[packet_index + 3],
-                                   pSrcBuf[packet_index + 4],
-                                   pDstBuf[packet_index + 4],
-                                   lensBuf[packet_index + 4],
-                                   pSrcBuf[packet_index + 5],
-                                   pDstBuf[packet_index + 5],
-                                   lensBuf[packet_index + 5],
-                                   pSrcBuf[packet_index + 6],
-                                   pDstBuf[packet_index + 6],
-                                   lensBuf[packet_index + 6],
-                                   pSrcBuf[packet_index + 7],
-                                   pDstBuf[packet_index + 7],
-                                   lensBuf[packet_index + 7]);
+                SNOW3G_F8_8_BUFFER(
+                        pCtx, pIV[packet_index], pIV[packet_index + 1], pIV[packet_index + 2],
+                        pIV[packet_index + 3], pIV[packet_index + 4], pIV[packet_index + 5],
+                        pIV[packet_index + 6], pIV[packet_index + 7], pSrcBuf[packet_index],
+                        pDstBuf[packet_index], lensBuf[packet_index], pSrcBuf[packet_index + 1],
+                        pDstBuf[packet_index + 1], lensBuf[packet_index + 1],
+                        pSrcBuf[packet_index + 2], pDstBuf[packet_index + 2],
+                        lensBuf[packet_index + 2], pSrcBuf[packet_index + 3],
+                        pDstBuf[packet_index + 3], lensBuf[packet_index + 3],
+                        pSrcBuf[packet_index + 4], pDstBuf[packet_index + 4],
+                        lensBuf[packet_index + 4], pSrcBuf[packet_index + 5],
+                        pDstBuf[packet_index + 5], lensBuf[packet_index + 5],
+                        pSrcBuf[packet_index + 6], pDstBuf[packet_index + 6],
+                        lensBuf[packet_index + 6], pSrcBuf[packet_index + 7],
+                        pDstBuf[packet_index + 7], lensBuf[packet_index + 7]);
                 packet_index += 8;
         }
 #endif
         /* process 4 buffers at-a-time */
         while (pktCnt >= 4) {
                 pktCnt -= 4;
-                SNOW3G_F8_4_BUFFER(pCtx, pIV[packet_index + 0],
-                                   pIV[packet_index + 1],
-                                   pIV[packet_index + 2],
-                                   pIV[packet_index + 3],
-                                   pSrcBuf[packet_index + 0],
-                                   pDstBuf[packet_index + 0],
-                                   lensBuf[packet_index + 0],
-                                   pSrcBuf[packet_index + 1],
-                                   pDstBuf[packet_index + 1],
-                                   lensBuf[packet_index + 1],
-                                   pSrcBuf[packet_index + 2],
-                                   pDstBuf[packet_index + 2],
-                                   lensBuf[packet_index + 2],
-                                   pSrcBuf[packet_index + 3],
-                                   pDstBuf[packet_index + 3],
-                                   lensBuf[packet_index + 3]);
+                SNOW3G_F8_4_BUFFER(pCtx, pIV[packet_index + 0], pIV[packet_index + 1],
+                                   pIV[packet_index + 2], pIV[packet_index + 3],
+                                   pSrcBuf[packet_index + 0], pDstBuf[packet_index + 0],
+                                   lensBuf[packet_index + 0], pSrcBuf[packet_index + 1],
+                                   pDstBuf[packet_index + 1], lensBuf[packet_index + 1],
+                                   pSrcBuf[packet_index + 2], pDstBuf[packet_index + 2],
+                                   lensBuf[packet_index + 2], pSrcBuf[packet_index + 3],
+                                   pDstBuf[packet_index + 3], lensBuf[packet_index + 3]);
                 packet_index += 4;
         }
 
         /* process 2 packets at-a-time */
         while (pktCnt >= 2) {
                 pktCnt -= 2;
-                SNOW3G_F8_2_BUFFER(pCtx, pIV[packet_index + 0],
-                                   pIV[packet_index + 1],
-                                   pSrcBuf[packet_index + 0],
-                                   pDstBuf[packet_index + 0],
-                                   lensBuf[packet_index + 0],
-                                   pSrcBuf[packet_index + 1],
-                                   pDstBuf[packet_index + 1],
-                                   lensBuf[packet_index + 1]);
+                SNOW3G_F8_2_BUFFER(pCtx, pIV[packet_index + 0], pIV[packet_index + 1],
+                                   pSrcBuf[packet_index + 0], pDstBuf[packet_index + 0],
+                                   lensBuf[packet_index + 0], pSrcBuf[packet_index + 1],
+                                   pDstBuf[packet_index + 1], lensBuf[packet_index + 1]);
                 packet_index += 2;
         }
 
         /* remaining packets are processed 1 at a time */
         while (pktCnt--) {
-                SNOW3G_F8_1_BUFFER(pCtx, pIV[packet_index + 0],
-                                   pSrcBuf[packet_index + 0],
-                                   pDstBuf[packet_index + 0],
-                                   lensBuf[packet_index + 0]);
+                SNOW3G_F8_1_BUFFER(pCtx, pIV[packet_index + 0], pSrcBuf[packet_index + 0],
+                                   pDstBuf[packet_index + 0], lensBuf[packet_index + 0]);
                 packet_index++;
         }
 }
@@ -3487,26 +3236,21 @@ void SNOW3G_F8_N_BUFFER(const snow3g_key_schedule_t *pCtx,
  * @param[in]  bufLenInBytes pointer to an array of message lengths in bytes
  * @param[in]  packetCount   number of packets to process (N)
  */
-void SNOW3G_F8_N_BUFFER_MULTIKEY(const snow3g_key_schedule_t * const pCtx[],
-                                 const void * const IV[],
-                                 const void * const pBufferIn[],
-                                 void *pBufferOut[],
-                                 const uint32_t bufLenInBytes[],
-                                 const uint32_t packetCount)
+void
+SNOW3G_F8_N_BUFFER_MULTIKEY(const snow3g_key_schedule_t *const pCtx[], const void *const IV[],
+                            const void *const pBufferIn[], void *pBufferOut[],
+                            const uint32_t bufLenInBytes[], const uint32_t packetCount)
 {
 #ifdef SAFE_PARAM
         /* reset error status */
         imb_set_errno(NULL, 0);
-        if (!cptr_check((const void * const *)pCtx, packetCount,
-            IMB_ERR_NULL_EXP_KEY))
+        if (!cptr_check((const void *const *) pCtx, packetCount, IMB_ERR_NULL_EXP_KEY))
                 return;
         if (!cptr_check(IV, packetCount, IMB_ERR_NULL_IV))
                 return;
-        if (!cptr_check((const void * const *)pBufferIn,
-                        packetCount,
-                        IMB_ERR_NULL_SRC))
+        if (!cptr_check((const void *const *) pBufferIn, packetCount, IMB_ERR_NULL_SRC))
                 return;
-        if (!ptr_check((void **)pBufferOut, packetCount, IMB_ERR_NULL_DST))
+        if (!ptr_check((void **) pBufferOut, packetCount, IMB_ERR_NULL_DST))
                 return;
         if (!length_check(bufLenInBytes, packetCount))
                 return;
@@ -3526,26 +3270,25 @@ void SNOW3G_F8_N_BUFFER_MULTIKEY(const snow3g_key_schedule_t * const pCtx[],
         uint8_t *srctempbuff;
         uint8_t *dsttempbuff;
         uint8_t *ivtempbuff;
-        snow3g_key_schedule_t *pCtxBuf[NUM_PACKETS_16] = {NULL};
-        uint8_t *pSrcBuf[NUM_PACKETS_16] = {NULL};
-        uint8_t *pDstBuf[NUM_PACKETS_16] = {NULL};
-        uint8_t *pIV[NUM_PACKETS_16] = {NULL};
-        uint32_t lensBuf[NUM_PACKETS_16] = {0};
+        snow3g_key_schedule_t *pCtxBuf[NUM_PACKETS_16] = { NULL };
+        uint8_t *pSrcBuf[NUM_PACKETS_16] = { NULL };
+        uint8_t *pDstBuf[NUM_PACKETS_16] = { NULL };
+        uint8_t *pIV[NUM_PACKETS_16] = { NULL };
+        uint32_t lensBuf[NUM_PACKETS_16] = { 0 };
         snow3g_key_schedule_t *tempCtx;
 
-        memcpy((void *)pCtxBuf, pCtx, packetCount * sizeof(void *));
-        memcpy((void *)lensBuf, bufLenInBytes, packetCount * sizeof(uint32_t));
-        memcpy((void *)pSrcBuf, pBufferIn, packetCount * sizeof(void *));
-        memcpy((void *)pDstBuf, pBufferOut, packetCount * sizeof(void *));
-        memcpy((void *)pIV, IV, packetCount * sizeof(void *));
+        memcpy((void *) pCtxBuf, pCtx, packetCount * sizeof(void *));
+        memcpy((void *) lensBuf, bufLenInBytes, packetCount * sizeof(uint32_t));
+        memcpy((void *) pSrcBuf, pBufferIn, packetCount * sizeof(void *));
+        memcpy((void *) pDstBuf, pBufferOut, packetCount * sizeof(void *));
+        memcpy((void *) pIV, IV, packetCount * sizeof(void *));
 
         packet_index = packetCount;
 
         while (packet_index--) {
 
                 /* check if all packets are sorted by decreasing length */
-                if (packet_index > 0 && lensBuf[packet_index - 1] <
-                    lensBuf[packet_index]) {
+                if (packet_index > 0 && lensBuf[packet_index - 1] < lensBuf[packet_index]) {
                         /* this packet array is not correctly sorted */
                         sortNeeded = 1;
                 }
@@ -3564,28 +3307,22 @@ void SNOW3G_F8_N_BUFFER_MULTIKEY(const snow3g_key_schedule_t * const pCtx[],
                 while (packet_index--) {
                         inner_index = packet_index;
                         while (inner_index--) {
-                                if (lensBuf[packet_index] >
-                                    lensBuf[inner_index]) {
+                                if (lensBuf[packet_index] > lensBuf[inner_index]) {
                                         /* swap buffers to arrange in
                                            descending order from [0]. */
                                         srctempbuff = pSrcBuf[packet_index];
                                         dsttempbuff = pDstBuf[packet_index];
                                         ivtempbuff = pIV[packet_index];
 
-                                        const int tempLen =
-                                                lensBuf[packet_index];
+                                        const int tempLen = lensBuf[packet_index];
 
                                         tempCtx = pCtxBuf[packet_index];
 
-                                        pSrcBuf[packet_index] =
-                                                pSrcBuf[inner_index];
-                                        pDstBuf[packet_index] =
-                                                pDstBuf[inner_index];
+                                        pSrcBuf[packet_index] = pSrcBuf[inner_index];
+                                        pDstBuf[packet_index] = pDstBuf[inner_index];
                                         pIV[packet_index] = pIV[inner_index];
-                                        lensBuf[packet_index] =
-                                                lensBuf[inner_index];
-                                        pCtxBuf[packet_index] =
-                                                pCtxBuf[inner_index];
+                                        lensBuf[packet_index] = lensBuf[inner_index];
+                                        pCtxBuf[packet_index] = pCtxBuf[inner_index];
 
                                         pSrcBuf[inner_index] = srctempbuff;
                                         pDstBuf[inner_index] = dsttempbuff;
@@ -3603,12 +3340,10 @@ void SNOW3G_F8_N_BUFFER_MULTIKEY(const snow3g_key_schedule_t * const pCtx[],
         while (pktCnt >= 8) {
                 pktCnt -= 8;
                 SNOW3G_F8_8_BUFFER_MULTIKEY(
-                        (const snow3g_key_schedule_t * const *)
-                        &pCtxBuf[packet_index],
-                        (const void * const *)&pIV[packet_index],
-                        (const void * const *)&pSrcBuf[packet_index],
-                        (void **)&pDstBuf[packet_index],
-                        &lensBuf[packet_index]);
+                        (const snow3g_key_schedule_t *const *) &pCtxBuf[packet_index],
+                        (const void *const *) &pIV[packet_index],
+                        (const void *const *) &pSrcBuf[packet_index],
+                        (void **) &pDstBuf[packet_index], &lensBuf[packet_index]);
                 packet_index += 8;
         }
 #endif
@@ -3616,10 +3351,8 @@ void SNOW3G_F8_N_BUFFER_MULTIKEY(const snow3g_key_schedule_t * const pCtx[],
         /* @todo process 2 packets at-a-time */
         /* remaining packets are processed 1 at a time */
         while (pktCnt--) {
-                SNOW3G_F8_1_BUFFER(pCtxBuf[packet_index + 0],
-                                   pIV[packet_index + 0],
-                                   pSrcBuf[packet_index + 0],
-                                   pDstBuf[packet_index + 0],
+                SNOW3G_F8_1_BUFFER(pCtxBuf[packet_index + 0], pIV[packet_index + 0],
+                                   pSrcBuf[packet_index + 0], pDstBuf[packet_index + 0],
                                    lensBuf[packet_index + 0]);
                 packet_index++;
         }
@@ -3636,11 +3369,9 @@ void SNOW3G_F8_N_BUFFER_MULTIKEY(const snow3g_key_schedule_t * const pCtx[],
  * @param[in] lengthInBits message length in bits
  * @param[out] pDigest     pointer to store the F9 digest
  */
-void SNOW3G_F9_1_BUFFER(const snow3g_key_schedule_t *pHandle,
-                        const void *pIV,
-                        const void *pBufferIn,
-                        const uint64_t lengthInBits,
-                        void *pDigest)
+void
+SNOW3G_F9_1_BUFFER(const snow3g_key_schedule_t *pHandle, const void *pIV, const void *pBufferIn,
+                   const uint64_t lengthInBits, void *pDigest)
 {
 #ifdef SAFE_PARAM
         if (pHandle == NULL) {
@@ -3672,7 +3403,7 @@ void SNOW3G_F9_1_BUFFER(const snow3g_key_schedule_t *pHandle,
         uint32_t z[5];
         const uint64_t *inputBuffer;
 
-        inputBuffer = (const uint64_t *)pBufferIn;
+        inputBuffer = (const uint64_t *) pBufferIn;
 
         /* Initialize the SNOW3G key schedule */
         snow3gStateInitialize_1(&ctx, pHandle, pIV);
@@ -3681,17 +3412,14 @@ void SNOW3G_F9_1_BUFFER(const snow3g_key_schedule_t *pHandle,
         snow3g_f9_keystream_words(&ctx, &z[0]);
 
         /* Final MAC */
-        *(uint32_t *)pDigest =
+        *(uint32_t *) pDigest =
 
 #ifdef NO_AESNI
-                snow3g_f9_1_buffer_internal_sse_no_aesni(&inputBuffer[0],
-                                                         z, lengthInBits);
+                snow3g_f9_1_buffer_internal_sse_no_aesni(&inputBuffer[0], z, lengthInBits);
 #elif defined(SSE)
-                snow3g_f9_1_buffer_internal_sse(&inputBuffer[0],
-                                                z, lengthInBits);
-#else /* AVX / AVX2 / AVX512 */
-                snow3g_f9_1_buffer_internal_avx(&inputBuffer[0],
-                                                z, lengthInBits);
+                snow3g_f9_1_buffer_internal_sse(&inputBuffer[0], z, lengthInBits);
+#else  /* AVX / AVX2 / AVX512 */
+                snow3g_f9_1_buffer_internal_avx(&inputBuffer[0], z, lengthInBits);
 #endif /* NO_AESNI */
 #ifdef SAFE_DATA
         CLEAR_MEM(&z, sizeof(z));
@@ -3713,11 +3441,9 @@ void SNOW3G_F9_1_BUFFER(const snow3g_key_schedule_t *pHandle,
  * @param[in] lengthInBits message length in bits
  * @param[out] pDigest     pointer to store the F9 digest
  */
-void snow3g_f9_1_buffer_vaes_avx512(const snow3g_key_schedule_t *pHandle,
-                                    const void *pIV,
-                                    const void *pBufferIn,
-                                    const uint64_t lengthInBits,
-                                    void *pDigest)
+void
+snow3g_f9_1_buffer_vaes_avx512(const snow3g_key_schedule_t *pHandle, const void *pIV,
+                               const void *pBufferIn, const uint64_t lengthInBits, void *pDigest)
 {
 #ifdef SAFE_PARAM
         if (pHandle == NULL) {
@@ -3755,10 +3481,8 @@ void snow3g_f9_1_buffer_vaes_avx512(const snow3g_key_schedule_t *pHandle,
         snow3g_f9_keystream_words(&ctx, z);
 
         /* Final MAC */
-        *(uint32_t *)pDigest =
-                snow3g_f9_1_buffer_internal_vaes_avx512((const uint64_t *)
-                                                        pBufferIn, z,
-                                                        lengthInBits);
+        *(uint32_t *) pDigest = snow3g_f9_1_buffer_internal_vaes_avx512(
+                (const uint64_t *) pBufferIn, z, lengthInBits);
 #ifdef SAFE_DATA
         CLEAR_MEM(z, sizeof(z));
         CLEAR_MEM(&ctx, sizeof(ctx));

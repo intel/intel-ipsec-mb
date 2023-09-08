@@ -29,27 +29,20 @@
 #include "include/error.h"
 
 IMB_DLL_EXPORT void
-imb_quic_aes_gcm(IMB_MGR *state,
-                 const struct gcm_key_data *key_data,
-                 const IMB_KEY_SIZE_BYTES key_size,
-                 const IMB_CIPHER_DIRECTION cipher_dir,
-                 void *dst_ptr_array[],
-                 const void * const src_ptr_array[],
-                 const uint64_t len_array[],
-                 const void * const iv_ptr_array[],
-                 const void * const aad_ptr_array[],
-                 const uint64_t aad_len,
-                 void *tag_ptr_array[],
-                 const uint64_t tag_len,
-                 const uint64_t num_packets)
+imb_quic_aes_gcm(IMB_MGR *state, const struct gcm_key_data *key_data,
+                 const IMB_KEY_SIZE_BYTES key_size, const IMB_CIPHER_DIRECTION cipher_dir,
+                 void *dst_ptr_array[], const void *const src_ptr_array[],
+                 const uint64_t len_array[], const void *const iv_ptr_array[],
+                 const void *const aad_ptr_array[], const uint64_t aad_len, void *tag_ptr_array[],
+                 const uint64_t tag_len, const uint64_t num_packets)
 {
         /**
          * @note 12 byte IV is assumed
          * @note it can be out of place operation
          * but AAD needs to be copied by the caller
          */
-	struct gcm_context_data ctx;
-	uint64_t n;
+        struct gcm_context_data ctx;
+        uint64_t n;
 
 #ifdef SAFE_PARAM
         if (state == NULL) {
@@ -122,58 +115,37 @@ imb_quic_aes_gcm(IMB_MGR *state,
         }
 #endif /* SAFE_PARAM */
 
-	if (cipher_dir == IMB_DIR_ENCRYPT) {
-		if (key_size == IMB_KEY_128_BYTES) {
-			for (n = 0; n < num_packets; n++) {
-				IMB_AES128_GCM_ENC(state, key_data, &ctx,
-						   dst_ptr_array[n],
-						   src_ptr_array[n],
-						   len_array[n],
-						   iv_ptr_array[n],
-						   aad_ptr_array[n],
-						   aad_len,
-						   tag_ptr_array[n],
-						   tag_len);
-			}
-		} else /* assume 256-bits key */ {
-			for (n = 0; n < num_packets; n++) {
-				IMB_AES256_GCM_ENC(state, key_data, &ctx,
-						   dst_ptr_array[n],
-						   src_ptr_array[n],
-						   len_array[n],
-						   iv_ptr_array[n],
-						   aad_ptr_array[n],
-						   aad_len,
-						   tag_ptr_array[n],
-						   tag_len);
-			}
-		}
-	} else /* decrypt direction */ {
-		if (key_size == IMB_KEY_128_BYTES) {
-			for (n = 0; n < num_packets; n++) {
-				IMB_AES128_GCM_DEC(state, key_data, &ctx,
-						   dst_ptr_array[n],
-						   src_ptr_array[n],
-						   len_array[n],
-						   iv_ptr_array[n],
-						   aad_ptr_array[n],
-						   aad_len,
-						   tag_ptr_array[n],
-						   tag_len);
-			}
-		} else /* assume 256-bits key */ {
-			for (n = 0; n < num_packets; n++) {
-				IMB_AES256_GCM_DEC(state, key_data, &ctx,
-						   dst_ptr_array[n],
-						   src_ptr_array[n],
-						   len_array[n],
-						   iv_ptr_array[n],
-						   aad_ptr_array[n],
-						   aad_len,
-						   tag_ptr_array[n],
-						   tag_len);
-			}
-		}
-	}
+        if (cipher_dir == IMB_DIR_ENCRYPT) {
+                if (key_size == IMB_KEY_128_BYTES) {
+                        for (n = 0; n < num_packets; n++) {
+                                IMB_AES128_GCM_ENC(state, key_data, &ctx, dst_ptr_array[n],
+                                                   src_ptr_array[n], len_array[n], iv_ptr_array[n],
+                                                   aad_ptr_array[n], aad_len, tag_ptr_array[n],
+                                                   tag_len);
+                        }
+                } else /* assume 256-bits key */ {
+                        for (n = 0; n < num_packets; n++) {
+                                IMB_AES256_GCM_ENC(state, key_data, &ctx, dst_ptr_array[n],
+                                                   src_ptr_array[n], len_array[n], iv_ptr_array[n],
+                                                   aad_ptr_array[n], aad_len, tag_ptr_array[n],
+                                                   tag_len);
+                        }
+                }
+        } else /* decrypt direction */ {
+                if (key_size == IMB_KEY_128_BYTES) {
+                        for (n = 0; n < num_packets; n++) {
+                                IMB_AES128_GCM_DEC(state, key_data, &ctx, dst_ptr_array[n],
+                                                   src_ptr_array[n], len_array[n], iv_ptr_array[n],
+                                                   aad_ptr_array[n], aad_len, tag_ptr_array[n],
+                                                   tag_len);
+                        }
+                } else /* assume 256-bits key */ {
+                        for (n = 0; n < num_packets; n++) {
+                                IMB_AES256_GCM_DEC(state, key_data, &ctx, dst_ptr_array[n],
+                                                   src_ptr_array[n], len_array[n], iv_ptr_array[n],
+                                                   aad_ptr_array[n], aad_len, tag_ptr_array[n],
+                                                   tag_len);
+                        }
+                }
+        }
 }
-

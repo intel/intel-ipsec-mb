@@ -34,108 +34,124 @@
 #include "ipsec_ooo_mgr.h"
 
 /* SHA */
-void call_sha1_x8_avx2_from_c(SHA1_ARGS *args, uint32_t size_in_blocks);
-void call_sha256_oct_avx2_from_c(SHA256_ARGS *args, uint32_t size_in_blocks);
-void call_sha512_x4_avx2_from_c(SHA512_ARGS *args, uint64_t size_in_blocks);
+void
+call_sha1_x8_avx2_from_c(SHA1_ARGS *args, uint32_t size_in_blocks);
+void
+call_sha256_oct_avx2_from_c(SHA256_ARGS *args, uint32_t size_in_blocks);
+void
+call_sha512_x4_avx2_from_c(SHA512_ARGS *args, uint64_t size_in_blocks);
 
-IMB_DLL_EXPORT void sha1_avx2(const void *data, const uint64_t length,
-                              void *digest);
-IMB_DLL_EXPORT void sha1_one_block_avx2(const void *data, void *digest);
-IMB_DLL_EXPORT void sha224_avx2(const void *data, const uint64_t length,
-                                void *digest);
-IMB_DLL_EXPORT void sha224_one_block_avx2(const void *data, void *digest);
-IMB_DLL_EXPORT void sha256_avx2(const void *data, const uint64_t length,
-                                void *digest);
-IMB_DLL_EXPORT void sha256_one_block_avx2(const void *data, void *digest);
-IMB_DLL_EXPORT void sha384_avx2(const void *data, const uint64_t length,
-                                void *digest);
-IMB_DLL_EXPORT void sha384_one_block_avx2(const void *data, void *digest);
-IMB_DLL_EXPORT void sha512_avx2(const void *data, const uint64_t length,
-                                void *digest);
-IMB_DLL_EXPORT void sha512_one_block_avx2(const void *data, void *digest);
+IMB_DLL_EXPORT void
+sha1_avx2(const void *data, const uint64_t length, void *digest);
+IMB_DLL_EXPORT void
+sha1_one_block_avx2(const void *data, void *digest);
+IMB_DLL_EXPORT void
+sha224_avx2(const void *data, const uint64_t length, void *digest);
+IMB_DLL_EXPORT void
+sha224_one_block_avx2(const void *data, void *digest);
+IMB_DLL_EXPORT void
+sha256_avx2(const void *data, const uint64_t length, void *digest);
+IMB_DLL_EXPORT void
+sha256_one_block_avx2(const void *data, void *digest);
+IMB_DLL_EXPORT void
+sha384_avx2(const void *data, const uint64_t length, void *digest);
+IMB_DLL_EXPORT void
+sha384_one_block_avx2(const void *data, void *digest);
+IMB_DLL_EXPORT void
+sha512_avx2(const void *data, const uint64_t length, void *digest);
+IMB_DLL_EXPORT void
+sha512_one_block_avx2(const void *data, void *digest);
 
 /*AES-CFB*/
-IMB_DLL_EXPORT void aes_cfb_128_one_avx2(void *out, const void *in,
-                                         const void *iv, const void *keys,
-                                         uint64_t len);
-IMB_DLL_EXPORT void aes_cfb_256_one_avx2(void *out, const void *in,
-                                         const void *iv, const void *keys,
-                                         uint64_t len);
+IMB_DLL_EXPORT void
+aes_cfb_128_one_avx2(void *out, const void *in, const void *iv, const void *keys, uint64_t len);
+IMB_DLL_EXPORT void
+aes_cfb_256_one_avx2(void *out, const void *in, const void *iv, const void *keys, uint64_t len);
 
 /* moved from MB MGR */
-IMB_JOB *submit_job_zuc_eea3_avx2(MB_MGR_ZUC_OOO *state,
-                                  IMB_JOB *job);
-IMB_JOB *flush_job_zuc_eea3_avx2(MB_MGR_ZUC_OOO *state);
+IMB_JOB *
+submit_job_zuc_eea3_avx2(MB_MGR_ZUC_OOO *state, IMB_JOB *job);
+IMB_JOB *
+flush_job_zuc_eea3_avx2(MB_MGR_ZUC_OOO *state);
 
-IMB_JOB *flush_job_zuc256_eea3_avx2(MB_MGR_ZUC_OOO *state);
+IMB_JOB *
+flush_job_zuc256_eea3_avx2(MB_MGR_ZUC_OOO *state);
 
-IMB_JOB *submit_job_zuc256_eea3_avx2(MB_MGR_ZUC_OOO *state,
-                                     IMB_JOB *job);
+IMB_JOB *
+submit_job_zuc256_eea3_avx2(MB_MGR_ZUC_OOO *state, IMB_JOB *job);
 
-IMB_JOB *submit_job_zuc_eia3_avx2(MB_MGR_ZUC_OOO *state,
-                                  IMB_JOB *job);
-IMB_JOB *flush_job_zuc_eia3_avx2(MB_MGR_ZUC_OOO *state);
+IMB_JOB *
+submit_job_zuc_eia3_avx2(MB_MGR_ZUC_OOO *state, IMB_JOB *job);
+IMB_JOB *
+flush_job_zuc_eia3_avx2(MB_MGR_ZUC_OOO *state);
 
-IMB_JOB *submit_job_zuc256_eia3_avx2(MB_MGR_ZUC_OOO *state,
-                                     IMB_JOB *job,
-                                     const uint64_t tag_sz);
-IMB_JOB *flush_job_zuc256_eia3_avx2(MB_MGR_ZUC_OOO *state,
-                                    const uint64_t tag_sz);
+IMB_JOB *
+submit_job_zuc256_eia3_avx2(MB_MGR_ZUC_OOO *state, IMB_JOB *job, const uint64_t tag_sz);
+IMB_JOB *
+flush_job_zuc256_eia3_avx2(MB_MGR_ZUC_OOO *state, const uint64_t tag_sz);
 
-IMB_JOB *submit_job_sha1_avx2(MB_MGR_SHA_1_OOO *state,
-                              IMB_JOB *job);
-IMB_JOB *flush_job_sha1_avx2(MB_MGR_SHA_1_OOO *state,
-                             IMB_JOB *job);
+IMB_JOB *
+submit_job_sha1_avx2(MB_MGR_SHA_1_OOO *state, IMB_JOB *job);
+IMB_JOB *
+flush_job_sha1_avx2(MB_MGR_SHA_1_OOO *state, IMB_JOB *job);
 
-IMB_JOB *submit_job_sha224_avx2(MB_MGR_SHA_256_OOO *state,
-                                IMB_JOB *job);
-IMB_JOB *flush_job_sha224_avx2(MB_MGR_SHA_256_OOO *state,
-                               IMB_JOB *job);
+IMB_JOB *
+submit_job_sha224_avx2(MB_MGR_SHA_256_OOO *state, IMB_JOB *job);
+IMB_JOB *
+flush_job_sha224_avx2(MB_MGR_SHA_256_OOO *state, IMB_JOB *job);
 
-IMB_JOB *submit_job_sha256_avx2(MB_MGR_SHA_256_OOO *state,
-                                IMB_JOB *job);
-IMB_JOB *flush_job_sha256_avx2(MB_MGR_SHA_256_OOO *state,
-                               IMB_JOB *job);
+IMB_JOB *
+submit_job_sha256_avx2(MB_MGR_SHA_256_OOO *state, IMB_JOB *job);
+IMB_JOB *
+flush_job_sha256_avx2(MB_MGR_SHA_256_OOO *state, IMB_JOB *job);
 
-IMB_JOB *submit_job_sha384_avx2(MB_MGR_SHA_512_OOO *state,
-                                IMB_JOB *job);
-IMB_JOB *flush_job_sha384_avx2(MB_MGR_SHA_512_OOO *state,
-                               IMB_JOB *job);
+IMB_JOB *
+submit_job_sha384_avx2(MB_MGR_SHA_512_OOO *state, IMB_JOB *job);
+IMB_JOB *
+flush_job_sha384_avx2(MB_MGR_SHA_512_OOO *state, IMB_JOB *job);
 
-IMB_JOB *submit_job_sha512_avx2(MB_MGR_SHA_512_OOO *state,
-                                IMB_JOB *job);
-IMB_JOB *flush_job_sha512_avx2(MB_MGR_SHA_512_OOO *state,
-                               IMB_JOB *job);
+IMB_JOB *
+submit_job_sha512_avx2(MB_MGR_SHA_512_OOO *state, IMB_JOB *job);
+IMB_JOB *
+flush_job_sha512_avx2(MB_MGR_SHA_512_OOO *state, IMB_JOB *job);
 
-void aes_cmac_256_subkey_gen_avx2(const void *key_exp,
-                                  void *key1, void *key2);
+void
+aes_cmac_256_subkey_gen_avx2(const void *key_exp, void *key1, void *key2);
 
-IMB_JOB *submit_job_chacha20_enc_dec_avx2(IMB_JOB *job);
+IMB_JOB *
+submit_job_chacha20_enc_dec_avx2(IMB_JOB *job);
 
-IMB_JOB *submit_job_hmac_avx2(MB_MGR_HMAC_SHA_1_OOO *state,
-                              IMB_JOB *job);
-IMB_JOB *flush_job_hmac_avx2(MB_MGR_HMAC_SHA_1_OOO *state);
+IMB_JOB *
+submit_job_hmac_avx2(MB_MGR_HMAC_SHA_1_OOO *state, IMB_JOB *job);
+IMB_JOB *
+flush_job_hmac_avx2(MB_MGR_HMAC_SHA_1_OOO *state);
 
-IMB_JOB *submit_job_hmac_sha_224_avx2(MB_MGR_HMAC_SHA_256_OOO *state,
-                                      IMB_JOB *job);
-IMB_JOB *flush_job_hmac_sha_224_avx2(MB_MGR_HMAC_SHA_256_OOO *state);
+IMB_JOB *
+submit_job_hmac_sha_224_avx2(MB_MGR_HMAC_SHA_256_OOO *state, IMB_JOB *job);
+IMB_JOB *
+flush_job_hmac_sha_224_avx2(MB_MGR_HMAC_SHA_256_OOO *state);
 
-IMB_JOB *submit_job_hmac_sha_256_avx2(MB_MGR_HMAC_SHA_256_OOO *state,
-                                      IMB_JOB *job);
-IMB_JOB *flush_job_hmac_sha_256_avx2(MB_MGR_HMAC_SHA_256_OOO *state);
+IMB_JOB *
+submit_job_hmac_sha_256_avx2(MB_MGR_HMAC_SHA_256_OOO *state, IMB_JOB *job);
+IMB_JOB *
+flush_job_hmac_sha_256_avx2(MB_MGR_HMAC_SHA_256_OOO *state);
 
-IMB_JOB *submit_job_hmac_sha_384_avx2(MB_MGR_HMAC_SHA_512_OOO *state,
-                                      IMB_JOB *job);
-IMB_JOB *flush_job_hmac_sha_384_avx2(MB_MGR_HMAC_SHA_512_OOO *state);
+IMB_JOB *
+submit_job_hmac_sha_384_avx2(MB_MGR_HMAC_SHA_512_OOO *state, IMB_JOB *job);
+IMB_JOB *
+flush_job_hmac_sha_384_avx2(MB_MGR_HMAC_SHA_512_OOO *state);
 
-IMB_JOB *submit_job_hmac_sha_512_avx2(MB_MGR_HMAC_SHA_512_OOO *state,
-                                      IMB_JOB *job);
-IMB_JOB *flush_job_hmac_sha_512_avx2(MB_MGR_HMAC_SHA_512_OOO *state);
+IMB_JOB *
+submit_job_hmac_sha_512_avx2(MB_MGR_HMAC_SHA_512_OOO *state, IMB_JOB *job);
+IMB_JOB *
+flush_job_hmac_sha_512_avx2(MB_MGR_HMAC_SHA_512_OOO *state);
 
-IMB_JOB *submit_job_hmac_md5_avx2(MB_MGR_HMAC_MD5_OOO *state,
-                                  IMB_JOB *job);
-IMB_JOB *flush_job_hmac_md5_avx2(MB_MGR_HMAC_MD5_OOO *state);
+IMB_JOB *
+submit_job_hmac_md5_avx2(MB_MGR_HMAC_MD5_OOO *state, IMB_JOB *job);
+IMB_JOB *
+flush_job_hmac_md5_avx2(MB_MGR_HMAC_MD5_OOO *state);
 
-IMB_DLL_EXPORT void set_suite_id_avx2_t1(IMB_MGR *state, IMB_JOB *job);
+IMB_DLL_EXPORT void
+set_suite_id_avx2_t1(IMB_MGR *state, IMB_JOB *job);
 
 #endif /* IMB_ASM_AVX2_T1_H */

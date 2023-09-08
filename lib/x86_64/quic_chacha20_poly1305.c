@@ -30,17 +30,11 @@
 #include "include/chacha20_poly1305.h"
 
 IMB_DLL_EXPORT void
-imb_quic_chacha20_poly1305(IMB_MGR *state,
-                           const void *key,
-                           const IMB_CIPHER_DIRECTION cipher_dir,
-                           void *dst_ptr_array[],
-                           const void * const src_ptr_array[],
-                           const uint64_t len_array[],
-                           const void * const iv_ptr_array[],
-                           const void * const aad_ptr_array[],
-                           const uint64_t aad_len,
-                           void *tag_ptr_array[],
-                           const uint64_t tag_len,
+imb_quic_chacha20_poly1305(IMB_MGR *state, const void *key, const IMB_CIPHER_DIRECTION cipher_dir,
+                           void *dst_ptr_array[], const void *const src_ptr_array[],
+                           const uint64_t len_array[], const void *const iv_ptr_array[],
+                           const void *const aad_ptr_array[], const uint64_t aad_len,
+                           void *tag_ptr_array[], const uint64_t tag_len,
                            const uint64_t num_packets)
 {
         /**
@@ -132,4 +126,3 @@ imb_quic_chacha20_poly1305(IMB_MGR *state,
                 state->chacha20_poly1305_quic(state, &job);
         }
 }
-

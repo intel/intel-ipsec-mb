@@ -37,36 +37,44 @@
 #include "include/clear_regs_mem.h"
 #include "include/error.h"
 
-extern void sha1_block_sse(const void *, void *);
-extern void sha1_block_avx(const void *, void *);
-extern void sha1_ni_block_sse(const void *, void *);
+extern void
+sha1_block_sse(const void *, void *);
+extern void
+sha1_block_avx(const void *, void *);
+extern void
+sha1_ni_block_sse(const void *, void *);
 
-extern void sha224_block_sse(const void *, void *);
-extern void sha224_block_avx(const void *, void *);
+extern void
+sha224_block_sse(const void *, void *);
+extern void
+sha224_block_avx(const void *, void *);
 
-extern void sha256_block_sse(const void *, void *);
-extern void sha256_block_avx(const void *, void *);
-extern void sha256_ni_block_sse(const void *, void *);
+extern void
+sha256_block_sse(const void *, void *);
+extern void
+sha256_block_avx(const void *, void *);
+extern void
+sha256_ni_block_sse(const void *, void *);
 
-extern void sha384_block_sse(const void *, void *);
-extern void sha384_block_avx(const void *, void *);
+extern void
+sha384_block_sse(const void *, void *);
+extern void
+sha384_block_avx(const void *, void *);
 
-extern void sha512_block_sse(const void *, void *);
-extern void sha512_block_avx(const void *, void *);
+extern void
+sha512_block_sse(const void *, void *);
+extern void
+sha512_block_avx(const void *, void *);
 
-enum arch_type {
-        ARCH_SSE = 0,
-        ARCH_SSE_SHANI,
-        ARCH_AVX
-};
+enum arch_type { ARCH_SSE = 0, ARCH_SSE_SHANI, ARCH_AVX };
 
 /* ========================================================================== */
 /*
  * Various utility functions for SHA API
  */
 
-__forceinline
-uint32_t bswap4(const uint32_t val)
+__forceinline uint32_t
+bswap4(const uint32_t val)
 {
         return ((val >> 24) |             /**< A*/
                 ((val & 0xff0000) >> 8) | /**< B*/
@@ -74,32 +82,32 @@ uint32_t bswap4(const uint32_t val)
                 (val << 24));             /**< D*/
 }
 
-__forceinline
-uint64_t bswap8(const uint64_t val)
+__forceinline uint64_t
+bswap8(const uint64_t val)
 {
         return (((uint64_t) bswap4((uint32_t) val)) << 32) |
-                (((uint64_t) bswap4((uint32_t) (val >> 32))));
+               (((uint64_t) bswap4((uint32_t) (val >> 32))));
 }
 
-__forceinline
-void store8_be(void *outp, const uint64_t val)
+__forceinline void
+store8_be(void *outp, const uint64_t val)
 {
-        *((uint64_t *)outp) = bswap8(val);
+        *((uint64_t *) outp) = bswap8(val);
 }
 
-__forceinline
-void var_memcpy(void *dst, const void *src, const uint64_t len)
+__forceinline void
+var_memcpy(void *dst, const void *src, const uint64_t len)
 {
         uint64_t i;
-        const uint8_t *src8 = (const uint8_t *)src;
-        uint8_t *dst8 = (uint8_t *)dst;
+        const uint8_t *src8 = (const uint8_t *) src;
+        uint8_t *dst8 = (uint8_t *) dst;
 
         for (i = 0; i < len; i++)
                 dst8[i] = src8[i];
 }
 
-__forceinline
-void copy_bswap4_array(void *dst, const void *src, const size_t num)
+__forceinline void
+copy_bswap4_array(void *dst, const void *src, const size_t num)
 {
         uint32_t *outp = (uint32_t *) dst;
         const uint32_t *inp = (const uint32_t *) src;
@@ -109,8 +117,8 @@ void copy_bswap4_array(void *dst, const void *src, const size_t num)
                 outp[i] = bswap4(inp[i]);
 }
 
-__forceinline
-void copy_bswap8_array(void *dst, const void *src, const size_t num)
+__forceinline void
+copy_bswap8_array(void *dst, const void *src, const size_t num)
 {
         uint64_t *outp = (uint64_t *) dst;
         const uint64_t *inp = (const uint64_t *) src;
@@ -120,10 +128,8 @@ void copy_bswap8_array(void *dst, const void *src, const size_t num)
                 outp[i] = bswap8(inp[i]);
 }
 
-__forceinline
-void
-sha_generic_one_block(const void *inp, void *digest,
-                      const enum arch_type arch, const int sha_type)
+__forceinline void
+sha_generic_one_block(const void *inp, void *digest, const enum arch_type arch, const int sha_type)
 {
         if (sha_type == 1) {
                 if (arch == ARCH_AVX)
@@ -160,10 +166,10 @@ sha_generic_one_block(const void *inp, void *digest,
         }
 }
 
-__forceinline
-void sha1_init_digest(void *p)
+__forceinline void
+sha1_init_digest(void *p)
 {
-        uint32_t *p_digest = (uint32_t *)p;
+        uint32_t *p_digest = (uint32_t *) p;
 
         p_digest[0] = H0;
         p_digest[1] = H1;
@@ -172,10 +178,10 @@ void sha1_init_digest(void *p)
         p_digest[4] = H4;
 }
 
-__forceinline
-void sha224_init_digest(void *p)
+__forceinline void
+sha224_init_digest(void *p)
 {
-        uint32_t *p_digest = (uint32_t *)p;
+        uint32_t *p_digest = (uint32_t *) p;
 
         p_digest[0] = SHA224_H0;
         p_digest[1] = SHA224_H1;
@@ -187,10 +193,10 @@ void sha224_init_digest(void *p)
         p_digest[7] = SHA224_H7;
 }
 
-__forceinline
-void sha256_init_digest(void *p)
+__forceinline void
+sha256_init_digest(void *p)
 {
-        uint32_t *p_digest = (uint32_t *)p;
+        uint32_t *p_digest = (uint32_t *) p;
 
         p_digest[0] = SHA256_H0;
         p_digest[1] = SHA256_H1;
@@ -202,10 +208,10 @@ void sha256_init_digest(void *p)
         p_digest[7] = SHA256_H7;
 }
 
-__forceinline
-void sha384_init_digest(void *p)
+__forceinline void
+sha384_init_digest(void *p)
 {
-        uint64_t *p_digest = (uint64_t *)p;
+        uint64_t *p_digest = (uint64_t *) p;
 
         p_digest[0] = SHA384_H0;
         p_digest[1] = SHA384_H1;
@@ -217,10 +223,10 @@ void sha384_init_digest(void *p)
         p_digest[7] = SHA384_H7;
 }
 
-__forceinline
-void sha512_init_digest(void *p)
+__forceinline void
+sha512_init_digest(void *p)
 {
-        uint64_t *p_digest = (uint64_t *)p;
+        uint64_t *p_digest = (uint64_t *) p;
 
         p_digest[0] = SHA512_H0;
         p_digest[1] = SHA512_H1;
@@ -232,8 +238,7 @@ void sha512_init_digest(void *p)
         p_digest[7] = SHA512_H7;
 }
 
-__forceinline
-void
+__forceinline void
 sha_generic_init(void *digest, const int sha_type)
 {
         if (sha_type == 1)
@@ -248,8 +253,8 @@ sha_generic_init(void *digest, const int sha_type)
                 sha512_init_digest(digest);
 }
 
-__forceinline
-void sha_generic_write_digest(void *dst, const void *src, const int sha_type)
+__forceinline void
+sha_generic_write_digest(void *dst, const void *src, const int sha_type)
 {
         if (sha_type == 1)
                 copy_bswap4_array(dst, src, NUM_SHA_DIGEST_WORDS);
@@ -263,11 +268,9 @@ void sha_generic_write_digest(void *dst, const void *src, const int sha_type)
                 copy_bswap8_array(dst, src, NUM_SHA_512_DIGEST_WORDS);
 }
 
-__forceinline
-void
-sha_generic(const void *data, const uint64_t length, void *digest,
-            const enum arch_type arch, const int sha_type,
-            const uint64_t blk_size, const uint64_t pad_size)
+__forceinline void
+sha_generic(const void *data, const uint64_t length, void *digest, const enum arch_type arch,
+            const int sha_type, const uint64_t blk_size, const uint64_t pad_size)
 {
 #ifdef SAFE_PARAM
         imb_set_errno(NULL, 0);
@@ -322,9 +325,8 @@ sha_generic(const void *data, const uint64_t length, void *digest,
 #endif
 }
 
-__forceinline
-void sha_generic_1block(const void *data, void *digest,
-                        const enum arch_type arch, const int sha_type)
+__forceinline void
+sha_generic_1block(const void *data, void *digest, const enum arch_type arch, const int sha_type)
 {
 #ifdef SAFE_PARAM
         imb_set_errno(NULL, 0);

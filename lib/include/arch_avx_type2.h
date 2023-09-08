@@ -32,6 +32,7 @@
 
 #include "intel-ipsec-mb.h"
 
-IMB_DLL_EXPORT void set_suite_id_avx_t2(IMB_MGR *state, IMB_JOB *job);
+IMB_DLL_EXPORT void
+set_suite_id_avx_t2(IMB_MGR *state, IMB_JOB *job);
 
 #endif /* IMB_ASM_AVX_T2_H */

@@ -40,8 +40,8 @@ extern volatile int imb_errno;
  * @param mb_mgr Pointer to multi-buffer manager
  * @param errnum Error type
  */
-__forceinline
-void imb_set_errno(IMB_MGR *mb_mgr, const int errnum)
+__forceinline void
+imb_set_errno(IMB_MGR *mb_mgr, const int errnum)
 {
         /* set MB_MGR error status */
         if (mb_mgr != NULL)

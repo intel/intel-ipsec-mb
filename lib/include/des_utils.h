@@ -41,8 +41,8 @@
  *
  * @return n-th bit value (0 or 1 value only)
  */
-__forceinline
-uint64_t bit_get64b(const uint64_t val, const unsigned n)
+__forceinline uint64_t
+bit_get64b(const uint64_t val, const unsigned n)
 {
         IMB_ASSERT(n < 64);
         return (val >> n) & UINT64_C(1);
@@ -57,8 +57,8 @@ uint64_t bit_get64b(const uint64_t val, const unsigned n)
  *
  * @return val with n-th bit set to value b
  */
-__forceinline
-uint64_t bit_set64b(const uint64_t val, const unsigned n, const uint64_t b)
+__forceinline uint64_t
+bit_set64b(const uint64_t val, const unsigned n, const uint64_t b)
 {
         const uint64_t m = UINT64_C(1) << n;
 
@@ -79,8 +79,8 @@ uint64_t bit_set64b(const uint64_t val, const unsigned n, const uint64_t b)
  *
  * @return permuted in word as described by the pattern
  */
-__forceinline
-uint64_t permute_64b(const uint64_t in, const uint8_t *pattern, const int size)
+__forceinline uint64_t
+permute_64b(const uint64_t in, const uint8_t *pattern, const int size)
 {
         uint64_t out = 0;
         int n = 0;
@@ -109,26 +109,21 @@ static const uint8_t reflect_tab[16] = {
         /* [14] 1110 => 0111 */ 7, /* [15] 1111 => 1111 */ 15
 };
 
-__forceinline
-uint8_t reflect_8b(const uint8_t pb)
+__forceinline uint8_t
+reflect_8b(const uint8_t pb)
 {
         return reflect_tab[pb >> 4] | (reflect_tab[pb & 15] << 4);
 }
 
-__forceinline
-uint64_t load64_reflect(const void *key)
+__forceinline uint64_t
+load64_reflect(const void *key)
 {
         const uint8_t *kb = (const uint8_t *) key;
 
-        return ((uint64_t) reflect_8b(kb[0])) |
-                ((uint64_t) reflect_8b(kb[1])) << 8 |
-                ((uint64_t) reflect_8b(kb[2])) << 16 |
-                ((uint64_t) reflect_8b(kb[3])) << 24 |
-                ((uint64_t) reflect_8b(kb[4])) << 32 |
-                ((uint64_t) reflect_8b(kb[5])) << 40 |
-                ((uint64_t) reflect_8b(kb[6])) << 48 |
-                ((uint64_t) reflect_8b(kb[7])) << 56;
+        return ((uint64_t) reflect_8b(kb[0])) | ((uint64_t) reflect_8b(kb[1])) << 8 |
+               ((uint64_t) reflect_8b(kb[2])) << 16 | ((uint64_t) reflect_8b(kb[3])) << 24 |
+               ((uint64_t) reflect_8b(kb[4])) << 32 | ((uint64_t) reflect_8b(kb[5])) << 40 |
+               ((uint64_t) reflect_8b(kb[6])) << 48 | ((uint64_t) reflect_8b(kb[7])) << 56;
 }
-
 
 #endif /* DES_UTILS_H */

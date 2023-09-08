@@ -36,7 +36,8 @@
  * @return Bitmask representing presence of CPU features/extensions,
  *         see intel-ipsec-mb.h IMB_FEATURE_xyz definitions for details.
  */
-IMB_DLL_LOCAL uint64_t cpu_feature_detect(void);
+IMB_DLL_LOCAL uint64_t
+cpu_feature_detect(void);
 
 /**
  * @brief Modifies CPU \a features mask based on requested \a flags

@@ -31,7 +31,7 @@
 #include <stdint.h>
 #include "constant_lookup.h"
 
-#if defined (AVX) || defined (AVX2)
+#if defined(AVX) || defined(AVX2)
 #define SNOW3G_SAFE_LUT8(table, idx, size) LOOKUP8_AVX(table, idx, size)
 #else /* SSE */
 #define SNOW3G_SAFE_LUT8(table, idx, size) LOOKUP8_SSE(table, idx, size)

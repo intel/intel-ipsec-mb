@@ -30,24 +30,21 @@
 #ifndef JOB_API_KASUMI_H
 #define JOB_API_KASUMI_H
 
-__forceinline
-IMB_JOB *
+__forceinline IMB_JOB *
 submit_kasumi_uea1_job(IMB_MGR *state, IMB_JOB *job)
 {
         const kasumi_key_sched_t *key = job->enc_keys;
-        const uint64_t iv = *(const uint64_t *)job->iv;
-        const uint32_t msg_bitlen =
-                        (const uint32_t)job->msg_len_to_cipher_in_bits;
-        const uint32_t msg_bitoff =
-                        (const uint32_t)job->cipher_start_src_offset_in_bits;
+        const uint64_t iv = *(const uint64_t *) job->iv;
+        const uint32_t msg_bitlen = (const uint32_t) job->msg_len_to_cipher_in_bits;
+        const uint32_t msg_bitoff = (const uint32_t) job->cipher_start_src_offset_in_bits;
 
         /* Use bit length API if
          * - msg length is not a multiple of bytes
          * - bit offset is not a multiple of bytes
          */
         if ((msg_bitlen & 0x07) || (msg_bitoff & 0x07)) {
-                IMB_KASUMI_F8_1_BUFFER_BIT(state, key, iv, job->src, job->dst,
-                                           msg_bitlen, msg_bitoff);
+                IMB_KASUMI_F8_1_BUFFER_BIT(state, key, iv, job->src, job->dst, msg_bitlen,
+                                           msg_bitoff);
 
         } else {
                 const uint32_t msg_bytelen = msg_bitlen >> 3;
@@ -55,8 +52,7 @@ submit_kasumi_uea1_job(IMB_MGR *state, IMB_JOB *job)
                 const void *src = job->src + msg_byteoff;
                 void *dst = job->dst + msg_byteoff;
 
-                IMB_KASUMI_F8_1_BUFFER(state, key, iv, src, dst,
-                                       msg_bytelen);
+                IMB_KASUMI_F8_1_BUFFER(state, key, iv, src, dst, msg_bytelen);
         }
 
         job->status |= IMB_STATUS_COMPLETED_CIPHER;

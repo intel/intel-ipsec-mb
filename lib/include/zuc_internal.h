@@ -47,24 +47,23 @@
 #include "include/wireless_common.h"
 
 /* 64 bytes of Keystream will be generated */
-#define ZUC_KEYSTR_LEN                      (64)
-#define NUM_LFSR_STATES                     (16)
-#define ZUC_WORD_BITS                       (32)
-#define ZUC_WORD_BYTES                      (ZUC_WORD_BITS / 8)
+#define ZUC_KEYSTR_LEN  (64)
+#define NUM_LFSR_STATES (16)
+#define ZUC_WORD_BITS   (32)
+#define ZUC_WORD_BYTES  (ZUC_WORD_BITS / 8)
 
 /* Range of input data for ZUC is from 1 to 65504 bits */
-#define ZUC_MIN_BITLEN     1
-#define ZUC_MAX_BITLEN     65504
-#define ZUC_MIN_BYTELEN    1
-#define ZUC_MAX_BYTELEN    (ZUC_MAX_BITLEN / 8)
+#define ZUC_MIN_BITLEN  1
+#define ZUC_MAX_BITLEN  65504
+#define ZUC_MIN_BYTELEN 1
+#define ZUC_MAX_BYTELEN (ZUC_MAX_BITLEN / 8)
 
 #ifdef DEBUG
 #ifdef _WIN32
-#define DEBUG_PRINT(_fmt, ...) \
-        fprintf(stderr, "%s()::%d " _fmt , __FUNCTION__, __LINE__, __VA_ARGS__)
+#define DEBUG_PRINT(_fmt, ...)                                                                     \
+        fprintf(stderr, "%s()::%d " _fmt, __FUNCTION__, __LINE__, __VA_ARGS__)
 #else
-#define DEBUG_PRINT(_fmt, ...) \
-        fprintf(stderr, "%s()::%d " _fmt , __func__, __LINE__, __VA_ARGS__)
+#define DEBUG_PRINT(_fmt, ...) fprintf(stderr, "%s()::%d " _fmt, __func__, __LINE__, __VA_ARGS__)
 #endif
 #else
 #define DEBUG_PRINT(_fmt, ...)
@@ -78,21 +77,21 @@
  *      KeyStream bytes must be swapped on 32bit boundary before this operation
  *
  *****************************************************************************/
-#define ZUC_XOR_KEYSTREAM(pIn64, pOut64, pKeyStream64)		\
-{									\
-	int i =0;							\
-	union SwapBytes_t {						\
-		uint64_t l64;						\
-		uint32_t w32[2];					\
-	}swapBytes;							\
-	/* loop through the key stream and xor 64 bits at a time */	\
-	for(i =0; i < ZUC_KEYSTR_LEN/8; i++) {				\
-		swapBytes.l64 = *pKeyStream64++;			\
-		swapBytes.w32[0] = bswap4(swapBytes.w32[0]); \
-		swapBytes.w32[1] = bswap4(swapBytes.w32[1]); \
-		*pOut64++ = *pIn64++ ^ swapBytes.l64;			\
-	}								\
-}
+#define ZUC_XOR_KEYSTREAM(pIn64, pOut64, pKeyStream64)                                             \
+        {                                                                                          \
+                int i = 0;                                                                         \
+                union SwapBytes_t {                                                                \
+                        uint64_t l64;                                                              \
+                        uint32_t w32[2];                                                           \
+                } swapBytes;                                                                       \
+                /* loop through the key stream and xor 64 bits at a time */                        \
+                for (i = 0; i < ZUC_KEYSTR_LEN / 8; i++) {                                         \
+                        swapBytes.l64 = *pKeyStream64++;                                           \
+                        swapBytes.w32[0] = bswap4(swapBytes.w32[0]);                               \
+                        swapBytes.w32[1] = bswap4(swapBytes.w32[1]);                               \
+                        *pOut64++ = *pIn64++ ^ swapBytes.l64;                                      \
+                }                                                                                  \
+        }
 
 /**
  *****************************************************************************
@@ -100,20 +99,20 @@
  *      Packed structure to store the ZUC state for 4 packets. *
  *****************************************************************************/
 typedef struct zuc_state_4_s {
-    uint32_t lfsrState[16][4];
-    /**< State registers of the LFSR */
-    uint32_t fR1[4];
-    /**< register of F */
-    uint32_t fR2[4];
-    /**< register of F */
-    uint32_t bX0[4];
-    /**< Output X0 of the bit reorganization for 4 packets */
-    uint32_t bX1[4];
-    /**< Output X1 of the bit reorganization for 4 packets */
-    uint32_t bX2[4];
-    /**< Output X2 of the bit reorganization for 4 packets */
-    uint32_t bX3[4];
-    /**< Output X3 of the bit reorganization for 4 packets */
+        uint32_t lfsrState[16][4];
+        /**< State registers of the LFSR */
+        uint32_t fR1[4];
+        /**< register of F */
+        uint32_t fR2[4];
+        /**< register of F */
+        uint32_t bX0[4];
+        /**< Output X0 of the bit reorganization for 4 packets */
+        uint32_t bX1[4];
+        /**< Output X1 of the bit reorganization for 4 packets */
+        uint32_t bX2[4];
+        /**< Output X2 of the bit reorganization for 4 packets */
+        uint32_t bX3[4];
+        /**< Output X3 of the bit reorganization for 4 packets */
 } ZucState4_t;
 
 /**
@@ -122,20 +121,20 @@ typedef struct zuc_state_4_s {
  *      Packed structure to store the ZUC state for 8 packets. *
  *****************************************************************************/
 typedef struct zuc_state_8_s {
-    uint32_t lfsrState[16][8];
-    /**< State registers of the LFSR */
-    uint32_t fR1[8];
-    /**< register of F */
-    uint32_t fR2[8];
-    /**< register of F */
-    uint32_t bX0[8];
-    /**< Output X0 of the bit reorganization for 8 packets */
-    uint32_t bX1[8];
-    /**< Output X1 of the bit reorganization for 8 packets */
-    uint32_t bX2[8];
-    /**< Output X2 of the bit reorganization for 8 packets */
-    uint32_t bX3[8];
-    /**< Output X3 of the bit reorganization for 8 packets */
+        uint32_t lfsrState[16][8];
+        /**< State registers of the LFSR */
+        uint32_t fR1[8];
+        /**< register of F */
+        uint32_t fR2[8];
+        /**< register of F */
+        uint32_t bX0[8];
+        /**< Output X0 of the bit reorganization for 8 packets */
+        uint32_t bX1[8];
+        /**< Output X1 of the bit reorganization for 8 packets */
+        uint32_t bX2[8];
+        /**< Output X2 of the bit reorganization for 8 packets */
+        uint32_t bX3[8];
+        /**< Output X3 of the bit reorganization for 8 packets */
 } ZucState8_t;
 
 /**
@@ -144,20 +143,20 @@ typedef struct zuc_state_8_s {
  *      Packed structure to store the ZUC state for a single packet. *
  *****************************************************************************/
 typedef struct zuc_state_s {
-    uint32_t lfsrState[16];
-    /**< State registers of the LFSR */
-    uint32_t fR1;
-    /**< register of F */
-    uint32_t fR2;
-    /**< register of F */
-    uint32_t bX0;
-    /**< Output X0 of the bit reorganization */
-    uint32_t bX1;
-    /**< Output X1 of the bit reorganization */
-    uint32_t bX2;
-    /**< Output X2 of the bit reorganization */
-    uint32_t bX3;
-    /**< Output X3 of the bit reorganization */
+        uint32_t lfsrState[16];
+        /**< State registers of the LFSR */
+        uint32_t fR1;
+        /**< register of F */
+        uint32_t fR2;
+        /**< register of F */
+        uint32_t bX0;
+        /**< Output X0 of the bit reorganization */
+        uint32_t bX1;
+        /**< Output X1 of the bit reorganization */
+        uint32_t bX2;
+        /**< Output X2 of the bit reorganization */
+        uint32_t bX3;
+        /**< Output X3 of the bit reorganization */
 } ZucState_t;
 
 /**
@@ -167,8 +166,8 @@ typedef struct zuc_state_s {
  *      @ref asm_ZucInitialization_4 and @ref asm_ZucGenKeystream64B_4
  *****************************************************************************/
 typedef struct zuc_key_4_s {
-    const uint8_t *pKeys[4];
-    /**< Array of pointers to 128-bit keys for the 4 packets */
+        const uint8_t *pKeys[4];
+        /**< Array of pointers to 128-bit keys for the 4 packets */
 } ZucKey4_t;
 
 /**
@@ -178,8 +177,8 @@ typedef struct zuc_key_4_s {
  *      @ref asm_ZucInitialization_8 and @ref asm_ZucGenKeystream64B_8
  *****************************************************************************/
 typedef struct zuc_key_8_s {
-    const uint8_t *pKeys[8];
-    /**< Array of pointers to 128-bit keys for the 8 packets */
+        const uint8_t *pKeys[8];
+        /**< Array of pointers to 128-bit keys for the 8 packets */
 } ZucKey8_t;
 
 /**
@@ -189,8 +188,8 @@ typedef struct zuc_key_8_s {
  *      @ref asm_ZucInitialization_16 and @ref asm_ZucGenKeystream64B_16
  *****************************************************************************/
 typedef struct zuc_key_16_s {
-    const uint8_t *pKeys[16];
-    /**< Array of pointers to 128-bit keys for the 16 packets */
+        const uint8_t *pKeys[16];
+        /**< Array of pointers to 128-bit keys for the 16 packets */
 } ZucKey16_t;
 
 /**
@@ -215,17 +214,14 @@ typedef struct zuc_key_16_s {
  *      None
  *
  *****************************************************************************/
-IMB_DLL_LOCAL void asm_ZucInitialization_sse(const void *pKey,
-                                             const void *pIv,
-                                             ZucState_t *pState);
+IMB_DLL_LOCAL void
+asm_ZucInitialization_sse(const void *pKey, const void *pIv, ZucState_t *pState);
 
-IMB_DLL_LOCAL void asm_ZucInitialization_sse_no_aesni(const void *pKey,
-                                                      const void *pIv,
-                                                      ZucState_t *pState);
+IMB_DLL_LOCAL void
+asm_ZucInitialization_sse_no_aesni(const void *pKey, const void *pIv, ZucState_t *pState);
 
-IMB_DLL_LOCAL void asm_ZucInitialization_avx(const void *pKey,
-                                             const void *pIv,
-                                             ZucState_t *pState);
+IMB_DLL_LOCAL void
+asm_ZucInitialization_avx(const void *pKey, const void *pIv, ZucState_t *pState);
 
 /**
  ******************************************************************************
@@ -248,21 +244,17 @@ IMB_DLL_LOCAL void asm_ZucInitialization_avx(const void *pKey,
  *      None
  *
  *****************************************************************************/
-IMB_DLL_LOCAL void asm_ZucInitialization_4_sse(ZucKey4_t *pKeys,
-                                               const uint8_t *ivs,
-                                               ZucState4_t *pState);
+IMB_DLL_LOCAL void
+asm_ZucInitialization_4_sse(ZucKey4_t *pKeys, const uint8_t *ivs, ZucState4_t *pState);
 
-IMB_DLL_LOCAL void asm_ZucInitialization_4_sse_no_aesni(ZucKey4_t *pKeys,
-                                                        const uint8_t *ivs,
-                                                        ZucState4_t *pState);
+IMB_DLL_LOCAL void
+asm_ZucInitialization_4_sse_no_aesni(ZucKey4_t *pKeys, const uint8_t *ivs, ZucState4_t *pState);
 
-IMB_DLL_LOCAL void asm_ZucInitialization_4_gfni_sse(ZucKey4_t *pKeys,
-                                                    const uint8_t *ivs,
-                                                    ZucState4_t *pState);
+IMB_DLL_LOCAL void
+asm_ZucInitialization_4_gfni_sse(ZucKey4_t *pKeys, const uint8_t *ivs, ZucState4_t *pState);
 
-IMB_DLL_LOCAL void asm_ZucInitialization_4_avx(ZucKey4_t *pKeys,
-                                               const uint8_t *ivs,
-                                               ZucState4_t *pState);
+IMB_DLL_LOCAL void
+asm_ZucInitialization_4_avx(ZucKey4_t *pKeys, const uint8_t *ivs, ZucState4_t *pState);
 
 /**
  ******************************************************************************
@@ -293,30 +285,21 @@ IMB_DLL_LOCAL void asm_ZucInitialization_4_avx(ZucKey4_t *pKeys,
  *      None
  *
  *****************************************************************************/
-IMB_DLL_LOCAL void asm_Zuc256Initialization_4_sse(ZucKey4_t *pKeys,
-                                                  const uint8_t *ivs,
-                                                  ZucState4_t *pState,
-                                                  void *tags,
-                                                  const uint64_t tag_sz);
+IMB_DLL_LOCAL void
+asm_Zuc256Initialization_4_sse(ZucKey4_t *pKeys, const uint8_t *ivs, ZucState4_t *pState,
+                               void *tags, const uint64_t tag_sz);
 
-IMB_DLL_LOCAL void asm_Zuc256Initialization_4_sse_no_aesni(ZucKey4_t *pKeys,
-                                                         const uint8_t *ivs,
-                                                         ZucState4_t *pState,
-                                                         void *tags,
-                                                         const uint64_t tag_sz);
+IMB_DLL_LOCAL void
+asm_Zuc256Initialization_4_sse_no_aesni(ZucKey4_t *pKeys, const uint8_t *ivs, ZucState4_t *pState,
+                                        void *tags, const uint64_t tag_sz);
 
-IMB_DLL_LOCAL void asm_Zuc256Initialization_4_gfni_sse(ZucKey4_t *pKeys,
-                                                       const uint8_t *ivs,
-                                                       ZucState4_t *pState,
-                                                       void *tags,
-                                                       const uint64_t tag_sz);
+IMB_DLL_LOCAL void
+asm_Zuc256Initialization_4_gfni_sse(ZucKey4_t *pKeys, const uint8_t *ivs, ZucState4_t *pState,
+                                    void *tags, const uint64_t tag_sz);
 
-IMB_DLL_LOCAL void asm_Zuc256Initialization_4_avx(ZucKey4_t *pKeys,
-                                                  const uint8_t *ivs,
-                                                  ZucState4_t *pState,
-                                                  void *tags,
-                                                  const uint64_t tag_sz);
-
+IMB_DLL_LOCAL void
+asm_Zuc256Initialization_4_avx(ZucKey4_t *pKeys, const uint8_t *ivs, ZucState4_t *pState,
+                               void *tags, const uint64_t tag_sz);
 
 /**
  ******************************************************************************
@@ -339,12 +322,10 @@ IMB_DLL_LOCAL void asm_Zuc256Initialization_4_avx(ZucKey4_t *pKeys,
  *      None
  *
  *****************************************************************************/
-IMB_DLL_LOCAL void asm_ZucInitialization_8_avx2(ZucKey8_t *pKeys,
-                                                const uint8_t *ivs,
-                                                ZucState8_t *pState);
-IMB_DLL_LOCAL void asm_ZucInitialization_8_gfni_avx2(ZucKey8_t *pKeys,
-                                                const uint8_t *ivs,
-                                                ZucState8_t *pState);
+IMB_DLL_LOCAL void
+asm_ZucInitialization_8_avx2(ZucKey8_t *pKeys, const uint8_t *ivs, ZucState8_t *pState);
+IMB_DLL_LOCAL void
+asm_ZucInitialization_8_gfni_avx2(ZucKey8_t *pKeys, const uint8_t *ivs, ZucState8_t *pState);
 
 /**
  ******************************************************************************
@@ -375,16 +356,12 @@ IMB_DLL_LOCAL void asm_ZucInitialization_8_gfni_avx2(ZucKey8_t *pKeys,
  *      None
  *
  *****************************************************************************/
-IMB_DLL_LOCAL void asm_Zuc256Initialization_8_avx2(ZucKey8_t *pKeys,
-                                                   const uint8_t *ivs,
-                                                   ZucState8_t *pState,
-                                                   void *tags,
-                                                   const uint64_t tag_sz);
-IMB_DLL_LOCAL void asm_Zuc256Initialization_8_gfni_avx2(ZucKey8_t *pKeys,
-                                                   const uint8_t *ivs,
-                                                   ZucState8_t *pState,
-                                                   void *tags,
-                                                   const uint64_t tag_sz);
+IMB_DLL_LOCAL void
+asm_Zuc256Initialization_8_avx2(ZucKey8_t *pKeys, const uint8_t *ivs, ZucState8_t *pState,
+                                void *tags, const uint64_t tag_sz);
+IMB_DLL_LOCAL void
+asm_Zuc256Initialization_8_gfni_avx2(ZucKey8_t *pKeys, const uint8_t *ivs, ZucState8_t *pState,
+                                     void *tags, const uint64_t tag_sz);
 
 /**
  ******************************************************************************
@@ -407,15 +384,13 @@ IMB_DLL_LOCAL void asm_Zuc256Initialization_8_gfni_avx2(ZucKey8_t *pKeys,
  *      None
  *
  *****************************************************************************/
-IMB_DLL_LOCAL void asm_ZucInitialization_16_avx512(ZucKey16_t *pKeys,
-                                                   const uint8_t *ivs,
-                                                   ZucState16_t *pState,
-                                                   const uint16_t lane_mask);
+IMB_DLL_LOCAL void
+asm_ZucInitialization_16_avx512(ZucKey16_t *pKeys, const uint8_t *ivs, ZucState16_t *pState,
+                                const uint16_t lane_mask);
 
-IMB_DLL_LOCAL void asm_ZucInitialization_16_gfni_avx512(ZucKey16_t *pKeys,
-                                                      const uint8_t *ivs,
-                                                      ZucState16_t *pState,
-                                                      const uint16_t lane_mask);
+IMB_DLL_LOCAL void
+asm_ZucInitialization_16_gfni_avx512(ZucKey16_t *pKeys, const uint8_t *ivs, ZucState16_t *pState,
+                                     const uint16_t lane_mask);
 
 /**
  ******************************************************************************
@@ -440,17 +415,13 @@ IMB_DLL_LOCAL void asm_ZucInitialization_16_gfni_avx512(ZucKey16_t *pKeys,
  *      None
  *
  *****************************************************************************/
-IMB_DLL_LOCAL void asm_Zuc256Initialization_16_avx512(ZucKey16_t *pKeys,
-                                                   const uint8_t *ivs,
-                                                   ZucState16_t *pState,
-                                                   const uint16_t lane_mask,
-                                                   const unsigned tag_sz);
+IMB_DLL_LOCAL void
+asm_Zuc256Initialization_16_avx512(ZucKey16_t *pKeys, const uint8_t *ivs, ZucState16_t *pState,
+                                   const uint16_t lane_mask, const unsigned tag_sz);
 
-IMB_DLL_LOCAL void asm_Zuc256Initialization_16_gfni_avx512(ZucKey16_t *pKeys,
-                                                      const uint8_t *ivs,
-                                                      ZucState16_t *pState,
-                                                      const uint16_t lane_mask,
-                                                      const unsigned tag_sz);
+IMB_DLL_LOCAL void
+asm_Zuc256Initialization_16_gfni_avx512(ZucKey16_t *pKeys, const uint8_t *ivs, ZucState16_t *pState,
+                                        const uint16_t lane_mask, const unsigned tag_sz);
 
 /**
  ******************************************************************************
@@ -471,8 +442,8 @@ IMB_DLL_LOCAL void asm_Zuc256Initialization_16_gfni_avx512(ZucKey16_t *pKeys,
  *      state.
  *
  *****************************************************************************/
-IMB_DLL_LOCAL void asm_ZucGenKeystream64B_avx(uint32_t *pKeystream,
-                                              ZucState_t *pState);
+IMB_DLL_LOCAL void
+asm_ZucGenKeystream64B_avx(uint32_t *pKeystream, ZucState_t *pState);
 
 /**
  ******************************************************************************
@@ -493,8 +464,8 @@ IMB_DLL_LOCAL void asm_ZucGenKeystream64B_avx(uint32_t *pKeystream,
  *      state.
  *
  *****************************************************************************/
-IMB_DLL_LOCAL void asm_ZucGenKeystream32B_avx(uint32_t *pKeystream,
-                                              ZucState_t *pState);
+IMB_DLL_LOCAL void
+asm_ZucGenKeystream32B_avx(uint32_t *pKeystream, ZucState_t *pState);
 
 /**
  ******************************************************************************
@@ -515,14 +486,14 @@ IMB_DLL_LOCAL void asm_ZucGenKeystream32B_avx(uint32_t *pKeystream,
  *      state.
  *
  *****************************************************************************/
-IMB_DLL_LOCAL void asm_ZucGenKeystream16B_avx(uint32_t *pKeystream,
-                                              ZucState_t *pState);
+IMB_DLL_LOCAL void
+asm_ZucGenKeystream16B_avx(uint32_t *pKeystream, ZucState_t *pState);
 
-IMB_DLL_LOCAL void asm_ZucGenKeystream16B_sse(uint32_t *pKeystream,
-                                              ZucState_t *pState);
+IMB_DLL_LOCAL void
+asm_ZucGenKeystream16B_sse(uint32_t *pKeystream, ZucState_t *pState);
 
-IMB_DLL_LOCAL void asm_ZucGenKeystream16B_sse_no_aesni(uint32_t *pKeystream,
-                                                       ZucState_t *pState);
+IMB_DLL_LOCAL void
+asm_ZucGenKeystream16B_sse_no_aesni(uint32_t *pKeystream, ZucState_t *pState);
 
 /**
  ******************************************************************************
@@ -543,14 +514,14 @@ IMB_DLL_LOCAL void asm_ZucGenKeystream16B_sse_no_aesni(uint32_t *pKeystream,
  *      state.
  *
  *****************************************************************************/
-IMB_DLL_LOCAL void asm_ZucGenKeystream8B_sse(void *pKeystream,
-                                             ZucState_t *pState);
+IMB_DLL_LOCAL void
+asm_ZucGenKeystream8B_sse(void *pKeystream, ZucState_t *pState);
 
-IMB_DLL_LOCAL void asm_ZucGenKeystream8B_sse_no_aesni(void *pKeystream,
-                                                      ZucState_t *pState);
+IMB_DLL_LOCAL void
+asm_ZucGenKeystream8B_sse_no_aesni(void *pKeystream, ZucState_t *pState);
 
-IMB_DLL_LOCAL void asm_ZucGenKeystream8B_avx(void *pKeystream,
-                                             ZucState_t *pState);
+IMB_DLL_LOCAL void
+asm_ZucGenKeystream8B_avx(void *pKeystream, ZucState_t *pState);
 
 /**
  ******************************************************************************
@@ -575,17 +546,14 @@ IMB_DLL_LOCAL void asm_ZucGenKeystream8B_avx(void *pKeystream,
  *      state.
  *
  *****************************************************************************/
-IMB_DLL_LOCAL void asm_ZucGenKeystream_sse(void *pKeystream,
-                                           ZucState_t *pState,
-                                           uint64_t numRounds);
+IMB_DLL_LOCAL void
+asm_ZucGenKeystream_sse(void *pKeystream, ZucState_t *pState, uint64_t numRounds);
 
-IMB_DLL_LOCAL void asm_ZucGenKeystream_sse_no_aesni(void *pKeystream,
-                                                    ZucState_t *pState,
-                                                    uint64_t numRounds);
+IMB_DLL_LOCAL void
+asm_ZucGenKeystream_sse_no_aesni(void *pKeystream, ZucState_t *pState, uint64_t numRounds);
 
-IMB_DLL_LOCAL void asm_ZucGenKeystream_avx(void *pKeystream,
-                                           ZucState_t *pState,
-                                           uint64_t numRounds);
+IMB_DLL_LOCAL void
+asm_ZucGenKeystream_avx(void *pKeystream, ZucState_t *pState, uint64_t numRounds);
 
 /**
  ******************************************************************************
@@ -607,17 +575,17 @@ IMB_DLL_LOCAL void asm_ZucGenKeystream_avx(void *pKeystream,
  *      state.
  *
  *****************************************************************************/
-IMB_DLL_LOCAL void asm_ZucGenKeystream16B_4_sse(ZucState4_t *pState,
-                                                uint32_t *pKeyStr[4]);
+IMB_DLL_LOCAL void
+asm_ZucGenKeystream16B_4_sse(ZucState4_t *pState, uint32_t *pKeyStr[4]);
 
-IMB_DLL_LOCAL void asm_ZucGenKeystream16B_4_sse_no_aesni(ZucState4_t *pState,
-                                                         uint32_t *pKeyStr[4]);
+IMB_DLL_LOCAL void
+asm_ZucGenKeystream16B_4_sse_no_aesni(ZucState4_t *pState, uint32_t *pKeyStr[4]);
 
-IMB_DLL_LOCAL void asm_ZucGenKeystream16B_4_gfni_sse(ZucState4_t *pState,
-                                                     uint32_t *pKeyStr[4]);
+IMB_DLL_LOCAL void
+asm_ZucGenKeystream16B_4_gfni_sse(ZucState4_t *pState, uint32_t *pKeyStr[4]);
 
-IMB_DLL_LOCAL void asm_ZucGenKeystream16B_4_avx(ZucState4_t *pState,
-                                                uint32_t *pKeyStr[4]);
+IMB_DLL_LOCAL void
+asm_ZucGenKeystream16B_4_avx(ZucState4_t *pState, uint32_t *pKeyStr[4]);
 
 /**
  ******************************************************************************
@@ -639,10 +607,10 @@ IMB_DLL_LOCAL void asm_ZucGenKeystream16B_4_avx(ZucState4_t *pState,
  *      state.
  *
  *****************************************************************************/
-IMB_DLL_LOCAL void asm_ZucGenKeystream32B_8_avx2(ZucState8_t *pState,
-                                                 uint32_t *pKeyStr[8]);
-IMB_DLL_LOCAL void asm_ZucGenKeystream32B_8_gfni_avx2(ZucState8_t *pState,
-                                                 uint32_t *pKeyStr[8]);
+IMB_DLL_LOCAL void
+asm_ZucGenKeystream32B_8_avx2(ZucState8_t *pState, uint32_t *pKeyStr[8]);
+IMB_DLL_LOCAL void
+asm_ZucGenKeystream32B_8_gfni_avx2(ZucState8_t *pState, uint32_t *pKeyStr[8]);
 
 /**
  ******************************************************************************
@@ -666,13 +634,12 @@ IMB_DLL_LOCAL void asm_ZucGenKeystream32B_8_gfni_avx2(ZucState8_t *pState,
  *      the ZUC state.
  *
  *****************************************************************************/
-IMB_DLL_LOCAL void asm_ZucGenKeystream64B_16_avx512(ZucState16_t *pState,
-                                                    uint32_t *pKeyStr,
-                                                    const unsigned key_off);
+IMB_DLL_LOCAL void
+asm_ZucGenKeystream64B_16_avx512(ZucState16_t *pState, uint32_t *pKeyStr, const unsigned key_off);
 
-IMB_DLL_LOCAL void asm_ZucGenKeystream64B_16_gfni_avx512(ZucState16_t *pState,
-                                                        uint32_t *pKeyStr,
-                                                        const unsigned key_off);
+IMB_DLL_LOCAL void
+asm_ZucGenKeystream64B_16_gfni_avx512(ZucState16_t *pState, uint32_t *pKeyStr,
+                                      const unsigned key_off);
 /**
  ******************************************************************************
  *
@@ -701,16 +668,12 @@ IMB_DLL_LOCAL void asm_ZucGenKeystream64B_16_gfni_avx512(ZucState16_t *pState,
  *
  *****************************************************************************/
 IMB_DLL_LOCAL void
-asm_ZucGenKeystream64B_16_skip16_avx512(ZucState16_t *pState,
-                                        uint32_t *pKeyStr,
-                                        const unsigned key_off,
-                                        const uint16_t lane_mask);
+asm_ZucGenKeystream64B_16_skip16_avx512(ZucState16_t *pState, uint32_t *pKeyStr,
+                                        const unsigned key_off, const uint16_t lane_mask);
 
 IMB_DLL_LOCAL void
-asm_ZucGenKeystream64B_16_skip16_gfni_avx512(ZucState16_t *pState,
-                                             uint32_t *pKeyStr,
-                                             const unsigned key_off,
-                                             const uint16_t lane_mask);
+asm_ZucGenKeystream64B_16_skip16_gfni_avx512(ZucState16_t *pState, uint32_t *pKeyStr,
+                                             const unsigned key_off, const uint16_t lane_mask);
 /**
  ******************************************************************************
  *
@@ -739,16 +702,12 @@ asm_ZucGenKeystream64B_16_skip16_gfni_avx512(ZucState16_t *pState,
  *
  *****************************************************************************/
 IMB_DLL_LOCAL void
-asm_ZucGenKeystream64B_16_skip8_avx512(ZucState16_t *pState,
-                                       uint32_t *pKeyStr,
-                                       const unsigned key_off,
-                                       const uint16_t lane_mask);
+asm_ZucGenKeystream64B_16_skip8_avx512(ZucState16_t *pState, uint32_t *pKeyStr,
+                                       const unsigned key_off, const uint16_t lane_mask);
 
 IMB_DLL_LOCAL void
-asm_ZucGenKeystream64B_16_skip8_gfni_avx512(ZucState16_t *pState,
-                                            uint32_t *pKeyStr,
-                                            const unsigned key_off,
-                                            const uint16_t lane_mask);
+asm_ZucGenKeystream64B_16_skip8_gfni_avx512(ZucState16_t *pState, uint32_t *pKeyStr,
+                                            const unsigned key_off, const uint16_t lane_mask);
 /**
  ******************************************************************************
  *
@@ -777,16 +736,12 @@ asm_ZucGenKeystream64B_16_skip8_gfni_avx512(ZucState16_t *pState,
  *
  *****************************************************************************/
 IMB_DLL_LOCAL void
-asm_ZucGenKeystream64B_16_skip4_avx512(ZucState16_t *pState,
-                                       uint32_t *pKeyStr,
-                                       const unsigned key_off,
-                                       const uint16_t lane_mask);
+asm_ZucGenKeystream64B_16_skip4_avx512(ZucState16_t *pState, uint32_t *pKeyStr,
+                                       const unsigned key_off, const uint16_t lane_mask);
 
 IMB_DLL_LOCAL void
-asm_ZucGenKeystream64B_16_skip4_gfni_avx512(ZucState16_t *pState,
-                                            uint32_t *pKeyStr,
-                                            const unsigned key_off,
-                                            const uint16_t lane_mask);
+asm_ZucGenKeystream64B_16_skip4_gfni_avx512(ZucState16_t *pState, uint32_t *pKeyStr,
+                                            const unsigned key_off, const uint16_t lane_mask);
 /**
  ******************************************************************************
  *
@@ -807,17 +762,17 @@ asm_ZucGenKeystream64B_16_skip4_gfni_avx512(ZucState16_t *pState,
  *      state.
  *
  *****************************************************************************/
-IMB_DLL_LOCAL void asm_ZucGenKeystream8B_4_sse(ZucState4_t *pState,
-                                               uint32_t *pKeyStr[4]);
+IMB_DLL_LOCAL void
+asm_ZucGenKeystream8B_4_sse(ZucState4_t *pState, uint32_t *pKeyStr[4]);
 
-IMB_DLL_LOCAL void asm_ZucGenKeystream8B_4_sse_no_aesni(ZucState4_t *pState,
-                                                        uint32_t *pKeyStr[4]);
+IMB_DLL_LOCAL void
+asm_ZucGenKeystream8B_4_sse_no_aesni(ZucState4_t *pState, uint32_t *pKeyStr[4]);
 
-IMB_DLL_LOCAL void asm_ZucGenKeystream8B_4_gfni_sse(ZucState4_t *pState,
-                                                    uint32_t *pKeyStr[4]);
+IMB_DLL_LOCAL void
+asm_ZucGenKeystream8B_4_gfni_sse(ZucState4_t *pState, uint32_t *pKeyStr[4]);
 
-IMB_DLL_LOCAL void asm_ZucGenKeystream8B_4_avx(ZucState4_t *pState,
-                                               uint32_t *pKeyStr[4]);
+IMB_DLL_LOCAL void
+asm_ZucGenKeystream8B_4_avx(ZucState4_t *pState, uint32_t *pKeyStr[4]);
 
 /**
  ******************************************************************************
@@ -839,17 +794,17 @@ IMB_DLL_LOCAL void asm_ZucGenKeystream8B_4_avx(ZucState4_t *pState,
  *      state.
  *
  *****************************************************************************/
-IMB_DLL_LOCAL void asm_ZucGenKeystream4B_4_sse(ZucState4_t *pState,
-                                               uint32_t *pKeyStr[4]);
+IMB_DLL_LOCAL void
+asm_ZucGenKeystream4B_4_sse(ZucState4_t *pState, uint32_t *pKeyStr[4]);
 
-IMB_DLL_LOCAL void asm_ZucGenKeystream4B_4_sse_no_aesni(ZucState4_t *pState,
-                                                        uint32_t *pKeyStr[4]);
+IMB_DLL_LOCAL void
+asm_ZucGenKeystream4B_4_sse_no_aesni(ZucState4_t *pState, uint32_t *pKeyStr[4]);
 
-IMB_DLL_LOCAL void asm_ZucGenKeystream4B_4_gfni_sse(ZucState4_t *pState,
-                                                    uint32_t *pKeyStr[4]);
+IMB_DLL_LOCAL void
+asm_ZucGenKeystream4B_4_gfni_sse(ZucState4_t *pState, uint32_t *pKeyStr[4]);
 
-IMB_DLL_LOCAL void asm_ZucGenKeystream4B_4_avx(ZucState4_t *pState,
-                                               uint32_t *pKeyStr[4]);
+IMB_DLL_LOCAL void
+asm_ZucGenKeystream4B_4_avx(ZucState4_t *pState, uint32_t *pKeyStr[4]);
 
 /**
  ******************************************************************************
@@ -871,10 +826,10 @@ IMB_DLL_LOCAL void asm_ZucGenKeystream4B_4_avx(ZucState4_t *pState,
  *      state.
  *
  *****************************************************************************/
-IMB_DLL_LOCAL void asm_ZucGenKeystream16B_8_avx2(ZucState8_t *pState,
-                                                uint32_t *pKeyStr[8]);
-IMB_DLL_LOCAL void asm_ZucGenKeystream16B_8_gfni_avx2(ZucState8_t *pState,
-                                                uint32_t *pKeyStr[8]);
+IMB_DLL_LOCAL void
+asm_ZucGenKeystream16B_8_avx2(ZucState8_t *pState, uint32_t *pKeyStr[8]);
+IMB_DLL_LOCAL void
+asm_ZucGenKeystream16B_8_gfni_avx2(ZucState8_t *pState, uint32_t *pKeyStr[8]);
 
 /**
  ******************************************************************************
@@ -896,10 +851,10 @@ IMB_DLL_LOCAL void asm_ZucGenKeystream16B_8_gfni_avx2(ZucState8_t *pState,
  *      state.
  *
  *****************************************************************************/
-IMB_DLL_LOCAL void asm_ZucGenKeystream8B_8_avx2(ZucState8_t *pState,
-                                                uint32_t *pKeyStr[8]);
-IMB_DLL_LOCAL void asm_ZucGenKeystream8B_8_gfni_avx2(ZucState8_t *pState,
-                                                uint32_t *pKeyStr[8]);
+IMB_DLL_LOCAL void
+asm_ZucGenKeystream8B_8_avx2(ZucState8_t *pState, uint32_t *pKeyStr[8]);
+IMB_DLL_LOCAL void
+asm_ZucGenKeystream8B_8_gfni_avx2(ZucState8_t *pState, uint32_t *pKeyStr[8]);
 
 /**
  ******************************************************************************
@@ -921,10 +876,10 @@ IMB_DLL_LOCAL void asm_ZucGenKeystream8B_8_gfni_avx2(ZucState8_t *pState,
  *      state.
  *
  *****************************************************************************/
-IMB_DLL_LOCAL void asm_ZucGenKeystream4B_8_avx2(ZucState8_t *pState,
-                                                uint32_t *pKeyStr[8]);
-IMB_DLL_LOCAL void asm_ZucGenKeystream4B_8_gfni_avx2(ZucState8_t *pState,
-                                                uint32_t *pKeyStr[8]);
+IMB_DLL_LOCAL void
+asm_ZucGenKeystream4B_8_avx2(ZucState8_t *pState, uint32_t *pKeyStr[8]);
+IMB_DLL_LOCAL void
+asm_ZucGenKeystream4B_8_gfni_avx2(ZucState8_t *pState, uint32_t *pKeyStr[8]);
 
 /**
  ******************************************************************************
@@ -948,13 +903,12 @@ IMB_DLL_LOCAL void asm_ZucGenKeystream4B_8_gfni_avx2(ZucState8_t *pState,
  *      state.
  *
  *****************************************************************************/
-IMB_DLL_LOCAL void asm_ZucGenKeystream8B_16_avx512(ZucState16_t *pState,
-                                                   uint32_t *pKeyStr,
-                                                   const unsigned key_off);
+IMB_DLL_LOCAL void
+asm_ZucGenKeystream8B_16_avx512(ZucState16_t *pState, uint32_t *pKeyStr, const unsigned key_off);
 
-IMB_DLL_LOCAL void asm_ZucGenKeystream8B_16_gfni_avx512(ZucState16_t *pState,
-                                                        uint32_t *pKeyStr,
-                                                        const unsigned key_off);
+IMB_DLL_LOCAL void
+asm_ZucGenKeystream8B_16_gfni_avx512(ZucState16_t *pState, uint32_t *pKeyStr,
+                                     const unsigned key_off);
 
 /**
  ******************************************************************************
@@ -981,15 +935,11 @@ IMB_DLL_LOCAL void asm_ZucGenKeystream8B_16_gfni_avx512(ZucState16_t *pState,
  *
  *****************************************************************************/
 IMB_DLL_LOCAL void
-asm_ZucGenKeystream_16_avx512(ZucState16_t *pState,
-                              uint32_t *pKstr,
-                              const unsigned key_off,
+asm_ZucGenKeystream_16_avx512(ZucState16_t *pState, uint32_t *pKstr, const unsigned key_off,
                               const uint32_t numRounds);
 
 IMB_DLL_LOCAL void
-asm_ZucGenKeystream_16_gfni_avx512(ZucState16_t *pState,
-                                   uint32_t *pKstr,
-                                   const unsigned key_off,
+asm_ZucGenKeystream_16_gfni_avx512(ZucState16_t *pState, uint32_t *pKstr, const unsigned key_off,
                                    const uint32_t numRounds);
 /**
  ******************************************************************************
@@ -1020,18 +970,13 @@ asm_ZucGenKeystream_16_gfni_avx512(ZucState16_t *pState,
  *
  *****************************************************************************/
 IMB_DLL_LOCAL void
-asm_ZucGenKeystream_16_skip16_avx512(ZucState16_t *pState,
-                                    uint32_t *pKstr,
-                                    const unsigned key_off,
-                                    const uint16_t lane_mask,
-                                    const uint32_t numRounds);
+asm_ZucGenKeystream_16_skip16_avx512(ZucState16_t *pState, uint32_t *pKstr, const unsigned key_off,
+                                     const uint16_t lane_mask, const uint32_t numRounds);
 
 IMB_DLL_LOCAL void
-asm_ZucGenKeystream_16_skip16_gfni_avx512(ZucState16_t *pState,
-                                         uint32_t *pKstr,
-                                         const unsigned key_off,
-                                         const uint16_t lane_mask,
-                                         const uint32_t numRounds);
+asm_ZucGenKeystream_16_skip16_gfni_avx512(ZucState16_t *pState, uint32_t *pKstr,
+                                          const unsigned key_off, const uint16_t lane_mask,
+                                          const uint32_t numRounds);
 
 /**
  ******************************************************************************
@@ -1062,17 +1007,12 @@ asm_ZucGenKeystream_16_skip16_gfni_avx512(ZucState16_t *pState,
  *
  *****************************************************************************/
 IMB_DLL_LOCAL void
-asm_ZucGenKeystream_16_skip8_avx512(ZucState16_t *pState,
-                                    uint32_t *pKstr,
-                                    const unsigned key_off,
-                                    const uint16_t lane_mask,
-                                    const uint32_t numRounds);
+asm_ZucGenKeystream_16_skip8_avx512(ZucState16_t *pState, uint32_t *pKstr, const unsigned key_off,
+                                    const uint16_t lane_mask, const uint32_t numRounds);
 
 IMB_DLL_LOCAL void
-asm_ZucGenKeystream_16_skip8_gfni_avx512(ZucState16_t *pState,
-                                         uint32_t *pKstr,
-                                         const unsigned key_off,
-                                         const uint16_t lane_mask,
+asm_ZucGenKeystream_16_skip8_gfni_avx512(ZucState16_t *pState, uint32_t *pKstr,
+                                         const unsigned key_off, const uint16_t lane_mask,
                                          const uint32_t numRounds);
 
 /**
@@ -1104,17 +1044,12 @@ asm_ZucGenKeystream_16_skip8_gfni_avx512(ZucState16_t *pState,
  *
  *****************************************************************************/
 IMB_DLL_LOCAL void
-asm_ZucGenKeystream_16_skip4_avx512(ZucState16_t *pState,
-                                    uint32_t *pKstr,
-                                    const unsigned key_off,
-                                    const uint16_t lane_mask,
-                                    const uint32_t numRounds);
+asm_ZucGenKeystream_16_skip4_avx512(ZucState16_t *pState, uint32_t *pKstr, const unsigned key_off,
+                                    const uint16_t lane_mask, const uint32_t numRounds);
 
 IMB_DLL_LOCAL void
-asm_ZucGenKeystream_16_skip4_gfni_avx512(ZucState16_t *pState,
-                                         uint32_t *pKstr,
-                                         const unsigned key_off,
-                                         const uint16_t lane_mask,
+asm_ZucGenKeystream_16_skip4_gfni_avx512(ZucState16_t *pState, uint32_t *pKstr,
+                                         const unsigned key_off, const uint16_t lane_mask,
                                          const uint32_t numRounds);
 /**
  ******************************************************************************
@@ -1141,29 +1076,21 @@ asm_ZucGenKeystream_16_skip4_gfni_avx512(ZucState16_t *pState,
  *      state.
  *
  *****************************************************************************/
-IMB_DLL_LOCAL void asm_ZucCipher_4_sse(ZucState4_t *pState,
-                                      const uint64_t *pIn[4],
-                                      uint64_t *pOut[4],
-                                      uint16_t lengths[4],
-                                      const uint64_t minLength);
+IMB_DLL_LOCAL void
+asm_ZucCipher_4_sse(ZucState4_t *pState, const uint64_t *pIn[4], uint64_t *pOut[4],
+                    uint16_t lengths[4], const uint64_t minLength);
 
-IMB_DLL_LOCAL void asm_ZucCipher_4_sse_no_aesni(ZucState4_t *pState,
-                                                const uint64_t *pIn[4],
-                                                uint64_t *pOut[4],
-                                                uint16_t lengths[4],
-                                                const uint64_t minLength);
+IMB_DLL_LOCAL void
+asm_ZucCipher_4_sse_no_aesni(ZucState4_t *pState, const uint64_t *pIn[4], uint64_t *pOut[4],
+                             uint16_t lengths[4], const uint64_t minLength);
 
-IMB_DLL_LOCAL void asm_ZucCipher_4_gfni_sse(ZucState4_t *pState,
-                                            const uint64_t *pIn[4],
-                                            uint64_t *pOut[4],
-                                            uint16_t lengths[4],
-                                            const uint64_t minLength);
+IMB_DLL_LOCAL void
+asm_ZucCipher_4_gfni_sse(ZucState4_t *pState, const uint64_t *pIn[4], uint64_t *pOut[4],
+                         uint16_t lengths[4], const uint64_t minLength);
 
-IMB_DLL_LOCAL void asm_ZucCipher_4_avx(ZucState4_t *pState,
-                                       const uint64_t *pIn[4],
-                                       uint64_t *pOut[4],
-                                       uint16_t lengths[4],
-                                       const uint64_t minLength);
+IMB_DLL_LOCAL void
+asm_ZucCipher_4_avx(ZucState4_t *pState, const uint64_t *pIn[4], uint64_t *pOut[4],
+                    uint16_t lengths[4], const uint64_t minLength);
 
 /**
  ******************************************************************************
@@ -1190,16 +1117,12 @@ IMB_DLL_LOCAL void asm_ZucCipher_4_avx(ZucState4_t *pState,
  *      state.
  *
  *****************************************************************************/
-IMB_DLL_LOCAL void asm_ZucCipher_8_avx2(ZucState8_t *pState,
-                                        const uint64_t *pIn[8],
-                                        uint64_t *pOut[8],
-                                        const uint16_t lengths[8],
-                                        const uint64_t minLength);
-IMB_DLL_LOCAL void asm_ZucCipher_8_gfni_avx2(ZucState8_t *pState,
-                                             const uint64_t *pIn[8],
-                                             uint64_t *pOut[8],
-                                             const uint16_t lengths[8],
-                                             const uint64_t minLength);
+IMB_DLL_LOCAL void
+asm_ZucCipher_8_avx2(ZucState8_t *pState, const uint64_t *pIn[8], uint64_t *pOut[8],
+                     const uint16_t lengths[8], const uint64_t minLength);
+IMB_DLL_LOCAL void
+asm_ZucCipher_8_gfni_avx2(ZucState8_t *pState, const uint64_t *pIn[8], uint64_t *pOut[8],
+                          const uint16_t lengths[8], const uint64_t minLength);
 
 /**
  ******************************************************************************
@@ -1225,17 +1148,13 @@ IMB_DLL_LOCAL void asm_ZucCipher_8_gfni_avx2(ZucState8_t *pState,
  *      state.
  *
  *****************************************************************************/
-IMB_DLL_LOCAL void asm_ZucCipher_16_avx512(ZucState16_t *pState,
-                                           const uint64_t *pIn[16],
-                                           uint64_t *pOut[16],
-                                           const uint16_t lengths[16],
-                                           const uint64_t minLength);
+IMB_DLL_LOCAL void
+asm_ZucCipher_16_avx512(ZucState16_t *pState, const uint64_t *pIn[16], uint64_t *pOut[16],
+                        const uint16_t lengths[16], const uint64_t minLength);
 
-IMB_DLL_LOCAL void asm_ZucCipher_16_gfni_avx512(ZucState16_t *pState,
-                                                const uint64_t *pIn[16],
-                                                uint64_t *pOut[16],
-                                                const uint16_t lengths[16],
-                                                const uint64_t minLength);
+IMB_DLL_LOCAL void
+asm_ZucCipher_16_gfni_avx512(ZucState16_t *pState, const uint64_t *pIn[16], uint64_t *pOut[16],
+                             const uint16_t lengths[16], const uint64_t minLength);
 
 /**
  ******************************************************************************
@@ -1255,25 +1174,20 @@ IMB_DLL_LOCAL void asm_ZucCipher_16_gfni_avx512(ZucState16_t *pState,
  *      None
  *
  *****************************************************************************/
-IMB_DLL_LOCAL void asm_Eia3Round16B_sse(void *T, const void *ks,
-                                        const void *data,
-                                        const uint64_t tag_sz);
+IMB_DLL_LOCAL void
+asm_Eia3Round16B_sse(void *T, const void *ks, const void *data, const uint64_t tag_sz);
 
-IMB_DLL_LOCAL void asm_Eia3Round16B_sse_no_aesni(void *T, const void *ks,
-                                                 const void *data,
-                                                 const uint64_t tag_sz);
+IMB_DLL_LOCAL void
+asm_Eia3Round16B_sse_no_aesni(void *T, const void *ks, const void *data, const uint64_t tag_sz);
 
-IMB_DLL_LOCAL void asm_Eia3Round16B_gfni_sse(void *T, const void *ks,
-                                             const void *data,
-                                             const uint64_t tag_sz);
+IMB_DLL_LOCAL void
+asm_Eia3Round16B_gfni_sse(void *T, const void *ks, const void *data, const uint64_t tag_sz);
 
-IMB_DLL_LOCAL void asm_Eia3Round16B_avx(void *T, const void *ks,
-                                        const void *data,
-                                        const uint64_t tag_sz);
+IMB_DLL_LOCAL void
+asm_Eia3Round16B_avx(void *T, const void *ks, const void *data, const uint64_t tag_sz);
 
-IMB_DLL_LOCAL void asm_Eia3Round32B_avx(void *T, const void *ks,
-                                        const void *data,
-                                        const uint64_t tag_sz);
+IMB_DLL_LOCAL void
+asm_Eia3Round32B_avx(void *T, const void *ks, const void *data, const uint64_t tag_sz);
 
 /**
  ******************************************************************************
@@ -1291,29 +1205,21 @@ IMB_DLL_LOCAL void asm_Eia3Round32B_avx(void *T, const void *ks,
  *      None
  *
  *****************************************************************************/
-IMB_DLL_LOCAL void asm_Eia3Remainder_sse(void *T, const void *ks,
-                                         const void *data,
-                                         const uint64_t n_bits,
-                                         const uint64_t key_size,
-                                         const uint64_t tag_size);
+IMB_DLL_LOCAL void
+asm_Eia3Remainder_sse(void *T, const void *ks, const void *data, const uint64_t n_bits,
+                      const uint64_t key_size, const uint64_t tag_size);
 
-IMB_DLL_LOCAL void asm_Eia3Remainder_sse_no_aesni(void *T, const void *ks,
-                                                  const void *data,
-                                                  const uint64_t n_bits,
-                                                  const uint64_t key_size,
-                                                  const uint64_t tag_size);
+IMB_DLL_LOCAL void
+asm_Eia3Remainder_sse_no_aesni(void *T, const void *ks, const void *data, const uint64_t n_bits,
+                               const uint64_t key_size, const uint64_t tag_size);
 
-IMB_DLL_LOCAL void asm_Eia3Remainder_gfni_sse(void *T, const void *ks,
-                                              const void *data,
-                                              const uint64_t n_bits,
-                                              const uint64_t key_size,
-                                              const uint64_t tag_size);
+IMB_DLL_LOCAL void
+asm_Eia3Remainder_gfni_sse(void *T, const void *ks, const void *data, const uint64_t n_bits,
+                           const uint64_t key_size, const uint64_t tag_size);
 
-IMB_DLL_LOCAL void asm_Eia3Remainder_avx(void *T, const void *ks,
-                                         const void *data,
-                                         const uint64_t n_bits,
-                                         const uint64_t key_size,
-                                         const uint64_t tag_size);
+IMB_DLL_LOCAL void
+asm_Eia3Remainder_avx(void *T, const void *ks, const void *data, const uint64_t n_bits,
+                      const uint64_t key_size, const uint64_t tag_size);
 
 /**
  ******************************************************************************
@@ -1336,20 +1242,16 @@ IMB_DLL_LOCAL void asm_Eia3Remainder_avx(void *T, const void *ks,
  *
  *****************************************************************************/
 
-IMB_DLL_LOCAL void asm_Eia3Round64BAVX512_16(void *T,
-                                             const uint32_t *ks,
-                                             const void **data,
-                                             uint16_t *len,
-                                             const uint64_t tag_sz);
+IMB_DLL_LOCAL void
+asm_Eia3Round64BAVX512_16(void *T, const uint32_t *ks, const void **data, uint16_t *len,
+                          const uint64_t tag_sz);
 
-IMB_DLL_LOCAL void asm_Eia3Round64B_16_VPCLMUL(void *T,
-                                               const uint32_t *ks,
-                                               const void **data,
-                                               uint16_t *len,
-                                               const uint64_t tag_sz);
+IMB_DLL_LOCAL void
+asm_Eia3Round64B_16_VPCLMUL(void *T, const uint32_t *ks, const void **data, uint16_t *len,
+                            const uint64_t tag_sz);
 
-IMB_DLL_LOCAL void asm_Eia3Round64BAVX512(uint32_t *T, const void *ks,
-                                          const void *data);
+IMB_DLL_LOCAL void
+asm_Eia3Round64BAVX512(uint32_t *T, const void *ks, const void *data);
 
 /**
  ******************************************************************************
@@ -1369,35 +1271,25 @@ IMB_DLL_LOCAL void asm_Eia3Round64BAVX512(uint32_t *T, const void *ks,
  *      None
  *
  *****************************************************************************/
-IMB_DLL_LOCAL void asm_Eia3RemainderAVX512(uint32_t *T, const void *ks,
-                                           const void *data,
-                                           const uint32_t n_bits);
+IMB_DLL_LOCAL void
+asm_Eia3RemainderAVX512(uint32_t *T, const void *ks, const void *data, const uint32_t n_bits);
 
-IMB_DLL_LOCAL uint32_t asm_Eia3RemainderAVX512_16(uint32_t *T,
-                                                  const uint32_t *ks,
-                                                  const void **data,
-                                                  uint16_t *lens,
-                                                  const uint32_t commonBits);
+IMB_DLL_LOCAL uint32_t
+asm_Eia3RemainderAVX512_16(uint32_t *T, const uint32_t *ks, const void **data, uint16_t *lens,
+                           const uint32_t commonBits);
 
-IMB_DLL_LOCAL uint32_t asm_Eia3_256_RemainderAVX512_16(uint32_t *T,
-                                                  const uint32_t *ks,
-                                                  const void **data,
-                                                  uint16_t *lens,
-                                                  const uint64_t commonBits,
-                                                  const uint64_t tag_size);
+IMB_DLL_LOCAL uint32_t
+asm_Eia3_256_RemainderAVX512_16(uint32_t *T, const uint32_t *ks, const void **data, uint16_t *lens,
+                                const uint64_t commonBits, const uint64_t tag_size);
 
-IMB_DLL_LOCAL uint32_t asm_Eia3RemainderAVX512_16_VPCLMUL(uint32_t *T,
-                                                  const uint32_t *ks,
-                                                  const void **data,
-                                                  uint16_t *lens,
-                                                  const uint32_t commonBits);
+IMB_DLL_LOCAL uint32_t
+asm_Eia3RemainderAVX512_16_VPCLMUL(uint32_t *T, const uint32_t *ks, const void **data,
+                                   uint16_t *lens, const uint32_t commonBits);
 
-IMB_DLL_LOCAL uint32_t asm_Eia3_256_RemainderAVX512_16_VPCLMUL(uint32_t *T,
-                                                  const uint32_t *ks,
-                                                  const void **data,
-                                                  uint16_t *lens,
-                                                  const uint64_t commonBits,
-                                                  const uint64_t tag_size);
+IMB_DLL_LOCAL uint32_t
+asm_Eia3_256_RemainderAVX512_16_VPCLMUL(uint32_t *T, const uint32_t *ks, const void **data,
+                                        uint16_t *lens, const uint64_t commonBits,
+                                        const uint64_t tag_size);
 
 /**
  ******************************************************************************
@@ -1414,313 +1306,249 @@ IMB_DLL_LOCAL uint32_t asm_Eia3_256_RemainderAVX512_16_VPCLMUL(uint32_t *T,
  *
  *****************************************************************************/
 IMB_DLL_LOCAL
-void asm_Eia3_Nx64B_AVX512_16(ZucState16_t *pState,
-                              uint32_t *pKeyStr,
-                              uint32_t *T,
-                              const void **data,
-                              uint16_t *len,
-                              const uint64_t numRounds,
-                              const uint64_t tagSize);
+void
+asm_Eia3_Nx64B_AVX512_16(ZucState16_t *pState, uint32_t *pKeyStr, uint32_t *T, const void **data,
+                         uint16_t *len, const uint64_t numRounds, const uint64_t tagSize);
 IMB_DLL_LOCAL
-void asm_Eia3_Nx64B_AVX512_16_VPCLMUL(ZucState16_t *pState,
-                                      uint32_t *pKeyStr,
-                                      uint32_t *T,
-                                      const void **data,
-                                      uint16_t *len,
-                                      const uint64_t numRounds,
-                                      const uint64_t tagSize);
+void
+asm_Eia3_Nx64B_AVX512_16_VPCLMUL(ZucState16_t *pState, uint32_t *pKeyStr, uint32_t *T,
+                                 const void **data, uint16_t *len, const uint64_t numRounds,
+                                 const uint64_t tagSize);
 IMB_DLL_LOCAL
-void zuc_eia3_4_buffer_job_gfni_sse(const void * const pKey[4],
-                                    const uint8_t *ivs,
-                                    const void * const pBufferIn[4],
-                                    uint32_t *pMacI[4],
-                                    const uint16_t lengthInBits[4],
-                                    const void * const job_in_lane[4]);
+void
+zuc_eia3_4_buffer_job_gfni_sse(const void *const pKey[4], const uint8_t *ivs,
+                               const void *const pBufferIn[4], uint32_t *pMacI[4],
+                               const uint16_t lengthInBits[4], const void *const job_in_lane[4]);
 
 IMB_DLL_LOCAL
-void zuc_eia3_4_buffer_job_no_gfni_sse(const void * const pKey[4],
-                                       const uint8_t *ivs,
-                                       const void * const pBufferIn[4],
-                                       uint32_t *pMacI[4],
-                                       const uint16_t lengthInBits[4],
-                                       const void * const job_in_lane[4]);
+void
+zuc_eia3_4_buffer_job_no_gfni_sse(const void *const pKey[4], const uint8_t *ivs,
+                                  const void *const pBufferIn[4], uint32_t *pMacI[4],
+                                  const uint16_t lengthInBits[4], const void *const job_in_lane[4]);
 
 IMB_DLL_LOCAL
-void zuc_eia3_4_buffer_job_sse_no_aesni(const void * const pKey[4],
-                                        const uint8_t *ivs,
-                                        const void * const pBufferIn[4],
-                                        uint32_t *pMacI[4],
-                                        const uint16_t lengthInBits[4],
-                                        const void * const job_in_lane[4]);
+void
+zuc_eia3_4_buffer_job_sse_no_aesni(const void *const pKey[4], const uint8_t *ivs,
+                                   const void *const pBufferIn[4], uint32_t *pMacI[4],
+                                   const uint16_t lengthInBits[4],
+                                   const void *const job_in_lane[4]);
 
 IMB_DLL_LOCAL
-void zuc256_eia3_4_buffer_job_gfni_sse(const void * const pKey[4],
-                                       const uint8_t *ivs,
-                                       const void * const pBufferIn[4],
-                                       void *pMacI[4],
-                                       const uint16_t lengthInBits[4],
-                                       const void * const job_in_lane[4],
-                                       const uint64_t tag_size);
+void
+zuc256_eia3_4_buffer_job_gfni_sse(const void *const pKey[4], const uint8_t *ivs,
+                                  const void *const pBufferIn[4], void *pMacI[4],
+                                  const uint16_t lengthInBits[4], const void *const job_in_lane[4],
+                                  const uint64_t tag_size);
 
 IMB_DLL_LOCAL
-void zuc256_eia3_4_buffer_job_no_gfni_sse(const void * const pKey[4],
-                                          const uint8_t *ivs,
-                                          const void * const pBufferIn[4],
-                                          void *pMacI[4],
-                                          const uint16_t lengthInBits[4],
-                                          const void * const job_in_lane[4],
-                                          const uint64_t tag_size);
+void
+zuc256_eia3_4_buffer_job_no_gfni_sse(const void *const pKey[4], const uint8_t *ivs,
+                                     const void *const pBufferIn[4], void *pMacI[4],
+                                     const uint16_t lengthInBits[4],
+                                     const void *const job_in_lane[4], const uint64_t tag_size);
 
 IMB_DLL_LOCAL
-void zuc256_eia3_4_buffer_job_sse_no_aesni(const void * const pKey[4],
-                                           const uint8_t *ivs,
-                                           const void * const pBufferIn[4],
-                                           void *pMacI[4],
-                                           const uint16_t lengthInBits[4],
-                                           const void * const job_in_lane[4],
-                                           const uint64_t tag_size);
+void
+zuc256_eia3_4_buffer_job_sse_no_aesni(const void *const pKey[4], const uint8_t *ivs,
+                                      const void *const pBufferIn[4], void *pMacI[4],
+                                      const uint16_t lengthInBits[4],
+                                      const void *const job_in_lane[4], const uint64_t tag_size);
 
 IMB_DLL_LOCAL
-void zuc_eia3_4_buffer_job_avx(const void * const pKey[4],
-                               const uint8_t *ivs,
-                               const void * const pBufferIn[4],
-                               uint32_t *pMacI[4],
-                               const uint16_t lengthInBits[4],
-                               const void * const job_in_lane[4]);
+void
+zuc_eia3_4_buffer_job_avx(const void *const pKey[4], const uint8_t *ivs,
+                          const void *const pBufferIn[4], uint32_t *pMacI[4],
+                          const uint16_t lengthInBits[4], const void *const job_in_lane[4]);
 
 IMB_DLL_LOCAL
-void zuc256_eia3_4_buffer_job_avx(const void * const pKey[4],
-                               const uint8_t *ivs,
-                               const void * const pBufferIn[4],
-                               void *pMacI[4],
-                               const uint16_t lengthInBits[4],
-                               const void * const job_in_lane[4],
-                               const uint64_t tag_size);
+void
+zuc256_eia3_4_buffer_job_avx(const void *const pKey[4], const uint8_t *ivs,
+                             const void *const pBufferIn[4], void *pMacI[4],
+                             const uint16_t lengthInBits[4], const void *const job_in_lane[4],
+                             const uint64_t tag_size);
 
 IMB_DLL_LOCAL
-void zuc_eia3_8_buffer_job_avx2(const void * const pKey[8],
-                                const uint8_t *ivs,
-                                const void * const pBufferIn[8],
-                                uint32_t *pMacI[8],
-                                const uint16_t lengthInBits[8],
-                                const void * const job_in_lane[8]);
+void
+zuc_eia3_8_buffer_job_avx2(const void *const pKey[8], const uint8_t *ivs,
+                           const void *const pBufferIn[8], uint32_t *pMacI[8],
+                           const uint16_t lengthInBits[8], const void *const job_in_lane[8]);
 
 IMB_DLL_LOCAL
-void zuc_eia3_8_buffer_job_gfni_avx2(const void * const pKey[8],
-                                const uint8_t *ivs,
-                                const void * const pBufferIn[8],
-                                uint32_t *pMacI[8],
-                                const uint16_t lengthInBits[8],
-                                const void * const job_in_lane[8]);
+void
+zuc_eia3_8_buffer_job_gfni_avx2(const void *const pKey[8], const uint8_t *ivs,
+                                const void *const pBufferIn[8], uint32_t *pMacI[8],
+                                const uint16_t lengthInBits[8], const void *const job_in_lane[8]);
 
 IMB_DLL_LOCAL
-void zuc256_eia3_8_buffer_job_avx2(const void * const pKey[8],
-                                   const uint8_t *ivs,
-                                   const void * const pBufferIn[8],
-                                   void *pMacI[8],
-                                   const uint16_t lengthInBits[8],
-                                   const void * const job_in_lane[8],
-                                   const uint64_t tag_size);
+void
+zuc256_eia3_8_buffer_job_avx2(const void *const pKey[8], const uint8_t *ivs,
+                              const void *const pBufferIn[8], void *pMacI[8],
+                              const uint16_t lengthInBits[8], const void *const job_in_lane[8],
+                              const uint64_t tag_size);
 
 IMB_DLL_LOCAL
-void zuc256_eia3_8_buffer_job_gfni_avx2(const void * const pKey[8],
-                                   const uint8_t *ivs,
-                                   const void * const pBufferIn[8],
-                                   void *pMacI[8],
-                                   const uint16_t lengthInBits[8],
-                                   const void * const job_in_lane[8],
+void
+zuc256_eia3_8_buffer_job_gfni_avx2(const void *const pKey[8], const uint8_t *ivs,
+                                   const void *const pBufferIn[8], void *pMacI[8],
+                                   const uint16_t lengthInBits[8], const void *const job_in_lane[8],
                                    const uint64_t tag_size);
 /* the s-boxes */
 extern const uint8_t S0[256];
 extern const uint8_t S1[256];
 
-void zuc_eea3_1_buffer_sse(const void *pKey, const void *pIv,
-                           const void *pBufferIn, void *pBufferOut,
-                           const uint32_t lengthInBytes);
+void
+zuc_eea3_1_buffer_sse(const void *pKey, const void *pIv, const void *pBufferIn, void *pBufferOut,
+                      const uint32_t lengthInBytes);
 
-void zuc_eea3_4_buffer_sse(const void * const pKey[4],
-                           const void * const pIv[4],
-                           const void * const pBufferIn[4],
-                           void *pBufferOut[4],
+void
+zuc_eea3_4_buffer_sse(const void *const pKey[4], const void *const pIv[4],
+                      const void *const pBufferIn[4], void *pBufferOut[4],
+                      const uint32_t lengthInBytes[4]);
+
+void
+zuc_eea3_n_buffer_sse(const void *const pKey[], const void *const pIv[],
+                      const void *const pBufferIn[], void *pBufferOut[],
+                      const uint32_t lengthInBytes[], const uint32_t numBuffers);
+
+void
+zuc_eia3_1_buffer_sse(const void *pKey, const void *pIv, const void *pBufferIn,
+                      const uint32_t lengthInBits, uint32_t *pMacI);
+
+void
+zuc_eia3_n_buffer_sse(const void *const pKey[], const void *const pIv[],
+                      const void *const pBufferIn[], const uint32_t lengthInBits[],
+                      uint32_t *pMacI[], const uint32_t numBuffers);
+
+void
+zuc_eia3_n_buffer_gfni_sse(const void *const pKey[], const void *const pIv[],
+                           const void *const pBufferIn[], const uint32_t lengthInBits[],
+                           uint32_t *pMacI[], const uint32_t numBuffers);
+
+void
+zuc_eea3_1_buffer_sse_no_aesni(const void *pKey, const void *pIv, const void *pBufferIn,
+                               void *pBufferOut, const uint32_t lengthInBytes);
+
+void
+zuc_eea3_4_buffer_sse_no_aesni(const void *const pKey[4], const void *const pIv[4],
+                               const void *const pBufferIn[4], void *pBufferOut[4],
+                               const uint32_t lengthInBytes[4]);
+
+void
+zuc_eea3_n_buffer_sse_no_aesni(const void *const pKey[], const void *const pIv[],
+                               const void *const pBufferIn[], void *pBufferOut[],
+                               const uint32_t lengthInBytes[], const uint32_t numBuffers);
+
+void
+zuc_eea3_4_buffer_gfni_sse(const void *const pKey[4], const void *const pIv[4],
+                           const void *const pBufferIn[4], void *pBufferOut[4],
                            const uint32_t lengthInBytes[4]);
 
-void zuc_eea3_n_buffer_sse(const void * const pKey[], const void * const pIv[],
-                           const void * const pBufferIn[], void *pBufferOut[],
-                           const uint32_t lengthInBytes[],
-                           const uint32_t numBuffers);
+void
+zuc_eea3_n_buffer_gfni_sse(const void *const pKey[], const void *const pIv[],
+                           const void *const pBufferIn[], void *pBufferOut[],
+                           const uint32_t lengthInBytes[], const uint32_t numBuffers);
 
-void zuc_eia3_1_buffer_sse(const void *pKey, const void *pIv,
-                           const void *pBufferIn, const uint32_t lengthInBits,
-                           uint32_t *pMacI);
+void
+zuc_eia3_1_buffer_sse_no_aesni(const void *pKey, const void *pIv, const void *pBufferIn,
+                               const uint32_t lengthInBits, uint32_t *pMacI);
 
-void zuc_eia3_n_buffer_sse(const void * const pKey[],
-                           const void * const pIv[],
-                           const void * const pBufferIn[],
-                           const uint32_t lengthInBits[],
-                           uint32_t *pMacI[],
-                           const uint32_t numBuffers);
+void
+zuc_eia3_n_buffer_sse_no_aesni(const void *const pKey[], const void *const pIv[],
+                               const void *const pBufferIn[], const uint32_t lengthInBits[],
+                               uint32_t *pMacI[], const uint32_t numBuffers);
 
-void zuc_eia3_n_buffer_gfni_sse(const void * const pKey[],
-                                const void * const pIv[],
-                                const void * const pBufferIn[],
-                                const uint32_t lengthInBits[],
-                                uint32_t *pMacI[],
-                                const uint32_t numBuffers);
+void
+zuc_eea3_1_buffer_avx(const void *pKey, const void *pIv, const void *pBufferIn, void *pBufferOut,
+                      const uint32_t lengthInBytes);
 
-void zuc_eea3_1_buffer_sse_no_aesni(const void *pKey, const void *pIv,
-                                    const void *pBufferIn, void *pBufferOut,
-                                    const uint32_t lengthInBytes);
+void
+zuc_eea3_4_buffer_avx(const void *const pKey[4], const void *const pIv[4],
+                      const void *const pBufferIn[4], void *pBufferOut[4],
+                      const uint32_t lengthInBytes[4]);
 
-void zuc_eea3_4_buffer_sse_no_aesni(const void * const pKey[4],
-                                    const void * const pIv[4],
-                                    const void * const pBufferIn[4],
-                                    void *pBufferOut[4],
-                                    const uint32_t lengthInBytes[4]);
+void
+zuc_eea3_n_buffer_avx(const void *const pKey[], const void *const pIv[],
+                      const void *const pBufferIn[], void *pBufferOut[],
+                      const uint32_t lengthInBytes[], const uint32_t numBuffers);
 
-void zuc_eea3_n_buffer_sse_no_aesni(const void * const pKey[],
-                                    const void * const pIv[],
-                                    const void * const pBufferIn[],
-                                    void *pBufferOut[],
-                                    const uint32_t lengthInBytes[],
-                                    const uint32_t numBuffers);
+void
+zuc_eia3_1_buffer_avx(const void *pKey, const void *pIv, const void *pBufferIn,
+                      const uint32_t lengthInBits, uint32_t *pMacI);
 
-void zuc_eea3_4_buffer_gfni_sse(const void * const pKey[4],
-                                const void * const pIv[4],
-                                const void * const pBufferIn[4],
-                                void *pBufferOut[4],
-                                const uint32_t lengthInBytes[4]);
+void
+zuc_eia3_n_buffer_avx(const void *const pKey[], const void *const pIv[],
+                      const void *const pBufferIn[], const uint32_t lengthInBits[],
+                      uint32_t *pMacI[], const uint32_t numBuffers);
 
-void zuc_eea3_n_buffer_gfni_sse(const void * const pKey[],
-                                const void * const pIv[],
-                                const void * const pBufferIn[],
-                                void *pBufferOut[],
-                                const uint32_t lengthInBytes[],
-                                const uint32_t numBuffers);
+void
+zuc_eea3_1_buffer_avx2(const void *pKey, const void *pIv, const void *pBufferIn, void *pBufferOut,
+                       const uint32_t lengthInBytes);
 
-void zuc_eia3_1_buffer_sse_no_aesni(const void *pKey, const void *pIv,
-                                    const void *pBufferIn,
-                                    const uint32_t lengthInBits,
-                                    uint32_t *pMacI);
+void
+zuc_eea3_n_buffer_avx2(const void *const pKey[], const void *const pIv[],
+                       const void *const pBufferIn[], void *pBufferOut[],
+                       const uint32_t lengthInBytes[], const uint32_t numBuffers);
 
-void zuc_eia3_n_buffer_sse_no_aesni(const void * const pKey[],
-                                    const void * const pIv[],
-                                    const void * const pBufferIn[],
-                                    const uint32_t lengthInBits[],
-                                    uint32_t *pMacI[],
-                                    const uint32_t numBuffers);
+void
+zuc_eia3_1_buffer_avx2(const void *pKey, const void *pIv, const void *pBufferIn,
+                       const uint32_t lengthInBits, uint32_t *pMacI);
 
-void zuc_eea3_1_buffer_avx(const void *pKey, const void *pIv,
-                           const void *pBufferIn, void *pBufferOut,
-                           const uint32_t lengthInBytes);
+void
+zuc_eia3_n_buffer_avx2(const void *const pKey[], const void *const pIv[],
+                       const void *const pBufferIn[], const uint32_t lengthInBits[],
+                       uint32_t *pMacI[], const uint32_t numBuffers);
 
-void zuc_eea3_4_buffer_avx(const void * const pKey[4],
-                           const void * const pIv[4],
-                           const void * const pBufferIn[4],
-                           void *pBufferOut[4],
-                           const uint32_t lengthInBytes[4]);
+void
+zuc_eea3_1_buffer_avx512(const void *pKey, const void *pIv, const void *pBufferIn, void *pBufferOut,
+                         const uint32_t lengthInBytes);
 
-void zuc_eea3_n_buffer_avx(const void * const pKey[], const void * const pIv[],
-                           const void * const pBufferIn[], void *pBufferOut[],
-                           const uint32_t lengthInBytes[],
-                           const uint32_t numBuffers);
+void
+zuc_eea3_n_buffer_avx512(const void *const pKey[], const void *const pIv[],
+                         const void *const pBufferIn[], void *pBufferOut[],
+                         const uint32_t lengthInBytes[], const uint32_t numBuffers);
 
-void zuc_eia3_1_buffer_avx(const void *pKey, const void *pIv,
-                           const void *pBufferIn, const uint32_t lengthInBits,
-                           uint32_t *pMacI);
+void
+zuc_eea3_n_buffer_gfni_avx512(const void *const pKey[], const void *const pIv[],
+                              const void *const pBufferIn[], void *pBufferOut[],
+                              const uint32_t lengthInBytes[], const uint32_t numBuffers);
 
-void zuc_eia3_n_buffer_avx(const void * const pKey[],
-                           const void * const pIv[],
-                           const void * const pBufferIn[],
-                           const uint32_t lengthInBits[],
-                           uint32_t *pMacI[],
-                           const uint32_t numBuffers);
+void
+zuc_eia3_1_buffer_avx512(const void *pKey, const void *pIv, const void *pBufferIn,
+                         const uint32_t lengthInBits, uint32_t *pMacI);
 
+void
+zuc_eia3_n_buffer_avx512(const void *const pKey[], const void *const pIv[],
+                         const void *const pBufferIn[], const uint32_t lengthInBits[],
+                         uint32_t *pMacI[], const uint32_t numBuffers);
 
-void zuc_eea3_1_buffer_avx2(const void *pKey, const void *pIv,
-                            const void *pBufferIn, void *pBufferOut,
-                            const uint32_t lengthInBytes);
-
-void zuc_eea3_n_buffer_avx2(const void * const pKey[], const void * const pIv[],
-                            const void * const pBufferIn[], void *pBufferOut[],
-                            const uint32_t lengthInBytes[],
-                            const uint32_t numBuffers);
-
-void zuc_eia3_1_buffer_avx2(const void *pKey, const void *pIv,
-                            const void *pBufferIn, const uint32_t lengthInBits,
-                            uint32_t *pMacI);
-
-void zuc_eia3_n_buffer_avx2(const void * const pKey[],
-                            const void * const pIv[],
-                            const void * const pBufferIn[],
-                            const uint32_t lengthInBits[],
-                            uint32_t *pMacI[],
-                            const uint32_t numBuffers);
-
-void zuc_eea3_1_buffer_avx512(const void *pKey, const void *pIv,
-                              const void *pBufferIn, void *pBufferOut,
-                              const uint32_t lengthInBytes);
-
-void zuc_eea3_n_buffer_avx512(const void * const pKey[],
-                              const void * const pIv[],
-                              const void * const pBufferIn[],
-                              void *pBufferOut[],
-                              const uint32_t lengthInBytes[],
-                              const uint32_t numBuffers);
-
-void zuc_eea3_n_buffer_gfni_avx512(const void * const pKey[],
-                                   const void * const pIv[],
-                                   const void * const pBufferIn[],
-                                   void *pBufferOut[],
-                                   const uint32_t lengthInBytes[],
-                                   const uint32_t numBuffers);
-
-void zuc_eia3_1_buffer_avx512(const void *pKey, const void *pIv,
-                              const void *pBufferIn,
-                              const uint32_t lengthInBits,
-                              uint32_t *pMacI);
-
-void zuc_eia3_n_buffer_avx512(const void * const pKey[],
-                              const void * const pIv[],
-                              const void * const pBufferIn[],
-                              const uint32_t lengthInBits[],
-                              uint32_t *pMacI[],
-                              const uint32_t numBuffers);
-
-void zuc_eia3_n_buffer_gfni_avx512(const void * const pKey[],
-                                   const void * const pIv[],
-                                   const void * const pBufferIn[],
-                                   const uint32_t lengthInBits[],
-                                   uint32_t *pMacI[],
-                                   const uint32_t numBuffers);
+void
+zuc_eia3_n_buffer_gfni_avx512(const void *const pKey[], const void *const pIv[],
+                              const void *const pBufferIn[], const uint32_t lengthInBits[],
+                              uint32_t *pMacI[], const uint32_t numBuffers);
 
 /* Internal API */
 IMB_DLL_LOCAL
-void _zuc_eea3_4_buffer_avx(const void * const pKey[4],
-                            const void * const pIv[4],
-                            const void * const pBufferIn[4],
-                            void *pBufferOut[4],
-                            const uint32_t length[4]);
+void
+_zuc_eea3_4_buffer_avx(const void *const pKey[4], const void *const pIv[4],
+                       const void *const pBufferIn[4], void *pBufferOut[4],
+                       const uint32_t length[4]);
 
 IMB_DLL_LOCAL
-void _zuc_eia3_4_buffer_avx(const void * const pKey[4],
-                            const void * const pIv[4],
-                            const void * const pBufferIn[4],
-                            const uint32_t lengthInBits[4],
-                            uint32_t *pMacI[4]);
+void
+_zuc_eia3_4_buffer_avx(const void *const pKey[4], const void *const pIv[4],
+                       const void *const pBufferIn[4], const uint32_t lengthInBits[4],
+                       uint32_t *pMacI[4]);
 
 IMB_DLL_LOCAL
-void _zuc_eea3_8_buffer_avx2(const void * const pKey[8],
-                             const void * const pIv[8],
-                             const void * const pBufferIn[8],
-                             void *pBufferOut[8],
-                             const uint32_t length[8]);
+void
+_zuc_eea3_8_buffer_avx2(const void *const pKey[8], const void *const pIv[8],
+                        const void *const pBufferIn[8], void *pBufferOut[8],
+                        const uint32_t length[8]);
 
 IMB_DLL_LOCAL
-void _zuc_eia3_8_buffer_avx2(const void * const pKey[8],
-                             const void * const pIv[8],
-                             const void * const pBufferIn[8],
-                             const uint32_t lengthInBits[8],
-                             uint32_t *pMacI[8]);
+void
+_zuc_eia3_8_buffer_avx2(const void *const pKey[8], const void *const pIv[8],
+                        const void *const pBufferIn[8], const uint32_t lengthInBits[8],
+                        uint32_t *pMacI[8]);
 
 #endif /* ZUC_INTERNAL_H_ */
-

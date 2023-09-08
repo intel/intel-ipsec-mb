@@ -47,8 +47,7 @@ init_mb_mgr_sse_internal(IMB_MGR *state, const int reset_mgrs)
                 return;
         }
 
-        state->features = cpu_feature_adjust(state->flags,
-                                             cpu_feature_detect());
+        state->features = cpu_feature_adjust(state->flags, cpu_feature_detect());
 
         /* reset error status */
         imb_set_errno(state, 0);
@@ -70,33 +69,38 @@ init_mb_mgr_sse(IMB_MGR *state)
                 imb_set_errno(state, IMB_ERR_SELFTEST);
 }
 
-IMB_JOB *submit_job_sse(IMB_MGR *state)
+IMB_JOB *
+submit_job_sse(IMB_MGR *state)
 {
         return IMB_SUBMIT_JOB(state);
 }
 
-IMB_JOB *flush_job_sse(IMB_MGR *state)
+IMB_JOB *
+flush_job_sse(IMB_MGR *state)
 {
         return IMB_FLUSH_JOB(state);
 }
 
-uint32_t queue_size_sse(IMB_MGR *state)
+uint32_t
+queue_size_sse(IMB_MGR *state)
 {
         return IMB_QUEUE_SIZE(state);
 }
 
-IMB_JOB *submit_job_nocheck_sse(IMB_MGR *state)
+IMB_JOB *
+submit_job_nocheck_sse(IMB_MGR *state)
 {
         return IMB_SUBMIT_JOB_NOCHECK(state);
 }
 
-IMB_JOB *get_next_job_sse(IMB_MGR *state)
+IMB_JOB *
+get_next_job_sse(IMB_MGR *state)
 {
         return IMB_GET_NEXT_JOB(state);
 }
 
-IMB_JOB *get_completed_job_sse(IMB_MGR *state)
+IMB_JOB *
+get_completed_job_sse(IMB_MGR *state)
 {
         return IMB_GET_COMPLETED_JOB(state);
 }
-
