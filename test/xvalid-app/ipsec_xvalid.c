@@ -378,62 +378,62 @@ struct str_value_mapping hash_algo_str_map[] = {
                         .hash_alg = IMB_AUTH_GHASH,
                 }
         },
-        {       .name = "CRC32-ETHERNET-FCS",
+        {       .name = "ETH-CRC32",
                 .values.job_params = {
                         .hash_alg = IMB_AUTH_CRC32_ETHERNET_FCS,
                 }
         },
-        {       .name = "CRC32-SCTP",
+        {       .name = "SCTP-CRC32",
                 .values.job_params = {
                         .hash_alg = IMB_AUTH_CRC32_SCTP,
                 }
         },
-        {       .name = "CRC32-WIMAX-OFDMA-DATA",
+        {       .name = "WIMAX-OFDMA-CRC32",
                 .values.job_params = {
                         .hash_alg = IMB_AUTH_CRC32_WIMAX_OFDMA_DATA,
                 }
         },
-        {       .name = "CRC24-LTE-A",
+        {       .name = "LTE-A-CRC24",
                 .values.job_params = {
                         .hash_alg = IMB_AUTH_CRC24_LTE_A,
                 }
         },
-        {       .name = "CRC24-LTE-B",
+        {       .name = "LTE-B-CRC24",
                 .values.job_params = {
                         .hash_alg = IMB_AUTH_CRC24_LTE_B,
                 }
         },
-        {       .name = "CRC16-X25",
+        {       .name = "X25-CRC16",
                 .values.job_params = {
                         .hash_alg = IMB_AUTH_CRC16_X25,
                 }
         },
-        {       .name = "CRC16-FP-DATA",
+        {       .name = "FP-CRC16",
                 .values.job_params = {
                         .hash_alg = IMB_AUTH_CRC16_FP_DATA,
                 }
         },
-        {       .name = "CRC11-FP-HEADER",
+        {       .name = "FP-CRC11",
                 .values.job_params = {
                         .hash_alg = IMB_AUTH_CRC11_FP_HEADER,
                 }
         },
-        {       .name = "CRC10-IUUP-DATA",
+        {       .name = "IUUP-CRC10",
                 .values.job_params = {
                         .hash_alg = IMB_AUTH_CRC10_IUUP_DATA,
                 }
         },
-        {       .name = "CRC8-WIMAX-OFDMA-HCS",
+        {       .name = "WIMAX-OFDMA-CRC8",
                 .values.job_params = {
                         .hash_alg = IMB_AUTH_CRC8_WIMAX_OFDMA_HCS,
                 }
         },
-        {       .name = "CRC7-FP-HEADER",
+        {       .name = "FP-CRC7",
                 .values.job_params = {
                         .hash_alg = IMB_AUTH_CRC7_FP_HEADER,
                 }
         },
-        {       .name = "CRC6-IUUP-HEADER",
+        {       .name = "IUUP-CRC6",
                 .values.job_params = {
                         .hash_alg = IMB_AUTH_CRC6_IUUP_HEADER,
                 }
