@@ -38,19 +38,14 @@ $(BURST_APP):
 clean:
 	$(MAKE) -C burst-app clean
 
-# style check section
-CHECKPATCH?=checkpatch.pl
-CHECKPATCH_FLAGS = --no-tree --no-signoff --emacs --no-color --max-line-length=100 --ignore CODE_INDENT,INITIALISED_STATIC,LEADING_SPACE,SPLIT_STRING,UNSPECIFIED_INT,ARRAY_SIZE,BLOCK_COMMENT_STYLE,GLOBAL_INITIALISERS,AVOID_EXTERNS,COMPLEX_MACRO,USE_FUNC,CONSTANT_COMPARISON,MISSING_SPACE,NEW_TYPEDEFS
-
-%.c_style_check : %.c
-	$(CHECKPATCH) $(CHECKPATCH_FLAGS) -f $<
-
-BURST_APP_SOURCES := $(wildcard $(BURST_APP)/*.[c])
-SOURCES_ALL := $(BURST_APP_SOURCES)
-SOURCES_STYLE := $(foreach infile,$(SOURCES_ALL),$(infile)_style_check)
-
+CLANGFORMAT?=clang-format
 .PHONY: style
-style: $(SOURCES_STYLE)
+style:
+	@for file in $(wildcard ./**/*.[ch]); do \
+		echo "Checking style $$file"; \
+		$(CLANGFORMAT) -style=file "$$file" | diff "$$file" - | tee /dev/stderr | [ $$(wc -c) -eq 0 ] || \
+		{ echo "ERROR: $$file has style problems"; exit 1; } \
+	done
 
 # cppcheck analysis check
 CPPCHECK ?= cppcheck
