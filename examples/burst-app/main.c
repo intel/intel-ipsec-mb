@@ -32,13 +32,13 @@
 
 #include <intel-ipsec-mb.h>
 
-#define NUM_BUFS IMB_MAX_JOBS
-#define BURST_SIZE 32
-#define BUF_SIZE 2048
-#define KEY_SIZE 16
-#define IV_SIZE 16
-#define AAD_SIZE 12
-#define DIGEST_SIZE 16
+#define NUM_BUFS       IMB_MAX_JOBS
+#define BURST_SIZE     32
+#define BUF_SIZE       2048
+#define KEY_SIZE       16
+#define IV_SIZE        16
+#define AAD_SIZE       12
+#define DIGEST_SIZE    16
 #define TOTAL_NUM_JOBS 10000UL
 
 /*
@@ -75,8 +75,7 @@ fill_job(IMB_JOB *job, const void *src_buf, void *dst_buf, const void *iv,
 }
 
 static int
-allocate_array(void **array, const unsigned num_elems,
-               const size_t elem_size)
+allocate_array(void **array, const unsigned num_elems, const size_t elem_size)
 {
         unsigned i;
 
@@ -89,7 +88,8 @@ allocate_array(void **array, const unsigned num_elems,
         return 0;
 }
 
-int main(void)
+int
+main(void)
 {
         unsigned i;
         IMB_MGR *mb_mgr = NULL;
@@ -130,7 +130,7 @@ int main(void)
 
         /* Prepare GCM keys (common for all buffers) */
         uint8_t key[KEY_SIZE];
-	struct gcm_key_data gdata_key;
+        struct gcm_key_data gdata_key;
 
         /* IMB API: Expand AES keys and precompute GHASH keys for AES-GCM */
         IMB_AES128_GCM_PRE(mb_mgr, key, &gdata_key);
@@ -147,8 +147,7 @@ int main(void)
 
         printf("Encrypting %lu buffers with AES-GCM\n", TOTAL_NUM_JOBS);
         while (n_jobs_left != 0) {
-                const unsigned burst_size = (n_jobs_left < BURST_SIZE) ?
-                                       n_jobs_left : BURST_SIZE;
+                const unsigned burst_size = (n_jobs_left < BURST_SIZE) ? n_jobs_left : BURST_SIZE;
 
                 /* IMB API: Get next burst of IMB_JOB's */
                 const unsigned n_jobs = IMB_GET_NEXT_BURST(mb_mgr, burst_size, jobs);
@@ -175,8 +174,8 @@ int main(void)
                         /* Index for next buffer in src_bufs/dst_bufs arrays */
                         const unsigned buf_idx = (TOTAL_NUM_JOBS - n_jobs_left + i) % NUM_BUFS;
 
-                        fill_job(jobs[i], src_bufs[buf_idx], dst_bufs[buf_idx],
-                                 iv[i], &gdata_key, aad[i], auth_tags[buf_idx]);
+                        fill_job(jobs[i], src_bufs[buf_idx], dst_bufs[buf_idx], iv[i], &gdata_key,
+                                 aad[i], auth_tags[buf_idx]);
 #if IMB_VERSION(1, 3, 0) < IMB_VERSION_NUM
                         imb_set_session(mb_mgr, jobs[i]);
 #endif
@@ -191,8 +190,7 @@ int main(void)
 
                 /* IMB API: Get string for the error */
                 if (err != 0) {
-                        printf("submit_burst error %d : '%s'\n", err,
-                               imb_get_strerror(err));
+                        printf("submit_burst error %d : '%s'\n", err, imb_get_strerror(err));
                         goto exit;
                 }
 
@@ -229,8 +227,8 @@ int main(void)
         }
 
         if (total_jobs_rx != TOTAL_NUM_JOBS) {
-                printf("Not all jobs could be completed (expected %lu, got %u)\n",
-                       TOTAL_NUM_JOBS, total_jobs_rx);
+                printf("Not all jobs could be completed (expected %lu, got %u)\n", TOTAL_NUM_JOBS,
+                       total_jobs_rx);
                 goto exit;
         }
 
