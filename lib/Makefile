@@ -1094,6 +1094,8 @@ help:
 	@echo "SAFE_OPTIONS=n"
 	@echo "          - Disable all safe options (enabled by default)"
 
+.PHONY: style
+style: clang-format checkpatch
 
 CHECKPATCH ?= checkpatch.pl
 # checkpatch ignore settings:
@@ -1107,13 +1109,7 @@ CHECKPATCH ?= checkpatch.pl
 #
 # NOTE: these flags cannot be broken into multiple lines due to
 #       spaces injected by make
-CHECKPATCH_FLAGS = --no-tree --no-signoff --emacs --no-color --ignore CODE_INDENT,INITIALISED_STATIC,LEADING_SPACE,SPLIT_STRING,UNSPECIFIED_INT,ARRAY_SIZE,BLOCK_COMMENT_STYLE,GLOBAL_INITIALISERS,NEW_TYPEDEFS,AVOID_EXTERNS,COMPLEX_MACRO,PREFER_ALIGNED,USE_FUNC,CONSTANT_COMPARISON,SPACING,GCC_BINARY_CONSTANT,VOLATILE
-
-%.c_style_check : %.c
-	$(CHECKPATCH) $(CHECKPATCH_FLAGS) -f $<
-
-%.h_style_check : %.h
-	$(CHECKPATCH) $(CHECKPATCH_FLAGS) -f $<
+CHECKPATCH_FLAGS = --no-tree --no-signoff --emacs --no-color --max-line-length=100 --ignore CODE_INDENT,INITIALISED_STATIC,LEADING_SPACE,SPLIT_STRING,UNSPECIFIED_INT,ARRAY_SIZE,BLOCK_COMMENT_STYLE,GLOBAL_INITIALISERS,NEW_TYPEDEFS,AVOID_EXTERNS,COMPLEX_MACRO,PREFER_ALIGNED,USE_FUNC,CONSTANT_COMPARISON,SPACING,GCC_BINARY_CONSTANT,VOLATILE
 
 %.asm_style_check : %.asm
 	$(CHECKPATCH) $(CHECKPATCH_FLAGS) -f $<
@@ -1121,12 +1117,21 @@ CHECKPATCH_FLAGS = --no-tree --no-signoff --emacs --no-color --ignore CODE_INDEN
 %.inc_style_check : %.inc
 	$(CHECKPATCH) $(CHECKPATCH_FLAGS) -f $<
 
-SOURCES_DIRS := . sse avx avx2 avx512 include no-aesni
-SOURCES := $(foreach dir,$(SOURCES_DIRS),$(wildcard $(dir)/**/*.[ch]) $(wildcard $(dir)/**/*.asm) $(wildcard $(dir)/**/*.inc))
-SOURCES_STYLE := $(foreach infile,$(SOURCES),$(infile)_style_check)
+SOURCES_DIRS := . sse_t1 sse_t2 sse_t3 avx_t1 avx_t2 avx2_t1 avx_t2 avx2_t3 avx512_t1 avx512_t2 x86_64 include no-aesni
+ASM_SOURCES := $(foreach dir,$(SOURCES_DIRS), $(wildcard $(dir)/**/*.asm) $(wildcard $(dir)/**/*.inc))
 
-.PHONY: style
-style: $(SOURCES_STYLE)
+.PHONY: checkpatch
+checkpatch:
+	$(CHECKPATCH) $(CHECKPATCH_FLAGS) -f $(ASM_SOURCES)
+
+.PHONY: clang-format
+CLANGFORMAT?=clang-format
+clang-format:
+	@for file in $(wildcard ./**/*.[ch]); do \
+		echo "Checking style $$file"; \
+		$(CLANGFORMAT) -style=file "$$file" | diff "$$file" - | tee /dev/stderr | [ $$(wc -c) -eq 0 ] || \
+		{ echo "ERROR: $$file has style problems"; exit 1; } \
+	done
 
 # cppcheck analysis check
 CPPCHECK ?= cppcheck
