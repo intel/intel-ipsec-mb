@@ -87,6 +87,7 @@ Table 1. List of supported cipher algorithms and their implementations.
 | SNOW-V         | N      | Y      | Y      | N      | N      | N      |
 | SNOW-V AEAD    | N      | Y      | Y      | N      | N      | N      |
 | PON-CRC-BIP    | N      | Y  by8 | Y  by8 | N      | N      | Y      |
+| SM4-ECB        | N      | Y      | N      | N      | N      | N      |
 +----------------------------------------------------------------------+
 ```
 Notes:  
@@ -211,6 +212,7 @@ Table 3. Encryption and integrity algorithm combinations
 | ZUC-EEA3-256, |                                                     |
 | SNOW3G-UEA3   |                                                     |
 | SNOW-V        |                                                     |
+| SM4-ECB       |                                                     |
 |---------------+-----------------------------------------------------|
 | AES128-DOCSIS,| DOCSIS-CRC32                                        |
 | AES256-DOCSIS |                                                     |

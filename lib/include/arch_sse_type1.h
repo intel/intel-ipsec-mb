@@ -334,6 +334,13 @@ submit_job_snow3g_uia2_sse(MB_MGR_SNOW3G_OOO *state, IMB_JOB *job);
 IMB_JOB *
 flush_job_snow3g_uia2_sse(MB_MGR_SNOW3G_OOO *state);
 
+/* SM4 */
+void
+sm4_ecb_sse(const void *in, void *out, const int size, const void *exp_keys);
+
+void
+sm4_set_key_sse(const void *pKey, void *exp_enc_keys, void *exp_dec_keys);
+
 IMB_DLL_EXPORT void
 set_suite_id_sse_t1(IMB_MGR *state, IMB_JOB *job);
 

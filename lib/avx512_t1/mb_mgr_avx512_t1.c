@@ -326,6 +326,9 @@ submit_aes_docsis256_dec_crc32_avx512(MB_MGR_DOCSIS_AES_OOO *state, IMB_JOB *job
         return job;
 }
 
+/* SM4 */
+#define SM4_ECB sm4_ecb_sse
+
 #define SUBMIT_JOB_DOCSIS128_SEC_CRC_ENC submit_job_aes_docsis128_enc_crc32_avx512
 #define SUBMIT_JOB_DOCSIS256_SEC_CRC_ENC submit_job_aes_docsis256_enc_crc32_avx512
 #define FLUSH_JOB_DOCSIS128_SEC_CRC_ENC  flush_job_aes_docsis128_enc_crc32_avx512
@@ -578,6 +581,8 @@ init_mb_mgr_avx512_t1_internal(IMB_MGR *state, const int reset_mgrs)
 
         state->chacha20_poly1305_quic = aead_chacha20_poly1305_avx512;
         state->chacha20_hp_quic = quic_chacha20_avx512;
+
+        state->sm4_keyexp = sm4_set_key_sse;
 }
 
 #include "mb_mgr_code.h"

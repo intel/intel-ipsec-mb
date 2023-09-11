@@ -128,6 +128,8 @@ typedef enum {
 
 #define IMB_AES_BLOCK_SIZE 16
 
+#define IMB_SM4_BLOCK_SIZE 16
+
 #define IMB_SHA1_DIGEST_SIZE_IN_BYTES   20
 #define IMB_SHA224_DIGEST_SIZE_IN_BYTES 28
 #define IMB_SHA256_DIGEST_SIZE_IN_BYTES 32
@@ -279,6 +281,7 @@ typedef enum {
         IMB_CIPHER_SNOW_V,
         IMB_CIPHER_SNOW_V_AEAD,
         IMB_CIPHER_GCM_SGL,
+        IMB_CIPHER_SM4_ECB,
         IMB_CIPHER_NUM
 } IMB_CIPHER_MODE;
 
@@ -589,6 +592,9 @@ struct chacha20_poly1305_context_data {
         uint8_t IV[12];            /**< IV (12 bytes) */
 };
 
+/* 32 precomputed (4-byte) rounds for SM4 key schedule (128 bytes in total) */
+#define IMB_SM4_KEY_SCHEDULE 32
+
 /**
  * Maximum Authenticated Tag Length in bytes.
  */
@@ -840,6 +846,8 @@ typedef IMB_JOB *(*chacha20_poly1305_quic_t)(struct IMB_MGR *, IMB_JOB *);
 
 typedef void (*chacha20_hp_quic_t)(const void *, const void *const *, void **, const uint64_t);
 
+typedef void (*sm4_keyexp_t)(const void *, void *, void *);
+
 /* Multi-buffer manager flags passed to alloc_mb_mgr() */
 
 #define IMB_FLAG_SHANI_OFF (1ULL << 0) /**< disable use of SHANI extension */
@@ -1056,6 +1064,8 @@ typedef struct IMB_MGR {
 
         chacha20_poly1305_quic_t chacha20_poly1305_quic;
         chacha20_hp_quic_t chacha20_hp_quic;
+
+        sm4_keyexp_t sm4_keyexp;
 
         /* in-order scheduler fields */
         int earliest_job; /**< byte offset, -1 if none */
@@ -2461,6 +2471,9 @@ init_mb_mgr_auto(IMB_MGR *state, IMB_ARCH *arch);
  *  WIMAX OFDMA HCS CRC8 function (IEEE 802.16)
  */
 #define IMB_CRC8_WIMAX_OFDMA_HCS(_mgr, _src, _len) (_mgr)->crc8_wimax_ofdma_hcs(_src, _len)
+
+#define IMB_SM4_KEYEXP(_mgr, _key, _exp_enc_key, _exp_dec_key)                                     \
+        ((_mgr)->sm4_keyexp((_key), (_exp_enc_key), (_exp_dec_key)))
 
 /* Auxiliary functions */
 

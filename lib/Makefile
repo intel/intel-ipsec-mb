@@ -416,7 +416,8 @@ asm_noaesni_lib_objs := \
 	crc32_iuup_sse_no_aesni.o \
 	crc32_wimax_sse_no_aesni.o \
 	snow_v_sse_no_aesni.o \
-	snow3g_uia2_sse_no_aesni.o
+	snow3g_uia2_sse_no_aesni.o \
+	sm4_sse_no_aesni.o
 
 #
 # List of ASM modules (sse directory)
@@ -530,7 +531,8 @@ asm_sse_lib_objs := \
 	chacha20_sse.o \
 	memcpy_sse.o \
 	snow_v_sse.o \
-	snow3g_uia2_by4_sse.o
+	snow3g_uia2_by4_sse.o \
+	sm4_sse.o
 
 #
 # List of ASM modules (avx directory)

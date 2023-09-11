@@ -48,6 +48,7 @@
 #include "include/aesni_emu.h"
 #include "include/error.h"
 
+#include "include/arch_sse_type1.h"  /* SM4-ECB */
 #include "include/arch_sse_type2.h"  /* SHA-NI */
 #include "include/arch_avx_type1.h"  /* AESNI */
 #include "include/arch_avx2_type1.h" /* MD5 */
@@ -332,6 +333,9 @@ submit_job_docsis256_sec_crc_dec_vaes_avx512(MB_MGR_DOCSIS_AES_OOO *state, IMB_J
         return job;
 }
 
+/* SM4 */
+#define SM4_ECB sm4_ecb_sse
+
 #define SUBMIT_JOB_DOCSIS128_SEC_CRC_ENC submit_job_aes_docsis128_enc_crc32_vaes_avx512
 #define SUBMIT_JOB_DOCSIS256_SEC_CRC_ENC submit_job_aes_docsis256_enc_crc32_vaes_avx512
 #define FLUSH_JOB_DOCSIS128_SEC_CRC_ENC  flush_job_aes_docsis128_enc_crc32_vaes_avx512
@@ -589,6 +593,8 @@ init_mb_mgr_avx512_t2_internal(IMB_MGR *state, const int reset_mgrs)
         state->aes_ecb_256_quic = aes_ecb_quic_enc_256_vaes_avx512;
         state->chacha20_poly1305_quic = aead_chacha20_poly1305_avx512;
         state->chacha20_hp_quic = quic_chacha20_avx512;
+
+        state->sm4_keyexp = sm4_set_key_sse;
 }
 
 #include "mb_mgr_code.h"

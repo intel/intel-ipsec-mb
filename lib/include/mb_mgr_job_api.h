@@ -260,6 +260,27 @@ SUBMIT_JOB_AES_CTR_BIT(IMB_JOB *job, const uint64_t key_sz)
 }
 
 /* ========================================================================= */
+/* SM4 */
+/* ========================================================================= */
+__forceinline IMB_JOB *
+SUBMIT_JOB_SM4_ECB_ENC(IMB_JOB *job)
+{
+        SM4_ECB(job->src + job->cipher_start_src_offset_in_bytes, job->dst,
+                job->msg_len_to_cipher_in_bytes & (~15), job->enc_keys);
+        job->status |= IMB_STATUS_COMPLETED_CIPHER;
+        return job;
+}
+
+__forceinline IMB_JOB *
+SUBMIT_JOB_SM4_ECB_DEC(IMB_JOB *job)
+{
+        SM4_ECB(job->src + job->cipher_start_src_offset_in_bytes, job->dst,
+                job->msg_len_to_cipher_in_bytes & (~15), job->dec_keys);
+        job->status |= IMB_STATUS_COMPLETED_CIPHER;
+        return job;
+}
+
+/* ========================================================================= */
 /* Custom hash / cipher */
 /* ========================================================================= */
 
@@ -419,6 +440,8 @@ SUBMIT_JOB_CIPHER_ENC(IMB_MGR *state, IMB_JOB *job, const IMB_CIPHER_MODE cipher
                 return SUBMIT_JOB_SNOW_V(job);
         } else if (IMB_CIPHER_SNOW_V_AEAD == cipher_mode) {
                 return submit_snow_v_aead_job(state, job);
+        } else if (IMB_CIPHER_SM4_ECB == cipher_mode) {
+                return SUBMIT_JOB_SM4_ECB_ENC(job);
         } else { /* assume IMB_CIPHER_NULL */
                 job->status |= IMB_STATUS_COMPLETED_CIPHER;
                 return job;
@@ -590,6 +613,8 @@ SUBMIT_JOB_CIPHER_DEC(IMB_MGR *state, IMB_JOB *job, const IMB_CIPHER_MODE cipher
                 return SUBMIT_JOB_SNOW_V(job);
         } else if (IMB_CIPHER_SNOW_V_AEAD == cipher_mode) {
                 return submit_snow_v_aead_job(state, job);
+        } else if (IMB_CIPHER_SM4_ECB == cipher_mode) {
+                return SUBMIT_JOB_SM4_ECB_DEC(job);
         } else {
                 /* assume IMB_CIPHER_NULL */
                 job->status |= IMB_STATUS_COMPLETED_CIPHER;
@@ -894,6 +919,13 @@ submit_cipher_dec_aes_gcm_256_sgl(IMB_MGR *state, IMB_JOB *job)
         return SUBMIT_JOB_CIPHER_DEC(state, job, IMB_CIPHER_GCM_SGL, IMB_KEY_256_BYTES);
 }
 
+/* SM4-ECB */
+static IMB_JOB *
+submit_cipher_dec_sm4_ecb(IMB_MGR *state, IMB_JOB *job)
+{
+        return SUBMIT_JOB_CIPHER_DEC(state, job, IMB_CIPHER_SM4_ECB, IMB_KEY_128_BYTES);
+}
+
 /* ========================= */
 /* ======== ENCRYPT ======== */
 /* ========================= */
@@ -1136,6 +1168,13 @@ submit_cipher_enc_aes_gcm_256_sgl(IMB_MGR *state, IMB_JOB *job)
         return SUBMIT_JOB_CIPHER_ENC(state, job, IMB_CIPHER_GCM_SGL, IMB_KEY_256_BYTES);
 }
 
+/* SM4-ECB */
+static IMB_JOB *
+submit_cipher_enc_sm4_ecb(IMB_MGR *state, IMB_JOB *job)
+{
+        return SUBMIT_JOB_CIPHER_ENC(state, job, IMB_CIPHER_SM4_ECB, IMB_KEY_128_BYTES);
+}
+
 /*
  * Four entries per algorithm (different key sizes),
  * algorithms in the same order IMB_CIPHER_MODE
@@ -1273,14 +1312,14 @@ static const submit_flush_fn_t tab_submit_cipher[] = {
         submit_cipher_dec_aes_gcm_128_sgl,
         submit_cipher_dec_aes_gcm_192_sgl,
         submit_cipher_dec_aes_gcm_256_sgl,
+        /* [24] SM4-ECB */
+        submit_cipher_dec_null,
+        submit_cipher_dec_sm4_ecb,
+        submit_cipher_dec_null,
+        submit_cipher_dec_null,
 
         /* add new cipher decrypt here */
 
-        /* [24] NULL */
-        NULL,
-        NULL,
-        NULL,
-        NULL,
         /* [25] NULL */
         NULL,
         NULL,
@@ -1441,14 +1480,14 @@ static const submit_flush_fn_t tab_submit_cipher[] = {
         submit_cipher_enc_aes_gcm_128_sgl,
         submit_cipher_enc_aes_gcm_192_sgl,
         submit_cipher_enc_aes_gcm_256_sgl,
+        /* [24] SM4-ECB */
+        submit_cipher_enc_null,
+        submit_cipher_enc_sm4_ecb,
+        submit_cipher_enc_null,
+        submit_cipher_enc_null,
 
         /* add new cipher encrypt here */
 
-        /* [24] NULL */
-        NULL,
-        NULL,
-        NULL,
-        NULL,
         /* [25] NULL */
         NULL,
         NULL,
@@ -1747,6 +1786,13 @@ flush_cipher_dec_aes_gcm_256_sgl(IMB_MGR *state, IMB_JOB *job)
         return FLUSH_JOB_CIPHER_DEC(state, job, IMB_CIPHER_GCM_SGL, IMB_KEY_256_BYTES);
 }
 
+/* SM4-ECB */
+static IMB_JOB *
+flush_cipher_dec_sm4_ecb(IMB_MGR *state, IMB_JOB *job)
+{
+        return FLUSH_JOB_CIPHER_DEC(state, job, IMB_CIPHER_SM4_ECB, IMB_KEY_128_BYTES);
+}
+
 /* ========================= */
 /* ======== ENCRYPT ======== */
 /* ========================= */
@@ -2003,6 +2049,13 @@ flush_cipher_enc_aes_gcm_256_sgl(IMB_MGR *state, IMB_JOB *job)
         return FLUSH_JOB_CIPHER_ENC(state, job, IMB_CIPHER_GCM_SGL, IMB_KEY_256_BYTES);
 }
 
+/* SM4-ECB */
+static IMB_JOB *
+flush_cipher_enc_sm4_ecb(IMB_MGR *state, IMB_JOB *job)
+{
+        return FLUSH_JOB_CIPHER_ENC(state, job, IMB_CIPHER_SM4_ECB, IMB_KEY_128_BYTES);
+}
+
 /*
  * Four entries per algorithm (different key sizes),
  * algorithms in the same order IMB_CIPHER_MODE
@@ -2136,14 +2189,14 @@ static const submit_flush_fn_t tab_flush_cipher[] = {
         flush_cipher_dec_aes_gcm_128_sgl,
         flush_cipher_dec_aes_gcm_192_sgl,
         flush_cipher_dec_aes_gcm_256_sgl,
+        /* [24] SM4-ECB */
+        flush_cipher_dec_null,
+        flush_cipher_dec_sm4_ecb,
+        flush_cipher_dec_null,
+        flush_cipher_dec_null,
 
         /* add new cipher decrypt here */
 
-        /* [24] NULL */
-        NULL,
-        NULL,
-        NULL,
-        NULL,
         /* [25] NULL */
         NULL,
         NULL,
@@ -2304,14 +2357,14 @@ static const submit_flush_fn_t tab_flush_cipher[] = {
         flush_cipher_enc_aes_gcm_128_sgl,
         flush_cipher_enc_aes_gcm_192_sgl,
         flush_cipher_enc_aes_gcm_256_sgl,
+        /* [24] SM4-ECB */
+        flush_cipher_enc_null,
+        flush_cipher_enc_sm4_ecb,
+        flush_cipher_enc_null,
+        flush_cipher_enc_null,
 
         /* add new cipher encrypt here */
 
-        /* [24] NULL */
-        NULL,
-        NULL,
-        NULL,
-        NULL,
         /* [25] NULL */
         NULL,
         NULL,

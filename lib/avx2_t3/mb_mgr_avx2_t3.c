@@ -249,6 +249,9 @@ flush_snow3g_uea2_job_avx2_t2(IMB_MGR *state)
 /* AES-DOCSIS */
 #define ETHERNET_FCS ethernet_fcs_avx_local
 
+/* SM4 */
+#define SM4_ECB sm4_ecb_sse
+
 static void
 reset_ooo_mgrs(IMB_MGR *state)
 {
@@ -489,6 +492,8 @@ init_mb_mgr_avx2_t3_internal(IMB_MGR *state, const int reset_mgrs)
 
         state->chacha20_poly1305_quic = aead_chacha20_poly1305_avx2;
         state->chacha20_hp_quic = quic_chacha20_avx2;
+
+        state->sm4_keyexp = sm4_set_key_sse;
 }
 
 #include "mb_mgr_code.h"

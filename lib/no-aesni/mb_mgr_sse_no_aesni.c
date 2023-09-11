@@ -220,6 +220,9 @@
 
 /* ====================================================================== */
 
+/* SM4 */
+#define SM4_ECB sm4_ecb_sse_no_aesni
+
 static void
 reset_ooo_mgrs(IMB_MGR *state)
 {
@@ -460,6 +463,8 @@ init_mb_mgr_sse_no_aesni_internal(IMB_MGR *state, const int reset_mgrs)
         state->chacha20_hp_quic = quic_chacha20_sse;
 
         state->set_suite_id = SET_SUITE_ID_FN;
+
+        state->sm4_keyexp = sm4_set_key_sse_no_aesni;
 }
 
 void

@@ -370,7 +370,8 @@ lib_objs1 = \
 	$(OBJ_DIR)\quic_hp_chacha20.obj \
 	$(OBJ_DIR)\quic_chacha20_poly1305.obj \
 	$(OBJ_DIR)\hmac_ipad_opad.obj \
-	$(OBJ_DIR)\cipher_suite_id.obj
+	$(OBJ_DIR)\cipher_suite_id.obj \
+	$(OBJ_DIR)\sm4_sse.obj
 
 lib_objs2 = \
 	$(OBJ_DIR)\mb_mgr_aes192_cbc_enc_flush_avx.obj \
@@ -552,7 +553,8 @@ no_aesni_objs = \
 	$(OBJ_DIR)\gcm192_gmac_api_sse_no_aesni.obj \
 	$(OBJ_DIR)\gcm256_api_sse_no_aesni.obj \
 	$(OBJ_DIR)\gcm256_sgl_api_sse_no_aesni.obj \
-	$(OBJ_DIR)\gcm256_gmac_api_sse_no_aesni.obj
+	$(OBJ_DIR)\gcm256_gmac_api_sse_no_aesni.obj \
+	$(OBJ_DIR)\sm4_sse_no_aesni.obj
 
 gcm_objs = \
 	$(OBJ_DIR)\gcm.obj \
