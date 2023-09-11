@@ -150,6 +150,7 @@ enum test_cipher_mode_e {
         TEST_AEAD_CHACHA20,
         TEST_SNOW_V,
         TEST_SNOW_V_AEAD,
+        TEST_SM4_ECB,
         TEST_NUM_CIPHER_TESTS
 };
 
@@ -304,6 +305,8 @@ const struct str_value_mapping cipher_algo_str_map[] = {
         { .name = "chacha20",
           .values.job_params = { .cipher_mode = TEST_CHACHA20, .key_size = 32 } },
         { .name = "snow-v", .values.job_params = { .cipher_mode = TEST_SNOW_V, .key_size = 32 } },
+        { .name = "sm4-ecb",
+          .values.job_params = { .cipher_mode = TEST_SM4_ECB, .key_size = IMB_KEY_128_BYTES } },
         { .name = "null", .values.job_params = { .cipher_mode = TEST_NULL_CIPHER, .key_size = 0 } }
 };
 
@@ -1284,6 +1287,9 @@ translate_cipher_mode(const enum test_cipher_mode_e test_mode)
         case TEST_SNOW_V_AEAD:
                 c_mode = IMB_CIPHER_SNOW_V_AEAD;
                 break;
+        case TEST_SM4_ECB:
+                c_mode = IMB_CIPHER_SM4_ECB;
+                break;
         default:
                 break;
         }
@@ -2064,7 +2070,8 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params, const uint32_t num_iter, uint8
         } else if (job_template.cipher_mode == IMB_CIPHER_CBCS_1_9) {
                 job_template.key_len_in_bytes = 16; /* cbcs-128 support only */
                 job_template.cipher_fields.CBCS.next_iv = next_iv;
-        } else if (job_template.cipher_mode == IMB_CIPHER_ECB)
+        } else if (job_template.cipher_mode == IMB_CIPHER_ECB ||
+                   job_template.cipher_mode == IMB_CIPHER_SM4_ECB)
                 job_template.iv_len_in_bytes = 0;
         else if (job_template.cipher_mode == IMB_CIPHER_CHACHA20)
                 job_template.iv_len_in_bytes = 12;
@@ -2913,7 +2920,8 @@ print_times(struct variant_s *variant_list, struct params_s *params, const uint3
                                                                         "CHACHA20",
                                                                         "CHACHA20_AEAD",
                                                                         "SNOW_V",
-                                                                        "SNOW_V_AEAD" };
+                                                                        "SNOW_V_AEAD",
+                                                                        "SM4_ECB" };
                 const char *c_dir_names[2] = { "ENCRYPT", "DECRYPT" };
                 const char *h_alg_names[TEST_NUM_HASH_TESTS - 1] = { "SHA1_HMAC",
                                                                      "SHA_224_HMAC",
