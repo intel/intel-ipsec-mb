@@ -111,6 +111,8 @@
 ; throughout the code, one tab and two tab indentations are used. one tab is for GHASH part, two tabs is for AES part.
 ;
 
+%use smartalign
+
 %include "include/os.inc"
 %include "include/reg_sizes.inc"
 %include "include/clear_regs.inc"
@@ -391,7 +393,7 @@ default rel
 
         mov     %%T1, %%A_IN            ; T1 = AAD
         mov     %%T2, %%A_LEN           ; T2 = aadLen
-
+align 32
 %%_get_AAD_loop128:
         cmp     %%T2, 128
         jl      %%_exit_AAD_loop128
@@ -475,6 +477,7 @@ default rel
         cmp     %%T2, 16
         jb      %%_AAD_reduce
 
+align 32
 %%_AAD_blocks:
         vmovdqu         %%XTMP0, [%%T1]
         vpshufb         %%XTMP0, [rel SHUF_MASK]
@@ -2641,11 +2644,11 @@ default rel
 
         ;; Encrypt the final <16 byte (partial) block, then hash
         cmp     r13, 16
-        jl      %%_encrypt_final_partial
+        jb      %%_encrypt_final_partial
 
         ;; Process 7 full blocks plus a partial block
         cmp     r13, 128
-        jl      %%_encrypt_by_8_partial
+        jb      %%_encrypt_by_8_partial
 
 %%_encrypt_by_8_parallel:
         ;; in_order vs. out_order is an optimization to increment the counter without shuffling
@@ -2655,9 +2658,10 @@ default rel
         and     r15d, 255
         vpshufb xmm9, [rel SHUF_MASK]
 
+align 32
 %%_encrypt_by_8_new:
         cmp     r15d, 255-8
-        jg      %%_encrypt_by_8
+        ja      %%_encrypt_by_8
 
         ;; xmm0  - T1
         ;; xmm10 - T2
@@ -2685,6 +2689,7 @@ default rel
         vpshufb xmm9, [rel SHUF_MASK]
         jmp     %%_encrypt_by_8_parallel_done
 
+align 32
 %%_encrypt_by_8:
         vpshufb xmm9, [rel SHUF_MASK]
         add     r15b, 8
@@ -3032,6 +3037,7 @@ skip_aad_check_error_init:
 ;        const u8  *aad,
 ;        const u64 aad_len);
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+align 32
 MKGLOBAL(FN_NAME(init_var_iv,_),function,)
 FN_NAME(init_var_iv,_):
         endbranch64
@@ -3146,6 +3152,7 @@ skip_aad_check_error_init_IV:
 ;        const u8 *in,
 ;        u64      msg_len);
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+align 32
 MKGLOBAL(FN_NAME(enc,_update_),function,)
 FN_NAME(enc,_update_):
         endbranch64
@@ -3230,6 +3237,7 @@ skip_in_out_check_error_update_enc:
 ;        const u8 *in,
 ;        u64      msg_len);
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+align 32
 MKGLOBAL(FN_NAME(dec,_update_),function,)
 FN_NAME(dec,_update_):
         endbranch64
@@ -3314,6 +3322,7 @@ skip_in_out_check_error_update_dec:
 ;        u8       *auth_tag,
 ;        u64      auth_tag_len);
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+align 32
 MKGLOBAL(FN_NAME(enc,_finalize_),function,)
 FN_NAME(enc,_finalize_):
         endbranch64
@@ -3407,6 +3416,7 @@ error_enc_fin:
 ;        u8       *auth_tag,
 ;        u64      auth_tag_len);
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+align 32
 MKGLOBAL(FN_NAME(dec,_finalize_),function,)
 FN_NAME(dec,_finalize_):
         endbranch64
@@ -3506,6 +3516,7 @@ error_dec_fin:
 ;        u8       *auth_tag,
 ;        u64      auth_tag_len);
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+align 32
 MKGLOBAL(FN_NAME(enc,_),function,)
 FN_NAME(enc,_):
         endbranch64
@@ -3642,6 +3653,7 @@ skip_aad_check_error_enc:
 ;        u8       *auth_tag,
 ;        u64      auth_tag_len);
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+align 32
 MKGLOBAL(FN_NAME(dec,_),function,)
 FN_NAME(dec,_):
         endbranch64
@@ -3775,6 +3787,7 @@ skip_aad_check_error_dec:
 ;       aes_gcm_enc_var_iv_256_avx512
 ;       (IMB_MGR *state, IMB_JOB *job)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+align 32
 MKGLOBAL(FN_NAME(enc_var_iv,_),function,internal)
 FN_NAME(enc_var_iv,_):
         endbranch64
@@ -3827,6 +3840,7 @@ skip_iv_len_12_enc_IV:
 ;       aes_gcm_dec_var_iv_256_avx512
 ;       (IMB_MGR *state, IMB_JOB *job)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+align 32
 MKGLOBAL(FN_NAME(dec_var_iv,_),function,internal)
 FN_NAME(dec_var_iv,_):
         endbranch64
@@ -3874,6 +3888,7 @@ skip_iv_len_12_dec_IV:
 ;void   ghash_pre_avx_gen4 / ghash_pre_avx512
 ;       (const void *key, struct gcm_key_data *key_data)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+align 32
 MKGLOBAL(GHASH_FN_NAME(ghash_pre),function,)
 GHASH_FN_NAME(ghash_pre):
         endbranch64
@@ -3918,7 +3933,6 @@ GHASH_FN_NAME(ghash_pre):
         PRECOMPUTE arg2, xmm6, xmm0, xmm1, xmm2, xmm3, xmm4, xmm5
 
 %ifdef SAFE_DATA
-        clear_scratch_gps_asm
         clear_scratch_xmms_avx_asm
 %endif
 %ifidn __OUTPUT_FORMAT__, win64
@@ -3952,6 +3966,7 @@ error_ghash_pre:
 ;        void         *io_tag,
 ;        const u64    tag_len);
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+align 32
 MKGLOBAL(GHASH_FN_NAME(ghash),function,)
 GHASH_FN_NAME(ghash):
         endbranch64
@@ -4136,6 +4151,7 @@ error_ghash:
 ;        const   u8 *in,
 ;        const   u64 msg_len);
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+align 32
 MKGLOBAL(GMAC_FN_NAME(update),function,)
 GMAC_FN_NAME(update):
         endbranch64
