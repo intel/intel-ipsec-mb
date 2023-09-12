@@ -217,6 +217,8 @@ struct str_value_mapping cipher_algo_str_map[] = {
           .values.job_params = { .cipher_mode = IMB_CIPHER_CHACHA20, .key_size = 32 } },
         { .name = "SNOW-V",
           .values.job_params = { .cipher_mode = IMB_CIPHER_SNOW_V, .key_size = 32 } },
+        { .name = "SM4-ECB",
+          .values.job_params = { .cipher_mode = IMB_CIPHER_SM4_ECB, .key_size = 16 } },
         { .name = "NULL-CIPHER",
           .values.job_params = { .cipher_mode = IMB_CIPHER_NULL, .key_size = 0 } }
 };
@@ -557,6 +559,8 @@ const uint8_t key_sizes[][3] = {
         { 32, 32, 1 },  /* IMB_CIPHER_CHACHA20_POLY1305_SGL */
         { 32, 32, 1 },  /* IMB_CIPHER_SNOW_V */
         { 32, 32, 1 },  /* IMB_CIPHER_SNOW_V_AEAD */
+        { 16, 32, 8 },  /* IMB_CIPHER_GCM_SGL */
+        { 16, 16, 1 },  /* IMB_CIPHER_SM4_ECB */
 };
 
 uint8_t custom_test = 0;
@@ -1027,6 +1031,7 @@ fill_job(IMB_JOB *job, const struct params_s *params, uint8_t *buf, uint8_t *dig
                 job->iv_len_in_bytes = 8;
                 break;
         case IMB_CIPHER_ECB:
+        case IMB_CIPHER_SM4_ECB:
                 job->enc_keys = enc_keys;
                 job->dec_keys = dec_keys;
                 job->iv_len_in_bytes = 0;
@@ -1181,6 +1186,7 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys, const uint8_t *ciph
                 case IMB_CIPHER_CNTR:
                 case IMB_CIPHER_CNTR_BITLEN:
                 case IMB_CIPHER_DOCSIS_SEC_BPI:
+                case IMB_CIPHER_SM4_ECB:
                 case IMB_CIPHER_ECB:
                 case IMB_CIPHER_CBCS_1_9:
                         nosimd_memset(enc_keys, pattern_cipher_key, sizeof(keys->enc_keys));
@@ -1340,6 +1346,9 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys, const uint8_t *ciph
                         fprintf(stderr, "Wrong key size\n");
                         return -1;
                 }
+                break;
+        case IMB_CIPHER_SM4_ECB:
+                IMB_SM4_KEYEXP(mb_mgr, ciph_key, enc_keys, dec_keys);
                 break;
         case IMB_CIPHER_DES:
         case IMB_CIPHER_DES3:
@@ -1606,6 +1615,11 @@ do_test(IMB_MGR *enc_mb_mgr, const IMB_ARCH enc_arch, IMB_MGR *dec_mb_mgr, const
                             params->cipher_mode == IMB_CIPHER_DES3) {
                                 random_num += (IMB_DES_BLOCK_SIZE - 1);
                                 random_num &= (~(IMB_DES_BLOCK_SIZE - 1));
+                        }
+
+                        if (params->cipher_mode == IMB_CIPHER_SM4_ECB) {
+                                random_num += (IMB_SM4_BLOCK_SIZE - 1);
+                                random_num &= (~(IMB_SM4_BLOCK_SIZE - 1));
                         }
 
                         /*
