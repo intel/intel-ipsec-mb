@@ -124,7 +124,7 @@ style: clang-format checkpatch
 .PHONY: clang-format
 CLANGFORMAT?=clang-format
 clang-format:
-	@for file in $(wildcard *.[ch]); do \
+	@for file in $(wildcard ./*.[ch]) $(wildcard ./**/*.[ch]); do \
 		echo "Checking style $$file"; \
 		$(CLANGFORMAT) -style=file "$$file" | diff "$$file" - | tee /dev/stderr | [ $$(wc -c) -eq 0 ] || \
 		{ echo "ERROR: $$file has style problems"; exit 1; } \
