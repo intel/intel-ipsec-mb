@@ -824,6 +824,16 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job, const IMB_CIPHER_MODE cipher_
                         return 1;
                 }
                 break;
+        case IMB_CIPHER_SM4_CBC:
+                if (job->iv_len_in_bytes != UINT64_C(16)) {
+                        imb_set_errno(state, IMB_ERR_JOB_IV_LEN);
+                        return 1;
+                }
+                if (job->iv == NULL) {
+                        imb_set_errno(state, IMB_ERR_JOB_NULL_IV);
+                        return 1;
+                }
+                /* Fall-through */
         case IMB_CIPHER_SM4_ECB:
                 if (job->src == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_SRC);

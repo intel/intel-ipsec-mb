@@ -280,6 +280,24 @@ SUBMIT_JOB_SM4_ECB_DEC(IMB_JOB *job)
         return job;
 }
 
+__forceinline IMB_JOB *
+SUBMIT_JOB_SM4_CBC_ENC(IMB_JOB *job)
+{
+        SM4_CBC_ENC(job->src + job->cipher_start_src_offset_in_bytes, job->dst,
+                    job->msg_len_to_cipher_in_bytes & (~15), job->enc_keys, job->iv);
+        job->status |= IMB_STATUS_COMPLETED_CIPHER;
+        return job;
+}
+
+__forceinline IMB_JOB *
+SUBMIT_JOB_SM4_CBC_DEC(IMB_JOB *job)
+{
+        SM4_CBC_DEC(job->src + job->cipher_start_src_offset_in_bytes, job->dst,
+                    job->msg_len_to_cipher_in_bytes & (~15), job->dec_keys, job->iv);
+        job->status |= IMB_STATUS_COMPLETED_CIPHER;
+        return job;
+}
+
 /* ========================================================================= */
 /* Custom hash / cipher */
 /* ========================================================================= */
@@ -442,6 +460,8 @@ SUBMIT_JOB_CIPHER_ENC(IMB_MGR *state, IMB_JOB *job, const IMB_CIPHER_MODE cipher
                 return submit_snow_v_aead_job(state, job);
         } else if (IMB_CIPHER_SM4_ECB == cipher_mode) {
                 return SUBMIT_JOB_SM4_ECB_ENC(job);
+        } else if (IMB_CIPHER_SM4_CBC == cipher_mode) {
+                return SUBMIT_JOB_SM4_CBC_ENC(job);
         } else { /* assume IMB_CIPHER_NULL */
                 job->status |= IMB_STATUS_COMPLETED_CIPHER;
                 return job;
@@ -615,6 +635,8 @@ SUBMIT_JOB_CIPHER_DEC(IMB_MGR *state, IMB_JOB *job, const IMB_CIPHER_MODE cipher
                 return submit_snow_v_aead_job(state, job);
         } else if (IMB_CIPHER_SM4_ECB == cipher_mode) {
                 return SUBMIT_JOB_SM4_ECB_DEC(job);
+        } else if (IMB_CIPHER_SM4_CBC == cipher_mode) {
+                return SUBMIT_JOB_SM4_CBC_DEC(job);
         } else {
                 /* assume IMB_CIPHER_NULL */
                 job->status |= IMB_STATUS_COMPLETED_CIPHER;
@@ -926,6 +948,13 @@ submit_cipher_dec_sm4_ecb(IMB_MGR *state, IMB_JOB *job)
         return SUBMIT_JOB_CIPHER_DEC(state, job, IMB_CIPHER_SM4_ECB, IMB_KEY_128_BYTES);
 }
 
+/* SM4-CBC */
+static IMB_JOB *
+submit_cipher_dec_sm4_cbc(IMB_MGR *state, IMB_JOB *job)
+{
+        return SUBMIT_JOB_CIPHER_DEC(state, job, IMB_CIPHER_SM4_CBC, IMB_KEY_128_BYTES);
+}
+
 /* ========================= */
 /* ======== ENCRYPT ======== */
 /* ========================= */
@@ -1175,6 +1204,13 @@ submit_cipher_enc_sm4_ecb(IMB_MGR *state, IMB_JOB *job)
         return SUBMIT_JOB_CIPHER_ENC(state, job, IMB_CIPHER_SM4_ECB, IMB_KEY_128_BYTES);
 }
 
+/* SM4-CBC */
+static IMB_JOB *
+submit_cipher_enc_sm4_cbc(IMB_MGR *state, IMB_JOB *job)
+{
+        return SUBMIT_JOB_CIPHER_ENC(state, job, IMB_CIPHER_SM4_CBC, IMB_KEY_128_BYTES);
+}
+
 /*
  * Four entries per algorithm (different key sizes),
  * algorithms in the same order IMB_CIPHER_MODE
@@ -1317,14 +1353,14 @@ static const submit_flush_fn_t tab_submit_cipher[] = {
         submit_cipher_dec_sm4_ecb,
         submit_cipher_dec_null,
         submit_cipher_dec_null,
+        /* [25] SM4-CBC */
+        submit_cipher_dec_null,
+        submit_cipher_dec_sm4_cbc,
+        submit_cipher_dec_null,
+        submit_cipher_dec_null,
 
         /* add new cipher decrypt here */
 
-        /* [25] NULL */
-        NULL,
-        NULL,
-        NULL,
-        NULL,
         /* [26] NULL */
         NULL,
         NULL,
@@ -1485,14 +1521,14 @@ static const submit_flush_fn_t tab_submit_cipher[] = {
         submit_cipher_enc_sm4_ecb,
         submit_cipher_enc_null,
         submit_cipher_enc_null,
+        /* [25] SM4-CBC */
+        submit_cipher_enc_null,
+        submit_cipher_enc_sm4_cbc,
+        submit_cipher_enc_null,
+        submit_cipher_enc_null,
 
         /* add new cipher encrypt here */
 
-        /* [25] NULL */
-        NULL,
-        NULL,
-        NULL,
-        NULL,
         /* [26] NULL */
         NULL,
         NULL,
@@ -1793,6 +1829,13 @@ flush_cipher_dec_sm4_ecb(IMB_MGR *state, IMB_JOB *job)
         return FLUSH_JOB_CIPHER_DEC(state, job, IMB_CIPHER_SM4_ECB, IMB_KEY_128_BYTES);
 }
 
+/* SM4-CBC */
+static IMB_JOB *
+flush_cipher_dec_sm4_cbc(IMB_MGR *state, IMB_JOB *job)
+{
+        return FLUSH_JOB_CIPHER_DEC(state, job, IMB_CIPHER_SM4_CBC, IMB_KEY_128_BYTES);
+}
+
 /* ========================= */
 /* ======== ENCRYPT ======== */
 /* ========================= */
@@ -2056,6 +2099,13 @@ flush_cipher_enc_sm4_ecb(IMB_MGR *state, IMB_JOB *job)
         return FLUSH_JOB_CIPHER_ENC(state, job, IMB_CIPHER_SM4_ECB, IMB_KEY_128_BYTES);
 }
 
+/* SM4-CBC */
+static IMB_JOB *
+flush_cipher_enc_sm4_cbc(IMB_MGR *state, IMB_JOB *job)
+{
+        return FLUSH_JOB_CIPHER_ENC(state, job, IMB_CIPHER_SM4_CBC, IMB_KEY_128_BYTES);
+}
+
 /*
  * Four entries per algorithm (different key sizes),
  * algorithms in the same order IMB_CIPHER_MODE
@@ -2194,14 +2244,14 @@ static const submit_flush_fn_t tab_flush_cipher[] = {
         flush_cipher_dec_sm4_ecb,
         flush_cipher_dec_null,
         flush_cipher_dec_null,
+        /* [25] SM4-CBC */
+        flush_cipher_dec_null,
+        flush_cipher_dec_sm4_cbc,
+        flush_cipher_dec_null,
+        flush_cipher_dec_null,
 
         /* add new cipher decrypt here */
 
-        /* [25] NULL */
-        NULL,
-        NULL,
-        NULL,
-        NULL,
         /* [26] NULL */
         NULL,
         NULL,
@@ -2362,14 +2412,14 @@ static const submit_flush_fn_t tab_flush_cipher[] = {
         flush_cipher_enc_sm4_ecb,
         flush_cipher_enc_null,
         flush_cipher_enc_null,
+        /* [25] SM4-CBC */
+        flush_cipher_enc_null,
+        flush_cipher_enc_sm4_cbc,
+        flush_cipher_enc_null,
+        flush_cipher_enc_null,
 
         /* add new cipher encrypt here */
 
-        /* [25] NULL */
-        NULL,
-        NULL,
-        NULL,
-        NULL,
         /* [26] NULL */
         NULL,
         NULL,

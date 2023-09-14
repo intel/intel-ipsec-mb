@@ -221,7 +221,9 @@
 /* ====================================================================== */
 
 /* SM4 */
-#define SM4_ECB sm4_ecb_sse_no_aesni
+#define SM4_ECB     sm4_ecb_sse_no_aesni
+#define SM4_CBC_ENC sm4_cbc_enc_sse_no_aesni
+#define SM4_CBC_DEC sm4_cbc_dec_sse_no_aesni
 
 static void
 reset_ooo_mgrs(IMB_MGR *state)

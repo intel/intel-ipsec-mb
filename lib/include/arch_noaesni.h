@@ -235,6 +235,13 @@ void
 sm4_ecb_sse_no_aesni(const void *in, void *out, const int size, const void *exp_keys);
 
 void
+sm4_cbc_enc_sse_no_aesni(const void *in, void *out, const int size, const void *exp_enc_keys,
+                         const void *iv);
+void
+sm4_cbc_dec_sse_no_aesni(const void *in, void *out, const int size, const void *exp_dec_keys,
+                         const void *iv);
+
+void
 sm4_set_key_sse_no_aesni(const void *pKey, void *exp_enc_keys, void *exp_dec_keys);
 IMB_DLL_EXPORT void
 set_suite_id_sse_no_aesni(IMB_MGR *state, IMB_JOB *job);

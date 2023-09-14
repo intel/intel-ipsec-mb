@@ -33,6 +33,8 @@
 %ifndef SM4_SET_KEY
 %define SM4_SET_KEY sm4_set_key_sse
 %define SM4_ECB     sm4_ecb_sse
+%define SM4_CBC_ENC sm4_cbc_enc_sse
+%define SM4_CBC_DEC sm4_cbc_dec_sse
 %endif
 
 %ifdef LINUX
@@ -40,11 +42,13 @@
 %define arg2    rsi
 %define arg3    rdx
 %define arg4    rcx
+%define arg5    r8
 %else
 %define arg1    rcx
 %define arg2    rdx
 %define arg3    r8
 %define arg4    r9
+%define arg5    qword [rsp + 40]
 %endif
 
 %define APPEND(a,b) a %+ b
@@ -99,11 +103,27 @@ align 16
 swap_bytes:
 db      3, 2, 1, 0, 7, 6, 5, 4, 11, 10, 9, 8, 15, 14, 13, 12
 
+align 16
+swap_bytes_3_0:
+db      3, 2, 1, 0, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff
+
+align 16
+swap_bytes_7_4:
+db      7, 6, 5, 4, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff
+
+align 16
+swap_bytes_11_8:
+db      11, 10, 9, 8, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff
+
+align 16
+swap_bytes_15_12:
+db      15, 14, 13, 12, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff
+
 mksection .text
 
 %macro FUNC_SAVE 0
         mov     r11, rsp
-        sub     rsp, 4*16 + 8
+        sub     rsp, 6*16 + 8
         and     rsp, ~15
 
 %ifidn __OUTPUT_FORMAT__, win64
@@ -112,8 +132,10 @@ mksection .text
         movdqa  [rsp + 1*16], xmm7
         movdqa  [rsp + 2*16], xmm8
         movdqa  [rsp + 3*16], xmm9
+        movdqa  [rsp + 4*16], xmm10
+        movdqa  [rsp + 5*16], xmm11
 %endif
-        mov     [rsp + 4*16], r11 ;; rsp pointer
+        mov     [rsp + 6*16], r11 ;; rsp pointer
 %endmacro
 
 %macro FUNC_RESTORE 0
@@ -123,8 +145,10 @@ mksection .text
         movdqa  xmm7,  [rsp + 1*16]
         movdqa  xmm8,  [rsp + 2*16]
         movdqa  xmm9,  [rsp + 3*16]
+        movdqa  xmm10, [rsp + 4*16]
+        movdqa  xmm11, [rsp + 5*16]
 %endif
-        mov     rsp, [rsp + 4*16]
+        mov     rsp, [rsp + 6*16]
 %endmacro
 
 %macro AFFINE 4
@@ -219,8 +243,8 @@ mksection .text
 ;; Encrypts/decrypts a single 128-bit block with SM4
 ;;
 %macro SM4_ENC_DEC 14
-%define %%IN     %1 ; [in] Pointer to 128-bit input block
-%define %%OUT    %2 ; [out] Pointer to 128-bit output block
+%define %%IN     %1 ; [in] 128-bit input block (XMM)
+%define %%OUT    %2 ; [out] 128-bit output block (XMM)
 %define %%KEYS   %3 ; [in] Pointer to expanded enc/dec keys
 %define %%XTMP1  %4 ; [clobbered] Temporary XMM register
 %define %%XTMP2  %5 ; [clobbered] Temporary XMM register
@@ -234,14 +258,11 @@ mksection .text
 %define %%XTMP  %13 ; [clobbered] Temporary XMM register
 %define %%IDX   %14 ; [clobbered] Temporary GP register
 
-        movd    %%XTMP1, [%%IN + 4*0]
+        movdqa  %%XTMP1, %%IN
         pshufb  %%XTMP1, [rel swap_bytes]
-        movd    %%XTMP2, [%%IN + 4*1]
-        pshufb  %%XTMP2, [rel swap_bytes]
-        movd    %%XTMP3, [%%IN + 4*2]
-        pshufb  %%XTMP3, [rel swap_bytes]
-        movd    %%XTMP4, [%%IN + 4*3]
-        pshufb  %%XTMP4, [rel swap_bytes]
+        pshufd  %%XTMP2, %%XTMP1, 0x55
+        pshufd  %%XTMP3, %%XTMP1, 0xAA
+        pshufd  %%XTMP4, %%XTMP1, 0xFF
 
         xor     %%IDX, %%IDX
 %%start_loop:
@@ -293,14 +314,11 @@ mksection .text
         jmp     %%start_loop
 
 %%end_loop:
+        punpckldq  %%XTMP4, %%XTMP3
+        punpckldq  %%XTMP2, %%XTMP1
+        punpcklqdq %%XTMP4, %%XTMP2
         pshufb  %%XTMP4, [rel swap_bytes]
-        movd    [%%OUT + 4*0], %%XTMP4
-        pshufb  %%XTMP3, [rel swap_bytes]
-        movd    [%%OUT + 4*1], %%XTMP3
-        pshufb  %%XTMP2, [rel swap_bytes]
-        movd    [%%OUT + 4*2], %%XTMP2
-        pshufb  %%XTMP1, [rel swap_bytes]
-        movd    [%%OUT + 4*3], %%XTMP1
+        movdqa  %%OUT, %%XTMP4
 
 %assign %%i 0
 %endmacro
@@ -439,8 +457,8 @@ error_set_key_sse:
 ;;void sm4_ecb_sse(const void *in, void *out, uint64_t len,
 ;;                 const uint32_t *exp_keys)
 ;;
-; arg 1: IN:   pointer to input (cipher text)
-; arg 2: OUT:  pointer to output (plain text)
+; arg 1: IN:   pointer to input
+; arg 2: OUT:  pointer to output
 ; arg 3: LEN:  length in bytes (multiple of 16)
 ; arg 4: KEYS: pointer to keys
 ;
@@ -461,7 +479,9 @@ ecb_loop:
         or      SIZE, SIZE
         jz      end_ecb_loop
 
-        SM4_ENC_DEC IN, OUT, KEY_EXP, xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, xmm9, r10
+        movdqu  xmm10, [IN]
+        SM4_ENC_DEC xmm10, xmm11, KEY_EXP, xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, xmm9, r10
+        movdqu  [OUT], xmm11
 
         dec     SIZE
         add     IN, 16
@@ -478,6 +498,114 @@ end_ecb_loop:
 
         ret
 
+;;
+;;void sm4_cbc_enc_sse(const void *in, void *out, uint64_t len,
+;;                     const uint32_t *exp_enc_keys)
+;;
+; arg 1: IN:   pointer to input (plaintext)
+; arg 2: OUT:  pointer to output (ciphertext)
+; arg 3: LEN:  length in bytes (multiple of 16)
+; arg 4: KEYS: pointer to expanded encryption keys
+; arg 5: IV:   pointer to IV
+;
+MKGLOBAL(SM4_CBC_ENC,function,internal)
+SM4_CBC_ENC:
+
+%define	IN      arg1
+%define	OUT     arg2
+%define SIZE    arg3
+%define	KEY_EXP arg4
+
+%define IV      r10
+
+        mov     IV, arg5
+
+        FUNC_SAVE
+
+        shr     SIZE, 4 ; Number of blocks
+
+        ; Read 16-byte IV
+        movdqu  xmm11, [IV]
+
+align 16
+cbc_enc_loop:
+        or      SIZE, SIZE
+        jz      end_cbc_enc_loop
+
+        movdqu  xmm10, [IN]
+        pxor    xmm10, xmm11 ; Plaintext[n] XOR CT[n-1] ; CT[-1] = IV
+        SM4_ENC_DEC xmm10, xmm11, KEY_EXP, xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, xmm9, r10
+        movdqu  [OUT], xmm11
+
+        dec     SIZE
+        add     IN, 16
+        add     OUT, 16
+
+        jmp     cbc_enc_loop
+
+end_cbc_enc_loop:
+
+%ifdef SAFE_DATA
+        clear_all_xmms_sse_asm
+%endif
+        FUNC_RESTORE
+
+        ret
+
+;;
+;;void sm4_cbc_dec_sse(const void *in, void *out, uint64_t len,
+;;                     const uint32_t *exp_dec_keys)
+;;
+; arg 1: IN:   pointer to input (ciphertext)
+; arg 2: OUT:  pointer to output (plaintext)
+; arg 3: LEN:  length in bytes (multiple of 16)
+; arg 4: KEYS: pointer to expanded decryption keys
+; arg 5: IV:   pointer to IV
+;
+MKGLOBAL(SM4_CBC_DEC,function,internal)
+SM4_CBC_DEC:
+
+%define	IN      arg1
+%define	OUT     arg2
+%define SIZE    arg3
+%define	KEY_EXP arg4
+
+%define IV      r10
+
+        mov     IV, arg5
+
+        FUNC_SAVE
+
+        shr     SIZE, 4 ; Number of blocks
+
+        ; Read 16-byte IV
+        movdqu  xmm12, [IV]
+
+align 16
+cbc_dec_loop:
+        or      SIZE, SIZE
+        jz      end_cbc_dec_loop
+
+        movdqu  xmm10, [IN]
+        SM4_ENC_DEC xmm10, xmm11, KEY_EXP, xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, xmm9, r10
+        pxor    xmm11, xmm12 ; Plainttext[n] XOR CT[n-1] ; CT[-1] = IV
+        movdqu  xmm12, xmm10
+        movdqu  [OUT], xmm11
+
+        dec     SIZE
+        add     IN, 16
+        add     OUT, 16
+
+        jmp     cbc_dec_loop
+
+end_cbc_dec_loop:
+
+%ifdef SAFE_DATA
+        clear_all_xmms_sse_asm
+%endif
+        FUNC_RESTORE
+
+        ret
 
 ;----------------------------------------------------------------------------------------
 ;----------------------------------------------------------------------------------------

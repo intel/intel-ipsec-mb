@@ -8,13 +8,16 @@ Library
 - QUIC CHACHA20-POLY1305 and CHACHA20 HP API added.
 - AVX2-VAES AES-CTR implementation added.
 - SM4-ECB SSE implementation added.
+- SM4-CBC SSE implementation added.
 
 Test Applications
 - QUIC CHACHA20-POLY1305 and CHACHA20 HP tests added.
+- SM4-ECB and SM4-CBC tests added.
 
 Performance Applications
 - New parameter added to benchmark QUIC `--quic-api`.
 - Burst API is benchmarked by default now.
+- SM4-ECB and SM4-CBC support added.
 
 v1.4 June 2023
 ========================================================================

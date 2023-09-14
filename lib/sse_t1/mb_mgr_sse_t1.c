@@ -251,7 +251,9 @@ flush_snow3g_uea2_job_sse(IMB_MGR *state)
 #define ETHERNET_FCS ethernet_fcs_sse_local
 
 /* SM4 */
-#define SM4_ECB sm4_ecb_sse
+#define SM4_ECB     sm4_ecb_sse
+#define SM4_CBC_ENC sm4_cbc_enc_sse
+#define SM4_CBC_DEC sm4_cbc_dec_sse
 
 /* ====================================================================== */
 
