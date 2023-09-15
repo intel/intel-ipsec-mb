@@ -105,6 +105,8 @@ extern int
 ctr_test(struct IMB_MGR *mb_mgr);
 extern int
 sm4_ecb_test(struct IMB_MGR *mb_mgr);
+extern int
+sm4_cbc_test(struct IMB_MGR *mb_mgr);
 
 typedef int (*imb_test_t)(struct IMB_MGR *mb_mgr);
 
@@ -161,7 +163,8 @@ struct imb_test tests[] = {
         { .str = "DIRECT_API_PARAM", .fn = direct_api_param_test, .enabled = 1 },
         { .str = "QUIC-ECB", .fn = quic_ecb_test, .enabled = 1 },
         { .str = "QUIC-CHACHA20", .fn = quic_chacha20_test, .enabled = 1 },
-        { .str = "SM4-ECB", .fn = sm4_ecb_test, .enabled = 1 }
+        { .str = "SM4-ECB", .fn = sm4_ecb_test, .enabled = 1 },
+        { .str = "SM4-CBC", .fn = sm4_cbc_test, .enabled = 1 }
 };
 
 static char *

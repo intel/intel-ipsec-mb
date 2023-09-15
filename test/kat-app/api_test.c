@@ -274,6 +274,7 @@ fill_in_job(struct IMB_JOB *job, const IMB_CIPHER_MODE cipher_mode,
         job->auth_tag_output_len_in_bytes = tag_len_tab[job->hash_alg];
 
         switch (job->cipher_mode) {
+        case IMB_CIPHER_SM4_CBC:
         case IMB_CIPHER_CBC:
         case IMB_CIPHER_CBCS_1_9:
                 job->key_len_in_bytes = UINT64_C(16);
@@ -1688,6 +1689,7 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                                     &chacha_ctx, &gcm_ctx);
                         switch (cipher) {
                         case IMB_CIPHER_GCM:
+                        case IMB_CIPHER_SM4_CBC:
                         case IMB_CIPHER_CBC:
                         case IMB_CIPHER_CBCS_1_9:
                         case IMB_CIPHER_DES:
@@ -1889,6 +1891,8 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                 uint64_t invalid_iv_len;
         } invalid_iv_lens[] = {
                 /* IVs must be 16 bytes */
+                { IMB_CIPHER_SM4_CBC, 15 },
+                { IMB_CIPHER_SM4_CBC, 17 },
                 { IMB_CIPHER_CBC, 15 },
                 { IMB_CIPHER_CBC, 17 },
                 { IMB_CIPHER_CBCS_1_9, 15 },
