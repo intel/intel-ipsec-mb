@@ -104,6 +104,8 @@ set(TEST_APP_SRC_FILES
   ${CMAKE_CURRENT_SOURCE_DIR}/sm4_ecb_test.json.c
   ${CMAKE_CURRENT_SOURCE_DIR}/sm4_cbc_test.c
   ${CMAKE_CURRENT_SOURCE_DIR}/sm4_cbc_test.json.c
+  ${CMAKE_CURRENT_SOURCE_DIR}/sm3_test.c
+  ${CMAKE_CURRENT_SOURCE_DIR}/sm3_test.json.c
   ${CMAKE_CURRENT_SOURCE_DIR}/../common/utils.c
 )
 

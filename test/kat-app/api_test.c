@@ -242,6 +242,7 @@ fill_in_job(struct IMB_JOB *job, const IMB_CIPHER_MODE cipher_mode,
                 4,  /* IMB_AUTH_CRC7_FP_HEADER */
                 4,  /* IMB_AUTH_CRC6_IUUP_HEADER */
                 16, /* IMB_AUTH_GHASH */
+                32, /* IMB_AUTH_SM3 */
         };
         static DECLARE_ALIGNED(uint8_t dust_bin[2048], 64);
         static void *ks_ptrs[3];
@@ -534,6 +535,9 @@ fill_in_job(struct IMB_JOB *job, const IMB_CIPHER_MODE cipher_mode,
                 job->key_len_in_bytes = UINT64_C(32);
                 job->iv_len_in_bytes = 16;
                 job->auth_tag_output_len_in_bytes = 16;
+                break;
+        case IMB_AUTH_SM3:
+                job->auth_tag_output_len_in_bytes = IMB_SM3_DIGEST_SIZE;
                 break;
         default:
                 break;
@@ -1153,7 +1157,8 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
                                     hash == IMB_AUTH_CRC8_WIMAX_OFDMA_HCS ||
                                     hash == IMB_AUTH_CRC7_FP_HEADER ||
                                     hash == IMB_AUTH_CRC6_IUUP_HEADER ||
-                                    hash == IMB_AUTH_POLY1305 || hash == IMB_AUTH_GHASH)
+                                    hash == IMB_AUTH_POLY1305 || hash == IMB_AUTH_GHASH ||
+                                    hash == IMB_AUTH_SM3)
                                         continue;
 
                                 /*
