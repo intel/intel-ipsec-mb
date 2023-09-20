@@ -152,6 +152,7 @@ Table 2. List of supported integrity algorithms and their implementations.
 | GHASH             | N      | Y  by8 | N      | Y  by8 | Y  by8 | Y by32 |
 | CRC(6)            | N      | Y  by8 | Y  by8 | N      | N      | Y by16 |
 | PON-CRC-BIP(7)    | N      | Y      | Y      | N      | N      | Y      |
+| SM3               | Y      | N      | N      | N      | N      | N      |
 +-------------------------------------------------------------------------+
 ```
 Notes:  

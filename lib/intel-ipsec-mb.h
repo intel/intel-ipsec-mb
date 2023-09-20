@@ -163,6 +163,9 @@ typedef enum {
 #define IMB_SNOW3G_DIGEST_LEN      4
 #define IMB_SNOW3G_IV_LEN_IN_BYTES 16
 
+#define IMB_SM3_DIGEST_SIZE 32
+#define IMB_SM3_BLOCK_SIZE  64
+
 /**
  * Minimum Ethernet frame size to calculate CRC32
  * Source Address (6 bytes) + Destination Address (6 bytes) + Type/Len (2 bytes)
@@ -335,6 +338,7 @@ typedef enum {
         IMB_AUTH_CRC7_FP_HEADER,         /**< CRC7-FP-HEADER */
         IMB_AUTH_CRC6_IUUP_HEADER,       /**< CRC6-IUUP-HEADER */
         IMB_AUTH_GHASH,                  /**< GHASH */
+        IMB_AUTH_SM3,                    /**< SM3 */
         IMB_AUTH_NUM
 } IMB_HASH_ALG;
 

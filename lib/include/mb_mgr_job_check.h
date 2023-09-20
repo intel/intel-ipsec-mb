@@ -1478,6 +1478,21 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job, const IMB_CIPHER_MODE cipher_
                         return 1;
                 }
                 break;
+        case IMB_AUTH_SM3:
+                if (job->auth_tag_output_len_in_bytes == 0 ||
+                    job->auth_tag_output_len_in_bytes > IMB_SM3_DIGEST_SIZE) {
+                        imb_set_errno(state, IMB_ERR_JOB_AUTH_TAG_LEN);
+                        return 1;
+                }
+                if (job->src == NULL) {
+                        imb_set_errno(state, IMB_ERR_JOB_NULL_SRC);
+                        return 1;
+                }
+                if (job->auth_tag_output == NULL) {
+                        imb_set_errno(state, IMB_ERR_JOB_NULL_AUTH);
+                        return 1;
+                }
+                break;
         default:
                 imb_set_errno(state, IMB_ERR_HASH_ALGO);
                 return 1;
