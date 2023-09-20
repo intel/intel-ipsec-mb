@@ -202,6 +202,7 @@ enum test_hash_alg_e {
         TEST_CRC7_FP_HEADER,
         TEST_CRC6_IUUP_HEADER,
         TEST_AUTH_GHASH,
+        TEST_AUTH_SM3,
         TEST_NUM_HASH_TESTS
 };
 
@@ -536,6 +537,12 @@ const struct str_value_mapping hash_algo_str_map[] = {
                         .hash_alg = TEST_AUTH_GHASH,
                 }
         },
+        {
+                .name = "sm3",
+                .values.job_params = {
+                        .hash_alg = TEST_AUTH_SM3,
+                }
+        },
 };
 
 const struct str_value_mapping aead_algo_str_map[] = {
@@ -663,6 +670,7 @@ const uint32_t auth_tag_length_bytes[] = {
         4,                         /* IMB_AUTH_CRC7_FP_HEADER */
         4,                         /* IMB_AUTH_CRC6_IUUP_HEADER */
         16,                        /* IMB_AUTH_GHASH */
+        32,                        /* IMB_AUTH_SM3 */
 };
 uint32_t index_limit;
 uint32_t key_idxs[NUM_OFFSETS];
@@ -1986,6 +1994,9 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params, const uint32_t num_iter, uint8
         case TEST_CRC6_IUUP_HEADER:
                 job_template.hash_alg = IMB_AUTH_CRC6_IUUP_HEADER;
                 break;
+        case TEST_AUTH_SM3:
+                job_template.hash_alg = IMB_AUTH_SM3;
+                break;
         default:
                 /* HMAC hash alg is SHA1 or MD5 */
                 job_template.u.HMAC._hashed_auth_key_xor_ipad = (uint8_t *) ipad;
@@ -2973,7 +2984,8 @@ print_times(struct variant_s *variant_list, struct params_s *params, const uint3
                                                                      "CRC8_WIMAX_HCS",
                                                                      "CRC7_FP_HEADER",
                                                                      "CRC6_IUUP_HEADER",
-                                                                     "GHASH" };
+                                                                     "GHASH",
+                                                                     "SM3" };
                 struct params_s par;
 
                 printf("ARCH");
