@@ -2079,6 +2079,10 @@ test_single(IMB_MGR *enc_mgr, const IMB_ARCH enc_arch, IMB_MGR *dec_mgr, const I
                                 if ((buf_size % IMB_AES_BLOCK_SIZE) != 0)
                                         continue;
 
+                        if (params->cipher_mode == IMB_CIPHER_SM4_ECB)
+                                if ((buf_size % IMB_SM4_BLOCK_SIZE) != 0)
+                                        continue;
+
                         if (params->cipher_mode == IMB_CIPHER_DES ||
                             params->cipher_mode == IMB_CIPHER_DES3)
                                 if ((buf_size % IMB_DES_BLOCK_SIZE) != 0)
