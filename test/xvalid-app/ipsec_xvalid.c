@@ -441,7 +441,13 @@ struct str_value_mapping hash_algo_str_map[] = {
                 .values.job_params = {
                         .hash_alg = IMB_AUTH_CRC6_IUUP_HEADER,
                 }
-        }
+        },
+        {
+                .name = "SM3",
+                .values.job_params = {
+                        .hash_alg = IMB_AUTH_SM3,
+                }
+        },
 };
 
 struct str_value_mapping aead_algo_str_map[] = {
@@ -535,6 +541,7 @@ const uint8_t auth_tag_len_bytes[] = {
         4,                         /* IMB_AUTH_CRC7_FP_HEADER */
         4,                         /* IMB_AUTH_CRC6_IUUP_HEADER */
         16,                        /* IMB_AUTH_GHASH */
+        32,                        /* IMB_AUTH_SM3 */
 };
 
 /* Minimum, maximum and step values of key sizes */
@@ -941,6 +948,7 @@ fill_job(IMB_JOB *job, const struct params_s *params, uint8_t *buf, uint8_t *dig
         case IMB_AUTH_CRC8_WIMAX_OFDMA_HCS:
         case IMB_AUTH_CRC7_FP_HEADER:
         case IMB_AUTH_CRC6_IUUP_HEADER:
+        case IMB_AUTH_SM3:
                 /* No operation needed */
                 break;
         case IMB_AUTH_DOCSIS_CRC32:
@@ -1167,6 +1175,7 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys, const uint8_t *ciph
                 case IMB_AUTH_CRC8_WIMAX_OFDMA_HCS:
                 case IMB_AUTH_CRC7_FP_HEADER:
                 case IMB_AUTH_CRC6_IUUP_HEADER:
+                case IMB_AUTH_SM3:
                         /* No operation needed */
                         break;
                 case IMB_AUTH_AES_GMAC_128:
@@ -1291,6 +1300,7 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys, const uint8_t *ciph
         case IMB_AUTH_CRC8_WIMAX_OFDMA_HCS:
         case IMB_AUTH_CRC7_FP_HEADER:
         case IMB_AUTH_CRC6_IUUP_HEADER:
+        case IMB_AUTH_SM3:
                 /* No operation needed */
                 break;
         case IMB_AUTH_POLY1305:
