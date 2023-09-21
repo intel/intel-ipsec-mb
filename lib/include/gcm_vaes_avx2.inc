@@ -112,6 +112,8 @@
 ; throughout the code, one tab and two tab indentations are used. one tab is for GHASH part, two tabs is for AES part.
 ;
 
+%use smartalign
+
 %include "include/os.inc"
 %include "include/reg_sizes.inc"
 %include "include/clear_regs.inc"
@@ -1660,9 +1662,9 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
 %define %%XMM7  %18
 %define %%XMM8  %19
 %define %%T7    %20
-%define %%loop_idx      %21
-%define %%ENC_DEC       %22
-%define %%FULL_PARTIAL  %23
+%define %%ENC_DEC       %21
+%define %%FULL_PARTIAL  %22
+%define %%CTR_CHECK     %23
 
         vmovdqa [rsp + TMP1], %%XMM1
         vmovdqa [rsp + TMP2], %%XMM2
@@ -1673,28 +1675,9 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
         vmovdqa [rsp + TMP7], %%XMM7
         vmovdqa [rsp + TMP8], %%XMM8
 
-%ifidn %%loop_idx, in_order
-                vpaddd  %%XMM1, %%CTR,  [rel ONE]           ; INCR CNT
-                vmovdqa %%T5, [rel TWO]
-                vpaddd  %%XMM2, %%CTR, %%T5
-                vpaddd  %%XMM3, %%XMM1, %%T5
-                vpaddd  %%XMM4, %%XMM2, %%T5
-                vpaddd  %%XMM5, %%XMM3, %%T5
-                vpaddd  %%XMM6, %%XMM4, %%T5
-                vpaddd  %%XMM7, %%XMM5, %%T5
-                vpaddd  %%XMM8, %%XMM6, %%T5
-                vmovdqa %%CTR, %%XMM8
+                cmp     DWORD(%%CTR_CHECK), (255 - 8)
+                ja      %%_ctr_overflow8
 
-                vmovdqa %%T5, [rel SHUF_MASK]
-                vpshufb %%XMM1, %%T5             ; perform a 16Byte swap
-                vpshufb %%XMM2, %%T5             ; perform a 16Byte swap
-                vpshufb %%XMM3, %%T5             ; perform a 16Byte swap
-                vpshufb %%XMM4, %%T5             ; perform a 16Byte swap
-                vpshufb %%XMM5, %%T5             ; perform a 16Byte swap
-                vpshufb %%XMM6, %%T5             ; perform a 16Byte swap
-                vpshufb %%XMM7, %%T5             ; perform a 16Byte swap
-                vpshufb %%XMM8, %%T5             ; perform a 16Byte swap
-%else
                 vpaddd  %%XMM1, %%CTR,  [rel ONEf]          ; INCR CNT
                 vmovdqa %%T5, [rel TWOf]
                 vpaddd  %%XMM2, %%CTR,  %%T5
@@ -1705,7 +1688,33 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
                 vpaddd  %%XMM7, %%XMM5, %%T5
                 vpaddd  %%XMM8, %%XMM6, %%T5
                 vmovdqa %%CTR, %%XMM8
-%endif
+                jmp     %%_ctr_overflow8_end
+
+%%_ctr_overflow8:
+                vpshufb %%CTR, %%CTR, [rel SHUF_MASK]
+                vpaddd  %%XMM1, %%CTR,  [rel ONE]           ; INCR CNT
+                vmovdqa %%T5, [rel TWO]
+                vpaddd  %%XMM2, %%CTR, %%T5
+                vpaddd  %%XMM3, %%XMM1, %%T5
+                vpaddd  %%XMM4, %%XMM2, %%T5
+                vpaddd  %%XMM5, %%XMM3, %%T5
+                vpaddd  %%XMM6, %%XMM4, %%T5
+                vpaddd  %%XMM7, %%XMM5, %%T5
+                vpaddd  %%XMM8, %%XMM6, %%T5
+
+                vmovdqa %%T5, [rel SHUF_MASK]
+                vpshufb %%XMM1, %%T5             ; perform a 16Byte swap
+                vpshufb %%XMM2, %%T5             ; perform a 16Byte swap
+                vpshufb %%XMM3, %%T5             ; perform a 16Byte swap
+                vpshufb %%XMM4, %%T5             ; perform a 16Byte swap
+                vpshufb %%XMM5, %%T5             ; perform a 16Byte swap
+                vpshufb %%XMM6, %%T5             ; perform a 16Byte swap
+                vpshufb %%XMM7, %%T5             ; perform a 16Byte swap
+                vpshufb %%XMM8, %%T5             ; perform a 16Byte swap
+                vmovdqa %%CTR, %%XMM8
+align 32
+%%_ctr_overflow8_end:
+                add     BYTE(%%CTR_CHECK), 8
 
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -2120,9 +2129,9 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
 %define %%XMM7  %18
 %define %%XMM8  %19
 %define %%T7    %20
-%define %%loop_idx      %21
-%define %%ENC_DEC       %22
-%define %%FULL_PARTIAL  %23
+%define %%ENC_DEC       %21
+%define %%FULL_PARTIAL  %22
+%define %%CTR_CHECK     %23     ;; [in/out] GP register with counter check
 
 %xdefine %%YMM1  YWORD(%%XMM1)
 %xdefine %%YMM2  YWORD(%%XMM2)
@@ -2133,10 +2142,26 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
 %xdefine %%YMM7  YWORD(%%XMM7)
 %xdefine %%YMM8  YWORD(%%XMM8)
 
-%ifidn %%loop_idx, in_order
+                cmp     DWORD(%%CTR_CHECK), (255 - 16)
+                ja      %%_counter_overflow16
+                ;; CTR in big endian
+                vinserti128     YWORD(%%CTR), %%CTR, 1
+                vpaddd          %%YMM1, YWORD(%%CTR), [rel ONE_TWOf]          ; INCR CNT
+                vmovdqa         YWORD(%%T5), [rel TWO_TWOf]
+                vpaddd          %%YMM2, %%YMM1, YWORD(%%T5)
+                vpaddd          %%YMM3, %%YMM2, YWORD(%%T5)
+                vpaddd          %%YMM4, %%YMM3, YWORD(%%T5)
+                vpaddd          %%YMM5, %%YMM4, YWORD(%%T5)
+                vpaddd          %%YMM6, %%YMM5, YWORD(%%T5)
+                vpaddd          %%YMM7, %%YMM6, YWORD(%%T5)
+                vpaddd          %%YMM8, %%YMM7, YWORD(%%T5)
+                vextracti128    %%CTR, %%YMM8, 1
+                jmp             %%_end_overflow16_check
+%%_counter_overflow16:
+                ;; CTR in big endian
                 vpshufb         %%CTR, %%CTR, [rel SHUF_MASK]
                 vinserti128     YWORD(%%CTR), %%CTR, 1
-                vpaddd          %%YMM1, YWORD(%%CTR),  [rel ONE_TWO]           ; INCR CNT
+                vpaddd          %%YMM1, YWORD(%%CTR), [rel ONE_TWO]           ; INCR CNT
                 vmovdqa         YWORD(%%T5), [rel TWO_TWO]
                 vpaddd          %%YMM2, %%YMM1, YWORD(%%T5)
                 vpaddd          %%YMM3, %%YMM2, YWORD(%%T5)
@@ -2156,21 +2181,12 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
                 vpshufb         %%YMM7, %%YMM7, YWORD(%%T5)
                 vpshufb         %%YMM8, %%YMM8, YWORD(%%T5)
                 vextracti128    %%CTR, %%YMM8, 1
-%else
-                vinserti128     YWORD(%%CTR), %%CTR, 1
-                vpaddd          %%YMM1, YWORD(%%CTR), [rel ONE_TWOf]          ; INCR CNT
-                vmovdqa         YWORD(%%T5), [rel TWO_TWOf]
-                vpaddd          %%YMM2, %%YMM1, YWORD(%%T5)
-                vpaddd          %%YMM3, %%YMM2, YWORD(%%T5)
-                vpaddd          %%YMM4, %%YMM3, YWORD(%%T5)
-                vpaddd          %%YMM5, %%YMM4, YWORD(%%T5)
-                vpaddd          %%YMM6, %%YMM5, YWORD(%%T5)
-                vpaddd          %%YMM7, %%YMM6, YWORD(%%T5)
-                vpaddd          %%YMM8, %%YMM7, YWORD(%%T5)
-                vextracti128    %%CTR, %%YMM8, 1
-%endif
+                ;; CTR left in big endian
+align 32
+%%_end_overflow16_check:
+                add             BYTE(%%CTR_CHECK), 16
 
-        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+                ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
                 vbroadcasti128  YWORD(%%T1), [%%GDATA + 16*0]
                 vpxor           %%YMM1, %%YMM1, YWORD(%%T1)
@@ -3448,17 +3464,14 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
         INITIAL_8BLOCKS_CIPHER %%GDATA_KEY, %%CIPH_PLAIN_OUT, %%PLAIN_CIPH_IN, r13, %%DATA_OFFSET, {8*16}, xmm12, xmm9, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, %%ENC_DEC
 
 %%_encrypt_by_16_parallel:
-        ;; in_order vs. out_order is an optimization to increment the counter without shuffling
-        ;; it back into little endian. r15d keeps track of when we need to increent in order so
+        ;; r15d keeps track of when we need to increment in order so
         ;; that the carry is handled correctly.
         vmovd   r15d, xmm9
         and     r15d, 255
-        vpshufb xmm9, [rel SHUF_MASK]
+        vpshufb xmm9, [rel SHUF_MASK]   ;; -> big endian CTR
 
+align 32
 %%_encrypt_by_16_new:
-        cmp     r15d, 255-16
-        ja      %%_encrypt_by_16
-
         ;; xmm0  - T1
         ;; xmm10 - T2
         ;; xmm11 - T3
@@ -3475,26 +3488,14 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
         ;; xmm7  - XMM7
         ;; xmm8  - XMM8
         ;; xmm15 - T7
-        add     r15b, 16
-        GHASH_16_ENCRYPT_16_PARALLEL  %%GDATA_KEY, %%CIPH_PLAIN_OUT, %%PLAIN_CIPH_IN, %%DATA_OFFSET, xmm0, xmm10, xmm11, xmm12, xmm13, xmm14, xmm9, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, xmm15, out_order, %%ENC_DEC, full
+
+        GHASH_16_ENCRYPT_16_PARALLEL  %%GDATA_KEY, %%CIPH_PLAIN_OUT, %%PLAIN_CIPH_IN, %%DATA_OFFSET, xmm0, xmm10, xmm11, xmm12, xmm13, xmm14, xmm9, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, xmm15, %%ENC_DEC, full, r15
         add     %%DATA_OFFSET, 256
         sub     r13, 256
         cmp     r13, 256
-        ja      %%_encrypt_by_16_new
+        jae     %%_encrypt_by_16_new
 
-        vpshufb xmm9, [rel SHUF_MASK]
-        jmp     %%_encrypt_by_16_parallel_done
-
-%%_encrypt_by_16:
-        vpshufb xmm9, [rel SHUF_MASK]
-        add     r15b, 16
-        GHASH_16_ENCRYPT_16_PARALLEL  %%GDATA_KEY, %%CIPH_PLAIN_OUT, %%PLAIN_CIPH_IN, %%DATA_OFFSET, xmm0, xmm10, xmm11, xmm12, xmm13, xmm14, xmm9, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, xmm15, in_order, %%ENC_DEC, full
-        vpshufb  xmm9, [rel SHUF_MASK]
-        add     %%DATA_OFFSET, 256
-        sub     r13, 256
-        cmp     r13, 256
-        ja      %%_encrypt_by_16_new
-        vpshufb  xmm9, [rel SHUF_MASK]
+        vpshufb xmm9, [rel SHUF_MASK]   ;; -> little endian CTR
 
 %%_encrypt_by_16_parallel_done:
         ;; ghash last 8 and move the cipher text blocks for ghash
@@ -3526,26 +3527,23 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
         vmovdqu [rsp + TMP7], xmm7
         vmovdqu [rsp + TMP8], xmm8
 
-        ;; Encrypt the final <16 byte (partial) block, then hash
-        cmp     r13, 16
-        jl      %%_encrypt_final_partial
+        ;; is it the end of the message?
+        or      r13, r13
+        je      %%_encrypt_done
 
         ;; Process 7 full blocks plus a partial block
         cmp     r13, 128
         jl      %%_encrypt_by_8_partial
 
 %%_encrypt_by_8_parallel:
-        ;; in_order vs. out_order is an optimization to increment the counter without shuffling
-        ;; it back into little endian. r15d keeps track of when we need to increent in order so
+        ;; r15d keeps track of when we need to increment in order so
         ;; that the carry is handled correctly.
         vmovd   r15d, xmm9
         and     r15d, 255
-        vpshufb xmm9, [rel SHUF_MASK]
+        vpshufb xmm9, [rel SHUF_MASK]   ;; -> big endian CTR
 
+align 32
 %%_encrypt_by_8_new:
-        cmp     r15d, 255-8
-        ja      %%_encrypt_by_8
-
         ;; xmm0  - T1
         ;; xmm10 - T2
         ;; xmm11 - T3
@@ -3562,26 +3560,13 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
         ;; xmm7  - XMM7
         ;; xmm8  - XMM8
         ;; xmm15 - T7
-        add     r15b, 8
-        GHASH_8_ENCRYPT_8_PARALLEL  %%GDATA_KEY, %%CIPH_PLAIN_OUT, %%PLAIN_CIPH_IN, %%DATA_OFFSET, xmm0, xmm10, xmm11, xmm12, xmm13, xmm14, xmm9, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, xmm15, out_order, %%ENC_DEC, full
+        GHASH_8_ENCRYPT_8_PARALLEL  %%GDATA_KEY, %%CIPH_PLAIN_OUT, %%PLAIN_CIPH_IN, %%DATA_OFFSET, xmm0, xmm10, xmm11, xmm12, xmm13, xmm14, xmm9, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, xmm15, %%ENC_DEC, full, r15
         add     %%DATA_OFFSET, 128
         sub     r13, 128
         cmp     r13, 128
         jae     %%_encrypt_by_8_new
 
-        vpshufb xmm9, [rel SHUF_MASK]
-        jmp     %%_encrypt_by_8_parallel_done
-
-%%_encrypt_by_8:
-        vpshufb xmm9, [rel SHUF_MASK]
-        add     r15b, 8
-        GHASH_8_ENCRYPT_8_PARALLEL  %%GDATA_KEY, %%CIPH_PLAIN_OUT, %%PLAIN_CIPH_IN, %%DATA_OFFSET, xmm0, xmm10, xmm11, xmm12, xmm13, xmm14, xmm9, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, xmm15, in_order, %%ENC_DEC, full
-        vpshufb  xmm9, [rel SHUF_MASK]
-        add     %%DATA_OFFSET, 128
-        sub     r13, 128
-        cmp     r13, 128
-        jae     %%_encrypt_by_8_new
-        vpshufb  xmm9, [rel SHUF_MASK]
+        vpshufb xmm9, [rel SHUF_MASK]   ;; -> little endian CTR
 
 %%_encrypt_by_8_parallel_done:
         ;; Test to see if we need a by 8 with partial block. At this point
@@ -3593,12 +3578,17 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
         ;; Shuffle needed to align key for partial block xor. out_order
         ;; is a little faster because it avoids extra shuffles.
         ;; TBD: Might need to account for when we don't have room to increment the counter.
+        vmovd   r15d, xmm9
+        and     r15d, 255
+        vpshufb xmm9, [rel SHUF_MASK]   ;; -> big endian CTR
 
         ;; Process parallel buffers with a final partial block.
-        GHASH_8_ENCRYPT_8_PARALLEL  %%GDATA_KEY, %%CIPH_PLAIN_OUT, %%PLAIN_CIPH_IN, %%DATA_OFFSET, xmm0, xmm10, xmm11, xmm12, xmm13, xmm14, xmm9, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, xmm15, in_order, %%ENC_DEC, partial
+        GHASH_8_ENCRYPT_8_PARALLEL  %%GDATA_KEY, %%CIPH_PLAIN_OUT, %%PLAIN_CIPH_IN, %%DATA_OFFSET, xmm0, xmm10, xmm11, xmm12, xmm13, xmm14, xmm9, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, xmm15, %%ENC_DEC, partial, r15
 
-        add     %%DATA_OFFSET, 128-16
-        sub     r13, 128-16
+        vpshufb xmm9, [rel SHUF_MASK]   ;; -> little endian CTR
+
+        add     %%DATA_OFFSET, 128 - 16
+        sub     r13, 128 - 16
 
 %%_encrypt_final_partial:
 
