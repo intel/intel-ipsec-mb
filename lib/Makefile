@@ -111,7 +111,6 @@ INCLUDES := $(foreach i,$(INCLUDE_DIRS),-I $i)
 ifeq ($(MINGW),0)
 CC_HAS_CET = $(and $(shell $(CC) --target-help 2> /dev/null | grep -m1 -e "-z ibt" | wc -l), \
 	$(shell $(CC) --help=common 2> /dev/null | grep -m1 -e "-fcf-protection" | wc -l))
-CET_LDFLAGS=-r -z ibt -z shstk
 endif
 CFLAGS := -fPIC $(EXTRA_CFLAGS) $(INCLUDES) \
 	-W -Wall -Wextra -Wmissing-declarations -Wpointer-arith \
@@ -247,15 +246,12 @@ LDFLAGS += -Wl,-z,noexecstack -Wl,-z,relro -Wl,-z,now
 endif
 LIBPERM = 0755
 ifeq ($(CC_HAS_CET),1)
-LDFLAGS += -fcf-protection=full -Wl,-z,ibt -Wl,-z,shstk -Wl,-z,cet-report=error
+LDFLAGS += -Wl,-z,ibt -Wl,-z,shstk -Wl,-z,cet-report=error
 endif
 else
 LIBNAME = $(LIB).a
 LIBPERM = 0644
 LDFLAGS += -g
-ifeq ($(CC_HAS_CET),1)
-LDFLAGS += -fcf-protection=full
-endif
 endif
 
 endif # style target
@@ -886,10 +882,6 @@ ifeq ($(USE_YASM),y)
 else
 	$(NASM) -MD $(@:.o=.d) -MT $@ -o $@ $(NASM_FLAGS) $<
 endif
-ifeq ($(CC_HAS_CET),1)
-	$(LD) $(CET_LDFLAGS) -o $@.tmp $@
-	mv $@.tmp $@
-endif
 
 $(OBJ_DIR)/%.o:sse_t1/%.c
 	$(CC) -MMD $(OPT_SSE) -c $(CFLAGS) $< -o $@
@@ -899,10 +891,6 @@ ifeq ($(USE_YASM),y)
 	$(YASM) $(YASM_FLAGS) $< -o $@
 else
 	$(NASM) -MD $(@:.o=.d) -MT $@ -o $@ $(NASM_FLAGS) $<
-endif
-ifeq ($(CC_HAS_CET),1)
-	$(LD) $(CET_LDFLAGS) -o $@.tmp $@
-	mv $@.tmp $@
 endif
 
 $(OBJ_DIR)/%.o:sse_t2/%.c
@@ -914,10 +902,6 @@ ifeq ($(USE_YASM),y)
 else
 	$(NASM) -MD $(@:.o=.d) -MT $@ -o $@ $(NASM_FLAGS) $<
 endif
-ifeq ($(CC_HAS_CET),1)
-	$(LD) $(CET_LDFLAGS) -o $@.tmp $@
-	mv $@.tmp $@
-endif
 
 $(OBJ_DIR)/%.o:sse_t3/%.c
 	$(CC) -MMD $(OPT_SSE) -c $(CFLAGS) $< -o $@
@@ -927,10 +911,6 @@ ifeq ($(USE_YASM),y)
 	$(YASM) $(YASM_FLAGS) $< -o $@
 else
 	$(NASM) -MD $(@:.o=.d) -MT $@ -o $@ $(NASM_FLAGS) $<
-endif
-ifeq ($(CC_HAS_CET),1)
-	$(LD) $(CET_LDFLAGS) -o $@.tmp $@
-	mv $@.tmp $@
 endif
 
 $(OBJ_DIR)/%.o:avx_t1/%.c
@@ -942,10 +922,6 @@ ifeq ($(USE_YASM),y)
 else
 	$(NASM) -MD $(@:.o=.d) -MT $@ -o $@ $(NASM_FLAGS) $<
 endif
-ifeq ($(CC_HAS_CET),1)
-	$(LD) $(CET_LDFLAGS) -o $@.tmp $@
-	mv $@.tmp $@
-endif
 
 $(OBJ_DIR)/%.o:avx_t2/%.c
 	$(CC) -MMD $(OPT_AVX) -c $(CFLAGS) $< -o $@
@@ -956,11 +932,6 @@ ifeq ($(USE_YASM),y)
 else
 	$(NASM) -MD $(@:.o=.d) -MT $@ -o $@ $(NASM_FLAGS) $<
 endif
-ifeq ($(CC_HAS_CET),1)
-	$(LD) $(CET_LDFLAGS) -o $@.tmp $@
-	mv $@.tmp $@
-endif
-
 $(OBJ_DIR)/%.o:avx2_t1/%.c
 	$(CC) -MMD $(OPT_AVX2) -c $(CFLAGS) $< -o $@
 
@@ -970,11 +941,6 @@ ifeq ($(USE_YASM),y)
 else
 	$(NASM) -MD $(@:.o=.d) -MT $@ -o $@ $(NASM_FLAGS) $<
 endif
-ifeq ($(CC_HAS_CET),1)
-	$(LD) $(CET_LDFLAGS) -o $@.tmp $@
-	mv $@.tmp $@
-endif
-
 $(OBJ_DIR)/%.o:avx2_t2/%.c
 	$(CC) -MMD $(OPT_AVX2) -c $(CFLAGS) $< -o $@
 
@@ -984,11 +950,6 @@ ifeq ($(USE_YASM),y)
 else
 	$(NASM) -MD $(@:.o=.d) -MT $@ -o $@ $(NASM_FLAGS) $<
 endif
-ifeq ($(CC_HAS_CET),1)
-	$(LD) $(CET_LDFLAGS) -o $@.tmp $@
-	mv $@.tmp $@
-endif
-
 $(OBJ_DIR)/%.o:avx2_t3/%.c
 	$(CC) -MMD $(OPT_AVX2) -c $(CFLAGS) $< -o $@
 
@@ -997,10 +958,6 @@ ifeq ($(USE_YASM),y)
 	$(YASM) $(YASM_FLAGS) $< -o $@
 else
 	$(NASM) -MD $(@:.o=.d) -MT $@ -o $@ $(NASM_FLAGS) $<
-endif
-ifeq ($(CC_HAS_CET),1)
-	$(LD) $(CET_LDFLAGS) -o $@.tmp $@
-	mv $@.tmp $@
 endif
 
 $(OBJ_DIR)/%.o:avx512_t1/%.c
@@ -1012,10 +969,6 @@ ifeq ($(USE_YASM),y)
 else
 	$(NASM) -MD $(@:.o=.d) -MT $@ -o $@ $(NASM_FLAGS) $<
 endif
-ifeq ($(CC_HAS_CET),1)
-	$(LD) $(CET_LDFLAGS) -o $@.tmp $@
-	mv $@.tmp $@
-endif
 
 $(OBJ_DIR)/%.o:avx512_t2/%.c
 	$(CC) -MMD $(OPT_AVX512) -c $(CFLAGS) $< -o $@
@@ -1026,10 +979,6 @@ ifeq ($(USE_YASM),y)
 else
 	$(NASM) -MD $(@:.o=.d) -MT $@ -o $@ $(NASM_FLAGS) $<
 endif
-ifeq ($(CC_HAS_CET),1)
-	$(LD) $(CET_LDFLAGS) -o $@.tmp $@
-	mv $@.tmp $@
-endif
 
 $(OBJ_DIR)/%.o:no-aesni/%.c
 	$(CC) -MMD $(OPT_NOAESNI) -c $(CFLAGS_NO_SIMD) $< -o $@
@@ -1039,10 +988,6 @@ ifeq ($(USE_YASM),y)
 	$(YASM) $(YASM_FLAGS) $< -o $@
 else
 	$(NASM) -MD $(@:.o=.d) -MT $@ -o $@ $(NASM_FLAGS) $<
-endif
-ifeq ($(CC_HAS_CET),1)
-	$(LD) $(CET_LDFLAGS) -o $@.tmp $@
-	mv $@.tmp $@
 endif
 
 $(OBJ_DIR):
