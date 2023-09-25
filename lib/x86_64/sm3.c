@@ -238,6 +238,7 @@ sm3_msg(void *tag, const uint64_t tag_length, const void *msg, const uint64_t ms
         memcpy(tag, digest, tag_length);
 
 #ifdef SAFE_DATA
+        clear_scratch_xmms_sse();
         clear_mem(block, sizeof(block));
 #endif
 }
