@@ -55,7 +55,6 @@ endif
 ifeq ($(MINGW),0)
 CC_HAS_CET = $(and $(shell $(CC) --target-help 2> /dev/null | grep -m1 -e "-z ibt" | wc -l), \
 	$(shell $(CC) --help=common 2> /dev/null | grep -m1 -e "-fcf-protection" | wc -l))
-CET_LDFLAGS=-r -z ibt -z shstk
 endif
 ifeq ($(CC_HAS_CET),1)
 CFLAGS += -fcf-protection=full
@@ -65,7 +64,7 @@ ifeq ($(MINGW),0)
 LDFLAGS = -fPIE -z noexecstack -z relro -z now -pthread
 endif
 ifeq ($(CC_HAS_CET),1)
-LDFLAGS += -fcf-protection=full -Wl,-z,ibt -Wl,-z,shstk -Wl,-z,cet-report=error
+LDFLAGS += -Wl,-z,ibt -Wl,-z,shstk -Wl,-z,cet-report=error
 endif
 LDLIBS = -lIPSec_MB
 
@@ -102,10 +101,6 @@ CPPCHECK ?= cppcheck
 # rule for compiling assembly code with producing dependencies
 %.o:%.asm
 	$(NASM) -MD $(@:.o=.d) -MT $@ -o $@ $(NASM_FLAGS) $<
-ifeq ($(CC_HAS_CET),1)
-	$(LD) $(CET_LDFLAGS) -o $@.tmp $@
-	mv $@.tmp $@
-endif
 
 all: $(EXE)
 
