@@ -23,6 +23,8 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+include(CheckCCompilerFlag)
+
 # extract library version from header file
 macro(imb_get_version IMB_HDR_FILE)
   file(STRINGS ${IMB_HDR_FILE} VER_STR REGEX "^.*IMB_VERSION_STR.*$")
@@ -131,6 +133,7 @@ macro(imb_compiler_check)
     (CMAKE_C_COMPILER_VERSION VERSION_LESS 5.0))
     message(FATAL_ERROR "GNU C Compiler version must be 5.0 or higher")
   endif()
+  check_c_compiler_flag("-fcf-protection" CC_HAS_CET)
 endmacro()
 
 # add uninstall target

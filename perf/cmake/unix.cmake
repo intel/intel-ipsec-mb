@@ -51,6 +51,11 @@ if(CMAKE_COMPILER_IS_GNUCC)
   string(APPEND CMAKE_C_FLAGS " -fno-strict-overflow")
 endif()
 
+if(CC_HAS_CET)
+  string(APPEND CMAKE_C_FLAGS " -fcf-protection=full")
+  string(APPEND CMAKE_EXE_LINKER_FLAGS " -Wl,-z,ibt -Wl,-z,shstk -Wl,-z,cet-report=error")
+endif()
+
 # set destination dir to copy scripts
 if(IMB_BIN_DIR)
   set(COPY_DST_DIR ${IMB_BIN_DIR})
