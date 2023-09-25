@@ -42,10 +42,6 @@ ifeq ($(USE_YASM),y)
 else
 	$(NASM) -MD $(@:.o=.d) -MT $@ -o $@ $(NASM_FLAGS) $<
 endif
-ifeq ($(CC_HAS_CET),1)
-	$(LD) $(CET_LDFLAGS) -o $@.tmp $@
-	mv $@.tmp $@
-endif
 
 # targets come here
 all: $(APP)
