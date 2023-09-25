@@ -32,6 +32,37 @@ if(NOT FULL_PROJECT_BUILD)
   message(FATAL_ERROR "Please run CMake from project root directory")
 endif()
 
+########################################
+# setup NASM
+########################################
+enable_language(ASM_NASM)
+if(NOT CMAKE_ASM_NASM_COMPILER_LOADED)
+  message(FATAL_ERROR "Can't find assembler")
+endif()
+
+set(NASM_VERSION_REQUIRED "2.14")
+
+execute_process(
+  COMMAND ${CMAKE_ASM_NASM_COMPILER} -v
+  OUTPUT_VARIABLE NASM_VERSION_OUTPUT
+  OUTPUT_STRIP_TRAILING_WHITESPACE)
+string(REGEX MATCH "NASM version ([0-9]*.[0-9]*)" NASM_VERSION
+             "${NASM_VERSION_OUTPUT}")
+if(NASM_VERSION)
+  if(NASM_VERSION_REQUIRED VERSION_GREATER ${CMAKE_MATCH_1})
+    message(
+      FATAL_ERROR "NASM version must be at least ${NASM_VERSION_REQUIRED}!")
+  endif()
+  message(STATUS "NASM version: ${CMAKE_MATCH_1}")
+else()
+  message(
+    WARNING
+      "Could not parse NASM version string: ${NASM_VERSION_OUTPUT}.\nPlease, be sure that ${CMAKE_ASM_NASM_COMPILER} version is >= ${NASM_VERSION_REQUIRED}"
+  )
+endif()
+
+set(CAN_USE_ASSEMBLER 1)
+
 #######################################
 # set library directories
 #######################################
@@ -150,37 +181,6 @@ endif()
 if(AVX_IFMA)
   list(APPEND LIB_DEFINES AVX_IFMA)
 endif()
-
-########################################
-# setup NASM
-########################################
-enable_language(ASM_NASM)
-if(NOT CMAKE_ASM_NASM_COMPILER_LOADED)
-  message(FATAL_ERROR "Can't find assembler")
-endif()
-
-set(NASM_VERSION_REQUIRED "2.14")
-
-execute_process(
-  COMMAND ${CMAKE_ASM_NASM_COMPILER} -v
-  OUTPUT_VARIABLE NASM_VERSION_OUTPUT
-  OUTPUT_STRIP_TRAILING_WHITESPACE)
-string(REGEX MATCH "NASM version ([0-9]*.[0-9]*)" NASM_VERSION
-             "${NASM_VERSION_OUTPUT}")
-if(NASM_VERSION)
-  if(NASM_VERSION_REQUIRED VERSION_GREATER ${CMAKE_MATCH_1})
-    message(
-      FATAL_ERROR "NASM version must be at least ${NASM_VERSION_REQUIRED}!")
-  endif()
-  message(STATUS "NASM version: ${CMAKE_MATCH_1}")
-else()
-  message(
-    WARNING
-      "Could not parse NASM version string: ${NASM_VERSION_OUTPUT}.\nPlease, be sure that ${CMAKE_ASM_NASM_COMPILER} version is >= ${NASM_VERSION_REQUIRED}"
-  )
-endif()
-
-set(CAN_USE_ASSEMBLER 1)
 
 ########################################
 # add OS specific options
