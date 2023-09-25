@@ -41,6 +41,7 @@ if(NOT CMAKE_ASM_NASM_COMPILER_LOADED)
 endif()
 
 set(NASM_VERSION_REQUIRED "2.14")
+set(NASM_VERSION_AVX_IFMA "2.16")
 
 execute_process(
   COMMAND ${CMAKE_ASM_NASM_COMPILER} -v
@@ -54,6 +55,15 @@ if(NASM_VERSION)
       FATAL_ERROR "NASM version must be at least ${NASM_VERSION_REQUIRED}!")
   endif()
   message(STATUS "NASM version: ${CMAKE_MATCH_1}")
+  if(NASM_VERSION_AVX_IFMA VERSION_GREATER ${CMAKE_MATCH_1})
+    message(
+      WARNING
+      "Minimum required NASM version for AVX-IFMA: ${NASM_VERSION_AVX_IFMA}. AVX-IFMA code not compiled - update NASM."
+    )
+  else()
+    # AVX IFMA supported by NASM
+    set(AVX_IFMA 1)
+  endif()
 else()
   message(
     WARNING
