@@ -81,9 +81,15 @@ endif()
 
 # filter unused symbol exports
 if(NOT STR_FILTER)
-  set(GEN_DEF_FILE_CMD "copy /Y ${LIB}.def ${SRC_DEF_FILE}")
+  execute_process(
+    COMMAND ${CMAKE_COMMAND} -E copy ${LIB}.def ${SRC_DEF_FILE}
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    )
 else()
-  set(GEN_DEF_FILE_CMD "findstr /v ${STR_FILTER} ${LIB}.def > ${SRC_DEF_FILE}")
+  execute_process(
+    COMMAND cmd /C "findstr /v ${STR_FILTER} ${LIB}.def > ${SRC_DEF_FILE}"
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    )
 endif()
 
 ########################################
@@ -115,9 +121,4 @@ if(BUILD_SHARED_LIBS)
     DESTINATION $ENV{WINDIR}/system32)
 endif()
 
-execute_process(
-  COMMAND cmd /C ${GEN_DEF_FILE_CMD}
-  WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-  OUTPUT_QUIET
-)
 
