@@ -217,9 +217,9 @@ struct str_value_mapping cipher_algo_str_map[] = {
           .values.job_params = { .cipher_mode = IMB_CIPHER_CHACHA20, .key_size = 32 } },
         { .name = "SNOW-V",
           .values.job_params = { .cipher_mode = IMB_CIPHER_SNOW_V, .key_size = 32 } },
-        { .name = "SM4-ECB",
+        { .name = "SM4-ECB-128",
           .values.job_params = { .cipher_mode = IMB_CIPHER_SM4_ECB, .key_size = 16 } },
-        { .name = "SM4-CBC",
+        { .name = "SM4-CBC-128",
           .values.job_params = { .cipher_mode = IMB_CIPHER_SM4_CBC, .key_size = 16 } },
         { .name = "NULL-CIPHER",
           .values.job_params = { .cipher_mode = IMB_CIPHER_NULL, .key_size = 0 } }
