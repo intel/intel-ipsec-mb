@@ -208,8 +208,13 @@ return_jobs_done:
         ADV_N_JOBS(&state->earliest_job, n_ret_jobs);
 
         if (state->earliest_job == state->next_job) {
-                state->earliest_job = -1; /* becomes empty */
-                state->next_job = 0;
+                /* check if any jobs completed in this run
+                 * if not, then we wrapped around the queue, but earliest job is still processing
+                 */
+                if (n_ret_jobs != 0) {
+                        state->earliest_job = -1; /* becomes empty */
+                        state->next_job = 0;
+                }
         }
 
         return n_ret_jobs;
@@ -248,8 +253,12 @@ FLUSH_BURST(IMB_MGR *state, const uint32_t max_jobs, IMB_JOB **jobs)
 #endif
         /* check if any jobs in queue */
         max_ret_jobs = queue_sz(state);
-        if (max_ret_jobs == 0)
-                return 0;
+        if (max_ret_jobs == 0) {
+                if (state->earliest_job == -1)
+                        return 0;
+                else
+                        max_ret_jobs = IMB_MAX_JOBS;
+        }
 
         /* set max number of jobs to return */
         if (max_ret_jobs > max_jobs)
