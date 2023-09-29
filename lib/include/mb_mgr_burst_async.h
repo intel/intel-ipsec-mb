@@ -211,6 +211,8 @@ return_jobs_done:
                 if (n_ret_jobs != 0) {
                         state->earliest_job = -1; /* becomes empty */
                         state->next_job = 0;
+                } else {
+                        return FLUSH_BURST(state, n_jobs, jobs);
                 }
         }
 
