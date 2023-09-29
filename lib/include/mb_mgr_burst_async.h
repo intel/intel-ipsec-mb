@@ -252,12 +252,8 @@ FLUSH_BURST(IMB_MGR *state, const uint32_t max_jobs, IMB_JOB **jobs)
 #endif
         /* check if any jobs in queue */
         max_ret_jobs = queue_sz(state);
-        if (max_ret_jobs == 0) {
-                if (state->earliest_job == -1)
-                        return 0;
-                else
-                        max_ret_jobs = IMB_MAX_JOBS;
-        }
+        if (max_ret_jobs == 0)
+                return 0;
 
         /* set max number of jobs to return */
         if (max_ret_jobs > max_jobs)
