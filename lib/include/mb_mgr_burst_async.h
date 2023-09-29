@@ -52,10 +52,7 @@ get_queue_sz_end(const int job_offset)
 __forceinline uint32_t
 queue_sz_remaining(IMB_MGR *state)
 {
-        if (state->earliest_job < 0)
-                return IMB_MAX_JOBS;
-
-        return IMB_MAX_JOBS - get_queue_sz(state);
+        return IMB_MAX_JOBS - queue_sz(state);
 }
 
 uint32_t
