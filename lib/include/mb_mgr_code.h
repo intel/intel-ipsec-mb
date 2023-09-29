@@ -63,7 +63,10 @@ queue_sz(IMB_MGR *state)
         if (state->earliest_job < 0)
                 return 0;
 
-        return get_queue_sz(state);
+        const uint32_t queue_size = get_queue_sz(state);
+
+        /* zero here means queue is full */
+        return queue_size ? queue_size : IMB_MAX_JOBS;
 }
 
 /* ========================================================================= */
