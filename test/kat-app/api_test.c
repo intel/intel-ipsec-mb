@@ -831,10 +831,10 @@ test_burst_api(struct IMB_MGR *mb_mgr)
         if (!quiet_mode)
                 printf("\n");
 
-	if ((mb_mgr->features & IMB_FEATURE_SAFE_PARAM) == 0) {
+        if ((mb_mgr->features & IMB_FEATURE_SAFE_PARAM) == 0) {
                 /* ======== test 6: full job queue wprapping around */
-		earliest_job = mb_mgr->earliest_job;
-		next_job = mb_mgr->next_job;
+                earliest_job = mb_mgr->earliest_job;
+                next_job = mb_mgr->next_job;
                 /* simulate mb_mgr job queue being almost full of jobs that are still processing */
                 mb_mgr->earliest_job = mb_mgr->next_job = 0;
                 /* mark one job as complete, so SUBMIT_BURST has something to return */
@@ -847,19 +847,19 @@ test_burst_api(struct IMB_MGR *mb_mgr)
 
                 /* ensure that mbr_mgr job buffer was not marked as "empty" in the process */
                 if (mb_mgr->earliest_job == -1) {
-                        printf("%s: test %d, job buffer unexpectedly marked 'empty'\n",
-                        __func__, TEST_INVALID_BURST);
+                        printf("%s: test %d, job buffer unexpectedly marked 'empty'\n", __func__,
+                               TEST_INVALID_BURST);
                         return 1;
                 }
-		/* restore job queue state */
+                /* restore job queue state */
                 for (i = 0; i < IMB_MAX_JOBS; i++) {
                         mb_mgr->jobs[i].status = IMB_STATUS_COMPLETED;
                 }
-		mb_mgr->earliest_job = earliest_job;
-		mb_mgr->next_job = next_job;
+                mb_mgr->earliest_job = earliest_job;
+                mb_mgr->next_job = next_job;
 
                 return 0;
-	}
+        }
 
         printf("GET_NEXT_BURST() API behavior test:\n");
 
