@@ -300,7 +300,7 @@ check_err_no_aesni_emu(const uint64_t feature_flags, IMB_MGR *p_mgr)
         return 0;
 }
 
-static void
+static int
 self_test_cb(void *arg, const char *phase, const char *type, const char *descr)
 {
         const char *pphase = "<NULL>";
@@ -324,6 +324,8 @@ self_test_cb(void *arg, const char *phase, const char *type, const char *descr)
         if (strcmp(pphase, IMB_SELF_TEST_PHASE_PASS) == 0 ||
             strcmp(pphase, IMB_SELF_TEST_PHASE_FAIL) == 0)
                 printf("%s\n", pphase);
+
+        return 1;
 }
 
 int

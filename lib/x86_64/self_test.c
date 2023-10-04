@@ -62,13 +62,13 @@ imb_self_test_get_cb(IMB_MGR *p_mgr, imb_self_test_cb_t *cb_fn, void **cb_arg)
         return 0;
 }
 
-static void
+static int
 make_callback(IMB_MGR *p_mgr, const char *phase, const char *type, const char *descr)
 {
         if (p_mgr->self_test_cb_fn == NULL)
                 return;
 
-        p_mgr->self_test_cb_fn(p_mgr->self_test_cb_arg, phase, type, descr);
+        return p_mgr->self_test_cb_fn(p_mgr->self_test_cb_arg, phase, type, descr);
 }
 
 /*
@@ -490,15 +490,15 @@ self_test_ciphers(IMB_MGR *p_mgr)
         for (unsigned i = 0; i < IMB_DIM(cipher_vectors); i++) {
                 const struct self_test_cipher_vector *v = &cipher_vectors[i];
 
-                make_callback(p_mgr, IMB_SELF_TEST_PHASE_START, IMB_SELF_TEST_TYPE_KAT_CIPHER,
-                              v->description);
+                (void) make_callback(p_mgr, IMB_SELF_TEST_PHASE_START,
+                                     IMB_SELF_TEST_TYPE_KAT_CIPHER, v->description);
                 const int r = self_test_cipher(p_mgr, v);
 
                 if (r == 0) {
                         ret = 0;
-                        make_callback(p_mgr, IMB_SELF_TEST_PHASE_FAIL, NULL, NULL);
+                        (void) make_callback(p_mgr, IMB_SELF_TEST_PHASE_FAIL, NULL, NULL);
                 } else {
-                        make_callback(p_mgr, IMB_SELF_TEST_PHASE_PASS, NULL, NULL);
+                        (void) make_callback(p_mgr, IMB_SELF_TEST_PHASE_PASS, NULL, NULL);
                 }
         }
 
@@ -957,16 +957,16 @@ self_test_hashes(IMB_MGR *p_mgr)
         for (unsigned i = 0; i < IMB_DIM(hash_vectors); i++) {
                 const struct self_test_hash_vector *v = &hash_vectors[i];
 
-                make_callback(p_mgr, IMB_SELF_TEST_PHASE_START, IMB_SELF_TEST_TYPE_KAT_AUTH,
-                              v->description);
+                (void) make_callback(p_mgr, IMB_SELF_TEST_PHASE_START, IMB_SELF_TEST_TYPE_KAT_AUTH,
+                                     v->description);
 
                 const int r = self_test_hash(p_mgr, v);
 
                 if (r == 0) {
                         ret = 0;
-                        make_callback(p_mgr, IMB_SELF_TEST_PHASE_FAIL, NULL, NULL);
+                        (void) make_callback(p_mgr, IMB_SELF_TEST_PHASE_FAIL, NULL, NULL);
                 } else {
-                        make_callback(p_mgr, IMB_SELF_TEST_PHASE_PASS, NULL, NULL);
+                        (void) make_callback(p_mgr, IMB_SELF_TEST_PHASE_PASS, NULL, NULL);
                 }
         }
 
@@ -1448,32 +1448,32 @@ self_test_aead(IMB_MGR *p_mgr)
         for (unsigned i = 0; i < IMB_DIM(aead_gcm_vectors); i++) {
                 const struct self_test_aead_gcm_vector *v = &aead_gcm_vectors[i];
 
-                make_callback(p_mgr, IMB_SELF_TEST_PHASE_START, IMB_SELF_TEST_TYPE_KAT_AEAD,
-                              v->description);
+                (void) make_callback(p_mgr, IMB_SELF_TEST_PHASE_START, IMB_SELF_TEST_TYPE_KAT_AEAD,
+                                     v->description);
 
                 const int r = self_test_aead_gcm(p_mgr, v);
 
                 if (r == 0) {
                         ret = 0;
-                        make_callback(p_mgr, IMB_SELF_TEST_PHASE_FAIL, NULL, NULL);
+                        (void) make_callback(p_mgr, IMB_SELF_TEST_PHASE_FAIL, NULL, NULL);
                 } else {
-                        make_callback(p_mgr, IMB_SELF_TEST_PHASE_PASS, NULL, NULL);
+                        (void) make_callback(p_mgr, IMB_SELF_TEST_PHASE_PASS, NULL, NULL);
                 }
         }
 
         for (unsigned i = 0; i < IMB_DIM(aead_ccm_vectors); i++) {
                 const struct self_test_aead_ccm_vector *v = &aead_ccm_vectors[i];
 
-                make_callback(p_mgr, IMB_SELF_TEST_PHASE_START, IMB_SELF_TEST_TYPE_KAT_AEAD,
-                              v->description);
+                (void) make_callback(p_mgr, IMB_SELF_TEST_PHASE_START, IMB_SELF_TEST_TYPE_KAT_AEAD,
+                                     v->description);
 
                 const int r = self_test_aead_ccm(p_mgr, v);
 
                 if (r == 0) {
                         ret = 0;
-                        make_callback(p_mgr, IMB_SELF_TEST_PHASE_FAIL, NULL, NULL);
+                        (void) make_callback(p_mgr, IMB_SELF_TEST_PHASE_FAIL, NULL, NULL);
                 } else {
-                        make_callback(p_mgr, IMB_SELF_TEST_PHASE_PASS, NULL, NULL);
+                        (void) make_callback(p_mgr, IMB_SELF_TEST_PHASE_PASS, NULL, NULL);
                 }
         }
 

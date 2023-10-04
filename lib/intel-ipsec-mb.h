@@ -858,8 +858,8 @@ typedef void (*chacha20_hp_quic_t)(const void *, const void *const *, void **, c
 
 typedef void (*sm4_keyexp_t)(const void *, void *, void *);
 
-typedef void (*imb_self_test_cb_t)(void *cb_arg, const char *phase, const char *type,
-                                   const char *descr);
+typedef int (*imb_self_test_cb_t)(void *cb_arg, const char *phase, const char *type,
+                                  const char *descr);
 /* Multi-buffer manager flags passed to alloc_mb_mgr() */
 
 #define IMB_FLAG_SHANI_OFF (1ULL << 0) /**< disable use of SHANI extension */
