@@ -160,7 +160,7 @@ test_sm3_vectors(struct IMB_MGR *mb_mgr, struct test_suite_context *ctx, const i
         const struct mac_test *v = sm3_test_json;
 
         if (!quiet_mode)
-                printf("SHA standard test vectors (N jobs = %d):\n", num_jobs);
+                printf("SM3 standard test vectors (N jobs = %d):\n", num_jobs);
         for (; v->msg != NULL; v++) {
 #ifdef DEBUG
                 if (!quiet_mode) {
