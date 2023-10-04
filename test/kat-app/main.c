@@ -118,10 +118,8 @@ typedef int (*imb_test_t)(struct IMB_MGR *mb_mgr);
 #define strcasecmp _stricmp
 #endif
 
-#define MAX_STR_LENGTH 32
-
 struct imb_test {
-        char str[MAX_STR_LENGTH];
+        const char *str;
         imb_test_t fn;
         unsigned enabled;
 };
