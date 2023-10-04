@@ -66,7 +66,7 @@ static int
 make_callback(IMB_MGR *p_mgr, const char *phase, const char *type, const char *descr)
 {
         if (p_mgr->self_test_cb_fn == NULL)
-                return;
+                return 1;
 
         return p_mgr->self_test_cb_fn(p_mgr->self_test_cb_arg, phase, type, descr);
 }
@@ -414,7 +414,7 @@ self_test_cipher(IMB_MGR *p_mgr, const struct self_test_cipher_vector *v)
         job->hash_alg = IMB_AUTH_NULL;
         job->cipher_direction = IMB_DIR_ENCRYPT;
         job->chain_order = IMB_ORDER_CIPHER_HASH;
-        job->src = v->plain_text;
+        job->src = scratch;
         job->dst = scratch;
         job->cipher_mode = v->cipher_mode;
         if (v->cipher_mode == IMB_CIPHER_DES3) {
@@ -433,6 +433,7 @@ self_test_cipher(IMB_MGR *p_mgr, const struct self_test_cipher_vector *v)
         job->msg_len_to_cipher_in_bytes = v->plain_text_size;
 
         memset(scratch, 0, sizeof(scratch));
+        memcpy(scratch, v->plain_text, v->plain_text_size);
 
         /* submit job and get it processed */
         if (!process_job(p_mgr))
@@ -448,7 +449,7 @@ self_test_cipher(IMB_MGR *p_mgr, const struct self_test_cipher_vector *v)
         job->hash_alg = IMB_AUTH_NULL;
         job->cipher_direction = IMB_DIR_DECRYPT;
         job->chain_order = IMB_ORDER_HASH_CIPHER;
-        job->src = v->cipher_text;
+        job->src = scratch;
         job->dst = scratch;
         job->cipher_mode = v->cipher_mode;
         if (v->cipher_mode == IMB_CIPHER_DES3) {
@@ -467,6 +468,7 @@ self_test_cipher(IMB_MGR *p_mgr, const struct self_test_cipher_vector *v)
         job->msg_len_to_cipher_in_bytes = v->plain_text_size;
 
         memset(scratch, 0, sizeof(scratch));
+        memcpy(scratch, v->cipher_text, v->plain_text_size);
 
         /* submit job and get it processed */
         if (!process_job(p_mgr))
@@ -803,6 +805,7 @@ self_test_hash(IMB_MGR *p_mgr, const struct self_test_hash_vector *v)
         struct gcm_key_data gmac_key;
         /* all */
         uint8_t scratch[IMB_SHA_512_BLOCK_SIZE];
+        uint8_t msg[256];
 
         IMB_ASSERT(v->tag_size <= sizeof(scratch));
 
@@ -810,14 +813,23 @@ self_test_hash(IMB_MGR *p_mgr, const struct self_test_hash_vector *v)
         if (v->tag_size > sizeof(scratch))
                 return 0;
 
+        IMB_ASSERT(v->message_size <= sizeof(msg));
+
+        /* message too long */
+        if (v->message_size > sizeof(msg))
+                return 0;
+
         /* test JOB API */
         IMB_JOB *job = IMB_GET_NEXT_JOB(p_mgr);
+
+        memset(msg, 0, sizeof(msg));
+        memcpy(msg, v->message, v->message_size);
 
         job->hash_alg = v->hash_mode;
         job->cipher_mode = IMB_CIPHER_NULL;
         job->cipher_direction = IMB_DIR_ENCRYPT;
         job->chain_order = IMB_ORDER_HASH_CIPHER;
-        job->src = v->message;
+        job->src = msg;
         job->hash_start_src_offset_in_bytes = 0;
         job->msg_len_to_hash_in_bytes = v->message_size;
         job->auth_tag_output = scratch;
@@ -1124,7 +1136,7 @@ self_test_aead_gcm(IMB_MGR *p_mgr, const struct self_test_aead_gcm_vector *v)
         job->cipher_direction = IMB_DIR_ENCRYPT;
         job->chain_order = IMB_ORDER_CIPHER_HASH;
         job->key_len_in_bytes = v->cipher_key_size;
-        job->src = v->plain_text;
+        job->src = text;
         job->dst = text;
         job->msg_len_to_cipher_in_bytes = v->plain_text_size;
         job->cipher_start_src_offset_in_bytes = UINT64_C(0);
@@ -1139,6 +1151,8 @@ self_test_aead_gcm(IMB_MGR *p_mgr, const struct self_test_aead_gcm_vector *v)
         job->u.GCM.aad_len_in_bytes = v->aad_size;
 
         memset(text, 0, sizeof(text));
+        memcpy(text, v->plain_text, v->plain_text_size);
+
         memset(tag, 0, sizeof(tag));
 
         /* submit job and get it processed */
@@ -1160,7 +1174,7 @@ self_test_aead_gcm(IMB_MGR *p_mgr, const struct self_test_aead_gcm_vector *v)
         job->cipher_direction = IMB_DIR_DECRYPT;
         job->chain_order = IMB_ORDER_HASH_CIPHER;
         job->key_len_in_bytes = v->cipher_key_size;
-        job->src = v->cipher_text;
+        job->src = text;
         job->dst = text;
         job->msg_len_to_cipher_in_bytes = v->plain_text_size;
         job->cipher_start_src_offset_in_bytes = UINT64_C(0);
@@ -1175,6 +1189,8 @@ self_test_aead_gcm(IMB_MGR *p_mgr, const struct self_test_aead_gcm_vector *v)
         job->u.GCM.aad_len_in_bytes = v->aad_size;
 
         memset(text, 0, sizeof(text));
+        memcpy(text, v->cipher_text, v->plain_text_size);
+
         memset(tag, 0, sizeof(tag));
 
         /* submit job and get it processed */
@@ -1368,7 +1384,7 @@ self_test_aead_ccm(IMB_MGR *p_mgr, const struct self_test_aead_ccm_vector *v)
         job->cipher_direction = IMB_DIR_ENCRYPT;
         job->chain_order = IMB_ORDER_HASH_CIPHER;
         job->key_len_in_bytes = v->cipher_key_size;
-        job->src = v->plain_text;
+        job->src = text;
         job->dst = text;
         job->msg_len_to_cipher_in_bytes = v->plain_text_size;
         job->cipher_start_src_offset_in_bytes = UINT64_C(0);
@@ -1385,6 +1401,8 @@ self_test_aead_ccm(IMB_MGR *p_mgr, const struct self_test_aead_ccm_vector *v)
         job->u.CCM.aad = v->aad;
 
         memset(text, 0, sizeof(text));
+        memcpy(text, v->plain_text, v->plain_text_size);
+
         memset(tag, 0, sizeof(tag));
 
         /* submit job and get it processed */
@@ -1406,7 +1424,7 @@ self_test_aead_ccm(IMB_MGR *p_mgr, const struct self_test_aead_ccm_vector *v)
         job->cipher_direction = IMB_DIR_DECRYPT;
         job->chain_order = IMB_ORDER_CIPHER_HASH;
         job->key_len_in_bytes = v->cipher_key_size;
-        job->src = v->cipher_text;
+        job->src = text;
         job->dst = text;
         job->msg_len_to_cipher_in_bytes = v->plain_text_size;
         job->cipher_start_src_offset_in_bytes = UINT64_C(0);
@@ -1423,6 +1441,8 @@ self_test_aead_ccm(IMB_MGR *p_mgr, const struct self_test_aead_ccm_vector *v)
         job->u.CCM.aad = v->aad;
 
         memset(text, 0, sizeof(text));
+        memcpy(text, v->cipher_text, v->plain_text_size);
+
         memset(tag, 0, sizeof(tag));
 
         /* submit job and get it processed */
