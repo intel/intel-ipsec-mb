@@ -903,9 +903,10 @@ typedef int (*imb_self_test_cb_t)(void *cb_arg, const char *phase, const char *t
 /**
  * Self test defines
  */
-#define IMB_SELF_TEST_PHASE_START "START"
-#define IMB_SELF_TEST_PHASE_PASS  "PASS"
-#define IMB_SELF_TEST_PHASE_FAIL  "FAIL"
+#define IMB_SELF_TEST_PHASE_START   "START"
+#define IMB_SELF_TEST_PHASE_PASS    "PASS"
+#define IMB_SELF_TEST_PHASE_FAIL    "FAIL"
+#define IMB_SELF_TEST_PHASE_CORRUPT "CORRUPT"
 
 #define IMB_SELF_TEST_TYPE_KAT_CIPHER "KAT_Cipher"
 #define IMB_SELF_TEST_TYPE_KAT_AUTH   "KAT_Auth"

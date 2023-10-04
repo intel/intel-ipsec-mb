@@ -435,6 +435,9 @@ self_test_cipher(IMB_MGR *p_mgr, const struct self_test_cipher_vector *v)
         memset(scratch, 0, sizeof(scratch));
         memcpy(scratch, v->plain_text, v->plain_text_size);
 
+        if (make_callback(p_mgr, IMB_SELF_TEST_PHASE_CORRUPT, NULL, NULL) == 0)
+                scratch[0] ^= 1;
+
         /* submit job and get it processed */
         if (!process_job(p_mgr))
                 return 0;
@@ -469,6 +472,12 @@ self_test_cipher(IMB_MGR *p_mgr, const struct self_test_cipher_vector *v)
 
         memset(scratch, 0, sizeof(scratch));
         memcpy(scratch, v->cipher_text, v->plain_text_size);
+
+        /*
+         * Don't make callback for corrupt decrypt direction.
+         * In the future split cipher tests into encrypt and decrypt
+         * direction then do corrupt callbacks as normal.
+         */
 
         /* submit job and get it processed */
         if (!process_job(p_mgr))
@@ -825,6 +834,9 @@ self_test_hash(IMB_MGR *p_mgr, const struct self_test_hash_vector *v)
         memset(msg, 0, sizeof(msg));
         memcpy(msg, v->message, v->message_size);
 
+        if (make_callback(p_mgr, IMB_SELF_TEST_PHASE_CORRUPT, NULL, NULL) == 0)
+                msg[0] ^= 1;
+
         job->hash_alg = v->hash_mode;
         job->cipher_mode = IMB_CIPHER_NULL;
         job->cipher_direction = IMB_DIR_ENCRYPT;
@@ -1153,6 +1165,9 @@ self_test_aead_gcm(IMB_MGR *p_mgr, const struct self_test_aead_gcm_vector *v)
         memset(text, 0, sizeof(text));
         memcpy(text, v->plain_text, v->plain_text_size);
 
+        if (make_callback(p_mgr, IMB_SELF_TEST_PHASE_CORRUPT, NULL, NULL) == 0)
+                text[0] ^= 1;
+
         memset(tag, 0, sizeof(tag));
 
         /* submit job and get it processed */
@@ -1190,6 +1205,12 @@ self_test_aead_gcm(IMB_MGR *p_mgr, const struct self_test_aead_gcm_vector *v)
 
         memset(text, 0, sizeof(text));
         memcpy(text, v->cipher_text, v->plain_text_size);
+
+        /*
+         * Don't make callback for corrupt decrypt direction.
+         * In the future split AEAD tests into encrypt and decrypt
+         * direction then do corrupt callbacks as normal.
+         */
 
         memset(tag, 0, sizeof(tag));
 
@@ -1403,6 +1424,9 @@ self_test_aead_ccm(IMB_MGR *p_mgr, const struct self_test_aead_ccm_vector *v)
         memset(text, 0, sizeof(text));
         memcpy(text, v->plain_text, v->plain_text_size);
 
+        if (make_callback(p_mgr, IMB_SELF_TEST_PHASE_CORRUPT, NULL, NULL) == 0)
+                text[0] ^= 1;
+
         memset(tag, 0, sizeof(tag));
 
         /* submit job and get it processed */
@@ -1442,6 +1466,12 @@ self_test_aead_ccm(IMB_MGR *p_mgr, const struct self_test_aead_ccm_vector *v)
 
         memset(text, 0, sizeof(text));
         memcpy(text, v->cipher_text, v->plain_text_size);
+
+        /*
+         * Don't make callback for corrupt decrypt direction.
+         * In the future split AEAD tests into encrypt and decrypt
+         * direction then do corrupt callbacks as normal.
+         */
 
         memset(tag, 0, sizeof(tag));
 

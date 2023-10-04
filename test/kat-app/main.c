@@ -168,6 +168,8 @@ struct imb_test tests[] = {
         { .str = "SM3", .fn = sm3_test, .enabled = 1 }
 };
 
+static int self_test_corrupt = 0;
+
 static char *
 get_test_types(void)
 {
@@ -219,7 +221,9 @@ usage(const char *name)
                 "--shani-on: Use SHA extensions, default: auto-detect\n"
                 "--shani-off: Don't use SHA extensions\n"
                 "--quiet: Enable quiet mode with reduced text output\n"
-                "--self-test-info: provides information about self-test progress\n",
+                "--self-test-info: provides information about self-test progress (> v1.4)\n"
+                "--self-test-corrupt: corrupt message during self-test (> v1.4; expect "
+                "initialization fail)\n",
                 name, test_types);
 
         free(test_types);
@@ -319,6 +323,9 @@ self_test_cb(void *arg, const char *phase, const char *type, const char *descr)
         if (strcmp(pphase, IMB_SELF_TEST_PHASE_START) == 0)
                 printf("%s : %s : ", ptype, pdescr);
 
+        if ((strcmp(pphase, IMB_SELF_TEST_PHASE_CORRUPT) == 0) && (self_test_corrupt == 1))
+                return 0;
+
         if (strcmp(pphase, IMB_SELF_TEST_PHASE_PASS) == 0 ||
             strcmp(pphase, IMB_SELF_TEST_PHASE_FAIL) == 0)
                 printf("%s\n", pphase);
@@ -353,6 +360,8 @@ main(int argc, char **argv)
                         quiet_mode = 1;
                 else if (strcmp(argv[i], "--self-test-info") == 0)
                         self_test_info = 1;
+                else if (strcmp(argv[i], "--self-test-corrupt") == 0)
+                        self_test_corrupt = 1;
                 else if (strcmp(argv[i], "--test-type") == 0) {
                         unsigned selected_test;
 
@@ -377,6 +386,16 @@ main(int argc, char **argv)
         } else {
                 printf("Detected library version: %s\n", imb_get_version_str());
                 printf("Tool version: %s\n", IMB_VERSION_STR);
+        }
+
+        if (imb_get_version() <= IMB_VERSION(1, 4, 0) && self_test_info) {
+                printf("`self-test-info` not supported in this library version!\n");
+                return EXIT_FAILURE;
+        }
+
+        if (imb_get_version() <= IMB_VERSION(1, 4, 0) && self_test_corrupt) {
+                printf("`self-test-corrupt` not supported in this library version!\n");
+                return EXIT_FAILURE;
         }
 
         /* Print available CPU features */
@@ -437,11 +456,24 @@ main(int argc, char **argv)
                         break;
                 }
 
-                if (p_mgr->features & IMB_FEATURE_SELF_TEST)
+                if (p_mgr->features & IMB_FEATURE_SELF_TEST) {
                         printf("SELF-TEST: %s\n",
                                (p_mgr->features & IMB_FEATURE_SELF_TEST_PASS) ? "PASS" : "FAIL");
-                else
+
+                        if (self_test_corrupt) {
+                                printf("SELF-TEST: CORRUPT option enabled. %s\n",
+                                       ((p_mgr->features & IMB_FEATURE_SELF_TEST_PASS) == 0)
+                                               ? "FAIL expected."
+                                               : "ERROR: PASS NOT EXPECTED!");
+
+                                if ((p_mgr->features & IMB_FEATURE_SELF_TEST_PASS) != 0) {
+                                        free_mb_mgr(p_mgr);
+                                        return EXIT_FAILURE;
+                                }
+                        }
+                } else {
                         printf("SELF-TEST: N/A (requires library >= v1.3)\n");
+                }
 
                 if (imb_get_errno(p_mgr) != 0) {
                         printf("Error initializing MB_MGR structure! %s\n",
