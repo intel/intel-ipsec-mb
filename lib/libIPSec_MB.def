@@ -712,3 +712,5 @@ EXPORTS
     sha256_one_block_sse_shani                  @686
     imb_quic_chacha20_poly1305			@687
     imb_quic_hp_chacha20			@688
+    imb_self_test_set_cb			@689
+    imb_self_test_get_cb			@690

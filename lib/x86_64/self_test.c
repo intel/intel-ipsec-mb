@@ -30,6 +30,52 @@
 
 #include "intel-ipsec-mb.h"
 #include "arch_x86_64.h"
+#include "include/error.h"
+
+/*
+ * =============================================================================
+ * SELF-TEST CALLBACK
+ * =============================================================================
+ */
+IMB_DLL_EXPORT int
+imb_self_test_set_cb(IMB_MGR *p_mgr, imb_self_test_cb_t cb_fn, void *cb_arg)
+{
+        if (p_mgr == NULL)
+                return IMB_ERR_NULL_MBMGR;
+
+        p_mgr->self_test_cb_fn = cb_fn;
+        p_mgr->self_test_cb_arg = cb_arg;
+        return 0;
+}
+
+IMB_DLL_EXPORT int
+imb_self_test_get_cb(IMB_MGR *p_mgr, imb_self_test_cb_t *cb_fn, void **cb_arg)
+{
+        if (p_mgr == NULL)
+                return IMB_ERR_NULL_MBMGR;
+
+        if (cb_fn == NULL || cb_arg == NULL)
+                return EINVAL;
+
+        *cb_fn = p_mgr->self_test_cb_fn;
+        *cb_arg = p_mgr->self_test_cb_arg;
+        return 0;
+}
+
+static void
+make_callback(IMB_MGR *p_mgr, const char *phase, const char *type, const char *descr)
+{
+        if (p_mgr->self_test_cb_fn == NULL)
+                return;
+
+        p_mgr->self_test_cb_fn(p_mgr->self_test_cb_arg, phase, type, descr);
+}
+
+/*
+ * =============================================================================
+ * SELF-TEST EXECUTION
+ * =============================================================================
+ */
 
 #ifndef NO_SELF_TEST_DEV
 
@@ -75,6 +121,7 @@ struct self_test_cipher_vector {
         const uint8_t *plain_text;
         size_t plain_text_size;
         const uint8_t *cipher_text;
+        const char *description;
 };
 
 /*
@@ -276,38 +323,39 @@ static const uint8_t tdes_ede_cbc_cipher_text[] = {
         0xf2, 0x7f, 0x73, 0xae, 0x26, 0xab, 0xbf, 0x74
 };
 
-#define ADD_CIPHER_VECTOR(_cmode, _key, _iv, _plain, _cipher)                                      \
+#define ADD_CIPHER_VECTOR(_cmode, _key, _iv, _plain, _cipher, _descr)                              \
         {                                                                                          \
-                _cmode, _key, sizeof(_key), _iv, sizeof(_iv), _plain, sizeof(_plain), _cipher      \
+                _cmode, _key, sizeof(_key), _iv, sizeof(_iv), _plain, sizeof(_plain), _cipher,     \
+                        _descr                                                                     \
         }
 
-struct self_test_cipher_vector cipher_vectors[] = {
+static const struct self_test_cipher_vector cipher_vectors[] = {
         ADD_CIPHER_VECTOR(IMB_CIPHER_CBC, aes_cbc_128_key, aes_cbc_128_iv, aes_cbc_128_plain_text,
-                          aes_cbc_128_cipher_text),
+                          aes_cbc_128_cipher_text, "AES128-CBC"),
         ADD_CIPHER_VECTOR(IMB_CIPHER_CBC, aes_cbc_192_key, aes_cbc_192_iv, aes_cbc_192_plain_text,
-                          aes_cbc_192_cipher_text),
+                          aes_cbc_192_cipher_text, "AES192-CBC"),
         ADD_CIPHER_VECTOR(IMB_CIPHER_CBC, aes_cbc_256_key, aes_cbc_256_iv, aes_cbc_256_plain_text,
-                          aes_cbc_256_cipher_text),
+                          aes_cbc_256_cipher_text, "AES256-CBC"),
         ADD_CIPHER_VECTOR(IMB_CIPHER_CNTR, aes_ctr_128_key, aes_ctr_128_iv, aes_ctr_128_plain_text,
-                          aes_ctr_128_cipher_text),
+                          aes_ctr_128_cipher_text, "AES128-CTR"),
         ADD_CIPHER_VECTOR(IMB_CIPHER_CNTR, aes_ctr_192_key, aes_ctr_192_iv, aes_ctr_192_plain_text,
-                          aes_ctr_192_cipher_text),
+                          aes_ctr_192_cipher_text, "AES192-CTR"),
         ADD_CIPHER_VECTOR(IMB_CIPHER_CNTR, aes_ctr_256_key, aes_ctr_256_iv, aes_ctr_256_plain_text,
-                          aes_ctr_256_cipher_text),
+                          aes_ctr_256_cipher_text, "AES256-CTR"),
         ADD_CIPHER_VECTOR(IMB_CIPHER_ECB, aes_ecb_128_key, null_iv, aes_ecb_128_plain_text,
-                          aes_ecb_128_cipher_text),
+                          aes_ecb_128_cipher_text, "AES128-ECB"),
         ADD_CIPHER_VECTOR(IMB_CIPHER_ECB, aes_ecb_192_key, null_iv, aes_ecb_192_plain_text,
-                          aes_ecb_192_cipher_text),
+                          aes_ecb_192_cipher_text, "AES192-ECB"),
         ADD_CIPHER_VECTOR(IMB_CIPHER_ECB, aes_ecb_256_key, null_iv, aes_ecb_256_plain_text,
-                          aes_ecb_256_cipher_text),
+                          aes_ecb_256_cipher_text, "AES256-ECB"),
         ADD_CIPHER_VECTOR(IMB_CIPHER_DES3, tdes_ede_cbc_key, tdes_ede_cbc_iv,
-                          tdes_ede_cbc_plain_text, tdes_ede_cbc_cipher_text),
+                          tdes_ede_cbc_plain_text, tdes_ede_cbc_cipher_text, "TDES-EDE-CBC"),
 };
 
 #define DES_KEY_SCHED_WORDS (IMB_DES_KEY_SCHED_SIZE / sizeof(uint64_t))
 
 static int
-self_test_ciphers(IMB_MGR *p_mgr)
+self_test_cipher(IMB_MGR *p_mgr, const struct self_test_cipher_vector *v)
 {
         union {
                 struct {
@@ -322,122 +370,139 @@ self_test_ciphers(IMB_MGR *p_mgr)
                 } tdes;
         } ks;
         uint8_t scratch[256];
-        unsigned i;
+
+        IMB_ASSERT(v->plain_text_size <= sizeof(scratch));
+
+        /* message too long */
+        if (v->plain_text_size > sizeof(scratch))
+                return 0;
+
+        if (v->cipher_mode == IMB_CIPHER_DES3) {
+                if (v->cipher_key_size != IMB_KEY_192_BYTES) {
+                        /* invalid key size */
+                        return 0;
+                }
+                des_key_schedule(ks.tdes.key_sched1, &v->cipher_key[0]);
+                des_key_schedule(ks.tdes.key_sched2, &v->cipher_key[8]);
+                des_key_schedule(ks.tdes.key_sched3, &v->cipher_key[16]);
+                ks.tdes.keys[0] = ks.tdes.key_sched1;
+                ks.tdes.keys[1] = ks.tdes.key_sched2;
+                ks.tdes.keys[2] = ks.tdes.key_sched3;
+        } else {
+                switch (v->cipher_key_size) {
+                case IMB_KEY_128_BYTES:
+                        IMB_AES_KEYEXP_128(p_mgr, v->cipher_key, ks.aes.expkey_enc,
+                                           ks.aes.expkey_dec);
+                        break;
+                case IMB_KEY_192_BYTES:
+                        IMB_AES_KEYEXP_192(p_mgr, v->cipher_key, ks.aes.expkey_enc,
+                                           ks.aes.expkey_dec);
+                        break;
+                case IMB_KEY_256_BYTES:
+                        IMB_AES_KEYEXP_256(p_mgr, v->cipher_key, ks.aes.expkey_enc,
+                                           ks.aes.expkey_dec);
+                        break;
+                default:
+                        /* invalid key size */
+                        return 0;
+                }
+        }
+
+        /* test encrypt direction */
+        IMB_JOB *job = IMB_GET_NEXT_JOB(p_mgr);
+
+        job->hash_alg = IMB_AUTH_NULL;
+        job->cipher_direction = IMB_DIR_ENCRYPT;
+        job->chain_order = IMB_ORDER_CIPHER_HASH;
+        job->src = v->plain_text;
+        job->dst = scratch;
+        job->cipher_mode = v->cipher_mode;
+        if (v->cipher_mode == IMB_CIPHER_DES3) {
+                job->enc_keys = ks.tdes.keys;
+        } else {
+                job->enc_keys = ks.aes.expkey_enc;
+                if (v->cipher_mode != IMB_CIPHER_CNTR)
+                        job->dec_keys = ks.aes.expkey_dec;
+        }
+        job->key_len_in_bytes = v->cipher_key_size;
+        if (v->cipher_mode != IMB_CIPHER_ECB) {
+                job->iv = v->cipher_iv;
+                job->iv_len_in_bytes = v->cipher_iv_size;
+        }
+        job->cipher_start_src_offset_in_bytes = 0;
+        job->msg_len_to_cipher_in_bytes = v->plain_text_size;
+
+        memset(scratch, 0, sizeof(scratch));
+
+        /* submit job and get it processed */
+        if (!process_job(p_mgr))
+                return 0;
+
+        /* check for cipher text mismatch */
+        if (memcmp(scratch, v->cipher_text, v->plain_text_size))
+                return 0;
+
+        /* test decrypt direction */
+        job = IMB_GET_NEXT_JOB(p_mgr);
+
+        job->hash_alg = IMB_AUTH_NULL;
+        job->cipher_direction = IMB_DIR_DECRYPT;
+        job->chain_order = IMB_ORDER_HASH_CIPHER;
+        job->src = v->cipher_text;
+        job->dst = scratch;
+        job->cipher_mode = v->cipher_mode;
+        if (v->cipher_mode == IMB_CIPHER_DES3) {
+                job->dec_keys = ks.tdes.keys;
+        } else {
+                job->dec_keys = ks.aes.expkey_dec;
+                if (v->cipher_mode == IMB_CIPHER_CNTR)
+                        job->enc_keys = ks.aes.expkey_enc;
+        }
+        job->key_len_in_bytes = v->cipher_key_size;
+        if (v->cipher_mode != IMB_CIPHER_ECB) {
+                job->iv = v->cipher_iv;
+                job->iv_len_in_bytes = v->cipher_iv_size;
+        }
+        job->cipher_start_src_offset_in_bytes = 0;
+        job->msg_len_to_cipher_in_bytes = v->plain_text_size;
+
+        memset(scratch, 0, sizeof(scratch));
+
+        /* submit job and get it processed */
+        if (!process_job(p_mgr))
+                return 0;
+
+        /* check for plain text mismatch */
+        if (memcmp(scratch, v->plain_text, v->plain_text_size))
+                return 0;
+
+        return 1;
+}
+
+static int
+self_test_ciphers(IMB_MGR *p_mgr)
+{
+        int ret = 1;
 
         while (IMB_FLUSH_JOB(p_mgr) != NULL)
                 ;
 
-        for (i = 0; i < IMB_DIM(cipher_vectors); i++) {
-                struct self_test_cipher_vector *v = &cipher_vectors[i];
+        for (unsigned i = 0; i < IMB_DIM(cipher_vectors); i++) {
+                const struct self_test_cipher_vector *v = &cipher_vectors[i];
 
-                IMB_ASSERT(v->plain_text_size <= sizeof(scratch));
+                make_callback(p_mgr, IMB_SELF_TEST_PHASE_START, IMB_SELF_TEST_TYPE_KAT_CIPHER,
+                              v->description);
+                const int r = self_test_cipher(p_mgr, v);
 
-                /* message too long */
-                if (v->plain_text_size > sizeof(scratch))
-                        return 0;
-
-                if (v->cipher_mode == IMB_CIPHER_DES3) {
-                        if (v->cipher_key_size != IMB_KEY_192_BYTES) {
-                                /* invalid key size */
-                                return 0;
-                        }
-                        des_key_schedule(ks.tdes.key_sched1, &v->cipher_key[0]);
-                        des_key_schedule(ks.tdes.key_sched2, &v->cipher_key[8]);
-                        des_key_schedule(ks.tdes.key_sched3, &v->cipher_key[16]);
-                        ks.tdes.keys[0] = ks.tdes.key_sched1;
-                        ks.tdes.keys[1] = ks.tdes.key_sched2;
-                        ks.tdes.keys[2] = ks.tdes.key_sched3;
+                if (r == 0) {
+                        ret = 0;
+                        make_callback(p_mgr, IMB_SELF_TEST_PHASE_FAIL, NULL, NULL);
                 } else {
-                        switch (v->cipher_key_size) {
-                        case IMB_KEY_128_BYTES:
-                                IMB_AES_KEYEXP_128(p_mgr, v->cipher_key, ks.aes.expkey_enc,
-                                                   ks.aes.expkey_dec);
-                                break;
-                        case IMB_KEY_192_BYTES:
-                                IMB_AES_KEYEXP_192(p_mgr, v->cipher_key, ks.aes.expkey_enc,
-                                                   ks.aes.expkey_dec);
-                                break;
-                        case IMB_KEY_256_BYTES:
-                                IMB_AES_KEYEXP_256(p_mgr, v->cipher_key, ks.aes.expkey_enc,
-                                                   ks.aes.expkey_dec);
-                                break;
-                        default:
-                                /* invalid key size */
-                                return 0;
-                        }
+                        make_callback(p_mgr, IMB_SELF_TEST_PHASE_PASS, NULL, NULL);
                 }
+        }
 
-                /* test encrypt direction */
-                IMB_JOB *job = IMB_GET_NEXT_JOB(p_mgr);
-
-                job->hash_alg = IMB_AUTH_NULL;
-                job->cipher_direction = IMB_DIR_ENCRYPT;
-                job->chain_order = IMB_ORDER_CIPHER_HASH;
-                job->src = v->plain_text;
-                job->dst = scratch;
-                job->cipher_mode = v->cipher_mode;
-                if (v->cipher_mode == IMB_CIPHER_DES3) {
-                        job->enc_keys = ks.tdes.keys;
-                } else {
-                        job->enc_keys = ks.aes.expkey_enc;
-                        if (v->cipher_mode != IMB_CIPHER_CNTR)
-                                job->dec_keys = ks.aes.expkey_dec;
-                }
-                job->key_len_in_bytes = v->cipher_key_size;
-                if (v->cipher_mode != IMB_CIPHER_ECB) {
-                        job->iv = v->cipher_iv;
-                        job->iv_len_in_bytes = v->cipher_iv_size;
-                }
-                job->cipher_start_src_offset_in_bytes = 0;
-                job->msg_len_to_cipher_in_bytes = v->plain_text_size;
-
-                memset(scratch, 0, sizeof(scratch));
-
-                /* submit job and get it processed */
-                if (!process_job(p_mgr))
-                        return 0;
-
-                /* check for cipher text mismatch */
-                if (memcmp(scratch, v->cipher_text, v->plain_text_size))
-                        return 0;
-
-                /* test decrypt direction */
-                job = IMB_GET_NEXT_JOB(p_mgr);
-
-                job->hash_alg = IMB_AUTH_NULL;
-                job->cipher_direction = IMB_DIR_DECRYPT;
-                job->chain_order = IMB_ORDER_HASH_CIPHER;
-                job->src = v->cipher_text;
-                job->dst = scratch;
-                job->cipher_mode = v->cipher_mode;
-                if (v->cipher_mode == IMB_CIPHER_DES3) {
-                        job->dec_keys = ks.tdes.keys;
-                } else {
-                        job->dec_keys = ks.aes.expkey_dec;
-                        if (v->cipher_mode == IMB_CIPHER_CNTR)
-                                job->enc_keys = ks.aes.expkey_enc;
-                }
-                job->key_len_in_bytes = v->cipher_key_size;
-                if (v->cipher_mode != IMB_CIPHER_ECB) {
-                        job->iv = v->cipher_iv;
-                        job->iv_len_in_bytes = v->cipher_iv_size;
-                }
-                job->cipher_start_src_offset_in_bytes = 0;
-                job->msg_len_to_cipher_in_bytes = v->plain_text_size;
-
-                memset(scratch, 0, sizeof(scratch));
-
-                /* submit job and get it processed */
-                if (!process_job(p_mgr))
-                        return 0;
-
-                /* check for plain text mismatch */
-                if (memcmp(scratch, v->plain_text, v->plain_text_size))
-                        return 0;
-
-        } /* for(cipher_vectors) */
-
-        return 1;
+        return ret;
 }
 
 /*
@@ -456,6 +521,7 @@ struct self_test_hash_vector {
         size_t tag_size;
         const uint8_t *hash_iv; /* gmac */
         size_t hash_iv_size;
+        const char *description;
 };
 
 /*
@@ -496,9 +562,9 @@ const uint8_t sha512_digest[] = { 0x20, 0x4a, 0x8f, 0xc6, 0xdd, 0xa8, 0x2f, 0x0a
                                   0x57, 0x78, 0x9c, 0xa0, 0x31, 0xad, 0x85, 0xc7, 0xa7, 0x1d, 0xd7,
                                   0x03, 0x54, 0xec, 0x63, 0x12, 0x38, 0xca, 0x34, 0x45 };
 
-#define ADD_SHA_VECTOR(_hmode, _msg, _digest)                                                      \
+#define ADD_SHA_VECTOR(_hmode, _msg, _digest, _descr)                                              \
         {                                                                                          \
-                _hmode, NULL, 0, _msg, sizeof(_msg), _digest, sizeof(_digest), NULL, 0             \
+                _hmode, NULL, 0, _msg, sizeof(_msg), _digest, sizeof(_digest), NULL, 0, _descr     \
         }
 
 /*
@@ -605,9 +671,10 @@ static const uint8_t hmac_sha512_digest[] = { 0xfc, 0x25, 0xe2, 0x40, 0x65, 0x8c
                                               0x48, 0xcf, 0xa2, 0x6a, 0x8a, 0x36, 0x6b, 0xf2,
                                               0xcd, 0x1f, 0x83, 0x6b, 0x05, 0xfc, 0xb0, 0x24 };
 
-#define ADD_HMAC_SHA_VECTOR(_hmode, _key, _msg, _digest)                                           \
+#define ADD_HMAC_SHA_VECTOR(_hmode, _key, _msg, _digest, _descr)                                   \
         {                                                                                          \
-                _hmode, _key, sizeof(_key), _msg, sizeof(_msg), _digest, sizeof(_digest), NULL, 0  \
+                _hmode, _key, sizeof(_key), _msg, sizeof(_msg), _digest, sizeof(_digest), NULL, 0, \
+                        _descr                                                                     \
         }
 
 /*
@@ -631,9 +698,10 @@ static const uint8_t aes_cmac_256_message[] = { 0x6b, 0xc1, 0xbe, 0xe2, 0x2e, 0x
 static const uint8_t aes_cmac_256_tag[] = { 0x15, 0x67, 0x27, 0xDC, 0x08, 0x78, 0x94, 0x4A,
                                             0x02, 0x3C, 0x1F, 0xE0, 0x3B, 0xAD, 0x6D, 0x93 };
 
-#define ADD_CMAC_VECTOR(_hmode, _key, _msg, _digest)                                               \
+#define ADD_CMAC_VECTOR(_hmode, _key, _msg, _digest, _descr)                                       \
         {                                                                                          \
-                _hmode, _key, sizeof(_key), _msg, sizeof(_msg), _digest, sizeof(_digest), NULL, 0  \
+                _hmode, _key, sizeof(_key), _msg, sizeof(_msg), _digest, sizeof(_digest), NULL, 0, \
+                        _descr                                                                     \
         }
 
 /*
@@ -687,42 +755,42 @@ static const uint8_t aes_gmac_256_message[] = {
 static const uint8_t aes_gmac_256_tag[] = { 0x77, 0x46, 0x0D, 0x6F, 0xB1, 0x87, 0xDB, 0xA9,
                                             0x46, 0xAD, 0xCD, 0xFB, 0xB7, 0xF9, 0x13, 0xA1 };
 
-#define ADD_GMAC_VECTOR(_hmode, _key, _iv, _msg, _tag)                                             \
+#define ADD_GMAC_VECTOR(_hmode, _key, _iv, _msg, _tag, _descr)                                     \
         {                                                                                          \
                 _hmode, _key, sizeof(_key), _msg, sizeof(_msg), _tag, sizeof(_tag), _iv,           \
-                        sizeof(_iv)                                                                \
+                        sizeof(_iv), _descr                                                        \
         }
 
-struct self_test_hash_vector hash_vectors[] = {
-        ADD_SHA_VECTOR(IMB_AUTH_SHA_1, sha_message, sha1_digest),
-        ADD_SHA_VECTOR(IMB_AUTH_SHA_224, sha_message, sha224_digest),
-        ADD_SHA_VECTOR(IMB_AUTH_SHA_256, sha_message, sha256_digest),
-        ADD_SHA_VECTOR(IMB_AUTH_SHA_384, sha_message, sha384_digest),
-        ADD_SHA_VECTOR(IMB_AUTH_SHA_512, sha_message, sha512_digest),
-        ADD_HMAC_SHA_VECTOR(IMB_AUTH_HMAC_SHA_1, hmac_sha1_key, hmac_sha1_message,
-                            hmac_sha1_digest),
+static const struct self_test_hash_vector hash_vectors[] = {
+        ADD_SHA_VECTOR(IMB_AUTH_SHA_1, sha_message, sha1_digest, "SHA1"),
+        ADD_SHA_VECTOR(IMB_AUTH_SHA_224, sha_message, sha224_digest, "SHA2-224"),
+        ADD_SHA_VECTOR(IMB_AUTH_SHA_256, sha_message, sha256_digest, "SHA2-256"),
+        ADD_SHA_VECTOR(IMB_AUTH_SHA_384, sha_message, sha384_digest, "SHA2-384"),
+        ADD_SHA_VECTOR(IMB_AUTH_SHA_512, sha_message, sha512_digest, "SHA2-512"),
+        ADD_HMAC_SHA_VECTOR(IMB_AUTH_HMAC_SHA_1, hmac_sha1_key, hmac_sha1_message, hmac_sha1_digest,
+                            "HMAC-SHA1"),
         ADD_HMAC_SHA_VECTOR(IMB_AUTH_HMAC_SHA_224, hmac_sha224_key, hmac_sha224_message,
-                            hmac_sha224_digest),
+                            hmac_sha224_digest, "HMAC-SHA2-224"),
         ADD_HMAC_SHA_VECTOR(IMB_AUTH_HMAC_SHA_256, hmac_sha256_key, hmac_sha256_message,
-                            hmac_sha256_digest),
+                            hmac_sha256_digest, "HMAC-SHA2-256"),
         ADD_HMAC_SHA_VECTOR(IMB_AUTH_HMAC_SHA_384, hmac_sha384_key, hmac_sha384_message,
-                            hmac_sha384_digest),
+                            hmac_sha384_digest, "HMAC-SHA2-384"),
         ADD_HMAC_SHA_VECTOR(IMB_AUTH_HMAC_SHA_512, hmac_sha512_key, hmac_sha512_message,
-                            hmac_sha512_digest),
-        ADD_CMAC_VECTOR(IMB_AUTH_AES_CMAC, aes_cmac_128_key, aes_cmac_128_message,
-                        aes_cmac_128_tag),
+                            hmac_sha512_digest, "HMAC-SHA2-512"),
+        ADD_CMAC_VECTOR(IMB_AUTH_AES_CMAC, aes_cmac_128_key, aes_cmac_128_message, aes_cmac_128_tag,
+                        "AES128-CMAC"),
         ADD_CMAC_VECTOR(IMB_AUTH_AES_CMAC_256, aes_cmac_256_key, aes_cmac_256_message,
-                        aes_cmac_256_tag),
+                        aes_cmac_256_tag, "AES256-CMAC"),
         ADD_GMAC_VECTOR(IMB_AUTH_AES_GMAC_128, aes_gmac_128_key, aes_gmac_128_iv,
-                        aes_gmac_128_message, aes_gmac_128_tag),
+                        aes_gmac_128_message, aes_gmac_128_tag, "AES128-GMAC"),
         ADD_GMAC_VECTOR(IMB_AUTH_AES_GMAC_192, aes_gmac_192_key, aes_gmac_192_iv,
-                        aes_gmac_192_message, aes_gmac_192_tag),
+                        aes_gmac_192_message, aes_gmac_192_tag, "AES192-GMAC"),
         ADD_GMAC_VECTOR(IMB_AUTH_AES_GMAC_256, aes_gmac_256_key, aes_gmac_256_iv,
-                        aes_gmac_256_message, aes_gmac_256_tag),
+                        aes_gmac_256_message, aes_gmac_256_tag, "AES256-GMAC"),
 };
 
 static int
-self_test_hash(IMB_MGR *p_mgr)
+self_test_hash(IMB_MGR *p_mgr, const struct self_test_hash_vector *v)
 {
         /* hmac */
         DECLARE_ALIGNED(uint8_t hmac_ipad[IMB_SHA512_DIGEST_SIZE_IN_BYTES], 16);
@@ -735,156 +803,174 @@ self_test_hash(IMB_MGR *p_mgr)
         struct gcm_key_data gmac_key;
         /* all */
         uint8_t scratch[IMB_SHA_512_BLOCK_SIZE];
-        unsigned i;
+
+        IMB_ASSERT(v->tag_size <= sizeof(scratch));
+
+        /* tag too long */
+        if (v->tag_size > sizeof(scratch))
+                return 0;
+
+        /* test JOB API */
+        IMB_JOB *job = IMB_GET_NEXT_JOB(p_mgr);
+
+        job->hash_alg = v->hash_mode;
+        job->cipher_mode = IMB_CIPHER_NULL;
+        job->cipher_direction = IMB_DIR_ENCRYPT;
+        job->chain_order = IMB_ORDER_HASH_CIPHER;
+        job->src = v->message;
+        job->hash_start_src_offset_in_bytes = 0;
+        job->msg_len_to_hash_in_bytes = v->message_size;
+        job->auth_tag_output = scratch;
+        job->auth_tag_output_len_in_bytes = v->tag_size;
+        if (v->hash_mode >= IMB_AUTH_HMAC_SHA_1 && v->hash_mode <= IMB_AUTH_HMAC_SHA_512) {
+                imb_hmac_ipad_opad(p_mgr, v->hash_mode, v->hash_key, v->hash_key_size, hmac_ipad,
+                                   hmac_opad);
+                job->u.HMAC._hashed_auth_key_xor_ipad = hmac_ipad;
+                job->u.HMAC._hashed_auth_key_xor_opad = hmac_opad;
+        }
+        if (v->hash_mode == IMB_AUTH_AES_CMAC) {
+                IMB_AES_KEYEXP_128(p_mgr, v->hash_key, expkey, dust);
+                IMB_AES_CMAC_SUBKEY_GEN_128(p_mgr, expkey, skey1, skey2);
+                job->u.CMAC._key_expanded = expkey;
+                job->u.CMAC._skey1 = skey1;
+                job->u.CMAC._skey2 = skey2;
+        }
+
+        if (v->hash_mode == IMB_AUTH_AES_CMAC_256) {
+                IMB_AES_KEYEXP_256(p_mgr, v->hash_key, expkey, dust);
+                IMB_AES_CMAC_SUBKEY_GEN_256(p_mgr, expkey, skey1, skey2);
+                job->u.CMAC._key_expanded = expkey;
+                job->u.CMAC._skey1 = skey1;
+                job->u.CMAC._skey2 = skey2;
+        }
+
+        if (v->hash_mode == IMB_AUTH_AES_GMAC_128) {
+                IMB_AES128_GCM_PRE(p_mgr, v->hash_key, &gmac_key);
+                job->u.GMAC._key = &gmac_key;
+                job->u.GMAC._iv = v->hash_iv;
+                job->u.GMAC.iv_len_in_bytes = v->hash_iv_size;
+        }
+
+        if (v->hash_mode == IMB_AUTH_AES_GMAC_192) {
+                IMB_AES192_GCM_PRE(p_mgr, v->hash_key, &gmac_key);
+                job->u.GMAC._key = &gmac_key;
+                job->u.GMAC._iv = v->hash_iv;
+                job->u.GMAC.iv_len_in_bytes = v->hash_iv_size;
+        }
+
+        if (v->hash_mode == IMB_AUTH_AES_GMAC_256) {
+                IMB_AES256_GCM_PRE(p_mgr, v->hash_key, &gmac_key);
+                job->u.GMAC._key = &gmac_key;
+                job->u.GMAC._iv = v->hash_iv;
+                job->u.GMAC.iv_len_in_bytes = v->hash_iv_size;
+        }
+
+        /* clear space where computed TAG is put into */
+        memset(scratch, 0, sizeof(scratch));
+
+        /* submit job and get it processed */
+        if (!process_job(p_mgr))
+                return 0;
+
+        /* check for TAG mismatch */
+        if (memcmp(scratch, v->tag, v->tag_size))
+                return 0;
+
+        /* exercise direct API test if available */
+        memset(scratch, 0, sizeof(scratch));
+
+        if (v->hash_mode == IMB_AUTH_SHA_1) {
+                memset(scratch, 0, sizeof(scratch));
+                IMB_SHA1(p_mgr, v->message, v->message_size, scratch);
+                if (memcmp(scratch, v->tag, v->tag_size))
+                        return 0;
+        }
+        if (v->hash_mode == IMB_AUTH_SHA_224) {
+                memset(scratch, 0, sizeof(scratch));
+                IMB_SHA224(p_mgr, v->message, v->message_size, scratch);
+                if (memcmp(scratch, v->tag, v->tag_size))
+                        return 0;
+        }
+        if (v->hash_mode == IMB_AUTH_SHA_256) {
+                memset(scratch, 0, sizeof(scratch));
+                IMB_SHA256(p_mgr, v->message, v->message_size, scratch);
+                if (memcmp(scratch, v->tag, v->tag_size))
+                        return 0;
+        }
+        if (v->hash_mode == IMB_AUTH_SHA_384) {
+                memset(scratch, 0, sizeof(scratch));
+                IMB_SHA384(p_mgr, v->message, v->message_size, scratch);
+                if (memcmp(scratch, v->tag, v->tag_size))
+                        return 0;
+        }
+        if (v->hash_mode == IMB_AUTH_SHA_512) {
+                memset(scratch, 0, sizeof(scratch));
+                IMB_SHA512(p_mgr, v->message, v->message_size, scratch);
+                if (memcmp(scratch, v->tag, v->tag_size))
+                        return 0;
+        }
+        if (v->hash_mode == IMB_AUTH_AES_GMAC_128) {
+                struct gcm_context_data ctx;
+
+                memset(scratch, 0, sizeof(scratch));
+                IMB_AES128_GCM_PRE(p_mgr, v->hash_key, &gmac_key);
+                IMB_AES128_GMAC_INIT(p_mgr, &gmac_key, &ctx, v->hash_iv, v->hash_iv_size);
+                IMB_AES128_GMAC_UPDATE(p_mgr, &gmac_key, &ctx, v->message, v->message_size);
+                IMB_AES128_GMAC_FINALIZE(p_mgr, &gmac_key, &ctx, scratch, v->tag_size);
+                if (memcmp(scratch, v->tag, v->tag_size))
+                        return 0;
+        }
+        if (v->hash_mode == IMB_AUTH_AES_GMAC_192) {
+                struct gcm_context_data ctx;
+
+                memset(scratch, 0, sizeof(scratch));
+                IMB_AES192_GCM_PRE(p_mgr, v->hash_key, &gmac_key);
+                IMB_AES192_GMAC_INIT(p_mgr, &gmac_key, &ctx, v->hash_iv, v->hash_iv_size);
+                IMB_AES192_GMAC_UPDATE(p_mgr, &gmac_key, &ctx, v->message, v->message_size);
+                IMB_AES192_GMAC_FINALIZE(p_mgr, &gmac_key, &ctx, scratch, v->tag_size);
+                if (memcmp(scratch, v->tag, v->tag_size))
+                        return 0;
+        }
+        if (v->hash_mode == IMB_AUTH_AES_GMAC_256) {
+                struct gcm_context_data ctx;
+
+                memset(scratch, 0, sizeof(scratch));
+                IMB_AES256_GCM_PRE(p_mgr, v->hash_key, &gmac_key);
+                IMB_AES256_GMAC_INIT(p_mgr, &gmac_key, &ctx, v->hash_iv, v->hash_iv_size);
+                IMB_AES256_GMAC_UPDATE(p_mgr, &gmac_key, &ctx, v->message, v->message_size);
+                IMB_AES256_GMAC_FINALIZE(p_mgr, &gmac_key, &ctx, scratch, v->tag_size);
+                if (memcmp(scratch, v->tag, v->tag_size))
+                        return 0;
+        }
+
+        return 1;
+}
+
+static int
+self_test_hashes(IMB_MGR *p_mgr)
+{
+        int ret = 1;
 
         while (IMB_FLUSH_JOB(p_mgr) != NULL)
                 ;
 
-        for (i = 0; i < IMB_DIM(hash_vectors); i++) {
-                struct self_test_hash_vector *v = &hash_vectors[i];
+        for (unsigned i = 0; i < IMB_DIM(hash_vectors); i++) {
+                const struct self_test_hash_vector *v = &hash_vectors[i];
 
-                IMB_ASSERT(v->tag_size <= sizeof(scratch));
+                make_callback(p_mgr, IMB_SELF_TEST_PHASE_START, IMB_SELF_TEST_TYPE_KAT_AUTH,
+                              v->description);
 
-                /* tag too long */
-                if (v->tag_size > sizeof(scratch))
-                        return 0;
+                const int r = self_test_hash(p_mgr, v);
 
-                /* test JOB API */
-                IMB_JOB *job = IMB_GET_NEXT_JOB(p_mgr);
-
-                job->hash_alg = v->hash_mode;
-                job->cipher_mode = IMB_CIPHER_NULL;
-                job->cipher_direction = IMB_DIR_ENCRYPT;
-                job->chain_order = IMB_ORDER_HASH_CIPHER;
-                job->src = v->message;
-                job->hash_start_src_offset_in_bytes = 0;
-                job->msg_len_to_hash_in_bytes = v->message_size;
-                job->auth_tag_output = scratch;
-                job->auth_tag_output_len_in_bytes = v->tag_size;
-                if (v->hash_mode >= IMB_AUTH_HMAC_SHA_1 && v->hash_mode <= IMB_AUTH_HMAC_SHA_512) {
-                        imb_hmac_ipad_opad(p_mgr, v->hash_mode, v->hash_key, v->hash_key_size,
-                                           hmac_ipad, hmac_opad);
-                        job->u.HMAC._hashed_auth_key_xor_ipad = hmac_ipad;
-                        job->u.HMAC._hashed_auth_key_xor_opad = hmac_opad;
+                if (r == 0) {
+                        ret = 0;
+                        make_callback(p_mgr, IMB_SELF_TEST_PHASE_FAIL, NULL, NULL);
+                } else {
+                        make_callback(p_mgr, IMB_SELF_TEST_PHASE_PASS, NULL, NULL);
                 }
-                if (v->hash_mode == IMB_AUTH_AES_CMAC) {
-                        IMB_AES_KEYEXP_128(p_mgr, v->hash_key, expkey, dust);
-                        IMB_AES_CMAC_SUBKEY_GEN_128(p_mgr, expkey, skey1, skey2);
-                        job->u.CMAC._key_expanded = expkey;
-                        job->u.CMAC._skey1 = skey1;
-                        job->u.CMAC._skey2 = skey2;
-                }
+        }
 
-                if (v->hash_mode == IMB_AUTH_AES_CMAC_256) {
-                        IMB_AES_KEYEXP_256(p_mgr, v->hash_key, expkey, dust);
-                        IMB_AES_CMAC_SUBKEY_GEN_256(p_mgr, expkey, skey1, skey2);
-                        job->u.CMAC._key_expanded = expkey;
-                        job->u.CMAC._skey1 = skey1;
-                        job->u.CMAC._skey2 = skey2;
-                }
-
-                if (v->hash_mode == IMB_AUTH_AES_GMAC_128) {
-                        IMB_AES128_GCM_PRE(p_mgr, v->hash_key, &gmac_key);
-                        job->u.GMAC._key = &gmac_key;
-                        job->u.GMAC._iv = v->hash_iv;
-                        job->u.GMAC.iv_len_in_bytes = v->hash_iv_size;
-                }
-
-                if (v->hash_mode == IMB_AUTH_AES_GMAC_192) {
-                        IMB_AES192_GCM_PRE(p_mgr, v->hash_key, &gmac_key);
-                        job->u.GMAC._key = &gmac_key;
-                        job->u.GMAC._iv = v->hash_iv;
-                        job->u.GMAC.iv_len_in_bytes = v->hash_iv_size;
-                }
-
-                if (v->hash_mode == IMB_AUTH_AES_GMAC_256) {
-                        IMB_AES256_GCM_PRE(p_mgr, v->hash_key, &gmac_key);
-                        job->u.GMAC._key = &gmac_key;
-                        job->u.GMAC._iv = v->hash_iv;
-                        job->u.GMAC.iv_len_in_bytes = v->hash_iv_size;
-                }
-
-                /* clear space where computed TAG is put into */
-                memset(scratch, 0, sizeof(scratch));
-
-                /* submit job and get it processed */
-                if (!process_job(p_mgr))
-                        return 0;
-
-                /* check for TAG mismatch */
-                if (memcmp(scratch, v->tag, v->tag_size))
-                        return 0;
-
-                /* exercise direct API test if available */
-                memset(scratch, 0, sizeof(scratch));
-
-                if (v->hash_mode == IMB_AUTH_SHA_1) {
-                        memset(scratch, 0, sizeof(scratch));
-                        IMB_SHA1(p_mgr, v->message, v->message_size, scratch);
-                        if (memcmp(scratch, v->tag, v->tag_size))
-                                return 0;
-                }
-                if (v->hash_mode == IMB_AUTH_SHA_224) {
-                        memset(scratch, 0, sizeof(scratch));
-                        IMB_SHA224(p_mgr, v->message, v->message_size, scratch);
-                        if (memcmp(scratch, v->tag, v->tag_size))
-                                return 0;
-                }
-                if (v->hash_mode == IMB_AUTH_SHA_256) {
-                        memset(scratch, 0, sizeof(scratch));
-                        IMB_SHA256(p_mgr, v->message, v->message_size, scratch);
-                        if (memcmp(scratch, v->tag, v->tag_size))
-                                return 0;
-                }
-                if (v->hash_mode == IMB_AUTH_SHA_384) {
-                        memset(scratch, 0, sizeof(scratch));
-                        IMB_SHA384(p_mgr, v->message, v->message_size, scratch);
-                        if (memcmp(scratch, v->tag, v->tag_size))
-                                return 0;
-                }
-                if (v->hash_mode == IMB_AUTH_SHA_512) {
-                        memset(scratch, 0, sizeof(scratch));
-                        IMB_SHA512(p_mgr, v->message, v->message_size, scratch);
-                        if (memcmp(scratch, v->tag, v->tag_size))
-                                return 0;
-                }
-                if (v->hash_mode == IMB_AUTH_AES_GMAC_128) {
-                        struct gcm_context_data ctx;
-
-                        memset(scratch, 0, sizeof(scratch));
-                        IMB_AES128_GCM_PRE(p_mgr, v->hash_key, &gmac_key);
-                        IMB_AES128_GMAC_INIT(p_mgr, &gmac_key, &ctx, v->hash_iv, v->hash_iv_size);
-                        IMB_AES128_GMAC_UPDATE(p_mgr, &gmac_key, &ctx, v->message, v->message_size);
-                        IMB_AES128_GMAC_FINALIZE(p_mgr, &gmac_key, &ctx, scratch, v->tag_size);
-                        if (memcmp(scratch, v->tag, v->tag_size))
-                                return 0;
-                }
-                if (v->hash_mode == IMB_AUTH_AES_GMAC_192) {
-                        struct gcm_context_data ctx;
-
-                        memset(scratch, 0, sizeof(scratch));
-                        IMB_AES192_GCM_PRE(p_mgr, v->hash_key, &gmac_key);
-                        IMB_AES192_GMAC_INIT(p_mgr, &gmac_key, &ctx, v->hash_iv, v->hash_iv_size);
-                        IMB_AES192_GMAC_UPDATE(p_mgr, &gmac_key, &ctx, v->message, v->message_size);
-                        IMB_AES192_GMAC_FINALIZE(p_mgr, &gmac_key, &ctx, scratch, v->tag_size);
-                        if (memcmp(scratch, v->tag, v->tag_size))
-                                return 0;
-                }
-                if (v->hash_mode == IMB_AUTH_AES_GMAC_256) {
-                        struct gcm_context_data ctx;
-
-                        memset(scratch, 0, sizeof(scratch));
-                        IMB_AES256_GCM_PRE(p_mgr, v->hash_key, &gmac_key);
-                        IMB_AES256_GMAC_INIT(p_mgr, &gmac_key, &ctx, v->hash_iv, v->hash_iv_size);
-                        IMB_AES256_GMAC_UPDATE(p_mgr, &gmac_key, &ctx, v->message, v->message_size);
-                        IMB_AES256_GMAC_FINALIZE(p_mgr, &gmac_key, &ctx, scratch, v->tag_size);
-                        if (memcmp(scratch, v->tag, v->tag_size))
-                                return 0;
-                }
-
-        } /* for(hash_vectors) */
-
-        return 1;
+        return ret;
 }
 
 /*
@@ -893,7 +979,7 @@ self_test_hash(IMB_MGR *p_mgr)
  * =============================================================================
  */
 
-struct self_test_gcm_vector {
+struct self_test_aead_gcm_vector {
         IMB_HASH_ALG hash_mode;
         IMB_CIPHER_MODE cipher_mode;
         const uint8_t *cipher_key;
@@ -907,6 +993,7 @@ struct self_test_gcm_vector {
         const uint8_t *cipher_text;
         const uint8_t *tag;
         size_t tag_size;
+        const char *description;
 };
 
 /*
@@ -982,209 +1069,200 @@ static const uint8_t aes_gcm_256_cipher_text[] = {
 static const uint8_t aes_gcm_256_tag[] = { 0x76, 0xfc, 0x6e, 0xce, 0x0f, 0x4e, 0x17, 0x68,
                                            0xcd, 0xdf, 0x88, 0x53, 0xbb, 0x2d, 0x55, 0x1b };
 
-#define ADD_GCM_VECTOR(_key, _iv, _aad, _plain, _cipher, _tag)                                     \
+#define ADD_GCM_VECTOR(_key, _iv, _aad, _plain, _cipher, _tag, _descr)                             \
         {                                                                                          \
                 IMB_AUTH_AES_GMAC, IMB_CIPHER_GCM, _key, sizeof(_key), _iv, sizeof(_iv), _aad,     \
-                        sizeof(_aad), _plain, sizeof(_plain), _cipher, _tag, sizeof(_tag)          \
+                        sizeof(_aad), _plain, sizeof(_plain), _cipher, _tag, sizeof(_tag), _descr  \
         }
 
-struct self_test_gcm_vector aead_gcm_vectors[] = {
+static const struct self_test_aead_gcm_vector aead_gcm_vectors[] = {
         ADD_GCM_VECTOR(aes_gcm_128_key, aes_gcm_128_iv, aes_gcm_128_aad, aes_gcm_128_plain_text,
-                       aes_gcm_128_cipher_text, aes_gcm_128_tag),
+                       aes_gcm_128_cipher_text, aes_gcm_128_tag, "AES128-GCM"),
         ADD_GCM_VECTOR(aes_gcm_192_key, aes_gcm_192_iv, aes_gcm_192_aad, aes_gcm_192_plain_text,
-                       aes_gcm_192_cipher_text, aes_gcm_192_tag),
+                       aes_gcm_192_cipher_text, aes_gcm_192_tag, "AES192-GCM"),
         ADD_GCM_VECTOR(aes_gcm_256_key, aes_gcm_256_iv, aes_gcm_256_aad, aes_gcm_256_plain_text,
-                       aes_gcm_256_cipher_text, aes_gcm_256_tag)
+                       aes_gcm_256_cipher_text, aes_gcm_256_tag, "AES256-GCM")
 };
 
 static int
-self_test_aead_gcm(IMB_MGR *p_mgr)
+self_test_aead_gcm(IMB_MGR *p_mgr, const struct self_test_aead_gcm_vector *v)
 {
         struct gcm_key_data gcm_key;
         struct gcm_context_data ctx;
         uint8_t text[128], tag[16];
-        unsigned i;
 
-        while (IMB_FLUSH_JOB(p_mgr) != NULL)
-                ;
+        IMB_ASSERT(v->tag_size <= sizeof(tag));
+        IMB_ASSERT(v->plain_text_size <= sizeof(text));
 
-        for (i = 0; i < IMB_DIM(aead_gcm_vectors); i++) {
-                struct self_test_gcm_vector *v = &aead_gcm_vectors[i];
+        /* tag too long */
+        if (v->tag_size > sizeof(tag))
+                return 0;
 
-                IMB_ASSERT(v->tag_size <= sizeof(tag));
-                IMB_ASSERT(v->plain_text_size <= sizeof(text));
+        /* message too long */
+        if (v->plain_text_size > sizeof(text))
+                return 0;
 
-                /* tag too long */
-                if (v->tag_size > sizeof(tag))
-                        return 0;
+        switch (v->cipher_key_size) {
+        case IMB_KEY_128_BYTES:
+                IMB_AES128_GCM_PRE(p_mgr, v->cipher_key, &gcm_key);
+                break;
+        case IMB_KEY_192_BYTES:
+                IMB_AES192_GCM_PRE(p_mgr, v->cipher_key, &gcm_key);
+                break;
+        case IMB_KEY_256_BYTES:
+                IMB_AES256_GCM_PRE(p_mgr, v->cipher_key, &gcm_key);
+                break;
+        default:
+                return 0;
+        }
 
-                /* message too long */
-                if (v->plain_text_size > sizeof(text))
-                        return 0;
+        /* test JOB API */
+        IMB_JOB *job = IMB_GET_NEXT_JOB(p_mgr);
 
-                switch (v->cipher_key_size) {
-                case IMB_KEY_128_BYTES:
-                        IMB_AES128_GCM_PRE(p_mgr, v->cipher_key, &gcm_key);
-                        break;
-                case IMB_KEY_192_BYTES:
-                        IMB_AES192_GCM_PRE(p_mgr, v->cipher_key, &gcm_key);
-                        break;
-                case IMB_KEY_256_BYTES:
-                        IMB_AES256_GCM_PRE(p_mgr, v->cipher_key, &gcm_key);
-                        break;
-                default:
-                        return 0;
-                }
+        /* encrypt test */
+        job->cipher_mode = v->cipher_mode;
+        job->cipher_direction = IMB_DIR_ENCRYPT;
+        job->chain_order = IMB_ORDER_CIPHER_HASH;
+        job->key_len_in_bytes = v->cipher_key_size;
+        job->src = v->plain_text;
+        job->dst = text;
+        job->msg_len_to_cipher_in_bytes = v->plain_text_size;
+        job->cipher_start_src_offset_in_bytes = UINT64_C(0);
+        job->iv = v->cipher_iv;
+        job->iv_len_in_bytes = v->cipher_iv_size;
+        job->auth_tag_output = tag;
+        job->auth_tag_output_len_in_bytes = v->tag_size;
+        job->hash_alg = v->hash_mode;
+        job->enc_keys = &gcm_key;
+        job->dec_keys = &gcm_key;
+        job->u.GCM.aad = v->aad;
+        job->u.GCM.aad_len_in_bytes = v->aad_size;
 
-                /* test JOB API */
-                IMB_JOB *job = IMB_GET_NEXT_JOB(p_mgr);
+        memset(text, 0, sizeof(text));
+        memset(tag, 0, sizeof(tag));
 
-                /* encrypt test */
-                job->cipher_mode = v->cipher_mode;
-                job->cipher_direction = IMB_DIR_ENCRYPT;
-                job->chain_order = IMB_ORDER_CIPHER_HASH;
-                job->key_len_in_bytes = v->cipher_key_size;
-                job->src = v->plain_text;
-                job->dst = text;
-                job->msg_len_to_cipher_in_bytes = v->plain_text_size;
-                job->cipher_start_src_offset_in_bytes = UINT64_C(0);
-                job->iv = v->cipher_iv;
-                job->iv_len_in_bytes = v->cipher_iv_size;
-                job->auth_tag_output = tag;
-                job->auth_tag_output_len_in_bytes = v->tag_size;
-                job->hash_alg = v->hash_mode;
-                job->enc_keys = &gcm_key;
-                job->dec_keys = &gcm_key;
-                job->u.GCM.aad = v->aad;
-                job->u.GCM.aad_len_in_bytes = v->aad_size;
+        /* submit job and get it processed */
+        if (!process_job(p_mgr))
+                return 0;
 
-                memset(text, 0, sizeof(text));
-                memset(tag, 0, sizeof(tag));
+        /* check for TAG mismatch */
+        if (memcmp(tag, v->tag, v->tag_size))
+                return 0;
 
-                /* submit job and get it processed */
-                if (!process_job(p_mgr))
-                        return 0;
+        /* check for text mismatch */
+        if (memcmp(text, v->cipher_text, v->plain_text_size))
+                return 0;
 
-                /* check for TAG mismatch */
-                if (memcmp(tag, v->tag, v->tag_size))
-                        return 0;
+        /* decrypt test */
+        job = IMB_GET_NEXT_JOB(p_mgr);
 
-                /* check for text mismatch */
-                if (memcmp(text, v->cipher_text, v->plain_text_size))
-                        return 0;
+        job->cipher_mode = v->cipher_mode;
+        job->cipher_direction = IMB_DIR_DECRYPT;
+        job->chain_order = IMB_ORDER_HASH_CIPHER;
+        job->key_len_in_bytes = v->cipher_key_size;
+        job->src = v->cipher_text;
+        job->dst = text;
+        job->msg_len_to_cipher_in_bytes = v->plain_text_size;
+        job->cipher_start_src_offset_in_bytes = UINT64_C(0);
+        job->iv = v->cipher_iv;
+        job->iv_len_in_bytes = v->cipher_iv_size;
+        job->auth_tag_output = tag;
+        job->auth_tag_output_len_in_bytes = v->tag_size;
+        job->hash_alg = v->hash_mode;
+        job->enc_keys = &gcm_key;
+        job->dec_keys = &gcm_key;
+        job->u.GCM.aad = v->aad;
+        job->u.GCM.aad_len_in_bytes = v->aad_size;
 
-                /* decrypt test */
-                job = IMB_GET_NEXT_JOB(p_mgr);
+        memset(text, 0, sizeof(text));
+        memset(tag, 0, sizeof(tag));
 
-                job->cipher_mode = v->cipher_mode;
-                job->cipher_direction = IMB_DIR_DECRYPT;
-                job->chain_order = IMB_ORDER_HASH_CIPHER;
-                job->key_len_in_bytes = v->cipher_key_size;
-                job->src = v->cipher_text;
-                job->dst = text;
-                job->msg_len_to_cipher_in_bytes = v->plain_text_size;
-                job->cipher_start_src_offset_in_bytes = UINT64_C(0);
-                job->iv = v->cipher_iv;
-                job->iv_len_in_bytes = v->cipher_iv_size;
-                job->auth_tag_output = tag;
-                job->auth_tag_output_len_in_bytes = v->tag_size;
-                job->hash_alg = v->hash_mode;
-                job->enc_keys = &gcm_key;
-                job->dec_keys = &gcm_key;
-                job->u.GCM.aad = v->aad;
-                job->u.GCM.aad_len_in_bytes = v->aad_size;
+        /* submit job and get it processed */
+        if (!process_job(p_mgr))
+                return 0;
 
-                memset(text, 0, sizeof(text));
-                memset(tag, 0, sizeof(tag));
+        /* check for TAG mismatch */
+        if (memcmp(tag, v->tag, v->tag_size))
+                return 0;
 
-                /* submit job and get it processed */
-                if (!process_job(p_mgr))
-                        return 0;
+        /* check for text mismatch */
+        if (memcmp(text, v->plain_text, v->plain_text_size))
+                return 0;
 
-                /* check for TAG mismatch */
-                if (memcmp(tag, v->tag, v->tag_size))
-                        return 0;
+        /* test direct API */
 
-                /* check for text mismatch */
-                if (memcmp(text, v->plain_text, v->plain_text_size))
-                        return 0;
+        /* encrypt direction */
+        memset(text, 0, sizeof(text));
+        memset(tag, 0, sizeof(tag));
 
-                /* test direct API */
+        switch (v->cipher_key_size) {
+        case IMB_KEY_128_BYTES:
+                IMB_AES128_GCM_INIT_VAR_IV(p_mgr, &gcm_key, &ctx, v->cipher_iv, v->cipher_iv_size,
+                                           v->aad, v->aad_size);
+                IMB_AES128_GCM_ENC_UPDATE(p_mgr, &gcm_key, &ctx, text, v->plain_text,
+                                          v->plain_text_size);
+                IMB_AES128_GCM_ENC_FINALIZE(p_mgr, &gcm_key, &ctx, tag, v->tag_size);
+                break;
+        case IMB_KEY_192_BYTES:
+                IMB_AES192_GCM_INIT_VAR_IV(p_mgr, &gcm_key, &ctx, v->cipher_iv, v->cipher_iv_size,
+                                           v->aad, v->aad_size);
+                IMB_AES192_GCM_ENC_UPDATE(p_mgr, &gcm_key, &ctx, text, v->plain_text,
+                                          v->plain_text_size);
+                IMB_AES192_GCM_ENC_FINALIZE(p_mgr, &gcm_key, &ctx, tag, v->tag_size);
+                break;
+        case IMB_KEY_256_BYTES:
+                IMB_AES256_GCM_INIT_VAR_IV(p_mgr, &gcm_key, &ctx, v->cipher_iv, v->cipher_iv_size,
+                                           v->aad, v->aad_size);
+                IMB_AES256_GCM_ENC_UPDATE(p_mgr, &gcm_key, &ctx, text, v->plain_text,
+                                          v->plain_text_size);
+                IMB_AES256_GCM_ENC_FINALIZE(p_mgr, &gcm_key, &ctx, tag, v->tag_size);
+                break;
+        default:
+                return 0;
+        }
+        /* check for TAG mismatch */
+        if (memcmp(tag, v->tag, v->tag_size))
+                return 0;
 
-                /* encrypt direction */
-                memset(text, 0, sizeof(text));
-                memset(tag, 0, sizeof(tag));
+        /* check for text mismatch */
+        if (memcmp(text, v->cipher_text, v->plain_text_size))
+                return 0;
 
-                switch (v->cipher_key_size) {
-                case IMB_KEY_128_BYTES:
-                        IMB_AES128_GCM_INIT_VAR_IV(p_mgr, &gcm_key, &ctx, v->cipher_iv,
-                                                   v->cipher_iv_size, v->aad, v->aad_size);
-                        IMB_AES128_GCM_ENC_UPDATE(p_mgr, &gcm_key, &ctx, text, v->plain_text,
-                                                  v->plain_text_size);
-                        IMB_AES128_GCM_ENC_FINALIZE(p_mgr, &gcm_key, &ctx, tag, v->tag_size);
-                        break;
-                case IMB_KEY_192_BYTES:
-                        IMB_AES192_GCM_INIT_VAR_IV(p_mgr, &gcm_key, &ctx, v->cipher_iv,
-                                                   v->cipher_iv_size, v->aad, v->aad_size);
-                        IMB_AES192_GCM_ENC_UPDATE(p_mgr, &gcm_key, &ctx, text, v->plain_text,
-                                                  v->plain_text_size);
-                        IMB_AES192_GCM_ENC_FINALIZE(p_mgr, &gcm_key, &ctx, tag, v->tag_size);
-                        break;
-                case IMB_KEY_256_BYTES:
-                        IMB_AES256_GCM_INIT_VAR_IV(p_mgr, &gcm_key, &ctx, v->cipher_iv,
-                                                   v->cipher_iv_size, v->aad, v->aad_size);
-                        IMB_AES256_GCM_ENC_UPDATE(p_mgr, &gcm_key, &ctx, text, v->plain_text,
-                                                  v->plain_text_size);
-                        IMB_AES256_GCM_ENC_FINALIZE(p_mgr, &gcm_key, &ctx, tag, v->tag_size);
-                        break;
-                default:
-                        return 0;
-                }
-                /* check for TAG mismatch */
-                if (memcmp(tag, v->tag, v->tag_size))
-                        return 0;
+        /* decrypt direction */
+        memset(text, 0, sizeof(text));
+        memset(tag, 0, sizeof(tag));
+        switch (v->cipher_key_size) {
+        case IMB_KEY_128_BYTES:
+                IMB_AES128_GCM_INIT_VAR_IV(p_mgr, &gcm_key, &ctx, v->cipher_iv, v->cipher_iv_size,
+                                           v->aad, v->aad_size);
+                IMB_AES128_GCM_DEC_UPDATE(p_mgr, &gcm_key, &ctx, text, v->cipher_text,
+                                          v->plain_text_size);
+                IMB_AES128_GCM_DEC_FINALIZE(p_mgr, &gcm_key, &ctx, tag, v->tag_size);
+                break;
+        case IMB_KEY_192_BYTES:
+                IMB_AES192_GCM_INIT_VAR_IV(p_mgr, &gcm_key, &ctx, v->cipher_iv, v->cipher_iv_size,
+                                           v->aad, v->aad_size);
+                IMB_AES192_GCM_DEC_UPDATE(p_mgr, &gcm_key, &ctx, text, v->cipher_text,
+                                          v->plain_text_size);
+                IMB_AES192_GCM_DEC_FINALIZE(p_mgr, &gcm_key, &ctx, tag, v->tag_size);
+                break;
+        case IMB_KEY_256_BYTES:
+                IMB_AES256_GCM_INIT_VAR_IV(p_mgr, &gcm_key, &ctx, v->cipher_iv, v->cipher_iv_size,
+                                           v->aad, v->aad_size);
+                IMB_AES256_GCM_DEC_UPDATE(p_mgr, &gcm_key, &ctx, text, v->cipher_text,
+                                          v->plain_text_size);
+                IMB_AES256_GCM_DEC_FINALIZE(p_mgr, &gcm_key, &ctx, tag, v->tag_size);
+                break;
+        default:
+                return 0;
+        }
+        /* check for TAG mismatch */
+        if (memcmp(tag, v->tag, v->tag_size))
+                return 0;
 
-                /* check for text mismatch */
-                if (memcmp(text, v->cipher_text, v->plain_text_size))
-                        return 0;
-
-                /* decrypt direction */
-                memset(text, 0, sizeof(text));
-                memset(tag, 0, sizeof(tag));
-                switch (v->cipher_key_size) {
-                case IMB_KEY_128_BYTES:
-                        IMB_AES128_GCM_INIT_VAR_IV(p_mgr, &gcm_key, &ctx, v->cipher_iv,
-                                                   v->cipher_iv_size, v->aad, v->aad_size);
-                        IMB_AES128_GCM_DEC_UPDATE(p_mgr, &gcm_key, &ctx, text, v->cipher_text,
-                                                  v->plain_text_size);
-                        IMB_AES128_GCM_DEC_FINALIZE(p_mgr, &gcm_key, &ctx, tag, v->tag_size);
-                        break;
-                case IMB_KEY_192_BYTES:
-                        IMB_AES192_GCM_INIT_VAR_IV(p_mgr, &gcm_key, &ctx, v->cipher_iv,
-                                                   v->cipher_iv_size, v->aad, v->aad_size);
-                        IMB_AES192_GCM_DEC_UPDATE(p_mgr, &gcm_key, &ctx, text, v->cipher_text,
-                                                  v->plain_text_size);
-                        IMB_AES192_GCM_DEC_FINALIZE(p_mgr, &gcm_key, &ctx, tag, v->tag_size);
-                        break;
-                case IMB_KEY_256_BYTES:
-                        IMB_AES256_GCM_INIT_VAR_IV(p_mgr, &gcm_key, &ctx, v->cipher_iv,
-                                                   v->cipher_iv_size, v->aad, v->aad_size);
-                        IMB_AES256_GCM_DEC_UPDATE(p_mgr, &gcm_key, &ctx, text, v->cipher_text,
-                                                  v->plain_text_size);
-                        IMB_AES256_GCM_DEC_FINALIZE(p_mgr, &gcm_key, &ctx, tag, v->tag_size);
-                        break;
-                default:
-                        return 0;
-                }
-                /* check for TAG mismatch */
-                if (memcmp(tag, v->tag, v->tag_size))
-                        return 0;
-
-                /* check for text mismatch */
-                if (memcmp(text, v->plain_text, v->plain_text_size))
-                        return 0;
-
-        } /* for(gcm_vectors) */
+        /* check for text mismatch */
+        if (memcmp(text, v->plain_text, v->plain_text_size))
+                return 0;
 
         return 1;
 }
@@ -1203,6 +1281,7 @@ struct self_test_aead_ccm_vector {
         const uint8_t *cipher_text;
         const uint8_t *tag;
         size_t tag_size;
+        const char *description;
 };
 
 /*
@@ -1239,131 +1318,124 @@ static const uint8_t aes_ccm_256_cipher_text[] = { 0x21, 0x61, 0x63, 0xDE, 0xCF,
                                                    0x1F, 0xA5, 0x96, 0xD7, 0x0F, 0x76, 0x91 };
 static const uint8_t aes_ccm_256_tag[] = { 0xCA, 0x8A, 0xFA, 0xA2, 0x3F, 0x22, 0x3E, 0x64 };
 
-#define ADD_CCM_VECTOR(_key, _nonce, _aad, _plain, _cipher, _tag)                                  \
+#define ADD_CCM_VECTOR(_key, _nonce, _aad, _plain, _cipher, _tag, _descr)                          \
         {                                                                                          \
                 IMB_AUTH_AES_CCM, IMB_CIPHER_CCM, _key, sizeof(_key), _nonce, sizeof(_nonce),      \
-                        _aad, sizeof(_aad), _plain, sizeof(_plain), _cipher, _tag, sizeof(_tag)    \
+                        _aad, sizeof(_aad), _plain, sizeof(_plain), _cipher, _tag, sizeof(_tag),   \
+                        _descr                                                                     \
         }
 
-struct self_test_aead_ccm_vector aead_ccm_vectors[] = {
+static const struct self_test_aead_ccm_vector aead_ccm_vectors[] = {
         ADD_CCM_VECTOR(aes_ccm_128_key, aes_ccm_128_nonce, aes_ccm_128_aad, aes_ccm_128_plain_text,
-                       aes_ccm_128_cipher_text, aes_ccm_128_tag),
+                       aes_ccm_128_cipher_text, aes_ccm_128_tag, "AES128-CCM"),
         ADD_CCM_VECTOR(aes_ccm_256_key, aes_ccm_256_nonce, aes_ccm_256_aad, aes_ccm_256_plain_text,
-                       aes_ccm_256_cipher_text, aes_ccm_256_tag)
+                       aes_ccm_256_cipher_text, aes_ccm_256_tag, "AES256-CCM")
 };
 
 static int
-self_test_aead_ccm(IMB_MGR *p_mgr)
+self_test_aead_ccm(IMB_MGR *p_mgr, const struct self_test_aead_ccm_vector *v)
 {
         DECLARE_ALIGNED(uint32_t expkey[4 * 15], 16);
         DECLARE_ALIGNED(uint32_t dust[4 * 15], 16);
         uint8_t text[128], tag[16];
-        unsigned i;
 
-        while (IMB_FLUSH_JOB(p_mgr) != NULL)
-                ;
+        IMB_ASSERT(v->tag_size <= sizeof(tag));
+        IMB_ASSERT(v->plain_text_size <= sizeof(text));
 
-        for (i = 0; i < IMB_DIM(aead_ccm_vectors); i++) {
-                struct self_test_aead_ccm_vector *v = &aead_ccm_vectors[i];
+        /* tag too long */
+        if (v->tag_size > sizeof(tag))
+                return 0;
 
-                IMB_ASSERT(v->tag_size <= sizeof(tag));
-                IMB_ASSERT(v->plain_text_size <= sizeof(text));
+        /* message too long */
+        if (v->plain_text_size > sizeof(text))
+                return 0;
 
-                /* tag too long */
-                if (v->tag_size > sizeof(tag))
-                        return 0;
+        switch (v->cipher_key_size) {
+        case IMB_KEY_128_BYTES:
+                IMB_AES_KEYEXP_128(p_mgr, v->cipher_key, expkey, dust);
+                break;
+        case IMB_KEY_256_BYTES:
+                IMB_AES_KEYEXP_256(p_mgr, v->cipher_key, expkey, dust);
+                break;
+        default:
+                return 0;
+        }
 
-                /* message too long */
-                if (v->plain_text_size > sizeof(text))
-                        return 0;
+        IMB_JOB *job = IMB_GET_NEXT_JOB(p_mgr);
 
-                switch (v->cipher_key_size) {
-                case IMB_KEY_128_BYTES:
-                        IMB_AES_KEYEXP_128(p_mgr, v->cipher_key, expkey, dust);
-                        break;
-                case IMB_KEY_256_BYTES:
-                        IMB_AES_KEYEXP_256(p_mgr, v->cipher_key, expkey, dust);
-                        break;
-                default:
-                        return 0;
-                }
+        /* encrypt test */
+        job->cipher_mode = v->cipher_mode;
+        job->cipher_direction = IMB_DIR_ENCRYPT;
+        job->chain_order = IMB_ORDER_HASH_CIPHER;
+        job->key_len_in_bytes = v->cipher_key_size;
+        job->src = v->plain_text;
+        job->dst = text;
+        job->msg_len_to_cipher_in_bytes = v->plain_text_size;
+        job->cipher_start_src_offset_in_bytes = UINT64_C(0);
+        job->msg_len_to_hash_in_bytes = v->plain_text_size;
+        job->hash_start_src_offset_in_bytes = UINT64_C(0);
+        job->iv = v->cipher_nonce;
+        job->iv_len_in_bytes = v->cipher_nonce_size;
+        job->auth_tag_output = tag;
+        job->auth_tag_output_len_in_bytes = v->tag_size;
+        job->hash_alg = v->hash_mode;
+        job->enc_keys = expkey;
+        job->dec_keys = expkey;
+        job->u.CCM.aad_len_in_bytes = v->aad_size;
+        job->u.CCM.aad = v->aad;
 
-                IMB_JOB *job = IMB_GET_NEXT_JOB(p_mgr);
+        memset(text, 0, sizeof(text));
+        memset(tag, 0, sizeof(tag));
 
-                /* encrypt test */
-                job->cipher_mode = v->cipher_mode;
-                job->cipher_direction = IMB_DIR_ENCRYPT;
-                job->chain_order = IMB_ORDER_HASH_CIPHER;
-                job->key_len_in_bytes = v->cipher_key_size;
-                job->src = v->plain_text;
-                job->dst = text;
-                job->msg_len_to_cipher_in_bytes = v->plain_text_size;
-                job->cipher_start_src_offset_in_bytes = UINT64_C(0);
-                job->msg_len_to_hash_in_bytes = v->plain_text_size;
-                job->hash_start_src_offset_in_bytes = UINT64_C(0);
-                job->iv = v->cipher_nonce;
-                job->iv_len_in_bytes = v->cipher_nonce_size;
-                job->auth_tag_output = tag;
-                job->auth_tag_output_len_in_bytes = v->tag_size;
-                job->hash_alg = v->hash_mode;
-                job->enc_keys = expkey;
-                job->dec_keys = expkey;
-                job->u.CCM.aad_len_in_bytes = v->aad_size;
-                job->u.CCM.aad = v->aad;
+        /* submit job and get it processed */
+        if (!process_job(p_mgr))
+                return 0;
 
-                memset(text, 0, sizeof(text));
-                memset(tag, 0, sizeof(tag));
+        /* check for TAG mismatch */
+        if (memcmp(tag, v->tag, v->tag_size))
+                return 0;
 
-                /* submit job and get it processed */
-                if (!process_job(p_mgr))
-                        return 0;
+        /* check for text mismatch */
+        if (memcmp(text, v->cipher_text, v->plain_text_size))
+                return 0;
 
-                /* check for TAG mismatch */
-                if (memcmp(tag, v->tag, v->tag_size))
-                        return 0;
+        /* decrypt test */
+        job = IMB_GET_NEXT_JOB(p_mgr);
 
-                /* check for text mismatch */
-                if (memcmp(text, v->cipher_text, v->plain_text_size))
-                        return 0;
+        job->cipher_mode = v->cipher_mode;
+        job->cipher_direction = IMB_DIR_DECRYPT;
+        job->chain_order = IMB_ORDER_CIPHER_HASH;
+        job->key_len_in_bytes = v->cipher_key_size;
+        job->src = v->cipher_text;
+        job->dst = text;
+        job->msg_len_to_cipher_in_bytes = v->plain_text_size;
+        job->cipher_start_src_offset_in_bytes = UINT64_C(0);
+        job->msg_len_to_hash_in_bytes = v->plain_text_size;
+        job->hash_start_src_offset_in_bytes = UINT64_C(0);
+        job->iv = v->cipher_nonce;
+        job->iv_len_in_bytes = v->cipher_nonce_size;
+        job->auth_tag_output = tag;
+        job->auth_tag_output_len_in_bytes = v->tag_size;
+        job->hash_alg = v->hash_mode;
+        job->enc_keys = expkey;
+        job->dec_keys = expkey;
+        job->u.CCM.aad_len_in_bytes = v->aad_size;
+        job->u.CCM.aad = v->aad;
 
-                /* decrypt test */
-                job = IMB_GET_NEXT_JOB(p_mgr);
+        memset(text, 0, sizeof(text));
+        memset(tag, 0, sizeof(tag));
 
-                job->cipher_mode = v->cipher_mode;
-                job->cipher_direction = IMB_DIR_DECRYPT;
-                job->chain_order = IMB_ORDER_CIPHER_HASH;
-                job->key_len_in_bytes = v->cipher_key_size;
-                job->src = v->cipher_text;
-                job->dst = text;
-                job->msg_len_to_cipher_in_bytes = v->plain_text_size;
-                job->cipher_start_src_offset_in_bytes = UINT64_C(0);
-                job->msg_len_to_hash_in_bytes = v->plain_text_size;
-                job->hash_start_src_offset_in_bytes = UINT64_C(0);
-                job->iv = v->cipher_nonce;
-                job->iv_len_in_bytes = v->cipher_nonce_size;
-                job->auth_tag_output = tag;
-                job->auth_tag_output_len_in_bytes = v->tag_size;
-                job->hash_alg = v->hash_mode;
-                job->enc_keys = expkey;
-                job->dec_keys = expkey;
-                job->u.CCM.aad_len_in_bytes = v->aad_size;
-                job->u.CCM.aad = v->aad;
+        /* submit job and get it processed */
+        if (!process_job(p_mgr))
+                return 0;
 
-                memset(text, 0, sizeof(text));
-                memset(tag, 0, sizeof(tag));
+        /* check for TAG mismatch */
+        if (memcmp(tag, v->tag, v->tag_size))
+                return 0;
 
-                /* submit job and get it processed */
-                if (!process_job(p_mgr))
-                        return 0;
-
-                /* check for TAG mismatch */
-                if (memcmp(tag, v->tag, v->tag_size))
-                        return 0;
-
-                /* check for text mismatch */
-                if (memcmp(text, v->plain_text, v->plain_text_size))
-                        return 0;
-        } /* for(ccm_vectors) */
+        /* check for text mismatch */
+        if (memcmp(text, v->plain_text, v->plain_text_size))
+                return 0;
 
         return 1;
 }
@@ -1371,14 +1443,61 @@ self_test_aead_ccm(IMB_MGR *p_mgr)
 static int
 self_test_aead(IMB_MGR *p_mgr)
 {
-        if (!self_test_aead_gcm(p_mgr))
-                return 0;
-        if (!self_test_aead_ccm(p_mgr))
-                return 0;
-        return 1;
+        int ret = 1;
+
+        for (unsigned i = 0; i < IMB_DIM(aead_gcm_vectors); i++) {
+                const struct self_test_aead_gcm_vector *v = &aead_gcm_vectors[i];
+
+                make_callback(p_mgr, IMB_SELF_TEST_PHASE_START, IMB_SELF_TEST_TYPE_KAT_AEAD,
+                              v->description);
+
+                const int r = self_test_aead_gcm(p_mgr, v);
+
+                if (r == 0) {
+                        ret = 0;
+                        make_callback(p_mgr, IMB_SELF_TEST_PHASE_FAIL, NULL, NULL);
+                } else {
+                        make_callback(p_mgr, IMB_SELF_TEST_PHASE_PASS, NULL, NULL);
+                }
+        }
+
+        for (unsigned i = 0; i < IMB_DIM(aead_ccm_vectors); i++) {
+                const struct self_test_aead_ccm_vector *v = &aead_ccm_vectors[i];
+
+                make_callback(p_mgr, IMB_SELF_TEST_PHASE_START, IMB_SELF_TEST_TYPE_KAT_AEAD,
+                              v->description);
+
+                const int r = self_test_aead_ccm(p_mgr, v);
+
+                if (r == 0) {
+                        ret = 0;
+                        make_callback(p_mgr, IMB_SELF_TEST_PHASE_FAIL, NULL, NULL);
+                } else {
+                        make_callback(p_mgr, IMB_SELF_TEST_PHASE_PASS, NULL, NULL);
+                }
+        }
+
+        return ret;
 }
 
 #endif /* NO_SELF_TEST_DEV */
+
+static int
+self_test_exec(IMB_MGR *p_mgr)
+{
+        int ret = 1;
+
+        if (!self_test_ciphers(p_mgr))
+                ret = 0;
+
+        if (!self_test_hashes(p_mgr))
+                ret = 0;
+
+        if (!self_test_aead(p_mgr))
+                ret = 0;
+
+        return ret;
+}
 
 /*
  * =============================================================================
@@ -1397,18 +1516,11 @@ self_test(IMB_MGR *p_mgr)
         p_mgr->features |= IMB_FEATURE_SELF_TEST;
         p_mgr->features &= ~IMB_FEATURE_SELF_TEST_PASS;
 
-        if (!self_test_ciphers(p_mgr))
-                ret = 0;
-
-        if (!self_test_hash(p_mgr))
-                ret = 0;
-
-        if (!self_test_aead(p_mgr))
+        if (!self_test_exec(p_mgr))
                 ret = 0;
 
         if (ret)
                 p_mgr->features |= IMB_FEATURE_SELF_TEST_PASS;
-
 #endif
 
         return ret;

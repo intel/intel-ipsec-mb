@@ -858,6 +858,8 @@ typedef void (*chacha20_hp_quic_t)(const void *, const void *const *, void **, c
 
 typedef void (*sm4_keyexp_t)(const void *, void *, void *);
 
+typedef void (*imb_self_test_cb_t)(void *cb_arg, const char *phase, const char *type,
+                                   const char *descr);
 /* Multi-buffer manager flags passed to alloc_mb_mgr() */
 
 #define IMB_FLAG_SHANI_OFF (1ULL << 0) /**< disable use of SHANI extension */
@@ -897,6 +899,17 @@ typedef void (*sm4_keyexp_t)(const void *, void *, void *);
 #define IMB_FEATURE_SELF_TEST      (1ULL << 20) /* self-test feature present */
 #define IMB_FEATURE_SELF_TEST_PASS (1ULL << 21) /* self-test passed */
 #define IMB_FEATURE_AVX_IFMA       (1ULL << 22)
+
+/**
+ * Self test defines
+ */
+#define IMB_SELF_TEST_PHASE_START "START"
+#define IMB_SELF_TEST_PHASE_PASS  "PASS"
+#define IMB_SELF_TEST_PHASE_FAIL  "FAIL"
+
+#define IMB_SELF_TEST_TYPE_KAT_CIPHER "KAT_Cipher"
+#define IMB_SELF_TEST_TYPE_KAT_AUTH   "KAT_Auth"
+#define IMB_SELF_TEST_TYPE_KAT_AEAD   "KAT_AEAD"
 
 /**
  * CPU flags needed for each implementation
@@ -1076,6 +1089,9 @@ typedef struct IMB_MGR {
         chacha20_hp_quic_t chacha20_hp_quic;
 
         sm4_keyexp_t sm4_keyexp;
+
+        imb_self_test_cb_t self_test_cb_fn;
+        void *self_test_cb_arg;
 
         /* in-order scheduler fields */
         int earliest_job; /**< byte offset, -1 if none */
@@ -3788,6 +3804,36 @@ imb_quic_hp_chacha20(IMB_MGR *state, const void *key, void *dst_ptr_array[],
 IMB_DLL_EXPORT uint32_t
 imb_set_session(IMB_MGR *state, IMB_JOB *job);
 
+/**
+ * @brief Sets callback function to be invoked when running a self test.
+ *
+ * If \a cb_fn is NULL then self test callback functionality gets disabled.
+ *
+ * @param [in] state   pointer to IMB_MGR
+ * @param [in] cb_fn   pointer to self test callback function
+ * @param [in] cb_arg  argument to be passed to the callback function \a cb_fn
+ *
+ * @return Operation status of \a IMB_ERR type
+ * @retval 0 on success
+ */
+IMB_DLL_EXPORT int
+imb_self_test_set_cb(IMB_MGR *state, imb_self_test_cb_t cb_fn, void *cb_arg);
+
+/**
+ * @brief Retrieves details of callback function to be invoked when running a self test.
+ *
+ * It may be useful to check status of self test callback or daisy chain
+ * a few callbacks together.
+ *
+ * @param [in] state       pointer to IMB_MGR
+ * @param [in,out] cb_fn   pointer to place pointer to self test callback function
+ * @param [in,out] cb_arg  pointer to place callback function argument
+ *
+ * @return Operation status of \a IMB_ERR type
+ * @retval 0 on success
+ */
+IMB_DLL_EXPORT int
+imb_self_test_get_cb(IMB_MGR *state, imb_self_test_cb_t *cb_fn, void **cb_arg);
 #ifdef __cplusplus
 }
 #endif
