@@ -2482,6 +2482,9 @@ init_mb_mgr_auto(IMB_MGR *state, IMB_ARCH *arch);
  */
 #define IMB_CRC8_WIMAX_OFDMA_HCS(_mgr, _src, _len) (_mgr)->crc8_wimax_ofdma_hcs(_src, _len)
 
+/**
+ *  SM4 key expansion
+ */
 #define IMB_SM4_KEYEXP(_mgr, _key, _exp_enc_key, _exp_dec_key)                                     \
         ((_mgr)->sm4_keyexp((_key), (_exp_enc_key), (_exp_dec_key)))
 
