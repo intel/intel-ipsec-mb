@@ -10,11 +10,13 @@ Library
 - SM4-ECB SSE implementation added.
 - SM4-CBC SSE implementation added.
 - x86-64 SM3 implementation added.
+- Self-Test callback functionality added with message corrupt option.
 
 Test Applications
 - QUIC CHACHA20-POLY1305 and CHACHA20 HP tests added.
 - SM4-ECB and SM4-CBC tests added.
 - SM3 tests added.
+- Self-Test callback support added to the KAT-APP.
 
 Performance Applications
 - New parameter added to benchmark QUIC `--quic-api`.

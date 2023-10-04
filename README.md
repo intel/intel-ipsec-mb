@@ -825,25 +825,43 @@ In order to support CMVP, the library implements Self-Test functionality that is
 The test is always performed as part of library initialization (power-up). There is no conditional self-test functionality as none of such conditions occur (i.e. pair-wise consistency test,
 software/firmware load test, manual key entry test, continuous random number generator test, and
 bypass test).
-The self-test consists of Cryptographic algorithm test (known answer test) on following algorithms:  
-- AES-GCM  
-- AES-GMAC  
-- AES-CCM  
-- AES-CBC  
-- AES-CTR  
-- AES-ECB  
-- TDES-EDE-CBC  
-- AES-CMAC  
-- SHA1  
-- SHA224  
-- SHA256  
-- SHA384  
-- SHA512  
-- HMAC-SHA1  
-- HMAC-SHA224  
-- HMAC-SHA256  
-- HMAC-SHA384  
-- HMAC-SHA512  
+
+Application can register self-test callback function to track test progress. Optionally application can corrupt input message for selected tests and observe change in the test result.
+
+Typical sequence of callbacks received by application is:
+- callback(IMB_SELF_TEST_PHASE_START, IMB_SELF_TEST_TYPE_KAT_CIPHER, "AES128-CBC")
+- callback(IMB_SELF_TEST_PHASE_CORRUPT, NULL, NULL)
+  - return 1: no message corruption
+  - return 0: corrupt the 1st byte
+- callback(IMB_SELF_TEST_PHASE_PASS or IMB_SELF_TEST_PHASE_PASS, NULL, NULL) => return 1
+- callback(IMB_SELF_TEST_PHASE_START, IMB_SELF_TEST_TYPE_KAT_CIPHER, "AES192-CBC") => return 1
+- ...
+Note that value returned by application self-test callback function only matters in the corrupt phase.
+
+The self-test consists of Cryptographic algorithm test (known answer test) on following types and algorithms:  
+- KAT_AEAD:
+  - AES-GCM  
+  - AES-CCM  
+- KAT_Cipher:
+  - AES-CBC  
+  - AES-CTR  
+  - AES-ECB  
+  - TDES-EDE-CBC  
+- KAT_Auth:
+  - AES-GMAC  
+  - AES-CMAC  
+  - SHA1  
+  - SHA224  
+  - SHA256  
+  - SHA384  
+  - SHA512  
+  - HMAC-SHA1  
+  - HMAC-SHA224  
+  - HMAC-SHA256  
+  - HMAC-SHA384  
+  - HMAC-SHA512  
+
+KAT_Cipher and KAT_AEAD types conduct tests in encrypt and decrypt cipher directions. However, the corrupt callback is made only for the encrypt direction. No callback is made for the decrypt direction at the moment.
 
 Example detection of library self-test completion & error in the application:
 ```
@@ -872,6 +890,55 @@ if (imb_get_errno(p_mgr) == IMB_ERR_SELFTEST) {
         /* self-test error */
         exit(EXIT_FAILURE);
 }
+```
+
+Example registration of self-test callback function:
+```
+int self_test_corrupt = 0;
+
+int callback(void *arg, const char *phase, const char *type, const char *descr)
+{
+        const char *pphase = "";
+        const char *ptype = "";
+        const char *pdescr = "";
+
+        if (phase != NULL)
+                pphase = phase;
+
+        if (type != NULL)
+                ptype = type;
+
+        if (descr != NULL)
+                pdescr = descr;
+
+        if (strcmp(pphase, IMB_SELF_TEST_PHASE_START) == 0)
+                printf("%s : %s : ", ptype, pdescr);
+
+        if ((strcmp(pphase, IMB_SELF_TEST_PHASE_CORRUPT) == 0) && (self_test_corrupt == 1))
+                return 0; /* corrupt input message */
+
+        if (strcmp(pphase, IMB_SELF_TEST_PHASE_PASS) == 0 ||
+            strcmp(pphase, IMB_SELF_TEST_PHASE_FAIL) == 0)
+                printf("%s\n", pphase);
+
+        return 1;
+}
+
+...
+
+IMB_ARCH arch;
+IMB_MGR *p_mgr = alloc_mb_mgr(0);
+
+/*
+ * Register self-test callback that will be invoked during
+ * subsequent init operation
+ */
+imb_self_test_set_cb(p_mgr, callback, NULL);
+
+init_mb_mgr_auto(p_mgr, &arch); /* or init_mb_mgr_sse/avx/avx2/avx512 */
+
+...
+
 ```
 
 ## 13.DLL Injection Attack
