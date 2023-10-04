@@ -1575,14 +1575,13 @@ do_test_quic_chacha_poly(struct params_s *params, const uint32_t num_iter, IMB_M
         for (n = 0; n < full_num_iter; n++)
                 imb_quic_chacha20_poly1305(p_mgr, kp, params->cipher_dir, (void **) out,
                                            (const void *const *) in, len, (const void *const *) iv,
-                                           (const void *const *) &aad, aad_size, (void **) tag,
-                                           TAG_LEN, K);
+                                           (const void *const *) &aad, aad_size, (void **) tag, K);
 
         if (last_iter != 0)
                 imb_quic_chacha20_poly1305(p_mgr, kp, params->cipher_dir, (void **) out,
                                            (const void *const *) in, len, (const void *const *) iv,
                                            (const void *const *) &aad, aad_size, (void **) tag,
-                                           TAG_LEN, last_iter);
+                                           last_iter);
 
 #ifndef _WIN32
         if (use_unhalted_cycles)

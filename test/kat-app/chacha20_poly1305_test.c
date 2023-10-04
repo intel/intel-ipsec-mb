@@ -169,7 +169,7 @@ test_aead(struct IMB_MGR *mb_mgr, const struct aead_test *vec, const int dir, co
 
         imb_quic_chacha20_poly1305(mb_mgr, vec->key, dir, dst_ptr_array, src_ptr_array, len_array,
                                    iv_ptr_array, aad_ptr_array, vec->aadSize / 8, tag_ptr_array,
-                                   DIGEST_SZ, num_jobs);
+                                   num_jobs);
 
         for (i = 0; i < num_jobs; i++) {
                 if (!aead_ok(vec, DIGEST_SZ, dst_ptr_array[i], dir, auths[i], padding,

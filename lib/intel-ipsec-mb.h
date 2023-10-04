@@ -3717,7 +3717,6 @@ imb_quic_hp_aes_ecb(IMB_MGR *state, const void *exp_key_data, void *dst_ptr_arra
  * @param [in]  aad_ptr_array array with AAD pointers
  * @param [in]  aad_len       AAD length in bytes
  * @param [out] tag_ptr_array array with authentication TAG pointers
- * @param [in]  tag_len       authentication TAG length in bytes
  * @param [in]  num_packets   number of packets in this batch
  */
 IMB_DLL_EXPORT void
@@ -3725,8 +3724,7 @@ imb_quic_chacha20_poly1305(IMB_MGR *state, const void *key, const IMB_CIPHER_DIR
                            void *dst_ptr_array[], const void *const src_ptr_array[],
                            const uint64_t len_array[], const void *const iv_ptr_array[],
                            const void *const aad_ptr_array[], const uint64_t aad_len,
-                           void *tag_ptr_array[], const uint64_t tag_len,
-                           const uint64_t num_packets);
+                           void *tag_ptr_array[], const uint64_t num_packets);
 
 /**
  * @brief Batch of ChaCha20 encrypt operations with the same key
