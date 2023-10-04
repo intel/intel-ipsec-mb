@@ -35,8 +35,6 @@
 #include "aead_test.h"
 
 #define AAD_SZ    24
-#define IV_SZ     12
-#define KEY_SZ    32
 #define DIGEST_SZ 16
 
 int
@@ -207,7 +205,7 @@ test_aead(struct IMB_MGR *mb_mgr, const struct aead_test *vec, const int dir, co
                 job->hash_alg = IMB_AUTH_CHACHA20_POLY1305;
                 job->enc_keys = vec->key;
                 job->dec_keys = vec->key;
-                job->key_len_in_bytes = KEY_SZ;
+                job->key_len_in_bytes = IMB_CHACHA20_POLY1305_KEY_SIZE;
 
                 job->u.CHACHA20_POLY1305.aad = (const void *) vec->aad;
                 job->u.CHACHA20_POLY1305.aad_len_in_bytes = vec->aadSize / 8;
@@ -221,7 +219,7 @@ test_aead(struct IMB_MGR *mb_mgr, const struct aead_test *vec, const int dir, co
                 job->dst = targets[i] + sizeof(padding);
 
                 job->iv = (const void *) vec->iv;
-                job->iv_len_in_bytes = IV_SZ;
+                job->iv_len_in_bytes = IMB_CHACHA20_POLY1305_IV_SIZE;
                 job->msg_len_to_cipher_in_bytes = vec->msgSize / 8;
                 job->cipher_start_src_offset_in_bytes = 0;
 
@@ -317,7 +315,7 @@ test_aead(struct IMB_MGR *mb_mgr, const struct aead_test *vec, const int dir, co
                 job->hash_alg = IMB_AUTH_CHACHA20_POLY1305;
                 job->enc_keys = vec->key;
                 job->dec_keys = vec->key;
-                job->key_len_in_bytes = KEY_SZ;
+                job->key_len_in_bytes = IMB_CHACHA20_POLY1305_KEY_SIZE;
 
                 job->u.CHACHA20_POLY1305.aad = vec->aad;
                 job->u.CHACHA20_POLY1305.aad_len_in_bytes = vec->aadSize / 8;
@@ -331,7 +329,7 @@ test_aead(struct IMB_MGR *mb_mgr, const struct aead_test *vec, const int dir, co
                 job->dst = targets[i] + sizeof(padding);
 
                 job->iv = (const void *) vec->iv;
-                job->iv_len_in_bytes = IV_SZ;
+                job->iv_len_in_bytes = IMB_CHACHA20_POLY1305_IV_SIZE;
                 job->msg_len_to_cipher_in_bytes = vec->msgSize / 8;
                 job->cipher_start_src_offset_in_bytes = 0;
 
@@ -479,10 +477,10 @@ test_single_job_sgl(struct IMB_MGR *mb_mgr, struct test_suite_context *ctx,
         uint8_t **segments = NULL;
         uint8_t linear_digest[DIGEST_SZ];
         uint8_t sgl_digest[DIGEST_SZ];
-        uint8_t key[KEY_SZ];
+        uint8_t key[IMB_CHACHA20_POLY1305_KEY_SIZE];
         unsigned i;
         uint8_t aad[AAD_SZ];
-        uint8_t iv[IV_SZ];
+        uint8_t iv[IMB_CHACHA20_POLY1305_IV_SIZE];
         struct chacha20_poly1305_context_data chacha_ctx;
         uint32_t last_seg_sz = buffer_sz % seg_sz;
         struct IMB_SGL_IOV *sgl_segs = NULL;
@@ -513,8 +511,8 @@ test_single_job_sgl(struct IMB_MGR *mb_mgr, struct test_suite_context *ctx,
         memset(linear_digest, 0xFF, DIGEST_SZ);
 
         generate_random_buf(in_buffer, buffer_sz);
-        generate_random_buf(key, KEY_SZ);
-        generate_random_buf(iv, IV_SZ);
+        generate_random_buf(key, IMB_CHACHA20_POLY1305_KEY_SIZE);
+        generate_random_buf(iv, IMB_CHACHA20_POLY1305_IV_SIZE);
         generate_random_buf(aad, AAD_SZ);
 
         segments = malloc(num_segments * sizeof(*segments));
@@ -558,13 +556,13 @@ test_single_job_sgl(struct IMB_MGR *mb_mgr, struct test_suite_context *ctx,
         job->dec_keys = key;
         job->src = in_buffer;
         job->dst = in_buffer;
-        job->key_len_in_bytes = KEY_SZ;
+        job->key_len_in_bytes = IMB_CHACHA20_POLY1305_KEY_SIZE;
 
         job->u.CHACHA20_POLY1305.aad = aad;
         job->u.CHACHA20_POLY1305.aad_len_in_bytes = AAD_SZ;
 
         job->iv = iv;
-        job->iv_len_in_bytes = IV_SZ;
+        job->iv_len_in_bytes = IMB_CHACHA20_POLY1305_IV_SIZE;
         job->msg_len_to_cipher_in_bytes = buffer_sz;
         job->cipher_start_src_offset_in_bytes = 0;
 
@@ -592,14 +590,14 @@ test_single_job_sgl(struct IMB_MGR *mb_mgr, struct test_suite_context *ctx,
         job->hash_alg = IMB_AUTH_CHACHA20_POLY1305_SGL;
         job->enc_keys = key;
         job->dec_keys = key;
-        job->key_len_in_bytes = KEY_SZ;
+        job->key_len_in_bytes = IMB_CHACHA20_POLY1305_KEY_SIZE;
 
         job->u.CHACHA20_POLY1305.aad = aad;
         job->u.CHACHA20_POLY1305.aad_len_in_bytes = AAD_SZ;
         job->u.CHACHA20_POLY1305.ctx = &chacha_ctx;
 
         job->iv = iv;
-        job->iv_len_in_bytes = IV_SZ;
+        job->iv_len_in_bytes = IMB_CHACHA20_POLY1305_IV_SIZE;
         job->cipher_start_src_offset_in_bytes = 0;
 
         job->hash_start_src_offset_in_bytes = 0;
@@ -669,10 +667,10 @@ test_sgl(struct IMB_MGR *mb_mgr, struct test_suite_context *ctx, const uint32_t 
         uint32_t num_segments;
         uint8_t linear_digest[DIGEST_SZ];
         uint8_t sgl_digest[DIGEST_SZ];
-        uint8_t key[KEY_SZ];
+        uint8_t key[IMB_CHACHA20_POLY1305_KEY_SIZE];
         unsigned int i, segments_to_update;
         uint8_t aad[AAD_SZ];
-        uint8_t iv[IV_SZ];
+        uint8_t iv[IMB_CHACHA20_POLY1305_IV_SIZE];
         struct chacha20_poly1305_context_data chacha_ctx;
         uint32_t last_seg_sz = buffer_sz % seg_sz;
 
@@ -695,8 +693,8 @@ test_sgl(struct IMB_MGR *mb_mgr, struct test_suite_context *ctx, const uint32_t 
         memset(linear_digest, 0xFF, DIGEST_SZ);
 
         generate_random_buf(in_buffer, buffer_sz);
-        generate_random_buf(key, KEY_SZ);
-        generate_random_buf(iv, IV_SZ);
+        generate_random_buf(key, IMB_CHACHA20_POLY1305_KEY_SIZE);
+        generate_random_buf(iv, IMB_CHACHA20_POLY1305_IV_SIZE);
         generate_random_buf(aad, AAD_SZ);
 
         segments = malloc(num_segments * sizeof(*segments));
@@ -743,13 +741,13 @@ test_sgl(struct IMB_MGR *mb_mgr, struct test_suite_context *ctx, const uint32_t 
         job->dec_keys = key;
         job->src = in_buffer;
         job->dst = in_buffer;
-        job->key_len_in_bytes = KEY_SZ;
+        job->key_len_in_bytes = IMB_CHACHA20_POLY1305_KEY_SIZE;
 
         job->u.CHACHA20_POLY1305.aad = aad;
         job->u.CHACHA20_POLY1305.aad_len_in_bytes = AAD_SZ;
 
         job->iv = iv;
-        job->iv_len_in_bytes = IV_SZ;
+        job->iv_len_in_bytes = IMB_CHACHA20_POLY1305_IV_SIZE;
         job->msg_len_to_cipher_in_bytes = buffer_sz;
         job->cipher_start_src_offset_in_bytes = 0;
 
@@ -778,14 +776,14 @@ test_sgl(struct IMB_MGR *mb_mgr, struct test_suite_context *ctx, const uint32_t 
                 job->hash_alg = IMB_AUTH_CHACHA20_POLY1305_SGL;
                 job->enc_keys = key;
                 job->dec_keys = key;
-                job->key_len_in_bytes = KEY_SZ;
+                job->key_len_in_bytes = IMB_CHACHA20_POLY1305_KEY_SIZE;
 
                 job->u.CHACHA20_POLY1305.aad = aad;
                 job->u.CHACHA20_POLY1305.aad_len_in_bytes = AAD_SZ;
                 job->u.CHACHA20_POLY1305.ctx = &chacha_ctx;
 
                 job->iv = iv;
-                job->iv_len_in_bytes = IV_SZ;
+                job->iv_len_in_bytes = IMB_CHACHA20_POLY1305_IV_SIZE;
                 job->cipher_start_src_offset_in_bytes = 0;
 
                 job->hash_start_src_offset_in_bytes = 0;
@@ -824,14 +822,14 @@ test_sgl(struct IMB_MGR *mb_mgr, struct test_suite_context *ctx, const uint32_t 
                         job->hash_alg = IMB_AUTH_CHACHA20_POLY1305_SGL;
                         job->enc_keys = key;
                         job->dec_keys = key;
-                        job->key_len_in_bytes = KEY_SZ;
+                        job->key_len_in_bytes = IMB_CHACHA20_POLY1305_KEY_SIZE;
 
                         job->u.CHACHA20_POLY1305.aad = aad;
                         job->u.CHACHA20_POLY1305.aad_len_in_bytes = AAD_SZ;
                         job->u.CHACHA20_POLY1305.ctx = &chacha_ctx;
 
                         job->iv = iv;
-                        job->iv_len_in_bytes = IV_SZ;
+                        job->iv_len_in_bytes = IMB_CHACHA20_POLY1305_IV_SIZE;
                         job->cipher_start_src_offset_in_bytes = 0;
 
                         job->hash_start_src_offset_in_bytes = 0;
@@ -863,14 +861,14 @@ test_sgl(struct IMB_MGR *mb_mgr, struct test_suite_context *ctx, const uint32_t 
                 job->hash_alg = IMB_AUTH_CHACHA20_POLY1305_SGL;
                 job->enc_keys = key;
                 job->dec_keys = key;
-                job->key_len_in_bytes = KEY_SZ;
+                job->key_len_in_bytes = IMB_CHACHA20_POLY1305_KEY_SIZE;
 
                 job->u.CHACHA20_POLY1305.aad = aad;
                 job->u.CHACHA20_POLY1305.aad_len_in_bytes = AAD_SZ;
                 job->u.CHACHA20_POLY1305.ctx = &chacha_ctx;
 
                 job->iv = iv;
-                job->iv_len_in_bytes = IV_SZ;
+                job->iv_len_in_bytes = IMB_CHACHA20_POLY1305_IV_SIZE;
                 job->cipher_start_src_offset_in_bytes = 0;
 
                 job->hash_start_src_offset_in_bytes = 0;

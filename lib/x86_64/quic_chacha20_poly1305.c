@@ -29,6 +29,8 @@
 #include "include/error.h"
 #include "include/chacha20_poly1305.h"
 
+#define CHACHA20_POLY1305_QUIC_TAG_LENGTH 16
+
 IMB_DLL_EXPORT void
 imb_quic_chacha20_poly1305(IMB_MGR *state, const void *key, const IMB_CIPHER_DIRECTION cipher_dir,
                            void *dst_ptr_array[], const void *const src_ptr_array[],
@@ -106,12 +108,12 @@ imb_quic_chacha20_poly1305(IMB_MGR *state, const void *key, const IMB_CIPHER_DIR
 
         IMB_JOB job;
 
-        job.key_len_in_bytes = 32;
+        job.key_len_in_bytes = IMB_CHACHA20_POLY1305_KEY_SIZE;
         job.enc_keys = key;
-        job.iv_len_in_bytes = 12;
+        job.iv_len_in_bytes = IMB_CHACHA20_POLY1305_IV_SIZE;
         job.cipher_start_src_offset_in_bytes = 0;
         job.hash_start_src_offset_in_bytes = 0;
-        job.auth_tag_output_len_in_bytes = tag_len;
+        job.auth_tag_output_len_in_bytes = CHACHA20_POLY1305_QUIC_TAG_LENGTH;
         job.u.CHACHA20_POLY1305.aad_len_in_bytes = aad_len;
 
         job.cipher_direction = cipher_dir;

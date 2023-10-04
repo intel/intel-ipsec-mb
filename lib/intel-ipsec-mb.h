@@ -166,6 +166,10 @@ typedef enum {
 #define IMB_SM3_DIGEST_SIZE 32
 #define IMB_SM3_BLOCK_SIZE  64
 
+#define IMB_CHACHA20_POLY1305_KEY_SIZE 32
+#define IMB_CHACHA20_POLY1305_IV_SIZE  12
+#define IMB_POLY1305_BLOCK_SIZE        16
+
 /**
  * Minimum Ethernet frame size to calculate CRC32
  * Source Address (6 bytes) + Destination Address (6 bytes) + Type/Len (2 bytes)
@@ -582,19 +586,20 @@ struct gcm_context_data {
  * @brief holds Chacha20-Poly1305 operation context
  */
 struct chacha20_poly1305_context_data {
-        uint64_t hash[3];          /**< Intermediate computation of hash value */
-        uint64_t aad_len;          /**< Total AAD length */
-        uint64_t hash_len;         /**< Total length to digest (excluding AAD) */
-        uint8_t last_ks[64];       /**< Last 64 bytes of KS */
-        uint8_t poly_key[32];      /**< Poly key */
-        uint8_t poly_scratch[16];  /**< Scratchpad to compute Poly on 16 bytes */
-        uint64_t last_block_count; /**< Last block count used in last segment */
-        uint64_t remain_ks_bytes;  /**< Amount of bytes still to use of keystream
-                                     (up to 63 bytes) */
-        uint64_t remain_ct_bytes;  /**< Amount of ciphertext bytes still to use
-                                     of previous segment to authenticate
-                                     (up to 16 bytes) */
-        uint8_t IV[12];            /**< IV (12 bytes) */
+        uint64_t hash[3];    /**< Intermediate computation of hash value */
+        uint64_t aad_len;    /**< Total AAD length */
+        uint64_t hash_len;   /**< Total length to digest (excluding AAD) */
+        uint8_t last_ks[64]; /**< Last 64 bytes of KS */
+        uint8_t poly_key[IMB_CHACHA20_POLY1305_KEY_SIZE]; /**< Poly key */
+        uint8_t poly_scratch[IMB_POLY1305_BLOCK_SIZE]; /**< Scratchpad to compute Poly on 16 bytes
+                                                        */
+        uint64_t last_block_count;                     /**< Last block count used in last segment */
+        uint64_t remain_ks_bytes;                  /**< Amount of bytes still to use of keystream
+                                                     (up to 63 bytes) */
+        uint64_t remain_ct_bytes;                  /**< Amount of ciphertext bytes still to use
+                                                     of previous segment to authenticate
+                                                     (up to 16 bytes) */
+        uint8_t IV[IMB_CHACHA20_POLY1305_IV_SIZE]; /**< IV (12 bytes) */
 };
 
 /* 32 precomputed (4-byte) rounds for SM4 key schedule (128 bytes in total) */
