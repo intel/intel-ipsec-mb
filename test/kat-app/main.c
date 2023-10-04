@@ -220,7 +220,8 @@ usage(const char *name)
                 "--gfni-off: Don't use Galois Field extensions\n"
                 "--shani-on: Use SHA extensions, default: auto-detect\n"
                 "--shani-off: Don't use SHA extensions\n"
-                "--quiet: Enable quiet mode with reduced text output\n",
+                "--quiet: Enable quiet mode with reduced text output\n"
+                "--self-test-info: provides information about self-test progress\n",
                 name, test_types);
 
         free(test_types);
@@ -299,12 +300,38 @@ check_err_no_aesni_emu(const uint64_t feature_flags, IMB_MGR *p_mgr)
         return 0;
 }
 
+static void
+self_test_cb(void *arg, const char *phase, const char *type, const char *descr)
+{
+        const char *pphase = "<NULL>";
+        const char *ptype = "<NULL>";
+        const char *pdescr = "<NULL>";
+
+        (void) arg;
+
+        if (phase != NULL)
+                pphase = phase;
+
+        if (type != NULL)
+                ptype = type;
+
+        if (descr != NULL)
+                pdescr = descr;
+
+        if (strcmp(pphase, IMB_SELF_TEST_PHASE_START) == 0)
+                printf("%s : %s : ", ptype, pdescr);
+
+        if (strcmp(pphase, IMB_SELF_TEST_PHASE_PASS) == 0 ||
+            strcmp(pphase, IMB_SELF_TEST_PHASE_FAIL) == 0)
+                printf("%s\n", pphase);
+}
+
 int
 main(int argc, char **argv)
 {
         uint8_t arch_support[IMB_ARCH_NUM];
         uint8_t arch_select[IMB_ARCH_NUM];
-        int i, atype, auto_detect = 0;
+        int i, atype, auto_detect = 0, self_test_info = 0;
         uint64_t flags = 0;
         int errors = 0;
         unsigned int stop_on_fail = 0;
@@ -324,6 +351,8 @@ main(int argc, char **argv)
                         stop_on_fail = 1;
                 else if (strcmp(argv[i], "--quiet") == 0)
                         quiet_mode = 1;
+                else if (strcmp(argv[i], "--self-test-info") == 0)
+                        self_test_info = 1;
                 else if (strcmp(argv[i], "--test-type") == 0) {
                         unsigned selected_test;
 
@@ -388,6 +417,9 @@ main(int argc, char **argv)
                         printf("Error allocating MB_MGR structure!\n");
                         return EXIT_FAILURE;
                 }
+
+                if (self_test_info)
+                        imb_self_test_set_cb(p_mgr, self_test_cb, NULL);
 
                 switch (atype) {
                 case IMB_ARCH_SSE:
