@@ -1464,8 +1464,8 @@ exit_ks:
         ret
 
 align 32
-MKGLOBAL(quic_chacha20_avx2,function,internal)
-quic_chacha20_avx2:
+MKGLOBAL(quic_hp_chacha20_avx2,function,internal)
+quic_hp_chacha20_avx2:
         endbranch64
 %define tmp     rax
 %define off     r11

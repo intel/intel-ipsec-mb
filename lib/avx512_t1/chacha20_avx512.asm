@@ -2654,11 +2654,11 @@ exit_ks:
         ret
 
 ;;
-;; quic_chacha20_avx512(void *key, const uint8_t *src_ptr_array,
-;;                      void *dst_ptr_array, const uint64_t num_buffers);
+;; quic_hp_chacha20_avx512(void *key, const uint8_t *src_ptr_array,
+;;                         void *dst_ptr_array, const uint64_t num_buffers);
 align 32
-MKGLOBAL(quic_chacha20_avx512,function,internal)
-quic_chacha20_avx512:
+MKGLOBAL(quic_hp_chacha20_avx512,function,internal)
+quic_hp_chacha20_avx512:
         endbranch64
 
 %define tmp     rax

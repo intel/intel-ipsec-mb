@@ -491,7 +491,7 @@ init_mb_mgr_avx_t2_internal(IMB_MGR *state, const int reset_mgrs)
         state->aes_ecb_256_quic = aes_ecb_quic_enc_256_avx;
 
         state->chacha20_poly1305_quic = aead_chacha20_poly1305_avx;
-        state->chacha20_hp_quic = quic_chacha20_sse;
+        state->chacha20_hp_quic = quic_hp_chacha20_sse;
 
         state->sm4_keyexp = sm4_set_key_sse;
 }

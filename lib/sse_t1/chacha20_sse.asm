@@ -2922,8 +2922,8 @@ exit_gen:
         jmp	restore_gen_keystr
 
 align 32
-MKGLOBAL(quic_chacha20_sse,function,internal)
-quic_chacha20_sse:
+MKGLOBAL(quic_hp_chacha20_sse,function,internal)
+quic_hp_chacha20_sse:
         endbranch64
 
 %define tmp     rax
