@@ -2456,6 +2456,242 @@ test_reset_api(struct IMB_MGR *mb_mgr)
         return 0;
 }
 
+/*
+ * @brief Test Self-Test API
+ */
+struct self_test_context {
+        int is_corrupt;
+
+        int to_corrupt;
+        int corrupted_counter;
+
+        int error_counter;
+
+        int start_counter;
+        int corrupt_counter;
+        int fail_counter;
+        int pass_counter;
+        int all_counter;
+};
+
+static int
+self_test_callback(void *arg, const char *phase, const char *type, const char *descr)
+{
+        struct self_test_context *p = (struct self_test_context *) arg;
+        const char *pphase = "";
+
+        p->all_counter++;
+
+        if (phase != NULL)
+                pphase = phase;
+        else
+                p->error_counter++;
+
+        if (strcmp(pphase, IMB_SELF_TEST_PHASE_START) == 0) {
+                p->start_counter++;
+                if (type == NULL || descr == NULL)
+                        p->error_counter++;
+        } else if (strcmp(pphase, IMB_SELF_TEST_PHASE_CORRUPT) == 0) {
+                p->corrupt_counter++;
+                if (p->is_corrupt) {
+                        /*
+                         * if this is corrupt test then what value
+                         * should be returned (0 -> corrupt)
+                         */
+                        if (p->to_corrupt > p->corrupted_counter) {
+                                p->corrupted_counter++;
+                                return 0;
+                        }
+                }
+                return 1;
+        } else if (strcmp(pphase, IMB_SELF_TEST_PHASE_PASS) == 0) {
+                p->pass_counter++;
+        } else if (strcmp(pphase, IMB_SELF_TEST_PHASE_FAIL) == 0) {
+                p->fail_counter++;
+        } else {
+                p->error_counter++;
+        }
+
+        return 1;
+}
+
+static int
+self_test_check_context(const struct self_test_context *p)
+{
+        if (p->start_counter != p->corrupt_counter)
+                return 0;
+
+        if (p->start_counter != (p->fail_counter + p->pass_counter))
+                return 0;
+
+        if (p->all_counter !=
+            (p->fail_counter + p->pass_counter + p->corrupt_counter + p->start_counter))
+                return 0;
+
+        if (p->is_corrupt) {
+                if (p->fail_counter != p->corrupted_counter)
+                        return 0;
+                if (p->to_corrupt != p->corrupted_counter)
+                        return 0;
+        }
+
+        if (p->error_counter != 0)
+                return 0;
+        return 1;
+}
+
+static void
+self_test_set_context(struct self_test_context *p, const int is_corrupt, const int to_corrupt)
+{
+        memset(p, 0, sizeof(*p));
+        p->is_corrupt = is_corrupt;
+        p->to_corrupt = to_corrupt;
+}
+
+static int
+test_self_test_api(struct IMB_MGR *mb_mgr)
+{
+        printf("Self-Test API test:\n");
+
+        /* invalid get test scenarios */
+        imb_self_test_cb_t cb_fn;
+        void *cb_arg;
+
+        if (imb_self_test_get_cb(NULL, &cb_fn, &cb_arg) != IMB_ERR_NULL_MBMGR)
+                return 1;
+
+        if (imb_self_test_get_cb(mb_mgr, NULL, &cb_arg) != EINVAL)
+                return 1;
+
+        if (imb_self_test_get_cb(mb_mgr, &cb_fn, NULL) != EINVAL)
+                return 1;
+
+        if (imb_self_test_get_cb(mb_mgr, NULL, NULL) != EINVAL)
+                return 1;
+
+        if (imb_self_test_get_cb(NULL, NULL, NULL) != IMB_ERR_NULL_MBMGR)
+                return 1;
+
+        if (!quiet_mode)
+                printf(".");
+
+        /* invalid set test scenarios */
+        if (imb_self_test_set_cb(NULL, NULL, NULL) != IMB_ERR_NULL_MBMGR)
+                return 1;
+
+        if (!quiet_mode)
+                printf(".");
+
+        /* valid test scenarios */
+        imb_self_test_cb_t cb_fn1, cb_fn2;
+        void *cb_arg1, *cb_arg2;
+
+        /* check if get called twice returns same values */
+        if (imb_self_test_get_cb(mb_mgr, &cb_fn1, &cb_arg1) != 0)
+                return 1;
+
+        if (imb_self_test_get_cb(mb_mgr, &cb_fn2, &cb_arg2) != 0)
+                return 1;
+
+        if ((cb_fn1 != cb_fn2) || (cb_arg1 != cb_arg2))
+                return 1;
+
+        if (!quiet_mode)
+                printf(".");
+
+        /* check set followed by get */
+        if (imb_self_test_set_cb(mb_mgr, self_test_callback, mb_mgr) != 0)
+                return 1;
+
+        if (imb_self_test_get_cb(mb_mgr, &cb_fn1, &cb_arg1) != 0)
+                return 1;
+
+        if ((cb_fn1 != self_test_callback) || (cb_arg1 != (void *) mb_mgr))
+                return 1;
+
+        /* check set with NULL argument */
+        if (imb_self_test_set_cb(mb_mgr, self_test_callback, NULL) != 0)
+                return 1;
+
+        if (imb_self_test_get_cb(mb_mgr, &cb_fn1, &cb_arg1) != 0)
+                return 1;
+
+        if ((cb_fn1 != self_test_callback) || (cb_arg1 != NULL))
+                return 1;
+
+        if (!quiet_mode)
+                printf(".");
+
+        /* check set with NULL callback */
+        if (imb_self_test_set_cb(mb_mgr, NULL, mb_mgr) != 0)
+                return 1;
+
+        if (imb_self_test_get_cb(mb_mgr, &cb_fn1, &cb_arg1) != 0)
+                return 1;
+
+        if ((cb_fn1 != NULL) || (cb_arg1 != (void *) mb_mgr))
+                return 1;
+
+        if (!quiet_mode)
+                printf(".");
+
+        /* check callback set followed by init - success scenario */
+        struct IMB_MGR *t_mgr = alloc_mb_mgr(0);
+        struct self_test_context test_ctx;
+        IMB_ARCH arch;
+
+        if (t_mgr == NULL)
+                return 1;
+
+        self_test_set_context(&test_ctx, 0, 0);
+
+        if (imb_self_test_set_cb(t_mgr, self_test_callback, &test_ctx) != 0) {
+                free_mb_mgr(t_mgr);
+                return 1;
+        }
+
+        init_mb_mgr_auto(t_mgr, &arch);
+        free_mb_mgr(t_mgr);
+
+        if (self_test_check_context(&test_ctx) == 0)
+                return 1;
+
+        const int num_tests = test_ctx.start_counter;
+
+        if (!quiet_mode)
+                printf(".");
+
+        /* check callback set followed by init - fail scenario */
+        for (int i = 0; i <= num_tests; i++) {
+                t_mgr = alloc_mb_mgr(0);
+
+                if (t_mgr == NULL)
+                        return 1;
+
+                self_test_set_context(&test_ctx, 1, i);
+
+                if (imb_self_test_set_cb(t_mgr, self_test_callback, &test_ctx) != 0) {
+                        free_mb_mgr(t_mgr);
+                        return 1;
+                }
+
+                init_mb_mgr_auto(t_mgr, &arch);
+                free_mb_mgr(t_mgr);
+
+                if (self_test_check_context(&test_ctx) == 0)
+                        return 1;
+
+                if (!quiet_mode)
+                        printf(".");
+        }
+
+        /* check callback set, set NULL and then init - callback disabled */
+
+        if (!quiet_mode)
+                printf("\n");
+        return 0;
+}
+
 int
 api_test(struct IMB_MGR *mb_mgr)
 {
@@ -2480,6 +2716,9 @@ api_test(struct IMB_MGR *mb_mgr)
         run++;
 
         errors += test_reset_api(mb_mgr);
+        run++;
+
+        errors += test_self_test_api(mb_mgr);
         run++;
 
         test_suite_update(&ctx, run - errors, errors);
