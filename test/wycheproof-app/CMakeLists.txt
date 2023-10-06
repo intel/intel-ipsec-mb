@@ -58,7 +58,11 @@ set(WYCHEPROOF_APP_SRC_FILES_C
 ########################################
 # add OS specific options
 if(WINDOWS)
-  include(${CMAKE_CURRENT_SOURCE_DIR}/../cmake/windows.cmake)
+  if(CMAKE_GENERATOR MATCHES "MinGW Makefiles")
+    include(${CMAKE_CURRENT_SOURCE_DIR}/../cmake/windows-mingw.cmake)
+  else()
+    include(${CMAKE_CURRENT_SOURCE_DIR}/../cmake/windows.cmake)
+  endif()
 else()
   include(${CMAKE_CURRENT_SOURCE_DIR}/../cmake/unix.cmake)
 endif()
