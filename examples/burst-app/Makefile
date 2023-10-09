@@ -37,16 +37,34 @@ CFLAGS = -D_GNU_SOURCE -DNO_COMPAT_IMB_API_053 $(INCLUDES) \
 	-Wstrict-prototypes -Wmissing-prototypes -Wold-style-definition \
 	-pthread -fno-delete-null-pointer-checks -fwrapv -std=c99
 
+MINGW ?= $(shell $(CC) -dM -E - < /dev/null | grep -i mingw | wc -l | sed 's/^ *//')
+
 # -fno-strict-overflow is not supported by clang
 ifneq ($(CC),clang)
 CFLAGS += -fno-strict-overflow
 endif
 
 LDLIBS = -lIPSec_MB
+ifeq ($(MINGW),0)
+LDFLAGS = -fPIE -z noexecstack -z relro -z now -pthread
+else
+LDFLAGS = -fPIE
+endif
 
 # imb-burst modules
 SOURCES := main.c
 OBJECTS := $(SOURCES:%.c=%.o)
+
+ifeq ($(DEBUG),y)
+CFLAGS += -O0 -DDEBUG -g
+LDFLAGS += -g
+else
+ifeq ($(MINGW),0)
+CFLAGS += -O3
+else
+CFLAGS += -O2
+endif
+endif
 
 ifeq ("$(shell test -e $(INSTPATH) && echo -n yes)","yes")
 # library installed
