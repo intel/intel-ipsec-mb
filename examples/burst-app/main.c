@@ -157,7 +157,6 @@ main(void)
                         completed_jobs = IMB_FLUSH_BURST(mb_mgr, BURST_SIZE, jobs);
 
                         total_jobs_rx += completed_jobs;
-                        n_jobs_left -= completed_jobs;
 #ifdef DEBUG
                         for (i = 0; i < completed_jobs; i++) {
                                 if (jobs[i]->status != IMB_STATUS_COMPLETED) {
