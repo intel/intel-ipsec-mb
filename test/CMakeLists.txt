@@ -37,3 +37,22 @@ add_subdirectory(xvalid-app)
 # build imb-wycheproof application
 add_subdirectory(wycheproof-app)
 
+if(NOT WINDOWS)
+  # build imb-acvp if libacvp available
+  if(NOT ACVP_LOC)
+    set(ACVP_LOC "/usr/local/acvp")
+  endif()
+  set(ACVP_INCLUDE_DIR "${ACVP_LOC}/include")
+
+  # find libacvp
+  find_library(
+    ACVP_LIB libacvp.a libacvp
+    PATHS ${ACVP_LOC}
+    PATH_SUFFIXES lib)
+
+  # add imb-acvp app if found
+  if(ACVP_LIB)
+    message(STATUS "ACVP_LIB...                ${ACVP_LIB}")
+    add_subdirectory(acvp-app)
+  endif()
+endif()
