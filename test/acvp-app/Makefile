@@ -55,7 +55,7 @@ utils.o: ../common/utils.c
 
 .PHONY: clean
 clean:
-	-rm -f $(DEP_FILES) $(APP)
+	-rm -f $(DEP_FILES) $(APP) utils.o
 
 # if target not clean then make dependencies
 ifneq ($(MAKECMDGOALS),clean)
