@@ -551,7 +551,7 @@ LLVMFuzzerTestOneInput(const uint8_t *data, size_t dataSize)
                         fill_job_data(job, buff);
                         fill_additional_cipher_data(job, buff, buffsize);
                         fill_additional_hash_data(job, buff, buffsize);
-                        job = IMB_SUBMIT_JOB(p_mgr);
+                        IMB_SUBMIT_JOB(p_mgr);
                 }
         } else if (burst) {
                 IMB_JOB *jobs[MAX_BURST_JOBS] = { NULL };
