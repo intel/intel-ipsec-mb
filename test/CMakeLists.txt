@@ -55,4 +55,9 @@ if(NOT WINDOWS)
     message(STATUS "ACVP_LIB...                ${ACVP_LIB}")
     add_subdirectory(acvp-app)
   endif()
+
+  # add fuzz apps if using clang
+  if(CMAKE_C_COMPILER_ID MATCHES "Clang")
+    add_subdirectory(fuzz-app)
+  endif()
 endif()
