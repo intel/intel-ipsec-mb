@@ -221,11 +221,10 @@ cpu_feature_detect(void)
         if (hi_leaf_number >= 1)
                 mbcpuid(0x1, 0x0, &cpuid_1_0);
 
-        if (hi_leaf_number >= 7)
+        if (hi_leaf_number >= 7) {
                 mbcpuid(0x7, 0x0, &cpuid_7_0);
-
-        if (hi_leaf_number >= 7)
                 mbcpuid(0x7, 0x1, &cpuid_7_1);
+        }
 
         for (i = 0; i < IMB_DIM(feat_tab); i++) {
                 if (hi_leaf_number < feat_tab[i].req_leaf_number)
