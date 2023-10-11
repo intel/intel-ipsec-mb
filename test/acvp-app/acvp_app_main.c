@@ -615,8 +615,7 @@ tdes_cbc_handler(ACVP_TEST_CASE *test_case)
         }
 
         /* Create key schedules */
-        if (tc->test_type != ACVP_SYM_TEST_TYPE_MCT ||
-            (tc->test_type == ACVP_SYM_TEST_TYPE_MCT && tc->mct_index == 0)) {
+        if (tc->test_type != ACVP_SYM_TEST_TYPE_MCT || tc->mct_index == 0) {
                 /*
                  * Always create key schedules unless this is continuation of
                  * Monte Carlo inner loop.
