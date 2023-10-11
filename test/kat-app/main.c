@@ -303,32 +303,32 @@ check_err_no_aesni_emu(const uint64_t feature_flags, IMB_MGR *p_mgr)
 }
 
 static int
-self_test_cb(void *arg, const char *phase, const char *type, const char *descr)
+self_test_cb(void *arg, const IMB_SELF_TEST_CALLBACK_DATA *data)
 {
-        const char *pphase = "<NULL>";
-        const char *ptype = "<NULL>";
-        const char *pdescr = "<NULL>";
+        const char *phase = "";
+        const char *type = "";
+        const char *descr = "";
 
         (void) arg;
 
-        if (phase != NULL)
-                pphase = phase;
+        if (data != NULL) {
+                if (data->phase != NULL)
+                        phase = data->phase;
+                if (data->type != NULL)
+                        type = data->type;
+                if (data->descr != NULL)
+                        descr = data->descr;
+        }
 
-        if (type != NULL)
-                ptype = type;
+        if (strcmp(phase, IMB_SELF_TEST_PHASE_START) == 0)
+                printf("%s : %s : ", type, descr);
 
-        if (descr != NULL)
-                pdescr = descr;
-
-        if (strcmp(pphase, IMB_SELF_TEST_PHASE_START) == 0)
-                printf("%s : %s : ", ptype, pdescr);
-
-        if ((strcmp(pphase, IMB_SELF_TEST_PHASE_CORRUPT) == 0) && (self_test_corrupt == 1))
+        if ((strcmp(phase, IMB_SELF_TEST_PHASE_CORRUPT) == 0) && (self_test_corrupt == 1))
                 return 0;
 
-        if (strcmp(pphase, IMB_SELF_TEST_PHASE_PASS) == 0 ||
-            strcmp(pphase, IMB_SELF_TEST_PHASE_FAIL) == 0)
-                printf("%s\n", pphase);
+        if (strcmp(phase, IMB_SELF_TEST_PHASE_PASS) == 0 ||
+            strcmp(phase, IMB_SELF_TEST_PHASE_FAIL) == 0)
+                printf("%s\n", phase);
 
         return 1;
 }

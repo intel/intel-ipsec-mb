@@ -68,7 +68,9 @@ make_callback(IMB_MGR *p_mgr, const char *phase, const char *type, const char *d
         if (p_mgr->self_test_cb_fn == NULL)
                 return 1;
 
-        return p_mgr->self_test_cb_fn(p_mgr->self_test_cb_arg, phase, type, descr);
+        const IMB_SELF_TEST_CALLBACK_DATA data = { .phase = phase, .type = type, .descr = descr };
+
+        return p_mgr->self_test_cb_fn(p_mgr->self_test_cb_arg, &data);
 }
 
 /*

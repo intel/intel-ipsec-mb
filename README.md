@@ -828,13 +828,13 @@ bypass test).
 
 Application can register self-test callback function to track test progress. Optionally application can corrupt input message for selected tests and observe change in the test result.
 
-Typical sequence of callbacks received by application is:
-- callback(IMB_SELF_TEST_PHASE_START, IMB_SELF_TEST_TYPE_KAT_CIPHER, "AES128-CBC")
-- callback(IMB_SELF_TEST_PHASE_CORRUPT, NULL, NULL)
+Example sequence of callbacks received by an application is:
+- callback(data.phase = IMB_SELF_TEST_PHASE_START, data.type = IMB_SELF_TEST_TYPE_KAT_CIPHER, data.descr = "AES128-CBC") => return 1
+- callback(data.phase = IMB_SELF_TEST_PHASE_CORRUPT)
   - return 1: no message corruption
-  - return 0: corrupt the 1st byte
-- callback(IMB_SELF_TEST_PHASE_PASS or IMB_SELF_TEST_PHASE_PASS, NULL, NULL) => return 1
-- callback(IMB_SELF_TEST_PHASE_START, IMB_SELF_TEST_TYPE_KAT_CIPHER, "AES192-CBC") => return 1
+  - return 0: corrupt single bit in the 1st byte
+- callback(data.phase = IMB_SELF_TEST_PHASE_PASS or IMB_SELF_TEST_PHASE_PASS) => return 1
+- callback(data.phase = IMB_SELF_TEST_PHASE_START, data.type = IMB_SELF_TEST_TYPE_KAT_CIPHER, data.descr = "AES192-CBC") => return 1
 - ...
 Note that value returned by application self-test callback function only matters in the corrupt phase.
 
@@ -896,30 +896,32 @@ Example registration of self-test callback function:
 ```
 int self_test_corrupt = 0;
 
-int callback(void *arg, const char *phase, const char *type, const char *descr)
+int callback(void *arg, const IMB_SELF_TEST_CALLBACK_DATA *data)
 {
-        const char *pphase = "";
-        const char *ptype = "";
-        const char *pdescr = "";
+        const char *phase = "";
+        const char *type = "";
+        const char *descr = "";
 
-        if (phase != NULL)
-                pphase = phase;
+        (void) arg;
 
-        if (type != NULL)
-                ptype = type;
+        if (data != NULL) {
+                if (data->phase != NULL)
+                        phase = data->phase;
+                if (data->type != NULL)
+                        type = data->type;
+                if (data->descr != NULL)
+                        descr = data->descr;
+        }
 
-        if (descr != NULL)
-                pdescr = descr;
+        if (strcmp(phase, IMB_SELF_TEST_PHASE_START) == 0)
+                printf("%s : %s : ", type, descr);
 
-        if (strcmp(pphase, IMB_SELF_TEST_PHASE_START) == 0)
-                printf("%s : %s : ", ptype, pdescr);
-
-        if ((strcmp(pphase, IMB_SELF_TEST_PHASE_CORRUPT) == 0) && (self_test_corrupt == 1))
+        if ((strcmp(phase, IMB_SELF_TEST_PHASE_CORRUPT) == 0) && (self_test_corrupt == 1))
                 return 0; /* corrupt input message */
 
-        if (strcmp(pphase, IMB_SELF_TEST_PHASE_PASS) == 0 ||
-            strcmp(pphase, IMB_SELF_TEST_PHASE_FAIL) == 0)
-                printf("%s\n", pphase);
+        if (strcmp(phase, IMB_SELF_TEST_PHASE_PASS) == 0 ||
+            strcmp(phase, IMB_SELF_TEST_PHASE_FAIL) == 0)
+                printf("%s\n", phase);
 
         return 1;
 }

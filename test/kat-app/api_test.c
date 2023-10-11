@@ -2484,23 +2484,33 @@ struct self_test_context {
 };
 
 static int
-self_test_callback(void *arg, const char *phase, const char *type, const char *descr)
+self_test_callback(void *arg, const IMB_SELF_TEST_CALLBACK_DATA *data)
 {
         struct self_test_context *p = (struct self_test_context *) arg;
-        const char *pphase = "";
+        const char *phase = "";
+
+        IMB_ASSERT(p != NULL);
+        if (p == NULL)
+                return 1;
 
         p->all_counter++;
 
-        if (phase != NULL)
-                pphase = phase;
+        IMB_ASSERT(data != NULL);
+        if (data == NULL) {
+                p->error_counter++;
+                return 1;
+        }
+
+        if (data->phase != NULL)
+                phase = data->phase;
         else
                 p->error_counter++;
 
-        if (strcmp(pphase, IMB_SELF_TEST_PHASE_START) == 0) {
+        if (strcmp(phase, IMB_SELF_TEST_PHASE_START) == 0) {
                 p->start_counter++;
-                if (type == NULL || descr == NULL)
+                if (data->type == NULL || data->descr == NULL)
                         p->error_counter++;
-        } else if (strcmp(pphase, IMB_SELF_TEST_PHASE_CORRUPT) == 0) {
+        } else if (strcmp(phase, IMB_SELF_TEST_PHASE_CORRUPT) == 0) {
                 p->corrupt_counter++;
                 if (p->is_corrupt) {
                         /*
@@ -2513,9 +2523,9 @@ self_test_callback(void *arg, const char *phase, const char *type, const char *d
                         }
                 }
                 return 1;
-        } else if (strcmp(pphase, IMB_SELF_TEST_PHASE_PASS) == 0) {
+        } else if (strcmp(phase, IMB_SELF_TEST_PHASE_PASS) == 0) {
                 p->pass_counter++;
-        } else if (strcmp(pphase, IMB_SELF_TEST_PHASE_FAIL) == 0) {
+        } else if (strcmp(phase, IMB_SELF_TEST_PHASE_FAIL) == 0) {
                 p->fail_counter++;
         } else {
                 p->error_counter++;
