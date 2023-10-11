@@ -834,14 +834,7 @@ test_burst_api(struct IMB_MGR *mb_mgr)
         /* ======== test 6: full job queue wrapping around */
 
         struct IMB_JOB *burst_jobs[IMB_MAX_BURST_SIZE] = { NULL };
-        const int LG_BUFFER_SIZE = 1024 * 16;
         uint32_t num_jobs = 0;
-        uint8_t *large_buffer = malloc(LG_BUFFER_SIZE);
-
-        if (large_buffer == NULL) {
-                printf("Failed to allocate large buffer\n");
-                return 1;
-        }
 
         /* ensure all jobs flushed */
         while (IMB_FLUSH_BURST(mb_mgr, IMB_MAX_BURST_SIZE, burst_jobs) != 0)
@@ -870,6 +863,14 @@ test_burst_api(struct IMB_MGR *mb_mgr)
         }
 
         /* use large buffer for first (earliest) job */
+        const size_t LG_BUFFER_SIZE = 1024 * 16;
+        uint8_t *large_buffer = malloc(LG_BUFFER_SIZE);
+
+        if (large_buffer == NULL) {
+                printf("Failed to allocate large buffer\n");
+                return 1;
+        }
+
         burst_jobs[0]->msg_len_to_cipher_in_bytes = LG_BUFFER_SIZE;
         burst_jobs[0]->src = large_buffer;
         burst_jobs[0]->dst = large_buffer;
@@ -879,6 +880,7 @@ test_burst_api(struct IMB_MGR *mb_mgr)
         if (completed_jobs != 0) {
                 printf("%s: test %d, unexpected number of completed jobs\n", __func__,
                        TEST_INVALID_BURST);
+                free(large_buffer);
                 return 1;
         }
 
@@ -886,6 +888,7 @@ test_burst_api(struct IMB_MGR *mb_mgr)
         if (IMB_QUEUE_SIZE(mb_mgr) != num_jobs) {
                 printf("%s: test %d, unexpected number of jobs in queue\n", __func__,
                        TEST_INVALID_BURST);
+                free(large_buffer);
                 return 1;
         }
 
@@ -893,6 +896,7 @@ test_burst_api(struct IMB_MGR *mb_mgr)
         if (mb_mgr->earliest_job == -1) {
                 printf("%s: test %d, job buffer unexpectedly marked 'empty'\n", __func__,
                        TEST_INVALID_BURST);
+                free(large_buffer);
                 return 1;
         }
 
@@ -901,6 +905,7 @@ test_burst_api(struct IMB_MGR *mb_mgr)
         if (num_jobs != IMB_MAX_BURST_SIZE) {
                 printf("%s: test %d, unexpected number of burst jobs\n", __func__,
                        TEST_INVALID_BURST);
+                free(large_buffer);
                 return 1;
         }
 
@@ -917,6 +922,7 @@ test_burst_api(struct IMB_MGR *mb_mgr)
         if (completed_jobs != num_jobs) {
                 printf("%s: test %d, unexpected number of completed jobs\n", __func__,
                        TEST_INVALID_BURST);
+                free(large_buffer);
                 return 1;
         }
 
@@ -924,6 +930,7 @@ test_burst_api(struct IMB_MGR *mb_mgr)
         if (IMB_QUEUE_SIZE(mb_mgr) != (IMB_MAX_JOBS - num_jobs)) {
                 printf("%s: test %d, unexpected number of jobs in queue\n", __func__,
                        TEST_INVALID_BURST);
+                free(large_buffer);
                 return 1;
         }
 
@@ -931,6 +938,7 @@ test_burst_api(struct IMB_MGR *mb_mgr)
         if (mb_mgr->earliest_job == -1) {
                 printf("%s: test %d, job buffer unexpectedly NOT marked 'empty'\n", __func__,
                        TEST_INVALID_BURST);
+                free(large_buffer);
                 return 1;
         }
 
@@ -939,8 +947,11 @@ test_burst_api(struct IMB_MGR *mb_mgr)
         if (completed_jobs != IMB_MAX_BURST_SIZE) {
                 printf("%s: test %d, unexpected number of completed jobs\n", __func__,
                        TEST_INVALID_BURST);
+                free(large_buffer);
                 return 1;
         }
+
+        free(large_buffer);
 
         /* 0 jobs in queue after flush */
         if (IMB_QUEUE_SIZE(mb_mgr) != 0) {
@@ -955,8 +966,6 @@ test_burst_api(struct IMB_MGR *mb_mgr)
                        TEST_INVALID_BURST);
                 return 1;
         }
-
-        free(large_buffer);
 
         print_progress();
 
