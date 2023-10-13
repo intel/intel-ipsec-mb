@@ -603,6 +603,8 @@ uint64_t flags = 0; /* flags passed to alloc_mb_mgr() */
 /* 0 => not possible, 1 => possible */
 int is_avx_sse_check_possible = 0;
 
+int burst_api = 0;
+
 static void
 avx_sse_check(const char *ctx_str, const IMB_HASH_ALG hash_alg, const IMB_CIPHER_MODE cipher_mode)
 {
@@ -1555,6 +1557,46 @@ perform_safe_checks(IMB_MGR *mgr, const IMB_ARCH arch, const char *dir)
         return 0;
 }
 
+static int
+post_job(IMB_MGR *mgr, IMB_JOB *job, unsigned *num_processed_jobs, const struct params_s *params,
+         uint8_t **test_buf, const unsigned *buf_sizes, const uint16_t *pli,
+         const uint64_t *xgem_hdr, const IMB_CIPHER_DIRECTION dir)
+{
+
+        const unsigned idx = (unsigned) ((uintptr_t) job->user_data);
+
+        if (job->status != IMB_STATUS_COMPLETED) {
+                int errc = imb_get_errno(mgr);
+
+                fprintf(stderr,
+                        "failed job, status:%d, "
+                        "error code:%d '%s'\n",
+                        job->status, errc, imb_get_strerror(errc));
+                return -1;
+        }
+        if (idx != *num_processed_jobs) {
+                fprintf(stderr,
+                        "enc-submit job returned out of order, "
+                        "received %u, expected %u\n",
+                        idx, *num_processed_jobs);
+                return -1;
+        }
+        (*num_processed_jobs)++;
+
+        /* Only need to modify the buffer after encryption */
+        if (dir == IMB_DIR_ENCRYPT) {
+                if (params->hash_alg == IMB_AUTH_PON_CRC_BIP) {
+                        if (modify_pon_test_buf(test_buf[idx], job, pli[idx], xgem_hdr[idx]) < 0)
+                                return -1;
+                }
+
+                if (params->hash_alg == IMB_AUTH_DOCSIS_CRC32)
+                        modify_docsis_crc32_test_buf(test_buf[idx], job, buf_sizes[idx]);
+        }
+
+        return 0;
+}
+
 /* Performs test using AES_HMAC or DOCSIS */
 static int
 do_test(IMB_MGR *enc_mb_mgr, const IMB_ARCH enc_arch, IMB_MGR *dec_mb_mgr, const IMB_ARCH dec_arch,
@@ -1562,7 +1604,7 @@ do_test(IMB_MGR *enc_mb_mgr, const IMB_ARCH enc_arch, IMB_MGR *dec_mb_mgr, const
         const unsigned imix, const unsigned num_jobs)
 {
         IMB_JOB *job;
-        uint32_t i, imix_job_idx = 0;
+        uint32_t i;
         int ret = -1;
         uint64_t xgem_hdr[MAX_NUM_JOBS] = { 0 };
         uint8_t tag_size_to_check[MAX_NUM_JOBS];
@@ -1610,8 +1652,6 @@ do_test(IMB_MGR *enc_mb_mgr, const IMB_ARCH enc_arch, IMB_MGR *dec_mb_mgr, const
                 /* Prepare buffer sizes */
                 if (imix) {
                         uint32_t random_num = rand() % DEFAULT_JOB_SIZE_MAX;
-
-                        imix_job_idx = i;
 
                         /* If random number is 0, change the size to 16 */
                         if (random_num == 0)
@@ -1760,92 +1800,110 @@ do_test(IMB_MGR *enc_mb_mgr, const IMB_ARCH enc_arch, IMB_MGR *dec_mb_mgr, const
         PinBasedCEC_MarkSecret((uintptr_t) dec_keys->k3, sizeof(dec_keys->k3));
 #endif
 
-        for (i = 0; i < num_jobs; i++) {
-                imix_job_idx = i;
+        if (burst_api) {
+                unsigned num_rx_jobs;
 
-                job = IMB_GET_NEXT_JOB(enc_mb_mgr);
-                /*
-                 * Encrypt + generate digest from encrypted message
-                 * using architecture under test
-                 */
-                nosimd_memcpy(src_dst_buf[i], test_buf[i], buf_sizes[i]);
-                if (fill_job(job, params, src_dst_buf[i], in_digest[i], aad, buf_sizes[i], tag_size,
-                             IMB_DIR_ENCRYPT, enc_keys, cipher_iv, auth_iv, i, next_iv) < 0)
+                IMB_JOB *burst_jobs[IMB_MAX_BURST_SIZE];
+                /* num_jobs will always be lower than IMB_MAX_BURST_SIZE */
+                num_rx_jobs = IMB_GET_NEXT_BURST(enc_mb_mgr, num_jobs, burst_jobs);
+
+                if (num_rx_jobs != num_jobs) {
+                        fprintf(stderr, "Number of jobs received less than requested\n");
                         goto exit;
-
-                /* Randomize memory for input digest */
-                generate_random_buf(in_digest[i], tag_size);
-
-                /* Clear scratch registers before submitting job to prevent
-                 * other functions from storing sensitive data in stack */
-                job = IMB_SUBMIT_JOB(enc_mb_mgr);
-
-                avx_sse_check("enc-submit", (unsigned) params->hash_alg,
-                              (unsigned) params->cipher_mode);
-
-                if (job) {
-                        const unsigned idx = (unsigned) ((uintptr_t) job->user_data);
-
-                        if (job->status != IMB_STATUS_COMPLETED) {
-                                int errc = imb_get_errno(enc_mb_mgr);
-
-                                fprintf(stderr,
-                                        "failed job, status:%d, "
-                                        "error code:%d '%s'\n",
-                                        job->status, errc, imb_get_strerror(errc));
-                                goto exit;
-                        }
-                        if (idx != num_processed_jobs) {
-                                fprintf(stderr,
-                                        "enc-submit job returned out of order, "
-                                        "received %u, expected %u\n",
-                                        idx, num_processed_jobs);
-                                goto exit;
-                        }
-                        num_processed_jobs++;
-
-                        if (params->hash_alg == IMB_AUTH_PON_CRC_BIP) {
-                                if (modify_pon_test_buf(test_buf[idx], job, pli[idx], xgem_hdr[idx]) < 0)
-                                        goto exit;
-                        }
-
-                        if (params->hash_alg == IMB_AUTH_DOCSIS_CRC32)
-                                modify_docsis_crc32_test_buf(test_buf[idx], job, buf_sizes[idx]);
                 }
-        }
-        /* Flush rest of the jobs, if there are outstanding jobs */
-        while (num_processed_jobs != num_jobs) {
-                job = IMB_FLUSH_JOB(enc_mb_mgr);
 
-                avx_sse_check("enc-flush", (unsigned) params->hash_alg,
+                for (i = 0; i < num_jobs; i++) {
+                        IMB_JOB *job = burst_jobs[i];
+
+                        /*
+                         * Encrypt + generate digest from encrypted message
+                         * using architecture under test
+                         */
+                        nosimd_memcpy(src_dst_buf[i], test_buf[i], buf_sizes[i]);
+                        if (fill_job(job, params, src_dst_buf[i], in_digest[i], aad, buf_sizes[i],
+                                     tag_size, IMB_DIR_ENCRYPT, enc_keys, cipher_iv, auth_iv, i,
+                                     next_iv) < 0)
+                                goto exit;
+
+                        /* Randomize memory for input digest */
+                        generate_random_buf(in_digest[i], tag_size);
+
+                        imb_set_session(enc_mb_mgr, job);
+                }
+
+                num_rx_jobs = IMB_SUBMIT_BURST(enc_mb_mgr, num_jobs, burst_jobs);
+
+                avx_sse_check("enc-submit-burst", (unsigned) params->hash_alg,
                               (unsigned) params->cipher_mode);
 
-                while (job != NULL) {
-                        const unsigned idx = (unsigned) ((uintptr_t) job->user_data);
+                if (num_rx_jobs < num_jobs) {
+                        num_rx_jobs += IMB_FLUSH_BURST(enc_mb_mgr, (num_jobs - num_rx_jobs),
+                                                       &burst_jobs[num_rx_jobs]);
+                        avx_sse_check("enc-flush-burst", (unsigned) params->hash_alg,
+                                      (unsigned) params->cipher_mode);
+                }
 
-                        if (job->status != IMB_STATUS_COMPLETED) {
-                                int errc = imb_get_errno(enc_mb_mgr);
+                if (num_rx_jobs != num_jobs) {
+                        fprintf(stderr, "Number of processed jobs less than submitted\n");
+                        goto exit;
+                }
 
-                                fprintf(stderr,
-                                        "failed job, status:%d, "
-                                        "error code:%d '%s'\n",
-                                        job->status, errc, imb_get_strerror(errc));
+                for (i = 0; i < num_rx_jobs; i++) {
+                        IMB_JOB *job = burst_jobs[i];
+
+                        if (post_job(enc_mb_mgr, job, &num_processed_jobs, params, test_buf,
+                                     buf_sizes, pli, xgem_hdr, IMB_DIR_ENCRYPT) < 0)
                                 goto exit;
-                        }
-                        if (idx != num_processed_jobs) {
-                                fprintf(stderr,
-                                        "enc-flush job returned out of order, "
-                                        "received %u, expected %u\n",
-                                        idx, num_processed_jobs);
+                }
+
+        } else {
+                for (i = 0; i < num_jobs; i++) {
+                        job = IMB_GET_NEXT_JOB(enc_mb_mgr);
+                        /*
+                         * Encrypt + generate digest from encrypted message
+                         * using architecture under test
+                         */
+                        nosimd_memcpy(src_dst_buf[i], test_buf[i], buf_sizes[i]);
+                        if (fill_job(job, params, src_dst_buf[i], in_digest[i], aad, buf_sizes[i],
+                                     tag_size, IMB_DIR_ENCRYPT, enc_keys, cipher_iv, auth_iv, i,
+                                     next_iv) < 0)
                                 goto exit;
+
+                        /* Randomize memory for input digest */
+                        generate_random_buf(in_digest[i], tag_size);
+
+                        /* Clear scratch registers before submitting job to prevent
+                         * other functions from storing sensitive data in stack */
+                        job = IMB_SUBMIT_JOB(enc_mb_mgr);
+
+                        avx_sse_check("enc-submit", (unsigned) params->hash_alg,
+                                      (unsigned) params->cipher_mode);
+
+                        if (job) {
+                                if (post_job(enc_mb_mgr, job, &num_processed_jobs, params, test_buf,
+                                             buf_sizes, pli, xgem_hdr, IMB_DIR_ENCRYPT) < 0) {
+                                        i = (unsigned) ((uintptr_t) job->user_data);
+                                        goto exit;
+                                }
                         }
-                        num_processed_jobs++;
+                }
+                /* Flush rest of the jobs, if there are outstanding jobs */
+                while (num_processed_jobs != num_jobs) {
+                        job = IMB_FLUSH_JOB(enc_mb_mgr);
 
-                        if (params->hash_alg == IMB_AUTH_DOCSIS_CRC32)
-                                modify_docsis_crc32_test_buf(test_buf[idx], job, buf_sizes[idx]);
+                        avx_sse_check("enc-flush", (unsigned) params->hash_alg,
+                                      (unsigned) params->cipher_mode);
 
-                        /* Get more completed jobs */
-                        job = IMB_GET_COMPLETED_JOB(enc_mb_mgr);
+                        while (job != NULL) {
+                                if (post_job(enc_mb_mgr, job, &num_processed_jobs, params, test_buf,
+                                             buf_sizes, pli, xgem_hdr, IMB_DIR_ENCRYPT) < 0) {
+                                        i = (unsigned) ((uintptr_t) job->user_data);
+                                        goto exit;
+                                }
+
+                                /* Get more completed jobs */
+                                job = IMB_GET_COMPLETED_JOB(enc_mb_mgr);
+                        }
                 }
         }
 
@@ -1876,83 +1934,105 @@ do_test(IMB_MGR *enc_mb_mgr, const IMB_ARCH enc_arch, IMB_MGR *dec_mb_mgr, const
         PinBasedCEC_MarkSecret((uintptr_t) dec_keys->k3, sizeof(dec_keys->k3));
 #endif
 
-        for (i = 0; i < num_jobs; i++) {
-                imix_job_idx = i;
+        if (burst_api) {
+                unsigned num_rx_jobs;
 
-                job = IMB_GET_NEXT_JOB(dec_mb_mgr);
+                IMB_JOB *burst_jobs[IMB_MAX_BURST_SIZE];
+                /* num_jobs will always be lower than IMB_MAX_BURST_SIZE */
+                num_rx_jobs = IMB_GET_NEXT_BURST(dec_mb_mgr, num_jobs, burst_jobs);
 
-                /* Randomize memory for output digest */
-                generate_random_buf(out_digest[i], tag_size);
-
-                /*
-                 * Generate digest from encrypted message and decrypt
-                 * using reference architecture
-                 */
-                if (fill_job(job, params, src_dst_buf[i], out_digest[i], aad, buf_sizes[i],
-                             tag_size, IMB_DIR_DECRYPT, dec_keys, cipher_iv, auth_iv, i,
-                             next_iv) < 0)
+                if (num_rx_jobs != num_jobs) {
+                        fprintf(stderr, "Number of jobs received less than requested\n");
                         goto exit;
-
-                /* Clear scratch registers before submitting job to prevent
-                 * other functions from storing sensitive data in stack */
-                job = IMB_SUBMIT_JOB(dec_mb_mgr);
-
-                avx_sse_check("dec-submit", (unsigned) params->hash_alg,
-                              (unsigned) params->cipher_mode);
-
-                if (job != NULL) {
-                        const unsigned idx = (unsigned) ((uintptr_t) job->user_data);
-
-                        if (job->status != IMB_STATUS_COMPLETED) {
-                                int errc = imb_get_errno(dec_mb_mgr);
-
-                                fprintf(stderr,
-                                        "failed job, status:%d, "
-                                        "error code:%d '%s'\n",
-                                        job->status, errc, imb_get_strerror(errc));
-                                goto exit;
-                        }
-
-                        if (idx != num_processed_jobs) {
-                                fprintf(stderr,
-                                        "dec-submit job returned out of order, "
-                                        "received %u, expected %u\n",
-                                        idx, num_processed_jobs);
-                                goto exit;
-                        }
-                        num_processed_jobs++;
                 }
-        }
 
-        /* Flush rest of the jobs, if there are outstanding jobs */
-        while (num_processed_jobs != num_jobs) {
-                job = IMB_FLUSH_JOB(dec_mb_mgr);
+                for (i = 0; i < num_jobs; i++) {
+                        IMB_JOB *job = burst_jobs[i];
 
-                avx_sse_check("dec-flush", (unsigned) params->hash_alg,
+                        /* Randomize memory for output digest */
+                        generate_random_buf(out_digest[i], tag_size);
+
+                        /*
+                         * Generate digest from encrypted message and decrypt
+                         * using reference architecture
+                         */
+                        if (fill_job(job, params, src_dst_buf[i], out_digest[i], aad, buf_sizes[i],
+                                     tag_size, IMB_DIR_DECRYPT, dec_keys, cipher_iv, auth_iv, i,
+                                     next_iv) < 0)
+                                goto exit;
+
+                        imb_set_session(dec_mb_mgr, job);
+                }
+
+                num_rx_jobs = IMB_SUBMIT_BURST(dec_mb_mgr, num_jobs, burst_jobs);
+
+                avx_sse_check("dec-submit-burst", (unsigned) params->hash_alg,
                               (unsigned) params->cipher_mode);
 
-                while (job != NULL) {
-                        const unsigned idx = (unsigned) ((uintptr_t) job->user_data);
+                if (num_rx_jobs < num_jobs)
+                        num_rx_jobs += IMB_FLUSH_BURST(dec_mb_mgr, (num_jobs - num_rx_jobs),
+                                                       &burst_jobs[num_rx_jobs]);
 
-                        if (job->status != IMB_STATUS_COMPLETED) {
-                                int errc = imb_get_errno(enc_mb_mgr);
+                if (num_rx_jobs != num_jobs) {
+                        fprintf(stderr, "Number of processed jobs less than submitted\n");
+                        goto exit;
+                }
 
-                                fprintf(stderr,
-                                        "failed job, status:%d, "
-                                        "error code:%d '%s'\n",
-                                        job->status, errc, imb_get_strerror(errc));
+                for (i = 0; i < num_rx_jobs; i++) {
+                        IMB_JOB *job = burst_jobs[i];
+
+                        if (post_job(dec_mb_mgr, job, &num_processed_jobs, params, test_buf,
+                                     buf_sizes, pli, xgem_hdr, IMB_DIR_DECRYPT) < 0)
                                 goto exit;
-                        }
-                        if (idx != num_processed_jobs) {
-                                fprintf(stderr,
-                                        "dec-flush job returned out of order, "
-                                        "received %u, expected %u\n",
-                                        idx, num_processed_jobs);
+                }
+        } else {
+                for (i = 0; i < num_jobs; i++) {
+                        job = IMB_GET_NEXT_JOB(dec_mb_mgr);
+
+                        /* Randomize memory for output digest */
+                        generate_random_buf(out_digest[i], tag_size);
+
+                        /*
+                         * Generate digest from encrypted message and decrypt
+                         * using reference architecture
+                         */
+                        if (fill_job(job, params, src_dst_buf[i], out_digest[i], aad, buf_sizes[i],
+                                     tag_size, IMB_DIR_DECRYPT, dec_keys, cipher_iv, auth_iv, i,
+                                     next_iv) < 0)
                                 goto exit;
+
+                        /* Clear scratch registers before submitting job to prevent
+                         * other functions from storing sensitive data in stack */
+                        job = IMB_SUBMIT_JOB(dec_mb_mgr);
+
+                        avx_sse_check("dec-submit", (unsigned) params->hash_alg,
+                                      (unsigned) params->cipher_mode);
+
+                        if (job != NULL) {
+                                if (post_job(dec_mb_mgr, job, &num_processed_jobs, params, test_buf,
+                                             buf_sizes, pli, xgem_hdr, IMB_DIR_DECRYPT) < 0) {
+                                        i = (unsigned) ((uintptr_t) job->user_data);
+                                        goto exit;
+                                }
                         }
-                        num_processed_jobs++;
-                        /* Get more completed jobs */
-                        job = IMB_GET_COMPLETED_JOB(dec_mb_mgr);
+                }
+
+                /* Flush rest of the jobs, if there are outstanding jobs */
+                while (num_processed_jobs != num_jobs) {
+                        job = IMB_FLUSH_JOB(dec_mb_mgr);
+
+                        avx_sse_check("dec-flush", (unsigned) params->hash_alg,
+                                      (unsigned) params->cipher_mode);
+
+                        while (job != NULL) {
+                                if (post_job(dec_mb_mgr, job, &num_processed_jobs, params, test_buf,
+                                             buf_sizes, pli, xgem_hdr, IMB_DIR_DECRYPT) < 0) {
+                                        i = (unsigned) ((uintptr_t) job->user_data);
+                                        goto exit;
+                                }
+                                /* Get more completed jobs */
+                                job = IMB_GET_COMPLETED_JOB(dec_mb_mgr);
+                        }
                 }
         }
 
@@ -1967,8 +2047,6 @@ do_test(IMB_MGR *enc_mb_mgr, const IMB_ARCH enc_arch, IMB_MGR *dec_mb_mgr, const
         } else {
                 for (i = 0; i < num_jobs; i++) {
                         int goto_exit = 0;
-
-                        imix_job_idx = i;
 
                         if (params->hash_alg != IMB_AUTH_NULL &&
                             memcmp(in_digest[i], out_digest[i], tag_size_to_check[i]) != 0) {
@@ -2019,14 +2097,17 @@ exit:
                 print_tested_arch(enc_mb_mgr->features, enc_arch);
                 printf("Decrypting ");
                 print_tested_arch(dec_mb_mgr->features, dec_arch);
-                if (imix) {
-                        printf("Job #%u, buffer size = %u\n", imix_job_idx,
-                               buf_sizes[imix_job_idx]);
+                /* Print buffer size info if the failure was caused by an actual job,
+                   where "i" indicates the index of the job failing */
+                if (i < num_jobs) {
+                        if (imix) {
+                                printf("Job #%u, buffer size = %u\n", i, buf_sizes[i]);
 
-                        for (i = 0; i < num_jobs; i++)
-                                printf("Other sizes = %u\n", buf_sizes[i]);
-                } else
-                        printf("Buffer size = %u\n", params->buf_size);
+                                for (i = 0; i < num_jobs; i++)
+                                        printf("Other sizes = %u\n", buf_sizes[i]);
+                        } else
+                                printf("Buffer size = %u\n", params->buf_size);
+                }
                 printf("Key size = %u\n", params->key_size);
                 printf("Tag size = %u\n", tag_size);
                 printf("AAD size = %u\n", (uint32_t) params->aad_size);
@@ -2491,7 +2572,8 @@ usage(const char *app_name)
                 "get cleared from IMB_MGR upon job completion (off by default; "
                 "requires library compiled with SAFE_DATA)\n"
                 "--avx-sse: if XGETBV is available then check for potential "
-                "AVX-SSE transition problems\n",
+                "AVX-SSE transition problems\n"
+                "--burst-api: use burst API instead of single job API\n",
                 app_name, MAX_NUM_JOBS);
 }
 
@@ -2795,6 +2877,8 @@ main(int argc, char *argv[])
                         is_avx_sse_check_possible = avx_sse_detectability();
                         if (!is_avx_sse_check_possible)
                                 fprintf(stderr, "XGETBV not available\n");
+                } else if (strcmp(argv[i], "--burst-api") == 0) {
+                        burst_api = 1;
                 } else {
                         usage(argv[0]);
                         return EXIT_FAILURE;
