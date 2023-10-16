@@ -2411,16 +2411,22 @@ SNOW3G_F8_1_BUFFER_BIT(const snow3g_key_schedule_t *pHandle, const void *pIV, co
                 return;
         }
 #endif
+        const size_t off_bytes = offsetInBits / 8;
+        uint8_t *dst = ((uint8_t *) pBufferOut) + off_bytes;
+        const uint8_t *src = ((const uint8_t *) pBufferIn) + off_bytes;
+
         uint8_t save_start = 0, save_end = 0;
-        uint8_t *dst = &((uint8_t *) pBufferOut)[offsetInBits >> 3];
+        const size_t off_bits = offsetInBits & 7;
 
-        save_msg_start_end(dst, offsetInBits & 7, lengthInBits, &save_start, &save_end);
-        copy_bits(dst, pBufferIn, offsetInBits, lengthInBits);
+        msg_save_start_end(dst, off_bits, lengthInBits, &save_start, &save_end);
+        msg_shl_copy(dst, src, off_bits, lengthInBits);
 
-        SNOW3G_F8_1_BUFFER(pHandle, pIV, dst, dst, (lengthInBits + 7) / 8);
+        const uint32_t len_bytes = (lengthInBits + 7) / 8; /* round up */
 
-        shift_bits(dst, offsetInBits & 7, lengthInBits);
-        restore_msg_start_end(dst, offsetInBits & 7, lengthInBits, save_start, save_end);
+        SNOW3G_F8_1_BUFFER(pHandle, pIV, dst, dst, len_bytes);
+
+        msg_shr(dst, off_bits, lengthInBits);
+        msg_restore_start_end(dst, off_bits, lengthInBits, save_start, save_end);
 }
 
 /**
