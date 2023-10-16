@@ -521,10 +521,8 @@ mksection .text
 %define %%NUM_BLOCKS     %11 ;; [in] Number of state blocks to prepare (numerical)
 
         ;; Prepare next 4 states (or 2, if 2 or less blocks left)
-        vmovdqu %%STATE_IN_B_L, [%%KEY]      ; Load key bytes 0-15
-        vmovdqu %%STATE_IN_C_L, [%%KEY + 16] ; Load key bytes 16-31
-        vperm2i128 %%STATE_IN_B_L,%%STATE_IN_B_L, 0x0
-        vperm2i128 %%STATE_IN_C_L, %%STATE_IN_C_L, 0x0
+        vbroadcasti128  %%STATE_IN_B_L, [%%KEY]      ; Load key bytes 0-15
+        vbroadcasti128  %%STATE_IN_C_L, [%%KEY + 16] ; Load key bytes 16-31
         vmovq   XWORD(%%STATE_IN_D_L), [%%IV]
         vpinsrd XWORD(%%STATE_IN_D_L), [%%IV + 8], 2
         vpslldq %%STATE_IN_D_L, 4
