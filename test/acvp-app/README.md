@@ -21,6 +21,8 @@ See intel-ipsec-mb [README](https://github.com/intel/intel-ipsec-mb/blob/main/RE
 Before running the application, ensure the library is installed by following the instructions
 in the [README](https://github.com/intel/intel-ipsec-mb/tree/main/test#library-installation).
 Installation of [libacvp](https://github.com/cisco/libacvp) is also required. Please follow its build and install instructions.
+Minimum version of libacvp is v2.0.
+
 ### Linux
 To perform AES-GCM validation:  
 `./imb-acvp --req AES-GCM-req.json --resp AES-GCM-resp.json`  

@@ -37,8 +37,13 @@
 #define MAX_TAG_LENGTH 16
 
 static ACVP_RESULT
-logger(char *msg)
+logger(char *msg, ACVP_LOG_LVL level)
 {
+        if (level == ACVP_LOG_LVL_ERR)
+                printf("[ERROR] ");
+        else if (level == ACVP_LOG_LVL_WARN)
+                printf("[WARNING] ");
+
         printf("%s", msg);
         return ACVP_SUCCESS;
 }

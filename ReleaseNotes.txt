@@ -17,6 +17,7 @@ Test Applications
 - SM4-ECB and SM4-CBC tests added.
 - SM3 tests added.
 - Self-Test callback support added to the KAT-APP.
+- Updated ACVP app (imb-acvp) to support libacvp v2.0+.
 
 Performance Applications
 - New parameter added to benchmark QUIC `--quic-api`.

@@ -750,6 +750,8 @@ ACVP test application located in `test` directory is to support CAVP process. It
 - HMAC-SHA384 (HMAC-SHA2-384)  
 - HMAC-SHA512 (HMAC-SHA2-512)  
 
+Note: the acvp-app requires libacvp 2.0+ to be built.
+
 ### CAVP Algorithm Parameters
 
 **Note:** all sizes in bits
