@@ -38,76 +38,8 @@ set(TEST_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../include)
 ########################################
 # set imb-kat source files
 ########################################
-set(TEST_APP_SRC_FILES
-  ${CMAKE_CURRENT_SOURCE_DIR}/main.c
-  ${CMAKE_CURRENT_SOURCE_DIR}/gcm_test.c
-  ${CMAKE_CURRENT_SOURCE_DIR}/ctr_test.c
-  ${CMAKE_CURRENT_SOURCE_DIR}/customop_test.c
-  ${CMAKE_CURRENT_SOURCE_DIR}/des_test.c
-  ${CMAKE_CURRENT_SOURCE_DIR}/ccm_test.c
-  ${CMAKE_CURRENT_SOURCE_DIR}/cmac_test.c
-  ${CMAKE_CURRENT_SOURCE_DIR}/hmac_sha1_test.c
-  ${CMAKE_CURRENT_SOURCE_DIR}/hmac_sha256_sha512_test.c
-  ${CMAKE_CURRENT_SOURCE_DIR}/hmac_md5_test.c
-  ${CMAKE_CURRENT_SOURCE_DIR}/aes_test.c
-  ${CMAKE_CURRENT_SOURCE_DIR}/sha_test.c
-  ${CMAKE_CURRENT_SOURCE_DIR}/chained_test.c
-  ${CMAKE_CURRENT_SOURCE_DIR}/api_test.c
-  ${CMAKE_CURRENT_SOURCE_DIR}/pon_test.c
-  ${CMAKE_CURRENT_SOURCE_DIR}/ecb_test.c
-  ${CMAKE_CURRENT_SOURCE_DIR}/zuc_test.c
-  ${CMAKE_CURRENT_SOURCE_DIR}/kasumi_test.c
-  ${CMAKE_CURRENT_SOURCE_DIR}/snow3g_test.c
-  ${CMAKE_CURRENT_SOURCE_DIR}/direct_api_test.c
-  ${CMAKE_CURRENT_SOURCE_DIR}/clear_mem_test.c
-  ${CMAKE_CURRENT_SOURCE_DIR}/hec_test.c
-  ${CMAKE_CURRENT_SOURCE_DIR}/xcbc_test.c
-  ${CMAKE_CURRENT_SOURCE_DIR}/aes_cbcs_test.c
-  ${CMAKE_CURRENT_SOURCE_DIR}/crc_test.c
-  ${CMAKE_CURRENT_SOURCE_DIR}/chacha_test.c
-  ${CMAKE_CURRENT_SOURCE_DIR}/poly1305_test.c
-  ${CMAKE_CURRENT_SOURCE_DIR}/chacha20_poly1305_test.c
-  ${CMAKE_CURRENT_SOURCE_DIR}/null_test.c
-  ${CMAKE_CURRENT_SOURCE_DIR}/snow_v_test.c
-  ${CMAKE_CURRENT_SOURCE_DIR}/direct_api_param_test.c
-  ${CMAKE_CURRENT_SOURCE_DIR}/quic_ecb_test.c
-  ${CMAKE_CURRENT_SOURCE_DIR}/quic_chacha20_test.c
-  ${CMAKE_CURRENT_SOURCE_DIR}/gmac_test.c
-  ${CMAKE_CURRENT_SOURCE_DIR}/ghash_test.c
-  ${CMAKE_CURRENT_SOURCE_DIR}/aes_cbc_test.c
-  ${CMAKE_CURRENT_SOURCE_DIR}/aes_cfb_test.c
-  ${CMAKE_CURRENT_SOURCE_DIR}/hmac_sha1.json.c
-  ${CMAKE_CURRENT_SOURCE_DIR}/hmac_sha224.json.c
-  ${CMAKE_CURRENT_SOURCE_DIR}/hmac_sha256.json.c
-  ${CMAKE_CURRENT_SOURCE_DIR}/hmac_sha384.json.c
-  ${CMAKE_CURRENT_SOURCE_DIR}/hmac_sha512.json.c
-  ${CMAKE_CURRENT_SOURCE_DIR}/hmac_md5.json.c
-  ${CMAKE_CURRENT_SOURCE_DIR}/gmac_test.json.c
-  ${CMAKE_CURRENT_SOURCE_DIR}/ghash_test.json.c
-  ${CMAKE_CURRENT_SOURCE_DIR}/poly1305_test.json.c
-  ${CMAKE_CURRENT_SOURCE_DIR}/cmac_test.json.c
-  ${CMAKE_CURRENT_SOURCE_DIR}/xcbc_test.json.c
-  ${CMAKE_CURRENT_SOURCE_DIR}/sha_test.json.c
-  ${CMAKE_CURRENT_SOURCE_DIR}/aes_cbcs_test.json.c
-  ${CMAKE_CURRENT_SOURCE_DIR}/aes_cbc_test.json.c
-  ${CMAKE_CURRENT_SOURCE_DIR}/aes_cfb_test.json.c
-  ${CMAKE_CURRENT_SOURCE_DIR}/ctr_test.json.c
-  ${CMAKE_CURRENT_SOURCE_DIR}/ecb_test.json.c
-  ${CMAKE_CURRENT_SOURCE_DIR}/chacha_test.json.c
-  ${CMAKE_CURRENT_SOURCE_DIR}/des_test.json.c
-  ${CMAKE_CURRENT_SOURCE_DIR}/gcm_test.json.c
-  ${CMAKE_CURRENT_SOURCE_DIR}/chacha20_poly1305_test.json.c
-  ${CMAKE_CURRENT_SOURCE_DIR}/ccm_test.json.c
-  ${CMAKE_CURRENT_SOURCE_DIR}/snow3g_test_f8_vectors.json.c
-  ${CMAKE_CURRENT_SOURCE_DIR}/snow3g_test_f9_vectors.json.c
-  ${CMAKE_CURRENT_SOURCE_DIR}/sm4_ecb_test.c
-  ${CMAKE_CURRENT_SOURCE_DIR}/sm4_ecb_test.json.c
-  ${CMAKE_CURRENT_SOURCE_DIR}/sm4_cbc_test.c
-  ${CMAKE_CURRENT_SOURCE_DIR}/sm4_cbc_test.json.c
-  ${CMAKE_CURRENT_SOURCE_DIR}/sm3_test.c
-  ${CMAKE_CURRENT_SOURCE_DIR}/sm3_test.json.c
-  ${CMAKE_CURRENT_SOURCE_DIR}/../common/utils.c
-)
+file(GLOB TEST_APP_SRC_FILES "${CMAKE_CURRENT_SOURCE_DIR}/*.c")
+list(APPEND TEST_APP_SRC_FILES ${CMAKE_CURRENT_SOURCE_DIR}/../common/utils.c)
 
 ########################################
 # set C compiler and NASM options

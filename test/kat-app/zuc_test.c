@@ -43,6 +43,7 @@
 #include "zuc_test_vectors.h"
 #include "gcm_ctr_vectors_test.h"
 #include "utils.h"
+#include "mac_test.h"
 
 #define MAXBUFS     17
 #define PASS_STATUS 0
@@ -55,6 +56,14 @@ enum api_type { TEST_DIRECT_API, TEST_SINGLE_JOB_API, TEST_BURST_JOB_API };
 
 int
 zuc_test(struct IMB_MGR *mb_mgr);
+
+extern const struct mac_test zuc_eia3_128_test_json[];
+
+struct zuc_eia3_128_params {
+        const uint32_t *count;
+        const uint8_t *bearer;
+        const uint8_t *direction;
+};
 
 int
 validate_zuc_algorithm(struct IMB_MGR *mb_mgr, uint8_t *pSrcData, uint8_t *pDstData, uint8_t *pKeys,
@@ -971,6 +980,19 @@ validate_zuc256_EEA3(struct IMB_MGR *mb_mgr, uint8_t **pSrcData, uint8_t **pDstD
         return ret;
 }
 
+/**
+ * Count, Bearer and Direction stored in vector IV field
+ */
+static void
+zuc_eia3_128_set_params(const struct mac_test *v, struct zuc_eia3_128_params *p)
+{
+        const uint8_t *params = (const uint8_t *) v->iv;
+
+        p->count = (const uint32_t *) &params[0];
+        p->bearer = &params[4];
+        p->direction = &params[5];
+}
+
 int
 validate_zuc_EIA_1_block(struct IMB_MGR *mb_mgr, uint8_t *pSrcData, uint8_t *pDstData,
                          uint8_t *pKeys, uint8_t *pIV, const enum api_type type)
@@ -978,19 +1000,21 @@ validate_zuc_EIA_1_block(struct IMB_MGR *mb_mgr, uint8_t *pSrcData, uint8_t *pDs
         uint32_t i;
         int ret = 0;
         uint32_t bitLength;
+        const struct mac_test *v = zuc_eia3_128_test_json;
 
-        for (i = 0; i < NUM_ZUC_EIA3_TESTS; i++) {
+        for (i = 0; v[i].msg != NULL; i++) {
                 const unsigned int iv_len = IMB_ZUC_IV_LEN_IN_BYTES;
+                struct zuc_eia3_128_params p = { 0 };
 
-                memcpy(pKeys, testEIA3_vectors[i].CK, IMB_ZUC_KEY_LEN_IN_BYTES);
+                memcpy(pKeys, v[i].key, IMB_ZUC_KEY_LEN_IN_BYTES);
 
-                zuc_eia3_iv_gen(testEIA3_vectors[i].count, testEIA3_vectors[i].Bearer,
-                                testEIA3_vectors[i].Direction, pIV);
-                bitLength = testEIA3_vectors[i].length_in_bits;
+                zuc_eia3_128_set_params(&v[i], &p);
+                zuc_eia3_iv_gen(*p.count, *p.bearer, *p.direction, pIV);
+                bitLength = (uint32_t) v[i].msgSize;
 
                 const uint32_t byteLength = (bitLength + 7) / 8;
 
-                memcpy(pSrcData, testEIA3_vectors[i].message, byteLength);
+                memcpy(pSrcData, v[i].msg, byteLength);
                 if (type == TEST_SINGLE_JOB_API)
                         submit_eia3_jobs(mb_mgr, &pKeys, &pIV, &pSrcData, &pDstData, &bitLength, 1,
                                          IMB_ZUC_KEY_LEN_IN_BYTES, IMB_ZUC_DIGEST_LEN_IN_BYTES,
@@ -998,11 +1022,10 @@ validate_zuc_EIA_1_block(struct IMB_MGR *mb_mgr, uint8_t *pSrcData, uint8_t *pDs
                 else /* TEST_DIRECT_API */
                         IMB_ZUC_EIA3_1_BUFFER(mb_mgr, pKeys, pIV, pSrcData, bitLength,
                                               (uint32_t *) pDstData);
-                const int retTmp = memcmp(pDstData, &testEIA3_vectors[i].mac,
-                                          sizeof(((struct test128EIA3_vectors_t *) 0)->mac));
+                const int retTmp = memcmp(pDstData, v[i].tag, v[i].tagSize / 8);
                 if (retTmp) {
-                        printf("Validate ZUC 1 block  test %u (Int): FAIL\n", i + 1);
-                        byte_hexdump("Expected", (const uint8_t *) &testEIA3_vectors[i].mac,
+                        printf("Validate ZUC 1 block  test %zu (Int): FAIL\n", v[i].tcId);
+                        byte_hexdump("Expected", (const uint8_t *) v[i].tag,
                                      IMB_ZUC_DIGEST_LEN_IN_BYTES);
                         byte_hexdump("Found", pDstData, IMB_ZUC_DIGEST_LEN_IN_BYTES);
                         ret = retTmp;
@@ -1010,9 +1033,9 @@ validate_zuc_EIA_1_block(struct IMB_MGR *mb_mgr, uint8_t *pSrcData, uint8_t *pDs
 #ifdef DEBUG
                 else {
                         if (!quiet_mode)
-                                printf("Validate ZUC 1 block  test %u (Int): "
-                                       "PASS\n",
-                                       i + 1);
+                                printf("ZUC-EIA3 128 1 block vector %zu Message length: %zu, "
+                                       "Tag length: %zu\n",
+                                       v[i].tcId, v[i].msgSize / 8, v[i].tagSize / 8);
                 }
 #endif
                 fflush(stdout);
@@ -1025,22 +1048,32 @@ validate_zuc_EIA_n_block(struct IMB_MGR *mb_mgr, uint8_t **pSrcData, uint8_t **p
                          uint8_t **pKeys, uint8_t **pIV, uint32_t numBuffs,
                          const enum api_type type)
 {
-        uint32_t i, j;
+        uint32_t i, j, num_vectors = 0;
         int retTmp, ret = 0;
         uint32_t byteLength;
         uint32_t bitLength[MAXBUFS];
-        struct test128EIA3_vectors_t vector;
         unsigned int iv_lens[MAXBUFS];
+        const struct mac_test *v = zuc_eia3_128_test_json;
 
-        for (i = 0; i < NUM_ZUC_EIA3_TESTS; i++) {
-                vector = testEIA3_vectors[i];
+        /* calculate number of test vectors */
+        for (i = 0; v[i].msg != NULL; i++)
+                num_vectors++;
+
+        if (num_vectors == 0) {
+                printf("ZUC-EIA3 128 N block - No vectors found!\n");
+                return 1;
+        }
+
+        for (i = 0; i < num_vectors; i++) {
                 for (j = 0; j < numBuffs; j++) {
-                        memcpy(pKeys[j], vector.CK, IMB_ZUC_KEY_LEN_IN_BYTES);
+                        struct zuc_eia3_128_params p = { 0 };
+                        memcpy(pKeys[j], v[i].key, IMB_ZUC_KEY_LEN_IN_BYTES);
 
-                        zuc_eia3_iv_gen(vector.count, vector.Bearer, vector.Direction, pIV[j]);
-                        bitLength[j] = vector.length_in_bits;
+                        zuc_eia3_128_set_params(&v[i], &p);
+                        zuc_eia3_iv_gen(*p.count, *p.bearer, *p.direction, pIV[j]);
+                        bitLength[j] = (uint32_t) v[i].msgSize;
                         byteLength = (bitLength[j] + 7) / 8;
-                        memcpy(pSrcData[j], vector.message, byteLength);
+                        memcpy(pSrcData[j], v[i].msg, byteLength);
                         iv_lens[j] = IMB_ZUC_IV_LEN_IN_BYTES;
                 }
                 if (type == TEST_SINGLE_JOB_API)
@@ -1058,12 +1091,12 @@ validate_zuc_EIA_n_block(struct IMB_MGR *mb_mgr, uint8_t **pSrcData, uint8_t **p
                                               (uint32_t **) pDstData, numBuffs);
 
                 for (j = 0; j < numBuffs; j++) {
-                        retTmp = memcmp(pDstData[j], &vector.mac, IMB_ZUC_DIGEST_LEN_IN_BYTES);
+                        retTmp = memcmp(pDstData[j], v[i].tag, IMB_ZUC_DIGEST_LEN_IN_BYTES);
                         if (retTmp) {
-                                printf("Validate ZUC n block test %u, index %u "
-                                       "(Int): FAIL\n",
-                                       i + 1, j);
-                                byte_hexdump("Expected", (const uint8_t *) &vector.mac,
+                                printf("ZUC-EIA3 128 N block #jobs: %d, vector %zu Message "
+                                       "length: %zu, Tag length: %zu\n",
+                                       numBuffs, v[i].tcId, v[i].msgSize / 8, v[i].tagSize / 8);
+                                byte_hexdump("Expected", (const uint8_t *) v[i].tag,
                                              IMB_ZUC_DIGEST_LEN_IN_BYTES);
                                 byte_hexdump("Found", pDstData[j], IMB_ZUC_DIGEST_LEN_IN_BYTES);
                                 ret = retTmp;
@@ -1071,9 +1104,10 @@ validate_zuc_EIA_n_block(struct IMB_MGR *mb_mgr, uint8_t **pSrcData, uint8_t **p
 #ifdef DEBUG
                         else {
                                 if (!quiet_mode)
-                                        printf("Validate ZUC n block test %u, "
-                                               "index %u (Int): PASS\n",
-                                               i + 1, j);
+                                        printf("ZUC-EIA3 128 N block #jobs: %d, vector %zu Message "
+                                               "length: %zu, Tag length: %zu\n",
+                                               numBuffs, v[i].tcId, v[i].msgSize / 8,
+                                               v[i].tagSize / 8);
                         }
 #endif
                         fflush(stdout);
@@ -1083,14 +1117,16 @@ validate_zuc_EIA_n_block(struct IMB_MGR *mb_mgr, uint8_t **pSrcData, uint8_t **p
         /* Generate digests for n different test vectors,
          * grouping all available tests vectors in groups of N buffers */
         for (i = 0; i < numBuffs; i++) {
-                vector = testEIA3_vectors[i % NUM_ZUC_EIA3_TESTS];
-                memcpy(pKeys[i], vector.CK, IMB_ZUC_KEY_LEN_IN_BYTES);
+                const int vec_idx = i % num_vectors;
+                struct zuc_eia3_128_params p = { 0 };
+                memcpy(pKeys[i], v[vec_idx].key, IMB_ZUC_KEY_LEN_IN_BYTES);
 
-                zuc_eia3_iv_gen(vector.count, vector.Bearer, vector.Direction, pIV[i]);
-                bitLength[i] = vector.length_in_bits;
+                zuc_eia3_128_set_params(&v[vec_idx], &p);
+                zuc_eia3_iv_gen(*p.count, *p.bearer, *p.direction, pIV[i]);
+                bitLength[i] = (uint32_t) v[vec_idx].msgSize;
                 byteLength = (bitLength[i] + 7) / 8;
-                memcpy(pSrcData[i], vector.message, byteLength);
-                iv_lens[j] = IMB_ZUC_IV_LEN_IN_BYTES;
+                memcpy(pSrcData[i], v[vec_idx].msg, byteLength);
+                iv_lens[i] = IMB_ZUC_IV_LEN_IN_BYTES;
         }
 
         if (type == TEST_SINGLE_JOB_API)
@@ -1106,14 +1142,14 @@ validate_zuc_EIA_n_block(struct IMB_MGR *mb_mgr, uint8_t **pSrcData, uint8_t **p
                                       bitLength, (uint32_t **) pDstData, numBuffs);
 
         for (i = 0; i < numBuffs; i++) {
-                vector = testEIA3_vectors[i % NUM_ZUC_EIA3_TESTS];
-                retTmp = memcmp(pDstData[i], &vector.mac,
-                                sizeof(((struct test128EIA3_vectors_t *) 0)->mac));
+                const int vec_idx = i % num_vectors;
+                retTmp = memcmp(pDstData[i], v[vec_idx].tag, v[vec_idx].tagSize / 8);
                 if (retTmp) {
-                        printf("Validate ZUC n block multi-vector test "
-                               "# jobs = %u, index %u (Int): FAIL\n",
-                               numBuffs, i);
-                        byte_hexdump("Expected", (const uint8_t *) &vector.mac,
+                        printf("ZUC-EIA3 128 N block #jobs: %d, vector %zu Message "
+                               "length: %zu, Tag length: %zu\n",
+                               numBuffs, v[vec_idx].tcId, v[vec_idx].msgSize / 8,
+                               v[vec_idx].tagSize / 8);
+                        byte_hexdump("Expected", (const uint8_t *) v[vec_idx].tag,
                                      IMB_ZUC_DIGEST_LEN_IN_BYTES);
                         byte_hexdump("Found", pDstData[i], IMB_ZUC_DIGEST_LEN_IN_BYTES);
                         ret = retTmp;
@@ -1121,9 +1157,10 @@ validate_zuc_EIA_n_block(struct IMB_MGR *mb_mgr, uint8_t **pSrcData, uint8_t **p
 #ifdef DEBUG
                 else {
                         if (!quiet_mode)
-                                printf("Validate ZUC n block multi-vector test,"
-                                       " #jobs = %u, index %u (Int): PASS\n",
-                                       numBuffs, i);
+                                printf("ZUC-EIA3 128 N block #jobs: %d, vector %zu Message "
+                                       "length: %zu, Tag length: %zu\n",
+                                       numBuffs, v[vec_idx].tcId, v[vec_idx].msgSize / 8,
+                                       v[vec_idx].tagSize / 8);
                 }
 #endif
                 fflush(stdout);
