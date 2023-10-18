@@ -36,9 +36,9 @@
 #include "include/arch_sse_type1.h"
 #include "include/arch_avx_type1.h"
 
-static uint32_t in[4 * 3] = { 0x01010101, 0x01010101, 0x01010101, 0x01010101,
-                              0x02020202, 0x02020202, 0x02020202, 0x02020202,
-                              0x03030303, 0x03030303, 0x03030303, 0x03030303 };
+static const uint32_t in[4 * 3] = { 0x01010101, 0x01010101, 0x01010101, 0x01010101,
+                                    0x02020202, 0x02020202, 0x02020202, 0x02020202,
+                                    0x03030303, 0x03030303, 0x03030303, 0x03030303 };
 
 void
 aes_xcbc_expand_key_sse(const void *key, void *k1_exp, void *k2, void *k3)
