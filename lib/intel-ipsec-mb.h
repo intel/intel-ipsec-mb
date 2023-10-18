@@ -1732,6 +1732,13 @@ init_mb_mgr_auto(IMB_MGR *state, IMB_ARCH *arch);
 #define IMB_AES_XCBC_KEYEXP(_mgr, _key, _exp_key, _exp_key2, _exp_key3)                            \
         ((_mgr)->xcbc_keyexp((_key), (_exp_key), (_exp_key2), (_exp_key3)))
 
+/**
+ * Generate DES key schedule
+ *
+ * @param[in] _mgr         Pointer to multi-buffer structure
+ * @param[out] _exp_key    DES key schedule
+ * @param[in] _key         input key
+ */
 #define IMB_DES_KEYSCHED(_mgr, _exp_key, _key) ((_mgr)->des_key_sched((_exp_key), (_key)))
 
 /* Hash API's */
@@ -1757,9 +1764,13 @@ init_mb_mgr_auto(IMB_MGR *state, IMB_ARCH *arch);
 /**
  * Authenticate 64-byte data buffer with SHA224.
  *
+ * @note The output \a tag is 32 bytes long (not 28 bytes).
+ *       This is needed for HMAC IPAD and OPAD computation
+ *       where full 8 word digest is required.
+ *
  * @param[in] _mgr    Pointer to multi-buffer structure
  * @param[in] _src    64-byte data buffer
- * @param[out] _tag   Digest output (28 bytes)
+ * @param[out] _tag   Digest output (32 bytes)
  */
 #define IMB_SHA224_ONE_BLOCK(_mgr, _src, _tag) ((_mgr)->sha224_one_block((_src), (_tag)))
 
@@ -1792,9 +1803,13 @@ init_mb_mgr_auto(IMB_MGR *state, IMB_ARCH *arch);
 /**
  * Authenticate 128-byte data buffer with SHA384.
  *
+ * @note The output \a tag is 64 bytes long, not 48 bytes.
+ *       This is needed for HMAC IPAD and OPAD computation
+ *       where full 8 word digest is required.
+ *
  * @param[in] _mgr    Pointer to multi-buffer structure
  * @param[in] _src    128-byte data buffer
- * @param[out] _tag   Digest output (48 bytes)
+ * @param[out] _tag   Digest output (64 bytes)
  */
 #define IMB_SHA384_ONE_BLOCK(_mgr, _src, _tag) ((_mgr)->sha384_one_block((_src), (_tag)))
 /**
@@ -2443,9 +2458,23 @@ init_mb_mgr_auto(IMB_MGR *state, IMB_ARCH *arch);
 #define IMB_SNOW3G_KEY_SCHED_SIZE(_mgr) ((_mgr)->snow3g_key_sched_size())
 
 /**
- *  HEC compute functions
+ * HEC (hybrid error coding) compute and header update for 32-bit XGEM header
+ *
+ * @param [in] _mgr           Pointer to initialized IMB_MGR structure
+ * @param [in] _src           Pointer to XGEM header (4 bytes)
+ *
+ * @return 32-bit XGEM header with updated HEC in BE format (ready for store)
  */
 #define IMB_HEC_32(_mgr, _src) ((_mgr)->hec_32(_src))
+
+/**
+ * HEC (hybrid error coding) compute and header update for 64-bit XGEM header
+ *
+ * @param [in] _mgr           Pointer to initialized IMB_MGR structure
+ * @param [in] _src           Pointer to XGEM header (8 bytes)
+ *
+ * @return 64-bit XGEM header with updated HEC in BE format (ready for store)
+ */
 #define IMB_HEC_64(_mgr, _src) ((_mgr)->hec_64(_src))
 
 /**
@@ -2509,7 +2538,12 @@ init_mb_mgr_auto(IMB_MGR *state, IMB_ARCH *arch);
 #define IMB_CRC8_WIMAX_OFDMA_HCS(_mgr, _src, _len) (_mgr)->crc8_wimax_ofdma_hcs(_src, _len)
 
 /**
- *  SM4 key expansion
+ * SM4 key expansion
+ *
+ * @param [in] _mgr           Pointer to initialized IMB_MGR structure
+ * @param [in] _key           Input key (16 bytes)
+ * @param [out] _exp_enc_key  Encrypt direction key schedule (128 bytes)
+ * @param [out] _exp_dec_key  Decrypt direction key schedule (128 bytes)
  */
 #define IMB_SM4_KEYEXP(_mgr, _key, _exp_enc_key, _exp_dec_key)                                     \
         ((_mgr)->sm4_keyexp((_key), (_exp_enc_key), (_exp_dec_key)))
@@ -3618,7 +3652,7 @@ zuc_eia3_iv_gen(const uint32_t count, const uint8_t bearer, const uint8_t dir, v
  * @param [in] count   COUNT (4 bytes in Little Endian)
  * @param [in] bearer  BEARER (5 bits)
  * @param [in] dir     DIRECTION (1 bit)
- * @param [out] iv_ptr Pointer to generated IV (16 bytes)
+ * @param [out] iv_ptr Pointer to generated IV (8 bytes)
  *
  * @return Operation status
  * @retval 0 success
@@ -3631,7 +3665,7 @@ kasumi_f8_iv_gen(const uint32_t count, const uint8_t bearer, const uint8_t dir, 
  *
  * @param [in] count   COUNT (4 bytes in Little Endian)
  * @param [in] fresh   FRESH (4 bytes in Little Endian)
- * @param [out] iv_ptr Pointer to generated IV (16 bytes)
+ * @param [out] iv_ptr Pointer to generated IV (8 bytes)
  *
  * @return Operation status
  * @retval 0 success
