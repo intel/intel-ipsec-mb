@@ -31,8 +31,8 @@
 /**
  *  Note: ZUC IV params stored in vector IV field
  *  uin32_t count = iv[0-3]
- *  uint8_t Bearer = iv[4]
- *  uint8_t Direction = iv[5]
+ *  uint8_t bearer = iv[4]
+ *  uint8_t direction = iv[5]
  */
 const struct mac_test zuc_eia3_128_test_json[] = {
         { 128, 32, 1, "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00",
