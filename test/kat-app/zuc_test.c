@@ -58,6 +58,7 @@ int
 zuc_test(struct IMB_MGR *mb_mgr);
 
 extern const struct mac_test zuc_eia3_128_test_json[];
+extern const struct mac_test zuc_eia3_256_test_json[];
 
 struct zuc_eia3_128_params {
         const uint32_t *count;
@@ -505,7 +506,7 @@ static inline int
 submit_burst_eia3_jobs(struct IMB_MGR *mb_mgr, uint8_t **const keys, uint8_t **const iv,
                        uint8_t **const src, uint8_t **const tags, const uint32_t *lens,
                        const unsigned int num_jobs, const unsigned int key_sz,
-                       const unsigned int tag_sz, const unsigned int *iv_lens)
+                       const size_t *tag_lens, const size_t *iv_lens)
 {
         IMB_JOB *job, *jobs[MAX_BURST_JOBS] = { NULL };
         unsigned int i;
@@ -537,7 +538,7 @@ submit_burst_eia3_jobs(struct IMB_MGR *mb_mgr, uint8_t **const keys, uint8_t **c
                 else
                         job->hash_alg = IMB_AUTH_ZUC256_EIA3_BITLEN;
                 job->auth_tag_output = tags[i];
-                job->auth_tag_output_len_in_bytes = tag_sz;
+                job->auth_tag_output_len_in_bytes = tag_lens[i];
 
                 imb_set_session(mb_mgr, job);
         }
@@ -576,8 +577,8 @@ check_eia3_burst_jobs:
 static inline int
 submit_eia3_jobs(struct IMB_MGR *mb_mgr, uint8_t **const keys, uint8_t **const iv,
                  uint8_t **const src, uint8_t **const tags, const uint32_t *lens,
-                 const unsigned int num_jobs, const unsigned int key_sz, const unsigned int tag_sz,
-                 const unsigned int *iv_lens)
+                 const unsigned int num_jobs, const unsigned int key_sz, const size_t *tag_lens,
+                 const size_t *iv_lens)
 {
         IMB_JOB *job;
         unsigned int i;
@@ -604,7 +605,7 @@ submit_eia3_jobs(struct IMB_MGR *mb_mgr, uint8_t **const keys, uint8_t **const i
                 else
                         job->hash_alg = IMB_AUTH_ZUC256_EIA3_BITLEN;
                 job->auth_tag_output = tags[i];
-                job->auth_tag_output_len_in_bytes = tag_sz;
+                job->auth_tag_output_len_in_bytes = tag_lens[i];
 
                 job = IMB_SUBMIT_JOB(mb_mgr);
                 if (job != NULL) {
@@ -1003,8 +1004,9 @@ validate_zuc_EIA_1_block(struct IMB_MGR *mb_mgr, uint8_t *pSrcData, uint8_t *pDs
         const struct mac_test *v = zuc_eia3_128_test_json;
 
         for (i = 0; v[i].msg != NULL; i++) {
-                const unsigned int iv_len = IMB_ZUC_IV_LEN_IN_BYTES;
                 struct zuc_eia3_128_params p = { 0 };
+                const size_t iv_len = v[i].ivSize / 8;
+                const size_t tag_len = IMB_ZUC_DIGEST_LEN_IN_BYTES;
 
                 memcpy(pKeys, v[i].key, IMB_ZUC_KEY_LEN_IN_BYTES);
 
@@ -1017,14 +1019,13 @@ validate_zuc_EIA_1_block(struct IMB_MGR *mb_mgr, uint8_t *pSrcData, uint8_t *pDs
                 memcpy(pSrcData, v[i].msg, byteLength);
                 if (type == TEST_SINGLE_JOB_API)
                         submit_eia3_jobs(mb_mgr, &pKeys, &pIV, &pSrcData, &pDstData, &bitLength, 1,
-                                         IMB_ZUC_KEY_LEN_IN_BYTES, IMB_ZUC_DIGEST_LEN_IN_BYTES,
-                                         &iv_len);
+                                         IMB_ZUC_KEY_LEN_IN_BYTES, &tag_len, &iv_len);
                 else /* TEST_DIRECT_API */
                         IMB_ZUC_EIA3_1_BUFFER(mb_mgr, pKeys, pIV, pSrcData, bitLength,
                                               (uint32_t *) pDstData);
                 const int retTmp = memcmp(pDstData, v[i].tag, v[i].tagSize / 8);
                 if (retTmp) {
-                        printf("Validate ZUC 1 block  test %zu (Int): FAIL\n", v[i].tcId);
+                        printf("Validate ZUC 1 block test %zu (Int): FAIL\n", v[i].tcId);
                         byte_hexdump("Expected", (const uint8_t *) v[i].tag,
                                      IMB_ZUC_DIGEST_LEN_IN_BYTES);
                         byte_hexdump("Found", pDstData, IMB_ZUC_DIGEST_LEN_IN_BYTES);
@@ -1052,7 +1053,8 @@ validate_zuc_EIA_n_block(struct IMB_MGR *mb_mgr, uint8_t **pSrcData, uint8_t **p
         int retTmp, ret = 0;
         uint32_t byteLength;
         uint32_t bitLength[MAXBUFS];
-        unsigned int iv_lens[MAXBUFS];
+        size_t iv_lens[MAXBUFS];
+        size_t tag_lens[MAXBUFS];
         const struct mac_test *v = zuc_eia3_128_test_json;
 
         /* calculate number of test vectors */
@@ -1075,15 +1077,15 @@ validate_zuc_EIA_n_block(struct IMB_MGR *mb_mgr, uint8_t **pSrcData, uint8_t **p
                         byteLength = (bitLength[j] + 7) / 8;
                         memcpy(pSrcData[j], v[i].msg, byteLength);
                         iv_lens[j] = IMB_ZUC_IV_LEN_IN_BYTES;
+                        tag_lens[j] = v[i].tagSize / 8;
                 }
                 if (type == TEST_SINGLE_JOB_API)
                         submit_eia3_jobs(mb_mgr, pKeys, pIV, pSrcData, pDstData, bitLength,
-                                         numBuffs, IMB_ZUC_KEY_LEN_IN_BYTES,
-                                         IMB_ZUC_DIGEST_LEN_IN_BYTES, iv_lens);
+                                         numBuffs, IMB_ZUC_KEY_LEN_IN_BYTES, tag_lens, iv_lens);
                 else if (type == TEST_BURST_JOB_API)
                         submit_burst_eia3_jobs(mb_mgr, pKeys, pIV, pSrcData, pDstData, bitLength,
-                                               numBuffs, IMB_ZUC_KEY_LEN_IN_BYTES,
-                                               IMB_ZUC_DIGEST_LEN_IN_BYTES, iv_lens);
+                                               numBuffs, IMB_ZUC_KEY_LEN_IN_BYTES, tag_lens,
+                                               iv_lens);
                 else /* TEST_BURST_JOB_API */
                         IMB_ZUC_EIA3_N_BUFFER(mb_mgr, (const void *const *) pKeys,
                                               (const void *const *) pIV,
@@ -1127,15 +1129,15 @@ validate_zuc_EIA_n_block(struct IMB_MGR *mb_mgr, uint8_t **pSrcData, uint8_t **p
                 byteLength = (bitLength[i] + 7) / 8;
                 memcpy(pSrcData[i], v[vec_idx].msg, byteLength);
                 iv_lens[i] = IMB_ZUC_IV_LEN_IN_BYTES;
+                tag_lens[i] = v[vec_idx].tagSize / 8;
         }
 
         if (type == TEST_SINGLE_JOB_API)
                 submit_eia3_jobs(mb_mgr, pKeys, pIV, pSrcData, pDstData, bitLength, numBuffs,
-                                 IMB_ZUC_KEY_LEN_IN_BYTES, IMB_ZUC_DIGEST_LEN_IN_BYTES, iv_lens);
+                                 IMB_ZUC_KEY_LEN_IN_BYTES, tag_lens, iv_lens);
         else if (type == TEST_BURST_JOB_API)
                 submit_burst_eia3_jobs(mb_mgr, pKeys, pIV, pSrcData, pDstData, bitLength, numBuffs,
-                                       IMB_ZUC_KEY_LEN_IN_BYTES, IMB_ZUC_DIGEST_LEN_IN_BYTES,
-                                       iv_lens);
+                                       IMB_ZUC_KEY_LEN_IN_BYTES, tag_lens, iv_lens);
         else /* TEST_BURST_JOB_API */
                 IMB_ZUC_EIA3_N_BUFFER(mb_mgr, (const void *const *) pKeys,
                                       (const void *const *) pIV, (const void *const *) pSrcData,
@@ -1169,47 +1171,38 @@ validate_zuc_EIA_n_block(struct IMB_MGR *mb_mgr, uint8_t **pSrcData, uint8_t **p
 };
 
 static int
-verify_tag_256(void *mac, const struct test256EIA3_vectors_t *vector, const unsigned tag_sz,
-               const uint32_t test_idx, const uint32_t vector_idx, const int multi_vector)
+verify_tag_256(void *mac, const struct mac_test *vector, uint32_t n_jobs, uint32_t job_idx,
+               const int multi_vector)
 {
-        const void *ref_mac = NULL;
-        int ret;
-
-        if (tag_sz == 4)
-                ref_mac = &vector->mac4;
-        else if (tag_sz == 8)
-                ref_mac = &vector->mac8;
-        else
-                ref_mac = &vector->mac16;
-
-        ret = memcmp(mac, ref_mac, tag_sz);
+        int ret = memcmp(mac, vector->tag, vector->tagSize / 8);
         if (ret) {
                 if (multi_vector) {
                         printf("Validate ZUC-256 n block multi-vector test "
-                               "# jobs = %u, index %u (Int - %u bytes): FAIL\n",
-                               test_idx, vector_idx, tag_sz);
+                               "# jobs = %u, job idx: %u, test: %zu (Int - %zu bytes): FAIL\n",
+                               n_jobs, job_idx, vector->tcId, vector->tagSize / 8);
 
                 } else {
-                        printf("Validate ZUC-256 n block test %u, "
-                               "index %u (Int - %u bytes): FAIL\n",
-                               test_idx + 1, vector_idx, tag_sz);
+                        printf("Validate ZUC-256 n block test "
+                               "# jobs = %u, job idx: %u, test: %zu (Int - %zu bytes): FAIL\n",
+                               n_jobs, job_idx, vector->tcId, vector->tagSize / 8);
                 }
-                byte_hexdump("Expected", (const uint8_t *) ref_mac, tag_sz);
-                byte_hexdump("Found", mac, tag_sz);
+                byte_hexdump("Expected", (const uint8_t *) vector->tag, (int) vector->tagSize / 8);
+                byte_hexdump("Found", mac, (int) vector->tagSize / 8);
         }
 #ifdef DEBUG
         else {
                 if (!quiet_mode) {
                         if (multi_vector) {
-                                printf("Validate ZUC-256 n block multi-vector "
-                                       "test #jobs = %u, index %u "
-                                       "(Int - %u bytes): PASS\n",
-                                       test_idx, vector_idx, tag_sz);
+                                printf("Validate ZUC-256 n block multi-vector test "
+                                       "# jobs = %u, job idx: %u, test: %zu (Int - %zu bytes): "
+                                       "PASS\n",
+                                       n_jobs, job_idx, vector->tcId, vector->tagSize / 8);
 
                         } else {
-                                printf("Validate ZUC-256 n block test %u, "
-                                       "index %u (Int - %u bytes): PASS\n",
-                                       test_idx + 1, vector_idx, tag_sz);
+                                printf("Validate ZUC-256 n block test "
+                                       "# jobs = %u, job idx: %u, test: %zu (Int - %zu bytes): "
+                                       "PASS\n",
+                                       n_jobs, job_idx, vector->tcId, vector->tagSize / 8);
                         }
                 }
         }
@@ -1223,72 +1216,78 @@ int
 validate_zuc256_EIA3(struct IMB_MGR *mb_mgr, uint8_t **pSrcData, uint8_t **pDstData,
                      uint8_t **pKeys, uint8_t **pIV, uint32_t numBuffs, const enum api_type type)
 {
-        uint32_t i, j;
+        uint32_t i, j, num_vectors = 0;
         int retTmp, ret = 0;
         uint32_t byteLength;
         uint32_t bitLength[MAXBUFS];
-        const struct test256EIA3_vectors_t *vector;
-        unsigned int iv_lens[MAXBUFS];
-        unsigned tag_sz;
+        size_t iv_lens[MAXBUFS];
+        size_t tag_lens[MAXBUFS];
 
-        for (i = 0; i < NUM_ZUC_256_EIA3_TESTS; i++) {
-                vector = &test256EIA3_vectors[i];
+        const struct mac_test *vector = zuc_eia3_256_test_json;
+
+        /* calculate number of test vectors */
+        for (i = 0; vector[i].msg != NULL; i++)
+                num_vectors++;
+
+        if (num_vectors == 0) {
+                printf("ZUC-EIA3 256 N block - No vectors found!\n");
+                return 1;
+        }
+
+        for (i = 0; i < num_vectors; i++) {
                 for (j = 0; j < numBuffs; j++) {
-                        memcpy(pKeys[j], vector->CK, IMB_ZUC256_KEY_LEN_IN_BYTES);
-                        memcpy(pIV[j], vector->IV, vector->iv_length);
-                        bitLength[j] = vector->length_in_bits;
+                        /* copy data for N buffers / jobs */
+                        memcpy(pKeys[j], vector[i].key, IMB_ZUC256_KEY_LEN_IN_BYTES);
+                        memcpy(pIV[j], vector[i].iv, vector[i].ivSize / 8);
+                        bitLength[j] = (uint32_t) vector[i].msgSize;
                         byteLength = (bitLength[j] + 7) / 8;
-                        memcpy(pSrcData[j], vector->message, byteLength);
-                        iv_lens[j] = vector->iv_length;
+                        memcpy(pSrcData[j], vector[i].msg, byteLength);
+                        iv_lens[j] = vector[i].ivSize / 8;
+                        tag_lens[j] = vector[i].tagSize / 8;
                 }
-                for (tag_sz = 4; tag_sz <= 16; tag_sz *= 2) {
-                        if (type == TEST_SINGLE_JOB_API)
-                                submit_eia3_jobs(mb_mgr, pKeys, pIV, pSrcData, pDstData, bitLength,
-                                                 numBuffs, IMB_ZUC256_KEY_LEN_IN_BYTES, tag_sz,
-                                                 iv_lens);
-                        else /* TEST_BURST_JOB_API */
-                                submit_burst_eia3_jobs(
-                                        mb_mgr, pKeys, pIV, pSrcData, pDstData, bitLength, numBuffs,
-                                        IMB_ZUC256_KEY_LEN_IN_BYTES, tag_sz, iv_lens);
+                if (type == TEST_SINGLE_JOB_API)
+                        submit_eia3_jobs(mb_mgr, pKeys, pIV, pSrcData, pDstData, bitLength,
+                                         numBuffs, IMB_ZUC256_KEY_LEN_IN_BYTES, tag_lens, iv_lens);
+                else /* TEST_BURST_JOB_API */
+                        submit_burst_eia3_jobs(mb_mgr, pKeys, pIV, pSrcData, pDstData, bitLength,
+                                               numBuffs, IMB_ZUC256_KEY_LEN_IN_BYTES, tag_lens,
+                                               iv_lens);
 
-                        for (j = 0; j < numBuffs; j++) {
-                                retTmp = verify_tag_256(pDstData[j], vector, tag_sz, i, j, 0);
-                                if (retTmp)
-                                        ret = retTmp;
-                        }
+                for (j = 0; j < numBuffs; j++) {
+
+                        retTmp = verify_tag_256(pDstData[j], &vector[i], numBuffs, j, 0);
+                        if (retTmp)
+                                ret = retTmp;
                 }
         }
 
         /* Generate digests for n different test vectors,
          * grouping all available tests vectors in groups of N buffers */
         for (i = 0; i < numBuffs; i++) {
-                vector = &test256EIA3_vectors[i % NUM_ZUC_256_EIA3_TESTS];
-                memcpy(pKeys[i], vector->CK, IMB_ZUC256_KEY_LEN_IN_BYTES);
-                memcpy(pIV[i], vector->IV, vector->iv_length);
+                const int vec_idx = i % num_vectors;
+                memcpy(pKeys[i], vector[vec_idx].key, IMB_ZUC256_KEY_LEN_IN_BYTES);
+                memcpy(pIV[i], vector[vec_idx].iv, vector[vec_idx].ivSize / 8);
 
-                bitLength[i] = vector->length_in_bits;
+                bitLength[i] = (uint32_t) vector[vec_idx].msgSize;
                 byteLength = (bitLength[i] + 7) / 8;
-                memcpy(pSrcData[i], vector->message, byteLength);
-                iv_lens[i] = vector->iv_length;
+                memcpy(pSrcData[i], vector[vec_idx].msg, byteLength);
+                iv_lens[i] = vector[vec_idx].ivSize / 8;
+                tag_lens[i] = vector[vec_idx].tagSize / 8;
         }
 
-        for (tag_sz = 4; tag_sz <= 16; tag_sz *= 2) {
-                if (type == TEST_SINGLE_JOB_API)
-                        submit_eia3_jobs(mb_mgr, pKeys, pIV, pSrcData, pDstData, bitLength,
-                                         numBuffs, IMB_ZUC256_KEY_LEN_IN_BYTES, tag_sz, iv_lens);
-                else /* TEST_BURST_JOB_API */
-                        submit_burst_eia3_jobs(mb_mgr, pKeys, pIV, pSrcData, pDstData, bitLength,
-                                               numBuffs, IMB_ZUC256_KEY_LEN_IN_BYTES, tag_sz,
-                                               iv_lens);
+        if (type == TEST_SINGLE_JOB_API)
+                submit_eia3_jobs(mb_mgr, pKeys, pIV, pSrcData, pDstData, bitLength, numBuffs,
+                                 IMB_ZUC256_KEY_LEN_IN_BYTES, tag_lens, iv_lens);
+        else /* TEST_BURST_JOB_API */
+                submit_burst_eia3_jobs(mb_mgr, pKeys, pIV, pSrcData, pDstData, bitLength, numBuffs,
+                                       IMB_ZUC256_KEY_LEN_IN_BYTES, tag_lens, iv_lens);
 
-                for (i = 0; i < numBuffs; i++) {
-                        const uint32_t vector_idx = i % NUM_ZUC_256_EIA3_TESTS;
+        for (i = 0; i < numBuffs; i++) {
+                const int vec_idx = i % num_vectors;
 
-                        vector = &test256EIA3_vectors[vector_idx];
-                        retTmp = verify_tag_256(pDstData[i], vector, tag_sz, numBuffs, i, 1);
-                        if (retTmp)
-                                ret = retTmp;
-                }
+                retTmp = verify_tag_256(pDstData[i], &vector[vec_idx], numBuffs, i, 1);
+                if (retTmp)
+                        ret = retTmp;
         }
         return ret;
 };

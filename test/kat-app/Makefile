@@ -44,7 +44,7 @@ SOURCES := main.c gcm_test.c ctr_test.c customop_test.c des_test.c ccm_test.c \
 	des_test.json.c chacha_test.json.c gcm_test.json.c ccm_test.json.c quic_chacha20_test.c \
 	chacha20_poly1305_test.json.c snow3g_test_f8_vectors.json.c snow3g_test_f9_vectors.json.c \
 	sm4_ecb_test.c sm4_ecb_test.json.c sm4_cbc_test.c sm4_cbc_test.json.c sm3_test.c \
-	sm3_test.json.c zuc_eia3_128.json.c
+	sm3_test.json.c zuc_eia3_128.json.c zuc_eia3_256.json.c
 
 OBJECTS := $(SOURCES:%.c=%.o) utils.o
 
