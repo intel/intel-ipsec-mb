@@ -30,11 +30,236 @@
 
 #include "intel-ipsec-mb.h"
 #include "include/error.h"
+#include "include/kasumi_interface.h"
+#include "include/zuc_internal.h"
 
 /* GCM NIST standard: len(M) < 2^39 - 256 */
 #define GCM_MAX_LEN       UINT64_C(((1ULL << 39) - 256) - 1)
 #define SNOW3G_MAX_BITLEN (UINT32_MAX)
 #define MB_MAX_LEN16      ((1 << 16) - 2)
+
+/* used to validate template job structure before computing session_id */
+static inline int
+is_job_invalid_light(IMB_MGR *state, const IMB_CIPHER_MODE cipher_mode, const IMB_HASH_ALG hash_alg,
+                     const IMB_CIPHER_DIRECTION cipher_direction,
+                     const IMB_KEY_SIZE_BYTES key_len_in_bytes)
+{
+        if (cipher_direction != IMB_DIR_DECRYPT && cipher_direction != IMB_DIR_ENCRYPT &&
+            cipher_mode != IMB_CIPHER_NULL) {
+                imb_set_errno(state, IMB_ERR_JOB_CIPH_DIR);
+                return 1;
+        }
+        switch (cipher_mode) {
+        case IMB_CIPHER_NULL:
+        case IMB_CIPHER_CUSTOM:
+        case IMB_CIPHER_SM4_CBC:
+        case IMB_CIPHER_SM4_ECB:
+                break;
+        case IMB_CIPHER_CBC:
+        case IMB_CIPHER_CBCS_1_9:
+        case IMB_CIPHER_ECB:
+        case IMB_CIPHER_CNTR:
+        case IMB_CIPHER_CNTR_BITLEN:
+                if (key_len_in_bytes != UINT64_C(16) && key_len_in_bytes != UINT64_C(24) &&
+                    key_len_in_bytes != UINT64_C(32)) {
+                        imb_set_errno(state, IMB_ERR_JOB_KEY_LEN);
+                        return 1;
+                }
+                break;
+        case IMB_CIPHER_DOCSIS_SEC_BPI:
+                if ((key_len_in_bytes != UINT64_C(16)) && (key_len_in_bytes != UINT64_C(32))) {
+                        imb_set_errno(state, IMB_ERR_JOB_KEY_LEN);
+                        return 1;
+                }
+                break;
+        case IMB_CIPHER_GCM:
+        case IMB_CIPHER_GCM_SGL:
+                if (key_len_in_bytes != UINT64_C(16) && key_len_in_bytes != UINT64_C(24) &&
+                    key_len_in_bytes != UINT64_C(32)) {
+                        imb_set_errno(state, IMB_ERR_JOB_KEY_LEN);
+                        return 1;
+                }
+                if (cipher_mode == IMB_CIPHER_GCM && hash_alg != IMB_AUTH_AES_GMAC) {
+                        imb_set_errno(state, IMB_ERR_HASH_ALGO);
+                        return 1;
+                }
+                if (cipher_mode == IMB_CIPHER_GCM_SGL && hash_alg != IMB_AUTH_GCM_SGL) {
+                        imb_set_errno(state, IMB_ERR_HASH_ALGO);
+                        return 1;
+                }
+                break;
+        case IMB_CIPHER_DES:
+        case IMB_CIPHER_DOCSIS_DES:
+                if (key_len_in_bytes != UINT64_C(8)) {
+                        imb_set_errno(state, IMB_ERR_JOB_KEY_LEN);
+                        return 1;
+                }
+                break;
+        case IMB_CIPHER_CCM:
+                /* currently only AES-CCM-128 and AES-CCM-256 supported */
+                if (key_len_in_bytes != UINT64_C(16) && key_len_in_bytes != UINT64_C(32)) {
+                        imb_set_errno(state, IMB_ERR_JOB_KEY_LEN);
+                        return 1;
+                }
+                if (hash_alg != IMB_AUTH_AES_CCM) {
+                        imb_set_errno(state, IMB_ERR_HASH_ALGO);
+                        return 1;
+                }
+                break;
+        case IMB_CIPHER_DES3:
+                if (key_len_in_bytes != UINT64_C(24)) {
+                        imb_set_errno(state, IMB_ERR_JOB_KEY_LEN);
+                        return 1;
+                }
+                break;
+        case IMB_CIPHER_PON_AES_CNTR:
+                if (hash_alg != IMB_AUTH_PON_CRC_BIP) {
+                        imb_set_errno(state, IMB_ERR_HASH_ALGO);
+                        return 1;
+                }
+                break;
+        case IMB_CIPHER_ZUC_EEA3:
+                if (key_len_in_bytes != UINT64_C(16) && key_len_in_bytes != UINT64_C(32)) {
+                        imb_set_errno(state, IMB_ERR_JOB_KEY_LEN);
+                        return 1;
+                }
+                break;
+        case IMB_CIPHER_SNOW3G_UEA2_BITLEN:
+                if (key_len_in_bytes != UINT64_C(16)) {
+                        imb_set_errno(state, IMB_ERR_JOB_KEY_LEN);
+                        return 1;
+                }
+                break;
+        case IMB_CIPHER_KASUMI_UEA1_BITLEN:
+                if (key_len_in_bytes != UINT64_C(16)) {
+                        imb_set_errno(state, IMB_ERR_JOB_KEY_LEN);
+                        return 1;
+                }
+                break;
+        case IMB_CIPHER_CHACHA20:
+                if (key_len_in_bytes != UINT64_C(32)) {
+                        imb_set_errno(state, IMB_ERR_JOB_KEY_LEN);
+                        return 1;
+                }
+                break;
+        case IMB_CIPHER_CHACHA20_POLY1305:
+        case IMB_CIPHER_CHACHA20_POLY1305_SGL:
+                if (key_len_in_bytes != UINT64_C(32)) {
+                        imb_set_errno(state, IMB_ERR_JOB_KEY_LEN);
+                        return 1;
+                }
+                break;
+        case IMB_CIPHER_SNOW_V_AEAD:
+        case IMB_CIPHER_SNOW_V:
+                if (key_len_in_bytes != UINT64_C(32)) {
+                        imb_set_errno(state, IMB_ERR_JOB_KEY_LEN);
+                        return 1;
+                }
+                if (cipher_mode == IMB_CIPHER_SNOW_V_AEAD && hash_alg != IMB_AUTH_SNOW_V_AEAD) {
+                        imb_set_errno(state, IMB_ERR_HASH_ALGO);
+                        return 1;
+                }
+                break;
+        default:
+                imb_set_errno(state, IMB_ERR_CIPH_MODE);
+                return 1;
+        }
+
+        switch (hash_alg) {
+        case IMB_AUTH_HMAC_SHA_1:
+        case IMB_AUTH_MD5:
+        case IMB_AUTH_HMAC_SHA_224:
+        case IMB_AUTH_HMAC_SHA_256:
+        case IMB_AUTH_HMAC_SHA_384:
+        case IMB_AUTH_HMAC_SHA_512:
+        case IMB_AUTH_AES_XCBC:
+        case IMB_AUTH_NULL:
+        case IMB_AUTH_CRC32_ETHERNET_FCS:
+        case IMB_AUTH_CRC32_SCTP:
+        case IMB_AUTH_CRC32_WIMAX_OFDMA_DATA:
+        case IMB_AUTH_CRC24_LTE_A:
+        case IMB_AUTH_CRC24_LTE_B:
+        case IMB_AUTH_CRC16_X25:
+        case IMB_AUTH_CRC16_FP_DATA:
+        case IMB_AUTH_CRC11_FP_HEADER:
+        case IMB_AUTH_CRC10_IUUP_DATA:
+        case IMB_AUTH_CRC8_WIMAX_OFDMA_HCS:
+        case IMB_AUTH_CRC7_FP_HEADER:
+        case IMB_AUTH_CRC6_IUUP_HEADER:
+        case IMB_AUTH_GHASH:
+        case IMB_AUTH_CUSTOM:
+        case IMB_AUTH_AES_CMAC:
+        case IMB_AUTH_AES_CMAC_BITLEN:
+        case IMB_AUTH_AES_CMAC_256:
+        case IMB_AUTH_SHA_1:
+        case IMB_AUTH_SHA_224:
+        case IMB_AUTH_SHA_256:
+        case IMB_AUTH_SHA_384:
+        case IMB_AUTH_SHA_512:
+        case IMB_AUTH_ZUC_EIA3_BITLEN:
+        case IMB_AUTH_ZUC256_EIA3_BITLEN:
+        case IMB_AUTH_SNOW3G_UIA2_BITLEN:
+        case IMB_AUTH_KASUMI_UIA1:
+        case IMB_AUTH_POLY1305:
+        case IMB_AUTH_SM3:
+        case IMB_AUTH_AES_GMAC_128:
+        case IMB_AUTH_AES_GMAC_192:
+        case IMB_AUTH_AES_GMAC_256:
+                break;
+        case IMB_AUTH_AES_GMAC:
+                if (cipher_mode != IMB_CIPHER_GCM) {
+                        imb_set_errno(state, IMB_ERR_CIPH_MODE);
+                        return 1;
+                }
+                break;
+        case IMB_AUTH_GCM_SGL:
+                if (cipher_mode != IMB_CIPHER_GCM_SGL) {
+                        imb_set_errno(state, IMB_ERR_CIPH_MODE);
+                        return 1;
+                }
+                break;
+        case IMB_AUTH_AES_CCM:
+                if (cipher_mode != IMB_CIPHER_CCM) {
+                        imb_set_errno(state, IMB_ERR_CIPH_MODE);
+                        return 1;
+                }
+                break;
+        case IMB_AUTH_PON_CRC_BIP:
+                if (cipher_mode != IMB_CIPHER_PON_AES_CNTR) {
+                        imb_set_errno(state, IMB_ERR_CIPH_MODE);
+                        return 1;
+                }
+                break;
+        case IMB_AUTH_DOCSIS_CRC32:
+                if (cipher_mode != IMB_CIPHER_DOCSIS_SEC_BPI) {
+                        imb_set_errno(state, IMB_ERR_CIPH_MODE);
+                        return 1;
+                }
+                break;
+        case IMB_AUTH_CHACHA20_POLY1305:
+                if (cipher_mode != IMB_CIPHER_CHACHA20_POLY1305) {
+                        imb_set_errno(state, IMB_ERR_CIPH_MODE);
+                        return 1;
+                }
+                break;
+        case IMB_AUTH_CHACHA20_POLY1305_SGL:
+                if (cipher_mode != IMB_CIPHER_CHACHA20_POLY1305_SGL) {
+                        imb_set_errno(state, IMB_ERR_CIPH_MODE);
+                        return 1;
+                }
+                break;
+        case IMB_AUTH_SNOW_V_AEAD:
+                if (cipher_mode != IMB_CIPHER_SNOW_V_AEAD) {
+                        imb_set_errno(state, IMB_ERR_CIPH_MODE);
+                        return 1;
+                }
+                break;
+        default:
+                imb_set_errno(state, IMB_ERR_HASH_ALGO);
+                return 1;
+        }
+        return 0;
+}
 
 __forceinline int
 is_job_invalid(IMB_MGR *state, const IMB_JOB *job, const IMB_CIPHER_MODE cipher_mode,

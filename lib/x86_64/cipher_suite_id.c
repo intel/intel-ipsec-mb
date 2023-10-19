@@ -28,6 +28,7 @@
 #include "intel-ipsec-mb.h"
 #include "include/error.h"
 #include "include/arch_x86_64.h"
+#include "include/mb_mgr_job_check.h"
 
 IMB_DLL_EXPORT uint32_t
 imb_set_session(IMB_MGR *state, IMB_JOB *job)
@@ -50,6 +51,9 @@ imb_set_session(IMB_MGR *state, IMB_JOB *job)
                 imb_set_errno(state, IMB_ERR_NULL_JOB);
                 return 0;
         }
+        if (is_job_invalid_light(state, job->cipher_mode, job->hash_alg, job->cipher_direction,
+                                 job->key_len_in_bytes))
+                return 0; /* errno is set inside is_job_invalid() */
         imb_set_errno(state, 0);
 #endif
         /* Fill in suite_id[] structure in \a job */
