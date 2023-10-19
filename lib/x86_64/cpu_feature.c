@@ -181,6 +181,13 @@ detect_bmi2(void)
         return (cpuid_7_0.ebx & (1UL << 8));
 }
 
+static uint32_t
+detect_hybrid(void)
+{
+        /* Check presence of Hybrid core - bit 15 of EDX */
+        return (cpuid_7_0.edx & (1UL << 15));
+}
+
 uint64_t
 cpu_feature_detect(void)
 {
@@ -207,6 +214,7 @@ cpu_feature_detect(void)
                 { 7, IMB_FEATURE_AVX512_IFMA, detect_avx512_ifma },
                 { 7, IMB_FEATURE_BMI2, detect_bmi2 },
                 { 7, IMB_FEATURE_AVX_IFMA, detect_avx_ifma },
+                { 7, IMB_FEATURE_HYBRID, detect_hybrid },
         };
         struct cpuid_regs r;
         unsigned hi_leaf_number = 0;
