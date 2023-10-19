@@ -2474,6 +2474,8 @@ SUBMIT_JOB_HASH_EX(IMB_MGR *state, IMB_JOB *job, const IMB_HASH_ALG hash_alg)
         MB_MGR_CMAC_OOO *aes256_cmac_ooo = state->aes256_cmac_ooo;
         MB_MGR_ZUC_OOO *zuc_eia3_ooo = state->zuc_eia3_ooo;
         MB_MGR_ZUC_OOO *zuc256_eia3_ooo = state->zuc256_eia3_ooo;
+        MB_MGR_ZUC_OOO *zuc256_eia3_8B_ooo = state->zuc256_eia3_8B_ooo;
+        MB_MGR_ZUC_OOO *zuc256_eia3_16B_ooo = state->zuc256_eia3_16B_ooo;
         MB_MGR_SHA_1_OOO *sha_1_ooo = state->sha_1_ooo;
         MB_MGR_SHA_256_OOO *sha_224_ooo = state->sha_224_ooo;
         MB_MGR_SHA_256_OOO *sha_256_ooo = state->sha_256_ooo;
@@ -2531,8 +2533,12 @@ SUBMIT_JOB_HASH_EX(IMB_MGR *state, IMB_JOB *job, const IMB_HASH_ALG hash_alg)
         case IMB_AUTH_ZUC_EIA3_BITLEN:
                 return SUBMIT_JOB_ZUC_EIA3(zuc_eia3_ooo, job);
         case IMB_AUTH_ZUC256_EIA3_BITLEN:
-                return SUBMIT_JOB_ZUC256_EIA3(zuc256_eia3_ooo, job,
-                                              job->auth_tag_output_len_in_bytes);
+                if (job->auth_tag_output_len_in_bytes == 4)
+                        return SUBMIT_JOB_ZUC256_EIA3(zuc256_eia3_ooo, job, 4);
+                if (job->auth_tag_output_len_in_bytes == 8)
+                        return SUBMIT_JOB_ZUC256_EIA3(zuc256_eia3_8B_ooo, job, 8);
+                else /* tag size == 16 */
+                        return SUBMIT_JOB_ZUC256_EIA3(zuc256_eia3_16B_ooo, job, 16);
         case IMB_AUTH_SNOW3G_UIA2_BITLEN:
 #if (defined(SAFE_LOOKUP) || defined(AVX512)) && !defined(SSE_AESNI_EMU)
                 return SUBMIT_JOB_SNOW3G_UIA2(snow3g_uia2_ooo, job);
@@ -2649,6 +2655,8 @@ FLUSH_JOB_HASH_EX(IMB_MGR *state, IMB_JOB *job, const IMB_HASH_ALG hash_alg)
         MB_MGR_CMAC_OOO *aes256_cmac_ooo = state->aes256_cmac_ooo;
         MB_MGR_ZUC_OOO *zuc_eia3_ooo = state->zuc_eia3_ooo;
         MB_MGR_ZUC_OOO *zuc256_eia3_ooo = state->zuc256_eia3_ooo;
+        MB_MGR_ZUC_OOO *zuc256_eia3_8B_ooo = state->zuc256_eia3_8B_ooo;
+        MB_MGR_ZUC_OOO *zuc256_eia3_16B_ooo = state->zuc256_eia3_16B_ooo;
         MB_MGR_SHA_1_OOO *sha_1_ooo = state->sha_1_ooo;
         MB_MGR_SHA_256_OOO *sha_224_ooo = state->sha_224_ooo;
         MB_MGR_SHA_256_OOO *sha_256_ooo = state->sha_256_ooo;
@@ -2699,7 +2707,12 @@ FLUSH_JOB_HASH_EX(IMB_MGR *state, IMB_JOB *job, const IMB_HASH_ALG hash_alg)
         case IMB_AUTH_ZUC_EIA3_BITLEN:
                 return FLUSH_JOB_ZUC_EIA3(zuc_eia3_ooo);
         case IMB_AUTH_ZUC256_EIA3_BITLEN:
-                return FLUSH_JOB_ZUC256_EIA3(zuc256_eia3_ooo, job->auth_tag_output_len_in_bytes);
+                if (job->auth_tag_output_len_in_bytes == 4)
+                        return FLUSH_JOB_ZUC256_EIA3(zuc256_eia3_ooo, 4);
+                if (job->auth_tag_output_len_in_bytes == 8)
+                        return FLUSH_JOB_ZUC256_EIA3(zuc256_eia3_8B_ooo, 8);
+                else /* tag size == 16 */
+                        return FLUSH_JOB_ZUC256_EIA3(zuc256_eia3_16B_ooo, 16);
 #if (defined(SAFE_LOOKUP) || defined(AVX512)) && !defined(SSE_AESNI_EMU)
         case IMB_AUTH_SNOW3G_UIA2_BITLEN:
                 return FLUSH_JOB_SNOW3G_UIA2(snow3g_uia2_ooo);

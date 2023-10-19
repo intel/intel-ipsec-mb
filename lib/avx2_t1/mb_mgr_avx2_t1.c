@@ -271,6 +271,8 @@ reset_ooo_mgrs(IMB_MGR *state)
         ooo_mgr_zuc_reset(state->zuc_eia3_ooo, 8);
         ooo_mgr_zuc_reset(state->zuc256_eea3_ooo, 8);
         ooo_mgr_zuc_reset(state->zuc256_eia3_ooo, 8);
+        ooo_mgr_zuc_reset(state->zuc256_eia3_8B_ooo, 8);
+        ooo_mgr_zuc_reset(state->zuc256_eia3_16B_ooo, 8);
 
         /* Init HMAC/SHA1 out-of-order fields */
         ooo_mgr_hmac_sha1_reset(state->hmac_sha_1_ooo, AVX2_NUM_SHA1_LANES);

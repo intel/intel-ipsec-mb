@@ -1144,6 +1144,8 @@ typedef struct IMB_MGR {
         void *sha_256_ooo;
         void *sha_384_ooo;
         void *sha_512_ooo;
+        void *zuc256_eia3_8B_ooo;
+        void *zuc256_eia3_16B_ooo;
         void *end_ooo; /* add new out-of-order managers above this line */
 } IMB_MGR;
 
