@@ -62,6 +62,7 @@ imb_self_test_get_cb(IMB_MGR *p_mgr, imb_self_test_cb_t *cb_fn, void **cb_arg)
         return 0;
 }
 
+#ifndef NO_SELF_TEST_DEV
 static int
 make_callback(IMB_MGR *p_mgr, const char *phase, const char *type, const char *descr)
 {
@@ -78,8 +79,6 @@ make_callback(IMB_MGR *p_mgr, const char *phase, const char *type, const char *d
  * SELF-TEST EXECUTION
  * =============================================================================
  */
-
-#ifndef NO_SELF_TEST_DEV
 
 static int
 process_job(IMB_MGR *p_mgr)
@@ -1532,8 +1531,6 @@ self_test_aead(IMB_MGR *p_mgr)
         return ret;
 }
 
-#endif /* NO_SELF_TEST_DEV */
-
 static int
 self_test_exec(IMB_MGR *p_mgr)
 {
@@ -1550,6 +1547,8 @@ self_test_exec(IMB_MGR *p_mgr)
 
         return ret;
 }
+
+#endif /* NO_SELF_TEST_DEV */
 
 /*
  * =============================================================================
