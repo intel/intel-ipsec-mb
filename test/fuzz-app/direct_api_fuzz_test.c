@@ -43,19 +43,24 @@ int
 LLVMFuzzerInitialize(int *, char ***);
 
 IMB_ARCH arch = IMB_ARCH_NONE;
+uint64_t flags = 0;
 
 static void
 parse_matched(int argc, char **argv)
 {
         for (int i = 0; i < argc; i++) {
-                if (strcmp(argv[i], "SSE") == 0)
+                if (strcasecmp(argv[i], "SSE") == 0)
                         arch = IMB_ARCH_SSE;
-                else if (strcmp(argv[i], "AVX") == 0)
+                else if (strcasecmp(argv[i], "AVX") == 0)
                         arch = IMB_ARCH_AVX;
-                else if (strcmp(argv[i], "AVX2") == 0)
+                else if (strcasecmp(argv[i], "AVX2") == 0)
                         arch = IMB_ARCH_AVX2;
-                else if (strcmp(argv[i], "AVX512") == 0)
+                else if (strcasecmp(argv[i], "AVX512") == 0)
                         arch = IMB_ARCH_AVX512;
+                else if (strcasecmp(argv[i], "SHANI-OFF") == 0)
+                        flags |= IMB_FLAG_SHANI_OFF;
+                else if (strcasecmp(argv[i], "GFNI-OFF") == 0)
+                        flags |= IMB_FLAG_GFNI_OFF;
         }
 }
 
@@ -67,7 +72,7 @@ LLVMFuzzerInitialize(int *argc, char ***argv)
                  * Check if the current argument matches the
                  * argument we are looking for.
                  */
-                if (strcmp((*argv)[i], "custom") == 0) {
+                if (strcasecmp((*argv)[i], "custom") == 0) {
                         parse_matched(*argc - (i + 1), &((*argv)[i + 1]));
                         /*
                          *  Remove the matching argument and all arguments
@@ -2511,7 +2516,7 @@ LLVMFuzzerTestOneInput(const uint8_t *data, size_t dataSize)
 
         /* allocate multi-buffer manager */
         if (p_mgr == NULL) {
-                p_mgr = alloc_mb_mgr(0);
+                p_mgr = alloc_mb_mgr(flags);
                 if (p_mgr == NULL) {
                         printf("Error allocating MB_MGR structure!\n");
                         free(buff);
