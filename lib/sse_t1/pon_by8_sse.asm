@@ -937,7 +937,7 @@ DEC_NO_CTR_FN_NAME:
         ret
 
 ;; uint32_t hec_32_sse(const uint8_t *in)
-align 64
+align 32
 MKGLOBAL(HEC_32,function,)
 HEC_32:
         endbranch64
@@ -973,7 +973,7 @@ error_hec32:
 %endif
 
 ;; uint32_t hec_64_sse(const uint8_t *in)
-align 64
+align 32
 MKGLOBAL(HEC_64,function,)
 HEC_64:
         endbranch64
