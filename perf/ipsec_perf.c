@@ -3295,7 +3295,7 @@ usage(void)
                 "--shani-off: don't use SHA extensions\n"
                 "--gfni-on: use Galois Field extensions, default: auto-detect\n"
                 "--gfni-off: don't use Galois Field extensions\n"
-                "--job-api: use JOB API"
+                "--job-api: use JOB API\n"
                 "--direct-api: use direct API when available\n"
                 "--gcm-sgl-api: use direct SGL API for GCM perf tests"
                 " (direct GCM API is default)\n"
