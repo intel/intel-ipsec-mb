@@ -60,7 +60,9 @@ api_test(struct IMB_MGR *mb_mgr);
 extern int
 pon_test(struct IMB_MGR *mb_mgr);
 extern int
-zuc_test(struct IMB_MGR *mb_mgr);
+zuc_eea3_test(struct IMB_MGR *mb_mgr);
+extern int
+zuc_eia3_test(struct IMB_MGR *mb_mgr);
 extern int
 kasumi_test(struct IMB_MGR *mb_mgr);
 extern int
@@ -139,7 +141,8 @@ struct imb_test tests[] = {
         { .str = "DES", .fn = des_test, .enabled = 1 },
         { .str = "CCM", .fn = ccm_test, .enabled = 1 },
         { .str = "CMAC", .fn = cmac_test, .enabled = 1 },
-        { .str = "ZUC", .fn = zuc_test, .enabled = 1 },
+        { .str = "ZUC_EEA3", .fn = zuc_eea3_test, .enabled = 1 },
+        { .str = "ZUC_EIA3", .fn = zuc_eia3_test, .enabled = 1 },
         { .str = "KASUMI", .fn = kasumi_test, .enabled = 1 },
         { .str = "SNOW3G", .fn = snow3g_test, .enabled = 1 },
         { .str = "HMAC_SHA1", .fn = hmac_sha1_test, .enabled = 1 },

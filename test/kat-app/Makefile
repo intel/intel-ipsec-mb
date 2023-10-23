@@ -34,7 +34,7 @@ include ../common/common.mk
 SOURCES := main.c gcm_test.c ctr_test.c customop_test.c des_test.c ccm_test.c \
 	cmac_test.c hmac_sha1_test.c hmac_sha256_sha512_test.c \
 	hmac_md5_test.c aes_test.c sha_test.c chained_test.c api_test.c pon_test.c \
-	ecb_test.c zuc_test.c kasumi_test.c snow3g_test.c direct_api_test.c clear_mem_test.c \
+	ecb_test.c zuc_eea3_test.c zuc_eia3_test.c kasumi_test.c snow3g_test.c direct_api_test.c clear_mem_test.c \
 	hec_test.c xcbc_test.c aes_cbcs_test.c crc_test.c chacha_test.c poly1305_test.c \
 	chacha20_poly1305_test.c null_test.c snow_v_test.c direct_api_param_test.c quic_ecb_test.c \
 	hmac_sha1.json.c hmac_sha224.json.c hmac_sha256.json.c hmac_sha384.json.c hmac_sha512.json.c \
