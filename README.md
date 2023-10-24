@@ -101,7 +101,8 @@ Notes:
 (8)   - decryption is by16 and encryption is x16  
 (9)   - currently 1:9 crypt:skip pattern supported  
 (10)  - by default, decryption and encryption are AVX by8.  
-        On CPUs supporting VAES, decryption and encryption are AVX2-VAES by16.  
+        On CPUs supporting VAES, decryption and encryption might use AVX2-VAES by16,
+        if beneficial.
 
 Legend:  
 ` byY` - single buffer Y blocks at a time  
