@@ -123,14 +123,14 @@ Table 2. List of supported integrity algorithms and their implementations.
 |-------------------+--------+--------+--------+--------+--------+--------|
 | AES-XCBC-96       | N      | Y   x4 | Y   x8 | N      | N      | Y x16  |
 | HMAC-MD5-96       | Y(1)   | Y x4x2 | Y x4x2 | Y x8x2 | N      | N      |
-| HMAC-SHA1-96      | N      | Y(2)x4 | Y   x4 | Y   x8 | Y  x16 | N      |
-| HMAC-SHA2-224_112 | N      | Y(2)x4 | Y   x4 | Y   x8 | Y  x16 | N      |
-| HMAC-SHA2-256_128 | N      | Y(2)x4 | Y   x4 | Y   x8 | Y  x16 | N      |
+| HMAC-SHA1-96      | N      | Y(2)x4 | Y(2)x4 | Y(2)x8 | Y  x16 | N      |
+| HMAC-SHA2-224_112 | N      | Y(2)x4 | Y(2)x4 | Y(2)x8 | Y  x16 | N      |
+| HMAC-SHA2-256_128 | N      | Y(2)x4 | Y(2)x4 | Y(2)x8 | Y  x16 | N      |
 | HMAC-SHA2-384_192 | N      | Y   x2 | Y   x2 | Y   x4 | Y   x8 | N      |
 | HMAC-SHA2-512_256 | N      | Y   x2 | Y   x2 | Y   x4 | Y   x8 | N      |
-| SHA1              | N      | Y(2)x4 | Y   x4 | Y   x8 | Y  x16 | N      |
-| SHA2-224          | N      | Y(2)x4 | Y   x4 | Y   x8 | Y  x16 | N      |
-| SHA2-256          | N      | Y(2)x4 | Y   x4 | Y   x8 | Y  x16 | N      |
+| SHA1              | N      | Y(2)x4 | Y(2)x4 | Y(2)x8 | Y  x16 | N      |
+| SHA2-224          | N      | Y(2)x4 | Y(2)x4 | Y(2)x8 | Y  x16 | N      |
+| SHA2-256          | N      | Y(2)x4 | Y(2)x4 | Y(2)x8 | Y  x16 | N      |
 | SHA2-384          | N      | Y   x2 | Y   x2 | Y   x4 | Y   x8 | N      |
 | SHA2-512          | N      | Y   x2 | Y   x2 | Y   x4 | Y   x8 | N      |
 | AES128-GMAC       | N      | Y  by8 | N      | Y  by8 | Y  by8 | Y by32 |
