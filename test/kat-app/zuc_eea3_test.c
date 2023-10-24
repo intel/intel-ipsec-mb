@@ -81,8 +81,6 @@ validate_zuc_EEA_n_block(struct IMB_MGR *mb_mgr, uint8_t **pSrcData, uint8_t **p
 int
 validate_zuc256_EEA3(struct IMB_MGR *mb_mgr, uint8_t **pSrcData, uint8_t **pDstData,
                      uint8_t **pKeys, uint8_t **pIV, uint32_t numBuffs, const enum api_type type);
-static void
-byte_hexdump(const char *message, const uint8_t *ptr, int len);
 
 /******************************************************************************
  * @ingroup zuc_functionalTest_app
@@ -832,25 +830,4 @@ validate_zuc_algorithm(struct IMB_MGR *mb_mgr, uint8_t *pSrcData, uint8_t *pDstD
 #endif
         }
         return ret;
-};
-/*****************************************************************************
- ** @description - utility function to dump test buffers$
- ** $
- ** @param message [IN] - debug message to print$
- ** @param ptr [IN] - pointer to beginning of buffer.$
- ** @param len [IN] - length of buffer.$
- *****************************************************************************/
-static void
-byte_hexdump(const char *message, const uint8_t *ptr, int len)
-{
-        int ctr;
-
-        printf("%s:\n", message);
-        for (ctr = 0; ctr < len; ctr++) {
-                printf("0x%02X ", ptr[ctr] & 0xff);
-                if (!((ctr + 1) % 16))
-                        printf("\n");
-        }
-        printf("\n");
-        printf("\n");
 };

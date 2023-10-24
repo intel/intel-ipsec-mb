@@ -414,3 +414,25 @@ membitcmp(const uint8_t *input, const uint8_t *output, const uint32_t bitlength,
         }
         return 0;
 }
+
+/*****************************************************************************
+ ** @description - utility function to dump test buffers$
+ ** $
+ ** @param message [IN] - debug message to print$
+ ** @param ptr [IN] - pointer to beginning of buffer.$
+ ** @param len [IN] - length of buffer.$
+ *****************************************************************************/
+void
+byte_hexdump(const char *message, const uint8_t *ptr, int len)
+{
+        int ctr;
+
+        printf("%s:\n", message);
+        for (ctr = 0; ctr < len; ctr++) {
+                printf("0x%02X ", ptr[ctr] & 0xff);
+                if (!((ctr + 1) % 16))
+                        printf("\n");
+        }
+        printf("\n");
+        printf("\n");
+};

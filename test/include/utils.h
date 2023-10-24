@@ -40,6 +40,8 @@ void
 hexdump(FILE *fp, const char *msg, const void *p, size_t len);
 void
 hexdump_ex(FILE *fp, const char *msg, const void *p, size_t len, const void *start_ptr);
+void
+byte_hexdump(const char *message, const uint8_t *ptr, int len);
 
 int
 update_flags_and_archs(const char *arg, uint8_t arch_support[IMB_ARCH_NUM], uint64_t *flags);
