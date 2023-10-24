@@ -27,6 +27,7 @@
 
 %include "include/os.inc"
 %include "include/clear_regs.inc"
+%include "include/aes_common.inc"
 %include "include/cet.inc"
 %include "include/error.inc"
 
@@ -57,15 +58,82 @@ dd 0x30373E45, 0x4C535A61, 0x686F767D, 0x848B9299,
 dd 0xA0A7AEB5, 0xBCC3CAD1, 0xD8DFE6ED, 0xF4FB0209,
 dd 0x10171E25, 0x2C333A41, 0x484F565D, 0x646B7279
 
+align 32
 in_shufb:
 db 0x03, 0x02, 0x01, 0x00, 0x07, 0x06, 0x05, 0x04
 db 0x0b, 0x0a, 0x09, 0x08, 0x0f, 0x0e, 0x0d, 0x0c
+db 0x03, 0x02, 0x01, 0x00, 0x07, 0x06, 0x05, 0x04
+db 0x0b, 0x0a, 0x09, 0x08, 0x0f, 0x0e, 0x0d, 0x0c
 
+align 32
 out_shufb:
 db 0x0f, 0x0e, 0x0d, 0x0c, 0x0b, 0x0a, 0x09, 0x08
 db 0x07, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01, 0x00
+db 0x0f, 0x0e, 0x0d, 0x0c, 0x0b, 0x0a, 0x09, 0x08
+db 0x07, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01, 0x00
 
+%define APPEND(x, y) x %+ y
 mksection .text
+
+;
+; Shuffle up to 8 YMMs
+;
+%macro SHUFFLE_BLOCKS 10
+%define %%NUM_BLOCKS %1
+%define %%YDATA0     %2
+%define %%YDATA1     %3
+%define %%YDATA2     %4
+%define %%YDATA3     %5
+%define %%YDATA4     %6
+%define %%YDATA5     %7
+%define %%YDATA6     %8
+%define %%YDATA7     %9
+%define %%YSHUF      %10
+
+%assign %%REMAIN_BLOCK (%%NUM_BLOCKS % 2)
+
+%assign j 0
+%rep %%NUM_BLOCKS / 2
+        vpshufb APPEND(YDATA, j), %%YSHUF
+%assign j (j+1)
+%endrep
+%if (%%REMAIN_BLOCK == 1)
+        vpshufb APPEND(YDATA, j), %%YSHUF
+%endif
+%endmacro
+
+;
+; Perform 8 SM4 rounds on YMMs
+;
+%macro SM4_ROUNDS 10
+%define %%NUM_BLOCKS %1
+%define %%YDATA0     %2
+%define %%YDATA1     %3
+%define %%YDATA2     %4
+%define %%YDATA3     %5
+%define %%YDATA4     %6
+%define %%YDATA5     %7
+%define %%YDATA6     %8
+%define %%YDATA7     %9
+%define %%YKEY       %10
+
+%assign %%REMAIN_BLOCK (%%NUM_BLOCKS % 2)
+
+%assign %%I 0
+%rep 8 ; Number of SM4 rounds
+        vbroadcasti128 %%YKEY, [KEY_EXP + 16*%%I]
+%assign %%J 0
+%rep %%NUM_BLOCKS/2
+        vsm4rnds4 APPEND(%%YDATA, %%J), APPEND(%%YDATA, %%J), %%YKEY
+%assign %%J (%%J+1)
+%endrep
+%if (%%REMAIN_BLOCK == 1)
+        vsm4rnds4 APPEND(%%YDATA, %%J), APPEND(%%YDATA, %%J), %%YKEY
+%endif
+
+%assign %%I (%%I + 1)
+%endrep
+%endmacro
 
 align 32
 MKGLOBAL(sm4_ecb_ni_avx2,function,internal)
@@ -77,29 +145,122 @@ sm4_ecb_ni_avx2:
 %define	KEY_EXP arg4
 
 %define IDX     r10
-%define XDATA0  xmm0
+%define TMP     r11
 
-        xor     IDX, IDX
-main_loop:
+%define YDATA0  ymm0
+%define YDATA1  ymm1
+%define YDATA2  ymm2
+%define YDATA3  ymm3
+%define YDATA4  ymm4
+%define YDATA5  ymm5
+%define YDATA6  ymm6
+%define YDATA7  ymm7
+%define YKEY    ymm15
+
+%define YSHUFB_IN  ymm13
+%define YSHUFB_OUT ymm14
+
+%define NBLOCKS_MAIN 8*2
+
         or      SIZE, SIZE
         jz      done
 
-        vmovdqu XDATA0, [IN + IDX]
-        vpshufb XDATA0, XDATA0, [rel in_shufb]
+        vmovdqa YSHUFB_IN,  [rel in_shufb]
+        vmovdqa YSHUFB_OUT, [rel out_shufb]
+        xor     IDX, IDX
+        mov     TMP, SIZE
+        and     TMP, 255    ; number of initial bytes (0 to 15 SM4 blocks)
+        jz      main_loop
 
-%assign i 0
-%rep 8
-        vsm4rnds4 XDATA0, XDATA0, [KEY_EXP + 16*i]
-%assign i (i + 1)
-%endrep
-        vpshufb XDATA0, [rel out_shufb]
+        ; branch to different code block based on remainder
+        cmp     TMP, 8*16
+        je      initial_num_blocks_is_8
+        jb      initial_num_blocks_is_7_1
+        cmp     TMP, 12*16
+        je      initial_num_blocks_is_12
+        jb      initial_num_blocks_is_11_9
+        ;; 15, 14 or 13
+        cmp     TMP, 14*16
+        ja      initial_num_blocks_is_15
+        je      initial_num_blocks_is_14
+        jmp     initial_num_blocks_is_13
+initial_num_blocks_is_11_9:
+        ;; 11, 10 or 9
+        cmp     TMP, 10*16
+        ja      initial_num_blocks_is_11
+        je      initial_num_blocks_is_10
+        jmp     initial_num_blocks_is_9
+initial_num_blocks_is_7_1:
+        cmp     TMP, 4*16
+        je      initial_num_blocks_is_4
+        jb      initial_num_blocks_is_3_1
+        ;; 7, 6 or 5
+        cmp     TMP, 6*16
+        ja      initial_num_blocks_is_7
+        je      initial_num_blocks_is_6
+        jmp     initial_num_blocks_is_5
+initial_num_blocks_is_3_1:
+        ;; 3, 2 or 1
+        cmp     TMP, 2*16
+        ja      initial_num_blocks_is_3
+        je      initial_num_blocks_is_2
+        ;; fall through for `jmp initial_num_blocks_is_1`
 
-        vmovdqu [OUT + IDX], XDATA0
+%assign initial_num_blocks 1
+%rep 15
 
-        add     IDX, 16
-        sub     SIZE, 16
+initial_num_blocks_is_ %+ initial_num_blocks :
+%assign remaining_block (initial_num_blocks %% 2)
+
+        ; load initial blocks
+        YMM_LOAD_BLOCKS_AVX2_0_16 initial_num_blocks, IN, 0, YDATA0,\
+                YDATA1, YDATA2, YDATA3, YDATA4, YDATA5,\
+                YDATA6, YDATA7
+
+        ; shuffle initial blocks initial blocks
+        SHUFFLE_BLOCKS initial_num_blocks, YDATA0, YDATA1, YDATA2, YDATA3, \
+                       YDATA4, YDATA5, YDATA6, YDATA7, YSHUFB_IN
+
+        SM4_ROUNDS initial_num_blocks, YDATA0, YDATA1, YDATA2, YDATA3, \
+                       YDATA4, YDATA5, YDATA6, YDATA7, YKEY
+
+        SHUFFLE_BLOCKS initial_num_blocks, YDATA0, YDATA1, YDATA2, YDATA3, \
+                       YDATA4, YDATA5, YDATA6, YDATA7, YSHUFB_OUT
+
+        ; store initial blocks
+        YMM_STORE_BLOCKS_AVX2_0_16 initial_num_blocks, OUT, 0, YDATA0, YDATA1,\
+                YDATA2, YDATA3, YDATA4, YDATA5, YDATA6, YDATA7
+
+        add     IDX, initial_num_blocks*16
+        cmp     IDX, SIZE
+        je      done
+
+%assign initial_num_blocks (initial_num_blocks + 1)
         jmp     main_loop
+%endrep
 
+align 32
+main_loop:
+        YMM_LOAD_BLOCKS_AVX2_0_16 NBLOCKS_MAIN, IN, IDX, YDATA0,\
+                YDATA1, YDATA2, YDATA3, YDATA4, YDATA5,\
+                YDATA6, YDATA7
+
+        SHUFFLE_BLOCKS NBLOCKS_MAIN, YDATA0, YDATA1, YDATA2, YDATA3, \
+                       YDATA4, YDATA5, YDATA6, YDATA7, YSHUFB_IN
+
+        SM4_ROUNDS NBLOCKS_MAIN, YDATA0, YDATA1, YDATA2, YDATA3, \
+                       YDATA4, YDATA5, YDATA6, YDATA7, YKEY
+
+        SHUFFLE_BLOCKS NBLOCKS_MAIN, YDATA0, YDATA1, YDATA2, YDATA3, \
+                       YDATA4, YDATA5, YDATA6, YDATA7, YSHUFB_OUT
+
+        ; store initial blocks
+        YMM_STORE_BLOCKS_AVX2_0_16 NBLOCKS_MAIN, OUT, IDX, YDATA0, YDATA1,\
+                YDATA2, YDATA3, YDATA4, YDATA5, YDATA6, YDATA7
+
+        add     IDX, 16*NBLOCKS_MAIN
+        cmp     IDX, SIZE
+        jne     main_loop
 done:
 
 %ifdef SAFE_DATA
