@@ -43,6 +43,7 @@
 #include "zuc_test_vectors.h"
 #include "gcm_ctr_vectors_test.h"
 #include "utils.h"
+#include "cipher_test.h"
 
 #define MAXBUFS     17
 #define PASS_STATUS 0
@@ -55,6 +56,8 @@ enum api_type { TEST_DIRECT_API, TEST_SINGLE_JOB_API, TEST_BURST_JOB_API };
 
 int
 zuc_eea3_test(struct IMB_MGR *mb_mgr);
+
+extern const struct cipher_test zuc_eea3_128_test_json[];
 
 struct zuc_eea3_128_params {
         const uint32_t *count;
@@ -485,34 +488,49 @@ test_output(const uint8_t *out, const uint8_t *ref, const uint32_t bytelen, cons
         return ret;
 }
 
+/**
+ * Count, Bearer and Direction stored in vector IV field
+ */
+static void
+zuc_eea3_128_set_params(const struct cipher_test *v, struct zuc_eea3_128_params *p)
+{
+        const uint8_t *params = (const uint8_t *) v->iv;
+
+        p->count = (const uint32_t *) &params[0];
+        p->bearer = &params[4];
+        p->direction = &params[5];
+}
+
 int
 validate_zuc_EEA_1_block(struct IMB_MGR *mb_mgr, uint8_t *pSrcData, uint8_t *pDstData,
                          uint8_t *pKeys, uint8_t *pIV, const enum api_type type)
 {
         uint32_t i;
         int ret = 0;
+        const struct cipher_test *vectors = zuc_eea3_128_test_json;
 
         /* ZUC-128-EEA3 */
-        for (i = 0; i < NUM_ZUC_EEA3_TESTS; i++) {
+        for (i = 0; vectors[i].msg != NULL; i++) {
                 char msg[50];
                 int retTmp;
                 uint32_t byteLength;
                 const unsigned int iv_len = IMB_ZUC_IV_LEN_IN_BYTES;
+                struct zuc_eea3_128_params p = { 0 };
 
-                memcpy(pKeys, testEEA3_vectors[i].CK, IMB_ZUC_KEY_LEN_IN_BYTES);
-                zuc_eea3_iv_gen(testEEA3_vectors[i].count, testEEA3_vectors[i].Bearer,
-                                testEEA3_vectors[i].Direction, pIV);
-                byteLength = (testEEA3_vectors[i].length_in_bits + 7) / 8;
-                memcpy(pSrcData, testEEA3_vectors[i].plaintext, byteLength);
+                memcpy(pKeys, vectors[i].key, IMB_ZUC_KEY_LEN_IN_BYTES);
+                zuc_eea3_128_set_params(&vectors[i], &p);
+                zuc_eea3_iv_gen(*p.count, *p.bearer, *p.direction, pIV);
+                byteLength = (uint32_t) (vectors[i].msgSize + 7) / 8;
+                memcpy(pSrcData, vectors[i].msg, byteLength);
                 if (type == TEST_SINGLE_JOB_API)
                         submit_eea3_jobs(mb_mgr, &pKeys, &pIV, &pSrcData, &pDstData, &byteLength,
                                          IMB_DIR_ENCRYPT, 1, IMB_ZUC_KEY_LEN_IN_BYTES, &iv_len);
                 else
                         IMB_ZUC_EEA3_1_BUFFER(mb_mgr, pKeys, pIV, pSrcData, pDstData, byteLength);
 
-                snprintf(msg, sizeof(msg), "Validate ZUC 1 block test %u (Enc):", i + 1);
-                retTmp = test_output(pDstData, testEEA3_vectors[i].ciphertext, byteLength,
-                                     testEEA3_vectors[i].length_in_bits, msg);
+                snprintf(msg, sizeof(msg), "Validate ZUC 1 block test %zu (Enc):", vectors[i].tcId);
+                retTmp = test_output(pDstData, (const uint8_t *) vectors[i].ct, byteLength,
+                                     (uint32_t) vectors[i].msgSize, msg);
                 if (retTmp < 0)
                         ret = retTmp;
         }
@@ -529,19 +547,22 @@ submit_and_verify(struct IMB_MGR *mb_mgr, uint8_t **pSrcData, uint8_t **pDstData
         unsigned int i;
         uint32_t packetLen[MAXBUFS];
         int ret = 0;
-        const struct test128EEA3_vectors_t *vector;
         unsigned int iv_lens[MAXBUFS];
+        const struct cipher_test *vectors = zuc_eea3_128_test_json;
 
         for (i = 0; i < num_buffers; i++) {
-                vector = &testEEA3_vectors[buf_idx[i]];
-                packetLen[i] = (vector->length_in_bits + 7) / 8;
-                memcpy(pKeys[i], vector->CK, IMB_ZUC_KEY_LEN_IN_BYTES);
-                zuc_eea3_iv_gen(vector->count, vector->Bearer, vector->Direction, pIV[i]);
+                const struct cipher_test *vector = &vectors[buf_idx[i]];
+                struct zuc_eea3_128_params p = { 0 };
+
+                packetLen[i] = (uint32_t) (vector->msgSize + 7) / 8;
+                memcpy(pKeys[i], vector->key, IMB_ZUC_KEY_LEN_IN_BYTES);
+                zuc_eea3_128_set_params(&vectors[buf_idx[i]], &p);
+                zuc_eea3_iv_gen(*p.count, *p.bearer, *p.direction, pIV[i]);
                 iv_lens[i] = IMB_ZUC_IV_LEN_IN_BYTES;
                 if (dir == IMB_DIR_ENCRYPT)
-                        memcpy(pSrcData[i], vector->plaintext, packetLen[i]);
+                        memcpy(pSrcData[i], vector->msg, packetLen[i]);
                 else
-                        memcpy(pSrcData[i], vector->ciphertext, packetLen[i]);
+                        memcpy(pSrcData[i], vector->ct, packetLen[i]);
         }
 
         if (type == TEST_SINGLE_JOB_API)
@@ -567,8 +588,8 @@ submit_and_verify(struct IMB_MGR *mb_mgr, uint8_t **pSrcData, uint8_t **pDstData
                 int retTmp;
                 char msg_start[50];
                 char msg[100];
+                const struct cipher_test *vector = &vectors[buf_idx[i]];
 
-                vector = &testEEA3_vectors[buf_idx[i]];
                 if (var_bufs)
                         snprintf(msg_start, sizeof(msg_start), "Validate ZUC %c block multi-vector",
                                  num_buffers == 4 ? '4' : 'N');
@@ -577,15 +598,15 @@ submit_and_verify(struct IMB_MGR *mb_mgr, uint8_t **pSrcData, uint8_t **pDstData
                                  num_buffers == 4 ? '4' : 'N');
 
                 if (dir == IMB_DIR_ENCRYPT) {
-                        snprintf(msg, sizeof(msg), "%s test %u, index %u (Enc):", msg_start,
-                                 buf_idx[i] + 1, i);
-                        retTmp = test_output(pDst8, vector->ciphertext, packetLen[i],
-                                             vector->length_in_bits, msg);
+                        snprintf(msg, sizeof(msg), "%s test %zu, index %u (Enc):", msg_start,
+                                 vector->tcId, i);
+                        retTmp = test_output(pDst8, (const uint8_t *) vector->ct, packetLen[i],
+                                             (uint32_t) vector->msgSize, msg);
                 } else { /* DECRYPT */
-                        snprintf(msg, sizeof(msg), "%s test %u, index %u (Dec):", msg_start,
-                                 buf_idx[i] + 1, i);
-                        retTmp = test_output(pDst8, vector->plaintext, packetLen[i],
-                                             vector->length_in_bits, msg);
+                        snprintf(msg, sizeof(msg), "%s test %zu, index %u (Dec):", msg_start,
+                                 vector->tcId, i);
+                        retTmp = test_output(pDst8, (const uint8_t *) vector->msg, packetLen[i],
+                                             (uint32_t) vector->msgSize, msg);
                 }
                 if (retTmp < 0)
                         ret = retTmp;
