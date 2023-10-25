@@ -41,4 +41,12 @@
 IMB_DLL_LOCAL void
 sm3_msg(void *tag, const uint64_t tag_len, const void *msg, const uint64_t msg_length);
 
+/**
+ * @brief Authenticates one block with SM3 hash algorithm
+ *
+ * @param tag pointer to store computed SM3 digest
+ * @param msg pointer to input block compute digest over
+ */
+IMB_DLL_LOCAL void
+sm3_one_block(void *tag, const void *msg);
 #endif /* SM3_H */

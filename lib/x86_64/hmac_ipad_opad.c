@@ -32,6 +32,7 @@
 
 #include <intel-ipsec-mb.h>
 #include "include/error.h"
+#include "include/sm3.h"
 
 IMB_DLL_EXPORT
 void
@@ -89,6 +90,9 @@ imb_hmac_ipad_opad(IMB_MGR *mb_mgr, const IMB_HASH_ALG sha_type, const void *pke
                         return;
                 }
                 break;
+        case IMB_AUTH_HMAC_SM3:
+                local_key_len = (key_len <= IMB_SM3_BLOCK_SIZE) ? key_len : IMB_SM3_DIGEST_SIZE;
+                break;
         default:
                 imb_set_errno(NULL, IMB_ERR_HASH_ALGO);
                 return;
@@ -112,6 +116,9 @@ imb_hmac_ipad_opad(IMB_MGR *mb_mgr, const IMB_HASH_ALG sha_type, const void *pke
                         break;
                 case IMB_AUTH_HMAC_SHA_384:
                         IMB_SHA384(mb_mgr, pkey, key_len, key);
+                        break;
+                case IMB_AUTH_HMAC_SM3:
+                        sm3_msg(key, IMB_SM3_DIGEST_SIZE, pkey, key_len);
                         break;
                 default: /* For SHA-512 */
                         IMB_SHA512(mb_mgr, pkey, key_len, key);
@@ -138,6 +145,9 @@ imb_hmac_ipad_opad(IMB_MGR *mb_mgr, const IMB_HASH_ALG sha_type, const void *pke
                 case IMB_AUTH_HMAC_SHA_512:
                         IMB_SHA512_ONE_BLOCK(mb_mgr, buf, ipad_hash);
                         break;
+                case IMB_AUTH_HMAC_SM3:
+                        sm3_one_block(ipad_hash, buf);
+                        break;
                 default: /* For MD5*/
                         IMB_MD5_ONE_BLOCK(mb_mgr, buf, ipad_hash);
                 }
@@ -163,6 +173,9 @@ imb_hmac_ipad_opad(IMB_MGR *mb_mgr, const IMB_HASH_ALG sha_type, const void *pke
                         break;
                 case IMB_AUTH_HMAC_SHA_512:
                         IMB_SHA512_ONE_BLOCK(mb_mgr, buf, opad_hash);
+                        break;
+                case IMB_AUTH_HMAC_SM3:
+                        sm3_one_block(opad_hash, buf);
                         break;
                 default: /* For MD5 */
                         IMB_MD5_ONE_BLOCK(mb_mgr, buf, opad_hash);

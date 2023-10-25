@@ -242,3 +242,19 @@ sm3_msg(void *tag, const uint64_t tag_length, const void *msg, const uint64_t ms
         clear_mem(block, sizeof(block));
 #endif
 }
+
+void
+sm3_one_block(void *tag, const void *msg)
+{
+        uint32_t digest[8];
+
+        sm3_init(digest);
+        sm3_update(digest, msg, 1);
+
+        memcpy(tag, digest, IMB_SM3_DIGEST_SIZE);
+
+#ifdef SAFE_DATA
+        clear_mem(digest, sizeof(digest));
+        clear_scratch_xmms_sse();
+#endif
+}
