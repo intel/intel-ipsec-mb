@@ -343,6 +343,7 @@ typedef enum {
         IMB_AUTH_CRC6_IUUP_HEADER,       /**< CRC6-IUUP-HEADER */
         IMB_AUTH_GHASH,                  /**< GHASH */
         IMB_AUTH_SM3,                    /**< SM3 */
+        IMB_AUTH_HMAC_SM3,               /**< SM3-HMAC */
         IMB_AUTH_NUM
 } IMB_HASH_ALG;
 
