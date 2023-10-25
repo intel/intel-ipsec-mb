@@ -36,8 +36,6 @@
 
 #include <intel-ipsec-mb.h>
 
-#include "gcm_ctr_vectors_test.h"
-#include "kasumi_test_vectors.h"
 #include "utils.h"
 #include "mac_test.h"
 #include "cipher_test.h"
@@ -195,7 +193,7 @@ struct kasumi_f8_x_blocks {
         uint32_t *packetLen;
         uint32_t *bitLens;
         uint32_t *bitOffsets;
-        struct cipher_test **vt;
+        const struct cipher_test **vt;
 
         uint8_t **encBuff;
         uint8_t **decBuff;
@@ -237,7 +235,7 @@ kasumi_f8_x_block_free(struct kasumi_f8_x_blocks *s)
         if (s->bitOffsets)
                 free(s->bitOffsets);
         if (s->vt)
-                free(s->vt);
+                free((void *) s->vt);
         if (s->encBuff)
                 free(s->encBuff);
         if (s->decBuff)
@@ -281,8 +279,10 @@ kasumi_f8_x_block_alloc(IMB_MGR *mgr, struct kasumi_f8_x_blocks *s, const size_t
                 memset(s->bitOffsets, 0, n * sizeof(s->bitOffsets[0]));
 
         s->vt = malloc(n * sizeof(s->vt[0]));
-        if (s->vt)
-                memset(s->vt, 0, n * sizeof(s->vt[0]));
+        if (s->vt) {
+                for (size_t i = 0; i < n; i++)
+                        s->vt[i] = NULL;
+        }
 
         s->encBuff = malloc(n * sizeof(s->encBuff[0]));
         if (s->encBuff)
@@ -975,7 +975,7 @@ validate_kasumi_f9(IMB_MGR *mgr, const unsigned job_api)
                 if (v->ivSize != 0)
                         continue;
 
-                const uint32_t byteLen = (uint32_t)((v->msgSize + 7) / CHAR_BIT);
+                const uint32_t byteLen = (uint32_t) ((v->msgSize + 7) / CHAR_BIT);
 
                 IMB_ASSERT(v->keySize == (IMB_KASUMI_KEY_SIZE * CHAR_BIT));
 
@@ -1018,7 +1018,7 @@ validate_kasumi_f9_user(IMB_MGR *mgr, const unsigned job_api)
 
         int ret = 1; /* assume error */
 
-        printf("Testing IMB_KASUMI_F9_1_BUFFER_USER (%s):\n", job_api ? "Job API" : "Direct API");
+        printf("Testing IMB_KASUMI_F9_1_BUFFER_USER (Direct API):\n");
 
         kasumi_key_sched_t *pKeySched = malloc(IMB_KASUMI_KEY_SCHED_SIZE(mgr));
         if (!pKeySched) {
