@@ -31,7 +31,7 @@
 #define SM3_H
 
 /**
- * @brief Initializes SM3 hash context structure
+ * @brief Authenticates message with SM3 hash algorithm
  *
  * @param tag pointer to store computed SM3 digest
  * @param tag_length output tag length in bytes
