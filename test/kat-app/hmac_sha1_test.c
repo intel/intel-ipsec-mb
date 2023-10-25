@@ -38,7 +38,6 @@
 int
 hmac_sha1_test(struct IMB_MGR *mb_mgr);
 
-#define DIGEST96_SIZE  12
 #define MAX_BURST_JOBS 32
 
 extern const struct mac_test hmac_sha1_test_kat_json[];
