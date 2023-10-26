@@ -2496,6 +2496,13 @@ SUBMIT_JOB_HASH_EX(IMB_MGR *state, IMB_JOB *job, const IMB_HASH_ALG hash_alg)
                 return SUBMIT_JOB_HMAC_SHA_384(hmac_sha_384_ooo, job);
         case IMB_AUTH_HMAC_SHA_512:
                 return SUBMIT_JOB_HMAC_SHA_512(hmac_sha_512_ooo, job);
+        case IMB_AUTH_HMAC_SM3:
+                sm3_hmac_msg(job->auth_tag_output, job->auth_tag_output_len_in_bytes,
+                             job->src + job->hash_start_src_offset_in_bytes,
+                             job->msg_len_to_hash_in_bytes, job->u.HMAC._hashed_auth_key_xor_ipad,
+                             job->u.HMAC._hashed_auth_key_xor_opad);
+                job->status |= IMB_STATUS_COMPLETED_AUTH;
+                return job;
         case IMB_AUTH_AES_XCBC:
                 return SUBMIT_JOB_AES_XCBC(aes_xcbc_ooo, job);
         case IMB_AUTH_MD5:
@@ -3013,6 +3020,12 @@ submit_hash_sm3(IMB_MGR *state, IMB_JOB *job)
         return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_SM3);
 }
 
+static IMB_JOB *
+submit_hash_hmac_sm3(IMB_MGR *state, IMB_JOB *job)
+{
+        return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_HMAC_SM3);
+}
+
 static const submit_flush_fn_t tab_submit_hash[] = {
         /* [0] invalid entry */
         NULL,
@@ -3110,6 +3123,8 @@ static const submit_flush_fn_t tab_submit_hash[] = {
         submit_hash_ghash,
         /* [47] SM3 */
         submit_hash_sm3,
+        /* [48] HMAC-SM3 */
+        submit_hash_hmac_sm3,
         /* add new hash algorithms here */
 };
 
@@ -3399,6 +3414,12 @@ flush_hash_sm3(IMB_MGR *state, IMB_JOB *job)
         return FLUSH_JOB_HASH_EX(state, job, IMB_AUTH_SM3);
 }
 
+static IMB_JOB *
+flush_hash_hmac_sm3(IMB_MGR *state, IMB_JOB *job)
+{
+        return FLUSH_JOB_HASH_EX(state, job, IMB_AUTH_HMAC_SM3);
+}
+
 static const submit_flush_fn_t tab_flush_hash[] = {
         /* [0] invalid entry */
         NULL,
@@ -3496,6 +3517,8 @@ static const submit_flush_fn_t tab_flush_hash[] = {
         flush_hash_ghash,
         /* [47] SM3 */
         flush_hash_sm3,
+        /* [48] HMAC-SM3 */
+        flush_hash_hmac_sm3,
         /* add new hash algorithms here */
 };
 

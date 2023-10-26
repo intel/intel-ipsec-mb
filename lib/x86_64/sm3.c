@@ -129,7 +129,7 @@ static void
 sm3_update(uint32_t digest[8], const void *input, uint64_t num_blocks)
 {
         const uint32_t *data = (const uint32_t *) input;
-        uint32_t W[68];
+        volatile uint32_t W[68];
 
         while (num_blocks--) {
                 /* prepare W[] - read data first */
@@ -198,7 +198,7 @@ sm3_update(uint32_t digest[8], const void *input, uint64_t num_blocks)
         }
 
 #ifdef SAFE_DATA
-        clear_mem(W, sizeof(W));
+        force_memset_zero_vol(W, sizeof(W));
 #endif
 }
 
@@ -256,5 +256,68 @@ sm3_one_block(void *tag, const void *msg)
 #ifdef SAFE_DATA
         clear_mem(digest, sizeof(digest));
         clear_scratch_xmms_sse();
+#endif
+}
+
+void
+sm3_hmac_msg(void *tag, const uint64_t tag_length, const void *msg, const uint64_t msg_length,
+             const void *ipad, const void *opad)
+{
+        uint32_t digest[8];
+        uint8_t block[IMB_SM3_BLOCK_SIZE];
+        uint32_t *block32 = (uint32_t *) block;
+
+        /* Initialize internal digest with IPAD */
+        memcpy(digest, ipad, IMB_SM3_DIGEST_SIZE);
+
+        /* Digest full blocks */
+        sm3_update(digest, msg, msg_length / IMB_SM3_BLOCK_SIZE);
+
+        const uint64_t partial_bytes = msg_length % IMB_SM3_BLOCK_SIZE;
+        const uint8_t *trail = &((const uint8_t *) msg)[msg_length - partial_bytes];
+
+        /* Prepare last one or two blocks (depending on size of last partial block) */
+        memset(block, 0, sizeof(block));
+        memcpy(block, trail, partial_bytes);
+        block[partial_bytes] = 0x80;
+
+        if (partial_bytes >= (IMB_SM3_BLOCK_SIZE - 8)) {
+                /*
+                 * length field doesn't fit into this block
+                 * - compute digest on the current block
+                 * - clear the block for the length to be put into it next
+                 */
+                sm3_update(digest, block, 1);
+                memset(block, 0, sizeof(block));
+        }
+
+        /* Store message length plus block size (from IPAD) at the end of the block */
+        store8_be(&block[IMB_SM3_BLOCK_SIZE - 8],
+                  (IMB_SM3_BLOCK_SIZE + msg_length) * 8 /* bit length */);
+
+        sm3_update(digest, block, 1);
+
+        memset(block, 0, sizeof(block));
+        for (unsigned i = 0; i < IMB_DIM(digest); i++)
+                block32[i] = BSWAP32(digest[i]);
+
+        block[IMB_SM3_DIGEST_SIZE] = 0x80;
+        /* Store length of inner hash plus block size (from OPAD) at the end of the block */
+        store8_be(&block[IMB_SM3_BLOCK_SIZE - 8],
+                  (IMB_SM3_BLOCK_SIZE + IMB_SM3_DIGEST_SIZE) * 8 /* bit length */);
+
+        /* Initialize internal digest with OPAD */
+        memcpy(digest, opad, IMB_SM3_DIGEST_SIZE);
+
+        sm3_update(digest, block, 1);
+
+        for (unsigned i = 0; i < IMB_DIM(digest); i++)
+                digest[i] = BSWAP32(digest[i]);
+
+        memcpy(tag, digest, tag_length);
+
+#ifdef SAFE_DATA
+        clear_scratch_xmms_sse();
+        clear_mem(block, sizeof(block));
 #endif
 }

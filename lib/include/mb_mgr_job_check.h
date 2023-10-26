@@ -172,6 +172,7 @@ is_job_invalid_light(IMB_MGR *state, const IMB_CIPHER_MODE cipher_mode, const IM
         case IMB_AUTH_HMAC_SHA_256:
         case IMB_AUTH_HMAC_SHA_384:
         case IMB_AUTH_HMAC_SHA_512:
+        case IMB_AUTH_HMAC_SM3:
         case IMB_AUTH_AES_XCBC:
         case IMB_AUTH_NULL:
         case IMB_AUTH_CRC32_ETHERNET_FCS:
@@ -1703,6 +1704,20 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job, const IMB_CIPHER_MODE cipher_
                         return 1;
                 }
                 break;
+        case IMB_AUTH_HMAC_SM3:
+                if (job->u.HMAC._hashed_auth_key_xor_ipad == NULL) {
+                        imb_set_errno(state, IMB_ERR_JOB_NULL_HMAC_IPAD);
+                        return 1;
+                }
+                if (job->u.HMAC._hashed_auth_key_xor_opad == NULL) {
+                        imb_set_errno(state, IMB_ERR_JOB_NULL_HMAC_OPAD);
+                        return 1;
+                }
+                if (job->msg_len_to_hash_in_bytes == 0) {
+                        imb_set_errno(state, IMB_ERR_JOB_AUTH_LEN);
+                        return 1;
+                }
+                /* Fall-through */
         case IMB_AUTH_SM3:
                 if (job->auth_tag_output_len_in_bytes == 0 ||
                     job->auth_tag_output_len_in_bytes > IMB_SM3_DIGEST_SIZE) {

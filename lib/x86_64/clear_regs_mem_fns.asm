@@ -96,12 +96,7 @@ clear_scratch_zmms:
 
         ret
 
-;
-; This function clears all memory passed
-;
-; void force_memset_zero(void *mem, const size_t size)
-MKGLOBAL(force_memset_zero,function,internal)
-force_memset_zero:
+%macro MEMSET_ZERO 0
 
 %ifdef LINUX
         mov rcx, rsi
@@ -117,6 +112,29 @@ force_memset_zero:
 %ifndef LINUX
         pop rdi
 %endif
+
+%endmacro
+
+;
+; This function clears all memory passed
+;
+; void force_memset_zero(void *mem, const size_t size)
+MKGLOBAL(force_memset_zero,function,internal)
+force_memset_zero:
+
+        MEMSET_ZERO
+
+        ret
+
+;
+; This function clears all memory passed (volatile version)
+;
+; void force_memset_zero(volatile void *mem, const size_t size)
+MKGLOBAL(force_memset_zero_vol,function,internal)
+force_memset_zero_vol:
+
+        MEMSET_ZERO
+
         ret
 
 MKGLOBAL(imb_clear_mem,function,)

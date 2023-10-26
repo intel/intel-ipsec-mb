@@ -39,6 +39,9 @@ clear_mem(void *mem, const size_t size)
         force_memset_zero(mem, size);
 }
 
+void
+force_memset_zero_vol(volatile void *mem, const size_t size);
+
 static inline void
 clear_var(void *var, const size_t size)
 {

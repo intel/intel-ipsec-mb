@@ -9,7 +9,7 @@ Library
 - AVX2-VAES AES-CTR implementation added.
 - SM4-ECB SSE implementation added.
 - SM4-CBC SSE implementation added.
-- x86-64 SM3 implementation added.
+- x86-64 SM3 and SM3-HMAC implementation added.
 - Self-Test callback functionality added with message corrupt option.
 
 Test Applications

@@ -154,6 +154,7 @@ Table 2. List of supported integrity algorithms and their implementations.
 | CRC(6)            | N      | Y  by8 | Y  by8 | N      | N      | Y by16 |
 | PON-CRC-BIP(7)    | N      | Y      | Y      | N      | N      | Y      |
 | SM3               | Y      | N      | N      | N      | N      | N      |
+| HMAC-SM3          | Y      | N      | N      | N      | N      | N      |
 +-------------------------------------------------------------------------+
 ```
 Notes:  
@@ -203,8 +204,8 @@ Table 3. Encryption and integrity algorithm combinations
 | AES128-ECB,   | ZUC-EIA3, ZUC-EIA3-256,                             |
 | AES192-ECB,   | SNOW3G-UIA3,                                        |
 | AES256-ECB,   | POLY1305,                                           |
-| NULL,         | AES128-GMAC, AES192-GMAC, AES256-GMAC, GHASH        |
-| AES128-DOCSIS,|                                                     |
+| NULL,         | AES128-GMAC, AES192-GMAC, AES256-GMAC, GHASH,       |
+| AES128-DOCSIS,| SM3, HMAC-SM3                                       |
 | AES256-DOCSIS,|                                                     |
 | DES-DOCSIS,   |                                                     |
 | 3DES,         |                                                     |

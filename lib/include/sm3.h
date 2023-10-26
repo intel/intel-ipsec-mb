@@ -49,4 +49,19 @@ sm3_msg(void *tag, const uint64_t tag_len, const void *msg, const uint64_t msg_l
  */
 IMB_DLL_LOCAL void
 sm3_one_block(void *tag, const void *msg);
+
+/**
+ * @brief Authenticates message with SM3-HMAC hash algorithm
+ *
+ * @param tag pointer to store computed SM3 digest
+ * @param tag_length output tag length in bytes
+ * @param msg pointer to input message to compute digest over
+ * @param msg_length length of the message in bytes
+ * @param ipad_hash block-sized inner padding
+ * @param opad_hash block-sized outer padding
+ */
+IMB_DLL_LOCAL void
+sm3_hmac_msg(void *tag, const uint64_t tag_len, const void *msg, const uint64_t msg_length,
+             const void *ipad_hash, const void *opad_hash);
+
 #endif /* SM3_H */
