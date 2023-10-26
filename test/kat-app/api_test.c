@@ -243,6 +243,7 @@ fill_in_job(struct IMB_JOB *job, const IMB_CIPHER_MODE cipher_mode,
                 4,  /* IMB_AUTH_CRC6_IUUP_HEADER */
                 16, /* IMB_AUTH_GHASH */
                 32, /* IMB_AUTH_SM3 */
+                32, /* IMB_AUTH_HMAC_SM3 */
         };
         static DECLARE_ALIGNED(uint8_t dust_bin[2048], 64);
         static void *ks_ptrs[3];
@@ -392,6 +393,7 @@ fill_in_job(struct IMB_JOB *job, const IMB_CIPHER_MODE cipher_mode,
         case IMB_AUTH_HMAC_SHA_256:
         case IMB_AUTH_HMAC_SHA_384:
         case IMB_AUTH_HMAC_SHA_512:
+        case IMB_AUTH_HMAC_SM3:
         case IMB_AUTH_MD5:
                 job->u.HMAC._hashed_auth_key_xor_ipad = dust_bin;
                 job->u.HMAC._hashed_auth_key_xor_opad = dust_bin;
@@ -1296,7 +1298,7 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
                                     hash == IMB_AUTH_CRC7_FP_HEADER ||
                                     hash == IMB_AUTH_CRC6_IUUP_HEADER ||
                                     hash == IMB_AUTH_POLY1305 || hash == IMB_AUTH_GHASH ||
-                                    hash == IMB_AUTH_SM3)
+                                    hash == IMB_AUTH_SM3 || hash == IMB_AUTH_HMAC_SM3)
                                         continue;
 
                                 /*
@@ -1364,6 +1366,7 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
                                 case IMB_AUTH_HMAC_SHA_256:
                                 case IMB_AUTH_HMAC_SHA_384:
                                 case IMB_AUTH_HMAC_SHA_512:
+                                case IMB_AUTH_HMAC_SM3:
                                 case IMB_AUTH_MD5:
                                 case IMB_AUTH_KASUMI_UIA1:
                                         fill_in_job(&template_job, cipher, dir, hash, order,
@@ -1450,6 +1453,7 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
                                 case IMB_AUTH_HMAC_SHA_256:
                                 case IMB_AUTH_HMAC_SHA_384:
                                 case IMB_AUTH_HMAC_SHA_512:
+                                case IMB_AUTH_HMAC_SM3:
                                 case IMB_AUTH_MD5:
                                         skip = 0;
                                         break;

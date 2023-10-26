@@ -111,6 +111,8 @@ extern int
 sm4_cbc_test(struct IMB_MGR *mb_mgr);
 extern int
 sm3_test(struct IMB_MGR *mb_mg);
+extern int
+hmac_sm3_test(struct IMB_MGR *mb_mg);
 
 typedef int (*imb_test_t)(struct IMB_MGR *mb_mgr);
 
@@ -165,10 +167,11 @@ struct imb_test tests[] = {
         { .str = "SNOW_V", .fn = snow_v_test, .enabled = 1 },
         { .str = "DIRECT_API_PARAM", .fn = direct_api_param_test, .enabled = 1 },
         { .str = "QUIC-ECB", .fn = quic_ecb_test, .enabled = 1 },
-        { .str = "QUIC-CHACHA20", .fn = quic_chacha20_test, .enabled = 1 },
-        { .str = "SM4-ECB", .fn = sm4_ecb_test, .enabled = 1 },
-        { .str = "SM4-CBC", .fn = sm4_cbc_test, .enabled = 1 },
-        { .str = "SM3", .fn = sm3_test, .enabled = 1 }
+        { .str = "QUIC_CHACHA20", .fn = quic_chacha20_test, .enabled = 1 },
+        { .str = "SM4_ECB", .fn = sm4_ecb_test, .enabled = 1 },
+        { .str = "SM4_CBC", .fn = sm4_cbc_test, .enabled = 1 },
+        { .str = "SM3", .fn = sm3_test, .enabled = 1 },
+        { .str = "HMAC_SM3", .fn = hmac_sm3_test, .enabled = 1 }
 };
 
 static int self_test_corrupt = 0;

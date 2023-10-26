@@ -15,7 +15,7 @@ Library
 Test Applications
 - QUIC CHACHA20-POLY1305 and CHACHA20 HP tests added.
 - SM4-ECB and SM4-CBC tests added.
-- SM3 tests added.
+- SM3 and SM3-HMAC tests added.
 - Self-Test callback support added to the KAT-APP.
 - Updated ACVP app (imb-acvp) to support libacvp v2.0+.
 
