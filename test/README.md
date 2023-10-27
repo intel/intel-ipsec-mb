@@ -14,11 +14,5 @@ For instructions to install the library, see the Library Installation section be
 
 ## Library Installation
 
-### Linux
-- Use standard OS installer to install the "intel-ipsec-mb" package (`apt`, `dnf` etc.)
-- Alternatively, install the library from source by following the instructions in the [README](https://github.com/intel/intel-ipsec-mb/#8-installation)
-
-
-### Windows
-- Install the library from source following the instructions in the [README](https://github.com/intel/intel-ipsec-mb\#8-installation)
-
+- On Linux, use standard OS installer to install the "intel-ipsec-mb" package (`apt`, `dnf` etc.)
+- Alternatively, build and install the library from source by following the instructions in the [INSTALL](https://github.com/intel/intel-ipsec-mb/blob/main/INSTALL.md#installation) file.
