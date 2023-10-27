@@ -23,7 +23,7 @@ Performance Applications
 - New parameter added to benchmark QUIC `--quic-api`.
 - Burst API is benchmarked by default now.
 - SM4-ECB and SM4-CBC support added.
-- SM3 support added.
+- SM3 and SM3-HMAC support added.
 
 v1.4 June 2023
 ========================================================================
