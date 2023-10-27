@@ -2345,7 +2345,7 @@ test_imb_self_test_get_cb(IMB_MGR *p_mgr, uint8_t *buff, size_t dataSize)
                 return -1;
         }
 
-        imb_self_test_get_cb(p_mgr, cb_fn, cb_arg);
+        (void) imb_self_test_get_cb(p_mgr, cb_fn, cb_arg);
 
         free(cb_fn);
         free(cb_arg);
