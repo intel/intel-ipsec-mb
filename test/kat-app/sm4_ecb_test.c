@@ -186,8 +186,8 @@ test_sm4_ecb_vectors(struct IMB_MGR *mb_mgr, struct test_suite_context *ctx,
                      const IMB_CIPHER_MODE cipher, const int num_jobs)
 {
         const struct cipher_test *v = sm4_ecb_test_json;
-        DECLARE_ALIGNED(uint32_t exp_enc_keys[IMB_SM4_KEY_SCHEDULE], 16);
-        DECLARE_ALIGNED(uint32_t exp_dec_keys[IMB_SM4_KEY_SCHEDULE], 16);
+        DECLARE_ALIGNED(uint32_t exp_enc_keys[IMB_SM4_KEY_SCHEDULE_ROUNDS], 16);
+        DECLARE_ALIGNED(uint32_t exp_dec_keys[IMB_SM4_KEY_SCHEDULE_ROUNDS], 16);
 
         if (!quiet_mode)
                 printf("SM4-ECB Test (N jobs = %d):\n", num_jobs);

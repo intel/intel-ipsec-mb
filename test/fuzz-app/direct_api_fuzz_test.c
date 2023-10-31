@@ -1890,7 +1890,7 @@ test_imb_sm4_keyexp(IMB_MGR *p_mgr, uint8_t *buff, size_t dataSize)
 
         void *ekey, *dkey;
 
-        if (test_aes_exp_alloc((IMB_SM4_KEY_SCHEDULE * 4) / 16, &ekey, &dkey) != 0) {
+        if (test_aes_exp_alloc((IMB_SM4_KEY_SCHEDULE_ROUNDS * 4) / 16, &ekey, &dkey) != 0) {
                 free(key);
                 return -1;
         }

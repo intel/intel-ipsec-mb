@@ -604,7 +604,7 @@ struct chacha20_poly1305_context_data {
 };
 
 /* 32 precomputed (4-byte) rounds for SM4 key schedule (128 bytes in total) */
-#define IMB_SM4_KEY_SCHEDULE 32
+#define IMB_SM4_KEY_SCHEDULE_ROUNDS 32
 
 /**
  * Maximum Authenticated Tag Length in bytes.
