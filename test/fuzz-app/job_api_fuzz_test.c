@@ -602,6 +602,9 @@ LLVMFuzzerTestOneInput(const uint8_t *data, size_t dataSize)
                          */
                         if (cipher == 0)
                                 cipher = (job->cipher_mode % (IMB_CIPHER_NUM + 1));
+
+                        job->cipher_mode = cipher;
+
                         clamp_lengths(job, buffsize);
                         static DECLARE_ALIGNED(uint8_t buff[2 * BUFF_SIZE], 64);
 
@@ -625,6 +628,9 @@ LLVMFuzzerTestOneInput(const uint8_t *data, size_t dataSize)
                          */
                         if (hash == 0)
                                 hash = (job->hash_alg % (IMB_AUTH_NUM + 1));
+
+                        job->hash_alg = hash;
+
                         clamp_lengths(job, buffsize);
                         static DECLARE_ALIGNED(uint8_t buff[2 * BUFF_SIZE], 64);
 
