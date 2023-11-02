@@ -1066,7 +1066,7 @@ test_burst_api(struct IMB_MGR *mb_mgr)
         }
         print_progress();
 
-        /* ======== test 10 : session_d */
+        /* ======== test 10 : session_id */
 
         while (IMB_GET_NEXT_BURST(mb_mgr, n_jobs, jobs) < n_jobs)
                 IMB_FLUSH_BURST(mb_mgr, n_jobs, jobs);
