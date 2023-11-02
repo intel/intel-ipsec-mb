@@ -367,6 +367,7 @@ fill_in_job(struct IMB_JOB *job, const IMB_CIPHER_MODE cipher_mode,
                 job->hash_alg = IMB_AUTH_CHACHA20_POLY1305_SGL;
                 job->key_len_in_bytes = UINT64_C(32);
                 job->iv_len_in_bytes = 12;
+                job->sgl_state = IMB_SGL_UPDATE;
                 break;
         case IMB_CIPHER_SNOW_V:
                 job->hash_alg = IMB_AUTH_NULL;
@@ -382,6 +383,7 @@ fill_in_job(struct IMB_JOB *job, const IMB_CIPHER_MODE cipher_mode,
                 job->hash_alg = IMB_AUTH_GCM_SGL;
                 job->key_len_in_bytes = UINT64_C(16);
                 job->iv_len_in_bytes = UINT64_C(12);
+                job->sgl_state = IMB_SGL_UPDATE;
                 break;
         default:
                 break;
@@ -2298,6 +2300,85 @@ test_job_invalid_misc_args(struct IMB_MGR *mb_mgr)
 
                                 print_progress();
                         }
+
+        /*
+         * INVALID SGL PARAMS
+         */
+        IMB_CIPHER_MODE sgl_cipher_modes[] = { IMB_CIPHER_GCM_SGL,
+                                               IMB_CIPHER_CHACHA20_POLY1305_SGL };
+        IMB_HASH_ALG sgl_auth_modes[] = { IMB_AUTH_GCM_SGL, IMB_AUTH_CHACHA20_POLY1305_SGL };
+
+        for (order = IMB_ORDER_CIPHER_HASH; order <= IMB_ORDER_HASH_CIPHER; order++)
+                for (dir = IMB_DIR_ENCRYPT; dir <= IMB_DIR_DECRYPT; dir++) {
+                        for (unsigned i = 0; i < DIM(sgl_cipher_modes); i++) {
+                                cipher = sgl_cipher_modes[i];
+                                hash = sgl_auth_modes[i];
+
+                                IMB_JOB *job = &template_job;
+
+                                fill_in_job(job, cipher, dir, hash, order, &chacha_ctx, &gcm_ctx);
+
+                                /* Invalid SGL state */
+                                job->sgl_state = IMB_SGL_ALL + 1;
+
+                                if (!is_submit_invalid(mb_mgr, job, TEST_INVALID_JOB,
+                                                       IMB_ERR_JOB_SGL_STATE))
+                                        return 1;
+
+                                imb_set_session(mb_mgr, job);
+                                if (!is_submit_burst_invalid(mb_mgr, job, TEST_INVALID_JOB,
+                                                             IMB_ERR_JOB_SGL_STATE))
+                                        return 1;
+
+                                /* Invalid SGL segments */
+                                job->sgl_state = IMB_SGL_ALL;
+                                job->num_sgl_io_segs = 2;
+                                job->sgl_io_segs = NULL;
+
+                                if (!is_submit_invalid(mb_mgr, job, TEST_INVALID_JOB,
+                                                       IMB_ERR_JOB_NULL_SRC))
+                                        return 1;
+
+                                imb_set_session(mb_mgr, job);
+                                if (!is_submit_burst_invalid(mb_mgr, job, TEST_INVALID_JOB,
+                                                             IMB_ERR_JOB_NULL_SRC))
+                                        return 1;
+
+                                /* Null source in non-zero length segment */
+                                struct IMB_SGL_IOV segs[2];
+                                uint8_t buf[50];
+
+                                job->sgl_io_segs = segs;
+
+                                segs[0].in = NULL;
+                                segs[0].out = buf;
+                                segs[0].len = 50;
+
+                                if (!is_submit_invalid(mb_mgr, job, TEST_INVALID_JOB,
+                                                       IMB_ERR_JOB_NULL_SRC))
+                                        return 1;
+
+                                imb_set_session(mb_mgr, job);
+                                if (!is_submit_burst_invalid(mb_mgr, job, TEST_INVALID_JOB,
+                                                             IMB_ERR_JOB_NULL_SRC))
+                                        return 1;
+
+                                segs[0].in = buf;
+                                segs[0].out = NULL;
+
+                                if (!is_submit_invalid(mb_mgr, job, TEST_INVALID_JOB,
+                                                       IMB_ERR_JOB_NULL_DST))
+                                        return 1;
+
+                                imb_set_session(mb_mgr, job);
+                                if (!is_submit_burst_invalid(mb_mgr, job, TEST_INVALID_JOB,
+                                                             IMB_ERR_JOB_NULL_DST))
+                                        return 1;
+
+                                /* Null destination in non-zero length segment */
+                                print_progress();
+                        }
+                }
 
         /* clean up */
         while (IMB_FLUSH_JOB(mb_mgr) != NULL)
