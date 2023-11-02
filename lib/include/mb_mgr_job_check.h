@@ -1214,7 +1214,7 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job, const IMB_CIPHER_MODE cipher_
                         imb_set_errno(state, IMB_ERR_JOB_NULL_SGL_CTX);
                         return 1;
                 }
-                if (job->sgl_state == IMB_SGL_COMPLETE) {
+                if (job->sgl_state == IMB_SGL_COMPLETE || job->sgl_state == IMB_SGL_ALL) {
                         if (job->auth_tag_output_len_in_bytes < UINT64_C(1) ||
                             job->auth_tag_output_len_in_bytes > UINT64_C(16)) {
                                 imb_set_errno(state, IMB_ERR_JOB_AUTH_TAG_LEN);
@@ -1225,7 +1225,7 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job, const IMB_CIPHER_MODE cipher_
                                 return 1;
                         }
                 }
-                if (job->sgl_state == IMB_SGL_INIT) {
+                if (job->sgl_state == IMB_SGL_INIT || job->sgl_state == IMB_SGL_ALL) {
                         if ((job->u.GCM.aad_len_in_bytes > 0) && (job->u.GCM.aad == NULL)) {
                                 imb_set_errno(state, IMB_ERR_JOB_NULL_AAD);
                                 return 1;
