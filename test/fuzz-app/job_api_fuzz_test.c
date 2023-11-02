@@ -36,6 +36,7 @@
 
 #define BUFF_SIZE      (32 * 1024 * 1024)
 #define MAX_BURST_JOBS 32
+#define MAX_SGL_SEGS   32
 
 int
 LLVMFuzzerTestOneInput(const uint8_t *, size_t);
@@ -64,6 +65,20 @@ clamp_lengths(struct IMB_JOB *job, const uint64_t buffsize)
 }
 
 static void
+fill_job_sgl_segments(struct IMB_JOB *job, struct IMB_SGL_IOV *sgl_segs, const int num_sgl_segs,
+                      void *buff, const uint64_t buffsize)
+{
+        for (int i = 0; i < num_sgl_segs; i++) {
+                sgl_segs->in = buff;
+                sgl_segs->out = buff;
+                sgl_segs->len = buffsize;
+        }
+
+        job->sgl_io_segs = sgl_segs;
+        job->num_sgl_io_segs = (uint64_t) num_sgl_segs;
+}
+
+static void
 fill_job_data(struct IMB_JOB *job, void *buff)
 {
         if (job->src != NULL)
@@ -81,7 +96,8 @@ fill_job_data(struct IMB_JOB *job, void *buff)
 }
 
 static void
-fill_additional_cipher_data(struct IMB_JOB *job, void *buff, const uint64_t buffsize)
+fill_additional_cipher_data(struct IMB_JOB *job, struct IMB_SGL_IOV *sgl_segs,
+                            const int num_sgl_segs, void *buff, const uint64_t buffsize)
 {
         const IMB_CIPHER_MODE cipherMode = job->cipher_mode;
 
@@ -114,6 +130,7 @@ fill_additional_cipher_data(struct IMB_JOB *job, void *buff, const uint64_t buff
                         job->u.GCM.aad_len_in_bytes = buffsize;
                 if (job->iv_len_in_bytes > buffsize)
                         job->iv_len_in_bytes = buffsize;
+                fill_job_sgl_segments(job, sgl_segs, num_sgl_segs, buff, buffsize);
                 break;
         case IMB_CIPHER_CHACHA20_POLY1305:
                 if (job->u.CHACHA20_POLY1305.aad != NULL)
@@ -131,6 +148,7 @@ fill_additional_cipher_data(struct IMB_JOB *job, void *buff, const uint64_t buff
                 }
                 if (job->u.CHACHA20_POLY1305.aad_len_in_bytes > buffsize)
                         job->u.CHACHA20_POLY1305.aad_len_in_bytes = buffsize;
+                fill_job_sgl_segments(job, sgl_segs, num_sgl_segs, buff, buffsize);
                 break;
         case IMB_CIPHER_SNOW_V_AEAD:
                 if (job->u.SNOW_V_AEAD.aad != NULL)
@@ -547,9 +565,10 @@ LLVMFuzzerTestOneInput(const uint8_t *data, size_t dataSize)
                                 job->cipher_mode = cipher;
                         clamp_lengths(job, buffsize);
                         static DECLARE_ALIGNED(uint8_t buff[2 * BUFF_SIZE], 64);
+                        static struct IMB_SGL_IOV sgl_segs[MAX_SGL_SEGS];
 
                         fill_job_data(job, buff);
-                        fill_additional_cipher_data(job, buff, buffsize);
+                        fill_additional_cipher_data(job, sgl_segs, MAX_SGL_SEGS, buff, buffsize);
                         fill_additional_hash_data(job, buff, buffsize);
                         IMB_SUBMIT_JOB(p_mgr);
                 }
@@ -580,9 +599,10 @@ LLVMFuzzerTestOneInput(const uint8_t *data, size_t dataSize)
                                 job->cipher_mode = cipher;
                         clamp_lengths(job, buffsize);
                         static DECLARE_ALIGNED(uint8_t buff[2 * BUFF_SIZE], 64);
+                        static struct IMB_SGL_IOV sgl_segs[MAX_SGL_SEGS];
 
                         fill_job_data(job, buff);
-                        fill_additional_cipher_data(job, buff, buffsize);
+                        fill_additional_cipher_data(job, sgl_segs, MAX_SGL_SEGS, buff, buffsize);
                         fill_additional_hash_data(job, buff, buffsize);
                 }
 
@@ -607,9 +627,10 @@ LLVMFuzzerTestOneInput(const uint8_t *data, size_t dataSize)
 
                         clamp_lengths(job, buffsize);
                         static DECLARE_ALIGNED(uint8_t buff[2 * BUFF_SIZE], 64);
+                        static struct IMB_SGL_IOV sgl_segs[MAX_SGL_SEGS];
 
                         fill_job_data(job, buff);
-                        fill_additional_cipher_data(job, buff, buffsize);
+                        fill_additional_cipher_data(job, sgl_segs, MAX_SGL_SEGS, buff, buffsize);
                 }
 
                 IMB_SUBMIT_CIPHER_BURST(p_mgr, jobs, num_jobs, cipher, dir, key_len);
