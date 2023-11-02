@@ -92,7 +92,8 @@ IMB_DLL_LOCAL const int imb_errno_types[] = { IMB_ERR_NULL_MBMGR,
                                               IMB_ERR_BURST_SIZE,
                                               IMB_ERR_BURST_OOO,
                                               IMB_ERR_SELFTEST,
-                                              IMB_ERR_BURST_SUITE_ID };
+                                              IMB_ERR_BURST_SUITE_ID,
+                                              IMB_ERR_JOB_SGL_STATE };
 
 int
 imb_get_errno(IMB_MGR *mb_mgr)
@@ -226,6 +227,8 @@ imb_get_strerror(int errnum)
                 return "Self-test failed";
         case IMB_ERR_BURST_SUITE_ID:
                 return "Invalid cipher suite ID (async burst API)";
+        case IMB_ERR_JOB_SGL_STATE:
+                return "Invalid SGL state";
         default:
                 return strerror(errnum);
         }

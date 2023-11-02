@@ -250,6 +250,7 @@ typedef enum {
         IMB_ERR_BURST_OOO,
         IMB_ERR_SELFTEST,
         IMB_ERR_BURST_SUITE_ID,
+        IMB_ERR_JOB_SGL_STATE,
         /* add new error types above this comment */
         IMB_ERR_MAX /* don't move this one */
 } IMB_ERR;
