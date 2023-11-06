@@ -7,20 +7,42 @@ on:
     branches: [ main ]
 
 jobs:
-  test:
+  # Build shared library with GMake (Clang)
+  release-gmake-clang-shared:
     runs-on: macos-12
-    steps:
-      - uses: actions/checkout@v3
 
-      - name: Test
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+        with:
+          repository: 'intel/intel-ipsec-mb'
+
+      - name: Build
         uses: cross-platform-actions/action@v0.15.0
         with:
           operating_system: freebsd
           version: '13.2'
           run: |
-            uname -a
-            echo $SHELL
-            pwd
-            ls -lah
-            whoami
-            env | sort
+            freebsd-version
+            pkg install -y curl nasm llvm gmake
+            gmake CC=clang -j 4
+
+  # Build shared library with GMake (GCC)
+  release-gmake-gcc-shared:
+    runs-on: macos-12
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+        with:
+          repository: 'intel/intel-ipsec-mb'
+
+      - name: Build
+        uses: cross-platform-actions/action@v0.15.0
+        with:
+          operating_system: freebsd
+          version: '13.2'
+          run: |
+            freebsd-version
+            pkg install -y curl nasm gmake gcc
+            gmake CC=gcc -j 4
