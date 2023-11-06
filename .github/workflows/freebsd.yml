@@ -10,13 +10,11 @@ jobs:
   # Build shared library with GMake (Clang)
   release-gmake-clang-shared:
     runs-on: ubuntu-22.04
-
+    name: FreeBSD Clang Build
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
         with:
-          repository: 'intel/intel-ipsec-mb'
-
+            repository: 'intel/intel-ipsec-mb'
       - name: Build
         uses: vmactions/freebsd-vm@v0
         with:
@@ -30,13 +28,11 @@ jobs:
   # Build shared library with GMake (GCC)
   release-gmake-gcc-shared:
     runs-on: ubuntu-22.04
-
+    name: FreeBSD GCC Build
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
         with:
-          repository: 'intel/intel-ipsec-mb'
-
+            repository: 'intel/intel-ipsec-mb'
       - name: Build
         uses: vmactions/freebsd-vm@v0
         with:
