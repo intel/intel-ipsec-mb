@@ -1,8 +1,11 @@
 ========================================================================
 Release Notes for Intel(R) Multi-Buffer Crypto for IPsec Library
 
-Unreleased
+v1.5 November 2023
 =======================================================================
+
+General
+- CMake MinGW support added.
 
 Library
 - QUIC CHACHA20-POLY1305 and CHACHA20 HP API added.
@@ -11,6 +14,11 @@ Library
 - SM4-CBC SSE implementation added.
 - x86-64 SM3 and SM3-HMAC implementation added.
 - Self-Test callback functionality added with message corrupt option.
+- Implemented AES-GCM with VAES AVX2.
+- Implemented AES-CTR with VAES AVX2.
+- Implemented a workaround for false load-block condition in SSE AES-CBC implementations.
+- Optimized CRC32 algorithms.
+- Optimized AES-GCM AVX2 and AVX512 implementations.
 
 Test Applications
 - QUIC CHACHA20-POLY1305 and CHACHA20 HP tests added.
@@ -18,6 +26,8 @@ Test Applications
 - SM3 and SM3-HMAC tests added.
 - Self-Test callback support added to the KAT-APP.
 - Updated ACVP app (imb-acvp) to support libacvp v2.0+.
+- Test vector standardized for various algorithms (CBC/CFB/CTR/ECB/DES/GCM/CCM/CHACHA20-POLY/SNOW3G/ZUC/KASUMI/SNOW-V).
+- Extended xvalid app to test burst API.
 
 Performance Applications
 - New parameter added to benchmark QUIC `--quic-api`.
