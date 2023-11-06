@@ -10,17 +10,16 @@ jobs:
   # Build shared library with GMake (Clang)
   release-gmake-clang-shared:
     runs-on: macos-12
-
     steps:
       - name: Checkout repo
         uses: actions/checkout@v3
         with:
           repository: 'intel/intel-ipsec-mb'
-
       - name: Build
         uses: cross-platform-actions/action@v0.15.0
         with:
           operating_system: freebsd
+          shell: bash
           version: '13.2'
           run: |
             freebsd-version
@@ -30,17 +29,16 @@ jobs:
   # Build shared library with GMake (GCC)
   release-gmake-gcc-shared:
     runs-on: macos-12
-
     steps:
       - name: Checkout repo
         uses: actions/checkout@v3
         with:
           repository: 'intel/intel-ipsec-mb'
-
       - name: Build
         uses: cross-platform-actions/action@v0.15.0
         with:
           operating_system: freebsd
+          shell: bash
           version: '13.2'
           run: |
             freebsd-version
