@@ -7,38 +7,26 @@ on:
     branches: [ main ]
 
 jobs:
-  # Build shared library with GMake (Clang)
-  release-gmake-clang-shared:
+  test:
     runs-on: ubuntu-22.04
-    name: FreeBSD Clang Build
+    name: A job to run test in FreeBSD
+    env:
+      MYTOKEN : ${{ secrets.MYTOKEN }}
+      MYTOKEN2: "value2"
     steps:
-      - uses: actions/checkout@v3
-        with:
-            repository: 'intel/intel-ipsec-mb'
-      - name: Build
-        uses: vmactions/freebsd-vm@v0
-        with:
-          usesh: true
-          mem: 8192
-          prepare: pkg install -y curl nasm llvm gmake
-          run: |
-            freebsd-version
-            gmake CC=clang -j 4
+    - uses: actions/checkout@v3
+    - name: Test in FreeBSD
+      id: test
+      uses: vmactions/freebsd-vm@v0
+      with:
+        envs: 'MYTOKEN MYTOKEN2'
+        usesh: true
+        prepare: |
+          pkg install -y curl
 
-  # Build shared library with GMake (GCC)
-  release-gmake-gcc-shared:
-    runs-on: ubuntu-22.04
-    name: FreeBSD GCC Build
-    steps:
-      - uses: actions/checkout@v3
-        with:
-            repository: 'intel/intel-ipsec-mb'
-      - name: Build
-        uses: vmactions/freebsd-vm@v0
-        with:
-          usesh: true
-          mem: 8192
-          prepare: pkg install -y curl nasm gmake gcc
-          run: |
-            freebsd-version
-            gmake CC=gcc -j 4
+        run: |
+          pwd
+          ls -lah
+          whoami
+          env
+          freebsd-version
