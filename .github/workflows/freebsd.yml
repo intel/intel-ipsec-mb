@@ -9,20 +9,18 @@ on:
 jobs:
   test:
     runs-on: macos-12
-    name: A job to run test in FreeBSD
     steps:
-    - uses: actions/checkout@v3
-    - name: Test in FreeBSD
-      id: test
-      uses: vmactions/freebsd-vm@v0
-      with:
-        usesh: true
-        prepare: |
-          pkg install -y curl
+      - uses: actions/checkout@v3
 
-        run: |
-          pwd
-          ls -lah
-          whoami
-          env
-          freebsd-version
+      - name: Test
+        uses: cross-platform-actions/action@v0.15.0
+        with:
+          operating_system: freebsd
+          version: '13.2'
+          run: |
+            uname -a
+            echo $SHELL
+            pwd
+            ls -lah
+            whoami
+            env | sort
