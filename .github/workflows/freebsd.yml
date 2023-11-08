@@ -9,38 +9,40 @@ on:
 jobs:
   # Build shared library with GMake (Clang)
   release-gmake-clang-shared:
-    runs-on: macos-12
+    runs-on: ubuntu-22.04
+
     steps:
       - name: Checkout repo
         uses: actions/checkout@v3
         with:
           repository: 'intel/intel-ipsec-mb'
+
       - name: Build
-        uses: cross-platform-actions/action@v0.15.0
+        uses: vmactions/freebsd-vm@v1
         with:
-          operating_system: freebsd
-          shell: bash
-          version: '13.2'
+          usesh: true
+          mem: 8192
+          prepare: pkg install -y curl nasm llvm gmake
           run: |
             freebsd-version
-            pkg install -y curl nasm llvm gmake
             gmake CC=clang -j 4
 
   # Build shared library with GMake (GCC)
   release-gmake-gcc-shared:
-    runs-on: macos-12
+    runs-on: ubuntu-22.04
+
     steps:
       - name: Checkout repo
         uses: actions/checkout@v3
         with:
           repository: 'intel/intel-ipsec-mb'
+
       - name: Build
-        uses: cross-platform-actions/action@v0.15.0
+        uses: vmactions/freebsd-vm@v1
         with:
-          operating_system: freebsd
-          shell: bash
-          version: '13.2'
+          usesh: true
+          mem: 8192
+          prepare: pkg install -y curl nasm gmake gcc
           run: |
             freebsd-version
-            pkg install -y curl nasm gmake gcc
             gmake CC=gcc -j 4
