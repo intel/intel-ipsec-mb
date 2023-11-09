@@ -9,7 +9,7 @@ on:
 jobs:
   # Build shared library with GMake (Clang)
   release-gmake-clang-shared:
-    runs-on: macos-12
+    runs-on: ubuntu-22.04
 
     steps:
       - name: Checkout repo
@@ -18,7 +18,7 @@ jobs:
           repository: 'intel/intel-ipsec-mb'
 
       - name: Build
-        uses: vmactions/freebsd-vm@v0
+        uses: vmactions/freebsd-vm@v1
         with:
           usesh: true
           mem: 8192
@@ -29,7 +29,7 @@ jobs:
 
   # Build shared library with GMake (GCC)
   release-gmake-gcc-shared:
-    runs-on: macos-12
+    runs-on: ubuntu-22.04
 
     steps:
       - name: Checkout repo
@@ -38,7 +38,7 @@ jobs:
           repository: 'intel/intel-ipsec-mb'
 
       - name: Build
-        uses: vmactions/freebsd-vm@v0
+        uses: vmactions/freebsd-vm@v1
         with:
           usesh: true
           mem: 8192
