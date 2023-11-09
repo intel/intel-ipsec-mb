@@ -5,6 +5,7 @@ var annotated_dup =
     [ "gcm_key_data", "structgcm__key__data.html", "structgcm__key__data" ],
     [ "IMB_JOB", "structIMB__JOB.html", "structIMB__JOB" ],
     [ "IMB_MGR", "structIMB__MGR.html", "structIMB__MGR" ],
+    [ "IMB_SELF_TEST_CALLBACK_DATA", "structIMB__SELF__TEST__CALLBACK__DATA.html", "structIMB__SELF__TEST__CALLBACK__DATA" ],
     [ "IMB_SGL_IOV", "structIMB__SGL__IOV.html", "structIMB__SGL__IOV" ],
     [ "imb_uint128_t", "structimb__uint128__t.html", "structimb__uint128__t" ],
     [ "kasumi_key_sched_s", "structkasumi__key__sched__s.html", "structkasumi__key__sched__s" ],

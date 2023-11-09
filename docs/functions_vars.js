@@ -19,6 +19,7 @@ var functions_vars =
     [ "q", "functions_vars_q.html", null ],
     [ "r", "functions_vars_r.html", null ],
     [ "s", "functions_vars_s.html", null ],
+    [ "t", "functions_vars_t.html", null ],
     [ "u", "functions_vars_u.html", null ],
     [ "v", "functions_vars_v.html", null ],
     [ "x", "functions_vars_x.html", null ],

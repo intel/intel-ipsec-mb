@@ -30,7 +30,7 @@
  <tbody>
  <tr id="projectrow">
   <td id="projectalign">
-   <div id="projectname">intel-ipsec-mb<span id="projectnumber">&#160;v1.4</span>
+   <div id="projectname">intel-ipsec-mb<span id="projectnumber">&#160;v1.5</span>
    </div>
    <div id="projectbrief">Documentation of the Intel(R) IPSec Multi-Buffer library</div>
   </td>
@@ -99,7 +99,7 @@ $(document).ready(function(){initNavTree('index.html',''); initResizable(); });
   <div class="headertitle"><div class="title">intel-ipsec-mb </div></div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><p><a class="anchor" id="md_C_1_2Users_2mdcornu_2dev_2libraries_8performance_8ipsec-mb_2README"></a> <a href="https://scan.coverity.com/projects/intel-ipsec-mb"><img src="https://scan.coverity.com/projects/16449/badge.svg" alt="Coverity Status" style="pointer-events: none;" class="inline"/></a> <img src="https://github.com/intel/intel-ipsec-mb/actions/workflows/linux_build_shared_gcc.yml/badge.svg" alt="Linux Build Shared gcc" style="pointer-events: none;" class="inline"/> <img src="https://github.com/intel/intel-ipsec-mb/actions/workflows/linux_build_static_gcc.yml/badge.svg" alt="Linux Build Static gcc" style="pointer-events: none;" class="inline"/> <img src="https://github.com/intel/intel-ipsec-mb/actions/workflows/linux_build_shared_clang.yml/badge.svg" alt="Linux Build Shared clang" style="pointer-events: none;" class="inline"/> <img src="https://github.com/intel/intel-ipsec-mb/actions/workflows/linux_build_static_clang.yml/badge.svg" alt="Linux Build Static clang" style="pointer-events: none;" class="inline"/> <img src="https://github.com/intel/intel-ipsec-mb/actions/workflows/linux_build_shared_clang_aesni_emu.yml/badge.svg" alt="Linux Build Shared clang AESNI emulation" style="pointer-events: none;" class="inline"/> <img src="https://github.com/intel/intel-ipsec-mb/actions/workflows/freebsd_build_shared_clang.yml/badge.svg" alt="FreeBSD Build Shared clang" style="pointer-events: none;" class="inline"/> <img src="https://github.com/intel/intel-ipsec-mb/actions/workflows/freebsd_build_shared_gcc.yml/badge.svg" alt="FreeBSD Build Shared gcc" style="pointer-events: none;" class="inline"/></p>
+<div class="textblock"><p><a class="anchor" id="md_C_1_2Users_2mdcornu_2dev_2ipsec-mb_2README"></a> <img src="https://github.com/intel/intel-ipsec-mb/actions/workflows/linux.yml/badge.svg" alt="Linux" style="pointer-events: none;" class="inline"/> <img src="https://github.com/intel/intel-ipsec-mb/actions/workflows/windows.yml/badge.svg" alt="Windows" style="pointer-events: none;" class="inline"/> <img src="https://github.com/intel/intel-ipsec-mb/actions/workflows/freebsd.yml/badge.svg" alt="FreeBSD" style="pointer-events: none;" class="inline"/> <a href="https://scan.coverity.com/projects/intel-ipsec-mb"><img src="https://scan.coverity.com/projects/16449/badge.svg" alt="Coverity Status" style="pointer-events: none;" class="inline"/></a></p>
 <h1><a class="anchor" id="autotoc_md0"></a>
 Intel(R) Multi-Buffer Crypto for IPsec Library</h1>
 <p>The library provides software crypto acceleration primarily targeting packet processing applications. It can be used for application such as: IPsec, TLS, Wireless (RAN), Cable or MPEG DRM.</p>
@@ -125,8 +125,8 @@ Contents</h2>
 <li>Package Content</li>
 <li>Documentation</li>
 <li>Compilation</li>
-<li>Security Considerations &amp; Options for Increased Security</li>
 <li>Installation</li>
+<li>Security Considerations &amp; Options for Increased Security</li>
 <li>Backwards compatibility</li>
 <li>Disclaimer (ZUC, KASUMI, SNOW3G)</li>
 <li>Legal Disclaimer</li>
@@ -136,24 +136,23 @@ Contents</h2>
 <h2><a class="anchor" id="autotoc_md2"></a>
 1. Overview</h2>
 <p>Intel Multi-Buffer Crypto for IPsec Library is highly-optimized software implementations of the core cryptographic processing for IPsec, which provides industry-leading performance on a range of Intel(R) Processors.</p>
-<p>For information on how the library works, see the Intel White Paper: "Fast Multi-buffer IPsec Implementations on Intel Architecture Processors". Jim Guilford, Sean Gulley, et. al.</p>
-<p>The easiest way to find it is to search the Internet for the title and Intel White Paper.</p>
+<p>For information on how the library works, see the Intel White Paper: <a href="https://github.com/intel/intel-ipsec-mb/wiki/doc/fast-multi-buffer-ipsec-implementations-ia-processors-paper.pdf">"Fast Multi-buffer IPsec Implementations on Intel Architecture Processors". Jim Guilford, Sean Gulley, et. al.</a></p>
 <p>Table 1. List of supported cipher algorithms and their implementations. </p><div class="fragment"><div class="line">+----------------------------------------------------------------------+</div>
 <div class="line">|                |                   Implementation                    |</div>
 <div class="line">| Encryption     +-----------------------------------------------------|</div>
 <div class="line">|                | x86_64 | SSE    | AVX    | AVX2   | AVX512 | VAES(5)|</div>
 <div class="line">|----------------+--------+--------+--------+--------+--------+--------|</div>
-<div class="line">| AES128-GCM     | N      | Y  by8 | N      | Y  by8 | Y  by8 | Y by32 |</div>
-<div class="line">| AES192-GCM     | N      | Y  by8 | N      | Y  by8 | Y  by8 | Y by32 |</div>
-<div class="line">| AES256-GCM     | N      | Y  by8 | N      | Y  by8 | Y  by8 | Y by32 |</div>
+<div class="line">| AES128-GCM     | N      | Y  by8 | N      | Y(10)  | Y  by8 | Y by32 |</div>
+<div class="line">| AES192-GCM     | N      | Y  by8 | N      | Y(10)  | Y  by8 | Y by32 |</div>
+<div class="line">| AES256-GCM     | N      | Y  by8 | N      | Y(10)  | Y  by8 | Y by32 |</div>
 <div class="line">| AES128-CCM     | N      | Y  by8 | Y  by8 | N      | N      | Y by16 |</div>
 <div class="line">| AES256-CCM     | N      | Y  by8 | Y  by8 | N      | N      | Y by16 |</div>
 <div class="line">| AES128-CBC     | N      | Y(1)   | Y(3)   | N      | N      | Y(6)   |</div>
 <div class="line">| AES192-CBC     | N      | Y(1)   | Y(3)   | N      | N      | Y(6)   |</div>
 <div class="line">| AES256-CBC     | N      | Y(1)   | Y(3)   | N      | N      | Y(6)   |</div>
-<div class="line">| AES128-CTR     | N      | Y  by8 | Y  by8 | N      | N      | Y by16 |</div>
-<div class="line">| AES192-CTR     | N      | Y  by8 | Y  by8 | N      | N      | Y by16 |</div>
-<div class="line">| AES256-CTR     | N      | Y  by8 | Y  by8 | N      | N      | Y by16 |</div>
+<div class="line">| AES128-CTR     | N      | Y  by8 | Y  by8 | Y(10)  | N      | Y by16 |</div>
+<div class="line">| AES192-CTR     | N      | Y  by8 | Y  by8 | Y(10)  | N      | Y by16 |</div>
+<div class="line">| AES256-CTR     | N      | Y  by8 | Y  by8 | Y(10)  | N      | Y by16 |</div>
 <div class="line">| AES128-ECB     | N      | Y(1)   | Y  by8 | Y(10)  | N      | Y by16 |</div>
 <div class="line">| AES192-ECB     | N      | Y(1)   | Y  by8 | Y(10)  | N      | Y by16 |</div>
 <div class="line">| AES256-ECB     | N      | Y(1)   | Y  by8 | Y(10)  | N      | Y by16 |</div>
@@ -173,6 +172,8 @@ Contents</h2>
 <div class="line">| SNOW-V         | N      | Y      | Y      | N      | N      | N      |</div>
 <div class="line">| SNOW-V AEAD    | N      | Y      | Y      | N      | N      | N      |</div>
 <div class="line">| PON-CRC-BIP    | N      | Y  by8 | Y  by8 | N      | N      | Y      |</div>
+<div class="line">| SM4-ECB        | N      | Y      | N      | N      | N      | N      |</div>
+<div class="line">| SM4-CBC        | N      | Y      | N      | N      | N      | N      |</div>
 <div class="line">+----------------------------------------------------------------------+</div>
 </div><!-- fragment --><p> Notes: <br  />
  (1,2) - By default, decryption is by4 and encryption is x4. <br  />
@@ -184,8 +185,7 @@ Contents</h2>
  (8) - decryption is by16 and encryption is x16 <br  />
  (9) - currently 1:9 crypt:skip pattern supported <br  />
  (10) - by default, decryption and encryption are AVX by8. <br  />
- On CPUs supporting VAES, decryption and encryption are AVX2-VAES by16. <br  />
-</p>
+ On CPUs supporting VAES, decryption and encryption might use AVX2-VAES by16, if beneficial.</p>
 <p>Legend: <br  />
  <code>byY</code> - single buffer Y blocks at a time <br  />
  <code>xY</code> - Y buffers at a time</p>
@@ -197,14 +197,14 @@ Contents</h2>
 <div class="line">|-------------------+--------+--------+--------+--------+--------+--------|</div>
 <div class="line">| AES-XCBC-96       | N      | Y   x4 | Y   x8 | N      | N      | Y x16  |</div>
 <div class="line">| HMAC-MD5-96       | Y(1)   | Y x4x2 | Y x4x2 | Y x8x2 | N      | N      |</div>
-<div class="line">| HMAC-SHA1-96      | N      | Y(2)x4 | Y   x4 | Y   x8 | Y  x16 | N      |</div>
-<div class="line">| HMAC-SHA2-224_112 | N      | Y(2)x4 | Y   x4 | Y   x8 | Y  x16 | N      |</div>
-<div class="line">| HMAC-SHA2-256_128 | N      | Y(2)x4 | Y   x4 | Y   x8 | Y  x16 | N      |</div>
+<div class="line">| HMAC-SHA1-96      | N      | Y(2)x4 | Y(2)x4 | Y(2)x8 | Y  x16 | N      |</div>
+<div class="line">| HMAC-SHA2-224_112 | N      | Y(2)x4 | Y(2)x4 | Y(2)x8 | Y  x16 | N      |</div>
+<div class="line">| HMAC-SHA2-256_128 | N      | Y(2)x4 | Y(2)x4 | Y(2)x8 | Y  x16 | N      |</div>
 <div class="line">| HMAC-SHA2-384_192 | N      | Y   x2 | Y   x2 | Y   x4 | Y   x8 | N      |</div>
 <div class="line">| HMAC-SHA2-512_256 | N      | Y   x2 | Y   x2 | Y   x4 | Y   x8 | N      |</div>
-<div class="line">| SHA1              | N      | Y(2)x4 | Y   x4 | Y   x8 | Y  x16 | N      |</div>
-<div class="line">| SHA2-224          | N      | Y(2)x4 | Y   x4 | Y   x8 | Y  x16 | N      |</div>
-<div class="line">| SHA2-256          | N      | Y(2)x4 | Y   x4 | Y   x8 | Y  x16 | N      |</div>
+<div class="line">| SHA1              | N      | Y(2)x4 | Y(2)x4 | Y(2)x8 | Y  x16 | N      |</div>
+<div class="line">| SHA2-224          | N      | Y(2)x4 | Y(2)x4 | Y(2)x8 | Y  x16 | N      |</div>
+<div class="line">| SHA2-256          | N      | Y(2)x4 | Y(2)x4 | Y(2)x8 | Y  x16 | N      |</div>
 <div class="line">| SHA2-384          | N      | Y   x2 | Y   x2 | Y   x4 | Y   x8 | N      |</div>
 <div class="line">| SHA2-512          | N      | Y   x2 | Y   x2 | Y   x4 | Y   x8 | N      |</div>
 <div class="line">| AES128-GMAC       | N      | Y  by8 | N      | Y  by8 | Y  by8 | Y by32 |</div>
@@ -227,6 +227,8 @@ Contents</h2>
 <div class="line">| GHASH             | N      | Y  by8 | N      | Y  by8 | Y  by8 | Y by32 |</div>
 <div class="line">| CRC(6)            | N      | Y  by8 | Y  by8 | N      | N      | Y by16 |</div>
 <div class="line">| PON-CRC-BIP(7)    | N      | Y      | Y      | N      | N      | Y      |</div>
+<div class="line">| SM3               | Y      | N      | N      | N      | N      | N      |</div>
+<div class="line">| HMAC-SM3          | Y      | N      | N      | N      | N      | N      |</div>
 <div class="line">+-------------------------------------------------------------------------+</div>
 </div><!-- fragment --><p> Notes: <br  />
  (1) - MD5 over one block implemented in C <br  />
@@ -280,8 +282,8 @@ Contents</h2>
 <div class="line">| AES128-ECB,   | ZUC-EIA3, ZUC-EIA3-256,                             |</div>
 <div class="line">| AES192-ECB,   | SNOW3G-UIA3,                                        |</div>
 <div class="line">| AES256-ECB,   | POLY1305,                                           |</div>
-<div class="line">| NULL,         | AES128-GMAC, AES192-GMAC, AES256-GMAC, GHASH        |</div>
-<div class="line">| AES128-DOCSIS,|                                                     |</div>
+<div class="line">| NULL,         | AES128-GMAC, AES192-GMAC, AES256-GMAC, GHASH,       |</div>
+<div class="line">| AES128-DOCSIS,| SM3, HMAC-SM3                                       |</div>
 <div class="line">| AES256-DOCSIS,|                                                     |</div>
 <div class="line">| DES-DOCSIS,   |                                                     |</div>
 <div class="line">| 3DES,         |                                                     |</div>
@@ -292,6 +294,8 @@ Contents</h2>
 <div class="line">| ZUC-EEA3-256, |                                                     |</div>
 <div class="line">| SNOW3G-UEA3   |                                                     |</div>
 <div class="line">| SNOW-V        |                                                     |</div>
+<div class="line">| SM4-ECB       |                                                     |</div>
+<div class="line">| SM4-CBC       |                                                     |</div>
 <div class="line">|---------------+-----------------------------------------------------|</div>
 <div class="line">| AES128-DOCSIS,| DOCSIS-CRC32                                        |</div>
 <div class="line">| AES256-DOCSIS |                                                     |</div>
@@ -345,15 +349,16 @@ Contents</h2>
 <li>test - Library test applications</li>
 <li>perf - Library performance application</li>
 <li>lib - Library source files</li>
-<li>lib/sse - Intel(R) SSE optimized routines</li>
-<li>lib/avx - Intel(R) AVX optimized routines</li>
-<li>lib/avx2 - Intel(R) AVX2 optimized routines</li>
-<li>lib/avx512 - Intel(R) AVX512 optimized routines</li>
+<li>lib/x86_64 - Non-SIMD routines</li>
+<li>lib/sse_* - Intel(R) SSE optimized routines</li>
+<li>lib/avx_* - Intel(R) AVX optimized routines</li>
+<li>lib/avx2_* - Intel(R) AVX2 optimized routines</li>
+<li>lib/avx512_* - Intel(R) AVX512 optimized routines</li>
 <li>lib/no-aesni - Non-AESNI accelerated routines</li>
 </ul>
 <p><b>Note:</b> <br  />
- There is just one branch used in the project. All development is done on the master branch. <br  />
- Code taken from the tip of the master branch should not be considered fit for production. <br  />
+ There is just one branch used in the project. All development is done on the main branch. <br  />
+ Code taken from the tip of the main branch should not be considered fit for production. <br  />
 </p>
 <p>Refer to the releases tab for stable code versions: <br  />
  <a href="https://github.com/intel/intel-ipsec-mb/releases">https://github.com/intel/intel-ipsec-mb/releases</a></p>
@@ -364,269 +369,19 @@ Contents</h2>
  <code>&gt; make doxy</code></p>
 <h2><a class="anchor" id="autotoc_md7"></a>
 6. Compilation</h2>
-<h3><a class="anchor" id="autotoc_md8"></a>
-Linux (64-bit only)</h3>
-<p>Required tools: <br  />
-</p><ul>
-<li>GNU make <br  />
-</li>
-<li>NASM version 2.14 (or newer) <br  />
-</li>
-<li>gcc (GCC) 4.8.3 (or newer) <br  />
-</li>
-</ul>
-<p>Shared library: <br  />
- <code>&gt; make</code></p>
-<p>Static library: <br  />
- <code>&gt; make SHARED=n</code></p>
-<p>Clean the build: <br  />
- <code>&gt; make clean</code> <br  />
- or <br  />
- <code>&gt; make clean SHARED=n</code></p>
-<p>Build with debugging information: <br  />
- <code>&gt; make DEBUG=y</code></p>
-<p>Build with AESNI emulation support (disabled by default): <br  />
- <code>&gt; make AESNI_EMU=y</code></p>
-<p><b>Note:</b> Building with debugging information is not advised for production use.</p>
-<p>For more build options and their explanation run: <br  />
- <code>&gt; make help</code></p>
-<h3><a class="anchor" id="autotoc_md9"></a>
-Windows MSVS (x64 only)</h3>
-<p>Required tools: <br  />
-</p><ul>
-<li>Microsoft (R) Visual Studio 2019: <br  />
-<ul>
-<li>NMAKE: Microsoft (R) Program Maintenance Utility Version 14.29.30148.0 <br  />
-</li>
-<li>CL: Microsoft (R) C/C++ Optimizing Compiler Version 19.29.30148 for x64 <br  />
-</li>
-<li>LIB: Microsoft (R) Library Manager Version 14.29.30148.0 <br  />
-</li>
-<li>LINK: Microsoft (R) Incremental Linker Version 14.29.30148.0 <br  />
-</li>
-<li>Note: Building on later versions should work but is not verified <br  />
-</li>
-</ul>
-</li>
-<li>NASM version 2.14 (or newer) <br  />
-</li>
-</ul>
-<p>Shared library (DLL): <br  />
- <code>&gt; nmake /f win_x64.mak</code></p>
-<p>Static library: <br  />
- <code>&gt; nmake /f win_x64.mak SHARED=n</code></p>
-<p>Clean the build: <br  />
- <code>&gt; nmake /f win_x64.mak clean</code> <br  />
- or <br  />
- <code>&gt; nmake /f win_x64.mak clean SHARED=n</code></p>
-<p>Build without safety features: <br  />
-</p><ul>
-<li>SAFE_DATA clears sensitive information stored temporarily on stack, registers or internal data structures <br  />
-</li>
-<li>SAFE_PARAM adds extra checks on input parameters <br  />
-</li>
-<li>SAFE_LOOKUP uses constant-time lookups (enabled by default) <br  />
-</li>
-<li>SAFE_OPTIONS additional option to disable all safe options. Enabled by default. <br  />
- Disable to turn off: SAFE_DATA, SAFE_PARAM and SAFE_LOOKUP. <br  />
-</li>
-</ul>
-<p><code>&gt; nmake /f win_x64.mak SAFE_DATA=n SAFE_PARAM=n</code> <code>&gt; nmake /f win_x64.mak SAFE_OPTIONS=n</code></p>
-<p>Build with debugging information: <br  />
- <code>&gt; nmake /f win_x64.mak DEBUG=y</code></p>
-<p>Build with AESNI emulation support (disabled by default): <br  />
- <code>&gt; nmake /f win_x64.mak AESNI_EMU=y</code></p>
-<p><b>Note:</b> Building with debugging information is not advised for production use.</p>
-<p>For more build options and their explanation run: <br  />
- <code>&gt; nmake /f win_x64.mak help</code></p>
-<h3><a class="anchor" id="autotoc_md10"></a>
-Windows Mingw-w64 (64-bit only)</h3>
-<p>Required tools: <br  />
-</p><ul>
-<li>GNU mingw32-make.exe <br  />
-</li>
-<li>NASM version 2.14 (or newer) <br  />
-</li>
-<li>gcc (GCC) 10.3.0 (or newer)</li>
-</ul>
-<p>Shared library: <br  />
- <code>&gt; mingw32-make.exe</code></p>
-<p>Static library: <br  />
- <code>&gt; mingw32-make.exe SHARED=n</code></p>
-<p>Clean the build: <br  />
- <code>&gt; mingw32-make.exe clean</code> <br  />
- or <br  />
- <code>&gt; mingw32-make.exe clean SHARED=n</code></p>
-<p>Build with debugging information: <br  />
- <code>&gt; mingw32-make.exe DEBUG=y</code></p>
-<p><b>Note:</b> Building with debugging information is not advised for production use.</p>
-<p>For more build options and their explanation run: <br  />
- <code>&gt; mingw32-make.exe help</code></p>
-<h3><a class="anchor" id="autotoc_md11"></a>
-FreeBSD (64-bit only)</h3>
-<p>Required tools: <br  />
-</p><ul>
-<li>GNU make <br  />
-</li>
-<li>NASM version 2.14 (or newer) <br  />
-</li>
-<li>gcc (GCC) 4.8.3 (or newer) / clang 5.0 (or newer) <br  />
-</li>
-</ul>
-<p>Shared library: <br  />
- <code>&gt; gmake</code></p>
-<p>Static library: <br  />
- <code>&gt; gmake SHARED=n</code></p>
-<p>Clean the build: <br  />
- <code>&gt; gmake clean</code> <br  />
- or <br  />
- <code>&gt; gmake clean SHARED=n</code></p>
-<p>Build with debugging information: <br  />
- <code>&gt; gmake DEBUG=y</code></p>
-<p><b>Note:</b> Building with debugging information is not advised for production use.</p>
-<p>For more build options and their explanation run: <br  />
- <code>&gt; gmake help</code></p>
-<h3><a class="anchor" id="autotoc_md12"></a>
-Building with CMake (experimental)</h3>
-<p>Minimum CMake version: 3.16</p>
-<p>Create build directory: </p><div class="fragment"><div class="line">mkdir build</div>
-<div class="line">cd build</div>
-</div><!-- fragment --><h4><a class="anchor" id="autotoc_md13"></a>
-Unix Makefiles (Linux and FreeBSD)</h4>
-<p>Shared library (default): </p><div class="fragment"><div class="line">cmake ..</div>
-<div class="line">cmake --build . --parallel</div>
-</div><!-- fragment --><p>Static library: </p><div class="fragment"><div class="line">cmake -DBUILD_SHARED_LIBS=OFF ..</div>
-<div class="line">cmake --build . --parallel</div>
-</div><!-- fragment --><p>Debug build: </p><div class="fragment"><div class="line">cmake -DCMAKE_BUILD_TYPE=Debug ..</div>
-<div class="line">cmake --build . --parallel</div>
-</div><!-- fragment --><p>For more build options and their explanation run: <code>cmake --build . --target print_help</code></p>
-<h4><a class="anchor" id="autotoc_md14"></a>
-Windows MSVS (x64 only)</h4>
-<p>Shared library with debugging information (default for MSVS) </p><div class="fragment"><div class="line">cmake -Ax64 ..</div>
-<div class="line">cmake --build .</div>
-</div><!-- fragment --><p>Release build: </p><div class="fragment"><div class="line">cmake -Ax64 ..</div>
-<div class="line">cmake --build . --config Release</div>
-</div><!-- fragment --><p>Static library: </p><div class="fragment"><div class="line">cmake -Ax64 -DBUILD_SHARED_LIBS=OFF ..</div>
-<div class="line">cmake --build . --config Release</div>
-</div><!-- fragment --><p>For more build options and their explanation run: <code>cmake --build . --target print_help</code></p>
-<h4><a class="anchor" id="autotoc_md15"></a>
-Ninja (Linux, FreeBSD and Windows):</h4>
-<div class="fragment"><div class="line">cmake -G Ninja ..</div>
-<div class="line">cmake --build .</div>
-</div><!-- fragment --><p>For more build options and their explanation run: </p><div class="fragment"><div class="line">cmake --build . --target print_help</div>
-</div><!-- fragment --><p>Library and applications can be found in: </p><div class="fragment"><div class="line">build/lib</div>
-<div class="line">build/test</div>
-<div class="line">build/perf</div>
-</div><!-- fragment --><h2><a class="anchor" id="autotoc_md16"></a>
-7. Security Considerations &amp; Options for Increased Security</h2>
-<h3><a class="anchor" id="autotoc_md17"></a>
-Security Considerations</h3>
-<p>The security of a system that uses cryptography depends on the strength of the cryptographic algorithms as well as the strength of the keys. Cryptographic key strength is dependent on several factors, with some of the most important factors including the length of the key, the entropy of the key bits, and maintaining the secrecy of the key.</p>
-<p>The selection of an appropriate algorithm and mode of operation critically affects the security of a system. Appropriate selection criteria is beyond the scope of this document and should be determined based upon usage, appropriate standards and consultation with a cryptographic expert. This library includes some algorithms, which are considered cryptographically weak and are included only for legacy and interoperability reasons. See the "Recommendations" section for more details.</p>
-<p>Secure creation of key material is not a part of this library. This library assumes that cryptographic keys have been created using approved methods with an appropriate and secure entropy source. Users of this library are referred to NIST SP800-133 Revision 1, Recommendation for Cryptographic Key Generation, found at <a href="https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-133r1.pdf">https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-133r1.pdf</a></p>
-<p>Even with the use of strong cryptographic algorithms and robustly generated keys, software implementations of cryptographic algorithms may be attacked at the implementation through cache-timing attacks, buffer-over-reads, and other software vulnerabilities. Counter-measures against these types of attacks are possible but require additional processing cycles. Whether a particular system should provide such counter-measures depends on the threats to that system, and cannot be determined by a general library such as this one. In order to provide the most flexible implementation, this library allows certain counter-measures to be enabled or disabled at compile time. These options are listed below as the "Options for Increased Security" and are enabled through various build flags.</p>
-<h3><a class="anchor" id="autotoc_md18"></a>
-Options for Increased Security</h3>
-<p>There are three build options that are used to increase safety in the code and help protect external functions from incorrect input data. The SAFE_DATA, SAFE_PARAM and SAFE_LOOKUP options are enabled by default. Due to the potential performance impact associated to the extra code, these can be disabled by setting the parameter equal to "n" (e.g. make SAFE_LOOKUP=n).</p>
-<p>No specific code has been added, and no specific validation or security tests have been performed to help protect against or check for side-channel attacks.</p>
-<h3><a class="anchor" id="autotoc_md19"></a>
-SAFE_DATA</h3>
-<p>Stack and registers containing sensitive information, such as keys or IVs, are cleared upon completion of a function call.</p>
-<h3><a class="anchor" id="autotoc_md20"></a>
-SAFE_PARAM</h3>
-<p>Input parameters are checked, looking generally for NULL pointers or an incorrect input length.</p>
-<h3><a class="anchor" id="autotoc_md21"></a>
-SAFE_LOOKUP</h3>
-<p>Lookups which depend on sensitive information are implemented with constant time functions.</p>
-<p>Algorithms where these constant time functions are used are the following: <br  />
-</p><ul>
-<li>AESNI emulation <br  />
-</li>
-<li>DES: SSE, AVX and AVX2 implementations <br  />
-</li>
-<li>KASUMI: all architectures <br  />
-</li>
-<li>SNOW3G: all architectures <br  />
-</li>
-</ul>
-<p>If SAFE_LOOKUP is not enabled in the build (e.g. make SAFE_LOOKUP=n) then the algorithms listed above may be susceptible to timing attacks which could expose the cryptographic key.</p>
-<h3><a class="anchor" id="autotoc_md22"></a>
-SAFE_OPTIONS</h3>
-<p>SAFE_OPTIONS is a parameter that can be used to disable/enable all supported safe options (i.e. SAFE_DATA, SAFE_PARAM, SAFE_LOOKUP). It is set to <code>y</code> by default and all safe options are enabled. <code>SAFE_OPTIONS=n</code> disables all safe options.</p>
-<h3><a class="anchor" id="autotoc_md23"></a>
-Security API</h3>
-<p><b>Force clearing/zeroing of memory</b> </p><div class="fragment"><div class="line"><a class="code hl_define" href="intel-ipsec-mb_8h.html#a986643689f56109161597f67eb9d7b40">IMB_DLL_EXPORT</a> <span class="keywordtype">void</span> <a class="code hl_function" href="intel-ipsec-mb_8h.html#aecdd69541b6d2a83d19ca804ef4b78d6">imb_clear_mem</a>(<span class="keywordtype">void</span> *mem, <span class="keyword">const</span> <span class="keywordtype">size_t</span> size);</div>
-<div class="ttc" id="aintel-ipsec-mb_8h_html_a986643689f56109161597f67eb9d7b40"><div class="ttname"><a href="intel-ipsec-mb_8h.html#a986643689f56109161597f67eb9d7b40">IMB_DLL_EXPORT</a></div><div class="ttdeci">#define IMB_DLL_EXPORT</div><div class="ttdef"><b>Definition</b> intel-ipsec-mb.h:86</div></div>
-<div class="ttc" id="aintel-ipsec-mb_8h_html_aecdd69541b6d2a83d19ca804ef4b78d6"><div class="ttname"><a href="intel-ipsec-mb_8h.html#aecdd69541b6d2a83d19ca804ef4b78d6">imb_clear_mem</a></div><div class="ttdeci">IMB_DLL_EXPORT void imb_clear_mem(void *mem, const size_t size)</div><div class="ttdoc">Force clearing/zeroing of memory.</div></div>
-</div><!-- fragment --><p> To assist in clearing sensitive application data such as keys, plaintext etc. the library provides the <code><a class="el" href="intel-ipsec-mb_8h.html#aecdd69541b6d2a83d19ca804ef4b78d6" title="Force clearing/zeroing of memory.">imb_clear_mem()</a></code> API. This API zeros _'size'_ bytes of memory pointed to by _'mem'_ followed by the <em>sfence</em> instruction to ensure memory is cleared before the function returns.</p>
-<h3><a class="anchor" id="autotoc_md24"></a>
-Galois Counter Mode (GCM) TAG Size</h3>
-<p>The library GCM and GMAC implementation provides flexibility as to tag size selection. As explained in <a href="https://csrc.nist.gov/publications/detail/sp/800-38d/final">NIST Special Publication 800-38D</a> section 5.2.1.2 and Appendix C, using tag sizes shorter than 96 bits can be insecure. Please refer to the aforementioned sections to understand the details, trade offs and mitigations of using shorter tag sizes.</p>
-<h2><a class="anchor" id="autotoc_md25"></a>
-8. Installation</h2>
-<h3><a class="anchor" id="autotoc_md26"></a>
-Linux (64-bit only)</h3>
-<p>First compile the library and then install: <br  />
- <code>&gt; make</code> <br  />
- <code>&gt; sudo make install</code></p>
-<p>To uninstall the library run: <br  />
- <code>&gt; sudo make uninstall</code></p>
-<p>If you want to change install location then define PREFIX: <br  />
- <code>&gt; sudo make install PREFIX=&lt;path&gt;</code></p>
-<p>If there is no need to run ldconfig at install stage please use NOLDCONFIG=y option: <br  />
- <code>&gt; sudo make install NOLDCONFIG=y</code></p>
-<p>If library was compiled as an archive (not a default option) then install it using SHARED=n option: <br  />
- <code>&gt; sudo make install SHARED=n</code></p>
-<h3><a class="anchor" id="autotoc_md27"></a>
-Windows (x64 only)</h3>
-<p>First compile the library and then install from a command prompt in administrator mode: <br  />
- <code>&gt; nmake /f win_x64.mak</code> <br  />
- <code>&gt; nmake /f win_x64.mak install</code></p>
-<p>To uninstall the library run: <br  />
- <code>&gt; nmake /f win_x64.mak uninstall</code></p>
-<p>If you want to change install location then define PREFIX (default C:\Program Files): <br  />
- <code>&gt; nmake /f win_x64.mak install PREFIX=&lt;path&gt;</code></p>
-<p>If library was compiled as a static library (not a default option) then install it using SHARED=n option: <br  />
- <code>&gt; nmake /f win_x64.mak install SHARED=n</code></p>
-<h3><a class="anchor" id="autotoc_md28"></a>
-FreeBSD (64-bit only)</h3>
-<p>First compile the library and then install: <br  />
- <code>&gt; gmake</code> <br  />
- <code>&gt; sudo gmake install</code></p>
-<p>To uninstall the library run: <br  />
- <code>&gt; sudo gmake uninstall</code></p>
-<p>If you want to change install location then define PREFIX: <br  />
- <code>&gt; sudo gmake install PREFIX=&lt;path&gt;</code></p>
-<p>If there is no need to run ldconfig at install stage please use NOLDCONFIG=y option: <br  />
- <code>&gt; sudo gmake install NOLDCONFIG=y</code></p>
-<p>If library was compiled as an archive (not a default option) then install it using SHARED=n option: <br  />
- <code>&gt; sudo gmake install SHARED=n</code></p>
-<h2><a class="anchor" id="autotoc_md29"></a>
-Installing with CMake (experimental)</h2>
-<h3><a class="anchor" id="autotoc_md30"></a>
-Unix (Linux and FreeBSD)</h3>
-<p>First compile the library and then install: <br  />
- </p><div class="fragment"><div class="line">cmake --build .</div>
-<div class="line">sudo cmake --install .</div>
-</div><!-- fragment --><p>To uninstall the library run: <br  />
- <code>sudo cmake --build . --target uninstall</code></p>
-<p>If you want to change install location then define PREFIX: <br  />
- <code>sudo cmake --install . --prefix=&lt;path&gt;</code></p>
-<h3><a class="anchor" id="autotoc_md31"></a>
-Windows (x64 only)</h3>
-<p>First compile the library and then install from a command prompt in administrator mode: <br  />
- </p><div class="fragment"><div class="line">cmake --build . --config Release</div>
-<div class="line">cmake --install . --config Release</div>
-</div><!-- fragment --><p>To uninstall the library run: <br  />
- <code>cmake --build . --target uninstall</code></p>
-<p>If you want to change install location then define PREFIX (default C:\Program Files): <br  />
- <code>cmake --install . --config Release --prefix=&lt;path&gt;</code></p>
-<h2><a class="anchor" id="autotoc_md32"></a>
+<p>Refer to the compilation section of the <a href="https://github.com/intel/intel-ipsec-mb/blob/main/INSTALL.md#compilation">INSTALL</a> file for instructions.</p>
+<h2><a class="anchor" id="autotoc_md8"></a>
+7. Installation</h2>
+<p>Refer to the installation section of the <a href="https://github.com/intel/intel-ipsec-mb/blob/main/INSTALL.md#installation">INSTALL</a> file for instructions.</p>
+<h2><a class="anchor" id="autotoc_md9"></a>
+8. Security Considerations &amp; Options for Increased Security</h2>
+<p>Refer to the <a href="https://github.com/intel/intel-ipsec-mb/blob/main/SECURITY.md#security-considerations--options-for-increased-security">SECURITY</a> file for security related information.</p>
+<h2><a class="anchor" id="autotoc_md10"></a>
 9. Backwards compatibility</h2>
 <p>In version 1.4, backward compile time symbol compatibility with library version 0.53 has been removed.</p>
 <p>Applications are encouraged to use new symbol names introduced in version 0.54.</p>
 <p>If required, compatibility symbol mapping can be implemented in the application. See compatibility symbol mapping in v1.3 header file: <a href="https://github.com/intel/intel-ipsec-mb/blob/v1.3/lib/intel-ipsec-mb.h#L246">https://github.com/intel/intel-ipsec-mb/blob/v1.3/lib/intel-ipsec-mb.h#L246</a></p>
-<h2><a class="anchor" id="autotoc_md33"></a>
+<h2><a class="anchor" id="autotoc_md11"></a>
 10. Disclaimer (ZUC, KASUMI, SNOW3G)</h2>
 <p>Please note that cryptographic material, such as ciphering algorithms, may be subject to national regulations. What is more, use of some algorithms in real networks and production equipment can be subject to agreement or licensing by the GSMA and/or the ETSI.</p>
 <p>For more details please see: <br  />
@@ -635,7 +390,7 @@ Windows (x64 only)</h3>
 </li>
 <li>ETSI <a href="https://www.etsi.org/security-algorithms-and-codes/cellular-algorithm-licences">https://www.etsi.org/security-algorithms-and-codes/cellular-algorithm-licences</a></li>
 </ul>
-<h2><a class="anchor" id="autotoc_md34"></a>
+<h2><a class="anchor" id="autotoc_md12"></a>
 11. Legal Disclaimer</h2>
 <p>THIS SOFTWARE IS PROVIDED BY INTEL"AS IS". NO LICENSE, EXPRESS OR <br  />
  IMPLIED, BY ESTOPPEL OR OTHERWISE, TO ANY INTELLECTUAL PROPERTY RIGHTS <br  />
@@ -646,10 +401,10 @@ Windows (x64 only)</h3>
  FITNESS FOR A PARTICULAR PURPOSE, MERCHANTABILITY, OR INFRINGEMENT <br  />
  OF ANY PATENT, COPYRIGHT OR OTHER INTELLECTUAL PROPERTY RIGHT. <br  />
 </p>
-<h2><a class="anchor" id="autotoc_md35"></a>
+<h2><a class="anchor" id="autotoc_md13"></a>
 12. FIPS Compliance</h2>
 <p>The library does not fulfill technical requirements to achieve Cryptographic Module (CMVP) certification as a standalone component. It is fit for Cryptographic Algorithm validation and certification (CAVP) and it can be part of CMVP as one of the components.</p>
-<h3><a class="anchor" id="autotoc_md36"></a>
+<h3><a class="anchor" id="autotoc_md14"></a>
 CAVP</h3>
 <p>ACVP test application located in <code>test</code> directory is to support CAVP process. It implements validation of the following algorithms: <br  />
 </p><ul>
@@ -660,6 +415,10 @@ CAVP</h3>
 <li>AES-CCM <br  />
 </li>
 <li>AES-CBC <br  />
+</li>
+<li>AES-EBC <br  />
+</li>
+<li>TDES-EDE-CBC <br  />
 </li>
 <li>AES-CTR <br  />
 </li>
@@ -686,7 +445,8 @@ CAVP</h3>
 <li>HMAC-SHA512 (HMAC-SHA2-512) <br  />
 </li>
 </ul>
-<h3><a class="anchor" id="autotoc_md37"></a>
+<p>Note: the acvp-app requires libacvp 2.0+ to be built.</p>
+<h3><a class="anchor" id="autotoc_md15"></a>
 CAVP Algorithm Parameters</h3>
 <p><b>Note:</b> all sizes in bits </p><div class="fragment"><div class="line">+--------------------------------------------------------------------------------------------+</div>
 <div class="line">| Algorithm           | Standard  | Parameters                                               |</div>
@@ -752,16 +512,31 @@ CAVP Algorithm Parameters</h3>
 <div class="line">| HMAC-SHA512         | FIPS198-1 | keyLen: [min = 8, max = 524288, increment = 8]           |</div>
 <div class="line">| (HMAC-SHA2-512)     |           | macLen: [min = 32, max = 512, increment = 8]             |</div>
 <div class="line">+--------------------------------------------------------------------------------------------+</div>
-</div><!-- fragment --> <h3><a class="anchor" id="autotoc_md38"></a>
+</div><!-- fragment --> <h3><a class="anchor" id="autotoc_md16"></a>
 Self-Test</h3>
-<p>In order to support CMVP, the library implements Self-Test functionality that is available with all compilation options. The test is always performed as part of library initialization (power-up). There is no conditional self-test functionality as none of such conditions occur (i.e. pair-wise consistency test, software/firmware load test, manual key entry test, continuous random number generator test, and bypass test). The self-test consists of Cryptographic algorithm test (known answer test) on following algorithms: <br  />
-</p><ul>
-<li>AES-GCM <br  />
+<p>In order to support CMVP, the library implements Self-Test functionality that is available with all compilation options. The test is always performed as part of library initialization (power-up). There is no conditional self-test functionality as none of such conditions occur (i.e. pair-wise consistency test, software/firmware load test, manual key entry test, continuous random number generator test, and bypass test).</p>
+<p>Application can register self-test callback function to track test progress. Optionally application can corrupt input message for selected tests and observe change in the test result.</p>
+<p>Example sequence of callbacks received by an application is:</p><ul>
+<li>callback(data.phase = IMB_SELF_TEST_PHASE_START, data.type = IMB_SELF_TEST_TYPE_KAT_CIPHER, data.descr = "AES128-CBC") =&gt; return 1</li>
+<li>callback(data.phase = IMB_SELF_TEST_PHASE_CORRUPT)<ul>
+<li>return 1: no message corruption</li>
+<li>return 0: corrupt single bit in the 1st byte</li>
+</ul>
 </li>
-<li>AES-GMAC <br  />
+<li>callback(data.phase = IMB_SELF_TEST_PHASE_PASS or IMB_SELF_TEST_PHASE_PASS) =&gt; return 1</li>
+<li>callback(data.phase = IMB_SELF_TEST_PHASE_START, data.type = IMB_SELF_TEST_TYPE_KAT_CIPHER, data.descr = "AES192-CBC") =&gt; return 1</li>
+<li>... Note that value returned by application self-test callback function only matters in the corrupt phase.</li>
+</ul>
+<p>The self-test consists of Cryptographic algorithm test (known answer test) on following types and algorithms: <br  />
+</p><ul>
+<li>KAT_AEAD:<ul>
+<li>AES-GCM <br  />
 </li>
 <li>AES-CCM <br  />
 </li>
+</ul>
+</li>
+<li>KAT_Cipher:<ul>
 <li>AES-CBC <br  />
 </li>
 <li>AES-CTR <br  />
@@ -769,6 +544,11 @@ Self-Test</h3>
 <li>AES-ECB <br  />
 </li>
 <li>TDES-EDE-CBC <br  />
+</li>
+</ul>
+</li>
+<li>KAT_Auth:<ul>
+<li>AES-GMAC <br  />
 </li>
 <li>AES-CMAC <br  />
 </li>
@@ -793,6 +573,9 @@ Self-Test</h3>
 <li>HMAC-SHA512 <br  />
 </li>
 </ul>
+</li>
+</ul>
+<p>KAT_Cipher and KAT_AEAD types conduct tests in encrypt and decrypt cipher directions. However, the corrupt callback is made only for the encrypt direction. No callback is made for the decrypt direction at the moment.</p>
 <p>Example detection of library self-test completion &amp; error in the application: </p><div class="fragment"><div class="line">IMB_ARCH arch;</div>
 <div class="line">IMB_MGR *p_mgr = alloc_mb_mgr(0);</div>
 <div class="line"> </div>
@@ -818,12 +601,58 @@ Self-Test</h3>
 <div class="line">        /* self-test error */</div>
 <div class="line">        exit(EXIT_FAILURE);</div>
 <div class="line">}</div>
-</div><!-- fragment --><h2><a class="anchor" id="autotoc_md39"></a>
+</div><!-- fragment --><p>Example registration of self-test callback function: </p><div class="fragment"><div class="line">int self_test_corrupt = 0;</div>
+<div class="line"> </div>
+<div class="line">int callback(void *arg, const IMB_SELF_TEST_CALLBACK_DATA *data)</div>
+<div class="line">{</div>
+<div class="line">        const char *phase = &quot;&quot;;</div>
+<div class="line">        const char *type = &quot;&quot;;</div>
+<div class="line">        const char *descr = &quot;&quot;;</div>
+<div class="line"> </div>
+<div class="line">        (void) arg;</div>
+<div class="line"> </div>
+<div class="line">        if (data != NULL) {</div>
+<div class="line">                if (data-&gt;phase != NULL)</div>
+<div class="line">                        phase = data-&gt;phase;</div>
+<div class="line">                if (data-&gt;type != NULL)</div>
+<div class="line">                        type = data-&gt;type;</div>
+<div class="line">                if (data-&gt;descr != NULL)</div>
+<div class="line">                        descr = data-&gt;descr;</div>
+<div class="line">        }</div>
+<div class="line"> </div>
+<div class="line">        if (strcmp(phase, IMB_SELF_TEST_PHASE_START) == 0)</div>
+<div class="line">                printf(&quot;%s : %s : &quot;, type, descr);</div>
+<div class="line"> </div>
+<div class="line">        if ((strcmp(phase, IMB_SELF_TEST_PHASE_CORRUPT) == 0) &amp;&amp; (self_test_corrupt == 1))</div>
+<div class="line">                return 0; /* corrupt input message */</div>
+<div class="line"> </div>
+<div class="line">        if (strcmp(phase, IMB_SELF_TEST_PHASE_PASS) == 0 ||</div>
+<div class="line">            strcmp(phase, IMB_SELF_TEST_PHASE_FAIL) == 0)</div>
+<div class="line">                printf(&quot;%s\n&quot;, phase);</div>
+<div class="line"> </div>
+<div class="line">        return 1;</div>
+<div class="line">}</div>
+<div class="line"> </div>
+<div class="line">...</div>
+<div class="line"> </div>
+<div class="line">IMB_ARCH arch;</div>
+<div class="line">IMB_MGR *p_mgr = alloc_mb_mgr(0);</div>
+<div class="line"> </div>
+<div class="line">/*</div>
+<div class="line"> * Register self-test callback that will be invoked during</div>
+<div class="line"> * subsequent init operation</div>
+<div class="line"> */</div>
+<div class="line">imb_self_test_set_cb(p_mgr, callback, NULL);</div>
+<div class="line"> </div>
+<div class="line">init_mb_mgr_auto(p_mgr, &amp;arch); /* or init_mb_mgr_sse/avx/avx2/avx512 */</div>
+<div class="line"> </div>
+<div class="line">...</div>
+</div><!-- fragment --><h2><a class="anchor" id="autotoc_md17"></a>
 13.DLL Injection Attack</h2>
-<h3><a class="anchor" id="autotoc_md40"></a>
+<h3><a class="anchor" id="autotoc_md18"></a>
 Problem</h3>
 <p>The Windows OS has an insecure predefined search order and set of defaults when trying to locate a resource. If the resource location is not specified by the software, an attacker need only place a malicious version in one of the locations Windows will search, and it will be loaded instead. Although this weakness can occur with any resource, it is especially common with DLL files.</p>
-<h3><a class="anchor" id="autotoc_md41"></a>
+<h3><a class="anchor" id="autotoc_md19"></a>
 Solutions</h3>
 <p>Applications using intel-ipsec-mb DLL library may need to apply one of the solutions to prevent from DLL injection attack.</p>
 <p>Two solutions are available:</p><ul>
@@ -832,7 +661,7 @@ Solutions</h3>
 <li>Signature verification of the DLL <br  />
 </li>
 </ul>
-<h3><a class="anchor" id="autotoc_md42"></a>
+<h3><a class="anchor" id="autotoc_md20"></a>
 Resources and Solution Details</h3>
 <ul>
 <li>Security remarks section of LoadLibraryEx documentation by Microsoft: <a href="https://docs.microsoft.com/en-us/windows/win32/api/libloaderapi/nf-libloaderapi-loadlibraryexa#security-remarks">https://docs.microsoft.com/en-us/windows/win32/api/libloaderapi/nf-libloaderapi-loadlibraryexa#security-remarks</a> <br  />

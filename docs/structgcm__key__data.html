@@ -30,7 +30,7 @@
  <tbody>
  <tr id="projectrow">
   <td id="projectalign">
-   <div id="projectname">intel-ipsec-mb<span id="projectnumber">&#160;v1.4</span>
+   <div id="projectname">intel-ipsec-mb<span id="projectnumber">&#160;v1.5</span>
    </div>
    <div id="projectbrief">Documentation of the Intel(R) IPSec Multi-Buffer library</div>
   </td>
@@ -123,8 +123,8 @@ Data Fields</h2></td></tr>
 <tr class="separator:a59cb7987a697909bab91b9f820c8ed49"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a5ffb5d0506035ce484d72be7b11f007f"><td class="memItemLeft" >&#160;&#160;&#160;struct {&#160;</td><td class="memItemRight" valign="bottom"></td></tr>
 <tr class="separator:a3f231fdc1d521cd15c111667e4aea818"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:afb872f75f591f26c311acf146d7c2982"><td class="memItemLeft" >&#160;&#160;&#160;&#160;&#160;&#160;uint8_t&#160;&#160;&#160;<a class="el" href="structgcm__key__data.html#a1c73e3891c50c5e03e82715ceda77d17">shifted_hkey</a> [<a class="el" href="intel-ipsec-mb_8h.html#a0c6f54ab6663187fa401c766a981a41e">IMB_GCM_ENC_KEY_LEN</a> *8]&#160;</td><td class="memItemRight" valign="bottom"></td></tr>
-<tr class="separator:afb872f75f591f26c311acf146d7c2982"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af14ef2b35d436f4b081dedb04bcd8f89"><td class="memItemLeft" >&#160;&#160;&#160;&#160;&#160;&#160;uint8_t&#160;&#160;&#160;<a class="el" href="structgcm__key__data.html#a1c73e3891c50c5e03e82715ceda77d17">shifted_hkey</a> [<a class="el" href="intel-ipsec-mb_8h.html#a0c6f54ab6663187fa401c766a981a41e">IMB_GCM_ENC_KEY_LEN</a> *8 *2]&#160;</td><td class="memItemRight" valign="bottom"></td></tr>
+<tr class="separator:af14ef2b35d436f4b081dedb04bcd8f89"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a5ffb5d0506035ce484d72be7b11f007f"><td class="memItemLeft" valign="top">&#160;&#160;&#160;}&#160;&#160;&#160;<a class="el" href="structgcm__key__data.html#a3f231fdc1d521cd15c111667e4aea818">avx2_avx512</a>&#160;</td><td class="memItemRight" valign="bottom"></td></tr>
 <tr class="separator:a5ffb5d0506035ce484d72be7b11f007f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ac9f7f886acb050fb3d32cb35714d0994"><td class="memItemLeft" >&#160;&#160;&#160;struct {&#160;</td><td class="memItemRight" valign="bottom"></td></tr>
@@ -194,6 +194,8 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 <p>This is needed for schoolbook multiply purposes. (HashKey&lt;&lt;1 mod poly), (HashKey^2&lt;&lt;1 mod poly), ..., (Hashkey^48&lt;&lt;1 mod poly)</p>
+<p>This is needed for schoolbook multiply purposes. (HashKey&lt;&lt;1 mod poly), (HashKey^2&lt;&lt;1 mod poly), ..., (Hashkey^8&lt;&lt;1 mod poly)</p>
+<p>Followed by: (HashKey&lt;&lt;1 mod poly) x POLY, (HashKey^2&lt;&lt;1 mod poly) x POLY, ..., (Hashkey^8&lt;&lt;1 mod poly) x POLY</p>
 <p>Start with: (HashKey&lt;&lt;1 mod poly), (HashKey^2&lt;&lt;1 mod poly), ..., (Hashkey^32&lt;&lt;1 mod poly)</p>
 <p>Followed by: (HashKey&lt;&lt;1 mod poly) x POLY, (HashKey^2&lt;&lt;1 mod poly) x POLY, ..., (Hashkey^32&lt;&lt;1 mod poly) x POLY </p>
 
