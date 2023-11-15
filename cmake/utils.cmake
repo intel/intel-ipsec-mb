@@ -24,6 +24,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 include(CheckCCompilerFlag)
+include(CheckLinkerFlag)
 
 # extract library version from header file
 macro(imb_get_version IMB_HDR_FILE)
@@ -133,7 +134,16 @@ macro(imb_compiler_check)
     (CMAKE_C_COMPILER_VERSION VERSION_LESS 5.0))
     message(FATAL_ERROR "GNU C Compiler version must be 5.0 or higher")
   endif()
-  check_c_compiler_flag("-fcf-protection" CC_HAS_CET)
+
+  # enable CET if supported by both compiler and linker
+  check_c_compiler_flag("-fcf-protection=full" CC_CET_CHECK)
+  check_linker_flag("C" "-z ibt" LD_IBT_CHECK)
+  if(CC_CET_CHECK AND LD_IBT_CHECK)
+    set(CET_SUPPORT YES)
+  else()
+    set(CET_SUPPORT NO)
+  endif()
+  message(STATUS "CET SUPPORT...             ${CET_SUPPORT}")
 endmacro()
 
 # add uninstall target
