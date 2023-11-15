@@ -24,14 +24,15 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+cmake_minimum_required(VERSION 3.18)
+cmake_policy(VERSION 3.18)
+
 include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/utils.cmake")
 
 # get version from public header file
 set(IMB_HDR "${CMAKE_CURRENT_SOURCE_DIR}/lib/intel-ipsec-mb.h")
 imb_get_version(${IMB_HDR})
 message(STATUS "Project Version: ${IPSEC_MB_VERSION_FULL}")
-
-cmake_minimum_required(VERSION 3.16)
 
 # set default project values
 imb_set_proj_defaults()
