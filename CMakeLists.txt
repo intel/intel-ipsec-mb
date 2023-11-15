@@ -38,7 +38,10 @@ message(STATUS "Project Version: ${IPSEC_MB_VERSION_FULL}")
 imb_set_proj_defaults()
 
 project(intel-ipsec-mb VERSION ${IPSEC_MB_VERSION}
-    DESCRIPTION "Intel(R) IPsec Multi-Buffer library")
+    DESCRIPTION "Intel(R) IPsec Multi-Buffer library"
+    LANGUAGES C ASM
+    HOMEPAGE_URL https://github.com/intel/intel-ipsec-mb/
+)
 
 # add testing support
 include(CTest)
