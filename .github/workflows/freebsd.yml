@@ -46,3 +46,53 @@ jobs:
           run: |
             freebsd-version
             gmake CC=gcc -j 4
+
+  # CMake release build with Clang
+  release-cmake-clang:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+        with:
+          repository: 'intel/intel-ipsec-mb'
+
+      - name: Clang Release Build
+        uses: vmactions/freebsd-vm@v1
+        with:
+          usesh: true
+          mem: 8192
+          prepare: pkg install -y curl nasm gmake cmake
+          run: |
+            echo ">>> CMAKE CONFIGURE"
+            cmake -B ./build -DCMAKE_BUILD_TYPE=Release
+            echo ">>> CMAKE BUILD"
+            cd ./build
+            cmake --build . --config Release -j4 -v
+            ctest -j 5 -C Release
+            echo ">>> CMAKE INSTALL"
+            cmake --install .
+
+  # CMake release build with GCC
+  release-cmake-gcc:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+        with:
+          repository: 'intel/intel-ipsec-mb'
+
+      - name: Release build with GCC
+        uses: vmactions/freebsd-vm@v1
+        with:
+          usesh: true
+          mem: 8192
+          prepare: pkg install -y curl nasm gmake cmake gcc
+          run: |
+            echo ">>> CMAKE CONFIGURE"
+            cmake -B ./build -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=gcc
+            echo ">>> CMAKE BUILD"
+            cd ./build
+            cmake --build . --config Release -j4 -v
+            ctest -j 5 -C Release
