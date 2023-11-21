@@ -672,7 +672,10 @@ asm_avx2_ifma_lib_objs := \
 # List of ASM modules (avx2_t4 directory)
 #
 asm_avx2_t4_lib_objs := \
-        sm4_ni_avx2.o
+        sm4_ni_avx2.o \
+        sm3_ni_x1_avx2.o \
+	sm3_msg_avx2.o \
+	sm3_hmac_avx2.o
 
 #
 # List of ASM modules (avx512 directory)

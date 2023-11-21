@@ -40,4 +40,13 @@ sm4_ecb_ni_avx2(const void *in, void *out, const int size, const void *exp_keys)
 
 void
 sm4_set_key_ni_avx2(const void *pKey, void *exp_enc_keys, void *exp_dec_keys);
+
+/* SM3 */
+void
+sm3_msg_ni_avx2(void *tag, const uint64_t tag_length, const void *msg, const uint64_t msg_length);
+IMB_JOB *
+sm3_hmac_submit_ni_avx2(IMB_JOB *job);
+IMB_JOB *
+sm3_msg_submit_ni_avx2(IMB_JOB *job);
+
 #endif /* IMB_ASM_AVX2_T4_H */

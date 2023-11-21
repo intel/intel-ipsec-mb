@@ -592,7 +592,9 @@ gcm_objs = \
 avx2_t4_objs = \
 	$(OBJ_DIR)\mb_mgr_avx2_t4.obj \
 	$(OBJ_DIR)\sm4_ni_avx2.obj \
-	$(OBJ_DIR)\sm3_ni_x1_avx2.obj
+	$(OBJ_DIR)\sm3_ni_x1_avx2.obj \
+	$(OBJ_DIR)\sm3_msg_avx2.obj \
+	$(OBJ_DIR)\sm3_hmac_avx2.obj
 
 !if "$(AESNI_EMU)" == "y"
 all_objs = $(lib_objs1) $(lib_objs2) $(gcm_objs) $(no_aesni_objs)
