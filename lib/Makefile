@@ -379,8 +379,7 @@ asm_generic_lib_objs := \
 	poly1305.o \
 	chacha20_poly1305.o \
 	mbcpuid.o \
-	atomic.o \
-	sm3.o
+	atomic.o
 
 #
 # List of ASM modules (no-aesni directory)
@@ -547,7 +546,12 @@ asm_sse_lib_objs := \
 	memcpy_sse.o \
 	snow_v_sse.o \
 	snow3g_uia2_by4_sse.o \
-	sm4_sse.o
+	sm4_sse.o \
+	sm3_base_init_sse.o \
+	sm3_base_update_sse.o \
+	sm3_base_one_block_sse.o \
+	sm3_base_msg_sse.o \
+	sm3_base_hmac_sse.o
 
 #
 # List of ASM modules (avx directory)

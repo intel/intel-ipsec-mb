@@ -224,7 +224,11 @@ lib_objs1 = \
 	$(OBJ_DIR)\save_xmms.obj \
 	$(OBJ_DIR)\mbcpuid.obj \
 	$(OBJ_DIR)\atomic.obj \
-	$(OBJ_DIR)\sm3.obj \
+	$(OBJ_DIR)\sm3_base_init_sse.obj \
+	$(OBJ_DIR)\sm3_base_update_sse.obj \
+	$(OBJ_DIR)\sm3_base_one_block_sse.obj \
+	$(OBJ_DIR)\sm3_base_msg_sse.obj \
+	$(OBJ_DIR)\sm3_base_hmac_sse.obj \
 	$(OBJ_DIR)\clear_regs_mem_fns.obj \
 	$(OBJ_DIR)\sha1_x4_avx.obj \
 	$(OBJ_DIR)\sha1_x4_sse.obj \
@@ -587,7 +591,8 @@ gcm_objs = \
 
 avx2_t4_objs = \
 	$(OBJ_DIR)\mb_mgr_avx2_t4.obj \
-	$(OBJ_DIR)\sm4_ni_avx2.obj
+	$(OBJ_DIR)\sm4_ni_avx2.obj \
+	$(OBJ_DIR)\sm3_ni_x1_avx2.obj
 
 !if "$(AESNI_EMU)" == "y"
 all_objs = $(lib_objs1) $(lib_objs2) $(gcm_objs) $(no_aesni_objs)

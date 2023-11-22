@@ -255,6 +255,12 @@ flush_snow3g_uea2_job_sse(IMB_MGR *state)
 #define SM4_CBC_ENC sm4_cbc_enc_sse
 #define SM4_CBC_DEC sm4_cbc_dec_sse
 
+/* SM3 */
+#define SUBMIT_JOB_SM3      sm3_msg_submit_sse
+#define FLUSH_JOB_SM3       unused
+#define SUBMIT_JOB_HMAC_SM3 sm3_hmac_submit_sse
+#define FLUSH_JOB_HMAC_SM3  unused
+
 /* ====================================================================== */
 
 static void

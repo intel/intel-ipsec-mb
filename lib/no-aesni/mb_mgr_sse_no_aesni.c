@@ -225,6 +225,12 @@
 #define SM4_CBC_ENC sm4_cbc_enc_sse_no_aesni
 #define SM4_CBC_DEC sm4_cbc_dec_sse_no_aesni
 
+/* SM3 */
+#define SUBMIT_JOB_SM3      sm3_msg_submit_sse
+#define FLUSH_JOB_SM3       unused
+#define SUBMIT_JOB_HMAC_SM3 sm3_hmac_submit_sse
+#define FLUSH_JOB_HMAC_SM3  unused
+
 static void
 reset_ooo_mgrs(IMB_MGR *state)
 {

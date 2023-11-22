@@ -32,8 +32,8 @@
 
 #include <intel-ipsec-mb.h>
 #include "include/error.h"
-#include "include/sm3.h"
 #include "include/memcpy.h"
+#include "include/arch_sse_type1.h" /* sm3_one_block_sse(), sm3_msg_sse() */
 
 IMB_DLL_EXPORT
 void
@@ -119,7 +119,7 @@ imb_hmac_ipad_opad(IMB_MGR *mb_mgr, const IMB_HASH_ALG sha_type, const void *pke
                         IMB_SHA384(mb_mgr, pkey, key_len, key);
                         break;
                 case IMB_AUTH_HMAC_SM3:
-                        sm3_msg(key, IMB_SM3_DIGEST_SIZE, pkey, key_len);
+                        sm3_msg_sse(key, IMB_SM3_DIGEST_SIZE, pkey, key_len);
                         break;
                 default: /* For SHA-512 */
                         IMB_SHA512(mb_mgr, pkey, key_len, key);
@@ -147,7 +147,7 @@ imb_hmac_ipad_opad(IMB_MGR *mb_mgr, const IMB_HASH_ALG sha_type, const void *pke
                         IMB_SHA512_ONE_BLOCK(mb_mgr, buf, ipad_hash);
                         break;
                 case IMB_AUTH_HMAC_SM3:
-                        sm3_one_block(ipad_hash, buf);
+                        sm3_one_block_sse(ipad_hash, buf);
                         break;
                 default: /* For MD5*/
                         IMB_MD5_ONE_BLOCK(mb_mgr, buf, ipad_hash);
@@ -176,7 +176,7 @@ imb_hmac_ipad_opad(IMB_MGR *mb_mgr, const IMB_HASH_ALG sha_type, const void *pke
                         IMB_SHA512_ONE_BLOCK(mb_mgr, buf, opad_hash);
                         break;
                 case IMB_AUTH_HMAC_SM3:
-                        sm3_one_block(opad_hash, buf);
+                        sm3_one_block_sse(opad_hash, buf);
                         break;
                 default: /* For MD5 */
                         IMB_MD5_ONE_BLOCK(mb_mgr, buf, opad_hash);

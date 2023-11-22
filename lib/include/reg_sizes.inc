@@ -30,33 +30,65 @@
 %ifndef _REG_SIZES_INC_
 %define _REG_SIZES_INC_
 
+%define	raxq	rax
+%define eaxq    rax
 %define	raxd	eax
 %define raxw	ax
 %define raxb	al
 
+%define	rbxq	rbx
+%define ebxq    rbx
 %define	rbxd	ebx
 %define rbxw	bx
 %define rbxb	bl
 
+%define	rcxq	rcx
+%define ecxq    rcx
 %define	rcxd	ecx
 %define rcxw	cx
 %define rcxb	cl
 
+%define	rdxq	rdx
+%define edxq    rdx
 %define	rdxd	edx
 %define rdxw	dx
 %define rdxb	dl
 
+%define	rsiq	rsi
+%define esiq    rsi
 %define	rsid	esi
 %define rsiw	si
 %define rsib	sil
 
+%define	rdiq	rdi
+%define ediq    rdi
 %define	rdid	edi
 %define rdiw	di
 %define rdib	dil
 
+%define	rbpq	rbp
+%define ebpq    rbp
 %define	rbpd	ebp
 %define rbpw	bp
 %define rbpb	bpl
+
+%define r8dq    r8
+%define r9dq    r9
+%define r10dq   r10
+%define r11dq   r11
+%define r12dq   r12
+%define r13dq   r13
+%define r14dq   r14
+%define r15dq   r15
+
+%define r8q     r8
+%define r9q     r9
+%define r10q    r10
+%define r11q    r11
+%define r12q    r12
+%define r13q    r13
+%define r14q    r14
+%define r15q    r15
 
 %xdefine zmm0x xmm0
 %xdefine zmm1x xmm1
@@ -355,6 +387,7 @@
 %xdefine zmm30z zmm30
 %xdefine zmm31z zmm31
 
+%define QWORD(reg) reg %+ q
 %define DWORD(reg) reg %+ d
 %define WORD(reg)  reg %+ w
 %define BYTE(reg)  reg %+ b

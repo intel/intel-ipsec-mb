@@ -348,6 +348,17 @@ sm4_cbc_dec_sse(const void *in, void *out, const int size, const void *exp_dec_k
 void
 sm4_set_key_sse(const void *pKey, void *exp_enc_keys, void *exp_dec_keys);
 
+/* SM3 */
+void
+sm3_one_block_sse(void *tag, const void *msg);
+void
+sm3_msg_sse(void *tag, const uint64_t tag_length, const void *msg, const uint64_t msg_length);
+IMB_JOB *
+sm3_hmac_submit_sse(IMB_JOB *job);
+IMB_JOB *
+sm3_msg_submit_sse(IMB_JOB *job);
+
+/* suite id */
 IMB_DLL_EXPORT void
 set_suite_id_sse_t1(IMB_MGR *state, IMB_JOB *job);
 

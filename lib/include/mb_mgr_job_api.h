@@ -50,7 +50,6 @@
 #include "include/job_api_snowv.h"
 #include "include/job_api_kasumi.h"
 #include "include/mb_mgr_job_check.h" /* is_job_invalid() */
-#include "include/sm3.h"
 
 #define CRC(func, state, job)                                                                      \
         *((uint32_t *) job->auth_tag_output) =                                                     \
@@ -2497,12 +2496,7 @@ SUBMIT_JOB_HASH_EX(IMB_MGR *state, IMB_JOB *job, const IMB_HASH_ALG hash_alg)
         case IMB_AUTH_HMAC_SHA_512:
                 return SUBMIT_JOB_HMAC_SHA_512(hmac_sha_512_ooo, job);
         case IMB_AUTH_HMAC_SM3:
-                sm3_hmac_msg(job->auth_tag_output, job->auth_tag_output_len_in_bytes,
-                             job->src + job->hash_start_src_offset_in_bytes,
-                             job->msg_len_to_hash_in_bytes, job->u.HMAC._hashed_auth_key_xor_ipad,
-                             job->u.HMAC._hashed_auth_key_xor_opad);
-                job->status |= IMB_STATUS_COMPLETED_AUTH;
-                return job;
+                return SUBMIT_JOB_HMAC_SM3(job);
         case IMB_AUTH_AES_XCBC:
                 return SUBMIT_JOB_AES_XCBC(aes_xcbc_ooo, job);
         case IMB_AUTH_MD5:
@@ -2631,11 +2625,7 @@ SUBMIT_JOB_HASH_EX(IMB_MGR *state, IMB_JOB *job, const IMB_HASH_ALG hash_alg)
         case IMB_AUTH_GHASH:
                 return process_ghash(state, job);
         case IMB_AUTH_SM3:
-                sm3_msg(job->auth_tag_output, job->auth_tag_output_len_in_bytes,
-                        job->src + job->hash_start_src_offset_in_bytes,
-                        job->msg_len_to_hash_in_bytes);
-                job->status |= IMB_STATUS_COMPLETED_AUTH;
-                return job;
+                return SUBMIT_JOB_SM3(job);
         default:
                 /**
                  * assume IMB_AUTH_GCM, IMB_AUTH_PON_CRC_BIP,
