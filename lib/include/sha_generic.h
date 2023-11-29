@@ -36,37 +36,12 @@
 #include "constants.h"
 #include "include/clear_regs_mem.h"
 #include "include/error.h"
+#include "include/arch_sse_type1.h"
+#include "include/arch_sse_type2.h"
+#include "include/arch_avx_type1.h"
+#include "include/arch_avx2_type4.h"
 
-extern void
-sha1_block_sse(const void *, void *);
-extern void
-sha1_block_avx(const void *, void *);
-extern void
-sha1_ni_block_sse(const void *, void *);
-
-extern void
-sha224_block_sse(const void *, void *);
-extern void
-sha224_block_avx(const void *, void *);
-
-extern void
-sha256_block_sse(const void *, void *);
-extern void
-sha256_block_avx(const void *, void *);
-extern void
-sha256_ni_block_sse(const void *, void *);
-
-extern void
-sha384_block_sse(const void *, void *);
-extern void
-sha384_block_avx(const void *, void *);
-
-extern void
-sha512_block_sse(const void *, void *);
-extern void
-sha512_block_avx(const void *, void *);
-
-enum arch_type { ARCH_SSE = 0, ARCH_SSE_SHANI, ARCH_AVX };
+enum arch_type { ARCH_SSE = 0, ARCH_SSE_SHANI, ARCH_AVX, ARCH_AVX2_SHANI };
 
 /* ========================================================================== */
 /*
@@ -135,6 +110,7 @@ __forceinline void
 sha_generic_one_block(const void *inp, void *digest, const enum arch_type arch, const int sha_type)
 {
         if (sha_type == 1) {
+                IMB_ASSERT(arch != ARCH_AVX2_SHANI);
                 if (arch == ARCH_AVX)
                         sha1_block_avx(inp, digest);
                 else if (arch == ARCH_SSE)
@@ -142,14 +118,15 @@ sha_generic_one_block(const void *inp, void *digest, const enum arch_type arch, 
                 else /* arch == ARCH_SSE_SHANI */
                         sha1_ni_block_sse(inp, digest);
         } else if (sha_type == 224) {
+                IMB_ASSERT(arch != ARCH_AVX2_SHANI);
                 if (arch == ARCH_AVX)
                         sha224_block_avx(inp, digest);
                 else if (arch == ARCH_SSE)
                         sha224_block_sse(inp, digest);
                 else /* arch == ARCH_SSE_SHANI */
-                        /* Same as SHA-224 */
                         sha256_ni_block_sse(inp, digest);
         } else if (sha_type == 256) {
+                IMB_ASSERT(arch != ARCH_AVX2_SHANI);
                 if (arch == ARCH_AVX)
                         sha256_block_avx(inp, digest);
                 else if (arch == ARCH_SSE)
@@ -157,15 +134,31 @@ sha_generic_one_block(const void *inp, void *digest, const enum arch_type arch, 
                 else /* arch == ARCH_SSE_SHANI */
                         sha256_ni_block_sse(inp, digest);
         } else if (sha_type == 384) {
+                IMB_ASSERT(arch != ARCH_SSE_SHANI);
                 if (arch == ARCH_AVX)
                         sha384_block_avx(inp, digest);
+#ifdef SMX_NI
+                else if (arch == ARCH_SSE)
+                        sha384_block_sse(inp, digest);
+                else /* arch == ARCH_AVX2_SHANI */
+                        sha512_ni_block_avx2(inp, digest);
+#else
                 else
                         sha384_block_sse(inp, digest);
+#endif
         } else if (sha_type == 512) {
+                IMB_ASSERT(arch != ARCH_SSE_SHANI);
                 if (arch == ARCH_AVX)
                         sha512_block_avx(inp, digest);
+#ifdef SMX_NI
+                else if (arch == ARCH_SSE)
+                        sha512_block_sse(inp, digest);
+                else /* arch == ARCH_AVX2_SHANI */
+                        sha512_ni_block_avx2(inp, digest);
+#else
                 else
                         sha512_block_sse(inp, digest);
+#endif
         }
 }
 
@@ -321,7 +314,7 @@ sha_generic(const void *data, const uint64_t length, void *digest, const enum ar
         clear_mem(cb, sizeof(cb));
         clear_mem(&local_digest, sizeof(local_digest));
         clear_scratch_gps();
-        if (arch == ARCH_AVX)
+        if (arch == ARCH_AVX || arch == ARCH_AVX2_SHANI)
                 clear_scratch_xmms_avx();
         else
                 clear_scratch_xmms_sse();
@@ -346,7 +339,7 @@ sha_generic_1block(const void *data, void *digest, const enum arch_type arch, co
         sha_generic_one_block(data, digest, arch, sha_type);
 #ifdef SAFE_DATA
         clear_scratch_gps();
-        if (arch == ARCH_AVX)
+        if (arch == ARCH_AVX || arch == ARCH_AVX2_SHANI)
                 clear_scratch_xmms_avx();
         else
                 clear_scratch_xmms_sse();

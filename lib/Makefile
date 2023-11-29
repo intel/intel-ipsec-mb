@@ -309,6 +309,7 @@ c_lib_objs := \
 	sha_avx.o \
 	sha_avx2.o \
 	sha_avx512.o \
+	sha_ni_avx2.o \
 	sha_mb_avx.o \
 	sha_mb_avx2.o \
 	sha_mb_avx512.o \
@@ -675,7 +676,8 @@ asm_avx2_t4_lib_objs := \
         sm4_ni_avx2.o \
         sm3_ni_x1_avx2.o \
 	sm3_msg_avx2.o \
-	sm3_hmac_avx2.o
+	sm3_hmac_avx2.o \
+	sha512_x1_ni_avx2.o
 
 #
 # List of ASM modules (avx512 directory)

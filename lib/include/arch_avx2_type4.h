@@ -49,4 +49,30 @@ sm3_hmac_submit_ni_avx2(IMB_JOB *job);
 IMB_JOB *
 sm3_msg_submit_ni_avx2(IMB_JOB *job);
 
+/* SHA512 */
+IMB_DLL_EXPORT void
+sha384_ni_avx2(const void *data, const uint64_t length, void *digest);
+IMB_DLL_EXPORT void
+sha384_one_block_ni_avx2(const void *data, void *digest);
+
+IMB_DLL_EXPORT void
+sha512_one_block_ni_avx2(const void *data, void *digest);
+IMB_DLL_EXPORT void
+sha512_ni_avx2(const void *data, const uint64_t length, void *digest);
+
+void
+sha512_ni_block_avx2(const void *input, void *);
+void
+sha512_update_ni_x1(uint64_t digest[8], const void *input, uint64_t num_blocks);
+
+IMB_JOB *
+submit_job_sha384_ni_avx2(MB_MGR_SHA_512_OOO *state, IMB_JOB *job);
+IMB_JOB *
+submit_job_sha512_ni_avx2(MB_MGR_SHA_512_OOO *state, IMB_JOB *job);
+
+IMB_JOB *
+flush_job_sha384_ni_avx2(MB_MGR_SHA_512_OOO *state, IMB_JOB *job);
+IMB_JOB *
+flush_job_sha512_ni_avx2(MB_MGR_SHA_512_OOO *state, IMB_JOB *job);
+
 #endif /* IMB_ASM_AVX2_T4_H */

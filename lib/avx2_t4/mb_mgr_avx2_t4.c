@@ -181,10 +181,10 @@
 #define FLUSH_JOB_SHA224  flush_job_sha224_ni_sse
 #define SUBMIT_JOB_SHA256 submit_job_sha256_ni_sse
 #define FLUSH_JOB_SHA256  flush_job_sha256_ni_sse
-#define SUBMIT_JOB_SHA384 submit_job_sha384_avx2
-#define FLUSH_JOB_SHA384  flush_job_sha384_avx2
-#define SUBMIT_JOB_SHA512 submit_job_sha512_avx2
-#define FLUSH_JOB_SHA512  flush_job_sha512_avx2
+#define SUBMIT_JOB_SHA384 submit_job_sha384_ni_avx2
+#define FLUSH_JOB_SHA384  flush_job_sha384_ni_avx2
+#define SUBMIT_JOB_SHA512 submit_job_sha512_ni_avx2
+#define FLUSH_JOB_SHA512  flush_job_sha512_ni_avx2
 
 /* HMAC-SHA1/224/256/384/512 */
 #define SUBMIT_JOB_HMAC         submit_job_hmac_ni_sse
