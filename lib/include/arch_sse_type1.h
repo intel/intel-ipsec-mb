@@ -162,6 +162,17 @@ call_sha_256_mult_sse_from_c(SHA256_ARGS *args, uint32_t size_in_blocks);
 void
 call_sha512_x2_sse_from_c(SHA512_ARGS *args, uint64_t size_in_blocks);
 
+void
+sha1_block_sse(const void *, void *);
+void
+sha224_block_sse(const void *, void *);
+void
+sha256_block_sse(const void *, void *);
+void
+sha384_block_sse(const void *, void *);
+void
+sha512_block_sse(const void *, void *);
+
 IMB_DLL_EXPORT void
 sha1_sse(const void *data, const uint64_t length, void *digest);
 IMB_DLL_EXPORT void
