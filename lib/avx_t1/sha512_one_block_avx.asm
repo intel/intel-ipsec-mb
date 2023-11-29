@@ -31,9 +31,11 @@
 %include "include/clear_regs.inc"
 
 %define	VMOVDQ vmovdqu ;; assume buffers not aligned
+%define EXPORT_DATA 0
 
 %ifndef FUNC
 %define FUNC sha512_block_avx
+%define EXPORT_DATA 1
 %endif
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Define Macros
@@ -260,10 +262,13 @@ rotate_Xs
 	ROTATE_ARGS
 %endm
 
+%if EXPORT_DATA != 0
 mksection .rodata
 default rel
+
+MKGLOBAL(SHA512_K_AVX,data,internal)
 align 64
-K512:
+SHA512_K_AVX:
 	dq	0x428a2f98d728ae22,0x7137449123ef65cd
 	dq	0xb5c0fbcfec4d3b2f,0xe9b5dba58189dbbc
 	dq	0x3956c25bf348b538,0x59f111f1b605d019
@@ -305,9 +310,18 @@ K512:
 	dq	0x4cc5d4becb3e42b6,0x597f299cfc657e2a
 	dq	0x5fcb6fab3ad6faec,0x6c44198c4a475817
 
+
+MKGLOBAL(SHA512_SHUFF_MASK_AVX,data,internal)
 align 16
-PSHUFFLE_BYTE_FLIP_MASK: ;ddq 0x08090a0b0c0d0e0f0001020304050607
+SHA512_SHUFF_MASK_AVX:
 	dq 0x0001020304050607, 0x08090a0b0c0d0e0f
+
+%else
+
+extern SHA512_K_AVX
+extern SHA512_SHUFF_MASK_AVX
+
+%endif
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -350,9 +364,9 @@ FUNC:
 	mov	g, [8*6 + CTX]
 	mov	h, [8*7 + CTX]
 
-	vmovdqa	BYTE_FLIP_MASK, [rel PSHUFFLE_BYTE_FLIP_MASK]
+	vmovdqa	BYTE_FLIP_MASK, [rel SHA512_SHUFF_MASK_AVX]
 
-	lea	TBL,[rel K512]
+	lea	TBL,[rel SHA512_K_AVX]
 
 	;; byte swap first 16 qwords
 	COPY_XMM_AND_BSWAP	X0, [INP + 0*16], BYTE_FLIP_MASK
