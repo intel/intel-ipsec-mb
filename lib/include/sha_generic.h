@@ -72,21 +72,24 @@ enum arch_type { ARCH_SSE = 0, ARCH_SSE_SHANI, ARCH_AVX };
 /*
  * Various utility functions for SHA API
  */
-
 __forceinline uint32_t
 bswap4(const uint32_t val)
 {
-        return ((val >> 24) |             /**< A*/
-                ((val & 0xff0000) >> 8) | /**< B*/
-                ((val & 0xff00) << 8) |   /**< C*/
-                (val << 24));             /**< D*/
+#ifdef LINUX
+        return __builtin_bswap32(val);
+#else
+        return _byteswap_ulong(val);
+#endif
 }
 
 __forceinline uint64_t
 bswap8(const uint64_t val)
 {
-        return (((uint64_t) bswap4((uint32_t) val)) << 32) |
-               (((uint64_t) bswap4((uint32_t) (val >> 32))));
+#ifdef LINUX
+        return __builtin_bswap64(val);
+#else
+        return _byteswap_uint64(val);
+#endif
 }
 
 __forceinline void
