@@ -26,6 +26,7 @@
 # ##############################################################################
 # IPSec_MB library CMake Unix config
 # ##############################################################################
+include(GNUInstallDirs)
 
 set(LIB IPSec_MB) # 'lib' prefix assumed on Linux
 
@@ -104,13 +105,13 @@ if(NOT CMAKE_INSTALL_PREFIX)
     CACHE STRING "Set default installation directory" FORCE)
 endif()
 if(NOT LIB_INSTALL_DIR)
-  set(LIB_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/lib")
+  set(LIB_INSTALL_DIR "${CMAKE_INSTALL_FULL_LIBDIR}")
 endif()
 if(NOT INCLUDE_INSTALL_DIR)
-  set(INCLUDE_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/include")
+  set(INCLUDE_INSTALL_DIR "${CMAKE_INSTALL_FULL_INCLUDEDIR}")
 endif()
 if(NOT MAN_INSTALL_DIR)
-  set(MAN_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/share/man/man7")
+  set(MAN_INSTALL_DIR "${CMAKE_INSTALL_FULL_MANDIR}/man7")
 endif()
 
 message(STATUS "LIB_INSTALL_DIR...         ${LIB_INSTALL_DIR}")
