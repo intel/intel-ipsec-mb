@@ -137,54 +137,58 @@ FN_NAME(enc,_):
 
         ;; Check key_data != NULL
         cmp     arg1, 0
-        jz      error_enc
+        jz      .error_enc
 
         ;; Check context_data != NULL
         cmp     arg2, 0
-        jz      error_enc
+        jz      .error_enc
 
         ;; Check IV != NULL
         cmp     arg6, 0
-        jz      error_enc
+        jz      .error_enc
 
         ;; Check auth_tag != NULL
         cmp     arg9, 0
-        jz      error_enc
+        jz      .error_enc
 
         ;; Check auth_tag_len == 0 or > 16
         cmp     arg10, 0
-        jz      error_enc
+        jz      .error_enc
 
         cmp     arg10, 16
-        ja      error_enc
+        ja      .error_enc
 
         ;; Check if msg_len == 0
         cmp     arg5, 0
-        jz      skip_in_out_check_enc
+        jz      .skip_in_out_check_enc
 
         ;; Check if msg_len > max_len
         cmp     arg5, GCM_MAX_LENGTH
-        ja      error_enc
+        ja      .error_enc
 
         ;; Check out != NULL (msg_len != 0)
         cmp     arg3, 0
-        jz      error_enc
+        jz      .error_enc
 
         ;; Check in != NULL (msg_len != 0)
         cmp     arg4, 0
-        jz      error_enc
+        jz      .error_enc
 
-skip_in_out_check_enc:
+.skip_in_out_check_enc:
         ;; Check if aad_len == 0
         cmp     arg8, 0
-        jz      skip_aad_check_enc
+        jz      .skip_aad_check_enc
 
         ;; Check aad != NULL (aad_len != 0)
         cmp     arg7, 0
-        jz      error_enc
+        jz      .error_enc
 
-skip_aad_check_enc:
+.skip_aad_check_enc:
 %endif
+        ;; Check if msg_len < 256
+        cmp     arg5, 16 * 16
+        jbe     .small_packet_path
+
         GCM_INIT arg1, arg2, arg6, arg7, arg8, r10, r11, r12, k1, xmm14, xmm2, \
                 zmm1, zmm3, zmm4, zmm5, zmm6, zmm7, zmm8, zmm9, zmm10, zmm11, \
                 zmm12, zmm13, zmm15, zmm16, zmm17, zmm18, zmm19, zmm20, single_call
@@ -193,13 +197,20 @@ skip_aad_check_enc:
 %ifdef SAFE_DATA
         clear_zmms_avx512 xmm6
 %endif
+        jmp     .exit_enc
 
-exit_enc:
+.small_packet_path:
+        GCM_ENC_DEC_VSMALL  arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, ENC
+%ifdef SAFE_DATA
+        clear_zmms_avx512 xmm6
+%endif
+
+.exit_enc:
         FUNC_RESTORE
         ret
 
 %ifdef SAFE_PARAM
-error_enc:
+.error_enc:
         ;; Clear reg and imb_errno
         IMB_ERR_CHECK_START rax
 
@@ -222,7 +233,7 @@ error_enc:
 
         ;; Check if msg_len == 0
         cmp     arg5, 0
-        jz      skip_in_out_check_error_enc
+        jz      .skip_in_out_check_error_enc
 
         ;; Check if msg_len > max_len
         IMB_ERR_CHECK_ABOVE arg5, GCM_MAX_LENGTH, rax, IMB_ERR_CIPH_LEN
@@ -233,18 +244,18 @@ error_enc:
         ;; Check in != NULL (msg_len != 0)
         IMB_ERR_CHECK_NULL arg4, rax, IMB_ERR_NULL_SRC
 
-skip_in_out_check_error_enc:
+.skip_in_out_check_error_enc:
         ;; Check if aad_len == 0
         cmp     arg8, 0
-        jz      skip_aad_check_error_enc
+        jz      .skip_aad_check_error_enc
 
         ;; Check aad != NULL (aad_len != 0)
         IMB_ERR_CHECK_NULL arg7, rax, IMB_ERR_NULL_AAD
 
-skip_aad_check_error_enc:
+.skip_aad_check_error_enc:
         ;; Set imb_errno
         IMB_ERR_CHECK_END rax
-        jmp     exit_enc
+        jmp     .exit_enc
 %endif
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
