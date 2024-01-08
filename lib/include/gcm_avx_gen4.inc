@@ -1,5 +1,5 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;  Copyright(c) 2011-2023, Intel Corporation All rights reserved.
+;  Copyright(c) 2011-2024, Intel Corporation All rights reserved.
 ;
 ;  Redistribution and use in source and binary forms, with or without
 ;  modification, are permitted provided that the following conditions
@@ -28,4 +28,4 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 %define IS_AVX2_GCM
-%include "include/gcm_common_avx2_avx512.inc"
+%include "include/gcm_api_avx2_avx512.inc"
