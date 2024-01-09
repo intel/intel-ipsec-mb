@@ -266,16 +266,9 @@ FN_NAME(init_var_iv,_):
 
 skip_aad_check_init_IV:
 %endif
-        cmp     arg4, 12
-        je      iv_len_12_init_IV
 
-	GCM_INIT arg1, arg2, arg3, arg5, arg6, arg4
-        jmp     skip_iv_len_12_init_IV
+        GCM_INIT arg1, arg2, arg3, arg5, arg6, arg4
 
-iv_len_12_init_IV:
-	GCM_INIT arg1, arg2, arg3, arg5, arg6
-
-skip_iv_len_12_init_IV:
 %ifdef SAFE_DATA
         clear_scratch_xmms_avx_asm
 %endif
@@ -978,20 +971,10 @@ FN_NAME(enc_var_iv,_):
 
         mov     arg1, [arg2 + _enc_keys]
 
-        cmp     qword [arg2 + _iv_len_in_bytes], 12
-        je      iv_len_12_enc_IV
-
         GCM_INIT arg1, {rsp + CONTEXT_OFFSET}, {[arg2 + _iv]}, \
                  {[arg2 + _gcm_aad]}, {[arg2 + _gcm_aad_len]}, \
-                 {[arg2 + _iv_len_in_bytes]}
+                 {qword [arg2 + _iv_len_in_bytes]}
 
-        jmp     skip_iv_len_12_enc_IV
-
-iv_len_12_enc_IV:
-	GCM_INIT arg1, {rsp + CONTEXT_OFFSET}, {[arg2 + _iv]}, \
-                 {[arg2 + _gcm_aad]}, {[arg2 + _gcm_aad_len]}
-
-skip_iv_len_12_enc_IV:
         mov     arg3, [arg2 + _src]
         add     arg3, [arg2 + _cipher_start_src_offset]
         mov     arg4, [arg2 + _dst]
@@ -1030,20 +1013,10 @@ FN_NAME(dec_var_iv,_):
 
         mov     arg1, [arg2 + _dec_keys]
 
-        cmp     qword [arg2 + _iv_len_in_bytes], 12
-        je      iv_len_12_dec_IV
-
         GCM_INIT arg1, {rsp + CONTEXT_OFFSET}, {[arg2 + _iv]}, \
                  {[arg2 + _gcm_aad]}, {[arg2 + _gcm_aad_len]}, \
-                 {[arg2 + _iv_len_in_bytes]}
+                 {qword [arg2 + _iv_len_in_bytes]}
 
-        jmp     skip_iv_len_12_dec_IV
-
-iv_len_12_dec_IV:
-	GCM_INIT arg1, {rsp + CONTEXT_OFFSET}, {[arg2 + _iv]}, \
-                 {[arg2 + _gcm_aad]}, {[arg2 + _gcm_aad_len]}
-
-skip_iv_len_12_dec_IV:
         mov     arg3, [arg2 + _src]
         add     arg3, [arg2 + _cipher_start_src_offset]
         mov     arg4, [arg2 + _dst]

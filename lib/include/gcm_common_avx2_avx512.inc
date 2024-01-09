@@ -2397,16 +2397,26 @@ align 32
         mov     [%%GDATA_CTX + InLen], %%GPR1               ; ctx_data.in_length = 0
         mov     [%%GDATA_CTX + PBlockLen], %%GPR1           ; ctx_data.partial_block_length = 0
 
-%if %0 == 6 ;; IV is different than 12 bytes
+%if %0 == 6
+        ;; IV may be different than 12 bytes
+        cmp     %%IV_LEN, 12
+        je      %%_iv_len_is_12
+
         ;; uses xmm0-xmm6, r10-r13, rax
         CALC_J0 %%GDATA_KEY, %%IV, %%IV_LEN
-%else ;; IV is 12 bytes
+        jmp     %%_iv_is_done
+
+%%_iv_len_is_12:
+%endif
+
+        ;; IV is 12 bytes
         ;; read 12 IV bytes and pad with 0x00000001
         mov     %%GPR2, %%IV
         vmovdqa xmm0, [rel ONEf]                        ; read 12 IV bytes and pad with 0x00000001
         vpinsrq xmm0, [%%GPR2], 0
         vpinsrd xmm0, [%%GPR2 + 8], 2
-%endif
+
+%%_iv_is_done:
         vmovdqu [%%GDATA_CTX + OrigIV], xmm0                ; ctx_data.orig_IV = iv
 
         ;; store IV as counter in LE format
