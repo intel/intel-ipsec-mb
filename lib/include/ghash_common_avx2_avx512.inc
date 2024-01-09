@@ -115,7 +115,7 @@ error_ghash_pre:
 ;; [in] arg1 = GDATA_KEY
 ;; [in/out] xmm0 = hash in/out
 ;; [clobbered] xmm1-xmm6
-;; [clobbered] r10, r11, rax, [r15, rbx]  
+;; [clobbered] r10, r11, rax
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 align 32
 MKGLOBAL(GHASH_FN_NAME(ghash_internal),function,internal)

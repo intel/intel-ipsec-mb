@@ -521,8 +521,7 @@ align 32
 
 %%_CALC_AAD_done:
 
-%endmacro ; CALC_AAD_HASH
-
+%endmacro ; CALC_GHASH
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; CALC_AAD_HASH: Calculates the hash of selected data which will not be encrypted.
@@ -2328,35 +2327,35 @@ align 32
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-%macro CALC_J0 13
+%macro CALC_J0 3
 %define %%KEY           %1 ;; [in] Pointer to GCM KEY structure
 %define %%IV            %2 ;; [in] Pointer to IV
 %define %%IV_LEN        %3 ;; [in] IV length
-%define %%J0            %4 ;; [out] XMM reg to contain J0
-%define %%TMP0          %5 ;; [clobbered] Temporary GP reg
-%define %%TMP1          %6 ;; [clobbered] Temporary GP reg
-%define %%TMP2          %7 ;; [clobbered] Temporary GP reg
-%define %%XTMP0         %8 ;; [clobbered] Temporary XMM reg
-%define %%XTMP1         %9 ;; [clobbered] Temporary XMM reg
-%define %%XTMP2         %10 ;; [clobbered] Temporary XMM reg
-%define %%XTMP3         %11 ;; [clobbered] Temporary XMM reg
-%define %%XTMP4         %12 ;; [clobbered] Temporary XMM reg
-%define %%XTMP5         %13 ;; [clobbered] Temporary XMM reg
+
+%define %%J0            xmm0 ;; [out] XMM reg to contain J0
+
+%define %%XTMP0         xmm1 ;; [clobbered] Temporary XMM reg
+%define %%XTMP1         xmm2 ;; [clobbered] Temporary XMM reg
+%define %%XTMP2         xmm3 ;; [clobbered] Temporary XMM reg
+%define %%XTMP3         xmm4 ;; [clobbered] Temporary XMM reg
+%define %%XTMP4         xmm5 ;; [clobbered] Temporary XMM reg
+%define %%XTMP5         xmm6 ;; [clobbered] Temporary XMM reg
 
         ;; J0 = GHASH(IV || 0s+64 || len(IV)64)
         ;; s = 16 * RoundUp(len(IV)/16) -  len(IV) */
 
         ;; Calculate GHASH of (IV || 0s)
         vpxor   %%J0, %%J0, %%J0
-        CALC_AAD_HASH %%IV, %%IV_LEN, %%J0, %%KEY, %%XTMP0, %%XTMP1, %%XTMP2, \
-                      %%XTMP3, %%XTMP4, %%XTMP5, %%TMP0, %%TMP1, %%TMP2
+        ;; arg1 = key pointer
+        mov     r12, %%IV
+        mov     r13, %%IV_LEN
+        call    GHASH_FN_NAME(ghash_internal)
 
         ;; Calculate GHASH of last 16-byte block (0 || len(IV)64)
+        vmovq   %%XTMP2, %%IV_LEN
+        vpsllq  %%XTMP2, %%XTMP2, 3     ;; IV length in bits
         vmovdqu %%XTMP0, [%%KEY + HashKey_1]
         vmovdqu %%XTMP1, [%%KEY + HashKeyK_1]
-        mov     %%TMP2, %%IV_LEN
-        shl     %%TMP2, 3       ;; IV length in bits
-        vmovq   %%XTMP2, %%TMP2
         vpxor   %%J0, %%J0, %%XTMP2
         GHASH_MUL2 %%J0, %%XTMP0, %%XTMP1, %%XTMP2, %%XTMP3, %%XTMP4, %%XTMP5
 
@@ -2367,23 +2366,26 @@ align 32
 ; GCM_INIT initializes a gcm_context_data struct to prepare for encoding/decoding.
 ; Input: gcm_key_data * (GDATA_KEY), gcm_context_data *(GDATA_CTX), IV, IV_LEN,
 ; Additional Authentication data (A_IN), Additional Data length (A_LEN).
-; Output: Updated GDATA_CTX with the hash of A_IN (AadHash) and initialized other parts of GDATA.
-; Clobbers rax, r10-r13 and xmm0-xmm6
+; Output: Updated GDATA_CTX with the hash of A_IN (AadHash=xmm14) and
+;         initialized other parts of GDATA.
+;         xmm2 - holds counter block (LE format)
+; Clobbers: rax, r10-r13 and xmm0-xmm6
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-%macro  GCM_INIT        8-9
+%macro  GCM_INIT        5-6
 %define %%GDATA_KEY     %1      ; [in] GCM expanded keys pointer
 %define %%GDATA_CTX     %2      ; [in] GCM context pointer
 %define %%IV            %3      ; [in] IV pointer
 %define %%A_IN          %4      ; [in] AAD pointer
 %define %%A_LEN         %5      ; [in] AAD length in bytes
-%define %%GPR1          %6      ; temp GPR
-%define %%GPR2          %7      ; temp GPR
-%define %%GPR3          %8      ; temp GPR
-%define %%IV_LEN        %9      ; [in] IV length
+%define %%IV_LEN        %6      ; [in] IV length
+
+%define %%GPR1          r10     ; temp GPR
+%define %%GPR2          r11     ; temp GPR
+%define %%GPR3          rax     ; temp GPR
 
 %define %%AAD_HASH      xmm14
 
-        vpxor   %%AAD_HASH, %%AAD_HASH
+        vpxor   %%AAD_HASH, %%AAD_HASH, %%AAD_HASH
         CALC_AAD_HASH %%A_IN, %%A_LEN, %%AAD_HASH, %%GDATA_KEY, \
                       xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, %%GPR1, %%GPR2, %%GPR3
 
@@ -2395,21 +2397,22 @@ align 32
         mov     [%%GDATA_CTX + InLen], %%GPR1               ; ctx_data.in_length = 0
         mov     [%%GDATA_CTX + PBlockLen], %%GPR1           ; ctx_data.partial_block_length = 0
 
-%if %0 == 9 ;; IV is different than 12 bytes
-        CALC_J0 %%GDATA_KEY, %%IV, %%IV_LEN, xmm2, r10, r11, r12, xmm0, xmm1, \
-                xmm3, xmm4, xmm5, xmm6
+%if %0 == 6 ;; IV is different than 12 bytes
+        ;; uses xmm0-xmm6, r10-r13, rax
+        CALC_J0 %%GDATA_KEY, %%IV, %%IV_LEN
 %else ;; IV is 12 bytes
         ;; read 12 IV bytes and pad with 0x00000001
         mov     %%GPR2, %%IV
-        vmovdqa xmm2, [rel ONEf]                        ; read 12 IV bytes and pad with 0x00000001
-        vpinsrq xmm2, [%%GPR2], 0
-        vpinsrd xmm2, [%%GPR2 + 8], 2
+        vmovdqa xmm0, [rel ONEf]                        ; read 12 IV bytes and pad with 0x00000001
+        vpinsrq xmm0, [%%GPR2], 0
+        vpinsrd xmm0, [%%GPR2 + 8], 2
 %endif
-        vmovdqu [%%GDATA_CTX + OrigIV], xmm2                ; ctx_data.orig_IV = iv
+        vmovdqu [%%GDATA_CTX + OrigIV], xmm0                ; ctx_data.orig_IV = iv
 
         ;; store IV as counter in LE format
-        vpshufb xmm2, [rel SHUF_MASK]
+        vpshufb xmm2, xmm0, [rel SHUF_MASK]
         vmovdqu [%%GDATA_CTX + CurCount], xmm2              ; ctx_data.current_counter = iv
+        ;; @note: xmm2 - needs to return counter block
 %endmacro
 
 %macro  GCM_ENC_DEC_SMALL   12
