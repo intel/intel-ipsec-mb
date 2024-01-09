@@ -972,7 +972,7 @@ FN_NAME(enc_var_iv,_):
         mov     arg1, [arg2 + _enc_keys]
 
         GCM_INIT arg1, {rsp + CONTEXT_OFFSET}, {[arg2 + _iv]}, \
-                 {[arg2 + _gcm_aad]}, {[arg2 + _gcm_aad_len]}, \
+                 {[arg2 + _gcm_aad]}, {qword [arg2 + _gcm_aad_len]}, \
                  {qword [arg2 + _iv_len_in_bytes]}
 
         mov     arg3, [arg2 + _src]
@@ -1014,7 +1014,7 @@ FN_NAME(dec_var_iv,_):
         mov     arg1, [arg2 + _dec_keys]
 
         GCM_INIT arg1, {rsp + CONTEXT_OFFSET}, {[arg2 + _iv]}, \
-                 {[arg2 + _gcm_aad]}, {[arg2 + _gcm_aad_len]}, \
+                 {[arg2 + _gcm_aad]}, {qword [arg2 + _gcm_aad_len]}, \
                  {qword [arg2 + _iv_len_in_bytes]}
 
         mov     arg3, [arg2 + _src]

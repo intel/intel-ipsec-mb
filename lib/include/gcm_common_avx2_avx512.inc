@@ -2385,10 +2385,27 @@ align 32
 
 %define %%AAD_HASH      xmm14
 
+        ;; IV may be different than 12 bytes
+        cmp     %%A_LEN, 12
+        je      %%_aad_len_is_12
+
         vpxor   %%AAD_HASH, %%AAD_HASH, %%AAD_HASH
         CALC_AAD_HASH %%A_IN, %%A_LEN, %%AAD_HASH, %%GDATA_KEY, \
                       xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, %%GPR1, %%GPR2, %%GPR3
+        jmp     %%_aad_is_done
 
+%%_aad_len_is_12:
+        ;; GHASH 12 bytes of AAD
+        mov     %%GPR1, %%A_IN
+        vmovq   %%AAD_HASH, [%%GPR1]
+        vpinsrd %%AAD_HASH, [%%GPR1 + 8], 2
+        vmovdqa xmm1, [%%GDATA_KEY + HashKey_1]
+        vmovdqa xmm2, [%%GDATA_KEY + HashKey_1 + HKeyGap]
+        vpshufb %%AAD_HASH, %%AAD_HASH, [rel SHUF_MASK]
+
+        GHASH_MUL2 %%AAD_HASH, xmm1, xmm2, xmm6, xmm5, xmm4, xmm3
+
+%%_aad_is_done:
         mov     %%GPR1, %%A_LEN
         vmovdqu [%%GDATA_CTX + AadHash], %%AAD_HASH         ; ctx_data.aad hash = aad_hash
         mov     [%%GDATA_CTX + AadLen], %%GPR1              ; ctx_data.aad_length = aad_length
@@ -2412,9 +2429,9 @@ align 32
         ;; IV is 12 bytes
         ;; read 12 IV bytes and pad with 0x00000001
         mov     %%GPR2, %%IV
-        vmovdqa xmm0, [rel ONEf]                        ; read 12 IV bytes and pad with 0x00000001
-        vpinsrq xmm0, [%%GPR2], 0
+        vmovq   xmm0, [%%GPR2]
         vpinsrd xmm0, [%%GPR2 + 8], 2
+        vpinsrd xmm0, [rel ONEf + 12], 3                   ; read 12 IV bytes and pad with 0x00000001
 
 %%_iv_is_done:
         vmovdqu [%%GDATA_CTX + OrigIV], xmm0                ; ctx_data.orig_IV = iv
