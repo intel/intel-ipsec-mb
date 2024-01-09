@@ -120,13 +120,8 @@ error_ghash_pre:
 align 32
 MKGLOBAL(GHASH_FN_NAME(ghash_internal),function,internal)
 GHASH_FN_NAME(ghash_internal):
-%ifdef IS_AVX2_GCM
-        CALC_AAD_HASH r12, r13, xmm0, arg1, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, \
-                      r10, r11, rax, r15, rbx
-%else
         CALC_AAD_HASH r12, r13, xmm0, arg1, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, \
                       r10, r11, rax
-%endif
         ret
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
