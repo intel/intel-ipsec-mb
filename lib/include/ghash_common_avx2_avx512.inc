@@ -125,6 +125,25 @@ GHASH_FN_NAME(ghash_internal):
         ret
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; partial_block_gmac_avx_gen4 / partial_block_gmac_avx512
+;; [in] arg2 = GDATA_CTX
+;; [in] arg3 = PLAIN_IN
+;; [in] arg4 = PLAIN_LEN
+;; [out] r11 = DATA_OFFSET
+;; [in/out] xmm0 = hash in/out
+;; [in] xmm13 = hash key
+;; [in] xmm14 = hash-K key
+;; [clobbered] xmm1-xmm6, xmm8, xmm9, xmm10
+;; [clobbered] r10, r12, r13, r15, rax
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+align 32
+MKGLOBAL(GHASH_FN_NAME(partial_block_gmac),function,internal)
+GHASH_FN_NAME(partial_block_gmac):
+	PARTIAL_BLOCK_GMAC arg2, arg3, arg4, r11, xmm0, xmm13, xmm14, \
+                           xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm8, xmm9, xmm10
+        ret
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;void   ghash_avx_gen4 / ghash_avx512 (
 ;        const struct gcm_key_data *key_data,
 ;        const void   *in,

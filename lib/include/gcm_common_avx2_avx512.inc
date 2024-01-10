@@ -2938,10 +2938,7 @@ align 32
 %define %%XMM10                 %15     ;; [clobbered] xmm register
 %define %%XMM11                 %16     ;; [clobbered] xmm register
 
-        ; Leave Macro if no partial blocks
-        cmp	qword [%%GDATA_CTX + PBlockLen], 0
-	je	%%_partial_block_done
-
+        ;; @note PBlockLen must not be zero
         mov	r13, [%%GDATA_CTX + PBlockLen]
 
         ; Read in input data without over reading
@@ -3017,5 +3014,5 @@ align 32
         mov     r12, %%PLAIN_LEN
 %%offset_set:
         mov     %%DATA_OFFSET, r12
-%%_partial_block_done:
+
 %endmacro ; PARTIAL_BLOCK_GMAC
