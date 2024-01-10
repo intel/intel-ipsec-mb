@@ -2920,27 +2920,29 @@ align 32
 ; Output: Updated GDATA_CTX
 ; Clobbers rax, r10, r12, r13, r15
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-%macro PARTIAL_BLOCK_GMAC       15
+%macro PARTIAL_BLOCK_GMAC       16
 %define %%GDATA_CTX             %1      ;; [in/out] GPR pointer to GCM context
 %define %%PLAIN_IN              %2      ;; [in] GPR pointer to plain/cipher text
 %define %%PLAIN_LEN             %3      ;; [in] text length in bytes, GPR or memory location (win64)
 %define %%DATA_OFFSET           %4      ;; [out] GPR data offset
 %define %%AAD_HASH              %5      ;; [in/out] xmm with hash value
 %define %%HASH_SUBKEY           %6      ;; [in] hash key
-%define %%XMM0                  %7      ;; [clobbered] xmm register
-%define %%XMM1                  %8      ;; [clobbered] xmm register
-%define %%XMM2                  %9      ;; [clobbered] xmm register
-%define %%XMM3                  %10     ;; [clobbered] xmm register
-%define %%XMM5                  %11     ;; [clobbered] xmm register
-%define %%XMM6                  %12     ;; [clobbered] xmm register
-%define %%XMM9                  %13     ;; [clobbered] xmm register
-%define %%XMM10                 %14     ;; [clobbered] xmm register
-%define %%XMM11                 %15     ;; [clobbered] xmm register
+%define %%HASHK_SUBKEY          %7      ;; [in] hash-K key
+%define %%XMM0                  %8      ;; [clobbered] xmm register
+%define %%XMM1                  %9      ;; [clobbered] xmm register
+%define %%XMM2                  %10     ;; [clobbered] xmm register
+%define %%XMM3                  %11     ;; [clobbered] xmm register
+%define %%XMM5                  %12     ;; [clobbered] xmm register
+%define %%XMM6                  %13     ;; [clobbered] xmm register
+%define %%XMM9                  %14     ;; [clobbered] xmm register
+%define %%XMM10                 %15     ;; [clobbered] xmm register
+%define %%XMM11                 %16     ;; [clobbered] xmm register
 
-	mov	r13, [%%GDATA_CTX + PBlockLen]
-	or	r13, r13
         ; Leave Macro if no partial blocks
+        cmp	qword [%%GDATA_CTX + PBlockLen], 0
 	je	%%_partial_block_done
+
+        mov	r13, [%%GDATA_CTX + PBlockLen]
 
         ; Read in input data without over reading
 %ifdef IS_AVX2_GCM
@@ -2989,7 +2991,7 @@ align 32
 	jl	%%_partial_incomplete_1
 
         ; GHASH computation for the last <16 Byte block
-	GHASH_MUL	%%AAD_HASH, %%HASH_SUBKEY, %%XMM0, %%XMM10, %%XMM11, %%XMM5, %%XMM6
+	GHASH_MUL2      %%AAD_HASH, %%HASH_SUBKEY, %%HASHK_SUBKEY, %%XMM0, %%XMM10, %%XMM11, %%XMM5
 	xor	rax, rax
 	mov	[%%GDATA_CTX + PBlockLen], rax
 	jmp	%%_ghash_done

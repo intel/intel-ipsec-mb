@@ -1080,10 +1080,11 @@ GMAC_FN_NAME(update):
 
         ;; Deal with previous partial block
 	xor	r11, r11
-	vmovdqu	xmm13, [arg1 + HashKey]
+	vmovdqu	xmm13, [arg1 + HashKey_1]
+	vmovdqu	xmm14, [arg1 + HashKeyK_1]
 	vmovdqu	xmm0, [arg2 + AadHash]
 
-	PARTIAL_BLOCK_GMAC arg2, arg3, arg4, r11, xmm0, xmm13, \
+	PARTIAL_BLOCK_GMAC arg2, arg3, arg4, r11, xmm0, xmm13, xmm14, \
                            xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm8, xmm9, xmm10
 
         ; CALC_AAD_HASH needs to deal with multiple of 16 bytes
