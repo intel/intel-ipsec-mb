@@ -58,17 +58,6 @@
 #define ZUC_MIN_BYTELEN 1
 #define ZUC_MAX_BYTELEN (ZUC_MAX_BITLEN / 8)
 
-#ifdef DEBUG
-#ifdef _WIN32
-#define DEBUG_PRINT(_fmt, ...)                                                                     \
-        fprintf(stderr, "%s()::%d " _fmt, __FUNCTION__, __LINE__, __VA_ARGS__)
-#else
-#define DEBUG_PRINT(_fmt, ...) fprintf(stderr, "%s()::%d " _fmt, __func__, __LINE__, __VA_ARGS__)
-#endif
-#else
-#define DEBUG_PRINT(_fmt, ...)
-#endif
-
 /**
  ******************************************************************************
  * @description
