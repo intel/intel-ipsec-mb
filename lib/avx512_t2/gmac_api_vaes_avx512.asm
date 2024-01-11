@@ -94,28 +94,20 @@ imb_aes_gmac_update_256_vaes_avx512:
         sub     arg4, r11
         add     arg3, r11
 
-        vmovq   xmm21, arg4 ; Save remaining length
-        and     arg4, -16 ; Get multiple of 16 bytes
-
-        or      arg4, arg4
+        mov     r10, arg4       ; Save remaining length
+        and     arg4, -16       ; Get multiple of 16 bytes
         jz      .no_full_blocks
 
         ;; Calculate GHASH of this segment
 
         ;; arg1 [in] pointer to key structure - arg1 here
-        ;; arg2 [in] message pointer - arg3 here
-        ;; arg3 [in] message length  - arg4 here
-        mov     r15, arg2
-        mov     r13, arg3
-        mov     arg2, arg3
-        mov     arg3, arg4
+        ;; r12 [in] message pointer - arg3 here
+        ;; r13 [in] message length  - arg4 here
+        mov     r12, arg3
+        mov     r13, arg4
 
         ;; xmm0 [in/out] ghash value
         call    ghash_internal_vaes_avx512
-
-        ;; restore original arguments
-        mov     arg2, r15
-        mov     arg3, r13
 
 	vmovdqu64	[arg2 + AadHash], xmm0	; ctx_data.aad hash = aad_hash
 
@@ -126,9 +118,9 @@ imb_aes_gmac_update_256_vaes_avx512:
 %endif
 
 .no_full_blocks:
-        add     arg3, arg4 ; Point at partial block
+        add     arg3, arg4      ; Point at partial block
 
-        vmovq   arg4, xmm21 ; Restore original remaining length
+        mov     arg4, r10       ; Restore original remaining length
         and     arg4, 15
         jz      .exit_gmac_update
 

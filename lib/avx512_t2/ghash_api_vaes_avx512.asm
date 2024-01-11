@@ -105,18 +105,18 @@ error_ghash_pre:
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; ghash_internal_vaes_avx512()
-; arg2 [in] message pointer
-; arg3 [in] message length
+; r12 [in/clobbered] message pointer
+; r13 [in/clobbered] message length
 ; xmm0 [in/out] ghash value
 ; arg1 [in] pointer to key structure
-; clobbers: zmm1-zmm19, r10-r12, k1
+; clobbers: zmm1-zmm19, rax, k1
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 align 32
 MKGLOBAL(ghash_internal_vaes_avx512,function,internal)
 ghash_internal_vaes_avx512:
-        CALC_AAD_HASH arg2, arg3, xmm0, arg1, zmm1, zmm2, zmm3, zmm4, zmm5, \
-                      zmm6, zmm7, zmm8, zmm9, zmm10, zmm11, zmm12, zmm13, \
-                      zmm15, zmm16, zmm17, zmm18, zmm19, r10, r11, r12, k1
+        CALC_GHASH r12, r13, xmm0, arg1, zmm1, zmm2, zmm3, zmm4, zmm5, \
+                   zmm6, zmm7, zmm8, zmm9, zmm10, zmm11, zmm12, zmm13, \
+                   zmm15, zmm16, zmm17, zmm18, zmm19, rax, k1
         ;; **zmm2, zmm3, zmm4 and zmm5 may contain clear text
         ;; **zmm13, zmm15, zmm18 and zmm8 may contain hash key
         ret
@@ -164,10 +164,12 @@ ghash_vaes_avx512:
         vmovdqu	xmm0, [arg4]
         vpshufb xmm0, xmm0, [rel SHUF_MASK] ; perform a 16Byte swap
 
-        ;; arg1 [in] pointer to key structure
-        ;; arg2 [in] message pointer
-        ;; arg3 [in] message length
+        ;; arg1 [in] pointer to key structure => arg1
+        ;; r12 [in] message pointer => arg2
+        ;; r13 [in] message length => arg3
         ;; xmm0 [in/out] ghash value
+        mov     r12, arg2
+        mov     r13, arg3
         call    ghash_internal_vaes_avx512
 
         vpshufb xmm0, xmm0, [rel SHUF_MASK] ; perform a 16Byte swap
