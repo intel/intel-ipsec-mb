@@ -1,5 +1,5 @@
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;  Copyright(c) 2021-2023, Intel Corporation All rights reserved.
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;  Copyright(c) 2024, Intel Corporation All rights reserved.
 ;
 ;  Redistribution and use in source and binary forms, with or without
 ;  modification, are permitted provided that the following conditions
@@ -27,12 +27,10 @@
 ;  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+%define GCM128_MODE 1
 %include "include/gcm_vaes_avx512.inc"
 %include "include/error.inc"
 %include "include/clear_regs.inc"
-
-%ifndef GCM_GMAC_API_VAES_AVX512_INC
-%define GCM_GMAC_API_VAES_AVX512_INC
 
 extern ghash_internal_vaes_avx512
 
@@ -48,8 +46,13 @@ default rel
 ;        const   u8 *in,
 ;        const   u64 msg_len);
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-MKGLOBAL(GMAC_FN_NAME(update),function,)
-GMAC_FN_NAME(update):
+align 32
+MKGLOBAL(imb_aes_gmac_update_128_vaes_avx512,function,)
+MKGLOBAL(imb_aes_gmac_update_192_vaes_avx512,function,)
+MKGLOBAL(imb_aes_gmac_update_256_vaes_avx512,function,)
+imb_aes_gmac_update_128_vaes_avx512:
+imb_aes_gmac_update_192_vaes_avx512:
+imb_aes_gmac_update_256_vaes_avx512:
         endbranch64
 	FUNC_SAVE small_frame
 
@@ -59,20 +62,20 @@ GMAC_FN_NAME(update):
 %endif
         ;; Check if msg_len == 0
 	cmp	arg4, 0
-	je	exit_gmac_update
+	je	.exit_gmac_update
 
 %ifdef SAFE_PARAM
         ;; Check key_data != NULL
         cmp     arg1, 0
-        jz      error_gmac_update
+        jz      .error_gmac_update
 
         ;; Check context_data != NULL
         cmp     arg2, 0
-        jz      error_gmac_update
+        jz      .error_gmac_update
 
         ;; Check in != NULL (msg_len != 0)
         cmp     arg3, 0
-        jz      error_gmac_update
+        jz      .error_gmac_update
 %endif
 
         ; Increment size of "AAD length" for GMAC
@@ -95,7 +98,7 @@ GMAC_FN_NAME(update):
         and     arg4, -16 ; Get multiple of 16 bytes
 
         or      arg4, arg4
-        jz      no_full_blocks
+        jz      .no_full_blocks
 
         ;; Calculate GHASH of this segment
 
@@ -119,15 +122,15 @@ GMAC_FN_NAME(update):
         ;; **zmm2, zmm3, zmm4 and zmm5 may contain clear text
         ;; **zmm19 may contain authentication key
 %ifdef SAFE_DATA
-        clear_zmms_avx512 xmm2, xmm3, xmm4, xmm5, xmm18, xmm19
+        clear_zmms_avx512 xmm2, xmm3, xmm4, xmm5, xmm18, xmm8
 %endif
 
-no_full_blocks:
+.no_full_blocks:
         add     arg3, arg4 ; Point at partial block
 
         vmovq   arg4, xmm21 ; Restore original remaining length
         and     arg4, 15
-        jz      exit_gmac_update
+        jz      .exit_gmac_update
 
         ; Save next partial block
         mov	[arg2 + PBlockLen], arg4
@@ -136,15 +139,15 @@ no_full_blocks:
         vpxorq  xmm0, xmm0, xmm1
         vmovdqu64 [arg2 + AadHash], xmm0
 %ifdef SAFE_DATA
-        ;; **xmm1 and xmm8 may contain some clear text
+        ;; **xmm1 and xmm0 may contain some clear text
         clear_zmms_avx512 xmm1, xmm0
 %endif
-exit_gmac_update:
+.exit_gmac_update:
         FUNC_RESTORE
 	ret
 
 %ifdef SAFE_PARAM
-error_gmac_update:
+.error_gmac_update:
         ;; Clear reg and imb_errno
         IMB_ERR_CHECK_START rax
 
@@ -159,9 +162,8 @@ error_gmac_update:
 
         ;; Set imb_errno
         IMB_ERR_CHECK_END rax
-        jmp     exit_gmac_update
+        jmp     .exit_gmac_update
 %endif
 
 mksection stack-noexec
 
-%endif ; GCM_GMAC_API_VAES_AVX512_INC

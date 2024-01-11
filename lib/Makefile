@@ -739,7 +739,7 @@ asm_avx512_gcm_objs := \
 	aes128_gcm_api_vaes_avx512.o aes192_gcm_api_vaes_avx512.o aes256_gcm_api_vaes_avx512.o \
 	aes128_gcm_sgl_api_vaes_avx512.o aes192_gcm_sgl_api_vaes_avx512.o aes256_gcm_sgl_api_vaes_avx512.o \
 	ghash_api_vaes_avx512.o \
-	aes128_gmac_api_vaes_avx512.o aes192_gmac_api_vaes_avx512.o aes256_gmac_api_vaes_avx512.o \
+	gmac_api_vaes_avx512.o \
 	aes128_gcm_by8_avx512.o aes192_gcm_by8_avx512.o aes256_gcm_by8_avx512.o
 
 #
