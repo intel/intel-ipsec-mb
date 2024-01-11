@@ -35,7 +35,6 @@
 #ifndef SNOW3G_COMMON_H
 #define SNOW3G_COMMON_H
 
-#include <stdio.h>  /* printf() */
 #include <string.h> /* memset(), memcpy() */
 #include <stdint.h>
 
@@ -3103,7 +3102,6 @@ SNOW3G_F8_N_BUFFER(const snow3g_key_schedule_t *pCtx, const void *const IV[],
 
         if (packetCount > NUM_PACKETS_16) {
                 pBufferOut[0] = NULL;
-                printf("packetCount too high (%u)\n", (unsigned) packetCount);
                 return;
         }
 
@@ -3267,7 +3265,6 @@ SNOW3G_F8_N_BUFFER_MULTIKEY(const snow3g_key_schedule_t *const pCtx[], const voi
 
         if (packetCount > NUM_PACKETS_16) {
                 pBufferOut[0] = NULL;
-                printf("packetCount too high (%u)\n", (unsigned) packetCount);
                 return;
         }
 
