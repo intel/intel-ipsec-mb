@@ -2952,19 +2952,30 @@ align 32
 %define %%IV_LEN        %31     ; [in] IV length
 
         ;; prepare IV
-%if %0 == 31 ;; IV is different than 12 bytes
+%if %0 == 31 ;; IV may different than 12 bytes
+        cmp     %%IV_LEN, 12
+        je      .iv_length_is_12_bytes
+
         CALC_J0 %%GDATA_KEY, %%IV, %%IV_LEN, %%CUR_COUNT, \
                         %%ZT0, %%ZT1, %%ZT2, %%ZT3, %%ZT4, %%ZT5, %%ZT6, %%ZT7, \
                         %%ZT8, %%ZT9, %%ZT10, %%ZT11, %%ZT12, %%ZT13, \
                         %%ZT14, %%ZT15, %%ZT16, %%ZT17, %%GPR1, %%GPR2, %%GPR3, %%MASKREG
-%else ;; IV is 12 bytes
+        jmp     .iv_prep_is_done
+
+%endif ;; IV is 12 bytes
+
+.iv_length_is_12_bytes:
         ;; read 12 IV bytes and pad with 0x00000001
         vmovdqa64       %%CUR_COUNT, [rel ONEf]
         mov             %%GPR2, %%IV
         mov             DWORD(%%GPR1), 0x0000_0fff
         kmovd           %%MASKREG, DWORD(%%GPR1)
         vmovdqu8        %%CUR_COUNT{%%MASKREG}, [%%GPR2]      ; ctr = IV | 0x1
-%endif
+
+.iv_prep_is_done:
+        vmovdqu64       [%%GDATA_CTX + OrigIV], %%CUR_COUNT   ; ctx.orig_IV = iv
+        vpshufb         %%CUR_COUNT, %%CUR_COUNT, [rel SHUF_MASK]
+        vmovdqu64       [%%GDATA_CTX + CurCount], %%CUR_COUNT ; ctx.current_counter = iv (LE format)
 
         ;; calculate AAD hash
         cmp             %%A_LEN, 12
@@ -2988,7 +2999,7 @@ align 32
         jmp             %%_aad_compute_done
 
 %%_aad_is_not_12_bytes:
-        vpxor           %%AAD_HASH, %%AAD_HASH
+        vpxor           %%AAD_HASH, %%AAD_HASH, %%AAD_HASH
         CALC_AAD_HASH   %%A_IN, %%A_LEN, %%AAD_HASH, %%GDATA_KEY, \
                         %%ZT0, %%ZT1, %%ZT2, %%ZT3, %%ZT4, %%ZT5, %%ZT6, %%ZT7, %%ZT8, %%ZT9, \
                         %%ZT10, %%ZT11, %%ZT12, %%ZT13,  %%ZT14, %%ZT15, %%ZT16, %%ZT17, \
@@ -3007,9 +3018,6 @@ align 32
         mov             [%%GDATA_CTX + PBlockLen], %%GPR1     ; ctx.partial_block_length = 0
 %endif
 
-        vmovdqu64       [%%GDATA_CTX + OrigIV], %%CUR_COUNT    ; ctx.orig_IV = iv
-        vpshufb         %%CUR_COUNT, [rel SHUF_MASK]
-        vmovdqu64       [%%GDATA_CTX + CurCount], %%CUR_COUNT ; ctx.current_counter = iv (LE format)
 %endmacro
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

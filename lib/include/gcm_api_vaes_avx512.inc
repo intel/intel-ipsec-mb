@@ -393,25 +393,13 @@ FN_NAME(enc_var_iv,_):
 
         mov     arg1, [arg2 + _enc_keys]
 
-        cmp     qword [arg2 + _iv_len_in_bytes], 12
-        je      iv_len_12_enc_IV
-
         GCM_INIT arg1, {rsp + CONTEXT_OFFSET}, {[arg2 + _iv]}, \
                  {[arg2 + _gcm_aad]}, {qword [arg2 + _gcm_aad_len]}, \
                  r10, r11, r12, k1, xmm14, xmm2, \
                  zmm1, zmm11, zmm3, zmm4, zmm5,   zmm6, zmm7, zmm8, zmm9, zmm10, \
                  zmm12, zmm13, zmm15, zmm16, zmm17, zmm18, zmm19, zmm20, single_call, \
-                 {[arg2 + _iv_len_in_bytes]}
-        jmp     skip_iv_len_12_enc_IV
+                 {qword [arg2 + _iv_len_in_bytes]}
 
-iv_len_12_enc_IV:
-        GCM_INIT arg1, {rsp + CONTEXT_OFFSET}, {[arg2 + _iv]}, \
-                 {[arg2 + _gcm_aad]}, {qword [arg2 + _gcm_aad_len]}, \
-                 r10, r11, r12, k1, xmm14, xmm2, \
-                 zmm1, zmm11, zmm3, zmm4, zmm5,   zmm6, zmm7, zmm8, zmm9, zmm10, \
-                 zmm12, zmm13, zmm15, zmm16, zmm17, zmm18, zmm19, zmm20, single_call
-
-skip_iv_len_12_enc_IV:
         mov     arg3, [arg2 + _src]
         add     arg3, [arg2 + _cipher_start_src_offset]
         mov     arg4, [arg2 + _dst]
@@ -448,25 +436,13 @@ FN_NAME(dec_var_iv,_):
 
         mov     arg1, [arg2 + _dec_keys]
 
-        cmp     qword [arg2 + _iv_len_in_bytes], 12
-        je      iv_len_12_dec_IV
-
         GCM_INIT arg1, {rsp + CONTEXT_OFFSET}, {[arg2 + _iv]}, \
                  {[arg2 + _gcm_aad]}, {qword [arg2 + _gcm_aad_len]}, \
                  r10, r11, r12, k1, xmm14, xmm2, \
                  zmm1, zmm11, zmm3, zmm4, zmm5,   zmm6, zmm7, zmm8, zmm9, zmm10, \
                  zmm12, zmm13, zmm15, zmm16, zmm17, zmm18, zmm19, zmm20, single_call, \
                  {qword [arg2 + _iv_len_in_bytes]}
-        jmp     skip_iv_len_12_dec_IV
 
-iv_len_12_dec_IV:
-        GCM_INIT arg1, {rsp + CONTEXT_OFFSET}, {[arg2 + _iv]}, \
-                 {[arg2 + _gcm_aad]}, {qword [arg2 + _gcm_aad_len]}, \
-                 r10, r11, r12, k1, xmm14, xmm2, \
-                 zmm1, zmm11, zmm3, zmm4, zmm5,   zmm6, zmm7, zmm8, zmm9, zmm10, \
-                 zmm12, zmm13, zmm15, zmm16, zmm17, zmm18, zmm19, zmm20, single_call
-
-skip_iv_len_12_dec_IV:
         mov     arg3, [arg2 + _src]
         add     arg3, [arg2 + _cipher_start_src_offset]
         mov     arg4, [arg2 + _dst]

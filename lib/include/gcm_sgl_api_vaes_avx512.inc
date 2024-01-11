@@ -159,20 +159,10 @@ FN_NAME(init_var_iv,_):
 
 skip_aad_check_init_IV:
 %endif
-        cmp     arg4, 12
-        je      iv_len_12_init_IV
-
         GCM_INIT arg1, arg2, arg3, arg5, arg6, r10, r11, r12, k1, xmm14, xmm2, \
                 zmm1, zmm11, zmm3, zmm4, zmm5, zmm6, zmm7, zmm8, zmm9, zmm10, \
                 zmm12, zmm13, zmm15, zmm16, zmm17, zmm18, zmm19, zmm20, multi_call, arg4
-        jmp     skip_iv_len_12_init_IV
 
-iv_len_12_init_IV:
-        GCM_INIT arg1, arg2, arg3, arg5, arg6, r10, r11, r12, k1, xmm14, xmm2, \
-                zmm1, zmm11, zmm3, zmm4, zmm5, zmm6, zmm7, zmm8, zmm9, zmm10, \
-                zmm12, zmm13, zmm15, zmm16, zmm17, zmm18, zmm19, zmm20, multi_call
-
-skip_iv_len_12_init_IV:
         ;; SAFE_DATA covered in FUNC_RESTORE()
 exit_init_IV:
 
