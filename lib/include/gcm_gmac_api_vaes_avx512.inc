@@ -34,6 +34,8 @@
 %ifndef GCM_GMAC_API_VAES_AVX512_INC
 %define GCM_GMAC_API_VAES_AVX512_INC
 
+extern ghash_internal_vaes_avx512
+
 mksection .text
 default rel
 
@@ -78,28 +80,41 @@ GMAC_FN_NAME(update):
 
         ;; Deal with previous partial block
 	xor	r11, r11
-	vmovdqu64	xmm8, [arg2 + AadHash]
+	vmovdqu64	xmm0, [arg2 + AadHash]
 
-	PARTIAL_BLOCK_GMAC arg1, arg2, arg3, arg4, r11, xmm8, r10, r12, rax, \
-                           zmm0, zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, zmm7, k1
+	PARTIAL_BLOCK_GMAC arg1, arg2, arg3, arg4, r11, xmm0, r10, r12, rax, \
+                           zmm8, zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, zmm7, k1
 %ifdef SAFE_DATA
-        clear_zmms_avx512 xmm0
+        clear_zmms_avx512 xmm8
 %endif
         ; CALC_AAD_HASH needs to deal with multiple of 16 bytes
         sub     arg4, r11
         add     arg3, r11
 
-        vmovq   xmm14, arg4 ; Save remaining length
+        vmovq   xmm21, arg4 ; Save remaining length
         and     arg4, -16 ; Get multiple of 16 bytes
 
         or      arg4, arg4
         jz      no_full_blocks
 
         ;; Calculate GHASH of this segment
-        CALC_AAD_HASH arg3, arg4, xmm8, arg1, zmm1, zmm2, zmm3, zmm4, zmm5, \
-                      zmm6, zmm7, zmm9, zmm10, zmm11, zmm12, zmm13, zmm15, \
-                      zmm16, zmm17, zmm18, zmm19, zmm20, r10, r11, r12, k1
-	vmovdqu64	[arg2 + AadHash], xmm8	; ctx_data.aad hash = aad_hash
+
+        ;; arg1 [in] pointer to key structure - arg1 here
+        ;; arg2 [in] message pointer - arg3 here
+        ;; arg3 [in] message length  - arg4 here
+        mov     r15, arg2
+        mov     r13, arg3
+        mov     arg2, arg3
+        mov     arg3, arg4
+
+        ;; xmm0 [in/out] ghash value
+        call    ghash_internal_vaes_avx512
+
+        ;; restore original arguments
+        mov     arg2, r15
+        mov     arg3, r13
+
+	vmovdqu64	[arg2 + AadHash], xmm0	; ctx_data.aad hash = aad_hash
 
         ;; **zmm2, zmm3, zmm4 and zmm5 may contain clear text
         ;; **zmm19 may contain authentication key
@@ -110,7 +125,7 @@ GMAC_FN_NAME(update):
 no_full_blocks:
         add     arg3, arg4 ; Point at partial block
 
-        vmovq   arg4, xmm14 ; Restore original remaining length
+        vmovq   arg4, xmm21 ; Restore original remaining length
         and     arg4, 15
         jz      exit_gmac_update
 
@@ -118,11 +133,11 @@ no_full_blocks:
         mov	[arg2 + PBlockLen], arg4
         READ_SMALL_DATA_INPUT_AVX512 xmm1, arg3, arg4, r11, k1
         vpshufb xmm1, xmm1, [rel SHUF_MASK]
-        vpxorq  xmm8, xmm8, xmm1
-        vmovdqu64 [arg2 + AadHash], xmm8
+        vpxorq  xmm0, xmm0, xmm1
+        vmovdqu64 [arg2 + AadHash], xmm0
 %ifdef SAFE_DATA
         ;; **xmm1 and xmm8 may contain some clear text
-        clear_zmms_avx512 xmm1, xmm8
+        clear_zmms_avx512 xmm1, xmm0
 %endif
 exit_gmac_update:
         FUNC_RESTORE
