@@ -111,10 +111,8 @@ imb_aes_gmac_update_256_vaes_avx512:
 
 	vmovdqu64	[arg2 + AadHash], xmm0	; ctx_data.aad hash = aad_hash
 
-        ;; **zmm2, zmm3, zmm4 and zmm5 may contain clear text
-        ;; **zmm19 may contain authentication key
 %ifdef SAFE_DATA
-        clear_zmms_avx512 xmm2, xmm3, xmm4, xmm5, xmm18, xmm8
+        clear_zmms_avx512 xmm3, xmm4, xmm5, xmm6, xmm19, xmm9
 %endif
 
 .no_full_blocks:

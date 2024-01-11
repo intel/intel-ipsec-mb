@@ -109,16 +109,16 @@ error_ghash_pre:
 ; r13 [in/clobbered] message length
 ; xmm0 [in/out] ghash value
 ; arg1 [in] pointer to key structure
-; clobbers: zmm1-zmm19, rax, k1
+; clobbers: zmm1, zmm3-zmm13, zmm15-zmm20, rax, k1
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 align 32
 MKGLOBAL(ghash_internal_vaes_avx512,function,internal)
 ghash_internal_vaes_avx512:
-        CALC_GHASH r12, r13, xmm0, arg1, zmm1, zmm2, zmm3, zmm4, zmm5, \
+        CALC_GHASH r12, r13, xmm0, arg1, zmm1, zmm3, zmm4, zmm5, \
                    zmm6, zmm7, zmm8, zmm9, zmm10, zmm11, zmm12, zmm13, \
-                   zmm15, zmm16, zmm17, zmm18, zmm19, rax, k1
-        ;; **zmm2, zmm3, zmm4 and zmm5 may contain clear text
-        ;; **zmm13, zmm15, zmm18 and zmm8 may contain hash key
+                   zmm15, zmm16, zmm17, zmm18, zmm19, zmm20, rax, k1
+        ;; **zmm3, zmm4, zmm5 and zmm6 may contain clear text
+        ;; **zmm15, zmm16, zmm19 and zmm9 may contain hash key
         ret
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -175,7 +175,7 @@ ghash_vaes_avx512:
         vpshufb xmm0, xmm0, [rel SHUF_MASK] ; perform a 16Byte swap
         simd_store_avx arg4, xmm0, arg5, r12, rax
 %ifdef SAFE_DATA
-        clear_zmms_avx512 xmm0, xmm2, xmm3, xmm4, xmm5, xmm13, xmm15, xmm8, xmm18
+        clear_zmms_avx512 xmm0, xmm3, xmm4, xmm5, xmm6, xmm15, xmm16, xmm9, xmm19
 %endif
 exit_ghash:
         FUNC_RESTORE

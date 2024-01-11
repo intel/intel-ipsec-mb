@@ -35,6 +35,11 @@
 %ifndef GCM_SGL_API_VAES_AVX512_INC
 %define GCM_SGL_API_VAES_AVX512_INC
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; External symbols
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+extern ghash_internal_vaes_avx512
+
 mksection .text
 default rel
 

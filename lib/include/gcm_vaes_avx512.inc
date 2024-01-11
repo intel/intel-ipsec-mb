@@ -2952,19 +2952,19 @@ align 32
 %define %%IV_LEN        %31     ; [in] IV length
 
         ;; prepare IV
-%if %0 == 31 ;; IV may different than 12 bytes
+%if %0 == 31 ;; IV may be different than 12 bytes
         cmp     %%IV_LEN, 12
-        je      .iv_length_is_12_bytes
+        je      %%_iv_length_is_12_bytes
 
         CALC_J0 %%GDATA_KEY, %%IV, %%IV_LEN, %%CUR_COUNT, \
                         %%ZT0, %%ZT1, %%ZT2, %%ZT3, %%ZT4, %%ZT5, %%ZT6, %%ZT7, \
                         %%ZT8, %%ZT9, %%ZT10, %%ZT11, %%ZT12, %%ZT13, \
                         %%ZT14, %%ZT15, %%ZT16, %%ZT17, %%GPR1, %%GPR2, %%GPR3, %%MASKREG
-        jmp     .iv_prep_is_done
+        jmp     %%_iv_prep_is_done
 
-%endif ;; IV is 12 bytes
+%endif
 
-.iv_length_is_12_bytes:
+%%_iv_length_is_12_bytes:
         ;; read 12 IV bytes and pad with 0x00000001
         vmovdqa64       %%CUR_COUNT, [rel ONEf]
         mov             %%GPR2, %%IV
@@ -2972,7 +2972,7 @@ align 32
         kmovd           %%MASKREG, DWORD(%%GPR1)
         vmovdqu8        %%CUR_COUNT{%%MASKREG}, [%%GPR2]      ; ctr = IV | 0x1
 
-.iv_prep_is_done:
+%%_iv_prep_is_done:
         vmovdqu64       [%%GDATA_CTX + OrigIV], %%CUR_COUNT   ; ctx.orig_IV = iv
         vpshufb         %%CUR_COUNT, %%CUR_COUNT, [rel SHUF_MASK]
         vmovdqu64       [%%GDATA_CTX + CurCount], %%CUR_COUNT ; ctx.current_counter = iv (LE format)
@@ -2982,7 +2982,7 @@ align 32
         jne             %%_aad_is_not_12_bytes
 
         ;; load 12 bytes of AAD
-%if %0 == 31 ;; IV is different than 12 bytes
+%if %0 == 31 ;; IV may be different than 12 bytes
         mov             DWORD(%%GPR1), 0x0000_0fff
         kmovd           %%MASKREG, DWORD(%%GPR1)
 %endif
@@ -2990,7 +2990,7 @@ align 32
         vmovdqu8        XWORD(%%AAD_HASH){%%MASKREG}{z}, [%%GPR1]
         vmovdqu8        XWORD(%%ZT0), [%%GDATA_KEY + HashKey_1]
         vmovdqu8        XWORD(%%ZT5), [%%GDATA_KEY + HashKey_1 + HKeyGap]
-        vpshufb         XWORD(%%AAD_HASH), [rel SHUF_MASK]
+        vpshufb         XWORD(%%AAD_HASH), XWORD(%%AAD_HASH), [rel SHUF_MASK]
 
         ;; GHASH 12 bytes of AAD
         GHASH_MUL2      XWORD(%%AAD_HASH), XWORD(%%ZT0), XWORD(%%ZT5), \
@@ -2999,12 +2999,16 @@ align 32
         jmp             %%_aad_compute_done
 
 %%_aad_is_not_12_bytes:
-        vpxor           %%AAD_HASH, %%AAD_HASH, %%AAD_HASH
-        CALC_AAD_HASH   %%A_IN, %%A_LEN, %%AAD_HASH, %%GDATA_KEY, \
-                        %%ZT0, %%ZT1, %%ZT2, %%ZT3, %%ZT4, %%ZT5, %%ZT6, %%ZT7, %%ZT8, %%ZT9, \
-                        %%ZT10, %%ZT11, %%ZT12, %%ZT13,  %%ZT14, %%ZT15, %%ZT16, %%ZT17, \
-                        %%GPR1, %%GPR2, %%GPR3, %%MASKREG
-        ;; **ZT1, ZT2, ZT3 may contain AAD but AAD is not considered sensitive
+        vpxor           xmm0, xmm0, xmm0
+        ;; arg1 - GDATA_KEY
+        ;; r12 - message pointer
+        ;; r13 - message length
+        ;; xmm0 - hash in/out
+        mov     r12, %%A_IN
+        mov     r13, %%A_LEN
+        call    ghash_internal_vaes_avx512
+        vmovdqa %%AAD_HASH, xmm0
+
 %%_aad_compute_done:
 
         ;; set up context fields
