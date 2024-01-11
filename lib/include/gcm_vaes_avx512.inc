@@ -2889,19 +2889,21 @@ align 32
         ;; s = 16 * RoundUp(len(IV)/16) -  len(IV) */
 
         ;; Calculate GHASH of (IV || 0s)
-        vpxor           %%J0, %%J0
-        CALC_AAD_HASH   %%IV, %%IV_LEN, %%J0, %%KEY, %%ZT0, %%ZT1, %%ZT2, %%ZT3, \
-                        %%ZT4, %%ZT5, %%ZT6, %%ZT7, %%ZT8, %%ZT9, %%ZT10, %%ZT11, \
-                        %%ZT12, %%ZT13,  %%ZT14, %%ZT15, %%ZT16, %%ZT17, \
-                        %%T1, %%T2, %%T3, %%MASKREG
-        ;; **ZT1, ZT2, ZT3 may contain sensitive data
+        vpxor           xmm0, xmm0, xmm0
+        ;; arg1 - GDATA_KEY
+        ;; r12 - message pointer
+        ;; r13 - message length
+        ;; xmm0 - hash in/out
+        mov             r12, %%IV
+        mov             r13, %%IV_LEN
+        call            ghash_internal_vaes_avx512
+        vmovdqa64       %%J0, xmm0
 
         ;; Calculate GHASH of last 16-byte block (0 || len(IV)64)
         mov             %%T1, %%IV_LEN
         shl             %%T1, 3 ;; IV length in bits
         vmovq           XWORD(%%ZT2), %%T1
 
-        ;; Might need shuffle of ZT2
         vpxorq          %%J0, XWORD(%%ZT2), %%J0
 
         vmovdqu64       XWORD(%%ZT0), [%%KEY + HashKey_1]
@@ -2909,7 +2911,7 @@ align 32
         GHASH_MUL2      %%J0, XWORD(%%ZT0),  XWORD(%%ZT5), XWORD(%%ZT1), XWORD(%%ZT2), XWORD(%%ZT3), XWORD(%%ZT4)
         ;; **ZT1, ZT2, ZT3 overwritten with ghash products
 
-        vpshufb         %%J0, [rel SHUF_MASK] ; perform a 16Byte swap
+        vpshufb         %%J0, %%J0, [rel SHUF_MASK] ; perform a 16Byte swap
 %endmacro
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
