@@ -2793,7 +2793,6 @@ align 32
 	je %%_partial_done
 
 	GHASH_MUL2 xmm14, xmm13, xmm0, xmm10, xmm11, xmm5, xmm6 ;GHASH computation for the last <16 Byte block
-	vmovdqu [%%GDATA_CTX + AadHash], xmm14
 
 %%_partial_done:
 

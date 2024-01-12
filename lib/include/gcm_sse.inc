@@ -2015,7 +2015,6 @@
 	je %%_partial_done
 
 	GHASH_MUL xmm14, xmm13, xmm0, xmm10, xmm11, xmm5, xmm6 ;GHASH computation for the last <16 Byte block
-	movdqu	[%%GDATA_CTX + AadHash], xmm14
 
 %%_partial_done:
 
