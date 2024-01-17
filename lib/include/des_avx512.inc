@@ -1,5 +1,5 @@
 ;;
-;; Copyright (c) 2017-2024, Intel Corporation
+;; Copyright (c) 2024, Intel Corporation
 ;;
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
@@ -30,6 +30,8 @@
 ;;   (1) University of Haifa, Israel
 ;;   (2) Intel Corporation
 
+%use smartalign
+
 %include "include/os.inc"
 %include "include/reg_sizes.inc"
 %include "include/mb_mgr_datastruct.inc"
@@ -49,9 +51,6 @@
 %define arg3	r8
 %define arg4	r9
 %endif
-
-%define STATE	arg1
-%define SIZE	arg2
 
 %define OFFSET  rax
 
@@ -179,11 +178,11 @@ endstruc
 %define %%L %1
 %define %%R %2
 %define %%T0 %3
-        PERMUTE %%R, %%L, 4,  [rel init_perm_consts + 0*64], %%T0
-        PERMUTE %%L, %%R, 16, [rel init_perm_consts + 1*64], %%T0
-        PERMUTE %%R, %%L, 2,  [rel init_perm_consts + 2*64], %%T0
-        PERMUTE %%L, %%R, 8,  [rel init_perm_consts + 3*64], %%T0
-        PERMUTE %%R, %%L, 1,  [rel init_perm_consts + 4*64], %%T0
+        PERMUTE %%R, %%L, 4,  [rel des_init_perm_consts_avx512 + 0*64], %%T0
+        PERMUTE %%L, %%R, 16, [rel des_init_perm_consts_avx512 + 1*64], %%T0
+        PERMUTE %%R, %%L, 2,  [rel des_init_perm_consts_avx512 + 2*64], %%T0
+        PERMUTE %%L, %%R, 8,  [rel des_init_perm_consts_avx512 + 3*64], %%T0
+        PERMUTE %%R, %%L, 1,  [rel des_init_perm_consts_avx512 + 4*64], %%T0
 %endmacro
 
 ;;; ===========================================================================
@@ -196,11 +195,11 @@ endstruc
 %define %%L %1
 %define %%R %2
 %define %%T0 %3
-        PERMUTE %%L, %%R, 1,  [rel init_perm_consts + 4*64], %%T0
-        PERMUTE %%R, %%L, 8,  [rel init_perm_consts + 3*64], %%T0
-        PERMUTE %%L, %%R, 2,  [rel init_perm_consts + 2*64], %%T0
-        PERMUTE %%R, %%L, 16, [rel init_perm_consts + 1*64], %%T0
-        PERMUTE %%L, %%R, 4,  [rel init_perm_consts + 0*64], %%T0
+        PERMUTE %%L, %%R, 1,  [rel des_init_perm_consts_avx512 + 4*64], %%T0
+        PERMUTE %%R, %%L, 8,  [rel des_init_perm_consts_avx512 + 3*64], %%T0
+        PERMUTE %%L, %%R, 2,  [rel des_init_perm_consts_avx512 + 2*64], %%T0
+        PERMUTE %%R, %%L, 16, [rel des_init_perm_consts_avx512 + 1*64], %%T0
+        PERMUTE %%L, %%R, 4,  [rel des_init_perm_consts_avx512 + 0*64], %%T0
 %endmacro
 
 ;;; ===========================================================================
@@ -218,68 +217,68 @@ endstruc
 %define %%T3 %5
 
         vprord  %%T0, %%W0, 3
-	vpandd  %%T0, %%T0, [rel mask_values + 0*64]
+	vpandd  %%T0, %%T0, [rel des_mask_values_avx512 + 0*64]
         vprord  %%T1, %%W0, 5
-	vpandd  %%T1, %%T1, [rel mask_values + 1*64]
+	vpandd  %%T1, %%T1, [rel des_mask_values_avx512 + 1*64]
 	vpord   %%T0, %%T0, %%T1
 
         vprord  %%T1, %%W0, 24
-	vpandd  %%T1, %%T1, [rel mask_values + 2*64]
+	vpandd  %%T1, %%T1, [rel des_mask_values_avx512 + 2*64]
         vprord  %%T2, %%W0, 26
-	vpandd  %%T2, %%T2, [rel mask_values + 3*64]
+	vpandd  %%T2, %%T2, [rel des_mask_values_avx512 + 3*64]
 	vpord   %%T1, %%T1, %%T2
 	vpord   %%T0, %%T0, %%T1
 
         vprord  %%T1, %%W0, 15
-	vpandd  %%T1, %%T1, [rel mask_values + 4*64]
+	vpandd  %%T1, %%T1, [rel des_mask_values_avx512 + 4*64]
         vprord  %%T2, %%W0, 17
-	vpandd  %%T2, %%T2, [rel mask_values + 5*64]
+	vpandd  %%T2, %%T2, [rel des_mask_values_avx512 + 5*64]
 	vpord   %%T1, %%T1, %%T2
 
         vprord  %%T2, %%W0, 6
-	vpandd  %%T2, %%T2, [rel mask_values + 6*64]
+	vpandd  %%T2, %%T2, [rel des_mask_values_avx512 + 6*64]
         vprord  %%T3, %%W0, 21
-	vpandd  %%T3, %%T3, [rel mask_values + 7*64]
+	vpandd  %%T3, %%T3, [rel des_mask_values_avx512 + 7*64]
 	vpord   %%T2, %%T2, %%T3
 	vpord   %%T1, %%T1, %%T2
 	vpord   %%T0, %%T0, %%T1
 
         vprord  %%T1, %%W0, 12
-	vpandd  %%T1, %%T1, [rel mask_values + 8*64]
+	vpandd  %%T1, %%T1, [rel des_mask_values_avx512 + 8*64]
         vprord  %%T2, %%W0, 14
-	vpandd  %%T2, %%T2, [rel mask_values + 9*64]
+	vpandd  %%T2, %%T2, [rel des_mask_values_avx512 + 9*64]
 	vpord   %%T1, %%T1, %%T2
 
         vprord  %%T2, %%W0, 4
-	vpandd  %%T2, %%T2, [rel mask_values + 10*64]
+	vpandd  %%T2, %%T2, [rel des_mask_values_avx512 + 10*64]
         vprord  %%T3, %%W0, 11
-	vpandd  %%T3, %%T3, [rel mask_values + 11*64]
+	vpandd  %%T3, %%T3, [rel des_mask_values_avx512 + 11*64]
 	vpord   %%T2, %%T2, %%T3
 	vpord   %%T1, %%T1, %%T2
 	vpord   %%T0, %%T0, %%T1
 
         vprord  %%T1, %%W0, 16
-	vpandd  %%T1, %%T1, [rel mask_values + 12*64]
+	vpandd  %%T1, %%T1, [rel des_mask_values_avx512 + 12*64]
         vprord  %%T2, %%W0, 22
-	vpandd  %%T2, %%T2, [rel mask_values + 13*64]
+	vpandd  %%T2, %%T2, [rel des_mask_values_avx512 + 13*64]
 	vpord   %%T1, %%T1, %%T2
 
         vprord  %%T2, %%W0, 19
-	vpandd  %%T2, %%T2, [rel mask_values + 14*64]
+	vpandd  %%T2, %%T2, [rel des_mask_values_avx512 + 14*64]
         vprord  %%T3, %%W0, 10
-	vpandd  %%T3, %%T3, [rel mask_values + 15*64]
+	vpandd  %%T3, %%T3, [rel des_mask_values_avx512 + 15*64]
 	vpord   %%T2, %%T2, %%T3
 	vpord   %%T1, %%T1, %%T2
 	vpord   %%T0, %%T0, %%T1
 
         vprord  %%T1, %%W0, 9
-	vpandd  %%T1, %%T1, [rel mask_values + 16*64]
+	vpandd  %%T1, %%T1, [rel des_mask_values_avx512 + 16*64]
         vprord  %%T2, %%W0, 13
-	vpandd  %%T2, %%T2, [rel mask_values + 17*64]
+	vpandd  %%T2, %%T2, [rel des_mask_values_avx512 + 17*64]
 	vpord   %%T1, %%T1, %%T2
 
         vprord  %%T2, %%W0, 25
-	vpandd  %%T2, %%T2, [rel mask_values + 18*64]
+	vpandd  %%T2, %%T2, [rel des_mask_values_avx512 + 18*64]
 	vpord   %%T1, %%T1, %%T2
 	vpord   %%W0, %%T0, %%T1
 %endmacro
@@ -313,18 +312,18 @@ endstruc
 
 	vprord          %%T0, %%IN, 31
 	vprord          %%T1, %%IN, 3
-	vpshufb         %%T0, %%T0, [rel idx_e]
-	vpshufb         %%T1, %%T1, [rel idx_e]
+	vpshufb         %%T0, %%T0, [rel des_idx_e_avx512]
+	vpshufb         %%T1, %%T1, [rel des_idx_e_avx512]
 	vpunpcklbw      %%OUT0A, %%T0, %%T1
 	vpunpckhbw      %%OUT1A, %%T0, %%T1
 	vpxord          %%OUT0A, %%OUT0A, %%K0
 	vpxord          %%OUT1A, %%OUT1A, %%K1
-	vpandd          %%OUT0B, %%OUT0A, [rel and_eu]
+	vpandd          %%OUT0B, %%OUT0A, [rel des_and_eu_avx512]
 	vpsrlw          %%OUT0B, %%OUT0B, 8
-	vpandd          %%OUT0A, %%OUT0A, [rel and_ed]
-	vpandd          %%OUT1B, %%OUT1A, [rel and_eu]
+	vpandd          %%OUT0A, %%OUT0A, [rel des_and_ed_avx512]
+	vpandd          %%OUT1B, %%OUT1A, [rel des_and_eu_avx512]
 	vpsrlw          %%OUT1B, %%OUT1B, 8
-	vpandd          %%OUT1A, %%OUT1A, [rel and_ed]
+	vpandd          %%OUT1A, %%OUT1A, [rel des_and_ed_avx512]
 %endmacro
 
 ;;; ===========================================================================
@@ -352,7 +351,7 @@ endstruc
 %define %%T4 %10
 %define %%T5 %11
 
-	vmovdqa64       %%T0, [rel reg_values16bit_7]
+	vmovdqa64       %%T0, [rel des_reg_values16bit_7_avx512]
 	vpcmpuw         k3, %%IN0A, %%T0, 2 ; 2 -> LE
 	vpcmpuw         k4, %%IN0B, %%T0, 2 ; 2 -> LE
 	vpcmpuw         k5, %%IN1A, %%T0, 2 ; 2 -> LE
@@ -363,10 +362,10 @@ endstruc
 	mov             DWORD(IA0), 0xaaaaaaaa
 	kmovd           k2, DWORD(IA0)
 
-        vmovdqa64       %%T0, [rel S_box_flipped + 0*64]
-        vmovdqa64       %%T1, [rel S_box_flipped + 1*64]
-        vmovdqa64       %%T2, [rel S_box_flipped + 4*64]
-        vmovdqa64       %%T3, [rel S_box_flipped + 5*64]
+        vmovdqa64       %%T0, [rel des_S_box_flipped_avx512 + 0*64]
+        vmovdqa64       %%T1, [rel des_S_box_flipped_avx512 + 1*64]
+        vmovdqa64       %%T2, [rel des_S_box_flipped_avx512 + 4*64]
+        vmovdqa64       %%T3, [rel des_S_box_flipped_avx512 + 5*64]
 	vpermw          %%T0{k1}{z}, %%IN0A, %%T0
 	vpermw          %%T1{k1}{z}, %%IN0A, %%T1
 	vpermw          %%T2{k2}{z}, %%IN0A, %%T2
@@ -375,10 +374,10 @@ endstruc
 	vpxord          %%OUT, %%T1, %%T3
         vmovdqu16       %%OUT{k3}, %%T0
 
-        vmovdqa64       %%T0, [rel S_box_flipped + 2*64]
-        vmovdqa64       %%T1, [rel S_box_flipped + 3*64]
-        vmovdqa64       %%T2, [rel S_box_flipped + 6*64]
-        vmovdqa64       %%T3, [rel S_box_flipped + 7*64]
+        vmovdqa64       %%T0, [rel des_S_box_flipped_avx512 + 2*64]
+        vmovdqa64       %%T1, [rel des_S_box_flipped_avx512 + 3*64]
+        vmovdqa64       %%T2, [rel des_S_box_flipped_avx512 + 6*64]
+        vmovdqa64       %%T3, [rel des_S_box_flipped_avx512 + 7*64]
 	vpermw          %%T0{k1}{z}, %%IN0B, %%T0
 	vpermw          %%T1{k1}{z}, %%IN0B, %%T1
 	vpermw          %%T2{k2}{z}, %%IN0B, %%T2
@@ -389,10 +388,10 @@ endstruc
 	vpsllw          %%T3, %%T3, 4
 	vpxord          %%OUT, %%OUT, %%T3
 
-        vmovdqa64       %%T0, [rel S_box_flipped + 8*64]
-        vmovdqa64       %%T1, [rel S_box_flipped + 9*64]
-        vmovdqa64       %%T2, [rel S_box_flipped + 12*64]
-        vmovdqa64       %%T3, [rel S_box_flipped + 13*64]
+        vmovdqa64       %%T0, [rel des_S_box_flipped_avx512 + 8*64]
+        vmovdqa64       %%T1, [rel des_S_box_flipped_avx512 + 9*64]
+        vmovdqa64       %%T2, [rel des_S_box_flipped_avx512 + 12*64]
+        vmovdqa64       %%T3, [rel des_S_box_flipped_avx512 + 13*64]
 	vpermw          %%T0{k1}{z}, %%IN1A, %%T0
 	vpermw          %%T1{k1}{z}, %%IN1A, %%T1
 	vpermw          %%T2{k2}{z}, %%IN1A, %%T2
@@ -401,10 +400,10 @@ endstruc
 	vpxord          %%T4, %%T1, %%T3
         vmovdqu16       %%T4{k5}, %%T0
 
-        vmovdqa64       %%T0, [rel S_box_flipped + 10*64]
-        vmovdqa64       %%T1, [rel S_box_flipped + 11*64]
-        vmovdqa64       %%T2, [rel S_box_flipped + 14*64]
-        vmovdqa64       %%T3, [rel S_box_flipped + 15*64]
+        vmovdqa64       %%T0, [rel des_S_box_flipped_avx512 + 10*64]
+        vmovdqa64       %%T1, [rel des_S_box_flipped_avx512 + 11*64]
+        vmovdqa64       %%T2, [rel des_S_box_flipped_avx512 + 14*64]
+        vmovdqa64       %%T3, [rel des_S_box_flipped_avx512 + 15*64]
 	vpermw          %%T0{k1}{z}, %%IN1B, %%T0
 	vpermw          %%T1{k1}{z}, %%IN1B, %%T1
 	vpermw          %%T2{k2}{z}, %%IN1B, %%T2
@@ -417,7 +416,7 @@ endstruc
 	vpxord          %%T4, %%T4, %%T5
 	vpsllw          %%T4, %%T4, 8
 	vpxord          %%OUT, %%OUT, %%T4
-        vpshufb         %%OUT, %%OUT, [rel shuffle_reg]
+        vpshufb         %%OUT, %%OUT, [rel des_shuffle_reg_avx512]
 %endmacro
 
 ;;; ===========================================================================
@@ -431,7 +430,7 @@ endstruc
 ;;; L [in/out] - zmm register; plain text in & cipher text out
 ;;; KS [in] - pointer to the key schedule
 ;;; T0-T11 [clobbered] - temporary zmm register
-%macro DES_ENC_DEC 16
+%macro DES_ENC_DEC_EXP 16
 %define %%ENC_DEC %1
 %define %%R %2
 %define %%L %3
@@ -449,11 +448,23 @@ endstruc
 %define %%T10 %15
 %define %%T11 %16
 
+
+        ;; Comment out section below & compile to see macro invocations in the code (registers & parameters).
+        ;;
+        ;; %define arglist "arglist:"
+        ;; %rep %0
+        ;; %xdefine arglist arglist %+ %1 %+ ,
+        ;; %rotate 1
+        ;; %endrep
+        ;; %warning arglist
+        ;; %undef arglist
+
         IP_Z    %%R, %%L, %%T0
 
 %ifidn  %%ENC_DEC, ENC
         ;; ENCRYPTION
         xor     KSOFFSET, KSOFFSET
+align 32
 %%_des_enc_loop:
         E_PHASE %%R, %%T1, %%T2, %%T3, %%T4, [%%KS + KSOFFSET + (0*64)], [%%KS + KSOFFSET + (1*64)], %%T6, %%T7
         S_PHASE %%T1, %%T2, %%T3, %%T4, %%T0, %%T6, %%T7, %%T8, %%T9, %%T10, %%T11
@@ -472,6 +483,7 @@ endstruc
 %else
         ;; DECRYPTION
         mov     KSOFFSET, (8*(4*64))
+align 32
 %%_des_dec_loop:
         E_PHASE %%R, %%T1, %%T2, %%T3, %%T4, [%%KS + KSOFFSET - (2*64)], [%%KS + KSOFFSET - (1*64)], %%T6, %%T7
         S_PHASE %%T1, %%T2, %%T3, %%T4, %%T0, %%T6, %%T7, %%T8, %%T9, %%T10, %%T11
@@ -487,6 +499,93 @@ endstruc
 %endif                          ; DECRYPTION
 
         FP_Z    %%R, %%L, %%T0
+
+%endmacro
+
+;;; ===========================================================================
+;;; Wrapper macro for DES_ENC_DEC_EXP
+;;; ===========================================================================
+;;;
+%macro DES_ENC_DEC 16
+%define %%ENC_DEC %1
+%define %%R %2
+%define %%L %3
+%define %%KS %4
+
+        ;; Make call to a function or expand macro with algorithmic code
+        ;; 0 - expand - use 0 to verify macro invocations & parameters vs functions in des_common.asm
+        ;; 1 - make call - use it in production (smaller code foot print)
+%assign make_call 1
+
+%if make_call != 0
+
+        ;; Retrieve R and L ZMM register numbers
+        ;; - this fragment could look better (with newer NASM) but it is compatible with NASM 2.14.02
+        ;;   - map R and L to string
+        ;;   - get sub-strings with ZMM number
+        ;;   - make new definition using the sub-strings - it results in a number that can be compared
+%defstr %%RSTR %%R
+%defstr %%LSTR %%L
+%substr %%r_idx %%RSTR 4, -1
+%substr %%l_idx %%LSTR 4, -1
+%define %%RNUM %%r_idx
+%define %%LNUM %%l_idx
+
+        ;; swap input/output zmm's only if R zmm has higher number than L one
+%assign %%swap_zmms 0
+%if %%RNUM > %%LNUM
+%assign %%swap_zmms 1
+%endif
+
+%if %%swap_zmms != 0
+        ;; register names are swapped
+        ;; - meaning there is function generated for the same pair of zmm's but they are swapped (R with L)
+        ;; - the idea is to re-use existing function and swap register values before the call (3DES/TDES use case)
+%define %%NEW_R %%L
+%define %%NEW_L %%R
+        vmovdqa64       %5, %%R
+        vmovdqa64       %%R, %%L
+        vmovdqa64       %%L, %5
+%else
+        ;; no swap needed
+%define %%NEW_R %%R
+%define %%NEW_L %%L
+%endif
+
+        ;; construct name of the function to be called
+        ;; des_<enc|dec>_<R-zmm>_<L-zmm>_avx512
+%ifidn %%ENC_DEC, ENC
+%define %%fn_name des_enc_ %+ %%NEW_R %+ _ %+ %%NEW_L %+ _avx512
+%else
+%define %%fn_name des_dec_ %+ %%NEW_R %+ _ %+ %%NEW_L %+ _avx512
+%endif
+
+        lea             r15, [%%KS]     ;; r15 is safe to be used as an input argument
+        call            %%fn_name
+
+%if %%swap_zmms != 0
+        ;; register names were swapped, unswap them
+        vmovdqa64       %5, %%R
+        vmovdqa64       %%R, %%L
+        vmovdqa64       %%L, %5
+%endif
+
+        ;; clean-up temporary macro definitions
+%undef %%fn_name
+%undef %%NEW_R
+%undef %%NEW_L
+%undef %%r_idx
+%undef %%l_idx
+%undef %%RSTR
+%undef %%LSTR
+%undef %%RNUM
+%undef %%LNUM
+%undef %%swap_zmms
+
+%else
+        ;; Expand the macro in-place
+        DES_ENC_DEC_EXP %1, %2, %3, %4, %5, %6, %7, %8, %9, %10, %11, %12, %13, %14, %15, %16
+%endif
 
 %endmacro
 
@@ -1067,43 +1166,40 @@ endstruc
 ;;; DES FINISH
 ;;; Update in/out pointers and store IV
 ;;; ===========================================================================
-;;;
-;;; Needs: STATE & SIZE
-;;; IV0   [in] - r512; initialization vector
-;;; IV1   [in] - r512; initialization vector
-;;; T0-T4 [clobbered] - temporary r512 registers
-%macro DES_FINISH 7
-%define %%IV0   %1
-%define %%IV1   %2
-%define %%T0    %3
-%define %%T1    %4
-%define %%T2    %5
-%define %%T3    %6
-%define %%T4    %7
+%macro DES_FINISH 9
+%define %%IV0   %1      ;; [in] zmm initialization vector (IV)
+%define %%IV1   %2      ;; [in] zmm initialization vector (IV)
+%define %%T0    %3      ;; [clobbered] temporary zmm
+%define %%T1    %4      ;; [clobbered] temporary zmm
+%define %%T2    %5      ;; [clobbered] temporary zmm
+%define %%T3    %6      ;; [clobbered] temporary zmm
+%define %%T4    %7      ;; [clobbered] temporary zmm
+%define %%STATE %8      ;; [in] pointer to OOO manager
+%define %%SIZE  %9      ;; [in] processed message size in bytes
 
-        vpbroadcastq    %%T4, SIZE
-        vmovdqu64       %%T0, [STATE + _des_args_in + (0 * PTR_SZ)]
-        vmovdqu64       %%T1, [STATE + _des_args_in + (8 * PTR_SZ)]
-        vmovdqu64       %%T2, [STATE + _des_args_out + (0 * PTR_SZ)]
-        vmovdqu64       %%T3, [STATE + _des_args_out + (8 * PTR_SZ)]
+        vpbroadcastq    %%T4, %%SIZE
+        vmovdqu64       %%T0, [%%STATE + _des_args_in + (0 * PTR_SZ)]
+        vmovdqu64       %%T1, [%%STATE + _des_args_in + (8 * PTR_SZ)]
+        vmovdqu64       %%T2, [%%STATE + _des_args_out + (0 * PTR_SZ)]
+        vmovdqu64       %%T3, [%%STATE + _des_args_out + (8 * PTR_SZ)]
         vpaddq          %%T0, %%T0, %%T4
         vpaddq          %%T1, %%T1, %%T4
         vpaddq          %%T2, %%T2, %%T4
         vpaddq          %%T3, %%T3, %%T4
-        vmovdqu64       [STATE + _des_args_in + (0 * PTR_SZ)], %%T0
-        vmovdqu64       [STATE + _des_args_in + (8 * PTR_SZ)], %%T1
-        vmovdqu64       [STATE + _des_args_out + (0 * PTR_SZ)], %%T2
-        vmovdqu64       [STATE + _des_args_out + (8 * PTR_SZ)], %%T3
+        vmovdqu64       [%%STATE + _des_args_in + (0 * PTR_SZ)], %%T0
+        vmovdqu64       [%%STATE + _des_args_in + (8 * PTR_SZ)], %%T1
+        vmovdqu64       [%%STATE + _des_args_out + (0 * PTR_SZ)], %%T2
+        vmovdqu64       [%%STATE + _des_args_out + (8 * PTR_SZ)], %%T3
 
-        vmovdqu64       [STATE + _des_args_IV + (0 * 64)], %%IV0
-        vmovdqu64       [STATE + _des_args_IV + (1 * 64)], %%IV1
+        vmovdqu64       [%%STATE + _des_args_IV + (0 * 64)], %%IV0
+        vmovdqu64       [%%STATE + _des_args_IV + (1 * 64)], %%IV1
 %endmacro
 
 ;;; ===========================================================================
 ;;; DES CFB ENCRYPT/DECRYPT - ONE BLOCK ONLY
 ;;; ===========================================================================
 ;;;
-;;; Needs: STATE, IA0-IA2
+;;; Needs: IA0-IA2
 ;;; ENC_DEC [in] - encyrpt (ENC) or decrypt (DEC) selection
 ;;; KS      [in] - key schedule
 ;;; T0-T24  [clobbered] - temporary r512
@@ -1113,7 +1209,7 @@ endstruc
 ;;; T_IV    [in] - 16 * 8 byte storage
 ;;;
 ;;; NOTE: clobbers OpMask registers
-%macro DES_CFB_ONE 31
+%macro DES_CFB_ONE 32
 %define %%ENC_DEC %1
 %define %%KS      %2
 %define %%T0      %3
@@ -1145,10 +1241,11 @@ endstruc
 %define %%T_OUT   %29
 %define %%T_IV    %30
 %define %%T_MASK  %31
+%define %%STATE   %32   ;; [in] GP with pointer to OOO manager
 
         ;; - find mask for non-zero partial lengths
         vpxord          %%T10, %%T10, %%T10
-        vmovdqu64       %%T0, [STATE + _des_args_PLen]
+        vmovdqu64       %%T0, [%%STATE + _des_args_PLen]
         vpcmpd          k3, %%T0, %%T10, 4 ; NEQ
         kmovw           DWORD(IA0), k3
         movzx           DWORD(IA0), WORD(IA0)
@@ -1161,10 +1258,10 @@ endstruc
         ;; with CFB partial block.
         ;; To do that current out position is compared against
         ;; calculated last full block position.
-        vmovdqu64       %%T1, [STATE + _des_args_out + (0*8)]
-        vmovdqu64       %%T2, [STATE + _des_args_LOut + (0*8)]
-        vmovdqu64       %%T3, [STATE + _des_args_out + (8*8)]
-        vmovdqu64       %%T4, [STATE + _des_args_LOut + (8*8)]
+        vmovdqu64       %%T1, [%%STATE + _des_args_out + (0*8)]
+        vmovdqu64       %%T2, [%%STATE + _des_args_LOut + (0*8)]
+        vmovdqu64       %%T3, [%%STATE + _des_args_out + (8*8)]
+        vmovdqu64       %%T4, [%%STATE + _des_args_LOut + (8*8)]
         vpcmpq          k4, %%T1, %%T2, 0 ; EQ
         vpcmpq          k5, %%T3, %%T4, 0 ; EQ
         kmovw           DWORD(IA1), k4
@@ -1180,21 +1277,21 @@ endstruc
         ;; Calculate ((1 << partial_bytes) - 1)
         ;; in order to get the mask for loads and stores
         ;; k3 & IA0 - hold valid mask
-        vmovdqa64       %%T1, [rel vec_ones_32b]
+        vmovdqa64       %%T1, [rel des_vec_ones_32b_avx512]
         vpsllvd         %%T2{k3}{z}, %%T1, %%T0
         vpsubd          %%T2{k3}{z}, %%T2, %%T1
         vmovdqu64       [%%T_MASK], %%T2
 
         ;; clear selected partial lens not to do them twice
-        vmovdqu32       [STATE + _des_args_PLen]{k3}, %%T10
+        vmovdqu32       [%%STATE + _des_args_PLen]{k3}, %%T10
 
         ;; copy IV, in and out pointers
-        vmovdqu64       %%T1, [STATE + _des_args_in + (0*PTR_SZ)]
-        vmovdqu64       %%T2, [STATE + _des_args_in + (8*PTR_SZ)]
-        vmovdqu64       %%T3, [STATE + _des_args_out + (0*PTR_SZ)]
-        vmovdqu64       %%T4, [STATE + _des_args_out + (8*PTR_SZ)]
-        vmovdqu64       %%T5, [STATE + _des_args_IV + (0*64)]
-        vmovdqu64       %%T6, [STATE + _des_args_IV + (1*64)]
+        vmovdqu64       %%T1, [%%STATE + _des_args_in + (0*PTR_SZ)]
+        vmovdqu64       %%T2, [%%STATE + _des_args_in + (8*PTR_SZ)]
+        vmovdqu64       %%T3, [%%STATE + _des_args_out + (0*PTR_SZ)]
+        vmovdqu64       %%T4, [%%STATE + _des_args_out + (8*PTR_SZ)]
+        vmovdqu64       %%T5, [%%STATE + _des_args_IV + (0*64)]
+        vmovdqu64       %%T6, [%%STATE + _des_args_IV + (1*64)]
         vmovdqu64       [%%T_IN + (0*PTR_SZ)], %%T1
         vmovdqu64       [%%T_IN + (8*PTR_SZ)], %%T2
         vmovdqu64       [%%T_OUT + (0*PTR_SZ)], %%T3
@@ -1204,7 +1301,7 @@ endstruc
 
         ;; calculate last block case mask
         ;; - first block case requires no modifications to in/out/IV
-        vmovdqu64       %%T1, [STATE + _des_args_BLen]
+        vmovdqu64       %%T1, [%%STATE + _des_args_BLen]
         vpcmpd          k2, %%T1, %%T10, 4 ; NEQ
         kmovw           DWORD(IA1), k2
         and             DWORD(IA1), DWORD(IA0)
@@ -1220,10 +1317,10 @@ endstruc
         and             DWORD(IA2), 0xff
         kmovw           k4, DWORD(IA2)
         kmovw           k5, DWORD(IA1)
-        vmovdqu64       %%T1, [STATE + _des_args_LOut + (0*PTR_SZ)]
-        vmovdqu64       %%T2, [STATE + _des_args_LOut + (8*PTR_SZ)]
-        vmovdqu64       %%T3, [STATE + _des_args_LIn + (0*PTR_SZ)]
-        vmovdqu64       %%T4, [STATE + _des_args_LIn + (8*PTR_SZ)]
+        vmovdqu64       %%T1, [%%STATE + _des_args_LOut + (0*PTR_SZ)]
+        vmovdqu64       %%T2, [%%STATE + _des_args_LOut + (8*PTR_SZ)]
+        vmovdqu64       %%T3, [%%STATE + _des_args_LIn + (0*PTR_SZ)]
+        vmovdqu64       %%T4, [%%STATE + _des_args_LIn + (8*PTR_SZ)]
         vmovdqu64       [%%T_OUT + (0*PTR_SZ)]{k4}, %%T1
         vmovdqu64       [%%T_OUT + (8*PTR_SZ)]{k5}, %%T2
         vmovdqu64       [%%T_IN + (0*PTR_SZ)]{k4}, %%T3
@@ -1236,9 +1333,9 @@ endstruc
         test            DWORD(IA0), (1 << IDX)
         jz              %%_des_cfb_one_copy_iv_next %+ IDX
 %ifidn %%ENC_DEC, ENC
-        mov             IA2, [STATE + _des_args_LOut + (IDX*PTR_SZ)]
+        mov             IA2, [%%STATE + _des_args_LOut + (IDX*PTR_SZ)]
 %else
-        mov             IA2, [STATE + _des_args_LIn + (IDX*PTR_SZ)]
+        mov             IA2, [%%STATE + _des_args_LIn + (IDX*PTR_SZ)]
 %endif
         mov             IA2, [IA2 - 8]
         mov             [%%T_IV + (0*4) + (IDX*4)], DWORD(IA2)
@@ -1323,30 +1420,18 @@ endstruc
 ;;; Converts length into mask of DES blocks
 ;;; ===========================================================================
 ;;;
-;;; MASK [out] - mask8 for value; for masked 64b loads and stores (r64)
-;;; USES: IA0, IA1 IA2
 ;;; ASSUMES: SIZE - OFFSET < 64
-%macro GET_MASK8 1
-%define %%MASK %1
+%macro GET_MASK8 3
+%define %%MASK %1       ;; [out] GP for mask value (load/store)
+%define %%SIZE %2       ;; [in] GP with message size in bytes
+%define %%TMP  %3       ;; [clobbered] temporary GP
 
-%ifidn IA1, rcx
-%define myrcx IA1
-%else
-%define myrcx rcx
-        mov     IA1, rcx
-%endif
-        mov     myrcx, SIZE
-        sub     myrcx, OFFSET
-        ;; - myrcx - remaining length
-        ;; - divide by 8 (DES block size)
-        ;; - create bit mask of the result
-        mov     DWORD(%%MASK), 1
-        shr     DWORD(myrcx), 3
-        shl     DWORD(%%MASK), BYTE(myrcx)
-        sub     DWORD(%%MASK), 1
-%ifnidn IA1, rcx
-        mov     rcx, IA1
-%endif
+        xor     %%MASK, %%MASK
+        mov     %%TMP, %%SIZE
+        sub     %%TMP, OFFSET
+        shr     %%TMP, 3
+        bts     %%MASK, %%TMP
+        sub     %%MASK, 1
 %endmacro
 
 ;;; ===========================================================================
@@ -1499,8 +1584,10 @@ endstruc
 ;;;                   3DES (3DES CBC)
 ;;;
 ;;; NOTE: clobbers OpMask registers
-%macro GENERIC_DES_ENC 1
-%define %%DES_DOCSIS %1
+%macro GENERIC_DES_ENC 3
+%define %%DES_DOCSIS    %1      ;; [in] select between DES (DES CBC), DOCSIS (DOCSIS DES) and 3DES (3DES CBC)
+%define %%STATE         %2      ;; [in] GP with pointer to OOO manager
+%define %%SIZE          %3      ;; [in] GP with message size in bytes
 
         ;; push the registers and allocate the stack frame
 	mov	        rax, rsp
@@ -1514,28 +1601,28 @@ endstruc
 
 %ifnidn %%DES_DOCSIS, 3DES
         ;; DES and DOCSIS DES
-        DES_INIT        STATE + _des_args_keys, STATE + _des_args_IV, rsp + _key_sched, ZIV0, ZIV1, ZW0, ZW1, ZW2, ZW3, ZW4, ZW5, ZW6, ZW7, ZW8, ZW9, ZW10, ZW11, ZW12, ZW13, ZW14, ZW15, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11
+        DES_INIT        %%STATE + _des_args_keys, %%STATE + _des_args_IV, rsp + _key_sched, ZIV0, ZIV1, ZW0, ZW1, ZW2, ZW3, ZW4, ZW5, ZW6, ZW7, ZW8, ZW9, ZW10, ZW11, ZW12, ZW13, ZW14, ZW15, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11
 %else
         ;; 3DES
-        DES3_INIT        STATE + _des_args_keys, STATE + _des_args_IV, rsp + _key_sched, rsp + _key_sched2, rsp + _key_sched3, ZIV0, ZIV1, ZW0, ZW1, ZW2, ZW3, ZW4, ZW5, ZW6, ZW7, ZW8, ZW9, ZW10, ZW11, ZW12, ZW13, ZW14, ZW15, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11, ENC
+        DES3_INIT        %%STATE + _des_args_keys, %%STATE + _des_args_IV, rsp + _key_sched, rsp + _key_sched2, rsp + _key_sched3, ZIV0, ZIV1, ZW0, ZW1, ZW2, ZW3, ZW4, ZW5, ZW6, ZW7, ZW8, ZW9, ZW10, ZW11, ZW12, ZW13, ZW14, ZW15, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11, ENC
 %endif
-        mov             [rsp + _size_save], SIZE
-        and             SIZE, -64
+        mov             [rsp + _size_save], %%SIZE
+        and             %%SIZE, -64
         xor             OFFSET, OFFSET
         ;; This loop processes message in blocks of 64 bytes.
         ;; Anything smaller than 64 bytes is handled separately after the loop.
 %%_gen_des_enc_loop:
-        cmp             OFFSET, SIZE
+        cmp             OFFSET, %%SIZE
         jz              %%_gen_des_enc_loop_end
         ;; run loads
-        mov             IA0, [STATE + _des_args_in + (0*PTR_SZ)]
-        mov             IA1, [STATE + _des_args_in + (1*PTR_SZ)]
-        mov             IA2, [STATE + _des_args_in + (2*PTR_SZ)]
-        mov             INP0, [STATE + _des_args_in + (3*PTR_SZ)]
-        mov             INP1, [STATE + _des_args_in + (4*PTR_SZ)]
-        mov             INP2, [STATE + _des_args_in + (5*PTR_SZ)]
-        mov             INP3, [STATE + _des_args_in + (6*PTR_SZ)]
-        mov             INP4, [STATE + _des_args_in + (7*PTR_SZ)]
+        mov             IA0, [%%STATE + _des_args_in + (0*PTR_SZ)]
+        mov             IA1, [%%STATE + _des_args_in + (1*PTR_SZ)]
+        mov             IA2, [%%STATE + _des_args_in + (2*PTR_SZ)]
+        mov             INP0, [%%STATE + _des_args_in + (3*PTR_SZ)]
+        mov             INP1, [%%STATE + _des_args_in + (4*PTR_SZ)]
+        mov             INP2, [%%STATE + _des_args_in + (5*PTR_SZ)]
+        mov             INP3, [%%STATE + _des_args_in + (6*PTR_SZ)]
+        mov             INP4, [%%STATE + _des_args_in + (7*PTR_SZ)]
         vmovdqu64       ZW0, [IA0 + OFFSET]
         vmovdqu64       ZW1, [IA1 + OFFSET]
         vmovdqu64       ZW2, [IA2 + OFFSET]
@@ -1545,14 +1632,14 @@ endstruc
         vmovdqu64       ZW6, [INP3 + OFFSET]
         vmovdqu64       ZW7, [INP4 + OFFSET]
 
-        mov             IA0, [STATE + _des_args_in + (8*PTR_SZ)]
-        mov             IA1, [STATE + _des_args_in + (9*PTR_SZ)]
-        mov             IA2, [STATE + _des_args_in + (10*PTR_SZ)]
-        mov             INP0, [STATE + _des_args_in + (11*PTR_SZ)]
-        mov             INP1, [STATE + _des_args_in + (12*PTR_SZ)]
-        mov             INP2, [STATE + _des_args_in + (13*PTR_SZ)]
-        mov             INP3, [STATE + _des_args_in + (14*PTR_SZ)]
-        mov             INP4, [STATE + _des_args_in + (15*PTR_SZ)]
+        mov             IA0, [%%STATE + _des_args_in + (8*PTR_SZ)]
+        mov             IA1, [%%STATE + _des_args_in + (9*PTR_SZ)]
+        mov             IA2, [%%STATE + _des_args_in + (10*PTR_SZ)]
+        mov             INP0, [%%STATE + _des_args_in + (11*PTR_SZ)]
+        mov             INP1, [%%STATE + _des_args_in + (12*PTR_SZ)]
+        mov             INP2, [%%STATE + _des_args_in + (13*PTR_SZ)]
+        mov             INP3, [%%STATE + _des_args_in + (14*PTR_SZ)]
+        mov             INP4, [%%STATE + _des_args_in + (15*PTR_SZ)]
         vmovdqu64       ZW8, [IA0 + OFFSET]
         vmovdqu64       ZW9, [IA1 + OFFSET]
         vmovdqu64       ZW10, [IA2 + OFFSET]
@@ -1578,14 +1665,14 @@ endstruc
         ;; transpose data on output
         TRANSPOSE_OUT   ZW0, ZW1, ZW2, ZW3, ZW4, ZW5, ZW6, ZW7, ZW8, ZW9, ZW10, ZW11, ZW12, ZW13, ZW14, ZW15, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11, ZTMP12, ZTMP13
         ;; run stores
-        mov             IA0, [STATE + _des_args_out + (0*PTR_SZ)]
-        mov             IA1, [STATE + _des_args_out + (1*PTR_SZ)]
-        mov             IA2, [STATE + _des_args_out + (2*PTR_SZ)]
-        mov             INP0, [STATE + _des_args_out + (3*PTR_SZ)]
-        mov             INP1, [STATE + _des_args_out + (4*PTR_SZ)]
-        mov             INP2, [STATE + _des_args_out + (5*PTR_SZ)]
-        mov             INP3, [STATE + _des_args_out + (6*PTR_SZ)]
-        mov             INP4, [STATE + _des_args_out + (7*PTR_SZ)]
+        mov             IA0, [%%STATE + _des_args_out + (0*PTR_SZ)]
+        mov             IA1, [%%STATE + _des_args_out + (1*PTR_SZ)]
+        mov             IA2, [%%STATE + _des_args_out + (2*PTR_SZ)]
+        mov             INP0, [%%STATE + _des_args_out + (3*PTR_SZ)]
+        mov             INP1, [%%STATE + _des_args_out + (4*PTR_SZ)]
+        mov             INP2, [%%STATE + _des_args_out + (5*PTR_SZ)]
+        mov             INP3, [%%STATE + _des_args_out + (6*PTR_SZ)]
+        mov             INP4, [%%STATE + _des_args_out + (7*PTR_SZ)]
         vmovdqu64       [IA0 + OFFSET], ZW0
         vmovdqu64       [IA1 + OFFSET], ZW1
         vmovdqu64       [IA2 + OFFSET], ZW2
@@ -1595,14 +1682,14 @@ endstruc
         vmovdqu64       [INP3 + OFFSET], ZW6
         vmovdqu64       [INP4 + OFFSET], ZW7
 
-        mov             IA0, [STATE + _des_args_out + (8*PTR_SZ)]
-        mov             IA1, [STATE + _des_args_out + (9*PTR_SZ)]
-        mov             IA2, [STATE + _des_args_out + (10*PTR_SZ)]
-        mov             INP0, [STATE + _des_args_out + (11*PTR_SZ)]
-        mov             INP1, [STATE + _des_args_out + (12*PTR_SZ)]
-        mov             INP2, [STATE + _des_args_out + (13*PTR_SZ)]
-        mov             INP3, [STATE + _des_args_out + (14*PTR_SZ)]
-        mov             INP4, [STATE + _des_args_out + (15*PTR_SZ)]
+        mov             IA0, [%%STATE + _des_args_out + (8*PTR_SZ)]
+        mov             IA1, [%%STATE + _des_args_out + (9*PTR_SZ)]
+        mov             IA2, [%%STATE + _des_args_out + (10*PTR_SZ)]
+        mov             INP0, [%%STATE + _des_args_out + (11*PTR_SZ)]
+        mov             INP1, [%%STATE + _des_args_out + (12*PTR_SZ)]
+        mov             INP2, [%%STATE + _des_args_out + (13*PTR_SZ)]
+        mov             INP3, [%%STATE + _des_args_out + (14*PTR_SZ)]
+        mov             INP4, [%%STATE + _des_args_out + (15*PTR_SZ)]
         vmovdqu64       [IA0 + OFFSET], ZW8
         vmovdqu64       [IA1 + OFFSET], ZW9
         vmovdqu64       [IA2 + OFFSET], ZW10
@@ -1617,23 +1704,23 @@ endstruc
 %%_gen_des_enc_loop_end:
         ;; This is where we check if there is anything less than 64 bytes
         ;; of message left for processing.
-        mov             SIZE, [rsp + _size_save]
-        cmp             OFFSET, SIZE
+        mov             %%SIZE, [rsp + _size_save]
+        cmp             OFFSET, %%SIZE
         jz              %%_gen_des_enc_part_end
         ;; calculate min of bytes_left and 64, convert to qword mask
-        GET_MASK8       IA0        ; IA0 = mask
+        GET_MASK8       IA0, %%SIZE, IA1        ; IA0 = mask
 
         kmovw           k7, DWORD(IA0)
         mov             [rsp + _mask_save], IA0
         ;; run masked loads
-        mov             IA0, [STATE + _des_args_in + (0*PTR_SZ)]
-        mov             IA1, [STATE + _des_args_in + (1*PTR_SZ)]
-        mov             IA2, [STATE + _des_args_in + (2*PTR_SZ)]
-        mov             INP0, [STATE + _des_args_in + (3*PTR_SZ)]
-        mov             INP1, [STATE + _des_args_in + (4*PTR_SZ)]
-        mov             INP2, [STATE + _des_args_in + (5*PTR_SZ)]
-        mov             INP3, [STATE + _des_args_in + (6*PTR_SZ)]
-        mov             INP4, [STATE + _des_args_in + (7*PTR_SZ)]
+        mov             IA0, [%%STATE + _des_args_in + (0*PTR_SZ)]
+        mov             IA1, [%%STATE + _des_args_in + (1*PTR_SZ)]
+        mov             IA2, [%%STATE + _des_args_in + (2*PTR_SZ)]
+        mov             INP0, [%%STATE + _des_args_in + (3*PTR_SZ)]
+        mov             INP1, [%%STATE + _des_args_in + (4*PTR_SZ)]
+        mov             INP2, [%%STATE + _des_args_in + (5*PTR_SZ)]
+        mov             INP3, [%%STATE + _des_args_in + (6*PTR_SZ)]
+        mov             INP4, [%%STATE + _des_args_in + (7*PTR_SZ)]
         vmovdqu64       ZW0{k7}{z}, [IA0 + OFFSET]
         vmovdqu64       ZW1{k7}{z}, [IA1 + OFFSET]
         vmovdqu64       ZW2{k7}{z}, [IA2 + OFFSET]
@@ -1643,14 +1730,14 @@ endstruc
         vmovdqu64       ZW6{k7}{z}, [INP3 + OFFSET]
         vmovdqu64       ZW7{k7}{z}, [INP4 + OFFSET]
 
-        mov             IA0, [STATE + _des_args_in + (8*PTR_SZ)]
-        mov             IA1, [STATE + _des_args_in + (9*PTR_SZ)]
-        mov             IA2, [STATE + _des_args_in + (10*PTR_SZ)]
-        mov             INP0, [STATE + _des_args_in + (11*PTR_SZ)]
-        mov             INP1, [STATE + _des_args_in + (12*PTR_SZ)]
-        mov             INP2, [STATE + _des_args_in + (13*PTR_SZ)]
-        mov             INP3, [STATE + _des_args_in + (14*PTR_SZ)]
-        mov             INP4, [STATE + _des_args_in + (15*PTR_SZ)]
+        mov             IA0, [%%STATE + _des_args_in + (8*PTR_SZ)]
+        mov             IA1, [%%STATE + _des_args_in + (9*PTR_SZ)]
+        mov             IA2, [%%STATE + _des_args_in + (10*PTR_SZ)]
+        mov             INP0, [%%STATE + _des_args_in + (11*PTR_SZ)]
+        mov             INP1, [%%STATE + _des_args_in + (12*PTR_SZ)]
+        mov             INP2, [%%STATE + _des_args_in + (13*PTR_SZ)]
+        mov             INP3, [%%STATE + _des_args_in + (14*PTR_SZ)]
+        mov             INP4, [%%STATE + _des_args_in + (15*PTR_SZ)]
         vmovdqu64       ZW8{k7}{z}, [IA0 + OFFSET]
         vmovdqu64       ZW9{k7}{z}, [IA1 + OFFSET]
         vmovdqu64       ZW10{k7}{z}, [IA2 + OFFSET]
@@ -1746,14 +1833,14 @@ endstruc
         TRANSPOSE_OUT   ZW0, ZW1, ZW2, ZW3, ZW4, ZW5, ZW6, ZW7, ZW8, ZW9, ZW10, ZW11, ZW12, ZW13, ZW14, ZW15, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11, ZTMP12, ZTMP13
 
         ;; run masked stores
-        mov             IA0, [STATE + _des_args_out + (0*PTR_SZ)]
-        mov             IA1, [STATE + _des_args_out + (1*PTR_SZ)]
-        mov             IA2, [STATE + _des_args_out + (2*PTR_SZ)]
-        mov             INP0, [STATE + _des_args_out + (3*PTR_SZ)]
-        mov             INP1, [STATE + _des_args_out + (4*PTR_SZ)]
-        mov             INP2, [STATE + _des_args_out + (5*PTR_SZ)]
-        mov             INP3, [STATE + _des_args_out + (6*PTR_SZ)]
-        mov             INP4, [STATE + _des_args_out + (7*PTR_SZ)]
+        mov             IA0, [%%STATE + _des_args_out + (0*PTR_SZ)]
+        mov             IA1, [%%STATE + _des_args_out + (1*PTR_SZ)]
+        mov             IA2, [%%STATE + _des_args_out + (2*PTR_SZ)]
+        mov             INP0, [%%STATE + _des_args_out + (3*PTR_SZ)]
+        mov             INP1, [%%STATE + _des_args_out + (4*PTR_SZ)]
+        mov             INP2, [%%STATE + _des_args_out + (5*PTR_SZ)]
+        mov             INP3, [%%STATE + _des_args_out + (6*PTR_SZ)]
+        mov             INP4, [%%STATE + _des_args_out + (7*PTR_SZ)]
         vmovdqu64       [IA0 + OFFSET]{k7}, ZW0
         vmovdqu64       [IA1 + OFFSET]{k7}, ZW1
         vmovdqu64       [IA2 + OFFSET]{k7}, ZW2
@@ -1763,14 +1850,14 @@ endstruc
         vmovdqu64       [INP3 + OFFSET]{k7}, ZW6
         vmovdqu64       [INP4 + OFFSET]{k7}, ZW7
 
-        mov             IA0, [STATE + _des_args_out + (8*PTR_SZ)]
-        mov             IA1, [STATE + _des_args_out + (9*PTR_SZ)]
-        mov             IA2, [STATE + _des_args_out + (10*PTR_SZ)]
-        mov             INP0, [STATE + _des_args_out + (11*PTR_SZ)]
-        mov             INP1, [STATE + _des_args_out + (12*PTR_SZ)]
-        mov             INP2, [STATE + _des_args_out + (13*PTR_SZ)]
-        mov             INP3, [STATE + _des_args_out + (14*PTR_SZ)]
-        mov             INP4, [STATE + _des_args_out + (15*PTR_SZ)]
+        mov             IA0, [%%STATE + _des_args_out + (8*PTR_SZ)]
+        mov             IA1, [%%STATE + _des_args_out + (9*PTR_SZ)]
+        mov             IA2, [%%STATE + _des_args_out + (10*PTR_SZ)]
+        mov             INP0, [%%STATE + _des_args_out + (11*PTR_SZ)]
+        mov             INP1, [%%STATE + _des_args_out + (12*PTR_SZ)]
+        mov             INP2, [%%STATE + _des_args_out + (13*PTR_SZ)]
+        mov             INP3, [%%STATE + _des_args_out + (14*PTR_SZ)]
+        mov             INP4, [%%STATE + _des_args_out + (15*PTR_SZ)]
         vmovdqu64       [IA0 + OFFSET]{k7}, ZW8
         vmovdqu64       [IA1 + OFFSET]{k7}, ZW9
         vmovdqu64       [IA2 + OFFSET]{k7}, ZW10
@@ -1782,11 +1869,11 @@ endstruc
 %%_gen_des_enc_part_end:
 
         ;; store IV and update pointers
-        DES_FINISH      ZIV0, ZIV1, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4
+        DES_FINISH      ZIV0, ZIV1, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, %%STATE, %%SIZE
 
         ;; CFB part for DOCSIS
 %ifidn %%DES_DOCSIS, DOCSIS
-        DES_CFB_ONE     ENC, rsp + _key_sched, ZW0, ZW1, ZW2, ZW3, ZW4, ZW5, ZW6, ZW7, ZW8, ZW9, ZW10, ZW11, ZW12, ZW13, ZW14, ZW15, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, rsp + _tmp_in, rsp + _tmp_out, rsp + _tmp_iv, rsp + _tmp_mask
+        DES_CFB_ONE     ENC, rsp + _key_sched, ZW0, ZW1, ZW2, ZW3, ZW4, ZW5, ZW6, ZW7, ZW8, ZW9, ZW10, ZW11, ZW12, ZW13, ZW14, ZW15, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, rsp + _tmp_in, rsp + _tmp_out, rsp + _tmp_iv, rsp + _tmp_mask, %%STATE
 %endif
 
         CLEAR_KEY_SCHEDULE %%DES_DOCSIS, ZW0
@@ -1810,12 +1897,11 @@ endstruc
 ;;; DES CBC / DOCSIS DES DECRYPT
 ;;; ===========================================================================
 ;;;
-;;; DES_DOCSIS [in] - select between DES (DES CBC), DOCSIS (DOCSIS DES) and
-;;;                   3DES (3DES CBC)
-;;;
 ;;; NOTE: clobbers OpMask registers
-%macro GENERIC_DES_DEC 1
-%define %%DES_DOCSIS %1
+%macro GENERIC_DES_DEC 3
+%define %%DES_DOCSIS    %1      ;; [in] select between DES (DES CBC), DOCSIS (DOCSIS DES) and 3DES (3DES CBC)
+%define %%STATE         %2      ;; [in] GP with pointer to OOO manager
+%define %%SIZE          %3      ;; [in] GP with message size in bytes
 
         ;; push the registers and allocate the stack frame
 	mov	        rax, rsp
@@ -1829,34 +1915,34 @@ endstruc
 
 %ifnidn %%DES_DOCSIS, 3DES
         ;; DES and DOCSIS
-        DES_INIT        STATE + _des_args_keys, STATE + _des_args_IV, rsp + _key_sched, ZIV0, ZIV1, ZW0, ZW1, ZW2, ZW3, ZW4, ZW5, ZW6, ZW7, ZW8, ZW9, ZW10, ZW11, ZW12, ZW13, ZW14, ZW15, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11
+        DES_INIT        %%STATE + _des_args_keys, %%STATE + _des_args_IV, rsp + _key_sched, ZIV0, ZIV1, ZW0, ZW1, ZW2, ZW3, ZW4, ZW5, ZW6, ZW7, ZW8, ZW9, ZW10, ZW11, ZW12, ZW13, ZW14, ZW15, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11
 %else
         ;; 3DES
-        DES3_INIT       STATE + _des_args_keys, STATE + _des_args_IV, rsp + _key_sched, rsp + _key_sched2, rsp + _key_sched3, ZIV0, ZIV1, ZW0, ZW1, ZW2, ZW3, ZW4, ZW5, ZW6, ZW7, ZW8, ZW9, ZW10, ZW11, ZW12, ZW13, ZW14, ZW15, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11, DEC
+        DES3_INIT       %%STATE + _des_args_keys, %%STATE + _des_args_IV, rsp + _key_sched, rsp + _key_sched2, rsp + _key_sched3, ZIV0, ZIV1, ZW0, ZW1, ZW2, ZW3, ZW4, ZW5, ZW6, ZW7, ZW8, ZW9, ZW10, ZW11, ZW12, ZW13, ZW14, ZW15, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11, DEC
 %endif
 
         ;; CFB part for DOCSIS
 %ifidn %%DES_DOCSIS, DOCSIS
-        DES_CFB_ONE     DEC, rsp + _key_sched, ZW0, ZW1, ZW2, ZW3, ZW4, ZW5, ZW6, ZW7, ZW8, ZW9, ZW10, ZW11, ZW12, ZW13, ZW14, ZW15, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, rsp + _tmp_in, rsp + _tmp_out, rsp + _tmp_iv, rsp + _tmp_mask
+        DES_CFB_ONE     DEC, rsp + _key_sched, ZW0, ZW1, ZW2, ZW3, ZW4, ZW5, ZW6, ZW7, ZW8, ZW9, ZW10, ZW11, ZW12, ZW13, ZW14, ZW15, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, rsp + _tmp_in, rsp + _tmp_out, rsp + _tmp_iv, rsp + _tmp_mask, %%STATE
 %endif
 
-        mov             [rsp + _size_save], SIZE
-        and             SIZE, -64
+        mov             [rsp + _size_save], %%SIZE
+        and             %%SIZE, -64
         xor             OFFSET, OFFSET
         ;; This loop processes message in blocks of 64 bytes.
         ;; Anything smaller than 64 bytes is handled separately after the loop.
 %%_gen_des_dec_loop:
-        cmp             OFFSET, SIZE
+        cmp             OFFSET, %%SIZE
         jz              %%_gen_des_dec_loop_end
         ;; run loads
-        mov             IA0, [STATE + _des_args_in + (0*PTR_SZ)]
-        mov             IA1, [STATE + _des_args_in + (1*PTR_SZ)]
-        mov             IA2, [STATE + _des_args_in + (2*PTR_SZ)]
-        mov             INP0, [STATE + _des_args_in + (3*PTR_SZ)]
-        mov             INP1, [STATE + _des_args_in + (4*PTR_SZ)]
-        mov             INP2, [STATE + _des_args_in + (5*PTR_SZ)]
-        mov             INP3, [STATE + _des_args_in + (6*PTR_SZ)]
-        mov             INP4, [STATE + _des_args_in + (7*PTR_SZ)]
+        mov             IA0, [%%STATE + _des_args_in + (0*PTR_SZ)]
+        mov             IA1, [%%STATE + _des_args_in + (1*PTR_SZ)]
+        mov             IA2, [%%STATE + _des_args_in + (2*PTR_SZ)]
+        mov             INP0, [%%STATE + _des_args_in + (3*PTR_SZ)]
+        mov             INP1, [%%STATE + _des_args_in + (4*PTR_SZ)]
+        mov             INP2, [%%STATE + _des_args_in + (5*PTR_SZ)]
+        mov             INP3, [%%STATE + _des_args_in + (6*PTR_SZ)]
+        mov             INP4, [%%STATE + _des_args_in + (7*PTR_SZ)]
         vmovdqu64       ZW0, [IA0 + OFFSET]
         vmovdqu64       ZW1, [IA1 + OFFSET]
         vmovdqu64       ZW2, [IA2 + OFFSET]
@@ -1866,14 +1952,14 @@ endstruc
         vmovdqu64       ZW6, [INP3 + OFFSET]
         vmovdqu64       ZW7, [INP4 + OFFSET]
 
-        mov             IA0, [STATE + _des_args_in + (8*PTR_SZ)]
-        mov             IA1, [STATE + _des_args_in + (9*PTR_SZ)]
-        mov             IA2, [STATE + _des_args_in + (10*PTR_SZ)]
-        mov             INP0, [STATE + _des_args_in + (11*PTR_SZ)]
-        mov             INP1, [STATE + _des_args_in + (12*PTR_SZ)]
-        mov             INP2, [STATE + _des_args_in + (13*PTR_SZ)]
-        mov             INP3, [STATE + _des_args_in + (14*PTR_SZ)]
-        mov             INP4, [STATE + _des_args_in + (15*PTR_SZ)]
+        mov             IA0, [%%STATE + _des_args_in + (8*PTR_SZ)]
+        mov             IA1, [%%STATE + _des_args_in + (9*PTR_SZ)]
+        mov             IA2, [%%STATE + _des_args_in + (10*PTR_SZ)]
+        mov             INP0, [%%STATE + _des_args_in + (11*PTR_SZ)]
+        mov             INP1, [%%STATE + _des_args_in + (12*PTR_SZ)]
+        mov             INP2, [%%STATE + _des_args_in + (13*PTR_SZ)]
+        mov             INP3, [%%STATE + _des_args_in + (14*PTR_SZ)]
+        mov             INP4, [%%STATE + _des_args_in + (15*PTR_SZ)]
         vmovdqu64       ZW8, [IA0 + OFFSET]
         vmovdqu64       ZW9, [IA1 + OFFSET]
         vmovdqu64       ZW10, [IA2 + OFFSET]
@@ -1898,14 +1984,14 @@ endstruc
         TRANSPOSE_OUT   ZW0, ZW1, ZW2, ZW3, ZW4, ZW5, ZW6, ZW7, ZW8, ZW9, ZW10, ZW11, ZW12, ZW13, ZW14, ZW15, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11, ZTMP12, ZTMP13
 
         ;; run stores
-        mov             IA0, [STATE + _des_args_out + (0*PTR_SZ)]
-        mov             IA1, [STATE + _des_args_out + (1*PTR_SZ)]
-        mov             IA2, [STATE + _des_args_out + (2*PTR_SZ)]
-        mov             INP0, [STATE + _des_args_out + (3*PTR_SZ)]
-        mov             INP1, [STATE + _des_args_out + (4*PTR_SZ)]
-        mov             INP2, [STATE + _des_args_out + (5*PTR_SZ)]
-        mov             INP3, [STATE + _des_args_out + (6*PTR_SZ)]
-        mov             INP4, [STATE + _des_args_out + (7*PTR_SZ)]
+        mov             IA0, [%%STATE + _des_args_out + (0*PTR_SZ)]
+        mov             IA1, [%%STATE + _des_args_out + (1*PTR_SZ)]
+        mov             IA2, [%%STATE + _des_args_out + (2*PTR_SZ)]
+        mov             INP0, [%%STATE + _des_args_out + (3*PTR_SZ)]
+        mov             INP1, [%%STATE + _des_args_out + (4*PTR_SZ)]
+        mov             INP2, [%%STATE + _des_args_out + (5*PTR_SZ)]
+        mov             INP3, [%%STATE + _des_args_out + (6*PTR_SZ)]
+        mov             INP4, [%%STATE + _des_args_out + (7*PTR_SZ)]
         vmovdqu64       [IA0 + OFFSET], ZW0
         vmovdqu64       [IA1 + OFFSET], ZW1
         vmovdqu64       [IA2 + OFFSET], ZW2
@@ -1915,14 +2001,14 @@ endstruc
         vmovdqu64       [INP3 + OFFSET], ZW6
         vmovdqu64       [INP4 + OFFSET], ZW7
 
-        mov             IA0, [STATE + _des_args_out + (8*PTR_SZ)]
-        mov             IA1, [STATE + _des_args_out + (9*PTR_SZ)]
-        mov             IA2, [STATE + _des_args_out + (10*PTR_SZ)]
-        mov             INP0, [STATE + _des_args_out + (11*PTR_SZ)]
-        mov             INP1, [STATE + _des_args_out + (12*PTR_SZ)]
-        mov             INP2, [STATE + _des_args_out + (13*PTR_SZ)]
-        mov             INP3, [STATE + _des_args_out + (14*PTR_SZ)]
-        mov             INP4, [STATE + _des_args_out + (15*PTR_SZ)]
+        mov             IA0, [%%STATE + _des_args_out + (8*PTR_SZ)]
+        mov             IA1, [%%STATE + _des_args_out + (9*PTR_SZ)]
+        mov             IA2, [%%STATE + _des_args_out + (10*PTR_SZ)]
+        mov             INP0, [%%STATE + _des_args_out + (11*PTR_SZ)]
+        mov             INP1, [%%STATE + _des_args_out + (12*PTR_SZ)]
+        mov             INP2, [%%STATE + _des_args_out + (13*PTR_SZ)]
+        mov             INP3, [%%STATE + _des_args_out + (14*PTR_SZ)]
+        mov             INP4, [%%STATE + _des_args_out + (15*PTR_SZ)]
         vmovdqu64       [IA0 + OFFSET], ZW8
         vmovdqu64       [IA1 + OFFSET], ZW9
         vmovdqu64       [IA2 + OFFSET], ZW10
@@ -1937,23 +2023,23 @@ endstruc
 %%_gen_des_dec_loop_end:
         ;; This is where we check if there is anything less than 64 bytes
         ;; of message left for processing.
-        mov             SIZE, [rsp + _size_save]
-        cmp             OFFSET, SIZE
+        mov             %%SIZE, [rsp + _size_save]
+        cmp             OFFSET, %%SIZE
         jz              %%_gen_des_dec_part_end
         ;; calculate min of bytes_left and 64, convert to qword mask
-        GET_MASK8       IA0        ; IA0 = mask
+        GET_MASK8       IA0, %%SIZE, IA1        ; IA0 = mask
 
         kmovw           k7, DWORD(IA0)
         mov             [rsp + _mask_save], IA0
         ;; run masked loads
-        mov             IA0, [STATE + _des_args_in + (0*PTR_SZ)]
-        mov             IA1, [STATE + _des_args_in + (1*PTR_SZ)]
-        mov             IA2, [STATE + _des_args_in + (2*PTR_SZ)]
-        mov             INP0, [STATE + _des_args_in + (3*PTR_SZ)]
-        mov             INP1, [STATE + _des_args_in + (4*PTR_SZ)]
-        mov             INP2, [STATE + _des_args_in + (5*PTR_SZ)]
-        mov             INP3, [STATE + _des_args_in + (6*PTR_SZ)]
-        mov             INP4, [STATE + _des_args_in + (7*PTR_SZ)]
+        mov             IA0, [%%STATE + _des_args_in + (0*PTR_SZ)]
+        mov             IA1, [%%STATE + _des_args_in + (1*PTR_SZ)]
+        mov             IA2, [%%STATE + _des_args_in + (2*PTR_SZ)]
+        mov             INP0, [%%STATE + _des_args_in + (3*PTR_SZ)]
+        mov             INP1, [%%STATE + _des_args_in + (4*PTR_SZ)]
+        mov             INP2, [%%STATE + _des_args_in + (5*PTR_SZ)]
+        mov             INP3, [%%STATE + _des_args_in + (6*PTR_SZ)]
+        mov             INP4, [%%STATE + _des_args_in + (7*PTR_SZ)]
         vmovdqu64       ZW0{k7}{z}, [IA0 + OFFSET]
         vmovdqu64       ZW1{k7}{z}, [IA1 + OFFSET]
         vmovdqu64       ZW2{k7}{z}, [IA2 + OFFSET]
@@ -1963,14 +2049,14 @@ endstruc
         vmovdqu64       ZW6{k7}{z}, [INP3 + OFFSET]
         vmovdqu64       ZW7{k7}{z}, [INP4 + OFFSET]
 
-        mov             IA0, [STATE + _des_args_in + (8*PTR_SZ)]
-        mov             IA1, [STATE + _des_args_in + (9*PTR_SZ)]
-        mov             IA2, [STATE + _des_args_in + (10*PTR_SZ)]
-        mov             INP0, [STATE + _des_args_in + (11*PTR_SZ)]
-        mov             INP1, [STATE + _des_args_in + (12*PTR_SZ)]
-        mov             INP2, [STATE + _des_args_in + (13*PTR_SZ)]
-        mov             INP3, [STATE + _des_args_in + (14*PTR_SZ)]
-        mov             INP4, [STATE + _des_args_in + (15*PTR_SZ)]
+        mov             IA0, [%%STATE + _des_args_in + (8*PTR_SZ)]
+        mov             IA1, [%%STATE + _des_args_in + (9*PTR_SZ)]
+        mov             IA2, [%%STATE + _des_args_in + (10*PTR_SZ)]
+        mov             INP0, [%%STATE + _des_args_in + (11*PTR_SZ)]
+        mov             INP1, [%%STATE + _des_args_in + (12*PTR_SZ)]
+        mov             INP2, [%%STATE + _des_args_in + (13*PTR_SZ)]
+        mov             INP3, [%%STATE + _des_args_in + (14*PTR_SZ)]
+        mov             INP4, [%%STATE + _des_args_in + (15*PTR_SZ)]
         vmovdqu64       ZW8{k7}{z}, [IA0 + OFFSET]
         vmovdqu64       ZW9{k7}{z}, [IA1 + OFFSET]
         vmovdqu64       ZW10{k7}{z}, [IA2 + OFFSET]
@@ -2062,14 +2148,14 @@ endstruc
         TRANSPOSE_OUT   ZW0, ZW1, ZW2, ZW3, ZW4, ZW5, ZW6, ZW7, ZW8, ZW9, ZW10, ZW11, ZW12, ZW13, ZW14, ZW15, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11, ZTMP12, ZTMP13
 
         ;; run masked stores
-        mov             IA0, [STATE + _des_args_out + (0*PTR_SZ)]
-        mov             IA1, [STATE + _des_args_out + (1*PTR_SZ)]
-        mov             IA2, [STATE + _des_args_out + (2*PTR_SZ)]
-        mov             INP0, [STATE + _des_args_out + (3*PTR_SZ)]
-        mov             INP1, [STATE + _des_args_out + (4*PTR_SZ)]
-        mov             INP2, [STATE + _des_args_out + (5*PTR_SZ)]
-        mov             INP3, [STATE + _des_args_out + (6*PTR_SZ)]
-        mov             INP4, [STATE + _des_args_out + (7*PTR_SZ)]
+        mov             IA0, [%%STATE + _des_args_out + (0*PTR_SZ)]
+        mov             IA1, [%%STATE + _des_args_out + (1*PTR_SZ)]
+        mov             IA2, [%%STATE + _des_args_out + (2*PTR_SZ)]
+        mov             INP0, [%%STATE + _des_args_out + (3*PTR_SZ)]
+        mov             INP1, [%%STATE + _des_args_out + (4*PTR_SZ)]
+        mov             INP2, [%%STATE + _des_args_out + (5*PTR_SZ)]
+        mov             INP3, [%%STATE + _des_args_out + (6*PTR_SZ)]
+        mov             INP4, [%%STATE + _des_args_out + (7*PTR_SZ)]
         vmovdqu64       [IA0 + OFFSET]{k7}, ZW0
         vmovdqu64       [IA1 + OFFSET]{k7}, ZW1
         vmovdqu64       [IA2 + OFFSET]{k7}, ZW2
@@ -2079,14 +2165,14 @@ endstruc
         vmovdqu64       [INP3 + OFFSET]{k7}, ZW6
         vmovdqu64       [INP4 + OFFSET]{k7}, ZW7
 
-        mov             IA0, [STATE + _des_args_out + (8*PTR_SZ)]
-        mov             IA1, [STATE + _des_args_out + (9*PTR_SZ)]
-        mov             IA2, [STATE + _des_args_out + (10*PTR_SZ)]
-        mov             INP0, [STATE + _des_args_out + (11*PTR_SZ)]
-        mov             INP1, [STATE + _des_args_out + (12*PTR_SZ)]
-        mov             INP2, [STATE + _des_args_out + (13*PTR_SZ)]
-        mov             INP3, [STATE + _des_args_out + (14*PTR_SZ)]
-        mov             INP4, [STATE + _des_args_out + (15*PTR_SZ)]
+        mov             IA0, [%%STATE + _des_args_out + (8*PTR_SZ)]
+        mov             IA1, [%%STATE + _des_args_out + (9*PTR_SZ)]
+        mov             IA2, [%%STATE + _des_args_out + (10*PTR_SZ)]
+        mov             INP0, [%%STATE + _des_args_out + (11*PTR_SZ)]
+        mov             INP1, [%%STATE + _des_args_out + (12*PTR_SZ)]
+        mov             INP2, [%%STATE + _des_args_out + (13*PTR_SZ)]
+        mov             INP3, [%%STATE + _des_args_out + (14*PTR_SZ)]
+        mov             INP4, [%%STATE + _des_args_out + (15*PTR_SZ)]
         vmovdqu64       [IA0 + OFFSET]{k7}, ZW8
         vmovdqu64       [IA1 + OFFSET]{k7}, ZW9
         vmovdqu64       [IA2 + OFFSET]{k7}, ZW10
@@ -2098,7 +2184,7 @@ endstruc
 %%_gen_des_dec_part_end:
 
         ;; store IV and update pointers
-        DES_FINISH      ZIV0, ZIV1, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4
+        DES_FINISH      ZIV0, ZIV1, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, %%STATE, %%SIZE
 
         CLEAR_KEY_SCHEDULE %%DES_DOCSIS, ZW0
 
@@ -2116,4 +2202,3 @@ endstruc
 %endif ;; SAFE_DATA
 
 %endmacro
-

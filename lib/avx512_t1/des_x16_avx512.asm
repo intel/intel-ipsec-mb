@@ -25,19 +25,32 @@
 ;; OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;
 
-;; Authors:
-;;   Shay Gueron (1, 2), Regev Shemy (2), Tomasz kantecki (2)
-;;   (1) University of Haifa, Israel
-;;   (2) Intel Corporation
-
-;; In System V AMD64 ABI
-;;	callee saves: RBX, RBP, R12-R15
-;; Windows x64 ABI
-;;	callee saves: RBX, RBP, RDI, RSI, RSP, R12-R15
-
-;; Clobbers ZMM0-31 and K1 to K7
+;; DES, TDES/3DES and DES-DOCSIS API generation
 
 %include "include/des_avx512.inc"
+
+;;; ========================================================
+;;; External module functions needed here
+
+extern des_enc_zmm0_zmm1_avx512
+extern des_enc_zmm2_zmm3_avx512
+extern des_enc_zmm4_zmm5_avx512
+extern des_enc_zmm6_zmm7_avx512
+extern des_enc_zmm8_zmm9_avx512
+extern des_enc_zmm10_zmm11_avx512
+extern des_enc_zmm12_zmm13_avx512
+extern des_enc_zmm14_zmm15_avx512
+extern des_enc_zmm18_zmm19_avx512
+
+extern des_dec_zmm0_zmm1_avx512
+extern des_dec_zmm2_zmm3_avx512
+extern des_dec_zmm4_zmm5_avx512
+extern des_dec_zmm6_zmm7_avx512
+extern des_dec_zmm8_zmm9_avx512
+extern des_dec_zmm10_zmm11_avx512
+extern des_dec_zmm12_zmm13_avx512
+extern des_dec_zmm14_zmm15_avx512
+extern des_dec_zmm18_zmm19_avx512
 
 ;;; ========================================================
 ;;; DATA
@@ -45,7 +58,8 @@
 mksection .rodata
 default rel
 align 64
-mask_values:
+MKGLOBAL(des_mask_values_avx512,data,internal)
+des_mask_values_avx512:
         dd 0x04000000, 0x04000000, 0x04000000, 0x04000000
         dd 0x04000000, 0x04000000, 0x04000000, 0x04000000
         dd 0x04000000, 0x04000000, 0x04000000, 0x04000000
@@ -124,7 +138,8 @@ mask_values:
         dd 0x90000000, 0x90000000, 0x90000000, 0x90000000
 
 align 64
-init_perm_consts:
+MKGLOBAL(des_init_perm_consts_avx512,data,internal)
+des_init_perm_consts_avx512:
         dd 0x0f0f0f0f, 0x0f0f0f0f, 0x0f0f0f0f, 0x0f0f0f0f
         dd 0x0f0f0f0f, 0x0f0f0f0f, 0x0f0f0f0f, 0x0f0f0f0f
         dd 0x0f0f0f0f, 0x0f0f0f0f, 0x0f0f0f0f, 0x0f0f0f0f
@@ -148,7 +163,8 @@ init_perm_consts:
 
 ;;; S-Box table
 align 64
-S_box_flipped:
+MKGLOBAL(des_S_box_flipped_avx512,data,internal)
+des_S_box_flipped_avx512:
         ;; SBOX0
         dw 0x07, 0x02, 0x0c, 0x0f, 0x04, 0x0b, 0x0a, 0x0c
         dw 0x0b, 0x07, 0x06, 0x09, 0x0d, 0x04, 0x00, 0x0a
@@ -224,39 +240,45 @@ S_box_flipped:
 
 ;;; Used in DOCSIS DES partial block scheduling 16 x 32bit of value 1
 align 64
-vec_ones_32b:
+MKGLOBAL(des_vec_ones_32b_avx512,data,internal)
+des_vec_ones_32b_avx512:
         dd 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
 
 align 64
-and_eu:
+MKGLOBAL(des_and_eu_avx512,data,internal)
+des_and_eu_avx512:
         dd 0x3f003f00, 0x3f003f00, 0x3f003f00, 0x3f003f00
         dd 0x3f003f00, 0x3f003f00, 0x3f003f00, 0x3f003f00
         dd 0x3f003f00, 0x3f003f00, 0x3f003f00, 0x3f003f00
         dd 0x3f003f00, 0x3f003f00, 0x3f003f00, 0x3f003f00
 
 align 64
-and_ed:
+MKGLOBAL(des_and_ed_avx512,data,internal)
+des_and_ed_avx512:
         dd 0x003f003f, 0x003f003f, 0x003f003f, 0x003f003f
         dd 0x003f003f, 0x003f003f, 0x003f003f, 0x003f003f
         dd 0x003f003f, 0x003f003f, 0x003f003f, 0x003f003f
         dd 0x003f003f, 0x003f003f, 0x003f003f, 0x003f003f
 
 align 64
-idx_e:
+MKGLOBAL(des_idx_e_avx512,data,internal)
+des_idx_e_avx512:
         dq 0x0d0c090805040100, 0x0f0e0b0a07060302
         dq 0x1d1c191815141110, 0x1f1e1b1a17161312
         dq 0x2d2c292825242120, 0x2f2e2b2a27262322
         dq 0x3d3c393835343130, 0x3f3e3b3a37363332
 
 align 64
-reg_values16bit_7:
+MKGLOBAL(des_reg_values16bit_7_avx512,data,internal)
+des_reg_values16bit_7_avx512:
         dq 0x001f001f001f001f, 0x001f001f001f001f
         dq 0x001f001f001f001f, 0x001f001f001f001f
         dq 0x001f001f001f001f, 0x001f001f001f001f
         dq 0x001f001f001f001f, 0x001f001f001f001f
 
 align 64
-shuffle_reg:
+MKGLOBAL(des_shuffle_reg_avx512,data,internal)
+des_shuffle_reg_avx512:
         dq 0x0705060403010200, 0x0f0d0e0c0b090a08
         dq 0x1715161413111210, 0x1f1d1e1c1b191a18
         dq 0x2725262423212220, 0x2f2d2e2c2b292a28
@@ -271,7 +293,7 @@ mksection .text
 align 64
 MKGLOBAL(des_x16_cbc_enc_avx512,function,internal)
 des_x16_cbc_enc_avx512:
-        GENERIC_DES_ENC DES
+        GENERIC_DES_ENC DES, arg1, arg2
         ret
 
 ;;; arg 1 : pointer to DES OOO structure
@@ -279,7 +301,7 @@ des_x16_cbc_enc_avx512:
 align 64
 MKGLOBAL(des_x16_cbc_dec_avx512,function,internal)
 des_x16_cbc_dec_avx512:
-        GENERIC_DES_DEC DES
+        GENERIC_DES_DEC DES, arg1, arg2
 	ret
 
 ;;; arg 1 : pointer to DES OOO structure
@@ -287,7 +309,7 @@ des_x16_cbc_dec_avx512:
 align 64
 MKGLOBAL(des3_x16_cbc_enc_avx512,function,internal)
 des3_x16_cbc_enc_avx512:
-        GENERIC_DES_ENC 3DES
+        GENERIC_DES_ENC 3DES, arg1, arg2
         ret
 
 ;;; arg 1 : pointer to DES OOO structure
@@ -295,7 +317,7 @@ des3_x16_cbc_enc_avx512:
 align 64
 MKGLOBAL(des3_x16_cbc_dec_avx512,function,internal)
 des3_x16_cbc_dec_avx512:
-        GENERIC_DES_DEC 3DES
+        GENERIC_DES_DEC 3DES, arg1, arg2
 	ret
 
 ;;; arg 1 : pointer to DES OOO structure
@@ -303,7 +325,7 @@ des3_x16_cbc_dec_avx512:
 align 64
 MKGLOBAL(docsis_des_x16_enc_avx512,function,internal)
 docsis_des_x16_enc_avx512:
-        GENERIC_DES_ENC DOCSIS
+        GENERIC_DES_ENC DOCSIS, arg1, arg2
 	ret
 
 ;;; arg 1 : pointer to DES OOO structure
@@ -311,7 +333,7 @@ docsis_des_x16_enc_avx512:
 align 64
 MKGLOBAL(docsis_des_x16_dec_avx512,function,internal)
 docsis_des_x16_dec_avx512:
-        GENERIC_DES_DEC DOCSIS
+        GENERIC_DES_DEC DOCSIS, arg1, arg2
 	ret
 
 mksection stack-noexec

@@ -654,6 +654,7 @@ asm_avx512_lib_objs := \
 	sha256_x16_avx512.o \
 	sha512_x8_avx512.o \
 	des_x16_avx512.o \
+	des_common_avx512.o \
 	aes_ecb_vaes_avx512.o \
 	aes_ecb_quic_vaes_avx512.o \
 	aes_cntr_api_by16_vaes_avx512.o \
