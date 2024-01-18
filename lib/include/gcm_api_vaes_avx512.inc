@@ -50,6 +50,7 @@ default rel
 ;       aes_gcm_precomp_256_vaes_avx512
 ;       (struct gcm_key_data *key_data)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+align 32
 MKGLOBAL(FN_NAME(precomp,_),function,)
 FN_NAME(precomp,_):
         endbranch64
@@ -123,6 +124,7 @@ error_precomp:
 ;        u8       *auth_tag,
 ;        u64      auth_tag_len);
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+align 32
 MKGLOBAL(FN_NAME(enc,_),function,)
 FN_NAME(enc,_):
         endbranch64
@@ -185,25 +187,19 @@ FN_NAME(enc,_):
 
 .skip_aad_check_enc:
 %endif
-        ;; Check if msg_len < 256
+        ;; Check if msg_len <= 256
         cmp     arg5, 16 * 16
         jbe     .small_packet_path
 
         GCM_INIT arg1, arg2, arg6, arg7, arg8, r10, r11, r12, k1, xmm14, xmm2, \
                 zmm1, zmm3, zmm4, zmm5, zmm6, zmm7, zmm8, zmm9, zmm10, zmm11, \
                 zmm12, zmm13, zmm15, zmm16, zmm17, zmm18, zmm19, zmm20, single_call
-        GCM_ENC_DEC  arg1, arg2, arg3, arg4, arg5, ENC, single_call
+        GCM_ENC_DEC  arg1, arg2, arg3, arg4, arg5, ENC, single_call, '>256'
         GCM_COMPLETE arg1, arg2, arg9, arg10, single_call, k1, r10, r11, r12
-%ifdef SAFE_DATA
-        clear_zmms_avx512 xmm6
-%endif
         jmp     .exit_enc
 
 .small_packet_path:
-        GCM_ENC_DEC_0_TO_256 arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, ENC
-%ifdef SAFE_DATA
-        clear_zmms_avx512 xmm6
-%endif
+        GCM_ENC_DEC_0_TO_256 arg1, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, ENC
 
 .exit_enc:
         FUNC_RESTORE
@@ -271,6 +267,7 @@ FN_NAME(enc,_):
 ;        u8       *auth_tag,
 ;        u64      auth_tag_len);
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+align 32
 MKGLOBAL(FN_NAME(dec,_),function,)
 FN_NAME(dec,_):
         endbranch64
@@ -285,68 +282,77 @@ FN_NAME(dec,_):
 
         ;; Check key_data != NULL
         cmp     arg1, 0
-        jz      error_dec
+        jz      .error_dec
 
         ;; Check context_data != NULL
         cmp     arg2, 0
-        jz      error_dec
+        jz      .error_dec
 
         ;; Check IV != NULL
         cmp     arg6, 0
-        jz      error_dec
+        jz      .error_dec
 
         ;; Check auth_tag != NULL
         cmp     arg9, 0
-        jz      error_dec
+        jz      .error_dec
 
         ;; Check auth_tag_len == 0 or > 16
         cmp     arg10, 0
-        jz      error_dec
+        jz      .error_dec
 
         cmp     arg10, 16
-        ja      error_dec
+        ja      .error_dec
 
         ;; Check if msg_len == 0
         cmp     arg5, 0
-        jz      skip_in_out_check_dec
+        jz      .skip_in_out_check_dec
 
         ;; Check if msg_len > max_len
         cmp     arg5, GCM_MAX_LENGTH
-        ja      error_dec
+        ja      .error_dec
 
         ;; Check out != NULL (msg_len != 0)
         cmp     arg3, 0
-        jz      error_dec
+        jz      .error_dec
 
         ;; Check in != NULL (msg_len != 0)
         cmp     arg4, 0
-        jz      error_dec
+        jz      .error_dec
 
-skip_in_out_check_dec:
+.skip_in_out_check_dec:
         ;; Check if aad_len == 0
         cmp     arg8, 0
-        jz      skip_aad_check_dec
+        jz      .skip_aad_check_dec
 
         ;; Check aad != NULL (aad_len != 0)
         cmp     arg7, 0
-        jz      error_dec
+        jz      .error_dec
 
-skip_aad_check_dec:
+.skip_aad_check_dec:
 %endif
+        ;; Check if msg_len <= 256
+        cmp     arg5, 16 * 16
+        jbe     .small_packet_path
+
         GCM_INIT arg1, arg2, arg6, arg7, arg8, r10, r11, r12, k1, xmm14, xmm2, \
                 zmm1, zmm3, zmm4, zmm5, zmm6, zmm7, zmm8, zmm9, zmm10, zmm11, \
                 zmm12, zmm13, zmm15, zmm16, zmm17, zmm18, zmm19, zmm20, single_call
-        GCM_ENC_DEC  arg1, arg2, arg3, arg4, arg5, DEC, single_call
+        GCM_ENC_DEC  arg1, arg2, arg3, arg4, arg5, DEC, single_call, '>256'
         GCM_COMPLETE arg1, arg2, arg9, arg10, single_call, k1, r10, r11, r12
 %ifdef SAFE_DATA
         clear_zmms_avx512 xmm6
 %endif
-exit_dec:
+        jmp     .exit_dec
+
+.small_packet_path:
+        GCM_ENC_DEC_0_TO_256 arg1, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, DEC
+
+.exit_dec:
         FUNC_RESTORE
         ret
 
 %ifdef SAFE_PARAM
-error_dec:
+.error_dec:
         ;; Clear reg and imb_errno
         IMB_ERR_CHECK_START rax
 
@@ -369,7 +375,7 @@ error_dec:
 
         ;; Check if msg_len == 0
         cmp     arg5, 0
-        jz      skip_in_out_check_error_dec
+        jz      .skip_in_out_check_error_dec
 
         ;; Check if msg_len > max_len
         IMB_ERR_CHECK_ABOVE arg5, GCM_MAX_LENGTH, rax, IMB_ERR_CIPH_LEN
@@ -380,19 +386,19 @@ error_dec:
         ;; Check in != NULL (msg_len != 0)
         IMB_ERR_CHECK_NULL arg4, rax, IMB_ERR_NULL_SRC
 
-skip_in_out_check_error_dec:
+.skip_in_out_check_error_dec:
         ;; Check if aad_len == 0
         cmp     arg8, 0
-        jz      skip_aad_check_error_dec
+        jz      .skip_aad_check_error_dec
 
         ;; Check aad != NULL (aad_len != 0)
         IMB_ERR_CHECK_NULL arg7, rax, IMB_ERR_NULL_AAD
 
-skip_aad_check_error_dec:
+.skip_aad_check_error_dec:
 
         ;; Set imb_errno
         IMB_ERR_CHECK_END rax
-        jmp     exit_dec
+        jmp     .exit_dec
 %endif
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -402,10 +408,15 @@ skip_aad_check_error_dec:
 ;IMB_JOB *aes_gcm_enc_var_iv_128_vaes_avx512 / aes_gcm_enc_var_iv_192_vaes_avx512 /
 ;       aes_gcm_enc_var_iv_256_vaes_avx512(IMB_MGR *state, IMB_JOB *job)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+align 32
 MKGLOBAL(FN_NAME(enc_var_iv,_),function,internal)
 FN_NAME(enc_var_iv,_):
         endbranch64
 	FUNC_SAVE alloc_context
+
+        ;; Check if msg_len <= 256
+        cmp     qword [arg2 + _msg_len_to_cipher], 16 * 16
+        jbe     .small_packet_path
 
         mov     arg1, [arg2 + _enc_keys]
 
@@ -420,7 +431,7 @@ FN_NAME(enc_var_iv,_):
         add     arg3, [arg2 + _cipher_start_src_offset]
         mov     arg4, [arg2 + _dst]
         mov     rbp, [arg2 + _msg_len_to_cipher]
-        GCM_ENC_DEC  arg1, {rsp + CONTEXT_OFFSET}, arg4, arg3, rbp, ENC, single_call
+        GCM_ENC_DEC  arg1, {rsp + CONTEXT_OFFSET}, arg4, arg3, rbp, ENC, single_call, '>256'
 
         GCM_COMPLETE arg1, {rsp + CONTEXT_OFFSET}, \
                      {[arg2 + _auth_tag_output]}, {[arg2 + _auth_tag_output_len_in_bytes]}, \
@@ -430,6 +441,27 @@ FN_NAME(enc_var_iv,_):
         clear_zmms_avx512 xmm1, xmm4, xmm6, xmm7, xmm8, xmm12, xmm13, xmm14, \
                           xmm16, xmm17, xmm18, xmm19, xmm20, xmm21, xmm26, xmm30, xmm31
 %endif
+        jmp     .exit_enc
+
+align 32
+.small_packet_path:
+        mov     arg1, [arg2 + _enc_keys]
+        mov     arg3, [arg2 + _src]
+        add     arg3, [arg2 + _cipher_start_src_offset]
+        mov     arg4, [arg2 + _dst]
+        mov     rbp, [arg2 + _msg_len_to_cipher]
+        GCM_ENC_DEC_0_TO_256 arg1, arg4, arg3, rbp, \
+                             {[arg2 + _iv]}, \
+                             {[arg2 + _gcm_aad]}, {qword [arg2 + _gcm_aad_len]}, \
+                             {[arg2 + _auth_tag_output]}, {[arg2 + _auth_tag_output_len_in_bytes]}, \
+                             ENC, {qword [arg2 + _iv_len_in_bytes]}
+
+%ifdef SAFE_DATA
+        clear_zmms_avx512 xmm0, xmm1, xmm2, xmm7, xmm8, xmm9, xmm11, xmm10, xmm14, \
+                          xmm15, xmm16, xmm17, xmm18, xmm20, xmm21
+%endif
+
+.exit_enc:
         ;; mark job complete
         mov     dword [arg2 + _status], IMB_STATUS_COMPLETED
 
@@ -445,10 +477,15 @@ FN_NAME(enc_var_iv,_):
 ;IMB_JOB *aes_gcm_dec_var_iv_128_vaes_avx512 / aes_gcm_dec_var_iv_192_vaes_avx512 /
 ;       aes_gcm_dec_var_iv_256_vaes_avx512(IMB_MGR *state, IMB_JOB *job)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+align 32
 MKGLOBAL(FN_NAME(dec_var_iv,_),function,internal)
 FN_NAME(dec_var_iv,_):
         endbranch64
 	FUNC_SAVE alloc_context
+
+        ;; Check if msg_len <= 256
+        cmp     qword [arg2 + _msg_len_to_cipher], 16 * 16
+        jbe     .small_packet_path
 
         mov     arg1, [arg2 + _dec_keys]
 
@@ -463,7 +500,7 @@ FN_NAME(dec_var_iv,_):
         add     arg3, [arg2 + _cipher_start_src_offset]
         mov     arg4, [arg2 + _dst]
         mov     rbp, [arg2 + _msg_len_to_cipher]
-        GCM_ENC_DEC  arg1, {rsp + CONTEXT_OFFSET}, arg4, arg3, rbp, DEC, single_call
+        GCM_ENC_DEC  arg1, {rsp + CONTEXT_OFFSET}, arg4, arg3, rbp, DEC, single_call, '>256'
 
         GCM_COMPLETE arg1, {rsp + CONTEXT_OFFSET}, \
                      {[arg2 + _auth_tag_output]}, {[arg2 + _auth_tag_output_len_in_bytes]}, \
@@ -473,6 +510,25 @@ FN_NAME(dec_var_iv,_):
         clear_zmms_avx512 xmm1, xmm4, xmm6, xmm7, xmm8, xmm12, xmm13, xmm14, \
                           xmm16, xmm17, xmm18, xmm19, xmm20, xmm21, xmm26, xmm30, xmm31
 %endif
+        jmp     .exit_dec
+
+align 32
+.small_packet_path:
+        mov     arg1, [arg2 + _enc_keys]
+        mov     arg3, [arg2 + _src]
+        add     arg3, [arg2 + _cipher_start_src_offset]
+        mov     arg4, [arg2 + _dst]
+        mov     rbp, [arg2 + _msg_len_to_cipher]
+        GCM_ENC_DEC_0_TO_256 arg1, arg4, arg3, rbp, \
+                             {[arg2 + _iv]}, \
+                             {[arg2 + _gcm_aad]}, {qword [arg2 + _gcm_aad_len]}, \
+                             {[arg2 + _auth_tag_output]}, {[arg2 + _auth_tag_output_len_in_bytes]}, \
+                             DEC, {qword [arg2 + _iv_len_in_bytes]}
+
+%ifdef SAFE_DATA
+        clear_zmms_avx512 xmm2, xmm3, xmm4, xmm5, xmm9, xmm15, xmm16, xmm17, xmm18, xmm19, xmm20, xmm21
+%endif
+.exit_dec:
         ;; mark job complete
         mov     dword [arg2 + _status], IMB_STATUS_COMPLETED
 
