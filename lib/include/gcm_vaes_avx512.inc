@@ -3760,7 +3760,7 @@ align 32
 ; Output: A cipher of the given plain text (CIPH_PLAIN_OUT), and updated GDATA_CTX
 ; Clobbers rax, r10-r15, and zmm0-zmm31, k1
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-%macro  GCM_ENC_DEC         7
+%macro  GCM_ENC_DEC         7-8
 %define %%GDATA_KEY         %1  ; [in] key pointer
 %define %%GDATA_CTX         %2  ; [in] context pointer
 %define %%CIPH_PLAIN_OUT    %3  ; [in] output buffer pointer
@@ -3768,6 +3768,15 @@ align 32
 %define %%PLAIN_CIPH_LEN    %5  ; [in] buffer length
 %define %%ENC_DEC           %6  ; [in] cipher direction
 %define %%INSTANCE_TYPE     %7  ; [in] 'single_call' or 'multi_call' selection
+%define %%MSG_SIZE_SCOPE    %8  ; [in] '>256' to remove small packets code path
+
+%assign include_small_packets 1
+
+%if %0 > 7
+%ifidn %%MSG_SIZE_SCOPE, '>256'
+%assign include_small_packets 0
+%endif
+%endif
 
 %define %%IA0               r10
 %define %%IA1               r12
@@ -3849,12 +3858,14 @@ align 32
 ;;;     - hash 16 blocks
 ;;;     - cipher N blocks & hash 16 blocks, hash N blocks (reduction)
 
+%if include_small_packets != 0
 %ifidn __OUTPUT_FORMAT__, win64
         cmp             %%PLAIN_CIPH_LEN, 0
 %else
         or              %%PLAIN_CIPH_LEN, %%PLAIN_CIPH_LEN
 %endif
         je              %%_enc_dec_done
+%endif ; include_small_packets != 0
 
         ;; Update length of data processed
 %ifidn __OUTPUT_FORMAT__, win64
@@ -3900,8 +3911,10 @@ align 32
         je              %%_enc_dec_done
 %endif                          ; %%INSTANCE_TYPE, multi_call
 
+%if include_small_packets != 0
         cmp             %%LENGTH, (16 * 16)
         jbe             %%_message_below_equal_16_blocks
+%endif ; include_small_packets != 0
 
         vmovdqa64       %%SHUF_MASK, [rel SHUF_MASK]
         vmovdqa64       %%ADDBE_4x4, [rel ddq_addbe_4444]
@@ -4155,8 +4168,12 @@ align 32
 %ifidn %%INSTANCE_TYPE, multi_call
         vpshufb         %%CTR_BLOCKx, %%CTR_BLOCKx, XWORD(%%SHUF_MASK)
 %endif
-        jmp             %%_ghash_done
 
+%if include_small_packets != 0
+        jmp             %%_ghash_done
+%endif ; include_small_packets != 0
+
+%if include_small_packets != 0
 %%_message_below_equal_16_blocks:
         ;; Determine how many blocks to process
         ;; - process one additional block if there is a partial block
@@ -4183,6 +4200,7 @@ align 32
        vpxorq   %%ZTMP10, %%ZTMP10, %%ZTMP10
 %endif
         ;; fall through to exit
+%endif ; include_small_packets != 0
 
 %%_ghash_done:
 %ifdef SAFE_DATA
