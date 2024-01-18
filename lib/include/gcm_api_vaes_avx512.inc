@@ -200,7 +200,7 @@ FN_NAME(enc,_):
         jmp     .exit_enc
 
 .small_packet_path:
-        GCM_ENC_DEC_VSMALL  arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, ENC
+        GCM_ENC_DEC_0_TO_256 arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, ENC
 %ifdef SAFE_DATA
         clear_zmms_avx512 xmm6
 %endif
