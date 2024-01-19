@@ -132,19 +132,18 @@
 %endif
 %endif
 
-%ifndef IS_AVX2_GCM
-%ifndef IS_AVX512_GCM
-%error "No GCM AVX2 or AVX512 selection made for gcm_common_avx2_avx512.inc!"
-%endif
+%ifdef IS_AVX512_GCM
+%error "IS_AVX512_GCM: AVX512 variant removed!"
 %endif
 
 %ifdef IS_AVX2_GCM
-%xdefine GCM_API_POSTFIX avx_gen4
+%error "IS_AVX2_GCM: Definition not required!"
 %endif
 
-%ifdef IS_AVX512_GCM
-%xdefine GCM_API_POSTFIX avx512
-%endif
+%define IS_AVX2_GCM
+
+%xdefine GCM_API_POSTFIX avx_gen4
+%xdefine GCM_API_POSTFIX_AVX512 avx512
 
 ;; Decide on AES-GCM key size to compile for
 %ifdef GCM128_MODE
@@ -164,11 +163,13 @@
 
 ;; Decide on AES-GCM key size to compile for
 %define FN_NAME(x,y) aes_gcm_ %+ x %+ GCM_API_KEYSZ %+ y %+ GCM_API_POSTFIX
+%define FN_NAME_AVX512(x,y) aes_gcm_ %+ x %+ GCM_API_KEYSZ %+ y %+ GCM_API_POSTFIX_AVX512
+
 %define GMAC_FN_NAME(x) imb_aes_gmac_ %+ x %+ GCM_API_KEYSZ %+ _ %+ GCM_API_POSTFIX
-%define GHASH_FN_NAME(x) x %+ _ %+ GCM_API_POSTFIX
+%define GMAC_FN_NAME_AVX512(x) imb_aes_gmac_ %+ x %+ GCM_API_KEYSZ %+ _ %+ GCM_API_POSTFIX_AVX512
 
 ; need to store 5 GP registers on stack (align to 16 bytes)
-; @note: the last,  8-byte slot is used in JOB API to save/restore a register
+; @note: the last 8-byte slot is used in JOB API to save/restore a register
 %define GP_STORAGE 8*6
 
 %define	TMP2	16*0    ; Temporary storage for AES State 2 (State 1 is stored in an XMM register)
@@ -2349,7 +2350,7 @@ align 32
         ;; arg1 = key pointer
         mov     r12, %%IV
         mov     r13, %%IV_LEN
-        call    GHASH_FN_NAME(ghash_internal)
+        call    ghash_internal_avx_gen4
 
         ;; Calculate GHASH of last 16-byte block (0 || len(IV)64)
         vmovq   %%XTMP2, %%IV_LEN

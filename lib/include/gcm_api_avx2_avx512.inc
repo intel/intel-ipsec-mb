@@ -34,8 +34,8 @@
 mksection .text
 default rel
 
-extern GHASH_FN_NAME(ghash_internal)
-extern GHASH_FN_NAME(partial_block_gmac)
+extern ghash_internal_avx_gen4
+extern partial_block_gmac_avx_gen4
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;void   aes_gcm_precomp_128_avx_gen4 /
@@ -48,7 +48,9 @@ extern GHASH_FN_NAME(partial_block_gmac)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 align 32
 MKGLOBAL(FN_NAME(precomp,_),function,)
+MKGLOBAL(FN_NAME_AVX512(precomp,_),function,)
 FN_NAME(precomp,_):
+FN_NAME_AVX512(precomp,_):
         endbranch64
 %ifdef SAFE_PARAM
         ;; Reset imb_errno
@@ -125,7 +127,9 @@ error_precomp:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 align 32
 MKGLOBAL(FN_NAME(init,_),function,)
+MKGLOBAL(FN_NAME_AVX512(init,_),function,)
 FN_NAME(init,_):
+FN_NAME_AVX512(init,_):
         endbranch64
         push    r12
         push    r13
@@ -223,7 +227,9 @@ skip_aad_check_error_init:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 align 32
 MKGLOBAL(FN_NAME(init_var_iv,_),function,)
+MKGLOBAL(FN_NAME_AVX512(init_var_iv,_),function,)
 FN_NAME(init_var_iv,_):
+FN_NAME_AVX512(init_var_iv,_):
         endbranch64
 	push	r12
 	push	r13
@@ -317,7 +323,6 @@ skip_aad_check_error_init_IV:
         jmp     exit_init_IV
 %endif
 
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;void   aes_gcm_enc_128_update_avx_gen4 / aes_gcm_enc_192_update_avx_gen4 /
 ;       aes_gcm_enc_128_update_avx_gen4 /
@@ -331,7 +336,9 @@ skip_aad_check_error_init_IV:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 align 32
 MKGLOBAL(FN_NAME(enc,_update_),function,)
+MKGLOBAL(FN_NAME_AVX512(enc,_update_),function,)
 FN_NAME(enc,_update_):
+FN_NAME_AVX512(enc,_update_):
         endbranch64
         FUNC_SAVE
 
@@ -416,7 +423,9 @@ skip_in_out_check_error_update_enc:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 align 32
 MKGLOBAL(FN_NAME(dec,_update_),function,)
+MKGLOBAL(FN_NAME_AVX512(dec,_update_),function,)
 FN_NAME(dec,_update_):
+FN_NAME_AVX512(dec,_update_):
         endbranch64
         FUNC_SAVE
 
@@ -501,7 +510,9 @@ skip_in_out_check_error_update_dec:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 align 32
 MKGLOBAL(FN_NAME(enc,_finalize_),function,)
+MKGLOBAL(FN_NAME_AVX512(enc,_finalize_),function,)
 FN_NAME(enc,_finalize_):
+FN_NAME_AVX512(enc,_finalize_):
         endbranch64
 %ifdef SAFE_PARAM
         ;; Reset imb_errno
@@ -595,7 +606,9 @@ error_enc_fin:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 align 32
 MKGLOBAL(FN_NAME(dec,_finalize_),function,)
+MKGLOBAL(FN_NAME_AVX512(dec,_finalize_),function,)
 FN_NAME(dec,_finalize_):
+FN_NAME_AVX512(dec,_finalize_):
         endbranch64
 %ifdef SAFE_PARAM
         ;; Reset imb_errno
@@ -695,7 +708,9 @@ error_dec_fin:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 align 32
 MKGLOBAL(FN_NAME(enc,_),function,)
+MKGLOBAL(FN_NAME_AVX512(enc,_),function,)
 FN_NAME(enc,_):
+FN_NAME_AVX512(enc,_):
         endbranch64
         FUNC_SAVE
 
@@ -832,7 +847,9 @@ skip_aad_check_error_enc:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 align 32
 MKGLOBAL(FN_NAME(dec,_),function,)
+MKGLOBAL(FN_NAME_AVX512(dec,_),function,)
 FN_NAME(dec,_):
+FN_NAME_AVX512(dec,_):
         endbranch64
         FUNC_SAVE
 
@@ -966,7 +983,9 @@ skip_aad_check_error_dec:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 align 32
 MKGLOBAL(FN_NAME(enc_var_iv,_),function,internal)
+MKGLOBAL(FN_NAME_AVX512(enc_var_iv,_),function,internal)
 FN_NAME(enc_var_iv,_):
+FN_NAME_AVX512(enc_var_iv,_):
         endbranch64
 	FUNC_SAVE alloc_context
 
@@ -1008,7 +1027,9 @@ FN_NAME(enc_var_iv,_):
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 align 32
 MKGLOBAL(FN_NAME(dec_var_iv,_),function,internal)
+MKGLOBAL(FN_NAME_AVX512(dec_var_iv,_),function,internal)
 FN_NAME(dec_var_iv,_):
+FN_NAME_AVX512(dec_var_iv,_):
         endbranch64
 	FUNC_SAVE alloc_context
 
@@ -1050,7 +1071,9 @@ FN_NAME(dec_var_iv,_):
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 align 32
 MKGLOBAL(GMAC_FN_NAME(update),function,)
+MKGLOBAL(GMAC_FN_NAME_AVX512(update),function,)
 GMAC_FN_NAME(update):
+GMAC_FN_NAME_AVX512(update):
         endbranch64
 	FUNC_SAVE
 
@@ -1092,7 +1115,7 @@ GMAC_FN_NAME(update):
         ;; arg4 = [in] message length
         ;; xmm0 = [in/out] hash
         ;; xmm13/xmm14 = [in] hash keys
-        call    GHASH_FN_NAME(partial_block_gmac)
+        call    partial_block_gmac_avx_gen4
         ;; r11 = bytes processed
 
         ; CALC_AAD_HASH needs to deal with multiple of 16 bytes
@@ -1111,7 +1134,7 @@ GMAC_FN_NAME(update):
         mov     r13, arg4
         ;; arg1 = key
         ;; xmm0 = hash in/out
-        call    GHASH_FN_NAME(ghash_internal)
+        call    ghash_internal_avx_gen4
 
         vmovdqu	[arg2 + AadHash], xmm0	; ctx_data.aad hash = aad_hash
 
