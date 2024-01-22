@@ -39,6 +39,7 @@
 ;%define DO_DBGPRINT
 ;%include "include/dbgprint.inc"
 %include "include/clear_regs.inc"
+%include "include/transpose_avx512.inc"
 
 %ifdef LINUX
 %define arg1	rdi
@@ -582,245 +583,11 @@ align 32
 %undef %%LNUM
 %undef %%swap_zmms
 
-%else
+%else  ; make_call != 0
         ;; Expand the macro in-place
         DES_ENC_DEC_EXP %1, %2, %3, %4, %5, %6, %7, %8, %9, %10, %11, %12, %13, %14, %15, %16
 %endif
 
-%endmacro
-
-;;; ===========================================================================
-;;; DATA TRANSPOSITION AT DATA INPUT
-;;; ===========================================================================
-;;;
-;;; IN00 - IN15 [in/out]:
-;;;          in:  IN00 - lane 0 data, IN01 - lane 1 data, ... IN15 - lane 15 data
-;;;          out: R0 - 16 x word0, L0 - 16 x word1, ... L7 - 16 x word15
-;;; T0-T3 [clobbered] - temporary zmm registers
-;;; K0-K5 [clobbered] - temporary zmm registers
-;;; H0-H3 [clobbered] - temporary zmm registers
-%macro TRANSPOSE_IN 30
-%define %%IN00 %1               ; R0
-%define %%IN01 %2               ; L0
-%define %%IN02 %3               ; R1
-%define %%IN03 %4               ; L1
-%define %%IN04 %5               ; R2
-%define %%IN05 %6               ; L2
-%define %%IN06 %7               ; R3
-%define %%IN07 %8               ; L3
-%define %%IN08 %9               ; R4
-%define %%IN09 %10              ; L4
-%define %%IN10 %11              ; R5
-%define %%IN11 %12              ; L5
-%define %%IN12 %13              ; R6
-%define %%IN13 %14              ; L6
-%define %%IN14 %15              ; R7
-%define %%IN15 %16              ; L7
-%define %%T0 %17
-%define %%T1 %18
-%define %%T2 %19
-%define %%T3 %20
-%define %%K0 %21
-%define %%K1 %22
-%define %%K2 %23
-%define %%K3 %24
-%define %%K4 %25
-%define %%K5 %26
-%define %%H0 %27
-%define %%H1 %28
-%define %%H2 %29
-%define %%H3 %30
-
-	vpunpckldq      %%K0, %%IN00, %%IN01
-	vpunpckhdq      %%K1, %%IN00, %%IN01
-	vpunpckldq      %%T0, %%IN02, %%IN03
-	vpunpckhdq      %%T1, %%IN02, %%IN03
-
-	vpunpckldq      %%IN00, %%IN04, %%IN05
-	vpunpckhdq      %%IN01, %%IN04, %%IN05
-	vpunpckldq      %%IN02, %%IN06, %%IN07
-	vpunpckhdq      %%IN03, %%IN06, %%IN07
-
-        vpunpcklqdq     %%K2, %%K0, %%T0
-	vpunpckhqdq     %%T2, %%K0, %%T0
-	vpunpcklqdq     %%K3, %%K1, %%T1
-	vpunpckhqdq     %%T3, %%K1, %%T1
-
-        vpunpcklqdq     %%K0, %%IN00, %%IN02
-	vpunpckhqdq     %%K1, %%IN00, %%IN02
-	vpunpcklqdq     %%T0, %%IN01, %%IN03
-	vpunpckhqdq     %%T1, %%IN01, %%IN03
-
-	vpunpckldq      %%K4, %%IN08, %%IN09
-	vpunpckhdq      %%K5, %%IN08, %%IN09
-	vpunpckldq      %%IN04, %%IN10, %%IN11
-	vpunpckhdq      %%IN05, %%IN10, %%IN11
-	vpunpckldq      %%IN06, %%IN12, %%IN13
-	vpunpckhdq      %%IN07, %%IN12, %%IN13
-	vpunpckldq      %%IN10, %%IN14, %%IN15
-	vpunpckhdq      %%IN11, %%IN14, %%IN15
-
-        vpunpcklqdq     %%IN12, %%K4, %%IN04
-	vpunpckhqdq     %%IN13, %%K4, %%IN04
-        vpunpcklqdq     %%IN14, %%K5, %%IN05
-	vpunpckhqdq     %%IN15, %%K5, %%IN05
-        vpunpcklqdq     %%IN00, %%IN06, %%IN10
-	vpunpckhqdq     %%IN01, %%IN06, %%IN10
-        vpunpcklqdq     %%IN02, %%IN07, %%IN11
-	vpunpckhqdq     %%IN03, %%IN07, %%IN11
-
-        vshufi64x2      %%H0, %%K2, %%K0, 0x44
-        vshufi64x2      %%H1, %%K2, %%K0, 0xee
-        vshufi64x2      %%H2, %%IN12, %%IN00, 0x44
-        vshufi64x2      %%H3, %%IN12, %%IN00, 0xee
-        vshufi64x2      %%IN00, %%H0, %%H2, 0x88    ; R0
-        vshufi64x2      %%IN04, %%H0, %%H2, 0xdd    ; R2
-        vshufi64x2      %%IN08, %%H1, %%H3, 0x88    ; R4
-        vshufi64x2      %%IN12, %%H1, %%H3, 0xdd    ; R6
-
-        vshufi64x2      %%H0, %%T2, %%K1, 0x44
-        vshufi64x2      %%H1, %%T2, %%K1, 0xee
-        vshufi64x2      %%H2, %%IN13, %%IN01, 0x44
-        vshufi64x2      %%H3, %%IN13, %%IN01, 0xee
-        vshufi64x2      %%IN01, %%H0, %%H2, 0x88    ; L0
-        vshufi64x2      %%IN05, %%H0, %%H2, 0xdd    ; L2
-        vshufi64x2      %%IN09, %%H1, %%H3, 0x88    ; L4
-        vshufi64x2      %%IN13, %%H1, %%H3, 0xdd    ; L6
-
-        vshufi64x2      %%H0, %%K3, %%T0, 0x44
-        vshufi64x2      %%H1, %%K3, %%T0, 0xee
-        vshufi64x2      %%H2, %%IN14, %%IN02, 0x44
-        vshufi64x2      %%H3, %%IN14, %%IN02, 0xee
-        vshufi64x2      %%IN02, %%H0, %%H2, 0x88    ; R1
-        vshufi64x2      %%IN06, %%H0, %%H2, 0xdd    ; R3
-        vshufi64x2      %%IN10, %%H1, %%H3, 0x88    ; R5
-        vshufi64x2      %%IN14, %%H1, %%H3, 0xdd    ; R7
-
-        vshufi64x2      %%H0, %%T3, %%T1, 0x44
-        vshufi64x2      %%H1, %%T3, %%T1, 0xee
-        vshufi64x2      %%H2, %%IN15, %%IN03, 0x44
-        vshufi64x2      %%H3, %%IN15, %%IN03, 0xee
-        vshufi64x2      %%IN03, %%H0, %%H2, 0x88    ; L1
-        vshufi64x2      %%IN07, %%H0, %%H2, 0xdd    ; L3
-        vshufi64x2      %%IN11, %%H1, %%H3, 0x88    ; L5
-        vshufi64x2      %%IN15, %%H1, %%H3, 0xdd    ; L7
-%endmacro
-
-;;; ===========================================================================
-;;; DATA TRANSPOSITION AT DATA OUTPUT
-;;; ===========================================================================
-;;;
-;;; IN00-IN15 aka R0/L0 - R7/L7 [in/out]:
-;;;          in:  R0 - 16 x word0, L0 - 16 x word1, ... L7 - 16 x word15
-;;;          out: R0 - lane 0 data, L0 - lane 1 data, ... L7 - lane 15 data
-;;; T0-T3 [clobbered] - temporary zmm registers
-;;; K0-K5 [clobbered] - temporary zmm registers
-;;; H0-H3 [clobbered] - temporary zmm registers
-%macro TRANSPOSE_OUT 30
-%define %%IN00 %1               ; R0
-%define %%IN01 %2               ; L0
-%define %%IN02 %3               ; R1
-%define %%IN03 %4               ; L1
-%define %%IN04 %5               ; R2
-%define %%IN05 %6               ; L2
-%define %%IN06 %7               ; R3
-%define %%IN07 %8               ; L3
-%define %%IN08 %9               ; R4
-%define %%IN09 %10              ; L4
-%define %%IN10 %11              ; R5
-%define %%IN11 %12              ; L5
-%define %%IN12 %13              ; R6
-%define %%IN13 %14              ; L6
-%define %%IN14 %15              ; R7
-%define %%IN15 %16              ; L7
-%define %%T0 %17
-%define %%T1 %18
-%define %%T2 %19
-%define %%T3 %20
-%define %%K0 %21
-%define %%K1 %22
-%define %%K2 %23
-%define %%K3 %24
-%define %%K4 %25
-%define %%K5 %26
-%define %%H0 %27
-%define %%H1 %28
-%define %%H2 %29
-%define %%H3 %30
-
-	vpunpckldq      %%K0, %%IN01, %%IN00
-	vpunpckhdq      %%K1, %%IN01, %%IN00
-	vpunpckldq      %%T0, %%IN03, %%IN02
-	vpunpckhdq      %%T1, %%IN03, %%IN02
-
-	vpunpckldq      %%IN00, %%IN05, %%IN04
-	vpunpckhdq      %%IN01, %%IN05, %%IN04
-	vpunpckldq      %%IN02, %%IN07, %%IN06
-	vpunpckhdq      %%IN03, %%IN07, %%IN06
-
-        vpunpcklqdq     %%K2, %%K0, %%T0
-	vpunpckhqdq     %%T2, %%K0, %%T0
-	vpunpcklqdq     %%K3, %%K1, %%T1
-	vpunpckhqdq     %%T3, %%K1, %%T1
-
-        vpunpcklqdq     %%K0, %%IN00, %%IN02
-	vpunpckhqdq     %%K1, %%IN00, %%IN02
-	vpunpcklqdq     %%T0, %%IN01, %%IN03
-	vpunpckhqdq     %%T1, %%IN01, %%IN03
-
-	vpunpckldq      %%K4, %%IN09, %%IN08
-	vpunpckhdq      %%K5, %%IN09, %%IN08
-	vpunpckldq      %%IN04, %%IN11, %%IN10
-	vpunpckhdq      %%IN05, %%IN11, %%IN10
-	vpunpckldq      %%IN06, %%IN13, %%IN12
-	vpunpckhdq      %%IN07, %%IN13, %%IN12
-	vpunpckldq      %%IN10, %%IN15, %%IN14
-	vpunpckhdq      %%IN11, %%IN15, %%IN14
-
-        vpunpcklqdq     %%IN12, %%K4, %%IN04
-	vpunpckhqdq     %%IN13, %%K4, %%IN04
-        vpunpcklqdq     %%IN14, %%K5, %%IN05
-	vpunpckhqdq     %%IN15, %%K5, %%IN05
-        vpunpcklqdq     %%IN00, %%IN06, %%IN10
-	vpunpckhqdq     %%IN01, %%IN06, %%IN10
-        vpunpcklqdq     %%IN02, %%IN07, %%IN11
-	vpunpckhqdq     %%IN03, %%IN07, %%IN11
-
-        vshufi64x2      %%H0, %%K2, %%K0, 0x44
-        vshufi64x2      %%H1, %%K2, %%K0, 0xee
-        vshufi64x2      %%H2, %%IN12, %%IN00, 0x44
-        vshufi64x2      %%H3, %%IN12, %%IN00, 0xee
-        vshufi64x2      %%IN00, %%H0, %%H2, 0x88    ; R0
-        vshufi64x2      %%IN04, %%H0, %%H2, 0xdd    ; R2
-        vshufi64x2      %%IN08, %%H1, %%H3, 0x88    ; R4
-        vshufi64x2      %%IN12, %%H1, %%H3, 0xdd    ; R6
-
-        vshufi64x2      %%H0, %%T2, %%K1, 0x44
-        vshufi64x2      %%H1, %%T2, %%K1, 0xee
-        vshufi64x2      %%H2, %%IN13, %%IN01, 0x44
-        vshufi64x2      %%H3, %%IN13, %%IN01, 0xee
-        vshufi64x2      %%IN01, %%H0, %%H2, 0x88    ; L0
-        vshufi64x2      %%IN05, %%H0, %%H2, 0xdd    ; L2
-        vshufi64x2      %%IN09, %%H1, %%H3, 0x88    ; L4
-        vshufi64x2      %%IN13, %%H1, %%H3, 0xdd    ; L6
-
-        vshufi64x2      %%H0, %%K3, %%T0, 0x44
-        vshufi64x2      %%H1, %%K3, %%T0, 0xee
-        vshufi64x2      %%H2, %%IN14, %%IN02, 0x44
-        vshufi64x2      %%H3, %%IN14, %%IN02, 0xee
-        vshufi64x2      %%IN02, %%H0, %%H2, 0x88    ; R1
-        vshufi64x2      %%IN06, %%H0, %%H2, 0xdd    ; R3
-        vshufi64x2      %%IN10, %%H1, %%H3, 0x88    ; R5
-        vshufi64x2      %%IN14, %%H1, %%H3, 0xdd    ; R7
-
-        vshufi64x2      %%H0, %%T3, %%T1, 0x44
-        vshufi64x2      %%H1, %%T3, %%T1, 0xee
-        vshufi64x2      %%H2, %%IN15, %%IN03, 0x44
-        vshufi64x2      %%H3, %%IN15, %%IN03, 0xee
-        vshufi64x2      %%IN03, %%H0, %%H2, 0x88    ; L1
-        vshufi64x2      %%IN07, %%H0, %%H2, 0xdd    ; L3
-        vshufi64x2      %%IN11, %%H1, %%H3, 0x88    ; L5
-        vshufi64x2      %%IN15, %%H1, %%H3, 0xdd    ; L7
 %endmacro
 
 ;;; ===========================================================================
@@ -1024,7 +791,7 @@ align 32
         vmovdqu64       %%T %+ IDX, [IA0]
 %assign IDX (IDX + 1)
 %endrep
-        TRANSPOSE_IN %%T0, %%T1, %%T2, %%T3, %%T4, %%T5, %%T6, %%T7, %%T8, %%T9, %%T10, %%T11, %%T12, %%T13, %%T14, %%T15, %%T16, %%T17, %%T18, %%T19, %%T20, %%T21, %%T22, %%T23, %%T24, %%T25, %%T26, %%T27, %%IV0, %%IV1
+        TRANSPOSE16_U32 %%T0, %%T1, %%T2, %%T3, %%T4, %%T5, %%T6, %%T7, %%T8, %%T9, %%T10, %%T11, %%T12, %%T13, %%T14, %%T15, %%T16, %%T17, %%T18, %%T19, %%T20, %%T21, %%T22, %%T23, %%T24, %%T25, %%T26, %%T27, %%IV0, %%IV1
 %assign IDX 0
 %rep 16
         vmovdqu64       [%%KS + (IDX * 64)], %%T %+ IDX
@@ -1039,7 +806,7 @@ align 32
         vmovdqu64       %%T %+ IDX, [IA0 + 64]
 %assign IDX (IDX + 1)
 %endrep
-        TRANSPOSE_IN %%T0, %%T1, %%T2, %%T3, %%T4, %%T5, %%T6, %%T7, %%T8, %%T9, %%T10, %%T11, %%T12, %%T13, %%T14, %%T15, %%T16, %%T17, %%T18, %%T19, %%T20, %%T21, %%T22, %%T23, %%T24, %%T25, %%T26, %%T27, %%IV0, %%IV1
+        TRANSPOSE16_U32 %%T0, %%T1, %%T2, %%T3, %%T4, %%T5, %%T6, %%T7, %%T8, %%T9, %%T10, %%T11, %%T12, %%T13, %%T14, %%T15, %%T16, %%T17, %%T18, %%T19, %%T20, %%T21, %%T22, %%T23, %%T24, %%T25, %%T26, %%T27, %%IV0, %%IV1
 %assign IDX 0
 %rep 16
         vmovdqu64       [%%KS + (16 * 64) + (IDX * 64)], %%T %+ IDX
@@ -1124,7 +891,7 @@ align 32
         vmovdqu64       %%T %+ IDX, [IA0]
 %assign IDX (IDX + 1)
 %endrep
-        TRANSPOSE_IN %%T0, %%T1, %%T2, %%T3, %%T4, %%T5, %%T6, %%T7, %%T8, %%T9, %%T10, %%T11, %%T12, %%T13, %%T14, %%T15, %%T16, %%T17, %%T18, %%T19, %%T20, %%T21, %%T22, %%T23, %%T24, %%T25, %%T26, %%T27, %%IV0, %%IV1
+        TRANSPOSE16_U32 %%T0, %%T1, %%T2, %%T3, %%T4, %%T5, %%T6, %%T7, %%T8, %%T9, %%T10, %%T11, %%T12, %%T13, %%T14, %%T15, %%T16, %%T17, %%T18, %%T19, %%T20, %%T21, %%T22, %%T23, %%T24, %%T25, %%T26, %%T27, %%IV0, %%IV1
 %assign IDX 0
 %rep 16
         vmovdqu64       [%%KS %+ KS_IDX + (IDX * 64)], %%T %+ IDX
@@ -1140,7 +907,7 @@ align 32
         vmovdqu64       %%T %+ IDX, [IA0 + 64]
 %assign IDX (IDX + 1)
 %endrep
-        TRANSPOSE_IN %%T0, %%T1, %%T2, %%T3, %%T4, %%T5, %%T6, %%T7, %%T8, %%T9, %%T10, %%T11, %%T12, %%T13, %%T14, %%T15, %%T16, %%T17, %%T18, %%T19, %%T20, %%T21, %%T22, %%T23, %%T24, %%T25, %%T26, %%T27, %%IV0, %%IV1
+        TRANSPOSE16_U32 %%T0, %%T1, %%T2, %%T3, %%T4, %%T5, %%T6, %%T7, %%T8, %%T9, %%T10, %%T11, %%T12, %%T13, %%T14, %%T15, %%T16, %%T17, %%T18, %%T19, %%T20, %%T21, %%T22, %%T23, %%T24, %%T25, %%T26, %%T27, %%IV0, %%IV1
 %assign IDX 0
 %rep 16
         vmovdqu64       [%%KS %+ KS_IDX + (16 * 64) + (IDX * 64)], %%T %+ IDX
@@ -1650,7 +1417,7 @@ align 32
         vmovdqu64       ZW15, [INP4 + OFFSET]
 
         ;; Transpose input
-        TRANSPOSE_IN    ZW0, ZW1, ZW2, ZW3, ZW4, ZW5, ZW6, ZW7, ZW8, ZW9, ZW10, ZW11, ZW12, ZW13, ZW14, ZW15, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11, ZTMP12, ZTMP13
+        TRANSPOSE16_U32 ZW0, ZW1, ZW2, ZW3, ZW4, ZW5, ZW6, ZW7, ZW8, ZW9, ZW10, ZW11, ZW12, ZW13, ZW14, ZW15, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11, ZTMP12, ZTMP13
 
         ;; DES CBC ENC comes here
         vpxord          ZW0, ZW0, ZIV0 ; R0 = R0 ^ IV0
@@ -1663,7 +1430,7 @@ align 32
 %endif
 
         ;; transpose data on output
-        TRANSPOSE_OUT   ZW0, ZW1, ZW2, ZW3, ZW4, ZW5, ZW6, ZW7, ZW8, ZW9, ZW10, ZW11, ZW12, ZW13, ZW14, ZW15, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11, ZTMP12, ZTMP13
+        TRANSPOSE16_U32 ZW1, ZW0, ZW3, ZW2, ZW5, ZW4, ZW7, ZW6, ZW9, ZW8, ZW11, ZW10, ZW13, ZW12, ZW15, ZW14, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11, ZTMP12, ZTMP13
         ;; run stores
         mov             IA0, [%%STATE + _des_args_out + (0*PTR_SZ)]
         mov             IA1, [%%STATE + _des_args_out + (1*PTR_SZ)]
@@ -1748,7 +1515,7 @@ align 32
         vmovdqu64       ZW15{k7}{z}, [INP4 + OFFSET]
 
         ;; Transpose input
-        TRANSPOSE_IN    ZW0, ZW1, ZW2, ZW3, ZW4, ZW5, ZW6, ZW7, ZW8, ZW9, ZW10, ZW11, ZW12, ZW13, ZW14, ZW15, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11, ZTMP12, ZTMP13
+        TRANSPOSE16_U32 ZW0, ZW1, ZW2, ZW3, ZW4, ZW5, ZW6, ZW7, ZW8, ZW9, ZW10, ZW11, ZW12, ZW13, ZW14, ZW15, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11, ZTMP12, ZTMP13
 
         ;; DES CBC ENC comes here
         vpxord          ZW0, ZW0, ZIV0 ; R0 = R0 ^ IV0
@@ -1830,7 +1597,7 @@ align 32
 
 %%_transpose_out:
         ;; transpose data on output
-        TRANSPOSE_OUT   ZW0, ZW1, ZW2, ZW3, ZW4, ZW5, ZW6, ZW7, ZW8, ZW9, ZW10, ZW11, ZW12, ZW13, ZW14, ZW15, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11, ZTMP12, ZTMP13
+        TRANSPOSE16_U32 ZW1, ZW0, ZW3, ZW2, ZW5, ZW4, ZW7, ZW6, ZW9, ZW8, ZW11, ZW10, ZW13, ZW12, ZW15, ZW14, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11, ZTMP12, ZTMP13
 
         ;; run masked stores
         mov             IA0, [%%STATE + _des_args_out + (0*PTR_SZ)]
@@ -1970,7 +1737,7 @@ align 32
         vmovdqu64       ZW15, [INP4 + OFFSET]
 
         ;; Transpose input
-        TRANSPOSE_IN   ZW0, ZW1, ZW2, ZW3, ZW4, ZW5, ZW6, ZW7, ZW8, ZW9, ZW10, ZW11, ZW12, ZW13, ZW14, ZW15, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11, ZTMP12, ZTMP13
+        TRANSPOSE16_U32 ZW0, ZW1, ZW2, ZW3, ZW4, ZW5, ZW6, ZW7, ZW8, ZW9, ZW10, ZW11, ZW12, ZW13, ZW14, ZW15, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11, ZTMP12, ZTMP13
 
 %ifnidn %%DES_DOCSIS, 3DES
         ;; DES CBC DEC comes here
@@ -1981,7 +1748,7 @@ align 32
 %endif
 
         ;; transpose data on output
-        TRANSPOSE_OUT   ZW0, ZW1, ZW2, ZW3, ZW4, ZW5, ZW6, ZW7, ZW8, ZW9, ZW10, ZW11, ZW12, ZW13, ZW14, ZW15, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11, ZTMP12, ZTMP13
+        TRANSPOSE16_U32 ZW1, ZW0, ZW3, ZW2, ZW5, ZW4, ZW7, ZW6, ZW9, ZW8, ZW11, ZW10, ZW13, ZW12, ZW15, ZW14, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11, ZTMP12, ZTMP13
 
         ;; run stores
         mov             IA0, [%%STATE + _des_args_out + (0*PTR_SZ)]
@@ -2067,7 +1834,7 @@ align 32
         vmovdqu64       ZW15{k7}{z}, [INP4 + OFFSET]
 
         ;; Transpose input
-        TRANSPOSE_IN    ZW0, ZW1, ZW2, ZW3, ZW4, ZW5, ZW6, ZW7, ZW8, ZW9, ZW10, ZW11, ZW12, ZW13, ZW14, ZW15, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11, ZTMP12, ZTMP13
+        TRANSPOSE16_U32 ZW0, ZW1, ZW2, ZW3, ZW4, ZW5, ZW6, ZW7, ZW8, ZW9, ZW10, ZW11, ZW12, ZW13, ZW14, ZW15, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11, ZTMP12, ZTMP13
 
         ;; DES CBC DEC comes here
         mov             IA0, [rsp + _mask_save]
@@ -2145,7 +1912,7 @@ align 32
 
 %%_transpose_out:
         ;; transpose data on output
-        TRANSPOSE_OUT   ZW0, ZW1, ZW2, ZW3, ZW4, ZW5, ZW6, ZW7, ZW8, ZW9, ZW10, ZW11, ZW12, ZW13, ZW14, ZW15, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11, ZTMP12, ZTMP13
+        TRANSPOSE16_U32 ZW1, ZW0, ZW3, ZW2, ZW5, ZW4, ZW7, ZW6, ZW9, ZW8, ZW11, ZW10, ZW13, ZW12, ZW15, ZW14, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11, ZTMP12, ZTMP13
 
         ;; run masked stores
         mov             IA0, [%%STATE + _des_args_out + (0*PTR_SZ)]
