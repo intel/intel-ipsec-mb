@@ -103,17 +103,18 @@
 %define ZTMP13  zmm31
 
 struc STACKFRAME
-_key_sched:	resq	16*16   ; 16 lanes x 16 qwords; 16 x 128 bytes = 2048
-_key_sched2:	resq	16*16   ; 16 lanes x 16 qwords; 16 x 128 bytes = 2048
-_key_sched3:	resq	16*16   ; 16 lanes x 16 qwords; 16 x 128 bytes = 2048
-_tmp_iv:	resq	16      ; 2 x 64 bytes
-_tmp_in:	resq	16      ; 2 x 64 bytes
-_tmp_out:	resq	16      ; 2 x 64 bytes
-_tmp_mask:	resd	16      ; 1 x 64 bytes
 _gpr_save:	resq	4       ; r12 to r15
 _rsp_save:	resq	1
 _mask_save:	resq	1
 _size_save:	resq	1
+_padding:       resq    1
+_tmp_iv:	resq	16      ; 2 x 64 bytes
+_tmp_in:	resq	16      ; 2 x 64 bytes
+_tmp_out:	resq	16      ; 2 x 64 bytes
+_tmp_mask:	resd	16      ; 1 x 64 bytes
+_key_sched:	resq	16*16   ; 16 lanes x 16 qwords; 16 x 128 bytes = 2048
+_key_sched2:	resq	16*16   ; 16 lanes x 16 qwords; 16 x 128 bytes = 2048
+_key_sched3:	resq	16*16   ; 16 lanes x 16 qwords; 16 x 128 bytes = 2048
 endstruc
 
 ;;; ===========================================================================
@@ -130,10 +131,12 @@ endstruc
 %define %%ZT    %2      ; [clobbered] temporary ZMM register
 
 %ifdef SAFE_DATA
-        vpxorq  %%ZT, %%ZT
-%assign rep_num (2048 / 64)
+        vpxorq  %%ZT, %%ZT, %%ZT
+
 %ifidn %%ALG, 3DES
-%assign rep_num (rep_num * 3)
+%assign rep_num ((3 * (16 * 16 * 8)) / 64)
+%else
+%assign rep_num ((16 * 16 * 8) / 64)
 %endif
 
 %assign offset 0
@@ -1358,7 +1361,11 @@ align 32
 
         ;; push the registers and allocate the stack frame
 	mov	        rax, rsp
+%ifnidn %%DES_DOCSIS, 3DES
+	sub	        rsp, _key_sched2        ;; no need for schedule 2 and 3 for non-TDES/3DES algos
+%else
 	sub	        rsp, STACKFRAME_size
+%endif
 	and	        rsp, -64
 	mov	        [rsp + _rsp_save], rax	; original SP
         mov             [rsp + _gpr_save + 0*8], r12
@@ -1368,10 +1375,10 @@ align 32
 
 %ifnidn %%DES_DOCSIS, 3DES
         ;; DES and DOCSIS DES
-        DES_INIT        %%STATE + _des_args_keys, %%STATE + _des_args_IV, rsp + _key_sched, ZIV0, ZIV1, ZW0, ZW1, ZW2, ZW3, ZW4, ZW5, ZW6, ZW7, ZW8, ZW9, ZW10, ZW11, ZW12, ZW13, ZW14, ZW15, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11
+        DES_INIT        {%%STATE + _des_args_keys}, {%%STATE + _des_args_IV}, {rsp + _key_sched}, ZIV0, ZIV1, ZW0, ZW1, ZW2, ZW3, ZW4, ZW5, ZW6, ZW7, ZW8, ZW9, ZW10, ZW11, ZW12, ZW13, ZW14, ZW15, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11
 %else
         ;; 3DES
-        DES3_INIT        %%STATE + _des_args_keys, %%STATE + _des_args_IV, rsp + _key_sched, rsp + _key_sched2, rsp + _key_sched3, ZIV0, ZIV1, ZW0, ZW1, ZW2, ZW3, ZW4, ZW5, ZW6, ZW7, ZW8, ZW9, ZW10, ZW11, ZW12, ZW13, ZW14, ZW15, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11, ENC
+        DES3_INIT        {%%STATE + _des_args_keys}, {%%STATE + _des_args_IV}, {rsp + _key_sched}, {rsp + _key_sched2}, {rsp + _key_sched3}, ZIV0, ZIV1, ZW0, ZW1, ZW2, ZW3, ZW4, ZW5, ZW6, ZW7, ZW8, ZW9, ZW10, ZW11, ZW12, ZW13, ZW14, ZW15, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11, ENC
 %endif
         mov             [rsp + _size_save], %%SIZE
         and             %%SIZE, -64
