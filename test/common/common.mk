@@ -28,8 +28,6 @@
 INSTPATH ?= /usr/include/intel-ipsec-mb.h
 LIB_DIR ?= ../../lib
 
-USE_YASM ?= n
-YASM ?= yasm
 NASM ?= nasm
 
 MINGW ?= $(shell $(CC) -dM -E - < /dev/null | grep -i mingw | wc -l | sed 's/^ *//')
@@ -58,7 +56,6 @@ ifeq ($(CC_HAS_CET),1)
 CFLAGS += -fcf-protection=full
 endif
 
-YASM_FLAGS := -f x64 -f elf64 -X gnu -g dwarf2 -DLINUX -D__linux__
 ifeq ($(MINGW),0)
 CFLAGS += -DLINUX
 NASM_FLAGS := -Werror -felf64 -Xgnu -gdwarf -DLINUX -D__linux__

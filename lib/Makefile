@@ -46,8 +46,6 @@ MAN1 = libipsec-mb.7
 MAN2 = libipsec-mb-dev.7
 NOLDCONFIG ?= n
 
-USE_YASM ?= n
-YASM ?= yasm
 NASM ?= nasm
 
 CC ?= gcc
@@ -139,13 +137,10 @@ endif
 
 ASM_INCLUDE_DIRS := .
 
-YASM_INCLUDES := $(foreach i,$(ASM_INCLUDE_DIRS),-I $i)
 NASM_INCLUDES := $(foreach i,$(ASM_INCLUDE_DIRS),-I$i/)
 ifneq ($(MINGW),0)
-YASM_FLAGS := -f x64 -f win64 -X gnu -g dwarf2 -DWIN_ABI $(YASM_INCLUDES)
 NASM_FLAGS := -Werror -fwin64 -Xvc -gcv8 -DWIN_ABI $(NASM_INCLUDES)
 else
-YASM_FLAGS := -f x64 -f elf64 -X gnu -g dwarf2 -DLINUX -D__linux__ $(YASM_INCLUDES)
 NASM_FLAGS := -Werror -felf64 -Xgnu -gdwarf -DLINUX -D__linux__ $(NASM_INCLUDES)
 endif
 
@@ -173,25 +168,21 @@ endif
 ifneq ($(SAFE_DATA),n)
 CFLAGS += -DSAFE_DATA
 NASM_FLAGS += -DSAFE_DATA
-YASM_FLAGS += -DSAFE_DATA
 endif
 
 ifneq ($(SAFE_PARAM),n)
 CFLAGS += -DSAFE_PARAM
 NASM_FLAGS += -DSAFE_PARAM
-YASM_FLAGS += -DSAFE_PARAM
 endif
 
 ifneq ($(SAFE_LOOKUP),n)
 CFLAGS += -DSAFE_LOOKUP
 NASM_FLAGS += -DSAFE_LOOKUP
-YASM_FLAGS += -DSAFE_LOOKUP
 endif
 
 ifeq ($(AESNI_EMU),y)
 CFLAGS += -DAESNI_EMU
 NASM_FLAGS += -DAESNI_EMU
-YASM_FLAGS += -DAESNI_EMU
 endif
 
 # prevent SIMD optimizations for non-aesni modules
@@ -878,118 +869,73 @@ $(OBJ_DIR)/%.o:x86_64/%.c
 	$(CC) -MMD $(OPT_X86) -c $(CFLAGS) $< -o $@
 
 $(OBJ_DIR)/%.o:x86_64/%.asm
-ifeq ($(USE_YASM),y)
-	$(YASM) $(YASM_FLAGS) $< -o $@
-else
 	$(NASM) -MD $(@:.o=.d) -MT $@ -o $@ $(NASM_FLAGS) $<
-endif
 
 $(OBJ_DIR)/%.o:sse_t1/%.c
 	$(CC) -MMD $(OPT_SSE) -c $(CFLAGS) $< -o $@
 
 $(OBJ_DIR)/%.o:sse_t1/%.asm
-ifeq ($(USE_YASM),y)
-	$(YASM) $(YASM_FLAGS) $< -o $@
-else
 	$(NASM) -MD $(@:.o=.d) -MT $@ -o $@ $(NASM_FLAGS) $<
-endif
 
 $(OBJ_DIR)/%.o:sse_t2/%.c
 	$(CC) -MMD $(OPT_SSE) -c $(CFLAGS) $< -o $@
 
 $(OBJ_DIR)/%.o:sse_t2/%.asm
-ifeq ($(USE_YASM),y)
-	$(YASM) $(YASM_FLAGS) $< -o $@
-else
 	$(NASM) -MD $(@:.o=.d) -MT $@ -o $@ $(NASM_FLAGS) $<
-endif
 
 $(OBJ_DIR)/%.o:sse_t3/%.c
 	$(CC) -MMD $(OPT_SSE) -c $(CFLAGS) $< -o $@
 
 $(OBJ_DIR)/%.o:sse_t3/%.asm
-ifeq ($(USE_YASM),y)
-	$(YASM) $(YASM_FLAGS) $< -o $@
-else
 	$(NASM) -MD $(@:.o=.d) -MT $@ -o $@ $(NASM_FLAGS) $<
-endif
 
 $(OBJ_DIR)/%.o:avx_t1/%.c
 	$(CC) -MMD $(OPT_AVX) -c $(CFLAGS) $< -o $@
 
 $(OBJ_DIR)/%.o:avx_t1/%.asm
-ifeq ($(USE_YASM),y)
-	$(YASM) $(YASM_FLAGS) $< -o $@
-else
 	$(NASM) -MD $(@:.o=.d) -MT $@ -o $@ $(NASM_FLAGS) $<
-endif
 
 $(OBJ_DIR)/%.o:avx_t2/%.c
 	$(CC) -MMD $(OPT_AVX) -c $(CFLAGS) $< -o $@
 
 $(OBJ_DIR)/%.o:avx_t2/%.asm
-ifeq ($(USE_YASM),y)
-	$(YASM) $(YASM_FLAGS) $< -o $@
-else
 	$(NASM) -MD $(@:.o=.d) -MT $@ -o $@ $(NASM_FLAGS) $<
-endif
+
 $(OBJ_DIR)/%.o:avx2_t1/%.c
 	$(CC) -MMD $(OPT_AVX2) -c $(CFLAGS) $< -o $@
 
 $(OBJ_DIR)/%.o:avx2_t1/%.asm
-ifeq ($(USE_YASM),y)
-	$(YASM) $(YASM_FLAGS) $< -o $@
-else
 	$(NASM) -MD $(@:.o=.d) -MT $@ -o $@ $(NASM_FLAGS) $<
-endif
+
 $(OBJ_DIR)/%.o:avx2_t2/%.c
 	$(CC) -MMD $(OPT_AVX2) -c $(CFLAGS) $< -o $@
 
 $(OBJ_DIR)/%.o:avx2_t2/%.asm
-ifeq ($(USE_YASM),y)
-	$(YASM) $(YASM_FLAGS) $< -o $@
-else
 	$(NASM) -MD $(@:.o=.d) -MT $@ -o $@ $(NASM_FLAGS) $<
-endif
+
 $(OBJ_DIR)/%.o:avx2_t3/%.c
 	$(CC) -MMD $(OPT_AVX2) -c $(CFLAGS) $< -o $@
 
 $(OBJ_DIR)/%.o:avx2_t3/%.asm
-ifeq ($(USE_YASM),y)
-	$(YASM) $(YASM_FLAGS) $< -o $@
-else
 	$(NASM) -MD $(@:.o=.d) -MT $@ -o $@ $(NASM_FLAGS) $<
-endif
 
 $(OBJ_DIR)/%.o:avx512_t1/%.c
 	$(CC) -MMD $(OPT_AVX512) -c $(CFLAGS) $< -o $@
 
 $(OBJ_DIR)/%.o:avx512_t1/%.asm
-ifeq ($(USE_YASM),y)
-	$(YASM) $(YASM_FLAGS) $< -o $@
-else
 	$(NASM) -MD $(@:.o=.d) -MT $@ -o $@ $(NASM_FLAGS) $<
-endif
 
 $(OBJ_DIR)/%.o:avx512_t2/%.c
 	$(CC) -MMD $(OPT_AVX512) -c $(CFLAGS) $< -o $@
 
 $(OBJ_DIR)/%.o:avx512_t2/%.asm
-ifeq ($(USE_YASM),y)
-	$(YASM) $(YASM_FLAGS) $< -o $@
-else
 	$(NASM) -MD $(@:.o=.d) -MT $@ -o $@ $(NASM_FLAGS) $<
-endif
 
 $(OBJ_DIR)/%.o:no-aesni/%.c
 	$(CC) -MMD $(OPT_NOAESNI) -c $(CFLAGS_NO_SIMD) $< -o $@
 
 $(OBJ_DIR)/%.o:no-aesni/%.asm
-ifeq ($(USE_YASM),y)
-	$(YASM) $(YASM_FLAGS) $< -o $@
-else
 	$(NASM) -MD $(@:.o=.d) -MT $@ -o $@ $(NASM_FLAGS) $<
-endif
 
 $(OBJ_DIR):
 	mkdir $(OBJ_DIR)

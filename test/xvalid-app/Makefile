@@ -37,11 +37,7 @@ OBJECTS := $(SOURCES:%.c=%.o) $(ASM:%.asm=%.o) utils.o
 
 # rule for compiling assembly code with producing dependencies
 %.o:%.asm
-ifeq ($(USE_YASM),y)
-	$(YASM) $(YASM_FLAGS) $< -o $@
-else
 	$(NASM) -MD $(@:.o=.d) -MT $@ -o $@ $(NASM_FLAGS) $<
-endif
 
 # targets come here
 all: $(APP)
