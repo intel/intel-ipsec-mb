@@ -2,6 +2,7 @@
 ![Windows](https://github.com/intel/intel-ipsec-mb/actions/workflows/windows.yml/badge.svg)
 ![FreeBSD](https://github.com/intel/intel-ipsec-mb/actions/workflows/freebsd.yml/badge.svg)
 [![Coverity Status](https://scan.coverity.com/projects/16449/badge.svg)](https://scan.coverity.com/projects/intel-ipsec-mb)
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/intel/intel-ipsec-mb/badge)](https://securityscorecards.dev/viewer/?uri=github.com/intel/intel-ipsec-mb)
 
 # Intel(R) Multi-Buffer Crypto for IPsec Library
 
