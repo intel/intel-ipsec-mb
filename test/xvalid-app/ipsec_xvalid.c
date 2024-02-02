@@ -138,6 +138,17 @@ struct data {
         uint8_t tag_size;
 };
 
+struct job_ctx {
+        uint64_t xgem_hdr;
+        uint16_t pli;
+        uint8_t *in_digest;
+        uint8_t *out_digest;
+        uint8_t tag_size_to_check;
+        uint8_t *test_buf;
+        uint8_t *src_dst_buf;
+        uint32_t buf_size;
+};
+
 struct custom_job_params {
         IMB_CIPHER_MODE cipher_mode; /* CBC, CNTR, DES, GCM etc. */
         IMB_HASH_ALG hash_alg;       /* SHA-1 or others... */
@@ -1569,8 +1580,7 @@ perform_safe_checks(IMB_MGR *mgr, const IMB_ARCH arch, const char *dir)
 
 static int
 post_job(IMB_MGR *mgr, IMB_JOB *job, unsigned *num_processed_jobs, const struct params_s *params,
-         uint8_t **test_buf, const unsigned *buf_sizes, const uint16_t *pli,
-         const uint64_t *xgem_hdr, const IMB_CIPHER_DIRECTION dir)
+         struct job_ctx *job_tab, const IMB_CIPHER_DIRECTION dir)
 {
 
         const unsigned idx = (unsigned) ((uintptr_t) job->user_data);
@@ -1596,15 +1606,114 @@ post_job(IMB_MGR *mgr, IMB_JOB *job, unsigned *num_processed_jobs, const struct 
         /* Only need to modify the buffer after encryption */
         if (dir == IMB_DIR_ENCRYPT) {
                 if (params->hash_alg == IMB_AUTH_PON_CRC_BIP) {
-                        if (modify_pon_test_buf(test_buf[idx], job, pli[idx], xgem_hdr[idx]) < 0)
+                        if (modify_pon_test_buf(job_tab[idx].test_buf, job, job_tab[idx].pli,
+                                                job_tab[idx].xgem_hdr) < 0)
                                 return -1;
                 }
 
                 if (params->hash_alg == IMB_AUTH_DOCSIS_CRC32)
-                        modify_docsis_crc32_test_buf(test_buf[idx], job, buf_sizes[idx]);
+                        modify_docsis_crc32_test_buf(job_tab[idx].test_buf, job,
+                                                     job_tab[idx].buf_size);
         }
 
         return 0;
+}
+
+static void
+set_job_ctx(struct job_ctx *ctx, const int imix, const int safe_check,
+            const struct params_s *params, uint8_t *in_digest, uint8_t *out_digest,
+            uint8_t tag_size, uint8_t *test_buf, uint8_t *src_dst_buf)
+{
+        ctx->in_digest = in_digest;
+        ctx->out_digest = out_digest;
+        ctx->tag_size_to_check = tag_size;
+        ctx->test_buf = test_buf;
+        ctx->src_dst_buf = src_dst_buf;
+
+        /* Prepare buffer sizes */
+        if (imix) {
+                uint32_t random_num = rand() % DEFAULT_JOB_SIZE_MAX;
+
+                /* If random number is 0, change the size to 16 */
+                if (random_num == 0)
+                        random_num = 16;
+
+                /*
+                 * CBC and ECB operation modes do not support lengths
+                 * which are non-multiple of block size
+                 */
+                if (params->cipher_mode == IMB_CIPHER_CBC ||
+                    params->cipher_mode == IMB_CIPHER_ECB ||
+                    params->cipher_mode == IMB_CIPHER_CBCS_1_9) {
+                        random_num += (IMB_AES_BLOCK_SIZE - 1);
+                        random_num &= (~(IMB_AES_BLOCK_SIZE - 1));
+                }
+
+                if (params->cipher_mode == IMB_CIPHER_DES ||
+                    params->cipher_mode == IMB_CIPHER_DES3) {
+                        random_num += (IMB_DES_BLOCK_SIZE - 1);
+                        random_num &= (~(IMB_DES_BLOCK_SIZE - 1));
+                }
+
+                if (params->cipher_mode == IMB_CIPHER_SM4_ECB ||
+                    params->cipher_mode == IMB_CIPHER_SM4_CBC) {
+                        random_num += (IMB_SM4_BLOCK_SIZE - 1);
+                        random_num &= (~(IMB_SM4_BLOCK_SIZE - 1));
+                }
+
+                /*
+                 * KASUMI-UIA1 needs to be at least 9 bytes
+                 * (IV + direction bit + '1' + 0s to align to
+                 * byte boundary)
+                 */
+                if (params->hash_alg == IMB_AUTH_KASUMI_UIA1)
+                        if (random_num < (IMB_KASUMI_BLOCK_SIZE + 1))
+                                random_num = 16;
+
+                ctx->buf_size = random_num;
+        } else
+                ctx->buf_size = params->buf_size;
+
+        if (params->hash_alg == IMB_AUTH_PON_CRC_BIP) {
+                /* Buf size is XGEM payload, including CRC,
+                 * allocate space for XGEM header and padding */
+                ctx->pli = ctx->buf_size;
+                ctx->buf_size += 8;
+                if (ctx->buf_size < 16)
+                        ctx->buf_size = 16;
+                if (ctx->buf_size % 4)
+                        ctx->buf_size = (ctx->buf_size + 3) & 0xfffffffc;
+                /*
+                 * Only first 4 bytes are checked, corresponding to BIP
+                 */
+                ctx->tag_size_to_check = 4;
+        }
+
+        if (params->hash_alg == IMB_AUTH_DOCSIS_CRC32) {
+                if (ctx->buf_size >=
+                    (IMB_DOCSIS_CRC32_MIN_ETH_PDU_SIZE + IMB_DOCSIS_CRC32_TAG_SIZE))
+                        ctx->tag_size_to_check = IMB_DOCSIS_CRC32_TAG_SIZE;
+                else
+                        ctx->tag_size_to_check = 0;
+        }
+
+        if (safe_check)
+                nosimd_memset(ctx->test_buf, pattern_plain_text, ctx->buf_size);
+        else
+                generate_random_buf(ctx->test_buf, ctx->buf_size);
+
+        /* For PON, construct the XGEM header, setting valid PLI */
+        if (params->hash_alg == IMB_AUTH_PON_CRC_BIP) {
+                /* create XGEM header template */
+                const uint16_t shifted_pli = (ctx->pli << 2) & 0xffff;
+                uint64_t *p_src = (uint64_t *) ctx->test_buf;
+
+                ctx->xgem_hdr = ((shifted_pli >> 8) & 0xff) | ((shifted_pli & 0xff) << 8);
+                p_src[0] = ctx->xgem_hdr;
+        }
+
+        /* Randomize memory for output digest */
+        generate_random_buf(ctx->out_digest, ctx->tag_size_to_check);
 }
 
 /* Performs test using AES_HMAC or DOCSIS */
@@ -1613,26 +1722,19 @@ do_test(IMB_MGR *enc_mb_mgr, const IMB_ARCH enc_arch, IMB_MGR *dec_mb_mgr, const
         const struct params_s *params, struct data *data, const unsigned safe_check,
         const unsigned imix, const unsigned num_jobs)
 {
+        struct job_ctx job_tab[MAX_NUM_JOBS];
         IMB_JOB *job;
         uint32_t i;
         int ret = -1;
-        uint64_t xgem_hdr[MAX_NUM_JOBS] = { 0 };
-        uint8_t tag_size_to_check[MAX_NUM_JOBS];
         struct cipher_auth_keys *enc_keys = &data->enc_keys;
         struct cipher_auth_keys *dec_keys = &data->dec_keys;
         uint8_t *aad = data->aad;
         uint8_t *cipher_iv = data->cipher_iv;
         uint8_t *auth_iv = data->auth_iv;
-        uint8_t *in_digest[MAX_NUM_JOBS];
-        uint8_t *out_digest[MAX_NUM_JOBS];
-        uint8_t *test_buf[MAX_NUM_JOBS] = { NULL };
-        uint8_t *src_dst_buf[MAX_NUM_JOBS];
-        uint32_t buf_sizes[MAX_NUM_JOBS] = { 0 };
         uint8_t *ciph_key = data->ciph_key;
         uint8_t *auth_key = data->auth_key;
         unsigned int num_processed_jobs = 0;
         uint8_t next_iv[IMB_AES_BLOCK_SIZE];
-        uint16_t pli[MAX_NUM_JOBS] = { 0 };
         uint8_t tag_size = data->tag_size;
 
         if (num_jobs == 0)
@@ -1653,93 +1755,9 @@ do_test(IMB_MGR *enc_mb_mgr, const IMB_ARCH enc_arch, IMB_MGR *dec_mb_mgr, const
                 generate_random_buf(auth_key, MAX_KEY_SIZE);
         }
 
-        for (i = 0; i < num_jobs; i++) {
-                in_digest[i] = data->in_digest[i];
-                out_digest[i] = data->out_digest[i];
-                tag_size_to_check[i] = tag_size;
-                test_buf[i] = data->test_buf[i];
-                src_dst_buf[i] = data->src_dst_buf[i];
-                /* Prepare buffer sizes */
-                if (imix) {
-                        uint32_t random_num = rand() % DEFAULT_JOB_SIZE_MAX;
-
-                        /* If random number is 0, change the size to 16 */
-                        if (random_num == 0)
-                                random_num = 16;
-
-                        /*
-                         * CBC and ECB operation modes do not support lengths
-                         * which are non-multiple of block size
-                         */
-                        if (params->cipher_mode == IMB_CIPHER_CBC ||
-                            params->cipher_mode == IMB_CIPHER_ECB ||
-                            params->cipher_mode == IMB_CIPHER_CBCS_1_9) {
-                                random_num += (IMB_AES_BLOCK_SIZE - 1);
-                                random_num &= (~(IMB_AES_BLOCK_SIZE - 1));
-                        }
-
-                        if (params->cipher_mode == IMB_CIPHER_DES ||
-                            params->cipher_mode == IMB_CIPHER_DES3) {
-                                random_num += (IMB_DES_BLOCK_SIZE - 1);
-                                random_num &= (~(IMB_DES_BLOCK_SIZE - 1));
-                        }
-
-                        if (params->cipher_mode == IMB_CIPHER_SM4_ECB ||
-                            params->cipher_mode == IMB_CIPHER_SM4_CBC) {
-                                random_num += (IMB_SM4_BLOCK_SIZE - 1);
-                                random_num &= (~(IMB_SM4_BLOCK_SIZE - 1));
-                        }
-
-                        /*
-                         * KASUMI-UIA1 needs to be at least 9 bytes
-                         * (IV + direction bit + '1' + 0s to align to
-                         * byte boundary)
-                         */
-                        if (params->hash_alg == IMB_AUTH_KASUMI_UIA1)
-                                if (random_num < (IMB_KASUMI_BLOCK_SIZE + 1))
-                                        random_num = 16;
-
-                        buf_sizes[i] = random_num;
-                } else
-                        buf_sizes[i] = params->buf_size;
-
-                if (params->hash_alg == IMB_AUTH_PON_CRC_BIP) {
-                        /* Buf size is XGEM payload, including CRC,
-                         * allocate space for XGEM header and padding */
-                        pli[i] = buf_sizes[i];
-                        buf_sizes[i] += 8;
-                        if (buf_sizes[i] < 16)
-                                buf_sizes[i] = 16;
-                        if (buf_sizes[i] % 4)
-                                buf_sizes[i] = (buf_sizes[i] + 3) & 0xfffffffc;
-                        /* Only first 4 bytes are checked,
-                         * corresponding to BIP */
-                        tag_size_to_check[i] = 4;
-                }
-
-                if (params->hash_alg == IMB_AUTH_DOCSIS_CRC32) {
-                        if (buf_sizes[i] >=
-                            (IMB_DOCSIS_CRC32_MIN_ETH_PDU_SIZE + IMB_DOCSIS_CRC32_TAG_SIZE))
-                                tag_size_to_check[i] = IMB_DOCSIS_CRC32_TAG_SIZE;
-                        else
-                                tag_size_to_check[i] = 0;
-                }
-
-                if (safe_check)
-                        nosimd_memset(test_buf[i], pattern_plain_text, buf_sizes[i]);
-                else
-                        generate_random_buf(test_buf[i], buf_sizes[i]);
-
-                /* For PON, construct the XGEM header, setting valid PLI */
-                if (params->hash_alg == IMB_AUTH_PON_CRC_BIP) {
-                        /* create XGEM header template */
-                        const uint16_t shifted_pli = (pli[i] << 2) & 0xffff;
-                        uint64_t *p_src = (uint64_t *) test_buf[i];
-
-                        xgem_hdr[i] = ((shifted_pli >> 8) & 0xff) | ((shifted_pli & 0xff) << 8);
-                        p_src[0] = xgem_hdr[i];
-                }
-        }
+        for (i = 0; i < num_jobs; i++)
+                set_job_ctx(&job_tab[i], imix, safe_check, params, data->in_digest[i],
+                            data->out_digest[i], tag_size, data->test_buf[i], data->src_dst_buf[i]);
 
         /*
          * Expand/schedule keys.
@@ -1829,14 +1847,15 @@ do_test(IMB_MGR *enc_mb_mgr, const IMB_ARCH enc_arch, IMB_MGR *dec_mb_mgr, const
                          * Encrypt + generate digest from encrypted message
                          * using architecture under test
                          */
-                        nosimd_memcpy(src_dst_buf[i], test_buf[i], buf_sizes[i]);
-                        if (fill_job(job, params, src_dst_buf[i], in_digest[i], aad, buf_sizes[i],
-                                     tag_size, IMB_DIR_ENCRYPT, enc_keys, cipher_iv, auth_iv, i,
-                                     next_iv) < 0)
+                        nosimd_memcpy(job_tab[i].src_dst_buf, job_tab[i].test_buf,
+                                      job_tab[i].buf_size);
+                        if (fill_job(job, params, job_tab[i].src_dst_buf, job_tab[i].in_digest, aad,
+                                     job_tab[i].buf_size, tag_size, IMB_DIR_ENCRYPT, enc_keys,
+                                     cipher_iv, auth_iv, i, next_iv) < 0)
                                 goto exit;
 
                         /* Randomize memory for input digest */
-                        generate_random_buf(in_digest[i], tag_size);
+                        generate_random_buf(job_tab[i].in_digest, tag_size);
 
                         imb_set_session(enc_mb_mgr, job);
                 }
@@ -1861,8 +1880,8 @@ do_test(IMB_MGR *enc_mb_mgr, const IMB_ARCH enc_arch, IMB_MGR *dec_mb_mgr, const
                 for (i = 0; i < num_rx_jobs; i++) {
                         IMB_JOB *job = burst_jobs[i];
 
-                        if (post_job(enc_mb_mgr, job, &num_processed_jobs, params, test_buf,
-                                     buf_sizes, pli, xgem_hdr, IMB_DIR_ENCRYPT) < 0)
+                        if (post_job(enc_mb_mgr, job, &num_processed_jobs, params, job_tab,
+                                     IMB_DIR_ENCRYPT) < 0)
                                 goto exit;
                 }
 
@@ -1873,14 +1892,15 @@ do_test(IMB_MGR *enc_mb_mgr, const IMB_ARCH enc_arch, IMB_MGR *dec_mb_mgr, const
                          * Encrypt + generate digest from encrypted message
                          * using architecture under test
                          */
-                        nosimd_memcpy(src_dst_buf[i], test_buf[i], buf_sizes[i]);
-                        if (fill_job(job, params, src_dst_buf[i], in_digest[i], aad, buf_sizes[i],
-                                     tag_size, IMB_DIR_ENCRYPT, enc_keys, cipher_iv, auth_iv, i,
-                                     next_iv) < 0)
+                        nosimd_memcpy(job_tab[i].src_dst_buf, job_tab[i].test_buf,
+                                      job_tab[i].buf_size);
+                        if (fill_job(job, params, job_tab[i].src_dst_buf, job_tab[i].in_digest, aad,
+                                     job_tab[i].buf_size, tag_size, IMB_DIR_ENCRYPT, enc_keys,
+                                     cipher_iv, auth_iv, i, next_iv) < 0)
                                 goto exit;
 
                         /* Randomize memory for input digest */
-                        generate_random_buf(in_digest[i], tag_size);
+                        generate_random_buf(job_tab[i].in_digest, tag_size);
 
                         /* Clear scratch registers before submitting job to prevent
                          * other functions from storing sensitive data in stack */
@@ -1890,8 +1910,8 @@ do_test(IMB_MGR *enc_mb_mgr, const IMB_ARCH enc_arch, IMB_MGR *dec_mb_mgr, const
                                       (unsigned) params->cipher_mode);
 
                         if (job) {
-                                if (post_job(enc_mb_mgr, job, &num_processed_jobs, params, test_buf,
-                                             buf_sizes, pli, xgem_hdr, IMB_DIR_ENCRYPT) < 0) {
+                                if (post_job(enc_mb_mgr, job, &num_processed_jobs, params, job_tab,
+                                             IMB_DIR_ENCRYPT) < 0) {
                                         i = (unsigned) ((uintptr_t) job->user_data);
                                         goto exit;
                                 }
@@ -1905,8 +1925,8 @@ do_test(IMB_MGR *enc_mb_mgr, const IMB_ARCH enc_arch, IMB_MGR *dec_mb_mgr, const
                                       (unsigned) params->cipher_mode);
 
                         while (job != NULL) {
-                                if (post_job(enc_mb_mgr, job, &num_processed_jobs, params, test_buf,
-                                             buf_sizes, pli, xgem_hdr, IMB_DIR_ENCRYPT) < 0) {
+                                if (post_job(enc_mb_mgr, job, &num_processed_jobs, params, job_tab,
+                                             IMB_DIR_ENCRYPT) < 0) {
                                         i = (unsigned) ((uintptr_t) job->user_data);
                                         goto exit;
                                 }
@@ -1960,15 +1980,15 @@ do_test(IMB_MGR *enc_mb_mgr, const IMB_ARCH enc_arch, IMB_MGR *dec_mb_mgr, const
                         IMB_JOB *job = burst_jobs[i];
 
                         /* Randomize memory for output digest */
-                        generate_random_buf(out_digest[i], tag_size);
+                        generate_random_buf(job_tab[i].out_digest, tag_size);
 
                         /*
                          * Generate digest from encrypted message and decrypt
                          * using reference architecture
                          */
-                        if (fill_job(job, params, src_dst_buf[i], out_digest[i], aad, buf_sizes[i],
-                                     tag_size, IMB_DIR_DECRYPT, dec_keys, cipher_iv, auth_iv, i,
-                                     next_iv) < 0)
+                        if (fill_job(job, params, job_tab[i].src_dst_buf, job_tab[i].out_digest,
+                                     aad, job_tab[i].buf_size, tag_size, IMB_DIR_DECRYPT, dec_keys,
+                                     cipher_iv, auth_iv, i, next_iv) < 0)
                                 goto exit;
 
                         imb_set_session(dec_mb_mgr, job);
@@ -1991,8 +2011,8 @@ do_test(IMB_MGR *enc_mb_mgr, const IMB_ARCH enc_arch, IMB_MGR *dec_mb_mgr, const
                 for (i = 0; i < num_rx_jobs; i++) {
                         IMB_JOB *job = burst_jobs[i];
 
-                        if (post_job(dec_mb_mgr, job, &num_processed_jobs, params, test_buf,
-                                     buf_sizes, pli, xgem_hdr, IMB_DIR_DECRYPT) < 0)
+                        if (post_job(dec_mb_mgr, job, &num_processed_jobs, params, job_tab,
+                                     IMB_DIR_DECRYPT) < 0)
                                 goto exit;
                 }
         } else {
@@ -2000,15 +2020,15 @@ do_test(IMB_MGR *enc_mb_mgr, const IMB_ARCH enc_arch, IMB_MGR *dec_mb_mgr, const
                         job = IMB_GET_NEXT_JOB(dec_mb_mgr);
 
                         /* Randomize memory for output digest */
-                        generate_random_buf(out_digest[i], tag_size);
+                        generate_random_buf(job_tab[i].out_digest, tag_size);
 
                         /*
                          * Generate digest from encrypted message and decrypt
                          * using reference architecture
                          */
-                        if (fill_job(job, params, src_dst_buf[i], out_digest[i], aad, buf_sizes[i],
-                                     tag_size, IMB_DIR_DECRYPT, dec_keys, cipher_iv, auth_iv, i,
-                                     next_iv) < 0)
+                        if (fill_job(job, params, job_tab[i].src_dst_buf, job_tab[i].out_digest,
+                                     aad, job_tab[i].buf_size, tag_size, IMB_DIR_DECRYPT, dec_keys,
+                                     cipher_iv, auth_iv, i, next_iv) < 0)
                                 goto exit;
 
                         /* Clear scratch registers before submitting job to prevent
@@ -2019,8 +2039,8 @@ do_test(IMB_MGR *enc_mb_mgr, const IMB_ARCH enc_arch, IMB_MGR *dec_mb_mgr, const
                                       (unsigned) params->cipher_mode);
 
                         if (job != NULL) {
-                                if (post_job(dec_mb_mgr, job, &num_processed_jobs, params, test_buf,
-                                             buf_sizes, pli, xgem_hdr, IMB_DIR_DECRYPT) < 0) {
+                                if (post_job(dec_mb_mgr, job, &num_processed_jobs, params, job_tab,
+                                             IMB_DIR_DECRYPT) < 0) {
                                         i = (unsigned) ((uintptr_t) job->user_data);
                                         goto exit;
                                 }
@@ -2035,8 +2055,8 @@ do_test(IMB_MGR *enc_mb_mgr, const IMB_ARCH enc_arch, IMB_MGR *dec_mb_mgr, const
                                       (unsigned) params->cipher_mode);
 
                         while (job != NULL) {
-                                if (post_job(dec_mb_mgr, job, &num_processed_jobs, params, test_buf,
-                                             buf_sizes, pli, xgem_hdr, IMB_DIR_DECRYPT) < 0) {
+                                if (post_job(dec_mb_mgr, job, &num_processed_jobs, params, job_tab,
+                                             IMB_DIR_DECRYPT) < 0) {
                                         i = (unsigned) ((uintptr_t) job->user_data);
                                         goto exit;
                                 }
@@ -2059,32 +2079,40 @@ do_test(IMB_MGR *enc_mb_mgr, const IMB_ARCH enc_arch, IMB_MGR *dec_mb_mgr, const
                         int goto_exit = 0;
 
                         if (params->hash_alg != IMB_AUTH_NULL &&
-                            memcmp(in_digest[i], out_digest[i], tag_size_to_check[i]) != 0) {
+                            memcmp(job_tab[i].in_digest, job_tab[i].out_digest,
+                                   job_tab[i].tag_size_to_check) != 0) {
                                 fprintf(stderr, "\nInput and output tags "
                                                 "don't match\n");
-                                hexdump(stdout, "Input digest", in_digest[i], tag_size_to_check[i]);
-                                hexdump(stdout, "Output digest", out_digest[i],
-                                        tag_size_to_check[i]);
+                                hexdump(stdout, "Input digest", job_tab[i].in_digest,
+                                        job_tab[i].tag_size_to_check);
+                                hexdump(stdout, "Output digest", job_tab[i].out_digest,
+                                        job_tab[i].tag_size_to_check);
                                 goto_exit = 1;
                         }
 
                         if (params->cipher_mode != IMB_CIPHER_NULL &&
-                            memcmp(src_dst_buf[i], test_buf[i], buf_sizes[i]) != 0) {
+                            memcmp(job_tab[i].src_dst_buf, job_tab[i].test_buf,
+                                   job_tab[i].buf_size) != 0) {
                                 fprintf(stderr, "\nDecrypted text and "
                                                 "plaintext don't match\n");
-                                hexdump(stdout, "Plaintext (orig)", test_buf[i], buf_sizes[i]);
-                                hexdump(stdout, "Decrypted msg", src_dst_buf[i], buf_sizes[i]);
+                                hexdump(stdout, "Plaintext (orig)", job_tab[i].test_buf,
+                                        job_tab[i].buf_size);
+                                hexdump(stdout, "Decrypted msg", job_tab[i].src_dst_buf,
+                                        job_tab[i].buf_size);
                                 goto_exit = 1;
                         }
 
-                        if ((params->hash_alg == IMB_AUTH_PON_CRC_BIP) && (pli[i] > 4)) {
-                                const uint64_t plen = 8 + pli[i] - 4;
+                        if ((params->hash_alg == IMB_AUTH_PON_CRC_BIP) && (job_tab[i].pli > 4)) {
+                                const uint64_t plen = 8 + job_tab[i].pli - 4;
 
-                                if (memcmp(src_dst_buf[i] + plen, out_digest[i] + 4, 4) != 0) {
+                                if (memcmp(job_tab[i].src_dst_buf + plen, job_tab[i].out_digest + 4,
+                                           4) != 0) {
                                         fprintf(stderr, "\nDecrypted CRC and "
                                                         "calculated CRC don't match\n");
-                                        hexdump(stdout, "Decrypted CRC", src_dst_buf[i] + plen, 4);
-                                        hexdump(stdout, "Calculated CRC", out_digest[i] + 4, 4);
+                                        hexdump(stdout, "Decrypted CRC",
+                                                job_tab[i].src_dst_buf + plen, 4);
+                                        hexdump(stdout, "Calculated CRC", job_tab[i].out_digest + 4,
+                                                4);
                                         goto_exit = 1;
                                 }
                         }
@@ -2111,10 +2139,10 @@ exit:
                    where "i" indicates the index of the job failing */
                 if (i < num_jobs) {
                         if (imix) {
-                                printf("Job #%u, buffer size = %u\n", i, buf_sizes[i]);
+                                printf("Job #%u, buffer size = %u\n", i, job_tab[i].buf_size);
 
                                 for (i = 0; i < num_jobs; i++)
-                                        printf("Other sizes = %u\n", buf_sizes[i]);
+                                        printf("Other sizes = %u\n", job_tab[i].buf_size);
                         } else
                                 printf("Buffer size = %u\n", params->buf_size);
                 }
