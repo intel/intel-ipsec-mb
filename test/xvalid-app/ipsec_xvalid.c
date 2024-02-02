@@ -1728,14 +1728,8 @@ do_test(IMB_MGR *enc_mb_mgr, const IMB_ARCH enc_arch, IMB_MGR *dec_mb_mgr, const
         int ret = -1;
         struct cipher_auth_keys *enc_keys = &data->enc_keys;
         struct cipher_auth_keys *dec_keys = &data->dec_keys;
-        uint8_t *aad = data->aad;
-        uint8_t *cipher_iv = data->cipher_iv;
-        uint8_t *auth_iv = data->auth_iv;
-        uint8_t *ciph_key = data->ciph_key;
-        uint8_t *auth_key = data->auth_key;
         unsigned int num_processed_jobs = 0;
         uint8_t next_iv[IMB_AES_BLOCK_SIZE];
-        uint8_t tag_size = data->tag_size;
 
         if (num_jobs == 0)
                 return ret;
@@ -1744,20 +1738,21 @@ do_test(IMB_MGR *enc_mb_mgr, const IMB_ARCH enc_arch, IMB_MGR *dec_mb_mgr, const
          * set keys and plaintext to known values,
          * so they can be searched later on in the MB_MGR structure and stack.
          * Otherwise, just randomize the data */
-        generate_random_buf(cipher_iv, MAX_IV_SIZE);
-        generate_random_buf(auth_iv, MAX_IV_SIZE);
-        generate_random_buf(aad, MAX_AAD_SIZE);
+        generate_random_buf(data->cipher_iv, MAX_IV_SIZE);
+        generate_random_buf(data->auth_iv, MAX_IV_SIZE);
+        generate_random_buf(data->aad, MAX_AAD_SIZE);
         if (safe_check) {
-                nosimd_memset(ciph_key, pattern_cipher_key, MAX_KEY_SIZE);
-                nosimd_memset(auth_key, pattern_auth_key, MAX_KEY_SIZE);
+                nosimd_memset(data->ciph_key, pattern_cipher_key, MAX_KEY_SIZE);
+                nosimd_memset(data->auth_key, pattern_auth_key, MAX_KEY_SIZE);
         } else {
-                generate_random_buf(ciph_key, MAX_KEY_SIZE);
-                generate_random_buf(auth_key, MAX_KEY_SIZE);
+                generate_random_buf(data->ciph_key, MAX_KEY_SIZE);
+                generate_random_buf(data->auth_key, MAX_KEY_SIZE);
         }
 
         for (i = 0; i < num_jobs; i++)
                 set_job_ctx(&job_tab[i], imix, safe_check, params, data->in_digest[i],
-                            data->out_digest[i], tag_size, data->test_buf[i], data->src_dst_buf[i]);
+                            data->out_digest[i], data->tag_size, data->test_buf[i],
+                            data->src_dst_buf[i]);
 
         /*
          * Expand/schedule keys.
@@ -1774,7 +1769,8 @@ do_test(IMB_MGR *enc_mb_mgr, const IMB_ARCH enc_arch, IMB_MGR *dec_mb_mgr, const
                 /* Clear scratch registers before expanding keys to prevent
                  * other functions from storing sensitive data in stack
                  */
-                if (prepare_keys(enc_mb_mgr, enc_keys, ciph_key, auth_key, params, 0) < 0)
+                if (prepare_keys(enc_mb_mgr, enc_keys, data->ciph_key, data->auth_key, params, 0) <
+                    0)
                         goto exit;
 
                 rsp_ptr = rdrsp();
@@ -1784,7 +1780,8 @@ do_test(IMB_MGR *enc_mb_mgr, const IMB_ARCH enc_arch, IMB_MGR *dec_mb_mgr, const
                         goto exit;
                 }
 
-                if (prepare_keys(dec_mb_mgr, dec_keys, ciph_key, auth_key, params, 0) < 0)
+                if (prepare_keys(dec_mb_mgr, dec_keys, data->ciph_key, data->auth_key, params, 0) <
+                    0)
                         goto exit;
 
                 rsp_ptr = rdrsp();
@@ -1799,16 +1796,20 @@ do_test(IMB_MGR *enc_mb_mgr, const IMB_ARCH enc_arch, IMB_MGR *dec_mb_mgr, const
                  * it is time to setup the keys and key schedules filled
                  * with specific patterns.
                  */
-                if (prepare_keys(enc_mb_mgr, enc_keys, ciph_key, auth_key, params, 1) < 0)
+                if (prepare_keys(enc_mb_mgr, enc_keys, data->ciph_key, data->auth_key, params, 1) <
+                    0)
                         goto exit;
 
-                if (prepare_keys(dec_mb_mgr, dec_keys, ciph_key, auth_key, params, 1) < 0)
+                if (prepare_keys(dec_mb_mgr, dec_keys, data->ciph_key, data->auth_key, params, 1) <
+                    0)
                         goto exit;
         } else {
-                if (prepare_keys(enc_mb_mgr, enc_keys, ciph_key, auth_key, params, 0) < 0)
+                if (prepare_keys(enc_mb_mgr, enc_keys, data->ciph_key, data->auth_key, params, 0) <
+                    0)
                         goto exit;
 
-                if (prepare_keys(dec_mb_mgr, dec_keys, ciph_key, auth_key, params, 0) < 0)
+                if (prepare_keys(dec_mb_mgr, dec_keys, data->ciph_key, data->auth_key, params, 0) <
+                    0)
                         goto exit;
         }
 
@@ -1849,13 +1850,14 @@ do_test(IMB_MGR *enc_mb_mgr, const IMB_ARCH enc_arch, IMB_MGR *dec_mb_mgr, const
                          */
                         nosimd_memcpy(job_tab[i].src_dst_buf, job_tab[i].test_buf,
                                       job_tab[i].buf_size);
-                        if (fill_job(job, params, job_tab[i].src_dst_buf, job_tab[i].in_digest, aad,
-                                     job_tab[i].buf_size, tag_size, IMB_DIR_ENCRYPT, enc_keys,
-                                     cipher_iv, auth_iv, i, next_iv) < 0)
+                        if (fill_job(job, params, job_tab[i].src_dst_buf, job_tab[i].in_digest,
+                                     data->aad, job_tab[i].buf_size, data->tag_size,
+                                     IMB_DIR_ENCRYPT, enc_keys, data->cipher_iv, data->auth_iv, i,
+                                     next_iv) < 0)
                                 goto exit;
 
                         /* Randomize memory for input digest */
-                        generate_random_buf(job_tab[i].in_digest, tag_size);
+                        generate_random_buf(job_tab[i].in_digest, data->tag_size);
 
                         imb_set_session(enc_mb_mgr, job);
                 }
@@ -1894,13 +1896,14 @@ do_test(IMB_MGR *enc_mb_mgr, const IMB_ARCH enc_arch, IMB_MGR *dec_mb_mgr, const
                          */
                         nosimd_memcpy(job_tab[i].src_dst_buf, job_tab[i].test_buf,
                                       job_tab[i].buf_size);
-                        if (fill_job(job, params, job_tab[i].src_dst_buf, job_tab[i].in_digest, aad,
-                                     job_tab[i].buf_size, tag_size, IMB_DIR_ENCRYPT, enc_keys,
-                                     cipher_iv, auth_iv, i, next_iv) < 0)
+                        if (fill_job(job, params, job_tab[i].src_dst_buf, job_tab[i].in_digest,
+                                     data->aad, job_tab[i].buf_size, data->tag_size,
+                                     IMB_DIR_ENCRYPT, enc_keys, data->cipher_iv, data->auth_iv, i,
+                                     next_iv) < 0)
                                 goto exit;
 
                         /* Randomize memory for input digest */
-                        generate_random_buf(job_tab[i].in_digest, tag_size);
+                        generate_random_buf(job_tab[i].in_digest, data->tag_size);
 
                         /* Clear scratch registers before submitting job to prevent
                          * other functions from storing sensitive data in stack */
@@ -1980,15 +1983,16 @@ do_test(IMB_MGR *enc_mb_mgr, const IMB_ARCH enc_arch, IMB_MGR *dec_mb_mgr, const
                         IMB_JOB *job = burst_jobs[i];
 
                         /* Randomize memory for output digest */
-                        generate_random_buf(job_tab[i].out_digest, tag_size);
+                        generate_random_buf(job_tab[i].out_digest, data->tag_size);
 
                         /*
                          * Generate digest from encrypted message and decrypt
                          * using reference architecture
                          */
                         if (fill_job(job, params, job_tab[i].src_dst_buf, job_tab[i].out_digest,
-                                     aad, job_tab[i].buf_size, tag_size, IMB_DIR_DECRYPT, dec_keys,
-                                     cipher_iv, auth_iv, i, next_iv) < 0)
+                                     data->aad, job_tab[i].buf_size, data->tag_size,
+                                     IMB_DIR_DECRYPT, dec_keys, data->cipher_iv, data->auth_iv, i,
+                                     next_iv) < 0)
                                 goto exit;
 
                         imb_set_session(dec_mb_mgr, job);
@@ -2020,15 +2024,16 @@ do_test(IMB_MGR *enc_mb_mgr, const IMB_ARCH enc_arch, IMB_MGR *dec_mb_mgr, const
                         job = IMB_GET_NEXT_JOB(dec_mb_mgr);
 
                         /* Randomize memory for output digest */
-                        generate_random_buf(job_tab[i].out_digest, tag_size);
+                        generate_random_buf(job_tab[i].out_digest, data->tag_size);
 
                         /*
                          * Generate digest from encrypted message and decrypt
                          * using reference architecture
                          */
                         if (fill_job(job, params, job_tab[i].src_dst_buf, job_tab[i].out_digest,
-                                     aad, job_tab[i].buf_size, tag_size, IMB_DIR_DECRYPT, dec_keys,
-                                     cipher_iv, auth_iv, i, next_iv) < 0)
+                                     data->aad, job_tab[i].buf_size, data->tag_size,
+                                     IMB_DIR_DECRYPT, dec_keys, data->cipher_iv, data->auth_iv, i,
+                                     next_iv) < 0)
                                 goto exit;
 
                         /* Clear scratch registers before submitting job to prevent
@@ -2147,7 +2152,7 @@ exit:
                                 printf("Buffer size = %u\n", params->buf_size);
                 }
                 printf("Key size = %u\n", params->key_size);
-                printf("Tag size = %u\n", tag_size);
+                printf("Tag size = %u\n", data->tag_size);
                 printf("AAD size = %u\n", (uint32_t) params->aad_size);
         }
 
