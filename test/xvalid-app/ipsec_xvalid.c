@@ -89,6 +89,11 @@
 #define MAX_SAFE_RETRIES     100
 #define DEFAULT_SAFE_RETRIES 2
 
+/* Sensitive data search pattern definitions */
+#define FOUND_CIPHER_KEY 1
+#define FOUND_AUTH_KEY   2
+#define FOUND_TEXT       3
+
 static int pattern_auth_key;
 static int pattern_cipher_key;
 static int pattern_plain_text;
@@ -742,6 +747,212 @@ search_patterns(const void *ptr, const size_t mem_size)
         }
 
         return -1;
+}
+
+/*
+ * @brief Searches across a block of memory if a pattern is present
+ *        (indicating there is some left over sensitive data)
+ *
+ * @return search status
+ * @retval 0 nothing found
+ * @retval FOUND_CIPHER_KEY fragment of CIPHER_KEY found
+ * @retval FOUND_AUTH_KEY fragment of AUTH_KEY found
+ * @retval FOUND_TEXT fragment of TEXT found
+ */
+static int
+search_patterns_ex(const void *ptr, const size_t mem_size, size_t *offset)
+{
+        const uint8_t *ptr8 = (const uint8_t *) ptr;
+        const size_t limit = mem_size - sizeof(uint64_t);
+
+        if (mem_size < sizeof(uint64_t) || offset == NULL)
+                return 0;
+
+        *offset = 0;
+
+        for (size_t i = 0; i <= limit; i++) {
+                const uint64_t string = *((const uint64_t *) &ptr8[i]);
+
+                if (string == pattern8_cipher_key) {
+                        *offset = i;
+                        return FOUND_CIPHER_KEY;
+                }
+
+                if (string == pattern8_auth_key) {
+                        *offset = i;
+                        return FOUND_AUTH_KEY;
+                }
+
+                if (string == pattern8_plain_text) {
+                        *offset = i;
+                        return FOUND_TEXT;
+                }
+        }
+
+        return 0;
+}
+
+struct safe_check_ctx {
+        IMB_ARCH arch;
+        const char *dir_name;
+        unsigned job_idx;
+        unsigned job_size;
+
+        int gps_check;
+        size_t gps_offset;
+
+        int simd_check;
+        size_t simd_offset;
+        size_t simd_reg_size;
+        const char *simd_reg_name;
+
+        int rsp_check;
+        size_t rsp_offset;
+        void *rsp_ptr;
+
+        int mgr_check;
+        size_t mgr_offset;
+        void *mgr_ptr;
+
+        int ooo_check;
+        size_t ooo_offset;
+        void *ooo_ptr;
+        const char *ooo_name;
+        size_t ooo_size;
+};
+
+static void
+print_match_gp(const void *ptr, const size_t offset)
+{
+        const char *reg_str[] = { "rax", "rbx", "rcx", "rdx", "rdi", "rsi", "r8",
+                                  "r9",  "r10", "r11", "r12", "r13", "r14", "r15" };
+        const uint8_t *ptr8 = (const uint8_t *) ptr;
+        static uint8_t tb[8];
+        const size_t len_to_print = 8;
+        const size_t reg_idx = offset / 8;
+        const char *reg_name = (reg_idx < DIM(reg_str)) ? reg_str[reg_idx] : "<unknown>";
+
+        nosimd_memcpy(tb, &ptr8[offset & ~7], len_to_print);
+        hexdump_ex(stderr, reg_name, tb, len_to_print, NULL);
+}
+
+static void
+print_match_xyzmm(const void *ptr, const size_t offset, const size_t simd_size,
+                  const char *simd_name)
+{
+        const uint8_t *ptr8 = (const uint8_t *) ptr;
+        static uint8_t tb[64];
+        const size_t len_to_print = simd_size;
+        const size_t reg_idx = offset / simd_size;
+        char reg_name[8];
+
+        nosimd_memcpy(tb, &ptr8[reg_idx * simd_size], len_to_print);
+
+        memset(reg_name, 0, sizeof(reg_name));
+        snprintf(reg_name, sizeof(reg_name) - 1, "%s%zu", simd_name, reg_idx);
+        hexdump_ex(stderr, reg_name, tb, len_to_print, NULL);
+}
+
+static void
+print_match_memory(const void *ptr, const size_t mem_size, const size_t offset,
+                   const char *mem_name)
+{
+        const uint8_t *ptr8 = (const uint8_t *) ptr;
+        static uint8_t tb[64];
+        const size_t len_to_print =
+                (sizeof(tb) > (mem_size - offset)) ? (mem_size - offset) : sizeof(tb);
+
+        nosimd_memcpy(tb, &ptr8[offset], len_to_print);
+        hexdump_ex(stderr, mem_name, tb, len_to_print, &ptr8[offset]);
+}
+
+static void
+print_match_type(const int check)
+{
+        if (check == FOUND_CIPHER_KEY)
+                fprintf(stderr, "Part of CIPHER_KEY found\n");
+        else if (check == FOUND_AUTH_KEY)
+                fprintf(stderr, "Part of AUTH_KEY found\n");
+        else if (check == FOUND_TEXT)
+                fprintf(stderr, "Part of plain/cipher text found\n");
+}
+
+static void
+print_match(const struct safe_check_ctx *ctx, const char *err_str)
+{
+        if (ctx->gps_check) {
+                fprintf(stderr, "%s\n", err_str);
+                print_match_type(ctx->gps_check);
+                print_match_gp(gps, ctx->gps_offset);
+                return;
+        }
+
+        if (ctx->simd_check) {
+                fprintf(stderr, "%s\n", err_str);
+                print_match_type(ctx->simd_check);
+                print_match_xyzmm(simd_regs, ctx->simd_offset, ctx->simd_reg_size,
+                                  ctx->simd_reg_name);
+                return;
+        }
+
+        if (ctx->rsp_check) {
+                fprintf(stderr, "%s\n", err_str);
+                print_match_type(ctx->rsp_check);
+                print_match_memory(ctx->rsp_ptr, STACK_DEPTH, ctx->rsp_offset, "STACK/RSP");
+                return;
+        }
+
+        if (ctx->mgr_check) {
+                fprintf(stderr, "%s\n", err_str);
+                print_match_type(ctx->mgr_check);
+                print_match_memory(ctx->mgr_ptr, sizeof(IMB_MGR), ctx->mgr_offset, "IMB_MGR");
+                return;
+        }
+
+        if (ctx->ooo_check) {
+                fprintf(stderr, "%s\n", err_str);
+                print_match_type(ctx->ooo_check);
+                print_match_memory(ctx->ooo_ptr, ctx->ooo_size, ctx->ooo_offset, ctx->ooo_name);
+                return;
+        }
+}
+
+static int
+compare_match(const struct safe_check_ctx *a, const struct safe_check_ctx *b)
+{
+        if (a->arch != b->arch)
+                return 1;
+        if (a->dir_name != b->dir_name)
+                return 1;
+
+        if (a->gps_check != b->gps_check)
+                return 1;
+        if (a->gps_offset != b->gps_offset)
+                return 1;
+
+        if (a->simd_check != b->simd_check)
+                return 1;
+        if (a->simd_offset != b->simd_offset)
+                return 1;
+
+        if (a->rsp_check != b->rsp_check)
+                return 1;
+        if (a->rsp_offset != b->rsp_offset)
+                return 1;
+
+        if (a->mgr_check != b->mgr_check)
+                return 1;
+        if (a->mgr_offset != b->mgr_offset)
+                return 1;
+
+        if (a->ooo_check != b->ooo_check)
+                return 1;
+        if (a->ooo_offset != b->ooo_offset)
+                return 1;
+        if (a->ooo_ptr != b->ooo_ptr)
+                return 1;
+
+        return 0;
 }
 
 static size_t
@@ -1468,64 +1679,91 @@ modify_docsis_crc32_test_buf(uint8_t *test_buf, const IMB_JOB *job, const uint32
 }
 
 /*
- * Checks for sensitive information in registers, stack and MB_MGR
- * (in this order, to try to minimize pollution of the data left out
- *  after the job completion, due to these actual checks).
+ * @brief Checks for sensitive information in registers, stack and MB_MGR
+ *        (in this order, to try to minimize pollution of the data left out
+ *        after the job completion, due to these actual checks).
  *
- *  Returns -1 if sensitive information was found or 0 if not.
+ * @return check status
+ * @retval 0 all OK
+ * @retval -1 sensitive data found
+ * @retval -2 wrong input arguments
  */
 static int
-perform_safe_checks(IMB_MGR *mgr, const IMB_ARCH arch, const char *dir)
+perform_safe_checks(IMB_MGR *mgr, const IMB_ARCH arch, struct safe_check_ctx *ctx, const char *dir)
 {
-        uint8_t *rsp_ptr;
-        uint32_t simd_size = 0;
-        void **ooo_ptr;
-        unsigned i;
+        static const struct {
+                size_t simd_set_size;
+                void (*simd_dump_fn)(void);
+        } simd_ctx[] = {
+                { 0, NULL },                     /* none */
+                { XMM_MEM_SIZE, dump_xmms_sse }, /* no aesni */
+                { XMM_MEM_SIZE, dump_xmms_avx }, /* sse */
+                { XMM_MEM_SIZE, dump_xmms_avx }, /* avx */
+                { YMM_MEM_SIZE, dump_ymms },     /* avx2 */
+                { ZMM_MEM_SIZE, dump_zmms }      /* avx512 */
+        };
 
         dump_gps();
+
+        if (ctx == NULL)
+                return -2;
+
         switch (arch) {
         case IMB_ARCH_SSE:
         case IMB_ARCH_NOAESNI:
-                dump_xmms_sse();
-                simd_size = XMM_MEM_SIZE;
-                break;
         case IMB_ARCH_AVX:
-                dump_xmms_avx();
-                simd_size = XMM_MEM_SIZE;
-                break;
         case IMB_ARCH_AVX2:
-                dump_ymms();
-                simd_size = YMM_MEM_SIZE;
-                break;
         case IMB_ARCH_AVX512:
-                dump_zmms();
-                simd_size = ZMM_MEM_SIZE;
                 break;
+        case IMB_ARCH_NONE:
+        case IMB_ARCH_NUM:
         default:
-                fprintf(stderr, "Error getting the architecture\n");
-                return -1;
-        }
-        if (search_patterns(gps, GP_MEM_SIZE) == 0) {
-                fprintf(stderr, "Pattern found in GP registers after %s data\n", dir);
-                return -1;
-        }
-        if (search_patterns(simd_regs, simd_size) == 0) {
-                fprintf(stderr, "Pattern found in SIMD registers after %s data\n", dir);
-                return -1;
-        }
-        rsp_ptr = rdrsp();
-        if (search_patterns((rsp_ptr - STACK_DEPTH), STACK_DEPTH) == 0) {
-                fprintf(stderr, "Pattern found in stack after %s data\n", dir);
-                return -1;
+                fprintf(stderr, "Invalid architecture!\n");
+                return -2;
         }
 
-        if (search_patterns(mgr, sizeof(IMB_MGR)) == 0) {
-                fprintf(stderr, "Pattern found in MB_MGR after %s data\n", dir);
-                return -1;
+        uint8_t *rsp_ptr = rdrsp();
+
+        simd_ctx[arch].simd_dump_fn();
+
+        memset(ctx, 0, sizeof(*ctx));
+
+        ctx->rsp_ptr = rsp_ptr;
+        ctx->arch = arch;
+        ctx->dir_name = dir;
+
+        if (arch == IMB_ARCH_AVX2) {
+                ctx->simd_reg_size = 32;
+                ctx->simd_reg_name = "ymm";
+        } else if (arch == IMB_ARCH_AVX512) {
+                ctx->simd_reg_size = 64;
+                ctx->simd_reg_name = "zmm";
+        } else {
+                ctx->simd_reg_size = 16;
+                ctx->simd_reg_name = "xmm";
         }
+
+        ctx->gps_check = search_patterns_ex(gps, GP_MEM_SIZE, &ctx->gps_offset);
+        if (ctx->gps_check != 0)
+                return -1;
+
+        ctx->simd_check =
+                search_patterns_ex(simd_regs, simd_ctx[arch].simd_set_size, &ctx->simd_offset);
+        if (ctx->simd_check != 0)
+                return -1;
+
+        ctx->rsp_check = search_patterns_ex((rsp_ptr - STACK_DEPTH), STACK_DEPTH, &ctx->rsp_offset);
+        if (ctx->rsp_check != 0)
+                return -1;
+
+        ctx->mgr_check = search_patterns_ex(mgr, sizeof(*mgr), &ctx->mgr_offset);
+        if (ctx->mgr_check != 0)
+                return -1;
 
         /* search OOO managers */
-        for (ooo_ptr = &mgr->aes128_ooo, i = 0; ooo_ptr < &mgr->end_ooo; ooo_ptr++, i++) {
+        void **ooo_ptr = &mgr->aes128_ooo;
+
+        for (unsigned i = 0; ooo_ptr < &mgr->end_ooo; ooo_ptr++, i++) {
                 static const char *const ooo_names[] = {
                         "aes128_ooo",
                         "aes192_ooo",
@@ -1566,11 +1804,13 @@ perform_safe_checks(IMB_MGR *mgr, const IMB_ARCH arch, const char *dir)
                         "end_ooo" /* add new ooo manager above this line */
                 };
                 void *ooo_mgr_p = *ooo_ptr;
+                const size_t ooo_size = get_ooo_mgr_size(ooo_mgr_p, i);
 
-                if (search_patterns(ooo_mgr_p, get_ooo_mgr_size(ooo_mgr_p, i)) == 0) {
-                        fprintf(stderr,
-                                "Pattern found in OOO MGR (index=%u,\"%s\") after %s data\n", i,
-                                ooo_names[i], dir);
+                ctx->ooo_check = search_patterns_ex(ooo_mgr_p, ooo_size, &ctx->ooo_offset);
+                if (ctx->ooo_check != 0) {
+                        ctx->ooo_ptr = ooo_mgr_p;
+                        ctx->ooo_name = ooo_names[i];
+                        ctx->ooo_size = ooo_size;
                         return -1;
                 }
         }
@@ -1809,10 +2049,52 @@ process_jobs(IMB_MGR *mb_mgr, IMB_JOB *job_tab, const unsigned num_jobs,
         return 0;
 }
 
-/* Performs test using AES_HMAC or DOCSIS */
+static void
+print_fail_context(IMB_MGR *enc_mb_mgr, const IMB_ARCH enc_arch, IMB_MGR *dec_mb_mgr,
+                   const IMB_ARCH dec_arch, const struct params_s *params, struct data *data,
+                   const unsigned imix, const unsigned num_jobs, const unsigned idx,
+                   const struct job_ctx *job_ctx_tab, const struct safe_check_ctx *safe_ctx)
+{
+        printf("Failures in\n");
+        print_algo_info(params);
+        printf("Encrypting ");
+        print_tested_arch(enc_mb_mgr->features, enc_arch);
+        printf("Decrypting ");
+        print_tested_arch(dec_mb_mgr->features, dec_arch);
+        /*
+         * Print buffer size info if the failure was caused by an actual job,
+         * where "idx" indicates the index of the job failing
+         */
+        if (idx < num_jobs) {
+                if (imix) {
+                        if (job_ctx_tab != NULL) {
+                                printf("Job #%u, buffer size = %u\n", idx,
+                                       job_ctx_tab[idx].buf_size);
+
+                                for (unsigned n = 0; n < num_jobs; n++)
+                                        printf("Other sizes = %u\n", job_ctx_tab[n].buf_size);
+                        } else if (safe_ctx != NULL) {
+                                printf("Job #%u, buffer size = %u\n", safe_ctx->job_idx,
+                                       safe_ctx->job_size);
+                        }
+                } else
+                        printf("Buffer size = %u\n", params->buf_size);
+        }
+        printf("Key size = %u\n", params->key_size);
+        printf("Tag size = %u\n", data->tag_size);
+        printf("AAD size = %u\n", (uint32_t) params->aad_size);
+}
+
+/*
+ * @brief Performs test using AES_HMAC or DOCSIS
+ * @return Operation status
+ * @retval 0 success
+ * @retval -1 encrypt/decrypt operation error (result mismatch, unsupported algorithm etc.)
+ * @retval -2 safe check error
+ */
 static int
 do_test(IMB_MGR *enc_mb_mgr, const IMB_ARCH enc_arch, IMB_MGR *dec_mb_mgr, const IMB_ARCH dec_arch,
-        const struct params_s *params, struct data *data, const unsigned safe_check,
+        const struct params_s *params, struct data *data, struct safe_check_ctx *p_safe_check,
         const unsigned imix, const unsigned num_jobs)
 {
         struct job_ctx job_ctx_tab[MAX_NUM_JOBS];
@@ -1823,6 +2105,7 @@ do_test(IMB_MGR *enc_mb_mgr, const IMB_ARCH enc_arch, IMB_MGR *dec_mb_mgr, const
         struct cipher_auth_keys *dec_keys = &data->dec_keys;
         /* unsigned int num_processed_jobs = 0; */
         uint8_t next_iv[IMB_AES_BLOCK_SIZE];
+        const unsigned safe_check = (p_safe_check != NULL);
 
         if (num_jobs == 0)
                 return ret;
@@ -1870,6 +2153,7 @@ do_test(IMB_MGR *enc_mb_mgr, const IMB_ARCH enc_arch, IMB_MGR *dec_mb_mgr, const
                 if (search_patterns((rsp_ptr - STACK_DEPTH), STACK_DEPTH) == 0) {
                         fprintf(stderr, "Pattern found in stack after "
                                         "expanding encryption keys\n");
+                        ret = -2;
                         goto exit;
                 }
 
@@ -1881,6 +2165,7 @@ do_test(IMB_MGR *enc_mb_mgr, const IMB_ARCH enc_arch, IMB_MGR *dec_mb_mgr, const
                 if (search_patterns((rsp_ptr - STACK_DEPTH), STACK_DEPTH) == 0) {
                         fprintf(stderr, "Pattern found in stack after "
                                         "expanding decryption keys\n");
+                        ret = -2;
                         goto exit;
                 }
 
@@ -1957,8 +2242,10 @@ do_test(IMB_MGR *enc_mb_mgr, const IMB_ARCH enc_arch, IMB_MGR *dec_mb_mgr, const
          * sensitive information after job is returned
          */
         if (safe_check)
-                if (perform_safe_checks(enc_mb_mgr, enc_arch, "encrypting") < 0)
+                if (perform_safe_checks(enc_mb_mgr, enc_arch, p_safe_check, "encrypting") < 0) {
+                        ret = -2;
                         goto exit;
+                }
 
 #ifdef PIN_BASED_CEC
         PinBasedCEC_MarkSecret((uintptr_t) enc_keys->enc_keys, sizeof(enc_keys->enc_keys));
@@ -2007,8 +2294,10 @@ do_test(IMB_MGR *enc_mb_mgr, const IMB_ARCH enc_arch, IMB_MGR *dec_mb_mgr, const
         /* Check that the registers, stack and MB_MGR do not contain any
          * sensitive information after job is returned */
         if (safe_check) {
-                if (perform_safe_checks(dec_mb_mgr, dec_arch, "decrypting") < 0)
+                if (perform_safe_checks(dec_mb_mgr, dec_arch, p_safe_check, "decrypting") < 0) {
+                        ret = -2;
                         goto exit;
+                }
         } else {
                 for (i = 0; i < num_jobs; i++) {
                         int goto_exit = 0;
@@ -2064,27 +2353,14 @@ exit:
         /* clear data */
         clear_data(data);
 
-        if (ret < 0) {
-                printf("Failures in\n");
-                print_algo_info(params);
-                printf("Encrypting ");
-                print_tested_arch(enc_mb_mgr->features, enc_arch);
-                printf("Decrypting ");
-                print_tested_arch(dec_mb_mgr->features, dec_arch);
-                /* Print buffer size info if the failure was caused by an actual job,
-                   where "i" indicates the index of the job failing */
-                if (i < num_jobs) {
-                        if (imix) {
-                                printf("Job #%u, buffer size = %u\n", i, job_ctx_tab[i].buf_size);
-
-                                for (i = 0; i < num_jobs; i++)
-                                        printf("Other sizes = %u\n", job_ctx_tab[i].buf_size);
-                        } else
-                                printf("Buffer size = %u\n", params->buf_size);
+        if (ret == -1) {
+                print_fail_context(enc_mb_mgr, enc_arch, dec_mb_mgr, dec_arch, params, data, imix,
+                                   num_jobs, i, job_ctx_tab, NULL);
+        } else if (ret == -2) {
+                if (p_safe_check != NULL) {
+                        p_safe_check->job_idx = i;
+                        p_safe_check->job_size = job_ctx_tab[i].buf_size;
                 }
-                printf("Key size = %u\n", params->key_size);
-                printf("Tag size = %u\n", data->tag_size);
-                printf("AAD size = %u\n", (uint32_t) params->aad_size);
         }
 
         return ret;
@@ -2174,35 +2450,32 @@ test_single(IMB_MGR *enc_mgr, const IMB_ARCH enc_arch, IMB_MGR *dec_mgr, const I
                         /* Check for sensitive data first, then normal cross
                          * architecture validation */
                         if (safe_check) {
-                                int result;
+                                struct safe_check_ctx safe_ctx1 = { 0 };
+                                const int result1 = do_test(enc_mgr, enc_arch, dec_mgr, dec_arch,
+                                                            params, variant_data, &safe_ctx1, 0, 1);
+                                if (result1 == -2) {
+                                        generate_patterns();
 
-                                result = do_test(enc_mgr, enc_arch, dec_mgr, dec_arch, params,
-                                                 variant_data, 1, 0, 1);
-                                if (result < 0) {
-                                        uint32_t j;
+                                        struct safe_check_ctx safe_ctx2 = { 0 };
+                                        const int result2 =
+                                                do_test(enc_mgr, enc_arch, dec_mgr, dec_arch,
+                                                        params, variant_data, &safe_ctx2, 0, 1);
 
-                                        for (j = 0; j < safe_retries; j++) {
-                                                printf("=== Issue found. "
-                                                       "Checking again...\n");
-                                                generate_patterns();
-                                                result = do_test(enc_mgr, enc_arch, dec_mgr,
-                                                                 dec_arch, params, variant_data, 1,
-                                                                 0, 1);
-                                                if (result == 0)
-                                                        break;
-                                        }
-                                        if (result < 0) {
+                                        if (result2 == -2 &&
+                                            compare_match(&safe_ctx1, &safe_ctx2) == 0) {
                                                 if (verbose)
                                                         printf("FAIL\n");
-                                                printf("=== issue confirmed\n");
+                                                print_fail_context(enc_mgr, enc_arch, dec_mgr,
+                                                                   dec_arch, params, variant_data,
+                                                                   0, 1, 0, NULL, &safe_ctx2);
+                                                print_match(&safe_ctx2, safe_ctx2.dir_name);
                                                 exit(EXIT_FAILURE);
                                         }
-                                        printf("=== false positive\n");
                                 }
                         }
 
-                        if (do_test(enc_mgr, enc_arch, dec_mgr, dec_arch, params, variant_data, 0,
-                                    0, 1) < 0)
+                        if (do_test(enc_mgr, enc_arch, dec_mgr, dec_arch, params, variant_data,
+                                    NULL, 0, 1) < 0)
                                 exit(EXIT_FAILURE);
                 }
         }
