@@ -2299,6 +2299,12 @@ do_test(IMB_MGR *enc_mb_mgr, const IMB_ARCH enc_arch, IMB_MGR *dec_mb_mgr, const
                         goto exit;
                 }
         } else {
+                /*
+                 * In safe check mode results are expected not to match.
+                 * This is due to the fact that different arch implementations
+                 * use various key formats. This is particularly visible with
+                 * AES-GCM and its GHASH authentication function.
+                 */
                 for (i = 0; i < num_jobs; i++) {
                         int goto_exit = 0;
 
@@ -2472,11 +2478,11 @@ test_single(IMB_MGR *enc_mgr, const IMB_ARCH enc_arch, IMB_MGR *dec_mgr, const I
                                                 exit(EXIT_FAILURE);
                                         }
                                 }
+                        } else {
+                                if (do_test(enc_mgr, enc_arch, dec_mgr, dec_arch, params,
+                                            variant_data, NULL, 0, 1) < 0)
+                                        exit(EXIT_FAILURE);
                         }
-
-                        if (do_test(enc_mgr, enc_arch, dec_mgr, dec_arch, params, variant_data,
-                                    NULL, 0, 1) < 0)
-                                exit(EXIT_FAILURE);
                 }
         }
 }
