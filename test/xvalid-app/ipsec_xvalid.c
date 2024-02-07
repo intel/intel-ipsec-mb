@@ -809,6 +809,7 @@ struct safe_check_ctx {
         int rsp_check;
         size_t rsp_offset;
         void *rsp_ptr;
+        uint8_t rsp_buf[64];
 
         int mgr_check;
         size_t mgr_offset;
@@ -867,51 +868,58 @@ print_match_memory(const void *ptr, const size_t mem_size, const size_t offset,
 }
 
 static void
-print_match_type(const int check)
+print_match_stack(const struct safe_check_ctx *ctx)
+{
+        const uint8_t *ptr8 = (const uint8_t *) ctx->rsp_ptr;
+        const size_t len_to_print = 64;
+
+        fprintf(stderr, "RSP = %p, offset = %zu, effective address = %p\n", ptr8, ctx->rsp_offset,
+                &ptr8[ctx->rsp_offset]);
+
+        hexdump_ex(stderr, "STACK", ctx->rsp_buf, len_to_print, &ptr8[ctx->rsp_offset]);
+}
+
+static void
+print_match_type(const int check, const char *err_str)
 {
         if (check == FOUND_CIPHER_KEY)
-                fprintf(stderr, "Part of CIPHER_KEY found\n");
+                fprintf(stderr, "Part of CIPHER_KEY found when %s\n", err_str);
         else if (check == FOUND_AUTH_KEY)
-                fprintf(stderr, "Part of AUTH_KEY found\n");
+                fprintf(stderr, "Part of AUTH_KEY found when %s\n", err_str);
         else if (check == FOUND_TEXT)
-                fprintf(stderr, "Part of plain/cipher text found\n");
+                fprintf(stderr, "Part of plain/cipher text found when %s\n", err_str);
 }
 
 static void
 print_match(const struct safe_check_ctx *ctx, const char *err_str)
 {
         if (ctx->gps_check) {
-                fprintf(stderr, "%s\n", err_str);
-                print_match_type(ctx->gps_check);
+                print_match_type(ctx->gps_check, err_str);
                 print_match_gp(gps, ctx->gps_offset);
                 return;
         }
 
         if (ctx->simd_check) {
-                fprintf(stderr, "%s\n", err_str);
-                print_match_type(ctx->simd_check);
+                print_match_type(ctx->simd_check, err_str);
                 print_match_xyzmm(simd_regs, ctx->simd_offset, ctx->simd_reg_size,
                                   ctx->simd_reg_name);
                 return;
         }
 
         if (ctx->rsp_check) {
-                fprintf(stderr, "%s\n", err_str);
-                print_match_type(ctx->rsp_check);
-                print_match_memory(ctx->rsp_ptr, STACK_DEPTH, ctx->rsp_offset, "STACK/RSP");
+                print_match_type(ctx->rsp_check, err_str);
+                print_match_stack(ctx);
                 return;
         }
 
         if (ctx->mgr_check) {
-                fprintf(stderr, "%s\n", err_str);
-                print_match_type(ctx->mgr_check);
+                print_match_type(ctx->mgr_check, err_str);
                 print_match_memory(ctx->mgr_ptr, sizeof(IMB_MGR), ctx->mgr_offset, "IMB_MGR");
                 return;
         }
 
         if (ctx->ooo_check) {
-                fprintf(stderr, "%s\n", err_str);
-                print_match_type(ctx->ooo_check);
+                print_match_type(ctx->ooo_check, err_str);
                 print_match_memory(ctx->ooo_ptr, ctx->ooo_size, ctx->ooo_offset, ctx->ooo_name);
                 return;
         }
@@ -1726,7 +1734,7 @@ perform_safe_checks(IMB_MGR *mgr, const IMB_ARCH arch, struct safe_check_ctx *ct
 
         simd_ctx[arch].simd_dump_fn();
 
-        memset(ctx, 0, sizeof(*ctx));
+        nosimd_memset(ctx, 0, sizeof(*ctx));
 
         ctx->rsp_ptr = rsp_ptr;
         ctx->arch = arch;
@@ -1743,6 +1751,14 @@ perform_safe_checks(IMB_MGR *mgr, const IMB_ARCH arch, struct safe_check_ctx *ct
                 ctx->simd_reg_name = "xmm";
         }
 
+        ctx->rsp_check = search_patterns_ex((rsp_ptr - STACK_DEPTH), STACK_DEPTH, &ctx->rsp_offset);
+        if (ctx->rsp_check != 0) {
+                const uint8_t *sp = (const uint8_t *) (rsp_ptr - STACK_DEPTH);
+
+                nosimd_memcpy(ctx->rsp_buf, &sp[ctx->rsp_offset], sizeof(ctx->rsp_buf));
+                return -1;
+        }
+
         ctx->gps_check = search_patterns_ex(gps, GP_MEM_SIZE, &ctx->gps_offset);
         if (ctx->gps_check != 0)
                 return -1;
@@ -1750,10 +1766,6 @@ perform_safe_checks(IMB_MGR *mgr, const IMB_ARCH arch, struct safe_check_ctx *ct
         ctx->simd_check =
                 search_patterns_ex(simd_regs, simd_ctx[arch].simd_set_size, &ctx->simd_offset);
         if (ctx->simd_check != 0)
-                return -1;
-
-        ctx->rsp_check = search_patterns_ex((rsp_ptr - STACK_DEPTH), STACK_DEPTH, &ctx->rsp_offset);
-        if (ctx->rsp_check != 0)
                 return -1;
 
         ctx->mgr_check = search_patterns_ex(mgr, sizeof(*mgr), &ctx->mgr_offset);
