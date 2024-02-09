@@ -696,60 +696,6 @@ generate_patterns(void)
 }
 
 /*
- * Searches across a block of memory if a pattern is present
- * (indicating there is some left over sensitive data)
- *
- * Returns 0 if pattern is present or -1 if not present
- */
-static int
-search_patterns(const void *ptr, const size_t mem_size)
-{
-        const uint8_t *ptr8 = (const uint8_t *) ptr;
-        const size_t limit = mem_size - sizeof(uint64_t);
-        const char *err_str = "";
-        int ret = -1;
-        size_t i;
-
-        if (mem_size < sizeof(uint64_t)) {
-                fprintf(stderr, "Invalid mem_size arg!\n");
-                return -1;
-        }
-
-        for (i = 0; i <= limit; i++) {
-                const uint64_t string = *((const uint64_t *) &ptr8[i]);
-
-                if (string == pattern8_cipher_key) {
-                        err_str = "Part of CIPHER_KEY is present";
-                        ret = 0;
-                } else if (string == pattern8_auth_key) {
-                        err_str = "Part of AUTH_KEY is present";
-                        ret = 0;
-                } else if (string == pattern8_plain_text) {
-                        err_str = "Part of plain/ciphertext is present";
-                        ret = 0;
-                }
-
-                if (ret != -1)
-                        break;
-        }
-
-        if (ret != -1) {
-                static uint8_t tb[64];
-                const size_t len_to_print = (mem_size - i) > sizeof(tb) ? sizeof(tb) : mem_size - i;
-
-                nosimd_memcpy(tb, &ptr8[i], len_to_print);
-
-                fprintf(stderr, "%s\n", err_str);
-                fprintf(stderr, "Offset = %zu bytes, Addr = %p, RSP = %p\n", i, &ptr8[i], rdrsp());
-
-                hexdump_ex(stderr, NULL, tb, len_to_print, &ptr8[i]);
-                return 0;
-        }
-
-        return -1;
-}
-
-/*
  * @brief Searches across a block of memory if a pattern is present
  *        (indicating there is some left over sensitive data)
  *
@@ -793,6 +739,8 @@ search_patterns_ex(const void *ptr, const size_t mem_size, size_t *offset)
 }
 
 struct safe_check_ctx {
+        int key_exp_phase;
+
         IMB_ARCH arch;
         const char *dir_name;
         unsigned job_idx;
@@ -828,13 +776,11 @@ print_match_gp(const void *ptr, const size_t offset)
         const char *reg_str[] = { "rax", "rbx", "rcx", "rdx", "rdi", "rsi", "r8",
                                   "r9",  "r10", "r11", "r12", "r13", "r14", "r15" };
         const uint8_t *ptr8 = (const uint8_t *) ptr;
-        static uint8_t tb[8];
         const size_t len_to_print = 8;
         const size_t reg_idx = offset / 8;
         const char *reg_name = (reg_idx < DIM(reg_str)) ? reg_str[reg_idx] : "<unknown>";
 
-        nosimd_memcpy(tb, &ptr8[offset & ~7], len_to_print);
-        hexdump_ex(stderr, reg_name, tb, len_to_print, NULL);
+        hexdump_ex(stderr, reg_name, &ptr8[offset & ~7], len_to_print, NULL);
 }
 
 static void
@@ -842,16 +788,13 @@ print_match_xyzmm(const void *ptr, const size_t offset, const size_t simd_size,
                   const char *simd_name)
 {
         const uint8_t *ptr8 = (const uint8_t *) ptr;
-        static uint8_t tb[64];
         const size_t len_to_print = simd_size;
         const size_t reg_idx = offset / simd_size;
         char reg_name[8];
 
-        nosimd_memcpy(tb, &ptr8[reg_idx * simd_size], len_to_print);
-
-        memset(reg_name, 0, sizeof(reg_name));
+        nosimd_memset(reg_name, 0, sizeof(reg_name));
         snprintf(reg_name, sizeof(reg_name) - 1, "%s%zu", simd_name, reg_idx);
-        hexdump_ex(stderr, reg_name, tb, len_to_print, NULL);
+        hexdump_ex(stderr, reg_name, &ptr8[reg_idx * simd_size], len_to_print, NULL);
 }
 
 static void
@@ -928,6 +871,8 @@ print_match(const struct safe_check_ctx *ctx, const char *err_str)
 static int
 compare_match(const struct safe_check_ctx *a, const struct safe_check_ctx *b)
 {
+        if (a->key_exp_phase != b->key_exp_phase)
+                return 1;
         if (a->arch != b->arch)
                 return 1;
         if (a->dir_name != b->dir_name)
@@ -1705,7 +1650,7 @@ perform_safe_checks(IMB_MGR *mgr, const IMB_ARCH arch, struct safe_check_ctx *ct
         } simd_ctx[] = {
                 { 0, NULL },                     /* none */
                 { XMM_MEM_SIZE, dump_xmms_sse }, /* no aesni */
-                { XMM_MEM_SIZE, dump_xmms_avx }, /* sse */
+                { XMM_MEM_SIZE, dump_xmms_sse }, /* sse */
                 { XMM_MEM_SIZE, dump_xmms_avx }, /* avx */
                 { YMM_MEM_SIZE, dump_ymms },     /* avx2 */
                 { ZMM_MEM_SIZE, dump_zmms }      /* avx512 */
@@ -1716,16 +1661,7 @@ perform_safe_checks(IMB_MGR *mgr, const IMB_ARCH arch, struct safe_check_ctx *ct
         if (ctx == NULL)
                 return -2;
 
-        switch (arch) {
-        case IMB_ARCH_SSE:
-        case IMB_ARCH_NOAESNI:
-        case IMB_ARCH_AVX:
-        case IMB_ARCH_AVX2:
-        case IMB_ARCH_AVX512:
-                break;
-        case IMB_ARCH_NONE:
-        case IMB_ARCH_NUM:
-        default:
+        if (arch == IMB_ARCH_NONE || arch >= IMB_ARCH_NUM) {
                 fprintf(stderr, "Invalid architecture!\n");
                 return -2;
         }
@@ -1773,56 +1709,71 @@ perform_safe_checks(IMB_MGR *mgr, const IMB_ARCH arch, struct safe_check_ctx *ct
                 return -1;
 
         /* search OOO managers */
-        void **ooo_ptr = &mgr->aes128_ooo;
+        static const char *const ooo_names[] = {
+                "aes128_ooo",
+                "aes192_ooo",
+                "aes256_ooo",
+                "docsis128_sec_ooo",
+                "docsis128_crc32_sec_ooo",
+                "docsis256_sec_ooo",
+                "docsis256_crc32_sec_ooo",
+                "des_enc_ooo",
+                "des_dec_ooo",
+                "des3_enc_ooo",
+                "des3_dec_ooo",
+                "docsis_des_enc_ooo",
+                "docsis_des_dec_ooo",
+                "hmac_sha_1_ooo",
+                "hmac_sha_224_ooo",
+                "hmac_sha_256_ooo",
+                "hmac_sha_384_ooo",
+                "hmac_sha_512_ooo",
+                "hmac_md5_ooo",
+                "aes_xcbc_ooo",
+                "aes_ccm_ooo",
+                "aes_cmac_ooo",
+                "zuc_eea3_ooo",
+                "zuc_eia3_ooo",
+                "aes128_cbcs_ooo",
+                "zuc256_eea3_ooo",
+                "zuc256_eia3_ooo",
+                "aes256_ccm_ooo",
+                "aes256_cmac_ooo",
+                "snow3g_uea2_ooo",
+                "snow3g_uia2_ooo",
+                "sha_1_ooo",
+                "sha_224_ooo",
+                "sha_256_ooo",
+                "sha_384_ooo",
+                "sha_512_ooo",
+                "end_ooo" /* add new ooo manager above this line */
+        };
+        static size_t ooo_size[64] = { 0 };
+        static int ooo_size_set = 0;
+        void **ooo_ptr = NULL;
 
+        IMB_ASSERT(IMB_DIM(ooo_names) <= IMB_DIM(ooo_size));
+
+        if (ooo_size_set == 0) {
+                ooo_ptr = &mgr->aes128_ooo;
+                for (unsigned i = 0; ooo_ptr < &mgr->end_ooo; ooo_ptr++, i++) {
+                        void *ooo_mgr_p = *ooo_ptr;
+
+                        ooo_size[i] = get_ooo_mgr_size(ooo_mgr_p, i);
+                }
+
+                ooo_size_set = 1;
+        }
+
+        ooo_ptr = &mgr->aes128_ooo;
         for (unsigned i = 0; ooo_ptr < &mgr->end_ooo; ooo_ptr++, i++) {
-                static const char *const ooo_names[] = {
-                        "aes128_ooo",
-                        "aes192_ooo",
-                        "aes256_ooo",
-                        "docsis128_sec_ooo",
-                        "docsis128_crc32_sec_ooo",
-                        "docsis256_sec_ooo",
-                        "docsis256_crc32_sec_ooo",
-                        "des_enc_ooo",
-                        "des_dec_ooo",
-                        "des3_enc_ooo",
-                        "des3_dec_ooo",
-                        "docsis_des_enc_ooo",
-                        "docsis_des_dec_ooo",
-                        "hmac_sha_1_ooo",
-                        "hmac_sha_224_ooo",
-                        "hmac_sha_256_ooo",
-                        "hmac_sha_384_ooo",
-                        "hmac_sha_512_ooo",
-                        "hmac_md5_ooo",
-                        "aes_xcbc_ooo",
-                        "aes_ccm_ooo",
-                        "aes_cmac_ooo",
-                        "zuc_eea3_ooo",
-                        "zuc_eia3_ooo",
-                        "aes128_cbcs_ooo",
-                        "zuc256_eea3_ooo",
-                        "zuc256_eia3_ooo",
-                        "aes256_ccm_ooo",
-                        "aes256_cmac_ooo",
-                        "snow3g_uea2_ooo",
-                        "snow3g_uia2_ooo",
-                        "sha_1_ooo",
-                        "sha_224_ooo",
-                        "sha_256_ooo",
-                        "sha_384_ooo",
-                        "sha_512_ooo",
-                        "end_ooo" /* add new ooo manager above this line */
-                };
                 void *ooo_mgr_p = *ooo_ptr;
-                const size_t ooo_size = get_ooo_mgr_size(ooo_mgr_p, i);
 
-                ctx->ooo_check = search_patterns_ex(ooo_mgr_p, ooo_size, &ctx->ooo_offset);
+                ctx->ooo_check = search_patterns_ex(ooo_mgr_p, ooo_size[i], &ctx->ooo_offset);
                 if (ctx->ooo_check != 0) {
                         ctx->ooo_ptr = ooo_mgr_p;
                         ctx->ooo_name = ooo_names[i];
-                        ctx->ooo_size = ooo_size;
+                        ctx->ooo_size = ooo_size[i];
                         return -1;
                 }
         }
@@ -1872,7 +1823,7 @@ post_job(IMB_MGR *mgr, IMB_JOB *job, unsigned *num_processed_jobs, const struct 
 }
 
 static void
-set_job_ctx(struct job_ctx *ctx, const int imix, const int safe_check,
+set_job_ctx(struct job_ctx *ctx, const unsigned imix, const unsigned safe_check,
             const struct params_s *params, uint8_t *in_digest, uint8_t *out_digest,
             uint8_t tag_size, uint8_t *test_buf, uint8_t *src_dst_buf)
 {
@@ -2069,10 +2020,11 @@ print_fail_context(IMB_MGR *enc_mb_mgr, const IMB_ARCH enc_arch, IMB_MGR *dec_mb
 {
         printf("Failures in\n");
         print_algo_info(params);
-        printf("Encrypting ");
+        printf("\nEncrypting ");
         print_tested_arch(enc_mb_mgr->features, enc_arch);
-        printf("Decrypting ");
+        printf("\nDecrypting ");
         print_tested_arch(dec_mb_mgr->features, dec_arch);
+        printf("\n");
         /*
          * Print buffer size info if the failure was caused by an actual job,
          * where "idx" indicates the index of the job failing
@@ -2115,7 +2067,6 @@ do_test(IMB_MGR *enc_mb_mgr, const IMB_ARCH enc_arch, IMB_MGR *dec_mb_mgr, const
         int ret = -1;
         struct cipher_auth_keys *enc_keys = &data->enc_keys;
         struct cipher_auth_keys *dec_keys = &data->dec_keys;
-        /* unsigned int num_processed_jobs = 0; */
         uint8_t next_iv[IMB_AES_BLOCK_SIZE];
         const unsigned safe_check = (p_safe_check != NULL);
 
@@ -2152,19 +2103,13 @@ do_test(IMB_MGR *enc_mb_mgr, const IMB_ARCH enc_arch, IMB_MGR *dec_mb_mgr, const
          * expansion functions.
          */
         if (safe_check) {
-                uint8_t *rsp_ptr;
-
-                /* Clear scratch registers before expanding keys to prevent
-                 * other functions from storing sensitive data in stack
-                 */
                 if (prepare_keys(enc_mb_mgr, enc_keys, data->ciph_key, data->auth_key, params, 0) <
                     0)
                         goto exit;
 
-                rsp_ptr = rdrsp();
-                if (search_patterns((rsp_ptr - STACK_DEPTH), STACK_DEPTH) == 0) {
-                        fprintf(stderr, "Pattern found in stack after "
-                                        "expanding encryption keys\n");
+                if (perform_safe_checks(enc_mb_mgr, enc_arch, p_safe_check,
+                                        "expanding encryption keys") < 0) {
+                        p_safe_check->key_exp_phase = 1;
                         ret = -2;
                         goto exit;
                 }
@@ -2173,10 +2118,9 @@ do_test(IMB_MGR *enc_mb_mgr, const IMB_ARCH enc_arch, IMB_MGR *dec_mb_mgr, const
                     0)
                         goto exit;
 
-                rsp_ptr = rdrsp();
-                if (search_patterns((rsp_ptr - STACK_DEPTH), STACK_DEPTH) == 0) {
-                        fprintf(stderr, "Pattern found in stack after "
-                                        "expanding decryption keys\n");
+                if (perform_safe_checks(dec_mb_mgr, dec_arch, p_safe_check,
+                                        "expanding decryption keys") < 0) {
+                        p_safe_check->key_exp_phase = 1;
                         ret = -2;
                         goto exit;
                 }
