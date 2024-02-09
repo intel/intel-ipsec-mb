@@ -33,6 +33,7 @@
 #include <intel-ipsec-mb.h>
 #include "include/error.h"
 #include "include/sm3.h"
+#include "include/memcpy.h"
 
 IMB_DLL_EXPORT
 void
@@ -102,7 +103,7 @@ imb_hmac_ipad_opad(IMB_MGR *mb_mgr, const IMB_HASH_ALG sha_type, const void *pke
 
         /* prepare the key */
         if (local_key_len == key_len) {
-                memcpy(key, pkey, key_len);
+                safe_memcpy(key, pkey, key_len);
         } else
                 switch (sha_type) {
                 case IMB_AUTH_HMAC_SHA_1:
