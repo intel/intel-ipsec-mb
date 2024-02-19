@@ -133,7 +133,7 @@ For more build options and their explanation run:
 
 ### Building with CMake (experimental)
 
-Minimum CMake version: 3.16
+Minimum CMake version: 3.18
 
 Create build directory:
 ```
