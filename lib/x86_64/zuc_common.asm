@@ -235,9 +235,10 @@ mksection .text
     shr         rbx, 31
     add         rax, rbx
 
-    mov rbx, rax
-    sub rbx, 0x7FFFFFFF
-    cmovns rax, rbx
+    mov         rbx, rax
+    and         rax, 0x7FFFFFFF
+    shr         rbx, 31
+    add         rax, rbx
 
     ; LFSR_S16 = (LFSR_S15++) = eax
     mov         [rsi + (( 0 + %1) % 16)*4], eax
