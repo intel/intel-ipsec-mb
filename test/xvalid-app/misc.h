@@ -82,6 +82,12 @@ nosimd_memcpy(void *dst, const void *src, size_t n);
 uint32_t
 avx_sse_transition_check(void);
 
+/*
+ * Quick search for patterns in memory (AVX2)
+ */
+uint64_t
+mem_search_avx2(const void *ptr, const size_t size);
+
 #define MISC_AVX_SSE_YMM0_15_ISSUE (1 << 2)
 #define MISC_AVX_SSE_ZMM0_15_ISSUE (1 << 6)
 #define MISC_AVX_SSE_ISSUE         (MISC_AVX_SSE_YMM0_15_ISSUE | MISC_AVX_SSE_ZMM0_15_ISSUE)

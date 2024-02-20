@@ -97,9 +97,9 @@
 static int pattern_auth_key;
 static int pattern_cipher_key;
 static int pattern_plain_text;
-static uint64_t pattern8_auth_key;
-static uint64_t pattern8_cipher_key;
-static uint64_t pattern8_plain_text;
+uint64_t pattern8_auth_key;
+uint64_t pattern8_cipher_key;
+uint64_t pattern8_plain_text;
 
 #define MAX_OOO_MGR_SIZE 8192
 
@@ -712,17 +712,12 @@ generate_patterns(void)
  * @retval FOUND_TEXT fragment of TEXT found
  */
 static int
-search_patterns_ex(const void *ptr, const size_t mem_size, size_t *offset)
+search_patterns(const void *ptr, const size_t mem_size, size_t *offset)
 {
         const uint8_t *ptr8 = (const uint8_t *) ptr;
         const size_t limit = mem_size - sizeof(uint64_t);
 
-        if (mem_size < sizeof(uint64_t) || offset == NULL)
-                return 0;
-
-        *offset = 0;
-
-        for (size_t i = 0; i <= limit; i++) {
+        for (size_t i = *offset; i <= limit; i++) {
                 const uint64_t string = *((const uint64_t *) &ptr8[i]);
 
                 if (string == pattern8_cipher_key) {
@@ -742,6 +737,47 @@ search_patterns_ex(const void *ptr, const size_t mem_size, size_t *offset)
         }
 
         return 0;
+}
+
+/*
+ * @brief Searches across a block of memory if a pattern is present
+ *        (indicating there is some left over sensitive data)
+ *
+ * @return search status
+ * @retval 0 nothing found
+ * @retval FOUND_CIPHER_KEY fragment of CIPHER_KEY found
+ * @retval FOUND_AUTH_KEY fragment of AUTH_KEY found
+ * @retval FOUND_TEXT fragment of TEXT found
+ */
+static int
+search_patterns_ex(const void *ptr, const size_t mem_size, size_t *offset)
+{
+        static uint32_t avx2_check = UINT32_MAX;
+
+        if (mem_size < sizeof(uint64_t) || offset == NULL)
+                return 0;
+
+        *offset = 0;
+
+        if (avx2_check == UINT32_MAX) {
+                /* Check presence of AVX2 - bit 5 of EBX, leaf 7, subleaf 0 */
+                struct misc_cpuid_regs r = { 0 };
+
+                misc_cpuid(7, 0, &r);
+                avx2_check = r.ebx & (1UL << 5);
+        }
+
+        if (avx2_check)
+                if (mem_search_avx2(ptr, mem_size) == 0ULL)
+                        return 0;
+
+        /*
+         * If AVX2 fast search reports a problem then run the slow check
+         * - also run slow check if AVX2 not available
+         */
+        const size_t limit = mem_size - sizeof(uint64_t);
+
+        return search_patterns(ptr, limit, offset);
 }
 
 struct safe_check_ctx {

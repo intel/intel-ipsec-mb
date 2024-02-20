@@ -27,6 +27,7 @@
 ;  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+%use smartalign
 
 %ifdef LINUX
 ;;; macro to declare global symbols
@@ -66,6 +67,22 @@
 %define arg4d   r9d
 %endif
 
+;; External symbols
+extern pattern8_cipher_key
+extern pattern8_auth_key
+extern pattern8_plain_text
+
+;; Data section
+section .data
+default rel
+
+align 16
+        db 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07
+shiftr:
+        db 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff
+        db 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff
+
+
 section .bss
 default rel
 
@@ -78,6 +95,286 @@ alignb 64
 simd_regs:	resb	32*64
 
 section .text
+
+;; ymm0 [in] pattern 1
+;; ymm1 [in] pattern 2
+;; ymm2 [in] pattern 3
+;; xmm11 [in] data block (old)
+;; xmm12 [in] data block (new)
+;; ymm8 [in/out] - mask for pattern 1 matches
+;; ymm9 [in/out] - mask for pattern 2 matches
+;; ymm10 [in/out] - mask for pattern 3 matches
+;; clobbers ymm3-ymm6
+align 32
+mem_search_helper_avx:
+        vpalignr        xmm3, xmm12, xmm11, 9
+        vpcmpeqq        xmm4, xmm0, xmm3
+        vpcmpeqq        xmm5, xmm1, xmm3
+        vpcmpeqq        xmm6, xmm2, xmm3
+        vpor            ymm8, ymm8, ymm4
+        vpor            ymm9, ymm9, ymm5
+        vpor            ymm10, ymm10, ymm6
+
+        vpalignr        xmm3, xmm12, xmm11, 10
+        vpcmpeqq        xmm4, xmm0, xmm3
+        vpcmpeqq        xmm5, xmm1, xmm3
+        vpcmpeqq        xmm6, xmm2, xmm3
+        vpor            ymm8, ymm8, ymm4
+        vpor            ymm9, ymm9, ymm5
+        vpor            ymm10, ymm10, ymm6
+
+        vpalignr        xmm3, xmm12, xmm11, 11
+        vpcmpeqq        xmm4, xmm0, xmm3
+        vpcmpeqq        xmm5, xmm1, xmm3
+        vpcmpeqq        xmm6, xmm2, xmm3
+        vpor            ymm8, ymm8, ymm4
+        vpor            ymm9, ymm9, ymm5
+        vpor            ymm10, ymm10, ymm6
+
+        vpalignr        xmm3, xmm12, xmm11, 12
+        vpcmpeqq        xmm4, xmm0, xmm3
+        vpcmpeqq        xmm5, xmm1, xmm3
+        vpcmpeqq        xmm6, xmm2, xmm3
+        vpor            ymm8, ymm8, ymm4
+        vpor            ymm9, ymm9, ymm5
+        vpor            ymm10, ymm10, ymm6
+
+        vpalignr        xmm3, xmm12, xmm11, 13
+        vpcmpeqq        xmm4, xmm0, xmm3
+        vpcmpeqq        xmm5, xmm1, xmm3
+        vpcmpeqq        xmm6, xmm2, xmm3
+        vpor            ymm8, ymm8, ymm4
+        vpor            ymm9, ymm9, ymm5
+        vpor            ymm10, ymm10, ymm6
+
+        vpalignr        xmm3, xmm12, xmm11, 14
+        vpcmpeqq        xmm4, xmm0, xmm3
+        vpcmpeqq        xmm5, xmm1, xmm3
+        vpcmpeqq        xmm6, xmm2, xmm3
+        vpor            ymm8, ymm8, ymm4
+        vpor            ymm9, ymm9, ymm5
+        vpor            ymm10, ymm10, ymm6
+
+        vpalignr        xmm3, xmm12, xmm11, 15
+        vpcmpeqq        xmm4, xmm0, xmm3
+        vpcmpeqq        xmm5, xmm1, xmm3
+        vpcmpeqq        xmm6, xmm2, xmm3
+        vpor            ymm8, ymm8, ymm4
+        vpor            ymm9, ymm9, ymm5
+        vpor            ymm10, ymm10, ymm6
+
+        vpcmpeqq        xmm4, xmm0, xmm12
+        vpcmpeqq        xmm5, xmm1, xmm12
+        vpcmpeqq        xmm6, xmm2, xmm12
+        vpor            ymm8, ymm8, ymm4
+        vpor            ymm9, ymm9, ymm5
+        vpor            ymm10, ymm10, ymm6
+        ret
+
+;; Loads 0 to 8 bytes (arg2) from arg1 location
+;; arg1 [in] current data pointer
+;; arg2 [in] number of bytes to load
+;; r15  [clobbered] temporary register
+;; xmm5 [out] read data block (1 to 7 bytes)
+;; xmm6 [clobbered] temporary read
+align 32
+mem_search_load_0_to_8_bytes:
+        ;; read the rest of the bytes in the buffer
+        ;; - read 8 from the end and remove overlapping bytes
+        ;; - it is safe to do this read because message length is
+        ;;   guaranteed to be >= 8 bytes
+        lea             r15, [arg1 + arg2]
+        vmovq           xmm5, [r15 - 8]
+
+        lea             r15, [shiftr]
+        sub             r15, arg2
+        vmovdqu         xmm6, [r15]
+        vpshufb         xmm5, xmm5, xmm6
+        ret
+
+;; uint64_t mem_search_avx2(const void *mem, const size_t size)
+MKGLOBAL(mem_search_avx2,function,)
+align 32
+mem_search_avx2:
+        push            r12
+        push            r13
+        push            r14
+        push            r15
+
+%ifdef WIN_ABI
+        sub             rsp, 7 * 16
+        vmovdqu         [rsp + 0*16], xmm6
+        vmovdqu         [rsp + 1*16], xmm7
+        vmovdqu         [rsp + 2*16], xmm8
+        vmovdqu         [rsp + 3*16], xmm9
+        vmovdqu         [rsp + 4*16], xmm10
+        vmovdqu         [rsp + 5*16], xmm11
+        vmovdqu         [rsp + 6*16], xmm12
+%endif
+        ;; clear result registers first; this is to return 0 if length is < 8
+        vpxor           ymm8, ymm8, ymm8
+        vpxor           ymm9, ymm9, ymm9
+        vpxor           ymm10, ymm10, ymm10
+
+        ;; quick length check
+        cmp             arg2, 8
+        jb              .exit
+
+        ;; prepare data for the main loop
+        vpxor           xmm11, xmm11, xmm11     ;; clear the data block (old)
+        vpxor           xmm12, xmm12, xmm12     ;; clear the data block (new)
+
+        vpbroadcastq    ymm0, [pattern8_cipher_key]
+        vpbroadcastq    ymm1, [pattern8_auth_key]
+        vpbroadcastq    ymm2, [pattern8_plain_text]
+
+        cmp             arg2, 32 + 8
+        jb              .loop16
+
+align 32
+.loop32:
+        vmovdqu         ymm11, [arg1]
+
+        vextracti128    xmm12, ymm11, 1
+        vmovq           xmm3, [arg1 + 32]
+        vinserti128     ymm12, xmm3, 1
+
+        vpcmpeqq        ymm4, ymm0, ymm11
+        vpcmpeqq        ymm5, ymm1, ymm11
+        vpcmpeqq        ymm6, ymm2, ymm11
+        vpor            ymm8, ymm8, ymm4
+        vpor            ymm9, ymm9, ymm5
+        vpor            ymm10, ymm10, ymm6
+
+        vpalignr        ymm3, ymm12, ymm11, 1
+        vpcmpeqq        ymm4, ymm0, ymm3
+        vpcmpeqq        ymm5, ymm1, ymm3
+        vpcmpeqq        ymm6, ymm2, ymm3
+        vpor            ymm8, ymm8, ymm4
+        vpor            ymm9, ymm9, ymm5
+        vpor            ymm10, ymm10, ymm6
+
+        vpalignr        ymm3, ymm12, ymm11, 2
+        vpcmpeqq        ymm4, ymm0, ymm3
+        vpcmpeqq        ymm5, ymm1, ymm3
+        vpcmpeqq        ymm6, ymm2, ymm3
+        vpor            ymm8, ymm8, ymm4
+        vpor            ymm9, ymm9, ymm5
+        vpor            ymm10, ymm10, ymm6
+
+        vpalignr        ymm3, ymm12, ymm11, 3
+        vpcmpeqq        ymm4, ymm0, ymm3
+        vpcmpeqq        ymm5, ymm1, ymm3
+        vpcmpeqq        ymm6, ymm2, ymm3
+        vpor            ymm8, ymm8, ymm4
+        vpor            ymm9, ymm9, ymm5
+        vpor            ymm10, ymm10, ymm6
+
+        vpalignr        ymm3, ymm12, ymm11, 4
+        vpcmpeqq        ymm4, ymm0, ymm3
+        vpcmpeqq        ymm5, ymm1, ymm3
+        vpcmpeqq        ymm6, ymm2, ymm3
+        vpor            ymm8, ymm8, ymm4
+        vpor            ymm9, ymm9, ymm5
+        vpor            ymm10, ymm10, ymm6
+
+        vpalignr        ymm3, ymm12, ymm11, 5
+        vpcmpeqq        ymm4, ymm0, ymm3
+        vpcmpeqq        ymm5, ymm1, ymm3
+        vpcmpeqq        ymm6, ymm2, ymm3
+        vpor            ymm8, ymm8, ymm4
+        vpor            ymm9, ymm9, ymm5
+        vpor            ymm10, ymm10, ymm6
+
+        vpalignr        ymm3, ymm12, ymm11, 6
+        vpcmpeqq        ymm4, ymm0, ymm3
+        vpcmpeqq        ymm5, ymm1, ymm3
+        vpcmpeqq        ymm6, ymm2, ymm3
+        vpor            ymm8, ymm8, ymm4
+        vpor            ymm9, ymm9, ymm5
+        vpor            ymm10, ymm10, ymm6
+
+        vpalignr        ymm3, ymm12, ymm11, 7
+        vpcmpeqq        ymm4, ymm0, ymm3
+        vpcmpeqq        ymm5, ymm1, ymm3
+        vpcmpeqq        ymm6, ymm2, ymm3
+        vpor            ymm8, ymm8, ymm4
+        vpor            ymm9, ymm9, ymm5
+        vpor            ymm10, ymm10, ymm6
+
+        add             arg1, 32
+        sub             arg2, 32
+        cmp             arg2, 32 + 8
+        jae             .loop32
+
+        vmovdqu         xmm11, [arg1 - 16]
+
+.loop16:
+        cmp             arg2, 16
+        jb              .process_below_16bytes
+        vmovdqu         xmm12, [arg1]
+        call            mem_search_helper_avx
+        vmovdqa         xmm11, xmm12
+        add             arg1, 16
+        sub             arg2, 16
+        jmp             .loop16
+
+.process_below_16bytes:
+        or              arg2, arg2
+        jz              .exit
+
+        cmp             arg2, 8
+        jb              .process_below_8bytes
+
+        ;; load 8 bytes
+        vmovq           xmm4, [arg1]
+        add             arg1, 8
+        sub             arg2, 8
+        ;; xmm4 = MSB [ ZERO 64-bit | full 64-bit data block ] LSB
+        jz              .run_final_check
+        ;; load bytes 9 to 15
+        call            mem_search_load_0_to_8_bytes
+        vpunpcklqdq     xmm4, xmm4, xmm5
+        ;; xmm4 = MSB [ partial 64-bit data block | full 64-bit data block ] LSB
+        jmp             .run_final_check
+
+.process_below_8bytes:
+        call            mem_search_load_0_to_8_bytes
+        vmovdqa         xmm4, xmm5
+        ;; xmm4 = MSB [ ZERO 64-bits | partial 64-bit data block ] LSB
+        ;; fall through to run the final check
+
+.run_final_check:
+        vmovdqa         xmm12, xmm4
+        call            mem_search_helper_avx
+
+.exit:
+        ;; fold the result masks to get the return status
+        vpmovmskb       eax, ymm8
+        vpmovmskb       r12d, ymm9
+        vpmovmskb       r13d, ymm10
+        or              eax, r12d
+        or              eax, r13d
+
+        vzeroupper
+
+        ;; rax == 0 OK
+        ;; rax != 0 match found (RAX = address to start precise scalar check)
+%ifdef WIN_ABI
+        vmovdqu         xmm6, [rsp + 0*16]
+        vmovdqu         xmm7, [rsp + 1*16]
+        vmovdqu         xmm8, [rsp + 2*16]
+        vmovdqu         xmm9, [rsp + 3*16]
+        vmovdqu         xmm10, [rsp + 4*16]
+        vmovdqu         xmm11, [rsp + 5*16]
+        vmovdqu         xmm12, [rsp + 6*16]
+        add             rsp, 7 * 16
+%endif
+        pop             r15
+        pop             r14
+        pop             r13
+        pop             r12
+        ret
 
 ;; uint32_t avx_sse_transition_check(void)
 MKGLOBAL(avx_sse_transition_check,function,)
