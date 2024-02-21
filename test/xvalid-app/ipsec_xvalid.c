@@ -677,6 +677,10 @@ clear_data(struct data *data)
 static void
 generate_patterns(void)
 {
+        const int old_auth_key = pattern_auth_key;
+        const int old_cipher_key = pattern_cipher_key;
+        const int old_plain_text = pattern_plain_text;
+
         /* randomize fill values - make sure they are unique and non-zero */
         do {
                 pattern_auth_key = rand() & 255;
@@ -684,7 +688,9 @@ generate_patterns(void)
                 pattern_plain_text = rand() & 255;
         } while (pattern_auth_key == pattern_cipher_key || pattern_auth_key == pattern_plain_text ||
                  pattern_cipher_key == pattern_plain_text || pattern_auth_key == 0 ||
-                 pattern_cipher_key == 0 || pattern_plain_text == 0);
+                 pattern_cipher_key == 0 || pattern_plain_text == 0 ||
+                 pattern_auth_key == old_auth_key || pattern_cipher_key == old_cipher_key ||
+                 pattern_plain_text == old_plain_text);
 
         nosimd_memset(&pattern8_auth_key, pattern_auth_key, sizeof(pattern8_auth_key));
         nosimd_memset(&pattern8_cipher_key, pattern_cipher_key, sizeof(pattern8_cipher_key));
