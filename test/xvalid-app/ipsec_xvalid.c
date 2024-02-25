@@ -701,7 +701,7 @@ generate_patterns(void)
                pattern_auth_key, pattern_cipher_key, pattern_plain_text);
 }
 
-/*
+/**
  * @brief Searches across a block of memory if a pattern is present
  *        (indicating there is some left over sensitive data)
  *
@@ -739,7 +739,154 @@ search_patterns(const void *ptr, const size_t mem_size, size_t *offset)
         return 0;
 }
 
+/**
+ * @brief Tests memory pattern search function for specific buffer size
+ *
+ * @param [in] cb_size size of the test buffer
+ * @param [in] pattern byte pattern to be used in the test
+ *
+ * @return Test status
+ * @retval 0 OK
+ * @retval -1 Test case 1 failed
+ * @retval -2 Test case 2 failed
+ * @retval -3 Test case 3 failed
+ */
+static int
+mem_search_avx2_test_case(const size_t cb_size, const int pattern)
+{
+        uint8_t *cb = malloc(cb_size);
+        int ret = 0;
+
+        if (cb == NULL)
+                return -100;
+
+        size_t i = 0;
+
+        /* test 1: pattern shrinks from start to the end */
+        for (i = 0; i < cb_size; i++) {
+                const size_t current_sz = cb_size - i;
+                uint8_t *p = &cb[i];
+
+                if (i != 0)
+                        nosimd_memset(cb, 0, i);
+                nosimd_memset(p, pattern, current_sz);
+
+                const uint64_t r1 = mem_search_avx2(cb, cb_size);
+
+                if (current_sz >= sizeof(uint64_t) && r1 == 0ULL) {
+                        ret = -1;
+                        break;
+                }
+
+                const uint64_t r2 = mem_search_avx2(p, current_sz);
+
+                if (current_sz >= sizeof(uint64_t) && r2 == 0ULL) {
+                        ret = -1;
+                        break;
+                }
+        }
+
+        /* test 2: pattern grows from end to start */
+        for (i = 0; (ret == 0) && (i < cb_size); i++) {
+                const size_t current_sz = cb_size - i;
+                uint8_t *p = &cb[current_sz];
+
+                nosimd_memset(cb, 0, current_sz);
+                if (i != 0)
+                        nosimd_memset(p, pattern, i);
+
+                const uint64_t r1 = mem_search_avx2(cb, cb_size);
+
+                if (i >= sizeof(uint64_t) && r1 == 0ULL) {
+                        ret = -2;
+                        break;
+                }
+
+                const uint64_t r2 = mem_search_avx2(p, i);
+
+                if (i >= sizeof(uint64_t) && r2 == 0ULL) {
+                        ret = -2;
+                        break;
+                }
+        }
+
+        /* test 3: moving and growing pattern */
+        for (i = 0; (ret == 0) && (i < cb_size); i++) {
+                const size_t current_sz = cb_size - i;
+                uint8_t *p = &cb[i];
+
+                for (size_t j = 1; (ret == 0) && (j < current_sz); j++) {
+                        if ((i + j) > cb_size)
+                                break;
+
+                        nosimd_memset(cb, 0, cb_size);
+                        nosimd_memset(p, pattern, j);
+
+                        const uint64_t r1 = mem_search_avx2(cb, cb_size);
+
+                        if (j >= sizeof(uint64_t) && r1 == 0ULL) {
+                                ret = -3;
+                                break;
+                        }
+
+                        const uint64_t r2 = mem_search_avx2(p, current_sz);
+
+                        if (j >= sizeof(uint64_t) && r2 == 0ULL) {
+                                ret = -3;
+                                break;
+                        }
+                }
+        }
+
+        free(cb);
+        return ret;
+}
+
 /*
+ * @brief Tests memory pattern search function for range of memory buffer sizes
+ *
+ * @return Test status
+ * @retval 0 OK
+ * @retval -1 Test case 1 failed
+ * @retval -2 Test case 2 failed
+ * @retval -3 Test case 3 failed
+ * @retval -4 Negative test case 4 failed
+ */
+static int
+mem_search_avx2_test(void)
+{
+        const int pattern_tab[3] = { pattern_cipher_key, pattern_auth_key, pattern_plain_text };
+        int ret = 0;
+
+        /* positive tests */
+        for (size_t i = 8; (ret == 0) && (i <= 128); i++)
+                for (size_t n = 0; (ret == 0) && (n < IMB_DIM(pattern_tab)); n++)
+                        ret = mem_search_avx2_test_case(i, pattern_tab[n]);
+
+        /* negative test */
+        if (ret == 0) {
+                int negative_pattern = 0;
+
+                for (negative_pattern = 1; negative_pattern < 256; negative_pattern++) {
+                        size_t n = 0;
+
+                        for (n = 0; n < IMB_DIM(pattern_tab); n++)
+                                if (negative_pattern == pattern_tab[n])
+                                        break;
+
+                        /* there was no match against existing patterns */
+                        if (n >= IMB_DIM(pattern_tab))
+                                break;
+                }
+
+                if (mem_search_avx2_test_case(128, negative_pattern) == 0)
+                        ret = -4;
+        }
+
+        return ret;
+}
+
+/**
  * @brief Searches across a block of memory if a pattern is present
  *        (indicating there is some left over sensitive data)
  *
@@ -757,6 +904,9 @@ search_patterns_ex(const void *ptr, const size_t mem_size, size_t *offset)
         if (mem_size < sizeof(uint64_t) || offset == NULL)
                 return 0;
 
+        if (ptr == NULL)
+                return 0;
+
         *offset = 0;
 
         if (avx2_check == UINT32_MAX) {
@@ -765,6 +915,12 @@ search_patterns_ex(const void *ptr, const size_t mem_size, size_t *offset)
 
                 misc_cpuid(7, 0, &r);
                 avx2_check = r.ebx & (1UL << 5);
+
+                /* run test of mem_search_avx2() function */
+                if (avx2_check && (mem_search_avx2_test() != 0)) {
+                        printf("ERROR: test_mem_search_avx2() test failed!\n");
+                        avx2_check = 0;
+                }
         }
 
         if (avx2_check)
