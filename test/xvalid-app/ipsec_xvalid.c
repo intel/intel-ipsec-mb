@@ -673,24 +673,32 @@ clear_data(struct data *data)
         imb_clear_mem(&data->dec_keys, sizeof(struct cipher_auth_keys));
 }
 
-/** Generate random fill patterns */
+/**
+ * Generate fill patterns
+ * - make sure each patterns are different
+ * - do not return zero pattern
+ * - make sure it takes as long as possible before pattern is re-used again
+ */
+static int
+get_pattern_seed(void)
+{
+        static int pattern_seed = 0;
+
+        if (pattern_seed == 0)
+                pattern_seed = (pattern_seed + 1) & 255;
+
+        const int ret_seed = pattern_seed;
+
+        pattern_seed = (pattern_seed + 1) & 255;
+        return ret_seed;
+}
+
 static void
 generate_patterns(void)
 {
-        const int old_auth_key = pattern_auth_key;
-        const int old_cipher_key = pattern_cipher_key;
-        const int old_plain_text = pattern_plain_text;
-
-        /* randomize fill values - make sure they are unique and non-zero */
-        do {
-                pattern_auth_key = rand() & 255;
-                pattern_cipher_key = rand() & 255;
-                pattern_plain_text = rand() & 255;
-        } while (pattern_auth_key == pattern_cipher_key || pattern_auth_key == pattern_plain_text ||
-                 pattern_cipher_key == pattern_plain_text || pattern_auth_key == 0 ||
-                 pattern_cipher_key == 0 || pattern_plain_text == 0 ||
-                 pattern_auth_key == old_auth_key || pattern_cipher_key == old_cipher_key ||
-                 pattern_plain_text == old_plain_text);
+        pattern_auth_key = get_pattern_seed();
+        pattern_cipher_key = get_pattern_seed();
+        pattern_plain_text = get_pattern_seed();
 
         nosimd_memset(&pattern8_auth_key, pattern_auth_key, sizeof(pattern8_auth_key));
         nosimd_memset(&pattern8_cipher_key, pattern_cipher_key, sizeof(pattern8_cipher_key));
