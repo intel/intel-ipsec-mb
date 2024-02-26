@@ -695,7 +695,11 @@ generate_patterns(void)
         nosimd_memset(&pattern8_auth_key, pattern_auth_key, sizeof(pattern8_auth_key));
         nosimd_memset(&pattern8_cipher_key, pattern_cipher_key, sizeof(pattern8_cipher_key));
         nosimd_memset(&pattern8_plain_text, pattern_plain_text, sizeof(pattern8_plain_text));
+}
 
+static void
+print_patterns(void)
+{
         printf(">>> Patterns: AUTH_KEY = 0x%02x, CIPHER_KEY = 0x%02x, "
                "PLAIN_TEXT = 0x%02x\n",
                pattern_auth_key, pattern_cipher_key, pattern_plain_text);
@@ -2220,9 +2224,8 @@ print_fail_context(IMB_MGR *enc_mb_mgr, const IMB_ARCH enc_arch, IMB_MGR *dec_mb
         print_algo_info(params);
         printf("\nEncrypting ");
         print_tested_arch(enc_mb_mgr->features, enc_arch);
-        printf("\nDecrypting ");
+        printf("Decrypting ");
         print_tested_arch(dec_mb_mgr->features, dec_arch);
-        printf("\n");
         /*
          * Print buffer size info if the failure was caused by an actual job,
          * where "idx" indicates the index of the job failing
@@ -2625,6 +2628,7 @@ test_single(IMB_MGR *enc_mgr, const IMB_ARCH enc_arch, IMB_MGR *dec_mgr, const I
                                             compare_match(&safe_ctx1, &safe_ctx2) == 0) {
                                                 if (verbose)
                                                         printf("FAIL\n");
+                                                print_patterns();
                                                 print_fail_context(enc_mgr, enc_arch, dec_mgr,
                                                                    dec_arch, params, variant_data,
                                                                    0, 1, 0, NULL, &safe_ctx2);
