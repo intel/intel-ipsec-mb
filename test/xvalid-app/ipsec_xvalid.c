@@ -762,6 +762,7 @@ search_patterns(const void *ptr, const size_t mem_size, size_t *offset)
  * @retval -1 Test case 1 failed
  * @retval -2 Test case 2 failed
  * @retval -3 Test case 3 failed
+ * @retval -100 Buffer allocation error
  */
 static int
 mem_search_avx2_test_case(const size_t cb_size, const int pattern)
@@ -863,6 +864,7 @@ mem_search_avx2_test_case(const size_t cb_size, const int pattern)
  * @retval -2 Test case 2 failed
  * @retval -3 Test case 3 failed
  * @retval -4 Negative test case 4 failed
+ * @retval -100 Buffer allocation error
  */
 static int
 mem_search_avx2_test(void)
@@ -2634,8 +2636,7 @@ test_single(IMB_MGR *enc_mgr, const IMB_ARCH enc_arch, IMB_MGR *dec_mgr, const I
 
                                         if (result2 == -2 &&
                                             compare_match(&safe_ctx1, &safe_ctx2) == 0) {
-                                                if (verbose)
-                                                        printf("FAIL\n");
+                                                printf("FAIL\n");
                                                 print_patterns();
                                                 print_fail_context(enc_mgr, enc_arch, dec_mgr,
                                                                    dec_arch, params, variant_data,
@@ -2695,8 +2696,7 @@ process_variant(IMB_MGR *enc_mgr, const IMB_ARCH enc_arch, IMB_MGR *dec_mgr,
                         for (j = 0; j < IMIX_ITER; j++) {
                                 if (do_test(enc_mgr, enc_arch, dec_mgr, dec_arch, params,
                                             variant_data, 0, 1, i) < 0) {
-                                        if (verbose)
-                                                printf("FAIL\n");
+                                        printf("FAIL\n");
                                         exit(EXIT_FAILURE);
                                 }
                         }

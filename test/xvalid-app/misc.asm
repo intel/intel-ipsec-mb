@@ -356,6 +356,11 @@ align 32
         or              eax, r12d
         or              eax, r13d
 
+        ;; clear the patterns
+        vpxor           xmm0, xmm0, xmm0
+        vpxor           xmm1, xmm1, xmm1
+        vpxor           xmm2, xmm2, xmm2
+
         vzeroupper
 
         ;; rax == 0 OK
