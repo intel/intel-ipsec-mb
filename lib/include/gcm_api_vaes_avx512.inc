@@ -526,7 +526,8 @@ align 32
                              DEC, {qword [arg2 + _iv_len_in_bytes]}
 
 %ifdef SAFE_DATA
-        clear_zmms_avx512 xmm0, xmm2, xmm3, xmm4, xmm5, xmm8, xmm9, xmm14, xmm15, xmm16, xmm17, xmm18, xmm19, xmm20, xmm21
+        clear_zmms_avx512 xmm0, xmm2, xmm3, xmm4, xmm5, xmm8, xmm9, xmm14, xmm15, \
+                          xmm16, xmm17, xmm18, xmm19, xmm20, xmm21, xmm26
 %endif
 .exit_dec:
         ;; mark job complete
