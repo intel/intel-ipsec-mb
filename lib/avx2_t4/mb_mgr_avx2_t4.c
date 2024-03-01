@@ -87,12 +87,12 @@
 #define SUBMIT_JOB_CIPHER_DEC SUBMIT_JOB_CIPHER_DEC_AVX2
 
 /* AES-GCM */
-#define AES_GCM_DEC_IV_128 aes_gcm_dec_var_iv_128_avx_gen4
-#define AES_GCM_ENC_IV_128 aes_gcm_enc_var_iv_128_avx_gen4
-#define AES_GCM_DEC_IV_192 aes_gcm_dec_var_iv_192_avx_gen4
-#define AES_GCM_ENC_IV_192 aes_gcm_enc_var_iv_192_avx_gen4
-#define AES_GCM_DEC_IV_256 aes_gcm_dec_var_iv_256_avx_gen4
-#define AES_GCM_ENC_IV_256 aes_gcm_enc_var_iv_256_avx_gen4
+#define AES_GCM_DEC_IV_128 aes_gcm_dec_var_iv_128_vaes_avx2
+#define AES_GCM_ENC_IV_128 aes_gcm_enc_var_iv_128_vaes_avx2
+#define AES_GCM_DEC_IV_192 aes_gcm_dec_var_iv_192_vaes_avx2
+#define AES_GCM_ENC_IV_192 aes_gcm_enc_var_iv_192_vaes_avx2
+#define AES_GCM_DEC_IV_256 aes_gcm_dec_var_iv_256_vaes_avx2
+#define AES_GCM_ENC_IV_256 aes_gcm_enc_var_iv_256_vaes_avx2
 
 #define SUBMIT_JOB_AES_GCM_DEC submit_job_gcm_dec_avx2
 #define SUBMIT_JOB_AES_GCM_ENC submit_job_gcm_enc_avx2
@@ -136,9 +136,9 @@
 #define AES_ECB_DEC_256 aes_ecb_dec_256_vaes_avx2
 
 /* AES-CTR */
-#define AES_CTR_128     aes_cntr_128_avx
-#define AES_CTR_192     aes_cntr_192_avx
-#define AES_CTR_256     aes_cntr_256_avx
+#define AES_CTR_128     aes_cntr_128_vaes_avx2
+#define AES_CTR_192     aes_cntr_192_vaes_avx2
+#define AES_CTR_256     aes_cntr_256_vaes_avx2
 #define AES_CTR_128_BIT aes_cntr_bit_128_avx
 #define AES_CTR_192_BIT aes_cntr_bit_192_avx
 #define AES_CTR_256_BIT aes_cntr_bit_256_avx
@@ -453,49 +453,49 @@ init_mb_mgr_avx2_t4_internal(IMB_MGR *state, const int reset_mgrs)
         state->chacha20_poly1305_finalize = finalize_chacha20_poly1305_fma_avx2;
 #endif
 
-        state->gcm128_enc = aes_gcm_enc_128_avx_gen4;
-        state->gcm192_enc = aes_gcm_enc_192_avx_gen4;
-        state->gcm256_enc = aes_gcm_enc_256_avx_gen4;
-        state->gcm128_dec = aes_gcm_dec_128_avx_gen4;
-        state->gcm192_dec = aes_gcm_dec_192_avx_gen4;
-        state->gcm256_dec = aes_gcm_dec_256_avx_gen4;
-        state->gcm128_init = aes_gcm_init_128_avx_gen4;
-        state->gcm192_init = aes_gcm_init_192_avx_gen4;
-        state->gcm256_init = aes_gcm_init_256_avx_gen4;
-        state->gcm128_init_var_iv = aes_gcm_init_var_iv_128_avx_gen4;
-        state->gcm192_init_var_iv = aes_gcm_init_var_iv_192_avx_gen4;
-        state->gcm256_init_var_iv = aes_gcm_init_var_iv_256_avx_gen4;
-        state->gcm128_enc_update = aes_gcm_enc_128_update_avx_gen4;
-        state->gcm192_enc_update = aes_gcm_enc_192_update_avx_gen4;
-        state->gcm256_enc_update = aes_gcm_enc_256_update_avx_gen4;
-        state->gcm128_dec_update = aes_gcm_dec_128_update_avx_gen4;
-        state->gcm192_dec_update = aes_gcm_dec_192_update_avx_gen4;
-        state->gcm256_dec_update = aes_gcm_dec_256_update_avx_gen4;
-        state->gcm128_enc_finalize = aes_gcm_enc_128_finalize_avx_gen4;
-        state->gcm192_enc_finalize = aes_gcm_enc_192_finalize_avx_gen4;
-        state->gcm256_enc_finalize = aes_gcm_enc_256_finalize_avx_gen4;
-        state->gcm128_dec_finalize = aes_gcm_dec_128_finalize_avx_gen4;
-        state->gcm192_dec_finalize = aes_gcm_dec_192_finalize_avx_gen4;
-        state->gcm256_dec_finalize = aes_gcm_dec_256_finalize_avx_gen4;
-        state->gcm128_precomp = aes_gcm_precomp_128_avx_gen4;
-        state->gcm192_precomp = aes_gcm_precomp_192_avx_gen4;
-        state->gcm256_precomp = aes_gcm_precomp_256_avx_gen4;
-        state->gcm128_pre = aes_gcm_pre_128_avx_gen4;
-        state->gcm192_pre = aes_gcm_pre_192_avx_gen4;
-        state->gcm256_pre = aes_gcm_pre_256_avx_gen4;
+        state->gcm128_enc = aes_gcm_enc_128_vaes_avx2;
+        state->gcm192_enc = aes_gcm_enc_192_vaes_avx2;
+        state->gcm256_enc = aes_gcm_enc_256_vaes_avx2;
+        state->gcm128_dec = aes_gcm_dec_128_vaes_avx2;
+        state->gcm192_dec = aes_gcm_dec_192_vaes_avx2;
+        state->gcm256_dec = aes_gcm_dec_256_vaes_avx2;
+        state->gcm128_init = aes_gcm_init_128_vaes_avx2;
+        state->gcm192_init = aes_gcm_init_192_vaes_avx2;
+        state->gcm256_init = aes_gcm_init_256_vaes_avx2;
+        state->gcm128_init_var_iv = aes_gcm_init_var_iv_128_vaes_avx2;
+        state->gcm192_init_var_iv = aes_gcm_init_var_iv_192_vaes_avx2;
+        state->gcm256_init_var_iv = aes_gcm_init_var_iv_256_vaes_avx2;
+        state->gcm128_enc_update = aes_gcm_enc_128_update_vaes_avx2;
+        state->gcm192_enc_update = aes_gcm_enc_192_update_vaes_avx2;
+        state->gcm256_enc_update = aes_gcm_enc_256_update_vaes_avx2;
+        state->gcm128_dec_update = aes_gcm_dec_128_update_vaes_avx2;
+        state->gcm192_dec_update = aes_gcm_dec_192_update_vaes_avx2;
+        state->gcm256_dec_update = aes_gcm_dec_256_update_vaes_avx2;
+        state->gcm128_enc_finalize = aes_gcm_enc_128_finalize_vaes_avx2;
+        state->gcm192_enc_finalize = aes_gcm_enc_192_finalize_vaes_avx2;
+        state->gcm256_enc_finalize = aes_gcm_enc_256_finalize_vaes_avx2;
+        state->gcm128_dec_finalize = aes_gcm_dec_128_finalize_vaes_avx2;
+        state->gcm192_dec_finalize = aes_gcm_dec_192_finalize_vaes_avx2;
+        state->gcm256_dec_finalize = aes_gcm_dec_256_finalize_vaes_avx2;
+        state->gcm128_precomp = aes_gcm_precomp_128_vaes_avx2;
+        state->gcm192_precomp = aes_gcm_precomp_192_vaes_avx2;
+        state->gcm256_precomp = aes_gcm_precomp_256_vaes_avx2;
+        state->gcm128_pre = aes_gcm_pre_128_vaes_avx2;
+        state->gcm192_pre = aes_gcm_pre_192_vaes_avx2;
+        state->gcm256_pre = aes_gcm_pre_256_vaes_avx2;
 
-        state->ghash = ghash_avx_gen4;
-        state->ghash_pre = ghash_pre_avx_gen4;
+        state->ghash = ghash_vaes_avx2;
+        state->ghash_pre = ghash_pre_vaes_avx2;
 
-        state->gmac128_init = imb_aes_gmac_init_128_avx_gen4;
-        state->gmac192_init = imb_aes_gmac_init_192_avx_gen4;
-        state->gmac256_init = imb_aes_gmac_init_256_avx_gen4;
-        state->gmac128_update = imb_aes_gmac_update_128_avx_gen4;
-        state->gmac192_update = imb_aes_gmac_update_192_avx_gen4;
-        state->gmac256_update = imb_aes_gmac_update_256_avx_gen4;
-        state->gmac128_finalize = imb_aes_gmac_finalize_128_avx_gen4;
-        state->gmac192_finalize = imb_aes_gmac_finalize_192_avx_gen4;
-        state->gmac256_finalize = imb_aes_gmac_finalize_256_avx_gen4;
+        state->gmac128_init = imb_aes_gmac_init_128_vaes_avx2;
+        state->gmac192_init = imb_aes_gmac_init_192_vaes_avx2;
+        state->gmac256_init = imb_aes_gmac_init_256_vaes_avx2;
+        state->gmac128_update = imb_aes_gmac_update_128_vaes_avx2;
+        state->gmac192_update = imb_aes_gmac_update_192_vaes_avx2;
+        state->gmac256_update = imb_aes_gmac_update_256_vaes_avx2;
+        state->gmac128_finalize = imb_aes_gmac_finalize_128_vaes_avx2;
+        state->gmac192_finalize = imb_aes_gmac_finalize_192_vaes_avx2;
+        state->gmac256_finalize = imb_aes_gmac_finalize_256_vaes_avx2;
 
         state->aes_ecb_128_quic = aes_ecb_quic_enc_128_avx;
         state->aes_ecb_256_quic = aes_ecb_quic_enc_256_avx;
