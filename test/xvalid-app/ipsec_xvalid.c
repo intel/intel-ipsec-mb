@@ -3354,5 +3354,7 @@ main(int argc, char *argv[])
 
         run_tests(safe_check);
 
+        fprintf(stdout, "All tests passed\n");
+
         return EXIT_SUCCESS;
 }
