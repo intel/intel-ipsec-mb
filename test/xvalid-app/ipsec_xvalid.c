@@ -1520,6 +1520,8 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys, const uint8_t *ciph
                 switch (params->hash_alg) {
                 case IMB_AUTH_AES_XCBC:
                         nosimd_memset(k1_expanded, pattern_auth_key, sizeof(keys->k1_expanded));
+                        nosimd_memset(k2, pattern_auth_key, sizeof(keys->k2));
+                        nosimd_memset(k3, pattern_auth_key, sizeof(keys->k3));
                         break;
                 case IMB_AUTH_AES_CMAC:
                 case IMB_AUTH_AES_CMAC_BITLEN:
