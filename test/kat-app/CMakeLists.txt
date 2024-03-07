@@ -126,7 +126,7 @@ add_test(NAME KAT-AVX512-T2
 # SDE tests
 if(SDE)
   add_test(NAME KAT-AVX2-T3
-    COMMAND ${SDE} -cmt -- ./${TEST_APP} ${ARCH_AVX2}
+    COMMAND ${SDE} -srf -- ./${TEST_APP} ${ARCH_AVX2}
     WORKING_DIRECTORY ${TEST_APP_BIN_DIR})
 endif()
 
