@@ -128,5 +128,8 @@ if(SDE)
   add_test(NAME KAT-AVX2-T3
     COMMAND ${SDE} -srf -- ./${TEST_APP} ${ARCH_AVX2}
     WORKING_DIRECTORY ${TEST_APP_BIN_DIR})
+  add_test(NAME KAT-AVX2-T4
+    COMMAND ${SDE} -arl -- ./${TEST_APP} ${ARCH_AVX2}
+    WORKING_DIRECTORY ${TEST_APP_BIN_DIR})
 endif()
 
