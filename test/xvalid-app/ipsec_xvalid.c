@@ -2533,8 +2533,14 @@ exit:
                                    num_jobs, i, job_ctx_tab, NULL);
         } else if (ret == -2) {
                 if (p_safe_check != NULL) {
-                        p_safe_check->job_idx = i;
-                        p_safe_check->job_size = job_ctx_tab[i].buf_size;
+                        /*
+                         * Only set job info if the error is coming from an actual job,
+                         * and not something else like key expansion
+                         */
+                        if (i < num_jobs) {
+                                p_safe_check->job_idx = i;
+                                p_safe_check->job_size = job_ctx_tab[i].buf_size;
+                        }
                 }
         }
 
