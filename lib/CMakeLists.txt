@@ -68,7 +68,7 @@ if(NASM_VERSION)
   if(NASM_VERSION_SMX_NI VERSION_GREATER ${CMAKE_MATCH_1})
     message(
       NOTICE
-      "Minimum required NASM version for SM3/SM4/SHA512-NI: ${NASM_VERSION_SMX_NI}. SM3/SHA/SHA512-NI code not compiled - update NASM."
+      "Minimum required NASM version for SM3/SM4/SHA512-NI: ${NASM_VERSION_SMX_NI}. SM3/SM4/SHA512-NI code not compiled - update NASM."
     )
   else()
     # SM3/SM4/SHA512-NI supported by NASM
