@@ -210,6 +210,10 @@ endif()
 if(AVX_IFMA)
   list(APPEND LIB_DEFINES AVX_IFMA)
 endif()
+# enable SMX-NI support
+if(SMX_NI)
+  list(APPEND LIB_DEFINES SMX_NI)
+endif()
 
 ########################################
 # add OS specific options
