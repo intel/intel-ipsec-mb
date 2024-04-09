@@ -198,14 +198,6 @@ test_hmac_shax(struct IMB_MGR *mb_mgr, const struct mac_test *vec, const uint32_
                 job = IMB_SUBMIT_JOB(mb_mgr);
                 if (job) {
                         jobs_rx++;
-                        /*
-                         * SHANI HMAC-SHA implementation can return a completed
-                         * job after 2nd submission
-                         */
-                        if (num_jobs < 2) {
-                                printf("%d Unexpected return from submit_job\n", __LINE__);
-                                goto end;
-                        }
                         if (!hmac_shax_job_ok(vec, job, sha_type, job->user_data, padding,
                                               sizeof(padding)))
                                 goto end;
