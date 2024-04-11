@@ -148,6 +148,86 @@ end:
         return ret;
 }
 
+static int
+test_ecb_burst(struct IMB_MGR *mb_mgr, void *enc_keys, void *dec_keys, const uint8_t *in_text,
+               const uint8_t *out_text, unsigned text_len, int dir, IMB_CIPHER_MODE cipher,
+               const int in_place, const int key_len, const int num_jobs)
+{
+        IMB_JOB burst_jobs[IMB_MAX_BURST_SIZE];
+        uint8_t padding[16];
+        uint32_t n_jobs = num_jobs;
+        uint8_t **targets = malloc(num_jobs * sizeof(void *));
+        int i, jobs_rx = 0, job_idx = 0, ret = -1;
+        const uint32_t burst_sz = (n_jobs > IMB_MAX_BURST_SIZE) ? IMB_MAX_BURST_SIZE : n_jobs;
+
+        if (targets == NULL)
+                return ret;
+
+        memset(targets, 0, num_jobs * sizeof(void *));
+        memset(padding, -1, sizeof(padding));
+
+        for (i = 0; i < num_jobs; i++) {
+                targets[i] = malloc(text_len + (sizeof(padding) * 2));
+                if (targets[i] == NULL)
+                        goto end;
+                memset(targets[i], -1, text_len + (sizeof(padding) * 2));
+                if (in_place) {
+                        /* copy input text to the allocated buffer */
+                        memcpy(targets[i] + sizeof(padding), in_text, text_len);
+                }
+        }
+
+        while (n_jobs) {
+                const int n = (n_jobs > burst_sz) ? burst_sz : n_jobs;
+
+                for (i = 0; i < n; i++) {
+                        IMB_JOB *job = &burst_jobs[i];
+
+                        if (!in_place)
+                                job->src = in_text;
+                        else
+                                job->src = targets[job_idx] + sizeof(padding);
+                        job->dst = targets[job_idx] + sizeof(padding);
+                        job->enc_keys = enc_keys;
+                        job->dec_keys = dec_keys;
+
+                        job->iv_len_in_bytes = 0;
+                        job->cipher_start_src_offset_in_bytes = 0;
+                        job->msg_len_to_cipher_in_bytes = text_len;
+                        job->user_data = targets[job_idx];
+                        job->user_data2 = (void *) ((uint64_t) job_idx);
+
+                        job_idx++;
+                }
+
+                jobs_rx = IMB_SUBMIT_CIPHER_BURST(mb_mgr, burst_jobs, n, cipher, dir, key_len);
+
+                if (jobs_rx != n) {
+                        printf("Expected %d jobs, received %d\n", n, jobs_rx);
+                        goto end;
+                }
+
+                for (i = 0; i < jobs_rx; i++) {
+                        IMB_JOB *job = &burst_jobs[i];
+
+                        if (!ecb_job_ok(job, out_text, job->user_data, padding, sizeof(padding),
+                                        text_len))
+                                goto end;
+                }
+                n_jobs -= n;
+        }
+
+        ret = 0;
+
+end:
+        for (i = 0; i < num_jobs; i++)
+                if (targets[i] != NULL)
+                        free(targets[i]);
+        if (targets != NULL)
+                free(targets);
+        return ret;
+}
+
 static void
 test_ecb_vectors(struct IMB_MGR *mb_mgr, const IMB_CIPHER_MODE cipher, const int num_jobs,
                  struct test_suite_context *ts128, struct test_suite_context *ts192,
@@ -225,6 +305,45 @@ test_ecb_vectors(struct IMB_MGR *mb_mgr, const IMB_CIPHER_MODE cipher, const int
                 } else {
                         test_suite_update(ctx, 1, 0);
                 }
+
+                // test burst API
+                if (test_ecb_burst(mb_mgr, enc_keys, dec_keys, (const void *) v->msg,
+                                   (const void *) v->ct, (unsigned) v->msgSize / 8, IMB_DIR_ENCRYPT,
+                                   cipher, 0, (unsigned) v->keySize / 8, num_jobs)) {
+                        printf("error #%zu burst encrypt\n", v->tcId);
+                        test_suite_update(ctx, 0, 1);
+                } else {
+                        test_suite_update(ctx, 1, 0);
+                }
+
+                if (test_ecb_burst(mb_mgr, enc_keys, dec_keys, (const void *) v->ct,
+                                   (const void *) v->msg, (unsigned) v->msgSize / 8,
+                                   IMB_DIR_DECRYPT, cipher, 0, (unsigned) v->keySize / 8,
+                                   num_jobs)) {
+                        printf("error #%zu burst decrypt\n", v->tcId);
+                        test_suite_update(ctx, 0, 1);
+                } else {
+                        test_suite_update(ctx, 1, 0);
+                }
+
+                if (test_ecb_burst(mb_mgr, enc_keys, dec_keys, (const void *) v->msg,
+                                   (const void *) v->ct, (unsigned) v->msgSize / 8, IMB_DIR_ENCRYPT,
+                                   cipher, 1, (unsigned) v->keySize / 8, num_jobs)) {
+                        printf("error #%zu burst encrypt in-place\n", v->tcId);
+                        test_suite_update(ctx, 0, 1);
+                } else {
+                        test_suite_update(ctx, 1, 0);
+                }
+
+                if (test_ecb_burst(mb_mgr, enc_keys, dec_keys, (const void *) v->ct,
+                                   (const void *) v->msg, (unsigned) v->msgSize / 8,
+                                   IMB_DIR_DECRYPT, cipher, 1, (unsigned) v->keySize / 8,
+                                   num_jobs)) {
+                        printf("error #%zu burst decrypt in-place\n", v->tcId);
+                        test_suite_update(ctx, 0, 1);
+                } else {
+                        test_suite_update(ctx, 1, 0);
+                }
         }
         if (!quiet_mode)
                 printf("\n");
@@ -234,7 +353,7 @@ int
 ecb_test(struct IMB_MGR *mb_mgr)
 {
         struct test_suite_context ts128, ts192, ts256;
-        const int num_jobs_tab[] = { 1, 3, 4, 5, 7, 8, 9, 15, 16, 17 };
+        const int num_jobs_tab[] = { 1, 3, 4, 5, 7, 8, 9, 15, 16, 17, 32, 64, 128, 256, 284 };
         unsigned i;
         int errors = 0;
 
