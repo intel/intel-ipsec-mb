@@ -258,6 +258,122 @@ submit_aes_ctr_burst(IMB_MGR *state, IMB_JOB *jobs, const uint32_t n_jobs,
 }
 
 __forceinline uint32_t
+submit_aes_ecb_enc_burst(IMB_MGR *state, IMB_JOB *jobs, const uint32_t n_jobs,
+                         const IMB_KEY_SIZE_BYTES key_size, const int run_check)
+{
+        if (run_check) {
+                uint32_t i;
+
+                /* validate jobs */
+                for (i = 0; i < n_jobs; i++) {
+                        IMB_JOB *job = &jobs[i];
+
+                        /* validate job */
+                        if (is_job_invalid(state, job, IMB_CIPHER_ECB, IMB_AUTH_NULL,
+                                           IMB_DIR_ENCRYPT, key_size)) {
+                                job->status = IMB_STATUS_INVALID_ARGS;
+                                return 0;
+                        }
+                }
+        }
+
+        if (key_size == IMB_KEY_128_BYTES) {
+                uint32_t i;
+
+                for (i = 0; i < n_jobs; i++) {
+                        IMB_JOB *job = &jobs[i];
+
+                        AES_ECB_ENC_128(job->src + job->cipher_start_src_offset_in_bytes,
+                                        job->enc_keys, job->dst,
+                                        job->msg_len_to_cipher_in_bytes & (~15));
+                        job->status = IMB_STATUS_COMPLETED;
+                }
+        } else if (key_size == IMB_KEY_192_BYTES) {
+                uint32_t i;
+
+                for (i = 0; i < n_jobs; i++) {
+                        IMB_JOB *job = &jobs[i];
+
+                        AES_ECB_ENC_192(job->src + job->cipher_start_src_offset_in_bytes,
+                                        job->enc_keys, job->dst,
+                                        job->msg_len_to_cipher_in_bytes & (~15));
+                        job->status = IMB_STATUS_COMPLETED;
+                }
+        } else /* assume 256-bit key */ {
+                uint32_t i;
+
+                for (i = 0; i < n_jobs; i++) {
+                        IMB_JOB *job = &jobs[i];
+
+                        AES_ECB_ENC_256(job->src + job->cipher_start_src_offset_in_bytes,
+                                        job->enc_keys, job->dst,
+                                        job->msg_len_to_cipher_in_bytes & (~15));
+                        job->status = IMB_STATUS_COMPLETED;
+                }
+        }
+
+        return n_jobs;
+}
+
+__forceinline uint32_t
+submit_aes_ecb_dec_burst(IMB_MGR *state, IMB_JOB *jobs, const uint32_t n_jobs,
+                         const IMB_KEY_SIZE_BYTES key_size, const int run_check)
+{
+        if (run_check) {
+                uint32_t i;
+
+                /* validate jobs */
+                for (i = 0; i < n_jobs; i++) {
+                        IMB_JOB *job = &jobs[i];
+
+                        /* validate job */
+                        if (is_job_invalid(state, job, IMB_CIPHER_ECB, IMB_AUTH_NULL,
+                                           IMB_DIR_DECRYPT, key_size)) {
+                                job->status = IMB_STATUS_INVALID_ARGS;
+                                return 0;
+                        }
+                }
+        }
+
+        if (key_size == IMB_KEY_128_BYTES) {
+                uint32_t i;
+
+                for (i = 0; i < n_jobs; i++) {
+                        IMB_JOB *job = &jobs[i];
+
+                        AES_ECB_DEC_128(job->src + job->cipher_start_src_offset_in_bytes,
+                                        job->dec_keys, job->dst,
+                                        job->msg_len_to_cipher_in_bytes & (~15));
+                        job->status = IMB_STATUS_COMPLETED;
+                }
+        } else if (key_size == IMB_KEY_192_BYTES) {
+                uint32_t i;
+
+                for (i = 0; i < n_jobs; i++) {
+                        IMB_JOB *job = &jobs[i];
+
+                        AES_ECB_DEC_192(job->src + job->cipher_start_src_offset_in_bytes,
+                                        job->dec_keys, job->dst,
+                                        job->msg_len_to_cipher_in_bytes & (~15));
+                        job->status = IMB_STATUS_COMPLETED;
+                }
+        } else /* assume 256-bit key */ {
+                uint32_t i;
+
+                for (i = 0; i < n_jobs; i++) {
+                        IMB_JOB *job = &jobs[i];
+
+                        AES_ECB_DEC_256(job->src + job->cipher_start_src_offset_in_bytes,
+                                        job->dec_keys, job->dst,
+                                        job->msg_len_to_cipher_in_bytes & (~15));
+                        job->status = IMB_STATUS_COMPLETED;
+                }
+        }
+
+        return n_jobs;
+}
+
+__forceinline uint32_t
 submit_cipher_burst_and_check(IMB_MGR *state, IMB_JOB *jobs, const uint32_t n_jobs,
                               const IMB_CIPHER_MODE cipher, const IMB_CIPHER_DIRECTION dir,
                               const IMB_KEY_SIZE_BYTES key_size, const int run_check)
@@ -279,6 +395,11 @@ submit_cipher_burst_and_check(IMB_MGR *state, IMB_JOB *jobs, const uint32_t n_jo
                         return submit_aes_cbc_burst_dec(state, jobs, n_jobs, key_size, run_check);
         case IMB_CIPHER_CNTR:
                 return submit_aes_ctr_burst(state, jobs, n_jobs, key_size, run_check);
+        case IMB_CIPHER_ECB:
+                if (dir == IMB_DIR_ENCRYPT)
+                        return submit_aes_ecb_enc_burst(state, jobs, n_jobs, key_size, run_check);
+                else
+                        return submit_aes_ecb_dec_burst(state, jobs, n_jobs, key_size, run_check);
         default:
                 break;
         }
