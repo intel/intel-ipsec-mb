@@ -45,9 +45,9 @@
 
 #ifdef _WIN32
 #include <intrin.h>
-#define strdup  _strdup
-#define BSWAP64 _byteswap_uint64
-#define __func__ __FUNCTION__
+#define strdup     _strdup
+#define BSWAP64    _byteswap_uint64
+#define __func__   __FUNCTION__
 #define strcasecmp _stricmp
 #else
 #include <x86intrin.h>

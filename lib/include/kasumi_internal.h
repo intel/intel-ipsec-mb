@@ -166,7 +166,7 @@ typedef union SafeBuffer {
                 (data) = datal ^ datah;                                                            \
                 (data) ^= (key2);                                                                  \
                 datal = LOOKUP16_SSE(sso_kasumi_S7e, (data) >> 9, 256);                            \
-                datah = LOOKUP16_SSE(sso_kasumi_S9e, (data) &0x1FF, 512);                          \
+                datah = LOOKUP16_SSE(sso_kasumi_S9e, (data) & 0x1FF, 512);                         \
                 (data) = datal ^ datah;                                                            \
                 (data) ^= (key3);                                                                  \
         } while (0)
@@ -1410,8 +1410,8 @@ kasumi_f8_n_buffer(const kasumi_key_sched_t *pKeySchedule, const uint64_t IV[],
                                         dataLen[inner_idx] = tempLen;
                                 }
                         } /* for inner packet idx (inner bubble-sort) */
-                }         /* for outer packet idx (outer bubble-sort) */
-        }                 /* if sortNeeded */
+                } /* for outer packet idx (outer bubble-sort) */
+        } /* if sortNeeded */
 
         packet_idx = dataCount;
         while (packet_idx--)

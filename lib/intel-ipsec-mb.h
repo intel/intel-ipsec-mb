@@ -48,7 +48,7 @@ typedef struct {
 #if defined __linux__ || defined __FreeBSD__
 /**< Linux/FreeBSD */
 #define DECLARE_ALIGNED(decl, alignval) decl __attribute__((aligned(alignval)))
-#define __forceinline static inline __attribute__((always_inline))
+#define __forceinline                   static inline __attribute__((always_inline))
 
 #if __GNUC__ >= 4
 #define IMB_DLL_EXPORT __attribute__((visibility("default")))
@@ -70,7 +70,7 @@ typedef struct {
 #else
 /* MSVS */
 #define DECLARE_ALIGNED(decl, alignval) __declspec(align(alignval)) decl
-#define __forceinline static __forceinline
+#define __forceinline                   static __forceinline
 
 #endif /* __MINGW__ */
 
@@ -425,7 +425,7 @@ typedef struct IMB_JOB {
                 /**< Length of message to hash (in bytes) */
                 uint64_t msg_len_to_hash_in_bits;
                 /**< Length of message to hash (in bits) */
-        };                                     /**< Length of message to hash */
+        }; /**< Length of message to hash */
         const uint8_t *iv;                     /**< Initialization Vector (IV) */
         uint64_t iv_len_in_bytes;              /**< IV length in bytes */
         uint8_t *auth_tag_output;              /**< Authentication tag output */
@@ -645,7 +645,7 @@ struct chacha20_poly1305_context_data {
 #ifdef __WIN32
 __declspec(align(64))
 #endif /* WIN32 */
-        struct gcm_key_data {
+struct gcm_key_data {
         uint8_t expanded_keys[IMB_GCM_ENC_KEY_LEN * IMB_GCM_KEY_SETS];
         union {
                 /**< Storage for precomputed hash keys */

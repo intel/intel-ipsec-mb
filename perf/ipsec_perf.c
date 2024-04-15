@@ -51,8 +51,8 @@
 #define strdup _strdup
 #undef __forceinline
 #define __forceinline static __forceinline
-#define __func__ __FUNCTION__
-#define strcasecmp _stricmp
+#define __func__      __FUNCTION__
+#define strcasecmp    _stricmp
 #else
 #include <stdlib.h>
 #include <x86intrin.h>

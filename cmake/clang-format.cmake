@@ -32,7 +32,7 @@ find_program(CLANG_FORMAT NAMES ${CLANG_FORMAT_BIN})
 
 # set up target if clang-format available
 if(CLANG_FORMAT)
-  set(CLANG_FORMAT_REQUIRED "13.0.1")
+  set(CLANG_FORMAT_REQUIRED "18.1.0")
 
   execute_process(
     COMMAND ${CLANG_FORMAT} --version

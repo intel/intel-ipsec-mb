@@ -3168,8 +3168,8 @@ SNOW3G_F8_N_BUFFER(const snow3g_key_schedule_t *pCtx, const void *const IV[],
                                         lensBuf[inner_index] = tempLen;
                                 }
                         } /* for inner packet index (inner bubble-sort) */
-                }         /* for outer packet index (outer bubble-sort) */
-        }                 /* if sortNeeded */
+                } /* for outer packet index (outer bubble-sort) */
+        } /* if sortNeeded */
 
         packet_index = 0;
         /* process 8 buffers at-a-time */
@@ -3334,8 +3334,8 @@ SNOW3G_F8_N_BUFFER_MULTIKEY(const snow3g_key_schedule_t *const pCtx[], const voi
                                         pCtxBuf[inner_index] = tempCtx;
                                 }
                         } /* for inner packet index (inner bubble-sort) */
-                }         /* for outer packet index (outer bubble-sort) */
-        }                 /* if sortNeeded */
+                } /* for outer packet index (outer bubble-sort) */
+        } /* if sortNeeded */
 
         packet_index = 0;
         /* process 8 buffers at-a-time */
