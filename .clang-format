@@ -39,7 +39,6 @@ AllowAllParametersOfDeclarationOnNextLine: false
 BinPackParameters: true
 BinPackArguments: true
 ReflowComments: true
-SpaceAfterCStyleCast: false
 ColumnLimit: 100
 Cpp11BracedListStyle: false
 MaxEmptyLinesToKeep: 1
