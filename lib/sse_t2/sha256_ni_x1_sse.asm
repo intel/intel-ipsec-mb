@@ -146,21 +146,6 @@ mksection .text
     movdqa  xmm13, [rsp + 10*16]
     movdqa  xmm14, [rsp + 11*16]
     movdqa  xmm15, [rsp + 12*16]
-
-%ifdef SAFE_DATA
-    pxor    xmm5, xmm5
-    movdqa [rsp + 3*16], xmm5
-    movdqa [rsp + 4*16], xmm5
-    movdqa [rsp + 5*16], xmm5
-    movdqa [rsp + 6*16], xmm5
-    movdqa [rsp + 7*16], xmm5
-    movdqa [rsp + 8*16], xmm5
-    movdqa [rsp + 9*16], xmm5
-    movdqa [rsp + 10*16], xmm5
-    movdqa [rsp + 11*16], xmm5
-    movdqa [rsp + 12*16], xmm5
-
-%endif
 %endif ; LINUX
     mov     rsp,   [rsp + 5*8] ;; rsp pointer
 %endmacro

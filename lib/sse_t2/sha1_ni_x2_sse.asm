@@ -151,19 +151,6 @@ mksection .text
     mov     rdi,   [rsp + GP_OFFSET]
     mov     rsi,   [rsp + GP_OFFSET + 8]
 
-%ifdef SAFE_DATA
-    pxor    xmm5, xmm5
-    movdqa  [rsp + 0*16], xmm5
-    movdqa  [rsp + 1*16], xmm5
-    movdqa  [rsp + 2*16], xmm5
-    movdqa  [rsp + 3*16], xmm5
-    movdqa  [rsp + 4*16], xmm5
-    movdqa  [rsp + 5*16], xmm5
-    movdqa  [rsp + 6*16], xmm5
-    movdqa  [rsp + 7*16], xmm5
-    movdqa  [rsp + 8*16], xmm5
-    movdqa  [rsp + 9*16], xmm5
-%endif
     mov     rbx, [rsp + GP_OFFSET + 2*8]
     mov     rbp, [rsp + GP_OFFSET + 3*8]
 %endif
