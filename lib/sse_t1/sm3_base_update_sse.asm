@@ -421,6 +421,11 @@ sm3_base_compress_16_63:
         movdqu  [rsp + _W +  4*4], xmm0
         movdqu  [rsp + _W +  8*4], xmm0
         movdqu  [rsp + _W + 12*4], xmm0
+
+        movdqu  [rsp + _W + 16*4], xmm0
+        movdqu  [rsp + _W + 20*4], xmm0
+        movdqu  [rsp + _W + 24*4], xmm0
+        movdqu  [rsp + _W + 28*4], xmm0
 %endif
         FUNC_END
 sm3_base_update_end:
