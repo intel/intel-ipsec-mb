@@ -150,12 +150,11 @@ submit_burst_and_check(IMB_MGR *state, const uint32_t n_jobs, IMB_JOB **jobs, co
                         }
 
                         /* validate job->suite_id */
-                        void *t[4];
+                        uint32_t t[2];
 
                         set_cipher_suite_id(jobs[i], t);
 
-                        if (jobs[i]->suite_id[0] != t[0] || jobs[i]->suite_id[1] != t[1] ||
-                            jobs[i]->suite_id[2] != t[2] || jobs[i]->suite_id[3] != t[3]) {
+                        if (jobs[i]->suite_id[0] != t[0] || jobs[i]->suite_id[1] != t[1]) {
                                 imb_set_errno(state, IMB_ERR_BURST_SUITE_ID);
                                 goto return_invalid_job;
                         }

@@ -3747,21 +3747,46 @@ FLUSH_JOB(IMB_MGR *state)
 /* ========================================================================= */
 
 __forceinline void
-set_cipher_suite_id(IMB_JOB *job, void **id)
+set_cipher_suite_id(IMB_JOB *job, uint32_t id[2])
 {
         const unsigned c_idx = calc_cipher_tab_index(job);
         const unsigned h_idx = (unsigned) job->hash_alg;
 
-        id[0] = (void *) tab_submit_cipher[c_idx];
-        id[1] = (void *) tab_submit_hash[h_idx];
-        id[2] = (void *) tab_flush_cipher[c_idx];
-        id[3] = (void *) tab_flush_hash[h_idx];
+        id[0] = c_idx;
+        id[1] = h_idx;
 }
 
-#define CALL_SUBMIT_CIPHER(s, j) ((submit_flush_fn_t) (j)->suite_id[0])(s, j)
-#define CALL_FLUSH_CIPHER(s, j)  ((submit_flush_fn_t) (j)->suite_id[2])(s, j)
-#define CALL_SUBMIT_HASH(s, j)   ((submit_flush_fn_t) (j)->suite_id[1])(s, j)
-#define CALL_FLUSH_HASH(s, j)    ((submit_flush_fn_t) (j)->suite_id[3])(s, j)
+__forceinline IMB_JOB *
+CALL_SUBMIT_CIPHER(IMB_MGR *state, IMB_JOB *job)
+{
+        const unsigned c_idx = job->suite_id[0];
+
+        return tab_submit_cipher[c_idx](state, job);
+}
+
+__forceinline IMB_JOB *
+CALL_FLUSH_CIPHER(IMB_MGR *state, IMB_JOB *job)
+{
+        const unsigned c_idx = job->suite_id[0];
+
+        return tab_flush_cipher[c_idx](state, job);
+}
+
+__forceinline IMB_JOB *
+CALL_SUBMIT_HASH(IMB_MGR *state, IMB_JOB *job)
+{
+        const unsigned h_idx = job->suite_id[1];
+
+        return tab_submit_hash[h_idx](state, job);
+}
+
+__forceinline IMB_JOB *
+CALL_FLUSH_HASH(IMB_MGR *state, IMB_JOB *job)
+{
+        const unsigned h_idx = job->suite_id[1];
+
+        return tab_flush_hash[h_idx](state, job);
+}
 
 IMB_DLL_EXPORT void
 SET_SUITE_ID_FN(IMB_MGR *state, IMB_JOB *job)
