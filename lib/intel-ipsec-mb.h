@@ -548,7 +548,7 @@ typedef struct IMB_JOB {
         } cipher_fields; /**< Cipher algorithm-specific fields */
 
         uint32_t suite_id[2]; /**< see imb_set_session() */
-        uint32_t session_id; /**< see imb_set_session() */
+        uint32_t session_id;  /**< see imb_set_session() */
 } IMB_JOB;
 
 /* KASUMI */

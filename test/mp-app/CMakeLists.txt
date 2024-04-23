@@ -1,4 +1,4 @@
-# Copyright (c) 2022-2023, Intel Corporation
+# Copyright (c) 2024, Intel Corporation
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -28,39 +28,47 @@ if(NOT FULL_PROJECT_BUILD)
   message(FATAL_ERROR "Please run CMake from project root directory")
 endif()
 
-# build imb-kat application
-add_subdirectory(kat-app)
+########################################
+# set app and library names
+########################################
+set(MP_APP imb-mp)
+set(LIB_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../lib)
+set(TEST_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../include)
 
-# build imb-xvalid application
-add_subdirectory(xvalid-app)
+########################################
+# set imb-mp source files
+########################################
+set(MP_APP_SRC_FILES_C
+  ${CMAKE_CURRENT_SOURCE_DIR}/imb-mp.c
+)
 
-# build imb-wycheproof application
-add_subdirectory(wycheproof-app)
-
-# build imb-mp application
-add_subdirectory(mp-app)
-
-if(NOT WINDOWS)
-  # build imb-acvp if libacvp available
-  if(NOT ACVP_LOC)
-    set(ACVP_LOC "/usr/local/acvp")
+########################################
+# set C compiler and NASM options
+########################################
+# add OS specific options
+if(WINDOWS)
+  if(CMAKE_GENERATOR MATCHES "MinGW Makefiles")
+    include(${CMAKE_CURRENT_SOURCE_DIR}/../cmake/windows-mingw.cmake)
+  else()
+    include(${CMAKE_CURRENT_SOURCE_DIR}/../cmake/windows.cmake)
   endif()
-  set(ACVP_INCLUDE_DIR "${ACVP_LOC}/include")
-
-  # find libacvp
-  find_library(
-    ACVP_LIB libacvp.a libacvp
-    PATHS ${ACVP_LOC}
-    PATH_SUFFIXES lib)
-
-  # add imb-acvp app if found
-  if(ACVP_LIB)
-    message(STATUS "ACVP_LIB...                ${ACVP_LIB}")
-    add_subdirectory(acvp-app)
-  endif()
-
-  # add fuzz apps if using clang
-  if(CMAKE_C_COMPILER_ID MATCHES "Clang")
-    add_subdirectory(fuzz-app)
-  endif()
+else()
+  include(${CMAKE_CURRENT_SOURCE_DIR}/../cmake/unix.cmake)
 endif()
+
+
+########################################
+# add targets
+########################################
+include_directories(${LIB_DIR} ${TEST_INCLUDE_DIR})
+link_directories(${LIB_DIR})
+
+add_executable(${MP_APP} ${MP_APP_SRC_FILES_C})
+target_link_libraries(${MP_APP} PRIVATE ${IPSEC_MB_LIB})
+target_compile_definitions(${MP_APP} PRIVATE ${APP_DEFINES})
+
+########################################
+# add tests
+########################################
+
+add_test(NAME MP COMMAND ${MP_APP})
