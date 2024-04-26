@@ -32,7 +32,7 @@
 struc frame
 .ABEF_SAVE	reso	1
 .CDGH_SAVE	reso	1
-.XMM_SAVE	reso	3
+.XMM_SAVE	reso	4
 .align		resq	1
 endstruc
 
@@ -82,9 +82,10 @@ sha256_ni_block_sse:
 	sub		rsp, frame_size
 
 %ifndef LINUX
-	movdqa		[rsp + frame.XMM_SAVE], xmm6
-	movdqa		[rsp + frame.XMM_SAVE + 16], xmm14
-	movdqa		[rsp + frame.XMM_SAVE + 16*2], xmm15
+	movdqa		[rsp + frame.XMM_SAVE + 0*16], xmm6
+	movdqa		[rsp + frame.XMM_SAVE + 1*16], xmm7
+	movdqa		[rsp + frame.XMM_SAVE + 2*16], xmm14
+	movdqa		[rsp + frame.XMM_SAVE + 3*16], xmm15
 %endif
 
 	;; load initial digest
@@ -313,9 +314,10 @@ sha256_ni_block_sse:
 %endif
 
 %ifndef LINUX
-	movdqa		xmm6, [rsp + frame.XMM_SAVE]
-	movdqa		xmm14, [rsp + frame.XMM_SAVE + 16]
-	movdqa		xmm15, [rsp + frame.XMM_SAVE + 16*2]
+	movdqa		xmm6, [rsp + frame.XMM_SAVE + 0*16]
+	movdqa		xmm7, [rsp + frame.XMM_SAVE + 1*16]
+	movdqa		xmm14, [rsp + frame.XMM_SAVE + 2*16]
+	movdqa		xmm15, [rsp + frame.XMM_SAVE + 3*16]
 %endif
         add		rsp, frame_size
 	ret
