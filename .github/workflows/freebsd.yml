@@ -21,7 +21,7 @@ jobs:
           repository: 'intel/intel-ipsec-mb'
 
       - name: Build
-        uses: vmactions/freebsd-vm@35a5b20a98476a681c7576a344775be7e7f77f06 # v1.0.6
+        uses: vmactions/freebsd-vm@cb45bd6303b9e66c0c5d6216999de259721950c5 # v1.0.7
         with:
           usesh: true
           mem: 8192
@@ -41,7 +41,7 @@ jobs:
           repository: 'intel/intel-ipsec-mb'
 
       - name: Build
-        uses: vmactions/freebsd-vm@35a5b20a98476a681c7576a344775be7e7f77f06 # v1.0.6
+        uses: vmactions/freebsd-vm@cb45bd6303b9e66c0c5d6216999de259721950c5 # v1.0.7
         with:
           usesh: true
           mem: 8192
@@ -61,7 +61,7 @@ jobs:
           repository: 'intel/intel-ipsec-mb'
 
       - name: Clang Release Build
-        uses: vmactions/freebsd-vm@35a5b20a98476a681c7576a344775be7e7f77f06 # v1.0.6
+        uses: vmactions/freebsd-vm@cb45bd6303b9e66c0c5d6216999de259721950c5 # v1.0.7
         with:
           usesh: true
           mem: 8192
@@ -87,7 +87,7 @@ jobs:
           repository: 'intel/intel-ipsec-mb'
 
       - name: Release build with GCC
-        uses: vmactions/freebsd-vm@35a5b20a98476a681c7576a344775be7e7f77f06 # v1.0.6
+        uses: vmactions/freebsd-vm@cb45bd6303b9e66c0c5d6216999de259721950c5 # v1.0.7
         with:
           usesh: true
           mem: 8192
