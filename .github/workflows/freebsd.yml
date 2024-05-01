@@ -89,6 +89,7 @@ jobs:
       - name: Release build with GCC
         uses: vmactions/freebsd-vm@cb45bd6303b9e66c0c5d6216999de259721950c5 # v1.0.7
         with:
+          release: "13.3"
           usesh: true
           mem: 8192
           prepare: pkg install -y curl nasm gmake cmake gcc
