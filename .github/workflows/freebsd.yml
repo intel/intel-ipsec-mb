@@ -99,4 +99,4 @@ jobs:
             echo ">>> CMAKE BUILD"
             cd ./build
             cmake --build . --config Release -j4 -v
-            ctest -j 5 -C Release
+            ctest -j 5 --output-on-failure -C Release
