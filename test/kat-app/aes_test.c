@@ -838,11 +838,17 @@ static const uint8_t DOCRC17_CT[] = {
 #define DOCRC17_FRAME_LEN     DIM(DOCRC17_PT)
 
 #define MK_DOCRC_VEC(_n)                                                                           \
-        {                                                                                          \
-                _n##_FRAME_LEN, _n##_KEY, _n##_KEY_LEN, _n##_IV, _n##_PT, _n##_CT,                 \
-                        _n##_HASH_OFFSET, _n##_HASH_LENGTH, _n##_CIPHER_OFFSET,                    \
-                        _n##_CIPHER_LENGTH, _n##_CRC                                               \
-        }
+        { _n##_FRAME_LEN,                                                                          \
+          _n##_KEY,                                                                                \
+          _n##_KEY_LEN,                                                                            \
+          _n##_IV,                                                                                 \
+          _n##_PT,                                                                                 \
+          _n##_CT,                                                                                 \
+          _n##_HASH_OFFSET,                                                                        \
+          _n##_HASH_LENGTH,                                                                        \
+          _n##_CIPHER_OFFSET,                                                                      \
+          _n##_CIPHER_LENGTH,                                                                      \
+          _n##_CRC }
 
 struct docsis_crc_vector {
         uint64_t frame_len;

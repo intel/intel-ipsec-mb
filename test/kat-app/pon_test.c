@@ -337,16 +337,12 @@ static const uint8_t OUT13_PON[] = {
 #define LENCIPH13_PON (LENBIP13_PON - OFFSET13_PON)
 
 #define ponvector(tname)                                                                           \
-        {                                                                                          \
-                KEY##tname, IV##tname, IN##tname, OUT##tname, BIPOUT##tname, LENBIP##tname,        \
-                        LENCIPH##tname, OFFSET##tname                                              \
-        }
+        { KEY##tname,    IV##tname,     IN##tname,      OUT##tname,                                \
+          BIPOUT##tname, LENBIP##tname, LENCIPH##tname, OFFSET##tname }
 
 #define pon_no_ctr_vector(tname)                                                                   \
-        {                                                                                          \
-                NULL, NULL, IN##tname, OUT##tname, BIPOUT##tname, LENBIP##tname, LENCIPH##tname,   \
-                        OFFSET##tname                                                              \
-        }
+        { NULL,          NULL,          IN##tname,      OUT##tname,                                \
+          BIPOUT##tname, LENBIP##tname, LENCIPH##tname, OFFSET##tname }
 
 static const struct pon_test_vector {
         const uint8_t *key;
