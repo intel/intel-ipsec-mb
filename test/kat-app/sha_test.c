@@ -38,6 +38,8 @@
 int
 sha_test(struct IMB_MGR *mb_mgr);
 
+#define MAX_BURST_JOBS 32
+
 extern const struct mac_test sha_test_json[];
 
 static int
@@ -172,6 +174,118 @@ end2:
         return ret;
 }
 
+static int
+test_sha_hash_burst(struct IMB_MGR *mb_mgr, const struct mac_test *vec, const int num_jobs,
+                    const int sha_type)
+{
+        struct IMB_JOB *job, jobs[MAX_BURST_JOBS] = { 0 };
+        uint8_t padding[16];
+        uint8_t **auths = malloc(num_jobs * sizeof(void *));
+        int i = 0, jobs_rx = 0, ret = -1;
+        int completed_jobs = 0;
+        IMB_HASH_ALG hash_alg;
+
+        if (auths == NULL) {
+                fprintf(stderr, "Can't allocate buffer memory\n");
+                goto end2;
+        }
+
+        memset(padding, -1, sizeof(padding));
+        memset(auths, 0, num_jobs * sizeof(void *));
+
+        switch (sha_type) {
+        case 1:
+                hash_alg = IMB_AUTH_SHA_1;
+                break;
+        case 224:
+                hash_alg = IMB_AUTH_SHA_224;
+                break;
+        case 256:
+                hash_alg = IMB_AUTH_SHA_256;
+                break;
+        case 384:
+                hash_alg = IMB_AUTH_SHA_384;
+                break;
+        case 512:
+        default:
+                hash_alg = IMB_AUTH_SHA_512;
+                break;
+        }
+
+        for (i = 0; i < num_jobs; i++) {
+                const size_t alloc_len = vec->tagSize / 8 + (sizeof(padding) * 2);
+
+                auths[i] = malloc(alloc_len);
+                if (auths[i] == NULL) {
+                        fprintf(stderr, "Can't allocate buffer memory\n");
+                        goto end;
+                }
+                memset(auths[i], -1, alloc_len);
+        }
+
+        for (i = 0; i < num_jobs; i++) {
+                job = &jobs[i];
+
+                job->enc_keys = NULL;
+                job->dec_keys = NULL;
+                job->cipher_direction = IMB_DIR_ENCRYPT;
+                job->chain_order = IMB_ORDER_HASH_CIPHER;
+                job->auth_tag_output = auths[i] + sizeof(padding);
+                job->auth_tag_output_len_in_bytes = vec->tagSize / 8;
+                job->src = (const void *) vec->msg;
+                job->msg_len_to_hash_in_bytes = vec->msgSize / 8;
+                job->cipher_mode = IMB_CIPHER_NULL;
+                job->hash_alg = hash_alg;
+
+                job->user_data = auths[i];
+        }
+
+        completed_jobs = IMB_SUBMIT_HASH_BURST(mb_mgr, jobs, num_jobs, hash_alg);
+        if (completed_jobs != num_jobs) {
+                int err = imb_get_errno(mb_mgr);
+
+                if (err != 0) {
+                        printf("submit_burst error %d : '%s'\n", err, imb_get_strerror(err));
+                        goto end;
+                } else {
+                        printf("submit_burst error: not enough "
+                               "jobs returned!\n");
+                        goto end;
+                }
+        }
+
+        for (i = 0; i < num_jobs; i++) {
+                job = &jobs[i];
+
+                if (job->status != IMB_STATUS_COMPLETED) {
+                        printf("job %u status not complete!\n", i + 1);
+                        goto end;
+                }
+
+                if (!sha_job_ok(vec, job, job->user_data, padding, sizeof(padding)))
+                        goto end;
+                jobs_rx++;
+        }
+
+        if (jobs_rx != num_jobs) {
+                printf("Expected %u jobs, received %u\n", num_jobs, jobs_rx);
+                goto end;
+        }
+        ret = 0;
+
+end:
+        for (i = 0; i < num_jobs; i++) {
+                if (auths[i] != NULL)
+                        free(auths[i]);
+        }
+
+end2:
+        if (auths != NULL)
+                free(auths);
+
+        return ret;
+}
+
 static void
 test_sha_vectors(struct IMB_MGR *mb_mgr, struct test_suite_context *sha1_ctx,
                  struct test_suite_context *sha224_ctx, struct test_suite_context *sha256_ctx,
@@ -221,6 +335,12 @@ test_sha_vectors(struct IMB_MGR *mb_mgr, struct test_suite_context *sha1_ctx,
                 }
 #endif
                 if (test_sha(mb_mgr, v, num_jobs, sha_type)) {
+                        printf("error #%zu\n", v->tcId);
+                        test_suite_update(ctx, 0, 1);
+                } else {
+                        test_suite_update(ctx, 1, 0);
+                }
+                if (test_sha_hash_burst(mb_mgr, v, num_jobs, sha_type)) {
                         printf("error #%zu\n", v->tcId);
                         test_suite_update(ctx, 0, 1);
                 } else {
