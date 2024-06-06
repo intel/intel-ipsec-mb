@@ -730,3 +730,27 @@ EXPORTS
     get_completed_job_avx2_t4            	@704
     imb_hash_burst_get_size                     @705
     imb_get_arch_type_string                    @706
+    submit_aead_burst_sse_t1                    @707
+    submit_aead_burst_sse_t2                    @708
+    submit_aead_burst_sse_t3                    @709
+    submit_aead_burst_sse_no_aesni              @710
+    submit_aead_burst_avx_t1                    @711
+    submit_aead_burst_avx_t2                    @712
+    submit_aead_burst_avx2_t1                   @713
+    submit_aead_burst_avx2_t2                   @714
+    submit_aead_burst_avx2_t3                   @715
+    submit_aead_burst_avx2_t4                   @716
+    submit_aead_burst_avx512_t1                 @717
+    submit_aead_burst_avx512_t2                 @718
+    submit_aead_burst_nocheck_sse_t1            @719
+    submit_aead_burst_nocheck_sse_t2            @720
+    submit_aead_burst_nocheck_sse_t3            @721
+    submit_aead_burst_nocheck_sse_no_aesni      @722
+    submit_aead_burst_nocheck_avx_t1            @723
+    submit_aead_burst_nocheck_avx_t2            @724
+    submit_aead_burst_nocheck_avx2_t1           @725
+    submit_aead_burst_nocheck_avx2_t2           @726
+    submit_aead_burst_nocheck_avx2_t3           @727
+    submit_aead_burst_nocheck_avx2_t4           @728
+    submit_aead_burst_nocheck_avx512_t1         @729
+    submit_aead_burst_nocheck_avx512_t2         @730

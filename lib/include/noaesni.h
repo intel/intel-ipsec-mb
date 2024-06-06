@@ -69,6 +69,16 @@ submit_hash_burst_sse_no_aesni(IMB_MGR *state, IMB_JOB *jobs, const uint32_t n_j
 IMB_DLL_EXPORT uint32_t
 submit_hash_burst_nocheck_sse_no_aesni(IMB_MGR *state, IMB_JOB *jobs, const uint32_t n_jobs,
                                        const IMB_HASH_ALG hash);
+
+IMB_DLL_EXPORT uint32_t
+submit_aead_burst_sse_no_aesni(IMB_MGR *state, IMB_JOB *jobs, const uint32_t n_jobs,
+                               const IMB_CIPHER_MODE cipher, const IMB_CIPHER_DIRECTION dir,
+                               const IMB_KEY_SIZE_BYTES key_size);
+IMB_DLL_EXPORT uint32_t
+submit_aead_burst_nocheck_sse_no_aesni(IMB_MGR *state, IMB_JOB *jobs, const uint32_t n_jobs,
+                                       const IMB_CIPHER_MODE cipher, const IMB_CIPHER_DIRECTION dir,
+                                       const IMB_KEY_SIZE_BYTES key_size);
+
 IMB_DLL_EXPORT void
 aes_keyexp_128_sse_no_aesni(const void *key, void *enc_exp_keys, void *dec_exp_keys);
 IMB_DLL_EXPORT void

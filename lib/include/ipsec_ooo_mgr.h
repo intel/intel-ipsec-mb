@@ -699,6 +699,96 @@ IMB_DLL_EXPORT uint32_t
 submit_hash_burst_nocheck_avx512_t2(IMB_MGR *state, IMB_JOB *jobs, const uint32_t n_jobs,
                                     const IMB_HASH_ALG hash);
 
+IMB_DLL_EXPORT uint32_t
+submit_aead_burst_sse_t1(IMB_MGR *state, IMB_JOB *jobs, const uint32_t n_jobs,
+                         const IMB_CIPHER_MODE cipher, const IMB_CIPHER_DIRECTION dir,
+                         const IMB_KEY_SIZE_BYTES key_size);
+IMB_DLL_EXPORT uint32_t
+submit_aead_burst_sse_t2(IMB_MGR *state, IMB_JOB *jobs, const uint32_t n_jobs,
+                         const IMB_CIPHER_MODE cipher, const IMB_CIPHER_DIRECTION dir,
+                         const IMB_KEY_SIZE_BYTES key_size);
+IMB_DLL_EXPORT uint32_t
+submit_aead_burst_sse_t3(IMB_MGR *state, IMB_JOB *jobs, const uint32_t n_jobs,
+                         const IMB_CIPHER_MODE cipher, const IMB_CIPHER_DIRECTION dir,
+                         const IMB_KEY_SIZE_BYTES key_size);
+IMB_DLL_EXPORT uint32_t
+submit_aead_burst_avx_t1(IMB_MGR *state, IMB_JOB *jobs, const uint32_t n_jobs,
+                         const IMB_CIPHER_MODE cipher, const IMB_CIPHER_DIRECTION dir,
+                         const IMB_KEY_SIZE_BYTES key_size);
+IMB_DLL_EXPORT uint32_t
+submit_aead_burst_avx_t2(IMB_MGR *state, IMB_JOB *jobs, const uint32_t n_jobs,
+                         const IMB_CIPHER_MODE cipher, const IMB_CIPHER_DIRECTION dir,
+                         const IMB_KEY_SIZE_BYTES key_size);
+IMB_DLL_EXPORT uint32_t
+submit_aead_burst_avx2_t1(IMB_MGR *state, IMB_JOB *jobs, const uint32_t n_jobs,
+                          const IMB_CIPHER_MODE cipher, const IMB_CIPHER_DIRECTION dir,
+                          const IMB_KEY_SIZE_BYTES key_size);
+IMB_DLL_EXPORT uint32_t
+submit_aead_burst_avx2_t2(IMB_MGR *state, IMB_JOB *jobs, const uint32_t n_jobs,
+                          const IMB_CIPHER_MODE cipher, const IMB_CIPHER_DIRECTION dir,
+                          const IMB_KEY_SIZE_BYTES key_size);
+IMB_DLL_EXPORT uint32_t
+submit_aead_burst_avx2_t3(IMB_MGR *state, IMB_JOB *jobs, const uint32_t n_jobs,
+                          const IMB_CIPHER_MODE cipher, const IMB_CIPHER_DIRECTION dir,
+                          const IMB_KEY_SIZE_BYTES key_size);
+IMB_DLL_EXPORT uint32_t
+submit_aead_burst_avx2_t4(IMB_MGR *state, IMB_JOB *jobs, const uint32_t n_jobs,
+                          const IMB_CIPHER_MODE cipher, const IMB_CIPHER_DIRECTION dir,
+                          const IMB_KEY_SIZE_BYTES key_size);
+IMB_DLL_EXPORT uint32_t
+submit_aead_burst_avx512_t1(IMB_MGR *state, IMB_JOB *jobs, const uint32_t n_jobs,
+                            const IMB_CIPHER_MODE cipher, const IMB_CIPHER_DIRECTION dir,
+                            const IMB_KEY_SIZE_BYTES key_size);
+IMB_DLL_EXPORT uint32_t
+submit_aead_burst_avx512_t2(IMB_MGR *state, IMB_JOB *jobs, const uint32_t n_jobs,
+                            const IMB_CIPHER_MODE cipher, const IMB_CIPHER_DIRECTION dir,
+                            const IMB_KEY_SIZE_BYTES key_size);
+
+IMB_DLL_EXPORT uint32_t
+submit_aead_burst_nocheck_sse_t1(IMB_MGR *state, IMB_JOB *jobs, const uint32_t n_jobs,
+                                 const IMB_CIPHER_MODE cipher, const IMB_CIPHER_DIRECTION dir,
+                                 const IMB_KEY_SIZE_BYTES key_size);
+IMB_DLL_EXPORT uint32_t
+submit_aead_burst_nocheck_sse_t2(IMB_MGR *state, IMB_JOB *jobs, const uint32_t n_jobs,
+                                 const IMB_CIPHER_MODE cipher, const IMB_CIPHER_DIRECTION dir,
+                                 const IMB_KEY_SIZE_BYTES key_size);
+IMB_DLL_EXPORT uint32_t
+submit_aead_burst_nocheck_sse_t3(IMB_MGR *state, IMB_JOB *jobs, const uint32_t n_jobs,
+                                 const IMB_CIPHER_MODE cipher, const IMB_CIPHER_DIRECTION dir,
+                                 const IMB_KEY_SIZE_BYTES key_size);
+IMB_DLL_EXPORT uint32_t
+submit_aead_burst_nocheck_avx_t1(IMB_MGR *state, IMB_JOB *jobs, const uint32_t n_jobs,
+                                 const IMB_CIPHER_MODE cipher, const IMB_CIPHER_DIRECTION dir,
+                                 const IMB_KEY_SIZE_BYTES key_size);
+IMB_DLL_EXPORT uint32_t
+submit_aead_burst_nocheck_avx_t2(IMB_MGR *state, IMB_JOB *jobs, const uint32_t n_jobs,
+                                 const IMB_CIPHER_MODE cipher, const IMB_CIPHER_DIRECTION dir,
+                                 const IMB_KEY_SIZE_BYTES key_size);
+IMB_DLL_EXPORT uint32_t
+submit_aead_burst_nocheck_avx2_t1(IMB_MGR *state, IMB_JOB *jobs, const uint32_t n_jobs,
+                                  const IMB_CIPHER_MODE cipher, const IMB_CIPHER_DIRECTION dir,
+                                  const IMB_KEY_SIZE_BYTES key_size);
+IMB_DLL_EXPORT uint32_t
+submit_aead_burst_nocheck_avx2_t2(IMB_MGR *state, IMB_JOB *jobs, const uint32_t n_jobs,
+                                  const IMB_CIPHER_MODE cipher, const IMB_CIPHER_DIRECTION dir,
+                                  const IMB_KEY_SIZE_BYTES key_size);
+IMB_DLL_EXPORT uint32_t
+submit_aead_burst_nocheck_avx2_t3(IMB_MGR *state, IMB_JOB *jobs, const uint32_t n_jobs,
+                                  const IMB_CIPHER_MODE cipher, const IMB_CIPHER_DIRECTION dir,
+                                  const IMB_KEY_SIZE_BYTES key_size);
+IMB_DLL_EXPORT uint32_t
+submit_aead_burst_nocheck_avx2_t4(IMB_MGR *state, IMB_JOB *jobs, const uint32_t n_jobs,
+                                  const IMB_CIPHER_MODE cipher, const IMB_CIPHER_DIRECTION dir,
+                                  const IMB_KEY_SIZE_BYTES key_size);
+IMB_DLL_EXPORT uint32_t
+submit_aead_burst_nocheck_avx512_t1(IMB_MGR *state, IMB_JOB *jobs, const uint32_t n_jobs,
+                                    const IMB_CIPHER_MODE cipher, const IMB_CIPHER_DIRECTION dir,
+                                    const IMB_KEY_SIZE_BYTES key_size);
+IMB_DLL_EXPORT uint32_t
+submit_aead_burst_nocheck_avx512_t2(IMB_MGR *state, IMB_JOB *jobs, const uint32_t n_jobs,
+                                    const IMB_CIPHER_MODE cipher, const IMB_CIPHER_DIRECTION dir,
+                                    const IMB_KEY_SIZE_BYTES key_size);
+
 /* SSE TYPE1 manager functions */
 IMB_DLL_EXPORT IMB_JOB *
 submit_job_sse_t1(IMB_MGR *state);

@@ -35,6 +35,102 @@
 #include "include/mb_mgr_job_check.h" /* is_job_invalid() */
 
 __forceinline uint32_t
+submit_aes_ccm_burst(IMB_MGR *state, IMB_JOB *jobs, const uint32_t n_jobs,
+                     const IMB_KEY_SIZE_BYTES key_size, const int run_check,
+                     const IMB_CIPHER_DIRECTION dir)
+{
+        uint32_t completed_jobs = 0;
+        MB_MGR_CCM_OOO *aes_ccm_ooo;
+        typedef IMB_JOB *(*submit_ccm_t)(MB_MGR_CCM_OOO *state, IMB_JOB *job);
+        submit_ccm_t submit_auth_ccm_fn;
+        typedef IMB_JOB *(*flush_ccm_t)(MB_MGR_CCM_OOO *state);
+        flush_ccm_t flush_auth_ccm_fn;
+        typedef IMB_JOB *(*aes_cntr_ccm_t)(IMB_JOB *job);
+        aes_cntr_ccm_t cntr_ccm_fn;
+        uint32_t i;
+
+        if (key_size == IMB_KEY_128_BYTES) {
+                aes_ccm_ooo = state->aes_ccm_ooo;
+                submit_auth_ccm_fn = SUBMIT_JOB_AES128_CCM_AUTH;
+                flush_auth_ccm_fn = FLUSH_JOB_AES128_CCM_AUTH;
+                cntr_ccm_fn = AES_CNTR_CCM_128;
+        } else {
+                aes_ccm_ooo = state->aes256_ccm_ooo;
+                submit_auth_ccm_fn = SUBMIT_JOB_AES256_CCM_AUTH;
+                flush_auth_ccm_fn = FLUSH_JOB_AES256_CCM_AUTH;
+                cntr_ccm_fn = AES_CNTR_CCM_256;
+        }
+
+        if (run_check) {
+
+                /* validate jobs */
+                for (i = 0; i < n_jobs; i++) {
+                        IMB_JOB *job = &jobs[i];
+
+                        /* validate job */
+                        if (is_job_invalid(state, job, IMB_CIPHER_CCM, IMB_AUTH_AES_CCM, dir,
+                                           key_size)) {
+                                job->status = IMB_STATUS_INVALID_ARGS;
+                                return 0;
+                        }
+                }
+        }
+
+        if (dir == IMB_DIR_ENCRYPT) {
+                /* First authenticate with AES-CMAC */
+                /* submit all jobs */
+                for (i = 0; i < n_jobs; i++) {
+                        IMB_JOB *job = &jobs[i];
+
+                        job = submit_auth_ccm_fn(aes_ccm_ooo, job);
+                        if (job != NULL)
+                                completed_jobs++;
+                }
+                /* flush any outstanding jobs */
+                if (completed_jobs != n_jobs)
+                        while (flush_auth_ccm_fn(aes_ccm_ooo) != NULL)
+                                completed_jobs++;
+
+                /* Then encrypt with AES-CTR */
+                for (i = 0; i < n_jobs; i++) {
+                        IMB_JOB *job = &jobs[i];
+
+                        cntr_ccm_fn(job);
+                        job->status = IMB_STATUS_COMPLETED;
+                }
+        } else {
+                /* First decrypt with AES-CTR */
+                for (i = 0; i < n_jobs; i++) {
+                        IMB_JOB *job = &jobs[i];
+
+                        cntr_ccm_fn(job);
+                }
+
+                /* Then authenticate with AES-CMAC */
+                /* submit all jobs */
+                for (i = 0; i < n_jobs; i++) {
+                        IMB_JOB *job = &jobs[i];
+
+                        job = submit_auth_ccm_fn(aes_ccm_ooo, job);
+                        if (job != NULL) {
+                                job->status = IMB_STATUS_COMPLETED;
+                                completed_jobs++;
+                        }
+                }
+                /* flush any outstanding jobs */
+                if (completed_jobs != n_jobs) {
+                        IMB_JOB *job = NULL;
+
+                        while ((job = flush_auth_ccm_fn(aes_ccm_ooo)) != NULL) {
+                                job->status = IMB_STATUS_COMPLETED;
+                                completed_jobs++;
+                        }
+                }
+        }
+
+        return completed_jobs;
+}
+__forceinline uint32_t
 submit_aes_cbc_burst_enc(IMB_MGR *state, IMB_JOB *jobs, const uint32_t n_jobs,
                          const IMB_KEY_SIZE_BYTES key_size, const int run_check)
 {
@@ -424,6 +520,45 @@ SUBMIT_CIPHER_BURST_NOCHECK(IMB_MGR *state, IMB_JOB *jobs, const uint32_t n_jobs
                             const IMB_KEY_SIZE_BYTES key_size)
 {
         return submit_cipher_burst_and_check(state, jobs, n_jobs, cipher, dir, key_size, 0);
+}
+
+__forceinline uint32_t
+submit_aead_burst_and_check(IMB_MGR *state, IMB_JOB *jobs, const uint32_t n_jobs,
+                            const IMB_CIPHER_MODE cipher, const IMB_CIPHER_DIRECTION dir,
+                            const IMB_KEY_SIZE_BYTES key_size, const int run_check)
+{
+        /* reset error status */
+        imb_set_errno(state, 0);
+
+        if (run_check)
+                if (jobs == NULL) {
+                        imb_set_errno(state, IMB_ERR_NULL_BURST);
+                        return 0;
+                }
+
+        if (cipher == IMB_CIPHER_CCM)
+                return submit_aes_ccm_burst(state, jobs, n_jobs, key_size, run_check, dir);
+
+        /* unsupported cipher mode */
+        imb_set_errno(state, IMB_ERR_CIPH_MODE);
+
+        return 0;
+}
+
+uint32_t
+SUBMIT_AEAD_BURST(IMB_MGR *state, IMB_JOB *jobs, const uint32_t n_jobs,
+                  const IMB_CIPHER_MODE cipher, const IMB_CIPHER_DIRECTION dir,
+                  const IMB_KEY_SIZE_BYTES key_size)
+{
+        return submit_aead_burst_and_check(state, jobs, n_jobs, cipher, dir, key_size, 1);
+}
+
+uint32_t
+SUBMIT_AEAD_BURST_NOCHECK(IMB_MGR *state, IMB_JOB *jobs, const uint32_t n_jobs,
+                          const IMB_CIPHER_MODE cipher, const IMB_CIPHER_DIRECTION dir,
+                          const IMB_KEY_SIZE_BYTES key_size)
+{
+        return submit_aead_burst_and_check(state, jobs, n_jobs, cipher, dir, key_size, 0);
 }
 
 __forceinline uint32_t

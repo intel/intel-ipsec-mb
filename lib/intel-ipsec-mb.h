@@ -1116,6 +1116,9 @@ typedef struct IMB_MGR {
         imb_self_test_cb_t self_test_cb_fn;
         void *self_test_cb_arg;
 
+        submit_cipher_burst_t submit_aead_burst;
+        submit_cipher_burst_t submit_aead_burst_nocheck;
+
         /* in-order scheduler fields */
         int earliest_job; /**< byte offset, -1 if none */
         int next_job;     /**< byte offset */
@@ -1679,6 +1682,38 @@ init_mb_mgr_auto(IMB_MGR *state, IMB_ARCH *arch);
  */
 #define IMB_SUBMIT_HASH_BURST_NOCHECK(_mgr, _jobs, _n_jobs, _hash)                                 \
         ((_mgr)->submit_hash_burst_nocheck((_mgr), (_jobs), (_n_jobs), (_hash)))
+
+/**
+ * Submit multiple cipher jobs to be processed synchronously after validating.
+ *
+ * @param [in] _mgr        Pointer to initialized IMB_MGR structure
+ * @param [in,out] _jobs   Pointer to array of IMB_JOB structures
+ * @param [in] _n_jobs     Number of jobs to process
+ * @param [in] _cipher     Cipher algorithm of type #IMB_CIPHER_MODE
+ * @param [in] _dir        Cipher direction of type #IMB_CIPHER_DIRECTION
+ * @param [in] _key_size   Key size in bytes of type #IMB_KEY_SIZE_BYTES
+ *
+ * @return Number of completed jobs
+ */
+#define IMB_SUBMIT_AEAD_BURST(_mgr, _jobs, _n_jobs, _cipher, _dir, _key_size)                      \
+        ((_mgr)->submit_aead_burst((_mgr), (_jobs), (_n_jobs), (_cipher), (_dir), (_key_size)))
+/**
+ * Submit multiple cipher jobs to be processed synchronously without validating.
+ *
+ * This is more performant but less secure than IMB_SUBMIT_AEAD_BURST().
+ *
+ * @param [in] _mgr        Pointer to initialized IMB_MGR structure
+ * @param [in,out] _jobs   Pointer to array of IMB_JOB structures
+ * @param [in] _n_jobs     Number of jobs to process
+ * @param [in] _cipher     Cipher algorithm of type #IMB_CIPHER_MODE
+ * @param [in] _dir        Cipher direction of type #IMB_CIPHER_DIRECTION
+ * @param [in] _key_size   Key size in bytes of type #IMB_KEY_SIZE_BYTES
+ *
+ * @return Number of completed jobs
+ */
+#define IMB_SUBMIT_AEAD_BURST_NOCHECK(_mgr, _jobs, _n_jobs, _cipher, _dir, _key_size)              \
+        ((_mgr)->submit_aead_burst_nocheck((_mgr), (_jobs), (_n_jobs), (_cipher), (_dir),          \
+                                           (_key_size)))
 
 /* Key expansion and generation API's */
 

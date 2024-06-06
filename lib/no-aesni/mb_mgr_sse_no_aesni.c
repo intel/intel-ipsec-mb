@@ -166,6 +166,8 @@
 #define SUBMIT_CIPHER_BURST_NOCHECK submit_cipher_burst_nocheck_sse_no_aesni
 #define SUBMIT_HASH_BURST           submit_hash_burst_sse_no_aesni
 #define SUBMIT_HASH_BURST_NOCHECK   submit_hash_burst_nocheck_sse_no_aesni
+#define SUBMIT_AEAD_BURST           submit_aead_burst_sse_no_aesni
+#define SUBMIT_AEAD_BURST_NOCHECK   submit_aead_burst_nocheck_sse_no_aesni
 #define SET_SUITE_ID_FN             set_suite_id_sse_no_aesni
 
 #define SUBMIT_JOB_AES128_DEC submit_job_aes128_dec_sse_no_aesni
@@ -351,6 +353,8 @@ init_mb_mgr_sse_no_aesni_internal(IMB_MGR *state, const int reset_mgrs)
         state->submit_cipher_burst_nocheck = submit_cipher_burst_nocheck_sse_no_aesni;
         state->submit_hash_burst = submit_hash_burst_sse_no_aesni;
         state->submit_hash_burst_nocheck = submit_hash_burst_nocheck_sse_no_aesni;
+        state->submit_aead_burst = submit_aead_burst_sse_no_aesni;
+        state->submit_aead_burst_nocheck = submit_aead_burst_nocheck_sse_no_aesni;
         state->submit_job_nocheck = submit_job_nocheck_sse_no_aesni;
         state->get_completed_job = get_completed_job_sse_no_aesni;
         state->flush_job = flush_job_sse_no_aesni;
