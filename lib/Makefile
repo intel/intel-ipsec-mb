@@ -340,7 +340,8 @@ c_lib_objs := \
 	quic_hp_chacha20.o \
 	quic_chacha20_poly1305.o \
 	hmac_ipad_opad.o \
-	cipher_suite_id.o
+	cipher_suite_id.o \
+	capabilities.o
 
 ifeq ($(AESNI_EMU), y)
 c_lib_objs := $(c_lib_objs) \

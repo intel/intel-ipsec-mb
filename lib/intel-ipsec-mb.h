@@ -3891,6 +3891,28 @@ imb_self_test_set_cb(IMB_MGR *state, imb_self_test_cb_t cb_fn, void *cb_arg);
  */
 IMB_DLL_EXPORT int
 imb_self_test_get_cb(IMB_MGR *state, imb_self_test_cb_t *cb_fn, void **cb_arg);
+
+/**
+ * @brief Retrieves minimum burst size for good performance on hash algorithms.
+ *
+ * Depending on the architecture used, this function returns the minimum
+ * burst size to be used for good performance on the hash-only burst API.
+ * The output burst size can be 1 (in case of a synchronous single-buffer implementation
+ * or 0 if the algorithm is not supported by the API).
+ *
+ * @param [in] mb_mgr          pointer to IMB MGR structure
+ * @param [in] algo            hash algorithm
+ * @param [out] out_burst_size pointer to store min burst size
+ *
+ * @return operation status.
+ * @retval 0 success
+ * @retval IMB_ERR_HASH_ALGO  not supported \a algo
+ * @retval IMB_ERR_NULL_MBMGR invalid \a mb_mgr pointer
+ * @retval IMB_ERR_NULL_BURST invalid \a out_burst_size pointer
+ */
+IMB_DLL_EXPORT int
+imb_hash_burst_get_size(IMB_MGR *mb_mgr, const IMB_HASH_ALG algo, unsigned *out_burst_size);
+
 #ifdef __cplusplus
 }
 #endif
