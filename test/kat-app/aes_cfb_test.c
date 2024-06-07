@@ -36,8 +36,6 @@
 #include "utils.h"
 #include "cipher_test.h"
 
-#define MAX_BURST_JOBS 64
-
 int
 cfb_test(struct IMB_MGR *mb_mgr);
 

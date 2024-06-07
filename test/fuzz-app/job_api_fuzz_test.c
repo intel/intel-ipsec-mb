@@ -34,9 +34,8 @@
 #include <stdbool.h>
 #include <intel-ipsec-mb.h>
 
-#define BUFF_SIZE      (32 * 1024 * 1024)
-#define MAX_BURST_JOBS 32
-#define MAX_SGL_SEGS   32
+#define BUFF_SIZE    (32 * 1024 * 1024)
+#define MAX_SGL_SEGS 32
 
 int
 LLVMFuzzerTestOneInput(const uint8_t *, size_t);
@@ -492,7 +491,7 @@ LLVMFuzzerTestOneInput(const uint8_t *data, size_t dataSize)
         if (dataSize < sizeof(IMB_JOB))
                 return 0;
 
-        if (num_jobs > MAX_BURST_JOBS || num_jobs == 0 || key_len == 0)
+        if (num_jobs > IMB_MAX_BURST_SIZE || num_jobs == 0 || key_len == 0)
                 return 0;
 
         if (cipher_dir != NULL) {
@@ -574,7 +573,7 @@ LLVMFuzzerTestOneInput(const uint8_t *data, size_t dataSize)
                         IMB_SUBMIT_JOB(p_mgr);
                 }
         } else if (burst) {
-                IMB_JOB *jobs[MAX_BURST_JOBS] = { NULL };
+                IMB_JOB *jobs[IMB_MAX_BURST_SIZE] = { NULL };
 
                 while (IMB_GET_NEXT_BURST(p_mgr, num_jobs, jobs) < (uint32_t) num_jobs)
                         IMB_FLUSH_BURST(p_mgr, num_jobs, jobs);
@@ -609,7 +608,7 @@ LLVMFuzzerTestOneInput(const uint8_t *data, size_t dataSize)
 
                 IMB_SUBMIT_BURST(p_mgr, num_jobs, jobs);
         } else if (cipher_burst) {
-                IMB_JOB jobs[MAX_BURST_JOBS] = { 0 };
+                IMB_JOB jobs[IMB_MAX_BURST_SIZE] = { 0 };
 
                 for (i = 0; i < num_jobs; i++) {
                         job = &jobs[i];
@@ -636,7 +635,7 @@ LLVMFuzzerTestOneInput(const uint8_t *data, size_t dataSize)
 
                 IMB_SUBMIT_CIPHER_BURST(p_mgr, jobs, num_jobs, cipher, dir, key_len);
         } else if (hash_burst) {
-                IMB_JOB jobs[MAX_BURST_JOBS] = { 0 };
+                IMB_JOB jobs[IMB_MAX_BURST_SIZE] = { 0 };
 
                 for (i = 0; i < num_jobs; i++) {
                         job = &jobs[i];

@@ -38,8 +38,6 @@
 int
 hmac_sm3_test(struct IMB_MGR *mb_mgr);
 
-#define MAX_BURST_JOBS 32
-
 extern const struct mac_test hmac_sm3_test_kat_json[];
 static int
 hmac_sm3_job_ok(const struct mac_test *vec, const struct IMB_JOB *job, const uint8_t *auth,
@@ -169,7 +167,7 @@ end:
 static int
 test_hmac_sm3_burst(struct IMB_MGR *mb_mgr, const struct mac_test *vec, const uint32_t num_jobs)
 {
-        struct IMB_JOB *job, *jobs[MAX_BURST_JOBS] = { NULL };
+        struct IMB_JOB *job, *jobs[IMB_MAX_BURST_SIZE] = { NULL };
         uint8_t padding[16];
         uint8_t **auths = malloc(num_jobs * sizeof(void *));
         uint32_t i = 0, jobs_rx = 0;
@@ -320,7 +318,7 @@ hmac_sm3_test(struct IMB_MGR *mb_mgr)
         uint32_t num_jobs;
 
         test_suite_start(&ts, "SM3");
-        for (num_jobs = 1; num_jobs <= MAX_BURST_JOBS; num_jobs++)
+        for (num_jobs = 1; num_jobs <= IMB_MAX_BURST_SIZE; num_jobs++)
                 test_hmac_sm3_std_vectors(mb_mgr, num_jobs, &ts);
         errors = test_suite_end(&ts);
 

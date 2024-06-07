@@ -36,8 +36,6 @@
 #include "utils.h"
 #include "cipher_test.h"
 
-#define MAX_BURST_JOBS 64
-
 int
 cbc_test(struct IMB_MGR *mb_mgr);
 
@@ -185,7 +183,7 @@ test_aes_many_burst(struct IMB_MGR *mb_mgr, void *enc_keys, void *dec_keys, cons
                     const int dir, const int order, const IMB_CIPHER_MODE cipher,
                     const int in_place, const int key_len, const int num_jobs)
 {
-        struct IMB_JOB *job, *jobs[MAX_BURST_JOBS] = { NULL };
+        struct IMB_JOB *job, *jobs[IMB_MAX_BURST_SIZE] = { NULL };
         uint8_t padding[16];
         uint8_t **targets = malloc(num_jobs * sizeof(void *));
         int i, completed_jobs, jobs_rx = 0, ret = -1;
@@ -291,7 +289,7 @@ test_aes_many_cipher_burst(struct IMB_MGR *mb_mgr, void *enc_keys, void *dec_key
                            const int dir, const IMB_CIPHER_MODE cipher, const int in_place,
                            const int key_len, const int num_jobs)
 {
-        struct IMB_JOB *job, jobs[MAX_BURST_JOBS];
+        struct IMB_JOB *job, jobs[IMB_MAX_BURST_SIZE];
         uint8_t padding[16];
         uint8_t **targets = malloc(num_jobs * sizeof(void *));
         int i, completed_jobs, jobs_rx = 0, ret = -1;
@@ -545,7 +543,7 @@ test_cbc_vectors(struct IMB_MGR *mb_mgr, struct test_suite_context *ctx128,
 int
 cbc_test(struct IMB_MGR *mb_mgr)
 {
-        const int num_jobs_tab[] = { 1, 3, 4, 5, 7, 8, 9, 15, 16, 17, MAX_BURST_JOBS };
+        const int num_jobs_tab[] = { 1, 3, 4, 5, 7, 8, 9, 15, 16, 17, IMB_MAX_BURST_SIZE };
         unsigned i;
         int errors = 0;
         struct test_suite_context ctx128;

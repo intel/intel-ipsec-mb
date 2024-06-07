@@ -38,8 +38,6 @@
 int
 sha_test(struct IMB_MGR *mb_mgr);
 
-#define MAX_BURST_JOBS 32
-
 extern const struct mac_test sha_test_json[];
 
 static int
@@ -178,7 +176,7 @@ static int
 test_sha_hash_burst(struct IMB_MGR *mb_mgr, const struct mac_test *vec, const int num_jobs,
                     const int sha_type)
 {
-        struct IMB_JOB *job, jobs[MAX_BURST_JOBS] = { 0 };
+        struct IMB_JOB *job, jobs[IMB_MAX_BURST_SIZE] = { 0 };
         uint8_t padding[16];
         uint8_t **auths = malloc(num_jobs * sizeof(void *));
         int i = 0, jobs_rx = 0, ret = -1;

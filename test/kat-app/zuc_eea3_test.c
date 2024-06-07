@@ -52,8 +52,6 @@
 #define MAX_BUFFER_LENGTH_IN_BITS  5670 /* biggest test is EIA test 5 */
 #define MAX_BUFFER_LENGTH_IN_BYTES ((MAX_BUFFER_LENGTH_IN_BITS) + 7) / 8
 
-#define MAX_BURST_JOBS 32
-
 enum api_type { TEST_DIRECT_API, TEST_SINGLE_JOB_API, TEST_BURST_JOB_API };
 
 int
@@ -312,7 +310,7 @@ submit_burst_eea3_jobs(struct IMB_MGR *mb_mgr, uint8_t **const keys, uint8_t **c
                        const unsigned int num_jobs, const unsigned int key_len,
                        const unsigned int *iv_lens)
 {
-        IMB_JOB *job, *jobs[MAX_BURST_JOBS] = { NULL };
+        IMB_JOB *job, *jobs[IMB_MAX_BURST_SIZE] = { NULL };
         unsigned int i;
         unsigned int jobs_rx = 0;
         uint32_t completed_jobs = 0;
