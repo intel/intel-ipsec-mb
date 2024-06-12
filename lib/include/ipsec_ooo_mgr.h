@@ -255,6 +255,7 @@ typedef struct {
         DECLARE_ALIGNED(IMB_JOB *job_in_lane[16], 16);
         uint64_t num_lanes_inuse;
         DECLARE_ALIGNED(uint8_t init_blocks[16 * (4 * 16)], 64);
+        uint32_t total_num_lanes;
         uint64_t road_block;
 } MB_MGR_CCM_OOO;
 

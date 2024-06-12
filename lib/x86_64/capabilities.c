@@ -104,6 +104,19 @@ imb_cipher_burst_get_size(const IMB_MGR *mb_mgr, const IMB_CIPHER_MODE cipher_mo
 }
 
 int
+imb_aead_burst_get_size(const IMB_MGR *mb_mgr, const IMB_CIPHER_MODE cipher_mode,
+                        unsigned *out_burst_size)
+{
+        if (cipher_mode == IMB_CIPHER_CCM) {
+                *out_burst_size = ((MB_MGR_CCM_OOO *) (mb_mgr->aes_ccm_ooo))->total_num_lanes;
+                return 0;
+        } else {
+                *out_burst_size = 0;
+                return IMB_ERR_CIPH_MODE;
+        }
+}
+
+int
 imb_get_arch_type_string(const IMB_MGR *state, const char **arch_type, const char **description)
 {
 #ifdef SAFE_PARAM
