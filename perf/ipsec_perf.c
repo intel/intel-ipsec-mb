@@ -741,6 +741,7 @@ typedef enum {
         TEST_API_BURST,
         TEST_API_CIPHER_BURST,
         TEST_API_HASH_BURST,
+        TEST_API_AEAD_BURST,
         TEST_API_DIRECT,
         TEST_API_QUIC,
         TEST_API_NUMOF
@@ -2412,6 +2413,75 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params, const uint32_t num_iter, uint8
                 }
                 jobs_done = num_iter - num_jobs;
 
+                /* test AEAD burst api */
+        } else if (test_api == TEST_API_AEAD_BURST) {
+                IMB_JOB jobs[MAX_BURST_SIZE];
+                IMB_JOB *jt = &job_template;
+                uint32_t num_jobs = num_iter;
+                uint32_t list_idx;
+
+                while (num_jobs && timebox_on) {
+                        uint32_t n_jobs = (num_jobs / burst_size) ? burst_size : num_jobs;
+
+                        /* set all job params */
+                        for (i = 0; i < n_jobs; i++) {
+                                job = &jobs[i];
+
+                                /* If IMIX testing is being done, set the buffer
+                                 * size to cipher going through the
+                                 * list of sizes precalculated */
+                                if (imix_list_count != 0) {
+                                        list_idx = i & (JOB_SIZE_IMIX_LIST - 1);
+                                        job->msg_len_to_cipher_in_bytes =
+                                                cipher_size_list[list_idx];
+                                } else
+                                        job->msg_len_to_cipher_in_bytes =
+                                                jt->msg_len_to_cipher_in_bytes;
+
+                                job->src = get_src_buffer(index, p_buffer);
+                                job->dst = get_dst_buffer(index, p_buffer);
+                                job->enc_keys = job->dec_keys =
+                                        (const uint32_t *) get_key_pointer(index, p_keys);
+                                job->cipher_start_src_offset_in_bytes =
+                                        jt->cipher_start_src_offset_in_bytes;
+                                job->iv = jt->iv;
+                                job->iv_len_in_bytes = jt->iv_len_in_bytes;
+                                job->msg_len_to_hash_in_bytes = jt->msg_len_to_hash_in_bytes;
+                                job->hash_start_src_offset_in_bytes =
+                                        jt->hash_start_src_offset_in_bytes;
+                                job->auth_tag_output_len_in_bytes =
+                                        jt->auth_tag_output_len_in_bytes;
+                                job->auth_tag_output = jt->auth_tag_output;
+                                if (jt->cipher_mode == IMB_CIPHER_CCM) {
+                                        job->u.CCM.aad_len_in_bytes = aad_size;
+                                        job->u.CCM.aad = job->src;
+                                }
+
+                                index = get_next_index(index);
+                        }
+                        /* submit AEAD burst */
+#ifdef DEBUG
+                        const uint32_t completed_jobs =
+                                IMB_SUBMIT_AEAD_BURST(mb_mgr, jobs, n_jobs, jt->cipher_mode,
+                                                      jt->cipher_direction, jt->key_len_in_bytes);
+
+                        if (completed_jobs != n_jobs) {
+                                const int err = imb_get_errno(mb_mgr);
+
+                                if (err != 0) {
+                                        printf("submit_aead_burst error "
+                                               "%d : '%s'\n",
+                                               err, imb_get_strerror(err));
+                                }
+                        }
+#else
+                        IMB_SUBMIT_AEAD_BURST_NOCHECK(mb_mgr, jobs, n_jobs, jt->cipher_mode,
+                                                      jt->cipher_direction, jt->key_len_in_bytes);
+#endif
+                        num_jobs -= n_jobs;
+                }
+                jobs_done = num_iter - num_jobs;
+
         } else { /* TEST_API_JOB */
                 imb_set_session(mb_mgr, &job_template);
 
@@ -3967,6 +4037,8 @@ main(int argc, char *argv[])
                         test_api = TEST_API_CIPHER_BURST;
                 } else if (strcmp(argv[i], "--hash-burst-api") == 0) {
                         test_api = TEST_API_HASH_BURST;
+                } else if (strcmp(argv[i], "--aead-burst-api") == 0) {
+                        test_api = TEST_API_AEAD_BURST;
                 } else if (strcmp(argv[i], "--burst-size") == 0) {
                         i = get_next_num_arg((const char *const *) argv, i, argc, &burst_size,
                                              sizeof(burst_size));
@@ -4008,16 +4080,17 @@ main(int argc, char *argv[])
 
         if (burst_size != 0 && test_api == TEST_API_JOB) {
                 fprintf(stderr, "--burst-size can only be used with "
-                                "--burst-api, --cipher-burst-api or "
-                                "--hash-burst-api options\n");
+                                "--burst-api, --cipher-burst-api, "
+                                "--hash-burst-api or --aead-burst-api options\n");
                 return EXIT_FAILURE;
         }
 
         if (test_api != TEST_API_JOB && burst_size == 0)
                 burst_size = DEFAULT_BURST_SIZE;
 
-        /* only a few algorithms support the hash/cipher-only burst API */
-        if (test_api == TEST_API_HASH_BURST || test_api == TEST_API_CIPHER_BURST) {
+        /* only a few algorithms support the hash-only/cipher-only/AEAD burst API */
+        if (test_api == TEST_API_HASH_BURST || test_api == TEST_API_CIPHER_BURST ||
+            test_api == TEST_API_AEAD_BURST) {
                 uint32_t optim_burst_size;
                 IMB_MGR *aux_mgr = alloc_mb_mgr(0);
 
@@ -4042,6 +4115,14 @@ main(int argc, char *argv[])
                                     &optim_burst_size) == IMB_ERR_CIPH_MODE) {
                                 fprintf(stderr,
                                         "Unsupported cipher-only burst API algorithm selected\n");
+                                free_mb_mgr(aux_mgr);
+                                return EXIT_FAILURE;
+                        }
+                } else { /* AEAD */
+                        if (imb_aead_burst_get_size(
+                                    aux_mgr, translate_cipher_mode(custom_job_params.cipher_mode),
+                                    &optim_burst_size) == IMB_ERR_CIPH_MODE) {
+                                fprintf(stderr, "Unsupported AEAD burst API algorithm selected\n");
                                 free_mb_mgr(aux_mgr);
                                 return EXIT_FAILURE;
                         }
