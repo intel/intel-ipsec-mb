@@ -3972,6 +3972,28 @@ imb_get_arch_type_string(const IMB_MGR *state, const char **arch_type, const cha
 IMB_DLL_EXPORT int
 imb_hash_burst_get_size(const IMB_MGR *mb_mgr, const IMB_HASH_ALG algo, unsigned *out_burst_size);
 
+/**
+ * @brief Retrieves minimum burst size for good performance on cipher algorithms.
+ *
+ * Depending on the architecture used, this function returns the minimum
+ * burst size to be used for good performance on the cipher-only burst API.
+ * The output burst size can be 1 (in case of a synchronous single-buffer implementation
+ * or 0 if the algorithm is not supported by the API).
+ *
+ * @param [in] mb_mgr          pointer to IMB MGR structure
+ * @param [in] cipher_mode     cipher mode
+ * @param [out] out_burst_size pointer to store min burst size
+ *
+ * @return operation status.
+ * @retval 0 success
+ * @retval IMB_ERR_CIPHER_MODE  not supported \a algo
+ * @retval IMB_ERR_NULL_MBMGR invalid \a mb_mgr pointer
+ * @retval IMB_ERR_NULL_BURST invalid \a out_burst_size pointer
+ */
+IMB_DLL_EXPORT int
+imb_cipher_burst_get_size(const IMB_MGR *mb_mgr, const IMB_CIPHER_MODE cipher_mode,
+                          unsigned *out_burst_size);
+
 #ifdef __cplusplus
 }
 #endif

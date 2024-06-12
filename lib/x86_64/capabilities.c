@@ -84,6 +84,26 @@ imb_hash_burst_get_size(const IMB_MGR *mb_mgr, const IMB_HASH_ALG algo, unsigned
 }
 
 int
+imb_cipher_burst_get_size(const IMB_MGR *mb_mgr, const IMB_CIPHER_MODE cipher_mode,
+                          unsigned *out_burst_size)
+{
+        switch (cipher_mode) {
+        case IMB_CIPHER_ECB:
+        case IMB_CIPHER_CNTR:
+                *out_burst_size = 1;
+                break;
+        case IMB_CIPHER_CBC:
+                *out_burst_size = ((MB_MGR_AES_OOO *) (mb_mgr->aes128_ooo))->total_num_lanes;
+                break;
+        default:
+                *out_burst_size = 0;
+                return IMB_ERR_CIPH_MODE;
+        }
+
+        return 0;
+}
+
+int
 imb_get_arch_type_string(const IMB_MGR *state, const char **arch_type, const char **description)
 {
 #ifdef SAFE_PARAM

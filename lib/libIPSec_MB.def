@@ -754,3 +754,4 @@ EXPORTS
     submit_aead_burst_nocheck_avx2_t4           @728
     submit_aead_burst_nocheck_avx512_t1         @729
     submit_aead_burst_nocheck_avx512_t2         @730
+    imb_cipher_burst_get_size                   @731

@@ -62,6 +62,7 @@ FIELD	_aes_unused_lanes, 8,	8
 FIELD	_aes_job_in_lane, 16*8,	8
 FIELD	_aes_lanes_in_use, 8,	8
 FIELD   _aes_lens_64,    16*8, 64
+FIELD   _aes_total_num_lanes, 4,     4
 FIELD   _aes_road_block, 8, 8
 END_FIELDS
 %assign _MB_MGR_AES_OOO_size	_FIELD_OFFSET
