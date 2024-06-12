@@ -4016,16 +4016,8 @@ main(int argc, char *argv[])
         if (test_api != TEST_API_JOB && burst_size == 0)
                 burst_size = DEFAULT_BURST_SIZE;
 
-        /* currently only AES-CBC & CTR supported by cipher-only burst API */
-        if (test_api == TEST_API_CIPHER_BURST && (custom_job_params.cipher_mode != TEST_CBC &&
-                                                  custom_job_params.cipher_mode != TEST_CNTR)) {
-                fprintf(stderr, "Unsupported cipher-only burst "
-                                "API algorithm selected\n");
-                return EXIT_FAILURE;
-        }
-
-        /* only a few algorithms support the hash-only burst API */
-        if (test_api == TEST_API_HASH_BURST) {
+        /* only a few algorithms support the hash/cipher-only burst API */
+        if (test_api == TEST_API_HASH_BURST || test_api == TEST_API_CIPHER_BURST) {
                 uint32_t optim_burst_size;
                 IMB_MGR *aux_mgr = alloc_mb_mgr(0);
 
@@ -4035,11 +4027,24 @@ main(int argc, char *argv[])
                 }
                 init_mb_mgr_auto(aux_mgr, NULL);
 
-                if (imb_hash_burst_get_size(aux_mgr, translate_hash_alg(custom_job_params.hash_alg),
-                                            &optim_burst_size) == IMB_ERR_HASH_ALGO) {
-                        fprintf(stderr, "Unsupported hash-only burst API algorithm selected\n");
-                        free_mb_mgr(aux_mgr);
-                        return EXIT_FAILURE;
+                if (test_api == TEST_API_HASH_BURST) {
+                        if (imb_hash_burst_get_size(aux_mgr,
+                                                    translate_hash_alg(custom_job_params.hash_alg),
+                                                    &optim_burst_size) == IMB_ERR_HASH_ALGO) {
+                                fprintf(stderr,
+                                        "Unsupported hash-only burst API algorithm selected\n");
+                                free_mb_mgr(aux_mgr);
+                                return EXIT_FAILURE;
+                        }
+                } else if (test_api == TEST_API_CIPHER_BURST) {
+                        if (imb_cipher_burst_get_size(
+                                    aux_mgr, translate_cipher_mode(custom_job_params.cipher_mode),
+                                    &optim_burst_size) == IMB_ERR_CIPH_MODE) {
+                                fprintf(stderr,
+                                        "Unsupported cipher-only burst API algorithm selected\n");
+                                free_mb_mgr(aux_mgr);
+                                return EXIT_FAILURE;
+                        }
                 }
 
                 if (optim_burst_size > burst_size)
