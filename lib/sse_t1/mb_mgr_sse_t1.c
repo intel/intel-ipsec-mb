@@ -351,6 +351,9 @@ init_mb_mgr_sse_t1_internal(IMB_MGR *state, const int reset_mgrs)
         /* Set architecture for future checks */
         state->used_arch = (uint32_t) IMB_ARCH_SSE;
 
+        /* Set architecture type for future checks */
+        state->used_arch_type = 1;
+
         if (reset_mgrs) {
                 reset_ooo_mgrs(state);
 

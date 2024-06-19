@@ -29,7 +29,7 @@
 #include "ipsec_ooo_mgr.h"
 
 int
-imb_hash_burst_get_size(IMB_MGR *mb_mgr, const IMB_HASH_ALG algo, unsigned *out_burst_size)
+imb_hash_burst_get_size(const IMB_MGR *mb_mgr, const IMB_HASH_ALG algo, unsigned *out_burst_size)
 {
 #ifdef SAFE_PARAM
         if (mb_mgr == NULL)
@@ -108,5 +108,56 @@ imb_hash_burst_get_size(IMB_MGR *mb_mgr, const IMB_HASH_ALG algo, unsigned *out_
                 return IMB_ERR_HASH_ALGO;
         }
 
+        return 0;
+}
+
+int
+imb_get_arch_type_string(const IMB_MGR *state, const char **arch_type, const char **description)
+{
+#ifdef SAFE_PARAM
+        if (state == NULL)
+                return IMB_ERR_NULL_MBMGR;
+        if (arch_type == NULL)
+                return EINVAL;
+#endif
+        struct arch_type_map {
+                IMB_ARCH arch;
+                uint8_t type;
+                const char *arch_type;
+                const char *description;
+        };
+
+        const struct arch_type_map arch_type_mappings[] = {
+                { IMB_ARCH_NOAESNI, 0, "AESNI Emulation", "CPU ISA: SSE" },
+                { IMB_ARCH_SSE, 1, "SSE Type 1", "CPU ISA: AES, PCLMUL, SSE" },
+                { IMB_ARCH_SSE, 2, "SSE Type 2", "CPU ISA: AES, PCLMUL, SSE, SHA-NI" },
+                { IMB_ARCH_SSE, 3, "SSE Type 3", "CPU ISA: AES, PCLMUL, SSE, SHA-NI, GFNI" },
+                { IMB_ARCH_AVX, 1, "AVX Type 1", "CPU ISA: AES, PCLMUL, SSE, AVX" },
+                { IMB_ARCH_AVX, 2, "AVX Type 2", "CPU ISA: AES, PCLMUL, SSE, AVX, SHA-NI" },
+                { IMB_ARCH_AVX2, 1, "AVX2 Type 1", "CPU ISA: AES, PCLMUL, SSE, AVX, AVX2" },
+                { IMB_ARCH_AVX2, 2, "AVX2 Type 2",
+                  "CPU ISA: VAES, VPCLMUL, SSE, AVX, AVX2, SHA-NI, GFNI" },
+                { IMB_ARCH_AVX2, 3, "AVX2 Type 3",
+                  "CPU ISA: VAES, VPCLMUL, SSE, AVX, AVX2, SHA-NI, GFNI, IFMA" },
+                { IMB_ARCH_AVX2, 4, "AVX2 Type 4",
+                  "CPU ISA: VAES, VPCLMUL, SSE, AVX, AVX2, SHA-NI, GFNI, IFMA, SHA512-NI, SM3-NI, "
+                  "SM4-NI" },
+                { IMB_ARCH_AVX512, 1, "AVX512 Type 1",
+                  "CPU ISA: AES, PCLMUL, SSE, AVX, AVX2, AVX512" },
+                { IMB_ARCH_AVX512, 2, "AVX512 Type 2",
+                  "CPU ISA: VAES, VPCLMUL, SSE, AVX, AVX2, AVX512, GFNI, SHA-NI" },
+        };
+
+        for (unsigned int i = 0; i < IMB_DIM(arch_type_mappings); i++) {
+                if (arch_type_mappings[i].arch == state->used_arch &&
+                    arch_type_mappings[i].type == state->used_arch_type) {
+                        *arch_type = arch_type_mappings[i].arch_type;
+                        if (description != NULL)
+                                *description = arch_type_mappings[i].description;
+
+                        break;
+                }
+                *arch_type = "Invalid arch type";
+        }
         return 0;
 }

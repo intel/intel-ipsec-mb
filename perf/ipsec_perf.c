@@ -4237,18 +4237,39 @@ main(int argc, char *argv[])
                 }
         }
 
-        if (archs[ARCH_SSE]) {
-                IMB_MGR *p_mgr = alloc_mb_mgr(flags);
+        IMB_MGR *p_mgr = alloc_mb_mgr(flags);
 
-                if (p_mgr == NULL) {
-                        fprintf(stderr, "Error allocating MB_MGR structure!\n");
-                        return EXIT_FAILURE;
-                }
-                init_mb_mgr_sse(p_mgr);
-                fprintf(stderr, "%s SHA extensions (shani) for SSE arch\n",
-                        (p_mgr->features & IMB_FEATURE_SHANI) ? "Using" : "Not using");
-                free_mb_mgr(p_mgr);
+        if (p_mgr == NULL) {
+                fprintf(stderr, "Error allocating MB_MGR structure!\n");
+                return EXIT_FAILURE;
         }
+
+        fprintf(stderr, "Testing ");
+        for (enum arch_type_e arch = ARCH_SSE; arch <= ARCH_AVX512; arch++) {
+                if (archs[arch] == 0)
+                        continue;
+
+                switch (arch) {
+                case ARCH_SSE:
+                        init_mb_mgr_sse(p_mgr);
+                        break;
+                case ARCH_AVX:
+                        init_mb_mgr_avx(p_mgr);
+                        break;
+                case ARCH_AVX2:
+                        init_mb_mgr_avx2(p_mgr);
+                        break;
+                default: /* ARCH_AV512 */
+                        init_mb_mgr_avx512(p_mgr);
+                        break;
+                }
+                const char *arch_type;
+
+                imb_get_arch_type_string(p_mgr, &arch_type, NULL);
+                fprintf(stderr, "\"%s\" ", arch_type);
+        }
+        fprintf(stderr, "implementation/s\n");
+        free_mb_mgr(p_mgr);
 
         memset(t_info, 0, sizeof(t_info));
         init_offsets(cache_type);

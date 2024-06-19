@@ -729,3 +729,4 @@ EXPORTS
     get_next_job_avx2_t4                	@703
     get_completed_job_avx2_t4            	@704
     imb_hash_burst_get_size                     @705
+    imb_get_arch_type_string                    @706

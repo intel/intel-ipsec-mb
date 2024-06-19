@@ -961,8 +961,10 @@ typedef struct IMB_MGR {
         uint64_t flags;    /**< passed to alloc_mb_mgr() */
         uint64_t features; /**< reflects features of multi-buffer instance */
 
-        uint64_t reserved[5]; /**< reserved for the future */
-        uint32_t used_arch;   /**< Architecture being used */
+        uint64_t reserved[4];   /**< reserved for the future */
+        uint8_t reserved2[7];   /**< reserved for the future */
+        uint8_t used_arch_type; /**< Architecture type being used */
+        uint32_t used_arch;     /**< Architecture being used */
 
         int imb_errno; /**< per mb_mgr error status */
 
@@ -3893,6 +3895,23 @@ IMB_DLL_EXPORT int
 imb_self_test_get_cb(IMB_MGR *state, imb_self_test_cb_t *cb_fn, void **cb_arg);
 
 /**
+ * @brief API to get a string with the architecture type being used.
+ *
+ * init_mb_mgr_XXX() must be called before this function call,
+ * where XXX is the desired architecture (can be auto).
+ *
+ * @param [in] state        pointer to IMB_MGR
+ * @param [out] arch_type   string with architecture type
+ * @param [out] description string with description of the arch type
+ *
+ * @return operation status.
+ * @retval 0 success
+ * @retval IMB_ERR_NULL_MBMGR invalid \a mb_mgr pointer
+ */
+IMB_DLL_EXPORT int
+imb_get_arch_type_string(const IMB_MGR *state, const char **arch_type, const char **description);
+
+/**
  * @brief Retrieves minimum burst size for good performance on hash algorithms.
  *
  * Depending on the architecture used, this function returns the minimum
@@ -3911,7 +3930,7 @@ imb_self_test_get_cb(IMB_MGR *state, imb_self_test_cb_t *cb_fn, void **cb_arg);
  * @retval IMB_ERR_NULL_BURST invalid \a out_burst_size pointer
  */
 IMB_DLL_EXPORT int
-imb_hash_burst_get_size(IMB_MGR *mb_mgr, const IMB_HASH_ALG algo, unsigned *out_burst_size);
+imb_hash_burst_get_size(const IMB_MGR *mb_mgr, const IMB_HASH_ALG algo, unsigned *out_burst_size);
 
 #ifdef __cplusplus
 }
