@@ -39,69 +39,41 @@ imb_hash_burst_get_size(const IMB_MGR *mb_mgr, const IMB_HASH_ALG algo, unsigned
                 return IMB_ERR_NULL_BURST;
 #endif
 
-        IMB_ARCH used_arch = (IMB_ARCH) mb_mgr->used_arch;
-
         switch (algo) {
         case IMB_AUTH_HMAC_SHA_1:
+                *out_burst_size =
+                        ((MB_MGR_HMAC_SHA_1_OOO *) (mb_mgr->hmac_sha_1_ooo))->total_num_lanes;
+                break;
         case IMB_AUTH_SHA_1:
-                switch (used_arch) {
-                case IMB_ARCH_NOAESNI:
-                case IMB_ARCH_SSE:
-                        *out_burst_size = SSE_NUM_SHA1_LANES;
-                        break;
-                case IMB_ARCH_AVX:
-                        *out_burst_size = AVX_NUM_SHA1_LANES;
-                        break;
-                case IMB_ARCH_AVX2:
-                        *out_burst_size = AVX2_NUM_SHA1_LANES;
-                        break;
-                case IMB_ARCH_AVX512:
-                default:
-                        *out_burst_size = AVX2_NUM_SHA1_LANES;
-                        break;
-                }
+                *out_burst_size = ((MB_MGR_SHA_1_OOO *) (mb_mgr->sha_1_ooo))->total_num_lanes;
                 break;
         case IMB_AUTH_HMAC_SHA_224:
+                *out_burst_size =
+                        ((MB_MGR_HMAC_SHA_256_OOO *) (mb_mgr->hmac_sha_224_ooo))->total_num_lanes;
+                break;
         case IMB_AUTH_SHA_224:
+                *out_burst_size = ((MB_MGR_SHA_256_OOO *) (mb_mgr->sha_224_ooo))->total_num_lanes;
+                break;
         case IMB_AUTH_HMAC_SHA_256:
+                *out_burst_size =
+                        ((MB_MGR_HMAC_SHA_256_OOO *) (mb_mgr->hmac_sha_256_ooo))->total_num_lanes;
+                break;
         case IMB_AUTH_SHA_256:
-                switch (used_arch) {
-                case IMB_ARCH_NOAESNI:
-                case IMB_ARCH_SSE:
-                        *out_burst_size = SSE_NUM_SHA256_LANES;
-                        break;
-                case IMB_ARCH_AVX:
-                        *out_burst_size = AVX_NUM_SHA256_LANES;
-                        break;
-                case IMB_ARCH_AVX2:
-                        *out_burst_size = AVX2_NUM_SHA256_LANES;
-                        break;
-                case IMB_ARCH_AVX512:
-                default:
-                        *out_burst_size = AVX2_NUM_SHA256_LANES;
-                        break;
-                }
+                *out_burst_size = ((MB_MGR_SHA_256_OOO *) (mb_mgr->sha_256_ooo))->total_num_lanes;
                 break;
         case IMB_AUTH_HMAC_SHA_384:
+                *out_burst_size =
+                        ((MB_MGR_HMAC_SHA_512_OOO *) (mb_mgr->hmac_sha_384_ooo))->total_num_lanes;
+                break;
         case IMB_AUTH_SHA_384:
+                *out_burst_size = ((MB_MGR_SHA_512_OOO *) (mb_mgr->sha_384_ooo))->total_num_lanes;
+                break;
         case IMB_AUTH_HMAC_SHA_512:
+                *out_burst_size =
+                        ((MB_MGR_HMAC_SHA_512_OOO *) (mb_mgr->hmac_sha_512_ooo))->total_num_lanes;
+                break;
         case IMB_AUTH_SHA_512:
-                switch (used_arch) {
-                case IMB_ARCH_NOAESNI:
-                case IMB_ARCH_SSE:
-                        *out_burst_size = SSE_NUM_SHA512_LANES;
-                        break;
-                case IMB_ARCH_AVX:
-                        *out_burst_size = AVX_NUM_SHA512_LANES;
-                        break;
-                case IMB_ARCH_AVX2:
-                        *out_burst_size = AVX2_NUM_SHA512_LANES;
-                        break;
-                case IMB_ARCH_AVX512:
-                default:
-                        *out_burst_size = AVX2_NUM_SHA512_LANES;
-                        break;
-                }
+                *out_burst_size = ((MB_MGR_SHA_512_OOO *) (mb_mgr->sha_512_ooo))->total_num_lanes;
                 break;
         default:
                 *out_burst_size = 0;

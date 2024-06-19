@@ -3916,7 +3916,12 @@ imb_get_arch_type_string(const IMB_MGR *state, const char **arch_type, const cha
  *
  * Depending on the architecture used, this function returns the minimum
  * burst size to be used for good performance on the hash-only burst API.
- * The output burst size can be 1 (in case of a synchronous single-buffer implementation
+ * Note that this will not return a value for best performance, but the minimum needed
+ * to start maximizing the CPU core (i.e. enough buffers to utilize efficiently the CPU core
+ * resources, taking into account that when buffers have different sizes, a higher burst size is
+ * recommended).
+ *
+ * The output burst size may also be 1 (in case of a synchronous single-buffer implementation
  * or 0 if the algorithm is not supported by the API).
  *
  * @param [in] mb_mgr          pointer to IMB MGR structure
