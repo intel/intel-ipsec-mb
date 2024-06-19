@@ -71,6 +71,18 @@ copy_bswap8_array_mb(void *dst, const void *src, const size_t num, const size_t 
 }
 
 __forceinline void
+copy_bswap8_array_mb_ni(void *dst, const void *src, const size_t num, const unsigned lane,
+                        const int digest_row_sz)
+{
+        uint64_t *outp = (uint64_t *) dst;
+        const uint64_t *inp = (const uint64_t *) src;
+        size_t i;
+
+        for (i = 0; i < num; i++)
+                outp[i] = bswap8(inp[digest_row_sz * lane + i]);
+}
+
+__forceinline void
 sha1_mb_init_digest(uint32_t *digest, const unsigned lane)
 {
         digest[lane + 0 * 16] = H0;
@@ -169,6 +181,19 @@ sha512_mb_init_digest(uint64_t *digest, const unsigned lane)
 }
 
 __forceinline void
+sha512_ni_mb_init_digest(uint64_t *digest, const unsigned lane)
+{
+        digest[8 * lane + 0] = SHA512_H0;
+        digest[8 * lane + 1] = SHA512_H1;
+        digest[8 * lane + 2] = SHA512_H2;
+        digest[8 * lane + 3] = SHA512_H3;
+        digest[8 * lane + 4] = SHA512_H4;
+        digest[8 * lane + 5] = SHA512_H5;
+        digest[8 * lane + 6] = SHA512_H6;
+        digest[8 * lane + 7] = SHA512_H7;
+}
+
+__forceinline void
 sha_mb_generic_init(void *digest, const int sha_type, const unsigned lane)
 {
         if (sha_type == 1)
@@ -192,6 +217,8 @@ sha_ni_mb_generic_init(void *digest, const int sha_type, const unsigned lane)
                 sha224_ni_mb_init_digest(digest, lane);
         else if (sha_type == 256)
                 sha256_ni_mb_init_digest(digest, lane);
+        else if (sha_type == 512)
+                sha512_ni_mb_init_digest(digest, lane);
 }
 
 __forceinline void
@@ -219,6 +246,8 @@ sha_ni_mb_generic_write_digest(void *dst, const void *src, const int sha_type, c
                 copy_bswap4_array_mb_ni(dst, src, NUM_SHA_224_DIGEST_WORDS, lane, 8);
         else if (sha_type == 256)
                 copy_bswap4_array_mb_ni(dst, src, NUM_SHA_256_DIGEST_WORDS, lane, 8);
+        else if (sha_type == 512)
+                copy_bswap8_array_mb_ni(dst, src, NUM_SHA_512_DIGEST_WORDS, lane, 8);
 }
 
 __forceinline void
@@ -545,7 +574,8 @@ submit_flush_job_sha_256(MB_MGR_SHA_256_OOO *state, IMB_JOB *job, const unsigned
 __forceinline IMB_JOB *
 submit_flush_job_sha_512(MB_MGR_SHA_512_OOO *state, IMB_JOB *job, const unsigned max_jobs,
                          const int is_submit, const int sha_type, const uint64_t blk_size,
-                         const uint64_t pad_size, void (*fn)(SHA512_ARGS *, uint64_t))
+                         const uint64_t pad_size, void (*fn)(SHA512_ARGS *, uint64_t),
+                         const int shani)
 {
         unsigned lane, min_idx;
         IMB_JOB *ret_job = NULL;
@@ -561,7 +591,10 @@ submit_flush_job_sha_512(MB_MGR_SHA_512_OOO *state, IMB_JOB *job, const unsigned
                 state->num_lanes_inuse++;
                 state->args.data_ptr[lane] = job->src + job->hash_start_src_offset_in_bytes;
 
-                sha_mb_generic_init(state->args.digest, sha_type, lane);
+                if (shani)
+                        sha_ni_mb_generic_init(state->args.digest, sha_type, lane);
+                else
+                        sha_mb_generic_init(state->args.digest, sha_type, lane);
 
                 /* copy job data in and set up initial blocks */
                 state->ldata[lane].job_in_lane = job;
@@ -656,8 +689,12 @@ submit_flush_job_sha_512(MB_MGR_SHA_512_OOO *state, IMB_JOB *job, const unsigned
         /* put back processed packet into unused lanes, set job as complete */
         state->unused_lanes = (state->unused_lanes << 4) | min_idx;
         state->num_lanes_inuse--;
-        sha_mb_generic_write_digest(ret_job->auth_tag_output, state->args.digest, sha_type, 8,
-                                    min_idx);
+        if (shani)
+                sha_ni_mb_generic_write_digest(ret_job->auth_tag_output, state->args.digest,
+                                               sha_type, min_idx);
+        else
+                sha_mb_generic_write_digest(ret_job->auth_tag_output, state->args.digest, sha_type,
+                                            8, min_idx);
         ret_job->status |= IMB_STATUS_COMPLETED_AUTH;
         state->ldata[min_idx].job_in_lane = NULL;
         return ret_job;

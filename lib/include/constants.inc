@@ -59,6 +59,7 @@
 ;; Sanity checks to fail build if not satisfied
 %define SHA1NI_DIGEST_ROW_SIZE	 (NUM_SHA1_DIGEST_WORDS * SHA1_DIGEST_WORD_SIZE)
 %define SHA256NI_DIGEST_ROW_SIZE (NUM_SHA256_DIGEST_WORDS * SHA256_DIGEST_WORD_SIZE)
+%define SHA512NI_DIGEST_ROW_SIZE (NUM_SHA512_DIGEST_WORDS * SHA512_DIGEST_WORD_SIZE)
 
 %define MD5_BLK_SZ              128  ; in bytes
 %define SHA1_BLK_SZ             64   ; in bytes

@@ -90,4 +90,7 @@ submit_job_hmac_sha_384_ni_avx2(MB_MGR_HMAC_SHA_512_OOO *state, IMB_JOB *job);
 IMB_JOB *
 submit_job_hmac_sha_512_ni_avx2(MB_MGR_HMAC_SHA_512_OOO *state, IMB_JOB *job);
 
+void
+call_sha512_ni_x2_avx2_from_c(SHA512_ARGS *args, uint64_t size_in_blocks);
+
 #endif /* IMB_ASM_AVX2_T4_H */

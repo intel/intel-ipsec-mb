@@ -679,6 +679,7 @@ asm_avx2_t4_lib_objs := \
 	sm3_msg_avx2.o \
 	sm3_hmac_avx2.o \
 	sha512_x1_ni_avx2.o \
+	sha512_x2_ni_avx2.o \
 	sha512_hmac_ni_avx2.o
 
 #
