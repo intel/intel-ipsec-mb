@@ -76,11 +76,6 @@ IMB_JOB *
 flush_job_sha512_ni_avx2(MB_MGR_SHA_512_OOO *state, IMB_JOB *job);
 
 IMB_JOB *
-submit_job_sha384_ni_avx2(MB_MGR_SHA_512_OOO *state, IMB_JOB *job);
-IMB_JOB *
-submit_job_sha512_ni_avx2(MB_MGR_SHA_512_OOO *state, IMB_JOB *job);
-
-IMB_JOB *
 flush_job_hmac_sha_384_ni_avx2(MB_MGR_HMAC_SHA_512_OOO *state);
 IMB_JOB *
 flush_job_hmac_sha_512_ni_avx2(MB_MGR_HMAC_SHA_512_OOO *state);
