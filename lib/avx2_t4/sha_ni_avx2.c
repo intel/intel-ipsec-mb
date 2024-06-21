@@ -69,29 +69,32 @@ sha512_ni_avx2(const void *data, const uint64_t length, void *digest)
 
 /* ========================================================================== */
 /*
- * SHA384 API for JOB API
+ * SHA384 MB API for JOB API
  */
 IMB_JOB *
 submit_job_sha384_ni_avx2(MB_MGR_SHA_512_OOO *state, IMB_JOB *job)
 {
-        const void *msg = (job->src + job->hash_start_src_offset_in_bytes);
-        const uint64_t length = job->msg_len_to_hash_in_bytes;
-        uint64_t tag[8];
-
+#ifdef SMX_NI
+        return submit_flush_job_sha_512(state, job, 2, 1, 384, IMB_SHA_384_BLOCK_SIZE,
+                                        SHA384_PAD_SIZE, call_sha512_ni_x2_avx2_from_c, 1);
+#else
         (void) state;
-
-        sha384_ni_avx2(msg, length, tag);
-        memcpy(job->auth_tag_output, tag, job->auth_tag_output_len_in_bytes);
-        job->status |= IMB_STATUS_COMPLETED_AUTH;
-        return job;
+        (void) job;
+        return NULL;
+#endif /* ifdef SMX_NI */
 }
 
 IMB_JOB *
 flush_job_sha384_ni_avx2(MB_MGR_SHA_512_OOO *state, IMB_JOB *job)
 {
+#ifdef SMX_NI
+        return submit_flush_job_sha_512(state, job, 2, 0, 384, IMB_SHA_384_BLOCK_SIZE,
+                                        SHA384_PAD_SIZE, call_sha512_ni_x2_avx2_from_c, 1);
+#else
         (void) state;
         (void) job;
         return NULL;
+#endif /* ifdef SMX_NI */
 }
 
 /* ========================================================================== */
