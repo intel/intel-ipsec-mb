@@ -86,13 +86,17 @@ shm_destroy(struct shared_memory *sm, const int is_pri)
         int ret = 0;
 
         if (!is_pri)
-                if (munmap(sm->ptr, sm->size) != 0)
+                if (munmap(sm->ptr, sm->size) != 0) {
+                        perror("shm_destroy()");
                         ret = -1;
+                }
         sm->ptr = NULL;
 
         if (is_pri)
-                if (shm_unlink(sm->name) != 0)
+                if (shm_unlink(sm->name) != 0) {
+                        perror("shm_destroy()");
                         ret = -1;
+                }
 
         sm->name = NULL;
         sm->size = 0;
@@ -110,17 +114,27 @@ shm_create(struct shared_memory *sm, const int is_pri, const char *name, const s
         sm->ptr = MAP_FAILED;
 
         /* create the shared memory object */
-        if (is_pri)
-                fd = shm_open(sm->name, O_CREAT | O_RDWR, 0666);
-        else
+        if (is_pri) {
                 fd = shm_open(sm->name, O_RDWR, 0666);
+                if (fd != -1) {
+                        printf("shm_open(): %s already exists!\n", sm->name);
+                        close(fd);
+                        return -1;
+                }
+                fd = shm_open(sm->name, O_CREAT | O_RDWR, 0666);
+        } else {
+                fd = shm_open(sm->name, O_RDWR, 0666);
+        }
 
-        if (fd == -1)
+        if (fd == -1) {
+                perror("shm_create()");
                 return -1;
+        }
 
         /* configure the size of the shared memory object */
         if (is_pri) {
                 if (ftruncate(fd, sm->size) != 0) {
+                        perror("shm_create()");
                         (void) shm_destroy(sm, is_pri);
                         close(fd);
                         return -1;
@@ -170,6 +184,7 @@ shm_create(struct shared_memory *sm, const int is_pri, const char *name, const s
         close(fd);
 
         if (sm->ptr == MAP_FAILED) {
+                perror("shm_create()");
                 fprintf(stderr, "!mmap() of %s shared memory error\n", sm->name);
                 (void) shm_destroy(sm, is_pri);
                 return -1;
