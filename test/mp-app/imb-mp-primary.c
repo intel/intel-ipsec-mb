@@ -50,6 +50,11 @@ mp_primary(const char *name2)
 
 #if defined(__linux__) || defined(__FreeBSD__)
 #include <sys/wait.h>
+#include <unistd.h> /* close() and unlink() */
+#endif
+
+#ifdef _WIN32
+#include <io.h> /* _mktemp() */
 #endif
 
 /*
@@ -136,25 +141,87 @@ prepare_reference_output(struct info_context *ctx, const int is_pri)
         return 0;
 }
 
+static char *
+randomize_shm_name(const char *name)
+{
+        if (name == NULL)
+                return NULL;
+
+        char temp[8];
+
+        memset(temp, 0, sizeof(temp));
+        strncpy(temp, "XXXXXX", sizeof(temp) - 1);
+
+#if defined(__linux__) || defined(__FreeBSD__)
+        int fd = mkstemp(temp);
+
+        if (fd == -1)
+                return NULL;
+
+        close(fd);
+        unlink(temp);
+#endif
+
+#ifdef _WIN32
+        (void) _mktemp(temp);
+#endif
+
+        const size_t name_len = strlen(name);
+        const size_t temp_len = strlen(temp);
+        const size_t new_len = name_len + temp_len + 1;
+        char *new_name = malloc(new_len);
+
+        if (new_name == NULL)
+                return NULL;
+
+        const int ret_len = snprintf(new_name, new_len, "%s%s", name, temp);
+
+        if (ret_len >= (int) new_len || ret_len < 0) {
+                free(new_name);
+                return NULL;
+        }
+
+        return new_name;
+}
+
 static int
 mp_primary(const char *name2)
 {
         const int is_pri = 1;
+
+        char *shm_info_uname = randomize_shm_name(SHM_INFO_NAME);
+
+        if (shm_info_uname == NULL)
+                return -1;
+
+        char *shm_data_uname = randomize_shm_name(SHM_DATA_NAME);
+
+        if (shm_data_uname == NULL) {
+                free(shm_info_uname);
+                return -1;
+        }
+
+        fprintf(stdout, "PRIMARY: init start %p, %s, %s\n", (void *) imb_get_errno, shm_info_uname,
+                shm_data_uname);
+
         struct shared_memory app_shm, info_shm;
         struct info_context *ctx = NULL;
         struct allocator app_alloc;
 
-        fprintf(stdout, "PRIMARY: init start %p\n", (void *) imb_get_errno);
-
-        if (shm_create(&info_shm, is_pri, SHM_INFO_NAME, SHM_INFO_SIZE, NULL) != 0)
+        if (shm_create(&info_shm, is_pri, shm_info_uname, SHM_INFO_SIZE, NULL) != 0) {
+                free(shm_info_uname);
+                free(shm_data_uname);
                 return -1;
+        }
 
         /* cast info shared memory onto info context structure */
         ctx = (struct info_context *) info_shm.ptr;
         memset(ctx, 0, sizeof(*ctx));
 
-        if (shm_create(&app_shm, is_pri, SHM_DATA_NAME, SHM_DATA_SIZE, NULL) != 0) {
+        if (shm_create(&app_shm, is_pri, shm_data_uname, SHM_DATA_SIZE, NULL) != 0) {
                 (void) shm_destroy(&info_shm, is_pri);
+                free(shm_info_uname);
+                free(shm_data_uname);
                 return -1;
         }
 
@@ -169,6 +236,8 @@ mp_primary(const char *name2)
         if (ctx->mb_mgr == NULL) {
                 (void) shm_destroy(&info_shm, is_pri);
                 (void) shm_destroy(&app_shm, is_pri);
+                free(shm_info_uname);
+                free(shm_data_uname);
                 return -1;
         }
 
@@ -178,6 +247,8 @@ mp_primary(const char *name2)
         if (alloc_crypto_op_data(ctx, &app_alloc, is_pri) != 0) {
                 (void) shm_destroy(&info_shm, is_pri);
                 (void) shm_destroy(&app_shm, is_pri);
+                free(shm_info_uname);
+                free(shm_data_uname);
                 return -1;
         }
 
@@ -185,6 +256,8 @@ mp_primary(const char *name2)
         if (prepare_reference_output(ctx, is_pri) != 0) {
                 (void) shm_destroy(&info_shm, is_pri);
                 (void) shm_destroy(&app_shm, is_pri);
+                free(shm_info_uname);
+                free(shm_data_uname);
                 return -1;
         }
 
@@ -196,6 +269,8 @@ mp_primary(const char *name2)
                                     &ctx->jobs_sent, ctx->exp_enc_key, ctx->iv, buffer_size) != 0) {
                 (void) shm_destroy(&info_shm, is_pri);
                 (void) shm_destroy(&app_shm, is_pri);
+                free(shm_info_uname);
+                free(shm_data_uname);
                 return -1;
         }
 
@@ -205,6 +280,8 @@ mp_primary(const char *name2)
         if (ctx->jobs_sent != IMB_DIM(ctx->buffer_table_in_out)) {
                 (void) shm_destroy(&info_shm, is_pri);
                 (void) shm_destroy(&app_shm, is_pri);
+                free(shm_info_uname);
+                free(shm_data_uname);
                 return -1;
         }
 
@@ -215,7 +292,35 @@ mp_primary(const char *name2)
          */
         fprintf(stdout, "PRIMARY: starting SECONDARY process now\n");
 
-        const int status = system(name2);
+        const size_t cmd_length =
+                strlen(name2) + 1 + strlen(shm_info_uname) + 1 + strlen(shm_data_uname) + 1;
+        char *cmd = malloc(cmd_length);
+
+        if (cmd == NULL) {
+                (void) shm_destroy(&info_shm, is_pri);
+                (void) shm_destroy(&app_shm, is_pri);
+                free(shm_info_uname);
+                free(shm_data_uname);
+                return -1;
+        }
+
+        memset(cmd, 0, cmd_length);
+
+        const int cmd_length_ret =
+                snprintf(cmd, cmd_length, "%s %s %s", name2, shm_info_uname, shm_data_uname);
+
+        if (cmd_length_ret >= (int) cmd_length || cmd_length_ret < 0) {
+                (void) shm_destroy(&info_shm, is_pri);
+                (void) shm_destroy(&app_shm, is_pri);
+                free(shm_info_uname);
+                free(shm_data_uname);
+                free(cmd);
+                return -1;
+        }
+
+        const int status = system(cmd);
+
+        free(cmd);
 
 #ifdef _WIN32
         const int err = (status != EXIT_SUCCESS);
@@ -230,6 +335,8 @@ mp_primary(const char *name2)
                 fprintf(stdout, "MULTI-PROCESS TEST: FAILED\n");
                 (void) shm_destroy(&info_shm, is_pri);
                 (void) shm_destroy(&app_shm, is_pri);
+                free(shm_info_uname);
+                free(shm_data_uname);
                 return -1;
         }
 
@@ -251,11 +358,18 @@ mp_primary(const char *name2)
         /* clean up and exit */
         if (shm_destroy(&info_shm, is_pri) != 0) {
                 (void) shm_destroy(&app_shm, is_pri);
+                free(shm_info_uname);
+                free(shm_data_uname);
                 return -1;
         }
-        if (shm_destroy(&app_shm, is_pri) != 0)
+        if (shm_destroy(&app_shm, is_pri) != 0) {
+                free(shm_info_uname);
+                free(shm_data_uname);
                 return -1;
+        }
 
+        free(shm_info_uname);
+        free(shm_data_uname);
         return 0;
 }
 #endif /* _WIN32 || __linux__ || __FreeBSD__ */

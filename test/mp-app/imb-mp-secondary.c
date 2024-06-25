@@ -38,8 +38,10 @@
 #if defined(__MINGW32__)
 
 static int
-mp_secondary(void)
+mp_secondary(const char *shm_info_uname, const char *shm_data_uname)
 {
+        (void) shm_info_uname;
+        (void) shm_data_uname;
         printf("Multi-Process test not executed.\n");
         return 0;
 }
@@ -53,15 +55,16 @@ mp_secondary(void)
  */
 
 static int
-mp_secondary(void)
+mp_secondary(const char *shm_info_uname, const char *shm_data_uname)
 {
         const int is_pri = 0;
         struct shared_memory app_shm, info_shm;
         struct info_context *ctx = NULL;
 
-        fprintf(stdout, "SECONDARY: init start %p\n", (void *) imb_get_errno);
+        fprintf(stdout, "SECONDARY: init start %p, %s, %s\n", (void *) imb_get_errno,
+                shm_info_uname, shm_data_uname);
 
-        if (shm_create(&info_shm, is_pri, SHM_INFO_NAME, SHM_INFO_SIZE, NULL) != 0)
+        if (shm_create(&info_shm, is_pri, shm_info_uname, SHM_INFO_SIZE, NULL) != 0)
                 return -1;
 
         /* cast info shared memory onto info context structure */
@@ -73,7 +76,7 @@ mp_secondary(void)
                 return -1;
         }
 
-        if (shm_create(&app_shm, is_pri, SHM_DATA_NAME, SHM_DATA_SIZE, ctx->app_mmap) != 0) {
+        if (shm_create(&app_shm, is_pri, shm_data_uname, SHM_DATA_SIZE, ctx->app_mmap) != 0) {
                 (void) shm_destroy(&info_shm, is_pri);
                 return -1;
         }
@@ -130,10 +133,13 @@ mp_secondary(void)
 int
 main(int argc, char **argv)
 {
+        int ret = -1;
+
         (void) argc;
         (void) argv;
 
-        const int ret = mp_secondary();
+        if (argc == 3)
+                ret = mp_secondary(argv[1], argv[2]);
 
         return (ret == 0) ? EXIT_SUCCESS : EXIT_FAILURE;
 }
