@@ -333,6 +333,7 @@ typedef struct {
         uint64_t unused_lanes;
         HMAC_SHA1_LANE_DATA ldata[AVX512_NUM_SHA1_LANES];
         uint32_t num_lanes_inuse;
+        uint32_t total_num_lanes;
         uint64_t road_block;
 } MB_MGR_HMAC_SHA_1_OOO;
 
@@ -342,6 +343,7 @@ typedef struct {
         uint64_t unused_lanes;
         HMAC_SHA1_LANE_DATA ldata[AVX512_NUM_SHA1_LANES];
         uint32_t num_lanes_inuse;
+        uint32_t total_num_lanes;
         uint64_t road_block;
 } MB_MGR_SHA_1_OOO;
 
@@ -351,6 +353,7 @@ typedef struct {
         uint64_t unused_lanes;
         HMAC_SHA1_LANE_DATA ldata[AVX512_NUM_SHA256_LANES];
         uint32_t num_lanes_inuse;
+        uint32_t total_num_lanes;
         uint64_t road_block;
 } MB_MGR_HMAC_SHA_256_OOO;
 
@@ -360,6 +363,7 @@ typedef struct {
         uint64_t unused_lanes;
         HMAC_SHA1_LANE_DATA ldata[AVX512_NUM_SHA256_LANES];
         uint32_t num_lanes_inuse;
+        uint32_t total_num_lanes;
         uint64_t road_block;
 } MB_MGR_SHA_256_OOO;
 
@@ -368,6 +372,7 @@ typedef struct {
         DECLARE_ALIGNED(uint16_t lens[8], 16);
         uint64_t unused_lanes;
         HMAC_SHA512_LANE_DATA ldata[AVX512_NUM_SHA512_LANES];
+        uint32_t total_num_lanes;
         uint64_t road_block;
 } MB_MGR_HMAC_SHA_512_OOO;
 
@@ -377,6 +382,7 @@ typedef struct {
         uint64_t unused_lanes;
         HMAC_SHA512_LANE_DATA ldata[AVX512_NUM_SHA512_LANES];
         uint32_t num_lanes_inuse;
+        uint32_t total_num_lanes;
         uint64_t road_block;
 } MB_MGR_SHA_512_OOO;
 
@@ -391,6 +397,7 @@ typedef struct {
         uint64_t unused_lanes;
         HMAC_SHA1_LANE_DATA ldata[AVX512_NUM_MD5_LANES];
         uint32_t num_lanes_inuse;
+        uint32_t total_num_lanes;
         uint64_t road_block;
 } MB_MGR_HMAC_MD5_OOO;
 

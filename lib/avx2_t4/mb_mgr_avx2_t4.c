@@ -350,6 +350,9 @@ init_mb_mgr_avx2_t4_internal(IMB_MGR *state, const int reset_mgrs)
         /* Set architecture for future checks */
         state->used_arch = (uint32_t) IMB_ARCH_AVX2;
 
+        /* Set architecture type for future checks */
+        state->used_arch_type = 4;
+
         if (reset_mgrs) {
                 reset_ooo_mgrs(state);
 

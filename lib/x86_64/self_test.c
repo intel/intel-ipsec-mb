@@ -325,10 +325,7 @@ static const uint8_t tdes_ede_cbc_cipher_text[] = {
 };
 
 #define ADD_CIPHER_VECTOR(_cmode, _key, _iv, _plain, _cipher, _descr)                              \
-        {                                                                                          \
-                _cmode, _key, sizeof(_key), _iv, sizeof(_iv), _plain, sizeof(_plain), _cipher,     \
-                        _descr                                                                     \
-        }
+        { _cmode, _key, sizeof(_key), _iv, sizeof(_iv), _plain, sizeof(_plain), _cipher, _descr }
 
 static const struct self_test_cipher_vector cipher_vectors[] = {
         ADD_CIPHER_VECTOR(IMB_CIPHER_CBC, aes_cbc_128_key, aes_cbc_128_iv, aes_cbc_128_plain_text,
@@ -575,9 +572,7 @@ const uint8_t sha512_digest[] = { 0x20, 0x4a, 0x8f, 0xc6, 0xdd, 0xa8, 0x2f, 0x0a
                                   0x03, 0x54, 0xec, 0x63, 0x12, 0x38, 0xca, 0x34, 0x45 };
 
 #define ADD_SHA_VECTOR(_hmode, _msg, _digest, _descr)                                              \
-        {                                                                                          \
-                _hmode, NULL, 0, _msg, sizeof(_msg), _digest, sizeof(_digest), NULL, 0, _descr     \
-        }
+        { _hmode, NULL, 0, _msg, sizeof(_msg), _digest, sizeof(_digest), NULL, 0, _descr }
 
 /*
  * Test vector from https://csrc.nist.gov/csrc/media/publications/fips/198/
@@ -685,8 +680,8 @@ static const uint8_t hmac_sha512_digest[] = { 0xfc, 0x25, 0xe2, 0x40, 0x65, 0x8c
 
 #define ADD_HMAC_SHA_VECTOR(_hmode, _key, _msg, _digest, _descr)                                   \
         {                                                                                          \
-                _hmode, _key, sizeof(_key), _msg, sizeof(_msg), _digest, sizeof(_digest), NULL, 0, \
-                        _descr                                                                     \
+                _hmode, _key, sizeof(_key), _msg, sizeof(_msg), _digest, sizeof(_digest),          \
+                NULL,   0,    _descr                                                               \
         }
 
 /*
@@ -712,8 +707,8 @@ static const uint8_t aes_cmac_256_tag[] = { 0x15, 0x67, 0x27, 0xDC, 0x08, 0x78, 
 
 #define ADD_CMAC_VECTOR(_hmode, _key, _msg, _digest, _descr)                                       \
         {                                                                                          \
-                _hmode, _key, sizeof(_key), _msg, sizeof(_msg), _digest, sizeof(_digest), NULL, 0, \
-                        _descr                                                                     \
+                _hmode, _key, sizeof(_key), _msg, sizeof(_msg), _digest, sizeof(_digest),          \
+                NULL,   0,    _descr                                                               \
         }
 
 /*
@@ -768,10 +763,8 @@ static const uint8_t aes_gmac_256_tag[] = { 0x77, 0x46, 0x0D, 0x6F, 0xB1, 0x87, 
                                             0x46, 0xAD, 0xCD, 0xFB, 0xB7, 0xF9, 0x13, 0xA1 };
 
 #define ADD_GMAC_VECTOR(_hmode, _key, _iv, _msg, _tag, _descr)                                     \
-        {                                                                                          \
-                _hmode, _key, sizeof(_key), _msg, sizeof(_msg), _tag, sizeof(_tag), _iv,           \
-                        sizeof(_iv), _descr                                                        \
-        }
+        { _hmode, _key,         sizeof(_key), _msg,        sizeof(_msg),                           \
+          _tag,   sizeof(_tag), _iv,          sizeof(_iv), _descr }
 
 static const struct self_test_hash_vector hash_vectors[] = {
         ADD_SHA_VECTOR(IMB_AUTH_SHA_1, sha_message, sha1_digest, "SHA1"),
@@ -1095,10 +1088,9 @@ static const uint8_t aes_gcm_256_tag[] = { 0x76, 0xfc, 0x6e, 0xce, 0x0f, 0x4e, 0
                                            0xcd, 0xdf, 0x88, 0x53, 0xbb, 0x2d, 0x55, 0x1b };
 
 #define ADD_GCM_VECTOR(_key, _iv, _aad, _plain, _cipher, _tag, _descr)                             \
-        {                                                                                          \
-                IMB_AUTH_AES_GMAC, IMB_CIPHER_GCM, _key, sizeof(_key), _iv, sizeof(_iv), _aad,     \
-                        sizeof(_aad), _plain, sizeof(_plain), _cipher, _tag, sizeof(_tag), _descr  \
-        }
+        { IMB_AUTH_AES_GMAC, IMB_CIPHER_GCM, _key,         sizeof(_key), _iv,                      \
+          sizeof(_iv),       _aad,           sizeof(_aad), _plain,       sizeof(_plain),           \
+          _cipher,           _tag,           sizeof(_tag), _descr }
 
 static const struct self_test_aead_gcm_vector aead_gcm_vectors[] = {
         ADD_GCM_VECTOR(aes_gcm_128_key, aes_gcm_128_iv, aes_gcm_128_aad, aes_gcm_128_plain_text,
@@ -1357,11 +1349,9 @@ static const uint8_t aes_ccm_256_cipher_text[] = { 0x21, 0x61, 0x63, 0xDE, 0xCF,
 static const uint8_t aes_ccm_256_tag[] = { 0xCA, 0x8A, 0xFA, 0xA2, 0x3F, 0x22, 0x3E, 0x64 };
 
 #define ADD_CCM_VECTOR(_key, _nonce, _aad, _plain, _cipher, _tag, _descr)                          \
-        {                                                                                          \
-                IMB_AUTH_AES_CCM, IMB_CIPHER_CCM, _key, sizeof(_key), _nonce, sizeof(_nonce),      \
-                        _aad, sizeof(_aad), _plain, sizeof(_plain), _cipher, _tag, sizeof(_tag),   \
-                        _descr                                                                     \
-        }
+        { IMB_AUTH_AES_CCM, IMB_CIPHER_CCM, _key,         sizeof(_key), _nonce,                    \
+          sizeof(_nonce),   _aad,           sizeof(_aad), _plain,       sizeof(_plain),            \
+          _cipher,          _tag,           sizeof(_tag), _descr }
 
 static const struct self_test_aead_ccm_vector aead_ccm_vectors[] = {
         ADD_CCM_VECTOR(aes_ccm_128_key, aes_ccm_128_nonce, aes_ccm_128_aad, aes_ccm_128_plain_text,

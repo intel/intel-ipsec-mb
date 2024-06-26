@@ -31,15 +31,29 @@ endif()
 ########################################
 # set app and library names
 ########################################
-set(MP_APP imb-mp)
+set(MP_APP_PRI imb-mp-primary)
+set(MP_APP_SEC imb-mp-secondary)
 set(LIB_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../lib)
 set(TEST_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../include)
 
 ########################################
-# set imb-mp source files
+# set imb-mp-primary source files
 ########################################
-set(MP_APP_SRC_FILES_C
-  ${CMAKE_CURRENT_SOURCE_DIR}/imb-mp.c
+set(MP_APP_PRI_SRC_FILES_C
+  ${CMAKE_CURRENT_SOURCE_DIR}/imb-mp-primary.c
+  ${CMAKE_CURRENT_SOURCE_DIR}/mp_shared_mem.c
+  ${CMAKE_CURRENT_SOURCE_DIR}/mp_imb.c
+  ${CMAKE_CURRENT_SOURCE_DIR}/mp_alloc.c
+)
+
+########################################
+# set imb-mp-secondary source files
+########################################
+set(MP_APP_SEC_SRC_FILES_C
+  ${CMAKE_CURRENT_SOURCE_DIR}/imb-mp-secondary.c
+  ${CMAKE_CURRENT_SOURCE_DIR}/mp_shared_mem.c
+  ${CMAKE_CURRENT_SOURCE_DIR}/mp_imb.c
+  ${CMAKE_CURRENT_SOURCE_DIR}/mp_alloc.c
 )
 
 ########################################
@@ -56,19 +70,32 @@ else()
   include(${CMAKE_CURRENT_SOURCE_DIR}/../cmake/unix.cmake)
 endif()
 
-
 ########################################
 # add targets
 ########################################
 include_directories(${LIB_DIR} ${TEST_INCLUDE_DIR})
 link_directories(${LIB_DIR})
 
-add_executable(${MP_APP} ${MP_APP_SRC_FILES_C})
-target_link_libraries(${MP_APP} PRIVATE ${IPSEC_MB_LIB})
-target_compile_definitions(${MP_APP} PRIVATE ${APP_DEFINES})
+add_executable(${MP_APP_PRI} ${MP_APP_PRI_SRC_FILES_C})
+target_link_libraries(${MP_APP_PRI} PRIVATE ${IPSEC_MB_LIB})
+target_compile_definitions(${MP_APP_PRI} PRIVATE ${APP_DEFINES})
+
+add_executable(${MP_APP_SEC} ${MP_APP_SEC_SRC_FILES_C})
+target_link_libraries(${MP_APP_SEC} PRIVATE ${IPSEC_MB_LIB})
+target_compile_definitions(${MP_APP_SEC} PRIVATE ${APP_DEFINES})
+
 
 ########################################
 # add tests
 ########################################
 
-add_test(NAME MP COMMAND ${MP_APP})
+# set working directory for tests
+if(IMB_BIN_DIR)
+  set(TEST_APP_BIN_DIR "${IMB_BIN_DIR}")
+else()
+  set(TEST_APP_BIN_DIR "${CMAKE_CURRENT_BINARY_DIR}")
+endif()
+
+add_test(NAME MULTIPROCESS
+  COMMAND ${MP_APP_PRI} ${TEST_APP_BIN_DIR}/${MP_APP_SEC}
+  WORKING_DIRECTORY ${TEST_APP_BIN_DIR})

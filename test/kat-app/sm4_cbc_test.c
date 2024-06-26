@@ -36,8 +36,6 @@
 #include "utils.h"
 #include "cipher_test.h"
 
-#define MAX_BURST_JOBS 64
-
 int
 sm4_cbc_test(struct IMB_MGR *mb_mgr);
 
@@ -252,7 +250,7 @@ test_sm4_cbc_vectors(struct IMB_MGR *mb_mgr, struct test_suite_context *ctx,
 int
 sm4_cbc_test(struct IMB_MGR *mb_mgr)
 {
-        const int num_jobs_tab[] = { 1, 3, 4, 5, 7, 8, 9, 15, 16, 17, MAX_BURST_JOBS };
+        const int num_jobs_tab[] = { 1, 3, 4, 5, 7, 8, 9, 15, 16, 17, IMB_MAX_BURST_SIZE };
         unsigned i;
         int errors = 0;
         struct test_suite_context ctx;

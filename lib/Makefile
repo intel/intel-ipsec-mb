@@ -340,7 +340,8 @@ c_lib_objs := \
 	quic_hp_chacha20.o \
 	quic_chacha20_poly1305.o \
 	hmac_ipad_opad.o \
-	cipher_suite_id.o
+	cipher_suite_id.o \
+	capabilities.o
 
 ifeq ($(AESNI_EMU), y)
 c_lib_objs := $(c_lib_objs) \
@@ -678,6 +679,7 @@ asm_avx2_t4_lib_objs := \
 	sm3_msg_avx2.o \
 	sm3_hmac_avx2.o \
 	sha512_x1_ni_avx2.o \
+	sha512_x2_ni_avx2.o \
 	sha512_hmac_ni_avx2.o
 
 #

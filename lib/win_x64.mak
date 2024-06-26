@@ -377,7 +377,8 @@ lib_objs1 = \
 	$(OBJ_DIR)\quic_chacha20_poly1305.obj \
 	$(OBJ_DIR)\hmac_ipad_opad.obj \
 	$(OBJ_DIR)\cipher_suite_id.obj \
-	$(OBJ_DIR)\sm4_sse.obj
+	$(OBJ_DIR)\sm4_sse.obj \
+	$(OBJ_DIR)\capabilities.obj
 
 lib_objs2 = \
 	$(OBJ_DIR)\mb_mgr_aes192_cbc_enc_flush_avx.obj \
@@ -596,6 +597,7 @@ avx2_t4_objs = \
 	$(OBJ_DIR)\sm3_msg_avx2.obj \
 	$(OBJ_DIR)\sm3_hmac_avx2.obj \
 	$(OBJ_DIR)\sha512_x1_ni_avx2.obj \
+	$(OBJ_DIR)\sha512_x2_ni_avx2.obj \
 	$(OBJ_DIR)\sha_ni_avx2.obj \
 	$(OBJ_DIR)\sha512_hmac_ni_avx2.obj
 

@@ -35,8 +35,6 @@
 
 #include "utils.h"
 
-#define MAX_BURST_JOBS 64
-
 int
 aes_test(struct IMB_MGR *mb_mgr);
 
@@ -838,11 +836,17 @@ static const uint8_t DOCRC17_CT[] = {
 #define DOCRC17_FRAME_LEN     DIM(DOCRC17_PT)
 
 #define MK_DOCRC_VEC(_n)                                                                           \
-        {                                                                                          \
-                _n##_FRAME_LEN, _n##_KEY, _n##_KEY_LEN, _n##_IV, _n##_PT, _n##_CT,                 \
-                        _n##_HASH_OFFSET, _n##_HASH_LENGTH, _n##_CIPHER_OFFSET,                    \
-                        _n##_CIPHER_LENGTH, _n##_CRC                                               \
-        }
+        { _n##_FRAME_LEN,                                                                          \
+          _n##_KEY,                                                                                \
+          _n##_KEY_LEN,                                                                            \
+          _n##_IV,                                                                                 \
+          _n##_PT,                                                                                 \
+          _n##_CT,                                                                                 \
+          _n##_HASH_OFFSET,                                                                        \
+          _n##_HASH_LENGTH,                                                                        \
+          _n##_CIPHER_OFFSET,                                                                      \
+          _n##_CIPHER_LENGTH,                                                                      \
+          _n##_CRC }
 
 struct docsis_crc_vector {
         uint64_t frame_len;
@@ -1023,7 +1027,7 @@ test_aes_many_burst(struct IMB_MGR *mb_mgr, void *enc_keys, void *dec_keys, cons
                     const int dir, const int order, const IMB_CIPHER_MODE cipher,
                     const int in_place, const int key_len, const int num_jobs)
 {
-        struct IMB_JOB *job, *jobs[MAX_BURST_JOBS] = { NULL };
+        struct IMB_JOB *job, *jobs[IMB_MAX_BURST_SIZE] = { NULL };
         uint8_t padding[16];
         uint8_t **targets = malloc(num_jobs * sizeof(void *));
         int i, completed_jobs, jobs_rx = 0, ret = -1;
@@ -1454,7 +1458,7 @@ test_docrc_vectors(struct IMB_MGR *mb_mgr, struct test_suite_context *ctx128,
 int
 aes_test(struct IMB_MGR *mb_mgr)
 {
-        const int num_jobs_tab[] = { 1, 3, 4, 5, 7, 8, 9, 15, 16, 17, MAX_BURST_JOBS };
+        const int num_jobs_tab[] = { 1, 3, 4, 5, 7, 8, 9, 15, 16, 17, IMB_MAX_BURST_SIZE };
         unsigned i;
         int errors = 0;
         struct test_suite_context ctx128;

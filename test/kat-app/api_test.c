@@ -38,8 +38,6 @@
 #define __func__ __FUNCTION__
 #endif
 
-#define MAX_BURST_JOBS 32
-
 int
 api_test(struct IMB_MGR *mb_mgr);
 
@@ -644,8 +642,8 @@ static int
 is_submit_burst_invalid(struct IMB_MGR *mb_mgr, const struct IMB_JOB *job, const int test_num,
                         int expected_errnum)
 {
-        IMB_JOB *jobs[MAX_BURST_JOBS] = { NULL };
-        uint32_t i, completed_jobs, n_jobs = MAX_BURST_JOBS;
+        IMB_JOB *jobs[IMB_MAX_BURST_SIZE] = { NULL };
+        uint32_t i, completed_jobs, n_jobs = IMB_MAX_BURST_SIZE;
         int err;
 
         while (IMB_GET_NEXT_BURST(mb_mgr, n_jobs, jobs) < n_jobs)
@@ -693,8 +691,8 @@ is_submit_burst_invalid(struct IMB_MGR *mb_mgr, const struct IMB_JOB *job, const
 static int
 test_burst_api(struct IMB_MGR *mb_mgr)
 {
-        struct IMB_JOB *job = NULL, *jobs[MAX_BURST_JOBS] = { NULL };
-        uint32_t i, completed_jobs, n_jobs = MAX_BURST_JOBS;
+        struct IMB_JOB *job = NULL, *jobs[IMB_MAX_BURST_SIZE] = { NULL };
+        uint32_t i, completed_jobs, n_jobs = IMB_MAX_BURST_SIZE;
         struct IMB_JOB **null_jobs = NULL;
         int err;
 

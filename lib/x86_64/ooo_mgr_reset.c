@@ -133,6 +133,7 @@ ooo_mgr_hmac_sha1_reset(void *p_ooo_mgr, const unsigned num_lanes)
 
         memset(p_mgr, 0, offsetof(MB_MGR_HMAC_SHA_1_OOO, road_block));
         memset(p_mgr->lens, 0xff, sizeof(p_mgr->lens));
+        p_mgr->total_num_lanes = num_lanes;
 
         for (i = 0; i < num_lanes; i++) {
                 p_mgr->ldata[i].extra_block[IMB_SHA1_BLOCK_SIZE] = 0x80;
@@ -163,6 +164,7 @@ ooo_mgr_hmac_sha224_reset(void *p_ooo_mgr, const unsigned num_lanes)
 
         memset(p_mgr, 0, offsetof(MB_MGR_HMAC_SHA_256_OOO, road_block));
         memset(p_mgr->lens, 0xff, sizeof(p_mgr->lens));
+        p_mgr->total_num_lanes = num_lanes;
 
         for (i = 0; i < num_lanes; i++) {
                 p_mgr->ldata[i].extra_block[IMB_SHA_256_BLOCK_SIZE] = 0x80;
@@ -193,6 +195,7 @@ ooo_mgr_hmac_sha256_reset(void *p_ooo_mgr, const unsigned num_lanes)
 
         memset(p_mgr, 0, offsetof(MB_MGR_HMAC_SHA_256_OOO, road_block));
         memset(p_mgr->lens, 0xff, sizeof(p_mgr->lens));
+        p_mgr->total_num_lanes = num_lanes;
 
         for (i = 0; i < num_lanes; i++) {
                 p_mgr->ldata[i].extra_block[IMB_SHA_256_BLOCK_SIZE] = 0x80;
@@ -223,6 +226,7 @@ ooo_mgr_hmac_sha384_reset(void *p_ooo_mgr, const unsigned num_lanes)
 
         memset(p_mgr, 0, offsetof(MB_MGR_HMAC_SHA_512_OOO, road_block));
         memset(p_mgr->lens, 0xff, sizeof(p_mgr->lens));
+        p_mgr->total_num_lanes = num_lanes;
 
         for (i = 0; i < num_lanes; i++) {
                 p_mgr->ldata[i].extra_block[IMB_SHA_384_BLOCK_SIZE] = 0x80;
@@ -259,6 +263,7 @@ ooo_mgr_hmac_sha512_reset(void *p_ooo_mgr, const unsigned num_lanes)
 
         memset(p_mgr, 0, offsetof(MB_MGR_HMAC_SHA_512_OOO, road_block));
         memset(p_mgr->lens, 0xff, sizeof(p_mgr->lens));
+        p_mgr->total_num_lanes = num_lanes;
 
         for (i = 0; i < num_lanes; i++) {
                 p_mgr->ldata[i].extra_block[IMB_SHA_512_BLOCK_SIZE] = 0x80;
@@ -295,6 +300,7 @@ ooo_mgr_hmac_md5_reset(void *p_ooo_mgr, const unsigned num_lanes)
 
         memset(p_mgr, 0, offsetof(MB_MGR_HMAC_MD5_OOO, road_block));
         memset(p_mgr->lens, 0xff, sizeof(p_mgr->lens));
+        p_mgr->total_num_lanes = num_lanes;
 
         for (i = 0; i < num_lanes; i++) {
                 p_mgr->ldata[i].extra_block[64] = 0x80;
@@ -340,6 +346,7 @@ ooo_mgr_sha1_reset(void *p_ooo_mgr, const unsigned num_lanes)
         MB_MGR_SHA_1_OOO *p_mgr = (MB_MGR_SHA_1_OOO *) p_ooo_mgr;
 
         memset(p_mgr, 0, offsetof(MB_MGR_SHA_1_OOO, road_block));
+        p_mgr->total_num_lanes = num_lanes;
 
         if (num_lanes == 2)
                 p_mgr->unused_lanes = 0xF10; /* SHANI */
@@ -358,6 +365,7 @@ ooo_mgr_sha256_reset(void *p_ooo_mgr, const unsigned num_lanes)
         MB_MGR_SHA_256_OOO *p_mgr = (MB_MGR_SHA_256_OOO *) p_ooo_mgr;
 
         memset(p_mgr, 0, offsetof(MB_MGR_SHA_256_OOO, road_block));
+        p_mgr->total_num_lanes = num_lanes;
 
         if (num_lanes == 2)
                 p_mgr->unused_lanes = 0xF10; /* SHANI */
@@ -376,6 +384,7 @@ ooo_mgr_sha512_reset(void *p_ooo_mgr, const unsigned num_lanes)
         MB_MGR_SHA_512_OOO *p_mgr = (MB_MGR_SHA_512_OOO *) p_ooo_mgr;
 
         memset(p_mgr, 0, offsetof(MB_MGR_SHA_512_OOO, road_block));
+        p_mgr->total_num_lanes = num_lanes;
 
         if (num_lanes == AVX_NUM_SHA512_LANES)
                 p_mgr->unused_lanes = 0xF10;

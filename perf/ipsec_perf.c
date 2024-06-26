@@ -1318,6 +1318,161 @@ translate_cipher_mode(const enum test_cipher_mode_e test_mode)
         return c_mode;
 }
 
+/*
+ * This function translates enum test_hash_alg_e to be used by ipsec_mb
+ * library
+ */
+static IMB_HASH_ALG
+translate_hash_alg(const enum test_hash_alg_e test_mode)
+{
+        IMB_HASH_ALG hash_alg = IMB_AUTH_NULL;
+
+        switch (test_mode) {
+        case TEST_SHA1:
+                hash_alg = IMB_AUTH_SHA_1;
+                break;
+        case TEST_SHA_224:
+                hash_alg = IMB_AUTH_SHA_224;
+                break;
+        case TEST_SHA_256:
+                hash_alg = IMB_AUTH_SHA_256;
+                break;
+        case TEST_SHA_384:
+                hash_alg = IMB_AUTH_SHA_384;
+                break;
+        case TEST_SHA_512:
+                hash_alg = IMB_AUTH_SHA_512;
+                break;
+        case TEST_SHA1_HMAC:
+                hash_alg = IMB_AUTH_HMAC_SHA_1;
+                break;
+        case TEST_SHA_224_HMAC:
+                hash_alg = IMB_AUTH_HMAC_SHA_224;
+                break;
+        case TEST_SHA_256_HMAC:
+                hash_alg = IMB_AUTH_HMAC_SHA_256;
+                break;
+        case TEST_SHA_384_HMAC:
+                hash_alg = IMB_AUTH_HMAC_SHA_384;
+                break;
+        case TEST_SHA_512_HMAC:
+                hash_alg = IMB_AUTH_HMAC_SHA_512;
+                break;
+        case TEST_XCBC:
+                hash_alg = IMB_AUTH_AES_XCBC;
+                break;
+        case TEST_HASH_CCM:
+                hash_alg = IMB_AUTH_AES_CCM;
+                break;
+        case TEST_HASH_GCM:
+                if (segment_size != 0)
+                        hash_alg = IMB_AUTH_GCM_SGL;
+                else
+                        hash_alg = IMB_AUTH_AES_GMAC;
+                break;
+        case TEST_DOCSIS_CRC32:
+                hash_alg = IMB_AUTH_DOCSIS_CRC32;
+                break;
+        case TEST_NULL_HASH:
+                hash_alg = IMB_AUTH_NULL;
+                break;
+        case TEST_HASH_CMAC:
+                hash_alg = IMB_AUTH_AES_CMAC;
+                break;
+        case TEST_HASH_CMAC_BITLEN:
+                hash_alg = IMB_AUTH_AES_CMAC_BITLEN;
+                break;
+        case TEST_HASH_CMAC_256:
+                hash_alg = IMB_AUTH_AES_CMAC_256;
+                break;
+        case TEST_HASH_POLY1305:
+                hash_alg = IMB_AUTH_POLY1305;
+                break;
+        case TEST_AEAD_POLY1305:
+                if (segment_size != 0)
+                        hash_alg = IMB_AUTH_CHACHA20_POLY1305_SGL;
+                else
+                        hash_alg = IMB_AUTH_CHACHA20_POLY1305;
+                break;
+        case TEST_PON_CRC_BIP:
+                hash_alg = IMB_AUTH_PON_CRC_BIP;
+                break;
+        case TEST_ZUC_EIA3:
+                hash_alg = IMB_AUTH_ZUC_EIA3_BITLEN;
+                break;
+        case TEST_ZUC256_EIA3:
+                hash_alg = IMB_AUTH_ZUC256_EIA3_BITLEN;
+                break;
+        case TEST_SNOW3G_UIA2:
+                hash_alg = IMB_AUTH_SNOW3G_UIA2_BITLEN;
+                break;
+        case TEST_KASUMI_UIA1:
+                hash_alg = IMB_AUTH_KASUMI_UIA1;
+                break;
+        case TEST_AES_GMAC_128:
+                hash_alg = IMB_AUTH_AES_GMAC_128;
+                break;
+        case TEST_AES_GMAC_192:
+                hash_alg = IMB_AUTH_AES_GMAC_192;
+                break;
+        case TEST_AES_GMAC_256:
+                hash_alg = IMB_AUTH_AES_GMAC_256;
+                break;
+        case TEST_AUTH_GHASH:
+                hash_alg = IMB_AUTH_GHASH;
+                break;
+        case TEST_AUTH_SNOW_V_AEAD:
+                hash_alg = IMB_AUTH_SNOW_V_AEAD;
+                break;
+        case TEST_CRC32_ETHERNET_FCS:
+                hash_alg = IMB_AUTH_CRC32_ETHERNET_FCS;
+                break;
+        case TEST_CRC32_SCTP:
+                hash_alg = IMB_AUTH_CRC32_SCTP;
+                break;
+        case TEST_CRC32_WIMAX_OFDMA_DATA:
+                hash_alg = IMB_AUTH_CRC32_WIMAX_OFDMA_DATA;
+                break;
+        case TEST_CRC24_LTE_A:
+                hash_alg = IMB_AUTH_CRC24_LTE_A;
+                break;
+        case TEST_CRC24_LTE_B:
+                hash_alg = IMB_AUTH_CRC24_LTE_B;
+                break;
+        case TEST_CRC16_X25:
+                hash_alg = IMB_AUTH_CRC16_X25;
+                break;
+        case TEST_CRC16_FP_DATA:
+                hash_alg = IMB_AUTH_CRC16_FP_DATA;
+                break;
+        case TEST_CRC11_FP_HEADER:
+                hash_alg = IMB_AUTH_CRC11_FP_HEADER;
+                break;
+        case TEST_CRC10_IUUP_DATA:
+                hash_alg = IMB_AUTH_CRC10_IUUP_DATA;
+                break;
+        case TEST_CRC8_WIMAX_OFDMA_HCS:
+                hash_alg = IMB_AUTH_CRC8_WIMAX_OFDMA_HCS;
+                break;
+        case TEST_CRC7_FP_HEADER:
+                hash_alg = IMB_AUTH_CRC7_FP_HEADER;
+                break;
+        case TEST_CRC6_IUUP_HEADER:
+                hash_alg = IMB_AUTH_CRC6_IUUP_HEADER;
+                break;
+        case TEST_AUTH_SM3:
+                hash_alg = IMB_AUTH_SM3;
+                break;
+        case TEST_SM3_HMAC:
+                hash_alg = IMB_AUTH_HMAC_SM3;
+                break;
+        default:
+                break;
+        }
+
+        return hash_alg;
+}
+
 static uint32_t
 get_next_size(const uint32_t index)
 {
@@ -1847,173 +2002,81 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params, const uint32_t num_iter, uint8
 
         job_template.auth_tag_output = (uint8_t *) digest;
 
+        /* Translating enum to the API's one */
+        job_template.hash_alg = translate_hash_alg(params->hash_alg);
         switch (params->hash_alg) {
-        case TEST_SHA1:
-                job_template.hash_alg = IMB_AUTH_SHA_1;
-                break;
-        case TEST_SHA_224:
-                job_template.hash_alg = IMB_AUTH_SHA_224;
-                break;
-        case TEST_SHA_256:
-                job_template.hash_alg = IMB_AUTH_SHA_256;
-                break;
-        case TEST_SHA_384:
-                job_template.hash_alg = IMB_AUTH_SHA_384;
-                break;
-        case TEST_SHA_512:
-                job_template.hash_alg = IMB_AUTH_SHA_512;
-                break;
         case TEST_XCBC:
                 job_template.u.XCBC._k1_expanded = k1_expanded;
                 job_template.u.XCBC._k2 = k2;
                 job_template.u.XCBC._k3 = k3;
-                job_template.hash_alg = IMB_AUTH_AES_XCBC;
-                break;
-        case TEST_HASH_CCM:
-                job_template.hash_alg = IMB_AUTH_AES_CCM;
-                break;
-        case TEST_HASH_GCM:
-                if (segment_size != 0)
-                        job_template.hash_alg = IMB_AUTH_GCM_SGL;
-                else
-                        job_template.hash_alg = IMB_AUTH_AES_GMAC;
-                break;
-        case TEST_DOCSIS_CRC32:
-                job_template.hash_alg = IMB_AUTH_DOCSIS_CRC32;
-                break;
-        case TEST_NULL_HASH:
-                job_template.hash_alg = IMB_AUTH_NULL;
                 break;
         case TEST_HASH_CMAC:
                 job_template.u.CMAC._key_expanded = k1_expanded;
                 job_template.u.CMAC._skey1 = k2;
                 job_template.u.CMAC._skey2 = k3;
-                job_template.hash_alg = IMB_AUTH_AES_CMAC;
                 break;
         case TEST_HASH_CMAC_BITLEN:
                 job_template.u.CMAC._key_expanded = k1_expanded;
                 job_template.u.CMAC._skey1 = k2;
                 job_template.u.CMAC._skey2 = k3;
-                job_template.hash_alg = IMB_AUTH_AES_CMAC_BITLEN;
                 break;
         case TEST_HASH_CMAC_256:
                 job_template.u.CMAC._key_expanded = k1_expanded;
                 job_template.u.CMAC._skey1 = k2;
                 job_template.u.CMAC._skey2 = k3;
-                job_template.hash_alg = IMB_AUTH_AES_CMAC_256;
                 break;
         case TEST_HASH_POLY1305:
                 job_template.u.POLY1305._key = k1_expanded;
-                job_template.hash_alg = IMB_AUTH_POLY1305;
-                break;
-        case TEST_AEAD_POLY1305:
-                if (segment_size != 0)
-                        job_template.hash_alg = IMB_AUTH_CHACHA20_POLY1305_SGL;
-                else
-                        job_template.hash_alg = IMB_AUTH_CHACHA20_POLY1305;
                 break;
         case TEST_PON_CRC_BIP:
-                job_template.hash_alg = IMB_AUTH_PON_CRC_BIP;
                 job_template.cipher_start_src_offset_in_bytes = 8;
                 break;
         case TEST_ZUC_EIA3:
-                job_template.hash_alg = IMB_AUTH_ZUC_EIA3_BITLEN;
                 job_template.u.ZUC_EIA3._key = k3;
                 job_template.u.ZUC_EIA3._iv = (uint8_t *) &auth_iv;
                 break;
         case TEST_ZUC256_EIA3:
-                job_template.hash_alg = IMB_AUTH_ZUC256_EIA3_BITLEN;
                 job_template.u.ZUC_EIA3._key = k3;
                 job_template.u.ZUC_EIA3._iv = (uint8_t *) &auth_iv;
                 break;
         case TEST_SNOW3G_UIA2:
-                job_template.hash_alg = IMB_AUTH_SNOW3G_UIA2_BITLEN;
                 job_template.u.SNOW3G_UIA2._key = k3;
                 job_template.u.SNOW3G_UIA2._iv = (uint8_t *) &auth_iv;
                 break;
         case TEST_KASUMI_UIA1:
-                job_template.hash_alg = IMB_AUTH_KASUMI_UIA1;
                 job_template.u.KASUMI_UIA1._key = k3;
                 break;
         case TEST_AES_GMAC_128:
-                job_template.hash_alg = IMB_AUTH_AES_GMAC_128;
                 IMB_AES128_GCM_PRE(mb_mgr, gcm_key, &gdata_key);
                 job_template.u.GMAC._key = &gdata_key;
                 job_template.u.GMAC._iv = (uint8_t *) &auth_iv;
                 job_template.u.GMAC.iv_len_in_bytes = 12;
                 break;
         case TEST_AES_GMAC_192:
-                job_template.hash_alg = IMB_AUTH_AES_GMAC_192;
                 IMB_AES192_GCM_PRE(mb_mgr, gcm_key, &gdata_key);
                 job_template.u.GMAC._key = &gdata_key;
                 job_template.u.GMAC._iv = (uint8_t *) &auth_iv;
                 job_template.u.GMAC.iv_len_in_bytes = 12;
                 break;
         case TEST_AES_GMAC_256:
-                job_template.hash_alg = IMB_AUTH_AES_GMAC_256;
                 IMB_AES256_GCM_PRE(mb_mgr, gcm_key, &gdata_key);
                 job_template.u.GMAC._key = &gdata_key;
                 job_template.u.GMAC._iv = (uint8_t *) &auth_iv;
                 job_template.u.GMAC.iv_len_in_bytes = 12;
                 break;
         case TEST_AUTH_GHASH:
-                job_template.hash_alg = IMB_AUTH_GHASH;
                 IMB_GHASH_PRE(mb_mgr, gcm_key, &gdata_key);
                 job_template.u.GHASH._key = &gdata_key;
                 job_template.u.GHASH._init_tag = (uint8_t *) &auth_iv;
                 break;
-        case TEST_AUTH_SNOW_V_AEAD:
-                job_template.hash_alg = IMB_AUTH_SNOW_V_AEAD;
-                break;
-        case TEST_CRC32_ETHERNET_FCS:
-                job_template.hash_alg = IMB_AUTH_CRC32_ETHERNET_FCS;
-                break;
-        case TEST_CRC32_SCTP:
-                job_template.hash_alg = IMB_AUTH_CRC32_SCTP;
-                break;
-        case TEST_CRC32_WIMAX_OFDMA_DATA:
-                job_template.hash_alg = IMB_AUTH_CRC32_WIMAX_OFDMA_DATA;
-                break;
-        case TEST_CRC24_LTE_A:
-                job_template.hash_alg = IMB_AUTH_CRC24_LTE_A;
-                break;
-        case TEST_CRC24_LTE_B:
-                job_template.hash_alg = IMB_AUTH_CRC24_LTE_B;
-                break;
-        case TEST_CRC16_X25:
-                job_template.hash_alg = IMB_AUTH_CRC16_X25;
-                break;
-        case TEST_CRC16_FP_DATA:
-                job_template.hash_alg = IMB_AUTH_CRC16_FP_DATA;
-                break;
-        case TEST_CRC11_FP_HEADER:
-                job_template.hash_alg = IMB_AUTH_CRC11_FP_HEADER;
-                break;
-        case TEST_CRC10_IUUP_DATA:
-                job_template.hash_alg = IMB_AUTH_CRC10_IUUP_DATA;
-                break;
-        case TEST_CRC8_WIMAX_OFDMA_HCS:
-                job_template.hash_alg = IMB_AUTH_CRC8_WIMAX_OFDMA_HCS;
-                break;
-        case TEST_CRC7_FP_HEADER:
-                job_template.hash_alg = IMB_AUTH_CRC7_FP_HEADER;
-                break;
-        case TEST_CRC6_IUUP_HEADER:
-                job_template.hash_alg = IMB_AUTH_CRC6_IUUP_HEADER;
-                break;
-        case TEST_AUTH_SM3:
-                job_template.hash_alg = IMB_AUTH_SM3;
-                break;
         case TEST_SM3_HMAC:
                 job_template.u.HMAC._hashed_auth_key_xor_ipad = (uint8_t *) ipad;
                 job_template.u.HMAC._hashed_auth_key_xor_opad = (uint8_t *) opad;
-                job_template.hash_alg = IMB_AUTH_HMAC_SM3;
                 break;
         default:
                 /* HMAC hash algorithm */
                 job_template.u.HMAC._hashed_auth_key_xor_ipad = (uint8_t *) ipad;
                 job_template.u.HMAC._hashed_auth_key_xor_opad = (uint8_t *) opad;
-                job_template.hash_alg = (IMB_HASH_ALG) params->hash_alg;
                 break;
         }
         if (tag_size == 0)
@@ -3961,15 +4024,28 @@ main(int argc, char *argv[])
                 return EXIT_FAILURE;
         }
 
-        /* currently only HMAC-SHAx algs supported by hash-only burst API */
-        if (test_api == TEST_API_HASH_BURST &&
-            ((custom_job_params.hash_alg != TEST_SHA1_HMAC) &&
-             (custom_job_params.hash_alg != TEST_SHA_224_HMAC) &&
-             (custom_job_params.hash_alg != TEST_SHA_256_HMAC) &&
-             (custom_job_params.hash_alg != TEST_SHA_384_HMAC) &&
-             (custom_job_params.hash_alg != TEST_SHA_512_HMAC))) {
-                fprintf(stderr, "Unsupported hash-only burst API algorithm selected\n");
-                return EXIT_FAILURE;
+        /* only a few algorithms support the hash-only burst API */
+        if (test_api == TEST_API_HASH_BURST) {
+                uint32_t optim_burst_size;
+                IMB_MGR *aux_mgr = alloc_mb_mgr(0);
+
+                if (aux_mgr == NULL) {
+                        fprintf(stderr, "Error allocating MB_MGR structure!\n");
+                        return EXIT_FAILURE;
+                }
+                init_mb_mgr_auto(aux_mgr, NULL);
+
+                if (imb_hash_burst_get_size(aux_mgr, translate_hash_alg(custom_job_params.hash_alg),
+                                            &optim_burst_size) == IMB_ERR_HASH_ALGO) {
+                        fprintf(stderr, "Unsupported hash-only burst API algorithm selected\n");
+                        free_mb_mgr(aux_mgr);
+                        return EXIT_FAILURE;
+                }
+
+                if (optim_burst_size > burst_size)
+                        fprintf(stderr, "NOTE: Burst size is lower than the minimum size for an "
+                                        "optimal performance\n");
+                free_mb_mgr(aux_mgr);
         }
 
         if (test_api == TEST_API_DIRECT && ((custom_job_params.cipher_mode != TEST_GCM) &&
@@ -4161,18 +4237,39 @@ main(int argc, char *argv[])
                 }
         }
 
-        if (archs[ARCH_SSE]) {
-                IMB_MGR *p_mgr = alloc_mb_mgr(flags);
+        IMB_MGR *p_mgr = alloc_mb_mgr(flags);
 
-                if (p_mgr == NULL) {
-                        fprintf(stderr, "Error allocating MB_MGR structure!\n");
-                        return EXIT_FAILURE;
-                }
-                init_mb_mgr_sse(p_mgr);
-                fprintf(stderr, "%s SHA extensions (shani) for SSE arch\n",
-                        (p_mgr->features & IMB_FEATURE_SHANI) ? "Using" : "Not using");
-                free_mb_mgr(p_mgr);
+        if (p_mgr == NULL) {
+                fprintf(stderr, "Error allocating MB_MGR structure!\n");
+                return EXIT_FAILURE;
         }
+
+        fprintf(stderr, "Testing ");
+        for (enum arch_type_e arch = ARCH_SSE; arch <= ARCH_AVX512; arch++) {
+                if (archs[arch] == 0)
+                        continue;
+
+                switch (arch) {
+                case ARCH_SSE:
+                        init_mb_mgr_sse(p_mgr);
+                        break;
+                case ARCH_AVX:
+                        init_mb_mgr_avx(p_mgr);
+                        break;
+                case ARCH_AVX2:
+                        init_mb_mgr_avx2(p_mgr);
+                        break;
+                default: /* ARCH_AV512 */
+                        init_mb_mgr_avx512(p_mgr);
+                        break;
+                }
+                const char *arch_type;
+
+                imb_get_arch_type_string(p_mgr, &arch_type, NULL);
+                fprintf(stderr, "\"%s\" ", arch_type);
+        }
+        fprintf(stderr, "implementation/s\n");
+        free_mb_mgr(p_mgr);
 
         memset(t_info, 0, sizeof(t_info));
         init_offsets(cache_type);

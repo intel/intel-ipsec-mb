@@ -51,21 +51,14 @@ struct gcm_ctr_vector {
 };
 
 #define vector(N)                                                                                  \
-        {                                                                                          \
-                K##N, (KBITS(K##N)), IV##N, sizeof(IV##N), A##N, A##N##_len, P##N, sizeof(P##N),   \
-                        C##N, T##N, sizeof(T##N)                                                   \
-        }
+        { K##N, (KBITS(K##N)), IV##N, sizeof(IV##N), A##N,        A##N##_len,                      \
+          P##N, sizeof(P##N),  C##N,  T##N,          sizeof(T##N) }
 
 #define extra_vector(N)                                                                            \
-        {                                                                                          \
-                K##N, (KBITS(K##N)), IV##N, sizeof(IV##N), A##N, A##N##_len, P##N, P##N##_len,     \
-                        C##N, T##N, sizeof(T##N)                                                   \
-        }
+        { K##N, (KBITS(K##N)), IV##N, sizeof(IV##N), A##N,        A##N##_len,                      \
+          P##N, P##N##_len,    C##N,  T##N,          sizeof(T##N) }
 #define ghash_vector(N)                                                                            \
-        {                                                                                          \
-                K##N, (KBITS(K##N)), NULL, 0, NULL, 0, P##N, sizeof(P##N), NULL, T##N,             \
-                        sizeof(T##N)                                                               \
-        }
+        { K##N, (KBITS(K##N)), NULL, 0, NULL, 0, P##N, sizeof(P##N), NULL, T##N, sizeof(T##N) }
 struct MB_MGR;
 
 extern int

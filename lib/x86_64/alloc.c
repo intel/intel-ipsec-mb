@@ -45,11 +45,8 @@
 #define ALIGN(x, y) ((x + (y - 1)) & (~(y - 1)))
 
 #define OOO_INFO(imb_mgr_ooo_ptr_name__, ooo_mgr_type__)                                           \
-        {                                                                                          \
-                offsetof(IMB_MGR, imb_mgr_ooo_ptr_name__),                                         \
-                        ALIGN(sizeof(ooo_mgr_type__), ALIGNMENT),                                  \
-                        offsetof(ooo_mgr_type__, road_block)                                       \
-        }
+        { offsetof(IMB_MGR, imb_mgr_ooo_ptr_name__), ALIGN(sizeof(ooo_mgr_type__), ALIGNMENT),     \
+          offsetof(ooo_mgr_type__, road_block) }
 
 const struct {
         size_t ooo_ptr_offset;
