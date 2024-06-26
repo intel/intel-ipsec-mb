@@ -80,7 +80,7 @@ extern sm3_base_update
 %xdefine t1     gp1
 %xdefine t2     gp2
 %xdefine t3     gp3
-%xdefine t4     gp3
+%xdefine t4     gp4
 
 %xdefine r1     gp12
 %xdefine r2     gp11
