@@ -204,12 +204,12 @@ SHUF_MASK:
 mksection .text
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; void sha512_ni_x2(SHA512_ARGS *args, UINT64 size_in_blocks)
+;; void sha512_ni_x2_avx2(SHA512_ARGS *args, UINT64 size_in_blocks)
 ;; arg1 : pointer to args
 ;; arg2 : size (in blocks) ;; assumed to be >= 1
 align 32
-MKGLOBAL(sha512_ni_x2,function,internal)
-sha512_ni_x2:
+MKGLOBAL(sha512_ni_x2_avx2,function,internal)
+sha512_ni_x2_avx2:
         mov             r11, rsp
         sub             rsp, frame_size
         and             rsp, -32
@@ -225,10 +225,10 @@ sha512_ni_x2:
         lea             SHA512_CONSTS, [rel SHA512_K_AVX]
 
         ;; load current hash value and transform
-        vmovdqu         STATE0, [args + 0*SHA512NI_DIGEST_ROW_SIZE]
-        vmovdqu         STATE1, [args + 0*SHA512NI_DIGEST_ROW_SIZE + 32]
-                vmovdqu         STATE0b, [args + 1*SHA512NI_DIGEST_ROW_SIZE]
-                vmovdqu         STATE1b, [args + 1*SHA512NI_DIGEST_ROW_SIZE + 32]
+        vmovdqu         STATE0, [args + _args_digest_sha512 + 0*SHA512NI_DIGEST_ROW_SIZE]
+        vmovdqu         STATE1, [args + _args_digest_sha512 + 0*SHA512NI_DIGEST_ROW_SIZE + 32]
+                vmovdqu         STATE0b, [args + _args_digest_sha512 + 1*SHA512NI_DIGEST_ROW_SIZE]
+                vmovdqu         STATE1b, [args + _args_digest_sha512 + 1*SHA512NI_DIGEST_ROW_SIZE + 32]
 
         vperm2i128 YTMP1, STATE0, STATE1, 0x20
                     vperm2i128 YTMP0, STATE0b, STATE1b, 0x20
@@ -386,10 +386,10 @@ align 32
                     vpermq STATE1b, YTMP0, 0xb1
 
         ;; update digests
-        vmovdqu         [args + 0*SHA512NI_DIGEST_ROW_SIZE], STATE0
-        vmovdqu         [args + 0*SHA512NI_DIGEST_ROW_SIZE + 32], STATE1
-                vmovdqu         [args + 1*SHA512NI_DIGEST_ROW_SIZE], STATE0b
-                vmovdqu         [args + 1*SHA512NI_DIGEST_ROW_SIZE + 32], STATE1b
+        vmovdqu         [args + _args_digest_sha512 + 0*SHA512NI_DIGEST_ROW_SIZE], STATE0
+        vmovdqu         [args + _args_digest_sha512 + 0*SHA512NI_DIGEST_ROW_SIZE + 32], STATE1
+                vmovdqu         [args + _args_digest_sha512 + 1*SHA512NI_DIGEST_ROW_SIZE], STATE0b
+                vmovdqu         [args + _args_digest_sha512 + 1*SHA512NI_DIGEST_ROW_SIZE + 32], STATE1b
 
         vzeroupper
 
@@ -405,7 +405,7 @@ align 32
 MKGLOBAL(call_sha512_ni_x2_avx2_from_c,function,internal)
 call_sha512_ni_x2_avx2_from_c:
         FUNC_SAVE
-        call sha512_ni_x2
+        call sha512_ni_x2_avx2
         FUNC_RESTORE
         ret
 
