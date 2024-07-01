@@ -96,6 +96,12 @@ else()
   set(TEST_APP_BIN_DIR "${CMAKE_CURRENT_BINARY_DIR}")
 endif()
 
+# append config type for multi-config generators
+get_property(multi_config_gen GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
+if (multi_config_gen)
+  STRING(APPEND TEST_APP_BIN_DIR "/$<IF:$<CONFIG:Debug>,Debug,Release>")
+endif()
+
 add_test(NAME MULTIPROCESS
   COMMAND ${MP_APP_PRI} ${TEST_APP_BIN_DIR}/${MP_APP_SEC}
   WORKING_DIRECTORY ${TEST_APP_BIN_DIR})
