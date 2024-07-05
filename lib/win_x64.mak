@@ -599,9 +599,10 @@ avx2_t4_objs = \
 	$(OBJ_DIR)\sha512_x1_ni_avx2.obj \
 	$(OBJ_DIR)\sha512_x2_ni_avx2.obj \
 	$(OBJ_DIR)\sha_ni_avx2.obj \
-	$(OBJ_DIR)\sha512_hmac_ni_avx2.obj \
 	$(OBJ_DIR)\mb_mgr_hmac_sha512_submit_ni_avx2.obj \
-	$(OBJ_DIR)\mb_mgr_hmac_sha512_flush_ni_avx2.obj
+	$(OBJ_DIR)\mb_mgr_hmac_sha512_flush_ni_avx2.obj \
+	$(OBJ_DIR)\mb_mgr_hmac_sha384_submit_ni_avx2.obj \
+	$(OBJ_DIR)\mb_mgr_hmac_sha384_flush_ni_avx2.obj
 
 !if "$(AESNI_EMU)" == "y"
 all_objs = $(lib_objs1) $(lib_objs2) $(gcm_objs) $(no_aesni_objs)

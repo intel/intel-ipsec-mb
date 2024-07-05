@@ -30,11 +30,12 @@
 %include "include/mb_mgr_datastruct.inc"
 %include "include/reg_sizes.inc"
 
-%define SHA512_FUNC sha512_ni_x2_avx2
+%ifndef FUNC
 %define FUNC flush_job_hmac_sha_512_ni_avx2
 %define SHA_X_DIGEST_SIZE 512
+%endif
 
-extern SHA512_FUNC
+extern sha512_ni_x2_avx2
 
 mksection .rodata
 default rel
@@ -50,7 +51,6 @@ lane_1: dq  1
 
 mksection .text
 
-%if 1
 %ifdef LINUX
 %define arg1    rdi
 %define arg2    rsi
@@ -71,23 +71,17 @@ mksection .text
 %define tmp2            rbx
 
 %define job_rax         rax
-%define tmp1            rax
 %define size_offset     rax
 %define tmp             rax
 %define start_offset    rax
 
 %define tmp3            arg1
-
 %define extra_blocks    arg2
 %define p               arg2
 
 %define tmp4            r8
-
 %define tmp5            r9
-
 %define tmp6            r10
-
-%endif
 
 struc STACK
 _gpr_save:      resq    3
@@ -97,7 +91,7 @@ endstruc
 %define APPEND(a,b) a %+ b
 
 ; JOB* FUNC(MB_MGR_HMAC_SHA_512_OOO *state)
-; arg 1 : rcx : state
+; arg 1 : state
 MKGLOBAL(FUNC,function,internal)
 FUNC:
         mov     rax, rsp
@@ -144,7 +138,7 @@ APPEND(skip_,I):
 
         ; "state" and "args" are the same address, arg1
         ; len is arg2
-        call    SHA512_FUNC
+        call    sha512_ni_x2_avx2
         ; state and idx are intact
 
 len_is_0:
@@ -173,7 +167,11 @@ proc_outer:
         vpshufb ymm0, [rel byteswap]
         vpshufb ymm1, [rel byteswap]
         vmovdqu [lane_data + _outer_block_sha512], ymm0
+%if (SHA_X_DIGEST_SIZE != 384)
         vmovdqu [lane_data + _outer_block_sha512+32], ymm1
+%else
+        vmovdqu [lane_data + _outer_block_sha512+32], xmm1
+%endif
 
         ; move the opad key into digest
         mov     tmp, [job + _auth_key_xor_opad]
@@ -227,15 +225,12 @@ end_loop:
         vpshufb ymm0, [rel byteswap]
         vmovdqu [p], ymm0
 %else
-        mov     QWORD(tmp2), [state + _args_digest_sha512 + idx + 0*SHA512_DIGEST_WORD_SIZE]
-        mov     QWORD(tmp4), [state + _args_digest_sha512 + idx + 1*SHA512_DIGEST_WORD_SIZE]
-        mov     QWORD(tmp6), [state + _args_digest_sha512 + idx + 2*SHA512_DIGEST_WORD_SIZE]
+        vmovdqu xmm0, [state + _args_digest_sha512 + idx]
+        vpshufb xmm0, [rel byteswap]
+        mov     QWORD(tmp2), [state + _args_digest_sha512 + idx + 16]
         bswap   QWORD(tmp2)
-        bswap   QWORD(tmp4)
-        bswap   QWORD(tmp6)
-        mov     [p + 0*8], QWORD(tmp2)
-        mov     [p + 1*8], QWORD(tmp4)
-        mov     [p + 2*8], QWORD(tmp6)
+        vmovdqu [p], xmm0
+        mov     [p + 16], QWORD(tmp2)
 %endif
         jmp     clear_ret
 

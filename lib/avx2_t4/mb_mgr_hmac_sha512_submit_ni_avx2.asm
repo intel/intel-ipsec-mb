@@ -31,11 +31,12 @@
 %include "include/memcpy.inc"
 %include "include/const.inc"
 
-%define SHA512_FUNC sha512_ni_x2_avx2
+%ifndef FUNC
 %define FUNC submit_job_hmac_sha_512_ni_avx2
 %define SHA_X_DIGEST_SIZE 512
+%endif
 
-extern SHA512_FUNC
+extern sha512_ni_x2_avx2
 
 mksection .rodata
 default rel
@@ -214,7 +215,7 @@ start_loop:
 
         ; "state" and "args" are the same address, arg1
         ; len is arg2
-        call    SHA512_FUNC
+        call    sha512_ni_x2_avx2
         ; state and idx are intact
 
 len_is_0:
@@ -246,7 +247,11 @@ proc_outer:
         vpshufb ymm0, [rel byteswap]
         vpshufb ymm1, [rel byteswap]
         vmovdqu [lane_data + _outer_block_sha512], ymm0
+%if (SHA_X_DIGEST_SIZE != 384)
         vmovdqu [lane_data + _outer_block_sha512+32], ymm1
+%else
+        vmovdqu [lane_data + _outer_block_sha512+32], xmm1
+%endif
 
         mov     tmp, [job + _auth_key_xor_opad]
         vmovdqu ymm0, [tmp]
@@ -312,15 +317,12 @@ end_loop:
         vpshufb ymm0, [rel byteswap]
         vmovdqu [p], ymm0
 %else
-        mov     QWORD(tmp2), [state + _args_digest_sha512 + idx + 0*SHA512_DIGEST_WORD_SIZE]
-        mov     QWORD(tmp4), [state + _args_digest_sha512 + idx + 1*SHA512_DIGEST_WORD_SIZE]
-        mov     QWORD(tmp6), [state + _args_digest_sha512 + idx + 2*SHA512_DIGEST_WORD_SIZE]
+        vmovdqu xmm0, [state + _args_digest_sha512 + idx]
+        vpshufb xmm0, [rel byteswap]
+        mov     QWORD(tmp2), [state + _args_digest_sha512 + idx + 16]
         bswap   QWORD(tmp2)
-        bswap   QWORD(tmp4)
-        bswap   QWORD(tmp6)
-        mov     [p + 0*8], QWORD(tmp2)
-        mov     [p + 1*8], QWORD(tmp4)
-        mov     [p + 2*8], QWORD(tmp6)
+        vmovdqu [p], xmm0
+        mov     [p + 16], QWORD(tmp2)
 %endif
         jmp     clear_ret
 

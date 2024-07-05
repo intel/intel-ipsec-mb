@@ -296,7 +296,7 @@ reset_ooo_mgrs(IMB_MGR *state)
         ooo_mgr_hmac_sha256_reset(state->hmac_sha_256_ooo, 2);
 
         /* Init HMAC/SHA384 out-of-order fields */
-        ooo_mgr_hmac_sha384_reset(state->hmac_sha_384_ooo, AVX2_NUM_SHA512_LANES);
+        ooo_mgr_hmac_sha384_reset(state->hmac_sha_384_ooo, 2);
 
         /* Init HMAC/SHA512 out-of-order fields */
         ooo_mgr_hmac_sha512_reset(state->hmac_sha_512_ooo, 2);
