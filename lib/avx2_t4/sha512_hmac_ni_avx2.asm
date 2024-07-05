@@ -408,14 +408,6 @@ sha512_384_hmac_submit_ni_avx2:
         ret
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; IMB_JOB *submit_job_hmac_sha_512_ni_avx2(MB_MGR_HMAC_SHA_512_OOO *state, IMB_JOB *job)
-align 32
-MKGLOBAL(submit_job_hmac_sha_512_ni_avx2,function,internal)
-submit_job_hmac_sha_512_ni_avx2:
-        mov     DWORD(arg1), 512
-        jmp     sha512_384_hmac_submit_ni_avx2
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; IMB_JOB *submit_job_hmac_sha_384_ni_avx2(MB_MGR_SHA384_OOO *state, IMB_JOB *job)
 align 32
 MKGLOBAL(submit_job_hmac_sha_384_ni_avx2,function,internal)
@@ -427,9 +419,7 @@ submit_job_hmac_sha_384_ni_avx2:
 ;; IMB_JOB *flush_job_hmac_sha_512_ni_avx2(MB_MGR_SHA512_OOO *state)
 ;; IMB_JOB *flush_job_hmac_sha_384_ni_avx2(MB_MGR_SHA384_OOO *state)
 align 32
-MKGLOBAL(flush_job_hmac_sha_512_ni_avx2,function,internal)
 MKGLOBAL(flush_job_hmac_sha_384_ni_avx2,function,internal)
-flush_job_hmac_sha_512_ni_avx2:
 flush_job_hmac_sha_384_ni_avx2:
         xor     rax, rax
         ret

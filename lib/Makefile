@@ -680,7 +680,9 @@ asm_avx2_t4_lib_objs := \
 	sm3_hmac_avx2.o \
 	sha512_x1_ni_avx2.o \
 	sha512_x2_ni_avx2.o \
-	sha512_hmac_ni_avx2.o
+	sha512_hmac_ni_avx2.o \
+	mb_mgr_hmac_sha512_flush_ni_avx2.o \
+	mb_mgr_hmac_sha512_submit_ni_avx2.o
 
 #
 # List of ASM modules (avx512 directory)
