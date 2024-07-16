@@ -102,7 +102,7 @@ ghash_test(struct IMB_MGR *mb_mgr);
 extern int
 cbc_test(struct IMB_MGR *mb_mgr);
 extern int
-cfb_test(struct IMB_MGR *mb_mgr);
+cfb_one_block_test(struct IMB_MGR *mb_mgr);
 extern int
 ctr_test(struct IMB_MGR *mb_mgr);
 extern int
@@ -132,7 +132,7 @@ struct imb_test tests[] = {
         { .str = "KAT", .fn = known_answer_test, .enabled = 1 },
         { .str = "DO_TEST", .fn = do_test, .enabled = 1 },
         { .str = "CBC", .fn = cbc_test, .enabled = 1 },
-        { .str = "CFB", .fn = cfb_test, .enabled = 1 },
+        { .str = "CFB", .fn = cfb_one_block_test, .enabled = 1 },
         { .str = "CTR", .fn = ctr_test, .enabled = 1 },
         { .str = "PON", .fn = pon_test, .enabled = 1 },
         { .str = "XCBC", .fn = xcbc_test, .enabled = 1 },

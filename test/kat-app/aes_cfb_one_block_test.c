@@ -37,16 +37,16 @@
 #include "cipher_test.h"
 
 int
-cfb_test(struct IMB_MGR *mb_mgr);
+cfb_one_block_test(struct IMB_MGR *mb_mgr);
 
-extern const struct cipher_test cfb_test_json[];
+extern const struct cipher_test cfb_one_block_test_json[];
 
 static int
 cfb_validate_ok(const uint8_t *output, const uint8_t *in_text, const size_t plen,
                 const uint32_t klen, const unsigned i, const unsigned is_enc, const int in_place)
 {
         if (memcmp(output, in_text, plen) != 0) {
-                printf("\nAES-CFB%s standard test vector %u %s (%s): fail\n",
+                printf("\nAES-CFB-ONE%s standard test vector %u %s (%s): fail\n",
                        (klen == 16) ? "128" : "256", i + 1, (is_enc) ? "encrypt" : "decrypt",
                        (in_place) ? "in-place" : "out-of-place");
                 return 0;
@@ -129,14 +129,14 @@ static void
 cfb_test_vectors(struct IMB_MGR *mb_mgr, struct test_suite_context *ctx128,
                  struct test_suite_context *ctx256)
 {
-        const struct cipher_test *v = cfb_test_json;
+        const struct cipher_test *v = cfb_one_block_test_json;
 
         for (; v->msg != NULL; v++) {
                 struct test_suite_context *ctx;
 
                 if (!quiet_mode) {
 #ifdef DEBUG
-                        printf("AES-CFB Test Case %zu key_len:%zu\n", v->tcId, v->keySize);
+                        printf("AES-CFB-ONE Test Case %zu key_len:%zu\n", v->tcId, v->keySize);
 #else
                         printf(".");
 #endif
@@ -156,14 +156,14 @@ cfb_test_vectors(struct IMB_MGR *mb_mgr, struct test_suite_context *ctx128,
 }
 
 int
-cfb_test(struct IMB_MGR *mb_mgr)
+cfb_one_block_test(struct IMB_MGR *mb_mgr)
 {
         int errors = 0;
         struct test_suite_context ctx128;
         struct test_suite_context ctx256;
 
-        test_suite_start(&ctx128, "AES-CFB-128");
-        test_suite_start(&ctx256, "AES-CFB-256");
+        test_suite_start(&ctx128, "AES-CFB-128 ONE-BLOCK");
+        test_suite_start(&ctx256, "AES-CFB-256 ONE-BLOCK");
         cfb_test_vectors(mb_mgr, &ctx128, &ctx256);
         errors += test_suite_end(&ctx128);
         errors += test_suite_end(&ctx256);

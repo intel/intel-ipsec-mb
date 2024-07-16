@@ -27,7 +27,7 @@
 
 /* CFB */
 #include "cipher_test.h"
-const struct cipher_test cfb_test_json[] = {
+const struct cipher_test cfb_one_block_test_json[] = {
         /* Vectors from CM-SP-SECv3.1-I06-160602 section I.10.2 */
         { 128, 128, 1, "\x01\x23\x45\x67\x89\xab\xcd\xef\x01\x23\x45\x67\x89\xab\xcd\xef",
           "\x12\x34\x56\x78\x90\xab\xcd\xef\x12\x34\x56\x78\x90\xab\xcd\xef",
