@@ -221,6 +221,13 @@ detect_sm4ni(void)
 #endif
 }
 
+static uint32_t
+detect_xsave(void)
+{
+        /* Check presence of XSAVE - bit 26 of ECX */
+        return (cpuid_1_0.ecx & (1UL << 26));
+}
+
 uint64_t
 cpu_feature_detect(void)
 {
@@ -249,7 +256,8 @@ cpu_feature_detect(void)
                          { 7, IMB_FEATURE_HYBRID, detect_hybrid },
                          { 7, IMB_FEATURE_SM3NI, detect_sm3ni },
                          { 7, IMB_FEATURE_SM4NI, detect_sm4ni },
-                         { 7, IMB_FEATURE_SHA512NI, detect_sha512ni } };
+                         { 7, IMB_FEATURE_SHA512NI, detect_sha512ni },
+                         { 1, IMB_FEATURE_XSAVE, detect_xsave } };
         struct cpuid_regs r;
         unsigned hi_leaf_number = 0;
         uint64_t features = 0;

@@ -917,6 +917,7 @@ typedef int (*imb_self_test_cb_t)(void *cb_arg, const IMB_SELF_TEST_CALLBACK_DAT
 #define IMB_FEATURE_SM3NI          (1ULL << 24)
 #define IMB_FEATURE_SM4NI          (1ULL << 25)
 #define IMB_FEATURE_SHA512NI       (1ULL << 26)
+#define IMB_FEATURE_XSAVE          (1ULL << 27)
 
 /**
  * Self test defines
@@ -937,7 +938,7 @@ typedef int (*imb_self_test_cb_t)(void *cb_arg, const IMB_SELF_TEST_CALLBACK_DAT
 #define IMB_CPUFLAGS_SSE      (IMB_CPUFLAGS_NO_AESNI | IMB_FEATURE_AESNI | IMB_FEATURE_PCLMULQDQ)
 #define IMB_CPUFLAGS_SSE_T2   (IMB_CPUFLAGS_SSE | IMB_FEATURE_SHANI)
 #define IMB_CPUFLAGS_SSE_T3   (IMB_CPUFLAGS_SSE_T2 | IMB_FEATURE_GFNI)
-#define IMB_CPUFLAGS_AVX      (IMB_CPUFLAGS_SSE | IMB_FEATURE_AVX)
+#define IMB_CPUFLAGS_AVX      (IMB_CPUFLAGS_SSE | IMB_FEATURE_AVX | IMB_FEATURE_XSAVE)
 #define IMB_CPUFLAGS_AVX2     (IMB_CPUFLAGS_AVX | IMB_FEATURE_AVX2 | IMB_FEATURE_BMI2)
 #define IMB_CPUFLAGS_AVX512   (IMB_CPUFLAGS_AVX2 | IMB_FEATURE_AVX512_SKX)
 #define IMB_CPUFLAGS_AVX512_T2                                                                     \
