@@ -31,6 +31,7 @@
 %include "include/reg_sizes.inc"
 %include "include/const.inc"
 %include "include/memcpy.inc"
+%include "include/cet.inc"
 
 %ifndef NUM_LANES
 %define NUM_LANES 4
@@ -614,12 +615,14 @@ align 64
 ; arg 2 : job
 MKGLOBAL(SUBMIT_JOB_AES_CCM_AUTH,function,internal)
 SUBMIT_JOB_AES_CCM_AUTH:
+        endbranch64
         GENERIC_SUBMIT_FLUSH_JOB_AES_CCM_AUTH_SSE SUBMIT
 
 ; IMB_JOB * flush_job_aes_ccm_auth_sse(MB_MGR_CCM_OOO *state)
 ; arg 1 : state
 MKGLOBAL(FLUSH_JOB_AES_CCM_AUTH,function,internal)
 FLUSH_JOB_AES_CCM_AUTH:
+        endbranch64
         GENERIC_SUBMIT_FLUSH_JOB_AES_CCM_AUTH_SSE FLUSH
 
 mksection stack-noexec

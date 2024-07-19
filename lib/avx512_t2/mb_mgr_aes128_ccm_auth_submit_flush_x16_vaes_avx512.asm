@@ -32,6 +32,7 @@
 %include "include/const.inc"
 %include "include/memcpy.inc"
 %include "include/clear_regs.inc"
+%include "include/cet.inc"
 
 %ifndef AES_CBC_MAC
 %define AES_CBC_MAC aes128_cbc_mac_vaes_avx512
@@ -726,12 +727,14 @@ align 64
 ; arg 2 : job
 MKGLOBAL(SUBMIT_JOB_AES_CCM_AUTH,function,internal)
 SUBMIT_JOB_AES_CCM_AUTH:
+        endbranch64
         GENERIC_SUBMIT_FLUSH_JOB_AES_CCM_AUTH_AVX SUBMIT
 
 ; IMB_JOB * flush_job_aes128/256_ccm_auth_vaes_avx512(MB_MGR_CCM_OOO *state)
 ; arg 1 : state
 MKGLOBAL(FLUSH_JOB_AES_CCM_AUTH,function,internal)
 FLUSH_JOB_AES_CCM_AUTH:
+        endbranch64
         GENERIC_SUBMIT_FLUSH_JOB_AES_CCM_AUTH_AVX FLUSH
 
 mksection stack-noexec

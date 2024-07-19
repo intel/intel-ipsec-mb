@@ -31,6 +31,7 @@
 %include "include/const.inc"
 %include "include/reg_sizes.inc"
 %include "include/clear_regs.inc"
+%include "include/cet.inc"
 
 ; routine to do AES256 CNTR enc/decrypt "by8"
 ; XMM registers are clobbered. Saving/restoring must be done at a higher level
@@ -594,6 +595,7 @@ align 32
 align 32
 MKGLOBAL(AES_CNTR_CCM_256,function,internal)
 AES_CNTR_CCM_256:
+        endbranch64
         DO_CNTR CCM
 %else
 ;; aes_cntr_256_sse(void *in, void *IV, void *keys, void *out, UINT64 num_bytes, UINT64 iv_len)
