@@ -299,6 +299,72 @@ SUBMIT_JOB_SM4_CBC_DEC(IMB_JOB *job)
 }
 
 /* ========================================================================= */
+/* AES-CFB ENC*/
+/* ========================================================================= */
+__forceinline IMB_JOB *
+SUBMIT_JOB_AES_CFB_ENC(IMB_JOB *job, const uint64_t key_sz)
+{
+        if (IMB_KEY_128_BYTES == key_sz) {
+#ifdef SUBMIT_JOB_AES_CFB_128_ENC
+                SUBMIT_JOB_AES_CFB_128_ENC(job);
+#else
+                AES_CFB_128_ENC(job->dst, job->src + job->cipher_start_src_offset_in_bytes, job->iv,
+                                job->enc_keys, job->msg_len_to_cipher_in_bytes);
+#endif
+        } else if (IMB_KEY_192_BYTES == key_sz) {
+#ifdef SUBMIT_JOB_AES_CFB_192_ENC
+                SUBMIT_JOB_AES_CFB_192_ENC(job);
+#else
+                AES_CFB_192_ENC(job->dst, job->src + job->cipher_start_src_offset_in_bytes, job->iv,
+                                job->enc_keys, job->msg_len_to_cipher_in_bytes);
+#endif
+        } else /* assume 256-bit key */ {
+#ifdef SUBMIT_JOB_AES_CFB_256_ENC
+                SUBMIT_JOB_AES_CFB_256_ENC(job);
+#else
+                AES_CFB_256_ENC(job->dst, job->src + job->cipher_start_src_offset_in_bytes, job->iv,
+                                job->enc_keys, job->msg_len_to_cipher_in_bytes);
+#endif
+        }
+
+        job->status |= IMB_STATUS_COMPLETED_CIPHER;
+        return job;
+}
+
+/* ========================================================================= */
+/* AES-CFB DEC */
+/* ========================================================================= */
+__forceinline IMB_JOB *
+SUBMIT_JOB_AES_CFB_DEC(IMB_JOB *job, const uint64_t key_sz)
+{
+        if (IMB_KEY_128_BYTES == key_sz) {
+#ifdef SUBMIT_JOB_AES_CFB_128_DEC
+                SUBMIT_JOB_AES_CFB_128_DEC(job);
+#else
+                AES_CFB_128_DEC(job->dst, job->src + job->cipher_start_src_offset_in_bytes, job->iv,
+                                job->dec_keys, job->msg_len_to_cipher_in_bytes);
+#endif
+        } else if (IMB_KEY_192_BYTES == key_sz) {
+#ifdef SUBMIT_JOB_AES_CFB_192_DEC
+                SUBMIT_JOB_AES_CFB_192_DEC(job);
+#else
+                AES_CFB_192_DEC(job->dst, job->src + job->cipher_start_src_offset_in_bytes, job->iv,
+                                job->dec_keys, job->msg_len_to_cipher_in_bytes);
+#endif
+        } else /* assume 256-bit key */ {
+#ifdef SUBMIT_JOB_AES_CFB_256_DEC
+                SUBMIT_JOB_AES_CFB_256_DEC(job);
+#else
+                AES_CFB_256_DEC(job->dst, job->src + job->cipher_start_src_offset_in_bytes, job->iv,
+                                job->dec_keys, job->msg_len_to_cipher_in_bytes);
+#endif
+        }
+
+        job->status |= IMB_STATUS_COMPLETED_CIPHER;
+        return job;
+}
+
+/* ========================================================================= */
 /* Custom hash / cipher */
 /* ========================================================================= */
 
@@ -462,6 +528,8 @@ SUBMIT_JOB_CIPHER_ENC(IMB_MGR *state, IMB_JOB *job, const IMB_CIPHER_MODE cipher
                 return SUBMIT_JOB_SM4_ECB_ENC(job);
         } else if (IMB_CIPHER_SM4_CBC == cipher_mode) {
                 return SUBMIT_JOB_SM4_CBC_ENC(job);
+        } else if (IMB_CIPHER_CFB == cipher_mode) {
+                return SUBMIT_JOB_AES_CFB_ENC(job, key_sz);
         } else { /* assume IMB_CIPHER_NULL */
                 job->status |= IMB_STATUS_COMPLETED_CIPHER;
                 return job;
@@ -637,6 +705,8 @@ SUBMIT_JOB_CIPHER_DEC(IMB_MGR *state, IMB_JOB *job, const IMB_CIPHER_MODE cipher
                 return SUBMIT_JOB_SM4_ECB_DEC(job);
         } else if (IMB_CIPHER_SM4_CBC == cipher_mode) {
                 return SUBMIT_JOB_SM4_CBC_DEC(job);
+        } else if (IMB_CIPHER_CFB == cipher_mode) {
+                return SUBMIT_JOB_AES_CFB_DEC(job, key_sz);
         } else {
                 /* assume IMB_CIPHER_NULL */
                 job->status |= IMB_STATUS_COMPLETED_CIPHER;
@@ -955,6 +1025,27 @@ submit_cipher_dec_sm4_cbc(IMB_MGR *state, IMB_JOB *job)
         return SUBMIT_JOB_CIPHER_DEC(state, job, IMB_CIPHER_SM4_CBC, IMB_KEY_128_BYTES);
 }
 
+/* AES-CFB 128 */
+static IMB_JOB *
+submit_cipher_dec_cfb_128(IMB_MGR *state, IMB_JOB *job)
+{
+        return SUBMIT_JOB_CIPHER_DEC(state, job, IMB_CIPHER_CFB, IMB_KEY_128_BYTES);
+}
+
+/* AES-CFB 192 */
+static IMB_JOB *
+submit_cipher_dec_cfb_192(IMB_MGR *state, IMB_JOB *job)
+{
+        return SUBMIT_JOB_CIPHER_DEC(state, job, IMB_CIPHER_CFB, IMB_KEY_192_BYTES);
+}
+
+/* AES-CFB 256 */
+static IMB_JOB *
+submit_cipher_dec_cfb_256(IMB_MGR *state, IMB_JOB *job)
+{
+        return SUBMIT_JOB_CIPHER_DEC(state, job, IMB_CIPHER_CFB, IMB_KEY_256_BYTES);
+}
+
 /* ========================= */
 /* ======== ENCRYPT ======== */
 /* ========================= */
@@ -1210,7 +1301,25 @@ submit_cipher_enc_sm4_cbc(IMB_MGR *state, IMB_JOB *job)
 {
         return SUBMIT_JOB_CIPHER_ENC(state, job, IMB_CIPHER_SM4_CBC, IMB_KEY_128_BYTES);
 }
+/* AES-CFB */
+static IMB_JOB *
+submit_cipher_enc_cfb_128(IMB_MGR *state, IMB_JOB *job)
+{
+        return SUBMIT_JOB_CIPHER_ENC(state, job, IMB_CIPHER_CFB, IMB_KEY_128_BYTES);
+}
 
+/* AES-CFB */
+static IMB_JOB *
+submit_cipher_enc_cfb_192(IMB_MGR *state, IMB_JOB *job)
+{
+        return SUBMIT_JOB_CIPHER_ENC(state, job, IMB_CIPHER_CFB, IMB_KEY_192_BYTES);
+}
+/* AES-CFB */
+static IMB_JOB *
+submit_cipher_enc_cfb_256(IMB_MGR *state, IMB_JOB *job)
+{
+        return SUBMIT_JOB_CIPHER_ENC(state, job, IMB_CIPHER_CFB, IMB_KEY_256_BYTES);
+}
 /*
  * Four entries per algorithm (different key sizes),
  * algorithms in the same order IMB_CIPHER_MODE
@@ -1358,14 +1467,12 @@ static const submit_flush_fn_t tab_submit_cipher[] = {
         submit_cipher_dec_sm4_cbc,
         submit_cipher_dec_null,
         submit_cipher_dec_null,
-
+        /* [26] AES-CFB */
+        submit_cipher_dec_null,
+        submit_cipher_dec_cfb_128,
+        submit_cipher_dec_cfb_192,
+        submit_cipher_dec_cfb_256,
         /* add new cipher decrypt here */
-
-        /* [26] NULL */
-        NULL,
-        NULL,
-        NULL,
-        NULL,
         /* [27] NULL */
         NULL,
         NULL,
@@ -1526,14 +1633,12 @@ static const submit_flush_fn_t tab_submit_cipher[] = {
         submit_cipher_enc_sm4_cbc,
         submit_cipher_enc_null,
         submit_cipher_enc_null,
-
+        /* [26] AES-CFB */
+        submit_cipher_enc_null,
+        submit_cipher_enc_cfb_128,
+        submit_cipher_enc_cfb_192,
+        submit_cipher_enc_cfb_256,
         /* add new cipher encrypt here */
-
-        /* [26] NULL */
-        NULL,
-        NULL,
-        NULL,
-        NULL,
         /* [27] NULL */
         NULL,
         NULL,
@@ -2118,7 +2223,6 @@ static const submit_flush_fn_t tab_flush_cipher[] = {
         /* ========================= */
         /* === DECRYPT DIRECTION === */
         /* ========================= */
-
         /* [0] keep empty - enums start from value 1 */
         NULL,
         NULL,

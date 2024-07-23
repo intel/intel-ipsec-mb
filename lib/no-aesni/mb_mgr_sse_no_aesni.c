@@ -188,6 +188,14 @@
 #define AES_CFB_128_ONE aes_cfb_128_one_sse_no_aesni
 #define AES_CFB_256_ONE aes_cfb_256_one_sse_no_aesni
 
+#define AES_CFB_128_ENC aes_cfb_128_enc_sse_no_aesni
+#define AES_CFB_192_ENC aes_cfb_192_enc_sse_no_aesni
+#define AES_CFB_256_ENC aes_cfb_256_enc_sse_no_aesni
+
+#define AES_CFB_128_DEC aes_cfb_128_dec_sse_no_aesni
+#define AES_CFB_192_DEC aes_cfb_192_dec_sse_no_aesni
+#define AES_CFB_256_DEC aes_cfb_256_dec_sse_no_aesni
+
 #define AES128_CBC_MAC aes128_cbc_mac_x4_no_aesni
 
 #define FLUSH_JOB_AES128_CCM_AUTH  flush_job_aes128_ccm_auth_sse_no_aesni

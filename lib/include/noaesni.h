@@ -104,5 +104,22 @@ aes_cfb_128_one_sse_no_aesni(void *out, const void *in, const void *iv, const vo
 IMB_DLL_EXPORT void
 aes_cfb_256_one_sse_no_aesni(void *out, const void *in, const void *iv, const void *keys,
                              uint64_t len);
-
+void
+aes_cfb_128_enc_sse_no_aesni(void *out, const void *in, const void *iv, const void *keys,
+                             uint64_t len);
+void
+aes_cfb_192_enc_sse_no_aesni(void *out, const void *in, const void *iv, const void *keys,
+                             uint64_t len);
+void
+aes_cfb_256_enc_sse_no_aesni(void *out, const void *in, const void *iv, const void *keys,
+                             uint64_t len);
+void
+aes_cfb_128_dec_sse_no_aesni(void *out, const void *in, const void *iv, const void *keys,
+                             uint64_t len);
+void
+aes_cfb_192_dec_sse_no_aesni(void *out, const void *in, const void *iv, const void *keys,
+                             uint64_t len);
+void
+aes_cfb_256_dec_sse_no_aesni(void *out, const void *in, const void *iv, const void *keys,
+                             uint64_t len);
 #endif /* NOAESNI_H */

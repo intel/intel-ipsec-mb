@@ -48,7 +48,7 @@
 #include "include/aesni_emu.h"
 #include "include/error.h"
 
-#include "include/arch_sse_type1.h"  /* SM4-ECB */
+#include "include/arch_sse_type1.h"  /* SM4-ECB, AES-CFB */
 #include "include/arch_sse_type2.h"  /* SHA-NI */
 #include "include/arch_avx_type1.h"  /* AESNI */
 #include "include/arch_avx2_type1.h" /* MD5 */
@@ -171,6 +171,14 @@
 /* AES-CFB */
 #define AES_CFB_128_ONE aes_cfb_128_one_avx512
 #define AES_CFB_256_ONE aes_cfb_256_one_avx512
+
+/* AES-CFB */
+#define AES_CFB_128_ENC aes_cfb_128_enc_sse
+#define AES_CFB_192_ENC aes_cfb_192_enc_sse
+#define AES_CFB_256_ENC aes_cfb_256_enc_sse
+#define AES_CFB_128_DEC aes_cfb_128_dec_sse
+#define AES_CFB_192_DEC aes_cfb_192_dec_sse
+#define AES_CFB_256_DEC aes_cfb_256_dec_sse
 
 /* AES-XCBC */
 #define SUBMIT_JOB_AES_XCBC submit_job_aes_xcbc_vaes_avx512

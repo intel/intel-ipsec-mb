@@ -192,6 +192,7 @@ lib_objs1 = \
 	$(OBJ_DIR)\aes256_cntr_ccm_by8_sse.obj \
 	$(OBJ_DIR)\aes256_cntr_ccm_by8_avx.obj \
 	$(OBJ_DIR)\aes_cfb_sse.obj \
+	$(OBJ_DIR)\aes_cfb_enc_dec_x1_sse.obj\
 	$(OBJ_DIR)\aes_cfb_avx.obj \
 	$(OBJ_DIR)\aes_docsis_dec_avx512.obj \
 	$(OBJ_DIR)\aes_docsis_enc_avx512.obj \
@@ -503,6 +504,7 @@ lib_objs2 = \
 
 no_aesni_objs = \
 	$(OBJ_DIR)\aesni_emu.obj \
+	$(OBJ_DIR)\aes_cfb_enc_dec_x1_sse_no_aesni.obj \
 	$(OBJ_DIR)\aes128_cbc_dec_by4_sse_no_aesni.obj \
 	$(OBJ_DIR)\aes_cfb_sse_no_aesni.obj \
 	$(OBJ_DIR)\pon_sse_no_aesni.obj \

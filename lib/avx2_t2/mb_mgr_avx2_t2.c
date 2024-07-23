@@ -47,7 +47,7 @@
 #include "include/aesni_emu.h"
 #include "include/error.h"
 
-#include "include/arch_sse_type1.h" /* poly1305, snow3g */
+#include "include/arch_sse_type1.h" /* poly1305, snow3g, aes-cfb */
 #include "include/arch_sse_type2.h" /* shani */
 #include "include/arch_avx_type1.h"
 #include "include/arch_avx2_type1.h"
@@ -142,6 +142,14 @@
 #define AES_CTR_128_BIT aes_cntr_bit_128_avx
 #define AES_CTR_192_BIT aes_cntr_bit_192_avx
 #define AES_CTR_256_BIT aes_cntr_bit_256_avx
+
+/* AES-CFB */
+#define AES_CFB_128_ENC aes_cfb_128_enc_sse
+#define AES_CFB_192_ENC aes_cfb_192_enc_sse
+#define AES_CFB_256_ENC aes_cfb_256_enc_sse
+#define AES_CFB_128_DEC aes_cfb_128_dec_sse
+#define AES_CFB_192_DEC aes_cfb_192_dec_sse
+#define AES_CFB_256_DEC aes_cfb_256_dec_sse
 
 /* AES-CCM */
 #define AES_CNTR_CCM_128 aes_cntr_ccm_128_avx

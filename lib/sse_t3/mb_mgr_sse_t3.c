@@ -158,9 +158,18 @@
 #define FLUSH_JOB_AES256_CMAC_AUTH  flush_job_aes256_cmac_auth_x8_sse
 #define SUBMIT_JOB_AES256_CMAC_AUTH submit_job_aes256_cmac_auth_x8_sse
 
-/* AES-CFB */
+/* AES-CFB ONE BLOCK*/
 #define AES_CFB_128_ONE aes_cfb_128_one_sse
 #define AES_CFB_256_ONE aes_cfb_256_one_sse
+
+/* AES-CFB */
+#define AES_CFB_128_ENC aes_cfb_128_enc_sse
+#define AES_CFB_192_ENC aes_cfb_192_enc_sse
+#define AES_CFB_256_ENC aes_cfb_256_enc_sse
+
+#define AES_CFB_128_DEC aes_cfb_128_dec_sse
+#define AES_CFB_192_DEC aes_cfb_192_dec_sse
+#define AES_CFB_256_DEC aes_cfb_256_dec_sse
 
 /* AES-XCBC */
 #define SUBMIT_JOB_AES_XCBC submit_job_aes_xcbc_sse
