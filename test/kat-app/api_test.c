@@ -383,6 +383,10 @@ fill_in_job(struct IMB_JOB *job, const IMB_CIPHER_MODE cipher_mode,
                 job->iv_len_in_bytes = UINT64_C(12);
                 job->sgl_state = IMB_SGL_UPDATE;
                 break;
+        case IMB_CIPHER_CFB:
+                job->key_len_in_bytes = UINT64_C(16);
+                job->iv_len_in_bytes = UINT64_C(16);
+                break;
         default:
                 break;
         }
@@ -1940,6 +1944,7 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                                 case IMB_CIPHER_PON_AES_CNTR:
                                 case IMB_CIPHER_SNOW_V:
                                 case IMB_CIPHER_SNOW_V_AEAD:
+                                case IMB_CIPHER_CFB:
 
                                         break;
                                 default:
@@ -1988,6 +1993,7 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                                 case IMB_CIPHER_SNOW_V:
                                 case IMB_CIPHER_SNOW_V_AEAD:
                                 case IMB_CIPHER_NULL:
+                                case IMB_CIPHER_CFB:
                                         continue;
                                         /* not allowed with null hash */
                                 case IMB_CIPHER_CHACHA20_POLY1305:
@@ -2056,6 +2062,8 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                 { IMB_CIPHER_SNOW_V_AEAD, 17 },
                 { IMB_CIPHER_SNOW_V, 15 },
                 { IMB_CIPHER_SNOW_V, 17 },
+                { IMB_CIPHER_CFB, 15 },
+                { IMB_CIPHER_CFB, 17 },
                 /* CCM IV must be 13 to 7 bytes */
                 { IMB_CIPHER_CCM, 6 },
                 { IMB_CIPHER_CCM, 14 },
@@ -2137,6 +2145,12 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                                 case IMB_CIPHER_SNOW_V_AEAD:
                                 case IMB_CIPHER_SNOW_V:
                                         if (key_len != IMB_KEY_256_BYTES)
+                                                continue;
+                                        break;
+                                case IMB_CIPHER_CFB:
+                                        if (key_len != IMB_KEY_128_BYTES &&
+                                            key_len != IMB_KEY_192_BYTES &&
+                                            key_len != IMB_KEY_256_BYTES)
                                                 continue;
                                         break;
                                 case IMB_CIPHER_CBCS_1_9:

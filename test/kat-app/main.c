@@ -113,6 +113,8 @@ extern int
 sm3_test(struct IMB_MGR *mb_mg);
 extern int
 hmac_sm3_test(struct IMB_MGR *mb_mg);
+extern int
+aes_cfb_test(struct IMB_MGR *mb_mg);
 
 typedef int (*imb_test_t)(struct IMB_MGR *mb_mgr);
 
@@ -132,7 +134,8 @@ struct imb_test tests[] = {
         { .str = "KAT", .fn = known_answer_test, .enabled = 1 },
         { .str = "DO_TEST", .fn = do_test, .enabled = 1 },
         { .str = "CBC", .fn = cbc_test, .enabled = 1 },
-        { .str = "CFB", .fn = cfb_one_block_test, .enabled = 1 },
+        { .str = "CFB_ONE", .fn = cfb_one_block_test, .enabled = 1 },
+        { .str = "CFB", .fn = aes_cfb_test, .enabled = 1 },
         { .str = "CTR", .fn = ctr_test, .enabled = 1 },
         { .str = "PON", .fn = pon_test, .enabled = 1 },
         { .str = "XCBC", .fn = xcbc_test, .enabled = 1 },
