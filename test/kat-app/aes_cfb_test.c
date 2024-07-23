@@ -37,8 +37,6 @@
 #include "utils.h"
 #include "cipher_test.h"
 
-#define MAX_AES_CFB_JOBS 32
-
 #define BYTE_ROUND_UP(x) ((x + 7) / 8)
 
 int
@@ -133,7 +131,7 @@ test_aes_cfb_burst(struct IMB_MGR *mb_mgr, const void *expkey, unsigned key_len,
                    const IMB_CIPHER_MODE alg, const uint32_t num_jobs)
 {
         uint32_t text_byte_len, i, completed_jobs, jobs_rx = 0;
-        struct IMB_JOB *job, *jobs[MAX_AES_CFB_JOBS];
+        struct IMB_JOB *job, *jobs[IMB_MAX_BURST_SIZE];
         uint8_t padding[16];
         uint8_t **targets = malloc(num_jobs * sizeof(void *));
         int ret = -1;
@@ -191,6 +189,112 @@ test_aes_cfb_burst(struct IMB_MGR *mb_mgr, const void *expkey, unsigned key_len,
 
         for (i = 0; i < num_jobs; i++) {
                 job = jobs[i];
+
+                if (job->status != IMB_STATUS_COMPLETED) {
+                        printf("job %u status not complete!\n", i + 1);
+                        goto end;
+                }
+                if (memcmp(out_text, targets[i] + sizeof(padding), text_byte_len)) {
+                        printf("mismatched\n");
+                        hexdump(stderr, "Target", targets[i] + sizeof(padding), text_byte_len);
+                        hexdump(stderr, "Expected", out_text, text_byte_len);
+                        goto end;
+                }
+                if (memcmp(padding, targets[i], sizeof(padding))) {
+                        printf("overwrite head\n");
+                        hexdump(stderr, "Target", targets[i],
+                                text_byte_len + (sizeof(padding) * 2));
+                        goto end;
+                }
+                if (memcmp(padding, targets[i] + sizeof(padding) + text_byte_len,
+                           sizeof(padding))) {
+                        printf("overwrite tail\n");
+                        hexdump(stderr, "Target", targets[i],
+                                text_byte_len + (sizeof(padding) * 2));
+                        goto end;
+                }
+                jobs_rx++;
+        }
+
+        if (jobs_rx != num_jobs) {
+                printf("Expected %u jobs, received %u\n", num_jobs, jobs_rx);
+                goto end;
+        }
+        ret = 0;
+end:
+
+end_alloc:
+        if (targets != NULL) {
+                for (i = 0; i < num_jobs; i++)
+                        free(targets[i]);
+                free(targets);
+        }
+
+        return ret;
+}
+
+static int
+test_aes_cfb_cipher_burst(struct IMB_MGR *mb_mgr, const void *expkey, unsigned key_len,
+                          const void *iv, unsigned iv_len, const uint8_t *in_text,
+                          const uint8_t *out_text, unsigned text_len,
+                          const IMB_CIPHER_DIRECTION dir, const IMB_CHAIN_ORDER order,
+                          const IMB_CIPHER_MODE alg, const uint32_t num_jobs)
+{
+        uint32_t text_byte_len, i, completed_jobs, jobs_rx = 0;
+        struct IMB_JOB *job, jobs[IMB_MAX_BURST_SIZE];
+        uint8_t padding[16];
+        uint8_t **targets = malloc(num_jobs * sizeof(void *));
+        int ret = -1;
+
+        if (targets == NULL)
+                goto end_alloc;
+
+        /* Get number of bytes */
+        text_byte_len = BYTE_ROUND_UP(text_len);
+
+        memset(targets, 0, num_jobs * sizeof(void *));
+        memset(padding, -1, sizeof(padding));
+
+        for (i = 0; i < num_jobs; i++) {
+                targets[i] = malloc(text_byte_len + (sizeof(padding) * 2));
+                if (targets[i] == NULL)
+                        goto end_alloc;
+                memset(targets[i], -1, text_byte_len + (sizeof(padding) * 2));
+        }
+
+        for (i = 0; i < num_jobs; i++) {
+                job = &jobs[i];
+                job->cipher_direction = dir;
+                job->chain_order = order;
+                job->dst = targets[i] + sizeof(padding);
+                job->src = in_text;
+                job->cipher_mode = alg;
+                job->enc_keys = expkey;
+                job->dec_keys = expkey;
+                job->key_len_in_bytes = key_len;
+                job->iv = iv;
+                job->iv_len_in_bytes = iv_len;
+                job->cipher_start_src_offset_in_bytes = 0;
+                job->msg_len_to_cipher_in_bytes = text_byte_len;
+                job->hash_alg = IMB_AUTH_NULL;
+        }
+
+        completed_jobs = IMB_SUBMIT_CIPHER_BURST(mb_mgr, jobs, num_jobs, alg, dir, key_len);
+        if (completed_jobs != num_jobs) {
+                int err = imb_get_errno(mb_mgr);
+
+                if (err != 0) {
+                        printf("submit_burst error %d : '%s'\n", err, imb_get_strerror(err));
+                        goto end;
+                } else {
+                        printf("submit_burst error: not enough "
+                               "jobs returned!\n");
+                        goto end;
+                }
+        }
+
+        for (i = 0; i < num_jobs; i++) {
+                job = &jobs[i];
 
                 if (job->status != IMB_STATUS_COMPLETED) {
                         printf("job %u status not complete!\n", i + 1);
@@ -358,6 +462,28 @@ test_aes_cfb_vectors_burst(struct IMB_MGR *mb_mgr, struct test_suite_context *ct
                 } else {
                         test_suite_update(ctx, 1, 0);
                 }
+
+                if (test_aes_cfb_cipher_burst(mb_mgr, expkey, (unsigned) v->keySize / 8, v->iv,
+                                              (unsigned) v->ivSize / 8, (const void *) v->msg,
+                                              (const void *) v->ct, (unsigned) v->msgSize,
+                                              IMB_DIR_ENCRYPT, IMB_ORDER_CIPHER_HASH, alg,
+                                              num_jobs)) {
+                        printf("error #%zu encrypt cipher-only burst\n", v->tcId);
+                        test_suite_update(ctx, 0, 1);
+                } else {
+                        test_suite_update(ctx, 1, 0);
+                }
+
+                if (test_aes_cfb_cipher_burst(mb_mgr, expkey, (unsigned) v->keySize / 8, v->iv,
+                                              (unsigned) v->ivSize / 8, (const void *) v->ct,
+                                              (const void *) v->msg, (unsigned) v->msgSize,
+                                              IMB_DIR_DECRYPT, IMB_ORDER_HASH_CIPHER, alg,
+                                              num_jobs)) {
+                        printf("error #%zu decrypt cipher-only burst\n", v->tcId);
+                        test_suite_update(ctx, 0, 1);
+                } else {
+                        test_suite_update(ctx, 1, 0);
+                }
         }
         if (!quiet_mode)
                 printf("\n");
@@ -375,12 +501,12 @@ aes_cfb_test(struct IMB_MGR *mb_mgr)
         struct test_suite_context ctx256;
 
         /* Standard aes_cfb vectors */
-        test_suite_start(&ctx128, "aes_cfb-128");
-        test_suite_start(&ctx192, "aes_cfb-192");
-        test_suite_start(&ctx256, "aes_cfb-256");
+        test_suite_start(&ctx128, "AES-CFB-128");
+        test_suite_start(&ctx192, "AES-CFB-192");
+        test_suite_start(&ctx256, "AES-CFB-256");
         test_aes_cfb_vectors(mb_mgr, &ctx128, &ctx192, &ctx256, aes_cfb_test_json, IMB_CIPHER_CFB);
 
-        for (i = 1; i <= MAX_AES_CFB_JOBS; i++)
+        for (i = 1; i <= IMB_MAX_BURST_SIZE; i++)
                 test_aes_cfb_vectors_burst(mb_mgr, &ctx128, &ctx192, &ctx256, aes_cfb_test_json,
                                            IMB_CIPHER_CFB, i);
 
