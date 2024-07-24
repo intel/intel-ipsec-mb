@@ -191,6 +191,8 @@ misc_cipher_mode_to_str(const IMB_CIPHER_MODE mode)
                 return "aead-snow-v";
         case IMB_CIPHER_GCM_SGL:
                 return "aead-aes-gcm-sgl";
+        case IMB_CIPHER_CFB:
+                return "aes-cfb";
         case IMB_CIPHER_NUM:
         default:
                 break;

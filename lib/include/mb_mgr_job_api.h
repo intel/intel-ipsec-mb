@@ -596,7 +596,8 @@ FLUSH_JOB_CIPHER_ENC(IMB_MGR *state, IMB_JOB *job, const IMB_CIPHER_MODE cipher_
 #endif
                 /**
                  * assume IMB_CIPHER_CNTR/CNTR_BITLEN, IMB_CIPHER_ECB,
-                 * IMB_CIPHER_CCM, IMB_CIPHER_NULL or IMB_CIPHER_GCM
+                 * IMB_CIPHER_CCM, IMB_CIPHER_NULL, IMB_CIPHER_CFB
+                 * or IMB_CIPHER_GCM
                  */
         } else {
                 return NULL;
@@ -1941,6 +1942,22 @@ flush_cipher_dec_sm4_cbc(IMB_MGR *state, IMB_JOB *job)
         return FLUSH_JOB_CIPHER_DEC(state, job, IMB_CIPHER_SM4_CBC, IMB_KEY_128_BYTES);
 }
 
+/* AES-CBC */
+static IMB_JOB *
+flush_cipher_dec_cfb_128(IMB_MGR *state, IMB_JOB *job)
+{
+        return FLUSH_JOB_CIPHER_DEC(state, job, IMB_CIPHER_CFB, IMB_KEY_128_BYTES);
+}
+static IMB_JOB *
+flush_cipher_dec_cfb_192(IMB_MGR *state, IMB_JOB *job)
+{
+        return FLUSH_JOB_CIPHER_DEC(state, job, IMB_CIPHER_CFB, IMB_KEY_192_BYTES);
+}
+static IMB_JOB *
+flush_cipher_dec_cfb_256(IMB_MGR *state, IMB_JOB *job)
+{
+        return FLUSH_JOB_CIPHER_DEC(state, job, IMB_CIPHER_CFB, IMB_KEY_256_BYTES);
+}
 /* ========================= */
 /* ======== ENCRYPT ======== */
 /* ========================= */
@@ -2211,6 +2228,22 @@ flush_cipher_enc_sm4_cbc(IMB_MGR *state, IMB_JOB *job)
         return FLUSH_JOB_CIPHER_ENC(state, job, IMB_CIPHER_SM4_CBC, IMB_KEY_128_BYTES);
 }
 
+/* AES-CBC */
+static IMB_JOB *
+flush_cipher_enc_cfb_128(IMB_MGR *state, IMB_JOB *job)
+{
+        return FLUSH_JOB_CIPHER_ENC(state, job, IMB_CIPHER_CFB, IMB_KEY_128_BYTES);
+}
+static IMB_JOB *
+flush_cipher_enc_cfb_192(IMB_MGR *state, IMB_JOB *job)
+{
+        return FLUSH_JOB_CIPHER_ENC(state, job, IMB_CIPHER_CFB, IMB_KEY_192_BYTES);
+}
+static IMB_JOB *
+flush_cipher_enc_cfb_256(IMB_MGR *state, IMB_JOB *job)
+{
+        return FLUSH_JOB_CIPHER_ENC(state, job, IMB_CIPHER_CFB, IMB_KEY_256_BYTES);
+}
 /*
  * Four entries per algorithm (different key sizes),
  * algorithms in the same order IMB_CIPHER_MODE
@@ -2353,14 +2386,12 @@ static const submit_flush_fn_t tab_flush_cipher[] = {
         flush_cipher_dec_sm4_cbc,
         flush_cipher_dec_null,
         flush_cipher_dec_null,
-
+        /* [26] AES-CFB */
+        flush_cipher_dec_null,
+        flush_cipher_dec_cfb_128,
+        flush_cipher_dec_cfb_192,
+        flush_cipher_dec_cfb_256,
         /* add new cipher decrypt here */
-
-        /* [26] NULL */
-        NULL,
-        NULL,
-        NULL,
-        NULL,
         /* [27] NULL */
         NULL,
         NULL,
@@ -2521,14 +2552,12 @@ static const submit_flush_fn_t tab_flush_cipher[] = {
         flush_cipher_enc_sm4_cbc,
         flush_cipher_enc_null,
         flush_cipher_enc_null,
-
+        /* [26] AES-CFB */
+        flush_cipher_enc_null,
+        flush_cipher_enc_cfb_128,
+        flush_cipher_enc_cfb_192,
+        flush_cipher_enc_cfb_256,
         /* add new cipher encrypt here */
-
-        /* [26] NULL */
-        NULL,
-        NULL,
-        NULL,
-        NULL,
         /* [27] NULL */
         NULL,
         NULL,

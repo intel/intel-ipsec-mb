@@ -238,7 +238,13 @@ struct str_value_mapping cipher_algo_str_map[] = {
         { .name = "SM4-CBC-128",
           .values.job_params = { .cipher_mode = IMB_CIPHER_SM4_CBC, .key_size = 16 } },
         { .name = "NULL-CIPHER",
-          .values.job_params = { .cipher_mode = IMB_CIPHER_NULL, .key_size = 0 } }
+          .values.job_params = { .cipher_mode = IMB_CIPHER_NULL, .key_size = 0 } },
+        { .name = "AES-CFB-128",
+          .values.job_params = { .cipher_mode = IMB_CIPHER_CFB, .key_size = IMB_KEY_128_BYTES } },
+        { .name = "AES-CFB-192",
+          .values.job_params = { .cipher_mode = IMB_CIPHER_CFB, .key_size = IMB_KEY_192_BYTES } },
+        { .name = "AES-CFB-256",
+          .values.job_params = { .cipher_mode = IMB_CIPHER_CFB, .key_size = IMB_KEY_256_BYTES } }
 };
 
 struct str_value_mapping hash_algo_str_map[] = {
@@ -594,6 +600,7 @@ const uint8_t key_sizes[][3] = {
         { 16, 32, 8 },  /* IMB_CIPHER_GCM_SGL */
         { 16, 16, 1 },  /* IMB_CIPHER_SM4_ECB */
         { 16, 16, 1 },  /* IMB_CIPHER_SM4_CBC */
+        { 16, 32, 8 }   /* IMB_CIPHER_CFB */
 };
 
 uint8_t custom_test = 0;
@@ -1406,6 +1413,7 @@ fill_job(IMB_JOB *job, const struct params_s *params, uint8_t *buf, uint8_t *dig
         case IMB_CIPHER_PON_AES_CNTR:
         case IMB_CIPHER_CNTR:
         case IMB_CIPHER_CNTR_BITLEN:
+        case IMB_CIPHER_CFB:
                 job->enc_keys = enc_keys;
                 job->dec_keys = enc_keys;
                 job->iv_len_in_bytes = 16;
@@ -1604,6 +1612,7 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys, const uint8_t *ciph
                 case IMB_CIPHER_SM4_ECB:
                 case IMB_CIPHER_ECB:
                 case IMB_CIPHER_CBCS_1_9:
+                case IMB_CIPHER_CFB:
                         nosimd_memset(enc_keys, pattern_cipher_key, sizeof(keys->enc_keys));
                         nosimd_memset(dec_keys, pattern_cipher_key, sizeof(keys->dec_keys));
                         break;
@@ -1749,6 +1758,7 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys, const uint8_t *ciph
         case IMB_CIPHER_DOCSIS_SEC_BPI:
         case IMB_CIPHER_ECB:
         case IMB_CIPHER_CBCS_1_9:
+        case IMB_CIPHER_CFB:
                 switch (params->key_size) {
                 case IMB_KEY_128_BYTES:
                         IMB_AES_KEYEXP_128(mb_mgr, ciph_key, enc_keys, dec_keys);
