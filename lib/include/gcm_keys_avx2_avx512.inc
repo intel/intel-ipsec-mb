@@ -31,27 +31,21 @@
 ;; First 15 128-bit words are reserved for AES round keys
 %xdefine HKeyStart (16 * 15)
 
-%xdefine HashKey_8      ((16 * 0) + HKeyStart)  ; HashKey^8 << 1 mod poly
-%xdefine HashKey_7      ((16 * 1) + HKeyStart)  ; HashKey^7 << 1 mod poly
-%xdefine HashKey_6      ((16 * 2) + HKeyStart)  ; HashKey^6 << 1 mod poly
-%xdefine HashKey_5      ((16 * 3) + HKeyStart)  ; HashKey^5 << 1 mod poly
-%xdefine HashKey_4      ((16 * 4) + HKeyStart)  ; HashKey^4 << 1 mod poly
-%xdefine HashKey_3      ((16 * 5) + HKeyStart)  ; HashKey^3 << 1 mod poly
-%xdefine HashKey_2      ((16 * 6) + HKeyStart)  ; HashKey^2 << 1 mod poly
-%xdefine HashKey_1      ((16 * 7) + HKeyStart)  ; HashKey << 1 mod poly
-%xdefine HashKey        HashKey_1
-
-%xdefine HKeyGap (16 * 8)
-;; (HashKey^n << 1 mod POLY) x POLY constants
-
-%xdefine HashKeyK_8     (HashKey_8 + HKeyGap)   ; (HashKey^8 << 1 mod poly) x POLY
-%xdefine HashKeyK_7     (HashKey_7 + HKeyGap)   ; (HashKey^7 << 1 mod poly) x POLY
-%xdefine HashKeyK_6     (HashKey_6 + HKeyGap)   ; (HashKey^6 << 1 mod poly) x POLY
-%xdefine HashKeyK_5     (HashKey_5 + HKeyGap)   ; (HashKey^5 << 1 mod poly) x POLY
-%xdefine HashKeyK_4     (HashKey_4 + HKeyGap)   ; (HashKey^4 << 1 mod poly) x POLY
-%xdefine HashKeyK_3     (HashKey_3 + HKeyGap)   ; (HashKey^3 << 1 mod poly) x POLY
-%xdefine HashKeyK_2     (HashKey_2 + HKeyGap)   ; (HashKey^2 << 1 mod poly) x POLY
-%xdefine HashKeyK_1     (HashKey_1 + HKeyGap)   ; (HashKey << 1 mod poly) x POLY
-%xdefine HashKeyK       HashKey_1
+%xdefine HashKey_8      ((16 *  0) + HKeyStart) ; HashKey^8 << 1 mod poly
+%xdefine HashKeyK_8     ((16 *  1) + HKeyStart) ; (HashKey^8 << 1 mod poly) x POLY
+%xdefine HashKey_7      ((16 *  2) + HKeyStart) ; HashKey^7 << 1 mod poly
+%xdefine HashKeyK_7     ((16 *  3) + HKeyStart) ; (HashKey^7 << 1 mod poly) x POLY
+%xdefine HashKey_6      ((16 *  4) + HKeyStart) ; HashKey^6 << 1 mod poly
+%xdefine HashKeyK_6     ((16 *  5) + HKeyStart) ; (HashKey^6 << 1 mod poly) x POLY
+%xdefine HashKey_5      ((16 *  6) + HKeyStart) ; HashKey^5 << 1 mod poly
+%xdefine HashKeyK_5     ((16 *  7) + HKeyStart) ; (HashKey^5 << 1 mod poly) x POLY
+%xdefine HashKey_4      ((16 *  8) + HKeyStart) ; HashKey^4 << 1 mod poly
+%xdefine HashKeyK_4     ((16 *  9) + HKeyStart) ; (HashKey^4 << 1 mod poly) x POLY
+%xdefine HashKey_3      ((16 * 10) + HKeyStart) ; HashKey^3 << 1 mod poly
+%xdefine HashKeyK_3     ((16 * 11) + HKeyStart) ; (HashKey^3 << 1 mod poly) x POLY
+%xdefine HashKey_2      ((16 * 12) + HKeyStart) ; HashKey^2 << 1 mod poly
+%xdefine HashKeyK_2     ((16 * 13) + HKeyStart) ; (HashKey^2 << 1 mod poly) x POLY
+%xdefine HashKey_1      ((16 * 14) + HKeyStart) ; HashKey << 1 mod poly
+%xdefine HashKeyK_1     ((16 * 15) + HKeyStart) ; (HashKey << 1 mod poly) x POLY
 
 %endif ; GCM_KEYS_AVX2_AVX512_INCLUDED

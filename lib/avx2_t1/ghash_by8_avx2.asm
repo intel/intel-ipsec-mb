@@ -31,10 +31,37 @@
 
 %use smartalign
 
+%define GHASH_API_IMPLEMENTATION
 %include "include/gcm_common_avx2_avx512.inc"
 
 mksection .text
 default rel
+
+;; IN:
+;;   arg1 - key pointer
+;;   xmm1-xmm8 contain cipher text blocks to be GHASH'ed
+;; OUT:
+;;   xmm14 contains the final hash
+;; CLOBBERS:
+;;   xmm0, xmm10-xmm15
+align 32
+MKGLOBAL(ghash_last_8_avx_gen4,function,internal)
+ghash_last_8_avx_gen4:
+        GHASH_LAST_8 arg1, xmm0, xmm10, xmm11, xmm12, xmm13, xmm14, xmm15, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8
+        ret
+
+;; IN:
+;;   arg1 - key pointer
+;;   xmm1-xmm7 contain cipher text blocks to be GHASH'ed
+;; OUT:
+;;   xmm14 contains the final hash
+;; CLOBBERS:
+;;   xmm0, xmm10-xmm15
+align 32
+MKGLOBAL(ghash_last_7_avx_gen4,function,internal)
+ghash_last_7_avx_gen4:
+        GHASH_LAST_7 arg1, xmm0, xmm10, xmm11, xmm12, xmm13, xmm14, xmm15, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7
+        ret
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;void   ghash_pre_avx_gen4 / ghash_pre_avx512
@@ -82,7 +109,7 @@ ghash_pre_avx512:
         vpand    xmm2, xmm2, [rel POLY]
         vpxor    xmm6, xmm6, xmm2                       ; xmm6 holds the HashKey<<1 mod poly
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        vmovdqu  [arg2 + HashKey], xmm6                 ; store HashKey<<1 mod poly
+        vmovdqu  [arg2 + HashKey_1], xmm6               ; store HashKey<<1 mod poly
 
         PRECOMPUTE arg2, xmm6, xmm0, xmm1, xmm2, xmm3, xmm4, xmm5
 
