@@ -818,7 +818,6 @@ submit_aes_cmac_burst(IMB_MGR *state, IMB_JOB *jobs, const uint32_t n_jobs, cons
         uint32_t i, completed_jobs = 0;
 
         if (run_check) {
-                uint32_t i;
 
                 /* validate jobs */
                 for (i = 0; i < n_jobs; i++) {

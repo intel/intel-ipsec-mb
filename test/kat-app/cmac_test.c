@@ -391,6 +391,135 @@ end2:
         return ret;
 }
 
+static int
+test_cmac_hash_burst(struct IMB_MGR *mb_mgr, const struct mac_test *vec,
+                     const struct cmac_subkeys *subKeys, const uint32_t num_jobs,
+                     const enum cmac_type type)
+{
+        DECLARE_ALIGNED(uint32_t expkey[4 * 15], 16);
+        DECLARE_ALIGNED(uint32_t dust[4 * 15], 16);
+        uint32_t skey1[4], skey2[4];
+        struct IMB_JOB *job, jobs[IMB_MAX_BURST_SIZE] = { 0 };
+        uint8_t padding[16];
+        uint8_t **auths = malloc(num_jobs * sizeof(void *));
+        int ret = -1;
+        uint32_t jobs_rx = 0, i, completed_jobs = 0;
+
+        if (auths == NULL) {
+                fprintf(stderr, "Can't allocate buffer memory\n");
+                goto end2;
+        }
+
+        memset(padding, -1, sizeof(padding));
+        memset(auths, 0, num_jobs * sizeof(void *));
+
+        for (i = 0; i < num_jobs; i++) {
+                auths[i] = malloc(16 + (sizeof(padding) * 2));
+                if (auths[i] == NULL) {
+                        fprintf(stderr, "Can't allocate buffer memory\n");
+                        goto end;
+                }
+
+                memset(auths[i], -1, 16 + (sizeof(padding) * 2));
+        }
+
+        if ((type == CMAC_128) || (type == CMAC_128_BITLEN)) {
+                IMB_AES_KEYEXP_128(mb_mgr, vec->key, expkey, dust);
+                IMB_AES_CMAC_SUBKEY_GEN_128(mb_mgr, expkey, skey1, skey2);
+        } else { /* AES-CMAC-256 */
+                IMB_AES_KEYEXP_256(mb_mgr, vec->key, expkey, dust);
+                IMB_AES_CMAC_SUBKEY_GEN_256(mb_mgr, expkey, skey1, skey2);
+        }
+
+        if (!cmac_subkey_test(subKeys, skey1, skey2))
+                goto end;
+
+        /**
+         * Submit all jobs
+         */
+        for (i = 0; i < num_jobs; i++) {
+                job = &jobs[i];
+                job->cipher_direction = IMB_DIR_ENCRYPT;
+                job->chain_order = IMB_ORDER_HASH_CIPHER;
+                job->cipher_mode = IMB_CIPHER_NULL;
+
+                switch (type) {
+                case CMAC_128:
+                        job->hash_alg = IMB_AUTH_AES_CMAC;
+                        job->msg_len_to_hash_in_bytes = vec->msgSize / 8;
+                        break;
+                case CMAC_128_BITLEN:
+                        job->hash_alg = IMB_AUTH_AES_CMAC_BITLEN;
+                        /* check for std or 3gpp vectors
+                           scale len if necessary */
+                        job->msg_len_to_hash_in_bits = vec->msgSize;
+                        break;
+                case CMAC_256:
+                        job->hash_alg = IMB_AUTH_AES_CMAC_256;
+                        job->msg_len_to_hash_in_bytes = vec->msgSize / 8;
+                        break;
+                default:
+                        printf("Invalid CMAC type specified\n");
+                        goto end;
+                }
+                job->u.CMAC._key_expanded = expkey;
+                job->u.CMAC._skey1 = skey1;
+                job->u.CMAC._skey2 = skey2;
+                job->src = (const void *) vec->msg;
+                job->hash_start_src_offset_in_bytes = 0;
+                job->auth_tag_output = auths[i] + sizeof(padding);
+                job->auth_tag_output_len_in_bytes = vec->tagSize / 8;
+
+                job->user_data = auths[i];
+        }
+
+        completed_jobs = IMB_SUBMIT_HASH_BURST(mb_mgr, jobs, num_jobs, jobs[0].hash_alg);
+        if (completed_jobs != num_jobs) {
+                int err = imb_get_errno(mb_mgr);
+
+                if (err != 0) {
+                        printf("submit_burst error %d : '%s'\n", err, imb_get_strerror(err));
+                        goto end;
+                } else {
+                        printf("submit_burst error: not enough "
+                               "jobs returned!\n");
+                        goto end;
+                }
+        }
+
+        for (i = 0; i < num_jobs; i++) {
+                job = &jobs[i];
+
+                if (job->status != IMB_STATUS_COMPLETED) {
+                        printf("job %u status not complete!\n", i + 1);
+                        goto end;
+                }
+
+                if (!cmac_job_ok(vec, job, job->user_data, padding, sizeof(padding)))
+                        goto end;
+                jobs_rx++;
+        }
+
+        if (jobs_rx != num_jobs) {
+                printf("Expected %u jobs, received %u\n", num_jobs, jobs_rx);
+                goto end;
+        }
+
+        ret = 0;
+
+end:
+        for (i = 0; i < num_jobs; i++) {
+                if (auths[i] != NULL)
+                        free(auths[i]);
+        }
+
+end2:
+        if (auths != NULL)
+                free(auths);
+
+        return ret;
+}
+
 static void
 test_cmac_std_vectors(struct IMB_MGR *mb_mgr, struct test_suite_context *ctx, const int num_jobs)
 {
@@ -419,6 +548,12 @@ test_cmac_std_vectors(struct IMB_MGR *mb_mgr, struct test_suite_context *ctx, co
 
                 if (test_cmac(mb_mgr, v, sk, IMB_DIR_DECRYPT, num_jobs, CMAC_128)) {
                         printf("error #%zu decrypt\n", v->tcId);
+                        test_suite_update(ctx, 0, 1);
+                } else {
+                        test_suite_update(ctx, 1, 0);
+                }
+                if (test_cmac_hash_burst(mb_mgr, v, sk, num_jobs, CMAC_128)) {
+                        printf("hash burst error #%zu\n", v->tcId);
                         test_suite_update(ctx, 0, 1);
                 } else {
                         test_suite_update(ctx, 1, 0);
@@ -456,6 +591,12 @@ test_cmac_256_std_vectors(struct IMB_MGR *mb_mgr, struct test_suite_context *ctx
                 }
                 if (test_cmac(mb_mgr, v, sk, IMB_DIR_DECRYPT, num_jobs, CMAC_256)) {
                         printf("error #%zu decrypt\n", v->tcId);
+                        test_suite_update(ctx, 0, 1);
+                } else {
+                        test_suite_update(ctx, 1, 0);
+                }
+                if (test_cmac_hash_burst(mb_mgr, v, sk, num_jobs, CMAC_256)) {
+                        printf("hash burst error #%zu\n", v->tcId);
                         test_suite_update(ctx, 0, 1);
                 } else {
                         test_suite_update(ctx, 1, 0);
@@ -500,6 +641,13 @@ test_cmac_bitlen_std_vectors(struct IMB_MGR *mb_mgr, struct test_suite_context *
                 } else {
                         test_suite_update(ctx, 1, 0);
                 }
+
+                if (test_cmac_hash_burst(mb_mgr, v, sk, num_jobs, CMAC_128_BITLEN)) {
+                        printf("hash burst error #%zu decrypt\n", v->tcId);
+                        test_suite_update(ctx, 0, 1);
+                } else {
+                        test_suite_update(ctx, 1, 0);
+                }
         }
         if (!quiet_mode)
                 printf("\n");
@@ -538,6 +686,13 @@ test_cmac_bitlen_3gpp_vectors(struct IMB_MGR *mb_mgr, struct test_suite_context 
                 } else {
                         test_suite_update(ctx, 1, 0);
                 }
+
+                if (test_cmac_hash_burst(mb_mgr, v, sk, num_jobs, CMAC_128_BITLEN)) {
+                        printf("hash burst error #%zu\n", v->tcId);
+                        test_suite_update(ctx, 0, 1);
+                } else {
+                        test_suite_update(ctx, 1, 0);
+                }
         }
         if (!quiet_mode)
                 printf("\n");
@@ -551,23 +706,23 @@ cmac_test(struct IMB_MGR *mb_mgr)
 
         /* CMAC 128 with standard vectors */
         test_suite_start(&ctx, "AES-CMAC-128");
-        for (i = 1; i < 20; i++)
+        for (i = 1; i < IMB_MAX_BURST_SIZE; i++)
                 test_cmac_std_vectors(mb_mgr, &ctx, i);
         errors += test_suite_end(&ctx);
 
         /* CMAC 128 BITLEN with standard vectors */
         test_suite_start(&ctx, "AES-CMAC-128-BIT-LENGTH");
-        for (i = 1; i < 20; i++)
+        for (i = 1; i < IMB_MAX_BURST_SIZE; i++)
                 test_cmac_bitlen_std_vectors(mb_mgr, &ctx, i);
 
         /* CMAC 128 BITLEN with 3GPP vectors */
-        for (i = 1; i < 20; i++)
+        for (i = 1; i < IMB_MAX_BURST_SIZE; i++)
                 test_cmac_bitlen_3gpp_vectors(mb_mgr, &ctx, i);
         errors += test_suite_end(&ctx);
 
         /* CMAC 256 with standard vectors */
         test_suite_start(&ctx, "AES-CMAC-256");
-        for (i = 1; i < 20; i++)
+        for (i = 1; i < IMB_MAX_BURST_SIZE; i++)
                 test_cmac_256_std_vectors(mb_mgr, &ctx, i);
         errors += test_suite_end(&ctx);
 
