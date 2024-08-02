@@ -211,7 +211,7 @@ cmac_job_ok(const struct mac_test *vec, const struct IMB_JOB *job, const uint8_t
 
 static int
 test_cmac(struct IMB_MGR *mb_mgr, const struct mac_test *vec, const struct cmac_subkeys *subKeys,
-          const int dir, const int num_jobs, const enum cmac_type type)
+          const int num_jobs, const enum cmac_type type)
 {
         DECLARE_ALIGNED(uint32_t expkey[4 * 15], 16);
         DECLARE_ALIGNED(uint32_t dust[4 * 15], 16);
@@ -258,7 +258,7 @@ test_cmac(struct IMB_MGR *mb_mgr, const struct mac_test *vec, const struct cmac_
          */
         for (i = 0; i < num_jobs; i++) {
                 job = IMB_GET_NEXT_JOB(mb_mgr);
-                job->cipher_direction = dir;
+                job->cipher_direction = IMB_DIR_ENCRYPT;
                 job->chain_order = IMB_ORDER_HASH_CIPHER;
                 job->cipher_mode = IMB_CIPHER_NULL;
 
@@ -324,7 +324,7 @@ test_cmac(struct IMB_MGR *mb_mgr, const struct mac_test *vec, const struct cmac_
                 job = IMB_GET_NEXT_JOB(mb_mgr);
                 first_job = job;
 
-                job->cipher_direction = dir;
+                job->cipher_direction = IMB_DIR_ENCRYPT;
                 job->chain_order = IMB_ORDER_HASH_CIPHER;
                 job->cipher_mode = IMB_CIPHER_NULL;
 
@@ -539,19 +539,13 @@ test_cmac_std_vectors(struct IMB_MGR *mb_mgr, struct test_suite_context *ctx, co
 #endif
                 }
 
-                if (test_cmac(mb_mgr, v, sk, IMB_DIR_ENCRYPT, num_jobs, CMAC_128)) {
-                        printf("error #%zu encrypt\n", v->tcId);
+                if (test_cmac(mb_mgr, v, sk, num_jobs, CMAC_128)) {
+                        printf("error #%zu\n", v->tcId);
                         test_suite_update(ctx, 0, 1);
                 } else {
                         test_suite_update(ctx, 1, 0);
                 }
 
-                if (test_cmac(mb_mgr, v, sk, IMB_DIR_DECRYPT, num_jobs, CMAC_128)) {
-                        printf("error #%zu decrypt\n", v->tcId);
-                        test_suite_update(ctx, 0, 1);
-                } else {
-                        test_suite_update(ctx, 1, 0);
-                }
                 if (test_cmac_hash_burst(mb_mgr, v, sk, num_jobs, CMAC_128)) {
                         printf("hash burst error #%zu\n", v->tcId);
                         test_suite_update(ctx, 0, 1);
@@ -583,14 +577,8 @@ test_cmac_256_std_vectors(struct IMB_MGR *mb_mgr, struct test_suite_context *ctx
 #endif
                 }
 
-                if (test_cmac(mb_mgr, v, sk, IMB_DIR_ENCRYPT, num_jobs, CMAC_256)) {
-                        printf("error #%zu encrypt\n", v->tcId);
-                        test_suite_update(ctx, 0, 1);
-                } else {
-                        test_suite_update(ctx, 1, 0);
-                }
-                if (test_cmac(mb_mgr, v, sk, IMB_DIR_DECRYPT, num_jobs, CMAC_256)) {
-                        printf("error #%zu decrypt\n", v->tcId);
+                if (test_cmac(mb_mgr, v, sk, num_jobs, CMAC_256)) {
+                        printf("error #%zu\n", v->tcId);
                         test_suite_update(ctx, 0, 1);
                 } else {
                         test_suite_update(ctx, 1, 0);
@@ -628,22 +616,15 @@ test_cmac_bitlen_std_vectors(struct IMB_MGR *mb_mgr, struct test_suite_context *
 #endif
                 }
 
-                if (test_cmac(mb_mgr, v, sk, IMB_DIR_ENCRYPT, num_jobs, CMAC_128_BITLEN)) {
-                        printf("error #%zu encrypt\n", v->tcId);
-                        test_suite_update(ctx, 0, 1);
-                } else {
-                        test_suite_update(ctx, 1, 0);
-                }
-
-                if (test_cmac(mb_mgr, v, sk, IMB_DIR_DECRYPT, num_jobs, CMAC_128_BITLEN)) {
-                        printf("error #%zu decrypt\n", v->tcId);
+                if (test_cmac(mb_mgr, v, sk, num_jobs, CMAC_128_BITLEN)) {
+                        printf("error #%zu\n", v->tcId);
                         test_suite_update(ctx, 0, 1);
                 } else {
                         test_suite_update(ctx, 1, 0);
                 }
 
                 if (test_cmac_hash_burst(mb_mgr, v, sk, num_jobs, CMAC_128_BITLEN)) {
-                        printf("hash burst error #%zu decrypt\n", v->tcId);
+                        printf("hash burst error #%zu\n", v->tcId);
                         test_suite_update(ctx, 0, 1);
                 } else {
                         test_suite_update(ctx, 1, 0);
@@ -673,15 +654,8 @@ test_cmac_bitlen_3gpp_vectors(struct IMB_MGR *mb_mgr, struct test_suite_context 
 #endif
                 }
 
-                if (test_cmac(mb_mgr, v, sk, IMB_DIR_ENCRYPT, num_jobs, CMAC_128_BITLEN)) {
-                        printf("error #%zu encrypt\n", v->tcId);
-                        test_suite_update(ctx, 0, 1);
-                } else {
-                        test_suite_update(ctx, 1, 0);
-                }
-
-                if (test_cmac(mb_mgr, v, sk, IMB_DIR_DECRYPT, num_jobs, CMAC_128_BITLEN)) {
-                        printf("error #%zu decrypt\n", v->tcId);
+                if (test_cmac(mb_mgr, v, sk, num_jobs, CMAC_128_BITLEN)) {
+                        printf("error #%zu\n", v->tcId);
                         test_suite_update(ctx, 0, 1);
                 } else {
                         test_suite_update(ctx, 1, 0);
