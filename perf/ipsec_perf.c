@@ -95,6 +95,10 @@ typedef cpuset_t cpu_set_t;
 #define NUM_RUNS    16
 /* maximum number of 128-bit expanded keys */
 #define KEYS_PER_JOB 15
+/* default time for one packet size to be tested for */
+#define DEFAULT_TIMEOUT_MS 100
+/* maximum time for one packet size to be tested for (1 minute) */
+#define MAX_TIMEOUT_MS (1 * 60 * 1000)
 
 #define AAD_SIZE_MAX                 JOB_SIZE_TOP
 #define CCM_AAD_SIZE_MAX             46
@@ -763,6 +767,7 @@ static uint32_t segment_size = 0;          /* segment size to test SGL (0 = no S
 
 static volatile int timebox_on = 1; /* flag to stop the test loop */
 static int use_timebox = 1;         /* time-box feature on/off flag */
+static uint32_t timeout_ms = 0;     /* time for one packet size to be tested */
 
 #ifdef LINUX
 static void
@@ -2195,8 +2200,6 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params, const uint32_t num_iter, uint8
                 job_template.u.SNOW_V_AEAD.aad_len_in_bytes = aad_size;
         }
 
-#define TIMEOUT_MS 100 /*< max time for one packet size to be tested for */
-
         uint32_t jobs_done = 0; /*< to track how many jobs done over time */
 #ifdef _WIN32
         HANDLE hTimebox = NULL;
@@ -2210,8 +2213,8 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params, const uint32_t num_iter, uint8
                 /* set up one shot timer */
                 it_next.it_interval.tv_sec = 0;
                 it_next.it_interval.tv_usec = 0;
-                it_next.it_value.tv_sec = TIMEOUT_MS / 1000;
-                it_next.it_value.tv_usec = (TIMEOUT_MS % 1000) * 1000;
+                it_next.it_value.tv_sec = timeout_ms / 1000;
+                it_next.it_value.tv_usec = (timeout_ms % 1000) * 1000;
                 if (setitimer(ITIMER_REAL, &it_next, NULL)) {
                         perror("setitimer(one-shot)");
                         goto exit;
@@ -2226,7 +2229,7 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params, const uint32_t num_iter, uint8
 
                 /* set a timer to call the timebox */
                 if (!CreateTimerQueueTimer(&hTimebox, hTimeboxQueue,
-                                           (WAITORTIMERCALLBACK) timebox_callback, NULL, TIMEOUT_MS,
+                                           (WAITORTIMERCALLBACK) timebox_callback, NULL, timeout_ms,
                                            0, 0)) {
                         fprintf(stderr, "CreateTimerQueueTimer() error %u\n",
                                 (unsigned) GetLastError());
@@ -3489,7 +3492,8 @@ usage(void)
                 "--no-tsc-detect: don't check TSC to core scaling\n"
                 "--tag-size: modify tag size\n"
                 "--plot: Adjust text output for direct use with plot output\n"
-                "--no-time-box: disables 100ms watchdog timer on "
+                "--time-box: set timebox timeout in milliseconds (default is 100ms)\n"
+                "--no-time-box: disables watchdog timer on "
                 "an algorithm@packet-size performance test\n"
                 "--burst-api: use burst API for perf tests (default)\n"
                 "--cipher-burst-api: use cipher-only burst API for perf tests\n"
@@ -4084,6 +4088,13 @@ main(int argc, char *argv[])
                                         (unsigned) buffer_offset);
                                 return EXIT_FAILURE;
                         }
+                } else if (strcmp(argv[i], "--time-box") == 0) {
+                        i = get_next_num_arg((const char *const *) argv, i, argc, &timeout_ms,
+                                             sizeof(timeout_ms));
+                        if (timeout_ms > (MAX_TIMEOUT_MS)) {
+                                fprintf(stderr, "timeout cannot be more than %d\n", MAX_TIMEOUT_MS);
+                                return EXIT_FAILURE;
+                        }
                 } else {
                         usage();
                         return EXIT_FAILURE;
@@ -4094,6 +4105,17 @@ main(int argc, char *argv[])
                                 "--burst-api, --cipher-burst-api, "
                                 "--hash-burst-api or --aead-burst-api options\n");
                 return EXIT_FAILURE;
+        }
+
+        /* check if timebox arg set */
+        if (timeout_ms) {
+                if (!use_timebox) {
+                        fprintf(stderr, "--time-box cannot be used with --no-time-box option\n");
+                        return EXIT_FAILURE;
+                }
+        } else {
+                /* timebox not set - use default */
+                timeout_ms = DEFAULT_TIMEOUT_MS;
         }
 
         if (test_api != TEST_API_JOB && burst_size == 0)
