@@ -759,8 +759,10 @@ typedef enum {
         TEST_API_NUMOF
 } TEST_API;
 
-const char *str_api_list[TEST_API_NUMOF] = { "single job",      "burst",  "cipher-only burst",
-                                             "hash-only burst", "direct", "QUIC" };
+const char *str_api_list[TEST_API_NUMOF] = {
+        "single job", "burst", "cipher-only burst", "hash-only burst", "aead-only burst",
+        "direct",     "QUIC"
+};
 
 static TEST_API test_api = TEST_API_BURST; /* test burst API by default */
 static uint32_t burst_size = 0;            /* num jobs to pass to burst API */
