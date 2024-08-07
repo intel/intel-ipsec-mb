@@ -152,6 +152,7 @@ enum test_cipher_mode_e {
         TEST_SNOW_V_AEAD,
         TEST_SM4_ECB,
         TEST_SM4_CBC,
+        TEST_CFB,
         TEST_NUM_CIPHER_TESTS
 };
 
@@ -312,6 +313,12 @@ const struct str_value_mapping cipher_algo_str_map[] = {
           .values.job_params = { .cipher_mode = TEST_SM4_ECB, .key_size = IMB_KEY_128_BYTES } },
         { .name = "sm4-cbc",
           .values.job_params = { .cipher_mode = TEST_SM4_CBC, .key_size = IMB_KEY_128_BYTES } },
+        { .name = "aes-cfb-128",
+          .values.job_params = { .cipher_mode = TEST_CFB, .key_size = IMB_KEY_128_BYTES } },
+        { .name = "aes-cfb-192",
+          .values.job_params = { .cipher_mode = TEST_CFB, .key_size = IMB_KEY_192_BYTES } },
+        { .name = "aes-cfb-256",
+          .values.job_params = { .cipher_mode = TEST_CFB, .key_size = IMB_KEY_256_BYTES } },
         { .name = "null", .values.job_params = { .cipher_mode = TEST_NULL_CIPHER, .key_size = 0 } }
 };
 
@@ -1312,6 +1319,9 @@ translate_cipher_mode(const enum test_cipher_mode_e test_mode)
                 break;
         case TEST_SM4_CBC:
                 c_mode = IMB_CIPHER_SM4_CBC;
+                break;
+        case TEST_CFB:
+                c_mode = IMB_CIPHER_CFB;
                 break;
         default:
                 break;
@@ -3084,7 +3094,8 @@ print_times(struct variant_s *variant_list, struct params_s *params, const uint3
                                                                         "SNOW_V",
                                                                         "SNOW_V_AEAD",
                                                                         "SM4_ECB",
-                                                                        "SM4_CBC" };
+                                                                        "SM4_CBC",
+                                                                        "AES-CFB" };
                 const char *c_dir_names[2] = { "ENCRYPT", "DECRYPT" };
                 const char *h_alg_names[TEST_NUM_HASH_TESTS - 1] = { "SHA1_HMAC",
                                                                      "SHA_224_HMAC",
