@@ -92,7 +92,8 @@ typedef cpuset_t cpu_set_t;
 #define REGION_SIZE (((JOB_SIZE_TOP + (MAX_BUFFER_OFFSET + MAX_SHA_SIZE_INCR)) + 4095) & (~4095))
 /* number of test buffers */
 #define NUM_OFFSETS (BUFSIZE / REGION_SIZE)
-#define NUM_RUNS    16
+/* default number of test runs */
+#define DEFAULT_NUM_RUNS 16
 /* maximum number of 128-bit expanded keys */
 #define KEYS_PER_JOB 15
 /* default time for one packet size to be tested for */
@@ -765,9 +766,11 @@ static TEST_API test_api = TEST_API_BURST; /* test burst API by default */
 static uint32_t burst_size = 0;            /* num jobs to pass to burst API */
 static uint32_t segment_size = 0;          /* segment size to test SGL (0 = no SGL) */
 
-static volatile int timebox_on = 1; /* flag to stop the test loop */
-static int use_timebox = 1;         /* time-box feature on/off flag */
-static uint32_t timeout_ms = 0;     /* time for one packet size to be tested */
+static volatile int timebox_on = 1;          /* flag to stop the test loop */
+static int use_timebox = 1;                  /* time-box feature on/off flag */
+static uint32_t timeout_ms = 0;              /* time for one packet size to be tested */
+static uint32_t num_runs = DEFAULT_NUM_RUNS; /* number of test runs to perform */
+static uint32_t throughput = 0;              /* report results as total bytes processed */
 
 #ifdef LINUX
 static void
@@ -2200,7 +2203,7 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params, const uint32_t num_iter, uint8
                 job_template.u.SNOW_V_AEAD.aad_len_in_bytes = aad_size;
         }
 
-        uint32_t jobs_done = 0; /*< to track how many jobs done over time */
+        uint64_t jobs_done = 0; /*< to track how many jobs done over time */
 #ifdef _WIN32
         HANDLE hTimebox = NULL;
         HANDLE hTimeboxQueue = NULL;
@@ -2239,12 +2242,15 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params, const uint32_t num_iter, uint8
                 timebox_on = 1;
         }
 
+        /* if reporting bytes processed then don't measure cycles */
+        if (!throughput) {
 #ifndef _WIN32
-        if (use_unhalted_cycles)
-                time = read_cycles(params->core);
-        else
+                if (use_unhalted_cycles)
+                        time = read_cycles(params->core);
+                else
 #endif
-                time = __rdtscp(&aux);
+                        time = __rdtscp(&aux);
+        }
 
         /* test burst api */
         if (test_api == TEST_API_BURST) {
@@ -2296,13 +2302,14 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params, const uint32_t num_iter, uint8
 #else
                         jobs_done += IMB_SUBMIT_BURST_NOCHECK(mb_mgr, n, jobs);
 #endif
-                        num_jobs -= n;
+                        if (!throughput)
+                                num_jobs -= n;
                 }
                 jobs_done += IMB_FLUSH_BURST(mb_mgr, IMB_MAX_BURST_SIZE, jobs);
 
 #ifdef DEBUG
                 if (jobs_done != jobs_submitted) {
-                        printf("Number of jobs completed (%u) not equal to "
+                        printf("Number of jobs completed (%" PRIu64 ") not equal to "
                                "jobs submitted (%u)\n",
                                jobs_done, jobs_submitted);
                         goto exit;
@@ -2361,12 +2368,13 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params, const uint32_t num_iter, uint8
                                 }
                         }
 #else
-                        IMB_SUBMIT_CIPHER_BURST_NOCHECK(mb_mgr, jobs, n_jobs, jt->cipher_mode,
-                                                        jt->cipher_direction, jt->key_len_in_bytes);
+                        jobs_done += IMB_SUBMIT_CIPHER_BURST_NOCHECK(
+                                mb_mgr, jobs, n_jobs, jt->cipher_mode, jt->cipher_direction,
+                                jt->key_len_in_bytes);
 #endif
-                        num_jobs -= n_jobs;
+                        if (!throughput)
+                                num_jobs -= n_jobs;
                 }
-                jobs_done = num_iter - num_jobs;
 
                 /* test hash-only burst api */
         } else if (test_api == TEST_API_HASH_BURST) {
@@ -2420,11 +2428,12 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params, const uint32_t num_iter, uint8
                                 }
                         }
 #else
-                        IMB_SUBMIT_HASH_BURST_NOCHECK(mb_mgr, jobs, n_jobs, jt->hash_alg);
+                        jobs_done +=
+                                IMB_SUBMIT_HASH_BURST_NOCHECK(mb_mgr, jobs, n_jobs, jt->hash_alg);
 #endif
-                        num_jobs -= n_jobs;
+                        if (!throughput)
+                                num_jobs -= n_jobs;
                 }
-                jobs_done = num_iter - num_jobs;
 
                 /* test AEAD burst api */
         } else if (test_api == TEST_API_AEAD_BURST) {
@@ -2488,27 +2497,32 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params, const uint32_t num_iter, uint8
                                 }
                         }
 #else
-                        IMB_SUBMIT_AEAD_BURST_NOCHECK(mb_mgr, jobs, n_jobs, jt->cipher_mode,
-                                                      jt->cipher_direction, jt->key_len_in_bytes);
+                        jobs_done += IMB_SUBMIT_AEAD_BURST_NOCHECK(
+                                mb_mgr, jobs, n_jobs, jt->cipher_mode, jt->cipher_direction,
+                                jt->key_len_in_bytes);
 #endif
-                        num_jobs -= n_jobs;
+                        if (!throughput)
+                                num_jobs -= n_jobs;
                 }
-                jobs_done = num_iter - num_jobs;
 
         } else { /* TEST_API_JOB */
+                uint64_t i = 0;
+                uint32_t num_jobs = num_iter;
+
                 imb_set_session(mb_mgr, &job_template);
 
-                for (i = 0; (i < num_iter) && timebox_on; i++) {
+                while (num_jobs && timebox_on) {
                         job = IMB_GET_NEXT_JOB(mb_mgr);
 
                         if (job->session_id != job_template.session_id)
                                 *job = job_template;
 
                         if (segment_size != 0)
-                                set_sgl_job_fields(job, p_buffer, p_keys, i, index, sgl[0],
-                                                   &gcm_ctx[0], &cp_ctx[0]);
+                                set_sgl_job_fields(job, p_buffer, p_keys, (uint32_t) i, index,
+                                                   sgl[0], &gcm_ctx[0], &cp_ctx[0]);
                         else
-                                set_job_fields(job, p_buffer, p_keys, i, index, &job_template);
+                                set_job_fields(job, p_buffer, p_keys, (uint32_t) i, index,
+                                               &job_template);
 
                         index = get_next_index(index);
 #ifdef DEBUG
@@ -2528,6 +2542,10 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params, const uint32_t num_iter, uint8
 #endif
                                 job = IMB_GET_COMPLETED_JOB(mb_mgr);
                         }
+                        i++;
+
+                        if (!throughput)
+                                num_jobs--;
                 }
                 jobs_done = i;
 
@@ -2552,12 +2570,14 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params, const uint32_t num_iter, uint8
                 sgl[i] = NULL;
         }
 
+        if (!throughput) {
 #ifndef _WIN32
-        if (use_unhalted_cycles)
-                time = (read_cycles(params->core) - rd_cycles_cost) - time;
-        else
+                if (use_unhalted_cycles)
+                        time = (read_cycles(params->core) - rd_cycles_cost) - time;
+                else
 #endif
-                time = __rdtscp(&aux) - time;
+                        time = __rdtscp(&aux) - time;
+        }
 
         if (use_timebox) {
 #ifdef LINUX
@@ -2576,12 +2596,18 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params, const uint32_t num_iter, uint8
                         fprintf(stderr, "DeleteTimerQueue() error %u\n", (unsigned) GetLastError());
 #endif
 
+                if (throughput)
+                        return jobs_done * params->job_size;
+
                 /* calculate return value */
                 if (jobs_done == 0)
                         return 0;
 
                 return time / jobs_done;
         }
+
+        if (throughput)
+                return jobs_done * params->job_size;
 
         if (!num_iter)
                 return time;
@@ -3052,7 +3078,7 @@ process_variant(IMB_MGR *mgr, const enum arch_type_e arch, struct params_s *para
                 } else
                         *times = do_test(mgr, params, num_iter, p_buffer, p_keys);
 
-                times += NUM_RUNS;
+                times += num_runs;
         }
 
         variant_ptr->params = *params;
@@ -3195,9 +3221,9 @@ print_times(struct variant_s *variant_list, struct params_s *params, const uint3
                 else
                         printf("%d", job_size_list[sz]);
                 for (col = 0; col < total_variants; col++) {
-                        uint64_t *time_ptr = &variant_list[col].avg_times[sz * NUM_RUNS];
+                        uint64_t *time_ptr = &variant_list[col].avg_times[sz * num_runs];
                         const unsigned long long val =
-                                mean_median(time_ptr, NUM_RUNS, p_buffer, p_keys);
+                                mean_median(time_ptr, num_runs, p_buffer, p_keys);
 
                         printf("\t%llu", val);
                 }
@@ -3323,7 +3349,7 @@ run_tests(void *arg)
         }
         memset(variant_list, 0, total_variants * sizeof(struct variant_s));
 
-        at_size = NUM_RUNS * params.num_sizes * sizeof(uint64_t);
+        at_size = num_runs * params.num_sizes * sizeof(uint64_t);
         for (variant = 0, variant_ptr = variant_list; variant < total_variants;
              variant++, variant_ptr++) {
                 variant_ptr->avg_times = (uint64_t *) malloc(at_size);
@@ -3333,9 +3359,9 @@ run_tests(void *arg)
                 }
         }
 
-        for (run = 0; run < NUM_RUNS; run++) {
+        for (run = 0; run < num_runs; run++) {
                 if (info->print_info)
-                        fprintf(stderr, "\nStarting run %u of %d%c", run + 1, NUM_RUNS,
+                        fprintf(stderr, "\nStarting run %u of %d%c", run + 1, num_runs,
                                 silent_progress_bar ? '\r' : '\n');
 
                 variant = 0;
@@ -3501,7 +3527,8 @@ usage(void)
                 "--burst-size: number of jobs to submit per burst\n"
                 "--quic-api: run QUIC-API specific tests only\n"
                 "--buffer-offset val: val is 0 by default, valid range is 0 to 15.\n"
-                "                     This option allows to test unaligned buffer cases\n",
+                "                     This option allows to test unaligned buffer cases\n"
+                "--throughput: report total number of bytes processed instead of cycles\n",
                 MAX_NUM_THREADS + 1);
 }
 
@@ -4095,6 +4122,10 @@ main(int argc, char *argv[])
                                 fprintf(stderr, "timeout cannot be more than %d\n", MAX_TIMEOUT_MS);
                                 return EXIT_FAILURE;
                         }
+                } else if (strcmp(argv[i], "--throughput") == 0) {
+                        throughput = 1;
+                        /* do single run when measuring throughput */
+                        num_runs = 1;
                 } else {
                         usage();
                         return EXIT_FAILURE;
@@ -4116,6 +4147,22 @@ main(int argc, char *argv[])
         } else {
                 /* timebox not set - use default */
                 timeout_ms = DEFAULT_TIMEOUT_MS;
+        }
+
+        if (throughput) {
+                if (test_api == TEST_API_DIRECT || test_api == TEST_API_QUIC) {
+                        fprintf(stderr,
+                                "--throughput option not supported for direct or QUIC APIs\n");
+                        return EXIT_FAILURE;
+                }
+                if (!use_timebox) {
+                        fprintf(stderr, "--throughput cannot be used with --no-time-box option\n");
+                        return EXIT_FAILURE;
+                }
+                if (job_iter != 0) {
+                        fprintf(stderr, "--throughput cannot be used with --job-iter option\n");
+                        return EXIT_FAILURE;
+                }
         }
 
         if (test_api != TEST_API_JOB && burst_size == 0)
