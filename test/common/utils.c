@@ -41,6 +41,9 @@
  */
 int quiet_mode = 0;
 
+const unsigned test_num_jobs[] = { 1, 3, 4, 5, 7, 8, 9, 15, 16, 17, IMB_MAX_BURST_SIZE };
+const size_t test_num_jobs_size = DIM(test_num_jobs);
+
 /**
  * @brief Simplistic memory copy (intentionally not using libc)
  *

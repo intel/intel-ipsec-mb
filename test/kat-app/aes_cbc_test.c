@@ -543,7 +543,6 @@ test_cbc_vectors(struct IMB_MGR *mb_mgr, struct test_suite_context *ctx128,
 int
 cbc_test(struct IMB_MGR *mb_mgr)
 {
-        const int num_jobs_tab[] = { 1, 3, 4, 5, 7, 8, 9, 15, 16, 17, IMB_MAX_BURST_SIZE };
         unsigned i;
         int errors = 0;
         struct test_suite_context ctx128;
@@ -553,9 +552,9 @@ cbc_test(struct IMB_MGR *mb_mgr)
         test_suite_start(&ctx128, "AES-CBC-128");
         test_suite_start(&ctx192, "AES-CBC-192");
         test_suite_start(&ctx256, "AES-CBC-256");
-        for (i = 0; i < DIM(num_jobs_tab); i++)
+        for (i = 0; i < test_num_jobs_size; i++)
                 test_cbc_vectors(mb_mgr, &ctx128, &ctx192, &ctx256, IMB_CIPHER_CBC,
-                                 num_jobs_tab[i]);
+                                 test_num_jobs[i]);
         errors += test_suite_end(&ctx128);
         errors += test_suite_end(&ctx192);
         errors += test_suite_end(&ctx256);

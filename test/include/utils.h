@@ -35,6 +35,8 @@
 #define DIV_ROUND_UP(x, y) ((x + y - 1) / y)
 
 extern int quiet_mode;
+extern const unsigned test_num_jobs[];
+extern const size_t test_num_jobs_size;
 
 void
 hexdump(FILE *fp, const char *msg, const void *p, size_t len);

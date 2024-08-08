@@ -223,14 +223,13 @@ test_chacha_vectors(struct IMB_MGR *mb_mgr, struct test_suite_context *ctx,
 int
 chacha_test(struct IMB_MGR *mb_mgr)
 {
-        const int num_jobs_tab[] = { 1, 3, 4, 5, 7, 8, 9, 15, 16, 17 };
         unsigned i;
         int errors = 0;
         struct test_suite_context ctx;
 
         test_suite_start(&ctx, "CHACHA20-256");
-        for (i = 0; i < DIM(num_jobs_tab); i++)
-                test_chacha_vectors(mb_mgr, &ctx, IMB_CIPHER_CHACHA20, num_jobs_tab[i]);
+        for (i = 0; i < test_num_jobs_size; i++)
+                test_chacha_vectors(mb_mgr, &ctx, IMB_CIPHER_CHACHA20, test_num_jobs[i]);
         errors = test_suite_end(&ctx);
 
         return errors;

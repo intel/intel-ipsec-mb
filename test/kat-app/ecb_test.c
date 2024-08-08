@@ -353,7 +353,6 @@ int
 ecb_test(struct IMB_MGR *mb_mgr)
 {
         struct test_suite_context ts128, ts192, ts256;
-        const int num_jobs_tab[] = { 1, 3, 4, 5, 7, 8, 9, 15, 16, 17, 32, 64, 128, 256, 284 };
         unsigned i;
         int errors = 0;
 
@@ -361,8 +360,8 @@ ecb_test(struct IMB_MGR *mb_mgr)
         test_suite_start(&ts192, "AES-ECB-192");
         test_suite_start(&ts256, "AES-ECB-256");
 
-        for (i = 0; i < DIM(num_jobs_tab); i++)
-                test_ecb_vectors(mb_mgr, IMB_CIPHER_ECB, num_jobs_tab[i], &ts128, &ts192, &ts256);
+        for (i = 0; i < test_num_jobs_size; i++)
+                test_ecb_vectors(mb_mgr, IMB_CIPHER_ECB, test_num_jobs[i], &ts128, &ts192, &ts256);
 
         errors = test_suite_end(&ts128);
         errors += test_suite_end(&ts192);

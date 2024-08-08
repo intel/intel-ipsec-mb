@@ -374,16 +374,15 @@ test_chained_vectors(struct IMB_MGR *mb_mgr, struct test_suite_context *ctx, con
 int
 chained_test(struct IMB_MGR *mb_mgr)
 {
-        const int num_jobs_tab[] = { 1, 3, 4, 5, 7, 8, 9, 15, 16, 17 };
         unsigned i;
         int errors = 0;
         struct test_suite_context ctx;
 
         test_suite_start(&ctx, "CHAINED-OP");
-        for (i = 0; i < DIM(num_jobs_tab); i++)
+        for (i = 0; i < test_num_jobs_size; i++)
                 test_chained_vectors(mb_mgr, &ctx, DIM(chained_vectors), chained_vectors,
                                      "AES-CBC + SHA1-HMAC standard test vectors", IMB_CIPHER_CBC,
-                                     IMB_AUTH_HMAC_SHA_1, num_jobs_tab[i]);
+                                     IMB_AUTH_HMAC_SHA_1, test_num_jobs[i]);
 
         errors += test_suite_end(&ctx);
 

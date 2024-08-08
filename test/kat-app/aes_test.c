@@ -1458,7 +1458,6 @@ test_docrc_vectors(struct IMB_MGR *mb_mgr, struct test_suite_context *ctx128,
 int
 aes_test(struct IMB_MGR *mb_mgr)
 {
-        const int num_jobs_tab[] = { 1, 3, 4, 5, 7, 8, 9, 15, 16, 17, IMB_MAX_BURST_SIZE };
         unsigned i;
         int errors = 0;
         struct test_suite_context ctx128;
@@ -1466,18 +1465,18 @@ aes_test(struct IMB_MGR *mb_mgr)
 
         test_suite_start(&ctx128, "DOCSIS-SEC-128");
         test_suite_start(&ctx256, "DOCSIS-SEC-256");
-        for (i = 0; i < DIM(num_jobs_tab); i++)
+        for (i = 0; i < test_num_jobs_size; i++)
                 test_aes_vectors(mb_mgr, &ctx128, &ctx256, DIM(docsis_vectors), docsis_vectors,
                                  "AES-DOCSIS standard test vectors", IMB_CIPHER_DOCSIS_SEC_BPI,
-                                 num_jobs_tab[i]);
+                                 test_num_jobs[i]);
         errors += test_suite_end(&ctx128);
         errors += test_suite_end(&ctx256);
 
         test_suite_start(&ctx128, "DOCSIS-SEC-128-CRC32");
         test_suite_start(&ctx256, "DOCSIS-SEC-256-CRC32");
-        for (i = 0; i < DIM(num_jobs_tab); i++)
+        for (i = 0; i < test_num_jobs_size; i++)
                 test_docrc_vectors(mb_mgr, &ctx128, &ctx256, DIM(docsis_crc_tab), docsis_crc_tab,
-                                   "AES-DOCSIS+CRC32 vectors", num_jobs_tab[i]);
+                                   "AES-DOCSIS+CRC32 vectors", test_num_jobs[i]);
         errors += test_suite_end(&ctx128);
         errors += test_suite_end(&ctx256);
 

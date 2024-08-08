@@ -2556,13 +2556,12 @@ validate_snow3g_f9(struct IMB_MGR *mb_mgr, uint32_t job_api, struct test_suite_c
                 /*test the integrity for f9_user with IV*/
                 if (job_api) {
                         unsigned j;
-                        const unsigned num_jobs_tab[] = { 1, 3, 4, 5, 7, 8, 9, 15, 16, 17 };
 
-                        for (j = 0; j < DIM(num_jobs_tab); j++) {
+                        for (j = 0; j < test_num_jobs_size; j++) {
                                 int ret = submit_uia2_job(
                                         mb_mgr, (uint8_t *) pKeySched, pIV, srcBuff, digest,
                                         (const uint32_t) testVectors[i].msgSize,
-                                        (const uint8_t *) testVectors[i].tag, num_jobs_tab[j]);
+                                        (const uint8_t *) testVectors[i].tag, test_num_jobs[j]);
                                 if (ret < 0) {
                                         printf("IMB_SNOW3G_F9 JOB API vector num:%zu\n",
                                                testVectors[i].tcId);

@@ -506,9 +506,9 @@ aes_cfb_test(struct IMB_MGR *mb_mgr)
         test_suite_start(&ctx256, "AES-CFB-256");
         test_aes_cfb_vectors(mb_mgr, &ctx128, &ctx192, &ctx256, aes_cfb_test_json, IMB_CIPHER_CFB);
 
-        for (i = 1; i <= IMB_MAX_BURST_SIZE; i++)
+        for (i = 0; i < test_num_jobs_size; i++)
                 test_aes_cfb_vectors_burst(mb_mgr, &ctx128, &ctx192, &ctx256, aes_cfb_test_json,
-                                           IMB_CIPHER_CFB, i);
+                                           IMB_CIPHER_CFB, test_num_jobs[i]);
 
         errors += test_suite_end(&ctx128);
         errors += test_suite_end(&ctx192);

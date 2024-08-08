@@ -158,7 +158,7 @@ test_aes_many(struct IMB_MGR *mb_mgr, void *enc_keys, void *dec_keys, const void
                 job->cipher_start_src_offset_in_bytes = 0;
                 job->msg_len_to_cipher_in_bytes = text_len;
                 job->user_data = targets[i];
-                job->user_data2 = (void *) ((uint64_t) i);
+                job->user_data2 = (void *) ((uintptr_t) i);
 
                 job->hash_alg = IMB_AUTH_NULL;
 
@@ -169,7 +169,7 @@ test_aes_many(struct IMB_MGR *mb_mgr, void *enc_keys, void *dec_keys, const void
                         jobs_rx++;
                         if (!aes_job_ok(job, out_text, job->user_data, padding, sizeof(padding),
                                         (unsigned) text_len, (uint8_t *) &last_cipher_block,
-                                        next_ivs[(uint64_t) job->user_data2]))
+                                        next_ivs[(uintptr_t) job->user_data2]))
                                 goto end;
                         /* reset job next_iv pointer */
                         job->cipher_fields.CBCS.next_iv = NULL;
@@ -183,7 +183,7 @@ test_aes_many(struct IMB_MGR *mb_mgr, void *enc_keys, void *dec_keys, const void
                 jobs_rx++;
                 if (!aes_job_ok(job, out_text, job->user_data, padding, sizeof(padding),
                                 (unsigned) text_len, (uint8_t *) &last_cipher_block,
-                                next_ivs[(uint64_t) job->user_data2]))
+                                next_ivs[(uintptr_t) job->user_data2]))
                         goto end;
                 /* reset job next_iv pointer */
                 job->cipher_fields.CBCS.next_iv = NULL;
@@ -283,14 +283,13 @@ test_aes_vectors(struct IMB_MGR *mb_mgr, struct test_suite_context *ctx,
 int
 aes_cbcs_test(struct IMB_MGR *mb_mgr)
 {
-        const int num_jobs_tab[] = { 1, 3, 4, 5, 7, 8, 9, 15, 16, 17 };
         unsigned i;
         int errors = 0;
         struct test_suite_context ctx;
 
         test_suite_start(&ctx, "AES-CBCS-128");
-        for (i = 0; i < DIM(num_jobs_tab); i++)
-                test_aes_vectors(mb_mgr, &ctx, IMB_CIPHER_CBCS_1_9, num_jobs_tab[i]);
+        for (i = 0; i < test_num_jobs_size; i++)
+                test_aes_vectors(mb_mgr, &ctx, IMB_CIPHER_CBCS_1_9, test_num_jobs[i]);
         errors = test_suite_end(&ctx);
 
         return errors;
