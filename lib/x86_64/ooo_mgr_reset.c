@@ -81,6 +81,8 @@ ooo_mgr_cmac_reset(void *p_ooo_mgr, const unsigned num_lanes)
 
         memset(p_mgr, 0, offsetof(MB_MGR_CMAC_OOO, road_block));
         memset(p_mgr->lens, 0xff, sizeof(p_mgr->lens));
+        p_mgr->total_num_lanes = num_lanes;
+
         if (num_lanes == 4)
                 p_mgr->unused_lanes = 0xF3210;
         else if (num_lanes == 8)
