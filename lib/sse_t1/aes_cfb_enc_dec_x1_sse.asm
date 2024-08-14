@@ -174,6 +174,7 @@ mksection .text
 align 32
 MKGLOBAL(AES_CFB_128_ENC,function,)
 AES_CFB_128_ENC:
+endbranch64
         do_cfb 9, ENC
 	ret
 
@@ -181,6 +182,7 @@ AES_CFB_128_ENC:
 align 32
 MKGLOBAL(AES_CFB_128_DEC,function,)
 AES_CFB_128_DEC:
+endbranch64
         do_cfb 9, DEC
 	ret
 
@@ -191,6 +193,7 @@ AES_CFB_128_DEC:
 align 32
 MKGLOBAL(AES_CFB_192_ENC,function,)
 AES_CFB_192_ENC:
+endbranch64
         do_cfb 11, ENC
 	ret
 
@@ -198,6 +201,7 @@ AES_CFB_192_ENC:
 align 32
 MKGLOBAL(AES_CFB_192_DEC,function,)
 AES_CFB_192_DEC:
+endbranch64
         do_cfb 11, DEC
 	ret
 
@@ -208,6 +212,7 @@ AES_CFB_192_DEC:
 align 32
 MKGLOBAL(AES_CFB_256_ENC,function,)
 AES_CFB_256_ENC:
+endbranch64
         do_cfb 13, ENC
 	ret
 
@@ -215,6 +220,7 @@ AES_CFB_256_ENC:
 align 32
 MKGLOBAL(AES_CFB_256_DEC,function,)
 AES_CFB_256_DEC:
+endbranch64
         do_cfb 13, DEC
 	ret
 
