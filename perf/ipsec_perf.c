@@ -3530,7 +3530,7 @@ usage(void)
                 "--quic-api: run QUIC-API specific tests only\n"
                 "--buffer-offset val: val is 0 by default, valid range is 0 to 15.\n"
                 "                     This option allows to test unaligned buffer cases\n"
-                "--throughput: report total number of bytes processed instead of cycles\n",
+                "--throughput: report total number of bytes processed within the timebox\n",
                 MAX_NUM_THREADS + 1);
 }
 
@@ -3928,6 +3928,8 @@ main(int argc, char *argv[])
         uint32_t num_sizes_list = 1;
         int turbo_enabled = 0;
         int tsc_detect = 1;
+        char timebox_str[64] = { 0 };
+        char throughput_str[64] = { 0 };
 
 #ifdef _WIN32
         HANDLE threads[MAX_NUM_THREADS];
@@ -4370,11 +4372,19 @@ main(int argc, char *argv[])
                         sha_size_incr = 0;
         }
 
+        sprintf(timebox_str, "Timebox: %ums", timeout_ms);
+        sprintf(throughput_str, "Throughput (bytes/%ums)", timeout_ms);
+
         fprintf(stderr,
+                "%s\nMeasurement mode: %s\n"
                 "Authentication size = cipher size + %u\n"
                 "Buffer offset = %u\n"
                 "Tool version: %s\n"
                 "Library version: %s\n",
+                use_timebox ? timebox_str : "",
+                throughput            ? throughput_str
+                : use_unhalted_cycles ? "Unhalted Cycles (MSR)"
+                                      : "Cycles (TSC)",
                 sha_size_incr, buffer_offset, IMB_VERSION_STR, imb_get_version_str());
 
         fprintf(stderr, "API type: %s", str_api_list[test_api]);
