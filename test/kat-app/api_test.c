@@ -275,6 +275,7 @@ fill_in_job(struct IMB_JOB *job, const IMB_CIPHER_MODE cipher_mode,
 
         switch (job->cipher_mode) {
         case IMB_CIPHER_SM4_CBC:
+        case IMB_CIPHER_SM4_CNTR:
         case IMB_CIPHER_CBC:
         case IMB_CIPHER_CBCS_1_9:
                 job->key_len_in_bytes = UINT64_C(16);
@@ -1862,6 +1863,7 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                                 break;
                         case IMB_CIPHER_CNTR:
                         case IMB_CIPHER_CNTR_BITLEN:
+                        case IMB_CIPHER_SM4_CNTR:
                         case IMB_CIPHER_CCM:
                         case IMB_CIPHER_PON_AES_CNTR:
                         case IMB_CIPHER_ZUC_EEA3:
@@ -1994,6 +1996,9 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                                 case IMB_CIPHER_SNOW_V_AEAD:
                                 case IMB_CIPHER_NULL:
                                 case IMB_CIPHER_CFB:
+                                case IMB_CIPHER_SM4_ECB:
+                                case IMB_CIPHER_SM4_CNTR:
+                                case IMB_CIPHER_SM4_CBC:
                                         continue;
                                         /* not allowed with null hash */
                                 case IMB_CIPHER_CHACHA20_POLY1305:
@@ -2071,6 +2076,9 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                 { IMB_CIPHER_CNTR, 11 },
                 { IMB_CIPHER_CNTR, 14 },
                 { IMB_CIPHER_CNTR, 17 },
+                { IMB_CIPHER_SM4_CNTR, 11 },
+                { IMB_CIPHER_SM4_CNTR, 14 },
+                { IMB_CIPHER_SM4_CNTR, 17 },
                 /* DES IVs must be 8 bytes */
                 { IMB_CIPHER_DES, 7 },
                 { IMB_CIPHER_DES, 9 },
@@ -2157,6 +2165,9 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                                 case IMB_CIPHER_PON_AES_CNTR:
                                 case IMB_CIPHER_SNOW3G_UEA2_BITLEN:
                                 case IMB_CIPHER_KASUMI_UEA1_BITLEN:
+                                case IMB_CIPHER_SM4_ECB:
+                                case IMB_CIPHER_SM4_CBC:
+                                case IMB_CIPHER_SM4_CNTR:
                                         if (key_len != IMB_KEY_128_BYTES)
                                                 continue;
                                         break;

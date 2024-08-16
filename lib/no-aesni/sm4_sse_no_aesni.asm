@@ -30,4 +30,5 @@
 %define SM4_ECB     sm4_ecb_sse_no_aesni
 %define SM4_CBC_ENC sm4_cbc_enc_sse_no_aesni
 %define SM4_CBC_DEC sm4_cbc_dec_sse_no_aesni
+%define SM4_CNTR     sm4_cntr_sse_no_aesni
 %include "sse_t1/sm4_sse.asm"

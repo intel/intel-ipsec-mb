@@ -298,6 +298,15 @@ SUBMIT_JOB_SM4_CBC_DEC(IMB_JOB *job)
         return job;
 }
 
+__forceinline IMB_JOB *
+SUBMIT_JOB_SM4_CNTR(IMB_JOB *job)
+{
+        SM4_CNTR(job->src + job->cipher_start_src_offset_in_bytes, job->dst,
+                 job->msg_len_to_cipher_in_bytes, job->dec_keys, job->iv, job->iv_len_in_bytes);
+        job->status |= IMB_STATUS_COMPLETED_CIPHER;
+        return job;
+}
+
 /* ========================================================================= */
 /* AES-CFB DEC */
 /* ========================================================================= */
@@ -495,6 +504,8 @@ SUBMIT_JOB_CIPHER_ENC(IMB_MGR *state, IMB_JOB *job, const IMB_CIPHER_MODE cipher
                 return SUBMIT_JOB_SM4_ECB_ENC(job);
         } else if (IMB_CIPHER_SM4_CBC == cipher_mode) {
                 return SUBMIT_JOB_SM4_CBC_ENC(job);
+        } else if (IMB_CIPHER_SM4_CNTR == cipher_mode) {
+                return SUBMIT_JOB_SM4_CNTR(job);
         } else if (IMB_CIPHER_CFB == cipher_mode) {
                 if (IMB_KEY_128_BYTES == key_sz) {
 #ifdef SUBMIT_JOB_AES_CFB_128_ENC
@@ -726,6 +737,8 @@ SUBMIT_JOB_CIPHER_DEC(IMB_MGR *state, IMB_JOB *job, const IMB_CIPHER_MODE cipher
                 return SUBMIT_JOB_SM4_ECB_DEC(job);
         } else if (IMB_CIPHER_SM4_CBC == cipher_mode) {
                 return SUBMIT_JOB_SM4_CBC_DEC(job);
+        } else if (IMB_CIPHER_SM4_CNTR == cipher_mode) {
+                return SUBMIT_JOB_SM4_CNTR(job);
         } else if (IMB_CIPHER_CFB == cipher_mode) {
                 return SUBMIT_JOB_AES_CFB_DEC(job, key_sz);
         } else {
@@ -1046,6 +1059,13 @@ submit_cipher_dec_sm4_cbc(IMB_MGR *state, IMB_JOB *job)
         return SUBMIT_JOB_CIPHER_DEC(state, job, IMB_CIPHER_SM4_CBC, IMB_KEY_128_BYTES);
 }
 
+/* SM4-CTR */
+static IMB_JOB *
+submit_cipher_dec_sm4_cntr(IMB_MGR *state, IMB_JOB *job)
+{
+        return SUBMIT_JOB_CIPHER_DEC(state, job, IMB_CIPHER_SM4_CNTR, IMB_KEY_128_BYTES);
+}
+
 /* AES-CFB 128 */
 static IMB_JOB *
 submit_cipher_dec_cfb_128(IMB_MGR *state, IMB_JOB *job)
@@ -1322,6 +1342,14 @@ submit_cipher_enc_sm4_cbc(IMB_MGR *state, IMB_JOB *job)
 {
         return SUBMIT_JOB_CIPHER_ENC(state, job, IMB_CIPHER_SM4_CBC, IMB_KEY_128_BYTES);
 }
+
+/* SM4-CTR */
+static IMB_JOB *
+submit_cipher_enc_sm4_cntr(IMB_MGR *state, IMB_JOB *job)
+{
+        return SUBMIT_JOB_CIPHER_ENC(state, job, IMB_CIPHER_SM4_CNTR, IMB_KEY_128_BYTES);
+}
+
 /* AES-CFB */
 static IMB_JOB *
 submit_cipher_enc_cfb_128(IMB_MGR *state, IMB_JOB *job)
@@ -1493,12 +1521,12 @@ static const submit_flush_fn_t tab_submit_cipher[] = {
         submit_cipher_dec_cfb_128,
         submit_cipher_dec_cfb_192,
         submit_cipher_dec_cfb_256,
+        /* [27] SM4-CTR */
+        submit_cipher_dec_null,
+        submit_cipher_dec_sm4_cntr,
+        submit_cipher_dec_null,
+        submit_cipher_dec_null,
         /* add new cipher decrypt here */
-        /* [27] NULL */
-        NULL,
-        NULL,
-        NULL,
-        NULL,
         /* [28] NULL */
         NULL,
         NULL,
@@ -1659,12 +1687,12 @@ static const submit_flush_fn_t tab_submit_cipher[] = {
         submit_cipher_enc_cfb_128,
         submit_cipher_enc_cfb_192,
         submit_cipher_enc_cfb_256,
+        /* [27] SM4-CTR */
+        submit_cipher_enc_null,
+        submit_cipher_enc_sm4_cntr,
+        submit_cipher_enc_null,
+        submit_cipher_enc_null,
         /* add new cipher encrypt here */
-        /* [27] NULL */
-        NULL,
-        NULL,
-        NULL,
-        NULL,
         /* [28] NULL */
         NULL,
         NULL,
@@ -1962,6 +1990,13 @@ flush_cipher_dec_sm4_cbc(IMB_MGR *state, IMB_JOB *job)
         return FLUSH_JOB_CIPHER_DEC(state, job, IMB_CIPHER_SM4_CBC, IMB_KEY_128_BYTES);
 }
 
+/* SM4-CTR */
+static IMB_JOB *
+flush_cipher_dec_sm4_cntr(IMB_MGR *state, IMB_JOB *job)
+{
+        return FLUSH_JOB_CIPHER_DEC(state, job, IMB_CIPHER_SM4_CNTR, IMB_KEY_128_BYTES);
+}
+
 /* AES-CBC */
 static IMB_JOB *
 flush_cipher_dec_cfb_128(IMB_MGR *state, IMB_JOB *job)
@@ -2248,6 +2283,13 @@ flush_cipher_enc_sm4_cbc(IMB_MGR *state, IMB_JOB *job)
         return FLUSH_JOB_CIPHER_ENC(state, job, IMB_CIPHER_SM4_CBC, IMB_KEY_128_BYTES);
 }
 
+/* SM4-CTR */
+static IMB_JOB *
+flush_cipher_enc_sm4_cntr(IMB_MGR *state, IMB_JOB *job)
+{
+        return FLUSH_JOB_CIPHER_ENC(state, job, IMB_CIPHER_SM4_CNTR, IMB_KEY_128_BYTES);
+}
+
 /* AES-CBC */
 static IMB_JOB *
 flush_cipher_enc_cfb_128(IMB_MGR *state, IMB_JOB *job)
@@ -2411,12 +2453,12 @@ static const submit_flush_fn_t tab_flush_cipher[] = {
         flush_cipher_dec_cfb_128,
         flush_cipher_dec_cfb_192,
         flush_cipher_dec_cfb_256,
+        /* [27] SM4-CTR */
+        flush_cipher_dec_null,
+        flush_cipher_dec_sm4_cntr,
+        flush_cipher_dec_null,
+        flush_cipher_dec_null,
         /* add new cipher decrypt here */
-        /* [27] NULL */
-        NULL,
-        NULL,
-        NULL,
-        NULL,
         /* [28] NULL */
         NULL,
         NULL,
@@ -2577,12 +2619,12 @@ static const submit_flush_fn_t tab_flush_cipher[] = {
         flush_cipher_enc_cfb_128,
         flush_cipher_enc_cfb_192,
         flush_cipher_enc_cfb_256,
+        /* [27] SM4-CNTR */
+        flush_cipher_enc_null,
+        flush_cipher_enc_sm4_cntr,
+        flush_cipher_enc_null,
+        flush_cipher_enc_null,
         /* add new cipher encrypt here */
-        /* [27] NULL */
-        NULL,
-        NULL,
-        NULL,
-        NULL,
         /* [28] NULL */
         NULL,
         NULL,

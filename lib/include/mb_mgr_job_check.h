@@ -50,8 +50,6 @@ is_job_invalid_light(IMB_MGR *state, const IMB_CIPHER_MODE cipher_mode, const IM
         switch (cipher_mode) {
         case IMB_CIPHER_NULL:
         case IMB_CIPHER_CUSTOM:
-        case IMB_CIPHER_SM4_CBC:
-        case IMB_CIPHER_SM4_ECB:
                 break;
         case IMB_CIPHER_CBC:
         case IMB_CIPHER_CBCS_1_9:
@@ -123,12 +121,10 @@ is_job_invalid_light(IMB_MGR *state, const IMB_CIPHER_MODE cipher_mode, const IM
                 }
                 break;
         case IMB_CIPHER_SNOW3G_UEA2_BITLEN:
-                if (key_len_in_bytes != UINT64_C(16)) {
-                        imb_set_errno(state, IMB_ERR_JOB_KEY_LEN);
-                        return 1;
-                }
-                break;
         case IMB_CIPHER_KASUMI_UEA1_BITLEN:
+        case IMB_CIPHER_SM4_CBC:
+        case IMB_CIPHER_SM4_ECB:
+        case IMB_CIPHER_SM4_CNTR:
                 if (key_len_in_bytes != UINT64_C(16)) {
                         imb_set_errno(state, IMB_ERR_JOB_KEY_LEN);
                         return 1;
@@ -1193,6 +1189,37 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job, const IMB_CIPHER_MODE cipher_
                         return 1;
                 }
                 break;
+        case IMB_CIPHER_SM4_CNTR:
+                if (job->src == NULL) {
+                        imb_set_errno(state, IMB_ERR_JOB_NULL_SRC);
+                        return 1;
+                }
+                if (job->dst == NULL) {
+                        imb_set_errno(state, IMB_ERR_JOB_NULL_DST);
+                        return 1;
+                }
+                if (job->iv == NULL) {
+                        imb_set_errno(state, IMB_ERR_JOB_NULL_IV);
+                        return 1;
+                }
+                if (job->enc_keys == NULL) {
+                        imb_set_errno(state, IMB_ERR_JOB_NULL_KEY);
+                        return 1;
+                }
+                if (key_len_in_bytes != UINT64_C(16)) {
+                        imb_set_errno(state, IMB_ERR_JOB_KEY_LEN);
+                        return 1;
+                }
+                if (job->iv_len_in_bytes != UINT64_C(16) && job->iv_len_in_bytes != UINT64_C(12)) {
+                        imb_set_errno(state, IMB_ERR_JOB_IV_LEN);
+                        return 1;
+                }
+                if (job->msg_len_to_cipher_in_bytes == 0) {
+                        imb_set_errno(state, IMB_ERR_JOB_CIPH_LEN);
+                        return 1;
+                }
+                break;
+
         case IMB_CIPHER_SM4_CBC:
                 if (job->iv_len_in_bytes != UINT64_C(16)) {
                         imb_set_errno(state, IMB_ERR_JOB_IV_LEN);
@@ -1200,6 +1227,11 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job, const IMB_CIPHER_MODE cipher_
                 }
                 if (job->iv == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_IV);
+                        return 1;
+                }
+                /* When multi-buffer implementation is added, it will limit the length */
+                if (job->msg_len_to_cipher_in_bytes > MB_MAX_LEN16) {
+                        imb_set_errno(state, IMB_ERR_JOB_CIPH_LEN);
                         return 1;
                 }
                 /* Fall-through */
@@ -1220,8 +1252,7 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job, const IMB_CIPHER_MODE cipher_
                         imb_set_errno(state, IMB_ERR_JOB_NULL_KEY);
                         return 1;
                 }
-                if (job->msg_len_to_cipher_in_bytes == 0 ||
-                    job->msg_len_to_cipher_in_bytes > MB_MAX_LEN16) {
+                if (job->msg_len_to_cipher_in_bytes == 0) {
                         imb_set_errno(state, IMB_ERR_JOB_CIPH_LEN);
                         return 1;
                 }

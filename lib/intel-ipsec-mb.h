@@ -292,6 +292,7 @@ typedef enum {
         IMB_CIPHER_SM4_ECB,
         IMB_CIPHER_SM4_CBC,
         IMB_CIPHER_CFB,
+        IMB_CIPHER_SM4_CNTR,
         IMB_CIPHER_NUM
 } IMB_CIPHER_MODE;
 

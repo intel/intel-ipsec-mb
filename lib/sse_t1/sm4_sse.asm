@@ -1,5 +1,5 @@
 ;;
-;; Copyright (c) 2023, Intel Corporation
+;; Copyright (c) 2023-2024, Intel Corporation
 ;;
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
@@ -29,12 +29,16 @@
 %include "include/clear_regs.inc"
 %include "include/cet.inc"
 %include "include/error.inc"
+%include "include/memcpy.inc"
+
+extern byteswap_const, ddq_add_1
 
 %ifndef SM4_SET_KEY
 %define SM4_SET_KEY sm4_set_key_sse
 %define SM4_ECB     sm4_ecb_sse
 %define SM4_CBC_ENC sm4_cbc_enc_sse
 %define SM4_CBC_DEC sm4_cbc_dec_sse
+%define SM4_CNTR    sm4_cntr_sse
 %endif
 
 %ifdef LINUX
@@ -43,12 +47,14 @@
 %define arg3    rdx
 %define arg4    rcx
 %define arg5    r8
+%define arg6    r9
 %else
 %define arg1    rcx
 %define arg2    rdx
 %define arg3    r8
 %define arg4    r9
 %define arg5    qword [rsp + 40]
+%define arg6    qword [rsp + 48]
 %endif
 
 %define APPEND(a,b) a %+ b
@@ -607,6 +613,90 @@ end_cbc_dec_loop:
 
         ret
 
+;;
+;;void sm4_ctr_sse(const void *in, void *out, uint64_t len,
+;;                 const uint32_t *exp_enc_keys)
+;;
+; arg 1: IN:     pointer to input (plaintext)
+; arg 2: OUT:    pointer to output (ciphertext)
+; arg 3: LEN:    length in bytes (multiple of 16)
+; arg 4: KEYS:   pointer to expanded encryption keys
+; arg 5: IV:     pointer to IV
+; arg 6: IV_LEN: length in bytes (12 or 16 bytes)
+;
+MKGLOBAL(SM4_CNTR,function,internal)
+SM4_CNTR:
+
+%define	IN      arg1
+%define	OUT     arg2
+%define SIZE    arg3
+%define	KEY_EXP arg4
+
+%define IV      r10
+
+%define tmp     r11
+%define tmp2    r10
+
+        mov     IV, arg5
+
+        test    arg6, 16
+        jnz     iv_is_16_bytes
+
+        ; Read 12 bytes: Nonce + ESP IV. Then pad with block counter 0x00000001
+        mov     DWORD(tmp), 0x01000000
+        pinsrq  xmm0, [IV], 0
+        pinsrd  xmm0, [IV + 8], 2
+        pinsrd  xmm0, DWORD(tmp), 3
+
+        jmp     iv_read
+
+iv_is_16_bytes:
+        ; Read 16 byte IV: Nonce + 4-byte block counter (BE)
+        movdqu  xmm0, [IV]
+
+iv_read:
+        FUNC_SAVE
+
+        mov     tmp, SIZE
+        shr     tmp, 4 ; Number of full blocks
+        jz      end_cntr_loop
+
+align 16
+cntr_loop:
+        SM4_ENC_DEC xmm0, xmm11, KEY_EXP, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, xmm9, xmm10, tmp2
+        movdqu  xmm10, [IN]
+        pxor    xmm10, xmm11 ; output from SM4_ENC_DEC (xmm11) XOR with plaintext or ciphertext (xmm10)
+
+        ; increment counter block
+        pshufb  xmm0, [rel byteswap_const]
+        paddd   xmm0, [ddq_add_1]
+        pshufb  xmm0, [rel byteswap_const]
+
+        movdqu  [OUT], xmm10
+
+        add     IN, 16
+        add     OUT, 16
+
+        dec     tmp
+        jnz     cntr_loop
+
+end_cntr_loop:
+        and     SIZE, 0xf
+        jz      end_partial_block
+
+        SM4_ENC_DEC xmm0, xmm11, KEY_EXP, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, xmm9, xmm10, tmp2
+        simd_load_sse_15_1 xmm10, IN, SIZE
+        pxor    xmm10, xmm11 ; output from SM4_ENC_DEC (xmm11) XOR with plaintext or ciphertext (xmm10)
+        simd_store_sse OUT, xmm10, SIZE, tmp, tmp2
+
+end_partial_block:
+
+%ifdef SAFE_DATA
+        clear_all_xmms_sse_asm
+%endif
+        FUNC_RESTORE
+
+        ret
 ;----------------------------------------------------------------------------------------
 ;----------------------------------------------------------------------------------------
 
