@@ -36,11 +36,13 @@
 %define arg2    rsi
 %define arg3    rdx
 %define arg4    rcx
+%define arg5    r8
 %else
 %define arg1    rcx
 %define arg2    rdx
 %define arg3    r8
 %define arg4    r9
+%define arg5    qword [rsp + 40]
 %endif
 
 mksection .rodata
@@ -262,6 +264,83 @@ main_loop:
         cmp     IDX, SIZE
         jne     main_loop
 done:
+
+%ifdef SAFE_DATA
+        clear_all_ymms_asm
+%else
+        vzeroupper
+%endif
+        ret
+
+align 32
+MKGLOBAL(sm4_cbc_enc_ni_avx2,function,internal)
+sm4_cbc_enc_ni_avx2:
+
+%define	IN      arg1
+%define	OUT     arg2
+%define SIZE    arg3
+%define	KEY_EXP arg4
+
+%define IV      r10
+%define IDX     r11
+
+%define XIN     xmm0
+%define XOUT    xmm1
+%define XKEY0   xmm2
+%define XKEY1   xmm3
+%define XKEY2   xmm4
+%define XKEY3   xmm5
+%define XKEY4   xmm6
+%define XKEY5   xmm7
+%define XKEY6   xmm8
+%define XKEY7   xmm9
+
+%define XSHUFB_IN  xmm10
+%define XSHUFB_OUT xmm11
+
+        or      SIZE, SIZE
+        jz      cbc_enc_done
+
+        mov     IV, arg5
+
+        vmovdqa XSHUFB_IN,  [rel in_shufb]
+        vmovdqa XSHUFB_OUT, [rel out_shufb]
+        shr     SIZE,  4
+        xor     IDX, IDX
+
+        ; Load round keys
+%assign i 0
+%rep 8 ; Number of SM4 rounds
+        vmovdqu APPEND(XKEY, i), [KEY_EXP + 16*i]
+%assign i (i + 1)
+%endrep
+
+        ; Load IV
+        vmovdqu XOUT, [IV]
+align 32
+cbc_enc_loop:
+        or      SIZE, SIZE
+        jz      cbc_enc_done
+
+        vmovdqu XIN, [IN + IDX]
+        vpxor   XIN, XOUT ; Plaintext[n] XOR CT[n-1] ; CT[-1] = IV
+
+        vpshufb XIN, XSHUFB_IN
+
+%assign i 0
+%rep 8 ; Number of SM4 rounds
+        vsm4rnds4 XIN, XIN, APPEND (XKEY, i)
+%assign i (i + 1)
+%endrep
+
+        vpshufb XOUT, XIN, XSHUFB_OUT
+
+        vmovdqu [OUT + IDX], XOUT
+
+        add     IDX, 16
+        dec     SIZE
+        jmp     cbc_enc_loop
+cbc_enc_done:
 
 %ifdef SAFE_DATA
         clear_all_ymms_asm

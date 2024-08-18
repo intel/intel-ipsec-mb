@@ -39,6 +39,9 @@ void
 sm4_ecb_ni_avx2(const void *in, void *out, const int size, const void *exp_keys);
 
 void
+sm4_cbc_enc_ni_avx2(const void *in, void *out, const int size, const void *exp_enc_keys,
+                    const void *iv);
+void
 sm4_set_key_ni_avx2(const void *pKey, void *exp_enc_keys, void *exp_dec_keys);
 
 /* SM3 */

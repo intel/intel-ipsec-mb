@@ -261,7 +261,7 @@ flush_snow3g_uea2_job_avx2_t2(IMB_MGR *state)
 
 /* SM4 */
 #define SM4_ECB     sm4_ecb_ni_avx2
-#define SM4_CBC_ENC sm4_cbc_enc_sse
+#define SM4_CBC_ENC sm4_cbc_enc_ni_avx2
 #define SM4_CBC_DEC sm4_cbc_dec_sse
 
 /* SM3 */
