@@ -88,8 +88,8 @@ Table 1. List of supported cipher algorithms and their implementations.
 | SNOW-V         | N      | Y      | Y      | N      | N      | N      |
 | SNOW-V AEAD    | N      | Y      | Y      | N      | N      | N      |
 | PON-CRC-BIP    | N      | Y  by8 | Y  by8 | N      | N      | Y      |
-| SM4-ECB        | N      | Y      | N      | N      | N      | N      |
-| SM4-CBC        | N      | Y      | N      | N      | N      | N      |
+| SM4-ECB        | N      | Y      | N      | Y(11)  | N      | N      |
+| SM4-CBC        | N      | Y      | N      | Y(12)  | N      | N      |
 +----------------------------------------------------------------------+
 ```
 Notes:  
@@ -104,6 +104,11 @@ Notes:
 (10)  - by default, decryption and encryption are AVX by8.  
         On CPUs supporting VAES, decryption and encryption might use AVX2-VAES by16,
         if beneficial.
+(11)  - AVX2 using SM4-NI ISA, by16, if the ISA is available, if not,
+        fallback to SSE implementation.
+(12)  - AVX2 using SM4-NI ISA if the ISA is available, if not,
+        fallback to SSE implementation. Single block in encryption,
+        by16 in decryption.
 
 Legend:  
 ` byY` - single buffer Y blocks at a time  

@@ -6,6 +6,10 @@ Unreleased
 General
 - YASM support removed.
 
+Library
+- SM4-ECB AVX2-SM4-NI implementation added.
+- SM4-CBC AVX2-SM4-NI implementation added.
+
 v1.5 November 2023
 =======================================================================
 
