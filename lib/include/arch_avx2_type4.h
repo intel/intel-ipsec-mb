@@ -37,9 +37,11 @@ set_suite_id_avx2_t4(IMB_MGR *state, IMB_JOB *job);
 /* SM4 */
 void
 sm4_ecb_ni_avx2(const void *in, void *out, const int size, const void *exp_keys);
-
 void
 sm4_cbc_enc_ni_avx2(const void *in, void *out, const int size, const void *exp_enc_keys,
+                    const void *iv);
+void
+sm4_cbc_dec_ni_avx2(const void *in, void *out, const int size, const void *exp_dec_keys,
                     const void *iv);
 void
 sm4_set_key_ni_avx2(const void *pKey, void *exp_enc_keys, void *exp_dec_keys);

@@ -349,6 +349,212 @@ cbc_enc_done:
 %endif
         ret
 
+align 32
+MKGLOBAL(sm4_cbc_dec_ni_avx2,function,internal)
+sm4_cbc_dec_ni_avx2:
+
+%define	IN      arg1
+%define	OUT     arg2
+%define SIZE    arg3
+%define	KEY_EXP arg4
+
+%define IV      r10
+
+%define IDX     r10
+%define TMP     r11
+
+%define YDATA0  ymm0
+%define YDATA1  ymm1
+%define YDATA2  ymm2
+%define YDATA3  ymm3
+%define YDATA4  ymm4
+%define YDATA5  ymm5
+%define YDATA6  ymm6
+%define YDATA7  ymm7
+%define YDATA0x xmm0
+%define YDATA1x xmm1
+%define YDATA2x xmm2
+%define YDATA3x xmm3
+%define YDATA4x xmm4
+%define YDATA5x xmm5
+%define YDATA6x xmm6
+%define YDATA7x xmm7
+%define YKEY    ymm15
+
+%define YSHUFB_IN  ymm13
+%define YSHUFB_OUT ymm14
+
+%define YPREV_CT   ymm12
+
+%define NBLOCKS_MAIN 8*2
+
+        mov     IV, arg5
+
+        sub     rsp, 16
+
+        or      SIZE, SIZE
+        jz      cbc_dec_done
+
+        vmovdqu xmm0, [IV]
+        vmovdqu [rsp], xmm0
+
+        vmovdqa YSHUFB_IN,  [rel in_shufb]
+        vmovdqa YSHUFB_OUT, [rel out_shufb]
+        xor     IDX, IDX
+        mov     TMP, SIZE
+        and     TMP, 255    ; number of initial bytes (0 to 15 SM4 blocks)
+        jz      cbc_dec_main_loop
+
+        ; branch to different code block based on remainder
+        cmp     TMP, 8*16
+        je      cbc_dec_initial_num_blocks_is_8
+        jb      cbc_dec_initial_num_blocks_is_7_1
+        cmp     TMP, 12*16
+        je      cbc_dec_initial_num_blocks_is_12
+        jb      cbc_dec_initial_num_blocks_is_11_9
+        ;; 15, 14 or 13
+        cmp     TMP, 14*16
+        ja      cbc_dec_initial_num_blocks_is_15
+        je      cbc_dec_initial_num_blocks_is_14
+        jmp     cbc_dec_initial_num_blocks_is_13
+cbc_dec_initial_num_blocks_is_11_9:
+        ;; 11, 10 or 9
+        cmp     TMP, 10*16
+        ja      cbc_dec_initial_num_blocks_is_11
+        je      cbc_dec_initial_num_blocks_is_10
+        jmp     cbc_dec_initial_num_blocks_is_9
+cbc_dec_initial_num_blocks_is_7_1:
+        cmp     TMP, 4*16
+        je      cbc_dec_initial_num_blocks_is_4
+        jb      cbc_dec_initial_num_blocks_is_3_1
+        ;; 7, 6 or 5
+        cmp     TMP, 6*16
+        ja      cbc_dec_initial_num_blocks_is_7
+        je      cbc_dec_initial_num_blocks_is_6
+        jmp     cbc_dec_initial_num_blocks_is_5
+cbc_dec_initial_num_blocks_is_3_1:
+        ;; 3, 2 or 1
+        cmp     TMP, 2*16
+        ja      cbc_dec_initial_num_blocks_is_3
+        je      cbc_dec_initial_num_blocks_is_2
+        ;; fall through for `jmp cbc_dec_initial_num_blocks_is_1`
+
+%assign cbc_dec_initial_num_blocks 1
+%rep 15
+
+cbc_dec_initial_num_blocks_is_ %+ cbc_dec_initial_num_blocks :
+
+        ; load initial blocks
+        YMM_LOAD_BLOCKS_AVX2_0_16 cbc_dec_initial_num_blocks, IN, 0, YDATA0,\
+                YDATA1, YDATA2, YDATA3, YDATA4, YDATA5,\
+                YDATA6, YDATA7
+
+        ; shuffle initial blocks initial blocks
+        SHUFFLE_BLOCKS cbc_dec_initial_num_blocks, YDATA0, YDATA1, YDATA2, YDATA3, \
+                       YDATA4, YDATA5, YDATA6, YDATA7, YSHUFB_IN
+
+        SM4_ROUNDS cbc_dec_initial_num_blocks, YDATA0, YDATA1, YDATA2, YDATA3, \
+                       YDATA4, YDATA5, YDATA6, YDATA7, YKEY
+
+        SHUFFLE_BLOCKS cbc_dec_initial_num_blocks, YDATA0, YDATA1, YDATA2, YDATA3, \
+                       YDATA4, YDATA5, YDATA6, YDATA7, YSHUFB_OUT
+
+        ; Load IV in first block
+        vmovdqu XWORD(YPREV_CT), [rsp]
+
+        ; Load previous ciphertexts and XOR with output from SM4 decryption stage
+%if cbc_dec_initial_num_blocks > 1
+        vinserti128     YPREV_CT, [IN], 1
+        vpxor           YDATA0, YPREV_CT
+
+        ; Up to 13 blocks left
+%assign cbc_dec_blocks_left (cbc_dec_initial_num_blocks - 2)
+
+%assign i 0
+%assign j 1
+%rep    (cbc_dec_blocks_left / 2)
+        vmovdqu         YPREV_CT, [IN + 16 + 32*i]
+        vpxor           APPEND(YDATA, j), YPREV_CT
+%assign i (i + 1)
+%assign j (j + 1)
+%endrep
+
+%if ((cbc_dec_blocks_left %% 2) == 1)
+        vmovdqu         XWORD(YPREV_CT), [IN + 16 + 32*i]
+        vpxor           XWORD(APPEND(YDATA, j)), XWORD(YPREV_CT)
+%endif
+%else ; cbc_dec_initial_num_blocks == 1
+        vpxor   XWORD(YDATA0), XWORD(YPREV_CT)
+%endif ; cbc_dec_initial_num_blocks > 1
+
+        ; Save last ciphertext, before it potentially gets overwritten
+        vmovdqu XWORD(YPREV_CT), [IN + 16 * (cbc_dec_initial_num_blocks - 1)]
+        vmovdqu [rsp], XWORD(YPREV_CT)
+
+        ; store initial blocks
+        YMM_STORE_BLOCKS_AVX2_0_16 cbc_dec_initial_num_blocks, OUT, 0, YDATA0, YDATA1,\
+                YDATA2, YDATA3, YDATA4, YDATA5, YDATA6, YDATA7
+
+        add     IDX, cbc_dec_initial_num_blocks*16
+        cmp     IDX, SIZE
+        je      cbc_dec_done
+
+%assign cbc_dec_initial_num_blocks (cbc_dec_initial_num_blocks + 1)
+        jmp     cbc_dec_main_loop
+%endrep
+
+align 32
+cbc_dec_main_loop:
+        YMM_LOAD_BLOCKS_AVX2_0_16 NBLOCKS_MAIN, IN, IDX, YDATA0,\
+                YDATA1, YDATA2, YDATA3, YDATA4, YDATA5,\
+                YDATA6, YDATA7
+
+        SHUFFLE_BLOCKS NBLOCKS_MAIN, YDATA0, YDATA1, YDATA2, YDATA3, \
+                       YDATA4, YDATA5, YDATA6, YDATA7, YSHUFB_IN
+
+        SM4_ROUNDS NBLOCKS_MAIN, YDATA0, YDATA1, YDATA2, YDATA3, \
+                       YDATA4, YDATA5, YDATA6, YDATA7, YKEY
+
+        SHUFFLE_BLOCKS NBLOCKS_MAIN, YDATA0, YDATA1, YDATA2, YDATA3, \
+                       YDATA4, YDATA5, YDATA6, YDATA7, YSHUFB_OUT
+
+        ; XOR with previous ciphertext
+        vmovdqu         XWORD(YPREV_CT), [rsp]
+        vinserti128     YPREV_CT, [IN + IDX], 1
+        vpxor           YDATA0, YPREV_CT
+
+%assign i 0
+%assign j 1
+%rep (14 / 2)
+        vmovdqu         YPREV_CT, [IN + IDX + 16 + 32*i]
+        vpxor           APPEND(YDATA, j), YPREV_CT
+%assign i (i + 1)
+%assign j (j + 1)
+%endrep
+
+        ; Save last ciphertext, before it potentially gets overwritten
+        vmovdqu XWORD(YPREV_CT), [IN + IDX + 16 + 32*i]
+        vmovdqu [rsp], XWORD(YPREV_CT)
+
+        ; Store initial blocks
+        YMM_STORE_BLOCKS_AVX2_0_16 NBLOCKS_MAIN, OUT, IDX, YDATA0, YDATA1,\
+                YDATA2, YDATA3, YDATA4, YDATA5, YDATA6, YDATA7
+
+        add     IDX, 16*NBLOCKS_MAIN
+        cmp     IDX, SIZE
+        jne     cbc_dec_main_loop
+cbc_dec_done:
+
+%ifdef SAFE_DATA
+        clear_all_ymms_asm
+%else
+        vzeroupper
+%endif
+
+        add rsp, 16
+
+        ret
+
 ;;
 ;;void sm4_set_key_sse(const void *key, const uint32_t *exp_enc_keys,
 ;;                     const uint32_t *exp_dec_keys)
