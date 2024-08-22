@@ -149,45 +149,76 @@ endstruc
     mov     rsp,   [rsp + 5*8] ;; rsp pointer
 %endmacro
 
-%macro SHA512ROUNDS4 7
-%define %%Y0            %1
-%define %%Y1            %2
-%define %%Y2            %3
-%define %%Y3            %4
-%define %%Y4            %5
-%define %%Y6            %6
-%define %%I             %7
+%macro SHA512ROUNDS4_X2 13
+%define %%Y0            %1      ;; MSG
+%define %%Y1            %2      ;; STATE0
+%define %%Y2            %3      ;; STATE1
+%define %%Y3            %4      ;; TMP
+%define %%Y4            %5      ;; TMP MSG
+%define %%Y6            %6      ;; TMP MSG
+%define %%_Y0           %7      ;; MSGb
+%define %%_Y1           %8      ;; STATE0b
+%define %%_Y2           %9      ;; STATE1b
+%define %%_Y3           %10     ;; TMP
+%define %%_Y4           %11     ;; TMP MSGb
+%define %%_Y6           %12     ;; TMP MSGb
+%define %%I             %13     ;; IDX
 
         vpaddq          %%Y0, %%Y3, [SHA512_CONSTS+32*%%I]
-        vpermq          YTMP3, %%Y3, 0x1b
         vpermq          YTMP1, %%Y6, 0x39
+        vpermq          YTMP3, %%Y3, 0x1b
         vpblendd        YTMP1, YTMP3, YTMP1, 0x3f
         vpaddq          %%Y4, %%Y4, YTMP1
-        vsha512msg2     %%Y4, %%Y3
+                vpaddq          %%_Y0, %%_Y3, [SHA512_CONSTS+32*%%I]
+                vpermq          YTMP1, %%_Y6, 0x39
+                vpermq          YTMP3, %%_Y3, 0x1b
+                vpblendd        YTMP1, YTMP3, YTMP1, 0x3f
+                vpaddq          %%_Y4, %%_Y4, YTMP1
         vsha512rnds2    %%Y2, %%Y1, XWORD(%%Y0)
         vperm2i128      %%Y0, %%Y0, %%Y0, 0x01
+                vsha512rnds2    %%_Y2, %%_Y1, XWORD(%%_Y0)
+                vperm2i128      %%_Y0, %%_Y0, %%_Y0, 0x01
+        vsha512msg2     %%Y4, %%Y3
         vsha512rnds2    %%Y1, %%Y2, XWORD(%%Y0)
+                vsha512msg2     %%_Y4, %%_Y3
+                vsha512rnds2    %%_Y1, %%_Y2, XWORD(%%_Y0)
         vsha512msg1     %%Y6, XWORD(%%Y3)
+                vsha512msg1     %%_Y6, XWORD(%%_Y3)
 %endmacro
 
-%macro SHA512ROUNDS4_FINAL 7
-%define %%Y0            %1
-%define %%Y1            %2
-%define %%Y2            %3
-%define %%Y3            %4
-%define %%Y4            %5
-%define %%Y6            %6
-%define %%I             %7
+%macro SHA512ROUNDS4_FINAL_X2 13
+%define %%Y0            %1      ;; MSG
+%define %%Y1            %2      ;; STATE0
+%define %%Y2            %3      ;; STATE1
+%define %%Y3            %4      ;; TMP
+%define %%Y4            %5      ;; TMP MSG
+%define %%Y6            %6      ;; TMP MSG
+%define %%_Y0           %7      ;; MSGb
+%define %%_Y1           %8      ;; STATE0b
+%define %%_Y2           %9      ;; STATE1b
+%define %%_Y3           %10     ;; TMP
+%define %%_Y4           %11     ;; TMP MSGb
+%define %%_Y6           %12     ;; TMP MSGb
+%define %%I             %13     ;; IDX
 
         vpaddq          %%Y0, %%Y3, [SHA512_CONSTS+32*%%I]
         vpermq          YTMP3, %%Y3, 0x1b
         vpermq          YTMP1, %%Y6, 0x39
         vpblendd        YTMP1, YTMP3, YTMP1, 0x3f
         vpaddq          %%Y4, %%Y4, YTMP1
-        vsha512msg2     %%Y4, %%Y3
+                vpaddq          %%_Y0, %%_Y3, [SHA512_CONSTS+32*%%I]
+                vpermq          YTMP3, %%_Y3, 0x1b
+                vpermq          YTMP1, %%_Y6, 0x39
+                vpblendd        YTMP1, YTMP3, YTMP1, 0x3f
+                vpaddq          %%_Y4, %%_Y4, YTMP1
         vsha512rnds2    %%Y2, %%Y1, XWORD(%%Y0)
         vperm2i128      %%Y0, %%Y0, %%Y0, 0x01
+                vsha512rnds2    %%_Y2, %%_Y1, XWORD(%%_Y0)
+                vperm2i128      %%_Y0, %%_Y0, %%Y0, 0x01
         vsha512rnds2    %%Y1, %%Y2, XWORD(%%Y0)
+        vsha512msg2     %%Y4, %%Y3
+                vsha512rnds2    %%_Y1, %%_Y2, XWORD(%%_Y0)
+                vsha512msg2     %%_Y4, %%_Y3
 %endmacro
 
 ;; re-use symbols from AVX codebase
@@ -310,45 +341,53 @@ align 32
                     vmovdqu YTMP2, MSGb
 
         ;; R16-75
-        SHA512ROUNDS4 MSG, STATE0, STATE1, YTMP0, MSGTMP0, MSGTMP2, 3
-        SHA512ROUNDS4 MSGb, STATE0b, STATE1b, YTMP2, MSGTMP0b, MSGTMP2b, 3
-        SHA512ROUNDS4 MSG, STATE0, STATE1, MSGTMP0, MSGTMP1, YTMP0, 4
-        SHA512ROUNDS4 MSGb, STATE0b, STATE1b, MSGTMP0b, MSGTMP1b, YTMP2, 4
+        SHA512ROUNDS4_X2 MSG, STATE0, STATE1, YTMP0, MSGTMP0, MSGTMP2, \
+                MSGb, STATE0b, STATE1b, YTMP2, MSGTMP0b, MSGTMP2b, 3
 
-        SHA512ROUNDS4 MSG, STATE0, STATE1, MSGTMP1, MSGTMP2, MSGTMP0, 5
-        SHA512ROUNDS4 MSGb, STATE0b, STATE1b, MSGTMP1b, MSGTMP2b, MSGTMP0b, 5
-        SHA512ROUNDS4 MSG, STATE0, STATE1, MSGTMP2, YTMP0, MSGTMP1, 6
-        SHA512ROUNDS4 MSGb, STATE0b, STATE1b, MSGTMP2b, YTMP2, MSGTMP1b, 6
+        SHA512ROUNDS4_X2 MSG, STATE0, STATE1, MSGTMP0, MSGTMP1, YTMP0, \
+                MSGb, STATE0b, STATE1b, MSGTMP0b, MSGTMP1b, YTMP2, 4
 
-        SHA512ROUNDS4 MSG, STATE0, STATE1, YTMP0, MSGTMP0, MSGTMP2, 7
-        SHA512ROUNDS4 MSGb, STATE0b, STATE1b, YTMP2, MSGTMP0b, MSGTMP2b, 7
-        SHA512ROUNDS4 MSG, STATE0, STATE1, MSGTMP0, MSGTMP1, YTMP0, 8
-        SHA512ROUNDS4 MSGb, STATE0b, STATE1b, MSGTMP0b, MSGTMP1b, YTMP2, 8
+        SHA512ROUNDS4_X2 MSG, STATE0, STATE1, MSGTMP1, MSGTMP2, MSGTMP0, \
+                MSGb, STATE0b, STATE1b, MSGTMP1b, MSGTMP2b, MSGTMP0b, 5
 
-        SHA512ROUNDS4 MSG, STATE0, STATE1, MSGTMP1, MSGTMP2, MSGTMP0, 9
-        SHA512ROUNDS4 MSGb, STATE0b, STATE1b, MSGTMP1b, MSGTMP2b, MSGTMP0b, 9
-        SHA512ROUNDS4 MSG, STATE0, STATE1, MSGTMP2, YTMP0, MSGTMP1, 10
-        SHA512ROUNDS4 MSGb, STATE0b, STATE1b, MSGTMP2b, YTMP2, MSGTMP1b, 10
+        SHA512ROUNDS4_X2 MSG, STATE0, STATE1, MSGTMP2, YTMP0, MSGTMP1, \
+                MSGb, STATE0b, STATE1b, MSGTMP2b, YTMP2, MSGTMP1b, 6
 
-        SHA512ROUNDS4 MSG, STATE0, STATE1, YTMP0, MSGTMP0, MSGTMP2, 11
-        SHA512ROUNDS4 MSGb, STATE0b, STATE1b, YTMP2, MSGTMP0b, MSGTMP2b, 11
-        SHA512ROUNDS4 MSG, STATE0, STATE1, MSGTMP0, MSGTMP1, YTMP0, 12
-        SHA512ROUNDS4 MSGb, STATE0b, STATE1b, MSGTMP0b, MSGTMP1b, YTMP2, 12
+        SHA512ROUNDS4_X2 MSG, STATE0, STATE1, YTMP0, MSGTMP0, MSGTMP2, \
+                MSGb, STATE0b, STATE1b, YTMP2, MSGTMP0b, MSGTMP2b, 7
 
-        SHA512ROUNDS4 MSG, STATE0, STATE1, MSGTMP1, MSGTMP2, MSGTMP0, 13
-        SHA512ROUNDS4 MSGb, STATE0b, STATE1b, MSGTMP1b, MSGTMP2b, MSGTMP0b, 13
-        SHA512ROUNDS4 MSG, STATE0, STATE1, MSGTMP2, YTMP0, MSGTMP1, 14
-        SHA512ROUNDS4 MSGb, STATE0b, STATE1b, MSGTMP2b, YTMP2, MSGTMP1b, 14
+        SHA512ROUNDS4_X2 MSG, STATE0, STATE1, MSGTMP0, MSGTMP1, YTMP0, \
+                MSGb, STATE0b, STATE1b, MSGTMP0b, MSGTMP1b, YTMP2, 8
 
-        SHA512ROUNDS4 MSG, STATE0, STATE1, YTMP0, MSGTMP0, MSGTMP2, 15
-        SHA512ROUNDS4 MSGb, STATE0b, STATE1b, YTMP2, MSGTMP0b, MSGTMP2b, 15
-        SHA512ROUNDS4 MSG, STATE0, STATE1, MSGTMP0, MSGTMP1, YTMP0, 16
-        SHA512ROUNDS4 MSGb, STATE0b, STATE1b, MSGTMP0b, MSGTMP1b, YTMP2, 16
+        SHA512ROUNDS4_X2 MSG, STATE0, STATE1, MSGTMP1, MSGTMP2, MSGTMP0, \
+                MSGb, STATE0b, STATE1b, MSGTMP1b, MSGTMP2b, MSGTMP0b, 9
 
-        SHA512ROUNDS4_FINAL MSG, STATE0, STATE1, MSGTMP1, MSGTMP2, MSGTMP0, 17
-        SHA512ROUNDS4_FINAL MSGb, STATE0b, STATE1b, MSGTMP1b, MSGTMP2b, MSGTMP0b, 17
-        SHA512ROUNDS4_FINAL MSG, STATE0, STATE1, MSGTMP2, YTMP0, MSGTMP1, 18
-        SHA512ROUNDS4_FINAL MSGb, STATE0b, STATE1b, MSGTMP2b, YTMP2, MSGTMP1b, 18
+        SHA512ROUNDS4_X2 MSG, STATE0, STATE1, MSGTMP2, YTMP0, MSGTMP1, \
+                MSGb, STATE0b, STATE1b, MSGTMP2b, YTMP2, MSGTMP1b, 10
+
+        SHA512ROUNDS4_X2 MSG, STATE0, STATE1, YTMP0, MSGTMP0, MSGTMP2, \
+                MSGb, STATE0b, STATE1b, YTMP2, MSGTMP0b, MSGTMP2b, 11
+
+        SHA512ROUNDS4_X2 MSG, STATE0, STATE1, MSGTMP0, MSGTMP1, YTMP0, \
+                MSGb, STATE0b, STATE1b, MSGTMP0b, MSGTMP1b, YTMP2, 12
+
+        SHA512ROUNDS4_X2 MSG, STATE0, STATE1, MSGTMP1, MSGTMP2, MSGTMP0, \
+                MSGb, STATE0b, STATE1b, MSGTMP1b, MSGTMP2b, MSGTMP0b, 13
+
+        SHA512ROUNDS4_X2 MSG, STATE0, STATE1, MSGTMP2, YTMP0, MSGTMP1, \
+                MSGb, STATE0b, STATE1b, MSGTMP2b, YTMP2, MSGTMP1b, 14
+
+        SHA512ROUNDS4_X2 MSG, STATE0, STATE1, YTMP0, MSGTMP0, MSGTMP2, \
+                MSGb, STATE0b, STATE1b, YTMP2, MSGTMP0b, MSGTMP2b, 15
+
+        SHA512ROUNDS4_X2 MSG, STATE0, STATE1, MSGTMP0, MSGTMP1, YTMP0, \
+                MSGb, STATE0b, STATE1b, MSGTMP0b, MSGTMP1b, YTMP2, 16
+
+        SHA512ROUNDS4_FINAL_X2 MSG, STATE0, STATE1, MSGTMP1, MSGTMP2, MSGTMP0, \
+                MSGb, STATE0b, STATE1b, MSGTMP1b, MSGTMP2b, MSGTMP0b, 17
+
+        SHA512ROUNDS4_FINAL_X2 MSG, STATE0, STATE1, MSGTMP2, YTMP0, MSGTMP1, \
+                MSGb, STATE0b, STATE1b, MSGTMP2b, YTMP2, MSGTMP1b, 18
 
         ;; R76-79
         vpaddq MSG, YTMP0, [SHA512_CONSTS+32*19]
