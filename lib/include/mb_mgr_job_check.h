@@ -1260,6 +1260,10 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job, const IMB_CIPHER_MODE cipher_
                         imb_set_errno(state, IMB_ERR_JOB_IV_LEN);
                         return 1;
                 }
+                if (job->msg_len_to_cipher_in_bytes & UINT64_C(15)) {
+                        imb_set_errno(state, IMB_ERR_JOB_CIPH_LEN);
+                        return 1;
+                }
                 break;
         default:
                 imb_set_errno(state, IMB_ERR_CIPH_MODE);

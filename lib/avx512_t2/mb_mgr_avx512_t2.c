@@ -176,9 +176,9 @@
 #define AES_CFB_128_ENC aes_cfb_128_enc_sse
 #define AES_CFB_192_ENC aes_cfb_192_enc_sse
 #define AES_CFB_256_ENC aes_cfb_256_enc_sse
-#define AES_CFB_128_DEC aes_cfb_128_dec_sse
-#define AES_CFB_192_DEC aes_cfb_192_dec_sse
-#define AES_CFB_256_DEC aes_cfb_256_dec_sse
+#define AES_CFB_128_DEC aes_cfb_dec_128_vaes_avx512
+#define AES_CFB_192_DEC aes_cfb_dec_192_vaes_avx512
+#define AES_CFB_256_DEC aes_cfb_dec_256_vaes_avx512
 
 /* AES-XCBC */
 #define SUBMIT_JOB_AES_XCBC submit_job_aes_xcbc_vaes_avx512

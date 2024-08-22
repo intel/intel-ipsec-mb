@@ -87,6 +87,18 @@ void
 aes_cbcs_1_9_dec_128_vaes_avx512(const void *in, const uint8_t *IV, const void *keys, void *out,
                                  uint64_t len_bytes, void *next_iv);
 
+/* AES-CFB */
+void
+aes_cfb_dec_128_vaes_avx512(const void *out, const void *in, const void *IV, const void *keys,
+                            uint64_t len_bytes);
+
+void
+aes_cfb_dec_192_vaes_avx512(const void *out, const void *in, const void *IV, const void *keys,
+                            uint64_t len_bytes);
+void
+aes_cfb_dec_256_vaes_avx512(const void *out, const void *in, const void *IV, const void *keys,
+                            uint64_t len_bytes);
+
 /* moved from MB MGR */
 
 IMB_JOB *

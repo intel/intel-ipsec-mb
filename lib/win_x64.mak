@@ -379,6 +379,7 @@ lib_objs1 = \
 	$(OBJ_DIR)\hmac_ipad_opad.obj \
 	$(OBJ_DIR)\cipher_suite_id.obj \
 	$(OBJ_DIR)\sm4_sse.obj \
+	$(OBJ_DIR)\aes_cfb_dec_by16_vaes_avx512.obj \
 	$(OBJ_DIR)\capabilities.obj
 
 lib_objs2 = \
