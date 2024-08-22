@@ -137,8 +137,8 @@ Table 2. List of supported integrity algorithms and their implementations.
 | SHA1              | N      | Y(2)x4 | Y(2)x4 | Y(2)x8 | Y  x16 | N      |
 | SHA2-224          | N      | Y(2)x4 | Y(2)x4 | Y(2)x8 | Y  x16 | N      |
 | SHA2-256          | N      | Y(2)x4 | Y(2)x4 | Y(2)x8 | Y  x16 | N      |
-| SHA2-384          | N      | Y   x2 | Y   x2 | Y   x4 | Y   x8 | N      |
-| SHA2-512          | N      | Y   x2 | Y   x2 | Y   x4 | Y   x8 | N      |
+| SHA2-384          | N      | Y   x2 | Y   x2 | Y(2)x4 | Y   x8 | N      |
+| SHA2-512          | N      | Y   x2 | Y   x2 | Y(2)x4 | Y   x8 | N      |
 | AES128-GMAC       | N      | Y  by8 | N      | Y  by8 | Y  by8 | Y by32 |
 | AES192-GMAC       | N      | Y  by8 | N      | Y  by8 | Y  by8 | Y by32 |
 | AES256-GMAC       | N      | Y  by8 | N      | Y  by8 | Y  by8 | Y by32 |
