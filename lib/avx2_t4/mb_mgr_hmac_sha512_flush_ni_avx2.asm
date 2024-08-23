@@ -30,6 +30,9 @@
 %include "include/mb_mgr_datastruct.inc"
 %include "include/reg_sizes.inc"
 
+%use smartalign
+alignmode nop
+
 %ifndef FUNC
 %define FUNC flush_job_hmac_sha_512_ni_avx2
 %define SHA_X_DIGEST_SIZE 512
@@ -92,6 +95,7 @@ endstruc
 
 ; JOB* FUNC(MB_MGR_HMAC_SHA_512_OOO *state)
 ; arg 1 : state
+align 32
 MKGLOBAL(FUNC,function,internal)
 FUNC:
         mov     rax, rsp
@@ -106,35 +110,27 @@ FUNC:
         jc      return_null
 
         ; find a lane with a non-null job
-        xor     idx, idx
-        cmp     qword [state + _ldata_sha512 + 1 * _SHA512_LANE_DATA_size + _job_in_lane_sha512], 0
+        xor     DWORD(idx), DWORD(idx)
+        cmp     qword [state + _ldata_sha512 + 1 * _SHA512_LANE_DATA_size + _job_in_lane_sha512], idx ; recycle idx being 0
         cmovne  idx, [rel lane_1]
 
 copy_lane_data:
         ; copy good lane (idx) to empty lanes
-        vmovdqa xmm0, [state + _lens_sha512]
         mov     tmp, [state + _args_sha512 + _data_ptr_sha512 + PTR_SZ*idx]
+        mov     DWORD(tmp6), DWORD(idx)
+        xor     DWORD(tmp6), 1
 
-%assign I 0
-%rep 2
-        cmp     qword [state + _ldata_sha512 + I * _SHA512_LANE_DATA_size + _job_in_lane_sha512], 0
-        jne     APPEND(skip_,I)
-        mov     [state + _args_sha512 + _data_ptr_sha512 + PTR_SZ*I], tmp
-        vpor    xmm0, xmm0, [rel len_masks + 16*I]
-APPEND(skip_,I):
-%assign I (I+1)
-%endrep
-        vmovdqa [state + _lens_sha512], xmm0
+        ;; copy lane 0 data to lane 1, or lane 1 to lane 0
+        mov     [state + _args_sha512 + _data_ptr_sha512 + PTR_SZ*tmp6], tmp
 
-        vphminposuw     xmm1, xmm0
-        vpextrw DWORD(len2), xmm1, 0    ; min value
-        vpextrw DWORD(idx), xmm1, 1     ; min index (0...3)
-        cmp     len2, 0
+        movzx   DWORD(len2), word [state + _lens_sha512 + idx*2]
+
+        ; No need to find min length - only two lanes available
+        or      len2, len2
         je      len_is_0
 
-        vpshuflw xmm1, xmm1, 0x00
-        vpsubw  xmm0, xmm0, xmm1
-        vmovdqa [state + _lens_sha512], xmm0
+        ; set both lane lengths to 0
+        mov     dword [state + _lens_sha512], 0
 
         ; "state" and "args" are the same address, arg1
         ; len is arg2
@@ -183,7 +179,7 @@ proc_outer:
 
         jmp     copy_lane_data
 
-        align   16
+align 32
 proc_extra_blocks:
         mov     DWORD(start_offset), [lane_data + _start_offset_sha512]
         mov     [state + _lens_sha512 + 2*idx], WORD(extra_blocks)
@@ -192,11 +188,12 @@ proc_extra_blocks:
         mov     dword [lane_data + _extra_blocks_sha512], 0
         jmp     copy_lane_data
 
+align 32
 return_null:
         xor     job_rax, job_rax
         jmp     return
 
-        align   16
+align 32
 end_loop:
         mov     job_rax, [lane_data + _job_in_lane_sha512]
         mov     qword [lane_data + _job_in_lane_sha512], 0

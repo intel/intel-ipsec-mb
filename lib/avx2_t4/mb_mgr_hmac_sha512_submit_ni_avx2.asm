@@ -31,6 +31,9 @@
 %include "include/memcpy.inc"
 %include "include/const.inc"
 
+%use smartalign
+alignmode nop
+
 %ifndef FUNC
 %define FUNC submit_job_hmac_sha_512_ni_avx2
 %define SHA_X_DIGEST_SIZE 512
@@ -50,7 +53,6 @@ unused_lane_lens:
 
 mksection .text
 
-%if 1
 %ifdef LINUX
 %define arg1    rdi
 %define arg2    rsi
@@ -93,8 +95,6 @@ mksection .text
 
 %define lane_data       r10
 
-%endif
-
 ; Define stack usage
 struc STACK
 _gpr_save:      resq    5
@@ -104,6 +104,7 @@ endstruc
 ; JOB* FUNC(MB_MGR_HMAC_sha_512_OOO *state, IMB_JOB *job)
 ; arg 1 : rcx : state
 ; arg 2 : rdx : job
+align 32
 MKGLOBAL(FUNC,function,internal)
 FUNC:
         mov     rax, rsp
@@ -130,11 +131,7 @@ FUNC:
         mov     [lane_data + _job_in_lane_sha512], job
         mov     dword [lane_data + _outer_done_sha512], 0
 
-        vmovdqa xmm0, [state + _lens_sha512]
-        XVPINSRW xmm0, xmm1, extra_blocks, lane, tmp, scale_x16
-        ;; reset unused lanes to UINT16_MAX before storing
-        vpor    xmm0, [rel unused_lane_lens]
-        vmovdqa [state + _lens_sha512], xmm0
+        mov     [state + _lens_sha512 + 2*lane], WORD(tmp)
 
         mov     last_len, len
         and     last_len, 127
@@ -186,10 +183,7 @@ end_fast_copy:
         jnz     ge128_bytes
 
 lt128_bytes:
-        vmovdqa xmm0, [state + _lens_sha512]
-        XVPINSRW xmm0, xmm1, tmp, lane, extra_blocks, scale_x16
-        vmovdqa [state + _lens_sha512], xmm0
-
+        mov     [state + _lens_sha512 + 2*lane], WORD(extra_blocks)
         lea     tmp, [lane_data + _extra_block_sha512 + start_offset]
         mov     [state + _args_data_ptr_sha512 + PTR_SZ*lane], tmp ;; 8 to hold a UINT8
         mov     dword [lane_data + _extra_blocks_sha512], 0
@@ -197,21 +191,24 @@ lt128_bytes:
 ge128_bytes:
         cmp     unused_lanes, 0xff
         jne     return_null
-        jmp     start_loop
 
-        align   16
+align 32
 start_loop:
         ; Find min length
-        vmovdqa xmm0, [state + _lens_sha512]
-        vphminposuw     xmm1, xmm0
-        vpextrw DWORD(len2), xmm1, 0    ; min value
-        vpextrw DWORD(idx), xmm1, 1     ; min index (0...1)
-        cmp     len2, 0
+        xor     len2, len2
+        mov     tmp, 0x10000
+        mov     WORD(len2), word [state + _lens_sha512 + 0*2]   ; [0:15] - lane 0 length, [16:31] - lane index (0)
+        mov     WORD(tmp), word [state + _lens_sha512 + 1*2]    ; [0:15] - lane 1 length, [16:31] - lane index (1)
+        cmp     WORD(len2), WORD(tmp)
+        cmovg   DWORD(len2), DWORD(tmp) ; move if lane 0 length is greater than lane 1 length
+
+        mov     idx, len2               ; retrieve index & length from [16:31] and [0:15] bit fields
+        shr     DWORD(idx), 16
+        and     DWORD(len2), 0xffff
         je      len_is_0
 
-        vpshuflw xmm1, xmm1, 0x00
-        vpsubw  xmm0, xmm0, xmm1
-        vmovdqa [state + _lens_sha512], xmm0
+        sub     word [state + _lens_sha512 + 0*2], WORD(len2)
+        sub     word [state + _lens_sha512 + 1*2], WORD(len2)
 
         ; "state" and "args" are the same address, arg1
         ; len is arg2
@@ -232,10 +229,7 @@ proc_outer:
         mov     dword [lane_data + _outer_done_sha512], 1
         mov     DWORD(size_offset), [lane_data + _size_offset_sha512]
         mov     qword [lane_data + _extra_block_sha512 + size_offset], 0
-
-        vmovdqa xmm0, [state + _lens_sha512]
-        XVPINSRW xmm0, xmm1, tmp, idx, 1, scale_x16
-        vmovdqa [state + _lens_sha512], xmm0
+        mov     word [state + _lens_sha512 + 2*idx], 1
 
         lea     tmp, [lane_data + _outer_block_sha512]
         mov     job, [lane_data + _job_in_lane_sha512]
@@ -261,20 +255,18 @@ proc_outer:
 
         jmp     start_loop
 
-        align   16
+align 32
 proc_extra_blocks:
         mov     DWORD(start_offset), [lane_data + _start_offset_sha512]
 
-        vmovdqa xmm0, [state + _lens_sha512]
-        XVPINSRW xmm0, xmm1, tmp, idx, extra_blocks, scale_x16
-        vmovdqa [state + _lens_sha512], xmm0
+        mov     [state + _lens_sha512 + 2*idx], WORD(extra_blocks)
 
         lea     tmp, [lane_data + _extra_block_sha512 + start_offset]
         mov     [state + _args_data_ptr_sha512 + PTR_SZ*idx], tmp ;;  idx is index of shortest length message
         mov     dword [lane_data + _extra_blocks_sha512], 0
         jmp     start_loop
 
-        align   16
+align 32
 copy_lt128:
         ;; less than one message block of data
         ;; destination extra block but backwards by len from where 0x80 pre-populated
@@ -288,7 +280,7 @@ return_null:
         xor     job_rax, job_rax
         jmp     return
 
-        align   16
+align 32
 end_loop:
         mov     job_rax, [lane_data + _job_in_lane_sha512]
         mov     unused_lanes, [state + _unused_lanes_sha512]
@@ -326,6 +318,7 @@ end_loop:
 %endif
         jmp     clear_ret
 
+align 32
 copy_full_digest:
         ;; copy 64 bytes for SHA512 / 48 bytes for SHA384
 %if (SHA_X_DIGEST_SIZE != 384)
