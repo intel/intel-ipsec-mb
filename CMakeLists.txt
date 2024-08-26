@@ -84,14 +84,16 @@ imb_add_target_doxy()
 # build library
 add_subdirectory(lib)
 
-# build perf application
-add_subdirectory(perf)
+if (NOT BUILD_LIBRARY_ONLY)
+  # build perf application
+  add_subdirectory(perf)
 
-# build test applications
-add_subdirectory(test)
+  # build test applications
+  add_subdirectory(test)
 
-# build example applications
-add_subdirectory(examples)
+  # build example applications
+  add_subdirectory(examples)
+endif()
 
 #######################################
 # configure post gen custom targets

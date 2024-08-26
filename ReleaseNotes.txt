@@ -5,6 +5,7 @@ Unreleased
 ======================================================================
 General
 - YASM support removed.
+- CMake library only build option added.
 
 Library
 - SM4-ECB AVX2-SM4-NI implementation added.

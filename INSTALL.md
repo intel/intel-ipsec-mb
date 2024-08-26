@@ -154,6 +154,11 @@ Static library:
 cmake -DBUILD_SHARED_LIBS=OFF ..
 cmake --build . --parallel
 ```
+Library only build (without applications):
+```
+cmake -DBUILD_LIBRARY_ONLY=ON ..
+cmake --build . --parallel
+```
 
 Debug build:
 ```
@@ -184,6 +189,11 @@ cmake -Ax64 -DBUILD_SHARED_LIBS=OFF ..
 cmake --build . --config Release
 ```
 
+Library only build (without applications):
+```
+cmake -Ax64 -DBUILD_LIBRARY_ONLY=ON ..
+cmake --build . --parallel
+```
 For more build options and their explanation run:
 `cmake --build . --target print_help`
 

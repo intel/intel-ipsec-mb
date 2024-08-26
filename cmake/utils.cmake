@@ -71,6 +71,7 @@ macro(imb_set_proj_defaults)
   option(SAFE_OPTIONS "Enable all safe options" ON)
   option(BUILD_SHARED_LIBS "Build shared library" ON)
   option(CMAKE_VERBOSE_MAKEFILE "Verbose build output" OFF)
+  option(BUILD_LIBRARY_ONLY "Build library only without applications" OFF)
   set(EXTRA_CFLAGS "" CACHE STRING "Extra compiler flags")
 
   # disable all SAFE options when SAFE_OPTIONS false
@@ -84,7 +85,7 @@ macro(imb_set_proj_defaults)
   # project options list (used by print_help target)
   set(IPSEC_MB_OPTIONS CMAKE_BUILD_TYPE IPSEC_MB_OPTIONS
     AESNI_EMU SAFE_PARAM SAFE_DATA SAFE_LOOKUP
-    SAFE_OPTIONS BUILD_SHARED_LIBS
+    SAFE_OPTIONS BUILD_LIBRARY_ONLY BUILD_SHARED_LIBS
     CMAKE_VERBOSE_MAKEFILE EXTRA_CFLAGS
     )
 
@@ -101,6 +102,7 @@ macro(imb_set_proj_defaults)
   message(STATUS "SAFE_PARAM...              ${SAFE_PARAM}")
   message(STATUS "SAFE_DATA...               ${SAFE_DATA}")
   message(STATUS "SAFE_LOOKUP...             ${SAFE_LOOKUP}")
+  message(STATUS "BUILD_LIBRARY_ONLY...      ${BUILD_LIBRARY_ONLY}")
   message(STATUS "BUILD_SHARED_LIBS...       ${BUILD_SHARED_LIBS}")
   message(STATUS "CMAKE_GENERATOR...         ${CMAKE_GENERATOR}")
   if(${CMAKE_GENERATOR_PLATFORM})
