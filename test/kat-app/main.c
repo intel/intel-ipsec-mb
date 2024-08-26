@@ -245,6 +245,7 @@ print_hw_features(void)
                 uint64_t feat_val;
                 const char *feat_name;
         } feat_tab[] = {
+                { IMB_FEATURE_XSAVE, "XSAVE" },         { IMB_FEATURE_OSXSAVE, "OSXSAVE" },
                 { IMB_FEATURE_SHANI, "SHANI" },         { IMB_FEATURE_AESNI, "AESNI" },
                 { IMB_FEATURE_PCLMULQDQ, "PCLMULQDQ" }, { IMB_FEATURE_CMOV, "CMOV" },
                 { IMB_FEATURE_SSE4_2, "SSE4.2" },       { IMB_FEATURE_AVX, "AVX" },
