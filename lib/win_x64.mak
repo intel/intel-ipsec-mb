@@ -53,8 +53,12 @@ DEBUG_OPT = /Od
 
 !if !defined(PREFIX)
 PREFIX = c:\Program Files
+INSTSYSDIR = %windir%\system32
 !endif
 INSTDIR = $(PREFIX)\intel-ipsec-mb
+INSTBINDIR = $(INSTDIR)\bin
+INSTLIBDIR = $(INSTDIR)\lib
+INSTINCDIR = $(INSTDIR)\include
 
 LIBBASE = libIPSec_MB
 
@@ -827,26 +831,32 @@ clean:
 
 install:
 	-md "$(INSTDIR)"
-	-copy /Y /V /A $(LIBBASE).def "$(INSTDIR)"
-	-copy /Y /V /B $(LIBBASE).exp "$(INSTDIR)"
-	-copy /Y /V /B $(LIBBASE).lib "$(INSTDIR)"
-	-copy /Y /V /A intel-ipsec-mb.h "$(INSTDIR)"
+	-md "$(INSTBINDIR)"
+	-md "$(INSTLIBDIR)"
+	-md "$(INSTINCDIR)"
+	-copy /Y /V /B $(LIBBASE).exp "$(INSTBINDIR)"
+	-copy /Y /V /B $(LIBBASE).lib "$(INSTLIBDIR)"
+	-copy /Y /V /A intel-ipsec-mb.h "$(INSTINCDIR)"
 !if "$(SHARED)" == "y"
-	-copy /Y /V /B $(LIB_DIR)\$(LIBBASE).pdb "$(INSTDIR)"
-	-copy /Y /V /B $(LIB_DIR)\$(LIBBASE).dll "$(INSTDIR)"
-	-copy /Y /V /B $(LIB_DIR)\$(LIBBASE).dll "%windir%\system32"
+	-copy /Y /V /B $(LIB_DIR)\$(LIBBASE).pdb "$(INSTBINDIR)"
+	-copy /Y /V /B $(LIB_DIR)\$(LIBBASE).dll "$(INSTBINDIR)"
+!if defined(INSTSYSDIR)
+	-copy /Y /V /B $(LIB_DIR)\$(LIBBASE).dll "$(INSTSYSDIR)"
+!endif
 !endif
 
 uninstall:
 !if "$(SHARED)" == "y"
 	-del /Q "%windir%\system32\$(LIBBASE).dll"
-	-del /Q "$(INSTDIR)\$(LIBBASE).dll"
-	-del /Q "$(INSTDIR)\$(LIBBASE).pdb"
+	-del /Q "$(INSTBINDIR)\$(LIBBASE).dll"
+	-del /Q "$(INSTBINDIR)\$(LIBBASE).pdb"
 !endif
-	-del /Q "$(INSTDIR)\$(LIBBASE).def"
-	-del /Q "$(INSTDIR)\$(LIBBASE).exp"
-	-del /Q "$(INSTDIR)\$(LIBBASE).lib"
-	-del /Q "$(INSTDIR)\intel-ipsec-mb.h"
+	-del /Q "$(INSTBINDIR)\$(LIBBASE).exp"
+	-del /Q "$(INSTLIBDIR)\$(LIBBASE).lib"
+	-del /Q "$(INSTINCDIR)\intel-ipsec-mb.h"
+	-rd "$(INSTINCDIR)"
+	-rd "$(INSTLIBDIR)"
+	-rd "$(INSTBINDIR)"
 	-rd "$(INSTDIR)"
 
 !if exist($(DEPALL))
