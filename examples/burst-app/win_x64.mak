@@ -33,9 +33,9 @@ INSTNAME = intel-ipsec-mb
 PREFIX = C:\Program Files
 !endif
 
-!if exist("$(PREFIX)\$(INSTNAME)\libIPSec_MB.lib")
-IPSECLIB = "$(PREFIX)\$(INSTNAME)\libIPSec_MB.lib"
-INCDIR = -I"$(PREFIX)\$(INSTNAME)"
+!if exist("$(PREFIX)\$(INSTNAME)\lib\libIPSec_MB.lib")
+IPSECLIB = "$(PREFIX)\$(INSTNAME)\lib\libIPSec_MB.lib"
+INCDIR = -I"$(PREFIX)\$(INSTNAME)\include"
 !else
 !if !defined(LIB_DIR)
 LIB_DIR = ..\lib
