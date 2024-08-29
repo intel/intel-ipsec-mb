@@ -112,22 +112,24 @@ endif()
 
 add_library(${LIB} ${SRC_FILES_ASM} ${SRC_FILES_C} ${SRC_DEF_FILE})
 
-# set install rules
-if(NOT CMAKE_INSTALL_PREFIX)
-  set(CMAKE_INSTALL_PREFIX "c:/Program Files"
-    CACHE STRING "Set default installation directory" FORCE)
-endif()
+########################################
+# library install rules
+########################################
 message(STATUS "CMAKE_INSTALL_PREFIX...    ${CMAKE_INSTALL_PREFIX}")
 
 install(TARGETS ${LIB}
-  DESTINATION ${CMAKE_INSTALL_PREFIX}/${CMAKE_PROJECT_NAME})
-install(FILES
-  ${IMB_HDR}
-  ${SRC_DEF_FILE}
-  DESTINATION ${CMAKE_INSTALL_PREFIX}/${CMAKE_PROJECT_NAME})
+        RUNTIME DESTINATION bin
+        LIBRARY DESTINATION lib
+        ARCHIVE DESTINATION lib)
+
+# install required shared library files
 if(BUILD_SHARED_LIBS)
-  install(FILES
-    $<TARGET_FILE_DIR:${LIB}>/lib${LIB}.dll
-    DESTINATION $ENV{WINDIR}/system32)
+  # install library in system folder if prefix not modified
+  if(CMAKE_INSTALL_PREFIX STREQUAL ${DEFAULT_INSTALL_PREFIX})
+    install(FILES $<TARGET_FILE_DIR:${LIB}>/lib${LIB}.dll
+      DESTINATION $ENV{WINDIR}/system32)
+  endif()
 endif()
 
+# install header files
+install(FILES ${IMB_HDR} DESTINATION include)

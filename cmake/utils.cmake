@@ -94,6 +94,12 @@ macro(imb_set_proj_defaults)
   # clear default debug build C Compiler Flags
   set(CMAKE_C_FLAGS_DEBUG "" CACHE STRING "" FORCE)
 
+  if(WIN32)
+    set(DEFAULT_INSTALL_PREFIX "C:/Program Files/intel-ipsec-mb")
+    set(CMAKE_INSTALL_PREFIX ${DEFAULT_INSTALL_PREFIX}
+    CACHE STRING "Set default installation directory")
+  endif()
+
   ########################################
   # print build information
   ########################################
