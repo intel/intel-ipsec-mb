@@ -1970,6 +1970,9 @@ perform_safe_checks(IMB_MGR *mgr, const IMB_ARCH arch, struct safe_check_ctx *ct
                 "sha_256_ooo",
                 "sha_384_ooo",
                 "sha_512_ooo",
+                "aes_cfb_128_ooo",
+                "aes_cfb_192_ooo",
+                "aes_cfb_256_ooo",
                 "end_ooo" /* add new ooo manager above this line */
         };
         static size_t ooo_size[64] = { 0 };

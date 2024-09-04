@@ -173,12 +173,15 @@
 #define AES_CFB_256_ONE aes_cfb_256_one_avx512
 
 /* AES-CFB */
-#define AES_CFB_128_ENC aes_cfb_128_enc_sse
-#define AES_CFB_192_ENC aes_cfb_192_enc_sse
-#define AES_CFB_256_ENC aes_cfb_256_enc_sse
-#define AES_CFB_128_DEC aes_cfb_dec_128_vaes_avx512
-#define AES_CFB_192_DEC aes_cfb_dec_192_vaes_avx512
-#define AES_CFB_256_DEC aes_cfb_dec_256_vaes_avx512
+#define SUBMIT_JOB_AES_CFB_128_ENC submit_job_aes128_cfb_enc_vaes_avx512
+#define FLUSH_JOB_AES_CFB_128_ENC  flush_job_aes128_cfb_enc_vaes_avx512
+#define SUBMIT_JOB_AES_CFB_192_ENC submit_job_aes192_cfb_enc_vaes_avx512
+#define FLUSH_JOB_AES_CFB_192_ENC  flush_job_aes192_cfb_enc_vaes_avx512
+#define SUBMIT_JOB_AES_CFB_256_ENC submit_job_aes256_cfb_enc_vaes_avx512
+#define FLUSH_JOB_AES_CFB_256_ENC  flush_job_aes256_cfb_enc_vaes_avx512
+#define AES_CFB_128_DEC            aes_cfb_dec_128_vaes_avx512
+#define AES_CFB_192_DEC            aes_cfb_dec_192_vaes_avx512
+#define AES_CFB_256_DEC            aes_cfb_dec_256_vaes_avx512
 
 /* AES-XCBC */
 #define SUBMIT_JOB_AES_XCBC submit_job_aes_xcbc_vaes_avx512
@@ -445,6 +448,11 @@ reset_ooo_mgrs(IMB_MGR *state)
 
         /* Init SHA512 out-of-order fields */
         ooo_mgr_sha512_reset(state->sha_512_ooo, AVX512_NUM_SHA512_LANES);
+
+        /*  Init AES-CFB out-of-order fields */
+        ooo_mgr_aes_reset(state->aes_cfb_128_ooo, 16);
+        ooo_mgr_aes_reset(state->aes_cfb_192_ooo, 16);
+        ooo_mgr_aes_reset(state->aes_cfb_256_ooo, 16);
 }
 
 IMB_DLL_LOCAL void

@@ -89,7 +89,10 @@ const struct {
                       OOO_INFO(sha_384_ooo, MB_MGR_SHA_512_OOO),
                       OOO_INFO(sha_512_ooo, MB_MGR_SHA_512_OOO),
                       OOO_INFO(zuc256_eia3_8B_ooo, MB_MGR_ZUC_OOO),
-                      OOO_INFO(zuc256_eia3_16B_ooo, MB_MGR_ZUC_OOO) };
+                      OOO_INFO(zuc256_eia3_16B_ooo, MB_MGR_ZUC_OOO),
+                      OOO_INFO(aes_cfb_128_ooo, MB_MGR_AES_OOO),
+                      OOO_INFO(aes_cfb_192_ooo, MB_MGR_AES_OOO),
+                      OOO_INFO(aes_cfb_256_ooo, MB_MGR_AES_OOO) };
 
 /**
  * @brief Calculates necessary memory size for IMB_MGR.

@@ -201,6 +201,23 @@ submit_job_aes256_ccm_auth_vaes_avx512(MB_MGR_CCM_OOO *state, IMB_JOB *job);
 IMB_JOB *
 flush_job_aes256_ccm_auth_vaes_avx512(MB_MGR_CCM_OOO *state);
 
+IMB_JOB *
+submit_job_aes128_cfb_enc_vaes_avx512(MB_MGR_AES_OOO *state, IMB_JOB *job);
+
+IMB_JOB *
+flush_job_aes128_cfb_enc_vaes_avx512(MB_MGR_AES_OOO *state);
+
+IMB_JOB *
+submit_job_aes192_cfb_enc_vaes_avx512(MB_MGR_AES_OOO *state, IMB_JOB *job);
+
+IMB_JOB *
+flush_job_aes192_cfb_enc_vaes_avx512(MB_MGR_AES_OOO *state);
+
+IMB_JOB *
+submit_job_aes256_cfb_enc_vaes_avx512(MB_MGR_AES_OOO *state, IMB_JOB *job);
+
+IMB_JOB *
+flush_job_aes256_cfb_enc_vaes_avx512(MB_MGR_AES_OOO *state);
 void
 poly1305_mac_fma_avx512(IMB_JOB *job);
 

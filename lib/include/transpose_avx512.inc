@@ -732,4 +732,40 @@ PSHUFFLE_TRANSPOSE_MASK2: 	dq 0x0000000000000002
         vshufi64x2      %%r1, %%t0, %%t1, 0x44 ; 1 5 9  13
         vshufi64x2      %%r3, %%t0, %%t1, 0xee ; 3 7 11 15
 %endmacro
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Transpose macro - executes 4x4 transpose of 4 ZMM registers
+; in: L0B0-3   out: B0L0-3
+;     L1B0-3        B1L0-3
+;     L2B0-3        B2L0-3
+;     L3B0-3        B3L0-3
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+%macro TRANSPOSE_4x4 10
+%define %%IN_OUT_0      %1
+%define %%IN_OUT_1      %2
+%define %%IN_OUT_2      %3
+%define %%IN_OUT_3      %4
+%define %%ZTMP_0        %5
+%define %%ZTMP_1        %6
+%define %%ZTMP_2        %7
+%define %%ZTMP_3        %8
+%define %%TAB_A0B0A1B1  %9
+%define %%TAB_A2B2A3B3  %10
+
+        vmovdqa64       %%ZTMP_0, %%TAB_A0B0A1B1
+        vmovdqa64       %%ZTMP_1, %%ZTMP_0
+        vmovdqa64       %%ZTMP_2, %%TAB_A2B2A3B3
+        vmovdqa64       %%ZTMP_3, %%ZTMP_2
+
+        vpermi2q        %%ZTMP_0, %%IN_OUT_0, %%IN_OUT_1
+        vpermi2q        %%ZTMP_1, %%IN_OUT_2, %%IN_OUT_3
+        vpermi2q        %%ZTMP_2, %%IN_OUT_0, %%IN_OUT_1
+        vpermi2q        %%ZTMP_3, %%IN_OUT_2, %%IN_OUT_3
+
+        vshufi64x2      %%IN_OUT_0, %%ZTMP_0, %%ZTMP_1, 0x44
+        vshufi64x2      %%IN_OUT_2, %%ZTMP_2, %%ZTMP_3, 0x44
+        vshufi64x2      %%IN_OUT_1, %%ZTMP_0, %%ZTMP_1, 0xee
+        vshufi64x2      %%IN_OUT_3, %%ZTMP_2, %%ZTMP_3, 0xee
+%endmacro
+
 %endif ;; _TRANSPOSE_AVX512_INC_

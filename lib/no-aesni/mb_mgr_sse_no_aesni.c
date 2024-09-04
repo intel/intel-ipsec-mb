@@ -315,6 +315,11 @@ reset_ooo_mgrs(IMB_MGR *state)
 
         /* Init SNOW3G-UIA out-of-order fields */
         ooo_mgr_snow3g_reset(state->snow3g_uia2_ooo, 4);
+
+        /*  Init AES-CFB out-of-order fields */
+        ooo_mgr_aes_reset(state->aes_cfb_128_ooo, 1);
+        ooo_mgr_aes_reset(state->aes_cfb_192_ooo, 1);
+        ooo_mgr_aes_reset(state->aes_cfb_256_ooo, 1);
 }
 
 IMB_DLL_LOCAL void

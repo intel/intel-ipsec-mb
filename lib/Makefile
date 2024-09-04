@@ -754,7 +754,15 @@ asm_avx512_lib_objs := \
 	snow3g_uia2_by32_vaes_avx512.o \
 	mb_mgr_snow3g_uea2_submit_flush_vaes_avx512.o \
 	mb_mgr_snow3g_uia2_submit_flush_vaes_avx512.o \
-	aes_cfb_dec_by16_vaes_avx512.o
+	aes_cfb_dec_by16_vaes_avx512.o \
+	aes_cfb_enc_vaes_avx512.o \
+	mb_mgr_aes128_cfb_enc_submit_vaes_avx512.o \
+	mb_mgr_aes128_cfb_enc_flush_vaes_avx512.o \
+	mb_mgr_aes192_cfb_enc_submit_vaes_avx512.o \
+	mb_mgr_aes192_cfb_enc_flush_vaes_avx512.o \
+	mb_mgr_aes256_cfb_enc_submit_vaes_avx512.o \
+	mb_mgr_aes256_cfb_enc_flush_vaes_avx512.o
+
 
 
 #

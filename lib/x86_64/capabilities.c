@@ -97,8 +97,10 @@ imb_cipher_burst_get_size(const IMB_MGR *mb_mgr, const IMB_CIPHER_MODE cipher_mo
         switch (cipher_mode) {
         case IMB_CIPHER_ECB:
         case IMB_CIPHER_CNTR:
-        case IMB_CIPHER_CFB:
                 *out_burst_size = 1;
+                break;
+        case IMB_CIPHER_CFB:
+                *out_burst_size = ((MB_MGR_AES_OOO *) (mb_mgr->aes_cfb_128_ooo))->total_num_lanes;
                 break;
         case IMB_CIPHER_CBC:
                 *out_burst_size = ((MB_MGR_AES_OOO *) (mb_mgr->aes128_ooo))->total_num_lanes;

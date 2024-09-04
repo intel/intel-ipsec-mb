@@ -1626,3 +1626,287 @@
 %endif                  ; The last round
 
 %endmacro
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; LOAD_STORE_VAR_x4 - variable load/store of 0-4 blocks (16 bytes) for 4 lanes
+; Number of blocks determined by masks in LANE_MASKS table on the stack
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+%macro LOAD_STORE_VAR_x4 15
+%define %%LANE_A        %1  ; [in] lane index to load/store (numerical)
+%define %%LANE_B        %2  ; [in] lane index to load/store (numerical)
+%define %%LANE_C        %3  ; [in] lane index to load/store (numerical)
+%define %%LANE_D        %4  ; [in] lane index to load/store (numerical)
+%define %%DATA_PTR      %5  ; [in] GP reg with ptr to lane input table
+%define %%OFFSET        %6  ; [in] GP reg input/output buffer offset
+%define %%ZDATA0        %7  ; [in/out] ZMM reg to load/store data
+%define %%ZDATA1        %8  ; [in/out] ZMM reg to load/store data
+%define %%ZDATA2        %9  ; [in/out] ZMM reg to load/store data
+%define %%ZDATA3        %10 ; [in/out] ZMM reg to load/store data
+%define %%GP0           %11 ; [clobbered] tmp GP reg
+%define %%GP1           %12 ; [clobbered] tmp GP reg
+%define %%LOAD_STORE    %13 ; [in] string value to select LOAD or STORE
+%define %%M1            %14 ; [clobbered] mask reg
+%define %%M2            %15 ; [clobbered] mask reg
+
+        mov             %%GP0, [%%DATA_PTR + 8*(%%LANE_A)]
+        mov             %%GP1, [%%DATA_PTR + 8*(%%LANE_B)]
+
+        kmovw           %%M1, [LANE_MASKS + 2*(%%LANE_A)]
+        kmovw           %%M2, [LANE_MASKS + 2*(%%LANE_B)]
+
+%ifidn %%LOAD_STORE, LOAD
+        vmovdqu32       %%ZDATA0{%%M1}{z}, [%%GP0 + %%OFFSET]
+        vmovdqu32       %%ZDATA1{%%M2}{z}, [%%GP1 + %%OFFSET]
+
+        mov             %%GP0, [%%DATA_PTR + 8*(%%LANE_C)]
+        mov             %%GP1, [%%DATA_PTR + 8*(%%LANE_D)]
+
+        kmovw           %%M1, [LANE_MASKS + 2*(%%LANE_C)]
+        kmovw           %%M2, [LANE_MASKS + 2*(%%LANE_D)]
+
+        vmovdqu32       %%ZDATA2{%%M1}{z}, [%%GP0 + %%OFFSET]
+        vmovdqu32       %%ZDATA3{%%M2}{z}, [%%GP1 + %%OFFSET]
+%else   ; STORE
+        vmovdqu32       [%%GP0 + %%OFFSET]{%%M1}, %%ZDATA0
+        vmovdqu32       [%%GP1 + %%OFFSET]{%%M2}, %%ZDATA1
+
+        mov             %%GP0, [%%DATA_PTR + 8*(%%LANE_C)]
+        mov             %%GP1, [%%DATA_PTR + 8*(%%LANE_D)]
+
+        kmovw           %%M1, [LANE_MASKS + 2*(%%LANE_C)]
+        kmovw           %%M2, [LANE_MASKS + 2*(%%LANE_D)]
+
+        vmovdqu32       [%%GP0 + %%OFFSET]{%%M1}, %%ZDATA2
+        vmovdqu32       [%%GP1 + %%OFFSET]{%%M2}, %%ZDATA3
+%endif
+%endmacro
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; PRELOADED_LOAD_STORE_VAR_x4
+; - Variable size load/store of 0-4 blocks for 4 lanes
+; - Input pointers are already loaded into GP registers
+; - Number of blocks determined by masks in LANE_MASKS table on the stack
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+%macro PRELOADED_LOAD_STORE_VAR_x4 18
+%define %%IN0           %1  ; [in] GP reg with lane input pointer
+%define %%IN1           %2  ; [in] GP reg with lane input pointer
+%define %%IN2           %3  ; [in] GP reg with lane input pointer
+%define %%IN3           %4  ; [in] GP reg with lane input pointer
+%define %%OFFSET        %5  ; [in] GP reg input/output buffer offset
+%define %%ZDATA0        %6  ; [in/out] ZMM reg to load/store data
+%define %%ZDATA1        %7  ; [in/out] ZMM reg to load/store data
+%define %%ZDATA2        %8  ; [in/out] ZMM reg to load/store data
+%define %%ZDATA3        %9  ; [in/out] ZMM reg to load/store data
+%define %%LOAD_STORE    %10 ; [in] string value to select LOAD or STORE
+%define %%LANE_A        %11 ; [in] lane ID
+%define %%LANE_B        %12 ; [in] lane ID
+%define %%LANE_C        %13 ; [in] lane ID
+%define %%LANE_D        %14 ; [in] lane ID
+%define %%M1            %15 ; [clobbered] mask reg
+%define %%M2            %16 ; [clobbered] mask reg
+%define %%M3            %17 ; [clobbered] mask reg
+%define %%M4            %18 ; [clobbered] mask reg
+
+        kmovw           %%M1, [LANE_MASKS + 2*(%%LANE_A)]
+        kmovw           %%M2, [LANE_MASKS + 2*(%%LANE_B)]
+        kmovw           %%M3, [LANE_MASKS + 2*(%%LANE_C)]
+        kmovw           %%M4, [LANE_MASKS + 2*(%%LANE_D)]
+
+%ifidn %%LOAD_STORE, LOAD
+        vmovdqu32       %%ZDATA0{%%M1}{z}, [%%IN0 + %%OFFSET]
+        vmovdqu32       %%ZDATA1{%%M2}{z}, [%%IN1 + %%OFFSET]
+        vmovdqu32       %%ZDATA2{%%M3}{z}, [%%IN2 + %%OFFSET]
+        vmovdqu32       %%ZDATA3{%%M4}{z}, [%%IN3 + %%OFFSET]
+%else   ; STORE
+        vmovdqu32       [%%IN0 + %%OFFSET]{%%M1}, %%ZDATA0
+        vmovdqu32       [%%IN1 + %%OFFSET]{%%M2}, %%ZDATA1
+        vmovdqu32       [%%IN2 + %%OFFSET]{%%M3}, %%ZDATA2
+        vmovdqu32       [%%IN3 + %%OFFSET]{%%M4}, %%ZDATA3
+%endif
+%endmacro
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; LOAD_STORE - loads/stores 1-4 blocks (16 bytes) for 4 lanes into ZMM registers
+; - Loads 4 blocks by default
+; - Pass %%MASK_REG argument to load/store 1-3 blocks (optional)
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+%macro LOAD_STORE_x4 13-14
+%define %%LANE_A        %1  ; [in] lane index to load/store (numerical)
+%define %%LANE_B        %2  ; [in] lane index to load/store (numerical)
+%define %%LANE_C        %3  ; [in] lane index to load/store (numerical)
+%define %%LANE_D        %4  ; [in] lane index to load/store (numerical)
+%define %%DATA_PTR      %5  ; [in] GP reg with ptr to lane input table
+%define %%OFFSET        %6  ; [in] GP reg input/output buffer offset
+%define %%ZDATA0        %7  ; [in/out] ZMM reg to load/store data
+%define %%ZDATA1        %8  ; [in/out] ZMM reg to load/store data
+%define %%ZDATA2        %9  ; [in/out] ZMM reg to load/store data
+%define %%ZDATA3        %10 ; [in/out] ZMM reg to load/store data
+%define %%GP0           %11 ; [clobbered] tmp GP reg
+%define %%GP1           %12 ; [clobbered] tmp GP reg
+%define %%LOAD_STORE    %13 ; [in] string value to select LOAD or STORE
+%define %%MASK_REG      %14 ; [in] mask reg used for load/store mask
+%define %%NUM_ARGS      %0
+
+        mov             %%GP0, [%%DATA_PTR + 8*(%%LANE_A)]
+        mov             %%GP1, [%%DATA_PTR + 8*(%%LANE_B)]
+
+%if %%NUM_ARGS <= 13    ;; %%MASK_REG not set, assume 4 block load/store
+%ifidn %%LOAD_STORE, LOAD
+        vmovdqu32       %%ZDATA0, [%%GP0 + %%OFFSET]
+        vmovdqu32       %%ZDATA1, [%%GP1 + %%OFFSET]
+
+        mov             %%GP0, [%%DATA_PTR + 8*(%%LANE_C)]
+        mov             %%GP1, [%%DATA_PTR + 8*(%%LANE_D)]
+
+        vmovdqu32       %%ZDATA2, [%%GP0 + %%OFFSET]
+        vmovdqu32       %%ZDATA3, [%%GP1 + %%OFFSET]
+%else   ; STORE
+        vmovdqu32       [%%GP0 + %%OFFSET], %%ZDATA0
+        vmovdqu32       [%%GP1 + %%OFFSET], %%ZDATA1
+
+        mov             %%GP0, [%%DATA_PTR + 8*(%%LANE_C)]
+        mov             %%GP1, [%%DATA_PTR + 8*(%%LANE_D)]
+
+        vmovdqu32       [%%GP0 + %%OFFSET], %%ZDATA2
+        vmovdqu32       [%%GP1 + %%OFFSET], %%ZDATA3
+%endif
+%else   ;; %%MASK_REG argument passed - 1, 2, or 3 block load/store
+%ifidn %%LOAD_STORE, LOAD
+        vmovdqu32       %%ZDATA0{%%MASK_REG}{z}, [%%GP0 + %%OFFSET]
+        vmovdqu32       %%ZDATA1{%%MASK_REG}{z}, [%%GP1 + %%OFFSET]
+
+        mov             %%GP0, [%%DATA_PTR + 8*(%%LANE_C)]
+        mov             %%GP1, [%%DATA_PTR + 8*(%%LANE_D)]
+
+        vmovdqu32       %%ZDATA2{%%MASK_REG}{z}, [%%GP0 + %%OFFSET]
+        vmovdqu32       %%ZDATA3{%%MASK_REG}{z}, [%%GP1 + %%OFFSET]
+%else   ; STORE
+        vmovdqu32       [%%GP0 + %%OFFSET]{%%MASK_REG}, %%ZDATA0
+        vmovdqu32       [%%GP1 + %%OFFSET]{%%MASK_REG}, %%ZDATA1
+
+        mov             %%GP0, [%%DATA_PTR + 8*(%%LANE_C)]
+        mov             %%GP1, [%%DATA_PTR + 8*(%%LANE_D)]
+
+        vmovdqu32       [%%GP0 + %%OFFSET]{%%MASK_REG}, %%ZDATA2
+        vmovdqu32       [%%GP1 + %%OFFSET]{%%MASK_REG}, %%ZDATA3
+%endif
+%endif  ;; %%NUM_ARGS
+%endmacro
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; PRELOADED_LOAD_STORE - loads/stores 1-4 blocks for 4 lanes into ZMM registers
+; - Input pointers are already loaded into GP registers
+; - Loads 4 blocks by default
+; - Pass %%MASK_REG argument to load/store 1-3 blocks (optional)
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+%macro PRELOADED_LOAD_STORE_x4 10-11
+%define %%IN0           %1  ; [in] GP reg with lane input pointer
+%define %%IN1           %2  ; [in] GP reg with lane input pointer
+%define %%IN2           %3  ; [in] GP reg with lane input pointer
+%define %%IN3           %4  ; [in] GP reg with lane input pointer
+%define %%OFFSET        %5  ; [in] GP reg input/output buffer offset
+%define %%ZDATA0        %6  ; [in/out] ZMM reg to load/store data
+%define %%ZDATA1        %7  ; [in/out] ZMM reg to load/store data
+%define %%ZDATA2        %8  ; [in/out] ZMM reg to load/store data
+%define %%ZDATA3        %9  ; [in/out] ZMM reg to load/store data
+%define %%LOAD_STORE    %10 ; [in] string value to select LOAD or STORE
+%define %%MASK_REG      %11 ; [in] mask reg used for load/store mask
+%define %%NUM_ARGS      %0
+
+%if %%NUM_ARGS <= 10    ;; %%MASK_REG not set, assume 4 block load/store
+%ifidn %%LOAD_STORE, LOAD
+        vmovdqu32       %%ZDATA0, [%%IN0 + %%OFFSET]
+        vmovdqu32       %%ZDATA1, [%%IN1 + %%OFFSET]
+        vmovdqu32       %%ZDATA2, [%%IN2 + %%OFFSET]
+        vmovdqu32       %%ZDATA3, [%%IN3 + %%OFFSET]
+%else   ; STORE
+        vmovdqu32       [%%IN0 + %%OFFSET], %%ZDATA0
+        vmovdqu32       [%%IN1 + %%OFFSET], %%ZDATA1
+        vmovdqu32       [%%IN2 + %%OFFSET], %%ZDATA2
+        vmovdqu32       [%%IN3 + %%OFFSET], %%ZDATA3
+%endif
+%else   ;; %%MASK_REG argument passed - 1, 2, or 3 block load/store
+%ifidn %%LOAD_STORE, LOAD
+        vmovdqu32       %%ZDATA0{%%MASK_REG}{z}, [%%IN0 + %%OFFSET]
+        vmovdqu32       %%ZDATA1{%%MASK_REG}{z}, [%%IN1 + %%OFFSET]
+        vmovdqu32       %%ZDATA2{%%MASK_REG}{z}, [%%IN2 + %%OFFSET]
+        vmovdqu32       %%ZDATA3{%%MASK_REG}{z}, [%%IN3 + %%OFFSET]
+%else   ; STORE
+        vmovdqu32       [%%IN0 + %%OFFSET]{%%MASK_REG}, %%ZDATA0
+        vmovdqu32       [%%IN1 + %%OFFSET]{%%MASK_REG}, %%ZDATA1
+        vmovdqu32       [%%IN2 + %%OFFSET]{%%MASK_REG}, %%ZDATA2
+        vmovdqu32       [%%IN3 + %%OFFSET]{%%MASK_REG}, %%ZDATA3
+%endif
+%endif  ;; %%NUM_ARGS
+%endmacro
+
+;; LOAD_STORE wrapper used to select load/store operation mode
+%macro LOAD_STORE_4 14
+%define %%LANE_A        %1  ; [in] lane index to load/store (numerical)
+%define %%LANE_B        %2  ; [in] lane index to load/store (numerical)
+%define %%LANE_C        %3  ; [in] lane index to load/store (numerical)
+%define %%LANE_D        %4  ; [in] lane index to load/store (numerical)
+%define %%DATA_PTR      %5  ; [in] GP reg with ptr to lane input table
+%define %%OFFSET        %6  ; [in] GP reg input/output buffer offset
+%define %%ZDATA0        %7  ; [in/out] ZMM reg to load/store data
+%define %%ZDATA1        %8  ; [in/out] ZMM reg to load/store data
+%define %%ZDATA2        %9  ; [in/out] ZMM reg to load/store data
+%define %%ZDATA3        %10 ; [in/out] ZMM reg to load/store data
+%define %%GP0           %11 ; [clobbered] tmp GP reg
+%define %%GP1           %12 ; [clobbered] tmp GP reg
+%define %%LOAD_STORE    %13 ; [in] string value to select LOAD or STORE
+%define %%MODE          %14 ; [in] load/store operation mode
+
+%ifidn %%MODE, SUBMIT_MODE
+       LOAD_STORE_x4 %%LANE_A, %%LANE_B, %%LANE_C, %%LANE_D, %%DATA_PTR, \
+                     %%OFFSET, %%ZDATA0, %%ZDATA1, %%ZDATA2, %%ZDATA3, \
+                     %%GP0, %%GP1, %%LOAD_STORE
+%endif
+
+%ifidn %%MODE, SUBMIT_FINAL_MODE
+       LOAD_STORE_x4 %%LANE_A, %%LANE_B, %%LANE_C, %%LANE_D, %%DATA_PTR, \
+                     %%OFFSET, %%ZDATA0, %%ZDATA1, %%ZDATA2, %%ZDATA3, \
+                     %%GP0, %%GP1, %%LOAD_STORE, k1
+%endif
+%ifidn %%MODE, FLUSH_MODE
+        LOAD_STORE_VAR_x4 %%LANE_A, %%LANE_B, %%LANE_C, %%LANE_D, %%DATA_PTR, \
+                          %%OFFSET, %%ZDATA0, %%ZDATA1, %%ZDATA2, %%ZDATA3, \
+                          %%GP0, %%GP1, %%LOAD_STORE, k1, k2
+%endif
+%endmacro
+
+;; PRELOADED_LOAD_STORE wrapper used to select load/store operation mode
+%macro PRELOADED_LOAD_STORE_4 11-15
+%define %%IN0           %1  ; [in] GP reg with lane input pointer
+%define %%IN1           %2  ; [in] GP reg with lane input pointer
+%define %%IN2           %3  ; [in] GP reg with lane input pointer
+%define %%IN3           %4  ; [in] GP reg with lane input pointer
+%define %%OFFSET        %5  ; [in] GP reg input/output buffer offset
+%define %%ZDATA0        %6  ; [in/out] ZMM reg to load/store data
+%define %%ZDATA1        %7  ; [in/out] ZMM reg to load/store data
+%define %%ZDATA2        %8  ; [in/out] ZMM reg to load/store data
+%define %%ZDATA3        %9  ; [in/out] ZMM reg to load/store data
+%define %%LOAD_STORE    %10 ; [in] string value to select LOAD or STORE
+%define %%MODE          %11 ; [in] load/store operation mode
+%define %%LANE_A        %12 ; [in] lane ID
+%define %%LANE_B        %13 ; [in] lane ID
+%define %%LANE_C        %14 ; [in] lane ID
+%define %%LANE_D        %15 ; [in] lane ID
+
+%ifidn %%MODE, SUBMIT_MODE
+        PRELOADED_LOAD_STORE_x4 %%IN0, %%IN1, %%IN2, %%IN3, %%OFFSET, \
+                                %%ZDATA0, %%ZDATA1, %%ZDATA2, %%ZDATA3, \
+                                %%LOAD_STORE
+%endif
+%ifidn %%MODE, SUBMIT_FINAL_MODE
+        PRELOADED_LOAD_STORE_x4 %%IN0, %%IN1, %%IN2, %%IN3, %%OFFSET, \
+                                %%ZDATA0, %%ZDATA1, %%ZDATA2, %%ZDATA3, \
+                                %%LOAD_STORE, k1
+%endif
+%ifidn %%MODE, FLUSH_MODE
+        PRELOADED_LOAD_STORE_VAR_x4 %%IN0, %%IN1, %%IN2, %%IN3, %%OFFSET, \
+                                    %%ZDATA0, %%ZDATA1, %%ZDATA2, %%ZDATA3, \
+                                    %%LOAD_STORE, %%LANE_A, %%LANE_B, \
+                                    %%LANE_C, %%LANE_D, k1, k2, k3, k4
+%endif
+%endmacro

@@ -384,6 +384,13 @@ lib_objs1 = \
 	$(OBJ_DIR)\cipher_suite_id.obj \
 	$(OBJ_DIR)\sm4_sse.obj \
 	$(OBJ_DIR)\aes_cfb_dec_by16_vaes_avx512.obj \
+	$(OBJ_DIR)\mb_mgr_aes128_cfb_enc_submit_vaes_avx512.obj \
+	$(OBJ_DIR)\mb_mgr_aes128_cfb_enc_flush_vaes_avx512.obj \
+	$(OBJ_DIR)\mb_mgr_aes192_cfb_enc_submit_vaes_avx512.obj \
+	$(OBJ_DIR)\mb_mgr_aes192_cfb_enc_flush_vaes_avx512.obj \
+	$(OBJ_DIR)\mb_mgr_aes256_cfb_enc_submit_vaes_avx512.obj \
+	$(OBJ_DIR)\mb_mgr_aes256_cfb_enc_flush_vaes_avx512.obj \
+	$(OBJ_DIR)\aes_cfb_enc_vaes_avx512.obj \
 	$(OBJ_DIR)\capabilities.obj
 
 lib_objs2 = \

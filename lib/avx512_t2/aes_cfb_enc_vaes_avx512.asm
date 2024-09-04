@@ -1,5 +1,5 @@
 ;;
-;; Copyright (c) 2019-2023, Intel Corporation
+;; Copyright (c) 2024, Intel Corporation
 ;;
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
@@ -25,7 +25,7 @@
 ;; OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;
 
-;;; routines to do 128/192/256 bit CBC AES encrypt
+;;; routines to do 128/192/256 bit CFB AES encrypt
 
 %include "include/os.inc"
 %include "include/mb_mgr_datastruct.inc"
@@ -33,7 +33,6 @@
 %include "include/clear_regs.inc"
 %include "include/aes_common.inc"
 %include "include/transpose_avx512.inc"
-
 
 struc STACK
 _gpr_save:      resq    4
@@ -113,9 +112,6 @@ endstruc
 %define R2_K4_7         zmm4
 %define R2_K8_11        zmm5
 
-%define MAC_TYPE_NONE   0
-%define MAC_TYPE_CBC    1
-%define MAC_TYPE_XCBC   2
 
 %define SUBMIT          0
 %define FLUSH           1
@@ -160,6 +156,12 @@ endstruc
 %define %%K04_07_OFFSET 64
 %define %%K08_11_OFFSET 128
 %define %%K12_15_OFFSET 192
+
+; ROUND 0
+        vpxorq   %%L00_03, %%L00_03, R0_K0_3
+        vpxorq   %%L04_07, %%L04_07, R0_K4_7
+        vpxorq   %%L08_11, %%L08_11, R0_K8_11
+        vpxorq   %%L12_15, %%L12_15, [%%KP + %%K12_15_OFFSET]
 
 %assign ROUND 1
 %rep (%%NROUNDS + 1)
@@ -228,14 +230,8 @@ endstruc
 %define %%ZTMP3         %27 ;; [clobbered] tmp ZMM register
 %define %%TMP0          %28 ;; [clobbered] tmp GP register
 %define %%TMP1          %29 ;; [clobbered] tmp GP register
-%define %%MAC_TYPE      %30 ;; [in] MAC_TYPE_NONE/CBC/XCBC flag
 %define %%SUBMIT_FLUSH  %31 ;; [in] SUBMIT/FLUSH flag
-
-%if %%MAC_TYPE == MAC_TYPE_XCBC
-%define %%KP    ARG + _aes_xcbc_args_key_tab
-%else
 %define %%KP    ARG + _aes_args_key_tab
-%endif
 %define %%K00_03_OFFSET 0
 %define %%K04_07_OFFSET 64
 %define %%K08_11_OFFSET 128
@@ -243,7 +239,7 @@ endstruc
 
         ;; check for at least 4 blocks
         cmp             %%LENGTH, 64
-        jl              %%encrypt_16_done
+        jb              %%encrypt_16_done
 
 %if %%SUBMIT_FLUSH == FLUSH
 %define %%MODE FLUSH_MODE
@@ -262,7 +258,7 @@ endstruc
 
 %%encrypt_16_start:
         cmp             %%LENGTH, 64
-        jl              %%encrypt_16_end
+        jb              %%encrypt_16_end
 
 %%encrypt_16_first:
 
@@ -296,50 +292,54 @@ endstruc
         TRANSPOSE_4x4 %%B0L12_15, %%B1L12_15, %%B2L12_15, %%B3L12_15, \
                       %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, TAB_A0B0A1B1, TAB_A2B2A3B3
 
-        ;; xor first plaintext block with IV and round zero key
-        vpternlogq      %%B0L00_03, %%ZIV00_03, R0_K0_3, 0x96
-        vpternlogq      %%B0L04_07, %%ZIV04_07, R0_K4_7, 0x96
-        vpternlogq      %%B0L08_11, %%ZIV08_11, R0_K8_11, 0x96
-        vpternlogq      %%B0L12_15, %%ZIV12_15, [%%KP + %%K12_15_OFFSET], 0x96
-
         ;; encrypt block 0 lanes
-        AESENC_ROUNDS_x16 %%B0L00_03, %%B0L04_07, %%B0L08_11, %%B0L12_15, %%KP, %%NROUNDS
-
-        ;; xor plaintext block with last cipher block and round zero key
-        vpternlogq      %%B1L00_03, %%B0L00_03, R0_K0_3, 0x96
-        vpternlogq      %%B1L04_07, %%B0L04_07, R0_K4_7, 0x96
-        vpternlogq      %%B1L08_11, %%B0L08_11, R0_K8_11, 0x96
-        vpternlogq      %%B1L12_15, %%B0L12_15, [%%KP + %%K12_15_OFFSET], 0x96
+        AESENC_ROUNDS_x16 %%ZIV00_03, %%ZIV04_07, %%ZIV08_11, %%ZIV12_15, %%KP, %%NROUNDS
+        vpxorq      %%ZIV00_03, %%ZIV00_03, %%B0L00_03
+        vpxorq      %%ZIV04_07, %%ZIV04_07, %%B0L04_07
+        vpxorq      %%ZIV08_11, %%ZIV08_11, %%B0L08_11
+        vpxorq      %%ZIV12_15, %%ZIV12_15, %%B0L12_15
+        ;; save encrypted block
+        vmovdqa64  %%B0L00_03, %%ZIV00_03
+        vmovdqa64  %%B0L04_07, %%ZIV04_07
+        vmovdqa64  %%B0L08_11, %%ZIV08_11
+        vmovdqa64  %%B0L12_15, %%ZIV12_15
 
         ;; encrypt block 1 lanes
-        AESENC_ROUNDS_x16 %%B1L00_03, %%B1L04_07, %%B1L08_11, %%B1L12_15, %%KP, %%NROUNDS
-
-        ;; xor plaintext block with last cipher block and round zero key
-        vpternlogq      %%B2L00_03, %%B1L00_03, R0_K0_3, 0x96
-        vpternlogq      %%B2L04_07, %%B1L04_07, R0_K4_7, 0x96
-        vpternlogq      %%B2L08_11, %%B1L08_11, R0_K8_11, 0x96
-        vpternlogq      %%B2L12_15, %%B1L12_15, [%%KP + %%K12_15_OFFSET], 0x96
+        AESENC_ROUNDS_x16 %%ZIV00_03, %%ZIV04_07, %%ZIV08_11, %%ZIV12_15, %%KP, %%NROUNDS
+        vpxorq      %%ZIV00_03, %%ZIV00_03, %%B1L00_03
+        vpxorq      %%ZIV04_07, %%ZIV04_07, %%B1L04_07
+        vpxorq      %%ZIV08_11, %%ZIV08_11, %%B1L08_11
+        vpxorq      %%ZIV12_15, %%ZIV12_15, %%B1L12_15
+        ;; save encrypted block
+        vmovdqa64  %%B1L00_03, %%ZIV00_03
+        vmovdqa64  %%B1L04_07, %%ZIV04_07
+        vmovdqa64  %%B1L08_11, %%ZIV08_11
+        vmovdqa64  %%B1L12_15, %%ZIV12_15
 
         ;; encrypt block 2 lanes
-        AESENC_ROUNDS_x16 %%B2L00_03, %%B2L04_07, %%B2L08_11, %%B2L12_15, %%KP, %%NROUNDS
+        AESENC_ROUNDS_x16 %%ZIV00_03, %%ZIV04_07, %%ZIV08_11, %%ZIV12_15, %%KP, %%NROUNDS
+        vpxorq      %%ZIV00_03, %%ZIV00_03, %%B2L00_03
+        vpxorq      %%ZIV04_07, %%ZIV04_07, %%B2L04_07
+        vpxorq      %%ZIV08_11, %%ZIV08_11, %%B2L08_11
+        vpxorq      %%ZIV12_15, %%ZIV12_15, %%B2L12_15
+        ;; save encrypted block
+        vmovdqa64  %%B2L00_03, %%ZIV00_03
+        vmovdqa64  %%B2L04_07, %%ZIV04_07
+        vmovdqa64  %%B2L08_11, %%ZIV08_11
+        vmovdqa64  %%B2L12_15, %%ZIV12_15
 
-        ;; xor plaintext block with last cipher block and round zero key
-        vpternlogq      %%B3L00_03, %%B2L00_03, R0_K0_3, 0x96
-        vpternlogq      %%B3L04_07, %%B2L04_07, R0_K4_7, 0x96
-        vpternlogq      %%B3L08_11, %%B2L08_11, R0_K8_11, 0x96
-        vpternlogq      %%B3L12_15, %%B2L12_15, [%%KP + %%K12_15_OFFSET], 0x96
+        ;; encrypt block 4 lanes
+        AESENC_ROUNDS_x16 %%ZIV00_03, %%ZIV04_07, %%ZIV08_11, %%ZIV12_15, %%KP, %%NROUNDS
+        vpxorq     %%B3L00_03, %%B3L00_03, %%ZIV00_03
+        vpxorq     %%B3L04_07, %%B3L04_07, %%ZIV04_07
+        vpxorq     %%B3L08_11, %%B3L08_11, %%ZIV08_11
+        vpxorq     %%B3L12_15, %%B3L12_15, %%ZIV12_15
+        ;; save encrypted block
+        vmovdqa64  %%ZIV00_03, %%B3L00_03
+        vmovdqa64  %%ZIV04_07, %%B3L04_07
+        vmovdqa64  %%ZIV08_11, %%B3L08_11
+        vmovdqa64  %%ZIV12_15, %%B3L12_15
 
-        ;; encrypt block 3 lanes
-        AESENC_ROUNDS_x16 %%B3L00_03, %%B3L04_07, %%B3L08_11, %%B3L12_15, %%KP, %%NROUNDS
-
-        ;; store last cipher block
-        vmovdqa64       %%ZIV00_03, %%B3L00_03
-        vmovdqa64       %%ZIV04_07, %%B3L04_07
-        vmovdqa64       %%ZIV08_11, %%B3L08_11
-        vmovdqa64       %%ZIV12_15, %%B3L12_15
-
-        ;; Don't write back ciphertext for CBC-MAC
-%if %%MAC_TYPE == MAC_TYPE_NONE
         ;; write back cipher text for lanes 0-3
         TRANSPOSE_4x4 %%B0L00_03, %%B1L00_03, %%B2L00_03, %%B3L00_03, \
                       %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, TAB_A0B0A1B1, TAB_A2B2A3B3
@@ -368,7 +368,6 @@ endstruc
         LOAD_STORE_4 12, 13, 14, 15, OUT, %%IDX, %%B0L12_15, %%B1L12_15, \
                       %%B2L12_15, %%B3L12_15, %%TMP0, %%TMP1, STORE, %%MODE
 
-%endif ;; MAC_TYPE
         sub             %%LENGTH, 64
         add             %%IDX, 64
         jmp             %%encrypt_16_start
@@ -388,12 +387,10 @@ endstruc
         add     	IN_L9, %%IDX
         add     	IN_L10, %%IDX
         add     	IN_L11, %%IDX
-%if %%MAC_TYPE == MAC_TYPE_NONE ;; skip out pointer update for CBC_MAC/XCBC
         vpaddq          %%ZTMP0, %%ZTMP2, [OUT]
         vpaddq          %%ZTMP1, %%ZTMP2, [OUT + 64]
         vmovdqa64       [OUT], %%ZTMP0
         vmovdqa64       [OUT + 64], %%ZTMP1
-%endif ;; MAC_TYPE
 
 %%encrypt_16_done:
 %endmacro
@@ -432,15 +429,9 @@ endstruc
 %define %%TMP0          %27 ;; [clobbered] tmp GP register
 %define %%TMP1          %28 ;; [clobbered] tmp GP register
 %define %%NUM_BLKS      %29 ;; [in] number of blocks (numerical value)
-%define %%MAC_TYPE      %30 ;; MAC_TYPE_NONE/CBC/XCBC flag
 %define %%SUBMIT_FLUSH  %31 ;; SUBMIT/FLUSH flag
 
-
-%if %%MAC_TYPE == MAC_TYPE_XCBC
-%define %%KP    ARG + _aes_xcbc_args_key_tab
-%else
 %define %%KP    ARG + _aes_args_key_tab
-%endif
 %define %%K00_03_OFFSET 0
 %define %%K04_07_OFFSET 64
 %define %%K08_11_OFFSET 128
@@ -498,60 +489,46 @@ endstruc
         TRANSPOSE_4x4 %%B0L12_15, %%B1L12_15, %%B2L12_15, %%B3L12_15, \
                       %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, TAB_A0B0A1B1, TAB_A2B2A3B3
 
-        ;; xor plaintext block with IV and round zero key
-        vpternlogq      %%B0L00_03, %%ZIV00_03, R0_K0_3, 0x96
-        vpternlogq      %%B0L04_07, %%ZIV04_07, R0_K4_7, 0x96
-        vpternlogq      %%B0L08_11, %%ZIV08_11, R0_K8_11, 0x96
-        vpternlogq      %%B0L12_15, %%ZIV12_15, [%%KP + %%K12_15_OFFSET], 0x96
-
         ;; encrypt block 0 lanes
-        AESENC_ROUNDS_x16 %%B0L00_03, %%B0L04_07, %%B0L08_11, %%B0L12_15, %%KP, %%NROUNDS
-
-%if %%NUM_BLKS == 1
-        ;; store last cipher block
-        vmovdqa64       %%ZIV00_03, %%B0L00_03
-        vmovdqa64       %%ZIV04_07, %%B0L04_07
-        vmovdqa64       %%ZIV08_11, %%B0L08_11
-        vmovdqa64       %%ZIV12_15, %%B0L12_15
-%endif
+        AESENC_ROUNDS_x16 %%ZIV00_03, %%ZIV04_07, %%ZIV08_11, %%ZIV12_15, %%KP, %%NROUNDS
+        vpxorq           %%ZIV00_03, %%ZIV00_03, %%B0L00_03
+        vpxorq           %%ZIV04_07, %%ZIV04_07, %%B0L04_07
+        vpxorq           %%ZIV08_11, %%ZIV08_11, %%B0L08_11
+        vpxorq           %%ZIV12_15, %%ZIV12_15, %%B0L12_15
+        ;; save encrypted block
+        vmovdqa64       %%B0L00_03, %%ZIV00_03
+        vmovdqa64       %%B0L04_07, %%ZIV04_07
+        vmovdqa64       %%B0L08_11, %%ZIV08_11
+        vmovdqa64       %%B0L12_15, %%ZIV12_15
 
 %if %%NUM_BLKS >= 2
-        ;; xor plaintext block with last cipher block and round zero key
-        vpternlogq      %%B1L00_03, %%B0L00_03, R0_K0_3, 0x96
-        vpternlogq      %%B1L04_07, %%B0L04_07, R0_K4_7, 0x96
-        vpternlogq      %%B1L08_11, %%B0L08_11, R0_K8_11, 0x96
-        vpternlogq      %%B1L12_15, %%B0L12_15, [%%KP + %%K12_15_OFFSET], 0x96
-
         ;; encrypt block 1 lanes
-        AESENC_ROUNDS_x16 %%B1L00_03, %%B1L04_07, %%B1L08_11, %%B1L12_15, %%KP, %%NROUNDS
-%endif
-%if %%NUM_BLKS == 2
-        ;; store last cipher block
-        vmovdqa64       %%ZIV00_03, %%B1L00_03
-        vmovdqa64       %%ZIV04_07, %%B1L04_07
-        vmovdqa64       %%ZIV08_11, %%B1L08_11
-        vmovdqa64       %%ZIV12_15, %%B1L12_15
+        AESENC_ROUNDS_x16 %%ZIV00_03, %%ZIV04_07, %%ZIV08_11, %%ZIV12_15, %%KP, %%NROUNDS
+        vpxorq      %%ZIV00_03, %%ZIV00_03, %%B1L00_03
+        vpxorq      %%ZIV04_07, %%ZIV04_07, %%B1L04_07
+        vpxorq      %%ZIV08_11, %%ZIV08_11, %%B1L08_11
+        vpxorq      %%ZIV12_15, %%ZIV12_15, %%B1L12_15
+        ;; save encrypted block
+        vmovdqa64       %%B1L00_03, %%ZIV00_03
+        vmovdqa64       %%B1L04_07, %%ZIV04_07
+        vmovdqa64       %%B1L08_11, %%ZIV08_11
+        vmovdqa64       %%B1L12_15, %%ZIV12_15
 %endif
 
 %if %%NUM_BLKS >= 3
-        ;; xor plaintext block with last cipher block and round zero key
-        vpternlogq      %%B2L00_03, %%B1L00_03, R0_K0_3, 0x96
-        vpternlogq      %%B2L04_07, %%B1L04_07, R0_K4_7, 0x96
-        vpternlogq      %%B2L08_11, %%B1L08_11, R0_K8_11, 0x96
-        vpternlogq      %%B2L12_15, %%B1L12_15, [%%KP + %%K12_15_OFFSET], 0x96
-
         ;; encrypt block 2 lanes
-        AESENC_ROUNDS_x16 %%B2L00_03, %%B2L04_07, %%B2L08_11, %%B2L12_15, %%KP, %%NROUNDS
+        AESENC_ROUNDS_x16 %%ZIV00_03, %%ZIV04_07, %%ZIV08_11, %%ZIV12_15, %%KP, %%NROUNDS
+        vpxorq           %%ZIV00_03, %%ZIV00_03, %%B2L00_03
+        vpxorq           %%ZIV04_07, %%ZIV04_07, %%B2L04_07
+        vpxorq           %%ZIV08_11, %%ZIV08_11, %%B2L08_11
+        vpxorq           %%ZIV12_15, %%ZIV12_15, %%B2L12_15
+        ;; save encrypted block
+        vmovdqa64       %%B2L00_03, %%ZIV00_03
+        vmovdqa64       %%B2L04_07, %%ZIV04_07
+        vmovdqa64       %%B2L08_11, %%ZIV08_11
+        vmovdqa64       %%B2L12_15, %%ZIV12_15
 %endif
-%if %%NUM_BLKS == 3
-        ;; store last cipher block
-        vmovdqa64       %%ZIV00_03, %%B2L00_03
-        vmovdqa64       %%ZIV04_07, %%B2L04_07
-        vmovdqa64       %%ZIV08_11, %%B2L08_11
-        vmovdqa64       %%ZIV12_15, %%B2L12_15
-%endif
-        ;; Don't write back ciphertext for CBC-MAC
-%if %%MAC_TYPE == MAC_TYPE_NONE
+
         ;; write back cipher text for lanes 0-3
         TRANSPOSE_4x4 %%B0L00_03, %%B1L00_03, %%B2L00_03, %%B3L00_03, \
                       %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, TAB_A0B0A1B1, TAB_A2B2A3B3
@@ -579,7 +556,6 @@ endstruc
 
         LOAD_STORE_4 12, 13, 14, 15, OUT, %%IDX, %%B0L12_15, %%B1L12_15, \
                       %%B2L12_15, %%B3L12_15, %%TMP0, %%TMP1, STORE, %%MODE
-%endif ;; !CBC_MAC
 
         ;; update in/out pointers
         mov             %%IDX, %%NUM_BLKS
@@ -589,41 +565,32 @@ endstruc
         vpaddq          %%ZTMP1, %%ZTMP2, [IN + 64]
         vmovdqa64       [IN], %%ZTMP0
         vmovdqa64       [IN + 64], %%ZTMP1
-%if %%MAC_TYPE == MAC_TYPE_NONE ;; skip out pointer update for CBC_MAC/XCBC
+
         vpaddq          %%ZTMP0, %%ZTMP2, [OUT]
         vpaddq          %%ZTMP1, %%ZTMP2, [OUT + 64]
         vmovdqa64       [OUT], %%ZTMP0
         vmovdqa64       [OUT + 64], %%ZTMP1
-%endif ;; MAC_TYPE
 %endmacro
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; CBC_ENC Encodes given data.
+; CFB_ENC Encodes given data.
 ; Requires the input data be at least 1 block (16 bytes) long
 ; Input: Number of AES rounds
 ;
 ; First encrypts block up to multiple of 4
 ; Then encrypts final blocks (less than 4)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-%macro CBC_ENC 3
+%macro CFB_ENC 2
 %define %%ROUNDS        %1
-%define %%MAC_TYPE      %2
-%define %%SUBMIT_FLUSH  %3
+%define %%SUBMIT_FLUSH  %2
 
 %define %%K00_03_OFFSET 0
 %define %%K04_07_OFFSET 64
 %define %%K08_11_OFFSET 128
-
-%if %%MAC_TYPE == MAC_TYPE_XCBC
-%define %%KP    ARG + _aes_xcbc_args_key_tab
-%define %%IV    ARG + _aes_xcbc_args_ICV
-%define %%IN    ARG + _aes_xcbc_args_in
-%else
 %define %%KP    ARG + _aes_args_key_tab
 %define %%IV    ARG + _aes_args_IV
 %define %%IN    ARG + _aes_args_in
 %define %%OUT   ARG + _aes_args_out
-%endif
 
 ;; check if flush
 %if %%SUBMIT_FLUSH == FLUSH
@@ -651,9 +618,7 @@ endstruc
         mov     IN_L11, [%%IN + 8*11]
 
         lea     IN, [%%IN]
-%if %%MAC_TYPE == MAC_TYPE_NONE
         lea     OUT, [%%OUT]
-%endif
 	;; preload some round keys
         vmovdqu64 R0_K0_3, [%%KP + %%K00_03_OFFSET]
         vmovdqu64 R0_K4_7, [%%KP + %%K04_07_OFFSET]
@@ -671,10 +636,9 @@ endstruc
         ;; get num remaining blocks
         shr             LEN, 4
         and             LEN, 3
-        je              %%_cbc_enc_done
-        cmp             LEN, 1
-        je              %%_final_blocks_1
+        je              %%_cfb_enc_done
         cmp             LEN, 2
+        jb              %%_final_blocks_1
         je              %%_final_blocks_2
 
 %%_final_blocks_3:
@@ -682,19 +646,19 @@ endstruc
                          %%ROUNDS, IA0, ZT0, ZT1, ZT2, ZT3, ZT4, ZT5, ZT6, ZT7,  \
                          ZT8, ZT9, ZT10, ZT11, ZT12, ZT13, ZT14, ZT15, ZT16, ZT17, \
                          ZT18, ZT19, IA1, IA2, 3, %%MAC_TYPE, %%SUBMIT_FLUSH
-        jmp              %%_cbc_enc_done
+        jmp              %%_cfb_enc_done
 %%_final_blocks_1:
         ENCRYPT_16_FINAL ZIV00_03, ZIV04_07, ZIV08_11, ZIV12_15, \
                          %%ROUNDS, IA0, ZT0, ZT1, ZT2, ZT3, ZT4, ZT5, ZT6, ZT7,  \
                          ZT8, ZT9, ZT10, ZT11, ZT12, ZT13, ZT14, ZT15, ZT16, ZT17, \
                          ZT18, ZT19, IA1, IA2, 1, %%MAC_TYPE, %%SUBMIT_FLUSH
-        jmp              %%_cbc_enc_done
+        jmp              %%_cfb_enc_done
 %%_final_blocks_2:
         ENCRYPT_16_FINAL ZIV00_03, ZIV04_07, ZIV08_11, ZIV12_15, \
                          %%ROUNDS, IA0, ZT0, ZT1, ZT2, ZT3, ZT4, ZT5, ZT6, ZT7,  \
                          ZT8, ZT9, ZT10, ZT11, ZT12, ZT13, ZT14, ZT15, ZT16, ZT17, \
                          ZT18, ZT19, IA1, IA2, 2, %%MAC_TYPE, %%SUBMIT_FLUSH
-%%_cbc_enc_done:
+%%_cfb_enc_done:
         ;; store IV's per lane
         vmovdqa64       [%%IV + 16*0],  ZIV00_03
         vmovdqa64       [%%IV + 16*4],  ZIV04_07
@@ -719,134 +683,69 @@ A2B2A3B3:
 mksection .text
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;  void aes_cbc_enc_128_vaes_avx512(AES_ARGS *args, uint64_t len_in_bytes);
+;;  void aes_cfb_enc_128_vaes_avx512(AES_ARGS *args, uint64_t len_in_bytes);
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-MKGLOBAL(aes_cbc_enc_128_vaes_avx512,function,internal)
-aes_cbc_enc_128_vaes_avx512:
+MKGLOBAL(aes_cfb_enc_128_vaes_avx512,function,internal)
+aes_cfb_enc_128_vaes_avx512:
         FUNC_SAVE
-        CBC_ENC 9, MAC_TYPE_NONE, SUBMIT
+        CFB_ENC 9, SUBMIT
         FUNC_RESTORE
         ret
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;  void aes_cbc_enc_192_vaes_avx512(AES_ARGS *args, uint64_t len_in_bytes);
+;;  void aes_cfb_enc_192_vaes_avx512(AES_ARGS *args, uint64_t len_in_bytes);
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-MKGLOBAL(aes_cbc_enc_192_vaes_avx512,function,internal)
-aes_cbc_enc_192_vaes_avx512:
+MKGLOBAL(aes_cfb_enc_192_vaes_avx512,function,internal)
+aes_cfb_enc_192_vaes_avx512:
         FUNC_SAVE
-        CBC_ENC 11, MAC_TYPE_NONE, SUBMIT
+        CFB_ENC 11, SUBMIT
         FUNC_RESTORE
         ret
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;  void aes_cbc_enc_256_vaes_avx512(AES_ARGS *args, uint64_t len_in_bytes);
+;;  void aes_cfb_enc_256_vaes_avx512(AES_ARGS *args, uint64_t len_in_bytes);
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-MKGLOBAL(aes_cbc_enc_256_vaes_avx512,function,internal)
-aes_cbc_enc_256_vaes_avx512:
+MKGLOBAL(aes_cfb_enc_256_vaes_avx512,function,internal)
+aes_cfb_enc_256_vaes_avx512:
         FUNC_SAVE
-        CBC_ENC 13, MAC_TYPE_NONE, SUBMIT
+        CFB_ENC 13, SUBMIT
         FUNC_RESTORE
         ret
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;  void aes128_cbc_mac_vaes_avx512(AES_ARGS *args, uint64_t len_in_bytes);
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-MKGLOBAL(aes128_cbc_mac_vaes_avx512,function,internal)
-aes128_cbc_mac_vaes_avx512:
-        FUNC_SAVE
-        CBC_ENC 9, MAC_TYPE_CBC, SUBMIT
-        FUNC_RESTORE
-        ret
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;  void aes256_cbc_mac_vaes_avx512(AES_ARGS *args, uint64_t len_in_bytes);
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-MKGLOBAL(aes256_cbc_mac_vaes_avx512,function,internal)
-aes256_cbc_mac_vaes_avx512:
-        FUNC_SAVE
-        CBC_ENC 13, MAC_TYPE_CBC, SUBMIT
-        FUNC_RESTORE
-        ret
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;  void aes_xcbc_mac_128_vaes_avx512(AES_XCBC_ARGS_x16 *args, uint64_t len_in_bytes);
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-MKGLOBAL(aes_xcbc_mac_128_vaes_avx512,function,internal)
-aes_xcbc_mac_128_vaes_avx512:
-        FUNC_SAVE
-        CBC_ENC 9, MAC_TYPE_XCBC, SUBMIT
-        FUNC_RESTORE
-        ret
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;  void aes_cbc_enc_128_flush_vaes_avx512(AES_ARGS *args,
+;;  void aes_cfb_enc_128_flush_vaes_avx512(AES_ARGS *args,
 ;;                                         uint64_t len_in_bytes,
 ;;                                         uint16_t valid_lane_mask);
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-MKGLOBAL(aes_cbc_enc_128_flush_vaes_avx512,function,internal)
-aes_cbc_enc_128_flush_vaes_avx512:
+MKGLOBAL(aes_cfb_enc_128_flush_vaes_avx512,function,internal)
+aes_cfb_enc_128_flush_vaes_avx512:
         FUNC_SAVE
-        CBC_ENC 9, MAC_TYPE_NONE, FLUSH
+        CFB_ENC 9, FLUSH
         FUNC_RESTORE
         ret
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;  void aes_cbc_enc_192_flush_vaes_avx512(AES_ARGS *args,
+;;  void aes_cfb_enc_192_flush_vaes_avx512(AES_ARGS *args,
 ;;                                         uint64_t len_in_bytes,
 ;;                                         uint16_t valid_lane_mask);
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-MKGLOBAL(aes_cbc_enc_192_flush_vaes_avx512,function,internal)
-aes_cbc_enc_192_flush_vaes_avx512:
+MKGLOBAL(aes_cfb_enc_192_flush_vaes_avx512,function,internal)
+aes_cfb_enc_192_flush_vaes_avx512:
         FUNC_SAVE
-        CBC_ENC 11, MAC_TYPE_NONE, FLUSH
+        CFB_ENC 11, FLUSH
         FUNC_RESTORE
         ret
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;  void aes_cbc_enc_256_flush_vaes_avx512(AES_ARGS *args,
+;;  void aes_cfb_enc_256_flush_vaes_avx512(AES_ARGS *args,
 ;;                                         uint64_t len_in_bytes,
 ;;                                         uint16_t valid_lane_mask);
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-MKGLOBAL(aes_cbc_enc_256_flush_vaes_avx512,function,internal)
-aes_cbc_enc_256_flush_vaes_avx512:
+MKGLOBAL(aes_cfb_enc_256_flush_vaes_avx512,function,internal)
+aes_cfb_enc_256_flush_vaes_avx512:
         FUNC_SAVE
-        CBC_ENC 13, MAC_TYPE_NONE, FLUSH
-        FUNC_RESTORE
-        ret
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;  void aes128_cbc_mac_flush_vaes_avx512(AES_ARGS *args,
-;;                                        uint64_t len_in_bytes,
-;;                                        uint16_t valid_lane_mask);
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-MKGLOBAL(aes128_cbc_mac_flush_vaes_avx512,function,internal)
-aes128_cbc_mac_flush_vaes_avx512:
-        FUNC_SAVE
-        CBC_ENC 9, MAC_TYPE_CBC, FLUSH
-        FUNC_RESTORE
-        ret
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;  void aes256_cbc_mac_flush_vaes_avx512(AES_ARGS *args,
-;;                                        uint64_t len_in_bytes,
-;;                                        uint16_t valid_lane_mask);
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-MKGLOBAL(aes256_cbc_mac_flush_vaes_avx512,function,internal)
-aes256_cbc_mac_flush_vaes_avx512:
-        FUNC_SAVE
-        CBC_ENC 13, MAC_TYPE_CBC, FLUSH
-        FUNC_RESTORE
-        ret
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;  void aes_xcbc_mac_128_flush_vaes_avx512(AES_ARGS *args,
-;;                                          uint64_t len_in_bytes,
-;;                                          uint16_t valid_lane_mask);
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-MKGLOBAL(aes_xcbc_mac_128_flush_vaes_avx512,function,internal)
-aes_xcbc_mac_128_flush_vaes_avx512:
-        FUNC_SAVE
-        CBC_ENC 9, MAC_TYPE_XCBC, FLUSH
+        CFB_ENC 13, FLUSH
         FUNC_RESTORE
         ret
 

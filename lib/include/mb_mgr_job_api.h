@@ -299,39 +299,6 @@ SUBMIT_JOB_SM4_CBC_DEC(IMB_JOB *job)
 }
 
 /* ========================================================================= */
-/* AES-CFB ENC*/
-/* ========================================================================= */
-__forceinline IMB_JOB *
-SUBMIT_JOB_AES_CFB_ENC(IMB_JOB *job, const uint64_t key_sz)
-{
-        if (IMB_KEY_128_BYTES == key_sz) {
-#ifdef SUBMIT_JOB_AES_CFB_128_ENC
-                SUBMIT_JOB_AES_CFB_128_ENC(job);
-#else
-                AES_CFB_128_ENC(job->dst, job->src + job->cipher_start_src_offset_in_bytes, job->iv,
-                                job->enc_keys, job->msg_len_to_cipher_in_bytes);
-#endif
-        } else if (IMB_KEY_192_BYTES == key_sz) {
-#ifdef SUBMIT_JOB_AES_CFB_192_ENC
-                SUBMIT_JOB_AES_CFB_192_ENC(job);
-#else
-                AES_CFB_192_ENC(job->dst, job->src + job->cipher_start_src_offset_in_bytes, job->iv,
-                                job->enc_keys, job->msg_len_to_cipher_in_bytes);
-#endif
-        } else /* assume 256-bit key */ {
-#ifdef SUBMIT_JOB_AES_CFB_256_ENC
-                SUBMIT_JOB_AES_CFB_256_ENC(job);
-#else
-                AES_CFB_256_ENC(job->dst, job->src + job->cipher_start_src_offset_in_bytes, job->iv,
-                                job->enc_keys, job->msg_len_to_cipher_in_bytes);
-#endif
-        }
-
-        job->status |= IMB_STATUS_COMPLETED_CIPHER;
-        return job;
-}
-
-/* ========================================================================= */
 /* AES-CFB DEC */
 /* ========================================================================= */
 __forceinline IMB_JOB *
@@ -529,7 +496,38 @@ SUBMIT_JOB_CIPHER_ENC(IMB_MGR *state, IMB_JOB *job, const IMB_CIPHER_MODE cipher
         } else if (IMB_CIPHER_SM4_CBC == cipher_mode) {
                 return SUBMIT_JOB_SM4_CBC_ENC(job);
         } else if (IMB_CIPHER_CFB == cipher_mode) {
-                return SUBMIT_JOB_AES_CFB_ENC(job, key_sz);
+                if (IMB_KEY_128_BYTES == key_sz) {
+#ifdef SUBMIT_JOB_AES_CFB_128_ENC
+                        MB_MGR_AES_OOO *aes_cfb_128_ooo = state->aes_cfb_128_ooo;
+                        return SUBMIT_JOB_AES_CFB_128_ENC(aes_cfb_128_ooo, job);
+#else
+                        AES_CFB_128_ENC(job->dst, job->src + job->cipher_start_src_offset_in_bytes,
+                                        job->iv, job->enc_keys, job->msg_len_to_cipher_in_bytes);
+                        job->status |= IMB_STATUS_COMPLETED_CIPHER;
+                        return job;
+#endif
+                } else if (IMB_KEY_192_BYTES == key_sz) {
+#ifdef SUBMIT_JOB_AES_CFB_192_ENC
+                        MB_MGR_AES_OOO *aes_cfb_192_ooo = state->aes_cfb_192_ooo;
+                        return SUBMIT_JOB_AES_CFB_192_ENC(aes_cfb_192_ooo, job);
+#else
+                        AES_CFB_192_ENC(job->dst, job->src + job->cipher_start_src_offset_in_bytes,
+                                        job->iv, job->enc_keys, job->msg_len_to_cipher_in_bytes);
+                        job->status |= IMB_STATUS_COMPLETED_CIPHER;
+                        return job;
+#endif
+                } else {
+#ifdef SUBMIT_JOB_AES_CFB_256_ENC
+                        MB_MGR_AES_OOO *aes_cfb_256_ooo = state->aes_cfb_256_ooo;
+                        return SUBMIT_JOB_AES_CFB_256_ENC(aes_cfb_256_ooo, job);
+#else
+                        AES_CFB_256_ENC(job->dst, job->src + job->cipher_start_src_offset_in_bytes,
+                                        job->iv, job->enc_keys, job->msg_len_to_cipher_in_bytes);
+                        job->status |= IMB_STATUS_COMPLETED_CIPHER;
+                        return job;
+#endif
+                }
+
         } else { /* assume IMB_CIPHER_NULL */
                 job->status |= IMB_STATUS_COMPLETED_CIPHER;
                 return job;
@@ -594,12 +592,34 @@ FLUSH_JOB_CIPHER_ENC(IMB_MGR *state, IMB_JOB *job, const IMB_CIPHER_MODE cipher_
         } else if (IMB_CIPHER_SNOW3G_UEA2_BITLEN == cipher_mode) {
                 return FLUSH_JOB_SNOW3G_UEA2(state);
 #endif
+        } else if (IMB_CIPHER_CFB == cipher_mode) {
+                if (16 == key_sz) {
+#ifdef FLUSH_JOB_AES_CFB_128_ENC
+                        MB_MGR_AES_OOO *aes_cfb_128_ooo = state->aes_cfb_128_ooo;
+                        return FLUSH_JOB_AES_CFB_128_ENC(aes_cfb_128_ooo);
+#else
+                        return NULL;
+#endif
+                } else if (24 == key_sz) {
+#ifdef FLUSH_JOB_AES_CFB_192_ENC
+                        MB_MGR_AES_OOO *aes_cfb_192_ooo = state->aes_cfb_192_ooo;
+                        return FLUSH_JOB_AES_CFB_192_ENC(aes_cfb_192_ooo);
+#else
+                        return NULL;
+#endif
+                } else {
+#ifdef FLUSH_JOB_AES_CFB_256_ENC
+                        MB_MGR_AES_OOO *aes_cfb_256_ooo = state->aes_cfb_256_ooo;
+                        return FLUSH_JOB_AES_CFB_256_ENC(aes_cfb_256_ooo);
+#else
+                        return NULL;
+#endif
+                }
+        } else {
                 /**
                  * assume IMB_CIPHER_CNTR/CNTR_BITLEN, IMB_CIPHER_ECB,
-                 * IMB_CIPHER_CCM, IMB_CIPHER_NULL, IMB_CIPHER_CFB
-                 * or IMB_CIPHER_GCM
+                 * IMB_CIPHER_CCM, IMB_CIPHER_NULL or IMB_CIPHER_GCM
                  */
-        } else {
                 return NULL;
         }
 }

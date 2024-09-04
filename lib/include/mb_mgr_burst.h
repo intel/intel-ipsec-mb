@@ -357,12 +357,12 @@ __forceinline uint32_t
 submit_aes_cfb_burst_enc(IMB_MGR *state, IMB_JOB *jobs, const uint32_t n_jobs,
                          const IMB_KEY_SIZE_BYTES key_size, const int run_check)
 {
+        uint32_t completed_jobs = 0;
         if (run_check) {
-
                 /* validate jobs */
                 for (uint32_t i = 0; i < n_jobs; i++) {
-
                         IMB_JOB *job = &jobs[i];
+
                         /* validate job */
                         if (is_job_invalid(state, job, IMB_CIPHER_CFB, IMB_AUTH_NULL,
                                            IMB_DIR_ENCRYPT, key_size)) {
@@ -372,14 +372,98 @@ submit_aes_cfb_burst_enc(IMB_MGR *state, IMB_JOB *jobs, const uint32_t n_jobs,
                 }
         }
 
-        for (uint32_t i = 0; i < n_jobs; i++) {
+        if (key_size == IMB_KEY_128_BYTES) {
+#ifdef SUBMIT_JOB_AES_CFB_128_ENC
+                MB_MGR_AES_OOO *aes_ooo = state->aes_cfb_128_ooo;
 
-                IMB_JOB *job = &jobs[i];
-                SUBMIT_JOB_AES_CFB_ENC(job, key_size);
-                job->status = IMB_STATUS_COMPLETED;
+                for (uint32_t i = 0; i < n_jobs; i++) {
+                        IMB_JOB *job = &jobs[i];
+                        job = SUBMIT_JOB_AES_CFB_128_ENC(aes_ooo, job);
+                        if (job != NULL) {
+                                job->status = IMB_STATUS_COMPLETED;
+                                completed_jobs++;
+                        }
+                }
+                if (completed_jobs != n_jobs) {
+                        IMB_JOB *job = NULL;
+
+                        while ((job = FLUSH_JOB_AES_CFB_128_ENC(aes_ooo)) != NULL) {
+                                job->status = IMB_STATUS_COMPLETED;
+                                completed_jobs++;
+                        }
+                }
+#else
+                for (uint32_t i = 0; i < n_jobs; i++) {
+                        IMB_JOB *job = &jobs[i];
+                        AES_CFB_128_ENC(job->dst, job->src + job->cipher_start_src_offset_in_bytes,
+                                        job->iv, job->enc_keys, job->msg_len_to_cipher_in_bytes);
+                        job->status = IMB_STATUS_COMPLETED;
+                }
+                completed_jobs = n_jobs;
+
+#endif
+        } else if (key_size == IMB_KEY_192_BYTES) {
+
+#ifdef SUBMIT_JOB_AES_CFB_192_ENC
+                MB_MGR_AES_OOO *aes_ooo = state->aes_cfb_192_ooo;
+                for (uint32_t i = 0; i < n_jobs; i++) {
+                        IMB_JOB *job = &jobs[i];
+                        job = SUBMIT_JOB_AES_CFB_192_ENC(aes_ooo, job);
+                        if (job != NULL) {
+                                job->status = IMB_STATUS_COMPLETED;
+                                completed_jobs++;
+                        }
+                }
+                if (completed_jobs != n_jobs) {
+                        IMB_JOB *job = NULL;
+
+                        while ((job = FLUSH_JOB_AES_CFB_192_ENC(aes_ooo)) != NULL) {
+                                job->status = IMB_STATUS_COMPLETED;
+                                completed_jobs++;
+                        }
+                }
+#else
+                for (uint32_t i = 0; i < n_jobs; i++) {
+                        IMB_JOB *job = &jobs[i];
+                        AES_CFB_192_ENC(job->dst, job->src + job->cipher_start_src_offset_in_bytes,
+                                        job->iv, job->enc_keys, job->msg_len_to_cipher_in_bytes);
+                        job->status = IMB_STATUS_COMPLETED;
+                }
+                completed_jobs = n_jobs;
+
+#endif
+        } else {
+#ifdef SUBMIT_JOB_AES_CFB_256_ENC
+                MB_MGR_AES_OOO *aes_ooo = state->aes_cfb_256_ooo;
+                for (uint32_t i = 0; i < n_jobs; i++) {
+                        IMB_JOB *job = &jobs[i];
+                        job = SUBMIT_JOB_AES_CFB_256_ENC(aes_ooo, job);
+                        if (job != NULL) {
+                                job->status = IMB_STATUS_COMPLETED;
+                                completed_jobs++;
+                        }
+                }
+                if (completed_jobs != n_jobs) {
+                        IMB_JOB *job = NULL;
+
+                        while ((job = FLUSH_JOB_AES_CFB_256_ENC(aes_ooo)) != NULL) {
+                                job->status = IMB_STATUS_COMPLETED;
+                                completed_jobs++;
+                        }
+                }
+
+#else
+                for (uint32_t i = 0; i < n_jobs; i++) {
+                        IMB_JOB *job = &jobs[i];
+                        AES_CFB_256_ENC(job->dst, job->src + job->cipher_start_src_offset_in_bytes,
+                                        job->iv, job->enc_keys, job->msg_len_to_cipher_in_bytes);
+                        job->status = IMB_STATUS_COMPLETED;
+                }
+                completed_jobs = n_jobs;
+
+#endif
         }
-
-        return n_jobs;
+        return completed_jobs;
 }
 
 __forceinline uint32_t
