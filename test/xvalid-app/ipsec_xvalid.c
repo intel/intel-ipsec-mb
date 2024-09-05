@@ -237,6 +237,8 @@ struct str_value_mapping cipher_algo_str_map[] = {
           .values.job_params = { .cipher_mode = IMB_CIPHER_SM4_ECB, .key_size = 16 } },
         { .name = "SM4-CBC-128",
           .values.job_params = { .cipher_mode = IMB_CIPHER_SM4_CBC, .key_size = 16 } },
+        { .name = "SM4-CTR-128",
+          .values.job_params = { .cipher_mode = IMB_CIPHER_SM4_CNTR, .key_size = 16 } },
         { .name = "NULL-CIPHER",
           .values.job_params = { .cipher_mode = IMB_CIPHER_NULL, .key_size = 0 } },
         { .name = "AES-CFB-128",
@@ -600,7 +602,8 @@ const uint8_t key_sizes[][3] = {
         { 16, 32, 8 },  /* IMB_CIPHER_GCM_SGL */
         { 16, 16, 1 },  /* IMB_CIPHER_SM4_ECB */
         { 16, 16, 1 },  /* IMB_CIPHER_SM4_CBC */
-        { 16, 32, 8 }   /* IMB_CIPHER_CFB */
+        { 16, 32, 8 },  /* IMB_CIPHER_CFB */
+        { 16, 16, 1 }   /* IMB_CIPHER_SM4_CNTR */
 };
 
 uint8_t custom_test = 0;
@@ -1411,6 +1414,7 @@ fill_job(IMB_JOB *job, const struct params_s *params, uint8_t *buf, uint8_t *dig
                 job->iv_len_in_bytes = 16;
                 break;
         case IMB_CIPHER_PON_AES_CNTR:
+        case IMB_CIPHER_SM4_CNTR:
         case IMB_CIPHER_CNTR:
         case IMB_CIPHER_CNTR_BITLEN:
         case IMB_CIPHER_CFB:
@@ -1776,6 +1780,7 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys, const uint8_t *ciph
                 break;
         case IMB_CIPHER_SM4_ECB:
         case IMB_CIPHER_SM4_CBC:
+        case IMB_CIPHER_SM4_CNTR:
                 IMB_SM4_KEYEXP(mb_mgr, ciph_key, enc_keys, dec_keys);
                 break;
         case IMB_CIPHER_DES:
