@@ -232,17 +232,17 @@ ethernet_fcs_sse_no_aesni_local(const void *msg, const uint64_t len, const void 
 
 /* SM4 */
 void
-sm4_ecb_sse_no_aesni(const void *in, void *out, const int size, const void *exp_keys);
+sm4_ecb_sse_no_aesni(const void *in, void *out, const uint64_t size, const void *exp_keys);
 
 void
-sm4_cbc_enc_sse_no_aesni(const void *in, void *out, const int size, const void *exp_enc_keys,
+sm4_cbc_enc_sse_no_aesni(const void *in, void *out, const uint64_t size, const void *exp_enc_keys,
                          const void *iv);
 void
-sm4_cbc_dec_sse_no_aesni(const void *in, void *out, const int size, const void *exp_dec_keys,
+sm4_cbc_dec_sse_no_aesni(const void *in, void *out, const uint64_t size, const void *exp_dec_keys,
                          const void *iv);
 void
-sm4_cntr_sse_no_aesni(const void *in, void *out, const int size, const void *exp_enc_keys,
-                      const void *iv, const int iv_len);
+sm4_cntr_sse_no_aesni(const void *in, void *out, const uint64_t size, const void *exp_enc_keys,
+                      const void *iv, const uint64_t iv_len);
 void
 sm4_set_key_sse_no_aesni(const void *pKey, void *exp_enc_keys, void *exp_dec_keys);
 IMB_DLL_EXPORT void

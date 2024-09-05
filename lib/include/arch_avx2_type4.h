@@ -36,16 +36,16 @@ set_suite_id_avx2_t4(IMB_MGR *state, IMB_JOB *job);
 
 /* SM4 */
 void
-sm4_ecb_ni_avx2(const void *in, void *out, const int size, const void *exp_keys);
+sm4_ecb_ni_avx2(const void *in, void *out, const uint64_t size, const void *exp_keys);
 void
-sm4_cbc_enc_ni_avx2(const void *in, void *out, const int size, const void *exp_enc_keys,
+sm4_cbc_enc_ni_avx2(const void *in, void *out, const uint64_t size, const void *exp_enc_keys,
                     const void *iv);
 void
-sm4_cbc_dec_ni_avx2(const void *in, void *out, const int size, const void *exp_dec_keys,
+sm4_cbc_dec_ni_avx2(const void *in, void *out, const uint64_t size, const void *exp_dec_keys,
                     const void *iv);
 void
-sm4_cntr_ni_avx2(const void *in, void *out, const int size, const void *exp_enc_keys,
-                 const void *iv, const int iv_len);
+sm4_cntr_ni_avx2(const void *in, void *out, const uint64_t size, const void *exp_enc_keys,
+                 const void *iv, const uint64_t iv_len);
 void
 sm4_set_key_ni_avx2(const void *pKey, void *exp_enc_keys, void *exp_dec_keys);
 
