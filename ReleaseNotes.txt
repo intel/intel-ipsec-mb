@@ -10,6 +10,7 @@ General
 Library
 - SM4-ECB AVX2-SM4-NI implementation added.
 - SM4-CBC AVX2-SM4-NI implementation added.
+- SM4-CTR SSE and AVX2-SM4-NI implementations added.
 - SHA-512 AVX2-SHA512-NI x2 implementation added.
 - SHA-384 AVX2-SHA384-NI x2 implementation added.
 

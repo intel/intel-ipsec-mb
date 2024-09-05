@@ -30,6 +30,7 @@
 %include "include/aes_common.inc"
 %include "include/cet.inc"
 %include "include/error.inc"
+%include "include/memcpy.inc"
 
 %ifdef LINUX
 %define arg1    rdi
@@ -37,17 +38,26 @@
 %define arg3    rdx
 %define arg4    rcx
 %define arg5    r8
+%define arg6    r9
 %else
 %define arg1    rcx
 %define arg2    rdx
 %define arg3    r8
 %define arg4    r9
 %define arg5    qword [rsp + 40]
+%define arg6    qword [rsp + 48]
 %endif
 
 mksection .rodata
 default rel
 
+align 16
+ddq_add_1:
+dq 0x0000000000000001, 0x0000000000000000
+
+align 16
+byteswap_const:
+dq  0x08090A0B0C0D0E0F, 0x0001020304050607
 align 16
 constants:
 dd 0xa3b1bac6, 0x56aa3350, 0x677d9197, 0xb27022dc,
@@ -555,9 +565,125 @@ cbc_dec_done:
 
         ret
 
+align 32
+MKGLOBAL(sm4_cntr_ni_avx2,function,internal)
+sm4_cntr_ni_avx2:
+
+%define	IN      arg1
+%define	OUT     arg2
+%define SIZE    arg3
+%define	KEY_EXP arg4
+
+%define IV      r10
+%define IV_LEN  r11
+
+%define IDX     r10
+%define TMP     r11
+
+%define XIN     xmm0
+%define XIV     xmm1
+%define XKEY0   xmm2
+%define XKEY1   xmm3
+%define XKEY2   xmm4
+%define XKEY3   xmm5
+%define XKEY4   xmm6
+%define XKEY5   xmm7
+%define XKEY6   xmm8
+%define XKEY7   xmm9
+
+%define XSHUFB_IN  xmm10
+%define XSHUFB_OUT xmm11
+
+        mov     IV, arg5
+        mov     IV_LEN, arg6
+
+        or      SIZE, SIZE
+        jz      ctr_done
+
+        test    IV_LEN, 16
+        jnz     iv_len_is_16_bytes
+
+        ; Read 12 bytes: Nonce + ESP IV. Then pad with block counter 0x00000001
+        mov     DWORD(TMP), 0x01000000
+        vpinsrq XIV, [IV], 0
+        vpinsrd XIV, [IV + 8], 2
+        vpinsrd XIV, DWORD(TMP), 3
+
+        jmp     iv_read
+
+iv_len_is_16_bytes:
+        vmovdqu XIV, [IV]
+
+iv_read:
+        vmovdqa XSHUFB_IN,  [rel in_shufb]
+        vmovdqa XSHUFB_OUT, [rel out_shufb]
+        xor     IDX, IDX
+
+        ; Load round keys
+%assign i 0
+%rep 8 ; Number of SM4 rounds
+        vmovdqu APPEND(XKEY, i), [KEY_EXP + 16*i]
+%assign i (i + 1)
+%endrep
+
+        mov     TMP, SIZE
+        shr     TMP,  4 ; Number of full blocks
+        jz      end_ctr_loop
+
+align 32
+ctr_loop:
+        vpshufb XIN, XIV, XSHUFB_IN
+
+%assign i 0
+%rep 8 ; Number of SM4 rounds
+        vsm4rnds4 XIN, XIN, APPEND (XKEY, i)
+%assign i (i + 1)
+%endrep
+
+        vpshufb XIN, XIN, XSHUFB_OUT
+
+        vpxor   XIN, [IN + IDX]
+        vmovdqu [OUT + IDX], XIN
+
+        vpshufb XIV, [rel byteswap_const]
+        vpaddd  XIV, [rel ddq_add_1]
+        vpshufb XIV, [rel byteswap_const]
+
+        add     IDX, 16
+        dec     TMP
+        jnz     ctr_loop
+
+end_ctr_loop:
+        and     SIZE, 0xf
+        jz      ctr_done
+
+        vpshufb XIN, XIV, XSHUFB_IN
+
+%assign i 0
+%rep 8 ; Number of SM4 rounds
+        vsm4rnds4 XIN, XIN, APPEND (XKEY, i)
+%assign i (i + 1)
+%endrep
+
+        vpshufb XIN, XIN, XSHUFB_OUT
+
+        add     IN, IDX
+        simd_load_avx_15_1 XIV, IN, SIZE
+        vpxor   XIN, XIV
+        simd_store_avx OUT, XIN, SIZE, TMP, rax, IDX
+
+ctr_done:
+
+%ifdef SAFE_DATA
+        clear_all_ymms_asm
+%else
+        vzeroupper
+%endif
+        ret
+
 ;;
-;;void sm4_set_key_sse(const void *key, const uint32_t *exp_enc_keys,
-;;                     const uint32_t *exp_dec_keys)
+;;void sm4_set_key_ni_avx2(const void *key, const uint32_t *exp_enc_keys,
+;;                         const uint32_t *exp_dec_keys)
 ;;
 ; arg 1: KEY:  pointer to 128-bit key
 ; arg 2: EXP_ENC_KEYS: pointer to expanded encryption keys

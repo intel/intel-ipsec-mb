@@ -90,6 +90,7 @@ Table 1. List of supported cipher algorithms and their implementations.
 | PON-CRC-BIP    | N      | Y  by8 | Y  by8 | N      | N      | Y      |
 | SM4-ECB        | N      | Y      | N      | Y(11)  | N      | N      |
 | SM4-CBC        | N      | Y      | N      | Y(12)  | N      | N      |
+| SM4-CTR        | N      | Y      | N      | Y(12)  | N      | N      |
 +----------------------------------------------------------------------+
 ```
 Notes:  
@@ -224,6 +225,7 @@ Table 3. Encryption and integrity algorithm combinations
 | SNOW-V        |                                                     |
 | SM4-ECB       |                                                     |
 | SM4-CBC       |                                                     |
+| SM4-CTR       |                                                     |
 |---------------+-----------------------------------------------------|
 | AES128-DOCSIS,| DOCSIS-CRC32                                        |
 | AES256-DOCSIS |                                                     |
