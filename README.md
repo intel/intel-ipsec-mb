@@ -90,7 +90,7 @@ Table 1. List of supported cipher algorithms and their implementations.
 | PON-CRC-BIP    | N      | Y  by8 | Y  by8 | N      | N      | Y      |
 | SM4-ECB        | N      | Y      | N      | Y(11)  | N      | N      |
 | SM4-CBC        | N      | Y      | N      | Y(12)  | N      | N      |
-| SM4-CTR        | N      | Y      | N      | Y(12)  | N      | N      |
+| SM4-CTR        | N      | Y      | N      | Y(13)  | N      | N      |
 +----------------------------------------------------------------------+
 ```
 Notes:  
@@ -110,6 +110,8 @@ Notes:
 (12)  - AVX2 using SM4-NI ISA if the ISA is available, if not,
         fallback to SSE implementation. Single block in encryption,
         by16 in decryption.
+(13)  - AVX2 using SM4-NI ISA, by8, if the ISA is available, if not,
+        fallback to SSE implementation.
 
 Legend:  
 ` byY` - single buffer Y blocks at a time  

@@ -51,13 +51,39 @@
 mksection .rodata
 default rel
 
-align 16
-ddq_add_1:
+align 32
+ddq_add_0_1:
+dq 0x0000000000000000, 0x0000000000000000
 dq 0x0000000000000001, 0x0000000000000000
 
-align 16
+align 32
+ddq_add_2_3:
+dq 0x0000000000000002, 0x0000000000000000
+dq 0x0000000000000003, 0x0000000000000000
+
+align 32
+ddq_add_4_5:
+dq 0x0000000000000004, 0x0000000000000000
+dq 0x0000000000000005, 0x0000000000000000
+
+align 32
+ddq_add_6_7:
+dq 0x0000000000000006, 0x0000000000000000
+dq 0x0000000000000007, 0x0000000000000000
+
+ddq_add_8:
+dq 0x0000000000000008, 0x0000000000000000
+dq 0x0000000000000008, 0x0000000000000000
+
+ddq_add_8_be:
+dq 0x0000000000000000, 0x0800000000000000
+dq 0x0000000000000000, 0x0800000000000000
+
+align 32
 byteswap_const:
 dq  0x08090A0B0C0D0E0F, 0x0001020304050607
+dq  0x08090A0B0C0D0E0F, 0x0001020304050607
+
 align 16
 constants:
 dd 0xa3b1bac6, 0x56aa3350, 0x677d9197, 0xb27022dc,
@@ -102,16 +128,14 @@ mksection .text
 %define %%YDATA7     %9
 %define %%YSHUF      %10
 
-%assign %%REMAIN_BLOCK (%%NUM_BLOCKS % 2)
+        YMM_OPCODE3_DSTR_SRC1R_SRC2R_BLOCKS_0_16 %%NUM_BLOCKS, vpshufb, \
+                        %%YDATA0, %%YDATA1, %%YDATA2, %%YDATA3, \
+                        %%YDATA4, %%YDATA5, %%YDATA6, %%YDATA7, \
+                        %%YDATA0, %%YDATA1, %%YDATA2, %%YDATA3, \
+                        %%YDATA4, %%YDATA5, %%YDATA6, %%YDATA7, \
+                        %%YSHUF, %%YSHUF, %%YSHUF, %%YSHUF, \
+                        %%YSHUF, %%YSHUF, %%YSHUF, %%YSHUF
 
-%assign j 0
-%rep %%NUM_BLOCKS / 2
-        vpshufb APPEND(YDATA, j), %%YSHUF
-%assign j (j+1)
-%endrep
-%if (%%REMAIN_BLOCK == 1)
-        vpshufb APPEND(YDATA, j), %%YSHUF
-%endif
 %endmacro
 
 ;
@@ -134,14 +158,13 @@ mksection .text
 %assign %%I 0
 %rep 8 ; Number of SM4 rounds
         vbroadcasti128 %%YKEY, [KEY_EXP + 16*%%I]
-%assign %%J 0
-%rep %%NUM_BLOCKS/2
-        vsm4rnds4 APPEND(%%YDATA, %%J), APPEND(%%YDATA, %%J), %%YKEY
-%assign %%J (%%J+1)
-%endrep
-%if (%%REMAIN_BLOCK == 1)
-        vsm4rnds4 APPEND(%%YDATA, %%J), APPEND(%%YDATA, %%J), %%YKEY
-%endif
+        YMM_OPCODE3_DSTR_SRC1R_SRC2R_BLOCKS_0_16 %%NUM_BLOCKS, vsm4rnds4, \
+                        %%YDATA0, %%YDATA1, %%YDATA2, %%YDATA3, \
+                        %%YDATA4, %%YDATA5, %%YDATA6, %%YDATA7, \
+                        %%YDATA0, %%YDATA1, %%YDATA2, %%YDATA3, \
+                        %%YDATA4, %%YDATA5, %%YDATA6, %%YDATA7, \
+                        %%YKEY, %%YKEY, %%YKEY, %%YKEY, \
+                        %%YKEY, %%YKEY, %%YKEY, %%YKEY
 
 %assign %%I (%%I + 1)
 %endrep
@@ -565,6 +588,40 @@ cbc_dec_done:
 
         ret
 
+%macro PREPARE_NEXT_COUNTER_BLOCKS 5
+%define %%YIV_0         %1
+%define %%YIV_1         %2
+%define %%YIV_2         %3
+%define %%YIV_3         %4
+%define %%CTR           %5
+
+        add     BYTE(%%CTR), 8
+        cmp     BYTE(%%CTR), 16
+        jb      %%ctr_overflow
+
+        vpaddd  %%YIV_0, [rel ddq_add_8_be]
+        vpaddd  %%YIV_1, [rel ddq_add_8_be]
+        vpaddd  %%YIV_2, [rel ddq_add_8_be]
+        vpaddd  %%YIV_3, [rel ddq_add_8_be]
+        jmp     %%end_prepare
+
+%%ctr_overflow:
+        vpshufb %%YIV_0, [rel byteswap_const]
+        vpshufb %%YIV_1, [rel byteswap_const]
+        vpshufb %%YIV_2, [rel byteswap_const]
+        vpshufb %%YIV_3, [rel byteswap_const]
+        vpaddd  %%YIV_0, [rel ddq_add_8]
+        vpaddd  %%YIV_1, [rel ddq_add_8]
+        vpaddd  %%YIV_2, [rel ddq_add_8]
+        vpaddd  %%YIV_3, [rel ddq_add_8]
+        vpshufb %%YIV_0, [rel byteswap_const]
+        vpshufb %%YIV_1, [rel byteswap_const]
+        vpshufb %%YIV_2, [rel byteswap_const]
+        vpshufb %%YIV_3, [rel byteswap_const]
+
+%%end_prepare:
+%endmacro
+
 align 32
 MKGLOBAL(sm4_cntr_ni_avx2,function,internal)
 sm4_cntr_ni_avx2:
@@ -579,20 +636,32 @@ sm4_cntr_ni_avx2:
 
 %define IDX     r10
 %define TMP     r11
+%define TMP2    rax
 
-%define XIN     xmm0
-%define XIV     xmm1
-%define XKEY0   xmm2
-%define XKEY1   xmm3
-%define XKEY2   xmm4
-%define XKEY3   xmm5
-%define XKEY4   xmm6
-%define XKEY5   xmm7
-%define XKEY6   xmm8
-%define XKEY7   xmm9
+%define XIN_0    xmm0
+%define XIV_0    xmm1
+%define XIN_1    xmm2
+%define XIN_2    xmm4
+%define XIN_3    xmm6
 
-%define XSHUFB_IN  xmm10
-%define XSHUFB_OUT xmm11
+%define XSHUFB_IN  xmm9
+%define XSHUFB_OUT xmm10
+
+%define YIN_0    ymm0
+%define YIV_0    ymm1
+%define YIN_1    ymm2
+%define YIV_1    ymm3
+%define YIN_2    ymm4
+%define YIV_2    ymm5
+%define YIN_3    ymm6
+%define YIV_3    ymm7
+
+%define YKEY    ymm8
+
+%define YSHUFB_IN  ymm9
+%define YSHUFB_OUT ymm10
+
+%define YLAST_BLOCK ymm11
 
         mov     IV, arg5
         mov     IV_LEN, arg6
@@ -605,72 +674,153 @@ sm4_cntr_ni_avx2:
 
         ; Read 12 bytes: Nonce + ESP IV. Then pad with block counter 0x00000001
         mov     DWORD(TMP), 0x01000000
-        vpinsrq XIV, [IV], 0
-        vpinsrd XIV, [IV + 8], 2
-        vpinsrd XIV, DWORD(TMP), 3
+        vmovq   XIV_0, [IV]
+        vpinsrd XIV_0, [IV + 8], 2
+        vpinsrd XIV_0, DWORD(TMP), 3
+        mov     DWORD(TMP2), 0x00000001
 
         jmp     iv_read
 
 iv_len_is_16_bytes:
-        vmovdqu XIV, [IV]
+        vmovdqu XIV_0, [IV]
+        movbe   DWORD(TMP2), [IV + 12]
+        and     DWORD(TMP2), 0xff
 
 iv_read:
-        vmovdqa XSHUFB_IN,  [rel in_shufb]
-        vmovdqa XSHUFB_OUT, [rel out_shufb]
+        ; TMP2 contains block counter in Little Endian
+
+        ; Broadcast IV
+        vperm2i128 YIV_0, YIV_0, YIV_0, 0
+        vmovdqa    YIV_1, YIV_0
+        vmovdqa    YIV_2, YIV_0
+        vmovdqa    YIV_3, YIV_0
+
+        vpshufb YIV_0, [rel byteswap_const]
+        vpshufb YIV_1, [rel byteswap_const]
+        vpshufb YIV_2, [rel byteswap_const]
+        vpshufb YIV_3, [rel byteswap_const]
+        vpaddd  YIV_0, [rel ddq_add_0_1]
+        vpaddd  YIV_1, [rel ddq_add_2_3]
+        vpaddd  YIV_2, [rel ddq_add_4_5]
+        vpaddd  YIV_3, [rel ddq_add_6_7]
+        vpshufb YIV_0, [rel byteswap_const]
+        vpshufb YIV_1, [rel byteswap_const]
+        vpshufb YIV_2, [rel byteswap_const]
+        vpshufb YIV_3, [rel byteswap_const]
+
+        add     BYTE(TMP2), 8
+        vmovdqa YSHUFB_IN,  [rel in_shufb]
+        vmovdqa YSHUFB_OUT, [rel out_shufb]
         xor     IDX, IDX
 
-        ; Load round keys
-%assign i 0
-%rep 8 ; Number of SM4 rounds
-        vmovdqu APPEND(XKEY, i), [KEY_EXP + 16*i]
-%assign i (i + 1)
-%endrep
-
         mov     TMP, SIZE
-        shr     TMP,  4 ; Number of full blocks
+        shr     TMP,  4+3 ; Number of 8x full blocks
         jz      end_ctr_loop
 
 align 32
-ctr_loop:
-        vpshufb XIN, XIV, XSHUFB_IN
+ctr_4x32_loop:
+        YMM_OPCODE3_DSTR_SRC1R_SRC2R_BLOCKS_0_16 8, vpshufb, \
+                        YIN_0, YIN_1, YIN_2, YIN_3, NULL, NULL, NULL, NULL, \
+                        YIV_0, YIV_1, YIV_2, YIV_3, NULL, NULL, NULL, NULL, \
+                        YSHUFB_IN, YSHUFB_IN, YSHUFB_IN, YSHUFB_IN,  NULL, NULL, NULL, NULL
 
-%assign i 0
-%rep 8 ; Number of SM4 rounds
-        vsm4rnds4 XIN, XIN, APPEND (XKEY, i)
-%assign i (i + 1)
-%endrep
+        SM4_ROUNDS 8, YIN_0, YIN_1, YIN_2, YIN_3, \
+                      NULL, NULL, NULL, NULL, YKEY
 
-        vpshufb XIN, XIN, XSHUFB_OUT
+        SHUFFLE_BLOCKS 8, YIN_0, YIN_1, YIN_2, YIN_3, \
+                          NULL, NULL, NULL, NULL, YSHUFB_OUT
 
-        vpxor   XIN, [IN + IDX]
-        vmovdqu [OUT + IDX], XIN
+        vpxor   YIN_0, [IN + IDX]
+        vpxor   YIN_1, [IN + IDX + 32]
+        vpxor   YIN_2, [IN + IDX + 32*2]
+        vpxor   YIN_3, [IN + IDX + 32*3]
+        vmovdqu [OUT + IDX], YIN_0
+        vmovdqu [OUT + IDX + 32], YIN_1
+        vmovdqu [OUT + IDX + 32*2], YIN_2
+        vmovdqu [OUT + IDX + 32*3], YIN_3
 
-        vpshufb XIV, [rel byteswap_const]
-        vpaddd  XIV, [rel ddq_add_1]
-        vpshufb XIV, [rel byteswap_const]
+        PREPARE_NEXT_COUNTER_BLOCKS YIV_0, YIV_1, YIV_2, YIV_3, TMP2
 
-        add     IDX, 16
+        add     IDX, 16*8
         dec     TMP
-        jnz     ctr_loop
+        jnz     ctr_4x32_loop
 
 end_ctr_loop:
-        and     SIZE, 0xf
+        sub     SIZE, IDX
         jz      ctr_done
 
-        vpshufb XIN, XIV, XSHUFB_IN
+        ; Between 1-127 bytes left
+        mov     TMP, SIZE
+        shr     TMP, 4 ; Number of full blocks (0-7)
+        jz      final_num_blocks_is_0
+
+        cmp     TMP, 4
+        je      final_num_blocks_is_4
+        jb      final_num_blocks_is_3_1
+        ;; 7, 6 or 5
+        cmp     TMP, 6
+        ja      final_num_blocks_is_7
+        je      final_num_blocks_is_6
+        jmp     final_num_blocks_is_5
+final_num_blocks_is_3_1:
+        ;; 3, 2 or 1
+        cmp     TMP, 2
+        ja      final_num_blocks_is_3
+        je      final_num_blocks_is_2
+        jmp     final_num_blocks_is_1
+
+%assign ctr_blocks_left 0
+%rep 8
+align 32
+final_num_blocks_is_  %+ ctr_blocks_left:
+
+        YMM_OPCODE3_DSTR_SRC1R_SRC2R_BLOCKS_0_16 (ctr_blocks_left + 1), vpshufb, \
+                        YIN_0, YIN_1, YIN_2, YIN_3, NULL, NULL, NULL, NULL, \
+                        YIV_0, YIV_1, YIV_2, YIV_3, NULL, NULL, NULL, NULL, \
+                        YSHUFB_IN, YSHUFB_IN, YSHUFB_IN, YSHUFB_IN,  NULL, NULL, NULL, NULL
+
+        SM4_ROUNDS (ctr_blocks_left + 1), YIN_0, YIN_1, YIN_2, YIN_3, \
+                   NULL, NULL, NULL, NULL, YKEY
+
+        SHUFFLE_BLOCKS (ctr_blocks_left + 1), YIN_0, YIN_1, YIN_2, YIN_3, \
+                       NULL, NULL, NULL, NULL, YSHUFB_OUT
+
+        ; Move last blocks to separate register, for partial block encryption/decryption preparation
+%assign final_block_reg (ctr_blocks_left / 2)
+%if ((ctr_blocks_left %% 2) == 1)
+        vextracti128 XWORD(YLAST_BLOCK), APPEND(YIN_, final_block_reg), 1
+%else
+        vmovdqa YLAST_BLOCK, APPEND(YIN_, final_block_reg)
+%endif
 
 %assign i 0
-%rep 8 ; Number of SM4 rounds
-        vsm4rnds4 XIN, XIN, APPEND (XKEY, i)
+%rep    (ctr_blocks_left / 2)
+        vpxor   APPEND(YIN_, i), [IN + IDX+ 32*i]
+        vmovdqu [OUT + IDX + 32*i], APPEND(YIN_, i)
 %assign i (i + 1)
 %endrep
 
-        vpshufb XIN, XIN, XSHUFB_OUT
+%if ((ctr_blocks_left %% 2) == 1)
+        vpxor   APPEND(XIN_, i), [IN + IDX + 32*i]
+        vmovdqu [OUT + IDX + 32*i], APPEND(XIN_, i)
+%endif
+
+        sub     SIZE, 16*ctr_blocks_left
+        add     IDX, 16*ctr_blocks_left
+
+        jmp     partial_block_ctr
+%assign ctr_blocks_left (ctr_blocks_left + 1)
+%endrep
+
+partial_block_ctr:
+        or      SIZE, SIZE
+        jz      ctr_done
 
         add     IN, IDX
-        simd_load_avx_15_1 XIV, IN, SIZE
-        vpxor   XIN, XIV
-        simd_store_avx OUT, XIN, SIZE, TMP, rax, IDX
+        add     OUT, IDX
+        simd_load_avx_15_1 XIV_0, IN, SIZE
+        vpxor   XWORD(YLAST_BLOCK), XIV_0
+        simd_store_avx OUT, XWORD(YLAST_BLOCK), SIZE, TMP, TMP2
 
 ctr_done:
 
