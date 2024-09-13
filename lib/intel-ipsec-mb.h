@@ -91,8 +91,8 @@ typedef struct {
 /**
  * Library version
  */
-#define IMB_VERSION_STR "1.2.0"
-#define IMB_VERSION_NUM 0x10200
+#define IMB_VERSION_STR "1.2.1"
+#define IMB_VERSION_NUM 0x10201
 
 /**
  * Macro to translate version number
@@ -983,6 +983,8 @@ typedef uint32_t (*crc32_fn_t)(const void *, const uint64_t);
 #define IMB_FEATURE_AVX512_IFMA (1ULL << 17)
 #define IMB_FEATURE_BMI2       (1ULL << 18)
 #define IMB_FEATURE_AESNI_EMU  (1ULL << 19)
+#define IMB_FEATURE_XSAVE          (1ULL << 27)
+#define IMB_FEATURE_OSXSAVE        (1ULL << 28)
 
 /* TOP LEVEL (IMB_MGR) Data structure fields */
 

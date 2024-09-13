@@ -49,7 +49,7 @@ init_mb_mgr_auto(IMB_MGR *state, IMB_ARCH *arch)
                 IMB_FEATURE_SSE4_2 | IMB_FEATURE_CMOV |
                 IMB_FEATURE_AESNI | IMB_FEATURE_PCLMULQDQ;
         const uint64_t detect_avx =
-                IMB_FEATURE_AVX | IMB_FEATURE_CMOV | IMB_FEATURE_AESNI;
+                IMB_FEATURE_AVX | IMB_FEATURE_CMOV | IMB_FEATURE_AESNI | IMB_FEATURE_XSAVE | IMB_FEATURE_OSXSAVE;
         const uint64_t detect_avx2 = IMB_FEATURE_AVX2 | detect_avx;
         const uint64_t detect_avx512 = IMB_FEATURE_AVX512_SKX | detect_avx2;
 

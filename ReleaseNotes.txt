@@ -1,6 +1,12 @@
 ========================================================================
 Release Notes for Intel(R) Multi-Buffer Crypto for IPsec Library
 
+v1.2.1 September 2024
+========================================================================
+
+General
+- Add check for XSAVE and OSXSAVE CPU capabilities for all AVX architectures
+
 v1.2 February 2022
 ========================================================================
 

@@ -180,6 +180,20 @@ static uint32_t detect_bmi2(void)
         return (cpuid_7_0.ebx & (1 << 8));
 }
 
+static uint32_t
+detect_xsave(void)
+{
+        /* Check presence of XSAVE - bit 26 of ECX */
+        return (cpuid_1_0.ecx & (1UL << 26));
+}
+
+static uint32_t
+detect_osxsave(void)
+{
+        /* Check presence of OSXSAVE - bit 27 of ECX */
+        return (cpuid_1_0.ecx & (1UL << 27));
+}
+
 uint64_t cpu_feature_detect(void)
 {
         static const struct {
@@ -204,6 +218,8 @@ uint64_t cpu_feature_detect(void)
                 { 7, IMB_FEATURE_GFNI, detect_gfni },
                 { 7, IMB_FEATURE_AVX512_IFMA, detect_avx512_ifma },
                 { 7, IMB_FEATURE_BMI2, detect_bmi2 },
+                { 1, IMB_FEATURE_XSAVE, detect_xsave },
+                { 1, IMB_FEATURE_OSXSAVE, detect_osxsave }
         };
         struct cpuid_regs r;
         unsigned hi_leaf_number = 0;
