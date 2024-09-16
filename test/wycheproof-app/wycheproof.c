@@ -1230,7 +1230,6 @@ static void
 usage(const char *name)
 {
         printf("Usage: %s [args], where args are zero or more\n"
-               "--aesni-emu test AESNI emulation interface\n"
                "--avx512    test AVX512 interface\n"
                "--avx2      test AVX2 interface\n"
                "--avx       test AVX interface\n"
@@ -1247,7 +1246,6 @@ main(int argc, const char **argv)
 {
         IMB_ARCH arch_to_run = IMB_ARCH_NUM;
         uint64_t flags = 0;
-        const uint64_t feat_flags = imb_get_feature_flags();
         IMB_MGR *p_mgr = NULL;
         int i;
 
@@ -1262,9 +1260,6 @@ main(int argc, const char **argv)
                 if ((strcmp(argv[i], "-h") == 0) || (strcmp(argv[i], "--help") == 0)) {
                         usage(argv[0]);
                         return EXIT_SUCCESS;
-                } else if (strcmp(argv[i], "--aesni-emu") == 0) {
-                        flags |= IMB_FLAG_AESNI_OFF;
-                        arch_to_run = IMB_ARCH_NOAESNI;
                 } else if (strcmp(argv[i], "--sse") == 0) {
                         arch_to_run = IMB_ARCH_SSE;
                 } else if (strcmp(argv[i], "--avx") == 0) {
@@ -1288,15 +1283,6 @@ main(int argc, const char **argv)
         }
 
         switch (arch_to_run) {
-        case IMB_ARCH_NOAESNI:
-                if (((feat_flags & IMB_FEATURE_AESNI_EMU) == 0) &&
-                    (imb_get_errno(p_mgr) == IMB_ERR_NO_AESNI_EMU)) {
-                        printf("AESNI Emulation is not enabled!\n");
-                        free_mb_mgr(p_mgr);
-                        return EXIT_FAILURE;
-                }
-                init_mb_mgr_sse(p_mgr);
-                break;
         case IMB_ARCH_SSE:
                 init_mb_mgr_sse(p_mgr);
                 break;

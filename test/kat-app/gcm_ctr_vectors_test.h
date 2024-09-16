@@ -30,7 +30,7 @@
 
 #include <stdint.h>
 
-enum arch_type { ARCH_SSE = 0, ARCH_AVX, ARCH_AVX2, ARCH_AVX512, ARCH_NO_AESNI, ARCH_NUMOF };
+enum arch_type { ARCH_SSE = 0, ARCH_AVX, ARCH_AVX2, ARCH_AVX512, ARCH_NUMOF };
 
 #define KBITS(K) (sizeof(K))
 

@@ -173,7 +173,6 @@ struct str_value_mapping {
 const struct str_value_mapping arch_str_map[] = {
         { .name = "NONE", .values.arch_type = IMB_ARCH_NONE },
         { .name = "SSE", .values.arch_type = IMB_ARCH_SSE },
-        { .name = "NO-AESNI", .values.arch_type = IMB_ARCH_NOAESNI },
         { .name = "AVX", .values.arch_type = IMB_ARCH_AVX },
         { .name = "AVX2", .values.arch_type = IMB_ARCH_AVX2 },
         { .name = "AVX512", .values.arch_type = IMB_ARCH_AVX512 }
@@ -627,9 +626,8 @@ struct custom_job_params custom_job_params = { .cipher_mode = IMB_CIPHER_NULL,
                                                .hash_alg = IMB_AUTH_NULL,
                                                .key_size = 0 };
 
-/* AESNI_EMU disabled by default */
-uint8_t enc_archs[IMB_ARCH_NUM] = { 0, 0, 1, 1, 1, 1 };
-uint8_t dec_archs[IMB_ARCH_NUM] = { 0, 0, 1, 1, 1, 1 };
+uint8_t enc_archs[IMB_ARCH_NUM] = { 0, 1, 1, 1, 1 };
+uint8_t dec_archs[IMB_ARCH_NUM] = { 0, 1, 1, 1, 1 };
 
 uint64_t flags = 0; /* flags passed to alloc_mb_mgr() */
 
@@ -1878,7 +1876,6 @@ perform_safe_checks(IMB_MGR *mgr, const IMB_ARCH arch, struct safe_check_ctx *ct
                 void (*simd_dump_fn)(void);
         } simd_ctx[] = {
                 { 0, NULL },                     /* none */
-                { XMM_MEM_SIZE, dump_xmms_sse }, /* no aesni */
                 { XMM_MEM_SIZE, dump_xmms_sse }, /* sse */
                 { XMM_MEM_SIZE, dump_xmms_avx }, /* avx */
                 { YMM_MEM_SIZE, dump_ymms },     /* avx2 */
@@ -2740,15 +2737,7 @@ run_test(const IMB_ARCH enc_arch, const IMB_ARCH dec_arch, struct params_s *para
         IMB_MGR *enc_mgr = NULL;
         IMB_MGR *dec_mgr = NULL;
 
-        if (enc_arch == IMB_ARCH_NOAESNI) {
-                enc_mgr = alloc_mb_mgr(flags | IMB_FLAG_AESNI_OFF);
-                if (imb_get_errno(enc_mgr) == IMB_ERR_NO_AESNI_EMU) {
-                        printf("AESNI Emulation is not enabled. "
-                               "Skipping NOAESNI test.\n");
-                        return;
-                }
-        } else
-                enc_mgr = alloc_mb_mgr(flags);
+        enc_mgr = alloc_mb_mgr(flags);
 
         if (enc_mgr == NULL) {
                 fprintf(stderr, "MB MGR could not be allocated\n");
@@ -2757,7 +2746,6 @@ run_test(const IMB_ARCH enc_arch, const IMB_ARCH dec_arch, struct params_s *para
 
         switch (enc_arch) {
         case IMB_ARCH_SSE:
-        case IMB_ARCH_NOAESNI:
                 init_mb_mgr_sse(enc_mgr);
                 break;
         case IMB_ARCH_AVX:
@@ -2787,15 +2775,7 @@ run_test(const IMB_ARCH enc_arch, const IMB_ARCH dec_arch, struct params_s *para
         printf("Encrypting ");
         print_tested_arch(enc_mgr->features, enc_arch);
 
-        if (dec_arch == IMB_ARCH_NOAESNI) {
-                dec_mgr = alloc_mb_mgr(flags | IMB_FLAG_AESNI_OFF);
-                if (imb_get_errno(dec_mgr) == IMB_ERR_NO_AESNI_EMU) {
-                        printf("AESNI Emulation is not enabled. "
-                               "Skipping NOAESNI test.\n");
-                        return;
-                }
-        } else
-                dec_mgr = alloc_mb_mgr(flags);
+        dec_mgr = alloc_mb_mgr(flags);
 
         if (dec_mgr == NULL) {
                 fprintf(stderr, "MB MGR could not be allocated\n");
@@ -2804,7 +2784,6 @@ run_test(const IMB_ARCH enc_arch, const IMB_ARCH dec_arch, struct params_s *para
 
         switch (dec_arch) {
         case IMB_ARCH_SSE:
-        case IMB_ARCH_NOAESNI:
                 init_mb_mgr_sse(dec_mgr);
                 break;
         case IMB_ARCH_AVX:
@@ -2958,10 +2937,10 @@ run_tests(const unsigned int safe_check)
 #endif
         }
         /* Performing tests for each selected architecture */
-        for (enc_arch = IMB_ARCH_NOAESNI; enc_arch < IMB_ARCH_NUM; enc_arch++) {
+        for (enc_arch = IMB_ARCH_SSE; enc_arch < IMB_ARCH_NUM; enc_arch++) {
                 if (enc_archs[enc_arch] == 0)
                         continue;
-                for (dec_arch = IMB_ARCH_NOAESNI; dec_arch < IMB_ARCH_NUM; dec_arch++) {
+                for (dec_arch = IMB_ARCH_SSE; dec_arch < IMB_ARCH_NUM; dec_arch++) {
                         if (dec_archs[dec_arch] == 0)
                                 continue;
                         run_test(enc_arch, dec_arch, &params, variant_data, safe_check);
@@ -2981,9 +2960,9 @@ usage(const char *app_name)
                 "-h: print this message\n"
                 "-v: verbose, prints extra information\n"
                 "--enc-arch: encrypting with architecture "
-                "(NO-AESNI/SSE/AVX/AVX2/AVX512)\n"
+                "(SSE/AVX/AVX2/AVX512)\n"
                 "--dec-arch: decrypting with architecture "
-                "(NO-AESNI/SSE/AVX/AVX2/AVX512)\n"
+                "(SSE/AVX/AVX2/AVX512)\n"
                 "--cipher-algo: Select cipher algorithm to run on the custom "
                 "test\n"
                 "--hash-algo: Select hash algorithm to run on the custom test\n"
@@ -2992,7 +2971,6 @@ usage(const char *app_name)
                 "--no-avx2: Don't do AVX2\n"
                 "--no-avx: Don't do AVX\n"
                 "--no-sse: Don't do SSE\n"
-                "--aesni-emu: Do AESNI_EMU (disabled by default)\n"
                 "--shani-on: use SHA extensions, default: auto-detect\n"
                 "--shani-off: don't use SHA extensions\n"
                 "--gfni-on: use Galois Field extensions, default: auto-detect\n"
@@ -3349,7 +3327,7 @@ main(int argc, char *argv[])
                 return EXIT_FAILURE;
 
         /* disable tests depending on instruction sets supported */
-        for (arch_id = IMB_ARCH_NOAESNI; arch_id < IMB_ARCH_NUM; arch_id++) {
+        for (arch_id = IMB_ARCH_SSE; arch_id < IMB_ARCH_NUM; arch_id++) {
                 if (arch_support[arch_id] == 0) {
                         enc_archs[arch_id] = 0;
                         dec_archs[arch_id] = 0;

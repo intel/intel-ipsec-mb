@@ -1434,8 +1434,6 @@ main(int argc, char **argv)
                                 test_arch = IMB_ARCH_AVX2;
                         else if (strcmp(argv[i + 1], "AVX512") == 0)
                                 test_arch = IMB_ARCH_AVX512;
-                        else if (strcmp(argv[i + 1], "NO-AESNI") == 0)
-                                test_arch = IMB_ARCH_NOAESNI;
                         else {
                                 fprintf(stderr, "Unsupported architecture\n");
                                 goto exit;
@@ -1530,11 +1528,7 @@ main(int argc, char **argv)
                 goto exit;
 
         /* Allocate and initialize MB_MGR */
-        if (test_arch == IMB_ARCH_NOAESNI)
-                mb_mgr = alloc_mb_mgr(IMB_FLAG_AESNI_OFF);
-        else
-                mb_mgr = alloc_mb_mgr(0);
-
+        mb_mgr = alloc_mb_mgr(0);
         if (mb_mgr == NULL) {
                 fprintf(stderr, "Could not allocate memory for MB_MGR\n");
                 goto exit;
@@ -1549,7 +1543,6 @@ main(int argc, char **argv)
                 init_mb_mgr_auto(mb_mgr, NULL);
                 break;
         case IMB_ARCH_SSE:
-        case IMB_ARCH_NOAESNI:
                 init_mb_mgr_sse(mb_mgr);
                 break;
         case IMB_ARCH_AVX:

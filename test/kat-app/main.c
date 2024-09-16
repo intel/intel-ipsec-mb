@@ -220,7 +220,6 @@ usage(const char *name)
                 "--help: Prints this page\n"
                 "--test-type <TEST_NAME>: Run selected test type. <TEST_NAME> is one of %s.\n"
                 "--stop-on-fail: Stop test execution if a test fails\n"
-                "--no-aesni-emu: Don't do AESNI emulation\n"
                 "--no-avx512: Don't do AVX512\n"
                 "--no-avx2: Don't do AVX2\n"
                 "--no-avx: Don't do AVX\n"
@@ -306,17 +305,6 @@ check_test_string_arg(const char *param, const char *arg)
         return DIM(tests);
 }
 
-/* Check if expected error for no AESNI Emulation support is returned */
-static int
-check_err_no_aesni_emu(const uint64_t feature_flags, IMB_MGR *p_mgr)
-{
-        if (((feature_flags & IMB_FEATURE_AESNI_EMU) == 0) &&
-            (imb_get_errno(p_mgr) == IMB_ERR_NO_AESNI_EMU))
-                return 1;
-
-        return 0;
-}
-
 static int
 self_test_cb(void *arg, const IMB_SELF_TEST_CALLBACK_DATA *data)
 {
@@ -357,7 +345,6 @@ main(int argc, char **argv)
         uint64_t flags = 0;
         int errors = 0;
         unsigned int stop_on_fail = 0;
-        const uint64_t feat_flags = imb_get_feature_flags();
 
         memset(arch_select, 0xff, sizeof(arch_select));
 
@@ -425,29 +412,17 @@ main(int argc, char **argv)
                 arch_support[j] = arch_support[j] & arch_select[j];
 
         /* Go through architectures */
-        for (atype = IMB_ARCH_NOAESNI; atype < IMB_ARCH_NUM; atype++) {
+        for (atype = IMB_ARCH_SSE; atype < IMB_ARCH_NUM; atype++) {
                 IMB_MGR *p_mgr = NULL;
                 unsigned test_idx;
                 uint64_t used_flags = flags;
 
                 if (!arch_support[atype])
                         continue;
-                if (atype == IMB_ARCH_NOAESNI)
-                        used_flags |= IMB_FLAG_AESNI_OFF;
 
                 p_mgr = alloc_mb_mgr(used_flags);
 
                 if (p_mgr == NULL) {
-                        if (atype == IMB_ARCH_NOAESNI) {
-                                if (check_err_no_aesni_emu(feat_flags, p_mgr)) {
-                                        printf("AESNI Emulation is not enabled."
-                                               " Skipping NOAESNI test.\n");
-                                        continue;
-                                }
-                                printf("Expected %s error, got %s error\n",
-                                       imb_get_strerror(IMB_ERR_NO_AESNI_EMU),
-                                       imb_get_strerror(imb_get_errno(p_mgr)));
-                        }
                         printf("Error allocating MB_MGR structure!\n");
                         return EXIT_FAILURE;
                 }
@@ -457,7 +432,6 @@ main(int argc, char **argv)
 
                 switch (atype) {
                 case IMB_ARCH_SSE:
-                case IMB_ARCH_NOAESNI:
                         init_mb_mgr_sse(p_mgr);
                         break;
                 case IMB_ARCH_AVX:
