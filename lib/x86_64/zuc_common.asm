@@ -108,7 +108,7 @@ mksection .text
 ;
 %macro NONLIN_FUN   2
 %define %%CALC_W %1 ; [in] Calculate W if 1
-%define %%ARCH   %2 ; [in] SSE/SSE_NO_AESNI/AVX
+%define %%ARCH   %2 ; [in] SSE/AVX
 
 %if (%%CALC_W == 1)
     mov         eax, r12d
@@ -157,18 +157,6 @@ mksection .text
     movdqa      xmm1, xmm0
     S0_comput_SSE xmm1, xmm2, xmm3, 0
     S1_comput_SSE xmm0, xmm2, xmm3, xmm4, 0
-
-    pand        xmm0, [rel mask_S1]
-    pand        xmm1, [rel mask_S0]
-
-    pxor        xmm0, xmm1
-    movd        r10d, xmm0      ; F_R1
-    pextrd      r11d, xmm0, 1   ; F_R2
-%elifidn %%ARCH, SSE_NO_AESNI
-    movq        xmm0, rdx
-    movdqa      xmm1, xmm0
-    S0_comput_SSE xmm1, xmm2, xmm3, 0
-    S1_comput_SSE_NO_AESNI xmm0, xmm2, xmm3, xmm4
 
     pand        xmm0, [rel mask_S1]
     pand        xmm1, [rel mask_S0]
@@ -280,7 +268,7 @@ mksection .text
 ; Initialize internal LFSR
 ;
 %macro ZUC_INIT 1
-%define %%ARCH  %1 ; [in] SSE/SSE_NO_AESNI/AVX
+%define %%ARCH  %1 ; [in] SSE/AVX
 
 %ifdef LINUX
 	%define		pKe	rdi
@@ -393,7 +381,7 @@ mksection .text
 ; for a single buffer (where N is number of rounds)
 ;
 %macro ZUC_KEYGEN 2
-%define %%ARCH          %1 ; [in] SSE/SSE_NO_AESNI/AVX
+%define %%ARCH          %1 ; [in] SSE/AVX
 %define %%NUM_ROUNDS    %2 ; [in] Number of 4-byte rounds
 
 %ifdef LINUX
@@ -529,7 +517,7 @@ mksection .text
 ; (where N is number of rounds, being 16 rounds the maximum)
 ;
 %macro ZUC_KEYGEN_VAR 1
-%define %%ARCH          %1 ; [in] SSE/SSE_NO_AESNI/AVX
+%define %%ARCH          %1 ; [in] SSE/AVX
 
 %ifdef LINUX
 	%define		pKS	rdi
@@ -656,29 +644,6 @@ asm_ZucInitialization_sse:
     ret
 
 ;;
-;;extern void Zuc_Initialization_sse_no_aesni(uint8_t* pKey, uint8_t* pIV,
-;;                                            uint32_t * pState)
-;;
-;; WIN64
-;;	RCX - pKey
-;;	RDX - pIV
-;;      R8  - pState
-;; LIN64
-;;	RDI - pKey
-;;	RSI - pIV
-;;      RDX - pState
-;;
-%ifdef AESNI_EMU
-align 16
-MKGLOBAL(asm_ZucInitialization_sse_no_aesni,function,internal)
-asm_ZucInitialization_sse_no_aesni:
-
-    ZUC_INIT SSE_NO_AESNI
-%endif ; AESNI_EMU
-
-    ret
-
-;;
 ;;extern void Zuc_Initialization_avx(uint8_t* pKey, uint8_t* pIV, uint32_t * pState)
 ;;
 ;; WIN64
@@ -717,26 +682,6 @@ asm_ZucGenKeystream8B_sse:
     ret
 
 ;;
-;; void asm_ZucGenKeystream8B_sse_no_aesni(void *pKeystream, ZucState_t *pState);
-;;
-;; WIN64
-;;	RCX - KS (key stream pointer)
-;; 	RDX - STATE (state pointer)
-;; LIN64
-;;	RDI - KS (key stream pointer)
-;;	RSI - STATE (state pointer)
-;;
-%ifdef AESNI_EMU
-align 16
-MKGLOBAL(asm_ZucGenKeystream8B_sse_no_aesni,function,internal)
-asm_ZucGenKeystream8B_sse_no_aesni:
-
-    ZUC_KEYGEN SSE_NO_AESNI, 2
-
-    ret
-%endif ; AESNI_EMU
-
-;;
 ;; void asm_ZucGenKeystream8B_avx(void *pKeystream, ZucState_t *pState);
 ;;
 ;; WIN64
@@ -771,26 +716,6 @@ asm_ZucGenKeystream16B_sse:
     ZUC_KEYGEN SSE, 4
 
     ret
-
-;;
-;; void asm_ZucGenKeystream16B_sse_no_aesni(uint32_t * pKeystream, uint32_t * pState);
-;;
-;; WIN64
-;;	RCX - KS (key stream pointer)
-;; 	RDX - STATE (state pointer)
-;; LIN64
-;;	RDI - KS (key stream pointer)
-;;	RSI - STATE (state pointer)
-;;
-%ifdef AESNI_EMU
-align 16
-MKGLOBAL(asm_ZucGenKeystream16B_sse_no_aesni,function,internal)
-asm_ZucGenKeystream16B_sse_no_aesni:
-
-    ZUC_KEYGEN SSE_NO_AESNI, 4
-
-    ret
-%endif ; AESNI_EMU
 
 ;;
 ;; void asm_ZucGenKeystream64B_avx(uint32_t * pKeystream, uint32_t * pState);
@@ -866,29 +791,6 @@ asm_ZucGenKeystream_sse:
     ZUC_KEYGEN_VAR SSE
 
     ret
-
-;;
-;; void asm_ZucGenKeystream_sse_no_aesni(uint32_t * pKeystream, uint32_t * pState,
-;;                              uint64_t numRounds);
-;;
-;; WIN64
-;;	RCX - KS (key stream pointer)
-;; 	RDX - STATE (state pointer)
-;; 	R8  - NROUNDS (number of 4B rounds)
-;; LIN64
-;;	RDI - KS (key stream pointer)
-;;	RSI - STATE (state pointer)
-;; 	RDX - NROUNDS (number of 4B rounds)
-;;
-%ifdef AESNI_EMU
-align 16
-MKGLOBAL(asm_ZucGenKeystream_sse_no_aesni,function,internal)
-asm_ZucGenKeystream_sse_no_aesni:
-
-    ZUC_KEYGEN_VAR SSE_NO_AESNI
-
-    ret
-%endif ; AESNI_EMU
 
 ;;
 ;; void asm_ZucGenKeystream_avx(uint32_t * pKeystream, uint32_t * pState);

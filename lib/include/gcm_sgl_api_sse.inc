@@ -44,10 +44,9 @@ default rel
 ;        u64     aad_len);
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 align 32
-%ifndef NO_AESNI
 MKGLOBAL(FN_NAME_AVX(init,_),function,)
 FN_NAME_AVX(init,_):
-%endif
+
 MKGLOBAL(FN_NAME(init,_),function,)
 FN_NAME(init,_):
         endbranch64
@@ -145,10 +144,9 @@ skip_aad_check_error_init:
 ;        const u64 aad_len);
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 align 32
-%ifndef NO_AESNI
 MKGLOBAL(FN_NAME_AVX(init_var_iv,_),function,)
 FN_NAME_AVX(init_var_iv,_):
-%endif
+
 MKGLOBAL(FN_NAME(init_var_iv,_),function,)
 FN_NAME(init_var_iv,_):
         endbranch64
@@ -260,10 +258,9 @@ skip_aad_check_error_init_IV:
 ;        u64     msg_len);
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 align 32
-%ifndef NO_AESNI
 MKGLOBAL(FN_NAME_AVX(enc,_update_),function,)
 FN_NAME_AVX(enc,_update_):
-%endif
+
 MKGLOBAL(FN_NAME(enc,_update_),function,)
 FN_NAME(enc,_update_):
         endbranch64
@@ -346,10 +343,9 @@ skip_in_out_check_error_update_enc:
 ;        u64     msg_len);
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 align 32
-%ifndef NO_AESNI
 MKGLOBAL(FN_NAME_AVX(dec,_update_),function,)
 FN_NAME_AVX(dec,_update_):
-%endif
+
 MKGLOBAL(FN_NAME(dec,_update_),function,)
 FN_NAME(dec,_update_):
         endbranch64
@@ -432,10 +428,9 @@ skip_in_out_check_error_update_dec:
 ;        u64     auth_tag_len);
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 align 32
-%ifndef NO_AESNI
 MKGLOBAL(FN_NAME_AVX(enc,_finalize_),function,)
 FN_NAME_AVX(enc,_finalize_):
-%endif
+
 MKGLOBAL(FN_NAME(enc,_finalize_),function,)
 FN_NAME(enc,_finalize_):
         endbranch64
@@ -530,10 +525,9 @@ error_enc_fin:
 ;        u64     auth_tag_len);
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 align 32
-%ifndef NO_AESNI
 MKGLOBAL(FN_NAME_AVX(dec,_finalize_),function,)
 FN_NAME_AVX(dec,_finalize_):
-%endif
+
 MKGLOBAL(FN_NAME(dec,_finalize_),function,)
 FN_NAME(dec,_finalize_):
         endbranch64

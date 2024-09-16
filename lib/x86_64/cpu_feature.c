@@ -298,10 +298,6 @@ cpu_feature_detect(void)
 #ifdef SAFE_PARAM
         features |= IMB_FEATURE_SAFE_PARAM;
 #endif
-#ifdef AESNI_EMU
-        features |= IMB_FEATURE_AESNI_EMU;
-#endif
-
         return features;
 }
 
@@ -310,9 +306,6 @@ cpu_feature_adjust(const uint64_t flags, uint64_t features)
 {
         if (flags & IMB_FLAG_SHANI_OFF)
                 features &= ~IMB_FEATURE_SHANI;
-
-        if (flags & IMB_FLAG_AESNI_OFF)
-                features &= ~IMB_FEATURE_AESNI;
 
         if (flags & IMB_FLAG_GFNI_OFF)
                 features &= ~IMB_FEATURE_GFNI;

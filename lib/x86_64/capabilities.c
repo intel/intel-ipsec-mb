@@ -143,7 +143,6 @@ imb_get_arch_type_string(const IMB_MGR *state, const char **arch_type, const cha
         };
 
         const struct arch_type_map arch_type_mappings[] = {
-                { IMB_ARCH_NOAESNI, 0, "AESNI Emulation", "CPU ISA: SSE" },
                 { IMB_ARCH_SSE, 1, "SSE Type 1", "CPU ISA: AES, PCLMUL, SSE" },
                 { IMB_ARCH_SSE, 2, "SSE Type 2", "CPU ISA: AES, PCLMUL, SSE, SHA-NI" },
                 { IMB_ARCH_SSE, 3, "SSE Type 3", "CPU ISA: AES, PCLMUL, SSE, SHA-NI, GFNI" },

@@ -43,9 +43,6 @@
 #include "wireless_common.h"
 #include "include/snow3g.h"
 #include "include/snow3g_tables.h"
-#ifdef NO_AESNI
-#include "include/aesni_emu.h"
-#endif
 #include "clear_regs_mem.h"
 #ifdef SAFE_PARAM
 #include "include/error.h"
@@ -462,16 +459,6 @@ s2_mixc_fixup_scalar(const __m128i no_mixc, const __m128i mixc)
 static inline uint32_t
 S1_box(const uint32_t x)
 {
-#ifdef NO_AESNI
-        union xmm_reg key, v;
-
-        key.qword[0] = key.qword[1] = 0;
-
-        v.dword[0] = v.dword[1] = v.dword[2] = v.dword[3] = x;
-
-        emulate_AESENC(&v, &key);
-        return v.dword[0];
-#else
         __m128i m;
 
         /*
@@ -481,7 +468,6 @@ S1_box(const uint32_t x)
         m = _mm_shuffle_epi32(_mm_cvtsi32_si128(x), 0);
         m = _mm_aesenc_si128(m, _mm_setzero_si128());
         return _mm_cvtsi128_si32(m);
-#endif
 }
 
 /**
@@ -493,11 +479,6 @@ S1_box(const uint32_t x)
 static inline void
 S1_box_2(uint32_t *x1, uint32_t *x2)
 {
-#ifdef NO_AESNI
-        /* reuse S1_box() for NO_AESNI path */
-        *x1 = S1_box(*x1);
-        *x2 = S1_box(*x2);
-#else
         const __m128i m_zero = _mm_setzero_si128();
         __m128i m1, m2;
 
@@ -507,7 +488,6 @@ S1_box_2(uint32_t *x1, uint32_t *x2)
         m2 = _mm_aesenc_si128(m2, m_zero);
         *x1 = _mm_cvtsi128_si32(m1);
         *x2 = _mm_cvtsi128_si32(m2);
-#endif
 }
 
 /**
@@ -531,18 +511,7 @@ S1_box_4(const __m128i x)
          * With this method, words from multiple streams are
          * pre-shuffled and one AESENC can process all four words.
          */
-#ifdef NO_AESNI
-        union xmm_reg key, vt;
-
-        _mm_storeu_si128((__m128i *) &key.qword[0], m_zero);
-        _mm_storeu_si128((__m128i *) &vt.qword[0], m1);
-
-        emulate_AESENC(&vt, &key);
-
-        return _mm_loadu_si128((const __m128i *) &vt.qword[0]);
-#else
         return _mm_aesenc_si128(m1, m_zero);
-#endif
 }
 
 #ifdef AVX2
@@ -583,27 +552,6 @@ S1_box_8(const __m256i x)
 static inline uint32_t
 S2_box(const uint32_t x)
 {
-#ifdef NO_AESNI
-        /* Perform invSR(SQ(x)) transform */
-        const __m128i par_lut = lut16x8b_256(_mm_cvtsi32_si128(x), snow3g_invSR_SQ);
-        const uint32_t new_x = _mm_cvtsi128_si32(par_lut);
-        union xmm_reg key, v, v_fixup;
-
-        key.qword[0] = key.qword[1] = 0;
-
-        v.dword[0] = v.dword[1] = v.dword[2] = v.dword[3] = new_x;
-
-        v_fixup = v;
-
-        emulate_AESENC(&v, &key);
-        emulate_AESENCLAST(&v_fixup, &key);
-
-        const __m128i ret_mixc = _mm_loadu_si128((const __m128i *) &v.qword[0]);
-        const __m128i ret_nomixc = _mm_loadu_si128((const __m128i *) &v_fixup.qword[0]);
-
-        return s2_mixc_fixup_scalar(ret_nomixc, ret_mixc);
-#else
-
 #ifndef SAFE_LOOKUP
         const uint8_t *w3 = (const uint8_t *) &snow3g_table_S2[x & 0xff];
         const uint8_t *w1 = (const uint8_t *) &snow3g_table_S2[(x >> 16) & 0xff];
@@ -632,8 +580,6 @@ S2_box(const uint32_t x)
 
         return s2_mixc_fixup_scalar(ret_nomixc, ret_mixc);
 #endif
-
-#endif
 }
 
 /**
@@ -645,11 +591,6 @@ S2_box(const uint32_t x)
 static inline void
 S2_box_2(uint32_t *x1, uint32_t *x2)
 {
-#ifdef NO_AESNI
-        *x1 = S2_box(*x1);
-        *x2 = S2_box(*x2);
-#else
-
 #ifdef SAFE_LOOKUP
         /* Perform invSR(SQ(x)) transform through a lookup table */
         const __m128i m_zero = _mm_setzero_si128();
@@ -685,8 +626,6 @@ S2_box_2(uint32_t *x1, uint32_t *x2)
         *x1 = S2_box(*x1);
         *x2 = S2_box(*x2);
 #endif
-
-#endif /* !NO_AESNI */
 }
 
 /**
@@ -707,26 +646,11 @@ S2_box_4(const __m128i x)
         __m128i m1 = _mm_shuffle_epi8(new_x, m_shuf_r);
 
         /* use AESNI operations for the rest of the S2 box */
-#ifdef NO_AESNI
-        union xmm_reg key;
-        union xmm_reg vt, ft;
-
-        _mm_storeu_si128((__m128i *) &key.qword[0], m_zero);
-
-        _mm_storeu_si128((__m128i *) &vt.qword[0], m1);
-        _mm_storeu_si128((__m128i *) &ft.qword[0], m1);
-        emulate_AESENC(&vt, &key);
-        emulate_AESENCLAST(&ft, &key);
-
-        return s2_mixc_fixup_4(_mm_loadu_si128((const __m128i *) &ft.qword[0]),
-                               _mm_loadu_si128((const __m128i *) &vt.qword[0]));
-#else
         __m128i f1 = _mm_aesenclast_si128(m1, m_zero);
 
         m1 = _mm_aesenc_si128(m1, m_zero);
 
         return s2_mixc_fixup_4(f1, m1);
-#endif
 }
 
 /**
@@ -738,10 +662,6 @@ S2_box_4(const __m128i x)
 static inline void
 S2_box_2x4(__m128i *in_out1, __m128i *in_out2)
 {
-#ifdef NO_AESNI
-        *in_out1 = S2_box_4(*in_out1);
-        *in_out2 = S2_box_4(*in_out2);
-#else
         /*
          * Perform invSR(SQ(x)) transform through a lookup table and
          * use AESNI operations for the rest of the S2 box
@@ -762,7 +682,6 @@ S2_box_2x4(__m128i *in_out1, __m128i *in_out2)
 
         *in_out1 = s2_mixc_fixup_4(f1, m1);
         *in_out2 = s2_mixc_fixup_4(f2, m2);
-#endif
 }
 
 #ifdef AVX2
@@ -3417,13 +3336,11 @@ SNOW3G_F9_1_BUFFER(const snow3g_key_schedule_t *pHandle, const void *pIV, const 
         /* Final MAC */
         *(uint32_t *) pDigest =
 
-#ifdef NO_AESNI
-                snow3g_f9_1_buffer_internal_sse_no_aesni(&inputBuffer[0], z, lengthInBits);
-#elif defined(SSE)
+#if defined(SSE)
                 snow3g_f9_1_buffer_internal_sse(&inputBuffer[0], z, lengthInBits);
-#else  /* AVX / AVX2 / AVX512 */
+#else /* AVX / AVX2 / AVX512 */
                 snow3g_f9_1_buffer_internal_avx(&inputBuffer[0], z, lengthInBits);
-#endif /* NO_AESNI */
+#endif
 #ifdef SAFE_DATA
         CLEAR_MEM(&z, sizeof(z));
         CLEAR_MEM(&ctx, sizeof(ctx));

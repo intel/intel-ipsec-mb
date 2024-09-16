@@ -33,8 +33,6 @@
 ; aes128_ecbenc_x3_avx(void *in, void *keys, void *out1, void *out2, void *out3);
 
 %include "include/os.inc"
-%define NO_AESNI_RENAME
-%include "include/aesni_emu.inc"
 %include "include/clear_regs.inc"
 
 %ifdef LINUX
@@ -152,101 +150,6 @@ aes128_ecbenc_x3_sse_return:
 %endif
 	ret
 
-%ifdef AESNI_EMU
-MKGLOBAL(aes128_ecbenc_x3_sse_no_aesni,function,internal)
-aes128_ecbenc_x3_sse_no_aesni:
-
-%ifndef LINUX
-	mov		OUT2, [rsp + 5*8]
-%endif
-
-%ifdef SAFE_PARAM
-        cmp             IN, 0
-        jz              aes128_ecbenc_x3_sse_no_aesni_return
-        cmp             KEYS, 0
-        jz              aes128_ecbenc_x3_sse_no_aesni_return
-        cmp             OUT0, 0
-        jz              aes128_ecbenc_x3_sse_no_aesni_return
-        cmp             OUT1, 0
-        jz              aes128_ecbenc_x3_sse_no_aesni_return
-        cmp             OUT2, 0
-        jz              aes128_ecbenc_x3_sse_no_aesni_return
-%endif
-
-	movdqu		XDATA0, [IN + 0*16]	; load first block of plain text
-	movdqu		XDATA1, [IN + 1*16]	; load second block of plain text
-	movdqu		XDATA2, [IN + 2*16]	; load third block of plain text
-
-	movdqa		XKEYA, [KEYS + 16*0]
-
-	movdqa		XKEYB, [KEYS + 16*1]
-	pxor		XDATA0, XKEYA	; 0. ARK
-	pxor		XDATA1, XKEYA	; 0. ARK
-	pxor		XDATA2, XKEYA	; 0. ARK
-
-	movdqa		XKEYA, [KEYS + 16*2]
-	EMULATE_AESENC	XDATA0, XKEYB	; 1. ENC
-	EMULATE_AESENC	XDATA1, XKEYB	; 1. ENC
-	EMULATE_AESENC	XDATA2, XKEYB	; 1. ENC
-
-	movdqa		XKEYB, [KEYS + 16*3]
-	EMULATE_AESENC	XDATA0, XKEYA	; 2. ENC
-	EMULATE_AESENC	XDATA1, XKEYA	; 2. ENC
-	EMULATE_AESENC	XDATA2, XKEYA	; 2. ENC
-
-	movdqa		XKEYA, [KEYS + 16*4]
-	EMULATE_AESENC	XDATA0, XKEYB	; 3. ENC
-	EMULATE_AESENC	XDATA1, XKEYB	; 3. ENC
-	EMULATE_AESENC	XDATA2, XKEYB	; 3. ENC
-
-	movdqa		XKEYB, [KEYS + 16*5]
-	EMULATE_AESENC	XDATA0, XKEYA	; 4. ENC
-	EMULATE_AESENC	XDATA1, XKEYA	; 4. ENC
-	EMULATE_AESENC	XDATA2, XKEYA	; 4. ENC
-
-	movdqa		XKEYA, [KEYS + 16*6]
-	EMULATE_AESENC	XDATA0, XKEYB	; 5. ENC
-	EMULATE_AESENC	XDATA1, XKEYB	; 5. ENC
-	EMULATE_AESENC	XDATA2, XKEYB	; 5. ENC
-
-	movdqa		XKEYB, [KEYS + 16*7]
-	EMULATE_AESENC	XDATA0, XKEYA	; 6. ENC
-	EMULATE_AESENC	XDATA1, XKEYA	; 6. ENC
-	EMULATE_AESENC	XDATA2, XKEYA	; 6. ENC
-
-	movdqa		XKEYA, [KEYS + 16*8]
-	EMULATE_AESENC	XDATA0, XKEYB	; 7. ENC
-	EMULATE_AESENC	XDATA1, XKEYB	; 7. ENC
-	EMULATE_AESENC	XDATA2, XKEYB	; 7. ENC
-
-	movdqa		XKEYB, [KEYS + 16*9]
-	EMULATE_AESENC	XDATA0, XKEYA	; 8. ENC
-	EMULATE_AESENC	XDATA1, XKEYA	; 8. ENC
-	EMULATE_AESENC	XDATA2, XKEYA	; 8. ENC
-
-	movdqa		XKEYA, [KEYS + 16*10]
-	EMULATE_AESENC	XDATA0, XKEYB	; 9. ENC
-	EMULATE_AESENC	XDATA1, XKEYB	; 9. ENC
-	EMULATE_AESENC	XDATA2, XKEYB	; 9. ENC
-
-	EMULATE_AESENCLAST XDATA0, XKEYA	; 10. ENC
-	EMULATE_AESENCLAST XDATA1, XKEYA	; 10. ENC
-	EMULATE_AESENCLAST XDATA2, XKEYA	; 10. ENC
-
-	movdqu		[OUT0], XDATA0	; write back ciphertext
-	movdqu		[OUT1], XDATA1	; write back ciphertext
-	movdqu		[OUT2], XDATA2	; write back ciphertext
-
-aes128_ecbenc_x3_sse_no_aesni_return:
-
-%ifdef SAFE_DATA
-        clear_scratch_gps_asm
-        clear_scratch_xmms_sse_asm
-%endif
-	ret
-%endif ; AESNI_EMU
-
-	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 MKGLOBAL(aes128_ecbenc_x3_avx,function,internal)

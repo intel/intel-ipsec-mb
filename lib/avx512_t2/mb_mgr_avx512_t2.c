@@ -44,8 +44,6 @@
 #include "include/des.h"
 #include "include/gcm.h"
 #include "include/cpu_feature.h"
-#include "include/noaesni.h"
-#include "include/aesni_emu.h"
 #include "include/error.h"
 
 #include "include/arch_sse_type1.h"  /* SM4-ECB, AES-CFB */

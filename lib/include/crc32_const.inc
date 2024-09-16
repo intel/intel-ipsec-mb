@@ -29,9 +29,6 @@
 %define crc32_const_inc_included
 
 ;; functions
-%ifdef AESNI_EMU
-extern crc32_by8_sse_no_aesni
-%endif
 extern crc32_by8_sse
 extern crc32_by8_avx
 extern crc32_by16_vclmul_avx512

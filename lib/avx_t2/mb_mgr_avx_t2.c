@@ -42,7 +42,6 @@
 #include "include/save_xmms.h"
 #include "include/des.h"
 #include "include/cpu_feature.h"
-#include "include/aesni_emu.h"
 #include "include/error.h"
 
 #include "include/arch_sse_type1.h" /* snow3g, aes-cfb */

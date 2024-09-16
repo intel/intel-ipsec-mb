@@ -117,16 +117,6 @@ aes256_cbc_mac_x4:
 MKGLOBAL(aes_cbc_enc_256_x4,function,internal)
 aes_cbc_enc_256_x4:
 %endif
-
-%else ;; NO-AESNI
-
-%ifdef CBC_MAC
-MKGLOBAL(aes256_cbc_mac_x4_no_aesni,function,internal)
-aes256_cbc_mac_x4_no_aesni:
-%else
-MKGLOBAL(aes_cbc_enc_256_x4_no_aesni,function,internal)
-aes_cbc_enc_256_x4_no_aesni:
-%endif
 %endif ;; AES_CBC_ENC_X4
 
 	push	rbp

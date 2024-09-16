@@ -26,8 +26,6 @@
 ;;
 
 %include "include/os.inc"
-%define NO_AESNI_RENAME
-%include "include/aesni_emu.inc"
 %include "include/clear_regs.inc"
 %include "include/cet.inc"
 %include "include/error.inc"
@@ -163,13 +161,8 @@ mksection .text
 %%_cmac_subkey_no_error:
 %endif
 
-%ifidn %%ARCH, no_aesni
-%define AESENC          EMULATE_AESENC
-%define AESENCLAST      EMULATE_AESENCLAST
-%else
 %define AESENC          aesenc
 %define AESENCLAST      aesenclast
-%endif
 
         ;; Step 1.  L := AES-128(K, const_Zero) ;
         movdqa          XL, [KEY_EXP + 16*0]    ; 0. ARK xor const_Zero
@@ -348,15 +341,6 @@ aes_cmac_subkey_gen_sse:
         AES_CMAC_SUBKEY_GEN_SSE 9
         ret
 
-%ifdef AESNI_EMU
-MKGLOBAL(aes_cmac_subkey_gen_sse_no_aesni,function,)
-align 32
-aes_cmac_subkey_gen_sse_no_aesni:
-        endbranch64
-        AES_CMAC_SUBKEY_GEN_SSE 9, no_aesni
-        ret
-%endif
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; void aes_cmac_256_subkey_gen_sse(const void *key_exp,
@@ -374,15 +358,6 @@ aes_cmac_256_subkey_gen_sse:
         endbranch64
         AES_CMAC_SUBKEY_GEN_SSE 13
         ret
-
-%ifdef AESNI_EMU
-MKGLOBAL(aes_cmac_256_subkey_gen_sse_no_aesni,function,)
-align 32
-aes_cmac_256_subkey_gen_sse_no_aesni:
-        endbranch64
-        AES_CMAC_SUBKEY_GEN_SSE 13, no_aesni
-        ret
-%endif
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;

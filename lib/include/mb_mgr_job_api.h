@@ -2675,7 +2675,7 @@ SUBMIT_JOB_HASH_EX(IMB_MGR *state, IMB_JOB *job, const IMB_HASH_ALG hash_alg)
         MB_MGR_SHA_256_OOO *sha_256_ooo = state->sha_256_ooo;
         MB_MGR_SHA_512_OOO *sha_384_ooo = state->sha_384_ooo;
         MB_MGR_SHA_512_OOO *sha_512_ooo = state->sha_512_ooo;
-#if (defined(SAFE_LOOKUP) || defined(AVX512)) && !defined(SSE_AESNI_EMU)
+#if (defined(SAFE_LOOKUP) || defined(AVX512))
         MB_MGR_SNOW3G_OOO *snow3g_uia2_ooo = state->snow3g_uia2_ooo;
 #endif
 
@@ -2736,7 +2736,7 @@ SUBMIT_JOB_HASH_EX(IMB_MGR *state, IMB_JOB *job, const IMB_HASH_ALG hash_alg)
                 else /* tag size == 16 */
                         return SUBMIT_JOB_ZUC256_EIA3(zuc256_eia3_16B_ooo, job, 16);
         case IMB_AUTH_SNOW3G_UIA2_BITLEN:
-#if (defined(SAFE_LOOKUP) || defined(AVX512)) && !defined(SSE_AESNI_EMU)
+#if (defined(SAFE_LOOKUP) || defined(AVX512))
                 return SUBMIT_JOB_SNOW3G_UIA2(snow3g_uia2_ooo, job);
 #else
                 IMB_SNOW3G_F9_1_BUFFER(
@@ -2854,7 +2854,7 @@ FLUSH_JOB_HASH_EX(IMB_MGR *state, IMB_JOB *job, const IMB_HASH_ALG hash_alg)
         MB_MGR_SHA_256_OOO *sha_256_ooo = state->sha_256_ooo;
         MB_MGR_SHA_512_OOO *sha_384_ooo = state->sha_384_ooo;
         MB_MGR_SHA_512_OOO *sha_512_ooo = state->sha_512_ooo;
-#if (defined(SAFE_LOOKUP) || defined(AVX512)) && !defined(SSE_AESNI_EMU)
+#if (defined(SAFE_LOOKUP) || defined(AVX512))
         MB_MGR_SNOW3G_OOO *snow3g_uia2_ooo = state->snow3g_uia2_ooo;
 #endif
 
@@ -2905,7 +2905,7 @@ FLUSH_JOB_HASH_EX(IMB_MGR *state, IMB_JOB *job, const IMB_HASH_ALG hash_alg)
                         return FLUSH_JOB_ZUC256_EIA3(zuc256_eia3_8B_ooo, 8);
                 else /* tag size == 16 */
                         return FLUSH_JOB_ZUC256_EIA3(zuc256_eia3_16B_ooo, 16);
-#if (defined(SAFE_LOOKUP) || defined(AVX512)) && !defined(SSE_AESNI_EMU)
+#if (defined(SAFE_LOOKUP) || defined(AVX512))
         case IMB_AUTH_SNOW3G_UIA2_BITLEN:
                 return FLUSH_JOB_SNOW3G_UIA2(snow3g_uia2_ooo);
 #endif

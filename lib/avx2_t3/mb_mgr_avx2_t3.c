@@ -43,8 +43,6 @@
 #include "include/save_xmms.h"
 #include "include/des.h"
 #include "include/cpu_feature.h"
-#include "include/noaesni.h"
-#include "include/aesni_emu.h"
 #include "include/error.h"
 
 #include "include/arch_sse_type1.h" /* poly1305, snow3g, aes-cfb */

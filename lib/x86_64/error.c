@@ -77,7 +77,7 @@ IMB_DLL_LOCAL const int imb_errno_types[] = { IMB_ERR_NULL_MBMGR,
                                               IMB_ERR_SRC_OFFSET,
                                               IMB_ERR_NULL_AUTH_KEY,
                                               IMB_ERR_NULL_CTX,
-                                              IMB_ERR_NO_AESNI_EMU,
+                                              IMB_ERR_NO_AESNI,
                                               IMB_ERR_JOB_NULL_HMAC_OPAD,
                                               IMB_ERR_JOB_NULL_HMAC_IPAD,
                                               IMB_ERR_JOB_NULL_XCBC_K1_EXP,
@@ -206,8 +206,8 @@ imb_get_strerror(int errnum)
                 return "Null pointer to authentication key (direct API)";
         case IMB_ERR_NULL_CTX:
                 return "Null pointer to context (direct API)";
-        case IMB_ERR_NO_AESNI_EMU:
-                return "No AESNI emulation support";
+        case IMB_ERR_NO_AESNI:
+                return "No AESNI support";
         case IMB_ERR_JOB_CIPH_DIR:
                 return "Invalid cipher direction";
         case IMB_ERR_MISSING_CPUFLAGS_INIT_MGR:

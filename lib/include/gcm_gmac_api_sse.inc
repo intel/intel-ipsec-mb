@@ -38,19 +38,15 @@ default rel
 
 %ifdef GCM128_MODE
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;void   ghash_pre_sse / ghash_sse_no_aesni
+;void   ghash_pre_sse
 ;       (const void *key, struct gcm_key_data *key_data)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 align 32
-%ifndef NO_AESNI
 MKGLOBAL(ghash_pre_avx_gen2,function,)
 ghash_pre_avx_gen2:
+
 MKGLOBAL(ghash_pre_sse,function,)
 ghash_pre_sse:
-%else
-MKGLOBAL(ghash_pre_sse_no_aesni,function,)
-ghash_pre_sse_no_aesni:
-%endif
         endbranch64
 ;; Parameter is passed through register
 %ifdef SAFE_PARAM
@@ -119,7 +115,7 @@ error_ghash_pre:
 %endif
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;void   ghash_sse / ghash_sse_no_aesni
+;void   ghash_sse
 ;       (const struct gcm_key_data *key_data,
 ;        const void   *in,
 ;        const u64    in_len,
@@ -127,15 +123,11 @@ error_ghash_pre:
 ;        const u64    tag_len);
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 align 32
-%ifndef NO_AESNI
 MKGLOBAL(ghash_avx_gen2,function,)
 ghash_avx_gen2:
+
 MKGLOBAL(ghash_sse,function,)
 ghash_sse:
-%else
-MKGLOBAL(ghash_sse_no_aesni,function,)
-ghash_sse_no_aesni:
-%endif
         endbranch64
         FUNC_SAVE
 
@@ -216,10 +208,9 @@ error_ghash:
 ;        const   u64 msg_len);
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 align 32
-%ifndef NO_AESNI
 MKGLOBAL(GMAC_FN_NAME_AVX(update),function,)
 GMAC_FN_NAME_AVX(update):
-%endif
+
 MKGLOBAL(GMAC_FN_NAME(update),function,)
 GMAC_FN_NAME(update):
         endbranch64

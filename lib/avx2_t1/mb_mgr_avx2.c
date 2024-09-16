@@ -28,7 +28,6 @@
 #include "intel-ipsec-mb.h"
 #include "include/ipsec_ooo_mgr.h"
 #include "include/cpu_feature.h"
-#include "include/aesni_emu.h"
 #include "include/error.h"
 #include "include/arch_x86_64.h"
 
@@ -43,7 +42,7 @@ init_mb_mgr_avx2_internal(IMB_MGR *state, const int reset_mgrs)
 #endif
 
         if (!(state->features & IMB_FEATURE_AESNI)) {
-                fallback_no_aesni(state, 1);
+                imb_set_errno(state, IMB_ERR_NO_AESNI);
                 return;
         }
 

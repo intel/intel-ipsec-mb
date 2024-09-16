@@ -27,12 +27,8 @@
 
 #include <stdio.h>
 #include "intel-ipsec-mb.h"
-#ifdef AESNI_EMU
-#include "include/noaesni.h"
-#endif
 #include "include/clear_regs_mem.h"
 #include "include/error.h"
-#include "include/arch_noaesni.h"
 #include "include/arch_sse_type1.h"
 #include "include/arch_avx_type1.h"
 
@@ -66,35 +62,6 @@ aes_xcbc_expand_key_sse(const void *key, void *k1_exp, void *k2, void *k3)
         clear_mem(&keys_exp_enc, sizeof(keys_exp_enc));
 #endif
 }
-
-#ifdef AESNI_EMU
-void
-aes_xcbc_expand_key_sse_no_aesni(const void *key, void *k1_exp, void *k2, void *k3)
-{
-#ifdef SAFE_PARAM
-        imb_set_errno(NULL, 0);
-        if (k1_exp == NULL || k2 == NULL || k3 == NULL) {
-                imb_set_errno(NULL, IMB_ERR_NULL_EXP_KEY);
-                return;
-        }
-        if (key == NULL) {
-                imb_set_errno(NULL, IMB_ERR_NULL_KEY);
-                return;
-        }
-#endif
-        DECLARE_ALIGNED(uint32_t keys_exp_enc[11 * 4], 16);
-
-        aes_keyexp_128_enc_sse_no_aesni(key, keys_exp_enc);
-
-        aes128_ecbenc_x3_sse_no_aesni(in, keys_exp_enc, k1_exp, k2, k3);
-
-        aes_keyexp_128_enc_sse_no_aesni(k1_exp, k1_exp);
-
-#ifdef SAFE_DATA
-        clear_mem(&keys_exp_enc, sizeof(keys_exp_enc));
-#endif
-}
-#endif /* AESNI_EMU */
 
 __forceinline void
 aes_xcbc_expand_key_avx_common(const void *key, void *k1_exp, void *k2, void *k3)

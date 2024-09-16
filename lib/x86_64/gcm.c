@@ -28,7 +28,6 @@
 #include <stdint.h>
 #include "intel-ipsec-mb.h"
 #include "gcm.h"
-#include "noaesni.h"
 #include "error.h"
 
 /**
@@ -61,28 +60,6 @@ aes_gcm_pre_128_sse(const void *key, struct gcm_key_data *key_data)
         aes_keyexp_128_enc_sse(key, key_data->expanded_keys);
         aes_gcm_precomp_128_sse(key_data);
 }
-
-#ifdef AESNI_EMU
-void
-aes_gcm_pre_128_sse_no_aesni(const void *key, struct gcm_key_data *key_data)
-{
-#ifdef SAFE_PARAM
-        /* reset error status */
-        imb_set_errno(NULL, 0);
-
-        if (key == NULL) {
-                imb_set_errno(NULL, IMB_ERR_NULL_KEY);
-                return;
-        }
-        if (key_data == NULL) {
-                imb_set_errno(NULL, IMB_ERR_NULL_EXP_KEY);
-                return;
-        }
-#endif
-        aes_keyexp_128_enc_sse_no_aesni(key, key_data->expanded_keys);
-        aes_gcm_precomp_128_sse_no_aesni(key_data);
-}
-#endif /* AESNI_EMU */
 
 void
 aes_gcm_pre_128_avx_gen2(const void *key, struct gcm_key_data *key_data)
@@ -190,28 +167,6 @@ aes_gcm_pre_192_sse(const void *key, struct gcm_key_data *key_data)
         aes_gcm_precomp_192_sse(key_data);
 }
 
-#ifdef AESNI_EMU
-void
-aes_gcm_pre_192_sse_no_aesni(const void *key, struct gcm_key_data *key_data)
-{
-#ifdef SAFE_PARAM
-        /* reset error status */
-        imb_set_errno(NULL, 0);
-
-        if (key == NULL) {
-                imb_set_errno(NULL, IMB_ERR_NULL_KEY);
-                return;
-        }
-        if (key_data == NULL) {
-                imb_set_errno(NULL, IMB_ERR_NULL_EXP_KEY);
-                return;
-        }
-#endif
-        aes_keyexp_192_enc_sse_no_aesni(key, key_data->expanded_keys);
-        aes_gcm_precomp_192_sse_no_aesni(key_data);
-}
-#endif /* AESNI_EMU */
-
 void
 aes_gcm_pre_192_avx_gen2(const void *key, struct gcm_key_data *key_data)
 {
@@ -317,28 +272,6 @@ aes_gcm_pre_256_sse(const void *key, struct gcm_key_data *key_data)
         aes_keyexp_256_enc_sse(key, key_data->expanded_keys);
         aes_gcm_precomp_256_sse(key_data);
 }
-
-#ifdef AESNI_EMU
-void
-aes_gcm_pre_256_sse_no_aesni(const void *key, struct gcm_key_data *key_data)
-{
-#ifdef SAFE_PARAM
-        /* reset error status */
-        imb_set_errno(NULL, 0);
-
-        if (key == NULL) {
-                imb_set_errno(NULL, IMB_ERR_NULL_KEY);
-                return;
-        }
-        if (key_data == NULL) {
-                imb_set_errno(NULL, IMB_ERR_NULL_EXP_KEY);
-                return;
-        }
-#endif
-        aes_keyexp_256_enc_sse_no_aesni(key, key_data->expanded_keys);
-        aes_gcm_precomp_256_sse_no_aesni(key_data);
-}
-#endif /* AESNI_EMU */
 
 void
 aes_gcm_pre_256_avx_gen2(const void *key, struct gcm_key_data *key_data)
@@ -521,56 +454,6 @@ imb_aes_gmac_finalize_256_avx_gen2(const struct gcm_key_data *key_data,
 {
         aes_gcm_enc_256_finalize_sse(key_data, context_data, auth_tag, auth_tag_len);
 }
-
-#ifdef AESNI_EMU
-void
-imb_aes_gmac_init_128_sse_no_aesni(const struct gcm_key_data *key_data,
-                                   struct gcm_context_data *context_data, const uint8_t *iv,
-                                   const uint64_t iv_len)
-{
-        aes_gcm_init_var_iv_128_sse_no_aesni(key_data, context_data, iv, iv_len, NULL, 0);
-}
-
-void
-imb_aes_gmac_init_192_sse_no_aesni(const struct gcm_key_data *key_data,
-                                   struct gcm_context_data *context_data, const uint8_t *iv,
-                                   const uint64_t iv_len)
-{
-        aes_gcm_init_var_iv_192_sse_no_aesni(key_data, context_data, iv, iv_len, NULL, 0);
-}
-
-void
-imb_aes_gmac_init_256_sse_no_aesni(const struct gcm_key_data *key_data,
-                                   struct gcm_context_data *context_data, const uint8_t *iv,
-                                   const uint64_t iv_len)
-{
-        aes_gcm_init_var_iv_256_sse_no_aesni(key_data, context_data, iv, iv_len, NULL, 0);
-}
-
-void
-imb_aes_gmac_finalize_128_sse_no_aesni(const struct gcm_key_data *key_data,
-                                       struct gcm_context_data *context_data, uint8_t *auth_tag,
-                                       const uint64_t auth_tag_len)
-{
-        aes_gcm_enc_128_finalize_sse_no_aesni(key_data, context_data, auth_tag, auth_tag_len);
-}
-
-void
-imb_aes_gmac_finalize_192_sse_no_aesni(const struct gcm_key_data *key_data,
-                                       struct gcm_context_data *context_data, uint8_t *auth_tag,
-                                       const uint64_t auth_tag_len)
-{
-        aes_gcm_enc_192_finalize_sse_no_aesni(key_data, context_data, auth_tag, auth_tag_len);
-}
-
-void
-imb_aes_gmac_finalize_256_sse_no_aesni(const struct gcm_key_data *key_data,
-                                       struct gcm_context_data *context_data, uint8_t *auth_tag,
-                                       const uint64_t auth_tag_len)
-{
-        aes_gcm_enc_256_finalize_sse_no_aesni(key_data, context_data, auth_tag, auth_tag_len);
-}
-#endif /* AESNI_EMU */
 
 void
 imb_aes_gmac_init_128_avx_gen4(const struct gcm_key_data *key_data,
