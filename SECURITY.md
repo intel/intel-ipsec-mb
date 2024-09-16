@@ -89,7 +89,6 @@ Lookups which depend on sensitive information are implemented with constant
 time functions.
 
 Algorithms where these constant time functions are used are the following:  
-- AESNI emulation  
 - DES: SSE, AVX and AVX2 implementations  
 - KASUMI: all architectures  
 - SNOW3G: all architectures  

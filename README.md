@@ -302,7 +302,6 @@ security updates.
 - lib/avx_* - Intel(R) AVX optimized routines
 - lib/avx2_* - Intel(R) AVX2 optimized routines
 - lib/avx512_* - Intel(R) AVX512 optimized routines
-- lib/no-aesni - Non-AESNI accelerated routines
 
 **Note:**   
 There is just one branch used in the project. All development is done on the main branch.  
