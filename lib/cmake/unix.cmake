@@ -79,12 +79,6 @@ set_source_files_properties(
 set_source_files_properties(${SRC_FILES_X86_64}
   PROPERTIES COMPILE_FLAGS
   "-msse4.2")
-if(AESNI_EMU)
-  set_source_files_properties(
-    ${SRC_FILES_NO_AESNI}
-    PROPERTIES COMPILE_FLAGS
-    "-march=nehalem -mno-pclmul")
-endif()
 
 ########################################
 # add library target

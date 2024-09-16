@@ -75,17 +75,8 @@ set_source_files_properties(
 set_source_files_properties(${SRC_FILES_X86_64}
   PROPERTIES COMPILE_FLAGS
   "-msse4.2")
-if(AESNI_EMU)
-  set_source_files_properties(
-    ${SRC_FILES_NO_AESNI}
-    PROPERTIES COMPILE_FLAGS
-    "-march=nehalem -mno-pclmul")
-endif()
 
 # generate windows DEF file
-if(NOT AESNI_EMU)
-  set(STR_FILTER "/c:_no_aesni")
-endif()
 if(NOT AVX_IFMA)
   set(STR_FILTER "${STR_FILTER} /c:_avx2_t3")
 endif()

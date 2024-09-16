@@ -112,7 +112,6 @@ typedef struct {
  */
 typedef enum {
         IMB_ARCH_NONE = 0,
-        IMB_ARCH_NOAESNI,
         IMB_ARCH_SSE,
         IMB_ARCH_AVX,
         IMB_ARCH_AVX2,
@@ -234,7 +233,7 @@ typedef enum {
         IMB_ERR_SRC_OFFSET,
         IMB_ERR_NULL_AUTH_KEY,
         IMB_ERR_NULL_CTX,
-        IMB_ERR_NO_AESNI_EMU,
+        IMB_ERR_NO_AESNI, /* Note: previously IMB_ERR_NO_AESNI_EMU */
         IMB_ERR_JOB_NULL_HMAC_OPAD,
         IMB_ERR_JOB_NULL_HMAC_IPAD,
         IMB_ERR_JOB_NULL_XCBC_K1_EXP,
@@ -889,8 +888,7 @@ typedef int (*imb_self_test_cb_t)(void *cb_arg, const IMB_SELF_TEST_CALLBACK_DAT
 /* Multi-buffer manager flags passed to alloc_mb_mgr() */
 
 #define IMB_FLAG_SHANI_OFF (1ULL << 0) /**< disable use of SHANI extension */
-#define IMB_FLAG_AESNI_OFF (1ULL << 1) /**< disable use of AESNI extension */
-#define IMB_FLAG_GFNI_OFF  (1ULL << 2) /**< disable use of GFNI extension */
+#define IMB_FLAG_GFNI_OFF  (1ULL << 1) /**< disable use of GFNI extension */
 
 /**
  * Multi-buffer manager detected features
@@ -921,16 +919,15 @@ typedef int (*imb_self_test_cb_t)(void *cb_arg, const IMB_SELF_TEST_CALLBACK_DAT
 #define IMB_FEATURE_GFNI           (1ULL << 16)
 #define IMB_FEATURE_AVX512_IFMA    (1ULL << 17)
 #define IMB_FEATURE_BMI2           (1ULL << 18)
-#define IMB_FEATURE_AESNI_EMU      (1ULL << 19)
-#define IMB_FEATURE_SELF_TEST      (1ULL << 20) /* self-test feature present */
-#define IMB_FEATURE_SELF_TEST_PASS (1ULL << 21) /* self-test passed */
-#define IMB_FEATURE_AVX_IFMA       (1ULL << 22)
-#define IMB_FEATURE_HYBRID         (1ULL << 23) /* Hybrid core */
-#define IMB_FEATURE_SM3NI          (1ULL << 24)
-#define IMB_FEATURE_SM4NI          (1ULL << 25)
-#define IMB_FEATURE_SHA512NI       (1ULL << 26)
-#define IMB_FEATURE_XSAVE          (1ULL << 27)
-#define IMB_FEATURE_OSXSAVE        (1ULL << 28) /* OS-enabled XSAVE */
+#define IMB_FEATURE_SELF_TEST      (1ULL << 19) /* self-test feature present */
+#define IMB_FEATURE_SELF_TEST_PASS (1ULL << 20) /* self-test passed */
+#define IMB_FEATURE_AVX_IFMA       (1ULL << 21)
+#define IMB_FEATURE_HYBRID         (1ULL << 22) /* Hybrid core */
+#define IMB_FEATURE_SM3NI          (1ULL << 23)
+#define IMB_FEATURE_SM4NI          (1ULL << 24)
+#define IMB_FEATURE_SHA512NI       (1ULL << 25)
+#define IMB_FEATURE_XSAVE          (1ULL << 26)
+#define IMB_FEATURE_OSXSAVE        (1ULL << 27) /* OS-enabled XSAVE */
 
 /**
  * Self test defines
@@ -1246,7 +1243,6 @@ imb_get_strerror(int errnum);
  * @param flags multi-buffer manager flags
  *     IMB_FLAG_SHANI_OFF - disable use (and detection) of SHA extensions,
  *                          currently SHANI is only available for SSE
- *     IMB_FLAG_AESNI_OFF - disable use (and detection) of AES extensions.
  *     IMB_FLAG_GFNI_OFF - disable use (and detection) of
  *                         Galois Field extensions.
  *
@@ -1287,7 +1283,6 @@ imb_get_mb_mgr_size(void);
  * @param [in] flags multi-buffer manager flags
  *     IMB_FLAG_SHANI_OFF - disable use (and detection) of SHA extensions,
  *                          currently SHANI is only available for SSE
- *     IMB_FLAG_AESNI_OFF - disable use (and detection) of AES extensions.
  *     IMB_FLAG_GFNI_OFF - disable use (and detection)
  *                         of Galois Field extensions.
  *

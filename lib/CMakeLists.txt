@@ -98,7 +98,6 @@ set(DIR_SSE_T1 ${CMAKE_CURRENT_SOURCE_DIR}/sse_t1)
 set(DIR_SSE_T2 ${CMAKE_CURRENT_SOURCE_DIR}/sse_t2)
 set(DIR_SSE_T3 ${CMAKE_CURRENT_SOURCE_DIR}/sse_t3)
 set(DIR_X86_64 ${CMAKE_CURRENT_SOURCE_DIR}/x86_64)
-set(DIR_NO_AESNI ${CMAKE_CURRENT_SOURCE_DIR}/no-aesni)
 if(AVX_IFMA)
   set(DIR_AVX2_T3 ${CMAKE_CURRENT_SOURCE_DIR}/avx2_t3)
 endif()
@@ -121,9 +120,6 @@ set(DIR_SOURCES
   ${DIR_SSE_T3}
   ${DIR_X86_64}
 )
-if(AESNI_EMU)
-  list(APPEND DIR_SOURCES ${DIR_NO_AESNI})
-endif()
 
 if(AVX_IFMA)
   list(APPEND DIR_SOURCES ${DIR_AVX2_T3})
@@ -144,7 +140,6 @@ file(GLOB SRC_FILES_SSE_T1 "${DIR_SSE_T1}/*.c")
 file(GLOB SRC_FILES_SSE_T2 "${DIR_SSE_T2}/*.c")
 file(GLOB SRC_FILES_SSE_T3 "${DIR_SSE_T3}/*.c")
 file(GLOB SRC_FILES_X86_64 "${DIR_X86_64}/*.c")
-file(GLOB SRC_FILES_NO_AESNI "${DIR_NO_AESNI}/*.c")
 
 # create list of all C source files
 set(SRC_FILES_C
@@ -160,9 +155,6 @@ set(SRC_FILES_C
   ${SRC_FILES_X86_64}
   ${SRC_FILES_AVX2_T4}
 )
-if(AESNI_EMU)
-  list(APPEND SRC_FILES_C ${SRC_FILES_NO_AESNI})
-endif()
 if(AVX_IFMA)
   list(APPEND SRC_FILES_C ${SRC_FILES_AVX2_T3})
 endif()
@@ -201,10 +193,6 @@ if(SAFE_LOOKUP)
   list(APPEND LIB_DEFINES SAFE_LOOKUP)
   string(APPEND CMAKE_ASM_NASM_FLAGS " -DSAFE_LOOKUP")
 endif()
-if(AESNI_EMU)
-  list(APPEND LIB_DEFINES AESNI_EMU)
-  string(APPEND CMAKE_ASM_NASM_FLAGS " -DAESNI_EMU")
-endif()
 
 # enable AVX IFMA support
 if(AVX_IFMA)
@@ -239,4 +227,4 @@ endforeach()
 
 # add include directories
 target_include_directories(${LIB} PRIVATE
-  ${DIR_CURRENT} ${DIR_INCLUDE} ${DIR_NO_AESNI})
+  ${DIR_CURRENT} ${DIR_INCLUDE})

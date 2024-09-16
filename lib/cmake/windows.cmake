@@ -64,17 +64,7 @@ set_source_files_properties(
   PROPERTIES COMPILE_FLAGS
   "$<$<CONFIG:RELEASE>:/Oi /O2>")
 
-# set AESNI_EMU specific compiler flags
-foreach(FILE ${SRC_FILES_NO_AESNI})
-  set_source_files_properties(${FILE} PROPERTIES
-    COMPILE_DEFINITIONS "${LIB_DEFINES}"
-    COMPILE_FLAGS "$<$<CONFIG:RELEASE>:/Od /Oi>")
-endforeach()
-
 # generate windows DEF file
-if(NOT AESNI_EMU)
-  set(STR_FILTER "/c:_no_aesni")
-endif()
 if(NOT AVX_IFMA)
   set(STR_FILTER "${STR_FILTER} /c:_avx2_t3")
 endif()

@@ -64,7 +64,6 @@ macro(imb_set_proj_defaults)
   #######################################
   # set default library options
   #######################################
-  option(AESNI_EMU "AESNI emulation support" OFF)
   option(SAFE_PARAM "API input parameter checking" ON)
   option(SAFE_DATA "Sensitive data cleared from registers and memory at operation end" ON)
   option(SAFE_LOOKUP "Lookups depending on sensitive data are constant time" ON)
@@ -84,7 +83,7 @@ macro(imb_set_proj_defaults)
 
   # project options list (used by print_help target)
   set(IPSEC_MB_OPTIONS CMAKE_BUILD_TYPE IPSEC_MB_OPTIONS
-    AESNI_EMU SAFE_PARAM SAFE_DATA SAFE_LOOKUP
+    SAFE_PARAM SAFE_DATA SAFE_LOOKUP
     SAFE_OPTIONS BUILD_LIBRARY_ONLY BUILD_SHARED_LIBS
     CMAKE_VERBOSE_MAKEFILE EXTRA_CFLAGS
     )
@@ -103,7 +102,6 @@ macro(imb_set_proj_defaults)
   ########################################
   # print build information
   ########################################
-  message(STATUS "AESNI emulation support... ${AESNI_EMU}")
   message(STATUS "SAFE_OPTIONS...            ${SAFE_OPTIONS}")
   message(STATUS "SAFE_PARAM...              ${SAFE_PARAM}")
   message(STATUS "SAFE_DATA...               ${SAFE_DATA}")

@@ -118,7 +118,7 @@ $(warning Minimum required NASM version for SM3/SM4/SHA512-NI: $(NASM_MAJOR_SMX_
 SMX_NI := n
 endif # NASM_SMX_NI_GET_REQ
 
-INCLUDE_DIRS := include . no-aesni
+INCLUDE_DIRS := include .
 INCLUDES := $(foreach i,$(INCLUDE_DIRS),-I $i)
 
 # if "-z ibt" is supported then assume "-z shstk, -z cet-report=error" are also supported
@@ -201,11 +201,6 @@ CFLAGS += -DSAFE_LOOKUP
 NASM_FLAGS += -DSAFE_LOOKUP
 endif
 
-ifeq ($(AESNI_EMU),y)
-CFLAGS += -DAESNI_EMU
-NASM_FLAGS += -DAESNI_EMU
-endif
-
 # prevent SIMD optimizations for non-aesni modules
 CFLAGS_NO_SIMD = $(CFLAGS) -O1
 CFLAGS += $(OPT)
@@ -216,7 +211,6 @@ OPT_SSE := -msse4.2 -maes -mpclmul
 OPT_AVX := -mavx -maes -mpclmul
 OPT_AVX2 := -mavx2 -maes -mpclmul
 OPT_AVX512 := -mavx2 -maes -mpclmul # -mavx512f is not available until gcc 4.9
-OPT_NOAESNI := -msse4.2 -mno-aes -mno-pclmul
 
 # Set architectural optimizations for GCC/CC
 ifeq ($(CC),$(filter $(CC),gcc cc))
@@ -228,7 +222,6 @@ OPT_SSE := -march=nehalem -maes -mpclmul
 OPT_AVX := -march=sandybridge -maes -mpclmul
 OPT_AVX2 := -march=haswell -maes -mpclmul
 OPT_AVX512 := -march=broadwell -maes -mpclmul
-OPT_NOAESNI := -march=nehalem -mno-pclmul
 endif
 endif
 
@@ -343,14 +336,6 @@ c_lib_objs := \
 	cipher_suite_id.o \
 	capabilities.o
 
-ifeq ($(AESNI_EMU), y)
-c_lib_objs := $(c_lib_objs) \
-	mb_mgr_sse_no_aesni.o \
-	aesni_emu.o \
-	zuc_top_sse_no_aesni.o \
-	snow3g_sse_no_aesni.o
-endif
-
 ifeq ($(AVX_IFMA), y)
 c_lib_objs := $(c_lib_objs) \
 	mb_mgr_avx2_t3.o
@@ -382,59 +367,6 @@ asm_generic_lib_objs := \
 	chacha20_poly1305.o \
 	mbcpuid.o \
 	atomic.o
-
-#
-# List of ASM modules (no-aesni directory)
-#
-asm_noaesni_lib_objs := \
-	aes128_cbc_dec_by4_sse_no_aesni.o \
-	aes192_cbc_dec_by4_sse_no_aesni.o \
-	aes256_cbc_dec_by4_sse_no_aesni.o \
-	aes128_cbc_enc_x4_sse_no_aesni.o \
-	aes192_cbc_enc_x4_sse_no_aesni.o \
-	aes256_cbc_enc_x4_sse_no_aesni.o \
-	aes128_cntr_by8_sse_no_aesni.o \
-	aes192_cntr_by8_sse_no_aesni.o \
-	aes256_cntr_by8_sse_no_aesni.o \
-	aes_ecb_by4_sse_no_aesni.o \
-	aes128_cntr_ccm_by8_sse_no_aesni.o \
-	aes256_cntr_ccm_by8_sse_no_aesni.o \
-	pon_sse_no_aesni.o \
-	zuc_sse_no_aesni.o \
-	aes_cfb_enc_dec_x1_sse_no_aesni.o \
-	aes_cfb_sse_no_aesni.o \
-	aes128_cbc_mac_x4_sse_no_aesni.o \
-	aes256_cbc_mac_x4_sse_no_aesni.o \
-	aes128_xcbc_mac_x4_sse_no_aesni.o \
-	mb_mgr_aes128_cbc_enc_flush_sse_no_aesni.o \
-	mb_mgr_aes128_cbc_enc_submit_sse_no_aesni.o \
-	mb_mgr_aes192_cbc_enc_flush_sse_no_aesni.o \
-	mb_mgr_aes192_cbc_enc_submit_sse_no_aesni.o \
-	mb_mgr_aes256_cbc_enc_flush_sse_no_aesni.o \
-	mb_mgr_aes256_cbc_enc_submit_sse_no_aesni.o \
-	mb_mgr_aes128_cmac_submit_flush_sse_no_aesni.o \
-	mb_mgr_aes256_cmac_submit_flush_sse_no_aesni.o \
-	mb_mgr_aes128_ccm_auth_submit_flush_sse_no_aesni.o \
-	mb_mgr_aes256_ccm_auth_submit_flush_sse_no_aesni.o \
-	mb_mgr_aes128_xcbc_flush_sse_no_aesni.o \
-	mb_mgr_aes128_xcbc_submit_sse_no_aesni.o \
-	mb_mgr_zuc_submit_flush_sse_no_aesni.o \
-	ethernet_fcs_sse_no_aesni.o \
-	crc16_x25_sse_no_aesni.o \
-	aes128_cbcs_1_9_enc_x4_sse_no_aesni.o \
-	aes128_cbcs_1_9_dec_by4_sse_no_aesni.o \
-	mb_mgr_aes128_cbcs_1_9_submit_sse_no_aesni.o \
-	mb_mgr_aes128_cbcs_1_9_flush_sse_no_aesni.o \
-	crc32_refl_by8_sse_no_aesni.o \
-	crc32_by8_sse_no_aesni.o \
-	crc32_sctp_sse_no_aesni.o \
-	crc32_lte_sse_no_aesni.o \
-	crc32_fp_sse_no_aesni.o \
-	crc32_iuup_sse_no_aesni.o \
-	crc32_wimax_sse_no_aesni.o \
-	snow_v_sse_no_aesni.o \
-	snow3g_uia2_sse_no_aesni.o \
-	sm4_sse_no_aesni.o
 
 #
 # List of ASM modules (sse directory)
@@ -771,11 +703,6 @@ asm_avx512_lib_objs := \
 
 c_gcm_objs := gcm.o
 
-asm_noaesni_gcm_objs := \
-	gcm128_api_sse_no_aesni.o gcm192_api_sse_no_aesni.o gcm256_api_sse_no_aesni.o \
-	gcm128_sgl_api_sse_no_aesni.o gcm192_sgl_api_sse_no_aesni.o gcm256_sgl_api_sse_no_aesni.o \
-	gcm128_gmac_api_sse_no_aesni.o gcm192_gmac_api_sse_no_aesni.o gcm256_gmac_api_sse_no_aesni.o
-
 asm_sse_gcm_objs := \
 	gcm128_api_by8_sse.o gcm192_api_by8_sse.o gcm256_api_by8_sse.o \
 	gcm128_sgl_api_by8_sse.o gcm192_sgl_api_by8_sse.o gcm256_sgl_api_by8_sse.o \
@@ -802,9 +729,6 @@ asm_obj_files := $(asm_generic_lib_objs) \
 	$(asm_avx2_lib_objs) $(asm_avx2_gcm_objs) \
 	$(asm_avx512_lib_objs) $(asm_avx512_gcm_objs)
 
-ifeq ($(AESNI_EMU), y)
-asm_obj_files := $(asm_obj_files) $(asm_noaesni_lib_objs) $(asm_noaesni_gcm_objs)
-endif
 ifeq ($(AVX_IFMA), y)
 asm_obj_files := $(asm_obj_files) $(asm_avx2_ifma_lib_objs)
 endif
@@ -839,26 +763,14 @@ dep_target_files := $(dep_files:%=$(OBJ_DIR)/%)
 all: $(LIB_DIR)/$(LIBNAME)
 
 STR_FILTER = ""
-ifneq ($(AESNI_EMU),y)
 
-ifneq ($(AVX_IFMA),y) # No AESNI_EMU, AVX2 Type 3 and Type 4
-STR_FILTER = "_no_aesni\|_avx2_t3\|_avx2_t4"
+ifneq ($(AVX_IFMA),y) # AVX2 Type 3 and Type 4
+STR_FILTER = "_avx2_t3\|_avx2_t4"
 else # AVX_IFMA
-ifneq ($(SMX_NI),y) # No AESNI_EMU and AVX2 Type4
-STR_FILTER = "_no_aesni\|_avx2_t4"
-else # No AESNI EMU only
-STR_FILTER = "_no_aesni"
+ifneq ($(SMX_NI),y) # AVX2 Type4
+STR_FILTER = "_avx2_t4"
 endif # SMX_NI
 endif # AVX_IFMA
-
-else # AESNI_EMU = y
-ifneq ($(AVX_IFMA),y) # No AVX2 Type 3 and Type 4
-STR_FILTER = "_avx2_t3\|_avx2_t4"
-else # No AVX2 Type 4
-STR_FILTER = "_avx2_t4"
-endif # AVX_IFMA
-
-endif # AESNI_EMU
 
 $(LIB)_lnk.def: $(LIB).def
 ifneq ($(STR_FILTER), "")
@@ -1013,12 +925,6 @@ $(OBJ_DIR)/%.o:avx512_t2/%.c
 $(OBJ_DIR)/%.o:avx512_t2/%.asm
 	$(NASM) -MD $(@:.o=.d) -MT $@ -o $@ $(NASM_FLAGS) $<
 
-$(OBJ_DIR)/%.o:no-aesni/%.c
-	$(CC) -MMD $(OPT_NOAESNI) -c $(CFLAGS_NO_SIMD) $< -o $@
-
-$(OBJ_DIR)/%.o:no-aesni/%.asm
-	$(NASM) -MD $(@:.o=.d) -MT $@ -o $@ $(NASM_FLAGS) $<
-
 $(OBJ_DIR):
 	mkdir $(OBJ_DIR)
 
@@ -1052,8 +958,6 @@ help:
 	@echo "		- this option will modify the optimization level when DEBUG is used"
 	@echo "DEBUG=y   - this option will produce library fit for debugging"
 	@echo "SHARED=n  - this option will produce static library"
-	@echo "AESNI_EMU=y - AESNI emulation support enabled"
-	@echo "AESNI_EMU=n - AESNI emulation support disabled (default)"
 	@echo "OBJ_DIR=obj (default)"
 	@echo "          - this option can be used to change build directory"
 	@echo "LIB_DIR=. (default)"
@@ -1098,7 +1002,7 @@ CHECKPATCH_FLAGS = --no-tree --no-signoff --emacs --no-color --max-line-length=1
 %.inc_style_check : %.inc
 	$(CHECKPATCH) $(CHECKPATCH_FLAGS) -f $<
 
-SOURCES_DIRS := . sse_t1 sse_t2 sse_t3 avx_t1 avx_t2 avx2_t1 avx_t2 avx2_t3 avx512_t1 avx512_t2 x86_64 include no-aesni
+SOURCES_DIRS := . sse_t1 sse_t2 sse_t3 avx_t1 avx_t2 avx2_t1 avx_t2 avx2_t3 avx512_t1 avx512_t2 x86_64 include
 ASM_SOURCES := $(foreach dir,$(SOURCES_DIRS), $(wildcard $(dir)/**/*.asm) $(wildcard $(dir)/**/*.inc))
 
 .PHONY: checkpatch

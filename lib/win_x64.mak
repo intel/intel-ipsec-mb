@@ -30,8 +30,6 @@
 # DEBUG=n   	- this option will produce library not fit for debugging (default)
 # DEBUG_OPT=<optim level> - this option will modify the optimization level
 #                           when DEBUG is used
-# AESNI_EMU=y   - this option will enable AESNI emulation support"
-# AESNI_EMU=n   - this option will disable AESNI emulation support (default)"
 # SHARED=y  	- this option will produce shared library (DLL) (default)
 # SHARED=n  	- this option will produce static library (lib)
 # SAFE_DATA=y   - this option will clear memory and registers containing
@@ -109,14 +107,9 @@ DCFLAGS = $(DCFLAGS) /DSAFE_LOOKUP
 DAFLAGS = $(DAFLAGS) -DSAFE_LOOKUP
 !endif
 
-!if "$(AESNI_EMU)" == "y"
-DCFLAGS = $(DCFLAGS) /DAESNI_EMU
-DAFLAGS = $(DAFLAGS) -DAESNI_EMU
-!endif
-
 CC = cl
 
-CFLAGS_ALL = $(EXTRA_CFLAGS) /I. /Iinclude /Ino-aesni \
+CFLAGS_ALL = $(EXTRA_CFLAGS) /I. /Iinclude \
 	/nologo /Y- /W3 /WX- /Gm- /fp:precise /EHsc /Z7 /std:c11
 
 CFLAGS = $(CFLAGS_ALL) $(OPT) $(DCFLAGS)
@@ -135,7 +128,7 @@ AFLAGS = $(DAFLAGS) -Werror -fwin64 -Xvc -DWIN_ABI -I.
 !ifndef DEPTOOL
 DEPTOOL = ..\mkdep.bat
 !endif
-DEPFLAGS=/I. /Iinclude /Ino-aesni
+DEPFLAGS=/I. /Iinclude
 DEPALL=lib.dep
 
 # warning messages
@@ -514,69 +507,6 @@ lib_objs2 = \
 	$(OBJ_DIR)\snow_v_sse.obj \
 	$(OBJ_DIR)\snow_v_avx.obj
 
-no_aesni_objs = \
-	$(OBJ_DIR)\aesni_emu.obj \
-	$(OBJ_DIR)\aes_cfb_enc_dec_x1_sse_no_aesni.obj \
-	$(OBJ_DIR)\aes128_cbc_dec_by4_sse_no_aesni.obj \
-	$(OBJ_DIR)\aes_cfb_sse_no_aesni.obj \
-	$(OBJ_DIR)\pon_sse_no_aesni.obj \
-	$(OBJ_DIR)\aes_ecb_by4_sse_no_aesni.obj \
-	$(OBJ_DIR)\aes128_cntr_by8_sse_no_aesni.obj \
-	$(OBJ_DIR)\aes128_cntr_ccm_by8_sse_no_aesni.obj \
-	$(OBJ_DIR)\aes192_cbc_dec_by4_sse_no_aesni.obj \
-	$(OBJ_DIR)\aes192_cntr_by8_sse_no_aesni.obj \
-	$(OBJ_DIR)\aes256_cbc_dec_by4_sse_no_aesni.obj \
-	$(OBJ_DIR)\aes256_cntr_by8_sse_no_aesni.obj \
-	$(OBJ_DIR)\aes256_cntr_ccm_by8_sse_no_aesni.obj \
-	$(OBJ_DIR)\aes128_cbc_mac_x4_sse_no_aesni.obj \
-	$(OBJ_DIR)\aes256_cbc_mac_x4_sse_no_aesni.obj \
-	$(OBJ_DIR)\aes128_cbc_enc_x4_sse_no_aesni.obj \
-	$(OBJ_DIR)\aes192_cbc_enc_x4_sse_no_aesni.obj \
-	$(OBJ_DIR)\aes256_cbc_enc_x4_sse_no_aesni.obj \
-	$(OBJ_DIR)\aes128_xcbc_mac_x4_sse_no_aesni.obj \
-	$(OBJ_DIR)\ethernet_fcs_sse_no_aesni.obj \
-	$(OBJ_DIR)\snow3g_sse_no_aesni.obj \
-	$(OBJ_DIR)\snow3g_uia2_sse_no_aesni.obj \
-	$(OBJ_DIR)\zuc_top_sse_no_aesni.obj \
-	$(OBJ_DIR)\zuc_sse_no_aesni.obj \
-	$(OBJ_DIR)\crc16_x25_sse_no_aesni.obj \
-	$(OBJ_DIR)\crc32_refl_by8_sse_no_aesni.obj \
-	$(OBJ_DIR)\crc32_by8_sse_no_aesni.obj \
-	$(OBJ_DIR)\crc32_sctp_sse_no_aesni.obj \
-	$(OBJ_DIR)\crc32_lte_sse_no_aesni.obj \
-	$(OBJ_DIR)\crc32_iuup_sse_no_aesni.obj \
-	$(OBJ_DIR)\crc32_fp_sse_no_aesni.obj \
-	$(OBJ_DIR)\crc32_wimax_sse_no_aesni.obj \
-	$(OBJ_DIR)\aes128_cbcs_1_9_enc_x4_sse_no_aesni.obj \
-	$(OBJ_DIR)\aes128_cbcs_1_9_dec_by4_sse_no_aesni.obj \
-	$(OBJ_DIR)\mb_mgr_aes128_cbcs_1_9_submit_sse_no_aesni.obj \
-	$(OBJ_DIR)\mb_mgr_aes128_cbcs_1_9_flush_sse_no_aesni.obj \
-	$(OBJ_DIR)\mb_mgr_aes192_cbc_enc_flush_sse_no_aesni.obj \
-	$(OBJ_DIR)\mb_mgr_aes192_cbc_enc_submit_sse_no_aesni.obj \
-	$(OBJ_DIR)\mb_mgr_aes256_cbc_enc_flush_sse_no_aesni.obj \
-	$(OBJ_DIR)\mb_mgr_aes256_cbc_enc_submit_sse_no_aesni.obj \
-	$(OBJ_DIR)\mb_mgr_aes128_cbc_enc_flush_sse_no_aesni.obj \
-	$(OBJ_DIR)\mb_mgr_aes128_cbc_enc_submit_sse_no_aesni.obj \
-	$(OBJ_DIR)\mb_mgr_aes128_cmac_submit_flush_sse_no_aesni.obj \
-	$(OBJ_DIR)\mb_mgr_aes256_cmac_submit_flush_sse_no_aesni.obj \
-	$(OBJ_DIR)\mb_mgr_aes128_ccm_auth_submit_flush_sse_no_aesni.obj \
-	$(OBJ_DIR)\mb_mgr_aes256_ccm_auth_submit_flush_sse_no_aesni.obj \
-	$(OBJ_DIR)\mb_mgr_aes128_xcbc_flush_sse_no_aesni.obj \
-	$(OBJ_DIR)\mb_mgr_aes128_xcbc_submit_sse_no_aesni.obj \
-	$(OBJ_DIR)\mb_mgr_zuc_submit_flush_sse_no_aesni.obj \
-	$(OBJ_DIR)\mb_mgr_sse_no_aesni.obj \
-	$(OBJ_DIR)\snow_v_sse_no_aesni.obj \
-	$(OBJ_DIR)\gcm128_api_sse_no_aesni.obj \
-	$(OBJ_DIR)\gcm128_sgl_api_sse_no_aesni.obj \
-	$(OBJ_DIR)\gcm128_gmac_api_sse_no_aesni.obj \
-	$(OBJ_DIR)\gcm192_api_sse_no_aesni.obj \
-	$(OBJ_DIR)\gcm192_sgl_api_sse_no_aesni.obj \
-	$(OBJ_DIR)\gcm192_gmac_api_sse_no_aesni.obj \
-	$(OBJ_DIR)\gcm256_api_sse_no_aesni.obj \
-	$(OBJ_DIR)\gcm256_sgl_api_sse_no_aesni.obj \
-	$(OBJ_DIR)\gcm256_gmac_api_sse_no_aesni.obj \
-	$(OBJ_DIR)\sm4_sse_no_aesni.obj
-
 gcm_objs = \
 	$(OBJ_DIR)\gcm.obj \
 	$(OBJ_DIR)\aes_gcm_by8_avx2.obj \
@@ -621,11 +551,7 @@ avx2_t4_objs = \
 	$(OBJ_DIR)\mb_mgr_hmac_sha384_submit_ni_avx2.obj \
 	$(OBJ_DIR)\mb_mgr_hmac_sha384_flush_ni_avx2.obj
 
-!if "$(AESNI_EMU)" == "y"
-all_objs = $(lib_objs1) $(lib_objs2) $(gcm_objs) $(no_aesni_objs)
-!else
 all_objs = $(lib_objs1) $(lib_objs2) $(gcm_objs)
-!endif
 
 !if "$(AVX_IFMA)" == "y"
 all_objs = $(all_objs) $(OBJ_DIR)\mb_mgr_avx2_t3.obj $(OBJ_DIR)\poly_fma_avx2.obj
@@ -661,22 +587,6 @@ $(LIB_DIR)\$(LIBNAME): $(all_objs) $(LIBBASE)_lnk.def
 !endif
 
 STR_FILTER = ""
-!if "$(AESNI_EMU)" != "y"
-!if "$(AVX_IFMA)" != "y"
-!if "$(SMX_NI)" != "y"
-STR_FILTER = "_no_aesni _avx2_t3 _avx2_t4"
-!else # SMX_NI = y
-STR_FILTER = "_no_aesni _avx2_t3"
-!endif
-!else # AVX_IFMA = y
-!if "$(SMX_NI)" != "y"
-STR_FILTER = "_no_aesni _avx2_t4"
-!else # SMX_NI = y
-STR_FILTER = "_no_aesni"
-!endif # SMX_NI
-!endif # AVX_IFMA
-
-!else # AESNI_EMU = y
 !if "$(AVX_IFMA)" != "y"
 !if "$(SMX_NI)" != "y"
 STR_FILTER = "_avx2_t3 _avx2_t4"
@@ -688,7 +598,6 @@ STR_FILTER = "_avx2_t3"
 STR_FILTER = "_avx2_t4"
 !endif # SMX_NI
 !endif # AVX_IFMA
-!endif # AESNI_EMU
 
 $(all_objs): $(OBJ_DIR) $(LIB_DIR)
 
@@ -786,13 +695,6 @@ $(DEPALL): $(all_objs)
 {avx512_t2\}.asm{$(OBJ_DIR)}.obj:
 	$(AS) -MD $@.dep -o $@ $(AFLAGS) $<
 
-{no-aesni\}.c{$(OBJ_DIR)}.obj:
-	$(CC) /Fo$@ /c $(CFLAGS_NO_SIMD) $<
-        $(DEPTOOL) $< $@ "$(DEPFLAGS)" > $@.dep
-
-{no-aesni\}.asm{$(OBJ_DIR)}.obj:
-	$(AS) -MD $@.dep -o $@ $(AFLAGS) $<
-
 $(OBJ_DIR):
 	mkdir $(OBJ_DIR)
 
@@ -809,8 +711,6 @@ help:
 	@echo "		- this option will modify the optimization level when DEBUG is used"
 	@echo "DEBUG=y   - this option will produce library fit for debugging"
 	@echo "SHARED=n  - this option will produce static library"
-	@echo "AESNI_EMU=y - AESNI emulation support enabled"
-	@echo "AESNI_EMU=n - AESNI emulation support disabled (default)"
 	@echo "OBJ_DIR=obj (default)"
 	@echo "          - this option can be used to change build directory"
 	@echo "LIB_DIR=. (default)"
