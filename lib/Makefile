@@ -785,7 +785,7 @@ asm_avx_gcm_objs :=
 
 asm_avx2_gcm_objs := \
 	ghash_by8_avx2.o aes_gcm_by8_avx2.o aes128_gcm_by8_avx2.o aes192_gcm_by8_avx2.o aes256_gcm_by8_avx2.o \
-	aes128_gcm_vaes_avx2.o aes192_gcm_vaes_avx2.o aes256_gcm_vaes_avx2.o
+	ghash_vaes_avx2.o aes_gcm_vaes_avx2.o aes128_gcm_vaes_avx2.o aes192_gcm_vaes_avx2.o aes256_gcm_vaes_avx2.o
 
 asm_avx512_gcm_objs := \
 	aes128_gcm_api_vaes_avx512.o aes192_gcm_api_vaes_avx512.o aes256_gcm_api_vaes_avx512.o \

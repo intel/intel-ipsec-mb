@@ -691,6 +691,19 @@ struct gcm_key_data {
                          */
                         uint8_t shifted_hkey[IMB_GCM_ENC_KEY_LEN * 32 * 2];
                 } vaes_avx512;
+                struct {
+                        /**
+                         * Start with:
+                         * (HashKey<<1 mod poly), (HashKey^2<<1 mod poly), ...,
+                         * (Hashkey^16<<1 mod poly)
+                         *
+                         * Followed by:
+                         * (HashKey<<1 mod poly) x POLY,
+                         * (HashKey^2<<1 mod poly) x POLY, ...,
+                         * (Hashkey^16<<1 mod poly) x POLY
+                         */
+                        uint8_t shifted_hkey[IMB_GCM_ENC_KEY_LEN * 16 * 2];
+                } vaes_avx2;
         } ghash_keys;
 }
 #ifdef LINUX

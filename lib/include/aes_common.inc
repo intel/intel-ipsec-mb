@@ -676,6 +676,63 @@
 
 %endmacro
 
+;; =============================================================================
+;; Generic macro to produce code that executes %%OPCODE instruction
+;; on selected number of AES blocks (16 bytes long) between 0 and 16.
+;; Destination and source 1 operands are registers, source 2 operand is memory.
+%macro YMM_OPCODE3_DSTR_SRC1R_SRC2M_BLOCKS_0_16 26
+%define %%NUM_BLOCKS    %1      ; [in] numerical value, number of AES blocks (0 to 16)
+%define %%OPCODE        %2      ; [in] instruction name
+%define %%DST0          %3      ; [out] destination YMM register
+%define %%DST1          %4      ; [out] destination YMM register
+%define %%DST2          %5      ; [out] destination YMM register
+%define %%DST3          %6      ; [out] destination YMM register
+%define %%DST4          %7      ; [out] destination YMM register
+%define %%DST5          %8      ; [out] destination YMM register
+%define %%DST6          %9      ; [out] destination YMM register
+%define %%DST7          %10     ; [out] destination YMM register
+%define %%SRC1_0        %11     ; [in] source 1 YMM register
+%define %%SRC1_1        %12     ; [in] source 1 YMM register
+%define %%SRC1_2        %13     ; [in] source 1 YMM register
+%define %%SRC1_3        %14     ; [in] source 1 YMM register
+%define %%SRC1_4        %15     ; [in] source 1 YMM register
+%define %%SRC1_5        %16     ; [in] source 1 YMM register
+%define %%SRC1_6        %17     ; [in] source 1 YMM register
+%define %%SRC1_7        %18     ; [in] source 1 YMM register
+%define %%SRC2_0        %19     ; [in] source 2 m256
+%define %%SRC2_1        %20     ; [in] source 2 m256
+%define %%SRC2_2        %21     ; [in] source 2 m256
+%define %%SRC2_3        %22     ; [in] source 2 m256
+%define %%SRC2_4        %23     ; [in] source 2 m256
+%define %%SRC2_5        %24     ; [in] source 2 m256
+%define %%SRC2_6        %25     ; [in] source 2 m256
+%define %%SRC2_7        %26     ; [in] source 2 m256
+
+%assign _reg_idx     0
+%assign _blocks_left %%NUM_BLOCKS
+
+%rep (%%NUM_BLOCKS / 2)
+%xdefine %%DSTREG  %%DST %+ _reg_idx
+%xdefine %%SRC1REG %%SRC1_ %+ _reg_idx
+%xdefine %%SRC2REG %%SRC2_ %+ _reg_idx
+        %%OPCODE        %%DSTREG, %%SRC1REG, %%SRC2REG
+%undef %%DSTREG
+%undef %%SRC1REG
+%undef %%SRC2REG
+%assign _reg_idx     (_reg_idx + 1)
+%assign _blocks_left (_blocks_left - 2)
+%endrep
+
+%xdefine %%DSTREG  %%DST %+ _reg_idx
+%xdefine %%SRC1REG %%SRC1_ %+ _reg_idx
+%xdefine %%SRC2REG %%SRC2_ %+ _reg_idx
+
+%if _blocks_left == 1
+        %%OPCODE        XWORD(%%DSTREG), XWORD(%%SRC1REG), %%SRC2REG
+%endif
+
+%endmacro
+
 ;;; ===========================================================================
 ;;; Handles AES encryption rounds
 ;;; It handles special cases: the last and first rounds
@@ -1187,8 +1244,6 @@
 
 %endmacro
 
-%endif ;; _AES_COMMON_INC_
-
 ;;; ===========================================================================
 ;;; Handles AES decryption rounds for 0 to 8 blocks on SSE
 ;;; It handles special cases: the last and first rounds
@@ -1627,6 +1682,7 @@
 
 %endmacro
 
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; LOAD_STORE_VAR_x4 - variable load/store of 0-4 blocks (16 bytes) for 4 lanes
 ; Number of blocks determined by masks in LANE_MASKS table on the stack
@@ -1910,3 +1966,5 @@
                                     %%LANE_C, %%LANE_D, k1, k2, k3, k4
 %endif
 %endmacro
+
+%endif ;; _AES_COMMON_INC_

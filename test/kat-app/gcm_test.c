@@ -1100,7 +1100,7 @@ test_gcm_std_vectors(struct test_suite_context *ts128, struct test_suite_context
                 printf("\n");
 }
 
-static void
+static int
 test_single_job_sgl(struct IMB_MGR *mb_mgr, struct test_suite_context *ctx, const uint32_t key_sz,
                     const uint32_t buffer_sz, const uint32_t seg_sz,
                     const IMB_CIPHER_DIRECTION cipher_dir)
@@ -1118,6 +1118,7 @@ test_single_job_sgl(struct IMB_MGR *mb_mgr, struct test_suite_context *ctx, cons
         uint32_t last_seg_sz = buffer_sz % seg_sz;
         struct IMB_SGL_IOV *sgl_segs = NULL;
         const uint32_t num_segments = DIV_ROUND_UP(buffer_sz, seg_sz);
+        int ret = -1;
 
         if (last_seg_sz == 0)
                 last_seg_sz = seg_sz;
@@ -1226,6 +1227,7 @@ test_single_job_sgl(struct IMB_MGR *mb_mgr, struct test_suite_context *ctx, cons
                 test_suite_update(ctx, 0, 1);
         } else {
                 test_suite_update(ctx, 1, 0);
+                ret = 0;
         }
 
 exit:
@@ -1236,9 +1238,10 @@ exit:
                         free(segments[i]);
                 free(segments);
         }
+        return ret;
 }
 
-static void
+static int
 test_sgl(struct IMB_MGR *mb_mgr, struct test_suite_context *ctx, const uint32_t key_sz,
          const uint32_t buffer_sz, const uint32_t seg_sz, const IMB_CIPHER_DIRECTION cipher_dir,
          const unsigned job_api)
@@ -1256,6 +1259,7 @@ test_sgl(struct IMB_MGR *mb_mgr, struct test_suite_context *ctx, const uint32_t 
         struct gcm_context_data gcm_ctx;
         struct gcm_key_data key;
         uint32_t last_seg_sz = buffer_sz % seg_sz;
+        int ret = -1;
 
         num_segments = (buffer_sz + (seg_sz - 1)) / seg_sz;
         if (last_seg_sz == 0)
@@ -1416,6 +1420,7 @@ test_sgl(struct IMB_MGR *mb_mgr, struct test_suite_context *ctx, const uint32_t 
                 test_suite_update(ctx, 0, 1);
         } else {
                 test_suite_update(ctx, 1, 0);
+                ret = 0;
         }
 
 exit:
@@ -1426,6 +1431,8 @@ exit:
                 free(segments);
         }
         free(segment_sizes);
+
+        return ret;
 }
 
 int
@@ -1466,14 +1473,22 @@ gcm_test(IMB_MGR *p_mgr)
 
                 for (seg_sz = seg_sz_step; seg_sz <= max_seg_sz; seg_sz += seg_sz_step) {
                         /* Job API */
-                        test_sgl(p_mgr, ctx, key_sz, buf_sz, seg_sz, IMB_DIR_ENCRYPT, 1);
-                        test_sgl(p_mgr, ctx, key_sz, buf_sz, seg_sz, IMB_DIR_DECRYPT, 1);
+                        if (test_sgl(p_mgr, ctx, key_sz, buf_sz, seg_sz, IMB_DIR_ENCRYPT, 1) != 0)
+                                break;
+                        if (test_sgl(p_mgr, ctx, key_sz, buf_sz, seg_sz, IMB_DIR_DECRYPT, 1) != 0)
+                                break;
                         /* Single job SGL API */
-                        test_single_job_sgl(p_mgr, ctx, key_sz, buf_sz, seg_sz, IMB_DIR_ENCRYPT);
-                        test_single_job_sgl(p_mgr, ctx, key_sz, buf_sz, seg_sz, IMB_DIR_DECRYPT);
+                        if (test_single_job_sgl(p_mgr, ctx, key_sz, buf_sz, seg_sz,
+                                                IMB_DIR_ENCRYPT) != 0)
+                                break;
+                        if (test_single_job_sgl(p_mgr, ctx, key_sz, buf_sz, seg_sz,
+                                                IMB_DIR_DECRYPT) != 0)
+                                break;
                         /* Direct API */
-                        test_sgl(p_mgr, ctx, key_sz, buf_sz, seg_sz, IMB_DIR_ENCRYPT, 0);
-                        test_sgl(p_mgr, ctx, key_sz, buf_sz, seg_sz, IMB_DIR_DECRYPT, 0);
+                        if (test_sgl(p_mgr, ctx, key_sz, buf_sz, seg_sz, IMB_DIR_ENCRYPT, 0) != 0)
+                                break;
+                        if (test_sgl(p_mgr, ctx, key_sz, buf_sz, seg_sz, IMB_DIR_DECRYPT, 0) != 0)
+                                break;
                 }
         }
 
