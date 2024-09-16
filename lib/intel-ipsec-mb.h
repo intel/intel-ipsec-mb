@@ -2610,6 +2610,16 @@ init_mb_mgr_auto(IMB_MGR *state, IMB_ARCH *arch);
 #define IMB_SM4_KEYEXP(_mgr, _key, _exp_enc_key, _exp_dec_key)                                     \
         ((_mgr)->sm4_keyexp((_key), (_exp_enc_key), (_exp_dec_key)))
 
+/**
+ * SM4-GCM precompute
+ *
+ * @param [in] mgr_mgr          Pointer to initialized IMB_MGR structure
+ * @param [in] key              Input SM4 key (16 bytes)
+ * @param [out] key_data        GCM expanded key data
+ */
+IMB_DLL_EXPORT void
+imb_sm4_gcm_pre(IMB_MGR *mb_mgr, const void *key, struct gcm_key_data *key_data);
+
 /* Auxiliary functions */
 
 /**

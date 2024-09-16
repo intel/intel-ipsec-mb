@@ -1,4 +1,4 @@
-; Copyright (c) 2017-2023, Intel Corporation
+; Copyright (c) 2017-2024, Intel Corporation
 ; 
 ; Redistribution and use in source and binary forms, with or without
 ; modification, are permitted provided that the following conditions are met:
@@ -662,3 +662,4 @@ EXPORTS
     submit_aead_burst_nocheck_avx512_t2        @636
     imb_cipher_burst_get_size                  @637
     imb_aead_burst_get_size                    @638
+    imb_sm4_gcm_pre                            @639
