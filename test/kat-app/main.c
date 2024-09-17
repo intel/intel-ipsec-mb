@@ -117,6 +117,8 @@ extern int
 aes_cfb_test(struct IMB_MGR *mb_mg);
 extern int
 sm4_ctr_test(struct IMB_MGR *mb_mgr);
+extern int
+sm4_gcm_test(struct IMB_MGR *mb_mgr);
 
 typedef int (*imb_test_t)(struct IMB_MGR *mb_mgr);
 
@@ -177,7 +179,8 @@ struct imb_test tests[] = {
         { .str = "SM4_CBC", .fn = sm4_cbc_test, .enabled = 1 },
         { .str = "SM3", .fn = sm3_test, .enabled = 1 },
         { .str = "HMAC_SM3", .fn = hmac_sm3_test, .enabled = 1 },
-        { .str = "SM4_CTR", .fn = sm4_ctr_test, .enabled = 1 }
+        { .str = "SM4_CTR", .fn = sm4_ctr_test, .enabled = 1 },
+        { .str = "SM4_GCM", .fn = sm4_gcm_test, .enabled = 1 }
 };
 
 static int self_test_corrupt = 0;

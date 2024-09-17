@@ -242,6 +242,7 @@ fill_in_job(struct IMB_JOB *job, const IMB_CIPHER_MODE cipher_mode,
                 16, /* IMB_AUTH_GHASH */
                 32, /* IMB_AUTH_SM3 */
                 32, /* IMB_AUTH_HMAC_SM3 */
+                16, /* IMB_AUTH_SM4_GCM */
         };
         static DECLARE_ALIGNED(uint8_t dust_bin[2048], 64);
         static void *ks_ptrs[3];
@@ -297,6 +298,11 @@ fill_in_job(struct IMB_JOB *job, const IMB_CIPHER_MODE cipher_mode,
                 break;
         case IMB_CIPHER_GCM:
                 job->hash_alg = IMB_AUTH_AES_GMAC;
+                job->key_len_in_bytes = UINT64_C(16);
+                job->iv_len_in_bytes = UINT64_C(12);
+                break;
+        case IMB_CIPHER_SM4_GCM:
+                job->hash_alg = IMB_AUTH_SM4_GCM;
                 job->key_len_in_bytes = UINT64_C(16);
                 job->iv_len_in_bytes = UINT64_C(12);
                 break;
@@ -1150,13 +1156,14 @@ check_aead(IMB_HASH_ALG hash, IMB_CIPHER_MODE cipher)
         if (hash == IMB_AUTH_CHACHA20_POLY1305 || hash == IMB_AUTH_CHACHA20_POLY1305_SGL ||
             hash == IMB_AUTH_DOCSIS_CRC32 || hash == IMB_AUTH_GCM_SGL ||
             hash == IMB_AUTH_AES_GMAC || hash == IMB_AUTH_AES_CCM || hash == IMB_AUTH_SNOW_V_AEAD ||
-            hash == IMB_AUTH_PON_CRC_BIP)
+            hash == IMB_AUTH_PON_CRC_BIP || hash == IMB_AUTH_SM4_GCM)
                 return 1;
 
         if (cipher == IMB_CIPHER_CHACHA20_POLY1305 || cipher == IMB_CIPHER_CHACHA20_POLY1305_SGL ||
             cipher == IMB_CIPHER_DOCSIS_SEC_BPI || cipher == IMB_CIPHER_GCM_SGL ||
             cipher == IMB_CIPHER_GCM || cipher == IMB_CIPHER_CCM ||
-            cipher == IMB_CIPHER_SNOW_V_AEAD || cipher == IMB_CIPHER_PON_AES_CNTR)
+            cipher == IMB_CIPHER_SNOW_V_AEAD || cipher == IMB_CIPHER_PON_AES_CNTR ||
+            cipher == IMB_CIPHER_SM4_GCM)
                 return 1;
         return 0;
 }
@@ -1841,6 +1848,7 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                                     &chacha_ctx, &gcm_ctx);
                         switch (cipher) {
                         case IMB_CIPHER_GCM:
+                        case IMB_CIPHER_SM4_GCM:
                         case IMB_CIPHER_SM4_CBC:
                         case IMB_CIPHER_CBC:
                         case IMB_CIPHER_CBCS_1_9:
@@ -1987,6 +1995,7 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                                 switch (cipher) {
                                         /* skip ciphers with no max limit */
                                 case IMB_CIPHER_GCM:
+                                case IMB_CIPHER_SM4_GCM:
                                 case IMB_CIPHER_GCM_SGL:
                                 case IMB_CIPHER_CUSTOM:
                                 case IMB_CIPHER_CNTR:
@@ -2105,6 +2114,8 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                 /* GCM IVs must be not be 0 bytes */
                 { IMB_CIPHER_GCM, 0 },
                 { IMB_CIPHER_GCM_SGL, 0 },
+                /* IVs must be 12 bytes */
+                { IMB_CIPHER_SM4_GCM, 13 },
         };
 
         dir = IMB_DIR_ENCRYPT;
@@ -2168,6 +2179,7 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                                 case IMB_CIPHER_SM4_ECB:
                                 case IMB_CIPHER_SM4_CBC:
                                 case IMB_CIPHER_SM4_CNTR:
+                                case IMB_CIPHER_SM4_GCM:
                                         if (key_len != IMB_KEY_128_BYTES)
                                                 continue;
                                         break;

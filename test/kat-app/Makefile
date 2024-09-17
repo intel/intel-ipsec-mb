@@ -46,7 +46,7 @@ SOURCES := main.c gcm_test.c ctr_test.c customop_test.c des_test.c ccm_test.c \
 	sm4_ecb_test.c sm4_ecb_test.json.c sm4_cbc_test.c sm4_cbc_test.json.c sm3_test.c \
 	sm3_test.json.c zuc_eia3_128.json.c zuc_eia3_256.json.c zuc_eea3_128.json.c zuc_eea3_256.json.c \
 	kasumi_f8.json.c kasumi_f9.json.c snow_v_test.json.c hmac_sm3_test.c hmac_sm3.json.c snow_v_aead.json.c \
-	aes_cfb_test.c aes_cfb_test.json.c sm4_ctr_test.c sm4_ctr_test.json.c
+	aes_cfb_test.c aes_cfb_test.json.c sm4_ctr_test.c sm4_ctr_test.json.c sm4_gcm_test.c sm4_gcm_test.json.c
 
 OBJECTS := $(SOURCES:%.c=%.o) utils.o
 
