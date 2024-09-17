@@ -2620,6 +2620,11 @@ init_mb_mgr_auto(IMB_MGR *state, IMB_ARCH *arch);
 IMB_DLL_EXPORT void
 imb_sm4_gcm_pre(IMB_MGR *mb_mgr, const void *key, struct gcm_key_data *key_data);
 
+IMB_DLL_EXPORT void
+imb_sm4_gcm_enc(IMB_MGR *mb_mgr, const struct gcm_key_data *key_data, void *dst, const void *src,
+                const uint64_t len, const void *iv, const void *aad, const uint64_t aad_len,
+                void *tag, const uint64_t tag_len);
+
 /* Auxiliary functions */
 
 /**
