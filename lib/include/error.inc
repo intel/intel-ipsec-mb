@@ -84,7 +84,6 @@ SET_ERRNO_TYPES \
     IMB_ERR_SRC_OFFSET,         \
     IMB_ERR_NULL_AUTH_KEY,      \
     IMB_ERR_NULL_CTX,           \
-    IMB_ERR_NO_AESNI,           \
     IMB_ERR_JOB_NULL_HMAC_OPAD, \
     IMB_ERR_JOB_NULL_HMAC_IPAD, \
     IMB_ERR_JOB_NULL_XCBC_K1_EXP,       \
