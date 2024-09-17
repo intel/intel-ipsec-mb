@@ -2625,6 +2625,11 @@ imb_sm4_gcm_enc(IMB_MGR *mb_mgr, const struct gcm_key_data *key_data, void *dst,
                 const uint64_t len, const void *iv, const void *aad, const uint64_t aad_len,
                 void *tag, const uint64_t tag_len);
 
+IMB_DLL_EXPORT void
+imb_sm4_gcm_dec(IMB_MGR *mb_mgr, const struct gcm_key_data *key_data, void *dst, const void *src,
+                const uint64_t len, const void *iv, const void *aad, const uint64_t aad_len,
+                void *tag, const uint64_t tag_len);
+
 /* Auxiliary functions */
 
 /**
