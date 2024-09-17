@@ -30,7 +30,6 @@
 
 #include "intel-ipsec-mb.h"
 #include "arch_sse_type1.h"
-#include "arch_avx2_type4.h"
 #include "gcm.h"
 #include "error.h"
 #include "sha_generic.h"
@@ -86,8 +85,12 @@ imb_sm4_gcm_enc(IMB_MGR *state, const struct gcm_key_data *key_data, void *dst, 
         uint8_t enc_counter_block_0[16];
 
         /* Encrypt counter block 0 */
-        sm4_ecb_sse(counter_block_0, enc_counter_block_0, 16,
-                    (const uint32_t *) key_data->expanded_keys);
+        if (state->used_arch == IMB_ARCH_AVX2 && state->used_arch_type == 4)
+                sm4_ecb_ni_avx2(counter_block_0, enc_counter_block_0, 16,
+                                (const uint32_t *) key_data->expanded_keys);
+        else
+                sm4_ecb_sse(counter_block_0, enc_counter_block_0, 16,
+                            (const uint32_t *) key_data->expanded_keys);
 
         /* Increment block counter value for the encryption part */
         counter_block_0[15]++;
@@ -96,8 +99,12 @@ imb_sm4_gcm_enc(IMB_MGR *state, const struct gcm_key_data *key_data, void *dst, 
         IMB_GHASH(state, key_data, aad, aad_len, initial_tag, 16);
 
         /* SM4-CTR on plaintext */
-        sm4_cntr_sse(src, dst, len, (const uint32_t *) key_data->expanded_keys, counter_block_0,
-                     16);
+        if (state->used_arch == IMB_ARCH_AVX2 && state->used_arch_type == 4)
+                sm4_cntr_ni_avx2(src, dst, len, (const uint32_t *) key_data->expanded_keys,
+                                 counter_block_0, 16);
+        else
+                sm4_cntr_sse(src, dst, len, (const uint32_t *) key_data->expanded_keys,
+                             counter_block_0, 16);
 
         /* Authenticate ciphertext */
         IMB_GHASH(state, key_data, dst, len, initial_tag, 16);
@@ -128,8 +135,12 @@ imb_sm4_gcm_dec(IMB_MGR *state, const struct gcm_key_data *key_data, void *dst, 
         uint8_t enc_counter_block_0[16];
 
         /* Encrypt counter block 0 */
-        sm4_ecb_sse(counter_block_0, enc_counter_block_0, 16,
-                    (const uint32_t *) key_data->expanded_keys);
+        if (state->used_arch == IMB_ARCH_AVX2 && state->used_arch_type == 4)
+                sm4_ecb_ni_avx2(counter_block_0, enc_counter_block_0, 16,
+                                (const uint32_t *) key_data->expanded_keys);
+        else
+                sm4_ecb_sse(counter_block_0, enc_counter_block_0, 16,
+                            (const uint32_t *) key_data->expanded_keys);
 
         /* Increment block counter value for the encryption part */
         counter_block_0[15]++;
@@ -141,8 +152,12 @@ imb_sm4_gcm_dec(IMB_MGR *state, const struct gcm_key_data *key_data, void *dst, 
         IMB_GHASH(state, key_data, src, len, initial_tag, 16);
 
         /* SM4-CTR on ciphertext */
-        sm4_cntr_sse(src, dst, len, (const uint32_t *) key_data->expanded_keys, counter_block_0,
-                     16);
+        if (state->used_arch == IMB_ARCH_AVX2 && state->used_arch_type == 4)
+                sm4_cntr_ni_avx2(src, dst, len, (const uint32_t *) key_data->expanded_keys,
+                                 counter_block_0, 16);
+        else
+                sm4_cntr_sse(src, dst, len, (const uint32_t *) key_data->expanded_keys,
+                             counter_block_0, 16);
 
         /* XOR with len(AAD) || len(C) and GHASH (XOR done internally) */
         uint64_t lens[2];
