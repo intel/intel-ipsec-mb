@@ -41,8 +41,9 @@ init_mb_mgr_sse_internal(IMB_MGR *state, const int reset_mgrs)
         }
 #endif
 
-        if (!(state->features & IMB_FEATURE_AESNI)) {
-                imb_set_errno(state, IMB_ERR_NO_AESNI);
+        /* Check minimum CPU flags needed for SSE interface */
+        if ((state->features & IMB_CPUFLAGS_SSE) != IMB_CPUFLAGS_SSE) {
+                imb_set_errno(state, IMB_ERR_MISSING_CPUFLAGS_INIT_MGR);
                 return;
         }
 

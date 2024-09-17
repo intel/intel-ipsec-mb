@@ -72,7 +72,7 @@ init_mb_mgr_auto(IMB_MGR *state, IMB_ARCH *arch)
                 goto init_mb_mgr_auto_ret;
         }
 
-        imb_set_errno(state, ENODEV);
+        imb_set_errno(state, IMB_ERR_MISSING_CPUFLAGS_INIT_MGR);
 
 init_mb_mgr_auto_ret:
         if (arch != NULL)

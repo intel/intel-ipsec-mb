@@ -42,8 +42,9 @@ init_mb_mgr_avx512_internal(IMB_MGR *state, const int reset_mgrs)
         }
 #endif
 
-        if (!(state->features & IMB_FEATURE_AESNI)) {
-                imb_set_errno(state, IMB_ERR_NO_AESNI);
+        /* Check minimum CPU flags needed for AVX512 interface */
+        if ((state->features & IMB_CPUFLAGS_AVX512) != IMB_CPUFLAGS_AVX512) {
+                imb_set_errno(state, IMB_ERR_MISSING_CPUFLAGS_INIT_MGR);
                 return;
         }
 
