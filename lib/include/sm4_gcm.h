@@ -80,6 +80,10 @@ sm4_gcm(IMB_MGR *state, const struct gcm_key_data *key_data, void *dst, const vo
 
         for (unsigned i = 0; i < tag_len; i++)
                 tag8[i] = initial_tag[i] ^ enc_counter_block_0[i];
+
+#ifdef SAFE_DATA
+        imb_clear_mem(enc_counter_block_0, 16);
+#endif
 }
 
 #endif /* SM4_GCM_H */

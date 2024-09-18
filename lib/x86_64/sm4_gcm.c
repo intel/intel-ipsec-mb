@@ -71,4 +71,8 @@ imb_sm4_gcm_pre(IMB_MGR *state, const void *key, struct gcm_key_data *key_data)
         IMB_SM4_KEYEXP(state, key, (uint32_t *) key_data->expanded_keys, dust);
         sm4_ecb_sse(all_zeros, hash_key, 16, (uint32_t *) key_data->expanded_keys);
         IMB_GHASH_PRE(state, hash_key, key_data);
+#ifdef SAFE_DATA
+        imb_clear_mem(hash_key, 16);
+        imb_clear_mem(dust, IMB_SM4_KEY_SCHEDULE_ROUNDS * 4);
+#endif
 }
