@@ -43,7 +43,7 @@
 #include "include/des.h"
 #include "include/cpu_feature.h"
 #include "include/error.h"
-#include "include/arch_sse_type1.h" /* snow3g, gcm, aes-cfb */
+#include "include/arch_sse_type1.h" /* snow3g, gcm, aes-cfb, zuc */
 #include "include/arch_avx_type1.h"
 #include "include/ooo_mgr_reset.h"
 
@@ -211,14 +211,14 @@
 #define POLY1305_MAC                     poly1305_mac_scalar
 
 /* ZUC EEA3 & EIA3 */
-#define SUBMIT_JOB_ZUC_EEA3    submit_job_zuc_eea3_avx
-#define FLUSH_JOB_ZUC_EEA3     flush_job_zuc_eea3_avx
-#define SUBMIT_JOB_ZUC_EIA3    submit_job_zuc_eia3_avx
-#define FLUSH_JOB_ZUC_EIA3     flush_job_zuc_eia3_avx
-#define SUBMIT_JOB_ZUC256_EEA3 submit_job_zuc256_eea3_avx
-#define FLUSH_JOB_ZUC256_EEA3  flush_job_zuc256_eea3_avx
-#define SUBMIT_JOB_ZUC256_EIA3 submit_job_zuc256_eia3_avx
-#define FLUSH_JOB_ZUC256_EIA3  flush_job_zuc256_eia3_avx
+#define SUBMIT_JOB_ZUC_EEA3    submit_job_zuc_eea3_no_gfni_sse
+#define FLUSH_JOB_ZUC_EEA3     flush_job_zuc_eea3_no_gfni_sse
+#define SUBMIT_JOB_ZUC_EIA3    submit_job_zuc_eia3_no_gfni_sse
+#define FLUSH_JOB_ZUC_EIA3     flush_job_zuc_eia3_no_gfni_sse
+#define SUBMIT_JOB_ZUC256_EEA3 submit_job_zuc256_eea3_no_gfni_sse
+#define FLUSH_JOB_ZUC256_EEA3  flush_job_zuc256_eea3_no_gfni_sse
+#define SUBMIT_JOB_ZUC256_EIA3 submit_job_zuc256_eia3_no_gfni_sse
+#define FLUSH_JOB_ZUC256_EIA3  flush_job_zuc256_eia3_no_gfni_sse
 
 /* SNOW-V */
 #define SUBMIT_JOB_SNOW_V      snow_v_avx
@@ -415,11 +415,11 @@ init_mb_mgr_avx_t1_internal(IMB_MGR *state, const int reset_mgrs)
         state->aes128_cfb_one = aes_cfb_128_one_avx;
         state->aes256_cfb_one = aes_cfb_256_one_avx;
 
-        state->eea3_1_buffer = zuc_eea3_1_buffer_avx;
-        state->eea3_4_buffer = zuc_eea3_4_buffer_avx;
-        state->eea3_n_buffer = zuc_eea3_n_buffer_avx;
-        state->eia3_1_buffer = zuc_eia3_1_buffer_avx;
-        state->eia3_n_buffer = zuc_eia3_n_buffer_avx;
+        state->eea3_1_buffer = zuc_eea3_1_buffer_sse;
+        state->eea3_4_buffer = zuc_eea3_4_buffer_sse;
+        state->eea3_n_buffer = zuc_eea3_n_buffer_sse;
+        state->eia3_1_buffer = zuc_eia3_1_buffer_sse;
+        state->eia3_n_buffer = zuc_eia3_n_buffer_sse;
 
         state->f8_1_buffer = kasumi_f8_1_buffer_avx;
         state->f8_1_buffer_bit = kasumi_f8_1_buffer_bit_avx;
