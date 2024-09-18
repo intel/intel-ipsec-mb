@@ -84,6 +84,16 @@ is_job_invalid_light(IMB_MGR *state, const IMB_CIPHER_MODE cipher_mode, const IM
                         return 1;
                 }
                 break;
+        case IMB_CIPHER_SM4_GCM:
+                if (key_len_in_bytes != UINT64_C(16)) {
+                        imb_set_errno(state, IMB_ERR_JOB_KEY_LEN);
+                        return 1;
+                }
+                if (cipher_mode == IMB_CIPHER_SM4_GCM && hash_alg != IMB_AUTH_SM4_GCM) {
+                        imb_set_errno(state, IMB_ERR_HASH_ALGO);
+                        return 1;
+                }
+                break;
         case IMB_CIPHER_DES:
         case IMB_CIPHER_DOCSIS_DES:
                 if (key_len_in_bytes != UINT64_C(8)) {
@@ -216,6 +226,12 @@ is_job_invalid_light(IMB_MGR *state, const IMB_CIPHER_MODE cipher_mode, const IM
                 break;
         case IMB_AUTH_GCM_SGL:
                 if (cipher_mode != IMB_CIPHER_GCM_SGL) {
+                        imb_set_errno(state, IMB_ERR_CIPH_MODE);
+                        return 1;
+                }
+                break;
+        case IMB_AUTH_SM4_GCM:
+                if (cipher_mode != IMB_CIPHER_SM4_GCM) {
                         imb_set_errno(state, IMB_ERR_CIPH_MODE);
                         return 1;
                 }
@@ -663,6 +679,45 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job, const IMB_CIPHER_MODE cipher_
                 default:
                         imb_set_errno(state, IMB_ERR_JOB_SGL_STATE);
                         return -1;
+                }
+                break;
+        case IMB_CIPHER_SM4_GCM:
+                if (job->msg_len_to_cipher_in_bytes > IMB_GCM_MAX_LEN) {
+                        imb_set_errno(state, IMB_ERR_JOB_CIPH_LEN);
+                        return 1;
+                }
+                if (job->msg_len_to_cipher_in_bytes != 0 && job->src == NULL) {
+                        imb_set_errno(state, IMB_ERR_JOB_NULL_SRC);
+                        return 1;
+                }
+                if (job->msg_len_to_cipher_in_bytes != 0 && job->dst == NULL) {
+                        imb_set_errno(state, IMB_ERR_JOB_NULL_DST);
+                        return 1;
+                }
+                if (job->iv == NULL) {
+                        imb_set_errno(state, IMB_ERR_JOB_NULL_IV);
+                        return 1;
+                }
+                if (job->iv_len_in_bytes != UINT64_C(12)) {
+                        imb_set_errno(state, IMB_ERR_JOB_IV_LEN);
+                        return 1;
+                }
+                /* Same key structure used for encrypt and decrypt */
+                if (cipher_direction == IMB_DIR_ENCRYPT && job->enc_keys == NULL) {
+                        imb_set_errno(state, IMB_ERR_JOB_NULL_KEY);
+                        return 1;
+                }
+                if (cipher_direction == IMB_DIR_DECRYPT && job->dec_keys == NULL) {
+                        imb_set_errno(state, IMB_ERR_JOB_NULL_KEY);
+                        return 1;
+                }
+                if (key_len_in_bytes != UINT64_C(16)) {
+                        imb_set_errno(state, IMB_ERR_JOB_KEY_LEN);
+                        return 1;
+                }
+                if (hash_alg != IMB_AUTH_SM4_GCM) {
+                        imb_set_errno(state, IMB_ERR_HASH_ALGO);
+                        return 1;
                 }
                 break;
         case IMB_CIPHER_CUSTOM:
@@ -1935,6 +1990,25 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job, const IMB_CIPHER_MODE cipher_
                 }
                 if (job->src == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_SRC);
+                        return 1;
+                }
+                if (job->auth_tag_output == NULL) {
+                        imb_set_errno(state, IMB_ERR_JOB_NULL_AUTH);
+                        return 1;
+                }
+                break;
+        case IMB_AUTH_SM4_GCM:
+                if (job->auth_tag_output_len_in_bytes < UINT64_C(1) ||
+                    job->auth_tag_output_len_in_bytes > UINT64_C(16)) {
+                        imb_set_errno(state, IMB_ERR_JOB_AUTH_TAG_LEN);
+                        return 1;
+                }
+                if ((job->u.GCM.aad_len_in_bytes > 0) && (job->u.GCM.aad == NULL)) {
+                        imb_set_errno(state, IMB_ERR_JOB_NULL_AAD);
+                        return 1;
+                }
+                if (cipher_mode != IMB_CIPHER_SM4_GCM) {
+                        imb_set_errno(state, IMB_ERR_CIPH_MODE);
                         return 1;
                 }
                 if (job->auth_tag_output == NULL) {

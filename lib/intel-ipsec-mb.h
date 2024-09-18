@@ -291,6 +291,7 @@ typedef enum {
         IMB_CIPHER_SM4_CBC,
         IMB_CIPHER_CFB,
         IMB_CIPHER_SM4_CNTR,
+        IMB_CIPHER_SM4_GCM,
         IMB_CIPHER_NUM
 } IMB_CIPHER_MODE;
 
@@ -345,6 +346,7 @@ typedef enum {
         IMB_AUTH_GHASH,                  /**< GHASH */
         IMB_AUTH_SM3,                    /**< SM3 */
         IMB_AUTH_HMAC_SM3,               /**< SM3-HMAC */
+        IMB_AUTH_SM4_GCM,                /**< SM4-GCM */
         IMB_AUTH_NUM
 } IMB_HASH_ALG;
 
@@ -2619,16 +2621,6 @@ init_mb_mgr_auto(IMB_MGR *state, IMB_ARCH *arch);
  */
 IMB_DLL_EXPORT void
 imb_sm4_gcm_pre(IMB_MGR *mb_mgr, const void *key, struct gcm_key_data *key_data);
-
-IMB_DLL_EXPORT void
-imb_sm4_gcm_enc(IMB_MGR *mb_mgr, const struct gcm_key_data *key_data, void *dst, const void *src,
-                const uint64_t len, const void *iv, const void *aad, const uint64_t aad_len,
-                void *tag, const uint64_t tag_len);
-
-IMB_DLL_EXPORT void
-imb_sm4_gcm_dec(IMB_MGR *mb_mgr, const struct gcm_key_data *key_data, void *dst, const void *src,
-                const uint64_t len, const void *iv, const void *aad, const uint64_t aad_len,
-                void *tag, const uint64_t tag_len);
 
 /* Auxiliary functions */
 

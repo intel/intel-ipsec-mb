@@ -91,6 +91,7 @@ Table 1. List of supported cipher algorithms and their implementations.
 | SM4-ECB        | N      | Y      | N      | Y(11)  | N      | N      |
 | SM4-CBC        | N      | Y      | N      | Y(12)  | N      | N      |
 | SM4-CTR        | N      | Y      | N      | Y(13)  | N      | N      |
+| SM4-GCM        | N      | Y      | N      | Y(13)  | N      | N      |
 +----------------------------------------------------------------------+
 ```
 Notes:  
@@ -164,6 +165,7 @@ Table 2. List of supported integrity algorithms and their implementations.
 | PON-CRC-BIP(7)    | N      | Y      | Y      | N      | N      | Y      |
 | SM3               | Y      | N      | N      | N      | N      | N      |
 | HMAC-SM3          | Y      | N      | N      | N      | N      | N      |
+| SM4-GCM           | N      | Y      | N      | Y      | N      | N      |
 +-------------------------------------------------------------------------+
 ```
 Notes:  
@@ -203,6 +205,8 @@ Table 3. Encryption and integrity algorithm combinations
 | AES128-CCM    | AES128-CCM                                          |
 |---------------+-----------------------------------------------------|
 | AES256-CCM    | AES256-CCM                                          |
+|---------------+-----------------------------------------------------|
+| SM4-GCM       | SM4-GCM                                             |
 |---------------+-----------------------------------------------------|
 | AES128-CBC,   | AES-XCBC-96,                                        |
 | AES192-CBC,   | HMAC-SHA1-96, HMAC-SHA2-224_112, HMAC-SHA2-256_128, |

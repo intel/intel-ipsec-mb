@@ -43,6 +43,7 @@
 
 #include "include/clear_regs_mem.h"
 #include "include/des.h"
+#include "include/sm4_gcm.h"
 #include "intel-ipsec-mb.h"
 #include "include/error.h"
 #include "include/snow3g_submit.h"
@@ -188,6 +189,35 @@ SUBMIT_JOB_AES_GCM_ENC(IMB_MGR *state, IMB_JOB *job, const uint64_t key_sz)
                 return AES_GCM_ENC_IV_192(state, job);
         else
                 return AES_GCM_ENC_IV_256(state, job);
+}
+
+/* ========================================================================= */
+/* SM4-GCM */
+/* ========================================================================= */
+__forceinline IMB_JOB *
+SUBMIT_JOB_SM4_GCM_DEC(IMB_MGR *state, IMB_JOB *job)
+{
+        sm4_gcm(state, (const struct gcm_key_data *) job->enc_keys, job->dst, job->src,
+                job->msg_len_to_cipher_in_bytes, job->iv, job->u.GCM.aad,
+                job->u.GCM.aad_len_in_bytes, job->auth_tag_output,
+                job->auth_tag_output_len_in_bytes, IMB_DIR_DECRYPT);
+
+        job->status |= IMB_STATUS_COMPLETED;
+
+        return job;
+}
+
+__forceinline IMB_JOB *
+SUBMIT_JOB_SM4_GCM_ENC(IMB_MGR *state, IMB_JOB *job)
+{
+        sm4_gcm(state, (const struct gcm_key_data *) job->enc_keys, job->dst, job->src,
+                job->msg_len_to_cipher_in_bytes, job->iv, job->u.GCM.aad,
+                job->u.GCM.aad_len_in_bytes, job->auth_tag_output,
+                job->auth_tag_output_len_in_bytes, IMB_DIR_ENCRYPT);
+
+        job->status |= IMB_STATUS_COMPLETED;
+
+        return job;
 }
 
 /* ========================================================================= */
@@ -403,6 +433,8 @@ SUBMIT_JOB_CIPHER_ENC(IMB_MGR *state, IMB_JOB *job, const IMB_CIPHER_MODE cipher
                 return SUBMIT_JOB_AES_GCM_ENC(state, job, key_sz);
         } else if (IMB_CIPHER_GCM_SGL == cipher_mode) {
                 return submit_gcm_sgl_enc(state, job, key_sz);
+        } else if (IMB_CIPHER_SM4_GCM == cipher_mode) {
+                return SUBMIT_JOB_SM4_GCM_ENC(state, job);
         } else if (IMB_CIPHER_CBC == cipher_mode) {
                 if (16 == key_sz) {
                         MB_MGR_AES_OOO *aes128_ooo = state->aes128_ooo;
@@ -643,6 +675,8 @@ SUBMIT_JOB_CIPHER_DEC(IMB_MGR *state, IMB_JOB *job, const IMB_CIPHER_MODE cipher
                 return SUBMIT_JOB_AES_GCM_DEC(state, job, key_sz);
         } else if (IMB_CIPHER_GCM_SGL == cipher_mode) {
                 return submit_gcm_sgl_dec(state, job, key_sz);
+        } else if (IMB_CIPHER_SM4_GCM == cipher_mode) {
+                return SUBMIT_JOB_SM4_GCM_DEC(state, job);
         } else if (IMB_CIPHER_CBC == cipher_mode) {
                 if (16 == key_sz) {
                         return SUBMIT_JOB_AES_CBC_128_DEC(job);
@@ -1066,6 +1100,13 @@ submit_cipher_dec_sm4_cntr(IMB_MGR *state, IMB_JOB *job)
         return SUBMIT_JOB_CIPHER_DEC(state, job, IMB_CIPHER_SM4_CNTR, IMB_KEY_128_BYTES);
 }
 
+/* SM4-GCM */
+static IMB_JOB *
+submit_cipher_dec_sm4_gcm(IMB_MGR *state, IMB_JOB *job)
+{
+        return SUBMIT_JOB_CIPHER_DEC(state, job, IMB_CIPHER_SM4_GCM, IMB_KEY_128_BYTES);
+}
+
 /* AES-CFB 128 */
 static IMB_JOB *
 submit_cipher_dec_cfb_128(IMB_MGR *state, IMB_JOB *job)
@@ -1350,6 +1391,13 @@ submit_cipher_enc_sm4_cntr(IMB_MGR *state, IMB_JOB *job)
         return SUBMIT_JOB_CIPHER_ENC(state, job, IMB_CIPHER_SM4_CNTR, IMB_KEY_128_BYTES);
 }
 
+/* SM4-GCM */
+static IMB_JOB *
+submit_cipher_enc_sm4_gcm(IMB_MGR *state, IMB_JOB *job)
+{
+        return SUBMIT_JOB_CIPHER_ENC(state, job, IMB_CIPHER_SM4_GCM, IMB_KEY_128_BYTES);
+}
+
 /* AES-CFB */
 static IMB_JOB *
 submit_cipher_enc_cfb_128(IMB_MGR *state, IMB_JOB *job)
@@ -1526,12 +1574,12 @@ static const submit_flush_fn_t tab_submit_cipher[] = {
         submit_cipher_dec_sm4_cntr,
         submit_cipher_dec_null,
         submit_cipher_dec_null,
+        /* [28] SM4-GCM */
+        submit_cipher_dec_null,
+        submit_cipher_dec_sm4_gcm,
+        submit_cipher_dec_null,
+        submit_cipher_dec_null,
         /* add new cipher decrypt here */
-        /* [28] NULL */
-        NULL,
-        NULL,
-        NULL,
-        NULL,
         /* [29] NULL */
         NULL,
         NULL,
@@ -1692,12 +1740,12 @@ static const submit_flush_fn_t tab_submit_cipher[] = {
         submit_cipher_enc_sm4_cntr,
         submit_cipher_enc_null,
         submit_cipher_enc_null,
+        /* [28] SM4-GCM */
+        submit_cipher_dec_null,
+        submit_cipher_enc_sm4_gcm,
+        submit_cipher_dec_null,
+        submit_cipher_dec_null,
         /* add new cipher encrypt here */
-        /* [28] NULL */
-        NULL,
-        NULL,
-        NULL,
-        NULL,
         /* [29] NULL */
         NULL,
         NULL,
@@ -1997,6 +2045,13 @@ flush_cipher_dec_sm4_cntr(IMB_MGR *state, IMB_JOB *job)
         return FLUSH_JOB_CIPHER_DEC(state, job, IMB_CIPHER_SM4_CNTR, IMB_KEY_128_BYTES);
 }
 
+/* SM4-GCM */
+static IMB_JOB *
+flush_cipher_dec_sm4_gcm(IMB_MGR *state, IMB_JOB *job)
+{
+        return FLUSH_JOB_CIPHER_DEC(state, job, IMB_CIPHER_SM4_GCM, IMB_KEY_128_BYTES);
+}
+
 /* AES-CBC */
 static IMB_JOB *
 flush_cipher_dec_cfb_128(IMB_MGR *state, IMB_JOB *job)
@@ -2290,6 +2345,13 @@ flush_cipher_enc_sm4_cntr(IMB_MGR *state, IMB_JOB *job)
         return FLUSH_JOB_CIPHER_ENC(state, job, IMB_CIPHER_SM4_CNTR, IMB_KEY_128_BYTES);
 }
 
+/* SM4-GCM */
+static IMB_JOB *
+flush_cipher_enc_sm4_gcm(IMB_MGR *state, IMB_JOB *job)
+{
+        return FLUSH_JOB_CIPHER_ENC(state, job, IMB_CIPHER_SM4_GCM, IMB_KEY_128_BYTES);
+}
+
 /* AES-CBC */
 static IMB_JOB *
 flush_cipher_enc_cfb_128(IMB_MGR *state, IMB_JOB *job)
@@ -2458,12 +2520,12 @@ static const submit_flush_fn_t tab_flush_cipher[] = {
         flush_cipher_dec_sm4_cntr,
         flush_cipher_dec_null,
         flush_cipher_dec_null,
+        /* [28] SM4-GCM */
+        flush_cipher_dec_null,
+        flush_cipher_dec_sm4_gcm,
+        flush_cipher_dec_null,
+        flush_cipher_dec_null,
         /* add new cipher decrypt here */
-        /* [28] NULL */
-        NULL,
-        NULL,
-        NULL,
-        NULL,
         /* [29] NULL */
         NULL,
         NULL,
@@ -2619,17 +2681,17 @@ static const submit_flush_fn_t tab_flush_cipher[] = {
         flush_cipher_enc_cfb_128,
         flush_cipher_enc_cfb_192,
         flush_cipher_enc_cfb_256,
-        /* [27] SM4-CNTR */
+        /* [27] SM4-CTR */
         flush_cipher_enc_null,
         flush_cipher_enc_sm4_cntr,
         flush_cipher_enc_null,
         flush_cipher_enc_null,
+        /* [28] SM4-GCM */
+        flush_cipher_enc_null,
+        flush_cipher_enc_sm4_gcm,
+        flush_cipher_enc_null,
+        flush_cipher_enc_null,
         /* add new cipher encrypt here */
-        /* [28] NULL */
-        NULL,
-        NULL,
-        NULL,
-        NULL,
         /* [29] NULL */
         NULL,
         NULL,
@@ -2823,7 +2885,7 @@ SUBMIT_JOB_HASH_EX(IMB_MGR *state, IMB_JOB *job, const IMB_HASH_ALG hash_alg)
                 return SUBMIT_JOB_SM3(job);
         default:
                 /**
-                 * assume IMB_AUTH_GCM, IMB_AUTH_PON_CRC_BIP,
+                 * assume IMB_AUTH_GCM, IMB_AUTH_SM4_GCM, IMB_AUTH_PON_CRC_BIP,
                  * IMB_AUTH_SNOW_V_AEAD or IMB_AUTH_NULL
                  */
                 job->status |= IMB_STATUS_COMPLETED_AUTH;
@@ -3211,6 +3273,12 @@ submit_hash_hmac_sm3(IMB_MGR *state, IMB_JOB *job)
         return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_HMAC_SM3);
 }
 
+static IMB_JOB *
+submit_hash_sm4_gcm(IMB_MGR *state, IMB_JOB *job)
+{
+        return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_SM4_GCM);
+}
+
 static const submit_flush_fn_t tab_submit_hash[] = {
         /* [0] invalid entry */
         NULL,
@@ -3310,6 +3378,8 @@ static const submit_flush_fn_t tab_submit_hash[] = {
         submit_hash_sm3,
         /* [48] HMAC-SM3 */
         submit_hash_hmac_sm3,
+        /* [49] SM4-GCM */
+        submit_hash_sm4_gcm,
         /* add new hash algorithms here */
 };
 
@@ -3605,6 +3675,12 @@ flush_hash_hmac_sm3(IMB_MGR *state, IMB_JOB *job)
         return FLUSH_JOB_HASH_EX(state, job, IMB_AUTH_HMAC_SM3);
 }
 
+static IMB_JOB *
+flush_hash_sm4_gcm(IMB_MGR *state, IMB_JOB *job)
+{
+        return FLUSH_JOB_HASH_EX(state, job, IMB_AUTH_SM4_GCM);
+}
+
 static const submit_flush_fn_t tab_flush_hash[] = {
         /* [0] invalid entry */
         NULL,
@@ -3704,6 +3780,8 @@ static const submit_flush_fn_t tab_flush_hash[] = {
         flush_hash_sm3,
         /* [48] HMAC-SM3 */
         flush_hash_hmac_sm3,
+        /* [49] SM4-GCM */
+        flush_hash_sm4_gcm,
         /* add new hash algorithms here */
 };
 
