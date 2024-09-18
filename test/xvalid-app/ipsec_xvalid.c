@@ -516,6 +516,10 @@ struct str_value_mapping aead_algo_str_map[] = {
           .values.job_params = { .cipher_mode = IMB_CIPHER_SNOW_V_AEAD,
                                  .hash_alg = IMB_AUTH_SNOW_V_AEAD,
                                  .key_size = 32 } },
+        { .name = "SM4-GCM",
+          .values.job_params = { .cipher_mode = IMB_CIPHER_SM4_GCM,
+                                 .hash_alg = IMB_AUTH_SM4_GCM,
+                                 .key_size = IMB_KEY_128_BYTES } },
 };
 
 /* This struct stores all information about performed test case */
@@ -572,6 +576,7 @@ const uint8_t auth_tag_len_bytes[] = {
         16,                        /* IMB_AUTH_GHASH */
         32,                        /* IMB_AUTH_SM3 */
         32,                        /* IMB_AUTH_HMAC_SM3 */
+        16,                        /* IMB_AUTH_SM4_GCM */
 };
 
 /* Minimum, maximum and step values of key sizes */
@@ -602,7 +607,8 @@ const uint8_t key_sizes[][3] = {
         { 16, 16, 1 },  /* IMB_CIPHER_SM4_ECB */
         { 16, 16, 1 },  /* IMB_CIPHER_SM4_CBC */
         { 16, 32, 8 },  /* IMB_CIPHER_CFB */
-        { 16, 16, 1 }   /* IMB_CIPHER_SM4_CNTR */
+        { 16, 16, 1 },  /* IMB_CIPHER_SM4_CNTR */
+        { 16, 16, 1 }   /* IMB_CIPHER_SM4_GCM */
 };
 
 uint8_t custom_test = 0;
@@ -1335,6 +1341,7 @@ fill_job(IMB_JOB *job, const struct params_s *params, uint8_t *buf, uint8_t *dig
         case IMB_AUTH_NULL:
         case IMB_AUTH_AES_GMAC:
         case IMB_AUTH_AES_CCM:
+        case IMB_AUTH_SM4_GCM:
         case IMB_AUTH_SHA_1:
         case IMB_AUTH_SHA_224:
         case IMB_AUTH_SHA_256:
@@ -1421,6 +1428,7 @@ fill_job(IMB_JOB *job, const struct params_s *params, uint8_t *buf, uint8_t *dig
                 job->iv_len_in_bytes = 16;
                 break;
         case IMB_CIPHER_GCM:
+        case IMB_CIPHER_SM4_GCM:
                 job->enc_keys = gdata_key;
                 job->dec_keys = gdata_key;
                 job->u.GCM.aad_len_in_bytes = params->aad_size;
@@ -1560,6 +1568,7 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys, const uint8_t *ciph
                         nosimd_memset(k3, pattern_auth_key, sizeof(keys->k3));
                         break;
                 case IMB_AUTH_AES_CCM:
+                case IMB_AUTH_SM4_GCM:
                 case IMB_AUTH_AES_GMAC:
                 case IMB_AUTH_NULL:
                 case IMB_AUTH_SHA_1:
@@ -1602,6 +1611,7 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys, const uint8_t *ciph
 
                 switch (params->cipher_mode) {
                 case IMB_CIPHER_GCM:
+                case IMB_CIPHER_SM4_GCM:
                         nosimd_memset(gdata_key, pattern_cipher_key, sizeof(keys->gdata_key));
                         break;
                 case IMB_CIPHER_PON_AES_CNTR:
@@ -1687,6 +1697,7 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys, const uint8_t *ciph
                 IMB_GHASH_PRE(mb_mgr, auth_key, gdata_key);
                 break;
         case IMB_AUTH_AES_CCM:
+        case IMB_AUTH_SM4_GCM:
         case IMB_AUTH_AES_GMAC:
         case IMB_AUTH_NULL:
         case IMB_AUTH_SHA_1:
@@ -1780,6 +1791,9 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys, const uint8_t *ciph
         case IMB_CIPHER_SM4_CBC:
         case IMB_CIPHER_SM4_CNTR:
                 IMB_SM4_KEYEXP(mb_mgr, ciph_key, enc_keys, dec_keys);
+                break;
+        case IMB_CIPHER_SM4_GCM:
+                imb_sm4_gcm_pre(mb_mgr, ciph_key, gdata_key);
                 break;
         case IMB_CIPHER_DES:
         case IMB_CIPHER_DES3:
@@ -2844,6 +2858,9 @@ run_test(const IMB_ARCH enc_arch, const IMB_ARCH dec_arch, struct params_s *para
                                 continue;
                         if ((c_mode == IMB_CIPHER_CCM && hash_alg != IMB_AUTH_AES_CCM) ||
                             (c_mode != IMB_CIPHER_CCM && hash_alg == IMB_AUTH_AES_CCM))
+                                continue;
+                        if ((c_mode == IMB_CIPHER_SM4_GCM && hash_alg != IMB_AUTH_SM4_GCM) ||
+                            (c_mode != IMB_CIPHER_SM4_GCM && hash_alg == IMB_AUTH_SM4_GCM))
                                 continue;
                         if ((c_mode == IMB_CIPHER_PON_AES_CNTR &&
                              hash_alg != IMB_AUTH_PON_CRC_BIP) ||
