@@ -159,6 +159,7 @@ enum test_cipher_mode_e {
         TEST_SM4_CBC,
         TEST_CFB,
         TEST_SM4_CNTR,
+        TEST_SM4_GCM,
         TEST_NUM_CIPHER_TESTS
 };
 
@@ -211,6 +212,7 @@ enum test_hash_alg_e {
         TEST_AUTH_GHASH,
         TEST_AUTH_SM3,
         TEST_SM3_HMAC,
+        TEST_HASH_SM4_GCM,
         TEST_NUM_HASH_TESTS
 };
 
@@ -620,6 +622,10 @@ const struct str_value_mapping aead_algo_str_map[] = {
           .values.job_params = { .cipher_mode = TEST_SNOW_V_AEAD,
                                  .key_size = 32,
                                  .hash_alg = TEST_AUTH_SNOW_V_AEAD } },
+        { .name = "sm4-gcm",
+          .values.job_params = { .cipher_mode = TEST_SM4_GCM,
+                                 .hash_alg = TEST_HASH_SM4_GCM,
+                                 .key_size = IMB_KEY_128_BYTES } },
 };
 
 const struct str_value_mapping cipher_dir_str_map[] = {
@@ -694,6 +700,7 @@ const uint32_t auth_tag_length_bytes[] = {
         16,                        /* IMB_AUTH_GHASH */
         32,                        /* IMB_AUTH_SM3 */
         32,                        /* IMB_AUTH_HMAC_SM3 */
+        16,                        /* SM4-GCM */
 };
 uint32_t index_limit;
 uint32_t key_idxs[NUM_OFFSETS];
@@ -1339,6 +1346,9 @@ translate_cipher_mode(const enum test_cipher_mode_e test_mode)
         case TEST_CFB:
                 c_mode = IMB_CIPHER_CFB;
                 break;
+        case TEST_SM4_GCM:
+                c_mode = IMB_CIPHER_SM4_GCM;
+                break;
         default:
                 break;
         }
@@ -1396,6 +1406,9 @@ translate_hash_alg(const enum test_hash_alg_e test_mode)
                         hash_alg = IMB_AUTH_GCM_SGL;
                 else
                         hash_alg = IMB_AUTH_AES_GMAC;
+                break;
+        case TEST_HASH_SM4_GCM:
+                hash_alg = IMB_AUTH_SM4_GCM;
                 break;
         case TEST_DOCSIS_CRC32:
                 hash_alg = IMB_AUTH_DOCSIS_CRC32;
@@ -1538,7 +1551,7 @@ set_job_fields(IMB_JOB *job, uint8_t *p_buffer, imb_uint128_t *p_keys, const uin
                 job->src = get_src_buffer(index, p_buffer);
 
         job->dst = get_dst_buffer(index, p_buffer);
-        if (job->cipher_mode == IMB_CIPHER_GCM) {
+        if (job->cipher_mode == IMB_CIPHER_GCM || job->cipher_mode == IMB_CIPHER_SM4_GCM) {
                 job->u.GCM.aad = job->src;
         } else if (job->cipher_mode == IMB_CIPHER_CCM) {
                 job->u.CCM.aad = job->src;
@@ -1653,7 +1666,8 @@ set_size_lists(uint32_t *cipher_size_list, uint32_t *hash_size_list, uint64_t *x
                 } else
                         cipher_size_list[i] = job_size;
 
-                if ((params->hash_alg == TEST_HASH_CCM) || (params->hash_alg == TEST_HASH_GCM))
+                if ((params->hash_alg == TEST_HASH_CCM) || (params->hash_alg == TEST_HASH_GCM) ||
+                    (params->hash_alg == TEST_HASH_SM4_GCM))
                         hash_size_list[i] = job_size;
                 else
                         hash_size_list[i] = job_size + sha_size_incr;
@@ -2147,6 +2161,12 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params, const uint32_t num_iter, uint8
                         IMB_AES256_GCM_PRE(mb_mgr, gcm_key, &gdata_key);
                         break;
                 }
+                job_template.enc_keys = &gdata_key;
+                job_template.dec_keys = &gdata_key;
+                job_template.u.GCM.aad_len_in_bytes = aad_size;
+                job_template.iv_len_in_bytes = 12;
+        } else if (job_template.cipher_mode == IMB_CIPHER_SM4_GCM) {
+                imb_sm4_gcm_pre(mb_mgr, gcm_key, &gdata_key);
                 job_template.enc_keys = &gdata_key;
                 job_template.dec_keys = &gdata_key;
                 job_template.u.GCM.aad_len_in_bytes = aad_size;
