@@ -123,14 +123,6 @@ aes_cbc_handler(ACVP_TEST_CASE *test_case)
                 job->dst = tc->ct;
                 job->msg_len_to_cipher_in_bytes = tc->pt_len;
                 tc->ct_len = tc->pt_len;
-
-                job = IMB_SUBMIT_JOB(mb_mgr);
-                if (job == NULL)
-                        job = IMB_FLUSH_JOB(mb_mgr);
-                if (job->status != IMB_STATUS_COMPLETED) {
-                        fprintf(stderr, "Invalid job\n");
-                        return ACVP_CRYPTO_MODULE_FAIL;
-                }
         } else /* DECRYPT */ {
                 job->cipher_direction = IMB_DIR_DECRYPT;
                 job->chain_order = IMB_ORDER_HASH_CIPHER;
@@ -138,14 +130,98 @@ aes_cbc_handler(ACVP_TEST_CASE *test_case)
                 job->dst = tc->pt;
                 job->msg_len_to_cipher_in_bytes = tc->ct_len;
                 tc->pt_len = tc->ct_len;
+        }
+        job = IMB_SUBMIT_JOB(mb_mgr);
+        if (job == NULL)
+                job = IMB_FLUSH_JOB(mb_mgr);
+        if (job->status != IMB_STATUS_COMPLETED) {
+                fprintf(stderr, "Invalid job\n");
+                return ACVP_CRYPTO_MODULE_FAIL;
+        }
+        /*
+         * If Monte-carlo test, copy the ciphertext for
+         * the IV of the next iteration
+         */
+        if (tc->test_type == ACVP_SYM_TEST_TYPE_MCT)
+                memcpy(next_iv, tc->ct, 16);
 
-                job = IMB_SUBMIT_JOB(mb_mgr);
-                if (job == NULL)
-                        job = IMB_FLUSH_JOB(mb_mgr);
-                if (job->status != IMB_STATUS_COMPLETED) {
-                        fprintf(stderr, "Invalid job\n");
-                        return ACVP_CRYPTO_MODULE_FAIL;
-                }
+        return ACVP_SUCCESS;
+}
+
+static int
+aes_cfb_handler(ACVP_TEST_CASE *test_case)
+{
+        ACVP_SYM_CIPHER_TC *tc;
+        IMB_JOB *job = NULL;
+        DECLARE_ALIGNED(uint32_t enc_keys[15 * 4], 16);
+        DECLARE_ALIGNED(uint32_t dec_keys[15 * 4], 16);
+        static uint8_t next_iv[16];
+
+        if (test_case == NULL)
+                return ACVP_CRYPTO_MODULE_FAIL;
+
+        tc = test_case->tc.symmetric;
+
+        if (tc->direction != ACVP_SYM_CIPH_DIR_ENCRYPT &&
+            tc->direction != ACVP_SYM_CIPH_DIR_DECRYPT) {
+                fprintf(stderr, "Unsupported direction\n");
+                return ACVP_CRYPTO_MODULE_FAIL;
+        }
+
+        switch (tc->key_len) {
+        case 128:
+                IMB_AES_KEYEXP_128(mb_mgr, tc->key, enc_keys, dec_keys);
+                break;
+        case 192:
+                IMB_AES_KEYEXP_192(mb_mgr, tc->key, enc_keys, dec_keys);
+                break;
+        case 256:
+                IMB_AES_KEYEXP_256(mb_mgr, tc->key, enc_keys, dec_keys);
+                break;
+        default:
+                fprintf(stderr, "Unsupported AES key length\n");
+                return ACVP_CRYPTO_MODULE_FAIL;
+        }
+
+        job = IMB_GET_NEXT_JOB(mb_mgr);
+        job->key_len_in_bytes = tc->key_len >> 3;
+        job->cipher_mode = IMB_CIPHER_CFB;
+        job->hash_alg = IMB_AUTH_NULL;
+        /*
+         * If Monte-carlo test, use the IV from the ciphertext of
+         * the previous iteration
+         */
+        if (tc->test_type == ACVP_SYM_TEST_TYPE_MCT && tc->mct_index != 0)
+                job->iv = next_iv;
+        else
+                job->iv = tc->iv;
+
+        job->iv_len_in_bytes = tc->iv_len;
+        job->cipher_start_src_offset_in_bytes = 0;
+        job->enc_keys = enc_keys;
+        job->dec_keys = enc_keys;
+
+        if (tc->direction == ACVP_SYM_CIPH_DIR_ENCRYPT) {
+                job->cipher_direction = IMB_DIR_ENCRYPT;
+                job->chain_order = IMB_ORDER_CIPHER_HASH;
+                job->src = tc->pt;
+                job->dst = tc->ct;
+                job->msg_len_to_cipher_in_bytes = tc->pt_len;
+                tc->ct_len = tc->pt_len;
+        } else /* DECRYPT */ {
+                job->cipher_direction = IMB_DIR_DECRYPT;
+                job->chain_order = IMB_ORDER_HASH_CIPHER;
+                job->src = tc->ct;
+                job->dst = tc->pt;
+                job->msg_len_to_cipher_in_bytes = tc->ct_len;
+                tc->pt_len = tc->ct_len;
+        }
+        job = IMB_SUBMIT_JOB(mb_mgr);
+        if (job == NULL)
+                job = IMB_FLUSH_JOB(mb_mgr);
+        if (job->status != IMB_STATUS_COMPLETED) {
+                fprintf(stderr, "Invalid job\n");
+                return ACVP_CRYPTO_MODULE_FAIL;
         }
         /*
          * If Monte-carlo test, copy the ciphertext for
@@ -1491,6 +1567,9 @@ main(int argc, char **argv)
                 goto exit;
 
         if (acvp_cap_sym_cipher_enable(ctx, ACVP_AES_ECB, &aes_ecb_handler) != ACVP_SUCCESS)
+                goto exit;
+
+        if (acvp_cap_sym_cipher_enable(ctx, ACVP_AES_CFB128, &aes_cfb_handler) != ACVP_SUCCESS)
                 goto exit;
 
         if (acvp_cap_sym_cipher_enable(ctx, ACVP_AES_CTR, &aes_ctr_handler) != ACVP_SUCCESS)
