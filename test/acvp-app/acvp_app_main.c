@@ -34,6 +34,17 @@
 
 #include "utils.h"
 
+#define LIB_VER(a, b, c) (((a) << 16) + ((b) << 8) + (c))
+
+/* Available from libacvp 2.1.0 */
+#ifdef ACVP_LIBRARY_VERSION_MAJOR
+#define INT_ACVP_LIB_VER_NUM                                                                       \
+        LIB_VER(ACVP_LIBRARY_VERSION_MAJOR, ACVP_LIBRARY_VERSION_MINOR, ACVP_LIBRARY_VERSION_PATCH)
+#else
+/* Assume version 2.0.0 (minimum required for this app) */
+#define INT_ACVP_LIB_VER_NUM LIB_VER(2, 0, 0)
+#endif
+
 #define MAX_TAG_LENGTH 16
 
 static ACVP_RESULT
@@ -1575,7 +1586,11 @@ main(int argc, char **argv)
         }
 
         /* Parse request file, run crypto tests and write out response file */
+#if INT_ACVP_LIB_VER_NUM >= LIB_VER(2, 2, 0)
+        acvp_run_vectors_from_file_offline(ctx, req_filename, resp_filename);
+#else
         acvp_run_vectors_from_file(ctx, req_filename, resp_filename);
+#endif
 
         ret = EXIT_SUCCESS;
 
