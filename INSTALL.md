@@ -5,127 +5,9 @@
 1. [Compilation](https://github.com/intel/intel-ipsec-mb/blob/main/INSTALL.md#compilation)
 2. [Installation](https://github.com/intel/intel-ipsec-mb/blob/main/INSTALL.md#installation)
 
-## Compilation
+## Compilation (x64 only)
 
-### Linux (64-bit only)
-
-Required tools:  
-- GNU make  
-- NASM version 2.14 (or newer)  
-- gcc (GCC) 4.8.3 (or newer)  
-
-Shared library:  
-`> make`
-
-Static library:  
-`> make SHARED=n`
-
-Clean the build:  
-`> make clean`  
-or  
-`> make clean SHARED=n`
-
-Build with debugging information:  
-`> make DEBUG=y`
-
-**Note:** Building with debugging information is not advised for production use.
-
-For more build options and their explanation run:   
-`> make help`
-
-### Windows MSVS (x64 only)
-
-Required tools:  
-- Microsoft (R) Visual Studio 2019:  
-  - NMAKE: Microsoft (R) Program Maintenance Utility Version 14.29.30148.0  
-  - CL: Microsoft (R) C/C++ Optimizing Compiler Version 19.29.30148 for x64  
-  - LIB: Microsoft (R) Library Manager Version 14.29.30148.0  
-  - LINK: Microsoft (R) Incremental Linker Version 14.29.30148.0  
-  - Note: Building on later versions should work but is not verified  
-- NASM version 2.14 (or newer)  
-
-Shared library (DLL):  
-`> nmake /f win_x64.mak`
-
-Static library:  
-`> nmake /f win_x64.mak SHARED=n`
-
-Clean the build:   
-`> nmake /f win_x64.mak clean`   
-or   
-`> nmake /f win_x64.mak clean SHARED=n`
-
-Build without safety features:  
-- SAFE_DATA clears sensitive information stored temporarily on stack, registers or internal data structures  
-- SAFE_PARAM adds extra checks on input parameters  
-- SAFE_LOOKUP uses constant-time lookups (enabled by default)  
-- SAFE_OPTIONS additional option to disable all safe options. Enabled by default.  
-  Disable to turn off: SAFE_DATA, SAFE_PARAM and SAFE_LOOKUP.  
-
-`> nmake /f win_x64.mak SAFE_DATA=n SAFE_PARAM=n`
-`> nmake /f win_x64.mak SAFE_OPTIONS=n`
-
-Build with debugging information:   
-`> nmake /f win_x64.mak DEBUG=y`
-
-**Note:** Building with debugging information is not advised for production use.
-
-For more build options and their explanation run:   
-`> nmake /f win_x64.mak help`
-
-### Windows Mingw-w64 (64-bit only)
-
-Required tools:  
-- GNU mingw32-make.exe  
-- NASM version 2.14 (or newer)  
-- gcc (GCC) 10.3.0 (or newer)
-
-Shared library:  
-`> mingw32-make.exe`
-
-Static library:  
-`> mingw32-make.exe SHARED=n`
-
-Clean the build:  
-`> mingw32-make.exe clean`  
-or  
-`> mingw32-make.exe clean SHARED=n`
-
-Build with debugging information:  
-`> mingw32-make.exe DEBUG=y`
-
-**Note:** Building with debugging information is not advised for production use.
-
-For more build options and their explanation run:   
-`> mingw32-make.exe help`
-
-### FreeBSD (64-bit only)
-
-Required tools:  
-- GNU make  
-- NASM version 2.14 (or newer)  
-- gcc (GCC) 4.8.3 (or newer) / clang 5.0 (or newer)  
-
-Shared library:   
-`> gmake`
-
-Static library:   
-`> gmake SHARED=n`
-
-Clean the build:   
-`> gmake clean`   
-or   
-`> gmake clean SHARED=n`
-
-Build with debugging information:   
-`> gmake DEBUG=y`
-
-**Note:** Building with debugging information is not advised for production use.
-
-For more build options and their explanation run:   
-`> gmake help`
-
-### Building with CMake (experimental)
+### Building with CMake
 
 Minimum CMake version: 3.18
 
@@ -163,7 +45,7 @@ cmake --build . --parallel
 For more build options and their explanation run:
 `cmake --build . --target print_help`
 
-#### Windows MSVS (x64 only)
+#### Windows MSVS
 
 Shared library with debugging information (default for MSVS)
 ```
@@ -208,60 +90,125 @@ build/lib
 build/test
 build/perf
 ```
+### Linux (Deprecated - replaced by CMake)
+
+Required tools:  
+- GNU make  
+- NASM version 2.14 (or newer)  
+- gcc (GCC) 4.8.3 (or newer)  
+
+Shared library:  
+`> make`
+
+Static library:  
+`> make SHARED=n`
+
+Clean the build:  
+`> make clean`  
+or  
+`> make clean SHARED=n`
+
+Build with debugging information:  
+`> make DEBUG=y`
+
+**Note:** Building with debugging information is not advised for production use.
+
+For more build options and their explanation run:   
+`> make help`
+
+### Windows MSVS (Deprecated - replaced by CMake)
+
+Required tools:  
+- Microsoft (R) Visual Studio 2019:  
+  - NMAKE: Microsoft (R) Program Maintenance Utility Version 14.29.30148.0  
+  - CL: Microsoft (R) C/C++ Optimizing Compiler Version 19.29.30148 for x64  
+  - LIB: Microsoft (R) Library Manager Version 14.29.30148.0  
+  - LINK: Microsoft (R) Incremental Linker Version 14.29.30148.0  
+  - Note: Building on later versions should work but is not verified  
+- NASM version 2.14 (or newer)  
+
+Shared library (DLL):  
+`> nmake /f win_x64.mak`
+
+Static library:  
+`> nmake /f win_x64.mak SHARED=n`
+
+Clean the build:   
+`> nmake /f win_x64.mak clean`   
+or   
+`> nmake /f win_x64.mak clean SHARED=n`
+
+Build without safety features:  
+- SAFE_DATA clears sensitive information stored temporarily on stack, registers or internal data structures  
+- SAFE_PARAM adds extra checks on input parameters  
+- SAFE_LOOKUP uses constant-time lookups (enabled by default)  
+- SAFE_OPTIONS additional option to disable all safe options. Enabled by default.  
+  Disable to turn off: SAFE_DATA, SAFE_PARAM and SAFE_LOOKUP.  
+
+`> nmake /f win_x64.mak SAFE_DATA=n SAFE_PARAM=n`
+`> nmake /f win_x64.mak SAFE_OPTIONS=n`
+
+Build with debugging information:   
+`> nmake /f win_x64.mak DEBUG=y`
+
+**Note:** Building with debugging information is not advised for production use.
+
+For more build options and their explanation run:   
+`> nmake /f win_x64.mak help`
+
+### Windows Mingw-w64 (Deprecated - replaced by CMake)
+
+Required tools:  
+- GNU mingw32-make.exe  
+- NASM version 2.14 (or newer)  
+- gcc (GCC) 10.3.0 (or newer)
+
+Shared library:  
+`> mingw32-make.exe`
+
+Static library:  
+`> mingw32-make.exe SHARED=n`
+
+Clean the build:  
+`> mingw32-make.exe clean`  
+or  
+`> mingw32-make.exe clean SHARED=n`
+
+Build with debugging information:  
+`> mingw32-make.exe DEBUG=y`
+
+**Note:** Building with debugging information is not advised for production use.
+
+For more build options and their explanation run:   
+`> mingw32-make.exe help`
+
+### FreeBSD (Deprecated - replaced by CMake)
+
+Required tools:  
+- GNU make  
+- NASM version 2.14 (or newer)  
+- gcc (GCC) 4.8.3 (or newer) / clang 5.0 (or newer)  
+
+Shared library:   
+`> gmake`
+
+Static library:   
+`> gmake SHARED=n`
+
+Clean the build:   
+`> gmake clean`   
+or   
+`> gmake clean SHARED=n`
+
+Build with debugging information:   
+`> gmake DEBUG=y`
+
+**Note:** Building with debugging information is not advised for production use.
+
+For more build options and their explanation run:   
+`> gmake help`
+
 ## Installation
-
-### Linux (64-bit only)
-
-First compile the library and then install:   
-`> make`  
-`> sudo make install`
-
-To uninstall the library run:   
-`> sudo make uninstall`
-
-If you want to change install location then define PREFIX:   
-`> sudo make install PREFIX=<path>`
-
-If there is no need to run ldconfig at install stage please use NOLDCONFIG=y option:   
-`> sudo make install NOLDCONFIG=y`
-
-If library was compiled as an archive (not a default option) then install it using SHARED=n option:   
-`> sudo make install SHARED=n`
-
-### Windows (x64 only)
-
-First compile the library and then install from a command prompt in administrator mode:   
-`> nmake /f win_x64.mak`  
-`> nmake /f win_x64.mak install`
-
-To uninstall the library run:   
-`> nmake /f win_x64.mak uninstall`
-
-If you want to change install location then define PREFIX (default C:\Program Files):   
-`> nmake /f win_x64.mak install PREFIX=<path>`
-
-If library was compiled as a static library (not a default option) then install it using SHARED=n option:   
-`> nmake /f win_x64.mak install SHARED=n`
-
-### FreeBSD (64-bit only)
-
-First compile the library and then install:   
-`> gmake`  
-`> sudo gmake install`
-
-To uninstall the library run:   
-`> sudo gmake uninstall`
-
-If you want to change install location then define PREFIX:   
-`> sudo gmake install PREFIX=<path>`
-
-If there is no need to run ldconfig at install stage please use NOLDCONFIG=y option:   
-`> sudo gmake install NOLDCONFIG=y`
-
-If library was compiled as an archive (not a default option) then install it using SHARED=n option:   
-`> sudo gmake install SHARED=n`
-
-## Installing with CMake (experimental)
 
 ### Unix (Linux and FreeBSD)
 
@@ -284,7 +231,7 @@ cmake --build . --parallel
 sudo cmake --install .
 ```
 
-### Windows (x64 only)
+### Windows
 
 First compile the library and then install from a command prompt in administrator mode:   
 ```
@@ -297,3 +244,54 @@ To uninstall the library run:
 
 If you want to change install location then define PREFIX (default C:\Program Files):   
 `cmake --install . --config Release --prefix=<path>`
+
+### Linux (Deprecated - replaced by CMake)
+
+First compile the library and then install:   
+`> make`  
+`> sudo make install`
+
+To uninstall the library run:   
+`> sudo make uninstall`
+
+If you want to change install location then define PREFIX:   
+`> sudo make install PREFIX=<path>`
+
+If there is no need to run ldconfig at install stage please use NOLDCONFIG=y option:   
+`> sudo make install NOLDCONFIG=y`
+
+If library was compiled as an archive (not a default option) then install it using SHARED=n option:   
+`> sudo make install SHARED=n`
+
+### Windows (Deprecated - replaced by CMake)
+
+First compile the library and then install from a command prompt in administrator mode:   
+`> nmake /f win_x64.mak`  
+`> nmake /f win_x64.mak install`
+
+To uninstall the library run:   
+`> nmake /f win_x64.mak uninstall`
+
+If you want to change install location then define PREFIX (default C:\Program Files):   
+`> nmake /f win_x64.mak install PREFIX=<path>`
+
+If library was compiled as a static library (not a default option) then install it using SHARED=n option:   
+`> nmake /f win_x64.mak install SHARED=n`
+
+### FreeBSD (Deprecated - replaced by CMake)
+
+First compile the library and then install:   
+`> gmake`  
+`> sudo gmake install`
+
+To uninstall the library run:   
+`> sudo gmake uninstall`
+
+If you want to change install location then define PREFIX:   
+`> sudo gmake install PREFIX=<path>`
+
+If there is no need to run ldconfig at install stage please use NOLDCONFIG=y option:   
+`> sudo gmake install NOLDCONFIG=y`
+
+If library was compiled as an archive (not a default option) then install it using SHARED=n option:   
+`> sudo gmake install SHARED=n`
