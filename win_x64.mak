@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2020-2023, Intel Corporation
+# Copyright (c) 2020-2024, Intel Corporation
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -25,15 +25,15 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-all:
+!if !defined(BUILD_DIR)
+BUILD_DIR = build
+!endif
+
+all: warning
 	cd lib & $(MAKE) /f win_x64.mak
-	cd test & $(MAKE) /f win_x64.mak
-	cd perf & $(MAKE) /f win_x64.mak
 
 clean:
 	cd lib & $(MAKE) /f win_x64.mak clean
-	cd test & $(MAKE) /f win_x64.mak clean
-	cd perf & $(MAKE) /f win_x64.mak clean
 
 install:
 	cd lib & $(MAKE) /f win_x64.mak install
@@ -43,3 +43,18 @@ uninstall:
 
 help:
 	cd lib & $(MAKE) /f win_x64.mak help
+
+# build cmake project
+build-cmake:
+	cmake -Ax64 -B $(BUILD_DIR)
+	cmake --build $(BUILD_DIR) --config Release
+
+# clean cmake project
+clean-cmake:
+	cmake --build $(BUILD_DIR) --target clean
+
+warning:
+	@echo "NOTE: Building the project with Makefiles is deprecated since v2.0 (replaced by CMake)."
+	@echo "      Starting from v2.0, only the library can be built using Makefiles and not the applications."
+	@echo "      See INSTALL.md for instructions to build the library and applications using CMake."
+	@echo ""
