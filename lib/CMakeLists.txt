@@ -35,6 +35,9 @@ endif()
 ########################################
 # setup NASM
 ########################################
+if(NOT CMAKE_ASM_NASM_COMPILER)
+  set(CMAKE_ASM_NASM_COMPILER nasm)
+endif()
 enable_language(ASM_NASM)
 if(NOT CMAKE_ASM_NASM_COMPILER_LOADED)
   message(FATAL_ERROR "Can't find assembler")
