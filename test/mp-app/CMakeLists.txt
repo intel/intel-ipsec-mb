@@ -77,11 +77,19 @@ include_directories(${LIB_DIR} ${TEST_INCLUDE_DIR})
 link_directories(${LIB_DIR})
 
 add_executable(${MP_APP_PRI} ${MP_APP_PRI_SRC_FILES_C})
-target_link_libraries(${MP_APP_PRI} PRIVATE ${IPSEC_MB_LIB})
+if(LINUX)
+  target_link_libraries(${MP_APP_PRI} PRIVATE ${IPSEC_MB_LIB} rt)
+else()
+  target_link_libraries(${MP_APP_PRI} PRIVATE ${IPSEC_MB_LIB})
+endif()
 target_compile_definitions(${MP_APP_PRI} PRIVATE ${APP_DEFINES})
 
 add_executable(${MP_APP_SEC} ${MP_APP_SEC_SRC_FILES_C})
-target_link_libraries(${MP_APP_SEC} PRIVATE ${IPSEC_MB_LIB})
+if(LINUX)
+  target_link_libraries(${MP_APP_SEC} PRIVATE ${IPSEC_MB_LIB} rt)
+else()
+  target_link_libraries(${MP_APP_SEC} PRIVATE ${IPSEC_MB_LIB})
+endif()
 target_compile_definitions(${MP_APP_SEC} PRIVATE ${APP_DEFINES})
 
 
