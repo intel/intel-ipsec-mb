@@ -522,7 +522,6 @@ asm_avx_lib_objs := \
 	sha384_one_block_avx.o \
 	sha512_one_block_avx.o \
 	sha512_x2_avx.o \
-	zuc_x4_avx.o \
 	mb_mgr_aes128_cbc_enc_flush_avx.o \
 	mb_mgr_aes128_cbc_enc_submit_avx.o \
 	mb_mgr_aes192_cbc_enc_flush_avx.o \

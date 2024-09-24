@@ -236,9 +236,6 @@ asm_ZucInitialization_4_sse(ZucKey4_t *pKeys, const uint8_t *ivs, ZucState4_t *p
 IMB_DLL_LOCAL void
 asm_ZucInitialization_4_gfni_sse(ZucKey4_t *pKeys, const uint8_t *ivs, ZucState4_t *pState);
 
-IMB_DLL_LOCAL void
-asm_ZucInitialization_4_avx(ZucKey4_t *pKeys, const uint8_t *ivs, ZucState4_t *pState);
-
 /**
  ******************************************************************************
  * @description
@@ -275,10 +272,6 @@ asm_Zuc256Initialization_4_sse(ZucKey4_t *pKeys, const uint8_t *ivs, ZucState4_t
 IMB_DLL_LOCAL void
 asm_Zuc256Initialization_4_gfni_sse(ZucKey4_t *pKeys, const uint8_t *ivs, ZucState4_t *pState,
                                     void *tags, const uint64_t tag_sz);
-
-IMB_DLL_LOCAL void
-asm_Zuc256Initialization_4_avx(ZucKey4_t *pKeys, const uint8_t *ivs, ZucState4_t *pState,
-                               void *tags, const uint64_t tag_sz);
 
 /**
  ******************************************************************************
@@ -551,9 +544,6 @@ asm_ZucGenKeystream16B_4_sse(ZucState4_t *pState, uint32_t *pKeyStr[4]);
 IMB_DLL_LOCAL void
 asm_ZucGenKeystream16B_4_gfni_sse(ZucState4_t *pState, uint32_t *pKeyStr[4]);
 
-IMB_DLL_LOCAL void
-asm_ZucGenKeystream16B_4_avx(ZucState4_t *pState, uint32_t *pKeyStr[4]);
-
 /**
  ******************************************************************************
  *
@@ -735,9 +725,6 @@ asm_ZucGenKeystream8B_4_sse(ZucState4_t *pState, uint32_t *pKeyStr[4]);
 IMB_DLL_LOCAL void
 asm_ZucGenKeystream8B_4_gfni_sse(ZucState4_t *pState, uint32_t *pKeyStr[4]);
 
-IMB_DLL_LOCAL void
-asm_ZucGenKeystream8B_4_avx(ZucState4_t *pState, uint32_t *pKeyStr[4]);
-
 /**
  ******************************************************************************
  *
@@ -763,9 +750,6 @@ asm_ZucGenKeystream4B_4_sse(ZucState4_t *pState, uint32_t *pKeyStr[4]);
 
 IMB_DLL_LOCAL void
 asm_ZucGenKeystream4B_4_gfni_sse(ZucState4_t *pState, uint32_t *pKeyStr[4]);
-
-IMB_DLL_LOCAL void
-asm_ZucGenKeystream4B_4_avx(ZucState4_t *pState, uint32_t *pKeyStr[4]);
 
 /**
  ******************************************************************************
@@ -1045,10 +1029,6 @@ IMB_DLL_LOCAL void
 asm_ZucCipher_4_gfni_sse(ZucState4_t *pState, const uint64_t *pIn[4], uint64_t *pOut[4],
                          uint16_t lengths[4], const uint64_t minLength);
 
-IMB_DLL_LOCAL void
-asm_ZucCipher_4_avx(ZucState4_t *pState, const uint64_t *pIn[4], uint64_t *pOut[4],
-                    uint16_t lengths[4], const uint64_t minLength);
-
 /**
  ******************************************************************************
  *
@@ -1136,9 +1116,6 @@ asm_Eia3Round16B_sse(void *T, const void *ks, const void *data, const uint64_t t
 
 IMB_DLL_LOCAL void
 asm_Eia3Round16B_gfni_sse(void *T, const void *ks, const void *data, const uint64_t tag_sz);
-
-IMB_DLL_LOCAL void
-asm_Eia3Round16B_avx(void *T, const void *ks, const void *data, const uint64_t tag_sz);
 
 IMB_DLL_LOCAL void
 asm_Eia3Round32B_avx(void *T, const void *ks, const void *data, const uint64_t tag_sz);
