@@ -45,7 +45,7 @@
 #include "include/cpu_feature.h"
 #include "include/error.h"
 
-#include "include/arch_sse_type1.h" /* poly1305, snow3g, aes-cfb */
+#include "include/arch_sse_type1.h" /* poly1305, snow3g, aes-cfb, zuc */
 #include "include/arch_avx_type1.h"
 #include "include/arch_avx2_type1.h"
 
@@ -416,7 +416,7 @@ init_mb_mgr_avx2_t1_internal(IMB_MGR *state, const int reset_mgrs)
         state->aes256_cfb_one = aes_cfb_256_one_avx2;
 
         state->eea3_1_buffer = zuc_eea3_1_buffer_avx2;
-        state->eea3_4_buffer = zuc_eea3_4_buffer_avx;
+        state->eea3_4_buffer = zuc_eea3_4_buffer_sse;
         state->eea3_n_buffer = zuc_eea3_n_buffer_avx2;
         state->eia3_1_buffer = zuc_eia3_1_buffer_avx2;
         state->eia3_n_buffer = zuc_eia3_n_buffer_avx2;
