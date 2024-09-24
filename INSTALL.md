@@ -42,7 +42,7 @@ cmake -DCMAKE_BUILD_TYPE=Debug ..
 cmake --build . --parallel
 ```
 
-For more build options and their explanation run:
+For more build options and their explanation run:   
 `cmake --build . --target print_help`
 
 #### Windows MSVS
@@ -70,7 +70,7 @@ Library only build (without applications):
 cmake -Ax64 -DBUILD_LIBRARY_ONLY=ON ..
 cmake --build . --parallel
 ```
-For more build options and their explanation run:
+For more build options and their explanation run:   
 `cmake --build . --target print_help`
 
 ####  Ninja (Linux, FreeBSD and Windows):
@@ -90,6 +90,18 @@ build/lib
 build/test
 build/perf
 ```
+#### Other CMake compilation notes
+
+- To set path to C compiler:
+```
+cmake -DCMAKE_C_COMPILER=/usr/local/bin/gcc ..
+```
+
+- To set path to NASM assembler:
+```
+cmake -DCMAKE_ASM_NASM_COMPILER=/usr/local/bin/nasm ..
+```
+
 ### Linux (Deprecated - replaced by CMake)
 
 Required tools:  
