@@ -1406,15 +1406,15 @@ zuc_eia3_n_buffer_gfni_avx512(const void *const pKey[], const void *const pIv[],
 /* Internal API */
 IMB_DLL_LOCAL
 void
-_zuc_eea3_4_buffer_avx(const void *const pKey[4], const void *const pIv[4],
+_zuc_eea3_4_buffer_sse(const void *const pKey[4], const void *const pIv[4],
                        const void *const pBufferIn[4], void *pBufferOut[4],
-                       const uint32_t length[4]);
+                       const uint32_t length[4], const unsigned use_gfni);
 
 IMB_DLL_LOCAL
 void
-_zuc_eia3_4_buffer_avx(const void *const pKey[4], const void *const pIv[4],
+_zuc_eia3_4_buffer_sse(const void *const pKey[4], const void *const pIv[4],
                        const void *const pBufferIn[4], const uint32_t lengthInBits[4],
-                       uint32_t *pMacI[4]);
+                       uint32_t *pMacI[4], const unsigned use_gfni);
 
 IMB_DLL_LOCAL
 void

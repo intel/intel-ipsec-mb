@@ -173,7 +173,8 @@ _zuc_eea3_1_buffer_sse(const void *pKey, const void *pIv, const void *pBufferIn,
 #endif
 }
 
-static inline void
+IMB_DLL_LOCAL
+void
 _zuc_eea3_4_buffer_sse(const void *const pKey[NUM_SSE_BUFS], const void *const pIv[NUM_SSE_BUFS],
                        const void *const pBufferIn[NUM_SSE_BUFS], void *pBufferOut[NUM_SSE_BUFS],
                        const uint32_t length[NUM_SSE_BUFS], const unsigned use_gfni)
@@ -615,7 +616,8 @@ _zuc_eia3_1_buffer_sse(const void *pKey, const void *pIv, const void *pBufferIn,
 #endif
 }
 
-static inline void
+IMB_DLL_LOCAL
+void
 _zuc_eia3_4_buffer_sse(const void *const pKey[NUM_SSE_BUFS], const void *const pIv[NUM_SSE_BUFS],
                        const void *const pBufferIn[NUM_SSE_BUFS],
                        const uint32_t lengthInBits[NUM_SSE_BUFS], uint32_t *pMacI[NUM_SSE_BUFS],

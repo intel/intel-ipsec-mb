@@ -470,8 +470,8 @@ zuc_eea3_n_buffer_avx2(const void *const pKey[], const void *const pIv[],
 
         if (packetCount >= 4) {
                 packetCount -= 4;
-                _zuc_eea3_4_buffer_avx(&pKey[i], &pIv[i], &pBufferIn[i], &pBufferOut[i],
-                                       &length[i]);
+                _zuc_eea3_4_buffer_sse(&pKey[i], &pIv[i], &pBufferIn[i], &pBufferOut[i], &length[i],
+                                       0);
                 i += 4;
         }
 
@@ -1078,8 +1078,8 @@ zuc_eia3_n_buffer_avx2(const void *const pKey[], const void *const pIv[],
 
         if (packetCount >= 4) {
                 packetCount -= 4;
-                _zuc_eia3_4_buffer_avx(&pKey[i], &pIv[i], &pBufferIn[i], &lengthInBits[i],
-                                       &pMacI[i]);
+                _zuc_eia3_4_buffer_sse(&pKey[i], &pIv[i], &pBufferIn[i], &lengthInBits[i],
+                                       &pMacI[i], 0);
                 i += 4;
         }
 

@@ -314,7 +314,6 @@ c_lib_objs := \
 	kasumi_iv.o \
 	kasumi_sse.o \
 	zuc_top_sse.o \
-	zuc_top_avx.o \
 	zuc_top_avx2.o \
 	zuc_top_avx512.o \
 	zuc_iv.o \
