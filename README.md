@@ -72,6 +72,9 @@ Table 1. List of supported cipher algorithms and their implementations.
 | AES128-ECB     | N      | Y(1)   | Y  by8 | Y(10)  | N      | Y by16 |
 | AES192-ECB     | N      | Y(1)   | Y  by8 | Y(10)  | N      | Y by16 |
 | AES256-ECB     | N      | Y(1)   | Y  by8 | Y(10)  | N      | Y by16 |
+| AES128-CFB     | N      | Y      | N      |        | N      | Y(6)   |
+| AES192-CFB     | N      | Y      | N      |        | N      | Y(6)   |
+| AES256-CFB     | N      | Y      | N      |        | N      | Y(6)   |
 | NULL           | Y      | N      | N      | N      | N      | N      |
 | AES128-DOCSIS  | N      | Y(2)   | Y(4)   | N      | Y(7)   | Y(8)   |
 | AES256-DOCSIS  | N      | Y(2)   | Y(4)   | N      | Y(7)   | Y(8)   |
@@ -217,6 +220,9 @@ Table 3. Encryption and integrity algorithm combinations
 | AES128-ECB,   | ZUC-EIA3, ZUC-EIA3-256,                             |
 | AES192-ECB,   | SNOW3G-UIA3,                                        |
 | AES256-ECB,   | POLY1305,                                           |
+| AES128-CFB,   |                                                     |
+| AES192-CFB,   |                                                     |
+| AES256-CFB,   |                                                     |
 | NULL,         | AES128-GMAC, AES192-GMAC, AES256-GMAC, GHASH,       |
 | AES128-DOCSIS,| SM3, HMAC-SM3                                       |
 | AES256-DOCSIS,|                                                     |
@@ -377,7 +383,8 @@ ACVP test application located in `test` directory is to support CAVP process. It
 - AES-GMAC  
 - AES-CCM  
 - AES-CBC  
-- AES-EBC  
+- AES-EBC
+- AES-CFB
 - TDES-EDE-CBC  
 - AES-CTR  
 - AES-CMAC  
@@ -416,6 +423,9 @@ Note: the acvp-app requires libacvp 2.0+ to be built.
 |                     |           | payloadLen: [min = 8, max = 128, increment = 8]          |
 |---------------------+-----------+----------------------------------------------------------|
 | AES-ECB             | SP800-38A | Key size: 128, 192, 256                                  |
+|                     |           | Direction: encrypt and decrypt                           |
+|---------------------+-----------+----------------------------------------------------------|
+| AES-CFB128          | SP800-38A | Key size: 128, 192, 256                                  |
 |                     |           | Direction: encrypt and decrypt                           |
 |---------------------+-----------+----------------------------------------------------------|
 | TDES-EDE-CBC        | SP800-38A | Key size: 192                                            |
@@ -490,6 +500,7 @@ The self-test consists of Cryptographic algorithm test (known answer test) on fo
   - AES-CBC  
   - AES-CTR  
   - AES-ECB  
+  - AES-CFB
   - TDES-EDE-CBC  
 - KAT_Auth:
   - AES-GMAC  
