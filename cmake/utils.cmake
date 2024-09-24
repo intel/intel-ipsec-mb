@@ -24,7 +24,9 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 include(CheckCCompilerFlag)
-include(CheckLinkerFlag)
+if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.18")
+  include(CheckLinkerFlag)
+endif()
 
 # extract library version from header file
 macro(imb_get_version IMB_HDR_FILE)
@@ -143,13 +145,16 @@ macro(imb_compiler_check)
 
   # enable CET if supported by both compiler and linker
   check_c_compiler_flag("-fcf-protection=full" CC_CET_CHECK)
-  check_linker_flag("C" "-z ibt" LD_IBT_CHECK)
-  if(CC_CET_CHECK AND LD_IBT_CHECK)
-    set(CET_SUPPORT YES)
-  else()
-    set(CET_SUPPORT NO)
+
+  if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.18")
+    check_linker_flag("C" "-z ibt" LD_IBT_CHECK)
+    if(CC_CET_CHECK AND LD_IBT_CHECK)
+      set(CET_SUPPORT YES)
+    else()
+      set(CET_SUPPORT NO)
+    endif()
+    message(STATUS "CET SUPPORT...             ${CET_SUPPORT}")
   endif()
-  message(STATUS "CET SUPPORT...             ${CET_SUPPORT}")
 endmacro()
 
 # add uninstall target
