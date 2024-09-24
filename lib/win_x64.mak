@@ -476,7 +476,6 @@ lib_objs2 = \
 	$(OBJ_DIR)\mb_mgr_hmac_sha1_submit_avx512.obj \
 	$(OBJ_DIR)\mb_mgr_zuc_submit_flush_sse.obj \
 	$(OBJ_DIR)\mb_mgr_zuc_submit_flush_gfni_sse.obj \
-	$(OBJ_DIR)\mb_mgr_zuc_submit_flush_avx.obj \
 	$(OBJ_DIR)\mb_mgr_zuc_submit_flush_avx2.obj \
 	$(OBJ_DIR)\mb_mgr_zuc_submit_flush_gfni_avx2.obj \
 	$(OBJ_DIR)\mb_mgr_zuc_submit_flush_avx512.obj \

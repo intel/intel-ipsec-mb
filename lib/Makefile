@@ -548,7 +548,6 @@ asm_avx_lib_objs := \
 	mb_mgr_hmac_sha384_submit_avx.o \
 	mb_mgr_hmac_sha512_flush_avx.o \
 	mb_mgr_hmac_sha512_submit_avx.o \
-	mb_mgr_zuc_submit_flush_avx.o \
 	ethernet_fcs_avx.o \
 	crc16_x25_avx.o \
 	aes128_cbcs_1_9_enc_x8_avx.o \
