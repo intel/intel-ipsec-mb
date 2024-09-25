@@ -30,6 +30,7 @@
 #include <string.h>
 
 #include <intel-ipsec-mb.h>
+#include <sys/stat.h>
 
 #include "mp_alloc.h"
 #include "mp_shared_mem.h"
@@ -153,7 +154,10 @@ randomize_shm_name(const char *name)
         strncpy(temp, "XXXXXX", sizeof(temp) - 1);
 
 #if defined(__linux__) || defined(__FreeBSD__)
+        mode_t mask = umask(S_IRWXU);
         int fd = mkstemp(temp);
+
+        umask(mask);
 
         if (fd == -1)
                 return NULL;
