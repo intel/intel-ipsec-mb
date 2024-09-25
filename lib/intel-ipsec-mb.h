@@ -959,7 +959,6 @@ typedef int (*imb_self_test_cb_t)(void *cb_arg, const IMB_SELF_TEST_CALLBACK_DAT
 #define IMB_CPUFLAGS_AVX2_T2                                                                       \
         (IMB_CPUFLAGS_AVX2 | IMB_FEATURE_SHANI | IMB_FEATURE_VAES | IMB_FEATURE_VPCLMULQDQ |       \
          IMB_FEATURE_GFNI)
-#define IMB_CPUFLAGS_AVX_T2  (IMB_CPUFLAGS_AVX | IMB_FEATURE_SHANI | IMB_FEATURE_GFNI)
 #define IMB_CPUFLAGS_AVX2_T3 (IMB_CPUFLAGS_AVX2_T2 | IMB_FEATURE_AVX_IFMA)
 #define IMB_CPUFLAGS_AVX2_T4                                                                       \
         (IMB_CPUFLAGS_AVX2_T3 | IMB_FEATURE_SM3NI | IMB_FEATURE_SM4NI | IMB_FEATURE_SHA512NI)

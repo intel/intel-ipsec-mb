@@ -281,7 +281,6 @@ SAFE_OPTIONS_MSG2="All safe options enabled by default."
 c_lib_objs := \
 	mb_mgr_avx.o \
 	mb_mgr_avx_t1.o \
-	mb_mgr_avx_t2.o \
 	mb_mgr_avx2.o \
 	mb_mgr_avx2_t1.o \
 	mb_mgr_avx2_t2.o \
@@ -877,12 +876,6 @@ $(OBJ_DIR)/%.o:avx_t1/%.c
 $(OBJ_DIR)/%.o:avx_t1/%.asm
 	$(NASM) -MD $(@:.o=.d) -MT $@ -o $@ $(NASM_FLAGS) $<
 
-$(OBJ_DIR)/%.o:avx_t2/%.c
-	$(CC) -MMD $(OPT_AVX) -c $(CFLAGS) $< -o $@
-
-$(OBJ_DIR)/%.o:avx_t2/%.asm
-	$(NASM) -MD $(@:.o=.d) -MT $@ -o $@ $(NASM_FLAGS) $<
-
 $(OBJ_DIR)/%.o:avx2_t1/%.c
 	$(CC) -MMD $(OPT_AVX2) -c $(CFLAGS) $< -o $@
 
@@ -1000,7 +993,7 @@ CHECKPATCH_FLAGS = --no-tree --no-signoff --emacs --no-color --max-line-length=1
 %.inc_style_check : %.inc
 	$(CHECKPATCH) $(CHECKPATCH_FLAGS) -f $<
 
-SOURCES_DIRS := . sse_t1 sse_t2 sse_t3 avx_t1 avx_t2 avx2_t1 avx_t2 avx2_t3 avx512_t1 avx512_t2 x86_64 include
+SOURCES_DIRS := . sse_t1 sse_t2 sse_t3 avx_t1 avx2_t1 avx2_t2 avx2_t3 avx512_t1 avx512_t2 x86_64 include
 ASM_SOURCES := $(foreach dir,$(SOURCES_DIRS), $(wildcard $(dir)/**/*.asm) $(wildcard $(dir)/**/*.inc))
 
 .PHONY: checkpatch

@@ -17,6 +17,7 @@ Library
 - SHA-384 AVX2-SHA384-NI x2 implementation added.
 - AES-CFB SSE and VAES AVX512 implementation added.
 - Removed AESNI emulation support
+- Removed AVX Type 2 implementation.
 
 Test Applications
 - Removed Makefile support

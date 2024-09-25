@@ -432,8 +432,6 @@ init_mb_mgr_avx_internal(IMB_MGR *state, const int reset_mgrs);
 IMB_DLL_LOCAL void
 init_mb_mgr_avx_t1_internal(IMB_MGR *state, const int reset_mgrs);
 IMB_DLL_LOCAL void
-init_mb_mgr_avx_t2_internal(IMB_MGR *state, const int reset_mgrs);
-IMB_DLL_LOCAL void
 init_mb_mgr_avx2_internal(IMB_MGR *state, const int reset_mgrs);
 IMB_DLL_LOCAL void
 init_mb_mgr_avx2_t1_internal(IMB_MGR *state, const int reset_mgrs);

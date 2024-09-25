@@ -52,10 +52,7 @@ init_mb_mgr_avx_internal(IMB_MGR *state, const int reset_mgrs)
 
         state->features = cpu_feature_adjust(state->flags, cpu_feature_detect());
 
-        if ((state->features & IMB_CPUFLAGS_AVX_T2) == IMB_CPUFLAGS_AVX_T2)
-                init_mb_mgr_avx_t2_internal(state, reset_mgrs);
-        else
-                init_mb_mgr_avx_t1_internal(state, reset_mgrs);
+        init_mb_mgr_avx_t1_internal(state, reset_mgrs);
 }
 
 void
