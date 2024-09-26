@@ -179,16 +179,16 @@
 #define SUBMIT_JOB_PON_DEC_NO_CTR submit_job_pon_dec_no_ctr_avx
 
 /* SHA1/224/256/384/512 */
-#define SUBMIT_JOB_SHA1   submit_job_sha1_avx
-#define FLUSH_JOB_SHA1    flush_job_sha1_avx
-#define SUBMIT_JOB_SHA224 submit_job_sha224_avx
-#define FLUSH_JOB_SHA224  flush_job_sha224_avx
-#define SUBMIT_JOB_SHA256 submit_job_sha256_avx
-#define FLUSH_JOB_SHA256  flush_job_sha256_avx
-#define SUBMIT_JOB_SHA384 submit_job_sha384_avx
-#define FLUSH_JOB_SHA384  flush_job_sha384_avx
-#define SUBMIT_JOB_SHA512 submit_job_sha512_avx
-#define FLUSH_JOB_SHA512  flush_job_sha512_avx
+#define SUBMIT_JOB_SHA1   submit_job_sha1_sse
+#define FLUSH_JOB_SHA1    flush_job_sha1_sse
+#define SUBMIT_JOB_SHA224 submit_job_sha224_sse
+#define FLUSH_JOB_SHA224  flush_job_sha224_sse
+#define SUBMIT_JOB_SHA256 submit_job_sha256_sse
+#define FLUSH_JOB_SHA256  flush_job_sha256_sse
+#define SUBMIT_JOB_SHA384 submit_job_sha384_sse
+#define FLUSH_JOB_SHA384  flush_job_sha384_sse
+#define SUBMIT_JOB_SHA512 submit_job_sha512_sse
+#define FLUSH_JOB_SHA512  flush_job_sha512_sse
 
 /* HMAC-SHA1/224/256/384/512 */
 #define SUBMIT_JOB_HMAC         submit_job_hmac_avx

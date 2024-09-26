@@ -302,7 +302,6 @@ c_lib_objs := \
 	sha_avx2.o \
 	sha_avx512.o \
 	sha_ni_avx2.o \
-	sha_mb_avx.o \
 	sha_mb_avx2.o \
 	sha_mb_avx512.o \
 	des_key.o \
