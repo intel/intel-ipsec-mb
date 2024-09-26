@@ -170,36 +170,6 @@ IMB_JOB *
 snow_v_aead_init_avx(IMB_JOB *job);
 
 IMB_JOB *
-submit_job_hmac_avx(MB_MGR_HMAC_SHA_1_OOO *state, IMB_JOB *job);
-IMB_JOB *
-flush_job_hmac_avx(MB_MGR_HMAC_SHA_1_OOO *state);
-
-IMB_JOB *
-submit_job_hmac_sha_224_avx(MB_MGR_HMAC_SHA_256_OOO *state, IMB_JOB *job);
-IMB_JOB *
-flush_job_hmac_sha_224_avx(MB_MGR_HMAC_SHA_256_OOO *state);
-
-IMB_JOB *
-submit_job_hmac_sha_256_avx(MB_MGR_HMAC_SHA_256_OOO *state, IMB_JOB *job);
-IMB_JOB *
-flush_job_hmac_sha_256_avx(MB_MGR_HMAC_SHA_256_OOO *state);
-
-IMB_JOB *
-submit_job_hmac_sha_384_avx(MB_MGR_HMAC_SHA_512_OOO *state, IMB_JOB *job);
-IMB_JOB *
-flush_job_hmac_sha_384_avx(MB_MGR_HMAC_SHA_512_OOO *state);
-
-IMB_JOB *
-submit_job_hmac_sha_512_avx(MB_MGR_HMAC_SHA_512_OOO *state, IMB_JOB *job);
-IMB_JOB *
-flush_job_hmac_sha_512_avx(MB_MGR_HMAC_SHA_512_OOO *state);
-
-IMB_JOB *
-submit_job_hmac_md5_avx(MB_MGR_HMAC_MD5_OOO *state, IMB_JOB *job);
-IMB_JOB *
-flush_job_hmac_md5_avx(MB_MGR_HMAC_MD5_OOO *state);
-
-IMB_JOB *
 submit_job_aes128_cmac_auth_avx(MB_MGR_CMAC_OOO *state, IMB_JOB *job);
 
 IMB_JOB *

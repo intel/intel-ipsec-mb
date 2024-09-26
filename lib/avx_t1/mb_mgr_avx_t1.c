@@ -191,18 +191,18 @@
 #define FLUSH_JOB_SHA512  flush_job_sha512_sse
 
 /* HMAC-SHA1/224/256/384/512 */
-#define SUBMIT_JOB_HMAC         submit_job_hmac_avx
-#define FLUSH_JOB_HMAC          flush_job_hmac_avx
-#define SUBMIT_JOB_HMAC_SHA_224 submit_job_hmac_sha_224_avx
-#define FLUSH_JOB_HMAC_SHA_224  flush_job_hmac_sha_224_avx
-#define SUBMIT_JOB_HMAC_SHA_256 submit_job_hmac_sha_256_avx
-#define FLUSH_JOB_HMAC_SHA_256  flush_job_hmac_sha_256_avx
-#define SUBMIT_JOB_HMAC_SHA_384 submit_job_hmac_sha_384_avx
-#define FLUSH_JOB_HMAC_SHA_384  flush_job_hmac_sha_384_avx
-#define SUBMIT_JOB_HMAC_SHA_512 submit_job_hmac_sha_512_avx
-#define FLUSH_JOB_HMAC_SHA_512  flush_job_hmac_sha_512_avx
-#define SUBMIT_JOB_HMAC_MD5     submit_job_hmac_md5_avx
-#define FLUSH_JOB_HMAC_MD5      flush_job_hmac_md5_avx
+#define SUBMIT_JOB_HMAC         submit_job_hmac_sse
+#define FLUSH_JOB_HMAC          flush_job_hmac_sse
+#define SUBMIT_JOB_HMAC_SHA_224 submit_job_hmac_sha_224_sse
+#define FLUSH_JOB_HMAC_SHA_224  flush_job_hmac_sha_224_sse
+#define SUBMIT_JOB_HMAC_SHA_256 submit_job_hmac_sha_256_sse
+#define FLUSH_JOB_HMAC_SHA_256  flush_job_hmac_sha_256_sse
+#define SUBMIT_JOB_HMAC_SHA_384 submit_job_hmac_sha_384_sse
+#define FLUSH_JOB_HMAC_SHA_384  flush_job_hmac_sha_384_sse
+#define SUBMIT_JOB_HMAC_SHA_512 submit_job_hmac_sha_512_sse
+#define FLUSH_JOB_HMAC_SHA_512  flush_job_hmac_sha_512_sse
+#define SUBMIT_JOB_HMAC_MD5     submit_job_hmac_md5_sse
+#define FLUSH_JOB_HMAC_MD5      flush_job_hmac_md5_sse
 
 /* CHACHA20 & POLY1305 */
 #define SUBMIT_JOB_CHACHA20_ENC_DEC      submit_job_chacha20_enc_dec_avx

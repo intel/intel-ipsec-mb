@@ -396,54 +396,42 @@ lib_objs2 = \
 	$(OBJ_DIR)\mb_mgr_aes128_xcbc_flush_x4_sse.obj \
 	$(OBJ_DIR)\mb_mgr_aes128_xcbc_submit_x8_avx.obj \
 	$(OBJ_DIR)\mb_mgr_aes128_xcbc_submit_x4_sse.obj \
-	$(OBJ_DIR)\mb_mgr_hmac_sha1_flush_avx.obj \
 	$(OBJ_DIR)\mb_mgr_hmac_sha1_flush_avx2.obj \
 	$(OBJ_DIR)\mb_mgr_hmac_sha1_flush_sse.obj \
 	$(OBJ_DIR)\mb_mgr_hmac_sha1_flush_ni_sse.obj \
 	$(OBJ_DIR)\mb_mgr_hmac_sha1_flush_avx512.obj \
-	$(OBJ_DIR)\mb_mgr_hmac_md5_flush_avx.obj \
 	$(OBJ_DIR)\mb_mgr_hmac_md5_flush_avx2.obj \
 	$(OBJ_DIR)\mb_mgr_hmac_md5_flush_sse.obj \
-	$(OBJ_DIR)\mb_mgr_hmac_md5_submit_avx.obj \
 	$(OBJ_DIR)\mb_mgr_hmac_md5_submit_avx2.obj \
 	$(OBJ_DIR)\mb_mgr_hmac_md5_submit_sse.obj \
-	$(OBJ_DIR)\mb_mgr_hmac_sha224_flush_avx.obj \
 	$(OBJ_DIR)\mb_mgr_hmac_sha224_flush_avx2.obj \
 	$(OBJ_DIR)\mb_mgr_hmac_sha224_flush_avx512.obj \
 	$(OBJ_DIR)\mb_mgr_hmac_sha224_flush_sse.obj \
 	$(OBJ_DIR)\mb_mgr_hmac_sha224_flush_ni_sse.obj \
-	$(OBJ_DIR)\mb_mgr_hmac_sha224_submit_avx.obj \
 	$(OBJ_DIR)\mb_mgr_hmac_sha224_submit_avx2.obj \
 	$(OBJ_DIR)\mb_mgr_hmac_sha224_submit_avx512.obj \
 	$(OBJ_DIR)\mb_mgr_hmac_sha224_submit_sse.obj \
 	$(OBJ_DIR)\mb_mgr_hmac_sha224_submit_ni_sse.obj \
-	$(OBJ_DIR)\mb_mgr_hmac_sha256_flush_avx.obj \
 	$(OBJ_DIR)\mb_mgr_hmac_sha256_flush_avx2.obj \
 	$(OBJ_DIR)\mb_mgr_hmac_sha256_flush_avx512.obj \
 	$(OBJ_DIR)\mb_mgr_hmac_sha256_flush_sse.obj \
 	$(OBJ_DIR)\mb_mgr_hmac_sha256_flush_ni_sse.obj \
-	$(OBJ_DIR)\mb_mgr_hmac_sha256_submit_avx.obj \
 	$(OBJ_DIR)\mb_mgr_hmac_sha256_submit_avx2.obj \
 	$(OBJ_DIR)\mb_mgr_hmac_sha256_submit_avx512.obj \
 	$(OBJ_DIR)\mb_mgr_hmac_sha256_submit_sse.obj \
 	$(OBJ_DIR)\mb_mgr_hmac_sha256_submit_ni_sse.obj \
-	$(OBJ_DIR)\mb_mgr_hmac_sha384_flush_avx.obj \
 	$(OBJ_DIR)\mb_mgr_hmac_sha384_flush_avx2.obj \
 	$(OBJ_DIR)\mb_mgr_hmac_sha384_flush_avx512.obj \
 	$(OBJ_DIR)\mb_mgr_hmac_sha384_flush_sse.obj \
-	$(OBJ_DIR)\mb_mgr_hmac_sha384_submit_avx.obj \
 	$(OBJ_DIR)\mb_mgr_hmac_sha384_submit_avx2.obj \
 	$(OBJ_DIR)\mb_mgr_hmac_sha384_submit_avx512.obj \
 	$(OBJ_DIR)\mb_mgr_hmac_sha384_submit_sse.obj \
-	$(OBJ_DIR)\mb_mgr_hmac_sha512_flush_avx.obj \
 	$(OBJ_DIR)\mb_mgr_hmac_sha512_flush_avx2.obj \
 	$(OBJ_DIR)\mb_mgr_hmac_sha512_flush_avx512.obj \
 	$(OBJ_DIR)\mb_mgr_hmac_sha512_flush_sse.obj \
-	$(OBJ_DIR)\mb_mgr_hmac_sha512_submit_avx.obj \
 	$(OBJ_DIR)\mb_mgr_hmac_sha512_submit_avx2.obj \
 	$(OBJ_DIR)\mb_mgr_hmac_sha512_submit_avx512.obj \
 	$(OBJ_DIR)\mb_mgr_hmac_sha512_submit_sse.obj \
-	$(OBJ_DIR)\mb_mgr_hmac_sha1_submit_avx.obj \
 	$(OBJ_DIR)\mb_mgr_hmac_sha1_submit_avx2.obj \
 	$(OBJ_DIR)\mb_mgr_hmac_sha1_submit_sse.obj \
 	$(OBJ_DIR)\mb_mgr_hmac_sha1_submit_ni_sse.obj \

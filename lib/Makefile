@@ -509,18 +509,6 @@ asm_avx_lib_objs := \
 	mb_mgr_aes256_ccm_auth_submit_flush_x8_avx.o \
 	mb_mgr_aes128_xcbc_flush_x8_avx.o \
 	mb_mgr_aes128_xcbc_submit_x8_avx.o \
-	mb_mgr_hmac_md5_flush_avx.o \
-	mb_mgr_hmac_md5_submit_avx.o \
-	mb_mgr_hmac_sha1_flush_avx.o \
-	mb_mgr_hmac_sha1_submit_avx.o \
-	mb_mgr_hmac_sha224_flush_avx.o \
-	mb_mgr_hmac_sha224_submit_avx.o \
-	mb_mgr_hmac_sha256_flush_avx.o \
-	mb_mgr_hmac_sha256_submit_avx.o \
-	mb_mgr_hmac_sha384_flush_avx.o \
-	mb_mgr_hmac_sha384_submit_avx.o \
-	mb_mgr_hmac_sha512_flush_avx.o \
-	mb_mgr_hmac_sha512_submit_avx.o \
 	ethernet_fcs_avx.o \
 	crc16_x25_avx.o \
 	aes128_cbcs_1_9_enc_x8_avx.o \
