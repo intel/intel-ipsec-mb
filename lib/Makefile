@@ -467,13 +467,22 @@ asm_sse_lib_objs := \
 # List of ASM modules (avx directory)
 #
 asm_avx_lib_objs := \
+	pon_by8_avx.o \
+	chacha20_avx.o \
+        memcpy_avx.o \
+	snow_v_avx.o \
+	snow3g_uia2_by4_avx.o
+
+#
+# List of ASM modules (avx2 directory)
+#
+asm_avx2_lib_objs := \
 	aes128_cbc_enc_x8_avx.o \
 	aes192_cbc_enc_x8_avx.o \
 	aes256_cbc_enc_x8_avx.o \
 	aes128_cbc_dec_by8_avx.o \
 	aes192_cbc_dec_by8_avx.o \
 	aes256_cbc_dec_by8_avx.o \
-	pon_by8_avx.o \
 	aes128_cntr_by8_avx.o \
 	aes192_cntr_by8_avx.o \
 	aes256_cntr_by8_avx.o \
@@ -503,15 +512,6 @@ asm_avx_lib_objs := \
 	aes128_cbcs_1_9_dec_by8_avx.o \
 	mb_mgr_aes128_cbcs_1_9_submit_avx.o \
 	mb_mgr_aes128_cbcs_1_9_flush_avx.o \
-	chacha20_avx.o \
-        memcpy_avx.o \
-	snow_v_avx.o \
-	snow3g_uia2_by4_avx.o
-
-#
-# List of ASM modules (avx2 directory)
-#
-asm_avx2_lib_objs := \
 	md5_x8x2_avx2.o \
 	sha1_x8_avx2.o \
 	sha256_oct_avx2.o \

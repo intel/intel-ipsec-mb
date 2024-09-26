@@ -25,8 +25,8 @@
 ;; OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;
 
-%define CNTR_CCM_AVX
-%ifndef AES_CNTR_CCM_256
-%define AES_CNTR_CCM_256 aes_cntr_ccm_256_avx
-%endif
-%include "avx_t1/aes256_cntr_by8_avx.asm"
+%define AES_CBC_MAC aes256_cbc_mac_x8
+%define SUBMIT_JOB_AES_CMAC_AUTH submit_job_aes256_cmac_auth_avx
+%define FLUSH_JOB_AES_CMAC_AUTH flush_job_aes256_cmac_auth_avx
+
+%include "avx2_t1/mb_mgr_aes128_cmac_submit_flush_x8_avx.asm"

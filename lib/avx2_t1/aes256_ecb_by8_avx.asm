@@ -1,5 +1,5 @@
 ;;
-;; Copyright (c) 2020-2023, Intel Corporation
+;; Copyright (c) 2022-2023, Intel Corporation
 ;;
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
@@ -25,8 +25,9 @@
 ;; OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;
 
-%define AES_CBC_MAC aes256_cbc_mac_x8
-%define SUBMIT_JOB_AES_CMAC_AUTH submit_job_aes256_cmac_auth_avx
-%define FLUSH_JOB_AES_CMAC_AUTH flush_job_aes256_cmac_auth_avx
+; routine to do AES ECB 256 encrypt/decrypt on 16n bytes doing AES by 8
 
-%include "avx_t1/mb_mgr_aes128_cmac_submit_flush_x8_avx.asm"
+%define AES_ECB_NROUNDS 14
+
+%include "include/os.inc"
+%include "avx2_t1/aes128_ecb_by8_avx.asm"

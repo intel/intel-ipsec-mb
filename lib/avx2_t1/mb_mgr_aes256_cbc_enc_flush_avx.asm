@@ -1,5 +1,5 @@
 ;;
-;; Copyright (c) 2019-2023, Intel Corporation
+;; Copyright (c) 2012-2023, Intel Corporation
 ;;
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
@@ -25,8 +25,6 @@
 ;; OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;
 
-%define CNTR_CCM_AVX
-%ifndef AES_CNTR_CCM_128
-%define AES_CNTR_CCM_128 aes_cntr_ccm_128_avx
-%endif
-%include "avx_t1/aes128_cntr_by8_avx.asm"
+%define AES_CBC_ENC_X8 aes_cbc_enc_256_x8
+%define FLUSH_JOB_AES_ENC flush_job_aes256_enc_avx
+%include "avx2_t1/mb_mgr_aes128_cbc_enc_flush_avx.asm"

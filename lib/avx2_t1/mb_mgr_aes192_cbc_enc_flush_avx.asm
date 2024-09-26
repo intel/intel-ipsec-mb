@@ -27,4 +27,4 @@
 
 %define AES_CBC_ENC_X8 aes_cbc_enc_192_x8
 %define FLUSH_JOB_AES_ENC flush_job_aes192_enc_avx
-%include "avx_t1/mb_mgr_aes128_cbc_enc_flush_avx.asm"
+%include "avx2_t1/mb_mgr_aes128_cbc_enc_flush_avx.asm"

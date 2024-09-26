@@ -1,5 +1,5 @@
 ;;
-;; Copyright (c) 2022-2023, Intel Corporation
+;; Copyright (c) 2012-2023, Intel Corporation
 ;;
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
@@ -25,9 +25,6 @@
 ;; OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;
 
-; routine to do AES ECB 256 encrypt/decrypt on 16n bytes doing AES by 8
-
-%define AES_ECB_NROUNDS 14
-
-%include "include/os.inc"
-%include "avx_t1/aes128_ecb_by8_avx.asm"
+%define AES_CBC_ENC_X8 aes_cbc_enc_192_x8
+%define SUBMIT_JOB_AES_ENC submit_job_aes192_enc_avx
+%include "avx2_t1/mb_mgr_aes128_cbc_enc_submit_avx.asm"
