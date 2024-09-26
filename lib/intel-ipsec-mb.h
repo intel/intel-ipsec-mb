@@ -2679,11 +2679,6 @@ md5_one_block_sse(const void *data, void *digest);
  * @copydoc md5_one_block_sse
  */
 IMB_DLL_EXPORT void
-md5_one_block_avx(const void *data, void *digest);
-/**
- * @copydoc md5_one_block_sse
- */
-IMB_DLL_EXPORT void
 md5_one_block_avx2(const void *data, void *digest);
 /**
  * @copydoc md5_one_block_sse

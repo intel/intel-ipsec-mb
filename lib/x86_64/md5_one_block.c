@@ -224,12 +224,6 @@ md5_one_block_sse(const void *data, void *digest)
 }
 
 void
-md5_one_block_avx(const void *data, void *digest)
-{
-        md5_one_block_common(data, digest, ARCH_AVX);
-}
-
-void
 md5_one_block_avx2(const void *data, void *digest)
 {
         md5_one_block_common(data, digest, ARCH_AVX2);

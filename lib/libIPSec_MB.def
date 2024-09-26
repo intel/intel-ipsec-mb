@@ -124,15 +124,10 @@ EXPORTS
     queue_size_avx2                            @98
     queue_size_avx512                          @99
     queue_size_sse                             @100
-    sha1_one_block_avx                         @101
     sha1_one_block_sse                         @102
-    sha224_one_block_avx                       @103
     sha224_one_block_sse                       @104
-    sha256_one_block_avx                       @105
     sha256_one_block_sse                       @106
-    sha384_one_block_avx                       @107
     sha384_one_block_sse                       @108
-    sha512_one_block_avx                       @109
     sha512_one_block_sse                       @110
     submit_job_avx                             @111
     submit_job_avx2                            @112
@@ -154,7 +149,6 @@ EXPORTS
     sha1_avx512                                @128
     sha1_one_block_avx2                        @129
     sha1_one_block_avx512                      @130
-    md5_one_block_avx                          @131
     md5_one_block_avx2                         @132
     md5_one_block_avx512                       @133
     sha224_one_block_avx2                      @134

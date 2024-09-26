@@ -400,17 +400,17 @@ init_mb_mgr_avx_t1_internal(IMB_MGR *state, const int reset_mgrs)
         state->xcbc_keyexp = aes_xcbc_expand_key_avx;
         state->des_key_sched = des_key_schedule;
 
-        state->sha1_one_block = sha1_one_block_avx;
+        state->sha1_one_block = sha1_one_block_sse;
         state->sha1 = sha1_avx;
-        state->sha224_one_block = sha224_one_block_avx;
+        state->sha224_one_block = sha224_one_block_sse;
         state->sha224 = sha224_avx;
-        state->sha256_one_block = sha256_one_block_avx;
+        state->sha256_one_block = sha256_one_block_sse;
         state->sha256 = sha256_avx;
-        state->sha384_one_block = sha384_one_block_avx;
+        state->sha384_one_block = sha384_one_block_sse;
         state->sha384 = sha384_avx;
-        state->sha512_one_block = sha512_one_block_avx;
+        state->sha512_one_block = sha512_one_block_sse;
         state->sha512 = sha512_avx;
-        state->md5_one_block = md5_one_block_avx;
+        state->md5_one_block = md5_one_block_sse;
 
         state->aes128_cfb_one = aes_cfb_128_one_avx;
         state->aes256_cfb_one = aes_cfb_256_one_avx;
