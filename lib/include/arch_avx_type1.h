@@ -234,17 +234,6 @@ call_sha_256_mult_avx_from_c(SHA256_ARGS *args, uint32_t size_in_blocks);
 void
 call_sha512_x2_avx_from_c(SHA512_ARGS *args, uint64_t size_in_blocks);
 
-void
-sha1_block_avx(const void *, void *);
-void
-sha224_block_avx(const void *, void *);
-void
-sha256_block_avx(const void *, void *);
-void
-sha384_block_avx(const void *, void *);
-void
-sha512_block_avx(const void *, void *);
-
 IMB_DLL_EXPORT void
 set_suite_id_avx_t1(IMB_MGR *state, IMB_JOB *job);
 

@@ -111,32 +111,26 @@ sha_generic_one_block(const void *inp, void *digest, const enum arch_type arch, 
 {
         if (sha_type == 1) {
                 IMB_ASSERT(arch != ARCH_AVX2_SHANI);
-                if (arch == ARCH_AVX)
-                        sha1_block_avx(inp, digest);
-                else if (arch == ARCH_SSE)
+                if (arch == ARCH_AVX || arch == ARCH_SSE)
                         sha1_block_sse(inp, digest);
                 else /* arch == ARCH_SSE_SHANI */
                         sha1_ni_block_sse(inp, digest);
         } else if (sha_type == 224) {
                 IMB_ASSERT(arch != ARCH_AVX2_SHANI);
-                if (arch == ARCH_AVX)
-                        sha224_block_avx(inp, digest);
-                else if (arch == ARCH_SSE)
+                if (arch == ARCH_AVX || arch == ARCH_SSE)
                         sha224_block_sse(inp, digest);
                 else /* arch == ARCH_SSE_SHANI */
                         sha256_ni_block_sse(inp, digest);
         } else if (sha_type == 256) {
                 IMB_ASSERT(arch != ARCH_AVX2_SHANI);
-                if (arch == ARCH_AVX)
-                        sha256_block_avx(inp, digest);
-                else if (arch == ARCH_SSE)
+                if (arch == ARCH_AVX || arch == ARCH_SSE)
                         sha256_block_sse(inp, digest);
                 else /* arch == ARCH_SSE_SHANI */
                         sha256_ni_block_sse(inp, digest);
         } else if (sha_type == 384) {
                 IMB_ASSERT(arch != ARCH_SSE_SHANI);
                 if (arch == ARCH_AVX)
-                        sha384_block_avx(inp, digest);
+                        sha384_block_sse(inp, digest);
 #ifdef SMX_NI
                 else if (arch == ARCH_SSE)
                         sha384_block_sse(inp, digest);
@@ -149,7 +143,7 @@ sha_generic_one_block(const void *inp, void *digest, const enum arch_type arch, 
         } else if (sha_type == 512) {
                 IMB_ASSERT(arch != ARCH_SSE_SHANI);
                 if (arch == ARCH_AVX)
-                        sha512_block_avx(inp, digest);
+                        sha512_block_sse(inp, digest);
 #ifdef SMX_NI
                 else if (arch == ARCH_SSE)
                         sha512_block_sse(inp, digest);

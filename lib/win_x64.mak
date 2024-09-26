@@ -221,23 +221,18 @@ lib_objs1 = \
 	$(OBJ_DIR)\sha1_x4_sse.obj \
 	$(OBJ_DIR)\sha1_ni_x2_sse.obj \
 	$(OBJ_DIR)\sha1_ni_x1_sse.obj \
-	$(OBJ_DIR)\sha1_one_block_avx.obj \
 	$(OBJ_DIR)\sha1_one_block_sse.obj \
 	$(OBJ_DIR)\sha1_ni_one_block_sse.obj \
 	$(OBJ_DIR)\sha1_x8_avx2.obj \
 	$(OBJ_DIR)\sha1_x16_avx512.obj \
-	$(OBJ_DIR)\sha224_one_block_avx.obj \
 	$(OBJ_DIR)\sha224_one_block_sse.obj \
 	$(OBJ_DIR)\sha256_oct_avx2.obj \
-	$(OBJ_DIR)\sha256_one_block_avx.obj \
 	$(OBJ_DIR)\sha256_one_block_sse.obj \
 	$(OBJ_DIR)\sha256_ni_one_block_sse.obj \
 	$(OBJ_DIR)\sha256_ni_x2_sse.obj \
 	$(OBJ_DIR)\sha256_ni_x1_sse.obj \
 	$(OBJ_DIR)\sha256_x16_avx512.obj \
-	$(OBJ_DIR)\sha384_one_block_avx.obj \
 	$(OBJ_DIR)\sha384_one_block_sse.obj \
-	$(OBJ_DIR)\sha512_one_block_avx.obj \
 	$(OBJ_DIR)\sha512_one_block_sse.obj \
 	$(OBJ_DIR)\sha512_x2_avx.obj \
 	$(OBJ_DIR)\sha512_x2_sse.obj \
