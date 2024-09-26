@@ -205,7 +205,6 @@ lib_objs1 = \
 	$(OBJ_DIR)\aes_cmac_subkey_gen.obj \
 	$(OBJ_DIR)\aes128_xcbc_mac_x4_sse.obj \
 	$(OBJ_DIR)\aes128_xcbc_mac_x8_avx.obj \
-	$(OBJ_DIR)\md5_x4x2_avx.obj \
 	$(OBJ_DIR)\md5_x4x2_sse.obj \
 	$(OBJ_DIR)\md5_x8x2_avx2.obj \
 	$(OBJ_DIR)\save_xmms.obj \
@@ -217,7 +216,6 @@ lib_objs1 = \
 	$(OBJ_DIR)\sm3_base_msg_sse.obj \
 	$(OBJ_DIR)\sm3_base_hmac_sse.obj \
 	$(OBJ_DIR)\clear_regs_mem_fns.obj \
-	$(OBJ_DIR)\sha1_x4_avx.obj \
 	$(OBJ_DIR)\sha1_x4_sse.obj \
 	$(OBJ_DIR)\sha1_ni_x2_sse.obj \
 	$(OBJ_DIR)\sha1_ni_x1_sse.obj \
@@ -234,11 +232,9 @@ lib_objs1 = \
 	$(OBJ_DIR)\sha256_x16_avx512.obj \
 	$(OBJ_DIR)\sha384_one_block_sse.obj \
 	$(OBJ_DIR)\sha512_one_block_sse.obj \
-	$(OBJ_DIR)\sha512_x2_avx.obj \
 	$(OBJ_DIR)\sha512_x2_sse.obj \
 	$(OBJ_DIR)\sha512_x4_avx2.obj \
 	$(OBJ_DIR)\sha512_x8_avx512.obj \
-	$(OBJ_DIR)\sha256_mult_avx.obj \
 	$(OBJ_DIR)\sha256_mult_sse.obj \
 	$(OBJ_DIR)\kasumi_avx.obj \
 	$(OBJ_DIR)\kasumi_iv.obj \

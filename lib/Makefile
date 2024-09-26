@@ -487,10 +487,6 @@ asm_avx_lib_objs := \
 	aes128_cbc_mac_x8_avx.o \
 	aes256_cbc_mac_x8_avx.o \
 	aes128_xcbc_mac_x8_avx.o \
-	md5_x4x2_avx.o \
-	sha1_x4_avx.o \
-	sha256_mult_avx.o \
-	sha512_x2_avx.o \
 	mb_mgr_aes128_cbc_enc_flush_avx.o \
 	mb_mgr_aes128_cbc_enc_submit_avx.o \
 	mb_mgr_aes192_cbc_enc_flush_avx.o \

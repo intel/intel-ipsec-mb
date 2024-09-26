@@ -20,6 +20,7 @@ Library
 - Removed AVX Type 2 implementation.
 - Removed AES-CMAC, AES-CCM, AES-CBC and AES-ECB x4 and by4 implementations from SSE type 1
   - They are replaced with x8 and by8 implementations from SSE type 3
+- Removed SHA/MD5 AVX implementations.
 
 Test Applications
 - Removed Makefile support
