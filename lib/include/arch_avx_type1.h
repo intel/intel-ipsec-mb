@@ -246,17 +246,6 @@ void
 sha512_block_avx(const void *, void *);
 
 IMB_DLL_EXPORT void
-sha1_avx(const void *data, const uint64_t length, void *digest);
-IMB_DLL_EXPORT void
-sha224_avx(const void *data, const uint64_t length, void *digest);
-IMB_DLL_EXPORT void
-sha256_avx(const void *data, const uint64_t length, void *digest);
-IMB_DLL_EXPORT void
-sha384_avx(const void *data, const uint64_t length, void *digest);
-IMB_DLL_EXPORT void
-sha512_avx(const void *data, const uint64_t length, void *digest);
-
-IMB_DLL_EXPORT void
 set_suite_id_avx_t1(IMB_MGR *state, IMB_JOB *job);
 
 #endif /* IMB_ASM_AVX_T1_H */

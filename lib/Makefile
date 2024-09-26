@@ -298,7 +298,6 @@ c_lib_objs := \
 	sha_ni_sse.o \
 	sha_mb_sse.o \
 	sha_ni_mb_sse.o \
-	sha_avx.o \
 	sha_avx2.o \
 	sha_avx512.o \
 	sha_ni_avx2.o \
