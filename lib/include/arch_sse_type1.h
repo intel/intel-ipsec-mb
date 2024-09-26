@@ -35,21 +35,36 @@
 
 /* AES-CBC */
 void
-aes_cbc_enc_128_x8(AES_ARGS *args, uint64_t len_in_bytes);
+aes_cbc_enc_128_x8_sse(AES_ARGS *args, uint64_t len_in_bytes);
 void
-aes_cbc_enc_192_x8(AES_ARGS *args, uint64_t len_in_bytes);
+aes_cbc_enc_192_x8_sse(AES_ARGS *args, uint64_t len_in_bytes);
 void
-aes_cbc_enc_256_x8(AES_ARGS *args, uint64_t len_in_bytes);
+aes_cbc_enc_256_x8_sse(AES_ARGS *args, uint64_t len_in_bytes);
+
+IMB_JOB *
+submit_job_aes128_enc_x8_sse(MB_MGR_AES_OOO *state, IMB_JOB *job);
+IMB_JOB *
+flush_job_aes128_enc_x8_sse(MB_MGR_AES_OOO *state);
+
+IMB_JOB *
+submit_job_aes192_enc_x8_sse(MB_MGR_AES_OOO *state, IMB_JOB *job);
+IMB_JOB *
+flush_job_aes192_enc_x8_sse(MB_MGR_AES_OOO *state);
+
+IMB_JOB *
+submit_job_aes256_enc_x8_sse(MB_MGR_AES_OOO *state, IMB_JOB *job);
+IMB_JOB *
+flush_job_aes256_enc_x8_sse(MB_MGR_AES_OOO *state);
 
 void
-aes_cbc_dec_128_sse(const void *in, const uint8_t *IV, const void *keys, void *out,
-                    uint64_t len_bytes);
+aes_cbc_dec_128_by8_sse(const void *in, const uint8_t *IV, const void *keys, void *out,
+                        uint64_t len_bytes);
 void
-aes_cbc_dec_192_sse(const void *in, const uint8_t *IV, const void *keys, void *out,
-                    uint64_t len_bytes);
+aes_cbc_dec_192_by8_sse(const void *in, const uint8_t *IV, const void *keys, void *out,
+                        uint64_t len_bytes);
 void
-aes_cbc_dec_256_sse(const void *in, const uint8_t *IV, const void *keys, void *out,
-                    uint64_t len_bytes);
+aes_cbc_dec_256_by8_sse(const void *in, const uint8_t *IV, const void *keys, void *out,
+                        uint64_t len_bytes);
 
 /* AES-CTR */
 void
@@ -82,18 +97,18 @@ aes_cntr_ccm_256_sse(IMB_JOB *job);
 
 /* AES-ECB */
 void
-aes_ecb_enc_256_by4_sse(const void *in, const void *keys, void *out, uint64_t len_bytes);
+aes_ecb_enc_256_by8_sse(const void *in, const void *keys, void *out, uint64_t len_bytes);
 void
-aes_ecb_enc_192_by4_sse(const void *in, const void *keys, void *out, uint64_t len_bytes);
+aes_ecb_enc_192_by8_sse(const void *in, const void *keys, void *out, uint64_t len_bytes);
 void
-aes_ecb_enc_128_by4_sse(const void *in, const void *keys, void *out, uint64_t len_bytes);
+aes_ecb_enc_128_by8_sse(const void *in, const void *keys, void *out, uint64_t len_bytes);
 
 void
-aes_ecb_dec_256_by4_sse(const void *in, const void *keys, void *out, uint64_t len_bytes);
+aes_ecb_dec_256_by8_sse(const void *in, const void *keys, void *out, uint64_t len_bytes);
 void
-aes_ecb_dec_192_by4_sse(const void *in, const void *keys, void *out, uint64_t len_bytes);
+aes_ecb_dec_192_by8_sse(const void *in, const void *keys, void *out, uint64_t len_bytes);
 void
-aes_ecb_dec_128_by4_sse(const void *in, const void *keys, void *out, uint64_t len_bytes);
+aes_ecb_dec_128_by8_sse(const void *in, const void *keys, void *out, uint64_t len_bytes);
 
 void
 aes_ecb_quic_enc_128_sse(const void *in, const void *keys, void *out, uint64_t num_buffers);
@@ -259,28 +274,28 @@ IMB_JOB *
 flush_job_aes_xcbc_sse(MB_MGR_AES_XCBC_OOO *state);
 
 IMB_JOB *
-submit_job_aes128_cmac_auth_sse(MB_MGR_CMAC_OOO *state, IMB_JOB *job);
+submit_job_aes128_cmac_auth_x8_sse(MB_MGR_CMAC_OOO *state, IMB_JOB *job);
 
 IMB_JOB *
-flush_job_aes128_cmac_auth_sse(MB_MGR_CMAC_OOO *state);
+flush_job_aes128_cmac_auth_x8_sse(MB_MGR_CMAC_OOO *state);
 
 IMB_JOB *
-submit_job_aes256_cmac_auth_sse(MB_MGR_CMAC_OOO *state, IMB_JOB *job);
+submit_job_aes256_cmac_auth_x8_sse(MB_MGR_CMAC_OOO *state, IMB_JOB *job);
 
 IMB_JOB *
-flush_job_aes256_cmac_auth_sse(MB_MGR_CMAC_OOO *state);
+flush_job_aes256_cmac_auth_x8_sse(MB_MGR_CMAC_OOO *state);
 
 IMB_JOB *
-submit_job_aes128_ccm_auth_sse(MB_MGR_CCM_OOO *state, IMB_JOB *job);
+submit_job_aes128_ccm_auth_x8_sse(MB_MGR_CCM_OOO *state, IMB_JOB *job);
 
 IMB_JOB *
-submit_job_aes256_ccm_auth_sse(MB_MGR_CCM_OOO *state, IMB_JOB *job);
+flush_job_aes128_ccm_auth_x8_sse(MB_MGR_CCM_OOO *state);
 
 IMB_JOB *
-flush_job_aes128_ccm_auth_sse(MB_MGR_CCM_OOO *state);
+submit_job_aes256_ccm_auth_x8_sse(MB_MGR_CCM_OOO *state, IMB_JOB *job);
 
 IMB_JOB *
-flush_job_aes256_ccm_auth_sse(MB_MGR_CCM_OOO *state);
+flush_job_aes256_ccm_auth_x8_sse(MB_MGR_CCM_OOO *state);
 
 IMB_JOB *
 submit_job_zuc_eea3_no_gfni_sse(MB_MGR_ZUC_OOO *state, IMB_JOB *job);

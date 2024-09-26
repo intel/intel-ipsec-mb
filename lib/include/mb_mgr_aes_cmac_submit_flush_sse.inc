@@ -1,5 +1,5 @@
 ;;
-;; Copyright (c) 2018-2023, Intel Corporation
+;; Copyright (c) 2018-2024, Intel Corporation
 ;;
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
@@ -25,6 +25,9 @@
 ;; OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;
 
+%ifndef MB_MGR_AES_CMAC_SUBMIT_FLUSH_SSE_INC
+%define MB_MGR_AES_CMAC_SUBMIT_FLUSH_SSE_INC
+
 %include "include/os.inc"
 %include "include/imb_job.inc"
 %include "include/mb_mgr_datastruct.inc"
@@ -35,58 +38,7 @@
 ;%define DO_DBGPRINT
 %include "include/dbgprint.inc"
 
-%ifndef NUM_LANES
-%define NUM_LANES 4
-%endif
-
-%ifndef AES_CBC_MAC
-%define AES_CBC_MAC aes128_cbc_mac_x4
-%define SUBMIT_JOB_AES_CMAC_AUTH submit_job_aes128_cmac_auth_sse
-%define FLUSH_JOB_AES_CMAC_AUTH flush_job_aes128_cmac_auth_sse
-%endif
-
-extern AES_CBC_MAC
-
-mksection .rodata
-default rel
-
-align 16
-len_masks:
-	dq 0x000000000000FFFF, 0x0000000000000000
-	dq 0x00000000FFFF0000, 0x0000000000000000
-	dq 0x0000FFFF00000000, 0x0000000000000000
-	dq 0xFFFF000000000000, 0x0000000000000000
-%if NUM_LANES > 4
-        dq 0x0000000000000000, 0x000000000000FFFF
-	dq 0x0000000000000000, 0x00000000FFFF0000
-	dq 0x0000000000000000, 0x0000FFFF00000000
-	dq 0x0000000000000000, 0xFFFF000000000000
-%endif
-
-%if NUM_LANES > 4
-align 16
-dupw:
-	dq 0x0100010001000100, 0x0100010001000100
-%endif
-
-one:	dq  1
-two:	dq  2
-three:	dq  3
-%if NUM_LANES > 4
-four:	dq  4
-five:	dq  5
-six:	dq  6
-seven:	dq  7
-%endif
-
-align 16
-len_shuf_masks:
-        dq 0XFFFFFFFF09080100, 0XFFFFFFFFFFFFFFFF
-        dq 0X09080100FFFFFFFF, 0XFFFFFFFFFFFFFFFF
-        dq 0XFFFFFFFFFFFFFFFF, 0XFFFFFFFF09080100
-        dq 0XFFFFFFFFFFFFFFFF, 0X09080100FFFFFFFF
-
-mksection .text
+%define NUM_LANES 8
 
 %define APPEND(a,b) a %+ b
 
@@ -142,8 +94,9 @@ endstruc
 ;;; AES CMAC job submit & flush
 ;;; ===========================================================================
 ;;; SUBMIT_FLUSH [in] - SUBMIT, FLUSH job selection
-%macro GENERIC_SUBMIT_FLUSH_JOB_AES_CMAC_SSE 1
-%define %%SUBMIT_FLUSH %1
+%macro GENERIC_SUBMIT_FLUSH_JOB_AES_CMAC_SSE 2
+%define %%SUBMIT_FLUSH %1 ;; [in] "SUBMIT" or "FLUSH" selection
+%define %%AES_CBC_MAC  %2 ;; [in] function to process CBC MAC algorithm on all lanes
         mov	rax, rsp
         sub	rsp, STACK_size
         and	rsp, -16
@@ -270,7 +223,6 @@ endstruc
 	cmovne	good_lane, [rel two]
 	cmp	qword [state + _aes_cmac_job_in_lane + 3*8], 0
 	cmovne	good_lane, [rel three]
-%if NUM_LANES > 4
 	cmp	qword [state + _aes_cmac_job_in_lane + 4*8], 0
 	cmovne	good_lane, [rel four]
 	cmp	qword [state + _aes_cmac_job_in_lane + 5*8], 0
@@ -279,7 +231,6 @@ endstruc
 	cmovne	good_lane, [rel six]
 	cmp	qword [state + _aes_cmac_job_in_lane + 7*8], 0
 	cmovne	good_lane, [rel seven]
-%endif
 
 	; Copy good_lane to empty lanes
 	mov	tmp2, [state + _aes_cmac_args_in + good_lane*8]
@@ -291,12 +242,12 @@ endstruc
 %assign I 0
 %rep NUM_LANES
 	cmp	qword [state + _aes_cmac_job_in_lane + I*8], 0
-	jne	APPEND(skip_,I)
+	jne	APPEND(%%_skip_,I)
 	mov	[state + _aes_cmac_args_in + I*8], tmp2
 	mov	[state + _aes_cmac_args_keys + I*8], tmp3
 	movdqa	[state + _aes_cmac_args_IV + I*16], xmm2
 	por	xmm0, [rel len_masks + 16*I]
-APPEND(skip_,I):
+APPEND(%%_skip_,I):
 %assign I (I+1)
 %endrep
         ;; Find min length
@@ -312,9 +263,9 @@ APPEND(skip_,I):
 %assign I 0
 %rep NUM_LANES
         cmp     qword [state + _aes_cmac_job_in_lane + I*8], tmp3
-        jne     APPEND(skip2_,I)
+        jne     APPEND(%%_skip2_,I)
         mov     [state + _aes_cmac_args_in + I*8], tmp2
-APPEND(skip2_,I):
+APPEND(%%_skip2_,I):
 %assign I (I+1)
 %endrep
 
@@ -326,17 +277,13 @@ APPEND(skip2_,I):
         or	len2, len2
 	je	%%_len_is_0
 
-%if NUM_LANES > 4
 	pshufb	xmm1, [rel dupw]        ; duplicate words across all lanes
-%else
-        pshuflw	xmm1, xmm1, 0
-%endif
         psubw	xmm0, xmm1
 	movdqa	[state + _aes_cmac_lens], xmm0
 
         ; "state" and "args" are the same address, arg1
 	; len2 is arg2
-	call    AES_CBC_MAC
+	call    %%AES_CBC_MAC
 	; state and idx are intact
 
         movdqa  xmm0, [state + _aes_cmac_lens]  ; preload lens
@@ -361,7 +308,6 @@ APPEND(skip2_,I):
         por     xmm1, xmm2
         por     xmm0, xmm1
 
-%if NUM_LANES > 4
         pxor    xmm3, xmm3
         pcmpeqq xmm3, [state + _aes_cmac_job_in_lane + 32]
         pshufb  xmm3, [rel len_shuf_masks + 32]
@@ -372,7 +318,6 @@ APPEND(skip2_,I):
 
         por     xmm3, xmm4
         por     xmm0, xmm3
-%endif ; %%NUM_LANES > 4
 %endif ; %%SUBMIT_FLUSH == FLUSH
 
         XPINSRW xmm0, xmm1, tmp3, idx, 16, scale_x16
@@ -440,10 +385,10 @@ APPEND(skip2_,I):
 %assign I 0
 %rep NUM_LANES
         cmp     qword [state + _aes_cmac_job_in_lane + I*8], 0
-        jne     APPEND(skip_clear_,I)
+        jne     APPEND(%%_skip_clear_,I)
         movdqa  [state + _aes_cmac_args_IV + I*16], xmm0
         movdqa  [state + _aes_cmac_scratch + I*16], xmm0
-APPEND(skip_clear_,I):
+APPEND(%%_skip_clear_,I):
 %assign I (I+1)
 %endrep
 %endif ;; SUBMIT
@@ -566,18 +511,4 @@ APPEND(skip_clear_,I):
 %endif
 %endmacro
 
-align 64
-; IMB_JOB * submit_job_aes_cmac_auth_sse(MB_MGR_CMAC_OOO *state, IMB_JOB *job)
-; arg 1 : state
-; arg 2 : job
-MKGLOBAL(SUBMIT_JOB_AES_CMAC_AUTH,function,internal)
-SUBMIT_JOB_AES_CMAC_AUTH:
-        GENERIC_SUBMIT_FLUSH_JOB_AES_CMAC_SSE SUBMIT
-
-; IMB_JOB * flush_job_aes_cmac_auth_sse(MB_MGR_CMAC_OOO *state)
-; arg 1 : state
-MKGLOBAL(FLUSH_JOB_AES_CMAC_AUTH,function,internal)
-FLUSH_JOB_AES_CMAC_AUTH:
-        GENERIC_SUBMIT_FLUSH_JOB_AES_CMAC_SSE FLUSH
-
-mksection stack-noexec
+%endif ;; MB_MGR_AES_CMAC_SUBMIT_FLUSH_SSE_INC

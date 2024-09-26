@@ -1,5 +1,5 @@
 ;;
-;; Copyright (c) 2019-2023, Intel Corporation
+;; Copyright (c) 2019-2024, Intel Corporation
 ;;
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
@@ -25,6 +25,9 @@
 ;; OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;
 
+%ifndef MB_MGR_AES_CCM_SUBMIT_FLUSH_SSE_INC
+%define MB_MGR_AES_CCM_SUBMIT_FLUSH_SSE_INC
+
 %include "include/os.inc"
 %include "include/imb_job.inc"
 %include "include/mb_mgr_datastruct.inc"
@@ -33,68 +36,9 @@
 %include "include/memcpy.inc"
 %include "include/cet.inc"
 
-%ifndef NUM_LANES
-%define NUM_LANES 4
-%endif
-
-%ifndef AES_CBC_MAC
-%define AES_CBC_MAC aes128_cbc_mac_x4
-%define SUBMIT_JOB_AES_CCM_AUTH submit_job_aes128_ccm_auth_sse
-%define FLUSH_JOB_AES_CCM_AUTH flush_job_aes128_ccm_auth_sse
-%endif
-
-extern AES_CBC_MAC
-
-mksection .rodata
-default rel
-
-align 16
-len_masks:
-        dq 0x000000000000FFFF, 0x0000000000000000
-        dq 0x00000000FFFF0000, 0x0000000000000000
-        dq 0x0000FFFF00000000, 0x0000000000000000
-        dq 0xFFFF000000000000, 0x0000000000000000
-%if NUM_LANES > 4
-        dq 0x0000000000000000, 0x000000000000FFFF
-	dq 0x0000000000000000, 0x00000000FFFF0000
-	dq 0x0000000000000000, 0x0000FFFF00000000
-	dq 0x0000000000000000, 0xFFFF000000000000
-%endif
-
-align 16
-len_shuf_masks:
-        dq 0XFFFFFFFF09080100, 0XFFFFFFFFFFFFFFFF
-        dq 0X09080100FFFFFFFF, 0XFFFFFFFFFFFFFFFF
-        dq 0XFFFFFFFFFFFFFFFF, 0XFFFFFFFF09080100
-        dq 0XFFFFFFFFFFFFFFFF, 0X09080100FFFFFFFF
-
-%if NUM_LANES > 4
-align 16
-dupw:
-	dq 0x0100010001000100, 0x0100010001000100
-%endif
-
-align 16
-counter_mask:
-	dq 0xFFFFFFFFFFFFFF07, 0x0000FFFFFFFFFFFF
-
-one:    dq  1
-two:    dq  2
-three:  dq  3
-%if NUM_LANES > 4
-four:	dq  4
-five:	dq  5
-six:	dq  6
-seven:	dq  7
-%endif
-
-mksection .text
+%define NUM_LANES 8
 
 %define APPEND(a,b) a %+ b
-
-%ifndef NROUNDS
-%define NROUNDS 9 ; AES-CCM-128
-%endif
 
 %ifdef LINUX
 %define arg1    rdi
@@ -155,17 +99,17 @@ endstruc
 ;;; ===========================================================================
 ;;; ===========================================================================
 
-%macro  ENCRYPT_SINGLE_BLOCK 2
-%define %%GDATA %1
-%define %%XMM0  %2
-
-                pxor           %%XMM0, [%%GDATA+16*0]
+%macro  ENCRYPT_SINGLE_BLOCK 3
+%define %%KEYP          %1 ;; [in] pointer to AES round keys
+%define %%XMM0          %2 ;; [in/out] XMM SIMD register with data block for encryption
+%define %%NROUNDS       %3 ;; [in] number of AESENC rounds (9 - aes128; 11 - aes192; 13 - aes256)
+                pxor           %%XMM0, [%%KEYP+16*0]
 %assign i 1
-%rep NROUNDS
-                aesenc         %%XMM0, [%%GDATA+16*i]
+%rep %%NROUNDS
+                aesenc         %%XMM0, [%%KEYP+16*i]
 %assign i (i+1)
 %endrep
-                aesenclast     %%XMM0, [%%GDATA+16*i]
+                aesenclast     %%XMM0, [%%KEYP+16*i]
 %endmacro
 
 ;; Set all NULL job lanes to UINT16_MAX
@@ -185,7 +129,6 @@ endstruc
         por             %%CCM_LENS, %%XTMP0
         por             %%CCM_LENS, %%XTMP1
 
-%if NUM_LANES > 4
         pxor            %%XTMP2, %%XTMP2
         pxor            %%XTMP3, %%XTMP3
         pcmpeqq         %%XTMP2, [state + _aes_ccm_job_in_lane + 32]
@@ -194,15 +137,16 @@ endstruc
         pshufb          %%XTMP3, [rel len_shuf_masks + 48]
         por             %%CCM_LENS, %%XTMP2
         por             %%CCM_LENS, %%XTMP3
-%endif
 %endmacro
 
 ;;; ===========================================================================
 ;;; AES CCM auth job submit & flush
 ;;; ===========================================================================
 ;;; SUBMIT_FLUSH [in] - SUBMIT, FLUSH job selection
-%macro GENERIC_SUBMIT_FLUSH_JOB_AES_CCM_AUTH_SSE 1
-%define %%SUBMIT_FLUSH %1
+%macro GENERIC_SUBMIT_FLUSH_JOB_AES_CCM_AUTH_SSE 3
+%define %%SUBMIT_FLUSH %1 ;; [in] "SUBMIT" or "FLUSH" selection
+%define %%AES_CBC_MAC  %2 ;; [in] function to process CBC MAC algorithm on all lanes
+%define %%NROUNDS      %3 ;; [in] number of AESENC rounds (9 - aes128; 11 - aes192; 13 - aes256)
 
         mov     rax, rsp
         sub     rsp, STACK_size
@@ -366,7 +310,6 @@ endstruc
         cmovne  good_lane, [rel two]
         cmp     qword [state + _aes_ccm_job_in_lane + 3*8], 0
         cmovne  good_lane, [rel three]
-%if NUM_LANES > 4
         cmp     qword [state + _aes_ccm_job_in_lane + 4*8], 0
         cmovne  good_lane, [rel four]
         cmp     qword [state + _aes_ccm_job_in_lane + 5*8], 0
@@ -375,7 +318,6 @@ endstruc
         cmovne  good_lane, [rel six]
         cmp     qword [state + _aes_ccm_job_in_lane + 7*8], 0
         cmovne  good_lane, [rel seven]
-%endif
 
         ; Copy good_lane to empty lanes
         movzx   tmp,  word [state + _aes_ccm_init_done + good_lane*2]
@@ -388,13 +330,13 @@ endstruc
 %assign I 0
 %rep NUM_LANES
         cmp     qword [state + _aes_ccm_job_in_lane + I*8], 0
-        jne     APPEND(skip_,I)
+        jne     APPEND(%%_skip_,I)
         por     ccm_lens, [rel len_masks + 16*I]
         mov     [state + _aes_ccm_init_done + I*2], WORD(tmp)
         mov     [state + _aes_ccm_args_in + I*8], tmp2
         mov     [state + _aes_ccm_args_keys + I*8], tmp3
         movdqa  [state + _aes_ccm_args_IV + I*16], xtmp0
-APPEND(skip_,I):
+APPEND(%%_skip_,I):
 %assign I (I+1)
 %endrep
         movdqa  [state + _aes_ccm_lens], ccm_lens
@@ -412,9 +354,9 @@ APPEND(skip_,I):
 %assign I 0
 %rep NUM_LANES
         cmp     qword [state + _aes_ccm_job_in_lane + I*8], 0
-        jne     APPEND(skip2_,I)
+        jne     APPEND(%%_skip2_,I)
         mov     [state + _aes_ccm_args_in + I*8], tmp2
-APPEND(skip2_,I):
+APPEND(%%_skip2_,I):
 %assign I (I+1)
 %endrep
 
@@ -429,17 +371,13 @@ APPEND(skip2_,I):
         or      len2, len2
         je      %%_len_is_0
         ;; subtract min length from all lengths
-%if NUM_LANES > 4
 	pshufb	min_len_idx, [rel dupw]     ; duplicate words across all lanes
-%else
-        pshuflw min_len_idx, min_len_idx, 0 ; broadcast min length
-%endif
         psubw   ccm_lens, min_len_idx
         movdqa  [state + _aes_ccm_lens], ccm_lens
 
         ; "state" and "args" are the same address, arg1
         ; len2 is arg2
-        call    AES_CBC_MAC
+        call    %%AES_CBC_MAC
         ; state and min_idx are intact
 
 %%_len_is_0:
@@ -460,7 +398,7 @@ APPEND(skip2_,I):
         pand   init_block0, [rel counter_mask]
 
         mov     tmp2, [state + _aes_ccm_args_keys + tmp]
-        ENCRYPT_SINGLE_BLOCK tmp2, init_block0
+        ENCRYPT_SINGLE_BLOCK tmp2, init_block0, %%NROUNDS
         pxor    init_block0, [state + _aes_ccm_args_IV + tmp * 2]
 
         ;; Copy Mlen bytes into auth_tag_output (Mlen = 4,6,8,10,12,14,16)
@@ -500,14 +438,14 @@ APPEND(skip2_,I):
 %assign I 0
 %rep NUM_LANES
         cmp     qword [state + _aes_ccm_job_in_lane + I*8], 0
-        jne     APPEND(skip_clear_,I)
+        jne     APPEND(%%_skip_clear_,I)
         movdqa  [state + _aes_ccm_args_IV + I*16],          xtmp0
         movdqa  [state + _aes_ccm_init_blocks + I*64],      xtmp0
         movdqa  [state + _aes_ccm_init_blocks + I*64 + 16], xtmp0
         movdqa  [state + _aes_ccm_init_blocks + I*64 + 32], xtmp0
         movdqa  [state + _aes_ccm_init_blocks + I*64 + 48], xtmp0
         mov     qword [state + _aes_ccm_args_keys + I*8], 0
-APPEND(skip_clear_,I):
+APPEND(%%_skip_clear_,I):
 %assign I (I+1)
 %endrep
 
@@ -609,20 +547,4 @@ APPEND(skip_clear_,I):
 %endif
 %endmacro
 
-align 64
-; IMB_JOB * submit_job_aes_ccm_auth_sse(MB_MGR_CCM_OOO *state, IMB_JOB *job)
-; arg 1 : state
-; arg 2 : job
-MKGLOBAL(SUBMIT_JOB_AES_CCM_AUTH,function,internal)
-SUBMIT_JOB_AES_CCM_AUTH:
-        endbranch64
-        GENERIC_SUBMIT_FLUSH_JOB_AES_CCM_AUTH_SSE SUBMIT
-
-; IMB_JOB * flush_job_aes_ccm_auth_sse(MB_MGR_CCM_OOO *state)
-; arg 1 : state
-MKGLOBAL(FLUSH_JOB_AES_CCM_AUTH,function,internal)
-FLUSH_JOB_AES_CCM_AUTH:
-        endbranch64
-        GENERIC_SUBMIT_FLUSH_JOB_AES_CCM_AUTH_SSE FLUSH
-
-mksection stack-noexec
+%endif ;; MB_MGR_AES_CCM_SUBMIT_FLUSH_SSE_INC

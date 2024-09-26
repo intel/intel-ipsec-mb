@@ -26,8 +26,7 @@
 ;;
 
 %define NUM_LANES 8
-%define AES_CBC_MAC aes128_cbc_mac_x8_sse
-%define SUBMIT_JOB_AES_CCM_AUTH submit_job_aes128_ccm_auth_x8_sse
-%define FLUSH_JOB_AES_CCM_AUTH flush_job_aes128_ccm_auth_x8_sse
+%define AES_CBC_ENC_X4 aes_cbc_enc_128_x8_sse
+%define FLUSH_JOB_AES_ENC flush_job_aes128_enc_x8_sse
 
-%include "sse_t1/mb_mgr_aes128_ccm_auth_submit_flush_x4_sse.asm"
+%include "include/mb_mgr_aes_cbc_enc_flush_sse.inc"

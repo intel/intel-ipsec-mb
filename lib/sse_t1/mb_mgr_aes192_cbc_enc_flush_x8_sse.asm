@@ -1,5 +1,5 @@
 ;;
-;; Copyright (c) 2012-2023, Intel Corporation
+;; Copyright (c) 2020-2023, Intel Corporation
 ;;
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
@@ -25,6 +25,8 @@
 ;; OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;
 
-%define AES_CBC_ENC_X4 aes_cbc_enc_256_x4
-%define SUBMIT_JOB_AES_ENC submit_job_aes256_enc_sse
-%include "sse_t1/mb_mgr_aes128_cbc_enc_submit_x4_sse.asm"
+%define NUM_LANES 8
+%define AES_CBC_ENC_X4 aes_cbc_enc_192_x8_sse
+%define FLUSH_JOB_AES_ENC flush_job_aes192_enc_x8_sse
+
+%include "include/mb_mgr_aes_cbc_enc_flush_sse.inc"

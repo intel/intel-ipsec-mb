@@ -46,4 +46,4 @@
 %define ARG_KEYS _aesxcbcarg_keys
 %define ARG_IV   _aesxcbcarg_ICV
 
-%include "sse_t1/aes128_cbc_enc_x4_sse.asm"
+%include "include/aes128_cbc_enc_x4_sse.inc"

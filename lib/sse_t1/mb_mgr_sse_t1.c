@@ -93,21 +93,21 @@
 #define SUBMIT_JOB_AES_GCM_ENC submit_job_aes_gcm_enc_sse
 
 /* AES-CBC */
-#define SUBMIT_JOB_AES_CBC_128_ENC submit_job_aes128_enc_sse
+#define SUBMIT_JOB_AES_CBC_128_ENC submit_job_aes128_enc_x8_sse
 #define SUBMIT_JOB_AES_CBC_128_DEC submit_job_aes128_dec_sse
-#define FLUSH_JOB_AES_CBC_128_ENC  flush_job_aes128_enc_sse
+#define FLUSH_JOB_AES_CBC_128_ENC  flush_job_aes128_enc_x8_sse
 
-#define SUBMIT_JOB_AES_CBC_192_ENC submit_job_aes192_enc_sse
+#define SUBMIT_JOB_AES_CBC_192_ENC submit_job_aes192_enc_x8_sse
 #define SUBMIT_JOB_AES_CBC_192_DEC submit_job_aes192_dec_sse
-#define FLUSH_JOB_AES_CBC_192_ENC  flush_job_aes192_enc_sse
+#define FLUSH_JOB_AES_CBC_192_ENC  flush_job_aes192_enc_x8_sse
 
-#define SUBMIT_JOB_AES_CBC_256_ENC submit_job_aes256_enc_sse
+#define SUBMIT_JOB_AES_CBC_256_ENC submit_job_aes256_enc_x8_sse
 #define SUBMIT_JOB_AES_CBC_256_DEC submit_job_aes256_dec_sse
-#define FLUSH_JOB_AES_CBC_256_ENC  flush_job_aes256_enc_sse
+#define FLUSH_JOB_AES_CBC_256_ENC  flush_job_aes256_enc_x8_sse
 
-#define AES_CBC_DEC_128 aes_cbc_dec_128_sse
-#define AES_CBC_DEC_192 aes_cbc_dec_192_sse
-#define AES_CBC_DEC_256 aes_cbc_dec_256_sse
+#define AES_CBC_DEC_128 aes_cbc_dec_128_by8_sse
+#define AES_CBC_DEC_192 aes_cbc_dec_192_by8_sse
+#define AES_CBC_DEC_256 aes_cbc_dec_256_by8_sse
 
 /* AES-CBCS */
 #define SUBMIT_JOB_AES128_CBCS_1_9_ENC submit_job_aes128_cbcs_1_9_enc_sse
@@ -123,12 +123,12 @@
 #define SUBMIT_JOB_AES_ECB_256_ENC submit_job_aes_ecb_256_enc_sse
 #define SUBMIT_JOB_AES_ECB_256_DEC submit_job_aes_ecb_256_dec_sse
 
-#define AES_ECB_ENC_128 aes_ecb_enc_128_by4_sse
-#define AES_ECB_ENC_192 aes_ecb_enc_192_by4_sse
-#define AES_ECB_ENC_256 aes_ecb_enc_256_by4_sse
-#define AES_ECB_DEC_128 aes_ecb_dec_128_by4_sse
-#define AES_ECB_DEC_192 aes_ecb_dec_192_by4_sse
-#define AES_ECB_DEC_256 aes_ecb_dec_256_by4_sse
+#define AES_ECB_ENC_128 aes_ecb_enc_128_by8_sse
+#define AES_ECB_ENC_192 aes_ecb_enc_192_by8_sse
+#define AES_ECB_ENC_256 aes_ecb_enc_256_by8_sse
+#define AES_ECB_DEC_128 aes_ecb_dec_128_by8_sse
+#define AES_ECB_DEC_192 aes_ecb_dec_192_by8_sse
+#define AES_ECB_DEC_256 aes_ecb_dec_256_by8_sse
 
 /* AES-CTR */
 #define AES_CTR_128     aes_cntr_128_sse
@@ -142,18 +142,18 @@
 #define AES_CNTR_CCM_128 aes_cntr_ccm_128_sse
 #define AES_CNTR_CCM_256 aes_cntr_ccm_256_sse
 
-#define FLUSH_JOB_AES128_CCM_AUTH  flush_job_aes128_ccm_auth_sse
-#define SUBMIT_JOB_AES128_CCM_AUTH submit_job_aes128_ccm_auth_sse
+#define FLUSH_JOB_AES128_CCM_AUTH  flush_job_aes128_ccm_auth_x8_sse
+#define SUBMIT_JOB_AES128_CCM_AUTH submit_job_aes128_ccm_auth_x8_sse
 
-#define FLUSH_JOB_AES256_CCM_AUTH  flush_job_aes256_ccm_auth_sse
-#define SUBMIT_JOB_AES256_CCM_AUTH submit_job_aes256_ccm_auth_sse
+#define FLUSH_JOB_AES256_CCM_AUTH  flush_job_aes256_ccm_auth_x8_sse
+#define SUBMIT_JOB_AES256_CCM_AUTH submit_job_aes256_ccm_auth_x8_sse
 
 /* AES-CMAC */
-#define FLUSH_JOB_AES128_CMAC_AUTH  flush_job_aes128_cmac_auth_sse
-#define SUBMIT_JOB_AES128_CMAC_AUTH submit_job_aes128_cmac_auth_sse
+#define FLUSH_JOB_AES128_CMAC_AUTH  flush_job_aes128_cmac_auth_x8_sse
+#define SUBMIT_JOB_AES128_CMAC_AUTH submit_job_aes128_cmac_auth_x8_sse
 
-#define FLUSH_JOB_AES256_CMAC_AUTH  flush_job_aes256_cmac_auth_sse
-#define SUBMIT_JOB_AES256_CMAC_AUTH submit_job_aes256_cmac_auth_sse
+#define FLUSH_JOB_AES256_CMAC_AUTH  flush_job_aes256_cmac_auth_x8_sse
+#define SUBMIT_JOB_AES256_CMAC_AUTH submit_job_aes256_cmac_auth_x8_sse
 
 /* AES-CFB */
 #define AES_CFB_128_ONE aes_cfb_128_one_sse
@@ -276,15 +276,15 @@ static void
 reset_ooo_mgrs(IMB_MGR *state)
 {
         /* Init AES out-of-order fields */
-        ooo_mgr_aes_reset(state->aes128_ooo, 4);
-        ooo_mgr_aes_reset(state->aes192_ooo, 4);
-        ooo_mgr_aes_reset(state->aes256_ooo, 4);
+        ooo_mgr_aes_reset(state->aes128_ooo, 8);
+        ooo_mgr_aes_reset(state->aes192_ooo, 8);
+        ooo_mgr_aes_reset(state->aes256_ooo, 8);
 
         /* DOCSIS SEC BPI uses same settings as AES CBC */
-        ooo_mgr_docsis_aes_reset(state->docsis128_sec_ooo, 4);
-        ooo_mgr_docsis_aes_reset(state->docsis128_crc32_sec_ooo, 4);
-        ooo_mgr_docsis_aes_reset(state->docsis256_sec_ooo, 4);
-        ooo_mgr_docsis_aes_reset(state->docsis256_crc32_sec_ooo, 4);
+        ooo_mgr_docsis_aes_reset(state->docsis128_sec_ooo, 8);
+        ooo_mgr_docsis_aes_reset(state->docsis128_crc32_sec_ooo, 8);
+        ooo_mgr_docsis_aes_reset(state->docsis256_sec_ooo, 8);
+        ooo_mgr_docsis_aes_reset(state->docsis256_crc32_sec_ooo, 8);
 
         /* Init ZUC out-of-order fields */
         ooo_mgr_zuc_reset(state->zuc_eea3_ooo, 4);
@@ -316,12 +316,12 @@ reset_ooo_mgrs(IMB_MGR *state)
         ooo_mgr_aes_xcbc_reset(state->aes_xcbc_ooo, 4);
 
         /* Init AES-CCM auth out-of-order fields */
-        ooo_mgr_ccm_reset(state->aes_ccm_ooo, 4);
-        ooo_mgr_ccm_reset(state->aes256_ccm_ooo, 4);
+        ooo_mgr_ccm_reset(state->aes_ccm_ooo, 8);
+        ooo_mgr_ccm_reset(state->aes256_ccm_ooo, 8);
 
         /* Init AES-CMAC auth out-of-order fields */
-        ooo_mgr_cmac_reset(state->aes_cmac_ooo, 4);
-        ooo_mgr_cmac_reset(state->aes256_cmac_ooo, 4);
+        ooo_mgr_cmac_reset(state->aes_cmac_ooo, 8);
+        ooo_mgr_cmac_reset(state->aes256_cmac_ooo, 8);
 
         /* Init AES-CBCS out-of-order fields */
         ooo_mgr_aes_reset(state->aes128_cbcs_ooo, 4);

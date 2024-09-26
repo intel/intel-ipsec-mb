@@ -1,5 +1,5 @@
 ;;
-;; Copyright (c) 2020-2023, Intel Corporation
+;; Copyright (c) 2022-2023, Intel Corporation
 ;;
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
@@ -25,8 +25,9 @@
 ;; OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;
 
-%define NUM_LANES 8
-%define AES_CBC_ENC_X4 aes_cbc_enc_128_x8_sse
-%define SUBMIT_JOB_AES_ENC submit_job_aes128_enc_x8_sse
+; routine to do AES ECB 192 encrypt/decrypt on 16n bytes doing AES by 8
 
-%include "sse_t1/mb_mgr_aes128_cbc_enc_submit_x4_sse.asm"
+%define AES_ECB_NROUNDS 12
+
+%include "include/os.inc"
+%include "include/aes_ecb_by8_sse.inc"

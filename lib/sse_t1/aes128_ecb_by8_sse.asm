@@ -1,5 +1,5 @@
 ;;
-;; Copyright (c) 2022-2023, Intel Corporation
+;; Copyright (c) 2021-2023, Intel Corporation
 ;;
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
@@ -25,9 +25,9 @@
 ;; OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;
 
-; routine to do AES ECB 256 encrypt/decrypt on 16n bytes doing AES by 8
+; routine to do AES ECB 128 encrypt/decrypt on 16n bytes doing AES by 8
 
-%define AES_ECB_NROUNDS 14
+%define AES_ECB_NROUNDS 10
 
 %include "include/os.inc"
-%include "sse_t3/aes128_ecb_by8_sse.asm"
+%include "include/aes_ecb_by8_sse.inc"
