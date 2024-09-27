@@ -332,7 +332,7 @@ __forceinline IMB_JOB *
 SUBMIT_JOB_SM4_CNTR(IMB_JOB *job)
 {
         SM4_CNTR(job->src + job->cipher_start_src_offset_in_bytes, job->dst,
-                 job->msg_len_to_cipher_in_bytes, job->dec_keys, job->iv, job->iv_len_in_bytes);
+                 job->msg_len_to_cipher_in_bytes, job->enc_keys, job->iv, job->iv_len_in_bytes);
         job->status |= IMB_STATUS_COMPLETED_CIPHER;
         return job;
 }
