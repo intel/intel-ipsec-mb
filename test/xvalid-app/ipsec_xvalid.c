@@ -1617,6 +1617,7 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys, const uint8_t *ciph
                 case IMB_CIPHER_PON_AES_CNTR:
                 case IMB_CIPHER_CBC:
                 case IMB_CIPHER_SM4_CBC:
+                case IMB_CIPHER_SM4_CNTR:
                 case IMB_CIPHER_CCM:
                 case IMB_CIPHER_CNTR:
                 case IMB_CIPHER_CNTR_BITLEN:
