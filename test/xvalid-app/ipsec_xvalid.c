@@ -2086,10 +2086,11 @@ set_job_ctx(struct job_ctx *ctx, const unsigned imix, const unsigned safe_check,
                         random_num = 16;
 
                 /*
-                 * CBC and ECB operation modes do not support lengths
+                 * CBC, CFB, CBCS and ECB operation modes do not support lengths
                  * which are non-multiple of block size
                  */
                 if (params->cipher_mode == IMB_CIPHER_CBC ||
+                    params->cipher_mode == IMB_CIPHER_CFB ||
                     params->cipher_mode == IMB_CIPHER_ECB ||
                     params->cipher_mode == IMB_CIPHER_CBCS_1_9) {
                         random_num += (IMB_AES_BLOCK_SIZE - 1);
@@ -2630,10 +2631,11 @@ test_single(IMB_MGR *enc_mgr, const IMB_ARCH enc_arch, IMB_MGR *dec_mgr, const I
                         params->buf_size = buf_size;
 
                         /*
-                         * CBC and ECB operation modes do not support lengths
+                         * CBC, CFB, CBCS and ECB operation modes do not support lengths
                          * which are non-multiple of block size
                          */
                         if (params->cipher_mode == IMB_CIPHER_CBC ||
+                            params->cipher_mode == IMB_CIPHER_CFB ||
                             params->cipher_mode == IMB_CIPHER_ECB ||
                             params->cipher_mode == IMB_CIPHER_CBCS_1_9)
                                 if ((buf_size % IMB_AES_BLOCK_SIZE) != 0)
