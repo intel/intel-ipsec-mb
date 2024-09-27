@@ -68,6 +68,35 @@ aes_cfb_128_one_avx2(void *out, const void *in, const void *iv, const void *keys
 IMB_DLL_EXPORT void
 aes_cfb_256_one_avx2(void *out, const void *in, const void *iv, const void *keys, uint64_t len);
 
+/* CRC */
+uint32_t
+crc16_x25_avx(const void *msg, const uint64_t len);
+uint32_t
+crc32_sctp_avx(const void *msg, const uint64_t len);
+uint32_t
+crc24_lte_a_avx(const void *msg, const uint64_t len);
+uint32_t
+crc24_lte_b_avx(const void *msg, const uint64_t len);
+uint32_t
+crc16_fp_data_avx(const void *msg, const uint64_t len);
+uint32_t
+crc11_fp_header_avx(const void *msg, const uint64_t len);
+uint32_t
+crc7_fp_header_avx(const void *msg, const uint64_t len);
+uint32_t
+crc10_iuup_data_avx(const void *msg, const uint64_t len);
+uint32_t
+crc6_iuup_header_avx(const void *msg, const uint64_t len);
+uint32_t
+crc32_wimax_ofdma_data_avx(const void *msg, const uint64_t len);
+uint32_t
+crc8_wimax_ofdma_hcs_avx(const void *msg, const uint64_t len);
+
+uint32_t
+ethernet_fcs_avx(const void *msg, const uint64_t len);
+uint32_t
+ethernet_fcs_avx_local(const void *msg, const uint64_t len, const void *tag_ouput);
+
 /* moved from MB MGR */
 IMB_JOB *
 submit_job_zuc_eea3_avx2(MB_MGR_ZUC_OOO *state, IMB_JOB *job);

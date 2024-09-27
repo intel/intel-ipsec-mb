@@ -499,19 +499,10 @@ asm_avx_lib_objs := \
 	mb_mgr_aes256_ccm_auth_submit_flush_x8_avx.o \
 	mb_mgr_aes128_xcbc_flush_x8_avx.o \
 	mb_mgr_aes128_xcbc_submit_x8_avx.o \
-	ethernet_fcs_avx.o \
-	crc16_x25_avx.o \
 	aes128_cbcs_1_9_enc_x8_avx.o \
 	aes128_cbcs_1_9_dec_by8_avx.o \
 	mb_mgr_aes128_cbcs_1_9_submit_avx.o \
 	mb_mgr_aes128_cbcs_1_9_flush_avx.o \
-	crc32_refl_by8_avx.o \
-	crc32_by8_avx.o \
-	crc32_sctp_avx.o \
-	crc32_lte_avx.o \
-	crc32_fp_avx.o \
-	crc32_iuup_avx.o \
-	crc32_wimax_avx.o \
 	chacha20_avx.o \
         memcpy_avx.o \
 	snow_v_avx.o \
@@ -527,6 +518,15 @@ asm_avx2_lib_objs := \
 	sha512_x4_avx2.o \
 	zuc_x8_avx2.o \
 	zuc_x8_gfni_avx2.o \
+	crc16_x25_avx.o \
+	crc32_refl_by8_avx.o \
+	crc32_by8_avx.o \
+	crc32_sctp_avx.o \
+	crc32_lte_avx.o \
+	crc32_fp_avx.o \
+	crc32_iuup_avx.o \
+	crc32_wimax_avx.o \
+	ethernet_fcs_avx.o \
 	aes128_ecb_vaes_avx2.o \
 	aes192_ecb_vaes_avx2.o \
 	aes256_ecb_vaes_avx2.o \

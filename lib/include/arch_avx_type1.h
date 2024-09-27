@@ -199,33 +199,6 @@ aes_cmac_256_subkey_gen_avx(const void *key_exp, void *key1, void *key2);
 void
 aes128_cbc_mac_x8(AES_ARGS *args, uint64_t len);
 
-uint32_t
-ethernet_fcs_avx(const void *msg, const uint64_t len);
-uint32_t
-ethernet_fcs_avx_local(const void *msg, const uint64_t len, const void *tag_ouput);
-uint32_t
-crc16_x25_avx(const void *msg, const uint64_t len);
-uint32_t
-crc32_sctp_avx(const void *msg, const uint64_t len);
-uint32_t
-crc24_lte_a_avx(const void *msg, const uint64_t len);
-uint32_t
-crc24_lte_b_avx(const void *msg, const uint64_t len);
-uint32_t
-crc16_fp_data_avx(const void *msg, const uint64_t len);
-uint32_t
-crc11_fp_header_avx(const void *msg, const uint64_t len);
-uint32_t
-crc7_fp_header_avx(const void *msg, const uint64_t len);
-uint32_t
-crc10_iuup_data_avx(const void *msg, const uint64_t len);
-uint32_t
-crc6_iuup_header_avx(const void *msg, const uint64_t len);
-uint32_t
-crc32_wimax_ofdma_data_avx(const void *msg, const uint64_t len);
-uint32_t
-crc8_wimax_ofdma_hcs_avx(const void *msg, const uint64_t len);
-
 /* SHA */
 void
 call_sha1_mult_avx_from_c(SHA1_ARGS *args, uint32_t size_in_blocks);

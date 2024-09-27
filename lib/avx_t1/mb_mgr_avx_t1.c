@@ -251,7 +251,7 @@ flush_snow3g_uea2_job_avx_t1(IMB_MGR *state)
 #define FLUSH_JOB_SNOW3G_UIA2  flush_job_snow3g_uia2_sse
 
 /* AES-DOCSIS */
-#define ETHERNET_FCS ethernet_fcs_avx_local
+#define ETHERNET_FCS ethernet_fcs_sse_local
 
 /* SM4 */
 #define SM4_ECB     sm4_ecb_sse
@@ -448,18 +448,18 @@ init_mb_mgr_avx_t1_internal(IMB_MGR *state, const int reset_mgrs)
         state->hec_32 = hec_32_avx;
         state->hec_64 = hec_64_avx;
 
-        state->crc32_ethernet_fcs = ethernet_fcs_avx;
-        state->crc16_x25 = crc16_x25_avx;
-        state->crc32_sctp = crc32_sctp_avx;
-        state->crc24_lte_a = crc24_lte_a_avx;
-        state->crc24_lte_b = crc24_lte_b_avx;
-        state->crc16_fp_data = crc16_fp_data_avx;
-        state->crc11_fp_header = crc11_fp_header_avx;
-        state->crc7_fp_header = crc7_fp_header_avx;
-        state->crc10_iuup_data = crc10_iuup_data_avx;
-        state->crc6_iuup_header = crc6_iuup_header_avx;
-        state->crc32_wimax_ofdma_data = crc32_wimax_ofdma_data_avx;
-        state->crc8_wimax_ofdma_hcs = crc8_wimax_ofdma_hcs_avx;
+        state->crc32_ethernet_fcs = ethernet_fcs_sse;
+        state->crc16_x25 = crc16_x25_sse;
+        state->crc32_sctp = crc32_sctp_sse;
+        state->crc24_lte_a = crc24_lte_a_sse;
+        state->crc24_lte_b = crc24_lte_b_sse;
+        state->crc16_fp_data = crc16_fp_data_sse;
+        state->crc11_fp_header = crc11_fp_header_sse;
+        state->crc7_fp_header = crc7_fp_header_sse;
+        state->crc10_iuup_data = crc10_iuup_data_sse;
+        state->crc6_iuup_header = crc6_iuup_header_sse;
+        state->crc32_wimax_ofdma_data = crc32_wimax_ofdma_data_sse;
+        state->crc8_wimax_ofdma_hcs = crc8_wimax_ofdma_hcs_sse;
 
         state->chacha20_poly1305_init = init_chacha20_poly1305_avx;
         state->chacha20_poly1305_enc_update = update_enc_chacha20_poly1305_avx;
