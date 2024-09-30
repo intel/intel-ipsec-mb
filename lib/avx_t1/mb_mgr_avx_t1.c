@@ -150,11 +150,11 @@
 #define SUBMIT_JOB_AES256_CCM_AUTH submit_job_aes256_ccm_auth_x8_sse
 
 /* AES-CMAC */
-#define FLUSH_JOB_AES128_CMAC_AUTH  flush_job_aes128_cmac_auth_avx
-#define SUBMIT_JOB_AES128_CMAC_AUTH submit_job_aes128_cmac_auth_avx
+#define FLUSH_JOB_AES128_CMAC_AUTH  flush_job_aes128_cmac_auth_x8_sse
+#define SUBMIT_JOB_AES128_CMAC_AUTH submit_job_aes128_cmac_auth_x8_sse
 
-#define FLUSH_JOB_AES256_CMAC_AUTH  flush_job_aes256_cmac_auth_avx
-#define SUBMIT_JOB_AES256_CMAC_AUTH submit_job_aes256_cmac_auth_avx
+#define FLUSH_JOB_AES256_CMAC_AUTH  flush_job_aes256_cmac_auth_x8_sse
+#define SUBMIT_JOB_AES256_CMAC_AUTH submit_job_aes256_cmac_auth_x8_sse
 
 /* AES-CFB ONE BLOCK */
 #define AES_CFB_128_ONE aes_cfb_128_one_sse
@@ -222,8 +222,8 @@
 #define FLUSH_JOB_ZUC256_EIA3  flush_job_zuc256_eia3_no_gfni_sse
 
 /* SNOW-V */
-#define SUBMIT_JOB_SNOW_V      snow_v_avx
-#define SUBMIT_JOB_SNOW_V_AEAD snow_v_aead_init_avx
+#define SUBMIT_JOB_SNOW_V      snow_v_sse
+#define SUBMIT_JOB_SNOW_V_AEAD snow_v_aead_init_sse
 
 /* SNOW3G UE2 & UIA2 */
 static IMB_JOB *
@@ -391,14 +391,14 @@ init_mb_mgr_avx_t1_internal(IMB_MGR *state, const int reset_mgrs)
         state->submit_aead_burst_nocheck = SUBMIT_AEAD_BURST_NOCHECK;
         state->set_suite_id = SET_SUITE_ID_FN;
 
-        state->keyexp_128 = aes_keyexp_128_avx;
-        state->keyexp_192 = aes_keyexp_192_avx;
-        state->keyexp_256 = aes_keyexp_256_avx;
+        state->keyexp_128 = aes_keyexp_128_sse;
+        state->keyexp_192 = aes_keyexp_192_sse;
+        state->keyexp_256 = aes_keyexp_256_sse;
 
-        state->cmac_subkey_gen_128 = aes_cmac_subkey_gen_avx;
-        state->cmac_subkey_gen_256 = aes_cmac_256_subkey_gen_avx;
+        state->cmac_subkey_gen_128 = aes_cmac_subkey_gen_sse;
+        state->cmac_subkey_gen_256 = aes_cmac_256_subkey_gen_sse;
 
-        state->xcbc_keyexp = aes_xcbc_expand_key_avx;
+        state->xcbc_keyexp = aes_xcbc_expand_key_sse;
         state->des_key_sched = des_key_schedule;
 
         state->sha1_one_block = sha1_one_block_sse;
@@ -413,8 +413,8 @@ init_mb_mgr_avx_t1_internal(IMB_MGR *state, const int reset_mgrs)
         state->sha512 = sha512_sse;
         state->md5_one_block = md5_one_block_sse;
 
-        state->aes128_cfb_one = aes_cfb_128_one_avx;
-        state->aes256_cfb_one = aes_cfb_256_one_avx;
+        state->aes128_cfb_one = aes_cfb_128_one_sse;
+        state->aes256_cfb_one = aes_cfb_256_one_sse;
 
         state->eea3_1_buffer = zuc_eea3_1_buffer_sse;
         state->eea3_4_buffer = zuc_eea3_4_buffer_sse;
@@ -446,8 +446,8 @@ init_mb_mgr_avx_t1_internal(IMB_MGR *state, const int reset_mgrs)
         state->snow3g_init_key_sched = snow3g_init_key_sched_sse;
         state->snow3g_key_sched_size = snow3g_key_sched_size_sse;
 
-        state->hec_32 = hec_32_avx;
-        state->hec_64 = hec_64_avx;
+        state->hec_32 = hec_32_sse;
+        state->hec_64 = hec_64_sse;
 
         state->crc32_ethernet_fcs = ethernet_fcs_sse;
         state->crc16_x25 = crc16_x25_sse;
@@ -511,8 +511,8 @@ init_mb_mgr_avx_t1_internal(IMB_MGR *state, const int reset_mgrs)
         state->gmac192_finalize = imb_aes_gmac_finalize_192_sse;
         state->gmac256_finalize = imb_aes_gmac_finalize_256_sse;
 
-        state->aes_ecb_128_quic = aes_ecb_quic_enc_128_avx;
-        state->aes_ecb_256_quic = aes_ecb_quic_enc_256_avx;
+        state->aes_ecb_128_quic = aes_ecb_quic_enc_128_sse;
+        state->aes_ecb_256_quic = aes_ecb_quic_enc_256_sse;
 
         state->chacha20_poly1305_quic = aead_chacha20_poly1305_avx;
         state->chacha20_hp_quic = quic_hp_chacha20_sse;

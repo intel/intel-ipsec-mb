@@ -464,15 +464,15 @@ asm_sse_lib_objs := \
 #
 # List of ASM modules (avx directory)
 #
-asm_avx_lib_objs := \
-	pon_by8_avx.o \
-        memcpy_avx.o \
-	snow_v_avx.o
+asm_avx_lib_objs := 
 
 #
 # List of ASM modules (avx2 directory)
 #
 asm_avx2_lib_objs := \
+	pon_by8_avx.o \
+        memcpy_avx.o \
+	snow_v_avx.o \
 	aes128_cbc_enc_x8_avx.o \
 	aes192_cbc_enc_x8_avx.o \
 	aes256_cbc_enc_x8_avx.o \

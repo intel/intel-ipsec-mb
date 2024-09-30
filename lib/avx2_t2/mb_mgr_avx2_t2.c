@@ -167,8 +167,8 @@
 #define SUBMIT_JOB_AES256_CMAC_AUTH submit_job_aes256_cmac_auth_avx
 
 /* AES-CFB */
-#define AES_CFB_128_ONE aes_cfb_128_one_avx2
-#define AES_CFB_256_ONE aes_cfb_256_one_avx2
+#define AES_CFB_128_ONE aes_cfb_128_one_avx
+#define AES_CFB_256_ONE aes_cfb_256_one_avx
 
 /* AES-XCBC */
 #define SUBMIT_JOB_AES_XCBC submit_job_aes_xcbc_avx
@@ -415,8 +415,8 @@ init_mb_mgr_avx2_t2_internal(IMB_MGR *state, const int reset_mgrs)
         state->sha512 = sha512_avx2;
         state->md5_one_block = md5_one_block_avx2;
 
-        state->aes128_cfb_one = aes_cfb_128_one_avx2;
-        state->aes256_cfb_one = aes_cfb_256_one_avx2;
+        state->aes128_cfb_one = aes_cfb_128_one_avx;
+        state->aes256_cfb_one = aes_cfb_256_one_avx;
 
         state->eea3_1_buffer = zuc_eea3_1_buffer_avx2;
         state->eea3_4_buffer = zuc_eea3_4_buffer_sse;

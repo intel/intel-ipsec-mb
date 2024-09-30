@@ -30,7 +30,7 @@
 #include "include/clear_regs_mem.h"
 #include "include/error.h"
 #include "include/arch_sse_type1.h"
-#include "include/arch_avx_type1.h"
+#include "include/arch_avx2_type1.h"
 
 static const uint32_t in[4 * 3] = { 0x01010101, 0x01010101, 0x01010101, 0x01010101,
                                     0x02020202, 0x02020202, 0x02020202, 0x02020202,

@@ -197,12 +197,6 @@ sha512_avx512(const void *data, const uint64_t length, void *digest);
 IMB_DLL_EXPORT void
 sha512_one_block_avx512(const void *data, void *digest);
 
-/* AES-CFB */
-IMB_DLL_EXPORT void
-aes_cfb_128_one_avx512(void *out, const void *in, const void *iv, const void *keys, uint64_t len);
-IMB_DLL_EXPORT void
-aes_cfb_256_one_avx512(void *out, const void *in, const void *iv, const void *keys, uint64_t len);
-
 IMB_DLL_EXPORT void
 set_suite_id_avx512_t1(IMB_MGR *state, IMB_JOB *job);
 

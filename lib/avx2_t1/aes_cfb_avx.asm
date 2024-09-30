@@ -171,12 +171,8 @@ mksection .text
 ;; It makes sure not to read more than LEN bytes from IN and
 ;; not to store more than LEN bytes to OUT.
 MKGLOBAL(aes_cfb_128_one_avx,function,)
-MKGLOBAL(aes_cfb_128_one_avx2,function,)
-MKGLOBAL(aes_cfb_128_one_avx512,function,)
 align 32
 aes_cfb_128_one_avx:
-aes_cfb_128_one_avx2:
-aes_cfb_128_one_avx512:
         endbranch64
         do_cfb 9
 
@@ -201,12 +197,8 @@ aes_cfb_128_one_avx512:
 ;; It makes sure not to read more than LEN bytes from IN and
 ;; not to store more than LEN bytes to OUT.
 MKGLOBAL(aes_cfb_256_one_avx,function,)
-MKGLOBAL(aes_cfb_256_one_avx2,function,)
-MKGLOBAL(aes_cfb_256_one_avx512,function,)
 align 32
 aes_cfb_256_one_avx:
-aes_cfb_256_one_avx2:
-aes_cfb_256_one_avx512:
         endbranch64
         do_cfb 13
 
