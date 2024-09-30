@@ -53,8 +53,6 @@ chacha20_enc_dec_ks(const void *src, void *dst, const uint64_t length, const voi
 {
         if (arch == IMB_ARCH_SSE)
                 chacha20_enc_dec_ks_sse(src, dst, length, key, ctx);
-        else if (arch == IMB_ARCH_AVX)
-                chacha20_enc_dec_ks_avx(src, dst, length, key, ctx);
         else if (arch == IMB_ARCH_AVX2)
                 chacha20_enc_dec_ks_avx2(src, dst, length, key, ctx);
         else /* IMB_ARCH_AVX512 */
@@ -523,11 +521,8 @@ aead_chacha20_poly1305(IMB_JOB *job, const IMB_ARCH arch, const unsigned ifma)
         if (job->cipher_direction == IMB_DIR_ENCRYPT) {
                 switch (arch) {
                 case IMB_ARCH_SSE:
-                        submit_job_chacha20_poly_enc_sse(job, ks);
-                        break;
                 case IMB_ARCH_AVX:
-                        submit_job_chacha20_enc_dec_avx(job);
-                        poly1305_key_gen_avx(job->enc_keys, job->iv, ks);
+                        submit_job_chacha20_poly_enc_sse(job, ks);
                         break;
                 case IMB_ARCH_AVX2:
                         submit_job_chacha20_enc_dec_avx2(job);
@@ -549,10 +544,10 @@ aead_chacha20_poly1305(IMB_JOB *job, const IMB_ARCH arch, const unsigned ifma)
                 /* generate key for authentication */
                 switch (arch) {
                 case IMB_ARCH_SSE:
+                case IMB_ARCH_AVX:
                         len_to_gen = (cipher_len >= (256 - 64)) ? 256 : (cipher_len + 64);
                         gen_keystr_poly_key_sse(job->enc_keys, job->iv, len_to_gen, ks);
                         break;
-                case IMB_ARCH_AVX:
                 case IMB_ARCH_AVX2:
                         poly1305_key_gen_avx(job->enc_keys, job->iv, ks);
                         break;
@@ -571,10 +566,8 @@ aead_chacha20_poly1305(IMB_JOB *job, const IMB_ARCH arch, const unsigned ifma)
 
                 switch (arch) {
                 case IMB_ARCH_SSE:
-                        submit_job_chacha20_poly_dec_sse(job, ks + 64, len_to_gen - 64);
-                        break;
                 case IMB_ARCH_AVX:
-                        submit_job_chacha20_enc_dec_avx(job);
+                        submit_job_chacha20_poly_dec_sse(job, ks + 64, len_to_gen - 64);
                         break;
                 case IMB_ARCH_AVX2:
                         submit_job_chacha20_enc_dec_avx2(job);

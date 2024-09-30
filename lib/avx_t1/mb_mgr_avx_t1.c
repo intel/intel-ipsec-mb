@@ -206,9 +206,9 @@
 #define FLUSH_JOB_HMAC_MD5      flush_job_hmac_md5_sse
 
 /* CHACHA20 & POLY1305 */
-#define SUBMIT_JOB_CHACHA20_ENC_DEC      submit_job_chacha20_enc_dec_avx
-#define SUBMIT_JOB_CHACHA20_POLY1305     aead_chacha20_poly1305_avx
-#define SUBMIT_JOB_CHACHA20_POLY1305_SGL aead_chacha20_poly1305_sgl_avx
+#define SUBMIT_JOB_CHACHA20_ENC_DEC      submit_job_chacha20_enc_dec_sse
+#define SUBMIT_JOB_CHACHA20_POLY1305     aead_chacha20_poly1305_sse
+#define SUBMIT_JOB_CHACHA20_POLY1305_SGL aead_chacha20_poly1305_sgl_sse
 #define POLY1305_MAC                     poly1305_mac_scalar
 
 /* ZUC EEA3 & EIA3 */
@@ -462,10 +462,10 @@ init_mb_mgr_avx_t1_internal(IMB_MGR *state, const int reset_mgrs)
         state->crc32_wimax_ofdma_data = crc32_wimax_ofdma_data_sse;
         state->crc8_wimax_ofdma_hcs = crc8_wimax_ofdma_hcs_sse;
 
-        state->chacha20_poly1305_init = init_chacha20_poly1305_avx;
-        state->chacha20_poly1305_enc_update = update_enc_chacha20_poly1305_avx;
-        state->chacha20_poly1305_dec_update = update_dec_chacha20_poly1305_avx;
-        state->chacha20_poly1305_finalize = finalize_chacha20_poly1305_avx;
+        state->chacha20_poly1305_init = init_chacha20_poly1305_sse;
+        state->chacha20_poly1305_enc_update = update_enc_chacha20_poly1305_sse;
+        state->chacha20_poly1305_dec_update = update_dec_chacha20_poly1305_sse;
+        state->chacha20_poly1305_finalize = finalize_chacha20_poly1305_sse;
 
         state->gcm128_enc = aes_gcm_enc_128_sse;
         state->gcm192_enc = aes_gcm_enc_192_sse;

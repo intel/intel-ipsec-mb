@@ -87,8 +87,8 @@ Table 1. List of supported cipher algorithms and their implementations.
 | ZUC-EEA3-256   | N      | Y  x4    | Y  x4  | Y  x8        | Y  x16 | Y  x16    |
 | SNOW3G-UEA2    | N      | Y  x4    | Y      | Y            | Y  x16 | Y  x16    |
 | AES128-CBCS(6) | N      | Y(1)     | Y(2)   | N            | N      | Y(4)      |
-| Chacha20       | N      | Y        | Y      | Y            | Y      | N         |
-| Chacha20 AEAD  | N      | Y        | Y      | Y            | Y      | N         |
+| Chacha20       | N      | Y        | N      | Y            | Y      | N         |
+| Chacha20 AEAD  | N      | Y        | N      | Y            | Y      | N         |
 | SNOW-V         | N      | Y        | Y      | N            | N      | N         |
 | SNOW-V AEAD    | N      | Y        | Y      | N            | N      | N         |
 | PON-CRC-BIP    | N      | Y  by8   | Y  by8 | N            | N      | Y         |

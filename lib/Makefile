@@ -468,7 +468,6 @@ asm_sse_lib_objs := \
 #
 asm_avx_lib_objs := \
 	pon_by8_avx.o \
-	chacha20_avx.o \
         memcpy_avx.o \
 	snow_v_avx.o \
 	snow3g_uia2_by4_avx.o

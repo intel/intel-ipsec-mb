@@ -162,9 +162,6 @@ IMB_JOB *
 flush_job_aes128_cbcs_1_9_enc_avx(MB_MGR_AES_OOO *state);
 
 IMB_JOB *
-submit_job_chacha20_enc_dec_avx(IMB_JOB *job);
-
-IMB_JOB *
 snow_v_avx(IMB_JOB *job);
 IMB_JOB *
 snow_v_aead_init_avx(IMB_JOB *job);
