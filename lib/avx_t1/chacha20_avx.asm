@@ -1740,47 +1740,4 @@ exit_ks:
         mov     rsp, [rsp + _RSP_SAVE]; restore RSP
 
         ret
-;;
-;; void poly1305_key_gen_avx(const void *key, const void *iv, void *poly_key)
-align 32
-MKGLOBAL(poly1305_key_gen_avx,function,internal)
-poly1305_key_gen_avx:
-%ifndef LINUX
-        mov     rax, rsp
-        sub     rsp, 3*16 + 8
-        and     rsp, -16
-	vmovdqa	[rsp], xmm6
-	vmovdqa	[rsp + 16], xmm7
-	vmovdqa	[rsp + 16*2], xmm8
-	mov	[rsp + 16*3], rax
-%endif
-        ;; prepare chacha state from IV, key
-        vmovdqa xmm0, [rel constants]
-        vmovdqu xmm1, [arg1]          ; Load key bytes 0-15
-        vmovdqu xmm2, [arg1 + 16]     ; Load key bytes 16-31
-        ;;  copy nonce (12 bytes)
-        vmovq   xmm3, [arg2]
-        vpinsrd xmm3, [arg2 + 8], 2
-        vpslldq xmm3, 4
-
-        ;; run one round of chacha20
-        GENERATE_64_128_KS xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8
-
-        ;; clamp R and store poly1305 key
-        ;; R = KEY[0..15] & 0xffffffc0ffffffc0ffffffc0fffffff
-        vpand   xmm4, [rel poly_clamp_r]
-        vmovdqu [arg3 + 0 * 16], xmm4
-        vmovdqu [arg3 + 1 * 16], xmm5
-
-%ifdef SAFE_DATA
-        clear_all_xmms_avx_asm
-%endif
-%ifndef LINUX
-	vmovdqa	xmm6, [rsp]
-	vmovdqa	xmm7, [rsp + 16]
-	vmovdqa	xmm8, [rsp + 16*2]
-	mov	rsp, [rsp + 16*3]
-%endif
-        ret
-
 mksection stack-noexec
