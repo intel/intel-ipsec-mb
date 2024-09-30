@@ -236,7 +236,6 @@ lib_objs1 = \
 	$(OBJ_DIR)\sha512_x4_avx2.obj \
 	$(OBJ_DIR)\sha512_x8_avx512.obj \
 	$(OBJ_DIR)\sha256_mult_sse.obj \
-	$(OBJ_DIR)\kasumi_avx.obj \
 	$(OBJ_DIR)\kasumi_iv.obj \
 	$(OBJ_DIR)\kasumi_sse.obj \
 	$(OBJ_DIR)\zuc_common.obj \
@@ -252,7 +251,6 @@ lib_objs1 = \
 	$(OBJ_DIR)\zuc_iv.obj \
 	$(OBJ_DIR)\snow3g_sse.obj \
 	$(OBJ_DIR)\snow3g_uia2_by4_sse.obj \
-	$(OBJ_DIR)\snow3g_avx.obj \
 	$(OBJ_DIR)\snow3g_avx2.obj \
 	$(OBJ_DIR)\snow3g_avx512.obj \
 	$(OBJ_DIR)\snow3g_uia2_by4_avx.obj \

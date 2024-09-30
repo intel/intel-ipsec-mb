@@ -22,6 +22,8 @@ Library
   - They are replaced with x8 and by8 implementations from SSE type 3
 - Removed SHA/MD5 AVX implementations.
 - Removed CHACHA20-POLY1305 AVX implementations.
+- Removed SNOW3G AVX implementations.
+- Removed KASUMI AVX implementations.
 
 Test Applications
 - Removed Makefile support

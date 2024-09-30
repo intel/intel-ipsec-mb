@@ -516,17 +516,17 @@ init_mb_mgr_avx512_t1_internal(IMB_MGR *state, const int reset_mgrs)
         state->eea3_n_buffer = zuc_eea3_n_buffer_avx512;
         state->eia3_n_buffer = zuc_eia3_n_buffer_avx512;
 
-        state->f8_1_buffer = kasumi_f8_1_buffer_avx;
-        state->f8_1_buffer_bit = kasumi_f8_1_buffer_bit_avx;
-        state->f8_2_buffer = kasumi_f8_2_buffer_avx;
-        state->f8_3_buffer = kasumi_f8_3_buffer_avx;
-        state->f8_4_buffer = kasumi_f8_4_buffer_avx;
-        state->f8_n_buffer = kasumi_f8_n_buffer_avx;
-        state->f9_1_buffer = kasumi_f9_1_buffer_avx;
-        state->f9_1_buffer_user = kasumi_f9_1_buffer_user_avx;
-        state->kasumi_init_f8_key_sched = kasumi_init_f8_key_sched_avx;
-        state->kasumi_init_f9_key_sched = kasumi_init_f9_key_sched_avx;
-        state->kasumi_key_sched_size = kasumi_key_sched_size_avx;
+        state->f8_1_buffer = kasumi_f8_1_buffer_sse;
+        state->f8_1_buffer_bit = kasumi_f8_1_buffer_bit_sse;
+        state->f8_2_buffer = kasumi_f8_2_buffer_sse;
+        state->f8_3_buffer = kasumi_f8_3_buffer_sse;
+        state->f8_4_buffer = kasumi_f8_4_buffer_sse;
+        state->f8_n_buffer = kasumi_f8_n_buffer_sse;
+        state->f9_1_buffer = kasumi_f9_1_buffer_sse;
+        state->f9_1_buffer_user = kasumi_f9_1_buffer_user_sse;
+        state->kasumi_init_f8_key_sched = kasumi_init_f8_key_sched_sse;
+        state->kasumi_init_f9_key_sched = kasumi_init_f9_key_sched_sse;
+        state->kasumi_key_sched_size = kasumi_key_sched_size_sse;
 
         state->snow3g_f8_1_buffer_bit = snow3g_f8_1_buffer_bit_avx512;
         state->snow3g_f8_1_buffer = snow3g_f8_1_buffer_avx512;

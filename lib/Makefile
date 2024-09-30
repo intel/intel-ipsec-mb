@@ -307,7 +307,6 @@ c_lib_objs := \
 	des_basic.o \
 	version.o \
 	cpu_feature.o \
-	kasumi_avx.o \
 	kasumi_iv.o \
 	kasumi_sse.o \
 	zuc_top_sse.o \
@@ -315,7 +314,6 @@ c_lib_objs := \
 	zuc_top_avx512.o \
 	zuc_iv.o \
 	snow3g_sse.o \
-	snow3g_avx.o \
 	snow3g_avx2.o \
 	snow3g_avx512.o \
 	snow3g_tables.o \
@@ -469,8 +467,7 @@ asm_sse_lib_objs := \
 asm_avx_lib_objs := \
 	pon_by8_avx.o \
         memcpy_avx.o \
-	snow_v_avx.o \
-	snow3g_uia2_by4_avx.o
+	snow_v_avx.o
 
 #
 # List of ASM modules (avx2 directory)
@@ -546,7 +543,8 @@ asm_avx2_lib_objs := \
 	mb_mgr_hmac_sha512_submit_avx2.o \
 	mb_mgr_zuc_submit_flush_avx2.o \
 	mb_mgr_zuc_submit_flush_gfni_avx2.o \
-	chacha20_avx2.o
+	chacha20_avx2.o \
+	snow3g_uia2_by4_avx.o
 
 #
 # List of ASM modules (avx2_t3 directory)
