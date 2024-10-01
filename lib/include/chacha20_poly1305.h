@@ -35,16 +35,12 @@
 IMB_JOB *
 aead_chacha20_poly1305_sse(IMB_MGR *mgr, IMB_JOB *job);
 IMB_JOB *
-aead_chacha20_poly1305_avx(IMB_MGR *mgr, IMB_JOB *job);
-IMB_JOB *
 aead_chacha20_poly1305_avx2(IMB_MGR *mgr, IMB_JOB *job);
 IMB_JOB *
 aead_chacha20_poly1305_avx512(IMB_MGR *mgr, IMB_JOB *job);
 
 IMB_JOB *
 aead_chacha20_poly1305_sgl_sse(IMB_MGR *mgr, IMB_JOB *job);
-IMB_JOB *
-aead_chacha20_poly1305_sgl_avx(IMB_MGR *mgr, IMB_JOB *job);
 IMB_JOB *
 aead_chacha20_poly1305_sgl_avx2(IMB_MGR *mgr, IMB_JOB *job);
 IMB_JOB *
@@ -107,9 +103,6 @@ void
 init_chacha20_poly1305_sse(const void *key, struct chacha20_poly1305_context_data *ctx,
                            const void *iv, const void *aad, const uint64_t aad_len);
 void
-init_chacha20_poly1305_avx(const void *key, struct chacha20_poly1305_context_data *ctx,
-                           const void *iv, const void *aad, const uint64_t aad_len);
-void
 init_chacha20_poly1305_avx2(const void *key, struct chacha20_poly1305_context_data *ctx,
                             const void *iv, const void *aad, const uint64_t aad_len);
 #ifdef AVX_IFMA
@@ -125,9 +118,6 @@ init_chacha20_poly1305_fma_avx512(const void *key, struct chacha20_poly1305_cont
                                   const void *iv, const void *aad, const uint64_t aad_len);
 void
 update_enc_chacha20_poly1305_sse(const void *key, struct chacha20_poly1305_context_data *ctx,
-                                 void *dst, const void *src, const uint64_t len);
-void
-update_enc_chacha20_poly1305_avx(const void *key, struct chacha20_poly1305_context_data *ctx,
                                  void *dst, const void *src, const uint64_t len);
 void
 update_enc_chacha20_poly1305_avx2(const void *key, struct chacha20_poly1305_context_data *ctx,
@@ -147,9 +137,6 @@ void
 update_dec_chacha20_poly1305_sse(const void *key, struct chacha20_poly1305_context_data *ctx,
                                  void *dst, const void *src, const uint64_t len);
 void
-update_dec_chacha20_poly1305_avx(const void *key, struct chacha20_poly1305_context_data *ctx,
-                                 void *dst, const void *src, const uint64_t len);
-void
 update_dec_chacha20_poly1305_avx2(const void *key, struct chacha20_poly1305_context_data *ctx,
                                   void *dst, const void *src, const uint64_t len);
 #ifdef AVX_IFMA
@@ -165,9 +152,6 @@ update_dec_chacha20_poly1305_fma_avx512(const void *key, struct chacha20_poly130
                                         void *dst, const void *src, const uint64_t len);
 void
 finalize_chacha20_poly1305_sse(struct chacha20_poly1305_context_data *ctx, void *tag,
-                               const uint64_t tag_len);
-void
-finalize_chacha20_poly1305_avx(struct chacha20_poly1305_context_data *ctx, void *tag,
                                const uint64_t tag_len);
 void
 finalize_chacha20_poly1305_avx2(struct chacha20_poly1305_context_data *ctx, void *tag,

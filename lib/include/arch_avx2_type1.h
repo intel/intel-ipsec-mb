@@ -272,19 +272,19 @@ IMB_JOB *
 flush_job_hmac_md5_avx2(MB_MGR_HMAC_MD5_OOO *state);
 
 IMB_JOB *
-submit_job_aes128_enc_avx(MB_MGR_AES_OOO *state, IMB_JOB *job);
+submit_job_aes128_cbc_enc_avx(MB_MGR_AES_OOO *state, IMB_JOB *job);
 IMB_JOB *
-flush_job_aes128_enc_avx(MB_MGR_AES_OOO *state);
+flush_job_aes128_cbc_enc_avx(MB_MGR_AES_OOO *state);
 
 IMB_JOB *
-submit_job_aes192_enc_avx(MB_MGR_AES_OOO *state, IMB_JOB *job);
+submit_job_aes192_cbc_enc_avx(MB_MGR_AES_OOO *state, IMB_JOB *job);
 IMB_JOB *
-flush_job_aes192_enc_avx(MB_MGR_AES_OOO *state);
+flush_job_aes192_cbc_enc_avx(MB_MGR_AES_OOO *state);
 
 IMB_JOB *
-submit_job_aes256_enc_avx(MB_MGR_AES_OOO *state, IMB_JOB *job);
+submit_job_aes256_cbc_enc_avx(MB_MGR_AES_OOO *state, IMB_JOB *job);
 IMB_JOB *
-flush_job_aes256_enc_avx(MB_MGR_AES_OOO *state);
+flush_job_aes256_cbc_enc_avx(MB_MGR_AES_OOO *state);
 
 IMB_JOB *
 submit_job_aes_xcbc_avx(MB_MGR_AES_XCBC_OOO *state, IMB_JOB *job);

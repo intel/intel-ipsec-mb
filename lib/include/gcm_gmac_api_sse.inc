@@ -42,9 +42,6 @@ default rel
 ;       (const void *key, struct gcm_key_data *key_data)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 align 32
-MKGLOBAL(ghash_pre_avx_gen2,function,)
-ghash_pre_avx_gen2:
-
 MKGLOBAL(ghash_pre_sse,function,)
 ghash_pre_sse:
         endbranch64
@@ -123,9 +120,6 @@ error_ghash_pre:
 ;        const u64    tag_len);
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 align 32
-MKGLOBAL(ghash_avx_gen2,function,)
-ghash_avx_gen2:
-
 MKGLOBAL(ghash_sse,function,)
 ghash_sse:
         endbranch64
@@ -208,9 +202,6 @@ error_ghash:
 ;        const   u64 msg_len);
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 align 32
-MKGLOBAL(GMAC_FN_NAME_AVX(update),function,)
-GMAC_FN_NAME_AVX(update):
-
 MKGLOBAL(GMAC_FN_NAME(update),function,)
 GMAC_FN_NAME(update):
         endbranch64

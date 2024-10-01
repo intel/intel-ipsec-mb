@@ -203,9 +203,6 @@ imb_set_pointers_mb_mgr(void *mem_ptr, const uint64_t flags, const unsigned rese
                 case IMB_ARCH_SSE:
                         init_mb_mgr_sse_internal(ptr, 0);
                         break;
-                case IMB_ARCH_AVX:
-                        init_mb_mgr_avx_internal(ptr, 0);
-                        break;
                 case IMB_ARCH_AVX2:
                         init_mb_mgr_avx2_internal(ptr, 0);
                         break;

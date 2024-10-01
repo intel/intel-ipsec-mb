@@ -48,8 +48,7 @@
 
 #include "include/arch_sse_type1.h"  /* SM4-ECB, AES-CFB, ZUC */
 #include "include/arch_sse_type2.h"  /* SHA-NI */
-#include "include/arch_avx_type1.h"  /* AESNI */
-#include "include/arch_avx2_type1.h" /* MD5 */
+#include "include/arch_avx2_type1.h" /* AESNI, MD5 */
 #include "include/arch_avx512_type1.h"
 #include "include/arch_avx512_type2.h"
 

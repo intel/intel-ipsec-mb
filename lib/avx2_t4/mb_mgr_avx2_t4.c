@@ -47,7 +47,6 @@
 
 #include "include/arch_sse_type1.h" /* poly1305, snow3g, aes-cfb, zuc */
 #include "include/arch_sse_type2.h" /* shani */
-#include "include/arch_avx_type1.h"
 #include "include/arch_avx2_type1.h"
 #include "include/arch_avx2_type2.h"
 #include "include/arch_avx2_type3.h"
@@ -98,17 +97,17 @@
 #define SUBMIT_JOB_AES_GCM_ENC submit_job_gcm_enc_avx2
 
 /* AES-CBC */
-#define SUBMIT_JOB_AES_CBC_128_ENC submit_job_aes128_enc_avx
-#define SUBMIT_JOB_AES_CBC_128_DEC submit_job_aes128_dec_avx
-#define FLUSH_JOB_AES_CBC_128_ENC  flush_job_aes128_enc_avx
+#define SUBMIT_JOB_AES_CBC_128_ENC submit_job_aes128_cbc_enc_avx
+#define SUBMIT_JOB_AES_CBC_128_DEC submit_job_aes128_cbc_dec_avx
+#define FLUSH_JOB_AES_CBC_128_ENC  flush_job_aes128_cbc_enc_avx
 
-#define SUBMIT_JOB_AES_CBC_192_ENC submit_job_aes192_enc_avx
-#define SUBMIT_JOB_AES_CBC_192_DEC submit_job_aes192_dec_avx
-#define FLUSH_JOB_AES_CBC_192_ENC  flush_job_aes192_enc_avx
+#define SUBMIT_JOB_AES_CBC_192_ENC submit_job_aes192_cbc_enc_avx
+#define SUBMIT_JOB_AES_CBC_192_DEC submit_job_aes192_cbc_dec_avx
+#define FLUSH_JOB_AES_CBC_192_ENC  flush_job_aes192_cbc_enc_avx
 
-#define SUBMIT_JOB_AES_CBC_256_ENC submit_job_aes256_enc_avx
-#define SUBMIT_JOB_AES_CBC_256_DEC submit_job_aes256_dec_avx
-#define FLUSH_JOB_AES_CBC_256_ENC  flush_job_aes256_enc_avx
+#define SUBMIT_JOB_AES_CBC_256_ENC submit_job_aes256_cbc_enc_avx
+#define SUBMIT_JOB_AES_CBC_256_DEC submit_job_aes256_cbc_dec_avx
+#define FLUSH_JOB_AES_CBC_256_ENC  flush_job_aes256_cbc_enc_avx
 
 #define AES_CBC_DEC_128 aes_cbc_dec_128_avx
 #define AES_CBC_DEC_192 aes_cbc_dec_192_avx

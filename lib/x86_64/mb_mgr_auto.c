@@ -60,12 +60,6 @@ init_mb_mgr_auto(IMB_MGR *state, IMB_ARCH *arch)
                 goto init_mb_mgr_auto_ret;
         }
 
-        if ((state->features & IMB_CPUFLAGS_AVX) == IMB_CPUFLAGS_AVX) {
-                init_mb_mgr_avx(state);
-                arch_detected = IMB_ARCH_AVX;
-                goto init_mb_mgr_auto_ret;
-        }
-
         if ((state->features & IMB_CPUFLAGS_SSE) == IMB_CPUFLAGS_SSE) {
                 init_mb_mgr_sse(state);
                 arch_detected = IMB_ARCH_SSE;

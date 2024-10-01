@@ -51,8 +51,6 @@ parse_matched(int argc, char **argv)
         for (int i = 0; i < argc; i++) {
                 if (strcasecmp(argv[i], "SSE") == 0)
                         arch = IMB_ARCH_SSE;
-                else if (strcasecmp(argv[i], "AVX") == 0)
-                        arch = IMB_ARCH_AVX;
                 else if (strcasecmp(argv[i], "AVX2") == 0)
                         arch = IMB_ARCH_AVX2;
                 else if (strcasecmp(argv[i], "AVX512") == 0)
@@ -2527,8 +2525,6 @@ LLVMFuzzerTestOneInput(const uint8_t *data, size_t dataSize)
 
                 if (arch == IMB_ARCH_SSE)
                         init_mb_mgr_sse(p_mgr);
-                else if (arch == IMB_ARCH_AVX)
-                        init_mb_mgr_avx(p_mgr);
                 else if (arch == IMB_ARCH_AVX2)
                         init_mb_mgr_avx2(p_mgr);
                 else if (arch == IMB_ARCH_AVX512)

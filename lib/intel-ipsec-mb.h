@@ -113,7 +113,6 @@ typedef struct {
 typedef enum {
         IMB_ARCH_NONE = 0,
         IMB_ARCH_SSE,
-        IMB_ARCH_AVX,
         IMB_ARCH_AVX2,
         IMB_ARCH_AVX512,
         IMB_ARCH_NUM,
@@ -949,9 +948,9 @@ typedef int (*imb_self_test_cb_t)(void *cb_arg, const IMB_SELF_TEST_CALLBACK_DAT
 #define IMB_CPUFLAGS_SSE      (IMB_CPUFLAGS_NO_AESNI | IMB_FEATURE_AESNI | IMB_FEATURE_PCLMULQDQ)
 #define IMB_CPUFLAGS_SSE_T2   (IMB_CPUFLAGS_SSE | IMB_FEATURE_SHANI)
 #define IMB_CPUFLAGS_SSE_T3   (IMB_CPUFLAGS_SSE_T2 | IMB_FEATURE_GFNI)
-#define IMB_CPUFLAGS_AVX                                                                           \
-        (IMB_CPUFLAGS_SSE | IMB_FEATURE_AVX | IMB_FEATURE_XSAVE | IMB_FEATURE_OSXSAVE)
-#define IMB_CPUFLAGS_AVX2   (IMB_CPUFLAGS_AVX | IMB_FEATURE_AVX2 | IMB_FEATURE_BMI2)
+#define IMB_CPUFLAGS_AVX2                                                                          \
+        (IMB_CPUFLAGS_SSE | IMB_FEATURE_AVX | IMB_FEATURE_XSAVE | IMB_FEATURE_OSXSAVE |            \
+         IMB_FEATURE_AVX2 | IMB_FEATURE_BMI2)
 #define IMB_CPUFLAGS_AVX512 (IMB_CPUFLAGS_AVX2 | IMB_FEATURE_AVX512_SKX)
 #define IMB_CPUFLAGS_AVX512_T2                                                                     \
         (IMB_CPUFLAGS_AVX512 | IMB_FEATURE_VAES | IMB_FEATURE_VPCLMULQDQ | IMB_FEATURE_GFNI |      \
@@ -1313,19 +1312,14 @@ imb_get_feature_flags(void);
  *                       the alloc_mb_mgr() API
  */
 IMB_DLL_EXPORT void
-init_mb_mgr_avx(IMB_MGR *state);
-/**
- * @copydoc init_mb_mgr_avx
- */
-IMB_DLL_EXPORT void
 init_mb_mgr_avx2(IMB_MGR *state);
 /**
- * @copydoc init_mb_mgr_avx
+ * @copydoc init_mb_mgr_avx2
  */
 IMB_DLL_EXPORT void
 init_mb_mgr_avx512(IMB_MGR *state);
 /**
- * @copydoc init_mb_mgr_avx
+ * @copydoc init_mb_mgr_avx2
  */
 IMB_DLL_EXPORT void
 init_mb_mgr_sse(IMB_MGR *state);
@@ -1340,19 +1334,14 @@ init_mb_mgr_sse(IMB_MGR *state);
  *         error conditions
  */
 IMB_DLL_EXPORT IMB_JOB *
-submit_job_avx(IMB_MGR *state);
-/**
- * @copydoc submit_job_avx
- */
-IMB_DLL_EXPORT IMB_JOB *
 submit_job_avx2(IMB_MGR *state);
 /**
- * @copydoc submit_job_avx
+ * @copydoc submit_job_avx2
  */
 IMB_DLL_EXPORT IMB_JOB *
 submit_job_avx512(IMB_MGR *state);
 /**
- * @copydoc submit_job_avx
+ * @copydoc submit_job_avx2
  */
 IMB_DLL_EXPORT IMB_JOB *
 submit_job_sse(IMB_MGR *state);
@@ -1367,19 +1356,14 @@ submit_job_sse(IMB_MGR *state);
  * @return Pointer to completed IMB_JOB or NULL if no job completed
  */
 IMB_DLL_EXPORT IMB_JOB *
-submit_job_nocheck_avx(IMB_MGR *state);
-/**
- * @copydoc submit_job_nocheck_avx
- */
-IMB_DLL_EXPORT IMB_JOB *
 submit_job_nocheck_avx2(IMB_MGR *state);
 /**
- * @copydoc submit_job_nocheck_avx
+ * @copydoc submit_job_nocheck_avx2
  */
 IMB_DLL_EXPORT IMB_JOB *
 submit_job_nocheck_avx512(IMB_MGR *state);
 /**
- * @copydoc submit_job_nocheck_avx
+ * @copydoc submit_job_nocheck_avx2
  */
 IMB_DLL_EXPORT IMB_JOB *
 submit_job_nocheck_sse(IMB_MGR *state);
@@ -1392,19 +1376,14 @@ submit_job_nocheck_sse(IMB_MGR *state);
  * @return Pointer to completed IMB_JOB or NULL if no more jobs to process
  */
 IMB_DLL_EXPORT IMB_JOB *
-flush_job_avx(IMB_MGR *state);
-/**
- * @copydoc flush_job_avx
- */
-IMB_DLL_EXPORT IMB_JOB *
 flush_job_avx2(IMB_MGR *state);
 /**
- * @copydoc flush_job_avx
+ * @copydoc flush_job_avx2
  */
 IMB_DLL_EXPORT IMB_JOB *
 flush_job_avx512(IMB_MGR *state);
 /**
- * @copydoc flush_job_avx
+ * @copydoc flush_job_avx2
  */
 IMB_DLL_EXPORT IMB_JOB *
 flush_job_sse(IMB_MGR *state);
@@ -1417,19 +1396,14 @@ flush_job_sse(IMB_MGR *state);
  * @return Number of jobs in the queue
  */
 IMB_DLL_EXPORT uint32_t
-queue_size_avx(IMB_MGR *state);
-/**
- * @copydoc queue_size_avx
- */
-IMB_DLL_EXPORT uint32_t
 queue_size_avx2(IMB_MGR *state);
 /**
- * @copydoc queue_size_avx
+ * @copydoc queue_size_avx2
  */
 IMB_DLL_EXPORT uint32_t
 queue_size_avx512(IMB_MGR *state);
 /**
- * @copydoc queue_size_avx
+ * @copydoc queue_size_avx2
  */
 IMB_DLL_EXPORT uint32_t
 queue_size_sse(IMB_MGR *state);
@@ -1442,19 +1416,14 @@ queue_size_sse(IMB_MGR *state);
  * @return Pointer to completed IMB_JOB or NULL if next job not complete
  */
 IMB_DLL_EXPORT IMB_JOB *
-get_completed_job_avx(IMB_MGR *state);
-/**
- * @copydoc get_completed_job_avx
- */
-IMB_DLL_EXPORT IMB_JOB *
 get_completed_job_avx2(IMB_MGR *state);
 /**
- * @copydoc get_completed_job_avx
+ * @copydoc get_completed_job_avx2
  */
 IMB_DLL_EXPORT IMB_JOB *
 get_completed_job_avx512(IMB_MGR *state);
 /**
- * @copydoc get_completed_job_avx
+ * @copydoc get_completed_job_avx2
  */
 IMB_DLL_EXPORT IMB_JOB *
 get_completed_job_sse(IMB_MGR *state);
@@ -1467,19 +1436,14 @@ get_completed_job_sse(IMB_MGR *state);
  * @return Pointer to next free IMB_JOB in the queue
  */
 IMB_DLL_EXPORT IMB_JOB *
-get_next_job_avx(IMB_MGR *state);
-/**
- * @copydoc get_next_job_avx
- */
-IMB_DLL_EXPORT IMB_JOB *
 get_next_job_avx2(IMB_MGR *state);
 /**
- * @copydoc get_next_job_avx
+ * @copydoc get_next_job_avx2
  */
 IMB_DLL_EXPORT IMB_JOB *
 get_next_job_avx512(IMB_MGR *state);
 /**
- * @copydoc get_next_job_avx
+ * @copydoc get_next_job_avx2
  */
 IMB_DLL_EXPORT IMB_JOB *
 get_next_job_sse(IMB_MGR *state);
@@ -2915,14 +2879,6 @@ aes_gcm_enc_128_sse(const struct gcm_key_data *key_data, struct gcm_context_data
  * @copydoc aes_gcm_enc_128_sse
  */
 IMB_DLL_EXPORT void
-aes_gcm_enc_128_avx_gen2(const struct gcm_key_data *key_data, struct gcm_context_data *context_data,
-                         uint8_t *out, uint8_t const *in, uint64_t len, const uint8_t *iv,
-                         uint8_t const *aad, uint64_t aad_len, uint8_t *auth_tag,
-                         uint64_t auth_tag_len);
-/**
- * @copydoc aes_gcm_enc_128_sse
- */
-IMB_DLL_EXPORT void
 aes_gcm_enc_128_avx_gen4(const struct gcm_key_data *key_data, struct gcm_context_data *context_data,
                          uint8_t *out, uint8_t const *in, uint64_t len, const uint8_t *iv,
                          uint8_t const *aad, uint64_t aad_len, uint8_t *auth_tag,
@@ -2949,14 +2905,6 @@ IMB_DLL_EXPORT void
 aes_gcm_enc_192_sse(const struct gcm_key_data *key_data, struct gcm_context_data *context_data,
                     uint8_t *out, uint8_t const *in, uint64_t len, const uint8_t *iv,
                     uint8_t const *aad, uint64_t aad_len, uint8_t *auth_tag, uint64_t auth_tag_len);
-/**
- * @copydoc aes_gcm_enc_192_sse
- */
-IMB_DLL_EXPORT void
-aes_gcm_enc_192_avx_gen2(const struct gcm_key_data *key_data, struct gcm_context_data *context_data,
-                         uint8_t *out, uint8_t const *in, uint64_t len, const uint8_t *iv,
-                         uint8_t const *aad, uint64_t aad_len, uint8_t *auth_tag,
-                         uint64_t auth_tag_len);
 /**
  * @copydoc aes_gcm_enc_192_sse
  */
@@ -2992,14 +2940,6 @@ aes_gcm_enc_256_sse(const struct gcm_key_data *key_data, struct gcm_context_data
  * @copydoc aes_gcm_enc_256_sse
  */
 IMB_DLL_EXPORT void
-aes_gcm_enc_256_avx_gen2(const struct gcm_key_data *key_data, struct gcm_context_data *context_data,
-                         uint8_t *out, uint8_t const *in, uint64_t len, const uint8_t *iv,
-                         uint8_t const *aad, uint64_t aad_len, uint8_t *auth_tag,
-                         uint64_t auth_tag_len);
-/**
- * @copydoc aes_gcm_enc_256_sse
- */
-IMB_DLL_EXPORT void
 aes_gcm_enc_256_avx_gen4(const struct gcm_key_data *key_data, struct gcm_context_data *context_data,
                          uint8_t *out, uint8_t const *in, uint64_t len, const uint8_t *iv,
                          uint8_t const *aad, uint64_t aad_len, uint8_t *auth_tag,
@@ -3027,14 +2967,6 @@ IMB_DLL_EXPORT void
 aes_gcm_dec_128_sse(const struct gcm_key_data *key_data, struct gcm_context_data *context_data,
                     uint8_t *out, uint8_t const *in, uint64_t len, const uint8_t *iv,
                     uint8_t const *aad, uint64_t aad_len, uint8_t *auth_tag, uint64_t auth_tag_len);
-/**
- * @copydoc aes_gcm_dec_128_sse
- */
-IMB_DLL_EXPORT void
-aes_gcm_dec_128_avx_gen2(const struct gcm_key_data *key_data, struct gcm_context_data *context_data,
-                         uint8_t *out, uint8_t const *in, uint64_t len, const uint8_t *iv,
-                         uint8_t const *aad, uint64_t aad_len, uint8_t *auth_tag,
-                         uint64_t auth_tag_len);
 /**
  * @copydoc aes_gcm_dec_128_sse
  */
@@ -3070,14 +3002,6 @@ aes_gcm_dec_192_sse(const struct gcm_key_data *key_data, struct gcm_context_data
  * @copydoc aes_gcm_dec_192_sse
  */
 IMB_DLL_EXPORT void
-aes_gcm_dec_192_avx_gen2(const struct gcm_key_data *key_data, struct gcm_context_data *context_data,
-                         uint8_t *out, uint8_t const *in, uint64_t len, const uint8_t *iv,
-                         uint8_t const *aad, uint64_t aad_len, uint8_t *auth_tag,
-                         uint64_t auth_tag_len);
-/**
- * @copydoc aes_gcm_dec_192_sse
- */
-IMB_DLL_EXPORT void
 aes_gcm_dec_192_avx_gen4(const struct gcm_key_data *key_data, struct gcm_context_data *context_data,
                          uint8_t *out, uint8_t const *in, uint64_t len, const uint8_t *iv,
                          uint8_t const *aad, uint64_t aad_len, uint8_t *auth_tag,
@@ -3109,14 +3033,6 @@ aes_gcm_dec_256_sse(const struct gcm_key_data *key_data, struct gcm_context_data
  * @copydoc aes_gcm_dec_256_sse
  */
 IMB_DLL_EXPORT void
-aes_gcm_dec_256_avx_gen2(const struct gcm_key_data *key_data, struct gcm_context_data *context_data,
-                         uint8_t *out, uint8_t const *in, uint64_t len, const uint8_t *iv,
-                         uint8_t const *aad, uint64_t aad_len, uint8_t *auth_tag,
-                         uint64_t auth_tag_len);
-/**
- * @copydoc aes_gcm_dec_256_sse
- */
-IMB_DLL_EXPORT void
 aes_gcm_dec_256_avx_gen4(const struct gcm_key_data *key_data, struct gcm_context_data *context_data,
                          uint8_t *out, uint8_t const *in, uint64_t len, const uint8_t *iv,
                          uint8_t const *aad, uint64_t aad_len, uint8_t *auth_tag,
@@ -3137,13 +3053,6 @@ aes_gcm_dec_256_avx_gen4(const struct gcm_key_data *key_data, struct gcm_context
 IMB_DLL_EXPORT void
 aes_gcm_init_128_sse(const struct gcm_key_data *key_data, struct gcm_context_data *context_data,
                      const uint8_t *iv, uint8_t const *aad, uint64_t aad_len);
-/**
- * @copydoc aes_gcm_init_128_sse
- */
-IMB_DLL_EXPORT void
-aes_gcm_init_128_avx_gen2(const struct gcm_key_data *key_data,
-                          struct gcm_context_data *context_data, const uint8_t *iv,
-                          uint8_t const *aad, uint64_t aad_len);
 /**
  * @copydoc aes_gcm_init_128_sse
  */
@@ -3170,13 +3079,6 @@ aes_gcm_init_192_sse(const struct gcm_key_data *key_data, struct gcm_context_dat
  * @copydoc aes_gcm_init_192_sse
  */
 IMB_DLL_EXPORT void
-aes_gcm_init_192_avx_gen2(const struct gcm_key_data *key_data,
-                          struct gcm_context_data *context_data, const uint8_t *iv,
-                          uint8_t const *aad, uint64_t aad_len);
-/**
- * @copydoc aes_gcm_init_192_sse
- */
-IMB_DLL_EXPORT void
 aes_gcm_init_192_avx_gen4(const struct gcm_key_data *key_data,
                           struct gcm_context_data *context_data, const uint8_t *iv,
                           uint8_t const *aad, uint64_t aad_len);
@@ -3195,13 +3097,6 @@ aes_gcm_init_192_avx_gen4(const struct gcm_key_data *key_data,
 IMB_DLL_EXPORT void
 aes_gcm_init_256_sse(const struct gcm_key_data *key_data, struct gcm_context_data *context_data,
                      const uint8_t *iv, uint8_t const *aad, uint64_t aad_len);
-/**
- * @copydoc aes_gcm_init_256_sse
- */
-IMB_DLL_EXPORT void
-aes_gcm_init_256_avx_gen2(const struct gcm_key_data *key_data,
-                          struct gcm_context_data *context_data, const uint8_t *iv,
-                          uint8_t const *aad, uint64_t aad_len);
 /**
  * @copydoc aes_gcm_init_256_sse
  */
@@ -3227,13 +3122,6 @@ aes_gcm_enc_128_update_sse(const struct gcm_key_data *key_data,
  * @copydoc aes_gcm_enc_128_update_sse
  */
 IMB_DLL_EXPORT void
-aes_gcm_enc_128_update_avx_gen2(const struct gcm_key_data *key_data,
-                                struct gcm_context_data *context_data, uint8_t *out,
-                                const uint8_t *in, uint64_t len);
-/**
- * @copydoc aes_gcm_enc_128_update_sse
- */
-IMB_DLL_EXPORT void
 aes_gcm_enc_128_update_avx_gen4(const struct gcm_key_data *key_data,
                                 struct gcm_context_data *context_data, uint8_t *out,
                                 const uint8_t *in, uint64_t len);
@@ -3251,13 +3139,6 @@ IMB_DLL_EXPORT void
 aes_gcm_enc_192_update_sse(const struct gcm_key_data *key_data,
                            struct gcm_context_data *context_data, uint8_t *out, const uint8_t *in,
                            uint64_t len);
-/**
- * @copydoc aes_gcm_enc_192_update_sse
- */
-IMB_DLL_EXPORT void
-aes_gcm_enc_192_update_avx_gen2(const struct gcm_key_data *key_data,
-                                struct gcm_context_data *context_data, uint8_t *out,
-                                const uint8_t *in, uint64_t len);
 /**
  * @copydoc aes_gcm_enc_192_update_sse
  */
@@ -3283,13 +3164,6 @@ aes_gcm_enc_256_update_sse(const struct gcm_key_data *key_data,
  * @copydoc aes_gcm_enc_256_update_sse
  */
 IMB_DLL_EXPORT void
-aes_gcm_enc_256_update_avx_gen2(const struct gcm_key_data *key_data,
-                                struct gcm_context_data *context_data, uint8_t *out,
-                                const uint8_t *in, uint64_t len);
-/**
- * @copydoc aes_gcm_enc_256_update_sse
- */
-IMB_DLL_EXPORT void
 aes_gcm_enc_256_update_avx_gen4(const struct gcm_key_data *key_data,
                                 struct gcm_context_data *context_data, uint8_t *out,
                                 const uint8_t *in, uint64_t len);
@@ -3307,13 +3181,6 @@ IMB_DLL_EXPORT void
 aes_gcm_dec_128_update_sse(const struct gcm_key_data *key_data,
                            struct gcm_context_data *context_data, uint8_t *out, const uint8_t *in,
                            uint64_t len);
-/**
- * @copydoc aes_gcm_dec_128_update_sse
- */
-IMB_DLL_EXPORT void
-aes_gcm_dec_128_update_avx_gen2(const struct gcm_key_data *key_data,
-                                struct gcm_context_data *context_data, uint8_t *out,
-                                const uint8_t *in, uint64_t len);
 /**
  * @copydoc aes_gcm_dec_128_update_sse
  */
@@ -3339,13 +3206,6 @@ aes_gcm_dec_192_update_sse(const struct gcm_key_data *key_data,
  * @copydoc aes_gcm_dec_192_update_sse
  */
 IMB_DLL_EXPORT void
-aes_gcm_dec_192_update_avx_gen2(const struct gcm_key_data *key_data,
-                                struct gcm_context_data *context_data, uint8_t *out,
-                                const uint8_t *in, uint64_t len);
-/**
- * @copydoc aes_gcm_dec_192_update_sse
- */
-IMB_DLL_EXPORT void
 aes_gcm_dec_192_update_avx_gen4(const struct gcm_key_data *key_data,
                                 struct gcm_context_data *context_data, uint8_t *out,
                                 const uint8_t *in, uint64_t len);
@@ -3363,13 +3223,6 @@ IMB_DLL_EXPORT void
 aes_gcm_dec_256_update_sse(const struct gcm_key_data *key_data,
                            struct gcm_context_data *context_data, uint8_t *out, const uint8_t *in,
                            uint64_t len);
-/**
- * @copydoc aes_gcm_dec_256_update_sse
- */
-IMB_DLL_EXPORT void
-aes_gcm_dec_256_update_avx_gen2(const struct gcm_key_data *key_data,
-                                struct gcm_context_data *context_data, uint8_t *out,
-                                const uint8_t *in, uint64_t len);
 /**
  * @copydoc aes_gcm_dec_256_update_sse
  */
@@ -3396,13 +3249,6 @@ aes_gcm_enc_128_finalize_sse(const struct gcm_key_data *key_data,
  * @copydoc aes_gcm_enc_128_finalize_sse
  */
 IMB_DLL_EXPORT void
-aes_gcm_enc_128_finalize_avx_gen2(const struct gcm_key_data *key_data,
-                                  struct gcm_context_data *context_data, uint8_t *auth_tag,
-                                  uint64_t auth_tag_len);
-/**
- * @copydoc aes_gcm_enc_128_finalize_sse
- */
-IMB_DLL_EXPORT void
 aes_gcm_enc_128_finalize_avx_gen4(const struct gcm_key_data *key_data,
                                   struct gcm_context_data *context_data, uint8_t *auth_tag,
                                   uint64_t auth_tag_len);
@@ -3421,13 +3267,6 @@ IMB_DLL_EXPORT void
 aes_gcm_enc_192_finalize_sse(const struct gcm_key_data *key_data,
                              struct gcm_context_data *context_data, uint8_t *auth_tag,
                              uint64_t auth_tag_len);
-/**
- * @copydoc aes_gcm_enc_192_finalize_sse
- */
-IMB_DLL_EXPORT void
-aes_gcm_enc_192_finalize_avx_gen2(const struct gcm_key_data *key_data,
-                                  struct gcm_context_data *context_data, uint8_t *auth_tag,
-                                  uint64_t auth_tag_len);
 /**
  * @copydoc aes_gcm_enc_192_finalize_sse
  */
@@ -3454,13 +3293,6 @@ aes_gcm_enc_256_finalize_sse(const struct gcm_key_data *key_data,
  * @copydoc aes_gcm_enc_256_finalize_sse
  */
 IMB_DLL_EXPORT void
-aes_gcm_enc_256_finalize_avx_gen2(const struct gcm_key_data *key_data,
-                                  struct gcm_context_data *context_data, uint8_t *auth_tag,
-                                  uint64_t auth_tag_len);
-/**
- * @copydoc aes_gcm_enc_256_finalize_sse
- */
-IMB_DLL_EXPORT void
 aes_gcm_enc_256_finalize_avx_gen4(const struct gcm_key_data *key_data,
                                   struct gcm_context_data *context_data, uint8_t *auth_tag,
                                   uint64_t auth_tag_len);
@@ -3479,13 +3311,6 @@ IMB_DLL_EXPORT void
 aes_gcm_dec_128_finalize_sse(const struct gcm_key_data *key_data,
                              struct gcm_context_data *context_data, uint8_t *auth_tag,
                              uint64_t auth_tag_len);
-/**
- * @copydoc aes_gcm_dec_128_finalize_sse
- */
-IMB_DLL_EXPORT void
-aes_gcm_dec_128_finalize_avx_gen2(const struct gcm_key_data *key_data,
-                                  struct gcm_context_data *context_data, uint8_t *auth_tag,
-                                  uint64_t auth_tag_len);
 /**
  * @copydoc aes_gcm_dec_128_finalize_sse
  */
@@ -3512,13 +3337,6 @@ aes_gcm_dec_192_finalize_sse(const struct gcm_key_data *key_data,
  * @copydoc aes_gcm_dec_192_finalize_sse
  */
 IMB_DLL_EXPORT void
-aes_gcm_dec_192_finalize_avx_gen2(const struct gcm_key_data *key_data,
-                                  struct gcm_context_data *context_data, uint8_t *auth_tag,
-                                  uint64_t auth_tag_len);
-/**
- * @copydoc aes_gcm_dec_192_finalize_sse
- */
-IMB_DLL_EXPORT void
 aes_gcm_dec_192_finalize_avx_gen4(const struct gcm_key_data *key_data,
                                   struct gcm_context_data *context_data, uint8_t *auth_tag,
                                   uint64_t auth_tag_len);
@@ -3537,13 +3355,6 @@ IMB_DLL_EXPORT void
 aes_gcm_dec_256_finalize_sse(const struct gcm_key_data *key_data,
                              struct gcm_context_data *context_data, uint8_t *auth_tag,
                              uint64_t auth_tag_len);
-/**
- * @copydoc aes_gcm_dec_256_finalize_sse
- */
-IMB_DLL_EXPORT void
-aes_gcm_dec_256_finalize_avx_gen2(const struct gcm_key_data *key_data,
-                                  struct gcm_context_data *context_data, uint8_t *auth_tag,
-                                  uint64_t auth_tag_len);
 /**
  * @copydoc aes_gcm_dec_256_finalize_sse
  */
@@ -3567,12 +3378,6 @@ aes_gcm_precomp_128_sse(struct gcm_key_data *key_data);
  * @copydoc aes_gcm_precomp_128_sse
  */
 IMB_DLL_EXPORT void
-aes_gcm_precomp_128_avx_gen2(struct gcm_key_data *key_data);
-
-/**
- * @copydoc aes_gcm_precomp_128_sse
- */
-IMB_DLL_EXPORT void
 aes_gcm_precomp_128_avx_gen4(struct gcm_key_data *key_data);
 
 /**
@@ -3585,12 +3390,6 @@ aes_gcm_precomp_128_avx_gen4(struct gcm_key_data *key_data);
  */
 IMB_DLL_EXPORT void
 aes_gcm_precomp_192_sse(struct gcm_key_data *key_data);
-
-/**
- * @copydoc aes_gcm_precomp_192_sse
- */
-IMB_DLL_EXPORT void
-aes_gcm_precomp_192_avx_gen2(struct gcm_key_data *key_data);
 
 /**
  * @copydoc aes_gcm_precomp_192_sse
@@ -3613,12 +3412,6 @@ aes_gcm_precomp_256_sse(struct gcm_key_data *key_data);
  * @copydoc aes_gcm_precomp_256_sse
  */
 IMB_DLL_EXPORT void
-aes_gcm_precomp_256_avx_gen2(struct gcm_key_data *key_data);
-
-/**
- * @copydoc aes_gcm_precomp_256_sse
- */
-IMB_DLL_EXPORT void
 aes_gcm_precomp_256_avx_gen4(struct gcm_key_data *key_data);
 
 /**
@@ -3632,11 +3425,6 @@ aes_gcm_precomp_256_avx_gen4(struct gcm_key_data *key_data);
  */
 IMB_DLL_EXPORT void
 aes_gcm_pre_128_sse(const void *key, struct gcm_key_data *key_data);
-/**
- * @copydoc aes_gcm_pre_128_sse
- */
-IMB_DLL_EXPORT void
-aes_gcm_pre_128_avx_gen2(const void *key, struct gcm_key_data *key_data);
 /**
  * @copydoc aes_gcm_pre_128_sse
  */
@@ -3657,11 +3445,6 @@ aes_gcm_pre_192_sse(const void *key, struct gcm_key_data *key_data);
  * @copydoc aes_gcm_pre_192_sse
  */
 IMB_DLL_EXPORT void
-aes_gcm_pre_192_avx_gen2(const void *key, struct gcm_key_data *key_data);
-/**
- * @copydoc aes_gcm_pre_192_sse
- */
-IMB_DLL_EXPORT void
 aes_gcm_pre_192_avx_gen4(const void *key, struct gcm_key_data *key_data);
 /**
  * @brief Pre-processes AES-GCM-256 key data.
@@ -3674,11 +3457,6 @@ aes_gcm_pre_192_avx_gen4(const void *key, struct gcm_key_data *key_data);
  */
 IMB_DLL_EXPORT void
 aes_gcm_pre_256_sse(const void *key, struct gcm_key_data *key_data);
-/**
- * @copydoc aes_gcm_pre_256_sse
- */
-IMB_DLL_EXPORT void
-aes_gcm_pre_256_avx_gen2(const void *key, struct gcm_key_data *key_data);
 /**
  * @copydoc aes_gcm_pre_256_sse
  */

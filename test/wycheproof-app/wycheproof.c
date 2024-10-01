@@ -1262,8 +1262,6 @@ main(int argc, const char **argv)
                         return EXIT_SUCCESS;
                 } else if (strcmp(argv[i], "--sse") == 0) {
                         arch_to_run = IMB_ARCH_SSE;
-                } else if (strcmp(argv[i], "--avx") == 0) {
-                        arch_to_run = IMB_ARCH_AVX;
                 } else if (strcmp(argv[i], "--avx2") == 0) {
                         arch_to_run = IMB_ARCH_AVX2;
                 } else if (strcmp(argv[i], "--avx512") == 0) {
@@ -1285,9 +1283,6 @@ main(int argc, const char **argv)
         switch (arch_to_run) {
         case IMB_ARCH_SSE:
                 init_mb_mgr_sse(p_mgr);
-                break;
-        case IMB_ARCH_AVX:
-                init_mb_mgr_avx(p_mgr);
                 break;
         case IMB_ARCH_AVX2:
                 init_mb_mgr_avx2(p_mgr);

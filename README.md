@@ -53,130 +53,122 @@ For information on how the library works, see the Intel White Paper:
 
 Table 1. List of supported cipher algorithms and their implementations.
 ```
-+---------------------------------------------------------------------------------+
-|                |                        Implementation                          |
-| Encryption     +----------------------------------------------------------------|
-|                | x86_64 | SSE      | AVX    | AVX2         | AVX512 | AVX512(3) |
-|                |        | Type 1/2 | Type 1 | Type 1/2/3/4 | Type 1 | Type 2    |
-|----------------+--------+----------+--------+--------------+--------+-----------|
-| AES128-GCM     | N      | Y  by8   | N      | Y(7)         | Y  by8 | Y by32    |
-| AES192-GCM     | N      | Y  by8   | N      | Y(7)         | Y  by8 | Y by32    |
-| AES256-GCM     | N      | Y  by8   | N      | Y(7)         | Y  by8 | Y by32    |
-| AES128-CCM     | N      | Y  by8   | N      | Y  by8       | N      | Y by16    |
-| AES256-CCM     | N      | Y  by8   | N      | Y  by8       | N      | Y by16    |
-| AES128-CBC     | N      | Y(2)     | N      | Y(2)         | N      | Y(4)      |
-| AES192-CBC     | N      | Y(2)     | N      | Y(2)         | N      | Y(4)      |
-| AES256-CBC     | N      | Y(2)     | N      | Y(2)         | N      | Y(4)      |
-| AES128-CTR     | N      | Y  by8   | N      | Y(7)         | N      | Y by16    |
-| AES192-CTR     | N      | Y  by8   | N      | Y(7)         | N      | Y by16    |
-| AES256-CTR     | N      | Y  by8   | N      | Y(7)         | N      | Y by16    |
-| AES128-ECB     | N      | Y(2)     | N      | Y(7)         | N      | Y by16    |
-| AES192-ECB     | N      | Y(2)     | N      | Y(7)         | N      | Y by16    |
-| AES256-ECB     | N      | Y(2)     | N      | Y(7)         | N      | Y by16    |
-| AES128-CFB     | N      | Y        | N      | N            | N      | Y(4)      |
-| AES192-CFB     | N      | Y        | N      | N            | N      | Y(4)      |
-| AES256-CFB     | N      | Y        | N      | N            | N      | Y(4)      |
-| NULL           | Y      | N        | N      | N            | N      | N         |
-| AES128-DOCSIS  | N      | Y(2)     | N      | Y(2)         | Y(5)   | Y(4)      |
-| AES256-DOCSIS  | N      | Y(2)     | N      | Y(2)         | Y(5)   | Y(4)      |
-| DES-DOCSIS     | Y      | N        | N      | N            | Y  x16 | N         |
-| 3DES           | Y      | N        | N      | N            | Y  x16 | N         |
-| DES            | Y      | N        | N      | N            | Y  x16 | N         |
-| KASUMI-F8      | Y      | N        | N      | N            | N      | N         |
-| ZUC-EEA3       | N      | Y  x4    | N      | Y  x8        | Y  x16 | Y  x16    |
-| ZUC-EEA3-256   | N      | Y  x4    | N      | Y  x8        | Y  x16 | Y  x16    |
-| SNOW3G-UEA2    | N      | Y  x4    | N      | Y            | Y  x16 | Y  x16    |
-| AES128-CBCS(6) | N      | Y(1)     | N      | Y(2)         | N      | Y(4)      |
-| Chacha20       | N      | Y        | N      | Y            | Y      | N         |
-| Chacha20 AEAD  | N      | Y        | N      | Y            | Y      | N         |
-| SNOW-V         | N      | Y        | Y      | N            | N      | N         |
-| SNOW-V AEAD    | N      | Y        | Y      | N            | N      | N         |
-| PON-CRC-BIP    | N      | Y  by8   | Y  by8 | N            | N      | Y         |
-| SM4-ECB        | N      | Y        | N      | Y(8)         | N      | N         |
-| SM4-CBC        | N      | Y        | N      | Y(9)         | N      | N         |
-| SM4-CTR        | N      | Y        | N      | Y(10)        | N      | N         |
-| SM4-GCM        | N      | Y        | N      | Y(10)        | N      | N         |
-+---------------------------------------------------------------------------------+
++---------------------------------------------------------------------------------------------------+
+|                |                              Implementation                                      |
+| Encryption     +----------------------------------------------------------------------------------|
+|                | SSE    | SSE    | SSE    | AVX2   | AVX2   | AVX2   | AVX2   | AVX512 | AVX512   |
+|                | Type 1 | Type 2 | Type 3 | Type 1 | Type 2 | Type 3 | Type 4 | Type 1 | Type 2   |
+|                | [S1]   | [S2]   | [S3]   | [A2-1] | [A2-2] | [A2-3] | [A2-4] | [A3-1] | [A3-2]   |
+|----------------+--------+--------+--------+--------+--------+--------+--------+--------+----------|
+| AES128-GCM     | Y  by8 |  <---  |  <---  | Y  by8 | Y by16 | [A2-1] | [A2-2] | [A2-1] | Y   by32 |
+| AES192-GCM     | Y  by8 |  <---  |  <---  | Y  by8 | Y by16 | [A2-1] | [A2-2] | [A2-1] | Y   by32 |
+| AES256-GCM     | Y  by8 |  <---  |  <---  | Y  by8 | Y by16 | [A2-1] | [A2-2] | [A2-1] | Y   by32 |
+| AES128-CCM     | Y  by8 |  <---  |  <---  | Y  by8 |  <---  |  <---  |  <---  |  <---  | Y   by16 |
+| AES256-CCM     | Y  by8 |  <---  |  <---  | Y  by8 |  <---  |  <---  |  <---  |  <---  | Y   by16 |
+| AES128-CBC     | Y(2)   |  <---  |  <---  | Y(2)   |  <---  |  <---  |  <---  |  <---  | Y(4)     |
+| AES192-CBC     | Y(2)   |  <---  |  <---  | Y(2)   |  <---  |  <---  |  <---  |  <---  | Y(4)     |
+| AES256-CBC     | Y(2)   |  <---  |  <---  | Y(2)   |  <---  |  <---  |  <---  |  <---  | Y(4)     |
+| AES128-CTR     | Y  by8 |  <---  |  <---  | Y  by8 | Y by16 |  <---  |  <---  |  <---  | Y   by16 |
+| AES192-CTR     | Y  by8 |  <---  |  <---  | Y  by8 | Y by16 |  <---  |  <---  |  <---  | Y   by16 |
+| AES256-CTR     | Y  by8 |  <---  |  <---  | Y  by8 | Y by16 |  <---  |  <---  |  <---  | Y   by16 |
+| AES128-ECB     | Y  by8 |  <---  |  <---  | Y  by8 | Y by16 |  <---  |  <---  |  <---  | Y   by16 |
+| AES192-ECB     | Y  by8 |  <---  |  <---  | Y  by8 | Y by16 |  <---  |  <---  |  <---  | Y   by16 |
+| AES256-ECB     | Y  by8 |  <---  |  <---  | Y  by8 | Y by16 |  <---  |  <---  |  <---  | Y   by16 |
+| AES128-CFB     | Y(3)   |  <---  |  <---  |  <---  |  <---  |  <---  |  <---  |  <---  | Y(4)     |
+| AES192-CFB     | Y(3)   |  <---  |  <---  |  <---  |  <---  |  <---  |  <---  |  <---  | Y(4)     |
+| AES256-CFB     | Y(3)   |  <---  |  <---  |  <---  |  <---  |  <---  |  <---  |  <---  | Y(4)     |
+| AES128-DOCSIS  | Y(2)   |  <---  |  <---  | Y(2)   |  <---  |  <---  |  <---  | Y(2)   | Y(4)     |
+| AES256-DOCSIS  | Y(2)   |  <---  |  <---  | Y(2)   |  <---  |  <---  |  <---  | Y(2)   | Y(4)     |
+| DES-DOCSIS     | Y      |  <---  |  <---  |  <---  |  <---  |  <---  |  <---  | Y  x16 |  <---    |
+| 3DES/TDES      | Y      |  <---  |  <---  |  <---  |  <---  |  <---  |  <---  | Y  x16 |  <---    |
+| DES            | Y      |  <---  |  <---  |  <---  |  <---  |  <---  |  <---  | Y  x16 |  <---    |
+| KASUMI-F8      | Y      |  <---  |  <---  |  <---  |  <---  |  <---  |  <---  |  <---  |  <---    |
+| ZUC-EEA3       | Y   x4 |  <---  | Y(5)x4 | Y  x8  | Y(5)x8 |  <---  |  <---  | Y  x16 | Y(5) x16 |
+| ZUC-EEA3-256   | Y   x4 |  <---  | Y(5)x4 | Y  x8  | Y(5)x8 |  <---  |  <---  | Y  x16 | Y(5) x16 |
+| SNOW3G-UEA2    | Y   x4 |  <---  |  <---  | Y      |  <---  |  <---  |  <---  | Y  x16 | Y    x16 |
+| AES128-CBCS(1) | Y      |  <---  |  <---  | Y(2)   |  <---  |  <---  |  <---  |  <---  | Y(9)     |
+| Chacha20       | Y      |  <---  |  <---  | Y      |  <---  |  <---  |  <---  | Y      |  <---    |
+| Chacha20 AEAD  | Y      |  <---  |  <---  | Y      |  <---  |  <---  |  <---  | Y      |  <---    |
+| SNOW-V         | Y      |  <---  |  <---  | Y      |  <---  |  <---  |  <---  |  <---  |  <---    |
+| SNOW-V AEAD    | Y      |  <---  |  <---  | Y      |  <---  |  <---  |  <---  |  <---  |  <---    |
+| PON-CRC-BIP    | Y  by8 |  <---  |  <---  | Y by8  |  <---  |  <---  |  <---  |  <---  | Y   by16 |
+| SM4-ECB        | Y      |  <---  |  <---  |  <---  |  <---  |  <---  | Y(6)   | [S1]   | [S1]     |
+| SM4-CBC        | Y      |  <---  |  <---  |  <---  |  <---  |  <---  | Y(7)   | [S1]   | [S1]     |
+| SM4-CTR        | Y      |  <---  |  <---  |  <---  |  <---  |  <---  | Y(8)   | [S1]   | [S1]     |
+| SM4-GCM        | Y      |  <---  |  <---  |  <---  |  <---  |  <---  | Y(8)   | [S1]   | [S1]     |
++---------------------------------------------------------------------------------------------------+
+
 ```
 Notes:  
-(1)   - decryption is by4 and encryption is x4  
-(2)   - decryption is by8 and encryption is x8  
-(3)   - AVX512 plus VAES, VPCLMULQDQ and GFNI extensions  
-(4)   - decryption is by16 and encryption is x16  
-(5)   - same as AES-CBC for AVX, combines cipher and CRC32  
-(6)   - currently 1:9 crypt:skip pattern supported  
-(7)   - by default, decryption and encryption are AVX by8.  
-        On CPUs supporting VAES, decryption and encryption might use AVX2-VAES by16,
-        if beneficial.
-(8)   - AVX2 using SM4-NI ISA, by16, if the ISA is available, if not,
-        fallback to SSE implementation.
-(9)   - AVX2 using SM4-NI ISA if the ISA is available, if not,
-        fallback to SSE implementation. Single block in encryption,
-        by16 in decryption.
-(10)  - AVX2 using SM4-NI ISA, by8, if the ISA is available, if not,
-        fallback to SSE implementation.
+(1)   - Currently 1:9 crypt:skip pattern supported.  
+(2)   - Decryption is by8 and encryption is x8.  
+(3)   - Single block decryption and encryption.  
+(4)   - Decryption is by16 and encryption is x16.  
+(5)   - Implementation using GFNI extensions.  
+(6)   - Implementation using SM4NI extensions, by16.  
+(7)   - Implementation using SM4NI extensions, single block encryption and by16 decryption.  
+(8)   - Implementation using SM4NI extensions, by8.  
+(9)   - Decryption is by16 and encryption is x12.  
 
 Legend:  
-` byY` - single buffer Y blocks at a time  
-`  xY` - Y buffers at a time
-
-As an example of how to read table 1 and 2, if one uses AVX512 interface
-to perform AES128-CBC encryption then there is no native AVX512
-implementation for this cipher. In such case, the library uses best
-available implementation which is AVX for AES128-CBC.
-
+` byY`- single buffer Y blocks at a time  
+`  xY`- Y buffers at a time  
+`[xyz]`- same as `xyz` implementation  
+`<---`- same as the column to the left  
 
 Table 2. List of supported integrity algorithms and their implementations.
 ```
-+------------------------------------------------------------------------------------+
-|                   |                        Implementation                          |
-| Integrity         +----------------------------------------------------------------|
-|                   | x86_64 | SSE      | AVX    | AVX2         | AVX512 | AVX512(3) |
-|                   |        | Type 1/2 | Type 1 | Type 1/2/3/4 | Type 1 | Type 2    |
-|-------------------+--------+----------+--------+--------------+--------+-----------|
-| AES-XCBC-96       | N      | Y   x4   | N      | Y x8         | N      | Y x16     |
-| HMAC-MD5-96       | Y(1)   | Y x4x2   | N      | Y x8x2       | N      | N         |
-| HMAC-SHA1-96      | N      | Y(2)x4   | N      | Y(2)x8       | Y  x16 | N         |
-| HMAC-SHA2-224_112 | N      | Y(2)x4   | N      | Y(2)x8       | Y  x16 | N         |
-| HMAC-SHA2-256_128 | N      | Y(2)x4   | N      | Y(2)x8       | Y  x16 | N         |
-| HMAC-SHA2-384_192 | N      | Y   x2   | N      | Y(9)x4       | Y   x8 | N         |
-| HMAC-SHA2-512_256 | N      | Y   x2   | N      | Y(9)x4       | Y   x8 | N         |
-| SHA1              | N      | Y(2)x4   | N      | Y(2)x8       | Y  x16 | N         |
-| SHA2-224          | N      | Y(2)x4   | N      | Y(2)x8       | Y  x16 | N         |
-| SHA2-256          | N      | Y(2)x4   | N      | Y(2)x8       | Y  x16 | N         |
-| SHA2-384          | N      | Y   x2   | N      | Y(9)x4       | Y   x8 | N         |
-| SHA2-512          | N      | Y   x2   | N      | Y(9)x4       | Y   x8 | N         |
-| AES128-GMAC       | N      | Y  by8   | N      | Y  by8       | Y  by8 | Y by32    |
-| AES192-GMAC       | N      | Y  by8   | N      | Y  by8       | Y  by8 | Y by32    |
-| AES256-GMAC       | N      | Y  by8   | N      | Y  by8       | Y  by8 | Y by32    |
-| NULL              | Y      | N        | N      | N            | N      | N         |
-| AES128-CCM        | N      | Y   x8   | N      | Y  x8        | N      | Y x16     |
-| AES256-CCM        | N      | Y   x8   | N      | Y  x8        | N      | Y x16     |
-| AES128-CMAC-96    | Y      | Y   x8   | N      | Y  x8        | N      | Y x16     |
-| AES256-CMAC-96    | Y      | Y   x8   | N      | Y  x8        | N      | Y x16     |
-| KASUMI-F9         | Y      | N        | N      | Y  x8        | N      | N         |
-| ZUC-EIA3          | N      | Y  x4    | N      | Y  x8        | Y  x16 | Y  x16    |
-| ZUC-EIA3-256      | N      | Y  x4    | N      | Y  x8        | Y  x16 | Y  x16    |
-| SNOW3G-UIA2(7)    | N      | Y by4    | N      | Y  by4       | Y by32 | Y by32    |
-| DOCSIS-CRC32(4)   | N      | Y        | N      | Y            | Y      | Y         |
-| HEC               | N      | Y        | Y      | N            | N      | N         |
-| POLY1305          | Y      | N        | N      | Y(8)         | Y      | Y         |
-| POLY1305 AEAD     | Y      | N        | N      | Y(8)         | Y      | Y         |
-| SNOW-V AEAD       | N      | Y  by8   | Y  by8 | Y  by8       | Y  by8 | Y by32    |
-| GHASH             | N      | Y  by8   | N      | Y  by8       | Y  by8 | Y by32    |
-| CRC(5)            | N      | Y  by8   | N      | Y  by8       | N      | Y by16    |
-| PON-CRC-BIP(6)    | N      | Y        | Y      | N            | N      | Y         |
-| SM3               | Y      | N        | N      | Y(10)        | N      | N         |
-| HMAC-SM3          | Y      | N        | N      | Y(10)        | N      | N         |
-| SM4-GCM           | N      | Y        | N      | Y            | N      | N         |
-+------------------------------------------------------------------------------------+
++-----------------------------------------------------------------------------------------------------+
+|                   |                             Implementation                                      |
+| Integrity         +---------------------------------------------------------------------------------|
+|                   | SSE    | SSE    | SSE    | AVX2   | AVX2   | AVX2   | AVX2   | AVX512 | AVX512  |
+|                   | Type 1 | Type 2 | Type 3 | Type 1 | Type 2 | Type 3 | Type 4 | Type 1 | Type 2  |
+|                   | [S1]   | [S2]   | [S3]   | [A2-1] | [A2-2] | [A2-3] | [A2-4] | [A3-1] | [A3-2]  |
+|-------------------+--------+--------+--------+--------+--------+--------+--------+--------+---------|
+| AES-XCBC-96       | Y   x4 |  <---  |  <---  | Y   x8 |  <---  |  <---  |  <---  |  <---  | Y   x16 |
+| HMAC-MD5-96       | Y(1)x4 |  <---  |  <---  | Y   x8 |  <---  |  <---  |  <---  |  <---  |  <---   |
+| HMAC-SHA1-96      | Y   x4 | Y(2)x2 |  <---  | Y   x8 | Y(2)x2 |  <---  |  <---  | Y  x16 |  <---   |
+| HMAC-SHA2-224_112 | Y   x4 | Y(2)x2 |  <---  | Y   x8 | Y(2)x2 |  <---  |  <---  | Y  x16 |  <---   |
+| HMAC-SHA2-256_128 | Y   x4 | Y(2)x2 |  <---  | Y   x8 | Y(2)x2 |  <---  |  <---  | Y  x16 |  <---   |
+| HMAC-SHA2-384_192 | Y   x2 |  <---  |  <---  | Y   x4 |  <---  |  <---  | Y(6)x2 | Y   x8 |  <---   |
+| HMAC-SHA2-512_256 | Y   x2 |  <---  |  <---  | Y   x4 |  <---  |  <---  | Y(6)x2 | Y   x8 |  <---   |
+| SHA1              | Y(2)x4 | Y(2)x2 |  <---  | Y   x8 | Y(2)x2 |  <---  |  <---  | Y  x16 |  <---   |
+| SHA2-224          | Y(2)x4 | Y(2)x2 |  <---  | Y   x8 | Y(2)x2 |  <---  |  <---  | Y  x16 |  <---   |
+| SHA2-256          | Y(2)x4 | Y(2)x2 |  <---  | Y   x8 | Y(2)x2 |  <---  |  <---  | Y  x16 |  <---   |
+| SHA2-384          | Y   x2 |  <---  |  <---  | Y   x4 |  <---  |  <---  | Y(6)x2 | Y   x8 |  <---   |
+| SHA2-512          | Y   x2 |  <---  |  <---  | Y   x4 |  <---  |  <---  | Y(6)x2 | Y   x8 |  <---   |
+| AES128-GMAC       | Y  by8 |  <---  |  <---  | Y  by8 | Y by16 | [A2-1] | [A2-2] | [A2-1] | Y  by32 |
+| AES192-GMAC       | Y  by8 |  <---  |  <---  | Y  by8 | Y by16 | [A2-1] | [A2-2] | [A2-1] | Y  by32 |
+| AES256-GMAC       | Y  by8 |  <---  |  <---  | Y  by8 | Y by16 | [A2-1] | [A2-2] | [A2-1] | Y  by32 |
+| AES128-CCM        | Y   x8 |  <---  |  <---  | Y   x8 |  <---  |  <---  |  <---  |  <---  | Y   x16 |
+| AES256-CCM        | Y   x8 |  <---  |  <---  | Y   x8 |  <---  |  <---  |  <---  |  <---  | Y   x16 |
+| AES128-CMAC-96    | Y   x8 |  <---  |  <---  | Y   x8 |  <---  |  <---  |  <---  |  <---  | Y   x16 |
+| AES256-CMAC-96    | Y   x8 |  <---  |  <---  | Y   x8 |  <---  |  <---  |  <---  |  <---  | Y   x16 |
+| KASUMI-F9         | Y      |  <---  |  <---  |  <---  |  <---  |  <---  |  <---  |  <---  |  <---   |
+| ZUC-EIA3          | Y   x4 |  <---  | Y(3)x4 | Y   x8 | Y(3)x8 |  <---  |  <---  | Y  x16 | Y(3)x16 |
+| ZUC-EIA3-256      | Y   x4 |  <---  | Y(3)x4 | Y   x8 | Y(3)x8 |  <---  |  <---  | Y  x16 | Y(3)x16 |
+| SNOW3G-UIA2       | Y(10)  |  <---  |  <---  |  <---  |  <---  |  <---  |  <---  |  <---  | Y(11)   |
+| DOCSIS-CRC32(8)   | Y      |  <---  |  <---  | Y      |  <---  |  <---  |  <---  |  <---  | Y       |
+| HEC               | Y      |  <---  |  <---  | Y      |  <---  |  <---  |  <---  |  <---  |  <---   |
+| POLY1305          | Y      |  <---  |  <---  |  <---  |  <---  | Y(4)   |  <---  | Y      | Y(4)    |
+| POLY1305 AEAD     | Y      |  <---  |  <---  |  <---  |  <---  | Y(4)   |  <---  | Y      | Y(4)    |
+| SNOW-V AEAD       | Y  by8 |  <---  |  <---  | Y  by8 |  <---  |  <---  |  <---  |  <---  | Y  by32 |
+| GHASH             | Y  by8 |  <---  |  <---  | Y  by8 | Y by16 | [A2-1] | [A2-2] | [A2-1] | Y  by32 |
+| CRC(7)            | Y  by8 |  <---  |  <---  | Y  by8 |  <---  |  <---  |  <---  |  <---  | Y  by16 |
+| PON-CRC-BIP(9)    | Y      |  <---  |  <---  | Y      |  <---  |  <---  |  <---  |  <---  | Y  by16 |
+| SM3               | Y      |  <---  |  <---  |  <---  |  <---  |  <---  | Y(5)x2 | [S1]   |  <---   |
+| HMAC-SM3          | Y      |  <---  |  <---  |  <---  |  <---  |  <---  | Y(5)x2 | [S1]   |  <---   |
+| SM4-GCM           | Y      |  <---  |  <---  | Y  by8 | Y by16 | [A2-1] | [A2-2] | [A2-1] | Y  by32 |
++-----------------------------------------------------------------------------------------------------+
 ```
 Notes:  
-(1)  - MD5 over one block implemented in C  
-(2)  - Implementation using SHANI extensions is x2  
-(3)  - AVX512 plus VAES, VPCLMULQDQ, GFNI and IFMA extensions  
-(4)  - used only with AES256-DOCSIS and AES128-DOCSIS ciphers  
-(5)  - Supported CRC types:
+(1)  - MD5 over one block implemented in C.  
+(2)  - Implementation using SHANI extensions.  
+(3)  - Implementation using GFNI extensions.  
+(4)  - Implementation using IFMA extensions.  
+(5)  - Implementation using SM3NI extensions.  
+(6)  - Implementation using SHA512NI extensions.  
+(7)  - Supported CRC types:  
  - CRC32: Ethernet FCS, SCTP, WIMAX OFDMA  
  - CRC24: LTE A, LTE B  
  - CRC16: X25, FP data  
@@ -185,94 +177,86 @@ Notes:
  - CRC8: WIMAX OFDMA HCS  
  - CRC7: FP header  
  - CRC6: IUUP header  
-(6)  - used only with PON-AES128-CTR cipher  
-(7)  - x4/x16 for init keystream generation, then by4/by32  
-(8)  - Only if AVX-IFMA instructions are supported  
-(9)  - using SHA512-NI ISA and x2 implementation, if the ISA is available  
-(10) - using SM3-NI ISA, if available  
+(8)  - used only with AES256-DOCSIS and AES128-DOCSIS ciphers.  
+(9)  - used only with PON-AES128-CTR cipher.  
+(10) - x4 for init keystream generation, then by4.  
+(11) - x16 for init keystream generation, then by32.  
 
 Legend:  
 ` byY`- single buffer Y blocks at a time  
 `  xY`- Y buffers at a time  
+`[xyz]`- same as `xyz` implementation  
+`<---`- same as the column to the left  
 
 Table 3. Encryption and integrity algorithm combinations
 ```
-+---------------------------------------------------------------------+
-| Encryption    | Allowed Integrity Algorithms                        |
-|---------------+-----------------------------------------------------|
-| AES128-GCM    | AES128-GMAC                                         |
-|---------------+-----------------------------------------------------|
-| AES192-GCM    | AES192-GMAC                                         |
-|---------------+-----------------------------------------------------|
-| AES256-GCM    | AES256-GMAC                                         |
-|---------------+-----------------------------------------------------|
-| AES128-CCM    | AES128-CCM                                          |
-|---------------+-----------------------------------------------------|
-| AES256-CCM    | AES256-CCM                                          |
-|---------------+-----------------------------------------------------|
-| SM4-GCM       | SM4-GCM                                             |
-|---------------+-----------------------------------------------------|
-| AES128-CBC,   | AES-XCBC-96,                                        |
-| AES192-CBC,   | HMAC-SHA1-96, HMAC-SHA2-224_112, HMAC-SHA2-256_128, |
-| AES256-CBC,   | HMAC-SHA2-384_192, HMAC-SHA2-512_256,               |
-| AES128-CTR,   | AES128-CMAC-96,                                     |
-| AES192-CTR,   | NULL,                                               |
-| AES256-CTR,   | KASUMI-F9,                                          |
-| AES128-ECB,   | ZUC-EIA3, ZUC-EIA3-256,                             |
-| AES192-ECB,   | SNOW3G-UIA3,                                        |
-| AES256-ECB,   | POLY1305,                                           |
-| AES128-CFB,   |                                                     |
-| AES192-CFB,   |                                                     |
-| AES256-CFB,   |                                                     |
-| NULL,         | AES128-GMAC, AES192-GMAC, AES256-GMAC, GHASH,       |
-| AES128-DOCSIS,| SM3, HMAC-SM3                                       |
-| AES256-DOCSIS,|                                                     |
-| DES-DOCSIS,   |                                                     |
-| 3DES,         |                                                     |
-| DES,          |                                                     |
-| Chacha20,     |                                                     |
-| KASUMI-F8,    |                                                     |
-| ZUC-EEA3,     |                                                     |
-| ZUC-EEA3-256, |                                                     |
-| SNOW3G-UEA3   |                                                     |
-| SNOW-V        |                                                     |
-| SM4-ECB       |                                                     |
-| SM4-CBC       |                                                     |
-| SM4-CTR       |                                                     |
-|---------------+-----------------------------------------------------|
-| AES128-DOCSIS,| DOCSIS-CRC32                                        |
-| AES256-DOCSIS |                                                     |
-|---------------+-----------------------------------------------------|
-| PON-AES128-CTR| PON-CRC-BIP                                         |
-|---------------+-----------------------------------------------------|
-| CHACHA20 AEAD | POLY1305 AEAD                                       |
-+---------------+-----------------------------------------------------+
-| SNOW-V AEAD   | SNOW-V AEAD (GHASH)                                 |
-+---------------+-----------------------------------------------------+
++-----------------------------------------------------------------------------+
+| Encryption Algorithm                | Allowed Integrity Algorithms          |
+|-------------------------------------+---------------------------------------|
+| AES128-GCM                          | AES128-GMAC                           |
+|-------------------------------------+---------------------------------------|
+| AES192-GCM                          | AES192-GMAC                           |
+|-------------------------------------+---------------------------------------|
+| AES256-GCM                          | AES256-GMAC                           |
+|-------------------------------------+---------------------------------------|
+| AES128-CCM                          | AES128-CCM                            |
+|-------------------------------------+---------------------------------------|
+| AES256-CCM                          | AES256-CCM                            |
+|-------------------------------------+---------------------------------------|
+| SM4-GCM                             | SM4-GCM                               |
+|-------------------------------------+---------------------------------------|
+| AES128-CBC, AES192-CBC, AES256-CBC, | AES-XCBC-96, AES128-CMAC-96,          |
+| AES128-CTR, AES192-CTR, AES256-CTR, | HMAC-SHA1-96, HMAC-SHA2-224_112,      |
+| AES128-ECB, AES192-ECB, AES256-ECB, | HMAC-SHA2-256_128, HMAC-SHA2-384_192, |
+| AES128-CFB, AES192-CFB, AES256-CFB, | HMAC-SHA2-512_256, NULL, POLY1305,    |
+| NULL, Chacha20,                     | AES128-GMAC, AES192-GMAC, AES256-GMAC,|
+| AES128-DOCSIS, AES256-DOCSIS,       | GHASH, SM3, HMAC-SM3                  |
+| DES-DOCSIS, 3DES, DES,              | ZUC-EIA3, ZUC-EIA3-256, SNOW3G-UIA3,  |
+| KASUMI-F8, SNOW-V, SNOW3G-UEA3,     | KASUMI-F9                             |
+| ZUC-EEA3, ZUC-EEA3-256,             |                                       |
+| SM4-ECB, SM4-CBC, SM4-CTR           |                                       |
+|-------------------------------------+---------------------------------------|
+| AES128-DOCSIS, AES256-DOCSIS        | DOCSIS-CRC32                          |
+|-------------------------------------+---------------------------------------|
+| PON-AES128-CTR                      | PON-CRC-BIP                           |
+|-------------------------------------+---------------------------------------|
+| CHACHA20 AEAD                       | POLY1305 AEAD                         |
+|-------------------------------------+---------------------------------------|
+| SNOW-V AEAD                         | SNOW-V AEAD (GHASH)                   |
++-------------------------------------+---------------------------------------+
 ```
 
-## 2. Processor Extensions
+## 2. Processor Extensions and Architecture Types
 
 Table 4. Processor extensions used in the library
 ```
-+-------------------------------------------------------------------------+
-| Algorithm         | Interface | Extensions                              |
-|-------------------+-----------+-----------------------------------------|
-| HMAC-SHA1-96,     | AVX512    | AVX512F, AVX512BW, AVX512VL             |
-| HMAC-SHA2-224_112,|           |                                         |
-| HMAC-SHA2-256_128,|           |                                         |
-| HMAC-SHA2-384_192,|           |                                         |
-| HMAC-SHA2-512_256 |           |                                         |
-|-------------------+-----------+-----------------------------------------|
-| DES, 3DES,        | AVX512    | AVX512F, AVX512BW                       |
-| DOCSIS-DES        |           |                                         |
-|-------------------+-----------+-----------------------------------------|
-| HMAC-SHA1-96,     | SSE       | SHANI                                   |
-| HMAC-SHA2-224_112,|           | - presence is autodetected and library  |
-| HMAC-SHA2-256_128,|           |   falls back to SSE implementation      |
-| HMAC-SHA2-384_192,|           |   if not present                        |
-| HMAC-SHA2-512_256 |           |                                         |
-+-------------------+-----------+-----------------------------------------+
++---------------------------------------------------------------------------------------+
+| Architecture  | Instruction Extensions                 | Example Products             |
+| Type          |                                        |                              |
+|---------------+----------------------------------------+------------------------------|
+| SSE Type 1    | SSE4.2, AESNI, PCLMULQDQ, CMOV, BSWAP  | Westmere, Sandy Bridge,      |
+|               |                                        | Ivy Bridge, Rangeley, Avoton |
+|---------------+----------------------------------------+------------------------------|
+| SSE Type 2    | [SSE Type 1] + SHANI                   | Denverton                    |
+|---------------+----------------------------------------+------------------------------|
+| SSE Type 3    | [SSE Type 2] + GFNI                    | Snow Ridge                   |
+|---------------+----------------------------------------+------------------------------|
+| AVX2 Type 1   | [SSE Type 1] + XSAVE, OSXSAVE, AVX,    | Haswell, Broadwell           |
+|               | AVX2, BMI2                             |                              |
+|---------------+----------------------------------------+------------------------------|
+| AVX2 Type 2   | [AVX2 Type 1] + SHANI, GFNI, VAES,     | Arizona Beach, Alder Lake    |
+|               | VPCLMULQDQ                             | Raptor Lake                  |
+|---------------+----------------------------------------+------------------------------|
+| AVX2 Type 3   | [AVX2 Type 2] + AVX-IFMA               | Sierra Forest                |
+|---------------+----------------------------------------+------------------------------|
+| AVX2 Type 4   | [AVX2 Type 3] + SM3NI, SM4NI, SHA512NI | Lunar Lake                   |
+|---------------+----------------------------------------+------------------------------|
+| AVX512 Type 1 | [AVX2 Type 1] + AVX512F, AVX512DQ,     | Sky Lake, Cascade Lake       |
+|               | AVX512CD, AVX512BW, AVX512VL           |                              |
+|---------------+----------------------------------------+------------------------------|
+| AVX512 Type 2 | [AVX512 Type 1] + SHANI, GFNI,         | Ice Lake, Sapphire Rapids,   |
+|               | AVX512-IFMA, VAES, VPCLMULQDQ          | Emerald Rapids               |
++---------------------------------------------------------------------------------------+
 ```
 
 ## 3. Recommendations
@@ -310,7 +294,6 @@ security updates.
 - lib - Library source files
 - lib/x86_64 - Non-SIMD routines
 - lib/sse_* - Intel(R) SSE optimized routines
-- lib/avx_* - Intel(R) AVX optimized routines
 - lib/avx2_* - Intel(R) AVX2 optimized routines
 - lib/avx512_* - Intel(R) AVX512 optimized routines
 

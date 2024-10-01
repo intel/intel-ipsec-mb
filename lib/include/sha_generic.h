@@ -38,7 +38,6 @@
 #include "include/error.h"
 #include "include/arch_sse_type1.h"
 #include "include/arch_sse_type2.h"
-#include "include/arch_avx_type1.h"
 #include "include/arch_avx2_type4.h"
 
 enum arch_type { ARCH_SSE = 0, ARCH_SSE_SHANI, ARCH_AVX, ARCH_AVX2_SHANI };

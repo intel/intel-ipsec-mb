@@ -1515,8 +1515,6 @@ main(int argc, char **argv)
                         }
                         if (strcmp(argv[i + 1], "SSE") == 0)
                                 test_arch = IMB_ARCH_SSE;
-                        else if (strcmp(argv[i + 1], "AVX") == 0)
-                                test_arch = IMB_ARCH_AVX;
                         else if (strcmp(argv[i + 1], "AVX2") == 0)
                                 test_arch = IMB_ARCH_AVX2;
                         else if (strcmp(argv[i + 1], "AVX512") == 0)
@@ -1634,9 +1632,6 @@ main(int argc, char **argv)
                 break;
         case IMB_ARCH_SSE:
                 init_mb_mgr_sse(mb_mgr);
-                break;
-        case IMB_ARCH_AVX:
-                init_mb_mgr_avx(mb_mgr);
                 break;
         case IMB_ARCH_AVX2:
                 init_mb_mgr_avx2(mb_mgr);

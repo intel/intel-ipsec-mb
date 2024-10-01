@@ -30,7 +30,6 @@
 #include "constants.h"
 #include "include/arch_sse_type1.h"
 #include "include/arch_sse_type2.h"
-#include "include/arch_avx_type1.h"
 #include "include/arch_avx2_type1.h"
 #include "include/arch_avx512_type1.h"
 

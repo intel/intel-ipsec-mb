@@ -179,8 +179,6 @@ update_flags_and_archs(const char *arg, uint8_t arch_support[IMB_ARCH_NUM], uint
                 arch_support[IMB_ARCH_AVX512] = 0;
         else if (strcmp(arg, "--no-avx2") == 0)
                 arch_support[IMB_ARCH_AVX2] = 0;
-        else if (strcmp(arg, "--no-avx") == 0)
-                arch_support[IMB_ARCH_AVX] = 0;
         else if (strcmp(arg, "--no-sse") == 0)
                 arch_support[IMB_ARCH_SSE] = 0;
         else if (strcmp(arg, "--shani-on") == 0)
@@ -236,16 +234,13 @@ detect_arch(uint8_t arch_support[IMB_ARCH_NUM])
         if ((p_mgr->features & detect_avx2) != detect_avx2)
                 arch_support[IMB_ARCH_AVX2] = 0;
 
-        if ((p_mgr->features & detect_avx) != detect_avx)
-                arch_support[IMB_ARCH_AVX] = 0;
-
         if ((p_mgr->features & detect_sse) != detect_sse)
                 arch_support[IMB_ARCH_SSE] = 0;
 
         free_mb_mgr(p_mgr);
 
-        if (arch_support[IMB_ARCH_SSE] == 0 && arch_support[IMB_ARCH_AVX] == 0 &&
-            arch_support[IMB_ARCH_AVX2] == 0 && arch_support[IMB_ARCH_AVX512] == 0) {
+        if (arch_support[IMB_ARCH_SSE] == 0 && arch_support[IMB_ARCH_AVX2] == 0 &&
+            arch_support[IMB_ARCH_AVX512] == 0) {
                 fprintf(stderr, "No available architecture detected!\n");
                 return -1;
         }
@@ -262,12 +257,11 @@ detect_arch(uint8_t arch_support[IMB_ARCH_NUM])
 void
 print_tested_arch(const uint64_t features, const IMB_ARCH arch)
 {
-        static const char *arch_str_tab[IMB_ARCH_NUM] = { "NONE", "SSE", "AVX", "AVX2", "AVX512" };
+        static const char *arch_str_tab[IMB_ARCH_NUM] = { "NONE", "SSE", "AVX2", "AVX512" };
         const char *feat = "";
 
         switch (arch) {
         case IMB_ARCH_AVX2:
-        case IMB_ARCH_AVX:
                 break;
         case IMB_ARCH_SSE:
                 if (features & IMB_FEATURE_SHANI) {

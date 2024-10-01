@@ -429,8 +429,6 @@ lib_objs2 = \
 	$(OBJ_DIR)\mb_mgr_zuc_submit_flush_gfni_avx2.obj \
 	$(OBJ_DIR)\mb_mgr_zuc_submit_flush_avx512.obj \
 	$(OBJ_DIR)\mb_mgr_zuc_submit_flush_gfni_avx512.obj \
-	$(OBJ_DIR)\mb_mgr_avx.obj \
-	$(OBJ_DIR)\mb_mgr_avx_t1.obj \
 	$(OBJ_DIR)\mb_mgr_avx2.obj \
 	$(OBJ_DIR)\mb_mgr_avx2_t1.obj \
 	$(OBJ_DIR)\mb_mgr_avx2_t2.obj \
@@ -585,13 +583,6 @@ $(DEPALL): $(all_objs)
         $(DEPTOOL) $< $@ "$(DEPFLAGS)" > $@.dep
 
 {sse_t3\}.asm{$(OBJ_DIR)}.obj:
-	$(AS) -MD $@.dep -o $@ $(AFLAGS) $<
-
-{avx_t1\}.c{$(OBJ_DIR)}.obj:
-	$(CC) /arch:AVX /Fo$@ /c $(CFLAGS) $<
-        $(DEPTOOL) $< $@ "$(DEPFLAGS)" > $@.dep
-
-{avx_t1\}.asm{$(OBJ_DIR)}.obj:
 	$(AS) -MD $@.dep -o $@ $(AFLAGS) $<
 
 {avx2_t1\}.c{$(OBJ_DIR)}.obj:

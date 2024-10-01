@@ -33,7 +33,7 @@
 
 %ifndef AES_CBC_ENC_X8
 %define AES_CBC_ENC_X8 aes_cbc_enc_128_x8
-%define SUBMIT_JOB_AES_ENC submit_job_aes128_enc_avx
+%define SUBMIT_JOB_AES_ENC submit_job_aes128_cbc_enc_avx
 %endif
 
 ; void AES_CBC_ENC_X8(AES_ARGS *args, UINT64 len_in_bytes);

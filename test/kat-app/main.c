@@ -225,7 +225,6 @@ usage(const char *name)
                 "--stop-on-fail: Stop test execution if a test fails\n"
                 "--no-avx512: Don't do AVX512\n"
                 "--no-avx2: Don't do AVX2\n"
-                "--no-avx: Don't do AVX\n"
                 "--no-sse: Don't do SSE\n"
                 "--auto-detect: Auto detects current architecture "
                 "to run the tests\n  Note: Auto detection "
@@ -436,9 +435,6 @@ main(int argc, char **argv)
                 switch (atype) {
                 case IMB_ARCH_SSE:
                         init_mb_mgr_sse(p_mgr);
-                        break;
-                case IMB_ARCH_AVX:
-                        init_mb_mgr_avx(p_mgr);
                         break;
                 case IMB_ARCH_AVX2:
                         init_mb_mgr_avx2(p_mgr);

@@ -37,6 +37,9 @@
 #include <signal.h>
 #include <sys/time.h>
 #endif
+#ifdef __clang_analyzer__
+#include <assert.h>
+#endif
 
 #ifdef _MSC_VER
 /* disable C5105 warning produced by standard headers C11 C standard */
@@ -125,7 +128,7 @@ typedef cpuset_t cpu_set_t;
 #define DEFAULT_BURST_SIZE 32
 #define MAX_BURST_SIZE     256
 
-enum arch_type_e { ARCH_SSE = 0, ARCH_AVX, ARCH_AVX2, ARCH_AVX512, NUM_ARCHS };
+enum arch_type_e { ARCH_SSE = 0, ARCH_AVX2, ARCH_AVX512, NUM_ARCHS };
 
 /* This enum will be mostly translated to IMB_CIPHER_MODE
  * (make sure to update c_mode_names list in print_times function)  */
@@ -245,7 +248,6 @@ struct str_value_mapping {
 };
 
 const struct str_value_mapping arch_str_map[] = { { .name = "SSE", .values.arch_type = ARCH_SSE },
-                                                  { .name = "AVX", .values.arch_type = ARCH_AVX },
                                                   { .name = "AVX2", .values.arch_type = ARCH_AVX2 },
                                                   { .name = "AVX512",
                                                     .values.arch_type = ARCH_AVX512 } };
@@ -736,7 +738,7 @@ struct custom_job_params custom_job_params = { .cipher_mode = TEST_NULL_CIPHER,
                                                .key_size = 0,
                                                .cipher_dir = IMB_DIR_ENCRYPT };
 
-uint8_t archs[NUM_ARCHS] = { 1, 1, 1, 1 }; /* uses all function sets */
+uint8_t archs[NUM_ARCHS] = { 1, 1, 1 }; /* uses all function sets */
 int use_gcm_sgl_api = 0;
 int use_unhalted_cycles = 0; /* read unhalted cycles instead of tsc */
 uint64_t rd_cycles_cost = 0; /* cost of reading unhalted cycles */
@@ -3067,6 +3069,10 @@ process_variant(IMB_MGR *mgr, const enum arch_type_e arch, struct params_s *para
         uint32_t sz;
         uint32_t job_size;
 
+#ifdef __clang_analyzer__
+        /* @todo not really needed but it eliminates false positives with scan-build-18 */
+        assert(times != NULL);
+#endif
         if (imix_list_count != 0)
                 sizes = 1;
 
@@ -3142,7 +3148,7 @@ print_times(struct variant_s *variant_list, struct params_s *params, const uint3
         uint32_t sz;
 
         if (plot_output_option == 0) {
-                const char *func_names[4] = { "SSE", "AVX", "AVX2", "AVX512" };
+                const char *func_names[4] = { "SSE", "AVX2", "AVX512" };
                 const char *c_mode_names[TEST_NUM_CIPHER_TESTS - 1] = { "CBC",
                                                                         "CNTR",
                                                                         "CNTR+8",
@@ -3434,9 +3440,6 @@ run_tests(void *arg)
                         case ARCH_SSE:
                                 init_mb_mgr_sse(p_mgr);
                                 break;
-                        case ARCH_AVX:
-                                init_mb_mgr_avx(p_mgr);
-                                break;
                         case ARCH_AVX2:
                                 init_mb_mgr_avx2(p_mgr);
                                 break;
@@ -3658,9 +3661,6 @@ detect_arch(unsigned int arch_support[NUM_ARCHS])
 
         if ((p_mgr->features & detect_avx2) != detect_avx2)
                 arch_support[ARCH_AVX2] = 0;
-
-        if ((p_mgr->features & detect_avx) != detect_avx)
-                arch_support[ARCH_AVX] = 0;
 
         if ((p_mgr->features & detect_sse) != detect_sse)
                 arch_support[ARCH_SSE] = 0;
@@ -3886,11 +3886,6 @@ detect_best_arch(uint8_t arch_support[NUM_ARCHS])
 
         if ((detected_features & detect_avx2) == detect_avx2) {
                 arch_support[ARCH_AVX2] = 1;
-                return 0;
-        }
-
-        if ((detected_features & detect_avx) == detect_avx) {
-                arch_support[ARCH_AVX] = 1;
                 return 0;
         }
 
@@ -4475,9 +4470,6 @@ main(int argc, char *argv[])
                 switch (arch) {
                 case ARCH_SSE:
                         init_mb_mgr_sse(p_mgr);
-                        break;
-                case ARCH_AVX:
-                        init_mb_mgr_avx(p_mgr);
                         break;
                 case ARCH_AVX2:
                         init_mb_mgr_avx2(p_mgr);

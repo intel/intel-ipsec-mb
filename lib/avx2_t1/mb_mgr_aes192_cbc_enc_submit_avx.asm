@@ -26,5 +26,5 @@
 ;;
 
 %define AES_CBC_ENC_X8 aes_cbc_enc_192_x8
-%define SUBMIT_JOB_AES_ENC submit_job_aes192_enc_avx
+%define SUBMIT_JOB_AES_ENC submit_job_aes192_cbc_enc_avx
 %include "avx2_t1/mb_mgr_aes128_cbc_enc_submit_avx.asm"

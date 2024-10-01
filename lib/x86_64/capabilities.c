@@ -146,7 +146,6 @@ imb_get_arch_type_string(const IMB_MGR *state, const char **arch_type, const cha
                 { IMB_ARCH_SSE, 1, "SSE Type 1", "CPU ISA: AES, PCLMUL, SSE" },
                 { IMB_ARCH_SSE, 2, "SSE Type 2", "CPU ISA: AES, PCLMUL, SSE, SHA-NI" },
                 { IMB_ARCH_SSE, 3, "SSE Type 3", "CPU ISA: AES, PCLMUL, SSE, SHA-NI, GFNI" },
-                { IMB_ARCH_AVX, 1, "AVX Type 1", "CPU ISA: AES, PCLMUL, SSE, AVX" },
                 { IMB_ARCH_AVX2, 1, "AVX2 Type 1", "CPU ISA: AES, PCLMUL, SSE, AVX, AVX2" },
                 { IMB_ARCH_AVX2, 2, "AVX2 Type 2",
                   "CPU ISA: VAES, VPCLMUL, SSE, AVX, AVX2, SHA-NI, GFNI" },

@@ -521,7 +521,6 @@ aead_chacha20_poly1305(IMB_JOB *job, const IMB_ARCH arch, const unsigned ifma)
         if (job->cipher_direction == IMB_DIR_ENCRYPT) {
                 switch (arch) {
                 case IMB_ARCH_SSE:
-                case IMB_ARCH_AVX:
                         submit_job_chacha20_poly_enc_sse(job, ks);
                         break;
                 case IMB_ARCH_AVX2:
@@ -544,7 +543,6 @@ aead_chacha20_poly1305(IMB_JOB *job, const IMB_ARCH arch, const unsigned ifma)
                 /* generate key for authentication */
                 switch (arch) {
                 case IMB_ARCH_SSE:
-                case IMB_ARCH_AVX:
                         len_to_gen = (cipher_len >= (256 - 64)) ? 256 : (cipher_len + 64);
                         gen_keystr_poly_key_sse(job->enc_keys, job->iv, len_to_gen, ks);
                         break;
@@ -566,7 +564,6 @@ aead_chacha20_poly1305(IMB_JOB *job, const IMB_ARCH arch, const unsigned ifma)
 
                 switch (arch) {
                 case IMB_ARCH_SSE:
-                case IMB_ARCH_AVX:
                         submit_job_chacha20_poly_dec_sse(job, ks + 64, len_to_gen - 64);
                         break;
                 case IMB_ARCH_AVX2:
@@ -607,14 +604,6 @@ aead_chacha20_poly1305_sse(IMB_MGR *mgr, IMB_JOB *job)
 
 IMB_DLL_LOCAL
 IMB_JOB *
-aead_chacha20_poly1305_avx(IMB_MGR *mgr, IMB_JOB *job)
-{
-        (void) mgr;
-        return aead_chacha20_poly1305(job, IMB_ARCH_AVX, 0);
-}
-
-IMB_DLL_LOCAL
-IMB_JOB *
 aead_chacha20_poly1305_avx2(IMB_MGR *mgr, IMB_JOB *job)
 {
         if (mgr->features & IMB_FEATURE_AVX_IFMA)
@@ -643,14 +632,6 @@ aead_chacha20_poly1305_sgl_sse(IMB_MGR *mgr, IMB_JOB *job)
 
 IMB_DLL_LOCAL
 IMB_JOB *
-aead_chacha20_poly1305_sgl_avx(IMB_MGR *mgr, IMB_JOB *job)
-{
-        (void) mgr;
-        return aead_chacha20_poly1305_sgl(job, IMB_ARCH_AVX, 0);
-}
-
-IMB_DLL_LOCAL
-IMB_JOB *
 aead_chacha20_poly1305_sgl_avx2(IMB_MGR *mgr, IMB_JOB *job)
 {
         if (mgr->features & IMB_FEATURE_AVX_IFMA)
@@ -675,14 +656,6 @@ init_chacha20_poly1305_sse(const void *key, struct chacha20_poly1305_context_dat
                            const void *iv, const void *aad, const uint64_t aad_len)
 {
         init_chacha20_poly1305_direct(key, ctx, iv, aad, aad_len, IMB_ARCH_SSE, 1, 0);
-}
-
-IMB_DLL_LOCAL
-void
-init_chacha20_poly1305_avx(const void *key, struct chacha20_poly1305_context_data *ctx,
-                           const void *iv, const void *aad, const uint64_t aad_len)
-{
-        init_chacha20_poly1305_direct(key, ctx, iv, aad, aad_len, IMB_ARCH_AVX, 1, 0);
 }
 
 IMB_DLL_LOCAL
@@ -724,14 +697,6 @@ update_enc_chacha20_poly1305_sse(const void *key, struct chacha20_poly1305_conte
                                  void *dst, const void *src, const uint64_t len)
 {
         update_chacha20_poly1305_direct(key, ctx, dst, src, len, IMB_DIR_ENCRYPT, IMB_ARCH_SSE, 1,
-                                        0);
-}
-
-void
-update_enc_chacha20_poly1305_avx(const void *key, struct chacha20_poly1305_context_data *ctx,
-                                 void *dst, const void *src, const uint64_t len)
-{
-        update_chacha20_poly1305_direct(key, ctx, dst, src, len, IMB_DIR_ENCRYPT, IMB_ARCH_AVX, 1,
                                         0);
 }
 
@@ -778,14 +743,6 @@ update_dec_chacha20_poly1305_sse(const void *key, struct chacha20_poly1305_conte
 }
 
 void
-update_dec_chacha20_poly1305_avx(const void *key, struct chacha20_poly1305_context_data *ctx,
-                                 void *dst, const void *src, const uint64_t len)
-{
-        update_chacha20_poly1305_direct(key, ctx, dst, src, len, IMB_DIR_DECRYPT, IMB_ARCH_AVX, 1,
-                                        0);
-}
-
-void
 update_dec_chacha20_poly1305_avx2(const void *key, struct chacha20_poly1305_context_data *ctx,
                                   void *dst, const void *src, const uint64_t len)
 {
@@ -824,13 +781,6 @@ finalize_chacha20_poly1305_sse(struct chacha20_poly1305_context_data *ctx, void 
                                const uint64_t tag_len)
 {
         finalize_chacha20_poly1305_direct(ctx, tag, tag_len, IMB_ARCH_SSE, 1, 0);
-}
-
-void
-finalize_chacha20_poly1305_avx(struct chacha20_poly1305_context_data *ctx, void *tag,
-                               const uint64_t tag_len)
-{
-        finalize_chacha20_poly1305_direct(ctx, tag, tag_len, IMB_ARCH_AVX, 1, 0);
 }
 
 void

@@ -173,7 +173,6 @@ struct str_value_mapping {
 const struct str_value_mapping arch_str_map[] = {
         { .name = "NONE", .values.arch_type = IMB_ARCH_NONE },
         { .name = "SSE", .values.arch_type = IMB_ARCH_SSE },
-        { .name = "AVX", .values.arch_type = IMB_ARCH_AVX },
         { .name = "AVX2", .values.arch_type = IMB_ARCH_AVX2 },
         { .name = "AVX512", .values.arch_type = IMB_ARCH_AVX512 }
 };
@@ -630,8 +629,8 @@ struct custom_job_params custom_job_params = { .cipher_mode = IMB_CIPHER_NULL,
                                                .hash_alg = IMB_AUTH_NULL,
                                                .key_size = 0 };
 
-uint8_t enc_archs[IMB_ARCH_NUM] = { 0, 1, 1, 1, 1 };
-uint8_t dec_archs[IMB_ARCH_NUM] = { 0, 1, 1, 1, 1 };
+uint8_t enc_archs[IMB_ARCH_NUM] = { 0, 1, 1, 1 };
+uint8_t dec_archs[IMB_ARCH_NUM] = { 0, 1, 1, 1 };
 
 uint64_t flags = 0; /* flags passed to alloc_mb_mgr() */
 
@@ -2050,12 +2049,18 @@ post_job(IMB_MGR *mgr, IMB_JOB *job, unsigned *num_processed_jobs, const struct 
 
         /* Only need to modify the buffer after encryption */
         if (dir == IMB_DIR_ENCRYPT) {
+#ifndef __clang_analyzer__
+                /*
+                 * @todo scan-build-18 reports false positive issue here -> do not analyze
+                 *     ipsec_xvalid.c:2055:29: warning: 3rd function call argument is an
+                 *     uninitialized value [core.CallAndMessage]
+                 */
                 if (params->hash_alg == IMB_AUTH_PON_CRC_BIP) {
                         if (modify_pon_test_buf(job_tab[idx].test_buf, job, job_tab[idx].pli,
                                                 job_tab[idx].xgem_hdr) < 0)
                                 return -1;
                 }
-
+#endif
                 if (params->hash_alg == IMB_AUTH_DOCSIS_CRC32)
                         modify_docsis_crc32_test_buf(job_tab[idx].test_buf, job,
                                                      job_tab[idx].buf_size);
@@ -2763,9 +2768,6 @@ run_test(const IMB_ARCH enc_arch, const IMB_ARCH dec_arch, struct params_s *para
         case IMB_ARCH_SSE:
                 init_mb_mgr_sse(enc_mgr);
                 break;
-        case IMB_ARCH_AVX:
-                init_mb_mgr_avx(enc_mgr);
-                break;
         case IMB_ARCH_AVX2:
                 init_mb_mgr_avx2(enc_mgr);
                 break;
@@ -2800,9 +2802,6 @@ run_test(const IMB_ARCH enc_arch, const IMB_ARCH dec_arch, struct params_s *para
         switch (dec_arch) {
         case IMB_ARCH_SSE:
                 init_mb_mgr_sse(dec_mgr);
-                break;
-        case IMB_ARCH_AVX:
-                init_mb_mgr_avx(dec_mgr);
                 break;
         case IMB_ARCH_AVX2:
                 init_mb_mgr_avx2(dec_mgr);
