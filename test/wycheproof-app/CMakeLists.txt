@@ -82,7 +82,30 @@ target_compile_definitions(${WYCHEPROOF_APP} PRIVATE ${APP_DEFINES})
 # add tests
 # ##############################################################################
 
-add_test(NAME WYCHEPROOF COMMAND ${WYCHEPROOF_APP})
-add_test(NAME WYCHEPROOF-SHANI-OFF COMMAND ${WYCHEPROOF_APP} --shani-off)
-add_test(NAME WYCHEPROOF-GFNI-OFF COMMAND ${WYCHEPROOF_APP} --gfni-off)
+# set working directory for tests
+if(IMB_BIN_DIR)
+  set(APP_BIN_DIR "${IMB_BIN_DIR}")
+else()
+  set(APP_BIN_DIR "${CMAKE_CURRENT_BINARY_DIR}")
+endif()
 
+# append config type for multi-config generators
+get_property(multi_config_gen GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
+if(multi_config_gen)
+  string(APPEND APP_BIN_DIR "/$<IF:$<CONFIG:Debug>,Debug,Release>")
+endif()
+
+add_test(
+  NAME WYCHEPROOF::DEFAULT
+  COMMAND ${WYCHEPROOF_APP}
+  WORKING_DIRECTORY ${APP_BIN_DIR})
+
+add_test(
+  NAME WYCHEPROOF::SHANI_OFF
+  COMMAND ${WYCHEPROOF_APP} --shani-off
+  WORKING_DIRECTORY ${APP_BIN_DIR})
+
+add_test(
+  NAME WYCHEPROOF::GFNI_OFF
+  COMMAND ${WYCHEPROOF_APP} --gfni-off
+  WORKING_DIRECTORY ${APP_BIN_DIR})
