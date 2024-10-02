@@ -81,3 +81,8 @@ link_directories(${LIB_DIR})
 target_link_libraries(${PERF_APP} PRIVATE ${IPSEC_MB_LIB})
 target_compile_definitions(${PERF_APP} PRIVATE ${APP_DEFINES})
 
+# ##############################################################################
+# include tests
+# ##############################################################################
+
+include(perf_tests.cmake)
