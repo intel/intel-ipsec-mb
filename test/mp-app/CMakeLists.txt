@@ -96,17 +96,18 @@ target_compile_definitions(${MP_APP_SEC} PRIVATE ${APP_DEFINES})
 
 # set working directory for tests
 if(IMB_BIN_DIR)
-  set(TEST_APP_BIN_DIR "${IMB_BIN_DIR}")
+  set(APP_BIN_DIR "${IMB_BIN_DIR}")
 else()
-  set(TEST_APP_BIN_DIR "${CMAKE_CURRENT_BINARY_DIR}")
+  set(APP_BIN_DIR "${CMAKE_CURRENT_BINARY_DIR}")
 endif()
 
 # append config type for multi-config generators
 get_property(multi_config_gen GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
-if (multi_config_gen)
-  STRING(APPEND TEST_APP_BIN_DIR "/$<IF:$<CONFIG:Debug>,Debug,Release>")
+if(multi_config_gen)
+  string(APPEND APP_BIN_DIR "/$<IF:$<CONFIG:Debug>,Debug,Release>")
 endif()
 
-add_test(NAME MULTIPROCESS
-  COMMAND ${MP_APP_PRI} ${TEST_APP_BIN_DIR}/${MP_APP_SEC}
-  WORKING_DIRECTORY ${TEST_APP_BIN_DIR})
+add_test(
+  NAME MULTIPROCESS::DEFAULT
+  COMMAND ${MP_APP_PRI} ${APP_BIN_DIR}/${MP_APP_SEC}
+  WORKING_DIRECTORY ${APP_BIN_DIR})
