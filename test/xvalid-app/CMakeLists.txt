@@ -82,12 +82,4 @@ target_compile_definitions(${XVALID_APP} PRIVATE ${APP_DEFINES})
 # add tests
 # ##############################################################################
 
-add_test(NAME XVALID-64B
-  COMMAND ${XVALID_APP} --job-size 64)
-
-# run safe check only when SAFE_DATA is enabled and only run on release build
-if (SAFE_DATA)
-  add_test(NAME XVALID-64B-SAFE-CHECK
-    COMMAND ${XVALID_APP} --safe-check --job-size 64
-    CONFIGURATIONS Release)
-endif()
+include(xvalid_tests.cmake)
