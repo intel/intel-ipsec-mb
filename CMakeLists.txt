@@ -63,7 +63,7 @@ imb_compiler_check()
 imb_add_target_uninstall("${CMAKE_CURRENT_SOURCE_DIR}/lib/cmake/uninstall.cmake.in")
 
 # style check target
-imb_add_target_style_check()
+imb_add_target_style_checks()
 
 # TAGS target
 imb_add_target_tags()

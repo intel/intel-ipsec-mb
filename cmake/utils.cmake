@@ -186,9 +186,10 @@ macro(imb_add_target_print_help OPTIONS)
   endforeach()
 endmacro()
 
-# style check using clang format
-macro(imb_add_target_style_check)
+# style check using clang & cmake format
+macro(imb_add_target_style_checks)
   include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/clang-format.cmake")
+  include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/cmake-format.cmake")
 endmacro()
 
 # add TAGS target
