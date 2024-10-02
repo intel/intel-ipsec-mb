@@ -358,12 +358,6 @@ struct str_value_mapping hash_algo_str_map[] = {
                 }
         },
         {
-                .name = "DOCSIS-SEC-128-CRC32",
-                .values.job_params = {
-                        .hash_alg = IMB_AUTH_DOCSIS_CRC32,
-                }
-        },
-        {
                 .name = "AES-GMAC-128",
                 .values.job_params = {
                         .hash_alg = IMB_AUTH_AES_GMAC_128,
@@ -519,6 +513,10 @@ struct str_value_mapping aead_algo_str_map[] = {
         { .name = "SM4-GCM",
           .values.job_params = { .cipher_mode = IMB_CIPHER_SM4_GCM,
                                  .hash_alg = IMB_AUTH_SM4_GCM,
+                                 .key_size = IMB_KEY_128_BYTES } },
+        { .name = "DOCSIS-SEC-128-CRC32",
+          .values.job_params = { .cipher_mode = IMB_CIPHER_DOCSIS_SEC_BPI,
+                                 .hash_alg = IMB_AUTH_DOCSIS_CRC32,
                                  .key_size = IMB_KEY_128_BYTES } },
 };
 
