@@ -66,3 +66,24 @@ add_executable(${SAMPLE_APP} ${SAMPLE_APP_SRC_FILES_C})
 target_link_libraries(${SAMPLE_APP} PRIVATE ${IPSEC_MB_LIB})
 target_compile_definitions(${SAMPLE_APP} PRIVATE ${APP_DEFINES})
 
+# ##############################################################################
+# add tests
+# ##############################################################################
+
+# set working directory for tests
+if(IMB_BIN_DIR)
+  set(APP_BIN_DIR "${IMB_BIN_DIR}")
+else()
+  set(APP_BIN_DIR "${CMAKE_CURRENT_BINARY_DIR}")
+endif()
+
+# append config type for multi-config generators
+get_property(multi_config_gen GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
+if(multi_config_gen)
+  string(APPEND APP_BIN_DIR "/$<IF:$<CONFIG:Debug>,Debug,Release>")
+endif()
+
+add_test(
+  NAME EXAMPLE::BURST
+  COMMAND ${SAMPLE_APP}
+  WORKING_DIRECTORY ${APP_BIN_DIR})
