@@ -1,3 +1,4 @@
+# cmake-format: off
 # Copyright (c) 2022-2023, Intel Corporation
 #
 # Redistribution and use in source and binary forms, with or without
@@ -22,6 +23,7 @@
 # CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+# cmake-format: on
 
 # Ensure building entire project
 if(NOT FULL_PROJECT_BUILD)

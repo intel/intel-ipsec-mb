@@ -1,3 +1,4 @@
+# cmake-format: off
 # Copyright (c) 2023, Intel Corporation
 #
 # Redistribution and use in source and binary forms, with or without
@@ -22,6 +23,7 @@
 # CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+# cmake-format: on
 
 # ##############################################################################
 # IPSec_MB library CMake Unix config
@@ -56,47 +58,42 @@ endif()
 
 if(CET_SUPPORT)
   string(APPEND CMAKE_C_FLAGS " -fcf-protection=full")
-  string(APPEND CMAKE_SHARED_LINKER_FLAGS " -Wl,-z,ibt -Wl,-z,shstk -Wl,-z,cet-report=error")
+  string(APPEND CMAKE_SHARED_LINKER_FLAGS
+         " -Wl,-z,ibt -Wl,-z,shstk -Wl,-z,cet-report=error")
 endif()
 
 # set directory specific C compiler flags
+set_source_files_properties(${SRC_FILES_AVX_T1} ${SRC_FILES_AVX_T2} PPROPERTIES
+                            COMPILE_FLAGS "-march=sandybridge -maes -mpclmul")
 set_source_files_properties(
-  ${SRC_FILES_AVX_T1} ${SRC_FILES_AVX_T2}
-  PPROPERTIES COMPILE_FLAGS
-  "-march=sandybridge -maes -mpclmul")
-set_source_files_properties(
-  ${SRC_FILES_AVX2_T1} ${SRC_FILES_AVX2_T2} ${SRC_FILES_AVX2_T3}
-  PPROPERTIES COMPILE_FLAGS
-  "-march=haswell -maes -mpclmul")
+  ${SRC_FILES_AVX2_T1} ${SRC_FILES_AVX2_T2} ${SRC_FILES_AVX2_T3} PPROPERTIES
+  COMPILE_FLAGS "-march=haswell -maes -mpclmul")
 set_source_files_properties(
   ${SRC_FILES_AVX512_T1} ${SRC_FILES_AVX512_T2}
-  PROPERTIES COMPILE_FLAGS
-  "-march=broadwell -maes -mpclmul")
+  PROPERTIES COMPILE_FLAGS "-march=broadwell -maes -mpclmul")
 set_source_files_properties(
   ${SRC_FILES_SSE_T1} ${SRC_FILES_SSE_T2} ${SRC_FILES_SSE_T3}
-  PROPERTIES COMPILE_FLAGS
-  "-march=nehalem -maes -mpclmul")
-set_source_files_properties(${SRC_FILES_X86_64}
-  PROPERTIES COMPILE_FLAGS
-  "-msse4.2")
+  PROPERTIES COMPILE_FLAGS "-march=nehalem -maes -mpclmul")
+set_source_files_properties(${SRC_FILES_X86_64} PROPERTIES COMPILE_FLAGS
+                                                           "-msse4.2")
 
-########################################
+# ##############################################################################
 # add library target
-########################################
+# ##############################################################################
 
 add_library(${LIB} ${SRC_FILES_ASM} ${SRC_FILES_C})
 
 # set library SO version
 string(REPLACE "." ";" VERSION_LIST ${IPSEC_MB_VERSION})
 list(GET VERSION_LIST 0 SO_MAJOR_VER)
-set_target_properties(${LIB} PROPERTIES
-  VERSION ${IPSEC_MB_VERSION_FULL}
-  SOVERSION ${SO_MAJOR_VER})
+set_target_properties(${LIB} PROPERTIES VERSION ${IPSEC_MB_VERSION_FULL}
+                                        SOVERSION ${SO_MAJOR_VER})
 
 # set install rules
 if(NOT CMAKE_INSTALL_PREFIX)
-  set(CMAKE_INSTALL_PREFIX "/usr"
-    CACHE STRING "Set default installation directory" FORCE)
+  set(CMAKE_INSTALL_PREFIX
+      "/usr"
+      CACHE STRING "Set default installation directory" FORCE)
 endif()
 if(NOT LIB_INSTALL_DIR)
   set(LIB_INSTALL_DIR "${CMAKE_INSTALL_FULL_LIBDIR}")
@@ -116,5 +113,4 @@ install(TARGETS ${LIB} DESTINATION ${LIB_INSTALL_DIR})
 install(FILES ${IMB_HDR} DESTINATION ${INCLUDE_INSTALL_DIR})
 install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/libipsec-mb.7
               ${CMAKE_CURRENT_SOURCE_DIR}/libipsec-mb-dev.7
-              DESTINATION ${MAN_INSTALL_DIR})
-
+        DESTINATION ${MAN_INSTALL_DIR})

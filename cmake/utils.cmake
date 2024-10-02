@@ -1,3 +1,4 @@
+# cmake-format: off
 # Copyright (c) 2023, Intel Corporation
 #
 # Redistribution and use in source and binary forms, with or without
@@ -22,6 +23,7 @@
 # CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+# cmake-format: on
 
 include(CheckCCompilerFlag)
 if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.18")
@@ -31,8 +33,10 @@ endif()
 # extract library version from header file
 macro(imb_get_version IMB_HDR_FILE)
   file(STRINGS ${IMB_HDR_FILE} VER_STR REGEX "^.*IMB_VERSION_STR.*$")
-  string(REGEX MATCH "[0-9]+.[0-9]+.[0-9]+(-[a-z]+)?" IPSEC_MB_VERSION_FULL ${VER_STR})
-  string(REGEX MATCH "[0-9]+.[0-9]+.[0-9]+" IPSEC_MB_VERSION ${IPSEC_MB_VERSION_FULL})
+  string(REGEX MATCH "[0-9]+.[0-9]+.[0-9]+(-[a-z]+)?" IPSEC_MB_VERSION_FULL
+               ${VER_STR})
+  string(REGEX MATCH "[0-9]+.[0-9]+.[0-9]+" IPSEC_MB_VERSION
+               ${IPSEC_MB_VERSION_FULL})
 endmacro()
 
 macro(imb_detect_os)
@@ -63,17 +67,20 @@ macro(imb_set_proj_defaults)
         CACHE STRING "Selected build type")
   endif()
 
-  #######################################
+  # ############################################################################
   # set default library options
-  #######################################
+  # ############################################################################
   option(SAFE_PARAM "API input parameter checking" ON)
-  option(SAFE_DATA "Sensitive data cleared from registers and memory at operation end" ON)
+  option(SAFE_DATA
+         "Sensitive data cleared from registers and memory at operation end" ON)
   option(SAFE_LOOKUP "Lookups depending on sensitive data are constant time" ON)
   option(SAFE_OPTIONS "Enable all safe options" ON)
   option(BUILD_SHARED_LIBS "Build shared library" ON)
   option(CMAKE_VERBOSE_MAKEFILE "Verbose build output" OFF)
   option(BUILD_LIBRARY_ONLY "Build library only without applications" OFF)
-  set(EXTRA_CFLAGS "" CACHE STRING "Extra compiler flags")
+  set(EXTRA_CFLAGS
+      ""
+      CACHE STRING "Extra compiler flags")
 
   # disable all SAFE options when SAFE_OPTIONS false
   if(NOT SAFE_OPTIONS)
@@ -84,26 +91,37 @@ macro(imb_set_proj_defaults)
   endif()
 
   # project options list (used by print_help target)
-  set(IPSEC_MB_OPTIONS CMAKE_BUILD_TYPE IPSEC_MB_OPTIONS
-    SAFE_PARAM SAFE_DATA SAFE_LOOKUP
-    SAFE_OPTIONS BUILD_LIBRARY_ONLY BUILD_SHARED_LIBS
-    CMAKE_VERBOSE_MAKEFILE EXTRA_CFLAGS
-    )
+  set(IPSEC_MB_OPTIONS
+      CMAKE_BUILD_TYPE
+      IPSEC_MB_OPTIONS
+      SAFE_PARAM
+      SAFE_DATA
+      SAFE_LOOKUP
+      SAFE_OPTIONS
+      BUILD_LIBRARY_ONLY
+      BUILD_SHARED_LIBS
+      CMAKE_VERBOSE_MAKEFILE
+      EXTRA_CFLAGS)
 
   # clear default release build C Compiler Flags
-  set(CMAKE_C_FLAGS_RELEASE "" CACHE STRING "" FORCE)
+  set(CMAKE_C_FLAGS_RELEASE
+      ""
+      CACHE STRING "" FORCE)
   # clear default debug build C Compiler Flags
-  set(CMAKE_C_FLAGS_DEBUG "" CACHE STRING "" FORCE)
+  set(CMAKE_C_FLAGS_DEBUG
+      ""
+      CACHE STRING "" FORCE)
 
   if(WIN32)
     set(DEFAULT_INSTALL_PREFIX "C:/Program Files/intel-ipsec-mb")
-    set(CMAKE_INSTALL_PREFIX ${DEFAULT_INSTALL_PREFIX}
-    CACHE STRING "Set default installation directory")
+    set(CMAKE_INSTALL_PREFIX
+        ${DEFAULT_INSTALL_PREFIX}
+        CACHE STRING "Set default installation directory")
   endif()
 
-  ########################################
+  # ############################################################################
   # print build information
-  ########################################
+  # ############################################################################
   message(STATUS "SAFE_OPTIONS...            ${SAFE_OPTIONS}")
   message(STATUS "SAFE_PARAM...              ${SAFE_PARAM}")
   message(STATUS "SAFE_DATA...               ${SAFE_DATA}")
@@ -114,11 +132,11 @@ macro(imb_set_proj_defaults)
   if(${CMAKE_GENERATOR_PLATFORM})
     message(STATUS "GENERATOR PLATFORM...      ${CMAKE_GENERATOR_PLATFORM}")
   endif()
-  if (NOT multi_config_gen)
+  if(NOT multi_config_gen)
     message(STATUS "BUILD_TYPE...              ${CMAKE_BUILD_TYPE}")
     message(STATUS "CMAKE_VERBOSE_MAKEFILE...  ${CMAKE_VERBOSE_MAKEFILE}")
   endif()
-  if (EXTRA_CFLAGS)
+  if(EXTRA_CFLAGS)
     message(STATUS "EXTRA_CFLAGS...            ${EXTRA_CFLAGS}")
   endif()
 
@@ -138,8 +156,8 @@ endmacro()
 
 # compiler checks
 macro(imb_compiler_check)
-  if((${CMAKE_C_COMPILER_ID} STREQUAL "GNU") AND
-    (CMAKE_C_COMPILER_VERSION VERSION_LESS 5.0))
+  if((${CMAKE_C_COMPILER_ID} STREQUAL "GNU") AND (CMAKE_C_COMPILER_VERSION
+                                                  VERSION_LESS 5.0))
     message(FATAL_ERROR "GNU C Compiler version must be 5.0 or higher")
   endif()
 
@@ -159,12 +177,13 @@ endmacro()
 
 # add uninstall target
 macro(imb_add_target_uninstall UNINSTALL_ROUTINE)
-  configure_file(${UNINSTALL_ROUTINE}
-    "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake"
+  configure_file(
+    ${UNINSTALL_ROUTINE} "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake"
     IMMEDIATE @ONLY)
 
-  add_custom_target(uninstall
-    COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake)
+  add_custom_target(
+    uninstall COMMAND ${CMAKE_COMMAND} -P
+                      ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake)
 endmacro()
 
 # add print_help target
@@ -172,16 +191,17 @@ macro(imb_add_target_print_help OPTIONS)
   add_custom_target(
     print_help
     COMMAND ${CMAKE_COMMAND} -E echo "Available build options:"
-    VERBATIM
-    )
+    VERBATIM)
 
-  foreach (OPTION ${OPTIONS})
-    get_property(HELP_TEXT CACHE ${OPTION} PROPERTY HELPSTRING)
+  foreach(OPTION ${OPTIONS})
+    get_property(
+      HELP_TEXT
+      CACHE ${OPTION}
+      PROPERTY HELPSTRING)
     if(HELP_TEXT)
-      add_custom_command(TARGET print_help
-        COMMAND
-        ${CMAKE_COMMAND} -E echo "    ${OPTION}=${${OPTION}} - ${HELP_TEXT}"
-        )
+      add_custom_command(
+        TARGET print_help COMMAND ${CMAKE_COMMAND} -E echo
+                                  "    ${OPTION}=${${OPTION}} - ${HELP_TEXT}")
     endif()
   endforeach()
 endmacro()
@@ -202,8 +222,7 @@ macro(imb_add_target_tags)
       COMMAND bash -c "find ./ -name '*.asm'  | etags -a -"
       COMMAND bash -c "find ./ -name '*.inc'  | etags -a -"
       WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-      VERBATIM
-      )
+      VERBATIM)
   endif()
 endmacro()
 
@@ -237,8 +256,8 @@ macro(imb_add_target_cppcheck_bughunt)
         COMMAND ${CMAKE_COMMAND} -E echo "Running cppcheck:"
         COMMAND bash -c "mkdir -p .cppcheck"
         COMMAND
-        bash -c
-        "${CPPCHECK} --force --enable=all ${CPPCHECK_FLAGS1} --project=./compile_commands.json"
+          bash -c
+          "${CPPCHECK} --force --enable=all ${CPPCHECK_FLAGS1} --project=./compile_commands.json"
         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
         VERBATIM)
 
@@ -248,8 +267,8 @@ macro(imb_add_target_cppcheck_bughunt)
         COMMAND ${CMAKE_COMMAND} -E echo "Running cppcheck bughunt:"
         COMMAND bash -c "mkdir -p .bughunt"
         COMMAND
-        bash -c
-        "${CPPCHECK} --bug-hunting --inconclusive ${CPPCHECK_FLAGS2} --project=./compile_commands.json"
+          bash -c
+          "${CPPCHECK} --bug-hunting --inconclusive ${CPPCHECK_FLAGS2} --project=./compile_commands.json"
         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
         VERBATIM)
     endif(CPPCHECK)

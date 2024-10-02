@@ -1,3 +1,4 @@
+# cmake-format: off
 # Copyright (c) 2023, Intel Corporation
 #
 # Redistribution and use in source and binary forms, with or without
@@ -22,6 +23,7 @@
 # CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+# cmake-format: on
 
 # ##############################################################################
 # Performance application CMake Windows config
@@ -57,4 +59,3 @@ add_custom_command(
   COMMAND
     ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/ipsec_perf_tool.py"
     $<TARGET_FILE_DIR:${PERF_APP}>)
-

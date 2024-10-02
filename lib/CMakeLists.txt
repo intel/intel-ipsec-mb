@@ -1,3 +1,4 @@
+# cmake-format: off
 # Copyright (c) 2022-2023, Intel Corporation
 #
 # Redistribution and use in source and binary forms, with or without
@@ -22,6 +23,7 @@
 # CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+# cmake-format: on
 
 # ##############################################################################
 # Build IPSec_MB library
@@ -32,9 +34,9 @@ if(NOT FULL_PROJECT_BUILD)
   message(FATAL_ERROR "Please run CMake from project root directory")
 endif()
 
-########################################
+# ##############################################################################
 # setup NASM
-########################################
+# ##############################################################################
 if(NOT CMAKE_ASM_NASM_COMPILER)
   set(CMAKE_ASM_NASM_COMPILER nasm)
 endif()
@@ -86,9 +88,9 @@ endif()
 
 set(CAN_USE_ASSEMBLER 1)
 
-#######################################
+# ##############################################################################
 # set library directories
-#######################################
+# ##############################################################################
 set(DIR_CURRENT ${CMAKE_CURRENT_SOURCE_DIR}/)
 set(DIR_INCLUDE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 set(DIR_AVX_T1 ${CMAKE_CURRENT_SOURCE_DIR}/avx_t1)
@@ -106,30 +108,29 @@ endif()
 if(SMX_NI)
   set(DIR_AVX2_T4 ${CMAKE_CURRENT_SOURCE_DIR}/avx2_t4)
 endif()
-########################################
+# ##############################################################################
 # create list of all source directories
-########################################
+# ##############################################################################
 set(DIR_SOURCES
-  ${DIR_AVX_T1}
-  ${DIR_AVX_T2}
-  ${DIR_AVX2_T1}
-  ${DIR_AVX2_T2}
-  ${DIR_AVX2_T4}
-  ${DIR_AVX512_T1}
-  ${DIR_AVX512_T2}
-  ${DIR_SSE_T1}
-  ${DIR_SSE_T2}
-  ${DIR_SSE_T3}
-  ${DIR_X86_64}
-)
+    ${DIR_AVX_T1}
+    ${DIR_AVX_T2}
+    ${DIR_AVX2_T1}
+    ${DIR_AVX2_T2}
+    ${DIR_AVX2_T4}
+    ${DIR_AVX512_T1}
+    ${DIR_AVX512_T2}
+    ${DIR_SSE_T1}
+    ${DIR_SSE_T2}
+    ${DIR_SSE_T3}
+    ${DIR_X86_64})
 
 if(AVX_IFMA)
   list(APPEND DIR_SOURCES ${DIR_AVX2_T3})
 endif()
 
-########################################
+# ##############################################################################
 # find C source files in all directories
-########################################
+# ##############################################################################
 file(GLOB SRC_FILES_AVX_T1 "${DIR_AVX_T1}/*.c")
 file(GLOB SRC_FILES_AVX_T2 "${DIR_AVX_T2}/*.c")
 file(GLOB SRC_FILES_AVX2_T1 "${DIR_AVX2_T1}/*.c")
@@ -145,18 +146,17 @@ file(GLOB SRC_FILES_X86_64 "${DIR_X86_64}/*.c")
 
 # create list of all C source files
 set(SRC_FILES_C
-  ${SRC_FILES_AVX_T1}
-  ${SRC_FILES_AVX_T2}
-  ${SRC_FILES_AVX2_T1}
-  ${SRC_FILES_AVX2_T2}
-  ${SRC_FILES_AVX512_T1}
-  ${SRC_FILES_AVX512_T2}
-  ${SRC_FILES_SSE_T1}
-  ${SRC_FILES_SSE_T2}
-  ${SRC_FILES_SSE_T3}
-  ${SRC_FILES_X86_64}
-  ${SRC_FILES_AVX2_T4}
-)
+    ${SRC_FILES_AVX_T1}
+    ${SRC_FILES_AVX_T2}
+    ${SRC_FILES_AVX2_T1}
+    ${SRC_FILES_AVX2_T2}
+    ${SRC_FILES_AVX512_T1}
+    ${SRC_FILES_AVX512_T2}
+    ${SRC_FILES_SSE_T1}
+    ${SRC_FILES_SSE_T2}
+    ${SRC_FILES_SSE_T3}
+    ${SRC_FILES_X86_64}
+    ${SRC_FILES_AVX2_T4})
 if(AVX_IFMA)
   list(APPEND SRC_FILES_C ${SRC_FILES_AVX2_T3})
 endif()
@@ -164,12 +164,11 @@ if(SMX_NI)
   list(APPEND SRC_FILES_C ${SRC_FILES_AVX2_T4})
 endif()
 
-
 list(SORT SRC_FILES_C)
 
-########################################
+# ##############################################################################
 # generate list of assembly source files
-########################################
+# ##############################################################################
 foreach(DIR ${DIR_SOURCES})
   file(GLOB_RECURSE TMP "${DIR}/*.asm")
   list(APPEND SRC_FILES_ASM ${TMP})
@@ -177,9 +176,9 @@ endforeach()
 
 list(SORT SRC_FILES_ASM)
 
-########################################
+# ##############################################################################
 # set C compiler options
-########################################
+# ##############################################################################
 set(LIB_DEFINES)
 
 # enable SAFE OPTIONS
@@ -205,9 +204,9 @@ if(SMX_NI)
   list(APPEND LIB_DEFINES SMX_NI)
 endif()
 
-########################################
+# ##############################################################################
 # add OS specific options
-########################################
+# ##############################################################################
 if(WINDOWS)
   if(CMAKE_GENERATOR MATCHES "MinGW Makefiles")
     include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/windows-mingw.cmake)
@@ -223,10 +222,9 @@ string(APPEND CMAKE_C_FLAGS " ${EXTRA_CFLAGS}")
 
 # add library definitions to all C source files
 foreach(FILE ${SRC_FILES_C})
-  set_source_files_properties(${FILE} PROPERTIES
-    COMPILE_DEFINITIONS "${LIB_DEFINES}")
+  set_source_files_properties(${FILE} PROPERTIES COMPILE_DEFINITIONS
+                                                 "${LIB_DEFINES}")
 endforeach()
 
 # add include directories
-target_include_directories(${LIB} PRIVATE
-  ${DIR_CURRENT} ${DIR_INCLUDE})
+target_include_directories(${LIB} PRIVATE ${DIR_CURRENT} ${DIR_INCLUDE})

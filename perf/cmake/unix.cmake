@@ -1,3 +1,4 @@
+# cmake-format: off
 # Copyright (c) 2023, Intel Corporation
 #
 # Redistribution and use in source and binary forms, with or without
@@ -22,6 +23,7 @@
 # CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+# cmake-format: on
 
 # ##############################################################################
 # Performance application CMake Unix config
@@ -53,7 +55,8 @@ endif()
 
 if(CET_SUPPORT)
   string(APPEND CMAKE_C_FLAGS " -fcf-protection=full")
-  string(APPEND CMAKE_EXE_LINKER_FLAGS " -Wl,-z,ibt -Wl,-z,shstk -Wl,-z,cet-report=error")
+  string(APPEND CMAKE_EXE_LINKER_FLAGS
+         " -Wl,-z,ibt -Wl,-z,shstk -Wl,-z,cet-report=error")
 endif()
 
 # set destination dir to copy scripts

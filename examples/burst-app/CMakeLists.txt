@@ -1,3 +1,4 @@
+# cmake-format: off
 # Copyright (c) 2023, Intel Corporation
 #
 # Redistribution and use in source and binary forms, with or without
@@ -22,29 +23,28 @@
 # CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+# cmake-format: on
 
 # Ensure building entire project
 if(NOT FULL_PROJECT_BUILD)
   message(FATAL_ERROR "Please run CMake from project root directory")
 endif()
 
-########################################
+# ##############################################################################
 # set app and library names
-########################################
+# ##############################################################################
 set(SAMPLE_APP imb-burst)
 set(LIB_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../lib)
 set(TEST_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../include)
 
-########################################
+# ##############################################################################
 # set imb-burst source files
-########################################
-set(SAMPLE_APP_SRC_FILES_C
-  ${CMAKE_CURRENT_SOURCE_DIR}/main.c
-)
+# ##############################################################################
+set(SAMPLE_APP_SRC_FILES_C ${CMAKE_CURRENT_SOURCE_DIR}/main.c)
 
-########################################
+# ##############################################################################
 # set C compiler options
-########################################
+# ##############################################################################
 # add OS specific options
 if(CMAKE_HOST_UNIX)
   include(${CMAKE_CURRENT_SOURCE_DIR}/../cmake/unix.cmake)
@@ -56,10 +56,9 @@ else()
   endif()
 endif()
 
-
-########################################
+# ##############################################################################
 # add targets
-########################################
+# ##############################################################################
 include_directories(${LIB_DIR})
 link_directories(${LIB_DIR})
 

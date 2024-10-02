@@ -1,3 +1,4 @@
+# cmake-format: off
 # Copyright (c) 2023, Intel Corporation
 #
 # Redistribution and use in source and binary forms, with or without
@@ -22,28 +23,29 @@
 # CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+# cmake-format: on
 
 # Ensure building entire project
 if(NOT FULL_PROJECT_BUILD)
   message(FATAL_ERROR "Please run CMake from project root directory")
 endif()
 
-########################################
+# ##############################################################################
 # set app and library names
-########################################
+# ##############################################################################
 set(TEST_APP imb-kat)
 set(LIB_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../lib)
 set(TEST_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../include)
 
-########################################
+# ##############################################################################
 # set imb-kat source files
-########################################
+# ##############################################################################
 file(GLOB TEST_APP_SRC_FILES "${CMAKE_CURRENT_SOURCE_DIR}/*.c")
 list(APPEND TEST_APP_SRC_FILES ${CMAKE_CURRENT_SOURCE_DIR}/../common/utils.c)
 
-########################################
+# ##############################################################################
 # set C compiler and NASM options
-########################################
+# ##############################################################################
 # add OS specific options
 if(WINDOWS)
   if(CMAKE_GENERATOR MATCHES "MinGW Makefiles")
@@ -55,9 +57,9 @@ else()
   include(${CMAKE_CURRENT_SOURCE_DIR}/../cmake/unix.cmake)
 endif()
 
-########################################
+# ##############################################################################
 # add targets
-########################################
+# ##############################################################################
 include_directories(${CMAKE_CURRENT_SOURCE_DIR} ${LIB_DIR} ${TEST_INCLUDE_DIR})
 link_directories(${LIB_DIR})
 

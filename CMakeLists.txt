@@ -1,3 +1,4 @@
+# cmake-format: off
 # Copyright (c) 2022-2023, Intel Corporation
 # Copyright 2000-2023 Kitware, Inc. and Contributors
 #
@@ -23,6 +24,7 @@
 # CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+# cmake-format: on
 
 cmake_minimum_required(VERSION 3.16)
 cmake_policy(VERSION 3.16)
@@ -37,11 +39,12 @@ message(STATUS "Project Version: ${IPSEC_MB_VERSION_FULL}")
 # set default project values
 imb_set_proj_defaults()
 
-project(intel-ipsec-mb VERSION ${IPSEC_MB_VERSION}
-    DESCRIPTION "Intel(R) IPsec Multi-Buffer library"
-    LANGUAGES C ASM
-    HOMEPAGE_URL https://github.com/intel/intel-ipsec-mb/
-)
+project(
+  intel-ipsec-mb
+  VERSION ${IPSEC_MB_VERSION}
+  DESCRIPTION "Intel(R) IPsec Multi-Buffer library"
+  LANGUAGES C ASM
+  HOMEPAGE_URL https://github.com/intel/intel-ipsec-mb/)
 
 # add testing support
 include(CTest)
@@ -55,12 +58,13 @@ imb_detect_os()
 # do compiler checks
 imb_compiler_check()
 
-#######################################
+# ##############################################################################
 # configure pre gen custom targets
-#######################################
+# ##############################################################################
 
 # add custom target to uninstall library
-imb_add_target_uninstall("${CMAKE_CURRENT_SOURCE_DIR}/lib/cmake/uninstall.cmake.in")
+imb_add_target_uninstall(
+  "${CMAKE_CURRENT_SOURCE_DIR}/lib/cmake/uninstall.cmake.in")
 
 # style check target
 imb_add_target_style_checks()
@@ -77,14 +81,14 @@ imb_add_target_cppcheck_bughunt()
 # doxy target to generate documentation
 imb_add_target_doxy()
 
-#######################################
+# ##############################################################################
 # configure main project targets
-#######################################
+# ##############################################################################
 
 # build library
 add_subdirectory(lib)
 
-if (NOT BUILD_LIBRARY_ONLY)
+if(NOT BUILD_LIBRARY_ONLY)
   # build perf application
   add_subdirectory(perf)
 
@@ -95,10 +99,9 @@ if (NOT BUILD_LIBRARY_ONLY)
   add_subdirectory(examples)
 endif()
 
-#######################################
+# ##############################################################################
 # configure post gen custom targets
-#######################################
+# ##############################################################################
 
 # add custom target to print help information
 imb_add_target_print_help("${IPSEC_MB_OPTIONS}")
-

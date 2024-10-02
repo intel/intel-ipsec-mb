@@ -1,3 +1,4 @@
+# cmake-format: off
 # Copyright (c) 2023, Intel Corporation
 #
 # Redistribution and use in source and binary forms, with or without
@@ -22,6 +23,7 @@
 # CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+# cmake-format: on
 
 # ##############################################################################
 # IPSec_MB library CMake MinGW config
@@ -56,25 +58,19 @@ if(CMAKE_COMPILER_IS_GNUCC)
 endif()
 
 # set directory specific C compiler flags
+set_source_files_properties(${SRC_FILES_AVX_T1} ${SRC_FILES_AVX_T2} PPROPERTIES
+                            COMPILE_FLAGS "-march=sandybridge -maes -mpclmul")
 set_source_files_properties(
-  ${SRC_FILES_AVX_T1} ${SRC_FILES_AVX_T2}
-  PPROPERTIES COMPILE_FLAGS
-  "-march=sandybridge -maes -mpclmul")
-set_source_files_properties(
-  ${SRC_FILES_AVX2_T1} ${SRC_FILES_AVX2_T2} ${SRC_FILES_AVX2_T3}
-  PPROPERTIES COMPILE_FLAGS
-  "-march=haswell -maes -mpclmul")
+  ${SRC_FILES_AVX2_T1} ${SRC_FILES_AVX2_T2} ${SRC_FILES_AVX2_T3} PPROPERTIES
+  COMPILE_FLAGS "-march=haswell -maes -mpclmul")
 set_source_files_properties(
   ${SRC_FILES_AVX512_T1} ${SRC_FILES_AVX512_T2}
-  PROPERTIES COMPILE_FLAGS
-  "-march=broadwell -maes -mpclmul")
+  PROPERTIES COMPILE_FLAGS "-march=broadwell -maes -mpclmul")
 set_source_files_properties(
   ${SRC_FILES_SSE_T1} ${SRC_FILES_SSE_T2} ${SRC_FILES_SSE_T3}
-  PROPERTIES COMPILE_FLAGS
-  "-march=nehalem -maes -mpclmul")
-set_source_files_properties(${SRC_FILES_X86_64}
-  PROPERTIES COMPILE_FLAGS
-  "-msse4.2")
+  PROPERTIES COMPILE_FLAGS "-march=nehalem -maes -mpclmul")
+set_source_files_properties(${SRC_FILES_X86_64} PROPERTIES COMPILE_FLAGS
+                                                           "-msse4.2")
 
 # generate windows DEF file
 if(NOT AVX_IFMA)
@@ -88,37 +84,36 @@ endif()
 if(NOT STR_FILTER)
   execute_process(
     COMMAND ${CMAKE_COMMAND} -E copy "lib${LIB}.def" ${SRC_DEF_FILE}
-    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    )
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 else()
   execute_process(
     COMMAND cmd /C "findstr /v ${STR_FILTER} lib${LIB}.def > ${SRC_DEF_FILE}"
-    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    )
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 endif()
 
-########################################
+# ##############################################################################
 # add library target
-########################################
+# ##############################################################################
 
 add_library(${LIB} ${SRC_FILES_ASM} ${SRC_FILES_C} ${SRC_DEF_FILE})
 
-########################################
+# ##############################################################################
 # library install rules
-########################################
+# ##############################################################################
 message(STATUS "CMAKE_INSTALL_PREFIX...    ${CMAKE_INSTALL_PREFIX}")
 
-install(TARGETS ${LIB}
-        RUNTIME DESTINATION bin
-        LIBRARY DESTINATION lib
-        ARCHIVE DESTINATION lib)
+install(
+  TARGETS ${LIB}
+  RUNTIME DESTINATION bin
+  LIBRARY DESTINATION lib
+  ARCHIVE DESTINATION lib)
 
 # install required shared library files
 if(BUILD_SHARED_LIBS)
   # install library in system folder if prefix not modified
   if(CMAKE_INSTALL_PREFIX STREQUAL ${DEFAULT_INSTALL_PREFIX})
     install(FILES $<TARGET_FILE_DIR:${LIB}>/lib${LIB}.dll
-      DESTINATION $ENV{WINDIR}/system32)
+            DESTINATION $ENV{WINDIR}/system32)
   endif()
 endif()
 

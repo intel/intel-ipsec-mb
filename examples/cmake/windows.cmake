@@ -1,3 +1,4 @@
+# cmake-format: off
 # Copyright (c) 2023, Intel Corporation
 #
 # Redistribution and use in source and binary forms, with or without
@@ -22,6 +23,7 @@
 # CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+# cmake-format: on
 
 # ##############################################################################
 # Test application CMake Windows config
@@ -34,8 +36,9 @@ set(IPSEC_MB_LIB libIPSec_MB)
 set(CMAKE_ASM_NASM_FLAGS "-Werror -fwin64 -Xvc -DWIN_ABI")
 
 # set C compiler flags
-set(CMAKE_C_FLAGS "/nologo /D_CRT_SECURE_NO_WARNINGS /Y- /W3 /WX- /Gm- /fp:precise /EHsc /std:c11 ${EXTRA_CFLAGS}")
+set(CMAKE_C_FLAGS
+    "/nologo /D_CRT_SECURE_NO_WARNINGS /Y- /W3 /WX- /Gm- /fp:precise /EHsc /std:c11 ${EXTRA_CFLAGS}"
+)
 set(CMAKE_C_FLAGS_DEBUG "/Od /DDEBUG /Z7")
 set(CMAKE_C_FLAGS_RELEASE "/O2 /Oi")
 set(CMAKE_EXE_LINKER_FLAGS_DEBUG "/debug")
-
