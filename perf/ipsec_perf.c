@@ -2433,11 +2433,29 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params, const uint32_t num_iter, uint8
                                         jt->hash_start_src_offset_in_bytes;
                                 job->auth_tag_output_len_in_bytes =
                                         jt->auth_tag_output_len_in_bytes;
-                                job->u.HMAC._hashed_auth_key_xor_ipad =
-                                        jt->u.HMAC._hashed_auth_key_xor_ipad;
-                                job->u.HMAC._hashed_auth_key_xor_opad =
-                                        jt->u.HMAC._hashed_auth_key_xor_opad;
                                 job->auth_tag_output = jt->auth_tag_output;
+
+                                switch (jt->hash_alg) {
+                                case IMB_AUTH_HMAC_SHA_1:
+                                case IMB_AUTH_HMAC_SHA_224:
+                                case IMB_AUTH_HMAC_SHA_256:
+                                case IMB_AUTH_HMAC_SHA_384:
+                                case IMB_AUTH_HMAC_SHA_512:
+                                        job->u.HMAC._hashed_auth_key_xor_ipad =
+                                                jt->u.HMAC._hashed_auth_key_xor_ipad;
+                                        job->u.HMAC._hashed_auth_key_xor_opad =
+                                                jt->u.HMAC._hashed_auth_key_xor_opad;
+                                        break;
+                                case IMB_AUTH_AES_CMAC:
+                                case IMB_AUTH_AES_CMAC_BITLEN:
+                                case IMB_AUTH_AES_CMAC_256:
+                                        job->u.CMAC._key_expanded = jt->u.CMAC._key_expanded;
+                                        job->u.CMAC._skey1 = jt->u.CMAC._skey1;
+                                        job->u.CMAC._skey2 = jt->u.CMAC._skey2;
+                                        break;
+                                default:
+                                        break;
+                                }
 
                                 index = get_next_index(index);
                         }
