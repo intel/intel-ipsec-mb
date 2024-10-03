@@ -432,6 +432,14 @@ align 32
 
         vzeroupper
 
+%ifdef SAFE_DATA
+        vpxor           YTMP0, YTMP0
+        vmovdqa         [rsp + frame.ABEF_SAVE], YTMP0
+        vmovdqa         [rsp + frame.CDGH_SAVE], YTMP0
+        vmovdqa         [rsp + frame.ABEF_SAVEb], YTMP0
+        vmovdqa         [rsp + frame.CDGH_SAVEb], YTMP0
+%endif
+
 .done_hash:
 
         mov     rsp, r11
