@@ -815,6 +815,7 @@ mksection .text
 %assign align_blocks (align_blocks + 1)
 %endrep
 
+align 32
 %%_main_loop:
         cmp     %%NUM_BYTES, (8 * 16)
         jb      %%_exit_loop

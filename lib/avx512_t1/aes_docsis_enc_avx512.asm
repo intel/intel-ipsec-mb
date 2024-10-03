@@ -731,6 +731,7 @@ mksection .text
         sub             %%LEN, 16
         je              %%_encrypt_the_last_block
 
+align 32
 %%_main_enc_loop:
         ;; if 16 bytes left (for CRC) then
         ;; go to the code variant where CRC last block case is checked
