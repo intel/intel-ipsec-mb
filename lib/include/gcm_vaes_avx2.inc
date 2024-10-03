@@ -1630,7 +1630,6 @@ align 32
 %endif
 
 %%_small_initial_compute_hash:
-        vmovdqa         [rsp + TMP1], xmm14     ;; overwrite TMP1 with current hash value; in some rare cases, TMP1 may contain fragment of a round key
         ;; Final hash is now in T3 (xmm14 really)
         vmovdqa         xmm9, [rsp + TMP3]      ;; keep last counter block into xmm9
 %endmacro                       ; INITIAL_BLOCKS_PARTIAL

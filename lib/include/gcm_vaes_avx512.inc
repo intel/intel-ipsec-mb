@@ -3202,8 +3202,8 @@ align 32
 %define %%ZTMP5                 zmm7
 %define %%ZTMP6                 zmm8
 %define %%ZTMP7                 zmm9
-%define %%ZTMP8                 zmm10
-%define %%ZTMP9                 zmm11
+%define %%ZTMP8                 zmm10 ; used by ghash()
+%define %%ZTMP9                 zmm11 ; used by ghash()
 %define %%ZTMP10                zmm12
 %define %%ZTMP11                zmm13
 %define %%ZTMP12                zmm14

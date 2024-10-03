@@ -707,9 +707,23 @@ get_pattern_seed(void)
 static void
 generate_patterns(void)
 {
-        pattern_auth_key = get_pattern_seed();
-        pattern_cipher_key = get_pattern_seed();
-        pattern_plain_text = get_pattern_seed();
+        static int var_patterns = 0;
+
+        /* change order of generating patterns */
+        if (var_patterns == 0) {
+                pattern_auth_key = get_pattern_seed();
+                pattern_cipher_key = get_pattern_seed();
+                pattern_plain_text = get_pattern_seed();
+        } else if (var_patterns == 1) {
+                pattern_cipher_key = get_pattern_seed();
+                pattern_auth_key = get_pattern_seed();
+                pattern_plain_text = get_pattern_seed();
+        } else {
+                pattern_plain_text = get_pattern_seed();
+                pattern_auth_key = get_pattern_seed();
+                pattern_cipher_key = get_pattern_seed();
+        }
+        var_patterns = (var_patterns + 1) % 3;
 
         nosimd_memset(&pattern8_auth_key, pattern_auth_key, sizeof(pattern8_auth_key));
         nosimd_memset(&pattern8_cipher_key, pattern_cipher_key, sizeof(pattern8_cipher_key));
