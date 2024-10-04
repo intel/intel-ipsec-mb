@@ -85,7 +85,7 @@ Table 1. List of supported cipher algorithms and their implementations.
 | KASUMI-F8      | Y      |  <---  |  <---  |  <---  |  <---  |  <---  |  <---  |  <---  |  <---    |
 | ZUC-EEA3       | Y   x4 |  <---  | Y(5)x4 | Y  x8  | Y(5)x8 |  <---  |  <---  | Y  x16 | Y(5) x16 |
 | ZUC-EEA3-256   | Y   x4 |  <---  | Y(5)x4 | Y  x8  | Y(5)x8 |  <---  |  <---  | Y  x16 | Y(5) x16 |
-| SNOW3G-UEA2    | Y   x4 |  <---  |  <---  | Y      |  <---  |  <---  |  <---  | Y  x16 | Y    x16 |
+| SNOW3G-UEA2    | Y   x4 |  <---  |  <---  |  <---  |  <---  |  <---  |  <---  | Y  x16 | Y    x16 |
 | AES128-CBCS(1) | Y      |  <---  |  <---  | Y(2)   |  <---  |  <---  |  <---  |  <---  | Y(9)     |
 | Chacha20       | Y      |  <---  |  <---  | Y      |  <---  |  <---  |  <---  | Y      |  <---    |
 | Chacha20 AEAD  | Y      |  <---  |  <---  | Y      |  <---  |  <---  |  <---  | Y      |  <---    |
@@ -147,7 +147,7 @@ Table 2. List of supported integrity algorithms and their implementations.
 | KASUMI-F9         | Y      |  <---  |  <---  |  <---  |  <---  |  <---  |  <---  |  <---  |  <---   |
 | ZUC-EIA3          | Y   x4 |  <---  | Y(3)x4 | Y   x8 | Y(3)x8 |  <---  |  <---  | Y  x16 | Y(3)x16 |
 | ZUC-EIA3-256      | Y   x4 |  <---  | Y(3)x4 | Y   x8 | Y(3)x8 |  <---  |  <---  | Y  x16 | Y(3)x16 |
-| SNOW3G-UIA2       | Y(10)  |  <---  |  <---  |  <---  |  <---  |  <---  |  <---  |  <---  | Y(11)   |
+| SNOW3G-UIA2       | Y(10)  |  <---  |  <---  | Y(10)  |  <---  |  <---  |  <---  |  <---  | Y(11)   |
 | DOCSIS-CRC32(8)   | Y      |  <---  |  <---  | Y      |  <---  |  <---  |  <---  |  <---  | Y       |
 | HEC               | Y      |  <---  |  <---  | Y      |  <---  |  <---  |  <---  |  <---  |  <---   |
 | POLY1305          | Y      |  <---  |  <---  |  <---  |  <---  | Y(4)   |  <---  | Y      | Y(4)    |
@@ -177,6 +177,7 @@ Notes:
  - CRC8: WIMAX OFDMA HCS  
  - CRC7: FP header  
  - CRC6: IUUP header  
+  
 (8)  - used only with AES256-DOCSIS and AES128-DOCSIS ciphers.  
 (9)  - used only with PON-AES128-CTR cipher.  
 (10) - x4 for init keystream generation, then by4.  
