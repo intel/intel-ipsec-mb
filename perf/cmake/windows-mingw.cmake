@@ -1,5 +1,5 @@
 # cmake-format: off
-# Copyright (c) 2023, Intel Corporation
+# Copyright (c) 2023-2024, Intel Corporation
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -62,3 +62,6 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/ipsec_diff_tool.py
                ${COPY_DST_DIR}/ipsec_diff_tool.py COPYONLY)
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/ipsec_perf_tool.py
                ${COPY_DST_DIR}/ipsec_perf_tool.py COPYONLY)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/imb-speed.py
+               ${COPY_DST_DIR}/imb-speed.py COPYONLY)
+

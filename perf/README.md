@@ -65,3 +65,31 @@ To benchmark all cipher-hash combinations using AVX512 architecture:
 
 To distribute algorithm benchmarks across a range of cores from 2 to 10:  
 `ipsec_perf_tool.py -c 2-10 > file.txt`  
+
+
+### Running the imb-speed.py script
+
+To benchmark and print throughput in the format of openssl speed, the `imb-speed.py` script should be used.
+This acts as a wrapper script around the updated `imb-perf` tool.  
+
+To benchmark a cipher, hash or AEAD algorithm on the best available architecture:  
+`imb-speed.py -evp aes-gcm-256`  
+
+To benchmark all available algorithms on the best available architecture:  
+`imb-speed.py`  
+
+To distribute the benchmarks across a range of cores from 2 to 10 (this measures single-core performance 
+per algorithm, not aggregated throughput):  
+`imb-speed.py -c 2-10`  
+
+To benchmark an algorithm with a custom-sized buffer (Default: 16, 64, 256, 1024, 8192, 16384):  
+`imb-speed.py -evp aes-gcm-256 -bytes 16834`  
+
+To benchmark with a specific timebox in seconds on a specific architecture:  
+`imb-speed.py -evp aes-gcm-256 -seconds 3 -arch AVX512`  
+
+To benchmark decryption instead of encryption:  
+`imb-speed.py -evp aes-gcm-256 -decrypt`  
+
+For more information:  
+`imb-speed.py -h`  

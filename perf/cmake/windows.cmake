@@ -1,5 +1,5 @@
 # cmake-format: off
-# Copyright (c) 2023, Intel Corporation
+# Copyright (c) 2023-2024, Intel Corporation
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -58,4 +58,10 @@ add_custom_command(
   POST_BUILD
   COMMAND
     ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/ipsec_perf_tool.py"
+    $<TARGET_FILE_DIR:${PERF_APP}>)
+add_custom_command(
+  TARGET ${PERF_APP}
+  POST_BUILD
+  COMMAND
+    ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/imb-speed.py"
     $<TARGET_FILE_DIR:${PERF_APP}>)
