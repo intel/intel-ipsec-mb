@@ -1911,7 +1911,6 @@ perform_safe_checks(IMB_MGR *mgr, const IMB_ARCH arch, struct safe_check_ctx *ct
         } simd_ctx[] = {
                 { 0, NULL },                     /* none */
                 { XMM_MEM_SIZE, dump_xmms_sse }, /* sse */
-                { XMM_MEM_SIZE, dump_xmms_avx }, /* avx */
                 { YMM_MEM_SIZE, dump_ymms },     /* avx2 */
                 { ZMM_MEM_SIZE, dump_zmms }      /* avx512 */
         };
