@@ -38,8 +38,8 @@ if(multi_config_gen)
   string(APPEND TEST_APP_BIN_DIR "/$<IF:$<CONFIG:Debug>,Debug,Release>")
 endif()
 
-set(DEFAULT_JOB_SIZE 64:128:2048)
-set(EXTENDED_JOB_SIZE 1:1:1024)
+set(DEFAULT_JOB_SIZES 16:16:128 128:128:2048)
+set(EXTENDED_JOB_SIZES 1:4:1024 2:4:1024 3:4:1024 4:4:1024)
 
 # ##############################################################################
 # cipher tests
@@ -80,18 +80,22 @@ set(CIPHER_ALGOS
 
 # cipher short tests
 foreach(ALGO ${CIPHER_ALGOS})
-  add_test(
-    NAME XVALID::CIPHER::${ALGO}
-    COMMAND ${XVALID_APP} --job-size ${DEFAULT_JOB_SIZE} --cipher-algo ${ALGO}
-    WORKING_DIRECTORY ${TEST_APP_BIN_DIR})
+  foreach(JOB_SIZE ${DEFAULT_JOB_SIZES})
+    add_test(
+      NAME XVALID::CIPHER::${ALGO}::${JOB_SIZE}
+      COMMAND ${XVALID_APP} --job-size ${JOB_SIZE} --cipher-algo ${ALGO}
+      WORKING_DIRECTORY ${TEST_APP_BIN_DIR})
+  endforeach()
 endforeach()
 
 # cipher extended tests
 foreach(ALGO ${CIPHER_ALGOS})
-  add_test(
-    NAME XVALID::EXT::CIPHER::${ALGO}
-    COMMAND ${XVALID_APP} --job-size ${EXTENDED_JOB_SIZE} --cipher-algo ${ALGO}
-    WORKING_DIRECTORY ${TEST_APP_BIN_DIR})
+  foreach(JOB_SIZE ${EXTENDED_JOB_SIZES})
+    add_test(
+      NAME XVALID::EXT::CIPHER::${ALGO}::${JOB_SIZE}
+      COMMAND ${XVALID_APP} --job-size ${JOB_SIZE} --cipher-algo ${ALGO}
+      WORKING_DIRECTORY ${TEST_APP_BIN_DIR})
+  endforeach()
 endforeach()
 
 # ##############################################################################
@@ -141,18 +145,22 @@ set(HASH_ALGOS
 
 # hash short tests
 foreach(ALGO ${HASH_ALGOS})
-  add_test(
-    NAME XVALID::HASH::${ALGO}
-    COMMAND ${XVALID_APP} --job-size ${DEFAULT_JOB_SIZE} --hash-algo ${ALGO}
-    WORKING_DIRECTORY ${TEST_APP_BIN_DIR})
+  foreach(JOB_SIZE ${DEFAULT_JOB_SIZES})
+    add_test(
+      NAME XVALID::HASH::${ALGO}::${JOB_SIZE}
+      COMMAND ${XVALID_APP} --job-size ${JOB_SIZE} --hash-algo ${ALGO}
+      WORKING_DIRECTORY ${TEST_APP_BIN_DIR})
+  endforeach()
 endforeach()
 
 # hash extended tests
 foreach(ALGO ${HASH_ALGOS})
-  add_test(
-    NAME XVALID::EXT::HASH::${ALGO}
-    COMMAND ${XVALID_APP} --job-size ${EXTENDED_JOB_SIZE} --hash-algo ${ALGO}
-    WORKING_DIRECTORY ${TEST_APP_BIN_DIR})
+  foreach(JOB_SIZE ${EXTENDED_JOB_SIZES})
+    add_test(
+      NAME XVALID::EXT::HASH::${ALGO}::${JOB_SIZE}
+      COMMAND ${XVALID_APP} --job-size ${JOB_SIZE} --hash-algo ${ALGO}
+      WORKING_DIRECTORY ${TEST_APP_BIN_DIR})
+  endforeach()
 endforeach()
 
 # ##############################################################################
@@ -174,18 +182,22 @@ set(AEAD_ALGOS
 
 # aead short tests
 foreach(ALGO ${AEAD_ALGOS})
-  add_test(
-    NAME XVALID::AEAD::${ALGO}
-    COMMAND ${XVALID_APP} --job-size ${DEFAULT_JOB_SIZE} --aead-algo ${ALGO}
-    WORKING_DIRECTORY ${TEST_APP_BIN_DIR})
+  foreach(JOB_SIZE ${DEFAULT_JOB_SIZES})
+    add_test(
+      NAME XVALID::AEAD::${ALGO}::${JOB_SIZE}
+      COMMAND ${XVALID_APP} --job-size ${JOB_SIZE} --aead-algo ${ALGO}
+      WORKING_DIRECTORY ${TEST_APP_BIN_DIR})
+  endforeach()
 endforeach()
 
 # aead extended tests
 foreach(ALGO ${AEAD_ALGOS})
-  add_test(
-    NAME XVALID::EXT::AEAD::${ALGO}
-    COMMAND ${XVALID_APP} --job-size ${EXTENDED_JOB_SIZE} --aead-algo ${ALGO}
-    WORKING_DIRECTORY ${TEST_APP_BIN_DIR})
+  foreach(JOB_SIZE ${EXTENDED_JOB_SIZES})
+    add_test(
+      NAME XVALID::EXT::AEAD::${ALGO}::${JOB_SIZE}
+      COMMAND ${XVALID_APP} --job-size ${JOB_SIZE} --aead-algo ${ALGO}
+      WORKING_DIRECTORY ${TEST_APP_BIN_DIR})
+  endforeach()
 endforeach()
 
 # ##############################################################################
