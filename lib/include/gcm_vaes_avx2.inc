@@ -1631,6 +1631,7 @@ align 32
 
 %%_small_initial_compute_hash:
         ;; Final hash is now in T3 (xmm14 really)
+        vmovdqa         [rsp + TMP1], xmm14     ;; @todo overwrite this location with current hash value
         vmovdqa         xmm9, [rsp + TMP3]      ;; keep last counter block into xmm9
 %endmacro                       ; INITIAL_BLOCKS_PARTIAL
 
