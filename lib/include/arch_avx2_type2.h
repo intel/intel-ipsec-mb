@@ -81,6 +81,16 @@ void
 aes_cntr_128_vaes_avx2(const void *in, const void *IV, const void *keys, void *out,
                        uint64_t len_bytes, uint64_t IV_len);
 
+/* AES-CFB */
+void
+aes_cfb_dec_128_vaes_avx2(const void *out, const void *in, const void *IV, const void *keys,
+                          uint64_t len_bytes);
+void
+aes_cfb_dec_192_vaes_avx2(const void *out, const void *in, const void *IV, const void *keys,
+                          uint64_t len_bytes);
+void
+aes_cfb_dec_256_vaes_avx2(const void *out, const void *in, const void *IV, const void *keys,
+                          uint64_t len_bytes);
 IMB_DLL_EXPORT void
 set_suite_id_avx2_t2(IMB_MGR *state, IMB_JOB *job);
 

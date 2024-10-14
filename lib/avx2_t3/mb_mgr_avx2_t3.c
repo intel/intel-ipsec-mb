@@ -145,9 +145,9 @@
 #define AES_CFB_128_ENC aes_cfb_128_enc_sse
 #define AES_CFB_192_ENC aes_cfb_192_enc_sse
 #define AES_CFB_256_ENC aes_cfb_256_enc_sse
-#define AES_CFB_128_DEC aes_cfb_128_dec_sse
-#define AES_CFB_192_DEC aes_cfb_192_dec_sse
-#define AES_CFB_256_DEC aes_cfb_256_dec_sse
+#define AES_CFB_128_DEC aes_cfb_dec_128_vaes_avx2
+#define AES_CFB_192_DEC aes_cfb_dec_192_vaes_avx2
+#define AES_CFB_256_DEC aes_cfb_dec_256_vaes_avx2
 
 /* AES-CCM */
 #define AES_CNTR_CCM_128 aes_cntr_ccm_128_avx
