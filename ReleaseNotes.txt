@@ -1,39 +1,74 @@
 ========================================================================
 Release Notes for Intel(R) Multi-Buffer Crypto for IPsec Library
 
-Unreleased
+v2.0 October 2024
 ======================================================================
 General
+- OpenSSF scorecard badge added.
 - YASM support removed.
 - CMake library only build option added.
+- CET support added to CMake build.
 - Replaced Makefiles with CMake as default build system.
+- Man pages installation path fixed.
+- Improved CMake project definitions and installation paths.
+- Added FreeBSD CMake builds to workflows.
+- Updated style check to clang-format version 18.
 
 Library
-- SM4-ECB AVX2-SM4-NI implementation added.
-- SM4-CBC AVX2-SM4-NI implementation added.
-- SM4-CTR SSE and AVX2-SM4-NI implementations added.
-- SM4-GCM SSE and AVX2-SM4-NI implementations added.
-- SHA-512 AVX2-SHA512-NI x2 implementation added.
-- SHA-384 AVX2-SHA384-NI x2 implementation added.
-- AES-CFB SSE and VAES AVX512 implementation added.
-- Removed AESNI emulation support.
-- Removed AVX Type 2 implementation.
-- Removed AES-CMAC, AES-CCM, AES-CBC and AES-ECB x4 and by4 implementations from SSE type 1.
-  - They are replaced with x8 and by8 implementations from SSE type 3.
-- Removed SHA/MD5 AVX implementations.
-- Removed CHACHA20-POLY1305 AVX implementations.
-- Removed SNOW3G AVX implementations.
-- Removed KASUMI AVX implementations.
-- Moved AVX type 1 implementations to AVX2 type 1.
-- Removed AVX architecture type.
+- AES-GCM changes
+  - Reduced binary size of AVX512 type 2 and AVX2 type 1 code by re-using internal GHASH functions.
+  - Optimized small packets for AVX512 type 2 (1 to 256 bytes).
+  - Removed specialized AVX512 type 1 and AVX2 type 1 is used instead.
+  - Implemented multiply reduce optimization for GHASH AVX2 type 1.
+  - Slightly improved large buffer performance for AVX2 type 1.
+  - Added new AVX2 type 2 implementation.
+- DES, 3DES/TDES and DES-DOCSIS binary size reduction.
+  - reduced stack frame size for DES and DES-DOCSIS.
+  - re-used common transpose macros in the implementation.
+- Fixed LFSR update in single buffer ZUC API implementation.
+- SM4 changes:
+  - Added SM4-CTR and SM4-GCM SSE implementations.
+  - Added AVX2-SM4-NI implementation for SM4-GCM, SM4-CTR, SM4-CBC and SM4-ECB.
+- SHA2-512/384 changes:
+  - Added SHA2-512/384 update AVX2-SHA512-NI single-buffer implementation.
+  - Added SHA2-512/384 and HMAC-SHA2-512/384 AVX2-SHA512-NI x2 multi-buffer implementations.
+- Added SM3 and SM3-HMAC SM3-NI implementations.
+- Added AES-CFB SSE type 1 and AVX512 type 2 implementations.
+- Removed features:
+  - Removed AESNI emulation support.
+  - Removed AVX Type 2 implementation.
+  - Removed AES-CMAC, AES-CCM, AES-CBC and AES-ECB x4 and by4 implementations from SSE type 1.
+    - They are replaced with x8 and by8 implementations from SSE type 3.
+  - Removed AVX type 1 implementations: SHA/MD5, CHACHA20-POLY1305, SNOW3G and KASUMI.
+  - Moved remaining AVX type 1 implementations into AVX2 type 1.
+  - Removed AVX architecture type.
+- Changed SHA1 on AVX2 type 4 architecture to use multi-buffer implementation.
+- Added check for XSAVE and OSXSAVE CPUID features for any AVX architecture type.
+- Extended cipher burst API support with: AES-ECB, AES-CFB.
+- Extended hash burst API support with: SHA1, SHA2-384/512, AES-CMAC.
+- Added AEAD burst API with AES-CCM support.
+- Added new API to retrieve optimal minimum burst size for hash, cipher and AEAD API's.
 
 Test Applications
+- Reduced false positive hit ratio in the cross validation safe check mode.
+- Improved performance of safe check pattern search in the cross validation tool.
+- Added new test vectors to KAT application for AES-CFB, SM4-CTR and SM4-GCM.
+- Added new multi-process test to exercise active-passive scenarios.
 - Removed Makefile support.
 - Removed AVX architecture type.
+- Added tests for AES-CFB.
+- Added burst API tests for SHA1, SHA2, AES-ECB, AES-CFB, AES-CMAC and AES-CCM. 
+- Added AES-CFB to ACVP application.
+- Extended ctest infrastructure with improved test granularity.
 
 Performance Applications
 - Removed Makefile support.
 - Removed AVX architecture type.
+- Added display of time-box and measurement mode details at start.
+- Added burst API tests for SHA1, SHA2, AES-ECB, AES-CFB, AES-CMAC and AES-CCM.
+- Added new throughput test mode option to `imb-perf`.
+  - It works together with new set time box option to report throughput for selected period of time.
+- Added `imb-speed.py` tool that mimics `openssl speed`.
 
 Example Applications
 - Removed Makefile support.
