@@ -2578,7 +2578,7 @@ init_mb_mgr_auto(IMB_MGR *state, IMB_ARCH *arch);
 /**
  * SM4-GCM precompute
  *
- * @param [in] mgr_mgr          Pointer to initialized IMB_MGR structure
+ * @param [in] mb_mgr           Pointer to initialized IMB_MGR structure
  * @param [in] key              Input SM4 key (16 bytes)
  * @param [out] key_data        GCM expanded key data
  */
