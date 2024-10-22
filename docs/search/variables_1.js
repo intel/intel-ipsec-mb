@@ -14,11 +14,14 @@ var searchData=
   ['aes256_5fcmac_5fooo_11',['aes256_cmac_ooo',['../structIMB__MGR.html#acbd18bab8176262daab2bd808ca30616',1,'IMB_MGR']]],
   ['aes256_5fooo_12',['aes256_ooo',['../structIMB__MGR.html#a6abbf129001cb44003a10105115e52b7',1,'IMB_MGR']]],
   ['aes_5fccm_5fooo_13',['aes_ccm_ooo',['../structIMB__MGR.html#a3eeeead99056e46d8cb1ed316f587aaf',1,'IMB_MGR']]],
-  ['aes_5fcmac_5fooo_14',['aes_cmac_ooo',['../structIMB__MGR.html#a0bd2acac3a6c3f90a998ed53a7d28e57',1,'IMB_MGR']]],
-  ['aes_5fecb_5f128_5fquic_15',['aes_ecb_128_quic',['../structIMB__MGR.html#a436adbd14682855df093afb36c569039',1,'IMB_MGR']]],
-  ['aes_5fecb_5f256_5fquic_16',['aes_ecb_256_quic',['../structIMB__MGR.html#a5e589dea4f677ad01cfb01d06884a281',1,'IMB_MGR']]],
-  ['aes_5fxcbc_5fooo_17',['aes_xcbc_ooo',['../structIMB__MGR.html#ad554a25793a904ae6cf7ca87250adbd3',1,'IMB_MGR']]],
-  ['auth_5ftag_5foutput_18',['auth_tag_output',['../structIMB__JOB.html#ac37080ddb0baf56c9589e65960430b32',1,'IMB_JOB']]],
-  ['auth_5ftag_5foutput_5flen_5fin_5fbytes_19',['auth_tag_output_len_in_bytes',['../structIMB__JOB.html#a750df4fa7330e2387138409d0eb50e0f',1,'IMB_JOB']]],
-  ['avx2_5favx512_20',['avx2_avx512',['../structgcm__key__data.html#a3f231fdc1d521cd15c111667e4aea818',1,'gcm_key_data']]]
+  ['aes_5fcfb_5f128_5fooo_14',['aes_cfb_128_ooo',['../structIMB__MGR.html#ae38f662b7ed1a22d7b68f4ee7b295083',1,'IMB_MGR']]],
+  ['aes_5fcfb_5f192_5fooo_15',['aes_cfb_192_ooo',['../structIMB__MGR.html#af36033eb1f9760869886c121fe3e291d',1,'IMB_MGR']]],
+  ['aes_5fcfb_5f256_5fooo_16',['aes_cfb_256_ooo',['../structIMB__MGR.html#aebeb50c8c2ef77497e73a86ae84b5e47',1,'IMB_MGR']]],
+  ['aes_5fcmac_5fooo_17',['aes_cmac_ooo',['../structIMB__MGR.html#a0bd2acac3a6c3f90a998ed53a7d28e57',1,'IMB_MGR']]],
+  ['aes_5fecb_5f128_5fquic_18',['aes_ecb_128_quic',['../structIMB__MGR.html#a436adbd14682855df093afb36c569039',1,'IMB_MGR']]],
+  ['aes_5fecb_5f256_5fquic_19',['aes_ecb_256_quic',['../structIMB__MGR.html#a5e589dea4f677ad01cfb01d06884a281',1,'IMB_MGR']]],
+  ['aes_5fxcbc_5fooo_20',['aes_xcbc_ooo',['../structIMB__MGR.html#ad554a25793a904ae6cf7ca87250adbd3',1,'IMB_MGR']]],
+  ['auth_5ftag_5foutput_21',['auth_tag_output',['../structIMB__JOB.html#ac37080ddb0baf56c9589e65960430b32',1,'IMB_JOB']]],
+  ['auth_5ftag_5foutput_5flen_5fin_5fbytes_22',['auth_tag_output_len_in_bytes',['../structIMB__JOB.html#a750df4fa7330e2387138409d0eb50e0f',1,'IMB_JOB']]],
+  ['avx2_5favx512_23',['avx2_avx512',['../structgcm__key__data.html#a3f231fdc1d521cd15c111667e4aea818',1,'gcm_key_data']]]
 ];

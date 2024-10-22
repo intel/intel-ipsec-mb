@@ -1,7 +1,9 @@
 var searchData=
 [
-  ['u_0',['u',['../structIMB__JOB.html#a5e6d8702069bf88ce81cd750df66bcbc',1,'IMB_JOB']]],
-  ['used_5farch_1',['used_arch',['../structIMB__MGR.html#a44b6c95f8ce611828b6acacdb459cdc9',1,'IMB_MGR']]],
-  ['user_5fdata_2',['user_data',['../structIMB__JOB.html#abd56907c9485830817f7b30870726aeb',1,'IMB_JOB']]],
-  ['user_5fdata2_3',['user_data2',['../structIMB__JOB.html#a4e68c8cf14552db625e26477650dfb8b',1,'IMB_JOB']]]
+  ['last_5fblock_5fcount_0',['last_block_count',['../structchacha20__poly1305__context__data.html#add03511d1f95376b3ac64a7916c27368',1,'chacha20_poly1305_context_data']]],
+  ['last_5fks_1',['last_ks',['../structchacha20__poly1305__context__data.html#afc74af4af99449f0b9f01338ae723c1a',1,'chacha20_poly1305_context_data']]],
+  ['legal_20disclaimer_2',['11. Legal Disclaimer',['../index.html#autotoc_md12',1,'']]],
+  ['len_3',['len',['../structIMB__SGL__IOV.html#a3a3662456b91011eb0585667492acc88',1,'IMB_SGL_IOV']]],
+  ['library_4',['Intel(R) Multi-Buffer Crypto for IPsec Library',['../index.html#autotoc_md0',1,'']]],
+  ['low_5',['low',['../structimb__uint128__t.html#a30e60cc86acb6eafaa4079c0e46ba622',1,'imb_uint128_t']]]
 ];

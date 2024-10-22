@@ -28,7 +28,7 @@ var NAVTREE =
     [ "Intel(R) Multi-Buffer Crypto for IPsec Library", "index.html#autotoc_md0", [
       [ "Contents", "index.html#autotoc_md1", null ],
       [ "1. Overview", "index.html#autotoc_md2", null ],
-      [ "2. Processor Extensions", "index.html#autotoc_md3", null ],
+      [ "2. Processor Extensions and Architecture Types", "index.html#autotoc_md3", null ],
       [ "3. Recommendations", "index.html#autotoc_md4", null ],
       [ "4. Package Content", "index.html#autotoc_md5", null ],
       [ "5. Documentation", "index.html#autotoc_md6", null ],
@@ -74,10 +74,10 @@ var NAVTREE =
 var NAVTREEINDEX =
 [
 "annotated.html",
-"intel-ipsec-mb_8h.html#a45dea093699e6e2dd462b6cafccee672",
-"intel-ipsec-mb_8h.html#a9fb47323b270bffc87ad8e77985e827d",
-"structIMB__JOB.html#a25b4ce8aec20f64cfc393b245d62a09e",
-"structchacha20__poly1305__context__data.html#add03511d1f95376b3ac64a7916c27368"
+"intel-ipsec-mb_8h.html#a46253857355ddae8d17bab1403289d0f",
+"intel-ipsec-mb_8h.html#aa12c6dbc4b212887ef528c215f513e0ba207979780b5d8472dfef2f5e12998d22",
+"structIMB__JOB.html#a7ba1fdbcc6ed2e3840990d2e34dac8e8",
+"structgcm__key__data.html#aa5bda4f55b8393be151cfe28a9dc1ca9"
 ];
 
 var SYNCONMSG = 'click to disable panel synchronisation';

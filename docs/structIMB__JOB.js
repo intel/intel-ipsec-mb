@@ -62,7 +62,7 @@ var structIMB__JOB =
     [ "SNOW_V_AEAD", "structIMB__JOB.html#abf4a3f2db05c6583de5a99d9590ddca1", null ],
     [ "src", "structIMB__JOB.html#af83d63eb71a4f26b4915562bea554f28", null ],
     [ "status", "structIMB__JOB.html#ad4e08611eee5188cb84cb2dc337ef9f0", null ],
-    [ "suite_id", "structIMB__JOB.html#a2e8f1fefae0b0fe245eb20e5cc2aa830", null ],
+    [ "suite_id", "structIMB__JOB.html#ae29266c5ed4da45592cb4f8a320e73da", null ],
     [ "u", "structIMB__JOB.html#a5e6d8702069bf88ce81cd750df66bcbc", null ],
     [ "user_data", "structIMB__JOB.html#abd56907c9485830817f7b30870726aeb", null ],
     [ "user_data2", "structIMB__JOB.html#a4e68c8cf14552db625e26477650dfb8b", null ],
