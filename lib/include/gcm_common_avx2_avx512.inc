@@ -117,6 +117,7 @@ alignmode nop
 %include "include/os.inc"
 %include "include/reg_sizes.inc"
 %include "include/clear_regs.inc"
+%include "include/gcm_context.inc"
 %include "include/gcm_defines.inc"
 %include "include/gcm_keys_avx2_avx512.inc"
 %include "include/gcm_common.inc"
@@ -124,6 +125,7 @@ alignmode nop
 %include "include/cet.inc"
 %include "include/error.inc"
 %include "include/imb_job.inc"
+%include "include/gcm_data_avx2.inc"
 
 %ifndef GHASH_API_IMPLEMENTATION
 extern ghash_last_8_avx_gen4

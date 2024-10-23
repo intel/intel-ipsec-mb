@@ -1,5 +1,5 @@
 ;;
-;; Copyright (c) 2012-2024, Intel Corporation
+;; Copyright (c) 2024, Intel Corporation
 ;;
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
@@ -25,8 +25,8 @@
 ;; OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;
 
-%ifndef GCM_DEFINES_INC_INCLUDED
-%define GCM_DEFINES_INC_INCLUDED
+%ifndef GCM_DATA_AVX2_INC_INCLUDED
+%define GCM_DATA_AVX2_INC_INCLUDED
 
 ;
 ; Authors:
@@ -34,73 +34,56 @@
 ;       Vinodh Gopal
 ;       James Guilford
 
-%ifdef WIN_ABI
-        %xdefine GCM_MAX_LENGTH r10
-%else
-        %xdefine GCM_MAX_LENGTH [rel gcm_max_len]
-%endif
+mksection .rodata
+default rel
 
-%macro INIT_GCM_MAX_LENGTH 0
-%ifdef WIN_ABI
-       mov     GCM_MAX_LENGTH, qword [rel gcm_max_len]
-%endif
-%endm
+align 16
+POLY:
+        dq     0x0000000000000001, 0xC200000000000000
 
-%define reg(q) xmm %+ q
-%define regy(q) ymm %+ q
-%define regz(q) zmm %+ q
+align 16
+POLY2:
+        dq     0x00000001C2000000, 0xC200000000000000
 
-%ifdef WIN_ABI
-	%xdefine arg1 rcx
-	%xdefine arg2 rdx
-	%xdefine arg3 r8
-	%xdefine arg4 r9
-	%xdefine arg5  qword [r14 + 8*5]
-	%xdefine arg6  qword [r14 + 8*6]
-	%xdefine arg7  qword [r14 + 8*7]
-	%xdefine arg8  qword [r14 + 8*8]
-	%xdefine arg9  qword [r14 + 8*9]
-	%xdefine arg10 qword [r14 + 8*10]
-	%xdefine arg11 qword [r14 + 8*11]
-%else
-	%xdefine arg1 rdi
-	%xdefine arg2 rsi
-	%xdefine arg3 rdx
-	%xdefine arg4 rcx
-	%xdefine arg5 r8
-	%xdefine arg6 r9
-	%xdefine arg7  qword [r14 + 8*1]
-	%xdefine arg8  qword [r14 + 8*2]
-	%xdefine arg9  qword [r14 + 8*3]
-	%xdefine arg10 qword [r14 + 8*4]
-	%xdefine arg11 qword [r14 + 8*5]
-%endif
+align 16
+SHUF_MASK:
+        dq     0x08090A0B0C0D0E0F, 0x0001020304050607
 
-%ifdef NT_LDST
-	%define NT_LD
-	%define NT_ST
-%endif
+;;; @note Order of these constants should not change.
+;;; More specifically, ALL_F should follow SHIFT_MASK, and ZERO should follow ALL_F
+align 16
+SHIFT_MASK:
+        dq     0x0706050403020100, 0x0f0e0d0c0b0a0908
 
-;;; Use Non-temporal load/stor
-%ifdef NT_LD
-	%define	XLDR	 movntdqa
-	%define	VXLDR	 vmovntdqa
-	%define	VX512LDR vmovntdqa
-%else
-	%define	XLDR	 movdqu
-	%define	VXLDR	 vmovdqu
-	%define	VX512LDR vmovdqu8
-%endif
+ALL_F:
+        dq     0xffffffffffffffff, 0xffffffffffffffff
 
-;;; Use Non-temporal load/stor
-%ifdef NT_ST
-	%define	XSTR	 movntdq
-	%define	VXSTR	 vmovntdq
-	%define	VX512STR vmovntdq
-%else
-	%define	XSTR	 movdqu
-	%define	VXSTR	 vmovdqu
-	%define	VX512STR vmovdqu8
-%endif
+ZERO:
+        dq     0x0000000000000000, 0x0000000000000000
 
-%endif ; GCM_DEFINES_INC_INCLUDED
+align 16
+ONE:
+        dq     0x0000000000000001, 0x0000000000000000
+
+align 16
+TWO:
+        dq     0x0000000000000002, 0x0000000000000000
+
+align 16
+TWOONE:
+        dq     0x0000000000000001, 0x0000000100000000
+
+align 16
+ONEf:
+        dq     0x0000000000000000, 0x0100000000000000
+
+align 16
+TWOf:
+        dq     0x0000000000000000, 0x0200000000000000
+
+;; GCM NIST standard: len(M) < 2^39 - 256
+align 8
+gcm_max_len:
+        dq      (((1<<39) - 256) - 1)
+
+%endif ; GCM_DATA_AVX2_INC_INCLUDED

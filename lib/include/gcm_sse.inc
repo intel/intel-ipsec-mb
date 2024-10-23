@@ -117,12 +117,15 @@
 %include "include/os.inc"
 %include "include/reg_sizes.inc"
 %include "include/clear_regs.inc"
+%include "include/gcm_context.inc"
 %include "include/gcm_defines.inc"
 %include "include/gcm_keys_sse_avx.inc"
 %include "include/gcm_common.inc"
 %include "include/memcpy.inc"
 %include "include/cet.inc"
 %include "include/error.inc"
+%include "include/gcm_data_sse.inc"
+
 %ifndef GCM128_MODE
 %ifndef GCM192_MODE
 %ifndef GCM256_MODE
