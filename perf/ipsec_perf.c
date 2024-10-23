@@ -3177,7 +3177,8 @@ print_times(struct variant_s *variant_list, struct params_s *params, const uint3
                                                                         "SM4_ECB",
                                                                         "SM4_CBC",
                                                                         "AES-CFB",
-                                                                        "SM4_CNTR" };
+                                                                        "SM4_CNTR",
+                                                                        "SM4_GCM" };
                 const char *c_dir_names[2] = { "ENCRYPT", "DECRYPT" };
                 const char *h_alg_names[TEST_NUM_HASH_TESTS - 1] = { "SHA1_HMAC",
                                                                      "SHA_224_HMAC",
@@ -3224,7 +3225,8 @@ print_times(struct variant_s *variant_list, struct params_s *params, const uint3
                                                                      "CRC6_IUUP_HEADER",
                                                                      "GHASH",
                                                                      "SM3",
-                                                                     "SM3_HMAC" };
+                                                                     "SM3_HMAC",
+                                                                     "SM4_GCM" };
                 struct params_s par;
 
                 printf("ARCH");
