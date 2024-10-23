@@ -181,6 +181,8 @@ class SpeedTool(object):
         print("\t-seconds   - takes timebox in seconds. default: 3")
         print("\t-c/-cores  - takes list/range of cores e.g. 2-8 or 3,4,5. default: none")
         print("\t-decrypt   - time decryption instead of encryption")
+        print("\t-no-skip   - do not skip algorithms (some algorithms skipped " \
+            "by default due to buffer size incompatibility)")
         print("\t-evp       - takes algorithm")
         print("Example:")
         print("\timb-speed.py -evp aes-gcm-256 -bytes 16834 -seconds 3 -cores 2,4 -arch AVX512")
@@ -220,6 +222,7 @@ class SpeedTool(object):
         global TIMEBOX
         global CORES
         global DECRYPT
+        global SKIP
 
         ARCH = None
         ALGO = None
@@ -227,6 +230,7 @@ class SpeedTool(object):
         TIMEBOX = 3000
         CORES = None
         DECRYPT = False
+        SKIP = True
 
         for i in range(len(sys.argv)):
             arg = sys.argv[i]
@@ -267,6 +271,8 @@ class SpeedTool(object):
                     sys.exit(1)
             if arg == "-decrypt":
                 DECRYPT = True
+            if arg == "-no-skip":
+                SKIP = False
             if arg == "-h":
                 self.usage()
                 sys.exit(1)
@@ -355,7 +361,7 @@ class SpeedTool(object):
                 alg = hash_alg
             if cipher_alg is not None and not cipher_alg.startswith("NULL"):
                 alg = cipher_alg + " " + key_size
-            
+
             alg = alg + " " + arch 
 
             values = {}
@@ -404,7 +410,7 @@ class SpeedTool(object):
             PERF_APP = 'imb-perf.exe'
         else:
             PERF_APP = 'imb-perf'
-        
+
         # set directions
         directions = ['encrypt']
         if DECRYPT is True:
@@ -420,7 +426,7 @@ class SpeedTool(object):
             print('Supported architectures: {}'.format(', '.join(supported_archs)), file=sys.stderr)
             print('Unknown architecture: {}'.format(ARCH), file=sys.stderr)
             return result
-        
+
         # print args
         print('Measuring:', file=sys.stderr)
         print('  Architecture: {}'.format(archs), file=sys.stderr)
@@ -460,8 +466,14 @@ class SpeedTool(object):
             return result
 
         for arch in archs:
+            skip_cipher_algos = ['zuc-eea3', 'zuc-eea3-256', 'kasumi-uea1']
+            skip_hash_algos = ['zuc-eia3', 'zuc-eia3-256','kasumi-uia1']
+            skip_aead_algos = ['aes-docsis-128-crc32', 'aes-docsis-256-crc32']
+
             if HASH_ALGO is not None:
                 for algo in HASH_ALGO:
+                    if SKIP and algo in skip_hash_algos:
+                        continue
                     TODO_Q.put(Variant(idx=TOTAL_VARIANTS, arch=arch, direction=None,
                                     sizes=PACKET_SIZE, hash_alg=algo, time_box=TIMEBOX,
                                     throughput=True))
@@ -469,6 +481,8 @@ class SpeedTool(object):
             if AEAD_ALGO is not None:
                 for direction in directions:
                     for algo in AEAD_ALGO:
+                        if SKIP and algo in skip_aead_algos:
+                            continue
                         TODO_Q.put(Variant(idx=TOTAL_VARIANTS, arch=arch, direction=direction,
                                         sizes=PACKET_SIZE, aead_alg=algo, time_box=TIMEBOX,
                                         throughput=True))
@@ -476,6 +490,8 @@ class SpeedTool(object):
             if CIPHER_ALGO is not None:
                 for direction in directions:
                     for algo in CIPHER_ALGO:
+                        if SKIP and algo in skip_cipher_algos:
+                            continue
                         TODO_Q.put(Variant(idx=TOTAL_VARIANTS, arch=arch, direction=direction,
                                         sizes=PACKET_SIZE, cipher_alg=algo, time_box=TIMEBOX,
                                         throughput=True))
