@@ -76,7 +76,7 @@ mksection .text
 ;; Input: %%NROUNDS: number of aesenc rounds depending on key size:
 ;; 128b key: (10 - 1) rounds
 ;; 192b key: (12 - 1) rounds
-;; 256b key: (15 - 1) rounds
+;; 256b key: (14 - 1) rounds
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 %macro do_cfb 2
 %define %%NROUNDS               %1
@@ -94,7 +94,7 @@ mksection .text
 	movdqu		XDATA, [IV]     ; IV, used for 1st block only
 
 %%main_loop:
-	pxor		XDATA, [KEYS]	; key XOR ciphertext
+	pxor		XDATA, [KEYS]	; key XOR ciphertext/plaintext
 
         cmp             LEN, IDX
         jb              %%_last_block

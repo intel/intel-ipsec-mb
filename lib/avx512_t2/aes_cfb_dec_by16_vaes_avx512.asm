@@ -105,7 +105,7 @@
 %define %%ZT4                   %12     ; [clobbered] ZMM temporary
 %define %%NROUNDS               %13     ; [in] number of rounds; numerical value
 
-        ;; load plain/cipher text
+        ;; load cipher text
         ZMM_LOAD_BLOCKS_0_16 %%num_final_blocks, %%CIPH_IN, 0, \
                 %%CIPHER_PLAIN_0_3, %%CIPHER_PLAIN_4_7, \
                 %%CIPHER_PLAIN_8_11, %%CIPHER_PLAIN_12_15
