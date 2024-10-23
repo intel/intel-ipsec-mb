@@ -4,6 +4,7 @@
 
 1. [Compilation](https://github.com/intel/intel-ipsec-mb/blob/main/INSTALL.md#compilation)
 2. [Installation](https://github.com/intel/intel-ipsec-mb/blob/main/INSTALL.md#installation)
+3. [Testing](https://github.com/intel/intel-ipsec-mb/blob/main/INSTALL.md#testing)
 
 ## Compilation (x64 only)
 
@@ -307,3 +308,20 @@ If there is no need to run ldconfig at install stage please use NOLDCONFIG=y opt
 
 If library was compiled as an archive (not a default option) then install it using SHARED=n option:   
 `> sudo gmake install SHARED=n`
+
+## Testing
+
+First compile the library and applications:   
+`cmake --build . --parallel`
+
+To run all tests:   
+`cmake --build . --target test`
+
+Use CTest to run tests in parallel:   
+`ctest --output-on-failure -j 10`
+
+Exclude extended tests:   
+`ctest -E EXT --output-on-failure -j 10`
+
+Include only KAT tests:   
+`ctest -R KAT --output-on-failure -j 10`
