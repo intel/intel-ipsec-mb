@@ -1444,7 +1444,7 @@ static const submit_flush_fn_t tab_submit_cipher[] = {
         submit_cipher_dec_aes_cbc_128,
         submit_cipher_dec_aes_cbc_192,
         submit_cipher_dec_aes_cbc_256,
-        /* [2] AES-CBC */
+        /* [2] AES-CTR */
         submit_cipher_dec_null,
         submit_cipher_dec_aes_ctr_128,
         submit_cipher_dec_aes_ctr_192,

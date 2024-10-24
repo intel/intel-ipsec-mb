@@ -543,6 +543,7 @@ asm_avx2_lib_objs := \
 	mb_mgr_zuc_submit_flush_gfni_avx2.o \
 	chacha20_avx2.o \
 	aes_cfb_dec_by16_vaes_avx2.o \
+	aes_cbc_dec_by16_vaes_avx2.o \
 	snow3g_uia2_by4_avx.o
 
 #

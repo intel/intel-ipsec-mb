@@ -107,9 +107,9 @@
 #define SUBMIT_JOB_AES_CBC_256_DEC submit_job_aes256_cbc_dec_avx
 #define FLUSH_JOB_AES_CBC_256_ENC  flush_job_aes256_cbc_enc_avx
 
-#define AES_CBC_DEC_128 aes_cbc_dec_128_avx
-#define AES_CBC_DEC_192 aes_cbc_dec_192_avx
-#define AES_CBC_DEC_256 aes_cbc_dec_256_avx
+#define AES_CBC_DEC_128 aes_cbc_dec_128_vaes_avx2
+#define AES_CBC_DEC_192 aes_cbc_dec_192_vaes_avx2
+#define AES_CBC_DEC_256 aes_cbc_dec_256_vaes_avx2
 
 /* AES-CBCS */
 #define SUBMIT_JOB_AES128_CBCS_1_9_ENC submit_job_aes128_cbcs_1_9_enc_avx
