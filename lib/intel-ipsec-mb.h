@@ -262,6 +262,8 @@ typedef enum {
 #endif
 #endif
 
+#define IMB_CIPHER_SM4_CTR IMB_CIPHER_SM4_CNTR
+
 typedef enum {
         IMB_CIPHER_CBC = 1,
         IMB_CIPHER_CNTR,

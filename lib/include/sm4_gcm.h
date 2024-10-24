@@ -54,8 +54,8 @@ sm4_gcm(IMB_MGR *state, const struct gcm_key_data *key_data, void *dst, const vo
 
         if (dir == IMB_DIR_ENCRYPT) {
                 /* SM4-CTR on plaintext */
-                SM4_CNTR(src, dst, len, (const uint32_t *) key_data->expanded_keys, counter_block_0,
-                         16);
+                SM4_CTR(src, dst, len, (const uint32_t *) key_data->expanded_keys, counter_block_0,
+                        16);
 
                 /* Authenticate ciphertext */
                 IMB_GHASH(state, key_data, dst, len, initial_tag, 16);
@@ -64,8 +64,8 @@ sm4_gcm(IMB_MGR *state, const struct gcm_key_data *key_data, void *dst, const vo
                 IMB_GHASH(state, key_data, src, len, initial_tag, 16);
 
                 /* SM4-CTR on ciphertext */
-                SM4_CNTR(src, dst, len, (const uint32_t *) key_data->expanded_keys, counter_block_0,
-                         16);
+                SM4_CTR(src, dst, len, (const uint32_t *) key_data->expanded_keys, counter_block_0,
+                        16);
         }
 
         /* XOR with len(AAD) || len(C) and GHASH (XOR done internally) */

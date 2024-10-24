@@ -329,10 +329,10 @@ SUBMIT_JOB_SM4_CBC_DEC(IMB_JOB *job)
 }
 
 __forceinline IMB_JOB *
-SUBMIT_JOB_SM4_CNTR(IMB_JOB *job)
+SUBMIT_JOB_SM4_CTR(IMB_JOB *job)
 {
-        SM4_CNTR(job->src + job->cipher_start_src_offset_in_bytes, job->dst,
-                 job->msg_len_to_cipher_in_bytes, job->enc_keys, job->iv, job->iv_len_in_bytes);
+        SM4_CTR(job->src + job->cipher_start_src_offset_in_bytes, job->dst,
+                job->msg_len_to_cipher_in_bytes, job->enc_keys, job->iv, job->iv_len_in_bytes);
         job->status |= IMB_STATUS_COMPLETED_CIPHER;
         return job;
 }
@@ -537,7 +537,7 @@ SUBMIT_JOB_CIPHER_ENC(IMB_MGR *state, IMB_JOB *job, const IMB_CIPHER_MODE cipher
         } else if (IMB_CIPHER_SM4_CBC == cipher_mode) {
                 return SUBMIT_JOB_SM4_CBC_ENC(job);
         } else if (IMB_CIPHER_SM4_CNTR == cipher_mode) {
-                return SUBMIT_JOB_SM4_CNTR(job);
+                return SUBMIT_JOB_SM4_CTR(job);
         } else if (IMB_CIPHER_CFB == cipher_mode) {
                 if (IMB_KEY_128_BYTES == key_sz) {
 #ifdef SUBMIT_JOB_AES_CFB_128_ENC
@@ -772,7 +772,7 @@ SUBMIT_JOB_CIPHER_DEC(IMB_MGR *state, IMB_JOB *job, const IMB_CIPHER_MODE cipher
         } else if (IMB_CIPHER_SM4_CBC == cipher_mode) {
                 return SUBMIT_JOB_SM4_CBC_DEC(job);
         } else if (IMB_CIPHER_SM4_CNTR == cipher_mode) {
-                return SUBMIT_JOB_SM4_CNTR(job);
+                return SUBMIT_JOB_SM4_CTR(job);
         } else if (IMB_CIPHER_CFB == cipher_mode) {
                 return SUBMIT_JOB_AES_CFB_DEC(job, key_sz);
         } else {
@@ -1095,7 +1095,7 @@ submit_cipher_dec_sm4_cbc(IMB_MGR *state, IMB_JOB *job)
 
 /* SM4-CTR */
 static IMB_JOB *
-submit_cipher_dec_sm4_cntr(IMB_MGR *state, IMB_JOB *job)
+submit_cipher_dec_sm4_ctr(IMB_MGR *state, IMB_JOB *job)
 {
         return SUBMIT_JOB_CIPHER_DEC(state, job, IMB_CIPHER_SM4_CNTR, IMB_KEY_128_BYTES);
 }
@@ -1386,7 +1386,7 @@ submit_cipher_enc_sm4_cbc(IMB_MGR *state, IMB_JOB *job)
 
 /* SM4-CTR */
 static IMB_JOB *
-submit_cipher_enc_sm4_cntr(IMB_MGR *state, IMB_JOB *job)
+submit_cipher_enc_sm4_ctr(IMB_MGR *state, IMB_JOB *job)
 {
         return SUBMIT_JOB_CIPHER_ENC(state, job, IMB_CIPHER_SM4_CNTR, IMB_KEY_128_BYTES);
 }
@@ -1571,7 +1571,7 @@ static const submit_flush_fn_t tab_submit_cipher[] = {
         submit_cipher_dec_cfb_256,
         /* [27] SM4-CTR */
         submit_cipher_dec_null,
-        submit_cipher_dec_sm4_cntr,
+        submit_cipher_dec_sm4_ctr,
         submit_cipher_dec_null,
         submit_cipher_dec_null,
         /* [28] SM4-GCM */
@@ -1737,7 +1737,7 @@ static const submit_flush_fn_t tab_submit_cipher[] = {
         submit_cipher_enc_cfb_256,
         /* [27] SM4-CTR */
         submit_cipher_enc_null,
-        submit_cipher_enc_sm4_cntr,
+        submit_cipher_enc_sm4_ctr,
         submit_cipher_enc_null,
         submit_cipher_enc_null,
         /* [28] SM4-GCM */
@@ -2040,7 +2040,7 @@ flush_cipher_dec_sm4_cbc(IMB_MGR *state, IMB_JOB *job)
 
 /* SM4-CTR */
 static IMB_JOB *
-flush_cipher_dec_sm4_cntr(IMB_MGR *state, IMB_JOB *job)
+flush_cipher_dec_sm4_ctr(IMB_MGR *state, IMB_JOB *job)
 {
         return FLUSH_JOB_CIPHER_DEC(state, job, IMB_CIPHER_SM4_CNTR, IMB_KEY_128_BYTES);
 }
@@ -2340,7 +2340,7 @@ flush_cipher_enc_sm4_cbc(IMB_MGR *state, IMB_JOB *job)
 
 /* SM4-CTR */
 static IMB_JOB *
-flush_cipher_enc_sm4_cntr(IMB_MGR *state, IMB_JOB *job)
+flush_cipher_enc_sm4_ctr(IMB_MGR *state, IMB_JOB *job)
 {
         return FLUSH_JOB_CIPHER_ENC(state, job, IMB_CIPHER_SM4_CNTR, IMB_KEY_128_BYTES);
 }
@@ -2517,7 +2517,7 @@ static const submit_flush_fn_t tab_flush_cipher[] = {
         flush_cipher_dec_cfb_256,
         /* [27] SM4-CTR */
         flush_cipher_dec_null,
-        flush_cipher_dec_sm4_cntr,
+        flush_cipher_dec_sm4_ctr,
         flush_cipher_dec_null,
         flush_cipher_dec_null,
         /* [28] SM4-GCM */
@@ -2683,7 +2683,7 @@ static const submit_flush_fn_t tab_flush_cipher[] = {
         flush_cipher_enc_cfb_256,
         /* [27] SM4-CTR */
         flush_cipher_enc_null,
-        flush_cipher_enc_sm4_cntr,
+        flush_cipher_enc_sm4_ctr,
         flush_cipher_enc_null,
         flush_cipher_enc_null,
         /* [28] SM4-GCM */

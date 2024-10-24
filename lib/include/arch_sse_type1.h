@@ -384,8 +384,8 @@ void
 sm4_cbc_dec_sse(const void *in, void *out, const uint64_t size, const void *exp_dec_keys,
                 const void *iv);
 void
-sm4_cntr_sse(const void *in, void *out, const uint64_t size, const void *exp_enc_keys,
-             const void *iv, const uint64_t iv_len);
+sm4_ctr_sse(const void *in, void *out, const uint64_t size, const void *exp_enc_keys,
+            const void *iv, const uint64_t iv_len);
 
 void
 sm4_set_key_sse(const void *pKey, void *exp_enc_keys, void *exp_dec_keys);

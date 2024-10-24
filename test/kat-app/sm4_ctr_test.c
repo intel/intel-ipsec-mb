@@ -190,11 +190,11 @@ test_sm4_ctr_vectors(struct IMB_MGR *mb_mgr, struct test_suite_context *ctx,
         DECLARE_ALIGNED(uint32_t dust[IMB_SM4_KEY_SCHEDULE_ROUNDS], 16);
 
         if (!quiet_mode)
-                printf("SM4-CNTR Test (N jobs = %d):\n", num_jobs);
+                printf("SM4-CTR Test (N jobs = %d):\n", num_jobs);
         for (; v->msg != NULL; v++) {
                 if (!quiet_mode) {
 #ifdef DEBUG
-                        printf("SM4-CNTR Test Case %zu\n", v->tcId);
+                        printf("SM4-CTR Test Case %zu\n", v->tcId);
 #else
                         printf(".");
 #endif
@@ -254,7 +254,7 @@ sm4_ctr_test(struct IMB_MGR *mb_mgr)
         int errors = 0;
         struct test_suite_context ctx;
 
-        test_suite_start(&ctx, "SM4-CNTR-128");
+        test_suite_start(&ctx, "SM4-CTR-128");
         for (i = 0; i < test_num_jobs_size; i++)
                 test_sm4_ctr_vectors(mb_mgr, &ctx, IMB_CIPHER_SM4_CNTR, test_num_jobs[i]);
         errors += test_suite_end(&ctx);

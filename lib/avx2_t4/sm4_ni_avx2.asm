@@ -623,8 +623,8 @@ cbc_dec_done:
 %endmacro
 
 align 32
-MKGLOBAL(sm4_cntr_ni_avx2,function,internal)
-sm4_cntr_ni_avx2:
+MKGLOBAL(sm4_ctr_ni_avx2,function,internal)
+sm4_ctr_ni_avx2:
 
 %define	IN      arg1
 %define	OUT     arg2

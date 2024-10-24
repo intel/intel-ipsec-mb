@@ -354,7 +354,7 @@ submit_job_docsis256_sec_crc_dec_vaes_avx512(MB_MGR_DOCSIS_AES_OOO *state, IMB_J
 #define SM4_ECB     sm4_ecb_sse
 #define SM4_CBC_ENC sm4_cbc_enc_sse
 #define SM4_CBC_DEC sm4_cbc_dec_sse
-#define SM4_CNTR    sm4_cntr_sse
+#define SM4_CTR     sm4_ctr_sse
 
 /* SM3 */
 #define SUBMIT_JOB_SM3      sm3_msg_submit_sse

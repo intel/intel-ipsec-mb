@@ -38,7 +38,7 @@ extern byteswap_const, ddq_add_1
 %define SM4_ECB     sm4_ecb_sse
 %define SM4_CBC_ENC sm4_cbc_enc_sse
 %define SM4_CBC_DEC sm4_cbc_dec_sse
-%define SM4_CNTR    sm4_cntr_sse
+%define SM4_CTR    sm4_ctr_sse
 %endif
 
 %ifdef LINUX
@@ -624,8 +624,8 @@ end_cbc_dec_loop:
 ; arg 5: IV:     pointer to IV
 ; arg 6: IV_LEN: length in bytes (12 or 16 bytes)
 ;
-MKGLOBAL(SM4_CNTR,function,internal)
-SM4_CNTR:
+MKGLOBAL(SM4_CTR,function,internal)
+SM4_CTR:
 
 %define	IN      arg1
 %define	OUT     arg2
