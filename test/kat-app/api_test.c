@@ -1344,6 +1344,11 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
                                         template_job.msg_len_to_hash_in_bytes =
                                                 ((1ULL << 38) - 64) + 1;
                                         break;
+                                case IMB_AUTH_AES_CMAC_BITLEN:
+                                        /* MB_MAX_LEN16 (((1 << 16) - 2) * 8) is max */
+                                        template_job.msg_len_to_hash_in_bits =
+                                                ((((1ULL << 16) - 1) * 8));
+                                        break;
                                 default:
                                         template_job.msg_len_to_hash_in_bytes = ((1 << 16) - 1);
                                         break;
