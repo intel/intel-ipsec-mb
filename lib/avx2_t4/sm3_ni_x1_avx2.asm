@@ -133,7 +133,7 @@ sm3_update_ni_x1:
         vmovdqu         [rsp + 6*16], xmm12
 %endif
 
-        ;; load current hash value and transform
+        ;; load current hash value and change word order
         vmovdqu         xmm6, [arg_hash]
         vmovdqu         xmm7, [arg_hash + 16]
         ;; xmm6 = D C B A, xmm7 = H G F E
@@ -224,14 +224,14 @@ block_loop:
 
         SM3ROUNDS4      xmm6, xmm7, xmm5, xmm2, xmm1, 60
 
-        ;; update hash value
+        ;; add feed-forward to the chaining value and move on to the next message block
         vpxor           xmm6, xmm6, xmm10
         vpxor           xmm7, xmm7, xmm11
         add             arg_msg, 64
         dec             arg_num_blks
         jnz             block_loop
 
-        ;; store the hash value back in memory
+        ;; change word order and store the hash value back in memory
         vpslld          xmm2, xmm7, 9
         vpsrld          xmm3, xmm7, 23
         vpxor           xmm1, xmm2, xmm3        ;; xmm1 = xmm2 ^ xmm3 = ROL32(CDGH, 9)
