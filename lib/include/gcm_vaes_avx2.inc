@@ -1457,13 +1457,13 @@ align 32
 ;;      ymm0, ymm1-ymm8, ymm10-ymm13,
 ;;          ymm15                       ;; [clobbered] temporary registers
 
-%define %%T1    xmm0
-%define %%T2    xmm10
-%define %%T3    xmm11
-%define %%T4    xmm12
-%define %%T5    xmm13
-%define %%T6    xmm14
-%define %%T7    xmm15
+%define %%T1    xmm10
+%define %%T2    xmm11
+%define %%T3    xmm12
+%define %%T4    xmm13
+%define %%T5    xmm14
+%define %%T6    xmm15
+%define %%T7    xmm0
 %define %%T8    xmm9
 
 %xdefine %%YT1  YWORD(%%T1)
