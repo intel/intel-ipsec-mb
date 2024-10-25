@@ -841,15 +841,17 @@ align 32
 ;;     %%num_initial_blocks = B mod 16
 %macro INITIAL_BLOCKS 7
 %define %%GDATA_KEY             %1      ;; [in] AES key and hash key pointer
-%define %%CIPH_PLAIN_OUT        %2      ;; [in] plain/cipher text pointer
-%define %%PLAIN_CIPH_IN         %3      ;; [in] cipher/plain text pointer
+%define %%CIPH_PLAIN_OUT        %2      ;; [in] cipher/plain text pointer
+%define %%PLAIN_CIPH_IN         %3      ;; [in] plain/cipher text pointer
 %define %%LENGTH                %4      ;; [in/out] register with message length
 %define %%DATA_OFFSET           %5      ;; [in/out] register current offset within the message
 %define %%num_initial_blocks    %6      ;; [in] can be 0, 1, 2, 3, 4, 5, 6, 7 ... 15
 %define %%ENC_DEC               %7      ;; [in] 'ENC' - encrypt, 'DEC' - decrypt direction selection
-;;      xmm9                            ;; [in] most recent counter block
+;;      xmm9                            ;; [in/out] most recent counter block
+;;                                      ;;     NOTE: in some sections ymm9/xmm9 is used as a temporary register.
 ;;      r10                             ;; [in] number of AESENC rounds (9, 11 or 13)
 ;;      r15                             ;; [in] pointer to store encrypted blocks for GHASH
+;;      xmm8                            ;; [in] current GHASH value
 ;;      ymm1-ymm8                       ;; [out] cipher text blocks ready for GHASH (shuffled & added HASH value to block 0)
 ;;      ymm0, ymm10-ymm15               ;; [clobbered] temporary registers
 
@@ -872,8 +874,8 @@ align 32
 %xdefine %%YT8  YWORD(%%T8)
 
 %if %%num_initial_blocks > 0
-                ;; Move AAD_HASH to temp reg
-                vmovdqa xmm8, xmm8
+                ;; Temporarily store GHASH value onto stack
+                vmovdqa xmm8, xmm8              ;; clear top 128-bits of ymm8
                 vmovdqu [r15 + TMP1], ymm8
 
                 ;; prepare counter blocks and do AES encryption on them
@@ -1417,8 +1419,8 @@ align 32
 %%_initial_words_done:
 %endif ;; %%num_initial_blocks > 0
 
-                vmovdqa xmm9, [r15 + TMP3]
-                vpxor   ymm1, ymm1, [r15 + TMP1]
+                vmovdqa xmm9, [r15 + TMP3]              ;; restore counter block in xmm9
+                vpxor   ymm1, ymm1, [r15 + TMP1]        ;; add current GHASH value to block 0
                 vmovdqu [r15 + TMP1], ymm1
                 vmovdqu [r15 + TMP3], ymm2
                 vmovdqu [r15 + TMP5], ymm3
@@ -1445,8 +1447,15 @@ align 32
 %define %%LENGTH                %5      ;; [in] message length
 %define %%DATA_OFFSET           %6      ;; [in/out] buffer offset
 %define %%num_initial_blocks    %7      ;; [in] numeric value, number of blocks can be from 1 to 7 (not 0)
-%define %%ENC_DEC               %8
-%define %%INSTANCE_TYPE         %9
+%define %%ENC_DEC               %8      ;; [in] selection for "ENC" encrypt or "DEC" for decrypt directions
+%define %%INSTANCE_TYPE         %9      ;; [in] "multi_call" or "single_call" API type selection
+;;      xmm9                            ;; [in/out] most recent counter block
+;;                                      ;;     NOTE: in some sections ymm9/xmm9 is used as a temporary register.
+;;      r10                             ;; [in] number of AESENC rounds (9, 11 or 13)
+;;      xmm8                            ;; [in] current GHASH value
+;;      xmm14                           ;; [out] updated GHASH value
+;;      ymm0, ymm1-ymm8, ymm10-ymm13,
+;;          ymm15                       ;; [clobbered] temporary registers
 
 %define %%T1    xmm0
 %define %%T2    xmm10
@@ -1466,19 +1475,14 @@ align 32
 %xdefine %%YT7  YWORD(%%T7)
 %xdefine %%YT8  YWORD(%%T8)
 
-%define %%CTR           xmm9
-%define %%HASH_IN       xmm8
-%define %%HASH_OUT      xmm14
-
-
 %assign j (((%%num_initial_blocks - 1) / 2) + 1)
 %xdefine %%LAST_YMM ymm %+ j
 %assign j ((%%num_initial_blocks - 1) % 2)
 %xdefine %%LAST_IDX j
 
-                ;; Move AAD_HASH onto stack frame
-                vmovdqa         xmm8, xmm8
-                vmovdqu         [rsp + TMP1], ymm8
+                ;; Temporarily store GHASH value onto stack
+                vmovdqa         xmm8, xmm8              ;; clear top 128-bits of ymm8
+                vmovdqa         [rsp + TMP1], ymm8
 
                 ;; prepare counter blocks and do AES encryption on them
 %xdefine %%FN gcm_aes_ctr_ %+ %%num_initial_blocks %+ _vaes_avx2
@@ -1632,7 +1636,7 @@ align 32
 %endif
 
 %%_small_initial_compute_hash:
-        ;; Final hash is now in T3 (xmm14 really)
+        ;; Final hash is now in xmm14
         vmovdqa         [rsp + TMP1], xmm14     ;; @todo overwrite this location with current hash value
         vmovdqa         xmm9, [rsp + TMP3]      ;; keep last counter block into xmm9
 %endmacro                       ; INITIAL_BLOCKS_PARTIAL
