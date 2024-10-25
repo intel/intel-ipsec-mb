@@ -876,7 +876,7 @@ align 32
 %if %%num_initial_blocks > 0
                 ;; Temporarily store GHASH value onto stack
                 vmovdqa xmm8, xmm8              ;; clear top 128-bits of ymm8
-                vmovdqu [r15 + TMP1], ymm8
+                vmovdqa [r15 + TMP1], ymm8
 
                 ;; prepare counter blocks and do AES encryption on them
 %xdefine %%FN gcm_aes_ctr_ %+ %%num_initial_blocks %+ _vaes_avx2
@@ -1421,14 +1421,14 @@ align 32
 
                 vmovdqa xmm9, [r15 + TMP3]              ;; restore counter block in xmm9
                 vpxor   ymm1, ymm1, [r15 + TMP1]        ;; add current GHASH value to block 0
-                vmovdqu [r15 + TMP1], ymm1
-                vmovdqu [r15 + TMP3], ymm2
-                vmovdqu [r15 + TMP5], ymm3
-                vmovdqu [r15 + TMP7], ymm4
-                vmovdqu [r15 + TMP9], ymm5
-                vmovdqu [r15 + TMP11], ymm6
-                vmovdqu [r15 + TMP13], ymm7
-                vmovdqu [r15 + TMP15], ymm8
+                vmovdqa [r15 + TMP1], ymm1
+                vmovdqa [r15 + TMP3], ymm2
+                vmovdqa [r15 + TMP5], ymm3
+                vmovdqa [r15 + TMP7], ymm4
+                vmovdqa [r15 + TMP9], ymm5
+                vmovdqa [r15 + TMP11], ymm6
+                vmovdqa [r15 + TMP13], ymm7
+                vmovdqa [r15 + TMP15], ymm8
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -1715,7 +1715,7 @@ align 32
                 add             BYTE(%%CTR_CHECK), 16
 
                 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        vmovdqu         %%YT2, [r12 + TMP1]
+        vmovdqa         %%YT2, [r12 + TMP1]
 
                 vbroadcasti128  %%YT1, [%%GDATA + 16*0]
                 vpxor           ymm1, ymm1, %%YT1
@@ -1728,7 +1728,7 @@ align 32
                 vpxor           ymm8, ymm8, %%YT1
 
         GHASH_SINGLE_MUL %%GDATA, 16, %%YT2, %%YT4, %%YT5, %%YT3, %%YT6, %%YT7, first
-        vmovdqu         %%YT2, [r12 + TMP3]
+        vmovdqa         %%YT2, [r12 + TMP3]
 
                 vbroadcasti128  %%YT1, [%%GDATA + 16*1]
                 vaesenc         ymm1, ymm1, %%YT1
@@ -1741,7 +1741,7 @@ align 32
                 vaesenc         ymm8, ymm8, %%YT1
 
         GHASH_SINGLE_MUL %%GDATA, 14, %%YT2, %%YT4, %%YT5, %%YT3, %%YT6, %%YT7, not_first
-        vmovdqu         %%YT2, [r12 + TMP5]
+        vmovdqa         %%YT2, [r12 + TMP5]
 
                 vbroadcasti128  %%YT1, [%%GDATA + 16*2]
                 vaesenc         ymm1, ymm1, %%YT1
@@ -1754,7 +1754,7 @@ align 32
                 vaesenc         ymm8, ymm8, %%YT1
 
         GHASH_SINGLE_MUL %%GDATA, 12, %%YT2, %%YT4, %%YT5, %%YT3, %%YT6, %%YT7, not_first
-        vmovdqu         %%YT2, [r12 + TMP7]
+        vmovdqa         %%YT2, [r12 + TMP7]
 
                 vbroadcasti128  %%YT1, [%%GDATA + 16*3]
                 vaesenc         ymm1, ymm1, %%YT1
@@ -1767,7 +1767,7 @@ align 32
                 vaesenc         ymm8, ymm8, %%YT1
 
         GHASH_SINGLE_MUL %%GDATA, 10, %%YT2, %%YT4, %%YT5, %%YT3, %%YT6, %%YT7, not_first
-        vmovdqu         %%YT2, [r12 + TMP9]
+        vmovdqa         %%YT2, [r12 + TMP9]
 
                 vbroadcasti128  %%YT1, [%%GDATA + 16*4]
                 vaesenc         ymm1, ymm1, %%YT1
@@ -1780,7 +1780,7 @@ align 32
                 vaesenc         ymm8, ymm8, %%YT1
 
         GHASH_SINGLE_MUL %%GDATA, 8, %%YT2, %%YT4, %%YT5, %%YT3, %%YT6, %%YT7, not_first
-        vmovdqu         %%YT2, [r12 + TMP11]
+        vmovdqa         %%YT2, [r12 + TMP11]
 
                 vbroadcasti128  %%YT1, [%%GDATA + 16*5]
                 vaesenc         ymm1, ymm1, %%YT1
@@ -1793,7 +1793,7 @@ align 32
                 vaesenc         ymm8, ymm8, %%YT1
 
         GHASH_SINGLE_MUL %%GDATA, 6, %%YT2, %%YT4, %%YT5, %%YT3, %%YT6, %%YT7, not_first
-        vmovdqu         %%YT2, [r12 + TMP13]
+        vmovdqa         %%YT2, [r12 + TMP13]
 
                 vbroadcasti128  %%YT1, [%%GDATA + 16*6]
                 vaesenc         ymm1, ymm1, %%YT1
@@ -1806,7 +1806,7 @@ align 32
                 vaesenc         ymm8, ymm8, %%YT1
 
         GHASH_SINGLE_MUL %%GDATA, 4, %%YT2, %%YT4, %%YT5, %%YT3, %%YT6, %%YT7, not_first
-        vmovdqu         %%YT2, [r12 + TMP15]
+        vmovdqa         %%YT2, [r12 + TMP15]
 
                 vbroadcasti128  %%YT1, [%%GDATA + 16*7]
                 vaesenc         ymm1, ymm1, %%YT1
@@ -2145,7 +2145,7 @@ align 32
         sub     rsp, VARIABLE_OFFSET + CONTEXT_SIZE
 %endif
 %endif
-	and     rsp, ~63
+	and     rsp, ~31
 
         mov     [rsp + GP_OFFSET + 0*8], rax ; original rsp pointer
         mov     [rsp + GP_OFFSET + 1*8], r12
