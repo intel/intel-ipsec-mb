@@ -112,9 +112,9 @@ ddq_addbe_8888:
         dq	0x0000000000000000, 0x0800000000000000
         dq	0x0000000000000000, 0x0800000000000000
 
-;; GCM NIST standard: len(M) < 2^39 - 256
+;; NIST SP 800-38-D, section 5.2.1.1: len(M) < 2^39 - 256 [bits]
 align 8
 gcm_max_len:
-        dq      (((1<<39) - 256) - 1)
+        dq      (((1<<39) - 256) / 8) - 1
 
 %endif ; GCM_DATA_VAES_AVX2_INC_INCLUDED

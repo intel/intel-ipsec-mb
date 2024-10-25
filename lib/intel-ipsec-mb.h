@@ -635,8 +635,8 @@ struct chacha20_poly1305_context_data {
 #define IMB_GCM_ENC_KEY_LEN 16
 #define IMB_GCM_KEY_SETS    (15) /**< exp key + 14 exp round keys*/
 
-/* GCM NIST standard: len(M) < 2^39 - 256 */
-#define IMB_GCM_MAX_LEN UINT64_C(((1ULL << 39) - 256) - 1)
+/* NIST SP 800-38-D, section 5.2.1.1: len(P) < 2^39 - 256 [bits] */
+#define IMB_GCM_MAX_LEN UINT64_C((((1ULL << 39) - 256) / 8) - 1)
 
 /* Per RFC 7539, max cipher size is (2^32 - 1) x 64 */
 #define IMB_CHACHA20_POLY1305_MAX_LEN UINT64_C((1ULL << 38) - 64)
