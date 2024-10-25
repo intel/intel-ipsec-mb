@@ -123,18 +123,18 @@ sha512_update_ni_x1:
         je              .done_hash
 
 %ifidn __OUTPUT_FORMAT__, win64
-        ;; xmm6:xmm15 need to be maintained for Windows
-        sub             rsp, 10*16
+        ;; xmm6:xmm9, xmm11:xmm15 need to be maintained for Windows
+        ;; xmm10 not used
+        sub             rsp, 9*16
         vmovdqu         [rsp + 0*16], xmm6
         vmovdqu         [rsp + 1*16], xmm7
         vmovdqu         [rsp + 2*16], xmm8
         vmovdqu         [rsp + 3*16], xmm9
-        vmovdqu         [rsp + 4*16], xmm10
-        vmovdqu         [rsp + 5*16], xmm11
-        vmovdqu         [rsp + 6*16], xmm12
-        vmovdqu         [rsp + 7*16], xmm13
-        vmovdqu         [rsp + 8*16], xmm14
-        vmovdqu         [rsp + 9*16], xmm15
+        vmovdqu         [rsp + 4*16], xmm11
+        vmovdqu         [rsp + 5*16], xmm12
+        vmovdqu         [rsp + 6*16], xmm13
+        vmovdqu         [rsp + 7*16], xmm14
+        vmovdqu         [rsp + 8*16], xmm15
 %endif
         vbroadcasti128  ymm15, [rel SHA512_SHUFF_MASK_AVX]
 
@@ -311,18 +311,18 @@ align 32
         vzeroupper
 
 %ifidn __OUTPUT_FORMAT__, win64
-        ;; xmm6:xmm15 need to be maintained for Windows
+        ;; xmm6:xmm9, xmm11:xmm15 need to be maintained for Windows
+        ;; xmm10 not used
         vmovdqu         xmm6, [rsp + 0*16]
         vmovdqu         xmm7, [rsp + 1*16]
         vmovdqu         xmm8, [rsp + 2*16]
         vmovdqu         xmm9, [rsp + 3*16]
-        vmovdqu         xmm10, [rsp + 4*16]
-        vmovdqu         xmm11, [rsp + 5*16]
-        vmovdqu         xmm12, [rsp + 6*16]
-        vmovdqu         xmm13, [rsp + 7*16]
-        vmovdqu         xmm14, [rsp + 8*16]
-        vmovdqu         xmm15, [rsp + 9*16]
-        add             rsp, 10*16
+        vmovdqu         xmm11, [rsp + 4*16]
+        vmovdqu         xmm12, [rsp + 5*16]
+        vmovdqu         xmm13, [rsp + 6*16]
+        vmovdqu         xmm14, [rsp + 7*16]
+        vmovdqu         xmm15, [rsp + 8*16]
+        add             rsp, 9*16
 %endif
 
 .done_hash:
