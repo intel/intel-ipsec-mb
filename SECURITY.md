@@ -120,3 +120,9 @@ ensure memory is cleared before the function returns.
 The library GCM and GMAC implementation provides flexibility as to tag size selection.
 As explained in [NIST Special Publication 800-38D](https://csrc.nist.gov/publications/detail/sp/800-38d/final) section 5.2.1.2 and Appendix C, using tag sizes shorter than 96 bits can be insecure.
 Please refer to the aforementioned sections to understand the details, trade offs and mitigations of using shorter tag sizes.
+
+### Galois Counter Mode Key/IV Pair Uniqueness
+
+This library does not check for uniqueness on AES-GCM key/IV pair.
+It is up to the application using the library AES-GCM API to conduct this check.
+Please refer to [NIST Special Publication 800-38D](https://csrc.nist.gov/publications/detail/sp/800-38d/final) section 8 and Appendix A, to find requirements details and instructions on constructing an IV.
