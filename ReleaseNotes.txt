@@ -13,6 +13,8 @@ General
 - Improved CMake project definitions and installation paths.
 - Added FreeBSD CMake builds to workflows.
 - Updated style check to clang-format version 18.
+- Marked direct API for wireless algorithms (KASUMI, SNOW3G and ZUC) as deprecated,
+  to be removed in the next release.
 
 Library
 - AES-GCM changes

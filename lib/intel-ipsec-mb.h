@@ -2032,16 +2032,24 @@ init_mb_mgr_auto(IMB_MGR *state, IMB_ARCH *arch);
  * @param _src   Pointer to Plaintext/Ciphertext input.
  * @param _dst   Pointer to Ciphertext/Plaintext output.
  * @param _len   Length of input data in bytes.
+ *
+ * @deprecated Please use the job API instead.
  */
 #define IMB_ZUC_EEA3_1_BUFFER(_mgr, _key, _iv, _src, _dst, _len)                                   \
         ((_mgr)->eea3_1_buffer((_key), (_iv), (_src), (_dst), (_len)))
+/**
+ * @copydoc IMB_ZUC_EEA3_1_BUFFER
+ */
 #define IMB_ZUC_EEA3_4_BUFFER(_mgr, _key, _iv, _src, _dst, _len)                                   \
         ((_mgr)->eea3_4_buffer((_key), (_iv), (_src), (_dst), (_len)))
+/**
+ * @copydoc IMB_ZUC_EEA3_1_BUFFER
+ */
 #define IMB_ZUC_EEA3_N_BUFFER(_mgr, _key, _iv, _src, _dst, _len, _count)                           \
         ((_mgr)->eea3_n_buffer((_key), (_iv), (_src), (_dst), (_len), (_count)))
 
 /**
- * @brief ZUC EIA3 Integrity function
+ * @brief ZUC EIA3 Integrity functions
  *
  * @param _mgr   Pointer to multi-buffer structure
  * @param _key   Pointer to key
@@ -2049,9 +2057,14 @@ init_mb_mgr_auto(IMB_MGR *state, IMB_ARCH *arch);
  * @param _src   Pointer to Plaintext/Ciphertext input.
  * @param _len   Length of input data in bits.
  * @param _tag   Pointer to Authenticated Tag output (4 bytes)
+ *
+ * @deprecated Please use the job API instead.
  */
 #define IMB_ZUC_EIA3_1_BUFFER(_mgr, _key, _iv, _src, _len, _tag)                                   \
         ((_mgr)->eia3_1_buffer((_key), (_iv), (_src), (_len), (_tag)))
+/**
+ * @copydoc IMB_ZUC_EIA3_1_BUFFER
+ */
 #define IMB_ZUC_EIA3_N_BUFFER(_mgr, _key, _iv, _src, _len, _tag, _count)                           \
         ((_mgr)->eia3_n_buffer((_key), (_iv), (_src), (_len), (_tag), (_count)))
 
@@ -2071,6 +2084,8 @@ init_mb_mgr_auto(IMB_MGR *state, IMB_ARCH *arch);
  * @param [out] _dst      Output buffer
  * @param [in]  _len      Length in BYTES
  *
+ * @deprecated Please use the job API instead.
+ *
  ******************************************************************************/
 #define IMB_KASUMI_F8_1_BUFFER(_mgr, _exp_key, _iv, _src, _dst, _len)                              \
         ((_mgr)->f8_1_buffer((_exp_key), (_iv), (_src), (_dst), (_len)))
@@ -2089,6 +2104,8 @@ init_mb_mgr_auto(IMB_MGR *state, IMB_ARCH *arch);
  * @param [out] _dst      Output buffer
  * @param [in]  _len      Length in BITS
  * @param [in]  _offset   Offset in BITS from begin of input buffer
+ *
+ * @deprecated Please use the job API instead.
  *
  ******************************************************************************/
 #define IMB_KASUMI_F8_1_BUFFER_BIT(_mgr, _exp_key, _iv, _src, _dst, _len, _offset)                 \
@@ -2111,6 +2128,8 @@ init_mb_mgr_auto(IMB_MGR *state, IMB_ARCH *arch);
  * @param [in]  _src2     Input buffer 2
  * @param [out] _dst2     Output buffer 2
  * @param [in]  _len2     Length in BYTES of input buffer 2
+ *
+ * @deprecated Please use the job API instead.
  *
  ******************************************************************************/
 #define IMB_KASUMI_F8_2_BUFFER(_mgr, _exp_key, _iv1, _iv2, _src1, _dst1, _len1, _src2, _dst2,      \
@@ -2136,6 +2155,8 @@ init_mb_mgr_auto(IMB_MGR *state, IMB_ARCH *arch);
  * @param [in]  _src3     Input buffer 3
  * @param [out] _dst3     Output buffer 3
  * @param [in]  _len      Common length in bytes for all buffers
+ *
+ * @deprecated Please use the job API instead.
  *
  ******************************************************************************/
 #define IMB_KASUMI_F8_3_BUFFER(_mgr, _exp_key, _iv1, _iv2, _iv3, _src1, _dst1, _src2, _dst2,       \
@@ -2165,6 +2186,8 @@ init_mb_mgr_auto(IMB_MGR *state, IMB_ARCH *arch);
  * @param [out] _dst4     Output buffer 4
  * @param [in]  _len      Common length in bytes for all buffers
  *
+ * @deprecated Please use the job API instead.
+ *
  ******************************************************************************/
 #define IMB_KASUMI_F8_4_BUFFER(_mgr, _exp_key, _iv1, _iv2, _iv3, _iv4, _src1, _dst1, _src2, _dst2, \
                                _src3, _dst3, _src4, _dst4, _len)                                   \
@@ -2184,6 +2207,8 @@ init_mb_mgr_auto(IMB_MGR *state, IMB_ARCH *arch);
  * @param [out] _dst     Array of output buffers
  * @param [in]  _len     Array of corresponding input buffer lengths in BITS
  * @param [in]  _count   Number of input buffers
+ *
+ * @deprecated Please use the job API instead.
  */
 #define IMB_KASUMI_F8_N_BUFFER(_mgr, _exp_key, _iv, _src, _dst, _len, _count)                      \
         ((_mgr)->f8_n_buffer((_exp_key), (_iv), (_src), (_dst), (_len), (_count)))
@@ -2201,6 +2226,8 @@ init_mb_mgr_auto(IMB_MGR *state, IMB_ARCH *arch);
  * @param [in]  _len     Length in BYTES of the data to be hashed
  * @param [out] _tag     Computed digest
  *
+ * @deprecated Please use the job API instead.
+ *
  */
 #define IMB_KASUMI_F9_1_BUFFER(_mgr, _exp_key, _src, _len, _tag)                                   \
         ((_mgr)->f9_1_buffer((_exp_key), (_src), (_len), (_tag)))
@@ -2217,6 +2244,8 @@ init_mb_mgr_auto(IMB_MGR *state, IMB_ARCH *arch);
  * @param [in]  _len     Length in BITS of the data to be hashed
  * @param [out] _tag     Computed digest
  * @param [in]  _dir     Direction bit
+ *
+ * @deprecated Please use the job API instead.
  *
  */
 #define IMB_KASUMI_F9_1_BUFFER_USER(_mgr, _exp_key, _iv, _src, _len, _tag, _dir)                   \
@@ -2273,6 +2302,8 @@ init_mb_mgr_auto(IMB_MGR *state, IMB_ARCH *arch);
  * @param[out] _dst          Output buffer
  * @param[in]  _len          Length in bits of input buffer
  * @param[in]  _offset       Offset in input/output buffer (in bits)
+ *
+ * @deprecated Please use the job API instead.
  */
 #define IMB_SNOW3G_F8_1_BUFFER_BIT(_mgr, _exp_key, _iv, _src, _dst, _len, _offset)                 \
         ((_mgr)->snow3g_f8_1_buffer_bit((_exp_key), (_iv), (_src), (_dst), (_len), (_offset)))
@@ -2290,6 +2321,8 @@ init_mb_mgr_auto(IMB_MGR *state, IMB_ARCH *arch);
  * @param[in]  _src          Input buffer
  * @param[out] _dst          Output buffer
  * @param[in]  _len          Length in bits of input buffer
+ *
+ * @deprecated Please use the job API instead.
  */
 #define IMB_SNOW3G_F8_1_BUFFER(_mgr, _exp_key, _iv, _src, _dst, _len)                              \
         ((_mgr)->snow3g_f8_1_buffer((_exp_key), (_iv), (_src), (_dst), (_len)))
@@ -2309,6 +2342,8 @@ init_mb_mgr_auto(IMB_MGR *state, IMB_ARCH *arch);
  * @param[in]  _src2          Input buffer 2
  * @param[out] _dst2          Output buffer 2
  * @param[in]  _len2          Length in bytes of input buffer 2
+ *
+ * @deprecated Please use the job API instead.
  */
 #define IMB_SNOW3G_F8_2_BUFFER(_mgr, _exp_key, _iv1, _iv2, _src1, _dst1, _len1, _src2, _dst2,      \
                                _len2)                                                              \
@@ -2339,6 +2374,8 @@ init_mb_mgr_auto(IMB_MGR *state, IMB_ARCH *arch);
  * @param[in]  _src4          Input buffer 4
  * @param[out] _dst4          Output buffer 4
  * @param[in]  _len4          Length in bytes of input buffer 4
+ *
+ * @deprecated Please use the job API instead.
  */
 #define IMB_SNOW3G_F8_4_BUFFER(_mgr, _exp_key, _iv1, _iv2, _iv3, _iv4, _src1, _dst1, _len1, _src2, \
                                _dst2, _len2, _src3, _dst3, _len3, _src4, _dst4, _len4)             \
@@ -2386,6 +2423,8 @@ init_mb_mgr_auto(IMB_MGR *state, IMB_ARCH *arch);
  * @param[in]  _src8          Input buffer 8
  * @param[out] _dst8          Output buffer 8
  * @param[in]  _len8          Length in bytes of input buffer 8
+ *
+ * @deprecated Please use the job API instead.
  */
 #define IMB_SNOW3G_F8_8_BUFFER(_mgr, _exp_key, _iv1, _iv2, _iv3, _iv4, _iv5, _iv6, _iv7, _iv8,     \
                                _src1, _dst1, _len1, _src2, _dst2, _len2, _src3, _dst3, _len3,      \
@@ -2408,6 +2447,8 @@ init_mb_mgr_auto(IMB_MGR *state, IMB_ARCH *arch);
  * @param[in]  _src      Array of 8 input buffers
  * @param[out] _dst      Array of 8 output buffers
  * @param[in]  _len      Array of 8 corresponding input buffer lengths
+ *
+ * @deprecated Please use the job API instead.
  */
 #define IMB_SNOW3G_F8_8_BUFFER_MULTIKEY(_mgr, _exp_key, _iv, _src, _dst, _len)                     \
         ((_mgr)->snow3g_f8_8_buffer_multikey((_exp_key), (_iv), (_src), (_dst), (_len)))
@@ -2424,6 +2465,8 @@ init_mb_mgr_auto(IMB_MGR *state, IMB_ARCH *arch);
  * @param[out] _dst      Array of output buffers - out[0] set to NULL on failure
  * @param[in]  _len      Array of corresponding input buffer lengths
  * @param[in]  _count    Number of input buffers
+ *
+ * @deprecated Please use the job API instead.
  *
  ******************************************************************************/
 #define IMB_SNOW3G_F8_N_BUFFER(_mgr, _exp_key, _iv, _src, _dst, _len, _count)                      \
@@ -2442,6 +2485,8 @@ init_mb_mgr_auto(IMB_MGR *state, IMB_ARCH *arch);
  *                       - out[0] set to NULL on failure
  * @param[in]  _len      Array of corresponding input buffer lengths
  * @param[in]  _count    Number of input buffers
+ *
+ * @deprecated Please use the job API instead.
  */
 #define IMB_SNOW3G_F8_N_BUFFER_MULTIKEY(_mgr, _exp_key, _iv, _src, _dst, _len, _count)             \
         ((_mgr)->snow3g_f8_n_buffer_multikey((_exp_key), (_iv), (_src), (_dst), (_len), (_count)))
@@ -2460,6 +2505,8 @@ init_mb_mgr_auto(IMB_MGR *state, IMB_ARCH *arch);
  * @param[in]  _src      Input buffer
  * @param[in]  _len      Length in bits of the data to be hashed
  * @param[out] _tag      Computed digest
+ *
+ * @deprecated Please use the job API instead.
  */
 #define IMB_SNOW3G_F9_1_BUFFER(_mgr, _exp_key, _iv, _src, _len, _tag)                              \
         ((_mgr)->snow3g_f9_1_buffer((_exp_key), (_iv), (_src), (_len), (_tag)))
