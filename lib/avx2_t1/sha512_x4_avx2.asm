@@ -1,5 +1,5 @@
 ;;
-;; Copyright (c) 2012-2023, Intel Corporation
+;; Copyright (c) 2012-2024, Intel Corporation
 ;;
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
