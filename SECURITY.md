@@ -10,16 +10,16 @@
 
 Versions of the library that are currently being supported with security updates.
 
-| Version | Supported          | Frameworks using this version       |
-| ------- | ------------------ | ----------------------------------- |
-| 2.0     | :white_check_mark: | DPDK 24.11, OpenSSL QAT Engine, VPP |
-| 1.5     | :white_check_mark: | DPDK 23.11, OpenSSL QAT Engine, VPP |
-| 1.4     | :x:                | DPDK 23.07                          |
-| 1.3     | :white_check_mark: | DPDK 22.11, OpenSSL QAT Engine, VPP |
-| 1.2     | :x:                | -                                   |
-| 1.1     | :x:                | -                                   |
-| 1.0     | :x:                | DPDK 21.11                          |
-| < 1.0   | :x:                | -                                   |
+| Version | Supported          | Frameworks using this version             |
+| ------- | ------------------ | ----------------------------------------- |
+| 2.0     | :white_check_mark: | DPDK 24.11, OpenSSL QAT Engine, VPP, SPDK |
+| 1.5     | :white_check_mark: | DPDK 23.11, OpenSSL QAT Engine, VPP, SPDK |
+| 1.4     | :x:                | DPDK 23.07                                |
+| 1.3     | :white_check_mark: | DPDK 22.11, OpenSSL QAT Engine, VPP, SPDK |
+| 1.2     | :x:                | -                                         |
+| 1.1     | :x:                | -                                         |
+| 1.0     | :x:                | DPDK 21.11                                |
+| < 1.0   | :x:                | -                                         |
 
 ## Reporting a Vulnerability
 
