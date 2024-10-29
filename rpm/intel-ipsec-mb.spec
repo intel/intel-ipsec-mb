@@ -1,4 +1,4 @@
-# Copyright (c) 2017-2023, Intel Corporation
+# Copyright (c) 2017-2024, Intel Corporation
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -24,8 +24,8 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 # Versions numbers
-%global major        1
-%global minor        4
+%global major        2
+%global minor        0
 %global patch        0
 %global fullversion  %{major}.%{minor}.%{patch}
 
@@ -109,6 +109,9 @@ ln -s libIPSec_MB.so.%{fullversion} libIPSec_MB.so
 %{_libdir}/libIPSec_MB.so
 
 %changelog
+* Tue Nov 29 2024 Pablo de Lara Guarch <pablo.de.lara.guarch@intel.com> 2.0.0-1
+- Update for release package v2.0
+
 * Tue Jun 06 2023 Pablo de Lara Guarch <pablo.de.lara.guarch@intel.com> 1.4.0-1
 - Update for release package v1.4
 

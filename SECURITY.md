@@ -12,7 +12,7 @@ Versions of the library that are currently being supported with security updates
 
 | Version | Supported          | Frameworks using this version       |
 | ------- | ------------------ | ----------------------------------- |
-| 2.0     | :white_check_mark: | to be updated                       |
+| 2.0     | :white_check_mark: | DPDK 24.11, OpenSSL QAT Engine, VPP |
 | 1.5     | :white_check_mark: | DPDK 23.11, OpenSSL QAT Engine, VPP |
 | 1.4     | :x:                | DPDK 23.07                          |
 | 1.3     | :white_check_mark: | DPDK 22.11, OpenSSL QAT Engine, VPP |

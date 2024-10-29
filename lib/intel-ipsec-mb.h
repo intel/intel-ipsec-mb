@@ -1,5 +1,5 @@
 /*******************************************************************************
-  Copyright (c) 2012-2023, Intel Corporation
+  Copyright (c) 2012-2024, Intel Corporation
 
   Redistribution and use in source and binary forms, with or without
   modification, are permitted provided that the following conditions are met:
@@ -85,8 +85,8 @@ typedef struct {
 /**
  * Library version
  */
-#define IMB_VERSION_STR "1.5.0"
-#define IMB_VERSION_NUM 0x10500
+#define IMB_VERSION_STR "2.0.0"
+#define IMB_VERSION_NUM 0x20000
 
 /**
  * Macro to translate version number
