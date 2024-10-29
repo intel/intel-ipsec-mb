@@ -49,6 +49,7 @@ var NAVTREE =
         [ "Resources and Solution Details", "index.html#autotoc_md20", null ]
       ] ]
     ] ],
+    [ "Deprecated List", "deprecated.html", null ],
     [ "Data Structures", "annotated.html", [
       [ "Data Structures", "annotated.html", "annotated_dup" ],
       [ "Data Structure Index", "classes.html", null ],
@@ -74,10 +75,10 @@ var NAVTREE =
 var NAVTREEINDEX =
 [
 "annotated.html",
-"intel-ipsec-mb_8h.html#a46253857355ddae8d17bab1403289d0f",
-"intel-ipsec-mb_8h.html#aa12c6dbc4b212887ef528c215f513e0ba207979780b5d8472dfef2f5e12998d22",
-"structIMB__JOB.html#a7ba1fdbcc6ed2e3840990d2e34dac8e8",
-"structgcm__key__data.html#aa5bda4f55b8393be151cfe28a9dc1ca9"
+"intel-ipsec-mb_8h.html#a4538b34eaf3a3d402041ada1e8d03e2c",
+"intel-ipsec-mb_8h.html#aa12c6dbc4b212887ef528c215f513e0ba15f55e87bb42cf5494dd01b9a1c4d712",
+"structIMB__JOB.html#a684b751d0a275a28d345a3d1051204ef",
+"structgcm__key__data.html#a3f231fdc1d521cd15c111667e4aea818"
 ];
 
 var SYNCONMSG = 'click to disable panel synchronisation';
