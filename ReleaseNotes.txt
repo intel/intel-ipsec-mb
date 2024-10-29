@@ -1,6 +1,11 @@
 ========================================================================
 Release Notes for Intel(R) Multi-Buffer Crypto for IPsec Library
 
+v2.0.1 June 2025
+======================================================================
+Library
+- Fixed DES/3DES-CBC plaintext/ciphertext output (issue #169).
+
 v2.0 October 2024
 ======================================================================
 General

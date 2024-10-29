@@ -331,6 +331,7 @@ var intel_ipsec_mb_8h =
     [ "IMB_CIPHER_MODE", "intel-ipsec-mb_8h.html#a3be1dfb4cbd4bd13dfdb2cf881f8334c", [
       [ "IMB_CIPHER_CBC", "intel-ipsec-mb_8h.html#a3be1dfb4cbd4bd13dfdb2cf881f8334ca0e2ebfcfd101ab4a39129082b2de517f", null ],
       [ "IMB_CIPHER_CNTR", "intel-ipsec-mb_8h.html#a3be1dfb4cbd4bd13dfdb2cf881f8334ca5b4126e439eaff0975846425594201ea", null ],
+      [ "IMB_CIPHER_CTR", "intel-ipsec-mb_8h.html#a3be1dfb4cbd4bd13dfdb2cf881f8334cae37b15031c4f905008e7b00f618baec0", null ],
       [ "IMB_CIPHER_NULL", "intel-ipsec-mb_8h.html#a3be1dfb4cbd4bd13dfdb2cf881f8334ca0bebd24d7311dedce100455dd3a8ddf6", null ],
       [ "IMB_CIPHER_DOCSIS_SEC_BPI", "intel-ipsec-mb_8h.html#a3be1dfb4cbd4bd13dfdb2cf881f8334caed8ba68d7d2d7602407f17305d1d99b7", null ],
       [ "IMB_CIPHER_GCM", "intel-ipsec-mb_8h.html#a3be1dfb4cbd4bd13dfdb2cf881f8334ca0f97344e525fef167a92d1a59a0492aa", null ],
@@ -340,8 +341,10 @@ var intel_ipsec_mb_8h =
       [ "IMB_CIPHER_CCM", "intel-ipsec-mb_8h.html#a3be1dfb4cbd4bd13dfdb2cf881f8334ca7d3946d77e4364bc45a9e72499bf817f", null ],
       [ "IMB_CIPHER_DES3", "intel-ipsec-mb_8h.html#a3be1dfb4cbd4bd13dfdb2cf881f8334ca639b1382de364a2b810f7876189bc64f", null ],
       [ "IMB_CIPHER_PON_AES_CNTR", "intel-ipsec-mb_8h.html#a3be1dfb4cbd4bd13dfdb2cf881f8334ca896285cd2fe56f73011b908e490cbbea", null ],
+      [ "IMB_CIPHER_PON_AES_CTR", "intel-ipsec-mb_8h.html#a3be1dfb4cbd4bd13dfdb2cf881f8334ca625873443fc051fe1a6623adfe8e9145", null ],
       [ "IMB_CIPHER_ECB", "intel-ipsec-mb_8h.html#a3be1dfb4cbd4bd13dfdb2cf881f8334ca357dec895f8dfa3371add1feaa001f56", null ],
       [ "IMB_CIPHER_CNTR_BITLEN", "intel-ipsec-mb_8h.html#a3be1dfb4cbd4bd13dfdb2cf881f8334ca6f69815480531651948b5549fa84023a", null ],
+      [ "IMB_CIPHER_CTR_BITLEN", "intel-ipsec-mb_8h.html#a3be1dfb4cbd4bd13dfdb2cf881f8334cae7239cb72b2afa0033ebca478af0078e", null ],
       [ "IMB_CIPHER_ZUC_EEA3", "intel-ipsec-mb_8h.html#a3be1dfb4cbd4bd13dfdb2cf881f8334ca3618bfaab3c19aabc8a93a03ae121efc", null ],
       [ "IMB_CIPHER_SNOW3G_UEA2_BITLEN", "intel-ipsec-mb_8h.html#a3be1dfb4cbd4bd13dfdb2cf881f8334ca88c3ff9a6816b3629dc5b4815b47607e", null ],
       [ "IMB_CIPHER_KASUMI_UEA1_BITLEN", "intel-ipsec-mb_8h.html#a3be1dfb4cbd4bd13dfdb2cf881f8334ca3f7a3edb272955efea015c5bb8572e3b", null ],
@@ -356,6 +359,7 @@ var intel_ipsec_mb_8h =
       [ "IMB_CIPHER_SM4_CBC", "intel-ipsec-mb_8h.html#a3be1dfb4cbd4bd13dfdb2cf881f8334cad491b9e7827ce4556c81b430a7e78e96", null ],
       [ "IMB_CIPHER_CFB", "intel-ipsec-mb_8h.html#a3be1dfb4cbd4bd13dfdb2cf881f8334cae5e7135341635a0f358339bb320b5b91", null ],
       [ "IMB_CIPHER_SM4_CNTR", "intel-ipsec-mb_8h.html#a3be1dfb4cbd4bd13dfdb2cf881f8334ca8ed4f2bf5a5ee207cab40d64f3f797aa", null ],
+      [ "IMB_CIPHER_SM4_CTR", "intel-ipsec-mb_8h.html#a3be1dfb4cbd4bd13dfdb2cf881f8334cac730e03aa6877b1cc210a19ab6501151", null ],
       [ "IMB_CIPHER_SM4_GCM", "intel-ipsec-mb_8h.html#a3be1dfb4cbd4bd13dfdb2cf881f8334ca948e8919158b0d8171ee64cd949de4eb", null ],
       [ "IMB_CIPHER_NUM", "intel-ipsec-mb_8h.html#a3be1dfb4cbd4bd13dfdb2cf881f8334ca78c470d405fb36037e41224b99d23c75", null ]
     ] ],

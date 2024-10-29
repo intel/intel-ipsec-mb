@@ -147,9 +147,9 @@ Macros</h2></td></tr>
 <tr class="separator:a986643689f56109161597f67eb9d7b40"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a479e22216a6be5645af96c4b1433339e" id="r_a479e22216a6be5645af96c4b1433339e"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="intel-ipsec-mb_8h.html#a479e22216a6be5645af96c4b1433339e">IMB_DLL_LOCAL</a></td></tr>
 <tr class="separator:a479e22216a6be5645af96c4b1433339e"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a874972638400dafdb542319d61bfbfbc" id="r_a874972638400dafdb542319d61bfbfbc"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="intel-ipsec-mb_8h.html#a874972638400dafdb542319d61bfbfbc">IMB_VERSION_STR</a>&#160;&#160;&#160;&quot;1.5.0&quot;</td></tr>
+<tr class="memitem:a874972638400dafdb542319d61bfbfbc" id="r_a874972638400dafdb542319d61bfbfbc"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="intel-ipsec-mb_8h.html#a874972638400dafdb542319d61bfbfbc">IMB_VERSION_STR</a>&#160;&#160;&#160;&quot;2.0.0&quot;</td></tr>
 <tr class="separator:a874972638400dafdb542319d61bfbfbc"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a415abfc6067c0b1663a508993a4eb0d4" id="r_a415abfc6067c0b1663a508993a4eb0d4"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="intel-ipsec-mb_8h.html#a415abfc6067c0b1663a508993a4eb0d4">IMB_VERSION_NUM</a>&#160;&#160;&#160;0x10500</td></tr>
+<tr class="memitem:a415abfc6067c0b1663a508993a4eb0d4" id="r_a415abfc6067c0b1663a508993a4eb0d4"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="intel-ipsec-mb_8h.html#a415abfc6067c0b1663a508993a4eb0d4">IMB_VERSION_NUM</a>&#160;&#160;&#160;0x20000</td></tr>
 <tr class="separator:a415abfc6067c0b1663a508993a4eb0d4"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ad9bcb21181d1e07b4f66d8bf0514c1a3" id="r_ad9bcb21181d1e07b4f66d8bf0514c1a3"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="intel-ipsec-mb_8h.html#ad9bcb21181d1e07b4f66d8bf0514c1a3">IMB_VERSION</a>(a,  b,  c)&#160;&#160;&#160;(((a) &lt;&lt; 16) + ((b) &lt;&lt; 8) + (c))</td></tr>
 <tr class="separator:ad9bcb21181d1e07b4f66d8bf0514c1a3"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -251,7 +251,7 @@ Macros</h2></td></tr>
 <tr class="separator:a0c6f54ab6663187fa401c766a981a41e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a73715b8c1ba918ce6d5c21749841b47b" id="r_a73715b8c1ba918ce6d5c21749841b47b"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="intel-ipsec-mb_8h.html#a73715b8c1ba918ce6d5c21749841b47b">IMB_GCM_KEY_SETS</a>&#160;&#160;&#160;(15)</td></tr>
 <tr class="separator:a73715b8c1ba918ce6d5c21749841b47b"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a270311268c29ce07cffa688042b1855a" id="r_a270311268c29ce07cffa688042b1855a"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="intel-ipsec-mb_8h.html#a270311268c29ce07cffa688042b1855a">IMB_GCM_MAX_LEN</a>&#160;&#160;&#160;UINT64_C(((1ULL &lt;&lt; 39) - 256) - 1)</td></tr>
+<tr class="memitem:a270311268c29ce07cffa688042b1855a" id="r_a270311268c29ce07cffa688042b1855a"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="intel-ipsec-mb_8h.html#a270311268c29ce07cffa688042b1855a">IMB_GCM_MAX_LEN</a>&#160;&#160;&#160;UINT64_C((((1ULL &lt;&lt; 39) - 256) / 8) - 1)</td></tr>
 <tr class="separator:a270311268c29ce07cffa688042b1855a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aef05a0c3b069c6076a3f1255582b3e38" id="r_aef05a0c3b069c6076a3f1255582b3e38"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="intel-ipsec-mb_8h.html#aef05a0c3b069c6076a3f1255582b3e38">IMB_CHACHA20_POLY1305_MAX_LEN</a>&#160;&#160;&#160;UINT64_C((1ULL &lt;&lt; 38) - 64)</td></tr>
 <tr class="separator:aef05a0c3b069c6076a3f1255582b3e38"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -537,13 +537,16 @@ Macros</h2></td></tr>
 <tr class="memdesc:adb23f957dde69fb3bb4c6798d1a69da4"><td class="mdescLeft">&#160;</td><td class="mdescRight">ZUC EEA3 Confidentiality functions.  <br /></td></tr>
 <tr class="separator:adb23f957dde69fb3bb4c6798d1a69da4"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a57445dd863838d04cf44f4d79c4dbcaf" id="r_a57445dd863838d04cf44f4d79c4dbcaf"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="intel-ipsec-mb_8h.html#a57445dd863838d04cf44f4d79c4dbcaf">IMB_ZUC_EEA3_4_BUFFER</a>(_mgr,  _key,  _iv,  _src,  _dst,  _len)&#160;&#160;&#160;        ((_mgr)-&gt;eea3_4_buffer((_key), (_iv), (_src), (_dst), (_len)))</td></tr>
+<tr class="memdesc:a57445dd863838d04cf44f4d79c4dbcaf"><td class="mdescLeft">&#160;</td><td class="mdescRight">ZUC EEA3 Confidentiality functions.    <br /></td></tr>
 <tr class="separator:a57445dd863838d04cf44f4d79c4dbcaf"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a6382e3185f31e61f995ab90110c52991" id="r_a6382e3185f31e61f995ab90110c52991"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="intel-ipsec-mb_8h.html#a6382e3185f31e61f995ab90110c52991">IMB_ZUC_EEA3_N_BUFFER</a>(_mgr,  _key,  _iv,  _src,  _dst,  _len,  _count)&#160;&#160;&#160;        ((_mgr)-&gt;eea3_n_buffer((_key), (_iv), (_src), (_dst), (_len), (_count)))</td></tr>
+<tr class="memdesc:a6382e3185f31e61f995ab90110c52991"><td class="mdescLeft">&#160;</td><td class="mdescRight">ZUC EEA3 Confidentiality functions.    <br /></td></tr>
 <tr class="separator:a6382e3185f31e61f995ab90110c52991"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ac789fe54f3a8f92144831a67b14501d4" id="r_ac789fe54f3a8f92144831a67b14501d4"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="intel-ipsec-mb_8h.html#ac789fe54f3a8f92144831a67b14501d4">IMB_ZUC_EIA3_1_BUFFER</a>(_mgr,  _key,  _iv,  _src,  _len,  _tag)&#160;&#160;&#160;        ((_mgr)-&gt;eia3_1_buffer((_key), (_iv), (_src), (_len), (_tag)))</td></tr>
-<tr class="memdesc:ac789fe54f3a8f92144831a67b14501d4"><td class="mdescLeft">&#160;</td><td class="mdescRight">ZUC EIA3 Integrity function.  <br /></td></tr>
+<tr class="memdesc:ac789fe54f3a8f92144831a67b14501d4"><td class="mdescLeft">&#160;</td><td class="mdescRight">ZUC EIA3 Integrity functions.  <br /></td></tr>
 <tr class="separator:ac789fe54f3a8f92144831a67b14501d4"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ae840d62f1246c0c4270c3319ef356d3c" id="r_ae840d62f1246c0c4270c3319ef356d3c"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="intel-ipsec-mb_8h.html#ae840d62f1246c0c4270c3319ef356d3c">IMB_ZUC_EIA3_N_BUFFER</a>(_mgr,  _key,  _iv,  _src,  _len,  _tag,  _count)&#160;&#160;&#160;        ((_mgr)-&gt;eia3_n_buffer((_key), (_iv), (_src), (_len), (_tag), (_count)))</td></tr>
+<tr class="memdesc:ae840d62f1246c0c4270c3319ef356d3c"><td class="mdescLeft">&#160;</td><td class="mdescRight">ZUC EIA3 Integrity functions.    <br /></td></tr>
 <tr class="separator:ae840d62f1246c0c4270c3319ef356d3c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a45ac331e1f9241e53fc35a1f88dec6ce" id="r_a45ac331e1f9241e53fc35a1f88dec6ce"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="intel-ipsec-mb_8h.html#a45ac331e1f9241e53fc35a1f88dec6ce">IMB_KASUMI_F8_1_BUFFER</a>(_mgr,  _exp_key,  _iv,  _src,  _dst,  _len)&#160;&#160;&#160;        ((_mgr)-&gt;f8_1_buffer((_exp_key), (_iv), (_src), (_dst), (_len)))</td></tr>
 <tr class="memdesc:a45ac331e1f9241e53fc35a1f88dec6ce"><td class="mdescLeft">&#160;</td><td class="mdescRight">Kasumi byte-level f8 operation on a single buffer.  <br /></td></tr>
@@ -870,37 +873,42 @@ Enumerations</h2></td></tr>
 <tr class="memitem:a3be1dfb4cbd4bd13dfdb2cf881f8334c" id="r_a3be1dfb4cbd4bd13dfdb2cf881f8334c"><td class="memItemLeft" align="right" valign="top">enum &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="intel-ipsec-mb_8h.html#a3be1dfb4cbd4bd13dfdb2cf881f8334c">IMB_CIPHER_MODE</a> { <br />
 &#160;&#160;<a class="el" href="intel-ipsec-mb_8h.html#a3be1dfb4cbd4bd13dfdb2cf881f8334ca0e2ebfcfd101ab4a39129082b2de517f">IMB_CIPHER_CBC</a> = 1
 , <a class="el" href="intel-ipsec-mb_8h.html#a3be1dfb4cbd4bd13dfdb2cf881f8334ca5b4126e439eaff0975846425594201ea">IMB_CIPHER_CNTR</a>
+, <a class="el" href="intel-ipsec-mb_8h.html#a3be1dfb4cbd4bd13dfdb2cf881f8334cae37b15031c4f905008e7b00f618baec0">IMB_CIPHER_CTR</a> = IMB_CIPHER_CNTR
 , <a class="el" href="intel-ipsec-mb_8h.html#a3be1dfb4cbd4bd13dfdb2cf881f8334ca0bebd24d7311dedce100455dd3a8ddf6">IMB_CIPHER_NULL</a>
-, <a class="el" href="intel-ipsec-mb_8h.html#a3be1dfb4cbd4bd13dfdb2cf881f8334caed8ba68d7d2d7602407f17305d1d99b7">IMB_CIPHER_DOCSIS_SEC_BPI</a>
 , <br />
-&#160;&#160;<a class="el" href="intel-ipsec-mb_8h.html#a3be1dfb4cbd4bd13dfdb2cf881f8334ca0f97344e525fef167a92d1a59a0492aa">IMB_CIPHER_GCM</a>
+&#160;&#160;<a class="el" href="intel-ipsec-mb_8h.html#a3be1dfb4cbd4bd13dfdb2cf881f8334caed8ba68d7d2d7602407f17305d1d99b7">IMB_CIPHER_DOCSIS_SEC_BPI</a>
+, <a class="el" href="intel-ipsec-mb_8h.html#a3be1dfb4cbd4bd13dfdb2cf881f8334ca0f97344e525fef167a92d1a59a0492aa">IMB_CIPHER_GCM</a>
 , <a class="el" href="intel-ipsec-mb_8h.html#a3be1dfb4cbd4bd13dfdb2cf881f8334ca4301726c71a4faf412a1a011cc4f0df8">IMB_CIPHER_CUSTOM</a>
 , <a class="el" href="intel-ipsec-mb_8h.html#a3be1dfb4cbd4bd13dfdb2cf881f8334ca049e85047492494fac0a4ec785707851">IMB_CIPHER_DES</a>
-, <a class="el" href="intel-ipsec-mb_8h.html#a3be1dfb4cbd4bd13dfdb2cf881f8334caf9d62e1ff3a1a8b2ed1dcc515a3ffe1b">IMB_CIPHER_DOCSIS_DES</a>
 , <br />
-&#160;&#160;<a class="el" href="intel-ipsec-mb_8h.html#a3be1dfb4cbd4bd13dfdb2cf881f8334ca7d3946d77e4364bc45a9e72499bf817f">IMB_CIPHER_CCM</a>
+&#160;&#160;<a class="el" href="intel-ipsec-mb_8h.html#a3be1dfb4cbd4bd13dfdb2cf881f8334caf9d62e1ff3a1a8b2ed1dcc515a3ffe1b">IMB_CIPHER_DOCSIS_DES</a>
+, <a class="el" href="intel-ipsec-mb_8h.html#a3be1dfb4cbd4bd13dfdb2cf881f8334ca7d3946d77e4364bc45a9e72499bf817f">IMB_CIPHER_CCM</a>
 , <a class="el" href="intel-ipsec-mb_8h.html#a3be1dfb4cbd4bd13dfdb2cf881f8334ca639b1382de364a2b810f7876189bc64f">IMB_CIPHER_DES3</a>
 , <a class="el" href="intel-ipsec-mb_8h.html#a3be1dfb4cbd4bd13dfdb2cf881f8334ca896285cd2fe56f73011b908e490cbbea">IMB_CIPHER_PON_AES_CNTR</a>
-, <a class="el" href="intel-ipsec-mb_8h.html#a3be1dfb4cbd4bd13dfdb2cf881f8334ca357dec895f8dfa3371add1feaa001f56">IMB_CIPHER_ECB</a>
 , <br />
-&#160;&#160;<a class="el" href="intel-ipsec-mb_8h.html#a3be1dfb4cbd4bd13dfdb2cf881f8334ca6f69815480531651948b5549fa84023a">IMB_CIPHER_CNTR_BITLEN</a>
-, <a class="el" href="intel-ipsec-mb_8h.html#a3be1dfb4cbd4bd13dfdb2cf881f8334ca3618bfaab3c19aabc8a93a03ae121efc">IMB_CIPHER_ZUC_EEA3</a>
+&#160;&#160;<a class="el" href="intel-ipsec-mb_8h.html#a3be1dfb4cbd4bd13dfdb2cf881f8334ca625873443fc051fe1a6623adfe8e9145">IMB_CIPHER_PON_AES_CTR</a> = IMB_CIPHER_PON_AES_CNTR
+, <a class="el" href="intel-ipsec-mb_8h.html#a3be1dfb4cbd4bd13dfdb2cf881f8334ca357dec895f8dfa3371add1feaa001f56">IMB_CIPHER_ECB</a>
+, <a class="el" href="intel-ipsec-mb_8h.html#a3be1dfb4cbd4bd13dfdb2cf881f8334ca6f69815480531651948b5549fa84023a">IMB_CIPHER_CNTR_BITLEN</a>
+, <a class="el" href="intel-ipsec-mb_8h.html#a3be1dfb4cbd4bd13dfdb2cf881f8334cae7239cb72b2afa0033ebca478af0078e">IMB_CIPHER_CTR_BITLEN</a> = IMB_CIPHER_CNTR_BITLEN
+, <br />
+&#160;&#160;<a class="el" href="intel-ipsec-mb_8h.html#a3be1dfb4cbd4bd13dfdb2cf881f8334ca3618bfaab3c19aabc8a93a03ae121efc">IMB_CIPHER_ZUC_EEA3</a>
 , <a class="el" href="intel-ipsec-mb_8h.html#a3be1dfb4cbd4bd13dfdb2cf881f8334ca88c3ff9a6816b3629dc5b4815b47607e">IMB_CIPHER_SNOW3G_UEA2_BITLEN</a>
 , <a class="el" href="intel-ipsec-mb_8h.html#a3be1dfb4cbd4bd13dfdb2cf881f8334ca3f7a3edb272955efea015c5bb8572e3b">IMB_CIPHER_KASUMI_UEA1_BITLEN</a>
+, <a class="el" href="intel-ipsec-mb_8h.html#a3be1dfb4cbd4bd13dfdb2cf881f8334ca71d87659793f7377d1d8b3315a3559f8">IMB_CIPHER_CBCS_1_9</a>
 , <br />
-&#160;&#160;<a class="el" href="intel-ipsec-mb_8h.html#a3be1dfb4cbd4bd13dfdb2cf881f8334ca71d87659793f7377d1d8b3315a3559f8">IMB_CIPHER_CBCS_1_9</a>
-, <a class="el" href="intel-ipsec-mb_8h.html#a3be1dfb4cbd4bd13dfdb2cf881f8334ca39d8d7ebca424a1c1a65bc04b5f64741">IMB_CIPHER_CHACHA20</a>
+&#160;&#160;<a class="el" href="intel-ipsec-mb_8h.html#a3be1dfb4cbd4bd13dfdb2cf881f8334ca39d8d7ebca424a1c1a65bc04b5f64741">IMB_CIPHER_CHACHA20</a>
 , <a class="el" href="intel-ipsec-mb_8h.html#a3be1dfb4cbd4bd13dfdb2cf881f8334caa5c375f97dce274a2446c8abf90aa61a">IMB_CIPHER_CHACHA20_POLY1305</a>
 , <a class="el" href="intel-ipsec-mb_8h.html#a3be1dfb4cbd4bd13dfdb2cf881f8334ca40926d8b731a401ec3e86ffa2089a1eb">IMB_CIPHER_CHACHA20_POLY1305_SGL</a>
+, <a class="el" href="intel-ipsec-mb_8h.html#a3be1dfb4cbd4bd13dfdb2cf881f8334cafea56410df85a0b006963e50fba78465">IMB_CIPHER_SNOW_V</a>
 , <br />
-&#160;&#160;<a class="el" href="intel-ipsec-mb_8h.html#a3be1dfb4cbd4bd13dfdb2cf881f8334cafea56410df85a0b006963e50fba78465">IMB_CIPHER_SNOW_V</a>
-, <a class="el" href="intel-ipsec-mb_8h.html#a3be1dfb4cbd4bd13dfdb2cf881f8334cada26994f8467300f862dbf45b5a22409">IMB_CIPHER_SNOW_V_AEAD</a>
+&#160;&#160;<a class="el" href="intel-ipsec-mb_8h.html#a3be1dfb4cbd4bd13dfdb2cf881f8334cada26994f8467300f862dbf45b5a22409">IMB_CIPHER_SNOW_V_AEAD</a>
 , <a class="el" href="intel-ipsec-mb_8h.html#a3be1dfb4cbd4bd13dfdb2cf881f8334ca48e024bc875c46b714b19a1c19908918">IMB_CIPHER_GCM_SGL</a>
 , <a class="el" href="intel-ipsec-mb_8h.html#a3be1dfb4cbd4bd13dfdb2cf881f8334ca7adbd2a1ad3472becfc1e39e4dd102ba">IMB_CIPHER_SM4_ECB</a>
+, <a class="el" href="intel-ipsec-mb_8h.html#a3be1dfb4cbd4bd13dfdb2cf881f8334cad491b9e7827ce4556c81b430a7e78e96">IMB_CIPHER_SM4_CBC</a>
 , <br />
-&#160;&#160;<a class="el" href="intel-ipsec-mb_8h.html#a3be1dfb4cbd4bd13dfdb2cf881f8334cad491b9e7827ce4556c81b430a7e78e96">IMB_CIPHER_SM4_CBC</a>
-, <a class="el" href="intel-ipsec-mb_8h.html#a3be1dfb4cbd4bd13dfdb2cf881f8334cae5e7135341635a0f358339bb320b5b91">IMB_CIPHER_CFB</a>
+&#160;&#160;<a class="el" href="intel-ipsec-mb_8h.html#a3be1dfb4cbd4bd13dfdb2cf881f8334cae5e7135341635a0f358339bb320b5b91">IMB_CIPHER_CFB</a>
 , <a class="el" href="intel-ipsec-mb_8h.html#a3be1dfb4cbd4bd13dfdb2cf881f8334ca8ed4f2bf5a5ee207cab40d64f3f797aa">IMB_CIPHER_SM4_CNTR</a>
+, <a class="el" href="intel-ipsec-mb_8h.html#a3be1dfb4cbd4bd13dfdb2cf881f8334cac730e03aa6877b1cc210a19ab6501151">IMB_CIPHER_SM4_CTR</a> = IMB_CIPHER_SM4_CNTR
 , <a class="el" href="intel-ipsec-mb_8h.html#a3be1dfb4cbd4bd13dfdb2cf881f8334ca948e8919158b0d8171ee64cd949de4eb">IMB_CIPHER_SM4_GCM</a>
 , <br />
 &#160;&#160;<a class="el" href="intel-ipsec-mb_8h.html#a3be1dfb4cbd4bd13dfdb2cf881f8334ca78c470d405fb36037e41224b99d23c75">IMB_CIPHER_NUM</a>
@@ -4230,12 +4238,12 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 <b>Value:</b><div class="fragment"><div class="line">        (<a class="code hl_define" href="intel-ipsec-mb_8h.html#a5654f563aaad731df22c8e8517c9154c">IMB_CPUFLAGS_SSE</a> | <a class="code hl_define" href="intel-ipsec-mb_8h.html#a7af992d12b4f9a6e789384969a066056">IMB_FEATURE_AVX</a> | <a class="code hl_define" href="intel-ipsec-mb_8h.html#af8159849ff1ccdc72382877cb596a55f">IMB_FEATURE_XSAVE</a> | <a class="code hl_define" href="intel-ipsec-mb_8h.html#a060ddf13837acb6d94bb927c8e73a74f">IMB_FEATURE_OSXSAVE</a> |            \</div>
 <div class="line">         <a class="code hl_define" href="intel-ipsec-mb_8h.html#a225e2cd9c1445795fc62879eabad2530">IMB_FEATURE_AVX2</a> | <a class="code hl_define" href="intel-ipsec-mb_8h.html#a557f3de4bcc0bd7e9bd90e5e1d1b9b09">IMB_FEATURE_BMI2</a>)</div>
-<div class="ttc" id="aintel-ipsec-mb_8h_html_a060ddf13837acb6d94bb927c8e73a74f"><div class="ttname"><a href="intel-ipsec-mb_8h.html#a060ddf13837acb6d94bb927c8e73a74f">IMB_FEATURE_OSXSAVE</a></div><div class="ttdeci">#define IMB_FEATURE_OSXSAVE</div><div class="ttdef"><b>Definition</b> intel-ipsec-mb.h:930</div></div>
-<div class="ttc" id="aintel-ipsec-mb_8h_html_a225e2cd9c1445795fc62879eabad2530"><div class="ttname"><a href="intel-ipsec-mb_8h.html#a225e2cd9c1445795fc62879eabad2530">IMB_FEATURE_AVX2</a></div><div class="ttdeci">#define IMB_FEATURE_AVX2</div><div class="ttdef"><b>Definition</b> intel-ipsec-mb.h:906</div></div>
-<div class="ttc" id="aintel-ipsec-mb_8h_html_a557f3de4bcc0bd7e9bd90e5e1d1b9b09"><div class="ttname"><a href="intel-ipsec-mb_8h.html#a557f3de4bcc0bd7e9bd90e5e1d1b9b09">IMB_FEATURE_BMI2</a></div><div class="ttdeci">#define IMB_FEATURE_BMI2</div><div class="ttdef"><b>Definition</b> intel-ipsec-mb.h:921</div></div>
-<div class="ttc" id="aintel-ipsec-mb_8h_html_a5654f563aaad731df22c8e8517c9154c"><div class="ttname"><a href="intel-ipsec-mb_8h.html#a5654f563aaad731df22c8e8517c9154c">IMB_CPUFLAGS_SSE</a></div><div class="ttdeci">#define IMB_CPUFLAGS_SSE</div><div class="ttdef"><b>Definition</b> intel-ipsec-mb.h:948</div></div>
-<div class="ttc" id="aintel-ipsec-mb_8h_html_a7af992d12b4f9a6e789384969a066056"><div class="ttname"><a href="intel-ipsec-mb_8h.html#a7af992d12b4f9a6e789384969a066056">IMB_FEATURE_AVX</a></div><div class="ttdeci">#define IMB_FEATURE_AVX</div><div class="ttdef"><b>Definition</b> intel-ipsec-mb.h:905</div></div>
-<div class="ttc" id="aintel-ipsec-mb_8h_html_af8159849ff1ccdc72382877cb596a55f"><div class="ttname"><a href="intel-ipsec-mb_8h.html#af8159849ff1ccdc72382877cb596a55f">IMB_FEATURE_XSAVE</a></div><div class="ttdeci">#define IMB_FEATURE_XSAVE</div><div class="ttdef"><b>Definition</b> intel-ipsec-mb.h:929</div></div>
+<div class="ttc" id="aintel-ipsec-mb_8h_html_a060ddf13837acb6d94bb927c8e73a74f"><div class="ttname"><a href="intel-ipsec-mb_8h.html#a060ddf13837acb6d94bb927c8e73a74f">IMB_FEATURE_OSXSAVE</a></div><div class="ttdeci">#define IMB_FEATURE_OSXSAVE</div><div class="ttdef"><b>Definition</b> intel-ipsec-mb.h:934</div></div>
+<div class="ttc" id="aintel-ipsec-mb_8h_html_a225e2cd9c1445795fc62879eabad2530"><div class="ttname"><a href="intel-ipsec-mb_8h.html#a225e2cd9c1445795fc62879eabad2530">IMB_FEATURE_AVX2</a></div><div class="ttdeci">#define IMB_FEATURE_AVX2</div><div class="ttdef"><b>Definition</b> intel-ipsec-mb.h:910</div></div>
+<div class="ttc" id="aintel-ipsec-mb_8h_html_a557f3de4bcc0bd7e9bd90e5e1d1b9b09"><div class="ttname"><a href="intel-ipsec-mb_8h.html#a557f3de4bcc0bd7e9bd90e5e1d1b9b09">IMB_FEATURE_BMI2</a></div><div class="ttdeci">#define IMB_FEATURE_BMI2</div><div class="ttdef"><b>Definition</b> intel-ipsec-mb.h:925</div></div>
+<div class="ttc" id="aintel-ipsec-mb_8h_html_a5654f563aaad731df22c8e8517c9154c"><div class="ttname"><a href="intel-ipsec-mb_8h.html#a5654f563aaad731df22c8e8517c9154c">IMB_CPUFLAGS_SSE</a></div><div class="ttdeci">#define IMB_CPUFLAGS_SSE</div><div class="ttdef"><b>Definition</b> intel-ipsec-mb.h:952</div></div>
+<div class="ttc" id="aintel-ipsec-mb_8h_html_a7af992d12b4f9a6e789384969a066056"><div class="ttname"><a href="intel-ipsec-mb_8h.html#a7af992d12b4f9a6e789384969a066056">IMB_FEATURE_AVX</a></div><div class="ttdeci">#define IMB_FEATURE_AVX</div><div class="ttdef"><b>Definition</b> intel-ipsec-mb.h:909</div></div>
+<div class="ttc" id="aintel-ipsec-mb_8h_html_af8159849ff1ccdc72382877cb596a55f"><div class="ttname"><a href="intel-ipsec-mb_8h.html#af8159849ff1ccdc72382877cb596a55f">IMB_FEATURE_XSAVE</a></div><div class="ttdeci">#define IMB_FEATURE_XSAVE</div><div class="ttdef"><b>Definition</b> intel-ipsec-mb.h:933</div></div>
 </div><!-- fragment -->
 </div>
 </div>
@@ -4252,11 +4260,11 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 <b>Value:</b><div class="fragment"><div class="line">        (<a class="code hl_define" href="intel-ipsec-mb_8h.html#ac0a92622a85423541536321231a6cb7d">IMB_CPUFLAGS_AVX2</a> | <a class="code hl_define" href="intel-ipsec-mb_8h.html#acb9c15eabfb9bafeb15a06886fa91e90">IMB_FEATURE_SHANI</a> | <a class="code hl_define" href="intel-ipsec-mb_8h.html#af4321e4e3c947f9b9fb7f204aaecf2c3">IMB_FEATURE_VAES</a> | <a class="code hl_define" href="intel-ipsec-mb_8h.html#a153d695ecd1af69a0d23385a50654614">IMB_FEATURE_VPCLMULQDQ</a> |       \</div>
 <div class="line">         <a class="code hl_define" href="intel-ipsec-mb_8h.html#aa67ab4088ac2f8cadbe839101d276567">IMB_FEATURE_GFNI</a>)</div>
-<div class="ttc" id="aintel-ipsec-mb_8h_html_a153d695ecd1af69a0d23385a50654614"><div class="ttname"><a href="intel-ipsec-mb_8h.html#a153d695ecd1af69a0d23385a50654614">IMB_FEATURE_VPCLMULQDQ</a></div><div class="ttdeci">#define IMB_FEATURE_VPCLMULQDQ</div><div class="ttdef"><b>Definition</b> intel-ipsec-mb.h:916</div></div>
-<div class="ttc" id="aintel-ipsec-mb_8h_html_aa67ab4088ac2f8cadbe839101d276567"><div class="ttname"><a href="intel-ipsec-mb_8h.html#aa67ab4088ac2f8cadbe839101d276567">IMB_FEATURE_GFNI</a></div><div class="ttdeci">#define IMB_FEATURE_GFNI</div><div class="ttdef"><b>Definition</b> intel-ipsec-mb.h:919</div></div>
-<div class="ttc" id="aintel-ipsec-mb_8h_html_ac0a92622a85423541536321231a6cb7d"><div class="ttname"><a href="intel-ipsec-mb_8h.html#ac0a92622a85423541536321231a6cb7d">IMB_CPUFLAGS_AVX2</a></div><div class="ttdeci">#define IMB_CPUFLAGS_AVX2</div><div class="ttdef"><b>Definition</b> intel-ipsec-mb.h:951</div></div>
-<div class="ttc" id="aintel-ipsec-mb_8h_html_acb9c15eabfb9bafeb15a06886fa91e90"><div class="ttname"><a href="intel-ipsec-mb_8h.html#acb9c15eabfb9bafeb15a06886fa91e90">IMB_FEATURE_SHANI</a></div><div class="ttdeci">#define IMB_FEATURE_SHANI</div><div class="ttdef"><b>Definition</b> intel-ipsec-mb.h:900</div></div>
-<div class="ttc" id="aintel-ipsec-mb_8h_html_af4321e4e3c947f9b9fb7f204aaecf2c3"><div class="ttname"><a href="intel-ipsec-mb_8h.html#af4321e4e3c947f9b9fb7f204aaecf2c3">IMB_FEATURE_VAES</a></div><div class="ttdeci">#define IMB_FEATURE_VAES</div><div class="ttdef"><b>Definition</b> intel-ipsec-mb.h:915</div></div>
+<div class="ttc" id="aintel-ipsec-mb_8h_html_a153d695ecd1af69a0d23385a50654614"><div class="ttname"><a href="intel-ipsec-mb_8h.html#a153d695ecd1af69a0d23385a50654614">IMB_FEATURE_VPCLMULQDQ</a></div><div class="ttdeci">#define IMB_FEATURE_VPCLMULQDQ</div><div class="ttdef"><b>Definition</b> intel-ipsec-mb.h:920</div></div>
+<div class="ttc" id="aintel-ipsec-mb_8h_html_aa67ab4088ac2f8cadbe839101d276567"><div class="ttname"><a href="intel-ipsec-mb_8h.html#aa67ab4088ac2f8cadbe839101d276567">IMB_FEATURE_GFNI</a></div><div class="ttdeci">#define IMB_FEATURE_GFNI</div><div class="ttdef"><b>Definition</b> intel-ipsec-mb.h:923</div></div>
+<div class="ttc" id="aintel-ipsec-mb_8h_html_ac0a92622a85423541536321231a6cb7d"><div class="ttname"><a href="intel-ipsec-mb_8h.html#ac0a92622a85423541536321231a6cb7d">IMB_CPUFLAGS_AVX2</a></div><div class="ttdeci">#define IMB_CPUFLAGS_AVX2</div><div class="ttdef"><b>Definition</b> intel-ipsec-mb.h:955</div></div>
+<div class="ttc" id="aintel-ipsec-mb_8h_html_acb9c15eabfb9bafeb15a06886fa91e90"><div class="ttname"><a href="intel-ipsec-mb_8h.html#acb9c15eabfb9bafeb15a06886fa91e90">IMB_FEATURE_SHANI</a></div><div class="ttdeci">#define IMB_FEATURE_SHANI</div><div class="ttdef"><b>Definition</b> intel-ipsec-mb.h:904</div></div>
+<div class="ttc" id="aintel-ipsec-mb_8h_html_af4321e4e3c947f9b9fb7f204aaecf2c3"><div class="ttname"><a href="intel-ipsec-mb_8h.html#af4321e4e3c947f9b9fb7f204aaecf2c3">IMB_FEATURE_VAES</a></div><div class="ttdeci">#define IMB_FEATURE_VAES</div><div class="ttdef"><b>Definition</b> intel-ipsec-mb.h:919</div></div>
 </div><!-- fragment -->
 </div>
 </div>
@@ -4315,8 +4323,8 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 <b>Value:</b><div class="fragment"><div class="line">        (<a class="code hl_define" href="intel-ipsec-mb_8h.html#a0a250932ede6ca7b69f5c763c24cf51d">IMB_CPUFLAGS_AVX512</a> | <a class="code hl_define" href="intel-ipsec-mb_8h.html#af4321e4e3c947f9b9fb7f204aaecf2c3">IMB_FEATURE_VAES</a> | <a class="code hl_define" href="intel-ipsec-mb_8h.html#a153d695ecd1af69a0d23385a50654614">IMB_FEATURE_VPCLMULQDQ</a> | <a class="code hl_define" href="intel-ipsec-mb_8h.html#aa67ab4088ac2f8cadbe839101d276567">IMB_FEATURE_GFNI</a> |      \</div>
 <div class="line">         <a class="code hl_define" href="intel-ipsec-mb_8h.html#a0134dfaffe12427a8f2182247c6f1f48">IMB_FEATURE_AVX512_IFMA</a> | <a class="code hl_define" href="intel-ipsec-mb_8h.html#acb9c15eabfb9bafeb15a06886fa91e90">IMB_FEATURE_SHANI</a>)</div>
-<div class="ttc" id="aintel-ipsec-mb_8h_html_a0134dfaffe12427a8f2182247c6f1f48"><div class="ttname"><a href="intel-ipsec-mb_8h.html#a0134dfaffe12427a8f2182247c6f1f48">IMB_FEATURE_AVX512_IFMA</a></div><div class="ttdeci">#define IMB_FEATURE_AVX512_IFMA</div><div class="ttdef"><b>Definition</b> intel-ipsec-mb.h:920</div></div>
-<div class="ttc" id="aintel-ipsec-mb_8h_html_a0a250932ede6ca7b69f5c763c24cf51d"><div class="ttname"><a href="intel-ipsec-mb_8h.html#a0a250932ede6ca7b69f5c763c24cf51d">IMB_CPUFLAGS_AVX512</a></div><div class="ttdeci">#define IMB_CPUFLAGS_AVX512</div><div class="ttdef"><b>Definition</b> intel-ipsec-mb.h:954</div></div>
+<div class="ttc" id="aintel-ipsec-mb_8h_html_a0134dfaffe12427a8f2182247c6f1f48"><div class="ttname"><a href="intel-ipsec-mb_8h.html#a0134dfaffe12427a8f2182247c6f1f48">IMB_FEATURE_AVX512_IFMA</a></div><div class="ttdeci">#define IMB_FEATURE_AVX512_IFMA</div><div class="ttdef"><b>Definition</b> intel-ipsec-mb.h:924</div></div>
+<div class="ttc" id="aintel-ipsec-mb_8h_html_a0a250932ede6ca7b69f5c763c24cf51d"><div class="ttname"><a href="intel-ipsec-mb_8h.html#a0a250932ede6ca7b69f5c763c24cf51d">IMB_CPUFLAGS_AVX512</a></div><div class="ttdeci">#define IMB_CPUFLAGS_AVX512</div><div class="ttdef"><b>Definition</b> intel-ipsec-mb.h:958</div></div>
 </div><!-- fragment -->
 </div>
 </div>
@@ -5014,11 +5022,11 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 <b>Value:</b><div class="fragment"><div class="line">        (<a class="code hl_define" href="intel-ipsec-mb_8h.html#ab673c08624d868ca0dd89e1a9ec28f00">IMB_FEATURE_AVX512F</a> | <a class="code hl_define" href="intel-ipsec-mb_8h.html#a8ca2c970faa0f62a3f4a6b6c18432bb1">IMB_FEATURE_AVX512DQ</a> | <a class="code hl_define" href="intel-ipsec-mb_8h.html#abbdb390b80ff1a92f31a7a9adc9beeb9">IMB_FEATURE_AVX512CD</a> |                       \</div>
 <div class="line">         <a class="code hl_define" href="intel-ipsec-mb_8h.html#a00caae81d425acb6b946bebb25ac267f">IMB_FEATURE_AVX512BW</a> | <a class="code hl_define" href="intel-ipsec-mb_8h.html#a803871900c08e2dc1b3f805ed4ecefd8">IMB_FEATURE_AVX512VL</a>)</div>
-<div class="ttc" id="aintel-ipsec-mb_8h_html_a00caae81d425acb6b946bebb25ac267f"><div class="ttname"><a href="intel-ipsec-mb_8h.html#a00caae81d425acb6b946bebb25ac267f">IMB_FEATURE_AVX512BW</a></div><div class="ttdeci">#define IMB_FEATURE_AVX512BW</div><div class="ttdef"><b>Definition</b> intel-ipsec-mb.h:910</div></div>
-<div class="ttc" id="aintel-ipsec-mb_8h_html_a803871900c08e2dc1b3f805ed4ecefd8"><div class="ttname"><a href="intel-ipsec-mb_8h.html#a803871900c08e2dc1b3f805ed4ecefd8">IMB_FEATURE_AVX512VL</a></div><div class="ttdeci">#define IMB_FEATURE_AVX512VL</div><div class="ttdef"><b>Definition</b> intel-ipsec-mb.h:911</div></div>
-<div class="ttc" id="aintel-ipsec-mb_8h_html_a8ca2c970faa0f62a3f4a6b6c18432bb1"><div class="ttname"><a href="intel-ipsec-mb_8h.html#a8ca2c970faa0f62a3f4a6b6c18432bb1">IMB_FEATURE_AVX512DQ</a></div><div class="ttdeci">#define IMB_FEATURE_AVX512DQ</div><div class="ttdef"><b>Definition</b> intel-ipsec-mb.h:908</div></div>
-<div class="ttc" id="aintel-ipsec-mb_8h_html_ab673c08624d868ca0dd89e1a9ec28f00"><div class="ttname"><a href="intel-ipsec-mb_8h.html#ab673c08624d868ca0dd89e1a9ec28f00">IMB_FEATURE_AVX512F</a></div><div class="ttdeci">#define IMB_FEATURE_AVX512F</div><div class="ttdef"><b>Definition</b> intel-ipsec-mb.h:907</div></div>
-<div class="ttc" id="aintel-ipsec-mb_8h_html_abbdb390b80ff1a92f31a7a9adc9beeb9"><div class="ttname"><a href="intel-ipsec-mb_8h.html#abbdb390b80ff1a92f31a7a9adc9beeb9">IMB_FEATURE_AVX512CD</a></div><div class="ttdeci">#define IMB_FEATURE_AVX512CD</div><div class="ttdef"><b>Definition</b> intel-ipsec-mb.h:909</div></div>
+<div class="ttc" id="aintel-ipsec-mb_8h_html_a00caae81d425acb6b946bebb25ac267f"><div class="ttname"><a href="intel-ipsec-mb_8h.html#a00caae81d425acb6b946bebb25ac267f">IMB_FEATURE_AVX512BW</a></div><div class="ttdeci">#define IMB_FEATURE_AVX512BW</div><div class="ttdef"><b>Definition</b> intel-ipsec-mb.h:914</div></div>
+<div class="ttc" id="aintel-ipsec-mb_8h_html_a803871900c08e2dc1b3f805ed4ecefd8"><div class="ttname"><a href="intel-ipsec-mb_8h.html#a803871900c08e2dc1b3f805ed4ecefd8">IMB_FEATURE_AVX512VL</a></div><div class="ttdeci">#define IMB_FEATURE_AVX512VL</div><div class="ttdef"><b>Definition</b> intel-ipsec-mb.h:915</div></div>
+<div class="ttc" id="aintel-ipsec-mb_8h_html_a8ca2c970faa0f62a3f4a6b6c18432bb1"><div class="ttname"><a href="intel-ipsec-mb_8h.html#a8ca2c970faa0f62a3f4a6b6c18432bb1">IMB_FEATURE_AVX512DQ</a></div><div class="ttdeci">#define IMB_FEATURE_AVX512DQ</div><div class="ttdef"><b>Definition</b> intel-ipsec-mb.h:912</div></div>
+<div class="ttc" id="aintel-ipsec-mb_8h_html_ab673c08624d868ca0dd89e1a9ec28f00"><div class="ttname"><a href="intel-ipsec-mb_8h.html#ab673c08624d868ca0dd89e1a9ec28f00">IMB_FEATURE_AVX512F</a></div><div class="ttdeci">#define IMB_FEATURE_AVX512F</div><div class="ttdef"><b>Definition</b> intel-ipsec-mb.h:911</div></div>
+<div class="ttc" id="aintel-ipsec-mb_8h_html_abbdb390b80ff1a92f31a7a9adc9beeb9"><div class="ttname"><a href="intel-ipsec-mb_8h.html#abbdb390b80ff1a92f31a7a9adc9beeb9">IMB_FEATURE_AVX512CD</a></div><div class="ttdeci">#define IMB_FEATURE_AVX512CD</div><div class="ttdef"><b>Definition</b> intel-ipsec-mb.h:913</div></div>
 </div><!-- fragment -->
 </div>
 </div>
@@ -5572,7 +5580,7 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">#define IMB_GCM_MAX_LEN&#160;&#160;&#160;UINT64_C(((1ULL &lt;&lt; 39) - 256) - 1)</td>
+          <td class="memname">#define IMB_GCM_MAX_LEN&#160;&#160;&#160;UINT64_C((((1ULL &lt;&lt; 39) - 256) / 8) - 1)</td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -5925,10 +5933,11 @@ Functions</h2></td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">_iv</td><td>Initialization vector </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">_src</td><td>Input buffer </td></tr>
     <tr><td class="paramdir">[out]</td><td class="paramname">_dst</td><td>Output buffer </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">_len</td><td>Length in BYTES </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">_len</td><td>Length in BYTES</td></tr>
   </table>
   </dd>
 </dl>
+<dl class="deprecated"><dt><b><a class="el" href="deprecated.html#_deprecated000003">Deprecated:</a></b></dt><dd>Please use the job API instead.</dd></dl>
 
 </div>
 </div>
@@ -5998,10 +6007,11 @@ Functions</h2></td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">_src</td><td>Input buffer </td></tr>
     <tr><td class="paramdir">[out]</td><td class="paramname">_dst</td><td>Output buffer </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">_len</td><td>Length in BITS </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">_offset</td><td>Offset in BITS from begin of input buffer </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">_offset</td><td>Offset in BITS from begin of input buffer</td></tr>
   </table>
   </dd>
 </dl>
+<dl class="deprecated"><dt><b><a class="el" href="deprecated.html#_deprecated000004">Deprecated:</a></b></dt><dd>Please use the job API instead.</dd></dl>
 
 </div>
 </div>
@@ -6094,10 +6104,11 @@ Functions</h2></td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">_len1</td><td>Length in BYTES of input buffer 1 </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">_src2</td><td>Input buffer 2 </td></tr>
     <tr><td class="paramdir">[out]</td><td class="paramname">_dst2</td><td>Output buffer 2 </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">_len2</td><td>Length in BYTES of input buffer 2 </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">_len2</td><td>Length in BYTES of input buffer 2</td></tr>
   </table>
   </dd>
 </dl>
+<dl class="deprecated"><dt><b><a class="el" href="deprecated.html#_deprecated000005">Deprecated:</a></b></dt><dd>Please use the job API instead.</dd></dl>
 
 </div>
 </div>
@@ -6204,10 +6215,11 @@ Functions</h2></td></tr>
     <tr><td class="paramdir">[out]</td><td class="paramname">_dst2</td><td>Output buffer 2 </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">_src3</td><td>Input buffer 3 </td></tr>
     <tr><td class="paramdir">[out]</td><td class="paramname">_dst3</td><td>Output buffer 3 </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">_len</td><td>Common length in bytes for all buffers </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">_len</td><td>Common length in bytes for all buffers</td></tr>
   </table>
   </dd>
 </dl>
+<dl class="deprecated"><dt><b><a class="el" href="deprecated.html#_deprecated000006">Deprecated:</a></b></dt><dd>Please use the job API instead.</dd></dl>
 
 </div>
 </div>
@@ -6335,10 +6347,11 @@ Functions</h2></td></tr>
     <tr><td class="paramdir">[out]</td><td class="paramname">_dst3</td><td>Output buffer 3 </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">_src4</td><td>Input buffer 4 </td></tr>
     <tr><td class="paramdir">[out]</td><td class="paramname">_dst4</td><td>Output buffer 4 </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">_len</td><td>Common length in bytes for all buffers </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">_len</td><td>Common length in bytes for all buffers</td></tr>
   </table>
   </dd>
 </dl>
+<dl class="deprecated"><dt><b><a class="el" href="deprecated.html#_deprecated000007">Deprecated:</a></b></dt><dd>Please use the job API instead.</dd></dl>
 
 </div>
 </div>
@@ -6408,10 +6421,11 @@ Functions</h2></td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">_src</td><td>Array of input buffers </td></tr>
     <tr><td class="paramdir">[out]</td><td class="paramname">_dst</td><td>Array of output buffers </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">_len</td><td>Array of corresponding input buffer lengths in BITS </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">_count</td><td>Number of input buffers </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">_count</td><td>Number of input buffers</td></tr>
   </table>
   </dd>
 </dl>
+<dl class="deprecated"><dt><b><a class="el" href="deprecated.html#_deprecated000008">Deprecated:</a></b></dt><dd>Please use the job API instead. </dd></dl>
 
 </div>
 </div>
@@ -6468,10 +6482,11 @@ Functions</h2></td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">_exp_key</td><td>Context where the scheduled keys are stored </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">_src</td><td>Input buffer </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">_len</td><td>Length in BYTES of the data to be hashed </td></tr>
-    <tr><td class="paramdir">[out]</td><td class="paramname">_tag</td><td>Computed digest </td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname">_tag</td><td>Computed digest</td></tr>
   </table>
   </dd>
 </dl>
+<dl class="deprecated"><dt><b><a class="el" href="deprecated.html#_deprecated000009">Deprecated:</a></b></dt><dd>Please use the job API instead.</dd></dl>
 
 </div>
 </div>
@@ -6541,10 +6556,11 @@ Functions</h2></td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">_src</td><td>Input buffer </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">_len</td><td>Length in BITS of the data to be hashed </td></tr>
     <tr><td class="paramdir">[out]</td><td class="paramname">_tag</td><td>Computed digest </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">_dir</td><td>Direction bit </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">_dir</td><td>Direction bit</td></tr>
   </table>
   </dd>
 </dl>
+<dl class="deprecated"><dt><b><a class="el" href="deprecated.html#_deprecated000010">Deprecated:</a></b></dt><dd>Please use the job API instead.</dd></dl>
 
 </div>
 </div>
@@ -7731,10 +7747,11 @@ Functions</h2></td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">_iv</td><td>iv[3] = count iv[2] = (bearer &lt;&lt; 27) | ((dir &amp; 0x1) &lt;&lt; 26) iv[1] = pIV[3] iv[0] = pIV[2] </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">_src</td><td>Input buffer </td></tr>
     <tr><td class="paramdir">[out]</td><td class="paramname">_dst</td><td>Output buffer </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">_len</td><td>Length in bits of input buffer </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">_len</td><td>Length in bits of input buffer</td></tr>
   </table>
   </dd>
 </dl>
+<dl class="deprecated"><dt><b><a class="el" href="deprecated.html#_deprecated000012">Deprecated:</a></b></dt><dd>Please use the job API instead. </dd></dl>
 
 </div>
 </div>
@@ -7802,10 +7819,11 @@ Functions</h2></td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">_src</td><td>Input buffer </td></tr>
     <tr><td class="paramdir">[out]</td><td class="paramname">_dst</td><td>Output buffer </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">_len</td><td>Length in bits of input buffer </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">_offset</td><td>Offset in input/output buffer (in bits) </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">_offset</td><td>Offset in input/output buffer (in bits)</td></tr>
   </table>
   </dd>
 </dl>
+<dl class="deprecated"><dt><b><a class="el" href="deprecated.html#_deprecated000011">Deprecated:</a></b></dt><dd>Please use the job API instead. </dd></dl>
 
 </div>
 </div>
@@ -7896,10 +7914,11 @@ Functions</h2></td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">_len1</td><td>Length in bytes of input buffer 1 </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">_src2</td><td>Input buffer 2 </td></tr>
     <tr><td class="paramdir">[out]</td><td class="paramname">_dst2</td><td>Output buffer 2 </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">_len2</td><td>Length in bytes of input buffer 2 </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">_len2</td><td>Length in bytes of input buffer 2</td></tr>
   </table>
   </dd>
 </dl>
+<dl class="deprecated"><dt><b><a class="el" href="deprecated.html#_deprecated000013">Deprecated:</a></b></dt><dd>Please use the job API instead. </dd></dl>
 
 </div>
 </div>
@@ -8047,10 +8066,11 @@ Functions</h2></td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">_len3</td><td>Length in bytes of input buffer 3 </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">_src4</td><td>Input buffer 4 </td></tr>
     <tr><td class="paramdir">[out]</td><td class="paramname">_dst4</td><td>Output buffer 4 </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">_len4</td><td>Length in bytes of input buffer 4 </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">_len4</td><td>Length in bytes of input buffer 4</td></tr>
   </table>
   </dd>
 </dl>
+<dl class="deprecated"><dt><b><a class="el" href="deprecated.html#_deprecated000014">Deprecated:</a></b></dt><dd>Please use the job API instead. </dd></dl>
 
 </div>
 </div>
@@ -8312,10 +8332,11 @@ Functions</h2></td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">_len7</td><td>Length in bytes of input buffer 7 </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">_src8</td><td>Input buffer 8 </td></tr>
     <tr><td class="paramdir">[out]</td><td class="paramname">_dst8</td><td>Output buffer 8 </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">_len8</td><td>Length in bytes of input buffer 8 </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">_len8</td><td>Length in bytes of input buffer 8</td></tr>
   </table>
   </dd>
 </dl>
+<dl class="deprecated"><dt><b><a class="el" href="deprecated.html#_deprecated000015">Deprecated:</a></b></dt><dd>Please use the job API instead. </dd></dl>
 
 </div>
 </div>
@@ -8376,10 +8397,11 @@ Functions</h2></td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">_iv</td><td>Array of 8 IV values </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">_src</td><td>Array of 8 input buffers </td></tr>
     <tr><td class="paramdir">[out]</td><td class="paramname">_dst</td><td>Array of 8 output buffers </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">_len</td><td>Array of 8 corresponding input buffer lengths </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">_len</td><td>Array of 8 corresponding input buffer lengths</td></tr>
   </table>
   </dd>
 </dl>
+<dl class="deprecated"><dt><b><a class="el" href="deprecated.html#_deprecated000016">Deprecated:</a></b></dt><dd>Please use the job API instead. </dd></dl>
 
 </div>
 </div>
@@ -8447,10 +8469,11 @@ Functions</h2></td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">_src</td><td>Array of input buffers </td></tr>
     <tr><td class="paramdir">[out]</td><td class="paramname">_dst</td><td>Array of output buffers - out[0] set to NULL on failure </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">_len</td><td>Array of corresponding input buffer lengths </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">_count</td><td>Number of input buffers </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">_count</td><td>Number of input buffers</td></tr>
   </table>
   </dd>
 </dl>
+<dl class="deprecated"><dt><b><a class="el" href="deprecated.html#_deprecated000017">Deprecated:</a></b></dt><dd>Please use the job API instead.</dd></dl>
 
 </div>
 </div>
@@ -8521,10 +8544,11 @@ Functions</h2></td></tr>
 </ul>
 </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">_len</td><td>Array of corresponding input buffer lengths </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">_count</td><td>Number of input buffers </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">_count</td><td>Number of input buffers</td></tr>
   </table>
   </dd>
 </dl>
+<dl class="deprecated"><dt><b><a class="el" href="deprecated.html#_deprecated000018">Deprecated:</a></b></dt><dd>Please use the job API instead. </dd></dl>
 
 </div>
 </div>
@@ -8585,10 +8609,11 @@ Functions</h2></td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">_iv</td><td>iv[3] = _BSWAP32(fresh^(dir&lt;&lt;15)) iv[2] = _BSWAP32(count^(dir&lt;&lt;31)) iv[1] = _BSWAP32(fresh) iv[0] = _BSWAP32(count)</td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">_src</td><td>Input buffer </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">_len</td><td>Length in bits of the data to be hashed </td></tr>
-    <tr><td class="paramdir">[out]</td><td class="paramname">_tag</td><td>Computed digest </td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname">_tag</td><td>Computed digest</td></tr>
   </table>
   </dd>
 </dl>
+<dl class="deprecated"><dt><b><a class="el" href="deprecated.html#_deprecated000019">Deprecated:</a></b></dt><dd>Please use the job API instead. </dd></dl>
 
 </div>
 </div>
@@ -9238,7 +9263,7 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">#define IMB_VERSION_NUM&#160;&#160;&#160;0x10500</td>
+          <td class="memname">#define IMB_VERSION_NUM&#160;&#160;&#160;0x20000</td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -9252,7 +9277,7 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">#define IMB_VERSION_STR&#160;&#160;&#160;&quot;1.5.0&quot;</td>
+          <td class="memname">#define IMB_VERSION_STR&#160;&#160;&#160;&quot;2.0.0&quot;</td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -9402,10 +9427,11 @@ Functions</h2></td></tr>
     <tr><td class="paramname">_iv</td><td>Pointer to 16-byte IV </td></tr>
     <tr><td class="paramname">_src</td><td>Pointer to Plaintext/Ciphertext input. </td></tr>
     <tr><td class="paramname">_dst</td><td>Pointer to Ciphertext/Plaintext output. </td></tr>
-    <tr><td class="paramname">_len</td><td>Length of input data in bytes. </td></tr>
+    <tr><td class="paramname">_len</td><td>Length of input data in bytes.</td></tr>
   </table>
   </dd>
 </dl>
+<dl class="deprecated"><dt><b><a class="el" href="deprecated.html#_deprecated000001">Deprecated:</a></b></dt><dd>Please use the job API instead. </dd></dl>
 
 </div>
 </div>
@@ -9458,6 +9484,20 @@ Functions</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
+
+<p>ZUC EEA3 Confidentiality functions.   </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">_mgr</td><td>Pointer to multi-buffer structure </td></tr>
+    <tr><td class="paramname">_key</td><td>Pointer to key </td></tr>
+    <tr><td class="paramname">_iv</td><td>Pointer to 16-byte IV </td></tr>
+    <tr><td class="paramname">_src</td><td>Pointer to Plaintext/Ciphertext input. </td></tr>
+    <tr><td class="paramname">_dst</td><td>Pointer to Ciphertext/Plaintext output. </td></tr>
+    <tr><td class="paramname">_len</td><td>Length of input data in bytes.</td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="deprecated"><dt><b><a class="el" href="deprecated.html#_deprecated000001">Deprecated:</a></b></dt><dd>Please use the job API instead. </dd></dl>
 
 </div>
 </div>
@@ -9517,6 +9557,20 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
+<p>ZUC EEA3 Confidentiality functions.   </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">_mgr</td><td>Pointer to multi-buffer structure </td></tr>
+    <tr><td class="paramname">_key</td><td>Pointer to key </td></tr>
+    <tr><td class="paramname">_iv</td><td>Pointer to 16-byte IV </td></tr>
+    <tr><td class="paramname">_src</td><td>Pointer to Plaintext/Ciphertext input. </td></tr>
+    <tr><td class="paramname">_dst</td><td>Pointer to Ciphertext/Plaintext output. </td></tr>
+    <tr><td class="paramname">_len</td><td>Length of input data in bytes.</td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="deprecated"><dt><b><a class="el" href="deprecated.html#_deprecated000001">Deprecated:</a></b></dt><dd>Please use the job API instead. </dd></dl>
+
 </div>
 </div>
 <a id="ac789fe54f3a8f92144831a67b14501d4" name="ac789fe54f3a8f92144831a67b14501d4"></a>
@@ -9569,7 +9623,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p>ZUC EIA3 Integrity function. </p>
+<p>ZUC EIA3 Integrity functions. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">_mgr</td><td>Pointer to multi-buffer structure </td></tr>
@@ -9577,10 +9631,11 @@ Functions</h2></td></tr>
     <tr><td class="paramname">_iv</td><td>Pointer to 16-byte IV </td></tr>
     <tr><td class="paramname">_src</td><td>Pointer to Plaintext/Ciphertext input. </td></tr>
     <tr><td class="paramname">_len</td><td>Length of input data in bits. </td></tr>
-    <tr><td class="paramname">_tag</td><td>Pointer to Authenticated Tag output (4 bytes) </td></tr>
+    <tr><td class="paramname">_tag</td><td>Pointer to Authenticated Tag output (4 bytes)</td></tr>
   </table>
   </dd>
 </dl>
+<dl class="deprecated"><dt><b><a class="el" href="deprecated.html#_deprecated000002">Deprecated:</a></b></dt><dd>Please use the job API instead. </dd></dl>
 
 </div>
 </div>
@@ -9639,6 +9694,20 @@ Functions</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
+
+<p>ZUC EIA3 Integrity functions.   </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">_mgr</td><td>Pointer to multi-buffer structure </td></tr>
+    <tr><td class="paramname">_key</td><td>Pointer to key </td></tr>
+    <tr><td class="paramname">_iv</td><td>Pointer to 16-byte IV </td></tr>
+    <tr><td class="paramname">_src</td><td>Pointer to Plaintext/Ciphertext input. </td></tr>
+    <tr><td class="paramname">_len</td><td>Length of input data in bits. </td></tr>
+    <tr><td class="paramname">_tag</td><td>Pointer to Authenticated Tag output (4 bytes)</td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="deprecated"><dt><b><a class="el" href="deprecated.html#_deprecated000002">Deprecated:</a></b></dt><dd>Please use the job API instead. </dd></dl>
 
 </div>
 </div>
@@ -10752,6 +10821,7 @@ Functions</h2></td></tr>
 <table class="fieldtable">
 <tr><th colspan="2">Enumerator</th></tr><tr><td class="fieldname"><a id="a3be1dfb4cbd4bd13dfdb2cf881f8334ca0e2ebfcfd101ab4a39129082b2de517f" name="a3be1dfb4cbd4bd13dfdb2cf881f8334ca0e2ebfcfd101ab4a39129082b2de517f"></a>IMB_CIPHER_CBC&#160;</td><td class="fielddoc"></td></tr>
 <tr><td class="fieldname"><a id="a3be1dfb4cbd4bd13dfdb2cf881f8334ca5b4126e439eaff0975846425594201ea" name="a3be1dfb4cbd4bd13dfdb2cf881f8334ca5b4126e439eaff0975846425594201ea"></a>IMB_CIPHER_CNTR&#160;</td><td class="fielddoc"></td></tr>
+<tr><td class="fieldname"><a id="a3be1dfb4cbd4bd13dfdb2cf881f8334cae37b15031c4f905008e7b00f618baec0" name="a3be1dfb4cbd4bd13dfdb2cf881f8334cae37b15031c4f905008e7b00f618baec0"></a>IMB_CIPHER_CTR&#160;</td><td class="fielddoc"></td></tr>
 <tr><td class="fieldname"><a id="a3be1dfb4cbd4bd13dfdb2cf881f8334ca0bebd24d7311dedce100455dd3a8ddf6" name="a3be1dfb4cbd4bd13dfdb2cf881f8334ca0bebd24d7311dedce100455dd3a8ddf6"></a>IMB_CIPHER_NULL&#160;</td><td class="fielddoc"></td></tr>
 <tr><td class="fieldname"><a id="a3be1dfb4cbd4bd13dfdb2cf881f8334caed8ba68d7d2d7602407f17305d1d99b7" name="a3be1dfb4cbd4bd13dfdb2cf881f8334caed8ba68d7d2d7602407f17305d1d99b7"></a>IMB_CIPHER_DOCSIS_SEC_BPI&#160;</td><td class="fielddoc"></td></tr>
 <tr><td class="fieldname"><a id="a3be1dfb4cbd4bd13dfdb2cf881f8334ca0f97344e525fef167a92d1a59a0492aa" name="a3be1dfb4cbd4bd13dfdb2cf881f8334ca0f97344e525fef167a92d1a59a0492aa"></a>IMB_CIPHER_GCM&#160;</td><td class="fielddoc"></td></tr>
@@ -10761,9 +10831,11 @@ Functions</h2></td></tr>
 <tr><td class="fieldname"><a id="a3be1dfb4cbd4bd13dfdb2cf881f8334ca7d3946d77e4364bc45a9e72499bf817f" name="a3be1dfb4cbd4bd13dfdb2cf881f8334ca7d3946d77e4364bc45a9e72499bf817f"></a>IMB_CIPHER_CCM&#160;</td><td class="fielddoc"></td></tr>
 <tr><td class="fieldname"><a id="a3be1dfb4cbd4bd13dfdb2cf881f8334ca639b1382de364a2b810f7876189bc64f" name="a3be1dfb4cbd4bd13dfdb2cf881f8334ca639b1382de364a2b810f7876189bc64f"></a>IMB_CIPHER_DES3&#160;</td><td class="fielddoc"></td></tr>
 <tr><td class="fieldname"><a id="a3be1dfb4cbd4bd13dfdb2cf881f8334ca896285cd2fe56f73011b908e490cbbea" name="a3be1dfb4cbd4bd13dfdb2cf881f8334ca896285cd2fe56f73011b908e490cbbea"></a>IMB_CIPHER_PON_AES_CNTR&#160;</td><td class="fielddoc"></td></tr>
+<tr><td class="fieldname"><a id="a3be1dfb4cbd4bd13dfdb2cf881f8334ca625873443fc051fe1a6623adfe8e9145" name="a3be1dfb4cbd4bd13dfdb2cf881f8334ca625873443fc051fe1a6623adfe8e9145"></a>IMB_CIPHER_PON_AES_CTR&#160;</td><td class="fielddoc"></td></tr>
 <tr><td class="fieldname"><a id="a3be1dfb4cbd4bd13dfdb2cf881f8334ca357dec895f8dfa3371add1feaa001f56" name="a3be1dfb4cbd4bd13dfdb2cf881f8334ca357dec895f8dfa3371add1feaa001f56"></a>IMB_CIPHER_ECB&#160;</td><td class="fielddoc"></td></tr>
 <tr><td class="fieldname"><a id="a3be1dfb4cbd4bd13dfdb2cf881f8334ca6f69815480531651948b5549fa84023a" name="a3be1dfb4cbd4bd13dfdb2cf881f8334ca6f69815480531651948b5549fa84023a"></a>IMB_CIPHER_CNTR_BITLEN&#160;</td><td class="fielddoc"><p>128-EEA2/NEA2 (3GPP) </p>
 </td></tr>
+<tr><td class="fieldname"><a id="a3be1dfb4cbd4bd13dfdb2cf881f8334cae7239cb72b2afa0033ebca478af0078e" name="a3be1dfb4cbd4bd13dfdb2cf881f8334cae7239cb72b2afa0033ebca478af0078e"></a>IMB_CIPHER_CTR_BITLEN&#160;</td><td class="fielddoc"></td></tr>
 <tr><td class="fieldname"><a id="a3be1dfb4cbd4bd13dfdb2cf881f8334ca3618bfaab3c19aabc8a93a03ae121efc" name="a3be1dfb4cbd4bd13dfdb2cf881f8334ca3618bfaab3c19aabc8a93a03ae121efc"></a>IMB_CIPHER_ZUC_EEA3&#160;</td><td class="fielddoc"><p>128-EEA3/NEA3 (3GPP) </p>
 </td></tr>
 <tr><td class="fieldname"><a id="a3be1dfb4cbd4bd13dfdb2cf881f8334ca88c3ff9a6816b3629dc5b4815b47607e" name="a3be1dfb4cbd4bd13dfdb2cf881f8334ca88c3ff9a6816b3629dc5b4815b47607e"></a>IMB_CIPHER_SNOW3G_UEA2_BITLEN&#160;</td><td class="fielddoc"><p>128-UEA2 (3GPP) </p>
@@ -10784,6 +10856,7 @@ Functions</h2></td></tr>
 <tr><td class="fieldname"><a id="a3be1dfb4cbd4bd13dfdb2cf881f8334cad491b9e7827ce4556c81b430a7e78e96" name="a3be1dfb4cbd4bd13dfdb2cf881f8334cad491b9e7827ce4556c81b430a7e78e96"></a>IMB_CIPHER_SM4_CBC&#160;</td><td class="fielddoc"></td></tr>
 <tr><td class="fieldname"><a id="a3be1dfb4cbd4bd13dfdb2cf881f8334cae5e7135341635a0f358339bb320b5b91" name="a3be1dfb4cbd4bd13dfdb2cf881f8334cae5e7135341635a0f358339bb320b5b91"></a>IMB_CIPHER_CFB&#160;</td><td class="fielddoc"></td></tr>
 <tr><td class="fieldname"><a id="a3be1dfb4cbd4bd13dfdb2cf881f8334ca8ed4f2bf5a5ee207cab40d64f3f797aa" name="a3be1dfb4cbd4bd13dfdb2cf881f8334ca8ed4f2bf5a5ee207cab40d64f3f797aa"></a>IMB_CIPHER_SM4_CNTR&#160;</td><td class="fielddoc"></td></tr>
+<tr><td class="fieldname"><a id="a3be1dfb4cbd4bd13dfdb2cf881f8334cac730e03aa6877b1cc210a19ab6501151" name="a3be1dfb4cbd4bd13dfdb2cf881f8334cac730e03aa6877b1cc210a19ab6501151"></a>IMB_CIPHER_SM4_CTR&#160;</td><td class="fielddoc"></td></tr>
 <tr><td class="fieldname"><a id="a3be1dfb4cbd4bd13dfdb2cf881f8334ca948e8919158b0d8171ee64cd949de4eb" name="a3be1dfb4cbd4bd13dfdb2cf881f8334ca948e8919158b0d8171ee64cd949de4eb"></a>IMB_CIPHER_SM4_GCM&#160;</td><td class="fielddoc"></td></tr>
 <tr><td class="fieldname"><a id="a3be1dfb4cbd4bd13dfdb2cf881f8334ca78c470d405fb36037e41224b99d23c75" name="a3be1dfb4cbd4bd13dfdb2cf881f8334ca78c470d405fb36037e41224b99d23c75"></a>IMB_CIPHER_NUM&#160;</td><td class="fielddoc"></td></tr>
 </table>

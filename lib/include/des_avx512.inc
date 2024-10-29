@@ -1447,14 +1447,14 @@ align 32
         mov             INP2, [%%STATE + _des_args_out + (5*PTR_SZ)]
         mov             INP3, [%%STATE + _des_args_out + (6*PTR_SZ)]
         mov             INP4, [%%STATE + _des_args_out + (7*PTR_SZ)]
-        vmovdqu64       [IA0 + OFFSET], ZW0
-        vmovdqu64       [IA1 + OFFSET], ZW1
-        vmovdqu64       [IA2 + OFFSET], ZW2
-        vmovdqu64       [INP0 + OFFSET], ZW3
-        vmovdqu64       [INP1 + OFFSET], ZW4
-        vmovdqu64       [INP2 + OFFSET], ZW5
-        vmovdqu64       [INP3 + OFFSET], ZW6
-        vmovdqu64       [INP4 + OFFSET], ZW7
+        vmovdqu64       [IA0 + OFFSET], ZW1
+        vmovdqu64       [IA1 + OFFSET], ZW0
+        vmovdqu64       [IA2 + OFFSET], ZW3
+        vmovdqu64       [INP0 + OFFSET], ZW2
+        vmovdqu64       [INP1 + OFFSET], ZW5
+        vmovdqu64       [INP2 + OFFSET], ZW4
+        vmovdqu64       [INP3 + OFFSET], ZW7
+        vmovdqu64       [INP4 + OFFSET], ZW6
 
         mov             IA0, [%%STATE + _des_args_out + (8*PTR_SZ)]
         mov             IA1, [%%STATE + _des_args_out + (9*PTR_SZ)]
@@ -1464,14 +1464,14 @@ align 32
         mov             INP2, [%%STATE + _des_args_out + (13*PTR_SZ)]
         mov             INP3, [%%STATE + _des_args_out + (14*PTR_SZ)]
         mov             INP4, [%%STATE + _des_args_out + (15*PTR_SZ)]
-        vmovdqu64       [IA0 + OFFSET], ZW8
-        vmovdqu64       [IA1 + OFFSET], ZW9
-        vmovdqu64       [IA2 + OFFSET], ZW10
-        vmovdqu64       [INP0 + OFFSET], ZW11
-        vmovdqu64       [INP1 + OFFSET], ZW12
-        vmovdqu64       [INP2 + OFFSET], ZW13
-        vmovdqu64       [INP3 + OFFSET], ZW14
-        vmovdqu64       [INP4 + OFFSET], ZW15
+        vmovdqu64       [IA0 + OFFSET], ZW9
+        vmovdqu64       [IA1 + OFFSET], ZW8
+        vmovdqu64       [IA2 + OFFSET], ZW11
+        vmovdqu64       [INP0 + OFFSET], ZW10
+        vmovdqu64       [INP1 + OFFSET], ZW13
+        vmovdqu64       [INP2 + OFFSET], ZW12
+        vmovdqu64       [INP3 + OFFSET], ZW15
+        vmovdqu64       [INP4 + OFFSET], ZW14
 
         add             OFFSET, 64
         jmp             %%_gen_des_enc_loop
@@ -1615,14 +1615,14 @@ align 32
         mov             INP2, [%%STATE + _des_args_out + (5*PTR_SZ)]
         mov             INP3, [%%STATE + _des_args_out + (6*PTR_SZ)]
         mov             INP4, [%%STATE + _des_args_out + (7*PTR_SZ)]
-        vmovdqu64       [IA0 + OFFSET]{k7}, ZW0
-        vmovdqu64       [IA1 + OFFSET]{k7}, ZW1
-        vmovdqu64       [IA2 + OFFSET]{k7}, ZW2
-        vmovdqu64       [INP0 + OFFSET]{k7}, ZW3
-        vmovdqu64       [INP1 + OFFSET]{k7}, ZW4
-        vmovdqu64       [INP2 + OFFSET]{k7}, ZW5
-        vmovdqu64       [INP3 + OFFSET]{k7}, ZW6
-        vmovdqu64       [INP4 + OFFSET]{k7}, ZW7
+        vmovdqu64       [IA0 + OFFSET]{k7}, ZW1
+        vmovdqu64       [IA1 + OFFSET]{k7}, ZW0
+        vmovdqu64       [IA2 + OFFSET]{k7}, ZW3
+        vmovdqu64       [INP0 + OFFSET]{k7}, ZW2
+        vmovdqu64       [INP1 + OFFSET]{k7}, ZW5
+        vmovdqu64       [INP2 + OFFSET]{k7}, ZW4
+        vmovdqu64       [INP3 + OFFSET]{k7}, ZW7
+        vmovdqu64       [INP4 + OFFSET]{k7}, ZW6
 
         mov             IA0, [%%STATE + _des_args_out + (8*PTR_SZ)]
         mov             IA1, [%%STATE + _des_args_out + (9*PTR_SZ)]
@@ -1632,14 +1632,14 @@ align 32
         mov             INP2, [%%STATE + _des_args_out + (13*PTR_SZ)]
         mov             INP3, [%%STATE + _des_args_out + (14*PTR_SZ)]
         mov             INP4, [%%STATE + _des_args_out + (15*PTR_SZ)]
-        vmovdqu64       [IA0 + OFFSET]{k7}, ZW8
-        vmovdqu64       [IA1 + OFFSET]{k7}, ZW9
-        vmovdqu64       [IA2 + OFFSET]{k7}, ZW10
-        vmovdqu64       [INP0 + OFFSET]{k7}, ZW11
-        vmovdqu64       [INP1 + OFFSET]{k7}, ZW12
-        vmovdqu64       [INP2 + OFFSET]{k7}, ZW13
-        vmovdqu64       [INP3 + OFFSET]{k7}, ZW14
-        vmovdqu64       [INP4 + OFFSET]{k7}, ZW15
+        vmovdqu64       [IA0 + OFFSET]{k7}, ZW9
+        vmovdqu64       [IA1 + OFFSET]{k7}, ZW8
+        vmovdqu64       [IA2 + OFFSET]{k7}, ZW11
+        vmovdqu64       [INP0 + OFFSET]{k7}, ZW10
+        vmovdqu64       [INP1 + OFFSET]{k7}, ZW13
+        vmovdqu64       [INP2 + OFFSET]{k7}, ZW12
+        vmovdqu64       [INP3 + OFFSET]{k7}, ZW15
+        vmovdqu64       [INP4 + OFFSET]{k7}, ZW14
 %%_gen_des_enc_part_end:
 
         ;; store IV and update pointers
@@ -1766,14 +1766,14 @@ align 32
         mov             INP2, [%%STATE + _des_args_out + (5*PTR_SZ)]
         mov             INP3, [%%STATE + _des_args_out + (6*PTR_SZ)]
         mov             INP4, [%%STATE + _des_args_out + (7*PTR_SZ)]
-        vmovdqu64       [IA0 + OFFSET], ZW0
-        vmovdqu64       [IA1 + OFFSET], ZW1
-        vmovdqu64       [IA2 + OFFSET], ZW2
-        vmovdqu64       [INP0 + OFFSET], ZW3
-        vmovdqu64       [INP1 + OFFSET], ZW4
-        vmovdqu64       [INP2 + OFFSET], ZW5
-        vmovdqu64       [INP3 + OFFSET], ZW6
-        vmovdqu64       [INP4 + OFFSET], ZW7
+        vmovdqu64       [IA0 + OFFSET], ZW1
+        vmovdqu64       [IA1 + OFFSET], ZW0
+        vmovdqu64       [IA2 + OFFSET], ZW3
+        vmovdqu64       [INP0 + OFFSET], ZW2
+        vmovdqu64       [INP1 + OFFSET], ZW5
+        vmovdqu64       [INP2 + OFFSET], ZW4
+        vmovdqu64       [INP3 + OFFSET], ZW7
+        vmovdqu64       [INP4 + OFFSET], ZW6
 
         mov             IA0, [%%STATE + _des_args_out + (8*PTR_SZ)]
         mov             IA1, [%%STATE + _des_args_out + (9*PTR_SZ)]
@@ -1783,14 +1783,14 @@ align 32
         mov             INP2, [%%STATE + _des_args_out + (13*PTR_SZ)]
         mov             INP3, [%%STATE + _des_args_out + (14*PTR_SZ)]
         mov             INP4, [%%STATE + _des_args_out + (15*PTR_SZ)]
-        vmovdqu64       [IA0 + OFFSET], ZW8
-        vmovdqu64       [IA1 + OFFSET], ZW9
-        vmovdqu64       [IA2 + OFFSET], ZW10
-        vmovdqu64       [INP0 + OFFSET], ZW11
-        vmovdqu64       [INP1 + OFFSET], ZW12
-        vmovdqu64       [INP2 + OFFSET], ZW13
-        vmovdqu64       [INP3 + OFFSET], ZW14
-        vmovdqu64       [INP4 + OFFSET], ZW15
+        vmovdqu64       [IA0 + OFFSET], ZW9
+        vmovdqu64       [IA1 + OFFSET], ZW8
+        vmovdqu64       [IA2 + OFFSET], ZW11
+        vmovdqu64       [INP0 + OFFSET], ZW10
+        vmovdqu64       [INP1 + OFFSET], ZW13
+        vmovdqu64       [INP2 + OFFSET], ZW12
+        vmovdqu64       [INP3 + OFFSET], ZW15
+        vmovdqu64       [INP4 + OFFSET], ZW14
 
         add             OFFSET, 64
         jmp             %%_gen_des_dec_loop
@@ -1930,14 +1930,14 @@ align 32
         mov             INP2, [%%STATE + _des_args_out + (5*PTR_SZ)]
         mov             INP3, [%%STATE + _des_args_out + (6*PTR_SZ)]
         mov             INP4, [%%STATE + _des_args_out + (7*PTR_SZ)]
-        vmovdqu64       [IA0 + OFFSET]{k7}, ZW0
-        vmovdqu64       [IA1 + OFFSET]{k7}, ZW1
-        vmovdqu64       [IA2 + OFFSET]{k7}, ZW2
-        vmovdqu64       [INP0 + OFFSET]{k7}, ZW3
-        vmovdqu64       [INP1 + OFFSET]{k7}, ZW4
-        vmovdqu64       [INP2 + OFFSET]{k7}, ZW5
-        vmovdqu64       [INP3 + OFFSET]{k7}, ZW6
-        vmovdqu64       [INP4 + OFFSET]{k7}, ZW7
+        vmovdqu64       [IA0 + OFFSET]{k7}, ZW1
+        vmovdqu64       [IA1 + OFFSET]{k7}, ZW0
+        vmovdqu64       [IA2 + OFFSET]{k7}, ZW3
+        vmovdqu64       [INP0 + OFFSET]{k7}, ZW2
+        vmovdqu64       [INP1 + OFFSET]{k7}, ZW5
+        vmovdqu64       [INP2 + OFFSET]{k7}, ZW4
+        vmovdqu64       [INP3 + OFFSET]{k7}, ZW7
+        vmovdqu64       [INP4 + OFFSET]{k7}, ZW6
 
         mov             IA0, [%%STATE + _des_args_out + (8*PTR_SZ)]
         mov             IA1, [%%STATE + _des_args_out + (9*PTR_SZ)]
@@ -1947,14 +1947,14 @@ align 32
         mov             INP2, [%%STATE + _des_args_out + (13*PTR_SZ)]
         mov             INP3, [%%STATE + _des_args_out + (14*PTR_SZ)]
         mov             INP4, [%%STATE + _des_args_out + (15*PTR_SZ)]
-        vmovdqu64       [IA0 + OFFSET]{k7}, ZW8
-        vmovdqu64       [IA1 + OFFSET]{k7}, ZW9
-        vmovdqu64       [IA2 + OFFSET]{k7}, ZW10
-        vmovdqu64       [INP0 + OFFSET]{k7}, ZW11
-        vmovdqu64       [INP1 + OFFSET]{k7}, ZW12
-        vmovdqu64       [INP2 + OFFSET]{k7}, ZW13
-        vmovdqu64       [INP3 + OFFSET]{k7}, ZW14
-        vmovdqu64       [INP4 + OFFSET]{k7}, ZW15
+        vmovdqu64       [IA0 + OFFSET]{k7}, ZW9
+        vmovdqu64       [IA1 + OFFSET]{k7}, ZW8
+        vmovdqu64       [IA2 + OFFSET]{k7}, ZW11
+        vmovdqu64       [INP0 + OFFSET]{k7}, ZW10
+        vmovdqu64       [INP1 + OFFSET]{k7}, ZW13
+        vmovdqu64       [INP2 + OFFSET]{k7}, ZW12
+        vmovdqu64       [INP3 + OFFSET]{k7}, ZW15
+        vmovdqu64       [INP4 + OFFSET]{k7}, ZW14
 %%_gen_des_dec_part_end:
 
         ;; store IV and update pointers
