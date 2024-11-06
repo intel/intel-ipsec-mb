@@ -70,6 +70,19 @@ submit_job_zuc256_eia3_gfni_avx2(MB_MGR_ZUC_OOO *state, IMB_JOB *job, const uint
 IMB_JOB *
 flush_job_zuc256_eia3_gfni_avx2(MB_MGR_ZUC_OOO *state, const uint64_t tag_sz);
 
+IMB_JOB *
+submit_job_aes128_cfb_enc_vaes_avx2(MB_MGR_AES_OOO *state, IMB_JOB *job);
+IMB_JOB *
+flush_job_aes128_cfb_enc_vaes_avx2(MB_MGR_AES_OOO *state);
+IMB_JOB *
+submit_job_aes192_cfb_enc_vaes_avx2(MB_MGR_AES_OOO *state, IMB_JOB *job);
+IMB_JOB *
+flush_job_aes192_cfb_enc_vaes_avx2(MB_MGR_AES_OOO *state);
+IMB_JOB *
+submit_job_aes256_cfb_enc_vaes_avx2(MB_MGR_AES_OOO *state, IMB_JOB *job);
+IMB_JOB *
+flush_job_aes256_cfb_enc_vaes_avx2(MB_MGR_AES_OOO *state);
+
 /* AES-CTR */
 void
 aes_cntr_256_vaes_avx2(const void *in, const void *IV, const void *keys, void *out,

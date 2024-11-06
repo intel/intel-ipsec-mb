@@ -143,12 +143,16 @@
 #define AES_CTR_256_BIT aes_cntr_bit_256_avx
 
 /* AES-CFB */
-#define AES_CFB_128_ENC aes_cfb_128_enc_sse
-#define AES_CFB_192_ENC aes_cfb_192_enc_sse
-#define AES_CFB_256_ENC aes_cfb_256_enc_sse
 #define AES_CFB_128_DEC aes_cfb_dec_128_vaes_avx2
 #define AES_CFB_192_DEC aes_cfb_dec_192_vaes_avx2
 #define AES_CFB_256_DEC aes_cfb_dec_256_vaes_avx2
+
+#define SUBMIT_JOB_AES_CFB_128_ENC submit_job_aes128_cfb_enc_vaes_avx2
+#define FLUSH_JOB_AES_CFB_128_ENC  flush_job_aes128_cfb_enc_vaes_avx2
+#define SUBMIT_JOB_AES_CFB_192_ENC submit_job_aes192_cfb_enc_vaes_avx2
+#define FLUSH_JOB_AES_CFB_192_ENC  flush_job_aes192_cfb_enc_vaes_avx2
+#define SUBMIT_JOB_AES_CFB_256_ENC submit_job_aes256_cfb_enc_vaes_avx2
+#define FLUSH_JOB_AES_CFB_256_ENC  flush_job_aes256_cfb_enc_vaes_avx2
 
 /* AES-CCM */
 #define AES_CNTR_CCM_128 aes_cntr_ccm_128_avx
@@ -346,9 +350,9 @@ reset_ooo_mgrs(IMB_MGR *state)
         ooo_mgr_snow3g_reset(state->snow3g_uia2_ooo, 4);
 
         /*  Init AES-CFB out-of-order fields */
-        ooo_mgr_aes_reset(state->aes_cfb_128_ooo, 1);
-        ooo_mgr_aes_reset(state->aes_cfb_192_ooo, 1);
-        ooo_mgr_aes_reset(state->aes_cfb_256_ooo, 1);
+        ooo_mgr_aes_reset(state->aes_cfb_128_ooo, 16);
+        ooo_mgr_aes_reset(state->aes_cfb_192_ooo, 16);
+        ooo_mgr_aes_reset(state->aes_cfb_256_ooo, 16);
 }
 
 IMB_DLL_LOCAL void

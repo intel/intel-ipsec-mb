@@ -55,6 +55,7 @@ ooo_mgr_aes_reset(void *p_ooo_mgr, const unsigned num_lanes)
                 memset(&p_mgr->lens64[12], 0xFF, set_0xff_size);
         } else if (num_lanes == 16)
                 p_mgr->unused_lanes = 0xFEDCBA9876543210;
+        p_mgr->num_lanes_inuse = 0;
 }
 
 IMB_DLL_LOCAL
