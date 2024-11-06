@@ -1,5 +1,4 @@
-========================================================================
-Release Notes for Intel(R) Multi-Buffer Crypto for IPsec Library
+# Release Notes for Intel(R) Multi-Buffer Crypto for IPsec Library
 
 v2.0 October 2024
 ======================================================================
@@ -628,8 +627,8 @@ General
 - New DOCSIS SEC BPI V3.1 cipher
 - GCM128 and GCM256 updates (with new API that is scatter gather list friendly)
 - GCM192 added
-- Added library API benchmark tool 'ipsec_perf' and
-  script to compare results 'ipsec_diff_tool.py'
+- Added library API benchmark tool `ipsec_perf` and
+  script to compare results `ipsec_diff_tool.py`
 Bug Fixes (vs v0.44)
 - AES CTR mode fix to allow message size not to be multiple of AES block size
 - RSI and RDI registers clobbered when running HMAC-SHA224 or HMAC-SHA256
@@ -649,26 +648,27 @@ General
 - NULL cipher added
 - NULL hash added
 - NASM tool chain compilation added (default)
-
-=======================================
-Feb 11, 2015
+ 
+Feb 11, 2015  
+========================================================================
 
 Fixed, so that the job auth_tag_output_len_in_bytes takes a different 
-value for different MAC types. In particular, the valid values are(in bytes):
-SHA1 - 12
-sha224 - 14 
-SHA256 - 16 
-sha384 - 24
-SHA512 - 32
-XCBC - 12
-MD5 - 12
+value for different MAC types. In particular, the valid values are(in bytes):   
+- SHA1 - 12
+- sha224 - 14 
+- SHA256 - 16 
+- sha384 - 24
+- SHA512 - 32
+- XCBC - 12
+- MD5 - 12
 
-=======================================
 Oct 24, 2011
+========================================================================
 
-SHA_256 added to multibuffer
-------------------------
-12 Aug 2011
+- SHA_256 added to multibuffer
+
+Aug 12, 2011
+========================================================================
 
 API
 
