@@ -11,6 +11,7 @@
 *.dep
 *~
 imb-perf*
+!imb-perf*.py
 imb-kat*
 imb-xvalid*
 imb-fuzz-*
