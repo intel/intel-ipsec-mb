@@ -1,5 +1,11 @@
 # Release Notes for Intel(R) Multi-Buffer Crypto for IPsec Library
 
+Unreleased
+======================================================================
+Performance Applications
+- Added `imb-perf-cmp.py` tool that compares post processed performance metrics.
+
+
 v2.0 October 2024
 ======================================================================
 General
