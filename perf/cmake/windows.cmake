@@ -65,3 +65,9 @@ add_custom_command(
   COMMAND
     ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/imb-speed.py"
     $<TARGET_FILE_DIR:${PERF_APP}>)
+add_custom_command(
+  TARGET ${PERF_APP}
+  POST_BUILD
+  COMMAND
+    ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/imb-perf-cmp.py"
+    $<TARGET_FILE_DIR:${PERF_APP}>)
