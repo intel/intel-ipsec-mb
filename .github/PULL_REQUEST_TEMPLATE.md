@@ -11,4 +11,4 @@
 ## Checklist
 <!--- All checkboxes should be checked -->
 - [ ] Updated relevant documentation (e.g., Release Notes, README files etc.)
-- [ ] Added the relevent labels to PR (e.g. enhancement, bug fix, documentation, version etc.)
+- [ ] Added the relevant labels to PR (e.g. enhancement, bug fix, documentation, version etc.)
