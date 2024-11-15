@@ -8,6 +8,8 @@ Test Applications
 Performance Applications
 - Added `imb-perf-cmp.py` tool that compares post processed performance metrics.
 
+Fixes
+- Fixed SM4-GCM plaintext/ciphertext address calculation (issue #159).
 
 v2.0 October 2024
 ======================================================================
