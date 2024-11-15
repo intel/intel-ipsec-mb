@@ -248,18 +248,27 @@ print_hw_features(void)
         const struct {
                 uint64_t feat_val;
                 const char *feat_name;
-        } feat_tab[] = {
-                { IMB_FEATURE_XSAVE, "XSAVE" },         { IMB_FEATURE_OSXSAVE, "OSXSAVE" },
-                { IMB_FEATURE_SHANI, "SHANI" },         { IMB_FEATURE_AESNI, "AESNI" },
-                { IMB_FEATURE_PCLMULQDQ, "PCLMULQDQ" }, { IMB_FEATURE_CMOV, "CMOV" },
-                { IMB_FEATURE_SSE4_2, "SSE4.2" },       { IMB_FEATURE_AVX, "AVX" },
-                { IMB_FEATURE_AVX2, "AVX2" },           { IMB_FEATURE_AVX512_SKX, "AVX512(SKX)" },
-                { IMB_FEATURE_VAES, "VAES" },           { IMB_FEATURE_VPCLMULQDQ, "VPCLMULQDQ" },
-                { IMB_FEATURE_GFNI, "GFNI" },           { IMB_FEATURE_AVX512_IFMA, "AVX512-IFMA" },
-                { IMB_FEATURE_AVX_IFMA, "AVX-IFMA" },   { IMB_FEATURE_BMI2, "BMI2" },
-                { IMB_FEATURE_HYBRID, "HYBRID-CORE" },  { IMB_FEATURE_SM3NI, "SM3NI" },
-                { IMB_FEATURE_SM4NI, "SM4NI" },         { IMB_FEATURE_SHA512NI, "SHA512NI" }
-        };
+        } feat_tab[] = { { IMB_FEATURE_XSAVE, "XSAVE" },
+                         { IMB_FEATURE_OSXSAVE, "OSXSAVE" },
+                         { IMB_FEATURE_SHANI, "SHANI" },
+                         { IMB_FEATURE_AESNI, "AESNI" },
+                         { IMB_FEATURE_PCLMULQDQ, "PCLMULQDQ" },
+                         { IMB_FEATURE_CMOV, "CMOV" },
+                         { IMB_FEATURE_SSE4_2, "SSE4.2" },
+                         { IMB_FEATURE_AVX, "AVX" },
+                         { IMB_FEATURE_AVX2, "AVX2" },
+                         { IMB_FEATURE_AVX512_SKX, "AVX512(SKX)" },
+                         { IMB_FEATURE_VAES, "VAES" },
+                         { IMB_FEATURE_VPCLMULQDQ, "VPCLMULQDQ" },
+                         { IMB_FEATURE_GFNI, "GFNI" },
+                         { IMB_FEATURE_AVX512_IFMA, "AVX512-IFMA" },
+                         { IMB_FEATURE_AVX_IFMA, "AVX-IFMA" },
+                         { IMB_FEATURE_BMI2, "BMI2" },
+                         { IMB_FEATURE_HYBRID, "HYBRID-CORE" },
+                         { IMB_FEATURE_SM3NI, "SM3NI" },
+                         { IMB_FEATURE_SM4NI, "SM4NI" },
+                         { IMB_FEATURE_SHA512NI, "SHA512NI" },
+                         { IMB_FEATURE_APX, "APX" } };
         IMB_MGR *p_mgr = NULL;
         unsigned i;
 

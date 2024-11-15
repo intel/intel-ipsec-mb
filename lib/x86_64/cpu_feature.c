@@ -235,6 +235,13 @@ detect_osxsave(void)
         return (cpuid_1_0.ecx & (1UL << 27));
 }
 
+static uint32_t
+detect_apx(void)
+{
+        /* Check presence of APX - bit 21 of EDX */
+        return (cpuid_7_1.edx & (1UL << 21));
+}
+
 uint64_t
 cpu_feature_detect(void)
 {
@@ -265,7 +272,8 @@ cpu_feature_detect(void)
                          { 7, IMB_FEATURE_SM4NI, detect_sm4ni },
                          { 7, IMB_FEATURE_SHA512NI, detect_sha512ni },
                          { 1, IMB_FEATURE_XSAVE, detect_xsave },
-                         { 1, IMB_FEATURE_OSXSAVE, detect_osxsave } };
+                         { 1, IMB_FEATURE_OSXSAVE, detect_osxsave },
+                         { 7, IMB_FEATURE_APX, detect_apx } };
         struct cpuid_regs r;
         unsigned hi_leaf_number = 0;
         uint64_t features = 0;
