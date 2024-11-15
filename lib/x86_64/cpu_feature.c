@@ -39,6 +39,7 @@ struct cpuid_regs {
 static struct cpuid_regs cpuid_1_0;
 static struct cpuid_regs cpuid_7_0;
 static struct cpuid_regs cpuid_7_1;
+static struct cpuid_regs cpuid_24_0;
 
 /*
  * A C wrapper for CPUID opcode
@@ -242,6 +243,41 @@ detect_apx(void)
         return (cpuid_7_1.edx & (1UL << 21));
 }
 
+static uint32_t
+detect_avx10(void)
+{
+        /* Check presence of AVX10 - bit 19 of EDX (bits 0-7 of EBX in CPUID(0x24,0) shows version
+         * number of AVX10 (could be 1 or 2, whether is AVX10.1 or AVX10.2, for now) */
+        return (cpuid_7_1.edx & (1UL << 19));
+}
+
+static uint32_t
+detect_avx10_256(void)
+{
+        if (detect_avx10() == 0)
+                return 0;
+
+        return (cpuid_24_0.ebx & (1UL << 17));
+}
+
+static uint32_t
+detect_avx10_512(void)
+{
+        if (detect_avx10() == 0)
+                return 0;
+
+        return (cpuid_24_0.ebx & (1UL << 18));
+}
+
+static uint32_t
+detect_avx10_ver2(void)
+{
+        if (detect_avx10() == 0)
+                return 0;
+
+        return ((cpuid_24_0.ebx & 0xff) >= 2);
+}
+
 uint64_t
 cpu_feature_detect(void)
 {
@@ -273,7 +309,10 @@ cpu_feature_detect(void)
                          { 7, IMB_FEATURE_SHA512NI, detect_sha512ni },
                          { 1, IMB_FEATURE_XSAVE, detect_xsave },
                          { 1, IMB_FEATURE_OSXSAVE, detect_osxsave },
-                         { 7, IMB_FEATURE_APX, detect_apx } };
+                         { 7, IMB_FEATURE_APX, detect_apx },
+                         { 7, IMB_FEATURE_AVX10_256, detect_avx10_256 },
+                         { 7, IMB_FEATURE_AVX10_512, detect_avx10_512 },
+                         { 7, IMB_FEATURE_AVX10_2, detect_avx10_ver2 } };
         struct cpuid_regs r;
         unsigned hi_leaf_number = 0;
         uint64_t features = 0;
@@ -290,6 +329,7 @@ cpu_feature_detect(void)
         if (hi_leaf_number >= 7) {
                 mbcpuid(0x7, 0x0, &cpuid_7_0);
                 mbcpuid(0x7, 0x1, &cpuid_7_1);
+                mbcpuid(0x24, 0x0, &cpuid_24_0);
         }
 
         for (i = 0; i < IMB_DIM(feat_tab); i++) {

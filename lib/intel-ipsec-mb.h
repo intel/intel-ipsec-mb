@@ -937,6 +937,9 @@ typedef int (*imb_self_test_cb_t)(void *cb_arg, const IMB_SELF_TEST_CALLBACK_DAT
 #define IMB_FEATURE_XSAVE          (1ULL << 26)
 #define IMB_FEATURE_OSXSAVE        (1ULL << 27) /* OS-enabled XSAVE */
 #define IMB_FEATURE_APX            (1ULL << 28)
+#define IMB_FEATURE_AVX10_256      (1ULL << 29)
+#define IMB_FEATURE_AVX10_512      (1ULL << 30)
+#define IMB_FEATURE_AVX10_2        (1ULL << 31)
 
 /**
  * Self test defines

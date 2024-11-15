@@ -268,7 +268,9 @@ print_hw_features(void)
                          { IMB_FEATURE_SM3NI, "SM3NI" },
                          { IMB_FEATURE_SM4NI, "SM4NI" },
                          { IMB_FEATURE_SHA512NI, "SHA512NI" },
-                         { IMB_FEATURE_APX, "APX" } };
+                         { IMB_FEATURE_APX, "APX" },
+                         { IMB_FEATURE_AVX10_256, "AVX10-256" },
+                         { IMB_FEATURE_AVX10_512, "AVX10-512" } };
         IMB_MGR *p_mgr = NULL;
         unsigned i;
 
@@ -283,7 +285,7 @@ print_hw_features(void)
         for (i = 0; i < IMB_DIM(feat_tab); i++) {
                 const uint64_t val = feat_tab[i].feat_val;
 
-                printf("\t%-*.*s : %s\n", 12, 12, feat_tab[i].feat_name,
+                printf("\t%-*.*s : %s\n", 13, 13, feat_tab[i].feat_name,
                        ((p_mgr->features & val) == val) ? "OK" : "n/a");
         }
 
