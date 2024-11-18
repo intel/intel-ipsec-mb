@@ -3026,7 +3026,6 @@ usage(const char *app_name)
                 "            - size:1:num_iterations format\n"
                 "              e.g. 64:1:128 => repeat 128 times operation on a 64 byte buffer\n"
 #endif
-                "            (-o still applies for MAC)\n"
                 "--num-jobs: maximum number of number of jobs to submit in one go "
                 "(maximum = %d)\n"
                 "--safe-check: check if keys, IVs, plaintext or tags "
