@@ -624,6 +624,7 @@ unsigned int imix_enabled = 0;
 uint32_t cipher_iv_size = 0;
 uint32_t auth_iv_size = 0;
 uint8_t auth_tag_size = 0;
+uint64_t offset = 4;
 
 struct custom_job_params custom_job_params = { .cipher_mode = IMB_CIPHER_NULL,
                                                .hash_alg = IMB_AUTH_NULL,
@@ -1237,6 +1238,7 @@ fill_job(IMB_JOB *job, const struct params_s *params, uint8_t *buf, uint8_t *dig
         uint8_t *ipad = keys->ipad;
         uint8_t *opad = keys->opad;
         struct gcm_key_data *gdata_key = &keys->gdata_key;
+        uint64_t cipher_offset_in_bytes = offset;
 
         /* Force partial byte, by subtracting 3 bits from the full length */
         if (params->cipher_mode == IMB_CIPHER_CNTR_BITLEN)
@@ -1245,15 +1247,13 @@ fill_job(IMB_JOB *job, const struct params_s *params, uint8_t *buf, uint8_t *dig
                 job->msg_len_to_cipher_in_bytes = buf_size;
 
         job->msg_len_to_hash_in_bytes = buf_size;
-        job->hash_start_src_offset_in_bytes = 0;
-        job->cipher_start_src_offset_in_bytes = 0;
         job->iv = cipher_iv;
         job->user_data = (void *) ((uintptr_t) index);
 
         if (params->cipher_mode == IMB_CIPHER_PON_AES_CNTR) {
                 /* Subtract XGEM header */
                 job->msg_len_to_cipher_in_bytes -= 8;
-                job->cipher_start_src_offset_in_bytes = 8;
+                cipher_offset_in_bytes = 8;
                 /* If no crypto needed, set msg_len_to_cipher to 0 */
                 if (params->key_size == 0)
                         job->msg_len_to_cipher_in_bytes = 0;
@@ -1265,7 +1265,7 @@ fill_job(IMB_JOB *job, const struct params_s *params, uint8_t *buf, uint8_t *dig
                         const uint64_t cipher_adjust = /* SA + DA only */
                                 IMB_DOCSIS_CRC32_MIN_ETH_PDU_SIZE - 2;
 
-                        job->cipher_start_src_offset_in_bytes += cipher_adjust;
+                        cipher_offset_in_bytes += cipher_adjust;
                         job->msg_len_to_cipher_in_bytes -= cipher_adjust;
                         job->msg_len_to_hash_in_bytes -= IMB_DOCSIS_CRC32_TAG_SIZE;
                 } else if (buf_size > IMB_DOCSIS_CRC32_TAG_SIZE) {
@@ -1278,9 +1278,11 @@ fill_job(IMB_JOB *job, const struct params_s *params, uint8_t *buf, uint8_t *dig
         }
 
         /* In-place operation */
-        job->src = buf;
-        job->dst = buf + job->cipher_start_src_offset_in_bytes;
+        /* "offset" will be applied to src inside the library code */
+        job->src = buf - offset;
+        job->dst = buf - offset + cipher_offset_in_bytes;
         job->auth_tag_output = digest;
+        job->hash_start_src_offset_in_bytes = offset;
 
         job->hash_alg = params->hash_alg;
         switch (params->hash_alg) {
@@ -1426,6 +1428,8 @@ fill_job(IMB_JOB *job, const struct params_s *params, uint8_t *buf, uint8_t *dig
         job->cipher_mode = params->cipher_mode;
         job->key_len_in_bytes = params->key_size;
 
+        job->cipher_start_src_offset_in_bytes = cipher_offset_in_bytes;
+
         switch (job->cipher_mode) {
         case IMB_CIPHER_CBCS_1_9:
                 job->cipher_fields.CBCS.next_iv = next_iv;
@@ -1497,6 +1501,7 @@ fill_job(IMB_JOB *job, const struct params_s *params, uint8_t *buf, uint8_t *dig
                 job->iv_len_in_bytes = 16;
                 job->cipher_start_src_offset_in_bits = 0;
                 job->msg_len_to_cipher_in_bits = (job->msg_len_to_cipher_in_bytes * 8);
+                job->cipher_start_src_offset_in_bits *= 8;
                 break;
         case IMB_CIPHER_KASUMI_UEA1_BITLEN:
                 job->enc_keys = k2;
@@ -1504,6 +1509,7 @@ fill_job(IMB_JOB *job, const struct params_s *params, uint8_t *buf, uint8_t *dig
                 job->iv_len_in_bytes = 8;
                 job->cipher_start_src_offset_in_bits = 0;
                 job->msg_len_to_cipher_in_bits = (job->msg_len_to_cipher_in_bytes * 8);
+                job->cipher_start_src_offset_in_bits *= 8;
                 break;
         case IMB_CIPHER_CHACHA20:
         case IMB_CIPHER_CHACHA20_POLY1305:
@@ -3033,7 +3039,9 @@ usage(const char *app_name)
                 "requires library compiled with SAFE_DATA)\n"
                 "--avx-sse: if XGETBV is available then check for potential "
                 "AVX-SSE transition problems\n"
-                "--burst-api: use burst API instead of single job API\n",
+                "--burst-api: use burst API instead of single job API\n"
+                "--offset: offset in bytes where the plaintext will be placed from the start of "
+                "the allocated buffer (default 4 bytes)",
                 app_name, MAX_NUM_JOBS);
 }
 
@@ -3339,6 +3347,9 @@ main(int argc, char *argv[])
                                 fprintf(stderr, "XGETBV not available\n");
                 } else if (strcmp(argv[i], "--burst-api") == 0) {
                         burst_api = 1;
+                } else if (strcmp(argv[i], "--offset") == 0) {
+                        i = get_next_num_arg((const char *const *) argv, i, argc, &offset,
+                                             sizeof(offset));
                 } else {
                         usage(argv[0]);
                         return EXIT_FAILURE;

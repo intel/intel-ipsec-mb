@@ -2,6 +2,9 @@
 
 Unreleased
 ======================================================================
+Test Applications
+- Added `--offset` parameter to `imb-xvalid` application.
+
 Performance Applications
 - Added `imb-perf-cmp.py` tool that compares post processed performance metrics.
 
