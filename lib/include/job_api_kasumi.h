@@ -50,9 +50,8 @@ submit_kasumi_uea1_job(IMB_MGR *state, IMB_JOB *job)
                 const uint32_t msg_bytelen = msg_bitlen >> 3;
                 const uint32_t msg_byteoff = msg_bitoff >> 3;
                 const void *src = job->src + msg_byteoff;
-                void *dst = job->dst + msg_byteoff;
 
-                IMB_KASUMI_F8_1_BUFFER(state, key, iv, src, dst, msg_bytelen);
+                IMB_KASUMI_F8_1_BUFFER(state, key, iv, src, job->dst, msg_bytelen);
         }
 
         job->status |= IMB_STATUS_COMPLETED_CIPHER;

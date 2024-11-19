@@ -10,6 +10,8 @@ Performance Applications
 
 Fixes
 - Fixed SM4-GCM plaintext/ciphertext address calculation (issue #159).
+- Fixed destination pointer calculation for SNOW3G and KASUMI, in JOB API, which should
+  be job->dst regardless the cipher offset. (issue #162).
 
 v2.0 October 2024
 ======================================================================
