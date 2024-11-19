@@ -1253,7 +1253,7 @@ fill_job(IMB_JOB *job, const struct params_s *params, uint8_t *buf, uint8_t *dig
         if (params->cipher_mode == IMB_CIPHER_PON_AES_CNTR) {
                 /* Subtract XGEM header */
                 job->msg_len_to_cipher_in_bytes -= 8;
-                cipher_offset_in_bytes = 8;
+                cipher_offset_in_bytes += 8;
                 /* If no crypto needed, set msg_len_to_cipher to 0 */
                 if (params->key_size == 0)
                         job->msg_len_to_cipher_in_bytes = 0;
@@ -1864,7 +1864,8 @@ modify_pon_test_buf(uint8_t *test_buf, const IMB_JOB *job, const uint32_t pli,
         uint64_t *buf64 = (uint64_t *) test_buf;
         const uint32_t *tag32 = (uint32_t *) job->auth_tag_output;
         const uint64_t hec_mask = BSWAP64(0xfffffffffffe000);
-        const uint64_t xgem_hdr_out = ((const uint64_t *) job->src)[0];
+        const uint64_t xgem_hdr_out =
+                ((const uint64_t *) (job->src + job->hash_start_src_offset_in_bytes))[0];
 
         /* Update CRC if PLI > 4 */
         if (pli > 4)
