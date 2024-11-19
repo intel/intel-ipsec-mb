@@ -292,7 +292,6 @@ mksection .text
         shr             %%TGP1, 3               ;; convert from bits to bytes (src & dst)
 
         mov             %%TGP2, [%%TGP0 + _dst]
-        add             %%TGP2, %%TGP1
         mov             [state + _snow3g_args_out + %%LANE*8], %%TGP2
 
         add             %%TGP1, [%%TGP0 + _src]

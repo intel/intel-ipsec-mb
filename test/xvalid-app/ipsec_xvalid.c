@@ -1497,7 +1497,6 @@ fill_job(IMB_JOB *job, const struct params_s *params, uint8_t *buf, uint8_t *dig
                 job->enc_keys = k2;
                 job->dec_keys = k2;
                 job->iv_len_in_bytes = 16;
-                job->cipher_start_src_offset_in_bits = 0;
                 job->msg_len_to_cipher_in_bits = (job->msg_len_to_cipher_in_bytes * 8);
                 job->cipher_start_src_offset_in_bits *= 8;
                 break;

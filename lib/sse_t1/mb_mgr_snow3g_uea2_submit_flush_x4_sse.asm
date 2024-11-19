@@ -198,7 +198,6 @@ mksection .text
         mov             %%TGP0, [job + _cipher_start_offset_in_bits]
         shr             %%TGP0, 3      ;; convert from bits to bytes (src & dst)
         mov             %%TGP1, [job + _dst]
-        add             %%TGP1, %%TGP0
         add             %%TGP0, [job + _src]
 
         mov             [state + _snow3g_args_in + %%LANE*8], %%TGP0
