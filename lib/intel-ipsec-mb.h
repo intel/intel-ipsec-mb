@@ -390,6 +390,10 @@ struct IMB_SGL_IOV {
  * expected to point to an array of 3 pointers for
  * the corresponding 3 key schedules.
  * - same key schedule used for enc and dec operations
+ *
+ * Cipher offset only applies to src pointer, not dst pointer.
+ * In case of an in-place operation, dst pointer needs to point
+ * at src + cipher_start_src_offset_in_bytes/bits.
  */
 
 typedef struct IMB_JOB {
