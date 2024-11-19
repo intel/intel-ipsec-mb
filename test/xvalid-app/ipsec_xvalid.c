@@ -1461,8 +1461,6 @@ fill_job(IMB_JOB *job, const struct params_s *params, uint8_t *buf, uint8_t *dig
         case IMB_CIPHER_CCM:
                 job->msg_len_to_cipher_in_bytes = buf_size;
                 job->msg_len_to_hash_in_bytes = buf_size;
-                job->hash_start_src_offset_in_bytes = 0;
-                job->cipher_start_src_offset_in_bytes = 0;
                 job->u.CCM.aad_len_in_bytes = params->aad_size;
                 job->u.CCM.aad = aad;
                 job->enc_keys = enc_keys;
