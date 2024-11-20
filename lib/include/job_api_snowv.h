@@ -69,8 +69,8 @@ submit_snow_v_aead_job(IMB_MGR *state, IMB_JOB *job)
                 IMB_GHASH(state, &gdata_key, job->dst, job->msg_len_to_cipher_in_bytes,
                           (void *) auth, sizeof(imb_uint128_t));
         else
-                IMB_GHASH(state, &gdata_key, job->src, job->msg_len_to_cipher_in_bytes,
-                          (void *) auth, sizeof(imb_uint128_t));
+                IMB_GHASH(state, &gdata_key, job->src + job->cipher_start_src_offset_in_bytes,
+                          job->msg_len_to_cipher_in_bytes, (void *) auth, sizeof(imb_uint128_t));
 
         IMB_GHASH(state, &gdata_key, (void *) &temp, sizeof(temp), (void *) auth,
                   sizeof(imb_uint128_t));
