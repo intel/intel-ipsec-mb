@@ -1508,6 +1508,9 @@ translate_hash_alg(const enum test_hash_alg_e test_mode)
         case TEST_SM3_HMAC:
                 hash_alg = IMB_AUTH_HMAC_SM3;
                 break;
+        case TEST_MD5:
+                hash_alg = IMB_AUTH_MD5;
+                break;
         default:
                 break;
         }
