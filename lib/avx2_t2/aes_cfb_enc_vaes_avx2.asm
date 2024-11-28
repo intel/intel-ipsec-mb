@@ -199,22 +199,29 @@
 %endmacro
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; AES-CFB Encrypt 1 block for 16 lanes
-;; at the time. Assume previous ciphertext / IV blocks are in LANE_0-15
+;; Encrypt 1 block for 16 lanes at the time.
+;; Assume previous ciphertext / IV blocks are in LANE_0-15
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-%macro ENCRYPT_1_BLOCK_16_LANES 2
+%macro ENCRYPT_1_BLOCK_16_LANES 3
 %define %%IDX           %1      ; [in] offset to read data from
 %define %%NROUNDS       %2      ; [in] number of AES rounds to perform
+%define %%MODE          %3      ; [in] flag to indicate mode (CFB or CBC)
 
         ;; read 1 block per each lane
         RD_SINGLE_BLOCK         %%IDX, TMP_0_3, TMP_4_7
  
+%ifidn %%MODE, CFB
         ;; encrypt previous ciphertext/IV
         AESENC_ROUNDS_x16       LANE_0_7, LANE_8_15, %%NROUNDS
-
+%endif
         ;; XOR encrypted block with plaintext
         YMM_OPCODE3_DSTR_SRC1R_SRC2M_BLOCKS_0_16        16, vpxor,              \
                 LANE_0_7, LANE_8_15, LANE_0_7, LANE_8_15, TMP_0_3, TMP_4_7
+
+%ifidn %%MODE, CBC
+        ;; encrypt previous ciphertext/IV
+        AESENC_ROUNDS_x16       LANE_0_7, LANE_8_15, %%NROUNDS
+%endif
 
         ;; Write out results from LANE_0_7, LANE_8_15
         LOAD_PTRx8 OUT_PTRS, 0
@@ -233,8 +240,9 @@
 ; clobbers GP regisers r8 - r15, rbx and arg2 (Linux:rsi/Windows rdx)
 ; clobers ymm0:ymm15
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-%macro CFB_ENC_16 1
+%macro AES_ENC_16 2
 %define %%NROUNDS       %1  ;; [in] Number of AES rounds; numerical value
+%define %%MODE          %2  ;; [in] flag to indicate mode (CFB or CBC)
 
         ;; load IVs / prev ciphertexts per lane
         vmovdqa         LANE_0_1, [IV + 32 * 0]
@@ -252,7 +260,7 @@ align 32
         cmp             LEN, 16
         jb              %%encrypt_end
 
-        ENCRYPT_1_BLOCK_16_LANES INDEX, %%NROUNDS
+        ENCRYPT_1_BLOCK_16_LANES INDEX, %%NROUNDS, %%MODE
         sub             LEN, 16
         add             INDEX, 16
         jmp             %%encrypt_16_start
@@ -295,7 +303,9 @@ align 32
         vmovdqa          [OUT_PTRS + 32 * 2], TMP_7
         vmovdqa          [OUT_PTRS + 32 * 3], TMP_0
 %%encrypt_16_done:
-%endmacro ;; CFB_ENC_16
+%endmacro ;; AES_ENC_16
+
+%ifndef AES_CBC_CMAC
 
 mksection .text
 
@@ -305,7 +315,7 @@ mksection .text
 align 32
 MKGLOBAL(aes_cfb_enc_128_vaes_avx2,function,internal)
 aes_cfb_enc_128_vaes_avx2:
-        CFB_ENC_16 11
+        AES_ENC_16 11, CFB
         ret
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -314,7 +324,7 @@ aes_cfb_enc_128_vaes_avx2:
 align 32
 MKGLOBAL(aes_cfb_enc_192_vaes_avx2,function,internal)
 aes_cfb_enc_192_vaes_avx2:
-        CFB_ENC_16 13
+        AES_ENC_16 13, CFB
         ret
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -323,7 +333,8 @@ aes_cfb_enc_192_vaes_avx2:
 align 32
 MKGLOBAL(aes_cfb_enc_256_vaes_avx2,function,internal)
 aes_cfb_enc_256_vaes_avx2:
-        CFB_ENC_16 15
+        AES_ENC_16 15, CFB
         ret
+%endif ;; AES_CBC_CMAC
 
 mksection stack-noexec
