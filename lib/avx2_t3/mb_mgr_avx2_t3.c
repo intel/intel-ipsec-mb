@@ -282,10 +282,10 @@ reset_ooo_mgrs(IMB_MGR *state)
         /* DOCSIS SEC BPI (AES CBC + AES CFB for partial block)
          * uses same settings as AES CBC.
          */
-        ooo_mgr_docsis_aes_reset(state->docsis128_sec_ooo, 8);
-        ooo_mgr_docsis_aes_reset(state->docsis128_crc32_sec_ooo, 8);
-        ooo_mgr_docsis_aes_reset(state->docsis256_sec_ooo, 8);
-        ooo_mgr_docsis_aes_reset(state->docsis256_crc32_sec_ooo, 8);
+        ooo_mgr_docsis_aes_reset(state->docsis128_sec_ooo, 16);
+        ooo_mgr_docsis_aes_reset(state->docsis128_crc32_sec_ooo, 16);
+        ooo_mgr_docsis_aes_reset(state->docsis256_sec_ooo, 16);
+        ooo_mgr_docsis_aes_reset(state->docsis256_crc32_sec_ooo, 16);
 
         /* Init ZUC out-of-order fields */
         ooo_mgr_zuc_reset(state->zuc_eea3_ooo, 8);
