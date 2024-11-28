@@ -548,6 +548,10 @@ asm_avx2_lib_objs := \
 	mb_mgr_aes192_cfb_enc_avx2.o \
 	mb_mgr_aes256_cfb_enc_avx2.o \
 	aes_cfb_enc_vaes_avx2.o \
+	mb_mgr_aes128_cbc_enc_avx2.o \
+	mb_mgr_aes192_cbc_enc_avx2.o \
+	mb_mgr_aes256_cbc_enc_avx2.o \
+	aes_cbc_enc_vaes_avx2.o \
 	snow3g_uia2_by4_avx.o
 
 #

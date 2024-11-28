@@ -115,6 +115,18 @@ aes_cbc_dec_192_vaes_avx2(const void *in, const void *IV, const void *keys, cons
 void
 aes_cbc_dec_256_vaes_avx2(const void *in, const void *IV, const void *keys, const void *out,
                           uint64_t len_bytes);
+IMB_JOB *
+submit_job_aes128_cbc_enc_vaes_avx2(MB_MGR_AES_OOO *state, IMB_JOB *job);
+IMB_JOB *
+flush_job_aes128_cbc_enc_vaes_avx2(MB_MGR_AES_OOO *state);
+IMB_JOB *
+submit_job_aes192_cbc_enc_vaes_avx2(MB_MGR_AES_OOO *state, IMB_JOB *job);
+IMB_JOB *
+flush_job_aes192_cbc_enc_vaes_avx2(MB_MGR_AES_OOO *state);
+IMB_JOB *
+submit_job_aes256_cbc_enc_vaes_avx2(MB_MGR_AES_OOO *state, IMB_JOB *job);
+IMB_JOB *
+flush_job_aes256_cbc_enc_vaes_avx2(MB_MGR_AES_OOO *state);
 
 IMB_DLL_EXPORT void
 set_suite_id_avx2_t2(IMB_MGR *state, IMB_JOB *job);

@@ -96,17 +96,17 @@
 #define SUBMIT_JOB_AES_GCM_ENC submit_job_gcm_enc_avx2
 
 /* AES-CBC */
-#define SUBMIT_JOB_AES_CBC_128_ENC submit_job_aes128_cbc_enc_avx
-#define SUBMIT_JOB_AES_CBC_128_DEC submit_job_aes128_cbc_dec_avx
-#define FLUSH_JOB_AES_CBC_128_ENC  flush_job_aes128_cbc_enc_avx
+#define SUBMIT_JOB_AES_CBC_128_ENC submit_job_aes128_cbc_enc_vaes_avx2
+#define SUBMIT_JOB_AES_CBC_128_DEC submit_job_aes128_cbc_dec_vaes_avx2
+#define FLUSH_JOB_AES_CBC_128_ENC  flush_job_aes128_cbc_enc_vaes_avx2
 
-#define SUBMIT_JOB_AES_CBC_192_ENC submit_job_aes192_cbc_enc_avx
-#define SUBMIT_JOB_AES_CBC_192_DEC submit_job_aes192_cbc_dec_avx
-#define FLUSH_JOB_AES_CBC_192_ENC  flush_job_aes192_cbc_enc_avx
+#define SUBMIT_JOB_AES_CBC_192_ENC submit_job_aes192_cbc_enc_vaes_avx2
+#define SUBMIT_JOB_AES_CBC_192_DEC submit_job_aes192_cbc_dec_vaes_avx2
+#define FLUSH_JOB_AES_CBC_192_ENC  flush_job_aes192_cbc_enc_vaes_avx2
 
-#define SUBMIT_JOB_AES_CBC_256_ENC submit_job_aes256_cbc_enc_avx
-#define SUBMIT_JOB_AES_CBC_256_DEC submit_job_aes256_cbc_dec_avx
-#define FLUSH_JOB_AES_CBC_256_ENC  flush_job_aes256_cbc_enc_avx
+#define SUBMIT_JOB_AES_CBC_256_ENC submit_job_aes256_cbc_enc_vaes_avx2
+#define SUBMIT_JOB_AES_CBC_256_DEC submit_job_aes256_cbc_dec_vaes_avx2
+#define FLUSH_JOB_AES_CBC_256_ENC  flush_job_aes256_cbc_enc_vaes_avx2
 
 #define AES_CBC_DEC_128 aes_cbc_dec_128_vaes_avx2
 #define AES_CBC_DEC_192 aes_cbc_dec_192_vaes_avx2
@@ -275,9 +275,9 @@ static void
 reset_ooo_mgrs(IMB_MGR *state)
 {
         /* Init AES out-of-order fields */
-        ooo_mgr_aes_reset(state->aes128_ooo, 8);
-        ooo_mgr_aes_reset(state->aes192_ooo, 8);
-        ooo_mgr_aes_reset(state->aes256_ooo, 8);
+        ooo_mgr_aes_reset(state->aes128_ooo, 16);
+        ooo_mgr_aes_reset(state->aes192_ooo, 16);
+        ooo_mgr_aes_reset(state->aes256_ooo, 16);
 
         /* DOCSIS SEC BPI (AES CBC + AES CFB for partial block)
          * uses same settings as AES CBC.

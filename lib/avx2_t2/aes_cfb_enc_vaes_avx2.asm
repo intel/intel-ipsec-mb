@@ -199,7 +199,7 @@
 %endmacro
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Encrypt 1 block for 16 lanes at the time.
+;; Encrypt 1 block for 16 lanes at a time.
 ;; Assume previous ciphertext / IV blocks are in LANE_0-15
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 %macro ENCRYPT_1_BLOCK_16_LANES 3
@@ -214,12 +214,12 @@
         ;; encrypt previous ciphertext/IV
         AESENC_ROUNDS_x16       LANE_0_7, LANE_8_15, %%NROUNDS
 %endif
-        ;; XOR encrypted block with plaintext
+        ;; XOR with plaintext
         YMM_OPCODE3_DSTR_SRC1R_SRC2M_BLOCKS_0_16        16, vpxor,              \
                 LANE_0_7, LANE_8_15, LANE_0_7, LANE_8_15, TMP_0_3, TMP_4_7
 
 %ifidn %%MODE, CBC
-        ;; encrypt previous ciphertext/IV
+        ;; encrypt previous ciphertext/IV XOR plaintext
         AESENC_ROUNDS_x16       LANE_0_7, LANE_8_15, %%NROUNDS
 %endif
 
@@ -237,8 +237,8 @@
 ; 16 bytes)
 ;   - loop encrypting LEN bytes of input data
 ;   - each loop encrypts 1 block across 16 lanes
-; clobbers GP regisers r8 - r15, rbx and arg2 (Linux:rsi/Windows rdx)
-; clobers ymm0:ymm15
+; clobbers GP registers r8 - r15, rbx and arg2 (Linux:rsi/Windows rdx)
+; clobbers ymm0:ymm15
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 %macro AES_ENC_16 2
 %define %%NROUNDS       %1  ;; [in] Number of AES rounds; numerical value

@@ -2,12 +2,15 @@
 
 Unreleased
 ======================================================================
+Library
+- Added AES-CFB AVX2 type 2 implementation.
+- Added AES-CBC AVX2 type 2 implementation.
+
 Test Applications
 - Added `--offset` parameter to `imb-xvalid` application.
 
 Performance Applications
 - Added `imb-perf-cmp.py` tool that compares post processed performance metrics.
-- Added AES-CFB AVX2 type 2.
 - Improved stability of imb-perf application.
 
 Fixes
