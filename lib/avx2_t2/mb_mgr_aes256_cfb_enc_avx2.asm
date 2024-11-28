@@ -32,10 +32,10 @@
 %include "include/const.inc"
 %include "include/clear_regs.inc"
 
-%ifndef AES_CFB_ENC_X16
-%define AES_CFB_ENC_X16 aes_cfb_enc_256_vaes_avx2
+%ifndef AES_ENC_X16
+%define AES_ENC_X16 aes_cfb_enc_256_vaes_avx2
 %define NUM_KEYS 15
-%define SUBMIT_JOB_AES_CFB_ENC submit_job_aes256_cfb_enc_vaes_avx2
-%define FLUSH_JOB_AES_CFB_ENC flush_job_aes256_cfb_enc_vaes_avx2
+%define SUBMIT_JOB_AES_ENC submit_job_aes256_cfb_enc_vaes_avx2
+%define FLUSH_JOB_AES_ENC flush_job_aes256_cfb_enc_vaes_avx2
 %endif
 %include "avx2_t2/mb_mgr_aes128_cfb_enc_avx2.asm"

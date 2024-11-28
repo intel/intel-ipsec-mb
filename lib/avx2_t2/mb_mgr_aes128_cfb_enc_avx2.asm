@@ -32,15 +32,15 @@
 %include "include/const.inc"
 %include "include/clear_regs.inc"
 
-%ifndef AES_CFB_ENC_X16
-%define AES_CFB_ENC_X16         aes_cfb_enc_128_vaes_avx2
-%define NUM_KEYS                11
-%define SUBMIT_JOB_AES_CFB_ENC  submit_job_aes128_cfb_enc_vaes_avx2
-%define FLUSH_JOB_AES_CFB_ENC   flush_job_aes128_cfb_enc_vaes_avx2
+%ifndef AES_ENC_X16
+%define AES_ENC_X16 aes_cfb_enc_128_vaes_avx2
+%define NUM_KEYS 11
+%define SUBMIT_JOB_AES_ENC submit_job_aes128_cfb_enc_vaes_avx2
+%define FLUSH_JOB_AES_ENC flush_job_aes128_cfb_enc_vaes_avx2
 %endif
 
-; void AES_CFB_ENC_X16(AES_ARGS_X16 *args, UINT64 len_in_bytes);
-extern AES_CFB_ENC_X16
+; void AES_ENC_X16(AES_ARGS_X16 *args, UINT64 len_in_bytes);
+extern AES_ENC_X16
 
 mksection .text
 
@@ -54,7 +54,7 @@ mksection .text
 
 %define state           arg1
 %define job             arg2
-%define min_len         arg2    ;; min_len is passed to AES_CFB_ENC_X16 call
+%define min_len         arg2    ;; min_len is passed to AES_ENC_X16 call
 %define job_rax         rax
 
 %define idx             rbp
@@ -321,10 +321,10 @@ endstruc
 %endmacro ;; STORE_JOB_DATA
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; Handle both SUBMIT and FLUSH calls for AES CFB encryption
+; Handle both SUBMIT and FLUSH calls for AES CFB/CBC encryption
 ; Allows to process 16 lanes in parallel
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-%macro SUBMIT_FLUSH_AES_CFB_ENC 1
+%macro SUBMIT_FLUSH_AES_ENC 1
 %define %%SUBMIT_FLUSH          %1
 
 %if %%SUBMIT_FLUSH == FLUSH
@@ -386,7 +386,7 @@ endstruc
 
         ; state == AES_ARGS == arg1
         ; min_len == arg2
-        call    AES_CFB_ENC_X16
+        call    AES_ENC_X16
         ; state and idx are intact
 
 %%len_is_0:
@@ -448,25 +448,25 @@ endstruc
 %endif ;; SAFE_DATA
 %endmacro
 
-; JOB* SUBMIT_JOB_AES_CFB_ENC(MB_MGR_AES_OOO *state, IMB_JOB *job)
+; JOB* SUBMIT_JOB_AES_ENC(MB_MGR_AES_OOO *state, IMB_JOB *job)
 ; arg 1 : state
 ; arg 2 : job
 align 32
-MKGLOBAL(SUBMIT_JOB_AES_CFB_ENC,function,internal)
-SUBMIT_JOB_AES_CFB_ENC:
+MKGLOBAL(SUBMIT_JOB_AES_ENC,function,internal)
+SUBMIT_JOB_AES_ENC:
         FUNC_SAVE
-        SUBMIT_FLUSH_AES_CFB_ENC SUBMIT
+        SUBMIT_FLUSH_AES_ENC SUBMIT
         FUNC_RESTORE
         ret
 
-; JOB* FLUSH_JOB_AES_CFB_ENC(MB_MGR_AES_OOO *state, IMB_JOB *job)
+; JOB* FLUSH_JOB_AES_ENC(MB_MGR_AES_OOO *state, IMB_JOB *job)
 ; arg 1 : state
 ; arg 2 : job
 align 32
-MKGLOBAL(FLUSH_JOB_AES_CFB_ENC,function,internal)
-FLUSH_JOB_AES_CFB_ENC:
+MKGLOBAL(FLUSH_JOB_AES_ENC,function,internal)
+FLUSH_JOB_AES_ENC:
         FUNC_SAVE
-        SUBMIT_FLUSH_AES_CFB_ENC FLUSH
+        SUBMIT_FLUSH_AES_ENC FLUSH
         FUNC_RESTORE
         ret
 mksection stack-noexec
