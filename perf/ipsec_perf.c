@@ -96,7 +96,7 @@ typedef cpuset_t cpu_set_t;
 /* number of test buffers */
 #define NUM_OFFSETS (BUFSIZE / REGION_SIZE)
 /* default number of test runs */
-#define DEFAULT_NUM_RUNS 16
+#define DEFAULT_NUM_RUNS 8
 /* maximum number of 128-bit expanded keys */
 #define KEYS_PER_JOB 15
 /* default time for one packet size to be tested for */
@@ -1155,7 +1155,7 @@ init_mem(uint8_t **p_buffer, imb_uint128_t **p_keys)
 {
         const size_t bufs_size = index_limit * REGION_SIZE;
         const size_t keys_size = index_limit * KEYS_PER_JOB * sizeof(imb_uint128_t);
-        const size_t alignment = 64;
+        const size_t alignment = 64 * 1024;
         uint8_t *buf = NULL;
         imb_uint128_t *keys = NULL;
 #ifdef LINUX

@@ -8,6 +8,7 @@ Test Applications
 Performance Applications
 - Added `imb-perf-cmp.py` tool that compares post processed performance metrics.
 - Added AES-CFB AVX2 type 2.
+- Improved stability of imb-perf application.
 
 Fixes
 - Fixed SM4-GCM plaintext/ciphertext address calculation (issue #159).
