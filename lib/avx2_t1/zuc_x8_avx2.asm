@@ -367,32 +367,80 @@ align 64
 
 %endmacro
 
+;;
+;; Load LFSR register from memory into YMM register
+;;
+%macro LOAD_LFSR 5
+%define %%STATE     %1 ;; [in] ZUC state
+%define %%ROUND_NUM %2 ;; [in] GP Register with Round number
+%define %%REG_IDX   %3 ;; [in] Register index to load (immediate)
+%define %%TMP       %4 ;; [clobbered] Temp GP reg
+%define %%LFSR      %5 ;; [out] YMM register to contain LFSR
+
+        lea     %%TMP, [%%ROUND_NUM + %%REG_IDX]
+        and     %%TMP, 0xf
+        shl     %%TMP, 5
+        vmovdqa %%LFSR, [%%TMP + %%STATE]
+
+%endmacro
+
+;;
+;; Store LFSR register to memory from YMM register
+;;
+%macro STORE_LFSR 5
+%define %%STATE     %1 ;; [in] ZUC state
+%define %%ROUND_NUM %2 ;; [in] GP Register with Round number
+%define %%REG_IDX   %3 ;; [in] Register index to load (immediate)
+%define %%TMP       %4 ;; [clobbered] Temp GP reg
+%define %%LFSR      %5 ;; [in] YMM register to contain LFSR
+
+        lea     %%TMP, [%%ROUND_NUM + %%REG_IDX]
+        and     %%TMP, 0xf
+        shl     %%TMP, 5
+        vmovdqa [%%TMP + %%STATE], %%LFSR
+
+%endmacro
 ;
 ; Calculates X0-X3 from LFSR registers
 ;
-%macro  BITS_REORG8 12-13
+%macro  BITS_REORG8 13-14
 %define %%STATE         %1  ; [in] ZUC state
 %define %%ROUND_NUM     %2  ; [in] Round number
-%define %%LFSR_0        %3  ; [clobbered] LFSR_0
-%define %%LFSR_2        %4  ; [clobbered] LFSR_2
-%define %%LFSR_5        %5  ; [clobbered] LFSR_5
-%define %%LFSR_7        %6  ; [clobbered] LFSR_7
-%define %%LFSR_9        %7  ; [clobbered] LFSR_9
-%define %%LFSR_11       %8  ; [clobbered] LFSR_11
-%define %%LFSR_14       %9  ; [clobbered] LFSR_14
-%define %%LFSR_15       %10 ; [clobbered] LFSR_15
-%define %%YTMP1         %11 ; [clobbered] Temporary YMM register
-%define %%YTMP2         %12 ; [clobbered] Temporary YMM register
-%define %%X3            %13 ; [out] YMM register containing X3 of all lanes (only for work mode)
+%define %%TMP           %3  ; [clobbered] Temporary GP register (used when ROUND_NUM is a register), or "no_reg"
+%define %%LFSR_0        %4  ; [clobbered] LFSR_0
+%define %%LFSR_2        %5  ; [clobbered] LFSR_2
+%define %%LFSR_5        %6  ; [clobbered] LFSR_5
+%define %%LFSR_7        %7  ; [clobbered] LFSR_7
+%define %%LFSR_9        %8  ; [clobbered] LFSR_9
+%define %%LFSR_11       %9  ; [clobbered] LFSR_11
+%define %%LFSR_14       %10 ; [clobbered] LFSR_14
+%define %%LFSR_15       %11 ; [clobbered] LFSR_15
+%define %%YTMP1         %12 ; [clobbered] Temporary YMM register
+%define %%YTMP2         %13 ; [clobbered] Temporary YMM register
+%define %%X3            %14 ; [out] YMM register containing X3 of all lanes (only for work mode)
+
+%ifnum %%ROUND_NUM
         vmovdqa %%LFSR_15, [%%STATE + ((15 + %%ROUND_NUM) % 16)*32]
         vmovdqa %%LFSR_14, [%%STATE + ((14 + %%ROUND_NUM) % 16)*32]
         vmovdqa %%LFSR_11, [%%STATE + ((11 + %%ROUND_NUM) % 16)*32]
         vmovdqa %%LFSR_9,  [%%STATE + (( 9 + %%ROUND_NUM) % 16)*32]
         vmovdqa %%LFSR_7,  [%%STATE + (( 7 + %%ROUND_NUM) % 16)*32]
         vmovdqa %%LFSR_5,  [%%STATE + (( 5 + %%ROUND_NUM) % 16)*32]
-%if (%0 == 13) ;Only needed when generating X3 (for "working" mode)
+%if (%0 == 14) ;Only needed when generating X3 (for "working" mode)
         vmovdqa %%LFSR_2,  [%%STATE + (( 2 + %%ROUND_NUM) % 16)*32]
         vmovdqa %%LFSR_0,  [%%STATE + (( 0 + %%ROUND_NUM) % 16)*32]
+%endif
+%else ; %%ROUND_NUM is num
+        LOAD_LFSR %%STATE, %%ROUND_NUM, 15, %%TMP, %%LFSR_15
+        LOAD_LFSR %%STATE, %%ROUND_NUM, 14, %%TMP, %%LFSR_14
+        LOAD_LFSR %%STATE, %%ROUND_NUM, 11, %%TMP, %%LFSR_11
+        LOAD_LFSR %%STATE, %%ROUND_NUM, 9, %%TMP, %%LFSR_9
+        LOAD_LFSR %%STATE, %%ROUND_NUM, 7, %%TMP, %%LFSR_7
+        LOAD_LFSR %%STATE, %%ROUND_NUM, 5, %%TMP, %%LFSR_5
+%if (%0 == 14) ; Only needed when generating X3 (for "working" mode)
+        LOAD_LFSR %%STATE, %%ROUND_NUM, 2, %%TMP, %%LFSR_2
+        LOAD_LFSR %%STATE, %%ROUND_NUM, 0, %%TMP, %%LFSR_0
+%endif
 %endif
 
         vpxor   %%YTMP1, %%YTMP1
@@ -409,7 +457,7 @@ align 64
         vpsrld  %%LFSR_5, 15
         vpor    %%LFSR_7, %%LFSR_5
         vmovdqa [%%STATE + OFS_X2], %%LFSR_7    ; BRC_X2
-%if (%0 == 13)
+%if (%0 == 14)
         vpslld  %%LFSR_2, 16
         vpsrld  %%LFSR_0, 15
         vpor    %%X3, %%LFSR_2, %%LFSR_0
@@ -630,24 +678,33 @@ align 64
 ; If init mode, add W to the calculation above.
 ; S_16 -> S_15 for next round
 ;
-%macro  LFSR_UPDT8  11
+%macro  LFSR_UPDT8  12
 %define %%STATE     %1  ; [in] ZUC state
 %define %%ROUND_NUM %2  ; [in] Round number
-%define %%LFSR_0    %3  ; [clobbered] LFSR_0 (YMM)
-%define %%LFSR_4    %4  ; [clobbered] LFSR_4 (YMM)
-%define %%LFSR_10   %5  ; [clobbered] LFSR_10 (YMM)
-%define %%LFSR_13   %6  ; [clobbered] LFSR_13 (YMM)
-%define %%LFSR_15   %7  ; [clobbered] LFSR_15 (YMM)
-%define %%YTMP      %8  ; [clobbered] Temporary YMM register
-%define %%MASK_31   %9  ; [in] Mask_31
-%define %%W         %10 ; [in/clobbered] In init mode, contains W for all 4 lanes
-%define %%MODE      %11 ; [constant] "init" / "work" mode
+%define %%TMP       %3  ; [clobbered] Temporary GP register (used when ROUND_NUM is a register) or "no_reg"
+%define %%LFSR_0    %4  ; [clobbered] LFSR_0 (YMM)
+%define %%LFSR_4    %5  ; [clobbered] LFSR_4 (YMM)
+%define %%LFSR_10   %6  ; [clobbered] LFSR_10 (YMM)
+%define %%LFSR_13   %7  ; [clobbered] LFSR_13 (YMM)
+%define %%LFSR_15   %8  ; [clobbered] LFSR_15 (YMM)
+%define %%YTMP      %9  ; [clobbered] Temporary YMM register
+%define %%MASK_31   %10 ; [in] Mask_31
+%define %%W         %11 ; [in/clobbered] In init mode, contains W for all 4 lanes
+%define %%MODE      %12 ; [constant] "init" / "work" mode
 
+%ifnum %%ROUND_NUM
         vmovdqa %%LFSR_0,  [%%STATE + (( 0 + %%ROUND_NUM) % 16)*32]
         vmovdqa %%LFSR_4,  [%%STATE + (( 4 + %%ROUND_NUM) % 16)*32]
         vmovdqa %%LFSR_10, [%%STATE + ((10 + %%ROUND_NUM) % 16)*32]
         vmovdqa %%LFSR_13, [%%STATE + ((13 + %%ROUND_NUM) % 16)*32]
         vmovdqa %%LFSR_15, [%%STATE + ((15 + %%ROUND_NUM) % 16)*32]
+%else
+        LOAD_LFSR %%STATE, %%ROUND_NUM, 0, %%TMP, %%LFSR_0
+        LOAD_LFSR %%STATE, %%ROUND_NUM, 4, %%TMP, %%LFSR_4
+        LOAD_LFSR %%STATE, %%ROUND_NUM, 10, %%TMP, %%LFSR_10
+        LOAD_LFSR %%STATE, %%ROUND_NUM, 13, %%TMP, %%LFSR_13
+        LOAD_LFSR %%STATE, %%ROUND_NUM, 15, %%TMP, %%LFSR_15
+%endif
 
         ; Calculate LFSR feedback (S_16)
 
@@ -669,7 +726,11 @@ align 64
         ADD_MOD31 %%W, %%LFSR_15, %%YTMP, %%MASK_31
 
         ; Store LFSR_S16
+%ifnum %%ROUND_NUM
         vmovdqa [%%STATE + (( 0 + %%ROUND_NUM) % 16)*32], %%W
+%else
+        STORE_LFSR %%STATE, %%ROUND_NUM, 0, %%TMP, %%W
+%endif
 %endmacro
 
 ;
@@ -968,24 +1029,29 @@ align 64
         vmovdqa %%MASK_31, [rel mask31]
 
         ; Shift LFSR 32-times, update state variables
-%assign %%N 0
-%rep 32
-        BITS_REORG8 pState, %%N, %%YTMP1, %%YTMP2, %%YTMP3, %%YTMP4, %%YTMP5, \
+        xor     r15, r15
+
+align 32
+%%start_loop_init:
+        BITS_REORG8 pState, r15, r14, %%YTMP1, %%YTMP2, %%YTMP3, %%YTMP4, %%YTMP5, \
                     %%YTMP6, %%YTMP7, %%YTMP8, %%YTMP9, %%YTMP10
         NONLIN_FUN8 pState, %%YTMP1, %%YTMP2, %%YTMP3, \
                     %%YTMP4, %%YTMP5, %%YTMP6, %%YTMP7, %%W
         vpsrld  %%W, 1 ; Shift out LSB of W
-        LFSR_UPDT8  pState, %%N, %%YTMP1, %%YTMP2, %%YTMP3, %%YTMP4, %%YTMP5, %%YTMP6, \
+        LFSR_UPDT8  pState, r15, r14, %%YTMP1, %%YTMP2, %%YTMP3, %%YTMP4, %%YTMP5, %%YTMP6, \
                     %%MASK_31, %%W, init ; W used in LFSR update
-%assign %%N %%N+1
-%endrep
+        inc     r15
+        cmp     r15, 32
+        jne     %%start_loop_init
+
+%%exit_loop_init:
 
         ; And once more, initial round from keygen phase = 33 times
-        BITS_REORG8 pState, 0, %%YTMP1, %%YTMP2, %%YTMP3, %%YTMP4, %%YTMP5, \
+        BITS_REORG8 pState, 0, no_reg, %%YTMP1, %%YTMP2, %%YTMP3, %%YTMP4, %%YTMP5, \
                     %%YTMP6, %%YTMP7, %%YTMP8, %%YTMP9, %%YTMP10
         NONLIN_FUN8 pState, %%YTMP1, %%YTMP2, %%YTMP3, \
                     %%YTMP4, %%YTMP5, %%YTMP6, %%YTMP7, %%W
-        LFSR_UPDT8  pState, 0, %%YTMP1, %%YTMP2, %%YTMP3, %%YTMP4, %%YTMP5, %%YTMP6, \
+        LFSR_UPDT8  pState, 0, no_reg, %%YTMP1, %%YTMP2, %%YTMP3, %%YTMP4, %%YTMP5, %%YTMP6, \
                     %%MASK_31, %%YTMP8, work
 
     ; Generate extra 4, 8 or 16 bytes of KS for initial tags
@@ -1001,13 +1067,13 @@ align 64
 
 %assign %%N 1
 %rep %%NUM_ROUNDS
-        BITS_REORG8 pState, %%N, %%YTMP1, %%YTMP2, %%YTMP3, %%YTMP4, %%YTMP5, \
+        BITS_REORG8 pState, %%N, no_reg, %%YTMP1, %%YTMP2, %%YTMP3, %%YTMP4, %%YTMP5, \
                     %%YTMP6, %%YTMP7, %%YTMP8, %%YTMP9, %%YTMP10, APPEND(%%KSTR,%%N)
         NONLIN_FUN8 pState, %%YTMP1, %%YTMP2, %%YTMP3, \
                     %%YTMP4, %%YTMP5, %%YTMP6, %%YTMP7, %%W
         ; OFS_X3 XOR W and store in stack
         vpxor   APPEND(%%KSTR, %%N), %%W
-        LFSR_UPDT8  pState, %%N, %%YTMP1, %%YTMP2, %%YTMP3, %%YTMP4, %%YTMP5, %%YTMP6, \
+        LFSR_UPDT8  pState, %%N, no_reg, %%YTMP1, %%YTMP2, %%YTMP3, %%YTMP4, %%YTMP5, %%YTMP6, \
                     %%MASK_31, %%YTMP8, work
 %assign %%N %%N+1
 %endrep
@@ -1127,14 +1193,14 @@ init_for_cipher:
         ; Generate N*4B of keystream in N rounds
 %assign %%N 1
 %rep %%NUM_ROUNDS
-        BITS_REORG8 pState, %%N, %%YTMP1, %%YTMP2, %%YTMP3, %%YTMP4, %%YTMP5, \
+        BITS_REORG8 pState, %%N, no_reg, %%YTMP1, %%YTMP2, %%YTMP3, %%YTMP4, %%YTMP5, \
                     %%YTMP6, %%YTMP7, %%YTMP8, %%YTMP9, %%YTMP10, %%X3
         NONLIN_FUN8 pState, %%YTMP1, %%YTMP2, %%YTMP3, \
                     %%YTMP4, %%YTMP5, %%YTMP6, %%YTMP7, %%W
         ; OFS_X3 XOR W and store in stack
         vpxor       %%X3, %%W
         vmovdqa     [rsp + 8*8 + (%%N-1)*32], %%X3
-        LFSR_UPDT8  pState, %%N, %%YTMP1, %%YTMP2, %%YTMP3, %%YTMP4, %%YTMP5, %%YTMP6, \
+        LFSR_UPDT8  pState, %%N, no_reg, %%YTMP1, %%YTMP2, %%YTMP3, %%YTMP4, %%YTMP5, %%YTMP6, \
                     %%MASK_31, %%YTMP8, work
 %assign %%N %%N+1
 %endrep
@@ -1312,14 +1378,14 @@ ZUC_KEYGEN4B_8:
 %assign %%N 1
 %assign %%round (%%INITIAL_ROUND + %%N)
 %rep %%NROUNDS
-        BITS_REORG8 pState, %%round, %%YTMP1, %%YTMP2, %%YTMP3, %%YTMP4, %%YTMP5, \
+        BITS_REORG8 pState, %%round, no_reg, %%YTMP1, %%YTMP2, %%YTMP3, %%YTMP4, %%YTMP5, \
                     %%YTMP6, %%YTMP7, %%YTMP8, %%YTMP9, %%YTMP10, %%X3
         NONLIN_FUN8 pState, %%YTMP1, %%YTMP2, %%YTMP3, \
                     %%YTMP4, %%YTMP5, %%YTMP6, %%YTMP7, %%W
         ; OFS_X3 XOR W and store in stack
         vpxor       %%X3, %%W
         vmovdqa     [rsp + (%%N-1)*32], %%X3
-        LFSR_UPDT8  pState, %%round, %%YTMP1, %%YTMP2, %%YTMP3, %%YTMP4, %%YTMP5, %%YTMP6, \
+        LFSR_UPDT8  pState, %%round, no_reg, %%YTMP1, %%YTMP2, %%YTMP3, %%YTMP4, %%YTMP5, %%YTMP6, \
                     %%MASK_31, %%YTMP8, work
 %assign %%N (%%N + 1)
 %assign %%round (%%round + 1)
