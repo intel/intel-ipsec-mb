@@ -349,12 +349,10 @@ mksection .text
 %define %%TMP       %4 ;; [clobbered] Temp GP reg
 %define %%LFSR      %5 ;; [out] XMM register to contain LFSR
 
-        mov     %%TMP, %%ROUND_NUM
-        add     %%TMP, %%REG_IDX
+        lea     %%TMP, [%%ROUND_NUM + %%REG_IDX]
         and     %%TMP, 0xf
         shl     %%TMP, 4
-        add     %%TMP, %%STATE
-        movdqa  %%LFSR, [%%TMP]
+        movdqa  %%LFSR, [%%TMP + %%STATE]
 
 %endmacro
 
@@ -368,12 +366,10 @@ mksection .text
 %define %%TMP       %4 ;; [clobbered] Temp GP reg
 %define %%LFSR      %5 ;; [in] XMM register to contain LFSR
 
-        mov     %%TMP, %%ROUND_NUM
-        add     %%TMP, %%REG_IDX
+        lea     %%TMP, [%%ROUND_NUM + %%REG_IDX]
         and     %%TMP, 0xf
         shl     %%TMP, 4
-        add     %%TMP, %%STATE
-        movdqa  [%%TMP], %%LFSR
+        movdqa  [%%TMP + %%STATE], %%LFSR
 
 %endmacro
 
