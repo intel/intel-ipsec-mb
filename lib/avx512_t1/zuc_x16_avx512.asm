@@ -477,28 +477,32 @@ align 64
         %define XMM_STORAGE     0
         %define GP_STORAGE      6*8
 %endif
-%define LANE_STORAGE    64
+%define LANE_STORAGE    32
+%define KEYSTR_STORAGE  64*16
 
-%define VARIABLE_OFFSET XMM_STORAGE + GP_STORAGE + LANE_STORAGE
-%define GP_OFFSET XMM_STORAGE
+%define VARIABLE_OFFSET KEYSTR_STORAGE + XMM_STORAGE + LANE_STORAGE + GP_STORAGE
+%define KEYSTR_OFFSET 0
+%define XMM_OFFSET KEYSTR_STORAGE
+%define LANE_OFFSET XMM_OFFSET + XMM_STORAGE
+%define GP_OFFSET LANE_OFFSET + LANE_STORAGE
 
 %macro FUNC_SAVE 0
         mov     rax, rsp
         sub     rsp, VARIABLE_OFFSET
-        and     rsp, ~15
+        and     rsp, ~63
 
 %ifidn __OUTPUT_FORMAT__, win64
         ; xmm6:xmm15 need to be maintained for Windows
-        vmovdqa [rsp + 0*16], xmm6
-        vmovdqa [rsp + 1*16], xmm7
-        vmovdqa [rsp + 2*16], xmm8
-        vmovdqa [rsp + 3*16], xmm9
-        vmovdqa [rsp + 4*16], xmm10
-        vmovdqa [rsp + 5*16], xmm11
-        vmovdqa [rsp + 6*16], xmm12
-        vmovdqa [rsp + 7*16], xmm13
-        vmovdqa [rsp + 8*16], xmm14
-        vmovdqa [rsp + 9*16], xmm15
+        vmovdqa [rsp + XMM_OFFSET + 0*16], xmm6
+        vmovdqa [rsp + XMM_OFFSET + 1*16], xmm7
+        vmovdqa [rsp + XMM_OFFSET + 2*16], xmm8
+        vmovdqa [rsp + XMM_OFFSET + 3*16], xmm9
+        vmovdqa [rsp + XMM_OFFSET + 4*16], xmm10
+        vmovdqa [rsp + XMM_OFFSET + 5*16], xmm11
+        vmovdqa [rsp + XMM_OFFSET + 6*16], xmm12
+        vmovdqa [rsp + XMM_OFFSET + 7*16], xmm13
+        vmovdqa [rsp + XMM_OFFSET + 8*16], xmm14
+        vmovdqa [rsp + XMM_OFFSET + 9*16], xmm15
         mov     [rsp + GP_OFFSET + 48], rdi
         mov     [rsp + GP_OFFSET + 56], rsi
 %endif
@@ -513,16 +517,16 @@ align 64
 %macro FUNC_RESTORE 0
 
 %ifidn __OUTPUT_FORMAT__, win64
-        vmovdqa xmm6,  [rsp + 0*16]
-        vmovdqa xmm7,  [rsp + 1*16]
-        vmovdqa xmm8,  [rsp + 2*16]
-        vmovdqa xmm9,  [rsp + 3*16]
-        vmovdqa xmm10, [rsp + 4*16]
-        vmovdqa xmm11, [rsp + 5*16]
-        vmovdqa xmm12, [rsp + 6*16]
-        vmovdqa xmm13, [rsp + 7*16]
-        vmovdqa xmm14, [rsp + 8*16]
-        vmovdqa xmm15, [rsp + 9*16]
+        vmovdqa xmm6,  [rsp + XMM_OFFSET + 0*16]
+        vmovdqa xmm7,  [rsp + XMM_OFFSET + 1*16]
+        vmovdqa xmm8,  [rsp + XMM_OFFSET + 2*16]
+        vmovdqa xmm9,  [rsp + XMM_OFFSET + 3*16]
+        vmovdqa xmm10, [rsp + XMM_OFFSET + 4*16]
+        vmovdqa xmm11, [rsp + XMM_OFFSET + 5*16]
+        vmovdqa xmm12, [rsp + XMM_OFFSET + 6*16]
+        vmovdqa xmm13, [rsp + XMM_OFFSET + 7*16]
+        vmovdqa xmm14, [rsp + XMM_OFFSET + 8*16]
+        vmovdqa xmm15, [rsp + XMM_OFFSET + 9*16]
         mov     rdi, [rsp + GP_OFFSET + 48]
         mov     rsi, [rsp + GP_OFFSET + 56]
 %endif
@@ -2595,7 +2599,7 @@ ZUC_KEYGEN_SKIP4_16:
 ;; 5 - ZMM16-31 will contain 64 bytes of KS for each buffer
 ;; 6 - Reads 64 bytes of data for each buffer, XOR with KS and writes the ciphertext
 ;;
-%macro CIPHER64B 12
+%macro CIPHER64B 15
 %define %%NROUNDS    %1
 %define %%BYTE_MASK  %2
 %define %%LANE_MASK  %3
@@ -2608,30 +2612,51 @@ ZUC_KEYGEN_SKIP4_16:
 %define %%W          %10
 %define %%R1         %11
 %define %%R2         %12
+%define %%STATE      %13
+%define %%TMP        %14
+%define %%TMP2       %15
 
         ; Read R1/R2
-        vmovdqa32   %%R1, [rax + OFS_R1]
-        vmovdqa32   %%R2, [rax + OFS_R2]
+        vmovdqa32   %%R1, [%%STATE + OFS_R1]
+        vmovdqa32   %%R2, [%%STATE + OFS_R2]
 
         ; Generate N*4B of keystream in N rounds
-%assign N 1
-%assign idx 16
-%rep %%NROUNDS
-        BITS_REORG16 rax, N, no_reg, %%LANE_MASK, zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, \
-                     zmm7, zmm8, zmm9, k1, %%X0, %%X1, %%X2, APPEND(zmm, idx)
-        NONLIN_FUN16 rax, %%LANE_MASK, %%X0, %%X1, %%X2, %%R1, %%R2, \
+        xor     %%TMP, %%TMP
+
+align 32
+%%start_loop_cipher:
+        inc     %%TMP
+        BITS_REORG16 %%STATE, %%TMP, %%TMP2, %%LANE_MASK, zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, \
+                     zmm7, zmm8, zmm9, k1, %%X0, %%X1, %%X2, zmm16
+        NONLIN_FUN16 %%STATE, %%LANE_MASK, %%X0, %%X1, %%X2, %%R1, %%R2, \
                      zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, zmm7
         ; OFS_X3 XOR W (zmm7)
-        vpxorq      APPEND(zmm, idx), zmm7
+        vpxorq      zmm16, zmm7
         ; Shuffle bytes within KS words to XOR with plaintext later
-        vpshufb APPEND(zmm, idx), [rel swap_mask]
-        LFSR_UPDT16  rax, N, no_reg, %%LANE_MASK, zmm1, zmm2, zmm3, zmm4, zmm5, \
+        vpshufb         zmm16, [rel swap_mask]
+        LFSR_UPDT16  %%STATE, %%TMP, %%TMP2, %%LANE_MASK, zmm1, zmm2, zmm3, zmm4, zmm5, \
                      zmm6, %%MASK_31, zmm7, work
-%assign N (N + 1)
-%assign idx (idx + 1)
+
+        mov     %%TMP2, %%TMP
+        dec     %%TMP2
+        shl     %%TMP2, 6
+        vmovdqa64 [rsp + KEYSTR_OFFSET + %%TMP2], zmm16
+
+        cmp     %%TMP, %%NROUNDS
+        jne     %%start_loop_cipher
+
+
+%%exit_loop_cipher:
+        vmovdqa32   [%%STATE + OFS_R1]{%%LANE_MASK}, %%R1
+        vmovdqa32   [%%STATE + OFS_R2]{%%LANE_MASK}, %%R2
+
+%assign %%I 0
+%assign %%IDX 16
+%rep 16
+        vmovdqa64 zmm %+ %%IDX, [rsp + KEYSTR_OFFSET + %%I*64]
+%assign %%I (%%I + 1)
+%assign %%IDX (%%IDX + 1)
 %endrep
-        vmovdqa32   [rax + OFS_R1]{%%LANE_MASK}, %%R1
-        vmovdqa32   [rax + OFS_R2]{%%LANE_MASK}, %%R2
 
         ; ZMM16-31 contain the keystreams for each round
         ; Perform a 32-bit 16x16 transpose to have the 64 bytes
@@ -2653,12 +2678,12 @@ ZUC_KEYGEN_SKIP4_16:
 %if %%LAST_ROUND == 1
         ;; Read number of bytes left to encrypt for the lane stored in stack
         ;; and construct byte mask to read from input pointer
-        movzx   r12d, word [rsp + j*2]
+        movzx   r12d, word [rsp + LANE_OFFSET + j*2]
         kmovq   %%BYTE_MASK, [rbx + r12*8]
 %endif
         mov     APPEND(r, k), [pIn + i]
         vmovdqu8 APPEND(zmm, j){%%BYTE_MASK}{z}, [APPEND(r, k) + %%OFFSET]
-%assign k 12 + ((j + 1) % 4)
+%assign k 12 + ((j + 1) % 3)
 %assign j (j + 1)
 %assign i (i + 8)
 %endrep
@@ -2680,12 +2705,12 @@ ZUC_KEYGEN_SKIP4_16:
 %if %%LAST_ROUND == 1
         ;; Read length to encrypt for the lane stored in stack
         ;; and construct byte mask to write to output pointer
-        movzx   r12d, word [rsp + (j-16)*2]
+        movzx   r12d, word [rsp + LANE_OFFSET + (j-16)*2]
         kmovq   %%BYTE_MASK, [rbx + r12*8]
 %endif
         mov     APPEND(r, k), [pOut + i]
         vmovdqu8 [APPEND(r, k) + %%OFFSET]{%%BYTE_MASK}, APPEND(zmm, j)
-%assign k 12 + ((j + 1) % 4)
+%assign k 12 + ((j + 1) % 3)
 %assign j (j + 1)
 %assign i (i + 8)
 %endrep
@@ -2733,8 +2758,7 @@ CIPHER_16:
         ; for each lane, and store it in stack to be used in the last round
         vpsubw  ymm1, ymm2 ; Bytes to encrypt in all lanes
         vpandq  ymm1, [rel all_3fs] ; Number of final bytes (up to 63 bytes) for each lane
-        sub     rsp, 32
-        vmovdqu [rsp], ymm1
+        vmovdqa [rsp + LANE_OFFSET], ymm1
 
         ; Load state pointer in RAX
         mov     rax, pState
@@ -2756,7 +2780,7 @@ loop:
 
         vmovdqa64 zmm0, [rel mask31]
 
-        CIPHER64B 16, k2, k3, buf_idx, 0, zmm0, zmm10, zmm11, zmm12, zmm13, zmm14, zmm15
+        CIPHER64B 16, k2, k3, buf_idx, 0, zmm0, zmm10, zmm11, zmm12, zmm13, zmm14, zmm15, rax, r14, r15
 
         sub     min_length, 64
         add     buf_idx, 64
@@ -2771,6 +2795,7 @@ exit_loop:
 
         vmovdqa64 zmm0, [rel mask31]
 
+        CIPHER64B r15, k2, k3, buf_idx, 1, zmm0, zmm10, zmm11, zmm12, zmm13, zmm14, zmm15, rax, r14, r13 ; r15 not modified
         cmp     r15, 8
         je      _num_final_rounds_is_8
         jl      _final_rounds_is_1_7
@@ -2824,7 +2849,6 @@ _final_rounds_is_1_3:
 %assign I 1
 %rep 16
 APPEND(_num_final_rounds_is_,I):
-        CIPHER64B I, k2, k3, buf_idx, 1, zmm0, zmm10, zmm11, zmm12, zmm13, zmm14, zmm15
         REORDER_LFSR rax, I, k3
         add     buf_idx, min_length
         jmp     _no_final_rounds
@@ -2832,7 +2856,6 @@ APPEND(_num_final_rounds_is_,I):
 %endrep
 
 _no_final_rounds:
-        add             rsp, 32
         ;; update in/out pointers
         add             buf_idx, 3
         and             buf_idx, 0xfffffffffffffffc
@@ -2846,6 +2869,14 @@ _no_final_rounds:
         vmovdqa64       [pOut], zmm1
         vmovdqa64       [pOut + 64], zmm2
 
+%ifdef SAFE_DATA
+        vpxorq          zmm0, zmm0
+%assign I 0
+%rep 16
+        vmovdqa64       [rsp + KEYSTR_OFFSET + I*64], zmm0
+%assign I (I + 1)
+%endrep
+%endif
         FUNC_RESTORE
 
         ret
