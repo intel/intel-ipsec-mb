@@ -1375,21 +1375,25 @@ ZUC_KEYGEN4B_8:
         vmovdqa %%MASK_31, [rel mask31]
 
         ; Generate N*4B of keystream in N rounds
-%assign %%N 1
-%assign %%round (%%INITIAL_ROUND + %%N)
-%rep %%NROUNDS
-        BITS_REORG8 pState, %%round, no_reg, %%YTMP1, %%YTMP2, %%YTMP3, %%YTMP4, %%YTMP5, \
+        mov     r15, %%INITIAL_ROUND
+align 32
+%%start_loop_cipher:
+        inc     r15
+        BITS_REORG8 pState, r15, r14, %%YTMP1, %%YTMP2, %%YTMP3, %%YTMP4, %%YTMP5, \
                     %%YTMP6, %%YTMP7, %%YTMP8, %%YTMP9, %%YTMP10, %%X3
         NONLIN_FUN8 pState, %%YTMP1, %%YTMP2, %%YTMP3, \
                     %%YTMP4, %%YTMP5, %%YTMP6, %%YTMP7, %%W
         ; OFS_X3 XOR W and store in stack
         vpxor       %%X3, %%W
-        vmovdqa     [rsp + (%%N-1)*32], %%X3
-        LFSR_UPDT8  pState, %%round, no_reg, %%YTMP1, %%YTMP2, %%YTMP3, %%YTMP4, %%YTMP5, %%YTMP6, \
+        mov         r14, r15
+        sub         r14, (%%INITIAL_ROUND+1)
+        shl         r14, 5
+        vmovdqa     [rsp + r14], %%X3
+        LFSR_UPDT8  pState, r15, r14, %%YTMP1, %%YTMP2, %%YTMP3, %%YTMP4, %%YTMP5, %%YTMP6, \
                     %%MASK_31, %%YTMP8, work
-%assign %%N (%%N + 1)
-%assign %%round (%%round + 1)
-%endrep
+
+        cmp         r15, (%%NROUNDS + %%INITIAL_ROUND)
+        jne         %%start_loop_cipher
 
 %assign %%N 1
 %rep %%NROUNDS
