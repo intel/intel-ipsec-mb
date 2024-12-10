@@ -1172,16 +1172,31 @@ init_for_cipher:
         movdqa  %%MASK_31, [rel mask31]
 
         ; Generate N*4B of keystream in N rounds
-%assign %%N 1
-%rep %%NUM_ROUNDS
-        BITS_REORG4 pState, %%N, no_reg, %%XTMP1, %%XTMP2, %%XTMP3, %%XTMP4, %%XTMP5, \
-                    %%XTMP6, %%XTMP7, %%XTMP8, %%XTMP9, %%XTMP10, APPEND(%%KSTR, %%N)
+        xor     r15, r15
+
+align 32
+%%start_loop_keygen:
+        inc     r15
+        ; Shift LFSR 32-times, update state variables
+        BITS_REORG4 pState, r15, r14, %%XTMP1, %%XTMP2, %%XTMP3, %%XTMP4, %%XTMP5, \
+                    %%XTMP6, %%XTMP7, %%XTMP8, %%XTMP9, %%XTMP10, %%KSTR1
         NONLIN_FUN4 pState, %%XTMP1, %%XTMP2, %%XTMP3, \
                     %%XTMP4, %%XTMP5, %%XTMP6, %%XTMP7, %%W
-        ; OFS_X3 XOR W and store in stack
-        pxor        APPEND(%%KSTR, %%N), %%W
-        LFSR_UPDT4  pState, %%N, no_reg, %%XTMP1, %%XTMP2, %%XTMP3, %%XTMP4, %%XTMP5, %%XTMP6, \
+        pxor        %%KSTR1, %%W
+        mov         r14, r15
+        dec         r14
+        shl         r14, 4
+        movdqa      [rsp + KEYSTR_OFFSET + r14], %%KSTR1
+        LFSR_UPDT4  pState, r15, r14, %%XTMP1, %%XTMP2, %%XTMP3, %%XTMP4, %%XTMP5, %%XTMP6, \
                     %%MASK_31, %%XTMP8, work
+        cmp         r15, %%NUM_ROUNDS
+        jne         %%start_loop_keygen
+
+%%exit_loop_keygen:
+
+%assign %%N 1
+%rep %%NUM_ROUNDS
+        movdqa  APPEND(%%KSTR, %%N), [rsp + KEYSTR_OFFSET + (%%N-1)*16]
 %assign %%N (%%N + 1)
 %endrep
 
@@ -1207,6 +1222,13 @@ init_for_cipher:
         ;; Reorder memory for LFSR registers, as not all 16 rounds
         ;; will be completed
         REORDER_LFSR pState, %%NUM_ROUNDS
+
+        ;; Clear stack frame containing keystream information
+        pxor    xmm0, xmm0
+        movdqa  [rsp + KEYSTR_OFFSET], xmm0
+        movdqa  [rsp + KEYSTR_OFFSET + 16], xmm0
+        movdqa  [rsp + KEYSTR_OFFSET + 32], xmm0
+        movdqa  [rsp + KEYSTR_OFFSET + 48], xmm0
 
         FUNC_RESTORE
 
