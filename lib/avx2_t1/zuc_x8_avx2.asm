@@ -1191,19 +1191,25 @@ init_for_cipher:
         vmovdqa %%MASK_31, [rel mask31]
 
         ; Generate N*4B of keystream in N rounds
-%assign %%N 1
-%rep %%NUM_ROUNDS
-        BITS_REORG8 pState, %%N, no_reg, %%YTMP1, %%YTMP2, %%YTMP3, %%YTMP4, %%YTMP5, \
+        xor     r15, r15
+align 32
+%%start_loop_keystr:
+        inc     r15
+        BITS_REORG8 pState, r15, r14, %%YTMP1, %%YTMP2, %%YTMP3, %%YTMP4, %%YTMP5, \
                     %%YTMP6, %%YTMP7, %%YTMP8, %%YTMP9, %%YTMP10, %%X3
         NONLIN_FUN8 pState, %%YTMP1, %%YTMP2, %%YTMP3, \
                     %%YTMP4, %%YTMP5, %%YTMP6, %%YTMP7, %%W
         ; OFS_X3 XOR W and store in stack
         vpxor       %%X3, %%W
-        vmovdqa     [rsp + 8*8 + (%%N-1)*32], %%X3
-        LFSR_UPDT8  pState, %%N, no_reg, %%YTMP1, %%YTMP2, %%YTMP3, %%YTMP4, %%YTMP5, %%YTMP6, \
+        mov         r14, r15
+        dec         r14
+        shl         r14, 5
+        vmovdqa     [rsp + 8*8 + r14], %%X3
+        LFSR_UPDT8  pState, r15, r14, %%YTMP1, %%YTMP2, %%YTMP3, %%YTMP4, %%YTMP5, %%YTMP6, \
                     %%MASK_31, %%YTMP8, work
-%assign %%N %%N+1
-%endrep
+
+        cmp         r15, %%NUM_ROUNDS
+        jne         %%start_loop_keystr
 
 %if (%%NUM_ROUNDS == 8)
         ;; Load all OFS_X3
