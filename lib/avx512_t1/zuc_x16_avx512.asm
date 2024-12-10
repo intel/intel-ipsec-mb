@@ -1663,41 +1663,66 @@ init_for_auth_tag_8B:
 %else ;; %%NUM_ROUNDS > %%SKIP_ROUNDS
         ; Generate N*4B of keystream in N rounds
         ; Generate first bytes of KS for all lanes
-%assign %%N 1
-%assign %%IDX 1
-%rep (%%NUM_ROUNDS-%%SKIP_ROUNDS)
-        BITS_REORG16 pState, %%N, no_reg, %%ALL_KMASK, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, %%ZTMP6, \
-                     %%ZTMP7, %%ZTMP8, %%ZTMP9, %%BLEND_KMASK, %%X0, %%X1, %%X2, APPEND(%%KSTR, %%IDX)
+
+        xor     r15, r15
+align 32
+%%start_loop_kstr:
+        inc     r15
+        BITS_REORG16 pState, r15, r14, %%ALL_KMASK, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, %%ZTMP6, \
+                     %%ZTMP7, %%ZTMP8, %%ZTMP9, %%BLEND_KMASK, %%X0, %%X1, %%X2, %%KSTR1
         NONLIN_FUN16 pState, %%ALL_KMASK, %%X0, %%X1, %%X2, %%R1, %%R2, \
                      %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, %%ZTMP6, %%W
-        ; OFS_X3 XOR W
-        vpxorq      APPEND(%%KSTR, %%IDX), %%W
-        LFSR_UPDT16  pState, %%N, no_reg, %%ALL_KMASK, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, \
+        ; OFS_X3 XOR W (zmm7)
+        vpxorq      %%KSTR1, %%W
+        LFSR_UPDT16  pState, r15, r14, %%ALL_KMASK, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, \
                      %%ZTMP6, %%MASK31, %%ZTMP7, work
-%assign %%N %%N+1
-%assign %%IDX (%%IDX + 1)
-%endrep
+
+        mov     r14, r15
+        dec     r14
+        shl     r14, 6
+        vmovdqa64 [rsp + KEYSTR_OFFSET + r14], %%KSTR1
+
+        cmp     r15, (%%NUM_ROUNDS-%%SKIP_ROUNDS)
+        jne     %%start_loop_kstr
 %if (%%NUM_ROUNDS > %%SKIP_ROUNDS)
         vmovdqa32   [pState + OFS_R1]{%%ALL_KMASK}, %%R1
         vmovdqa32   [pState + OFS_R2]{%%ALL_KMASK}, %%R2
 %endif
 
        ; Generate rest of the KS bytes (last 8 bytes) for selected lanes
-%rep %%SKIP_ROUNDS
-        BITS_REORG16 pState, %%N, no_reg, %%FULL_LANE_KMASK, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, %%ZTMP6, \
-                     %%ZTMP7, %%ZTMP8, %%ZTMP9, %%BLEND_KMASK, %%X0, %%X1, %%X2, APPEND(%%KSTR, %%IDX)
+align 32
+%%start_loop_kstr_skip_rounds:
+        cmp     r15, %%NUM_ROUNDS
+        je      %%exit_loop_kstr_skip_rounds
+
+        inc     r15
+        BITS_REORG16 pState, r15, r14, %%FULL_LANE_KMASK, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, %%ZTMP6, \
+                     %%ZTMP7, %%ZTMP8, %%ZTMP9, %%BLEND_KMASK, %%X0, %%X1, %%X2, %%KSTR1
         NONLIN_FUN16 pState, %%FULL_LANE_KMASK, %%X0, %%X1, %%X2, %%R1, %%R2, \
                      %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, %%ZTMP6, %%W
         ; OFS_X3 XOR W
-        vpxorq       APPEND(%%KSTR, %%IDX), %%W
-        LFSR_UPDT16  pState, %%N, no_reg, %%FULL_LANE_KMASK, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, \
+        vpxorq       %%KSTR1, %%W
+        LFSR_UPDT16  pState, r15, r14, %%FULL_LANE_KMASK, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, \
                      %%ZTMP6, %%MASK31, %%ZTMP7, work
-%assign %%N %%N+1
-%assign %%IDX (%%IDX + 1)
-%endrep
+        mov     r14, r15
+        dec     r14
+        shl     r14, 6
+        vmovdqa64 [rsp + KEYSTR_OFFSET + r14], %%KSTR1
+
+        jmp     %%start_loop_kstr_skip_rounds
+
+%%exit_loop_kstr_skip_rounds:
         vmovdqa32   [pState + OFS_R1]{%%FULL_LANE_KMASK}, %%R1
         vmovdqa32   [pState + OFS_R2]{%%FULL_LANE_KMASK}, %%R2
-%endif ;; (%%NUM_ROUNDS == 1)
+
+%assign %%I 0
+%assign %%IDX 1
+%rep 16
+        vmovdqa64 %%KSTR %+ %%IDX, [rsp + KEYSTR_OFFSET + %%I*64]
+%assign %%I (%%I + 1)
+%assign %%IDX (%%IDX + 1)
+%endrep
+%endif ;; (%%NUM_ROUNDS <= %%SKIP_ROUNDS)
 
         ; Perform a 32-bit 16x16 transpose to have up to 64 bytes
         ; (NUM_ROUNDS * 4B) of each lane in a different register
@@ -1733,6 +1758,15 @@ init_for_auth_tag_8B:
         REORDER_LFSR pState, %%NUM_ROUNDS, %%FULL_LANE_KMASK
 %endif
 
+        ; Clear keystream from stack
+%ifdef SAFE_DATA
+        vpxorq          %%ZTMP1, %%ZTMP1
+%assign %%I 0
+%rep 16
+        vmovdqa64       [rsp + KEYSTR_OFFSET + %%I*64], %%ZTMP1
+%assign %%I (%%I + 1)
+%endrep
+%endif
 %endmacro ; KEYGEN_16_AVX512
 
 ;;
@@ -2869,6 +2903,7 @@ _no_final_rounds:
         vmovdqa64       [pOut], zmm1
         vmovdqa64       [pOut + 64], zmm2
 
+        ; Clear keystream from stack
 %ifdef SAFE_DATA
         vpxorq          zmm0, zmm0
 %assign I 0
