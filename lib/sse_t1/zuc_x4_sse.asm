@@ -238,7 +238,6 @@ db      0xff, 0xff, 0xff, 0xff, 0x04, 0x05, 0x06, 0x07
 
 ; Stack frame for ZucCipher function
 struc STACK
-_rsp_save:      resq    1 ; Space for rsp pointer
 _gpr_save:      resq    2 ; Space for GP registers
 _rem_bytes_save resq    1 ; Space for number of remaining bytes
 endstruc
@@ -259,8 +258,11 @@ mksection .text
         %define GP_STORAGE      6*8
 %endif
 
-%define VARIABLE_OFFSET XMM_STORAGE + GP_STORAGE
-%define GP_OFFSET XMM_STORAGE
+%define KEYSTR_STORAGE 16*4
+%define VARIABLE_OFFSET XMM_STORAGE + KEYSTR_STORAGE + GP_STORAGE + STACK_size
+%define KEYSTR_OFFSET XMM_STORAGE
+%define GP_OFFSET KEYSTR_OFFSET + KEYSTR_STORAGE
+%define STACK_OFFSET GP_OFFSET + GP_STORAGE
 
 %macro FUNC_SAVE 0
         mov     r11, rsp
@@ -1313,19 +1315,30 @@ ZUC_KEYGEN4B_4:
         movdqa  %%MASK_31, [rel mask31]
 
         ; Generate N*4B of keystream in N rounds
-%assign %%N 1
-%assign %%round (%%INITIAL_ROUND + %%N)
-%rep %%NROUNDS
-        BITS_REORG4 pState, %%round, no_reg, %%XTMP1, %%XTMP2, %%XTMP3, %%XTMP4, %%XTMP5, \
-                    %%XTMP6, %%XTMP7, %%XTMP8, %%XTMP9, %%XTMP10, APPEND(%%KSTR, %%N)
+        mov     r15, %%INITIAL_ROUND
+%%start_loop_cipher:
+        inc     r15
+        ; Shift LFSR 32-times, update state variables
+        BITS_REORG4 pState, r15, r14, %%XTMP1, %%XTMP2, %%XTMP3, %%XTMP4, %%XTMP5, \
+                    %%XTMP6, %%XTMP7, %%XTMP8, %%XTMP9, %%XTMP10, %%KSTR1
         NONLIN_FUN4 pState, %%XTMP1, %%XTMP2, %%XTMP3, \
                     %%XTMP4, %%XTMP5, %%XTMP6, %%XTMP7, %%W
-        ; OFS_X3 XOR W and store in stack
-        pxor        APPEND(%%KSTR, %%N), %%W
-        LFSR_UPDT4  pState, %%round, no_reg, %%XTMP1, %%XTMP2, %%XTMP3, %%XTMP4, %%XTMP5, %%XTMP6, \
+        pxor        %%KSTR1, %%W
+        mov         r14, r15
+        sub         r14, (%%INITIAL_ROUND+1)
+        shl         r14, 4
+        movdqa      [rsp + KEYSTR_OFFSET + r14], %%KSTR1
+        LFSR_UPDT4  pState, r15, r14, %%XTMP1, %%XTMP2, %%XTMP3, %%XTMP4, %%XTMP5, %%XTMP6, \
                     %%MASK_31, %%XTMP8, work
+        cmp         r15, (%%NROUNDS + %%INITIAL_ROUND)
+        jne         %%start_loop_cipher
+
+%%exit_loop_cipher:
+
+%assign %%N 1
+%rep %%NROUNDS
+        movdqa  APPEND(%%KSTR, %%N), [rsp + KEYSTR_OFFSET + (%%N-1)*16]
 %assign %%N (%%N + 1)
-%assign %%round (%%round + 1)
 %endrep
 
         TRANSPOSE4_U32 %%KSTR1, %%KSTR2, %%KSTR3, %%KSTR4, %%XTMP5, %%XTMP6
@@ -1339,17 +1352,17 @@ ZUC_KEYGEN4B_4:
         mov     r15, [pIn + 24]
 %if (%%LAST_CALL == 1)
         ;; Save GP registers
-        mov     [rsp + _gpr_save],  %%TMP1
-        mov     [rsp + _gpr_save + 8], %%TMP2
+        mov     [rsp + STACK_OFFSET + _gpr_save],  %%TMP1
+        mov     [rsp + STACK_OFFSET + _gpr_save + 8], %%TMP2
 
         ;; Read in r10 the word containing the number of final bytes to read for each lane
-        movzx  r10d, word [rsp + _rem_bytes_save]
+        movzx  r10d, word [rsp + STACK_OFFSET + _rem_bytes_save]
         simd_load_sse_16_1 %%XTMP5, r12 + %%OFFSET, r10
-        movzx  r10d, word [rsp + _rem_bytes_save + 2]
+        movzx  r10d, word [rsp + STACK_OFFSET + _rem_bytes_save + 2]
         simd_load_sse_16_1 %%XTMP6, r13 + %%OFFSET, r10
-        movzx  r10d, word [rsp + _rem_bytes_save + 4]
+        movzx  r10d, word [rsp + STACK_OFFSET + _rem_bytes_save + 4]
         simd_load_sse_16_1 %%XTMP7, r14 + %%OFFSET, r10
-        movzx  r10d, word [rsp + _rem_bytes_save + 6]
+        movzx  r10d, word [rsp + STACK_OFFSET + _rem_bytes_save + 6]
         simd_load_sse_16_1 %%XTMP8, r15 + %%OFFSET, r10
 %else
         movdqu  %%XTMP5, [r12 + %%OFFSET]
@@ -1374,13 +1387,13 @@ ZUC_KEYGEN4B_4:
         mov     r15, [pOut + 24]
 
 %if (%%LAST_CALL == 1)
-        movzx  r10d, word [rsp + _rem_bytes_save]
+        movzx  r10d, word [rsp + STACK_OFFSET + _rem_bytes_save]
         simd_store_sse r12, %%KSTR1, r10, %%TMP1, %%TMP2, %%OFFSET
-        movzx  r10d, word [rsp + _rem_bytes_save + 2]
+        movzx  r10d, word [rsp + STACK_OFFSET + _rem_bytes_save + 2]
         simd_store_sse r13, %%KSTR2, r10, %%TMP1, %%TMP2, %%OFFSET
-        movzx  r10d, word [rsp + _rem_bytes_save + 4]
+        movzx  r10d, word [rsp + STACK_OFFSET + _rem_bytes_save + 4]
         simd_store_sse r14, %%KSTR3, r10, %%TMP1, %%TMP2, %%OFFSET
-        movzx  r10d, word [rsp + _rem_bytes_save + 6]
+        movzx  r10d, word [rsp + STACK_OFFSET + _rem_bytes_save + 6]
         simd_store_sse r15, %%KSTR4, r10, %%TMP1, %%TMP2, %%OFFSET
 
         ; Restore registers
@@ -1472,15 +1485,10 @@ ZUC_CIPHER_4:
         pcmpeqw xmm2, xmm3 ;; Mask with FFFF in lengths == 0
         pand    xmm2, [rel all_10s] ;; 16 in positions where lengths was 0
         por     xmm1, xmm2          ;; Number of final bytes (up to 16 bytes) for each lane
-
-        ; Allocate stack frame to store keystreams (16*4 bytes), number of final bytes (8 bytes),
-        ; space for rsp (8 bytes) and 2 GP registers (16 bytes) that will be clobbered later
-        mov     rax, rsp
-        sub     rsp, STACK_size
-        and     rsp, -16
         xor     buf_idx, buf_idx
-        movq    [rsp + _rem_bytes_save], xmm1
-        mov     [rsp + _rsp_save], rax
+
+        ; Save number of final bytes (8 bytes) in stack
+        movq    [rsp + STACK_OFFSET + _rem_bytes_save], xmm1
 
 loop_cipher64:
         cmp     min_length, 64
@@ -1612,8 +1620,12 @@ exit_final_rounds:
         movdqa         [pOut], xmm1
         movdqa         [pOut + 16], xmm2
 
-        ; Restore rsp
-        mov     rsp, [rsp + _rsp_save]
+        ;; Clear stack frame containing keystream information
+        pxor    xmm0, xmm0
+        movdqa  [rsp + KEYSTR_OFFSET], xmm0
+        movdqa  [rsp + KEYSTR_OFFSET + 16], xmm0
+        movdqa  [rsp + KEYSTR_OFFSET + 32], xmm0
+        movdqa  [rsp + KEYSTR_OFFSET + 48], xmm0
 
         FUNC_RESTORE
 
