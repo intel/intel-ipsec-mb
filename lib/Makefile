@@ -552,7 +552,10 @@ asm_avx2_lib_objs := \
 	mb_mgr_aes192_cbc_enc_avx2.o \
 	mb_mgr_aes256_cbc_enc_avx2.o \
 	aes_cbc_enc_vaes_avx2.o \
-	snow3g_uia2_by4_avx.o
+	snow3g_uia2_by4_avx.o \
+	mb_mgr_aes128_cmac_submit_flush_x16_vaes_avx2.o \
+	mb_mgr_aes256_cmac_submit_flush_x16_vaes_avx2.o \
+	aes_cmac_vaes_avx2.o
 
 #
 # List of ASM modules (avx2_t3 directory)

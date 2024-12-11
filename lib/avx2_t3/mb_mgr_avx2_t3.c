@@ -164,11 +164,11 @@
 #define SUBMIT_JOB_AES256_CCM_AUTH submit_job_aes256_ccm_auth_avx
 
 /* AES-CMAC */
-#define FLUSH_JOB_AES128_CMAC_AUTH  flush_job_aes128_cmac_auth_avx
-#define SUBMIT_JOB_AES128_CMAC_AUTH submit_job_aes128_cmac_auth_avx
+#define FLUSH_JOB_AES128_CMAC_AUTH  flush_job_aes128_cmac_auth_vaes_avx2
+#define SUBMIT_JOB_AES128_CMAC_AUTH submit_job_aes128_cmac_auth_vaes_avx2
 
-#define FLUSH_JOB_AES256_CMAC_AUTH  flush_job_aes256_cmac_auth_avx
-#define SUBMIT_JOB_AES256_CMAC_AUTH submit_job_aes256_cmac_auth_avx
+#define FLUSH_JOB_AES256_CMAC_AUTH  flush_job_aes256_cmac_auth_vaes_avx2
+#define SUBMIT_JOB_AES256_CMAC_AUTH submit_job_aes256_cmac_auth_vaes_avx2
 
 /* AES-CFB */
 #define AES_CFB_128_ONE aes_cfb_128_one_avx
@@ -321,8 +321,8 @@ reset_ooo_mgrs(IMB_MGR *state)
         ooo_mgr_ccm_reset(state->aes256_ccm_ooo, 8);
 
         /* Init AES-CMAC auth out-of-order fields */
-        ooo_mgr_cmac_reset(state->aes_cmac_ooo, 8);
-        ooo_mgr_cmac_reset(state->aes256_cmac_ooo, 8);
+        ooo_mgr_cmac_reset(state->aes_cmac_ooo, 16);
+        ooo_mgr_cmac_reset(state->aes256_cmac_ooo, 16);
 
         /* Init AES CBC-S out-of-order fields */
         ooo_mgr_aes_reset(state->aes128_cbcs_ooo, 8);

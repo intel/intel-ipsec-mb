@@ -77,10 +77,12 @@
 %define TMP_0_3         TMP_0, TMP_1, TMP_2, TMP_3
 %define TMP_4_7         TMP_4, TMP_5, TMP_6, TMP_7
 
+%ifndef AES_CMAC
 %define KP              AES_ARGS + _aes_args_key_tab
 %define IV              AES_ARGS + _aes_args_IV
 %define IN_PTRS         AES_ARGS + _aes_args_in
 %define OUT_PTRS        AES_ARGS + _aes_args_out
+%endif
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Load (input or output) pointers to defined GPs:
@@ -218,17 +220,20 @@
         YMM_OPCODE3_DSTR_SRC1R_SRC2M_BLOCKS_0_16        16, vpxor,              \
                 LANE_0_7, LANE_8_15, LANE_0_7, LANE_8_15, TMP_0_3, TMP_4_7
 
-%ifidn %%MODE, CBC
+%ifnidn %%MODE, CFB
         ;; encrypt previous ciphertext/IV XOR plaintext
         AESENC_ROUNDS_x16       LANE_0_7, LANE_8_15, %%NROUNDS
 %endif
 
+;; if not CMAC
+%ifnidn %%MODE, CMAC
         ;; Write out results from LANE_0_7, LANE_8_15
         LOAD_PTRx8 OUT_PTRS, 0
         WRITE_OUT_1BLOCK        LANE_0_7, %%IDX
 
         LOAD_PTRx8 OUT_PTRS, 8
         WRITE_OUT_1BLOCK        LANE_8_15, %%IDX
+%endif
 
 %endmacro ;; ENCRYPT_1_BLOCK_16_LANES
 
@@ -287,10 +292,12 @@ align 32
         vpaddq          TMP_3, TMP_0, [IN_PTRS + 32 * 2]
         vpaddq          TMP_4, TMP_0, [IN_PTRS + 32 * 3]
 
+%ifnidn %%MODE, CMAC
         vpaddq          TMP_5, TMP_0, [OUT_PTRS]
         vpaddq          TMP_6, TMP_0, [OUT_PTRS + 32 * 1]
         vpaddq          TMP_7, TMP_0, [OUT_PTRS + 32 * 2]
         vpaddq          TMP_0, TMP_0, [OUT_PTRS + 32 * 3]
+%endif
 
         ;; write new pointers to AES_ARGS
         vmovdqa          [IN_PTRS], TMP_1
@@ -298,10 +305,12 @@ align 32
         vmovdqa          [IN_PTRS + 32 * 2], TMP_3
         vmovdqa          [IN_PTRS + 32 * 3], TMP_4
 
+%ifnidn %%MODE, CMAC
         vmovdqa          [OUT_PTRS], TMP_5
         vmovdqa          [OUT_PTRS + 32 * 1], TMP_6
         vmovdqa          [OUT_PTRS + 32 * 2], TMP_7
         vmovdqa          [OUT_PTRS + 32 * 3], TMP_0
+%endif
 %%encrypt_16_done:
 %endmacro ;; AES_ENC_16
 

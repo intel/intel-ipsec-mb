@@ -461,7 +461,10 @@ lib_objs2 = \
 	$(OBJ_DIR)\poly1305.obj \
 	$(OBJ_DIR)\chacha20_poly1305.obj \
 	$(OBJ_DIR)\snow_v_sse.obj \
-	$(OBJ_DIR)\snow_v_avx.obj
+	$(OBJ_DIR)\snow_v_avx.obj \
+	$(OBJ_DIR)\mb_mgr_aes128_cmac_submit_flush_x16_vaes_avx2.obj \
+	$(OBJ_DIR)\mb_mgr_aes256_cmac_submit_flush_x16_vaes_avx2.obj \
+	$(OBJ_DIR)\aes_cmac_vaes_avx2.obj
 
 gcm_objs = \
 	$(OBJ_DIR)\gcm.obj \

@@ -128,6 +128,16 @@ submit_job_aes256_cbc_enc_vaes_avx2(MB_MGR_AES_OOO *state, IMB_JOB *job);
 IMB_JOB *
 flush_job_aes256_cbc_enc_vaes_avx2(MB_MGR_AES_OOO *state);
 
+/* AES-CMAC */
+IMB_JOB *
+submit_job_aes128_cmac_auth_vaes_avx2(MB_MGR_CMAC_OOO *state, IMB_JOB *job);
+IMB_JOB *
+flush_job_aes128_cmac_auth_vaes_avx2(MB_MGR_CMAC_OOO *state);
+IMB_JOB *
+submit_job_aes256_cmac_auth_vaes_avx2(MB_MGR_CMAC_OOO *state, IMB_JOB *job);
+IMB_JOB *
+flush_job_aes256_cmac_auth_vaes_avx2(MB_MGR_CMAC_OOO *state);
+
 IMB_DLL_EXPORT void
 set_suite_id_avx2_t2(IMB_MGR *state, IMB_JOB *job);
 
