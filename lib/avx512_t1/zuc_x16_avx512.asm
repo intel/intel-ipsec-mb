@@ -40,6 +40,7 @@
 %define USE_GFNI_VAES_VPCLMUL 0
 %define CIPHER_16 asm_ZucCipher_16_avx512
 %define ZUC128_INIT asm_ZucInitialization_16_avx512
+%define ZUCNEA6_INIT asm_ZucNEA6Initialization_16_avx512
 %define ZUC128_REMAINDER_16 asm_Eia3RemainderAVX512_16
 %define ZUC_KEYGEN64B_16 asm_ZucGenKeystream64B_16_avx512
 %define ZUC_KEYGEN8B_16 asm_ZucGenKeystream8B_16_avx512
@@ -59,14 +60,29 @@ dd      0x0044D700, 0x0026BC00, 0x00626B00, 0x00135E00, 0x00578900, 0x0035E200, 
 dd      0x004D7800, 0x002F1300, 0x006BC400, 0x001AF100, 0x005E2600, 0x003C4D00, 0x00789A00, 0x0047AC00
 
 align 64
+EK256_d64_NEA6:
+dd      0x00640000, 0x00430000, 0x007b0000, 0x002A0000, 0x00110000, 0x00050000, 0x00510000, 0x00420000
+dd      0x001a0000, 0x00310000, 0x00180000, 0x00660000, 0x00140000, 0x002e0000, 0x00010000, 0x005c0000
+
+align 64
 shuf_mask_key:
 dd      0x00FFFFFF, 0x01FFFFFF, 0x02FFFFFF, 0x03FFFFFF, 0x04FFFFFF, 0x05FFFFFF, 0x06FFFFFF, 0x07FFFFFF,
 dd      0x08FFFFFF, 0x09FFFFFF, 0x0AFFFFFF, 0x0BFFFFFF, 0x0CFFFFFF, 0x0DFFFFFF, 0x0EFFFFFF, 0x0FFFFFFF,
 
 align 64
+shuf_mask_key_16_31:
+dd      0xFFFF0008, 0xFFFF0109, 0xFFFF020A, 0xFFFF030B, 0xFFFF040C, 0xFFFF050D, 0xFFFF060E, 0xFFFFFFFF,
+dd      0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFF070F,
+
+align 64
 shuf_mask_iv:
 dd      0xFFFFFF00, 0xFFFFFF01, 0xFFFFFF02, 0xFFFFFF03, 0xFFFFFF04, 0xFFFFFF05, 0xFFFFFF06, 0xFFFFFF07,
 dd      0xFFFFFF08, 0xFFFFFF09, 0xFFFFFF0A, 0xFFFFFF0B, 0xFFFFFF0C, 0xFFFFFF0D, 0xFFFFFF0E, 0xFFFFFF0F
+
+align 64
+shuf_mask_iv_nea6:
+dd      0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFF0008,
+dd      0xFFFF0109, 0xFFFF020A, 0xFFFF030B, 0xFFFF040C, 0xFFFF050D, 0xFFFF060E, 0xFFFF070F, 0xFFFFFFFF
 
 align 64
 mask31:
@@ -1080,14 +1096,36 @@ align 64
 %endmacro
 
 ;
+; Initialize LFSR registers for a single lane, for ZUC-NEA6
+;
+%macro INIT_LFSR_NEA6 4
+%define %%KEY  %1 ;; [in] Key pointer
+%define %%IV   %2 ;; [in] IV pointer
+%define %%LFSR %3 ;; [out] ZMM register to contain initialized LFSR regs
+%define %%ZTMP %4 ;; [clobbered] ZMM temporary register
 
-%macro INIT_16_AVX512 6
+        vbroadcasti64x2 %%LFSR, [%%KEY]
+        vbroadcasti64x2 %%ZTMP, [%%IV]
+        vpshufb         %%LFSR, [rel shuf_mask_key]
+        vpsrld          %%LFSR, 1
+        vpshufb         %%ZTMP, [rel shuf_mask_iv_nea6]
+        vpternlogq      %%LFSR, %%ZTMP, [rel EK256_d64_NEA6], 0xFE ; A OR B OR C
+        vbroadcasti64x2 %%ZTMP, [%%KEY + 16]
+        vpshufb         %%ZTMP, [rel shuf_mask_key_16_31]
+        vpxorq          %%LFSR, %%LFSR, %%ZTMP
+
+%endmacro
+
+;
+
+%macro INIT_16_AVX512 7
 %define %%KEY           %1 ; [in] Array of 16 key pointers
 %define %%IV            %2 ; [in] Array of 16 IV pointers
 %define %%STATE         %3 ; [in] State
 %define %%LANE_MASK     %4 ; [in] Mask register with lanes to update
 %define %%TMP           %5 ; [clobbered] Temporary GP register
 %define %%TMP2          %6 ; [clobbered] Temporary GP register
+%define %%ALGO          %7 ; [constant] Algorithm (ZUC128, ZUC256 or ZUCNEA6)
 
 %define %%ZTMP1  zmm0
 %define %%ZTMP2  zmm1
@@ -1154,7 +1192,11 @@ align 64
 %rep 16
         mov     %%TMP, [pKe + 8*%%IDX]  ; Load Key N pointer
         lea     %%TMP2, [pIv + 32*%%IDX] ; Load IV N pointer
+%ifidn %%ALGO, ZUC128
         INIT_LFSR_128 %%TMP, %%TMP2, APPEND(%%LFSR, %%LFSR_IDX), %%ZTMP1
+%else ; %%ALGO == ZUCNEA6
+        INIT_LFSR_NEA6 %%TMP, %%TMP2, APPEND(%%LFSR, %%LFSR_IDX), %%ZTMP1
+%endif
 %assign %%IDX (%%IDX + 1)
 %assign %%LFSR_IDX (%%LFSR_IDX + 1)
 %endrep
@@ -1197,7 +1239,11 @@ align_loop
         LFSR_UPDT16  %%STATE, %%TMP, %%TMP2, %%INIT_LANE_KMASK, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, \
                         %%ZTMP6, %%MASK31, %%W, init  ; W used in LFSR update
         inc     %%TMP
+%ifidn %%ALGO, ZUCNEA6
+        cmp     %%TMP, 48
+%else
         cmp     %%TMP, 32
+%endif
         jne     %%start_loop_init
 
 align_label
@@ -1223,6 +1269,7 @@ align_label
 ;;                                      ZucState16_t *pState,
 ;;                                      const uint64_t lane_mask)
 ;;
+align 64
 MKGLOBAL(ZUC128_INIT,function,internal)
 align_function
 ZUC128_INIT:
@@ -1235,7 +1282,30 @@ ZUC128_INIT:
 
         FUNC_SAVE
 
-        INIT_16_AVX512 pKe, pIv, pState, lane_mask, r12, r13
+        INIT_16_AVX512 pKe, pIv, pState, lane_mask, r12, r13, ZUC128
+
+        FUNC_RESTORE
+
+        ret
+
+;;
+;; void asm_ZucNEA6Initialization_16_avx512(ZucKey16_t *pKeys, ZucIv16_t *pIvs,
+;;                                          ZucState16_t *pState,
+;;                                          const uint64_t lane_mask)
+;;
+align 64
+MKGLOBAL(ZUCNEA6_INIT,function,internal)
+ZUCNEA6_INIT:
+%define pKe             arg1
+%define pIv             arg2
+%define pState          arg3
+%define lane_mask       arg4
+
+        endbranch64
+
+        FUNC_SAVE
+
+        INIT_16_AVX512 pKe, pIv, pState, lane_mask, r12, r13, ZUCNEA6
 
         FUNC_RESTORE
 
@@ -1821,6 +1891,7 @@ align_loop
 ;; void asm_ZucGenKeystream64B_16_avx512(state16_t *pSta, u32* pKeyStr[16],
 ;;                                       const u32 key_off)
 ;;
+align 64
 MKGLOBAL(ZUC_KEYGEN64B_16,function,internal)
 align_function
 ZUC_KEYGEN64B_16:
@@ -1839,7 +1910,7 @@ ZUC_KEYGEN64B_16:
 ;;                               uint32_t *T,
 ;;                               const void **data,
 ;;                               uint16_t *len,
-;;                               const uint64_t numRounds,
+;;                               const uint64_t numRounds)
 MKGLOBAL(ZUC_EIA3_N64B,function,internal)
 align_function
 ZUC_EIA3_N64B:
@@ -1876,6 +1947,7 @@ ZUC_EIA3_N64B:
 ;;                                             const u32 key_off,
 ;;                                             const u16 lane_mask)
 ;;
+align 64
 MKGLOBAL(ZUC_KEYGEN64B_SKIP8_16,function,internal)
 align_function
 ZUC_KEYGEN64B_SKIP8_16:
@@ -1893,6 +1965,7 @@ ZUC_KEYGEN64B_SKIP8_16:
 ;; void asm_ZucGenKeystream8B_16_avx512(state16_t *pSta, u32* pKeyStr[16],
 ;;                                      const u32 key_off)
 ;;
+align 64
 MKGLOBAL(ZUC_KEYGEN8B_16,function,internal)
 align_function
 ZUC_KEYGEN8B_16:
@@ -1977,6 +2050,7 @@ align_label
 ;;                                    const u32 key_off,
 ;;                                    const u32 numRounds)
 ;;
+align 64
 MKGLOBAL(ZUC_KEYGEN_16,function,internal)
 align_function
 ZUC_KEYGEN_16:
@@ -1996,6 +2070,7 @@ ZUC_KEYGEN_16:
 ;;                                          const u16 lane_mask,
 ;;                                          u32 numRounds)
 ;;
+align 64
 MKGLOBAL(ZUC_KEYGEN_SKIP8_16,function,internal)
 align_function
 ZUC_KEYGEN_SKIP8_16:
@@ -2144,6 +2219,7 @@ align_label
 ;; void asm_ZucCipher_16_avx512(state16_t *pSta, u64 *pIn[16],
 ;;                              u64 *pOut[16], u16 lengths[16],
 ;;                              u64 min_length);
+align 64
 MKGLOBAL(CIPHER_16,function,internal)
 align_function
 CIPHER_16:
