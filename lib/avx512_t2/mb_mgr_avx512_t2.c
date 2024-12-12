@@ -48,7 +48,6 @@
 
 #include "include/arch_sse_type1.h"  /* SM4-ECB, AES-CFB */
 #include "include/arch_sse_type2.h"  /* SHA-NI */
-#include "include/arch_sse_type3.h"  /* ZUC */
 #include "include/arch_avx2_type1.h" /* AESNI, MD5 */
 #include "include/arch_avx512_type1.h"
 #include "include/arch_avx512_type2.h"
@@ -241,8 +240,8 @@
 #define FLUSH_JOB_ZUC_EIA3  flush_job_zuc_eia3_gfni_avx512
 
 /* ZUC NEA6 */
-#define SUBMIT_JOB_ZUC_NEA6 submit_job_zuc_nea6_gfni_sse
-#define FLUSH_JOB_ZUC_NEA6  flush_job_zuc_nea6_gfni_sse
+#define SUBMIT_JOB_ZUC_NEA6 submit_job_zuc_nea6_gfni_avx512
+#define FLUSH_JOB_ZUC_NEA6  flush_job_zuc_nea6_gfni_avx512
 
 /* SNOW5G */
 #define SUBMIT_JOB_SNOW5G snow_5g_sse
@@ -382,7 +381,7 @@ reset_ooo_mgrs(IMB_MGR *state)
         /* Init ZUC out-of-order fields */
         ooo_mgr_zuc_reset(state->zuc_eea3_ooo, 16);
         ooo_mgr_zuc_reset(state->zuc_eia3_ooo, 16);
-        ooo_mgr_zuc_reset(state->zuc_nea6_ooo, 4);
+        ooo_mgr_zuc_reset(state->zuc_nea6_ooo, 16);
 
         /* Init HMAC/SHA1 out-of-order fields */
         ooo_mgr_hmac_sha1_reset(state->hmac_sha_1_ooo, AVX512_NUM_SHA1_LANES);
