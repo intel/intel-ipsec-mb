@@ -36,6 +36,7 @@
 %ifndef ZUC_CIPHER_4
 %define ZUC_CIPHER_4 asm_ZucCipher_4_sse
 %define ZUC128_INIT_4 asm_ZucInitialization_4_sse
+%define ZUCNEA6_INIT_4 asm_ZucNEA6Initialization_4_sse
 %define ZUC_KEYGEN16B_4 asm_ZucGenKeystream16B_4_sse
 %define ZUC_KEYGEN8B_4 asm_ZucGenKeystream8B_4_sse
 %define ZUC_KEYGEN4B_4 asm_ZucGenKeystream4B_4_sse
@@ -72,6 +73,13 @@ dd      0x00578900, 0x0035E200, 0x00713500, 0x0009AF00
 dd      0x004D7800, 0x002F1300, 0x006BC400, 0x001AF100,
 dd      0x005E2600, 0x003C4D00, 0x00789A00, 0x0047AC00
 
+align 64
+Ek_d_NEA6:
+dd      0x00640000, 0x00430000, 0x007b0000, 0x002A0000
+dd      0x00110000, 0x00050000, 0x00510000, 0x00420000
+dd      0x001a0000, 0x00310000, 0x00180000, 0x00660000
+dd      0x00140000, 0x002e0000, 0x00010000, 0x005c0000
+
 align 16
 shuf_mask_key:
 dd      0x00FFFFFF, 0x01FFFFFF, 0x02FFFFFF, 0x03FFFFFF,
@@ -85,6 +93,20 @@ dd      0xFFFFFF00, 0xFFFFFF01, 0xFFFFFF02, 0xFFFFFF03,
 dd      0xFFFFFF04, 0xFFFFFF05, 0xFFFFFF06, 0xFFFFFF07,
 dd      0xFFFFFF08, 0xFFFFFF09, 0xFFFFFF0A, 0xFFFFFF0B,
 dd      0xFFFFFF0C, 0xFFFFFF0D, 0xFFFFFF0E, 0xFFFFFF0F,
+
+align 64
+shuf_mask_key_16_31:
+dd      0xFFFF0008, 0xFFFF0109, 0xFFFF020A, 0xFFFF030B,
+dd      0xFFFF040C, 0xFFFF050D, 0xFFFF060E, 0xFFFFFFFF,
+dd      0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF,
+dd      0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFF070F,
+
+align 64
+shuf_mask_iv_nea6:
+dd      0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF,
+dd      0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFF0008,
+dd      0xFFFF0109, 0xFFFF020A, 0xFFFF030B, 0xFFFF040C,
+dd      0xFFFF050D, 0xFFFF060E, 0xFFFF070F, 0xFFFFFFFF
 
 align 16
 mask31:
@@ -664,8 +686,8 @@ mksection .text
 %define %%KEY       %1 ;; [in] XMM register containing 16-byte key
 %define %%IV        %2 ;; [in] XMM register containing 16-byte IV
 %define %%SHUF_KEY  %3 ;; [in] Shuffle key mask
-%define %%SHUF_IV   %4 ;; [in] Shuffle key mask
-%define %%EKD_MASK  %5 ;; [in] Shuffle key mask
+%define %%SHUF_IV   %4 ;; [in] Shuffle IV mask
+%define %%EKD_MASK  %5 ;; [in] Constants mask
 %define %%LFSR      %6 ;; [out] XMM register to contain initialized LFSR regs
 %define %%XTMP      %7 ;; [clobbered] XMM temporary register
 
@@ -679,7 +701,34 @@ mksection .text
 
 %endmacro
 
-%macro ZUC_INIT_4 0
+;
+; Initialize LFSR registers for a single lane, for ZUC-NEA6
+;
+%macro INIT_LFSR_NEA6 8
+%define %%KEY       %1 ;; [in] 32-byte key pointer
+%define %%IV        %2 ;; [in] XMM register containing 16-byte IV
+%define %%SHUF_KEY  %3 ;; [in] Shuffle key mask for first 16 bytes of key
+%define %%SHUF_KEY2 %4 ;; [in] Shuffle key mask for second 16 bytes of key
+%define %%SHUF_IV   %5 ;; [in] Shuffle IV mask
+%define %%EKD_MASK  %6 ;; [in] Constants mask
+%define %%LFSR      %7 ;; [out] XMM register to contain initialized LFSR regs
+%define %%XTMP      %8 ;; [clobbered] XMM temporary register
+
+    movdqu          %%LFSR, [%%KEY]
+    movdqa          %%XTMP, %%IV
+    pshufb          %%LFSR, %%SHUF_KEY
+    psrld           %%LFSR, 1
+    pshufb          %%XTMP, %%SHUF_IV
+    por             %%LFSR, %%XTMP
+    por             %%LFSR, %%EKD_MASK
+    movdqu          %%XTMP, [%%KEY + 16]
+    pshufb          %%XTMP, %%SHUF_KEY2
+    por             %%LFSR, %%XTMP
+
+%endmacro
+
+%macro ZUC_INIT_4 1
+%define %%ALGO     %1 ; [constant] Algorithm (ZUC128 or ZUCNEA6)
 
 %ifdef LINUX
         %define         pKe     rdi
@@ -716,6 +765,11 @@ mksection .text
 %define %%KSTR4 %%XTMP15
 %define %%MASK_31 %%XTMP16
 
+%define %%KEY1 r12
+%define %%KEY2 r13
+%define %%KEY3 r14
+%define %%KEY4 r15
+
         FUNC_SAVE
 
         ; Zero out R1-R2
@@ -723,6 +777,7 @@ mksection .text
         movdqa  [pState + OFS_R1], %%XTMP1
         movdqa  [pState + OFS_R2], %%XTMP1
 
+%ifidn %%ALGO, ZUC128
         ;; Load key and IVs
 %assign %%OFF 0
 %assign %%I 1
@@ -742,7 +797,7 @@ mksection .text
 
 %assign %%OFF 0
 %rep 4
-        ; Set read-only registers for shuffle masks for key, IV and Ek_d for 8 registers
+        ; Set read-only registers for shuffle masks for key, IV and Ek_d for 4 registers
         movdqa  %%XTMP13, [rel shuf_mask_key + %%OFF]
         movdqa  %%XTMP14, [rel shuf_mask_iv + %%OFF]
         movdqa  %%XTMP15, [rel Ek_d + %%OFF]
@@ -771,6 +826,57 @@ mksection .text
 %assign %%OFF (%%OFF + 16)
 %endrep
 
+%else ;; %%ALGO == ZUCNEA6
+
+        ;; Load key pointers and IVs
+%assign %%OFF 0
+%assign %%I 1
+%assign %%J 5
+%rep 4
+        mov     APPEND(%%KEY, %%I),  [pKe + %%OFF]
+        ; Read 16 bytes of IV
+        movdqa  APPEND(%%XTMP, %%J), [pIv + %%OFF*4]
+%assign %%OFF (%%OFF + 8)
+%assign %%I (%%I + 1)
+%assign %%J (%%J + 1)
+%endrep
+
+        ;;; Initialize all LFSR registers in four steps:
+        ;;; first, registers 0-3, then registers 4-7, 8-11, 12-15
+
+%assign %%OFF 0
+%rep 4
+        ; Set read-only registers for shuffle masks for key, IV and Ek_d for 4 registers
+        movdqa  %%XTMP13, [rel shuf_mask_key + %%OFF]
+        movdqa  %%XTMP1,  [rel shuf_mask_key_16_31 + %%OFF]
+        movdqa  %%XTMP14, [rel shuf_mask_iv_nea6 + %%OFF]
+        movdqa  %%XTMP15, [rel Ek_d_NEA6 + %%OFF]
+
+       ; Set 4xLFSR registers for all packets
+%assign %%IDX 9
+%assign %%I 1
+%assign %%J 5
+%rep 4
+        INIT_LFSR_NEA6 APPEND(%%KEY,%%I), APPEND(%%XTMP,%%J), %%XTMP13, %%XTMP1, %%XTMP14, \
+                      %%XTMP15, APPEND(%%XTMP, %%IDX), %%XTMP16
+%assign %%IDX (%%IDX + 1)
+%assign %%I (%%I + 1)
+%assign %%J (%%J + 1)
+%endrep
+
+        ; Store 4xLFSR registers in memory (reordering first,
+        ; so all SX registers are together)
+        TRANSPOSE4_U32  %%XTMP9, %%XTMP10, %%XTMP11, %%XTMP12, %%XTMP13, %%XTMP14
+
+        movdqa  [pState + 4*%%OFF], %%XTMP9
+        movdqa  [pState + 4*%%OFF + 16], %%XTMP10
+        movdqa  [pState + 4*%%OFF + 16*2], %%XTMP11
+        movdqa  [pState + 4*%%OFF + 16*3], %%XTMP12
+
+%assign %%OFF (%%OFF + 16)
+%endrep
+%endif ;; %%ALGO
+
         ; Load read-only registers
         movdqa  %%MASK_31, [rel mask31]
 
@@ -778,7 +884,11 @@ mksection .text
 
 align_loop
 %%start_loop:
+%ifidn %%ALGO, ZUCNEA6
+        cmp     r15, 48
+%else
         cmp     r15, 32
+%endif
         je      %%exit_loop
         ; Shift LFSR 32-times, update state variables
         BITS_REORG4 pState, r15, r14, %%XTMP1, %%XTMP2, %%XTMP3, %%XTMP4, %%XTMP5, \
@@ -807,9 +917,14 @@ align_label
 MKGLOBAL(ZUC128_INIT_4,function,internal)
 align_function
 ZUC128_INIT_4:
-        ZUC_INIT_4
+        ZUC_INIT_4 ZUC128
         ret
 
+MKGLOBAL(ZUCNEA6_INIT_4,function,internal)
+align_function
+ZUCNEA6_INIT_4:
+        ZUC_INIT_4 ZUCNEA6
+        ret
 ;
 ; Generate N*4 bytes of keystream
 ; for 4 buffers (where N is number of rounds)
@@ -1603,7 +1718,6 @@ ZUC_EIA3REMAINDER:
 ;;  @param [in] KS (key stream pointer)
 ;;  @param [in] DATA (data pointer)
 ;;
-align 16
 MKGLOBAL(ZUC_EIA3ROUND16B,function,internal)
 align_function
 ZUC_EIA3ROUND16B:
