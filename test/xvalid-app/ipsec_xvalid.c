@@ -229,7 +229,10 @@ struct str_value_mapping cipher_algo_str_map[] = {
         { .name = "AES-CFB-192",
           .values.job_params = { .cipher_mode = IMB_CIPHER_CFB, .key_size = IMB_KEY_192_BYTES } },
         { .name = "AES-CFB-256",
-          .values.job_params = { .cipher_mode = IMB_CIPHER_CFB, .key_size = IMB_KEY_256_BYTES } }
+          .values.job_params = { .cipher_mode = IMB_CIPHER_CFB, .key_size = IMB_KEY_256_BYTES } },
+        { .name = "ZUC-NEA6",
+          .values.job_params = { .cipher_mode = IMB_CIPHER_ZUC_NEA6,
+                                 .key_size = IMB_KEY_256_BYTES } }
 };
 
 struct str_value_mapping hash_algo_str_map[] = {
@@ -616,7 +619,8 @@ const uint8_t key_sizes[][3] = {
         { 16, 16, 1 },  /* IMB_CIPHER_SM4_CBC */
         { 16, 32, 8 },  /* IMB_CIPHER_CFB */
         { 16, 16, 1 },  /* IMB_CIPHER_SM4_CNTR */
-        { 16, 16, 1 }   /* IMB_CIPHER_SM4_GCM */
+        { 16, 16, 1 },  /* IMB_CIPHER_SM4_GCM */
+        { 32, 32, 1 }   /* IMB_CIPHER_ZUC_NEA6 */
 };
 
 uint8_t custom_test = 0;
@@ -1479,6 +1483,11 @@ fill_job(IMB_JOB *job, const struct params_s *params, uint8_t *buf, uint8_t *dig
                 job->dec_keys = dec_keys;
                 job->iv_len_in_bytes = 0;
                 break;
+        case IMB_CIPHER_ZUC_NEA6:
+                job->enc_keys = k2;
+                job->dec_keys = k2;
+                job->iv_len_in_bytes = 16;
+                break;
         case IMB_CIPHER_ZUC_EEA3:
                 job->enc_keys = k2;
                 job->dec_keys = k2;
@@ -1817,6 +1826,7 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys, const uint8_t *ciph
                 nosimd_memcpy(k2, ciph_key, 16);
                 break;
         case IMB_CIPHER_ZUC_EEA3:
+        case IMB_CIPHER_ZUC_NEA6:
         case IMB_CIPHER_CHACHA20:
         case IMB_CIPHER_CHACHA20_POLY1305:
         case IMB_CIPHER_CHACHA20_POLY1305_SGL:
