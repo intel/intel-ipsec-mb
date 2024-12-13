@@ -157,6 +157,7 @@ enum test_cipher_mode_e {
         TEST_CFB,
         TEST_SM4_CTR,
         TEST_SM4_GCM,
+        TEST_ZUC_NEA6,
         TEST_NUM_CIPHER_TESTS
 };
 
@@ -299,6 +300,8 @@ const struct str_value_mapping cipher_algo_str_map[] = {
           .values.job_params = { .cipher_mode = TEST_CFB, .key_size = IMB_KEY_192_BYTES } },
         { .name = "aes-cfb-256",
           .values.job_params = { .cipher_mode = TEST_CFB, .key_size = IMB_KEY_256_BYTES } },
+        { .name = "zuc-nea6",
+          .values.job_params = { .cipher_mode = TEST_ZUC_NEA6, .key_size = IMB_KEY_256_BYTES } },
         { .name = "null", .values.job_params = { .cipher_mode = TEST_NULL_CIPHER, .key_size = 0 } }
 };
 
@@ -1456,6 +1459,9 @@ translate_cipher_mode(const enum test_cipher_mode_e test_mode)
         case TEST_ZUC_EEA3:
                 c_mode = IMB_CIPHER_ZUC_EEA3;
                 break;
+        case TEST_ZUC_NEA6:
+                c_mode = IMB_CIPHER_ZUC_NEA6;
+                break;
         case TEST_SNOW3G_UEA2:
                 c_mode = IMB_CIPHER_SNOW3G_UEA2_BITLEN;
                 break;
@@ -2326,6 +2332,8 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params, const uint32_t num_iter, uint8
                         job_template.key_len_in_bytes = 32;
                         job_template.iv_len_in_bytes = 25;
                 }
+        } else if (job_template.cipher_mode == IMB_CIPHER_ZUC_NEA6) {
+                job_template.iv_len_in_bytes = 16;
         } else if (job_template.cipher_mode == IMB_CIPHER_DOCSIS_SEC_BPI &&
                    job_template.hash_alg == IMB_AUTH_DOCSIS_CRC32) {
                 const uint64_t ciph_adjust = /* SA + DA */
@@ -3293,7 +3301,8 @@ print_times(struct variant_s *variant_list, struct params_s *params, const uint3
                                                                         "SM4_CBC",
                                                                         "AES-CFB",
                                                                         "SM4_CTR",
-                                                                        "SM4_GCM" };
+                                                                        "SM4_GCM",
+                                                                        "ZUC_NEA6" };
                 const char *c_dir_names[2] = { "ENCRYPT", "DECRYPT" };
                 const char *h_alg_names[TEST_NUM_HASH_TESTS - 1] = {
                         "SHA1_HMAC",
