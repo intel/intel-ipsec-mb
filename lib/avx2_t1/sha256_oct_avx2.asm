@@ -51,138 +51,41 @@ default rel
 align 64
 ;global K256_8
 K256_8:
-	dq	0x428a2f98428a2f98, 0x428a2f98428a2f98
-	dq	0x428a2f98428a2f98, 0x428a2f98428a2f98
-	dq	0x7137449171374491, 0x7137449171374491
-	dq	0x7137449171374491, 0x7137449171374491
-	dq	0xb5c0fbcfb5c0fbcf, 0xb5c0fbcfb5c0fbcf
-	dq	0xb5c0fbcfb5c0fbcf, 0xb5c0fbcfb5c0fbcf
-	dq	0xe9b5dba5e9b5dba5, 0xe9b5dba5e9b5dba5
-	dq	0xe9b5dba5e9b5dba5, 0xe9b5dba5e9b5dba5
-	dq	0x3956c25b3956c25b, 0x3956c25b3956c25b
-	dq	0x3956c25b3956c25b, 0x3956c25b3956c25b
-	dq	0x59f111f159f111f1, 0x59f111f159f111f1
-	dq	0x59f111f159f111f1, 0x59f111f159f111f1
-	dq	0x923f82a4923f82a4, 0x923f82a4923f82a4
-	dq	0x923f82a4923f82a4, 0x923f82a4923f82a4
-	dq	0xab1c5ed5ab1c5ed5, 0xab1c5ed5ab1c5ed5
-	dq	0xab1c5ed5ab1c5ed5, 0xab1c5ed5ab1c5ed5
-	dq	0xd807aa98d807aa98, 0xd807aa98d807aa98
-	dq	0xd807aa98d807aa98, 0xd807aa98d807aa98
-	dq	0x12835b0112835b01, 0x12835b0112835b01
-	dq	0x12835b0112835b01, 0x12835b0112835b01
-	dq	0x243185be243185be, 0x243185be243185be
-	dq	0x243185be243185be, 0x243185be243185be
-	dq	0x550c7dc3550c7dc3, 0x550c7dc3550c7dc3
-	dq	0x550c7dc3550c7dc3, 0x550c7dc3550c7dc3
-	dq	0x72be5d7472be5d74, 0x72be5d7472be5d74
-	dq	0x72be5d7472be5d74, 0x72be5d7472be5d74
-	dq	0x80deb1fe80deb1fe, 0x80deb1fe80deb1fe
-	dq	0x80deb1fe80deb1fe, 0x80deb1fe80deb1fe
-	dq	0x9bdc06a79bdc06a7, 0x9bdc06a79bdc06a7
-	dq	0x9bdc06a79bdc06a7, 0x9bdc06a79bdc06a7
-	dq	0xc19bf174c19bf174, 0xc19bf174c19bf174
-	dq	0xc19bf174c19bf174, 0xc19bf174c19bf174
-	dq	0xe49b69c1e49b69c1, 0xe49b69c1e49b69c1
-	dq	0xe49b69c1e49b69c1, 0xe49b69c1e49b69c1
-	dq	0xefbe4786efbe4786, 0xefbe4786efbe4786
-	dq	0xefbe4786efbe4786, 0xefbe4786efbe4786
-	dq	0x0fc19dc60fc19dc6, 0x0fc19dc60fc19dc6
-	dq	0x0fc19dc60fc19dc6, 0x0fc19dc60fc19dc6
-	dq	0x240ca1cc240ca1cc, 0x240ca1cc240ca1cc
-	dq	0x240ca1cc240ca1cc, 0x240ca1cc240ca1cc
-	dq	0x2de92c6f2de92c6f, 0x2de92c6f2de92c6f
-	dq	0x2de92c6f2de92c6f, 0x2de92c6f2de92c6f
-	dq	0x4a7484aa4a7484aa, 0x4a7484aa4a7484aa
-	dq	0x4a7484aa4a7484aa, 0x4a7484aa4a7484aa
-	dq	0x5cb0a9dc5cb0a9dc, 0x5cb0a9dc5cb0a9dc
-	dq	0x5cb0a9dc5cb0a9dc, 0x5cb0a9dc5cb0a9dc
-	dq	0x76f988da76f988da, 0x76f988da76f988da
-	dq	0x76f988da76f988da, 0x76f988da76f988da
-	dq	0x983e5152983e5152, 0x983e5152983e5152
-	dq	0x983e5152983e5152, 0x983e5152983e5152
-	dq	0xa831c66da831c66d, 0xa831c66da831c66d
-	dq	0xa831c66da831c66d, 0xa831c66da831c66d
-	dq	0xb00327c8b00327c8, 0xb00327c8b00327c8
-	dq	0xb00327c8b00327c8, 0xb00327c8b00327c8
-	dq	0xbf597fc7bf597fc7, 0xbf597fc7bf597fc7
-	dq	0xbf597fc7bf597fc7, 0xbf597fc7bf597fc7
-	dq	0xc6e00bf3c6e00bf3, 0xc6e00bf3c6e00bf3
-	dq	0xc6e00bf3c6e00bf3, 0xc6e00bf3c6e00bf3
-	dq	0xd5a79147d5a79147, 0xd5a79147d5a79147
-	dq	0xd5a79147d5a79147, 0xd5a79147d5a79147
-	dq	0x06ca635106ca6351, 0x06ca635106ca6351
-	dq	0x06ca635106ca6351, 0x06ca635106ca6351
-	dq	0x1429296714292967, 0x1429296714292967
-	dq	0x1429296714292967, 0x1429296714292967
-	dq	0x27b70a8527b70a85, 0x27b70a8527b70a85
-	dq	0x27b70a8527b70a85, 0x27b70a8527b70a85
-	dq	0x2e1b21382e1b2138, 0x2e1b21382e1b2138
-	dq	0x2e1b21382e1b2138, 0x2e1b21382e1b2138
-	dq	0x4d2c6dfc4d2c6dfc, 0x4d2c6dfc4d2c6dfc
-	dq	0x4d2c6dfc4d2c6dfc, 0x4d2c6dfc4d2c6dfc
-	dq	0x53380d1353380d13, 0x53380d1353380d13
-	dq	0x53380d1353380d13, 0x53380d1353380d13
-	dq	0x650a7354650a7354, 0x650a7354650a7354
-	dq	0x650a7354650a7354, 0x650a7354650a7354
-	dq	0x766a0abb766a0abb, 0x766a0abb766a0abb
-	dq	0x766a0abb766a0abb, 0x766a0abb766a0abb
-	dq	0x81c2c92e81c2c92e, 0x81c2c92e81c2c92e
-	dq	0x81c2c92e81c2c92e, 0x81c2c92e81c2c92e
-	dq	0x92722c8592722c85, 0x92722c8592722c85
-	dq	0x92722c8592722c85, 0x92722c8592722c85
-	dq	0xa2bfe8a1a2bfe8a1, 0xa2bfe8a1a2bfe8a1
-	dq	0xa2bfe8a1a2bfe8a1, 0xa2bfe8a1a2bfe8a1
-	dq	0xa81a664ba81a664b, 0xa81a664ba81a664b
-	dq	0xa81a664ba81a664b, 0xa81a664ba81a664b
-	dq	0xc24b8b70c24b8b70, 0xc24b8b70c24b8b70
-	dq	0xc24b8b70c24b8b70, 0xc24b8b70c24b8b70
-	dq	0xc76c51a3c76c51a3, 0xc76c51a3c76c51a3
-	dq	0xc76c51a3c76c51a3, 0xc76c51a3c76c51a3
-	dq	0xd192e819d192e819, 0xd192e819d192e819
-	dq	0xd192e819d192e819, 0xd192e819d192e819
-	dq	0xd6990624d6990624, 0xd6990624d6990624
-	dq	0xd6990624d6990624, 0xd6990624d6990624
-	dq	0xf40e3585f40e3585, 0xf40e3585f40e3585
-	dq	0xf40e3585f40e3585, 0xf40e3585f40e3585
-	dq	0x106aa070106aa070, 0x106aa070106aa070
-	dq	0x106aa070106aa070, 0x106aa070106aa070
-	dq	0x19a4c11619a4c116, 0x19a4c11619a4c116
-	dq	0x19a4c11619a4c116, 0x19a4c11619a4c116
-	dq	0x1e376c081e376c08, 0x1e376c081e376c08
-	dq	0x1e376c081e376c08, 0x1e376c081e376c08
-	dq	0x2748774c2748774c, 0x2748774c2748774c
-	dq	0x2748774c2748774c, 0x2748774c2748774c
-	dq	0x34b0bcb534b0bcb5, 0x34b0bcb534b0bcb5
-	dq	0x34b0bcb534b0bcb5, 0x34b0bcb534b0bcb5
-	dq	0x391c0cb3391c0cb3, 0x391c0cb3391c0cb3
-	dq	0x391c0cb3391c0cb3, 0x391c0cb3391c0cb3
-	dq	0x4ed8aa4a4ed8aa4a, 0x4ed8aa4a4ed8aa4a
-	dq	0x4ed8aa4a4ed8aa4a, 0x4ed8aa4a4ed8aa4a
-	dq	0x5b9cca4f5b9cca4f, 0x5b9cca4f5b9cca4f
-	dq	0x5b9cca4f5b9cca4f, 0x5b9cca4f5b9cca4f
-	dq	0x682e6ff3682e6ff3, 0x682e6ff3682e6ff3
-	dq	0x682e6ff3682e6ff3, 0x682e6ff3682e6ff3
-	dq	0x748f82ee748f82ee, 0x748f82ee748f82ee
-	dq	0x748f82ee748f82ee, 0x748f82ee748f82ee
-	dq	0x78a5636f78a5636f, 0x78a5636f78a5636f
-	dq	0x78a5636f78a5636f, 0x78a5636f78a5636f
-	dq	0x84c8781484c87814, 0x84c8781484c87814
-	dq	0x84c8781484c87814, 0x84c8781484c87814
-	dq	0x8cc702088cc70208, 0x8cc702088cc70208
-	dq	0x8cc702088cc70208, 0x8cc702088cc70208
-	dq	0x90befffa90befffa, 0x90befffa90befffa
-	dq	0x90befffa90befffa, 0x90befffa90befffa
-	dq	0xa4506ceba4506ceb, 0xa4506ceba4506ceb
-	dq	0xa4506ceba4506ceb, 0xa4506ceba4506ceb
-	dq	0xbef9a3f7bef9a3f7, 0xbef9a3f7bef9a3f7
-	dq	0xbef9a3f7bef9a3f7, 0xbef9a3f7bef9a3f7
-	dq	0xc67178f2c67178f2, 0xc67178f2c67178f2
-	dq	0xc67178f2c67178f2, 0xc67178f2c67178f2
+	dd	0x428a2f98,	0x71374491
+	dd	0xb5c0fbcf,	0xe9b5dba5
+	dd	0x3956c25b,	0x59f111f1
+	dd	0x923f82a4,	0xab1c5ed5
+	dd	0xd807aa98,	0x12835b01
+	dd	0x243185be,	0x550c7dc3
+	dd	0x72be5d74,	0x80deb1fe
+	dd	0x9bdc06a7,	0xc19bf174
+	dd	0xe49b69c1,	0xefbe4786
+	dd	0x0fc19dc6,	0x240ca1cc
+	dd	0x2de92c6f,	0x4a7484aa
+	dd	0x5cb0a9dc,	0x76f988da
+	dd	0x983e5152,	0xa831c66d
+	dd	0xb00327c8,	0xbf597fc7
+	dd	0xc6e00bf3,	0xd5a79147
+	dd	0x06ca6351,	0x14292967
+	dd	0x27b70a85,	0x2e1b2138
+	dd	0x4d2c6dfc,	0x53380d13
+	dd	0x650a7354,	0x766a0abb
+	dd	0x81c2c92e,	0x92722c85
+	dd	0xa2bfe8a1,	0xa81a664b
+	dd	0xc24b8b70,	0xc76c51a3
+	dd	0xd192e819,	0xd6990624
+	dd	0xf40e3585,	0x106aa070
+	dd	0x19a4c116,	0x1e376c08
+	dd	0x2748774c,	0x34b0bcb5
+	dd	0x391c0cb3,	0x4ed8aa4a
+	dd	0x5b9cca4f,	0x682e6ff3
+	dd	0x748f82ee,	0x78a5636f
+	dd	0x84c87814,	0x8cc70208
+	dd	0x90befffa,	0xa4506ceb
+	dd	0xbef9a3f7,	0xc67178f2
 
-PSHUFFLE_BYTE_FLIP_MASK: ;ddq 0x0c0d0e0f08090a0b0405060700010203
-                         ;ddq 0x0c0d0e0f08090a0b0405060700010203
-	dq 0x0405060700010203, 0x0c0d0e0f08090a0b
+align 16
+PSHUFFLE_BYTE_FLIP_MASK:
 	dq 0x0405060700010203, 0x0c0d0e0f08090a0b
 
 extern K256
@@ -336,7 +239,7 @@ mksection .text
 %define TT7 ymm15
 
 %define SZ8	8*SHA256_DIGEST_WORD_SIZE	; Size of one vector register
-%define ROUNDS 64*SZ8
+%define ROUNDS 64*SHA256_DIGEST_WORD_SIZE
 
 ; Define stack usage
 
@@ -416,7 +319,8 @@ endstruc
 
 	PRORD_nd	a1, e, 25		; sig1: a1 = (e >> 25)
 	vmovdqa	[SZ8*(%%i&0xf) + rsp], %%T1
-	vpaddd	%%T1, %%T1, [TBL + ROUND]	; T1 = W + K
+	vpbroadcastd TT7, [TBL + ROUND]
+	vpaddd	%%T1, %%T1, TT7	; T1 = W + K
 	vpxor	a0, a0, e	; sig1: a0 = e ^ (e >> 5)
 	PRORD	a0, 6		; sig1: a0 = (e >> 6) ^ (e >> 11)
 	vpaddd	h, h, a2	; h = h + ch
@@ -425,7 +329,7 @@ endstruc
 	vpxor	a0, a0, a1	; a0 = sigma1
 	PRORD_nd	a1, a, 22	; sig0: a1 = (a >> 22)
 	vpxor	%%T1, a, c	; maj: T1 = a^c
-	add	ROUND, SZ8	; ROUND++
+	add	ROUND, 4	; ROUND++
 	vpand	%%T1, %%T1, b	; maj: T1 = (a^c)&b
 	vpaddd	h, h, a0
 
@@ -530,7 +434,7 @@ lloop:
 	vmovdqa	[YTMP1], h
 	TRANSPOSE8_U32_PRELOADED TT0, TT1, TT2, TT3, TT4, TT5, TT6, TT7,   TMP0, TMP1
 	DBGPRINTL_YMM "transposed input ", TT0, TT1, TT2, TT3, TT4, TT5, TT6, TT7
-	vmovdqa	TMP1, [rel PSHUFFLE_BYTE_FLIP_MASK]
+	vbroadcasti128	TMP1, [rel PSHUFFLE_BYTE_FLIP_MASK]
 	vmovdqa	g, [YTMP0]
 	vpshufb	TT0, TT0, TMP1
 	vpshufb	TT1, TT1, TMP1

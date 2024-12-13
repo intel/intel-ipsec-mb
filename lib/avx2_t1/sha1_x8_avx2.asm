@@ -44,26 +44,17 @@
 mksection .rodata
 default rel
 align 32
-PSHUFFLE_BYTE_FLIP_MASK: ;ddq 0x0c0d0e0f08090a0b0405060700010203
-			 ;ddq 0x0c0d0e0f08090a0b0405060700010203
+PSHUFFLE_BYTE_FLIP_MASK:
 	dq 0x0405060700010203, 0x0c0d0e0f08090a0b
-	dq 0x0405060700010203, 0x0c0d0e0f08090a0b
-K00_19:                  ;ddq 0x5A8279995A8279995A8279995A827999
-	                 ;ddq 0x5A8279995A8279995A8279995A827999
-	dq 0x5A8279995A827999, 0x5A8279995A827999
-	dq 0x5A8279995A827999, 0x5A8279995A827999
-K20_39:                  ;ddq 0x6ED9EBA16ED9EBA16ED9EBA16ED9EBA1
-	                 ;ddq 0x6ED9EBA16ED9EBA16ED9EBA16ED9EBA1
-	dq 0x6ED9EBA16ED9EBA1, 0x6ED9EBA16ED9EBA1
-	dq 0x6ED9EBA16ED9EBA1, 0x6ED9EBA16ED9EBA1
-K40_59:                  ;ddq 0x8F1BBCDC8F1BBCDC8F1BBCDC8F1BBCDC
-			 ;ddq 0x8F1BBCDC8F1BBCDC8F1BBCDC8F1BBCDC
-	dq 0x8F1BBCDC8F1BBCDC, 0x8F1BBCDC8F1BBCDC
-	dq 0x8F1BBCDC8F1BBCDC, 0x8F1BBCDC8F1BBCDC
-K60_79:                  ;ddq 0xCA62C1D6CA62C1D6CA62C1D6CA62C1D6
-	                 ;ddq 0xCA62C1D6CA62C1D6CA62C1D6CA62C1D6
-	dq 0xCA62C1D6CA62C1D6, 0xCA62C1D6CA62C1D6
-	dq 0xCA62C1D6CA62C1D6, 0xCA62C1D6CA62C1D6
+
+K00_19:
+	dd 0x5A827999
+K20_39:
+	dd 0x6ED9EBA1
+K40_59:
+	dd 0x8F1BBCDC
+K60_79:
+	dd 0xCA62C1D6
 
 mksection .text
 
@@ -401,7 +392,7 @@ sha1_x8_avx2:
 
 	xor	IDX, IDX
 lloop:
-	vmovdqa	F, [rel PSHUFFLE_BYTE_FLIP_MASK]
+	vbroadcasti128	F, [rel PSHUFFLE_BYTE_FLIP_MASK]
 %assign I 0
 %rep 2
 	TRANSPOSE8_U32_LOAD8 T0, T1, T2, T3, T4, T5, T6, T7, \
@@ -440,7 +431,7 @@ lloop:
 ;;
 ;; perform 0-79 steps
 ;;
-	vmovdqa	K, [rel K00_19]
+	vpbroadcastd	K, [rel K00_19]
 ;; do rounds 0...15
 %assign I 0
 %rep 16
@@ -459,7 +450,7 @@ lloop:
 %endrep
 
 ;; do rounds 20...39
-	vmovdqa	K, [rel K20_39]
+	vpbroadcastd	K, [rel K20_39]
 %rep 20
 	SHA1_STEP_16_79 A,B,C,D,E, TMP,FUN, I, K, MAGIC_F1
 	ROTATE_ARGS
@@ -467,7 +458,7 @@ lloop:
 %endrep
 
 ;; do rounds 40...59
-	vmovdqa	K, [rel K40_59]
+	vpbroadcastd	K, [rel K40_59]
 %rep 20
 	SHA1_STEP_16_79 A,B,C,D,E, TMP,FUN, I, K, MAGIC_F2
 	ROTATE_ARGS
@@ -475,7 +466,7 @@ lloop:
 %endrep
 
 ;; do rounds 60...79
-	vmovdqa	K, [rel K60_79]
+	vpbroadcastd	K, [rel K60_79]
 %rep 20
 	SHA1_STEP_16_79 A,B,C,D,E, TMP,FUN, I, K, MAGIC_F3
 	ROTATE_ARGS
