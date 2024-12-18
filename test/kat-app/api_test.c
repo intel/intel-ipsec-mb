@@ -347,6 +347,10 @@ fill_in_job(struct IMB_JOB *job, const IMB_CIPHER_MODE cipher_mode,
         case IMB_CIPHER_SM4_ECB:
                 job->key_len_in_bytes = UINT64_C(16);
                 break;
+        case IMB_CIPHER_ZUC_NEA6:
+                job->key_len_in_bytes = UINT64_C(32);
+                job->iv_len_in_bytes = 16;
+                break;
         case IMB_CIPHER_ZUC_EEA3:
                 job->key_len_in_bytes = UINT64_C(16);
                 job->iv_len_in_bytes = 16;
@@ -1862,6 +1866,7 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                         case IMB_CIPHER_SM4_CNTR:
                         case IMB_CIPHER_CCM:
                         case IMB_CIPHER_PON_AES_CNTR:
+                        case IMB_CIPHER_ZUC_NEA6:
                         case IMB_CIPHER_ZUC_EEA3:
                         case IMB_CIPHER_SNOW3G_UEA2_BITLEN:
                         case IMB_CIPHER_KASUMI_UEA1_BITLEN:
@@ -1996,6 +2001,10 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                                 case IMB_CIPHER_CHACHA20_POLY1305:
                                 case IMB_CIPHER_CHACHA20_POLY1305_SGL:
                                         continue;
+                                case IMB_CIPHER_ZUC_NEA6:
+                                        /* max is 2^32 - 1 bits (2^29 bytes) */
+                                        job->msg_len_to_cipher_in_bytes = ((1ULL << 29));
+                                        break;
                                 case IMB_CIPHER_ZUC_EEA3:
                                         /* max is 8188 bytes */
                                         job->msg_len_to_cipher_in_bytes = 8190;
@@ -2083,6 +2092,9 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                 { IMB_CIPHER_GCM_SGL, 0 },
                 /* IVs must be 12 bytes */
                 { IMB_CIPHER_SM4_GCM, 13 },
+                /* ZUC-NEA6 IV must be 16 bytes */
+                { IMB_CIPHER_ZUC_NEA6, 15 },
+                { IMB_CIPHER_ZUC_NEA6, 17 }
         };
 
         dir = IMB_DIR_ENCRYPT;
@@ -2128,6 +2140,7 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                                 case IMB_CIPHER_CHACHA20:
                                 case IMB_CIPHER_CHACHA20_POLY1305:
                                 case IMB_CIPHER_CHACHA20_POLY1305_SGL:
+                                case IMB_CIPHER_ZUC_NEA6:
                                         if (key_len != IMB_KEY_256_BYTES)
                                                 continue;
                                         break;
