@@ -41,6 +41,11 @@ IMB_JOB *
 flush_job_zuc_eea3_gfni_sse(MB_MGR_ZUC_OOO *state);
 
 IMB_JOB *
+submit_job_zuc_nea6_gfni_sse(MB_MGR_ZUC_OOO *state, IMB_JOB *job);
+IMB_JOB *
+flush_job_zuc_nea6_gfni_sse(MB_MGR_ZUC_OOO *state);
+
+IMB_JOB *
 submit_job_zuc_eia3_gfni_sse(MB_MGR_ZUC_OOO *state, IMB_JOB *job);
 IMB_JOB *
 flush_job_zuc_eia3_gfni_sse(MB_MGR_ZUC_OOO *state);

@@ -52,6 +52,7 @@
 #include "include/arch_avx512_type2.h"
 #include "include/arch_sse_type1.h" /* aes-cfb, zuc */
 #include "include/arch_sse_type2.h" /* SHA-NI */
+#include "include/arch_sse_type3.h"  /* ZUC */
 #include "include/arch_avx10_type1.h"
 
 #include "include/ooo_mgr_reset.h"
@@ -250,6 +251,10 @@
 #define FLUSH_JOB_ZUC_EEA3  flush_job_zuc_eea3_gfni_avx512
 #define SUBMIT_JOB_ZUC_EIA3 submit_job_zuc_eia3_gfni_avx512
 #define FLUSH_JOB_ZUC_EIA3  flush_job_zuc_eia3_gfni_avx512
+
+/* ZUC NEA6 */
+#define SUBMIT_JOB_ZUC_NEA6 submit_job_zuc_nea6_gfni_sse
+#define FLUSH_JOB_ZUC_NEA6  flush_job_zuc_nea6_gfni_sse
 
 /* SNOW3G UEA2 & UIA2 */
 static IMB_JOB *

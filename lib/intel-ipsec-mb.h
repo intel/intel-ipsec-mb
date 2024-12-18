@@ -291,6 +291,7 @@ typedef enum {
         IMB_CIPHER_SM4_CNTR,
         IMB_CIPHER_SM4_CTR = IMB_CIPHER_SM4_CNTR,
         IMB_CIPHER_SM4_GCM,
+        IMB_CIPHER_ZUC_NEA6,
         IMB_CIPHER_NUM
 } IMB_CIPHER_MODE;
 
@@ -1157,6 +1158,7 @@ typedef struct IMB_MGR {
         void *aes_cfb_128_ooo;
         void *aes_cfb_192_ooo;
         void *aes_cfb_256_ooo;
+        void *zuc_nea6_ooo;
         void *end_ooo; /* add new out-of-order managers above this line */
 } IMB_MGR;
 

@@ -58,6 +58,12 @@
 #define ZUC_MIN_BYTELEN 1
 #define ZUC_MAX_BYTELEN (ZUC_MAX_BITLEN / 8)
 
+/* Range of input data for ZUC is from 1 to 2^32 - 1 bits */
+#define ZUC_NEA6_MIN_BITLEN  1
+#define ZUC_NEA6_MAX_BITLEN  ((1ULL << 32) - 1)
+#define ZUC_NEA6_MIN_BYTELEN 1
+#define ZUC_NEA6_MAX_BYTELEN (ZUC_NEA6_MAX_BITLEN / 8)
+
 /**
  ******************************************************************************
  * @description

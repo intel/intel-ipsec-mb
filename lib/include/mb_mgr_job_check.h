@@ -128,6 +128,12 @@ is_job_invalid_light(IMB_MGR *state, const IMB_CIPHER_MODE cipher_mode, const IM
                         return 1;
                 }
                 break;
+        case IMB_CIPHER_ZUC_NEA6:
+                if (key_len_in_bytes != UINT64_C(32)) {
+                        imb_set_errno(state, IMB_ERR_JOB_KEY_LEN);
+                        return 1;
+                }
+                break;
         case IMB_CIPHER_SNOW3G_UEA2_BITLEN:
         case IMB_CIPHER_KASUMI_UEA1_BITLEN:
         case IMB_CIPHER_SM4_CBC:
@@ -993,6 +999,37 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job, const IMB_CIPHER_MODE cipher_
                                 imb_set_errno(state, IMB_ERR_JOB_IV_LEN);
                                 return 1;
                         }
+                }
+                break;
+        case IMB_CIPHER_ZUC_NEA6:
+                if (job->src == NULL) {
+                        imb_set_errno(state, IMB_ERR_JOB_NULL_SRC);
+                        return 1;
+                }
+                if (job->dst == NULL) {
+                        imb_set_errno(state, IMB_ERR_JOB_NULL_DST);
+                        return 1;
+                }
+                if (job->iv == NULL) {
+                        imb_set_errno(state, IMB_ERR_JOB_NULL_IV);
+                        return 1;
+                }
+                if (job->enc_keys == NULL) {
+                        imb_set_errno(state, IMB_ERR_JOB_NULL_KEY);
+                        return 1;
+                }
+                if (key_len_in_bytes != UINT64_C(32)) {
+                        imb_set_errno(state, IMB_ERR_JOB_KEY_LEN);
+                        return 1;
+                }
+                if (job->msg_len_to_cipher_in_bytes == 0 ||
+                    job->msg_len_to_cipher_in_bytes > ZUC_NEA6_MAX_BYTELEN) {
+                        imb_set_errno(state, IMB_ERR_JOB_CIPH_LEN);
+                        return 1;
+                }
+                if (job->iv_len_in_bytes != UINT64_C(16)) {
+                        imb_set_errno(state, IMB_ERR_JOB_IV_LEN);
+                        return 1;
                 }
                 break;
         case IMB_CIPHER_SNOW3G_UEA2_BITLEN:

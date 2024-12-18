@@ -206,6 +206,10 @@
 #define SUBMIT_JOB_ZUC_EIA3 submit_job_zuc_eia3_avx2
 #define FLUSH_JOB_ZUC_EIA3  flush_job_zuc_eia3_avx2
 
+/* ZUC NEA6 */
+#define SUBMIT_JOB_ZUC_NEA6 submit_job_zuc_nea6_no_gfni_sse
+#define FLUSH_JOB_ZUC_NEA6  flush_job_zuc_nea6_no_gfni_sse
+
 /* SNOW3G UE2 & UIA2 */
 static IMB_JOB *
 submit_snow3g_uea2_job_avx2_t1(IMB_MGR *state, IMB_JOB *job)
@@ -266,6 +270,7 @@ reset_ooo_mgrs(IMB_MGR *state)
         /* Init ZUC out-of-order fields */
         ooo_mgr_zuc_reset(state->zuc_eea3_ooo, 8);
         ooo_mgr_zuc_reset(state->zuc_eia3_ooo, 8);
+        ooo_mgr_zuc_reset(state->zuc_nea6_ooo, 4);
 
         /* Init HMAC/SHA1 out-of-order fields */
         ooo_mgr_hmac_sha1_reset(state->hmac_sha_1_ooo, AVX2_NUM_SHA1_LANES);

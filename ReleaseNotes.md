@@ -22,6 +22,7 @@ Library
 - Added SHAKE128 and SHAKE256 base implementations.
 - Removed KASUMI bit-length support and corresponding API.
 - Added support for zero-length messages in HMAC-SHA and HMAC-MD5 algorithms.
+- Added ZUC-NEA6 SSE implementation.
 
 Test Applications
 - Added `--offset` parameter to `imb-xvalid` application.
