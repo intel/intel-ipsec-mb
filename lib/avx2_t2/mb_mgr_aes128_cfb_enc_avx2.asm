@@ -34,6 +34,7 @@
 
 %ifndef AES_ENC_X16
 %define AES_ENC_X16 aes_cfb_enc_128_vaes_avx2
+%define MODE CFB
 %define NUM_KEYS 11
 %define SUBMIT_JOB_AES_ENC submit_job_aes128_cfb_enc_vaes_avx2
 %define FLUSH_JOB_AES_ENC flush_job_aes128_cfb_enc_vaes_avx2
@@ -300,6 +301,10 @@ endstruc
         mov     [state + _aes_job_in_lane + %%LANE_IDX*8], %%JOB
         ;; Store length
         mov     %%TMP_GP_1, [%%JOB + _msg_len_to_cipher_in_bytes]
+
+%ifidn MODE, CBC
+	and	%%TMP_GP_1, -16		; DOCSIS may pass size unaligned to block size
+%endif
         mov     [state + _aes_lens + 2*%%LANE_IDX], WORD(%%TMP_GP_1)
         ;; Store IV
         mov     iv, [%%JOB + _iv]

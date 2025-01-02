@@ -34,6 +34,7 @@
 
 %ifndef AES_ENC_X16
 %define AES_ENC_X16 aes_cbc_enc_128_vaes_avx2
+%define MODE CBC
 %define NUM_KEYS 11
 %define SUBMIT_JOB_AES_ENC submit_job_aes128_cbc_enc_vaes_avx2
 %define FLUSH_JOB_AES_ENC flush_job_aes128_cbc_enc_vaes_avx2

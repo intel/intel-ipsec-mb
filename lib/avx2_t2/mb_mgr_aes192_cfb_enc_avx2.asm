@@ -34,6 +34,7 @@
 
 %ifndef AES_ENC_X16
 %define AES_ENC_X16 aes_cfb_enc_192_vaes_avx2
+%define MODE CFB
 %define NUM_KEYS 13
 %define SUBMIT_JOB_AES_ENC submit_job_aes192_cfb_enc_vaes_avx2
 %define FLUSH_JOB_AES_ENC flush_job_aes192_cfb_enc_vaes_avx2
