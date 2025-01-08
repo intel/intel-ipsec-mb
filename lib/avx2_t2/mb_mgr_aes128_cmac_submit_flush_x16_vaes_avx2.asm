@@ -264,7 +264,7 @@ endstruc
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; For each unused lane (with job ptr set to 0) set length to UINT16_MAX(0xffff)
-; Updates [state + _aes_lens]
+; Updates [state + _aes_cmac_lens]
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 %macro SET_LENGTHS_TO_MAX 4
 %define %%LENGTH_LO        %1     ;; [clobbered] temp YMM reg
@@ -290,8 +290,8 @@ endstruc
 %%skip_copy_ffs_hi_ %+ I:
 %assign I (I+1)
 %endrep
-        vmovdqa [state + _aes_cmac_lens], XWORD(%%LENGTH_LO)
-        vmovdqa [state + _aes_cmac_lens + 8*2], %%LENGTH_HI
+        vinserti128 %%LENGTH_LO, %%LENGTH_LO, %%LENGTH_HI, 1
+        vmovdqa [state + _aes_cmac_lens], %%LENGTH_LO
 
 %endmacro ;; SET_LENGTHS_TO_MAX
 
@@ -358,7 +358,10 @@ endstruc
         ;; len = (n-1)*16
         lea     TMP_GP_1, [n - 1]
         shl     TMP_GP_1, 4
-        mov     [state + _aes_cmac_lens + 2*lane], WORD(TMP_GP_1)
+
+        vmovdqa YMM_TMP_0, [state + _aes_cmac_lens]
+        VPINSRW_256 YMM_TMP_0, XMM_TMP_1, XMM_TMP_2, TMP_GP_3, lane, TMP_GP_1, scale_x16
+        vmovdqa [state + _aes_cmac_lens], YMM_TMP_0
 
         ;; check remainder bits
         or      rbits, rbits
@@ -372,8 +375,8 @@ endstruc
         ;; M_last = padding(M_n) XOR K2
         lea     TMP_GP_1, [rel padding_0x80_tab16 + 16]
         sub     TMP_GP_1, r
-        vmovdqu xmm0, [TMP_GP_1]
-        vmovdqa [m_last], xmm0
+        vmovdqu XMM_TMP_2, [TMP_GP_1]
+        vmovdqa [m_last], XMM_TMP_2
 
         mov     TMP_GP_1, [job + _src]
         add     TMP_GP_1, [job + _hash_start_src_offset_in_bytes]
@@ -386,9 +389,9 @@ endstruc
         ;; src + n + r
         mov     TMP_GP_3, [job + _skey2]
         vmovdqa XMM_TMP_1, [m_last]
-        vmovdqu XMM_TMP_0, [TMP_GP_3]
-        vpxor   XMM_TMP_0, XMM_TMP_1
-        vmovdqa [m_last], XMM_TMP_0
+        vmovdqu XMM_TMP_2, [TMP_GP_3]
+        vpxor   XMM_TMP_2, XMM_TMP_1
+        vmovdqa [m_last], XMM_TMP_2
 
 %%_step_5:
         ;; If not all 16 jobs are in use wait for more jobs
@@ -408,23 +411,22 @@ endstruc
         SET_LENGTHS_TO_MAX YMM_TMP_0, XMM_TMP_1, XMM_TMP_2, TMP_GP_3
 
         ;; Find minimum length
-        vmovdqa         YMM_TMP_0, [state + _aes_cmac_lens]
         vphminposuw     XMM_TMP_2, XMM_TMP_0  ; for lanes 0...7
 %endif ;; SUBMIT_FLUSH
 
 %%_cmac_round:
-        vpextrw         min_len, XMM_TMP_2, 0        ; min value
-        vpextrw         idx, XMM_TMP_2, 1            ; min index (for lanes 0...7)
+        vpextrw         min_len, XMM_TMP_2, 0            ; min value
+        vpextrw         idx, XMM_TMP_2, 1                ; min index (for lanes 0...7)
 
-        vextracti128    XMM_TMP_1, YMM_TMP_0, 1      ; for lanes 8...15
+        vextracti128    XMM_TMP_1, YMM_TMP_0, 1          ; for lanes 8...15
         vphminposuw     XMM_TMP_2, XMM_TMP_1
         vpextrw         DWORD(TMP_GP_1), XMM_TMP_2, 0    ; min value
         cmp             DWORD(min_len), DWORD(TMP_GP_1)
-        jbe             %%use_min                               ; check if new value is lower
+        jbe             %%use_min                        ; check if new value is lower
         ;; Min value is from lanes 8...15
-        vpextrw         idx, XMM_TMP_2, 1         ; min index (0-7)
+        vpextrw         idx, XMM_TMP_2, 1                ; min index (0-7)
         add             idx, 8                           ; index + 8
-        mov             min_len, TMP_GP_1                       ; min len
+        mov             min_len, TMP_GP_1                ; min len
 %%use_min:
         ; Check for zero length, to retrieve already encrypted buffers
         cmp             min_len, 0
@@ -457,7 +459,9 @@ endstruc
         mov     word [state + _aes_cmac_init_done + idx*2], 1
 
         ;; set lane len to 16
-        mov     word [state + _aes_cmac_lens + 2*idx], 16
+        vmovdqa YMM_TMP_0, [state + _aes_cmac_lens]
+        VPINSRW_256 YMM_TMP_0, XMM_TMP_1, XMM_TMP_2, TMP_GP_3, idx, 16, scale_x16
+        vmovdqa [state + _aes_cmac_lens], YMM_TMP_0
 
         mov     TMP_GP_3, idx
         shl     TMP_GP_3, 4  ; idx*16
@@ -469,7 +473,6 @@ endstruc
         COPY_GOOD_LANE_DATA idx
         SET_LENGTHS_TO_MAX YMM_TMP_0, XMM_TMP_1, XMM_TMP_2, TMP_GP_3
 %endif
-        vmovdqa         YMM_TMP_0, [state + _aes_cmac_lens]
         vphminposuw     XMM_TMP_2, XMM_TMP_0  ; for lanes 0...7
 
         jmp     %%_cmac_round
@@ -578,10 +581,9 @@ endstruc
         mov     word [state + _aes_cmac_init_done + lane*2], 1
         mov     [state + _aes_cmac_args_in + lane*8], m_last
 
-        mov     word [state + _aes_cmac_lens + 2*lane], 16
-        ; vmovdqa XMM_TMP_0, [state + _aes_cmac_lens]
-        ; XVPINSRW XMM_TMP_0, XMM_TMP_1, TMP_GP_2, lane, 16, scale_x16
-        ; vmovdqa [state + _aes_cmac_lens], XMM_TMP_0
+        vmovdqa YMM_TMP_0, [state + _aes_cmac_lens]
+        VPINSRW_256 YMM_TMP_0, XMM_TMP_1, XMM_TMP_2, TMP_GP_3, lane, 16, scale_x16
+        vmovdqa [state + _aes_cmac_lens], YMM_TMP_0
 
         mov     n, 1
         jmp     %%_not_complete_block

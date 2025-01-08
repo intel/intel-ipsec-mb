@@ -134,6 +134,32 @@ extern padding_0x80_tab16
 %%exit:
 %endmacro
 
+;;; VPINSRW_256 insert word into ymm register
+%macro VPINSRW_256 7
+
+%define %%dest          %1 ; dest YMM reg to insert word
+%define %%tmp_simd1     %2 ; XMM reg to clobber
+%define %%tmp_simd2     %3 ; XMM reg to clobber
+%define %%tmp_gp        %4 ; GP reg to clobber
+%define %%idx           %5 ; word index to insert value
+%define %%val           %6 ; word value to insert into idx
+%define %%scale_idx     %7 ; flag to set if index is to be scaled x16
+
+        cmp     %%idx, 8
+        jl      %%lower_128
+        sub     %%idx, 8
+        vextracti128 %%tmp_simd1, %%dest, 1
+        XVPINSRW %%tmp_simd1, %%tmp_simd2, %%tmp_gp, %%idx, %%val, %%scale_idx
+        vinserti128 %%dest, %%dest, %%tmp_simd1, 1
+        add     %%idx, 8
+        jmp     %%exit
+%%lower_128:
+        vmovdqa %%tmp_simd2, XWORD(%%dest)
+        XVPINSRW XWORD(%%tmp_simd2), %%tmp_simd1, %%tmp_gp, %%idx, %%val, %%scale_idx
+        vinserti128 %%dest, %%dest, %%tmp_simd2, 0
+%%exit:
+%endmacro
+
 ; PINSRD_COMMON insert dword into 128 bit SIMD register
 %macro PINSRD_COMMON 7
 
