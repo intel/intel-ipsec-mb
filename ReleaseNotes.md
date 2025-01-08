@@ -5,6 +5,7 @@ Unreleased
 Library
 - Added AES-CFB AVX2 type 2 implementation.
 - Added AES-CBC AVX2 type 2 implementation.
+- Added AES-CMAC AVX2 type 2 implementation.
 
 Test Applications
 - Added `--offset` parameter to `imb-xvalid` application.

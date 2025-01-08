@@ -142,8 +142,8 @@ Table 2. List of supported integrity algorithms and their implementations.
 | AES256-GMAC       | Y  by8 |  <---  |  <---  | Y  by8 | Y by16 | [A2-1] | [A2-2] | [A2-1] | Y  by32 |
 | AES128-CCM        | Y   x8 |  <---  |  <---  | Y   x8 |  <---  |  <---  |  <---  |  <---  | Y   x16 |
 | AES256-CCM        | Y   x8 |  <---  |  <---  | Y   x8 |  <---  |  <---  |  <---  |  <---  | Y   x16 |
-| AES128-CMAC-96    | Y   x8 |  <---  |  <---  | Y   x8 |  <---  |  <---  |  <---  |  <---  | Y   x16 |
-| AES256-CMAC-96    | Y   x8 |  <---  |  <---  | Y   x8 |  <---  |  <---  |  <---  |  <---  | Y   x16 |
+| AES128-CMAC-96    | Y   x8 |  <---  |  <---  | Y   x8 | Y  x16 |  <---  |  <---  |  <---  | Y   x16 |
+| AES256-CMAC-96    | Y   x8 |  <---  |  <---  | Y   x8 | Y  x16 |  <---  |  <---  |  <---  | Y   x16 |
 | KASUMI-F9         | Y      |  <---  |  <---  |  <---  |  <---  |  <---  |  <---  |  <---  |  <---   |
 | ZUC-EIA3          | Y   x4 |  <---  | Y(3)x4 | Y   x8 | Y(3)x8 |  <---  |  <---  | Y  x16 | Y(3)x16 |
 | ZUC-EIA3-256      | Y   x4 |  <---  | Y(3)x4 | Y   x8 | Y(3)x8 |  <---  |  <---  | Y  x16 | Y(3)x16 |
