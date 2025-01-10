@@ -37,9 +37,12 @@
 %ifndef SUBMIT_JOB_ZUC128_EEA3
 %define SUBMIT_JOB_ZUC128_EEA3 submit_job_zuc_eea3_avx2
 %define FLUSH_JOB_ZUC128_EEA3 flush_job_zuc_eea3_avx2
+%define SUBMIT_JOB_ZUC_NEA6 submit_job_zuc_nea6_avx2
+%define FLUSH_JOB_ZUC_NEA6 flush_job_zuc_nea6_avx2
 %define SUBMIT_JOB_ZUC128_EIA3 submit_job_zuc_eia3_avx2
 %define FLUSH_JOB_ZUC128_EIA3 flush_job_zuc_eia3_avx2
 %define ZUC128_INIT_8        asm_ZucInitialization_8_avx2
+%define ZUCNEA6_INIT_8       asm_ZucNEA6Initialization_8_avx2
 %define ZUC_EIA3_8_BUFFER    zuc_eia3_8_buffer_job_avx2
 %define ZUC_CIPHER_8      asm_ZucCipher_8_avx2
 %endif
@@ -81,6 +84,7 @@ dd      0x00000000, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF
 dd      0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF
 
 extern ZUC128_INIT_8
+extern ZUCNEA6_INIT_8
 extern ZUC_CIPHER_8
 extern ZUC_EIA3_8_BUFFER
 
@@ -178,7 +182,8 @@ mksection .text
 
 %endmacro
 
-%macro SUBMIT_JOB_ZUC_EEA3 0
+%macro SUBMIT_JOB_ZUC_EEA3 1
+%define %%ALGO      %1 ; [constant] ZUC128 or ZUCNEA6
 
 ; idx needs to be in rbp
 %define len              rbp
@@ -215,7 +220,7 @@ mksection .text
         shr     unused_lanes, 4
         mov     tmp, [job + _iv]
         shl     lane, 5
-        ; Read first 16 bytes of IV
+        ; Read the 16 bytes of IV
         vmovdqu xmm0, [tmp]
         vmovdqa [state + _zuc_args_IV + lane], xmm0
         shr     lane, 5
@@ -273,7 +278,11 @@ mksection .text
         lea     arg1, [r12 + _zuc_args_keys]
         lea     arg2, [r12 + _zuc_args_IV]
         lea     arg3, [r12 + _zuc_state]
+%ifidn %%ALGO, ZUC128
         call    ZUC128_INIT_8
+%else ;; %%ALGO == ZUCNEA6
+        call    ZUCNEA6_INIT_8
+%endif
 
         RESTORE_STACK_SPACE 5
 
@@ -393,7 +402,8 @@ align_label
         jmp     %%return_submit_eea3
 %endmacro
 
-%macro FLUSH_JOB_ZUC_EEA3 0
+%macro FLUSH_JOB_ZUC_EEA3 1
+%define %%ALGO      %1 ; [constant] ZUC128 or ZUCNEA6
 
 %define unused_lanes     rbx
 %define tmp1             rbx
@@ -492,7 +502,11 @@ APPEND(%%skip_eea3_,I):
         lea     arg2, [r12 + _zuc_args_IV]
         lea     arg3, [r12 + _zuc_state]
 
+%ifidn %%ALGO, ZUC128
         call    ZUC128_INIT_8
+%else ;; %%ALGO == ZUCNEA6
+        call    ZUCNEA6_INIT_8
+%endif ;; %%ALGO
 
         RESTORE_STACK_SPACE 5
 
@@ -679,9 +693,14 @@ align_label
 MKGLOBAL(SUBMIT_JOB_ZUC128_EEA3,function,internal)
 align_function
 SUBMIT_JOB_ZUC128_EEA3:
-        SUBMIT_JOB_ZUC_EEA3
+        SUBMIT_JOB_ZUC_EEA3 ZUC128
 
-
+; JOB* SUBMIT_JOB_ZUC_NEA6(MB_MGR_ZUC_OOO *state, IMB_JOB *job)
+; arg 1 : state
+; arg 2 : job
+MKGLOBAL(SUBMIT_JOB_ZUC_NEA6,function,internal)
+SUBMIT_JOB_ZUC_NEA6:
+        SUBMIT_JOB_ZUC_EEA3 ZUCNEA6
 
 ; JOB* FLUSH_JOB_ZUC128_EEA3(MB_MGR_ZUC_OOO *state, IMB_JOB *job)
 ; arg 1 : state
@@ -689,8 +708,14 @@ SUBMIT_JOB_ZUC128_EEA3:
 MKGLOBAL(FLUSH_JOB_ZUC128_EEA3,function,internal)
 align_function
 FLUSH_JOB_ZUC128_EEA3:
-        FLUSH_JOB_ZUC_EEA3
+        FLUSH_JOB_ZUC_EEA3 ZUC128
 
+; JOB* FLUSH_JOB_ZUC_NEA6(MB_MGR_ZUC_OOO *state, IMB_JOB *job)
+; arg 1 : state
+; arg 2 : job
+MKGLOBAL(FLUSH_JOB_ZUC_NEA6,function,internal)
+FLUSH_JOB_ZUC_NEA6:
+        FLUSH_JOB_ZUC_EEA3 ZUCNEA6
 
 
 %macro SUBMIT_JOB_ZUC_EIA3 0

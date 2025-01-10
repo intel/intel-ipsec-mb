@@ -191,6 +191,11 @@ IMB_JOB *
 flush_job_zuc_eea3_avx2(MB_MGR_ZUC_OOO *state);
 
 IMB_JOB *
+submit_job_zuc_nea6_avx2(MB_MGR_ZUC_OOO *state, IMB_JOB *job);
+IMB_JOB *
+flush_job_zuc_nea6_avx2(MB_MGR_ZUC_OOO *state);
+
+IMB_JOB *
 submit_job_zuc_eia3_avx2(MB_MGR_ZUC_OOO *state, IMB_JOB *job);
 IMB_JOB *
 flush_job_zuc_eia3_avx2(MB_MGR_ZUC_OOO *state);
