@@ -38,6 +38,7 @@
 %ifndef ZUC_CIPHER_8
 %define ZUC_CIPHER_8 asm_ZucCipher_8_avx2
 %define ZUC128_INIT_8 asm_ZucInitialization_8_avx2
+%define ZUCNEA6_INIT_8 asm_ZucNEA6Initialization_8_avx2
 %define ZUC_KEYGEN32B_8 asm_ZucGenKeystream32B_8_avx2
 %define ZUC_KEYGEN16B_8 asm_ZucGenKeystream16B_8_avx2
 %define ZUC_KEYGEN8B_8 asm_ZucGenKeystream8B_8_avx2
@@ -72,9 +73,30 @@ dd      0x0044D700, 0x0026BC00, 0x00626B00, 0x00135E00, 0x00578900, 0x0035E200, 
 dd      0x004D7800, 0x002F1300, 0x006BC400, 0x001AF100, 0x005E2600, 0x003C4D00, 0x00789A00, 0x0047AC00
 
 align 32
+Ek_d_NEA6:
+dd      0x00640000, 0x00430000, 0x007b0000, 0x002A0000
+dd      0x00110000, 0x00050000, 0x00510000, 0x00420000
+dd      0x001a0000, 0x00310000, 0x00180000, 0x00660000
+dd      0x00140000, 0x002e0000, 0x00010000, 0x005c0000
+
+align 32
 shuf_mask_key:
 dd      0x00FFFFFF, 0x01FFFFFF, 0x02FFFFFF, 0x03FFFFFF, 0x04FFFFFF, 0x05FFFFFF, 0x06FFFFFF, 0x07FFFFFF,
 dd      0x08FFFFFF, 0x09FFFFFF, 0x0AFFFFFF, 0x0BFFFFFF, 0x0CFFFFFF, 0x0DFFFFFF, 0x0EFFFFFF, 0x0FFFFFFF,
+
+align 64
+shuf_mask_key_16_31:
+dd      0xFFFF0008, 0xFFFF0109, 0xFFFF020A, 0xFFFF030B,
+dd      0xFFFF040C, 0xFFFF050D, 0xFFFF060E, 0xFFFFFFFF,
+dd      0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF,
+dd      0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFF070F,
+
+align 64
+shuf_mask_iv_nea6:
+dd      0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF,
+dd      0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFF0008,
+dd      0xFFFF0109, 0xFFFF020A, 0xFFFF030B, 0xFFFF040C,
+dd      0xFFFF050D, 0xFFFF060E, 0xFFFF070F, 0xFFFFFFFF
 
 align 32
 shuf_mask_iv:
@@ -689,8 +711,8 @@ align 64
 %define %%KEY       %1 ;; [in] Key pointer
 %define %%IV        %2 ;; [in] IV pointer
 %define %%SHUF_KEY  %3 ;; [in] Shuffle key mask
-%define %%SHUF_IV   %4 ;; [in] Shuffle key mask
-%define %%EKD_MASK  %5 ;; [in] Shuffle key mask
+%define %%SHUF_IV   %4 ;; [in] Shuffle IV mask
+%define %%EKD_MASK  %5 ;; [in] d-constants
 %define %%LFSR      %6 ;; [out] YMM register to contain initialized LFSR regs
 %define %%YTMP      %7 ;; [clobbered] YMM temporary register
 
@@ -705,8 +727,42 @@ align 64
 %endmacro
 
 ;
+; Initialize LFSR registers for a single lane, for ZUC-128
+;
+; This macro initializes 8 LFSR registers at time.
+; so it needs to be called twice.
+;
+; From spec, s_i (LFSR) registers need to be loaded as follows:
+;
+; For 0 <= i <= 15, let s_i= k_i || d_i || iv_i.
+; Where k_i is each byte of the key, d_i is a 15-bit constant
+; and iv_i is each byte of the IV.
+;
+%macro INIT_LFSR_NEA6 8
+%define %%KEY             %1 ;; [in] 32-byte key pointer
+%define %%IV              %2 ;; [in] IV pointer
+%define %%SHUF_KEY        %3 ;; [in] Shuffle key mask (bytes 0-15)
+%define %%SHUF_KEY_16_31  %4 ;; [in] Shuffle key mask (bytes 16-31)
+%define %%SHUF_IV         %5 ;; [in] Shuffle IV mask
+%define %%EKD_MASK        %6 ;; [in] d-constants
+%define %%LFSR            %7 ;; [out] YMM register to contain initialized LFSR regs
+%define %%YTMP            %8 ;; [clobbered] YMM temporary register
 
-%macro ZUC_INIT_8 0
+        vbroadcastf128  %%LFSR, [%%KEY]
+        vbroadcastf128  %%YTMP, [%%IV]
+        vpshufb         %%LFSR, %%SHUF_KEY
+        vpsrld          %%LFSR, 1
+        vpshufb         %%YTMP, %%SHUF_IV
+        vpor            %%LFSR, %%YTMP
+        vpor            %%LFSR, %%EKD_MASK
+        vbroadcastf128  %%YTMP, [%%KEY + 16]
+        vpshufb         %%YTMP, %%SHUF_KEY_16_31
+        vpor            %%LFSR, %%LFSR, %%YTMP
+
+%endmacro
+
+%macro ZUC_INIT_8 1
+%define %%ALGO     %1 ; [constant] Algorithm (ZUC128 or ZUCNEA6)
 
 %define pKe     arg1
 %define pIv     arg2
@@ -747,6 +803,7 @@ align 64
         ;;; Initialize all LFSR registers in two steps:
         ;;; first, registers 0-7, then registers 8-15
 
+%ifidn %%ALGO, ZUC128
 %assign %%OFF 0
 %rep 2
         ; Set read-only registers for shuffle masks for key, IV and Ek_d for 8 registers
@@ -778,6 +835,42 @@ align 64
 %assign %%OFF (%%OFF + 32)
 %endrep
 
+%else ;; %%ALGO, == ZUCNEA6
+
+%assign %%OFF 0
+%rep 2
+        ; Set read-only registers for shuffle masks for key, IV and Ek_d for 8 registers
+        vmovdqa %%YTMP12, [rel shuf_mask_key_16_31 + %%OFF]
+        vmovdqa %%YTMP13, [rel shuf_mask_key + %%OFF]
+        vmovdqa %%YTMP14, [rel shuf_mask_iv_nea6 + %%OFF]
+        vmovdqa %%YTMP15, [rel Ek_d_NEA6 + %%OFF]
+
+        ; Set 8xLFSR registers for all packets
+%assign %%I 1
+%assign %%OFF_PTR 0
+%rep 8
+        mov     r9, [pKe + %%OFF_PTR]  ; Load Key N pointer
+        lea     r10, [pIv + 4*%%OFF_PTR] ; Load IV N pointer
+        INIT_LFSR_NEA6 r9, r10, %%YTMP13, %%YTMP12, %%YTMP14, %%YTMP15, APPEND(%%YTMP, %%I), %%YTMP11
+%assign %%I (%%I + 1)
+%assign %%OFF_PTR (%%OFF_PTR + 8)
+%endrep
+
+        ; Store 8xLFSR registers in memory (reordering first,
+        ; so all SX registers are together)
+        TRANSPOSE8_U32  %%YTMP1, %%YTMP2, %%YTMP3, %%YTMP4, %%YTMP5, %%YTMP6, %%YTMP7, %%YTMP8, %%YTMP9, %%YTMP10
+
+%assign %%I 1
+%rep 8
+        vmovdqa [pState + 8*%%OFF + 32*(%%I-1)], APPEND(%%YTMP, %%I)
+%assign %%I (%%I+1)
+%endrep
+
+%assign %%OFF (%%OFF + 32)
+%endrep
+
+%endif ;; %%ALGO
+
         ; Load read-only registers
         vmovdqa %%MASK_31, [rel mask31]
 
@@ -794,7 +887,11 @@ align_loop
         LFSR_UPDT8  pState, r15, r14, %%YTMP1, %%YTMP2, %%YTMP3, %%YTMP4, %%YTMP5, %%YTMP6, \
                         %%MASK_31, %%W, init ; W used in LFSR update
         inc     r15
+%ifidn %%ALGO, ZUCNEA6
+        cmp     r15, 48
+%else
         cmp     r15, 32
+%endif
         jne     %%start_loop_init
 
 align_label
@@ -811,14 +908,22 @@ align_label
         FUNC_RESTORE
 %endmacro
 
+align 64
 MKGLOBAL(ZUC128_INIT_8,function,internal)
 align_function
 ZUC128_INIT_8:
         endbranch64
-        ZUC_INIT_8
+        ZUC_INIT_8 ZUC128
 
         ret
 
+align 64
+MKGLOBAL(ZUCNEA6_INIT_8,function,internal)
+ZUCNEA6_INIT_8:
+        endbranch64
+        ZUC_INIT_8 ZUCNEA6
+
+        ret
 ;
 ; Generate N*4 bytes of keystream
 ; for 8 buffers (where N is number of rounds)
@@ -951,6 +1056,7 @@ align_loop
 ;;  RDI    - pSta
 ;;  RSI    - pKeyStr
 ;;
+align 64
 MKGLOBAL(ZUC_KEYGEN32B_8,function,internal)
 align_function
 ZUC_KEYGEN32B_8:
@@ -970,6 +1076,7 @@ ZUC_KEYGEN32B_8:
 ;;  RDI    - pSta
 ;;  RSI    - pKeyStr
 ;;
+align 64
 MKGLOBAL(ZUC_KEYGEN16B_8,function,internal)
 align_function
 ZUC_KEYGEN16B_8:
@@ -989,6 +1096,7 @@ ZUC_KEYGEN16B_8:
 ;;  RDI    - pSta
 ;;  RSI    - pKeyStr
 ;;
+align 64
 MKGLOBAL(ZUC_KEYGEN8B_8,function,internal)
 align_function
 ZUC_KEYGEN8B_8:
@@ -1008,6 +1116,7 @@ ZUC_KEYGEN8B_8:
 ;;  RDI    - pSta
 ;;  RSI    - pKeyStr
 ;;
+align 64
 MKGLOBAL(ZUC_KEYGEN4B_8,function,internal)
 align_function
 ZUC_KEYGEN4B_8:
@@ -1221,6 +1330,7 @@ align_loop
 ;;  RCX - lengths
 ;;  R8  - min_length
 ;;
+align 64
 MKGLOBAL(ZUC_CIPHER_8,function,internal)
 align_function
 ZUC_CIPHER_8:
