@@ -88,6 +88,7 @@ Table 1. List of supported cipher algorithms and their implementations.
 | SNOW3G-UEA2    | Y   x4 |  <---  |  <---  |  <---  |  <---  |  <---  |  <---  | Y  x16 | Y    x16 |  <---  |
 | Chacha20       | Y      |  <---  |  <---  | Y      |  <---  |  <---  |  <---  | Y      |  <---    |  <---  |
 | Chacha20 AEAD  | Y      |  <---  |  <---  | Y      |  <---  |  <---  |  <---  | Y      |  <---    |  <---  |
+| SNOW5G-NEA4    | Y      |  <---  |  <---  |  <---  |  <---  |  <---  |  <---  |  <---  |  <---    |  <---  |
 | PON-CRC-BIP    | Y  by8 |  <---  |  <---  | Y by8  |  <---  |  <---  |  <---  |  <---  | Y   by16 |  <---  |
 | SM4-ECB        | Y      |  <---  |  <---  |  <---  |  <---  |  <---  | Y(5)   | [S1]   | [S1]     | [A2-4] |
 | SM4-CBC        | Y      |  <---  |  <---  |  <---  |  <---  |  <---  | Y(6)   | [S1]   | [S1]     | [A2-4] |
@@ -211,10 +212,11 @@ Table 3. Encryption and integrity algorithm combinations
 | AES128-CFB, AES192-CFB, AES256-CFB, | HMAC-SHA2-512_256, NULL, POLY1305,    |
 | NULL, Chacha20,                     | AES128-GMAC, AES192-GMAC, AES256-GMAC,|
 | AES128-DOCSIS, AES256-DOCSIS,       | GHASH, SM3, HMAC-SM3                  |
-| DES-DOCSIS, 3DES, DES,              | ZUC-EIA3, SNOW3G-UIA3, KASUMI-F9      |
-| KASUMI-F8, SNOW-V, SNOW3G-UEA3,     |                                       |
+| DES-DOCSIS, 3DES, DES,              | ZUC-EIA3, SNOW3G-UIA2, KASUMI-F9      |
+| KASUMI-F8, SNOW3G-UEA2,             |                                       |
 | ZUC-EEA3, ZUC-NEA6                  |                                       |
-| SM4-ECB, SM4-CBC, SM4-CTR           |                                       |
+| SM4-ECB, SM4-CBC, SM4-CTR,          |                                       |
+| SNOW5G-NEA4                         |                                       |
 |-------------------------------------+---------------------------------------|
 | AES128-DOCSIS, AES256-DOCSIS        | DOCSIS-CRC32                          |
 |-------------------------------------+---------------------------------------|

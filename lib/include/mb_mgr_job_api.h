@@ -473,6 +473,8 @@ SUBMIT_JOB_CIPHER_ENC(IMB_MGR *state, IMB_JOB *job, const IMB_CIPHER_MODE cipher
 #endif
         } else if (IMB_CIPHER_KASUMI_UEA1_BITLEN == cipher_mode) {
                 return submit_kasumi_uea1_job(state, job);
+        } else if (IMB_CIPHER_SNOW5G_NEA4 == cipher_mode) {
+                return SUBMIT_JOB_SNOW5G(job);
         } else if (IMB_CIPHER_SM4_ECB == cipher_mode) {
                 return SUBMIT_JOB_SM4_ECB_ENC(job);
         } else if (IMB_CIPHER_SM4_CBC == cipher_mode) {
@@ -692,6 +694,8 @@ SUBMIT_JOB_CIPHER_DEC(IMB_MGR *state, IMB_JOB *job, const IMB_CIPHER_MODE cipher
 #endif
         } else if (IMB_CIPHER_KASUMI_UEA1_BITLEN == cipher_mode) {
                 return submit_kasumi_uea1_job(state, job);
+        } else if (IMB_CIPHER_SNOW5G_NEA4 == cipher_mode) {
+                return SUBMIT_JOB_SNOW5G(job);
         } else if (IMB_CIPHER_SM4_ECB == cipher_mode) {
                 return SUBMIT_JOB_SM4_ECB_DEC(job);
         } else if (IMB_CIPHER_SM4_CBC == cipher_mode) {
@@ -947,6 +951,13 @@ submit_cipher_dec_chacha20_poly1305_sgl(IMB_MGR *state, IMB_JOB *job)
                                      IMB_KEY_256_BYTES);
 }
 
+/* SNOW5G */
+static IMB_JOB *
+submit_cipher_dec_snow5g(IMB_MGR *state, IMB_JOB *job)
+{
+        return SUBMIT_JOB_CIPHER_DEC(state, job, IMB_CIPHER_SNOW5G_NEA4, IMB_KEY_256_BYTES);
+}
+
 /* AES-GCM SGL */
 static IMB_JOB *
 submit_cipher_dec_aes_gcm_128_sgl(IMB_MGR *state, IMB_JOB *job)
@@ -1199,6 +1210,13 @@ submit_cipher_enc_chacha20_poly1305_sgl(IMB_MGR *state, IMB_JOB *job)
                                      IMB_KEY_256_BYTES);
 }
 
+/* SNOW5G */
+static IMB_JOB *
+submit_cipher_enc_snow5g(IMB_MGR *state, IMB_JOB *job)
+{
+        return SUBMIT_JOB_CIPHER_ENC(state, job, IMB_CIPHER_SNOW5G_NEA4, IMB_KEY_256_BYTES);
+}
+
 /* AES-GCM SGL */
 static IMB_JOB *
 submit_cipher_enc_aes_gcm_128_sgl(IMB_MGR *state, IMB_JOB *job)
@@ -1412,12 +1430,12 @@ static const submit_flush_fn_t tab_submit_cipher[] = {
         submit_cipher_dec_null,
         submit_cipher_dec_null,
         submit_cipher_dec_zuc_nea6,
-        /* add new cipher decrypt here */
         /* [26] NULL */
-        NULL,
-        NULL,
-        NULL,
-        NULL,
+        submit_cipher_dec_snow5g,
+        submit_cipher_dec_snow5g,
+        submit_cipher_dec_snow5g,
+        submit_cipher_dec_snow5g,
+        /* add new cipher decrypt here */
         /* [27] NULL */
         NULL,
         NULL,
@@ -1578,12 +1596,12 @@ static const submit_flush_fn_t tab_submit_cipher[] = {
         submit_cipher_enc_null,
         submit_cipher_enc_null,
         submit_cipher_enc_zuc_nea6,
+        /* [26] SNOW5G */
+        submit_cipher_enc_snow5g,
+        submit_cipher_enc_snow5g,
+        submit_cipher_enc_snow5g,
+        submit_cipher_enc_snow5g,
         /* add new cipher encrypt here */
-        /* [26] NULL */
-        NULL,
-        NULL,
-        NULL,
-        NULL,
         /* [27] NULL */
         NULL,
         NULL,
@@ -1812,6 +1830,13 @@ flush_cipher_dec_chacha20_poly1305_sgl(IMB_MGR *state, IMB_JOB *job)
 {
         return FLUSH_JOB_CIPHER_DEC(state, job, IMB_CIPHER_CHACHA20_POLY1305_SGL,
                                     IMB_KEY_256_BYTES);
+}
+
+/* SNOW5G */
+static IMB_JOB *
+flush_cipher_dec_snow5g(IMB_MGR *state, IMB_JOB *job)
+{
+        return FLUSH_JOB_CIPHER_DEC(state, job, IMB_CIPHER_SNOW5G_NEA4, IMB_KEY_256_BYTES);
 }
 
 /* AES-GCM SGL */
@@ -2075,6 +2100,13 @@ flush_cipher_enc_chacha20_poly1305_sgl(IMB_MGR *state, IMB_JOB *job)
                                     IMB_KEY_256_BYTES);
 }
 
+/* SNOW5G */
+static IMB_JOB *
+flush_cipher_enc_snow5g(IMB_MGR *state, IMB_JOB *job)
+{
+        return FLUSH_JOB_CIPHER_ENC(state, job, IMB_CIPHER_SNOW5G_NEA4, IMB_KEY_256_BYTES);
+}
+
 /* AES-GCM SGL */
 static IMB_JOB *
 flush_cipher_enc_aes_gcm_128_sgl(IMB_MGR *state, IMB_JOB *job)
@@ -2280,12 +2312,12 @@ static const submit_flush_fn_t tab_flush_cipher[] = {
         flush_cipher_dec_null,
         flush_cipher_dec_null,
         flush_cipher_dec_zuc_nea6,
+        /* [26] SNOW5G */
+        flush_cipher_dec_snow5g,
+        flush_cipher_dec_snow5g,
+        flush_cipher_dec_snow5g,
+        flush_cipher_dec_snow5g,
         /* add new cipher decrypt here */
-        /* [26] NULL */
-        NULL,
-        NULL,
-        NULL,
-        NULL,
         /* [27] NULL */
         NULL,
         NULL,
@@ -2446,12 +2478,12 @@ static const submit_flush_fn_t tab_flush_cipher[] = {
         flush_cipher_enc_null,
         flush_cipher_enc_null,
         flush_cipher_enc_zuc_nea6,
+        /* [26] SNOW5G */
+        flush_cipher_enc_snow5g,
+        flush_cipher_enc_snow5g,
+        flush_cipher_enc_snow5g,
+        flush_cipher_enc_snow5g,
         /* add new cipher encrypt here */
-        /* [26] NULL */
-        NULL,
-        NULL,
-        NULL,
-        NULL,
         /* [27] NULL */
         NULL,
         NULL,

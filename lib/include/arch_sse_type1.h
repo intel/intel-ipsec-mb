@@ -356,6 +356,9 @@ IMB_JOB *
 submit_job_chacha20_enc_dec_sse(IMB_JOB *job);
 
 IMB_JOB *
+snow_5g_sse(IMB_JOB *job);
+
+IMB_JOB *
 submit_job_snow3g_uea2_sse(MB_MGR_SNOW3G_OOO *state, IMB_JOB *job);
 IMB_JOB *
 flush_job_snow3g_uea2_sse(MB_MGR_SNOW3G_OOO *state);

@@ -216,6 +216,9 @@
 #define SUBMIT_JOB_ZUC_NEA6 submit_job_zuc_nea6_no_gfni_sse
 #define FLUSH_JOB_ZUC_NEA6  flush_job_zuc_nea6_no_gfni_sse
 
+/* SNOW5G */
+#define SUBMIT_JOB_SNOW5G snow_5g_sse
+
 /* SNOW3G UE2 & UIA2 */
 static IMB_JOB *
 submit_snow3g_uea2_job_sse(IMB_MGR *state, IMB_JOB *job)
