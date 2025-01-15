@@ -153,7 +153,7 @@ submit_job_hmac_avx512:
         mov	tmp, len
         shr	tmp, 6	; divide by 64, len in terms of blocks
 
-        mov	[lane_data + _job_in_lane], job
+        mov	[state + _job_in_lane_sha1 + lane*8], job
         mov	dword [lane_data + _outer_done], 0
         VPINSRW_M256 state + _lens, xmm0, xmm1, p, lane, tmp, scale_x16
 
@@ -273,7 +273,7 @@ proc_outer:
         mov	qword [lane_data + _extra_block + size_offset], 0
         VPINSRW_M256 state + _lens, xmm0, xmm1, p, idx, 1, scale_x16
         lea	tmp, [lane_data + _outer_block]
-        mov	job, [lane_data + _job_in_lane]
+        mov	job, [state + _job_in_lane_sha1 + idx*8]
         mov	[state + _args_data_ptr + PTR_SZ*idx], tmp
 
         vmovd	xmm0, [state + _args_digest + SHA1_DIGEST_WORD_SIZE*idx + 0*SHA1_DIGEST_ROW_SIZE]
@@ -323,9 +323,9 @@ return_null:
 
         align	16
 end_loop:
-        mov	job_rax, [lane_data + _job_in_lane]
+        mov	job_rax, [state + _job_in_lane_sha1 + idx*8]
         or	dword [job_rax + _status], IMB_STATUS_COMPLETED_AUTH
-        mov	qword [lane_data + _job_in_lane], 0
+        mov     qword [state + _job_in_lane_sha1 + idx*8], 0
 
         mov	unused_lanes, [state + _unused_lanes]
         shl	unused_lanes, 4

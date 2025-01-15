@@ -163,47 +163,48 @@ flush_job_hmac_avx512:
 	cmp	num_lanes_inuse, 0
 	jz	return_null
 
-	; find a lane with a non-null job
+	; Find lanes with NULL jobs
 	xor	idx, idx
-%assign I 1
-%rep 15
-	cmp	qword [state + _ldata + (I * _HMAC_SHA1_LANE_DATA_size) + _job_in_lane], 0
-	cmovne	idx, [rel APPEND(lane_,I)]
-%assign I (I+1)
-%endrep
+	vpxorq          zmm0, zmm0
+	vmovdqa64       zmm1, [state + _job_in_lane_sha1]
+	vmovdqa64       zmm2, [state + _job_in_lane_sha1 + (8*8)]
+	vpcmpq          k1, zmm1, zmm0, 0 ; EQ ; mask of null jobs (L8)
+	vpcmpq          k2, zmm2, zmm0, 0 ; EQ ; mask of null jobs (H8)
+	kshiftlw        k3, k2, 8
+	korw            k3, k3, k1 ; mask of NULL jobs for all lanes
+
+find_min_len:
+	; - Update lengths of NULL lanes to 0xFFFF, to find minimum
+	vmovdqa         ymm0, [state + _lens]
+	mov             DWORD(tmp4), 0xffff
+	vpbroadcastw    ymm1, DWORD(tmp4)
+	vmovdqu16       ymm0{k3}, ymm1
+	vmovdqa64       [state + _lens], ymm0
+
+	;; Find min length for lanes 0-7
+	vphminposuw     xmm1, xmm0
+
+	; extract min length of lanes 0-7
+	vpextrw         DWORD(len2), xmm1, 0  ; min value
+	vpextrw         DWORD(idx), xmm1, 1   ; min index
+
+	;; Update lens and find min for lanes 8-15
+	vextracti128    xmm2, ymm0, 1
+	vphminposuw     xmm3, xmm2
+	vpextrw         DWORD(len_upper), xmm3, 0  ; min value
+	cmp             DWORD(len2), DWORD(len_upper)
+	jle             copy_lane_data
+	
+	vmovdqa		xmm1, xmm3
+	vpextrw         DWORD(idx), xmm3, 1   ; min index
+	add             DWORD(idx), 8         ; but index +8
+	mov             len2, len_upper       ; min len
 
 copy_lane_data:
 	; copy valid lane (idx) to empty lanes
-	vmovdqa	ymm0, [state + _lens]
-	mov	tmp, [state + _args_data_ptr + PTR_SZ*idx]
-
-%assign I 0
-%rep 16
-	cmp	qword [state + _ldata + I * _HMAC_SHA1_LANE_DATA_size + _job_in_lane], 0
-	jne	APPEND(skip_,I)
-	mov	[state + _args_data_ptr + PTR_SZ*I], tmp
-	vpor	ymm0, ymm0, [rel len_masks + 32*I] ; 32 for ymm, 16 for xmm
-APPEND(skip_,I):
-%assign I (I+1)
-%endrep
-	vmovdqa	[state + _lens], ymm0
-
-	vphminposuw	xmm1, xmm0
-	vpextrw	DWORD(len2), xmm1, 0	; min value
-	vpextrw	DWORD(idx), xmm1, 1	; min index (0...7)
-
-        vmovdqa	xmm2, [state + _lens + 8*2]
-        vphminposuw	xmm3, xmm2
-        vpextrw	DWORD(len_upper), xmm3, 0	; min value
-        vpextrw	DWORD(idx_upper), xmm3, 1	; min index (8...F)
-
-	cmp	len2, len_upper
-	jle	use_min
-
-	vmovdqa	xmm1, xmm3
-	mov	len2, len_upper
-	mov	idx, idx_upper	; idx would be in range 0..7
-	add	idx, 8		; to reflect that index is in 8..F range
+	vpbroadcastq    zmm4, [state + _args_data_ptr + idx*8]
+	vmovdqa64       [state + _args_data_ptr + (0*PTR_SZ)]{k1}, zmm4
+	vmovdqa64       [state + _args_data_ptr + (8*PTR_SZ)]{k2}, zmm4
 
 use_min:
 	DBGPRINTL64 "FLUSH min_length", len2
@@ -242,7 +243,7 @@ proc_outer:
 	mov	qword [lane_data + _extra_block + size_offset], 0
 	mov	word [state + _lens + 2*idx], 1
 	lea	tmp, [lane_data + _outer_block]
-	mov	job, [lane_data + _job_in_lane]
+	mov	job, [state + _job_in_lane_sha1 + idx*8]
 	mov	[state + _args_data_ptr + PTR_SZ*idx], tmp
 
 	vmovd	xmm0, [state + _args_digest + SHA1_DIGEST_WORD_SIZE*idx + 0*SHA1_DIGEST_ROW_SIZE]
@@ -263,7 +264,7 @@ proc_outer:
 	vpextrd	[state + _args_digest + SHA1_DIGEST_WORD_SIZE*idx + 2*SHA1_DIGEST_ROW_SIZE], xmm0, 2
 	vpextrd	[state + _args_digest + SHA1_DIGEST_WORD_SIZE*idx + 3*SHA1_DIGEST_ROW_SIZE], xmm0, 3
 	mov	[state + _args_digest + SHA1_DIGEST_WORD_SIZE*idx + 4*SHA1_DIGEST_ROW_SIZE], DWORD(tmp)
-	jmp	copy_lane_data
+	jmp	find_min_len
 
 	align	16
 proc_extra_blocks:
@@ -272,7 +273,7 @@ proc_extra_blocks:
 	lea	tmp, [lane_data + _extra_block + start_offset]
 	mov	[state + _args_data_ptr + PTR_SZ*idx], tmp
 	mov	dword [lane_data + _extra_blocks], 0
-	jmp	copy_lane_data
+	jmp 	find_min_len
 
 return_null:
         DBGPRINTL "FLUSH *** ---------- return null"
@@ -281,9 +282,9 @@ return_null:
 
 	align	16
 end_loop:
-	mov	job_rax, [lane_data + _job_in_lane]
-	mov	qword [lane_data + _job_in_lane], 0
+	mov	job_rax, [state + _job_in_lane_sha1 + idx*8]
 	or	dword [job_rax + _status], IMB_STATUS_COMPLETED_AUTH
+	mov	qword [state + _job_in_lane_sha1 + idx*8], 0
 
 	mov	unused_lanes, [state + _unused_lanes]
 	shl	unused_lanes, 4	 ;; a nibble
@@ -325,7 +326,7 @@ clear_ret:
         ;; of returned job and NULL jobs
 %assign I 0
 %rep 16
-	cmp	qword [state + _ldata + (I*_HMAC_SHA1_LANE_DATA_size) + _job_in_lane], 0
+	cmp	qword [state + _job_in_lane_sha1 + I*8], 0
 	jne	APPEND(skip_clear_,I)
 
         ;; Clear digest

@@ -322,6 +322,7 @@ FIELD	_args,		_SHA1_ARGS_size, _SHA1_ARGS_align
 FIELD	_lens,		32,	32
 FIELD	_unused_lanes,	8,	8
 FIELD	_ldata,		_HMAC_SHA1_LANE_DATA_size*MAX_SHA1_LANES, _HMAC_SHA1_LANE_DATA_align
+FIELD   _job_in_lane_sha1, 8*MAX_SHA1_LANES, 64
 FIELD   _num_lanes_inuse_sha1, 4,     4
 FIELD   _total_num_lanes_sha1, 4,     4
 FIELD   _road_block_sha1,      8,     8
