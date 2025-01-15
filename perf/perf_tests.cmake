@@ -68,6 +68,7 @@ set(CIPHER_ALGOS
   aes-cfb-192
   aes-cfb-256
   zuc-nea6
+  snow5g_nea4
   null)
 
 # cipher smoke tests (burst API)

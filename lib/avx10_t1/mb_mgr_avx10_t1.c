@@ -52,7 +52,7 @@
 #include "include/arch_avx512_type2.h"
 #include "include/arch_sse_type1.h" /* aes-cfb, zuc */
 #include "include/arch_sse_type2.h" /* SHA-NI */
-#include "include/arch_sse_type3.h"  /* ZUC */
+#include "include/arch_sse_type3.h" /* ZUC */
 #include "include/arch_avx10_type1.h"
 
 #include "include/ooo_mgr_reset.h"

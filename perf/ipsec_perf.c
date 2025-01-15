@@ -158,6 +158,7 @@ enum test_cipher_mode_e {
         TEST_SM4_CTR,
         TEST_SM4_GCM,
         TEST_ZUC_NEA6,
+        TEST_SNOW5G_NEA4,
         TEST_NUM_CIPHER_TESTS
 };
 
@@ -302,6 +303,8 @@ const struct str_value_mapping cipher_algo_str_map[] = {
           .values.job_params = { .cipher_mode = TEST_CFB, .key_size = IMB_KEY_256_BYTES } },
         { .name = "zuc-nea6",
           .values.job_params = { .cipher_mode = TEST_ZUC_NEA6, .key_size = IMB_KEY_256_BYTES } },
+        { .name = "snow5g_nea4",
+          .values.job_params = { .cipher_mode = TEST_SNOW5G_NEA4, .key_size = 32 } },
         { .name = "null", .values.job_params = { .cipher_mode = TEST_NULL_CIPHER, .key_size = 0 } }
 };
 
@@ -1478,6 +1481,9 @@ translate_cipher_mode(const enum test_cipher_mode_e test_mode)
                         c_mode = IMB_CIPHER_CHACHA20_POLY1305;
 
                 break;
+        case TEST_SNOW5G_NEA4:
+                c_mode = IMB_CIPHER_SNOW5G_NEA4;
+                break;
         case TEST_SM4_ECB:
                 c_mode = IMB_CIPHER_SM4_ECB;
                 break;
@@ -2362,6 +2368,9 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params, const uint32_t num_iter, uint8
                 job_template.dec_keys = k1_expanded;
                 job_template.u.CHACHA20_POLY1305.aad_len_in_bytes = aad_size;
                 job_template.iv_len_in_bytes = 12;
+        } else if (job_template.cipher_mode == IMB_CIPHER_SNOW5G_NEA4) {
+                job_template.iv_len_in_bytes = 16;
+                job_template.key_len_in_bytes = 32;
         }
 
         uint64_t jobs_done = 0; /*< to track how many jobs done over time */
@@ -3302,7 +3311,8 @@ print_times(struct variant_s *variant_list, struct params_s *params, const uint3
                                                                         "AES-CFB",
                                                                         "SM4_CTR",
                                                                         "SM4_GCM",
-                                                                        "ZUC_NEA6" };
+                                                                        "ZUC_NEA6",
+                                                                        "SNOW5G_NEA4" };
                 const char *c_dir_names[2] = { "ENCRYPT", "DECRYPT" };
                 const char *h_alg_names[TEST_NUM_HASH_TESTS - 1] = {
                         "SHA1_HMAC",
@@ -4370,8 +4380,8 @@ main(int argc, char *argv[])
 
         if (throughput) {
                 if (test_api == TEST_API_DIRECT || test_api == TEST_API_QUIC) {
-                        fprintf(stderr,
-                                "--throughput option not supported for direct or QUIC APIs\n");
+                        fprintf(stderr, "--throughput option not supported for direct or "
+                                        "QUIC APIs\n");
                         return EXIT_FAILURE;
                 }
                 if (!use_timebox) {
@@ -4403,8 +4413,8 @@ main(int argc, char *argv[])
                         if (imb_hash_burst_get_size(aux_mgr,
                                                     translate_hash_alg(custom_job_params.hash_alg),
                                                     &optim_burst_size) == IMB_ERR_HASH_ALGO) {
-                                fprintf(stderr,
-                                        "Unsupported hash-only burst API algorithm selected\n");
+                                fprintf(stderr, "Unsupported hash-only burst API algorithm "
+                                                "selected\n");
                                 free_mb_mgr(aux_mgr);
                                 return EXIT_FAILURE;
                         }
@@ -4412,8 +4422,8 @@ main(int argc, char *argv[])
                         if (imb_cipher_burst_get_size(
                                     aux_mgr, translate_cipher_mode(custom_job_params.cipher_mode),
                                     &optim_burst_size) == IMB_ERR_CIPH_MODE) {
-                                fprintf(stderr,
-                                        "Unsupported cipher-only burst API algorithm selected\n");
+                                fprintf(stderr, "Unsupported cipher-only burst API "
+                                                "algorithm selected\n");
                                 free_mb_mgr(aux_mgr);
                                 return EXIT_FAILURE;
                         }

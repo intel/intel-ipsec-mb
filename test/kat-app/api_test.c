@@ -378,6 +378,11 @@ fill_in_job(struct IMB_JOB *job, const IMB_CIPHER_MODE cipher_mode,
                 job->iv_len_in_bytes = 12;
                 job->sgl_state = IMB_SGL_UPDATE;
                 break;
+        case IMB_CIPHER_SNOW5G_NEA4:
+                job->hash_alg = IMB_AUTH_NULL;
+                job->key_len_in_bytes = UINT64_C(32);
+                job->iv_len_in_bytes = 16;
+                break;
         case IMB_CIPHER_GCM_SGL:
                 job->hash_alg = IMB_AUTH_GCM_SGL;
                 job->key_len_in_bytes = UINT64_C(16);
@@ -1945,6 +1950,7 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                                 case IMB_CIPHER_CHACHA20_POLY1305:
                                 case IMB_CIPHER_CHACHA20_POLY1305_SGL:
                                 case IMB_CIPHER_PON_AES_CNTR:
+                                case IMB_CIPHER_SNOW5G_NEA4:
                                 case IMB_CIPHER_CFB:
 
                                         break;
@@ -1991,6 +1997,7 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                                 case IMB_CIPHER_CUSTOM:
                                 case IMB_CIPHER_CNTR:
                                 case IMB_CIPHER_PON_AES_CNTR:
+                                case IMB_CIPHER_SNOW5G_NEA4:
                                 case IMB_CIPHER_NULL:
                                 case IMB_CIPHER_CFB:
                                 case IMB_CIPHER_SM4_ECB:
@@ -2044,57 +2051,58 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
         const struct invalid_cipher_iv_params {
                 IMB_CIPHER_MODE cipher_mode;
                 uint64_t invalid_iv_len;
-        } invalid_iv_lens[] = {
-                /* IVs must be 16 bytes */
-                { IMB_CIPHER_SM4_CBC, 15 },
-                { IMB_CIPHER_SM4_CBC, 17 },
-                { IMB_CIPHER_CBC, 15 },
-                { IMB_CIPHER_CBC, 17 },
-                { IMB_CIPHER_DOCSIS_SEC_BPI, 15 },
-                { IMB_CIPHER_DOCSIS_SEC_BPI, 17 },
-                { IMB_CIPHER_PON_AES_CNTR, 15 },
-                { IMB_CIPHER_PON_AES_CNTR, 17 },
-                { IMB_CIPHER_SNOW3G_UEA2_BITLEN, 15 },
-                { IMB_CIPHER_SNOW3G_UEA2_BITLEN, 17 },
-                { IMB_CIPHER_CFB, 15 },
-                { IMB_CIPHER_CFB, 17 },
-                { IMB_CIPHER_ZUC_EEA3, 15 },
-                { IMB_CIPHER_ZUC_EEA3, 17 },
-                /* CCM IV must be 13 to 7 bytes */
-                { IMB_CIPHER_CCM, 6 },
-                { IMB_CIPHER_CCM, 14 },
-                /* CNTR IV must be 12 or 16 bytes */
-                { IMB_CIPHER_CNTR, 11 },
-                { IMB_CIPHER_CNTR, 14 },
-                { IMB_CIPHER_CNTR, 17 },
-                { IMB_CIPHER_SM4_CNTR, 11 },
-                { IMB_CIPHER_SM4_CNTR, 14 },
-                { IMB_CIPHER_SM4_CNTR, 17 },
-                /* DES IVs must be 8 bytes */
-                { IMB_CIPHER_DES, 7 },
-                { IMB_CIPHER_DES, 9 },
-                { IMB_CIPHER_DOCSIS_DES, 7 },
-                { IMB_CIPHER_DOCSIS_DES, 9 },
-                { IMB_CIPHER_DES3, 7 },
-                { IMB_CIPHER_DES3, 9 },
-                /* KASUMI IV must be 8 bytes */
-                { IMB_CIPHER_KASUMI_UEA1_BITLEN, 7 },
-                { IMB_CIPHER_KASUMI_UEA1_BITLEN, 9 },
-                /* CHACHA20 IVs must be 12 bytes */
-                { IMB_CIPHER_CHACHA20, 15 },
-                { IMB_CIPHER_CHACHA20, 17 },
-                { IMB_CIPHER_CHACHA20_POLY1305, 15 },
-                { IMB_CIPHER_CHACHA20_POLY1305, 17 },
-                { IMB_CIPHER_CHACHA20_POLY1305_SGL, 15 },
-                { IMB_CIPHER_CHACHA20_POLY1305_SGL, 17 },
-                /* GCM IVs must be not be 0 bytes */
-                { IMB_CIPHER_GCM, 0 },
-                { IMB_CIPHER_GCM_SGL, 0 },
-                /* IVs must be 12 bytes */
-                { IMB_CIPHER_SM4_GCM, 13 },
-                /* ZUC-NEA6 IV must be 16 bytes */
-                { IMB_CIPHER_ZUC_NEA6, 15 },
-                { IMB_CIPHER_ZUC_NEA6, 17 }
+        } invalid_iv_lens[] = { /* IVs must be 16 bytes */
+                                { IMB_CIPHER_SM4_CBC, 15 },
+                                { IMB_CIPHER_SM4_CBC, 17 },
+                                { IMB_CIPHER_CBC, 15 },
+                                { IMB_CIPHER_CBC, 17 },
+                                { IMB_CIPHER_DOCSIS_SEC_BPI, 15 },
+                                { IMB_CIPHER_DOCSIS_SEC_BPI, 17 },
+                                { IMB_CIPHER_PON_AES_CNTR, 15 },
+                                { IMB_CIPHER_PON_AES_CNTR, 17 },
+                                { IMB_CIPHER_SNOW3G_UEA2_BITLEN, 15 },
+                                { IMB_CIPHER_SNOW3G_UEA2_BITLEN, 17 },
+                                { IMB_CIPHER_CFB, 15 },
+                                { IMB_CIPHER_CFB, 17 },
+                                { IMB_CIPHER_ZUC_EEA3, 15 },
+                                { IMB_CIPHER_ZUC_EEA3, 17 },
+                                /* CCM IV must be 13 to 7 bytes */
+                                { IMB_CIPHER_CCM, 6 },
+                                { IMB_CIPHER_CCM, 14 },
+                                /* CNTR IV must be 12 or 16 bytes */
+                                { IMB_CIPHER_CNTR, 11 },
+                                { IMB_CIPHER_CNTR, 14 },
+                                { IMB_CIPHER_CNTR, 17 },
+                                { IMB_CIPHER_SM4_CNTR, 11 },
+                                { IMB_CIPHER_SM4_CNTR, 14 },
+                                { IMB_CIPHER_SM4_CNTR, 17 },
+                                /* DES IVs must be 8 bytes */
+                                { IMB_CIPHER_DES, 7 },
+                                { IMB_CIPHER_DES, 9 },
+                                { IMB_CIPHER_DOCSIS_DES, 7 },
+                                { IMB_CIPHER_DOCSIS_DES, 9 },
+                                { IMB_CIPHER_DES3, 7 },
+                                { IMB_CIPHER_DES3, 9 },
+                                /* KASUMI IV must be 8 bytes */
+                                { IMB_CIPHER_KASUMI_UEA1_BITLEN, 7 },
+                                { IMB_CIPHER_KASUMI_UEA1_BITLEN, 9 },
+                                /* CHACHA20 IVs must be 12 bytes */
+                                { IMB_CIPHER_CHACHA20, 15 },
+                                { IMB_CIPHER_CHACHA20, 17 },
+                                { IMB_CIPHER_CHACHA20_POLY1305, 15 },
+                                { IMB_CIPHER_CHACHA20_POLY1305, 17 },
+                                { IMB_CIPHER_CHACHA20_POLY1305_SGL, 15 },
+                                { IMB_CIPHER_CHACHA20_POLY1305_SGL, 17 },
+                                /* GCM IVs must be not be 0 bytes */
+                                { IMB_CIPHER_GCM, 0 },
+                                { IMB_CIPHER_GCM_SGL, 0 },
+                                /* IVs must be 12 bytes */
+                                { IMB_CIPHER_SM4_GCM, 13 },
+                                /* NEAx algos IV must be 16 bytes */
+                                { IMB_CIPHER_ZUC_NEA6, 15 },
+                                { IMB_CIPHER_ZUC_NEA6, 17 },
+                                { IMB_CIPHER_SNOW5G_NEA4, 15 },
+                                { IMB_CIPHER_SNOW5G_NEA4, 17 }
         };
 
         dir = IMB_DIR_ENCRYPT;
@@ -2141,6 +2149,8 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                                 case IMB_CIPHER_CHACHA20_POLY1305:
                                 case IMB_CIPHER_CHACHA20_POLY1305_SGL:
                                 case IMB_CIPHER_ZUC_NEA6:
+                                case IMB_CIPHER_SNOW5G_NEA4:
+
                                         if (key_len != IMB_KEY_256_BYTES)
                                                 continue;
                                         break;

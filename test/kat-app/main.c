@@ -86,6 +86,8 @@ chacha20_poly1305_test(struct IMB_MGR *mb_mgr);
 extern int
 null_test(struct IMB_MGR *mb_mgr);
 extern int
+snow5g_test(struct IMB_MGR *mb_mgr);
+extern int
 direct_api_param_test(struct IMB_MGR *mb_mgr);
 extern int
 quic_ecb_test(struct IMB_MGR *mb_mgr);
@@ -177,7 +179,9 @@ struct imb_test tests[] = {
         { .str = "HMAC_SM3", .fn = hmac_sm3_test, .enabled = 1 },
         { .str = "SM4_CTR", .fn = sm4_ctr_test, .enabled = 1 },
         { .str = "SM4_GCM", .fn = sm4_gcm_test, .enabled = 1 },
-        { .str = "SHA3", .fn = sha3_test, .enabled = 1 }
+        { .str = "SHA3", .fn = sha3_test, .enabled = 1 },
+        { .str = "SNOW5G", .fn = snow5g_test, .enabled = 1 },
+
 };
 
 static int self_test_corrupt = 0;

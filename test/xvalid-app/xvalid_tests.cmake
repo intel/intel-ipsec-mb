@@ -79,7 +79,8 @@ set(CIPHER_ALGOS
     null-cipher
     aes-cfb-128
     aes-cfb-192
-    aes-cfb-256)
+    aes-cfb-256
+    snow5g_nea4)
 
 # cipher short tests
 foreach(ALGO ${CIPHER_ALGOS})

@@ -232,7 +232,9 @@ struct str_value_mapping cipher_algo_str_map[] = {
           .values.job_params = { .cipher_mode = IMB_CIPHER_CFB, .key_size = IMB_KEY_256_BYTES } },
         { .name = "ZUC-NEA6",
           .values.job_params = { .cipher_mode = IMB_CIPHER_ZUC_NEA6,
-                                 .key_size = IMB_KEY_256_BYTES } }
+                                 .key_size = IMB_KEY_256_BYTES } },
+        { .name = "SNOW5G_NEA4",
+          .values.job_params = { .cipher_mode = IMB_CIPHER_SNOW5G_NEA4, .key_size = 32 } }
 };
 
 struct str_value_mapping hash_algo_str_map[] = {
@@ -620,7 +622,8 @@ const uint8_t key_sizes[][3] = {
         { 16, 32, 8 },  /* IMB_CIPHER_CFB */
         { 16, 16, 1 },  /* IMB_CIPHER_SM4_CNTR */
         { 16, 16, 1 },  /* IMB_CIPHER_SM4_GCM */
-        { 32, 32, 1 }   /* IMB_CIPHER_ZUC_NEA6 */
+        { 32, 32, 1 },  /* IMB_CIPHER_ZUC_NEA6 */
+        { 32, 32, 1 }   /* IMB_CIPHER_SNOW5G_NEA4 */
 };
 
 uint8_t custom_test = 0;
@@ -1517,6 +1520,11 @@ fill_job(IMB_JOB *job, const struct params_s *params, uint8_t *buf, uint8_t *dig
                 job->dec_keys = k2;
                 job->iv_len_in_bytes = 12;
                 break;
+        case IMB_CIPHER_SNOW5G_NEA4:
+                job->enc_keys = k2;
+                job->dec_keys = k2;
+                job->iv_len_in_bytes = 16;
+                break;
         case IMB_CIPHER_NULL:
                 /* No operation needed */
                 break;
@@ -1662,6 +1670,7 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys, const uint8_t *ciph
                 case IMB_CIPHER_CHACHA20:
                 case IMB_CIPHER_CHACHA20_POLY1305:
                 case IMB_CIPHER_CHACHA20_POLY1305_SGL:
+                case IMB_CIPHER_SNOW5G_NEA4:
                         nosimd_memset(k2, pattern_cipher_key, 32);
                         break;
                 case IMB_CIPHER_NULL:
@@ -1830,6 +1839,7 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys, const uint8_t *ciph
         case IMB_CIPHER_CHACHA20:
         case IMB_CIPHER_CHACHA20_POLY1305:
         case IMB_CIPHER_CHACHA20_POLY1305_SGL:
+        case IMB_CIPHER_SNOW5G_NEA4:
                 /* Use of:
                  *     nosimd_memcpy(k2, ciph_key, 32);
                  * leaves sensitive data on the stack.
