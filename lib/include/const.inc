@@ -316,4 +316,38 @@ extern padding_0x80_tab16
         mov     rcx, %%TMP       ; restore rcx
 %endmacro
 
+;;; VPINSRQ_M512x2 insert qword into 128 byte memory range
+%macro VPINSRQ_M512x2 7
+
+%define %%mem_addr         %1 ; 64 byte aligned memory address to insert quadword
+%define %%qword_to_insert  %2 ; GP reg containing quadword to insert, pass 0 to insert 0 into index contained in idx
+%define %%tmp_gp2          %3 ; GP reg to clobber
+%define %%tmp_simd1        %4 ; ZMM reg to load memory into
+%define %%tmp_simd2        %5 ; ZMM reg to load quadword into
+%define %%tmp_k            %6 ; K reg to hold mask
+%define %%idx              %7 ; dword index/lane value
+
+        xor %%tmp_gp2, %%tmp_gp2
+	bts %%tmp_gp2, DWORD(%%idx)
+%ifidn %%qword_to_insert, 0
+	not %%tmp_gp2
+	kmovd %%tmp_k, %%tmp_gp2
+	vmovdqa64 %%tmp_simd1{%%tmp_k}{z}, [%%mem_addr]
+	vmovdqa64 [%%mem_addr], %%tmp_simd1
+	kshiftrd %%tmp_k, %%tmp_k, 8
+	vmovdqa64 %%tmp_simd1{%%tmp_k}{z}, [%%mem_addr + 64]
+	vmovdqa64 [%%mem_addr + 64], %%tmp_simd1
+%else
+	kmovd %%tmp_k, %%tmp_gp2
+        vpbroadcastq %%tmp_simd2, %%qword_to_insert
+	vmovdqa64 %%tmp_simd1, [%%mem_addr]
+	vmovdqa64 %%tmp_simd1{%%tmp_k}, %%tmp_simd2
+	vmovdqa64 [%%mem_addr], %%tmp_simd1
+	kshiftrd %%tmp_k, %%tmp_k, 8
+	vmovdqa64 %%tmp_simd1, [%%mem_addr + 64]
+	vmovdqa64 %%tmp_simd1{%%tmp_k}, %%tmp_simd2
+	vmovdqa64 [%%mem_addr + 64], %%tmp_simd1
+%endif
+%endmacro
+
 %endif ; end ifndef _CONST_INC_

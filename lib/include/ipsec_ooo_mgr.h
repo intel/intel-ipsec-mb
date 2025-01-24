@@ -356,6 +356,7 @@ typedef struct {
         DECLARE_ALIGNED(uint16_t lens[16], 16);
         uint64_t unused_lanes;
         HMAC_SHA1_LANE_DATA ldata[AVX512_NUM_SHA256_LANES];
+        DECLARE_ALIGNED(IMB_JOB *job_in_lane_sha256[AVX512_NUM_SHA256_LANES], 64);
         uint32_t num_lanes_inuse;
         uint32_t total_num_lanes;
         uint64_t road_block;

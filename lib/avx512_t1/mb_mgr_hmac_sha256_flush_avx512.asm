@@ -45,6 +45,7 @@
 %include "include/mb_mgr_datastruct.inc"
 %include "include/reg_sizes.inc"
 %include "include/clear_regs.inc"
+%include "include/const.inc"
 ;; %define DO_DBGPRINT
 %include "include/dbgprint.inc"
 
@@ -170,59 +171,56 @@ flush_job_hmac_sha_256_avx512:
 	cmp	dword [state + _num_lanes_inuse_sha256], 0
 	jz	return_null
 
-	; find a lane with a non-null job
+	; find lanes with NULL jobs
 	xor	idx, idx
+	vpxorq          zmm0, zmm0
+	vmovdqa64       zmm1, [state + _job_in_lane_sha256]
+	vmovdqa64       zmm2, [state + _job_in_lane_sha256 + (8*8)]
+	vpcmpq          k1, zmm1, zmm0, 0 ; EQ ; mask of null jobs (L8)
+	vpcmpq          k2, zmm2, zmm0, 0 ; EQ ; mask of null jobs (H8)
+	kshiftlw        k3, k2, 8
+	korw            k3, k3, k1 ; mask of NULL jobs for all lanes
 
-%assign I 1
-%rep 15
-	cmp	qword [state + _ldata_sha256 + (I * _HMAC_SHA1_LANE_DATA_size) + _job_in_lane], 0
-	cmovne	idx, [rel APPEND(lane_,I)]
-%assign I (I+1)
-%endrep
+find_min_len:
+	; - Update lengths of NULL lanes to 0xFFFF, to find minimum
+	vmovdqa         ymm0, [state + _lens_sha256]
+	mov             DWORD(tmp), 0xffff
+	vpbroadcastw    ymm1, DWORD(tmp)
+	vmovdqu16       ymm0{k3}, ymm1
+	vmovdqa64       [state + _lens_sha256], ymm0
+
+	;; Find min length for lanes 0-7
+	vphminposuw     xmm1, xmm0
+
+	; extract min length of lanes 0-7
+	vpextrw         DWORD(len2), xmm1, 0  ; min value
+	vpextrw         DWORD(idx), xmm1, 1   ; min index
+
+	;; Update lens and find min for lanes 8-15
+	vextracti128    xmm2, ymm0, 1
+	vphminposuw     xmm3, xmm2
+	vpextrw         DWORD(len_upper), xmm3, 0  ; min value
+	cmp             DWORD(len2), DWORD(len_upper)
+	jbe             copy_lane_data
+
+	vmovdqa		xmm1, xmm3
+	vpextrw         DWORD(idx), xmm3, 1   ; min index
+	add             DWORD(idx), 8         ; but index +8
+	mov             len2, len_upper       ; min len
 
 copy_lane_data:
-	; copy idx to empty lanes
-	vmovdqa	ymm0, [state + _lens_sha256]
-	mov	tmp, [state + _args_data_ptr_sha256 + PTR_SZ*idx]
-
-%assign I 0
-%rep 16
-	cmp	qword [state + _ldata_sha256  + I * _HMAC_SHA1_LANE_DATA_size + _job_in_lane], 0
-	jne	APPEND(skip_,I)
-	mov	[state + _args_data_ptr_sha256	+ PTR_SZ*I], tmp
-	vpor	ymm0, ymm0, [rel len_masks + 32*I]
-APPEND(skip_,I):
-%assign I (I+1)
-%endrep
-
-	vmovdqa	[state + _lens_sha256 ], ymm0
-
-	vphminposuw	xmm1, xmm0
-	vpextrw	DWORD(len2), xmm1, 0	; min value
-	vpextrw	DWORD(idx), xmm1, 1	; min index (0...7)
-
-	vmovdqa	xmm2, [state + _lens_sha256 + 8*2]
-        vphminposuw	xmm3, xmm2
-        vpextrw	DWORD(len_upper), xmm3, 0	; min value
-        vpextrw	DWORD(idx_upper), xmm3, 1	; min index (8...F)
-
-	cmp	len2, len_upper
-	jle	use_min
-
-	vmovdqa	xmm1, xmm3
-	mov	len2, len_upper
-	mov	idx, idx_upper	; idx would be in range 0..7
-	add	idx, 8		; to reflect that index is in 8..F range
+	; copy valid lane (idx) to empty lanes
+	vpbroadcastq    zmm4, [state + _args_data_ptr_sha256 + idx*8]
+	vmovdqa64       [state + _args_data_ptr_sha256 + (0*PTR_SZ)]{k1}, zmm4
+	vmovdqa64       [state + _args_data_ptr_sha256 + (8*PTR_SZ)]{k2}, zmm4
 
 use_min:
 	cmp	len2, 0
 	je	len_is_0
 
-	vpbroadcastw	xmm1, xmm1 ; duplicate words across all lanes
-	vpsubw	xmm0, xmm0, xmm1
-	vmovdqa	[state + _lens_sha256], xmm0
-	vpsubw	xmm2, xmm2, xmm1
-	vmovdqa	[state + _lens_sha256 + 8*2], xmm2
+	vpbroadcastw	ymm1, xmm1 ; duplicate words across all lanes
+	vpsubw	ymm0, ymm0, ymm1
+	vmovdqa	[state + _lens_sha256], ymm0
 
 	; "state" and "args" are the same address, arg1
 	; len is arg2
@@ -243,7 +241,9 @@ proc_outer:
 	mov	dword [lane_data + _outer_done], 1
 	mov	DWORD(size_offset), [lane_data + _size_offset]
 	mov	qword [lane_data + _extra_block + size_offset], 0
-	mov	word [state + _lens_sha256 + 2*idx], 1
+	vmovdqa ymm5, [state + _lens_sha256]
+	VPINSRW_256 ymm5, xmm0, xmm1, tmp, idx, 1, scale_x16
+	vmovdqa64 [state + _lens_sha256], ymm5
 	lea	tmp, [lane_data + _outer_block]
 	mov	[state + _args_data_ptr_sha256 + PTR_SZ*idx], tmp
 
@@ -266,7 +266,7 @@ proc_outer:
 	mov	dword [lane_data + _outer_block + 7*4], 0x80
 %endif
 
-	mov	job, [lane_data + _job_in_lane]
+	mov	job, [state + _job_in_lane_sha256 + idx*8]
 	mov	tmp, [job + _auth_key_xor_opad]
 	vmovdqu	xmm0, [tmp]
 	vmovdqu	xmm1,  [tmp + 4*4]
@@ -278,16 +278,18 @@ proc_outer:
 	vpextrd	[state + _args_digest_sha256 + 4*idx + 5*SHA256_DIGEST_ROW_SIZE], xmm1, 1
 	vpextrd	[state + _args_digest_sha256 + 4*idx + 6*SHA256_DIGEST_ROW_SIZE], xmm1, 2
 	vpextrd	[state + _args_digest_sha256 + 4*idx + 7*SHA256_DIGEST_ROW_SIZE], xmm1, 3
-	jmp	copy_lane_data
+	jmp	find_min_len
 
 	align	16
 proc_extra_blocks:
 	mov	DWORD(start_offset), [lane_data + _start_offset]
-	mov	[state + _lens_sha256 + 2*idx], WORD(extra_blocks)
+	vmovdqa ymm5, [state + _lens_sha256]
+	VPINSRW_256 ymm5, xmm0, xmm1, tmp, idx, extra_blocks, scale_x16
+	vmovdqa64 [state + _lens_sha256], ymm5
 	lea	tmp, [lane_data + _extra_block + start_offset]
 	mov	[state + _args_data_ptr_sha256 + PTR_SZ*idx], tmp
 	mov	dword [lane_data + _extra_blocks], 0
-	jmp	copy_lane_data
+	jmp	find_min_len
 
 return_null:
 	xor	job_rax, job_rax
@@ -295,8 +297,8 @@ return_null:
 
 	align	16
 end_loop:
-	mov	job_rax, [lane_data + _job_in_lane]
-	mov	qword [lane_data + _job_in_lane], 0
+	mov	job_rax, [state + _job_in_lane_sha256 + idx*8]
+	VPINSRQ_M512x2 state + _job_in_lane_sha256, 0, r12d, zmm6, zmm7, k4, idx
 	or	dword [job_rax + _status], IMB_STATUS_COMPLETED_AUTH
 	mov	unused_lanes, [state + _unused_lanes_sha256]
 	shl	unused_lanes, 4
@@ -377,7 +379,7 @@ clear_ret:
         ;; of returned job and NULL jobs
 %assign I 0
 %rep 16
-	cmp	qword [state + _ldata_sha256 + (I*_HMAC_SHA1_LANE_DATA_size) + _job_in_lane], 0
+	cmp	qword [state + _job_in_lane_sha256 + I*8], 0
 	jne	APPEND(skip_clear_,I)
 
         ;; Clear digest (28 bytes for SHA-224, 32 bytes for SHA-256 bytes)

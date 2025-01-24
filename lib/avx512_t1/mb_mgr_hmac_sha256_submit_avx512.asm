@@ -153,9 +153,12 @@ submit_job_hmac_sha_256_avx512:
 	mov	tmp, len
 	shr	tmp, 6	; divide by 64, len in terms of blocks
 
-	mov	[lane_data + _job_in_lane], job
+	VPINSRQ_M512x2 state + _job_in_lane_sha256, job, r12d, zmm6, zmm7, k4, lane
+
 	mov	dword [lane_data + _outer_done], 0
-        VPINSRW_M256 state + _lens_sha256, xmm0, xmm1, p, lane, tmp, scale_x16
+	vmovdqa ymm5, [state + _lens_sha256]
+	VPINSRW_256 ymm5, xmm0, xmm1, p, lane, tmp, scale_x16
+	vmovdqa64 [state + _lens_sha256], ymm5
 
 	mov	last_len, len
 	and	last_len, 63
@@ -204,7 +207,9 @@ end_fast_copy:
 	jnz	ge64_bytes
 
 lt64_bytes:
-        VPINSRW_M256 state + _lens_sha256, xmm0, xmm1, tmp, lane, extra_blocks, scale_x16
+        vmovdqa ymm5, [state + _lens_sha256]
+	VPINSRW_256 ymm5, xmm0, xmm1, tmp, lane, extra_blocks, scale_x16
+	vmovdqa64 [state + _lens_sha256], ymm5
 	lea	tmp, [lane_data + _extra_block + start_offset]
 	mov	[state + _args_data_ptr_sha256 + PTR_SZ*lane], tmp
 	mov	dword [lane_data + _extra_blocks], 0
@@ -262,9 +267,11 @@ proc_outer:
 	mov	dword [lane_data + _outer_done], 1
 	mov	DWORD(size_offset), [lane_data + _size_offset]
 	mov	qword [lane_data + _extra_block + size_offset], 0
-        VPINSRW_M256 state + _lens_sha256, xmm0, xmm1, tmp, idx, 1, scale_x16
+	vmovdqa ymm5, [state + _lens_sha256]
+        VPINSRW_256 ymm5, xmm0, xmm1, tmp, idx, 1, scale_x16
+	vmovdqa64 [state + _lens_sha256], ymm5
 	lea	tmp, [lane_data + _outer_block]
-	mov	job, [lane_data + _job_in_lane]
+	mov	job, [state + _job_in_lane_sha256 + idx*8]
 	mov	[state + _args_data_ptr_sha256 + PTR_SZ*idx], tmp
 
 	vmovd	xmm0, [state + _args_digest_sha256 + 4*idx + 0*SHA256_DIGEST_ROW_SIZE]
@@ -302,7 +309,9 @@ proc_outer:
 	align	16
 proc_extra_blocks:
 	mov	DWORD(start_offset), [lane_data + _start_offset]
-        VPINSRW_M256 state + _lens_sha256, xmm0, xmm1, tmp, idx, extra_blocks, scale_x16
+	vmovdqa	ymm5, [state + _lens_sha256]
+        VPINSRW_256 ymm5, xmm0, xmm1, tmp, idx, extra_blocks, scale_x16
+	vmovdqa64 [state + _lens_sha256], ymm5
 	lea	tmp, [lane_data + _extra_block + start_offset]
 	mov	[state + _args_data_ptr_sha256 + 8*idx], tmp
 	mov	dword [lane_data + _extra_blocks], 0
@@ -325,9 +334,9 @@ return_null:
 
 	align	16
 end_loop:
-	mov	job_rax, [lane_data + _job_in_lane]
+	mov	job_rax, [state + _job_in_lane_sha256 + idx*8]
+	VPINSRQ_M512x2 state + _job_in_lane_sha256, 0, r12d, zmm6, zmm7, k4, idx
 	mov	unused_lanes, [state + _unused_lanes_sha256]
-	mov	qword [lane_data + _job_in_lane], 0
 	or	dword [job_rax + _status], IMB_STATUS_COMPLETED_AUTH
 	shl	unused_lanes, 4
 	or	unused_lanes, idx
