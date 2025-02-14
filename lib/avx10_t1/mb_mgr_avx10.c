@@ -53,7 +53,13 @@ init_mb_mgr_avx10_internal(IMB_MGR *state, const int reset_mgrs)
 
         state->features = cpu_feature_adjust(state->flags, cpu_feature_detect());
 
+#ifdef SMX_NI
         init_mb_mgr_avx10_t1_internal(state, reset_mgrs);
+#else
+        /* If SM4/SM3/SHA512-NI instructions are not supported by the assembler, fallback to
+         * AVX512-T2 implementations */
+        init_mb_mgr_avx512_t2_internal(state, reset_mgrs);
+#endif
 }
 
 void

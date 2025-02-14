@@ -47,6 +47,7 @@
 #include "include/error.h"
 
 #include "include/arch_avx2_type1.h" /* AESNI, MD5 */
+#include "include/arch_avx2_type4.h" /* SM4, SM3, SHA512 */
 #include "include/arch_avx512_type1.h"
 #include "include/arch_avx512_type2.h"
 #include "include/arch_sse_type1.h" /* aes-cfb, zuc */
@@ -192,10 +193,17 @@
 #define FLUSH_JOB_SHA224  flush_job_sha224_avx512
 #define SUBMIT_JOB_SHA256 submit_job_sha256_avx512
 #define FLUSH_JOB_SHA256  flush_job_sha256_avx512
+#ifdef SMX_NI
+#define SUBMIT_JOB_SHA384 submit_job_sha384_ni_avx2
+#define FLUSH_JOB_SHA384  flush_job_sha384_ni_avx2
+#define SUBMIT_JOB_SHA512 submit_job_sha512_ni_avx2
+#define FLUSH_JOB_SHA512  flush_job_sha512_ni_avx2
+#else
 #define SUBMIT_JOB_SHA384 submit_job_sha384_avx512
 #define FLUSH_JOB_SHA384  flush_job_sha384_avx512
 #define SUBMIT_JOB_SHA512 submit_job_sha512_avx512
 #define FLUSH_JOB_SHA512  flush_job_sha512_avx512
+#endif
 
 /* HMAC-SHA1/224/256/384/512 */
 #define SUBMIT_JOB_HMAC         submit_job_hmac_avx512
@@ -204,12 +212,21 @@
 #define FLUSH_JOB_HMAC_SHA_224  flush_job_hmac_sha_224_avx512
 #define SUBMIT_JOB_HMAC_SHA_256 submit_job_hmac_sha_256_avx512
 #define FLUSH_JOB_HMAC_SHA_256  flush_job_hmac_sha_256_avx512
+
+#ifdef SMX_NI
+#define SUBMIT_JOB_HMAC_SHA_384 submit_job_hmac_sha_384_ni_avx2
+#define FLUSH_JOB_HMAC_SHA_384  flush_job_hmac_sha_384_ni_avx2
+#define SUBMIT_JOB_HMAC_SHA_512 submit_job_hmac_sha_512_ni_avx2
+#define FLUSH_JOB_HMAC_SHA_512  flush_job_hmac_sha_512_ni_avx2
+#else
 #define SUBMIT_JOB_HMAC_SHA_384 submit_job_hmac_sha_384_avx512
 #define FLUSH_JOB_HMAC_SHA_384  flush_job_hmac_sha_384_avx512
 #define SUBMIT_JOB_HMAC_SHA_512 submit_job_hmac_sha_512_avx512
 #define FLUSH_JOB_HMAC_SHA_512  flush_job_hmac_sha_512_avx512
-#define SUBMIT_JOB_HMAC_MD5     submit_job_hmac_md5_avx2
-#define FLUSH_JOB_HMAC_MD5      flush_job_hmac_md5_avx2
+#endif
+
+#define SUBMIT_JOB_HMAC_MD5 submit_job_hmac_md5_avx2
+#define FLUSH_JOB_HMAC_MD5  flush_job_hmac_md5_avx2
 
 /* DES & 3DES */
 #define SUBMIT_JOB_DES_CBC_ENC submit_job_des_cbc_enc_avx512
@@ -401,10 +418,10 @@ reset_ooo_mgrs(IMB_MGR *state)
         ooo_mgr_hmac_sha256_reset(state->hmac_sha_256_ooo, AVX512_NUM_SHA256_LANES);
 
         /* Init HMAC/SHA384 out-of-order fields */
-        ooo_mgr_hmac_sha384_reset(state->hmac_sha_384_ooo, AVX512_NUM_SHA512_LANES);
+        ooo_mgr_hmac_sha384_reset(state->hmac_sha_384_ooo, 2);
 
         /* Init HMAC/SHA512 out-of-order fields */
-        ooo_mgr_hmac_sha512_reset(state->hmac_sha_512_ooo, AVX512_NUM_SHA512_LANES);
+        ooo_mgr_hmac_sha512_reset(state->hmac_sha_512_ooo, 2);
 
         /* Init HMAC/MD5 out-of-order fields */
         ooo_mgr_hmac_md5_reset(state->hmac_md5_ooo, AVX2_NUM_MD5_LANES);
@@ -437,10 +454,10 @@ reset_ooo_mgrs(IMB_MGR *state)
         ooo_mgr_sha256_reset(state->sha_256_ooo, AVX512_NUM_SHA256_LANES);
 
         /* Init SHA384 out-of-order fields */
-        ooo_mgr_sha512_reset(state->sha_384_ooo, AVX512_NUM_SHA512_LANES);
+        ooo_mgr_sha512_reset(state->sha_384_ooo, 2);
 
         /* Init SHA512 out-of-order fields */
-        ooo_mgr_sha512_reset(state->sha_512_ooo, AVX512_NUM_SHA512_LANES);
+        ooo_mgr_sha512_reset(state->sha_512_ooo, 2);
 
         /*  Init AES-CFB out-of-order fields */
         ooo_mgr_aes_reset(state->aes_cfb_128_ooo, 16);
