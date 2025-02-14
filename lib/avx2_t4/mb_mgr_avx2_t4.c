@@ -338,10 +338,10 @@ reset_ooo_mgrs(IMB_MGR *state)
         ooo_mgr_sha256_reset(state->sha_256_ooo, 2);
 
         /* Init SHA384 out-of-order fields */
-        ooo_mgr_sha512_reset(state->sha_384_ooo, AVX2_NUM_SHA512_LANES);
+        ooo_mgr_sha512_reset(state->sha_384_ooo, 2);
 
         /* Init SHA512 out-of-order fields */
-        ooo_mgr_sha512_reset(state->sha_512_ooo, AVX2_NUM_SHA512_LANES);
+        ooo_mgr_sha512_reset(state->sha_512_ooo, 2);
 
         /* Init SNOW3G-UEA out-of-order fields */
         ooo_mgr_snow3g_reset(state->snow3g_uea2_ooo, 4);
