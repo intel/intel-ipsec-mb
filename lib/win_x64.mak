@@ -445,6 +445,8 @@ lib_objs2 = \
 	$(OBJ_DIR)\mb_mgr_avx512.obj \
 	$(OBJ_DIR)\mb_mgr_avx512_t1.obj \
 	$(OBJ_DIR)\mb_mgr_avx512_t2.obj \
+	$(OBJ_DIR)\mb_mgr_avx10.obj \
+	$(OBJ_DIR)\mb_mgr_avx10_t1.obj \
 	$(OBJ_DIR)\mb_mgr_des_avx512.obj \
 	$(OBJ_DIR)\mb_mgr_sse.obj \
 	$(OBJ_DIR)\mb_mgr_sse_t1.obj \
@@ -638,6 +640,13 @@ $(DEPALL): $(all_objs)
         $(DEPTOOL) $< $@ "$(DEPFLAGS)" > $@.dep
 
 {avx512_t2\}.asm{$(OBJ_DIR)}.obj:
+	$(AS) -MD $@.dep -o $@ $(AFLAGS) $<
+
+{avx10_t1\}.c{$(OBJ_DIR)}.obj:
+	$(CC) /arch:AVX /Fo$@ /c $(CFLAGS) $<
+        $(DEPTOOL) $< $@ "$(DEPFLAGS)" > $@.dep
+
+{avx10_t1\}.asm{$(OBJ_DIR)}.obj:
 	$(AS) -MD $@.dep -o $@ $(AFLAGS) $<
 
 $(OBJ_DIR):

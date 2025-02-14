@@ -115,6 +115,7 @@ typedef enum {
         IMB_ARCH_SSE,
         IMB_ARCH_AVX2,
         IMB_ARCH_AVX512,
+        IMB_ARCH_AVX10,
         IMB_ARCH_NUM,
 } IMB_ARCH;
 
@@ -973,6 +974,9 @@ typedef int (*imb_self_test_cb_t)(void *cb_arg, const IMB_SELF_TEST_CALLBACK_DAT
 #define IMB_CPUFLAGS_AVX2_T3 (IMB_CPUFLAGS_AVX2_T2 | IMB_FEATURE_AVX_IFMA)
 #define IMB_CPUFLAGS_AVX2_T4                                                                       \
         (IMB_CPUFLAGS_AVX2_T3 | IMB_FEATURE_SM3NI | IMB_FEATURE_SM4NI | IMB_FEATURE_SHA512NI)
+#define IMB_CPUFLAGS_AVX10                                                                         \
+        (IMB_CPUFLAGS_AVX512 | IMB_CPUFLAGS_AVX2_T4 | IMB_FEATURE_APX | IMB_FEATURE_AVX10_2 |      \
+         IMB_FEATURE_AVX10_512)
 
 /* TOP LEVEL (IMB_MGR) Data structure fields */
 
@@ -1335,6 +1339,11 @@ init_mb_mgr_avx512(IMB_MGR *state);
  */
 IMB_DLL_EXPORT void
 init_mb_mgr_sse(IMB_MGR *state);
+/**
+ * @copydoc init_mb_mgr_avx2
+ */
+IMB_DLL_EXPORT void
+init_mb_mgr_avx10(IMB_MGR *state);
 
 /**
  * @brief Submit job for processing after validating.
@@ -1359,6 +1368,12 @@ IMB_DLL_EXPORT IMB_JOB *
 submit_job_sse(IMB_MGR *state);
 
 /**
+ * @copydoc submit_job_avx2
+ */
+IMB_DLL_EXPORT IMB_JOB *
+submit_job_avx10(IMB_MGR *state);
+
+/**
  * @brief Submit job for processing without validating.
  *
  * This is more performant but less secure than submit_job_xxx()
@@ -1379,6 +1394,11 @@ submit_job_nocheck_avx512(IMB_MGR *state);
  */
 IMB_DLL_EXPORT IMB_JOB *
 submit_job_nocheck_sse(IMB_MGR *state);
+/**
+ * @copydoc submit_job_nocheck_avx2
+ */
+IMB_DLL_EXPORT IMB_JOB *
+submit_job_nocheck_avx10(IMB_MGR *state);
 
 /**
  * @brief Force processing until next job in queue is completed.
@@ -1399,6 +1419,11 @@ flush_job_avx512(IMB_MGR *state);
  */
 IMB_DLL_EXPORT IMB_JOB *
 flush_job_sse(IMB_MGR *state);
+/**
+ * @copydoc flush_job_avx2
+ */
+IMB_DLL_EXPORT IMB_JOB *
+flush_job_avx10(IMB_MGR *state);
 
 /**
  * @brief Get number of jobs queued to be processed.
@@ -1419,6 +1444,11 @@ queue_size_avx512(IMB_MGR *state);
  */
 IMB_DLL_EXPORT uint32_t
 queue_size_sse(IMB_MGR *state);
+/**
+ * @copydoc queue_size_avx2
+ */
+IMB_DLL_EXPORT uint32_t
+queue_size_avx10(IMB_MGR *state);
 
 /**
  * @brief Get next completed job.
@@ -1439,6 +1469,11 @@ get_completed_job_avx512(IMB_MGR *state);
  */
 IMB_DLL_EXPORT IMB_JOB *
 get_completed_job_sse(IMB_MGR *state);
+/**
+ * @copydoc get_completed_job_avx2
+ */
+IMB_DLL_EXPORT IMB_JOB *
+get_completed_job_avx10(IMB_MGR *state);
 
 /**
  * @brief Get next available job.
@@ -1459,6 +1494,11 @@ get_next_job_avx512(IMB_MGR *state);
  */
 IMB_DLL_EXPORT IMB_JOB *
 get_next_job_sse(IMB_MGR *state);
+/**
+ * @copydoc get_next_job_avx2
+ */
+IMB_DLL_EXPORT IMB_JOB *
+get_next_job_avx10(IMB_MGR *state);
 
 /**
  * @brief Automatically initialize most performant

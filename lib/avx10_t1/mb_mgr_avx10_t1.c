@@ -1,5 +1,5 @@
 /*******************************************************************************
- Copyright (c) 2022-2024, Intel Corporation
+ Copyright (c) 2025, Intel Corporation
 
  Redistribution and use in source and binary forms, with or without
  modification, are permitted provided that the following conditions are met:
@@ -46,11 +46,12 @@
 #include "include/cpu_feature.h"
 #include "include/error.h"
 
-#include "include/arch_sse_type1.h"  /* SM4-ECB, AES-CFB, ZUC */
-#include "include/arch_sse_type2.h"  /* SHA-NI */
 #include "include/arch_avx2_type1.h" /* AESNI, MD5 */
 #include "include/arch_avx512_type1.h"
 #include "include/arch_avx512_type2.h"
+#include "include/arch_sse_type1.h" /* aes-cfb, zuc */
+#include "include/arch_sse_type2.h" /* SHA-NI */
+#include "include/arch_avx10_type1.h"
 
 #include "include/ooo_mgr_reset.h"
 
@@ -58,38 +59,32 @@
 #define RESTORE_XMMS restore_xmms_avx
 
 /* JOB API */
-#define SUBMIT_JOB                  submit_job_avx512_t2
-#define FLUSH_JOB                   flush_job_avx512_t2
-#define QUEUE_SIZE                  queue_size_avx512_t2
-#define SUBMIT_JOB_NOCHECK          submit_job_nocheck_avx512_t2
-#define GET_NEXT_JOB                get_next_job_avx512_t2
-#define GET_COMPLETED_JOB           get_completed_job_avx512_t2
-#define SUBMIT_BURST                submit_burst_avx512_t2
-#define SUBMIT_BURST_NOCHECK        submit_burst_nocheck_avx512_t2
-#define SUBMIT_CIPHER_BURST         submit_cipher_burst_avx512_t2
-#define SUBMIT_CIPHER_BURST_NOCHECK submit_cipher_burst_nocheck_avx512_t2
-#define SUBMIT_HASH_BURST           submit_hash_burst_avx512_t2
-#define SUBMIT_HASH_BURST_NOCHECK   submit_hash_burst_nocheck_avx512_t2
-#define SUBMIT_AEAD_BURST           submit_aead_burst_avx512_t2
-#define SUBMIT_AEAD_BURST_NOCHECK   submit_aead_burst_nocheck_avx512_t2
-#define GET_NEXT_BURST              get_next_burst_avx512_t2
-#define SUBMIT_BURST                submit_burst_avx512_t2
-#define SUBMIT_BURST_NOCHECK        submit_burst_nocheck_avx512_t2
-#define FLUSH_BURST                 flush_burst_avx512_t2
-#define SUBMIT_CIPHER_BURST         submit_cipher_burst_avx512_t2
-#define SUBMIT_CIPHER_BURST_NOCHECK submit_cipher_burst_nocheck_avx512_t2
-#define SUBMIT_HASH_BURST           submit_hash_burst_avx512_t2
-#define SUBMIT_HASH_BURST_NOCHECK   submit_hash_burst_nocheck_avx512_t2
-#define SET_SUITE_ID_FN             set_suite_id_avx512_t2
+#define SUBMIT_JOB                  submit_job_avx10_t1
+#define FLUSH_JOB                   flush_job_avx10_t1
+#define QUEUE_SIZE                  queue_size_avx10_t1
+#define SUBMIT_JOB_NOCHECK          submit_job_nocheck_avx10_t1
+#define GET_NEXT_JOB                get_next_job_avx10_t1
+#define GET_COMPLETED_JOB           get_completed_job_avx10_t1
+#define GET_NEXT_BURST              get_next_burst_avx10_t1
+#define SUBMIT_BURST                submit_burst_avx10_t1
+#define SUBMIT_BURST_NOCHECK        submit_burst_nocheck_avx10_t1
+#define FLUSH_BURST                 flush_burst_avx10_t1
+#define SUBMIT_CIPHER_BURST         submit_cipher_burst_avx10_t1
+#define SUBMIT_CIPHER_BURST_NOCHECK submit_cipher_burst_nocheck_avx10_t1
+#define SUBMIT_HASH_BURST           submit_hash_burst_avx10_t1
+#define SUBMIT_HASH_BURST_NOCHECK   submit_hash_burst_nocheck_avx10_t1
+#define SUBMIT_AEAD_BURST           submit_aead_burst_avx10_t1
+#define SUBMIT_AEAD_BURST_NOCHECK   submit_aead_burst_nocheck_avx10_t1
+#define SET_SUITE_ID_FN             set_suite_id_avx10_t1
 
 /* Hash */
-#define SUBMIT_JOB_HASH SUBMIT_JOB_HASH_AVX512_T2
-#define FLUSH_JOB_HASH  FLUSH_JOB_HASH_AVX512_T2
+#define SUBMIT_JOB_HASH SUBMIT_JOB_HASH_AVX10_T1
+#define FLUSH_JOB_HASH  FLUSH_JOB_HASH_AVX10_T1
 
 /* Cipher encrypt / decrypt */
-#define SUBMIT_JOB_CIPHER_ENC SUBMIT_JOB_CIPHER_ENC_AVX512_T2
-#define FLUSH_JOB_CIPHER_ENC  FLUSH_JOB_CIPHER_ENC_AVX512_T2
-#define SUBMIT_JOB_CIPHER_DEC SUBMIT_JOB_CIPHER_DEC_AVX512_T2
+#define SUBMIT_JOB_CIPHER_ENC SUBMIT_JOB_CIPHER_ENC_AVX10_T1
+#define FLUSH_JOB_CIPHER_ENC  FLUSH_JOB_CIPHER_ENC_AVX10_T1
+#define SUBMIT_JOB_CIPHER_DEC SUBMIT_JOB_CIPHER_DEC_AVX10_T1
 
 /* AES-GCM */
 #define AES_GCM_DEC_IV_128 aes_gcm_dec_var_iv_128_vaes_avx512
@@ -454,19 +449,19 @@ reset_ooo_mgrs(IMB_MGR *state)
 }
 
 IMB_DLL_LOCAL void
-init_mb_mgr_avx512_t2_internal(IMB_MGR *state, const int reset_mgrs)
+init_mb_mgr_avx10_t1_internal(IMB_MGR *state, const int reset_mgrs)
 {
         /* Check if CPU flags needed for AVX512 interface are present */
-        if ((state->features & IMB_CPUFLAGS_AVX512_T2) != IMB_CPUFLAGS_AVX512_T2) {
+        if ((state->features & IMB_CPUFLAGS_AVX10) != IMB_CPUFLAGS_AVX10) {
                 imb_set_errno(state, IMB_ERR_MISSING_CPUFLAGS_INIT_MGR);
                 return;
         }
 
         /* Set architecture for future checks */
-        state->used_arch = (uint32_t) IMB_ARCH_AVX512;
+        state->used_arch = (uint32_t) IMB_ARCH_AVX10;
 
         /* Set architecture type for future checks */
-        state->used_arch_type = 2;
+        state->used_arch_type = 1;
 
         if (reset_mgrs) {
                 reset_ooo_mgrs(state);

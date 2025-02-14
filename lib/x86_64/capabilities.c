@@ -158,6 +158,9 @@ imb_get_arch_type_string(const IMB_MGR *state, const char **arch_type, const cha
                   "CPU ISA: AES, PCLMUL, SSE, AVX, AVX2, AVX512" },
                 { IMB_ARCH_AVX512, 2, "AVX512 Type 2",
                   "CPU ISA: VAES, VPCLMUL, SSE, AVX, AVX2, AVX512, GFNI, SHA-NI" },
+                { IMB_ARCH_AVX10, 1, "AVX10 Type 1",
+                  "CPU ISA: VAES, VPCLMUL, SSE, AVX, AVX2, AVX512, GFNI, SHA-NI, IFMA, SHA512-NI, "
+                  "SM3-NI, SM4-NI" },
         };
 
         for (unsigned int i = 0; i < IMB_DIM(arch_type_mappings); i++) {

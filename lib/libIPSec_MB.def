@@ -542,3 +542,20 @@ EXPORTS
     imb_cipher_burst_get_size                  @516
     imb_aead_burst_get_size                    @517
     imb_sm4_gcm_pre                            @518
+    get_next_burst_avx10_t1                    @519
+    submit_burst_avx10_t1                      @520
+    submit_burst_nocheck_avx10_t1              @521
+    flush_burst_avx10_t1                       @522
+    submit_cipher_burst_avx10_t1               @523
+    submit_cipher_burst_nocheck_avx10_t1       @524
+    submit_hash_burst_avx10_t1                 @525
+    submit_hash_burst_nocheck_avx10_t1         @526
+    flush_job_avx10_t1                         @527
+    queue_size_avx10_t1                        @528
+    submit_job_avx10_t1                        @529
+    submit_job_nocheck_avx10_t1                @530
+    get_next_job_avx10_t1                      @531
+    get_completed_job_avx10_t1                 @532
+    submit_aead_burst_avx10_t1                 @533
+    submit_aead_burst_nocheck_avx10_t1         @534
+    init_mb_mgr_avx10                          @535

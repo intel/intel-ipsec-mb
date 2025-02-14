@@ -285,6 +285,8 @@ c_lib_objs := \
 	mb_mgr_avx512.o \
 	mb_mgr_avx512_t1.o \
 	mb_mgr_avx512_t2.o \
+	mb_mgr_avx10.o \
+	mb_mgr_avx10_t1.o \
 	mb_mgr_sse.o \
 	mb_mgr_sse_t1.o \
 	mb_mgr_sse_t2.o \
@@ -871,6 +873,9 @@ $(OBJ_DIR)/%.o:avx512_t2/%.c
 
 $(OBJ_DIR)/%.o:avx512_t2/%.asm
 	$(NASM) -MD $(@:.o=.d) -MT $@ -o $@ $(NASM_FLAGS) $<
+
+$(OBJ_DIR)/%.o:avx10_t1/%.c
+	$(CC) -MMD $(OPT_AVX512) -c $(CFLAGS) $< -o $@
 
 $(OBJ_DIR):
 	mkdir $(OBJ_DIR)
