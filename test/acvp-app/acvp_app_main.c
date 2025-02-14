@@ -1509,16 +1509,20 @@ main(int argc, char **argv)
                         resp_filename = argv[i + 1];
                         i++;
                 } else if (strcmp(argv[i], "--arch") == 0) {
-                        if (argv[i + 1] == NULL) {
+                        const char *arch = argv[i + 1];
+
+                        if (arch == NULL) {
                                 fprintf(stderr, "Missing argument for --arch\n");
                                 goto exit;
                         }
-                        if (strcmp(argv[i + 1], "SSE") == 0)
+                        if (strcmp(arch, "SSE") == 0)
                                 test_arch = IMB_ARCH_SSE;
-                        else if (strcmp(argv[i + 1], "AVX2") == 0)
+                        else if (strcmp(arch, "AVX2") == 0)
                                 test_arch = IMB_ARCH_AVX2;
-                        else if (strcmp(argv[i + 1], "AVX512") == 0)
+                        else if (strcmp(arch, "AVX512") == 0)
                                 test_arch = IMB_ARCH_AVX512;
+                        else if (strcmp(arch, "AVX10") == 0)
+                                test_arch = IMB_ARCH_AVX10;
                         else {
                                 fprintf(stderr, "Unsupported architecture\n");
                                 goto exit;
@@ -1638,6 +1642,9 @@ main(int argc, char **argv)
                 break;
         case IMB_ARCH_AVX512:
                 init_mb_mgr_avx512(mb_mgr);
+                break;
+        case IMB_ARCH_AVX10:
+                init_mb_mgr_avx10(mb_mgr);
                 break;
         default:
                 fprintf(stderr, "Invalid architecture\n");

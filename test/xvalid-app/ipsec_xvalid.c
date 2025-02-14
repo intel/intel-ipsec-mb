@@ -174,7 +174,8 @@ const struct str_value_mapping arch_str_map[] = {
         { .name = "NONE", .values.arch_type = IMB_ARCH_NONE },
         { .name = "SSE", .values.arch_type = IMB_ARCH_SSE },
         { .name = "AVX2", .values.arch_type = IMB_ARCH_AVX2 },
-        { .name = "AVX512", .values.arch_type = IMB_ARCH_AVX512 }
+        { .name = "AVX512", .values.arch_type = IMB_ARCH_AVX512 },
+        { .name = "AVX10", .values.arch_type = IMB_ARCH_AVX10 }
 };
 
 struct str_value_mapping cipher_algo_str_map[] = {
@@ -1942,7 +1943,7 @@ perform_safe_checks(IMB_MGR *mgr, const IMB_ARCH arch, struct safe_check_ctx *ct
         if (arch == IMB_ARCH_AVX2) {
                 ctx->simd_reg_size = 32;
                 ctx->simd_reg_name = "ymm";
-        } else if (arch == IMB_ARCH_AVX512) {
+        } else if (arch == IMB_ARCH_AVX512 || arch == IMB_ARCH_AVX10) {
                 ctx->simd_reg_size = 64;
                 ctx->simd_reg_name = "zmm";
         } else {
@@ -2799,6 +2800,9 @@ run_test(const IMB_ARCH enc_arch, const IMB_ARCH dec_arch, struct params_s *para
         case IMB_ARCH_AVX512:
                 init_mb_mgr_avx512(enc_mgr);
                 break;
+        case IMB_ARCH_AVX10:
+                init_mb_mgr_avx10(enc_mgr);
+                break;
         default:
                 fprintf(stderr, "Invalid architecture\n");
                 exit(EXIT_FAILURE);
@@ -2833,6 +2837,9 @@ run_test(const IMB_ARCH enc_arch, const IMB_ARCH dec_arch, struct params_s *para
                 break;
         case IMB_ARCH_AVX512:
                 init_mb_mgr_avx512(dec_mgr);
+                break;
+        case IMB_ARCH_AVX10:
+                init_mb_mgr_avx10(dec_mgr);
                 break;
         default:
                 fprintf(stderr, "Invalid architecture\n");

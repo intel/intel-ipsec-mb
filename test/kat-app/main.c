@@ -453,6 +453,9 @@ main(int argc, char **argv)
                 case IMB_ARCH_AVX512:
                         init_mb_mgr_avx512(p_mgr);
                         break;
+                case IMB_ARCH_AVX10:
+                        init_mb_mgr_avx10(p_mgr);
+                        break;
                 }
 
                 if (p_mgr->features & IMB_FEATURE_SELF_TEST) {

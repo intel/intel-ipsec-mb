@@ -1266,6 +1266,8 @@ main(int argc, const char **argv)
                         arch_to_run = IMB_ARCH_AVX2;
                 } else if (strcmp(argv[i], "--avx512") == 0) {
                         arch_to_run = IMB_ARCH_AVX512;
+                } else if (strcmp(argv[i], "--avx10") == 0) {
+                        arch_to_run = IMB_ARCH_AVX10;
                 } else if (strcmp(argv[i], "--shani-off") == 0) {
                         flags |= IMB_FLAG_SHANI_OFF;
                 } else if (strcmp(argv[i], "--gfni-off") == 0) {
@@ -1289,6 +1291,9 @@ main(int argc, const char **argv)
                 break;
         case IMB_ARCH_AVX512:
                 init_mb_mgr_avx512(p_mgr);
+                break;
+        case IMB_ARCH_AVX10:
+                init_mb_mgr_avx10(p_mgr);
                 break;
         default:
                 /* auto-detect */

@@ -177,6 +177,8 @@ update_flags_and_archs(const char *arg, uint8_t arch_support[IMB_ARCH_NUM], uint
 
         if (strcmp(arg, "--no-avx512") == 0)
                 arch_support[IMB_ARCH_AVX512] = 0;
+        if (strcmp(arg, "--no-avx10") == 0)
+                arch_support[IMB_ARCH_AVX10] = 0;
         else if (strcmp(arg, "--no-avx2") == 0)
                 arch_support[IMB_ARCH_AVX2] = 0;
         else if (strcmp(arg, "--no-sse") == 0)
@@ -210,6 +212,7 @@ detect_arch(uint8_t arch_support[IMB_ARCH_NUM])
         const uint64_t detect_avx = IMB_FEATURE_AVX | IMB_FEATURE_CMOV | IMB_FEATURE_AESNI;
         const uint64_t detect_avx2 = IMB_FEATURE_AVX2 | detect_avx;
         const uint64_t detect_avx512 = IMB_FEATURE_AVX512_SKX | detect_avx2;
+        const uint64_t detect_avx10 = IMB_FEATURE_AVX10_2 | detect_avx512;
 
         IMB_MGR *p_mgr = NULL;
         IMB_ARCH arch_id;
@@ -228,6 +231,9 @@ detect_arch(uint8_t arch_support[IMB_ARCH_NUM])
                 return -1;
         }
 
+        if ((p_mgr->features & detect_avx10) != detect_avx10)
+                arch_support[IMB_ARCH_AVX10] = 0;
+
         if ((p_mgr->features & detect_avx512) != detect_avx512)
                 arch_support[IMB_ARCH_AVX512] = 0;
 
@@ -240,7 +246,7 @@ detect_arch(uint8_t arch_support[IMB_ARCH_NUM])
         free_mb_mgr(p_mgr);
 
         if (arch_support[IMB_ARCH_SSE] == 0 && arch_support[IMB_ARCH_AVX2] == 0 &&
-            arch_support[IMB_ARCH_AVX512] == 0) {
+            arch_support[IMB_ARCH_AVX512] == 0 && arch_support[IMB_ARCH_AVX10] == 0) {
                 fprintf(stderr, "No available architecture detected!\n");
                 return -1;
         }
@@ -257,11 +263,13 @@ detect_arch(uint8_t arch_support[IMB_ARCH_NUM])
 void
 print_tested_arch(const uint64_t features, const IMB_ARCH arch)
 {
-        static const char *arch_str_tab[IMB_ARCH_NUM] = { "NONE", "SSE", "AVX2", "AVX512" };
+        static const char *arch_str_tab[IMB_ARCH_NUM] = { "NONE", "SSE", "AVX2", "AVX512",
+                                                          "AVX10" };
         const char *feat = "";
 
         switch (arch) {
         case IMB_ARCH_AVX2:
+        case IMB_ARCH_AVX10:
                 break;
         case IMB_ARCH_SSE:
                 if (features & IMB_FEATURE_SHANI) {
