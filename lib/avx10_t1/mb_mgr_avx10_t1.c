@@ -362,11 +362,19 @@ submit_job_docsis256_sec_crc_dec_vaes_avx512(MB_MGR_DOCSIS_AES_OOO *state, IMB_J
 #define SUBMIT_JOB_DOCSIS128_SEC_CRC_DEC submit_job_docsis128_sec_crc_dec_vaes_avx512
 #define SUBMIT_JOB_DOCSIS256_SEC_CRC_DEC submit_job_docsis256_sec_crc_dec_vaes_avx512
 
+#ifdef SMX_NI
+/* SM4 */
+#define SM4_ECB     sm4_ecb_ni_avx2
+#define SM4_CBC_ENC sm4_cbc_enc_ni_avx2
+#define SM4_CBC_DEC sm4_cbc_dec_ni_avx2
+#define SM4_CTR     sm4_ctr_ni_avx2
+#else
 /* SM4 */
 #define SM4_ECB     sm4_ecb_sse
 #define SM4_CBC_ENC sm4_cbc_enc_sse
 #define SM4_CBC_DEC sm4_cbc_dec_sse
 #define SM4_CTR     sm4_ctr_sse
+#endif
 
 /* SM3 */
 #define SUBMIT_JOB_SM3      sm3_msg_submit_sse
@@ -637,7 +645,9 @@ init_mb_mgr_avx10_t1_internal(IMB_MGR *state, const int reset_mgrs)
         state->chacha20_poly1305_quic = aead_chacha20_poly1305_avx512;
         state->chacha20_hp_quic = quic_hp_chacha20_avx512;
 
-        state->sm4_keyexp = sm4_set_key_sse;
+#ifdef SMX_NI
+        state->sm4_keyexp = sm4_set_key_ni_avx2;
+#endif
 }
 
 #include "mb_mgr_code.h"
