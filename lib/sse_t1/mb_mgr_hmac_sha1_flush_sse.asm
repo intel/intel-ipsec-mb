@@ -29,6 +29,7 @@
 %include "include/imb_job.inc"
 %include "include/mb_mgr_datastruct.inc"
 %include "include/reg_sizes.inc"
+%include "include/memcpy.inc"
 
 ;%define DO_DBGPRINT
 %include "include/dbgprint.inc"
@@ -92,6 +93,7 @@ mksection .text
 %define p               arg2
 
 %define tmp4		r8
+%define tmp5		r9
 
 %endif
 
@@ -229,6 +231,9 @@ end_loop:
 
 	mov	p, [job_rax + _auth_tag_output]
 
+	cmp 	qword [job_rax + _auth_tag_output_len_in_bytes], 12
+	jne 	copy_tag
+	
 	; copy 12 bytes
 	mov	DWORD(tmp2), [state + _args_digest + SHA1_DIGEST_WORD_SIZE*idx + 0*SHA1_DIGEST_ROW_SIZE]
 	mov	DWORD(tmp4), [state + _args_digest + SHA1_DIGEST_WORD_SIZE*idx + 1*SHA1_DIGEST_ROW_SIZE]
@@ -239,17 +244,25 @@ end_loop:
 	mov	DWORD(tmp2), [state + _args_digest + SHA1_DIGEST_WORD_SIZE*idx + 2*SHA1_DIGEST_ROW_SIZE]
 	bswap	DWORD(tmp2)
 	mov	[p + 2*4], DWORD(tmp2)
+	jmp 	clear_ret
 
-        cmp     qword [job_rax + _auth_tag_output_len_in_bytes], 12
-        je      clear_ret
+copy_tag:
+	;; always copy 4 bytes
+	mov	DWORD(tmp2), [state + _args_digest + idx*4 + 0*SHA1_DIGEST_ROW_SIZE]
+	bswap	DWORD(tmp2)
+	mov	[p + 0*SHA1_DIGEST_WORD_SIZE], DWORD(tmp2)
+	cmp     qword [job_rax + _auth_tag_output_len_in_bytes], 4
+	je      clear_ret
 
-        ;; copy remaining 8 bytes to return 20 byte digest
-        mov	DWORD(tmp2),  [state + _args_digest + SHA1_DIGEST_WORD_SIZE*idx + 3*SHA1_DIGEST_ROW_SIZE]
-        mov	DWORD(tmp4), [state + _args_digest + SHA1_DIGEST_WORD_SIZE*idx + 4*SHA1_DIGEST_ROW_SIZE]
-        bswap	DWORD(tmp2)
-        bswap	DWORD(tmp4)
-        mov	[p + 3*SHA1_DIGEST_WORD_SIZE], DWORD(tmp2)
-        mov	[p + 4*SHA1_DIGEST_WORD_SIZE], DWORD(tmp4)
+	;; copy remaining bytes to return digest
+	mov    	tmp2, qword [job_rax + _auth_tag_output_len_in_bytes]
+	sub    	tmp2, 4 ; copied 4 bytes already
+	movd   	xmm0, [state + _args_digest + SHA1_DIGEST_WORD_SIZE*idx + 1*SHA1_DIGEST_ROW_SIZE]
+	pinsrd  xmm0, [state + _args_digest + SHA1_DIGEST_WORD_SIZE*idx + 2*SHA1_DIGEST_ROW_SIZE], 1
+	pinsrd  xmm0, [state + _args_digest + SHA1_DIGEST_WORD_SIZE*idx + 3*SHA1_DIGEST_ROW_SIZE], 2
+	pinsrd  xmm0, [state + _args_digest + SHA1_DIGEST_WORD_SIZE*idx + 4*SHA1_DIGEST_ROW_SIZE], 3
+	pshufb  xmm0, [rel byteswap]
+	simd_store_sse {p + 1*SHA1_DIGEST_WORD_SIZE}, xmm0, tmp2, tmp4, tmp5
 
 clear_ret:
 

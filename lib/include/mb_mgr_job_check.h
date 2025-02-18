@@ -1357,7 +1357,6 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job, const IMB_CIPHER_MODE cipher_
         }
 
         switch (hash_alg) {
-        case IMB_AUTH_HMAC_SHA_1:
         case IMB_AUTH_MD5:
         case IMB_AUTH_HMAC_SHA_224:
         case IMB_AUTH_HMAC_SHA_256:
@@ -1370,6 +1369,34 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job, const IMB_CIPHER_MODE cipher_
                 if (job->auth_tag_output_len_in_bytes != auth_tag_len_ipsec[hash_alg] &&
                     job->auth_tag_output_len_in_bytes != auth_tag_len_fips[hash_alg]) {
                         imb_set_errno(state, IMB_ERR_JOB_AUTH_TAG_LEN);
+                        return 1;
+                }
+                if (job->msg_len_to_hash_in_bytes == 0 ||
+                    job->msg_len_to_hash_in_bytes > MB_MAX_LEN16) {
+                        imb_set_errno(state, IMB_ERR_JOB_AUTH_LEN);
+                        return 1;
+                }
+                if (job->auth_tag_output == NULL) {
+                        imb_set_errno(state, IMB_ERR_JOB_NULL_AUTH);
+                        return 1;
+                }
+                if (job->u.HMAC._hashed_auth_key_xor_ipad == NULL) {
+                        imb_set_errno(state, IMB_ERR_JOB_NULL_HMAC_IPAD);
+                        return 1;
+                }
+                if (job->u.HMAC._hashed_auth_key_xor_opad == NULL) {
+                        imb_set_errno(state, IMB_ERR_JOB_NULL_HMAC_OPAD);
+                        return 1;
+                }
+                break;
+        case IMB_AUTH_HMAC_SHA_1:
+                if (job->auth_tag_output_len_in_bytes < 4 ||
+                    job->auth_tag_output_len_in_bytes > auth_tag_len_fips[hash_alg]) {
+                        imb_set_errno(state, IMB_ERR_JOB_AUTH_TAG_LEN);
+                        return 1;
+                }
+                if (job->src == NULL) {
+                        imb_set_errno(state, IMB_ERR_JOB_NULL_SRC);
                         return 1;
                 }
                 if (job->msg_len_to_hash_in_bytes == 0 ||

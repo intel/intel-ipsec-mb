@@ -29,6 +29,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <assert.h>
 
 #include <intel-ipsec-mb.h>
 #include "gcm_ctr_vectors_test.h"
@@ -41,7 +42,7 @@ hmac_sha1_test(struct IMB_MGR *mb_mgr);
 extern const struct mac_test hmac_sha1_test_kat_json[];
 static int
 hmac_sha1_job_ok(const struct mac_test *vec, const struct IMB_JOB *job, const uint8_t *auth,
-                 const uint8_t *padding, const size_t sizeof_padding)
+                 const uint8_t *padding, const size_t sizeof_padding, const size_t tag_size)
 {
         if (job->status != IMB_STATUS_COMPLETED) {
                 printf("line:%d job error status:%d ", __LINE__, job->status);
@@ -49,10 +50,9 @@ hmac_sha1_job_ok(const struct mac_test *vec, const struct IMB_JOB *job, const ui
         }
 
         /* hash checks */
-        if (memcmp(padding, &auth[sizeof_padding + (vec->tagSize / 8)], sizeof_padding)) {
+        if (memcmp(padding, &auth[sizeof_padding + tag_size], sizeof_padding)) {
                 printf("hash overwrite tail\n");
-                hexdump(stderr, "Target", &auth[sizeof_padding + (vec->tagSize / 8)],
-                        sizeof_padding);
+                hexdump(stderr, "Target", &auth[sizeof_padding + tag_size], sizeof_padding);
                 return 0;
         }
 
@@ -62,17 +62,18 @@ hmac_sha1_job_ok(const struct mac_test *vec, const struct IMB_JOB *job, const ui
                 return 0;
         }
 
-        if (memcmp(vec->tag, &auth[sizeof_padding], vec->tagSize / 8)) {
+        if (memcmp(vec->tag, &auth[sizeof_padding], tag_size)) {
                 printf("hash mismatched\n");
-                hexdump(stderr, "Received", &auth[sizeof_padding], vec->tagSize / 8);
-                hexdump(stderr, "Expected", vec->tag, vec->tagSize / 8);
+                hexdump(stderr, "Received", &auth[sizeof_padding], tag_size);
+                hexdump(stderr, "Expected", vec->tag, tag_size);
                 return 0;
         }
         return 1;
 }
 
 static int
-test_hmac_sha1(struct IMB_MGR *mb_mgr, const struct mac_test *vec, const uint32_t num_jobs)
+test_hmac_sha1(struct IMB_MGR *mb_mgr, const struct mac_test *vec, const uint32_t num_jobs,
+               const size_t tag_size)
 {
         struct IMB_JOB *job;
         uint8_t padding[16];
@@ -91,7 +92,7 @@ test_hmac_sha1(struct IMB_MGR *mb_mgr, const struct mac_test *vec, const uint32_
         memset(auths, 0, num_jobs * sizeof(void *));
 
         for (i = 0; i < num_jobs; i++) {
-                const size_t alloc_len = (vec->tagSize / 8) + (sizeof(padding) * 2);
+                const size_t alloc_len = tag_size + (sizeof(padding) * 2);
 
                 auths[i] = malloc(alloc_len);
                 if (auths[i] == NULL) {
@@ -113,7 +114,7 @@ test_hmac_sha1(struct IMB_MGR *mb_mgr, const struct mac_test *vec, const uint32_
                 job->dst = NULL;
                 job->key_len_in_bytes = 0;
                 job->auth_tag_output = auths[i] + sizeof(padding);
-                job->auth_tag_output_len_in_bytes = vec->tagSize / 8;
+                job->auth_tag_output_len_in_bytes = tag_size;
                 job->iv = NULL;
                 job->iv_len_in_bytes = 0;
                 job->src = (const void *) vec->msg;
@@ -139,14 +140,15 @@ test_hmac_sha1(struct IMB_MGR *mb_mgr, const struct mac_test *vec, const uint32_
                                 printf("%d Unexpected return from submit_job\n", __LINE__);
                                 goto end;
                         }
-                        if (!hmac_sha1_job_ok(vec, job, job->user_data, padding, sizeof(padding)))
+                        if (!hmac_sha1_job_ok(vec, job, job->user_data, padding, sizeof(padding),
+                                              tag_size))
                                 goto end;
                 }
         }
 
         while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL) {
                 jobs_rx++;
-                if (!hmac_sha1_job_ok(vec, job, job->user_data, padding, sizeof(padding)))
+                if (!hmac_sha1_job_ok(vec, job, job->user_data, padding, sizeof(padding), tag_size))
                         goto end;
         }
 
@@ -254,7 +256,8 @@ check_burst_jobs:
                         goto end;
                 }
 
-                if (!hmac_sha1_job_ok(vec, job, job->user_data, padding, sizeof(padding)))
+                if (!hmac_sha1_job_ok(vec, job, job->user_data, padding, sizeof(padding),
+                                      vec->tagSize / 8))
                         goto end;
                 jobs_rx++;
         }
@@ -364,7 +367,8 @@ test_hmac_sha1_hash_burst(struct IMB_MGR *mb_mgr, const struct mac_test *vec,
                         goto end;
                 }
 
-                if (!hmac_sha1_job_ok(vec, job, job->user_data, padding, sizeof(padding)))
+                if (!hmac_sha1_job_ok(vec, job, job->user_data, padding, sizeof(padding),
+                                      vec->tagSize / 8))
                         goto end;
                 jobs_rx++;
         }
@@ -407,7 +411,7 @@ test_hmac_sha1_std_vectors(struct IMB_MGR *mb_mgr, const uint32_t num_jobs,
 #endif
                 }
 
-                if (test_hmac_sha1(mb_mgr, v, num_jobs)) {
+                if (test_hmac_sha1(mb_mgr, v, num_jobs, v->tagSize / 8)) {
                         printf("error #%zu\n", v->tcId);
                         test_suite_update(ts, 0, 1);
                 } else {
@@ -438,10 +442,23 @@ hmac_sha1_test(struct IMB_MGR *mb_mgr)
         struct test_suite_context ts;
         int errors = 0;
         uint32_t num_jobs;
+        uint32_t tag_size;
+        const struct mac_test *v = hmac_sha1_test_kat_json;
 
         test_suite_start(&ts, "HMAC-SHA1");
         for (num_jobs = 1; num_jobs <= IMB_MAX_BURST_SIZE; num_jobs++)
                 test_hmac_sha1_std_vectors(mb_mgr, num_jobs, &ts);
+
+        assert(v->tagSize / 8 == 20);
+        for (tag_size = 4; tag_size <= 20; tag_size++) {
+                if (test_hmac_sha1(mb_mgr, v, IMB_MAX_BURST_SIZE, tag_size)) {
+                        printf("error tag size: %u\n", tag_size);
+                        test_suite_update(&ts, 0, 1);
+                } else {
+                        test_suite_update(&ts, 1, 0);
+                }
+        }
+
         errors = test_suite_end(&ts);
 
         return errors;

@@ -304,11 +304,15 @@ end_loop:
 
         mov	p, [job_rax + _auth_tag_output]
 
-        ; copy 12 bytes
 %if SHA1NI_DIGEST_ROW_SIZE != 20
 %error	"Below code has been optimized for SHA1NI_DIGEST_ROW_SIZE = 20!"
 %endif
-	lea	idx, [idx + 4*idx]
+	
+        lea	idx, [idx + 4*idx]
+	cmp 	qword [job_rax + _auth_tag_output_len_in_bytes], 12
+	jne 	copy_tag
+	
+        ; copy 12 bytes
         mov	DWORD(tmp),  [state + _args_digest + idx*4 + 0*SHA1_DIGEST_WORD_SIZE]
         mov	DWORD(tmp2), [state + _args_digest + idx*4 + 1*SHA1_DIGEST_WORD_SIZE]
         mov	DWORD(tmp3), [state + _args_digest + idx*4 + 2*SHA1_DIGEST_WORD_SIZE]
@@ -318,17 +322,25 @@ end_loop:
         mov	[p + 0*SHA1_DIGEST_WORD_SIZE], DWORD(tmp)
         mov	[p + 1*SHA1_DIGEST_WORD_SIZE], DWORD(tmp2)
         mov	[p + 2*SHA1_DIGEST_WORD_SIZE], DWORD(tmp3)
+        jmp 	clear_ret
 
-        cmp     qword [job_rax + _auth_tag_output_len_in_bytes], 12
-        je      clear_ret
+copy_tag:
+        ;; always copy 4 bytes
+	mov	DWORD(tmp2), [state + _args_digest + SHA1_DIGEST_WORD_SIZE*idx + 0*SHA1_DIGEST_ROW_SIZE]
+	bswap	DWORD(tmp2)
+	mov	[p + 0*SHA1_DIGEST_WORD_SIZE], DWORD(tmp2)
+	cmp     qword [job_rax + _auth_tag_output_len_in_bytes], 4
+	je      clear_ret
 
-        ;; copy remaining 8 bytes to return 20 byte digest
-        mov	DWORD(tmp),  [state + _args_digest + idx*4 + 3*SHA1_DIGEST_WORD_SIZE]
-        mov	DWORD(tmp2), [state + _args_digest + idx*4 + 4*SHA1_DIGEST_WORD_SIZE]
-        bswap	DWORD(tmp)
-        bswap	DWORD(tmp2)
-        mov	[p + 3*4], DWORD(tmp)
-        mov	[p + 4*4], DWORD(tmp2)
+	;; copy remaining bytes to return digest
+	mov 	tmp2, qword [job_rax + _auth_tag_output_len_in_bytes]
+	sub 	tmp2, 4 ; copied 4 bytes already
+        movd 	xmm0, [state + _args_digest + idx*4 + 1*SHA1_DIGEST_WORD_SIZE]
+	pinsrd  xmm0, [state + _args_digest + idx*4 + 2*SHA1_DIGEST_WORD_SIZE], 1
+	pinsrd  xmm0, [state + _args_digest + idx*4 + 3*SHA1_DIGEST_WORD_SIZE], 2
+	pinsrd  xmm0, [state + _args_digest + idx*4 + 4*SHA1_DIGEST_WORD_SIZE], 3
+	pshufb  xmm0, [rel byteswap]
+	simd_store_sse {p + 1*SHA1_DIGEST_WORD_SIZE}, xmm0, tmp2, tmp, tmp3
 
 clear_ret:
 
