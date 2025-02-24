@@ -34,6 +34,8 @@
 #include "include/zuc_internal.h"
 
 #define SNOW3G_MAX_BITLEN (UINT32_MAX)
+#define NIA_MAX_BITLEN    (UINT32_MAX - 1)
+#define NIA_MAX_BYTELEN   (NIA_MAX_BITLEN / 8)
 #define MB_MAX_LEN16      ((1 << 16) - 2)
 
 /* used to validate template job structure before computing session_id */
@@ -221,6 +223,7 @@ is_job_invalid_light(IMB_MGR *state, const IMB_CIPHER_MODE cipher_mode, const IM
         case IMB_AUTH_SHA3_512:
         case IMB_AUTH_SHAKE128:
         case IMB_AUTH_SHAKE256:
+        case IMB_AUTH_AES_NIA5:
                 break;
         case IMB_AUTH_AES_GMAC:
                 if (cipher_mode != IMB_CIPHER_GCM) {
@@ -1488,6 +1491,25 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job, const IMB_CIPHER_MODE cipher_
                 }
                 if (job->auth_tag_output_len_in_bytes != auth_tag_len_ipsec[hash_alg]) {
                         imb_set_errno(state, IMB_ERR_JOB_AUTH_TAG_LEN);
+                        return 1;
+                }
+                break;
+        case IMB_AUTH_AES_NIA5:
+                if (job->src == NULL && job->msg_len_to_hash_in_bytes != 0) {
+                        imb_set_errno(state, IMB_ERR_JOB_NULL_SRC);
+                        return 1;
+                }
+                if (job->msg_len_to_hash_in_bytes > NIA_MAX_BYTELEN) {
+                        imb_set_errno(state, IMB_ERR_JOB_AUTH_LEN);
+                        return 1;
+                }
+                if (job->auth_tag_output_len_in_bytes < UINT64_C(4) ||
+                    job->auth_tag_output_len_in_bytes > UINT64_C(16)) {
+                        imb_set_errno(state, IMB_ERR_JOB_AUTH_TAG_LEN);
+                        return 1;
+                }
+                if (job->auth_tag_output == NULL) {
+                        imb_set_errno(state, IMB_ERR_JOB_NULL_AUTH);
                         return 1;
                 }
                 break;

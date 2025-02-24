@@ -266,6 +266,9 @@ flush_snow3g_uea2_job_avx2_t2(IMB_MGR *state)
 #define POLYVAL     polyval_sse
 #define POLYVAL_PRE polyval_pre_sse
 
+/* AES-NIA5 */
+#define GENERATE_HQP_AES generate_hqp_aes_sse
+
 static void
 reset_ooo_mgrs(IMB_MGR *state)
 {

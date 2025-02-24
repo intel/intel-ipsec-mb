@@ -50,6 +50,7 @@
 #include "include/job_api_gcm.h"
 #include "include/job_api_kasumi.h"
 #include "include/job_api_sha3.h"
+#include "include/job_api_wireless_nxa.h"
 #include "include/mb_mgr_job_check.h" /* is_job_invalid() */
 
 #define CRC(func, state, job)                                                                      \
@@ -2687,6 +2688,8 @@ SUBMIT_JOB_HASH_EX(IMB_MGR *state, IMB_JOB *job, const IMB_HASH_ALG hash_alg)
                 return submit_job_sha3(state, job, IMB_AUTH_SHAKE128);
         case IMB_AUTH_SHAKE256:
                 return submit_job_sha3(state, job, IMB_AUTH_SHAKE256);
+        case IMB_AUTH_AES_NIA5:
+                return submit_aes_nia5_job(job);
         default:
                 /**
                  * assume IMB_AUTH_GCM, IMB_AUTH_SM4_GCM, IMB_AUTH_PON_CRC_BIP or IMB_AUTH_NULL
@@ -2764,7 +2767,7 @@ FLUSH_JOB_HASH_EX(IMB_MGR *state, IMB_JOB *job, const IMB_HASH_ALG hash_alg)
         case IMB_AUTH_SNOW3G_UIA2_BITLEN:
                 return FLUSH_JOB_SNOW3G_UIA2(snow3g_uia2_ooo);
 #endif
-        default: /* assume GCM or IMB_AUTH_NULL */
+        default:
                 if (!(job->status & IMB_STATUS_COMPLETED_AUTH)) {
                         job->status |= IMB_STATUS_COMPLETED_AUTH;
                         return job;
@@ -3096,6 +3099,12 @@ submit_hash_shake256(IMB_MGR *state, IMB_JOB *job)
         return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_SHAKE256);
 }
 
+static IMB_JOB *
+submit_hash_aes_nia5(IMB_MGR *state, IMB_JOB *job)
+{
+        return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_AES_NIA5);
+}
+
 static const submit_flush_fn_t tab_submit_hash[] = {
         /* [0] invalid entry */
         NULL,
@@ -3204,7 +3213,9 @@ static const submit_flush_fn_t tab_submit_hash[] = {
         /* [52] SHAKE128 */
         submit_hash_shake128,
         /* [53] SHAKE256 */
-        submit_hash_shake256
+        submit_hash_shake256,
+        /* [54] AES-NIA5 */
+        submit_hash_aes_nia5,
         /* add new hash algorithms here */
 };
 
@@ -3530,6 +3541,12 @@ flush_hash_shake256(IMB_MGR *state, IMB_JOB *job)
         return FLUSH_JOB_HASH_EX(state, job, IMB_AUTH_SHAKE256);
 }
 
+static IMB_JOB *
+flush_hash_aes_nia5(IMB_MGR *state, IMB_JOB *job)
+{
+        return FLUSH_JOB_HASH_EX(state, job, IMB_AUTH_AES_NIA5);
+}
+
 static const submit_flush_fn_t tab_flush_hash[] = {
         /* [0] invalid entry */
         NULL,
@@ -3638,7 +3655,9 @@ static const submit_flush_fn_t tab_flush_hash[] = {
         /* [52] SHAKE128 */
         flush_hash_shake128,
         /* [53] SHAKE256 */
-        flush_hash_shake256
+        flush_hash_shake256,
+        /* [54] AES-NIA5 */
+        flush_hash_aes_nia5,
         /* add new hash algorithms here */
 };
 

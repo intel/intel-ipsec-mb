@@ -395,13 +395,16 @@ sm3_hmac_submit_sse(IMB_JOB *job);
 IMB_JOB *
 sm3_msg_submit_sse(IMB_JOB *job);
 
-
 /* POLYVAL */
 void
 polyval_sse(const struct gcm_key_data *key_data, const void *in, const uint64_t in_len,
             void *io_tag);
 void
 polyval_pre_sse(const void *key, struct gcm_key_data *key_data);
+
+/* AES-NxA5 */
+void
+generate_hqp_aes_sse(const void *aes_expanded_keys, const void *iv, uint8_t HQP[]);
 
 /* suite id */
 IMB_DLL_EXPORT void

@@ -159,6 +159,7 @@ Table 2. List of supported integrity algorithms and their implementations.
 | SHA3-512          | Y      |  <---  |  <---  |  <---  |  <---  |  <---  |  <---  | Y      |  <---   |  <---  |
 | SHAKE128          | Y      |  <---  |  <---  |  <---  |  <---  |  <---  |  <---  | Y      |  <---   |  <---  |
 | SHAKE256          | Y      |  <---  |  <---  |  <---  |  <---  |  <---  |  <---  | Y      |  <---   |  <---  |
+| AES-NIA5          | Y      |  <---  |  <---  |  <---  |  <---  |  <---  |  <---  |  <---  |  <---   |  <---  |
 +--------------------------------------------------------------------------------------------------------------+
 ```
 Notes:  
@@ -213,7 +214,7 @@ Table 3. Encryption and integrity algorithm combinations
 | NULL, Chacha20,                     | AES128-GMAC, AES192-GMAC, AES256-GMAC,|
 | AES128-DOCSIS, AES256-DOCSIS,       | GHASH, SM3, HMAC-SM3                  |
 | DES-DOCSIS, 3DES, DES,              | ZUC-EIA3, SNOW3G-UIA2, KASUMI-F9      |
-| KASUMI-F8, SNOW3G-UEA2,             |                                       |
+| KASUMI-F8, SNOW3G-UEA2,             | AES-NIA5                              |
 | ZUC-EEA3, ZUC-NEA6                  |                                       |
 | SM4-ECB, SM4-CBC, SM4-CTR,          |                                       |
 | SNOW5G-NEA4                         |                                       |

@@ -353,6 +353,7 @@ typedef enum {
         IMB_AUTH_SHA3_512,               /**< SHA3-512 */
         IMB_AUTH_SHAKE128,               /**< SHAKE128 */
         IMB_AUTH_SHAKE256,               /**< SHAKE256 */
+        IMB_AUTH_AES_NIA5,               /**< AES256-NIA5 */
         IMB_AUTH_NUM
 } IMB_HASH_ALG;
 
@@ -521,7 +522,13 @@ typedef struct IMB_JOB {
                         struct chacha20_poly1305_context_data *ctx;
                         /**< Chacha20-Poly1305 context (for SGL only) */
                 } CHACHA20_POLY1305; /**< Chacha20-Poly1305 specific fields */
-        } u;                         /**< Hash algorithm-specific fields */
+                struct _AES_NIA5_specific_fields {
+                        const uint8_t *_expanded_auth_key;
+                        /**< AES expanded encryption keys (16-byte aligned) */
+                        const uint8_t *_iv;
+                        /**< Authentication 16-byte IV */
+                } AES_NIA5; /**< AES_NIA5 specific fields */
+        } u;                /**< Hash algorithm-specific fields */
 
         IMB_STATUS status;                     /**< Job status */
         IMB_CIPHER_MODE cipher_mode;           /**< Cipher mode */
