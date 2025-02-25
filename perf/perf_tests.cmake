@@ -133,7 +133,8 @@ set(HASH_ALGOS
   sha3-384
   sha3-512
   shake-128
-  shake-256)
+  shake-256
+  aes-nia5)
 
 # hash smoke tests (burst API)
 foreach(ALGO ${HASH_ALGOS})
@@ -201,7 +202,7 @@ endforeach()
 # cipher burst API tests
 ########################################
 
-set(CIHPER_BURST_API_ALGOS
+set(CIPHER_BURST_API_ALGOS
   aes-cbc-128
   aes-cbc-192
   aes-cbc-256
@@ -216,7 +217,7 @@ set(CIHPER_BURST_API_ALGOS
   aes-ecb-256)
 
 # cipher smoke tests (cipher burst API)
-foreach(ALGO ${CIHPER_BURST_API_ALGOS})
+foreach(ALGO ${CIPHER_BURST_API_ALGOS})
   add_test(NAME PERF::SMOKE::CIPHER::CIPHER_BURST_API::${ALGO}
     COMMAND ${PERF_APP} --smoke --cipher-burst-api --cipher-algo ${ALGO}
     WORKING_DIRECTORY ${APP_BIN_DIR})

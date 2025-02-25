@@ -216,6 +216,7 @@ enum test_hash_alg_e {
         TEST_SHA3_512,
         TEST_SHAKE_128,
         TEST_SHAKE_256,
+        TEST_AES_NIA5,
         TEST_NUM_HASH_TESTS
 };
 
@@ -573,6 +574,12 @@ const struct str_value_mapping hash_algo_str_map[] = {
                         .hash_alg = TEST_SHAKE_256
                 }
         },
+        {
+                .name = "aes-nia5",
+                .values.job_params = {
+                        .hash_alg = TEST_AES_NIA5
+                }
+        }
 };
 
 const struct str_value_mapping aead_algo_str_map[] = {
@@ -699,6 +706,7 @@ const uint32_t auth_tag_length_bytes[] = {
         64,                        /* IMB_AUTH_SHA3_512 */
         16,                        /* IMB_AUTH_SHAKE128 */
         32,                        /* IMB_AUTH_SHAKE256 */
+        4,                         /* AES-NIA5 */
 };
 uint32_t index_limit;
 uint32_t key_idxs[NUM_OFFSETS];
@@ -1672,6 +1680,9 @@ translate_hash_alg(const enum test_hash_alg_e test_mode)
         case TEST_SHAKE_256:
                 hash_alg = IMB_AUTH_SHAKE256;
                 break;
+        case TEST_AES_NIA5:
+                hash_alg = IMB_AUTH_AES_NIA5;
+                break;
         default:
                 break;
         }
@@ -2217,6 +2228,10 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params, const uint32_t num_iter, uint8
                 job_template.u.CMAC._key_expanded = k1_expanded;
                 job_template.u.CMAC._skey1 = k2;
                 job_template.u.CMAC._skey2 = k3;
+                break;
+        case TEST_AES_NIA5:
+                job_template.u.AES_NIA5._expanded_auth_key = (const uint8_t *) k1_expanded;
+                job_template.u.AES_NIA5._iv = (const uint8_t *) &auth_iv;
                 break;
         case TEST_HASH_POLY1305:
                 job_template.u.POLY1305._key = k1_expanded;
