@@ -254,6 +254,10 @@ flush_snow3g_uea2_job_avx2_t1(IMB_MGR *state)
 #define SUBMIT_JOB_HMAC_SM3 sm3_hmac_submit_sse
 #define FLUSH_JOB_HMAC_SM3  unused
 
+/* POLYVAL */
+#define POLYVAL     polyval_sse
+#define POLYVAL_PRE polyval_pre_sse
+
 static void
 reset_ooo_mgrs(IMB_MGR *state)
 {

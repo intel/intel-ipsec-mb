@@ -395,6 +395,14 @@ sm3_hmac_submit_sse(IMB_JOB *job);
 IMB_JOB *
 sm3_msg_submit_sse(IMB_JOB *job);
 
+
+/* POLYVAL */
+void
+polyval_sse(const struct gcm_key_data *key_data, const void *in, const uint64_t in_len,
+            void *io_tag);
+void
+polyval_pre_sse(const void *key, struct gcm_key_data *key_data);
+
 /* suite id */
 IMB_DLL_EXPORT void
 set_suite_id_sse_t1(IMB_MGR *state, IMB_JOB *job);

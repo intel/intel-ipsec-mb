@@ -339,7 +339,7 @@
 ; Input: The input data (A_IN), that data's length (A_LEN), and the hash key (HASH_KEY).
 ; Output: The hash of the data (AAD_HASH).
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-%macro  CALC_AAD_HASH   15
+%macro  CALC_AAD_HASH   15-16
 %define %%A_IN          %1
 %define %%A_LEN         %2
 %define %%AAD_HASH      %3
@@ -355,6 +355,7 @@
 %define %%T3            %13
 %define %%T4            %14
 %define %%T5            %15     ; temp reg 5
+%define %%POLYVAL       %16     ; if argument passed, do not shuffle data blocks
 
         mov     %%T1, %%A_IN            ; T1 = AAD
         mov     %%T2, %%A_LEN           ; T2 = aadLen
@@ -365,7 +366,9 @@ align_loop
         jl      %%_exit_AAD_loop128
 
         movdqu          %%XTMP0, [%%T1 + 16*0]
+%if %0 == 15
         pshufb          %%XTMP0, [rel SHUF_MASK]
+%endif
 
         pxor            %%XTMP0, %%AAD_HASH
 
@@ -384,8 +387,9 @@ align_loop
 %assign j 7
 %rep 7
         movdqu          %%XTMP0, [%%T1 + 16*i]
+%if %0 == 15
         pshufb          %%XTMP0, [rel SHUF_MASK]
-
+%endif
         movdqu          %%XTMP5, [%%GDATA_KEY + HashKey_ %+ j]
         movdqa          %%XTMP4, %%XTMP0
         pclmulqdq       %%XTMP4, %%XTMP5, 0x11                          ; %%T1 = T1 + a1*b1
@@ -433,8 +437,9 @@ align_label
         lea     %%T3, [%%GDATA_KEY + %%T3]
 
         movdqu          %%XTMP0, [%%T1]
+%if %0 == 15
         pshufb          %%XTMP0, [rel SHUF_MASK]
-
+%endif
         pxor            %%XTMP0, %%AAD_HASH
 
         movdqu          %%XTMP5, [%%T3]
@@ -457,8 +462,9 @@ align_label
 align_loop
 %%_AAD_blocks:
         movdqu          %%XTMP0, [%%T1]
+%if %0 == 15
         pshufb          %%XTMP0, [rel SHUF_MASK]
-
+%endif
         movdqu          %%XTMP5, [%%T3]
         movdqa          %%XTMP4, %%XTMP0
         pclmulqdq       %%XTMP4, %%XTMP5, 0x11                 ; %%T1 = T1 + a1*b1
@@ -521,7 +527,9 @@ align_label
         movdqu          %%XTMP0, [%%GDATA_KEY + HashKey]
         READ_SMALL_DATA_INPUT_SSE   %%XTMP1, %%T1, %%T2, %%T3
         ;byte-reflect the AAD data
+%if %0 == 15
         pshufb          %%XTMP1, [rel SHUF_MASK]
+%endif
         pxor            %%AAD_HASH, %%XTMP1
         GHASH_MUL       %%AAD_HASH, %%XTMP0, %%XTMP1, %%XTMP2, %%XTMP3, %%XTMP4, %%XTMP5
 

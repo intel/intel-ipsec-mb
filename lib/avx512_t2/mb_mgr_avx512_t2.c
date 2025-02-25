@@ -352,6 +352,10 @@ submit_job_docsis256_sec_crc_dec_vaes_avx512(MB_MGR_DOCSIS_AES_OOO *state, IMB_J
 #define SUBMIT_JOB_HMAC_SM3 sm3_hmac_submit_sse
 #define FLUSH_JOB_HMAC_SM3  unused
 
+/* POLYVAL */
+#define POLYVAL     polyval_sse
+#define POLYVAL_PRE polyval_pre_sse
+
 /* ====================================================================== */
 
 static void
