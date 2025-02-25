@@ -247,6 +247,7 @@ fill_in_job(struct IMB_JOB *job, const IMB_CIPHER_MODE cipher_mode,
                 64, /* IMB_AUTH_SHA3_512 */
                 0,  /* IMB_AUTH_SHAKE128 - skipped */
                 0,  /* IMB_AUTH_SHAKE256 - skipped */
+                4,  /* IMB_AUTH_AES_NIA5 */
         };
         static DECLARE_ALIGNED(uint8_t dust_bin[2048], 64);
         static void *ks_ptrs[3];
@@ -471,6 +472,10 @@ fill_in_job(struct IMB_JOB *job, const IMB_CIPHER_MODE cipher_mode,
                 job->hash_alg = IMB_AUTH_PON_CRC_BIP;
                 job->key_len_in_bytes = 16;
                 job->iv_len_in_bytes = 16;
+                break;
+        case IMB_AUTH_AES_NIA5:
+                job->u.AES_NIA5._expanded_auth_key = dust_bin;
+                job->u.AES_NIA5._iv = dust_bin;
                 break;
         case IMB_AUTH_ZUC_EIA3_BITLEN:
                 job->u.ZUC_EIA3._key = dust_bin;
@@ -1348,6 +1353,10 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
                                         /* MB_MAX_LEN16 (((1 << 16) - 2) * 8) is max */
                                         template_job.msg_len_to_hash_in_bits =
                                                 ((((1ULL << 16) - 1) * 8));
+                                        break;
+                                case IMB_AUTH_AES_NIA5:
+                                        /* (2^32 - 1 bits) is max */
+                                        template_job.msg_len_to_hash_in_bytes = (1ULL << 32) / 8;
                                         break;
                                 default:
                                         template_job.msg_len_to_hash_in_bytes = ((1 << 16) - 1);
