@@ -6,6 +6,7 @@ Library
 - Added AES-CFB AVX2 type 2 implementation.
 - Added AES-CBC AVX2 type 2 implementation.
 - Added AES-CMAC AVX2 type 2 implementation.
+- Added support for variable sized tags (from 4 to 20 bytes) for HMAC-SHA1
 
 Test Applications
 - Added `--offset` parameter to `imb-xvalid` application.

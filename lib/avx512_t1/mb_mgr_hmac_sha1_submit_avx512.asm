@@ -336,6 +336,9 @@ end_loop:
 
 	mov	p, [job_rax + _auth_tag_output]
 
+	cmp 	qword [job_rax + _auth_tag_output_len_in_bytes], 12
+	jne 	copy_tag
+
         ; copy 12 bytes
         mov	DWORD(tmp),  [state + _args_digest + SHA1_DIGEST_WORD_SIZE*idx + 0*SHA1_DIGEST_ROW_SIZE]
         mov	DWORD(tmp2), [state + _args_digest + SHA1_DIGEST_WORD_SIZE*idx + 1*SHA1_DIGEST_ROW_SIZE]
@@ -346,17 +349,38 @@ end_loop:
         mov	[p + 0*SHA1_DIGEST_WORD_SIZE], DWORD(tmp)
         mov	[p + 1*SHA1_DIGEST_WORD_SIZE], DWORD(tmp2)
         mov	[p + 2*SHA1_DIGEST_WORD_SIZE], DWORD(tmp3)
+        jmp     clear_ret
 
-        cmp     qword [job_rax + _auth_tag_output_len_in_bytes], 12
-        je      clear_ret
-
-        ;; copy remaining 8 bytes to return 20 byte digest
-        mov	DWORD(tmp),  [state + _args_digest + SHA1_DIGEST_WORD_SIZE*idx + 3*SHA1_DIGEST_ROW_SIZE]
-        mov	DWORD(tmp2), [state + _args_digest + SHA1_DIGEST_WORD_SIZE*idx + 4*SHA1_DIGEST_ROW_SIZE]
-        bswap	DWORD(tmp)
+copy_tag:
+        ;; always copy 4 bytes
+        mov	DWORD(tmp2), [state + _args_digest + SHA1_DIGEST_WORD_SIZE*idx + 0*SHA1_DIGEST_ROW_SIZE]
         bswap	DWORD(tmp2)
-        mov	[p + 3*SHA1_DIGEST_WORD_SIZE], DWORD(tmp)
-        mov	[p + 4*SHA1_DIGEST_WORD_SIZE], DWORD(tmp2)
+        mov	[p + 0*SHA1_DIGEST_WORD_SIZE], DWORD(tmp2)
+
+        cmp 	qword [job_rax + _auth_tag_output_len_in_bytes], 4
+        je      clear_ret
+%ifndef LINUX
+	mov 	tmp2, rcx ; save rcx
+%endif
+        mov 	rcx, qword [job_rax + _auth_tag_output_len_in_bytes]
+
+	sub 	rcx, 4 ; already copied 4 bytes
+        mov 	r12, 1
+	shl 	r12, cl  ; Calculate the mask for copying bytes
+	dec 	r12
+	kmovq 	k1, r12
+
+%ifndef LINUX
+	mov 	rcx, tmp2 ; restore rcx
+%endif
+
+        vmovd	xmm0, [state + _args_digest + SHA1_DIGEST_WORD_SIZE*idx + 1*SHA1_DIGEST_ROW_SIZE]
+        vpinsrd	xmm0, xmm0, [state + _args_digest + SHA1_DIGEST_WORD_SIZE*idx + 2*SHA1_DIGEST_ROW_SIZE], 1
+        vpinsrd	xmm0, xmm0, [state + _args_digest + SHA1_DIGEST_WORD_SIZE*idx + 3*SHA1_DIGEST_ROW_SIZE], 2
+        vpinsrd	xmm0, xmm0, [state + _args_digest + SHA1_DIGEST_WORD_SIZE*idx + 4*SHA1_DIGEST_ROW_SIZE], 3
+        vpshufb	xmm0, xmm0, [rel byteswap]
+	
+	vmovdqu8 [p + 1*4]{k1}, xmm0 ; Store bytes
 
 clear_ret:
 
