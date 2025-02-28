@@ -402,6 +402,9 @@ polyval_sse(const struct gcm_key_data *key_data, const void *in, const uint64_t 
 void
 polyval_pre_sse(const void *key, struct gcm_key_data *key_data);
 
+void
+polyval_16B_sse(const void *key, void *in_out_data);
+
 /* AES-NxA5 */
 void
 generate_hqp_aes_sse(const void *aes_expanded_keys, const void *iv, uint8_t HQP[]);

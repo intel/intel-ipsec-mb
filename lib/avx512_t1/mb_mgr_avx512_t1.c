@@ -344,6 +344,7 @@ submit_aes_docsis256_dec_crc32_avx512(MB_MGR_DOCSIS_AES_OOO *state, IMB_JOB *job
 
 /* POLYVAL */
 #define POLYVAL     polyval_sse
+#define POLYVAL_16B polyval_16B_sse
 #define POLYVAL_PRE polyval_pre_sse
 
 /* AES-NIA5 */

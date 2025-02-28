@@ -54,9 +54,10 @@ submit_aes_nia5_job(IMB_JOB *job)
 
         memcpy(&lengths[8], &msg_len_in_bits, 8);
 
-        /* TODO: No need for whole precompute process */
-        POLYVAL_PRE(Q, &gdata_key);
-        POLYVAL(&gdata_key, lengths, 16, digest);
+        for (int i = 0; i < 16; i++)
+                digest[i] ^= lengths[i];
+
+        POLYVAL_16B(Q, digest);
 
         /* XOR digest with P */
         for (int i = 0; i < 16; i++)

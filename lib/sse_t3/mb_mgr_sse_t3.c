@@ -266,6 +266,7 @@ flush_snow3g_uea2_job_sse(IMB_MGR *state)
 
 /* POLYVAL */
 #define POLYVAL     polyval_sse
+#define POLYVAL_16B polyval_16B_sse
 #define POLYVAL_PRE polyval_pre_sse
 
 /* AES-NIA5 */
