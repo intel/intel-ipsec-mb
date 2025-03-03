@@ -974,10 +974,10 @@ hmac_sha1_handler(ACVP_TEST_CASE *test_case)
         job->src = tc->msg;
         job->msg_len_to_hash_in_bytes = tc->msg_len;
         /*
-         * The library only supports 12 or 20-byte tags and therefore,
-         * we are outputting 20 bytes always
+         * The library is optimized for 12 byte tags but can output
+         * tag sizes from 4 bytes to 20 bytes.
          */
-        job->auth_tag_output_len_in_bytes = IMB_SHA1_DIGEST_SIZE_IN_BYTES;
+        job->auth_tag_output_len_in_bytes = tc->mac_len;
         job->auth_tag_output = tc->mac;
 
         job = IMB_SUBMIT_JOB(mb_mgr);
