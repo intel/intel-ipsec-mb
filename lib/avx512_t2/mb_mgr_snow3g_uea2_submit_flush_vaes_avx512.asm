@@ -124,8 +124,12 @@ mksection .text
         ;; 32 iterations of FSM and LFSR clock are needed
         ;; LD_ST_MASK is used to determine if any data should
         ;; be read from src and written to dst
-        ;; When set to 0 so no reads/writes occur
+        ;; When set to 0 so no reads/writes occur.
+        ;; In this case, input/output pointers are set to a valid address (rsp)
+        ;; even though no data will be written, to avoid penalties due to invalid addresses.
         mov             qword [state + _snow3g_args_LD_ST_MASK + %%LANE*8], 0
+        mov             [state + _snow3g_args_in + %%LANE*8], rsp
+        mov             [state + _snow3g_args_out + %%LANE*8], rsp
 
         vmovdqa32       zmm0, [state + _snow3g_lens_dw]
         mov             DWORD(%%TGP0), 32
@@ -307,7 +311,11 @@ mksection .text
         vmovdqa32       [state + _snow3g_lens_dw], zmm0
 
         ;; required in case of flush
+        ;; Input/output pointers are set to a valid address (rsp)
+        ;; even though no data will be written, to avoid penalties due to invalid addresses.
         mov             qword [state + _snow3g_args_LD_ST_MASK + %%LANE*8], 0
+        mov             [state + _snow3g_args_in + %%LANE*8], rsp
+        mov             [state + _snow3g_args_out + %%LANE*8], rsp
 
         ;; decrement number of jobs in use
         dec             qword [state + _snow3g_lanes_in_use]
