@@ -7,13 +7,18 @@ Library
 - Added AES-CBC AVX2 type 2 implementation.
 - Added AES-CMAC AVX2 type 2 implementation.
 - Added support for variable sized tags (from 4 to 20 bytes) for HMAC-SHA1
+- Added AVX10 architecture, based primarily on AVX512 implementations with
+  some AVX2 Type 4 implementations for some algorithms.
 
 Test Applications
 - Added `--offset` parameter to `imb-xvalid` application.
+- Added AVX10 architecture support.
+
 
 Performance Applications
 - Added `imb-perf-cmp.py` tool that compares post processed performance metrics.
 - Improved stability of imb-perf application.
+- Added AVX10 architecture support.
 
 Fixes
 - Fixed SM4-GCM plaintext/ciphertext address calculation (issue #159).
