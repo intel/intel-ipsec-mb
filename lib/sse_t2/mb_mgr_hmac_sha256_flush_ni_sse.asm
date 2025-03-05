@@ -37,6 +37,7 @@
 %include "include/imb_job.inc"
 %include "include/mb_mgr_datastruct.inc"
 %include "include/reg_sizes.inc"
+%include "include/memcpy.inc"
 
 ;%define DO_DBGPRINT
 %include "include/dbgprint.inc"
@@ -258,20 +259,30 @@ end_loop:
         jmp     clear_ret
 
 copy_full_digest:
-	movdqu	xmm0,  [state + _args_digest_sha256 + idx]
-	movdqu	xmm1,  [state + _args_digest_sha256 + idx + 16]
+	cmp 	qword [job_rax + _auth_tag_output_len_in_bytes], 16
+	ja 	copy_tag_gt16
+
+ 	;; copy up to 16 bytes
+	mov 	tmp2, qword [job_rax + _auth_tag_output_len_in_bytes]
+	movdqu	xmm0, [state + _args_digest_sha256 + idx]
 	pshufb	xmm0, bswap_xmm4
+	simd_store_sse {p + 0*4}, xmm0, tmp2, tmp4, tmp5
+	jmp 	clear_ret
+
+copy_tag_gt16:
+	;; copy 16 bytes first
+	movdqu	xmm0, [state + _args_digest_sha256 + idx]
+	pshufb	xmm0, bswap_xmm4
+	movdqu	[p], xmm0
+
+	;; calculate remaining bytes to copy
+	mov 	tmp2, qword [job_rax + _auth_tag_output_len_in_bytes]
+	sub 	tmp2, 16
+
+	;; copy remaining bytes
+	movdqu	xmm1, [state + _args_digest_sha256 + idx + 16]
 	pshufb	xmm1, bswap_xmm4
-%ifdef SHA224
-	;; SHA224
-	movdqu	[p], xmm0
-	movq	[p + 16], xmm1
-	pextrd	[p + 16 + 8], xmm1, 2
-%else
-	;; SHA256
-	movdqu	[p], xmm0
-	movdqu	[p + 16], xmm1
-%endif
+	simd_store_sse {p + 4*4}, xmm1, tmp2, tmp4, tmp5
 
 clear_ret:
 
