@@ -1358,8 +1358,6 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job, const IMB_CIPHER_MODE cipher_
 
         switch (hash_alg) {
         case IMB_AUTH_MD5:
-        case IMB_AUTH_HMAC_SHA_224:
-        case IMB_AUTH_HMAC_SHA_256:
         case IMB_AUTH_HMAC_SHA_384:
         case IMB_AUTH_HMAC_SHA_512:
                 if (job->src == NULL) {
@@ -1390,6 +1388,8 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job, const IMB_CIPHER_MODE cipher_
                 }
                 break;
         case IMB_AUTH_HMAC_SHA_1:
+        case IMB_AUTH_HMAC_SHA_224:
+        case IMB_AUTH_HMAC_SHA_256:
                 if (job->auth_tag_output_len_in_bytes < 4 ||
                     job->auth_tag_output_len_in_bytes > auth_tag_len_fips[hash_alg]) {
                         imb_set_errno(state, IMB_ERR_JOB_AUTH_TAG_LEN);

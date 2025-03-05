@@ -29,6 +29,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <assert.h>
 
 #include <intel-ipsec-mb.h>
 #include "gcm_ctr_vectors_test.h"
@@ -47,7 +48,8 @@ extern const struct mac_test hmac_sha512_test_kat_json[];
 
 static int
 hmac_shax_job_ok(const struct mac_test *vec, const struct IMB_JOB *job, const int sha_type,
-                 const uint8_t *auth, const uint8_t *padding, const size_t sizeof_padding)
+                 const uint8_t *auth, const uint8_t *padding, const size_t sizeof_padding,
+                 const size_t tag_size)
 {
         const uint8_t *p_digest = NULL;
 
@@ -70,10 +72,9 @@ hmac_shax_job_ok(const struct mac_test *vec, const struct IMB_JOB *job, const in
         }
 
         /* hash checks */
-        if (memcmp(padding, &auth[sizeof_padding + (vec->tagSize / 8)], sizeof_padding)) {
+        if (memcmp(padding, &auth[sizeof_padding + tag_size], sizeof_padding)) {
                 printf("hash overwrite tail\n");
-                hexdump(stderr, "Target", &auth[sizeof_padding + (vec->tagSize / 8)],
-                        sizeof_padding);
+                hexdump(stderr, "Target", &auth[sizeof_padding + tag_size], sizeof_padding);
                 return 0;
         }
 
@@ -83,10 +84,10 @@ hmac_shax_job_ok(const struct mac_test *vec, const struct IMB_JOB *job, const in
                 return 0;
         }
 
-        if (memcmp(p_digest, &auth[sizeof_padding], vec->tagSize / 8)) {
+        if (memcmp(p_digest, &auth[sizeof_padding], tag_size)) {
                 printf("hash mismatched\n");
-                hexdump(stderr, "Received", &auth[sizeof_padding], vec->tagSize / 8);
-                hexdump(stderr, "Expected", p_digest, vec->tagSize / 8);
+                hexdump(stderr, "Received", &auth[sizeof_padding], tag_size);
+                hexdump(stderr, "Expected", p_digest, tag_size);
                 return 0;
         }
         return 1;
@@ -94,7 +95,7 @@ hmac_shax_job_ok(const struct mac_test *vec, const struct IMB_JOB *job, const in
 
 static int
 test_hmac_shax(struct IMB_MGR *mb_mgr, const struct mac_test *vec, const uint32_t num_jobs,
-               const int sha_type)
+               const int sha_type, const size_t tag_size)
 {
         struct IMB_JOB *job;
         uint8_t padding[16];
@@ -141,7 +142,7 @@ test_hmac_shax(struct IMB_MGR *mb_mgr, const struct mac_test *vec, const uint32_
         memset(auths, 0, num_jobs * sizeof(void *));
 
         for (i = 0; i < num_jobs; i++) {
-                const size_t alloc_len = (vec->tagSize / 8) + (sizeof(padding) * 2);
+                const size_t alloc_len = tag_size + (sizeof(padding) * 2);
 
                 auths[i] = malloc(alloc_len);
                 if (auths[i] == NULL) {
@@ -165,7 +166,7 @@ test_hmac_shax(struct IMB_MGR *mb_mgr, const struct mac_test *vec, const uint32_
                 job->dst = NULL;
                 job->key_len_in_bytes = 0;
                 job->auth_tag_output = auths[i] + sizeof(padding);
-                job->auth_tag_output_len_in_bytes = vec->tagSize / 8;
+                job->auth_tag_output_len_in_bytes = tag_size;
                 job->iv = NULL;
                 job->iv_len_in_bytes = 0;
                 job->src = (const void *) vec->msg;
@@ -199,14 +200,15 @@ test_hmac_shax(struct IMB_MGR *mb_mgr, const struct mac_test *vec, const uint32_
                 if (job) {
                         jobs_rx++;
                         if (!hmac_shax_job_ok(vec, job, sha_type, job->user_data, padding,
-                                              sizeof(padding)))
+                                              sizeof(padding), tag_size))
                                 goto end;
                 }
         }
 
         while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL) {
                 jobs_rx++;
-                if (!hmac_shax_job_ok(vec, job, sha_type, job->user_data, padding, sizeof(padding)))
+                if (!hmac_shax_job_ok(vec, job, sha_type, job->user_data, padding, sizeof(padding),
+                                      tag_size))
                         goto end;
         }
 
@@ -352,7 +354,8 @@ check_burst_jobs:
                         goto end;
                 }
 
-                if (!hmac_shax_job_ok(vec, job, sha_type, job->user_data, padding, sizeof(padding)))
+                if (!hmac_shax_job_ok(vec, job, sha_type, job->user_data, padding, sizeof(padding),
+                                      vec->tagSize / 8))
                         goto end;
                 jobs_rx++;
         }
@@ -507,7 +510,8 @@ test_hmac_shax_hash_burst(struct IMB_MGR *mb_mgr, const struct mac_test *vec,
                         goto end;
                 }
 
-                if (!hmac_shax_job_ok(vec, job, sha_type, job->user_data, padding, sizeof(padding)))
+                if (!hmac_shax_job_ok(vec, job, sha_type, job->user_data, padding, sizeof(padding),
+                                      vec->tagSize / 8))
                         goto end;
                 jobs_rx++;
         }
@@ -579,7 +583,7 @@ test_hmac_shax_std_vectors(struct IMB_MGR *mb_mgr, const int sha_type, const uin
 #endif
                         continue;
                 }
-                if (test_hmac_shax(mb_mgr, v, num_jobs, sha_type)) {
+                if (test_hmac_shax(mb_mgr, v, num_jobs, sha_type, v->tagSize / 8)) {
                         printf("error #%zu\n", v->tcId);
                         test_suite_update(ts, 0, 1);
                 } else {
@@ -608,17 +612,55 @@ hmac_sha256_sha512_test(struct IMB_MGR *mb_mgr)
         const int sha_types_tab[] = { 224, 256, 384, 512 };
         static const char *const sha_names_tab[] = { "HMAC-SHA224", "HMAC-SHA256", "HMAC-SHA384",
                                                      "HMAC-SHA512" };
+        struct test_suite_context ts_sha224, ts_sha256, ts_sha384, ts_sha512;
         unsigned i, num_jobs;
         int errors = 0;
+        uint32_t tag_size;
+
+        /* Initialize test suites and store in array */
+        test_suite_start(&ts_sha224, sha_names_tab[0]);
+        test_suite_start(&ts_sha256, sha_names_tab[1]);
+        test_suite_start(&ts_sha384, sha_names_tab[2]);
+        test_suite_start(&ts_sha512, sha_names_tab[3]);
+        struct test_suite_context *sha_ts_tab[] = { &ts_sha224, &ts_sha256, &ts_sha384,
+                                                    &ts_sha512 };
 
         for (i = 0; i < DIM(sha_types_tab); i++) {
-                struct test_suite_context ts;
 
-                test_suite_start(&ts, sha_names_tab[i]);
                 for (num_jobs = 1; num_jobs <= max_burst_jobs; num_jobs++)
-                        test_hmac_shax_std_vectors(mb_mgr, sha_types_tab[i], num_jobs, &ts);
-                errors += test_suite_end(&ts);
+                        test_hmac_shax_std_vectors(mb_mgr, sha_types_tab[i], num_jobs,
+                                                   sha_ts_tab[i]);
         }
+
+        const struct mac_test *vec_224 = hmac_sha224_test_kat_json;
+        assert(vec_224->tagSize / 8 == 28);
+        for (tag_size = 4; tag_size <= 28; tag_size++) {
+                if (test_hmac_shax(mb_mgr, vec_224, IMB_MAX_BURST_SIZE, sha_types_tab[0],
+                                   tag_size)) {
+                        printf("error tag size: %u\n", tag_size);
+                        test_suite_update(&ts_sha224, 0, 1);
+                } else {
+                        test_suite_update(&ts_sha224, 1, 0);
+                }
+        }
+
+        const struct mac_test *vec_256 = hmac_sha256_test_kat_json;
+        assert(vec_256->tagSize / 8 == 32);
+        for (tag_size = 4; tag_size <= 32; tag_size++) {
+                if (test_hmac_shax(mb_mgr, vec_256, IMB_MAX_BURST_SIZE, sha_types_tab[1],
+                                   tag_size)) {
+                        printf("error tag size: %u\n", tag_size);
+                        test_suite_update(&ts_sha256, 0, 1);
+                } else {
+                        test_suite_update(&ts_sha256, 1, 0);
+                }
+        }
+
+        /* End test suites */
+        errors += test_suite_end(&ts_sha224);
+        errors += test_suite_end(&ts_sha256);
+        errors += test_suite_end(&ts_sha384);
+        errors += test_suite_end(&ts_sha512);
 
         return errors;
 }
