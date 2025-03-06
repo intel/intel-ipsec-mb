@@ -128,7 +128,7 @@ typedef cpuset_t cpu_set_t;
 #define DEFAULT_BURST_SIZE 32
 #define MAX_BURST_SIZE     256
 
-enum arch_type_e { ARCH_SSE = 0, ARCH_AVX2, ARCH_AVX512, NUM_ARCHS };
+enum arch_type_e { ARCH_SSE = 0, ARCH_AVX2, ARCH_AVX512, ARCH_AVX10, NUM_ARCHS };
 
 /* This enum will be mostly translated to IMB_CIPHER_MODE
  * (make sure to update c_mode_names list in print_times function)  */
@@ -247,10 +247,12 @@ struct str_value_mapping {
         union params values;
 };
 
-const struct str_value_mapping arch_str_map[] = { { .name = "SSE", .values.arch_type = ARCH_SSE },
-                                                  { .name = "AVX2", .values.arch_type = ARCH_AVX2 },
-                                                  { .name = "AVX512",
-                                                    .values.arch_type = ARCH_AVX512 } };
+const struct str_value_mapping arch_str_map[] = {
+        { .name = "SSE", .values.arch_type = ARCH_SSE },
+        { .name = "AVX2", .values.arch_type = ARCH_AVX2 },
+        { .name = "AVX512", .values.arch_type = ARCH_AVX512 },
+        { .name = "AVX10", .values.arch_type = ARCH_AVX10 }
+};
 
 const struct str_value_mapping cipher_algo_str_map[] = {
         { .name = "aes-cbc-128",
@@ -738,7 +740,7 @@ struct custom_job_params custom_job_params = { .cipher_mode = TEST_NULL_CIPHER,
                                                .key_size = 0,
                                                .cipher_dir = IMB_DIR_ENCRYPT };
 
-uint8_t archs[NUM_ARCHS] = { 1, 1, 1 }; /* uses all function sets */
+uint8_t archs[NUM_ARCHS] = { 1, 1, 1, 1 }; /* uses all function sets */
 int use_gcm_sgl_api = 0;
 int use_unhalted_cycles = 0; /* read unhalted cycles instead of tsc */
 uint64_t rd_cycles_cost = 0; /* cost of reading unhalted cycles */
@@ -3151,7 +3153,7 @@ print_times(struct variant_s *variant_list, struct params_s *params, const uint3
         uint32_t sz;
 
         if (plot_output_option == 0) {
-                const char *func_names[4] = { "SSE", "AVX2", "AVX512" };
+                const char *func_names[4] = { "SSE", "AVX2", "AVX512", "AVX10" };
                 const char *c_mode_names[TEST_NUM_CIPHER_TESTS - 1] = { "CBC",
                                                                         "CNTR",
                                                                         "CNTR+8",
@@ -3437,7 +3439,7 @@ run_tests(void *arg)
                 params.hash_alg = custom_job_params.hash_alg;
 
                 /* Performing tests for each selected architecture */
-                for (arch = ARCH_SSE; arch <= ARCH_AVX512; arch++) {
+                for (arch = ARCH_SSE; arch <= ARCH_AVX10; arch++) {
                         if (archs[arch] == 0)
                                 continue;
 
@@ -3447,6 +3449,9 @@ run_tests(void *arg)
                                 break;
                         case ARCH_AVX2:
                                 init_mb_mgr_avx2(p_mgr);
+                                break;
+                        case ARCH_AVX10:
+                                init_mb_mgr_avx10(p_mgr);
                                 break;
                         default: /* ARCH_AV512 */
                                 init_mb_mgr_avx512(p_mgr);
@@ -3528,7 +3533,7 @@ usage(void)
                 "-h: print this message\n"
                 "-c: Use cold cache, it uses warm as default\n"
                 "-w: Use warm cache\n"
-                "--arch: run only tests on specified architecture (SSE/AVX/AVX2/AVX512)\n"
+                "--arch: run only tests on specified architecture (SSE/AVX2/AVX512/AVX10)\n"
                 "--arch-best: detect available architectures and run only on the best one\n"
                 "--cipher-dir: Select cipher direction to run on the custom test  "
                 "(encrypt/decrypt) (default = encrypt)\n"
@@ -3644,6 +3649,7 @@ detect_arch(unsigned int arch_support[NUM_ARCHS])
         const uint64_t detect_avx = IMB_FEATURE_AVX | IMB_FEATURE_CMOV | IMB_FEATURE_AESNI;
         const uint64_t detect_avx2 = IMB_FEATURE_AVX2 | detect_avx;
         const uint64_t detect_avx512 = IMB_FEATURE_AVX512_SKX | detect_avx2;
+        const uint64_t detect_avx10 = IMB_FEATURE_AVX10_2 | detect_avx512;
         IMB_MGR *p_mgr = NULL;
         enum arch_type_e arch_id;
 
@@ -3660,6 +3666,9 @@ detect_arch(unsigned int arch_support[NUM_ARCHS])
                 fprintf(stderr, "Architecture detect error!\n");
                 return -1;
         }
+
+        if ((p_mgr->features & detect_avx10) != detect_avx10)
+                arch_support[ARCH_AVX10] = 0;
 
         if ((p_mgr->features & detect_avx512) != detect_avx512)
                 arch_support[ARCH_AVX512] = 0;
@@ -3864,6 +3873,7 @@ detect_best_arch(uint8_t arch_support[NUM_ARCHS])
         const uint64_t detect_avx = IMB_FEATURE_AVX | IMB_FEATURE_CMOV | IMB_FEATURE_AESNI;
         const uint64_t detect_avx2 = IMB_FEATURE_AVX2 | detect_avx;
         const uint64_t detect_avx512 = IMB_FEATURE_AVX512_SKX | detect_avx2;
+        const uint64_t detect_avx10 = IMB_FEATURE_AVX10_2 | detect_avx512;
         IMB_MGR *p_mgr = NULL;
         uint64_t detected_features = 0;
 
@@ -3883,6 +3893,11 @@ detect_best_arch(uint8_t arch_support[NUM_ARCHS])
         free_mb_mgr(p_mgr);
 
         memset(arch_support, 0, NUM_ARCHS * sizeof(arch_support[0]));
+
+        if ((detected_features & detect_avx10) == detect_avx10) {
+                arch_support[ARCH_AVX10] = 1;
+                return 0;
+        }
 
         if ((detected_features & detect_avx512) == detect_avx512) {
                 arch_support[ARCH_AVX512] = 1;
@@ -4468,7 +4483,7 @@ main(int argc, char *argv[])
         }
 
         fprintf(stderr, "Testing ");
-        for (enum arch_type_e arch = ARCH_SSE; arch <= ARCH_AVX512; arch++) {
+        for (enum arch_type_e arch = ARCH_SSE; arch <= ARCH_AVX10; arch++) {
                 if (archs[arch] == 0)
                         continue;
 
@@ -4478,6 +4493,9 @@ main(int argc, char *argv[])
                         break;
                 case ARCH_AVX2:
                         init_mb_mgr_avx2(p_mgr);
+                        break;
+                case ARCH_AVX10:
+                        init_mb_mgr_avx10(p_mgr);
                         break;
                 default: /* ARCH_AV512 */
                         init_mb_mgr_avx512(p_mgr);
