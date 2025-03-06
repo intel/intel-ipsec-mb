@@ -29,6 +29,7 @@
 %include "include/imb_job.inc"
 %include "include/mb_mgr_datastruct.inc"
 %include "include/reg_sizes.inc"
+%include "include/memcpy.inc"
 
 extern sha256_oct_avx2
 
@@ -282,37 +283,42 @@ end_loop:
         jmp     clear_ret
 
 copy_full_digest:
-	mov	DWORD(tmp),  [state + _args_digest_sha256 + 4*idx + 0*SHA256_DIGEST_ROW_SIZE]
-	mov	DWORD(tmp2), [state + _args_digest_sha256 + 4*idx + 1*SHA256_DIGEST_ROW_SIZE]
-	mov	DWORD(tmp4), [state + _args_digest_sha256 + 4*idx + 2*SHA256_DIGEST_ROW_SIZE]
-	mov	DWORD(tmp5), [state + _args_digest_sha256 + 4*idx + 3*SHA256_DIGEST_ROW_SIZE]
-	bswap	DWORD(tmp)
-	bswap	DWORD(tmp2)
-	bswap	DWORD(tmp4)
-	bswap	DWORD(tmp5)
-	mov	[p + 0*4], DWORD(tmp)
-	mov	[p + 1*4], DWORD(tmp2)
-	mov	[p + 2*4], DWORD(tmp4)
-	mov	[p + 3*4], DWORD(tmp5)
+	cmp 	qword [job_rax + _auth_tag_output_len_in_bytes], 16
+	ja 	copy_tag_gt16
 
-	mov	DWORD(tmp),  [state + _args_digest_sha256 + 4*idx + 4*SHA256_DIGEST_ROW_SIZE]
-	mov	DWORD(tmp2), [state + _args_digest_sha256 + 4*idx + 5*SHA256_DIGEST_ROW_SIZE]
-	mov	DWORD(tmp4), [state + _args_digest_sha256 + 4*idx + 6*SHA256_DIGEST_ROW_SIZE]
+	;; copy up to 16 bytes
+	mov    	tmp2, qword [job_rax + _auth_tag_output_len_in_bytes]
+	vmovd   xmm0, [state + _args_digest_sha256 + 4*idx + 0*SHA256_DIGEST_ROW_SIZE]
+	vpinsrd xmm0, [state + _args_digest_sha256 + 4*idx + 1*SHA256_DIGEST_ROW_SIZE], 1
+	vpinsrd xmm0, [state + _args_digest_sha256 + 4*idx + 2*SHA256_DIGEST_ROW_SIZE], 2
+	vpinsrd xmm0, [state + _args_digest_sha256 + 4*idx + 3*SHA256_DIGEST_ROW_SIZE], 3
+	vpshufb xmm0, [rel byteswap]
+	simd_store_avx {p + 0*4}, xmm0, tmp2, tmp4, tmp5
+	jmp 	clear_ret
+
+copy_tag_gt16:
+	;; copy 16 bytes first
+	mov    	tmp2, qword 16
+	vmovd   xmm0, [state + _args_digest_sha256 + 4*idx + 0*SHA256_DIGEST_ROW_SIZE]
+	vpinsrd xmm0, [state + _args_digest_sha256 + 4*idx + 1*SHA256_DIGEST_ROW_SIZE], 1
+	vpinsrd xmm0, [state + _args_digest_sha256 + 4*idx + 2*SHA256_DIGEST_ROW_SIZE], 2
+	vpinsrd xmm0, [state + _args_digest_sha256 + 4*idx + 3*SHA256_DIGEST_ROW_SIZE], 3
+	vpshufb xmm0, [rel byteswap]
+	vmovdqu [p + 0*4], xmm0
+
+	;; calculate remaining bytes to copy
+	mov    	tmp2, qword [job_rax + _auth_tag_output_len_in_bytes]
+	sub    	tmp2, 16 ; copied 16 bytes already
+
+	;; copy remaining bytes
+	vmovd   xmm0, [state + _args_digest_sha256 + 4*idx + 4*SHA256_DIGEST_ROW_SIZE]
+	vpinsrd xmm0, [state + _args_digest_sha256 + 4*idx + 5*SHA256_DIGEST_ROW_SIZE], 1
+	vpinsrd xmm0, [state + _args_digest_sha256 + 4*idx + 6*SHA256_DIGEST_ROW_SIZE], 2
 %ifndef SHA224
-	mov	DWORD(tmp5), [state + _args_digest_sha256 + 4*idx + 7*SHA256_DIGEST_ROW_SIZE]
+	vpinsrd xmm0, [state + _args_digest_sha256 + 4*idx + 7*SHA256_DIGEST_ROW_SIZE], 3
 %endif
-	bswap	DWORD(tmp)
-	bswap	DWORD(tmp2)
-	bswap	DWORD(tmp4)
-%ifndef SHA224
-	bswap	DWORD(tmp5)
-%endif
-	mov	[p + 4*4], DWORD(tmp)
-	mov	[p + 5*4], DWORD(tmp2)
-	mov	[p + 6*4], DWORD(tmp4)
-%ifndef SHA224
-	mov	[p + 7*4], DWORD(tmp5)
-%endif
+	vpshufb xmm0, [rel byteswap]
+	simd_store_avx {p + 4*4}, xmm0, tmp2, tmp4, tmp5
 
 clear_ret:
 
