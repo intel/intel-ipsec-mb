@@ -60,6 +60,8 @@ default rel
 align 16
 byteswap:
 	dq 0x0405060700010203, 0x0c0d0e0f08090a0b
+	dq 0x0405060700010203, 0x0c0d0e0f08090a0b
+
 
 mksection .text
 
@@ -372,38 +374,36 @@ end_loop:
 %endif
         jmp     clear_ret
 copy_full_digest:
-	;; copy 28 bytes for SHA224 // 32 bytes for SHA256
-	mov	DWORD(tmp),  [state + _args_digest_sha256 + 4*idx + 0*SHA256_DIGEST_ROW_SIZE]
-	mov	DWORD(tmp2), [state + _args_digest_sha256 + 4*idx + 1*SHA256_DIGEST_ROW_SIZE]
-	mov	DWORD(tmp3), [state + _args_digest_sha256 + 4*idx + 2*SHA256_DIGEST_ROW_SIZE]
-	mov	DWORD(tmp4), [state + _args_digest_sha256 + 4*idx + 3*SHA256_DIGEST_ROW_SIZE]
-	bswap	DWORD(tmp)
-	bswap	DWORD(tmp2)
-	bswap	DWORD(tmp3)
-	bswap	DWORD(tmp4)
-	mov	[p + 0*4], DWORD(tmp)
-	mov	[p + 1*4], DWORD(tmp2)
-	mov	[p + 2*4], DWORD(tmp3)
-	mov	[p + 3*4], DWORD(tmp4)
+%ifndef LINUX
+	mov 	tmp2, rcx ; save rcx
+%endif
+	mov 	rcx, qword [job_rax + _auth_tag_output_len_in_bytes]
 
-	mov	DWORD(tmp),  [state + _args_digest_sha256 + 4*idx + 4*SHA256_DIGEST_ROW_SIZE]
-	mov	DWORD(tmp2), [state + _args_digest_sha256 + 4*idx + 5*SHA256_DIGEST_ROW_SIZE]
-	mov	DWORD(tmp3), [state + _args_digest_sha256 + 4*idx + 6*SHA256_DIGEST_ROW_SIZE]
-%ifndef SHA224
-	mov	DWORD(tmp4), [state + _args_digest_sha256 + 4*idx + 7*SHA256_DIGEST_ROW_SIZE]
+        mov 	tmp4, 1
+	shl 	tmp4, cl  ; Calculate the mask for copying bytes
+	dec 	tmp4
+	kmovq 	k1, tmp4
+
+%ifndef LINUX
+	mov 	rcx, tmp2 ; restore rcx
 %endif
-	bswap	DWORD(tmp)
-	bswap	DWORD(tmp2)
-	bswap	DWORD(tmp3)
+
+	;; copy up to 28/32 bytes
+	vmovd   xmm0, [state + _args_digest_sha256 + 4*idx + 0*SHA256_DIGEST_ROW_SIZE]
+	vpinsrd xmm0, [state + _args_digest_sha256 + 4*idx + 1*SHA256_DIGEST_ROW_SIZE], 1
+	vpinsrd xmm0, [state + _args_digest_sha256 + 4*idx + 2*SHA256_DIGEST_ROW_SIZE], 2
+	vpinsrd xmm0, [state + _args_digest_sha256 + 4*idx + 3*SHA256_DIGEST_ROW_SIZE], 3
+
+	vmovd   xmm1, [state + _args_digest_sha256 + 4*idx + 4*SHA256_DIGEST_ROW_SIZE]
+	vpinsrd xmm1, [state + _args_digest_sha256 + 4*idx + 5*SHA256_DIGEST_ROW_SIZE], 1
+	vpinsrd xmm1, [state + _args_digest_sha256 + 4*idx + 6*SHA256_DIGEST_ROW_SIZE], 2
 %ifndef SHA224
-	bswap	DWORD(tmp4)
+	vpinsrd xmm1, [state + _args_digest_sha256 + 4*idx + 7*SHA256_DIGEST_ROW_SIZE], 3
 %endif
-	mov	[p + 4*4], DWORD(tmp)
-	mov	[p + 5*4], DWORD(tmp2)
-	mov	[p + 6*4], DWORD(tmp3)
-%ifndef SHA224
-	mov	[p + 7*4], DWORD(tmp4)
-%endif
+
+	vinserti128 ymm0, xmm1, 1
+	vpshufb ymm0, ymm0, [rel byteswap]
+	vmovdqu8 [p + 0*4]{k1}, ymm0 ; Store bytes
 
 clear_ret:
 
