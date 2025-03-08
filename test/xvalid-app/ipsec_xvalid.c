@@ -490,6 +490,12 @@ struct str_value_mapping hash_algo_str_map[] = {
                         .hash_alg = IMB_AUTH_SHAKE256
                 }
         },
+        {
+                .name = "AES-NIA5",
+                .values.job_params = {
+                        .hash_alg = IMB_AUTH_AES_NIA5,
+                }
+        },
 };
 
 struct str_value_mapping aead_algo_str_map[] = {
@@ -594,6 +600,7 @@ const uint8_t auth_tag_len_bytes[] = {
         64,                        /* IMB_AUTH_SHA3_512 */
         16,                        /* IMB_AUTH_SHAKE128 */
         32,                        /* IMB_AUTH_SHAKE256 */
+        4,                         /* IMB_AUTH_AES_NIA5 */
 };
 
 /* Minimum, maximum and step values of key sizes */
@@ -1394,6 +1401,7 @@ fill_job(IMB_JOB *job, const struct params_s *params, uint8_t *buf, uint8_t *dig
                 /* No operation needed */
                 break;
         case IMB_AUTH_DOCSIS_CRC32:
+                /* No operation needed */
                 break;
         case IMB_AUTH_POLY1305:
                 job->u.POLY1305._key = k1_expanded;
@@ -1402,6 +1410,10 @@ fill_job(IMB_JOB *job, const struct params_s *params, uint8_t *buf, uint8_t *dig
         case IMB_AUTH_CHACHA20_POLY1305_SGL:
                 job->u.CHACHA20_POLY1305.aad_len_in_bytes = params->aad_size;
                 job->u.CHACHA20_POLY1305.aad = aad;
+                break;
+        case IMB_AUTH_AES_NIA5:
+                job->u.AES_NIA5._expanded_auth_key = (const uint8_t *) k1_expanded;
+                job->u.AES_NIA5._iv = auth_iv;
                 break;
         default:
                 printf("Unsupported hash algorithm %u, line %d\n", (unsigned) params->hash_alg,
@@ -1575,6 +1587,7 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys, const uint8_t *ciph
                         nosimd_memset(k3, pattern_auth_key, sizeof(keys->k3));
                         break;
                 case IMB_AUTH_POLY1305:
+                case IMB_AUTH_AES_NIA5:
                         nosimd_memset(k1_expanded, pattern_auth_key, sizeof(keys->k1_expanded));
                         break;
                 case IMB_AUTH_HMAC_SHA_1:
@@ -1696,6 +1709,9 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys, const uint8_t *ciph
         case IMB_AUTH_AES_CMAC_256:
                 IMB_AES_KEYEXP_256(mb_mgr, auth_key, k1_expanded, dust);
                 IMB_AES_CMAC_SUBKEY_GEN_256(mb_mgr, k1_expanded, k2, k3);
+                break;
+        case IMB_AUTH_AES_NIA5:
+                IMB_AES_KEYEXP_256(mb_mgr, auth_key, k1_expanded, dust);
                 break;
         case IMB_AUTH_HMAC_SHA_1:
         case IMB_AUTH_HMAC_SHA_224:
