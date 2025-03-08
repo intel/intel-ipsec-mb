@@ -295,6 +295,7 @@ typedef enum {
         IMB_CIPHER_ZUC_NEA6,
         IMB_CIPHER_SNOW5G_NEA4,
         IMB_CIPHER_AES_NEA5, /**< AES256-NEA5 */
+        IMB_CIPHER_AES_NCA5, /**< AES256-NCA5 */
         IMB_CIPHER_NUM
 } IMB_CIPHER_MODE;
 
@@ -355,6 +356,7 @@ typedef enum {
         IMB_AUTH_SHAKE128,               /**< SHAKE128 */
         IMB_AUTH_SHAKE256,               /**< SHAKE256 */
         IMB_AUTH_AES_NIA5,               /**< AES256-NIA5 */
+        IMB_AUTH_AES_NCA5,               /**< AES256-NCA5 */
         IMB_AUTH_NUM
 } IMB_HASH_ALG;
 
@@ -529,7 +531,12 @@ typedef struct IMB_JOB {
                         const uint8_t *_iv;
                         /**< Authentication 16-byte IV */
                 } AES_NIA5; /**< AES_NIA5 specific fields */
-        } u;                /**< Hash algorithm-specific fields */
+                struct _NCA_specific_fields {
+                        const void *aad;
+                        /**< Additional Authentication Data (AAD) */
+                        uint64_t aad_len_in_bytes; /**< Length of AAD */
+                } NCA;                             /**< NCA4/5/6 specific fields */
+        } u;                                       /**< Hash algorithm-specific fields */
 
         IMB_STATUS status;                     /**< Job status */
         IMB_CIPHER_MODE cipher_mode;           /**< Cipher mode */

@@ -39,6 +39,7 @@ submit_aes_nia5_job(IMB_JOB *job)
         uint8_t *H = HQP;
         uint8_t *Q = &HQP[16];
         uint8_t *P = &HQP[16 * 2];
+        const uint8_t *msg = job->src + job->hash_start_src_offset_in_bytes;
 
         /* Generate H, Q, P keys */
         GENERATE_HQP_AES(job->u.AES_NIA5._expanded_auth_key, job->u.AES_NIA5._iv, HQP);
@@ -46,7 +47,7 @@ submit_aes_nia5_job(IMB_JOB *job)
         /* Precompute hash keys from H */
         POLYVAL_PRE(H, &gdata_key);
         /* Digest message bytes */
-        POLYVAL(&gdata_key, job->src, job->msg_len_to_hash_in_bytes, digest);
+        POLYVAL(&gdata_key, msg, job->msg_len_to_hash_in_bytes, digest);
 
         /* XOR 16-byte lengths array with previous digest and hash with Q */
         uint8_t lengths[16] = { 0 };
@@ -70,6 +71,66 @@ submit_aes_nia5_job(IMB_JOB *job)
         clear_mem(HQP, sizeof(HQP));
         clear_mem(&gdata_key, sizeof(struct gcm_key_data));
 #endif
+        return job;
+}
+
+__forceinline IMB_JOB *
+submit_aes_nca5_job(IMB_JOB *job, IMB_CIPHER_DIRECTION cipher_dir)
+{
+        DECLARE_ALIGNED(uint8_t HQP[3 * 16], 64);
+        DECLARE_ALIGNED(uint8_t digest[16], 16) = { 0 };
+        struct gcm_key_data gdata_key;
+        uint8_t *H = HQP;
+        uint8_t *Q = &HQP[16];
+        uint8_t *P = &HQP[16 * 2];
+        const uint8_t *msg = job->src + job->cipher_start_src_offset_in_bytes;
+
+        /* Generate H, Q, P keys */
+        generate_hqp_aes_sse(job->enc_keys, job->iv, HQP);
+
+        /* Precompute hash keys from H */
+        POLYVAL_PRE(H, &gdata_key);
+
+        /* Digest AAD bytes if any */
+        if (job->u.NCA.aad_len_in_bytes != 0)
+                POLYVAL(&gdata_key, job->u.NCA.aad, job->u.NCA.aad_len_in_bytes, digest);
+
+        if (cipher_dir == IMB_DIR_ENCRYPT) {
+                /* Encrypt plaintext (assumes last 4 bytes of 16-byte IV as 0) */
+                AES_CTR_256(msg, job->iv, job->enc_keys, job->dst, job->msg_len_to_cipher_in_bytes,
+                            16);
+
+                /* Digest ciphertext */
+                POLYVAL(&gdata_key, job->dst, job->msg_len_to_cipher_in_bytes, digest);
+        } else { /* Decrypt */
+                /* Digest ciphertext */
+                POLYVAL(&gdata_key, msg, job->msg_len_to_cipher_in_bytes, digest);
+
+                /* Decrypt ciphertext (assumes last 4 bytes of 16-byte IV as 0) */
+                aes_cntr_256_sse(msg, job->iv, job->enc_keys, job->dst,
+                                 job->msg_len_to_cipher_in_bytes, 16);
+        }
+
+        uint8_t lengths[16] = { 0 };
+        const uint64_t msg_len_in_bits = job->msg_len_to_cipher_in_bytes * 8;
+        const uint64_t aad_len_in_bits = job->u.NCA.aad_len_in_bytes * 8;
+
+        memcpy(lengths, &msg_len_in_bits, 8);
+        memcpy(&lengths[8], &aad_len_in_bits, 8);
+
+        /* XOR 16-byte lengths array with previous digest and hash with Q */
+        for (int i = 0; i < 16; i++)
+                digest[i] ^= lengths[i];
+
+        POLYVAL_16B(Q, digest);
+
+        /* XOR digest with P */
+        for (int i = 0; i < 16; i++)
+                digest[i] ^= P[i];
+
+        job->status |= IMB_STATUS_COMPLETED;
+        memcpy(job->auth_tag_output, digest, job->auth_tag_output_len_in_bytes);
+
         return job;
 }
 

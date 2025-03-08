@@ -36,6 +36,8 @@
 #define SNOW3G_MAX_BITLEN (UINT32_MAX)
 #define NIA_MAX_BITLEN    (UINT32_MAX - 1)
 #define NIA_MAX_BYTELEN   (NIA_MAX_BITLEN / 8)
+#define NCA_MAX_BITLEN    NIA_MAX_BITLEN
+#define NCA_MAX_BYTELEN   NIA_MAX_BYTELEN
 #define MB_MAX_LEN16      ((1 << 16) - 2)
 
 /* used to validate template job structure before computing session_id */
@@ -89,7 +91,17 @@ is_job_invalid_light(IMB_MGR *state, const IMB_CIPHER_MODE cipher_mode, const IM
                         imb_set_errno(state, IMB_ERR_JOB_KEY_LEN);
                         return 1;
                 }
-                if (cipher_mode == IMB_CIPHER_SM4_GCM && hash_alg != IMB_AUTH_SM4_GCM) {
+                if (hash_alg != IMB_AUTH_SM4_GCM) {
+                        imb_set_errno(state, IMB_ERR_HASH_ALGO);
+                        return 1;
+                }
+                break;
+        case IMB_CIPHER_AES_NCA5:
+                if (key_len_in_bytes != UINT64_C(32)) {
+                        imb_set_errno(state, IMB_ERR_JOB_KEY_LEN);
+                        return 1;
+                }
+                if (hash_alg != IMB_AUTH_AES_NCA5) {
                         imb_set_errno(state, IMB_ERR_HASH_ALGO);
                         return 1;
                 }
@@ -240,6 +252,12 @@ is_job_invalid_light(IMB_MGR *state, const IMB_CIPHER_MODE cipher_mode, const IM
                 break;
         case IMB_AUTH_SM4_GCM:
                 if (cipher_mode != IMB_CIPHER_SM4_GCM) {
+                        imb_set_errno(state, IMB_ERR_CIPH_MODE);
+                        return 1;
+                }
+                break;
+        case IMB_AUTH_AES_NCA5:
+                if (cipher_mode != IMB_CIPHER_AES_NCA5) {
                         imb_set_errno(state, IMB_ERR_CIPH_MODE);
                         return 1;
                 }
@@ -704,6 +722,41 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job, const IMB_CIPHER_MODE cipher_
                         return 1;
                 }
                 if (hash_alg != IMB_AUTH_SM4_GCM) {
+                        imb_set_errno(state, IMB_ERR_HASH_ALGO);
+                        return 1;
+                }
+                break;
+        case IMB_CIPHER_AES_NCA5:
+                if (job->msg_len_to_cipher_in_bytes > NCA_MAX_BYTELEN) {
+                        imb_set_errno(state, IMB_ERR_JOB_CIPH_LEN);
+                        return 1;
+                }
+                if (job->msg_len_to_cipher_in_bytes != 0 && job->src == NULL) {
+                        imb_set_errno(state, IMB_ERR_JOB_NULL_SRC);
+                        return 1;
+                }
+                if (job->msg_len_to_cipher_in_bytes != 0 && job->dst == NULL) {
+                        imb_set_errno(state, IMB_ERR_JOB_NULL_DST);
+                        return 1;
+                }
+                if (job->iv == NULL) {
+                        imb_set_errno(state, IMB_ERR_JOB_NULL_IV);
+                        return 1;
+                }
+                if (job->iv_len_in_bytes != UINT64_C(16)) {
+                        imb_set_errno(state, IMB_ERR_JOB_IV_LEN);
+                        return 1;
+                }
+                /* Same key structure used for encrypt and decrypt */
+                if (cipher_direction == IMB_DIR_ENCRYPT && job->enc_keys == NULL) {
+                        imb_set_errno(state, IMB_ERR_JOB_NULL_KEY);
+                        return 1;
+                }
+                if (key_len_in_bytes != UINT64_C(32)) {
+                        imb_set_errno(state, IMB_ERR_JOB_KEY_LEN);
+                        return 1;
+                }
+                if (hash_alg != IMB_AUTH_AES_NCA5) {
                         imb_set_errno(state, IMB_ERR_HASH_ALGO);
                         return 1;
                 }
@@ -2053,6 +2106,25 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job, const IMB_CIPHER_MODE cipher_
         case IMB_AUTH_SHAKE256:
                 if (job->src == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_SRC);
+                        return 1;
+                }
+                if (job->auth_tag_output == NULL) {
+                        imb_set_errno(state, IMB_ERR_JOB_NULL_AUTH);
+                        return 1;
+                }
+                break;
+        case IMB_AUTH_AES_NCA5:
+                if (job->auth_tag_output_len_in_bytes < UINT64_C(4) ||
+                    job->auth_tag_output_len_in_bytes > UINT64_C(16)) {
+                        imb_set_errno(state, IMB_ERR_JOB_AUTH_TAG_LEN);
+                        return 1;
+                }
+                if ((job->u.NCA.aad_len_in_bytes > 0) && (job->u.NCA.aad == NULL)) {
+                        imb_set_errno(state, IMB_ERR_JOB_NULL_AAD);
+                        return 1;
+                }
+                if (cipher_mode != IMB_CIPHER_AES_NCA5) {
+                        imb_set_errno(state, IMB_ERR_CIPH_MODE);
                         return 1;
                 }
                 if (job->auth_tag_output == NULL) {
