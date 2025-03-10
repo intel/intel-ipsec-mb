@@ -331,37 +331,70 @@ end_loop:
         jmp     clear_ret
 
 copy_full_digest:
-	;; copy 64 bytes for SHA512 / 48 bytes for SHA384
-	mov	QWORD(tmp),  [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 0*SHA512_DIGEST_ROW_SIZE]
-	mov	QWORD(tmp2), [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 1*SHA512_DIGEST_ROW_SIZE]
-	mov	QWORD(tmp3), [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 2*SHA512_DIGEST_ROW_SIZE]
-	mov	QWORD(tmp4), [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 3*SHA512_DIGEST_ROW_SIZE] ; this line of code will run only for SHA512
-	bswap	QWORD(tmp)
-	bswap	QWORD(tmp2)
-	bswap	QWORD(tmp3)
-	bswap	QWORD(tmp4)
-	mov	[p + 0*8], QWORD(tmp)
-	mov	[p + 1*8], QWORD(tmp2)
-	mov	[p + 2*8], QWORD(tmp3)
-	mov	[p + 3*8], QWORD(tmp4)
-	mov	QWORD(tmp),  [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 4*SHA512_DIGEST_ROW_SIZE]
-	mov	QWORD(tmp2), [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 5*SHA512_DIGEST_ROW_SIZE]
+	cmp 	qword [job_rax + _auth_tag_output_len_in_bytes], 16
+	ja 	copy_tag_gt16
+
+	;; copy up to 16 bytes
+	mov    	tmp2, qword [job_rax + _auth_tag_output_len_in_bytes]
+	movq   	xmm0, [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 0*SHA512_DIGEST_ROW_SIZE]
+	pinsrq  xmm0, [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 1*SHA512_DIGEST_ROW_SIZE], 1
+	pshufb  xmm0, [rel byteswap]
+	simd_store_sse {p + 0*4}, xmm0, tmp2, tmp4, tmp3
+	jmp 	clear_ret
+
+copy_tag_gt16:
+	;; copy 16 bytes first
+	movq   	xmm0, [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 0*SHA512_DIGEST_ROW_SIZE]
+	pinsrq  xmm0, [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 1*SHA512_DIGEST_ROW_SIZE], 1
+	pshufb  xmm0, [rel byteswap]
+	movdqu  [p + 0*4], xmm0
+
+	;; calculate remaining bytes to copy
+	mov    	tmp2, qword [job_rax + _auth_tag_output_len_in_bytes]
+	sub    	tmp2, 16 ; copied 16 bytes already
+	cmp 	qword [job_rax + _auth_tag_output_len_in_bytes], 32
+	ja	copy_tag_gt32
+
+	;; copy up to 32 bytes
+	movq   	xmm0, [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 2*SHA512_DIGEST_ROW_SIZE]
+	pinsrq  xmm0, [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 3*SHA512_DIGEST_ROW_SIZE], 1
+	pshufb  xmm0, [rel byteswap]
+	simd_store_sse {p + 4*4}, xmm0, tmp2, tmp4, tmp3
+	jmp 	clear_ret
+
+copy_tag_gt32:
+	;; copy 32 bytes
+	movq   	xmm0, [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 2*SHA512_DIGEST_ROW_SIZE]
+	pinsrq  xmm0, [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 3*SHA512_DIGEST_ROW_SIZE], 1
+	pshufb  xmm0, [rel byteswap]
+	movdqu  [p + 4*4], xmm0
+
+	sub    	tmp2, 16 ; copied another 16 bytes
 %if (SHA_X_DIGEST_SIZE != 384)
-	mov	QWORD(tmp3), [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 6*SHA512_DIGEST_ROW_SIZE]
-	mov	QWORD(tmp4), [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 7*SHA512_DIGEST_ROW_SIZE] ; this line of code will run only for SHA512
+	cmp 	qword [job_rax + _auth_tag_output_len_in_bytes], 48
+	ja	copy_tag_gt48
 %endif
-	bswap	QWORD(tmp)
-	bswap	QWORD(tmp2)
-%if (SHA_X_DIGEST_SIZE != 384)
-	bswap	QWORD(tmp3)
-	bswap	QWORD(tmp4)
-%endif
-	mov	[p + 4*8], QWORD(tmp)
-	mov	[p + 5*8], QWORD(tmp2)
-%if (SHA_X_DIGEST_SIZE != 384)
-	mov	[p + 6*8], QWORD(tmp3)
-	mov	[p + 7*8], QWORD(tmp4)
-%endif
+	;; copy up to 48 bytes
+	movq   	xmm0, [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 4*SHA512_DIGEST_ROW_SIZE]
+	pinsrq  xmm0, [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 5*SHA512_DIGEST_ROW_SIZE], 1
+	pshufb  xmm0, [rel byteswap]
+	simd_store_sse {p + 8*4}, xmm0, tmp2, tmp4, tmp3
+	jmp 	clear_ret
+
+copy_tag_gt48:
+	;; copy 48 bytes
+	movq   	xmm0, [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 4*SHA512_DIGEST_ROW_SIZE]
+	pinsrq  xmm0, [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 5*SHA512_DIGEST_ROW_SIZE], 1
+	pshufb  xmm0, [rel byteswap]
+	movdqu  [p + 8*4], xmm0
+
+	sub    	tmp2, 16 ; copied another 16 bytes
+
+	;; copy up to 64 bytes
+	movq   	xmm0, [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 6*SHA512_DIGEST_ROW_SIZE]
+	pinsrq  xmm0, [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 7*SHA512_DIGEST_ROW_SIZE], 1
+	pshufb  xmm0, [rel byteswap]
+	simd_store_sse {p + 12*4}, xmm0, tmp2, tmp4, tmp3
 
 clear_ret:
 
