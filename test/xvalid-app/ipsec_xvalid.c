@@ -541,6 +541,10 @@ struct str_value_mapping aead_algo_str_map[] = {
           .values.job_params = { .cipher_mode = IMB_CIPHER_DOCSIS_SEC_BPI,
                                  .hash_alg = IMB_AUTH_DOCSIS_CRC32,
                                  .key_size = IMB_KEY_128_BYTES } },
+        { .name = "AES-NCA5",
+          .values.job_params = { .cipher_mode = IMB_CIPHER_AES_NCA5,
+                                 .hash_alg = IMB_AUTH_AES_NCA5,
+                                 .key_size = IMB_KEY_256_BYTES } },
 };
 
 /* This struct stores all information about performed test case */
@@ -603,6 +607,7 @@ const uint8_t auth_tag_len_bytes[] = {
         16,                        /* IMB_AUTH_SHAKE128 */
         32,                        /* IMB_AUTH_SHAKE256 */
         4,                         /* IMB_AUTH_AES_NIA5 */
+        4,                         /* IMB_AUTH_AES_NCA5 */
 };
 
 /* Minimum, maximum and step values of key sizes */
@@ -633,7 +638,8 @@ const uint8_t key_sizes[][3] = {
         { 16, 16, 1 },  /* IMB_CIPHER_SM4_GCM */
         { 32, 32, 1 },  /* IMB_CIPHER_ZUC_NEA6 */
         { 32, 32, 1 },  /* IMB_CIPHER_SNOW5G_NEA4 */
-        { 32, 32, 1 }   /* IMB_CIPHER_AES_NEA5 */
+        { 32, 32, 1 },  /* IMB_CIPHER_AES_NEA5 */
+        { 32, 32, 1 }   /* IMB_CIPHER_AES_NCA5 */
 };
 
 uint8_t custom_test = 0;
@@ -1404,6 +1410,7 @@ fill_job(IMB_JOB *job, const struct params_s *params, uint8_t *buf, uint8_t *dig
                 /* No operation needed */
                 break;
         case IMB_AUTH_DOCSIS_CRC32:
+        case IMB_AUTH_AES_NCA5:
                 /* No operation needed */
                 break;
         case IMB_AUTH_POLY1305:
@@ -1458,6 +1465,10 @@ fill_job(IMB_JOB *job, const struct params_s *params, uint8_t *buf, uint8_t *dig
                 job->dec_keys = dec_keys;
                 job->iv_len_in_bytes = 16;
                 break;
+        case IMB_CIPHER_AES_NCA5:
+                job->u.NCA.aad_len_in_bytes = params->aad_size;
+                job->u.NCA.aad = aad;
+                /* Fall-through */
         case IMB_CIPHER_PON_AES_CNTR:
         case IMB_CIPHER_SM4_CNTR:
         case IMB_CIPHER_CNTR:
@@ -1502,11 +1513,6 @@ fill_job(IMB_JOB *job, const struct params_s *params, uint8_t *buf, uint8_t *dig
                 job->dec_keys = dec_keys;
                 job->iv_len_in_bytes = 0;
                 break;
-        case IMB_CIPHER_ZUC_NEA6:
-                job->enc_keys = k2;
-                job->dec_keys = k2;
-                job->iv_len_in_bytes = 16;
-                break;
         case IMB_CIPHER_ZUC_EEA3:
                 job->enc_keys = k2;
                 job->dec_keys = k2;
@@ -1537,6 +1543,7 @@ fill_job(IMB_JOB *job, const struct params_s *params, uint8_t *buf, uint8_t *dig
                 job->iv_len_in_bytes = 12;
                 break;
         case IMB_CIPHER_SNOW5G_NEA4:
+        case IMB_CIPHER_ZUC_NEA6:
                 job->enc_keys = k2;
                 job->dec_keys = k2;
                 job->iv_len_in_bytes = 16;
@@ -1678,6 +1685,7 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys, const uint8_t *ciph
                 case IMB_CIPHER_DES:
                 case IMB_CIPHER_DES3:
                 case IMB_CIPHER_DOCSIS_DES:
+                case IMB_CIPHER_AES_NCA5:
                         nosimd_memset(enc_keys, pattern_cipher_key, sizeof(keys->enc_keys));
                         break;
                 case IMB_CIPHER_SNOW3G_UEA2_BITLEN:
@@ -1777,6 +1785,7 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys, const uint8_t *ciph
         case IMB_AUTH_SHA3_512:
         case IMB_AUTH_SHAKE128:
         case IMB_AUTH_SHAKE256:
+        case IMB_AUTH_AES_NCA5:
                 /* No operation needed */
                 break;
         case IMB_AUTH_POLY1305:
@@ -1869,6 +1878,9 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys, const uint8_t *ciph
                  */
                 nosimd_memcpy(k2, ciph_key, 16);
                 nosimd_memcpy(k2 + 16, ciph_key + 16, 16);
+                break;
+        case IMB_CIPHER_AES_NCA5:
+                IMB_AES_KEYEXP_256(mb_mgr, ciph_key, enc_keys, dec_keys);
                 break;
         case IMB_CIPHER_NULL:
                 /* No operation needed */
