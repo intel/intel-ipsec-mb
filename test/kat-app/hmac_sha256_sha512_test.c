@@ -656,6 +656,30 @@ hmac_sha256_sha512_test(struct IMB_MGR *mb_mgr)
                 }
         }
 
+        const struct mac_test *vec_384 = hmac_sha384_test_kat_json;
+        assert(vec_384->tagSize / 8 == 48);
+        for (tag_size = 4; tag_size <= 48; tag_size++) {
+                if (test_hmac_shax(mb_mgr, vec_384, IMB_MAX_BURST_SIZE, sha_types_tab[2],
+                                   tag_size)) {
+                        printf("error tag size: %u\n", tag_size);
+                        test_suite_update(&ts_sha384, 0, 1);
+                } else {
+                        test_suite_update(&ts_sha384, 1, 0);
+                }
+        }
+
+        const struct mac_test *vec_512 = hmac_sha512_test_kat_json;
+        assert(vec_512->tagSize / 8 == 64);
+        for (tag_size = 4; tag_size <= 64; tag_size++) {
+                if (test_hmac_shax(mb_mgr, vec_512, IMB_MAX_BURST_SIZE, sha_types_tab[3],
+                                   tag_size)) {
+                        printf("error tag size: %u\n", tag_size);
+                        test_suite_update(&ts_sha512, 0, 1);
+                } else {
+                        test_suite_update(&ts_sha512, 1, 0);
+                }
+        }
+
         /* End test suites */
         errors += test_suite_end(&ts_sha224);
         errors += test_suite_end(&ts_sha256);
