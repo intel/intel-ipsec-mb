@@ -80,7 +80,8 @@ set(CIPHER_ALGOS
     aes-cfb-128
     aes-cfb-192
     aes-cfb-256
-    snow5g_nea4)
+    snow5g-nea4
+    aes-nea5)
 
 # cipher short tests
 foreach(ALGO ${CIPHER_ALGOS})

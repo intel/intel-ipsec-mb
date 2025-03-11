@@ -233,8 +233,10 @@ struct str_value_mapping cipher_algo_str_map[] = {
         { .name = "ZUC-NEA6",
           .values.job_params = { .cipher_mode = IMB_CIPHER_ZUC_NEA6,
                                  .key_size = IMB_KEY_256_BYTES } },
-        { .name = "SNOW5G_NEA4",
-          .values.job_params = { .cipher_mode = IMB_CIPHER_SNOW5G_NEA4, .key_size = 32 } }
+        { .name = "SNOW5G-NEA4",
+          .values.job_params = { .cipher_mode = IMB_CIPHER_SNOW5G_NEA4, .key_size = 32 } },
+        { .name = "AES-NEA5",
+          .values.job_params = { .cipher_mode = IMB_CIPHER_AES_NEA5, .key_size = 32 } }
 };
 
 struct str_value_mapping hash_algo_str_map[] = {
@@ -630,7 +632,8 @@ const uint8_t key_sizes[][3] = {
         { 16, 16, 1 },  /* IMB_CIPHER_SM4_CNTR */
         { 16, 16, 1 },  /* IMB_CIPHER_SM4_GCM */
         { 32, 32, 1 },  /* IMB_CIPHER_ZUC_NEA6 */
-        { 32, 32, 1 }   /* IMB_CIPHER_SNOW5G_NEA4 */
+        { 32, 32, 1 },  /* IMB_CIPHER_SNOW5G_NEA4 */
+        { 32, 32, 1 }   /* IMB_CIPHER_AES_NEA5 */
 };
 
 uint8_t custom_test = 0;
@@ -1458,6 +1461,7 @@ fill_job(IMB_JOB *job, const struct params_s *params, uint8_t *buf, uint8_t *dig
         case IMB_CIPHER_PON_AES_CNTR:
         case IMB_CIPHER_SM4_CNTR:
         case IMB_CIPHER_CNTR:
+        case IMB_CIPHER_AES_NEA5:
         case IMB_CIPHER_CFB:
                 job->enc_keys = enc_keys;
                 job->dec_keys = enc_keys;
@@ -1663,6 +1667,7 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys, const uint8_t *ciph
                 case IMB_CIPHER_SM4_CNTR:
                 case IMB_CIPHER_CCM:
                 case IMB_CIPHER_CNTR:
+                case IMB_CIPHER_AES_NEA5:
                 case IMB_CIPHER_DOCSIS_SEC_BPI:
                 case IMB_CIPHER_SM4_ECB:
                 case IMB_CIPHER_ECB:
@@ -1815,6 +1820,7 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys, const uint8_t *ciph
         case IMB_CIPHER_CBC:
         case IMB_CIPHER_CCM:
         case IMB_CIPHER_CNTR:
+        case IMB_CIPHER_AES_NEA5:
         case IMB_CIPHER_DOCSIS_SEC_BPI:
         case IMB_CIPHER_ECB:
         case IMB_CIPHER_CFB:
