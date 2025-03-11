@@ -49,6 +49,7 @@
 #include "include/arch_sse_type1.h"  /* SM4-ECB, AES-CFB */
 #include "include/arch_sse_type2.h"  /* SHA-NI */
 #include "include/arch_avx2_type1.h" /* AESNI, MD5 */
+#include "include/arch_avx2_type2.h" /* AES-CTR */
 #include "include/arch_avx512_type1.h"
 #include "include/arch_avx512_type2.h"
 
@@ -138,6 +139,9 @@
 #define SUBMIT_JOB_AES_CTR_128 aes_cntr_128_submit_vaes_avx512
 #define SUBMIT_JOB_AES_CTR_192 aes_cntr_192_submit_vaes_avx512
 #define SUBMIT_JOB_AES_CTR_256 aes_cntr_256_submit_vaes_avx512
+#define AES_CTR_128            aes_cntr_128_vaes_avx2
+#define AES_CTR_192            aes_cntr_192_vaes_avx2
+#define AES_CTR_256            aes_cntr_256_vaes_avx2
 
 /* AES-CCM */
 #define AES_CNTR_CCM_128 aes_cntr_ccm_128_vaes_avx512

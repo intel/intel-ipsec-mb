@@ -294,6 +294,7 @@ typedef enum {
         IMB_CIPHER_SM4_GCM,
         IMB_CIPHER_ZUC_NEA6,
         IMB_CIPHER_SNOW5G_NEA4,
+        IMB_CIPHER_AES_NEA5, /**< AES256-NEA5 */
         IMB_CIPHER_NUM
 } IMB_CIPHER_MODE;
 

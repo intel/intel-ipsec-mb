@@ -159,6 +159,7 @@ is_job_invalid_light(IMB_MGR *state, const IMB_CIPHER_MODE cipher_mode, const IM
                         return 1;
                 }
                 break;
+        case IMB_CIPHER_AES_NEA5:
         case IMB_CIPHER_SNOW5G_NEA4:
                 if (key_len_in_bytes != UINT64_C(32)) {
                         imb_set_errno(state, IMB_ERR_JOB_KEY_LEN);
@@ -1239,6 +1240,7 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job, const IMB_CIPHER_MODE cipher_
                         return -1;
                 }
                 break;
+        case IMB_CIPHER_AES_NEA5:
         case IMB_CIPHER_SNOW5G_NEA4:
                 if (job->msg_len_to_cipher_in_bytes != 0 && job->src == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_SRC);
