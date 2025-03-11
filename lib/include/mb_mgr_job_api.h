@@ -30,7 +30,7 @@
 
 /*
  * This contains the bulk of the mb_mgr code, with #define's to build
- * an SSE, AVX, AVX2 or AVX512 version (see mb_mgr_sse.c, mb_mgr_avx.c, etc.)
+ * an SSE, AVX2, AVX512 or AVX10 version (see mb_mgr_sse.c, mb_mgr_avx2.c, etc.)
  *
  * get_next_job() returns a job object. This must be filled in and returned
  * via submit_job() before get_next_job() is called again.
