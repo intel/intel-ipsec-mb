@@ -159,6 +159,7 @@ enum test_cipher_mode_e {
         TEST_SM4_GCM,
         TEST_ZUC_NEA6,
         TEST_SNOW5G_NEA4,
+        TEST_AES_NEA5,
         TEST_NUM_CIPHER_TESTS
 };
 
@@ -304,8 +305,10 @@ const struct str_value_mapping cipher_algo_str_map[] = {
           .values.job_params = { .cipher_mode = TEST_CFB, .key_size = IMB_KEY_256_BYTES } },
         { .name = "zuc-nea6",
           .values.job_params = { .cipher_mode = TEST_ZUC_NEA6, .key_size = IMB_KEY_256_BYTES } },
-        { .name = "snow5g_nea4",
+        { .name = "snow5g-nea4",
           .values.job_params = { .cipher_mode = TEST_SNOW5G_NEA4, .key_size = 32 } },
+        { .name = "aes-nea5",
+          .values.job_params = { .cipher_mode = TEST_AES_NEA5, .key_size = 32 } },
         { .name = "null", .values.job_params = { .cipher_mode = TEST_NULL_CIPHER, .key_size = 0 } }
 };
 
@@ -1507,6 +1510,9 @@ translate_cipher_mode(const enum test_cipher_mode_e test_mode)
         case TEST_SM4_GCM:
                 c_mode = IMB_CIPHER_SM4_GCM;
                 break;
+        case TEST_AES_NEA5:
+                c_mode = IMB_CIPHER_AES_NEA5;
+                break;
         default:
                 break;
         }
@@ -2383,7 +2389,8 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params, const uint32_t num_iter, uint8
                 job_template.dec_keys = k1_expanded;
                 job_template.u.CHACHA20_POLY1305.aad_len_in_bytes = aad_size;
                 job_template.iv_len_in_bytes = 12;
-        } else if (job_template.cipher_mode == IMB_CIPHER_SNOW5G_NEA4) {
+        } else if (job_template.cipher_mode == IMB_CIPHER_SNOW5G_NEA4 ||
+                   job_template.cipher_mode == IMB_CIPHER_AES_NEA5) {
                 job_template.iv_len_in_bytes = 16;
                 job_template.key_len_in_bytes = 32;
         }
@@ -3327,7 +3334,8 @@ print_times(struct variant_s *variant_list, struct params_s *params, const uint3
                                                                         "SM4_CTR",
                                                                         "SM4_GCM",
                                                                         "ZUC_NEA6",
-                                                                        "SNOW5G_NEA4" };
+                                                                        "SNOW5G_NEA4",
+                                                                        "AES_NEA5" };
                 const char *c_dir_names[2] = { "ENCRYPT", "DECRYPT" };
                 const char *h_alg_names[TEST_NUM_HASH_TESTS - 1] = {
                         "SHA1_HMAC",
