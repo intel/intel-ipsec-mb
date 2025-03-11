@@ -380,6 +380,7 @@ fill_in_job(struct IMB_JOB *job, const IMB_CIPHER_MODE cipher_mode,
                 job->sgl_state = IMB_SGL_UPDATE;
                 break;
         case IMB_CIPHER_SNOW5G_NEA4:
+        case IMB_CIPHER_AES_NEA5:
                 job->hash_alg = IMB_AUTH_NULL;
                 job->key_len_in_bytes = UINT64_C(32);
                 job->iv_len_in_bytes = 16;
@@ -1960,6 +1961,7 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                                 case IMB_CIPHER_CHACHA20_POLY1305_SGL:
                                 case IMB_CIPHER_PON_AES_CNTR:
                                 case IMB_CIPHER_SNOW5G_NEA4:
+                                case IMB_CIPHER_AES_NEA5:
                                 case IMB_CIPHER_CFB:
 
                                         break;
@@ -2007,6 +2009,7 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                                 case IMB_CIPHER_CNTR:
                                 case IMB_CIPHER_PON_AES_CNTR:
                                 case IMB_CIPHER_SNOW5G_NEA4:
+                                case IMB_CIPHER_AES_NEA5:
                                 case IMB_CIPHER_NULL:
                                 case IMB_CIPHER_CFB:
                                 case IMB_CIPHER_SM4_ECB:
@@ -2111,7 +2114,9 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                                 { IMB_CIPHER_ZUC_NEA6, 15 },
                                 { IMB_CIPHER_ZUC_NEA6, 17 },
                                 { IMB_CIPHER_SNOW5G_NEA4, 15 },
-                                { IMB_CIPHER_SNOW5G_NEA4, 17 }
+                                { IMB_CIPHER_SNOW5G_NEA4, 17 },
+                                { IMB_CIPHER_AES_NEA5, 15 },
+                                { IMB_CIPHER_AES_NEA5, 17 }
         };
 
         dir = IMB_DIR_ENCRYPT;
@@ -2159,7 +2164,7 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                                 case IMB_CIPHER_CHACHA20_POLY1305_SGL:
                                 case IMB_CIPHER_ZUC_NEA6:
                                 case IMB_CIPHER_SNOW5G_NEA4:
-
+                                case IMB_CIPHER_AES_NEA5:
                                         if (key_len != IMB_KEY_256_BYTES)
                                                 continue;
                                         break;

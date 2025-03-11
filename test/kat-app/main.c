@@ -121,6 +121,8 @@ extern int
 sha3_test(struct IMB_MGR *mb_mgr);
 extern int
 aes_nia5_test(struct IMB_MGR *mb_mgr);
+extern int
+aes_nea5_test(struct IMB_MGR *mb_mgr);
 
 typedef int (*imb_test_t)(struct IMB_MGR *mb_mgr);
 
@@ -184,6 +186,7 @@ struct imb_test tests[] = {
         { .str = "SHA3", .fn = sha3_test, .enabled = 1 },
         { .str = "SNOW5G", .fn = snow5g_test, .enabled = 1 },
         { .str = "AES_NIA5", .fn = aes_nia5_test, .enabled = 1 },
+        { .str = "AES_NEA5", .fn = aes_nea5_test, .enabled = 1 },
 };
 
 static int self_test_corrupt = 0;
