@@ -220,6 +220,7 @@ enum test_hash_alg_e {
         TEST_SHAKE_256,
         TEST_AES_NIA5,
         TEST_HASH_AES_NCA5,
+        TEST_ZUC_NIA6,
         TEST_NUM_HASH_TESTS
 };
 
@@ -584,6 +585,12 @@ const struct str_value_mapping hash_algo_str_map[] = {
                 .values.job_params = {
                         .hash_alg = TEST_AES_NIA5
                 }
+        },
+        {
+                .name = "zuc-nia6",
+                .values.job_params = {
+                        .hash_alg = TEST_ZUC_NIA6
+                }
         }
 };
 
@@ -717,6 +724,7 @@ const uint32_t auth_tag_length_bytes[] = {
         32,                        /* IMB_AUTH_SHAKE256 */
         4,                         /* AES-NIA5 */
         4,                         /* AES-NCA5 */
+        4,                         /* ZUC-NIA6 */
 };
 uint32_t index_limit;
 uint32_t key_idxs[NUM_OFFSETS];
@@ -1702,6 +1710,9 @@ translate_hash_alg(const enum test_hash_alg_e test_mode)
         case TEST_AES_NIA5:
                 hash_alg = IMB_AUTH_AES_NIA5;
                 break;
+        case TEST_ZUC_NIA6:
+                hash_alg = IMB_AUTH_ZUC_NIA6;
+                break;
         default:
                 break;
         }
@@ -2263,6 +2274,7 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params, const uint32_t num_iter, uint8
                 job_template.cipher_start_src_offset_in_bytes = 8;
                 break;
         case TEST_ZUC_EIA3:
+        case TEST_ZUC_NIA6:
                 job_template.u.ZUC_EIA3._key = k3;
                 job_template.u.ZUC_EIA3._iv = (uint8_t *) &auth_iv;
                 break;
