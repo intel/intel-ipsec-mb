@@ -246,6 +246,34 @@ asm_ZucInitialization_4_gfni_sse(ZucKey4_t *pKeys, const uint8_t *ivs, ZucState4
  ******************************************************************************
  * @description
  *      Definition of the external function that implements the initialization
+ *      stage of the ZUC-NEA6 algorithm for 4 packets. The function will
+ *      initialize the state for 4 individual packets.
+ *
+ * @param[in] pKey                  Pointer to an array of 256-bit initial keys
+ *                                  that will be used when initializing the ZUC
+ *                                  state.
+ * @param[in] ivs                   Pointer to 4 x 16-byte initialization
+ *                                  vectors that will be used when initializing
+ *                                  the ZUC state
+ * @param[in,out] pState            Pointer to a ZUC state structure of type
+ *                                  @ref ZucState4_t that will be populated
+ *                                  with the initialized ZUC state.
+ *
+ * @pre
+ *      None
+ *
+ *****************************************************************************/
+IMB_DLL_LOCAL void
+asm_ZucNEA6Initialization_4_sse(ZucKey4_t *pKeys, const uint8_t *ivs, ZucState4_t *pState);
+
+IMB_DLL_LOCAL void
+asm_ZucNEA6Initialization_4_gfni_sse(ZucKey4_t *pKeys, const uint8_t *ivs, ZucState4_t *pState);
+
+/**
+ ******************************************************************************
+ * @description
+ *      Definition of the external function that implements the initialization
+>>>>>>> 5a033f2c (lib: add ZUC-NIA6 algorithm)
  *      stage of the ZUC algorithm for 8 packets. The function will initialize
  *      the state for 8 individual packets.
  *
@@ -992,6 +1020,19 @@ void
 zuc_eia3_4_buffer_job_no_gfni_sse(const void *const pKey[4], const uint8_t *ivs,
                                   const void *const pBufferIn[4], uint32_t *pMacI[4],
                                   const uint16_t lengthInBits[4], const void *const job_in_lane[4]);
+
+IMB_DLL_LOCAL
+void
+zuc_nia6_4_buffer_job_gfni_sse(const void *const pKey[4], const uint8_t *ivs,
+                               const void *const pBufferIn[4], void *pMacI[4],
+                               const uint16_t lengthInBytes[4], const void *const job_in_lane[4]);
+
+IMB_DLL_LOCAL
+void
+zuc_nia6_4_buffer_job_no_gfni_sse(const void *const pKey[4], const uint8_t *ivs,
+                                  const void *const pBufferIn[4], void *pMacI[4],
+                                  const uint16_t lengthInBytes[4],
+                                  const void *const job_in_lane[4]);
 
 IMB_DLL_LOCAL
 void

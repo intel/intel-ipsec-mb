@@ -521,6 +521,7 @@ align_label
 ; JOB* SUBMIT_JOB_ZUC128_EEA3(MB_MGR_ZUC_OOO *state, IMB_JOB *job)
 ; arg 1 : state
 ; arg 2 : job
+align 32
 MKGLOBAL(SUBMIT_JOB_ZUC128_EEA3,function,internal)
 align_function
 SUBMIT_JOB_ZUC128_EEA3:
@@ -530,6 +531,7 @@ SUBMIT_JOB_ZUC128_EEA3:
 ; JOB* SUBMIT_JOB_ZUC_NEA6(MB_MGR_ZUC_OOO *state, IMB_JOB *job)
 ; arg 1 : state
 ; arg 2 : job
+align 32
 MKGLOBAL(SUBMIT_JOB_ZUC_NEA6,function,internal)
 SUBMIT_JOB_ZUC_NEA6:
         SUBMIT_JOB_ZUC_EEA3 ZUCNEA6
@@ -537,6 +539,7 @@ SUBMIT_JOB_ZUC_NEA6:
 
 ; JOB* FLUSH_JOB_ZUC128_EEA3(MB_MGR_ZUC_OOO *state)
 ; arg 1 : state
+align 32
 MKGLOBAL(FLUSH_JOB_ZUC128_EEA3,function,internal)
 align_function
 FLUSH_JOB_ZUC128_EEA3:
@@ -545,6 +548,7 @@ FLUSH_JOB_ZUC128_EEA3:
 
 ; JOB* FLUSH_JOB_ZUC_NEA6(MB_MGR_ZUC_OOO *state)
 ; arg 1 : state
+align 32
 MKGLOBAL(FLUSH_JOB_ZUC_NEA6,function,internal)
 FLUSH_JOB_ZUC_NEA6:
         FLUSH_JOB_ZUC_EEA3 ZUCNEA6
@@ -1050,6 +1054,7 @@ align_label
 ; JOB* SUBMIT_JOB_ZUC128_EIA3(MB_MGR_ZUC_OOO *state, IMB_JOB *job)
 ; arg 1 : state
 ; arg 2 : job
+align 32
 MKGLOBAL(SUBMIT_JOB_ZUC128_EIA3,function,internal)
 align_function
 SUBMIT_JOB_ZUC128_EIA3:
@@ -1059,11 +1064,11 @@ SUBMIT_JOB_ZUC128_EIA3:
 
 ; JOB* FLUSH_JOB_ZUC128_EIA3(MB_MGR_ZUC_OOO *state)
 ; arg 1 : state
+align 32
 MKGLOBAL(FLUSH_JOB_ZUC128_EIA3,function,internal)
 align_function
 FLUSH_JOB_ZUC128_EIA3:
         FLUSH_JOB_ZUC_EIA3
         ret
-
 
 mksection stack-noexec

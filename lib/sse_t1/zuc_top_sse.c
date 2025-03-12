@@ -41,6 +41,7 @@
 #include "include/clear_regs_mem.h"
 #include "intel-ipsec-mb.h"
 #include "include/error.h"
+#include "include/arch_sse_type1.h"
 
 #define SAVE_XMMS               save_xmms
 #define RESTORE_XMMS            restore_xmms
@@ -75,6 +76,27 @@ eia3_remainder(void *T, const void *ks, const void *data, const uint64_t n_bits,
                 asm_Eia3Remainder_gfni_sse(T, ks, data, n_bits);
         else
                 asm_Eia3Remainder_sse(T, ks, data, n_bits);
+}
+
+static inline void
+keygen_4(ZucState4_t *state, uint32_t **pKeyStrArr, const uint64_t numKeyStrBytes,
+         const unsigned use_gfni)
+{
+        if (use_gfni) {
+                if (numKeyStrBytes == 4)
+                        asm_ZucGenKeystream4B_4_gfni_sse(state, pKeyStrArr);
+                else if (numKeyStrBytes == 8)
+                        asm_ZucGenKeystream8B_4_gfni_sse(state, pKeyStrArr);
+                else /* 16 */
+                        asm_ZucGenKeystream16B_4_gfni_sse(state, pKeyStrArr);
+        } else {
+                if (numKeyStrBytes == 4)
+                        asm_ZucGenKeystream4B_4_sse(state, pKeyStrArr);
+                else if (numKeyStrBytes == 8)
+                        asm_ZucGenKeystream8B_4_sse(state, pKeyStrArr);
+                else /* 16 */
+                        asm_ZucGenKeystream16B_4_sse(state, pKeyStrArr);
+        }
 }
 
 static inline void
@@ -1063,4 +1085,114 @@ zuc_eia3_n_buffer_gfni_sse(const void *const pKey[], const void *const pIv[],
                            uint32_t *pMacI[], const uint32_t numBuffers)
 {
         _zuc_eia3_n_buffer_sse(pKey, pIv, pBufferIn, lengthInBits, pMacI, numBuffers, 1);
+}
+
+static void
+shuffle(uint8_t H[16])
+{
+        uint32_t *H32 = (uint32_t *) H;
+        for (int i = 0; i < 4; i++)
+                H32[i] = bswap4(H32[i]);
+}
+static inline void
+_zuc_nia6_4_buffer_job(const void *const pKey[NUM_SSE_BUFS], const uint8_t *ivs,
+                       const void *const pBufferIn[NUM_SSE_BUFS], void *pMacI[NUM_SSE_BUFS],
+                       const uint16_t lengthInBytes[NUM_SSE_BUFS],
+                       const void *const job_in_lane[NUM_SSE_BUFS], const unsigned use_gfni)
+{
+        unsigned int i;
+        DECLARE_ALIGNED(ZucState4_t state, 64);
+        DECLARE_ALIGNED(uint8_t H[NUM_SSE_BUFS][16], 64);
+        DECLARE_ALIGNED(uint8_t Q[NUM_SSE_BUFS][16], 64);
+        DECLARE_ALIGNED(uint8_t P[NUM_SSE_BUFS][16], 64);
+        DECLARE_ALIGNED(uint32_t * pKeyStrArr[NUM_SSE_BUFS], 16) = { NULL };
+        uint8_t tag[NUM_SSE_BUFS][16];
+        const uint8_t *pIn8[NUM_SSE_BUFS] = { NULL };
+        /* structure to store the 4 keys */
+        DECLARE_ALIGNED(ZucKey4_t keys, 64);
+
+        for (i = 0; i < NUM_SSE_BUFS; i++) {
+                pIn8[i] = (const uint8_t *) pBufferIn[i];
+                keys.pKeys[i] = pKey[i];
+        }
+
+        /* Initialize ZUC state */
+        if (use_gfni)
+                asm_ZucNEA6Initialization_4_gfni_sse(&keys, ivs, &state);
+        else
+                asm_ZucNEA6Initialization_4_sse(&keys, ivs, &state);
+
+        /* Generate H,Q,P keys */
+        for (i = 0; i < NUM_SSE_BUFS; i++)
+                pKeyStrArr[i] = (uint32_t *) H[i];
+        keygen_4(&state, pKeyStrArr, 16, use_gfni);
+        for (i = 0; i < NUM_SSE_BUFS; i++)
+                pKeyStrArr[i] = (uint32_t *) Q[i];
+        keygen_4(&state, pKeyStrArr, 16, use_gfni);
+        for (i = 0; i < NUM_SSE_BUFS; i++)
+                pKeyStrArr[i] = (uint32_t *) P[i];
+        keygen_4(&state, pKeyStrArr, 16, use_gfni);
+
+        for (i = 0; i < NUM_SSE_BUFS; i++) {
+                struct gcm_key_data gdata_key;
+                const IMB_JOB *job = job_in_lane[i];
+
+                if (job == NULL)
+                        continue;
+
+                memset(tag[i], 0, 16);
+
+                shuffle(H[i]);
+                /* Precompute hash keys from H */
+                polyval_pre_sse(H[i], &gdata_key);
+                /* Digest message bytes */
+                polyval_sse(&gdata_key, pIn8[i], lengthInBytes[i], tag[i]);
+
+                /* XOR 16-byte lengths array with previous digest and hash with Q */
+                uint64_t lengths[2] = { 0 };
+
+                lengths[1] = lengthInBytes[i] * 8;
+
+                uint64_t *tag64 = (uint64_t *) tag[i];
+                tag64[0] ^= lengths[0];
+                tag64[1] ^= lengths[1];
+
+                shuffle(Q[i]);
+                polyval_16B_sse(Q[i], tag64);
+
+                /* XOR tag with P */
+                shuffle(P[i]);
+                for (int j = 0; j < 16; j++)
+                        tag[i][j] ^= P[i][j];
+
+                memcpy(pMacI[i], tag[i], job->auth_tag_output_len_in_bytes);
+        }
+
+#ifdef SAFE_DATA
+        /* Clear sensitive data (in registers and stack) */
+        clear_mem(H, sizeof(H));
+        clear_mem(Q, sizeof(Q));
+        clear_mem(P, sizeof(P));
+        clear_mem(&state, sizeof(state));
+        clear_mem(&keys, sizeof(keys));
+#endif
+}
+
+void
+zuc_nia6_4_buffer_job_no_gfni_sse(const void *const pKey[NUM_SSE_BUFS], const uint8_t *pIv,
+                                  const void *const pBufferIn[NUM_SSE_BUFS],
+                                  void *pMacI[NUM_SSE_BUFS],
+                                  const uint16_t lengthInBytes[NUM_SSE_BUFS],
+                                  const void *const job_in_lane[NUM_SSE_BUFS])
+{
+        _zuc_nia6_4_buffer_job(pKey, pIv, pBufferIn, pMacI, lengthInBytes, job_in_lane, 0);
+}
+
+void
+zuc_nia6_4_buffer_job_gfni_sse(const void *const pKey[NUM_SSE_BUFS], const uint8_t *pIv,
+                               const void *const pBufferIn[NUM_SSE_BUFS], void *pMacI[NUM_SSE_BUFS],
+                               const uint16_t lengthInBytes[NUM_SSE_BUFS],
+                               const void *const job_in_lane[NUM_SSE_BUFS])
+{
+        _zuc_nia6_4_buffer_job(pKey, pIv, pBufferIn, pMacI, lengthInBytes, job_in_lane, 1);
 }

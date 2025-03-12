@@ -31,6 +31,10 @@
 %define SUBMIT_JOB_ZUC128_EIA3 submit_job_zuc_eia3_gfni_sse
 %define FLUSH_JOB_ZUC128_EIA3 flush_job_zuc_eia3_gfni_sse
 %define ZUC_EIA3_4_BUFFER zuc_eia3_4_buffer_job_gfni_sse
+%define SUBMIT_JOB_ZUC_NIA6 submit_job_zuc_nia6_gfni_sse
+%define FLUSH_JOB_ZUC_NIA6 flush_job_zuc_nia6_gfni_sse
+%define ZUC_EIA3_4_BUFFER zuc_eia3_4_buffer_job_gfni_sse
+%define ZUC_NIA6_4_BUFFER zuc_nia6_4_buffer_job_gfni_sse
 %define ZUC128_INIT_4 asm_ZucInitialization_4_gfni_sse
 %define ZUCNEA6_INIT_4 asm_ZucNEA6Initialization_4_gfni_sse
 %define ZUC_CIPHER_4      asm_ZucCipher_4_gfni_sse

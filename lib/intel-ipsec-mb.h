@@ -357,6 +357,7 @@ typedef enum {
         IMB_AUTH_SHAKE256,               /**< SHAKE256 */
         IMB_AUTH_AES_NIA5,               /**< AES256-NIA5 */
         IMB_AUTH_AES_NCA5,               /**< AES256-NCA5 */
+        IMB_AUTH_ZUC_NIA6,               /**< ZUC256-NIA6 */
         IMB_AUTH_NUM
 } IMB_HASH_ALG;
 
