@@ -316,6 +316,11 @@ IMB_JOB *
 flush_job_zuc_nea6_no_gfni_sse(MB_MGR_ZUC_OOO *state);
 
 IMB_JOB *
+submit_job_zuc_nia6_no_gfni_sse(MB_MGR_ZUC_OOO *state, IMB_JOB *job);
+IMB_JOB *
+flush_job_zuc_nia6_no_gfni_sse(MB_MGR_ZUC_OOO *state);
+
+IMB_JOB *
 submit_job_zuc_eia3_no_gfni_sse(MB_MGR_ZUC_OOO *state, IMB_JOB *job);
 IMB_JOB *
 flush_job_zuc_eia3_no_gfni_sse(MB_MGR_ZUC_OOO *state);

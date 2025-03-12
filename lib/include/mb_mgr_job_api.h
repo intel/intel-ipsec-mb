@@ -2620,6 +2620,7 @@ SUBMIT_JOB_HASH_EX(IMB_MGR *state, IMB_JOB *job, const IMB_HASH_ALG hash_alg)
         MB_MGR_CMAC_OOO *aes_cmac_ooo = state->aes_cmac_ooo;
         MB_MGR_CMAC_OOO *aes256_cmac_ooo = state->aes256_cmac_ooo;
         MB_MGR_ZUC_OOO *zuc_eia3_ooo = state->zuc_eia3_ooo;
+        MB_MGR_ZUC_OOO *zuc_nia6_ooo = state->zuc_nia6_ooo;
         MB_MGR_SHA_1_OOO *sha_1_ooo = state->sha_1_ooo;
         MB_MGR_SHA_256_OOO *sha_224_ooo = state->sha_224_ooo;
         MB_MGR_SHA_256_OOO *sha_256_ooo = state->sha_256_ooo;
@@ -2678,6 +2679,8 @@ SUBMIT_JOB_HASH_EX(IMB_MGR *state, IMB_JOB *job, const IMB_HASH_ALG hash_alg)
                 return SUBMIT_JOB_SHA512(sha_512_ooo, job);
         case IMB_AUTH_ZUC_EIA3_BITLEN:
                 return SUBMIT_JOB_ZUC_EIA3(zuc_eia3_ooo, job);
+        case IMB_AUTH_ZUC_NIA6:
+                return SUBMIT_JOB_ZUC_NIA6(zuc_nia6_ooo, job);
         case IMB_AUTH_SNOW3G_UIA2_BITLEN:
 #if (defined(SAFE_LOOKUP) || defined(AVX512))
                 return SUBMIT_JOB_SNOW3G_UIA2(snow3g_uia2_ooo, job);
@@ -2802,6 +2805,7 @@ FLUSH_JOB_HASH_EX(IMB_MGR *state, IMB_JOB *job, const IMB_HASH_ALG hash_alg)
         MB_MGR_CMAC_OOO *aes_cmac_ooo = state->aes_cmac_ooo;
         MB_MGR_CMAC_OOO *aes256_cmac_ooo = state->aes256_cmac_ooo;
         MB_MGR_ZUC_OOO *zuc_eia3_ooo = state->zuc_eia3_ooo;
+        MB_MGR_ZUC_OOO *zuc_nia6_ooo = state->zuc_nia6_ooo;
         MB_MGR_SHA_1_OOO *sha_1_ooo = state->sha_1_ooo;
         MB_MGR_SHA_256_OOO *sha_224_ooo = state->sha_224_ooo;
         MB_MGR_SHA_256_OOO *sha_256_ooo = state->sha_256_ooo;
@@ -2851,6 +2855,8 @@ FLUSH_JOB_HASH_EX(IMB_MGR *state, IMB_JOB *job, const IMB_HASH_ALG hash_alg)
                 return FLUSH_JOB_AES256_CMAC_AUTH(aes256_cmac_ooo);
         case IMB_AUTH_ZUC_EIA3_BITLEN:
                 return FLUSH_JOB_ZUC_EIA3(zuc_eia3_ooo);
+        case IMB_AUTH_ZUC_NIA6:
+                return FLUSH_JOB_ZUC_NIA6(zuc_nia6_ooo);
 #if (defined(SAFE_LOOKUP) || defined(AVX512))
         case IMB_AUTH_SNOW3G_UIA2_BITLEN:
                 return FLUSH_JOB_SNOW3G_UIA2(snow3g_uia2_ooo);
@@ -3199,6 +3205,12 @@ submit_hash_aes_nca5(IMB_MGR *state, IMB_JOB *job)
         return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_AES_NCA5);
 }
 
+static IMB_JOB *
+submit_hash_zuc_nia6(IMB_MGR *state, IMB_JOB *job)
+{
+        return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_ZUC_NIA6);
+}
+
 static const submit_flush_fn_t tab_submit_hash[] = {
         /* [0] invalid entry */
         NULL,
@@ -3312,6 +3324,8 @@ static const submit_flush_fn_t tab_submit_hash[] = {
         submit_hash_aes_nia5,
         /* [55] AES-NCA5 */
         submit_hash_aes_nca5,
+        /* [52] ZUC-NIA6 */
+        submit_hash_zuc_nia6,
         /* add new hash algorithms here */
 };
 
@@ -3649,6 +3663,12 @@ flush_hash_aes_nca5(IMB_MGR *state, IMB_JOB *job)
         return FLUSH_JOB_HASH_EX(state, job, IMB_AUTH_AES_NCA5);
 }
 
+static IMB_JOB *
+flush_hash_zuc_nia6(IMB_MGR *state, IMB_JOB *job)
+{
+        return FLUSH_JOB_HASH_EX(state, job, IMB_AUTH_ZUC_NIA6);
+}
+
 static const submit_flush_fn_t tab_flush_hash[] = {
         /* [0] invalid entry */
         NULL,
@@ -3762,6 +3782,8 @@ static const submit_flush_fn_t tab_flush_hash[] = {
         flush_hash_aes_nia5,
         /* [55] AES-NCA5 */
         flush_hash_aes_nca5,
+        /* [52] ZUC-NIA6 */
+        flush_hash_zuc_nia6,
         /* add new hash algorithms here */
 };
 
