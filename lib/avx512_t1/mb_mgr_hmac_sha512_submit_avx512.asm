@@ -331,38 +331,48 @@ end_loop:
         jmp     clear_ret
 
 copy_full_digest:
-	;; copy 64 bytes for SHA512 / 48 bytes for SHA384
-	mov	QWORD(tmp),  [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 0*SHA512_DIGEST_ROW_SIZE]
-	mov	QWORD(tmp2), [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 1*SHA512_DIGEST_ROW_SIZE]
-	mov	QWORD(tmp3), [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 2*SHA512_DIGEST_ROW_SIZE]
-	mov	QWORD(tmp4), [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 3*SHA512_DIGEST_ROW_SIZE]
-	bswap	QWORD(tmp)
-	bswap	QWORD(tmp2)
-	bswap	QWORD(tmp3)
-	bswap	QWORD(tmp4)
-	mov	[p + 0*8], QWORD(tmp)
-	mov	[p + 1*8], QWORD(tmp2)
-	mov	[p + 2*8], QWORD(tmp3)
-	mov	[p + 3*8], QWORD(tmp4)
+	cmp 	qword [job_rax + _auth_tag_output_len_in_bytes], 64
+	je 	set_full_mask
+%ifndef LINUX
+	mov 	tmp2, rcx ; save rcx
+%endif
+	mov 	rcx, qword [job_rax + _auth_tag_output_len_in_bytes]
 
-	mov	QWORD(tmp),  [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 4*SHA512_DIGEST_ROW_SIZE]
-	mov	QWORD(tmp2), [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 5*SHA512_DIGEST_ROW_SIZE]
-%if (SHA_X_DIGEST_SIZE != 384)
-	mov	QWORD(tmp3), [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 6*SHA512_DIGEST_ROW_SIZE]
-	mov	QWORD(tmp4), [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 7*SHA512_DIGEST_ROW_SIZE]
+        mov 	tmp4, 1
+	shl 	tmp4, cl  ; Calculate the mask for copying bytes
+	dec 	tmp4
+%ifndef LINUX
+	mov 	rcx, tmp2 ; restore rcx
 %endif
-	bswap	QWORD(tmp)
-	bswap	QWORD(tmp2)
+	jmp 	move_mask
+
+set_full_mask:
+	mov 	tmp4, -1
+
+move_mask:
+	kmovq 	k1, tmp4
+
+	;; Load 32 bytes
+	vmovq   xmm0, [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 0*SHA512_DIGEST_ROW_SIZE]
+	vpinsrq xmm0, [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 1*SHA512_DIGEST_ROW_SIZE], 1
+
+	vmovq   xmm1, [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 2*SHA512_DIGEST_ROW_SIZE]
+	vpinsrq xmm1, [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 3*SHA512_DIGEST_ROW_SIZE], 1
+	vinserti128 ymm0, xmm1, 1
+
+	;; Load next 32 bytes
+	vmovq   xmm2, [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 4*SHA512_DIGEST_ROW_SIZE]
+	vpinsrq xmm2, [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 5*SHA512_DIGEST_ROW_SIZE], 1
 %if (SHA_X_DIGEST_SIZE != 384)
-	bswap	QWORD(tmp3)
-	bswap	QWORD(tmp4)
+	vmovq   xmm3, [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 6*SHA512_DIGEST_ROW_SIZE]
+	vpinsrq xmm3, [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 7*SHA512_DIGEST_ROW_SIZE], 1
+	vinserti128 ymm2, xmm3, 1
 %endif
-	mov	[p + 4*8], QWORD(tmp)
-	mov	[p + 5*8], QWORD(tmp2)
-%if (SHA_X_DIGEST_SIZE != 384)
-	mov	[p + 6*8], QWORD(tmp3)
-	mov	[p + 7*8], QWORD(tmp4)
-%endif
+
+	vinserti64x4 zmm0, zmm0, ymm2, 1
+	vbroadcasti64x2 zmm3, [rel byteswap]
+	vpshufb zmm0, zmm0, zmm3
+	vmovdqu8 [p + 0*4]{k1}, zmm0 ; Store bytes
 
 clear_ret:
 
