@@ -59,6 +59,8 @@
 #define ineI 0x49656e69
 #define ntel 0x6c65746e
 
+int prov_sw_offload = 0;
+
 int
 prov_sw_cpu_support(void)
 {

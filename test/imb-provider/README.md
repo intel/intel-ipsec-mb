@@ -18,14 +18,14 @@ To build the project, follow these steps:
 
 2. Run CMake to configure the project:
     ```sh
-    cmake -DWITH_PROV_SW_IPSEC_MB_INSTALL_DIR=/local/ipsec-install/ -DWITH_IPSEC_BUILD_DIR=/ipsec-mb/build/ -DOPENSSL_INSTALL_DIR=/custom/openssl/ ..
+    cmake -DWITH_IPSEC_INSTALL_DIR=/local/ipsec-install/ -DWITH_IPSEC_BUILD_DIR=/ipsec-mb/build/ -DOPENSSL_INSTALL_DIR=/custom/openssl/ ..
     ```
 
     ### CMake Options
 
-    - `-DWITH_PROV_SW_IPSEC_MB_INSTALL_DIR`: Specifies the directory where IPSecMB is installed.
+    - `-DWITH_IPSEC_INSTALL_DIR`: Specifies the directory where IPSecMB is installed.
     - `-DWITH_IPSEC_BUILD_DIR`: Specifies the directory where IPSecMB is built.
-    - `-DOPENSSL_INSTALL_DIR`: Specifies the installation directory of a custom OpenSSL. imb-provider will be installed into system OpenSSL without this option.
+    - `-DOPENSSL_INSTALL_DIR`: Specifies the installation directory of a custom OpenSSL. Without this option, the provider will be built where CMake and make are executed.
 
     These options configure the paths for the necessary dependencies and installation directories.
     ```
@@ -39,7 +39,13 @@ To build the project, follow these steps:
 
 ## Usage
 
-Install imb-provider.so for OpenSSL and test with OpenSSL speed:
+Test `imb-provider.so` with system OpenSSL:
+```sh
+openssl speed -provider-path ipsec-mb/test/imb-provider/build -provider imb-provider -elapsed --bytes 16384 -evp aes-256-gcm
+```
+
+Test `imb-provider.so` with a custom OpenSSL. With the `-DOPENSSL_INSTALL_DIR` option, the `imb-provider.so` is installed into the custom OpenSSL directory specified.
+
 ```sh
 /custom/openssl/bin/openssl speed -provider imb-provider -elapsed --bytes 16384 -evp aes-256-gcm
 ```
