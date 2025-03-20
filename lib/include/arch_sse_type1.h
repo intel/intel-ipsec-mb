@@ -193,6 +193,8 @@ call_sha512_x2_sse_from_c(SHA512_ARGS *args, uint64_t size_in_blocks);
 void
 sha1_block_sse(const void *, void *);
 void
+sha1_update_sse(const void *, void *, uint64_t);
+void
 sha224_block_sse(const void *, void *);
 void
 sha256_block_sse(const void *, void *);

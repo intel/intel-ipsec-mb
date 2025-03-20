@@ -29,11 +29,13 @@
 %ifdef LINUX
 %define INP	rdi ; 1st arg
 %define CTX     rsi ; 2nd arg
+%define ARG3 	rdx ; 3rd arg
 %define REG3	edx
 %define REG4	ecx
 %else
 %define INP	rcx ; 1st arg
 %define CTX     rdx ; 2nd arg
+%define ARG3 	r8  ; 3rd arg
 %define REG3	edi
 %define REG4	esi
 %endif
@@ -56,45 +58,7 @@ endstruc
 %define SHUF_MASK	xmm14
 %define E_MASK		xmm15
 
-mksection .rodata
-default rel
-align 64
-PSHUFFLE_BYTE_FLIP_MASK: ;ddq 0x000102030405060708090a0b0c0d0e0f
-	dq 0x08090a0b0c0d0e0f, 0x0001020304050607
-UPPER_WORD_MASK:         ;ddq 0xFFFFFFFF000000000000000000000000
-	dq 0x0000000000000000, 0xFFFFFFFF00000000
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; void sha1_ni_block_sse(void *input_data, UINT32 digest[5])
-;; arg 1 : (in) pointer to one block of data
-;; arg 2 : (in/out) pointer to read/write digest
-
-mksection .text
-MKGLOBAL(sha1_ni_block_sse,function,internal)
-align 32
-sha1_ni_block_sse:
-	sub		rsp, frame_size
-
-%ifndef LINUX
-	movdqa		[rsp + frame.XMM_SAVE], xmm6
-	movdqa		[rsp + frame.XMM_SAVE + 16], xmm14
-	movdqa		[rsp + frame.XMM_SAVE + 16*2], xmm15
-%endif
-
-	;; load initial digest
-        movdqu          ABCD, [CTX]
-        pxor            E0, E0
-        pinsrd          E0, [CTX + 16], 3
-	pshufd		ABCD, ABCD, 0x1B
-
-	movdqa		SHUF_MASK, [rel PSHUFFLE_BYTE_FLIP_MASK]
-	movdqa		E_MASK, [rel UPPER_WORD_MASK]
-
-	;; Copy digests
-	movdqa		[rsp + frame.ABCD_SAVE], ABCD
-	movdqa		[rsp + frame.E_SAVE],    E0
-
+%macro one_block_ni 0
 	;; Only needed if not using sha1nexte for rounds 0-3
 	pand		E0,   E_MASK
 
@@ -262,6 +226,48 @@ sha1_ni_block_sse:
 
 	paddd		ABCD, [rsp + frame.ABCD_SAVE]
 	paddd		E0,   [rsp + frame.E_SAVE]
+%endmacro
+
+mksection .rodata
+default rel
+align 64
+PSHUFFLE_BYTE_FLIP_MASK: ;ddq 0x000102030405060708090a0b0c0d0e0f
+	dq 0x08090a0b0c0d0e0f, 0x0001020304050607
+UPPER_WORD_MASK:         ;ddq 0xFFFFFFFF000000000000000000000000
+	dq 0x0000000000000000, 0xFFFFFFFF00000000
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; void sha1_ni_block_sse(void *input_data, UINT32 digest[5])
+;; arg 1 : (in) pointer to one block of data
+;; arg 2 : (in/out) pointer to read/write digest
+
+mksection .text
+MKGLOBAL(sha1_ni_block_sse,function,internal)
+align 32
+sha1_ni_block_sse:
+	sub		rsp, frame_size
+
+%ifndef LINUX
+	movdqa		[rsp + frame.XMM_SAVE], xmm6
+	movdqa		[rsp + frame.XMM_SAVE + 16], xmm14
+	movdqa		[rsp + frame.XMM_SAVE + 16*2], xmm15
+%endif
+
+	;; load initial digest
+        movdqu          ABCD, [CTX]
+        pxor            E0, E0
+        pinsrd          E0, [CTX + 16], 3
+	pshufd		ABCD, ABCD, 0x1B
+
+	movdqa		SHUF_MASK, [rel PSHUFFLE_BYTE_FLIP_MASK]
+	movdqa		E_MASK, [rel UPPER_WORD_MASK]
+
+	;; Copy digests
+	movdqa		[rsp + frame.ABCD_SAVE], ABCD
+	movdqa		[rsp + frame.E_SAVE],    E0
+
+	one_block_ni
 
 	;; write out digests
 	pshufd		ABCD, ABCD, 0x1B
@@ -277,6 +283,69 @@ sha1_ni_block_sse:
 
         movdqa   [rsp + frame.ABCD_SAVE], MSG0
         movdqa   [rsp + frame.E_SAVE], MSG0
+%endif
+
+%ifndef LINUX
+	movdqa		xmm6, [rsp + frame.XMM_SAVE]
+	movdqa		xmm14, [rsp + frame.XMM_SAVE + 16]
+	movdqa		xmm15, [rsp + frame.XMM_SAVE + 16*2]
+%endif
+	add		rsp, frame_size
+
+	ret
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; void sha1_ni_update_sse(void *input_data, UINT32 digest[5], UINT64 num_blocks)
+;; arg 1 : (in) pointer to data
+;; arg 2 : (in/out) pointer to read/write digest
+;; arg 3 : (in) number of blocks to process
+
+mksection .text
+MKGLOBAL(sha1_ni_update_sse,function,internal)
+align 32
+sha1_ni_update_sse:
+	sub		rsp, frame_size
+
+%ifndef LINUX
+	movdqa		[rsp + frame.XMM_SAVE], xmm6
+	movdqa		[rsp + frame.XMM_SAVE + 16], xmm14
+	movdqa		[rsp + frame.XMM_SAVE + 16*2], xmm15
+%endif
+
+	;; load initial digest
+        movdqu          ABCD, [CTX]
+        pxor            E0, E0
+        pinsrd          E0, [CTX + 16], 3
+	pshufd		ABCD, ABCD, 0x1B
+
+	movdqa		SHUF_MASK, [rel PSHUFFLE_BYTE_FLIP_MASK]
+	movdqa		E_MASK, [rel UPPER_WORD_MASK]
+
+	;; Copy digests
+	movdqa		[rsp + frame.ABCD_SAVE], ABCD
+	movdqa		[rsp + frame.E_SAVE],    E0
+
+align 32
+process_block:
+	one_block_ni
+
+	add 		INP, 64
+	dec 		ARG3
+	cmp 		ARG3, 0
+	ja 		process_block
+
+	;; write out digests
+	pshufd		ABCD, ABCD, 0x1B
+        movdqu          [CTX], ABCD
+        pextrd          [CTX + 16], E0, 3
+
+        ;; Clear regs holding message
+%ifdef SAFE_DATA
+        pxor    MSG0, MSG0
+        pxor    MSG1, MSG1
+        pxor    MSG2, MSG2
+        pxor    MSG3, MSG3
 %endif
 
 %ifndef LINUX

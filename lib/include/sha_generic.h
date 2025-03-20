@@ -156,6 +156,19 @@ sha_generic_one_block(const void *inp, void *digest, const enum arch_type arch, 
 }
 
 __forceinline void
+sha_generic_update(const void *inp, void *digest, const enum arch_type arch, const int sha_type,
+                   const uint64_t num_blocks)
+{
+        if (sha_type == 1) {
+                IMB_ASSERT(arch != ARCH_AVX2_SHANI);
+                if (arch == ARCH_AVX || arch == ARCH_SSE)
+                        sha1_update_sse(inp, digest, num_blocks);
+                else /* arch == ARCH_SSE_SHANI */
+                        sha1_ni_update_sse(inp, digest, num_blocks);
+        }
+}
+
+__forceinline void
 sha1_init_digest(void *p)
 {
         uint32_t *p_digest = (uint32_t *) p;
@@ -284,9 +297,17 @@ sha_generic(const void *data, const uint64_t length, void *digest, const enum ar
 
         sha_generic_init(ld, sha_type);
 
-        for (idx = 0; (idx + blk_size) <= length; idx += blk_size)
-                sha_generic_one_block(&inp[idx], ld, arch, sha_type);
+        if (sha_type == 1) {
+                const uint64_t num_blocks = length / blk_size;
+                idx = num_blocks * blk_size;
 
+                if (num_blocks > 0)
+                        sha_generic_update(inp, ld, arch, sha_type, num_blocks);
+
+        } else {
+                for (idx = 0; (idx + blk_size) <= length; idx += blk_size)
+                        sha_generic_one_block(&inp[idx], ld, arch, sha_type);
+        }
         r = length % blk_size;
 
         memset(cb, 0, sizeof(cb));

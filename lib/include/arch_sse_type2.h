@@ -44,6 +44,8 @@ call_sha256_ni_x2_sse_from_c(SHA256_ARGS *args, uint32_t size_in_blocks);
 void
 sha1_ni_block_sse(const void *, void *);
 void
+sha1_ni_update_sse(const void *, void *, uint64_t);
+void
 sha256_ni_block_sse(const void *, void *);
 
 IMB_DLL_EXPORT void

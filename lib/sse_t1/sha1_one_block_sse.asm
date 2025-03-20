@@ -51,11 +51,13 @@ mksection .text
 %ifdef LINUX
 %define INP	rdi ; 1st arg
 %define CTX     rsi ; 2nd arg
+%define ARG3 	rdx ; 3rd arg
 %define REG3	edx
 %define REG4	ecx
 %else
 %define INP	rcx ; 1st arg
 %define CTX     rdx ; 2nd arg
+%define ARG3 	r8  ; 3rd arg
 %define REG3	edi
 %define REG4	esi
 %endif
@@ -109,7 +111,7 @@ mksection .text
 %xdefine c b
 %xdefine b a
 %xdefine a TMP_
-%endm
+%endmacro
 
 ;; Magic functions defined in FIPS 180-1
 ;;
@@ -251,32 +253,7 @@ ROTATE_ARGS
 ROTATE_ARGS
 %endmacro
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; void sha1_block_sse(void *input_data, UINT32 digest[5])
-;; arg 1 : (in) pointer to one block of data
-;; arg 2 : (in/out) pointer to read/write digest
-MKGLOBAL(sha1_block_sse,function,internal)
-align 32
-sha1_block_sse:
-	push	rbx
-	push	rsi
-	push	rdi
-	push	r12
-	push	r13
-
-	movdqa	XTMP0, [rel PSHUFFLE_BYTE_FLIP_MASK]
-
-%ifndef LINUX
-	mov	rax, rsp		; copy rsp
-	sub	rsp, FRAMESZ
-	and	rsp, -16		; align stack frame
-	mov	[_RSP],rax		; save copy of rsp
-	movdqa	[rsp + 0 * 16], xmm6
-	movdqa	[rsp + 1 * 16], xmm7
-	movdqa	[rsp + 2 * 16], xmm8
-
-%endif
+%macro one_block 0
 	MOVDQ	X0, [INP + 0*16]
 	MOVDQ	X1, [INP + 1*16]
 
@@ -284,17 +261,11 @@ sha1_block_sse:
 	MOVDQ	X2, [INP + 2*16]
 	MOVDQ	X3, [INP + 3*16]
 
-        ;; set up a-f based on h0-h4
 	;; byte swap first 16 dwords
-	mov	a, [SZ*0 + CTX]
 	pshufb	X0, XTMP0
-	mov	b, [SZ*1 + CTX]
 	pshufb	X1, XTMP0
-	mov	c, [SZ*2 + CTX]
 	pshufb	X2, XTMP0
-	mov	d, [SZ*3 + CTX]
 	pshufb	X3, XTMP0
-	mov	e, [SZ*4 + CTX]
 
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 	;; do rounds 00-19
@@ -309,13 +280,13 @@ sha1_block_sse:
 	rotate_Xs
 	rotate_Xs
 	rotate_Xs
-	jmp	loop1_5
+	jmp	.loop1_5
 align 16
-loop1:
+.loop1:
 
 	do_4i	MAGIC_F0
 
-loop1_5:
+.loop1_5:
 	do_4i	MAGIC_F0
 
 	rotate_Xs
@@ -328,7 +299,7 @@ loop1_5:
 	movdqa	X1, X3
 
 	sub	RND, 1
-	jne	loop1
+	jne	.loop1
 
 	rotate_Xs
 	rotate_Xs
@@ -352,13 +323,13 @@ loop1_5:
 	rotate_Xs
 	rotate_Xs
 	rotate_Xs
-	jmp	loop2_5
+	jmp	.loop2_5
 align 16
-loop2:
+.loop2:
 
 	do_4i	MAGIC_F1
 
-loop2_5:
+.loop2_5:
 	do_4i	MAGIC_F1
 
 	rotate_Xs
@@ -371,7 +342,7 @@ loop2_5:
 	movdqa	X1, X3
 
 	sub	RND, 1
-	jne	loop2
+	jne	.loop2
 
 	rotate_Xs
 	rotate_Xs
@@ -395,13 +366,13 @@ loop2_5:
 	rotate_Xs
 	rotate_Xs
 	rotate_Xs
-	jmp	loop3_5
+	jmp	.loop3_5
 align 16
-loop3:
+.loop3:
 
 	do_4i	MAGIC_F2
 
-loop3_5:
+.loop3_5:
 	do_4i	MAGIC_F2
 
 	rotate_Xs
@@ -414,7 +385,7 @@ loop3_5:
 	movdqa	X1, X3
 
 	sub	RND, 1
-	jne	loop3
+	jne	.loop3
 
 	rotate_Xs
 	rotate_Xs
@@ -475,6 +446,43 @@ loop3_5:
 	ROUND MAGIC_F3
 	pextrd	T1, XFER, 3
 	ROUND MAGIC_F3
+%endmacro
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; void sha1_block_sse(void *input_data, UINT32 digest[5])
+;; arg 1 : (in) pointer to one block of data
+;; arg 2 : (in/out) pointer to read/write digest
+MKGLOBAL(sha1_block_sse,function,internal)
+align 32
+sha1_block_sse:
+	push	rbx
+	push	rsi
+	push	rdi
+	push	r12
+	push	r13
+
+	movdqa	XTMP0, [rel PSHUFFLE_BYTE_FLIP_MASK]
+
+%ifndef LINUX
+	mov	rax, rsp		; copy rsp
+	sub	rsp, FRAMESZ
+	and	rsp, -16		; align stack frame
+	mov	[_RSP],rax		; save copy of rsp
+	movdqa	[rsp + 0 * 16], xmm6
+	movdqa	[rsp + 1 * 16], xmm7
+	movdqa	[rsp + 2 * 16], xmm8
+
+%endif
+
+        ;; set up a-f based on h0-h4
+	mov	a, [SZ*0 + CTX]
+	mov	b, [SZ*1 + CTX]
+	mov	c, [SZ*2 + CTX]
+	mov	d, [SZ*3 + CTX]
+	mov	e, [SZ*4 + CTX]
+
+	one_block
 
         ;; update result digest h0-h4
 	add	[SZ*0 + CTX], a
@@ -504,6 +512,86 @@ loop3_5:
 %endif
 %endif ;; LINUX
 
+	pop	r13
+	pop	r12
+	pop	rdi
+	pop	rsi
+	pop	rbx
+
+	ret
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; void sha1_update_sse(void *input_data, UINT32 digest[5], UINT64 num_blocks)
+;; arg 1 : (in) pointer to data
+;; arg 2 : (in/out) pointer to read/write digest
+;; arg 3 : (in) number of blocks to process
+MKGLOBAL(sha1_update_sse,function,internal)
+align 32
+sha1_update_sse:
+	push	rbx
+	push	rsi
+	push	rdi
+	push	r12
+	push	r13
+	push   	r14
+
+	movdqa	XTMP0, [rel PSHUFFLE_BYTE_FLIP_MASK]
+
+%ifndef LINUX
+	mov	rax, rsp		; copy rsp
+	sub	rsp, FRAMESZ
+	and	rsp, -16		; align stack frame
+	mov	[_RSP],rax		; save copy of rsp
+	movdqa	[rsp + 0 * 16], xmm6
+	movdqa	[rsp + 1 * 16], xmm7
+	movdqa	[rsp + 2 * 16], xmm8
+
+%endif
+
+	mov 	r14, ARG3
+
+        ;; set up a-f based on h0-h4
+	mov	a, [SZ*0 + CTX]
+	mov	b, [SZ*1 + CTX]
+	mov	c, [SZ*2 + CTX]
+	mov	d, [SZ*3 + CTX]
+	mov	e, [SZ*4 + CTX]
+
+align 32
+process_block:
+	one_block
+
+	add 	INP, 64
+	dec 	r14
+	cmp 	r14, 0
+	ja 	process_block
+
+        ;; update result digest h0-h4
+	add	[SZ*0 + CTX], a
+	add	[SZ*1 + CTX], b
+	add	[SZ*2 + CTX], c
+	add	[SZ*3 + CTX], d
+	add	[SZ*4 + CTX], e
+
+%ifndef LINUX
+	movdqa	xmm8, [rsp + 2 * 16]
+	movdqa	xmm7, [rsp + 1 * 16]
+	movdqa	xmm6, [rsp + 0 * 16]
+
+%ifdef SAFE_DATA
+        ;; Clear potential sensitive data stored in xmms
+        clear_xmms_sse xmm0, xmm1, xmm2, xmm3, xmm4, xmm5
+%endif
+
+	mov	rsp, [_RSP]
+%else ;; LINUX
+%ifdef SAFE_DATA
+	clear_all_xmms_sse_asm
+%endif
+%endif ;; LINUX
+
+	pop 	r14
 	pop	r13
 	pop	r12
 	pop	rdi
