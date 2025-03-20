@@ -173,6 +173,56 @@ end2:
 }
 
 static int
+test_sha_sb(struct IMB_MGR *mb_mgr, const struct mac_test *vec, const int num_jobs,
+            const int sha_type)
+{
+        uint8_t padding[16];
+        uint8_t *auths;
+        int i = 0, ret = -1;
+        const size_t sizeof_padding = sizeof(padding);
+
+        memset(padding, -1, sizeof_padding);
+
+        const size_t alloc_len = vec->tagSize / 8 + (sizeof_padding * 2);
+
+        auths = malloc(alloc_len);
+        if (auths == NULL) {
+                fprintf(stderr, "Can't allocate buffer memory\n");
+                goto end;
+        }
+        memset(auths, -1, alloc_len);
+
+        for (i = 0; i < num_jobs; i++) {
+                switch (sha_type) {
+                case 1:
+                default:
+                        IMB_SHA1(mb_mgr, vec->msg, vec->msgSize / 8, auths + sizeof_padding);
+                        if (memcmp(auths + sizeof_padding, vec->tag, vec->tagSize / 8) != 0) {
+                                fprintf(stderr, "hash mismatched\n");
+                                goto end;
+                        }
+                        if (memcmp(padding, auths, sizeof_padding)) {
+                                fprintf(stderr, "hash overwrite head\n");
+                                goto end;
+                        }
+                        if (memcmp(padding, auths + vec->tagSize / 8 + sizeof_padding,
+                                   sizeof_padding)) {
+                                fprintf(stderr, "hash overwrite tail\n");
+                                goto end;
+                        }
+                }
+        }
+
+        ret = 0;
+
+end:
+        if (auths != NULL)
+                free(auths);
+
+        return ret;
+}
+
+static int
 test_sha_hash_burst(struct IMB_MGR *mb_mgr, const struct mac_test *vec, const int num_jobs,
                     const int sha_type)
 {
@@ -337,6 +387,14 @@ test_sha_vectors(struct IMB_MGR *mb_mgr, struct test_suite_context *sha1_ctx,
                         test_suite_update(ctx, 0, 1);
                 } else {
                         test_suite_update(ctx, 1, 0);
+                }
+                if (sha_type == 1) {
+                        if (test_sha_sb(mb_mgr, v, num_jobs, sha_type)) {
+                                printf("error #%zu\n", v->tcId);
+                                test_suite_update(ctx, 0, 1);
+                        } else {
+                                test_suite_update(ctx, 1, 0);
+                        }
                 }
                 if (test_sha_hash_burst(mb_mgr, v, num_jobs, sha_type)) {
                         printf("error #%zu\n", v->tcId);
