@@ -1550,11 +1550,12 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job, const IMB_CIPHER_MODE cipher_
                 }
                 break;
         case IMB_AUTH_AES_NIA5:
-                if (job->src == NULL && job->msg_len_to_hash_in_bytes != 0) {
+                if (job->src == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_SRC);
                         return 1;
                 }
-                if (job->msg_len_to_hash_in_bytes > NIA_MAX_BYTELEN) {
+                if (job->msg_len_to_hash_in_bytes == 0 ||
+                    job->msg_len_to_hash_in_bytes > NIA_MAX_BYTELEN) {
                         imb_set_errno(state, IMB_ERR_JOB_AUTH_LEN);
                         return 1;
                 }

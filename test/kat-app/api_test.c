@@ -1401,6 +1401,7 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
                                          */
                                 case IMB_AUTH_HMAC_SM3:
                                 case IMB_AUTH_KASUMI_UIA1:
+                                case IMB_AUTH_AES_NIA5:
                                         fill_in_job(&template_job, cipher, dir, hash, order,
                                                     &chacha_ctx, &gcm_ctx);
                                         template_job.msg_len_to_hash_in_bytes = 0;
