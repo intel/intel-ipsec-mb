@@ -27,123 +27,104 @@
 ;  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-%define GCM128_MODE 1 ; Need to define GCM128_MODE just for gcm_sse.inc
+%define GCM128_MODE 1 ; Need to define GCM128_MODE just for gcm_vaes_avx512.inc
 
-%include "include/gcm_sse.inc"
-%include "include/align_sse.inc"
+%include "include/gcm_vaes_avx512.inc"
 
 section .text
 default rel
 
-MKGLOBAL(polyval_pre_sse,function,)
-align_function
-polyval_pre_sse:
+align 32
+MKGLOBAL(polyval_pre_vclmul_avx512,function,)
+polyval_pre_vclmul_avx512:
         endbranch64
-
-%ifidn __OUTPUT_FORMAT__, win64
-        sub     rsp, 1*16
-        ; only xmm6 needs to be maintained
-        movdqu  [rsp + 0*16], xmm6
-%endif
+        FUNC_SAVE small_frame
 
         ;;;   From Appendix A of RFC 8452
         ;;;   POLYVAL(H, X_1, ..., X_n) =
         ;;;   ByteReverse(GHASH(mulX_GHASH(ByteReverse(H)), ByteReverse(X_1), ...,
         ;;;   ByteReverse(X_n)))
 
-        movdqu  xmm6, [arg1]
+        vmovdqu xmm6, [arg1]
         ;; To compute polyval hash keys, first calculate internal key H' (mulX_GHASH(ByteReverse(H)))
-        movdqa  xmm2, xmm6
-        psrlq   xmm6, 1
-        psllq   xmm2, 63
-        movdqa  xmm1, xmm2
-        psrldq  xmm2, 8
-        pslldq  xmm1, 8
-        por     xmm6, xmm2
+        vmovdqa  xmm2, xmm6
+        vpsrlq   xmm6, xmm6, 1
+        vpsllq   xmm2, xmm2, 63
+        vmovdqa  xmm1, xmm2
+        vpsrldq  xmm2, xmm2, 8
+        vpslldq  xmm1, xmm1, 8
+        vpor     xmm6, xmm6, xmm2
         ;reduction
-        pshufd  xmm2, xmm1, 11100111b
-        pcmpeqd xmm2, [rel MSB_POLYVAL]
-        pand    xmm2, [rel POLY_POLYVAL]
-        pxor    xmm6, xmm2                       ; xmm6 holds the HashKey<<1 mod poly
+        vpshufd  xmm2, xmm1, 11100111b
+        vpcmpeqd xmm2, [rel MSB_POLYVAL]
+        vpand    xmm2, xmm2, [rel POLY_POLYVAL]
+        vpxor    xmm6, xmm6, xmm2                       ; xmm6 holds the HashKey<<1 mod poly
 
         ;;;;;;;;;;;;;;;  PRECOMPUTATION of HashKey<<1 mod poly from the HashKey;;;;;;;;;;;;;;;
-        movdqa  xmm2, xmm6
-        psllq   xmm6, 1
-        psrlq   xmm2, 63
-        movdqa  xmm1, xmm2
-        pslldq  xmm2, 8
-        psrldq  xmm1, 8
-        por     xmm6, xmm2
+        vmovdqa  xmm2, xmm6
+        vpsllq   xmm6, xmm6, 1
+        vpsrlq   xmm2, xmm2, 63
+        vmovdqa  xmm1, xmm2
+        vpslldq  xmm2, xmm2, 8
+        vpsrldq  xmm1, xmm1, 8
+        vpor     xmm6, xmm6, xmm2
         ;reduction
-        pshufd  xmm2, xmm1, 00100100b
-        pcmpeqd xmm2, [rel TWOONE]
-        pand    xmm2, [rel POLY]
-        pxor    xmm6, xmm2                       ; xmm6 holds the HashKey<<1 mod poly
+        vpshufd  xmm2, xmm1, 00100100b
+        vpcmpeqd xmm2, [rel TWOONE]
+        vpand    xmm2, xmm2, [rel POLY]
+        vpxor    xmm6, xmm6, xmm2                       ; xmm6 holds the HashKey<<1 mod poly
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        movdqu  [arg2 + HashKey], xmm6                 ; store HashKey<<1 mod poly
+        vmovdqu  [arg2 + HashKey_1], xmm6                 ; store HashKey<<1 mod poly
 
-        PRECOMPUTE arg2, xmm6, xmm0, xmm1, xmm2, xmm3, xmm4, xmm5
-
+        PRECOMPUTE arg2, xmm6, xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm7, xmm8
 %ifdef SAFE_DATA
-        clear_scratch_gps_asm
-        clear_scratch_xmms_sse_asm
+        clear_zmms_avx512 xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8
 %endif
-%ifidn __OUTPUT_FORMAT__, win64
-        movdqu  xmm6, [rsp + 0*16]
-        add     rsp, 1*16
-%endif
+        FUNC_RESTORE
+exit_ghash_pre:
+
         ret
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;void   polyval_16B_sse
+;void   polyval_16B_vclmul_avx512
 ;       (const void   *hash_key,
 ;        void   *in_out)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-MKGLOBAL(polyval_16B_sse,function,)
-align_function
-polyval_16B_sse:
+align 32
+MKGLOBAL(polyval_16B_vclmul_avx512,function,)
+polyval_16B_vclmul_avx512:
         endbranch64
-%ifidn __OUTPUT_FORMAT__, win64
-        sub     rsp, 1*16
-        ; only xmm6 needs to be maintained
-        movdqu  [rsp + 0*16], xmm6
-%endif
 
-        movdqu  xmm0, [arg1]
-        movdqu  xmm1, [arg2]
+        vmovdqu64  xmm0, [arg1]
+        vmovdqu64  xmm1, [arg2]
 
-        GHASH_MUL xmm1, xmm0, xmm2, xmm3, xmm4, xmm5, xmm6
+        GHASH_MUL xmm1, xmm0, xmm2, xmm3, xmm4, xmm5, xmm16
 
-        movdqu  [arg2], xmm1
+        vmovdqu64 [arg2], xmm1
 
-%ifidn __OUTPUT_FORMAT__, win64
-        movdqu  xmm6, [rsp + 0*16]
-        add     rsp, 1*16
-%endif
         ret
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;void   polyval_sse
+;void   polyval_vclmul_avx512
 ;       (const struct gcm_key_data *key_data,
 ;        const void   *in,
 ;        const u64    in_len,
 ;        void         *io_tag)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-MKGLOBAL(polyval_sse,function,)
-align_function
-polyval_sse:
+align 32
+MKGLOBAL(polyval_vclmul_avx512,function,)
+polyval_vclmul_avx512:
         endbranch64
-        FUNC_SAVE
 
         ;; copy tag to xmm0
-        movdqu  xmm0, [arg4]
+        vmovdqu  xmm0, [arg4]
 
-        CALC_AAD_HASH arg2, arg3, xmm0, arg1, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, \
-                      r10, r11, r12, r13, rax, 1
+        CALC_AAD_HASH arg2, arg3, xmm0, arg1, zmm1, zmm2, zmm3, zmm4, zmm5, zmm16, \
+                      zmm17, zmm18, zmm19, zmm20, zmm21, zmm22, zmm23, zmm24, zmm25, \
+                      zmm26, zmm27, zmm28, r10, r11, rax, k1, 1
 
-        movdqu  [arg4], xmm0
+        vmovdqu  [arg4], xmm0
 
-        FUNC_RESTORE
         ret
 

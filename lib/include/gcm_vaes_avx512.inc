@@ -255,16 +255,23 @@
 %define %%ZTMP8 %20     ; [clobbered**] temporary ZMM
 %define %%ZTMP9 %21     ; [clobbered**] temporary ZMM
 %define %%ZTMPA %22     ; [clobbered**] temporary ZMM
-%define %%SHUFM %23     ; [in] ZMM with shuffle mask - provided only when input data needs shuffling
+%define %%SHUFM %23     ; [in] ZMM with shuffle mask - provided only when input data needs shuffling, or "noshuffle", meaning no shuffling to be done
 
 %assign start_ghash 0
 %assign do_reduction 0
 %assign uload_and_shuffle 0
 %assign hk_broadcast 0
 %assign do_hxor 1
+%define VMOVDQ       vmovdqa64
 
 %if %0 == 23
-%assign uload_and_shuffle 1
+        %define VMOVDQ       vmovdqu64
+%ifnidn %%SHUFM, noshuffle
+        %assign uload_and_shuffle 1
+%else
+        ; if SHUFM is 0, maintain "uload_and_shuffle = 0
+        %assign uload_and_shuffle 0
+%endif
 %endif
 
 %ifidn %%LOADT, hk_bcast
@@ -289,11 +296,9 @@
 %assign do_hxor 0
 %endif
         ;; ghash blocks 0-3
+        VMOVDQ          %%ZTMP9, [%%INPTR + %%INOFF + %%INDIS]
 %if uload_and_shuffle != 0
-        vmovdqu64       %%ZTMP9, [%%INPTR + %%INOFF + %%INDIS]
         vpshufb         %%ZTMP9, %%ZTMP9, %%SHUFM
-%else
-        vmovdqa64       %%ZTMP9, [%%INPTR + %%INOFF + %%INDIS]
 %endif
 
 %if start_ghash != 0
@@ -311,11 +316,9 @@
         vpclmulqdq      %%ZTMP2, %%ZTMP9, %%ZTMP8, 0x01 ; THL = MH*HL
         vpclmulqdq      %%ZTMP3, %%ZTMP9, %%ZTMP8, 0x11 ; THH = MH*HH
         ;; ghash blocks 4-7
+        VMOVDQ          %%ZTMP9, [%%INPTR + %%INOFF + %%INDIS + 64]
 %if uload_and_shuffle != 0
-        vmovdqu64       %%ZTMP9, [%%INPTR + %%INOFF + %%INDIS + 64]
         vpshufb         %%ZTMP9, %%ZTMP9, %%SHUFM
-%else
-        vmovdqa64       %%ZTMP9, [%%INPTR + %%INOFF + %%INDIS + 64]
 %endif
 %if hk_broadcast != 0
         vbroadcastf64x2 %%ZTMP8, [%%HKPTR + %%HKOFF + %%HKDIS + 64]
@@ -337,11 +340,9 @@
         vpternlogq      %%GH, %%ZTMP1, %%ZTMP3, 0x96        ; T1 = THH + TLH
 %endif
         ;; ghash blocks 8-11
+        VMOVDQ          %%ZTMP9, [%%INPTR + %%INOFF + %%INDIS + 128]
 %if uload_and_shuffle != 0
-        vmovdqu64       %%ZTMP9, [%%INPTR + %%INOFF + %%INDIS + 128]
         vpshufb         %%ZTMP9, %%ZTMP9, %%SHUFM
-%else
-        vmovdqa64       %%ZTMP9, [%%INPTR + %%INOFF + %%INDIS + 128]
 %endif
 %if hk_broadcast != 0
         vbroadcastf64x2 %%ZTMP8, [%%HKPTR + %%HKOFF + %%HKDIS + 128]
@@ -358,11 +359,9 @@
         vpternlogq      %%GL, %%ZTMP6, %%ZTMP4, 0x96        ; T2 = THL + TLL
         vpternlogq      %%GH, %%ZTMP7, %%ZTMP5, 0x96        ; T1 = THH + TLH
         ;; ghash blocks 12-15
+        VMOVDQ          %%ZTMP9, [%%INPTR + %%INOFF + %%INDIS + 192]
 %if uload_and_shuffle != 0
-        vmovdqu64       %%ZTMP9, [%%INPTR + %%INOFF + %%INDIS + 192]
         vpshufb         %%ZTMP9, %%ZTMP9, %%SHUFM
-%else
-        vmovdqa64       %%ZTMP9, [%%INPTR + %%INOFF + %%INDIS + 192]
 %endif
 %if hk_broadcast != 0
         vbroadcastf64x2 %%ZTMP8, [%%HKPTR + %%HKOFF + %%HKDIS + 192]
@@ -850,7 +849,7 @@
 ; Input: The input data (A_IN), that data's length (A_LEN), and the hash key (HASH_KEY).
 ; Output: The hash of the data (AAD_HASH).
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-%macro  CALC_GHASH   24
+%macro  CALC_GHASH   24-25
 %define %%A_IN          %1      ; [in/clobbered] AAD text pointer
 %define %%A_LEN         %2      ; [in/clobbered] AAD length
 %define %%AAD_HASH      %3      ; [in/out] xmm ghash value
@@ -875,13 +874,20 @@
 %define %%ZT17          %22     ; [clobbered] ZMM register
 %define %%T3            %23     ; [clobbered] GP register
 %define %%MASKREG       %24     ; [clobbered] mask register
+%define %%POLYVAL       %25     ; [constant] If argument passed, do not shuffle data blocks
 
+%if %0 == 25
+%define %%SHFMSK noshuffle
+%else
 %define %%SHFMSK %%ZT13
+%endif
 
         cmp             %%A_LEN, (16*16)
         jb              %%_less_than_16x16
 
+%ifnidn %%SHFMSK, noshuffle
         vmovdqa64       %%SHFMSK, [rel SHUF_MASK]
+%endif
 
 align_loop
 %%_get_AAD_loop2x32x16:
@@ -1025,13 +1031,14 @@ align_label
                         I, %%A_IN, 0, \
                         %%ZT1, %%ZT2, %%ZT3, %%ZT4, %%MASKREG
 
+%ifnidn %%SHFMSK, noshuffle
         ZMM_OPCODE3_DSTR_SRC1R_SRC2R_BLOCKS_0_16 \
                         I, vpshufb, \
                         %%ZT1, %%ZT2, %%ZT3, %%ZT4, \
                         %%ZT1, %%ZT2, %%ZT3, %%ZT4, \
                         %%SHFMSK, %%SHFMSK, %%SHFMSK, %%SHFMSK
         ;; **ZT1, ZT2, ZT3, ZT4 contain clear text
-
+%endif
         GHASH_1_TO_16 %%GDATA_KEY, ZWORD(%%AAD_HASH), \
                         %%ZT0, %%ZT14, %%ZT15, %%ZT16, %%ZT17, \
                         %%ZT9, %%ZT10, %%ZT11, %%ZT12, %%ZT7, \
@@ -1092,12 +1099,14 @@ align_label
 
 align_label
 %%_AAD_blocks_ %+ I:
+%ifnidn %%SHFMSK, noshuffle
 %if I >= 3
         vmovdqa64       %%SHFMSK, [rel SHUF_MASK]
 %elif I == 2
         vmovdqa64       YWORD(%%SHFMSK), [rel SHUF_MASK]
 %elif I == 1
         vmovdqa64       XWORD(%%SHFMSK), [rel SHUF_MASK]
+%endif
 %endif
 
 %if I > 12
@@ -1113,12 +1122,14 @@ align_label
                         I, %%A_IN, 0, \
                         %%ZT1, %%ZT2, %%ZT3, %%ZT4, %%MASKREG
 
+%ifnidn %%SHFMSK, noshuffle
         ZMM_OPCODE3_DSTR_SRC1R_SRC2R_BLOCKS_0_16 \
                         I, vpshufb, \
                         %%ZT1, %%ZT2, %%ZT3, %%ZT4, \
                         %%ZT1, %%ZT2, %%ZT3, %%ZT4, \
                         %%SHFMSK, %%SHFMSK, %%SHFMSK, %%SHFMSK
         ;; **ZT1, ZT2, ZT3, ZT4 contain clear text
+%endif
 
         GHASH_1_TO_16 %%GDATA_KEY, ZWORD(%%AAD_HASH), \
                         %%ZT0, %%ZT5, %%ZT6, %%ZT7, %%ZT8, \
@@ -1143,7 +1154,7 @@ align_label
 ; Input: The input data (A_IN), that data's length (A_LEN), and the hash key (HASH_KEY).
 ; Output: The hash of the data (AAD_HASH).
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-%macro  CALC_AAD_HASH   26
+%macro  CALC_AAD_HASH   26-27
 %define %%A_IN          %1      ; [in] AAD text pointer
 %define %%A_LEN         %2      ; [in] AAD length
 %define %%AAD_HASH      %3      ; [in/out] xmm ghash value
@@ -1170,6 +1181,7 @@ align_label
 %define %%T2            %24     ; [clobbered] GP register
 %define %%T3            %25     ; [clobbered] GP register
 %define %%MASKREG       %26     ; [clobbered] mask register
+%define %%POLYVAL       %27     ; [constant] If argument passed, do not shuffle data blocks
 
         mov             %%T1, %%A_IN            ; T1 = AAD
         mov             %%T2, %%A_LEN           ; T2 = aadLen
@@ -1177,7 +1189,7 @@ align_label
         CALC_GHASH      %%T1, %%T2, %%AAD_HASH, %%GDATA_KEY, \
                         %%ZT0, %%ZT1, %%ZT2, %%ZT3, %%ZT4, %%ZT5, %%ZT6, %%ZT7, \
                         %%ZT8, %%ZT9, %%ZT10, %%ZT11, %%ZT12, %%ZT13, %%ZT14, \
-                        %%ZT15, %%ZT16, %%ZT17, %%T3, %%MASKREG
+                        %%ZT15, %%ZT16, %%ZT17, %%T3, %%MASKREG, %%POLYVAL
 
 %endmacro ; CALC_AAD_HASH
 

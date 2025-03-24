@@ -86,6 +86,16 @@ void
 aes_cfb_dec_256_vaes_avx512(const void *out, const void *in, const void *IV, const void *keys,
                             uint64_t len_bytes);
 
+/* POLYVAL */
+void
+polyval_vclmul_avx512(const struct gcm_key_data *key_data, const void *in, const uint64_t in_len,
+                      void *io_tag);
+void
+polyval_pre_vclmul_avx512(const void *key, struct gcm_key_data *key_data);
+
+void
+polyval_16B_vclmul_avx512(const void *key, void *in_out_data);
+
 /* moved from MB MGR */
 
 IMB_JOB *
