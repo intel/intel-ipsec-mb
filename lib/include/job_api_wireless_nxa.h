@@ -30,6 +30,24 @@
 #ifndef JOB_API_WIRELESS_NXA_H
 #define JOB_API_WIRELESS_NXA_H
 
+static const uint8_t zero_low_4B_mask[16] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+                                              0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00 };
+
+__forceinline IMB_JOB *
+submit_job_aes_nea5(IMB_JOB *job)
+{
+        uint8_t iv[16];
+        __m128i iv_reg = _mm_loadu_si128((const __m128i *) job->iv);
+        iv_reg = _mm_and_si128(iv_reg, _mm_loadu_si128((const __m128i *) zero_low_4B_mask));
+
+        _mm_storeu_si128((__m128i *) iv, iv_reg);
+        AES_CTR_256(job->src + job->cipher_start_src_offset_in_bytes, iv, job->enc_keys, job->dst,
+                    job->msg_len_to_cipher_in_bytes, 16);
+        job->status |= IMB_STATUS_COMPLETED_CIPHER;
+
+        return job;
+}
+
 __forceinline IMB_JOB *
 submit_aes_nia5_job(IMB_JOB *job)
 {
@@ -86,7 +104,7 @@ submit_aes_nca5_job(IMB_JOB *job, IMB_CIPHER_DIRECTION cipher_dir)
         const uint8_t *msg = job->src + job->cipher_start_src_offset_in_bytes;
 
         /* Generate H, Q, P keys */
-        generate_hqp_aes_sse(job->enc_keys, job->iv, HQP);
+        GENERATE_HQP_AES(job->enc_keys, job->iv, HQP);
 
         /* Precompute hash keys from H */
         POLYVAL_PRE(H, &gdata_key);
@@ -95,10 +113,16 @@ submit_aes_nca5_job(IMB_JOB *job, IMB_CIPHER_DIRECTION cipher_dir)
         if (job->u.NCA.aad_len_in_bytes != 0)
                 POLYVAL(&gdata_key, job->u.NCA.aad, job->u.NCA.aad_len_in_bytes, digest);
 
+        /* Prepare IV for AES-CTR */
+        uint8_t iv[16];
+
+        __m128i iv_reg = _mm_loadu_si128((const __m128i *) job->iv);
+        iv_reg = _mm_and_si128(iv_reg, _mm_loadu_si128((const __m128i *) zero_low_4B_mask));
+
+        _mm_storeu_si128((__m128i *) iv, iv_reg);
         if (cipher_dir == IMB_DIR_ENCRYPT) {
-                /* Encrypt plaintext (assumes last 4 bytes of 16-byte IV as 0) */
-                AES_CTR_256(msg, job->iv, job->enc_keys, job->dst, job->msg_len_to_cipher_in_bytes,
-                            16);
+                /* Encrypt plaintext */
+                AES_CTR_256(msg, iv, job->enc_keys, job->dst, job->msg_len_to_cipher_in_bytes, 16);
 
                 /* Digest ciphertext */
                 POLYVAL(&gdata_key, job->dst, job->msg_len_to_cipher_in_bytes, digest);
@@ -107,8 +131,7 @@ submit_aes_nca5_job(IMB_JOB *job, IMB_CIPHER_DIRECTION cipher_dir)
                 POLYVAL(&gdata_key, msg, job->msg_len_to_cipher_in_bytes, digest);
 
                 /* Decrypt ciphertext (assumes last 4 bytes of 16-byte IV as 0) */
-                aes_cntr_256_sse(msg, job->iv, job->enc_keys, job->dst,
-                                 job->msg_len_to_cipher_in_bytes, 16);
+                AES_CTR_256(msg, iv, job->enc_keys, job->dst, job->msg_len_to_cipher_in_bytes, 16);
         }
 
         uint8_t lengths[16] = { 0 };

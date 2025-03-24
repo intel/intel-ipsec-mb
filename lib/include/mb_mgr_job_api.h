@@ -58,9 +58,6 @@
                 func(state, job->src + job->hash_start_src_offset_in_bytes,                        \
                      job->msg_len_to_hash_in_bytes)
 
-static const uint8_t zero_low_4B_mask[16] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-                                              0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00 };
-
 /* ========================================================================= */
 /* AES-CBC */
 /* ========================================================================= */
@@ -206,25 +203,6 @@ SUBMIT_JOB_SM4_GCM_ENC(IMB_MGR *state, IMB_JOB *job)
                 job->auth_tag_output_len_in_bytes, IMB_DIR_ENCRYPT);
 
         job->status |= IMB_STATUS_COMPLETED;
-
-        return job;
-}
-
-/* ========================================================================= */
-/* AES-NEA5 */
-/* ========================================================================= */
-__forceinline IMB_JOB *
-SUBMIT_JOB_AES_NEA5(IMB_JOB *job)
-{
-        uint8_t iv[16];
-
-        __m128i iv_reg = _mm_loadu_si128((const __m128i *) job->iv);
-        iv_reg = _mm_and_si128(iv_reg, _mm_loadu_si128((const __m128i *) zero_low_4B_mask));
-
-        _mm_storeu_si128((__m128i *) iv, iv_reg);
-        AES_CTR_256(job->src + job->cipher_start_src_offset_in_bytes, iv, job->enc_keys, job->dst,
-                    job->msg_len_to_cipher_in_bytes, 16);
-        job->status |= IMB_STATUS_COMPLETED_CIPHER;
 
         return job;
 }
@@ -428,7 +406,7 @@ SUBMIT_JOB_CIPHER_ENC(IMB_MGR *state, IMB_JOB *job, const IMB_CIPHER_MODE cipher
         } else if (IMB_CIPHER_CNTR == cipher_mode) {
                 return SUBMIT_JOB_AES_CTR(job, key_sz);
         } else if (IMB_CIPHER_AES_NEA5 == cipher_mode) {
-                return SUBMIT_JOB_AES_NEA5(job);
+                return submit_job_aes_nea5(job);
         } else if (IMB_CIPHER_ECB == cipher_mode) {
                 if (16 == key_sz) {
                         return SUBMIT_JOB_AES_ECB_128_ENC(job);
@@ -652,7 +630,7 @@ SUBMIT_JOB_CIPHER_DEC(IMB_MGR *state, IMB_JOB *job, const IMB_CIPHER_MODE cipher
         } else if (IMB_CIPHER_CNTR == cipher_mode) {
                 return SUBMIT_JOB_AES_CTR(job, key_sz);
         } else if (IMB_CIPHER_AES_NEA5 == cipher_mode) {
-                return SUBMIT_JOB_AES_NEA5(job);
+                return submit_job_aes_nea5(job);
         } else if (IMB_CIPHER_ECB == cipher_mode) {
                 if (16 == key_sz) {
                         return SUBMIT_JOB_AES_ECB_128_DEC(job);
