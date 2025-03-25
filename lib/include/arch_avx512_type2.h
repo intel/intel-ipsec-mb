@@ -96,6 +96,10 @@ polyval_pre_vclmul_avx512(const void *key, struct gcm_key_data *key_data);
 void
 polyval_16B_vclmul_avx512(const void *key, void *in_out_data);
 
+/* AES-NxA5 */
+void
+generate_hqp_vaes_avx512(const void *aes_expanded_keys, const void *iv, uint8_t HQP[]);
+
 /* moved from MB MGR */
 
 IMB_JOB *

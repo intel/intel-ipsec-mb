@@ -392,7 +392,7 @@ submit_job_docsis256_sec_crc_dec_vaes_avx512(MB_MGR_DOCSIS_AES_OOO *state, IMB_J
 #define POLYVAL_PRE polyval_pre_vclmul_avx512
 
 /* AES-NIA5 */
-#define GENERATE_HQP_AES generate_hqp_aes_sse
+#define GENERATE_HQP_AES generate_hqp_vaes_avx512
 
 /* ====================================================================== */
 
