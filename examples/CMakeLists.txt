@@ -32,3 +32,6 @@ endif()
 
 # build imb-burst application
 add_subdirectory(burst-app)
+
+# build imb-single-buff application
+add_subdirectory(sb-app)
