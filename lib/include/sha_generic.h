@@ -165,6 +165,18 @@ sha_generic_update(const void *inp, void *digest, const enum arch_type arch, con
                         sha1_update_sse(inp, digest, num_blocks);
                 else /* arch == ARCH_SSE_SHANI */
                         sha1_ni_update_sse(inp, digest, num_blocks);
+        } else if (sha_type == 224) {
+                IMB_ASSERT(arch != ARCH_AVX2_SHANI);
+                if (arch == ARCH_AVX || arch == ARCH_SSE)
+                        sha224_update_sse(inp, digest, num_blocks);
+                else /* arch == ARCH_SSE_SHANI */
+                        sha256_ni_update_sse(inp, digest, num_blocks);
+        } else if (sha_type == 256) {
+                IMB_ASSERT(arch != ARCH_AVX2_SHANI);
+                if (arch == ARCH_AVX || arch == ARCH_SSE)
+                        sha256_update_sse(inp, digest, num_blocks);
+                else /* arch == ARCH_SSE_SHANI */
+                        sha256_ni_update_sse(inp, digest, num_blocks);
         }
 }
 
@@ -297,7 +309,7 @@ sha_generic(const void *data, const uint64_t length, void *digest, const enum ar
 
         sha_generic_init(ld, sha_type);
 
-        if (sha_type == 1) {
+        if (sha_type == 1 || sha_type == 224 || sha_type == 256) {
                 const uint64_t num_blocks = length / blk_size;
                 idx = num_blocks * blk_size;
 

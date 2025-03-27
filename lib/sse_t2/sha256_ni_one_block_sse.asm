@@ -39,13 +39,11 @@ endstruc
 %ifdef LINUX
 %define INP	rdi ; 1st arg
 %define CTX     rsi ; 2nd arg
-%define REG3	edx
-%define REG4	ecx
+%define ARG3	rdx ; 3rd arg
 %else
 %define INP	rcx ; 1st arg
 %define CTX     rdx ; 2nd arg
-%define REG3	edi
-%define REG4	esi
+%define ARG3	r8  ; 3rd arg
 %endif
 
 ;; MSG MUST be xmm0 (implicit argument)
@@ -60,52 +58,9 @@ endstruc
 %define MSGTMP		xmm14
 %define SHUF_MASK	xmm15
 
-mksection .rodata
-default rel
-
-extern K256
-
-align 64
-PSHUFFLE_BYTE_FLIP_MASK:
-	dq 0x0405060700010203, 0x0c0d0e0f08090a0b
-
-mksection .text
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; void sha256_ni_block_sse(void *input_data, UINT32 digest[8])
-;; arg 1 : (in) pointer to one block of data
-;; arg 2 : (in/out) pointer to read/write digest
-
-MKGLOBAL(sha256_ni_block_sse,function,internal)
-align 32
-sha256_ni_block_sse:
-	sub		rsp, frame_size
-
-%ifndef LINUX
-	movdqa		[rsp + frame.XMM_SAVE + 0*16], xmm6
-	movdqa		[rsp + frame.XMM_SAVE + 1*16], xmm7
-	movdqa		[rsp + frame.XMM_SAVE + 2*16], xmm14
-	movdqa		[rsp + frame.XMM_SAVE + 3*16], xmm15
-%endif
-
-	;; load initial digest
-	;; Probably need to reorder these appropriately
-	;; DCBA, HGFE -> ABEF, CDGH
-	movdqu		STATE0, [CTX]
-	movdqu		STATE1,	[CTX + 16]
-
-	pshufd		STATE0, STATE0, 0xB1	; CDAB
-	pshufd		STATE1, STATE1, 0x1B	; EFGH
-	movdqa		MSGTMP4, STATE0
-	palignr		STATE0, STATE1, 8	; ABEF
-	pblendw		STATE1, MSGTMP4, 0xF0	; CDGH
-
-	movdqa		SHUF_MASK, [rel PSHUFFLE_BYTE_FLIP_MASK]
-
-	;; Save digests
-	movdqa		[rsp + frame.ABEF_SAVE], STATE0
-	movdqa		[rsp + frame.CDGH_SAVE], STATE1
-
+;; Input: 64 byte input block (MSG)
+;; Output: 32 byte digest (STATE0, STATE1)
+%macro one_block_256_ni 0
 	;; Rounds 0-3
 	movdqu		MSG, [INP + 0*16]
 	pshufb		MSG, SHUF_MASK
@@ -288,6 +243,54 @@ sha256_ni_block_sse:
 
 	paddd		STATE0, [rsp + frame.ABEF_SAVE]
 	paddd		STATE1, [rsp + frame.CDGH_SAVE]
+%endmacro
+
+mksection .rodata
+default rel
+
+extern K256
+
+align 64
+PSHUFFLE_BYTE_FLIP_MASK:
+	dq 0x0405060700010203, 0x0c0d0e0f08090a0b
+
+mksection .text
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; void sha256_ni_block_sse(void *input_data, UINT32 digest[8])
+;; arg 1 : (in) pointer to one block of data
+;; arg 2 : (in/out) pointer to read/write digest
+MKGLOBAL(sha256_ni_block_sse,function,internal)
+align 32
+sha256_ni_block_sse:
+	sub		rsp, frame_size
+
+%ifndef LINUX
+	movdqu		[rsp + frame.XMM_SAVE + 0*16], xmm6
+	movdqu		[rsp + frame.XMM_SAVE + 1*16], xmm7
+	movdqu		[rsp + frame.XMM_SAVE + 2*16], xmm14
+	movdqu		[rsp + frame.XMM_SAVE + 3*16], xmm15
+%endif
+
+	;; load initial digest
+	;; Probably need to reorder these appropriately
+	;; DCBA, HGFE -> ABEF, CDGH
+	movdqu		STATE0, [CTX]
+	movdqu		STATE1,	[CTX + 16]
+
+	pshufd		STATE0, STATE0, 0xB1	; CDAB
+	pshufd		STATE1, STATE1, 0x1B	; EFGH
+	movdqa		MSGTMP4, STATE0
+	palignr		STATE0, STATE1, 8	; ABEF
+	pblendw		STATE1, MSGTMP4, 0xF0	; CDGH
+
+	movdqa		SHUF_MASK, [rel PSHUFFLE_BYTE_FLIP_MASK]
+
+	;; Save digests
+	movdqu		[rsp + frame.ABEF_SAVE], STATE0
+	movdqu		[rsp + frame.CDGH_SAVE], STATE1
+
+	one_block_256_ni
 
 	; Reorder for writeback
 	pshufd		STATE0, STATE0, 0x1B	; FEBA
@@ -309,15 +312,89 @@ sha256_ni_block_sse:
         pxor            MSGTMP4, MSGTMP4
         pxor            MSGTMP, MSGTMP
 
-        movdqa          [rsp + frame.ABEF_SAVE], MSGTMP0
-        movdqa          [rsp + frame.CDGH_SAVE], MSGTMP0
+        movdqu          [rsp + frame.ABEF_SAVE], MSGTMP0
+        movdqu          [rsp + frame.CDGH_SAVE], MSGTMP0
 %endif
 
 %ifndef LINUX
-	movdqa		xmm6, [rsp + frame.XMM_SAVE + 0*16]
-	movdqa		xmm7, [rsp + frame.XMM_SAVE + 1*16]
-	movdqa		xmm14, [rsp + frame.XMM_SAVE + 2*16]
-	movdqa		xmm15, [rsp + frame.XMM_SAVE + 3*16]
+	movdqu		xmm6, [rsp + frame.XMM_SAVE + 0*16]
+	movdqu		xmm7, [rsp + frame.XMM_SAVE + 1*16]
+	movdqu		xmm14, [rsp + frame.XMM_SAVE + 2*16]
+	movdqu		xmm15, [rsp + frame.XMM_SAVE + 3*16]
+%endif
+        add		rsp, frame_size
+	ret
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; void sha256_ni_update_sse(void *input_data, UINT32 digest[8], UINT64 num_blks)
+;; arg 1 : (in) pointer to one block of data
+;; arg 2 : (in/out) pointer to read/write digest
+;; arg 3 : (in) number of blocks to process
+MKGLOBAL(sha256_ni_update_sse,function,internal)
+align 32
+sha256_ni_update_sse:
+	sub		rsp, frame_size
+
+%ifndef LINUX
+	movdqu		[rsp + frame.XMM_SAVE + 0*16], xmm6
+	movdqu		[rsp + frame.XMM_SAVE + 1*16], xmm7
+	movdqu		[rsp + frame.XMM_SAVE + 2*16], xmm14
+	movdqu		[rsp + frame.XMM_SAVE + 3*16], xmm15
+%endif
+
+	;; load initial digest
+	;; Probably need to reorder these appropriately
+	;; DCBA, HGFE -> ABEF, CDGH
+	movdqu		STATE0, [CTX]
+	movdqu		STATE1,	[CTX + 16]
+
+	pshufd		STATE0, STATE0, 0xB1	; CDAB
+	pshufd		STATE1, STATE1, 0x1B	; EFGH
+	movdqa		MSGTMP4, STATE0
+	palignr		STATE0, STATE1, 8	; ABEF
+	pblendw		STATE1, MSGTMP4, 0xF0	; CDGH
+
+	movdqa		SHUF_MASK, [rel PSHUFFLE_BYTE_FLIP_MASK]
+
+align 32
+process_block:
+	;; Save digests
+	movdqu		[rsp + frame.ABEF_SAVE], STATE0
+	movdqu		[rsp + frame.CDGH_SAVE], STATE1
+
+	one_block_256_ni
+
+	add INP, 64
+	dec ARG3
+	jnz process_block
+
+	; Reorder for writeback
+	pshufd		STATE0, STATE0, 0x1B	; FEBA
+	pshufd		STATE1, STATE1, 0xB1	; DCHG
+	movdqa		MSGTMP4, STATE0
+	pblendw		STATE0, STATE1,  0xF0	; DCBA
+	palignr		STATE1, MSGTMP4,  8	; HGFE
+
+	;; update digests
+	movdqu		[CTX], STATE0
+	movdqu		[CTX + 16], STATE1
+
+        ;; Clear regs holding message
+%ifdef SAFE_DATA
+        pxor            MSGTMP0, MSGTMP0
+        pxor            MSGTMP1, MSGTMP1
+        pxor            MSGTMP2, MSGTMP2
+        pxor            MSGTMP3, MSGTMP3
+        pxor            MSGTMP4, MSGTMP4
+        pxor            MSGTMP, MSGTMP
+%endif
+
+%ifndef LINUX
+	movdqu		xmm6, [rsp + frame.XMM_SAVE + 0*16]
+	movdqu		xmm7, [rsp + frame.XMM_SAVE + 1*16]
+	movdqu		xmm14, [rsp + frame.XMM_SAVE + 2*16]
+	movdqu		xmm15, [rsp + frame.XMM_SAVE + 3*16]
 %endif
         add		rsp, frame_size
 	ret

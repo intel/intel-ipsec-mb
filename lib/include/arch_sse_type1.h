@@ -197,7 +197,11 @@ sha1_update_sse(const void *, void *, uint64_t);
 void
 sha224_block_sse(const void *, void *);
 void
+sha224_update_sse(const void *, void *, uint64_t num_blocks);
+void
 sha256_block_sse(const void *, void *);
+void
+sha256_update_sse(const void *, void *, uint64_t num_blocks);
 void
 sha384_block_sse(const void *, void *);
 void
