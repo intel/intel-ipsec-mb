@@ -195,21 +195,29 @@ test_sha_sb(struct IMB_MGR *mb_mgr, const struct mac_test *vec, const int num_jo
         for (i = 0; i < num_jobs; i++) {
                 switch (sha_type) {
                 case 1:
-                default:
                         IMB_SHA1(mb_mgr, vec->msg, vec->msgSize / 8, auths + sizeof_padding);
-                        if (memcmp(auths + sizeof_padding, vec->tag, vec->tagSize / 8) != 0) {
-                                fprintf(stderr, "hash mismatched\n");
-                                goto end;
-                        }
-                        if (memcmp(padding, auths, sizeof_padding)) {
-                                fprintf(stderr, "hash overwrite head\n");
-                                goto end;
-                        }
-                        if (memcmp(padding, auths + vec->tagSize / 8 + sizeof_padding,
-                                   sizeof_padding)) {
-                                fprintf(stderr, "hash overwrite tail\n");
-                                goto end;
-                        }
+                        break;
+                case 224:
+                        IMB_SHA224(mb_mgr, vec->msg, vec->msgSize / 8, auths + sizeof_padding);
+                        break;
+                case 256:
+                        IMB_SHA256(mb_mgr, vec->msg, vec->msgSize / 8, auths + sizeof_padding);
+                        break;
+                default:
+                        fprintf(stderr, "SHA algorithm not supported\n");
+                        goto end;
+                }
+                if (memcmp(auths + sizeof_padding, vec->tag, vec->tagSize / 8) != 0) {
+                        fprintf(stderr, "hash mismatched\n");
+                        goto end;
+                }
+                if (memcmp(padding, auths, sizeof_padding)) {
+                        fprintf(stderr, "hash overwrite head\n");
+                        goto end;
+                }
+                if (memcmp(padding, auths + vec->tagSize / 8 + sizeof_padding, sizeof_padding)) {
+                        fprintf(stderr, "hash overwrite tail\n");
+                        goto end;
                 }
         }
 
@@ -388,7 +396,7 @@ test_sha_vectors(struct IMB_MGR *mb_mgr, struct test_suite_context *sha1_ctx,
                 } else {
                         test_suite_update(ctx, 1, 0);
                 }
-                if (sha_type == 1) {
+                if (sha_type == 1 || sha_type == 224 || sha_type == 256) {
                         if (test_sha_sb(mb_mgr, v, num_jobs, sha_type)) {
                                 printf("error #%zu\n", v->tcId);
                                 test_suite_update(ctx, 0, 1);

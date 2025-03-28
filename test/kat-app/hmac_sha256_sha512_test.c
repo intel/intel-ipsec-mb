@@ -219,6 +219,10 @@ test_hmac_shax(struct IMB_MGR *mb_mgr, const struct mac_test *vec, const uint32_
         ret = 0;
 
 end:
+        /* Flush unchecked jobs to prevent segfault*/
+        while (IMB_FLUSH_JOB(mb_mgr) != NULL)
+                ;
+
         for (i = 0; i < num_jobs; i++) {
                 if (auths[i] != NULL)
                         free(auths[i]);
@@ -371,6 +375,10 @@ check_burst_jobs:
         ret = 0;
 
 end:
+        /* Flush unchecked jobs to prevent segfault*/
+        while (IMB_FLUSH_JOB(mb_mgr) != NULL)
+                ;
+
         for (i = 0; i < num_jobs; i++) {
                 if (auths[i] != NULL)
                         free(auths[i]);
@@ -523,6 +531,10 @@ test_hmac_shax_hash_burst(struct IMB_MGR *mb_mgr, const struct mac_test *vec,
         ret = 0;
 
 end:
+        /* Flush unchecked jobs to prevent segfault*/
+        while (IMB_FLUSH_JOB(mb_mgr) != NULL)
+                ;
+
         for (i = 0; i < num_jobs; i++) {
                 if (auths[i] != NULL)
                         free(auths[i]);
