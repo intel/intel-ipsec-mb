@@ -1692,6 +1692,7 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys, const uint8_t *ciph
                 case IMB_CIPHER_KASUMI_UEA1_BITLEN:
                         nosimd_memset(k2, pattern_cipher_key, 16);
                         break;
+                case IMB_CIPHER_ZUC_NEA6:
                 case IMB_CIPHER_ZUC_EEA3:
                 case IMB_CIPHER_CHACHA20:
                 case IMB_CIPHER_CHACHA20_POLY1305:
