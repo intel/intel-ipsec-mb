@@ -2941,6 +2941,9 @@ run_test(const IMB_ARCH enc_arch, const IMB_ARCH dec_arch, struct params_s *para
                              hash_alg == IMB_AUTH_CHACHA20_POLY1305))
                                 continue;
 
+                        if ((c_mode == IMB_CIPHER_AES_NCA5 && hash_alg != IMB_AUTH_AES_NCA5) ||
+                            (c_mode != IMB_CIPHER_AES_NCA5 && hash_alg == IMB_AUTH_AES_NCA5))
+                                continue;
                         /* This test app does not support SGL yet */
                         if ((c_mode == IMB_CIPHER_CHACHA20_POLY1305_SGL) ||
                             (hash_alg == IMB_AUTH_CHACHA20_POLY1305_SGL))
