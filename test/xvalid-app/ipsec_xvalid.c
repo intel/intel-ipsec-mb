@@ -1616,6 +1616,7 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys, const uint8_t *ciph
                 case IMB_AUTH_KASUMI_UIA1:
                         nosimd_memset(k3, pattern_auth_key, sizeof(keys->k3));
                         break;
+                case IMB_AUTH_AES_NCA5:
                 case IMB_AUTH_AES_CCM:
                 case IMB_AUTH_SM4_GCM:
                 case IMB_AUTH_AES_GMAC:
