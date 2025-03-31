@@ -498,6 +498,12 @@ struct str_value_mapping hash_algo_str_map[] = {
                         .hash_alg = IMB_AUTH_AES_NIA5,
                 }
         },
+        {
+                .name = "ZUC-NIA6",
+                .values.job_params = {
+                        .hash_alg = IMB_AUTH_ZUC_NIA6,
+                }
+        },
 };
 
 struct str_value_mapping aead_algo_str_map[] = {
@@ -608,6 +614,7 @@ const uint8_t auth_tag_len_bytes[] = {
         32,                        /* IMB_AUTH_SHAKE256 */
         4,                         /* IMB_AUTH_AES_NIA5 */
         4,                         /* IMB_AUTH_AES_NCA5 */
+        4,                         /* IMB_AUTH_ZUC_NIA6 */
 };
 
 /* Minimum, maximum and step values of key sizes */
@@ -1358,6 +1365,10 @@ fill_job(IMB_JOB *job, const struct params_s *params, uint8_t *buf, uint8_t *dig
                 job->u.ZUC_EIA3._iv = auth_iv;
                 job->msg_len_to_hash_in_bits = (job->msg_len_to_hash_in_bytes * 8);
                 break;
+        case IMB_AUTH_ZUC_NIA6:
+                job->u.ZUC_EIA3._key = k2;
+                job->u.ZUC_EIA3._iv = auth_iv;
+                break;
         case IMB_AUTH_SNOW3G_UIA2_BITLEN:
                 job->u.SNOW3G_UIA2._key = k2;
                 job->u.SNOW3G_UIA2._iv = auth_iv;
@@ -1612,6 +1623,7 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys, const uint8_t *ciph
                         nosimd_memset(opad, pattern_auth_key, sizeof(keys->opad));
                         break;
                 case IMB_AUTH_ZUC_EIA3_BITLEN:
+                case IMB_AUTH_ZUC_NIA6:
                 case IMB_AUTH_SNOW3G_UIA2_BITLEN:
                 case IMB_AUTH_KASUMI_UIA1:
                         nosimd_memset(k3, pattern_auth_key, sizeof(keys->k3));
@@ -1738,6 +1750,7 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys, const uint8_t *ciph
                 imb_hmac_ipad_opad(mb_mgr, params->hash_alg, auth_key, MAX_KEY_SIZE, ipad, opad);
                 break;
         case IMB_AUTH_ZUC_EIA3_BITLEN:
+        case IMB_AUTH_ZUC_NIA6:
         case IMB_AUTH_SNOW3G_UIA2_BITLEN:
         case IMB_AUTH_KASUMI_UIA1:
                 nosimd_memcpy(k2, auth_key, sizeof(keys->k2));

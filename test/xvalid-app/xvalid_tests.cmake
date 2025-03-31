@@ -152,7 +152,8 @@ set(HASH_ALGOS
     sha3-512
     shake-128
     shake-256
-    aes-nia5)
+    aes-nia5
+    zuc-nia6)
 
 # hash short tests
 foreach(ALGO ${HASH_ALGOS})
