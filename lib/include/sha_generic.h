@@ -177,6 +177,25 @@ sha_generic_update(const void *inp, void *digest, const enum arch_type arch, con
                         sha256_update_sse(inp, digest, num_blocks);
                 else /* arch == ARCH_SSE_SHANI */
                         sha256_ni_update_sse(inp, digest, num_blocks);
+        } else if (sha_type == 384) {
+                IMB_ASSERT(arch != ARCH_SSE_SHANI);
+#ifdef SMX_NI
+                if (arch == ARCH_AVX2_SHANI) {
+                        sha512_update_ni_x1(digest, inp, num_blocks);
+                        return;
+                }
+#endif
+                sha384_update_sse(inp, digest, num_blocks);
+        } else if (sha_type == 512) {
+                IMB_ASSERT(arch != ARCH_SSE_SHANI);
+#ifdef SMX_NI
+                if (arch == ARCH_AVX2_SHANI) {
+                        sha512_update_ni_x1(digest, inp, num_blocks);
+                        return;
+                }
+
+#endif
+                sha512_update_sse(inp, digest, num_blocks);
         }
 }
 
@@ -305,21 +324,16 @@ sha_generic(const void *data, const uint64_t length, void *digest, const enum ar
         } local_digest;
         void *ld = (void *) &local_digest;
         const uint8_t *inp = (const uint8_t *) data;
-        uint64_t idx, r;
+        uint64_t r;
 
         sha_generic_init(ld, sha_type);
 
-        if (sha_type == 1 || sha_type == 224 || sha_type == 256) {
-                const uint64_t num_blocks = length / blk_size;
-                idx = num_blocks * blk_size;
+        const uint64_t num_blocks = length / blk_size;
+        const uint64_t idx = num_blocks * blk_size;
 
-                if (num_blocks > 0)
-                        sha_generic_update(inp, ld, arch, sha_type, num_blocks);
+        if (num_blocks > 0)
+                sha_generic_update(inp, ld, arch, sha_type, num_blocks);
 
-        } else {
-                for (idx = 0; (idx + blk_size) <= length; idx += blk_size)
-                        sha_generic_one_block(&inp[idx], ld, arch, sha_type);
-        }
         r = length % blk_size;
 
         memset(cb, 0, sizeof(cb));

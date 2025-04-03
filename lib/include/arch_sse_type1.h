@@ -205,7 +205,11 @@ sha256_update_sse(const void *, void *, uint64_t num_blocks);
 void
 sha384_block_sse(const void *, void *);
 void
+sha384_update_sse(const void *, void *, uint64_t);
+void
 sha512_block_sse(const void *, void *);
+void
+sha512_update_sse(const void *, void *, uint64_t);
 
 IMB_DLL_EXPORT void
 sha1_sse(const void *data, const uint64_t length, void *digest);

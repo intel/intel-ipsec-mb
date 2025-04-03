@@ -30,10 +30,16 @@
 %include "include/os.inc"
 %include "include/clear_regs.inc"
 
+%use smartalign
+
 %define	MOVDQ movdqu ;; assume buffers not aligned
 
 %ifndef FUNC
 %define FUNC sha512_block_sse
+%endif
+
+%ifndef UPDATE
+%define UPDATE sha512_update_sse
 %endif
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Define Macros
@@ -67,6 +73,7 @@
 %ifdef LINUX
 %define CTX	rsi	; 2nd arg
 %define INP	rdi	; 1st arg
+%define ARG3 	rdx 	; 3rd arg
 
 %define SRND	rdi	; clobbers INP
 %define c	rcx
@@ -75,6 +82,7 @@
 %else
 %define CTX	rdx 	; 2nd arg
 %define INP	rcx 	; 1st arg
+%define ARG3 	r8 	; 3rd arg
 
 %define SRND	rcx	; clobbers INP
 %define c 	rdi
@@ -99,6 +107,8 @@ struc STACK
 _XMM_SAVE:	reso	8
 %endif
 _XFER:		reso	1
+_GP_SAVE:       resq    8       ; Space to store up to 8 GP registers
+_INP:		resq	1
 endstruc
 
 ; rotate_Xs
@@ -265,6 +275,74 @@ rotate_Xs
 	ROTATE_ARGS
 %endm
 
+%macro one_block_512 0
+	;; byte swap first 16 qwords
+	COPY_XMM_AND_BSWAP	X0, [INP + 0*16], BYTE_FLIP_MASK
+	COPY_XMM_AND_BSWAP	X1, [INP + 1*16], BYTE_FLIP_MASK
+	COPY_XMM_AND_BSWAP	X2, [INP + 2*16], BYTE_FLIP_MASK
+	COPY_XMM_AND_BSWAP	X3, [INP + 3*16], BYTE_FLIP_MASK
+	COPY_XMM_AND_BSWAP	X4, [INP + 4*16], BYTE_FLIP_MASK
+	COPY_XMM_AND_BSWAP	X5, [INP + 5*16], BYTE_FLIP_MASK
+	COPY_XMM_AND_BSWAP	X6, [INP + 6*16], BYTE_FLIP_MASK
+	COPY_XMM_AND_BSWAP	X7, [INP + 7*16], BYTE_FLIP_MASK
+
+	;; schedule 64 input qwords, by doing 4 iterations of 16 rounds
+	mov	SRND, 4
+align 16
+.loop1:
+
+%assign i 0
+%rep 7
+	movdqa	XFER, X0
+	paddq	XFER, [TBL + i*16]
+	movdqa	[rsp + _XFER], XFER
+	TWO_ROUNDS_AND_SCHED
+%assign i (i+1)
+%endrep
+
+	movdqa	XFER, X0
+	paddq	XFER, [TBL + 7*16]
+	movdqa	[rsp + _XFER], XFER
+	add	TBL, 8*16
+	TWO_ROUNDS_AND_SCHED
+
+	sub	SRND, 1
+	jne	.loop1
+
+	mov	SRND, 2
+	jmp .loop2a
+.loop2:
+	movdqa	X0, X4
+	movdqa	X1, X5
+	movdqa	X2, X6
+	movdqa	X3, X7
+
+.loop2a:
+	paddq	X0, [TBL + 0*16]
+	movdqa	[rsp + _XFER], X0
+	DO_ROUND 0
+	DO_ROUND 1
+
+	paddq	X1, [TBL + 1*16]
+	movdqa	[rsp + _XFER], X1
+	DO_ROUND 0
+	DO_ROUND 1
+
+	paddq	X2, [TBL + 2*16]
+	movdqa	[rsp + _XFER], X2
+	DO_ROUND 0
+	DO_ROUND 1
+
+	paddq	X3, [TBL + 3*16]
+	movdqa	[rsp + _XFER], X3
+	add	TBL, 4*16
+	DO_ROUND 0
+	DO_ROUND 1
+
+	sub	SRND, 1
+	jne	.loop2
+%endmacro
+
 mksection .rodata
 default rel
 align 64
@@ -323,26 +401,26 @@ mksection .text
 MKGLOBAL(FUNC,function,internal)
 align 32
 FUNC:
-	push	rbx
+	sub     rsp, STACK_size
+	mov     [rsp + _GP_SAVE], rbx
 %ifndef LINUX
-	push	rsi
-	push	rdi
+	mov     [rsp + _GP_SAVE + 8], rsi
+	mov     [rsp + _GP_SAVE + 16], rdi
 %endif
-	push	rbp
-	push	r13
-	push	r14
-	push	r15
+	mov     [rsp + _GP_SAVE + 24], r13
+	mov     [rsp + _GP_SAVE + 32], r14
+	mov     [rsp + _GP_SAVE + 40], r15
+	mov     [rsp + _GP_SAVE + 48], rbp
 
-	sub	rsp,STACK_size
 %ifndef LINUX
-	movdqa	[rsp + _XMM_SAVE + 0*16],xmm6
-	movdqa	[rsp + _XMM_SAVE + 1*16],xmm7
-	movdqa	[rsp + _XMM_SAVE + 2*16],xmm8
-	movdqa	[rsp + _XMM_SAVE + 3*16],xmm9
-	movdqa	[rsp + _XMM_SAVE + 4*16],xmm10
-	movdqa	[rsp + _XMM_SAVE + 5*16],xmm11
-	movdqa	[rsp + _XMM_SAVE + 6*16],xmm12
-	movdqa	[rsp + _XMM_SAVE + 7*16],xmm13
+	movdqu	[rsp + _XMM_SAVE + 0*16],xmm6
+	movdqu	[rsp + _XMM_SAVE + 1*16],xmm7
+	movdqu	[rsp + _XMM_SAVE + 2*16],xmm8
+	movdqu	[rsp + _XMM_SAVE + 3*16],xmm9
+	movdqu	[rsp + _XMM_SAVE + 4*16],xmm10
+	movdqu	[rsp + _XMM_SAVE + 5*16],xmm11
+	movdqu	[rsp + _XMM_SAVE + 6*16],xmm12
+	movdqu	[rsp + _XMM_SAVE + 7*16],xmm13
 %endif
 
 	;; load initial digest
@@ -359,71 +437,7 @@ FUNC:
 
 	lea	TBL,[rel K512]
 
-	;; byte swap first 16 qwords
-	COPY_XMM_AND_BSWAP	X0, [INP + 0*16], BYTE_FLIP_MASK
-	COPY_XMM_AND_BSWAP	X1, [INP + 1*16], BYTE_FLIP_MASK
-	COPY_XMM_AND_BSWAP	X2, [INP + 2*16], BYTE_FLIP_MASK
-	COPY_XMM_AND_BSWAP	X3, [INP + 3*16], BYTE_FLIP_MASK
-	COPY_XMM_AND_BSWAP	X4, [INP + 4*16], BYTE_FLIP_MASK
-	COPY_XMM_AND_BSWAP	X5, [INP + 5*16], BYTE_FLIP_MASK
-	COPY_XMM_AND_BSWAP	X6, [INP + 6*16], BYTE_FLIP_MASK
-	COPY_XMM_AND_BSWAP	X7, [INP + 7*16], BYTE_FLIP_MASK
-
-	;; schedule 64 input qwords, by doing 4 iterations of 16 rounds
-	mov	SRND, 4
-align 16
-loop1:
-
-%assign i 0
-%rep 7
-	movdqa	XFER, X0
-	paddq	XFER, [TBL + i*16]
-	movdqa	[rsp + _XFER], XFER
-	TWO_ROUNDS_AND_SCHED
-%assign i (i+1)
-%endrep
-
-	movdqa	XFER, X0
-	paddq	XFER, [TBL + 7*16]
-	movdqa	[rsp + _XFER], XFER
-	add	TBL, 8*16
-	TWO_ROUNDS_AND_SCHED
-
-	sub	SRND, 1
-	jne	loop1
-
-	mov	SRND, 2
-	jmp loop2a
-loop2:
-	movdqa	X0, X4
-	movdqa	X1, X5
-	movdqa	X2, X6
-	movdqa	X3, X7
-
-loop2a:
-	paddq	X0, [TBL + 0*16]
-	movdqa	[rsp + _XFER], X0
-	DO_ROUND 0
-	DO_ROUND 1
-
-	paddq	X1, [TBL + 1*16]
-	movdqa	[rsp + _XFER], X1
-	DO_ROUND 0
-	DO_ROUND 1
-
-	paddq	X2, [TBL + 2*16]
-	movdqa	[rsp + _XFER], X2
-	DO_ROUND 0
-	DO_ROUND 1
-
-	paddq	X3, [TBL + 3*16]
-	movdqa	[rsp + _XFER], X3
-	add	TBL, 4*16
-	DO_ROUND 0
-	DO_ROUND 1
-
-	sub	SRND, 1
-	jne	loop2
+	one_block_512
 
 	add	[8*0 + CTX], a
 	add	[8*1 + CTX], b
@@ -436,26 +450,26 @@ loop2a:
 
 done_hash:
 %ifndef LINUX
-	movdqa	xmm6,[rsp + _XMM_SAVE + 0*16]
-	movdqa	xmm7,[rsp + _XMM_SAVE + 1*16]
-	movdqa	xmm8,[rsp + _XMM_SAVE + 2*16]
-	movdqa	xmm9,[rsp + _XMM_SAVE + 3*16]
-	movdqa	xmm10,[rsp + _XMM_SAVE + 4*16]
-	movdqa	xmm11,[rsp + _XMM_SAVE + 5*16]
-	movdqa	xmm12,[rsp + _XMM_SAVE + 6*16]
-	movdqa	xmm13,[rsp + _XMM_SAVE + 7*16]
+	movdqu	xmm6,[rsp + _XMM_SAVE + 0*16]
+	movdqu	xmm7,[rsp + _XMM_SAVE + 1*16]
+	movdqu	xmm8,[rsp + _XMM_SAVE + 2*16]
+	movdqu	xmm9,[rsp + _XMM_SAVE + 3*16]
+	movdqu	xmm10,[rsp + _XMM_SAVE + 4*16]
+	movdqu	xmm11,[rsp + _XMM_SAVE + 5*16]
+	movdqu	xmm12,[rsp + _XMM_SAVE + 6*16]
+	movdqu	xmm13,[rsp + _XMM_SAVE + 7*16]
 
 %ifdef SAFE_DATA
         ;; Clear potential sensitive data stored in stack
         clear_xmms_sse xmm0, xmm1, xmm2, xmm3, xmm4, xmm5
-        movdqa  [rsp + _XMM_SAVE + 0 * 16], xmm0
-        movdqa  [rsp + _XMM_SAVE + 1 * 16], xmm0
-        movdqa  [rsp + _XMM_SAVE + 2 * 16], xmm0
-        movdqa  [rsp + _XMM_SAVE + 3 * 16], xmm0
-        movdqa  [rsp + _XMM_SAVE + 4 * 16], xmm0
-        movdqa  [rsp + _XMM_SAVE + 5 * 16], xmm0
-        movdqa  [rsp + _XMM_SAVE + 6 * 16], xmm0
-        movdqa  [rsp + _XMM_SAVE + 7 * 16], xmm0
+        movdqu  [rsp + _XMM_SAVE + 0 * 16], xmm0
+        movdqu  [rsp + _XMM_SAVE + 1 * 16], xmm0
+        movdqu  [rsp + _XMM_SAVE + 2 * 16], xmm0
+        movdqu  [rsp + _XMM_SAVE + 3 * 16], xmm0
+        movdqu  [rsp + _XMM_SAVE + 4 * 16], xmm0
+        movdqu  [rsp + _XMM_SAVE + 5 * 16], xmm0
+        movdqu  [rsp + _XMM_SAVE + 6 * 16], xmm0
+        movdqu  [rsp + _XMM_SAVE + 7 * 16], xmm0
 %endif
 %else ;; LINUX
 %ifdef SAFE_DATA
@@ -463,17 +477,126 @@ done_hash:
 %endif
 %endif ;; LINUX
 
+        mov     rbx, [rsp + _GP_SAVE]
+%ifndef LINUX
+        mov     rsi, [rsp + _GP_SAVE + 8]
+        mov     rdi, [rsp + _GP_SAVE + 16]
+%endif
+	mov     r13, [rsp + _GP_SAVE + 24]
+        mov     r14, [rsp + _GP_SAVE + 32]
+        mov     r15, [rsp + _GP_SAVE + 40]
+        mov     rbp, [rsp + _GP_SAVE + 48]
+
 	add	rsp, STACK_size
 
-	pop	r15
-	pop	r14
-	pop	r13
-	pop	rbp
+	ret
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; void UPDATE(void *input_data, UINT64 digest[8], UINT64 num_blocks)
+;; arg 1 : pointer to input data
+;; arg 2 : pointer to digest
+;; arg 3 : number of blocks
+MKGLOBAL(UPDATE,function,internal)
+align 32
+UPDATE:
+    	sub     rsp, STACK_size
+	mov     [rsp + _GP_SAVE], rbx
 %ifndef LINUX
-	pop	rdi
-	pop	rsi
+	mov     [rsp + _GP_SAVE + 8], rsi
+	mov     [rsp + _GP_SAVE + 16], rdi
 %endif
-	pop	rbx
+	mov     [rsp + _GP_SAVE + 24], r12
+	mov     [rsp + _GP_SAVE + 32], r13
+	mov     [rsp + _GP_SAVE + 40], r14
+	mov     [rsp + _GP_SAVE + 48], r15
+	mov     [rsp + _GP_SAVE + 56], rbp
+%ifndef LINUX
+	movdqu	[rsp + _XMM_SAVE + 0*16],xmm6
+	movdqu	[rsp + _XMM_SAVE + 1*16],xmm7
+	movdqu	[rsp + _XMM_SAVE + 2*16],xmm8
+	movdqu	[rsp + _XMM_SAVE + 3*16],xmm9
+	movdqu	[rsp + _XMM_SAVE + 4*16],xmm10
+	movdqu	[rsp + _XMM_SAVE + 5*16],xmm11
+	movdqu	[rsp + _XMM_SAVE + 6*16],xmm12
+	movdqu	[rsp + _XMM_SAVE + 7*16],xmm13
+%endif
+
+	mov 	r12, ARG3
+
+	movdqa	BYTE_FLIP_MASK, [rel PSHUFFLE_BYTE_FLIP_MASK]
+
+align 32
+process_block:
+	;; load initial digest
+	mov	a, [8*0 + CTX]
+	mov	b, [8*1 + CTX]
+	mov	c, [8*2 + CTX]
+	mov	d, [8*3 + CTX]
+	mov	e, [8*4 + CTX]
+	mov	f, [8*5 + CTX]
+	mov	g, [8*6 + CTX]
+	mov	h, [8*7 + CTX]
+
+	lea	TBL,[rel K512]
+
+	mov	[rsp + _INP], INP  ; Save INP to the stack
+	one_block_512
+	mov	INP, [rsp + _INP]  ; Restore INP from the stack
+
+	add	[8*0 + CTX], a
+	add	[8*1 + CTX], b
+	add	[8*2 + CTX], c
+	add	[8*3 + CTX], d
+	add	[8*4 + CTX], e
+	add	[8*5 + CTX], f
+	add	[8*6 + CTX], g
+	add	[8*7 + CTX], h
+
+	add 	INP, 128
+	dec 	r12
+	jnz 	process_block
+
+%ifndef LINUX
+	movdqu	xmm6,[rsp + _XMM_SAVE + 0*16]
+	movdqu	xmm7,[rsp + _XMM_SAVE + 1*16]
+	movdqu	xmm8,[rsp + _XMM_SAVE + 2*16]
+	movdqu	xmm9,[rsp + _XMM_SAVE + 3*16]
+	movdqu	xmm10,[rsp + _XMM_SAVE + 4*16]
+	movdqu	xmm11,[rsp + _XMM_SAVE + 5*16]
+	movdqu	xmm12,[rsp + _XMM_SAVE + 6*16]
+	movdqu	xmm13,[rsp + _XMM_SAVE + 7*16]
+
+%ifdef SAFE_DATA
+        ;; Clear potential sensitive data stored in stack
+        clear_xmms_sse xmm0, xmm1, xmm2, xmm3, xmm4, xmm5
+        movdqu  [rsp + _XMM_SAVE + 0 * 16], xmm0
+        movdqu  [rsp + _XMM_SAVE + 1 * 16], xmm0
+        movdqu  [rsp + _XMM_SAVE + 2 * 16], xmm0
+        movdqu  [rsp + _XMM_SAVE + 3 * 16], xmm0
+        movdqu  [rsp + _XMM_SAVE + 4 * 16], xmm0
+        movdqu  [rsp + _XMM_SAVE + 5 * 16], xmm0
+        movdqu  [rsp + _XMM_SAVE + 6 * 16], xmm0
+        movdqu  [rsp + _XMM_SAVE + 7 * 16], xmm0
+%endif
+%else ;; LINUX
+%ifdef SAFE_DATA
+	clear_all_xmms_sse_asm
+%endif
+%endif ;; LINUX
+
+        mov     rbx, [rsp + _GP_SAVE]
+%ifndef LINUX
+        mov     rsi, [rsp + _GP_SAVE + 8]
+        mov     rdi, [rsp + _GP_SAVE + 16]
+%endif
+	mov     r12, [rsp + _GP_SAVE + 24]
+	mov     r13, [rsp + _GP_SAVE + 32]
+        mov     r14, [rsp + _GP_SAVE + 40]
+        mov     r15, [rsp + _GP_SAVE + 48]
+        mov     rbp, [rsp + _GP_SAVE + 56]
+
+	add	rsp, STACK_size
 
 	ret
 
