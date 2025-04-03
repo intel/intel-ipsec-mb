@@ -203,6 +203,12 @@ test_sha_sb(struct IMB_MGR *mb_mgr, const struct mac_test *vec, const int num_jo
                 case 256:
                         IMB_SHA256(mb_mgr, vec->msg, vec->msgSize / 8, auths + sizeof_padding);
                         break;
+                case 384:
+                        IMB_SHA384(mb_mgr, vec->msg, vec->msgSize / 8, auths + sizeof_padding);
+                        break;
+                case 512:
+                        IMB_SHA512(mb_mgr, vec->msg, vec->msgSize / 8, auths + sizeof_padding);
+                        break;
                 default:
                         fprintf(stderr, "SHA algorithm not supported\n");
                         goto end;
@@ -396,13 +402,11 @@ test_sha_vectors(struct IMB_MGR *mb_mgr, struct test_suite_context *sha1_ctx,
                 } else {
                         test_suite_update(ctx, 1, 0);
                 }
-                if (sha_type == 1 || sha_type == 224 || sha_type == 256) {
-                        if (test_sha_sb(mb_mgr, v, num_jobs, sha_type)) {
-                                printf("error #%zu\n", v->tcId);
-                                test_suite_update(ctx, 0, 1);
-                        } else {
-                                test_suite_update(ctx, 1, 0);
-                        }
+                if (test_sha_sb(mb_mgr, v, num_jobs, sha_type)) {
+                        printf("error #%zu\n", v->tcId);
+                        test_suite_update(ctx, 0, 1);
+                } else {
+                        test_suite_update(ctx, 1, 0);
                 }
                 if (test_sha_hash_burst(mb_mgr, v, num_jobs, sha_type)) {
                         printf("error #%zu\n", v->tcId);
