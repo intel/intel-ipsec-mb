@@ -32,6 +32,10 @@
 
 #include <intel-ipsec-mb.h>
 
+#ifdef _WIN32
+#define strcasecmp _stricmp
+#endif
+
 #define BUF_SIZE       16384
 #define TOTAL_NUM_JOBS 10000UL
 
@@ -44,14 +48,21 @@ fill_buffer(void *buf)
 }
 
 int
-main(void)
+main(int argc, char **argv)
 {
+        if (argc != 2) {
+                printf("Usage: %s <sha_type>\n", argv[0]);
+                printf("sha_type: SHA1, SHA224, SHA256, SHA384, SHA512\n");
+                return EXIT_FAILURE;
+        }
+
         IMB_MGR *mb_mgr = NULL;
         int exit_status = EXIT_FAILURE;
+        const char *sha_type = argv[1];
 
         /* Allocate buffers */
         void *src_buf = malloc(BUF_SIZE);
-        uint8_t digest[IMB_SHA1_DIGEST_SIZE_IN_BYTES];
+        uint8_t digest[IMB_SHA512_DIGEST_SIZE_IN_BYTES];
 
         unsigned n_jobs_left = TOTAL_NUM_JOBS;
 
@@ -73,10 +84,22 @@ main(void)
         /* IMB API: Initialize MB_MGR, detecting best implementation to use */
         init_mb_mgr_auto(mb_mgr, NULL);
 
-        printf("Computing SHA1 on %u bytes buffer %lu times\n", BUF_SIZE, TOTAL_NUM_JOBS);
+        printf("Computing %s on %u bytes buffer %lu times\n", sha_type, BUF_SIZE, TOTAL_NUM_JOBS);
         while (n_jobs_left != 0) {
-                /* IMB API: Submit msg to be authenticated */
-                IMB_SHA1(mb_mgr, src_buf, BUF_SIZE, digest);
+                if (strcasecmp(sha_type, "SHA1") == 0) {
+                        IMB_SHA1(mb_mgr, src_buf, BUF_SIZE, digest);
+                } else if (strcasecmp(sha_type, "SHA224") == 0) {
+                        IMB_SHA224(mb_mgr, src_buf, BUF_SIZE, digest);
+                } else if (strcasecmp(sha_type, "SHA256") == 0) {
+                        IMB_SHA256(mb_mgr, src_buf, BUF_SIZE, digest);
+                } else if (strcasecmp(sha_type, "SHA384") == 0) {
+                        IMB_SHA384(mb_mgr, src_buf, BUF_SIZE, digest);
+                } else if (strcasecmp(sha_type, "SHA512") == 0) {
+                        IMB_SHA512(mb_mgr, src_buf, BUF_SIZE, digest);
+                } else {
+                        printf("Unsupported SHA type: %s\n", sha_type);
+                        goto exit;
+                }
 
                 /* IMB API: Get error number set (0 = all correct) */
                 const int err = imb_get_errno(mb_mgr);
