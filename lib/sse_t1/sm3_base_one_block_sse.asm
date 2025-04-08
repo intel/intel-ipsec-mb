@@ -32,6 +32,7 @@ extern sm3_base_update
 
 %include "include/os.inc"
 %include "include/reg_sizes.inc"
+%include "include/align_sse.inc"
 
 %ifdef LINUX
 
@@ -54,8 +55,8 @@ mksection .text
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; void sm3_one_block_sm3(void *tag, const void *msg)
-align 32
 MKGLOBAL(sm3_one_block_sse,function,internal)
+align_function
 sm3_one_block_sse:
         call    sm3_base_init
         mov     DWORD(arg3), 1

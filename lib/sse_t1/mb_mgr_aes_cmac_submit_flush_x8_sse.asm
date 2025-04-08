@@ -26,6 +26,7 @@
 ;;
 
 %include "include/mb_mgr_aes_cmac_submit_flush_sse.inc"
+%include "include/align_sse.inc"
 
 mksection .rodata
 default rel
@@ -64,33 +65,33 @@ mksection .text
 extern aes128_cbc_mac_x8_sse
 extern aes256_cbc_mac_x8_sse
 
-align 32
 ; IMB_JOB * submit_job_aes128_cmac_auth_x8_sse(MB_MGR_CMAC_OOO *state, IMB_JOB *job)
 ; arg 1 : state
 ; arg 2 : job
 MKGLOBAL(submit_job_aes128_cmac_auth_x8_sse,function,internal)
+align_function
 submit_job_aes128_cmac_auth_x8_sse:
         GENERIC_SUBMIT_FLUSH_JOB_AES_CMAC_SSE SUBMIT, aes128_cbc_mac_x8_sse
 
 ; IMB_JOB * flush_job_aes128_cmac_auth_x8_sse(MB_MGR_CMAC_OOO *state)
 ; arg 1 : state
-align 32
 MKGLOBAL(flush_job_aes128_cmac_auth_x8_sse,function,internal)
+align_function
 flush_job_aes128_cmac_auth_x8_sse:
         GENERIC_SUBMIT_FLUSH_JOB_AES_CMAC_SSE FLUSH, aes128_cbc_mac_x8_sse
 
-align 32
 ; IMB_JOB * submit_job_aes256_cmac_auth_x8_sse(MB_MGR_CMAC_OOO *state, IMB_JOB *job)
 ; arg 1 : state
 ; arg 2 : job
 MKGLOBAL(submit_job_aes256_cmac_auth_x8_sse,function,internal)
+align_function
 submit_job_aes256_cmac_auth_x8_sse:
         GENERIC_SUBMIT_FLUSH_JOB_AES_CMAC_SSE SUBMIT, aes256_cbc_mac_x8_sse
 
 ; IMB_JOB * flush_job_aes256_cmac_auth_x8_sse(MB_MGR_CMAC_OOO *state)
 ; arg 1 : state
-align 32
 MKGLOBAL(flush_job_aes256_cmac_auth_x8_sse,function,internal)
+align_function
 flush_job_aes256_cmac_auth_x8_sse:
         GENERIC_SUBMIT_FLUSH_JOB_AES_CMAC_SSE FLUSH, aes256_cbc_mac_x8_sse
 

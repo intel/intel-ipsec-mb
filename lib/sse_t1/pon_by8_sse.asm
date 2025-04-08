@@ -31,6 +31,7 @@
 %include "include/clear_regs.inc"
 %include "include/cet.inc"
 %include "include/error.inc"
+%include "include/align_sse.inc"
 
 ;;; This is implementation of stitched algorithms: AES128-CTR + CRC32 + BIP
 ;;; This combination is required by PON/xPON/gPON standard.
@@ -248,6 +249,8 @@ mksection .text
         ;; Add 1 to the top 64 bits. First shift left value 1 by 64 bits.
         pslldq          %%TXMM2, 8
         paddq           %%CTR, %%TXMM2
+
+align_label
 %%_no_ctr_overflow:
 %endif
         ;; CRC calculation
@@ -356,6 +359,7 @@ mksection .text
 %define %%GPT1        %13       ; [clobbered] temporary GP
 %define %%GPT2        %14       ; [clobbered] temporary GP
 
+align_loop
 %%_cipher_last_blocks:
         cmp     %%NUM_BYTES, 16
         jb      %%_partial_block_left
@@ -366,6 +370,7 @@ mksection .text
         jz      %%_bip_done
         jmp     %%_cipher_last_blocks
 
+align_label
 %%_partial_block_left:
         simd_load_sse_15_1 %%XMMT2, %%PTR_IN, %%NUM_BYTES
 
@@ -391,6 +396,7 @@ mksection .text
         ;; store partial bytes in the output buffer
         simd_store_sse_15 %%PTR_OUT, %%XMMT1, %%NUM_BYTES, %%GPT1, %%GPT2
 
+align_label
 %%_bip_done:
 %endmacro                       ; CIPHER_BIP_REST
 
@@ -448,6 +454,7 @@ mksection .text
         pclmulqdq       %%XT1, %%XCRCKEY, 0x10
         pxor            %%XCRC, %%XT1
 
+align_label
 %%_crc_barrett:
         ;; Barrett reduction
         pand            %%XCRC, [rel mask2]
@@ -663,6 +670,8 @@ mksection .text
         xor     DWORD(decrypt_not_done), DWORD(decrypt_not_done)
 %endif
         mov     DWORD(bytes_to_crc), 4  ; it will be zero after the sub (avoid jmp)
+
+align_label
 %%_crc_not_zero:
         sub     bytes_to_crc, 4         ; subtract size of the CRC itself
 
@@ -738,6 +747,7 @@ mksection .text
         movdqu  xtmp2, [tmp + bytes_to_crc - 16]
         jmp     %%_crc_two_xmms
 
+align_label
 %%_exact_16_left:
 %ifidn %%DIR, ENC
         movdqu  xtmp1, [p_in]
@@ -747,6 +757,7 @@ mksection .text
         pxor    xcrc, xtmp1 ; xor the initial CRC value
         jmp     %%_128_done
 
+align_label
 %%_less_than_16_left:
 %ifidn %%DIR, ENC
         simd_load_sse_15_1 xtmp1, p_in, bytes_to_crc
@@ -763,6 +774,7 @@ mksection .text
         pshufb  xcrc, xtmp1
         jmp     %%_128_done
 
+align_label
 %%only_less_than_4:
         cmp     bytes_to_crc, 3
         jl      %%only_less_than_3
@@ -770,23 +782,28 @@ mksection .text
         CRC32_REDUCE_64_TO_32 ethernet_fcs, xcrc, xtmp1, xtmp2, xcrckey
         jmp     %%_crc_done
 
+align_label
 %%only_less_than_3:
         cmp     bytes_to_crc, 2
         jl      %%only_less_than_2
         pslldq  xcrc, 6
         CRC32_REDUCE_64_TO_32 ethernet_fcs, xcrc, xtmp1, xtmp2, xcrckey
         jmp     %%_crc_done
+
+align_label
 %%only_less_than_2:
         pslldq  xcrc, 7
         CRC32_REDUCE_64_TO_32 ethernet_fcs, xcrc, xtmp1, xtmp2, xcrckey
         jmp     %%_crc_done
 
+align_label
 %%_at_least_32_bytes:
         DO_PON  p_keys, NUM_AES_ROUNDS, xcounter, p_in, p_out, xbip, \
                 xcrc, xcrckey, xtmp1, xtmp2, xtmp3, first_crc, %%DIR, %%CIPHER, ctr_check
         sub     num_bytes, 16
         sub     bytes_to_crc, 16
 
+align_loop
 %%_main_loop:
         cmp     bytes_to_crc, 16
         jb      %%_exit_loop
@@ -799,6 +816,7 @@ mksection .text
 %endif
         jmp     %%_main_loop
 
+align_label
 %%_exit_loop:
 
 %ifidn %%DIR, DEC
@@ -820,6 +838,8 @@ mksection .text
         ;; Partial bytes left - complete CRC calculation
         lea             tmp, [rel pshufb_shf_table]
         movdqu          xtmp2, [tmp + bytes_to_crc]
+
+align_label
 %%_crc_two_xmms:
 %ifidn %%DIR, ENC
         movdqu          xtmp1, [p_in - 16 + bytes_to_crc]  ; xtmp1 = data for CRC
@@ -842,9 +862,11 @@ mksection .text
         pxor            xcrc, xtmp3
         pxor            xcrc, xtmp1
 
+align_label
 %%_128_done:
         CRC32_REDUCE_128_TO_32 ethernet_fcs, xcrc, xtmp1, xtmp2, xcrckey
 
+align_label
 %%_crc_done:
         ;; @todo - store-to-load problem in ENC case (to be fixed later)
         ;; - store CRC in input buffer and authentication tag output
@@ -853,6 +875,8 @@ mksection .text
         or      DWORD(write_back_crc), DWORD(write_back_crc)
         jz      %%_skip_crc_write_back
         mov     [p_in + bytes_to_crc], DWORD(ethernet_fcs)
+
+align_label
 %%_skip_crc_write_back:
 %endif
         mov     tmp, [job + _auth_tag_output]
@@ -871,6 +895,8 @@ mksection .text
 %endif
         CIPHER_BIP_REST num_bytes, %%DIR, %%CIPHER, p_in, p_out, p_keys, xbip, \
                         xcounter, xtmp1, xtmp2, xtmp3, ctr_check, tmp2, tmp3
+
+align_label
 %%_do_not_cipher_the_rest:
 
         ;; finalize BIP
@@ -909,36 +935,36 @@ mksection .text
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;; aes_cntr_128_pon_enc_sse(IMB_JOB *job)
-align 32
 MKGLOBAL(ENC_FN_NAME,function,internal)
+align_function
 ENC_FN_NAME:
         AES128_CTR_PON ENC, CTR
         ret
 
 ;;; aes_cntr_128_pon_dec_sse(IMB_JOB *job)
-align 32
 MKGLOBAL(DEC_FN_NAME,function,internal)
+align_function
 DEC_FN_NAME:
         AES128_CTR_PON DEC, CTR
         ret
 
 ;;; aes_cntr_128_pon_enc_no_ctr_sse(IMB_JOB *job)
-align 32
 MKGLOBAL(ENC_NO_CTR_FN_NAME,function,internal)
+align_function
 ENC_NO_CTR_FN_NAME:
         AES128_CTR_PON ENC, NO_CTR
         ret
 
 ;;; aes_cntr_128_pon_dec_no_ctr_sse(IMB_JOB *job)
-align 32
 MKGLOBAL(DEC_NO_CTR_FN_NAME,function,internal)
+align_function
 DEC_NO_CTR_FN_NAME:
         AES128_CTR_PON DEC, NO_CTR
         ret
 
 ;; uint32_t hec_32_sse(const uint8_t *in)
-align 32
 MKGLOBAL(HEC_32,function,)
+align_function
 HEC_32:
         endbranch64
 
@@ -959,6 +985,7 @@ HEC_32:
         ret
 
 %ifdef SAFE_PARAM
+align_label
 error_hec32:
         ;; Clear reg and imb_errno
         IMB_ERR_CHECK_START rax
@@ -973,8 +1000,8 @@ error_hec32:
 %endif
 
 ;; uint32_t hec_64_sse(const uint8_t *in)
-align 32
 MKGLOBAL(HEC_64,function,)
+align_function
 HEC_64:
         endbranch64
 
@@ -994,6 +1021,7 @@ HEC_64:
         ret
 
 %ifdef SAFE_PARAM
+align_label
 error_hec64:
         ;; Clear reg and imb_errno
         IMB_ERR_CHECK_START rax

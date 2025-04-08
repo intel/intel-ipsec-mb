@@ -40,6 +40,7 @@
 %include "include/reg_sizes.inc"
 %include "include/crc32_refl.inc"
 %include "include/clear_regs.inc"
+%include "include/align_sse.inc"
 
 %ifndef CRC32_REFL_FN
 %define CRC32_REFL_FN crc32_refl_by8_sse
@@ -70,8 +71,8 @@ mksection .text
 ;; arg3 - buffer size
 ;; arg4 - pointer to CRC constants
 ;; Returns CRC value through EAX
-align 32
 MKGLOBAL(CRC32_REFL_FN,function,internal)
+align_function
 CRC32_REFL_FN:
         not             DWORD(arg1)
 
@@ -106,6 +107,7 @@ CRC32_REFL_FN:
 
         ;; Fold 128 bytes at a time.
         ;; This section of the code folds 8 xmm registers in parallel
+align_loop
 .fold_128_B_loop:
         add             arg2, 128
         movdqu          xmm9, [arg2 + 16 * 0]
@@ -230,6 +232,7 @@ CRC32_REFL_FN:
         ;; we can fold 16 bytes at a time if y>=16
         ;; continue folding 16B at a time
 
+align_loop
 .16B_reduction_loop:
         movdqa          xmm8, xmm7
         pclmulqdq       xmm8, xmm10, 0x1
@@ -246,6 +249,7 @@ CRC32_REFL_FN:
         ;; Now we have 16+z bytes left to reduce, where 0<= z < 16.
         ;; First, we reduce the data in the xmm7 register
 
+align_label
 .final_reduction_for_128:
         add             arg3, 16
         je              .128_done
@@ -254,6 +258,7 @@ CRC32_REFL_FN:
         ;; Since we know that there was data before the pointer, we can offset
         ;; the input pointer before the actual point, to receive exactly 16 bytes.
         ;; After that the registers need to be adjusted.
+align_label
 .get_last_two_xmms:
 
         movdqa          xmm2, xmm7
@@ -276,6 +281,7 @@ CRC32_REFL_FN:
         pxor            xmm7, xmm8
         pxor            xmm7, xmm2
 
+align_label
 .128_done:
         ;; compute crc of a 128-bit value
         movdqa          xmm10, [arg4 + crc32_const_fold_128b_to_64b]
@@ -293,6 +299,7 @@ CRC32_REFL_FN:
         pxor            xmm7, xmm0
 
         ;; barrett reduction
+align_label
 .barrett:
         pand            xmm7, [rel mask2]
         movdqa          xmm1, xmm7
@@ -308,6 +315,7 @@ CRC32_REFL_FN:
         pxor            xmm7, xmm1
         pextrd          eax, xmm7, 2
 
+align_label
 .cleanup:
 %ifdef SAFE_DATA
         clear_all_xmms_sse_asm
@@ -315,7 +323,7 @@ CRC32_REFL_FN:
         not             eax
         ret
 
-align 32
+align_label
 .less_than_256:
         ;; check if there is enough buffer to be able to fold 16B at a time
         cmp             arg3, 32
@@ -336,7 +344,7 @@ align 32
         sub             arg3, 32
         jmp             .16B_reduction_loop
 
-align 32
+align_label
 .less_than_32:
         ;; Move initial crc to the return value.
         ;; This is necessary for zero-length buffers.
@@ -357,7 +365,7 @@ align 32
         movdqa          xmm10, [arg4 + crc32_const_fold_1x128b]
         jmp             .get_last_two_xmms
 
-align 32
+align_label
 .less_than_16_left:
         simd_load_sse_15_1 xmm7, arg2, arg3
         pxor            xmm7, xmm0              ; xor the initial crc value
@@ -370,24 +378,27 @@ align 32
         pshufb          xmm7,xmm0
         jmp             .128_done
 
-align 32
+align_label
 .exact_16_left:
         movdqu          xmm7, [arg2]
         pxor            xmm7, xmm0              ; xor the initial crc value
         jmp             .128_done
 
+align_label
 .only_less_than_4:
         cmp             arg3, 3
         jl              .only_less_than_3
         pslldq          xmm7, 5
         jmp             .barrett
 
+align_label
 .only_less_than_3:
         cmp             arg3, 2
         jl              .only_less_than_2
         pslldq          xmm7, 6
         jmp             .barrett
 
+align_label
 .only_less_than_2:
         pslldq          xmm7, 7
         jmp             .barrett

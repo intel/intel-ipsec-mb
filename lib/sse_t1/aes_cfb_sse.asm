@@ -30,6 +30,7 @@
 %include "include/clear_regs.inc"
 %include "include/cet.inc"
 %include "include/error.inc"
+%include "include/align_sse.inc"
 ;;; Routines to do 128/256 bit CFB AES encrypt/decrypt operations on one block only.
 ;;; It processes only one buffer at a time.
 ;;; It is designed to manage partial blocks of DOCSIS 3.1 SEC BPI
@@ -115,6 +116,7 @@ mksection .text
 
         jmp             %%cfb_no_error
 
+align_label
 %%cfb_error:
         IMB_ERR_CHECK_START rax
         IMB_ERR_CHECK_NULL IV, rax, IMB_ERR_NULL_IV
@@ -126,6 +128,7 @@ mksection .text
 
         jmp %%exit_cfb
 
+align_label
 %%cfb_no_error:
 %%skip_in_out_check:
 %endif
@@ -154,6 +157,7 @@ mksection .text
         clear_xmms_sse  XDATA, XIN
         clear_scratch_gps_asm
 %endif
+align_label
 %%exit_cfb:
 %endmacro
 
@@ -177,7 +181,7 @@ mksection .text
 ;; not to store more than LEN bytes to OUT.
 
 MKGLOBAL(AES_CFB_128_ONE,function,)
-align 32
+align_function
 AES_CFB_128_ONE:
         endbranch64
         do_cfb 9
@@ -204,7 +208,7 @@ AES_CFB_128_ONE:
 ;; not to store more than LEN bytes to OUT.
 
 MKGLOBAL(AES_CFB_256_ONE,function,)
-align 32
+align_function
 AES_CFB_256_ONE:
         endbranch64
         do_cfb 13

@@ -29,6 +29,7 @@
 ; Uses SSE instructions
 %include "include/os.inc"
 %include "include/clear_regs.inc"
+%include "include/align_sse.inc"
 
 mksection .rodata
 default rel
@@ -283,11 +284,12 @@ ROTATE_ARGS
 	rotate_Xs
 	rotate_Xs
 	jmp	.loop1_5
-align 16
+align_loop
 .loop1:
 
 	do_4i	MAGIC_F0
 
+align_label
 .loop1_5:
 	do_4i	MAGIC_F0
 
@@ -326,11 +328,13 @@ align 16
 	rotate_Xs
 	rotate_Xs
 	jmp	.loop2_5
-align 16
+
+align_loop
 .loop2:
 
 	do_4i	MAGIC_F1
 
+align_label
 .loop2_5:
 	do_4i	MAGIC_F1
 
@@ -369,11 +373,13 @@ align 16
 	rotate_Xs
 	rotate_Xs
 	jmp	.loop3_5
-align 16
+
+align_loop
 .loop3:
 
 	do_4i	MAGIC_F2
 
+align_label
 .loop3_5:
 	do_4i	MAGIC_F2
 
@@ -456,7 +462,7 @@ align 16
 ;; arg 1 : (in) pointer to one block of data
 ;; arg 2 : (in/out) pointer to read/write digest
 MKGLOBAL(sha1_block_sse,function,internal)
-align 32
+align_function
 sha1_block_sse:
 	push	rbx
 	push	rsi
@@ -527,7 +533,7 @@ sha1_block_sse:
 ;; arg 2 : (in/out) pointer to read/write digest
 ;; arg 3 : (in) number of blocks to process
 MKGLOBAL(sha1_update_sse,function,internal)
-align 32
+align_function
 sha1_update_sse:
 	push	rbx
 	push	rsi
@@ -549,7 +555,7 @@ sha1_update_sse:
 
 	mov 	r14, ARG3
 
-align 32
+align_loop
 process_block:
         ;; set up a-f based on h0-h4
 	mov	a, [SZ*0 + CTX]

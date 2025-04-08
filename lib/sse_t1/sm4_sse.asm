@@ -30,6 +30,7 @@
 %include "include/cet.inc"
 %include "include/error.inc"
 %include "include/memcpy.inc"
+%include "include/align_sse.inc"
 
 extern byteswap_const, ddq_add_1
 
@@ -271,6 +272,8 @@ mksection .text
         pshufd  %%XTMP4, %%XTMP1, 0xFF
 
         xor     %%IDX, %%IDX
+
+align_loop
 %%start_loop:
         cmp     %%IDX, 16*8
         je      %%end_loop
@@ -319,6 +322,7 @@ mksection .text
         add     %%IDX, 16
         jmp     %%start_loop
 
+align_label
 %%end_loop:
         punpckldq  %%XTMP4, %%XTMP3
         punpckldq  %%XTMP2, %%XTMP1
@@ -338,8 +342,8 @@ mksection .text
 ; arg 2: EXP_ENC_KEYS: pointer to expanded encryption keys
 ; arg 3: EXP_DEC_KEYS: pointer to expanded decryption keys
 ;
-align 16
 MKGLOBAL(SM4_SET_KEY,function,internal)
+align_function
 SM4_SET_KEY:
 
 %define	KEY             arg1
@@ -449,6 +453,7 @@ SM4_SET_KEY:
         ret
 
 %ifdef SAFE_PARAM
+align_label
 error_set_key_sse:
         IMB_ERR_CHECK_START rax
         IMB_ERR_CHECK_NULL KEY, rax, IMB_ERR_NULL_KEY
@@ -469,6 +474,7 @@ error_set_key_sse:
 ; arg 4: KEYS: pointer to keys
 ;
 MKGLOBAL(SM4_ECB,function,internal)
+align_function
 SM4_ECB:
 
 %define	IN      arg1
@@ -480,7 +486,7 @@ SM4_ECB:
 
         shr     SIZE, 4 ; Number of blocks
 
-align 16
+align_loop
 ecb_loop:
         or      SIZE, SIZE
         jz      end_ecb_loop
@@ -495,6 +501,7 @@ ecb_loop:
 
         jmp     ecb_loop
 
+align_label
 end_ecb_loop:
 
 %ifdef SAFE_DATA
@@ -515,6 +522,7 @@ end_ecb_loop:
 ; arg 5: IV:   pointer to IV
 ;
 MKGLOBAL(SM4_CBC_ENC,function,internal)
+align_function
 SM4_CBC_ENC:
 
 %define	IN      arg1
@@ -533,7 +541,7 @@ SM4_CBC_ENC:
         ; Read 16-byte IV
         movdqu  xmm11, [IV]
 
-align 16
+align_loop
 cbc_enc_loop:
         or      SIZE, SIZE
         jz      end_cbc_enc_loop
@@ -549,6 +557,7 @@ cbc_enc_loop:
 
         jmp     cbc_enc_loop
 
+align_label
 end_cbc_enc_loop:
 
 %ifdef SAFE_DATA
@@ -569,6 +578,7 @@ end_cbc_enc_loop:
 ; arg 5: IV:   pointer to IV
 ;
 MKGLOBAL(SM4_CBC_DEC,function,internal)
+align_function
 SM4_CBC_DEC:
 
 %define	IN      arg1
@@ -587,7 +597,7 @@ SM4_CBC_DEC:
         ; Read 16-byte IV
         movdqu  xmm12, [IV]
 
-align 16
+align_loop
 cbc_dec_loop:
         or      SIZE, SIZE
         jz      end_cbc_dec_loop
@@ -604,6 +614,7 @@ cbc_dec_loop:
 
         jmp     cbc_dec_loop
 
+align_label
 end_cbc_dec_loop:
 
 %ifdef SAFE_DATA
@@ -625,6 +636,7 @@ end_cbc_dec_loop:
 ; arg 6: IV_LEN: length in bytes (12 or 16 bytes)
 ;
 MKGLOBAL(SM4_CTR,function,internal)
+align_function
 SM4_CTR:
 
 %define	IN      arg1
@@ -650,10 +662,12 @@ SM4_CTR:
 
         jmp     iv_read
 
+align_label
 iv_is_16_bytes:
         ; Read 16 byte IV: Nonce + 4-byte block counter (BE)
         movdqu  xmm0, [IV]
 
+align_label
 iv_read:
         FUNC_SAVE
 
@@ -661,7 +675,7 @@ iv_read:
         shr     tmp, 4 ; Number of full blocks
         jz      end_cntr_loop
 
-align 16
+align_loop
 cntr_loop:
         SM4_ENC_DEC xmm0, xmm11, KEY_EXP, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, xmm9, xmm10, tmp2
         movdqu  xmm10, [IN]
@@ -680,6 +694,7 @@ cntr_loop:
         dec     tmp
         jnz     cntr_loop
 
+align_label
 end_cntr_loop:
         and     SIZE, 0xf
         jz      end_partial_block
@@ -689,6 +704,7 @@ end_cntr_loop:
         pxor    xmm10, xmm11 ; output from SM4_ENC_DEC (xmm11) XOR with plaintext or ciphertext (xmm10)
         simd_store_sse OUT, xmm10, SIZE, tmp, tmp2
 
+align_label
 end_partial_block:
 
 %ifdef SAFE_DATA

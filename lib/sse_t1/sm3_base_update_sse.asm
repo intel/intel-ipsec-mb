@@ -29,6 +29,7 @@
 
 %include "include/os.inc"
 %include "include/reg_sizes.inc"
+%include "include/align_sse.inc"
 
 %ifdef LINUX
 
@@ -322,14 +323,15 @@ mksection .text
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; void sm3_base_update(uint32_t digest[8], const void *input, uint64_t num_blocks)
-align 32
 MKGLOBAL(sm3_base_update,function,internal)
+align_function
 sm3_base_update:
         or      arg3, arg3
         jz      sm3_base_update_end
 
         FUNC_START
 
+align_loop
 sm3_base_loop:
         ;; W[0..15]: load and shuffle 16 bytes of message
         movdqu  xmm0, [arg2 + 0*16]
@@ -350,7 +352,7 @@ sm3_base_loop:
         lea     t9, [rsp + _W]
         mov     DWORD(t10), 16
 
-align 32
+align_loop
 sm3_base_W_expand:
         ;; W[i] = P1(W[i - 16] ^ W[i - 9] ^ ROL32(W[i - 3], 15)) ^
         ;;        ROL32(W[i - 13], 7) ^ W[i - 6]
@@ -385,14 +387,14 @@ sm3_base_W_expand:
         ;; compress
         xor     DWORD(t10), DWORD(t10)
 
-align 32
+align_loop
 sm3_base_compress_0_15:
         SM3_COMPRESS t10, 0, DWORD(t9), DWORD(t11), DWORD(t12)
         inc     DWORD(t10)
         cmp     DWORD(t10), 16
         jne     sm3_base_compress_0_15
 
-align 32
+align_loop
 sm3_base_compress_16_63:
         SM3_COMPRESS t10, 1, DWORD(t9), DWORD(t11), DWORD(t12)
         inc     DWORD(t10)
@@ -428,6 +430,7 @@ sm3_base_compress_16_63:
         movdqu  [rsp + _W + 28*4], xmm0
 %endif
         FUNC_END
+align_label
 sm3_base_update_end:
         ret
 

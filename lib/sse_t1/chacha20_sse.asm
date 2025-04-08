@@ -31,6 +31,7 @@
 %include "include/clear_regs.inc"
 %include "include/chacha_poly_defines.inc"
 %include "include/cet.inc"
+%include "include/align_sse.inc"
 
 mksection .rodata
 default rel
@@ -219,6 +220,7 @@ mksection .text
 
         jmp     %%end_encrypt
 
+align_label
 %%up_to_63B:
         movdqu  %%PT0, [%%SRC + %%REG_OFF + %%IMM_OFF]
         movdqu  %%PT1, [%%SRC + %%REG_OFF + %%IMM_OFF + 16]
@@ -250,6 +252,7 @@ mksection .text
 
         jmp     %%end_encrypt
 
+align_label
 %%up_to_48B:
         movdqu  %%PT0, [%%SRC + %%REG_OFF + %%IMM_OFF]
         movdqu  %%PT1, [%%SRC + %%REG_OFF + %%IMM_OFF + 16]
@@ -277,6 +280,7 @@ mksection .text
 
         jmp     %%end_encrypt
 
+align_label
 %%up_to_32B:
         movdqu  %%PT0, [%%SRC + %%REG_OFF + %%IMM_OFF]
 %if %0 == 16
@@ -300,6 +304,7 @@ mksection .text
 
         jmp     %%end_encrypt
 
+align_label
 %%up_to_16B:
         lea     %%SRC, [%%SRC + %%REG_OFF + %%IMM_OFF]
         lea     %%DST, [%%DST + %%REG_OFF + %%IMM_OFF]
@@ -313,6 +318,7 @@ mksection .text
 
         simd_store_sse %%DST, %%PT0, %%LEN, %%TMP, %%TMP2
 
+align_label
 %%end_encrypt:
         add     %%SRC, %%LEN
         add     %%DST, %%LEN
@@ -652,6 +658,8 @@ mksection .text
 %endrep
 
         mov     DWORD(%%LOOP_IDX), 10
+
+align_loop
 %%start_loop:
         CHACHA20_ROUND %%XMM_DWORD_0, %%XMM_DWORD_1, %%XMM_DWORD_2, %%XMM_DWORD_3, \
                        %%XMM_DWORD_4, %%XMM_DWORD_5, %%XMM_DWORD_6, %%XMM_DWORD_7, \
@@ -673,8 +681,8 @@ mksection .text
 %endrep
 %endmacro
 
-align 32
 MKGLOBAL(submit_job_chacha20_enc_dec_sse,function,internal)
+align_function
 submit_job_chacha20_enc_dec_sse:
 
 %define src     r8
@@ -752,7 +760,7 @@ submit_job_chacha20_enc_dec_sse:
         cmp     len, 64*4
         jb      more_than_2_blocks_left
 
-align 32
+align_loop
 start_loop:
 
         ; Generate 256 bytes of keystream
@@ -857,6 +865,7 @@ start_loop:
         cmp     len, 64*4
         jae     start_loop
 
+align_label
 exit_loop:
 
         ; Check if there are no more bytes to encrypt
@@ -866,6 +875,7 @@ exit_loop:
         cmp     len, 64*2
         ja      more_than_2_blocks_left
 
+align_label
 check_1_or_2_blocks_left:
         cmp     len, 64
         ja      two_blocks_left
@@ -902,6 +912,7 @@ check_1_or_2_blocks_left:
 
         jmp     no_partial_block
 
+align_label
 less_than_64:
 
         ENCRYPT_1B_64B  src, dst, len, off, 0, xmm9, xmm10, xmm11, xmm12, \
@@ -909,6 +920,7 @@ less_than_64:
 
         jmp     no_partial_block
 
+align_label
 two_blocks_left:
 
         ; Get last block counter dividing offset by 64
@@ -947,6 +959,7 @@ two_blocks_left:
 
         jmp     no_partial_block
 
+align_label
 between_64_127:
         ; Load plaintext, XOR with KS and store ciphertext for first 64 bytes
         ENCRYPT_64B src, dst, off, 0, xmm4, xmm5, xmm6, xmm7, \
@@ -960,6 +973,7 @@ between_64_127:
 
         jmp     no_partial_block
 
+align_label
 more_than_2_blocks_left:
 
         ; Generate 256 bytes of keystream
@@ -1044,10 +1058,12 @@ more_than_2_blocks_left:
 
         jmp     no_partial_block
 
+align_label
 between_129_191:
         ENCRYPT_1B_64B  src, dst, len, off, 0, xmm2, xmm6, xmm10, xmm14, \
                         xmm0, xmm1, xmm4, xmm3, off, src
 
+align_label
 no_partial_block:
 
 %ifdef SAFE_DATA
@@ -1064,6 +1080,7 @@ no_partial_block:
 
         mov     rsp, [rsp + _RSP_SAVE]
 
+align_label
 exit:
         mov     rax, job
         or      dword [rax + _status], IMB_STATUS_COMPLETED_CIPHER
@@ -1071,8 +1088,8 @@ exit:
         pop     r13
         ret
 
-align 32
 MKGLOBAL(chacha20_enc_dec_ks_sse,function,internal)
+align_function
 chacha20_enc_dec_ks_sse:
 
 %define blk_cnt r10
@@ -1160,6 +1177,7 @@ chacha20_enc_dec_ks_sse:
         sub     len, tmp5
         jz      no_partial_block_ks
 
+align_label
 no_remain_ks_bytes:
         ; Reset remaining number of KS bytes
         mov     qword [ctx + RemainKsBytes], 0
@@ -1211,7 +1229,7 @@ no_remain_ks_bytes:
         cmp     len, 64*4
         jb      more_than_2_blocks_left_ks
 
-align 32
+align_loop
 start_loop_ks:
 
         ; Generate 256 bytes of keystream
@@ -1317,6 +1335,7 @@ start_loop_ks:
         cmp     len, 64*4
         jae     start_loop_ks
 
+align_label
 exit_loop_ks:
 
         ; Check if there are no more bytes to encrypt
@@ -1326,6 +1345,7 @@ exit_loop_ks:
         cmp     len, 64*2
         ja      more_than_2_blocks_left_ks
 
+align_label
 check_1_or_2_blocks_left_ks:
         cmp     len, 64
         ja      two_blocks_left_ks
@@ -1362,6 +1382,7 @@ check_1_or_2_blocks_left_ks:
 
         jmp     no_partial_block_ks
 
+align_label
 less_than_64_ks:
 
         ; Preserve len
@@ -1383,6 +1404,7 @@ less_than_64_ks:
         mov     [ctx + RemainKsBytes], tmp
         jmp     no_partial_block_ks
 
+align_label
 two_blocks_left_ks:
 
         ; Prepare next 2 chacha states from IV, key
@@ -1419,6 +1441,7 @@ two_blocks_left_ks:
 
         jmp     no_partial_block_ks
 
+align_label
 between_64_127_ks:
         ; Load plaintext, XOR with KS and store ciphertext for first 64 bytes
         ENCRYPT_64B src, dst, off, 0, xmm4, xmm5, xmm6, xmm7, \
@@ -1432,6 +1455,7 @@ between_64_127_ks:
         ; Handle rest up to 63 bytes in "less_than_64"
         jmp     less_than_64_ks
 
+align_label
 more_than_2_blocks_left_ks:
 
         ; Generate 256 bytes of keystream
@@ -1524,6 +1548,7 @@ more_than_2_blocks_left_ks:
 
         jmp     less_than_64_ks
 
+align_label
 between_129_191_ks:
         ; move bytes 128-191 of KS to xmm9-12 (used in less_than_64)
         movdqa  xmm9, xmm2
@@ -1533,6 +1558,7 @@ between_129_191_ks:
 
         jmp     less_than_64_ks
 
+align_label
 no_partial_block_ks:
 
         mov     [ctx + LastBlkCount], blk_cnt
@@ -1549,6 +1575,7 @@ no_partial_block_ks:
         movdqa  [rsp + _XMM_SAVE + 16], xmm0
 %endif
 
+align_label
 exit_ks:
         mov     r12, [rsp + _GP_SAVE]
         mov     r13, [rsp + _GP_SAVE + 8]
@@ -1572,8 +1599,8 @@ exit_ks:
 
 ;;
 ;; void poly1305_key_gen_sse(const void *key, const void *iv, void *poly_key)
-align 32
 MKGLOBAL(poly1305_key_gen_sse,function,internal)
+align_function
 poly1305_key_gen_sse:
 
 %ifndef LINUX
@@ -1615,8 +1642,8 @@ poly1305_key_gen_sse:
 %endif
         ret
 
-align 32
 MKGLOBAL(submit_job_chacha20_poly_enc_sse,function,internal)
+align_function
 submit_job_chacha20_poly_enc_sse:
 
 %define src     r8
@@ -1803,7 +1830,7 @@ submit_job_chacha20_poly_enc_sse:
         cmp     len, 64*4
         jb      exit_loop_poly
 
-align 32
+align_loop
 start_loop_poly:
 
         ; Generate 256 bytes of keystream
@@ -1908,6 +1935,7 @@ start_loop_poly:
         cmp     len, 64*4
         jae     start_loop_poly
 
+align_label
 exit_loop_poly:
 
         ; Check if there are no more bytes to encrypt
@@ -1917,6 +1945,7 @@ exit_loop_poly:
         cmp     len, 64*2
         ja      more_than_2_blocks_left_poly
 
+align_label
 check_1_or_2_blocks_left_poly:
         cmp     len, 64
         ja      two_blocks_left_poly
@@ -1957,6 +1986,7 @@ check_1_or_2_blocks_left_poly:
 
         jmp     no_partial_block_poly
 
+align_label
 gen_poly_key:
         ; Generate 64 bytes of keystream
         GENERATE_64_128_KS xmm0, xmm1, xmm2, xmm3, xmm9, xmm10, xmm11, \
@@ -1969,6 +1999,7 @@ gen_poly_key:
 
         jmp     no_partial_block_poly
 
+align_label
 less_than_64_poly:
 
         ENCRYPT_1B_64B  src, dst, len, off, 0, xmm9, xmm10, xmm11, xmm12, \
@@ -1976,6 +2007,7 @@ less_than_64_poly:
 
         jmp     no_partial_block_poly
 
+align_label
 two_blocks_left_poly:
 
         ; Prepare next 2 chacha states from IV, key
@@ -2016,6 +2048,7 @@ two_blocks_left_poly:
 
         jmp     no_partial_block_poly
 
+align_label
 gen_poly_key_two_blocks:
 
         movdqa  xmm8, xmm3
@@ -2041,6 +2074,7 @@ gen_poly_key_two_blocks:
 
         jmp     no_partial_block_poly
 
+align_label
 between_64_127_poly:
         ; Load plaintext, XOR with KS and store ciphertext for first 64 bytes
         ENCRYPT_64B src, dst, off, 0, xmm4, xmm5, xmm6, xmm7, \
@@ -2053,6 +2087,7 @@ between_64_127_poly:
 
         jmp     no_partial_block_poly
 
+align_label
 more_than_2_blocks_left_poly:
 
         ; Generate 256 bytes of keystream
@@ -2142,6 +2177,7 @@ more_than_2_blocks_left_poly:
 
         jmp     no_partial_block_poly
 
+align_label
 gen_poly_key_up_to_four_blocks:
 
         ; Restore xmm2,xmm3
@@ -2181,10 +2217,12 @@ gen_poly_key_up_to_four_blocks:
 
         jmp     no_partial_block_poly
 
+align_label
 between_129_191_poly:
         ENCRYPT_1B_64B  src, dst, len, off, 0, xmm2, xmm6, xmm10, xmm14, \
                         xmm0, xmm1, xmm3, xmm4, off, src
 
+align_label
 no_partial_block_poly:
 
 %ifdef SAFE_DATA
@@ -2218,8 +2256,8 @@ no_partial_block_poly:
 
         ret
 
-align 32
 MKGLOBAL(submit_job_chacha20_poly_dec_sse,function,internal)
+align_function
 submit_job_chacha20_poly_dec_sse:
 
 %define src     r8
@@ -2282,6 +2320,7 @@ submit_job_chacha20_poly_dec_sse:
 
         jmp     no_partial_block_dec
 
+align_label
 initial_dec_num_blocks_is_2:
 
         ; 2 initial blocks
@@ -2296,6 +2335,7 @@ initial_dec_num_blocks_is_2:
 
         jmp     no_partial_block_dec
 
+align_label
 initial_dec_num_blocks_is_3:
 
         ; 3 initial blocks
@@ -2375,7 +2415,7 @@ initial_dec_num_blocks_is_3:
         cmp     len, 64*4
         jb      more_than_2_blocks_left_dec
 
-align 32
+align_loop
 start_loop_dec:
 
         ; Generate 256 bytes of keystream
@@ -2480,6 +2520,7 @@ start_loop_dec:
         cmp     len, 64*4
         jae     start_loop_dec
 
+align_label
 exit_loop_dec:
 
         ; Check if there are no more bytes to encrypt
@@ -2489,6 +2530,7 @@ exit_loop_dec:
         cmp     len, 64*2
         ja      more_than_2_blocks_left_dec
 
+align_label
 check_1_or_2_blocks_left_dec:
         cmp     len, 64
         ja      two_blocks_left_dec
@@ -2525,6 +2567,7 @@ check_1_or_2_blocks_left_dec:
 
         jmp     no_partial_block_dec
 
+align_label
 less_than_64_dec:
 
         ENCRYPT_1B_64B  src, dst, len, off, 0, xmm9, xmm10, xmm11, xmm12, \
@@ -2532,6 +2575,7 @@ less_than_64_dec:
 
         jmp     no_partial_block_dec
 
+align_label
 two_blocks_left_dec:
 
         ; Get last block counter dividing offset by 64
@@ -2570,6 +2614,7 @@ two_blocks_left_dec:
 
         jmp     no_partial_block_dec
 
+align_label
 between_64_127_dec:
         ; Load plaintext, XOR with KS and store ciphertext for first 64 bytes
         ENCRYPT_64B src, dst, off, 0, xmm4, xmm5, xmm6, xmm7, \
@@ -2583,6 +2628,7 @@ between_64_127_dec:
 
         jmp     no_partial_block_dec
 
+align_label
 more_than_2_blocks_left_dec:
 
         ; Generate 256 bytes of keystream
@@ -2667,10 +2713,11 @@ more_than_2_blocks_left_dec:
 
         jmp     no_partial_block_dec
 
+align_label
 between_129_191_dec:
         ENCRYPT_1B_64B  src, dst, len, off, 0, xmm2, xmm6, xmm10, xmm14, \
                         xmm0, xmm1, xmm4, xmm3, off, src
-
+align_label
 no_partial_block_dec:
 
 %ifdef SAFE_DATA
@@ -2703,6 +2750,7 @@ no_partial_block_dec:
         ret
 
 MKGLOBAL(gen_keystr_poly_key_sse,function,internal)
+align_function
 gen_keystr_poly_key_sse:
 
 %define keys    arg1
@@ -2834,6 +2882,7 @@ gen_keystr_poly_key_sse:
         movdqa  [rsp + _XMM_SAVE + 16], xmm0
 %endif
 
+align_label
 restore_gen_keystr:
 %ifndef LINUX
 %assign i 0
@@ -2848,6 +2897,7 @@ restore_gen_keystr:
 
         ret
 
+align_label
 check_1_or_2_blocks_left_gen:
 
         cmp     len, 64
@@ -2879,6 +2929,7 @@ check_1_or_2_blocks_left_gen:
 
         jmp     exit_gen
 
+align_label
 two_blocks_left_gen:
 
         ; Prepare next 2 chacha states from IV, key
@@ -2914,6 +2965,7 @@ two_blocks_left_gen:
         movdqu  [ks + 16*6], xmm11
         movdqu  [ks + 16*7], xmm12
 
+align_label
 exit_gen:
 
 %ifdef SAFE_DATA
@@ -2921,8 +2973,8 @@ exit_gen:
 %endif
         jmp	restore_gen_keystr
 
-align 32
 MKGLOBAL(quic_hp_chacha20_sse,function,internal)
+align_function
 quic_hp_chacha20_sse:
         endbranch64
 
@@ -2988,7 +3040,7 @@ quic_hp_chacha20_sse:
         cmp     num_buffers, 4
         jb      three_buffers_left
 
-align 32
+align_loop
 start_loop_quic:
 
         ; Load 16-byte samples from 4 buffers
@@ -3048,6 +3100,7 @@ start_loop_quic:
         cmp     num_buffers, 4
         jae     start_loop_quic
 
+align_label
 exit_loop_quic:
 
         ; Check if there are no more buffers
@@ -3060,6 +3113,7 @@ exit_loop_quic:
 
         ; fall-through for one buffer
 
+align_label
 one_buffer_left:
         ; Prepare next chacha state
         movdqu  xmm1, [key]          ; Load key bytes 0-15
@@ -3079,6 +3133,7 @@ one_buffer_left:
 
         jmp     no_more_buffers
 
+align_label
 two_buffers_left:
         ; Prepare next 2 chacha states from IV, key
         movdqu  xmm1, [key]          ; Load key bytes 0-15
@@ -3104,6 +3159,7 @@ two_buffers_left:
 
         jmp     no_more_buffers
 
+align_label
 three_buffers_left:
 
         mov     tmp, [src_array + off]
@@ -3148,6 +3204,7 @@ three_buffers_left:
         movd    [tmp], xmm0
         pextrb  [tmp + 4], xmm0, 4
 
+align_label
 no_more_buffers:
 
 %ifdef SAFE_DATA
@@ -3171,6 +3228,7 @@ no_more_buffers:
 %endif
         mov     rsp, [rsp + _RSP_SAVE]
 
+align_label
 exit_quic:
 
         ret

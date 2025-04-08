@@ -29,6 +29,7 @@
 %include "include/imb_job.inc"
 %include "include/mb_mgr_datastruct.inc"
 %include "include/reg_sizes.inc"
+%include "include/align_sse.inc"
 
 %ifndef AES_XCBC_X4
 %define AES_XCBC_X4 aes_xcbc_mac_128_x4
@@ -100,6 +101,7 @@ endstruc
 ; arg 1 : state
 ; arg 2 : job
 MKGLOBAL(FLUSH_JOB_AES_XCBC,function,internal)
+align_function
 FLUSH_JOB_AES_XCBC:
 
         mov	rax, rsp
@@ -132,6 +134,7 @@ FLUSH_JOB_AES_XCBC:
 	cmp	qword [state + _aes_xcbc_ldata + 3 * _XCBC_LANE_DATA_size + _xcbc_job_in_lane], 0
 	cmovne	idx, [rel three]
 
+align_loop
 copy_lane_data:
 	; copy idx to empty lanes
 	mov	tmp1, [state + _aes_xcbc_args_in + idx*8]
@@ -170,6 +173,7 @@ APPEND(skip_,I):
 	call	AES_XCBC_X4
 	; state and idx are intact
 
+align_label
 len_is_0:
         ; process completed job "idx"
         imul    lane_data, idx, _XCBC_LANE_DATA_size
@@ -183,6 +187,7 @@ len_is_0:
         mov     [state + _aes_xcbc_args_in + 8*idx], tmp
         jmp     copy_lane_data
 
+align_label
 end_loop:
         mov     job_rax, [lane_data + _xcbc_job_in_lane]
         mov     icv,  [job_rax + _auth_tag_output]
@@ -215,6 +220,7 @@ APPEND(skip_clear_,I):
 %assign I (I+1)
 %endrep
 %endif
+align_label
 return:
 
 	mov	rbx, [rsp + _gpr_save + 8*0]
@@ -231,6 +237,7 @@ return:
 
 	ret
 
+align_label
 return_null:
 	xor	job_rax, job_rax
 	jmp	return

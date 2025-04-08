@@ -30,6 +30,7 @@
 %include "include/const.inc"
 %include "include/reg_sizes.inc"
 %include "include/clear_regs.inc"
+%include "include/align_sse.inc"
 
 ; routine to do AES192 CNTR enc/decrypt "by8"
 ; XMM registers are clobbered. Saving/restoring must be done at a higher level
@@ -274,6 +275,7 @@ extern ddq_add_5, ddq_add_6, ddq_add_7, ddq_add_8
         por             xtmp2, xtmp
         movdqa		CONCAT(xdata, idx), xtmp2
 
+align_label
 %%skip_preserve:
 %endif
 
@@ -319,6 +321,7 @@ mksection .text
         movdqu  xcounter, [p_IV]
 %endif
 
+align_label
 %%bswap_iv:
 	pshufb	xcounter, xbyteswap
 
@@ -343,46 +346,56 @@ mksection .text
 	cmp	tmp, 2*16
 	jg	%%eq3
 	je	%%eq2
+
+align_label
 %%eq1:
 	do_aes_load	1, %%CNTR_TYPE	; 1 block
 	add	p_out, 1*16
         jmp     %%chk
 
+align_label
 %%eq2:
 	do_aes_load	2, %%CNTR_TYPE	; 2 blocks
 	add	p_out, 2*16
         jmp      %%chk
 
+align_label
 %%eq3:
 	do_aes_load	3, %%CNTR_TYPE	; 3 blocks
 	add	p_out, 3*16
 	jmp	%%chk
 
+align_label
 %%eq4:
 	do_aes_load	4, %%CNTR_TYPE
 	add	p_out, 4*16
 	jmp	%%chk
 
+align_label
 %%gt4:
         ; 5 <= tmp <= 7
 	cmp	tmp, 6*16
 	jg	%%eq7
 	je	%%eq6
 
+align_label
 %%eq5:
 	do_aes_load	5, %%CNTR_TYPE
 	add	p_out, 5*16
 	jmp	%%chk
 
+align_label
 %%eq6:
 	do_aes_load	6, %%CNTR_TYPE
 	add	p_out, 6*16
 	jmp	%%chk
 
+align_label
 %%eq7:
 	do_aes_load	7, %%CNTR_TYPE
 	add	p_out, 7*16
 	; fall through to chk
+align_label
 %%chk:
 	and	num_bytes, ~(7*16)
 	jz	%%do_return2
@@ -396,7 +409,7 @@ mksection .text
 	movdqa	xkey8, [p_keys + 8*16]
 	movdqa	xkey12, [p_keys + 12*16]
 
-align 32
+align_loop
 %%main_loop2:
 	; num_bytes is a multiple of 8 blocks + partial bytes
 	do_aes_noload	8, %%CNTR_TYPE
@@ -409,6 +422,7 @@ align 32
 	or      num_bytes, num_bytes
         jnz    %%last
 
+align_label
 %%do_return2:
 
 %ifidn %%CNTR_TYPE, CNTR_BIT
@@ -423,6 +437,7 @@ align 32
 
 	ret
 
+align_label
 %%last:
 
 	; load partial block into XMM register
@@ -480,27 +495,29 @@ align 32
         movdqa  xdata0, xtmp2
 %endif
 
+align_label
 %%store_output:
         ; copy result into the output buffer
         simd_store_sse_15 p_out, xdata0, num_bytes, tmp, rax
 
         jmp	%%do_return2
 
+align_label
 %%iv_is_16_bytes:
         ; Read 16 byte IV: Nonce + ESP IV + block counter (BE)
         movdqu  xcounter, [p_IV]
         jmp     %%bswap_iv
 %endmacro
 
-align 32
 ;; aes_cntr_192_sse(void *in, void *IV, void *keys, void *out, UINT64 num_bytes, UINT64 iv_len)
 MKGLOBAL(AES_CNTR_192,function,internal)
+align_function
 AES_CNTR_192:
         DO_CNTR CNTR
 
-align 32
 ;; aes_cntr_bit_192_sse(void *in, void *IV, void *keys, void *out, UINT64 num_bits, UINT64 iv_len)
 MKGLOBAL(AES_CNTR_BIT_192,function,internal)
+align_function
 AES_CNTR_BIT_192:
         DO_CNTR CNTR_BIT
 

@@ -31,6 +31,7 @@
 %include "include/memcpy.inc"
 %include "include/mb_mgr_datastruct.inc"
 %include "include/const.inc"
+%include "include/align_sse.inc"
 
 %ifndef ZUC_CIPHER_4
 %define ZUC_CIPHER_4 asm_ZucCipher_4_sse
@@ -1019,6 +1020,8 @@ mksection .text
         movdqa  %%MASK_31, [rel mask31]
 
         xor     r15, r15
+
+align_loop
 %%start_loop:
         cmp     r15, 32
         je      %%exit_loop
@@ -1033,6 +1036,7 @@ mksection .text
         inc     r15
         jmp     %%start_loop
 
+align_label
 %%exit_loop:
         ; And once more, initial round from keygen phase = 33 times
         BITS_REORG4 pState, 0, no_reg, %%XTMP1, %%XTMP2, %%XTMP3, %%XTMP4, %%XTMP5, \
@@ -1093,11 +1097,13 @@ mksection .text
 %endmacro
 
 MKGLOBAL(ZUC128_INIT_4,function,internal)
+align_function
 ZUC128_INIT_4:
         ZUC_INIT_4 128, 0
         ret
 
 MKGLOBAL(ZUC256_INIT_4,function,internal)
+align_function
 ZUC256_INIT_4:
 
 %define tags   arg4
@@ -1111,18 +1117,22 @@ ZUC256_INIT_4:
     jb init_for_auth_tag_4B
 
     ; Fall-through for tag size = 16 bytes
+align_label
 init_for_auth_tag_16B:
     ZUC_INIT_4 256, 16, tags
     ret
 
+align_label
 init_for_auth_tag_8B:
     ZUC_INIT_4 256, 8, tags
     ret
 
+align_label
 init_for_auth_tag_4B:
     ZUC_INIT_4 256, 4, tags
     ret
 
+align_label
 init_for_cipher:
     ZUC_INIT_4 256, 0
     ret
@@ -1174,7 +1184,7 @@ init_for_cipher:
         ; Generate N*4B of keystream in N rounds
         xor     r15, r15
 
-align 32
+align_loop
 %%start_loop_keygen:
         inc     r15
         ; Shift LFSR 32-times, update state variables
@@ -1192,6 +1202,7 @@ align 32
         cmp         r15, %%NUM_ROUNDS
         jne         %%start_loop_keygen
 
+align_label
 %%exit_loop_keygen:
 
 %assign %%N 1
@@ -1246,6 +1257,7 @@ align 32
 ;;  RSI    - pKeyStr
 ;;
 MKGLOBAL(ZUC_KEYGEN16B_4,function,internal)
+align_function
 ZUC_KEYGEN16B_4:
 
         KEYGEN_4_SSE 4
@@ -1264,6 +1276,7 @@ ZUC_KEYGEN16B_4:
 ;;  RSI    - pKeyStr
 ;;
 MKGLOBAL(ZUC_KEYGEN8B_4,function,internal)
+align_function
 ZUC_KEYGEN8B_4:
 
         KEYGEN_4_SSE 2
@@ -1282,6 +1295,7 @@ ZUC_KEYGEN8B_4:
 ;;  RSI    - pKeyStr
 ;;
 MKGLOBAL(ZUC_KEYGEN4B_4,function,internal)
+align_function
 ZUC_KEYGEN4B_4:
 
         KEYGEN_4_SSE 1
@@ -1338,6 +1352,8 @@ ZUC_KEYGEN4B_4:
 
         ; Generate N*4B of keystream in N rounds
         mov     r15, %%INITIAL_ROUND
+
+align_loop
 %%start_loop_cipher:
         inc     r15
         ; Shift LFSR 32-times, update state variables
@@ -1355,6 +1371,7 @@ ZUC_KEYGEN4B_4:
         cmp         r15, (%%NROUNDS + %%INITIAL_ROUND)
         jne         %%start_loop_cipher
 
+align_label
 %%exit_loop_cipher:
 
 %assign %%N 1
@@ -1448,6 +1465,7 @@ ZUC_KEYGEN4B_4:
 ;;  R8  - min_length
 ;;
 MKGLOBAL(ZUC_CIPHER_4,function,internal)
+align_function
 ZUC_CIPHER_4:
 
 %define pState  arg1
@@ -1512,6 +1530,7 @@ ZUC_CIPHER_4:
         ; Save number of final bytes (8 bytes) in stack
         movq    [rsp + STACK_OFFSET + _rem_bytes_save], xmm1
 
+align_loop
 loop_cipher64:
         cmp     min_length, 64
         jl      exit_loop_cipher64
@@ -1525,6 +1544,8 @@ loop_cipher64:
 %assign round_off (round_off + 4)
 %endrep
         jmp     loop_cipher64
+
+align_label
 exit_loop_cipher64:
 
         ; Check if there are more bytes left to encrypt
@@ -1548,6 +1569,7 @@ exit_loop_cipher64:
         jb      _num_final_rounds_is_9
         ja      _num_final_rounds_is_11
 
+align_label
 _final_rounds_is_13_16:
         cmp     r15, 16
         je      _num_final_rounds_is_16
@@ -1556,6 +1578,7 @@ _final_rounds_is_13_16:
         jb      _num_final_rounds_is_13
         ja      _num_final_rounds_is_15
 
+align_label
 _final_rounds_is_1_7:
         cmp     r15, 4
         je      _num_final_rounds_is_4
@@ -1567,6 +1590,7 @@ _final_rounds_is_1_7:
         jb      _num_final_rounds_is_5
         ja      _num_final_rounds_is_7
 
+align_label
 _final_rounds_is_1_3:
         cmp     r15, 2
         je      _num_final_rounds_is_2
@@ -1625,6 +1649,7 @@ APPEND(_num_final_rounds_is_,I):
 %assign I (I + 1)
 %endrep
 
+align_label
 exit_final_rounds:
         ;; update in/out pointers
         movq           xmm0, buf_idx
@@ -1651,6 +1676,7 @@ exit_final_rounds:
 
         FUNC_RESTORE
 
+align_label
 exit_cipher:
 
         ret
@@ -1878,6 +1904,7 @@ exit_cipher:
         DIGEST_16_BYTES %%KS, %%XTMP1, %%XTMP6, %%XTMP2, %%XTMP3, %%XTMP4, \
                         %%XTMP5, %%XTMP7, %%XTMP8, %%KS_L, %%KS_M1, %%KS_M2, %%KS_H, %%TAG_SZ
 
+align_label
 %%Eia3RoundsSSE_end:
 
 %if %%TAG_SZ == 4
@@ -2004,8 +2031,8 @@ exit_cipher:
 ;;  @param [in] KEY_SZ (Key size: 128 or 256 bits)
 ;;  @param [in] TAG_SZ (Tag size: 4, 8 or 16 bytes)
 ;;
-align 16
 MKGLOBAL(ZUC_EIA3REMAINDER,function,internal)
+align_function
 ZUC_EIA3REMAINDER:
 %define T       arg1
 %define KS      arg2
@@ -2023,24 +2050,28 @@ ZUC_EIA3REMAINDER:
 
         ; Key size = 256
         ; Fall-through for tag size = 4 bytes
+align_label
 remainder_tag_sz_4:
         REMAINDER T, KS, DATA, N_BITS, r11, r12, r13, r14, r15, \
                   xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, \
                   xmm8, xmm9, xmm10, xmm11, 256, 4
         ret
 
+align_label
 remainder_tag_sz_8:
         REMAINDER T, KS, DATA, N_BITS, r11, r12, r13, r14, r15, \
                   xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, \
                   xmm8, xmm9, xmm10, xmm11, 256, 8
         ret
 
+align_label
 remainder_tag_sz_16:
         REMAINDER T, KS, DATA, N_BITS, r11, r12, r13, r14, r15, \
                   xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, \
                   xmm8, xmm9, xmm10, xmm11, 256, 16
         ret
 
+align_label
 remainder_key_sz_128:
         REMAINDER T, KS, DATA, N_BITS, r11, r12, r13, r14, r15, \
                   xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, \
@@ -2113,6 +2144,7 @@ remainder_key_sz_128:
 ;;
 align 16
 MKGLOBAL(ZUC_EIA3ROUND16B,function,internal)
+align_function
 ZUC_EIA3ROUND16B:
 
 %define	T       arg1
@@ -2125,16 +2157,19 @@ ZUC_EIA3ROUND16B:
         ja      round_tag_16B
 
         ; Fall-through for tag size = 4 bytes
+align_label
 round_tag_4B:
         ROUND T, KS, DATA, rax, xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, \
               xmm7, xmm8, xmm9, xmm10, xmm11, 4
         ret
 
+align_label
 round_tag_8B:
         ROUND T, KS, DATA, rax, xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, \
               xmm7, xmm8, xmm9, xmm10, xmm11, 8
         ret
 
+align_label
 round_tag_16B:
         ROUND T, KS, DATA, rax, xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, \
               xmm7, xmm8, xmm9, xmm10, xmm11, 16

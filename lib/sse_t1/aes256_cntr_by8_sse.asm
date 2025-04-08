@@ -32,6 +32,7 @@
 %include "include/reg_sizes.inc"
 %include "include/clear_regs.inc"
 %include "include/cet.inc"
+%include "include/align_sse.inc"
 
 ; routine to do AES256 CNTR enc/decrypt "by8"
 ; XMM registers are clobbered. Saving/restoring must be done at a higher level
@@ -310,6 +311,7 @@ extern ddq_add_5, ddq_add_6, ddq_add_7, ddq_add_8
         por             xtmp2, xtmp
         movdqa		CONCAT(xdata, idx), xtmp2
 
+align_label
 %%skip_preserve:
 %endif
 
@@ -383,6 +385,7 @@ _iv_length_9:
 _iv_length_8:
         pinsrb	xcounter, [p_IV + 7], 8
 
+align_label
 _finish_nonce_move:
         ; last byte = 1
         por     xcounter, [rel set_byte15]
@@ -412,6 +415,7 @@ _finish_nonce_move:
         movdqu  xcounter, [p_IV]
 %endif
 %endif ;; CNTR/CNTR_BIT/CCM
+align_label
 %%_bswap_iv:
 	pshufb	xcounter, xbyteswap
 
@@ -436,46 +440,56 @@ _finish_nonce_move:
 	cmp	tmp, 2*16
 	jg	%%_eq3
 	je	%%_eq2
+
+align_label
 %%_eq1:
 	do_aes_load	1, %%CNTR_TYPE	; 1 block
 	add	p_out, 1*16
         jmp     %%_chk
 
+align_label
 %%_eq2:
 	do_aes_load	2, %%CNTR_TYPE	; 2 blocks
 	add	p_out, 2*16
         jmp      %%_chk
 
+align_label
 %%_eq3:
 	do_aes_load	3, %%CNTR_TYPE	; 3 blocks
 	add	p_out, 3*16
 	jmp	%%_chk
 
+align_label
 %%_eq4:
 	do_aes_load	4, %%CNTR_TYPE
 	add	p_out, 4*16
 	jmp	%%_chk
 
+align_label
 %%_gt4:
         ; 5 <= tmp <= 7
 	cmp	tmp, 6*16
 	jg	%%_eq7
 	je	%%_eq6
 
+align_label
 %%_eq5:
 	do_aes_load	5, %%CNTR_TYPE
 	add	p_out, 5*16
 	jmp	%%_chk
 
+align_label
 %%_eq6:
 	do_aes_load	6, %%CNTR_TYPE
 	add	p_out, 6*16
 	jmp	%%_chk
 
+align_label
 %%_eq7:
 	do_aes_load	7, %%CNTR_TYPE
 	add	p_out, 7*16
 	; fall through to chk
+align_label
 %%_chk:
 	and	num_bytes, ~(7*16)
 	jz	%%_do_return2
@@ -489,7 +503,7 @@ _finish_nonce_move:
 	movdqa	xkey8, [p_keys + 8*16]
 	movdqa	xkey12, [p_keys + 12*16]
 
-align 32
+align_loop
 %%_main_loop2:
 	; num_bytes is a multiple of 8 blocks + partial bytes
 	do_aes_noload	8, %%CNTR_TYPE
@@ -502,6 +516,7 @@ align 32
 	or      num_bytes, num_bytes
         jnz    %%_last
 
+align_label
 %%_do_return2:
 %ifidn %%CNTR_TYPE, CCM
 	mov	rax, job
@@ -520,6 +535,7 @@ align 32
 
 	ret
 
+align_label
 %%_last:
 
 	; load partial block into XMM register
@@ -577,12 +593,14 @@ align 32
         movdqa  xdata0, xtmp2
 %endif
 
+align_label
 %%_store_output:
         ; copy result into the output buffer
         simd_store_sse_15 p_out, xdata0, num_bytes, tmp, rax
 
         jmp	%%_do_return2
 
+align_label
 %%_iv_is_16_bytes:
         ; Read 16 byte IV: Nonce + ESP IV + block counter (BE)
         movdqu  xcounter, [p_IV]
@@ -592,21 +610,21 @@ align 32
 %ifdef CNTR_CCM_SSE
 ; IMB_JOB * aes_cntr_ccm_256_<arch>(IMB_JOB *job)
 ; arg 1 : job
-align 32
 MKGLOBAL(AES_CNTR_CCM_256,function,internal)
+align_function
 AES_CNTR_CCM_256:
         endbranch64
         DO_CNTR CCM
 %else
 ;; aes_cntr_256_sse(void *in, void *IV, void *keys, void *out, UINT64 num_bytes, UINT64 iv_len)
-align 32
 MKGLOBAL(AES_CNTR_256,function,internal)
+align_function
 AES_CNTR_256:
         DO_CNTR CNTR
 
 ;; aes_cntr_bit_256_sse(void *in, void *IV, void *keys, void *out, UINT64 num_bits, UINT64 iv_len)
-align 32
 MKGLOBAL(AES_CNTR_BIT_256,function,internal)
+align_function
 AES_CNTR_BIT_256:
         DO_CNTR CNTR_BIT
 %endif ;; CNTR_CCM_SSE

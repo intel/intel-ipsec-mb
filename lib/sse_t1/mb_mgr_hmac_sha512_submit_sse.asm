@@ -31,6 +31,7 @@
 %include "include/reg_sizes.inc"
 %include "include/memcpy.inc"
 %include "include/const.inc"
+%include "include/align_sse.inc"
 
 extern sha512_x2_sse
 
@@ -102,6 +103,7 @@ endstruc
 ; arg 1 : rcx : state
 ; arg 2 : rdx : job
 MKGLOBAL(FUNC,function,internal)
+align_function
 FUNC:
 
 	mov	rax, rsp
@@ -146,6 +148,7 @@ FUNC:
 	cmp	len, 128
 	jb	copy_lt128
 
+align_label
 fast_copy:
 	add	p, len
 %assign I 0
@@ -160,6 +163,7 @@ fast_copy:
 	movdqa	[lane_data + _extra_block_sha512 + I*4*16 + 3*16], xmm3
 %assign I (I+1)
 %endrep
+align_label
 end_fast_copy:
 
 	mov	size_offset, extra_blocks
@@ -186,6 +190,7 @@ end_fast_copy:
 	test	len, ~127
 	jnz	ge128_bytes
 
+align_label
 lt128_bytes:
         movdqa  xmm0, [state + _lens_sha512]
         XPINSRW xmm0, xmm1, tmp, lane, extra_blocks, scale_x16
@@ -195,12 +200,13 @@ lt128_bytes:
 	mov	[state + _args_data_ptr_sha512 + PTR_SZ*lane], tmp ;; 8 to hold a UINT8
 	mov	dword [lane_data + _extra_blocks_sha512], 0
 
+align_label
 ge128_bytes:
 	cmp	unused_lanes, 0xff
 	jne	return_null
 	jmp	start_loop
 
-	align	16
+align_loop
 start_loop:
 	; Find min length
 	movdqa	xmm0, [state + _lens_sha512]
@@ -219,6 +225,7 @@ start_loop:
 	call	sha512_x2_sse
 	; state and idx are intact
 
+align_label
 len_is_0:
 	; process completed job "idx"
 	imul	lane_data, idx, _SHA512_LANE_DATA_size
@@ -229,6 +236,7 @@ len_is_0:
 	cmp	dword [lane_data + _outer_done_sha512], 0
 	jne	end_loop
 
+align_label
 proc_outer:
 	mov	dword [lane_data + _outer_done_sha512], 1
 	mov	DWORD(size_offset), [lane_data + _size_offset_sha512]
@@ -261,7 +269,7 @@ proc_outer:
 %endrep
 	jmp	start_loop
 
-	align	16
+align_label
 proc_extra_blocks:
 	mov	DWORD(start_offset), [lane_data + _start_offset_sha512]
 
@@ -274,7 +282,7 @@ proc_extra_blocks:
 	mov	dword [lane_data + _extra_blocks_sha512], 0
 	jmp	start_loop
 
-	align	16
+align_label
 copy_lt128:
 	;; less than one message block of data
 	;; beginning of source block
@@ -285,11 +293,12 @@ copy_lt128:
 	mov	unused_lanes, [state + _unused_lanes_sha512]
 	jmp	end_fast_copy
 
+align_label
 return_null:
 	xor	job_rax, job_rax
 	jmp	return
 
-	align	16
+align_label
 end_loop:
 	mov	job_rax, [lane_data + _job_in_lane_sha512]
 	mov	unused_lanes, [state + _unused_lanes_sha512]
@@ -330,6 +339,7 @@ end_loop:
 %endif
         jmp     clear_ret
 
+align_label
 copy_full_digest:
 	cmp 	qword [job_rax + _auth_tag_output_len_in_bytes], 16
 	ja 	copy_tag_gt16
@@ -342,6 +352,7 @@ copy_full_digest:
 	simd_store_sse {p + 0*4}, xmm0, tmp2, tmp4, tmp3
 	jmp 	clear_ret
 
+align_label
 copy_tag_gt16:
 	;; copy 16 bytes first
 	movq   	xmm0, [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 0*SHA512_DIGEST_ROW_SIZE]
@@ -362,6 +373,7 @@ copy_tag_gt16:
 	simd_store_sse {p + 4*4}, xmm0, tmp2, tmp4, tmp3
 	jmp 	clear_ret
 
+align_label
 copy_tag_gt32:
 	;; copy 32 bytes
 	movq   	xmm0, [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 2*SHA512_DIGEST_ROW_SIZE]
@@ -381,6 +393,7 @@ copy_tag_gt32:
 	simd_store_sse {p + 8*4}, xmm0, tmp2, tmp4, tmp3
 	jmp 	clear_ret
 
+align_label
 copy_tag_gt48:
 	;; copy 48 bytes
 	movq   	xmm0, [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 4*SHA512_DIGEST_ROW_SIZE]
@@ -396,6 +409,7 @@ copy_tag_gt48:
 	pshufb  xmm0, [rel byteswap]
 	simd_store_sse {p + 12*4}, xmm0, tmp2, tmp4, tmp3
 
+align_label
 clear_ret:
 
 %ifdef SAFE_DATA
@@ -429,6 +443,7 @@ clear_ret:
 %endif
 %endif ;; SAFE_DATA
 
+align_label
 return:
 	mov	rbx, [rsp + _gpr_save + 8*0]
 	mov	rbp, [rsp + _gpr_save + 8*1]

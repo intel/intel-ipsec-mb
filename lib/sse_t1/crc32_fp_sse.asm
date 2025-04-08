@@ -31,6 +31,7 @@
 %include "include/clear_regs.inc"
 %include "include/cet.inc"
 %include "include/error.inc"
+%include "include/align_sse.inc"
 
 [bits 64]
 default rel
@@ -76,8 +77,8 @@ mksection .text
 ;; arg1 - buffer pointer
 ;; arg2 - buffer size in bytes
 ;; Returns CRC value through RAX
-align 32
 MKGLOBAL(CRC16_FP_DATA_FN, function,)
+align_function
 CRC16_FP_DATA_FN:
         endbranch64
 %ifdef SAFE_PARAM
@@ -93,6 +94,7 @@ CRC16_FP_DATA_FN:
         or              arg1, arg1
         jz              .wrong_param
 
+align_label
 .end_param_check:
 %endif
 %ifndef LINUX
@@ -135,6 +137,7 @@ CRC16_FP_DATA_FN:
         ret
 
 %ifdef SAFE_PARAM
+align_label
 .wrong_param:
         ;; Clear reg and imb_errno
         IMB_ERR_CHECK_START rax
@@ -154,8 +157,8 @@ CRC16_FP_DATA_FN:
 ;; arg1 - buffer pointer
 ;; arg2 - buffer size in bytes
 ;; Returns CRC value through RAX
-align 32
 MKGLOBAL(CRC11_FP_HEADER_FN, function,)
+align_function
 CRC11_FP_HEADER_FN:
         endbranch64
 %ifdef SAFE_PARAM
@@ -171,6 +174,7 @@ CRC11_FP_HEADER_FN:
         or              arg1, arg1
         jz              .wrong_param
 
+align_label
 .end_param_check:
 %endif
 %ifndef LINUX
@@ -213,6 +217,7 @@ CRC11_FP_HEADER_FN:
         ret
 
 %ifdef SAFE_PARAM
+align_label
 .wrong_param:
         ;; Clear reg and imb_errno
         IMB_ERR_CHECK_START rax
@@ -232,8 +237,8 @@ CRC11_FP_HEADER_FN:
 ;; arg1 - buffer pointer
 ;; arg2 - buffer size in bytes
 ;; Returns CRC value through RAX
-align 32
 MKGLOBAL(CRC7_FP_HEADER_FN, function,)
+align_function
 CRC7_FP_HEADER_FN:
         endbranch64
 %ifdef SAFE_PARAM
@@ -249,6 +254,7 @@ CRC7_FP_HEADER_FN:
         or              arg1, arg1
         jz              .wrong_param
 
+align_label
 .end_param_check:
 %endif
 %ifndef LINUX
@@ -291,6 +297,7 @@ CRC7_FP_HEADER_FN:
         ret
 
 %ifdef SAFE_PARAM
+align_label
 .wrong_param:
         ;; Clear reg and imb_errno
         IMB_ERR_CHECK_START rax

@@ -42,6 +42,7 @@
 %include "include/os.inc"
 %include "include/mb_mgr_datastruct.inc"
 %include "include/clear_regs.inc"
+%include "include/align_sse.inc"
 
 ;%define DO_DBGPRINT
 %include "include/dbgprint.inc"
@@ -386,7 +387,7 @@ endstruc
 ;; arg 2 : INP_SIZE : size of data in blocks (assumed >= 1)
 ;;
 MKGLOBAL(sha512_x2_sse,function,internal)
-align 32
+align_function
 sha512_x2_sse:
 	; general registers preserved in outer calling routine
 	; outer calling routine saves all the XMM registers
@@ -411,6 +412,8 @@ sha512_x2_sse:
 	mov	inp1,[STATE + _data_ptr_sha512  +1*PTR_SZ]
 
 	xor	IDX, IDX
+
+align_loop
 lloop:
 	xor	ROUND, ROUND
 	DBGPRINTL64  "lloop enter INP_SIZE ", INP_SIZE
@@ -446,7 +449,7 @@ lloop:
 %assign i (i*4)
 
 	jmp	Lrounds_16_xx
-align 16
+align_loop
 Lrounds_16_xx:
 %rep 16
 	ROUND_16_XX	T1, i
@@ -505,6 +508,7 @@ DBGPRINTL "====================== exit sha512_x2_sse code =====================\
 
 ; void call_sha512_x2_sse_from_c(SHA512_ARGS *args, UINT64 size_in_blocks);
 MKGLOBAL(call_sha512_x2_sse_from_c,function,internal)
+align_function
 call_sha512_x2_sse_from_c:
 	FUNC_SAVE
 	call sha512_x2_sse

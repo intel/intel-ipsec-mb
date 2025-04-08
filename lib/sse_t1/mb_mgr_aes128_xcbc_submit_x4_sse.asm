@@ -31,6 +31,7 @@
 %include "include/mb_mgr_datastruct.inc"
 %include "include/reg_sizes.inc"
 %include "include/memcpy.inc"
+%include "include/align_sse.inc"
 %ifndef AES_XCBC_X4
 %define AES_XCBC_X4 aes_xcbc_mac_128_x4
 %define SUBMIT_JOB_AES_XCBC submit_job_aes_xcbc_sse
@@ -92,6 +93,7 @@ endstruc
 ; arg 1 : state
 ; arg 2 : job
 MKGLOBAL(SUBMIT_JOB_AES_XCBC,function,internal)
+align_function
 SUBMIT_JOB_AES_XCBC:
 
         mov	rax, rsp
@@ -135,6 +137,7 @@ SUBMIT_JOB_AES_XCBC:
 	and	last_len, 15	; Check lsbs of msg len
 	jnz	slow_copy	; if not 16B mult, do slow copy
 
+align_label
 fast_copy:
 	movdqu	xmm0, [p - 16]	; load last block M[n]
         mov     tmp, [job + _k2] ; load K2 address
@@ -142,6 +145,7 @@ fast_copy:
         pxor    xmm0, xmm1      ; M[n] XOR K2
 	movdqa	[lane_data + _xcbc_final_block], xmm0
 	sub	len, 16		; take last block off length
+align_label
 end_fast_copy:
 	pxor	xmm0, xmm0
 	shl	lane, 4	; multiply by 16
@@ -155,6 +159,7 @@ end_fast_copy:
 	cmp	unused_lanes, 0xff
 	jne	return_null
 
+align_loop
 start_loop:
 	; Find min length
 	phminposuw	xmm1, xmm0
@@ -172,6 +177,7 @@ start_loop:
 	call	AES_XCBC_X4
 	; state and idx are intact
 
+align_label
 len_is_0:
 	; process completed job "idx"
 	imul	lane_data, idx, _XCBC_LANE_DATA_size
@@ -186,6 +192,7 @@ len_is_0:
         movdqa	xmm0, [state + _aes_xcbc_lens]
 	jmp	start_loop
 
+align_label
 end_loop:
 	; process completed job "idx"
 	mov	job_rax, [lane_data + _xcbc_job_in_lane]
@@ -213,6 +220,7 @@ end_loop:
         movdqa  [lane_data + _xcbc_final_block + 16], xmm0
 %endif
 
+align_label
 return:
 
 	mov	rbx, [rsp + _gpr_save + 8*0]
@@ -229,6 +237,7 @@ return:
 
 	ret
 
+align_label
 small_buffer:
 	; For buffers <= 16 Bytes
 	; The input data is set to final block
@@ -238,6 +247,7 @@ small_buffer:
 	cmp	len, 16
 	je	fast_copy
 
+align_label
 slow_copy:
 	and	len, ~15	; take final block off len
 	sub	p, last_len	; adjust data pointer
@@ -253,6 +263,7 @@ slow_copy:
 	movdqu	[lane_data + _xcbc_final_block], xmm0	; write final block
 	jmp	end_fast_copy
 
+align_label
 return_null:
 	xor	job_rax, job_rax
 	jmp	return

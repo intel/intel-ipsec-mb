@@ -31,6 +31,7 @@
 %include "include/dbgprint.inc"
 %include "include/mb_mgr_datastruct.inc"
 %include "include/clear_regs.inc"
+%include "include/align_sse.inc"
 
 mksection .rodata
 default rel
@@ -341,7 +342,6 @@ mksection .text
     mov     rsp, [rsp + GP_OFFSET] ;; rsp pointer
 %endmacro
 
-align 32
 
 ; XMM registers are clobbered. Saving/restoring must be done at a higher level
 
@@ -349,6 +349,7 @@ align 32
 ; arg 1 : rcx : pointer to args
 ; arg 2 : rdx : size (in blocks) ;; assumed to be >= 1
 MKGLOBAL(sha1_mult_sse,function,internal)
+align_function
 sha1_mult_sse:
 
 	sub	rsp, FRAMESZ
@@ -379,6 +380,7 @@ sha1_mult_sse:
 	mov	inp3,[arg1 + _data_ptr_sha1 + 3*PTR_SZ]
         DBGPRINTL64 "Sha1-SSE Incoming data ptrs", inp0, inp1, inp2, inp3
 	xor	IDX, IDX
+align_loop
 lloop:
 	movdqa	F, [rel PSHUFFLE_BYTE_FLIP_MASK]
 %assign I 0
@@ -518,6 +520,7 @@ lloop:
 
 ; void call_sha1_mult_sse_from_c(SHA1_ARGS *args, UINT32 size_in_blocks);
 MKGLOBAL(call_sha1_mult_sse_from_c,function,internal)
+align_function
 call_sha1_mult_sse_from_c:
 	FUNC_SAVE
 	call sha1_mult_sse

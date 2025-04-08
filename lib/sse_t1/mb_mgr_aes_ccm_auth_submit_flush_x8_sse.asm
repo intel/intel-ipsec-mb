@@ -26,6 +26,7 @@
 ;;
 
 %include "include/mb_mgr_aes_ccm_submit_flush_sse.inc"
+%include "include/align_sse.inc"
 
 mksection .rodata
 default rel
@@ -72,16 +73,16 @@ extern aes256_cbc_mac_x8_sse
 ; IMB_JOB * submit_job_aes128_ccm_auth_x8_sse(MB_MGR_CCM_OOO *state, IMB_JOB *job)
 ; arg 1 : state
 ; arg 2 : job
-align 32
 MKGLOBAL(submit_job_aes128_ccm_auth_x8_sse,function,internal)
+align_function
 submit_job_aes128_ccm_auth_x8_sse:
         endbranch64
         GENERIC_SUBMIT_FLUSH_JOB_AES_CCM_AUTH_SSE SUBMIT, aes128_cbc_mac_x8_sse, 9
 
 ; IMB_JOB * flush_job_aes128_ccm_auth_x8_sse(MB_MGR_CCM_OOO *state)
 ; arg 1 : state
-align 32
 MKGLOBAL(flush_job_aes128_ccm_auth_x8_sse,function,internal)
+align_function
 flush_job_aes128_ccm_auth_x8_sse:
         endbranch64
         GENERIC_SUBMIT_FLUSH_JOB_AES_CCM_AUTH_SSE FLUSH, aes128_cbc_mac_x8_sse, 9
@@ -89,16 +90,16 @@ flush_job_aes128_ccm_auth_x8_sse:
 ; IMB_JOB * submit_job_aes256_ccm_auth_x8_sse(MB_MGR_CCM_OOO *state, IMB_JOB *job)
 ; arg 1 : state
 ; arg 2 : job
-align 32
 MKGLOBAL(submit_job_aes256_ccm_auth_x8_sse,function,internal)
+align_function
 submit_job_aes256_ccm_auth_x8_sse:
         endbranch64
         GENERIC_SUBMIT_FLUSH_JOB_AES_CCM_AUTH_SSE SUBMIT, aes256_cbc_mac_x8_sse, 13
 
 ; IMB_JOB * flush_job_aes256_ccm_auth_x8_sse(MB_MGR_CCM_OOO *state)
 ; arg 1 : state
-align 32
 MKGLOBAL(flush_job_aes256_ccm_auth_x8_sse,function,internal)
+align_function
 flush_job_aes256_ccm_auth_x8_sse:
         endbranch64
         GENERIC_SUBMIT_FLUSH_JOB_AES_CCM_AUTH_SSE FLUSH, aes256_cbc_mac_x8_sse, 13

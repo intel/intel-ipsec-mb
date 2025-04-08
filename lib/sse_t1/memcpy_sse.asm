@@ -27,6 +27,7 @@
 
 %include "include/os.inc"
 %include "include/memcpy.inc"
+%include "include/align_sse.inc"
 
 %ifdef LINUX
 %define arg1    rdi
@@ -42,12 +43,14 @@ mksection .text
 
 ; void memcpy_fn_sse_16(void *dst, const void *src, const size_t size)
 MKGLOBAL(memcpy_fn_sse_16,function,internal)
+align_function
 memcpy_fn_sse_16:
         memcpy_sse_16 arg1, arg2, arg3, r10, r11
 
         ret
 
 MKGLOBAL(memcpy_fn_sse_128,function,internal)
+align_function
 memcpy_fn_sse_128:
         movdqu  xmm0, [arg2]
         movdqu  xmm1, [arg2 + 16]
@@ -69,6 +72,7 @@ memcpy_fn_sse_128:
         ret
 
 MKGLOBAL(safe_memcpy,function,internal)
+align_function
 safe_memcpy:
 %ifndef LINUX
         ;; save rdi and rsi

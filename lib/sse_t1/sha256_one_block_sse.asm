@@ -29,6 +29,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 %include "include/os.inc"
 %include "include/clear_regs.inc"
+%include "include/align_sse.inc"
 
 mksection .rodata
 default rel
@@ -383,7 +384,7 @@ rotate_Xs
 
 	;; schedule 48 input dwords, by doing 3 rounds of 16 each
 	mov	SRND, 3
-align 16
+align_loop
 .loop1:
 	movdqa	XFER, [TBL + 0*16]
 	paddd	XFER, X0
@@ -410,6 +411,7 @@ align 16
 	jne	.loop1
 
 	mov	SRND, 2
+align_loop
 .loop2:
 	paddd	X0, [TBL + 0*16]
 	movdqa	[rsp + _XFER], X0
@@ -439,7 +441,7 @@ mksection .text
 ;; arg 1 : pointer to input data
 ;; arg 2 : pointer to digest
 MKGLOBAL(FUNC,function,internal)
-align 32
+align_function
 FUNC:
 	sub     rsp, STACK_size
 	mov     [rsp + _GP_SAVE], rbx
@@ -489,6 +491,7 @@ FUNC:
 	add	[4*6 + CTX], g
 	add	[4*7 + CTX], h
 
+align_label
 done_hash:
 %ifndef LINUX
 	movdqu	xmm6,[rsp + _XMM_SAVE + 0*16]
@@ -536,7 +539,7 @@ done_hash:
 ;; arg 2 : pointer to digest
 ;; arg 3 : number of blocks
 MKGLOBAL(UPDATE,function,internal)
-align 32
+align_function
 UPDATE:
     	sub     rsp, STACK_size
 	mov     [rsp + _GP_SAVE], rbx
@@ -566,7 +569,7 @@ UPDATE:
 	movdqa	SHUF_00BA, [rel _SHUF_00BA]
 	movdqa	SHUF_DC00, [rel _SHUF_DC00]
 
-align 32
+align_loop
 process_block:
 	;; load initial digest
 	mov	a, [4*0 + CTX]

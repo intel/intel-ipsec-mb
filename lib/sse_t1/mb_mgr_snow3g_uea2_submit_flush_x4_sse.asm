@@ -30,6 +30,7 @@
 %include "include/mb_mgr_datastruct.inc"
 %include "include/reg_sizes.inc"
 %include "include/snow3g_uea2_by4_sse.inc"
+%include "include/align_sse.inc"
 
 %define SUBMIT_JOB_SNOW3G_UEA2 submit_job_snow3g_uea2_sse
 %define FLUSH_JOB_SNOW3G_UEA2 flush_job_snow3g_uea2_sse
@@ -237,6 +238,7 @@ mksection .text
         je              %%return_uea2
 %endif
 
+align_loop
 %%_find_min:
 %define ROUNDED_DW_LENS _snow3g_lens+32
 %define KEYGEN_STAGE    _snow3g_args_LD_ST_MASK
@@ -301,6 +303,7 @@ mksection .text
 
         jmp %%_find_min
 
+align_label
 %%_len_is_0:
         ;; ---------------------------------------------------------------------
         ;; 3 states are possible here for the lane with length 0:
@@ -324,6 +327,7 @@ mksection .text
 
         jmp             %%_find_min
 
+align_label
 %%_init_done:
         mov             dword [state + KEYGEN_STAGE + %%LANE*4], 0xffffffff
 
@@ -335,10 +339,13 @@ mksection .text
         and             %%TGP1, 3
         je              %%_no_rounding_up
         inc             %%TGP0
+
+align_label
 %%_no_rounding_up:
         mov             dword [state + ROUNDED_DW_LENS + %%LANE*4], DWORD (%%TGP0)
         jmp             %%_find_min
 
+align_label
 %%process_completed_job_submit_uea2:
         ;; COMPLETE: return job, change job dw length to UINT32_MAX, set masks
         ;; to not initialized
@@ -388,6 +395,7 @@ mksection .text
         movdqa          [rsp + _keystream + 3 * 16], %%TMP_XMM_0
 %endif
 
+align_label
 %%return_uea2:
 
 %ifdef SAFE_DATA
@@ -406,6 +414,7 @@ mksection .text
 ;; arg 2 : job
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(SUBMIT_JOB_SNOW3G_UEA2,function,internal)
+align_function
 SUBMIT_JOB_SNOW3G_UEA2:
         SUBMIT_FLUSH_JOB_SNOW3G_UEA2_SSE submit, tmp_gp1, tmp_gp2, tmp_gp3,     \
                                      tmp_gp4, tmp_gp5, tmp_gp6, tmp_gp7,    \
@@ -416,6 +425,7 @@ SUBMIT_JOB_SNOW3G_UEA2:
         ret
 
 MKGLOBAL(FLUSH_JOB_SNOW3G_UEA2,function,internal)
+align_function
 FLUSH_JOB_SNOW3G_UEA2:
         SUBMIT_FLUSH_JOB_SNOW3G_UEA2_SSE flush, tmp_gp1, tmp_gp2, tmp_gp3, tmp_gp4,\
                                      tmp_gp5, tmp_gp6, tmp_gp7, tmp_gp8, xmm0, \

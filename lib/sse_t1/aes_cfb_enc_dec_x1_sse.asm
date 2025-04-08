@@ -30,6 +30,7 @@
 %include "include/clear_regs.inc"
 %include "include/cet.inc"
 %include "include/error.inc"
+%include "include/align_sse.inc"
 
 ;;; Routines to do 128/192/256 bit CFB AES encrypt/decrypt operations on one
 ;;; buffer at a time.
@@ -93,6 +94,7 @@ mksection .text
 	mov	        IDX, 16
 	movdqu		XDATA, [IV]     ; IV, used for 1st block only
 
+align_loop
 %%main_loop:
 	pxor		XDATA, [KEYS]	; key XOR ciphertext/plaintext
 
@@ -119,6 +121,7 @@ mksection .text
 %endif
 	jmp		%%main_loop
 
+align_label
 %%_last_block: ;; 1 - 15 bytes left to process
         ;; use LEN and IN as temp
         and             LEN, 15
@@ -139,6 +142,7 @@ mksection .text
 
         simd_store_sse	OUT_CPY, XDATA, LEN, IN, IDX
 
+align_label
 %%_done:
 %ifdef SAFE_DATA
         ;; XDATA and XIN are the only scratch SIMD registers used
@@ -171,16 +175,16 @@ mksection .text
 ;; AES CFB 128
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; void aes_cfb_128_enc
-align 32
 MKGLOBAL(AES_CFB_128_ENC,function,)
+align_function
 AES_CFB_128_ENC:
 endbranch64
         do_cfb 9, ENC
 	ret
 
 ;; void aes_cfb_128_dec
-align 32
 MKGLOBAL(AES_CFB_128_DEC,function,)
+align_function
 AES_CFB_128_DEC:
 endbranch64
         do_cfb 9, DEC
@@ -190,16 +194,16 @@ endbranch64
 ;; AES CFB 192
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; void aes_cfb_192_enc
-align 32
 MKGLOBAL(AES_CFB_192_ENC,function,)
+align_function
 AES_CFB_192_ENC:
 endbranch64
         do_cfb 11, ENC
 	ret
 
 ;; void aes_cfb_192_dec
-align 32
 MKGLOBAL(AES_CFB_192_DEC,function,)
+align_function
 AES_CFB_192_DEC:
 endbranch64
         do_cfb 11, DEC
@@ -209,16 +213,16 @@ endbranch64
 ;; AES CFB 256
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; void aes_cfb_256_enc
-align 32
 MKGLOBAL(AES_CFB_256_ENC,function,)
+align_function
 AES_CFB_256_ENC:
 endbranch64
         do_cfb 13, ENC
 	ret
 
 ;; void aes_cfb_256_dec
-align 32
 MKGLOBAL(AES_CFB_256_DEC,function,)
+align_function
 AES_CFB_256_DEC:
 endbranch64
         do_cfb 13, DEC

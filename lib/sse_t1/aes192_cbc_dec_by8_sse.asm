@@ -48,11 +48,12 @@
 %endif
 
 %include "include/aes_cbc_dec_by8_sse.inc"
+%include "include/align_sse.inc"
 
 mksection .text
 
-align 64
 MKGLOBAL(aes_cbc_dec_192_by8_sse,function,internal)
+align_function
 aes_cbc_dec_192_by8_sse:
 %ifndef LINUX
         mov     arg5, [rsp + 5*8]

@@ -34,6 +34,7 @@ extern sm3_base_update
 %include "include/reg_sizes.inc"
 %include "include/imb_job.inc"
 %include "include/memcpy.inc"
+%include "include/align_sse.inc"
 
 %ifdef LINUX
 
@@ -167,8 +168,8 @@ mksection .text
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; IMB_JOB *sm3_hmac_submit_sse(IMB_JOB *job)
-align 32
 MKGLOBAL(sm3_hmac_submit_sse,function,internal)
+align_function
 sm3_hmac_submit_sse:
         FUNC_START
 
@@ -201,6 +202,8 @@ sm3_hmac_submit_sse:
         sub     t2, arg3                ;; t2 =  number of bytes left
 
         xor     DWORD(arg1), DWORD(arg1)
+
+align_loop
 .partial_block_copy:
         cmp     DWORD(arg1), DWORD(t2)
         je      .partial_block_copy_exit
@@ -209,12 +212,15 @@ sm3_hmac_submit_sse:
         inc     DWORD(arg1)
         jmp     .partial_block_copy
 
+align_label
 .partial_block_copy_exit:
         ;; put end of message marker
         mov     BYTE [rsp + _B + arg1], 0x80
         inc     DWORD(arg1)
 
         xor     DWORD(t1), DWORD(t1)
+
+align_loop
 .partial_block_zero:
         cmp     DWORD(arg1), 64
         je      .partial_block_zero_exit
@@ -222,6 +228,7 @@ sm3_hmac_submit_sse:
         inc     DWORD(arg1)
         jmp     .partial_block_zero
 
+align_label
 .partial_block_zero_exit:
         cmp     DWORD(t2), 64 - 8
         jb      .add_msg_length
@@ -243,6 +250,7 @@ sm3_hmac_submit_sse:
         mov     [rsp + _B + 5*8], t1
         mov     [rsp + _B + 6*8], t1
 
+align_label
 .add_msg_length:
         lea     t1, [arg_msg_length*8 + 64*8]  ;; original message length in bits + 1 IPAD block
         bswap   t1
@@ -253,6 +261,7 @@ sm3_hmac_submit_sse:
         mov     DWORD(arg3), 1
         call    sm3_base_update
 
+align_label
 .process_opad:
         movdqa  xmm0, [rsp + _D + 0*16]
         movdqa  xmm1, [rsp + _D + 1*16]
@@ -277,6 +286,7 @@ sm3_hmac_submit_sse:
         mov     DWORD(arg3), 1
         call    sm3_base_update
 
+align_label
 .tag_store_start:
         ;; byte swap the digest and write it back
         lea     arg1, [rsp + _D]
@@ -294,6 +304,7 @@ sm3_hmac_submit_sse:
         jb      .tag_store_1_15
         je      .tag_store_16
 
+align_label
 .tag_store_16_31:
         movdqu  [t1 + 0*16], xmm0
         lea     t1, [t1 + 16]
@@ -301,18 +312,22 @@ sm3_hmac_submit_sse:
         sub     t2, 16
         ;; fall through to store remaining tag bytes
 
+align_label
 .tag_store_1_15:
         simd_store_sse  t1, xmm0, t2, t3, t4
         jmp     .tag_store_end
 
+align_label
 .tag_store_32:
         movdqu  [t1 + 1*16], xmm1
         ;; fall through to store 1st 16 bytes
 
+align_label
 .tag_store_16:
         movdqu  [t1 + 0*16], xmm0
         ;; fall through
 
+align_label
 .tag_store_end:
 
 %ifdef SAFE_DATA

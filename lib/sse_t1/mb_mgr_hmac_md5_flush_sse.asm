@@ -29,6 +29,7 @@
 %include "include/imb_job.inc"
 %include "include/mb_mgr_datastruct.inc"
 %include "include/reg_sizes.inc"
+%include "include/align_sse.inc"
 
 extern md5_x4x2_sse
 
@@ -112,6 +113,7 @@ endstruc
 ; JOB* flush_job_hmac_md5_sse(MB_MGR_HMAC_MD5_OOO *state)
 ; arg 1 : rcx : state
 MKGLOBAL(flush_job_hmac_md5_sse,function,internal)
+align_function
 flush_job_hmac_md5_sse:
 
         mov	rax, rsp
@@ -151,6 +153,7 @@ flush_job_hmac_md5_sse:
 	cmp	qword [state + _ldata_md5 + 7 * _HMAC_SHA1_LANE_DATA_size + _job_in_lane],0
 	cmovne	idx, [rel seven]
 
+align_loop
 copy_lane_data:
 	; copy good lane (idx) to empty lanes
 	movdqa	xmm0, [state + _lens_md5]
@@ -183,6 +186,7 @@ APPEND(skip_,I):
 	call	md5_x4x2_sse
 	; state and idx are intact
 
+align_label
 len_is_0:
 	; process completed job "idx"
 	imul	lane_data, idx, _HMAC_SHA1_LANE_DATA_size
@@ -193,6 +197,7 @@ len_is_0:
 	cmp	dword [lane_data + _outer_done], 0
 	jne	end_loop
 
+align_label
 proc_outer:
 	mov	dword [lane_data + _outer_done], 1
 	mov	DWORD(size_offset), [lane_data + _size_offset]
@@ -217,7 +222,7 @@ proc_outer:
 	pextrd	[state + _args_digest_md5 + MD5_DIGEST_WORD_SIZE*idx + 3*MD5_DIGEST_ROW_SIZE], xmm0, 3
 	jmp	copy_lane_data
 
-	align	16
+align_label
 proc_extra_blocks:
 	mov	DWORD(start_offset), [lane_data + _start_offset]
 	mov	[state + _lens_md5 + 2*idx], WORD(extra_blocks)
@@ -226,11 +231,12 @@ proc_extra_blocks:
 	mov	dword [lane_data + _extra_blocks], 0
 	jmp	copy_lane_data
 
+align_label
 return_null:
 	xor	job_rax, job_rax
 	jmp	return
 
-	align	16
+align_label
 end_loop:
 	mov	job_rax, [lane_data + _job_in_lane]
 	mov	qword [lane_data + _job_in_lane], 0
@@ -260,6 +266,7 @@ end_loop:
         mov	DWORD(tmp5), [state + _args_digest_md5 + MD5_DIGEST_WORD_SIZE*idx + 3*MD5_DIGEST_ROW_SIZE]
         mov	[p + 3*4], DWORD(tmp5)
 
+align_label
 clear_ret:
 
 %ifdef SAFE_DATA
@@ -296,6 +303,7 @@ APPEND(skip_clear_,I):
 
 %endif ;; SAFE_DATA
 
+align_label
 return:
 
 	mov	rbx, [rsp + _gpr_save + 8*0]

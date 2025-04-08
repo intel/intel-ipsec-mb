@@ -27,8 +27,8 @@
 
 ;; https://datatracker.ietf.org/doc/html/draft-shen-sm3-hash
 
-%use smartalign
 %include "include/os.inc"
+%include "include/align_sse.inc"
 
 %ifdef LINUX
 %define arg1    rdi
@@ -56,6 +56,7 @@ mksection .text
 ;; void sm3_base_init(uint32_t digest[8])
 align 32
 MKGLOBAL(sm3_base_init,function,internal)
+align_function
 sm3_base_init:
         movdqu  xmm0, [rel I_const + 0*16]
         movdqu  xmm1, [rel I_const + 1*16]

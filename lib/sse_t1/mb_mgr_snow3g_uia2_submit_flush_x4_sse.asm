@@ -31,6 +31,7 @@
 %include "include/reg_sizes.inc"
 %include "include/clear_regs.inc"
 %include "include/snow3g_uea2_by4_sse.inc"
+%include "include/align_sse.inc"
 
 %define SUBMIT_JOB_SNOW3G_UIA2 submit_job_snow3g_uia2_sse
 %define FLUSH_JOB_SNOW3G_UIA2 flush_job_snow3g_uia2_sse
@@ -203,6 +204,7 @@ APPEND(skip_lane_copy_,i):
 
 %endif ;;submit/flush
 
+align_label
 %%process_job_uia2:
         ;; preserve state for function call
         mov     tmp_state, state
@@ -220,6 +222,7 @@ APPEND(skip_lane_copy_,i):
         ;; copy digest temporarily
         mov     DWORD(%%TGP0), eax
 
+align_label
 %%process_completed_job_submit_uia2:
         ; process completed job "%%LANE"
         ;; - decrement number of jobs in use
@@ -246,11 +249,13 @@ APPEND(skip_lane_copy_,i):
 
         jmp     %%return_uia2
 
+align_label
 %%init_all_lanes_uia2:
         ;; set initialized lanes mask for all 4 lanes
         ;; this is used to update OOO MGR after initialization
         mov     DWORD(init_lanes), 0xf
 
+align_label
 %%init_lanes_uia2:
 
         ;; multi-buffer init + 5 dw of KS gen
@@ -273,9 +278,11 @@ APPEND(skip_lane_copy_,i):
         ;; process first job
         jmp     %%process_job_uia2
 
+align_label
 %%return_null_uia2:
         xor     job_rax, job_rax
 
+align_label
 %%return_uia2:
         SNOW3G_FUNC_END
 
@@ -285,6 +292,7 @@ APPEND(skip_lane_copy_,i):
 ; arg 1 : state
 ; arg 2 : job
 MKGLOBAL(SUBMIT_JOB_SNOW3G_UIA2,function,internal)
+align_function
 SUBMIT_JOB_SNOW3G_UIA2:
         SUBMIT_FLUSH_JOB_SNOW3G_UIA2 submit, tmp_gp0, tmp_gp1, \
                                      tmp_gp2, tmp_gp3, tmp_gp4, tmp_gp5, \
@@ -296,6 +304,7 @@ SUBMIT_JOB_SNOW3G_UIA2:
 ; JOB* FLUSH_JOB_SNOW3G_UIA2(MB_MGR_SNOW3G_OOO *state)
 ; arg 1 : state
 MKGLOBAL(FLUSH_JOB_SNOW3G_UIA2,function,internal)
+align_function
 FLUSH_JOB_SNOW3G_UIA2:
         SUBMIT_FLUSH_JOB_SNOW3G_UIA2 flush, tmp_gp0, tmp_gp1, \
                                      tmp_gp2, tmp_gp3, tmp_gp4, tmp_gp5, \

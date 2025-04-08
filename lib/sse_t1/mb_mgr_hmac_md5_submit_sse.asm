@@ -31,6 +31,7 @@
 %include "include/memcpy.inc"
 %include "include/reg_sizes.inc"
 %include "include/const.inc"
+%include "include/align_sse.inc"
 
 extern md5_x4x2_sse
 
@@ -98,6 +99,7 @@ endstruc
 ; arg 1 : rcx : state
 ; arg 2 : rdx : job
 MKGLOBAL(submit_job_hmac_md5_sse,function,internal)
+align_function
 submit_job_hmac_md5_sse:
 
         mov	rax, rsp
@@ -148,6 +150,7 @@ submit_job_hmac_md5_sse:
         cmp	len, 64
         jb	copy_lt64
 
+align_label
 fast_copy:
         add	p, len
         movdqu	xmm0, [p - 64 + 0*16]
@@ -158,6 +161,7 @@ fast_copy:
         movdqa	[lane_data + _extra_block + 1*16], xmm1
         movdqa	[lane_data + _extra_block + 2*16], xmm2
         movdqa	[lane_data + _extra_block + 3*16], xmm3
+align_label
 end_fast_copy:
 
         mov	size_offset, extra_blocks
@@ -183,6 +187,7 @@ end_fast_copy:
         test	len, ~63
         jnz	ge64_bytes
 
+align_label
 lt64_bytes:
         movdqa  xmm0, [state + _lens_md5]
         XPINSRW xmm0, xmm1, tmp, lane, extra_blocks, scale_x16
@@ -192,12 +197,13 @@ lt64_bytes:
         mov	[state + _args_data_ptr_md5 + PTR_SZ*lane], tmp
         mov	dword [lane_data + _extra_blocks], 0
 
+align_label
 ge64_bytes:
         cmp	unused_lanes, 0xf
         jne	return_null
         jmp	start_loop
 
-        align	16
+align_loop
 start_loop:
         ; Find min length
         movdqa	xmm0, [state + _lens_md5]
@@ -216,6 +222,7 @@ start_loop:
         call	md5_x4x2_sse
         ; state and idx are intact
 
+align_label
 len_is_0:
         ; process completed job "idx"
         imul	lane_data, idx, _HMAC_SHA1_LANE_DATA_size
@@ -226,6 +233,7 @@ len_is_0:
         cmp	dword [lane_data + _outer_done], 0
         jne	end_loop
 
+align_label
 proc_outer:
         mov	dword [lane_data + _outer_done], 1
         mov	DWORD(size_offset), [lane_data + _size_offset]
@@ -254,7 +262,7 @@ proc_outer:
         pextrd	[state + _args_digest_md5 + MD5_DIGEST_WORD_SIZE*idx + 3*MD5_DIGEST_ROW_SIZE], xmm0, 3
         jmp	start_loop
 
-        align	16
+align_label
 proc_extra_blocks:
         mov	DWORD(start_offset), [lane_data + _start_offset]
 
@@ -269,6 +277,7 @@ proc_extra_blocks:
 
         align	16
 
+align_label
 copy_lt64:
         ;; less than one message block of data
         ;; beginning of source block
@@ -280,11 +289,12 @@ copy_lt64:
         mov	unused_lanes, [state + _unused_lanes_md5]
         jmp	end_fast_copy
 
+align_label
 return_null:
         xor	job_rax, job_rax
         jmp	return
 
-        align	16
+align_label
 end_loop:
         mov	job_rax, [lane_data + _job_in_lane]
         mov	unused_lanes, [state + _unused_lanes_md5]
@@ -311,6 +321,7 @@ end_loop:
         mov	DWORD(tmp3), [state + _args_digest_md5 + MD5_DIGEST_WORD_SIZE*idx + 3*MD5_DIGEST_ROW_SIZE]
         mov	[p + 3*4], DWORD(tmp3)
 
+align_label
 clear_ret:
 
 %ifdef SAFE_DATA
@@ -334,6 +345,7 @@ clear_ret:
         movdqa  [lane_data + _outer_block], xmm0
 %endif
 
+align_label
 return:
 
 	mov	rbx, [rsp + _gpr_save + 8*0]

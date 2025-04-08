@@ -39,6 +39,7 @@
 %include "include/os.inc"
 %include "include/mb_mgr_datastruct.inc"
 %include "include/clear_regs.inc"
+%include "include/align_sse.inc"
 
 mksection .rodata align=64
 default rel
@@ -407,8 +408,8 @@ rot44 equ  21
 ; arg 1 : pointer to MD5_ARGS structure
 ; arg 2 : number of blocks (>=1)
 ;
-align 32
 MKGLOBAL(md5_x4x2_sse,function,internal)
+align_function
 md5_x4x2_sse:
 
         sub     rsp, STACK_SIZE
@@ -468,6 +469,7 @@ md5_x4x2_sse:
 %assign I (I+1)
 %endrep
 
+align_loop
 lloop:
         ; save old digests
         movdqa  [AA], A
@@ -656,6 +658,7 @@ lloop:
 
         jmp     lloop
 
+align_label
 lastblock:
 
         MD5_STEP MAGIC_F, A,B,C,D, A2,B2,C2,D2, FUN,TMP, FUN2,TMP2, mem1 + 0*16, [TBL+ 0*16], rot11

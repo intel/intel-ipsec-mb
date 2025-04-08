@@ -29,8 +29,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 %include "include/os.inc"
 %include "include/clear_regs.inc"
-
-%use smartalign
+%include "include/align_sse.inc"
 
 %define	MOVDQ movdqu ;; assume buffers not aligned
 
@@ -288,7 +287,7 @@ rotate_Xs
 
 	;; schedule 64 input qwords, by doing 4 iterations of 16 rounds
 	mov	SRND, 4
-align 16
+align_loop
 .loop1:
 
 %assign i 0
@@ -311,12 +310,14 @@ align 16
 
 	mov	SRND, 2
 	jmp .loop2a
+align_loop
 .loop2:
 	movdqa	X0, X4
 	movdqa	X1, X5
 	movdqa	X2, X6
 	movdqa	X3, X7
 
+align_label
 .loop2a:
 	paddq	X0, [TBL + 0*16]
 	movdqa	[rsp + _XFER], X0
@@ -399,7 +400,7 @@ PSHUFFLE_BYTE_FLIP_MASK: ;ddq 0x08090a0b0c0d0e0f0001020304050607
 ;; arg 2 : pointer to digest
 mksection .text
 MKGLOBAL(FUNC,function,internal)
-align 32
+align_function
 FUNC:
 	sub     rsp, STACK_size
 	mov     [rsp + _GP_SAVE], rbx
@@ -448,6 +449,7 @@ FUNC:
 	add	[8*6 + CTX], g
 	add	[8*7 + CTX], h
 
+align_label
 done_hash:
 %ifndef LINUX
 	movdqu	xmm6,[rsp + _XMM_SAVE + 0*16]
@@ -498,7 +500,7 @@ done_hash:
 ;; arg 2 : pointer to digest
 ;; arg 3 : number of blocks
 MKGLOBAL(UPDATE,function,internal)
-align 32
+align_function
 UPDATE:
     	sub     rsp, STACK_size
 	mov     [rsp + _GP_SAVE], rbx
@@ -526,7 +528,7 @@ UPDATE:
 
 	movdqa	BYTE_FLIP_MASK, [rel PSHUFFLE_BYTE_FLIP_MASK]
 
-align 32
+align_loop
 process_block:
 	;; load initial digest
 	mov	a, [8*0 + CTX]

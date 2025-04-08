@@ -31,6 +31,7 @@
 %include "include/clear_regs.inc"
 %include "include/cet.inc"
 %include "include/error.inc"
+%include "include/align_sse.inc"
 
 [bits 64]
 default rel
@@ -72,8 +73,8 @@ mksection .text
 ;; arg1 - buffer pointer
 ;; arg2 - buffer size in bytes
 ;; Returns CRC value through RAX
-align 32
 MKGLOBAL(CRC32_WIMAX_DATA_FN, function,)
+align_function
 CRC32_WIMAX_DATA_FN:
         endbranch64
 %ifdef SAFE_PARAM
@@ -89,6 +90,7 @@ CRC32_WIMAX_DATA_FN:
         or              arg1, arg1
         jz              .wrong_param
 
+align_label
 .end_param_check:
 %endif
 %ifndef LINUX
@@ -131,6 +133,7 @@ CRC32_WIMAX_DATA_FN:
         ret
 
 %ifdef SAFE_PARAM
+align_label
 .wrong_param:
         ;; Clear reg and imb_errno
         IMB_ERR_CHECK_START rax
@@ -150,8 +153,8 @@ CRC32_WIMAX_DATA_FN:
 ;; arg1 - buffer pointer
 ;; arg2 - buffer size in bytes
 ;; Returns CRC value through RAX
-align 32
 MKGLOBAL(CRC8_WIMAX_HCS_FN, function,)
+align_function
 CRC8_WIMAX_HCS_FN:
         endbranch64
 %ifdef SAFE_PARAM
@@ -167,6 +170,7 @@ CRC8_WIMAX_HCS_FN:
         or              arg1, arg1
         jz              .wrong_param
 
+align_label
 .end_param_check:
 %endif
 %ifndef LINUX
@@ -209,6 +213,7 @@ CRC8_WIMAX_HCS_FN:
         ret
 
 %ifdef SAFE_PARAM
+align_label
 .wrong_param:
         ;; Clear reg and imb_errno
         IMB_ERR_CHECK_START rax

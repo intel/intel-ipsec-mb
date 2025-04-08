@@ -1,5 +1,5 @@
 ;;
-;; Copyright (c) 2012-2024, Intel Corporation
+;; Copyright (c) 2025, Intel Corporation
 ;;
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
@@ -25,17 +25,14 @@
 ;; OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;
 
-;; AES-CBC-192
+%use smartalign
+ALIGNMODE P6
 
-%include "include/aes_cbc_enc_x8_sse.inc"
-%include "include/align_sse.inc"
+;; Common macro to be used to align SSE functions
+%define align_function align 32
 
-mksection .text
+;; Common macro to be used to align SSE loops
+%define align_loop align 32
 
-MKGLOBAL(aes_cbc_enc_192_x8_sse,function,internal)
-align_function
-aes_cbc_enc_192_x8_sse:
-        AES_CBC_X8 CBC, 11, 16, {arg1 + _aesarg_IV}, {arg1 + _aesarg_keys}, {arg1 + _aesarg_in}, {arg1 + _aesarg_out}
-        ret
-
-mksection stack-noexec
+;; Common macro to be used to align SSE labels
+%define align_label align 32
