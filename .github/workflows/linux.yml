@@ -120,7 +120,7 @@ jobs:
 
     - name: Test
       working-directory: ${{github.workspace}}/build
-      run: ctest -j 5 -C ${{env.BUILD_TYPE}}
+      run: ctest -j 5 -C ${{env.BUILD_TYPE}} --output-on-failure
 
     - name: Install
       working-directory: ${{github.workspace}}/build
@@ -153,5 +153,5 @@ jobs:
 
     - name: Test
       working-directory: ${{github.workspace}}/build
-      run: ctest -j 5 -C ${{env.BUILD_TYPE}}
+      run: ctest -j 5 -C ${{env.BUILD_TYPE}} --output-on-failure
 
