@@ -551,6 +551,8 @@ sha1_update_sse:
 
 	mov 	r14, ARG3
 
+align 32
+process_block:
         ;; set up a-f based on h0-h4
 	mov	a, [SZ*0 + CTX]
 	mov	b, [SZ*1 + CTX]
@@ -558,8 +560,6 @@ sha1_update_sse:
 	mov	d, [SZ*3 + CTX]
 	mov	e, [SZ*4 + CTX]
 
-align 32
-process_block:
 	one_block
 
         ;; update result digest h0-h4
