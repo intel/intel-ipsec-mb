@@ -551,6 +551,8 @@ sha1_update_sse:
 
 	mov 	r14, ARG3
 
+align 32
+process_block:
         ;; set up a-f based on h0-h4
 	mov	a, [SZ*0 + CTX]
 	mov	b, [SZ*1 + CTX]
@@ -558,14 +560,7 @@ sha1_update_sse:
 	mov	d, [SZ*3 + CTX]
 	mov	e, [SZ*4 + CTX]
 
-align 32
-process_block:
 	one_block
-
-	add 	INP, 64
-	dec 	r14
-	cmp 	r14, 0
-	ja 	process_block
 
         ;; update result digest h0-h4
 	add	[SZ*0 + CTX], a
@@ -573,6 +568,10 @@ process_block:
 	add	[SZ*2 + CTX], c
 	add	[SZ*3 + CTX], d
 	add	[SZ*4 + CTX], e
+
+	add 	INP, 64
+	dec 	r14
+	jnz 	process_block
 
 %ifndef LINUX
 	movdqa	xmm8, [rsp + 2 * 16]
