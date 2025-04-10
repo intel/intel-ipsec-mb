@@ -322,18 +322,17 @@ sha1_ni_update_sse:
 	movdqa		SHUF_MASK, [rel PSHUFFLE_BYTE_FLIP_MASK]
 	movdqa		E_MASK, [rel UPPER_WORD_MASK]
 
+align 32
+process_block:
 	;; Copy digests
 	movdqa		[rsp + frame.ABCD_SAVE], ABCD
 	movdqa		[rsp + frame.E_SAVE],    E0
 
-align 32
-process_block:
 	one_block_ni
 
 	add 		INP, 64
 	dec 		ARG3
-	cmp 		ARG3, 0
-	ja 		process_block
+	jnz 		process_block
 
 	;; write out digests
 	pshufd		ABCD, ABCD, 0x1B
