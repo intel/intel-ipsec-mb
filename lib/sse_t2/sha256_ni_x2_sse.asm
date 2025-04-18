@@ -43,6 +43,7 @@
 %include "include/dbgprint.inc"
 %include "include/mb_mgr_datastruct.inc"
 %include "include/clear_regs.inc"
+%include "include/align_sse.inc"
 
 ; resdq = res0 => 16 bytes
 struc frame
@@ -164,7 +165,7 @@ mksection .text
 %endmacro
 
 MKGLOBAL(sha256_ni,function,internal)
-align 32
+align_function
 sha256_ni:
 	sub		rsp, frame_size
 
@@ -217,6 +218,7 @@ sha256_ni:
 	DBGPRINTL 	"jobA data:"
 	xor		r10, r10
 	sub		NUM_BLKS, INP
+align_loop
 .loop_dbgA:
 	movdqu		MSG, [INP + r10 + 0*16]
         DBGPRINT_XMM	MSG
@@ -240,6 +242,7 @@ sha256_ni:
 	DBGPRINTL 	"jobB data:"
 	xor		r10, r10
 	sub		NUM_BLKS, INP
+align_loop
 .loop_dbgB:
 	movdqu		MSG, [INPb + r10 + 0*16]
         DBGPRINT_XMM	MSG
@@ -256,6 +259,7 @@ sha256_ni:
 	pop		r10
 %endif
 
+align_loop
 .loop0:
 	;; Save digests
 	movdqa		[rsp + frame.ABEF_SAVE], STATE0
@@ -630,6 +634,7 @@ sha256_ni:
 	DBGPRINT_XMM	STATE0b
 	DBGPRINT_XMM	STATE1b
 
+align_label
 done_hash:
         DBGPRINTL	"exit sha256-ni-x2"
 
@@ -648,6 +653,7 @@ done_hash:
 
 ; void call_sha256_ni_x2_sse_from_c(SHA256_ARGS *args, UINT32 size_in_blocks);
 MKGLOBAL(call_sha256_ni_x2_sse_from_c,function,internal)
+align_function
 call_sha256_ni_x2_sse_from_c:
 	FUNC_SAVE
 	call sha256_ni

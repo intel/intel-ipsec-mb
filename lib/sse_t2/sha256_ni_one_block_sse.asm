@@ -27,6 +27,7 @@
 
 %include "include/os.inc"
 %include "include/clear_regs.inc"
+%include "include/align_sse.inc"
 
 ; resdq = res0 => 16 bytes
 struc frame
@@ -261,7 +262,7 @@ mksection .text
 ;; arg 1 : (in) pointer to one block of data
 ;; arg 2 : (in/out) pointer to read/write digest
 MKGLOBAL(sha256_ni_block_sse,function,internal)
-align 32
+align_function
 sha256_ni_block_sse:
 	sub		rsp, frame_size
 
@@ -332,7 +333,7 @@ sha256_ni_block_sse:
 ;; arg 2 : (in/out) pointer to read/write digest
 ;; arg 3 : (in) number of blocks to process
 MKGLOBAL(sha256_ni_update_sse,function,internal)
-align 32
+align_function
 sha256_ni_update_sse:
 	sub		rsp, frame_size
 
@@ -357,7 +358,7 @@ sha256_ni_update_sse:
 
 	movdqa		SHUF_MASK, [rel PSHUFFLE_BYTE_FLIP_MASK]
 
-align 32
+align_loop
 process_block:
 	;; Save digests
 	movdqu		[rsp + frame.ABEF_SAVE], STATE0

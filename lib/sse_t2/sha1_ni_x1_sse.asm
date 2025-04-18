@@ -43,6 +43,7 @@
 %include "include/dbgprint.inc"
 %include "include/clear_regs.inc"
 %include "include/mb_mgr_datastruct.inc"
+%include "include/align_sse.inc"
 
 %ifdef LINUX
 %define arg1	rdi
@@ -97,7 +98,7 @@ UPPER_WORD_MASK:         ;ddq 0xFFFFFFFF000000000000000000000000
 
 mksection .text
 MKGLOBAL(sha1_ni_x1,function,internal)
-align 32
+align_function
 sha1_ni_x1:
 	sub		rsp, frame_size
 
@@ -120,6 +121,7 @@ sha1_ni_x1:
 	movdqa		SHUF_MASK, [rel PSHUFFLE_BYTE_FLIP_MASK]
 	movdqa		E_MASK, [rel UPPER_WORD_MASK]
 
+align_loop
 loop0:
 	;; Copy digests
 	movdqa		[rsp + frame.ABCD_SAVE], ABCD
@@ -305,6 +307,7 @@ loop0:
 	;; update input pointers
 	mov		[args + _data_ptr_sha1 + lane*PTR_SZ], INP
 
+align_label
 done_hash:
 
         ;; Clear stack frame (4*16 bytes)

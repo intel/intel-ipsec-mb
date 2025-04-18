@@ -26,6 +26,7 @@
 ;;
 
 %include "include/os.inc"
+%include "include/align_sse.inc"
 %ifdef LINUX
 %define INP	rdi ; 1st arg
 %define CTX     rsi ; 2nd arg
@@ -244,7 +245,7 @@ UPPER_WORD_MASK:         ;ddq 0xFFFFFFFF000000000000000000000000
 
 mksection .text
 MKGLOBAL(sha1_ni_block_sse,function,internal)
-align 32
+align_function
 sha1_ni_block_sse:
 	sub		rsp, frame_size
 
@@ -303,7 +304,7 @@ sha1_ni_block_sse:
 
 mksection .text
 MKGLOBAL(sha1_ni_update_sse,function,internal)
-align 32
+align_function
 sha1_ni_update_sse:
 	sub		rsp, frame_size
 
@@ -322,7 +323,7 @@ sha1_ni_update_sse:
 	movdqa		SHUF_MASK, [rel PSHUFFLE_BYTE_FLIP_MASK]
 	movdqa		E_MASK, [rel UPPER_WORD_MASK]
 
-align 32
+align_loop
 process_block:
 
 	;; Copy digests

@@ -43,6 +43,7 @@
 %include "include/dbgprint.inc"
 %include "include/clear_regs.inc"
 %include "include/mb_mgr_datastruct.inc"
+%include "include/align_sse.inc"
 
 %ifdef LINUX
 %define arg1	rdi
@@ -158,7 +159,7 @@ mksection .text
 %endmacro
 
 MKGLOBAL(sha1_ni,function,internal)
-align 32
+align_function
 sha1_ni:
 	sub		rsp, frame_size
 
@@ -202,6 +203,7 @@ sha1_ni:
 	movdqa		E_MASK, [rel UPPER_WORD_MASK]
 
 	DBGPRINTL "jobA data:"
+align_loop
 loop0:
 	;; Copy digests
 	movdqa		[rsp + frame.ABCD_SAVE], ABCD
@@ -533,6 +535,7 @@ loop0:
 	mov		[args + _data_ptr_sha1 + 0*PTR_SZ], INP
 	 mov		 [args + _data_ptr_sha1 + 1*PTR_SZ], INPb
 
+align_label
 done_hash:
 
         ;; Clear stack frame (4*16 bytes)
@@ -562,6 +565,7 @@ done_hash:
 
 ; void call_sha1_ni_x2_sse_from_c(SHA1_ARGS *args, UINT32 size_in_blocks);
 MKGLOBAL(call_sha1_ni_x2_sse_from_c,function,internal)
+align_function
 call_sha1_ni_x2_sse_from_c:
 	FUNC_SAVE
 	call sha1_ni

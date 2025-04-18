@@ -38,6 +38,7 @@
 %include "include/mb_mgr_datastruct.inc"
 %include "include/reg_sizes.inc"
 %include "include/memcpy.inc"
+%include "include/align_sse.inc"
 
 ;%define DO_DBGPRINT
 %include "include/dbgprint.inc"
@@ -107,6 +108,7 @@ mksection .text
 ; arg 1 : state
 ; arg 2 : job
 MKGLOBAL(submit_job_hmac_sha_224_ni_sse,function,internal)
+align_function
 submit_job_hmac_sha_224_ni_sse:
 
 %else
@@ -115,6 +117,7 @@ submit_job_hmac_sha_224_ni_sse:
 ; arg 1 : state
 ; arg 2 : job
 MKGLOBAL(submit_job_hmac_sha_256_ni_sse,function,internal)
+align_function
 submit_job_hmac_sha_256_ni_sse:
 %endif
 
@@ -161,6 +164,7 @@ submit_job_hmac_sha_256_ni_sse:
 	cmp	len, 64
 	jb	copy_lt64
 
+align_label
 fast_copy:
 	add	p, len
 	movdqu	xmm0, [p - 64 + 0*16]
@@ -171,6 +175,7 @@ fast_copy:
 	movdqa	[lane_data + _extra_block + 1*16], xmm1
 	movdqa	[lane_data + _extra_block + 2*16], xmm2
 	movdqa	[lane_data + _extra_block + 3*16], xmm3
+align_label
 end_fast_copy:
 
 	mov	size_offset, extra_blocks
@@ -201,18 +206,20 @@ end_fast_copy:
 	test	len, ~63
 	jnz	ge64_bytes
 
+align_label
 lt64_bytes:
 	mov	[state + _lens_sha256 + 2*lane], WORD(extra_blocks)
 	lea	tmp, [lane_data + _extra_block + start_offset]
 	mov	[state + _args_data_ptr_sha256 + 8*lane], tmp
 	mov	dword [lane_data + _extra_blocks], 0
 
+align_label
 ge64_bytes:
 	cmp	unused_lanes, 0xff
 	jne	return_null
 	jmp	start_loop
 
-	align	16
+align_loop
 start_loop:
 	; Find min length - only two lanes available
 	xor     len2, len2
@@ -234,6 +241,7 @@ start_loop:
         ; len is arg2
         call	sha256_ni
         ; state is intact
+align_label
 len_is_0:
 	; process completed job "idx"
 	imul	lane_data, idx, _HMAC_SHA1_LANE_DATA_size
@@ -245,6 +253,7 @@ len_is_0:
 	cmp	dword [lane_data + _outer_done], 0
 	jne	end_loop
 
+align_label
 proc_outer:
 	mov	dword [lane_data + _outer_done], 1
 	mov	DWORD(size_offset), [lane_data + _size_offset]
@@ -276,7 +285,7 @@ proc_outer:
 	movdqu	[state + _args_digest_sha256 + tmp4*4 + 4*4], xmm1
 	jmp	start_loop
 
-	align	16
+align_label
 proc_extra_blocks:
 	mov	DWORD(start_offset), [lane_data + _start_offset]
 	mov	[state + _lens_sha256 + 2*idx], WORD(extra_blocks)
@@ -285,8 +294,7 @@ proc_extra_blocks:
 	mov	dword [lane_data + _extra_blocks], 0
 	jmp	start_loop
 
-	align	16
-
+align_label
 copy_lt64:
 	;; less than one message block of data
 	;; beginning of source block
@@ -298,11 +306,12 @@ copy_lt64:
 	mov	unused_lanes, [state + _unused_lanes_sha256]
 	jmp	end_fast_copy
 
+align_label
 return_null:
 	xor	job_rax, job_rax
 	jmp	return
 
-	align	16
+align_label
 end_loop:
 	mov	job_rax, [lane_data + _job_in_lane]
 	mov	unused_lanes, [state + _unused_lanes_sha256]
@@ -341,6 +350,7 @@ end_loop:
 %endif
         jmp     clear_ret
 
+align_label
 copy_full_digest:
 	cmp 	qword [job_rax + _auth_tag_output_len_in_bytes], 16
 	ja 	copy_tag_gt16
@@ -352,6 +362,7 @@ copy_full_digest:
 	simd_store_sse {p + 0*4}, xmm0, tmp2, tmp4, tmp
 	jmp 	clear_ret
 
+align_label
 copy_tag_gt16:
 	;; copy 16 bytes first
 	movdqu	xmm0, [state + _args_digest_sha256 + idx]
@@ -367,6 +378,7 @@ copy_tag_gt16:
 	pshufb	xmm1, bswap_xmm4
 	simd_store_sse {p + 4*4}, xmm1, tmp2, tmp4, tmp
 
+align_label
 clear_ret:
 
 %ifdef SAFE_DATA
@@ -395,6 +407,7 @@ clear_ret:
 %endif
 %endif ;; SAFE_DATA
 
+align_label
 return:
 	mov	rbx, [rsp + _gpr_save + 8*0]
 	mov	rbp, [rsp + _gpr_save + 8*1]

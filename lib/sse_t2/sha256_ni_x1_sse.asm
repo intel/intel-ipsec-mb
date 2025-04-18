@@ -42,6 +42,7 @@
 %include "include/cet.inc"
 %include "include/mb_mgr_datastruct.inc"
 %include "include/clear_regs.inc"
+%include "include/align_sse.inc"
 
 ; resdq = res0 => 16 bytes
 struc frame
@@ -151,7 +152,7 @@ mksection .text
 %endmacro
 
 MKGLOBAL(sha256_ni_x1,function,internal)
-align 32
+align_function
 sha256_ni_x1:
 	sub		rsp, frame_size
 
@@ -178,6 +179,7 @@ sha256_ni_x1:
 
 	movdqa		SHUF_MASK, [rel PSHUFFLE_BYTE_FLIP_MASK]
 
+align_loop
 .loop0:
 	;; Save digests
 	movdqa		[rsp + frame.ABEF_SAVE], STATE0
@@ -386,6 +388,7 @@ sha256_ni_x1:
         ;; update data pointers
 	mov		[args + _data_ptr_sha256 + lane*PTR_SZ], INP
 
+align_label
 done_hash:
 
         ;; Clear stack frame (2*16 bytes)
@@ -400,6 +403,7 @@ done_hash:
 
 ; void call_sha256_ni_x1_sse_from_c(SHA256_ARGS *args, UINT32 size_in_blocks);
 MKGLOBAL(call_sha256_ni_x1_sse_from_c,function,internal)
+align_function
 call_sha256_ni_x1_sse_from_c:
 	FUNC_SAVE
 	call sha256_ni_x1

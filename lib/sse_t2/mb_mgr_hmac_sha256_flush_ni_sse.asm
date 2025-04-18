@@ -38,6 +38,7 @@
 %include "include/mb_mgr_datastruct.inc"
 %include "include/reg_sizes.inc"
 %include "include/memcpy.inc"
+%include "include/align_sse.inc"
 
 ;%define DO_DBGPRINT
 %include "include/dbgprint.inc"
@@ -107,11 +108,13 @@ mksection .text
 ;; JOB* flush_job_hmac_sha_224_ni_sse(MB_MGR_HMAC_SHA_256_OOO *state)
 ;; arg1 : state
 MKGLOBAL(flush_job_hmac_sha_224_ni_sse,function,internal)
+align_function
 flush_job_hmac_sha_224_ni_sse:
 %else
 ;; JOB* flush_job_hmac_sha_256_ni_sse(MB_MGR_HMAC_SHA_256_OOO *state)
 ;; arg1 : state
 MKGLOBAL(flush_job_hmac_sha_256_ni_sse,function,internal)
+align_function
 flush_job_hmac_sha_256_ni_sse:
 %endif
 	mov	rax, rsp
@@ -138,6 +141,7 @@ flush_job_hmac_sha_256_ni_sse:
 	cmovne	idx, [rel one]
 	DBGPRINTL64 "idx:", idx
 
+align_loop
 copy_lane_data:
 	xor	len2, len2
 	mov	WORD(len2), word [state + _lens_sha256 + idx*2]
@@ -156,6 +160,7 @@ copy_lane_data:
 	call	sha256_ni_x1
 	; state and idx are intact
 
+align_label
 len_is_0:
 	; process completed job "idx"
 	imul	lane_data, idx, _HMAC_SHA1_LANE_DATA_size
@@ -167,6 +172,7 @@ len_is_0:
 	cmp	dword [lane_data + _outer_done], 0
 	jne	end_loop
 
+align_label
 proc_outer:
 	mov	dword [lane_data + _outer_done], 1
 	mov	DWORD(size_offset), [lane_data + _size_offset]
@@ -205,7 +211,7 @@ proc_outer:
         DBGPRINT_XMM xmm1
 	jmp	copy_lane_data
 
-	align	16
+align_label
 proc_extra_blocks:
 	mov	DWORD(start_offset), [lane_data + _start_offset]
 	mov	[state + _lens_sha256 + 2*idx], WORD(extra_blocks)
@@ -214,11 +220,12 @@ proc_extra_blocks:
 	mov	dword [lane_data + _extra_blocks], 0
 	jmp	copy_lane_data
 
+align_label
 return_null:
 	xor	job_rax, job_rax
 	jmp	return
 
-	align	16
+align_label
 end_loop:
 	mov	job_rax, [lane_data + _job_in_lane]
 	mov	qword [lane_data + _job_in_lane], 0
@@ -258,6 +265,7 @@ end_loop:
         DBGPRINT_XMM	xmm0
         jmp     clear_ret
 
+align_label
 copy_full_digest:
 	cmp 	qword [job_rax + _auth_tag_output_len_in_bytes], 16
 	ja 	copy_tag_gt16
@@ -269,6 +277,7 @@ copy_full_digest:
 	simd_store_sse {p + 0*4}, xmm0, tmp2, tmp4, tmp5
 	jmp 	clear_ret
 
+align_label
 copy_tag_gt16:
 	;; copy 16 bytes first
 	movdqu	xmm0, [state + _args_digest_sha256 + idx]
@@ -284,6 +293,7 @@ copy_tag_gt16:
 	pshufb	xmm1, bswap_xmm4
 	simd_store_sse {p + 4*4}, xmm1, tmp2, tmp4, tmp5
 
+align_label
 clear_ret:
 
 %ifdef SAFE_DATA
@@ -323,6 +333,7 @@ APPEND(skip_clear_,I):
 
 %endif ;; SAFE_DATA
 
+align_label
 return:
         DBGPRINTL "exit sha256-ni-sse flush"
 
