@@ -125,6 +125,7 @@
 %include "include/cet.inc"
 %include "include/error.inc"
 %include "include/gcm_data_sse.inc"
+%include "include/align_sse.inc"
 
 %ifndef GCM128_MODE
 %ifndef GCM192_MODE
@@ -354,6 +355,7 @@
         mov     %%T1, %%A_IN            ; T1 = AAD
         mov     %%T2, %%A_LEN           ; T2 = aadLen
 
+align_loop
 %%_get_AAD_loop128:
         cmp     %%T2, 128
         jl      %%_exit_AAD_loop128
@@ -434,6 +436,7 @@
         add     %%T1, 128
         jmp     %%_get_AAD_loop128
 
+align_label
 %%_exit_AAD_loop128:
         cmp     %%T2, 16
         jl      %%_get_small_AAD_block
@@ -467,6 +470,7 @@
         cmp     %%T2, 16
         jl      %%_AAD_reduce
 
+align_loop
 %%_AAD_blocks:
         movdqu          %%XTMP0, [%%T1]
         pshufb          %%XTMP0, [rel SHUF_MASK]
@@ -494,6 +498,7 @@
         jl      %%_AAD_reduce
         jmp     %%_AAD_blocks
 
+align_label
 %%_AAD_reduce:
         movdqa          %%XTMP4, %%XTMP3
         pslldq          %%XTMP4, 8                             ; shift-L 2 DWs
@@ -524,6 +529,7 @@
         movdqa          %%AAD_HASH, %%XTMP1
         pxor            %%AAD_HASH, %%XTMP4                    ; the result is in %%T1
 
+align_label
 %%_get_small_AAD_block:
         or      %%T2, %%T2
         je      %%_CALC_AAD_done
@@ -535,6 +541,7 @@
         pxor            %%AAD_HASH, %%XTMP1
         GHASH_MUL       %%AAD_HASH, %%XTMP0, %%XTMP1, %%XTMP2, %%XTMP3, %%XTMP4, %%XTMP5
 
+align_label
 %%_CALC_AAD_done:
 
 %endmacro ; CALC_AAD_HASH
@@ -566,10 +573,12 @@
 	XLDR	xmm1, [%%PLAIN_CYPH_IN]		;If more than 16 bytes of data, just fill the xmm register
 	jmp	%%_data_read
 
+align_label
 %%_fewer_than_16_bytes:
 	lea	r10, [%%PLAIN_CYPH_IN + %%DATA_OFFSET]
 	READ_SMALL_DATA_INPUT_SSE	xmm1, r10, %%PLAIN_CYPH_LEN, rax
 
+align_label
 %%_data_read:				;Finished reading in data
 
 	movdqu	xmm9, [%%GDATA_CTX + PBlockEncKey]	;xmm9 = ctx_data.partial_block_enc_key
@@ -589,6 +598,7 @@
 	sub	r15, 16				;Set r15 to be the amount of data left in CYPH_PLAIN_IN after filling the block
 	jge	%%_no_extra_mask_1		;Determine if if partial block is not being filled and shift mask accordingly
 	sub	r12, r15
+align_label
 %%_no_extra_mask_1:
 
 	movdqu	xmm1, [r12 + ALL_F-SHIFT_MASK]	; get the appropriate mask to mask out bottom r13 bytes of xmm9
@@ -606,6 +616,7 @@
 	xor	rax,rax
 	mov	[%%GDATA_CTX + PBlockLen], rax
 	jmp	%%_dec_done
+align_label
 %%_partial_incomplete_1:
 %ifidn __OUTPUT_FORMAT__, win64
         mov     rax, %%PLAIN_CYPH_LEN
@@ -613,6 +624,7 @@
 %else
        	add	[%%GDATA_CTX + PBlockLen], %%PLAIN_CYPH_LEN
 %endif
+align_label
 %%_dec_done:
 	movdqu	[%%GDATA_CTX + AadHash], %%AAD_HASH
 
@@ -624,6 +636,7 @@
 	sub	r15, 16				;Set r15 to be the amount of data left in CYPH_PLAIN_IN after filling the block
 	jge	%%_no_extra_mask_2		;Determine if if partial block is not being filled and shift mask accordingly
 	sub	r12, r15
+align_label
 %%_no_extra_mask_2:
 
 	movdqu	xmm1, [r12 + ALL_F-SHIFT_MASK]	; get the appropriate mask to mask out bottom r13 bytes of xmm9
@@ -640,6 +653,7 @@
 	xor	rax,rax
 	mov	[%%GDATA_CTX + PBlockLen], rax
 	jmp	%%_encode_done
+align_label
 %%_partial_incomplete_2:
 %ifidn __OUTPUT_FORMAT__, win64
         mov     rax, %%PLAIN_CYPH_LEN
@@ -647,6 +661,7 @@
 %else
        	add     [%%GDATA_CTX + PBlockLen], %%PLAIN_CYPH_LEN
 %endif
+align_label
 %%_encode_done:
 	movdqu	[%%GDATA_CTX + AadHash], %%AAD_HASH
 
@@ -662,8 +677,10 @@
 	mov	r13, 16
 	sub	r13, r12			; Set r13 to be the number of bytes to write out
 	jmp	%%_count_set
+align_label
 %%_partial_fill:
 	mov	r13, %%PLAIN_CYPH_LEN
+align_label
 %%_count_set:
 	movq	rax, xmm9
 	cmp	r13, 8
@@ -674,6 +691,7 @@
 	psrldq	xmm9, 8
 	movq	rax, xmm9
 	sub	r13, 8
+align_loop
 %%_less_than_8_bytes_left:
 	mov	BYTE [%%CYPH_PLAIN_OUT + %%DATA_OFFSET], al
 	add	%%DATA_OFFSET, 1
@@ -681,6 +699,7 @@
 	sub	r13, 1
 	jne	%%_less_than_8_bytes_left
          ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+align_label
 %%_partial_block_done:
 %endmacro ; PARTIAL_BLOCK
 
@@ -935,6 +954,7 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+align_label
 %%_initial_blocks_done:
 
 %endmacro
@@ -1819,43 +1839,53 @@
 
         jmp     %%_initial_num_blocks_is_1
 
+align_label
 %%_initial_num_blocks_is_7:
 	INITIAL_BLOCKS	%%GDATA_KEY, %%GDATA_CTX, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, r13, %%DATA_OFFSET, 7, xmm12, xmm13, xmm14, xmm15, xmm11, xmm9, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, xmm10, xmm0, %%ENC_DEC
         sub     r13, 16*7
         jmp     %%_initial_blocks_encrypted
 
+align_label
 %%_initial_num_blocks_is_6:
 	INITIAL_BLOCKS	%%GDATA_KEY, %%GDATA_CTX, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, r13, %%DATA_OFFSET, 6, xmm12, xmm13, xmm14, xmm15, xmm11, xmm9, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, xmm10, xmm0, %%ENC_DEC
         sub     r13, 16*6
         jmp     %%_initial_blocks_encrypted
 
+align_label
 %%_initial_num_blocks_is_5:
 	INITIAL_BLOCKS	%%GDATA_KEY, %%GDATA_CTX, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, r13, %%DATA_OFFSET, 5, xmm12, xmm13, xmm14, xmm15, xmm11, xmm9, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, xmm10, xmm0, %%ENC_DEC
         sub     r13, 16*5
         jmp     %%_initial_blocks_encrypted
 
+align_label
 %%_initial_num_blocks_is_4:
 	INITIAL_BLOCKS	%%GDATA_KEY, %%GDATA_CTX, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, r13, %%DATA_OFFSET, 4, xmm12, xmm13, xmm14, xmm15, xmm11, xmm9, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, xmm10, xmm0, %%ENC_DEC
         sub     r13, 16*4
         jmp     %%_initial_blocks_encrypted
 
+align_label
 %%_initial_num_blocks_is_3:
 	INITIAL_BLOCKS	%%GDATA_KEY, %%GDATA_CTX, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, r13, %%DATA_OFFSET, 3, xmm12, xmm13, xmm14, xmm15, xmm11, xmm9, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, xmm10, xmm0, %%ENC_DEC
         sub     r13, 16*3
         jmp     %%_initial_blocks_encrypted
+
+align_label
 %%_initial_num_blocks_is_2:
 	INITIAL_BLOCKS	%%GDATA_KEY, %%GDATA_CTX, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, r13, %%DATA_OFFSET, 2, xmm12, xmm13, xmm14, xmm15, xmm11, xmm9, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, xmm10, xmm0, %%ENC_DEC
         sub     r13, 16*2
         jmp     %%_initial_blocks_encrypted
 
+align_label
 %%_initial_num_blocks_is_1:
 	INITIAL_BLOCKS	%%GDATA_KEY, %%GDATA_CTX, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, r13, %%DATA_OFFSET, 1, xmm12, xmm13, xmm14, xmm15, xmm11, xmm9, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, xmm10, xmm0, %%ENC_DEC
         sub     r13, 16
         jmp     %%_initial_blocks_encrypted
 
+align_label
 %%_initial_num_blocks_is_0:
 	INITIAL_BLOCKS	%%GDATA_KEY, %%GDATA_CTX, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, r13, %%DATA_OFFSET, 0, xmm12, xmm13, xmm14, xmm15, xmm11, xmm9, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, xmm10, xmm0, %%ENC_DEC
 
+align_label
 %%_initial_blocks_encrypted:
         cmp     r13, 0
         je      %%_zero_cipher_left
@@ -1867,6 +1897,7 @@
         and     r15d, 255
         pshufb  xmm9, [SHUF_MASK]
 
+align_loop
 %%_encrypt_by_8_new:
         cmp     r15d, 255-8
         jg      %%_encrypt_by_8
@@ -1880,6 +1911,7 @@
         pshufb  xmm9, [SHUF_MASK]
         jmp     %%_eight_cipher_left
 
+align_label
 %%_encrypt_by_8:
         pshufb  xmm9, [SHUF_MASK]
         add     r15b, 8
@@ -1891,9 +1923,11 @@
 
         pshufb  xmm9, [SHUF_MASK]
 
+align_label
 %%_eight_cipher_left:
 	GHASH_LAST_8	%%GDATA_KEY, xmm0, xmm10, xmm11, xmm12, xmm13, xmm14, xmm15, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8
 
+align_label
 %%_zero_cipher_left:
 	movdqu	[%%GDATA_CTX + AadHash], xmm14
 	movdqu	[%%GDATA_CTX + CurCount], xmm9
@@ -1921,6 +1955,7 @@
 	sub	r12, r13
 	jmp	%%_data_read
 
+align_label
 %%_large_enough_update:
         sub     %%DATA_OFFSET, 16
         add     %%DATA_OFFSET, r13
@@ -1934,6 +1969,7 @@
         sub     r12, r13                                ; adjust the shuffle mask pointer to be able to shift 16-r13 bytes (r13 is the number of bytes in plaintext mod 16)
         movdqu  xmm2, [r12]                             ; get the appropriate shuffle mask
         pshufb  xmm1, xmm2                              ; shift right 16-r13 bytes
+align_label
 %%_data_read:
         %ifidn  %%ENC_DEC, DEC
         movdqa  xmm2, xmm1
@@ -1968,6 +2004,7 @@
         movq    rax, xmm9
         sub     r13, 8
 
+align_label
 %%_less_than_8_bytes_left:
         mov     BYTE [%%CYPH_PLAIN_OUT + %%DATA_OFFSET], al
         add     %%DATA_OFFSET, 1
@@ -1976,6 +2013,7 @@
         jne     %%_less_than_8_bytes_left
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+align_label
 %%_multiple_of_16_bytes:
 
 %endmacro
@@ -2003,6 +2041,7 @@
 
 	GHASH_MUL xmm14, xmm13, xmm0, xmm10, xmm11, xmm5, xmm6 ;GHASH computation for the last <16 Byte block
 
+align_label
 %%_partial_done:
 
 	mov	r12, [%%GDATA_CTX + AadLen]			; r12 = aadLen (number of bytes)
@@ -2026,6 +2065,7 @@
 
         pxor    xmm9, xmm14
 
+align_label
 %%_return_T:
 	mov	r10, %%AUTH_TAG				; r10 = authTag
 	mov	r11, %%AUTH_TAG_LEN			; r11 = auth_tag_len
@@ -2041,10 +2081,12 @@
 
         simd_store_sse r10, xmm9, r11, r12, rax
         jmp     %%_return_T_done
+align_label
 %%_T_8:
         movq    rax, xmm9
         mov     [r10], rax
         jmp     %%_return_T_done
+align_label
 %%_T_12:
         movq    rax, xmm9
         mov     [r10], rax
@@ -2052,9 +2094,11 @@
         movd    eax, xmm9
         mov     [r10 + 8], eax
         jmp     %%_return_T_done
+align_label
 %%_T_16:
         movdqu  [r10], xmm9
 
+align_label
 %%_return_T_done:
 
 %ifdef SAFE_DATA
@@ -2095,11 +2139,13 @@
 	XLDR	xmm1, [%%PLAIN_IN]
 	jmp	%%_data_read
 
+align_label
 %%_fewer_than_16_bytes:
 	lea	r10, [%%PLAIN_IN]
 	READ_SMALL_DATA_INPUT_SSE	xmm1, r10, %%PLAIN_LEN, rax
 
         ; Finished reading in data
+align_label
 %%_data_read:
 
 	lea	r12, [rel SHIFT_MASK]
@@ -2118,6 +2164,7 @@
         ; Determine if partial block is not being filled and shift mask accordingly
 	jge	%%_no_extra_mask_1
 	sub	r12, r15
+align_label
 %%_no_extra_mask_1:
 
         ; get the appropriate mask to mask out bottom r13 bytes of xmm3
@@ -2136,6 +2183,7 @@
 	xor	rax,rax
 	mov	[%%GDATA_CTX + PBlockLen], rax
 	jmp	%%_ghash_done
+align_label
 %%_partial_incomplete_1:
 %ifidn __OUTPUT_FORMAT__, win64
         mov     rax, %%PLAIN_LEN
@@ -2143,6 +2191,7 @@
 %else
         add     [%%GDATA_CTX + PBlockLen], %%PLAIN_LEN
 %endif
+align_label
 %%_ghash_done:
 	movdqu	[%%GDATA_CTX + AadHash], %%AAD_HASH
 
@@ -2154,10 +2203,13 @@
         sub     r12, r13
 
         jmp     %%offset_set
+align_label
 %%_partial_fill:
         mov     r12, %%PLAIN_LEN
+align_label
 %%offset_set:
         mov     %%DATA_OFFSET, r12
+align_label
 %%_partial_block_done:
 %endmacro ; PARTIAL_BLOCK_GMAC
 

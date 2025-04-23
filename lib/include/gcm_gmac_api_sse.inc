@@ -29,6 +29,7 @@
 
 %include "include/gcm_sse.inc"
 %include "include/gcm_common.inc"
+%include "include/align_sse.inc"
 
 %ifndef GCM_GMAC_API_SSE_INC
 %define GCM_GMAC_API_SSE_INC
@@ -41,7 +42,7 @@ default rel
 ;void   ghash_pre_sse
 ;       (const void *key, struct gcm_key_data *key_data)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-align 32
+align_function
 MKGLOBAL(ghash_pre_sse,function,)
 ghash_pre_sse:
         endbranch64
@@ -92,10 +93,12 @@ ghash_pre_sse:
         movdqu  xmm6, [rsp + 0*16]
         add     rsp, 1*16
 %endif
+align_label
 exit_ghash_pre:
         ret
 
 %ifdef SAFE_PARAM
+align_label
 error_ghash_pre:
         ;; Clear reg and imb_errno
         IMB_ERR_CHECK_START rax
@@ -119,7 +122,7 @@ error_ghash_pre:
 ;        void         *io_tag,
 ;        const u64    tag_len);
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-align 32
+align_function
 MKGLOBAL(ghash_sse,function,)
 ghash_sse:
         endbranch64
@@ -161,11 +164,13 @@ ghash_sse:
 
         simd_store_sse arg4, xmm0, arg5, r12, rax
 
+align_label
 exit_ghash:
         FUNC_RESTORE
         ret
 
 %ifdef SAFE_PARAM
+align_label
 error_ghash:
         ;; Clear reg and imb_errno
         IMB_ERR_CHECK_START rax
@@ -201,7 +206,7 @@ error_ghash:
 ;        const   u8 *in,
 ;        const   u64 msg_len);
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-align 32
+align_function
 MKGLOBAL(GMAC_FN_NAME(update),function,)
 GMAC_FN_NAME(update):
         endbranch64
@@ -254,6 +259,7 @@ GMAC_FN_NAME(update):
                       r10, r11, r12, r13, rax
 	movdqu	[arg2 + AadHash], xmm8	; ctx_data.aad hash = aad_hash
 
+align_label
 no_full_blocks:
         add     arg3, arg4 ; Point at partial block
 
@@ -268,12 +274,14 @@ no_full_blocks:
         pxor    xmm8, xmm1
         movdqu  [arg2 + AadHash], xmm8
 
+align_label
 exit_gmac_update:
 	FUNC_RESTORE
 
 	ret
 
 %ifdef SAFE_PARAM
+align_label
 error_gmac_update:
         ;; Clear reg and imb_errno
         IMB_ERR_CHECK_START rax

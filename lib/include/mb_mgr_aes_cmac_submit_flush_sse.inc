@@ -35,6 +35,7 @@
 %include "include/reg_sizes.inc"
 %include "include/memcpy.inc"
 %include "include/const.inc"
+%include "include/align_sse.inc"
 ;%define DO_DBGPRINT
 %include "include/dbgprint.inc"
 
@@ -179,6 +180,7 @@ endstruc
         or      r, r
         jz      %%_complete_block
 
+align_label
 %%_not_complete_block:
         ;; M_last = padding(M_n) XOR K2
         lea     tmp, [rel padding_0x80_tab16 + 16]
@@ -201,6 +203,7 @@ endstruc
         pxor    xmm0, xmm1
         movdqa  [m_last], xmm0
 
+align_label
 %%_step_5:
         ;; Find min length
         movdqa  xmm0, [state + _aes_cmac_lens]
@@ -254,6 +257,7 @@ APPEND(%%_skip_,I):
         phminposuw xmm1, xmm0
         jmp     %%_cmac_round
 
+align_loop
 %%_cmac_round_flush:
         ;; - good lane already known
         ;; - copy good_lane input pointer to empty lanes
@@ -271,6 +275,7 @@ APPEND(%%_skip2_,I):
 
 %endif ; end FLUSH
 
+align_loop
 %%_cmac_round:
 	pextrw	len2, xmm1, 0	; min value
 	pextrw	idx, xmm1, 1	; min index (0...3)
@@ -287,6 +292,7 @@ APPEND(%%_skip2_,I):
 	; state and idx are intact
 
         movdqa  xmm0, [state + _aes_cmac_lens]  ; preload lens
+align_label
 %%_len_is_0:
         ; Check if job complete
         test    word [state + _aes_cmac_init_done + idx*2], 0xffff
@@ -337,6 +343,7 @@ APPEND(%%_skip2_,I):
         jmp     %%_cmac_round_flush
 %endif
 
+align_label
 %%_copy_complete_digest:
         ; Job complete, copy digest to AT output
  	mov	job_rax, [state + _aes_cmac_job_in_lane + idx*8]
@@ -355,9 +362,11 @@ APPEND(%%_skip2_,I):
         movdqu  [tmp2], xmm0
         jmp     %%_update_lanes
 
+align_label
 %%_ne_16_copy:
         memcpy_sse_16 tmp2, tmp3, tmp4, lane, iv
 
+align_label
 %%_update_lanes:
         ; Update unused lanes
         mov	unused_lanes, [state + _aes_cmac_unused_lanes]
@@ -395,6 +404,7 @@ APPEND(%%_skip_clear_,I):
 
 %endif ;; SAFE_DATA
 
+align_label
 %%_return:
 	mov	rbx, [rsp + _gpr_save + 8*0]
 	mov	rbp, [rsp + _gpr_save + 8*1]
@@ -409,11 +419,13 @@ APPEND(%%_skip_clear_,I):
 	mov	rsp, [rsp + _rsp_save]	; original SP
 	ret
 
+align_label
 %%_return_null:
 	xor	job_rax, job_rax
 	jmp	%%_return
 
 %ifidn %%SUBMIT_FLUSH, SUBMIT
+align_label
 %%_complete_block:
 
         ;; Block size aligned
@@ -432,6 +444,7 @@ APPEND(%%_skip_clear_,I):
 
         jmp     %%_step_5
 
+align_label
 %%_lt_one_block:
         ;; Single partial block
         mov     word [state + _aes_cmac_init_done + lane*2], 1
@@ -444,6 +457,7 @@ APPEND(%%_skip_clear_,I):
         mov     n, 1
         jmp     %%_not_complete_block
 
+align_label
 %%_not_complete_block_3gpp:
         ;; bit pad last block
         ;; xor with skey2
@@ -463,6 +477,7 @@ APPEND(%%_skip_clear_,I):
         simd_load_sse_15_1 xmm0, tmp, r
         dec     r
 
+align_label
 %%_update_mlast_3gpp:
         ;; set last byte padding mask
         ;; shift into correct xmm idx
@@ -504,6 +519,7 @@ APPEND(%%_skip_clear_,I):
 
         jmp     %%_step_5
 
+align_label
 %%_load_full_block_3gpp:
         movdqu  xmm0, [tmp]
         mov     r, 0xf

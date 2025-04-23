@@ -31,6 +31,7 @@
 
 %include "include/gcm_sse.inc"
 %include "include/imb_job.inc"
+%include "include/align_sse.inc"
 
 %ifndef GCM_API_SSE_INC
 %define GCM_API_SSE_INC
@@ -42,7 +43,7 @@ default rel
 ;void	aes_gcm_precomp_128_sse / aes_gcm_precomp_192_sse / aes_gcm_precomp_256_sse
 ;        (struct gcm_key_data *key_data);
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-align 32
+align_function
 MKGLOBAL(FN_NAME(precomp,_),function,)
 FN_NAME(precomp,_):
         endbranch64
@@ -92,11 +93,13 @@ FN_NAME(precomp,_):
         add     rsp, 1*16
 %endif
 
+align_label
 exit_precomp:
 
         ret
 
 %ifdef SAFE_PARAM
+align_label
 error_precomp:
         ;; Clear reg and imb_errno
         IMB_ERR_CHECK_START rax
@@ -123,7 +126,7 @@ error_precomp:
 ;        u8      *auth_tag,
 ;        u64     auth_tag_len);
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-align 32
+align_function
 MKGLOBAL(FN_NAME(enc,_),function,)
 FN_NAME(enc,_):
         endbranch64
@@ -175,6 +178,7 @@ FN_NAME(enc,_):
         cmp     arg4, 0
         jz      error_enc
 
+align_label
 skip_in_out_check_enc:
         ;; Check if aad_len == 0
         cmp     arg8, 0
@@ -184,6 +188,7 @@ skip_in_out_check_enc:
         cmp     arg7, 0
         jz      error_enc
 
+align_label
 skip_aad_check_enc:
 %endif
 	GCM_INIT arg1, arg2, arg6, arg7, arg8
@@ -192,12 +197,14 @@ skip_aad_check_enc:
 
 	GCM_COMPLETE arg1, arg2, arg9, arg10
 
+align_label
 exit_enc:
 	FUNC_RESTORE
 
 	ret
 
 %ifdef SAFE_PARAM
+align_label
 error_enc:
         ;; Clear reg and imb_errno
         IMB_ERR_CHECK_START rax
@@ -232,6 +239,7 @@ error_enc:
         ;; Check in != NULL (msg_len != 0)
         IMB_ERR_CHECK_NULL arg4, rax, IMB_ERR_NULL_SRC
 
+align_label
 skip_in_out_check_error_enc:
         ;; Check if aad_len == 0
         cmp     arg8, 0
@@ -240,6 +248,7 @@ skip_in_out_check_error_enc:
         ;; Check aad != NULL (aad_len != 0)
         IMB_ERR_CHECK_NULL arg7, rax, IMB_ERR_NULL_AAD
 
+align_label
 skip_aad_check_error_enc:
         ;; Set imb_errno
         IMB_ERR_CHECK_END rax
@@ -259,7 +268,7 @@ skip_aad_check_error_enc:
 ;        u8      *auth_tag,
 ;        u64     auth_tag_len);
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-align 32
+align_function
 MKGLOBAL(FN_NAME(dec,_),function,)
 FN_NAME(dec,_):
         endbranch64
@@ -311,6 +320,7 @@ FN_NAME(dec,_):
         cmp     arg4, 0
         jz      error_dec
 
+align_label
 skip_in_out_check_dec:
         ;; Check if aad_len == 0
         cmp     arg8, 0
@@ -320,6 +330,7 @@ skip_in_out_check_dec:
         cmp     arg7, 0
         jz      error_dec
 
+align_label
 skip_aad_check_dec:
 %endif
 
@@ -329,12 +340,14 @@ skip_aad_check_dec:
 
 	GCM_COMPLETE arg1, arg2, arg9, arg10
 
+align_label
 exit_dec:
 	FUNC_RESTORE
 
 	ret
 
 %ifdef SAFE_PARAM
+align_label
 error_dec:
         ;; Clear reg and imb_errno
         IMB_ERR_CHECK_START rax
@@ -369,6 +382,7 @@ error_dec:
         ;; Check in != NULL (msg_len != 0)
         IMB_ERR_CHECK_NULL arg4, rax, IMB_ERR_NULL_SRC
 
+align_label
 skip_in_out_check_error_dec:
         ;; Check if aad_len == 0
         cmp     arg8, 0
@@ -377,6 +391,7 @@ skip_in_out_check_error_dec:
         ;; Check aad != NULL (aad_len != 0)
         IMB_ERR_CHECK_NULL arg7, rax, IMB_ERR_NULL_AAD
 
+align_label
 skip_aad_check_error_dec:
 
         ;; Set imb_errno
@@ -391,7 +406,7 @@ skip_aad_check_error_dec:
 ;IMB_JOB *aes_gcm_enc_var_iv_128_sse / aes_gcm_enc_var_iv_192_sse /
 ;       aes_gcm_enc_var_iv_256_sse(IMB_MGR *state, IMB_JOB *job)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-align 32
+align_function
 MKGLOBAL(FN_NAME(enc_var_iv,_),function,internal)
 FN_NAME(enc_var_iv,_):
         endbranch64
@@ -408,10 +423,12 @@ FN_NAME(enc_var_iv,_):
 
         jmp     skip_iv_len_12_enc_IV
 
+align_function
 iv_len_12_enc_IV:
 	GCM_INIT arg1, {rsp + CONTEXT_OFFSET}, {[arg2 + _iv]}, \
                  {[arg2 + _gcm_aad]}, {[arg2 + _gcm_aad_len]}
 
+align_label
 skip_iv_len_12_enc_IV:
         mov     arg3, [arg2 + _src]
         add     arg3, [arg2 + _cipher_start_src_offset]
@@ -439,7 +456,7 @@ skip_iv_len_12_enc_IV:
 ;IMB_JOB *aes_gcm_dec_var_iv_128_sse / aes_gcm_dec_var_iv_192_sse /
 ;       aes_gcm_dec_var_iv_256_sse(IMB_MGR *state, IMB_JOB *job)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-align 32
+align_function
 MKGLOBAL(FN_NAME(dec_var_iv,_),function,internal)
 FN_NAME(dec_var_iv,_):
         endbranch64
@@ -456,10 +473,12 @@ FN_NAME(dec_var_iv,_):
 
         jmp     skip_iv_len_12_dec_IV
 
+align_label
 iv_len_12_dec_IV:
 	GCM_INIT arg1, {rsp + CONTEXT_OFFSET}, {[arg2 + _iv]}, \
                  {[arg2 + _gcm_aad]}, {[arg2 + _gcm_aad_len]}
 
+align_label
 skip_iv_len_12_dec_IV:
         mov     arg3, [arg2 + _src]
         add     arg3, [arg2 + _cipher_start_src_offset]

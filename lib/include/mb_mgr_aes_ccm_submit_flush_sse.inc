@@ -35,6 +35,7 @@
 %include "include/const.inc"
 %include "include/memcpy.inc"
 %include "include/cet.inc"
+%include "include/align_sse.inc"
 
 %define NUM_LANES 8
 
@@ -237,6 +238,7 @@ endstruc
 %%_iv_length_8:
         pinsrb init_block0, [tmp + 7], 8
 
+align_label
 %%_finish_nonce_move:
 
         ;; Bytes 14 & 15 (message length), in Big Endian
@@ -284,6 +286,7 @@ endstruc
         mov     tmp2, [job + _cbcmac_aad]
         memcpy_sse_64_1 tmp, tmp2, aad_len, tmp3, tmp4, xtmp0, xtmp1, xtmp2, xtmp3
 
+align_label
 %%_aad_complete:
 
         ;; Finish Block 0 with Byte 0
@@ -344,6 +347,7 @@ APPEND(%%_skip_,I):
         phminposuw min_len_idx, ccm_lens
         jmp     %%_ccm_round
 
+align_loop
 %%_ccm_round_flush:
         ;; This is identical to the above block but optimized for
         ;; a repeat flush operation when keys etc. are already set
@@ -362,6 +366,7 @@ APPEND(%%_skip2_,I):
 
 %endif ; end FLUSH
 
+align_loop
 %%_ccm_round:
         pextrw  len2, min_len_idx, 0    ; min value
         pextrw  min_idx, min_len_idx, 1         ; min index (0...3)
@@ -380,6 +385,7 @@ APPEND(%%_skip2_,I):
         call    %%AES_CBC_MAC
         ; state and min_idx are intact
 
+align_label
 %%_len_is_0:
 
         movzx   tmp, WORD [state + _aes_ccm_init_done + min_idx*2]
@@ -388,6 +394,7 @@ APPEND(%%_skip2_,I):
         cmp     WORD(tmp), 1
         je      %%_prepare_partial_block_to_auth
 
+align_label
 %%_encrypt_digest:
 
         ;; Set counter block 0 (reusing previous initial block 0)
@@ -408,6 +415,7 @@ APPEND(%%_skip2_,I):
 
         simd_store_sse tmp2, init_block0, tmp3, tmp, rax
 
+align_label
 %%_update_lanes:
         ; Update unused lanes
         mov     unused_lanes, [state + _aes_ccm_unused_lanes]
@@ -452,6 +460,7 @@ APPEND(%%_skip_clear_,I):
 %endif ;; SUBMIT
 %endif ;; SAFE_DATA
 
+align_label
 %%_return:
         mov     rbx, [rsp + _gpr_save + 8*0]
         mov     rbp, [rsp + _gpr_save + 8*1]
@@ -466,23 +475,28 @@ APPEND(%%_skip_clear_,I):
         mov     rsp, [rsp + _rsp_save]  ; original SP
         ret
 
+align_label
 %%_return_null:
         xor     job_rax, job_rax
         jmp     %%_return
 
+align_label
 %%_prepare_full_blocks_to_auth:
 
         cmp     dword [min_job + _cipher_direction], 2 ; DECRYPT
         je      %%_decrypt
 
+align_label
 %%_encrypt:
         mov     tmp, [min_job + _src]
         add     tmp, [min_job + _hash_start_src_offset_in_bytes]
         jmp     %%_set_init_done_1
 
+align_label
 %%_decrypt:
         mov     tmp, [min_job + _dst]
 
+align_label
 %%_set_init_done_1:
         mov     [state + _aes_ccm_args_in + min_idx*8], tmp
         mov     word [state + _aes_ccm_init_done + min_idx*2], 1
@@ -510,6 +524,7 @@ APPEND(%%_skip_clear_,I):
         jmp     %%_ccm_round
 %endif
 
+align_label
 %%_prepare_partial_block_to_auth:
         ; Check if partial block needs to be hashed
         mov     auth_len, [min_job + _msg_len_to_hash_in_bytes]
@@ -535,6 +550,7 @@ APPEND(%%_skip_clear_,I):
 
         simd_load_sse_15_1 xtmp0, tmp2, auth_len
 
+align_label
 %%_finish_partial_block_copy:
         movdqa  [init_block_addr], xtmp0
         mov     [state + _aes_ccm_args_in + min_idx * 8], init_block_addr

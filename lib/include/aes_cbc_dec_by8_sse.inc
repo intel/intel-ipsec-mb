@@ -35,6 +35,7 @@
 %include "include/mb_mgr_datastruct.inc"
 %include "include/clear_regs.inc"
 %include "include/reg_sizes.inc"
+%include "include/align_sse.inc"
 
 %define CONCAT(a,b) a %+ b
 
@@ -177,6 +178,7 @@ endstruc
         movdqa          xdata0, xkeytmp
         jmp             %%_update_pointers
 
+align_label
 %%_just_finish_stores:
         movdqu	        [%%p_out  + (i * 16)], CONCAT(xdata,i)
 %endif
@@ -202,6 +204,7 @@ endstruc
 %endif
 %endif
 
+align_label
 %%_update_pointers:
 
 %if is_1_to_7_short_or_8_last == 0
@@ -252,30 +255,32 @@ endstruc
 	cmp	        DWORD(%%tmp), 4 * 16
 	ja	        %%_sgt4
 	je	        %%_seq4
+align_label
 %%_slt4:
 	cmp	        DWORD(%%tmp), 2 * 16
 	ja	        %%_seq3
 	je	        %%_seq2
+align_label
 %%_seq1:
 	DO_AES_DEC      %%p_in, %%p_out, %%p_keys, 1, %%num_rounds, %%length, short
 	jmp	        %%_do_return
 
-align 32
+align_label
 %%_seq2:
 	DO_AES_DEC      %%p_in, %%p_out, %%p_keys, 2, %%num_rounds, %%length, short
 	jmp	        %%_do_return
 
-align 32
+align_label
 %%_seq3:
 	DO_AES_DEC      %%p_in, %%p_out, %%p_keys, 3, %%num_rounds, %%length, short
 	jmp	        %%_do_return
 
-align 32
+align_label
 %%_seq4:
 	DO_AES_DEC      %%p_in, %%p_out, %%p_keys, 4, %%num_rounds, %%length, short
 	jmp	        %%_do_return
 
-align 32
+align_label
 %%_sgt4:
 	cmp	        DWORD(%%tmp), 6 * 16
 	ja	        %%_seq7
@@ -284,12 +289,12 @@ align 32
 	DO_AES_DEC      %%p_in, %%p_out, %%p_keys, 5, %%num_rounds, %%length, short
 	jmp	        %%_do_return
 
-align 32
+align_label
 %%_seq6:
 	DO_AES_DEC      %%p_in, %%p_out, %%p_keys, 6, %%num_rounds, %%length, short
 	jmp	        %%_do_return
 
-align 32
+align_label
 %%_seq7:
 	DO_AES_DEC      %%p_in, %%p_out, %%p_keys, 7, %%num_rounds, %%length, short
 	jmp	        %%_do_return
@@ -297,7 +302,7 @@ align 32
         ;; =====================================================================
         ;; message longer than 8 blocks
 
-align 32
+align_label
 %%_longer_than_8_blocks:
         ;; process 1 to 7 blocks first
 	mov	        DWORD(%%tmp), DWORD(%%length)
@@ -308,60 +313,63 @@ align 32
 	cmp	        DWORD(%%tmp), 4 * 16
 	ja	        %%_gt4
 	je	        %%_eq4
+align_label
 %%_lt4:
 	cmp	        DWORD(%%tmp), 2 * 16
 	ja	        %%_eq3
 	je	        %%_eq2
+align_label
 %%_eq1:
 	DO_AES_DEC      %%p_in, %%p_out, %%p_keys, 1, %%num_rounds, %%length, start
 	jz	        %%_do_return
 	jmp	        %%_main_loop
 
-align 32
+align_label
 %%_eq2:
 	DO_AES_DEC      %%p_in, %%p_out, %%p_keys, 2, %%num_rounds, %%length, start
 	jz	        %%_do_return
 	jmp	        %%_main_loop
 
-align 32
+align_label
 %%_eq3:
 	DO_AES_DEC      %%p_in, %%p_out, %%p_keys, 3, %%num_rounds, %%length, start
 	jz	        %%_do_return
 	jmp	        %%_main_loop
 
-align 32
+align_label
 %%_eq4:
 	DO_AES_DEC      %%p_in, %%p_out, %%p_keys, 4, %%num_rounds, %%length, start
 	jz	        %%_do_return
 	jmp	        %%_main_loop
 
-align 32
+align_label
 %%_gt4:
 	cmp	        DWORD(%%tmp), 6 * 16
 	ja	        %%_eq7
 	je	        %%_eq6
+align_label
 %%_eq5:
 	DO_AES_DEC      %%p_in, %%p_out, %%p_keys, 5, %%num_rounds, %%length, start
 	jz	        %%_do_return
 	jmp	        %%_main_loop
 
-align 32
+align_label
 %%_eq6:
 	DO_AES_DEC      %%p_in, %%p_out, %%p_keys, 6, %%num_rounds, %%length, start
 	jz	        %%_do_return
 	jmp	        %%_main_loop
 
-align 32
+align_label
 %%_eq7:
 	DO_AES_DEC      %%p_in, %%p_out, %%p_keys, 7, %%num_rounds, %%length, start
 	jz	        %%_do_return
 	jmp	        %%_main_loop
 
-align 32
+align_label
 %%_eq0:
 	movdqu	        xdata0, [%%p_in]
 
-align 32
+align_loop
 %%_main_loop:
         cmp             %%length, 2 * (8 * 16)
         jb              %%_the_last_8_blocks
@@ -369,12 +377,12 @@ align 32
         DO_AES_DEC      %%p_in, %%p_out, %%p_keys, 8, %%num_rounds, %%length, main
         jmp	        %%_main_loop
 
-align 32
+align_label
 %%_the_last_8_blocks:
         ;; %%length is 8 blocks (8 x 16-bytes)
         DO_AES_DEC      %%p_in, %%p_out, %%p_keys, 8, %%num_rounds, %%length, last
 
-align 32
+align_label
 %%_do_return:
 %ifdef SAFE_DATA
         clear_xmms_sse xdata0, xdata1, xdata2, xdata3, xdata4, xdata5, xdata6, xdata7, xkeytmp

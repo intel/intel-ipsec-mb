@@ -43,6 +43,7 @@
 ;
 %include "include/os.inc"
 %include "include/clear_regs.inc"
+%include "include/align_sse.inc"
 
 %ifndef AES_CBC_DEC_128
 %define AES_CBC_DEC_128 aes_cbc_dec_128_sse
@@ -97,6 +98,7 @@
 mksection .text
 
 MKGLOBAL(AES_CBC_DEC_128,function,internal)
+align_function
 AES_CBC_DEC_128:
 %ifndef LINUX
 	mov	LEN, [rsp + 8*5]
@@ -121,6 +123,7 @@ AES_CBC_DEC_128:
 	jb	initial_1
 	ja	initial_3
 
+align_label
 initial_2:
 	; load cipher text
 	movdqu	XDATA0, [IN + 0*OFFSET]
@@ -189,7 +192,7 @@ initial_2:
 	jz	done
 	jmp	main_loop
 
-	align 16
+align_label
 initial_1:
 	; load cipher text
 	movdqu	XDATA0, [IN + 0*OFFSET]
@@ -243,6 +246,7 @@ initial_1:
 	jz	done
 	jmp	main_loop
 
+align_label
 initial_3:
 	; load cipher text
 	movdqu	XDATA0, [IN + 0*OFFSET]
@@ -335,7 +339,7 @@ initial_3:
 	jz	done
 	jmp	main_loop
 
-	align 16
+align_label
 initial_4:
 	; load cipher text
 	movdqu	XDATA0, [IN + 0*OFFSET]
@@ -444,7 +448,7 @@ initial_4:
 	jz	done
 	jmp	main_loop
 
-	align 16
+align_loop
 main_loop:
 	; load cipher text
 	movdqu	XDATA0, [IN + IDX + 0*OFFSET]
@@ -540,6 +544,7 @@ main_loop:
         sub     LEN, 4*16
 	jnz	main_loop
 
+align_label
 done:
 %ifdef CBCS
 %ifndef LINUX

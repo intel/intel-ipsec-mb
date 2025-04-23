@@ -32,6 +32,7 @@
 %include "include/os.inc"
 %include "include/mb_mgr_datastruct.inc"
 %include "include/clear_regs.inc"
+%include "include/align_sse.inc"
 
 %define	MOVDQ movdqu ;; assume buffers not aligned
 %macro pxor2 2
@@ -231,6 +232,7 @@ mksection .text
 	cmp		LEN, IDX
 	jle		%%_done
 
+align_loop
 %%_main_loop:
 	pxor2		XDATA0, [IN0 + IDX]	; plaintext XOR IV
 	pxor2		XDATA1, [IN1 + IDX]	; plaintext XOR IV
@@ -304,6 +306,7 @@ mksection .text
 	cmp	LEN, IDX
 	ja	%%_main_loop
 
+align_label
 %%_done:
 	;; update IV / store digest for CBC-MAC
 	movdqa	[ARG + %%ARG_IV + 16*0], XDATA0
@@ -376,6 +379,7 @@ mksection .text
 %endif ;; FUNC
 
 MKGLOBAL(FUNC,function,internal)
+align_function
 FUNC:
 %ifdef ARG_OUT
         AES_CBC_X4 MODE, OFFSET, ARG_IV, ARG_KEYS, ARG_IN, ARG_OUT

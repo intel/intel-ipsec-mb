@@ -34,6 +34,7 @@
 %include "include/os.inc"
 %include "include/mb_mgr_datastruct.inc"
 %include "include/clear_regs.inc"
+%include "include/align_sse.inc"
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; struct AES_ARGS {
@@ -189,7 +190,7 @@ endstruc
         movdqu          XTMP6, [IN6 + IDX]
         movdqu          XTMP7, [TMP + IDX]
 
-align 32
+align_loop
 %%_main_loop:
         ;; 0. ARK
         pxor		XDATA0, [KEYS0 + 16*0]
@@ -277,7 +278,7 @@ align 32
 %endif
         jmp             %%_main_loop
 
-align 32
+align_label
 %%_exit_main_loop:
 
 %ifnidn %%MODE, CBC_XCBC_MAC

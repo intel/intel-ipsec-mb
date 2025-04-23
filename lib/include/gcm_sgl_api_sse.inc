@@ -28,6 +28,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 %include "include/gcm_sse.inc"
+%include "include/align_sse.inc"
 
 %ifndef GCM_SGL_API_SSE_INC
 %define GCM_SGL_API_SSE_INC
@@ -43,7 +44,7 @@ default rel
 ;        const   u8 *aad,
 ;        u64     aad_len);
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-align 32
+align_function
 MKGLOBAL(FN_NAME(init,_),function,)
 FN_NAME(init,_):
         endbranch64
@@ -82,6 +83,7 @@ FN_NAME(init,_):
         cmp     arg4, 0
         jz      error_init
 
+align_label
 skip_aad_check_init:
 %endif
 	GCM_INIT arg1, arg2, arg3, arg4, arg5
@@ -90,6 +92,7 @@ skip_aad_check_init:
         clear_scratch_gps_asm
         clear_scratch_xmms_sse_asm
 %endif
+align_label
 exit_init:
 
 %ifidn __OUTPUT_FORMAT__, win64
@@ -103,6 +106,7 @@ exit_init:
         ret
 
 %ifdef SAFE_PARAM
+align_label
 error_init:
         ;; Clear reg and imb_errno
         IMB_ERR_CHECK_START rax
@@ -123,6 +127,7 @@ error_init:
         ;; Check aad != NULL (aad_len != 0)
         IMB_ERR_CHECK_NULL arg4, rax, IMB_ERR_NULL_AAD
 
+align_label
 skip_aad_check_error_init:
 
         ;; Set imb_errno
@@ -140,7 +145,7 @@ skip_aad_check_error_init:
 ;        const u8  *aad,
 ;        const u64 aad_len);
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-align 32
+align_function
 MKGLOBAL(FN_NAME(init_var_iv,_),function,)
 FN_NAME(init_var_iv,_):
         endbranch64
@@ -183,6 +188,7 @@ FN_NAME(init_var_iv,_):
         cmp     arg5, 0
         jz      error_init_IV
 
+align_label
 skip_aad_check_init_IV:
 %endif
         cmp     arg4, 12
@@ -191,14 +197,17 @@ skip_aad_check_init_IV:
 	GCM_INIT arg1, arg2, arg3, arg5, arg6, arg4
         jmp     skip_iv_len_12_init_IV
 
+align_label
 iv_len_12_init_IV:
 	GCM_INIT arg1, arg2, arg3, arg5, arg6
 
+align_label
 skip_iv_len_12_init_IV:
 %ifdef SAFE_DATA
         clear_scratch_gps_asm
         clear_scratch_xmms_sse_asm
 %endif
+align_label
 exit_init_IV:
 
 %ifidn __OUTPUT_FORMAT__, win64
@@ -212,6 +221,7 @@ exit_init_IV:
         ret
 
 %ifdef SAFE_PARAM
+align_label
 error_init_IV:
         ;; Clear reg and imb_errno
         IMB_ERR_CHECK_START rax
@@ -235,6 +245,7 @@ error_init_IV:
         ;; Check aad != NULL (aad_len != 0)
         IMB_ERR_CHECK_NULL arg5, rax, IMB_ERR_NULL_AAD
 
+align_label
 skip_aad_check_error_init_IV:
 
         ;; Set imb_errno
@@ -251,7 +262,7 @@ skip_aad_check_error_init_IV:
 ;        const   u8 *in,
 ;        u64     msg_len);
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-align 32
+align_function
 MKGLOBAL(FN_NAME(enc,_update_),function,)
 FN_NAME(enc,_update_):
         endbranch64
@@ -290,12 +301,14 @@ FN_NAME(enc,_update_):
 %endif
 	GCM_ENC_DEC arg1, arg2, arg3, arg4, arg5, ENC
 
+align_label
 exit_update_enc:
 	FUNC_RESTORE
 
 	ret
 
 %ifdef SAFE_PARAM
+align_label
 error_update_enc:
         ;; Clear reg and imb_errno
         IMB_ERR_CHECK_START rax
@@ -319,6 +332,7 @@ error_update_enc:
         ;; Check in != NULL (plaintext_len != 0)
         IMB_ERR_CHECK_NULL arg4, rax, IMB_ERR_NULL_SRC
 
+align_label
 skip_in_out_check_error_update_enc:
         ;; Set imb_errno
         IMB_ERR_CHECK_END rax
@@ -333,7 +347,7 @@ skip_in_out_check_error_update_enc:
 ;        const   u8 *in,
 ;        u64     msg_len);
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-align 32
+align_function
 MKGLOBAL(FN_NAME(dec,_update_),function,)
 FN_NAME(dec,_update_):
         endbranch64
@@ -373,12 +387,14 @@ FN_NAME(dec,_update_):
 
 	GCM_ENC_DEC arg1, arg2, arg3, arg4, arg5, DEC
 
+align_label
 exit_update_dec:
 	FUNC_RESTORE
 
 	ret
 
 %ifdef SAFE_PARAM
+align_label
 error_update_dec:
         ;; Clear reg and imb_errno
         IMB_ERR_CHECK_START rax
@@ -402,6 +418,7 @@ error_update_dec:
         ;; Check in != NULL (plaintext_len != 0)
         IMB_ERR_CHECK_NULL arg4, rax, IMB_ERR_NULL_SRC
 
+align_label
 skip_in_out_check_error_update_dec:
         ;; Set imb_errno
         IMB_ERR_CHECK_END rax
@@ -415,7 +432,7 @@ skip_in_out_check_error_update_dec:
 ;        u8      *auth_tag,
 ;        u64     auth_tag_len);
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-align 32
+align_function
 MKGLOBAL(FN_NAME(enc,_finalize_),function,)
 FN_NAME(enc,_finalize_):
         endbranch64
@@ -475,10 +492,12 @@ FN_NAME(enc,_finalize_):
 
 	pop r12
 
+align_label
 exit_enc_fin:
         ret
 
 %ifdef SAFE_PARAM
+align_label
 error_enc_fin:
         ;; Clear reg and imb_errno
         IMB_ERR_CHECK_START rax
@@ -509,7 +528,7 @@ error_enc_fin:
 ;        u8      *auth_tag,
 ;        u64     auth_tag_len);
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-align 32
+align_function
 MKGLOBAL(FN_NAME(dec,_finalize_),function,)
 FN_NAME(dec,_finalize_):
         endbranch64
@@ -569,10 +588,12 @@ FN_NAME(dec,_finalize_):
 
 	pop r12
 
+align_label
 exit_dec_fin:
         ret
 
 %ifdef SAFE_PARAM
+align_label
 error_dec_fin:
         ;; Clear reg and imb_errno
         IMB_ERR_CHECK_START rax

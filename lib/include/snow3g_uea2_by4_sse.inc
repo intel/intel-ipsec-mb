@@ -33,6 +33,7 @@
 %include "include/mb_mgr_datastruct.inc"
 %include "include/memcpy.inc"
 %include "include/transpose_sse.inc"
+%include "include/align_sse.inc"
 
 extern snow3g_table_A_mul
 extern snow3g_table_A_div
@@ -860,6 +861,7 @@ endstruc
         xor             DWORD(%%TMP64), [%%IN_PTR]
         mov             dword [%%OUT_PTR], DWORD(%%TMP64)
         jmp             %%_write_done
+align_label
 %%_not_dw:
         and             %%LENGTH, 3
         cmp             %%LENGTH, 2
@@ -873,9 +875,11 @@ endstruc
         and             %%LENGTH, 1
         je              %%_write_done
         shr             %%TMP64, 16
+align_label
 %%_write_single_byte:
         xor             BYTE(%%TMP64), [%%IN_PTR]
         mov             byte [%%OUT_PTR], BYTE(%%TMP64)
+align_label
 %%_write_done:
 %endif
         ;; if %%LENGTH is less then 4 bytes per given lane that's the last bytes
@@ -887,6 +891,7 @@ endstruc
         mov             [%%STATE + _snow3g_args_in + %%LANE*8], %%IN_PTR
         mov             [%%STATE + _snow3g_args_out + %%LANE*8], %%OUT_PTR
 
+align_label
 %%no_output:
 %endmacro
 
@@ -999,9 +1004,11 @@ endstruc
         je              %%no_dqws
 
 
+align_loop
 %%next_dqw:
         xor             %%TMP1_64, %%TMP1_64
 
+align_loop
 %%next_dqw_round:
 %ifdef SAFE_LOOKUP
         SNOW3G_KEY_GEN_SSE %%STATE, %%TMP1, %%TMP2, %%TMP3, %%TMP4, %%TMP5,    \
@@ -1025,12 +1032,14 @@ endstruc
         sub             %%LENGTH, 1
         jne             %%next_dqw
 
+align_label
 %%no_dqws:
         and             %%COMMON_LEN, 0x3
         cmp             %%COMMON_LEN, 0
 
         je              %%no_full_dws_to_write_out
 
+align_loop
 %%next_dw:
         xor             %%TMP1_64,  %%TMP1_64
 %ifdef SAFE_LOOKUP
@@ -1050,6 +1059,7 @@ endstruc
         sub                     %%COMMON_LEN, 1
         jne                     %%next_dw
 
+align_label
 %%no_full_dws_to_write_out:
         ;; Process last dw/bytes:
         xor             %%TMP1_64,  %%TMP1_64
@@ -1067,6 +1077,7 @@ endstruc
         SNOW3G_OUTPUT      3, %%STATE,  2, %%IN, %%OUT, %%TMP1_64, %%LENGTH
         SNOW3G_OUTPUT      3, %%STATE,  3, %%IN, %%OUT, %%TMP1_64, %%LENGTH
 
+align_label
 %%zero_bytes:
 %endmacro
 
@@ -1115,6 +1126,7 @@ endstruc
         mov     %%TMP1_64, 32
         xor     %%TMP2_64, %%TMP2_64
 
+align_loop
 %%next_auth_round:
 %ifdef SAFE_LOOKUP
         SNOW3G_KEY_GEN_SSE %%STATE, %%TMP1, %%TMP2, %%TMP3, %%TMP4, %%TMP5,    \
@@ -1147,6 +1159,7 @@ endstruc
         ;; Generate 4 dw of keystream for each lane
         xor     %%TMP1_64, %%TMP1_64
 
+align_loop
 %%next_auth_round2:
 %ifdef SAFE_LOOKUP
         SNOW3G_KEY_GEN_SSE %%STATE, %%TMP1, %%TMP2, %%TMP3, %%TMP4, %%TMP5,    \
