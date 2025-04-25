@@ -30,6 +30,7 @@
 %include "include/cet.inc"
 %include "include/memcpy.inc"
 %include "include/const.inc"
+%include "include/align_avx.inc"
 %define APPEND(a,b) a %+ b
 %define APPEND3(a,b,c) a %+ b %+ c
 
@@ -166,7 +167,7 @@ mksection .text
 ;; snow3g_f9_1_buffer_internal_avx(const uint64_t *pBufferIn,
 ;;                                 const uint32_t KS[5],
 ;;                                 const uint64_t lengthInBits);
-align 16
+align_function
 MKGLOBAL(snow3g_f9_1_buffer_internal_avx,function,internal)
 snow3g_f9_1_buffer_internal_avx:
         endbranch64
@@ -203,6 +204,7 @@ snow3g_f9_1_buffer_internal_avx:
         vpunpcklqdq xmm0, P1, xmm1              ;; xmm0 = p1p2
         vpunpcklqdq xmm1, xmm5, xmm3            ;; xmm1 = p3p4
 
+align_loop
 start_4_blk_loop:
         vmovdqu         xmm3, [in_ptr + offset * 8]
         vmovdqu         xmm4, [in_ptr + offset * 8 + 16]
@@ -234,6 +236,7 @@ start_4_blk_loop:
         ;; less than 4 blocks left
         jmp     single_blk_chk
 
+align_loop
 start_single_blk_loop:
         vmovq   xmm0, [in_ptr + offset * 8]
         vpshufb xmm0, xmm0, [rel bswap64]
@@ -242,10 +245,12 @@ start_single_blk_loop:
 
         inc     offset
 
+align_label
 single_blk_chk:
         cmp     offset, qword_len
         jb      start_single_blk_loop
 
+align_label
 partial_blk:
         mov     tmp5, 0x3f      ;; len_in_bits % 64
         and     tmp5, bit_len
@@ -275,6 +280,7 @@ partial_blk:
 
         MUL_AND_REDUCE_TO_64 EV, P1, xmm3
 
+align_label
 skip_rem_bits:
         ;; /* Multiply by Q */
         ;; E = multiply_and_reduce64(E ^ lengthInBits,

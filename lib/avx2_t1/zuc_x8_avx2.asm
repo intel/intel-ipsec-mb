@@ -33,6 +33,7 @@
 %include "include/mb_mgr_datastruct.inc"
 %include "include/cet.inc"
 %include "include/const.inc"
+%include "include/align_avx.inc"
 
 %ifndef ZUC_CIPHER_8
 %define ZUC_CIPHER_8 asm_ZucCipher_8_avx2
@@ -1031,7 +1032,7 @@ align 64
         ; Shift LFSR 32-times, update state variables
         xor     r15, r15
 
-align 32
+align_loop
 %%start_loop_init:
         BITS_REORG8 pState, r15, r14, %%YTMP1, %%YTMP2, %%YTMP3, %%YTMP4, %%YTMP5, \
                     %%YTMP6, %%YTMP7, %%YTMP8, %%YTMP9, %%YTMP10
@@ -1044,6 +1045,7 @@ align 32
         cmp     r15, 32
         jne     %%start_loop_init
 
+align_label
 %%exit_loop_init:
 
         ; And once more, initial round from keygen phase = 33 times
@@ -1106,6 +1108,7 @@ align 32
 %endmacro
 
 MKGLOBAL(ZUC128_INIT_8,function,internal)
+align_function
 ZUC128_INIT_8:
         endbranch64
         ZUC_INIT_8 128, 0
@@ -1113,6 +1116,7 @@ ZUC128_INIT_8:
         ret
 
 MKGLOBAL(ZUC256_INIT_8,function,internal)
+align_function
 ZUC256_INIT_8:
 %define tags   arg4
 %define tag_sz arg5
@@ -1127,18 +1131,22 @@ ZUC256_INIT_8:
         jb init_for_auth_tag_4B
 
         ; Fall-through for tag size = 16 bytes
+align_label
 init_for_auth_tag_16B:
         ZUC_INIT_8 256, 16, tags
         ret
 
+align_label
 init_for_auth_tag_8B:
         ZUC_INIT_8 256, 8, tags
         ret
 
+align_label
 init_for_auth_tag_4B:
         ZUC_INIT_8 256, 4, tags
         ret
 
+align_label
 init_for_cipher:
         ZUC_INIT_8 256, 0
         ret
@@ -1192,7 +1200,7 @@ init_for_cipher:
 
         ; Generate N*4B of keystream in N rounds
         xor     r15, r15
-align 32
+align_loop
 %%start_loop_keystr:
         inc     r15
         BITS_REORG8 pState, r15, r14, %%YTMP1, %%YTMP2, %%YTMP3, %%YTMP4, %%YTMP5, \
@@ -1276,6 +1284,7 @@ align 32
 ;;  RSI    - pKeyStr
 ;;
 MKGLOBAL(ZUC_KEYGEN32B_8,function,internal)
+align_function
 ZUC_KEYGEN32B_8:
         endbranch64
         KEYGEN_8_AVX2 8
@@ -1294,6 +1303,7 @@ ZUC_KEYGEN32B_8:
 ;;  RSI    - pKeyStr
 ;;
 MKGLOBAL(ZUC_KEYGEN16B_8,function,internal)
+align_function
 ZUC_KEYGEN16B_8:
         endbranch64
         KEYGEN_8_AVX2 4
@@ -1312,6 +1322,7 @@ ZUC_KEYGEN16B_8:
 ;;  RSI    - pKeyStr
 ;;
 MKGLOBAL(ZUC_KEYGEN8B_8,function,internal)
+align_function
 ZUC_KEYGEN8B_8:
         endbranch64
         KEYGEN_8_AVX2 2
@@ -1330,6 +1341,7 @@ ZUC_KEYGEN8B_8:
 ;;  RSI    - pKeyStr
 ;;
 MKGLOBAL(ZUC_KEYGEN4B_8,function,internal)
+align_function
 ZUC_KEYGEN4B_8:
         endbranch64
         KEYGEN_8_AVX2 1
@@ -1382,7 +1394,7 @@ ZUC_KEYGEN4B_8:
 
         ; Generate N*4B of keystream in N rounds
         mov     r15, %%INITIAL_ROUND
-align 32
+align_loop
 %%start_loop_cipher:
         inc     r15
         BITS_REORG8 pState, r15, r14, %%YTMP1, %%YTMP2, %%YTMP3, %%YTMP4, %%YTMP5, \
@@ -1542,6 +1554,7 @@ align 32
 ;;  R8  - min_length
 ;;
 MKGLOBAL(ZUC_CIPHER_8,function,internal)
+align_function
 ZUC_CIPHER_8:
 %define pState  arg1
 %define pIn     arg2
@@ -1603,6 +1616,7 @@ ZUC_CIPHER_8:
         ; Load state pointer in RAX
         mov     rax, pState
 
+align_loop
 loop_cipher64:
         cmp     min_length, 64
         jl      exit_loop_cipher64
@@ -1618,6 +1632,7 @@ loop_cipher64:
         sub     min_length, 32
 
         jmp     loop_cipher64
+align_label
 exit_loop_cipher64:
 
         ; Check if at least 32 bytes are left to encrypt
@@ -1631,6 +1646,7 @@ exit_loop_cipher64:
         sub     min_length, 32
 
         ; Check if there are more bytes left to encrypt
+align_label
 less_than_32:
 
         mov     r15, min_length
@@ -1638,6 +1654,7 @@ less_than_32:
         shr     r15, 2 ;; number of rounds left (round up length to nearest multiple of 4B)
         jz      exit_final_rounds
 
+align_label
 _final_rounds_is_1_8:
         cmp     r15, 4
         je      _num_final_rounds_is_4
@@ -1653,6 +1670,7 @@ _final_rounds_is_1_8:
         cmp     r15, 5
         je      _num_final_rounds_is_5
 
+align_label
 _final_rounds_is_1_3:
         cmp     r15, 3
         je      _num_final_rounds_is_3
@@ -1672,6 +1690,7 @@ APPEND(_num_final_rounds_is_,I):
 %assign I (I + 1)
 %endrep
 
+align_label
 exit_final_rounds:
         ;; update in/out pointers
 
@@ -1702,6 +1721,7 @@ exit_final_rounds:
 
         FUNC_RESTORE
 
+align_label
 exit_cipher32:
         vzeroupper
         ret
@@ -1896,7 +1916,7 @@ exit_cipher32:
 ;;  @param [in] DATA (data pointer)
 ;;  @param [in] TAG_SZ (Tag size: 4, 8 or 16 bytes)
 ;;
-align 64
+align_function
 MKGLOBAL(asm_Eia3Round32B_avx,function,internal)
 asm_Eia3Round32B_avx:
 
@@ -1916,6 +1936,7 @@ asm_Eia3Round32B_avx:
         ja      round32B_tag_16B
 
         ; Fall-through for 4 bytes
+align_label
 round32B_tag_4B:
         EIA3_ROUND T, KS, DATA, r11, \
                   xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, \
@@ -1923,6 +1944,7 @@ round32B_tag_4B:
 
         jmp     end_round32B
 
+align_label
 round32B_tag_8B:
         EIA3_ROUND T, KS, DATA, r11, \
                   xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, \
@@ -1930,10 +1952,12 @@ round32B_tag_8B:
 
         jmp     end_round32B
 
+align_label
 round32B_tag_16B:
         EIA3_ROUND T, KS, DATA, r11, \
                   xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, \
                   xmm8, xmm9, xmm10, xmm11, xmm12, xmm13, 2, 16
+align_label
 end_round32B:
 
         ;; Copy last 32 bytes of KS to the front
@@ -1991,6 +2015,7 @@ end_round32B:
         add     %%DATA, 16
         add     %%KS, 16
         sub     %%N_BITS, 128
+align_label
 %%Eia3RoundsAVX_dq_end:
 
         or      %%N_BITS, %%N_BITS
@@ -2025,6 +2050,7 @@ end_round32B:
                         %%XTMP5, %%XTMP6, %%KS_L, %%KS_M1, %%KS_M2, %%KS_H, \
                         0, %%TAG_SZ
 
+align_label
 %%Eia3RoundsAVX_end:
 
 %if %%TAG_SZ == 4
@@ -2152,7 +2178,7 @@ end_round32B:
 ;;  @param [in] KEY_SZ (Key size: 128 or 256 bits)
 ;;  @param [in] TAG_SZ (Tag size: 4, 8 or 16 bytes)
 ;;
-align 64
+align_function
 MKGLOBAL(asm_Eia3Remainder_avx,function,internal)
 asm_Eia3Remainder_avx:
 
@@ -2176,24 +2202,28 @@ asm_Eia3Remainder_avx:
 
         ; Key size = 256
         ; Fall-through for tag size = 4 bytes
+align_label
 remainder_tag_sz_4:
         REMAINDER T, KS, DATA, N_BITS, r11, r12, r13, r14, r15, \
                   xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, \
                   xmm8, xmm9, xmm10, xmm11, xmm12, xmm13, 256, 4
         ret
 
+align_label
 remainder_tag_sz_8:
         REMAINDER T, KS, DATA, N_BITS, r11, r12, r13, r14, r15, \
                   xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, \
                   xmm8, xmm9, xmm10, xmm11, xmm12, xmm13, 256, 8
         ret
 
+align_label
 remainder_tag_sz_16:
         REMAINDER T, KS, DATA, N_BITS, r11, r12, r13, r14, r15, \
                   xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, \
                   xmm8, xmm9, xmm10, xmm11, xmm12, xmm13, 256, 16
         ret
 
+align_label
 remainder_key_sz_128:
         REMAINDER T, KS, DATA, N_BITS, r11, r12, r13, r14, r15, \
                   xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, \

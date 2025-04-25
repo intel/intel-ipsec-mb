@@ -33,6 +33,7 @@
 ;%define DO_DBGPRINT
 %include "include/dbgprint.inc"
 %include "include/const.inc"
+%include "include/align_avx.inc"
 extern sha1_x8_avx2
 
 mksection .rodata
@@ -98,6 +99,7 @@ endstruc
 ; arg 1 : rcx : state
 ; arg 2 : rdx : job
 MKGLOBAL(submit_job_hmac_avx2,function,internal)
+align_function
 submit_job_hmac_avx2:
         mov	rax, rsp
         sub	rsp, STACK_size
@@ -145,12 +147,14 @@ submit_job_hmac_avx2:
         cmp	len, 64
         jb	copy_lt64
 
+align_label
 fast_copy:
         add	p, len
         vmovdqu    ymm0, [p - 64 + 0 * 32]
         vmovdqu    ymm1, [p - 64 + 1 * 32]
         vmovdqu    [lane_data + _extra_block + 0*32], ymm0
         vmovdqu    [lane_data + _extra_block + 1*32], ymm1
+align_label
 end_fast_copy:
         mov	size_offset, extra_blocks
         shl	size_offset, 6
@@ -177,6 +181,7 @@ end_fast_copy:
         test	len, ~63
         jnz	ge64_bytes
 
+align_label
 lt64_bytes:
         vmovdqa xmm0, [state + _lens]
         XVPINSRW xmm0, xmm1, tmp, lane, extra_blocks, scale_x16
@@ -186,12 +191,13 @@ lt64_bytes:
         mov	[state + _args_data_ptr + PTR_SZ*lane], tmp
         mov	dword [lane_data + _extra_blocks], 0
 
+align_label
 ge64_bytes:
         cmp	unused_lanes, 0xf
         jne	return_null
         jmp	start_loop
 
-        align	16
+align_loop
 start_loop:
         ; Find min length
         vmovdqa	xmm0, [state + _lens]
@@ -215,6 +221,7 @@ start_loop:
         call	sha1_x8_avx2
         ; state and idx are intact
 
+align_label
 len_is_0:
         ; process completed job "idx"
         imul	lane_data, idx, _HMAC_SHA1_LANE_DATA_size
@@ -225,6 +232,7 @@ len_is_0:
         cmp	dword [lane_data + _outer_done], 0
         jne	end_loop
 
+align_label
 proc_outer:
         mov	dword [lane_data + _outer_done], 1
         mov	DWORD(size_offset), [lane_data + _size_offset]
@@ -258,7 +266,7 @@ proc_outer:
         mov	[state + _args_digest + SHA1_DIGEST_WORD_SIZE*idx + 4*SHA1_DIGEST_ROW_SIZE], DWORD(tmp)
         jmp	start_loop
 
-        align	16
+align_label
 proc_extra_blocks:
         mov	DWORD(start_offset), [lane_data + _start_offset]
 
@@ -271,7 +279,7 @@ proc_extra_blocks:
         mov	dword [lane_data + _extra_blocks], 0
         jmp	start_loop
 
-        align	16
+align_label
 copy_lt64:
         ;; less than one message block of data
         ;; beginning of source block
@@ -282,11 +290,12 @@ copy_lt64:
         mov	unused_lanes, [state + _unused_lanes]
         jmp	end_fast_copy
 
+align_label
 return_null:
         xor	job_rax, job_rax
         jmp	return
 
-        align	16
+align_label
 end_loop:
         mov	job_rax, [lane_data + _job_in_lane]
         mov	unused_lanes, [state + _unused_lanes]
@@ -313,6 +322,7 @@ end_loop:
         mov	[p + 2*SHA1_DIGEST_WORD_SIZE], DWORD(tmp3)
 	jmp 	clear_ret
 
+align_label
 copy_tag:
 	;; always copy 4 bytes
 	mov	DWORD(tmp2), [state + _args_digest + idx*4 + 0*SHA1_DIGEST_ROW_SIZE]
@@ -331,6 +341,7 @@ copy_tag:
 	vpshufb xmm0, xmm0, [rel byteswap]
 	simd_store_avx {p + 1*SHA1_DIGEST_WORD_SIZE}, xmm0, tmp2, tmp4, tmp3
 
+align_label
 clear_ret:
 
 %ifdef SAFE_DATA
@@ -354,6 +365,7 @@ clear_ret:
         mov     dword [lane_data + _outer_block + 16], 0
 %endif
 
+align_label
 return:
         vzeroupper
         DBGPRINTL "---------- exit sha1 submit -----------"

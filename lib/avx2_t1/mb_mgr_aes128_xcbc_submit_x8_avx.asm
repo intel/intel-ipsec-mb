@@ -32,6 +32,7 @@
 
 %include "include/memcpy.inc"
 %include "include/const.inc"
+%include "include/align_avx.inc"
 
 %ifndef AES_XCBC_X8
 %define AES_XCBC_X8 aes_xcbc_mac_128_x8
@@ -96,6 +97,7 @@ endstruc
 ; arg 1 : state
 ; arg 2 : job
 MKGLOBAL(SUBMIT_JOB_AES_XCBC,function,internal)
+align_function
 SUBMIT_JOB_AES_XCBC:
 
         mov	rax, rsp
@@ -140,6 +142,7 @@ SUBMIT_JOB_AES_XCBC:
 	and	last_len, 15	; Check lsbs of msg len
 	jnz	slow_copy	; if not 16B mult, do slow copy
 
+align_label
 fast_copy:
 	vmovdqu	xmm0, [p - 16]	; load last block M[n]
         mov     tmp, [job + _k2] ; load K2 address
@@ -147,6 +150,7 @@ fast_copy:
         vpxor   xmm0, xmm0, xmm1      ; M[n] XOR K2
 	vmovdqa	[lane_data + _xcbc_final_block], xmm0
 	sub	len, 16		; take last block off length
+align_label
 end_fast_copy:
 	vpxor	xmm0, xmm0, xmm0
 	shl	lane, 4	; multiply by 16
@@ -159,6 +163,7 @@ end_fast_copy:
 	cmp	unused_lanes, 0xf
 	jne	return_null
 
+align_loop
 start_loop:
 	; Find min length
 	vphminposuw	xmm1, xmm0
@@ -176,6 +181,7 @@ start_loop:
 	call	AES_XCBC_X8
 	; state and idx are intact
 
+align_label
 len_is_0:
 	; process completed job "idx"
 	imul	lane_data, idx, _XCBC_LANE_DATA_size
@@ -193,6 +199,7 @@ len_is_0:
 	mov	[state + _aes_xcbc_args_in + 8*idx], tmp
 	jmp	start_loop
 
+align_label
 end_loop:
 	; process completed job "idx"
 	mov	job_rax, [lane_data + _xcbc_job_in_lane]
@@ -220,6 +227,7 @@ end_loop:
         vmovdqa [lane_data + _xcbc_final_block + 16], xmm0
 %endif
 
+align_label
 return:
 
 	mov	rbx, [rsp + _gpr_save + 8*0]
@@ -236,6 +244,7 @@ return:
 
         ret
 
+align_label
 small_buffer:
 	; For buffers <= 16 Bytes
 	; The input data is set to final block
@@ -245,6 +254,7 @@ small_buffer:
 	cmp	len, 16
 	je	fast_copy
 
+align_label
 slow_copy:
 	and	len, ~15	; take final block off len
 	sub	p, last_len	; adjust data pointer
@@ -260,6 +270,7 @@ slow_copy:
 	vmovdqu	[lane_data + _xcbc_final_block], xmm0	; write final block
 	jmp	end_fast_copy
 
+align_label
 return_null:
 	xor	job_rax, job_rax
 	jmp	return

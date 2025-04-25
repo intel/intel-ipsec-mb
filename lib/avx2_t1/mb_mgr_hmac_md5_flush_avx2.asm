@@ -31,6 +31,7 @@
 %include "include/reg_sizes.inc"
 ;%define DO_DBGPRINT
 %include "include/dbgprint.inc"
+%include "include/align_avx.inc"
 extern md5_x8x2_avx2
 
 mksection .rodata
@@ -127,6 +128,7 @@ endstruc
 ; JOB* flush_job_hmac_md5_avx(MB_MGR_HMAC_MD5_OOO *state)
 ; arg 1 : rcx : state
 MKGLOBAL(flush_job_hmac_md5_avx2,function,internal)
+align_function
 flush_job_hmac_md5_avx2:
         mov	rax, rsp
         sub	rsp, STACK_size
@@ -158,6 +160,7 @@ flush_job_hmac_md5_avx2:
 %assign I (I+1)
 %endrep
 
+align_loop
 copy_lane_data:
         ; copy good lane (idx) to empty lanes
         mov	tmp, [state + _args_data_ptr_md5 + PTR_SZ*idx]
@@ -185,7 +188,7 @@ APPEND(upper_skip_,I):
 %endrep
         jmp	start_loop0
 
-        align	32
+align_label
 start_loop0:
         ; Find min length
         vphminposuw	xmm2, xmm0
@@ -199,11 +202,13 @@ start_loop0:
         cmp len2, len_upper
         jle use_min
 
+align_label
 min_in_high:
         vmovdqa xmm2, xmm3
         mov len2, len_upper
         mov idx, idx_upper
         or  idx, 0x8  ; to reflect that index in 8-F
+align_label
 use_min:
         and len2, len2   ; to set flags
         jz  len_is_0
@@ -223,6 +228,7 @@ use_min:
         call	md5_x8x2_avx2
         ; state and idx are intact
 
+align_label
 len_is_0:
         ; process completed job "idx"
         imul	lane_data, idx, _HMAC_SHA1_LANE_DATA_size
@@ -233,6 +239,7 @@ len_is_0:
         cmp	dword [lane_data + _outer_done], 0
         jne	end_loop
 
+align_label
 proc_outer:
         mov	dword [lane_data + _outer_done], 1
         mov	DWORD(size_offset), [lane_data + _size_offset]
@@ -256,7 +263,7 @@ proc_outer:
         vpextrd	[state + _args_digest_md5 + MD5_DIGEST_WORD_SIZE*idx + 3*MD5_DIGEST_ROW_SIZE], xmm0, 3
         jmp	copy_lane_data
 
-        align	16
+align_label
 proc_extra_blocks:
         mov	DWORD(start_offset), [lane_data + _start_offset]
         mov	[state + _lens_md5 + 2*idx], WORD(extra_blocks)
@@ -265,11 +272,12 @@ proc_extra_blocks:
         mov	dword [lane_data + _extra_blocks], 0
         jmp	copy_lane_data
 
+align_label
 return_null:
         xor	job_rax, job_rax
         jmp	return
 
-        align	16
+align_label
 end_loop:
         mov	job_rax, [lane_data + _job_in_lane]
         mov	qword [lane_data + _job_in_lane], 0
@@ -303,6 +311,7 @@ end_loop:
 	mov	DWORD(tmp5), [state + _args_digest_md5 + MD5_DIGEST_WORD_SIZE*idx + 3*MD5_DIGEST_ROW_SIZE]
 	mov	[p + 3*4], DWORD(tmp5)
 
+align_label
 clear_ret:
 
 %ifdef SAFE_DATA
@@ -336,6 +345,7 @@ APPEND(skip_clear_,I):
 
 %endif ;; SAFE_DATA
 
+align_label
 return:
         DBGPRINTL "---------- exit md5 flush -----------"
         vzeroupper

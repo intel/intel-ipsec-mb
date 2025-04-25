@@ -32,6 +32,7 @@
 %include "include/memcpy.inc"
 ;%define DO_DBGPRINT
 %include "include/dbgprint.inc"
+%include "include/align_avx.inc"
 extern sha1_x8_avx2
 
 mksection .rodata
@@ -117,6 +118,7 @@ endstruc
 ; JOB* flush_job_hmac_avx(MB_MGR_HMAC_SHA_1_OOO *state)
 ; arg 1 : rcx : state
 MKGLOBAL(flush_job_hmac_avx2,function,internal)
+align_function
 flush_job_hmac_avx2:
 	mov	rax, rsp
 	sub	rsp, STACK_size
@@ -141,6 +143,7 @@ flush_job_hmac_avx2:
 %assign I (I+1)
 %endrep
 
+align_loop
 copy_lane_data:
 	; copy valid lane (idx) to empty lanes
 	vmovdqa	xmm0, [state + _lens]
@@ -178,6 +181,7 @@ APPEND(skip_,I):
 	call	sha1_x8_avx2
 	; state and idx are intact
 
+align_label
 len_is_0:
 	; process completed job "idx"
 	imul	lane_data, idx, _HMAC_SHA1_LANE_DATA_size
@@ -188,6 +192,7 @@ len_is_0:
 	cmp	dword [lane_data + _outer_done], 0
 	jne	end_loop
 
+align_label
 proc_outer:
 	mov	dword [lane_data + _outer_done], 1
 	mov	DWORD(size_offset), [lane_data + _size_offset]
@@ -217,7 +222,7 @@ proc_outer:
 	mov	[state + _args_digest + SHA1_DIGEST_WORD_SIZE*idx + 4*SHA1_DIGEST_ROW_SIZE], DWORD(tmp)
 	jmp	copy_lane_data
 
-	align	16
+align_label
 proc_extra_blocks:
 	mov	DWORD(start_offset), [lane_data + _start_offset]
 	mov	[state + _lens + 2*idx], WORD(extra_blocks)
@@ -226,11 +231,12 @@ proc_extra_blocks:
 	mov	dword [lane_data + _extra_blocks], 0
 	jmp	copy_lane_data
 
+align_label
 return_null:
 	xor	job_rax, job_rax
 	jmp	return
 
-	align	16
+align_label
 end_loop:
 	mov	job_rax, [lane_data + _job_in_lane]
 	mov	qword [lane_data + _job_in_lane], 0
@@ -257,6 +263,7 @@ end_loop:
 	mov	[p + 2*4], DWORD(r12)
 	jmp 	clear_ret
 
+align_label
 copy_tag:
 	;; always copy 4 bytes
 	mov	DWORD(tmp2), [state + _args_digest + idx*4 + 0*SHA1_DIGEST_ROW_SIZE]
@@ -275,6 +282,7 @@ copy_tag:
 	vpshufb xmm0, xmm0, [rel byteswap]
 	simd_store_avx {p + 1*SHA1_DIGEST_WORD_SIZE}, xmm0, tmp2, tmp4, r12
 
+align_label
 clear_ret:
 
 %ifdef SAFE_DATA
@@ -310,6 +318,7 @@ APPEND(skip_clear_,I):
 
 %endif ;; SAFE_DATA
 
+align_label
 return:
         vzeroupper
 	mov	rbp, [rsp + _gpr_save + 8*0]

@@ -27,6 +27,7 @@
 
 %include "include/os.inc"
 %include "include/memcpy.inc"
+%include "include/align_avx.inc"
 
 %ifdef LINUX
 %define arg1    rdi
@@ -42,6 +43,7 @@ mksection .text
 
 ; void memcpy_fn_avx_16(void *dst, const void *src, const size_t size)
 MKGLOBAL(memcpy_fn_avx_16,function,internal)
+align_function
 memcpy_fn_avx_16:
         memcpy_avx_16 arg1, arg2, arg3, r10, r11
 

@@ -32,6 +32,7 @@
 %include "include/reg_sizes.inc"
 %include "include/const.inc"
 %include "include/clear_regs.inc"
+%include "include/align_avx.inc"
 
 %ifndef SUBMIT_JOB_ZUC128_EEA3
 %define SUBMIT_JOB_ZUC128_EEA3 submit_job_zuc_eea3_avx2
@@ -230,6 +231,7 @@ mksection .text
 %else ;; %%KEY_SIZE == 256
         cmp     qword [job + _iv_len_in_bytes], 25
         je      %%_iv_size_25
+align_label
 %%_iv_size_23:
         ; Read 23 bytes of IV and expand to 25 bytes
         ; then expand the last 6 bytes to 8 bytes
@@ -252,6 +254,7 @@ mksection .text
         mov     [state + _zuc_args_IV + lane + 17], tmp2
 
         jmp     %%_iv_read
+align_label
 %%_iv_size_25:
         ; Read 25 bytes of IV
         vmovdqu xmm0, [tmp]
@@ -259,6 +262,7 @@ mksection .text
         vmovq   xmm0, [tmp + 16]
         vpinsrb xmm0, [tmp + 24], 8
         vmovdqa [state + _zuc_args_IV + lane + 16], xmm0
+align_label
 %%_iv_read:
 %endif
         shr     lane, 5
@@ -365,6 +369,7 @@ mksection .text
 %assign I (I + 1)
 %endrep
 
+align_label
 %%skip_submit_restoring_state:
 %ifdef SAFE_DATA
         ;; Clear stack containing state info
@@ -394,6 +399,7 @@ mksection .text
         mov     state, [rsp + _gpr_save + 8*8]
         mov     job,   [rsp + _gpr_save + 8*9]
 
+align_label
 %%len_is_0_submit_eea3:
         ; process completed job "idx"
         mov     job_rax, [state + _zuc_job_in_lane + idx*8]
@@ -411,6 +417,7 @@ mksection .text
         CLEAR_ZUC_LANE_STATE state, idx, tmp, ymm0, ymm1
 %endif
 
+align_label
 %%return_submit_eea3:
 %ifdef SAFE_DATA
         clear_scratch_ymms_asm
@@ -432,6 +439,7 @@ mksection .text
 
         ret
 
+align_label
 %%return_null_submit_eea3:
         xor     job_rax, job_rax
         jmp     %%return_submit_eea3
@@ -592,6 +600,7 @@ APPEND3(%%skip_flush_lane_,I,J):
 %assign I (I + 1)
 %endrep
 
+align_label
 %%skip_flush_restoring_state:
 %ifdef SAFE_DATA
         ;; Clear stack containing state info
@@ -606,6 +615,7 @@ APPEND3(%%skip_flush_lane_,I,J):
 
         mov     word [r12 + _zuc_init_not_done], 0 ; Init done for all lanes
 
+align_label
 %%skip_flush_init:
 
         ;; Copy state from good lane to NULL lanes
@@ -672,12 +682,14 @@ APPEND3(%%skip_eea3_copy_,I,J):
         jmp     %%skip_flush_clear_state
 %endif
 
+align_label
 %%len_is_0_flush_eea3:
 %ifdef SAFE_DATA
         ; Clear ZUC state of the lane that is returned
         mov     tmp2, idx
         CLEAR_ZUC_LANE_STATE state, tmp2, tmp3, ymm0, ymm1
 
+align_label
 %%skip_flush_clear_state:
 %endif
         ; process completed job "idx"
@@ -691,6 +703,7 @@ APPEND3(%%skip_eea3_copy_,I,J):
 
         SHIFT_GP        1, idx, tmp3, tmp4, left
         or      [state + _zuc_unused_lane_bitmask], BYTE(tmp3)
+align_label
 %%return_flush_eea3:
 %ifdef SAFE_DATA
         clear_scratch_ymms_asm
@@ -712,6 +725,7 @@ APPEND3(%%skip_eea3_copy_,I,J):
 
         ret
 
+align_label
 %%return_null_flush_eea3:
         xor     job_rax, job_rax
         jmp     %%return_flush_eea3
@@ -721,6 +735,7 @@ APPEND3(%%skip_eea3_copy_,I,J):
 ; arg 1 : state
 ; arg 2 : job
 MKGLOBAL(SUBMIT_JOB_ZUC128_EEA3,function,internal)
+align_function
 SUBMIT_JOB_ZUC128_EEA3:
         SUBMIT_JOB_ZUC_EEA3 128
 
@@ -728,6 +743,7 @@ SUBMIT_JOB_ZUC128_EEA3:
 ; arg 1 : state
 ; arg 2 : job
 MKGLOBAL(SUBMIT_JOB_ZUC256_EEA3,function,internal)
+align_function
 SUBMIT_JOB_ZUC256_EEA3:
         SUBMIT_JOB_ZUC_EEA3 256
 
@@ -735,6 +751,7 @@ SUBMIT_JOB_ZUC256_EEA3:
 ; arg 1 : state
 ; arg 2 : job
 MKGLOBAL(FLUSH_JOB_ZUC128_EEA3,function,internal)
+align_function
 FLUSH_JOB_ZUC128_EEA3:
         FLUSH_JOB_ZUC_EEA3 128
 
@@ -742,6 +759,7 @@ FLUSH_JOB_ZUC128_EEA3:
 ; arg 1 : state
 ; arg 2 : job
 MKGLOBAL(FLUSH_JOB_ZUC256_EEA3,function,internal)
+align_function
 FLUSH_JOB_ZUC256_EEA3:
         FLUSH_JOB_ZUC_EEA3 256
 
@@ -792,6 +810,7 @@ FLUSH_JOB_ZUC256_EEA3:
         ; Check if ZUC_EIA3._iv is not NULL, meaning a 25-byte IV can be parsed
         or      tmp, tmp
         jnz     %%_iv_size_25
+align_label
 %%_iv_size_23:
         ; Read 23 bytes of IV and expand to 25 bytes
         ; then expand the last 6 bytes to 8 bytes
@@ -816,6 +835,7 @@ FLUSH_JOB_ZUC256_EEA3:
         mov     [state + _zuc_args_IV + lane + 17], tmp2
 
         jmp     %%_iv_read
+align_label
 %%_iv_size_25:
         ; Read 25 bytes of IV
         vmovdqu xmm0, [tmp]
@@ -823,6 +843,7 @@ FLUSH_JOB_ZUC256_EEA3:
         vmovq   xmm0, [tmp + 16]
         vpinsrb xmm0, [tmp + 24], 8
         vmovdqa [state + _zuc_args_IV + lane + 16], xmm0
+align_label
 %%_iv_read:
 %endif
         shr     lane, 5
@@ -901,6 +922,7 @@ FLUSH_JOB_ZUC256_EEA3:
         vpxor   xmm0, xmm0
         vmovdqu [state + _zuc_lens], xmm0
 
+align_label
 %%len_is_0_submit_eia3:
         ; process completed job "idx"
         mov     job_rax, [state + _zuc_job_in_lane + idx*8]
@@ -913,6 +935,7 @@ FLUSH_JOB_ZUC256_EEA3:
         or      unused_lanes, idx
         mov     [state + _zuc_unused_lanes], unused_lanes
 
+align_label
 %%return_submit_eia3:
 %ifdef SAFE_DATA
         clear_scratch_ymms_asm
@@ -934,10 +957,12 @@ FLUSH_JOB_ZUC256_EEA3:
 
         jmp     %%exit_submit_eia3
 
+align_label
 %%return_null_submit_eia3:
         xor     job_rax, job_rax
         jmp     %%return_submit_eia3
 
+align_label
 %%exit_submit_eia3:
 %endmacro
 
@@ -1069,6 +1094,7 @@ APPEND(%%skip_eia3_,I):
         ;; Clear all lengths of valid jobs and set to FFFF to NULL jobs
         vmovdqu [state + _zuc_lens], xmm2
 
+align_label
 %%len_is_0_flush_eia3:
         ; process completed job "idx"
         mov     job_rax, [state + _zuc_job_in_lane + idx*8]
@@ -1081,6 +1107,7 @@ APPEND(%%skip_eia3_,I):
         or      unused_lanes, idx
         mov     [state + _zuc_unused_lanes], unused_lanes
 
+align_label
 %%return_flush_eia3:
 %ifdef SAFE_DATA
         clear_scratch_ymms_asm
@@ -1102,10 +1129,12 @@ APPEND(%%skip_eia3_,I):
 
         jmp     %%exit_flush_eia3
 
+align_label
 %%return_null_flush_eia3:
         xor     job_rax, job_rax
         jmp     %%return_flush_eia3
 
+align_label
 %%exit_flush_eia3:
 %endmacro
 
@@ -1113,6 +1142,7 @@ APPEND(%%skip_eia3_,I):
 ; arg 1 : state
 ; arg 2 : job
 MKGLOBAL(SUBMIT_JOB_ZUC128_EIA3,function,internal)
+align_function
 SUBMIT_JOB_ZUC128_EIA3:
         SUBMIT_JOB_ZUC_EIA3 128, 4
         ret
@@ -1123,18 +1153,22 @@ SUBMIT_JOB_ZUC128_EIA3:
 ; arg 2 : job
 ; arg 3 : tag size (4, 8 or 16 bytes)
 MKGLOBAL(SUBMIT_JOB_ZUC256_EIA3,function,internal)
+align_function
 SUBMIT_JOB_ZUC256_EIA3:
         cmp     arg3, 8
         je      submit_tag_8B
         jb      submit_tag_4B
 
         ; Fall-through for 16-byte tag
+align_label
 submit_tag_16B:
         SUBMIT_JOB_ZUC_EIA3 256, 16
         ret
+align_label
 submit_tag_8B:
         SUBMIT_JOB_ZUC_EIA3 256, 8
         ret
+align_label
 submit_tag_4B:
         SUBMIT_JOB_ZUC_EIA3 256, 4
         ret
@@ -1142,6 +1176,7 @@ submit_tag_4B:
 ; JOB* FLUSH_JOB_ZUC128_EIA3(MB_MGR_ZUC_OOO *state)
 ; arg 1 : state
 MKGLOBAL(FLUSH_JOB_ZUC128_EIA3,function,internal)
+align_function
 FLUSH_JOB_ZUC128_EIA3:
         FLUSH_JOB_ZUC_EIA3 128, 4
         ret
@@ -1151,20 +1186,24 @@ FLUSH_JOB_ZUC128_EIA3:
 ; arg 1 : state
 ; arg 2 : tag size (4, 8 or 16 bytes)
 MKGLOBAL(FLUSH_JOB_ZUC256_EIA3,function,internal)
+align_function
 FLUSH_JOB_ZUC256_EIA3:
         cmp     arg2, 8
         je      flush_tag_8B
         jb      flush_tag_4B
 
         ; Fall-through for 16-byte tag
+align_label
 flush_tag_16B:
         FLUSH_JOB_ZUC_EIA3 256, 16
         ret
 
+align_label
 flush_tag_8B:
         FLUSH_JOB_ZUC_EIA3 256, 8
         ret
 
+align_label
 flush_tag_4B:
         FLUSH_JOB_ZUC_EIA3 256, 4
         ret

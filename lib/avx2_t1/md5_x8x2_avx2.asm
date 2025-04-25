@@ -40,6 +40,7 @@
 %include "include/mb_mgr_datastruct.inc"
 %include "include/transpose_avx2.inc"
 %include "include/clear_regs.inc"
+%include "include/align_avx.inc"
 
 mksection .rodata
 default rel
@@ -379,7 +380,7 @@ rot44 equ  21
 		vpaddd       %%rA2, %%rA2, %%rB2
 %endmacro
 
-align 32
+align_function
 
 ; void md5_x8x2_avx(MD5_ARGS *args, UINT64 num_blks)
 ; arg 1 : pointer to MD5_ARGS structure
@@ -465,6 +466,7 @@ md5_x8x2_avx2:
 	vmovdqu	Y_C2,[state + 2 * MD5_DIGEST_ROW_SIZE + 32]
         vmovdqu	Y_D2,[state + 3 * MD5_DIGEST_ROW_SIZE + 32]
 
+align_loop
 lloop:
 	; save old digests to stack
 	vmovdqa	[Y_AA], Y_A
@@ -689,6 +691,7 @@ lloop:
 	;; Proceed to processing of next block
 	jmp 	lloop
 
+align_label
 lastblock:
 
 	; Perform the 64 rounds of processing ...

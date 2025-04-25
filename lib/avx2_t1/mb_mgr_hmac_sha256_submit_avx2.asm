@@ -31,6 +31,7 @@
 %include "include/reg_sizes.inc"
 %include "include/memcpy.inc"
 %include "include/const.inc"
+%include "include/align_avx.inc"
 
 extern sha256_oct_avx2
 
@@ -101,6 +102,7 @@ endstruc
 ; arg 1 : rcx : state
 ; arg 2 : rdx : job
 MKGLOBAL(FUNC,function,internal)
+align_function
 FUNC:
 	mov	rax, rsp
 	sub	rsp, STACK_size
@@ -148,6 +150,7 @@ FUNC:
 	cmp	len, 64
 	jb	copy_lt64
 
+align_label
 fast_copy:
         add	p, len
         vmovdqu	ymm0, [p - 64 + 0 * 32]
@@ -155,6 +158,7 @@ fast_copy:
         vmovdqu	[lane_data + _extra_block + 0*32], ymm0
         vmovdqu	[lane_data + _extra_block + 1*32], ymm1
 
+align_label
 end_fast_copy:
 	mov	size_offset, extra_blocks
 	shl	size_offset, 6
@@ -184,6 +188,7 @@ end_fast_copy:
 	test	len, ~63
 	jnz	ge64_bytes
 
+align_label
 lt64_bytes:
         vmovdqa xmm0, [state + _lens_sha256]
         XVPINSRW xmm0, xmm1, tmp, lane, extra_blocks, scale_x16
@@ -193,12 +198,13 @@ lt64_bytes:
 	mov	[state + _args_data_ptr_sha256 + 8*lane], tmp
 	mov	dword [lane_data + _extra_blocks], 0
 
+align_label
 ge64_bytes:
 	cmp	unused_lanes, 0xf
 	jne	return_null
 	jmp	start_loop
 
-	align	16
+align_loop
 start_loop:
 	; Find min length
 	vmovdqa	xmm0, [state + _lens_sha256]
@@ -217,6 +223,7 @@ start_loop:
 	call	sha256_oct_avx2
 	; state and idx are intact
 
+align_label
 len_is_0:
 	; process completed job "idx"
 	imul	lane_data, idx, _HMAC_SHA1_LANE_DATA_size
@@ -227,6 +234,7 @@ len_is_0:
 	cmp		dword [lane_data + _outer_done], 0
 	jne		end_loop
 
+align_label
 proc_outer:
 	mov		dword [lane_data + _outer_done], 1
 	mov		DWORD(size_offset), [lane_data + _size_offset]
@@ -272,7 +280,7 @@ proc_outer:
 
 	jmp	start_loop
 
-	align	16
+align_label
 proc_extra_blocks:
 	mov	DWORD(start_offset), [lane_data + _start_offset]
 
@@ -285,7 +293,7 @@ proc_extra_blocks:
 	mov	dword [lane_data + _extra_blocks], 0
 	jmp	start_loop
 
-	align 16
+align_label
 copy_lt64:
 	;; less than one message block of data
 	;; beginning of source block
@@ -296,11 +304,12 @@ copy_lt64:
         mov	unused_lanes, [state + _unused_lanes_sha256]
         jmp	end_fast_copy
 
+align_label
 return_null:
         xor	job_rax, job_rax
         jmp	return
 
-        align	16
+align_label
 end_loop:
         mov	job_rax, [lane_data + _job_in_lane]
         mov	unused_lanes, [state + _unused_lanes_sha256]
@@ -338,6 +347,7 @@ end_loop:
 %endif
         jmp     clear_ret
 
+align_label
 copy_full_digest:
 	cmp 	qword [job_rax + _auth_tag_output_len_in_bytes], 16
 	ja 	copy_tag_gt16
@@ -352,6 +362,7 @@ copy_full_digest:
 	simd_store_avx {p + 0*4}, xmm0, tmp2, tmp4, tmp
 	jmp 	clear_ret
 
+align_label
 copy_tag_gt16:
 	;; copy 16 bytes first
 	mov    	tmp2, qword 16
@@ -376,6 +387,7 @@ copy_tag_gt16:
 	vpshufb xmm0, [rel byteswap]
 	simd_store_avx {p + 4*4}, xmm0, tmp2, tmp4, tmp
 
+align_label
 clear_ret:
 
 %ifdef SAFE_DATA
@@ -406,6 +418,7 @@ clear_ret:
 %endif
 %endif ;; SAFE_DATA
 
+align_label
 return:
         vzeroupper
 

@@ -36,6 +36,7 @@
 %include "include/imb_job.inc"
 %include "include/clear_regs.inc"
 %include "include/cet.inc"
+%include "include/align_avx.inc"
 
 %ifndef SNOW_V
 %define SNOW_V snow_v_avx
@@ -283,6 +284,7 @@ mksection .text
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 MKGLOBAL(SNOW_V_AEAD_INIT,function,)
+align_function
 SNOW_V_AEAD_INIT:
       endbranch64
       FUNC_START
@@ -294,6 +296,7 @@ SNOW_V_AEAD_INIT:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 MKGLOBAL(SNOW_V,function,)
+align_function
 SNOW_V:
         endbranch64
         FUNC_START
@@ -301,6 +304,7 @@ SNOW_V:
         xor             DWORD(offset), DWORD(offset)
         vpxor           LFSR_B_LDQ, LFSR_B_LDQ, LFSR_B_LDQ
 
+align_label
 snow_v_common_init:
 
         ;; Init LSFR
@@ -322,6 +326,7 @@ snow_v_common_init:
 
         mov             eax, 15
 
+align_loop
 init_fsm_lfsr_loop:
 
         SNOW_V_KEYSTREAM   KEYSTREAM, LFSR_B_HDQ, FSM_R1, FSM_R2
@@ -374,6 +379,7 @@ init_fsm_lfsr_loop:
         ;; cipher by plain when the same src/dst pointer is used
         jnz             no_partial_block_left
 
+align_label
 no_aead:
 
         ;; Process input
@@ -386,6 +392,7 @@ no_aead:
         and             rax, 0xfffffffffffffff0
         jz              final_bytes
 
+align_loop
 encrypt_loop:
 
         vmovdqu         temp4, [r10 + offset]
@@ -401,6 +408,7 @@ encrypt_loop:
         sub             rax, 16
         jnz             encrypt_loop
 
+align_label
 final_bytes:
         mov             rax, [job + _msg_len_to_cipher_in_bytes]
         and             rax, 0xf
@@ -416,6 +424,7 @@ final_bytes:
         ;; use r10 and offset as temp [clobbered]
         simd_store_avx_15 r11, temp4, rax, r10, offset
 
+align_label
 no_partial_block_left:
         ;; Clear registers and return data
 %ifdef SAFE_DATA

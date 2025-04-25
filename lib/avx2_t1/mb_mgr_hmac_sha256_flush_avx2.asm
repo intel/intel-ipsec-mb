@@ -30,6 +30,7 @@
 %include "include/mb_mgr_datastruct.inc"
 %include "include/reg_sizes.inc"
 %include "include/memcpy.inc"
+%include "include/align_avx.inc"
 
 extern sha256_oct_avx2
 
@@ -118,6 +119,7 @@ endstruc
 ; JOB* FUNC(MB_MGR_HMAC_SHA_256_OOO *state)
 ; arg 1 : state
 MKGLOBAL(FUNC,function,internal)
+align_function
 FUNC:
 	mov	rax, rsp
 	sub	rsp, STACK_size
@@ -148,6 +150,7 @@ FUNC:
 %assign I (I+1)
 %endrep
 
+align_loop
 copy_lane_data:
 	; copy idx to empty lanes
 	vmovdqa	xmm0, [state + _lens_sha256]
@@ -180,6 +183,7 @@ APPEND(skip_,I):
 	call	sha256_oct_avx2
 	; state and idx are intact
 
+align_label
 len_is_0:
 	; process completed job "idx"
 	imul	lane_data, idx, _HMAC_SHA1_LANE_DATA_size
@@ -190,6 +194,7 @@ len_is_0:
 	cmp	dword [lane_data + _outer_done], 0
 	jne	end_loop
 
+align_label
 proc_outer:
 	mov	dword [lane_data + _outer_done], 1
 	mov	DWORD(size_offset), [lane_data + _size_offset]
@@ -231,7 +236,7 @@ proc_outer:
 	vpextrd	[state + _args_digest_sha256 + 4*idx + 7*SHA256_DIGEST_ROW_SIZE], xmm1, 3
 	jmp	copy_lane_data
 
-	align	16
+align_label
 proc_extra_blocks:
 	mov	DWORD(start_offset), [lane_data + _start_offset]
 	mov	[state + _lens_sha256 + 2*idx], WORD(extra_blocks)
@@ -240,11 +245,12 @@ proc_extra_blocks:
 	mov	dword [lane_data + _extra_blocks], 0
 	jmp	copy_lane_data
 
+align_label
 return_null:
 	xor	job_rax, job_rax
 	jmp	return
 
-	align	16
+align_label
 end_loop:
 	mov	job_rax, [lane_data + _job_in_lane]
 	mov	qword [lane_data + _job_in_lane], 0
@@ -282,6 +288,7 @@ end_loop:
 %endif
         jmp     clear_ret
 
+align_label
 copy_full_digest:
 	cmp 	qword [job_rax + _auth_tag_output_len_in_bytes], 16
 	ja 	copy_tag_gt16
@@ -296,6 +303,7 @@ copy_full_digest:
 	simd_store_avx {p + 0*4}, xmm0, tmp2, tmp4, tmp5
 	jmp 	clear_ret
 
+align_label
 copy_tag_gt16:
 	;; copy 16 bytes first
 	mov    	tmp2, qword 16
@@ -320,6 +328,7 @@ copy_tag_gt16:
 	vpshufb xmm0, [rel byteswap]
 	simd_store_avx {p + 4*4}, xmm0, tmp2, tmp4, tmp5
 
+align_label
 clear_ret:
 
 %ifdef SAFE_DATA
@@ -362,6 +371,7 @@ APPEND(skip_clear_,I):
 
 %endif ;; SAFE_DATA
 
+align_label
 return:
         vzeroupper
 

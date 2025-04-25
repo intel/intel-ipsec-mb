@@ -30,6 +30,7 @@
 %include "include/mb_mgr_datastruct.inc"
 %include "include/reg_sizes.inc"
 %include "include/memcpy.inc"
+%include "include/align_avx.inc"
 
 extern sha512_x4_avx2
 
@@ -109,6 +110,7 @@ endstruc
 ; JOB* FUNC(MB_MGR_HMAC_SHA_512_OOO *state)
 ; arg 1 : rcx : state
 MKGLOBAL(FUNC,function,internal)
+align_function
 FUNC:
 	mov	rax, rsp
 	sub	rsp, STACK_size
@@ -131,6 +133,7 @@ FUNC:
 %assign I (I+1)
 %endrep
 
+align_loop
 copy_lane_data:
 	; copy good lane (idx) to empty lanes
 	vmovdqa	xmm0, [state + _lens_sha512]
@@ -163,6 +166,7 @@ APPEND(skip_,I):
 	call	sha512_x4_avx2
 	; state and idx are intact
 
+align_label
 len_is_0:
 	; process completed job "idx"
 	imul	lane_data, idx, _SHA512_LANE_DATA_size
@@ -173,6 +177,7 @@ len_is_0:
 	cmp	dword [lane_data + _outer_done_sha512], 0
 	jne	end_loop
 
+align_label
 proc_outer:
 	mov	dword [lane_data + _outer_done_sha512], 1
 	mov	DWORD(size_offset), [lane_data + _size_offset_sha512]
@@ -205,7 +210,7 @@ proc_outer:
 
 	jmp	copy_lane_data
 
-	align	16
+align_label
 proc_extra_blocks:
 	mov	DWORD(start_offset), [lane_data + _start_offset_sha512]
 	mov	[state + _lens_sha512 + 2*idx], WORD(extra_blocks)
@@ -214,11 +219,12 @@ proc_extra_blocks:
 	mov	dword [lane_data + _extra_blocks_sha512], 0
 	jmp	copy_lane_data
 
+align_label
 return_null:
 	xor	job_rax, job_rax
 	jmp	return
 
-	align	16
+align_label
 end_loop:
 	mov	job_rax, [lane_data + _job_in_lane_sha512]
 	mov	qword [lane_data + _job_in_lane_sha512], 0
@@ -259,6 +265,7 @@ end_loop:
 %endif
         jmp     clear_ret
 
+align_label
 copy_full_digest:
 	cmp 	qword [job_rax + _auth_tag_output_len_in_bytes], 16
 	ja 	copy_tag_gt16
@@ -271,6 +278,7 @@ copy_full_digest:
 	simd_store_avx {p + 0*4}, xmm0, tmp2, tmp4, tmp6
 	jmp 	clear_ret
 
+align_label
 copy_tag_gt16:
 	;; copy 16 bytes first
 	vmovq   xmm0, [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 0*SHA512_DIGEST_ROW_SIZE]
@@ -291,6 +299,7 @@ copy_tag_gt16:
 	simd_store_avx {p + 4*4}, xmm0, tmp2, tmp4, tmp6
 	jmp 	clear_ret
 
+align_label
 copy_tag_gt32:
 	;; copy 32 bytes
 	vmovq   xmm0, [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 2*SHA512_DIGEST_ROW_SIZE]
@@ -310,6 +319,7 @@ copy_tag_gt32:
 	simd_store_avx {p + 8*4}, xmm0, tmp2, tmp4, tmp6
 	jmp 	clear_ret
 
+align_label
 copy_tag_gt48:
 	;; copy 48 bytes
 	vmovq   xmm0, [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 4*SHA512_DIGEST_ROW_SIZE]
@@ -325,6 +335,7 @@ copy_tag_gt48:
 	vpshufb xmm0, [rel byteswap]
 	simd_store_avx {p + 12*4}, xmm0, tmp2, tmp4, tmp6
 
+align_label
 clear_ret:
 %ifdef SAFE_DATA
         vpxor   ymm0, ymm0
@@ -368,6 +379,7 @@ APPEND(skip_clear_,I):
 
 %endif ;; SAFE_DATA
 
+align_label
 return:
         vzeroupper
 

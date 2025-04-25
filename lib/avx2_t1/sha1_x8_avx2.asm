@@ -40,6 +40,7 @@
 %include "include/mb_mgr_datastruct.inc"
 %include "include/transpose_avx2.inc"
 %include "include/clear_regs.inc"
+%include "include/align_avx.inc"
 
 mksection .rodata
 default rel
@@ -350,7 +351,7 @@ mksection .text
     mov     rsp, [rsp + GP_OFFSET + 4*8] ;; rsp pointer
 %endmacro
 
-align 32
+align_function
 
 ; void sha1_x8_avx2(void *state, int num_blks)
 ; arg 1 : rcx : pointer to array[4] of pointer to input data
@@ -391,6 +392,7 @@ sha1_x8_avx2:
 	mov	inp7,[state+_data_ptr_sha1+7*PTR_SZ]
 
 	xor	IDX, IDX
+align_loop
 lloop:
 	vbroadcasti128	F, [rel PSHUFFLE_BYTE_FLIP_MASK]
 %assign I 0
@@ -547,6 +549,7 @@ lloop:
 
 ; void call_sha1_x8_avx2_from_c(SHA1_ARGS *args, UINT32 size_in_blocks);
 MKGLOBAL(call_sha1_x8_avx2_from_c,function,internal)
+align_function
 call_sha1_x8_avx2_from_c:
 	FUNC_SAVE
 	call sha1_x8_avx2

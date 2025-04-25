@@ -29,6 +29,7 @@
 %include "include/imb_job.inc"
 %include "include/mb_mgr_datastruct.inc"
 %include "include/reg_sizes.inc"
+%include "include/align_avx.inc"
 
 %ifndef AES_CBC_ENC_X8
 %define AES_CBC_ENC_X8 aes_cbc_enc_128_x8
@@ -114,6 +115,7 @@ endstruc
 ; arg 1 : state
 ; arg 2 : job
 MKGLOBAL(FLUSH_JOB_AES_ENC,function,internal)
+align_function
 FLUSH_JOB_AES_ENC:
         mov	rax, rsp
         sub	rsp, STACK_size
@@ -190,6 +192,7 @@ APPEND(skip_,I):
 	call	AES_CBC_ENC_X8
 	; state and idx are intact
 
+align_label
 len_is_0:
 	; process completed job "idx"
 	mov	job_rax, [state + _aes_job_in_lane + idx*8]
@@ -212,6 +215,7 @@ APPEND(skip_clear_,I):
 %endrep
 %endif
 
+align_label
 return:
 
 	mov	rbx, [rsp + _gpr_save + 8*0]
@@ -228,6 +232,7 @@ return:
 
         ret
 
+align_label
 return_null:
 	xor	job_rax, job_rax
 	jmp	return

@@ -30,6 +30,7 @@
 %include "include/mb_mgr_datastruct.inc"
 %include "include/reg_sizes.inc"
 %include "include/const.inc"
+%include "include/align_avx.inc"
 
 %define NUM_LANES 8
 
@@ -81,6 +82,7 @@ endstruc
 ; arg 1 : state
 ; arg 2 : job
 MKGLOBAL(SUBMIT_JOB_AES_CBCS_ENC,function,internal)
+align_function
 SUBMIT_JOB_AES_CBCS_ENC:
 
         mov	rax, rsp
@@ -171,6 +173,7 @@ SUBMIT_JOB_AES_CBCS_ENC:
 	call	AES_CBCS_ENC_X8
 	; state and idx are intact
 
+align_label
 len_is_0:
 	; process completed job "idx"
 	mov	job_rax, [state + _aes_job_in_lane + idx*8]
@@ -194,6 +197,7 @@ len_is_0:
         mov     qword [state + _aes_args_keys + idx], 0
 %endif
 
+align_label
 return:
 
 	mov	rbx, [rsp + _gpr_save + 8*0]
@@ -210,6 +214,7 @@ return:
 
 	ret
 
+align_label
 return_null:
 	xor	job_rax, job_rax
 	jmp	return

@@ -45,6 +45,7 @@
 %include "include/mb_mgr_datastruct.inc"
 %include "include/transpose_avx2.inc"
 %include "include/clear_regs.inc"
+%include "include/align_avx.inc"
 
 mksection .rodata
 default rel
@@ -381,7 +382,7 @@ endstruc
 ;; arg 1 : STATE : pointer to array of pointers to input data
 ;; arg 2 : INP_SIZE  : size of input in blocks
 MKGLOBAL(sha256_oct_avx2,function,internal)
-align 16
+align_function
 sha256_oct_avx2:
 	; general registers preserved in outer calling routine
 	; outer calling routine saves all the XMM registers
@@ -411,6 +412,7 @@ sha256_oct_avx2:
 	mov	inp7,[STATE + _data_ptr_sha256 + 7*PTR_SZ]
 
 	xor	IDX, IDX
+align_loop
 lloop:
 	xor	ROUND, ROUND
 
@@ -468,7 +470,7 @@ lloop:
 %assign i (i*8)
 
 	jmp	Lrounds_16_xx
-align 16
+align_loop
 Lrounds_16_xx:
 %rep 16
 	ROUND_16_XX	T1, i
@@ -538,6 +540,7 @@ Lrounds_16_xx:
 
 ; void call_sha256_oct_avx2_from_c(SHA256_ARGS *args, UINT32 size_in_blocks);
 MKGLOBAL(call_sha256_oct_avx2_from_c,function,internal)
+align_function
 call_sha256_oct_avx2_from_c:
 	FUNC_SAVE
 	call sha256_oct_avx2
