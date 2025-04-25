@@ -31,6 +31,7 @@
 %include "include/clear_regs.inc"
 %include "include/cet.inc"
 %include "include/error.inc"
+%include "include/align_avx.inc"
 
 [bits 64]
 default rel
@@ -60,7 +61,7 @@ mksection .text
 ;; arg1 - buffer pointer
 ;; arg2 - buffer size in bytes
 ;; Returns CRC value through RAX
-align 32
+align_function
 MKGLOBAL(crc32_wimax_ofdma_data_avx, function,)
 crc32_wimax_ofdma_data_avx:
         endbranch64
@@ -77,6 +78,7 @@ crc32_wimax_ofdma_data_avx:
         or              arg1, arg1
         jz              .wrong_param
 
+align_label
 .end_param_check:
 %endif
 %ifndef LINUX
@@ -119,6 +121,7 @@ crc32_wimax_ofdma_data_avx:
         ret
 
 %ifdef SAFE_PARAM
+align_label
 .wrong_param:
         ;; Clear reg and imb_errno
         IMB_ERR_CHECK_START rax
@@ -138,7 +141,7 @@ crc32_wimax_ofdma_data_avx:
 ;; arg1 - buffer pointer
 ;; arg2 - buffer size in bytes
 ;; Returns CRC value through RAX
-align 32
+align_function
 MKGLOBAL(crc8_wimax_ofdma_hcs_avx, function,)
 crc8_wimax_ofdma_hcs_avx:
         endbranch64
@@ -155,6 +158,7 @@ crc8_wimax_ofdma_hcs_avx:
         or              arg1, arg1
         jz              wrong_param
 
+align_label
 end_param_check:
 %endif
 %ifndef LINUX
@@ -197,6 +201,7 @@ end_param_check:
         ret
 
 %ifdef SAFE_PARAM
+align_label
 wrong_param:
         ;; Clear reg and imb_errno
         IMB_ERR_CHECK_START rax

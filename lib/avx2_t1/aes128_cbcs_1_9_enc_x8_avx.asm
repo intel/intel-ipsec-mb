@@ -33,10 +33,11 @@
 ;; AES-CBCS-128 1:9
 
 %include "include/aes_cbc_enc_x8_avx.inc"
+%include "include/align_avx.inc"
 
 mksection .text
 
-align 64
+align_function
 MKGLOBAL(aes_cbcs_1_9_enc_128_x8,function,internal)
 aes_cbcs_1_9_enc_128_x8:
         AES_CBC_X8 CBC, 9, 160, {arg1 + _aesarg_IV}, {arg1 + _aesarg_keys}, {arg1 + _aesarg_in}, {arg1 + _aesarg_out}

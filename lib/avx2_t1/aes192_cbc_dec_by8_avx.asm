@@ -48,10 +48,11 @@
 %endif
 
 %include "include/aes_cbc_dec_by8_avx.inc"
+%include "include/align_avx.inc"
 
 mksection .text
 
-align 64
+align_function
 MKGLOBAL(aes_cbc_dec_192_avx,function,internal)
 aes_cbc_dec_192_avx:
 %ifndef LINUX

@@ -30,6 +30,7 @@
 %include "include/os.inc"
 %include "include/clear_regs.inc"
 %include "include/aes_common.inc"
+%include "include/align_avx.inc"
 
 %ifdef LINUX
 %define IN              rdi
@@ -90,6 +91,7 @@
         je      %%initial_num_blocks_is_6
         jb      %%initial_num_blocks_is_5
         ja      %%initial_num_blocks_is_7
+align_label
 %%initial_num_blocks_is_3_1:
         ;; 3, 2 or 1
         cmp     TMP, 2*16
@@ -98,6 +100,7 @@
         ;; fall through for `jmp %%initial_num_blocks_is_1`
 %assign num_blocks 1
 %rep 7
+align_label
 %%initial_num_blocks_is_ %+ num_blocks :
         ; load initial blocks
         XMM_LOAD_BLOCKS_AVX_0_8 num_blocks, IN, 0, XDATA0,\
@@ -122,7 +125,7 @@
 %assign num_blocks (num_blocks + 1)
         jmp     %%main_loop
 %endrep
-align 16
+align_loop
 %%main_loop:
         ; load next 8 blocks
         XMM_LOAD_BLOCKS_AVX_0_8 8, {IN + IDX}, 0, XDATA0,\
@@ -144,6 +147,7 @@ align 16
         add     IDX, 8*16
         cmp     IDX, LEN
         jne      %%main_loop
+align_label
 %%done:
 %ifdef SAFE_DATA
         clear_all_xmms_avx_asm
@@ -151,12 +155,12 @@ align 16
 %endmacro
 
 mksection .text
-align 16
+align_function
 MKGLOBAL(AES_ECB_ENC,function,internal)
 AES_ECB_ENC:
         AES_ECB ENC
         ret
-align 16
+align_function
 MKGLOBAL(AES_ECB_DEC,function,internal)
 AES_ECB_DEC:
         AES_ECB DEC

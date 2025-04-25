@@ -32,6 +32,7 @@
 %include "include/transpose_avx2.inc"
 %include "include/chacha_poly_defines.inc"
 %include "include/cet.inc"
+%include "include/align_avx.inc"
 mksection .rodata
 default rel
 
@@ -130,6 +131,7 @@ mksection .text
         cmp     %%LEN, 32
         jbe     %%up_to_32B
 
+align_label
 %%up_to_64B:
         vmovdqu  %%PT0, [%%SRC + %%OFF]
 %if %0 == 11
@@ -151,6 +153,7 @@ mksection .text
 
         jmp     %%end_encrypt
 
+align_label
 %%up_to_32B:
         add     %%SRC, %%OFF
         add     %%DST, %%OFF
@@ -162,6 +165,7 @@ mksection .text
         vpxor    %%PT0, %%KS0
         simd_store_avx2 %%DST, %%PT0, %%LEN, %%TMP, %%TMP2
 
+align_label
 %%end_encrypt:
         add     %%SRC, %%LEN
         add     %%DST, %%LEN
@@ -594,7 +598,7 @@ mksection .text
 %endif
 %endmacro
 
-align 32
+align_function
 MKGLOBAL(submit_job_chacha20_enc_dec_avx2,function,internal)
 submit_job_chacha20_enc_dec_avx2:
         endbranch64
@@ -671,7 +675,7 @@ submit_job_chacha20_enc_dec_avx2:
         cmp     len, 64*8
         jb      exit_loop
 
-align 32
+align_loop
 start_loop:
 
         ; Generate 512 bytes of keystream
@@ -747,6 +751,7 @@ start_loop:
         cmp     len, 64*8
         jae     start_loop
 
+align_label
 exit_loop:
 
         ; Check if there are no more bytes to encrypt
@@ -786,6 +791,7 @@ exit_loop:
 
         jmp     no_partial_block
 
+align_label
 more_than_2_blocks_left:
 
         ; Get last block counter dividing offset by 64
@@ -823,6 +829,7 @@ more_than_2_blocks_left:
 
         jmp     no_partial_block
 
+align_label
 more_than_4_blocks_left:
         ; Generate 512 bytes of keystream
         GENERATE_512_KS ymm0, ymm1, ymm2, ymm3, ymm4, ymm5, ymm6, ymm7, \
@@ -889,6 +896,7 @@ more_than_4_blocks_left:
         cmp     len, 64*2
         jb      less_than_2_full_blocks
 
+align_label
 less_than_4_full_blocks:
         ; XOR next 128 bytes
         vpxor   ymm0, [src + off]
@@ -914,6 +922,7 @@ less_than_4_full_blocks:
         vmovdqa ymm8, ymm10
         vmovdqa ymm9, ymm11
 
+align_label
 less_than_2_full_blocks:
 
         cmp     len, 64
@@ -936,6 +945,7 @@ less_than_2_full_blocks:
         vmovdqa ymm0, ymm1
         vmovdqa ymm8, ymm9
 
+align_label
 less_than_1_full_block:
 
         cmp     len, 32
@@ -955,6 +965,7 @@ less_than_1_full_block:
         ; Move last 32 bytes of KS to registers YMM0
         vmovdqa ymm0, ymm8
 
+align_label
 partial_block:
 
         add     src, off
@@ -964,6 +975,7 @@ partial_block:
         vpxor   ymm1, ymm0
         simd_store_avx2 dst, ymm1, len, tmp, tmp2
 
+align_label
 no_partial_block:
         endbranch64
 %ifdef SAFE_DATA
@@ -995,13 +1007,14 @@ no_partial_block:
         vzeroupper
 %endif
 
+align_label
 exit:
         mov     rax, job
         or      dword [rax + _status], IMB_STATUS_COMPLETED_CIPHER
 
         ret
 
-align 32
+align_function
 MKGLOBAL(chacha20_enc_dec_ks_avx2,function,internal)
 chacha20_enc_dec_ks_avx2:
         endbranch64
@@ -1089,6 +1102,7 @@ chacha20_enc_dec_ks_avx2:
         sub     len, tmp5
         jz      no_partial_block_ks
 
+align_label
 no_remain_ks_bytes:
         ; Reset remaining number of KS bytes
         mov     qword [ctx + RemainKsBytes], 0
@@ -1132,7 +1146,7 @@ no_remain_ks_bytes:
         cmp     len, 64*8
         jb      exit_loop_ks
 
-align 32
+align_loop
 start_loop_ks:
 
         ; Generate 512 bytes of keystream
@@ -1209,6 +1223,7 @@ start_loop_ks:
         cmp     len, 64*8
         jae     start_loop_ks
 
+align_label
 exit_loop_ks:
 
         ; Check if there are no more bytes to encrypt
@@ -1248,6 +1263,7 @@ exit_loop_ks:
 
         jmp     no_partial_block_ks
 
+align_label
 more_than_2_blocks_left_ks:
 
         ; Get last block counter dividing offset by 64
@@ -1285,6 +1301,7 @@ more_than_2_blocks_left_ks:
 
         jmp     no_partial_block_ks
 
+align_label
 more_than_4_blocks_left_ks:
         ; Generate 512 bytes of keystream
         GENERATE_512_KS ymm0, ymm1, ymm2, ymm3, ymm4, ymm5, ymm6, ymm7, \
@@ -1352,6 +1369,7 @@ more_than_4_blocks_left_ks:
         cmp     len, 64*2
         jb      less_than_2_full_blocks_ks
 
+align_label
 less_than_4_full_blocks_ks:
         ; XOR next 128 bytes
         vpxor   ymm0, [src + off]
@@ -1378,6 +1396,7 @@ less_than_4_full_blocks_ks:
         vmovdqa ymm8, ymm10
         vmovdqa ymm9, ymm11
 
+align_label
 less_than_2_full_blocks_ks:
 
         cmp     len, 64
@@ -1401,6 +1420,7 @@ less_than_2_full_blocks_ks:
         vmovdqa ymm0, ymm1
         vmovdqa ymm8, ymm9
 
+align_label
 less_than_1_full_block_ks:
 
         ; Preserve len
@@ -1419,6 +1439,7 @@ less_than_1_full_block_ks:
         sub     tmp, tmp5
         mov     [ctx + RemainKsBytes], tmp
 
+align_label
 no_partial_block_ks:
         endbranch64
         mov     [ctx + LastBlkCount], blk_cnt
@@ -1459,11 +1480,12 @@ no_partial_block_ks:
         vzeroupper
 %endif
 
+align_label
 exit_ks:
 
         ret
 
-align 32
+align_function
 MKGLOBAL(quic_hp_chacha20_avx2,function,internal)
 quic_hp_chacha20_avx2:
         endbranch64
@@ -1519,7 +1541,7 @@ quic_hp_chacha20_avx2:
         cmp     num_buffers, 8
         jb      exit_loop_quic
 
-align 32
+align_loop
 start_loop_quic:
 
         ; Load counter + nonce values from the 8 samples (src)
@@ -1600,6 +1622,7 @@ start_loop_quic:
         cmp     num_buffers, 8
         jae     start_loop_quic
 
+align_label
 exit_loop_quic:
 
         ; Check if there are no more buffers
@@ -1615,6 +1638,7 @@ exit_loop_quic:
         je      two_buffers_left
         ja      three_buffers_left
 
+align_label
 one_buffer_left:
         PREPARE_NEXT_STATES_1_TO_4_QUIC ymm4, ymm5, ymm6, ymm7, ymm12, \
                                    ymm8, ymm9, src_array, off, tmp, key, 1
@@ -1630,6 +1654,7 @@ one_buffer_left:
 
         jmp     no_more_buffers
 
+align_label
 two_buffers_left:
 
         PREPARE_NEXT_STATES_1_TO_4_QUIC ymm4, ymm5, ymm6, ymm7, ymm12, \
@@ -1649,6 +1674,7 @@ two_buffers_left:
 
         jmp     no_more_buffers
 
+align_label
 four_buffers_left:
 
         PREPARE_NEXT_STATES_1_TO_4_QUIC ymm4, ymm5, ymm6, ymm7, ymm12, \
@@ -1674,6 +1700,7 @@ four_buffers_left:
 
         jmp     no_more_buffers
 
+align_label
 three_buffers_left:
 
         PREPARE_NEXT_STATES_1_TO_4_QUIC ymm4, ymm5, ymm6, ymm7, ymm12, \
@@ -1696,6 +1723,7 @@ three_buffers_left:
 
         jmp     no_more_buffers
 
+align_label
 more_than_4_buffers_left:
 
         ; Load counter + nonce values from the next 4 samples (src)
@@ -1784,6 +1812,7 @@ APPEND(buffers_left_, i):
 %assign i (i + 1)
 %endrep
 
+align_label
 no_more_buffers:
 %ifdef SAFE_DATA
         vpxor   ymm0, ymm0
@@ -1812,6 +1841,7 @@ no_more_buffers:
         vzeroupper
 %endif
 
+align_label
 exit_quic:
         ret
 
@@ -1850,7 +1880,7 @@ exit_quic:
 
 ;;
 ;; void poly1305_key_gen_avx(const void *key, const void *iv, void *poly_key)
-align 32
+align_function
 MKGLOBAL(poly1305_key_gen_avx,function,internal)
 poly1305_key_gen_avx:
 %ifndef LINUX

@@ -33,6 +33,7 @@
 
 %define GHASH_API_IMPLEMENTATION
 %include "include/gcm_common_avx2_avx512.inc"
+%include "include/align_avx.inc"
 
 mksection .text
 default rel
@@ -44,7 +45,7 @@ default rel
 ;;   xmm14 contains the final hash
 ;; CLOBBERS:
 ;;   xmm0, xmm10-xmm15
-align 32
+align_function
 MKGLOBAL(ghash_last_8_avx_gen4,function,internal)
 ghash_last_8_avx_gen4:
         GHASH_LAST_8 arg1, xmm0, xmm10, xmm11, xmm12, xmm13, xmm14, xmm15, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8
@@ -57,7 +58,7 @@ ghash_last_8_avx_gen4:
 ;;   xmm14 contains the final hash
 ;; CLOBBERS:
 ;;   xmm0, xmm10-xmm15
-align 32
+align_function
 MKGLOBAL(ghash_last_7_avx_gen4,function,internal)
 ghash_last_7_avx_gen4:
         GHASH_LAST_7 arg1, xmm0, xmm10, xmm11, xmm12, xmm13, xmm14, xmm15, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7
@@ -67,7 +68,7 @@ ghash_last_7_avx_gen4:
 ;void   ghash_pre_avx_gen4 / ghash_pre_avx512
 ;       (const void *key, struct gcm_key_data *key_data)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-align 32
+align_function
 MKGLOBAL(ghash_pre_avx_gen4,function,)
 MKGLOBAL(ghash_pre_avx512,function,)
 ghash_pre_avx_gen4:
@@ -120,10 +121,12 @@ ghash_pre_avx512:
         vmovdqu xmm6, [rsp + 0*16]
         add     rsp, 1*16
 %endif
+align_label
 exit_ghash_pre:
         ret
 
 %ifdef SAFE_PARAM
+align_label
 error_ghash_pre:
         ;; Clear reg and imb_errno
         IMB_ERR_CHECK_START rax
@@ -148,7 +151,7 @@ error_ghash_pre:
 ;; [clobbered] xmm1-xmm6
 ;; [clobbered] r10, r11, rax
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-align 32
+align_function
 MKGLOBAL(ghash_internal_avx_gen4,function,internal)
 ghash_internal_avx_gen4:
         CALC_AAD_HASH r12, r13, xmm0, arg1, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, \
@@ -167,7 +170,7 @@ ghash_internal_avx_gen4:
 ;; [clobbered] xmm1-xmm6, xmm8, xmm9, xmm10
 ;; [clobbered] r10, r12, r13, r15, rax
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-align 32
+align_function
 MKGLOBAL(partial_block_gmac_avx_gen4,function,internal)
 partial_block_gmac_avx_gen4:
 	PARTIAL_BLOCK_GMAC arg2, arg3, arg4, r11, xmm0, xmm13, xmm14, \
@@ -182,7 +185,7 @@ partial_block_gmac_avx_gen4:
 ;        void         *io_tag,
 ;        const u64    tag_len);
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-align 32
+align_function
 MKGLOBAL(ghash_avx_gen4,function,)
 MKGLOBAL(ghash_avx512,function,)
 ghash_avx_gen4:
@@ -226,11 +229,13 @@ ghash_avx512:
 
         simd_store_avx arg4, xmm0, arg5, r12, rax
 
+align_label
 exit_ghash:
         FUNC_RESTORE
         ret
 
 %ifdef SAFE_PARAM
+align_label
 error_ghash:
         ;; Clear reg and imb_errno
         IMB_ERR_CHECK_START rax

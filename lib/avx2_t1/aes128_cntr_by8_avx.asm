@@ -32,6 +32,7 @@
 %include "include/reg_sizes.inc"
 %include "include/clear_regs.inc"
 %include "include/cet.inc"
+%include "include/align_avx.inc"
 
 ; routine to do AES128 CNTR enc/decrypt "by8"
 ; XMM registers are clobbered. Saving/restoring must be done at a higher level
@@ -310,6 +311,7 @@ mksection .text
         vpandn          CONCAT(xdata,idx), xtmp2, CONCAT(xdata,idx)
         vpor            CONCAT(xdata,idx), xtmp
 
+align_label
 %%skip_preserve:
 %endif
 
@@ -382,6 +384,7 @@ _iv_length_9:
 _iv_length_8:
         vpinsrb xcounter, [p_IV + 7], 8
 
+align_label
 _finish_nonce_move:
         ; last byte = 1
         vpor    xcounter, [rel set_byte15]
@@ -411,6 +414,7 @@ _finish_nonce_move:
         vmovdqu xcounter, [p_IV]
 %endif
 %endif ;; CNTR/CNTR_BIT/CCM
+align_label
 %%bswap_iv:
 	vpshufb	xcounter, xbyteswap
 
@@ -432,49 +436,59 @@ _finish_nonce_move:
 	jg	%%gt4
 	je	%%eq4
 
+align_label
 %%lt4:
 	cmp	tmp, 2*16
 	jg	%%eq3
 	je	%%eq2
+align_label
 %%eq1:
 	do_aes_load	1, %%CNTR_TYPE
 	add	p_out, 1*16
 	jmp	%%chk
 
+align_label
 %%eq2:
 	do_aes_load	2, %%CNTR_TYPE
 	add	p_out, 2*16
 	jmp	%%chk
 
+align_label
 %%eq3:
 	do_aes_load	3, %%CNTR_TYPE
 	add	p_out, 3*16
 	jmp	%%chk
 
+align_label
 %%eq4:
 	do_aes_load	4, %%CNTR_TYPE
 	add	p_out, 4*16
 	jmp	%%chk
 
+align_label
 %%gt4:
 	cmp	tmp, 6*16
 	jg	%%eq7
 	je	%%eq6
 
+align_label
 %%eq5:
 	do_aes_load	5, %%CNTR_TYPE
 	add	p_out, 5*16
 	jmp	%%chk
 
+align_label
 %%eq6:
 	do_aes_load	6, %%CNTR_TYPE
 	add	p_out, 6*16
 	jmp	%%chk
 
+align_label
 %%eq7:
 	do_aes_load	7, %%CNTR_TYPE
 	add	p_out, 7*16
 	; fall through to chk
+align_label
 %%chk:
 	and	num_bytes, ~(7*16)
 	jz	%%do_return2
@@ -489,7 +503,7 @@ _finish_nonce_move:
 	vmovdqa	xkey9, [p_keys + 9*16]
 	jmp	%%main_loop2
 
-align 32
+align_loop
 %%main_loop2:
 	; num_bytes is a multiple of 8 blocks + partial bytes
 	do_aes_noload	8, %%CNTR_TYPE
@@ -502,6 +516,7 @@ align 32
         or      num_bytes, num_bytes
         jnz	%%last
 
+align_label
 %%do_return2:
 %ifidn %%CNTR_TYPE, CCM
 	mov	rax, job
@@ -520,11 +535,13 @@ align 32
 
 	ret
 
+align_label
 %%last:
 
 	; load partial block into XMM register
 	simd_load_avx_15_1 xpart, p_in, num_bytes
 
+align_label
 %%final_ctr_enc:
 	; Encryption of a single partial block
         vpshufb	xcounter, xbyteswap
@@ -576,19 +593,21 @@ align 32
         vpor    xdata0, xtmp
 %endif
 
+align_label
 %%store_output:
         ; copy result into the output buffer
         simd_store_avx_15 p_out, xdata0, num_bytes, tmp, rax
 
         jmp	%%do_return2
 
+align_label
 %%iv_is_16_bytes:
         ; Read 16 byte IV: Nonce + ESP IV + block counter (BE)
         vmovdqu xcounter, [p_IV]
         jmp     %%bswap_iv
 %endmacro
 
-align 32
+align_function
 %ifdef CNTR_CCM_AVX
 ; IMB_JOB * aes_cntr_ccm_128_avx(IMB_JOB *job)
 ; arg 1 : job
@@ -603,6 +622,7 @@ MKGLOBAL(aes_cntr_128_avx,function,internal)
 aes_cntr_128_avx:
 	DO_CNTR CNTR
 
+align_function
 ;; aes_cntr_bit_128_avx(void *in, void *IV, void *keys, void *out, UINT64 num_bits,
 ;;                  UINT64 iv_len)
 MKGLOBAL(aes_cntr_bit_128_avx,function,internal)

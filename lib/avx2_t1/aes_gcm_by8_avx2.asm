@@ -33,6 +33,7 @@
 
 %define GCM_UTIL_IMPLEMENTATION
 %include "include/gcm_common_avx2_avx512.inc"
+%include "include/align_avx.inc"
 
 mksection .text
 default rel
@@ -55,7 +56,7 @@ default rel
 ;;
 ;; CLOBBERED:
 ;;   xmm0, xmm10-xmm13, xmm15
-align 32
+align_function
 MKGLOBAL(gcm_initial_blocks_enc_avx_gen4,function,internal)
 gcm_initial_blocks_enc_avx_gen4:
         and     r12, 7  ; don't allow 8 initial blocks
@@ -74,7 +75,7 @@ gcm_initial_blocks_enc_avx_gen4:
 
 %assign L 7
 %rep 8
-align 32
+align_label
 .initial_num_blocks_is_ %+ L:
         INITIAL_BLOCKS  arg1, arg3, arg4, r13, r11, L, xmm12, xmm13, xmm14, xmm15, xmm11, xmm9, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, xmm10, xmm0, ENC, r10, r15
         ret
@@ -100,7 +101,7 @@ align 32
 ;;
 ;; CLOBBERED:
 ;;   xmm0, xmm10-xmm13, xmm15
-align 32
+align_function
 MKGLOBAL(gcm_initial_blocks_dec_avx_gen4,function,internal)
 gcm_initial_blocks_dec_avx_gen4:
         and     r12, 7  ; don't allow 8 initial blocks
@@ -119,7 +120,7 @@ gcm_initial_blocks_dec_avx_gen4:
 
 %assign L 7
 %rep 8
-align 32
+align_label
 .initial_num_blocks_is_ %+ L:
         INITIAL_BLOCKS  arg1, arg3, arg4, r13, r11, L, xmm12, xmm13, xmm14, xmm15, xmm11, xmm9, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, xmm10, xmm0, DEC, r10, r15
         ret

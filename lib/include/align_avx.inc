@@ -1,5 +1,5 @@
 ;;
-;; Copyright (c) 2012-2024, Intel Corporation
+;; Copyright (c) 2025, Intel Corporation
 ;;
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
@@ -25,17 +25,14 @@
 ;; OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;
 
-;; AES-XCBC-128
+%use smartalign
+ALIGNMODE P6
 
-%include "include/aes_cbc_enc_x8_avx.inc"
-%include "include/align_avx.inc"
+;; Common macro to be used to align functions
+%define align_function align 32
 
-mksection .text
+;; Common macro to be used to align loops
+%define align_loop align 32
 
-align_function
-MKGLOBAL(aes_xcbc_mac_128_x8,function,internal)
-aes_xcbc_mac_128_x8:
-        AES_CBC_X8 CBC_XCBC_MAC, 9, 16, {arg1 + _aesxcbcarg_ICV}, {arg1 + _aesxcbcarg_keys}, {arg1 + _aesxcbcarg_in}
-        ret
-
-mksection stack-noexec
+;; Common macro to be used to align labels
+%define align_label align 32
