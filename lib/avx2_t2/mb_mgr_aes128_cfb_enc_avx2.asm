@@ -31,6 +31,7 @@
 %include "include/reg_sizes.inc"
 %include "include/const.inc"
 %include "include/clear_regs.inc"
+%include "include/align_avx.inc"
 
 %ifndef AES_ENC_X16
 %define AES_ENC_X16 aes_cfb_enc_128_vaes_avx2
@@ -250,6 +251,7 @@ endstruc
 %assign KEY (KEY+1)
 %endrep
 
+align_label
 %%skip_copy_ %+ LANE_ID:
 %assign LANE_ID (LANE_ID+1)
 %endrep
@@ -276,11 +278,13 @@ endstruc
         jne     %%skip_copy_ffs_ %+ I
         mov     idx, (I << 4)
         XVPINSRW XWORD(%%LENGTH_LO), %%TEMP_XMM, %%TEMP_GP, idx, 0xffff, no_scale
+align_label
 %%skip_copy_ffs_ %+ I:
         cmp     qword [state + _aes_job_in_lane + ( I + 8 ) * 8], 0
         jne     %%skip_copy_ffs_hi_ %+ I
         mov     idx, (I << 4)
         XVPINSRW %%LENGTH_HI, %%TEMP_XMM, %%TEMP_GP, idx, 0xffff, no_scale
+align_label
 %%skip_copy_ffs_hi_ %+ I:
 %assign I (I+1)
 %endrep
@@ -372,6 +376,7 @@ endstruc
         vpextrw         idx, XMM_TMP_2, 1         ; min index (0-7)
         add             idx, 8                           ; index + 8
         mov             min_len, TMP_GP_1                       ; min len
+align_label
 %%use_min:
         ; Check for zero length, to retrieve already encrypted buffers
         cmp             min_len, 0
@@ -394,6 +399,7 @@ endstruc
         call    AES_ENC_X16
         ; state and idx are intact
 
+align_label
 %%len_is_0:
         ; job with id == index is completed - set status to completed
         mov     job_rax, [state + _aes_job_in_lane + idx * 8]
@@ -442,9 +448,11 @@ endstruc
 
         jmp %%done
 
+align_label
 %%return_null:
         xor     job_rax, job_rax
 
+align_label
 %%done:
 %ifdef SAFE_DATA
 	clear_all_ymms_asm
@@ -456,7 +464,7 @@ endstruc
 ; JOB* SUBMIT_JOB_AES_ENC(MB_MGR_AES_OOO *state, IMB_JOB *job)
 ; arg 1 : state
 ; arg 2 : job
-align 32
+align_function
 MKGLOBAL(SUBMIT_JOB_AES_ENC,function,internal)
 SUBMIT_JOB_AES_ENC:
         FUNC_SAVE
@@ -467,7 +475,7 @@ SUBMIT_JOB_AES_ENC:
 ; JOB* FLUSH_JOB_AES_ENC(MB_MGR_AES_OOO *state, IMB_JOB *job)
 ; arg 1 : state
 ; arg 2 : job
-align 32
+align_function
 MKGLOBAL(FLUSH_JOB_AES_ENC,function,internal)
 FLUSH_JOB_AES_ENC:
         FUNC_SAVE

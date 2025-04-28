@@ -32,6 +32,7 @@
 %include "include/reg_sizes.inc"
 %include "include/clear_regs.inc"
 %include "include/aes_common.inc"
+%include "include/align_avx.inc"
 
 %ifdef LINUX
 %define arg1            rdi
@@ -260,7 +261,7 @@
         vmovdqa         LANE_14_15, [IV + 32 * 7]
         xor             INDEX, INDEX
 
-align 32
+align_loop
 %%encrypt_16_start:
         cmp             LEN, 16
         jb              %%encrypt_end
@@ -270,6 +271,7 @@ align 32
         add             INDEX, 16
         jmp             %%encrypt_16_start
 
+align_label
 %%encrypt_end:
         ;; Store last cipher block for next blocks processing in case job per
         ;; lane is not yet completed
@@ -311,6 +313,7 @@ align 32
         vmovdqa          [OUT_PTRS + 32 * 2], TMP_7
         vmovdqa          [OUT_PTRS + 32 * 3], TMP_0
 %endif
+align_label
 %%encrypt_16_done:
 %endmacro ;; AES_ENC_16
 
@@ -321,7 +324,7 @@ mksection .text
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;  void aes_cfb_enc_128_vaes_avx2(AES_ARGS *args, uint64_t len_in_bytes);
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-align 32
+align_function
 MKGLOBAL(aes_cfb_enc_128_vaes_avx2,function,internal)
 aes_cfb_enc_128_vaes_avx2:
         AES_ENC_16 11, CFB
@@ -330,7 +333,7 @@ aes_cfb_enc_128_vaes_avx2:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;  void aes_cfb_enc_192_vaes_avx2(AES_ARGS *args, uint64_t len_in_bytes);
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-align 32
+align_function
 MKGLOBAL(aes_cfb_enc_192_vaes_avx2,function,internal)
 aes_cfb_enc_192_vaes_avx2:
         AES_ENC_16 13, CFB
@@ -339,7 +342,7 @@ aes_cfb_enc_192_vaes_avx2:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;  void aes_cfb_enc_256_vaes_avx2(AES_ARGS *args, uint64_t len_in_bytes);
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-align 32
+align_function
 MKGLOBAL(aes_cfb_enc_256_vaes_avx2,function,internal)
 aes_cfb_enc_256_vaes_avx2:
         AES_ENC_16 15, CFB

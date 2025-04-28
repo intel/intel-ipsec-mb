@@ -28,12 +28,13 @@
 %use smartalign
 %define AES_CTR_DECLARE_DATA 1
 %include "include/aes_cntr_by16_vaes_avx2.inc"
+%include "include/align_avx.inc"
 
 %include "include/cet.inc"
 
 ;; aes_cntr_128_vaes_avx2(void *in, void *IV, void *keys, void *out, UINT64 num_bytes,
 ;;                        UINT64 iv_len)
-align 32
+align_function
 MKGLOBAL(aes_cntr_128_vaes_avx2,function,internal)
 aes_cntr_128_vaes_avx2:
         endbranch64

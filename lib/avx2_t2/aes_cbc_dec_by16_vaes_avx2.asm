@@ -31,6 +31,7 @@
 %include "include/reg_sizes.inc"
 %include "include/aes_common.inc"
 %include "include/clear_regs.inc"
+%include "include/align_avx.inc"
 
 struc STACK
 _PREV_BLOCK_YMM_SAVE:      resy    1       ; Space to store 1 temporary YMM register
@@ -176,7 +177,7 @@ endstruc
         vbroadcasti128  TMP_0, [%%IV]
         vmovdqa         [rsp + _PREV_BLOCK_YMM_SAVE], TMP_0
 
-align 32
+align_loop
 %%decrypt_16_parallel:
         cmp     %%LENGTH, 256
         jb      %%final_blocks
@@ -185,6 +186,7 @@ align 32
 
         jmp     %%decrypt_16_parallel
 
+align_label
 %%final_blocks:
         ;; get num final blocks
         shr     %%LENGTH, 4
@@ -207,7 +209,7 @@ align 32
 ;; final num blocks is 15:
         CBC_BLOCKS %%PLAIN_OUT, %%CIPH_IN, 15, %%NROUNDS
         jmp     %%cbc_dec_done
-align 32
+align_label
 %%final_blocks_is_9_11:
         cmp     %%LENGTH, 10
         je      %%final_num_blocks_is_10
@@ -216,7 +218,7 @@ align 32
 ;; final num blocks is 11:
         CBC_BLOCKS %%PLAIN_OUT, %%CIPH_IN, 11, %%NROUNDS
         jmp     %%cbc_dec_done
-align 32
+align_label
 %%final_blocks_is_1_7:
         cmp     %%LENGTH, 4
         je      %%final_num_blocks_is_4
@@ -231,7 +233,7 @@ align 32
         CBC_BLOCKS %%PLAIN_OUT, %%CIPH_IN, 7, %%NROUNDS
         jmp     %%cbc_dec_done
 
-align 32
+align_label
 %%final_blocks_is_1_3:
         cmp     %%LENGTH, 2
         je      %%final_num_blocks_is_2
@@ -247,7 +249,7 @@ align 32
 %rep 3
 %assign NUM_BLOCKS TOTAL_NUM_BLOCKS
 %rep 3
-align 32
+align_label
 %%final_num_blocks_is_ %+ NUM_BLOCKS:
         CBC_BLOCKS %%PLAIN_OUT, %%CIPH_IN, NUM_BLOCKS, %%NROUNDS
         jmp     %%cbc_dec_done
@@ -256,16 +258,16 @@ align 32
 %assign TOTAL_NUM_BLOCKS (TOTAL_NUM_BLOCKS - 4)
 %endrep
 
-align 32
+align_label
 %%final_num_blocks_is_2:
         CBC_BLOCKS %%PLAIN_OUT, %%CIPH_IN, 2, %%NROUNDS
         jmp     %%cbc_dec_done
 
-align 32
+align_label
 %%final_num_blocks_is_1:
         CBC_BLOCKS %%PLAIN_OUT, %%CIPH_IN, 1, %%NROUNDS
 
-align 32
+align_label
 %%cbc_dec_done:
 %ifdef SAFE_DATA
 	clear_all_ymms_asm
@@ -290,7 +292,7 @@ align 32
 ;; =============================================================================
 ;; void aes_cbc_128_dec_vaes_avx2
 mksection .text
-align 32
+align_function
 MKGLOBAL(aes_cbc_dec_128_vaes_avx2,function,internal)
 aes_cbc_dec_128_vaes_avx2:
         AES_CBC_DEC arg1, arg4, AES_ROUND_KEYS, arg2, arg5, 9
@@ -298,7 +300,7 @@ aes_cbc_dec_128_vaes_avx2:
 
 ;; =============================================================================
 ;; void aes_cbc_192_dec_vaes_avx2
-align 32
+align_function
 MKGLOBAL(aes_cbc_dec_192_vaes_avx2,function,internal)
 aes_cbc_dec_192_vaes_avx2:
         AES_CBC_DEC arg1, arg4, AES_ROUND_KEYS, arg2, arg5, 11
@@ -306,7 +308,7 @@ aes_cbc_dec_192_vaes_avx2:
 
 ;; =============================================================================
 ;; void aes_cbc_256_dec_vaes_avx2
-align 32
+align_function
 MKGLOBAL(aes_cbc_dec_256_vaes_avx2,function,internal)
 aes_cbc_dec_256_vaes_avx2:
         AES_CBC_DEC arg1, arg4, AES_ROUND_KEYS, arg2, arg5, 13

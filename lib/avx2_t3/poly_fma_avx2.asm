@@ -31,6 +31,7 @@
 %include "include/imb_job.inc"
 %include "include/clear_regs.inc"
 %include "include/cet.inc"
+%include "include/align_avx.inc"
 
 ;; Enforce VEX encoding for AVX2 capable systems
 %xdefine vpmadd52luq {vex3}vpmadd52luq
@@ -721,6 +722,7 @@ mksection .text
         mov     %%T0, %%LEN
         and     %%T0, 0xffffffffffffffc0 ; multiple of 64 bytes
 
+align_loop
 %%_poly1305_blocks_loop:
         cmp     %%T0, POLY1305_BLOCK_SIZE*4
         jbe     %%_poly1305_blocks_loop_end
@@ -734,6 +736,7 @@ mksection .text
 
         jmp     %%_poly1305_blocks_loop
 
+align_label
 %%_poly1305_blocks_loop_end:
 
         ;; Need to multiply by r^4, r^3, r^2, r
@@ -785,6 +788,7 @@ mksection .text
 
         and     %%LEN, (POLY1305_BLOCK_SIZE*4 - 1) ; Get remaining lengths (LEN < 64 bytes)
 
+align_label
 %%_simd_to_gp:
         ; Carry propagation
         vpsrlq  %%XTMP1, XWORD(%%YMM_ACC0), 44
@@ -827,6 +831,7 @@ mksection .text
         vmovdqa [rsp + _r4p_save + 32], %%YTMP1
 %endif
 
+align_loop
 %%_final_loop:
         cmp     %%LEN, POLY1305_BLOCK_SIZE
         jb      %%_poly1305_blocks_partial
@@ -848,6 +853,7 @@ mksection .text
 
         jmp     %%_final_loop
 
+align_label
 %%_poly1305_blocks_partial:
 
         or      %%LEN, %%LEN
@@ -879,6 +885,7 @@ mksection .text
         POLY1305_MUL_REDUCE %%A0, %%A1, %%A2, %%R0, %%R1, \
                             %%T0, %%T1, %%T2, %%T3, %%GP_RAX, %%GP_RDX
 
+align_label
 %%_poly1305_blocks_exit:
 %endmacro
 
@@ -993,7 +1000,7 @@ mksection .text
 ;; arg2 - Message length
 ;; arg3 - Input/output hash
 ;; arg4 - Poly1305 key
-align 32
+align_function
 MKGLOBAL(poly1305_aead_update_fma_avx2,function,internal)
 poly1305_aead_update_fma_avx2:
 
@@ -1053,6 +1060,7 @@ poly1305_aead_update_fma_avx2:
         mov     [_arg3 + 2 * 8], _a2
 
         FUNC_EXIT
+align_label
 .poly1305_update_exit:
         ret
 
@@ -1063,7 +1071,7 @@ poly1305_aead_update_fma_avx2:
 ;; arg1 - Input hash
 ;; arg2 - Poly1305 key
 ;; arg3 - Output tag
-align 32
+align_function
 MKGLOBAL(poly1305_aead_complete_fma_avx2,function,internal)
 poly1305_aead_complete_fma_avx2:
 
@@ -1098,6 +1106,7 @@ poly1305_aead_complete_fma_avx2:
 %endif
 
         FUNC_EXIT
+align_label
 .poly1305_complete_exit:
         ret
 
@@ -1105,7 +1114,7 @@ poly1305_aead_complete_fma_avx2:
 ;; =============================================================================
 ;; void poly1305_mac_fma_avx2(IMB_JOB *job)
 ;; arg1 - job structure
-align 32
+align_function
 MKGLOBAL(poly1305_mac_fma_avx2,function,internal)
 poly1305_mac_fma_avx2:
         FUNC_ENTRY
@@ -1138,6 +1147,7 @@ poly1305_mac_fma_avx2:
         mov     rdx, [job + _auth_tag_output]
         POLY1305_FINALIZE rax, rdx, _a0, _a1, _a2, gp6, gp7, gp8
 
+align_label
 .poly1305_mac_exit:
         FUNC_EXIT
         ret

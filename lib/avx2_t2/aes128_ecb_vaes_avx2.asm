@@ -45,6 +45,7 @@
 %include "include/os.inc"
 %include "include/clear_regs.inc"
 %include "include/aes_common.inc"
+%include "include/align_avx.inc"
 
 %ifdef LINUX
 %define IN      rdi
@@ -113,12 +114,14 @@
         ja      %%initial_num_blocks_is_15
         je      %%initial_num_blocks_is_14
         jmp     %%initial_num_blocks_is_13
+align_label
 %%initial_num_blocks_is_11_9:
         ;; 11, 10 or 9
         cmp     TMP, 10*16
         ja      %%initial_num_blocks_is_11
         je      %%initial_num_blocks_is_10
         jmp     %%initial_num_blocks_is_9
+align_label
 %%initial_num_blocks_is_7_1:
         cmp     TMP, 4*16
         je      %%initial_num_blocks_is_4
@@ -128,6 +131,7 @@
         ja      %%initial_num_blocks_is_7
         je      %%initial_num_blocks_is_6
         jmp     %%initial_num_blocks_is_5
+align_label
 %%initial_num_blocks_is_3_1:
         ;; 3, 2 or 1
         cmp     TMP, 2*16
@@ -138,6 +142,7 @@
 %assign num_blocks 1
 %rep 15
 
+align_label
         %%initial_num_blocks_is_ %+ num_blocks :
 %assign %%I 0
         ; load initial blocks
@@ -167,7 +172,7 @@
         jmp     %%main_loop
 %endrep
 
-align 16
+align_loop
 %%main_loop:
         ; load the next 16 blocks into ymm registers
         YMM_LOAD_BLOCKS_AVX2_0_16 16, {IN + IDX}, 0, YDATA0, YDATA1,\
@@ -194,6 +199,7 @@ align 16
         cmp     IDX, LEN
         jne     %%main_loop
 
+align_label
 %%done:
 
 %ifdef SAFE_DATA
@@ -204,12 +210,12 @@ align 16
 %endmacro
 
 mksection .text
-align 16
+align_function
 MKGLOBAL(AES_ECB_ENC,function,internal)
 AES_ECB_ENC:
         AES_ECB ENC
         ret
-align 16
+align_function
 MKGLOBAL(AES_ECB_DEC,function,internal)
 AES_ECB_DEC:
         AES_ECB DEC

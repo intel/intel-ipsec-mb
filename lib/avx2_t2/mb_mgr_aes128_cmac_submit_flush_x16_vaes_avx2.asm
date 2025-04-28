@@ -32,6 +32,7 @@
 %include "include/const.inc"
 %include "include/clear_regs.inc"
 %include "include/memcpy.inc"
+%include "include/align_avx.inc"
 
 %ifndef AES_ENC_X16
 %define AES_ENC_X16 aes128_cbc_mac_vaes_avx2
@@ -256,6 +257,7 @@ endstruc
 %assign KEY (KEY+1)
 %endrep
 
+align_label
 %%skip_copy_ %+ LANE_ID:
 %assign LANE_ID (LANE_ID+1)
 %endrep
@@ -282,11 +284,13 @@ endstruc
         jne     %%skip_copy_ffs_ %+ I
         mov     idx, (I << 4)
         XVPINSRW XWORD(%%LENGTH_LO), %%TEMP_XMM, %%TEMP_GP, idx, 0xffff, no_scale
+align_label
 %%skip_copy_ffs_ %+ I:
         cmp     qword [state + _aes_cmac_job_in_lane + ( I + 8 ) * 8], 0
         jne     %%skip_copy_ffs_hi_ %+ I
         mov     idx, (I << 4)
         XVPINSRW %%LENGTH_HI, %%TEMP_XMM, %%TEMP_GP, idx, 0xffff, no_scale
+align_label
 %%skip_copy_ffs_hi_ %+ I:
 %assign I (I+1)
 %endrep
@@ -371,6 +375,7 @@ endstruc
         or      r, r
         jz      %%_complete_block
 
+align_label
 %%_not_complete_block:
         ;; M_last = padding(M_n) XOR K2
         lea     TMP_GP_1, [rel padding_0x80_tab16 + 16]
@@ -393,6 +398,7 @@ endstruc
         vpxor   XMM_TMP_2, XMM_TMP_1
         vmovdqa [m_last], XMM_TMP_2
 
+align_label
 %%_step_5:
         ;; If not all 16 jobs are in use wait for more jobs
         cmp     qword [state + _aes_cmac_num_lanes_inuse], 16
@@ -414,6 +420,7 @@ endstruc
         vphminposuw     XMM_TMP_2, XMM_TMP_0  ; for lanes 0...7
 %endif ;; SUBMIT_FLUSH
 
+align_loop
 %%_cmac_round:
         vpextrw         min_len, XMM_TMP_2, 0            ; min value
         vpextrw         idx, XMM_TMP_2, 1                ; min index (for lanes 0...7)
@@ -427,6 +434,7 @@ endstruc
         vpextrw         idx, XMM_TMP_2, 1                ; min index (0-7)
         add             idx, 8                           ; index + 8
         mov             min_len, TMP_GP_1                ; min len
+align_label
 %%use_min:
         ; Check for zero length, to retrieve already encrypted buffers
         cmp             min_len, 0
@@ -450,6 +458,7 @@ endstruc
         call    AES_ENC_X16
         ; state and idx are intact
 
+align_label
 %%len_is_0:
         ; Check if job complete
         test    word [state + _aes_cmac_init_done + idx*2], 0xffff
@@ -477,6 +486,7 @@ endstruc
 
         jmp     %%_cmac_round
 
+align_label
 %%_copy_complete_digest:
         ; Job complete, copy digest to AT output
  	mov	job_rax, [state + _aes_cmac_job_in_lane + idx*8]
@@ -495,9 +505,11 @@ endstruc
         vmovdqu [TMP_GP_2], XMM_TMP_0
         jmp     %%_update_lanes
 
+align_label
 %%_ne_16_copy:
         memcpy_avx_16 TMP_GP_2, TMP_GP_3, TMP_GP_1, lane, iv
 
+align_label
 %%_update_lanes:
         ; Update unused lanes
         mov	unused_lanes, [state + _aes_cmac_unused_lanes]
@@ -532,6 +544,7 @@ endstruc
 %assign KEY (KEY+1)
 %endrep
 
+align_label
 %%skip_clear_ %+ LANE_ID:
 %assign LANE_ID (LANE_ID+1)
 %endrep
@@ -553,11 +566,13 @@ endstruc
 
         jmp %%done
 
+align_label
 %%return_null:
         xor     job_rax, job_rax
 	jmp	%%done
 
 %if %%SUBMIT_FLUSH == SUBMIT
+align_label
 %%_complete_block:
 
         ;; Block size aligned
@@ -576,6 +591,7 @@ endstruc
 
         jmp     %%_step_5
 
+align_label
 %%_lt_one_block:
         ;; Single partial block
         mov     word [state + _aes_cmac_init_done + lane*2], 1
@@ -588,6 +604,7 @@ endstruc
         mov     n, 1
         jmp     %%_not_complete_block
 
+align_label
 %%_not_complete_block_3gpp:
         ;; bit pad last block
         ;; xor with skey2
@@ -607,6 +624,7 @@ endstruc
         simd_load_avx_15_1 XMM_TMP_0, TMP_GP_1, r
         dec     r
 
+align_label
 %%_update_mlast_3gpp:
         ;; set last byte padding mask
         ;; shift into correct xmm idx
@@ -648,12 +666,14 @@ endstruc
 
         jmp     %%_step_5
 
+align_label
 %%_load_full_block_3gpp:
         vmovdqu XMM_TMP_0, [TMP_GP_1]
         mov     r, 0xf
         jmp     %%_update_mlast_3gpp
 %endif ;; SUBMIT
 
+align_label
 %%done:
 %ifdef SAFE_DATA
 	clear_all_ymms_asm
@@ -665,7 +685,7 @@ endstruc
 ; JOB* SUBMIT_JOB_AES_ENC(MB_MGR_AES_OOO *state, IMB_JOB *job)
 ; arg 1 : state
 ; arg 2 : job
-align 32
+align_function
 MKGLOBAL(SUBMIT_JOB_AES_ENC,function,internal)
 SUBMIT_JOB_AES_ENC:
         FUNC_SAVE
@@ -676,7 +696,7 @@ SUBMIT_JOB_AES_ENC:
 ; JOB* FLUSH_JOB_AES_ENC(MB_MGR_AES_OOO *state, IMB_JOB *job)
 ; arg 1 : state
 ; arg 2 : job
-align 32
+align_function
 MKGLOBAL(FLUSH_JOB_AES_ENC,function,internal)
 FLUSH_JOB_AES_ENC:
         FUNC_SAVE

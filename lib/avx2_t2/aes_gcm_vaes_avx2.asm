@@ -35,6 +35,7 @@
 
 %define GCM_UTIL_IMPLEMENTATION
 %include "include/gcm_vaes_avx2.inc"
+%include "include/align_avx.inc"
 
 mksection .text
 default rel
@@ -52,7 +53,7 @@ default rel
 ;;
 ;; CLOBBERED:
 ;;   xmm0, xmm10-xmm13, xmm15
-align 32
+align_function
 MKGLOBAL(gcm_aes_ctr_1_vaes_avx2,function,internal)
 gcm_aes_ctr_1_vaes_avx2:
         vpaddd          xmm9, xmm9, [rel ONE]
@@ -77,14 +78,14 @@ gcm_aes_ctr_1_vaes_avx2:
         vaesenclast     xmm1, xmm1, [arg1 + 16*14]
         ret
 
-align 32
+align_label
 .aes192:
         vaesenc         xmm1, xmm1, [arg1 + 16*10]
         vaesenc         xmm1, xmm1, [arg1 + 16*11]
         vaesenclast     xmm1, xmm1, [arg1 + 16*12]
         ret
 
-align 32
+align_label
 .aes128:
         vaesenclast     xmm1, xmm1, [arg1 + 16*10]
         ret
@@ -93,7 +94,7 @@ align 32
 
 %rep 15
 
-align 32
+align_function
 MKGLOBAL(gcm_aes_ctr_ %+ NB %+ _vaes_avx2,function,internal)
 gcm_aes_ctr_ %+ NB %+ _vaes_avx2:
 
@@ -162,7 +163,7 @@ gcm_aes_ctr_ %+ NB %+ _vaes_avx2:
                         ymm0, ymm0, ymm0, ymm0, ymm0, ymm0, ymm0, ymm0
         ret
 
-align 32
+align_label
 .aes192:
 %assign NJ 10
 %rep 2
@@ -182,7 +183,7 @@ align 32
                         ymm0, ymm0, ymm0, ymm0, ymm0, ymm0, ymm0, ymm0
         ret
 
-align 32
+align_label
 .aes128:
         vbroadcasti128  ymm0, [arg1 + 16*10]
         YMM_OPCODE3_DSTR_SRC1R_SRC2R_BLOCKS_0_16 \
@@ -216,7 +217,7 @@ align 32
 ;;
 ;; CLOBBERED:
 ;;   xmm0, xmm10-xmm13, xmm15
-align 32
+align_function
 MKGLOBAL(gcm_initial_blocks_enc_vaes_avx2,function,internal)
 gcm_initial_blocks_enc_vaes_avx2:
         and     r12d, 15    ; don't allow 16 initial blocks
@@ -246,7 +247,7 @@ gcm_initial_blocks_enc_vaes_avx2:
 
 %assign NB 15
 %rep 16
-align 32
+align_label
 .initial_num_blocks_is_ %+ NB :
         INITIAL_BLOCKS  arg1, arg3, arg4, r13, r11, NB, ENC
         ret
@@ -271,7 +272,7 @@ align 32
 ;;
 ;; CLOBBERED:
 ;;   xmm0, xmm10-xmm13, xmm15
-align 32
+align_function
 MKGLOBAL(gcm_initial_blocks_dec_vaes_avx2,function,internal)
 gcm_initial_blocks_dec_vaes_avx2:
         and     r12d, 15    ; don't allow 16 initial blocks
@@ -301,7 +302,7 @@ gcm_initial_blocks_dec_vaes_avx2:
 
 %assign NB 15
 %rep 16
-align 32
+align_label
 .initial_num_blocks_is_ %+ NB :
         INITIAL_BLOCKS  arg1, arg3, arg4, r13, r11, NB, DEC
         ret
@@ -325,7 +326,7 @@ align 32
 ;; CLOBBERED:
 ;;   xmm10, xmm11
 ;;   r10, r12, r15, rax
-align 32
+align_function
 MKGLOBAL(gcm_enc_final_partial_block_vaes_avx2,function,internal)
 gcm_enc_final_partial_block_vaes_avx2:
         ENCRYPT_FINAL_PARTIAL_BLOCK \
@@ -349,7 +350,7 @@ gcm_enc_final_partial_block_vaes_avx2:
 ;; CLOBBERED:
 ;;   xmm10, xmm11
 ;;   r10, r12, r15, rax
-align 32
+align_function
 MKGLOBAL(gcm_dec_final_partial_block_vaes_avx2,function,internal)
 gcm_dec_final_partial_block_vaes_avx2:
         ENCRYPT_FINAL_PARTIAL_BLOCK \
