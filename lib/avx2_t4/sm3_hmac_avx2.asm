@@ -35,6 +35,7 @@ extern sm3_tag_store_avx
 %include "include/reg_sizes.inc"
 %include "include/imb_job.inc"
 %include "include/memcpy.inc"
+%include "include/align_avx.inc"
 
 %ifdef LINUX
 
@@ -168,7 +169,7 @@ mksection .text
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; IMB_JOB *sm3_hmac_submit_ni_avx2(IMB_JOB *job)
-align 32
+align_function
 MKGLOBAL(sm3_hmac_submit_ni_avx2,function,internal)
 sm3_hmac_submit_ni_avx2:
         FUNC_START
@@ -202,6 +203,7 @@ sm3_hmac_submit_ni_avx2:
         sub     t2, arg3                ;; t2 =  number of bytes left
 
         xor     DWORD(arg1), DWORD(arg1)
+align_loop
 .partial_block_copy:
         cmp     DWORD(arg1), DWORD(t2)
         je      .partial_block_copy_exit
@@ -210,12 +212,14 @@ sm3_hmac_submit_ni_avx2:
         inc     DWORD(arg1)
         jmp     .partial_block_copy
 
+align_label
 .partial_block_copy_exit:
         ;; put end of message marker
         mov     BYTE [rsp + _B + arg1], 0x80
         inc     DWORD(arg1)
 
         xor     DWORD(t1), DWORD(t1)
+align_loop
 .partial_block_zero:
         cmp     DWORD(arg1), 64
         je      .partial_block_zero_exit
@@ -223,6 +227,7 @@ sm3_hmac_submit_ni_avx2:
         inc     DWORD(arg1)
         jmp     .partial_block_zero
 
+align_label
 .partial_block_zero_exit:
         cmp     DWORD(t2), 64 - 8
         jb      .add_msg_length
@@ -244,6 +249,7 @@ sm3_hmac_submit_ni_avx2:
         mov     [rsp + _B + 5*8], t1
         mov     [rsp + _B + 6*8], t1
 
+align_label
 .add_msg_length:
         lea     t1, [arg_msg_length*8 + 64*8]  ;; original message length in bits + 1 IPAD block
         bswap   t1
@@ -254,6 +260,7 @@ sm3_hmac_submit_ni_avx2:
         mov     DWORD(arg3), 1
         call    sm3_update_ni_x1
 
+align_label
 .process_opad:
         vmovdqa xmm0, [rsp + _D + 0*16]
         vmovdqa xmm1, [rsp + _D + 1*16]
@@ -278,6 +285,7 @@ sm3_hmac_submit_ni_avx2:
         mov     DWORD(arg3), 1
         call    sm3_update_ni_x1
 
+align_label
 .tag_store_start:
         ;; byte swap the digest and write it back
         vmovdqa xmm0, [rsp + _D + 0*16]

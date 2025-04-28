@@ -31,6 +31,7 @@
 %include "include/cet.inc"
 %include "include/error.inc"
 %include "include/memcpy.inc"
+%include "include/align_avx.inc"
 
 %ifdef LINUX
 %define arg1    rdi
@@ -170,7 +171,7 @@ mksection .text
 %endrep
 %endmacro
 
-align 32
+align_function
 MKGLOBAL(sm4_ecb_ni_avx2,function,internal)
 sm4_ecb_ni_avx2:
 
@@ -219,12 +220,14 @@ sm4_ecb_ni_avx2:
         ja      initial_num_blocks_is_15
         je      initial_num_blocks_is_14
         jmp     initial_num_blocks_is_13
+align_label
 initial_num_blocks_is_11_9:
         ;; 11, 10 or 9
         cmp     TMP, 10*16
         ja      initial_num_blocks_is_11
         je      initial_num_blocks_is_10
         jmp     initial_num_blocks_is_9
+align_label
 initial_num_blocks_is_7_1:
         cmp     TMP, 4*16
         je      initial_num_blocks_is_4
@@ -234,6 +237,7 @@ initial_num_blocks_is_7_1:
         ja      initial_num_blocks_is_7
         je      initial_num_blocks_is_6
         jmp     initial_num_blocks_is_5
+align_label
 initial_num_blocks_is_3_1:
         ;; 3, 2 or 1
         cmp     TMP, 2*16
@@ -244,6 +248,7 @@ initial_num_blocks_is_3_1:
 %assign initial_num_blocks 1
 %rep 15
 
+align_label
 initial_num_blocks_is_ %+ initial_num_blocks :
 %assign remaining_block (initial_num_blocks %% 2)
 
@@ -274,7 +279,7 @@ initial_num_blocks_is_ %+ initial_num_blocks :
         jmp     main_loop
 %endrep
 
-align 32
+align_loop
 main_loop:
         YMM_LOAD_BLOCKS_AVX2_0_16 NBLOCKS_MAIN, IN, IDX, YDATA0,\
                 YDATA1, YDATA2, YDATA3, YDATA4, YDATA5,\
@@ -296,6 +301,7 @@ main_loop:
         add     IDX, 16*NBLOCKS_MAIN
         cmp     IDX, SIZE
         jne     main_loop
+align_label
 done:
 
 %ifdef SAFE_DATA
@@ -305,7 +311,7 @@ done:
 %endif
         ret
 
-align 32
+align_function
 MKGLOBAL(sm4_cbc_enc_ni_avx2,function,internal)
 sm4_cbc_enc_ni_avx2:
 
@@ -350,7 +356,7 @@ sm4_cbc_enc_ni_avx2:
 
         ; Load IV
         vmovdqu XOUT, [IV]
-align 32
+align_loop
 cbc_enc_loop:
         or      SIZE, SIZE
         jz      cbc_enc_done
@@ -373,6 +379,7 @@ cbc_enc_loop:
         add     IDX, 16
         dec     SIZE
         jmp     cbc_enc_loop
+align_label
 cbc_enc_done:
 
 %ifdef SAFE_DATA
@@ -382,7 +389,7 @@ cbc_enc_done:
 %endif
         ret
 
-align 32
+align_function
 MKGLOBAL(sm4_cbc_dec_ni_avx2,function,internal)
 sm4_cbc_dec_ni_avx2:
 
@@ -450,12 +457,14 @@ sm4_cbc_dec_ni_avx2:
         ja      cbc_dec_initial_num_blocks_is_15
         je      cbc_dec_initial_num_blocks_is_14
         jmp     cbc_dec_initial_num_blocks_is_13
+align_label
 cbc_dec_initial_num_blocks_is_11_9:
         ;; 11, 10 or 9
         cmp     TMP, 10*16
         ja      cbc_dec_initial_num_blocks_is_11
         je      cbc_dec_initial_num_blocks_is_10
         jmp     cbc_dec_initial_num_blocks_is_9
+align_label
 cbc_dec_initial_num_blocks_is_7_1:
         cmp     TMP, 4*16
         je      cbc_dec_initial_num_blocks_is_4
@@ -465,6 +474,7 @@ cbc_dec_initial_num_blocks_is_7_1:
         ja      cbc_dec_initial_num_blocks_is_7
         je      cbc_dec_initial_num_blocks_is_6
         jmp     cbc_dec_initial_num_blocks_is_5
+align_label
 cbc_dec_initial_num_blocks_is_3_1:
         ;; 3, 2 or 1
         cmp     TMP, 2*16
@@ -475,6 +485,7 @@ cbc_dec_initial_num_blocks_is_3_1:
 %assign cbc_dec_initial_num_blocks 1
 %rep 15
 
+align_label
 cbc_dec_initial_num_blocks_is_ %+ cbc_dec_initial_num_blocks :
 
         ; load initial blocks
@@ -536,7 +547,7 @@ cbc_dec_initial_num_blocks_is_ %+ cbc_dec_initial_num_blocks :
         jmp     cbc_dec_main_loop
 %endrep
 
-align 32
+align_loop
 cbc_dec_main_loop:
         YMM_LOAD_BLOCKS_AVX2_0_16 NBLOCKS_MAIN, IN, IDX, YDATA0,\
                 YDATA1, YDATA2, YDATA3, YDATA4, YDATA5,\
@@ -576,6 +587,7 @@ cbc_dec_main_loop:
         add     IDX, 16*NBLOCKS_MAIN
         cmp     IDX, SIZE
         jne     cbc_dec_main_loop
+align_label
 cbc_dec_done:
 
 %ifdef SAFE_DATA
@@ -605,6 +617,7 @@ cbc_dec_done:
         vpaddd  %%YIV_3, [rel ddq_add_8_be]
         jmp     %%end_prepare
 
+align_label
 %%ctr_overflow:
         vpshufb %%YIV_0, [rel byteswap_const]
         vpshufb %%YIV_1, [rel byteswap_const]
@@ -619,10 +632,11 @@ cbc_dec_done:
         vpshufb %%YIV_2, [rel byteswap_const]
         vpshufb %%YIV_3, [rel byteswap_const]
 
+align_label
 %%end_prepare:
 %endmacro
 
-align 32
+align_function
 MKGLOBAL(sm4_ctr_ni_avx2,function,internal)
 sm4_ctr_ni_avx2:
 
@@ -681,11 +695,13 @@ sm4_ctr_ni_avx2:
 
         jmp     iv_read
 
+align_label
 iv_len_is_16_bytes:
         vmovdqu XIV_0, [IV]
         movbe   DWORD(TMP2), [IV + 12]
         and     DWORD(TMP2), 0xff
 
+align_label
 iv_read:
         ; TMP2 contains block counter in Little Endian
 
@@ -717,7 +733,7 @@ iv_read:
         shr     TMP,  4+3 ; Number of 8x full blocks
         jz      end_ctr_loop
 
-align 32
+align_loop
 ctr_4x32_loop:
         YMM_OPCODE3_DSTR_SRC1R_SRC2R_BLOCKS_0_16 8, vpshufb, \
                         YIN_0, YIN_1, YIN_2, YIN_3, NULL, NULL, NULL, NULL, \
@@ -745,6 +761,7 @@ ctr_4x32_loop:
         dec     TMP
         jnz     ctr_4x32_loop
 
+align_label
 end_ctr_loop:
         sub     SIZE, IDX
         jz      ctr_done
@@ -762,6 +779,7 @@ end_ctr_loop:
         ja      final_num_blocks_is_7
         je      final_num_blocks_is_6
         jmp     final_num_blocks_is_5
+align_label
 final_num_blocks_is_3_1:
         ;; 3, 2 or 1
         cmp     TMP, 2
@@ -771,7 +789,7 @@ final_num_blocks_is_3_1:
 
 %assign ctr_blocks_left 0
 %rep 8
-align 32
+align_label
 final_num_blocks_is_  %+ ctr_blocks_left:
 
         YMM_OPCODE3_DSTR_SRC1R_SRC2R_BLOCKS_0_16 (ctr_blocks_left + 1), vpshufb, \
@@ -812,6 +830,7 @@ final_num_blocks_is_  %+ ctr_blocks_left:
 %assign ctr_blocks_left (ctr_blocks_left + 1)
 %endrep
 
+align_label
 partial_block_ctr:
         or      SIZE, SIZE
         jz      ctr_done
@@ -822,6 +841,7 @@ partial_block_ctr:
         vpxor   XWORD(YLAST_BLOCK), XIV_0
         simd_store_avx OUT, XWORD(YLAST_BLOCK), SIZE, TMP, TMP2
 
+align_label
 ctr_done:
 
 %ifdef SAFE_DATA
@@ -839,7 +859,7 @@ ctr_done:
 ; arg 2: EXP_ENC_KEYS: pointer to expanded encryption keys
 ; arg 3: EXP_DEC_KEYS: pointer to expanded decryption keys
 ;
-align 32
+align_function
 MKGLOBAL(sm4_set_key_ni_avx2,function,internal)
 sm4_set_key_ni_avx2:
 
@@ -873,6 +893,7 @@ sm4_set_key_ni_avx2:
 %assign i (i + 1)
 %endrep
 
+align_label
 sm4_set_key_ni_avx2_return:
 
 %ifdef SAFE_DATA
@@ -883,6 +904,7 @@ sm4_set_key_ni_avx2_return:
        ret
 
 %ifdef SAFE_PARAM
+align_label
 error_set_key_ni_avx2:
         IMB_ERR_CHECK_START rax
         IMB_ERR_CHECK_NULL KEY, rax, IMB_ERR_NULL_KEY

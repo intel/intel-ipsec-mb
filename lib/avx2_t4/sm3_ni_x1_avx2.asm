@@ -41,6 +41,7 @@
 
 %include "include/os.inc"
 %include "include/clear_regs.inc"
+%include "include/align_avx.inc"
 
 %ifdef LINUX
 %define arg1	rdi
@@ -115,7 +116,7 @@ mksection .text
 ;; arg2 : [in] message pointer
 ;; arg3 : [in] number of blocks to process
 
-align 32
+align_function
 MKGLOBAL(sm3_update_ni_x1,function,internal)
 sm3_update_ni_x1:
         or              arg_num_blks, arg_num_blks
@@ -151,7 +152,7 @@ sm3_update_ni_x1:
         vpblendd        xmm7, xmm1, xmm0, 0x3   ;; xmm7 = ROL32(C, 23) ROL32(D, 23) ROL32(G, 13) ROL32(H, 13)
 
         vmovdqa         xmm12, [rel SHUFF_MASK]
-align 32
+align_loop
 block_loop:
         vmovdqa         xmm10, xmm6
         vmovdqa         xmm11, xmm7
@@ -260,6 +261,7 @@ block_loop:
         add             rsp, 7*16
 %endif
 
+align_label
 done_hash:
 
 	ret

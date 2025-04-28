@@ -42,6 +42,7 @@
 %include "include/os.inc"
 %include "include/clear_regs.inc"
 %include "include/reg_sizes.inc"
+%include "include/align_avx.inc"
 
 %ifdef LINUX
 %define arg1	rdi
@@ -116,7 +117,7 @@ mksection .text
 ;; arg2 : [in] message pointer
 ;; arg3 : [in] number of blocks to process
 
-align 32
+align_function
 MKGLOBAL(sha512_update_ni_x1,function,internal)
 sha512_update_ni_x1:
         or              arg_num_blks, arg_num_blks
@@ -150,7 +151,7 @@ sha512_update_ni_x1:
         ;; ymm13 = A B E F, ymm14 = C D G H
 
         lea             rax, [rel SHA512_K_AVX]
-align 32
+align_loop
 .block_loop:
         vmovdqa         ymm11, ymm13    ;; ABEF
         vmovdqa         ymm12, ymm14    ;; CDGH
@@ -325,6 +326,7 @@ align 32
         add             rsp, 9*16
 %endif
 
+align_label
 .done_hash:
 
 	ret
@@ -335,7 +337,7 @@ align 32
 ;; arg1 : [in] message pointer
 ;; arg2 : [in/out] pointer to hash value
 
-align 32
+align_function
 MKGLOBAL(sha512_ni_block_avx2,function,internal)
 sha512_ni_block_avx2:
         mov     rax, arg1

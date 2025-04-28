@@ -43,6 +43,7 @@
 %include "include/clear_regs.inc"
 %include "include/reg_sizes.inc"
 %include "include/mb_mgr_datastruct.inc"
+%include "include/align_avx.inc"
 
 ; resdq = res0 => 16 bytes
 struc frame
@@ -238,7 +239,7 @@ mksection .text
 ;; void sha512_ni_x2_avx2(SHA512_ARGS *args, UINT64 size_in_blocks)
 ;; arg1 : pointer to args
 ;; arg2 : size (in blocks) ;; assumed to be >= 1
-align 32
+align_function
 MKGLOBAL(sha512_ni_x2_avx2,function,internal)
 sha512_ni_x2_avx2:
         mov             r11, rsp
@@ -270,7 +271,7 @@ sha512_ni_x2_avx2:
         vpermq STATE1, STATE1, 0x1b
                     vpermq STATE1b, STATE1b, 0x1b
 
-align 32
+align_loop
 .block_loop:
         ;; Save digests
         vmovdqa         [rsp + frame.ABEF_SAVE], STATE0
@@ -440,6 +441,7 @@ align 32
         vmovdqa         [rsp + frame.CDGH_SAVEb], YTMP0
 %endif
 
+align_label
 .done_hash:
 
         mov     rsp, r11
@@ -450,6 +452,7 @@ align 32
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; void call_sha512_ni_x2_avx2_from_c(SHA512_ARGS *args, UINT64 size_in_blocks);
 MKGLOBAL(call_sha512_ni_x2_avx2_from_c,function,internal)
+align_function
 call_sha512_ni_x2_avx2_from_c:
         FUNC_SAVE
         call sha512_ni_x2_avx2

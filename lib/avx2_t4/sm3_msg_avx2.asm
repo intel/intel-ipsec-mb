@@ -34,6 +34,7 @@ extern sm3_update_ni_x1
 %include "include/reg_sizes.inc"
 %include "include/memcpy.inc"
 %include "include/imb_job.inc"
+%include "include/align_avx.inc"
 
 %ifdef LINUX
 
@@ -146,7 +147,7 @@ mksection .text
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; void sm3_tag_store_avx(void *tag_ptr, const uint64_t tag_length, xmm1:xmm0 tag)
 ;; NOTE: may clobber t1 & t2 (rax & r10)
-align 32
+align_function
 MKGLOBAL(sm3_tag_store_avx,function,internal)
 sm3_tag_store_avx:
         cmp     arg2, 32
@@ -156,6 +157,7 @@ sm3_tag_store_avx:
         jb      .tag_store_1_15
         je      .tag_store_16
 
+align_label
 .tag_store_16_31:
         vmovdqu [arg1 + 0*16], xmm0
         lea     arg1, [arg1 + 16]
@@ -163,24 +165,28 @@ sm3_tag_store_avx:
         sub     arg2, 16
         ;; fall through to store remaining tag bytes
 
+align_label
 .tag_store_1_15:
         simd_store_avx  arg1, xmm0, arg2, t1, t2
         jmp     .tag_store_end
 
+align_label
 .tag_store_32:
         vmovdqu [arg1 + 1*16], xmm1
         ;; fall through to store 1st 16 bytes
 
+align_label
 .tag_store_16:
         vmovdqu [arg1 + 0*16], xmm0
         ;; fall through
 
+align_label
 .tag_store_end:
         ret
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; void sm3_msg_ni_avx2(void *tag, const uint64_t tag_length, const void *msg, const uint64_t msg_length)
-align 32
+align_function
 MKGLOBAL(sm3_msg_ni_avx2,function,internal)
 sm3_msg_ni_avx2:
         FUNC_START
@@ -211,6 +217,7 @@ sm3_msg_ni_avx2:
         sub     r5, arg3                ;; r5 =  number of bytes left
 
         xor     DWORD(arg1), DWORD(arg1)
+align_loop
 .partial_block_copy:
         cmp     DWORD(arg1), DWORD(r5)
         je      .partial_block_copy_exit
@@ -219,12 +226,14 @@ sm3_msg_ni_avx2:
         inc     DWORD(arg1)
         jmp     .partial_block_copy
 
+align_label
 .partial_block_copy_exit:
         ;; put end of message marker
         mov     BYTE [rsp + _B + arg1], 0x80
         inc     DWORD(arg1)
 
         xor     DWORD(t1), DWORD(t1)
+align_loop
 .partial_block_zero:
         cmp     DWORD(arg1), 64
         je      .partial_block_zero_exit
@@ -232,6 +241,7 @@ sm3_msg_ni_avx2:
         inc     DWORD(arg1)
         jmp     .partial_block_zero
 
+align_label
 .partial_block_zero_exit:
         cmp     DWORD(r5), 64 - 8
         jb      .add_msg_length
@@ -253,6 +263,7 @@ sm3_msg_ni_avx2:
         mov     [rsp + _B + 5*8], t1
         mov     [rsp + _B + 6*8], t1
 
+align_label
 .add_msg_length:
         lea     t1, [arg_msg_length*8]  ;; original message length in bits
         movbe   [rsp + _B + 7*8], t1
@@ -262,6 +273,7 @@ sm3_msg_ni_avx2:
         mov     DWORD(arg3), 1
         call    sm3_update_ni_x1
 
+align_label
 .tag_store_start:
         ;; byte swap the digest and write it back
         vmovdqa xmm0, [rsp + _D + 0*16]
@@ -285,7 +297,7 @@ sm3_msg_ni_avx2:
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; IMB_JOB *sm3_msg_submit_ni_avx2(IMB_JOB *)
-align 32
+align_function
 MKGLOBAL(sm3_msg_submit_ni_avx2,function,internal)
 sm3_msg_submit_ni_avx2:
         push    arg1
