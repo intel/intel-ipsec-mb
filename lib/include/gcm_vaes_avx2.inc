@@ -128,6 +128,7 @@ alignmode nop
 %include "include/error.inc"
 %include "include/imb_job.inc"
 %include "include/gcm_data_vaes_avx2.inc"
+%include "include/align_avx.inc"
 
 %ifndef GHASH_API_IMPLEMENTATION
 extern ghash_1_vaes_avx2
@@ -437,7 +438,7 @@ extern gcm_aes_ctr_16_vaes_avx2
         cmp             %%T2, 256
         jb              %%_AAD_below_256
 
-align 32
+align_loop
 %%_get_AAD_loop256:
 
         vmovdqu         %%YT0, [%%T1 + 16*0]
@@ -491,6 +492,7 @@ align 32
         cmp             %%T2, 256
         jae             %%_get_AAD_loop256
 
+align_label
 %%_AAD_below_256:
         cmp             DWORD(%%T2), 16
         jb              %%_AAD_partial_block
@@ -523,7 +525,7 @@ align 32
         add             %%T1, 32        ; move to the next two data blocks
         sub             DWORD(%%T2), 32 ; decrement message length
 
-align 32
+align_loop
 %%_AAD_2_blocks_loop:
         cmp             DWORD(%%T2), 32
         jb              %%_end_AAD_2_blocks_loop
@@ -548,7 +550,7 @@ align 32
         jz              %%_AAD_reduce
         jmp             %%_AAD_2_blocks_loop
 
-align 32
+align_label
 %%_AAD_1_full_block_left:
         vmovdqu         %%XT0, [%%T1]
         vpshufb         %%XT0, %%XT0, [rel SHUF_MASK]
@@ -573,7 +575,7 @@ align 32
 
         jmp             %%_AAD_partial_block
 
-align 32
+align_label
 %%_end_AAD_2_blocks_loop:
         cmp             DWORD(%%T2), 16
         jb              %%_AAD_reduce
@@ -598,6 +600,7 @@ align 32
 
         ;; fall through to reduce
 
+align_label
 %%_AAD_reduce:
         ;; combine 2x128-bits hash states into 128-bit hash state
         vextracti128    %%XT0, %%STATE_00, 1
@@ -612,7 +615,7 @@ align 32
         vpxor           %%XHASH, %%XHASH, %%XT0
 
         ;; fall through to check for partial block
-
+align_label
 %%_AAD_partial_block:
         or              DWORD(%%T2), DWORD(%%T2)
         je              %%_CALC_AAD_done
@@ -625,6 +628,7 @@ align 32
         vpxor           %%AAD_HASH, %%AAD_HASH, %%XT1
         GHASH_MUL2      %%AAD_HASH, %%XT0, %%XT2, %%XT1, %%XT3, %%XT4, %%XT5
 
+align_label
 %%_CALC_AAD_done:
 
 %endmacro ; CALC_AAD_HASH
@@ -712,10 +716,12 @@ align 32
         VXLDR   xmm1, [%%PLAIN_CIPH_IN]         ;If more than 16 bytes of data, just fill the xmm register
         jmp     %%_data_read
 
+align_label
 %%_fewer_than_16_bytes:
         lea     r10, [%%PLAIN_CIPH_IN + %%DATA_OFFSET]
         READ_SMALL_DATA_INPUT_AVX   xmm1, r10, %%PLAIN_CIPH_LEN, rax
 
+align_label
 %%_data_read:                           ;Finished reading in data
         vmovdqu xmm9, [%%GDATA_CTX + PBlockEncKey]  ;xmm9 = my_ctx_data.partial_block_enc_key
 
@@ -735,6 +741,7 @@ align 32
         sub     r15, 16                         ;Set r15 to be the amount of data left in CIPH_PLAIN_IN after filling the block
         jge     %%_no_extra_mask                ;Determine if if partial block is not being filled and shift mask accordingly
         sub     r12, r15
+align_label
 %%_no_extra_mask:
 
         vmovdqu xmm1, [r12 + ALL_F - SHIFT_MASK]; get the appropriate mask to mask out bottom r13 bytes of xmm9
@@ -760,6 +767,7 @@ align 32
         mov     [%%GDATA_CTX + PBlockLen], rax
         jmp     %%_enc_dec_done
 
+align_label
 %%_partial_incomplete:
 %ifidn __OUTPUT_FORMAT__, win64
         mov     rax, %%PLAIN_CIPH_LEN
@@ -767,6 +775,7 @@ align 32
 %else
         add     [%%GDATA_CTX + PBlockLen], %%PLAIN_CIPH_LEN
 %endif
+align_label
 %%_enc_dec_done:
         vmovdqu [%%GDATA_CTX + AadHash], %%AAD_HASH
 
@@ -783,14 +792,17 @@ align 32
         mov     r13, 16
         sub     r13, r12                        ; Set r13 to be the number of bytes to write out
         jmp     %%_count_set
+align_label
 %%_partial_fill:
         mov     r13, %%PLAIN_CIPH_LEN
+align_label
 %%_count_set:
 
         simd_store_avx  %%CIPH_PLAIN_OUT, xmm9, r13, rax, r12, %%DATA_OFFSET
         add             %%DATA_OFFSET, r13
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+align_label
 %%_partial_block_done:
 %endmacro ; PARTIAL_BLOCK
 
@@ -1284,6 +1296,7 @@ align 32
 
                 jmp     %%_initial_blocks2_aesenclast_done
 
+align_label
 %%_initial_blocks2_aesenclast_192:
                 vbroadcasti128  ymm0, [%%GDATA_KEY + 16*10]
                 YMM_OPCODE3_DSTR_SRC1R_SRC2R_BLOCKS_0_16 \
@@ -1308,6 +1321,7 @@ align 32
 
                 jmp     %%_initial_blocks2_aesenclast_done
 
+align_label
 %%_initial_blocks2_aesenclast_128:
                 vbroadcasti128  ymm0, [%%GDATA_KEY + 16*10]
                 YMM_OPCODE3_DSTR_SRC1R_SRC2R_BLOCKS_0_16 \
@@ -1316,6 +1330,7 @@ align 32
                                 ymm1, ymm2, ymm3, ymm4, ymm5, ymm6, ymm7, ymm8, \
                                 ymm0, ymm0, ymm0, ymm0, ymm0, ymm0, ymm0, ymm0
 
+align_label
 %%_initial_blocks2_aesenclast_done:
 
 %if %%num_initial_blocks > 0
@@ -1374,6 +1389,7 @@ align 32
                 ;; jmp and %%_initial_skip_last_word_write not required for %%num_initial_blocks=0 case
                 jmp     %%_initial_words_done
 
+align_label
 %%_initial_skip_last_word_write:
                 ;; Load 15 plain/cipher text blocks and XOR them against AES blocks
                 YMM_LOAD_BLOCKS_AVX2_0_16 \
@@ -1416,6 +1432,7 @@ align 32
                 sub     %%LENGTH, 15*16
                 add     %%DATA_OFFSET, 15*16
 
+align_label
 %%_initial_words_done:
 %endif ;; %%num_initial_blocks > 0
 
@@ -1432,6 +1449,7 @@ align 32
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+align_label
 %%_initial_blocks_done:
 
 %endmacro
@@ -1579,6 +1597,7 @@ align 32
 
 %endif                          ; %if %%num_initial_blocks < 8
 
+align_label
 %%_small_initial_partial_block:
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1635,6 +1654,7 @@ align 32
         vmovdqa         xmm14, xmm1
 %endif
 
+align_label
 %%_small_initial_compute_hash:
         ;; Final hash is now in xmm14
         vmovdqa         [rsp + TMP1], xmm14     ;; @todo overwrite this location with current hash value
@@ -1687,6 +1707,7 @@ align 32
                                 {[rel ddq_addbe_8888]}, {[rel ddq_addbe_8888]}
                 jmp             %%_end_overflow16_check
 
+align_label
 %%_counter_overflow16:
                 ;; Increment CTR in little endian
                 vpshufb         %%YCTR, %%YCTR, [rel SHUF_MASK]
@@ -1709,7 +1730,7 @@ align 32
                 vpshufb         ymm7, ymm7, %%YT5
                 vpshufb         ymm8, ymm8, %%YT5
                 ;; CTR left in big endian
-align 32
+align_label
 %%_end_overflow16_check:
                 vperm2i128      %%YCTR, ymm8, ymm8, 0x11
                 add             BYTE(%%CTR_CHECK), 16
@@ -2268,6 +2289,7 @@ align 32
         vmovdqa %%AAD_HASH, xmm0        ;; put hash out into xmm14
         jmp     %%_aad_is_done
 
+align_label
 %%_aad_len_is_12:
         ;; GHASH 12 bytes of AAD
         mov     %%GPR1, %%A_IN
@@ -2279,6 +2301,7 @@ align 32
 
         GHASH_MUL2 %%AAD_HASH, xmm1, xmm2, xmm6, xmm5, xmm4, xmm3
 
+align_label
 %%_aad_is_done:
         mov     %%GPR1, %%A_LEN
         vmovdqu [%%GDATA_CTX + AadHash], %%AAD_HASH         ; ctx_data.aad hash = aad_hash
@@ -2297,6 +2320,7 @@ align 32
         CALC_J0 %%GDATA_KEY, %%IV, %%IV_LEN
         jmp     %%_iv_is_done
 
+align_label
 %%_iv_len_is_12:
 %endif
 
@@ -2307,6 +2331,7 @@ align 32
         vpinsrd xmm0, [%%GPR2 + 8], 2
         vpinsrd xmm0, [rel ONEf + 12], 3                   ; read 12 IV bytes and pad with 0x00000001
 
+align_label
 %%_iv_is_done:
         vmovdqu [%%GDATA_CTX + OrigIV], xmm0                ; ctx_data.orig_IV = iv
 
@@ -2359,7 +2384,7 @@ align 32
 
 %assign n 16
 %rep 15
-align 32
+align_label
 %%_small_initial_num_blocks_is_ %+ n :
         INITIAL_BLOCKS_PARTIAL  %%GDATA_KEY, %%GDATA_CTX, %%CIPH_PLAIN_OUT, \
                 %%PLAIN_CIPH_IN, %%LENGTH, %%DATA_OFFSET, n, \
@@ -2368,11 +2393,12 @@ align 32
 %assign n (n - 1)
 %endrep
 
-align 32
+align_label
 %%_small_initial_num_blocks_is_1:
         INITIAL_BLOCKS_PARTIAL  %%GDATA_KEY, %%GDATA_CTX, %%CIPH_PLAIN_OUT, \
                 %%PLAIN_CIPH_IN, %%LENGTH, %%DATA_OFFSET, 1, \
                 %%ENC_DEC, %%INSTANCE_TYPE
+align_label
 %%_small_initial_blocks_encrypted:
 
 %endmacro                       ; GCM_ENC_DEC_SMALL
@@ -2458,6 +2484,7 @@ align 32
         GCM_ENC_DEC_SMALL %%GDATA_KEY, %%GDATA_CTX, %%CIPH_PLAIN_OUT, %%PLAIN_CIPH_IN, %%PLAIN_CIPH_LEN, %%ENC_DEC, %%DATA_OFFSET, r13, r12, xmm9, xmm14, %%INSTANCE_TYPE
         jmp     %%_ghash_done
 
+align_label
 %%_large_message_path:
         mov     r10d, NROUNDS
         mov     r15, rsp
@@ -2467,6 +2494,7 @@ align 32
         call    gcm_initial_blocks_dec_vaes_avx2
 %endif
 
+align_label
 %%_initial_blocks_encrypted:
         ;; in_order vs. out_order is an optimization to increment the counter without shuffling
         ;; it back into little endian. r15d keeps track of when we need to increent in order so
@@ -2490,7 +2518,7 @@ align 32
         cmp     r13, 256
         jb      %%_encrypt_by_16_partial
 
-align 32
+align_loop
 %%_encrypt_by_16_new:
         GHASH_16_ENCRYPT_16_PARALLEL  %%GDATA_KEY, %%CIPH_PLAIN_OUT, %%PLAIN_CIPH_IN, %%DATA_OFFSET, %%ENC_DEC, full, r15
         add     %%DATA_OFFSET, 256
@@ -2499,11 +2527,13 @@ align 32
         cmp     r13, 256
         jae     %%_encrypt_by_16_new
 
+align_label
 %%_encrypt_by_16_partial:
         GHASH_16_ENCRYPT_16_PARALLEL  %%GDATA_KEY, %%CIPH_PLAIN_OUT, %%PLAIN_CIPH_IN, %%DATA_OFFSET, %%ENC_DEC, partial, r15
         add     %%DATA_OFFSET, 256 - 16
         sub     r13, 256 - 16
 
+align_label
 %%_encrypt_final_partial:
         ;; TMP16  - Final encrypted counter - need to hash with partial or full block ciphertext
         vmovdqa xmm15, [rsp + TMP16]
@@ -2521,6 +2551,7 @@ align 32
         vpshufb xmm15, xmm15, [rel SHUF_MASK]
         vinserti128 ymm8, xmm15, 1
 
+align_label
 %%_encrypt_done:
         vpshufb xmm9, xmm9, [rel SHUF_MASK]
 
@@ -2537,13 +2568,16 @@ align 32
         vpxor   xmm14, xmm14, xmm15
         jmp     %%_ghash_done
 %endif
+align_label
 %%_hash_last_16:
         call    ghash_16_vaes_avx2
 
+align_label
 %%_ghash_done:
         vmovdqu [%%GDATA_CTX + CurCount], xmm9  ; my_ctx_data.current_counter = xmm9
         vmovdqu [%%GDATA_CTX + AadHash], xmm14  ; my_ctx_data.aad hash = xmm14
 
+align_label
 %%_enc_dec_done:
 
 %endmacro       ; GCM_ENC_DEC
@@ -2583,6 +2617,7 @@ align 32
 
 	GHASH_MUL2 xmm14, xmm13, xmm0, xmm10, xmm11, xmm5, xmm6 ;GHASH computation for the last <16 Byte block
 
+align_label
 %%_partial_done:
 
 %endif
@@ -2604,6 +2639,7 @@ align 32
 
         vpxor   xmm9, xmm9, xmm14
 
+align_label
 %%_return_T:
         mov     r10, %%AUTH_TAG             ; r10 = authTag
         mov     r11, %%AUTH_TAG_LEN         ; r11 = auth_tag_len
@@ -2619,10 +2655,12 @@ align 32
 
         simd_store_avx r10, xmm9, r11, r12, rax
         jmp     %%_return_T_done
+align_label
 %%_T_8:
         vmovq   rax, xmm9
         mov     [r10], rax
         jmp     %%_return_T_done
+align_label
 %%_T_12:
         vmovq   rax, xmm9
         mov     [r10], rax
@@ -2630,9 +2668,11 @@ align 32
         vmovd   eax, xmm9
         mov     [r10 + 8], eax
         jmp     %%_return_T_done
+align_label
 %%_T_16:
         vmovdqu  [r10], xmm9
 
+align_label
 %%_return_T_done:
 
 %ifdef SAFE_DATA
@@ -2679,10 +2719,12 @@ align 32
 	VXLDR   %%XMM1, [%%PLAIN_IN]
 	jmp	%%_data_read
 
+align_label
 %%_fewer_than_16_bytes:
 	lea	r10, [%%PLAIN_IN]
 	READ_SMALL_DATA_INPUT_AVX	%%XMM1, r10, %%PLAIN_LEN, rax
         ; Finished reading in data
+align_label
 %%_data_read:
 
 	lea	r12, [rel SHIFT_MASK]
@@ -2700,6 +2742,7 @@ align 32
         ; Determine if partial block is not being filled and shift mask accordingly
 	jge	%%_no_extra_mask_1
 	sub	r12, r15
+align_label
 %%_no_extra_mask_1:
 
         ; Get the appropriate mask to mask out bottom r13 bytes of %%XMM3
@@ -2718,6 +2761,7 @@ align 32
 	xor	rax, rax
 	mov	[%%GDATA_CTX + PBlockLen], rax
 	jmp	%%_ghash_done
+align_label
 %%_partial_incomplete_1:
 %ifidn __OUTPUT_FORMAT__, win64
         mov     rax, %%PLAIN_LEN
@@ -2725,6 +2769,7 @@ align 32
 %else
         add     [%%GDATA_CTX + PBlockLen], %%PLAIN_LEN
 %endif
+align_label
 %%_ghash_done:
 	vmovdqu	[%%GDATA_CTX + AadHash], %%AAD_HASH
 
@@ -2736,8 +2781,10 @@ align 32
         sub     r12, r13
 
         jmp     %%offset_set
+align_label
 %%_partial_fill:
         mov     r12, %%PLAIN_LEN
+align_label
 %%offset_set:
         mov     %%DATA_OFFSET, r12
 

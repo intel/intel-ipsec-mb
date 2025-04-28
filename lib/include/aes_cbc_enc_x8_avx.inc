@@ -35,6 +35,7 @@
 %include "include/os.inc"
 %include "include/mb_mgr_datastruct.inc"
 %include "include/clear_regs.inc"
+%include "include/align_avx.inc"
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; struct AES_ARGS {
@@ -171,7 +172,7 @@ endstruc
         vmovdqu         XTMP6, [IN6 + IDX]
         vmovdqu         XTMP7, [TMP + IDX]
 
-align   32
+align_loop
 
 %%_main_loop:
         ;; 0. ARK
@@ -260,7 +261,7 @@ align   32
 %endif
         jmp             %%_main_loop
 
-align 32
+align_label
 %%_exit_main_loop:
 
 %ifnidn %%MODE, CBC_XCBC_MAC

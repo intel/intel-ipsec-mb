@@ -30,6 +30,7 @@
 %use smartalign
 
 %include "include/gcm_vaes_avx2.inc"
+%include "include/align_avx.inc"
 
 mksection .text
 default rel
@@ -43,7 +44,7 @@ extern partial_block_gmac_vaes_avx2
 ;       aes_gcm_precomp_256_vaes_avx2 /
 ;       (struct gcm_key_data *key_data)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-align 32
+align_function
 MKGLOBAL(FN_NAME(precomp,_),function,)
 FN_NAME(precomp,_):
         endbranch64
@@ -91,11 +92,13 @@ FN_NAME(precomp,_):
         add     rsp, 1*16
 %endif
 
+align_label
 exit_precomp:
 
         ret
 
 %ifdef SAFE_PARAM
+align_label
 error_precomp:
         ;; Clear reg and imb_errno
         IMB_ERR_CHECK_START rax
@@ -117,7 +120,7 @@ error_precomp:
 ;        const u8 *aad,
 ;        u64      aad_len);
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-align 32
+align_function
 MKGLOBAL(FN_NAME(init,_),function,)
 FN_NAME(init,_):
         endbranch64
@@ -156,6 +159,7 @@ FN_NAME(init,_):
         or      arg4, arg4
         jz      error_init
 
+align_label
 skip_aad_check_init:
 %endif
         GCM_INIT arg1, arg2, arg3, arg4, arg5
@@ -163,6 +167,7 @@ skip_aad_check_init:
 %ifdef SAFE_DATA
         clear_scratch_xmms_avx_asm
 %endif
+align_label
 exit_init:
 
 %ifidn __OUTPUT_FORMAT__, win64
@@ -176,6 +181,7 @@ exit_init:
         ret
 
 %ifdef SAFE_PARAM
+align_label
 error_init:
         ;; Clear reg and imb_errno
         IMB_ERR_CHECK_START rax
@@ -196,6 +202,7 @@ error_init:
         ;; Check aad != NULL (aad_len != 0)
         IMB_ERR_CHECK_NULL arg4, rax, IMB_ERR_NULL_AAD
 
+align_label
 skip_aad_check_error_init:
 
         ;; Set imb_errno
@@ -213,7 +220,7 @@ skip_aad_check_error_init:
 ;        const u8  *aad,
 ;        const u64 aad_len);
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-align 32
+align_function
 MKGLOBAL(FN_NAME(init_var_iv,_),function,)
 FN_NAME(init_var_iv,_):
         endbranch64
@@ -257,6 +264,7 @@ FN_NAME(init_var_iv,_):
         cmp     arg5, 0
         jz      error_init_IV
 
+align_label
 skip_aad_check_init_IV:
 %endif
 
@@ -265,6 +273,7 @@ skip_aad_check_init_IV:
 %ifdef SAFE_DATA
         clear_scratch_xmms_avx_asm
 %endif
+align_label
 exit_init_IV:
 
 %ifidn __OUTPUT_FORMAT__, win64
@@ -279,6 +288,7 @@ exit_init_IV:
         ret
 
 %ifdef SAFE_PARAM
+align_label
 error_init_IV:
         ;; Clear reg and imb_errno
         IMB_ERR_CHECK_START rax
@@ -302,6 +312,7 @@ error_init_IV:
         ;; Check aad != NULL (aad_len != 0)
         IMB_ERR_CHECK_NULL arg5, rax, IMB_ERR_NULL_AAD
 
+align_label
 skip_aad_check_error_init_IV:
 
         ;; Set imb_errno
@@ -318,7 +329,7 @@ skip_aad_check_error_init_IV:
 ;        const u8 *in,
 ;        u64      msg_len);
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-align 32
+align_function
 MKGLOBAL(FN_NAME(enc,_update_),function,)
 FN_NAME(enc,_update_):
         endbranch64
@@ -357,12 +368,14 @@ FN_NAME(enc,_update_):
 %endif
         GCM_ENC_DEC arg1, arg2, arg3, arg4, arg5, ENC, multi_call
 
+align_label
 exit_update_enc:
         FUNC_RESTORE
 
         ret
 
 %ifdef SAFE_PARAM
+align_label
 error_update_enc:
         ;; Clear reg and imb_errno
         IMB_ERR_CHECK_START rax
@@ -386,6 +399,7 @@ error_update_enc:
         ;; Check in != NULL (msg_len != 0)
         IMB_ERR_CHECK_NULL arg4, rax, IMB_ERR_NULL_SRC
 
+align_label
 skip_in_out_check_error_update_enc:
         ;; Set imb_errno
         IMB_ERR_CHECK_END rax
@@ -401,7 +415,7 @@ skip_in_out_check_error_update_enc:
 ;        const u8 *in,
 ;        u64      msg_len);
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-align 32
+align_function
 MKGLOBAL(FN_NAME(dec,_update_),function,)
 FN_NAME(dec,_update_):
         endbranch64
@@ -441,12 +455,14 @@ FN_NAME(dec,_update_):
 
         GCM_ENC_DEC arg1, arg2, arg3, arg4, arg5, DEC, multi_call
 
+align_label
 exit_update_dec:
         FUNC_RESTORE
 
         ret
 
 %ifdef SAFE_PARAM
+align_label
 error_update_dec:
         ;; Clear reg and imb_errno
         IMB_ERR_CHECK_START rax
@@ -470,6 +486,7 @@ error_update_dec:
         ;; Check in != NULL (plaintext_len != 0)
         IMB_ERR_CHECK_NULL arg4, rax, IMB_ERR_NULL_SRC
 
+align_label
 skip_in_out_check_error_update_dec:
         ;; Set imb_errno
         IMB_ERR_CHECK_END rax
@@ -484,7 +501,7 @@ skip_in_out_check_error_update_dec:
 ;        u8       *auth_tag,
 ;        u64      auth_tag_len);
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-align 32
+align_function
 MKGLOBAL(FN_NAME(enc,_finalize_),function,)
 FN_NAME(enc,_finalize_):
         endbranch64
@@ -541,10 +558,12 @@ FN_NAME(enc,_finalize_):
         add     rsp, 7*16
 %endif
         pop r12
+align_label
 exit_enc_fin:
         ret
 
 %ifdef SAFE_PARAM
+align_label
 error_enc_fin:
         ;; Clear reg and imb_errno
         IMB_ERR_CHECK_START rax
@@ -576,7 +595,7 @@ error_enc_fin:
 ;        u8       *auth_tag,
 ;        u64      auth_tag_len);
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-align 32
+align_function
 MKGLOBAL(FN_NAME(dec,_finalize_),function,)
 FN_NAME(dec,_finalize_):
         endbranch64
@@ -635,10 +654,12 @@ FN_NAME(dec,_finalize_):
 
         pop r12
 
+align_label
 exit_dec_fin:
         ret
 
 %ifdef SAFE_PARAM
+align_label
 error_dec_fin:
         ;; Clear reg and imb_errno
         IMB_ERR_CHECK_START rax
@@ -675,7 +696,7 @@ error_dec_fin:
 ;        u8       *auth_tag,
 ;        u64      auth_tag_len);
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-align 32
+align_function
 MKGLOBAL(FN_NAME(enc,_),function,)
 FN_NAME(enc,_):
         endbranch64
@@ -727,6 +748,7 @@ FN_NAME(enc,_):
         or      arg4, arg4
         jz      error_enc
 
+align_label
 skip_in_out_check_enc:
         ;; Check if aad_len == 0
         cmp     arg8, 0
@@ -736,6 +758,7 @@ skip_in_out_check_enc:
         cmp     arg7, 0
         jz      error_enc
 
+align_label
 skip_aad_check_enc:
 %endif
         GCM_INIT arg1, arg2, arg6, arg7, arg8
@@ -744,12 +767,14 @@ skip_aad_check_enc:
 
         GCM_COMPLETE arg1, arg2, arg9, arg10, single_call
 
+align_label
 exit_enc:
         FUNC_RESTORE
 
         ret
 
 %ifdef SAFE_PARAM
+align_label
 error_enc:
         ;; Clear reg and imb_errno
         IMB_ERR_CHECK_START rax
@@ -784,6 +809,7 @@ error_enc:
         ;; Check in != NULL (msg_len != 0)
         IMB_ERR_CHECK_NULL arg4, rax, IMB_ERR_NULL_SRC
 
+align_label
 skip_in_out_check_error_enc:
         ;; Check if aad_len == 0
         cmp     arg8, 0
@@ -792,6 +818,7 @@ skip_in_out_check_error_enc:
         ;; Check aad != NULL (aad_len != 0)
         IMB_ERR_CHECK_NULL arg7, rax, IMB_ERR_NULL_AAD
 
+align_label
 skip_aad_check_error_enc:
         ;; Set imb_errno
         IMB_ERR_CHECK_END rax
@@ -811,7 +838,7 @@ skip_aad_check_error_enc:
 ;        u8       *auth_tag,
 ;        u64      auth_tag_len);
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-align 32
+align_function
 MKGLOBAL(FN_NAME(dec,_),function,)
 FN_NAME(dec,_):
         endbranch64
@@ -863,6 +890,7 @@ FN_NAME(dec,_):
         or      arg4, arg4
         jz      error_dec
 
+align_label
 skip_in_out_check_dec:
         ;; Check if aad_len == 0
         cmp     arg8, 0
@@ -872,6 +900,7 @@ skip_in_out_check_dec:
         cmp     arg7, 0
         jz      error_dec
 
+align_label
 skip_aad_check_dec:
 %endif
         GCM_INIT arg1, arg2, arg6, arg7, arg8
@@ -880,12 +909,14 @@ skip_aad_check_dec:
 
         GCM_COMPLETE arg1, arg2, arg9, arg10, single_call
 
+align_label
 exit_dec:
         FUNC_RESTORE
 
         ret
 
 %ifdef SAFE_PARAM
+align_label
 error_dec:
         ;; Clear reg and imb_errno
         IMB_ERR_CHECK_START rax
@@ -920,6 +951,7 @@ error_dec:
         ;; Check in != NULL (msg_len != 0)
         IMB_ERR_CHECK_NULL arg4, rax, IMB_ERR_NULL_SRC
 
+align_label
 skip_in_out_check_error_dec:
         ;; Check if aad_len == 0
         cmp     arg8, 0
@@ -928,6 +960,7 @@ skip_in_out_check_error_dec:
         ;; Check aad != NULL (aad_len != 0)
         IMB_ERR_CHECK_NULL arg7, rax, IMB_ERR_NULL_AAD
 
+align_label
 skip_aad_check_error_dec:
 
         ;; Set imb_errno
@@ -943,7 +976,7 @@ skip_aad_check_error_dec:
 ;       aes_gcm_enc_var_iv_256_vaes_avx2 /
 ;       (IMB_MGR *state, IMB_JOB *job)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-align 32
+align_function
 MKGLOBAL(FN_NAME(enc_var_iv,_),function,internal)
 FN_NAME(enc_var_iv,_):
         endbranch64
@@ -983,7 +1016,7 @@ FN_NAME(enc_var_iv,_):
 ;       aes_gcm_dec_var_iv_256_vaes_avx2 /
 ;       (IMB_MGR *state, IMB_JOB *job)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-align 32
+align_function
 MKGLOBAL(FN_NAME(dec_var_iv,_),function,internal)
 FN_NAME(dec_var_iv,_):
         endbranch64
@@ -1023,7 +1056,7 @@ FN_NAME(dec_var_iv,_):
 ;        const   u8 *in,
 ;        const   u64 msg_len);
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-align 32
+align_function
 MKGLOBAL(GMAC_FN_NAME(update),function,)
 GMAC_FN_NAME(update):
         endbranch64
@@ -1074,6 +1107,7 @@ GMAC_FN_NAME(update):
         sub     arg4, r11
         add     arg3, r11
 
+align_label
 .partial_block_is_zero_len:
         vmovq   xmm7, arg4 ; Save remaining length
         and     arg4, -16 ; Get multiple of 16 bytes
@@ -1090,6 +1124,7 @@ GMAC_FN_NAME(update):
 
         vmovdqu	[arg2 + AadHash], xmm0	; ctx_data.aad hash = aad_hash
 
+align_label
 .no_full_blocks:
         add     arg3, arg4 ; Point at partial block
 
@@ -1104,12 +1139,14 @@ GMAC_FN_NAME(update):
         vpxor   xmm0, xmm0, xmm1
         vmovdqu [arg2 + AadHash], xmm0
 
+align_label
 .exit_gmac_update:
 	FUNC_RESTORE
 
 	ret
 
 %ifdef SAFE_PARAM
+align_label
 .error_gmac_update:
         ;; Clear reg and imb_errno
         IMB_ERR_CHECK_START rax

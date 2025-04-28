@@ -35,6 +35,7 @@
 %include "include/mb_mgr_datastruct.inc"
 %include "include/clear_regs.inc"
 %include "include/reg_sizes.inc"
+%include "include/align_avx.inc"
 
 %define CONCAT(a,b) a %+ b
 
@@ -205,61 +206,64 @@ endstruc
 	cmp	        DWORD(%%tmp), 4
 	ja	        %%_gt4
 	je	        %%_eq4
+align_label
 %%_lt4:
 	cmp	        DWORD(%%tmp), 2
 	ja	        %%_eq3
 	je	        %%_eq2
+align_label
 %%_eq1:
 	DO_AES_DEC      %%p_in, %%p_out, %%p_keys, 1, %%num_rounds, %%length, %%step
 	jz	        %%_do_return
 	jmp	        %%_main_loop
 
-align 32
+align_label
 %%_eq2:
 	DO_AES_DEC      %%p_in, %%p_out, %%p_keys, 2, %%num_rounds, %%length, %%step
 	jz	        %%_do_return
 	jmp	        %%_main_loop
 
-align 32
+align_label
 %%_eq3:
 	DO_AES_DEC      %%p_in, %%p_out, %%p_keys, 3, %%num_rounds, %%length, %%step
 	jz	        %%_do_return
 	jmp	        %%_main_loop
 
-align 32
+align_label
 %%_eq4:
 	DO_AES_DEC      %%p_in, %%p_out, %%p_keys, 4, %%num_rounds, %%length, %%step
 	jz	        %%_do_return
 	jmp	        %%_main_loop
 
-align 32
+align_label
 %%_gt4:
 	cmp	        DWORD(%%tmp), 6
 	ja	        %%_eq7
 	je	        %%_eq6
+align_label
 %%_eq5:
 	DO_AES_DEC      %%p_in, %%p_out, %%p_keys, 5, %%num_rounds, %%length, %%step
 	jz	        %%_do_return
 	jmp	        %%_main_loop
 
-align 32
+align_label
 %%_eq6:
 	DO_AES_DEC      %%p_in, %%p_out, %%p_keys, 6, %%num_rounds, %%length, %%step
 	jz	        %%_do_return
 	jmp	        %%_main_loop
 
-align 32
+align_label
 %%_eq7:
 	DO_AES_DEC      %%p_in, %%p_out, %%p_keys, 7, %%num_rounds, %%length, %%step
 	jz	        %%_do_return
 
-align 32
+align_loop
 %%_main_loop:
         ;; %%length is a multiple of 8 blocks
         DO_AES_DEC      %%p_in, %%p_out, %%p_keys, 8, %%num_rounds, %%length, %%step
         jnz             %%_main_loop
 
-align 32
+align_label
 %%_do_return:
         vmovdqa         xdata0, [rsp + _IV]
         vmovdqa         [%%p_next_IV], xdata0

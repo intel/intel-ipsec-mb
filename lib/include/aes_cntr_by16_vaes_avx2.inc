@@ -38,6 +38,7 @@
 %include "include/reg_sizes.inc"
 %include "include/aes_common.inc"
 %include "include/clear_regs.inc"
+%include "include/align_avx.inc"
 
 ;; YMM registers are clobbered and then scratch ones get cleared.
 ;; Windows YMM saving/restoring must be done at a higher level.
@@ -273,7 +274,7 @@ mksection .text
 	vpaddd	        ycounter, ycounter, [rel vavx2_ctr_ddq_add_be_16_16]
 	jmp	        %%_by16_end
 
-align 32
+align_label
 %%_by16_overflow:
 	vpshufb	        ycounter, ycounter, ybyteswap
 	vpaddd	        ydata0, ycounter, [rel vavx2_ctr_ddq_add_1_0]
@@ -295,7 +296,7 @@ align 32
 	vpshufb	        ydata7, ydata7, ybyteswap
 	vpshufb	        ycounter, ycounter, ybyteswap
 
-align 32
+align_label
 %%_by16_end:
 	add	        tmp, 16
 	and	        tmp, 255
@@ -475,9 +476,11 @@ align 32
         vpinsrd         xcounter, DWORD(tmp), 3
 	jmp	        %%_bswap_xcounter
 
+align_label
 %%iv_is_16_bytes:
 	vmovdqu         xcounter, [p_IV]
 
+align_label
 %%_bswap_xcounter:
 	vpshufb	        xcounter, xbyteswap
 
@@ -527,7 +530,7 @@ align 32
 %assign L (L + 1)
 %endrep
 
-align 32
+align_label
 %%chk:
 	and	        num_bytes, ~(15 * 16)
 	jz	        %%do_return2
@@ -540,7 +543,7 @@ align 32
 	and	        DWORD(tmp), 255
 	vinserti128     ycounter, xcounter, 1
 	vpshufb	        ycounter, ycounter, ybyteswap
-align 32
+align_loop
 %%main_loop2:
 	; num_bytes is a multiple of 16 blocks + partial bytes
 	do_aes	        16, %%NROUNDS
@@ -555,10 +558,12 @@ align 32
 	;; get counter block back to LE
 	vpshufb		xcounter, xcounter, xbyteswap
 
+align_label
 %%last:
 	; load partial block into XMM register
 	simd_load_avx_15_1 xpart, p_in, num_bytes
 
+align_label
 %%final_ctr_enc:
 	; Encryption of a single partial block
         vpshufb	        xdata0, xcounter, xbyteswap
@@ -574,10 +579,12 @@ align 32
 	; xor keystream with the message (scratch)
         vpxor           xdata0, xdata0, xpart
 
+align_label
 %%store_output:
         ; copy result into the output buffer
         simd_store_avx_15 p_out, xdata0, num_bytes, tmp, rax
 
+align_label
 %%do_return2:
 
 %ifdef SAFE_DATA
