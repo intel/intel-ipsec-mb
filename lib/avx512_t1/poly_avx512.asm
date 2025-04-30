@@ -30,6 +30,7 @@
 %include "include/memcpy.inc"
 %include "include/imb_job.inc"
 %include "include/clear_regs.inc"
+%include "include/align_avx512.inc"
 
 [bits 64]
 default rel
@@ -861,6 +862,7 @@ mksection .text
         mov     %%T0, %%LEN
         and     %%T0, 0xffffffffffffff80 ; multiple of 128 bytes
 
+align_loop
 %%_poly1305_blocks_loop:
         cmp     %%T0, POLY1305_BLOCK_SIZE*8
         jbe     %%_poly1305_blocks_loop_end
@@ -880,6 +882,7 @@ mksection .text
 
         jmp     %%_poly1305_blocks_loop
 
+align_label
 %%_poly1305_blocks_loop_end:
 
         ;; Need to multiply by r^8,r^7... r
@@ -1011,9 +1014,11 @@ mksection .text
         vporq   zmm5, [%%T1 + %%T0]
         jmp     %%_end_pad
 
+align_label
 %%_pad_second_64b:
         vporq   zmm6, [%%T1 + %%T0]
 
+align_label
 %%_end_pad:
 %endif
         mov     %%T0, %%LEN
@@ -1086,6 +1091,7 @@ APPEND(%%_shuffle_blocks_, i):
 %assign i (i + 1)
 %endrep
 
+align_label
 %%_end_shuffle:
 
         ; zmm5-zmm9 contain the 8 blocks of message plus the previous accumulator
@@ -1134,6 +1140,7 @@ APPEND(%%_shuffle_blocks_, i):
         vpaddq  xmm3, xmm13
         vpaddq  xmm4, xmm14
 
+align_label
 %%_simd_to_gp:
         ; Carry propagation
         vpsrlq  xmm6, xmm0, 26
@@ -1184,6 +1191,7 @@ APPEND(%%_shuffle_blocks_, i):
 %endif
 
         vzeroupper
+align_loop
 %%_final_loop:
         cmp     %%LEN, POLY1305_BLOCK_SIZE
         jb      %%_poly1305_blocks_partial
@@ -1205,6 +1213,7 @@ APPEND(%%_shuffle_blocks_, i):
 
         jmp     %%_final_loop
 
+align_label
 %%_poly1305_blocks_partial:
 
         or      %%LEN, %%LEN
@@ -1238,6 +1247,7 @@ APPEND(%%_shuffle_blocks_, i):
         POLY1305_MUL_REDUCE %%A0, %%A1, %%A2, %%R0, %%R1, \
                             %%T0, %%T1, %%T2, %%T3, %%GP_RAX, %%GP_RDX
 
+align_label
 %%_poly1305_blocks_exit:
 %endmacro
 
@@ -1352,7 +1362,7 @@ APPEND(%%_shuffle_blocks_, i):
 ;; arg2 - Message length
 ;; arg3 - Input/output hash
 ;; arg4 - Poly1305 key
-align 32
+align_function
 MKGLOBAL(poly1305_aead_update_avx512,function,internal)
 poly1305_aead_update_avx512:
 
@@ -1412,6 +1422,7 @@ poly1305_aead_update_avx512:
         mov     [_arg3 + 2 * 8], _a2
 
         FUNC_EXIT
+align_label
 .poly1305_update_exit:
         ret
 
@@ -1422,7 +1433,7 @@ poly1305_aead_update_avx512:
 ;; arg1 - Input hash
 ;; arg2 - Poly1305 key
 ;; arg3 - Output tag
-align 32
+align_function
 MKGLOBAL(poly1305_aead_complete_avx512,function,internal)
 poly1305_aead_complete_avx512:
 
@@ -1457,6 +1468,7 @@ poly1305_aead_complete_avx512:
 %endif
 
         FUNC_EXIT
+align_label
 .poly1305_complete_exit:
         ret
 
@@ -1464,7 +1476,7 @@ poly1305_aead_complete_avx512:
 ;; =============================================================================
 ;; void poly1305_mac_plain_avx512(IMB_JOB *job)
 ;; arg1 - job structure
-align 32
+align_function
 MKGLOBAL(poly1305_mac_plain_avx512,function,internal)
 poly1305_mac_plain_avx512:
         FUNC_ENTRY
@@ -1497,6 +1509,7 @@ poly1305_mac_plain_avx512:
         mov     rdx, [job + _auth_tag_output]
         POLY1305_FINALIZE rax, rdx, _a0, _a1, _a2, gp6, gp7, gp8
 
+align_label
 .poly1305_mac_exit:
         FUNC_EXIT
         ret

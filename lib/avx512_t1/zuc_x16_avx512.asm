@@ -32,6 +32,7 @@
 %include "include/const.inc"
 %include "include/mb_mgr_datastruct.inc"
 %include "include/cet.inc"
+%include "include/align_avx512.inc"
 %define APPEND(a,b) a %+ b
 %define APPEND3(a,b,c) a %+ b %+ c
 
@@ -1378,7 +1379,7 @@ align 64
     ; Shift LFSR 32-times, update state variables
         xor     %%TMP, %%TMP
 
-align 32
+align_loop
 %%start_loop_init:
         BITS_REORG16 %%STATE, %%TMP, %%TMP2, %%INIT_LANE_KMASK, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, %%ZTMP6, \
                      %%ZTMP7, %%ZTMP8, %%ZTMP9, %%BLEND_KMASK, %%X0, %%X1, %%X2
@@ -1392,6 +1393,7 @@ align 32
         cmp     %%TMP, 32
         jne     %%start_loop_init
 
+align_label
 %%exit_loop_init:
 
         ; And once more, initial round from keygen phase = 33 times
@@ -1485,6 +1487,7 @@ align 32
 ;;                                      const uint64_t lane_mask)
 ;;
 MKGLOBAL(ZUC128_INIT,function,internal)
+align_function
 ZUC128_INIT:
 %define pKe             arg1
 %define pIv             arg2
@@ -1509,6 +1512,7 @@ ZUC128_INIT:
 ;;                                         void *tags)
 ;;
 MKGLOBAL(ZUC256_INIT,function,internal)
+align_function
 ZUC256_INIT:
 %define pKe             arg1
 %define pIv             arg2
@@ -1526,6 +1530,7 @@ ZUC256_INIT:
         je      init_for_auth_tag_8B
         jb      init_for_auth_tag_4B
 
+align_label
 init_for_auth_tag_16B:
         FUNC_SAVE
 
@@ -1535,6 +1540,7 @@ init_for_auth_tag_16B:
 
         ret
 
+align_label
 init_for_cipher:
         FUNC_SAVE
 
@@ -1544,6 +1550,7 @@ init_for_cipher:
 
         ret
 
+align_label
 init_for_auth_tag_4B:
         FUNC_SAVE
 
@@ -1553,6 +1560,7 @@ init_for_auth_tag_4B:
 
         ret
 
+align_label
 init_for_auth_tag_8B:
         FUNC_SAVE
 
@@ -1665,7 +1673,7 @@ init_for_auth_tag_8B:
         ; Generate first bytes of KS for all lanes
 
         xor     r15, r15
-align 32
+align_loop
 %%start_loop_kstr:
         inc     r15
         BITS_REORG16 pState, r15, r14, %%ALL_KMASK, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, %%ZTMP6, \
@@ -1690,7 +1698,7 @@ align 32
 %endif
 
        ; Generate rest of the KS bytes (last 8 bytes) for selected lanes
-align 32
+align_loop
 %%start_loop_kstr_skip_rounds:
         cmp     r15, %%NUM_ROUNDS
         je      %%exit_loop_kstr_skip_rounds
@@ -1711,6 +1719,7 @@ align 32
 
         jmp     %%start_loop_kstr_skip_rounds
 
+align_label
 %%exit_loop_kstr_skip_rounds:
         vmovdqa32   [pState + OFS_R1]{%%FULL_LANE_KMASK}, %%R1
         vmovdqa32   [pState + OFS_R2]{%%FULL_LANE_KMASK}, %%R2
@@ -2147,6 +2156,7 @@ align 32
         ;;
         ;; Generate keystream and digest 64 bytes on each iteration
         ;;
+align_loop
 %%_loop:
         ;; Generate 64B of keystream in 16 (4x4) rounds
         ;; N goes from 1 to 16, within two nested reps of 4 iterations
@@ -2346,6 +2356,7 @@ align 32
 ;;                                       const u32 key_off)
 ;;
 MKGLOBAL(ZUC_KEYGEN64B_16,function,internal)
+align_function
 ZUC_KEYGEN64B_16:
         endbranch64
 
@@ -2365,6 +2376,7 @@ ZUC_KEYGEN64B_16:
 ;;                               const uint64_t numRounds,
 ;;                               const uint64_t tag_size);
 MKGLOBAL(ZUC_EIA3_N64B,function,internal)
+align_function
 ZUC_EIA3_N64B:
 %define STATE         arg1
 %define KS            arg2
@@ -2392,6 +2404,7 @@ ZUC_EIA3_N64B:
         ja      Eia3_N64B_tag_16B
 
         ; Fall-through for 4 bytes
+align_label
 Eia3_N64B_tag_4B:
         FUNC_SAVE
 
@@ -2401,6 +2414,7 @@ Eia3_N64B_tag_4B:
 
         ret
 
+align_label
 Eia3_N64B_tag_8B:
         FUNC_SAVE
 
@@ -2410,6 +2424,7 @@ Eia3_N64B_tag_8B:
 
         ret
 
+align_label
 Eia3_N64B_tag_16B:
         FUNC_SAVE
 
@@ -2425,6 +2440,7 @@ Eia3_N64B_tag_16B:
 ;;                                             const u16 lane_mask)
 ;;
 MKGLOBAL(ZUC_KEYGEN64B_SKIP16_16,function,internal)
+align_function
 ZUC_KEYGEN64B_SKIP16_16:
         endbranch64
 
@@ -2442,6 +2458,7 @@ ZUC_KEYGEN64B_SKIP16_16:
 ;;                                             const u16 lane_mask)
 ;;
 MKGLOBAL(ZUC_KEYGEN64B_SKIP8_16,function,internal)
+align_function
 ZUC_KEYGEN64B_SKIP8_16:
         endbranch64
 
@@ -2458,6 +2475,7 @@ ZUC_KEYGEN64B_SKIP8_16:
 ;;                                             const u16 lane_mask)
 ;;
 MKGLOBAL(ZUC_KEYGEN64B_SKIP4_16,function,internal)
+align_function
 ZUC_KEYGEN64B_SKIP4_16:
         endbranch64
 
@@ -2474,6 +2492,7 @@ ZUC_KEYGEN64B_SKIP4_16:
 ;;                                      const u32 key_off)
 ;;
 MKGLOBAL(ZUC_KEYGEN8B_16,function,internal)
+align_function
 ZUC_KEYGEN8B_16:
         endbranch64
 
@@ -2508,12 +2527,14 @@ ZUC_KEYGEN8B_16:
         ja      %%_num_rounds_is_15
         jb      %%_num_rounds_is_13
 
+align_label
 %%_rounds_is_9_11:
         cmp     %%NUM_ROUNDS, 10
         je      %%_num_rounds_is_10
         ja      %%_num_rounds_is_11
         jb      %%_num_rounds_is_9
 
+align_label
 %%_rounds_is_1_7:
         cmp     %%NUM_ROUNDS, 4
         je      %%_num_rounds_is_4
@@ -2525,6 +2546,7 @@ ZUC_KEYGEN8B_16:
         ja      %%_num_rounds_is_7
         jb      %%_num_rounds_is_5
 
+align_label
 %%_rounds_is_1_3:
         cmp     %%NUM_ROUNDS, 2
         je      %%_num_rounds_is_2
@@ -2544,6 +2566,7 @@ APPEND(%%_num_rounds_is_,%%I):
 %assign %%I (%%I + 1)
 %endrep
 
+align_label
 %%_done:
 %endmacro
 
@@ -2553,6 +2576,7 @@ APPEND(%%_num_rounds_is_,%%I):
 ;;                                    const u32 numRounds)
 ;;
 MKGLOBAL(ZUC_KEYGEN_16,function,internal)
+align_function
 ZUC_KEYGEN_16:
         endbranch64
 
@@ -2571,6 +2595,7 @@ ZUC_KEYGEN_16:
 ;;                                          u32 numRounds)
 ;;
 MKGLOBAL(ZUC_KEYGEN_SKIP16_16,function,internal)
+align_function
 ZUC_KEYGEN_SKIP16_16:
         endbranch64
 
@@ -2590,6 +2615,7 @@ ZUC_KEYGEN_SKIP16_16:
 ;;                                          u32 numRounds)
 ;;
 MKGLOBAL(ZUC_KEYGEN_SKIP8_16,function,internal)
+align_function
 ZUC_KEYGEN_SKIP8_16:
         endbranch64
 
@@ -2610,6 +2636,7 @@ ZUC_KEYGEN_SKIP8_16:
 ;;                                          u32 numRounds)
 ;;
 MKGLOBAL(ZUC_KEYGEN_SKIP4_16,function,internal)
+align_function
 ZUC_KEYGEN_SKIP4_16:
         endbranch64
 
@@ -2657,7 +2684,7 @@ ZUC_KEYGEN_SKIP4_16:
         ; Generate N*4B of keystream in N rounds
         xor     %%TMP, %%TMP
 
-align 32
+align_loop
 %%start_loop_cipher:
         inc     %%TMP
         BITS_REORG16 %%STATE, %%TMP, %%TMP2, %%LANE_MASK, zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, \
@@ -2680,6 +2707,7 @@ align 32
         jne     %%start_loop_cipher
 
 
+align_label
 %%exit_loop_cipher:
         vmovdqa32   [%%STATE + OFS_R1]{%%LANE_MASK}, %%R1
         vmovdqa32   [%%STATE + OFS_R2]{%%LANE_MASK}, %%R2
@@ -2756,6 +2784,7 @@ align 32
 ;;                              u64 *pOut[16], u16 lengths[16],
 ;;                              u64 min_length);
 MKGLOBAL(CIPHER_16,function,internal)
+align_function
 CIPHER_16:
 
 %define pState     arg1
@@ -2808,6 +2837,7 @@ CIPHER_16:
         xor     buf_idx, buf_idx
 
         ;; Perform rounds of 64 bytes, where LFSR reordering is not needed
+align_loop
 loop:
         cmp     min_length, 64
         jl      exit_loop
@@ -2820,6 +2850,7 @@ loop:
         add     buf_idx, 64
         jmp     loop
 
+align_label
 exit_loop:
 
         mov     r15, min_length
@@ -2849,6 +2880,7 @@ exit_loop:
         cmp     r15, 13
         je      _num_final_rounds_is_13
 
+align_label
 _final_rounds_is_9_11:
         cmp     r15, 11
         je      _num_final_rounds_is_11
@@ -2857,6 +2889,7 @@ _final_rounds_is_9_11:
         cmp     r15, 9
         je      _num_final_rounds_is_9
 
+align_label
 _final_rounds_is_1_7:
         cmp     r15, 4
         je      _num_final_rounds_is_4
@@ -2870,6 +2903,7 @@ _final_rounds_is_1_7:
         cmp     r15, 5
         je      _num_final_rounds_is_5
 
+align_label
 _final_rounds_is_1_3:
         cmp     r15, 3
         je      _num_final_rounds_is_3
@@ -2889,6 +2923,7 @@ APPEND(_num_final_rounds_is_,I):
 %assign I (I + 1)
 %endrep
 
+align_label
 _no_final_rounds:
         ;; update in/out pointers
         add             buf_idx, 3
@@ -3305,7 +3340,7 @@ _no_final_rounds:
 ;;  @param [in] LEN: Array of lengths for all 16 buffers
 ;;  @param [in] TAG_SZ: Tag size (4, 8 or 16 bytes)
 ;;
-align 64
+align_function
 MKGLOBAL(ZUC_ROUND64B_16,function,internal)
 ZUC_ROUND64B_16:
 %define T         arg1
@@ -3321,6 +3356,7 @@ ZUC_ROUND64B_16:
         jb      round_4B
 
         ;; Fall-through for 16-byte tag
+align_label
 round_16B:
 
         FUNC_SAVE
@@ -3335,6 +3371,7 @@ round_16B:
 
         ret
 
+align_label
 round_8B:
 
         FUNC_SAVE
@@ -3348,6 +3385,7 @@ round_8B:
         FUNC_RESTORE
 
         ret
+align_label
 round_4B:
 
         FUNC_SAVE
@@ -3382,11 +3420,13 @@ round_4B:
         jmp     %%_ks_qword_read
 
         ;; The 8 bytes of %%KS are separated
+align_label
 %%_read_2dwords:
         mov     DWORD(%%TMP1), [%%KS_ADDR + %%IN_OFFSET_OUT_KS]
         mov     DWORD(%%IN_OFFSET_OUT_KS), [%%KS_ADDR + %%IN_OFFSET_OUT_KS + (4+48)]
         shl     %%IN_OFFSET_OUT_KS, 32
         or      %%IN_OFFSET_OUT_KS, %%TMP1
+align_label
 %%_ks_qword_read:
         ; Rotate left by MIN_LEN % 32
         mov     %%TMP1, rcx
@@ -3421,12 +3461,14 @@ round_4B:
         je      %%_read_4B_8B
 
         ;; All 12 bytes of KS are contiguous
+align_label
 %%_read_12B:
         mov     %%TMP1, [%%KS_ADDR + %%IN_OFFSET_OUT_KS]
         mov     %%IN_OFFSET_OUT_KS, [%%KS_ADDR + %%IN_OFFSET_OUT_KS + 4]
         jmp     %%_ks_qwords_read
 
         ;; The first 8 bytes of KS are contiguous, the other 4 are separated
+align_label
 %%_read_8B_4B:
         mov     %%TMP1, [%%KS_ADDR + %%IN_OFFSET_OUT_KS]
         ; Read last 4 bytes of first segment and first 4 bytes of second segment
@@ -3437,12 +3479,14 @@ round_4B:
 
         jmp     %%_ks_qwords_read
         ;; The first 8 bytes of KS are separated, the other 8 are contiguous
+align_label
 %%_read_4B_8B:
         mov     DWORD(%%TMP1), [%%KS_ADDR + %%IN_OFFSET_OUT_KS]
         mov     DWORD(%%TMP2), [%%KS_ADDR + %%IN_OFFSET_OUT_KS + (4+48)]
         shl     %%TMP2, 32
         or      %%TMP1, %%TMP2
         mov     %%IN_OFFSET_OUT_KS, [%%KS_ADDR + %%IN_OFFSET_OUT_KS + (4+48)]
+align_label
 %%_ks_qwords_read:
         ; Rotate left by LEN_BUF % 32
         mov     %%TMP2, rcx
@@ -3678,6 +3722,7 @@ APPEND3(%%Eia3RoundsAVX_end,I,J):
         ; These last steps should be done only for the buffers that
         ; have no more data to authenticate
         xor     %%IDX, %%IDX
+align_loop
 %%start_loop:
         ; Update data pointer
         movzx   DWORD(%%TMP1), word [rsp + %%IDX*2]
@@ -3798,6 +3843,7 @@ APPEND3(%%Eia3RoundsAVX_end,I,J):
         shr     %%IDX, 4
 %endif
 
+align_label
 %%skip_comput:
         inc     %%IDX
         cmp     %%IDX, 16
@@ -3836,6 +3882,7 @@ APPEND3(%%Eia3RoundsAVX_end,I,J):
         ja      %%_copy_4bytes_12bytes
 
         ; Fall-through if 16 bytes to copy are 12 contiguous bytes and 4 separated bytes
+align_label
 %%_copy_12bytes_4bytes:
 %assign %%i 0
 %rep 4
@@ -3853,6 +3900,7 @@ APPEND3(%%Eia3RoundsAVX_end,I,J):
 %endrep
         jmp     %%_ks_copied
 
+align_label
 %%_copy_8bytes_8bytes:
 %assign %%i 0
 %rep 4
@@ -3867,6 +3915,7 @@ APPEND3(%%Eia3RoundsAVX_end,I,J):
 %assign %%i (%%i + 1)
 %endrep
         jmp     %%_ks_copied
+align_label
 %%_copy_4bytes_12bytes:
 %assign %%i 0
 %rep 4
@@ -3883,6 +3932,7 @@ APPEND3(%%Eia3RoundsAVX_end,I,J):
 %assign %%i (%%i + 1)
 %endrep
         jmp     %%_ks_copied
+align_label
 %%_copy_16bytes:
 %assign %%i 0
 %rep 4
@@ -3913,6 +3963,7 @@ APPEND3(%%Eia3RoundsAVX_end,I,J):
         jmp     %%_ks_copied
 
         ;; The 8 bytes of %%KS are separated
+align_label
 %%_copy_2dwords:
 %assign %%i 0
 %rep 4
@@ -3939,6 +3990,7 @@ APPEND3(%%Eia3RoundsAVX_end,I,J):
 %assign %%i (%%i + 1)
 %endrep
 %endif ; %%KS_WORDS_TO_COPY
+align_label
 %%_ks_copied:
         vzeroupper
 %endmacro ; REMAINDER_16
@@ -3953,7 +4005,7 @@ APPEND3(%%Eia3RoundsAVX_end,I,J):
 ;;  @param [in] DATA : Array of pointers to data for all 16 buffers
 ;;  @param [in] N_BITS : Number of common data bits to process
 ;;
-align 64
+align_function
 MKGLOBAL(ZUC128_REMAINDER_16,function,internal)
 ZUC128_REMAINDER_16:
 
@@ -3987,7 +4039,7 @@ ZUC128_REMAINDER_16:
 ;;  @param [in] N_BITS : Number data bits to process
 ;;  @param [in] TAG_SIZE : Tag size (4, 8 or 16 bytes)
 ;;
-align 64
+align_function
 MKGLOBAL(ZUC256_REMAINDER_16,function,internal)
 ZUC256_REMAINDER_16:
 
@@ -4009,6 +4061,7 @@ ZUC256_REMAINDER_16:
         jb      remainder_4B
 
         ; Fall-through for 16-byte tag
+align_label
 remainder_16B:
         FUNC_SAVE
 
@@ -4017,6 +4070,7 @@ remainder_16B:
         FUNC_RESTORE
 
         ret
+align_label
 remainder_8B:
         FUNC_SAVE
 
@@ -4025,6 +4079,7 @@ remainder_8B:
         FUNC_RESTORE
 
         ret
+align_label
 remainder_4B:
         FUNC_SAVE
 
@@ -4047,7 +4102,7 @@ remainder_4B:
 ;;  @param [in] DATA (data pointer)
 ;;  @param [in] N_BITS (number data bits to process)
 ;;
-align 64
+align_function
 MKGLOBAL(asm_Eia3RemainderAVX512,function,internal)
 asm_Eia3RemainderAVX512:
 %ifdef LINUX
@@ -4127,6 +4182,7 @@ asm_Eia3RemainderAVX512:
         sub     N_BITS, 128
 %assign I (I + 1)
 %endrep
+align_label
 Eia3RoundsAVX512_dq_end:
 
         or      N_BITS, N_BITS
@@ -4191,6 +4247,7 @@ Eia3RoundsAVX512_dq_end:
         vpternlogq xmm9, xmm14, xmm13, 0x96
         vpternlogq xmm9, xmm15, xmm8, 0x96
 
+align_label
 Eia3RoundsAVX_end:
         mov     r11d, [T]
         vmovq   rax, xmm9
@@ -4241,7 +4298,7 @@ Eia3RoundsAVX_end:
 ;;  @param [in] KS (key stream pointer)
 ;;  @param [in] DATA (data pointer)
 ;;
-align 64
+align_function
 MKGLOBAL(asm_Eia3Round64BAVX512,function,internal)
 asm_Eia3Round64BAVX512:
 %ifdef LINUX

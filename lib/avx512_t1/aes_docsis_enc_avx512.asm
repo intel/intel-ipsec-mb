@@ -36,6 +36,7 @@
 %include "include/reg_sizes.inc"
 %include "include/const.inc"
 %include "include/clear_regs.inc"
+%include "include/align_avx512.inc"
 
 %define APPEND(a,b) a %+ b
 
@@ -224,6 +225,7 @@ mksection .text
         vpclmulqdq      %%XT1, %%XT1, %%XCRCKEY, 0x10
         vpxorq          %%XCRC, %%XCRC, %%XT1
 
+align_label
 %%_crc_barrett:
         ;; Barrett reduction
         vpandq          %%XCRC, [rel mask2]
@@ -303,11 +305,13 @@ mksection .text
         sub             %%bytes_to_crc, 16
         jmp             %%_crc_two_xmms
 
+align_label
 %%_exact_16_left:
         vmovdqu64       %%xtmp1, [%%p_in]
         vpxorq          %%xcrc, %%xtmp1 ; xor the initial CRC value
         jmp             %%_128_done
 
+align_label
 %%_less_than_16_left:
         lea             %%tmp, [rel byte_len_to_mask_table]
         kmovw           k1, [%%tmp + %%bytes_to_crc*2]
@@ -323,6 +327,7 @@ mksection .text
         vpshufb         %%xcrc, %%xtmp1
         jmp             %%_128_done
 
+align_label
 %%_less_than_4_left:
         ;; less than 4 bytes left
         cmp             %%bytes_to_crc, 3
@@ -330,23 +335,28 @@ mksection .text
         vpslldq         %%xcrc, 5
         jmp             %%_do_barret
 
+align_label
 %%_less_than_3_left:
         cmp             %%bytes_to_crc, 2
         jne             %%_less_than_2_left
         vpslldq         %%xcrc, 6
         jmp             %%_do_barret
 
+align_label
 %%_less_than_2_left:
         vpslldq         %%xcrc, 7
 
+align_label
 %%_do_barret:
         CRC32_REDUCE_64_TO_32 %%ethernet_fcs, %%xcrc, %%xtmp1, %%xtmp2, %%xcrckey
         jmp             %%_64_done
 
+align_label
 %%_at_least_32_bytes:
         CRC_UPDATE16 %%p_in, %%xcrc, %%xcrckey, %%xtmp1, %%xtmp2, first_crc
         sub             %%bytes_to_crc, 16
 
+align_loop
 %%_main_loop:
         cmp             %%bytes_to_crc, 16
         jb              %%_exit_loop
@@ -355,9 +365,11 @@ mksection .text
         jz              %%_128_done
         jmp             %%_main_loop
 
+align_label
 %%_exit_loop:
 
         ;; Partial bytes left - complete CRC calculation
+align_label
 %%_crc_two_xmms:
         lea             %%tmp, [rel pshufb_shf_table]
         vmovdqu64       %%xtmp2, [%%tmp + %%bytes_to_crc]
@@ -372,7 +384,7 @@ mksection .text
 
         ;; final CRC calculation
         CRC_CLMUL %%xcrc, %%xcrckey, %%xtmp3, %%xtmp1
-
+align_label
 %%_128_done:
         CRC32_REDUCE_128_TO_32 %%ethernet_fcs, %%xcrc, %%xtmp1, %%xtmp2, %%xcrckey
 %%_64_done:
@@ -481,6 +493,7 @@ mksection .text
 %endif  ; np_last
 
 %ifnidn %%LAST, no_last
+align_label
 %%_crc_lane_last_partial:
         ;; Partial block case (the last block)
         ;; - last CRC round is specific
@@ -522,6 +535,7 @@ mksection .text
 %endif  ; no_last
 
 %ifnidn %%FIRST, no_first
+align_label
 %%_crc_lane_first_round:
         ;; Case of less than 16 bytes will not happen here since
         ;; submit code takes care of it.
@@ -532,6 +546,7 @@ mksection .text
         sub             word [%%ARG + _docsis_crc_args_len + 2*%%LANEID], 16
 %endif  ; no_first
 
+align_label
 %%_crc_lane_done:
 %endmacro       ; CRC32_ROUND
 
@@ -568,6 +583,7 @@ mksection .text
         vmovdqa64       %%XCRC_VAL, %%LANEDAT
         CRC_CLMUL       %%XCRC_VAL, %%XCRC_MUL, %%XDATA, %%XCRC_TMP
         vmovdqa64       %%LANEDAT, %%XCRC_VAL
+align_label
 %%_crc_lane_done:
 
 %endif  ;; !(%%LANEID < 7)
@@ -731,7 +747,7 @@ mksection .text
         sub             %%LEN, 16
         je              %%_encrypt_the_last_block
 
-align 32
+align_loop
 %%_main_enc_loop:
         ;; if 16 bytes left (for CRC) then
         ;; go to the code variant where CRC last block case is checked
@@ -819,6 +835,7 @@ align 32
 
         jmp             %%_main_enc_loop
 
+align_label
 %%_encrypt_and_crc_the_last_block:
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;; Main loop doesn't subtract lengths to save cycles
@@ -908,6 +925,7 @@ align 32
         add             %%IDX, 16
         sub             %%LEN, 16
 
+align_label
 %%_encrypt_the_last_block:
         ;; NOTE: XDATA[0-7] preloaded with data blocks from corresponding lanes
 
@@ -983,6 +1001,7 @@ align 32
 
         add             %%IDX, 16
 
+align_label
 %%_enc_done:
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;; update IV
@@ -1140,6 +1159,7 @@ align 32
         shr             %%lane, 4
         jmp             %%_crc_complete
 
+align_label
 %%_crc_in_chunks:
         ;; CRC in chunks will follow
         mov             %%GT5, [%%JOB + _msg_len_to_cipher_in_bytes]
@@ -1161,12 +1181,14 @@ align 32
         vmovdqa64       [%%STATE + _docsis_crc_args_init + %%lane], xmm8
         shr             %%lane, 4
 
+align_label
 %%_crc_complete:
         cmp             %%unused_lanes, 0xf
         je              %%_load_lens
         xor             %%job_rax, %%job_rax    ; return NULL
         jmp             %%_return
 
+align_label
 %%_load_lens:
         ;; load lens into xmm0
         vmovdqa64       xmm0, [%%STATE + _aes_lens]
@@ -1189,6 +1211,7 @@ align 32
         xor             %%job_rax, %%job_rax    ; return NULL
         jmp             %%_return
 
+align_label
 %%_find_non_null_lane:
         ; find a lane with a non-null job
         xor             %%good_lane, %%good_lane
@@ -1236,6 +1259,7 @@ APPEND(%%_skip_,I):
 
 %endif  ;; SUBMIT / FLUSH
 
+align_label
 %%_find_min_job:
         ;; Find min length (xmm0 includes vector of 8 lengths)
         ;; vmovdqa64       xmm0, [%%STATE + _aes_lens] => not needed xmm0 already loaded with lengths
@@ -1262,6 +1286,7 @@ APPEND(%%_skip_,I):
 
         mov             %%idx, [rsp + _idx]
 
+align_label
 %%_len_is_0:
         mov             %%job_rax, [%%STATE + _aes_job_in_lane + %%idx*8]
 
@@ -1298,11 +1323,13 @@ APPEND(%%_skip_,I):
 
 ;; complete the last block
 
+align_label
 %%_crc_read_reduce:
         shl             %%idx, 1
         vmovdqa64       xmm8, [%%STATE + _docsis_crc_args_init + %%idx*8]
         shr             %%idx, 1
 
+align_label
 %%_crc_reduce:
         ;; GT3 - offset in bytes to put the CRC32 value into
         ;; GT4 - src buffer pointer
@@ -1315,6 +1342,7 @@ APPEND(%%_skip_,I):
         mov             [%%STATE + _docsis_crc_args_init + %%idx*8], DWORD(%%GT7)
         shr             %%idx, 1
 
+align_label
 %%_crc_is_complete:
         mov             %%GT3, [%%job_rax + _msg_len_to_cipher_in_bytes]
         and             %%GT3, 0xf
@@ -1340,6 +1368,7 @@ APPEND(%%_skip_,I):
         vpxorq          xmm1, xmm1, xmm3
         vmovdqu8        [%%GT5]{k1}, xmm1
 
+align_label
 %%_no_partial_block_cipher:
         ;;  - copy CRC value into auth tag
         ;; - process completed job "idx"
@@ -1378,6 +1407,7 @@ APPEND(%%_skip_clear_,I):
 %endif  ;; SUBMIT / FLUSH
 %endif  ;; SAFE_DATA
 
+align_label
 %%_return:
 
 %endmacro
@@ -1387,7 +1417,7 @@ APPEND(%%_skip_clear_,I):
 ;; arg 1 : state
 ;; arg 2 : job
 
-align 64
+align_function
 MKGLOBAL(submit_job_aes_docsis128_enc_crc32_avx512,function,internal)
 submit_job_aes_docsis128_enc_crc32_avx512:
         FUNC_ENTRY
@@ -1408,7 +1438,7 @@ submit_job_aes_docsis128_enc_crc32_avx512:
 ;; arg 1 : state
 ;; arg 2 : job
 
-align 64
+align_function
 MKGLOBAL(submit_job_aes_docsis256_enc_crc32_avx512,function,internal)
 submit_job_aes_docsis256_enc_crc32_avx512:
         FUNC_ENTRY
@@ -1427,7 +1457,7 @@ submit_job_aes_docsis256_enc_crc32_avx512:
 ;; =====================================================================
 ;; JOB* FLUSH128(MB_MGR_AES_OOO *state)
 ;; arg 1 : state
-align 64
+align_function
 MKGLOBAL(flush_job_aes_docsis128_enc_crc32_avx512,function,internal)
 flush_job_aes_docsis128_enc_crc32_avx512:
         FUNC_ENTRY
@@ -1446,7 +1476,7 @@ flush_job_aes_docsis128_enc_crc32_avx512:
 ;; =====================================================================
 ;; JOB* FLUSH256(MB_MGR_AES_OOO *state)
 ;; arg 1 : state
-align 64
+align_function
 MKGLOBAL(flush_job_aes_docsis256_enc_crc32_avx512,function,internal)
 flush_job_aes_docsis256_enc_crc32_avx512:
         FUNC_ENTRY

@@ -45,6 +45,7 @@
 %include "include/mb_mgr_datastruct.inc"
 %include "include/reg_sizes.inc"
 %include "include/clear_regs.inc"
+%include "include/align_avx512.inc"
 
 ;; %define DO_DBGPRINT
 %include "include/dbgprint.inc"
@@ -145,6 +146,7 @@ endstruc
 ; JOB* flush_job_hmac_avx(MB_MGR_HMAC_SHA_1_OOO *state)
 ; arg 1 : rcx : state
 MKGLOBAL(flush_job_hmac_avx512,function,internal)
+align_function
 flush_job_hmac_avx512:
 
 	mov	rax, rsp
@@ -173,6 +175,7 @@ flush_job_hmac_avx512:
 	kshiftlw        k3, k2, 8
 	korw            k3, k3, k1 ; mask of NULL jobs for all lanes
 
+align_label
 find_min_len:
 	; - Update lengths of NULL lanes to 0xFFFF, to find minimum
 	vmovdqa         ymm0, [state + _lens]
@@ -200,12 +203,14 @@ find_min_len:
 	add             DWORD(idx), 8         ; but index +8
 	mov             len2, len_upper       ; min len
 
+align_loop
 copy_lane_data:
 	; copy valid lane (idx) to empty lanes
 	vpbroadcastq    zmm4, [state + _args_data_ptr + idx*8]
 	vmovdqa64       [state + _args_data_ptr + (0*PTR_SZ)]{k1}, zmm4
 	vmovdqa64       [state + _args_data_ptr + (8*PTR_SZ)]{k2}, zmm4
 
+align_label
 use_min:
 	DBGPRINTL64 "FLUSH min_length", len2
 	DBGPRINTL64 "FLUSH min_length index ", idx
@@ -227,6 +232,7 @@ use_min:
 	call	sha1_x16_avx512
 	; state and idx are intact
 
+align_label
 len_is_0:
 	; process completed job "idx"
 	imul	lane_data, idx, _HMAC_SHA1_LANE_DATA_size
@@ -237,6 +243,7 @@ len_is_0:
 	cmp	dword [lane_data + _outer_done], 0
 	jne	end_loop
 
+align_label
 proc_outer:
 	mov	dword [lane_data + _outer_done], 1
 	mov	DWORD(size_offset), [lane_data + _size_offset]
@@ -266,7 +273,7 @@ proc_outer:
 	mov	[state + _args_digest + SHA1_DIGEST_WORD_SIZE*idx + 4*SHA1_DIGEST_ROW_SIZE], DWORD(tmp)
 	jmp	find_min_len
 
-	align	16
+align_label
 proc_extra_blocks:
 	mov	DWORD(start_offset), [lane_data + _start_offset]
 	mov	[state + _lens + 2*idx], WORD(extra_blocks)
@@ -275,12 +282,13 @@ proc_extra_blocks:
 	mov	dword [lane_data + _extra_blocks], 0
 	jmp 	find_min_len
 
+align_label
 return_null:
         DBGPRINTL "FLUSH *** ---------- return null"
 	xor	job_rax, job_rax
 	jmp	return
 
-	align	16
+align_label
 end_loop:
 	mov	job_rax, [state + _job_in_lane_sha1 + idx*8]
 	or	dword [job_rax + _status], IMB_STATUS_COMPLETED_AUTH
@@ -310,6 +318,7 @@ end_loop:
 	mov	[p + 2*4], DWORD(r12)
 	jmp 	clear_ret
 
+align_label
 copy_tag:
         ;; always copy 4 bytes
         mov	DWORD(tmp2), [state + _args_digest + SHA1_DIGEST_WORD_SIZE*idx + 0*SHA1_DIGEST_ROW_SIZE]
@@ -341,6 +350,7 @@ copy_tag:
 	
 	vmovdqu8 [p + 1*4]{k1}, xmm0 ; Store bytes
 
+align_label
 clear_ret:
 
 %ifdef SAFE_DATA
@@ -381,6 +391,7 @@ APPEND(skip_clear_,I):
         vzeroupper
 %endif
 
+align_label
 return:
         DBGPRINTL "---------- exit hmac flush avx512 -----------"
         mov	rbp, [rsp + _gpr_save + 8*0]

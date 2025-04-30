@@ -44,6 +44,7 @@
 %include "include/transpose_avx512.inc"
 %include "include/reg_sizes.inc"
 %include "include/clear_regs.inc"
+%include "include/align_avx512.inc"
 ; re-use K256 from sha256_oct_avx2.asm
 extern K256
 
@@ -413,7 +414,7 @@ mksection .text
 ;; arg 2 : rdx : pointer to array of pointers to digest
 ;; arg 3 : r8  : size of input in bytes
 MKGLOBAL(sha256_x16_avx512,function,internal)
-align 64
+align_function
 sha256_x16_avx512:
 	mov	rax, rsp
         sub     rsp, STACK_SPACE
@@ -471,7 +472,7 @@ sha256_x16_avx512:
 				   inp0, inp1, inp2, inp3, inp4, inp5, \
 				   inp6, inp7, IDX
 
-	align 32
+align_loop
 lloop:
 	vbroadcasti32x4	TMP2, [rel PSHUFFLE_BYTE_FLIP_MASK]
 
@@ -545,6 +546,7 @@ lloop:
 
 	jmp	lloop
 
+align_label
 lastLoop:
 	; Process last 16 rounds
 %assign I 48
@@ -601,6 +603,7 @@ lastLoop:
 
 ; void call_sha256_x16_avx512_from_c(SHA256_ARGS *args, UINT32 size_in_blocks);
 MKGLOBAL(call_sha256_x16_avx512_from_c,function,internal)
+align_function
 call_sha256_x16_avx512_from_c:
 	FUNC_SAVE
 	call sha256_x16_avx512

@@ -37,6 +37,7 @@
 %include "include/mb_mgr_datastruct.inc"
 %include "include/reg_sizes.inc"
 %include "include/clear_regs.inc"
+%include "include/align_avx512.inc"
 
 extern sha512_x8_avx512
 
@@ -119,19 +120,18 @@ endstruc
 
 %define APPEND(a,b) a %+ b
 
+align_function
 %ifndef SHA384
 ; JOB* flush_job_hmac_sha_384_avx512(MB_MGR_HMAC_SHA_512_OOO *state)
 ; arg 1 : state
 %define SHA_X_DIGEST_SIZE 512
 MKGLOBAL(flush_job_hmac_sha_512_avx512,function,internal)
-align 64
 flush_job_hmac_sha_512_avx512:
 %else
 ; JOB* flush_job_hmac_sha_512_avx512(MB_MGR_HMAC_SHA_512_OOO *state)
 ; arg 1 : state
 %define SHA_X_DIGEST_SIZE 384
 MKGLOBAL(flush_job_hmac_sha_384_avx512,function,internal)
-align 64
 flush_job_hmac_sha_384_avx512:
 %endif
 	mov	rax, rsp
@@ -161,6 +161,7 @@ flush_job_hmac_sha_384_avx512:
 %assign I (I+1)
 %endrep
 
+align_loop
 copy_lane_data:
 	; copy good lane (idx) to empty lanes
 	vmovdqa	xmm0, [state + _lens_sha512]
@@ -193,6 +194,7 @@ APPEND(skip_,I):
 	call	sha512_x8_avx512
 	; state and idx are intact
 
+align_label
 len_is_0:
 	; process completed job "idx"
 	imul	lane_data, idx, _SHA512_LANE_DATA_size
@@ -203,6 +205,7 @@ len_is_0:
 	cmp	dword [lane_data + _outer_done_sha512], 0
 	jne	end_loop
 
+align_label
 proc_outer:
 	mov	dword [lane_data + _outer_done_sha512], 1
 	mov	DWORD(size_offset), [lane_data + _size_offset_sha512]
@@ -235,7 +238,7 @@ proc_outer:
 
 	jmp	copy_lane_data
 
-	align	32
+align_label
 proc_extra_blocks:
 	mov	DWORD(start_offset), [lane_data + _start_offset_sha512]
 	mov	[state + _lens_sha512 + 2*idx], WORD(extra_blocks)
@@ -244,11 +247,12 @@ proc_extra_blocks:
 	mov	dword [lane_data + _extra_blocks_sha512], 0
 	jmp	copy_lane_data
 
+align_label
 return_null:
 	xor	job_rax, job_rax
 	jmp	return
 
-	align	32
+align_label
 end_loop:
 	mov	job_rax, [lane_data + _job_in_lane_sha512]
 	mov	qword [lane_data + _job_in_lane_sha512], 0
@@ -288,6 +292,7 @@ end_loop:
 %endif
         jmp     clear_ret
 
+align_label
 copy_full_digest:
 	cmp 	qword [job_rax + _auth_tag_output_len_in_bytes], 64
 	je 	set_full_mask
@@ -304,9 +309,11 @@ copy_full_digest:
 %endif
 	jmp 	move_mask
 
+align_label
 set_full_mask:
 	mov 	tmp4, -1
 
+align_label
 move_mask:
 	kmovq 	k1, tmp4
 
@@ -332,6 +339,7 @@ move_mask:
 	vpshufb zmm0, zmm0, zmm3
 	vmovdqu8 [p + 0*4]{k1}, zmm0 ; Store bytes
 
+align_label
 clear_ret:
 
 %ifdef SAFE_DATA
@@ -379,6 +387,7 @@ APPEND(skip_clear_,I):
         vzeroupper
 %endif
 
+align_label
 return:
 	mov	rbx, [rsp + _gpr_save + 8*0]
 	mov	rbp, [rsp + _gpr_save + 8*1]

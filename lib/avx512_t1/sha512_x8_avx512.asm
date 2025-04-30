@@ -45,6 +45,7 @@
 %include "include/mb_mgr_datastruct.inc"
 %include "include/transpose_avx512.inc"
 %include "include/clear_regs.inc"
+%include "include/align_avx512.inc"
 %define APPEND(a,b) a %+ b
 
 %ifdef LINUX
@@ -361,7 +362,7 @@ mksection .text
 ;; arg 2 : rdx : pointer to UINT64 digest[8][num_lanes]
 ;; arg 3 : size in message block lengths (= 128 bytes)
 MKGLOBAL(sha512_x8_avx512,function,internal)
-align 64
+align_function
 sha512_x8_avx512:
         mov	rax, rsp
         sub     rsp, STACK_SPACE
@@ -393,7 +394,7 @@ sha512_x8_avx512:
 	mov	inp7, [STATE + _data_ptr_sha512 + 7*PTR_SZ]
 	jmp	lloop
 
-align 32
+align_loop
 lloop:
 	;; Load 64-byte blocks of data into ZMM registers before
 	;; performing a 8x8 64-bit transpose.
@@ -480,7 +481,7 @@ lloop:
 
         jmp	lloop
 
-align 32
+align_label
 lastLoop:
         ; Process last 16 rounds
 %assign I SHA_ROUNDS_LESS_16
@@ -536,6 +537,7 @@ lastLoop:
 
 ; void call_sha512_x8_avx512_from_c(SHA512_ARGS *args, UINT64 size_in_blocks);
 MKGLOBAL(call_sha512_x8_avx512_from_c,function,internal)
+align_function
 call_sha512_x8_avx512_from_c:
 	FUNC_SAVE
 	call sha512_x8_avx512

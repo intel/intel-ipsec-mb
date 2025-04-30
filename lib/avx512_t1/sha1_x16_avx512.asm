@@ -44,6 +44,7 @@
 %include "include/transpose_avx512.inc"
 %include "include/reg_sizes.inc"
 %include "include/clear_regs.inc"
+%include "include/align_avx512.inc"
 mksection .rodata
 default rel
 align 64
@@ -263,7 +264,7 @@ mksection .text
 ;; FRAMESZ must be an odd multiple of 8
 %define FRAMESZ	16*10 + 8
 
-align 64
+align_function
 ; void sha1_mult_x16_avx3(void **input_data, UINT128 *digest, UINT32 size)
 ; arg 1 : pointer to SHA1 args structure
 ; arg 2 : size (in blocks) ;; assumed to be >= 1
@@ -327,6 +328,7 @@ sha1_x16_avx512:
 				   W8, W9, W10, W11, W12, W13, W14, W15, \
 				   inp0, inp1, inp2, inp3, inp4, inp5, \
 				   inp6, inp7, IDX
+align_loop
 lloop:
 	vbroadcasti32x4	TMP2, [rel PSHUFFLE_BYTE_FLIP_MASK]
 
@@ -398,6 +400,7 @@ lloop:
 
 	jmp lloop
 
+align_label
 lastLoop:
 ; Need to reset argument rotation values to Round 64 values
 %xdefine TMP_ A
@@ -514,6 +517,7 @@ lastLoop:
 
 ; void call_sha1_x16_avx512_from_c(SHA1_ARGS *args, UINT32 size_in_blocks);
 MKGLOBAL(call_sha1_x16_avx512_from_c,function,internal)
+align_function
 call_sha1_x16_avx512_from_c:
 	FUNC_SAVE
 	call sha1_x16_avx512

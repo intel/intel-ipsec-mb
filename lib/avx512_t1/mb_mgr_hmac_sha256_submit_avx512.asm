@@ -49,6 +49,7 @@
 %include "include/clear_regs.inc"
 ;; %define DO_DBGPRINT
 %include "include/dbgprint.inc"
+%include "include/align_avx512.inc"
 
 %use smartalign
 
@@ -117,7 +118,7 @@ endstruc
 ; JOB* FUNC(MB_MGR_HMAC_SHA_256_OOO *state, IMB_JOB *job)
 ; arg 1 : rcx : state
 ; arg 2 : rdx : job
-	align 32
+align_function
 %ifdef SHA224
 MKGLOBAL(submit_job_hmac_sha_224_avx512,function,internal)
 submit_job_hmac_sha_224_avx512:
@@ -175,9 +176,11 @@ submit_job_hmac_sha_256_avx512:
 	cmp	len, 64
 	jb	copy_lt64
 
+align_label
 fast_copy:
 	vmovdqu32	zmm0, [p - 64 + len]
 	vmovdqu32	[lane_data + _extra_block], zmm0
+align_label
 end_fast_copy:
 
 	mov	size_offset, extra_blocks
@@ -208,6 +211,7 @@ end_fast_copy:
 	test	len, ~63
 	jnz	ge64_bytes
 
+align_label
 lt64_bytes:
         vmovdqa ymm5, [state + _lens_sha256]
 	VPINSRW_256 ymm5, xmm0, xmm1, tmp, lane, extra_blocks, scale_x16
@@ -216,11 +220,12 @@ lt64_bytes:
 	mov	[state + _args_data_ptr_sha256 + PTR_SZ*lane], tmp
 	mov	dword [lane_data + _extra_blocks], 0
 
+align_label
 ge64_bytes:
         cmp	dword [state + _num_lanes_inuse_sha256], 0x10 ; all 16 lanes used?
 	jne	return_null
 
-	align	16
+align_loop
 start_loop:
 	; Find min length
 	vmovdqa	xmm0, [state + _lens_sha256]
@@ -240,6 +245,7 @@ start_loop:
 	mov	len2, len_upper
 	mov	idx, idx_upper	; idx is in range 0..7
 	add	idx, 8		; to reflect that real index is in 8..F range
+align_label
 use_min:
 	cmp	len2, 0
 	je	len_is_0
@@ -255,6 +261,7 @@ use_min:
 	call	sha256_x16_avx512
 	; state and idx are intact
 
+align_label
 len_is_0:
 	; process completed job "idx"
 	imul	lane_data, idx, _HMAC_SHA1_LANE_DATA_size
@@ -265,6 +272,7 @@ len_is_0:
 	cmp	dword [lane_data + _outer_done], 0
 	jne	end_loop
 
+align_label
 proc_outer:
 	mov	dword [lane_data + _outer_done], 1
 	mov	DWORD(size_offset), [lane_data + _size_offset]
@@ -308,7 +316,7 @@ proc_outer:
 
 	jmp	start_loop
 
-	align	16
+align_label
 proc_extra_blocks:
 	mov	DWORD(start_offset), [lane_data + _start_offset]
 	vmovdqa	ymm5, [state + _lens_sha256]
@@ -319,7 +327,7 @@ proc_extra_blocks:
 	mov	dword [lane_data + _extra_blocks], 0
 	jmp	start_loop
 
-	align 16
+align_label
 copy_lt64:
 	;; less than one message block of data
 	;; beginning of source block
@@ -330,11 +338,12 @@ copy_lt64:
 	mov	unused_lanes, [state + _unused_lanes_sha256]
 	jmp	end_fast_copy
 
+align_label
 return_null:
 	xor	job_rax, job_rax
 	jmp	return
 
-	align	16
+align_label
 end_loop:
 	mov	job_rax, [state + _job_in_lane_sha256 + idx*8]
 	VPINSRQ_M512x2 state + _job_in_lane_sha256, 0, r12d, zmm6, zmm7, k4, idx
@@ -373,6 +382,7 @@ end_loop:
 	mov	[p + 3*4], DWORD(tmp4)
 %endif
         jmp     clear_ret
+align_label
 copy_full_digest:
 %ifndef LINUX
 	mov 	tmp2, rcx ; save rcx
@@ -405,6 +415,7 @@ copy_full_digest:
 	vpshufb ymm0, ymm0, [rel byteswap]
 	vmovdqu8 [p + 0*4]{k1}, ymm0 ; Store bytes
 
+align_label
 clear_ret:
 
 %ifdef SAFE_DATA
@@ -434,6 +445,7 @@ clear_ret:
 %endif
 %endif ;; SAFE_DATA
 
+align_label
 return:
 %ifdef SAFE_DATA
         clear_all_zmms_asm

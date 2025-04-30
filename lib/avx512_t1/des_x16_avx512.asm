@@ -28,6 +28,7 @@
 ;; DES, TDES/3DES and DES-DOCSIS API generation
 
 %include "include/des_avx512.inc"
+%include "include/align_avx512.inc"
 
 ;;; ========================================================
 ;;; External module functions needed here
@@ -290,7 +291,7 @@ mksection .text
 
 ;;; arg 1 : pointer to DES OOO structure
 ;;; arg 2 : size in bytes
-align 64
+align_function
 MKGLOBAL(des_x16_cbc_enc_avx512,function,internal)
 des_x16_cbc_enc_avx512:
         GENERIC_DES_ENC DES, arg1, arg2
@@ -298,7 +299,7 @@ des_x16_cbc_enc_avx512:
 
 ;;; arg 1 : pointer to DES OOO structure
 ;;; arg 2 : size in bytes
-align 64
+align_function
 MKGLOBAL(des_x16_cbc_dec_avx512,function,internal)
 des_x16_cbc_dec_avx512:
         GENERIC_DES_DEC DES, arg1, arg2
@@ -306,7 +307,7 @@ des_x16_cbc_dec_avx512:
 
 ;;; arg 1 : pointer to DES OOO structure
 ;;; arg 2 : size in bytes
-align 64
+align_function
 MKGLOBAL(des3_x16_cbc_enc_avx512,function,internal)
 des3_x16_cbc_enc_avx512:
         GENERIC_DES_ENC 3DES, arg1, arg2
@@ -314,7 +315,7 @@ des3_x16_cbc_enc_avx512:
 
 ;;; arg 1 : pointer to DES OOO structure
 ;;; arg 2 : size in bytes
-align 64
+align_function
 MKGLOBAL(des3_x16_cbc_dec_avx512,function,internal)
 des3_x16_cbc_dec_avx512:
         GENERIC_DES_DEC 3DES, arg1, arg2
@@ -322,7 +323,7 @@ des3_x16_cbc_dec_avx512:
 
 ;;; arg 1 : pointer to DES OOO structure
 ;;; arg 2 : size in bytes
-align 64
+align_function
 MKGLOBAL(docsis_des_x16_enc_avx512,function,internal)
 docsis_des_x16_enc_avx512:
         GENERIC_DES_ENC DOCSIS, arg1, arg2
@@ -330,7 +331,7 @@ docsis_des_x16_enc_avx512:
 
 ;;; arg 1 : pointer to DES OOO structure
 ;;; arg 2 : size in bytes
-align 64
+align_function
 MKGLOBAL(docsis_des_x16_dec_avx512,function,internal)
 docsis_des_x16_dec_avx512:
         GENERIC_DES_DEC DOCSIS, arg1, arg2

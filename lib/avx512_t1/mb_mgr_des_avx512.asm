@@ -49,6 +49,7 @@
 ;%define DO_DBGPRINT
 %include "include/dbgprint.inc"
 %include "include/const.inc"
+%include "include/align_avx512.inc"
 
 extern docsis_des_x16_enc_avx512
 extern docsis_des_x16_dec_avx512
@@ -175,6 +176,7 @@ extern des3_x16_cbc_dec_avx512
         vpextrw         DWORD(MIN_IDX), XWORD(ZTMP2), 1   ; min index
         add             DWORD(MIN_IDX), 8               ; but index +8
         mov             MIN_LEN, IA2                    ; min len
+align_label
 %%_use_min:
         cmp             MIN_LEN, 0
         je              %%_len_is_0
@@ -213,10 +215,12 @@ extern des3_x16_cbc_dec_avx512
         pop             MIN_IDX
         jmp             %%_des_submit_end
 
+align_label
 %%_des_submit_null_end:
         xor     rax, rax
         jmp     %%_des_submit_return
 
+align_label
 %%_len_is_0:
 %ifidn %%DES_DOCSIS, DOCSIS
         cmp             dword [STATE + _des_args_PLen + MIN_IDX*4], 0
@@ -231,6 +235,7 @@ extern des3_x16_cbc_dec_avx512
         pop            MIN_IDX
 %endif                          ; DOCSIS
         ;; fall through
+align_label
 %%_des_submit_end:
         ;; return a job
         ;; - decrement number of jobs in use
@@ -252,6 +257,7 @@ extern des3_x16_cbc_dec_avx512
         mov     dword [STATE + _des_args_IV + MIN_IDX*4 + (AVX512_NUM_DES_LANES*4)], 0
 %endif
         vzeroupper
+align_label
 %%_des_submit_return:
 %endmacro
 
@@ -342,6 +348,7 @@ extern des3_x16_cbc_dec_avx512
         vpextrw         DWORD(MIN_IDX), XWORD(ZTMP2), 1   ; min index
         add             DWORD(MIN_IDX), 8               ; but index +8
         mov             MIN_LEN, IA2                    ; min len
+align_label
 %%_use_min:
         vpbroadcastw    XWORD(ZTMP3), WORD(MIN_LEN)
         vpsubw          XWORD(ZTMP0), XWORD(ZTMP0), XWORD(ZTMP3)
@@ -388,9 +395,11 @@ extern des3_x16_cbc_dec_avx512
         pop             MIN_IDX
         jmp             %%_des_flush_end
 
+align_label
 %%_des_flush_null_end:
         xor     rax, rax
         jmp     %%_des_flush_return
+align_label
 %%_des_flush_end:
         ;; return a job
         ;; - decrement number of jobs in use
@@ -417,6 +426,7 @@ extern des3_x16_cbc_dec_avx512
         vmovdqa32       [STATE + _des_args_IV]{k6}, ZTMP1
         vmovdqa32       [STATE + _des_args_IV + (16*4)]{k6}, ZTMP1
 %endif
+align_label
 %%_des_flush_return:
         vzeroupper
 %endmacro
@@ -433,7 +443,7 @@ mksection .text
 
 ;;; arg 1 : pointer to DES OOO structure
 ;;; arg 2 : job
-align 64
+align_function
 MKGLOBAL(submit_job_des_cbc_enc_avx512,function,internal)
 submit_job_des_cbc_enc_avx512:
         GENERIC_DES_SUBMIT DES, ENC
@@ -441,7 +451,7 @@ submit_job_des_cbc_enc_avx512:
 
 ;;; arg 1 : pointer to DES OOO structure
 ;;; arg 2 : job
-align 64
+align_function
 MKGLOBAL(submit_job_des_cbc_dec_avx512,function,internal)
 submit_job_des_cbc_dec_avx512:
         GENERIC_DES_SUBMIT DES, DEC
@@ -449,7 +459,7 @@ submit_job_des_cbc_dec_avx512:
 
 ;;; arg 1 : pointer to DES OOO structure
 ;;; arg 2 : job
-align 64
+align_function
 MKGLOBAL(submit_job_docsis_des_enc_avx512,function,internal)
 submit_job_docsis_des_enc_avx512:
         GENERIC_DES_SUBMIT DOCSIS, ENC
@@ -457,7 +467,7 @@ submit_job_docsis_des_enc_avx512:
 
 ;;; arg 1 : pointer to DES OOO structure
 ;;; arg 2 : job
-align 64
+align_function
 MKGLOBAL(submit_job_docsis_des_dec_avx512,function,internal)
 submit_job_docsis_des_dec_avx512:
         GENERIC_DES_SUBMIT DOCSIS, DEC
@@ -465,7 +475,7 @@ submit_job_docsis_des_dec_avx512:
 
 ;;; arg 1 : pointer to DES OOO structure
 ;;; arg 2 : job
-align 64
+align_function
 MKGLOBAL(submit_job_3des_cbc_enc_avx512,function,internal)
 submit_job_3des_cbc_enc_avx512:
         GENERIC_DES_SUBMIT 3DES, ENC
@@ -473,49 +483,49 @@ submit_job_3des_cbc_enc_avx512:
 
 ;;; arg 1 : pointer to DES OOO structure
 ;;; arg 2 : job
-align 64
+align_function
 MKGLOBAL(submit_job_3des_cbc_dec_avx512,function,internal)
 submit_job_3des_cbc_dec_avx512:
         GENERIC_DES_SUBMIT 3DES, DEC
         ret
 
 ;;; arg 1 : pointer to DES OOO structure
-align 64
+align_function
 MKGLOBAL(flush_job_des_cbc_enc_avx512,function,internal)
 flush_job_des_cbc_enc_avx512:
         GENERIC_DES_FLUSH DES, ENC
         ret
 
 ;;; arg 1 : pointer to DES OOO structure
-align 64
+align_function
 MKGLOBAL(flush_job_des_cbc_dec_avx512,function,internal)
 flush_job_des_cbc_dec_avx512:
         GENERIC_DES_FLUSH DES, DEC
         ret
 
 ;;; arg 1 : pointer to DES OOO structure
-align 64
+align_function
 MKGLOBAL(flush_job_docsis_des_enc_avx512,function,internal)
 flush_job_docsis_des_enc_avx512:
         GENERIC_DES_FLUSH DOCSIS, ENC
         ret
 
 ;;; arg 1 : pointer to DES OOO structure
-align 64
+align_function
 MKGLOBAL(flush_job_docsis_des_dec_avx512,function,internal)
 flush_job_docsis_des_dec_avx512:
         GENERIC_DES_FLUSH DOCSIS, DEC
         ret
 
 ;;; arg 1 : pointer to DES OOO structure
-align 64
+align_function
 MKGLOBAL(flush_job_3des_cbc_enc_avx512,function,internal)
 flush_job_3des_cbc_enc_avx512:
         GENERIC_DES_FLUSH 3DES, ENC
         ret
 
 ;;; arg 1 : pointer to DES OOO structure
-align 64
+align_function
 MKGLOBAL(flush_job_3des_cbc_dec_avx512,function,internal)
 flush_job_3des_cbc_dec_avx512:
         GENERIC_DES_FLUSH 3DES, DEC

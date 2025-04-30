@@ -34,6 +34,7 @@
 %include "include/aes_common.inc"
 %include "include/chacha_poly_defines.inc"
 %include "include/cet.inc"
+%include "include/align_avx512.inc"
 mksection .rodata
 default rel
 
@@ -1220,6 +1221,7 @@ mksection .text
         vmovdqu8 [%%DST + %%OFF + 64*%%I]{%%KMASK}, APPEND(%%KS, %%J)
 
         jmp     %%encrypt_done
+align_label
 %%encrypt_key_calculated:
 %endif ; %%GEN_KEY == gen_poly_key
 %endif ; %%NUM_BLOCKS != 16
@@ -1243,6 +1245,7 @@ mksection .text
 %assign %%I (%%I + 1)
 %endrep
         vmovdqu8 [%%DST + %%OFF + 64*%%I]{%%KMASK}, APPEND(%%KS, %%I)
+align_label
 %%encrypt_done:
 
 %endmacro
@@ -1385,7 +1388,7 @@ mksection .text
 
 %endmacro
 
-align 32
+align_function
 MKGLOBAL(submit_job_chacha20_enc_dec_avx512,function,internal)
 submit_job_chacha20_enc_dec_avx512:
         endbranch64
@@ -1437,7 +1440,7 @@ submit_job_chacha20_enc_dec_avx512:
         cmp     len, 64*16
         jb      exit_loop
 
-align 32
+align_loop
 start_loop:
         ENCRYPT_1K zmm16, zmm17, zmm18, zmm19, zmm20, zmm21, zmm22, zmm23, \
                    zmm24, zmm25, zmm26, zmm27, zmm28, zmm29, zmm30, zmm31, \
@@ -1459,6 +1462,7 @@ start_loop:
         cmp     len, 64*16
         jae     start_loop
 
+align_label
 exit_loop:
 
         ; Check if there are partial block (less than 16*64 bytes)
@@ -1487,6 +1491,7 @@ exit_loop:
 
         jmp ks_gen_done
 
+align_label
 more_than_4_blocks_left:
         ;; up to 8 blocks left
 
@@ -1504,6 +1509,7 @@ more_than_4_blocks_left:
                         zmm8, zmm9, zmm10, zmm11, 8
 
         jmp ks_gen_done
+align_label
 more_than_8_blocks_left:
         ; Generate another 64*16 bytes of keystream and XOR only the leftover plaintext
         GENERATE_1K_KS zmm16, zmm17, zmm18, zmm19, zmm20, zmm21, zmm22, zmm23, \
@@ -1511,6 +1517,7 @@ more_than_8_blocks_left:
                        zmm0, zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, zmm7, zmm8, \
                        zmm9, zmm10, zmm11, zmm12, zmm13, zmm14, zmm15
 
+align_label
 ks_gen_done:
 
         ; Calculate number of final blocks
@@ -1536,12 +1543,14 @@ ks_gen_done:
         je      final_num_blocks_is_15
         jmp     final_num_blocks_is_16
 
+align_label
 final_num_blocks_is_9_11:
         cmp     tmp, 10
         je      final_num_blocks_is_10
         jb      final_num_blocks_is_9
         ja      final_num_blocks_is_11
 
+align_label
 final_num_blocks_is_1_7:
         ; Final blocks 1-7
         cmp     tmp, 4
@@ -1554,6 +1563,7 @@ final_num_blocks_is_1_7:
         jb      final_num_blocks_is_5
         ja      final_num_blocks_is_7
 
+align_label
 final_num_blocks_is_1_3:
         cmp     tmp, 2
         je      final_num_blocks_is_2
@@ -1576,6 +1586,7 @@ APPEND(final_num_blocks_is_, I):
 %assign I (I + 1)
 %endrep
 
+align_label
 no_partial_block:
 
 %ifdef SAFE_DATA
@@ -1588,7 +1599,7 @@ no_partial_block:
 
         ret
 
-align 32
+align_function
 MKGLOBAL(submit_job_chacha20_poly_enc_avx512,function,internal)
 submit_job_chacha20_poly_enc_avx512:
         endbranch64
@@ -1682,7 +1693,7 @@ submit_job_chacha20_poly_enc_avx512:
         cmp     len, 64*16
         jb      exit_loop_poly
 
-align 32
+align_loop
 start_loop_poly:
         ENCRYPT_1K zmm16, zmm17, zmm18, zmm19, zmm20, zmm21, zmm22, zmm23, \
                    zmm24, zmm25, zmm26, zmm27, zmm28, zmm29, zmm30, zmm31, \
@@ -1705,6 +1716,7 @@ start_loop_poly:
         cmp     len, 64*16
         jae     start_loop_poly
 
+align_label
 exit_loop_poly:
 
         ; Check if there are partial block (less than 16*64 bytes)
@@ -1729,11 +1741,13 @@ exit_loop_poly:
                                    zmm8, zmm9, off, iv, keys, k2, 4, gen_poly_key
         jmp     four_states_prepared
 
+align_label
 prepare_four_states:
 
         PREPARE_NEXT_STATES_4_TO_8 zmm0, zmm1, zmm2, zmm3, zmm7, \
                                    zmm8, zmm9, off, iv, keys, k2, 4, no_key
 
+align_label
 four_states_prepared:
         shl     off, 6 ; Restore offset
 
@@ -1745,6 +1759,7 @@ four_states_prepared:
 
         jmp ks_gen_done_poly
 
+align_label
 more_than_4_blocks_left_poly:
         ;; up to 8 blocks left
 
@@ -1760,10 +1775,12 @@ more_than_4_blocks_left_poly:
                                    zmm8, zmm9, off, iv, keys, k2, 8, gen_poly_key
         jmp     eight_states_prepared
 
+align_label
 prepare_eight_states:
 
         PREPARE_NEXT_STATES_4_TO_8 zmm0, zmm1, zmm2, zmm3, zmm7, \
                                    zmm8, zmm9, off, iv, keys, k2, 8, no_key
+align_label
 eight_states_prepared:
         shl     off, 6 ; Restore offset
 
@@ -1774,6 +1791,7 @@ eight_states_prepared:
                         zmm8, zmm9, zmm10, zmm11, 8
 
         jmp ks_gen_done_poly
+align_label
 more_than_8_blocks_left_poly:
         ; Generate another 64*16 bytes of keystream and XOR only the leftover plaintext
         GENERATE_1K_KS zmm16, zmm17, zmm18, zmm19, zmm20, zmm21, zmm22, zmm23, \
@@ -1781,6 +1799,7 @@ more_than_8_blocks_left_poly:
                        zmm0, zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, zmm7, zmm8, \
                        zmm9, zmm10, zmm11, zmm12, zmm13, zmm14, zmm15
 
+align_label
 ks_gen_done_poly:
 
         ; Reduce number of bytes used for the Poly key
@@ -1810,12 +1829,14 @@ ks_gen_done_poly:
         je      final_num_blocks_is_15_poly
         jmp     final_num_blocks_is_16_poly
 
+align_label
 final_num_blocks_is_9_11_poly:
         cmp     tmp, 10
         je      final_num_blocks_is_10_poly
         jb      final_num_blocks_is_9_poly
         ja      final_num_blocks_is_11_poly
 
+align_label
 final_num_blocks_is_1_7_poly:
         ; Final blocks 1-7
         cmp     tmp, 4
@@ -1828,6 +1849,7 @@ final_num_blocks_is_1_7_poly:
         jb      final_num_blocks_is_5_poly
         ja      final_num_blocks_is_7_poly
 
+align_label
 final_num_blocks_is_1_3_poly:
         cmp     tmp, 2
         je      final_num_blocks_is_2_poly
@@ -1850,10 +1872,12 @@ APPEND3(final_num_blocks_is_, I, _poly):
 %assign I (I + 1)
 %endrep
 
+align_label
 final_num_blocks_is_0_poly:
         ; Generate Poly key
         GEN_POLY_KEY    arg2, zmm25
 
+align_label
 no_partial_block_poly:
 
 %ifdef SAFE_DATA
@@ -1879,7 +1903,7 @@ no_partial_block_poly:
 
         ret
 
-align 32
+align_function
 MKGLOBAL(gen_keystr_poly_key_avx512,function,internal)
 gen_keystr_poly_key_avx512:
         endbranch64
@@ -1958,6 +1982,7 @@ gen_keystr_poly_key_avx512:
 
         jmp	exit_gen_keystr
 
+align_label
 less_than_512_ks:
 
         cmp     len, 64*4
@@ -1982,6 +2007,7 @@ less_than_512_ks:
 
         jmp	exit_gen_keystr
 
+align_label
 more_than_256_ks:
         xor     off, off
         PREPARE_NEXT_STATES_4_TO_8 zmm0, zmm1, zmm2, zmm3, zmm7, \
@@ -2004,6 +2030,7 @@ more_than_256_ks:
         vmovdqa64 [ks + 64*6], zmm26
         vmovdqa64 [ks + 64*7], zmm23
 
+align_label
 exit_gen_keystr:
 %ifndef LINUX
 %assign i 0
@@ -2017,7 +2044,7 @@ exit_gen_keystr:
 %endif
         ret
 
-align 32
+align_function
 MKGLOBAL(submit_job_chacha20_poly_dec_avx512,function,internal)
 submit_job_chacha20_poly_dec_avx512:
         endbranch64
@@ -2085,12 +2112,14 @@ submit_job_chacha20_poly_dec_avx512:
         cmp     tmp, 15
         je      initial_dec_num_blocks_is_15
 
+align_label
 initial_dec_num_blocks_is_9_11:
         cmp     tmp, 10
         je      initial_dec_num_blocks_is_10
         jb      initial_dec_num_blocks_is_9
         ja      initial_dec_num_blocks_is_11
 
+align_label
 initial_dec_num_blocks_is_1_7:
         ; Initial blocks 1-7
         cmp     tmp, 4
@@ -2103,6 +2132,7 @@ initial_dec_num_blocks_is_1_7:
         jb      initial_dec_num_blocks_is_5
         ja      initial_dec_num_blocks_is_7
 
+align_label
 initial_dec_num_blocks_is_1_3:
         cmp     tmp, 2
         je      initial_dec_num_blocks_is_2
@@ -2137,6 +2167,7 @@ APPEND(initial_dec_num_blocks_is_, I):
 %assign I (I + 1)
 %endrep
 
+align_label
 resume_dec:
         ; Get remaining length to decrypt
         mov     len, [job + _msg_len_to_cipher_in_bytes]
@@ -2177,7 +2208,7 @@ resume_dec:
         cmp     len, 64*16
         jb      exit_loop_dec
 
-align 32
+align_loop
 start_loop_dec:
         ENCRYPT_1K zmm16, zmm17, zmm18, zmm19, zmm20, zmm21, zmm22, zmm23, \
                    zmm24, zmm25, zmm26, zmm27, zmm28, zmm29, zmm30, zmm31, \
@@ -2199,6 +2230,7 @@ start_loop_dec:
         cmp     len, 64*16
         jae     start_loop_dec
 
+align_label
 exit_loop_dec:
 
         ; Check if there are partial block (less than 16*64 bytes)
@@ -2227,6 +2259,7 @@ exit_loop_dec:
 
         jmp ks_gen_done_dec
 
+align_label
 more_than_4_blocks_left_dec:
         ;; up to 8 blocks left
 
@@ -2244,6 +2277,7 @@ more_than_4_blocks_left_dec:
                         zmm8, zmm9, zmm10, zmm11, 8
 
         jmp ks_gen_done_dec
+align_label
 more_than_8_blocks_left_dec:
         ; Generate another 64*16 bytes of keystream and XOR only the leftover plaintext
         GENERATE_1K_KS zmm16, zmm17, zmm18, zmm19, zmm20, zmm21, zmm22, zmm23, \
@@ -2251,6 +2285,7 @@ more_than_8_blocks_left_dec:
                        zmm0, zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, zmm7, zmm8, \
                        zmm9, zmm10, zmm11, zmm12, zmm13, zmm14, zmm15
 
+align_label
 ks_gen_done_dec:
 
         ; Calculate number of final blocks
@@ -2276,12 +2311,14 @@ ks_gen_done_dec:
         je      final_dec_num_blocks_is_15
         jmp     final_dec_num_blocks_is_16
 
+align_label
 final_dec_num_blocks_is_9_11:
         cmp     tmp, 10
         je      final_dec_num_blocks_is_10
         jb      final_dec_num_blocks_is_9
         ja      final_dec_num_blocks_is_11
 
+align_label
 final_dec_num_blocks_is_1_7:
         ; Final blocks 1-7
         cmp     tmp, 4
@@ -2294,6 +2331,7 @@ final_dec_num_blocks_is_1_7:
         jb      final_dec_num_blocks_is_5
         ja      final_dec_num_blocks_is_7
 
+align_label
 final_dec_num_blocks_is_1_3:
         cmp     tmp, 2
         je      final_dec_num_blocks_is_2
@@ -2316,6 +2354,7 @@ APPEND(final_dec_num_blocks_is_, I):
 %assign I (I + 1)
 %endrep
 
+align_label
 no_partial_block_dec:
 
 %ifdef SAFE_DATA
@@ -2345,7 +2384,7 @@ no_partial_block_dec:
 %endif
         ret
 
-align 32
+align_function
 MKGLOBAL(chacha20_enc_dec_ks_avx512,function,internal)
 chacha20_enc_dec_ks_avx512:
         endbranch64
@@ -2441,6 +2480,7 @@ chacha20_enc_dec_ks_avx512:
         sub     len, tmp5
         jz      no_partial_block_ks
 
+align_label
 no_remain_ks_bytes:
 
         ; Reset remaining number of KS bytes
@@ -2479,7 +2519,7 @@ no_remain_ks_bytes:
         cmp     len, 64*16
         jb      exit_loop_ks
 
-align 32
+align_function
 start_loop_ks:
         ENCRYPT_1K zmm16, zmm17, zmm18, zmm19, zmm20, zmm21, zmm22, zmm23, \
                    zmm24, zmm25, zmm26, zmm27, zmm28, zmm29, zmm30, zmm31, \
@@ -2502,6 +2542,7 @@ start_loop_ks:
         cmp     len, 64*16
         jae     start_loop_ks
 
+align_label
 exit_loop_ks:
 
         ; Check if there are partial block (less than 16*64 bytes)
@@ -2528,6 +2569,7 @@ exit_loop_ks:
 
         jmp ks_gen_done_ks
 
+align_label
 more_than_4_blocks_left_ks:
         ;; up to 8 blocks left
 
@@ -2543,6 +2585,7 @@ more_than_4_blocks_left_ks:
                         zmm8, zmm9, zmm10, zmm11, 8
 
         jmp ks_gen_done_ks
+align_label
 more_than_8_blocks_left_ks:
         ; Generate another 64*16 bytes of keystream and XOR only the leftover plaintext
         GENERATE_1K_KS zmm16, zmm17, zmm18, zmm19, zmm20, zmm21, zmm22, zmm23, \
@@ -2550,6 +2593,7 @@ more_than_8_blocks_left_ks:
                        zmm0, zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, zmm7, zmm8, \
                        zmm9, zmm10, zmm11, zmm12, zmm13, zmm14, zmm15
 
+align_label
 ks_gen_done_ks:
 
         ; Calculate number of final blocks
@@ -2575,12 +2619,14 @@ ks_gen_done_ks:
         je      final_num_blocks_is_15_ks
         jmp     final_num_blocks_is_16_ks
 
+align_label
 final_num_blocks_is_9_11_ks:
         cmp     tmp, 10
         je      final_num_blocks_is_10_ks
         jb      final_num_blocks_is_9_ks
         ja      final_num_blocks_is_11_ks
 
+align_label
 final_num_blocks_is_1_7_ks:
         ; Final blocks 1-7
         cmp     tmp, 4
@@ -2593,6 +2639,7 @@ final_num_blocks_is_1_7_ks:
         jb      final_num_blocks_is_5_ks
         ja      final_num_blocks_is_7_ks
 
+align_label
 final_num_blocks_is_1_3_ks:
         cmp     tmp, 2
         je      final_num_blocks_is_2_ks
@@ -2623,6 +2670,7 @@ APPEND3(final_num_blocks_is_, I, _ks):
 %assign I (I + 1)
 %endrep
 
+align_label
 no_partial_block_ks:
 
         mov     [ctx + LastBlkCount], blk_cnt
@@ -2650,13 +2698,14 @@ no_partial_block_ks:
         vzeroupper
 %endif
 
+align_label
 exit_ks:
         ret
 
 ;;
 ;; quic_hp_chacha20_avx512(void *key, const uint8_t *src_ptr_array,
 ;;                         void *dst_ptr_array, const uint64_t num_buffers);
-align 32
+align_function
 MKGLOBAL(quic_hp_chacha20_avx512,function,internal)
 quic_hp_chacha20_avx512:
         endbranch64
@@ -2710,7 +2759,7 @@ quic_hp_chacha20_avx512:
         cmp     num_buffers, 16
         jb      exit_loop_quic
 
-align 32
+align_loop
 start_loop_quic:
 
         ; Load counter + nonce values from the 16 samples (src)
@@ -2769,6 +2818,7 @@ start_loop_quic:
         cmp     num_buffers, 16
         jae     start_loop_quic
 
+align_label
 exit_loop_quic:
 
         ; Check if there are no buffers left
@@ -2790,12 +2840,14 @@ exit_loop_quic:
         jb      final_num_buffers_is_13
         jmp     final_num_buffers_is_15
 
+align_label
 final_num_buffers_is_9_11:
         cmp     num_buffers, 10
         je      final_num_buffers_is_10
         jb      final_num_buffers_is_9
         ja      final_num_buffers_is_11
 
+align_label
 final_num_buffers_is_1_7:
         ; Final buffers 1-7
         cmp     num_buffers, 4
@@ -2808,6 +2860,7 @@ final_num_buffers_is_1_7:
         jb      final_num_buffers_is_5
         ja      final_num_buffers_is_7
 
+align_label
 final_num_buffers_is_1_3:
         cmp     num_buffers, 2
         je      final_num_buffers_is_2
@@ -2868,6 +2921,7 @@ APPEND(final_num_buffers_is_, BUFFERS_LEFT):
 %assign BUFFERS_LEFT (BUFFERS_LEFT + 1)
 %endrep
 
+align_label
 end_quic:
 
 %ifdef SAFE_DATA
