@@ -26,6 +26,7 @@ Fixes
   be job->dst regardless the cipher offset. (issue #162).
 - Fixed SNOW-V-AEAD ciphertext address calculation (issue #161).
 - Fixed MD5-HMAC in performance application (wrong test-algo mapping).
+- Fixed AES-GCM key structure alignment
 
 v2.0 October 2024
 ======================================================================

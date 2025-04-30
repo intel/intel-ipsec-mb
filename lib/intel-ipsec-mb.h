@@ -652,7 +652,7 @@ struct chacha20_poly1305_context_data {
  *
  * gcm_key_data hold internal key information used by gcm128, gcm192 and gcm256.
  */
-#ifdef __WIN32
+#ifdef _WIN32
 __declspec(align(64))
 #endif /* WIN32 */
 struct gcm_key_data {
@@ -714,7 +714,7 @@ struct gcm_key_data {
                 } vaes_avx2;
         } ghash_keys;
 }
-#ifdef LINUX
+#if defined(__linux__) || defined(__FreeBSD__)
 __attribute__((aligned(64)));
 #else
 ;
