@@ -41,6 +41,7 @@
 %include "include/crc32_refl.inc"
 %include "include/cet.inc"
 %include "include/clear_regs.inc"
+%include "include/align_avx512.inc"
 
 [bits 64]
 default rel
@@ -71,7 +72,7 @@ mksection .text
 ;; arg4 - pointer to CRC constants
 ;; Returns CRC value through EAX
 
-align 32
+align_function
 MKGLOBAL(crc32_refl_by16_vclmul_avx512,function,internal)
 crc32_refl_by16_vclmul_avx512:
         endbranch64
@@ -99,6 +100,7 @@ crc32_refl_by16_vclmul_avx512:
 	vbroadcasti32x4 zmm16, [arg4 + crc32_const_fold_16x128b]
 	sub		len, 256
 
+align_loop
 .fold_256_B_loop:
 	add		msg, 256
 	vmovdqu8	zmm3, [msg + 16*0]
@@ -140,6 +142,7 @@ crc32_refl_by16_vclmul_avx512:
 	add		len, 128
         jmp             .less_than_128_B
 
+align_loop
 .fold_128_B_loop:
 	add		msg, 128
 	vmovdqu8	zmm8, [msg + 16*0]
@@ -157,6 +160,7 @@ crc32_refl_by16_vclmul_avx512:
 
 	add		msg, 128
 
+align_label
 .less_than_128_B:
         ;; At this point, the buffer pointer is pointing at the last
         ;; y bytes of the buffer, where 0 <= y < 128.
@@ -175,6 +179,7 @@ crc32_refl_by16_vclmul_avx512:
         add             len, 128
 
         jmp             .fold_64B_loop
+align_label
 .fold_128_B_register:
         ;; fold the 8x128-bits into 1x128-bits with different constants
 	vmovdqu8	zmm16, [arg4 + crc32_const_fold_7x128b]
@@ -205,6 +210,7 @@ crc32_refl_by16_vclmul_avx512:
         ;; we can fold 16 bytes at a time if y>=16
         ;; continue folding 16B at a time
 
+align_loop
 .reduction_loop_16B:
 	vpclmulqdq	xmm8, xmm7, xmm10, 0x1
 	vpclmulqdq	xmm7, xmm7, xmm10, 0x10
@@ -219,6 +225,7 @@ crc32_refl_by16_vclmul_avx512:
 
         ;; Now we have 16+z bytes left to reduce, where 0<= z < 16.
         ;; First, we reduce the data in the xmm7 register
+align_label
 .final_reduction_for_128:
 	add		len, 16
 	je		.done_128
@@ -227,6 +234,7 @@ crc32_refl_by16_vclmul_avx512:
 	; since we know that there was data before the pointer, we can offset
 	; the input pointer before the actual point, to receive exactly 16 bytes.
 	; after that the registers need to be adjusted.
+align_label
 .get_last_two_xmms:
 
 	vmovdqa		xmm2, xmm7
@@ -247,6 +255,7 @@ crc32_refl_by16_vclmul_avx512:
 	vpclmulqdq	xmm7, xmm7, xmm10, 0x10
         vpternlogq      zmm7, zmm2, zmm8, 0x96
 
+align_label
 .done_128:
 	;; compute crc of a 128-bit value
 	vmovdqa		xmm10, [arg4 + crc32_const_fold_128b_to_64b]
@@ -264,6 +273,7 @@ crc32_refl_by16_vclmul_avx512:
 	vpxor		xmm7, xmm0
 
 	;; barrett reduction
+align_label
 .barrett:
 	vpand		xmm7, [rel mask2]
 	vmovdqa		xmm1, xmm7
@@ -277,6 +287,7 @@ crc32_refl_by16_vclmul_avx512:
         vpternlogq      zmm7, zmm2, zmm1, 0x96
 	vpextrd		eax, xmm7, 2
 
+align_label
 .cleanup:
 %ifdef SAFE_DATA
         clear_all_zmms_asm
@@ -286,7 +297,7 @@ crc32_refl_by16_vclmul_avx512:
 	not		eax
 	ret
 
-align 32
+align_label
 .less_than_256:
         ;; check if there is enough buffer to be able to fold 16B at a time
         cmp             len, 32
@@ -309,6 +320,7 @@ align 32
 
         vbroadcasti32x4 zmm10, [arg4 + crc32_const_fold_4x128b]
 
+align_loop
 .fold_64B_loop:
         vmovdqu8        zmm4, [msg]
         vpclmulqdq      zmm2, zmm0, zmm10, 0x10
@@ -321,6 +333,7 @@ align 32
         cmp             len, 64
         jge             .fold_64B_loop
 
+align_label
 .reduce_64B:
         ; Reduce from 64 bytes to 16 bytes
 	vmovdqu8	zmm11, [arg4 + crc32_const_fold_3x128b]
@@ -340,6 +353,7 @@ align 32
         jns             .reduction_loop_16B ; At least 16 bytes of data to digest
         jmp             .final_reduction_for_128
 
+align_label
 .less_than_64:
 	;; if there is, load the constants
 	vmovdqa	xmm10, [arg4 + crc32_const_fold_1x128b]
@@ -355,7 +369,7 @@ align 32
 	sub	len, 32
 	jmp	.reduction_loop_16B
 
-align 32
+align_label
 .less_than_32:
         ;; Move initial crc to the return value.
         ;; This is necessary for zero-length buffers.
@@ -376,7 +390,7 @@ align 32
 	vmovdqa	xmm10, [arg4 + crc32_const_fold_1x128b]
 	jmp	.get_last_two_xmms
 
-align 32
+align_label
 .less_than_16_left:
         lea     r11, [rel byte_len_to_mask_table]
         kmovw   k2, [r11 + len*2]
@@ -391,13 +405,14 @@ align 32
 	vpshufb	xmm7, xmm0
 	jmp	.done_128
 
+align_label
 .only_less_than_4:
         lea     r11, [rel pshufb_shift_table]
         vmovdqu	xmm0, [r11 + len]
         vpshufb	xmm7, xmm0
         jmp	.barrett
 
-align 32
+align_label
 .exact_16_left:
 	vmovdqu	xmm7, [msg]
 	vpxor	xmm7, xmm0      ; xor the initial crc value

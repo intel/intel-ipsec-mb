@@ -27,6 +27,7 @@
 
 %define CBCS
 %include "avx512_t2/mb_mgr_aes128_cbc_enc_flush_avx512.asm"
+%include "include/align_avx512.inc"
 
 %define AES_CBCS_ENC_X16 aes_cbcs_1_9_enc_128_vaes_avx512
 %define FLUSH_JOB_AES_CBCS_ENC flush_job_aes128_cbcs_1_9_enc_vaes_avx512
@@ -38,6 +39,7 @@ extern AES_CBCS_ENC_X16
 ; arg 1 : state
 ; arg 2 : job
 MKGLOBAL(FLUSH_JOB_AES_CBCS_ENC,function,internal)
+align_function
 FLUSH_JOB_AES_CBCS_ENC:
         mov     rax, rsp
         sub     rsp, STACK_size
@@ -167,6 +169,7 @@ FLUSH_JOB_AES_CBCS_ENC:
         call    AES_CBCS_ENC_X16
         ; state and idx are intact
 
+align_label
 len_is_0:
         ; process completed job "idx"
         mov     job_rax, [state + _aes_job_in_lane + idx*8]
@@ -196,6 +199,7 @@ len_is_0:
         CLEAR_IV_KEYS_IN_NULL_LANES tmp1, xmm0, k6
 %endif
 
+align_label
 return:
 %ifdef SAFE_DATA
 	clear_all_zmms_asm
@@ -217,6 +221,7 @@ return:
 
         ret
 
+align_label
 return_null:
         xor     job_rax, job_rax
         jmp     return

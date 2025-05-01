@@ -32,6 +32,7 @@
 %include "include/clear_regs.inc"
 %include "include/aes_common.inc"
 %include "include/mb_mgr_datastruct.inc"
+%include "include/align_avx512.inc"
 
 default rel
 
@@ -205,6 +206,7 @@ mksection .text
         vpclmulqdq      %%XT1, %%XT1, %%XCRCKEY, 0x10
         vpxorq          %%XCRC, %%XCRC, %%XT1
 
+align_label
 %%_crc_barrett:
         ;; Barrett reduction
         vpandq          %%XCRC, [rel mask2]
@@ -284,11 +286,13 @@ mksection .text
         sub             %%bytes_to_crc, 16
         jmp             %%_crc_two_xmms
 
+align_label
 %%_exact_16_left:
         vmovdqu64       %%xtmp1, [%%p_in]
         vpxorq          %%xcrc, %%xtmp1 ; xor the initial CRC value
         jmp             %%_128_done
 
+align_label
 %%_less_than_16_left:
         lea             %%tmp, [rel byte_len_to_mask_table]
         kmovw           k1, [%%tmp + %%bytes_to_crc*2]
@@ -304,6 +308,7 @@ mksection .text
         vpshufb         %%xcrc, %%xtmp1
         jmp             %%_128_done
 
+align_label
 %%_less_than_4_left:
         ;; less than 4 bytes left
         cmp             %%bytes_to_crc, 3
@@ -311,23 +316,28 @@ mksection .text
         vpslldq         %%xcrc, 5
         jmp             %%_do_barret
 
+align_label
 %%_less_than_3_left:
         cmp             %%bytes_to_crc, 2
         jne             %%_less_than_2_left
         vpslldq         %%xcrc, 6
         jmp             %%_do_barret
 
+align_label
 %%_less_than_2_left:
         vpslldq         %%xcrc, 7
 
+align_label
 %%_do_barret:
         CRC32_REDUCE_64_TO_32 %%ethernet_fcs, %%xcrc, %%xtmp1, %%xtmp2, %%xcrckey
         jmp             %%_64_done
 
+align_label
 %%_at_least_32_bytes:
         CRC_UPDATE16 %%p_in, %%xcrc, %%xcrckey, %%xtmp1, %%xtmp2, first_crc
         sub             %%bytes_to_crc, 16
 
+align_loop
 %%_main_loop:
         cmp             %%bytes_to_crc, 16
         jb              %%_exit_loop
@@ -336,9 +346,11 @@ mksection .text
         jz              %%_128_done
         jmp             %%_main_loop
 
+align_label
 %%_exit_loop:
 
         ;; Partial bytes left - complete CRC calculation
+align_label
 %%_crc_two_xmms:
         lea             %%tmp, [rel pshufb_shf_table]
         vmovdqu64       %%xtmp2, [%%tmp + %%bytes_to_crc]
@@ -354,6 +366,7 @@ mksection .text
         ;; final CRC calculation
         CRC_CLMUL %%xcrc, %%xcrckey, %%xtmp3, %%xtmp1
 
+align_label
 %%_128_done:
         CRC32_REDUCE_128_TO_32 %%ethernet_fcs, %%xcrc, %%xtmp1, %%xtmp2, %%xcrckey
 %%_64_done:
@@ -814,6 +827,7 @@ mksection .text
 
         vextracti64x2   %%XCRC0, %%ZCRC_IN_OUT3, 3
 
+align_loop
 %%_main_loop:
         cmp     %%NUM_BYTES, (16 * 16) + 16
         jb      %%_main_loop_exit
@@ -830,6 +844,7 @@ mksection .text
 
         jmp     %%_main_loop
 
+align_label
 %%_main_loop_exit:
         ;; Up to 16 (inclusive) blocks left to process
         ;; - decrypt the blocks first
@@ -852,6 +867,7 @@ mksection .text
 	jg	%%_decrypt_gt4
 	je	%%_decrypt_eq4
 
+align_label
 %%_decrypt_lt4:
         ;; 1 to 3 blocks
 	cmp	%%NUM_BLOCKS, 2
@@ -859,6 +875,7 @@ mksection .text
 	je	%%_decrypt_eq2
         jmp     %%_decrypt_eq1
 
+align_label
 %%_decrypt_gt4:
         ;; 5 to 7
 	cmp	%%NUM_BLOCKS, 6
@@ -866,6 +883,7 @@ mksection .text
 	je	%%_decrypt_eq6
         jmp     %%_decrypt_eq5
 
+align_label
 %%_decrypt_gt8:
         ;; 9 to 15
 	cmp	%%NUM_BLOCKS, 12
@@ -878,6 +896,7 @@ mksection .text
 	je	%%_decrypt_eq10
         jmp     %%_decrypt_eq9
 
+align_label
 %%_decrypt_gt12:
         ;; 13 to 15
 	cmp	%%NUM_BLOCKS, 14
@@ -887,6 +906,7 @@ mksection .text
 
 %assign number_of_blocks 1
 %rep 15
+align_label
 %%_decrypt_eq %+ number_of_blocks :
         ;; decrypt selected number of blocks
         AES_CBC_DEC_1_TO_16 %%SRC, %%DST, number_of_blocks, %%OFFSET, %%NUM_BYTES, \
@@ -916,6 +936,7 @@ mksection .text
 %assign number_of_blocks (number_of_blocks + 1)
 %endrep
 
+align_label
 %%_decrypt_eq0:
         ;; Special case. Check if there are full 16 blocks for decrypt
         ;; - it can happen here because the main loop checks for 17 blocks
@@ -933,6 +954,7 @@ mksection .text
         vextracti32x4   %%XIV, %%ZIV, 3
         vextracti64x2   %%XCRC0, %%ZTMP9, 3
 
+align_label
 %%_decrypt_done_fold_by8:
         ;; Register content at this point:
         ;; ZTMP6 - ZTMP9 => decrypted blocks (16 to 31)
@@ -949,6 +971,7 @@ mksection .text
         vpclmulqdq      %%ZCRC_IN_OUT1, %%ZCRC_IN_OUT1, %%ZTMP2, 0x10
         vpternlogq      %%ZCRC_IN_OUT1, %%ZCRC_IN_OUT3, %%ZTMP1, 0x96
 
+align_label
 %%_decrypt_done_no_fold_16_to_8:
         ;; CRC 8 blocks of already decrypted text
         test            %%NUM_BLOCKS, 8
@@ -966,6 +989,7 @@ mksection .text
         vmovdqa64       %%ZTMP6, %%ZTMP8
         vmovdqa64       %%ZTMP7, %%ZTMP9
 
+align_label
 %%_skip_crc_by8:
         ;; fold 8 x 128 bits -> 4 x 128 bits
         vbroadcastf64x2 %%ZTMP2, [rel fold_by_4]
@@ -983,6 +1007,7 @@ mksection .text
 
         vmovdqa64       %%ZTMP6, %%ZTMP7
 
+align_label
 %%_skip_crc_by4:
         ;; fold 4 x 128 bits -> 2 x 128 bits
         vbroadcastf64x2 YWORD(%%ZTMP2), [rel fold_by_2]
@@ -1001,6 +1026,7 @@ mksection .text
 
         vshufi64x2      %%ZTMP6, %%ZTMP6, %%ZTMP6, 1110_1110b
 
+align_label
 %%_skip_crc_by2:
         ;; fold 2 x 128 bits -> 1 x 128 bits
         vmovdqa64       XWORD(%%ZTMP2), [rel fold_by_1]
@@ -1017,9 +1043,11 @@ mksection .text
         vpclmulqdq      XWORD(%%ZCRC_IN_OUT0), XWORD(%%ZCRC_IN_OUT0), XWORD(%%ZTMP2), 0x10
         vpternlogq      XWORD(%%ZCRC_IN_OUT0), XWORD(%%ZTMP6), XWORD(%%ZTMP1), 0x96
 
+align_label
 %%_skip_crc_by1:
         jmp             %%_check_partial_block
 
+align_label
 %%_cbc_decrypt_done:
         ;; No blocks left to compute CRC for. Just fold the sums from 16x128-bits into 1x128-bits.
         ;; Register content at this point:
@@ -1036,6 +1064,7 @@ mksection .text
         vpclmulqdq      %%ZCRC_IN_OUT1, %%ZCRC_IN_OUT1, %%ZTMP2, 0x10
         vpternlogq      %%ZCRC_IN_OUT1, %%ZCRC_IN_OUT3, %%ZTMP1, 0x96
 
+align_label
 %%_cbc_decrypt_done_fold_8_to_4:
         ;; fold 8 x 128 bits -> 4 x 128 bits
         vbroadcastf64x2 %%ZTMP2, [rel fold_by_4]
@@ -1065,6 +1094,7 @@ mksection .text
         ;; =====================================================================
         ;; Part handling messages from 16 - 32 blocks
         ;; =====================================================================
+align_label
 %%_below_33_blocks:
         ;; Decrypt 16 blocks first
         ;; Make sure IV is in the top 128 bits of ZMM.
@@ -1105,6 +1135,7 @@ mksection .text
 	jg	%%_decrypt2_gt4
 	je	%%_decrypt2_eq4
 
+align_label
 %%_decrypt2_lt4:
         ;; 1 to 3 blocks
 	cmp	%%NUM_BLOCKS, 2
@@ -1112,6 +1143,7 @@ mksection .text
 	je	%%_decrypt2_eq2
         jmp     %%_decrypt2_eq1
 
+align_label
 %%_decrypt2_gt4:
         ;; 5 to 7
 	cmp	%%NUM_BLOCKS, 6
@@ -1119,6 +1151,7 @@ mksection .text
 	je	%%_decrypt2_eq6
         jmp     %%_decrypt2_eq5
 
+align_label
 %%_decrypt2_gt8:
         ;; 9 to 15
 	cmp	%%NUM_BLOCKS, 12
@@ -1131,6 +1164,7 @@ mksection .text
 	je	%%_decrypt2_eq10
         jmp     %%_decrypt2_eq9
 
+align_label
 %%_decrypt2_gt12:
         ;; 13 to 15
 	cmp	%%NUM_BLOCKS, 14
@@ -1140,6 +1174,7 @@ mksection .text
 
 %assign number_of_blocks 1
 %rep 15
+align_label
 %%_decrypt2_eq %+ number_of_blocks :
         AES_CBC_DEC_1_TO_16 %%SRC, %%DST, number_of_blocks, %%OFFSET, %%NUM_BYTES, \
                         %%KEYS, %%ZIV, %%NROUNDS, \
@@ -1166,6 +1201,7 @@ mksection .text
 %assign number_of_blocks (number_of_blocks + 1)
 %endrep
 
+align_label
 %%_decrypt2_eq0:
         ;; Special case. Check if there are full 16 blocks for decrypt.
         ;; If yes then decrypt them and fall through to folding/crc section
@@ -1187,6 +1223,7 @@ mksection .text
         ;; =====================================================================
         ;; Part handling messages up to from 1 to 16 blocks
         ;; =====================================================================
+align_label
 %%_below_17_blocks:
         ;; Make sure IV is in the top 128 bits of ZMM.
         vshufi64x2      %%ZIV, %%ZIV, %%ZIV, 0000_0000b
@@ -1205,6 +1242,7 @@ mksection .text
 	jg	%%_gt4
 	je	%%_eq4
 
+align_label
 %%_lt4:
         ;; 1 to 3 blocks
 	cmp	%%NUM_BLOCKS, 2
@@ -1212,6 +1250,7 @@ mksection .text
 	je	%%_eq2
         jmp     %%_eq1
 
+align_label
 %%_gt4:
         ;; 5 to 7
 	cmp	%%NUM_BLOCKS, 6
@@ -1219,6 +1258,7 @@ mksection .text
 	je	%%_eq6
         jmp     %%_eq5
 
+align_label
 %%_gt8:
         ;; 9 to 15
 	cmp	%%NUM_BLOCKS, 12
@@ -1231,6 +1271,7 @@ mksection .text
 	je	%%_eq10
         jmp     %%_eq9
 
+align_label
 %%_gt12:
         ;; 13 to 15
 	cmp	%%NUM_BLOCKS, 14
@@ -1240,6 +1281,7 @@ mksection .text
 
 %assign number_of_blocks 1
 %rep 16
+align_label
 %%_eq %+ number_of_blocks :
         ;; Start building the pipeline by decrypting number of blocks
         ;; - later cipher & CRC operations get stitched
@@ -1285,6 +1327,7 @@ mksection .text
         ;;     NUM_BYTES - number of bytes left to decrypt
         ;;     XIV - IV for decrypt operation
         ;; =====================================================================
+align_label
 %%_check_partial_block:
         or              %%NUM_BYTES, %%NUM_BYTES
         jz              %%_no_partial_bytes
@@ -1303,6 +1346,7 @@ mksection .text
         vpxorq          %%XTMP0, %%XTMP0, %%XTMP1
         vmovdqu8        [%%DST + %%OFFSET + 0]{k1}, %%XTMP0
 
+align_label
 %%_no_partial_bytes:
         ;; At this stage:
         ;; - whole message is decrypted the focus moves to complete CRC
@@ -1330,6 +1374,7 @@ mksection .text
         sub     %%NUM_BYTES, 16
         add     %%OFFSET, 16    ; compensate for the subtract above
 
+align_label
 %%_no_partial_bytes__lt16:
         or              %%NUM_BYTES, %%NUM_BYTES
         jz              %%_no_partial_bytes__128_done
@@ -1349,10 +1394,12 @@ mksection .text
 
         CRC_CLMUL %%XCRC_IN_OUT, %%XCRC_MUL, %%XCRC_TMP, %%XTMP1
 
+align_label
 %%_no_partial_bytes__128_done:
         CRC32_REDUCE_128_TO_32 rax, %%XCRC_IN_OUT, %%XTMP1, %%XTMP0, %%XCRC_TMP
         jmp     %%_do_return
 
+align_label
 %%_no_partial_bytes__start_crc:
         ;; - CRC was not started yet
         ;; - CBC decryption could have taken place and/or CFB
@@ -1362,6 +1409,7 @@ mksection .text
                          %%XCRC_MUL, %%XTMP0, %%XTMP1, %%XCRC_TMP
         jmp     %%_do_return
 
+align_label
 %%_no_block_pending_crc:
         ;; Message consists of partial block only (first_crc not employed yet)
         ;; - XTMP0 includes clear text from CFB processing above
@@ -1390,6 +1438,7 @@ mksection .text
         CRC32_REDUCE_128_TO_32 rax, %%XCRC_IN_OUT, %%XTMP0, %%XTMP1, %%XCRC_TMP
         jmp             %%_do_return
 
+align_label
 %%_no_block_pending_crc__lt4:
         ;; less than 4 bytes left for CRC
         cmp             %%NUM_BYTES, 3
@@ -1397,18 +1446,22 @@ mksection .text
         vpslldq         %%XCRC_IN_OUT, 5
         jmp             %%_do_barret
 
+align_label
 %%_no_block_pending_crc__neq3:
         cmp             %%NUM_BYTES, 2
         jne             %%_no_block_pending_crc__neq2
         vpslldq         %%XCRC_IN_OUT, 6
         jmp             %%_do_barret
 
+align_label
 %%_no_block_pending_crc__neq2:
         vpslldq         %%XCRC_IN_OUT, 7
 
+align_label
 %%_do_barret:
         CRC32_REDUCE_64_TO_32 rax, %%XCRC_IN_OUT, %%XTMP0, %%XTMP1, %%XCRC_TMP
 
+align_label
 %%_do_return:
         ;; result in rax
 
@@ -1449,6 +1502,7 @@ mksection .text
         not             eax             ; carry CRC value into the combined part
         vmovd           xmm15, eax      ; initial CRC value
 
+align_label
 %%aes_docsis_dec_crc32_avx512__skip_aad:
         mov             tmp1, [job + _iv]
 	vmovdqu64       xmm14, [tmp1]   ; load IV
@@ -1473,6 +1527,7 @@ mksection .text
 
         jmp             %%aes_docsis_dec_crc32_avx512__exit
 
+align_label
 %%aes_docsis_dec_crc32_avx512__no_cipher:
         ;; tmp1 - already points to hash start
         ;; job is arg1
@@ -1483,6 +1538,7 @@ mksection .text
         call            ethernet_fcs_avx512_local
         mov             job, [rsp + _job_save]
 
+align_label
 %%aes_docsis_dec_crc32_avx512__exit:
         mov             tmp1, [job + _auth_tag_output]
 	mov             [tmp1], eax        ; store CRC32 value
@@ -1507,14 +1563,14 @@ mksection .text
 ;; ===================================================================
 ;; input: arg1 = job
 ;; ===================================================================
-align 64
+align_function
 MKGLOBAL(aes_docsis128_dec_crc32_vaes_avx512,function,internal)
 aes_docsis128_dec_crc32_vaes_avx512:
         AES_DOCSIS_DEC_CRC32 9
 
         ret
 
-align 64
+align_function
 MKGLOBAL(aes_docsis256_dec_crc32_vaes_avx512,function,internal)
 aes_docsis256_dec_crc32_vaes_avx512:
         AES_DOCSIS_DEC_CRC32 13

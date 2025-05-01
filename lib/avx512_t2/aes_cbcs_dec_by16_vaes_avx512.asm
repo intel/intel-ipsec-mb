@@ -27,6 +27,7 @@
 
 %define CBCS
 %include "avx512_t2/aes_cbc_dec_by16_vaes_avx512.asm"
+%include "include/align_avx512.inc"
 
 %define len     rax
 
@@ -36,6 +37,7 @@ mksection .text
 ;; aes_cbcs_1_9_dec_128_vaes_avx512(void *in, void *IV, void *keys, void *out, UINT64 num_bytes)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(aes_cbcs_1_9_dec_128_vaes_avx512,function,internal)
+align_function
 aes_cbcs_1_9_dec_128_vaes_avx512:
 %ifndef LINUX
         mov     len,     [rsp + 8*5]

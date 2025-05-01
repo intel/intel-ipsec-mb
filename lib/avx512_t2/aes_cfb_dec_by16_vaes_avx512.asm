@@ -29,6 +29,7 @@
 %include "include/reg_sizes.inc"
 %include "include/aes_common.inc"
 %include "include/clear_regs.inc"
+%include "include/align_avx512.inc"
 
 %ifdef LINUX
 %define arg1	rdi
@@ -235,6 +236,7 @@
         ;; preload keys
         LOAD_KEYS %%KEYS, %%NROUNDS
 
+align_loop
 %%decrypt_16_parallel:
         cmp     %%LENGTH, 256
         jb      %%final_blocks
@@ -244,6 +246,7 @@
                             zTMP0, zTMP1, zTMP2, zTMP3, %%NROUNDS
         jmp     %%decrypt_16_parallel
 
+align_label
 %%final_blocks:
         ;; get num final blocks
         shr     %%LENGTH, 4
@@ -268,7 +271,7 @@
                      zBLK_8_11, zBLK_12_15, zTMP0, zTMP1, zTMP2, zTMP3, \
                      %%NROUNDS
         jmp     %%cfb_dec_done
-align 64
+align_label
 %%final_blocks_is_9_11:
         cmp     %%LENGTH, 10
         je      %%final_num_blocks_is_10
@@ -279,7 +282,7 @@ align 64
                      zBLK_8_11, zBLK_12_15, zTMP0, zTMP1, zTMP2, zTMP3, \
                      %%NROUNDS
         jmp     %%cfb_dec_done
-align 64
+align_label
 %%final_blocks_is_1_7:
         cmp     %%LENGTH, 4
         je      %%final_num_blocks_is_4
@@ -296,7 +299,7 @@ align 64
                      %%NROUNDS
         jmp     %%cfb_dec_done
 
-align 64
+align_label
 %%final_blocks_is_1_3:
         cmp     %%LENGTH, 2
         je      %%final_num_blocks_is_2
@@ -308,83 +311,83 @@ align 64
                      %%NROUNDS
         jmp     %%cfb_dec_done
 
-align 64
+align_label
 %%final_num_blocks_is_14:
         FINAL_BLOCKS %%PLAIN_OUT, %%CIPH_IN, zIV, 14, zBLK_0_3, zBLK_4_7, \
                      zBLK_8_11, zBLK_12_15, zTMP0, zTMP1, zTMP2, zTMP3, \
                      %%NROUNDS
         jmp     %%cfb_dec_done
 
-align 64
+align_label
 %%final_num_blocks_is_13:
         FINAL_BLOCKS %%PLAIN_OUT, %%CIPH_IN, zIV, 13, zBLK_0_3, zBLK_4_7, \
                      zBLK_8_11, zBLK_12_15, zTMP0, zTMP1, zTMP2, zTMP3, \
                      %%NROUNDS
         jmp     %%cfb_dec_done
 
-align 64
+align_label
 %%final_num_blocks_is_12:
         FINAL_BLOCKS %%PLAIN_OUT, %%CIPH_IN, zIV, 12, zBLK_0_3, zBLK_4_7, \
                      zBLK_8_11, zBLK_12_15, zTMP0, zTMP1, zTMP2, zTMP3, \
                      %%NROUNDS
         jmp     %%cfb_dec_done
 
-align 64
+align_label
 %%final_num_blocks_is_10:
         FINAL_BLOCKS %%PLAIN_OUT, %%CIPH_IN, zIV, 10, zBLK_0_3, zBLK_4_7, \
                      zBLK_8_11, zBLK_12_15, zTMP0, zTMP1, zTMP2, zTMP3, \
                      %%NROUNDS
         jmp     %%cfb_dec_done
 
-align 64
+align_label
 %%final_num_blocks_is_9:
         FINAL_BLOCKS %%PLAIN_OUT, %%CIPH_IN, zIV, 9, zBLK_0_3, zBLK_4_7, \
                      zBLK_8_11, zBLK_12_15, zTMP0, zTMP1, zTMP2, zTMP3, \
                      %%NROUNDS
         jmp     %%cfb_dec_done
 
-align 64
+align_label
 %%final_num_blocks_is_8:
         FINAL_BLOCKS %%PLAIN_OUT, %%CIPH_IN, zIV, 8, zBLK_0_3, zBLK_4_7, \
                      zBLK_8_11, zBLK_12_15, zTMP0, zTMP1, zTMP2, zTMP3, \
                      %%NROUNDS
         jmp     %%cfb_dec_done
 
-align 64
+align_label
 %%final_num_blocks_is_6:
         FINAL_BLOCKS %%PLAIN_OUT, %%CIPH_IN, zIV, 6, zBLK_0_3, zBLK_4_7, \
                      zBLK_8_11, zBLK_12_15, zTMP0, zTMP1, zTMP2, zTMP3, \
                      %%NROUNDS
         jmp     %%cfb_dec_done
 
-align 64
+align_label
 %%final_num_blocks_is_5:
         FINAL_BLOCKS %%PLAIN_OUT, %%CIPH_IN, zIV, 5, zBLK_0_3, zBLK_4_7, \
                      zBLK_8_11, zBLK_12_15, zTMP0, zTMP1, zTMP2, zTMP3, \
                      %%NROUNDS
         jmp     %%cfb_dec_done
 
-align 64
+align_label
 %%final_num_blocks_is_4:
         FINAL_BLOCKS %%PLAIN_OUT, %%CIPH_IN, zIV, 4, zBLK_0_3, zBLK_4_7, \
                      zBLK_8_11, zBLK_12_15, zTMP0, zTMP1, zTMP2, zTMP3, \
                      %%NROUNDS
         jmp     %%cfb_dec_done
 
-align 64
+align_label
 %%final_num_blocks_is_2:
         FINAL_BLOCKS %%PLAIN_OUT, %%CIPH_IN, zIV, 2, zBLK_0_3, zBLK_4_7, \
                      zBLK_8_11, zBLK_12_15, zTMP0, zTMP1, zTMP2, zTMP3, \
                      %%NROUNDS
         jmp     %%cfb_dec_done
 
-align 64
+align_label
 %%final_num_blocks_is_1:
         FINAL_BLOCKS %%PLAIN_OUT, %%CIPH_IN, zIV, 1, zBLK_0_3, zBLK_4_7, \
                      zBLK_8_11, zBLK_12_15, zTMP0, zTMP1, zTMP2, zTMP3, \
                      %%NROUNDS
 
-align 64
+align_label
 %%cfb_dec_done:
 %ifdef SAFE_DATA
 	clear_all_zmms_asm
@@ -407,7 +410,7 @@ align 64
 ;; =============================================================================
 ;; void aes_cfb_128_dec_vaes_avx512
 mksection .text
-align 64
+align_function
 MKGLOBAL(aes_cfb_dec_128_vaes_avx512,function,internal)
 aes_cfb_dec_128_vaes_avx512:
         AES_CFB_DEC arg2, arg1, arg4, arg3, arg5, 9
@@ -415,7 +418,7 @@ aes_cfb_dec_128_vaes_avx512:
 
 ;; =============================================================================
 ;; void aes_cfb_192_dec_vaes_avx512
-align 64
+align_function
 MKGLOBAL(aes_cfb_dec_192_vaes_avx512,function,internal)
 aes_cfb_dec_192_vaes_avx512:
         AES_CFB_DEC arg2, arg1, arg4, arg3, arg5, 11
@@ -423,7 +426,7 @@ aes_cfb_dec_192_vaes_avx512:
 
 ;; =============================================================================
 ;; void aes_cfb_256_dec_vaes_avx512
-align 64
+align_function
 MKGLOBAL(aes_cfb_dec_256_vaes_avx512,function,internal)
 aes_cfb_dec_256_vaes_avx512:
         AES_CFB_DEC arg2, arg1, arg4, arg3, arg5, 13

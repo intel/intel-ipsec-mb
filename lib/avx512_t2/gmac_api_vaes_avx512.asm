@@ -31,6 +31,7 @@
 %include "include/gcm_vaes_avx512.inc"
 %include "include/error.inc"
 %include "include/clear_regs.inc"
+%include "include/align_avx512.inc"
 
 extern ghash_internal_vaes_avx512
 
@@ -46,7 +47,7 @@ default rel
 ;        const   u8 *in,
 ;        const   u64 msg_len);
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-align 32
+align_function
 MKGLOBAL(imb_aes_gmac_update_128_vaes_avx512,function,)
 MKGLOBAL(imb_aes_gmac_update_192_vaes_avx512,function,)
 MKGLOBAL(imb_aes_gmac_update_256_vaes_avx512,function,)
@@ -115,6 +116,7 @@ imb_aes_gmac_update_256_vaes_avx512:
         clear_zmms_avx512 xmm3, xmm4, xmm5, xmm6, xmm19, xmm9
 %endif
 
+align_label
 .no_full_blocks:
         add     arg3, arg4      ; Point at partial block
 
@@ -132,11 +134,13 @@ imb_aes_gmac_update_256_vaes_avx512:
         ;; **xmm1 and xmm0 may contain some clear text
         clear_zmms_avx512 xmm1, xmm0
 %endif
+align_label
 .exit_gmac_update:
         FUNC_RESTORE
 	ret
 
 %ifdef SAFE_PARAM
+align_label
 .error_gmac_update:
         ;; Clear reg and imb_errno
         IMB_ERR_CHECK_START rax

@@ -32,6 +32,7 @@
 %include "include/crc32_refl.inc"
 %include "include/cet.inc"
 %include "include/error.inc"
+%include "include/align_avx512.inc"
 
 %ifndef LINUX
 %xdefine	arg1 rcx
@@ -59,7 +60,7 @@ mksection .text
 ;; arg1 - buffer pointer
 ;; arg2 - buffer size in bytes
 ;; Returns CRC value through RAX
-align 32
+align_function
 MKGLOBAL(ethernet_fcs_avx512, function,)
 ethernet_fcs_avx512:
         endbranch64
@@ -76,6 +77,7 @@ ethernet_fcs_avx512:
         or              arg1, arg1
         jz              wrong_param
 
+align_label
 end_param_check:
 %endif
         mov             rax, rsp
@@ -119,6 +121,7 @@ end_param_check:
         ret
 
 %ifdef SAFE_PARAM
+align_label
 wrong_param:
         ;; Clear reg and imb_errno
         IMB_ERR_CHECK_START rax
@@ -140,7 +143,7 @@ wrong_param:
 ;; arg2 - buffer size in bytes
 ;; arg3 - place to store computed CRC value (can be NULL)
 ;; Returns CRC value through RAX
-align 32
+align_function
 MKGLOBAL(ethernet_fcs_avx512_local, function,internal)
 ethernet_fcs_avx512_local:
         endbranch64
@@ -164,6 +167,7 @@ ethernet_fcs_avx512_local:
 
         mov             [arg3], eax
 
+align_label
 .local_fn_exit:
         mov             rsp, [rsp + _rsp_save]
         ret

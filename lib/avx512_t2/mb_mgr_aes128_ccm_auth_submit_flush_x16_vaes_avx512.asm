@@ -33,6 +33,7 @@
 %include "include/memcpy.inc"
 %include "include/clear_regs.inc"
 %include "include/cet.inc"
+%include "include/align_avx512.inc"
 
 %ifndef AES_CBC_MAC
 %define AES_CBC_MAC aes128_cbc_mac_vaes_avx512
@@ -276,6 +277,7 @@ endstruc
 %endif
         ;; copy key for each lane
         vmovdqa64       [%%KEY_TAB + j + (k*16)], %%XTMP2
+align_label
 %%_skip_copy %+ j %+ _ %+ k:
 %assign k (k + 1)
 %endrep
@@ -308,6 +310,7 @@ endstruc
 %assign j (j + 256)
 
 %endrep
+align_label
 %%_skip_clear %+ k:
 %assign k (k + 1)
 %endrep
@@ -442,6 +445,7 @@ endstruc
         vmovdqu8 ZWORD(xtmp0){k1}, [tmp2]
         vmovdqu8 [tmp]{k1}, ZWORD(xtmp0)
 
+align_label
 %%_aad_complete:
 
         ;; Finish Block 0 with Byte 0
@@ -499,6 +503,7 @@ endstruc
         vphminposuw     min_len_idx, XWORD(ccm_lens)
         jmp             %%_ccm_round
 
+align_loop
 %%_ccm_round_flush:
         ;; find null lanes
         ;; - vphminposuw already issued
@@ -522,6 +527,7 @@ endstruc
 
 %endif ; end FLUSH
 
+align_loop
 %%_ccm_round:
 
         ; Find min length for lanes 8-15
@@ -535,6 +541,7 @@ endstruc
         vpextrw         DWORD(min_idx), min_len_idx, 1   ; min index
         add             DWORD(min_idx), 8               ; but index +8
         mov             len2, tmp4                    ; min len
+align_label
 %%_use_min:
         mov             min_job, [state + _aes_ccm_job_in_lane + min_idx*8]
         or              len2, len2
@@ -553,6 +560,7 @@ endstruc
         call    AES_CBC_MAC
         ; state and min_idx are intact
 
+align_label
 %%_len_is_0:
 
         movzx   tmp, WORD [state + _aes_ccm_init_done + min_idx*2]
@@ -561,6 +569,7 @@ endstruc
         cmp     WORD(tmp), 1
         je      %%_prepare_partial_block_to_auth
 
+align_label
 %%_encrypt_digest:
 
         ;; Set counter block 0 (reusing previous initial block 0)
@@ -580,6 +589,7 @@ endstruc
         mov     tmp2, [min_job + _auth_tag_output]
 
         simd_store_avx tmp2, init_block0, tmp3, tmp, tmp4
+align_label
 %%_update_lanes:
         ; Update unused lanes
         mov     unused_lanes, [state + _aes_ccm_unused_lanes]
@@ -625,6 +635,7 @@ endstruc
 %endif ;; SUBMIT
 %endif ;; SAFE_DATA
 
+align_label
 %%_return:
 %ifdef SAFE_DATA
         clear_all_zmms_asm
@@ -644,23 +655,28 @@ endstruc
         mov     rsp, [rsp + _rsp_save]  ; original SP
         ret
 
+align_label
 %%_return_null:
         xor     job_rax, job_rax
         jmp     %%_return
 
+align_label
 %%_prepare_full_blocks_to_auth:
 
         cmp     dword [min_job + _cipher_direction], 2 ; DECRYPT
         je      %%_decrypt
 
+align_label
 %%_encrypt:
         mov     tmp, [min_job + _src]
         add     tmp, [min_job + _hash_start_src_offset_in_bytes]
         jmp     %%_set_init_done_1
 
+align_label
 %%_decrypt:
         mov     tmp, [min_job + _dst]
 
+align_label
 %%_set_init_done_1:
         mov     [state + _aes_ccm_args_in + min_idx*8], tmp
         mov     word [state + _aes_ccm_init_done + min_idx*2], 1
@@ -685,6 +701,7 @@ endstruc
         jmp     %%_ccm_round_flush
 %endif
 
+align_label
 %%_prepare_partial_block_to_auth:
         ; Check if partial block needs to be hashed
         mov     auth_len, [min_job + _msg_len_to_hash_in_bytes]
@@ -711,6 +728,7 @@ endstruc
 
         simd_load_avx_15_1 xtmp0, tmp2, auth_len
 
+align_label
 %%_finish_partial_block_copy:
         vmovdqa [init_block_addr], xtmp0
         mov     [state + _aes_ccm_args_in + min_idx * 8], init_block_addr
@@ -721,7 +739,7 @@ endstruc
 %endif
 %endmacro
 
-align 64
+align_function
 ; IMB_JOB * submit_job_aes128/256_ccm_auth_vaes_avx512(MB_MGR_CCM_OOO *state, IMB_JOB *job)
 ; arg 1 : state
 ; arg 2 : job
@@ -730,6 +748,7 @@ SUBMIT_JOB_AES_CCM_AUTH:
         endbranch64
         GENERIC_SUBMIT_FLUSH_JOB_AES_CCM_AUTH_AVX SUBMIT
 
+align_function
 ; IMB_JOB * flush_job_aes128/256_ccm_auth_vaes_avx512(MB_MGR_CCM_OOO *state)
 ; arg 1 : state
 MKGLOBAL(FLUSH_JOB_AES_CCM_AUTH,function,internal)

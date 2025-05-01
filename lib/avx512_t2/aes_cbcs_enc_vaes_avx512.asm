@@ -31,6 +31,7 @@
 %include "include/mb_mgr_datastruct.inc"
 %include "include/reg_sizes.inc"
 %include "include/clear_regs.inc"
+%include "include/align_avx512.inc"
 
 %define GPR_SAVE_AREA   rsp + _gpr_save
 
@@ -263,10 +264,12 @@
         ;; skip length check on first loop
         jmp             %%encrypt_12_first
 
+align_loop
 %%encrypt_12_start:
         cmp             %%LENGTH, 32
         jb              %%encrypt_12_end
 
+align_label
 %%encrypt_12_first:
 
         ;; load and XOR first block lanes with IV / ciphertexxt and round 0 key
@@ -311,6 +314,7 @@
         add             %%IDX, %%OFFSET
         jmp             %%encrypt_12_start
 
+align_label
 %%encrypt_12_end:
 
         shr             %%LENGTH, 4
@@ -341,6 +345,7 @@
 
         add     %%IDX, %%OFFSET
 
+align_label
 %%encrypt_12_done:
         ;; update in/out pointers
         vpbroadcastq    %%ZTMP2, %%IDX
@@ -400,9 +405,11 @@
 %endif
         jmp %%cbcs_enc_start
 
+align_label
 %%skip_len_cal:
         mov     LEN, 16
 
+align_label
 %%cbcs_enc_start:
         ;; load IV's per lane
         vmovdqa64       ZIV00_03, [%%IV + 16*0]
@@ -446,6 +453,7 @@ mksection .text
 ;;  void aes_cbcs_1_9_enc_128_vaes_avx512(AES_ARGS *args, uint64_t len_in_bytes);
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(aes_cbcs_1_9_enc_128_vaes_avx512,function,internal)
+align_function
 aes_cbcs_1_9_enc_128_vaes_avx512:
         FUNC_SAVE
         CBCS_ENC 9, 160

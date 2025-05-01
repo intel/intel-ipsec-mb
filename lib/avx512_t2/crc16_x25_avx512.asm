@@ -32,6 +32,7 @@
 %include "include/crc32_refl.inc"
 %include "include/cet.inc"
 %include "include/error.inc"
+%include "include/align_avx512.inc"
 
 %ifndef LINUX
 %xdefine	arg1 rcx
@@ -58,7 +59,7 @@ mksection .text
 ;; arg1 - buffer pointer
 ;; arg2 - buffer size in bytes
 ;; Returns CRC value through RAX
-align 32
+align_function
 MKGLOBAL(crc16_x25_avx512, function,)
 crc16_x25_avx512:
         endbranch64
@@ -75,6 +76,7 @@ crc16_x25_avx512:
         or              arg1, arg1
         jz              .wrong_param
 
+align_label
 .end_param_check:
 %endif
 %ifndef LINUX
@@ -119,6 +121,7 @@ crc16_x25_avx512:
         ret
 
 %ifdef SAFE_PARAM
+align_label
 .wrong_param:
         ;; Clear reg and imb_errno
         IMB_ERR_CHECK_START rax

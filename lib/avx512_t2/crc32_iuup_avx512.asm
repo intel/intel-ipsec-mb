@@ -31,6 +31,7 @@
 %include "include/clear_regs.inc"
 %include "include/cet.inc"
 %include "include/error.inc"
+%include "include/align_avx512.inc"
 
 [bits 64]
 default rel
@@ -60,7 +61,7 @@ mksection .text
 ;; arg1 - buffer pointer
 ;; arg2 - buffer size in bytes
 ;; Returns CRC value through RAX
-align 32
+align_function
 MKGLOBAL(crc10_iuup_data_avx512, function,)
 crc10_iuup_data_avx512:
         endbranch64
@@ -77,6 +78,7 @@ crc10_iuup_data_avx512:
         or              arg1, arg1
         jz              .wrong_param
 
+align_label
 .end_param_check:
 %endif
 %ifndef LINUX
@@ -121,6 +123,7 @@ crc10_iuup_data_avx512:
         ret
 
 %ifdef SAFE_PARAM
+align_label
 .wrong_param:
         ;; Clear reg and imb_errno
         IMB_ERR_CHECK_START rax
@@ -140,7 +143,7 @@ crc10_iuup_data_avx512:
 ;; arg1 - buffer pointer
 ;; arg2 - buffer size in bytes
 ;; Returns CRC value through RAX
-align 32
+align_function
 MKGLOBAL(crc6_iuup_header_avx512, function,)
 crc6_iuup_header_avx512:
         endbranch64
@@ -157,6 +160,7 @@ crc6_iuup_header_avx512:
         or              arg1, arg1
         jz              .wrong_param
 
+align_label
 .end_param_check:
 %endif
 %ifndef LINUX
@@ -201,6 +205,7 @@ crc6_iuup_header_avx512:
         ret
 
 %ifdef SAFE_PARAM
+align_label
 .wrong_param:
         ;; Clear reg and imb_errno
         IMB_ERR_CHECK_START rax

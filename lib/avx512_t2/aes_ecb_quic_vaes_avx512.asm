@@ -45,6 +45,7 @@
 %include "include/clear_regs.inc"
 %include "include/aes_common.inc"
 %include "include/cet.inc"
+%include "include/align_avx512.inc"
 
 %define AES_ECB_QUIC_ENC_128 aes_ecb_quic_enc_128_vaes_avx512
 %define AES_ECB_QUIC_ENC_256 aes_ecb_quic_enc_256_vaes_avx512
@@ -183,12 +184,14 @@ mksection .text
         ja      %%initial_num_buffers_is_15
         je      %%initial_num_buffers_is_14
         jmp     %%initial_num_buffers_is_13
+align_label
 %%initial_num_buffers_is_11_9:
         ;; 11, 10 or 9
         cmp     TMP, 10
         ja      %%initial_num_buffers_is_11
         je      %%initial_num_buffers_is_10
         jmp     %%initial_num_buffers_is_9
+align_label
 %%initial_num_buffers_is_7_1:
         cmp     TMP, 4
         je      %%initial_num_buffers_is_4
@@ -198,6 +201,7 @@ mksection .text
         ja      %%initial_num_buffers_is_7
         je      %%initial_num_buffers_is_6
         jmp     %%initial_num_buffers_is_5
+align_label
 %%initial_num_buffers_is_3_1:
         ;; 3, 2 or 1
         cmp     TMP, 2
@@ -208,6 +212,7 @@ mksection .text
 %assign num_buffers 1
 %rep 15
 
+align_label
         %%initial_num_buffers_is_ %+ num_buffers :
 %assign %%I 0
         ; load blocks
@@ -239,7 +244,7 @@ mksection .text
         jmp     %%main_loop
 %endrep
 
-align 16
+align_loop
 %%main_loop:
         ; load next 16 blocks
         YMM_LOAD_BLOCKS_MULT_IN_0_16 16, {IN + IDX*8}, TMP, YDATA0,\
@@ -269,6 +274,7 @@ align 16
         cmp     IDX, N_BUFS
         jne     %%main_loop
 
+align_label
 %%done:
 %ifdef SAFE_DATA
         clear_all_zmms_asm
@@ -277,14 +283,14 @@ align 16
 %endif
 %endmacro
 
-align 16
+align_function
 MKGLOBAL(AES_ECB_QUIC_ENC_128,function,internal)
 AES_ECB_QUIC_ENC_128:
         endbranch64
         AES_ECB_QUIC 10
         ret
 
-align 16
+align_function
 MKGLOBAL(AES_ECB_QUIC_ENC_256,function,internal)
 AES_ECB_QUIC_ENC_256:
         endbranch64

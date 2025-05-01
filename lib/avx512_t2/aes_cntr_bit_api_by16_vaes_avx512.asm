@@ -28,11 +28,13 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 %include "include/aes_cntr_by16_vaes_avx512.inc"
+%include "include/align_avx512.inc"
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;void aes_cntr_bit_128_submit_vaes_avx512 (IMB_JOB *job)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(aes_cntr_bit_128_submit_vaes_avx512,function,internal)
+align_function
 aes_cntr_bit_128_submit_vaes_avx512:
         FUNC_SAVE CNTR_BIT
         ;; arg1 - [in] job
@@ -47,6 +49,7 @@ aes_cntr_bit_128_submit_vaes_avx512:
 ;void aes_cntr_bit_192_submit_vaes_avx512 (IMB_JOB *job)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(aes_cntr_bit_192_submit_vaes_avx512,function,internal)
+align_function
 aes_cntr_bit_192_submit_vaes_avx512:
         FUNC_SAVE CNTR_BIT
         ;; arg1 - [in] job
@@ -61,6 +64,7 @@ aes_cntr_bit_192_submit_vaes_avx512:
 ;void aes_cntr_bit_256_submit_vaes_avx512 (IMB_JOB *job)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(aes_cntr_bit_256_submit_vaes_avx512,function,internal)
+align_function
 aes_cntr_bit_256_submit_vaes_avx512:
         FUNC_SAVE CNTR_BIT
         ;; arg1 - [in] job

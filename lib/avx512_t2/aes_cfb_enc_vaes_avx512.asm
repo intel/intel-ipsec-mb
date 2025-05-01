@@ -33,6 +33,7 @@
 %include "include/clear_regs.inc"
 %include "include/aes_common.inc"
 %include "include/transpose_avx512.inc"
+%include "include/align_avx512.inc"
 
 struc STACK
 _gpr_save:      resq    4
@@ -256,10 +257,12 @@ endstruc
         ;; skip length check on first loop
         jmp             %%encrypt_16_first
 
+align_loop
 %%encrypt_16_start:
         cmp             %%LENGTH, 64
         jb              %%encrypt_16_end
 
+align_label
 %%encrypt_16_first:
 
         ;; load 4 plaintext blocks for lanes 0-3
@@ -372,6 +375,7 @@ endstruc
         add             %%IDX, 64
         jmp             %%encrypt_16_start
 
+align_label
 %%encrypt_16_end:
         ;; update in/out pointers
         vpbroadcastq    %%ZTMP2, %%IDX
@@ -392,6 +396,7 @@ endstruc
         vmovdqa64       [OUT], %%ZTMP0
         vmovdqa64       [OUT + 64], %%ZTMP1
 
+align_label
 %%encrypt_16_done:
 %endmacro
 
@@ -641,23 +646,27 @@ endstruc
         jb              %%_final_blocks_1
         je              %%_final_blocks_2
 
+align_label
 %%_final_blocks_3:
         ENCRYPT_16_FINAL ZIV00_03, ZIV04_07, ZIV08_11, ZIV12_15, \
                          %%ROUNDS, IA0, ZT0, ZT1, ZT2, ZT3, ZT4, ZT5, ZT6, ZT7,  \
                          ZT8, ZT9, ZT10, ZT11, ZT12, ZT13, ZT14, ZT15, ZT16, ZT17, \
                          ZT18, ZT19, IA1, IA2, 3, %%MAC_TYPE, %%SUBMIT_FLUSH
         jmp              %%_cfb_enc_done
+align_label
 %%_final_blocks_1:
         ENCRYPT_16_FINAL ZIV00_03, ZIV04_07, ZIV08_11, ZIV12_15, \
                          %%ROUNDS, IA0, ZT0, ZT1, ZT2, ZT3, ZT4, ZT5, ZT6, ZT7,  \
                          ZT8, ZT9, ZT10, ZT11, ZT12, ZT13, ZT14, ZT15, ZT16, ZT17, \
                          ZT18, ZT19, IA1, IA2, 1, %%MAC_TYPE, %%SUBMIT_FLUSH
         jmp              %%_cfb_enc_done
+align_label
 %%_final_blocks_2:
         ENCRYPT_16_FINAL ZIV00_03, ZIV04_07, ZIV08_11, ZIV12_15, \
                          %%ROUNDS, IA0, ZT0, ZT1, ZT2, ZT3, ZT4, ZT5, ZT6, ZT7,  \
                          ZT8, ZT9, ZT10, ZT11, ZT12, ZT13, ZT14, ZT15, ZT16, ZT17, \
                          ZT18, ZT19, IA1, IA2, 2, %%MAC_TYPE, %%SUBMIT_FLUSH
+align_label
 %%_cfb_enc_done:
         ;; store IV's per lane
         vmovdqa64       [%%IV + 16*0],  ZIV00_03
@@ -686,6 +695,7 @@ mksection .text
 ;;  void aes_cfb_enc_128_vaes_avx512(AES_ARGS *args, uint64_t len_in_bytes);
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(aes_cfb_enc_128_vaes_avx512,function,internal)
+align_function
 aes_cfb_enc_128_vaes_avx512:
         FUNC_SAVE
         CFB_ENC 9, SUBMIT
@@ -696,6 +706,7 @@ aes_cfb_enc_128_vaes_avx512:
 ;;  void aes_cfb_enc_192_vaes_avx512(AES_ARGS *args, uint64_t len_in_bytes);
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(aes_cfb_enc_192_vaes_avx512,function,internal)
+align_function
 aes_cfb_enc_192_vaes_avx512:
         FUNC_SAVE
         CFB_ENC 11, SUBMIT
@@ -706,6 +717,7 @@ aes_cfb_enc_192_vaes_avx512:
 ;;  void aes_cfb_enc_256_vaes_avx512(AES_ARGS *args, uint64_t len_in_bytes);
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(aes_cfb_enc_256_vaes_avx512,function,internal)
+align_function
 aes_cfb_enc_256_vaes_avx512:
         FUNC_SAVE
         CFB_ENC 13, SUBMIT
@@ -719,6 +731,7 @@ aes_cfb_enc_256_vaes_avx512:
 ;;                                         uint16_t valid_lane_mask);
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(aes_cfb_enc_128_flush_vaes_avx512,function,internal)
+align_function
 aes_cfb_enc_128_flush_vaes_avx512:
         FUNC_SAVE
         CFB_ENC 9, FLUSH
@@ -731,6 +744,7 @@ aes_cfb_enc_128_flush_vaes_avx512:
 ;;                                         uint16_t valid_lane_mask);
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(aes_cfb_enc_192_flush_vaes_avx512,function,internal)
+align_function
 aes_cfb_enc_192_flush_vaes_avx512:
         FUNC_SAVE
         CFB_ENC 11, FLUSH
@@ -743,6 +757,7 @@ aes_cfb_enc_192_flush_vaes_avx512:
 ;;                                         uint16_t valid_lane_mask);
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(aes_cfb_enc_256_flush_vaes_avx512,function,internal)
+align_function
 aes_cfb_enc_256_flush_vaes_avx512:
         FUNC_SAVE
         CFB_ENC 13, FLUSH

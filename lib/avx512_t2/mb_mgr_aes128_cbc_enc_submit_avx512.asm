@@ -31,6 +31,7 @@
 %include "include/reg_sizes.inc"
 %include "include/const.inc"
 %include "include/clear_regs.inc"
+%include "include/align_avx512.inc"
 
 %ifndef AES_CBC_ENC_X16
 %define AES_CBC_ENC_X16 aes_cbc_enc_128_vaes_avx512
@@ -139,6 +140,7 @@ endstruc
 ; arg 1 : state
 ; arg 2 : job
 MKGLOBAL(SUBMIT_JOB_AES_ENC,function,internal)
+align_function
 SUBMIT_JOB_AES_ENC:
         mov     rax, rsp
         sub     rsp, STACK_size
@@ -214,6 +216,7 @@ SUBMIT_JOB_AES_ENC:
         vpextrw         DWORD(idx), xmm2, 1   ; min index
         add             DWORD(idx), 8               ; but index +8
         mov             len2, tmp                    ; min len
+align_label
 use_min:
         cmp             len2, 0
         je              len_is_0
@@ -227,6 +230,7 @@ use_min:
         call    AES_CBC_ENC_X16
         ; state and idx are intact
 
+align_label
 len_is_0:
         ; process completed job "idx"
         mov     job_rax, [state + _aes_job_in_lane + idx*8]
@@ -254,6 +258,7 @@ len_is_0:
 %endrep
 %endif
 
+align_label
 return:
 %ifdef SAFE_DATA
 	clear_all_zmms_asm
@@ -274,6 +279,7 @@ return:
 
         ret
 
+align_label
 return_null:
         xor     job_rax, job_rax
         jmp     return

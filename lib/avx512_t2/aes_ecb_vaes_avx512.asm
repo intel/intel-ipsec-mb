@@ -45,6 +45,7 @@
 %include "include/os.inc"
 %include "include/clear_regs.inc"
 %include "include/aes_common.inc"
+%include "include/align_avx512.inc"
 
 %define AES_ECB_ENC_128 aes_ecb_enc_128_vaes_avx512
 %define AES_ECB_DEC_128 aes_ecb_dec_128_vaes_avx512
@@ -107,12 +108,14 @@ mksection .text
         ja      %%initial_num_blocks_is_15
         je      %%initial_num_blocks_is_14
         jmp     %%initial_num_blocks_is_13
+align_label
 %%initial_num_blocks_is_11_9:
         ;; 11, 10 or 9
         cmp     TMP, 10*16
         ja      %%initial_num_blocks_is_11
         je      %%initial_num_blocks_is_10
         jmp     %%initial_num_blocks_is_9
+align_label
 %%initial_num_blocks_is_7_1:
         cmp     TMP, 4*16
         je      %%initial_num_blocks_is_4
@@ -122,6 +125,7 @@ mksection .text
         ja      %%initial_num_blocks_is_7
         je      %%initial_num_blocks_is_6
         jmp     %%initial_num_blocks_is_5
+align_label
 %%initial_num_blocks_is_3_1:
         ;; 3, 2 or 1
         cmp     TMP, 2*16
@@ -132,6 +136,7 @@ mksection .text
 %assign num_blocks 1
 %rep 15
 
+align_label
         %%initial_num_blocks_is_ %+ num_blocks :
 %assign %%I 0
         ; load initial blocks
@@ -161,7 +166,7 @@ mksection .text
         jmp     %%main_loop
 %endrep
 
-align 16
+align_loop
 %%main_loop:
         ; load the next 16 blocks into ymm registers
         YMM_LOAD_BLOCKS_0_16 16, {IN + IDX}, 0, YDATA0, YDATA1,\
@@ -188,6 +193,7 @@ align 16
         cmp     IDX, LEN
         jne     %%main_loop
 
+align_label
 %%done:
 
 %ifdef SAFE_DATA
@@ -200,13 +206,13 @@ align 16
 ;;
 ;; AES-ECB 128 functions
 ;;
-align 16
+align_function
 MKGLOBAL(AES_ECB_ENC_128,function,internal)
 AES_ECB_ENC_128:
         AES_ECB 10, ENC
         ret
 
-align 16
+align_function
 MKGLOBAL(AES_ECB_DEC_128,function,internal)
 AES_ECB_DEC_128:
         AES_ECB 10, DEC
@@ -215,13 +221,13 @@ AES_ECB_DEC_128:
 ;;
 ;; AES-ECB 192 functions
 ;;
-align 16
+align_function
 MKGLOBAL(AES_ECB_ENC_192,function,internal)
 AES_ECB_ENC_192:
         AES_ECB 12, ENC
         ret
 
-align 16
+align_function
 MKGLOBAL(AES_ECB_DEC_192,function,internal)
 AES_ECB_DEC_192:
         AES_ECB 12, DEC
@@ -230,13 +236,13 @@ AES_ECB_DEC_192:
 ;;
 ;; AES-ECB 256 functions
 ;;
-align 16
+align_function
 MKGLOBAL(AES_ECB_ENC_256,function,internal)
 AES_ECB_ENC_256:
         AES_ECB 14, ENC
         ret
 
-align 16
+align_function
 MKGLOBAL(AES_ECB_DEC_256,function,internal)
 AES_ECB_DEC_256:
         AES_ECB 14, DEC

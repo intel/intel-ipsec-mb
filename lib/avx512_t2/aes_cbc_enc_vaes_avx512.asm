@@ -33,6 +33,7 @@
 %include "include/clear_regs.inc"
 %include "include/aes_common.inc"
 %include "include/transpose_avx512.inc"
+%include "include/align_avx512.inc"
 
 
 struc STACK
@@ -260,10 +261,12 @@ endstruc
         ;; skip length check on first loop
         jmp             %%encrypt_16_first
 
+align_loop
 %%encrypt_16_start:
         cmp             %%LENGTH, 64
         jl              %%encrypt_16_end
 
+align_label
 %%encrypt_16_first:
 
         ;; load 4 plaintext blocks for lanes 0-3
@@ -373,6 +376,7 @@ endstruc
         add             %%IDX, 64
         jmp             %%encrypt_16_start
 
+align_label
 %%encrypt_16_end:
         ;; update in/out pointers
         vpbroadcastq    %%ZTMP2, %%IDX
@@ -395,6 +399,7 @@ endstruc
         vmovdqa64       [OUT + 64], %%ZTMP1
 %endif ;; MAC_TYPE
 
+align_label
 %%encrypt_16_done:
 %endmacro
 
@@ -677,23 +682,27 @@ endstruc
         cmp             LEN, 2
         je              %%_final_blocks_2
 
+align_label
 %%_final_blocks_3:
         ENCRYPT_16_FINAL ZIV00_03, ZIV04_07, ZIV08_11, ZIV12_15, \
                          %%ROUNDS, IA0, ZT0, ZT1, ZT2, ZT3, ZT4, ZT5, ZT6, ZT7,  \
                          ZT8, ZT9, ZT10, ZT11, ZT12, ZT13, ZT14, ZT15, ZT16, ZT17, \
                          ZT18, ZT19, IA1, IA2, 3, %%MAC_TYPE, %%SUBMIT_FLUSH
         jmp              %%_cbc_enc_done
+align_label
 %%_final_blocks_1:
         ENCRYPT_16_FINAL ZIV00_03, ZIV04_07, ZIV08_11, ZIV12_15, \
                          %%ROUNDS, IA0, ZT0, ZT1, ZT2, ZT3, ZT4, ZT5, ZT6, ZT7,  \
                          ZT8, ZT9, ZT10, ZT11, ZT12, ZT13, ZT14, ZT15, ZT16, ZT17, \
                          ZT18, ZT19, IA1, IA2, 1, %%MAC_TYPE, %%SUBMIT_FLUSH
         jmp              %%_cbc_enc_done
+align_label
 %%_final_blocks_2:
         ENCRYPT_16_FINAL ZIV00_03, ZIV04_07, ZIV08_11, ZIV12_15, \
                          %%ROUNDS, IA0, ZT0, ZT1, ZT2, ZT3, ZT4, ZT5, ZT6, ZT7,  \
                          ZT8, ZT9, ZT10, ZT11, ZT12, ZT13, ZT14, ZT15, ZT16, ZT17, \
                          ZT18, ZT19, IA1, IA2, 2, %%MAC_TYPE, %%SUBMIT_FLUSH
+align_label
 %%_cbc_enc_done:
         ;; store IV's per lane
         vmovdqa64       [%%IV + 16*0],  ZIV00_03
@@ -722,6 +731,7 @@ mksection .text
 ;;  void aes_cbc_enc_128_vaes_avx512(AES_ARGS *args, uint64_t len_in_bytes);
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(aes_cbc_enc_128_vaes_avx512,function,internal)
+align_function
 aes_cbc_enc_128_vaes_avx512:
         FUNC_SAVE
         CBC_ENC 9, MAC_TYPE_NONE, SUBMIT
@@ -732,6 +742,7 @@ aes_cbc_enc_128_vaes_avx512:
 ;;  void aes_cbc_enc_192_vaes_avx512(AES_ARGS *args, uint64_t len_in_bytes);
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(aes_cbc_enc_192_vaes_avx512,function,internal)
+align_function
 aes_cbc_enc_192_vaes_avx512:
         FUNC_SAVE
         CBC_ENC 11, MAC_TYPE_NONE, SUBMIT
@@ -742,6 +753,7 @@ aes_cbc_enc_192_vaes_avx512:
 ;;  void aes_cbc_enc_256_vaes_avx512(AES_ARGS *args, uint64_t len_in_bytes);
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(aes_cbc_enc_256_vaes_avx512,function,internal)
+align_function
 aes_cbc_enc_256_vaes_avx512:
         FUNC_SAVE
         CBC_ENC 13, MAC_TYPE_NONE, SUBMIT
@@ -752,6 +764,7 @@ aes_cbc_enc_256_vaes_avx512:
 ;;  void aes128_cbc_mac_vaes_avx512(AES_ARGS *args, uint64_t len_in_bytes);
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(aes128_cbc_mac_vaes_avx512,function,internal)
+align_function
 aes128_cbc_mac_vaes_avx512:
         FUNC_SAVE
         CBC_ENC 9, MAC_TYPE_CBC, SUBMIT
@@ -762,6 +775,7 @@ aes128_cbc_mac_vaes_avx512:
 ;;  void aes256_cbc_mac_vaes_avx512(AES_ARGS *args, uint64_t len_in_bytes);
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(aes256_cbc_mac_vaes_avx512,function,internal)
+align_function
 aes256_cbc_mac_vaes_avx512:
         FUNC_SAVE
         CBC_ENC 13, MAC_TYPE_CBC, SUBMIT
@@ -772,6 +786,7 @@ aes256_cbc_mac_vaes_avx512:
 ;;  void aes_xcbc_mac_128_vaes_avx512(AES_XCBC_ARGS_x16 *args, uint64_t len_in_bytes);
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(aes_xcbc_mac_128_vaes_avx512,function,internal)
+align_function
 aes_xcbc_mac_128_vaes_avx512:
         FUNC_SAVE
         CBC_ENC 9, MAC_TYPE_XCBC, SUBMIT
@@ -784,6 +799,7 @@ aes_xcbc_mac_128_vaes_avx512:
 ;;                                         uint16_t valid_lane_mask);
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(aes_cbc_enc_128_flush_vaes_avx512,function,internal)
+align_function
 aes_cbc_enc_128_flush_vaes_avx512:
         FUNC_SAVE
         CBC_ENC 9, MAC_TYPE_NONE, FLUSH
@@ -796,6 +812,7 @@ aes_cbc_enc_128_flush_vaes_avx512:
 ;;                                         uint16_t valid_lane_mask);
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(aes_cbc_enc_192_flush_vaes_avx512,function,internal)
+align_function
 aes_cbc_enc_192_flush_vaes_avx512:
         FUNC_SAVE
         CBC_ENC 11, MAC_TYPE_NONE, FLUSH
@@ -808,6 +825,7 @@ aes_cbc_enc_192_flush_vaes_avx512:
 ;;                                         uint16_t valid_lane_mask);
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(aes_cbc_enc_256_flush_vaes_avx512,function,internal)
+align_function
 aes_cbc_enc_256_flush_vaes_avx512:
         FUNC_SAVE
         CBC_ENC 13, MAC_TYPE_NONE, FLUSH
@@ -820,6 +838,7 @@ aes_cbc_enc_256_flush_vaes_avx512:
 ;;                                        uint16_t valid_lane_mask);
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(aes128_cbc_mac_flush_vaes_avx512,function,internal)
+align_function
 aes128_cbc_mac_flush_vaes_avx512:
         FUNC_SAVE
         CBC_ENC 9, MAC_TYPE_CBC, FLUSH
@@ -832,6 +851,7 @@ aes128_cbc_mac_flush_vaes_avx512:
 ;;                                        uint16_t valid_lane_mask);
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(aes256_cbc_mac_flush_vaes_avx512,function,internal)
+align_function
 aes256_cbc_mac_flush_vaes_avx512:
         FUNC_SAVE
         CBC_ENC 13, MAC_TYPE_CBC, FLUSH
@@ -844,6 +864,7 @@ aes256_cbc_mac_flush_vaes_avx512:
 ;;                                          uint16_t valid_lane_mask);
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(aes_xcbc_mac_128_flush_vaes_avx512,function,internal)
+align_function
 aes_xcbc_mac_128_flush_vaes_avx512:
         FUNC_SAVE
         CBC_ENC 9, MAC_TYPE_XCBC, FLUSH

@@ -32,6 +32,7 @@
 
 %include "include/error.inc"
 %include "include/clear_regs.inc"
+%include "include/align_avx512.inc"
 
 mksection .text
 default rel
@@ -40,7 +41,7 @@ default rel
 ;void   ghash_pre_vaes_avx512
 ;       (const void *key, struct gcm_key_data *key_data)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-align 32
+align_function
 MKGLOBAL(ghash_pre_vaes_avx512,function,)
 ghash_pre_vaes_avx512:
         endbranch64
@@ -83,11 +84,13 @@ ghash_pre_vaes_avx512:
         clear_zmms_avx512 xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8
 %endif
         FUNC_RESTORE
+align_label
 exit_ghash_pre:
 
         ret
 
 %ifdef SAFE_PARAM
+align_label
 error_ghash_pre:
         ;; Clear reg and imb_errno
         IMB_ERR_CHECK_START rax
@@ -111,7 +114,7 @@ error_ghash_pre:
 ; arg1 [in] pointer to key structure
 ; clobbers: zmm1, zmm3-zmm13, zmm15-zmm20, rax, k1
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-align 32
+align_function
 MKGLOBAL(ghash_internal_vaes_avx512,function,internal)
 ghash_internal_vaes_avx512:
         CALC_GHASH r12, r13, xmm0, arg1, zmm1, zmm3, zmm4, zmm5, \
@@ -129,7 +132,7 @@ ghash_internal_vaes_avx512:
 ;        void         *io_tag,
 ;        const u64    tag_len);
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-align 32
+align_function
 MKGLOBAL(ghash_vaes_avx512,function,)
 ghash_vaes_avx512:
         endbranch64
@@ -177,11 +180,13 @@ ghash_vaes_avx512:
 %ifdef SAFE_DATA
         clear_zmms_avx512 xmm0, xmm2, xmm3, xmm4, xmm5, xmm6, xmm15, xmm16, xmm9, xmm19
 %endif
+align_label
 exit_ghash:
         FUNC_RESTORE
         ret
 
 %ifdef SAFE_PARAM
+align_label
 error_ghash:
         ;; Clear reg and imb_errno
         IMB_ERR_CHECK_START rax

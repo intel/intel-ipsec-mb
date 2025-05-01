@@ -31,6 +31,7 @@
 %include "include/clear_regs.inc"
 %include "include/cet.inc"
 %include "include/error.inc"
+%include "include/align_avx512.inc"
 
 [bits 64]
 default rel
@@ -60,7 +61,7 @@ mksection .text
 ;; arg1 - buffer pointer
 ;; arg2 - buffer size in bytes
 ;; Returns CRC value through RAX
-align 32
+align_function
 MKGLOBAL(crc32_sctp_avx512, function,)
 crc32_sctp_avx512:
         endbranch64
@@ -77,6 +78,7 @@ crc32_sctp_avx512:
         or              arg1, arg1
         jz              wrong_param
 
+align_label
 end_param_check:
 %endif
 %ifndef LINUX
@@ -119,6 +121,7 @@ end_param_check:
         ret
 
 %ifdef SAFE_PARAM
+align_label
 wrong_param:
         ;; Clear reg and imb_errno
         IMB_ERR_CHECK_START rax
