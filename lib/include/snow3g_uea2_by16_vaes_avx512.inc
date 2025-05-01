@@ -28,6 +28,7 @@
 %include "include/transpose_avx512.inc"
 %include "include/imb_job.inc"
 %include "include/constant_lookup.inc"
+%include "include/align_avx512.inc"
 
 mksection .rodata
 default rel
@@ -1063,6 +1064,7 @@ endstruc
         ;; used as offset for storing key stream on the stack frame
         xor             %%TGP0, %%TGP0
 
+align_loop
 %%next_keyword:
 %ifidn %%GEN, avx512_gen2
         FSM_CLOCK       FSM1, FSM2, FSM3, LFSR_5, LFSR_15, KEYSTREAM, \
@@ -1117,6 +1119,7 @@ endstruc
 
         add             %%OFFSET, 64
 
+align_label
 %%no_write_yet:
         dec             %%COUNT
         jnz             %%next_keyword
@@ -1141,6 +1144,7 @@ endstruc
 %endrep
         lea             %%OFFSET, [%%OFFSET + %%TGP1 * 4]
 
+align_label
 %%fin:
 
 %endmacro
@@ -1170,6 +1174,7 @@ endstruc
         kxorw           %%KR6, %%KR6, %%KR6
         knotw           %%KR6, %%KR6            ;; 0xffff -> do LFSR_15 xor
         mov             DWORD(%%COUNT), 32
+align_loop
 %%_auth_keystream_init_mode:
 %ifidn %%GEN, avx512_gen2
         FSM_CLOCK       FSM1, FSM2, FSM3, LFSR_5, LFSR_15, KEYSTREAM, \
@@ -1201,11 +1206,13 @@ endstruc
         kxorw           %%KR6, %%KR6, %%KR6     ;; no LFSR_15 xor in init2
         jmp             %%_auth_keystream_init_mode
 
+align_label
 %%_auth_keystream_init_mode_exit:
 
         ;; working mode - 5 double words
         mov             DWORD(%%COUNT), 5
         xor             %%TGP0, %%TGP0
+align_loop
 %%_auth_keystream_work_mode:
 %ifidn %%GEN, avx512_gen2
         FSM_CLOCK       FSM1, FSM2, FSM3, LFSR_5, LFSR_15, KEYSTREAM, \

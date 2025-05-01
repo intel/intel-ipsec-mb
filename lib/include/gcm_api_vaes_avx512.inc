@@ -32,6 +32,7 @@
 %include "include/os.inc"
 %include "include/clear_regs.inc"
 %include "include/imb_job.inc"
+%include "include/align_avx512.inc"
 
 %ifndef GCM_API_VAES_AVX512_INC
 %define GCM_API_VAES_AVX512_INC
@@ -50,7 +51,7 @@ default rel
 ;       aes_gcm_precomp_256_vaes_avx512
 ;       (struct gcm_key_data *key_data)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-align 32
+align_function
 MKGLOBAL(FN_NAME(precomp,_),function,)
 FN_NAME(precomp,_):
         endbranch64
@@ -93,11 +94,13 @@ FN_NAME(precomp,_):
 %endif
 
         FUNC_RESTORE
+align_label
 exit_precomp:
 
         ret
 
 %ifdef SAFE_PARAM
+align_label
 error_precomp:
         ;; Clear reg and imb_errno
         IMB_ERR_CHECK_START rax
@@ -124,7 +127,7 @@ error_precomp:
 ;        u8       *auth_tag,
 ;        u64      auth_tag_len);
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-align 32
+align_function
 MKGLOBAL(FN_NAME(enc,_),function,)
 FN_NAME(enc,_):
         endbranch64
@@ -176,6 +179,7 @@ FN_NAME(enc,_):
         cmp     arg4, 0
         jz      .error_enc
 
+align_label
 .skip_in_out_check_enc:
         ;; Check if aad_len == 0
         cmp     arg8, 0
@@ -185,6 +189,7 @@ FN_NAME(enc,_):
         cmp     arg7, 0
         jz      .error_enc
 
+align_label
 .skip_aad_check_enc:
 %endif
         ;; Check if msg_len <= 256
@@ -198,14 +203,17 @@ FN_NAME(enc,_):
         GCM_COMPLETE arg1, arg2, arg9, arg10, single_call, k1, r10, r11, r12
         jmp     .exit_enc
 
+align_label
 .small_packet_path:
         GCM_ENC_DEC_0_TO_256 arg1, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, ENC
 
+align_label
 .exit_enc:
         FUNC_RESTORE
         ret
 
 %ifdef SAFE_PARAM
+align_label
 .error_enc:
         ;; Clear reg and imb_errno
         IMB_ERR_CHECK_START rax
@@ -240,6 +248,7 @@ FN_NAME(enc,_):
         ;; Check in != NULL (msg_len != 0)
         IMB_ERR_CHECK_NULL arg4, rax, IMB_ERR_NULL_SRC
 
+align_label
 .skip_in_out_check_error_enc:
         ;; Check if aad_len == 0
         cmp     arg8, 0
@@ -248,6 +257,7 @@ FN_NAME(enc,_):
         ;; Check aad != NULL (aad_len != 0)
         IMB_ERR_CHECK_NULL arg7, rax, IMB_ERR_NULL_AAD
 
+align_label
 .skip_aad_check_error_enc:
         ;; Set imb_errno
         IMB_ERR_CHECK_END rax
@@ -267,7 +277,7 @@ FN_NAME(enc,_):
 ;        u8       *auth_tag,
 ;        u64      auth_tag_len);
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-align 32
+align_function
 MKGLOBAL(FN_NAME(dec,_),function,)
 FN_NAME(dec,_):
         endbranch64
@@ -319,6 +329,7 @@ FN_NAME(dec,_):
         cmp     arg4, 0
         jz      .error_dec
 
+align_label
 .skip_in_out_check_dec:
         ;; Check if aad_len == 0
         cmp     arg8, 0
@@ -328,6 +339,7 @@ FN_NAME(dec,_):
         cmp     arg7, 0
         jz      .error_dec
 
+align_label
 .skip_aad_check_dec:
 %endif
         ;; Check if msg_len <= 256
@@ -344,14 +356,17 @@ FN_NAME(dec,_):
 %endif
         jmp     .exit_dec
 
+align_label
 .small_packet_path:
         GCM_ENC_DEC_0_TO_256 arg1, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, DEC
 
+align_label
 .exit_dec:
         FUNC_RESTORE
         ret
 
 %ifdef SAFE_PARAM
+align_label
 .error_dec:
         ;; Clear reg and imb_errno
         IMB_ERR_CHECK_START rax
@@ -386,6 +401,7 @@ FN_NAME(dec,_):
         ;; Check in != NULL (msg_len != 0)
         IMB_ERR_CHECK_NULL arg4, rax, IMB_ERR_NULL_SRC
 
+align_label
 .skip_in_out_check_error_dec:
         ;; Check if aad_len == 0
         cmp     arg8, 0
@@ -394,6 +410,7 @@ FN_NAME(dec,_):
         ;; Check aad != NULL (aad_len != 0)
         IMB_ERR_CHECK_NULL arg7, rax, IMB_ERR_NULL_AAD
 
+align_label
 .skip_aad_check_error_dec:
 
         ;; Set imb_errno
@@ -408,7 +425,7 @@ FN_NAME(dec,_):
 ;IMB_JOB *aes_gcm_enc_var_iv_128_vaes_avx512 / aes_gcm_enc_var_iv_192_vaes_avx512 /
 ;       aes_gcm_enc_var_iv_256_vaes_avx512(IMB_MGR *state, IMB_JOB *job)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-align 32
+align_function
 MKGLOBAL(FN_NAME(enc_var_iv,_),function,internal)
 FN_NAME(enc_var_iv,_):
         endbranch64
@@ -443,7 +460,7 @@ FN_NAME(enc_var_iv,_):
 %endif
         jmp     .exit_enc
 
-align 32
+align_label
 .small_packet_path:
         mov     arg1, [arg2 + _enc_keys]
         mov     arg3, [arg2 + _src]
@@ -461,6 +478,7 @@ align 32
                           xmm15, xmm16, xmm17, xmm18, xmm19, xmm20, xmm21, xmm26
 %endif
 
+align_label
 .exit_enc:
         ;; mark job complete
         mov     dword [arg2 + _status], IMB_STATUS_COMPLETED
@@ -477,7 +495,7 @@ align 32
 ;IMB_JOB *aes_gcm_dec_var_iv_128_vaes_avx512 / aes_gcm_dec_var_iv_192_vaes_avx512 /
 ;       aes_gcm_dec_var_iv_256_vaes_avx512(IMB_MGR *state, IMB_JOB *job)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-align 32
+align_function
 MKGLOBAL(FN_NAME(dec_var_iv,_),function,internal)
 FN_NAME(dec_var_iv,_):
         endbranch64
@@ -512,7 +530,7 @@ FN_NAME(dec_var_iv,_):
 %endif
         jmp     .exit_dec
 
-align 32
+align_label
 .small_packet_path:
         mov     arg1, [arg2 + _enc_keys]
         mov     arg3, [arg2 + _src]
@@ -529,6 +547,7 @@ align 32
         clear_zmms_avx512 xmm0, xmm2, xmm3, xmm4, xmm5, xmm8, xmm9, xmm11, xmm14, xmm15, \
                           xmm16, xmm17, xmm18, xmm19, xmm20, xmm21, xmm26, xmm27
 %endif
+align_label
 .exit_dec:
         ;; mark job complete
         mov     dword [arg2 + _status], IMB_STATUS_COMPLETED

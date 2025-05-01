@@ -38,6 +38,7 @@
 %include "include/aes_common.inc"
 %include "include/const.inc"
 %include "include/clear_regs.inc"
+%include "include/align_avx512.inc"
 
 mksection .rodata
 default rel
@@ -431,6 +432,7 @@ default rel
         vpaddq  %%ZT4{%%MASKREG2}, [rel ddq_add_high_1]
 %endif ;; num_intial_blocks
 
+align_label
 %%no_overflow_initial:
 %endif ; CNTR_TYPE == CNTR_PON
 %endif ; %%num_initial_blocks > 1
@@ -590,6 +592,7 @@ default rel
         sub             rcx, %%LENGTH
         shr             %%IA0, cl
         mov             rcx, %%IA1
+align_label
 %%_initial_partial_block_continue:
 %endif
         kmovq           %%MASKREG, %%IA0
@@ -637,6 +640,7 @@ default rel
         kshiftlq %%MASKREG2, %%MASKREG2, 1
         vpaddq  %%CTR_13_16{%%MASKREG2}, [rel ddq_add_high_1]
 
+align_label
 %%no_overflow:
 %endif ; CNTR_TYPE == CNTR_PON
 
@@ -682,6 +686,7 @@ default rel
 
 %endif
 
+align_label
 %%store_output:
         ;; write cipher/plain text back to output
         vmovdqu8        [%%CYPH_PLAIN_OUT + %%DATA_OFFSET], %%ZT1
@@ -696,6 +701,7 @@ default rel
         add             %%DATA_OFFSET, 256
         sub             %%LENGTH, 256
         jmp             %%_initial_blocks_done
+align_label
 %%_initial_partial_done:
         ;; zero the length (all encryption is complete)
         xor             %%LENGTH, %%LENGTH
@@ -845,6 +851,7 @@ default rel
         vpaddq  %%ZT4{%%MASKREG2}, [rel ddq_add_high_1]
 %endif
 
+align_label
 %%no_overflow:
 %endif
         ;; shuffle the counters for AES rounds
@@ -927,6 +934,7 @@ default rel
 
 %endif
 
+align_label
 %%store_output:
         ;; write cipher/plain text back to output
         ZMM_STORE_MASKED_BLOCKS_0_16 %%num_initial_blocks, %%CYPH_PLAIN_OUT, 0, \
@@ -1026,6 +1034,7 @@ default rel
         kshiftlq %%MASKREG2, %%MASKREG2, 1
         vpaddq  %%CTR_13_16{%%MASKREG2}, [rel ddq_add_high_1]
 
+align_label
 %%no_overflow:
 %endif ; CNTR_TYPE == CNTR_PON
 
@@ -1076,6 +1085,7 @@ default rel
 
 %endif
 
+align_label
 %%store_output:
 
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1190,6 +1200,7 @@ default rel
         cmp     %%NUM_BLOCKS, 13
         je      %%_small_initial_num_blocks_is_13
 
+align_label
 %%_small_initial_blocks_is_9_11:
         cmp     %%NUM_BLOCKS, 11
         je      %%_small_initial_num_blocks_is_11
@@ -1198,6 +1209,7 @@ default rel
         cmp     %%NUM_BLOCKS, 9
         je      %%_small_initial_num_blocks_is_9
 
+align_label
 %%_small_initial_blocks_is_1_7:
         cmp     %%NUM_BLOCKS, 4
         je      %%_small_initial_num_blocks_is_4
@@ -1211,6 +1223,7 @@ default rel
         cmp     %%NUM_BLOCKS, 5
         je      %%_small_initial_num_blocks_is_5
 
+align_label
 %%_small_initial_blocks_is_1_3:
         cmp     %%NUM_BLOCKS, 3
         je      %%_small_initial_num_blocks_is_3
@@ -1243,6 +1256,7 @@ APPEND(%%_small_initial_num_blocks_is_, %%i):
 %assign %%i (%%i + 1)
 %endrep
 
+align_label
 %%_small_initial_blocks_encrypted:
 
 %endmacro                       ; CNTR_ENC_DEC_SMALL
@@ -1412,6 +1426,7 @@ APPEND(%%_small_initial_num_blocks_is_, %%i):
 
         jmp     %%_enc_dec_done
 
+align_label
 %%_large_message_path:
         ;; Still, don't allow 16 INITIAL blocks since this will
         ;; can be handled by the x16 partial loop.
@@ -1467,6 +1482,7 @@ APPEND(%%_small_initial_num_blocks_is_, %%i):
         cmp     %%IA1, 13
         je      %%_initial_num_blocks_is_13
 
+align_label
 %%_initial_blocks_is_9_11:
         cmp     %%IA1, 11
         je      %%_initial_num_blocks_is_11
@@ -1475,6 +1491,7 @@ APPEND(%%_small_initial_num_blocks_is_, %%i):
         cmp     %%IA1, 9
         je      %%_initial_num_blocks_is_9
 
+align_label
 %%_initial_blocks_is_1_7:
         cmp     %%IA1, 4
         je      %%_initial_num_blocks_is_4
@@ -1488,6 +1505,7 @@ APPEND(%%_small_initial_num_blocks_is_, %%i):
         cmp     %%IA1, 5
         je      %%_initial_num_blocks_is_5
 
+align_label
 %%_initial_blocks_is_1_3:
         cmp     %%IA1, 3
         je      %%_initial_num_blocks_is_3
@@ -1496,6 +1514,7 @@ APPEND(%%_small_initial_num_blocks_is_, %%i):
 
         jmp     %%_initial_num_blocks_is_1
 
+align_label
 %%_initial_num_blocks_is_15:
         INITIAL_BLOCKS  %%KEY, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, \
                 %%LENGTH, %%DATA_OFFSET, 15, %%CTR_BLOCKx, \
@@ -1504,6 +1523,7 @@ APPEND(%%_small_initial_num_blocks_is_, %%i):
                 %%ZTMP4, %%ZTMP5, %%ZTMP6, %%ZTMP7, %%IA0, %%IA1, %%MASKREG, \
                 %%SHUFREG, %%NROUNDS, %%CNTR_TYPE, %%RBITS
         jmp             %%_initial_blocks_encrypted
+align_label
 %%_initial_num_blocks_is_14:
         INITIAL_BLOCKS  %%KEY, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, \
                 %%LENGTH, %%DATA_OFFSET, 14, %%CTR_BLOCKx, \
@@ -1512,6 +1532,7 @@ APPEND(%%_small_initial_num_blocks_is_, %%i):
                 %%ZTMP4, %%ZTMP5, %%ZTMP6, %%ZTMP7, %%IA0, %%IA1, %%MASKREG, \
                 %%SHUFREG, %%NROUNDS, %%CNTR_TYPE, %%RBITS
         jmp             %%_initial_blocks_encrypted
+align_label
 %%_initial_num_blocks_is_13:
         INITIAL_BLOCKS  %%KEY, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, \
                 %%LENGTH, %%DATA_OFFSET, 13, %%CTR_BLOCKx, \
@@ -1520,6 +1541,7 @@ APPEND(%%_small_initial_num_blocks_is_, %%i):
                 %%ZTMP4, %%ZTMP5, %%ZTMP6, %%ZTMP7, %%IA0, %%IA1, %%MASKREG, \
                 %%SHUFREG, %%NROUNDS, %%CNTR_TYPE, %%RBITS
         jmp             %%_initial_blocks_encrypted
+align_label
 %%_initial_num_blocks_is_12:
         INITIAL_BLOCKS  %%KEY, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, \
                 %%LENGTH, %%DATA_OFFSET, 12, %%CTR_BLOCKx, \
@@ -1528,6 +1550,7 @@ APPEND(%%_small_initial_num_blocks_is_, %%i):
                 %%ZTMP4, %%ZTMP5, %%ZTMP6, %%ZTMP7, %%IA0, %%IA1, %%MASKREG, \
                 %%SHUFREG, %%NROUNDS, %%CNTR_TYPE, %%RBITS
         jmp             %%_initial_blocks_encrypted
+align_label
 %%_initial_num_blocks_is_11:
         INITIAL_BLOCKS  %%KEY, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, \
                 %%LENGTH, %%DATA_OFFSET, 11, %%CTR_BLOCKx, \
@@ -1536,6 +1559,7 @@ APPEND(%%_small_initial_num_blocks_is_, %%i):
                 %%ZTMP4, %%ZTMP5, %%ZTMP6, %%ZTMP7, %%IA0, %%IA1, %%MASKREG, \
                 %%SHUFREG, %%NROUNDS, %%CNTR_TYPE, %%RBITS
         jmp             %%_initial_blocks_encrypted
+align_label
 %%_initial_num_blocks_is_10:
         INITIAL_BLOCKS  %%KEY, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, \
                 %%LENGTH, %%DATA_OFFSET, 10, %%CTR_BLOCKx, \
@@ -1544,6 +1568,7 @@ APPEND(%%_small_initial_num_blocks_is_, %%i):
                 %%ZTMP4, %%ZTMP5, %%ZTMP6, %%ZTMP7, %%IA0, %%IA1, %%MASKREG, \
                 %%SHUFREG, %%NROUNDS, %%CNTR_TYPE, %%RBITS
         jmp             %%_initial_blocks_encrypted
+align_label
 %%_initial_num_blocks_is_9:
         INITIAL_BLOCKS  %%KEY, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, \
                 %%LENGTH, %%DATA_OFFSET, 9, %%CTR_BLOCKx, \
@@ -1552,6 +1577,7 @@ APPEND(%%_small_initial_num_blocks_is_, %%i):
                 %%ZTMP4, %%ZTMP5, %%ZTMP6, %%ZTMP7, %%IA0, %%IA1, %%MASKREG, \
                 %%SHUFREG, %%NROUNDS, %%CNTR_TYPE, %%RBITS
         jmp             %%_initial_blocks_encrypted
+align_label
 %%_initial_num_blocks_is_8:
         INITIAL_BLOCKS  %%KEY, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, \
                 %%LENGTH, %%DATA_OFFSET, 8, %%CTR_BLOCKx, \
@@ -1560,6 +1586,7 @@ APPEND(%%_small_initial_num_blocks_is_, %%i):
                 %%ZTMP4, %%ZTMP5, %%ZTMP6, %%ZTMP7, %%IA0, %%IA1, %%MASKREG, \
                 %%SHUFREG, %%NROUNDS, %%CNTR_TYPE, %%RBITS
         jmp             %%_initial_blocks_encrypted
+align_label
 %%_initial_num_blocks_is_7:
         INITIAL_BLOCKS  %%KEY, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, \
                 %%LENGTH, %%DATA_OFFSET, 7, %%CTR_BLOCKx, \
@@ -1568,6 +1595,7 @@ APPEND(%%_small_initial_num_blocks_is_, %%i):
                 %%ZTMP4, %%ZTMP5, %%ZTMP6, %%ZTMP7, %%IA0, %%IA1, %%MASKREG, \
                 %%SHUFREG, %%NROUNDS, %%CNTR_TYPE, %%RBITS
         jmp             %%_initial_blocks_encrypted
+align_label
 %%_initial_num_blocks_is_6:
         INITIAL_BLOCKS  %%KEY, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, \
                 %%LENGTH, %%DATA_OFFSET, 6, %%CTR_BLOCKx, \
@@ -1576,6 +1604,7 @@ APPEND(%%_small_initial_num_blocks_is_, %%i):
                 %%ZTMP4, %%ZTMP5, %%ZTMP6, %%ZTMP7, %%IA0, %%IA1, %%MASKREG, \
                 %%SHUFREG, %%NROUNDS, %%CNTR_TYPE, %%RBITS
         jmp             %%_initial_blocks_encrypted
+align_label
 %%_initial_num_blocks_is_5:
         INITIAL_BLOCKS  %%KEY, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, \
                 %%LENGTH, %%DATA_OFFSET, 5, %%CTR_BLOCKx, \
@@ -1584,6 +1613,7 @@ APPEND(%%_small_initial_num_blocks_is_, %%i):
                 %%ZTMP4, %%ZTMP5, %%ZTMP6, %%ZTMP7, %%IA0, %%IA1, %%MASKREG, \
                 %%SHUFREG, %%NROUNDS, %%CNTR_TYPE, %%RBITS
         jmp             %%_initial_blocks_encrypted
+align_label
 %%_initial_num_blocks_is_4:
         INITIAL_BLOCKS  %%KEY, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, \
                 %%LENGTH, %%DATA_OFFSET, 4, %%CTR_BLOCKx, \
@@ -1592,6 +1622,7 @@ APPEND(%%_small_initial_num_blocks_is_, %%i):
                 %%ZTMP4, %%ZTMP5, %%ZTMP6, %%ZTMP7, %%IA0, %%IA1, %%MASKREG, \
                 %%SHUFREG, %%NROUNDS, %%CNTR_TYPE, %%RBITS
         jmp             %%_initial_blocks_encrypted
+align_label
 %%_initial_num_blocks_is_3:
         INITIAL_BLOCKS  %%KEY, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, \
                 %%LENGTH, %%DATA_OFFSET, 3, %%CTR_BLOCKx, \
@@ -1600,6 +1631,7 @@ APPEND(%%_small_initial_num_blocks_is_, %%i):
                 %%ZTMP4, %%ZTMP5, %%ZTMP6, %%ZTMP7, %%IA0, %%IA1, %%MASKREG, \
                 %%SHUFREG, %%NROUNDS, %%CNTR_TYPE, %%RBITS
         jmp             %%_initial_blocks_encrypted
+align_label
 %%_initial_num_blocks_is_2:
         INITIAL_BLOCKS  %%KEY, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, \
                 %%LENGTH, %%DATA_OFFSET, 2, %%CTR_BLOCKx, \
@@ -1608,6 +1640,7 @@ APPEND(%%_small_initial_num_blocks_is_, %%i):
                 %%ZTMP4, %%ZTMP5, %%ZTMP6, %%ZTMP7, %%IA0, %%IA1, %%MASKREG, \
                 %%SHUFREG, %%NROUNDS, %%CNTR_TYPE, %%RBITS
         jmp             %%_initial_blocks_encrypted
+align_label
 %%_initial_num_blocks_is_1:
         INITIAL_BLOCKS  %%KEY, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, \
                 %%LENGTH, %%DATA_OFFSET, 1, %%CTR_BLOCKx, \
@@ -1616,6 +1649,7 @@ APPEND(%%_small_initial_num_blocks_is_, %%i):
                 %%ZTMP4, %%ZTMP5, %%ZTMP6, %%ZTMP7, %%IA0, %%IA1, %%MASKREG, \
                 %%SHUFREG, %%NROUNDS, %%CNTR_TYPE, %%RBITS
         jmp             %%_initial_blocks_encrypted
+align_label
 %%_initial_num_blocks_is_0:
         INITIAL_BLOCKS  %%KEY, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, \
                 %%LENGTH, %%DATA_OFFSET, 0, %%CTR_BLOCKx, \
@@ -1624,6 +1658,7 @@ APPEND(%%_small_initial_num_blocks_is_, %%i):
                 %%ZTMP4, %%ZTMP5, %%ZTMP6, %%ZTMP7, %%IA0, %%IA1, %%MASKREG, \
                 %%SHUFREG, %%NROUNDS, %%CNTR_TYPE, %%RBITS
 
+align_label
 %%_initial_blocks_encrypted:
         or              %%LENGTH, %%LENGTH
         je              %%_enc_dec_done
@@ -1633,6 +1668,7 @@ APPEND(%%_small_initial_num_blocks_is_, %%i):
         cmp             %%LENGTH, 256
         jl              %%_encrypt_by_16_partial
 
+align_loop
 %%_encrypt_by_16:
         ENCRYPT_16_PARALLEL  %%KEY, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, \
                 %%DATA_OFFSET, %%CTR_BLOCK_1_4, %%CTR_BLOCK_5_8, \
@@ -1647,12 +1683,14 @@ APPEND(%%_small_initial_num_blocks_is_, %%i):
         cmp             %%LENGTH, 256
         jge             %%_encrypt_by_16
 
+align_label
 %%_encrypt_by_16_done:
         ;; Test to see if we need a by 16 with partial block. At this point
         ;; bytes remaining should be either zero or between 241-255.
         or              %%LENGTH, %%LENGTH
         je              %%_enc_dec_done
 
+align_label
 %%_encrypt_by_16_partial:
 
         ENCRYPT_16_PARALLEL  %%KEY, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, \
@@ -1664,6 +1702,7 @@ APPEND(%%_small_initial_num_blocks_is_, %%i):
                 %%MASKREG, %%SHUFREG, %%ADD8REG, %%NROUNDS, %%CNTR_TYPE, \
                 %%RBITS
 
+align_label
 %%_enc_dec_done:
 %ifidn %%CNTR_TYPE, CCM
 	mov	rax, %%JOB
@@ -1777,6 +1816,7 @@ APPEND(%%_small_initial_num_blocks_is_, %%i):
 
         jmp     %%_enc_dec_done
 
+align_label
 %%_large_message_path:
         ;; Still, don't allow 16 INITIAL blocks since this will
         ;; can be handled by the x16 partial loop.
@@ -1800,6 +1840,7 @@ APPEND(%%_small_initial_num_blocks_is_, %%i):
         cmp     %%IA1, 13
         je      %%_initial_num_blocks_is_13
 
+align_label
 %%_initial_blocks_is_9_11:
         cmp     %%IA1, 11
         je      %%_initial_num_blocks_is_11
@@ -1808,6 +1849,7 @@ APPEND(%%_small_initial_num_blocks_is_, %%i):
         cmp     %%IA1, 9
         je      %%_initial_num_blocks_is_9
 
+align_label
 %%_initial_blocks_is_1_7:
         cmp     %%IA1, 4
         je      %%_initial_num_blocks_is_4
@@ -1821,6 +1863,7 @@ APPEND(%%_small_initial_num_blocks_is_, %%i):
         cmp     %%IA1, 5
         je      %%_initial_num_blocks_is_5
 
+align_label
 %%_initial_blocks_is_1_3:
         cmp     %%IA1, 3
         je      %%_initial_num_blocks_is_3
@@ -1843,6 +1886,7 @@ APPEND(%%_initial_num_blocks_is_,%%i):
 %assign %%i (%%i + 1)
 %endrep
 
+align_label
 %%_initial_blocks_encrypted:
         or              %%LENGTH, %%LENGTH
         je              %%_enc_dec_done
@@ -1852,6 +1896,7 @@ APPEND(%%_initial_num_blocks_is_,%%i):
         cmp             %%LENGTH, 256
         jl              %%_encrypt_by_16_partial
 
+align_loop
 %%_encrypt_by_16:
         ENCRYPT_16_PARALLEL  %%KEY, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, \
                 %%DATA_OFFSET, %%CTR_BLOCK_1_4, %%CTR_BLOCK_5_8, \
@@ -1866,12 +1911,14 @@ APPEND(%%_initial_num_blocks_is_,%%i):
         cmp             %%LENGTH, 256
         jge             %%_encrypt_by_16
 
+align_label
 %%_encrypt_by_16_done:
         ;; Test to see if we need a by 16 with partial block. At this point
         ;; bytes remaining should be either zero or between 241-255.
         or              %%LENGTH, %%LENGTH
         je              %%_enc_dec_done
 
+align_label
 %%_encrypt_by_16_partial:
 
         ENCRYPT_16_PARALLEL  %%KEY, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, \
@@ -1883,6 +1930,7 @@ APPEND(%%_initial_num_blocks_is_,%%i):
                 %%MASKREG, %%SHUFREG, %%ADD16REG, %%NROUNDS, %%CNTR_TYPE, \
                 %%RBITS, %%Z_BIP, %%DIR, %%MASKREG2
 
+align_label
 %%_enc_dec_done:
         vextracti64x4   YWORD(%%ZTMP1), %%Z_BIP, 1
         vpxorq          YWORD(%%Z_BIP), YWORD(%%ZTMP1)

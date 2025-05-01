@@ -40,6 +40,7 @@
 ;%include "include/dbgprint.inc"
 %include "include/clear_regs.inc"
 %include "include/transpose_avx512.inc"
+%include "include/align_avx512.inc"
 
 %ifdef LINUX
 %define arg1	rdi
@@ -468,7 +469,7 @@ endstruc
 %ifidn  %%ENC_DEC, ENC
         ;; ENCRYPTION
         xor     KSOFFSET, KSOFFSET
-align 32
+align_loop
 %%_des_enc_loop:
         E_PHASE %%R, %%T1, %%T2, %%T3, %%T4, [%%KS + KSOFFSET + (0*64)], [%%KS + KSOFFSET + (1*64)], %%T6, %%T7
         S_PHASE %%T1, %%T2, %%T3, %%T4, %%T0, %%T6, %%T7, %%T8, %%T9, %%T10, %%T11
@@ -487,7 +488,7 @@ align 32
 %else
         ;; DECRYPTION
         mov     KSOFFSET, (8*(4*64))
-align 32
+align_loop
 %%_des_dec_loop:
         E_PHASE %%R, %%T1, %%T2, %%T3, %%T4, [%%KS + KSOFFSET - (2*64)], [%%KS + KSOFFSET - (1*64)], %%T6, %%T7
         S_PHASE %%T1, %%T2, %%T3, %%T4, %%T0, %%T6, %%T7, %%T8, %%T9, %%T10, %%T11
@@ -1111,10 +1112,12 @@ align 32
         mov             [%%T_IV + (0*4) + (IDX*4)], DWORD(IA2)
         shr             IA2, 32
         mov             [%%T_IV + (16*4) + (IDX*4)], DWORD(IA2)
+align_label
 %%_des_cfb_one_copy_iv_next %+ IDX:
 %assign IDX (IDX + 1)
 %endrep
 
+align_label
 %%_des_cfb_one_no_last_blocks:
         ;; Uffff ... finally let's do some DES CFB
         ;; - let's use T_IN, T_OUT, T_IV and T_MASK
@@ -1182,6 +1185,7 @@ align 32
         vmovdqu64       [%%T_IV + (1*64)], %%T5
 %endif
 
+align_label
 %%_des_cfb_one_end:
 
 %endmacro
@@ -1385,6 +1389,7 @@ align 32
         xor             OFFSET, OFFSET
         ;; This loop processes message in blocks of 64 bytes.
         ;; Anything smaller than 64 bytes is handled separately after the loop.
+align_loop
 %%_gen_des_enc_loop:
         cmp             OFFSET, %%SIZE
         jz              %%_gen_des_enc_loop_end
@@ -1475,6 +1480,7 @@ align 32
 
         add             OFFSET, 64
         jmp             %%_gen_des_enc_loop
+align_label
 %%_gen_des_enc_loop_end:
         ;; This is where we check if there is anything less than 64 bytes
         ;; of message left for processing.
@@ -1545,6 +1551,7 @@ align 32
 %endif
         jmp             %%_transpose_out
 
+align_label
 %%_blocks_2:
         ;; process two blocks and move to transpose out
 %ifnidn %%DES_DOCSIS, 3DES
@@ -1554,6 +1561,7 @@ align 32
 %endif
         jmp             %%_transpose_out
 
+align_label
 %%_blocks_3:
         ;; process three blocks and move to transpose out
 %ifnidn %%DES_DOCSIS, 3DES
@@ -1563,6 +1571,7 @@ align 32
 %endif
         jmp             %%_transpose_out
 
+align_label
 %%_blocks_4:
         ;; process four blocks and move to transpose out
 %ifnidn %%DES_DOCSIS, 3DES
@@ -1572,10 +1581,12 @@ align 32
 %endif
         jmp             %%_transpose_out
 
+align_label
 %%_gt_4:
         cmp             BYTE(IA0), 0x3f
         ja              %%_blocks_7
         jz              %%_blocks_6
+align_label
 %%_blocks_5:
         ;; process five blocks and move to transpose out
 %ifnidn %%DES_DOCSIS, 3DES
@@ -1585,6 +1596,7 @@ align 32
 %endif
         jmp             %%_transpose_out
 
+align_label
 %%_blocks_6:
         ;; process six blocks and move to transpose out
 %ifnidn %%DES_DOCSIS, 3DES
@@ -1594,6 +1606,7 @@ align 32
 %endif
         jmp             %%_transpose_out
 
+align_label
 %%_blocks_7:
         ;; process seven blocks and move to transpose out
 %ifnidn %%DES_DOCSIS, 3DES
@@ -1602,6 +1615,7 @@ align 32
         GEN_3DES_ENC_CIPHER 7, rsp + _key_sched, rsp + _key_sched2, rsp + _key_sched3
 %endif
 
+align_label
 %%_transpose_out:
         ;; transpose data on output
         TRANSPOSE16_U32 ZW1, ZW0, ZW3, ZW2, ZW5, ZW4, ZW7, ZW6, ZW9, ZW8, ZW11, ZW10, ZW13, ZW12, ZW15, ZW14, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11, ZTMP12, ZTMP13
@@ -1640,6 +1654,7 @@ align 32
         vmovdqu64       [INP2 + OFFSET]{k7}, ZW13
         vmovdqu64       [INP3 + OFFSET]{k7}, ZW14
         vmovdqu64       [INP4 + OFFSET]{k7}, ZW15
+align_label
 %%_gen_des_enc_part_end:
 
         ;; store IV and update pointers
@@ -1705,6 +1720,7 @@ align 32
         xor             OFFSET, OFFSET
         ;; This loop processes message in blocks of 64 bytes.
         ;; Anything smaller than 64 bytes is handled separately after the loop.
+align_loop
 %%_gen_des_dec_loop:
         cmp             OFFSET, %%SIZE
         jz              %%_gen_des_dec_loop_end
@@ -1794,6 +1810,7 @@ align 32
 
         add             OFFSET, 64
         jmp             %%_gen_des_dec_loop
+align_label
 %%_gen_des_dec_loop_end:
         ;; This is where we check if there is anything less than 64 bytes
         ;; of message left for processing.
@@ -1860,6 +1877,7 @@ align 32
 %endif
         jmp             %%_transpose_out
 
+align_label
 %%_blocks_2:
         ;; process two blocks and move to transpose out
 %ifnidn %%DES_DOCSIS, 3DES
@@ -1869,6 +1887,7 @@ align 32
 %endif
         jmp             %%_transpose_out
 
+align_label
 %%_blocks_3:
         ;; process three blocks and move to transpose out
 %ifnidn %%DES_DOCSIS, 3DES
@@ -1878,6 +1897,7 @@ align 32
 %endif
         jmp             %%_transpose_out
 
+align_label
 %%_blocks_4:
         ;; process four blocks and move to transpose out
 %ifnidn %%DES_DOCSIS, 3DES
@@ -1887,10 +1907,12 @@ align 32
 %endif
         jmp             %%_transpose_out
 
+align_label
 %%_gt_4:
         cmp             BYTE(IA0), 0x3f
         ja              %%_blocks_7
         jz              %%_blocks_6
+align_label
 %%_blocks_5:
         ;; process five blocks and move to transpose out
 %ifnidn %%DES_DOCSIS, 3DES
@@ -1900,6 +1922,7 @@ align 32
 %endif
         jmp             %%_transpose_out
 
+align_label
 %%_blocks_6:
         ;; process six blocks and move to transpose out
 %ifnidn %%DES_DOCSIS, 3DES
@@ -1909,6 +1932,7 @@ align 32
 %endif
         jmp             %%_transpose_out
 
+align_label
 %%_blocks_7:
         ;; process seven blocks and move to transpose out
 %ifnidn %%DES_DOCSIS, 3DES
@@ -1917,6 +1941,7 @@ align 32
         GEN_3DES_DEC_CIPHER 7, rsp + _key_sched, rsp + _key_sched2, rsp + _key_sched3
 %endif
 
+align_label
 %%_transpose_out:
         ;; transpose data on output
         TRANSPOSE16_U32 ZW1, ZW0, ZW3, ZW2, ZW5, ZW4, ZW7, ZW6, ZW9, ZW8, ZW11, ZW10, ZW13, ZW12, ZW15, ZW14, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11, ZTMP12, ZTMP13
@@ -1955,6 +1980,7 @@ align 32
         vmovdqu64       [INP2 + OFFSET]{k7}, ZW13
         vmovdqu64       [INP3 + OFFSET]{k7}, ZW14
         vmovdqu64       [INP4 + OFFSET]{k7}, ZW15
+align_label
 %%_gen_des_dec_part_end:
 
         ;; store IV and update pointers
