@@ -31,6 +31,7 @@
 %include "include/memcpy.inc"
 %include "include/const.inc"
 %include "include/aes_common.inc"
+%include "include/align_avx512.inc"
 %define APPEND(a,b) a %+ b
 %define APPEND3(a,b,c) a %+ b %+ c
 
@@ -490,7 +491,7 @@ mksection .text
 ;; snow3g_f9_1_buffer_internal_vaes_avx512(const uint64_t *pBufferIn,
 ;;                                         const uint32_t KS[5],
 ;;                                         const uint64_t lengthInBits);
-align 64
+align_function
 MKGLOBAL(snow3g_f9_1_buffer_internal_vaes_avx512,function,internal)
 snow3g_f9_1_buffer_internal_vaes_avx512:
         endbranch64
@@ -519,6 +520,7 @@ snow3g_f9_1_buffer_internal_vaes_avx512:
         cmp     qword_len, 32                   ;; <32 blocks go to final blocks
         jb      lt32_blocks
 
+align_loop
 start_32_block_loop:
         vmovdqu64       zmm3, [in_ptr]
         vmovdqu64       zmm4, [in_ptr + 64]
@@ -566,6 +568,7 @@ start_32_block_loop:
 
         jmp     start_32_block_loop
 
+align_label
 lt32_blocks:
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;; Less than 32 blocks remaining
@@ -588,6 +591,7 @@ lt32_blocks:
         cmp     qword_len, 24
         jbe     le24_blocks
 
+align_label
 gt24_blocks:
         ;; 25 - 31 blocks
         PROCESS_FINAL_BLOCKS 31, in_ptr, qword_len, k2, tmp4, zmm3, zmm4, zmm23, zmm24, zmm0, \
@@ -595,22 +599,26 @@ gt24_blocks:
 
         jmp     full_blocks_complete
 
+align_label
 le24_blocks:
         ;; 17 - 24 blocks
         PROCESS_FINAL_BLOCKS 24, in_ptr, qword_len, k2, tmp4, zmm3, zmm4, zmm23, zmm24, zmm0, \
                              zmm1, zmm20, zmm21, zmm5, zmm6, zmm10, zmm11, zmm25, zmm26, zmm30, zmm31
         jmp     full_blocks_complete
 
+align_label
 le16_blocks:
         cmp     qword_len, 8
         jbe     le8_blocks
 
+align_label
 gt8_blocks:
         ;; 9 - 16 blocks
         PROCESS_FINAL_BLOCKS 16, in_ptr, qword_len, k2, tmp4, zmm3, zmm4, zmm23, zmm24, zmm0, \
                              zmm1, zmm20, zmm21, zmm5, zmm6, zmm10, zmm11, zmm25, zmm26, zmm30, zmm31
         jmp     full_blocks_complete
 
+align_label
 le8_blocks:
         ;; 1 - 8 blocks
         PROCESS_FINAL_BLOCKS 8, in_ptr, qword_len, k2, tmp4, zmm3, zmm4, zmm23, zmm24, zmm0, \
@@ -618,6 +626,7 @@ le8_blocks:
 
         jmp     full_blocks_complete
 
+align_label
 full_blocks_complete:
 
         mov     tmp5, 0x3f      ;; len_in_bits % 64
@@ -645,6 +654,7 @@ full_blocks_complete:
 
         MUL_AND_REDUCE_64x64_LOW EV, P1, xmm3
 
+align_label
 skip_rem_bits:
         ;; /* Multiply by Q */
         ;; E = multiply_and_reduce64(E ^ lengthInBits,

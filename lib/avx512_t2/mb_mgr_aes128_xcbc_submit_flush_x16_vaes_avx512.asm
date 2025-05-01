@@ -32,6 +32,7 @@
 %include "include/memcpy.inc"
 %include "include/const.inc"
 %include "include/clear_regs.inc"
+%include "include/align_avx512.inc"
 
 %ifndef AES_XCBC_X16
 %define AES_XCBC_X16 aes_xcbc_mac_128_vaes_avx512
@@ -195,6 +196,7 @@ endstruc
 	and	last_len, 15	; Check lsbs of msg len
 	jnz	%%_slow_copy	; if not 16B mult, do slow copy
 
+align_label
 %%_fast_copy:
 	vmovdqu	xmm0, [p - 16]	; load last block M[n]
         mov     tmp, [job + _k2] ; load K2 address
@@ -202,6 +204,7 @@ endstruc
         vpxor   xmm0, xmm0, xmm1      ; M[n] XOR K2
 	vmovdqa	[lane_data + _xcbc_final_block], xmm0
 	sub	len, 16		; take last block off length
+align_label
 %%_end_fast_copy:
         ;; Update lane len
         vmovdqa64 ymm0, [state + _aes_xcbc_lens]
@@ -238,8 +241,10 @@ endstruc
 
         bts     tmp, i ;; set bit in null lane mask
         jmp     %%_end_loop %+ i
+align_label
 %%_skip_copy %+ i:
         mov     DWORD(tmp2), i ;; store good lane idx
+align_label
 %%_end_loop %+ i:
 %assign i (i - 1)
 %endrep
@@ -266,6 +271,7 @@ endstruc
 
 %endif ; SUBMIT_FLUSH
 
+align_loop
 %%_start_loop:
 
         ; Find min length for lanes 8-15
@@ -279,6 +285,7 @@ endstruc
         vpextrw         DWORD(idx), xmm2, 1   ; min index
         add             DWORD(idx), 8               ; but index +8
         mov             len2, tmp3                    ; min len
+align_label
 %%_use_min:
         cmp             len2, 0
         je              %%_len_is_0
@@ -297,6 +304,7 @@ endstruc
 %endif
 	; state and idx are intact
 
+align_label
 %%_len_is_0:
 	; process completed job "idx"
 	imul	lane_data, idx, _XCBC_LANE_DATA_size
@@ -350,6 +358,7 @@ endstruc
 
 	jmp	%%_start_loop
 
+align_label
 %%_end_loop:
 	; process completed job "idx"
 	mov	job_rax, [lane_data + _xcbc_job_in_lane]
@@ -382,6 +391,7 @@ endstruc
 %endrep
 %endif
 
+align_label
 %%_return:
 
 %ifdef SAFE_DATA
@@ -405,6 +415,7 @@ endstruc
         ret
 
 %ifidn %%SUBMIT_FLUSH, SUBMIT
+align_label
 %%_small_buffer:
 	; For buffers <= 16 Bytes
 	; The input data is set to final block
@@ -414,6 +425,7 @@ endstruc
 	cmp	len, 16
 	je	%%_fast_copy
 
+align_label
 %%_slow_copy:
 	and	len, ~15	; take final block off len
 	sub	p, last_len	; adjust data pointer
@@ -438,13 +450,14 @@ endstruc
 
 %endif ; SUBMIT
 
+align_label
 %%_return_null:
 	xor	job_rax, job_rax
 	jmp	%%_return
 
 %endmacro
 
-align 64
+align_function
 ; IMB_JOB * submit_job_aes_xcbc_vaes_avx512(MB_MGR_XCBC_OOO *state, IMB_JOB *job)
 ; arg 1 : state
 ; arg 2 : job
@@ -452,6 +465,7 @@ MKGLOBAL(SUBMIT_JOB_AES_XCBC,function,internal)
 SUBMIT_JOB_AES_XCBC:
         GENERIC_SUBMIT_FLUSH_JOB_AES_XCBC_VAES_AVX512 SUBMIT
 
+align_function
 ; IMB_JOB * flush_job_aes_xcbc_vaes_avx512(MB_MGR_XCBC_OOO *state)
 ; arg 1 : state
 MKGLOBAL(FLUSH_JOB_AES_XCBC,function,internal)

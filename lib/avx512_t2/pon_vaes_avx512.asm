@@ -31,6 +31,7 @@
 %include "include/os.inc"
 %include "include/memcpy.inc"
 %include "include/clear_regs.inc"
+%include "include/align_avx512.inc"
 
 extern aes_cntr_pon_enc_128_vaes_avx512
 extern aes_cntr_pon_dec_128_vaes_avx512
@@ -256,6 +257,7 @@ endstruc
 
         mov     tmp_1, [job + _auth_tag_output]
         mov     [tmp_1 + 4], eax
+align_label
 %%_skip_crc:
         ; get output buffer
         mov     dst, [job + _dst]
@@ -297,6 +299,7 @@ endstruc
         mov     tmp_2, [job + _msg_len_to_hash_in_bytes]
         sub     tmp_2, 8
 
+align_loop
 %%start_bip:
         cmp     tmp_2, 64
         jle     %%finish_bip
@@ -306,6 +309,7 @@ endstruc
         add     dst, 64
 
         jmp     %%start_bip
+align_label
 %%finish_bip:
 
         lea     tmp_1, [rel byte64_len_to_mask_table]
@@ -420,6 +424,7 @@ endstruc
         mov     tmp_2, [job + _msg_len_to_hash_in_bytes]
         sub     tmp_2, 8
 
+align_loop
 %%start_bip:
         cmp     tmp_2, 64
         jle     %%finish_bip
@@ -429,6 +434,7 @@ endstruc
         add     dst, 64
 
         jmp     %%start_bip
+align_label
 %%finish_bip:
 
         lea     tmp_1, [rel byte64_len_to_mask_table]
@@ -473,6 +479,7 @@ endstruc
 
         mov     tmp_1, [job + _auth_tag_output]
         mov     [tmp_1 + 4], eax
+align_label
 %%_skip_crc:
         ; Restore job pointer
         mov    job, [rsp + _job_save]
@@ -501,28 +508,28 @@ endstruc
 %endmacro
 
 ;;; submit_job_pon_enc_vaes_avx512(IMB_JOB *job)
-align 64
+align_function
 MKGLOBAL(submit_job_pon_enc_vaes_avx512,function,internal)
 submit_job_pon_enc_vaes_avx512:
         AES128_CTR_PON_ENC CTR
         ret
 
 ;;; submit_job_pon_dec_vaes_avx512(IMB_JOB *job)
-align 64
+align_function
 MKGLOBAL(submit_job_pon_dec_vaes_avx512,function,internal)
 submit_job_pon_dec_vaes_avx512:
         AES128_CTR_PON_DEC CTR
         ret
 
 ;;; submit_job_pon_enc_no_ctr_vaes_avx512(IMB_JOB *job)
-align 64
+align_function
 MKGLOBAL(submit_job_pon_enc_no_ctr_vaes_avx512,function,internal)
 submit_job_pon_enc_no_ctr_vaes_avx512:
         AES128_CTR_PON_ENC NO_CTR
         ret
 
 ;;; submit_job_pon_dec_no_ctr_vaes_avx512(IMB_JOB *job)
-align 64
+align_function
 MKGLOBAL(submit_job_pon_dec_no_ctr_vaes_avx512,function,internal)
 submit_job_pon_dec_no_ctr_vaes_avx512:
         AES128_CTR_PON_DEC NO_CTR

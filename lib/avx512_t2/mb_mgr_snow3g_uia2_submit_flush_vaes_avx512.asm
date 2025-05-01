@@ -33,6 +33,7 @@
 %include "include/const.inc"
 %include "include/clear_regs.inc"
 %include "include/snow3g_uea2_by16_vaes_avx512.inc"
+%include "include/align_avx512.inc"
 
 %ifndef SUBMIT_JOB_SNOW3G_UIA2
 %define SUBMIT_JOB_SNOW3G_UIA2_GEN2     submit_job_snow3g_uia2_vaes_avx512
@@ -183,6 +184,7 @@ mksection .text
         jmp             %%init_lanes_uia2
 %endif
 
+align_label
 %%process_job_uia2:
         ;; preserve state for function call
         mov     tmp_state, state
@@ -203,6 +205,7 @@ mksection .text
         ;; copy digest temporarily
         mov     DWORD(tmp), eax
 
+align_label
 %%process_completed_job_submit_uia2:
         ; process completed job "idx"
         ;; - decrement number of jobs in use
@@ -228,11 +231,13 @@ mksection .text
 
         jmp     %%return_uia2
 
+align_label
 %%init_all_lanes_uia2:
         ;; set initialized lanes mask for all 16 lanes
         ;; this is used to update OOO MGR after initialization
         mov     DWORD(init_lanes), 0xffff
 
+align_label
 %%init_lanes_uia2:
 
         SNOW3G_AUTH_INIT_5 {state + _snow3g_args_keys}, \
@@ -248,6 +253,7 @@ mksection .text
         ;; process first job
         jmp     %%process_job_uia2
 
+align_label
 %%return_uia2:
 %ifdef SAFE_DATA
         clear_scratch_zmms_asm
@@ -258,6 +264,7 @@ mksection .text
 
         ret
 
+align_label
 %%return_null_uia2:
         xor     job_rax, job_rax
         jmp     %%return_uia2
@@ -267,20 +274,24 @@ mksection .text
 ; arg 1 : state
 ; arg 2 : job
 MKGLOBAL(SUBMIT_JOB_SNOW3G_UIA2_GEN2,function,internal)
+align_function
 SUBMIT_JOB_SNOW3G_UIA2_GEN2:
         SUBMIT_FLUSH_JOB_SNOW3G_UIA2 submit, avx512_gen2
 
 MKGLOBAL(SUBMIT_JOB_SNOW3G_UIA2,function,internal)
+align_function
 SUBMIT_JOB_SNOW3G_UIA2:
         SUBMIT_FLUSH_JOB_SNOW3G_UIA2 submit, avx512_gen1
 
 ; JOB* FLUSH_JOB_SNOW3G_UIA2(MB_MGR_SNOW3G_OOO *state)
 ; arg 1 : state
 MKGLOBAL(FLUSH_JOB_SNOW3G_UIA2_GEN2,function,internal)
+align_function
 FLUSH_JOB_SNOW3G_UIA2_GEN2:
         SUBMIT_FLUSH_JOB_SNOW3G_UIA2 flush, avx512_gen2
 
 MKGLOBAL(FLUSH_JOB_SNOW3G_UIA2,function,internal)
+align_function
 FLUSH_JOB_SNOW3G_UIA2:
         SUBMIT_FLUSH_JOB_SNOW3G_UIA2 flush, avx512_gen1
 

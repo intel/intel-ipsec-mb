@@ -31,6 +31,7 @@
 %include "include/imb_job.inc"
 %include "include/clear_regs.inc"
 %include "include/cet.inc"
+%include "include/align_avx512.inc"
 
 ;; Enforce EVEX encoding for AVX512 capable systems
 %xdefine vpmadd52luq {evex}vpmadd52luq
@@ -1112,6 +1113,7 @@ mksection .text
         mov     %%T0, %%LEN
         and     %%T0, 0xffffffffffffff00 ; multiple of 256 bytes
 
+align_loop
 %%_poly1305_blocks_loop:
         cmp     %%T0, POLY1305_BLOCK_SIZE*16
         jbe     %%_poly1305_blocks_loop_end
@@ -1128,6 +1130,7 @@ mksection .text
 
         jmp     %%_poly1305_blocks_loop
 
+align_label
 %%_poly1305_blocks_loop_end:
 
         ;; Need to multiply by r^16, r^15, r^14... r
@@ -1209,6 +1212,7 @@ mksection .text
 
         and     %%LEN, (POLY1305_BLOCK_SIZE*16 - 1) ; Get remaining lengths (LEN < 256 bytes)
 
+align_label
 %%_less_than_256:
         cmp     %%LEN, POLY1305_BLOCK_SIZE*8
         jb      %%_less_than_128
@@ -1277,6 +1281,7 @@ mksection .text
         vpaddq  xmm14{k1}{z}, xmm11
         vpaddq  xmm15{k1}{z}, xmm12
 
+align_label
 %%_less_than_128:
         cmp     %%LEN, 32 ; If remaining bytes is <= 32, perform last blocks in scalar
         jbe     %%_simd_to_gp
@@ -1374,6 +1379,7 @@ APPEND(%%_shuffle_blocks_, i):
 %assign i (i + 1)
 %endrep
 
+align_label
 %%_end_shuffle:
         ; zmm13-zmm15 contain the 8 blocks of message plus the previous accumulator
         ; zmm22-24 contain the 3x44-bit limbs of the powers of R
@@ -1409,6 +1415,7 @@ APPEND(%%_shuffle_blocks_, i):
         vpaddq  xmm14, xmm11
         vpaddq  xmm15, xmm12
 
+align_label
 %%_simd_to_gp:
         ; Carry propagation
         vpsrlq  xmm0, xmm13, 44
@@ -1449,6 +1456,7 @@ APPEND(%%_shuffle_blocks_, i):
         vmovdqa64 [rsp + _r_save + 64*5], zmm0
 %endif
 
+align_loop
 %%_final_loop:
         cmp     %%LEN, POLY1305_BLOCK_SIZE
         jb      %%_poly1305_blocks_partial
@@ -1470,6 +1478,7 @@ APPEND(%%_shuffle_blocks_, i):
 
         jmp     %%_final_loop
 
+align_label
 %%_len_256_511:
 
         ; zmm13-zmm15 contain the 8 blocks of message plus the previous accumulator
@@ -1545,6 +1554,7 @@ APPEND(%%_shuffle_blocks_, i):
         sub     %%LEN, POLY1305_BLOCK_SIZE*16
 
         jmp     %%_less_than_256
+align_label
 %%_poly1305_blocks_partial:
 
         or      %%LEN, %%LEN
@@ -1578,6 +1588,7 @@ APPEND(%%_shuffle_blocks_, i):
         POLY1305_MUL_REDUCE %%A0, %%A1, %%A2, %%R0, %%R1, \
                             %%T0, %%T1, %%T2, %%T3, %%GP_RAX, %%GP_RDX
 
+align_label
 %%_poly1305_blocks_exit:
 %endmacro
 
@@ -1692,7 +1703,7 @@ APPEND(%%_shuffle_blocks_, i):
 ;; arg2 - Message length
 ;; arg3 - Input/output hash
 ;; arg4 - Poly1305 key
-align 32
+align_function
 MKGLOBAL(poly1305_aead_update_fma_avx512,function,internal)
 poly1305_aead_update_fma_avx512:
 
@@ -1752,6 +1763,7 @@ poly1305_aead_update_fma_avx512:
         mov     [_arg3 + 2 * 8], _a2
 
         FUNC_EXIT
+align_label
 .poly1305_update_exit:
         ret
 
@@ -1762,7 +1774,7 @@ poly1305_aead_update_fma_avx512:
 ;; arg1 - Input hash
 ;; arg2 - Poly1305 key
 ;; arg3 - Output tag
-align 32
+align_function
 MKGLOBAL(poly1305_aead_complete_fma_avx512,function,internal)
 poly1305_aead_complete_fma_avx512:
 
@@ -1797,6 +1809,7 @@ poly1305_aead_complete_fma_avx512:
 %endif
 
         FUNC_EXIT
+align_label
 .poly1305_complete_exit:
         ret
 
@@ -1804,7 +1817,7 @@ poly1305_aead_complete_fma_avx512:
 ;; =============================================================================
 ;; void poly1305_mac_fma_avx512(IMB_JOB *job)
 ;; arg1 - job structure
-align 32
+align_function
 MKGLOBAL(poly1305_mac_fma_avx512,function,internal)
 poly1305_mac_fma_avx512:
         FUNC_ENTRY
@@ -1837,6 +1850,7 @@ poly1305_mac_fma_avx512:
         mov     rdx, [job + _auth_tag_output]
         POLY1305_FINALIZE rax, rdx, _a0, _a1, _a2, gp6, gp7, gp8
 
+align_label
 .poly1305_mac_exit:
         FUNC_EXIT
         ret

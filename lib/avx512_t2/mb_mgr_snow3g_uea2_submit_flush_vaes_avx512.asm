@@ -31,6 +31,7 @@
 %include "include/imb_job.inc"
 %include "include/os.inc"
 %include "include/clear_regs.inc"
+%include "include/align_avx512.inc"
 
 %include "include/snow3g_uea2_by16_vaes_avx512.inc"
 
@@ -168,6 +169,7 @@ mksection .text
         ;; WORK2) and they can be processed in parallel by the algorithmic code.
         ;; ---------------------------------------------------------------------
 
+align_loop
 %%_find_min:
         ;; Find minimum length
         vmovdqa32       zmm0, [state + _snow3g_lens_dw]
@@ -224,6 +226,7 @@ mksection .text
         vmovdqa32       [state + _snow3g_args_out + 0*8], zmm3
         vmovdqa32       [state + _snow3g_args_out + 8*8], zmm4
 
+align_label
 %%_len_is_0:
         ;; Four states are possible here:
         ;;   INIT1) initialization phase is complete
@@ -260,6 +263,7 @@ mksection .text
         mov             qword [state + _snow3g_args_byte_length + %%LANE*8], 0
         jmp             %%_find_min
 
+align_label
 %%_init_phase_in_progress:
         ;; This is INIT1 or INIT2 state
         bt              word [state + _snow3g_INIT_MASK], WORD(%%LANE)
@@ -276,6 +280,7 @@ mksection .text
         vmovdqa32       [state + _snow3g_lens_dw], zmm0
         jmp             %%_find_min
 
+align_label
 %%_init_done:
         ;; The lane is in INIT2 state
         ;; - just finished 2 phase of initialization (1 iteration)
@@ -303,6 +308,7 @@ mksection .text
 
         jmp             %%_find_min
 
+align_label
 %%process_completed_job_submit_uea2:
         ;; COMPLETE: return job, change job length to UINT32_MAX
         vmovdqa32       zmm0, [state + _snow3g_lens_dw]
@@ -377,6 +383,7 @@ mksection .text
         clear_scratch_zmms_asm
 %endif
 
+align_label
 %%return_uea2:
 
 %endmacro
@@ -385,6 +392,7 @@ mksection .text
 ;; arg 1 : state
 ;; arg 2 : job
 MKGLOBAL(SUBMIT_JOB_SNOW3G_UEA2_GEN2,function,internal)
+align_function
 SUBMIT_JOB_SNOW3G_UEA2_GEN2:
         SNOW3G_FUNC_START
         SUBMIT_FLUSH_JOB_SNOW3G_UEA2 submit, tmp_gp1, tmp_gp2, tmp_gp3, tmp_gp4, tmp_gp5, tmp_gp6, tmp_gp7, tmp_gp8, tmp_gp9, tmp_gp10, tmp_gp11, avx512_gen2
@@ -392,6 +400,7 @@ SUBMIT_JOB_SNOW3G_UEA2_GEN2:
         ret
 
 MKGLOBAL(SUBMIT_JOB_SNOW3G_UEA2,function,internal)
+align_function
 SUBMIT_JOB_SNOW3G_UEA2:
         SNOW3G_FUNC_START
         SUBMIT_FLUSH_JOB_SNOW3G_UEA2 submit, tmp_gp1, tmp_gp2, tmp_gp3, tmp_gp4, tmp_gp5, tmp_gp6, tmp_gp7, tmp_gp8, tmp_gp9, tmp_gp10, tmp_gp11, avx512_gen1
@@ -401,6 +410,7 @@ SUBMIT_JOB_SNOW3G_UEA2:
 ;; JOB* FLUSH_JOB_SNOW3G_UEA2(MB_MGR_SNOW3G_OOO *state)
 ;; arg 1 : state
 MKGLOBAL(FLUSH_JOB_SNOW3G_UEA2_GEN2,function,internal)
+align_function
 FLUSH_JOB_SNOW3G_UEA2_GEN2:
         SNOW3G_FUNC_START
         SUBMIT_FLUSH_JOB_SNOW3G_UEA2 flush, tmp_gp1, tmp_gp2, tmp_gp3, tmp_gp4, tmp_gp5, tmp_gp6, tmp_gp7, tmp_gp8, tmp_gp9, tmp_gp10, tmp_gp11, avx512_gen2
@@ -408,6 +418,7 @@ FLUSH_JOB_SNOW3G_UEA2_GEN2:
         ret
 
 MKGLOBAL(FLUSH_JOB_SNOW3G_UEA2,function,internal)
+align_function
 FLUSH_JOB_SNOW3G_UEA2:
         SNOW3G_FUNC_START
         SUBMIT_FLUSH_JOB_SNOW3G_UEA2 flush, tmp_gp1, tmp_gp2, tmp_gp3, tmp_gp4, tmp_gp5, tmp_gp6, tmp_gp7, tmp_gp8, tmp_gp9, tmp_gp10, tmp_gp11, avx512_gen1

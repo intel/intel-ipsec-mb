@@ -31,6 +31,7 @@
 %include "include/reg_sizes.inc"
 %include "include/const.inc"
 %include "include/clear_regs.inc"
+%include "include/align_avx512.inc"
 
 %ifndef AES_CBC_MAC
 %define AES_CBC_MAC aes128_cbc_mac_vaes_avx512
@@ -255,6 +256,7 @@ endstruc
         or      r, r
         jz      %%_complete_block
 
+align_label
 %%_not_complete_block:
         ;; M_last = padding(M_n) XOR K2
 
@@ -287,6 +289,7 @@ endstruc
         vpxor   xmm2, xmm1
         vmovdqa [m_last], xmm2
 
+align_label
 %%_step_5:
         ;; Find min length for lanes 0-7
         vphminposuw     xmm2, xmm0
@@ -333,6 +336,7 @@ endstruc
 
 %endif ; end FLUSH
 
+align_loop
 %%_cmac_round:
         ; Find min length for lanes 8-15
         vpextrw         DWORD(len2), xmm2, 0   ; min value
@@ -345,6 +349,7 @@ endstruc
         vpextrw         DWORD(idx), xmm2, 1   ; min index
         add             DWORD(idx), 8               ; but index +8
         mov             len2, tmp4                    ; min len
+align_label
 %%_use_min:
         cmp             len2, 0
         je              %%_len_is_0
@@ -364,6 +369,7 @@ endstruc
         ; state and idx are intact
 
         vmovdqa ymm0, [state + _aes_cmac_lens]  ; preload lens
+align_label
 %%_len_is_0:
         ; Check if job complete
         test    word [state + _aes_cmac_init_done + idx*2], 0xffff
@@ -415,6 +421,7 @@ endstruc
 
         jmp     %%_cmac_round
 
+align_label
 %%_copy_complete_digest:
         ; Job complete, copy digest to AT output
  	mov	job_rax, [state + _aes_cmac_job_in_lane + idx*8]
@@ -433,6 +440,7 @@ endstruc
         vmovdqu [tmp2], xmm0
         jmp     %%_update_lanes
 
+align_label
 %%_ne_16_copy:
         vmovdqa xmm0, [tmp3]
 
@@ -451,6 +459,7 @@ endstruc
 
         vmovdqu8 [tmp2]{k1}, xmm0
 
+align_label
 %%_update_lanes:
         ; Update unused lanes
         mov	unused_lanes, [state + _aes_cmac_unused_lanes]
@@ -481,6 +490,7 @@ endstruc
 
 %endif ;; SAFE_DATA
 
+align_label
 %%_return:
 %ifdef SAFE_DATA
 	clear_all_zmms_asm
@@ -501,11 +511,13 @@ endstruc
 	mov	rsp, [rsp + _rsp_save]	; original SP
 	ret
 
+align_label
 %%_return_null:
 	xor	job_rax, job_rax
 	jmp	%%_return
 
 %ifidn %%SUBMIT_FLUSH, SUBMIT
+align_label
 %%_complete_block:
 
         ;; Block size aligned
@@ -524,6 +536,7 @@ endstruc
 
         jmp     %%_step_5
 
+align_label
 %%_lt_one_block:
         ;; Single partial block
         mov     word [state + _aes_cmac_init_done + lane*2], 1
@@ -550,6 +563,7 @@ endstruc
         mov     n, 1
         jmp     %%_not_complete_block
 
+align_label
 %%_not_complete_block_3gpp:
         ;; bit pad last block
         ;; xor with skey2
@@ -582,6 +596,7 @@ endstruc
 
         dec     r
 
+align_label
 %%_update_mlast_3gpp:
         ;; set last byte padding mask
         ;; shift into correct xmm idx
@@ -623,6 +638,7 @@ endstruc
 
         jmp     %%_step_5
 
+align_label
 %%_load_full_block_3gpp:
         vmovdqu xmm4, [tmp]
         mov     r, 0xf
@@ -635,12 +651,14 @@ align 64
 ; arg 1 : state
 ; arg 2 : job
 MKGLOBAL(SUBMIT_JOB_AES_CMAC_AUTH,function,internal)
+align_function
 SUBMIT_JOB_AES_CMAC_AUTH:
         GENERIC_SUBMIT_FLUSH_JOB_AES_CMAC_VAES_AVX512 SUBMIT
 
 ; IMB_JOB * flush_job_aes_cmac_auth_vaes_avx512(MB_MGR_CMAC_OOO *state)
 ; arg 1 : state
 MKGLOBAL(FLUSH_JOB_AES_CMAC_AUTH,function,internal)
+align_function
 FLUSH_JOB_AES_CMAC_AUTH:
         GENERIC_SUBMIT_FLUSH_JOB_AES_CMAC_VAES_AVX512 FLUSH
 

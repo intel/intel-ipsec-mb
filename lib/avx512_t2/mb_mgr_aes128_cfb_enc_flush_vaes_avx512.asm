@@ -31,6 +31,7 @@
 %include "include/constants.inc"
 %include "include/reg_sizes.inc"
 %include "include/clear_regs.inc"
+%include "include/align_avx512.inc"
 
 %ifndef AES_CFB_ENC_X16
 %define AES_CFB_ENC_X16 aes_cfb_enc_128_flush_vaes_avx512
@@ -104,6 +105,7 @@ mksection .text
 %endif
         ;; copy key for each lane
         vmovdqa64       [%%KEY_TAB + j + (k*16)], %%XTMP2
+align_label
 %%_skip_copy %+ j %+ _ %+ k:
 %assign k (k + 1)
 %endrep
@@ -135,6 +137,7 @@ mksection .text
 %assign j (j + 256)
 
 %endrep
+align_label
 %%_skip_clear %+ k:
 %assign k (k + 1)
 %endrep
@@ -152,6 +155,7 @@ endstruc
 ; arg 1 : state
 ; arg 2 : job
 MKGLOBAL(FLUSH_JOB_AES_CFB_ENC,function,internal)
+align_function
 FLUSH_JOB_AES_CFB_ENC:
         mov     rax, rsp
         sub     rsp, STACK_size
@@ -220,6 +224,7 @@ FLUSH_JOB_AES_CFB_ENC:
         vpextrw         DWORD(idx), xmm2, 1   ; min index
         add             DWORD(idx), 8               ; but index +8
         mov             len2, tmp3                    ; min len
+align_label
 use_min:
         or              len2, len2
         je              len_is_0
@@ -234,6 +239,7 @@ use_min:
         call    AES_CFB_ENC_X16
         ; state and idx are intact
 
+align_label
 len_is_0:
         ; process completed job "idx"
         mov     job_rax, [state + _aes_job_in_lane + idx*8]
@@ -258,6 +264,7 @@ len_is_0:
 
 %endif
 
+align_label
 return:
 %ifdef SAFE_DATA
 	clear_all_zmms_asm
@@ -279,6 +286,7 @@ return:
 
         ret
 
+align_label
 return_null:
         xor     job_rax, job_rax
         jmp     return
