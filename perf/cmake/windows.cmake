@@ -57,7 +57,7 @@ add_custom_command(
   TARGET ${PERF_APP}
   POST_BUILD
   COMMAND
-    ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/ipsec_perf_tool.py"
+    ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/imb-perf-tool.py"
     $<TARGET_FILE_DIR:${PERF_APP}>)
 add_custom_command(
   TARGET ${PERF_APP}
