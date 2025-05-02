@@ -120,3 +120,16 @@ Please use `ipsec_diff_tool.py` script to produce a slope file.
 
 Example usage:
 `./imb-slope-to-stat.pl file1.slope file2.slope ... > file.stat`
+
+### Running the imb-stat-algo-report.pl script
+
+The `imb-stat-algo-report.pl` script takes one or more stat files as input and produces a report.
+The report includes percentage of algorithms that score best for given stat file and predefined criteria:
+- minimum cycle cost for given packet size, calculated using average slope and intercept values
+- minimum cycle cost for given packet size, calculated using `average + stdev` slope and intercept values
+- minimum cycle cost gap for given packet size, calculated using (max - min)  slope and intercept values
+
+Please use `imb-slope-to-stat.pl` script to produce a stat file.
+
+Example usage:
+`./imb-stat-algo-report.pl file1.stat file2.stat ...`
