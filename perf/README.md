@@ -110,3 +110,13 @@ To compare two result files and set the threshold to 5%:
 
 To compare two result files and output an Excel spreadsheet with the results:  
 `imb-perf-cmp.py baseline_results.txt compare_results.txt --generate_excel`  
+
+### Running the imb-slope-to-stat.pl script
+
+The `imb-slope-to-stat.pl` script is used to convert one or more performance slope files into a stat file (STDOUT).
+Stat files include average, median, min, max, stdev and stdev/average values for all input algorithm slope and intercept data.
+
+Please use `ipsec_diff_tool.py` script to produce a slope file.
+
+Example usage:
+`./imb-slope-to-stat.pl file1.slope file2.slope ... > file.stat`

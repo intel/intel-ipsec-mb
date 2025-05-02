@@ -66,4 +66,6 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/imb-speed.py
                ${COPY_DST_DIR}/imb-speed.py COPYONLY)
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/imb-perf-cmp.py
                ${COPY_DST_DIR}/imb-perf-cmp.py COPYONLY)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/imb-slope-to-stat.pl
+               ${COPY_DST_DIR}/imb-slope-to-stat.pl COPYONLY)
 
