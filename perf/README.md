@@ -133,3 +133,14 @@ Please use `imb-slope-to-stat.pl` script to produce a stat file.
 
 Example usage:
 `./imb-stat-algo-report.pl file1.stat file2.stat ...`
+
+### Running the imb-stat-avg.pl script
+
+The `imb-stat-avg.pl` script takes one or more stat files as input and produces a report.
+The report includes average stat data from from each input stat file across all algorithms.
+It allows to compare average characteristics of different stat files against each other.
+
+Please use `imb-slope-to-stat.pl` script to produce a stat file.
+
+Example usage:
+`./imb-stat-avg.pl file1.stat file2.stat ...`

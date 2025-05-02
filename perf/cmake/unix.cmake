@@ -79,3 +79,5 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/imb-slope-to-stat.pl
                ${COPY_DST_DIR}/imb-slope-to-stat.pl COPYONLY)
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/imb-stat-algo-report.pl
                ${COPY_DST_DIR}/imb-stat-algo-report.pl COPYONLY)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/imb-stat-avg.pl
+               ${COPY_DST_DIR}/imb-stat-avg.pl COPYONLY)

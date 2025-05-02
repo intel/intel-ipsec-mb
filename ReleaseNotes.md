@@ -19,6 +19,8 @@ Performance Applications
 - Added `imb-perf-cmp.py` tool that compares post processed performance metrics.
 - Improved stability of imb-perf application.
 - Added AVX10 architecture support.
+- Added `imb-slope-to-stat.pl`, `imb-stat-algo-report.pl` and `imb-stat-avg.pl` scripts.
+- Renamed `ipsec_perf_tool.py` to `imb-perf-tool.py`.
 
 Fixes
 - Fixed SM4-GCM plaintext/ciphertext address calculation (issue #159).
