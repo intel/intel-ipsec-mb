@@ -61,7 +61,7 @@ class Variant:
     def __init__(self, idx=None, arch=None, direction='encrypt', cipher_alg=None,
                  hash_alg=None, aead_alg=None, sizes=None, offset=None,
                  cold_cache=False, shani_off=False, gfni_off=False, job_api=False,
-                 unhalted_cycles=False, quick_test=False, smoke_test=False,
+                 unhalted_cycles=False, quick_test=False, smoke_test=False, turbo=False,
                  imix=None, aad_size=None, job_iter=None, no_time_box=False, buffer_offset=None):
         """Build perf app command line"""
         global PERF_APP
@@ -85,6 +85,7 @@ class Variant:
         self.unhalted_cycles = unhalted_cycles
         self.quick_test = quick_test
         self.smoke_test = smoke_test
+        self.turbo = turbo
         self.imix = imix
         self.aad_size = aad_size
         self.job_iter = job_iter
@@ -144,6 +145,9 @@ class Variant:
 
         if self.smoke_test is True:
             self.cmd += ' --smoke'
+
+        if self.turbo is True:
+            self.cmd += ' --turbo'
 
         if self.no_time_box is True:
             self.cmd += ' --no-time-box'
@@ -413,6 +417,10 @@ def parse_args():
                         help=textwrap.dedent('''\
                         very quick, imprecise and without print out
                         (for validation only)'''))
+    parser.add_argument("--turbo", action='store_true',
+                        help=textwrap.dedent('''\
+                        more precise TSC/CPU CLK ratio calculation
+                        (required when turbo is on)'''))
     parser.add_argument("--imix", default=None,
                         help=textwrap.dedent('''\
                         set numbers that establish occurrence proportions between packet sizes.
@@ -466,7 +474,7 @@ def parse_args():
     return args.arch, cores, directions, args.offset, \
         alg_types, args.job_size, args.cold_cache, args.arch_best, \
         args.shani_off, args.gfni_off, args.job_api, \
-        args.unhalted_cycles, args.quick, args.smoke, args.imix, \
+        args.unhalted_cycles, args.quick, args.smoke, args.turbo, args.imix, \
         args.aad_size, args.job_iter, args.no_time_box, args.buffer_offset
 
 
@@ -537,7 +545,7 @@ def main():
     # parse command line args
     archs, cores, directions, offset, alg_types, sizes, cold_cache, arch_best, \
         shani_off, gfni_off, job_api, unhalted_cycles, quick_test, smoke_test, \
-        imix, aad_size, job_iter, no_time_box, buffer_offset = parse_args()
+        turbo, imix, aad_size, job_iter, no_time_box, buffer_offset = parse_args()
 
     # validate requested archs are supported
     if arch_best is True:
@@ -572,6 +580,11 @@ def main():
         print('  API: {}'.format("job-api" if job_api else "burst-api"), file=sys.stderr)
         print('  Measuring using {}'.format("unhalted cycles" if unhalted_cycles \
                                             else "rdtsc"), file=sys.stderr)
+        if unhalted_cycles is True:
+            print('  TSC/CLK Ratio: {}'.format("N/A"))
+        else:
+            print('  TSC/CLK Ratio: {}'.format("precise/turbo" if turbo \
+                                               else "standard"), file=sys.stderr)
         if quick_test is True or smoke_test is True:
             print('  Test type: {}'.format("smoke" if smoke_test else "quick"), file=sys.stderr)
         if job_iter is not None:
@@ -588,9 +601,9 @@ def main():
                                        offset=offset, sizes=sizes, cipher_alg=cipher_alg,
                                        cold_cache=cold_cache, shani_off=shani_off, gfni_off=gfni_off,
                                        job_api=job_api, unhalted_cycles=unhalted_cycles,
-                                       quick_test=quick_test, smoke_test=smoke_test, imix=imix,
+                                       quick_test=quick_test, smoke_test=smoke_test, turbo=turbo, imix=imix,
                                        aad_size=aad_size, job_iter=job_iter, no_time_box=no_time_box,
-				       buffer_offset=buffer_offset))
+                                       buffer_offset=buffer_offset))
                     TOTAL_VARIANTS += 1
 
         if 'hash-only' in alg_types:
@@ -600,9 +613,9 @@ def main():
                                    offset=offset, sizes=sizes, hash_alg=hash_alg,
                                    cold_cache=cold_cache, shani_off=shani_off, gfni_off=gfni_off,
                                    job_api=job_api, unhalted_cycles=unhalted_cycles,
-                                   quick_test=quick_test, smoke_test=smoke_test, imix=imix,
+                                   quick_test=quick_test, smoke_test=smoke_test, turbo=turbo, imix=imix,
                                    aad_size=aad_size, job_iter=job_iter, no_time_box=no_time_box,
-			       	   buffer_offset=buffer_offset))
+                                   buffer_offset=buffer_offset))
                 TOTAL_VARIANTS += 1
 
         if 'aead-only' in alg_types:
@@ -612,9 +625,9 @@ def main():
                                        offset=offset, sizes=sizes, aead_alg=aead_alg,
                                        cold_cache=cold_cache, shani_off=shani_off, gfni_off=gfni_off,
                                        job_api=job_api, unhalted_cycles=unhalted_cycles,
-                                       quick_test=quick_test, smoke_test=smoke_test, imix=imix,
+                                       quick_test=quick_test, smoke_test=smoke_test, turbo=turbo, imix=imix,
                                        aad_size=aad_size, job_iter=job_iter, no_time_box=no_time_box,
-				       buffer_offset=buffer_offset))
+                                       buffer_offset=buffer_offset))
                     TOTAL_VARIANTS += 1
 
         if 'cipher-hash-all' in alg_types:
@@ -627,9 +640,9 @@ def main():
                                            hash_alg=hash_alg, cold_cache=cold_cache,
                                            shani_off=shani_off, gfni_off=gfni_off, job_api=job_api,
                                            unhalted_cycles=unhalted_cycles, quick_test=quick_test,
-                                           smoke_test=smoke_test, imix=imix, aad_size=aad_size,
+                                           smoke_test=smoke_test, turbo=turbo, imix=imix, aad_size=aad_size,
                                            job_iter=job_iter, no_time_box=no_time_box,
-					   buffer_offset=buffer_offset))
+                                           buffer_offset=buffer_offset))
                         TOTAL_VARIANTS += 1
 
     # take starting timestamp
