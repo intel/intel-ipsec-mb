@@ -183,6 +183,8 @@ extern vavx2_ctr_ddq_add_be_16
 extern vavx2_ctr_ddq_add_be_16_16
 %endif
 
+extern set_byte15
+
 ;; =============================================================================
 ;; CODE PART
 ;; =============================================================================
@@ -219,6 +221,28 @@ mksection .text
 %define ydata6    ymm11
 %define ydata7    ymm12
 
+%ifdef CNTR_CCM_AVX2
+%ifdef LINUX
+%define job	  rdi
+%define p_in	  rsi
+%define p_keys	  rdx
+%define p_out	  rcx
+%define num_bytes r8
+%define arg_ivlen r9
+%else ;; LINUX
+%define job	  rcx
+%define p_in	  rdx
+%define p_keys	  r8
+%define p_out	  r9
+%define num_bytes r10
+%define arg_ivlen r13
+%define p_ivlen   rax
+%endif ;; LINUX
+%define p_IV    r11
+%define flags   r12
+
+%else ;; CNTR_CCM_AVX2
+
 %ifdef LINUX
 %define p_in	  rdi
 %define p_IV	  rsi
@@ -234,6 +258,7 @@ mksection .text
 %define num_bytes r10
 %define arg_ivlen r11
 %endif ;; LINUX
+%endif ;; CNTR_CCM_AVX2
 
 %define tmp	r11
 
@@ -446,8 +471,9 @@ align_label
 ;;
 ;; Macro generating AES-CTR implementation for specific key size
 ;;
-%macro DO_CNTR 1
-%define %%KEY_SIZE_BITS %1      ;; [in] numeric value: 128, 192 or 256
+%macro DO_CNTR 2
+%define %%KEY_SIZE_BITS %1      ;; [in] Numeric value: 128, 192 or 256
+%define %%CNTR_TYPE     %2      ;; [in] Type of CNTR operation to do (CNTR/CCM)
 
 %if %%KEY_SIZE_BITS == 128
 %define %%NROUNDS 9
@@ -459,12 +485,71 @@ align_label
 %error "AES-CTR AVX2 VAES: unsupported key size!"
 %endif
 
+	vmovdqa	        ybyteswap, [rel vavx2_byteswap_const2]
+
+%ifidn %%CNTR_TYPE, CCM
+        mov     p_in, [job + _src]
+        add     p_in, [job + _cipher_start_src_offset_in_bytes]
+        mov     arg_ivlen, [job + _iv_len_in_bytes]
+        mov	num_bytes, [job + _msg_len_to_cipher_in_bytes]
+        mov     p_keys, [job + _enc_keys]
+        mov     p_out, [job + _dst]
+        ;; Prepare IV
+
+        ;; Byte 0: flags with L'
+        ;; Calculate L' = 15 - Nonce length - 1 = 14 - IV length
+        mov     flags, 14
+        sub     flags, arg_ivlen
+        vmovd   xcounter, DWORD(flags)
+        ;; Bytes 1 - 13: Nonce (7 - 13 bytes long)
+
+        ;; Bytes 1 - 7 are always copied (first 7 bytes)
+        mov     p_IV, [job + _iv]
+        vpinsrb xcounter, [p_IV], 1
+        vpinsrw xcounter, [p_IV + 1], 1
+        vpinsrd xcounter, [p_IV + 3], 1
+
+        cmp     arg_ivlen, 7
+        je      %%_finish_nonce_move
+
+        cmp     arg_ivlen, 8
+        je      %%_iv_length_8
+        cmp     arg_ivlen, 9
+        je      %%_iv_length_9
+        cmp     arg_ivlen, 10
+        je      %%_iv_length_10
+        cmp     arg_ivlen, 11
+        je      %%_iv_length_11
+        cmp     arg_ivlen, 12
+        je      %%_iv_length_12
+
+        ;; Bytes 8 - 13
+%%_iv_length_13:
+        vpinsrb xcounter, [p_IV + 12], 13
+%%_iv_length_12:
+        vpinsrb xcounter, [p_IV + 11], 12
+%%_iv_length_11:
+        vpinsrd xcounter, [p_IV + 7], 2
+        jmp     %%_finish_nonce_move
+%%_iv_length_10:
+        vpinsrb xcounter, [p_IV + 9], 10
+%%_iv_length_9:
+        vpinsrb xcounter, [p_IV + 8], 9
+%%_iv_length_8:
+        vpinsrb xcounter, [p_IV + 7], 8
+
+align_label
+%%_finish_nonce_move:
+        ; last byte = 1
+        vpor    xcounter, [rel set_byte15]
+
+%else ;; CNTR/CCM
+
 %ifndef LINUX
 	mov	        num_bytes, [rsp + 8*5] ; arg5
 	mov	        arg_ivlen, [rsp + 8*6] ; arg6
 %endif
 
-	vmovdqa	        ybyteswap, [rel vavx2_byteswap_const2]
         ;; Read 16 byte IV: Nonce + 8-byte block counter (BE)
         test            arg_ivlen, 16
         jnz             %%iv_is_16_bytes
@@ -479,11 +564,11 @@ align_label
 align_label
 %%iv_is_16_bytes:
 	vmovdqu         xcounter, [p_IV]
+%endif ;; CCM
 
 align_label
 %%_bswap_xcounter:
 	vpshufb	        xcounter, xbyteswap
-
         ;; calculate len
         ;; convert bits to bytes (message length in bits for CNTR_BIT)
 	mov	        DWORD(tmp), DWORD(num_bytes)
@@ -586,6 +671,10 @@ align_label
 
 align_label
 %%do_return2:
+%ifidn %%CNTR_TYPE, CCM
+	mov	rax, job
+	or	dword [rax + _status], IMB_STATUS_COMPLETED_CIPHER
+%endif
 
 %ifdef SAFE_DATA
        	clear_all_ymms_asm

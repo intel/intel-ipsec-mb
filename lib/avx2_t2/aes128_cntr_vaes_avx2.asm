@@ -1,5 +1,5 @@
 ;;
-;; Copyright (c) 2023-2024, Intel Corporation
+;; Copyright (c) 2023-2025, Intel Corporation
 ;;
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
@@ -38,7 +38,7 @@ align_function
 MKGLOBAL(aes_cntr_128_vaes_avx2,function,internal)
 aes_cntr_128_vaes_avx2:
         endbranch64
-	DO_CNTR 128
+	DO_CNTR 128, CNTR
 	ret
 
 mksection stack-noexec

@@ -138,6 +138,12 @@ submit_job_aes256_cmac_auth_vaes_avx2(MB_MGR_CMAC_OOO *state, IMB_JOB *job);
 IMB_JOB *
 flush_job_aes256_cmac_auth_vaes_avx2(MB_MGR_CMAC_OOO *state);
 
+/* AES-CCM */
+IMB_JOB *
+aes_cntr_ccm_128_vaes_avx2(IMB_JOB *job);
+IMB_JOB *
+aes_cntr_ccm_256_vaes_avx2(IMB_JOB *job);
+
 IMB_DLL_EXPORT void
 set_suite_id_avx2_t2(IMB_MGR *state, IMB_JOB *job);
 

@@ -153,8 +153,8 @@
 #define AES_CFB_256_DEC aes_cfb_dec_256_vaes_avx2
 
 /* AES-CCM */
-#define AES_CNTR_CCM_128 aes_cntr_ccm_128_avx
-#define AES_CNTR_CCM_256 aes_cntr_ccm_256_avx
+#define AES_CNTR_CCM_128 aes_cntr_ccm_128_vaes_avx2
+#define AES_CNTR_CCM_256 aes_cntr_ccm_256_vaes_avx2
 
 #define FLUSH_JOB_AES128_CCM_AUTH  flush_job_aes128_ccm_auth_avx
 #define SUBMIT_JOB_AES128_CCM_AUTH submit_job_aes128_ccm_auth_avx
