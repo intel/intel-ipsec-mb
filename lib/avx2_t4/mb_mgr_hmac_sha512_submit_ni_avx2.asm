@@ -30,6 +30,7 @@
 %include "include/reg_sizes.inc"
 %include "include/memcpy.inc"
 %include "include/const.inc"
+%include "include/align_avx.inc"
 
 %use smartalign
 alignmode nop
@@ -104,7 +105,7 @@ endstruc
 ; JOB* FUNC(MB_MGR_HMAC_sha_512_OOO *state, IMB_JOB *job)
 ; arg 1 : rcx : state
 ; arg 2 : rdx : job
-align 32
+align_function
 MKGLOBAL(FUNC,function,internal)
 FUNC:
         mov     rax, rsp
@@ -146,6 +147,7 @@ FUNC:
         cmp     len, 128
         jb      copy_lt128
 
+align_label
 fast_copy:
         add     p, len
         vmovdqu ymm0, [p - 128 + 0*32]
@@ -156,6 +158,7 @@ fast_copy:
         vmovdqu [lane_data + _extra_block_sha512 + 1*32], ymm1
         vmovdqu [lane_data + _extra_block_sha512 + 2*32], ymm2
         vmovdqu [lane_data + _extra_block_sha512 + 3*32], ymm3
+align_label
 end_fast_copy:
 
         mov     size_offset, extra_blocks
@@ -182,17 +185,19 @@ end_fast_copy:
         test    len, ~127
         jnz     ge128_bytes
 
+align_label
 lt128_bytes:
         mov     [state + _lens_sha512 + 2*lane], WORD(extra_blocks)
         lea     tmp, [lane_data + _extra_block_sha512 + start_offset]
         mov     [state + _args_data_ptr_sha512 + PTR_SZ*lane], tmp ;; 8 to hold a UINT8
         mov     dword [lane_data + _extra_blocks_sha512], 0
 
+align_label
 ge128_bytes:
         cmp     unused_lanes, 0xff
         jne     return_null
 
-align 32
+align_loop
 start_loop:
         ; Find min length
         xor     len2, len2
@@ -215,6 +220,7 @@ start_loop:
         call    sha512_ni_x2_avx2
         ; state and idx are intact
 
+align_label
 len_is_0:
         ; process completed job "idx"
         imul    lane_data, idx, _SHA512_LANE_DATA_size
@@ -225,6 +231,7 @@ len_is_0:
         cmp     dword [lane_data + _outer_done_sha512], 0
         jne     end_loop
 
+align_label
 proc_outer:
         mov     dword [lane_data + _outer_done_sha512], 1
         mov     DWORD(size_offset), [lane_data + _size_offset_sha512]
@@ -255,7 +262,7 @@ proc_outer:
 
         jmp     start_loop
 
-align 32
+align_label
 proc_extra_blocks:
         mov     DWORD(start_offset), [lane_data + _start_offset_sha512]
 
@@ -266,7 +273,7 @@ proc_extra_blocks:
         mov     dword [lane_data + _extra_blocks_sha512], 0
         jmp     start_loop
 
-align 32
+align_label
 copy_lt128:
         ;; less than one message block of data
         ;; destination extra block but backwards by len from where 0x80 pre-populated
@@ -276,11 +283,12 @@ copy_lt128:
         mov     unused_lanes, [state + _unused_lanes_sha512]
         jmp     end_fast_copy
 
+align_label
 return_null:
         xor     job_rax, job_rax
         jmp     return
 
-align 32
+align_label
 end_loop:
         mov     job_rax, [lane_data + _job_in_lane_sha512]
         mov     unused_lanes, [state + _unused_lanes_sha512]
@@ -318,7 +326,7 @@ end_loop:
 %endif
         jmp     clear_ret
 
-align 32
+align_label
 copy_full_digest:
 	cmp 	qword [job_rax + _auth_tag_output_len_in_bytes], 16
 	ja 	copy_tag_gt16
@@ -330,6 +338,7 @@ copy_full_digest:
 	simd_store_avx {p + 0*4}, xmm0, tmp2, tmp4, tmp
 	jmp 	clear_ret
 
+align_label
 copy_tag_gt16:
 	;; copy 16 bytes first
 	vmovdqa xmm0, [state + _args_digest_sha512 + idx]
@@ -348,6 +357,7 @@ copy_tag_gt16:
 	simd_store_avx {p + 4*4}, xmm0, tmp2, tmp4, tmp
 	jmp 	clear_ret
 
+align_label
 copy_tag_gt32:
 	;; copy 32 bytes
 	vmovdqa xmm0, [state + _args_digest_sha512 + idx + 16]
@@ -365,6 +375,7 @@ copy_tag_gt32:
 	simd_store_avx {p + 8*4}, xmm0, tmp2, tmp4, tmp
 	jmp 	clear_ret
 
+align_label
 copy_tag_gt48:
 	;; copy 48 bytes
 	vmovdqa xmm0, [state + _args_digest_sha512 + idx + 32]
@@ -378,6 +389,7 @@ copy_tag_gt48:
 	vpshufb xmm0, [rel byteswap]
 	simd_store_avx {p + 12*4}, xmm0, tmp2, tmp4, tmp
 
+align_label
 clear_ret:
 %ifdef SAFE_DATA
         ;; Clear digest (48B/64B), outer_block (48B/64B) and extra_block (128B) of returned job
@@ -409,6 +421,7 @@ clear_ret:
 %endif
 %endif ;; SAFE_DATA
 
+align_label
 return:
         vzeroupper
 
