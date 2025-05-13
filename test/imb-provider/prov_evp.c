@@ -75,22 +75,6 @@ prov_free_digest_meth(void)
         }
 }
 
-static inline const EVP_CIPHER *
-prov_gcm_cipher_sw_impl(int nid)
-{
-        switch (nid) {
-        case NID_aes_128_gcm:
-                return EVP_aes_128_gcm();
-        case NID_aes_192_gcm:
-                return EVP_aes_192_gcm();
-        case NID_aes_256_gcm:
-                return EVP_aes_256_gcm();
-        default:
-                fprintf(stderr, "Invalid nid %d\n", nid);
-                return NULL;
-        }
-}
-
 const EVP_CIPHER *
 prov_create_gcm_cipher_meth(int nid, int keylen)
 {

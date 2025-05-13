@@ -37,6 +37,8 @@
 #include "e_prov.h"
 #include "prov_evp.h"
 #include "prov_sw_gcm.h"
+#include "prov_sw_sha.h"
+#include "prov_sw_hmac_sha.h"
 
 OSSL_PROVIDER *prov = NULL;
 
@@ -70,6 +72,8 @@ extern const OSSL_DISPATCH prov_sha224_functions[];
 extern const OSSL_DISPATCH prov_sha256_functions[];
 extern const OSSL_DISPATCH prov_sha384_functions[];
 extern const OSSL_DISPATCH prov_sha512_functions[];
+
+extern const OSSL_DISPATCH prov_hmac_sha_functions[];
 
 PROV_PARAMS prov_params;
 
@@ -142,6 +146,10 @@ static const OSSL_ALGORITHM prov_digests[] = {
         { NULL, NULL, NULL }
 };
 
+static const OSSL_ALGORITHM prov_macs[] = { { PROV_NAMES_HMAC, PROV_DEFAULT_PROPERTIES,
+                                              prov_hmac_sha_functions },
+                                            { NULL, NULL, NULL } };
+
 static const OSSL_ALGORITHM *
 prov_query(void *provctx, int operation_id, int *no_cache)
 {
@@ -159,6 +167,8 @@ prov_query(void *provctx, int operation_id, int *no_cache)
         switch (operation_id) {
         case OSSL_OP_DIGEST:
                 return prov_digests;
+        case OSSL_OP_MAC:
+                return prov_macs;
         case OSSL_OP_CIPHER:
                 return prov_exported_ciphers;
         case OSSL_OP_SIGNATURE:
