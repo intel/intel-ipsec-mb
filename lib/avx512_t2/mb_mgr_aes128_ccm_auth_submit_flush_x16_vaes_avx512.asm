@@ -412,7 +412,7 @@ align_label
         kmovw   k1, DWORD(tmp)
 
         vpbroadcastw    ccm_lens{k1}, WORD(auth_len)
-        vmovdqa64       [state + _aes_cmac_lens], ccm_lens
+        vmovdqa64       [state + _aes_ccm_lens], ccm_lens
 
         vphminposuw min_len_idx, XWORD(ccm_lens)
 
@@ -553,7 +553,7 @@ align_label
 %else
         vpsubw          ccm_lens{k7}, ccm_lens, ytmp0
 %endif
-        vmovdqa         [state + _aes_cmac_lens], ccm_lens
+        vmovdqa         [state + _aes_ccm_lens], ccm_lens
 
         ; "state" and "args" are the same address, arg1
         ; len2 is arg2
