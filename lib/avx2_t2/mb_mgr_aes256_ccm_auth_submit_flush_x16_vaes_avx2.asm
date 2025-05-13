@@ -1,5 +1,5 @@
 ;;
-;; Copyright (c) 2024, Intel Corporation
+;; Copyright (c) 2025, Intel Corporation
 ;;
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
@@ -25,43 +25,13 @@
 ;; OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;
 
-;;; routines to do 128/256 bit AES-CMAC
+%ifndef AES_CBC_MAC
+%define AES_CBC_MAC aes256_cbc_mac_vaes_avx2
+%define NUM_KEYS 15
+%define NROUNDS 13
+%define SUBMIT_JOB_AES_CCM_AUTH submit_job_aes256_ccm_auth_vaes_avx2
+%define FLUSH_JOB_AES_CCM_AUTH flush_job_aes256_ccm_auth_vaes_avx2
+%endif
 
-%define AES_CBC_CMAC
-%define AES_CMAC
-%define KP              AES_ARGS + _aes_cmac_args_key_tab
-%define IV              AES_ARGS + _aes_cmac_args_IV
-%define IN_PTRS         AES_ARGS + _aes_cmac_args_in
+%include "avx2_t2/mb_mgr_aes128_ccm_auth_submit_flush_x16_vaes_avx2.asm"
 
-%include "avx2_t2/aes_cfb_enc_vaes_avx2.asm"
-%include "include/align_avx.inc"
-
-mksection .text
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;  void aes128_cbc_mac_vaes_avx2(AES_ARGS *args, uint64_t len_in_bytes);
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-align_function
-MKGLOBAL(aes128_cbc_mac_vaes_avx2,function,internal)
-aes128_cbc_mac_vaes_avx2:
-        push    rbp
-        push    r15
-        AES_ENC_16 11, CMAC
-        pop     r15
-        pop     rbp
-        ret
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;  void aes256_cbc_mac_vaes_avx2(AES_ARGS *args, uint64_t len_in_bytes);
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-align_function
-MKGLOBAL(aes256_cbc_mac_vaes_avx2,function,internal)
-aes256_cbc_mac_vaes_avx2:
-        push    rbp
-        push    r15
-        AES_ENC_16 15, CMAC
-        pop     r15
-        pop     rbp
-        ret
-
-mksection stack-noexec
