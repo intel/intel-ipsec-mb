@@ -9,6 +9,7 @@ Library
 - Added support for variable sized tags (from 4 to 20 bytes) for HMAC-SHA1
 - Added AVX10 architecture, based primarily on AVX512 implementations with
   some AVX2 Type 4 implementations for some algorithms.
+- Added AES-CCM AVX2 type 2 implementation.
 
 Test Applications
 - Added `--offset` parameter to `imb-xvalid` application.
