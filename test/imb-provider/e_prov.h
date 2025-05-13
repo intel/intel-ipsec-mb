@@ -25,23 +25,14 @@
  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 *******************************************************************************/
 
-#ifndef E_PROV_H
-#define E_PROV_H
+#include "prov_sw_freelist.h"
 
-#include <sys/types.h>
-#include <unistd.h>
-#include <string.h>
-#include <semaphore.h>
-#include <sched.h>
-#include <openssl/async.h>
-#include "prov_common.h"
-
-#define unlikely(x) __builtin_expect(!!(x), 0)
-
-extern int prov_sw_offload;
+extern const char *prov_id;
 
 int
 bind_prov(void);
 int
 prov_sw_cpu_support(void);
-#endif /* E_PROV_H */
+
+mb_thread_data *
+mb_check_thread_local(void);

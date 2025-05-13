@@ -38,8 +38,8 @@ typedef struct _alg_context {
         IMB_HASH_ALG hash_alg;
         size_t md_size;
         size_t block_size;
-        unsigned max_burst_size;
         unsigned char msg_hash[64];
+        uint8_t auths[64];
 } ALG_CTX;
 
 typedef struct _op_data {
@@ -49,8 +49,10 @@ typedef struct _op_data {
         const unsigned char *data;
         size_t len;
         ASYNC_JOB *job;
+        IMB_JOB *imb_job;
         int *sts;
-        uint8_t auths[64];
+        int flush;
+        struct timespec timestamp;
 } op_data;
 
 #endif /* PROV_SW_REQUEST_H */

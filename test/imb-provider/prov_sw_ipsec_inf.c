@@ -33,8 +33,6 @@
 
 IMB_MGR *ipsec_mgr = NULL;
 
-int
-prov_imb_sha2(int nid, unsigned char hash_type, const void *data, size_t len, unsigned char *out);
 void
 prov_imb_aes_gcm_precomp(int nid, const void *key, struct gcm_key_data *key_data_ptr)
 {
@@ -122,7 +120,6 @@ void
 prov_imb_aes_gcm_enc_finalize(int nid, const struct gcm_key_data *key_data_ptr,
                               struct gcm_context_data *gcm_ctx_ptr, uint8_t *auth_tag,
                               uint64_t auth_tag_len)
-
 {
 
         switch (nid) {
@@ -166,26 +163,6 @@ prov_imb_aes_gcm_dec_finalize(int nid, const struct gcm_key_data *key_data_ptr,
                                             auth_tag_len);
                 break;
         }
-}
-
-int
-prov_imb_sha2(int nid, unsigned char hash_type, const void *data, size_t len, unsigned char *out)
-{
-        switch (nid) {
-        case NID_sha224:
-                IMB_SHA224(ipsec_mgr, data, len, out);
-                break;
-        case NID_sha256:
-                IMB_SHA256(ipsec_mgr, data, len, out);
-                break;
-        case NID_sha384:
-                IMB_SHA384(ipsec_mgr, data, len, out);
-                break;
-        case NID_sha512:
-                IMB_SHA512(ipsec_mgr, data, len, out);
-                break;
-        }
-        return 0;
 }
 
 int

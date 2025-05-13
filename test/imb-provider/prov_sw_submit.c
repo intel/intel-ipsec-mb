@@ -48,7 +48,7 @@ check_for_stuck_jobs(mb_thread_data *tlv)
         ASYNC_JOB *job = queue_async_check_stuck_job(tlv->jobs);
 
         if (job != NULL) // oldest submitted job is stuck
-                prov_wake_job(job, ASYNC_STATUS_OK);
+                prov_wake_job(job);
 
         return 1;
 }
@@ -72,8 +72,8 @@ submit_single_job(mb_thread_data *tlv, ALG_CTX *ctx, ASYNC_JOB *async_job, IMB_J
         // Retrieve a free item from the freelist
         op_data *req = NULL;
         while ((req = flist_async_pop(tlv->freelist_jobs)) == NULL) {
-                prov_wake_job(async_job, ASYNC_STATUS_EAGAIN);
-                prov_pause_job(async_job, ASYNC_STATUS_EAGAIN);
+                prov_wake_job(async_job);
+                prov_pause_job(async_job);
         }
 
         // Populate with job details
@@ -112,7 +112,7 @@ async_update(mb_thread_data *tlv, ALG_CTX *ctx, ASYNC_JOB *async_job, IMB_JOB *i
                 ret_async_job = (ASYNC_JOB *) ret_job->user_data2;
                 if (ret_async_job != async_job) {
                         if (ret_job->status == IMB_STATUS_COMPLETED) {
-                                prov_wake_job(ret_async_job, ASYNC_STATUS_OK);
+                                prov_wake_job(ret_async_job);
                         } else {
                                 fprintf(stderr,
                                         "ASYNC JOB %p IMB_JOB %p not completed, status = %d\n",
@@ -157,7 +157,7 @@ async_update(mb_thread_data *tlv, ALG_CTX *ctx, ASYNC_JOB *async_job, IMB_JOB *i
                         if (flush_async_job != async_job) {
                                 // If the flush async job is not the same as the current async job,
                                 // wake it up
-                                prov_wake_job(flush_async_job, ASYNC_STATUS_OK);
+                                prov_wake_job(flush_async_job);
                         }
                 }
         }

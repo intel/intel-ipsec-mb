@@ -47,4 +47,4 @@ prov_create_gcm_cipher_meth(int nid, int keylen);
 const EVP_CIPHER *
 prov_create_ccm_cipher_meth(int nid, int keylen);
 
-#endif /* PROV_EVP_H */
+#endif

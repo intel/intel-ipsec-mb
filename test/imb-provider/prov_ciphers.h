@@ -25,8 +25,6 @@
  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 *******************************************************************************/
 
-#ifndef PROV_CIPHERS_H
-#define PROV_CIPHERS_H
 #include <string.h>
 #include <openssl/core.h>
 #include <openssl/provider.h>
@@ -54,6 +52,10 @@
 
 #define GCM_IV_MAX_SIZE     (1024 / 8)
 #define PROV_AES_BLOCK_SIZE 16
+
+typedef struct {
+        _Atomic int val;
+} CRYPTO_REF_COUNT;
 
 typedef struct prov_evp_aes_cbc_cipher_st {
         int nid;
@@ -217,4 +219,3 @@ get_default_cipher_aes_gcm(int nid);
                   (void (*)(void)) prov_cipher_aead_settable_ctx_params },                         \
                 { 0, NULL }                                                                        \
         }
-#endif /* PROV_CIPHERS_H */

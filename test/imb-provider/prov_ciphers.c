@@ -28,7 +28,6 @@
 #include "prov_provider.h"
 #include "prov_ciphers.h"
 #include "e_prov.h"
-
 #include "prov_sw_gcm.h"
 
 int nid;

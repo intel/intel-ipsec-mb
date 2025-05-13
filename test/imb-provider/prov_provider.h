@@ -34,10 +34,9 @@
 #include <openssl/core_dispatch.h>
 
 #define PROV_PROVIDER_VERSION_STR      "v1.0"
-#define PROV_PROVIDER_FULL_VERSION_STR "img-provider v1.0"
+#define PROV_PROVIDER_FULL_VERSION_STR "imb-provider v1.0"
 #define PROV_PROVIDER_NAME_STR         "imb-provider"
 
-#define OSSL_NELEM(x)          (sizeof(x) / sizeof((x)[0]))
 #define PROV_NAMES_AES_128_GCM "AES-128-GCM"
 #define PROV_NAMES_AES_192_GCM "AES-192-GCM"
 #define PROV_NAMES_AES_256_GCM "AES-256-GCM"

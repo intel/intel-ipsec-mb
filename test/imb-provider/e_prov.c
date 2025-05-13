@@ -25,31 +25,13 @@
  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 *******************************************************************************/
 
-/* Standard Includes */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <pthread.h>
-#include <unistd.h>
-#include <ctype.h>
-#include <fcntl.h>
-#include <sys/epoll.h>
-#include <sys/types.h>
-#include <sys/eventfd.h>
-#include <unistd.h>
-#include <signal.h>
-#include <time.h>
 
-/* Local Includes */
 #include "e_prov.h"
-#include "prov_fork.h"
 #include "prov_evp.h"
-#include "prov_sw_gcm.h" // ipsec mg mgr
-
-/* OpenSSL Includes */
-#include <openssl/err.h>
-#include <openssl/objects.h>
-#include <openssl/crypto.h>
+#include "prov_sw_gcm.h"
 
 /* __cpuid(unsigned int info[4], unsigned int leaf, unsigned int subleaf); */
 #define __cpuid(x, y, z)                                                                           \
@@ -59,7 +41,7 @@
 #define ineI 0x49656e69
 #define ntel 0x6c65746e
 
-int prov_sw_offload = 0;
+const char *prov_id = "imb-provider";
 
 int
 prov_sw_cpu_support(void)
@@ -84,20 +66,16 @@ prov_sw_cpu_support(void)
 int
 bind_prov(void)
 {
-        int ret = 0;
-
-        /* Check if we are running only on Intel CPU &
-         * has the instruction set needed */
-        prov_sw_offload = prov_sw_cpu_support();
-
-        if (prov_sw_offload && !init_ipsec_mb_mgr()) {
-                fprintf(stderr, "PROV_SW IPSec_mb manager Initialization failed\n");
-                return ret;
+        if (!prov_sw_cpu_support()) {
+                fprintf(stderr, "imb-provider is restricted to run on Intel CPU only\n");
+                return 0;
         }
 
-        /* Create static structures for ciphers now
-         * as this function will be called by a single thread. */
+        if (!init_ipsec_mb_mgr()) {
+                fprintf(stderr, "IPSecMB manager init failed (sync)\n");
+                return 0;
+        }
+
         prov_create_ciphers();
-        ret = 1;
-        return ret;
+        return 1;
 }

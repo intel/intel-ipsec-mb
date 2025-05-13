@@ -25,15 +25,10 @@
  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 *******************************************************************************/
 
-#ifndef PROV_FORK_H
-#define PROV_FORK_H
-
 #include "e_prov.h"
 
-int
-prov_create_thread(pthread_t *pThreadId, const pthread_attr_t *attr, void *(*start_func)(void *),
-                   void *pArg);
+void
+get_sem_wait_abs_time(struct timespec *polling_abs_timeout, const struct timespec polling_timeout);
 
-int
-prov_join_thread(pthread_t threadId, void **retval);
-#endif
+void *
+multibuff_timer_poll_func(void *ih);

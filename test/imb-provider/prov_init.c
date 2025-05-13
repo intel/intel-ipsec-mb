@@ -125,7 +125,7 @@ static const OSSL_ALGORITHM_CAPABLE prov_deflt_ciphers[] = {
         { { NULL, NULL, NULL }, NULL }
 };
 
-static OSSL_ALGORITHM prov_exported_ciphers[OSSL_NELEM(prov_deflt_ciphers)];
+static OSSL_ALGORITHM prov_exported_ciphers[IMB_DIM(prov_deflt_ciphers)];
 
 static const OSSL_ALGORITHM prov_keyexch[] = { { NULL, NULL, NULL } };
 

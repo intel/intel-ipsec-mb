@@ -25,50 +25,22 @@
  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 *******************************************************************************/
 
-/* Standard Includes */
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <pthread.h>
-#include <signal.h>
-#include <fcntl.h>
-
-/* Local Includes */
-#include "prov_fork.h"
 #include "e_prov.h"
 
-/* OpenSSL Includes */
-#include <openssl/err.h>
-#include <openssl/provider.h>
-#include "prov_provider.h"
+#define PROV_JOB_RESUMED_UNEXPECTEDLY        -1
+#define PROV_CHK_JOB_RESUMED_UNEXPECTEDLY(x) (x == PROV_JOB_RESUMED_UNEXPECTEDLY)
+
+int
+prov_is_event_driven();
+int
+prov_setup_async_event_notification(ASYNC_JOB *job);
+int
+prov_clear_async_event_notification(ASYNC_JOB *job);
+int
+prov_pause_job(ASYNC_JOB *job);
+int
+prov_wake_job(ASYNC_JOB *job);
 
 int
 prov_create_thread(pthread_t *pThreadId, const pthread_attr_t *attr, void *(*start_func)(void *),
-                   void *pArg)
-{
-        return pthread_create(pThreadId, attr, start_func, (void *) pArg);
-}
-
-int
-prov_join_thread(pthread_t threadId, void **retval)
-{
-        return pthread_join(threadId, retval);
-}
-
-int
-prov_kill_thread(pthread_t threadId, int sig)
-{
-        return pthread_kill(threadId, sig);
-}
-
-int
-prov_setspecific_thread(pthread_key_t key, const void *value)
-{
-        return pthread_setspecific(key, value);
-}
-
-void *
-prov_getspecific_thread(pthread_key_t key)
-{
-        return pthread_getspecific(key);
-}
+                   void *pArg);

@@ -185,10 +185,6 @@ ossl_prov_bio_printf(OSSL_CORE_BIO *bio, const char *format, ...)
         return ret;
 }
 
-#ifndef FIPS_MODULE
-
-/* No direct BIO support in the FIPS module */
-
 static int
 bio_core_read_ex(BIO *bio, char *data, size_t data_len, size_t *bytes_read)
 {
@@ -282,5 +278,3 @@ ossl_bio_new_from_core_bio(PROV_CTX *provctx, OSSL_CORE_BIO *corebio)
         BIO_set_data(outbio, corebio);
         return outbio;
 }
-
-#endif
