@@ -25,37 +25,31 @@
  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 *******************************************************************************/
 
-#ifndef PROV_SW_QUEUE_H
-#define PROV_SW_QUEUE_H
-
 #include <stdio.h>
-#include "prov_sw_request.h"
+#include <string.h>
 
-#define STUCK_JOB_TIMEOUT_MS 10
+#include <openssl/err.h>
+#include <openssl/evp.h>
+#include <openssl/rand.h>
+#include <openssl/tls1.h>
+#include <openssl/modes.h>
+#include <openssl/sha.h>
+#include <openssl/engine.h>
+#include <openssl/ossl_typ.h>
 
-typedef struct _queue_async {
-        pthread_mutex_t mb_queue_mutex;
-        op_data *head;
-        op_data *tail;
-        int num_items;
-        int disabled;
-} queue_async;
+#include "e_prov.h"
+#include "prov_sw_freelist.h"
+#include <intel-ipsec-mb.h>
 
-queue_async *
-queue_async_create();
-int
-queue_async_disable(queue_async *queue);
-int
-queue_async_cleanup(queue_async *queue);
-int
-queue_async_enqueue(queue_async *queue, op_data *item);
-op_data *
-queue_async_dequeue(queue_async *queue);
-void *
-queue_async_check_stuck_job(queue_async *queue);
-op_data *
-queue_async_dequeue_find(queue_async *queue, ASYNC_JOB *job);
-int
-queue_async_get_size(queue_async *queue);
+#define PROV_DIGEST_FLAG_XOF          0x0001
+#define PROV_DIGEST_FLAG_ALGID_ABSENT 0x0002
+#define SHA_FLAGS                     PROV_DIGEST_FLAG_ALGID_ABSENT
 
-#endif /* PROV_SW_QUEUE_H */
+int
+sha_async_init(ALG_CTX *ctx);
+int
+sha_async_update(ALG_CTX *ctx, const unsigned char *actual_data, size_t len);
+int
+sha_async_final(ALG_CTX *ctx, unsigned char *md);
+int
+sha_async_cleanup(ALG_CTX *ctx);

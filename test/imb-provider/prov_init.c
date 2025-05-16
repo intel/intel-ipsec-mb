@@ -32,20 +32,14 @@
 #include "prov_provider.h"
 #include "e_prov.h"
 #include "prov_evp.h"
-#include "prov_fork.h"
 #include "prov_bio.h"
 
-/* Local Includes */
 #include "e_prov.h"
-#include "prov_fork.h"
 #include "prov_evp.h"
-
 #include "prov_sw_gcm.h"
-#include "prov_sw_sha2.h"
 
 OSSL_PROVIDER *prov = NULL;
 
-/* By default, provider always in a happy state */
 int
 prov_is_running(void)
 {
@@ -71,6 +65,7 @@ extern const OSSL_DISPATCH prov_aes128gcm_functions[];
 extern const OSSL_DISPATCH prov_aes192gcm_functions[];
 extern const OSSL_DISPATCH prov_aes256gcm_functions[];
 
+extern const OSSL_DISPATCH prov_sha1_functions[];
 extern const OSSL_DISPATCH prov_sha224_functions[];
 extern const OSSL_DISPATCH prov_sha256_functions[];
 extern const OSSL_DISPATCH prov_sha384_functions[];
@@ -90,7 +85,6 @@ prov_teardown(void *provctx)
         }
 }
 
-/* Parameters we provide to the core */
 static const OSSL_PARAM prov_param_types[] = {
         OSSL_PARAM_DEFN(OSSL_PROV_PARAM_NAME, OSSL_PARAM_UTF8_PTR, NULL, 0),
         OSSL_PARAM_DEFN(OSSL_PROV_PARAM_VERSION, OSSL_PARAM_UTF8_PTR, NULL, 0),
@@ -140,6 +134,7 @@ static const OSSL_ALGORITHM prov_keymgmt[] = { { NULL, NULL, NULL } };
 static const OSSL_ALGORITHM prov_signature[] = { { NULL, NULL, NULL } };
 
 static const OSSL_ALGORITHM prov_digests[] = {
+        { PROV_NAMES_SHA1, PROV_DEFAULT_PROPERTIES, prov_sha1_functions },
         { PROV_NAMES_SHA2_224, PROV_DEFAULT_PROPERTIES, prov_sha224_functions },
         { PROV_NAMES_SHA2_256, PROV_DEFAULT_PROPERTIES, prov_sha256_functions },
         { PROV_NAMES_SHA2_384, PROV_DEFAULT_PROPERTIES, prov_sha384_functions },
@@ -184,7 +179,6 @@ static const OSSL_DISPATCH prov_dispatch_table[] = {
         { 0, NULL }
 };
 
-/* Functions provided by the core */
 static OSSL_FUNC_core_gettable_params_fn *c_gettable_params = NULL;
 static OSSL_FUNC_core_get_params_fn *c_get_params = NULL;
 static OSSL_FUNC_core_get_libctx_fn *c_get_libctx = NULL;
@@ -283,10 +277,11 @@ OSSL_provider_init(const OSSL_CORE_HANDLE *handle, const OSSL_DISPATCH *in,
         *out = prov_dispatch_table;
         prov_cache_exported_algorithms(prov_deflt_ciphers, prov_exported_ciphers);
 
+        fprintf(stderr, "Gathering benchmarks using IPSecMB imb-provider!\n");
         return 1;
 
 err:
-        fprintf(stderr, "imb-provider init failed\n");
+        fprintf(stderr, "IPSecMB imb-provider initialization failed\n");
         prov_teardown(prov_ctx);
         return 0;
 }

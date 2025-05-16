@@ -32,12 +32,13 @@ project(imb-provider)
 # Source files
 set(PROV_COMMON_SRC e_prov.c prov_evp.c)
 set(PROV_SRC prov_init.c prov_ciphers.c prov_bio.c)
-set(PROV_SW_IPSEC_SRC prov_sw_gcm.c prov_sha2.c prov_sw_sha2.c prov_sw_ipsec_inf.c)
+set(PROV_SW_IPSEC_SRC prov_sw_gcm.c prov_sha.c prov_sw_sha.c prov_sw_ipsec_inf.c)
+set(PROV_SW_ASYNC prov_sw_freelist.c prov_sw_polling.c prov_sw_queue.c prov_sw_queue.c prov_sw_init.c prov_events.c)
 set(IPSEC_SRC ${CMAKE_SOURCE_DIR}/../../lib/intel-ipsec-mb.h)
 include_directories(${CMAKE_SOURCE_DIR}/../../lib)
 
 # Add the library target
-add_library(imb-provider SHARED ${PROV_COMMON_SRC} ${PROV_SRC} ${PROV_SW_IPSEC_SRC} ${IPSEC_SRC})
+add_library(imb-provider SHARED ${PROV_COMMON_SRC} ${PROV_SRC} ${PROV_SW_IPSEC_SRC} ${PROV_SW_ASYNC} ${IPSEC_SRC})
 
 # Compiler flags
 set(CFLAGS_COMMON "-Wall -Wformat -Wformat-security -D_FORTIFY_SOURCE=2 -fno-delete-null-pointer-checks -fwrapv -fstack-protector-strong")

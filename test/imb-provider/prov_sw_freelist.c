@@ -29,48 +29,41 @@
 #include <stdlib.h>
 #include <pthread.h>
 
-/* Local Includes */
 #include "e_prov.h"
 #include "prov_sw_freelist.h"
 #include "prov_sw_request.h"
 #include "prov_events.h"
 #include <emmintrin.h>
 
-/* OpenSSL Includes */
 #include <openssl/err.h>
 
-mb_flist_update *
-mb_flist_update_create()
+flist_async *
+flist_async_create()
 {
-        mb_flist_update *freelist = NULL;
-        op_data *item = NULL;
-        int num_items = MULTIBUFF_MAX_INFLIGHTS;
-
-        freelist = OPENSSL_zalloc(sizeof(mb_flist_update));
+        flist_async *freelist = OPENSSL_zalloc(sizeof(flist_async));
         if (freelist == NULL)
                 return NULL;
 
-        pthread_mutex_init(&freelist->mb_flist_mutex, NULL);
+        if (pthread_mutex_init(&freelist->mb_flist_mutex, NULL) != 0) {
+                OPENSSL_free(freelist);
+                return NULL;
+        }
 
         freelist->head = NULL;
 
-        while (num_items > 0) {
-                item = OPENSSL_zalloc(sizeof(op_data));
-                if (item == NULL) {
-                        mb_flist_update_cleanup(freelist);
+        for (int i = 0; i < MULTIBUFF_MAX_INFLIGHTS; i++) {
+                op_data *item = OPENSSL_zalloc(sizeof(op_data));
+                if (item == NULL || flist_async_push(freelist, item) != 0) {
+                        flist_async_cleanup(freelist);
                         return NULL;
                 }
-                if (mb_flist_update_push(freelist, item) != 0) {
-                        mb_flist_update_cleanup(freelist);
-                        return NULL;
-                }
-                num_items--;
         }
+
         return freelist;
 }
 
 int
-mb_flist_update_cleanup(mb_flist_update *freelist)
+flist_async_cleanup(flist_async *freelist)
 {
         op_data *item = NULL;
 
@@ -80,11 +73,7 @@ mb_flist_update_cleanup(mb_flist_update *freelist)
         pthread_mutex_lock(&freelist->mb_flist_mutex);
 
         while ((item = freelist->head) != NULL) {
-                if (item->next != NULL) {
-                        freelist->head = item->next;
-                } else {
-                        freelist->head = NULL;
-                }
+                freelist->head = item->next;
                 OPENSSL_free(item);
         }
 
@@ -96,9 +85,9 @@ mb_flist_update_cleanup(mb_flist_update *freelist)
 }
 
 int
-mb_flist_update_push(mb_flist_update *freelist, op_data *item)
+flist_async_push(flist_async *freelist, op_data *item)
 {
-        if (freelist == NULL)
+        if (freelist == NULL || item == NULL)
                 return 1;
 
         pthread_mutex_lock(&freelist->mb_flist_mutex);
@@ -111,44 +100,20 @@ mb_flist_update_push(mb_flist_update *freelist, op_data *item)
         return 0;
 }
 
-int
-mb_flist_update_push_array(mb_flist_update *freelist, op_data **items, int num_items)
-{
-        if (freelist == NULL)
-                return 1;
-
-        pthread_mutex_lock(&freelist->mb_flist_mutex);
-
-        for (int num = 0; num < num_items; num++) {
-                op_data *item = (op_data *) items[num];
-                prov_wake_job(item->job, ASYNC_STATUS_OK);
-                OPENSSL_cleanse(item, sizeof(op_data));
-                item->next = freelist->head;
-                freelist->head = item;
-        }
-
-        _mm_sfence();
-
-        pthread_mutex_unlock(&freelist->mb_flist_mutex);
-
-        return 0;
-}
-
 op_data *
-mb_flist_update_pop(mb_flist_update *freelist)
+flist_async_pop(flist_async *freelist)
 {
+        op_data *item = NULL;
+
         if (freelist == NULL)
                 return NULL;
 
         pthread_mutex_lock(&freelist->mb_flist_mutex);
 
-        if (freelist->head == NULL) {
-                pthread_mutex_unlock(&freelist->mb_flist_mutex);
-                return NULL;
+        if (freelist->head != NULL) {
+                item = freelist->head;
+                freelist->head = item->next;
         }
-
-        op_data *item = freelist->head;
-        freelist->head = item->next;
 
         pthread_mutex_unlock(&freelist->mb_flist_mutex);
 

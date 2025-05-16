@@ -49,3 +49,19 @@ Test `imb-provider.so` with a custom OpenSSL. With the `-DOPENSSL_INSTALL_DIR` o
 ```sh
 /custom/openssl/bin/openssl speed -provider imb-provider -elapsed --bytes 16384 -evp aes-256-gcm
 ```
+
+## Supported Algorithms
+
+The `imb-provider` supports the following cryptographic algorithms:
+
+- **Symmetric Encryption:**
+    - AES-128-GCM
+    - AES-192-GCM
+    - AES-256-GCM
+
+- **Hashing:**
+    - SHA-1
+    - SHA-224
+    - SHA-256
+    - SHA-384
+    - SHA-512

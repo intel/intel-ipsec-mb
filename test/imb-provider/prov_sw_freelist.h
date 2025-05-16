@@ -33,27 +33,31 @@
 #include "prov_sw_request.h"
 #include "prov_sw_queue.h"
 
-typedef struct _mb_flist_update {
+#ifndef MULTIBUFF_MAX_INFLIGHTS
+#define MULTIBUFF_MAX_INFLIGHTS 128
+#endif
+
+typedef struct _flist_async {
         pthread_mutex_t mb_flist_mutex;
         op_data *head;
-} mb_flist_update;
+} flist_async;
 
 typedef struct _mb_thread_data {
         pthread_t polling_thread;
         int keep_polling;
         sem_t mb_polling_thread_sem;
-        mb_flist_update *update_freelist;
-        mb_queue_update *update_queue;
+        queue_async *jobs;
+        flist_async *freelist_jobs;
+        IMB_MGR *imb_mgr;
+        int woke_up;
 } mb_thread_data;
 
-mb_flist_update *
-mb_flist_update_create();
+flist_async *
+flist_async_create();
 int
-mb_flist_update_cleanup(mb_flist_update *freelist);
+flist_async_cleanup(flist_async *freelist);
 int
-mb_flist_update_push(mb_flist_update *freelist, op_data *item);
-int
-mb_flist_update_push_array(mb_flist_update *freelist, op_data **items, int num_items);
+flist_async_push(flist_async *freelist, op_data *item);
 op_data *
-mb_flist_update_pop(mb_flist_update *flist);
+flist_async_pop(flist_async *flist);
 #endif

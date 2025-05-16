@@ -37,33 +37,30 @@
 /* OpenSSL Includes */
 #include <openssl/err.h>
 
-mb_queue_update *
-mb_queue_update_create()
+queue_async *
+queue_async_create()
 {
-        mb_queue_update *queue = OPENSSL_zalloc(sizeof(mb_queue_update));
+        queue_async *queue = OPENSSL_zalloc(sizeof(queue_async));
         if (queue == NULL)
                 return NULL;
 
         pthread_mutex_init(&queue->mb_queue_mutex, NULL);
-        pthread_mutex_lock(&queue->mb_queue_mutex);
 
         queue->head = NULL;
         queue->tail = NULL;
         queue->disabled = 0;
         queue->num_items = 0;
-        pthread_mutex_unlock(&queue->mb_queue_mutex);
 
         return queue;
 }
 
 int
-mb_queue_update_disable(mb_queue_update *queue)
+queue_async_disable(queue_async *queue)
 {
         if (queue == NULL)
                 return 1;
 
         pthread_mutex_lock(&queue->mb_queue_mutex);
-
         queue->disabled = 1;
         pthread_mutex_unlock(&queue->mb_queue_mutex);
 
@@ -71,7 +68,7 @@ mb_queue_update_disable(mb_queue_update *queue)
 }
 
 int
-mb_queue_update_cleanup(mb_queue_update *queue)
+queue_async_cleanup(queue_async *queue)
 {
         if (queue == NULL)
                 return 1;
@@ -83,21 +80,15 @@ mb_queue_update_cleanup(mb_queue_update *queue)
 }
 
 int
-mb_queue_update_enqueue(mb_queue_update *queue, op_data *item)
+queue_async_enqueue(queue_async *queue, op_data *item)
 {
-        if (queue == NULL || item == NULL)
+        if (queue == NULL || item == NULL || queue->disabled)
                 return 1;
 
         pthread_mutex_lock(&queue->mb_queue_mutex);
 
-        if (queue->disabled == 1) {
-                pthread_mutex_unlock(&queue->mb_queue_mutex);
-                return 1;
-        }
-
         if (queue->num_items == 0) {
-                queue->tail = item;
-                queue->head = item;
+                queue->head = queue->tail = item;
         } else {
                 queue->tail->next = item;
                 queue->tail = item;
@@ -110,25 +101,92 @@ mb_queue_update_enqueue(mb_queue_update *queue, op_data *item)
         return 0;
 }
 
-op_data *
-mb_queue_update_dequeue(mb_queue_update *queue)
+void *
+queue_async_check_stuck_job(queue_async *queue)
 {
         if (queue == NULL)
                 return NULL;
 
         pthread_mutex_lock(&queue->mb_queue_mutex);
 
-        if (queue->head == NULL) {
-                pthread_mutex_unlock(&queue->mb_queue_mutex);
-                return NULL;
+        void *job_ptr = NULL;
+        if (queue->head != NULL) {
+                struct timespec current_time;
+                clock_gettime(CLOCK_MONOTONIC, &current_time);
+
+                long elapsed_ms = (current_time.tv_sec - queue->head->timestamp.tv_sec) * 1000 +
+                                  (current_time.tv_nsec - queue->head->timestamp.tv_nsec) / 1000000;
+
+                if (elapsed_ms > 10) {
+                        job_ptr = queue->head->job;
+                        queue->head->flush = 1;
+                }
         }
 
-        op_data *item = queue->head;
-        queue->head = item->next;
-        queue->num_items--;
+        pthread_mutex_unlock(&queue->mb_queue_mutex);
 
-        if (queue->num_items == 0)
-                queue->tail = NULL;
+        return job_ptr;
+}
+
+op_data *
+queue_async_dequeue(queue_async *queue)
+{
+        if (queue == NULL)
+                return NULL;
+
+        pthread_mutex_lock(&queue->mb_queue_mutex);
+
+        op_data *item = NULL;
+
+        if (queue->tail != NULL) {
+                item = queue->tail;
+
+                if (queue->head == queue->tail) {
+                        queue->head = queue->tail = NULL;
+                } else {
+                        op_data *current = queue->head;
+                        while (current->next != queue->tail) {
+                                current = current->next;
+                        }
+                        current->next = NULL;
+                        queue->tail = current;
+                }
+
+                queue->num_items--;
+        }
+
+        pthread_mutex_unlock(&queue->mb_queue_mutex);
+
+        return item;
+}
+
+op_data *
+queue_async_dequeue_find(queue_async *queue, ASYNC_JOB *job)
+{
+        if (queue == NULL || job == NULL)
+                return NULL;
+
+        pthread_mutex_lock(&queue->mb_queue_mutex);
+
+        op_data *item = queue->head;
+        op_data *prev = NULL;
+
+        while (item != NULL) {
+                if (item->job == job) {
+                        if (prev != NULL) {
+                                prev->next = item->next;
+                        } else {
+                                queue->head = item->next;
+                        }
+                        if (item == queue->tail) {
+                                queue->tail = prev;
+                        }
+                        queue->num_items--;
+                        break;
+                }
+                prev = item;
+                item = item->next;
+        }
 
         pthread_mutex_unlock(&queue->mb_queue_mutex);
 
@@ -136,7 +194,7 @@ mb_queue_update_dequeue(mb_queue_update *queue)
 }
 
 int
-mb_queue_update_get_size(mb_queue_update *queue)
+queue_async_get_size(queue_async *queue)
 {
         if (queue == NULL)
                 return 0;
