@@ -200,8 +200,9 @@ macro(imb_add_target_print_help OPTIONS)
       PROPERTY HELPSTRING)
     if(HELP_TEXT)
       add_custom_command(
-        TARGET print_help COMMAND ${CMAKE_COMMAND} -E echo
-                                  "    ${OPTION}=${${OPTION}} - ${HELP_TEXT}")
+        TARGET print_help
+        POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E echo "    ${OPTION}=${${OPTION}} - ${HELP_TEXT}")
     endif()
   endforeach()
 endmacro()
