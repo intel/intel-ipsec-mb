@@ -29,10 +29,10 @@
 ALIGNMODE P6
 
 ;; Common macro to be used to align SSE functions
-%define align_function align 32
+%define align_function align 64
 
 ;; Common macro to be used to align SSE loops
-%define align_loop align 32
+%define align_loop align 16
 
 ;; Common macro to be used to align SSE labels
-%define align_label align 32
+%define align_label align 16
