@@ -55,6 +55,11 @@ submit_job_zuc_nia6_gfni_sse(MB_MGR_ZUC_OOO *state, IMB_JOB *job);
 IMB_JOB *
 flush_job_zuc_nia6_gfni_sse(MB_MGR_ZUC_OOO *state);
 
+IMB_JOB *
+submit_job_zuc_nca6_gfni_sse(MB_MGR_ZUC_OOO *state, IMB_JOB *job);
+IMB_JOB *
+flush_job_zuc_nca6_gfni_sse(MB_MGR_ZUC_OOO *state);
+
 IMB_DLL_EXPORT void
 set_suite_id_sse_t3(IMB_MGR *state, IMB_JOB *job);
 

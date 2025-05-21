@@ -223,6 +223,10 @@
 #define SUBMIT_JOB_ZUC_NIA6 submit_job_zuc_nia6_no_gfni_sse
 #define FLUSH_JOB_ZUC_NIA6  flush_job_zuc_nia6_no_gfni_sse
 
+/* ZUC NCA6 */
+#define SUBMIT_JOB_ZUC_NCA6 submit_job_zuc_nca6_no_gfni_sse
+#define FLUSH_JOB_ZUC_NCA6  flush_job_zuc_nca6_no_gfni_sse
+
 /* SNOW5G */
 #define SUBMIT_JOB_SNOW5G snow_5g_sse
 
@@ -296,6 +300,7 @@ reset_ooo_mgrs(IMB_MGR *state)
         ooo_mgr_zuc_reset(state->zuc_eia3_ooo, 4);
         ooo_mgr_zuc_reset(state->zuc_nea6_ooo, 4);
         ooo_mgr_zuc_reset(state->zuc_nia6_ooo, 4);
+        ooo_mgr_zuc_reset(state->zuc_nca6_ooo, 4);
 
         /* Init HMAC/SHA1 out-of-order fields */
         ooo_mgr_hmac_sha1_reset(state->hmac_sha_1_ooo, 2);

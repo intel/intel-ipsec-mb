@@ -38,4 +38,7 @@
 %define ZUC128_INIT_4 asm_ZucInitialization_4_gfni_sse
 %define ZUCNEA6_INIT_4 asm_ZucNEA6Initialization_4_gfni_sse
 %define ZUC_CIPHER_4      asm_ZucCipher_4_gfni_sse
+%define ZUC_NCA6_4_BUFFER zuc_nca6_4_buffer_job_gfni_sse
+%define SUBMIT_JOB_ZUC_NCA6 submit_job_zuc_nca6_gfni_sse
+%define FLUSH_JOB_ZUC_NCA6 flush_job_zuc_nca6_gfni_sse
 %include "sse_t1/mb_mgr_zuc_submit_flush_sse.asm"

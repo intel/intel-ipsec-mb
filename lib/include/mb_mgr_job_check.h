@@ -106,6 +106,16 @@ is_job_invalid_light(IMB_MGR *state, const IMB_CIPHER_MODE cipher_mode, const IM
                         return 1;
                 }
                 break;
+        case IMB_CIPHER_ZUC_NCA6:
+                if (key_len_in_bytes != UINT64_C(32)) {
+                        imb_set_errno(state, IMB_ERR_JOB_KEY_LEN);
+                        return 1;
+                }
+                if (hash_alg != IMB_AUTH_ZUC_NCA6) {
+                        imb_set_errno(state, IMB_ERR_HASH_ALGO);
+                        return 1;
+                }
+                break;
         case IMB_CIPHER_DES:
         case IMB_CIPHER_DOCSIS_DES:
                 if (key_len_in_bytes != UINT64_C(8)) {
@@ -259,6 +269,12 @@ is_job_invalid_light(IMB_MGR *state, const IMB_CIPHER_MODE cipher_mode, const IM
                 break;
         case IMB_AUTH_AES_NCA5:
                 if (cipher_mode != IMB_CIPHER_AES_NCA5) {
+                        imb_set_errno(state, IMB_ERR_CIPH_MODE);
+                        return 1;
+                }
+                break;
+        case IMB_AUTH_ZUC_NCA6:
+                if (cipher_mode != IMB_CIPHER_ZUC_NCA6) {
                         imb_set_errno(state, IMB_ERR_CIPH_MODE);
                         return 1;
                 }
@@ -758,6 +774,41 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job, const IMB_CIPHER_MODE cipher_
                         return 1;
                 }
                 if (hash_alg != IMB_AUTH_AES_NCA5) {
+                        imb_set_errno(state, IMB_ERR_HASH_ALGO);
+                        return 1;
+                }
+                break;
+        case IMB_CIPHER_ZUC_NCA6:
+                if (job->msg_len_to_cipher_in_bytes > NCA_MAX_BYTELEN) {
+                        imb_set_errno(state, IMB_ERR_JOB_CIPH_LEN);
+                        return 1;
+                }
+                if (job->msg_len_to_cipher_in_bytes != 0 && job->src == NULL) {
+                        imb_set_errno(state, IMB_ERR_JOB_NULL_SRC);
+                        return 1;
+                }
+                if (job->msg_len_to_cipher_in_bytes != 0 && job->dst == NULL) {
+                        imb_set_errno(state, IMB_ERR_JOB_NULL_DST);
+                        return 1;
+                }
+                if (job->iv == NULL) {
+                        imb_set_errno(state, IMB_ERR_JOB_NULL_IV);
+                        return 1;
+                }
+                if (job->iv_len_in_bytes != UINT64_C(16)) {
+                        imb_set_errno(state, IMB_ERR_JOB_IV_LEN);
+                        return 1;
+                }
+                /* Same key structure used for encrypt and decrypt */
+                if (cipher_direction == IMB_DIR_ENCRYPT && job->enc_keys == NULL) {
+                        imb_set_errno(state, IMB_ERR_JOB_NULL_KEY);
+                        return 1;
+                }
+                if (key_len_in_bytes != UINT64_C(32)) {
+                        imb_set_errno(state, IMB_ERR_JOB_KEY_LEN);
+                        return 1;
+                }
+                if (hash_alg != IMB_AUTH_ZUC_NCA6) {
                         imb_set_errno(state, IMB_ERR_HASH_ALGO);
                         return 1;
                 }
@@ -2127,6 +2178,25 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job, const IMB_CIPHER_MODE cipher_
                         return 1;
                 }
                 if (cipher_mode != IMB_CIPHER_AES_NCA5) {
+                        imb_set_errno(state, IMB_ERR_CIPH_MODE);
+                        return 1;
+                }
+                if (job->auth_tag_output == NULL) {
+                        imb_set_errno(state, IMB_ERR_JOB_NULL_AUTH);
+                        return 1;
+                }
+                break;
+        case IMB_AUTH_ZUC_NCA6:
+                if (job->auth_tag_output_len_in_bytes < UINT64_C(4) ||
+                    job->auth_tag_output_len_in_bytes > UINT64_C(16)) {
+                        imb_set_errno(state, IMB_ERR_JOB_AUTH_TAG_LEN);
+                        return 1;
+                }
+                if ((job->u.NCA.aad_len_in_bytes > 0) && (job->u.NCA.aad == NULL)) {
+                        imb_set_errno(state, IMB_ERR_JOB_NULL_AAD);
+                        return 1;
+                }
+                if (cipher_mode != IMB_CIPHER_ZUC_NCA6) {
                         imb_set_errno(state, IMB_ERR_CIPH_MODE);
                         return 1;
                 }

@@ -49,6 +49,9 @@
 %define ZUC256_INIT_4     asm_Zuc256Initialization_4_sse
 %define ZUCNEA6_INIT_4     asm_ZucNEA6Initialization_4_sse
 %define ZUC_CIPHER_4      asm_ZucCipher_4_sse
+%define ZUC_NCA6_4_BUFFER zuc_nca6_4_buffer_job_no_gfni_sse
+%define SUBMIT_JOB_ZUC_NCA6 submit_job_zuc_nca6_no_gfni_sse
+%define FLUSH_JOB_ZUC_NCA6 flush_job_zuc_nca6_no_gfni_sse
 %endif
 
 mksection .rodata
@@ -106,6 +109,7 @@ extern ZUC_NIA6_4_BUFFER
 extern ZUC128_INIT_4
 extern ZUCNEA6_INIT_4
 extern ZUC_CIPHER_4
+extern ZUC_NCA6_4_BUFFER
 
 %ifdef LINUX
 %define arg1    rdi
@@ -1013,5 +1017,288 @@ align_function
 FLUSH_JOB_ZUC_NIA6:
         FLUSH_JOB_ZUC_EIA3 ZUCNIA6
         ret
+
+; JOB* SUBMIT_JOB_ZUC_NCA6(MB_MGR_ZUC_OOO *state, IMB_JOB *job)
+; arg 1 : state
+; arg 2 : job
+MKGLOBAL(SUBMIT_JOB_ZUC_NCA6,function,internal)
+align_function
+SUBMIT_JOB_ZUC_NCA6:
+
+; idx needs to be in rbp
+%define len              rbp
+%define idx              rbp
+%define tmp              rbp
+%define tmp2             r14
+%define tmp3             r15
+
+%define lane             r8
+%define unused_lanes     rbx
+%define len2             r13
+
+        mov     rax, rsp
+        sub     rsp, STACK_size
+        and     rsp, -16
+
+        mov     [rsp + _gpr_save + 8*0], rbx
+        mov     [rsp + _gpr_save + 8*1], rbp
+        mov     [rsp + _gpr_save + 8*2], r12
+        mov     [rsp + _gpr_save + 8*3], r13
+        mov     [rsp + _gpr_save + 8*4], r14
+        mov     [rsp + _gpr_save + 8*5], r15
+%ifndef LINUX
+        mov     [rsp + _gpr_save + 8*6], rsi
+        mov     [rsp + _gpr_save + 8*7], rdi
+%endif
+        mov     [rsp + _gpr_save + 8*8], state
+        mov     [rsp + _gpr_save + 8*9], job
+        mov     [rsp + _rsp_save], rax  ; original SP
+
+        mov     unused_lanes, [state + _zuc_unused_lanes]
+        movzx   lane, BYTE(unused_lanes)
+        shr     unused_lanes, 8
+        mov     tmp, [job + _iv]
+        shl     lane, 5
+
+        ; Read first 16 bytes of IV
+        movdqu  xmm0, [tmp]
+        movdqa  [state + _zuc_args_IV + lane], xmm0
+
+        shr     lane, 5
+        mov     [state + _zuc_unused_lanes], unused_lanes
+
+        mov     [state + _zuc_job_in_lane + lane*8], job
+        mov     tmp, [job + _src]
+        add     tmp, [job + _cipher_start_src_offset_in_bytes]
+        mov     [state + _zuc_args_in + lane*8], tmp
+        mov     tmp, [job + _enc_keys]
+        mov     [state + _zuc_args_keys + lane*8], tmp
+        mov     tmp, [job + _dst]
+        mov     [state + _zuc_args_out + lane*8], tmp
+
+        ;; insert dummy len into proper lane (actual length is retrieved inside the algorithmic code)
+        mov     len, 1
+
+        movdqa  xmm0, [state + _zuc_lens]
+        XPINSRW xmm0, xmm1, tmp, lane, len, scale_x16
+        movdqa  [state + _zuc_lens], xmm0
+
+        cmp     unused_lanes, 0xff
+        jne     return_null_submit_nca6
+
+        ; Find minimum length (searching for zero length,
+        ; to retrieve already encrypted buffers)
+        phminposuw      xmm1, xmm0
+        pextrw  len2, xmm1, 0   ; min value
+        pextrw  idx, xmm1, 1    ; min index (0...3)
+        cmp     len2, 0
+        je      len_is_0_submit_nca6
+
+        ; Move state into r11, as register for state will be used
+        ; to pass parameter to next function
+        mov     r11, state
+
+        RESERVE_STACK_SPACE 6
+
+        lea     arg1, [r11 + _zuc_args_keys]
+        lea     arg2, [r11 + _zuc_args_IV]
+        lea     arg3, [r11 + _zuc_args_in]
+        lea     arg4, [r11 + _zuc_args_out]
+%ifdef LINUX
+        lea     arg5, [r11 + _zuc_lens]
+        lea     arg6, [r11 + _zuc_job_in_lane]
+%else
+        lea     r12, [r11 + _zuc_lens]
+        mov     arg5, r12
+        lea     r12, [r11 + _zuc_job_in_lane]
+        mov     arg6, r12
+%endif
+
+        call    ZUC_NCA6_4_BUFFER
+
+        RESTORE_STACK_SPACE 6
+
+        mov     state, [rsp + _gpr_save + 8*8]
+        mov     job,   [rsp + _gpr_save + 8*9]
+
+        ;; Clear all lengths (function above completes all buffers)
+        mov     qword [state + _zuc_lens], 0
+
+align_label
+len_is_0_submit_nca6:
+        ; process completed job "idx"
+        mov     job_rax, [state + _zuc_job_in_lane + idx*8]
+        mov     unused_lanes, [state + _zuc_unused_lanes]
+        mov     qword [state + _zuc_job_in_lane + idx*8], 0
+        or      dword [job_rax + _status], IMB_STATUS_COMPLETED
+        ;; TODO: fix double store (above setting the length to 0 and now setting to FFFFF)
+        mov     word [state + _zuc_lens + idx*2], 0xFFFF
+        shl     unused_lanes, 8
+        or      unused_lanes, idx
+        mov     [state + _zuc_unused_lanes], unused_lanes
+
+align_label
+return_submit_nca6:
+%ifdef SAFE_DATA
+        clear_all_xmms_sse_asm
+%endif
+        mov     rbx, [rsp + _gpr_save + 8*0]
+        mov     rbp, [rsp + _gpr_save + 8*1]
+        mov     r12, [rsp + _gpr_save + 8*2]
+        mov     r13, [rsp + _gpr_save + 8*3]
+        mov     r14, [rsp + _gpr_save + 8*4]
+        mov     r15, [rsp + _gpr_save + 8*5]
+%ifndef LINUX
+        mov     rsi, [rsp + _gpr_save + 8*6]
+        mov     rdi, [rsp + _gpr_save + 8*7]
+%endif
+        mov     rsp, [rsp + _rsp_save]  ; original SP
+
+        ret
+
+align_label
+return_null_submit_nca6:
+        xor     job_rax, job_rax
+        jmp     return_submit_nca6
+
+; JOB* FLUSH_JOB_ZUC_NCA6(MB_MGR_ZUC_OOO *state)
+; arg 1 : state
+MKGLOBAL(FLUSH_JOB_ZUC_NCA6,function,internal)
+align_function
+FLUSH_JOB_ZUC_NCA6:
+
+%define unused_lanes     rbx
+%define tmp1             rbx
+
+%define tmp2             rax
+
+; idx needs to be in rbp
+%define tmp              rbp
+%define idx              rbp
+
+%define tmp3             r8
+%define tmp4             r9
+%define tmp5             r10
+
+        mov     rax, rsp
+        sub     rsp, STACK_size
+        and     rsp, -16
+
+        mov     [rsp + _gpr_save + 8*0], rbx
+        mov     [rsp + _gpr_save + 8*1], rbp
+        mov     [rsp + _gpr_save + 8*2], r12
+        mov     [rsp + _gpr_save + 8*3], r13
+        mov     [rsp + _gpr_save + 8*4], r14
+        mov     [rsp + _gpr_save + 8*5], r15
+%ifndef LINUX
+        mov     [rsp + _gpr_save + 8*6], rsi
+        mov     [rsp + _gpr_save + 8*7], rdi
+%endif
+        mov     [rsp + _gpr_save + 8*8], state
+        mov     [rsp + _rsp_save], rax  ; original SP
+
+        ; check for empty
+        mov     unused_lanes, [state + _zuc_unused_lanes]
+        bt      unused_lanes, 32+7
+        jc      return_null_flush_nca6
+
+        ; Find minimum length (searching for zero length,
+        ; to retrieve already authenticated buffers)
+        movdqa  xmm0, [state + _zuc_lens]
+        phminposuw     xmm1, xmm0
+        pextrw  len2, xmm1, 0   ; min value
+        pextrw  idx, xmm1, 1    ; min index (0...3)
+        cmp     len2, 0
+        je      len_is_0_flush_nca6
+
+        ; copy good_lane to empty lanes
+        mov     tmp1, [state + _zuc_args_in + idx*8]
+        mov     tmp2, [state + _zuc_args_out + idx*8]
+        mov     tmp3, [state + _zuc_args_keys + idx*8]
+        shl     idx, 5
+        movdqa  xmm4, [state + _zuc_args_IV + idx]
+        shr     idx, 5
+
+        pcmpeqw xmm3, xmm3 ;; Get all ff's in XMM register
+        pcmpeqw xmm0, xmm3 ;; Mask with FFFF in NULL jobs
+        movq    [rsp + _null_len_save], xmm0 ;; Save lengths with FFFF in NULL jobs
+
+%assign I 0
+%rep 4
+        cmp     qword [state + _zuc_job_in_lane + I*8], 0
+        jne     APPEND(skip_nca6_,I)
+        mov     [state + _zuc_args_in + I*8], tmp1
+        mov     [state + _zuc_args_out + I*8], tmp2
+        mov     [state + _zuc_args_keys + I*8], tmp3
+        movdqa  [state + _zuc_args_IV + I*32], xmm4
+APPEND(skip_nca6_,I):
+%assign I (I+1)
+%endrep
+
+        ; Move state into r11, as register for state will be used
+        ; to pass parameter to next function
+        mov     r11, state
+
+        RESERVE_STACK_SPACE 6
+
+        lea     arg1, [r11 + _zuc_args_keys]
+        lea     arg2, [r11 + _zuc_args_IV]
+        lea     arg3, [r11 + _zuc_args_in]
+        lea     arg4, [r11 + _zuc_args_out]
+%ifdef LINUX
+        lea     arg5, [r11 + _zuc_lens]
+        lea     arg6, [r11 + _zuc_job_in_lane]
+%else
+        lea     r12, [r11 + _zuc_lens]
+        mov     arg5, r12
+        lea     r12, [r11 + _zuc_job_in_lane]
+        mov     arg6, r12
+%endif
+        call    ZUC_NCA6_4_BUFFER
+
+        RESTORE_STACK_SPACE 6
+
+        mov	tmp5, [rsp + _null_len_save]
+        mov     state, [rsp + _gpr_save + 8*8]
+
+        ;; Clear all lengths (function above completes all buffers)
+        mov     qword [state + _zuc_lens], tmp5
+
+align_label
+len_is_0_flush_nca6:
+        ; process completed job "idx"
+        mov     job_rax, [state + _zuc_job_in_lane + idx*8]
+        mov     unused_lanes, [state + _zuc_unused_lanes]
+        mov     qword [state + _zuc_job_in_lane + idx*8], 0
+        or      dword [job_rax + _status], IMB_STATUS_COMPLETED
+        ;; TODO: fix double store (above setting the length to 0 and now setting to FFFFF)
+        mov     word [state + _zuc_lens + idx*2], 0xFFFF
+        shl     unused_lanes, 8
+        or      unused_lanes, idx
+        mov     [state + _zuc_unused_lanes], unused_lanes
+
+align_label
+return_flush_nca6:
+%ifdef SAFE_DATA
+        clear_all_xmms_sse_asm
+%endif
+        mov     rbx, [rsp + _gpr_save + 8*0]
+        mov     rbp, [rsp + _gpr_save + 8*1]
+        mov     r12, [rsp + _gpr_save + 8*2]
+        mov     r13, [rsp + _gpr_save + 8*3]
+        mov     r14, [rsp + _gpr_save + 8*4]
+        mov     r15, [rsp + _gpr_save + 8*5]
+%ifndef LINUX
+        mov     rsi, [rsp + _gpr_save + 8*6]
+        mov     rdi, [rsp + _gpr_save + 8*7]
+%endif
+        mov     rsp, [rsp + _rsp_save]  ; original SP
+
+        ret
+
+align_label
+return_null_flush_nca6:
+        xor     job_rax, job_rax
+        jmp     return_flush_nca6
 
 mksection stack-noexec

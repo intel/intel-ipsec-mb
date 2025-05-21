@@ -296,6 +296,7 @@ typedef enum {
         IMB_CIPHER_SNOW5G_NEA4,
         IMB_CIPHER_AES_NEA5, /**< AES256-NEA5 */
         IMB_CIPHER_AES_NCA5, /**< AES256-NCA5 */
+        IMB_CIPHER_ZUC_NCA6, /**< ZUC256-NCA6 */
         IMB_CIPHER_NUM
 } IMB_CIPHER_MODE;
 
@@ -358,6 +359,7 @@ typedef enum {
         IMB_AUTH_AES_NIA5,               /**< AES256-NIA5 */
         IMB_AUTH_AES_NCA5,               /**< AES256-NCA5 */
         IMB_AUTH_ZUC_NIA6,               /**< ZUC256-NIA6 */
+        IMB_AUTH_ZUC_NCA6,               /**< ZUC256-NCA6 */
         IMB_AUTH_NUM
 } IMB_HASH_ALG;
 
@@ -1178,6 +1180,7 @@ typedef struct IMB_MGR {
         void *aes_cfb_256_ooo;
         void *zuc_nea6_ooo;
         void *zuc_nia6_ooo;
+        void *zuc_nca6_ooo;
         void *end_ooo; /* add new out-of-order managers above this line */
 } IMB_MGR;
 

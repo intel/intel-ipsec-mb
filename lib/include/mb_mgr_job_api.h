@@ -519,6 +519,9 @@ SUBMIT_JOB_CIPHER_ENC(IMB_MGR *state, IMB_JOB *job, const IMB_CIPHER_MODE cipher
 
         } else if (IMB_CIPHER_AES_NCA5 == cipher_mode) {
                 return submit_aes_nca5_job(job, IMB_DIR_ENCRYPT);
+        } else if (IMB_CIPHER_ZUC_NCA6 == cipher_mode) {
+                MB_MGR_ZUC_OOO *zuc_nca6_ooo = state->zuc_nca6_ooo;
+                return SUBMIT_JOB_ZUC_NCA6(zuc_nca6_ooo, job);
         } else { /* assume IMB_CIPHER_NULL */
                 job->status |= IMB_STATUS_COMPLETED_CIPHER;
                 return job;
@@ -573,6 +576,9 @@ FLUSH_JOB_CIPHER_ENC(IMB_MGR *state, IMB_JOB *job, const IMB_CIPHER_MODE cipher_
                 MB_MGR_ZUC_OOO *zuc_nea6_ooo = state->zuc_nea6_ooo;
 
                 return FLUSH_JOB_ZUC_NEA6(zuc_nea6_ooo);
+        } else if (IMB_CIPHER_ZUC_NCA6 == cipher_mode) {
+                MB_MGR_ZUC_OOO *zuc_nca6_ooo = state->zuc_nca6_ooo;
+                return FLUSH_JOB_ZUC_NCA6(zuc_nca6_ooo);
 #ifdef FLUSH_JOB_SNOW3G_UEA2
         } else if (IMB_CIPHER_SNOW3G_UEA2_BITLEN == cipher_mode) {
                 return FLUSH_JOB_SNOW3G_UEA2(state);
@@ -713,6 +719,9 @@ SUBMIT_JOB_CIPHER_DEC(IMB_MGR *state, IMB_JOB *job, const IMB_CIPHER_MODE cipher
                 return SUBMIT_JOB_AES_CFB_DEC(job, key_sz);
         } else if (IMB_CIPHER_AES_NCA5 == cipher_mode) {
                 return submit_aes_nca5_job(job, IMB_DIR_DECRYPT);
+        } else if (IMB_CIPHER_ZUC_NCA6 == cipher_mode) {
+                MB_MGR_ZUC_OOO *zuc_nca6_ooo = state->zuc_nca6_ooo;
+                return SUBMIT_JOB_ZUC_NCA6(zuc_nca6_ooo, job);
         } else {
                 /* assume IMB_CIPHER_NULL */
                 job->status |= IMB_STATUS_COMPLETED_CIPHER;
@@ -769,6 +778,11 @@ FLUSH_JOB_CIPHER_DEC(IMB_MGR *state, IMB_JOB *job, const IMB_CIPHER_MODE cipher_
                 return FLUSH_JOB_ZUC_NEA6(zuc_nea6_ooo);
         }
 
+        if (IMB_CIPHER_ZUC_NCA6 == cipher_mode) {
+                MB_MGR_ZUC_OOO *zuc_nca6_ooo = state->zuc_nca6_ooo;
+
+                return FLUSH_JOB_ZUC_NCA6(zuc_nca6_ooo);
+        }
         return NULL;
 }
 
@@ -1049,6 +1063,13 @@ submit_cipher_dec_aes_nca5(IMB_MGR *state, IMB_JOB *job)
         return SUBMIT_JOB_CIPHER_DEC(state, job, IMB_CIPHER_AES_NCA5, IMB_KEY_256_BYTES);
 }
 
+/* ZUC-NCA6 */
+static IMB_JOB *
+submit_cipher_dec_zuc_nca6(IMB_MGR *state, IMB_JOB *job)
+{
+        return SUBMIT_JOB_CIPHER_DEC(state, job, IMB_CIPHER_ZUC_NCA6, IMB_KEY_256_BYTES);
+}
+
 /* ========================= */
 /* ======== ENCRYPT ======== */
 /* ========================= */
@@ -1321,6 +1342,13 @@ submit_cipher_enc_aes_nca5(IMB_MGR *state, IMB_JOB *job)
         return SUBMIT_JOB_CIPHER_ENC(state, job, IMB_CIPHER_AES_NCA5, IMB_KEY_256_BYTES);
 }
 
+/* ZUC-NCA6 */
+static IMB_JOB *
+submit_cipher_enc_zuc_nca6(IMB_MGR *state, IMB_JOB *job)
+{
+        return SUBMIT_JOB_CIPHER_ENC(state, job, IMB_CIPHER_ZUC_NCA6, IMB_KEY_256_BYTES);
+}
+
 /*
  * Four entries per algorithm (different key sizes),
  * algorithms in the same order IMB_CIPHER_MODE
@@ -1483,12 +1511,12 @@ static const submit_flush_fn_t tab_submit_cipher[] = {
         submit_cipher_dec_null,
         submit_cipher_dec_null,
         submit_cipher_dec_aes_nca5,
+        /* [29] ZUC NCA6 */
+        submit_cipher_dec_null,
+        submit_cipher_dec_null,
+        submit_cipher_dec_null,
+        submit_cipher_dec_zuc_nca6,
         /* add new cipher decrypt here */
-        /* [29] NULL */
-        NULL,
-        NULL,
-        NULL,
-        NULL,
         /* [30] NULL */
         NULL,
         NULL,
@@ -1649,12 +1677,12 @@ static const submit_flush_fn_t tab_submit_cipher[] = {
         submit_cipher_enc_null,
         submit_cipher_enc_null,
         submit_cipher_enc_aes_nca5,
+        /* [29] ZUC NCA6 */
+        submit_cipher_enc_null,
+        submit_cipher_enc_null,
+        submit_cipher_enc_null,
+        submit_cipher_enc_zuc_nca6,
         /* add new cipher encrypt here */
-        /* [29] NULL */
-        NULL,
-        NULL,
-        NULL,
-        NULL,
         /* [30] NULL */
         NULL,
         NULL,
@@ -1955,6 +1983,13 @@ flush_cipher_dec_aes_nca5(IMB_MGR *state, IMB_JOB *job)
         return FLUSH_JOB_CIPHER_DEC(state, job, IMB_CIPHER_AES_NCA5, IMB_KEY_256_BYTES);
 }
 
+/* ZUC-NCA6 */
+static IMB_JOB *
+flush_cipher_dec_zuc_nca6(IMB_MGR *state, IMB_JOB *job)
+{
+        return FLUSH_JOB_CIPHER_DEC(state, job, IMB_CIPHER_ZUC_NCA6, IMB_KEY_256_BYTES);
+}
+
 /* ========================= */
 /* ======== ENCRYPT ======== */
 /* ========================= */
@@ -2238,6 +2273,13 @@ flush_cipher_enc_aes_nca5(IMB_MGR *state, IMB_JOB *job)
         return FLUSH_JOB_CIPHER_ENC(state, job, IMB_CIPHER_AES_NCA5, IMB_KEY_256_BYTES);
 }
 
+/* ZUC-NCA6 */
+static IMB_JOB *
+flush_cipher_enc_zuc_nca6(IMB_MGR *state, IMB_JOB *job)
+{
+        return FLUSH_JOB_CIPHER_ENC(state, job, IMB_CIPHER_ZUC_NCA6, IMB_KEY_256_BYTES);
+}
+
 /*
  * Four entries per algorithm (different key sizes),
  * algorithms in the same order IMB_CIPHER_MODE
@@ -2395,12 +2437,12 @@ static const submit_flush_fn_t tab_flush_cipher[] = {
         flush_cipher_dec_null,
         flush_cipher_dec_null,
         flush_cipher_dec_aes_nca5,
+        /* [29] ZUC NCA6 */
+        flush_cipher_dec_null,
+        flush_cipher_dec_null,
+        flush_cipher_dec_null,
+        flush_cipher_dec_zuc_nca6,
         /* add new cipher decrypt here */
-        /* [29] NULL */
-        NULL,
-        NULL,
-        NULL,
-        NULL,
         /* [30] NULL */
         NULL,
         NULL,
@@ -2560,6 +2602,11 @@ static const submit_flush_fn_t tab_flush_cipher[] = {
         flush_cipher_enc_null,
         flush_cipher_enc_null,
         flush_cipher_enc_aes_nca5,
+        /* [33] ZUC NCA6 */
+        flush_cipher_enc_null,
+        flush_cipher_enc_null,
+        flush_cipher_enc_null,
+        flush_cipher_enc_zuc_nca6,
         /* add new cipher encrypt here */
         /* [29] NULL */
         NULL,
@@ -3189,6 +3236,12 @@ submit_hash_zuc_nia6(IMB_MGR *state, IMB_JOB *job)
         return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_ZUC_NIA6);
 }
 
+static IMB_JOB *
+submit_hash_zuc_nca6(IMB_MGR *state, IMB_JOB *job)
+{
+        return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_ZUC_NCA6);
+}
+
 static const submit_flush_fn_t tab_submit_hash[] = {
         /* [0] invalid entry */
         NULL,
@@ -3304,6 +3357,8 @@ static const submit_flush_fn_t tab_submit_hash[] = {
         submit_hash_aes_nca5,
         /* [52] ZUC-NIA6 */
         submit_hash_zuc_nia6,
+        /* [53] ZUC-NCA6 */
+        submit_hash_zuc_nca6,
         /* add new hash algorithms here */
 };
 
@@ -3647,6 +3702,12 @@ flush_hash_zuc_nia6(IMB_MGR *state, IMB_JOB *job)
         return FLUSH_JOB_HASH_EX(state, job, IMB_AUTH_ZUC_NIA6);
 }
 
+static IMB_JOB *
+flush_hash_zuc_nca6(IMB_MGR *state, IMB_JOB *job)
+{
+        return FLUSH_JOB_HASH_EX(state, job, IMB_AUTH_ZUC_NCA6);
+}
+
 static const submit_flush_fn_t tab_flush_hash[] = {
         /* [0] invalid entry */
         NULL,
@@ -3760,8 +3821,10 @@ static const submit_flush_fn_t tab_flush_hash[] = {
         flush_hash_aes_nia5,
         /* [55] AES-NCA5 */
         flush_hash_aes_nca5,
-        /* [52] ZUC-NIA6 */
+        /* [56] ZUC-NIA6 */
         flush_hash_zuc_nia6,
+        /* [57] ZUC-NCA6 */
+        flush_hash_zuc_nca6,
         /* add new hash algorithms here */
 };
 
