@@ -250,6 +250,7 @@ fill_in_job(struct IMB_JOB *job, const IMB_CIPHER_MODE cipher_mode,
                 4,  /* IMB_AUTH_AES_NIA5 */
                 4,  /* IMB_AUTH_AES_NCA5 */
                 4,  /* IMB_AUTH_ZUC_NIA6 */
+                4,  /* IMB_AUTH_ZUC_NCA6 */
         };
         static DECLARE_ALIGNED(uint8_t dust_bin[2048], 64);
         static void *ks_ptrs[3];
@@ -306,6 +307,11 @@ fill_in_job(struct IMB_JOB *job, const IMB_CIPHER_MODE cipher_mode,
                 break;
         case IMB_CIPHER_AES_NCA5:
                 job->hash_alg = IMB_AUTH_AES_NCA5;
+                job->key_len_in_bytes = UINT64_C(32);
+                job->iv_len_in_bytes = UINT64_C(16);
+                break;
+        case IMB_CIPHER_ZUC_NCA6:
+                job->hash_alg = IMB_AUTH_ZUC_NCA6;
                 job->key_len_in_bytes = UINT64_C(32);
                 job->iv_len_in_bytes = UINT64_C(16);
                 break;
@@ -453,6 +459,7 @@ fill_in_job(struct IMB_JOB *job, const IMB_CIPHER_MODE cipher_mode,
                 job->iv_len_in_bytes = UINT64_C(12);
                 break;
         case IMB_AUTH_AES_NCA5:
+        case IMB_AUTH_ZUC_NCA6:
                 job->u.NCA.aad = dust_bin;
                 job->u.NCA.aad_len_in_bytes = 16;
                 break;
@@ -1166,14 +1173,14 @@ check_aead(IMB_HASH_ALG hash, IMB_CIPHER_MODE cipher)
         if (hash == IMB_AUTH_CHACHA20_POLY1305 || hash == IMB_AUTH_CHACHA20_POLY1305_SGL ||
             hash == IMB_AUTH_DOCSIS_CRC32 || hash == IMB_AUTH_GCM_SGL ||
             hash == IMB_AUTH_AES_GMAC || hash == IMB_AUTH_AES_CCM || hash == IMB_AUTH_PON_CRC_BIP ||
-            hash == IMB_AUTH_SM4_GCM || hash == IMB_AUTH_AES_NCA5)
+            hash == IMB_AUTH_SM4_GCM || hash == IMB_AUTH_AES_NCA5 || hash == IMB_AUTH_ZUC_NCA6)
                 return 1;
 
         if (cipher == IMB_CIPHER_CHACHA20_POLY1305 || cipher == IMB_CIPHER_CHACHA20_POLY1305_SGL ||
             cipher == IMB_CIPHER_DOCSIS_SEC_BPI || cipher == IMB_CIPHER_GCM_SGL ||
             cipher == IMB_CIPHER_GCM || cipher == IMB_CIPHER_CCM ||
             cipher == IMB_CIPHER_PON_AES_CNTR || cipher == IMB_CIPHER_SM4_GCM ||
-            cipher == IMB_CIPHER_AES_NCA5)
+            cipher == IMB_CIPHER_AES_NCA5 || cipher == IMB_CIPHER_ZUC_NCA6)
                 return 1;
         return 0;
 }
