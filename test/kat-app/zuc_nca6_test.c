@@ -192,7 +192,6 @@ test_zuc_nca6_vectors(IMB_MGR *p_mgr, struct aead_test const *vector, struct tes
         memory_set(ct_test, 0, vector->msgSize / 8);
         memory_set(T_test, 0, vector->tagSize / 8);
 
-#if 0 // TODO: disable decryption test for now
         /*
          * Decrypt
          */
@@ -251,7 +250,7 @@ test_zuc_nca6_vectors(IMB_MGR *p_mgr, struct aead_test const *vector, struct tes
                 test_suite_update(ts, 0, 1);
         else
                 test_suite_update(ts, 1, 0);
-#endif
+
 test_zuc_nca6_vectors_exit:
         if (NULL != ct_test)
                 free(ct_test);

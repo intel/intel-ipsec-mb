@@ -521,7 +521,7 @@ SUBMIT_JOB_CIPHER_ENC(IMB_MGR *state, IMB_JOB *job, const IMB_CIPHER_MODE cipher
                 return submit_aes_nca5_job(job, IMB_DIR_ENCRYPT);
         } else if (IMB_CIPHER_ZUC_NCA6 == cipher_mode) {
                 MB_MGR_ZUC_OOO *zuc_nca6_ooo = state->zuc_nca6_ooo;
-                return SUBMIT_JOB_ZUC_NCA6(zuc_nca6_ooo, job);
+                return SUBMIT_JOB_ZUC_NCA6(zuc_nca6_ooo, job, IMB_DIR_ENCRYPT);
         } else { /* assume IMB_CIPHER_NULL */
                 job->status |= IMB_STATUS_COMPLETED_CIPHER;
                 return job;
@@ -578,7 +578,7 @@ FLUSH_JOB_CIPHER_ENC(IMB_MGR *state, IMB_JOB *job, const IMB_CIPHER_MODE cipher_
                 return FLUSH_JOB_ZUC_NEA6(zuc_nea6_ooo);
         } else if (IMB_CIPHER_ZUC_NCA6 == cipher_mode) {
                 MB_MGR_ZUC_OOO *zuc_nca6_ooo = state->zuc_nca6_ooo;
-                return FLUSH_JOB_ZUC_NCA6(zuc_nca6_ooo);
+                return FLUSH_JOB_ZUC_NCA6(zuc_nca6_ooo, IMB_DIR_ENCRYPT);
 #ifdef FLUSH_JOB_SNOW3G_UEA2
         } else if (IMB_CIPHER_SNOW3G_UEA2_BITLEN == cipher_mode) {
                 return FLUSH_JOB_SNOW3G_UEA2(state);
@@ -721,7 +721,7 @@ SUBMIT_JOB_CIPHER_DEC(IMB_MGR *state, IMB_JOB *job, const IMB_CIPHER_MODE cipher
                 return submit_aes_nca5_job(job, IMB_DIR_DECRYPT);
         } else if (IMB_CIPHER_ZUC_NCA6 == cipher_mode) {
                 MB_MGR_ZUC_OOO *zuc_nca6_ooo = state->zuc_nca6_ooo;
-                return SUBMIT_JOB_ZUC_NCA6(zuc_nca6_ooo, job);
+                return SUBMIT_JOB_ZUC_NCA6(zuc_nca6_ooo, job, IMB_DIR_DECRYPT);
         } else {
                 /* assume IMB_CIPHER_NULL */
                 job->status |= IMB_STATUS_COMPLETED_CIPHER;
@@ -781,7 +781,7 @@ FLUSH_JOB_CIPHER_DEC(IMB_MGR *state, IMB_JOB *job, const IMB_CIPHER_MODE cipher_
         if (IMB_CIPHER_ZUC_NCA6 == cipher_mode) {
                 MB_MGR_ZUC_OOO *zuc_nca6_ooo = state->zuc_nca6_ooo;
 
-                return FLUSH_JOB_ZUC_NCA6(zuc_nca6_ooo);
+                return FLUSH_JOB_ZUC_NCA6(zuc_nca6_ooo, IMB_DIR_DECRYPT);
         }
         return NULL;
 }

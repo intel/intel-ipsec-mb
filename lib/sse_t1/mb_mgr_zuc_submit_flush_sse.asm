@@ -1018,12 +1018,15 @@ FLUSH_JOB_ZUC_NIA6:
         FLUSH_JOB_ZUC_EIA3 ZUCNIA6
         ret
 
-; JOB* SUBMIT_JOB_ZUC_NCA6(MB_MGR_ZUC_OOO *state, IMB_JOB *job)
+; JOB* SUBMIT_JOB_ZUC_NCA6(MB_MGR_ZUC_OOO *state, IMB_JOB *job, IMB_CIPHER_DIRECTION cipher_dir)
 ; arg 1 : state
 ; arg 2 : job
+; arg 3 : cipher direction
 MKGLOBAL(SUBMIT_JOB_ZUC_NCA6,function,internal)
 align_function
 SUBMIT_JOB_ZUC_NCA6:
+
+%define cipher_dir arg3
 
 ; idx needs to be in rbp
 %define len              rbp
@@ -1053,6 +1056,8 @@ SUBMIT_JOB_ZUC_NCA6:
         mov     [rsp + _gpr_save + 8*8], state
         mov     [rsp + _gpr_save + 8*9], job
         mov     [rsp + _rsp_save], rax  ; original SP
+
+        mov     r13, cipher_dir ; Store cipher direction
 
         mov     unused_lanes, [state + _zuc_unused_lanes]
         movzx   lane, BYTE(unused_lanes)
@@ -1098,7 +1103,7 @@ SUBMIT_JOB_ZUC_NCA6:
         ; to pass parameter to next function
         mov     r11, state
 
-        RESERVE_STACK_SPACE 6
+        RESERVE_STACK_SPACE 7
 
         lea     arg1, [r11 + _zuc_args_keys]
         lea     arg2, [r11 + _zuc_args_IV]
@@ -1113,10 +1118,11 @@ SUBMIT_JOB_ZUC_NCA6:
         lea     r12, [r11 + _zuc_job_in_lane]
         mov     arg6, r12
 %endif
+        mov     arg7, r13
 
         call    ZUC_NCA6_4_BUFFER
 
-        RESTORE_STACK_SPACE 6
+        RESTORE_STACK_SPACE 7
 
         mov     state, [rsp + _gpr_save + 8*8]
         mov     job,   [rsp + _gpr_save + 8*9]
@@ -1161,11 +1167,14 @@ return_null_submit_nca6:
         xor     job_rax, job_rax
         jmp     return_submit_nca6
 
-; JOB* FLUSH_JOB_ZUC_NCA6(MB_MGR_ZUC_OOO *state)
+; JOB* FLUSH_JOB_ZUC_NCA6(MB_MGR_ZUC_OOO *state, IMB_CIPHER_DIRECTION cipher_dir)
 ; arg 1 : state
+; arg 2 : cipher direction
 MKGLOBAL(FLUSH_JOB_ZUC_NCA6,function,internal)
 align_function
 FLUSH_JOB_ZUC_NCA6:
+
+%define cipher_dir arg2
 
 %define unused_lanes     rbx
 %define tmp1             rbx
@@ -1179,6 +1188,9 @@ FLUSH_JOB_ZUC_NCA6:
 %define tmp3             r8
 %define tmp4             r9
 %define tmp5             r10
+
+%define unused_lanes     rbx
+%define len2             r14
 
         mov     rax, rsp
         sub     rsp, STACK_size
@@ -1196,6 +1208,8 @@ FLUSH_JOB_ZUC_NCA6:
 %endif
         mov     [rsp + _gpr_save + 8*8], state
         mov     [rsp + _rsp_save], rax  ; original SP
+
+        mov     r13, cipher_dir ; Store cipher direction
 
         ; check for empty
         mov     unused_lanes, [state + _zuc_unused_lanes]
@@ -1239,7 +1253,7 @@ APPEND(skip_nca6_,I):
         ; to pass parameter to next function
         mov     r11, state
 
-        RESERVE_STACK_SPACE 6
+        RESERVE_STACK_SPACE 7
 
         lea     arg1, [r11 + _zuc_args_keys]
         lea     arg2, [r11 + _zuc_args_IV]
@@ -1254,9 +1268,11 @@ APPEND(skip_nca6_,I):
         lea     r12, [r11 + _zuc_job_in_lane]
         mov     arg6, r12
 %endif
+        mov     arg7, r13
+
         call    ZUC_NCA6_4_BUFFER
 
-        RESTORE_STACK_SPACE 6
+        RESTORE_STACK_SPACE 7
 
         mov	tmp5, [rsp + _null_len_save]
         mov     state, [rsp + _gpr_save + 8*8]

@@ -1202,7 +1202,8 @@ static inline void
 _zuc_nca6_4_buffer_job(const void *const pKey[NUM_SSE_BUFS], const uint8_t *ivs,
                        const void *const pBufferIn[NUM_SSE_BUFS], void *pBufferOut[NUM_SSE_BUFS],
                        const uint16_t length[NUM_SSE_BUFS],
-                       const IMB_JOB *const job_in_lane[NUM_SSE_BUFS], const unsigned use_gfni)
+                       const IMB_JOB *const job_in_lane[NUM_SSE_BUFS], const unsigned use_gfni,
+                       const IMB_CIPHER_DIRECTION dir)
 {
         unsigned int i;
         DECLARE_ALIGNED(ZucState4_t state, 64);
@@ -1231,6 +1232,7 @@ _zuc_nca6_4_buffer_job(const void *const pKey[NUM_SSE_BUFS], const uint8_t *ivs,
         DECLARE_ALIGNED(uint64_t * pOut64[NUM_SSE_BUFS], 64) = { NULL };
         /* structure to store the 4 keys */
         DECLARE_ALIGNED(ZucKey4_t keys, 64);
+        struct gcm_key_data gdata_key[NUM_SSE_BUFS];
 
         /*
          * Calculate the number of bytes left over for each packet,
@@ -1263,6 +1265,28 @@ _zuc_nca6_4_buffer_job(const void *const pKey[NUM_SSE_BUFS], const uint8_t *ivs,
                 pIn64[i] = (const uint64_t *) pBufferIn[i];
         }
 
+        /* Set tags to zero */
+        memset(tag, 0, 16 * NUM_SSE_BUFS);
+
+        if (dir == IMB_DIR_DECRYPT) {
+                for (i = 0; i < NUM_SSE_BUFS; i++) {
+                        const IMB_JOB *job = job_in_lane[i];
+
+                        if (job == NULL)
+                                continue;
+
+                        shuffle(H[i]);
+                        /* Precompute hash keys from H */
+                        polyval_pre_sse(H[i], &gdata_key[i]);
+
+                        /* Digest AAD */
+                        polyval_sse(&gdata_key[i], job->u.NCA.aad, job->u.NCA.aad_len_in_bytes,
+                                    tag[i]);
+
+                        /* Digest plaintext */
+                        polyval_sse(&gdata_key[i], pBufferIn[i], lengthInBytes[i], tag[i]);
+                }
+        }
         /* Encrypt common length of all buffers */
         if (use_gfni)
                 asm_ZucCipher_4_gfni_sse(&state, pIn64, pOut64, remainBytes, (uint16_t) bytes);
@@ -1270,7 +1294,6 @@ _zuc_nca6_4_buffer_job(const void *const pKey[NUM_SSE_BUFS], const uint8_t *ivs,
                 asm_ZucCipher_4_sse(&state, pIn64, pOut64, remainBytes, (uint16_t) bytes);
 
         for (i = 0; i < NUM_SSE_BUFS; i++) {
-                struct gcm_key_data gdata_key;
                 const IMB_JOB *job = job_in_lane[i];
 
                 if (job == NULL)
@@ -1357,18 +1380,18 @@ _zuc_nca6_4_buffer_job(const void *const pKey[NUM_SSE_BUFS], const uint8_t *ivs,
                         }
                 }
 
-                /* Authentication part */
-                memset(tag[i], 0, 16);
+                if (dir == IMB_DIR_ENCRYPT) {
+                        shuffle(H[i]);
+                        /* Precompute hash keys from H */
+                        polyval_pre_sse(H[i], &gdata_key[i]);
 
-                shuffle(H[i]);
-                /* Precompute hash keys from H */
-                polyval_pre_sse(H[i], &gdata_key);
+                        /* Digest AAD */
+                        polyval_sse(&gdata_key[i], job->u.NCA.aad, job->u.NCA.aad_len_in_bytes,
+                                    tag[i]);
 
-                /* Digest AAD */
-                polyval_sse(&gdata_key, job->u.NCA.aad, job->u.NCA.aad_len_in_bytes, tag[i]);
-
-                /* Digest ciphertext (TODO: decrypt direction) */
-                polyval_sse(&gdata_key, pBufferOut[i], lengthInBytes[i], tag[i]);
+                        /* Digest ciphertext (TODO: decrypt direction) */
+                        polyval_sse(&gdata_key[i], pBufferOut[i], lengthInBytes[i], tag[i]);
+                }
 
                 /* XOR 16-byte lengths array with previous digest and hash with Q */
                 uint64_t lengths[2] = { 0 };
@@ -1406,16 +1429,18 @@ zuc_nca6_4_buffer_job_no_gfni_sse(const void *const pKey[NUM_SSE_BUFS], const ui
                                   const void *const pBufferIn[NUM_SSE_BUFS],
                                   void *pBufferOut[NUM_SSE_BUFS],
                                   const uint16_t length[NUM_SSE_BUFS],
-                                  const IMB_JOB *const job_in_lane[NUM_SSE_BUFS])
+                                  const IMB_JOB *const job_in_lane[NUM_SSE_BUFS],
+                                  const IMB_CIPHER_DIRECTION dir)
 {
-        _zuc_nca6_4_buffer_job(pKey, ivs, pBufferIn, pBufferOut, length, job_in_lane, 0);
+        _zuc_nca6_4_buffer_job(pKey, ivs, pBufferIn, pBufferOut, length, job_in_lane, 0, dir);
 }
 
 void
 zuc_nca6_4_buffer_job_gfni_sse(const void *const pKey[NUM_SSE_BUFS], const uint8_t *ivs,
                                const void *const pBufferIn[NUM_SSE_BUFS],
                                void *pBufferOut[NUM_SSE_BUFS], const uint16_t length[NUM_SSE_BUFS],
-                               const IMB_JOB *const job_in_lane[NUM_SSE_BUFS])
+                               const IMB_JOB *const job_in_lane[NUM_SSE_BUFS],
+                               const IMB_CIPHER_DIRECTION dir)
 {
-        _zuc_nca6_4_buffer_job(pKey, ivs, pBufferIn, pBufferOut, length, job_in_lane, 1);
+        _zuc_nca6_4_buffer_job(pKey, ivs, pBufferIn, pBufferOut, length, job_in_lane, 1, dir);
 }

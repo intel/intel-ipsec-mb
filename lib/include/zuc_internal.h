@@ -1051,14 +1051,15 @@ void
 zuc_nca6_4_buffer_job_no_gfni_sse(const void *const pKey[4], const uint8_t *ivs,
                                   const void *const pBufferIn[4], void *pBufferOut[4],
                                   const uint16_t lengthInBytes[4],
-                                  const IMB_JOB *const job_in_lane[4]);
+                                  const IMB_JOB *const job_in_lane[4],
+                                  const IMB_CIPHER_DIRECTION dir);
 
 IMB_DLL_LOCAL
 void
 zuc_nca6_4_buffer_job_gfni_sse(const void *const pKey[4], const uint8_t *ivs,
                                const void *const pBufferIn[4], void *pBufferOut[4],
-                               const uint16_t lengthInBytes[4],
-                               const IMB_JOB *const job_in_lane[4]);
+                               const uint16_t lengthInBytes[4], const IMB_JOB *const job_in_lane[4],
+                               const IMB_CIPHER_DIRECTION dir);
 /* the s-boxes */
 extern const uint8_t S0[256];
 extern const uint8_t S1[256];
