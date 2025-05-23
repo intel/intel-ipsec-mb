@@ -168,7 +168,8 @@ set(AEAD_ALGOS
   aes-docsis-128-crc32
   aes-docsis-256-crc32
   sm4-gcm
-  aes-nca5)
+  aes-nca5
+  zuc-nca6)
 
 # aead smoke tests (burst API)
 foreach(ALGO ${AEAD_ALGOS})

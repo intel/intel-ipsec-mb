@@ -161,6 +161,7 @@ enum test_cipher_mode_e {
         TEST_SNOW5G_NEA4,
         TEST_AES_NEA5,
         TEST_AES_NCA5,
+        TEST_ZUC_NCA6,
         TEST_NUM_CIPHER_TESTS
 };
 
@@ -220,6 +221,7 @@ enum test_hash_alg_e {
         TEST_SHAKE_256,
         TEST_AES_NIA5,
         TEST_HASH_AES_NCA5,
+        TEST_HASH_ZUC_NCA6,
         TEST_ZUC_NIA6,
         TEST_NUM_HASH_TESTS
 };
@@ -643,6 +645,10 @@ const struct str_value_mapping aead_algo_str_map[] = {
           .values.job_params = { .cipher_mode = TEST_AES_NCA5,
                                  .hash_alg = TEST_HASH_AES_NCA5,
                                  .key_size = IMB_KEY_256_BYTES } },
+        { .name = "zuc-nca6",
+          .values.job_params = { .cipher_mode = TEST_ZUC_NCA6,
+                                 .hash_alg = TEST_HASH_ZUC_NCA6,
+                                 .key_size = IMB_KEY_256_BYTES } },
 };
 
 const struct str_value_mapping cipher_dir_str_map[] = {
@@ -725,6 +731,7 @@ const uint32_t auth_tag_length_bytes[] = {
         4,                         /* AES-NIA5 */
         4,                         /* AES-NCA5 */
         4,                         /* ZUC-NIA6 */
+        4,                         /* ZUC-NCA6 */
 };
 uint32_t index_limit;
 uint32_t key_idxs[NUM_OFFSETS];
@@ -1531,6 +1538,9 @@ translate_cipher_mode(const enum test_cipher_mode_e test_mode)
         case TEST_AES_NCA5:
                 c_mode = IMB_CIPHER_AES_NCA5;
                 break;
+        case TEST_ZUC_NCA6:
+                c_mode = IMB_CIPHER_ZUC_NCA6;
+                break;
         default:
                 break;
         }
@@ -1594,6 +1604,9 @@ translate_hash_alg(const enum test_hash_alg_e test_mode)
                 break;
         case TEST_HASH_AES_NCA5:
                 hash_alg = IMB_AUTH_AES_NCA5;
+                break;
+        case TEST_HASH_ZUC_NCA6:
+                hash_alg = IMB_AUTH_ZUC_NCA6;
                 break;
         case TEST_DOCSIS_CRC32:
                 hash_alg = IMB_AUTH_DOCSIS_CRC32;
@@ -1763,6 +1776,9 @@ set_job_fields(IMB_JOB *job, uint8_t *p_buffer, imb_uint128_t *p_keys, const uin
         } else if (job->cipher_mode == IMB_CIPHER_AES_NCA5) {
                 job->u.NCA.aad = job->src;
                 job->enc_keys = job->dec_keys = (const uint32_t *) get_key_pointer(index, p_keys);
+        } else if (job->cipher_mode == IMB_CIPHER_ZUC_NCA6) {
+                job->u.NCA.aad = job->src;
+                job->enc_keys = job->dec_keys = (const uint32_t *) get_key_pointer(index, p_keys);
         } else if (job->cipher_mode == IMB_CIPHER_CCM) {
                 job->u.CCM.aad = job->src;
                 job->enc_keys = job->dec_keys = (const uint32_t *) get_key_pointer(index, p_keys);
@@ -1867,7 +1883,8 @@ set_size_lists(uint32_t *cipher_size_list, uint32_t *hash_size_list, uint64_t *x
 
                 if ((params->hash_alg == TEST_HASH_CCM) || (params->hash_alg == TEST_HASH_GCM) ||
                     (params->hash_alg == TEST_HASH_SM4_GCM) ||
-                    (params->hash_alg == TEST_HASH_AES_NCA5))
+                    (params->hash_alg == TEST_HASH_AES_NCA5) ||
+                    (params->hash_alg == TEST_HASH_ZUC_NCA6))
                         hash_size_list[i] = job_size;
                 else
                         hash_size_list[i] = job_size + sha_size_incr;
@@ -2363,6 +2380,9 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params, const uint32_t num_iter, uint8
                 job_template.u.GCM.aad_len_in_bytes = aad_size;
                 job_template.iv_len_in_bytes = 12;
         } else if (job_template.cipher_mode == IMB_CIPHER_AES_NCA5) {
+                job_template.iv_len_in_bytes = 16;
+                job_template.u.NCA.aad_len_in_bytes = aad_size;
+        } else if (job_template.cipher_mode == IMB_CIPHER_ZUC_NCA6) {
                 job_template.iv_len_in_bytes = 16;
                 job_template.u.NCA.aad_len_in_bytes = aad_size;
         } else if (job_template.cipher_mode == IMB_CIPHER_SM4_GCM) {
@@ -3368,7 +3388,8 @@ print_times(struct variant_s *variant_list, struct params_s *params, const uint3
                                                                         "ZUC_NEA6",
                                                                         "SNOW5G_NEA4",
                                                                         "AES_NEA5",
-                                                                        "AES_NCA5" };
+                                                                        "AES_NCA5",
+                                                                        "ZUC_NCA6" };
                 const char *c_dir_names[2] = { "ENCRYPT", "DECRYPT" };
                 const char *h_alg_names[TEST_NUM_HASH_TESTS - 1] = { "SHA1_HMAC",
                                                                      "SHA_224_HMAC",
@@ -3421,7 +3442,8 @@ print_times(struct variant_s *variant_list, struct params_s *params, const uint3
                                                                      "SHA3_512",
                                                                      "SHAKE_128",
                                                                      "SHAKE_256",
-                                                                     "AES_NCA5" };
+                                                                     "AES_NCA5",
+                                                                     "ZUC_NCA6" };
                 struct params_s par;
 
                 printf("ARCH");
