@@ -190,7 +190,8 @@ set(AEAD_ALGOS
     pon-128-no-ctr
     aead-chacha20-256-poly1305
     sm4-gcm
-    aes-nca5)
+    aes-nca5
+    zuc-nca6)
 
 # aead short tests
 foreach(ALGO ${AEAD_ALGOS})
