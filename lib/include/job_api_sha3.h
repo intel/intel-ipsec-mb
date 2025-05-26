@@ -25,55 +25,45 @@
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 *******************************************************************************/
 
-#ifndef IMB_SHA3_H
-#define IMB_SHA3_H
+#ifndef JOB_API_SHA3_H
+#define JOB_API_SHA3_H
 
-#include <intel-ipsec-mb.h>
+#include "sha3.h"
 
-/**
- * Function to compute SHAKE128 on the input message with any output length.
- */
-IMB_DLL_LOCAL
-void
-shake128(const uint8_t *input, uint64_t inputByteLen, uint8_t *output, uint64_t outputByteLen);
+__forceinline IMB_JOB *
+submit_job_sha3(IMB_MGR *state, IMB_JOB *job, const IMB_HASH_ALG hash_alg)
+{
+        /* state not used */
+        (void) state;
 
-/**
- * Function to compute SHAKE256 on the input message with any output length.
- */
-IMB_DLL_LOCAL
-void
-shake256(const uint8_t *input, uint64_t inputByteLen, uint8_t *output, uint64_t outputByteLen);
+        switch (hash_alg) {
+        case IMB_AUTH_SHA3_224:
+                sha3_224(job->src, job->msg_len_to_hash_in_bytes, job->auth_tag_output);
+                break;
+        case IMB_AUTH_SHA3_256:
+                sha3_256(job->src, job->msg_len_to_hash_in_bytes, job->auth_tag_output);
+                break;
+        case IMB_AUTH_SHA3_384:
+                sha3_384(job->src, job->msg_len_to_hash_in_bytes, job->auth_tag_output);
+                break;
+        case IMB_AUTH_SHA3_512:
+                sha3_512(job->src, job->msg_len_to_hash_in_bytes, job->auth_tag_output);
+                break;
+        case IMB_AUTH_SHAKE128:
+                shake128(job->src, job->msg_len_to_hash_in_bytes, job->auth_tag_output,
+                         job->auth_tag_output_len_in_bytes);
+                break;
+        case IMB_AUTH_SHAKE256:
+                shake256(job->src, job->msg_len_to_hash_in_bytes, job->auth_tag_output,
+                         job->auth_tag_output_len_in_bytes);
+                break;
+        default:
+                job->status |= IMB_STATUS_INVALID_ARGS;
+                return job;
+        }
 
-/**
- * Function to compute SHA3-224 on the input message. The output length is
- * fixed to 28 bytes.
- */
-IMB_DLL_LOCAL
-void
-sha3_224(const uint8_t *input, uint64_t inputByteLen, uint8_t *output);
+        job->status |= IMB_STATUS_COMPLETED_AUTH;
+        return job;
+}
 
-/**
- * Function to compute SHA3-256 on the input message. The output length is
- * fixed to 32 bytes.
- */
-IMB_DLL_LOCAL
-void
-sha3_256(const uint8_t *input, uint64_t inputByteLen, uint8_t *output);
-
-/**
- * Function to compute SHA3-384 on the input message. The output length is
- * fixed to 48 bytes.
- */
-IMB_DLL_LOCAL
-void
-sha3_384(const uint8_t *input, uint64_t inputByteLen, uint8_t *output);
-
-/**
- * Function to compute SHA3-512 on the input message. The output length is
- * fixed to 64 bytes.
- */
-IMB_DLL_LOCAL
-void
-sha3_512(const uint8_t *input, uint64_t inputByteLen, uint8_t *output);
-
-#endif IMB_SHA3_H
+#endif /* JOB_API_SHA3_H */

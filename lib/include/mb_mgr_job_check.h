@@ -203,6 +203,12 @@ is_job_invalid_light(IMB_MGR *state, const IMB_CIPHER_MODE cipher_mode, const IM
         case IMB_AUTH_AES_GMAC_128:
         case IMB_AUTH_AES_GMAC_192:
         case IMB_AUTH_AES_GMAC_256:
+        case IMB_AUTH_SHA3_224:
+        case IMB_AUTH_SHA3_256:
+        case IMB_AUTH_SHA3_384:
+        case IMB_AUTH_SHA3_512:
+        case IMB_AUTH_SHAKE128:
+        case IMB_AUTH_SHAKE256:
                 break;
         case IMB_AUTH_AES_GMAC:
                 if (cipher_mode != IMB_CIPHER_GCM) {
@@ -310,6 +316,15 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job, const IMB_CIPHER_MODE cipher_
                 4,  /* IMB_AUTH_CRC7_FP_HEADER */
                 4,  /* IMB_AUTH_CRC6_IUUP_HEADER */
                 16, /* IMB_AUTH_GHASH */
+                0,  /* IMB_AUTH_SM3 - not used */
+                0,  /* IMB_AUTH_HMAC_SM3 - not used */
+                0,  /* IMB_AUTH_SM4_GCM - not used */
+                28, /* IMB_AUTH_SHA3_224 */
+                32, /* IMB_AUTH_SHA3_256 */
+                48, /* IMB_AUTH_SHA3_384 */
+                64, /* IMB_AUTH_SHA3_512 */
+                0,  /* IMB_AUTH_SHAKE128 - not used */
+                0,  /* IMB_AUTH_SHAKE256 - not used */
         };
         const uint64_t auth_tag_len_ipsec[] = {
                 0,  /* INVALID selection */
@@ -1919,6 +1934,30 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job, const IMB_CIPHER_MODE cipher_
                 }
                 if (cipher_mode != IMB_CIPHER_SM4_GCM) {
                         imb_set_errno(state, IMB_ERR_CIPH_MODE);
+                        return 1;
+                }
+                if (job->auth_tag_output == NULL) {
+                        imb_set_errno(state, IMB_ERR_JOB_NULL_AUTH);
+                        return 1;
+                }
+                break;
+        case IMB_AUTH_SHA3_224:
+        case IMB_AUTH_SHA3_256:
+        case IMB_AUTH_SHA3_384:
+        case IMB_AUTH_SHA3_512:
+                if (job->auth_tag_output_len_in_bytes != auth_tag_len_fips[hash_alg]) {
+                        imb_set_errno(state, IMB_ERR_JOB_AUTH_TAG_LEN);
+                        return 1;
+                }
+                /* Fall-through */
+        case IMB_AUTH_SHAKE128:
+        case IMB_AUTH_SHAKE256:
+                if (job->src == NULL) {
+                        imb_set_errno(state, IMB_ERR_JOB_NULL_SRC);
+                        return 1;
+                }
+                if (job->msg_len_to_hash_in_bytes > MB_MAX_LEN16) {
+                        imb_set_errno(state, IMB_ERR_JOB_AUTH_LEN);
                         return 1;
                 }
                 if (job->auth_tag_output == NULL) {

@@ -339,6 +339,12 @@ typedef enum {
         IMB_AUTH_SM3,                    /**< SM3 */
         IMB_AUTH_HMAC_SM3,               /**< SM3-HMAC */
         IMB_AUTH_SM4_GCM,                /**< SM4-GCM */
+        IMB_AUTH_SHA3_224,               /**< SHA3-224 */
+        IMB_AUTH_SHA3_256,               /**< SHA3-256 */
+        IMB_AUTH_SHA3_384,               /**< SHA3-384 */
+        IMB_AUTH_SHA3_512,               /**< SHA3-512 */
+        IMB_AUTH_SHAKE128,               /**< SHAKE128 */
+        IMB_AUTH_SHAKE256,               /**< SHAKE256 */
         IMB_AUTH_NUM
 } IMB_HASH_ALG;
 

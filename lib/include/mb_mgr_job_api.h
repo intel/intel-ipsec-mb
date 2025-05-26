@@ -49,6 +49,7 @@
 #include "include/snow3g_submit.h"
 #include "include/job_api_gcm.h"
 #include "include/job_api_kasumi.h"
+#include "include/job_api_sha3.h"
 #include "include/mb_mgr_job_check.h" /* is_job_invalid() */
 
 #define CRC(func, state, job)                                                                      \
@@ -2596,6 +2597,18 @@ SUBMIT_JOB_HASH_EX(IMB_MGR *state, IMB_JOB *job, const IMB_HASH_ALG hash_alg)
                 return process_ghash(state, job);
         case IMB_AUTH_SM3:
                 return SUBMIT_JOB_SM3(job);
+        case IMB_AUTH_SHA3_224:
+                return submit_job_sha3(state, job, IMB_AUTH_SHA3_224);
+        case IMB_AUTH_SHA3_256:
+                return submit_job_sha3(state, job, IMB_AUTH_SHA3_256);
+        case IMB_AUTH_SHA3_384:
+                return submit_job_sha3(state, job, IMB_AUTH_SHA3_384);
+        case IMB_AUTH_SHA3_512:
+                return submit_job_sha3(state, job, IMB_AUTH_SHA3_512);
+        case IMB_AUTH_SHAKE128:
+                return submit_job_sha3(state, job, IMB_AUTH_SHAKE128);
+        case IMB_AUTH_SHAKE256:
+                return submit_job_sha3(state, job, IMB_AUTH_SHAKE256);
         default:
                 /**
                  * assume IMB_AUTH_GCM, IMB_AUTH_SM4_GCM, IMB_AUTH_PON_CRC_BIP or IMB_AUTH_NULL
@@ -2673,6 +2686,18 @@ FLUSH_JOB_HASH_EX(IMB_MGR *state, IMB_JOB *job, const IMB_HASH_ALG hash_alg)
         case IMB_AUTH_SNOW3G_UIA2_BITLEN:
                 return FLUSH_JOB_SNOW3G_UIA2(snow3g_uia2_ooo);
 #endif
+        case IMB_AUTH_SHA3_224:
+                return submit_job_sha3(state, job, IMB_AUTH_SHA3_224);
+        case IMB_AUTH_SHA3_256:
+                return submit_job_sha3(state, job, IMB_AUTH_SHA3_256);
+        case IMB_AUTH_SHA3_384:
+                return submit_job_sha3(state, job, IMB_AUTH_SHA3_384);
+        case IMB_AUTH_SHA3_512:
+                return submit_job_sha3(state, job, IMB_AUTH_SHA3_512);
+        case IMB_AUTH_SHAKE128:
+                return submit_job_sha3(state, job, IMB_AUTH_SHAKE128);
+        case IMB_AUTH_SHAKE256:
+                return submit_job_sha3(state, job, IMB_AUTH_SHAKE256);
         default: /* assume GCM or IMB_AUTH_NULL */
                 if (!(job->status & IMB_STATUS_COMPLETED_AUTH)) {
                         job->status |= IMB_STATUS_COMPLETED_AUTH;
@@ -2969,6 +2994,42 @@ submit_hash_sm4_gcm(IMB_MGR *state, IMB_JOB *job)
         return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_SM4_GCM);
 }
 
+static IMB_JOB *
+submit_hash_sha3_224(IMB_MGR *state, IMB_JOB *job)
+{
+        return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_SHA3_224);
+}
+
+static IMB_JOB *
+submit_hash_sha3_256(IMB_MGR *state, IMB_JOB *job)
+{
+        return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_SHA3_256);
+}
+
+static IMB_JOB *
+submit_hash_sha3_384(IMB_MGR *state, IMB_JOB *job)
+{
+        return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_SHA3_384);
+}
+
+static IMB_JOB *
+submit_hash_sha3_512(IMB_MGR *state, IMB_JOB *job)
+{
+        return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_SHA3_512);
+}
+
+static IMB_JOB *
+submit_hash_shake128(IMB_MGR *state, IMB_JOB *job)
+{
+        return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_SHAKE128);
+}
+
+static IMB_JOB *
+submit_hash_shake256(IMB_MGR *state, IMB_JOB *job)
+{
+        return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_SHAKE256);
+}
+
 static const submit_flush_fn_t tab_submit_hash[] = {
         /* [0] invalid entry */
         NULL,
@@ -3066,6 +3127,18 @@ static const submit_flush_fn_t tab_submit_hash[] = {
         submit_hash_hmac_sm3,
         /* [47] SM4-GCM */
         submit_hash_sm4_gcm,
+        /* [48] SHA3-224 */
+        submit_hash_sha3_224,
+        /* [49] SHA3-256 */
+        submit_hash_sha3_256,
+        /* [50] SHA3-384 */
+        submit_hash_sha3_384,
+        /* [51] SHA3-512 */
+        submit_hash_sha3_512,
+        /* [52] SHAKE128 */
+        submit_hash_shake128,
+        /* [53] SHAKE256 */
+        submit_hash_shake256
         /* add new hash algorithms here */
 };
 
@@ -3355,6 +3428,42 @@ flush_hash_sm4_gcm(IMB_MGR *state, IMB_JOB *job)
         return FLUSH_JOB_HASH_EX(state, job, IMB_AUTH_SM4_GCM);
 }
 
+static IMB_JOB *
+flush_hash_sha3_224(IMB_MGR *state, IMB_JOB *job)
+{
+        return FLUSH_JOB_HASH_EX(state, job, IMB_AUTH_SHA3_224);
+}
+
+static IMB_JOB *
+flush_hash_sha3_256(IMB_MGR *state, IMB_JOB *job)
+{
+        return FLUSH_JOB_HASH_EX(state, job, IMB_AUTH_SHA3_256);
+}
+
+static IMB_JOB *
+flush_hash_sha3_384(IMB_MGR *state, IMB_JOB *job)
+{
+        return FLUSH_JOB_HASH_EX(state, job, IMB_AUTH_SHA3_384);
+}
+
+static IMB_JOB *
+flush_hash_sha3_512(IMB_MGR *state, IMB_JOB *job)
+{
+        return FLUSH_JOB_HASH_EX(state, job, IMB_AUTH_SHA3_512);
+}
+
+static IMB_JOB *
+flush_hash_shake128(IMB_MGR *state, IMB_JOB *job)
+{
+        return FLUSH_JOB_HASH_EX(state, job, IMB_AUTH_SHAKE128);
+}
+
+static IMB_JOB *
+flush_hash_shake256(IMB_MGR *state, IMB_JOB *job)
+{
+        return FLUSH_JOB_HASH_EX(state, job, IMB_AUTH_SHAKE256);
+}
+
 static const submit_flush_fn_t tab_flush_hash[] = {
         /* [0] invalid entry */
         NULL,
@@ -3452,6 +3561,18 @@ static const submit_flush_fn_t tab_flush_hash[] = {
         flush_hash_hmac_sm3,
         /* [47] SM4-GCM */
         flush_hash_sm4_gcm,
+        /* [48] SHA3-224 */
+        flush_hash_sha3_224,
+        /* [49] SHA3-256 */
+        flush_hash_sha3_256,
+        /* [50] SHA3-384 */
+        flush_hash_sha3_384,
+        /* [51] SHA3-512 */
+        flush_hash_sha3_512,
+        /* [52] SHAKE128 */
+        flush_hash_shake128,
+        /* [53] SHAKE256 */
+        flush_hash_shake256
         /* add new hash algorithms here */
 };
 
