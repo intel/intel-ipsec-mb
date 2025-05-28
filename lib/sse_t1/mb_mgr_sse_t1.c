@@ -225,7 +225,8 @@
 #define FLUSH_JOB_ZUC_NCA6  flush_job_zuc_nca6_no_gfni_sse
 
 /* SNOW5G */
-#define SUBMIT_JOB_SNOW5G snow_5g_sse
+#define SUBMIT_JOB_SNOW5G      snow_5g_sse
+#define SUBMIT_JOB_SNOW5G_NIA4 snow_5g_nia4_sse
 
 /* SNOW3G UE2 & UIA2 */
 static IMB_JOB *
@@ -275,6 +276,9 @@ flush_snow3g_uea2_job_sse(IMB_MGR *state)
 
 /* AES-NIA5 */
 #define GENERATE_HQP_AES generate_hqp_aes_sse
+
+/* SNOW5G-NIA4 */
+#define GENERATE_HQP_SNOW5G generate_hqp_snow5g_sse
 
 /* ====================================================================== */
 

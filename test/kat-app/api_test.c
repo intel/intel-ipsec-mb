@@ -251,6 +251,8 @@ fill_in_job(struct IMB_JOB *job, const IMB_CIPHER_MODE cipher_mode,
                 4,  /* IMB_AUTH_AES_NCA5 */
                 4,  /* IMB_AUTH_ZUC_NIA6 */
                 4,  /* IMB_AUTH_ZUC_NCA6 */
+                4,  /* IMB_AUTH_SNOW5G_NIA4 */
+
         };
         static DECLARE_ALIGNED(uint8_t dust_bin[2048], 64);
         static void *ks_ptrs[3];
@@ -491,6 +493,10 @@ fill_in_job(struct IMB_JOB *job, const IMB_CIPHER_MODE cipher_mode,
                 job->hash_alg = IMB_AUTH_PON_CRC_BIP;
                 job->key_len_in_bytes = 16;
                 job->iv_len_in_bytes = 16;
+                break;
+        case IMB_AUTH_SNOW5G_NIA4:
+                job->u.SNOW5G_NIA4._key = dust_bin;
+                job->u.SNOW5G_NIA4._iv = dust_bin;
                 break;
         case IMB_AUTH_AES_NIA5:
                 job->u.AES_NIA5._expanded_auth_key = dust_bin;
@@ -1375,6 +1381,7 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
                                         template_job.msg_len_to_hash_in_bits =
                                                 ((((1ULL << 16) - 1) * 8));
                                         break;
+                                case IMB_AUTH_SNOW5G_NIA4:
                                 case IMB_AUTH_ZUC_NIA6:
                                 case IMB_AUTH_AES_NIA5:
                                         /* (2^32 - 1 bits) is max */
@@ -1413,6 +1420,7 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
                                 case IMB_AUTH_KASUMI_UIA1:
                                 case IMB_AUTH_AES_NIA5:
                                 case IMB_AUTH_ZUC_NIA6:
+                                case IMB_AUTH_SNOW5G_NIA4:
                                         fill_in_job(&template_job, cipher, dir, hash, order,
                                                     &chacha_ctx, &gcm_ctx);
                                         template_job.msg_len_to_hash_in_bytes = 0;

@@ -102,6 +102,8 @@ polyval_16B_vclmul_avx512:
 
         vmovdqu64 [arg2], xmm1
 
+        vzeroupper
+
         ret
 
 
@@ -119,12 +121,15 @@ polyval_vclmul_avx512:
 
         ;; copy tag to xmm0
         vmovdqu  xmm0, [arg4]
-
         CALC_AAD_HASH arg2, arg3, xmm0, arg1, zmm1, zmm2, zmm3, zmm4, zmm5, zmm16, \
                       zmm17, zmm18, zmm19, zmm20, zmm21, zmm22, zmm23, zmm24, zmm25, \
                       zmm26, zmm27, zmm28, r10, r11, rax, k1, 1
 
         vmovdqu  [arg4], xmm0
-
+%ifdef SAFE_DATA
+    clear_scratch_zmms_asm
+%else
+        vzeroupper
+%endif
         ret
 

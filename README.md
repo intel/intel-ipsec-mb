@@ -220,9 +220,9 @@ Table 3. Encryption and integrity algorithm combinations
 | AES128-CFB, AES192-CFB, AES256-CFB, | HMAC-SHA2-512_256, NULL, POLY1305,    |
 | NULL, Chacha20,                     | AES128-GMAC, AES192-GMAC, AES256-GMAC,|
 | AES128-DOCSIS, AES256-DOCSIS,       | GHASH, SM3, HMAC-SM3                  |
-| DES-DOCSIS, 3DES, DES,              | ZUC-EIA3, SNOW3G-UIA2, KASUMI-F9      |
-| KASUMI-F8, SNOW3G-UEA2,             | AES-NIA5, ZUC-NIA6                    |
-| ZUC-EEA3, ZUC-NEA6                  |                                       |
+| DES-DOCSIS, 3DES, DES,              | ZUC-EIA3, SNOW3G-UIA2,                |
+| KASUMI-F8, SNOW3G-UEA2,             | KASUMI-F9, AES-NIA5, ZUC-NIA6,        |
+| ZUC-EEA3, ZUC-NEA6,                 | SNOW5G-NIA4                           |
 | SM4-ECB, SM4-CBC, SM4-CTR,          |                                       |
 | SNOW5G-NEA4                         |                                       |
 |-------------------------------------+---------------------------------------|

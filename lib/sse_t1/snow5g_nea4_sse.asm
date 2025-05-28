@@ -35,6 +35,7 @@
 
 %ifndef SNOW5G
 %define SNOW5G snow_5g_sse
+%define SNOW5G_NIA4_GEN_HQP generate_hqp_snow5g_sse
 %endif
 mksection .rodata
 
@@ -54,10 +55,14 @@ dq 0xf0b07030e0a0602
 
 %ifdef LINUX
         %define arg1      rdi
+        %define arg2      rsi
+        %define arg3      rdx
         %define offset    rcx
 %else
         %define arg1      rcx
-        %define offset    r8
+        %define arg2      rdx
+        %define arg3      r8
+        %define offset    r9
 %endif
 
 %define job     arg1
@@ -220,20 +225,21 @@ mksection .text
         movdqa          T1, LFSR_B_HDQ
 %endmacro ; SNOW5G_LFSR_UPDATE
 
-; ==============================================================================
-; NEA4: SNOW5G based NR(New Radio) Encryption Algorithm
-; ==============================================================================
-%macro PROCESS_SNOW5G 0
+%macro SNOW5G_INIT 2
+%define %%KEYS  %1 ;; [in] address
+%define %%IV    %2 ;; [in] address
+
+
         movdqa          gA, [rel alpha]
         movdqa          gB, [rel beta]
         movdqa          gSigma, [rel sigma]
 
         ; ----------------------------------------------------------------------
         ; Init LFSR, FSM and tap registers
-        mov             TEMP_GP, [job + _enc_keys]
+        mov             TEMP_GP, %%KEYS
         movdqu          LFSR_A_HDQ, [TEMP_GP]
         movdqu          LFSR_B_HDQ, [TEMP_GP + 16]
-        mov             TEMP_GP, [job + _iv]
+        mov             TEMP_GP, %%IV
         movdqu          LFSR_A_LDQ, [TEMP_GP]
         pxor            LFSR_B_LDQ, LFSR_B_LDQ
         ; FSM: R1 = R2 = R3 = 0
@@ -245,18 +251,18 @@ mksection .text
 
         mov     DWORD(TEMP_GP), 15
 align_loop
-init_fsm_lfsr_loop:
+%%_init_fsm_lfsr_loop:
         SNOW5G_KEYSTREAM
         SNOW5G_FSM_UPDATE
         SNOW5G_LFSR_UPDATE
         pxor            LFSR_A_HDQ, KEYSTREAM
         movdqa          T2, LFSR_A_HDQ
         dec             DWORD(TEMP_GP)
-        jnz             init_fsm_lfsr_loop
+        jnz             %%_init_fsm_lfsr_loop
 
 ;     if t==15 then R1 = R1 ⊕ (k_7,k_6,…,k_0 )
 ;     if t==16 then R1 = R1 ⊕ (k_15,k_14,…,k_8 )
-        mov             TEMP_GP, [job + _enc_keys]
+        mov             TEMP_GP, %%KEYS
         movdqu          TEMP_3, [TEMP_GP]
         pxor            FSM_R1, TEMP_3
 
@@ -269,9 +275,17 @@ init_fsm_lfsr_loop:
 
         movdqu          TEMP_3, [TEMP_GP + 16]
         pxor            FSM_R1, TEMP_3
-        ; At this point FSM and LFSR are initialized
-        ; ----------------------------------------------------------------------
 
+        ; At this point FSM and LFSR are initialized
+%endmacro ;; SNOW5G_INIT
+
+; ==============================================================================
+; NEA4: SNOW5G based NR(New Radio) Encryption Algorithm
+; ==============================================================================
+%macro PROCESS_SNOW5G 0
+
+        SNOW5G_INIT {[job + _enc_keys]}, {[job + _iv]}
+        
         ; Process input
         mov             IN_PTR, [job + _src]
         add             IN_PTR, [job + _cipher_start_src_offset_in_bytes]
@@ -320,7 +334,39 @@ no_partial_block_left:
 
         mov             TEMP_GP, job
         or              dword [TEMP_GP + _status], IMB_STATUS_COMPLETED_CIPHER
-%endmacro PROCESS_SNOW5G
+%endmacro ;; PROCESS_SNOW5G
+
+; ==============================================================================
+; NIA4: SNOW5G based NR(New Radio) Encryption Algorithm
+; ==============================================================================
+%macro SNOW5G_GEN_HQP 0
+       SNOW5G_INIT arg1, arg2
+
+        ;; Snow 5G.GenerateHQP 
+        SNOW5G_KEYSTREAM
+        SNOW5G_FSM_UPDATE
+        SNOW5G_LFSR_UPDATE
+        movdqa          T2, LFSR_A_HDQ
+        movdqu          [arg3], KEYSTREAM
+
+        SNOW5G_KEYSTREAM
+        SNOW5G_FSM_UPDATE
+        SNOW5G_LFSR_UPDATE
+        movdqa          T2, LFSR_A_HDQ
+        movdqu          [arg3 + 16], KEYSTREAM
+
+        SNOW5G_KEYSTREAM
+        SNOW5G_FSM_UPDATE
+        SNOW5G_LFSR_UPDATE
+        movdqa          T2, LFSR_A_HDQ
+        movdqu          [arg3 + 32], KEYSTREAM
+
+
+%ifdef SAFE_DATA
+        clear_scratch_xmms_sse_asm
+%endif
+
+%endmacro ;; SNOW5G_GEN_HQP
 
 MKGLOBAL(SNOW5G,function,)
 align_function
@@ -330,4 +376,16 @@ SNOW5G:
         PROCESS_SNOW5G
         FUNC_RESTORE
         ret
+
+;; SNOW5G_NIA4_GEN_HQP(keys, iv, out_hqp)
+MKGLOBAL(SNOW5G_NIA4_GEN_HQP,function,)
+align_function
+SNOW5G_NIA4_GEN_HQP:
+        endbranch64
+        FUNC_SAVE
+        SNOW5G_GEN_HQP
+        FUNC_RESTORE
+        ret
+
+
 mksection stack-noexec

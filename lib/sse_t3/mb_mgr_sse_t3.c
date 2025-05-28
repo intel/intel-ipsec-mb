@@ -280,6 +280,9 @@ flush_snow3g_uea2_job_sse(IMB_MGR *state)
 /* AES-NIA5 */
 #define GENERATE_HQP_AES generate_hqp_aes_sse
 
+/* SNOW5G-NIA4 */
+#define GENERATE_HQP_SNOW5G generate_hqp_snow5g_sse
+
 /* ====================================================================== */
 
 static void

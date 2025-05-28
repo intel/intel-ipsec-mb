@@ -248,6 +248,7 @@ is_job_invalid_light(IMB_MGR *state, const IMB_CIPHER_MODE cipher_mode, const IM
         case IMB_AUTH_SHAKE128:
         case IMB_AUTH_SHAKE256:
         case IMB_AUTH_AES_NIA5:
+        case IMB_AUTH_SNOW5G_NIA4:
                 break;
         case IMB_AUTH_AES_GMAC:
                 if (cipher_mode != IMB_CIPHER_GCM) {
@@ -1602,6 +1603,7 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job, const IMB_CIPHER_MODE cipher_
                 }
                 break;
         case IMB_AUTH_AES_NIA5:
+        case IMB_AUTH_SNOW5G_NIA4:
         case IMB_AUTH_ZUC_NIA6:
                 if (job->src == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_SRC);

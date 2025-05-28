@@ -279,6 +279,9 @@ flush_snow3g_uea2_job_avx2_t2(IMB_MGR *state)
 /* AES-NIA5 */
 #define GENERATE_HQP_AES generate_hqp_aes_sse
 
+/* SNOW5G-NIA4 */
+#define GENERATE_HQP_SNOW5G generate_hqp_snow5g_sse
+
 static void
 reset_ooo_mgrs(IMB_MGR *state)
 {

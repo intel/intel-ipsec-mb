@@ -504,6 +504,12 @@ struct str_value_mapping hash_algo_str_map[] = {
                         .hash_alg = IMB_AUTH_ZUC_NIA6,
                 }
         },
+        {
+                .name = "SNOW5G-NIA4",
+                .values.job_params = {
+                        .hash_alg = IMB_AUTH_SNOW5G_NIA4,
+                }
+        },
 };
 
 struct str_value_mapping aead_algo_str_map[] = {
@@ -620,6 +626,7 @@ const uint8_t auth_tag_len_bytes[] = {
         4,                         /* IMB_AUTH_AES_NCA5 */
         4,                         /* IMB_AUTH_ZUC_NIA6 */
         4,                         /* IMB_AUTH_ZUC_NCA6 */
+        4,                         /* IMB_AUTH_SNOW5G_NIA4 */
 };
 
 /* Minimum, maximum and step values of key sizes */
@@ -1443,6 +1450,10 @@ fill_job(IMB_JOB *job, const struct params_s *params, uint8_t *buf, uint8_t *dig
                 job->u.AES_NIA5._expanded_auth_key = (const uint8_t *) k1_expanded;
                 job->u.AES_NIA5._iv = auth_iv;
                 break;
+        case IMB_AUTH_SNOW5G_NIA4:
+                job->u.SNOW5G_NIA4._key = (const uint8_t *) enc_keys;
+                job->u.SNOW5G_NIA4._iv = auth_iv;
+                break;
         default:
                 printf("Unsupported hash algorithm %u, line %d\n", (unsigned) params->hash_alg,
                        __LINE__);
@@ -1671,6 +1682,7 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys, const uint8_t *ciph
                 case IMB_AUTH_SHA3_512:
                 case IMB_AUTH_SHAKE128:
                 case IMB_AUTH_SHAKE256:
+                case IMB_AUTH_SNOW5G_NIA4:
                         /* No operation needed */
                         break;
                 case IMB_AUTH_AES_GMAC_128:
@@ -1812,6 +1824,7 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys, const uint8_t *ciph
         case IMB_AUTH_SHAKE256:
         case IMB_AUTH_AES_NCA5:
         case IMB_AUTH_ZUC_NCA6:
+        case IMB_AUTH_SNOW5G_NIA4:
                 /* No operation needed */
                 break;
         case IMB_AUTH_POLY1305:

@@ -223,6 +223,7 @@ enum test_hash_alg_e {
         TEST_HASH_AES_NCA5,
         TEST_HASH_ZUC_NCA6,
         TEST_ZUC_NIA6,
+        TEST_SNOW5G_NIA4,
         TEST_NUM_HASH_TESTS
 };
 
@@ -593,6 +594,12 @@ const struct str_value_mapping hash_algo_str_map[] = {
                 .values.job_params = {
                         .hash_alg = TEST_ZUC_NIA6
                 }
+        },
+        {
+                .name = "snow5g-nia4",
+                .values.job_params = {
+                        .hash_alg = TEST_SNOW5G_NIA4
+                }
         }
 };
 
@@ -732,6 +739,8 @@ const uint32_t auth_tag_length_bytes[] = {
         4,                         /* AES-NCA5 */
         4,                         /* ZUC-NIA6 */
         4,                         /* ZUC-NCA6 */
+        4,                         /* SNOW5G-NIA4 */
+
 };
 uint32_t index_limit;
 uint32_t key_idxs[NUM_OFFSETS];
@@ -1726,6 +1735,9 @@ translate_hash_alg(const enum test_hash_alg_e test_mode)
         case TEST_ZUC_NIA6:
                 hash_alg = IMB_AUTH_ZUC_NIA6;
                 break;
+        case TEST_SNOW5G_NIA4:
+                hash_alg = IMB_AUTH_SNOW5G_NIA4;
+                break;
         default:
                 break;
         }
@@ -2283,6 +2295,10 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params, const uint32_t num_iter, uint8
         case TEST_AES_NIA5:
                 job_template.u.AES_NIA5._expanded_auth_key = (const uint8_t *) k1_expanded;
                 job_template.u.AES_NIA5._iv = (const uint8_t *) &auth_iv;
+                break;
+        case TEST_SNOW5G_NIA4:
+                job_template.u.SNOW5G_NIA4._key = (const uint8_t *) gcm_key;
+                job_template.u.SNOW5G_NIA4._iv = (const uint8_t *) &auth_iv;
                 break;
         case TEST_HASH_POLY1305:
                 job_template.u.POLY1305._key = k1_expanded;

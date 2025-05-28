@@ -30,6 +30,9 @@
 #ifndef JOB_API_WIRELESS_NXA_H
 #define JOB_API_WIRELESS_NXA_H
 
+void
+generate_hqp_snow5g_sse(const uint8_t *key, const uint8_t *iv, uint8_t *hqp);
+
 static const uint8_t zero_low_4B_mask[16] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
                                               0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00 };
 
@@ -154,6 +157,51 @@ submit_aes_nca5_job(IMB_JOB *job, IMB_CIPHER_DIRECTION cipher_dir)
         job->status |= IMB_STATUS_COMPLETED;
         memcpy(job->auth_tag_output, digest, job->auth_tag_output_len_in_bytes);
 
+        return job;
+}
+
+__forceinline IMB_JOB *
+submit_snow5g_nia4_job(IMB_JOB *job)
+{
+        DECLARE_ALIGNED(uint8_t HQP[3 * 16], 64);
+        DECLARE_ALIGNED(uint8_t digest[16], 16) = { 0 };
+        struct gcm_key_data gdata_key;
+        uint8_t *H = HQP;
+        uint8_t *Q = &HQP[16];
+        uint8_t *P = &HQP[16 * 2];
+        const uint8_t *msg = job->src + job->hash_start_src_offset_in_bytes;
+
+        /* Generate H, Q, P keys for SNOW5G NIA4 */
+        GENERATE_HQP_SNOW5G(job->u.SNOW5G_NIA4._key, job->u.SNOW5G_NIA4._iv, HQP);
+
+        /* Precompute hash keys from H */
+        POLYVAL_PRE(H, &gdata_key);
+        /* Digest message bytes */
+        POLYVAL(&gdata_key, msg, job->msg_len_to_hash_in_bytes, digest);
+
+        /* XOR 16-byte lengths array with previous digest and hash with Q */
+        uint8_t lengths[16] = { 0 };
+        const uint64_t msg_len_in_bits = job->msg_len_to_hash_in_bytes * 8;
+
+        memcpy(&lengths[8], &msg_len_in_bits, 8);
+
+        for (int i = 0; i < 16; i++)
+                digest[i] ^= lengths[i];
+
+        POLYVAL_16B(Q, digest);
+
+        /* XOR digest with P */
+        for (int i = 0; i < 16; i++)
+                digest[i] ^= P[i];
+
+        job->status |= IMB_STATUS_COMPLETED_AUTH;
+        memcpy(job->auth_tag_output, digest, job->auth_tag_output_len_in_bytes);
+
+#ifdef SAFE_DATA
+        clear_mem(HQP, sizeof(HQP));
+        clear_mem(&gdata_key, sizeof(struct gcm_key_data));
+        clear_mem(digest, sizeof(digest));
+#endif
         return job;
 }
 
