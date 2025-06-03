@@ -22,6 +22,7 @@ Performance Applications
 - Added AVX10 architecture support.
 - Added `imb-slope-to-stat.pl`, `imb-stat-algo-report.pl` and `imb-stat-avg.pl` scripts.
 - Renamed `ipsec_perf_tool.py` to `imb-perf-tool.py`.
+- Modified `--cores` option to accept a list of cores instead of a coremask.
 
 Fixes
 - Fixed SM4-GCM plaintext/ciphertext address calculation (issue #159).

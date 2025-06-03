@@ -119,7 +119,9 @@ typedef cpuset_t cpu_set_t;
 #define DIM(x)             (sizeof(x) / sizeof(x[0]))
 #define DIV_ROUND_UP(x, y) ((x + y - 1) / y)
 
-#define MAX_NUM_THREADS 16 /* Maximum number of threads that can be created */
+#define MAX_NUM_THREADS        512 /* Maximum number of threads that can be created */
+#define MAX_CPU_CORES          512 /* Maximum number of CPU cores supported */
+#define NUM_CORE_MASK_ELEMENTS DIV_ROUND_UP(MAX_CPU_CORES, 64)
 
 #define IA32_MSR_FIXED_CTR_CTRL      0x38D
 #define IA32_MSR_PERF_GLOBAL_CTR     0x38F
@@ -742,9 +744,9 @@ struct custom_job_params custom_job_params = { .cipher_mode = TEST_NULL_CIPHER,
 
 uint8_t archs[NUM_ARCHS] = { 1, 1, 1, 1 }; /* uses all function sets */
 int use_gcm_sgl_api = 0;
-int use_unhalted_cycles = 0; /* read unhalted cycles instead of tsc */
-uint64_t rd_cycles_cost = 0; /* cost of reading unhalted cycles */
-uint64_t core_mask = 0;      /* bitmap of selected cores */
+int use_unhalted_cycles = 0;                        /* read unhalted cycles instead of tsc */
+uint64_t rd_cycles_cost = 0;                        /* cost of reading unhalted cycles */
+uint64_t core_mask[NUM_CORE_MASK_ELEMENTS] = { 0 }; /* bitmap of selected cores */
 
 uint64_t flags = 0; /* flags passed to alloc_mb_mgr() */
 
@@ -918,24 +920,162 @@ bitcount(const uint64_t val)
         return bits;
 }
 
+/* Get number of bits set in core_mask array */
+static unsigned
+bitcount_array(const uint64_t val[NUM_CORE_MASK_ELEMENTS])
+{
+        unsigned i, total_bits = 0;
+
+        for (i = 0; i < NUM_CORE_MASK_ELEMENTS; i++)
+                total_bits += bitcount(val[i]);
+
+        return total_bits;
+}
+
 /* Get the next core in core mask
    Set last_core to negative to start from beginning of core_mask */
 static int
-next_core(const uint64_t core_mask, const int last_core)
+next_core(const uint64_t core_mask[NUM_CORE_MASK_ELEMENTS], const int last_core)
 {
         int core = 0;
+        int element = 0;
 
-        if (last_core >= 0)
+        if (last_core >= 0) {
                 core = last_core;
-
-        while (((core_mask >> core) & 1) == 0) {
-                core++;
-
-                if (core >= (int) BITS(core_mask))
-                        return -1;
+                element = core / 64;
+                core = core % 64;
         }
 
-        return core;
+        for (; element < NUM_CORE_MASK_ELEMENTS; element++) {
+                while (core < 64) {
+                        if ((core_mask[element] >> core) & 1)
+                                return element * 64 + core;
+                        core++;
+                }
+                core = 0; /* Reset bit position for next element */
+        }
+
+        return -1;
+}
+
+/* Parse a comma-separated list of core numbers or ranges into a bitmask */
+static void
+parse_corelist(const char *corelist, uint64_t core_mask[NUM_CORE_MASK_ELEMENTS])
+{
+        char *copy_arg = NULL;
+        char *token = NULL;
+        char *endptr = NULL;
+        char *range_token = NULL;
+        char *range_copy = NULL;
+        uint32_t core_start, core_end, core;
+        uint32_t element, bit;
+
+        /* Initialize mask to 0 */
+        memset(core_mask, 0, sizeof(uint64_t) * NUM_CORE_MASK_ELEMENTS);
+
+        if (corelist == NULL)
+                return;
+
+        copy_arg = strdup(corelist);
+        if (copy_arg == NULL) {
+                fprintf(stderr, "%s() internal error: memory allocation failed!\n", __func__);
+                exit(EXIT_FAILURE);
+        }
+
+        token = strtok(copy_arg, ",");
+        while (token != NULL) {
+                /* Check if it's a range (contains '-') */
+                if (strchr(token, '-') != NULL) {
+                        range_copy = strdup(token);
+                        if (range_copy == NULL) {
+                                fprintf(stderr, "%s() internal error: memory allocation failed!\n",
+                                        __func__);
+                                free(copy_arg);
+                                exit(EXIT_FAILURE);
+                        }
+
+                        range_token = strtok(range_copy, "-");
+                        if (range_token == NULL) {
+                                fprintf(stderr, "Invalid core range format: %s\n", token);
+                                free(range_copy);
+                                free(copy_arg);
+                                exit(EXIT_FAILURE);
+                        }
+
+                        core_start = (uint32_t) strtoul(range_token, &endptr, 10);
+                        if (*endptr != '\0') {
+                                fprintf(stderr, "Invalid core number: %s\n", range_token);
+                                free(range_copy);
+                                free(copy_arg);
+                                exit(EXIT_FAILURE);
+                        }
+
+                        range_token = strtok(NULL, "-");
+                        if (range_token == NULL) {
+                                fprintf(stderr, "Invalid core range format: %s\n", token);
+                                free(range_copy);
+                                free(copy_arg);
+                                exit(EXIT_FAILURE);
+                        }
+
+                        core_end = (uint32_t) strtoul(range_token, &endptr, 10);
+                        if (*endptr != '\0') {
+                                fprintf(stderr, "Invalid core number: %s\n", range_token);
+                                free(range_copy);
+                                free(copy_arg);
+                                exit(EXIT_FAILURE);
+                        }
+
+                        if (core_end < core_start) {
+                                fprintf(stderr, "Invalid core range: %u-%u\n", core_start,
+                                        core_end);
+                                free(range_copy);
+                                free(copy_arg);
+                                exit(EXIT_FAILURE);
+                        }
+
+                        for (core = core_start; core <= core_end; core++) {
+                                if (core >= MAX_CPU_CORES) {
+                                        fprintf(stderr,
+                                                "Core number %u exceeds maximum supported core "
+                                                "(%u)\n",
+                                                core, MAX_CPU_CORES - 1);
+                                        free(range_copy);
+                                        free(copy_arg);
+                                        exit(EXIT_FAILURE);
+                                }
+                                element = core / 64;
+                                bit = core % 64;
+                                core_mask[element] |= (1ULL << bit);
+                        }
+
+                        free(range_copy);
+                } else {
+                        /* Single core number */
+                        core = (uint32_t) strtoul(token, &endptr, 10);
+                        if (*endptr != '\0') {
+                                fprintf(stderr, "Invalid core number: %s\n", token);
+                                free(copy_arg);
+                                exit(EXIT_FAILURE);
+                        }
+
+                        if (core >= MAX_CPU_CORES) {
+                                fprintf(stderr,
+                                        "Core number %u exceeds maximum supported core (%u)\n",
+                                        core, MAX_CPU_CORES - 1);
+                                free(copy_arg);
+                                exit(EXIT_FAILURE);
+                        }
+
+                        element = core / 64;
+                        bit = core % 64;
+                        core_mask[element] |= (1ULL << bit);
+                }
+
+                token = strtok(NULL, ",");
+        }
+
+        free(copy_arg);
 }
 
 /* Set CPU affinity for current thread */
@@ -994,7 +1134,7 @@ start_cycles_ctr(const uint32_t core)
 {
         int ret;
 
-        if (core >= BITS(core_mask))
+        if (core >= MAX_CPU_CORES)
                 return 1;
 
         /* Disable cycles counter */
@@ -1059,7 +1199,7 @@ set_avg_unhalted_cycle_cost(const int core, uint64_t *value)
         unsigned i;
         uint64_t cycles[10];
 
-        if (value == NULL || core_mask == 0 || core < 0)
+        if (value == NULL || bitcount_array(core_mask) == 0 || core < 0)
                 return 1;
 
         /* Fill cycles table with read cost values */
@@ -3346,7 +3486,7 @@ run_tests(void *arg)
         params.core = (uint32_t) info->core;
 
         /* if cores selected then set affinity */
-        if (core_mask)
+        if (bitcount_array(core_mask) > 0)
                 if (set_affinity(info->core) != 0) {
                         fprintf(stderr,
                                 "Failed to set cpu "
@@ -3548,7 +3688,9 @@ usage(void)
                 " (direct GCM API is default)\n"
                 "--threads num: <num> for the number of threads to run"
                 " Max: %d\n"
-                "--cores mask: <mask> CPU's to run threads\n"
+                "--cores CORELIST: CPU cores to use, specified as a comma-separated list\n"
+                "       or range of cores (e.g. 0,2 or 1-4,6). For example: '0,2,4,6' or "
+                "'1-4,6,8-10'\n"
                 "--unhalted-cycles: measure using unhalted cycles (requires root).\n"
                 "                   Note: RDTSC is used by default.\n"
                 "--quick: reduces number of test iterations by x10\n"
@@ -4122,8 +4264,12 @@ main(int argc, char *argv[])
                                 return EXIT_FAILURE;
                         }
                 } else if (strcmp(argv[i], "--cores") == 0) {
-                        i = get_next_num_arg((const char *const *) argv, i, argc, &core_mask,
-                                             sizeof(core_mask));
+                        if (i + 1 >= argc) {
+                                fprintf(stderr, "Error: --cores requires a corelist argument\n");
+                                return EXIT_FAILURE;
+                        }
+                        parse_corelist(argv[i + 1], core_mask);
+                        i++;
                 } else if (strcmp(argv[i], "--unhalted-cycles") == 0) {
                         use_unhalted_cycles = 1;
                 } else if (strcmp(argv[i], "--no-progress-bar") == 0) {
@@ -4370,11 +4516,11 @@ main(int argc, char *argv[])
         }
 
         /* Check num cores >= number of threads */
-        if ((core_mask != 0 && num_t != 0) && (num_t > bitcount(core_mask))) {
+        if ((bitcount_array(core_mask) > 0 && num_t != 0) && (num_t > bitcount_array(core_mask))) {
                 fprintf(stderr,
                         "Insufficient number of cores in "
-                        "core mask (0x%lx) to run %u threads!\n",
-                        (unsigned long) core_mask, num_t);
+                        "core mask to run %u threads!\n",
+                        num_t);
                 return EXIT_FAILURE;
         }
 
@@ -4388,7 +4534,7 @@ main(int argc, char *argv[])
 
         /* if cycles selected then init MSR module */
         if (use_unhalted_cycles) {
-                if (core_mask == 0) {
+                if (bitcount_array(core_mask) == 0) {
                         fprintf(stderr, "Must specify core mask "
                                         "when reading unhalted cycles!\n");
                         return EXIT_FAILURE;
@@ -4528,7 +4674,7 @@ main(int argc, char *argv[])
 
                 for (n = 0; n < (num_t - 1); n++, thread_info_p++) {
                         /* Set core if selected */
-                        if (core_mask) {
+                        if (bitcount_array(core_mask) > 0) {
                                 core = next_core(core_mask, core);
                                 thread_info_p->core = core++;
                         }
@@ -4560,7 +4706,7 @@ main(int argc, char *argv[])
                                 "structure for main thread!\n");
                 exit(EXIT_FAILURE);
         }
-        if (core_mask) {
+        if (bitcount_array(core_mask) > 0) {
                 core = next_core(core_mask, core);
                 thread_info_p->core = core;
         }

@@ -114,8 +114,7 @@ class Variant:
     def set_core(self, core):
         """Set core to run perf app on"""
         self.core = core
-        mask = 1 << core
-        self.cmd += ' --cores {}'.format(str(hex(mask)))
+        self.cmd += ' --cores {}'.format(str(core))
 
     def get_output(self):
         """Get output from run"""
