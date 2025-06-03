@@ -3584,6 +3584,7 @@ usage(void)
                 "--burst-api: use burst API for perf tests (default)\n"
                 "--cipher-burst-api: use cipher-only burst API for perf tests\n"
                 "--hash-burst-api: use hash-only burst API for perf tests\n"
+                "--aead-burst-api: use AEAD algorithm burst API for perf tests\n"
                 "--burst-size: number of jobs to submit per burst\n"
                 "--quic-api: run QUIC-API specific tests only\n"
                 "--buffer-offset val: val is 0 by default, valid range is 0 to 15.\n"
