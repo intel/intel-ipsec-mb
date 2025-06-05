@@ -49,9 +49,7 @@ set(CIPHER_ALGOS
   aes-ctr-128
   aes-ctr-192
   aes-ctr-256
-  aes-ctr8-128
-  aes-ctr8-192
-  aes-ctr8-256
+
   aes-ctr-bit-128
   aes-ctr-bit-192
   aes-ctr-bit-256
@@ -62,11 +60,8 @@ set(CIPHER_ALGOS
   aes-ecb-192
   aes-ecb-256
   aes-docsis-128
-  aes-docsis8-128
   aes-docsis-256
-  aes-docsis8-256
   des-docsis
-  des-docsis4
   des-cbc
   3des-cbc
   zuc-eea3
@@ -171,9 +166,7 @@ set(AEAD_ALGOS
   pon-128-no-ctr
   chacha20-poly1305
   aes-docsis-128-crc32
-  aes-docsis8-128-crc32
   aes-docsis-256-crc32
-  aes-docsis8-256-crc32
   snow-v-aead
   sm4-gcm)
 

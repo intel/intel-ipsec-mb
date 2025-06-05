@@ -137,17 +137,14 @@ enum arch_type_e { ARCH_SSE = 0, ARCH_AVX2, ARCH_AVX512, ARCH_AVX10, NUM_ARCHS }
 enum test_cipher_mode_e {
         TEST_CBC = 1,
         TEST_CNTR,
-        TEST_CNTR8,        /* CNTR with increased buffer by 8 */
         TEST_CNTR_BITLEN,  /* CNTR-BITLEN */
         TEST_CNTR_BITLEN4, /* CNTR-BITLEN with 4 less bits in the last byte */
         TEST_ECB,
         TEST_CBCS_1_9,
         TEST_NULL_CIPHER,
         TEST_AESDOCSIS,
-        TEST_AESDOCSIS8, /* AES DOCSIS with increased buffer size by 8 */
         TEST_DESDOCSIS,
-        TEST_DESDOCSIS4, /* DES DOCSIS with increased buffer size by 4 */
-        TEST_GCM,        /* Additional field used by GCM, not translated */
+        TEST_GCM, /* Additional field used by GCM, not translated */
         TEST_CCM,
         TEST_DES,
         TEST_3DES,
@@ -269,12 +266,6 @@ const struct str_value_mapping cipher_algo_str_map[] = {
           .values.job_params = { .cipher_mode = TEST_CNTR, .key_size = IMB_KEY_192_BYTES } },
         { .name = "aes-ctr-256",
           .values.job_params = { .cipher_mode = TEST_CNTR, .key_size = IMB_KEY_256_BYTES } },
-        { .name = "aes-ctr8-128",
-          .values.job_params = { .cipher_mode = TEST_CNTR8, .key_size = IMB_KEY_128_BYTES } },
-        { .name = "aes-ctr8-192",
-          .values.job_params = { .cipher_mode = TEST_CNTR8, .key_size = IMB_KEY_192_BYTES } },
-        { .name = "aes-ctr8-256",
-          .values.job_params = { .cipher_mode = TEST_CNTR8, .key_size = IMB_KEY_256_BYTES } },
         { .name = "aes-ctr-bit-128",
           .values.job_params = { .cipher_mode = TEST_CNTR_BITLEN, .key_size = IMB_KEY_128_BYTES } },
         { .name = "aes-ctr-bit-192",
@@ -298,16 +289,10 @@ const struct str_value_mapping cipher_algo_str_map[] = {
           .values.job_params = { .cipher_mode = TEST_ECB, .key_size = IMB_KEY_256_BYTES } },
         { .name = "aes-docsis-128",
           .values.job_params = { .cipher_mode = TEST_AESDOCSIS, .key_size = IMB_KEY_128_BYTES } },
-        { .name = "aes-docsis8-128",
-          .values.job_params = { .cipher_mode = TEST_AESDOCSIS8, .key_size = IMB_KEY_128_BYTES } },
         { .name = "aes-docsis-256",
           .values.job_params = { .cipher_mode = TEST_AESDOCSIS, .key_size = IMB_KEY_256_BYTES } },
-        { .name = "aes-docsis8-256",
-          .values.job_params = { .cipher_mode = TEST_AESDOCSIS8, .key_size = IMB_KEY_256_BYTES } },
         { .name = "des-docsis",
           .values.job_params = { .cipher_mode = TEST_DESDOCSIS, .key_size = 8 } },
-        { .name = "des-docsis4",
-          .values.job_params = { .cipher_mode = TEST_DESDOCSIS4, .key_size = 8 } },
         { .name = "des-cbc", .values.job_params = { .cipher_mode = TEST_DES, .key_size = 8 } },
         { .name = "3des-cbc", .values.job_params = { .cipher_mode = TEST_3DES, .key_size = 24 } },
         { .name = "zuc-eea3",
@@ -612,16 +597,8 @@ const struct str_value_mapping aead_algo_str_map[] = {
           .values.job_params = { .cipher_mode = TEST_AESDOCSIS,
                                  .hash_alg = TEST_DOCSIS_CRC32,
                                  .key_size = IMB_KEY_128_BYTES } },
-        { .name = "aes-docsis8-128-crc32",
-          .values.job_params = { .cipher_mode = TEST_AESDOCSIS8,
-                                 .hash_alg = TEST_DOCSIS_CRC32,
-                                 .key_size = IMB_KEY_128_BYTES } },
         { .name = "aes-docsis-256-crc32",
           .values.job_params = { .cipher_mode = TEST_AESDOCSIS,
-                                 .hash_alg = TEST_DOCSIS_CRC32,
-                                 .key_size = IMB_KEY_256_BYTES } },
-        { .name = "aes-docsis8-256-crc32",
-          .values.job_params = { .cipher_mode = TEST_AESDOCSIS8,
                                  .hash_alg = TEST_DOCSIS_CRC32,
                                  .key_size = IMB_KEY_256_BYTES } },
         { .name = "snow-v-aead",
@@ -1410,7 +1387,6 @@ translate_cipher_mode(const enum test_cipher_mode_e test_mode)
                 c_mode = IMB_CIPHER_CBC;
                 break;
         case TEST_CNTR:
-        case TEST_CNTR8:
                 c_mode = IMB_CIPHER_CNTR;
                 break;
         case TEST_CNTR_BITLEN:
@@ -1424,11 +1400,9 @@ translate_cipher_mode(const enum test_cipher_mode_e test_mode)
                 c_mode = IMB_CIPHER_NULL;
                 break;
         case TEST_AESDOCSIS:
-        case TEST_AESDOCSIS8:
                 c_mode = IMB_CIPHER_DOCSIS_SEC_BPI;
                 break;
         case TEST_DESDOCSIS:
-        case TEST_DESDOCSIS4:
                 c_mode = IMB_CIPHER_DOCSIS_DES;
                 break;
         case TEST_GCM:
@@ -1792,13 +1766,9 @@ set_size_lists(uint32_t *cipher_size_list, uint32_t *hash_size_list, uint64_t *x
                 else
                         job_size = params->job_size;
 
-                if ((params->cipher_mode == TEST_AESDOCSIS8) || (params->cipher_mode == TEST_CNTR8))
-                        cipher_size_list[i] = job_size + 8;
-                else if (params->cipher_mode == TEST_DESDOCSIS4)
-                        cipher_size_list[i] = job_size + 4;
-                else if ((params->cipher_mode == TEST_CNTR_BITLEN) ||
-                         (params->cipher_mode == TEST_SNOW3G_UEA2) ||
-                         (params->cipher_mode == TEST_KASUMI_UEA1))
+                if ((params->cipher_mode == TEST_CNTR_BITLEN) ||
+                    (params->cipher_mode == TEST_SNOW3G_UEA2) ||
+                    (params->cipher_mode == TEST_KASUMI_UEA1))
                         cipher_size_list[i] = job_size * 8;
                 else if (params->cipher_mode == TEST_CNTR_BITLEN4)
                         cipher_size_list[i] = job_size * 8 - 4;
@@ -1840,8 +1810,7 @@ set_size_lists(uint32_t *cipher_size_list, uint32_t *hash_size_list, uint64_t *x
                 } else if (params->hash_alg == TEST_NULL_HASH)
                         hash_size_list[i] = 0;
 
-                if (((params->cipher_mode == TEST_AESDOCSIS) ||
-                     (params->cipher_mode == TEST_AESDOCSIS8)) &&
+                if ((params->cipher_mode == TEST_AESDOCSIS) &&
                     (params->hash_alg == TEST_DOCSIS_CRC32)) {
                         const uint32_t ciph_adjust = /* SA + DA */
                                 IMB_DOCSIS_CRC32_MIN_ETH_PDU_SIZE - 2;
@@ -2277,8 +2246,7 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params, const uint32_t num_iter, uint8
 
         if (params->cipher_mode == TEST_NULL_CIPHER) {
                 job_template.chain_order = IMB_ORDER_HASH_CIPHER;
-        } else if (params->cipher_mode == TEST_CCM || ((params->cipher_mode == TEST_AESDOCSIS ||
-                                                        params->cipher_mode == TEST_AESDOCSIS8) &&
+        } else if (params->cipher_mode == TEST_CCM || ((params->cipher_mode == TEST_AESDOCSIS) &&
                                                        params->hash_alg == TEST_DOCSIS_CRC32)) {
                 if (job_template.cipher_direction == IMB_DIR_ENCRYPT)
                         job_template.chain_order = IMB_ORDER_HASH_CIPHER;
@@ -3296,16 +3264,13 @@ print_times(struct variant_s *variant_list, struct params_s *params, const uint3
                 const char *func_names[4] = { "SSE", "AVX2", "AVX512", "AVX10" };
                 const char *c_mode_names[TEST_NUM_CIPHER_TESTS - 1] = { "CBC",
                                                                         "CNTR",
-                                                                        "CNTR+8",
                                                                         "CNTR_BITLEN",
                                                                         "CNTR_BITLEN4",
                                                                         "ECB",
                                                                         "CBCS_1_9",
                                                                         "NULL_CIPHER",
                                                                         "DOCAES",
-                                                                        "DOCAES+8",
                                                                         "DOCDES",
-                                                                        "DOCDES+4",
                                                                         "GCM",
                                                                         "CCM",
                                                                         "DES",
