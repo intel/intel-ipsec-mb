@@ -121,11 +121,6 @@ aes_ecb_quic_enc_256_avx(const void *in, const void *keys, void *out, uint64_t n
 void
 aes128_ecbenc_x3_avx(const void *in, void *keys, void *out1, void *out2, void *out3);
 
-/* AES-CBCS */
-void
-aes_cbcs_1_9_dec_128_avx(const void *in, const uint8_t *IV, const void *keys, void *out,
-                         uint64_t len_bytes, void *next_iv);
-
 /* AES-CFB */
 IMB_DLL_EXPORT void
 aes_cfb_128_one_avx(void *out, const void *in, const void *iv, const void *keys, uint64_t len);
@@ -285,11 +280,6 @@ submit_job_aes_cntr_avx(IMB_JOB *job);
 
 IMB_JOB *
 submit_job_aes_cntr_bit_avx(IMB_JOB *job);
-
-IMB_JOB *
-submit_job_aes128_cbcs_1_9_enc_avx(MB_MGR_AES_OOO *state, IMB_JOB *job);
-IMB_JOB *
-flush_job_aes128_cbcs_1_9_enc_avx(MB_MGR_AES_OOO *state);
 
 IMB_JOB *
 submit_job_chacha20_enc_dec_avx(IMB_JOB *job);

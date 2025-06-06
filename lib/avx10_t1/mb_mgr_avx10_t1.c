@@ -115,12 +115,6 @@
 #define AES_CBC_DEC_192 aes_cbc_dec_192_vaes_avx512
 #define AES_CBC_DEC_256 aes_cbc_dec_256_vaes_avx512
 
-/* AES-CBCS */
-#define SUBMIT_JOB_AES128_CBCS_1_9_ENC submit_job_aes128_cbcs_1_9_enc_vaes_avx512
-#define FLUSH_JOB_AES128_CBCS_1_9_ENC  flush_job_aes128_cbcs_1_9_enc_vaes_avx512
-#define SUBMIT_JOB_AES128_CBCS_1_9_DEC submit_job_aes128_cbcs_1_9_dec_vaes_avx512
-#define AES_CBCS_1_9_DEC_128           aes_cbcs_1_9_dec_128_vaes_avx512
-
 /* AES-ECB */
 #define SUBMIT_JOB_AES_ECB_128_ENC submit_job_aes_ecb_128_enc_vaes_avx512
 #define SUBMIT_JOB_AES_ECB_128_DEC submit_job_aes_ecb_128_dec_vaes_avx512
@@ -137,9 +131,9 @@
 #define AES_ECB_DEC_256 aes_ecb_dec_256_vaes_avx512
 
 /* AES-CTR */
-#define SUBMIT_JOB_AES_CTR_128     aes_cntr_128_submit_vaes_avx512
-#define SUBMIT_JOB_AES_CTR_192     aes_cntr_192_submit_vaes_avx512
-#define SUBMIT_JOB_AES_CTR_256     aes_cntr_256_submit_vaes_avx512
+#define SUBMIT_JOB_AES_CTR_128 aes_cntr_128_submit_vaes_avx512
+#define SUBMIT_JOB_AES_CTR_192 aes_cntr_192_submit_vaes_avx512
+#define SUBMIT_JOB_AES_CTR_256 aes_cntr_256_submit_vaes_avx512
 
 /* AES-CCM */
 #define AES_CNTR_CCM_128 aes_cntr_ccm_128_vaes_avx512
@@ -446,9 +440,6 @@ reset_ooo_mgrs(IMB_MGR *state)
         /* Init AES-CMAC auth out-of-order fields */
         ooo_mgr_cmac_reset(state->aes_cmac_ooo, 16);
         ooo_mgr_cmac_reset(state->aes256_cmac_ooo, 16);
-
-        /* Init AES CBC-S out-of-order fields */
-        ooo_mgr_aes_reset(state->aes128_cbcs_ooo, 12);
 
         /* Init SNOW3G out-of-order fields */
         ooo_mgr_snow3g_reset(state->snow3g_uea2_ooo, 16);

@@ -65,50 +65,48 @@ Table 1. List of supported cipher algorithms and their implementations.
 | AES256-GCM     | Y  by8 |  <---  |  <---  | Y  by8 | Y by16 | [A2-1] | [A2-2] | [A2-1] | Y   by32 |  <---  |
 | AES128-CCM     | Y  by8 |  <---  |  <---  | Y  by8 | Y by16 |  <---  |  <---  |  <---  | Y   by16 |  <---  |
 | AES256-CCM     | Y  by8 |  <---  |  <---  | Y  by8 | Y by16 |  <---  |  <---  |  <---  | Y   by16 |  <---  |
-| AES128-CBC     | Y(2)   |  <---  |  <---  | Y(2)   |  Y (4) |  <---  |  <---  |  <---  | Y(4)     |  <---  |
-| AES192-CBC     | Y(2)   |  <---  |  <---  | Y(2)   |  Y (4) |  <---  |  <---  |  <---  | Y(4)     |  <---  |
-| AES256-CBC     | Y(2)   |  <---  |  <---  | Y(2)   |  Y (4) |  <---  |  <---  |  <---  | Y(4)     |  <---  |
+| AES128-CBC     | Y(1)   |  <---  |  <---  | Y(1)   |  Y (3) |  <---  |  <---  |  <---  | Y(3)     |  <---  |
+| AES192-CBC     | Y(1)   |  <---  |  <---  | Y(1)   |  Y (3) |  <---  |  <---  |  <---  | Y(3)     |  <---  |
+| AES256-CBC     | Y(1)   |  <---  |  <---  | Y(1)   |  Y (3) |  <---  |  <---  |  <---  | Y(3)     |  <---  |
 | AES128-CTR     | Y  by8 |  <---  |  <---  | Y  by8 | Y by16 |  <---  |  <---  |  <---  | Y   by16 |  <---  |
 | AES192-CTR     | Y  by8 |  <---  |  <---  | Y  by8 | Y by16 |  <---  |  <---  |  <---  | Y   by16 |  <---  |
 | AES256-CTR     | Y  by8 |  <---  |  <---  | Y  by8 | Y by16 |  <---  |  <---  |  <---  | Y   by16 |  <---  |
 | AES128-ECB     | Y  by8 |  <---  |  <---  | Y  by8 | Y by16 |  <---  |  <---  |  <---  | Y   by16 |  <---  |
 | AES192-ECB     | Y  by8 |  <---  |  <---  | Y  by8 | Y by16 |  <---  |  <---  |  <---  | Y   by16 |  <---  |
 | AES256-ECB     | Y  by8 |  <---  |  <---  | Y  by8 | Y by16 |  <---  |  <---  |  <---  | Y   by16 |  <---  |
-| AES128-CFB     | Y(3)   |  <---  |  <---  |  <---  |  Y (4) |  <---  |  <---  |  <---  | Y(4)     |  <---  |
-| AES192-CFB     | Y(3)   |  <---  |  <---  |  <---  |  Y (4) |  <---  |  <---  |  <---  | Y(4)     |  <---  |
-| AES256-CFB     | Y(3)   |  <---  |  <---  |  <---  |  Y (4) |  <---  |  <---  |  <---  | Y(4)     |  <---  |
-| AES128-DOCSIS  | Y(2)   |  <---  |  <---  | Y(2)   |  <---  |  <---  |  <---  | Y(2)   | Y(4)     |  <---  |
-| AES256-DOCSIS  | Y(2)   |  <---  |  <---  | Y(2)   |  <---  |  <---  |  <---  | Y(2)   | Y(4)     |  <---  |
+| AES128-CFB     | Y(2)   |  <---  |  <---  |  <---  |  Y (3) |  <---  |  <---  |  <---  | Y(3)     |  <---  |
+| AES192-CFB     | Y(2)   |  <---  |  <---  |  <---  |  Y (3) |  <---  |  <---  |  <---  | Y(3)     |  <---  |
+| AES256-CFB     | Y(2)   |  <---  |  <---  |  <---  |  Y (3) |  <---  |  <---  |  <---  | Y(3)     |  <---  |
+| AES128-DOCSIS  | Y(1)   |  <---  |  <---  | Y(1)   |  <---  |  <---  |  <---  | Y(1)   | Y(3)     |  <---  |
+| AES256-DOCSIS  | Y(1)   |  <---  |  <---  | Y(1)   |  <---  |  <---  |  <---  | Y(1)   | Y(3)     |  <---  |
 | DES-DOCSIS     | Y      |  <---  |  <---  |  <---  |  <---  |  <---  |  <---  | Y  x16 |  <---    |  <---  |
 | 3DES/TDES      | Y      |  <---  |  <---  |  <---  |  <---  |  <---  |  <---  | Y  x16 |  <---    |  <---  |
 | DES            | Y      |  <---  |  <---  |  <---  |  <---  |  <---  |  <---  | Y  x16 |  <---    |  <---  |
 | KASUMI-F8      | Y      |  <---  |  <---  |  <---  |  <---  |  <---  |  <---  |  <---  |  <---    |  <---  |
-| ZUC-EEA3       | Y   x4 |  <---  | Y(5)x4 | Y  x8  | Y(5)x8 |  <---  |  <---  | Y  x16 | Y(5) x16 |  <---  |
-| ZUC-EEA3-256   | Y   x4 |  <---  | Y(5)x4 | Y  x8  | Y(5)x8 |  <---  |  <---  | Y  x16 | Y(5) x16 |  <---  |
+| ZUC-EEA3       | Y   x4 |  <---  | Y(4)x4 | Y  x8  | Y(4)x8 |  <---  |  <---  | Y  x16 | Y(4) x16 |  <---  |
+| ZUC-EEA3-256   | Y   x4 |  <---  | Y(4)x4 | Y  x8  | Y(4)x8 |  <---  |  <---  | Y  x16 | Y(4) x16 |  <---  |
 | SNOW3G-UEA2    | Y   x4 |  <---  |  <---  |  <---  |  <---  |  <---  |  <---  | Y  x16 | Y    x16 |  <---  |
-| AES128-CBCS(1) | Y      |  <---  |  <---  | Y(2)   |  <---  |  <---  |  <---  |  <---  | Y(9)     |  <---  |
 | Chacha20       | Y      |  <---  |  <---  | Y      |  <---  |  <---  |  <---  | Y      |  <---    |  <---  |
 | Chacha20 AEAD  | Y      |  <---  |  <---  | Y      |  <---  |  <---  |  <---  | Y      |  <---    |  <---  |
 | SNOW-V         | Y      |  <---  |  <---  | Y      |  <---  |  <---  |  <---  |  <---  |  <---    |  <---  |
 | SNOW-V AEAD    | Y      |  <---  |  <---  | Y      |  <---  |  <---  |  <---  |  <---  |  <---    |  <---  |
 | PON-CRC-BIP    | Y  by8 |  <---  |  <---  | Y by8  |  <---  |  <---  |  <---  |  <---  | Y   by16 |  <---  |
-| SM4-ECB        | Y      |  <---  |  <---  |  <---  |  <---  |  <---  | Y(6)   | [S1]   | [S1]     | [A2-4] |
-| SM4-CBC        | Y      |  <---  |  <---  |  <---  |  <---  |  <---  | Y(7)   | [S1]   | [S1]     | [A2-4] |
-| SM4-CTR        | Y      |  <---  |  <---  |  <---  |  <---  |  <---  | Y(8)   | [S1]   | [S1]     | [A2-4] |
-| SM4-GCM        | Y      |  <---  |  <---  |  <---  |  <---  |  <---  | Y(8)   | [S1]   | [S1]     | [A2-4] |
+| SM4-ECB        | Y      |  <---  |  <---  |  <---  |  <---  |  <---  | Y(5)   | [S1]   | [S1]     | [A2-4] |
+| SM4-CBC        | Y      |  <---  |  <---  |  <---  |  <---  |  <---  | Y(6)   | [S1]   | [S1]     | [A2-4] |
+| SM4-CTR        | Y      |  <---  |  <---  |  <---  |  <---  |  <---  | Y(7)   | [S1]   | [S1]     | [A2-4] |
+| SM4-GCM        | Y      |  <---  |  <---  |  <---  |  <---  |  <---  | Y(7)   | [S1]   | [S1]     | [A2-4] |
 +------------------------------------------------------------------------------------------------------------+
 
 ```
 Notes:  
-(1)   - Currently 1:9 crypt:skip pattern supported.  
-(2)   - Decryption is by8 and encryption is x8.  
-(3)   - Single block decryption and encryption.  
-(4)   - Decryption is by16 and encryption is x16.  
-(5)   - Implementation using GFNI extensions.  
-(6)   - Implementation using SM4NI extensions, by16.  
-(7)   - Implementation using SM4NI extensions, single block encryption and by16 decryption.  
-(8)   - Implementation using SM4NI extensions, by8.  
-(9)   - Decryption is by16 and encryption is x12.  
+(1)   - Decryption is by8 and encryption is x8.  
+(2)   - Single block decryption and encryption.  
+(3)   - Decryption is by16 and encryption is x16.  
+(4)   - Implementation using GFNI extensions.  
+(5)   - Implementation using SM4NI extensions, by16.  
+(6)   - Implementation using SM4NI extensions, single block encryption and by16 decryption.  
+(7)   - Implementation using SM4NI extensions, by8.  
+(8)   - Decryption is by16 and encryption is x12.  
 
 Legend:  
 ` byY`- single buffer Y blocks at a time  

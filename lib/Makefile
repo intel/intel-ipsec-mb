@@ -411,8 +411,6 @@ asm_sse_lib_objs := \
 	mb_mgr_aes192_cbc_enc_submit_x8_sse.o \
 	mb_mgr_aes256_cbc_enc_flush_x8_sse.o \
 	mb_mgr_aes256_cbc_enc_submit_x8_sse.o \
-	mb_mgr_aes128_cbcs_1_9_submit_sse.o \
-	mb_mgr_aes128_cbcs_1_9_flush_sse.o \
 	mb_mgr_aes_cmac_submit_flush_x8_sse.o \
 	mb_mgr_aes_ccm_auth_submit_flush_x8_sse.o \
 	mb_mgr_aes128_xcbc_flush_x4_sse.o \
@@ -442,8 +440,6 @@ asm_sse_lib_objs := \
 	ethernet_fcs_sse.o \
 	crc16_x25_sse.o \
 	crc32_sctp_sse.o \
-	aes128_cbcs_1_9_enc_x4_sse.o \
-	aes128_cbcs_1_9_dec_by4_sse.o \
 	crc32_refl_by8_sse.o \
 	crc32_by8_sse.o \
 	crc32_lte_sse.o \
@@ -504,10 +500,6 @@ asm_avx2_lib_objs := \
 	mb_mgr_aes256_ccm_auth_submit_flush_x8_avx.o \
 	mb_mgr_aes128_xcbc_flush_x8_avx.o \
 	mb_mgr_aes128_xcbc_submit_x8_avx.o \
-	aes128_cbcs_1_9_enc_x8_avx.o \
-	aes128_cbcs_1_9_dec_by8_avx.o \
-	mb_mgr_aes128_cbcs_1_9_submit_avx.o \
-	mb_mgr_aes128_cbcs_1_9_flush_avx.o \
 	md5_x8x2_avx2.o \
 	sha1_x8_avx2.o \
 	sha256_oct_avx2.o \
@@ -599,8 +591,6 @@ asm_avx512_lib_objs := \
 	pon_vaes_avx512.o \
 	aes_cbc_dec_by16_vaes_avx512.o \
 	aes_cbc_enc_vaes_avx512.o \
-	aes_cbcs_enc_vaes_avx512.o \
-	aes_cbcs_dec_by16_vaes_avx512.o \
 	aes_docsis_dec_avx512.o \
 	aes_docsis_enc_avx512.o \
 	aes_docsis_dec_vaes_avx512.o \
@@ -638,8 +628,6 @@ asm_avx512_lib_objs := \
 	crc16_x25_avx512.o \
 	crc32_refl_by16_vclmul_avx512.o \
 	crc32_by16_vclmul_avx512.o \
-	mb_mgr_aes128_cbcs_1_9_submit_avx512.o \
-	mb_mgr_aes128_cbcs_1_9_flush_avx512.o \
 	crc32_sctp_avx512.o \
 	crc32_lte_avx512.o \
 	crc32_fp_avx512.o \

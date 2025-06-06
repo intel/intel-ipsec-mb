@@ -157,10 +157,6 @@ fill_additional_cipher_data(struct IMB_JOB *job, struct IMB_SGL_IOV *sgl_segs,
                 if (job->u.SNOW_V_AEAD.aad_len_in_bytes > buffsize)
                         job->u.SNOW_V_AEAD.aad_len_in_bytes = buffsize;
                 break;
-        case IMB_CIPHER_CBCS_1_9:
-                if (job->cipher_fields.CBCS.next_iv != NULL)
-                        job->cipher_fields.CBCS.next_iv = buff;
-                break;
         default:
                 break;
         }
@@ -437,8 +433,6 @@ cipher_selection(void)
                         return IMB_CIPHER_SNOW3G_UEA2_BITLEN;
                 else if (strcmp(a, "IMB_CIPHER_KASUMI_UEA1_BITLEN") == 0)
                         return IMB_CIPHER_KASUMI_UEA1_BITLEN;
-                else if (strcmp(a, "IMB_CIPHER_CBCS_1_9") == 0)
-                        return IMB_CIPHER_CBCS_1_9;
                 else if (strcmp(a, "IMB_CIPHER_CHACHA20") == 0)
                         return IMB_CIPHER_CHACHA20;
                 else if (strcmp(a, "IMB_CIPHER_CHACHA20_POLY1305") == 0)

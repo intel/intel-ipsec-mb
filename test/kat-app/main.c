@@ -76,8 +76,6 @@ hec_test(struct IMB_MGR *mb_mgr);
 extern int
 xcbc_test(struct IMB_MGR *mb_mgr);
 extern int
-aes_cbcs_test(struct IMB_MGR *mb_mgr);
-extern int
 crc_test(struct IMB_MGR *mb_mgr);
 extern int
 chacha_test(struct IMB_MGR *mb_mgr);
@@ -162,7 +160,6 @@ struct imb_test tests[] = {
         { .str = "SHA", .fn = sha_test, .enabled = 1 },
         { .str = "CHAINED", .fn = chained_test, .enabled = 1 },
         { .str = "HEC", .fn = hec_test, .enabled = 1 },
-        { .str = "AES_CBCS", .fn = aes_cbcs_test, .enabled = 1 },
         { .str = "CHACHA", .fn = chacha_test, .enabled = 1 },
         { .str = "POLY1305", .fn = poly1305_test, .enabled = 1 },
         { .str = "API", .fn = api_test, .enabled = 1 },

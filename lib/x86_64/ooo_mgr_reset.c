@@ -46,14 +46,7 @@ ooo_mgr_aes_reset(void *p_ooo_mgr, const unsigned num_lanes)
                 p_mgr->unused_lanes = 0xF3210;
         else if (num_lanes == 8)
                 p_mgr->unused_lanes = 0xF76543210;
-        else if (num_lanes == 12) {
-                /* CBCS only */
-                const size_t set_0xff_size =
-                        sizeof(p_mgr->lens64) - (12 * sizeof(p_mgr->lens64[0]));
-
-                p_mgr->unused_lanes = 0xBA9876543210;
-                memset(&p_mgr->lens64[12], 0xFF, set_0xff_size);
-        } else if (num_lanes == 16)
+        else if (num_lanes == 16)
                 p_mgr->unused_lanes = 0xFEDCBA9876543210;
         p_mgr->num_lanes_inuse = 0;
 }

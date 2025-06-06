@@ -138,7 +138,6 @@ enum test_cipher_mode_e {
         TEST_CBC = 1,
         TEST_CNTR,
         TEST_ECB,
-        TEST_CBCS_1_9,
         TEST_NULL_CIPHER,
         TEST_AESDOCSIS,
         TEST_DESDOCSIS,
@@ -286,8 +285,6 @@ const struct str_value_mapping cipher_algo_str_map[] = {
           .values.job_params = { .cipher_mode = TEST_SNOW3G_UEA2, .key_size = 16 } },
         { .name = "kasumi-uea1",
           .values.job_params = { .cipher_mode = TEST_KASUMI_UEA1, .key_size = 16 } },
-        { .name = "aes-cbcs-1-9",
-          .values.job_params = { .cipher_mode = TEST_CBCS_1_9, .key_size = 16 } },
         { .name = "chacha20",
           .values.job_params = { .cipher_mode = TEST_CHACHA20, .key_size = 32 } },
         { .name = "snow-v", .values.job_params = { .cipher_mode = TEST_SNOW_V, .key_size = 32 } },
@@ -1412,9 +1409,6 @@ translate_cipher_mode(const enum test_cipher_mode_e test_mode)
         case TEST_KASUMI_UEA1:
                 c_mode = IMB_CIPHER_KASUMI_UEA1_BITLEN;
                 break;
-        case TEST_CBCS_1_9:
-                c_mode = IMB_CIPHER_CBCS_1_9;
-                break;
         case TEST_CHACHA20:
                 c_mode = IMB_CIPHER_CHACHA20;
                 break;
@@ -2097,7 +2091,6 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params, const uint32_t num_iter, uint8
         uint64_t time = 0;
         uint32_t aux;
         uint8_t gcm_key[32];
-        uint8_t next_iv[IMB_AES_BLOCK_SIZE];
         struct gcm_context_data gcm_ctx[MAX_BURST_SIZE];
         struct chacha20_poly1305_context_data cp_ctx[MAX_BURST_SIZE];
         struct IMB_SGL_IOV *sgl[MAX_BURST_SIZE] = { NULL };
@@ -2297,9 +2290,6 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params, const uint32_t num_iter, uint8
                 job_template.cipher_start_src_offset_in_bits = 0;
                 job_template.key_len_in_bytes = 16;
                 job_template.iv_len_in_bytes = 8;
-        } else if (job_template.cipher_mode == IMB_CIPHER_CBCS_1_9) {
-                job_template.key_len_in_bytes = 16; /* cbcs-128 support only */
-                job_template.cipher_fields.CBCS.next_iv = next_iv;
         } else if (job_template.cipher_mode == IMB_CIPHER_ECB ||
                    job_template.cipher_mode == IMB_CIPHER_SM4_ECB)
                 job_template.iv_len_in_bytes = 0;
@@ -3241,7 +3231,6 @@ print_times(struct variant_s *variant_list, struct params_s *params, const uint3
                 const char *c_mode_names[TEST_NUM_CIPHER_TESTS - 1] = { "CBC",
                                                                         "CNTR",
                                                                         "ECB",
-                                                                        "CBCS_1_9",
                                                                         "NULL_CIPHER",
                                                                         "DOCAES",
                                                                         "DOCDES",

@@ -217,8 +217,6 @@ struct str_value_mapping cipher_algo_str_map[] = {
           .values.job_params = { .cipher_mode = IMB_CIPHER_SNOW3G_UEA2_BITLEN, .key_size = 16 } },
         { .name = "KASUMI-F8",
           .values.job_params = { .cipher_mode = IMB_CIPHER_KASUMI_UEA1_BITLEN, .key_size = 16 } },
-        { .name = "AES-CBCS-128",
-          .values.job_params = { .cipher_mode = IMB_CIPHER_CBCS_1_9, .key_size = 16 } },
         { .name = "CHACHA20-256",
           .values.job_params = { .cipher_mode = IMB_CIPHER_CHACHA20, .key_size = 32 } },
         { .name = "SNOW-V",
@@ -585,7 +583,6 @@ const uint8_t key_sizes[][3] = {
         { 16, 32, 16 }, /* IMB_CIPHER_ZUC_EEA3 */
         { 16, 16, 1 },  /* IMB_CIPHER_SNOW3G_UEA2 */
         { 16, 16, 1 },  /* IMB_CIPHER_KASUMI_UEA1_BITLEN */
-        { 16, 16, 1 },  /* IMB_CIPHER_CBCS_1_9 */
         { 32, 32, 1 },  /* IMB_CIPHER_CHACHA20 */
         { 32, 32, 1 },  /* IMB_CIPHER_CHACHA20_POLY1305 */
         { 32, 32, 1 },  /* IMB_CIPHER_CHACHA20_POLY1305_SGL */
@@ -1218,7 +1215,7 @@ static int
 fill_job(IMB_JOB *job, const struct params_s *params, uint8_t *buf, uint8_t *digest,
          const uint8_t *aad, const uint32_t buf_size, const uint8_t tag_size,
          IMB_CIPHER_DIRECTION cipher_dir, struct cipher_auth_keys *keys, uint8_t *cipher_iv,
-         uint8_t *auth_iv, const unsigned index, uint8_t *next_iv)
+         uint8_t *auth_iv, const unsigned index)
 {
         static const void *ks_ptr[3];
         uint32_t *k1_expanded = keys->k1_expanded;
@@ -1418,9 +1415,6 @@ fill_job(IMB_JOB *job, const struct params_s *params, uint8_t *buf, uint8_t *dig
         job->cipher_start_src_offset_in_bytes = cipher_offset_in_bytes;
 
         switch (job->cipher_mode) {
-        case IMB_CIPHER_CBCS_1_9:
-                job->cipher_fields.CBCS.next_iv = next_iv;
-                /* Fall-through */
         case IMB_CIPHER_SM4_CBC:
         case IMB_CIPHER_CBC:
         case IMB_CIPHER_DOCSIS_SEC_BPI:
@@ -1630,7 +1624,6 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys, const uint8_t *ciph
                 case IMB_CIPHER_DOCSIS_SEC_BPI:
                 case IMB_CIPHER_SM4_ECB:
                 case IMB_CIPHER_ECB:
-                case IMB_CIPHER_CBCS_1_9:
                 case IMB_CIPHER_CFB:
                         nosimd_memset(enc_keys, pattern_cipher_key, sizeof(keys->enc_keys));
                         nosimd_memset(dec_keys, pattern_cipher_key, sizeof(keys->dec_keys));
@@ -1776,7 +1769,6 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys, const uint8_t *ciph
         case IMB_CIPHER_CNTR:
         case IMB_CIPHER_DOCSIS_SEC_BPI:
         case IMB_CIPHER_ECB:
-        case IMB_CIPHER_CBCS_1_9:
         case IMB_CIPHER_CFB:
                 switch (params->key_size) {
                 case IMB_KEY_128_BYTES:
@@ -1981,7 +1973,6 @@ perform_safe_checks(IMB_MGR *mgr, const IMB_ARCH arch, struct safe_check_ctx *ct
                 "aes_cmac_ooo",
                 "zuc_eea3_ooo",
                 "zuc_eia3_ooo",
-                "aes128_cbcs_ooo",
                 "zuc256_eea3_ooo",
                 "zuc256_eia3_ooo",
                 "aes256_ccm_ooo",
@@ -2098,13 +2089,12 @@ set_job_ctx(struct job_ctx *ctx, const unsigned imix, const unsigned safe_check,
                         random_num = 16;
 
                 /*
-                 * CBC, CFB, CBCS and ECB operation modes do not support lengths
+                 * CBC, CFB and ECB operation modes do not support lengths
                  * which are non-multiple of block size
                  */
                 if (params->cipher_mode == IMB_CIPHER_CBC ||
                     params->cipher_mode == IMB_CIPHER_CFB ||
-                    params->cipher_mode == IMB_CIPHER_ECB ||
-                    params->cipher_mode == IMB_CIPHER_CBCS_1_9) {
+                    params->cipher_mode == IMB_CIPHER_ECB) {
                         random_num += (IMB_AES_BLOCK_SIZE - 1);
                         random_num &= (~(IMB_AES_BLOCK_SIZE - 1));
                 }
@@ -2323,7 +2313,6 @@ do_test(IMB_MGR *enc_mb_mgr, const IMB_ARCH enc_arch, IMB_MGR *dec_mb_mgr, const
         int ret = -1;
         struct cipher_auth_keys *enc_keys = &data->enc_keys;
         struct cipher_auth_keys *dec_keys = &data->dec_keys;
-        uint8_t next_iv[IMB_AES_BLOCK_SIZE];
         const unsigned safe_check = (p_safe_check != NULL);
 
         if (num_jobs == 0)
@@ -2431,7 +2420,7 @@ do_test(IMB_MGR *enc_mb_mgr, const IMB_ARCH enc_arch, IMB_MGR *dec_mb_mgr, const
                               job_ctx_tab[i].buf_size);
                 if (fill_job(job, params, job_ctx_tab[i].src_dst_buf, job_ctx_tab[i].in_digest,
                              data->aad, job_ctx_tab[i].buf_size, data->tag_size, IMB_DIR_ENCRYPT,
-                             enc_keys, data->cipher_iv, data->auth_iv, i, next_iv) < 0)
+                             enc_keys, data->cipher_iv, data->auth_iv, i) < 0)
                         goto exit;
 
                 /* Randomize memory for input digest */
@@ -2488,7 +2477,7 @@ do_test(IMB_MGR *enc_mb_mgr, const IMB_ARCH enc_arch, IMB_MGR *dec_mb_mgr, const
                  */
                 if (fill_job(job, params, job_ctx_tab[i].src_dst_buf, job_ctx_tab[i].out_digest,
                              data->aad, job_ctx_tab[i].buf_size, data->tag_size, IMB_DIR_DECRYPT,
-                             dec_keys, data->cipher_iv, data->auth_iv, i, next_iv) < 0)
+                             dec_keys, data->cipher_iv, data->auth_iv, i) < 0)
                         goto exit;
 
                 if (burst_api)
@@ -2643,13 +2632,12 @@ test_single(IMB_MGR *enc_mgr, const IMB_ARCH enc_arch, IMB_MGR *dec_mgr, const I
                         params->buf_size = buf_size;
 
                         /*
-                         * CBC, CFB, CBCS and ECB operation modes do not support lengths
+                         * CBC, CFB and ECB operation modes do not support lengths
                          * which are non-multiple of block size
                          */
                         if (params->cipher_mode == IMB_CIPHER_CBC ||
                             params->cipher_mode == IMB_CIPHER_CFB ||
-                            params->cipher_mode == IMB_CIPHER_ECB ||
-                            params->cipher_mode == IMB_CIPHER_CBCS_1_9)
+                            params->cipher_mode == IMB_CIPHER_ECB)
                                 if ((buf_size % IMB_AES_BLOCK_SIZE) != 0)
                                         continue;
 

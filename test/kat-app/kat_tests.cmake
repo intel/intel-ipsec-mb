@@ -66,7 +66,6 @@ set(TEST_TYPES
     SHA
     CHAINED
     HEC
-    AES_CBCS
     CHACHA
     POLY1305
     API

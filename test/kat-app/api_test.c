@@ -278,11 +278,8 @@ fill_in_job(struct IMB_JOB *job, const IMB_CIPHER_MODE cipher_mode,
         case IMB_CIPHER_SM4_CBC:
         case IMB_CIPHER_SM4_CNTR:
         case IMB_CIPHER_CBC:
-        case IMB_CIPHER_CBCS_1_9:
                 job->key_len_in_bytes = UINT64_C(16);
                 job->iv_len_in_bytes = UINT64_C(16);
-                if (job->cipher_mode == IMB_CIPHER_CBCS_1_9)
-                        job->cipher_fields.CBCS.next_iv = dust_bin;
                 break;
         case IMB_CIPHER_CNTR:
                 job->key_len_in_bytes = UINT64_C(16);
@@ -1855,7 +1852,6 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                         case IMB_CIPHER_SM4_GCM:
                         case IMB_CIPHER_SM4_CBC:
                         case IMB_CIPHER_CBC:
-                        case IMB_CIPHER_CBCS_1_9:
                         case IMB_CIPHER_DES:
                         case IMB_CIPHER_DES3:
                         case IMB_CIPHER_DOCSIS_DES:
@@ -2027,10 +2023,6 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                                         /* max is 20000 bits */
                                         job->msg_len_to_cipher_in_bits = 20008;
                                         break;
-                                case IMB_CIPHER_CBCS_1_9:
-                                        /* max is 2^60 bytes */
-                                        job->msg_len_to_cipher_in_bytes = ((1ULL << 60) + 1);
-                                        break;
                                 case IMB_CIPHER_CHACHA20:
                                         /* Chacha20 limit (2^32 - 1) x 64 */
                                         job->msg_len_to_cipher_in_bytes = ((1ULL << 38) - 64) + 1;
@@ -2064,8 +2056,6 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                 { IMB_CIPHER_SM4_CBC, 17 },
                 { IMB_CIPHER_CBC, 15 },
                 { IMB_CIPHER_CBC, 17 },
-                { IMB_CIPHER_CBCS_1_9, 15 },
-                { IMB_CIPHER_CBCS_1_9, 17 },
                 { IMB_CIPHER_DOCSIS_SEC_BPI, 15 },
                 { IMB_CIPHER_DOCSIS_SEC_BPI, 17 },
                 { IMB_CIPHER_PON_AES_CNTR, 15 },
@@ -2172,7 +2162,6 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                                             key_len != IMB_KEY_256_BYTES)
                                                 continue;
                                         break;
-                                case IMB_CIPHER_CBCS_1_9:
                                 case IMB_CIPHER_PON_AES_CNTR:
                                 case IMB_CIPHER_SNOW3G_UEA2_BITLEN:
                                 case IMB_CIPHER_KASUMI_UEA1_BITLEN:
@@ -2199,39 +2188,6 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                         }
                 }
         }
-
-        /*
-         * OTHER MISC TESTS
-         */
-
-        /* CBCS NULL NEXT IV TEST */
-        for (order = IMB_ORDER_CIPHER_HASH; order <= IMB_ORDER_HASH_CIPHER; order++)
-                for (dir = IMB_DIR_ENCRYPT; dir <= IMB_DIR_DECRYPT; dir++) {
-                        cipher = IMB_CIPHER_CBCS_1_9;
-
-                        /*
-                         * Skip cipher algorithms belonging to AEAD
-                         * algorithms, as the test is for cipher
-                         * only algorithms */
-                        if (check_aead(hash, cipher))
-                                continue;
-
-                        IMB_JOB *job = &template_job;
-
-                        fill_in_job(job, cipher, dir, hash, order, &chacha_ctx, &gcm_ctx);
-
-                        job->cipher_fields.CBCS.next_iv = NULL;
-
-                        if (!is_submit_invalid(mb_mgr, job, TEST_CIPH_NEXT_IV_NULL,
-                                               IMB_ERR_JOB_NULL_NEXT_IV))
-                                return 1;
-
-                        imb_set_session(mb_mgr, job);
-                        if (!is_submit_burst_invalid(mb_mgr, job, TEST_CIPH_NEXT_IV_NULL,
-                                                     IMB_ERR_JOB_NULL_NEXT_IV))
-                                return 1;
-                        print_progress();
-                }
 
         /* clean up */
         while (IMB_FLUSH_JOB(mb_mgr) != NULL)

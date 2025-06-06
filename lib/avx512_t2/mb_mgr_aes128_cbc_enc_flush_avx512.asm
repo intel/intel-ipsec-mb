@@ -149,8 +149,6 @@ _gpr_save:      resq    8
 _rsp_save:      resq    1
 endstruc
 
-%ifndef CBCS
-
 ; JOB* FLUSH_JOB_AES_ENC(MB_MGR_AES_OOO *state, IMB_JOB *job)
 ; arg 1 : state
 ; arg 2 : job
@@ -294,4 +292,3 @@ return_null:
 
 mksection stack-noexec
 
-%endif ;; CBCS

@@ -370,12 +370,8 @@ test_ctr_vectors(struct IMB_MGR *mb_mgr, struct test_suite_context *ctx128,
 
                 if (!quiet_mode) {
 #ifdef DEBUG
-                        if (alg == IMB_CIPHER_CNTR)
-                                printf("Standard vector %zu  KeySize:%zu IVSize:%zu MsgSize:%zu\n",
-                                       v->tcId, v->keySize, v->ivSize / 8, v->msgSize / 8);
-                        else
-                                printf("Bit vector %zu  KeySize:%zu IVSize:%zu MsgSize:%zu\n",
-                                       v->tcId, v->keySize, v->ivSize / 8, v->msgSize);
+                        printf("Standard vector %zu  KeySize:%zu IVSize:%zu MsgSize:%zu\n", v->tcId,
+                               v->keySize, v->ivSize / 8, v->msgSize / 8);
 #else
                         printf(".");
 #endif

@@ -74,7 +74,6 @@ const struct {
                       OOO_INFO(aes_xcbc_ooo, MB_MGR_AES_XCBC_OOO),
                       OOO_INFO(aes_ccm_ooo, MB_MGR_CCM_OOO),
                       OOO_INFO(aes_cmac_ooo, MB_MGR_CMAC_OOO),
-                      OOO_INFO(aes128_cbcs_ooo, MB_MGR_AES_OOO),
                       OOO_INFO(zuc_eea3_ooo, MB_MGR_ZUC_OOO),
                       OOO_INFO(zuc_eia3_ooo, MB_MGR_ZUC_OOO),
                       OOO_INFO(zuc256_eea3_ooo, MB_MGR_ZUC_OOO),

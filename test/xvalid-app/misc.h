@@ -175,8 +175,6 @@ misc_cipher_mode_to_str(const IMB_CIPHER_MODE mode)
                 return "snow3g-uea2";
         case IMB_CIPHER_KASUMI_UEA1_BITLEN:
                 return "kasumi-uea1";
-        case IMB_CIPHER_CBCS_1_9:
-                return "aes-cbcs-1-9";
         case IMB_CIPHER_CHACHA20:
                 return "chacha20";
         case IMB_CIPHER_CHACHA20_POLY1305:

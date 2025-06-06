@@ -52,7 +52,6 @@ is_job_invalid_light(IMB_MGR *state, const IMB_CIPHER_MODE cipher_mode, const IM
         case IMB_CIPHER_CUSTOM:
                 break;
         case IMB_CIPHER_CBC:
-        case IMB_CIPHER_CBCS_1_9:
         case IMB_CIPHER_ECB:
         case IMB_CIPHER_CNTR:
                 if (key_len_in_bytes != UINT64_C(16) && key_len_in_bytes != UINT64_C(24) &&
@@ -396,7 +395,6 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job, const IMB_CIPHER_MODE cipher_
         }
         switch (cipher_mode) {
         case IMB_CIPHER_CBC:
-        case IMB_CIPHER_CBCS_1_9:
                 if (job->src == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_SRC);
                         return 1;
@@ -430,17 +428,8 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job, const IMB_CIPHER_MODE cipher_
                         imb_set_errno(state, IMB_ERR_JOB_CIPH_LEN);
                         return 1;
                 }
-                if (cipher_mode == IMB_CIPHER_CBCS_1_9) {
-                        if (job->msg_len_to_cipher_in_bytes > ((1ULL << (60)) - 1)) {
-                                imb_set_errno(state, IMB_ERR_JOB_CIPH_LEN);
-                                return 1;
-                        }
-                        if (job->cipher_fields.CBCS.next_iv == NULL) {
-                                imb_set_errno(state, IMB_ERR_JOB_NULL_NEXT_IV);
-                                return 1;
-                        }
-                } else if (cipher_direction == IMB_DIR_ENCRYPT &&
-                           job->msg_len_to_cipher_in_bytes > MB_MAX_LEN16) {
+                if (cipher_direction == IMB_DIR_ENCRYPT &&
+                    job->msg_len_to_cipher_in_bytes > MB_MAX_LEN16) {
                         imb_set_errno(state, IMB_ERR_JOB_CIPH_LEN);
                         return 1;
                 }

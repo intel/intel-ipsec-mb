@@ -74,11 +74,6 @@ aes_ecb_quic_enc_128_vaes_avx512(const void *in, const void *keys, void *out, ui
 void
 aes_ecb_quic_enc_256_vaes_avx512(const void *in, const void *keys, void *out, uint64_t num_buffers);
 
-/* AES-CBCS */
-void
-aes_cbcs_1_9_dec_128_vaes_avx512(const void *in, const uint8_t *IV, const void *keys, void *out,
-                                 uint64_t len_bytes, void *next_iv);
-
 /* AES-CFB */
 void
 aes_cfb_dec_128_vaes_avx512(const void *out, const void *in, const void *IV, const void *keys,
@@ -151,11 +146,6 @@ IMB_JOB *
 submit_job_zuc256_eia3_gfni_avx512(MB_MGR_ZUC_OOO *state, IMB_JOB *job, const uint64_t tag_sz);
 IMB_JOB *
 flush_job_zuc256_eia3_gfni_avx512(MB_MGR_ZUC_OOO *state, const uint64_t tag_sz);
-
-IMB_JOB *
-submit_job_aes128_cbcs_1_9_enc_vaes_avx512(MB_MGR_AES_OOO *state, IMB_JOB *job);
-IMB_JOB *
-flush_job_aes128_cbcs_1_9_enc_vaes_avx512(MB_MGR_AES_OOO *state);
 
 IMB_JOB *
 submit_job_snow3g_uea2_vaes_avx512(MB_MGR_SNOW3G_OOO *state, IMB_JOB *job);

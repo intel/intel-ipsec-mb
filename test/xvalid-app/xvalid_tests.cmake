@@ -64,7 +64,6 @@ set(CIPHER_ALGOS
     zuc-eea3-256
     snow3g-uea2
     kasumi-f8
-    aes-cbcs-128
     chacha20-256
     snow-v
     sm4-ecb-128

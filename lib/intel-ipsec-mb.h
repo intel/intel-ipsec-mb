@@ -281,7 +281,6 @@ typedef enum {
         IMB_CIPHER_ZUC_EEA3,           /**< 128-EEA3/NEA3 (3GPP) */
         IMB_CIPHER_SNOW3G_UEA2_BITLEN, /**< 128-UEA2 (3GPP) */
         IMB_CIPHER_KASUMI_UEA1_BITLEN, /**< 128-UEA1 (3GPP) */
-        IMB_CIPHER_CBCS_1_9,           /**< MPEG CENC (ISO 23001-7) */
         IMB_CIPHER_CHACHA20,
         IMB_CIPHER_CHACHA20_POLY1305,     /**< AEAD CHACHA20 */
         IMB_CIPHER_CHACHA20_POLY1305_SGL, /**< AEAD CHACHA20 with SGL support*/
@@ -547,13 +546,6 @@ typedef struct IMB_JOB {
         IMB_SGL_STATE sgl_state;
         /**< SGL state (IMB_SGL_INIT/IMB_SGL_UPDATE/IMB_SGL_COMPLETE/
                         IMB_SGL_ALL) */
-
-        union {
-                struct _CBCS_specific_fields {
-                        void *next_iv;
-                        /**< Pointer to next IV (last ciphertext block) */
-                } CBCS;  /**< CBCS specific fields */
-        } cipher_fields; /**< Cipher algorithm-specific fields */
 
         uint32_t suite_id[2]; /**< see imb_set_session() */
         uint32_t session_id;  /**< see imb_set_session() */
@@ -1175,7 +1167,6 @@ typedef struct IMB_MGR {
         void *aes_cmac_ooo;
         void *zuc_eea3_ooo;
         void *zuc_eia3_ooo;
-        void *aes128_cbcs_ooo;
         void *zuc256_eea3_ooo;
         void *zuc256_eia3_ooo;
         void *aes256_ccm_ooo;
