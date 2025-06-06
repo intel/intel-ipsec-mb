@@ -91,17 +91,6 @@ void
 aes_cntr_128_avx(const void *in, const void *IV, const void *keys, void *out, uint64_t len_bytes,
                  uint64_t IV_len);
 
-/* AES-CTR-BITLEN */
-void
-aes_cntr_bit_256_avx(const void *in, const void *IV, const void *keys, void *out, uint64_t len_bits,
-                     uint64_t IV_len);
-void
-aes_cntr_bit_192_avx(const void *in, const void *IV, const void *keys, void *out, uint64_t len_bits,
-                     uint64_t IV_len);
-void
-aes_cntr_bit_128_avx(const void *in, const void *IV, const void *keys, void *out, uint64_t len_bits,
-                     uint64_t IV_len);
-
 /* AES-CCM */
 IMB_JOB *
 aes_cntr_ccm_128_avx(IMB_JOB *job);

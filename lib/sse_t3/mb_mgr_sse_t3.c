@@ -135,9 +135,6 @@
 #define AES_CTR_128     aes_cntr_128_sse
 #define AES_CTR_192     aes_cntr_192_sse
 #define AES_CTR_256     aes_cntr_256_sse
-#define AES_CTR_128_BIT aes_cntr_bit_128_sse
-#define AES_CTR_192_BIT aes_cntr_bit_192_sse
-#define AES_CTR_256_BIT aes_cntr_bit_256_sse
 
 /* AES-CCM */
 #define AES_CNTR_CCM_128 aes_cntr_ccm_128_sse

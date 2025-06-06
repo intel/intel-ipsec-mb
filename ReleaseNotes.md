@@ -10,11 +10,12 @@ Library
 - Added AVX10 architecture, based primarily on AVX512 implementations with
   some AVX2 Type 4 implementations for some algorithms.
 - Added AES-CCM AVX2 type 2 implementation.
+- Removed AES-CTR bit-length variant.
 
 Test Applications
 - Added `--offset` parameter to `imb-xvalid` application.
 - Added AVX10 architecture support.
-
+- Removed AES-CTR bit-length variant.
 
 Performance Applications
 - Added `imb-perf-cmp.py` tool that compares post processed performance metrics.
@@ -23,6 +24,7 @@ Performance Applications
 - Added `imb-slope-to-stat.pl`, `imb-stat-algo-report.pl` and `imb-stat-avg.pl` scripts.
 - Renamed `ipsec_perf_tool.py` to `imb-perf-tool.py`.
 - Modified `--cores` option to accept a list of cores instead of a coremask.
+- Removed AES-CTR bit-length variant.
 
 Fixes
 - Fixed SM4-GCM plaintext/ciphertext address calculation (issue #159).

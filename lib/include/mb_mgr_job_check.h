@@ -55,7 +55,6 @@ is_job_invalid_light(IMB_MGR *state, const IMB_CIPHER_MODE cipher_mode, const IM
         case IMB_CIPHER_CBCS_1_9:
         case IMB_CIPHER_ECB:
         case IMB_CIPHER_CNTR:
-        case IMB_CIPHER_CNTR_BITLEN:
                 if (key_len_in_bytes != UINT64_C(16) && key_len_in_bytes != UINT64_C(24) &&
                     key_len_in_bytes != UINT64_C(32)) {
                         imb_set_errno(state, IMB_ERR_JOB_KEY_LEN);
@@ -483,7 +482,6 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job, const IMB_CIPHER_MODE cipher_
                 }
                 break;
         case IMB_CIPHER_CNTR:
-        case IMB_CIPHER_CNTR_BITLEN:
                 if (job->src == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_SRC);
                         return 1;
@@ -505,18 +503,10 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job, const IMB_CIPHER_MODE cipher_
                         imb_set_errno(state, IMB_ERR_JOB_KEY_LEN);
                         return 1;
                 }
-                if ((cipher_mode == IMB_CIPHER_CNTR && job->iv_len_in_bytes != UINT64_C(16) &&
-                     job->iv_len_in_bytes != UINT64_C(12)) ||
-                    (cipher_mode == IMB_CIPHER_CNTR_BITLEN &&
-                     job->iv_len_in_bytes != UINT64_C(16))) {
+                if (job->iv_len_in_bytes != UINT64_C(16) && job->iv_len_in_bytes != UINT64_C(12)) {
                         imb_set_errno(state, IMB_ERR_JOB_IV_LEN);
                         return 1;
                 }
-                /*
-                 * msg_len_to_cipher_in_bits is used with CNTR_BITLEN, but it is
-                 * effectively the same field as msg_len_to_cipher_in_bytes,
-                 * since it is part of the same union
-                 */
                 if (job->msg_len_to_cipher_in_bytes == 0) {
                         imb_set_errno(state, IMB_ERR_JOB_CIPH_LEN);
                         return 1;

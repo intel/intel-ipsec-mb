@@ -39,7 +39,6 @@
 
 %ifndef AES_CNTR_128
 %define AES_CNTR_128 aes_cntr_128_sse
-%define AES_CNTR_BIT_128 aes_cntr_bit_128_sse
 %endif
 
 extern byteswap_const, set_byte15, ddq_add_1, ddq_add_2, ddq_add_3, ddq_add_4
@@ -128,11 +127,7 @@ extern ddq_add_5, ddq_add_6, ddq_add_7, ddq_add_8
 %define %%cntr_type %2
 %define %%load_keys %3
 
-%ifidn %%cntr_type, CNTR_BIT
-%define %%PADD paddq
-%else
 %define %%PADD paddd
-%endif
 
 %if (%%load_keys)
 	movdqa	xkey0, [p_keys + 0*16]
@@ -250,43 +245,6 @@ extern ddq_add_5, ddq_add_6, ddq_add_7, ddq_add_8
 	pxor	CONCAT(xdata,i), xkeyA
 %endif
 
-%ifidn %%cntr_type, CNTR_BIT
-        ;; check if this is the end of the message
-        mov     tmp, num_bytes
-        and     tmp, ~(%%by*16)
-        jnz     %%skip_preserve
-        ;; Check if there is a partial byte
-        or      r_bits, r_bits
-        jz      %%skip_preserve
-
-%assign idx (%%by - 1)
-        ;; Load output to get last partial byte
-        movdqu         xtmp, [p_out + idx * 16]
-
-        ;; Save RCX in temporary GP register
-        mov             tmp, rcx
-        mov             mask, 0xff
-        mov             cl, BYTE(r_bits)
-        shr             mask, cl ;; e.g. 3 remaining bits -> mask = 00011111
-        mov             rcx, tmp
-
-        movq            xtmp2, mask
-        pslldq          xtmp2, 15
-        ;; At this point, xtmp2 contains a mask with all 0s, but with some ones
-        ;; in the partial byte
-
-        ;; Clear all the bits that do not need to be preserved from the output
-        pand            xtmp, xtmp2
-
-        ;; Clear all bits from the input that are not to be ciphered
-        pandn	        xtmp2, CONCAT(xdata, idx)
-        por             xtmp2, xtmp
-        movdqa		CONCAT(xdata, idx), xtmp2
-
-align_label
-%%skip_preserve:
-%endif
-
 %assign i 0
 %rep %%by
 	MOVDQ	[p_out  + i*16], CONCAT(xdata,i)
@@ -302,7 +260,7 @@ mksection .text
 ;; Macro performing AES-CTR.
 ;;
 %macro DO_CNTR 1
-%define %%CNTR_TYPE %1 ; [in] Type of CNTR operation to do (CNTR/CNTR_BIT/CCM)
+%define %%CNTR_TYPE %1 ; [in] Type of CNTR operation to do (CNTR/CCM)
 
 %ifidn %%CNTR_TYPE, CCM
         mov     p_in, [job + _src]
@@ -361,19 +319,12 @@ align_label
 _finish_nonce_move:
         ; last byte = 1
         por     xcounter, [rel set_byte15]
-%else ;; CNTR/CNTR_BIT
+%else ;; CNTR
 %ifndef LINUX
 	mov	num_bytes, [rsp + 8*5] ; arg5
 %endif
 
-%ifidn %%CNTR_TYPE, CNTR_BIT
-        push r12
-        push r13
-        push r14
-%endif
-
 	movdqa	xbyteswap, [rel byteswap_const]
-%ifidn %%CNTR_TYPE, CNTR
         test    p_ivlen, 16
         jnz     %%iv_is_16_bytes
         ; Read 12 bytes: Nonce + ESP IV. Then pad with block counter 0x00000001
@@ -381,24 +332,12 @@ _finish_nonce_move:
         pinsrq  xcounter, [p_IV], 0
         pinsrd  xcounter, [p_IV + 8], 2
         pinsrd  xcounter, DWORD(tmp), 3
-
-%else ;; CNTR_BIT
-        ; Read 16 byte IV: Nonce + 8-byte block counter (BE)
-        movdqu  xcounter, [p_IV]
-%endif
-%endif ;; CNTR/CNTR_BIT/CCM
+%endif ;; CNTR/CCM
 align_label
 %%bswap_iv:
 	pshufb	xcounter, xbyteswap
 
         ;; calculate len
-        ;; convert bits to bytes (message length in bits for CNTR_BIT)
-%ifidn %%CNTR_TYPE, CNTR_BIT
-        mov     r_bits, num_bits
-        add     num_bits, 7
-        shr     num_bits, 3 ; "num_bits" and "num_bytes" registers are the same
-        and     r_bits, 7   ; Check if there are remainder bits (0-7)
-%endif
 	mov	tmp, num_bytes
 	and	tmp, 7*16
 	jz	%%chk       ; multiple of 8 blocks and/or below 16 bytes
@@ -495,12 +434,6 @@ align_label
 	or	dword [rax + _status], IMB_STATUS_COMPLETED_CIPHER
 %endif
 
-%ifidn %%CNTR_TYPE, CNTR_BIT
-        pop r14
-        pop r13
-        pop r12
-%endif
-
 %ifdef SAFE_DATA
 	clear_all_xmms_sse_asm
 %endif ;; SAFE_DATA
@@ -528,42 +461,6 @@ align_label
 
 	; xor keystream with the message (scratch)
         pxor    xdata0, xpart
-
-%ifidn %%CNTR_TYPE, CNTR_BIT
-        ;; Check if there is a partial byte
-        or      r_bits, r_bits
-        jz      %%store_output
-
-        ;; Load output to get last partial byte
-        simd_load_sse_15_1 xtmp, p_out, num_bytes
-
-        ;; Save RCX in temporary GP register
-        mov     tmp, rcx
-        mov     mask, 0xff
-%ifidn r_bits, rcx
-%error "r_bits cannot be mapped to rcx!"
-%endif
-        mov     cl, BYTE(r_bits)
-        shr     mask, cl ;; e.g. 3 remaining bits -> mask = 00011111
-        mov     rcx, tmp
-
-        movq    xtmp2, mask
-
-        ;; Get number of full bytes in last block of 16 bytes
-        mov     tmp, num_bytes
-        dec     tmp
-        XPSLLB  xtmp2, tmp, xtmp3, tmp2
-        ;; At this point, xtmp2 contains a mask with all 0s, but with some ones
-        ;; in the partial byte
-
-        ;; Clear all the bits that do not need to be preserved from the output
-        pand    xtmp, xtmp2
-
-        ;; Clear the bits from the input that are not to be ciphered
-        pandn   xtmp2, xdata0
-        por     xtmp2, xtmp
-        movdqa  xdata0, xtmp2
-%endif
 
 align_label
 %%store_output:
@@ -593,12 +490,6 @@ MKGLOBAL(AES_CNTR_128,function,internal)
 align_function
 AES_CNTR_128:
         DO_CNTR CNTR
-
-;; aes_cntr_bit_128_sse(void *in, void *IV, void *keys, void *out, UINT64 num_bits, UINT64 iv_len)
-MKGLOBAL(AES_CNTR_BIT_128,function,internal)
-align_function
-AES_CNTR_BIT_128:
-        DO_CNTR CNTR_BIT
 %endif ;; CNTR_CCM_SSE
 
 mksection stack-noexec

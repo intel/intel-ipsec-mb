@@ -47,19 +47,16 @@ extern const struct cipher_test ctr_bit_test_json[];
 static int
 test_ctr(struct IMB_MGR *mb_mgr, const void *expkey, unsigned key_len, const void *iv,
          unsigned iv_len, const uint8_t *in_text, const uint8_t *out_text, unsigned text_len,
-         const IMB_CIPHER_DIRECTION dir, const IMB_CHAIN_ORDER order, const IMB_CIPHER_MODE alg)
+         const IMB_CIPHER_DIRECTION dir, const IMB_CHAIN_ORDER order)
 {
-        uint32_t text_byte_len;
+        const IMB_CIPHER_MODE alg = IMB_CIPHER_CNTR;
         struct IMB_JOB *job;
         uint8_t padding[16];
         uint8_t *target;
         int ret = -1;
 
-        /* Get number of bytes (in case algo is CNTR_BITLEN) */
-        if (alg == IMB_CIPHER_CNTR)
-                text_byte_len = text_len / 8;
-        else
-                text_byte_len = BYTE_ROUND_UP(text_len);
+        /* Always IMB_CIPHER_CNTR: text_byte_len = text_len / 8 */
+        const uint32_t text_byte_len = text_len / 8;
 
         target = malloc(text_byte_len + (sizeof(padding) * 2));
         if (target == NULL) {
@@ -85,11 +82,7 @@ test_ctr(struct IMB_MGR *mb_mgr, const void *expkey, unsigned key_len, const voi
         job->iv = iv;
         job->iv_len_in_bytes = iv_len;
         job->cipher_start_src_offset_in_bytes = 0;
-        if (alg == IMB_CIPHER_CNTR)
-                job->msg_len_to_cipher_in_bytes = text_byte_len;
-        else
-                job->msg_len_to_cipher_in_bits = text_len;
-
+        job->msg_len_to_cipher_in_bytes = text_byte_len;
         job->hash_alg = IMB_AUTH_NULL;
 
         job = IMB_SUBMIT_JOB(mb_mgr);
@@ -142,10 +135,10 @@ end:
 static int
 test_ctr_burst(struct IMB_MGR *mb_mgr, const void *expkey, unsigned key_len, const void *iv,
                unsigned iv_len, const uint8_t *in_text, const uint8_t *out_text, unsigned text_len,
-               const IMB_CIPHER_DIRECTION dir, const IMB_CHAIN_ORDER order,
-               const IMB_CIPHER_MODE alg, const uint32_t num_jobs)
+               const IMB_CIPHER_DIRECTION dir, const IMB_CHAIN_ORDER order, const uint32_t num_jobs)
 {
-        uint32_t text_byte_len, i, completed_jobs, jobs_rx = 0;
+        const IMB_CIPHER_MODE alg = IMB_CIPHER_CNTR;
+        uint32_t i, completed_jobs, jobs_rx = 0;
         struct IMB_JOB *job, *jobs[MAX_CTR_JOBS];
         uint8_t padding[16];
         uint8_t **targets = malloc(num_jobs * sizeof(void *));
@@ -154,11 +147,7 @@ test_ctr_burst(struct IMB_MGR *mb_mgr, const void *expkey, unsigned key_len, con
         if (targets == NULL)
                 goto end_alloc;
 
-        /* Get number of bytes (in case algo is CNTR_BITLEN) */
-        if (alg == IMB_CIPHER_CNTR)
-                text_byte_len = text_len / 8;
-        else
-                text_byte_len = BYTE_ROUND_UP(text_len);
+        const uint32_t text_byte_len = text_len / 8;
 
         memset(targets, 0, num_jobs * sizeof(void *));
         memset(padding, -1, sizeof(padding));
@@ -260,10 +249,10 @@ static int
 test_ctr_cipher_burst(struct IMB_MGR *mb_mgr, const void *expkey, unsigned key_len, const void *iv,
                       unsigned iv_len, const uint8_t *in_text, const uint8_t *out_text,
                       unsigned text_len, const IMB_CIPHER_DIRECTION dir,
-                      const IMB_CHAIN_ORDER order, const IMB_CIPHER_MODE alg,
-                      const uint32_t num_jobs)
+                      const IMB_CHAIN_ORDER order, const uint32_t num_jobs)
 {
-        uint32_t text_byte_len, i, completed_jobs, jobs_rx = 0;
+        const IMB_CIPHER_MODE alg = IMB_CIPHER_CNTR;
+        uint32_t i, completed_jobs, jobs_rx = 0;
         struct IMB_JOB *job, jobs[MAX_CTR_JOBS];
         uint8_t padding[16];
         uint8_t **targets = malloc(num_jobs * sizeof(void *));
@@ -272,11 +261,8 @@ test_ctr_cipher_burst(struct IMB_MGR *mb_mgr, const void *expkey, unsigned key_l
         if (targets == NULL)
                 goto end_alloc;
 
-        /* Get number of bytes (in case algo is CNTR_BITLEN) */
-        if (alg == IMB_CIPHER_CNTR)
-                text_byte_len = text_len / 8;
-        else
-                text_byte_len = BYTE_ROUND_UP(text_len);
+        /* Get number of bytes */
+        const uint32_t text_byte_len = text_len / 8;
 
         memset(targets, 0, num_jobs * sizeof(void *));
         memset(padding, -1, sizeof(padding));
@@ -373,7 +359,7 @@ end_alloc:
 static void
 test_ctr_vectors(struct IMB_MGR *mb_mgr, struct test_suite_context *ctx128,
                  struct test_suite_context *ctx192, struct test_suite_context *ctx256,
-                 const struct cipher_test *v, const IMB_CIPHER_MODE alg)
+                 const struct cipher_test *v)
 {
         DECLARE_ALIGNED(uint32_t expkey[4 * 15], 16);
         DECLARE_ALIGNED(uint32_t dust[4 * 15], 16);
@@ -414,7 +400,7 @@ test_ctr_vectors(struct IMB_MGR *mb_mgr, struct test_suite_context *ctx128,
 
                 if (test_ctr(mb_mgr, expkey, (unsigned) v->keySize / 8, v->iv,
                              (unsigned) v->ivSize / 8, (const void *) v->msg, (const void *) v->ct,
-                             (unsigned) v->msgSize, IMB_DIR_ENCRYPT, IMB_ORDER_CIPHER_HASH, alg)) {
+                             (unsigned) v->msgSize, IMB_DIR_ENCRYPT, IMB_ORDER_CIPHER_HASH)) {
                         printf("error #%zu encrypt\n", v->tcId);
                         test_suite_update(ctx, 0, 1);
                 } else {
@@ -423,14 +409,14 @@ test_ctr_vectors(struct IMB_MGR *mb_mgr, struct test_suite_context *ctx128,
 
                 if (test_ctr(mb_mgr, expkey, (unsigned) v->keySize / 8, v->iv,
                              (unsigned) v->ivSize / 8, (const void *) v->ct, (const void *) v->msg,
-                             (unsigned) v->msgSize, IMB_DIR_DECRYPT, IMB_ORDER_HASH_CIPHER, alg)) {
+                             (unsigned) v->msgSize, IMB_DIR_DECRYPT, IMB_ORDER_HASH_CIPHER)) {
                         printf("error #%zu decrypt\n", v->tcId);
                         test_suite_update(ctx, 0, 1);
                 } else {
                         test_suite_update(ctx, 1, 0);
                 }
 
-                if (v->ivSize / 8 == 12 && alg == IMB_CIPHER_CNTR) {
+                if (v->ivSize / 8 == 12) {
                         /* IV in the table didn't include block counter (12 bytes).
                          * Let's encrypt & decrypt the same but
                          * with 16 byte IV that includes block counter.
@@ -448,8 +434,8 @@ test_ctr_vectors(struct IMB_MGR *mb_mgr, struct test_suite_context *ctx128,
 
                         if (test_ctr(mb_mgr, expkey, (unsigned) v->keySize / 8, local_iv,
                                      new_iv_len, (const void *) v->msg, (const void *) v->ct,
-                                     (unsigned) v->msgSize, IMB_DIR_ENCRYPT, IMB_ORDER_CIPHER_HASH,
-                                     alg)) {
+                                     (unsigned) v->msgSize, IMB_DIR_ENCRYPT,
+                                     IMB_ORDER_CIPHER_HASH)) {
                                 printf("error #%zu encrypt\n", v->tcId);
                                 test_suite_update(ctx, 0, 1);
                         } else {
@@ -458,8 +444,8 @@ test_ctr_vectors(struct IMB_MGR *mb_mgr, struct test_suite_context *ctx128,
 
                         if (test_ctr(mb_mgr, expkey, (unsigned) v->keySize / 8, local_iv,
                                      new_iv_len, (const void *) v->ct, (const void *) v->msg,
-                                     (unsigned) v->msgSize, IMB_DIR_DECRYPT, IMB_ORDER_HASH_CIPHER,
-                                     alg)) {
+                                     (unsigned) v->msgSize, IMB_DIR_DECRYPT,
+                                     IMB_ORDER_HASH_CIPHER)) {
                                 printf("error #%zu decrypt\n", v->tcId);
                                 test_suite_update(ctx, 0, 1);
                         } else {
@@ -474,8 +460,7 @@ test_ctr_vectors(struct IMB_MGR *mb_mgr, struct test_suite_context *ctx128,
 static void
 test_ctr_vectors_burst(struct IMB_MGR *mb_mgr, struct test_suite_context *ctx128,
                        struct test_suite_context *ctx192, struct test_suite_context *ctx256,
-                       const struct cipher_test *v, const IMB_CIPHER_MODE alg,
-                       const uint32_t num_jobs)
+                       const struct cipher_test *v, const uint32_t num_jobs)
 {
         DECLARE_ALIGNED(uint32_t expkey[4 * 15], 16);
         DECLARE_ALIGNED(uint32_t dust[4 * 15], 16);
@@ -487,12 +472,8 @@ test_ctr_vectors_burst(struct IMB_MGR *mb_mgr, struct test_suite_context *ctx128
 
                 if (!quiet_mode) {
 #ifdef DEBUG
-                        if (alg == IMB_CIPHER_CNTR)
-                                printf("Standard vector %zu  KeySize:%zu IVSize:%zu MsgSize:%zu\n",
-                                       v->tcId, v->keySize, v->ivSize / 8, v->msgSize / 8);
-                        else
-                                printf("Bit vector %zu  KeySize:%zu IVSize:%zu MsgSize:%zu\n",
-                                       v->tcId, v->keySize, v->ivSize / 8, v->msgSize);
+                        printf("Standard vector %zu  KeySize:%zu IVSize:%zu MsgSize:%zu\n", v->tcId,
+                               v->keySize, v->ivSize / 8, v->msgSize / 8);
 #else
                         printf(".");
 #endif
@@ -518,7 +499,7 @@ test_ctr_vectors_burst(struct IMB_MGR *mb_mgr, struct test_suite_context *ctx128
                 if (test_ctr_burst(mb_mgr, expkey, (unsigned) v->keySize / 8, v->iv,
                                    (unsigned) v->ivSize / 8, (const void *) v->msg,
                                    (const void *) v->ct, (unsigned) v->msgSize, IMB_DIR_ENCRYPT,
-                                   IMB_ORDER_CIPHER_HASH, alg, num_jobs)) {
+                                   IMB_ORDER_CIPHER_HASH, num_jobs)) {
                         printf("error #%zu encrypt burst\n", v->tcId);
                         test_suite_update(ctx, 0, 1);
                 } else {
@@ -528,14 +509,14 @@ test_ctr_vectors_burst(struct IMB_MGR *mb_mgr, struct test_suite_context *ctx128
                 if (test_ctr_burst(mb_mgr, expkey, (unsigned) v->keySize / 8, v->iv,
                                    (unsigned) v->ivSize / 8, (const void *) v->ct,
                                    (const void *) v->msg, (unsigned) v->msgSize, IMB_DIR_DECRYPT,
-                                   IMB_ORDER_HASH_CIPHER, alg, num_jobs)) {
+                                   IMB_ORDER_HASH_CIPHER, num_jobs)) {
                         printf("error #%zu decrypt burst\n", v->tcId);
                         test_suite_update(ctx, 0, 1);
                 } else {
                         test_suite_update(ctx, 1, 0);
                 }
 
-                if (v->ivSize / 8 == 12 && alg == IMB_CIPHER_CNTR) {
+                if (v->ivSize / 8 == 12) {
                         /* IV in the table didn't include block counter (12 bytes).
                          * Let's encrypt & decrypt the same but
                          * with 16 byte IV that includes block counter.
@@ -554,7 +535,7 @@ test_ctr_vectors_burst(struct IMB_MGR *mb_mgr, struct test_suite_context *ctx128
                         if (test_ctr_burst(mb_mgr, expkey, (unsigned) v->keySize / 8, local_iv,
                                            new_iv_len, (const void *) v->msg, (const void *) v->ct,
                                            (unsigned) v->msgSize, IMB_DIR_ENCRYPT,
-                                           IMB_ORDER_CIPHER_HASH, alg, num_jobs)) {
+                                           IMB_ORDER_CIPHER_HASH, num_jobs)) {
                                 printf("error #%zu encrypt burst\n", v->tcId);
                                 test_suite_update(ctx, 0, 1);
                         } else {
@@ -564,7 +545,7 @@ test_ctr_vectors_burst(struct IMB_MGR *mb_mgr, struct test_suite_context *ctx128
                         if (test_ctr_burst(mb_mgr, expkey, (unsigned) v->keySize / 8, local_iv,
                                            new_iv_len, (const void *) v->ct, (const void *) v->msg,
                                            (unsigned) v->msgSize, IMB_DIR_DECRYPT,
-                                           IMB_ORDER_HASH_CIPHER, alg, num_jobs)) {
+                                           IMB_ORDER_HASH_CIPHER, num_jobs)) {
                                 printf("error #%zu decrypt burst\n", v->tcId);
                                 test_suite_update(ctx, 0, 1);
                         } else {
@@ -572,14 +553,10 @@ test_ctr_vectors_burst(struct IMB_MGR *mb_mgr, struct test_suite_context *ctx128
                         }
                 }
 
-                /* skip bitlen cipher-only burst api tests */
-                if (alg == IMB_CIPHER_CNTR_BITLEN)
-                        continue;
-
                 if (test_ctr_cipher_burst(mb_mgr, expkey, (unsigned) v->keySize / 8, v->iv,
                                           (unsigned) v->ivSize / 8, (const void *) v->msg,
                                           (const void *) v->ct, (unsigned) v->msgSize,
-                                          IMB_DIR_ENCRYPT, IMB_ORDER_CIPHER_HASH, alg, num_jobs)) {
+                                          IMB_DIR_ENCRYPT, IMB_ORDER_CIPHER_HASH, num_jobs)) {
                         printf("error #%zu encrypt cipher-only burst\n", v->tcId);
                         test_suite_update(ctx, 0, 1);
                 } else {
@@ -589,14 +566,14 @@ test_ctr_vectors_burst(struct IMB_MGR *mb_mgr, struct test_suite_context *ctx128
                 if (test_ctr_cipher_burst(mb_mgr, expkey, (unsigned) v->keySize / 8, v->iv,
                                           (unsigned) v->ivSize / 8, (const void *) v->ct,
                                           (const void *) v->msg, (unsigned) v->msgSize,
-                                          IMB_DIR_DECRYPT, IMB_ORDER_HASH_CIPHER, alg, num_jobs)) {
+                                          IMB_DIR_DECRYPT, IMB_ORDER_HASH_CIPHER, num_jobs)) {
                         printf("error #%zu decrypt cipher-only burst\n", v->tcId);
                         test_suite_update(ctx, 0, 1);
                 } else {
                         test_suite_update(ctx, 1, 0);
                 }
 
-                if (v->ivSize / 8 == 12 && alg == IMB_CIPHER_CNTR) {
+                if (v->ivSize / 8 == 12) {
                         /* IV in the table didn't include block counter (12 bytes).
                          * Let's encrypt & decrypt the same but
                          * with 16 byte IV that includes block counter.
@@ -615,7 +592,7 @@ test_ctr_vectors_burst(struct IMB_MGR *mb_mgr, struct test_suite_context *ctx128
                         if (test_ctr_cipher_burst(mb_mgr, expkey, (unsigned) v->keySize / 8,
                                                   local_iv, new_iv_len, (const void *) v->msg,
                                                   (const void *) v->ct, (unsigned) v->msgSize / 8,
-                                                  IMB_DIR_ENCRYPT, IMB_ORDER_CIPHER_HASH, alg,
+                                                  IMB_DIR_ENCRYPT, IMB_ORDER_CIPHER_HASH,
                                                   num_jobs)) {
                                 printf("error #%zu encrypt cipher-only burst\n", v->tcId);
                                 test_suite_update(ctx, 0, 1);
@@ -626,7 +603,7 @@ test_ctr_vectors_burst(struct IMB_MGR *mb_mgr, struct test_suite_context *ctx128
                         if (test_ctr_cipher_burst(mb_mgr, expkey, (unsigned) v->keySize / 8,
                                                   local_iv, new_iv_len, (const void *) v->ct,
                                                   (const void *) v->msg, (unsigned) v->msgSize / 8,
-                                                  IMB_DIR_DECRYPT, IMB_ORDER_HASH_CIPHER, alg,
+                                                  IMB_DIR_DECRYPT, IMB_ORDER_HASH_CIPHER,
                                                   num_jobs)) {
                                 printf("error #%zu decrypt cipher-only burst\n", v->tcId);
                                 test_suite_update(ctx, 0, 1);
@@ -652,23 +629,9 @@ ctr_test(struct IMB_MGR *mb_mgr)
         test_suite_start(&ctx128, "AES-CTR-128");
         test_suite_start(&ctx192, "AES-CTR-192");
         test_suite_start(&ctx256, "AES-CTR-256");
-        test_ctr_vectors(mb_mgr, &ctx128, &ctx192, &ctx256, ctr_test_json, IMB_CIPHER_CNTR);
+        test_ctr_vectors(mb_mgr, &ctx128, &ctx192, &ctx256, ctr_test_json);
         for (i = 1; i <= MAX_CTR_JOBS; i++)
-                test_ctr_vectors_burst(mb_mgr, &ctx128, &ctx192, &ctx256, ctr_test_json,
-                                       IMB_CIPHER_CNTR, i);
-        errors += test_suite_end(&ctx128);
-        errors += test_suite_end(&ctx192);
-        errors += test_suite_end(&ctx256);
-
-        /* CTR_BITLEN vectors */
-        test_suite_start(&ctx128, "AES-CTR-128-BIT-LENGTH");
-        test_suite_start(&ctx192, "AES-CTR-192-BIT-LENGTH");
-        test_suite_start(&ctx256, "AES-CTR-256-BIT-LENGTH");
-        test_ctr_vectors(mb_mgr, &ctx128, &ctx192, &ctx256, ctr_bit_test_json,
-                         IMB_CIPHER_CNTR_BITLEN);
-        for (i = 1; i <= MAX_CTR_JOBS; i++)
-                test_ctr_vectors_burst(mb_mgr, &ctx128, &ctx192, &ctx256, ctr_bit_test_json,
-                                       IMB_CIPHER_CNTR_BITLEN, i);
+                test_ctr_vectors_burst(mb_mgr, &ctx128, &ctx192, &ctx256, ctr_test_json, i);
         errors += test_suite_end(&ctx128);
         errors += test_suite_end(&ctx192);
         errors += test_suite_end(&ctx256);

@@ -137,8 +137,6 @@ enum arch_type_e { ARCH_SSE = 0, ARCH_AVX2, ARCH_AVX512, ARCH_AVX10, NUM_ARCHS }
 enum test_cipher_mode_e {
         TEST_CBC = 1,
         TEST_CNTR,
-        TEST_CNTR_BITLEN,  /* CNTR-BITLEN */
-        TEST_CNTR_BITLEN4, /* CNTR-BITLEN with 4 less bits in the last byte */
         TEST_ECB,
         TEST_CBCS_1_9,
         TEST_NULL_CIPHER,
@@ -266,21 +264,6 @@ const struct str_value_mapping cipher_algo_str_map[] = {
           .values.job_params = { .cipher_mode = TEST_CNTR, .key_size = IMB_KEY_192_BYTES } },
         { .name = "aes-ctr-256",
           .values.job_params = { .cipher_mode = TEST_CNTR, .key_size = IMB_KEY_256_BYTES } },
-        { .name = "aes-ctr-bit-128",
-          .values.job_params = { .cipher_mode = TEST_CNTR_BITLEN, .key_size = IMB_KEY_128_BYTES } },
-        { .name = "aes-ctr-bit-192",
-          .values.job_params = { .cipher_mode = TEST_CNTR_BITLEN, .key_size = IMB_KEY_192_BYTES } },
-        { .name = "aes-ctr-bit-256",
-          .values.job_params = { .cipher_mode = TEST_CNTR_BITLEN, .key_size = IMB_KEY_256_BYTES } },
-        { .name = "aes-ctr-bit4-128",
-          .values.job_params = { .cipher_mode = TEST_CNTR_BITLEN4,
-                                 .key_size = IMB_KEY_128_BYTES } },
-        { .name = "aes-ctr-bit4-192",
-          .values.job_params = { .cipher_mode = TEST_CNTR_BITLEN4,
-                                 .key_size = IMB_KEY_192_BYTES } },
-        { .name = "aes-ctr-bit4-256",
-          .values.job_params = { .cipher_mode = TEST_CNTR_BITLEN4,
-                                 .key_size = IMB_KEY_256_BYTES } },
         { .name = "aes-ecb-128",
           .values.job_params = { .cipher_mode = TEST_ECB, .key_size = IMB_KEY_128_BYTES } },
         { .name = "aes-ecb-192",
@@ -1389,10 +1372,6 @@ translate_cipher_mode(const enum test_cipher_mode_e test_mode)
         case TEST_CNTR:
                 c_mode = IMB_CIPHER_CNTR;
                 break;
-        case TEST_CNTR_BITLEN:
-        case TEST_CNTR_BITLEN4:
-                c_mode = IMB_CIPHER_CNTR_BITLEN;
-                break;
         case TEST_ECB:
                 c_mode = IMB_CIPHER_ECB;
                 break;
@@ -1766,12 +1745,9 @@ set_size_lists(uint32_t *cipher_size_list, uint32_t *hash_size_list, uint64_t *x
                 else
                         job_size = params->job_size;
 
-                if ((params->cipher_mode == TEST_CNTR_BITLEN) ||
-                    (params->cipher_mode == TEST_SNOW3G_UEA2) ||
+                if ((params->cipher_mode == TEST_SNOW3G_UEA2) ||
                     (params->cipher_mode == TEST_KASUMI_UEA1))
                         cipher_size_list[i] = job_size * 8;
-                else if (params->cipher_mode == TEST_CNTR_BITLEN4)
-                        cipher_size_list[i] = job_size * 8 - 4;
                 else if ((params->cipher_mode == TEST_NULL_CIPHER) ||
                          (params->cipher_mode == TEST_PON_NO_CNTR))
                         cipher_size_list[i] = 0;
@@ -3264,8 +3240,6 @@ print_times(struct variant_s *variant_list, struct params_s *params, const uint3
                 const char *func_names[4] = { "SSE", "AVX2", "AVX512", "AVX10" };
                 const char *c_mode_names[TEST_NUM_CIPHER_TESTS - 1] = { "CBC",
                                                                         "CNTR",
-                                                                        "CNTR_BITLEN",
-                                                                        "CNTR_BITLEN4",
                                                                         "ECB",
                                                                         "CBCS_1_9",
                                                                         "NULL_CIPHER",

@@ -281,7 +281,6 @@ lib_objs1 = \
 	$(OBJ_DIR)\des_x16_avx512.obj \
 	$(OBJ_DIR)\des_common_avx512.obj \
 	$(OBJ_DIR)\aes_cntr_api_by16_vaes_avx512.obj \
-	$(OBJ_DIR)\aes_cntr_bit_api_by16_vaes_avx512.obj \
 	$(OBJ_DIR)\aes_cntr_ccm_api_by16_vaes_avx512.obj \
 	$(OBJ_DIR)\aes_cntr_pon_api_by16_vaes_avx512.obj \
 	$(OBJ_DIR)\aes_cbc_dec_by16_vaes_avx512.obj \

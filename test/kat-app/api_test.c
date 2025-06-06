@@ -285,7 +285,6 @@ fill_in_job(struct IMB_JOB *job, const IMB_CIPHER_MODE cipher_mode,
                         job->cipher_fields.CBCS.next_iv = dust_bin;
                 break;
         case IMB_CIPHER_CNTR:
-        case IMB_CIPHER_CNTR_BITLEN:
                 job->key_len_in_bytes = UINT64_C(16);
                 job->iv_len_in_bytes = UINT64_C(16);
                 break;
@@ -1875,7 +1874,6 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                                         return 1;
                                 break;
                         case IMB_CIPHER_CNTR:
-                        case IMB_CIPHER_CNTR_BITLEN:
                         case IMB_CIPHER_SM4_CNTR:
                         case IMB_CIPHER_CCM:
                         case IMB_CIPHER_PON_AES_CNTR:
@@ -2004,7 +2002,6 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                                 case IMB_CIPHER_GCM_SGL:
                                 case IMB_CIPHER_CUSTOM:
                                 case IMB_CIPHER_CNTR:
-                                case IMB_CIPHER_CNTR_BITLEN:
                                 case IMB_CIPHER_PON_AES_CNTR:
                                 case IMB_CIPHER_SNOW_V:
                                 case IMB_CIPHER_SNOW_V_AEAD:
@@ -2071,8 +2068,6 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                 { IMB_CIPHER_CBCS_1_9, 17 },
                 { IMB_CIPHER_DOCSIS_SEC_BPI, 15 },
                 { IMB_CIPHER_DOCSIS_SEC_BPI, 17 },
-                { IMB_CIPHER_CNTR_BITLEN, 15 },
-                { IMB_CIPHER_CNTR_BITLEN, 17 },
                 { IMB_CIPHER_PON_AES_CNTR, 15 },
                 { IMB_CIPHER_PON_AES_CNTR, 17 },
                 { IMB_CIPHER_SNOW3G_UEA2_BITLEN, 15 },

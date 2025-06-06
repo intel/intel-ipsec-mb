@@ -594,7 +594,6 @@ asm_avx512_lib_objs := \
 	aes_ecb_vaes_avx512.o \
 	aes_ecb_quic_vaes_avx512.o \
 	aes_cntr_api_by16_vaes_avx512.o \
-	aes_cntr_bit_api_by16_vaes_avx512.o \
 	aes_cntr_ccm_api_by16_vaes_avx512.o \
 	aes_cntr_pon_api_by16_vaes_avx512.o \
 	pon_vaes_avx512.o \

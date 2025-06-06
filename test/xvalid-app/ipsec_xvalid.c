@@ -191,15 +191,6 @@ struct str_value_mapping cipher_algo_str_map[] = {
           .values.job_params = { .cipher_mode = IMB_CIPHER_CNTR, .key_size = IMB_KEY_192_BYTES } },
         { .name = "AES-CTR-256",
           .values.job_params = { .cipher_mode = IMB_CIPHER_CNTR, .key_size = IMB_KEY_256_BYTES } },
-        { .name = "AES-CTR-128-BIT-LENGTH",
-          .values.job_params = { .cipher_mode = IMB_CIPHER_CNTR_BITLEN,
-                                 .key_size = IMB_KEY_128_BYTES } },
-        { .name = "AES-CTR-192-BIT-LENGTH",
-          .values.job_params = { .cipher_mode = IMB_CIPHER_CNTR_BITLEN,
-                                 .key_size = IMB_KEY_192_BYTES } },
-        { .name = "AES-CTR-256-BIT-LENGTH",
-          .values.job_params = { .cipher_mode = IMB_CIPHER_CNTR_BITLEN,
-                                 .key_size = IMB_KEY_256_BYTES } },
         { .name = "AES-ECB-128",
           .values.job_params = { .cipher_mode = IMB_CIPHER_ECB, .key_size = IMB_KEY_128_BYTES } },
         { .name = "AES-ECB-192",
@@ -591,7 +582,6 @@ const uint8_t key_sizes[][3] = {
         { 24, 24, 1 },  /* IMB_CIPHER_DES3 */
         { 16, 16, 1 },  /* IMB_CIPHER_PON_AES_CNTR */
         { 16, 32, 8 },  /* IMB_CIPHER_ECB */
-        { 16, 32, 8 },  /* IMB_CIPHER_CNTR_BITLEN */
         { 16, 32, 16 }, /* IMB_CIPHER_ZUC_EEA3 */
         { 16, 16, 1 },  /* IMB_CIPHER_SNOW3G_UEA2 */
         { 16, 16, 1 },  /* IMB_CIPHER_KASUMI_UEA1_BITLEN */
@@ -1241,11 +1231,7 @@ fill_job(IMB_JOB *job, const struct params_s *params, uint8_t *buf, uint8_t *dig
         struct gcm_key_data *gdata_key = &keys->gdata_key;
         uint64_t cipher_offset_in_bytes = offset;
 
-        /* Force partial byte, by subtracting 3 bits from the full length */
-        if (params->cipher_mode == IMB_CIPHER_CNTR_BITLEN)
-                job->msg_len_to_cipher_in_bits = buf_size * 8 - 3;
-        else
-                job->msg_len_to_cipher_in_bytes = buf_size;
+        job->msg_len_to_cipher_in_bytes = buf_size;
 
         job->msg_len_to_hash_in_bytes = buf_size;
         job->iv = cipher_iv;
@@ -1445,7 +1431,6 @@ fill_job(IMB_JOB *job, const struct params_s *params, uint8_t *buf, uint8_t *dig
         case IMB_CIPHER_PON_AES_CNTR:
         case IMB_CIPHER_SM4_CNTR:
         case IMB_CIPHER_CNTR:
-        case IMB_CIPHER_CNTR_BITLEN:
         case IMB_CIPHER_CFB:
                 job->enc_keys = enc_keys;
                 job->dec_keys = enc_keys;
@@ -1642,7 +1627,6 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys, const uint8_t *ciph
                 case IMB_CIPHER_SM4_CNTR:
                 case IMB_CIPHER_CCM:
                 case IMB_CIPHER_CNTR:
-                case IMB_CIPHER_CNTR_BITLEN:
                 case IMB_CIPHER_DOCSIS_SEC_BPI:
                 case IMB_CIPHER_SM4_ECB:
                 case IMB_CIPHER_ECB:
@@ -1790,7 +1774,6 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys, const uint8_t *ciph
         case IMB_CIPHER_CBC:
         case IMB_CIPHER_CCM:
         case IMB_CIPHER_CNTR:
-        case IMB_CIPHER_CNTR_BITLEN:
         case IMB_CIPHER_DOCSIS_SEC_BPI:
         case IMB_CIPHER_ECB:
         case IMB_CIPHER_CBCS_1_9:

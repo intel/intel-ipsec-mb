@@ -431,8 +431,6 @@ cipher_selection(void)
                         return IMB_CIPHER_PON_AES_CNTR;
                 else if (strcmp(a, "IMB_CIPHER_ECB") == 0)
                         return IMB_CIPHER_ECB;
-                else if (strcmp(a, "IMB_CIPHER_CNTR_BITLEN") == 0)
-                        return IMB_CIPHER_CNTR_BITLEN;
                 else if (strcmp(a, "IMB_CIPHER_ZUC_EEA3") == 0)
                         return IMB_CIPHER_ZUC_EEA3;
                 else if (strcmp(a, "IMB_CIPHER_SNOW3G_UEA2_BITLEN") == 0)

@@ -134,9 +134,6 @@
 #define AES_CTR_128     aes_cntr_128_avx
 #define AES_CTR_192     aes_cntr_192_avx
 #define AES_CTR_256     aes_cntr_256_avx
-#define AES_CTR_128_BIT aes_cntr_bit_128_avx
-#define AES_CTR_192_BIT aes_cntr_bit_192_avx
-#define AES_CTR_256_BIT aes_cntr_bit_256_avx
 
 /* AES-CFB */
 #define AES_CFB_128_ENC aes_cfb_128_enc_sse

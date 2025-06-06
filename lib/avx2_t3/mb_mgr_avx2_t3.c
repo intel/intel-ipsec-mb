@@ -137,9 +137,6 @@
 #define AES_CTR_128     aes_cntr_128_vaes_avx2
 #define AES_CTR_192     aes_cntr_192_vaes_avx2
 #define AES_CTR_256     aes_cntr_256_vaes_avx2
-#define AES_CTR_128_BIT aes_cntr_bit_128_avx
-#define AES_CTR_192_BIT aes_cntr_bit_192_avx
-#define AES_CTR_256_BIT aes_cntr_bit_256_avx
 
 /* AES-CFB */
 #define SUBMIT_JOB_AES_CFB_128_ENC submit_job_aes128_cfb_enc_vaes_avx2

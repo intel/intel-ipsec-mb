@@ -169,8 +169,6 @@ misc_cipher_mode_to_str(const IMB_CIPHER_MODE mode)
                 return "pon-aes-ctr";
         case IMB_CIPHER_ECB:
                 return "aes-ecb";
-        case IMB_CIPHER_CNTR_BITLEN:
-                return "aes-ctr (bitlen)";
         case IMB_CIPHER_ZUC_EEA3:
                 return "zuc-eea3";
         case IMB_CIPHER_SNOW3G_UEA2_BITLEN:

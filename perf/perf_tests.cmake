@@ -49,13 +49,6 @@ set(CIPHER_ALGOS
   aes-ctr-128
   aes-ctr-192
   aes-ctr-256
-
-  aes-ctr-bit-128
-  aes-ctr-bit-192
-  aes-ctr-bit-256
-  aes-ctr-bit4-128
-  aes-ctr-bit4-192
-  aes-ctr-bit4-256
   aes-ecb-128
   aes-ecb-192
   aes-ecb-256

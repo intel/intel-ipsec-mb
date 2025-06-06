@@ -140,9 +140,6 @@
 #define SUBMIT_JOB_AES_CTR_128     aes_cntr_128_submit_vaes_avx512
 #define SUBMIT_JOB_AES_CTR_192     aes_cntr_192_submit_vaes_avx512
 #define SUBMIT_JOB_AES_CTR_256     aes_cntr_256_submit_vaes_avx512
-#define SUBMIT_JOB_AES_CTR_128_BIT aes_cntr_bit_128_submit_vaes_avx512
-#define SUBMIT_JOB_AES_CTR_192_BIT aes_cntr_bit_192_submit_vaes_avx512
-#define SUBMIT_JOB_AES_CTR_256_BIT aes_cntr_bit_256_submit_vaes_avx512
 
 /* AES-CCM */
 #define AES_CNTR_CCM_128 aes_cntr_ccm_128_vaes_avx512
