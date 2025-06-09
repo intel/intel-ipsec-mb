@@ -1,0 +1,245 @@
+/*****************************************************************************
+ Copyright (c) 2025, Intel Corporation
+
+ Redistribution and use in source and binary forms, with or without
+ modification, are permitted provided that the following conditions are met:
+
+     * Redistributions of source code must retain the above copyright notice,
+       this list of conditions and the following disclaimer.
+     * Redistributions in binary form must reproduce the above copyright
+       notice, this list of conditions and the following disclaimer in the
+       documentation and/or other materials provided with the distribution.
+     * Neither the name of Intel Corporation nor the names of its contributors
+       may be used to endorse or promote products derived from this software
+       without specific prior written permission.
+
+ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE
+ FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+ OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*****************************************************************************/
+
+#include <stdint.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+
+#include <intel-ipsec-mb.h>
+#include "utils.h"
+#include "mac_test.h"
+
+int
+sha3_test(struct IMB_MGR *mb_mgr);
+
+extern const struct mac_test sha3_test_json[];
+
+static int
+sha3_job_ok(const struct mac_test *vec, const struct IMB_JOB *job, const uint8_t *auth,
+            const uint8_t *padding, const size_t sizeof_padding)
+{
+        if (job->status != IMB_STATUS_COMPLETED) {
+                printf("line:%d job error status:%d ", __LINE__, job->status);
+                return 0;
+        }
+
+        /* hash checks */
+        if (memcmp(padding, &auth[sizeof_padding + (vec->tagSize / 8)], sizeof_padding)) {
+                printf("hash overwrite tail\n");
+                hexdump(stderr, "Target", &auth[sizeof_padding + (vec->tagSize / 8)],
+                        sizeof_padding);
+                return 0;
+        }
+
+        if (memcmp(padding, &auth[0], sizeof_padding)) {
+                printf("hash overwrite head\n");
+                hexdump(stderr, "Target", &auth[0], sizeof_padding);
+                return 0;
+        }
+
+        if (memcmp((const void *) vec->tag, &auth[sizeof_padding], vec->tagSize / 8)) {
+                printf("hash mismatched\n");
+                hexdump(stderr, "Received", &auth[sizeof_padding], vec->tagSize / 8);
+                hexdump(stderr, "Expected", (const void *) vec->tag, vec->tagSize / 8);
+                return 0;
+        }
+        return 1;
+}
+
+static int
+test_sha3(struct IMB_MGR *mb_mgr, const struct mac_test *vec, const int num_jobs,
+          const int sha_type)
+{
+        struct IMB_JOB *job;
+        uint8_t padding[16];
+        uint8_t **auths = malloc(num_jobs * sizeof(void *));
+        int i = 0, jobs_rx = 0, ret = -1;
+
+        if (auths == NULL) {
+                fprintf(stderr, "Can't allocate buffer memory\n");
+                goto end2;
+        }
+
+        memset(padding, -1, sizeof(padding));
+        memset(auths, 0, num_jobs * sizeof(void *));
+
+        for (i = 0; i < num_jobs; i++) {
+                const size_t alloc_len = vec->tagSize / 8 + (sizeof(padding) * 2);
+
+                auths[i] = malloc(alloc_len);
+                if (auths[i] == NULL) {
+                        fprintf(stderr, "Can't allocate buffer memory\n");
+                        goto end;
+                }
+                memset(auths[i], -1, alloc_len);
+        }
+
+        /* empty the manager */
+        while (IMB_FLUSH_JOB(mb_mgr) != NULL)
+                ;
+
+        for (i = 0; i < num_jobs; i++) {
+                job = IMB_GET_NEXT_JOB(mb_mgr);
+
+                memset(job, 0, sizeof(*job));
+                job->cipher_direction = IMB_DIR_ENCRYPT;
+                job->chain_order = IMB_ORDER_HASH_CIPHER;
+                job->auth_tag_output = auths[i] + sizeof(padding);
+                job->auth_tag_output_len_in_bytes = vec->tagSize / 8;
+                job->src = (const void *) vec->msg;
+                job->msg_len_to_hash_in_bytes = vec->msgSize / 8;
+                job->cipher_mode = IMB_CIPHER_NULL;
+                switch (sha_type) {
+                case 224:
+                        job->hash_alg = IMB_AUTH_SHA3_224;
+                        break;
+                case 256:
+                        job->hash_alg = IMB_AUTH_SHA3_256;
+                        break;
+                case 384:
+                        job->hash_alg = IMB_AUTH_SHA3_384;
+                        break;
+                case 512:
+                default:
+                        job->hash_alg = IMB_AUTH_SHA3_512;
+                        break;
+                }
+
+                job->user_data = auths[i];
+
+                job = IMB_SUBMIT_JOB(mb_mgr);
+                if (job) {
+                        jobs_rx++;
+                        if (!sha3_job_ok(vec, job, job->user_data, padding, sizeof(padding)))
+                                goto end;
+                }
+        }
+
+        while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL) {
+                jobs_rx++;
+                if (!sha3_job_ok(vec, job, job->user_data, padding, sizeof(padding)))
+                        goto end;
+        }
+
+        if (jobs_rx != num_jobs) {
+                printf("Expected %d jobs, received %d\n", num_jobs, jobs_rx);
+                goto end;
+        }
+        ret = 0;
+
+end:
+        /* empty the manager before next tests */
+        while (IMB_FLUSH_JOB(mb_mgr) != NULL)
+                ;
+
+        for (i = 0; i < num_jobs; i++) {
+                if (auths[i] != NULL)
+                        free(auths[i]);
+        }
+
+end2:
+        if (auths != NULL)
+                free(auths);
+
+        return ret;
+}
+
+static void
+test_sha3_vectors(struct IMB_MGR *mb_mgr, struct test_suite_context *sha3_224_ctx,
+                  struct test_suite_context *sha3_256_ctx, struct test_suite_context *sha3_384_ctx,
+                  struct test_suite_context *sha3_512_ctx, const int num_jobs)
+{
+        struct test_suite_context *ctx;
+        const struct mac_test *v = sha3_test_json;
+        int sha_type;
+
+        if (!quiet_mode)
+                printf("SHA3 standard test vectors (N jobs = %d):\n", num_jobs);
+        for (; v->msg != NULL; v++) {
+
+                switch (v->tagSize) {
+                case 224:
+                        ctx = sha3_224_ctx;
+                        sha_type = 224;
+                        break;
+                case 256:
+                        ctx = sha3_256_ctx;
+                        sha_type = 256;
+                        break;
+                case 384:
+                        ctx = sha3_384_ctx;
+                        sha_type = 384;
+                        break;
+                case 512:
+                        ctx = sha3_512_ctx;
+                        sha_type = 512;
+                        break;
+                default:
+                        ctx = sha3_224_ctx;
+                        printf("error #%zu, invalid tag size\n", v->tcId);
+                        test_suite_update(ctx, 0, 1);
+                        continue;
+                }
+#ifdef DEBUG
+                if (!quiet_mode) {
+                        printf("SHA3-%d Test Case %zu "
+                               "data_len:%zu digest_len:%zu\n",
+                               sha_type, v->tcId, v->msgSize / 8, v->tagSize / 8);
+                }
+#endif
+                if (test_sha3(mb_mgr, v, num_jobs, sha_type)) {
+                        printf("error #%zu\n", v->tcId);
+                        test_suite_update(ctx, 0, 1);
+                } else {
+                        test_suite_update(ctx, 1, 0);
+                }
+        }
+}
+
+int
+sha3_test(struct IMB_MGR *mb_mgr)
+{
+        struct test_suite_context sha3_224_ctx, sha3_256_ctx, sha3_384_ctx, sha3_512_ctx;
+        int errors = 0;
+        unsigned i;
+
+        test_suite_start(&sha3_224_ctx, "SHA3_224");
+        test_suite_start(&sha3_256_ctx, "SHA3_256");
+        test_suite_start(&sha3_384_ctx, "SHA3_384");
+        test_suite_start(&sha3_512_ctx, "SHA3_512");
+        for (i = 1; i <= 17; i++) {
+                test_sha3_vectors(mb_mgr, &sha3_224_ctx, &sha3_256_ctx, &sha3_384_ctx,
+                                  &sha3_512_ctx, i);
+        }
+        errors += test_suite_end(&sha3_224_ctx);
+        errors += test_suite_end(&sha3_256_ctx);
+        errors += test_suite_end(&sha3_384_ctx);
+        errors += test_suite_end(&sha3_512_ctx);
+
+        return errors;
+}
