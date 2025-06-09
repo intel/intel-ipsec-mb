@@ -181,10 +181,6 @@ misc_cipher_mode_to_str(const IMB_CIPHER_MODE mode)
                 return "aead-chacha20-poly1305";
         case IMB_CIPHER_CHACHA20_POLY1305_SGL:
                 return "aead-chacha20-poly1305-sgl";
-        case IMB_CIPHER_SNOW_V:
-                return "snow-v";
-        case IMB_CIPHER_SNOW_V_AEAD:
-                return "aead-snow-v";
         case IMB_CIPHER_GCM_SGL:
                 return "aead-aes-gcm-sgl";
         case IMB_CIPHER_CFB:
@@ -268,8 +264,6 @@ misc_hash_alg_to_str(const IMB_HASH_ALG mode)
                 return "aead-chacha20-poly1305-sgl";
         case IMB_AUTH_ZUC256_EIA3_BITLEN:
                 return "zuc256-eia3";
-        case IMB_AUTH_SNOW_V_AEAD:
-                return "aead-snow-v";
         case IMB_AUTH_GCM_SGL:
                 return "aead-aes-gcm-sgl";
         case IMB_AUTH_CRC32_ETHERNET_FCS:

@@ -284,8 +284,6 @@ typedef enum {
         IMB_CIPHER_CHACHA20,
         IMB_CIPHER_CHACHA20_POLY1305,     /**< AEAD CHACHA20 */
         IMB_CIPHER_CHACHA20_POLY1305_SGL, /**< AEAD CHACHA20 with SGL support*/
-        IMB_CIPHER_SNOW_V,
-        IMB_CIPHER_SNOW_V_AEAD,
         IMB_CIPHER_GCM_SGL,
         IMB_CIPHER_SM4_ECB,
         IMB_CIPHER_SM4_CBC,
@@ -330,7 +328,6 @@ typedef enum {
         IMB_AUTH_CHACHA20_POLY1305,      /**< AEAD POLY1305 */
         IMB_AUTH_CHACHA20_POLY1305_SGL,  /**< AEAD CHACHA20 with SGL support */
         IMB_AUTH_ZUC256_EIA3_BITLEN,     /**< 256-EIA3/NIA3 (3GPP) */
-        IMB_AUTH_SNOW_V_AEAD,            /**< SNOW-V-AEAD */
         IMB_AUTH_GCM_SGL,                /**< AES-GCM with SGL support */
         IMB_AUTH_CRC32_ETHERNET_FCS,     /**< CRC32-ETHERNET-FCS */
         IMB_AUTH_CRC32_SCTP,             /**< CRC32-SCTP */
@@ -518,15 +515,7 @@ typedef struct IMB_JOB {
                         struct chacha20_poly1305_context_data *ctx;
                         /**< Chacha20-Poly1305 context (for SGL only) */
                 } CHACHA20_POLY1305; /**< Chacha20-Poly1305 specific fields */
-                struct _SNOW_V_AEAD_specific_fields {
-                        const void *aad;
-                        /**< Additional Authentication Data (AAD) */
-                        uint64_t aad_len_in_bytes;
-                        /**< Length of AAD */
-                        void *reserved;
-                        /**< Reserved bytes */
-                } SNOW_V_AEAD; /**< SNOW-V AEAD specific fields */
-        } u;                   /**< Hash algorithm-specific fields */
+        } u;                         /**< Hash algorithm-specific fields */
 
         IMB_STATUS status;                     /**< Job status */
         IMB_CIPHER_MODE cipher_mode;           /**< Cipher mode */

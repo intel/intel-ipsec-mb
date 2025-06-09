@@ -219,8 +219,6 @@ struct str_value_mapping cipher_algo_str_map[] = {
           .values.job_params = { .cipher_mode = IMB_CIPHER_KASUMI_UEA1_BITLEN, .key_size = 16 } },
         { .name = "CHACHA20-256",
           .values.job_params = { .cipher_mode = IMB_CIPHER_CHACHA20, .key_size = 32 } },
-        { .name = "SNOW-V",
-          .values.job_params = { .cipher_mode = IMB_CIPHER_SNOW_V, .key_size = 32 } },
         { .name = "SM4-ECB-128",
           .values.job_params = { .cipher_mode = IMB_CIPHER_SM4_ECB, .key_size = 16 } },
         { .name = "SM4-CBC-128",
@@ -495,10 +493,6 @@ struct str_value_mapping aead_algo_str_map[] = {
           .values.job_params = { .cipher_mode = IMB_CIPHER_CHACHA20_POLY1305,
                                  .hash_alg = IMB_AUTH_CHACHA20_POLY1305,
                                  .key_size = 32 } },
-        { .name = "SNOW-V-AEAD",
-          .values.job_params = { .cipher_mode = IMB_CIPHER_SNOW_V_AEAD,
-                                 .hash_alg = IMB_AUTH_SNOW_V_AEAD,
-                                 .key_size = 32 } },
         { .name = "SM4-GCM",
           .values.job_params = { .cipher_mode = IMB_CIPHER_SM4_GCM,
                                  .hash_alg = IMB_AUTH_SM4_GCM,
@@ -546,7 +540,6 @@ const uint8_t auth_tag_len_bytes[] = {
         16,                        /* IMB_AUTH_CHACHA20_POLY1305 */
         16,                        /* IMB_AUTH_CHACHA20_POLY1305_SGL */
         4,                         /* IMB_AUTH_ZUC256_EIA3_BITLEN */
-        16,                        /* IMB_AUTH_SNOW_V_AEAD */
         16,                        /* IMB_AUTH_AES_GCM_SGL */
         4,                         /* IMB_AUTH_CRC32_ETHERNET_FCS */
         4,                         /* IMB_AUTH_CRC32_SCTP */
@@ -586,8 +579,6 @@ const uint8_t key_sizes[][3] = {
         { 32, 32, 1 },  /* IMB_CIPHER_CHACHA20 */
         { 32, 32, 1 },  /* IMB_CIPHER_CHACHA20_POLY1305 */
         { 32, 32, 1 },  /* IMB_CIPHER_CHACHA20_POLY1305_SGL */
-        { 32, 32, 1 },  /* IMB_CIPHER_SNOW_V */
-        { 32, 32, 1 },  /* IMB_CIPHER_SNOW_V_AEAD */
         { 16, 32, 8 },  /* IMB_CIPHER_GCM_SGL */
         { 16, 16, 1 },  /* IMB_CIPHER_SM4_ECB */
         { 16, 16, 1 },  /* IMB_CIPHER_SM4_CBC */
@@ -1378,10 +1369,6 @@ fill_job(IMB_JOB *job, const struct params_s *params, uint8_t *buf, uint8_t *dig
                 job->u.CHACHA20_POLY1305.aad_len_in_bytes = params->aad_size;
                 job->u.CHACHA20_POLY1305.aad = aad;
                 break;
-        case IMB_AUTH_SNOW_V_AEAD:
-                job->u.SNOW_V_AEAD.aad_len_in_bytes = params->aad_size;
-                job->u.SNOW_V_AEAD.aad = aad;
-                break;
         default:
                 printf("Unsupported hash algorithm %u, line %d\n", (unsigned) params->hash_alg,
                        __LINE__);
@@ -1494,12 +1481,6 @@ fill_job(IMB_JOB *job, const struct params_s *params, uint8_t *buf, uint8_t *dig
                 job->dec_keys = k2;
                 job->iv_len_in_bytes = 12;
                 break;
-        case IMB_CIPHER_SNOW_V:
-        case IMB_CIPHER_SNOW_V_AEAD:
-                job->enc_keys = k2;
-                job->dec_keys = k2;
-                job->iv_len_in_bytes = 16;
-                break;
         case IMB_CIPHER_NULL:
                 /* No operation needed */
                 break;
@@ -1581,7 +1562,6 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys, const uint8_t *ciph
                 case IMB_AUTH_DOCSIS_CRC32:
                 case IMB_AUTH_CHACHA20_POLY1305:
                 case IMB_AUTH_CHACHA20_POLY1305_SGL:
-                case IMB_AUTH_SNOW_V_AEAD:
                 case IMB_AUTH_GCM_SGL:
                 case IMB_AUTH_CRC32_ETHERNET_FCS:
                 case IMB_AUTH_CRC32_SCTP:
@@ -1641,8 +1621,6 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys, const uint8_t *ciph
                 case IMB_CIPHER_CHACHA20:
                 case IMB_CIPHER_CHACHA20_POLY1305:
                 case IMB_CIPHER_CHACHA20_POLY1305_SGL:
-                case IMB_CIPHER_SNOW_V:
-                case IMB_CIPHER_SNOW_V_AEAD:
                         nosimd_memset(k2, pattern_cipher_key, 32);
                         break;
                 case IMB_CIPHER_NULL:
@@ -1709,7 +1687,6 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys, const uint8_t *ciph
         case IMB_AUTH_DOCSIS_CRC32:
         case IMB_AUTH_CHACHA20_POLY1305:
         case IMB_AUTH_CHACHA20_POLY1305_SGL:
-        case IMB_AUTH_SNOW_V_AEAD:
         case IMB_AUTH_GCM_SGL:
         case IMB_AUTH_CRC32_ETHERNET_FCS:
         case IMB_AUTH_CRC32_SCTP:
@@ -1806,8 +1783,6 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys, const uint8_t *ciph
         case IMB_CIPHER_CHACHA20:
         case IMB_CIPHER_CHACHA20_POLY1305:
         case IMB_CIPHER_CHACHA20_POLY1305_SGL:
-        case IMB_CIPHER_SNOW_V:
-        case IMB_CIPHER_SNOW_V_AEAD:
                 /* Use of:
                  *     nosimd_memcpy(k2, ciph_key, 32);
                  * leaves sensitive data on the stack.
@@ -2879,11 +2854,6 @@ run_test(const IMB_ARCH enc_arch, const IMB_ARCH dec_arch, struct params_s *para
                              hash_alg != IMB_AUTH_CHACHA20_POLY1305) ||
                             (c_mode != IMB_CIPHER_CHACHA20_POLY1305 &&
                              hash_alg == IMB_AUTH_CHACHA20_POLY1305))
-                                continue;
-
-                        if ((c_mode == IMB_CIPHER_SNOW_V_AEAD &&
-                             hash_alg != IMB_AUTH_SNOW_V_AEAD) ||
-                            (c_mode != IMB_CIPHER_SNOW_V_AEAD && hash_alg == IMB_AUTH_SNOW_V_AEAD))
                                 continue;
 
                         /* This test app does not support SGL yet */

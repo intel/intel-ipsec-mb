@@ -151,17 +151,6 @@ is_job_invalid_light(IMB_MGR *state, const IMB_CIPHER_MODE cipher_mode, const IM
                         return 1;
                 }
                 break;
-        case IMB_CIPHER_SNOW_V_AEAD:
-        case IMB_CIPHER_SNOW_V:
-                if (key_len_in_bytes != UINT64_C(32)) {
-                        imb_set_errno(state, IMB_ERR_JOB_KEY_LEN);
-                        return 1;
-                }
-                if (cipher_mode == IMB_CIPHER_SNOW_V_AEAD && hash_alg != IMB_AUTH_SNOW_V_AEAD) {
-                        imb_set_errno(state, IMB_ERR_HASH_ALGO);
-                        return 1;
-                }
-                break;
         case IMB_CIPHER_CFB:
                 if (key_len_in_bytes != UINT64_C(16) && key_len_in_bytes != UINT64_C(24) &&
                     key_len_in_bytes != UINT64_C(32)) {
@@ -264,12 +253,6 @@ is_job_invalid_light(IMB_MGR *state, const IMB_CIPHER_MODE cipher_mode, const IM
                         return 1;
                 }
                 break;
-        case IMB_AUTH_SNOW_V_AEAD:
-                if (cipher_mode != IMB_CIPHER_SNOW_V_AEAD) {
-                        imb_set_errno(state, IMB_ERR_CIPH_MODE);
-                        return 1;
-                }
-                break;
         default:
                 imb_set_errno(state, IMB_ERR_HASH_ALGO);
                 return 1;
@@ -315,7 +298,6 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job, const IMB_CIPHER_MODE cipher_
                 16, /* IMB_AUTH_CHACHA_POLY1305 */
                 16, /* IMB_AUTH_CHACHA_POLY1305_SGL */
                 4,  /* IMB_AUTH_ZUC256_EIA3_BITLEN */
-                16, /* IMB_AUTH_SNOW_V_AEAD */
                 16, /* IMB_AUTH_AES_GCM_SGL */
                 4,  /* IMB_AUTH_CRC32_ETHERNET_FCS */
                 4,  /* IMB_AUTH_CRC32_SCTP */
@@ -364,7 +346,6 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job, const IMB_CIPHER_MODE cipher_
                 16, /* IMB_AUTH_CHACHA_POLY1305 */
                 16, /* IMB_AUTH_CHACHA_POLY1305_SGL */
                 4,  /* IMB_AUTH_ZUC256_EIA3_BITLEN */
-                16, /* IMB_AUTH_SNOW_V_AEAD */
                 16, /* IMB_AUTH_AES_GCM_SGL */
                 4,  /* IMB_AUTH_CRC32_ETHERNET_FCS */
                 4,  /* IMB_AUTH_CRC32_SCTP */
@@ -1192,37 +1173,6 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job, const IMB_CIPHER_MODE cipher_
                         return -1;
                 }
                 break;
-        case IMB_CIPHER_SNOW_V_AEAD:
-        case IMB_CIPHER_SNOW_V:
-                if (job->msg_len_to_cipher_in_bytes != 0 && job->src == NULL) {
-                        imb_set_errno(state, IMB_ERR_JOB_NULL_SRC);
-                        return 1;
-                }
-                if (job->msg_len_to_cipher_in_bytes != 0 && job->dst == NULL) {
-                        imb_set_errno(state, IMB_ERR_JOB_NULL_DST);
-                        return 1;
-                }
-                if (job->iv == NULL) {
-                        imb_set_errno(state, IMB_ERR_JOB_NULL_IV);
-                        return 1;
-                }
-                if (job->enc_keys == NULL) {
-                        imb_set_errno(state, IMB_ERR_JOB_NULL_KEY);
-                        return 1;
-                }
-                if (key_len_in_bytes != UINT64_C(32)) {
-                        imb_set_errno(state, IMB_ERR_JOB_KEY_LEN);
-                        return 1;
-                }
-                if (job->iv_len_in_bytes != UINT64_C(16)) {
-                        imb_set_errno(state, IMB_ERR_JOB_IV_LEN);
-                        return 1;
-                }
-                if (cipher_mode == IMB_CIPHER_SNOW_V_AEAD && hash_alg != IMB_AUTH_SNOW_V_AEAD) {
-                        imb_set_errno(state, IMB_ERR_HASH_ALGO);
-                        return 1;
-                }
-                break;
         case IMB_CIPHER_SM4_CNTR:
                 if (job->src == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_SRC);
@@ -1960,24 +1910,6 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job, const IMB_CIPHER_MODE cipher_
                 }
                 if (job->u.CHACHA20_POLY1305.ctx == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_SGL_CTX);
-                        return 1;
-                }
-                break;
-        case IMB_AUTH_SNOW_V_AEAD:
-                if ((job->u.SNOW_V_AEAD.aad_len_in_bytes > 0) && (job->u.SNOW_V_AEAD.aad == NULL)) {
-                        imb_set_errno(state, IMB_ERR_JOB_NULL_AAD);
-                        return 1;
-                }
-                if (job->auth_tag_output == NULL) {
-                        imb_set_errno(state, IMB_ERR_JOB_NULL_AUTH);
-                        return 1;
-                }
-                if (job->auth_tag_output_len_in_bytes != auth_tag_len_ipsec[hash_alg]) {
-                        imb_set_errno(state, IMB_ERR_JOB_AUTH_TAG_LEN);
-                        return 1;
-                }
-                if (cipher_mode != IMB_CIPHER_SNOW_V_AEAD) {
-                        imb_set_errno(state, IMB_ERR_CIPH_MODE);
                         return 1;
                 }
                 break;

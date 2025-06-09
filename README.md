@@ -88,8 +88,6 @@ Table 1. List of supported cipher algorithms and their implementations.
 | SNOW3G-UEA2    | Y   x4 |  <---  |  <---  |  <---  |  <---  |  <---  |  <---  | Y  x16 | Y    x16 |  <---  |
 | Chacha20       | Y      |  <---  |  <---  | Y      |  <---  |  <---  |  <---  | Y      |  <---    |  <---  |
 | Chacha20 AEAD  | Y      |  <---  |  <---  | Y      |  <---  |  <---  |  <---  | Y      |  <---    |  <---  |
-| SNOW-V         | Y      |  <---  |  <---  | Y      |  <---  |  <---  |  <---  |  <---  |  <---    |  <---  |
-| SNOW-V AEAD    | Y      |  <---  |  <---  | Y      |  <---  |  <---  |  <---  |  <---  |  <---    |  <---  |
 | PON-CRC-BIP    | Y  by8 |  <---  |  <---  | Y by8  |  <---  |  <---  |  <---  |  <---  | Y   by16 |  <---  |
 | SM4-ECB        | Y      |  <---  |  <---  |  <---  |  <---  |  <---  | Y(5)   | [S1]   | [S1]     | [A2-4] |
 | SM4-CBC        | Y      |  <---  |  <---  |  <---  |  <---  |  <---  | Y(6)   | [S1]   | [S1]     | [A2-4] |
@@ -106,7 +104,6 @@ Notes:
 (5)   - Implementation using SM4NI extensions, by16.  
 (6)   - Implementation using SM4NI extensions, single block encryption and by16 decryption.  
 (7)   - Implementation using SM4NI extensions, by8.  
-(8)   - Decryption is by16 and encryption is x12.  
 
 Legend:  
 ` byY`- single buffer Y blocks at a time  
@@ -150,7 +147,6 @@ Table 2. List of supported integrity algorithms and their implementations.
 | HEC               | Y      |  <---  |  <---  | Y      |  <---  |  <---  |  <---  |  <---  |  <---   |  <---  |
 | POLY1305          | Y      |  <---  |  <---  |  <---  |  <---  | Y(4)   |  <---  | Y      | Y(4)    |  <---  |
 | POLY1305 AEAD     | Y      |  <---  |  <---  |  <---  |  <---  | Y(4)   |  <---  | Y      | Y(4)    |  <---  |
-| SNOW-V AEAD       | Y  by8 |  <---  |  <---  | Y  by8 |  <---  |  <---  |  <---  |  <---  | Y  by32 |  <---  |
 | GHASH             | Y  by8 |  <---  |  <---  | Y  by8 | Y by16 | [A2-1] | [A2-2] | [A2-1] | Y  by32 |  <---  |
 | CRC(7)            | Y  by8 |  <---  |  <---  | Y  by8 |  <---  |  <---  |  <---  |  <---  | Y  by16 |  <---  |
 | PON-CRC-BIP(9)    | Y      |  <---  |  <---  | Y      |  <---  |  <---  |  <---  |  <---  | Y  by16 |  <---  |

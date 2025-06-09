@@ -65,7 +65,6 @@ set(CIPHER_ALGOS
     snow3g-uea2
     kasumi-f8
     chacha20-256
-    snow-v
     sm4-ecb-128
     sm4-cbc-128
     sm4-ctr-128
@@ -173,7 +172,6 @@ set(AEAD_ALGOS
     pon-128-bip-crc32
     pon-128-no-ctr
     aead-chacha20-256-poly1305
-    snow-v-aead
     sm4-gcm)
 
 # aead short tests

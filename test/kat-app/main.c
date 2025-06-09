@@ -86,8 +86,6 @@ chacha20_poly1305_test(struct IMB_MGR *mb_mgr);
 extern int
 null_test(struct IMB_MGR *mb_mgr);
 extern int
-snow_v_test(struct IMB_MGR *mb_mgr);
-extern int
 direct_api_param_test(struct IMB_MGR *mb_mgr);
 extern int
 quic_ecb_test(struct IMB_MGR *mb_mgr);
@@ -168,7 +166,6 @@ struct imb_test tests[] = {
         { .str = "CRC", .fn = crc_test, .enabled = 1 },
         { .str = "CHACHA20_POLY1305", .fn = chacha20_poly1305_test, .enabled = 1 },
         { .str = "NULL", .fn = null_test, .enabled = 1 },
-        { .str = "SNOW_V", .fn = snow_v_test, .enabled = 1 },
         { .str = "DIRECT_API_PARAM", .fn = direct_api_param_test, .enabled = 1 },
         { .str = "QUIC-ECB", .fn = quic_ecb_test, .enabled = 1 },
         { .str = "QUIC_CHACHA20", .fn = quic_chacha20_test, .enabled = 1 },

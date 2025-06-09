@@ -12,12 +12,14 @@ Library
 - Added AES-CCM AVX2 type 2 implementation.
 - Removed AES-CTR bit-length variant.
 - Removed AES-CBCS 1:9 cipher.
+- Removed SNOW-V cipher together with AEAD SNOW-V.
 
 Test Applications
 - Added `--offset` parameter to `imb-xvalid` application.
 - Added AVX10 architecture support.
 - Removed AES-CTR bit-length variant.
 - Removed AES-CBCS 1:9 cipher.
+- Removed SNOW-V cipher together with AEAD SNOW-V.
 
 Performance Applications
 - Added `imb-perf-cmp.py` tool that compares post processed performance metrics.
@@ -28,6 +30,7 @@ Performance Applications
 - Modified `--cores` option to accept a list of cores instead of a coremask.
 - Removed AES-CTR bit-length variant.
 - Removed AES-CBCS 1:9 cipher.
+- Removed SNOW-V cipher together with AEAD SNOW-V.
 
 Fixes
 - Fixed SM4-GCM plaintext/ciphertext address calculation (issue #159).

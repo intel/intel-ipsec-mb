@@ -448,7 +448,6 @@ asm_sse_lib_objs := \
 	crc32_wimax_sse.o \
 	chacha20_sse.o \
 	memcpy_sse.o \
-	snow_v_sse.o \
 	snow3g_uia2_by4_sse.o \
 	sm4_sse.o \
 	sm3_base_init_sse.o \
@@ -468,7 +467,6 @@ asm_avx_lib_objs :=
 asm_avx2_lib_objs := \
 	pon_by8_avx.o \
         memcpy_avx.o \
-	snow_v_avx.o \
 	aes128_cbc_enc_x8_avx.o \
 	aes192_cbc_enc_x8_avx.o \
 	aes256_cbc_enc_x8_avx.o \

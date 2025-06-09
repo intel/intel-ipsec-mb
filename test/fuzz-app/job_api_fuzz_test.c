@@ -149,14 +149,6 @@ fill_additional_cipher_data(struct IMB_JOB *job, struct IMB_SGL_IOV *sgl_segs,
                         job->u.CHACHA20_POLY1305.aad_len_in_bytes = buffsize;
                 fill_job_sgl_segments(job, sgl_segs, num_sgl_segs, buff, buffsize);
                 break;
-        case IMB_CIPHER_SNOW_V_AEAD:
-                if (job->u.SNOW_V_AEAD.aad != NULL)
-                        job->u.SNOW_V_AEAD.aad = buff;
-                if (job->u.SNOW_V_AEAD.reserved != NULL)
-                        job->u.SNOW_V_AEAD.reserved = buff;
-                if (job->u.SNOW_V_AEAD.aad_len_in_bytes > buffsize)
-                        job->u.SNOW_V_AEAD.aad_len_in_bytes = buffsize;
-                break;
         default:
                 break;
         }
@@ -265,12 +257,6 @@ fill_additional_hash_data(struct IMB_JOB *job, void *buff, uint64_t buffsize)
                 if (job->u.CHACHA20_POLY1305.aad_len_in_bytes > buffsize)
                         job->u.CHACHA20_POLY1305.aad_len_in_bytes = buffsize;
                 break;
-        case IMB_AUTH_SNOW_V_AEAD:
-                if (job->u.SNOW_V_AEAD.aad != NULL)
-                        job->u.SNOW_V_AEAD.aad = buff;
-                if (job->u.SNOW_V_AEAD.aad_len_in_bytes > buffsize)
-                        job->u.SNOW_V_AEAD.aad_len_in_bytes = buffsize;
-                break;
         case IMB_AUTH_GCM_SGL:
                 if (job->u.GCM.aad != NULL)
                         job->u.GCM.aad = buff;
@@ -359,8 +345,6 @@ hash_selection(void)
                         return IMB_AUTH_CHACHA20_POLY1305_SGL;
                 else if (strcmp(a, "IMB_AUTH_ZUC256_EIA3_BITLEN") == 0)
                         return IMB_AUTH_ZUC256_EIA3_BITLEN;
-                else if (strcmp(a, "IMB_AUTH_SNOW_V_AEAD") == 0)
-                        return IMB_AUTH_SNOW_V_AEAD;
                 else if (strcmp(a, "IMB_AUTH_GCM_SGL") == 0)
                         return IMB_AUTH_GCM_SGL;
                 else if (strcmp(a, "IMB_AUTH_CRC32_ETHERNET_FCS") == 0)
@@ -439,10 +423,6 @@ cipher_selection(void)
                         return IMB_CIPHER_CHACHA20_POLY1305;
                 else if (strcmp(a, "IMB_CIPHER_CHACHA20_POLY1305_SGL") == 0)
                         return IMB_CIPHER_CHACHA20_POLY1305_SGL;
-                else if (strcmp(a, "IMB_CIPHER_SNOW_V") == 0)
-                        return IMB_CIPHER_SNOW_V;
-                else if (strcmp(a, "IMB_CIPHER_SNOW_V_AEAD") == 0)
-                        return IMB_CIPHER_SNOW_V_AEAD;
                 else if (strcmp(a, "IMB_CIPHER_GCM_SGL") == 0)
                         return IMB_CIPHER_GCM_SGL;
                 else

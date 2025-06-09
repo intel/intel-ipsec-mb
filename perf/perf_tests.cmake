@@ -62,7 +62,6 @@ set(CIPHER_ALGOS
   snow3g-uea2
   kasumi-uea1
   chacha20
-  snow-v
   sm4-ecb
   sm4-cbc
   sm4-ctr
@@ -159,7 +158,6 @@ set(AEAD_ALGOS
   chacha20-poly1305
   aes-docsis-128-crc32
   aes-docsis-256-crc32
-  snow-v-aead
   sm4-gcm)
 
 # aead smoke tests (burst API)

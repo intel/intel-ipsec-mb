@@ -48,7 +48,6 @@
 #include "include/error.h"
 #include "include/snow3g_submit.h"
 #include "include/job_api_gcm.h"
-#include "include/job_api_snowv.h"
 #include "include/job_api_kasumi.h"
 #include "include/mb_mgr_job_check.h" /* is_job_invalid() */
 
@@ -475,10 +474,6 @@ SUBMIT_JOB_CIPHER_ENC(IMB_MGR *state, IMB_JOB *job, const IMB_CIPHER_MODE cipher
 #endif
         } else if (IMB_CIPHER_KASUMI_UEA1_BITLEN == cipher_mode) {
                 return submit_kasumi_uea1_job(state, job);
-        } else if (IMB_CIPHER_SNOW_V == cipher_mode) {
-                return SUBMIT_JOB_SNOW_V(job);
-        } else if (IMB_CIPHER_SNOW_V_AEAD == cipher_mode) {
-                return submit_snow_v_aead_job(state, job);
         } else if (IMB_CIPHER_SM4_ECB == cipher_mode) {
                 return SUBMIT_JOB_SM4_ECB_ENC(job);
         } else if (IMB_CIPHER_SM4_CBC == cipher_mode) {
@@ -702,10 +697,6 @@ SUBMIT_JOB_CIPHER_DEC(IMB_MGR *state, IMB_JOB *job, const IMB_CIPHER_MODE cipher
 #endif
         } else if (IMB_CIPHER_KASUMI_UEA1_BITLEN == cipher_mode) {
                 return submit_kasumi_uea1_job(state, job);
-        } else if (IMB_CIPHER_SNOW_V == cipher_mode) {
-                return SUBMIT_JOB_SNOW_V(job);
-        } else if (IMB_CIPHER_SNOW_V_AEAD == cipher_mode) {
-                return submit_snow_v_aead_job(state, job);
         } else if (IMB_CIPHER_SM4_ECB == cipher_mode) {
                 return SUBMIT_JOB_SM4_ECB_DEC(job);
         } else if (IMB_CIPHER_SM4_CBC == cipher_mode) {
@@ -959,20 +950,6 @@ submit_cipher_dec_chacha20_poly1305_sgl(IMB_MGR *state, IMB_JOB *job)
                                      IMB_KEY_256_BYTES);
 }
 
-/* SNOW-V */
-static IMB_JOB *
-submit_cipher_dec_snow_v(IMB_MGR *state, IMB_JOB *job)
-{
-        return SUBMIT_JOB_CIPHER_DEC(state, job, IMB_CIPHER_SNOW_V, IMB_KEY_256_BYTES);
-}
-
-/* SNOW-V AEAD */
-static IMB_JOB *
-submit_cipher_dec_snow_v_aead(IMB_MGR *state, IMB_JOB *job)
-{
-        return SUBMIT_JOB_CIPHER_DEC(state, job, IMB_CIPHER_SNOW_V_AEAD, IMB_KEY_256_BYTES);
-}
-
 /* AES-GCM SGL */
 static IMB_JOB *
 submit_cipher_dec_aes_gcm_128_sgl(IMB_MGR *state, IMB_JOB *job)
@@ -1224,20 +1201,6 @@ submit_cipher_enc_chacha20_poly1305_sgl(IMB_MGR *state, IMB_JOB *job)
                                      IMB_KEY_256_BYTES);
 }
 
-/* SNOW-V */
-static IMB_JOB *
-submit_cipher_enc_snow_v(IMB_MGR *state, IMB_JOB *job)
-{
-        return SUBMIT_JOB_CIPHER_ENC(state, job, IMB_CIPHER_SNOW_V, IMB_KEY_256_BYTES);
-}
-
-/* SNOW-V AEAD */
-static IMB_JOB *
-submit_cipher_enc_snow_v_aead(IMB_MGR *state, IMB_JOB *job)
-{
-        return SUBMIT_JOB_CIPHER_ENC(state, job, IMB_CIPHER_SNOW_V_AEAD, IMB_KEY_256_BYTES);
-}
-
 /* AES-GCM SGL */
 static IMB_JOB *
 submit_cipher_enc_aes_gcm_128_sgl(IMB_MGR *state, IMB_JOB *job)
@@ -1416,47 +1379,47 @@ static const submit_flush_fn_t tab_submit_cipher[] = {
         submit_cipher_dec_chacha20_poly1305_sgl,
         submit_cipher_dec_chacha20_poly1305_sgl,
         submit_cipher_dec_chacha20_poly1305_sgl,
-        /* [19] SNOW-V */
-        submit_cipher_dec_snow_v,
-        submit_cipher_dec_snow_v,
-        submit_cipher_dec_snow_v,
-        submit_cipher_dec_snow_v,
-        /* [20] SNOW-V AEAD */
-        submit_cipher_dec_snow_v_aead,
-        submit_cipher_dec_snow_v_aead,
-        submit_cipher_dec_snow_v_aead,
-        submit_cipher_dec_snow_v_aead,
-        /* [21] AES-GCM SGL */
+        /* [19] AES-GCM SGL */
         submit_cipher_dec_null,
         submit_cipher_dec_aes_gcm_128_sgl,
         submit_cipher_dec_aes_gcm_192_sgl,
         submit_cipher_dec_aes_gcm_256_sgl,
-        /* [22] SM4-ECB */
+        /* [20] SM4-ECB */
         submit_cipher_dec_null,
         submit_cipher_dec_sm4_ecb,
         submit_cipher_dec_null,
         submit_cipher_dec_null,
-        /* [23] SM4-CBC */
+        /* [21] SM4-CBC */
         submit_cipher_dec_null,
         submit_cipher_dec_sm4_cbc,
         submit_cipher_dec_null,
         submit_cipher_dec_null,
-        /* [24] AES-CFB */
+        /* [22] AES-CFB */
         submit_cipher_dec_null,
         submit_cipher_dec_cfb_128,
         submit_cipher_dec_cfb_192,
         submit_cipher_dec_cfb_256,
-        /* [25] SM4-CTR */
+        /* [23] SM4-CTR */
         submit_cipher_dec_null,
         submit_cipher_dec_sm4_ctr,
         submit_cipher_dec_null,
         submit_cipher_dec_null,
-        /* [26] SM4-GCM */
+        /* [24] SM4-GCM */
         submit_cipher_dec_null,
         submit_cipher_dec_sm4_gcm,
         submit_cipher_dec_null,
         submit_cipher_dec_null,
         /* add new cipher decrypt here */
+        /* [25] NULL */
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        /* [26] NULL */
+        NULL,
+        NULL,
+        NULL,
+        NULL,
         /* [27] NULL */
         NULL,
         NULL,
@@ -1582,47 +1545,47 @@ static const submit_flush_fn_t tab_submit_cipher[] = {
         submit_cipher_enc_chacha20_poly1305_sgl,
         submit_cipher_enc_chacha20_poly1305_sgl,
         submit_cipher_enc_chacha20_poly1305_sgl,
-        /* [19] SNOW-V */
-        submit_cipher_enc_snow_v,
-        submit_cipher_enc_snow_v,
-        submit_cipher_enc_snow_v,
-        submit_cipher_enc_snow_v,
-        /* [20] SNOW-V AEAD */
-        submit_cipher_enc_snow_v_aead,
-        submit_cipher_enc_snow_v_aead,
-        submit_cipher_enc_snow_v_aead,
-        submit_cipher_enc_snow_v_aead,
-        /* [21] AES-GCM SGL */
+        /* [19] AES-GCM SGL */
         submit_cipher_enc_null,
         submit_cipher_enc_aes_gcm_128_sgl,
         submit_cipher_enc_aes_gcm_192_sgl,
         submit_cipher_enc_aes_gcm_256_sgl,
-        /* [22] SM4-ECB */
+        /* [20] SM4-ECB */
         submit_cipher_enc_null,
         submit_cipher_enc_sm4_ecb,
         submit_cipher_enc_null,
         submit_cipher_enc_null,
-        /* [23] SM4-CBC */
+        /* [21] SM4-CBC */
         submit_cipher_enc_null,
         submit_cipher_enc_sm4_cbc,
         submit_cipher_enc_null,
         submit_cipher_enc_null,
-        /* [24] AES-CFB */
+        /* [22] AES-CFB */
         submit_cipher_enc_null,
         submit_cipher_enc_cfb_128,
         submit_cipher_enc_cfb_192,
         submit_cipher_enc_cfb_256,
-        /* [25] SM4-CTR */
+        /* [23] SM4-CTR */
         submit_cipher_enc_null,
         submit_cipher_enc_sm4_ctr,
         submit_cipher_enc_null,
         submit_cipher_enc_null,
-        /* [26] SM4-GCM */
+        /* [24] SM4-GCM */
         submit_cipher_dec_null,
         submit_cipher_enc_sm4_gcm,
         submit_cipher_dec_null,
         submit_cipher_dec_null,
         /* add new cipher encrypt here */
+        /* [25] NULL */
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        /* [26] NULL */
+        NULL,
+        NULL,
+        NULL,
+        NULL,
         /* [27] NULL */
         NULL,
         NULL,
@@ -1850,20 +1813,6 @@ flush_cipher_dec_chacha20_poly1305_sgl(IMB_MGR *state, IMB_JOB *job)
 {
         return FLUSH_JOB_CIPHER_DEC(state, job, IMB_CIPHER_CHACHA20_POLY1305_SGL,
                                     IMB_KEY_256_BYTES);
-}
-
-/* SNOW-V */
-static IMB_JOB *
-flush_cipher_dec_snow_v(IMB_MGR *state, IMB_JOB *job)
-{
-        return FLUSH_JOB_CIPHER_DEC(state, job, IMB_CIPHER_SNOW_V, IMB_KEY_256_BYTES);
-}
-
-/* SNOW-V AEAD */
-static IMB_JOB *
-flush_cipher_dec_snow_v_aead(IMB_MGR *state, IMB_JOB *job)
-{
-        return FLUSH_JOB_CIPHER_DEC(state, job, IMB_CIPHER_SNOW_V_AEAD, IMB_KEY_256_BYTES);
 }
 
 /* AES-GCM SGL */
@@ -2126,20 +2075,6 @@ flush_cipher_enc_chacha20_poly1305_sgl(IMB_MGR *state, IMB_JOB *job)
                                     IMB_KEY_256_BYTES);
 }
 
-/* SNOW-V */
-static IMB_JOB *
-flush_cipher_enc_snow_v(IMB_MGR *state, IMB_JOB *job)
-{
-        return FLUSH_JOB_CIPHER_ENC(state, job, IMB_CIPHER_SNOW_V, IMB_KEY_256_BYTES);
-}
-
-/* SNOW-V AEAD */
-static IMB_JOB *
-flush_cipher_enc_snow_v_aead(IMB_MGR *state, IMB_JOB *job)
-{
-        return FLUSH_JOB_CIPHER_ENC(state, job, IMB_CIPHER_SNOW_V_AEAD, IMB_KEY_256_BYTES);
-}
-
 /* AES-GCM SGL */
 static IMB_JOB *
 flush_cipher_enc_aes_gcm_128_sgl(IMB_MGR *state, IMB_JOB *job)
@@ -2310,47 +2245,47 @@ static const submit_flush_fn_t tab_flush_cipher[] = {
         flush_cipher_dec_chacha20_poly1305_sgl,
         flush_cipher_dec_chacha20_poly1305_sgl,
         flush_cipher_dec_chacha20_poly1305_sgl,
-        /* [19] SNOW-V */
-        flush_cipher_dec_snow_v,
-        flush_cipher_dec_snow_v,
-        flush_cipher_dec_snow_v,
-        flush_cipher_dec_snow_v,
-        /* [20] SNOW-V AEAD */
-        flush_cipher_dec_snow_v_aead,
-        flush_cipher_dec_snow_v_aead,
-        flush_cipher_dec_snow_v_aead,
-        flush_cipher_dec_snow_v_aead,
-        /* [21] AES-GCM SGL */
+        /* [19] AES-GCM SGL */
         flush_cipher_dec_null,
         flush_cipher_dec_aes_gcm_128_sgl,
         flush_cipher_dec_aes_gcm_192_sgl,
         flush_cipher_dec_aes_gcm_256_sgl,
-        /* [22] SM4-ECB */
+        /* [20] SM4-ECB */
         flush_cipher_dec_null,
         flush_cipher_dec_sm4_ecb,
         flush_cipher_dec_null,
         flush_cipher_dec_null,
-        /* [23] SM4-CBC */
+        /* [21] SM4-CBC */
         flush_cipher_dec_null,
         flush_cipher_dec_sm4_cbc,
         flush_cipher_dec_null,
         flush_cipher_dec_null,
-        /* [24] AES-CFB */
+        /* [22] AES-CFB */
         flush_cipher_dec_null,
         flush_cipher_dec_cfb_128,
         flush_cipher_dec_cfb_192,
         flush_cipher_dec_cfb_256,
-        /* [25] SM4-CTR */
+        /* [23] SM4-CTR */
         flush_cipher_dec_null,
         flush_cipher_dec_sm4_ctr,
         flush_cipher_dec_null,
         flush_cipher_dec_null,
-        /* [26] SM4-GCM */
+        /* [24] SM4-GCM */
         flush_cipher_dec_null,
         flush_cipher_dec_sm4_gcm,
         flush_cipher_dec_null,
         flush_cipher_dec_null,
         /* add new cipher decrypt here */
+        /* [25] NULL */
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        /* [26] NULL */
+        NULL,
+        NULL,
+        NULL,
+        NULL,
         /* [27] NULL */
         NULL,
         NULL,
@@ -2476,47 +2411,47 @@ static const submit_flush_fn_t tab_flush_cipher[] = {
         flush_cipher_enc_chacha20_poly1305_sgl,
         flush_cipher_enc_chacha20_poly1305_sgl,
         flush_cipher_enc_chacha20_poly1305_sgl,
-        /* [19] SNOW-V */
-        flush_cipher_enc_snow_v,
-        flush_cipher_enc_snow_v,
-        flush_cipher_enc_snow_v,
-        flush_cipher_enc_snow_v,
-        /* [20] SNOW-V AEAD */
-        flush_cipher_enc_snow_v_aead,
-        flush_cipher_enc_snow_v_aead,
-        flush_cipher_enc_snow_v_aead,
-        flush_cipher_enc_snow_v_aead,
-        /* [21] AES-GCM SGL */
+        /* [19] AES-GCM SGL */
         flush_cipher_enc_null,
         flush_cipher_enc_aes_gcm_128_sgl,
         flush_cipher_enc_aes_gcm_192_sgl,
         flush_cipher_enc_aes_gcm_256_sgl,
-        /* [22] SM4-ECB */
+        /* [20] SM4-ECB */
         flush_cipher_enc_null,
         flush_cipher_enc_sm4_ecb,
         flush_cipher_enc_null,
         flush_cipher_enc_null,
-        /* [23] SM4-CBC */
+        /* [21] SM4-CBC */
         flush_cipher_enc_null,
         flush_cipher_enc_sm4_cbc,
         flush_cipher_enc_null,
         flush_cipher_enc_null,
-        /* [24] AES-CFB */
+        /* [22] AES-CFB */
         flush_cipher_enc_null,
         flush_cipher_enc_cfb_128,
         flush_cipher_enc_cfb_192,
         flush_cipher_enc_cfb_256,
-        /* [25] SM4-CTR */
+        /* [23] SM4-CTR */
         flush_cipher_enc_null,
         flush_cipher_enc_sm4_ctr,
         flush_cipher_enc_null,
         flush_cipher_enc_null,
-        /* [26] SM4-GCM */
+        /* [24] SM4-GCM */
         flush_cipher_enc_null,
         flush_cipher_enc_sm4_gcm,
         flush_cipher_enc_null,
         flush_cipher_enc_null,
         /* add new cipher encrypt here */
+        /* [25] NULL */
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        /* [26] NULL */
+        NULL,
+        NULL,
+        NULL,
+        NULL,
         /* [27] NULL */
         NULL,
         NULL,
@@ -2720,8 +2655,7 @@ SUBMIT_JOB_HASH_EX(IMB_MGR *state, IMB_JOB *job, const IMB_HASH_ALG hash_alg)
                 return SUBMIT_JOB_SM3(job);
         default:
                 /**
-                 * assume IMB_AUTH_GCM, IMB_AUTH_SM4_GCM, IMB_AUTH_PON_CRC_BIP,
-                 * IMB_AUTH_SNOW_V_AEAD or IMB_AUTH_NULL
+                 * assume IMB_AUTH_GCM, IMB_AUTH_SM4_GCM, IMB_AUTH_PON_CRC_BIP or IMB_AUTH_NULL
                  */
                 job->status |= IMB_STATUS_COMPLETED_AUTH;
                 return job;
@@ -3007,12 +2941,6 @@ submit_hash_zuc256_eia3_bit(IMB_MGR *state, IMB_JOB *job)
 }
 
 static IMB_JOB *
-submit_hash_snow_v_aead(IMB_MGR *state, IMB_JOB *job)
-{
-        return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_SNOW_V_AEAD);
-}
-
-static IMB_JOB *
 submit_hash_gcm_sgl(IMB_MGR *state, IMB_JOB *job)
 {
         return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_GCM_SGL);
@@ -3179,41 +3107,39 @@ static const submit_flush_fn_t tab_submit_hash[] = {
         submit_hash_chacha20_poly1305_sgl,
         /* [31] ZUC256 EIA3 */
         submit_hash_zuc256_eia3_bit,
-        /* [32] SNOW-V AEAD */
-        submit_hash_snow_v_aead,
-        /* [33] GCM SGL */
+        /* [32] GCM SGL */
         submit_hash_gcm_sgl,
-        /* [34] CRC32 ETHERNET FCS */
+        /* [33] CRC32 ETHERNET FCS */
         submit_hash_crc32_ethernet_fcs,
-        /* [35] CRC32 SCTP */
+        /* [34] CRC32 SCTP */
         submit_hash_crc32_sctp,
-        /* [36] CRC32 WIMAX OFDMA DATA */
+        /* [35] CRC32 WIMAX OFDMA DATA */
         submit_hash_crc32_wimax_ofdma,
-        /* [37] CRC24 LTE A */
+        /* [36] CRC24 LTE A */
         submit_hash_crc24_lte_a,
-        /* [38] CRC24 LTE B */
+        /* [37] CRC24 LTE B */
         submit_hash_crc24_lte_b,
-        /* [39] CRC16 X25 */
+        /* [38] CRC16 X25 */
         submit_hash_crc16_x25,
-        /* [40] CRC16 FP DATA */
+        /* [39] CRC16 FP DATA */
         submit_hash_crc16_fp_data,
-        /* [41] CRC11 FP HEADER */
+        /* [40] CRC11 FP HEADER */
         submit_hash_crc11_fp_header,
-        /* [42] CRC10 IUUP DATA */
+        /* [41] CRC10 IUUP DATA */
         submit_hash_crc10_iuup_data,
-        /* [43] CRC8 WIMAX OFDMA HCS */
+        /* [42] CRC8 WIMAX OFDMA HCS */
         submit_hash_crc8_wimax_odma,
-        /* [44] CRC7 FP HEADER */
+        /* [43] CRC7 FP HEADER */
         submit_hash_crc7_fp_header,
-        /* [45] CRC6 IUUP HEADER */
+        /* [44] CRC6 IUUP HEADER */
         submit_hash_crc6_iuup_header,
-        /* [46] GHASH */
+        /* [45] GHASH */
         submit_hash_ghash,
-        /* [47] SM3 */
+        /* [46] SM3 */
         submit_hash_sm3,
-        /* [48] HMAC-SM3 */
+        /* [47] HMAC-SM3 */
         submit_hash_hmac_sm3,
-        /* [49] SM4-GCM */
+        /* [48] SM4-GCM */
         submit_hash_sm4_gcm,
         /* add new hash algorithms here */
 };
@@ -3409,12 +3335,6 @@ flush_hash_zuc256_eia3_bit(IMB_MGR *state, IMB_JOB *job)
 }
 
 static IMB_JOB *
-flush_hash_snow_v_aead(IMB_MGR *state, IMB_JOB *job)
-{
-        return FLUSH_JOB_HASH_EX(state, job, IMB_AUTH_SNOW_V_AEAD);
-}
-
-static IMB_JOB *
 flush_hash_gcm_sgl(IMB_MGR *state, IMB_JOB *job)
 {
         return FLUSH_JOB_HASH_EX(state, job, IMB_AUTH_GCM_SGL);
@@ -3581,41 +3501,39 @@ static const submit_flush_fn_t tab_flush_hash[] = {
         flush_hash_chacha20_poly1305_sgl,
         /* [31] ZUC256 EIA3 */
         flush_hash_zuc256_eia3_bit,
-        /* [32] SNOW-V AEAD */
-        flush_hash_snow_v_aead,
-        /* [33] GCM SGL */
+        /* [32] GCM SGL */
         flush_hash_gcm_sgl,
-        /* [34] CRC32 ETHERNET FCS */
+        /* [33] CRC32 ETHERNET FCS */
         flush_hash_crc32_ethernet_fcs,
-        /* [35] CRC32 SCTP */
+        /* [34] CRC32 SCTP */
         flush_hash_crc32_sctp,
-        /* [36] CRC32 WIMAX OFDMA DATA */
+        /* [35] CRC32 WIMAX OFDMA DATA */
         flush_hash_crc32_wimax_ofdma,
-        /* [37] CRC24 LTE A */
+        /* [36] CRC24 LTE A */
         flush_hash_crc24_lte_a,
-        /* [38] CRC24 LTE B */
+        /* [37] CRC24 LTE B */
         flush_hash_crc24_lte_b,
-        /* [39] CRC16 X25 */
+        /* [38] CRC16 X25 */
         flush_hash_crc16_x25,
-        /* [40] CRC16 FP DATA */
+        /* [39] CRC16 FP DATA */
         flush_hash_crc16_fp_data,
-        /* [41] CRC11 FP HEADER */
+        /* [40] CRC11 FP HEADER */
         flush_hash_crc11_fp_header,
-        /* [42] CRC10 IUUP DATA */
+        /* [41] CRC10 IUUP DATA */
         flush_hash_crc10_iuup_data,
-        /* [43] CRC8 WIMAX OFDMA HCS */
+        /* [42] CRC8 WIMAX OFDMA HCS */
         flush_hash_crc8_wimax_odma,
-        /* [44] CRC7 FP HEADER */
+        /* [43] CRC7 FP HEADER */
         flush_hash_crc7_fp_header,
-        /* [45] CRC6 IUUP HEADER */
+        /* [44] CRC6 IUUP HEADER */
         flush_hash_crc6_iuup_header,
-        /* [46] GHASH */
+        /* [45] GHASH */
         flush_hash_ghash,
-        /* [47] SM3 */
+        /* [46] SM3 */
         flush_hash_sm3,
-        /* [48] HMAC-SM3 */
+        /* [47] HMAC-SM3 */
         flush_hash_hmac_sm3,
-        /* [49] SM4-GCM */
+        /* [48] SM4-GCM */
         flush_hash_sm4_gcm,
         /* add new hash algorithms here */
 };

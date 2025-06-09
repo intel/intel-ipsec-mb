@@ -225,7 +225,6 @@ fill_in_job(struct IMB_JOB *job, const IMB_CIPHER_MODE cipher_mode,
                 16, /* IMB_AUTH_CHACHA20_POLY1305 */
                 16, /* IMB_AUTH_CHACHA20_POLY1305_SGL */
                 4,  /* IMB_AUTH_ZUC256_EIA3_BITLEN */
-                16, /* IMB_AUTH_SNOW_V_AEAD */
                 16, /* IMB_AUTH_AES_GCM_SGL */
                 4,  /* IMB_AUTH_CRC32_ETHERNET_FCS */
                 4,  /* IMB_AUTH_CRC32_SCTP */
@@ -369,16 +368,6 @@ fill_in_job(struct IMB_JOB *job, const IMB_CIPHER_MODE cipher_mode,
                 job->key_len_in_bytes = UINT64_C(32);
                 job->iv_len_in_bytes = 12;
                 job->sgl_state = IMB_SGL_UPDATE;
-                break;
-        case IMB_CIPHER_SNOW_V:
-                job->hash_alg = IMB_AUTH_NULL;
-                job->key_len_in_bytes = UINT64_C(32);
-                job->iv_len_in_bytes = 16;
-                break;
-        case IMB_CIPHER_SNOW_V_AEAD:
-                job->hash_alg = IMB_AUTH_SNOW_V_AEAD;
-                job->key_len_in_bytes = UINT64_C(32);
-                job->iv_len_in_bytes = 16;
                 break;
         case IMB_CIPHER_GCM_SGL:
                 job->hash_alg = IMB_AUTH_GCM_SGL;
@@ -538,12 +527,6 @@ fill_in_job(struct IMB_JOB *job, const IMB_CIPHER_MODE cipher_mode,
                 job->cipher_mode = IMB_CIPHER_GCM_SGL;
                 job->key_len_in_bytes = UINT64_C(16);
                 job->iv_len_in_bytes = UINT64_C(12);
-                break;
-        case IMB_AUTH_SNOW_V_AEAD:
-                job->cipher_mode = IMB_CIPHER_SNOW_V_AEAD;
-                job->key_len_in_bytes = UINT64_C(32);
-                job->iv_len_in_bytes = 16;
-                job->auth_tag_output_len_in_bytes = 16;
                 break;
         case IMB_AUTH_SM3:
                 job->auth_tag_output_len_in_bytes = IMB_SM3_DIGEST_SIZE;
@@ -1151,15 +1134,14 @@ check_aead(IMB_HASH_ALG hash, IMB_CIPHER_MODE cipher)
 {
         if (hash == IMB_AUTH_CHACHA20_POLY1305 || hash == IMB_AUTH_CHACHA20_POLY1305_SGL ||
             hash == IMB_AUTH_DOCSIS_CRC32 || hash == IMB_AUTH_GCM_SGL ||
-            hash == IMB_AUTH_AES_GMAC || hash == IMB_AUTH_AES_CCM || hash == IMB_AUTH_SNOW_V_AEAD ||
-            hash == IMB_AUTH_PON_CRC_BIP || hash == IMB_AUTH_SM4_GCM)
+            hash == IMB_AUTH_AES_GMAC || hash == IMB_AUTH_AES_CCM || hash == IMB_AUTH_PON_CRC_BIP ||
+            hash == IMB_AUTH_SM4_GCM)
                 return 1;
 
         if (cipher == IMB_CIPHER_CHACHA20_POLY1305 || cipher == IMB_CIPHER_CHACHA20_POLY1305_SGL ||
             cipher == IMB_CIPHER_DOCSIS_SEC_BPI || cipher == IMB_CIPHER_GCM_SGL ||
             cipher == IMB_CIPHER_GCM || cipher == IMB_CIPHER_CCM ||
-            cipher == IMB_CIPHER_SNOW_V_AEAD || cipher == IMB_CIPHER_PON_AES_CNTR ||
-            cipher == IMB_CIPHER_SM4_GCM)
+            cipher == IMB_CIPHER_PON_AES_CNTR || cipher == IMB_CIPHER_SM4_GCM)
                 return 1;
         return 0;
 }
@@ -1294,7 +1276,7 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
                                     hash == IMB_AUTH_PON_CRC_BIP || hash == IMB_AUTH_AES_GMAC ||
                                     hash == IMB_AUTH_AES_GMAC_128 ||
                                     hash == IMB_AUTH_AES_GMAC_192 ||
-                                    hash == IMB_AUTH_AES_GMAC_256 || hash == IMB_AUTH_SNOW_V_AEAD ||
+                                    hash == IMB_AUTH_AES_GMAC_256 ||
                                     hash == IMB_AUTH_CRC32_ETHERNET_FCS ||
                                     hash == IMB_AUTH_CRC32_SCTP ||
                                     hash == IMB_AUTH_CRC32_WIMAX_OFDMA_DATA ||
@@ -1951,8 +1933,6 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                                 case IMB_CIPHER_CHACHA20_POLY1305:
                                 case IMB_CIPHER_CHACHA20_POLY1305_SGL:
                                 case IMB_CIPHER_PON_AES_CNTR:
-                                case IMB_CIPHER_SNOW_V:
-                                case IMB_CIPHER_SNOW_V_AEAD:
                                 case IMB_CIPHER_CFB:
 
                                         break;
@@ -1999,8 +1979,6 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                                 case IMB_CIPHER_CUSTOM:
                                 case IMB_CIPHER_CNTR:
                                 case IMB_CIPHER_PON_AES_CNTR:
-                                case IMB_CIPHER_SNOW_V:
-                                case IMB_CIPHER_SNOW_V_AEAD:
                                 case IMB_CIPHER_NULL:
                                 case IMB_CIPHER_CFB:
                                 case IMB_CIPHER_SM4_ECB:
@@ -2062,10 +2040,6 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                 { IMB_CIPHER_PON_AES_CNTR, 17 },
                 { IMB_CIPHER_SNOW3G_UEA2_BITLEN, 15 },
                 { IMB_CIPHER_SNOW3G_UEA2_BITLEN, 17 },
-                { IMB_CIPHER_SNOW_V_AEAD, 15 },
-                { IMB_CIPHER_SNOW_V_AEAD, 17 },
-                { IMB_CIPHER_SNOW_V, 15 },
-                { IMB_CIPHER_SNOW_V, 17 },
                 { IMB_CIPHER_CFB, 15 },
                 { IMB_CIPHER_CFB, 17 },
                 /* CCM IV must be 13 to 7 bytes */
@@ -2151,8 +2125,6 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                                 case IMB_CIPHER_CHACHA20:
                                 case IMB_CIPHER_CHACHA20_POLY1305:
                                 case IMB_CIPHER_CHACHA20_POLY1305_SGL:
-                                case IMB_CIPHER_SNOW_V_AEAD:
-                                case IMB_CIPHER_SNOW_V:
                                         if (key_len != IMB_KEY_256_BYTES)
                                                 continue;
                                         break;
@@ -2267,7 +2239,6 @@ test_job_invalid_misc_args(struct IMB_MGR *mb_mgr)
                                 switch (cipher) {
                                         /* skip algos with no max limit */
                                 case IMB_CIPHER_PON_AES_CNTR:
-                                case IMB_CIPHER_SNOW_V_AEAD:
                                 case IMB_CIPHER_CHACHA20_POLY1305:
                                 case IMB_CIPHER_CHACHA20_POLY1305_SGL:
                                 case IMB_CIPHER_CCM:
@@ -2497,15 +2468,13 @@ test_reset_api(struct IMB_MGR *mb_mgr)
         }
 
         /* Test AEAD algorithms */
-        const IMB_HASH_ALG aead_hash_algos[] = { IMB_AUTH_AES_GMAC,          IMB_AUTH_AES_CCM,
+        const IMB_HASH_ALG aead_hash_algos[] = { IMB_AUTH_AES_GMAC, IMB_AUTH_AES_CCM,
                                                  IMB_AUTH_CHACHA20_POLY1305, IMB_AUTH_PON_CRC_BIP,
-                                                 IMB_AUTH_DOCSIS_CRC32,      IMB_AUTH_SNOW_V_AEAD };
-        const IMB_CIPHER_MODE aead_cipher_algos[] = { IMB_CIPHER_GCM,
-                                                      IMB_CIPHER_CCM,
+                                                 IMB_AUTH_DOCSIS_CRC32 };
+        const IMB_CIPHER_MODE aead_cipher_algos[] = { IMB_CIPHER_GCM, IMB_CIPHER_CCM,
                                                       IMB_CIPHER_CHACHA20_POLY1305,
                                                       IMB_CIPHER_PON_AES_CNTR,
-                                                      IMB_CIPHER_DOCSIS_SEC_BPI,
-                                                      IMB_CIPHER_SNOW_V_AEAD };
+                                                      IMB_CIPHER_DOCSIS_SEC_BPI };
 
         unsigned int i;
 
