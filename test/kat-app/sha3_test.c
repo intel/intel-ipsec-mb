@@ -38,6 +38,8 @@ int
 sha3_test(struct IMB_MGR *mb_mgr);
 
 extern const struct mac_test sha3_test_json[];
+extern const struct mac_test shake128_test_json[];
+extern const struct mac_test shake256_test_json[];
 
 static int
 sha3_job_ok(const struct mac_test *vec, const struct IMB_JOB *job, const uint8_t *auth,
@@ -73,7 +75,7 @@ sha3_job_ok(const struct mac_test *vec, const struct IMB_JOB *job, const uint8_t
 
 static int
 test_sha3(struct IMB_MGR *mb_mgr, const struct mac_test *vec, const int num_jobs,
-          const int sha_type)
+          const IMB_HASH_ALG sha_type)
 {
         struct IMB_JOB *job;
         uint8_t padding[16];
@@ -114,21 +116,7 @@ test_sha3(struct IMB_MGR *mb_mgr, const struct mac_test *vec, const int num_jobs
                 job->src = (const void *) vec->msg;
                 job->msg_len_to_hash_in_bytes = vec->msgSize / 8;
                 job->cipher_mode = IMB_CIPHER_NULL;
-                switch (sha_type) {
-                case 224:
-                        job->hash_alg = IMB_AUTH_SHA3_224;
-                        break;
-                case 256:
-                        job->hash_alg = IMB_AUTH_SHA3_256;
-                        break;
-                case 384:
-                        job->hash_alg = IMB_AUTH_SHA3_384;
-                        break;
-                case 512:
-                default:
-                        job->hash_alg = IMB_AUTH_SHA3_512;
-                        break;
-                }
+                job->hash_alg = sha_type;
 
                 job->user_data = auths[i];
 
@@ -176,7 +164,7 @@ test_sha3_vectors(struct IMB_MGR *mb_mgr, struct test_suite_context *sha3_224_ct
 {
         struct test_suite_context *ctx;
         const struct mac_test *v = sha3_test_json;
-        int sha_type;
+        IMB_HASH_ALG sha_type;
 
         if (!quiet_mode)
                 printf("SHA3 standard test vectors (N jobs = %d):\n", num_jobs);
@@ -185,19 +173,19 @@ test_sha3_vectors(struct IMB_MGR *mb_mgr, struct test_suite_context *sha3_224_ct
                 switch (v->tagSize) {
                 case 224:
                         ctx = sha3_224_ctx;
-                        sha_type = 224;
+                        sha_type = IMB_AUTH_SHA3_224;
                         break;
                 case 256:
                         ctx = sha3_256_ctx;
-                        sha_type = 256;
+                        sha_type = IMB_AUTH_SHA3_256;
                         break;
                 case 384:
                         ctx = sha3_384_ctx;
-                        sha_type = 384;
+                        sha_type = IMB_AUTH_SHA3_384;
                         break;
                 case 512:
                         ctx = sha3_512_ctx;
-                        sha_type = 512;
+                        sha_type = IMB_AUTH_SHA3_512;
                         break;
                 default:
                         ctx = sha3_224_ctx;
@@ -221,10 +209,60 @@ test_sha3_vectors(struct IMB_MGR *mb_mgr, struct test_suite_context *sha3_224_ct
         }
 }
 
+static void
+test_shake_vectors(struct IMB_MGR *mb_mgr, struct test_suite_context *shake128_ctx,
+                   struct test_suite_context *shake256_ctx, const int num_jobs)
+{
+        struct test_suite_context *ctx;
+        const struct mac_test *shake128_v = shake128_test_json;
+        const struct mac_test *shake256_v = shake256_test_json;
+        IMB_HASH_ALG sha_type;
+
+        if (!quiet_mode)
+                printf("SHAKE standard test vectors (N jobs = %d):\n", num_jobs);
+
+        ctx = shake128_ctx;
+        sha_type = IMB_AUTH_SHAKE128;
+        for (; shake128_v->msg != NULL; shake128_v++) {
+#ifdef DEBUG
+                if (!quiet_mode) {
+                        printf("SHAKE128 Test Case %zu "
+                               "data_len:%zu digest_len:%zu\n",
+                               shake128_v->tcId, shake128_v->msgSize / 8, shake128_v->tagSize / 8);
+                }
+#endif
+                if (test_sha3(mb_mgr, shake128_v, num_jobs, sha_type)) {
+                        printf("error #%zu\n", shake128_v->tcId);
+                        test_suite_update(ctx, 0, 1);
+                } else {
+                        test_suite_update(ctx, 1, 0);
+                }
+        }
+
+        ctx = shake256_ctx;
+        sha_type = IMB_AUTH_SHAKE256;
+        for (; shake256_v->msg != NULL; shake256_v++) {
+#ifdef DEBUG
+                if (!quiet_mode) {
+                        printf("SHAKE256 Test Case %zu "
+                               "data_len:%zu digest_len:%zu\n",
+                               shake256_v->tcId, shake256_v->msgSize / 8, shake256_v->tagSize / 8);
+                }
+#endif
+                if (test_sha3(mb_mgr, shake256_v, num_jobs, sha_type)) {
+                        printf("error #%zu\n", shake256_v->tcId);
+                        test_suite_update(ctx, 0, 1);
+                } else {
+                        test_suite_update(ctx, 1, 0);
+                }
+        }
+}
+
 int
 sha3_test(struct IMB_MGR *mb_mgr)
 {
         struct test_suite_context sha3_224_ctx, sha3_256_ctx, sha3_384_ctx, sha3_512_ctx;
+        struct test_suite_context shake128_ctx, shake256_ctx;
         int errors = 0;
         unsigned i;
 
@@ -240,6 +278,14 @@ sha3_test(struct IMB_MGR *mb_mgr)
         errors += test_suite_end(&sha3_256_ctx);
         errors += test_suite_end(&sha3_384_ctx);
         errors += test_suite_end(&sha3_512_ctx);
+
+        test_suite_start(&shake128_ctx, "SHAKE128");
+        test_suite_start(&shake256_ctx, "SHAKE256");
+        for (i = 1; i <= 17; i++) {
+                test_shake_vectors(mb_mgr, &shake128_ctx, &shake256_ctx, i);
+        }
+        errors += test_suite_end(&shake128_ctx);
+        errors += test_suite_end(&shake256_ctx);
 
         return errors;
 }
