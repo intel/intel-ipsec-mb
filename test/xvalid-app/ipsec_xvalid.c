@@ -449,6 +449,42 @@ struct str_value_mapping hash_algo_str_map[] = {
                         .hash_alg = IMB_AUTH_HMAC_SM3,
                 }
         },
+        {
+                .name = "sha3-224",
+                .values.job_params = {
+                        .hash_alg = IMB_AUTH_SHA3_224
+                }
+        },
+        {
+                .name = "sha3-256",
+                .values.job_params = {
+                        .hash_alg = IMB_AUTH_SHA3_256
+                }
+        },
+        {
+                .name = "sha3-384",
+                .values.job_params = {
+                        .hash_alg = IMB_AUTH_SHA3_384
+                }
+        },
+        {
+                .name = "sha3-512",
+                .values.job_params = {
+                        .hash_alg = IMB_AUTH_SHA3_512
+                }
+        },
+        {
+                .name = "shake-128",
+                .values.job_params = {
+                        .hash_alg = IMB_AUTH_SHAKE128
+                }
+        },
+        {
+                .name = "shake-256",
+                .values.job_params = {
+                        .hash_alg = IMB_AUTH_SHAKE256
+                }
+        },
 };
 
 struct str_value_mapping aead_algo_str_map[] = {
@@ -547,6 +583,12 @@ const uint8_t auth_tag_len_bytes[] = {
         32,                        /* IMB_AUTH_SM3 */
         32,                        /* IMB_AUTH_HMAC_SM3 */
         16,                        /* IMB_AUTH_SM4_GCM */
+        28,                        /* IMB_AUTH_SHA3_224 */
+        32,                        /* IMB_AUTH_SHA3_256 */
+        48,                        /* IMB_AUTH_SHA3_384 */
+        64,                        /* IMB_AUTH_SHA3_512 */
+        16,                        /* IMB_AUTH_SHAKE128 */
+        32,                        /* IMB_AUTH_SHAKE256 */
 };
 
 /* Minimum, maximum and step values of key sizes */
@@ -1336,6 +1378,12 @@ fill_job(IMB_JOB *job, const struct params_s *params, uint8_t *buf, uint8_t *dig
         case IMB_AUTH_CRC7_FP_HEADER:
         case IMB_AUTH_CRC6_IUUP_HEADER:
         case IMB_AUTH_SM3:
+        case IMB_AUTH_SHA3_224:
+        case IMB_AUTH_SHA3_256:
+        case IMB_AUTH_SHA3_384:
+        case IMB_AUTH_SHA3_512:
+        case IMB_AUTH_SHAKE128:
+        case IMB_AUTH_SHAKE256:
                 /* No operation needed */
                 break;
         case IMB_AUTH_DOCSIS_CRC32:
@@ -1678,6 +1726,12 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys, const uint8_t *ciph
         case IMB_AUTH_CRC7_FP_HEADER:
         case IMB_AUTH_CRC6_IUUP_HEADER:
         case IMB_AUTH_SM3:
+        case IMB_AUTH_SHA3_224:
+        case IMB_AUTH_SHA3_256:
+        case IMB_AUTH_SHA3_384:
+        case IMB_AUTH_SHA3_512:
+        case IMB_AUTH_SHAKE128:
+        case IMB_AUTH_SHAKE256:
                 /* No operation needed */
                 break;
         case IMB_AUTH_POLY1305:

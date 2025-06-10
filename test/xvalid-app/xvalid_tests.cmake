@@ -134,7 +134,13 @@ set(HASH_ALGOS
     fp-crc7
     iuup-crc6
     sm3
-    hmac-sm3)
+    hmac-sm3
+    sha3-224
+    sha3-256
+    sha3-384
+    sha3-512
+    shake-128
+    shake-256)
 
 # hash short tests
 foreach(ALGO ${HASH_ALGOS})
