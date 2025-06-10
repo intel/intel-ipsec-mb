@@ -329,7 +329,8 @@ c_lib_objs := \
 	hmac_ipad_opad.o \
 	cipher_suite_id.o \
 	capabilities.o \
-        sm4_gcm.o
+        sm4_gcm.o \
+	sha3.o
 
 ifeq ($(AVX_IFMA), y)
 c_lib_objs := $(c_lib_objs) \
