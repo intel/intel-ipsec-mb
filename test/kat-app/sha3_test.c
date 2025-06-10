@@ -157,6 +157,101 @@ end2:
         return ret;
 }
 
+static int
+test_sha3_burst(struct IMB_MGR *mb_mgr, const struct mac_test *vec, const uint32_t num_jobs,
+                const IMB_HASH_ALG sha_type)
+{
+        struct IMB_JOB *job, *jobs[IMB_MAX_BURST_SIZE] = { NULL };
+        uint8_t padding[16];
+        uint8_t **auths = malloc(num_jobs * sizeof(void *));
+        uint32_t i = 0, jobs_rx = 0;
+        int ret = -1, err;
+        uint32_t completed_jobs = 0;
+
+        if (auths == NULL) {
+                fprintf(stderr, "Can't allocate buffer memory\n");
+                goto end2;
+        }
+
+        memset(padding, -1, sizeof(padding));
+        memset(auths, 0, num_jobs * sizeof(void *));
+
+        for (i = 0; i < num_jobs; i++) {
+                const size_t alloc_len = vec->tagSize / 8 + (sizeof(padding) * 2);
+
+                auths[i] = malloc(alloc_len);
+                if (auths[i] == NULL) {
+                        fprintf(stderr, "Can't allocate buffer memory\n");
+                        goto end;
+                }
+                memset(auths[i], -1, alloc_len);
+        }
+
+        /* empty the manager */
+        while (IMB_GET_NEXT_BURST(mb_mgr, num_jobs, jobs) < num_jobs)
+                IMB_FLUSH_BURST(mb_mgr, num_jobs, jobs);
+
+        for (i = 0; i < num_jobs; i++) {
+                job = jobs[i];
+                job->cipher_direction = IMB_DIR_ENCRYPT;
+                job->chain_order = IMB_ORDER_HASH_CIPHER;
+                job->auth_tag_output = auths[i] + sizeof(padding);
+                job->auth_tag_output_len_in_bytes = vec->tagSize / 8;
+                job->src = (const void *) vec->msg;
+                job->msg_len_to_hash_in_bytes = vec->msgSize / 8;
+                job->cipher_mode = IMB_CIPHER_NULL;
+                job->hash_alg = sha_type;
+
+                job->user_data = auths[i];
+
+                imb_set_session(mb_mgr, job);
+        }
+
+        completed_jobs = IMB_SUBMIT_BURST(mb_mgr, num_jobs, jobs);
+        err = imb_get_errno(mb_mgr);
+
+        if (err != 0) {
+                printf("submit_burst error %d : '%s'\n", err, imb_get_strerror(err));
+                goto end;
+        }
+
+check_burst_jobs:
+        for (i = 0; i < completed_jobs; i++) {
+                job = jobs[i];
+
+                if (job->status != IMB_STATUS_COMPLETED) {
+                        printf("job %u status not complete!\n", i + 1);
+                        goto end;
+                }
+
+                if (!sha3_job_ok(vec, job, job->user_data, padding, sizeof(padding)))
+                        goto end;
+                jobs_rx++;
+        }
+
+        if (jobs_rx != num_jobs) {
+                completed_jobs = IMB_FLUSH_BURST(mb_mgr, num_jobs - completed_jobs, jobs);
+                if (completed_jobs == 0) {
+                        printf("Expected %u jobs, received %u\n", num_jobs, jobs_rx);
+                        goto end;
+                }
+                goto check_burst_jobs;
+        }
+        ret = 0;
+
+end:
+        for (i = 0; i < num_jobs; i++) {
+                if (auths[i] != NULL)
+                        free(auths[i]);
+        }
+
+end2:
+        if (auths != NULL)
+                free(auths);
+
+        return ret;
+}
+
 static void
 test_sha3_vectors(struct IMB_MGR *mb_mgr, struct test_suite_context *sha3_224_ctx,
                   struct test_suite_context *sha3_256_ctx, struct test_suite_context *sha3_384_ctx,
@@ -197,11 +292,18 @@ test_sha3_vectors(struct IMB_MGR *mb_mgr, struct test_suite_context *sha3_224_ct
                 if (!quiet_mode) {
                         printf("SHA3-%d Test Case %zu "
                                "data_len:%zu digest_len:%zu\n",
-                               sha_type, v->tcId, v->msgSize / 8, v->tagSize / 8);
+                               (int) v->tagSize, v->tcId, v->msgSize / 8, v->tagSize / 8);
                 }
 #endif
                 if (test_sha3(mb_mgr, v, num_jobs, sha_type)) {
                         printf("error #%zu\n", v->tcId);
+                        test_suite_update(ctx, 0, 1);
+                } else {
+                        test_suite_update(ctx, 1, 0);
+                }
+
+                if (test_sha3_burst(mb_mgr, v, num_jobs, sha_type)) {
+                        printf("burst error #%zu\n", v->tcId);
                         test_suite_update(ctx, 0, 1);
                 } else {
                         test_suite_update(ctx, 1, 0);
@@ -232,7 +334,13 @@ test_shake_vectors(struct IMB_MGR *mb_mgr, struct test_suite_context *shake128_c
                 }
 #endif
                 if (test_sha3(mb_mgr, shake128_v, num_jobs, sha_type)) {
-                        printf("error #%zu\n", shake128_v->tcId);
+                        printf("SHAKE128 error #%zu\n", shake128_v->tcId);
+                        test_suite_update(ctx, 0, 1);
+                } else {
+                        test_suite_update(ctx, 1, 0);
+                }
+                if (test_sha3_burst(mb_mgr, shake128_v, num_jobs, sha_type)) {
+                        printf("SHAKE128 burst error #%zu\n", shake128_v->tcId);
                         test_suite_update(ctx, 0, 1);
                 } else {
                         test_suite_update(ctx, 1, 0);
@@ -250,7 +358,13 @@ test_shake_vectors(struct IMB_MGR *mb_mgr, struct test_suite_context *shake128_c
                 }
 #endif
                 if (test_sha3(mb_mgr, shake256_v, num_jobs, sha_type)) {
-                        printf("error #%zu\n", shake256_v->tcId);
+                        printf("SHAKE256 error #%zu\n", shake256_v->tcId);
+                        test_suite_update(ctx, 0, 1);
+                } else {
+                        test_suite_update(ctx, 1, 0);
+                }
+                if (test_sha3(mb_mgr, shake256_v, num_jobs, sha_type)) {
+                        printf("SHAKE256 burst error #%zu\n", shake256_v->tcId);
                         test_suite_update(ctx, 0, 1);
                 } else {
                         test_suite_update(ctx, 1, 0);
