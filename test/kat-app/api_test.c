@@ -241,6 +241,12 @@ fill_in_job(struct IMB_JOB *job, const IMB_CIPHER_MODE cipher_mode,
                 32, /* IMB_AUTH_SM3 */
                 32, /* IMB_AUTH_HMAC_SM3 */
                 16, /* IMB_AUTH_SM4_GCM */
+                28, /* IMB_AUTH_SHA3_224 */
+                32, /* IMB_AUTH_SHA3_256 */
+                48, /* IMB_AUTH_SHA3_384 */
+                64, /* IMB_AUTH_SHA3_512 */
+                0,  /* IMB_AUTH_SHAKE128 - skipped */
+                0,  /* IMB_AUTH_SHAKE256 - skipped */
         };
         static DECLARE_ALIGNED(uint8_t dust_bin[2048], 64);
         static void *ks_ptrs[3];
@@ -1244,6 +1250,13 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
                                  * algorithms, as the test is for authentication
                                  * only algorithms */
                                 if (check_aead(hash, cipher))
+                                        continue;
+
+                                /*
+                                 * Skip SHAKE algorithms since they can accept any output
+                                 * length, including zero.
+                                 */
+                                if (hash == IMB_AUTH_SHAKE128 || hash == IMB_AUTH_SHAKE256)
                                         continue;
 
                                 fill_in_job(&template_job, cipher, dir, hash, order, &chacha_ctx,
