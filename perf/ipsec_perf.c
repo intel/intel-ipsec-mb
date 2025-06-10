@@ -207,6 +207,12 @@ enum test_hash_alg_e {
         TEST_AUTH_SM3,
         TEST_SM3_HMAC,
         TEST_HASH_SM4_GCM,
+        TEST_SHA3_224,
+        TEST_SHA3_256,
+        TEST_SHA3_384,
+        TEST_SHA3_512,
+        TEST_SHAKE_128,
+        TEST_SHAKE_256,
         TEST_NUM_HASH_TESTS
 };
 
@@ -523,7 +529,43 @@ const struct str_value_mapping hash_algo_str_map[] = {
                 .values.job_params = {
                         .hash_alg = TEST_SM3_HMAC,
                 }
-        }
+        },
+        {
+                .name = "sha3-224",
+                .values.job_params = {
+                        .hash_alg = TEST_SHA3_224
+                }
+        },
+        {
+                .name = "sha3-256",
+                .values.job_params = {
+                        .hash_alg = TEST_SHA3_256
+                }
+        },
+        {
+                .name = "sha3-384",
+                .values.job_params = {
+                        .hash_alg = TEST_SHA3_384
+                }
+        },
+        {
+                .name = "sha3-512",
+                .values.job_params = {
+                        .hash_alg = TEST_SHA3_512
+                }
+        },
+        {
+                .name = "shake-128",
+                .values.job_params = {
+                        .hash_alg = TEST_SHAKE_128
+                }
+        },
+        {
+                .name = "shake-256",
+                .values.job_params = {
+                        .hash_alg = TEST_SHAKE_256
+                }
+        },
 };
 
 const struct str_value_mapping aead_algo_str_map[] = {
@@ -644,6 +686,12 @@ const uint32_t auth_tag_length_bytes[] = {
         32,                        /* IMB_AUTH_SM3 */
         32,                        /* IMB_AUTH_HMAC_SM3 */
         16,                        /* SM4-GCM */
+        28,                        /* IMB_AUTH_SHA3_224 */
+        32,                        /* IMB_AUTH_SHA3_256 */
+        48,                        /* IMB_AUTH_SHA3_384 */
+        64,                        /* IMB_AUTH_SHA3_512 */
+        16,                        /* IMB_AUTH_SHAKE128 */
+        32,                        /* IMB_AUTH_SHAKE256 */
 };
 uint32_t index_limit;
 uint32_t key_idxs[NUM_OFFSETS];
@@ -1568,6 +1616,24 @@ translate_hash_alg(const enum test_hash_alg_e test_mode)
                 break;
         case TEST_MD5:
                 hash_alg = IMB_AUTH_MD5;
+                break;
+        case TEST_SHA3_224:
+                hash_alg = IMB_AUTH_SHA3_224;
+                break;
+        case TEST_SHA3_256:
+                hash_alg = IMB_AUTH_SHA3_256;
+                break;
+        case TEST_SHA3_384:
+                hash_alg = IMB_AUTH_SHA3_384;
+                break;
+        case TEST_SHA3_512:
+                hash_alg = IMB_AUTH_SHA3_512;
+                break;
+        case TEST_SHAKE_128:
+                hash_alg = IMB_AUTH_SHAKE128;
+                break;
+        case TEST_SHAKE_256:
+                hash_alg = IMB_AUTH_SHAKE256;
                 break;
         default:
                 break;
@@ -3204,51 +3270,60 @@ print_times(struct variant_s *variant_list, struct params_s *params, const uint3
                                                                         "SM4_CTR",
                                                                         "SM4_GCM" };
                 const char *c_dir_names[2] = { "ENCRYPT", "DECRYPT" };
-                const char *h_alg_names[TEST_NUM_HASH_TESTS - 1] = { "SHA1_HMAC",
-                                                                     "SHA_224_HMAC",
-                                                                     "SHA_256_HMAC",
-                                                                     "SHA_384_HMAC",
-                                                                     "SHA_512_HMAC",
-                                                                     "XCBC",
-                                                                     "MD5",
-                                                                     "CMAC",
-                                                                     "SHA1",
-                                                                     "SHA_224",
-                                                                     "SHA_256",
-                                                                     "SHA_384",
-                                                                     "SHA_512",
-                                                                     "CMAC_BITLEN",
-                                                                     "CMAC_256",
-                                                                     "NULL_HASH",
-                                                                     "CRC32",
-                                                                     "GCM",
-                                                                     "CUSTOM",
-                                                                     "CCM",
-                                                                     "BIP-CRC32",
-                                                                     "ZUC_EIA3_BITLEN",
-                                                                     "SNOW3G_UIA2_BITLEN",
-                                                                     "KASUMI_UIA1",
-                                                                     "GMAC-128",
-                                                                     "GMAC-192",
-                                                                     "GMAC-256",
-                                                                     "POLY1305",
-                                                                     "POLY1305_AEAD",
-                                                                     "CRC32_ETH_FCS",
-                                                                     "CRC32_SCTP",
-                                                                     "CRC32_WIMAX_DATA",
-                                                                     "CRC24_LTE_A",
-                                                                     "CR24_LTE_B",
-                                                                     "CR16_X25",
-                                                                     "CRC16_FP_DATA",
-                                                                     "CRC11_FP_HEADER",
-                                                                     "CRC10_IUUP_DATA",
-                                                                     "CRC8_WIMAX_HCS",
-                                                                     "CRC7_FP_HEADER",
-                                                                     "CRC6_IUUP_HEADER",
-                                                                     "GHASH",
-                                                                     "SM3",
-                                                                     "SM3_HMAC",
-                                                                     "SM4_GCM" };
+                const char *h_alg_names[TEST_NUM_HASH_TESTS - 1] = {
+                        "SHA1_HMAC",
+                        "SHA_224_HMAC",
+                        "SHA_256_HMAC",
+                        "SHA_384_HMAC",
+                        "SHA_512_HMAC",
+                        "XCBC",
+                        "MD5",
+                        "CMAC",
+                        "SHA1",
+                        "SHA_224",
+                        "SHA_256",
+                        "SHA_384",
+                        "SHA_512",
+                        "CMAC_BITLEN",
+                        "CMAC_256",
+                        "NULL_HASH",
+                        "CRC32",
+                        "GCM",
+                        "CUSTOM",
+                        "CCM",
+                        "BIP-CRC32",
+                        "ZUC_EIA3_BITLEN",
+                        "SNOW3G_UIA2_BITLEN",
+                        "KASUMI_UIA1",
+                        "GMAC-128",
+                        "GMAC-192",
+                        "GMAC-256",
+                        "POLY1305",
+                        "POLY1305_AEAD",
+                        "CRC32_ETH_FCS",
+                        "CRC32_SCTP",
+                        "CRC32_WIMAX_DATA",
+                        "CRC24_LTE_A",
+                        "CR24_LTE_B",
+                        "CR16_X25",
+                        "CRC16_FP_DATA",
+                        "CRC11_FP_HEADER",
+                        "CRC10_IUUP_DATA",
+                        "CRC8_WIMAX_HCS",
+                        "CRC7_FP_HEADER",
+                        "CRC6_IUUP_HEADER",
+                        "GHASH",
+                        "SM3",
+                        "SM3_HMAC",
+                        "SM4_GCM",
+                        "SHA3_224",
+                        "SHA3_256",
+                        "SHA3_384",
+                        "SHA3_512",
+                        "SHAKE_128",
+                        "SHAKE_256",
+                };
+
                 struct params_s par;
 
                 printf("ARCH");

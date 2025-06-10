@@ -125,7 +125,13 @@ set(HASH_ALGOS
   crc6-iuup-header
   ghash
   sm3
-  sm3-hmac)
+  sm3-hmac
+  sha3-224
+  sha3-256
+  sha3-384
+  sha3-512
+  shake-128
+  shake-256)
 
 # hash smoke tests (burst API)
 foreach(ALGO ${HASH_ALGOS})
