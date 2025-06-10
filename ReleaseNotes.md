@@ -14,6 +14,8 @@ Library
 - Removed AES-CBCS 1:9 cipher.
 - Removed SNOW-V cipher together with AEAD SNOW-V.
 - Removed ZUC-EEA3-256 and ZUC-EIA3-256 algorithms.
+- Added SHA3-224, SHA3-256, SHA3-384 and SHA3-512 base implementations.
+- Added SHAKE128 and SHAKE256 base implementations.
 
 Test Applications
 - Added `--offset` parameter to `imb-xvalid` application.
@@ -21,6 +23,7 @@ Test Applications
 - Removed AES-CTR bit-length variant.
 - Removed AES-CBCS 1:9 cipher.
 - Removed SNOW-V cipher together with AEAD SNOW-V.
+- Added SHA3 and SHAKE support to imb-kat and imb-xvalid applications.
 
 Performance Applications
 - Added `imb-perf-cmp.py` tool that compares post processed performance metrics.
@@ -32,6 +35,7 @@ Performance Applications
 - Removed AES-CTR bit-length variant.
 - Removed AES-CBCS 1:9 cipher.
 - Removed SNOW-V cipher together with AEAD SNOW-V.
+- Added SHA3/SHAKE support to imb-perf application.
 
 Fixes
 - Fixed SM4-GCM plaintext/ciphertext address calculation (issue #159).
