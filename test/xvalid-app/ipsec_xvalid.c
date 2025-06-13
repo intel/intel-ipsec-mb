@@ -211,8 +211,6 @@ struct str_value_mapping cipher_algo_str_map[] = {
           .values.job_params = { .cipher_mode = IMB_CIPHER_DES3, .key_size = 24 } },
         { .name = "ZUC-EEA3",
           .values.job_params = { .cipher_mode = IMB_CIPHER_ZUC_EEA3, .key_size = 16 } },
-        { .name = "ZUC-EEA3-256",
-          .values.job_params = { .cipher_mode = IMB_CIPHER_ZUC_EEA3, .key_size = 32 } },
         { .name = "SNOW3G-UEA2",
           .values.job_params = { .cipher_mode = IMB_CIPHER_SNOW3G_UEA2_BITLEN, .key_size = 16 } },
         { .name = "KASUMI-F8",
@@ -573,7 +571,7 @@ const uint8_t key_sizes[][3] = {
         { 24, 24, 1 },  /* IMB_CIPHER_DES3 */
         { 16, 16, 1 },  /* IMB_CIPHER_PON_AES_CNTR */
         { 16, 32, 8 },  /* IMB_CIPHER_ECB */
-        { 16, 32, 16 }, /* IMB_CIPHER_ZUC_EEA3 */
+        { 16, 16, 1 },  /* IMB_CIPHER_ZUC_EEA3 */
         { 16, 16, 1 },  /* IMB_CIPHER_SNOW3G_UEA2 */
         { 16, 16, 1 },  /* IMB_CIPHER_KASUMI_UEA1_BITLEN */
         { 32, 32, 1 },  /* IMB_CIPHER_CHACHA20 */
@@ -1948,7 +1946,6 @@ perform_safe_checks(IMB_MGR *mgr, const IMB_ARCH arch, struct safe_check_ctx *ct
                 "aes_cmac_ooo",
                 "zuc_eea3_ooo",
                 "zuc_eia3_ooo",
-                "zuc256_eea3_ooo",
                 "zuc256_eia3_ooo",
                 "aes256_ccm_ooo",
                 "aes256_cmac_ooo",

@@ -250,8 +250,6 @@
 #define FLUSH_JOB_ZUC_EEA3     flush_job_zuc_eea3_gfni_avx512
 #define SUBMIT_JOB_ZUC_EIA3    submit_job_zuc_eia3_gfni_avx512
 #define FLUSH_JOB_ZUC_EIA3     flush_job_zuc_eia3_gfni_avx512
-#define SUBMIT_JOB_ZUC256_EEA3 submit_job_zuc256_eea3_gfni_avx512
-#define FLUSH_JOB_ZUC256_EEA3  flush_job_zuc256_eea3_gfni_avx512
 #define SUBMIT_JOB_ZUC256_EIA3 submit_job_zuc256_eia3_gfni_avx512
 #define FLUSH_JOB_ZUC256_EIA3  flush_job_zuc256_eia3_gfni_avx512
 
@@ -407,7 +405,6 @@ reset_ooo_mgrs(IMB_MGR *state)
         /* Init ZUC out-of-order fields */
         ooo_mgr_zuc_reset(state->zuc_eea3_ooo, 16);
         ooo_mgr_zuc_reset(state->zuc_eia3_ooo, 16);
-        ooo_mgr_zuc_reset(state->zuc256_eea3_ooo, 16);
         ooo_mgr_zuc_reset(state->zuc256_eia3_ooo, 16);
         ooo_mgr_zuc_reset(state->zuc256_eia3_8B_ooo, 16);
         ooo_mgr_zuc_reset(state->zuc256_eia3_16B_ooo, 16);

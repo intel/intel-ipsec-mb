@@ -84,7 +84,6 @@ Table 1. List of supported cipher algorithms and their implementations.
 | DES            | Y      |  <---  |  <---  |  <---  |  <---  |  <---  |  <---  | Y  x16 |  <---    |  <---  |
 | KASUMI-F8      | Y      |  <---  |  <---  |  <---  |  <---  |  <---  |  <---  |  <---  |  <---    |  <---  |
 | ZUC-EEA3       | Y   x4 |  <---  | Y(4)x4 | Y  x8  | Y(4)x8 |  <---  |  <---  | Y  x16 | Y(4) x16 |  <---  |
-| ZUC-EEA3-256   | Y   x4 |  <---  | Y(4)x4 | Y  x8  | Y(4)x8 |  <---  |  <---  | Y  x16 | Y(4) x16 |  <---  |
 | SNOW3G-UEA2    | Y   x4 |  <---  |  <---  |  <---  |  <---  |  <---  |  <---  | Y  x16 | Y    x16 |  <---  |
 | Chacha20       | Y      |  <---  |  <---  | Y      |  <---  |  <---  |  <---  | Y      |  <---    |  <---  |
 | Chacha20 AEAD  | Y      |  <---  |  <---  | Y      |  <---  |  <---  |  <---  | Y      |  <---    |  <---  |
@@ -208,7 +207,7 @@ Table 3. Encryption and integrity algorithm combinations
 | AES128-DOCSIS, AES256-DOCSIS,       | GHASH, SM3, HMAC-SM3                  |
 | DES-DOCSIS, 3DES, DES,              | ZUC-EIA3, ZUC-EIA3-256, SNOW3G-UIA3,  |
 | KASUMI-F8, SNOW-V, SNOW3G-UEA3,     | KASUMI-F9                             |
-| ZUC-EEA3, ZUC-EEA3-256,             |                                       |
+| ZUC-EEA3,                           |                                       |
 | SM4-ECB, SM4-CBC, SM4-CTR           |                                       |
 |-------------------------------------+---------------------------------------|
 | AES128-DOCSIS, AES256-DOCSIS        | DOCSIS-CRC32                          |

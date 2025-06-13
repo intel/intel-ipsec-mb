@@ -465,7 +465,7 @@ class SpeedTool(object):
             return result
 
         for arch in archs:
-            skip_cipher_algos = ['zuc-eea3', 'zuc-eea3-256', 'kasumi-uea1']
+            skip_cipher_algos = ['zuc-eea3', 'kasumi-uea1']
             skip_hash_algos = ['zuc-eia3', 'zuc-eia3-256','kasumi-uia1']
             skip_aead_algos = ['aes-docsis-128-crc32', 'aes-docsis-256-crc32']
 

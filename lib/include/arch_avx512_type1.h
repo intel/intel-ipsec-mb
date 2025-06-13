@@ -74,11 +74,6 @@ IMB_JOB *
 flush_job_zuc_eia3_no_gfni_avx512(MB_MGR_ZUC_OOO *state);
 
 IMB_JOB *
-submit_job_zuc256_eea3_no_gfni_avx512(MB_MGR_ZUC_OOO *state, IMB_JOB *job);
-IMB_JOB *
-flush_job_zuc256_eea3_no_gfni_avx512(MB_MGR_ZUC_OOO *state);
-
-IMB_JOB *
 submit_job_zuc256_eia3_no_gfni_avx512(MB_MGR_ZUC_OOO *state, IMB_JOB *job, const uint64_t tag_sz);
 IMB_JOB *
 flush_job_zuc256_eia3_no_gfni_avx512(MB_MGR_ZUC_OOO *state, const uint64_t tag_sz);

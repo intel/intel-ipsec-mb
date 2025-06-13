@@ -2042,6 +2042,8 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                 { IMB_CIPHER_SNOW3G_UEA2_BITLEN, 17 },
                 { IMB_CIPHER_CFB, 15 },
                 { IMB_CIPHER_CFB, 17 },
+                { IMB_CIPHER_ZUC_EEA3, 15 },
+                { IMB_CIPHER_ZUC_EEA3, 17 },
                 /* CCM IV must be 13 to 7 bytes */
                 { IMB_CIPHER_CCM, 6 },
                 { IMB_CIPHER_CCM, 14 },
@@ -2062,12 +2064,6 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                 /* KASUMI IV must be 8 bytes */
                 { IMB_CIPHER_KASUMI_UEA1_BITLEN, 7 },
                 { IMB_CIPHER_KASUMI_UEA1_BITLEN, 9 },
-                /* ZUC IV must be 16, 23 or 25 bytes */
-                { IMB_CIPHER_ZUC_EEA3, 15 },
-                { IMB_CIPHER_ZUC_EEA3, 17 },
-                { IMB_CIPHER_ZUC_EEA3, 22 },
-                { IMB_CIPHER_ZUC_EEA3, 24 },
-                { IMB_CIPHER_ZUC_EEA3, 26 },
                 /* CHACHA20 IVs must be 12 bytes */
                 { IMB_CIPHER_CHACHA20, 15 },
                 { IMB_CIPHER_CHACHA20, 17 },
@@ -2110,7 +2106,7 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                                 case IMB_CIPHER_CCM:
                                 case IMB_CIPHER_DOCSIS_SEC_BPI:
                                 case IMB_CIPHER_ZUC_EEA3:
-                                        if (key_len == IMB_KEY_192_BYTES)
+                                        if (key_len != IMB_KEY_128_BYTES)
                                                 continue;
                                         break;
                                 case IMB_CIPHER_DES:

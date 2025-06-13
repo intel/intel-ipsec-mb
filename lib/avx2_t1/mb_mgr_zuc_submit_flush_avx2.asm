@@ -37,14 +37,11 @@
 %ifndef SUBMIT_JOB_ZUC128_EEA3
 %define SUBMIT_JOB_ZUC128_EEA3 submit_job_zuc_eea3_avx2
 %define FLUSH_JOB_ZUC128_EEA3 flush_job_zuc_eea3_avx2
-%define SUBMIT_JOB_ZUC256_EEA3 submit_job_zuc256_eea3_avx2
-%define FLUSH_JOB_ZUC256_EEA3 flush_job_zuc256_eea3_avx2
 %define SUBMIT_JOB_ZUC128_EIA3 submit_job_zuc_eia3_avx2
 %define FLUSH_JOB_ZUC128_EIA3 flush_job_zuc_eia3_avx2
 %define SUBMIT_JOB_ZUC256_EIA3 submit_job_zuc256_eia3_avx2
 %define FLUSH_JOB_ZUC256_EIA3 flush_job_zuc256_eia3_avx2
 %define ZUC128_INIT_8        asm_ZucInitialization_8_avx2
-%define ZUC256_INIT_8        asm_Zuc256Initialization_8_avx2
 %define ZUC_EIA3_8_BUFFER    zuc_eia3_8_buffer_job_avx2
 %define ZUC256_EIA3_8_BUFFER zuc256_eia3_8_buffer_job_avx2
 %define ZUC_CIPHER_8      asm_ZucCipher_8_avx2
@@ -186,8 +183,7 @@ mksection .text
 
 %endmacro
 
-%macro SUBMIT_JOB_ZUC_EEA3 1
-%define %%KEY_SIZE      %1 ; [constant] Key size (128 or 256)
+%macro SUBMIT_JOB_ZUC_EEA3 0
 
 ; idx needs to be in rbp
 %define len              rbp
@@ -224,47 +220,9 @@ mksection .text
         shr     unused_lanes, 4
         mov     tmp, [job + _iv]
         shl     lane, 5
-%if %%KEY_SIZE == 128
         ; Read first 16 bytes of IV
         vmovdqu xmm0, [tmp]
         vmovdqa [state + _zuc_args_IV + lane], xmm0
-%else ;; %%KEY_SIZE == 256
-        cmp     qword [job + _iv_len_in_bytes], 25
-        je      %%_iv_size_25
-align_label
-%%_iv_size_23:
-        ; Read 23 bytes of IV and expand to 25 bytes
-        ; then expand the last 6 bytes to 8 bytes
-
-        ; Read and write first 16 bytes
-        vmovdqu xmm0, [tmp]
-        vmovdqa [state + _zuc_args_IV + lane], xmm0
-        ; Read and write next byte
-        mov     al, [tmp + 16]
-        mov     [state + _zuc_args_IV + lane + 16], al
-        ; Read last 8 bytes and keep only the last 6 bytes
-        mov     tmp2, [tmp + 15]
-        mov     tmp3, 0x0000ffffffffffff
-        bswap   tmp2
-        and     tmp2, tmp3 ; last 6 bytes of IV
-        ; Expand 6 bytes to 8 bytes and write out
-        mov     tmp3, 0x3f3f3f3f3f3f3f3f
-        pdep    tmp2, tmp2, tmp3
-        bswap   tmp2
-        mov     [state + _zuc_args_IV + lane + 17], tmp2
-
-        jmp     %%_iv_read
-align_label
-%%_iv_size_25:
-        ; Read 25 bytes of IV
-        vmovdqu xmm0, [tmp]
-        vmovdqa [state + _zuc_args_IV + lane], xmm0
-        vmovq   xmm0, [tmp + 16]
-        vpinsrb xmm0, [tmp + 24], 8
-        vmovdqa [state + _zuc_args_IV + lane + 16], xmm0
-align_label
-%%_iv_read:
-%endif
         shr     lane, 5
         mov     [state + _zuc_unused_lanes], unused_lanes
 
@@ -320,12 +278,7 @@ align_label
         lea     arg1, [r12 + _zuc_args_keys]
         lea     arg2, [r12 + _zuc_args_IV]
         lea     arg3, [r12 + _zuc_state]
-%if %%KEY_SIZE == 128
         call    ZUC128_INIT_8
-%else
-        mov     arg5, 0 ; Tag size = 0, arg4 not used
-        call    ZUC256_INIT_8
-%endif
 
         RESTORE_STACK_SPACE 5
 
@@ -445,8 +398,7 @@ align_label
         jmp     %%return_submit_eea3
 %endmacro
 
-%macro FLUSH_JOB_ZUC_EEA3 1
-%define %%KEY_SIZE      %1 ; [constant] Key size (128 or 256)
+%macro FLUSH_JOB_ZUC_EEA3 0
 
 %define unused_lanes     rbx
 %define tmp1             rbx
@@ -545,12 +497,7 @@ APPEND(%%skip_eea3_,I):
         lea     arg2, [r12 + _zuc_args_IV]
         lea     arg3, [r12 + _zuc_state]
 
-%if %%KEY_SIZE == 128
         call    ZUC128_INIT_8
-%else
-        mov     arg5, 0 ; Tag size = 0, arg4 not used
-        call    ZUC256_INIT_8
-%endif
 
         RESTORE_STACK_SPACE 5
 
@@ -737,15 +684,9 @@ align_label
 MKGLOBAL(SUBMIT_JOB_ZUC128_EEA3,function,internal)
 align_function
 SUBMIT_JOB_ZUC128_EEA3:
-        SUBMIT_JOB_ZUC_EEA3 128
+        SUBMIT_JOB_ZUC_EEA3
 
-; JOB* SUBMIT_JOB_ZUC256_EEA3(MB_MGR_ZUC_OOO *state, IMB_JOB *job)
-; arg 1 : state
-; arg 2 : job
-MKGLOBAL(SUBMIT_JOB_ZUC256_EEA3,function,internal)
-align_function
-SUBMIT_JOB_ZUC256_EEA3:
-        SUBMIT_JOB_ZUC_EEA3 256
+
 
 ; JOB* FLUSH_JOB_ZUC128_EEA3(MB_MGR_ZUC_OOO *state, IMB_JOB *job)
 ; arg 1 : state
@@ -753,15 +694,9 @@ SUBMIT_JOB_ZUC256_EEA3:
 MKGLOBAL(FLUSH_JOB_ZUC128_EEA3,function,internal)
 align_function
 FLUSH_JOB_ZUC128_EEA3:
-        FLUSH_JOB_ZUC_EEA3 128
+        FLUSH_JOB_ZUC_EEA3
 
-; JOB* FLUSH_JOB_ZUC256_EEA3(MB_MGR_ZUC_OOO *state, IMB_JOB *job)
-; arg 1 : state
-; arg 2 : job
-MKGLOBAL(FLUSH_JOB_ZUC256_EEA3,function,internal)
-align_function
-FLUSH_JOB_ZUC256_EEA3:
-        FLUSH_JOB_ZUC_EEA3 256
+
 
 %macro SUBMIT_JOB_ZUC_EIA3 2
 %define %%KEY_SIZE      %1 ; [constant] Key size (128 or 256)

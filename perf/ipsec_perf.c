@@ -275,8 +275,6 @@ const struct str_value_mapping cipher_algo_str_map[] = {
         { .name = "3des-cbc", .values.job_params = { .cipher_mode = TEST_3DES, .key_size = 24 } },
         { .name = "zuc-eea3",
           .values.job_params = { .cipher_mode = TEST_ZUC_EEA3, .key_size = 16 } },
-        { .name = "zuc-eea3-256",
-          .values.job_params = { .cipher_mode = TEST_ZUC_EEA3, .key_size = 32 } },
         { .name = "snow3g-uea2",
           .values.job_params = { .cipher_mode = TEST_SNOW3G_UEA2, .key_size = 16 } },
         { .name = "kasumi-uea1",

@@ -132,11 +132,6 @@ IMB_JOB *
 flush_job_zuc_eia3_gfni_avx512(MB_MGR_ZUC_OOO *state);
 
 IMB_JOB *
-submit_job_zuc256_eea3_gfni_avx512(MB_MGR_ZUC_OOO *state, IMB_JOB *job);
-IMB_JOB *
-flush_job_zuc256_eea3_gfni_avx512(MB_MGR_ZUC_OOO *state);
-
-IMB_JOB *
 aes_cntr_ccm_128_vaes_avx512(IMB_JOB *job);
 
 IMB_JOB *

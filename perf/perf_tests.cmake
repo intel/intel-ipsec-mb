@@ -58,7 +58,6 @@ set(CIPHER_ALGOS
   des-cbc
   3des-cbc
   zuc-eea3
-  zuc-eea3-256
   snow3g-uea2
   kasumi-uea1
   chacha20

@@ -26,8 +26,6 @@
 ;;
 %define SUBMIT_JOB_ZUC128_EEA3 submit_job_zuc_eea3_gfni_avx512
 %define FLUSH_JOB_ZUC128_EEA3 flush_job_zuc_eea3_gfni_avx512
-%define SUBMIT_JOB_ZUC256_EEA3 submit_job_zuc256_eea3_gfni_avx512
-%define FLUSH_JOB_ZUC256_EEA3 flush_job_zuc256_eea3_gfni_avx512
 %define SUBMIT_JOB_ZUC128_EIA3 submit_job_zuc_eia3_gfni_avx512
 %define FLUSH_JOB_ZUC128_EIA3 flush_job_zuc_eia3_gfni_avx512
 %define SUBMIT_JOB_ZUC256_EIA3 submit_job_zuc256_eia3_gfni_avx512
