@@ -174,10 +174,9 @@ update_flags_and_archs(const char *arg, uint8_t arch_support[IMB_ARCH_NUM], uint
                 fprintf(stderr, "Inputs not passed correctly\n");
                 return -1;
         }
-
         if (strcmp(arg, "--no-avx512") == 0)
                 arch_support[IMB_ARCH_AVX512] = 0;
-        if (strcmp(arg, "--no-avx10") == 0)
+        else if (strcmp(arg, "--no-avx10") == 0)
                 arch_support[IMB_ARCH_AVX10] = 0;
         else if (strcmp(arg, "--no-avx2") == 0)
                 arch_support[IMB_ARCH_AVX2] = 0;
