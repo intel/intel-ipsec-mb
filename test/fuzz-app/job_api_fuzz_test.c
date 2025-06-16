@@ -199,10 +199,6 @@ fill_additional_hash_data(struct IMB_JOB *job, void *buff, uint64_t buffsize)
                 if (job->u.CMAC._skey2 != NULL)
                         job->u.CMAC._skey2 = buff;
                 break;
-        case IMB_AUTH_ZUC256_EIA3_BITLEN:
-                if (job->u.ZUC_EIA3._iv23 != NULL)
-                        job->u.ZUC_EIA3._iv23 = (uint8_t *) buff;
-                /* fall through */
         case IMB_AUTH_ZUC_EIA3_BITLEN:
                 if (job->u.ZUC_EIA3._key != NULL)
                         job->u.ZUC_EIA3._key = (uint8_t *) buff;
@@ -343,8 +339,6 @@ hash_selection(void)
                         return IMB_AUTH_CHACHA20_POLY1305;
                 else if (strcmp(a, "IMB_AUTH_CHACHA20_POLY1305_SGL") == 0)
                         return IMB_AUTH_CHACHA20_POLY1305_SGL;
-                else if (strcmp(a, "IMB_AUTH_ZUC256_EIA3_BITLEN") == 0)
-                        return IMB_AUTH_ZUC256_EIA3_BITLEN;
                 else if (strcmp(a, "IMB_AUTH_GCM_SGL") == 0)
                         return IMB_AUTH_GCM_SGL;
                 else if (strcmp(a, "IMB_AUTH_CRC32_ETHERNET_FCS") == 0)

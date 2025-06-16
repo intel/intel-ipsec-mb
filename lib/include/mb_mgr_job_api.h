@@ -2452,9 +2452,6 @@ SUBMIT_JOB_HASH_EX(IMB_MGR *state, IMB_JOB *job, const IMB_HASH_ALG hash_alg)
         MB_MGR_CMAC_OOO *aes_cmac_ooo = state->aes_cmac_ooo;
         MB_MGR_CMAC_OOO *aes256_cmac_ooo = state->aes256_cmac_ooo;
         MB_MGR_ZUC_OOO *zuc_eia3_ooo = state->zuc_eia3_ooo;
-        MB_MGR_ZUC_OOO *zuc256_eia3_ooo = state->zuc256_eia3_ooo;
-        MB_MGR_ZUC_OOO *zuc256_eia3_8B_ooo = state->zuc256_eia3_8B_ooo;
-        MB_MGR_ZUC_OOO *zuc256_eia3_16B_ooo = state->zuc256_eia3_16B_ooo;
         MB_MGR_SHA_1_OOO *sha_1_ooo = state->sha_1_ooo;
         MB_MGR_SHA_256_OOO *sha_224_ooo = state->sha_224_ooo;
         MB_MGR_SHA_256_OOO *sha_256_ooo = state->sha_256_ooo;
@@ -2513,13 +2510,6 @@ SUBMIT_JOB_HASH_EX(IMB_MGR *state, IMB_JOB *job, const IMB_HASH_ALG hash_alg)
                 return SUBMIT_JOB_SHA512(sha_512_ooo, job);
         case IMB_AUTH_ZUC_EIA3_BITLEN:
                 return SUBMIT_JOB_ZUC_EIA3(zuc_eia3_ooo, job);
-        case IMB_AUTH_ZUC256_EIA3_BITLEN:
-                if (job->auth_tag_output_len_in_bytes == 4)
-                        return SUBMIT_JOB_ZUC256_EIA3(zuc256_eia3_ooo, job, 4);
-                if (job->auth_tag_output_len_in_bytes == 8)
-                        return SUBMIT_JOB_ZUC256_EIA3(zuc256_eia3_8B_ooo, job, 8);
-                else /* tag size == 16 */
-                        return SUBMIT_JOB_ZUC256_EIA3(zuc256_eia3_16B_ooo, job, 16);
         case IMB_AUTH_SNOW3G_UIA2_BITLEN:
 #if (defined(SAFE_LOOKUP) || defined(AVX512))
                 return SUBMIT_JOB_SNOW3G_UIA2(snow3g_uia2_ooo, job);
@@ -2630,9 +2620,6 @@ FLUSH_JOB_HASH_EX(IMB_MGR *state, IMB_JOB *job, const IMB_HASH_ALG hash_alg)
         MB_MGR_CMAC_OOO *aes_cmac_ooo = state->aes_cmac_ooo;
         MB_MGR_CMAC_OOO *aes256_cmac_ooo = state->aes256_cmac_ooo;
         MB_MGR_ZUC_OOO *zuc_eia3_ooo = state->zuc_eia3_ooo;
-        MB_MGR_ZUC_OOO *zuc256_eia3_ooo = state->zuc256_eia3_ooo;
-        MB_MGR_ZUC_OOO *zuc256_eia3_8B_ooo = state->zuc256_eia3_8B_ooo;
-        MB_MGR_ZUC_OOO *zuc256_eia3_16B_ooo = state->zuc256_eia3_16B_ooo;
         MB_MGR_SHA_1_OOO *sha_1_ooo = state->sha_1_ooo;
         MB_MGR_SHA_256_OOO *sha_224_ooo = state->sha_224_ooo;
         MB_MGR_SHA_256_OOO *sha_256_ooo = state->sha_256_ooo;
@@ -2682,13 +2669,6 @@ FLUSH_JOB_HASH_EX(IMB_MGR *state, IMB_JOB *job, const IMB_HASH_ALG hash_alg)
                 return FLUSH_JOB_AES256_CMAC_AUTH(aes256_cmac_ooo);
         case IMB_AUTH_ZUC_EIA3_BITLEN:
                 return FLUSH_JOB_ZUC_EIA3(zuc_eia3_ooo);
-        case IMB_AUTH_ZUC256_EIA3_BITLEN:
-                if (job->auth_tag_output_len_in_bytes == 4)
-                        return FLUSH_JOB_ZUC256_EIA3(zuc256_eia3_ooo, 4);
-                if (job->auth_tag_output_len_in_bytes == 8)
-                        return FLUSH_JOB_ZUC256_EIA3(zuc256_eia3_8B_ooo, 8);
-                else /* tag size == 16 */
-                        return FLUSH_JOB_ZUC256_EIA3(zuc256_eia3_16B_ooo, 16);
 #if (defined(SAFE_LOOKUP) || defined(AVX512))
         case IMB_AUTH_SNOW3G_UIA2_BITLEN:
                 return FLUSH_JOB_SNOW3G_UIA2(snow3g_uia2_ooo);
@@ -2888,12 +2868,6 @@ submit_hash_chacha20_poly1305_sgl(IMB_MGR *state, IMB_JOB *job)
 }
 
 static IMB_JOB *
-submit_hash_zuc256_eia3_bit(IMB_MGR *state, IMB_JOB *job)
-{
-        return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_ZUC256_EIA3_BITLEN);
-}
-
-static IMB_JOB *
 submit_hash_gcm_sgl(IMB_MGR *state, IMB_JOB *job)
 {
         return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_GCM_SGL);
@@ -3058,41 +3032,39 @@ static const submit_flush_fn_t tab_submit_hash[] = {
         submit_hash_chacha20_poly1305,
         /* [30] CHACHA20-POLY1305 SGL */
         submit_hash_chacha20_poly1305_sgl,
-        /* [31] ZUC256 EIA3 */
-        submit_hash_zuc256_eia3_bit,
-        /* [32] GCM SGL */
+        /* [31] GCM SGL */
         submit_hash_gcm_sgl,
-        /* [33] CRC32 ETHERNET FCS */
+        /* [32] CRC32 ETHERNET FCS */
         submit_hash_crc32_ethernet_fcs,
-        /* [34] CRC32 SCTP */
+        /* [33] CRC32 SCTP */
         submit_hash_crc32_sctp,
-        /* [35] CRC32 WIMAX OFDMA DATA */
+        /* [34] CRC32 WIMAX OFDMA DATA */
         submit_hash_crc32_wimax_ofdma,
-        /* [36] CRC24 LTE A */
+        /* [35] CRC24 LTE A */
         submit_hash_crc24_lte_a,
-        /* [37] CRC24 LTE B */
+        /* [36] CRC24 LTE B */
         submit_hash_crc24_lte_b,
-        /* [38] CRC16 X25 */
+        /* [37] CRC16 X25 */
         submit_hash_crc16_x25,
-        /* [39] CRC16 FP DATA */
+        /* [38] CRC16 FP DATA */
         submit_hash_crc16_fp_data,
-        /* [40] CRC11 FP HEADER */
+        /* [39] CRC11 FP HEADER */
         submit_hash_crc11_fp_header,
-        /* [41] CRC10 IUUP DATA */
+        /* [40] CRC10 IUUP DATA */
         submit_hash_crc10_iuup_data,
-        /* [42] CRC8 WIMAX OFDMA HCS */
+        /* [41] CRC8 WIMAX OFDMA HCS */
         submit_hash_crc8_wimax_odma,
-        /* [43] CRC7 FP HEADER */
+        /* [42] CRC7 FP HEADER */
         submit_hash_crc7_fp_header,
-        /* [44] CRC6 IUUP HEADER */
+        /* [43] CRC6 IUUP HEADER */
         submit_hash_crc6_iuup_header,
-        /* [45] GHASH */
+        /* [44] GHASH */
         submit_hash_ghash,
-        /* [46] SM3 */
+        /* [45] SM3 */
         submit_hash_sm3,
-        /* [47] HMAC-SM3 */
+        /* [46] HMAC-SM3 */
         submit_hash_hmac_sm3,
-        /* [48] SM4-GCM */
+        /* [47] SM4-GCM */
         submit_hash_sm4_gcm,
         /* add new hash algorithms here */
 };
@@ -3282,12 +3254,6 @@ flush_hash_chacha20_poly1305_sgl(IMB_MGR *state, IMB_JOB *job)
 }
 
 static IMB_JOB *
-flush_hash_zuc256_eia3_bit(IMB_MGR *state, IMB_JOB *job)
-{
-        return FLUSH_JOB_HASH_EX(state, job, IMB_AUTH_ZUC256_EIA3_BITLEN);
-}
-
-static IMB_JOB *
 flush_hash_gcm_sgl(IMB_MGR *state, IMB_JOB *job)
 {
         return FLUSH_JOB_HASH_EX(state, job, IMB_AUTH_GCM_SGL);
@@ -3452,41 +3418,39 @@ static const submit_flush_fn_t tab_flush_hash[] = {
         flush_hash_chacha20_poly1305,
         /* [30] CHACHA20-POLY1305 SGL */
         flush_hash_chacha20_poly1305_sgl,
-        /* [31] ZUC256 EIA3 */
-        flush_hash_zuc256_eia3_bit,
-        /* [32] GCM SGL */
+        /* [31] GCM SGL */
         flush_hash_gcm_sgl,
-        /* [33] CRC32 ETHERNET FCS */
+        /* [32] CRC32 ETHERNET FCS */
         flush_hash_crc32_ethernet_fcs,
-        /* [34] CRC32 SCTP */
+        /* [33] CRC32 SCTP */
         flush_hash_crc32_sctp,
-        /* [35] CRC32 WIMAX OFDMA DATA */
+        /* [34] CRC32 WIMAX OFDMA DATA */
         flush_hash_crc32_wimax_ofdma,
-        /* [36] CRC24 LTE A */
+        /* [35] CRC24 LTE A */
         flush_hash_crc24_lte_a,
-        /* [37] CRC24 LTE B */
+        /* [36] CRC24 LTE B */
         flush_hash_crc24_lte_b,
-        /* [38] CRC16 X25 */
+        /* [37] CRC16 X25 */
         flush_hash_crc16_x25,
-        /* [39] CRC16 FP DATA */
+        /* [38] CRC16 FP DATA */
         flush_hash_crc16_fp_data,
-        /* [40] CRC11 FP HEADER */
+        /* [39] CRC11 FP HEADER */
         flush_hash_crc11_fp_header,
-        /* [41] CRC10 IUUP DATA */
+        /* [40] CRC10 IUUP DATA */
         flush_hash_crc10_iuup_data,
-        /* [42] CRC8 WIMAX OFDMA HCS */
+        /* [41] CRC8 WIMAX OFDMA HCS */
         flush_hash_crc8_wimax_odma,
-        /* [43] CRC7 FP HEADER */
+        /* [42] CRC7 FP HEADER */
         flush_hash_crc7_fp_header,
-        /* [44] CRC6 IUUP HEADER */
+        /* [43] CRC6 IUUP HEADER */
         flush_hash_crc6_iuup_header,
-        /* [45] GHASH */
+        /* [44] GHASH */
         flush_hash_ghash,
-        /* [46] SM3 */
+        /* [45] SM3 */
         flush_hash_sm3,
-        /* [47] HMAC-SM3 */
+        /* [46] HMAC-SM3 */
         flush_hash_hmac_sm3,
-        /* [48] SM4-GCM */
+        /* [47] SM4-GCM */
         flush_hash_sm4_gcm,
         /* add new hash algorithms here */
 };

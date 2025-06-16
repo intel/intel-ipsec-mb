@@ -60,11 +60,6 @@ IMB_JOB *
 flush_job_zuc_eia3_gfni_avx2(MB_MGR_ZUC_OOO *state);
 
 IMB_JOB *
-submit_job_zuc256_eia3_gfni_avx2(MB_MGR_ZUC_OOO *state, IMB_JOB *job, const uint64_t tag_sz);
-IMB_JOB *
-flush_job_zuc256_eia3_gfni_avx2(MB_MGR_ZUC_OOO *state, const uint64_t tag_sz);
-
-IMB_JOB *
 submit_job_aes128_cfb_enc_vaes_avx2(MB_MGR_AES_OOO *state, IMB_JOB *job);
 IMB_JOB *
 flush_job_aes128_cfb_enc_vaes_avx2(MB_MGR_AES_OOO *state);

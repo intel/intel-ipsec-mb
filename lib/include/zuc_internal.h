@@ -240,43 +240,6 @@ asm_ZucInitialization_4_gfni_sse(ZucKey4_t *pKeys, const uint8_t *ivs, ZucState4
  ******************************************************************************
  * @description
  *      Definition of the external function that implements the initialization
- *      stage of the ZUC-256 algorithm for 4 packets. The function will
- *      initialize the state for 4 individual packets.
- *
- * @param[in] pKey                  Pointer to an array of 256-bit initial keys
- *                                  that will be used when initializing the ZUC
- *                                  state.
- * @param[in] ivs                   Pointer to 4 x 25-byte initialization
- *                                  vectors that will be used when initializing
- *                                  the ZUC state (first 17 bytes are full
- *                                  bytes, in last 8 bytes, only the lower
- *                                  6 bits are used)
- * @param[in,out] pState            Pointer to a ZUC state structure of type
- *                                  @ref ZucState4_t that will be populated
- *                                  with the initialized ZUC state.
- * @param[in,out] tags              Array of 4 pointers to authentication tags
- *                                  (up to 16 bytes each, only for ZUC-EIA3)
- * @param[in] tag_sz                Tag size (0, 4, 8 or 16), to select the
- *                                  constants used to initialize the LFSR
- *                                  the LFSR registers (0 is used in case of
- *                                  encryption).
- *
- * @pre
- *      None
- *
- *****************************************************************************/
-IMB_DLL_LOCAL void
-asm_Zuc256Initialization_4_sse(ZucKey4_t *pKeys, const uint8_t *ivs, ZucState4_t *pState,
-                               void *tags, const uint64_t tag_sz);
-
-IMB_DLL_LOCAL void
-asm_Zuc256Initialization_4_gfni_sse(ZucKey4_t *pKeys, const uint8_t *ivs, ZucState4_t *pState,
-                                    void *tags, const uint64_t tag_sz);
-
-/**
- ******************************************************************************
- * @description
- *      Definition of the external function that implements the initialization
  *      stage of the ZUC algorithm for 8 packets. The function will initialize
  *      the state for 8 individual packets.
  *
@@ -298,42 +261,6 @@ IMB_DLL_LOCAL void
 asm_ZucInitialization_8_avx2(ZucKey8_t *pKeys, const uint8_t *ivs, ZucState8_t *pState);
 IMB_DLL_LOCAL void
 asm_ZucInitialization_8_gfni_avx2(ZucKey8_t *pKeys, const uint8_t *ivs, ZucState8_t *pState);
-
-/**
- ******************************************************************************
- * @description
- *      Definition of the external function that implements the initialization
- *      stage of the ZUC-256 algorithm for 8 packets. The function will
- *      initialize the state for 8 individual packets.
- *
- * @param[in] pKey                  Pointer to an array of 256-bit initial keys
- *                                  that will be used when initializing the ZUC
- *                                  state.
- * @param[in] ivs                   Pointer to 8 x 25-byte initialization
- *                                  vectors that will be used when initializing
- *                                  the ZUC state (first 17 bytes are full
- *                                  bytes, in last 8 bytes, only the lower
- *                                  6 bits are used)
- * @param[in,out] pState            Pointer to a ZUC state structure of type
- *                                  @ref ZucState8_t that will be populated
- *                                  with the initialized ZUC state.
- * @param[in,out] tags              Array of 4 pointers to authentication tags
- *                                  (up to 16 bytes each, only for ZUC-EIA3)
- * @param[in] tag_sz                Tag size (0, 4, 8 or 16), to select the
- *                                  constants used to initialize the LFSR
- *                                  the LFSR registers (0 is used in case of
- *                                  encryption).
- *
- * @pre
- *      None
- *
- *****************************************************************************/
-IMB_DLL_LOCAL void
-asm_Zuc256Initialization_8_avx2(ZucKey8_t *pKeys, const uint8_t *ivs, ZucState8_t *pState,
-                                void *tags, const uint64_t tag_sz);
-IMB_DLL_LOCAL void
-asm_Zuc256Initialization_8_gfni_avx2(ZucKey8_t *pKeys, const uint8_t *ivs, ZucState8_t *pState,
-                                     void *tags, const uint64_t tag_sz);
 
 /**
  ******************************************************************************
@@ -363,37 +290,6 @@ asm_ZucInitialization_16_avx512(ZucKey16_t *pKeys, const uint8_t *ivs, ZucState1
 IMB_DLL_LOCAL void
 asm_ZucInitialization_16_gfni_avx512(ZucKey16_t *pKeys, const uint8_t *ivs, ZucState16_t *pState,
                                      const uint16_t lane_mask);
-
-/**
- ******************************************************************************
- * @description
- *      Definition of the external function that implements the initialization
- *      stage of the ZUC-256 algorithm for 16 packets. The function will
- *      initialize the state for 16 individual packets.
- *
- * @param[in] pKey                  Pointer to an array of 256-bit initial keys
- *                                  that will be used when initializing the ZUC
- *                                  state.
- * @param[in] ivs                   Pointer to 16 x 25-byte initialization
- *                                  vectors that will be used when initializing
- *                                  the ZUC state (first 17 bytes are full
- *                                  bytes, in last 8 bytes, only the lower
- *                                  6 bits are used)
- * @param[in,out] pState            Pointer to a ZUC state structure of type
- *                                  @ref ZucState16_t that will be populated
- *                                  with the initialized ZUC state.
- *
- * @pre
- *      None
- *
- *****************************************************************************/
-IMB_DLL_LOCAL void
-asm_Zuc256Initialization_16_avx512(ZucKey16_t *pKeys, const uint8_t *ivs, ZucState16_t *pState,
-                                   const uint16_t lane_mask, const unsigned tag_sz);
-
-IMB_DLL_LOCAL void
-asm_Zuc256Initialization_16_gfni_avx512(ZucKey16_t *pKeys, const uint8_t *ivs, ZucState16_t *pState,
-                                        const uint16_t lane_mask, const unsigned tag_sz);
 
 /**
  ******************************************************************************
@@ -604,40 +500,6 @@ asm_ZucGenKeystream64B_16_gfni_avx512(ZucState16_t *pState, uint32_t *pKeyStr,
  *      Definition of the external function that implements the working
  *      stage of the ZUC algorithm. The function will generate 64 bytes of
  *      keystream for 16 packets in parallel, except for selected lanes,
- *      which will have 48 bytes of keystream generated instead.
- *
- * @param[in] pState                Pointer to a ZUC state structure of type
- *                                  @ref ZucState16_t
- *
- * @param[in,out] pKeyStr           Array of pointers to 16 input buffers
- *                                  that will contain the generated keystream
- *                                  for these 16 packets.
- *
- * @param[in] key_off               Starting offset for writing KS.
- *
- * @param[in] lane_mask             Mask containing lanes which will have 64
- *                                  bytes of KS generated (16 bytes less for
- *                                  the rest)
- *
- * @pre
- *      A successful call to @ref asm_ZucInitialization_16_avx512 to initialize
- *      the ZUC state.
- *
- *****************************************************************************/
-IMB_DLL_LOCAL void
-asm_ZucGenKeystream64B_16_skip16_avx512(ZucState16_t *pState, uint32_t *pKeyStr,
-                                        const unsigned key_off, const uint16_t lane_mask);
-
-IMB_DLL_LOCAL void
-asm_ZucGenKeystream64B_16_skip16_gfni_avx512(ZucState16_t *pState, uint32_t *pKeyStr,
-                                             const unsigned key_off, const uint16_t lane_mask);
-/**
- ******************************************************************************
- *
- * @description
- *      Definition of the external function that implements the working
- *      stage of the ZUC algorithm. The function will generate 64 bytes of
- *      keystream for 16 packets in parallel, except for selected lanes,
  *      which will have 56 bytes of keystream generated instead.
  *
  * @param[in] pState                Pointer to a ZUC state structure of type
@@ -665,40 +527,7 @@ asm_ZucGenKeystream64B_16_skip8_avx512(ZucState16_t *pState, uint32_t *pKeyStr,
 IMB_DLL_LOCAL void
 asm_ZucGenKeystream64B_16_skip8_gfni_avx512(ZucState16_t *pState, uint32_t *pKeyStr,
                                             const unsigned key_off, const uint16_t lane_mask);
-/**
- ******************************************************************************
- *
- * @description
- *      Definition of the external function that implements the working
- *      stage of the ZUC algorithm. The function will generate 64 bytes of
- *      keystream for 16 packets in parallel, except for selected lanes,
- *      which will have 60 bytes of keystream generated instead.
- *
- * @param[in] pState                Pointer to a ZUC state structure of type
- *                                  @ref ZucState16_t
- *
- * @param[in,out] pKeyStr           Array of pointers to 16 input buffers
- *                                  that will contain the generated keystream
- *                                  for these 16 packets.
- *
- * @param[in] key_off               Starting offset for writing KS.
- *
- * @param[in] lane_mask             Mask containing lanes which will have 64
- *                                  bytes of KS generated (4 bytes less for
- *                                  the rest)
- *
- * @pre
- *      A successful call to @ref asm_ZucInitialization_16_avx512 to initialize
- *      the ZUC state.
- *
- *****************************************************************************/
-IMB_DLL_LOCAL void
-asm_ZucGenKeystream64B_16_skip4_avx512(ZucState16_t *pState, uint32_t *pKeyStr,
-                                       const unsigned key_off, const uint16_t lane_mask);
 
-IMB_DLL_LOCAL void
-asm_ZucGenKeystream64B_16_skip4_gfni_avx512(ZucState16_t *pState, uint32_t *pKeyStr,
-                                            const unsigned key_off, const uint16_t lane_mask);
 /**
  ******************************************************************************
  *
@@ -904,43 +733,6 @@ asm_ZucGenKeystream_16_gfni_avx512(ZucState16_t *pState, uint32_t *pKstr, const 
  * @param[in] key_off               Starting offset for writing KS.
  *
  * @param[in] lane_mask             Mask containing lanes which will have N*4
- *                                  bytes of KS generated (16 bytes less for
- *                                  the rest)
- *
- * @param[in] numRounds             Number of 4-byte rounds (1 to 16 rounds)
- *
- * @pre
- *      A successful call to @ref asm_ZucInitialization_16_avx512 to initialize
- *      ZUC state.
- *
- *****************************************************************************/
-IMB_DLL_LOCAL void
-asm_ZucGenKeystream_16_skip16_avx512(ZucState16_t *pState, uint32_t *pKstr, const unsigned key_off,
-                                     const uint16_t lane_mask, const uint32_t numRounds);
-
-IMB_DLL_LOCAL void
-asm_ZucGenKeystream_16_skip16_gfni_avx512(ZucState16_t *pState, uint32_t *pKstr,
-                                          const unsigned key_off, const uint16_t lane_mask,
-                                          const uint32_t numRounds);
-
-/**
- ******************************************************************************
- *
- * @description
- *      Definition of the external function that implements the working
- *      stage of the ZUC algorithm. The function will generate N*4 bytes of
- *      keystream for sixteen packets in parallel.
- *
- * @param[in] pState                Pointer to a ZUC state structure of type
- *                                  @ref ZucState16_t
- *
- * @param[in,out] pKeyStr           Array of pointers to 16 input buffers
- *                                  that will contain the generated keystream
- *                                  for these 16 packets.
- *
- * @param[in] key_off               Starting offset for writing KS.
- *
- * @param[in] lane_mask             Mask containing lanes which will have N*4
  *                                  bytes of KS generated (8 bytes less for
  *                                  the rest)
  *
@@ -960,42 +752,6 @@ asm_ZucGenKeystream_16_skip8_gfni_avx512(ZucState16_t *pState, uint32_t *pKstr,
                                          const unsigned key_off, const uint16_t lane_mask,
                                          const uint32_t numRounds);
 
-/**
- ******************************************************************************
- *
- * @description
- *      Definition of the external function that implements the working
- *      stage of the ZUC algorithm. The function will generate N*4 bytes of
- *      keystream for sixteen packets in parallel.
- *
- * @param[in] pState                Pointer to a ZUC state structure of type
- *                                  @ref ZucState16_t
- *
- * @param[in,out] pKeyStr           Array of pointers to 16 input buffers
- *                                  that will contain the generated keystream
- *                                  for these 16 packets.
- *
- * @param[in] key_off               Starting offset for writing KS.
- *
- * @param[in] lane_mask             Mask containing lanes which will have N*4
- *                                  bytes of KS generated (4 bytes less for
- *                                  the rest)
- *
- * @param[in] numRounds             Number of 4-byte rounds (1 to 16 rounds)
- *
- * @pre
- *      A successful call to @ref asm_ZucInitialization_16_avx512 to initialize
- *      ZUC state.
- *
- *****************************************************************************/
-IMB_DLL_LOCAL void
-asm_ZucGenKeystream_16_skip4_avx512(ZucState16_t *pState, uint32_t *pKstr, const unsigned key_off,
-                                    const uint16_t lane_mask, const uint32_t numRounds);
-
-IMB_DLL_LOCAL void
-asm_ZucGenKeystream_16_skip4_gfni_avx512(ZucState16_t *pState, uint32_t *pKstr,
-                                         const unsigned key_off, const uint16_t lane_mask,
-                                         const uint32_t numRounds);
 /**
  ******************************************************************************
  *
@@ -1105,20 +861,18 @@ asm_ZucCipher_16_gfni_avx512(ZucState16_t *pState, const uint64_t *pIn[16], uint
  *
  * @param[in] data                  Pointer to the data
  *
- * @param[in] tag_sz                Tag size (4, 8 or 16 bytes)
- *
  * @pre
  *      None
  *
  *****************************************************************************/
 IMB_DLL_LOCAL void
-asm_Eia3Round16B_sse(void *T, const void *ks, const void *data, const uint64_t tag_sz);
+asm_Eia3Round16B_sse(void *T, const void *ks, const void *data);
 
 IMB_DLL_LOCAL void
-asm_Eia3Round16B_gfni_sse(void *T, const void *ks, const void *data, const uint64_t tag_sz);
+asm_Eia3Round16B_gfni_sse(void *T, const void *ks, const void *data);
 
 IMB_DLL_LOCAL void
-asm_Eia3Round32B_avx(void *T, const void *ks, const void *data, const uint64_t tag_sz);
+asm_Eia3Round32B_avx(void *T, const void *ks, const void *data);
 
 /**
  ******************************************************************************
@@ -1130,23 +884,18 @@ asm_Eia3Round32B_avx(void *T, const void *ks, const void *data, const uint64_t t
  * @param[in] ks                    Pointer to key stream
  * @param[in] data                  Pointer to the data
  * @param[in] n_bits                Number of data bits to be processed
- * @param[in] key_size              Key size (128 or 256 bits)
- * @param[in] tag_size              Tag size (4, 8 or 16 bytes)
  * @pre
  *      None
  *
  *****************************************************************************/
 IMB_DLL_LOCAL void
-asm_Eia3Remainder_sse(void *T, const void *ks, const void *data, const uint64_t n_bits,
-                      const uint64_t key_size, const uint64_t tag_size);
+asm_Eia3Remainder_sse(void *T, const void *ks, const void *data, const uint64_t n_bits);
 
 IMB_DLL_LOCAL void
-asm_Eia3Remainder_gfni_sse(void *T, const void *ks, const void *data, const uint64_t n_bits,
-                           const uint64_t key_size, const uint64_t tag_size);
+asm_Eia3Remainder_gfni_sse(void *T, const void *ks, const void *data, const uint64_t n_bits);
 
 IMB_DLL_LOCAL void
-asm_Eia3Remainder_avx(void *T, const void *ks, const void *data, const uint64_t n_bits,
-                      const uint64_t key_size, const uint64_t tag_size);
+asm_Eia3Remainder_avx(void *T, const void *ks, const void *data, const uint64_t n_bits);
 
 /**
  ******************************************************************************
@@ -1162,20 +911,16 @@ asm_Eia3Remainder_avx(void *T, const void *ks, const void *data, const uint64_t 
  *
  * @param[in] len                   Array of remaining lengths for 16 buffers
  *
- * @param[in] tag_sz                Tag size (4, 8 or 16 bytes)
- *
  * @pre
  *      None
  *
  *****************************************************************************/
 
 IMB_DLL_LOCAL void
-asm_Eia3Round64BAVX512_16(void *T, const uint32_t *ks, const void **data, uint16_t *len,
-                          const uint64_t tag_sz);
+asm_Eia3Round64BAVX512_16(void *T, const uint32_t *ks, const void **data, uint16_t *len);
 
 IMB_DLL_LOCAL void
-asm_Eia3Round64B_16_VPCLMUL(void *T, const uint32_t *ks, const void **data, uint16_t *len,
-                            const uint64_t tag_sz);
+asm_Eia3Round64B_16_VPCLMUL(void *T, const uint32_t *ks, const void **data, uint16_t *len);
 
 IMB_DLL_LOCAL void
 asm_Eia3Round64BAVX512(uint32_t *T, const void *ks, const void *data);
@@ -1206,17 +951,8 @@ asm_Eia3RemainderAVX512_16(uint32_t *T, const uint32_t *ks, const void **data, u
                            const uint32_t commonBits);
 
 IMB_DLL_LOCAL uint32_t
-asm_Eia3_256_RemainderAVX512_16(uint32_t *T, const uint32_t *ks, const void **data, uint16_t *lens,
-                                const uint64_t commonBits, const uint64_t tag_size);
-
-IMB_DLL_LOCAL uint32_t
 asm_Eia3RemainderAVX512_16_VPCLMUL(uint32_t *T, const uint32_t *ks, const void **data,
                                    uint16_t *lens, const uint32_t commonBits);
-
-IMB_DLL_LOCAL uint32_t
-asm_Eia3_256_RemainderAVX512_16_VPCLMUL(uint32_t *T, const uint32_t *ks, const void **data,
-                                        uint16_t *lens, const uint64_t commonBits,
-                                        const uint64_t tag_size);
 
 /**
  ******************************************************************************
@@ -1229,18 +965,16 @@ asm_Eia3_256_RemainderAVX512_16_VPCLMUL(uint32_t *T, const uint32_t *ks, const v
  * @param[in] data                  Array of 16 pointers to data for 16 buffers
  * @param[in] len                   Array of lengths for 16 buffers
  * @param[in] numRounds             Number of 64B rounds to perform
- * @param[in] tagSize               Tag size (4 or 8 bytes)
  *
  *****************************************************************************/
 IMB_DLL_LOCAL
 void
 asm_Eia3_Nx64B_AVX512_16(ZucState16_t *pState, uint32_t *pKeyStr, uint32_t *T, const void **data,
-                         uint16_t *len, const uint64_t numRounds, const uint64_t tagSize);
+                         uint16_t *len, const uint64_t numRounds);
 IMB_DLL_LOCAL
 void
 asm_Eia3_Nx64B_AVX512_16_VPCLMUL(ZucState16_t *pState, uint32_t *pKeyStr, uint32_t *T,
-                                 const void **data, uint16_t *len, const uint64_t numRounds,
-                                 const uint64_t tagSize);
+                                 const void **data, uint16_t *len, const uint64_t numRounds);
 IMB_DLL_LOCAL
 void
 zuc_eia3_4_buffer_job_gfni_sse(const void *const pKey[4], const uint8_t *ivs,
@@ -1255,20 +989,6 @@ zuc_eia3_4_buffer_job_no_gfni_sse(const void *const pKey[4], const uint8_t *ivs,
 
 IMB_DLL_LOCAL
 void
-zuc256_eia3_4_buffer_job_gfni_sse(const void *const pKey[4], const uint8_t *ivs,
-                                  const void *const pBufferIn[4], void *pMacI[4],
-                                  const uint16_t lengthInBits[4], const void *const job_in_lane[4],
-                                  const uint64_t tag_size);
-
-IMB_DLL_LOCAL
-void
-zuc256_eia3_4_buffer_job_no_gfni_sse(const void *const pKey[4], const uint8_t *ivs,
-                                     const void *const pBufferIn[4], void *pMacI[4],
-                                     const uint16_t lengthInBits[4],
-                                     const void *const job_in_lane[4], const uint64_t tag_size);
-
-IMB_DLL_LOCAL
-void
 zuc_eia3_8_buffer_job_avx2(const void *const pKey[8], const uint8_t *ivs,
                            const void *const pBufferIn[8], uint32_t *pMacI[8],
                            const uint16_t lengthInBits[8], const void *const job_in_lane[8]);
@@ -1279,19 +999,6 @@ zuc_eia3_8_buffer_job_gfni_avx2(const void *const pKey[8], const uint8_t *ivs,
                                 const void *const pBufferIn[8], uint32_t *pMacI[8],
                                 const uint16_t lengthInBits[8], const void *const job_in_lane[8]);
 
-IMB_DLL_LOCAL
-void
-zuc256_eia3_8_buffer_job_avx2(const void *const pKey[8], const uint8_t *ivs,
-                              const void *const pBufferIn[8], void *pMacI[8],
-                              const uint16_t lengthInBits[8], const void *const job_in_lane[8],
-                              const uint64_t tag_size);
-
-IMB_DLL_LOCAL
-void
-zuc256_eia3_8_buffer_job_gfni_avx2(const void *const pKey[8], const uint8_t *ivs,
-                                   const void *const pBufferIn[8], void *pMacI[8],
-                                   const uint16_t lengthInBits[8], const void *const job_in_lane[8],
-                                   const uint64_t tag_size);
 /* the s-boxes */
 extern const uint8_t S0[256];
 extern const uint8_t S1[256];

@@ -39,11 +39,8 @@
 %define FLUSH_JOB_ZUC128_EEA3 flush_job_zuc_eea3_avx2
 %define SUBMIT_JOB_ZUC128_EIA3 submit_job_zuc_eia3_avx2
 %define FLUSH_JOB_ZUC128_EIA3 flush_job_zuc_eia3_avx2
-%define SUBMIT_JOB_ZUC256_EIA3 submit_job_zuc256_eia3_avx2
-%define FLUSH_JOB_ZUC256_EIA3 flush_job_zuc256_eia3_avx2
 %define ZUC128_INIT_8        asm_ZucInitialization_8_avx2
 %define ZUC_EIA3_8_BUFFER    zuc_eia3_8_buffer_job_avx2
-%define ZUC256_EIA3_8_BUFFER zuc256_eia3_8_buffer_job_avx2
 %define ZUC_CIPHER_8      asm_ZucCipher_8_avx2
 %endif
 
@@ -84,10 +81,8 @@ dd      0x00000000, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF
 dd      0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF
 
 extern ZUC128_INIT_8
-extern ZUC256_INIT_8
 extern ZUC_CIPHER_8
 extern ZUC_EIA3_8_BUFFER
-extern ZUC256_EIA3_8_BUFFER
 
 %ifdef LINUX
 %define arg1    rdi
@@ -698,9 +693,7 @@ FLUSH_JOB_ZUC128_EEA3:
 
 
 
-%macro SUBMIT_JOB_ZUC_EIA3 2
-%define %%KEY_SIZE      %1 ; [constant] Key size (128 or 256)
-%define %%TAG_SIZE      %2 ; [constant] Tag size (4, 8 or 16)
+%macro SUBMIT_JOB_ZUC_EIA3 0
 
 ; idx needs to be in rbp
 %define len              rbp
@@ -737,50 +730,9 @@ FLUSH_JOB_ZUC128_EEA3:
         shr     unused_lanes, 4
         mov     tmp, [job + _zuc_eia3_iv]
         shl     lane, 5
-%if %%KEY_SIZE == 128
         ; Read first 16 bytes of IV
         vmovdqu xmm0, [tmp]
         vmovdqa [state + _zuc_args_IV + lane], xmm0
-%else ;; %%KEY_SIZE == 256
-        ; Check if ZUC_EIA3._iv is not NULL, meaning a 25-byte IV can be parsed
-        or      tmp, tmp
-        jnz     %%_iv_size_25
-align_label
-%%_iv_size_23:
-        ; Read 23 bytes of IV and expand to 25 bytes
-        ; then expand the last 6 bytes to 8 bytes
-        mov     tmp, [job + _zuc_eia3_iv23]
-        ; Read and write first 16 bytes
-        vmovdqu xmm0, [tmp]
-        vmovdqa [state + _zuc_args_IV + lane], xmm0
-        ; Read and write next byte
-        mov     al, [tmp + 16]
-        mov     [state + _zuc_args_IV + lane + 16], al
-        ; Read next 6 bytes and write as 8 bytes
-
-        ; Read last 8 bytes and keep only 6 bytes
-        mov     tmp2, [tmp + 15]
-        mov     tmp3, 0x0000ffffffffffff
-        bswap   tmp2
-        and     tmp2, tmp3
-        ; Expand to 8 bytes and write
-        mov     tmp3, 0x3f3f3f3f3f3f3f3f
-        pdep    tmp2, tmp2, tmp3
-        bswap   tmp2
-        mov     [state + _zuc_args_IV + lane + 17], tmp2
-
-        jmp     %%_iv_read
-align_label
-%%_iv_size_25:
-        ; Read 25 bytes of IV
-        vmovdqu xmm0, [tmp]
-        vmovdqa [state + _zuc_args_IV + lane], xmm0
-        vmovq   xmm0, [tmp + 16]
-        vpinsrb xmm0, [tmp + 24], 8
-        vmovdqa [state + _zuc_args_IV + lane + 16], xmm0
-align_label
-%%_iv_read:
-%endif
         shr     lane, 5
         mov     [state + _zuc_unused_lanes], unused_lanes
 
@@ -815,11 +767,7 @@ align_label
         ; to pass parameter to next function
         mov     r11, state
 
-%if %%KEY_SIZE == 128
         RESERVE_STACK_SPACE 6
-%else ; %%KEY_SIZE == 256
-        RESERVE_STACK_SPACE 7
-%endif
 
         lea     arg1, [r11 + _zuc_args_keys]
         lea     arg2, [r11 + _zuc_args_IV]
@@ -834,21 +782,10 @@ align_label
         lea     r12, [r11 + _zuc_job_in_lane]
         mov     arg6, r12
 %endif
-%if %%KEY_SIZE == 256
-        mov     arg7, %%TAG_SIZE
-%endif
 
-%if %%KEY_SIZE == 128
         call    ZUC_EIA3_8_BUFFER
-%else
-        call    ZUC256_EIA3_8_BUFFER
-%endif
 
-%if %%KEY_SIZE == 128
         RESTORE_STACK_SPACE 6
-%else ; %%KEY_SIZE == 256
-        RESTORE_STACK_SPACE 7
-%endif
 
         mov     state, [rsp + _gpr_save + 8*8]
         mov     job,   [rsp + _gpr_save + 8*9]
@@ -901,9 +838,7 @@ align_label
 %%exit_submit_eia3:
 %endmacro
 
-%macro FLUSH_JOB_ZUC_EIA3 2
-%define %%KEY_SIZE      %1 ; [constant] Key size (128 or 256)
-%define %%TAG_SIZE      %2 ; [constant] Tag size (4, 8 or 16)
+%macro FLUSH_JOB_ZUC_EIA3 0
 
 %define unused_lanes     rbx
 %define tmp1             rbx
@@ -987,11 +922,7 @@ APPEND(%%skip_eia3_,I):
         ; to pass parameter to next function
         mov     r11, state
 
-%if %%KEY_SIZE == 128
         RESERVE_STACK_SPACE 6
-%else ; %%KEY_SIZE == 256
-        RESERVE_STACK_SPACE 7
-%endif
 
         lea     arg1, [r11 + _zuc_args_keys]
         lea     arg2, [r11 + _zuc_args_IV]
@@ -1006,21 +937,10 @@ APPEND(%%skip_eia3_,I):
         lea     r12, [r11 + _zuc_job_in_lane]
         mov     arg6, r12
 %endif
-%if %%KEY_SIZE == 256
-        mov     arg7, %%TAG_SIZE
-%endif
 
-%if %%KEY_SIZE == 128
         call    ZUC_EIA3_8_BUFFER
-%else
-        call    ZUC256_EIA3_8_BUFFER
-%endif
 
-%if %%KEY_SIZE == 128
         RESTORE_STACK_SPACE 6
-%else ; %%KEY_SIZE == 256
-        RESTORE_STACK_SPACE 7
-%endif
 
         vmovdqa xmm2, [rsp + _null_len_save]
 
@@ -1079,68 +999,16 @@ align_label
 MKGLOBAL(SUBMIT_JOB_ZUC128_EIA3,function,internal)
 align_function
 SUBMIT_JOB_ZUC128_EIA3:
-        SUBMIT_JOB_ZUC_EIA3 128, 4
+        SUBMIT_JOB_ZUC_EIA3
         ret
 
-; JOB* SUBMIT_JOB_ZUC256_EIA3(MB_MGR_ZUC_OOO *state, IMB_JOB *job,
-;                             const uint64_t tag_sz)
-; arg 1 : state
-; arg 2 : job
-; arg 3 : tag size (4, 8 or 16 bytes)
-MKGLOBAL(SUBMIT_JOB_ZUC256_EIA3,function,internal)
-align_function
-SUBMIT_JOB_ZUC256_EIA3:
-        cmp     arg3, 8
-        je      submit_tag_8B
-        jb      submit_tag_4B
-
-        ; Fall-through for 16-byte tag
-align_label
-submit_tag_16B:
-        SUBMIT_JOB_ZUC_EIA3 256, 16
-        ret
-align_label
-submit_tag_8B:
-        SUBMIT_JOB_ZUC_EIA3 256, 8
-        ret
-align_label
-submit_tag_4B:
-        SUBMIT_JOB_ZUC_EIA3 256, 4
-        ret
 
 ; JOB* FLUSH_JOB_ZUC128_EIA3(MB_MGR_ZUC_OOO *state)
 ; arg 1 : state
 MKGLOBAL(FLUSH_JOB_ZUC128_EIA3,function,internal)
 align_function
 FLUSH_JOB_ZUC128_EIA3:
-        FLUSH_JOB_ZUC_EIA3 128, 4
-        ret
-
-; JOB* FLUSH_JOB_ZUC256_EIA3(MB_MGR_ZUC_OOO *state,
-;                            const uint64_t tag_sz)
-; arg 1 : state
-; arg 2 : tag size (4, 8 or 16 bytes)
-MKGLOBAL(FLUSH_JOB_ZUC256_EIA3,function,internal)
-align_function
-FLUSH_JOB_ZUC256_EIA3:
-        cmp     arg2, 8
-        je      flush_tag_8B
-        jb      flush_tag_4B
-
-        ; Fall-through for 16-byte tag
-align_label
-flush_tag_16B:
-        FLUSH_JOB_ZUC_EIA3 256, 16
-        ret
-
-align_label
-flush_tag_8B:
-        FLUSH_JOB_ZUC_EIA3 256, 8
-        ret
-
-align_label
-flush_tag_4B:
-        FLUSH_JOB_ZUC_EIA3 256, 4
+        FLUSH_JOB_ZUC_EIA3
         ret
 
 mksection stack-noexec

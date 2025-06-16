@@ -72,8 +72,7 @@
 #define MAX_AAD_SIZE     1024
 #define NUM_TAG_SIZES    7
 
-#define MAX_IV_SIZE  25 /* IV size for ZUC-256 */
-#define MAX_TAG_SIZE 16 /* Max tag size for ZUC-256 */
+#define MAX_IV_SIZE 16
 
 #define MAX_NUM_JOBS 32
 #define IMIX_ITER    1000
@@ -373,12 +372,6 @@ struct str_value_mapping hash_algo_str_map[] = {
                 }
         },
         {
-                .name = "ZUC-EIA3-256",
-                .values.job_params = {
-                        .hash_alg = IMB_AUTH_ZUC256_EIA3_BITLEN,
-                }
-        },
-        {
                 .name = "GHASH",
                 .values.job_params = {
                         .hash_alg = IMB_AUTH_GHASH,
@@ -537,7 +530,6 @@ const uint8_t auth_tag_len_bytes[] = {
         16,                        /* IMB_AUTH_POLY1305 */
         16,                        /* IMB_AUTH_CHACHA20_POLY1305 */
         16,                        /* IMB_AUTH_CHACHA20_POLY1305_SGL */
-        4,                         /* IMB_AUTH_ZUC256_EIA3_BITLEN */
         16,                        /* IMB_AUTH_AES_GCM_SGL */
         4,                         /* IMB_AUTH_CRC32_ETHERNET_FCS */
         4,                         /* IMB_AUTH_CRC32_SCTP */
@@ -1296,17 +1288,6 @@ fill_job(IMB_JOB *job, const struct params_s *params, uint8_t *buf, uint8_t *dig
                 job->u.HMAC._hashed_auth_key_xor_ipad = (uint8_t *) ipad;
                 job->u.HMAC._hashed_auth_key_xor_opad = (uint8_t *) opad;
                 break;
-        case IMB_AUTH_ZUC256_EIA3_BITLEN:
-                job->u.ZUC_EIA3._key = k2;
-                if (auth_iv_size == 23) {
-                        job->u.ZUC_EIA3._iv23 = auth_iv;
-                        job->u.ZUC_EIA3._iv = NULL;
-                } else {
-                        job->u.ZUC_EIA3._iv = auth_iv;
-                        job->u.ZUC_EIA3._iv23 = NULL;
-                }
-                job->msg_len_to_hash_in_bits = (job->msg_len_to_hash_in_bytes * 8);
-                break;
         case IMB_AUTH_ZUC_EIA3_BITLEN:
                 job->u.ZUC_EIA3._key = k2;
                 job->u.ZUC_EIA3._iv = auth_iv;
@@ -1542,7 +1523,6 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys, const uint8_t *ciph
                         nosimd_memset(opad, pattern_auth_key, sizeof(keys->opad));
                         break;
                 case IMB_AUTH_ZUC_EIA3_BITLEN:
-                case IMB_AUTH_ZUC256_EIA3_BITLEN:
                 case IMB_AUTH_SNOW3G_UIA2_BITLEN:
                 case IMB_AUTH_KASUMI_UIA1:
                         nosimd_memset(k3, pattern_auth_key, sizeof(keys->k3));
@@ -1655,7 +1635,6 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys, const uint8_t *ciph
                 imb_hmac_ipad_opad(mb_mgr, params->hash_alg, auth_key, MAX_KEY_SIZE, ipad, opad);
                 break;
         case IMB_AUTH_ZUC_EIA3_BITLEN:
-        case IMB_AUTH_ZUC256_EIA3_BITLEN:
         case IMB_AUTH_SNOW3G_UIA2_BITLEN:
         case IMB_AUTH_KASUMI_UIA1:
                 nosimd_memcpy(k2, auth_key, sizeof(keys->k2));
@@ -1946,7 +1925,6 @@ perform_safe_checks(IMB_MGR *mgr, const IMB_ARCH arch, struct safe_check_ctx *ct
                 "aes_cmac_ooo",
                 "zuc_eea3_ooo",
                 "zuc_eia3_ooo",
-                "zuc256_eia3_ooo",
                 "aes256_ccm_ooo",
                 "aes256_cmac_ooo",
                 "snow3g_uea2_ooo",
@@ -2585,10 +2563,6 @@ test_single(IMB_MGR *enc_mgr, const IMB_ARCH enc_arch, IMB_MGR *dec_mgr, const I
                 /* If CCM, test all tag sizes supported (4,6,8,10,12,14,16) */
                 if (params->hash_alg == IMB_AUTH_AES_CCM) {
                         for (i = 4; i <= 16; i += 2)
-                                tag_sizes[num_tag_sizes++] = i;
-                        /* If ZUC-EIA3-256, test all tag sizes supported (4,8,16) */
-                } else if (params->hash_alg == IMB_AUTH_ZUC256_EIA3_BITLEN) {
-                        for (i = 4; i <= 16; i *= 2)
                                 tag_sizes[num_tag_sizes++] = i;
                 } else {
                         tag_sizes[0] = auth_tag_len_bytes[params->hash_alg - 1];
@@ -3253,11 +3227,11 @@ main(int argc, char *argv[])
                 } else if (strcmp(argv[i], "--tag-size") == 0) {
                         i = get_next_num_arg((const char *const *) argv, i, argc, &auth_tag_size,
                                              sizeof(auth_tag_size));
-                        if (auth_tag_size > MAX_TAG_SIZE) {
+                        if (auth_tag_size > MAX_DIGEST_SIZE) {
                                 fprintf(stderr,
                                         "Tag size cannot be "
                                         "higher than %d\n",
-                                        MAX_TAG_SIZE);
+                                        MAX_DIGEST_SIZE);
                                 return EXIT_FAILURE;
                         }
                 } else if (strcmp(argv[i], "--num-jobs") == 0) {

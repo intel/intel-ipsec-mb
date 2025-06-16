@@ -262,8 +262,6 @@ misc_hash_alg_to_str(const IMB_HASH_ALG mode)
                 return "aead-chacha20-poly1305";
         case IMB_AUTH_CHACHA20_POLY1305_SGL:
                 return "aead-chacha20-poly1305-sgl";
-        case IMB_AUTH_ZUC256_EIA3_BITLEN:
-                return "zuc256-eia3";
         case IMB_AUTH_GCM_SGL:
                 return "aead-aes-gcm-sgl";
         case IMB_AUTH_CRC32_ETHERNET_FCS:

@@ -184,11 +184,6 @@ IMB_JOB *
 flush_job_zuc_eia3_avx2(MB_MGR_ZUC_OOO *state);
 
 IMB_JOB *
-submit_job_zuc256_eia3_avx2(MB_MGR_ZUC_OOO *state, IMB_JOB *job, const uint64_t tag_sz);
-IMB_JOB *
-flush_job_zuc256_eia3_avx2(MB_MGR_ZUC_OOO *state, const uint64_t tag_sz);
-
-IMB_JOB *
 submit_job_sha1_avx2(MB_MGR_SHA_1_OOO *state, IMB_JOB *job);
 IMB_JOB *
 flush_job_sha1_avx2(MB_MGR_SHA_1_OOO *state, IMB_JOB *job);

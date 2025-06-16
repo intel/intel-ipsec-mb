@@ -39,20 +39,12 @@
 %define FLUSH_JOB_ZUC128_EEA3 flush_job_zuc_eea3_no_gfni_avx512
 %define SUBMIT_JOB_ZUC128_EIA3 submit_job_zuc_eia3_no_gfni_avx512
 %define FLUSH_JOB_ZUC128_EIA3 flush_job_zuc_eia3_no_gfni_avx512
-%define SUBMIT_JOB_ZUC256_EIA3 submit_job_zuc256_eia3_no_gfni_avx512
-%define FLUSH_JOB_ZUC256_EIA3 flush_job_zuc256_eia3_no_gfni_avx512
 %define ZUC128_INIT_16     asm_ZucInitialization_16_avx512
-%define ZUC256_INIT_16     asm_Zuc256Initialization_16_avx512
 %define ZUC_KEYGEN4B_16    asm_ZucGenKeystream4B_16_avx512
 %define ZUC_CIPHER         asm_ZucCipher_16_avx512
 %define ZUC_REMAINDER_16   asm_Eia3RemainderAVX512_16
-%define ZUC256_REMAINDER_16 asm_Eia3_256_RemainderAVX512_16
-%define ZUC_KEYGEN_SKIP16_16 asm_ZucGenKeystream_16_skip16_avx512
-%define ZUC_KEYGEN64B_SKIP16_16 asm_ZucGenKeystream64B_16_skip16_avx512
 %define ZUC_KEYGEN_SKIP8_16 asm_ZucGenKeystream_16_skip8_avx512
 %define ZUC_KEYGEN64B_SKIP8_16 asm_ZucGenKeystream64B_16_skip8_avx512
-%define ZUC_KEYGEN_SKIP4_16 asm_ZucGenKeystream_16_skip4_avx512
-%define ZUC_KEYGEN64B_SKIP4_16 asm_ZucGenKeystream64B_16_skip4_avx512
 %define ZUC_KEYGEN_16      asm_ZucGenKeystream_16_avx512
 %define ZUC_KEYGEN64B_16   asm_ZucGenKeystream64B_16_avx512
 %define ZUC_ROUND64B       asm_Eia3Round64BAVX512_16
@@ -70,24 +62,12 @@ extern asm_ZucInitialization_16_avx512
 extern asm_ZucInitialization_16_gfni_avx512
 extern asm_ZucCipher_16_avx512
 extern asm_ZucCipher_16_gfni_avx512
-extern asm_Zuc256Initialization_16_avx512
-extern asm_Zuc256Initialization_16_gfni_avx512
 extern asm_Eia3RemainderAVX512_16
 extern asm_Eia3RemainderAVX512_16_VPCLMUL
-extern asm_Eia3_256_RemainderAVX512_16
-extern asm_Eia3_256_RemainderAVX512_16_VPCLMUL
-extern asm_ZucGenKeystream_16_skip16_avx512
-extern asm_ZucGenKeystream_16_skip16_gfni_avx512
-extern asm_ZucGenKeystream64B_16_skip16_avx512
-extern asm_ZucGenKeystream64B_16_skip16_gfni_avx512
 extern asm_ZucGenKeystream_16_skip8_avx512
 extern asm_ZucGenKeystream_16_skip8_gfni_avx512
 extern asm_ZucGenKeystream64B_16_skip8_avx512
 extern asm_ZucGenKeystream64B_16_skip8_gfni_avx512
-extern asm_ZucGenKeystream_16_skip4_avx512
-extern asm_ZucGenKeystream_16_skip4_gfni_avx512
-extern asm_ZucGenKeystream64B_16_skip4_avx512
-extern asm_ZucGenKeystream64B_16_skip4_gfni_avx512
 extern asm_ZucGenKeystream_16_avx512
 extern asm_ZucGenKeystream_16_gfni_avx512
 extern asm_ZucGenKeystream64B_16_avx512
@@ -542,13 +522,11 @@ FLUSH_JOB_ZUC128_EEA3:
 
 
 
-%macro ZUC_EIA3_16_BUFFER 6
+%macro ZUC_EIA3_16_BUFFER 4
 %define %%OOO           %1 ; [in] Pointer to ZUC OOO manager
-%define %%KEY_SIZE      %2 ; [constant] Key size (16 or 32)
-%define %%TAG_SIZE      %3 ; [constant] Tag size (4, 8 or 16 bytes)
-%define %%L             %4 ; [clobbered] Temporary GP register (dword)
-%define %%REMAIN_BITS   %5 ; [clobbered] Temporary GP register (dword)
-%define %%TMP           %6 ; [clobbered] Temporary GP register
+%define %%L             %2 ; [clobbered] Temporary GP register (dword)
+%define %%REMAIN_BITS   %3 ; [clobbered] Temporary GP register (dword)
+%define %%TMP           %4 ; [clobbered] Temporary GP register
 
         ; Find minimum length
         vmovdqa xmm0, [%%OOO + _zuc_lens]
@@ -561,11 +539,7 @@ FLUSH_JOB_ZUC128_EEA3:
         cmovbe  %%REMAIN_BITS, DWORD(%%TMP)
 
         ; Get number of KS 32-bit words to generate ([length/32] + tag_size))
-%if %%KEY_SIZE == 128
-        lea     %%L, [%%REMAIN_BITS + 31 + 2*(8*%%TAG_SIZE)]
-%else ; %%KEY_SIZE == 256
-        lea     %%L, [%%REMAIN_BITS + 31 + (8*%%TAG_SIZE)]
-%endif
+        lea     %%L, [%%REMAIN_BITS + 31 + 2*(8*4)]
 
         shr     %%L, 5
 
@@ -587,17 +561,7 @@ FLUSH_JOB_ZUC128_EEA3:
         mov     [rsp + 32], %%L
 %endif
 
-%if %%KEY_SIZE == 128
         call    ZUC_KEYGEN_SKIP8_16
-%else ; %%KEY_SIZE == 256
-%if %%TAG_SIZE == 4
-        call    ZUC_KEYGEN_SKIP4_16
-%elif %%TAG_SIZE == 8
-        call    ZUC_KEYGEN_SKIP8_16
-%else ;; %%TAG_SIZE == 16
-        call    ZUC_KEYGEN_SKIP16_16
-%endif
-%endif ; %%KEY_SIZE
 
         RESTORE_STACK_SPACE 5
 
@@ -612,17 +576,7 @@ align_label
         xor     arg3, arg3 ; offset = 0
         movzx   DWORD(arg4), word [%%OOO + _zuc_init_not_done]
 
-%if %%KEY_SIZE == 128
         call    ZUC_KEYGEN64B_SKIP8_16
-%else ; %%KEY_SIZE == 256
-%if %%TAG_SIZE == 4
-        call    ZUC_KEYGEN64B_SKIP4_16
-%elif %%TAG_SIZE == 8
-        call    ZUC_KEYGEN64B_SKIP8_16
-%else ;; %%TAG_SIZE == 16
-        call    ZUC_KEYGEN64B_SKIP16_16
-%endif
-%endif
         sub     %%L, 16
 
 align_loop
@@ -641,18 +595,17 @@ align_loop
 
         call    ZUC_KEYGEN_16
 
-        RESERVE_STACK_SPACE 5
+        RESERVE_STACK_SPACE 4
 
         ; Digest 64 bytes of data
         lea     arg1, [%%OOO + _zuc_args_digest]
         lea     arg2, [%%OOO + _zuc_args_KS]
         lea     arg3, [%%OOO + _zuc_args_in]
         lea     arg4, [%%OOO + _zuc_lens]
-        mov     arg5, %%TAG_SIZE
 
         call    ZUC_ROUND64B
 
-        RESTORE_STACK_SPACE 5
+        RESTORE_STACK_SPACE 4
 
         sub     %%REMAIN_BITS, 64*8
         jmp     %%_exit
@@ -661,7 +614,7 @@ align_label
 %%_above_eq_16_loop:
 
         ; Generate next 16 KS words and digest 64 bytes of data
-        RESERVE_STACK_SPACE 7
+        RESERVE_STACK_SPACE 6
 
         mov     DWORD(%%TMP), %%L
         shr     DWORD(%%TMP), 4 ; Number of rounds of 64 bytes
@@ -682,11 +635,10 @@ align_label
         lea     %%TMP, [%%OOO + _zuc_lens]
         mov     [rsp + 32], %%TMP
 %endif
-        mov     arg7, %%TAG_SIZE
 
         call    ZUC_EIA3_N64B
 
-        RESTORE_STACK_SPACE 7
+        RESTORE_STACK_SPACE 6
 
         and     %%L, 0xf ; Remaining words of KS left to generate
 
@@ -706,11 +658,7 @@ align_label
 
 align_label
 %%_exit:
-%if %%KEY_SIZE == 128
         RESERVE_STACK_SPACE 5
-%else
-        RESERVE_STACK_SPACE 6
-%endif
 
         ; Digest final bytes of data and generate tag for finished buffers
         lea     arg1, [%%OOO + _zuc_args_digest]
@@ -723,21 +671,13 @@ align_label
         mov     [rsp + 32], %%REMAIN_BITS
 %endif
 
-%if %%KEY_SIZE == 128
         call    ZUC_REMAINDER_16
         RESTORE_STACK_SPACE 5
-%else
-        mov     arg6, %%TAG_SIZE
-        call    ZUC256_REMAINDER_16
-        RESTORE_STACK_SPACE 6
-%endif
 
         mov     word [%%OOO + _zuc_init_not_done], 0
 %endmacro
 
-%macro SUBMIT_JOB_ZUC_EIA3 2
-%define %%KEY_SIZE      %1 ; [constant] Key size (128 or 256)
-%define %%TAG_SIZE      %2 ; [constant] Tag size (4, 8 or 16 bytes)
+%macro SUBMIT_JOB_ZUC_EIA3 0
 
 ; idx needs to be in rbp
 %define len              rbp
@@ -774,47 +714,9 @@ align_label
         shr     unused_lanes, 4
         mov     tmp, [job + _zuc_eia3_iv]
         shl     lane, 5
-%if %%KEY_SIZE == 128
         ; Read first 16 bytes of IV
         vmovdqu xmm0, [tmp]
         vmovdqa [state + _zuc_args_IV + lane], xmm0
-%else ;; %%KEY_SIZE == 256
-        ; Check if ZUC_EIA3._iv is not NULL, meaning a 25-byte IV can be parsed
-        or      tmp, tmp
-        jnz     %%_iv_size_25
-align_label
-%%_iv_size_23:
-        ; Read 23 bytes of IV and expand to 25 bytes
-        ; then expand the last 6 bytes to 8 bytes
-        mov     tmp, [job + _zuc_eia3_iv23]
-        ; Read and write first 16 bytes
-        vmovdqu xmm0, [tmp]
-        vmovdqa [state + _zuc_args_IV + lane], xmm0
-        ; Read and write next byte
-        mov     al, [tmp + 16]
-        mov     [state + _zuc_args_IV + lane + 16], al
-        ; Read last 8 bytes and keep only the last 6 bytes
-        mov     tmp2, [tmp + 15]
-        mov     tmp3, 0x0000ffffffffffff
-        bswap   tmp2
-        and     tmp2, tmp3 ; last 6 bytes of IV
-        ; Expand 6 bytes to 8 bytes and write out
-        mov     tmp3, 0x3f3f3f3f3f3f3f3f
-        pdep    tmp2, tmp2, tmp3
-        bswap   tmp2
-        mov     [state + _zuc_args_IV + lane + 17], tmp2
-
-        jmp     %%_iv_read
-align_label
-%%_iv_size_25:
-        ; Read 25 bytes of IV
-        mov     DWORD(tmp2), 0x1ffffff
-        kmovd   k1, DWORD(tmp2)
-        vmovdqu8 ymm0{k1}, [tmp]
-        vmovdqa [state + _zuc_args_IV + lane], ymm0
-align_label
-%%_iv_read:
-%endif
         shr     lane, 5
         mov     [state + _zuc_unused_lanes], unused_lanes
         add	qword [state + _zuc_lanes_in_use], 1
@@ -828,9 +730,7 @@ align_label
         not     tmp
         and     [state + _zuc_unused_lane_bitmask], WORD(tmp)
         ; Reset temporary digest for the lane
-%if %%KEY_SIZE == 128
         mov     dword [state + _zuc_args_digest + lane*4], 0
-%endif
         mov     tmp, [job + _src]
         add     tmp, [job + _hash_start_src_offset_in_bytes]
         mov     [state + _zuc_args_in + lane*8], tmp
@@ -873,7 +773,6 @@ align_label
         ; to pass parameter to next function
         mov     r12, state
 
-%if %%KEY_SIZE == 128
         lea     arg1, [r12 + _zuc_args_keys]
         lea     arg2, [r12 + _zuc_args_IV]
         lea     arg3, [r12 + _zuc_state]
@@ -881,19 +780,7 @@ align_label
 
         call    ZUC128_INIT_16
 
-%else ;; %%KEY_SIZE == 256
-        lea     arg1, [r12 + _zuc_args_keys]
-        lea     arg2, [r12 + _zuc_args_IV]
-        lea     arg3, [r12 + _zuc_state]
-        movzx   DWORD(arg4), word [r12 + _zuc_init_not_done]
-        mov     r10, %%TAG_SIZE ; Argument 5 hardcoded to r10, as INIT is expecting it in that register
-        lea     r11, [r12 + _zuc_args_digest] ; Argument 6 hardcoded to r11
-
-        call    ZUC256_INIT_16
-
-%endif ;; %%KEY_SIZE == 128
-
-        ZUC_EIA3_16_BUFFER r12, %%KEY_SIZE, %%TAG_SIZE, DWORD(tmp), DWORD(tmp2), tmp3
+        ZUC_EIA3_16_BUFFER r12, DWORD(tmp), DWORD(tmp2), tmp3
 
         mov     state, [rsp + _gpr_save + 8*8]
         mov     job,   [rsp + _gpr_save + 8*9]
@@ -909,18 +796,8 @@ align_label
         or      dword [job_rax + _status], IMB_STATUS_COMPLETED_AUTH
         ; Copy digest to auth tag output
         mov     r11, [job_rax + _auth_tag_output]
-%if %%TAG_SIZE == 4
         mov     r10d, [state + _zuc_args_digest + idx*4]
         mov     [r11], r10d
-%elif %%TAG_SIZE == 8
-        mov     r10, [state + _zuc_args_digest + idx*8]
-        mov     [r11], r10
-%else ; %%TAG_SIZE == 16
-        shl     idx, 4
-        vmovdqa xmm0, [state + _zuc_args_digest + idx]
-        vmovdqu [r11], xmm0
-        shr     idx, 4
-%endif
         shl     unused_lanes, 4
         or      unused_lanes, idx
         mov     [state + _zuc_unused_lanes], unused_lanes
@@ -960,9 +837,7 @@ align_label
         mov     rsp, [rsp + _rsp_save]  ; original SP
 %endmacro
 
-%macro FLUSH_JOB_ZUC_EIA3 2
-%define %%KEY_SIZE      %1 ; [constant] Key size (128 or 256)
-%define %%TAG_SIZE      %2 ; [constant] Tag size (4, 8 or 16 bytes)
+%macro FLUSH_JOB_ZUC_EIA3 0
 
 %define unused_lanes     rbx
 %define tmp1             rbx
@@ -1061,7 +936,6 @@ align_label
         cmp     word [r12 + _zuc_init_not_done], 0
         je      %%skip_init_flush_eia3
 
-%if %%KEY_SIZE == 128
         lea     arg1, [r12 + _zuc_args_keys]
         lea     arg2, [r12 + _zuc_args_IV]
         lea     arg3, [r12 + _zuc_state]
@@ -1069,21 +943,9 @@ align_label
 
         call    ZUC128_INIT_16
 
-%else ;; %%KEY_SIZE == 256
-        lea     arg1, [r12 + _zuc_args_keys]
-        lea     arg2, [r12 + _zuc_args_IV]
-        lea     arg3, [r12 + _zuc_state]
-        movzx   DWORD(arg4), word [r12 + _zuc_init_not_done]
-        mov     r10, %%TAG_SIZE ; Argument 5 hardcoded to r10, as INIT is expecting it in that register
-        lea     r11, [r12 + _zuc_args_digest] ; Argument 6 hardcoded to r11
-
-        call    ZUC256_INIT_16
-
-%endif ;; %%KEY_SIZE == 128
-
 align_label
 %%skip_init_flush_eia3:
-        ZUC_EIA3_16_BUFFER r12, %%KEY_SIZE, %%TAG_SIZE, DWORD(tmp), DWORD(tmp2), tmp4
+        ZUC_EIA3_16_BUFFER r12, DWORD(tmp), DWORD(tmp2), tmp4
 
         mov     state, [rsp + _gpr_save + 8*8]
 
@@ -1117,18 +979,8 @@ align_label
         or      dword [job_rax + _status], IMB_STATUS_COMPLETED_AUTH
         ; Copy digest to auth tag output
         mov     r11, [job_rax + _auth_tag_output]
-%if %%TAG_SIZE == 4
         mov     r10d, [state + _zuc_args_digest + idx*4]
         mov     [r11], r10d
-%elif %%TAG_SIZE == 8
-        mov     r10, [state + _zuc_args_digest + idx*8]
-        mov     [r11], r10
-%else ; %%TAG_SIZE == 16
-        shl     idx, 4
-        vmovdqa xmm0, [state + _zuc_args_digest + idx]
-        vmovdqu [r11], xmm0
-        shr     idx, 4
-%endif
         shl     unused_lanes, 4
         or      unused_lanes, idx
         mov     [state + _zuc_unused_lanes], unused_lanes
@@ -1173,68 +1025,17 @@ align_label
 MKGLOBAL(SUBMIT_JOB_ZUC128_EIA3,function,internal)
 align_function
 SUBMIT_JOB_ZUC128_EIA3:
-        SUBMIT_JOB_ZUC_EIA3 128, 4
+        SUBMIT_JOB_ZUC_EIA3
         ret
 
-; JOB* SUBMIT_JOB_ZUC256_EIA3(MB_MGR_ZUC_OOO *state, IMB_JOB *job,
-;                             const uint64_t tag_sz)
-; arg 1 : state
-; arg 2 : job
-; arg 3 : tag size (4, 8 or 16 bytes)
-MKGLOBAL(SUBMIT_JOB_ZUC256_EIA3,function,internal)
-align_function
-SUBMIT_JOB_ZUC256_EIA3:
-        cmp     arg3, 8
-        je      submit_tag_8B
-        jb      submit_tag_4B
-
-align_label
-submit_tag_16B:
-        SUBMIT_JOB_ZUC_EIA3 256, 16
-        ret
-
-align_label
-submit_tag_8B:
-        SUBMIT_JOB_ZUC_EIA3 256, 8
-        ret
-
-align_label
-submit_tag_4B:
-        SUBMIT_JOB_ZUC_EIA3 256, 4
-        ret
 
 ; JOB* FLUSH_JOB_ZUC128_EIA3(MB_MGR_ZUC_OOO *state)
 ; arg 1 : state
 MKGLOBAL(FLUSH_JOB_ZUC128_EIA3,function,internal)
 align_function
 FLUSH_JOB_ZUC128_EIA3:
-        FLUSH_JOB_ZUC_EIA3 128, 4
+        FLUSH_JOB_ZUC_EIA3
         ret
 
-; JOB* FLUSH_JOB_ZUC256_EIA3(MB_MGR_ZUC_OOO *state,
-;                            const uint64_t tag_sz)
-; arg 1 : state
-; arg 2 : tag size (4, 8 or 16 bytes)
-MKGLOBAL(FLUSH_JOB_ZUC256_EIA3,function,internal)
-align_function
-FLUSH_JOB_ZUC256_EIA3:
-        cmp     arg2, 8
-        je      flush_tag_8B
-        jb      flush_tag_4B
-
-align_label
-flush_tag_16B:
-        FLUSH_JOB_ZUC_EIA3 256, 16
-        ret
-
-align_label
-flush_tag_8B:
-        FLUSH_JOB_ZUC_EIA3 256, 8
-        ret
-
-align_label
-flush_tag_4B:
-        FLUSH_JOB_ZUC_EIA3 256, 4
-        ret
 
 mksection stack-noexec

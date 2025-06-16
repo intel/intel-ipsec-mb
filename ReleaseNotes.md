@@ -13,6 +13,7 @@ Library
 - Removed AES-CTR bit-length variant.
 - Removed AES-CBCS 1:9 cipher.
 - Removed SNOW-V cipher together with AEAD SNOW-V.
+- Removed ZUC-EEA3-256 and ZUC-EIA3-256 algorithms.
 
 Test Applications
 - Added `--offset` parameter to `imb-xvalid` application.

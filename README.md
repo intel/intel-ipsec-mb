@@ -140,7 +140,6 @@ Table 2. List of supported integrity algorithms and their implementations.
 | AES256-CMAC-96    | Y   x8 |  <---  |  <---  | Y   x8 | Y  x16 |  <---  |  <---  |  <---  | Y   x16 |  <---  |
 | KASUMI-F9         | Y      |  <---  |  <---  |  <---  |  <---  |  <---  |  <---  |  <---  |  <---   |  <---  |
 | ZUC-EIA3          | Y   x4 |  <---  | Y(3)x4 | Y   x8 | Y(3)x8 |  <---  |  <---  | Y  x16 | Y(3)x16 |  <---  |
-| ZUC-EIA3-256      | Y   x4 |  <---  | Y(3)x4 | Y   x8 | Y(3)x8 |  <---  |  <---  | Y  x16 | Y(3)x16 |  <---  |
 | SNOW3G-UIA2       | Y(10)  |  <---  |  <---  | Y(10)  |  <---  |  <---  |  <---  |  <---  | Y(11)   |  <---  |
 | DOCSIS-CRC32(8)   | Y      |  <---  |  <---  | Y      |  <---  |  <---  |  <---  |  <---  | Y       |  <---  |
 | HEC               | Y      |  <---  |  <---  | Y      |  <---  |  <---  |  <---  |  <---  |  <---   |  <---  |
@@ -205,8 +204,8 @@ Table 3. Encryption and integrity algorithm combinations
 | AES128-CFB, AES192-CFB, AES256-CFB, | HMAC-SHA2-512_256, NULL, POLY1305,    |
 | NULL, Chacha20,                     | AES128-GMAC, AES192-GMAC, AES256-GMAC,|
 | AES128-DOCSIS, AES256-DOCSIS,       | GHASH, SM3, HMAC-SM3                  |
-| DES-DOCSIS, 3DES, DES,              | ZUC-EIA3, ZUC-EIA3-256, SNOW3G-UIA3,  |
-| KASUMI-F8, SNOW-V, SNOW3G-UEA3,     | KASUMI-F9                             |
+| DES-DOCSIS, 3DES, DES,              | ZUC-EIA3, SNOW3G-UIA3, KASUMI-F9      |
+| KASUMI-F8, SNOW-V, SNOW3G-UEA3,     |                                       |
 | ZUC-EEA3,                           |                                       |
 | SM4-ECB, SM4-CBC, SM4-CTR           |                                       |
 |-------------------------------------+---------------------------------------|

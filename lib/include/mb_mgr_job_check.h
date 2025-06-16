@@ -196,7 +196,6 @@ is_job_invalid_light(IMB_MGR *state, const IMB_CIPHER_MODE cipher_mode, const IM
         case IMB_AUTH_SHA_384:
         case IMB_AUTH_SHA_512:
         case IMB_AUTH_ZUC_EIA3_BITLEN:
-        case IMB_AUTH_ZUC256_EIA3_BITLEN:
         case IMB_AUTH_SNOW3G_UIA2_BITLEN:
         case IMB_AUTH_KASUMI_UIA1:
         case IMB_AUTH_POLY1305:
@@ -297,7 +296,6 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job, const IMB_CIPHER_MODE cipher_
                 16, /* IMB_AUTH_POLY1305 */
                 16, /* IMB_AUTH_CHACHA_POLY1305 */
                 16, /* IMB_AUTH_CHACHA_POLY1305_SGL */
-                4,  /* IMB_AUTH_ZUC256_EIA3_BITLEN */
                 16, /* IMB_AUTH_AES_GCM_SGL */
                 4,  /* IMB_AUTH_CRC32_ETHERNET_FCS */
                 4,  /* IMB_AUTH_CRC32_SCTP */
@@ -345,7 +343,6 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job, const IMB_CIPHER_MODE cipher_
                 16, /* IMB_AUTH_POLY1305 */
                 16, /* IMB_AUTH_CHACHA_POLY1305 */
                 16, /* IMB_AUTH_CHACHA_POLY1305_SGL */
-                4,  /* IMB_AUTH_ZUC256_EIA3_BITLEN */
                 16, /* IMB_AUTH_AES_GCM_SGL */
                 4,  /* IMB_AUTH_CRC32_ETHERNET_FCS */
                 4,  /* IMB_AUTH_CRC32_SCTP */
@@ -1687,38 +1684,6 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job, const IMB_CIPHER_MODE cipher_
                         return 1;
                 }
                 if (job->auth_tag_output_len_in_bytes != auth_tag_len_ipsec[hash_alg]) {
-                        imb_set_errno(state, IMB_ERR_JOB_AUTH_TAG_LEN);
-                        return 1;
-                }
-                if (job->auth_tag_output == NULL) {
-                        imb_set_errno(state, IMB_ERR_JOB_NULL_AUTH);
-                        return 1;
-                }
-                break;
-        case IMB_AUTH_ZUC256_EIA3_BITLEN:
-                if (job->src == NULL) {
-                        imb_set_errno(state, IMB_ERR_JOB_NULL_SRC);
-                        return 1;
-                }
-                if ((job->msg_len_to_hash_in_bits < ZUC_MIN_BITLEN) ||
-                    (job->msg_len_to_hash_in_bits > ZUC_MAX_BITLEN)) {
-                        imb_set_errno(state, IMB_ERR_JOB_AUTH_LEN);
-                        return 1;
-                }
-                if (job->u.ZUC_EIA3._key == NULL) {
-                        imb_set_errno(state, IMB_ERR_JOB_NULL_KEY);
-                        return 1;
-                }
-                if (job->u.ZUC_EIA3._iv == NULL) {
-                        /* If 25-byte IV is NULL, check 23-byte IV */
-                        if (job->u.ZUC_EIA3._iv23 == NULL) {
-                                imb_set_errno(state, IMB_ERR_JOB_NULL_IV);
-                                return 1;
-                        }
-                }
-                if ((job->auth_tag_output_len_in_bytes != 4) &&
-                    (job->auth_tag_output_len_in_bytes != 8) &&
-                    (job->auth_tag_output_len_in_bytes != 16)) {
                         imb_set_errno(state, IMB_ERR_JOB_AUTH_TAG_LEN);
                         return 1;
                 }

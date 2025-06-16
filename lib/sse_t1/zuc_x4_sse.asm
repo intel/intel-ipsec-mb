@@ -36,7 +36,6 @@
 %ifndef ZUC_CIPHER_4
 %define ZUC_CIPHER_4 asm_ZucCipher_4_sse
 %define ZUC128_INIT_4 asm_ZucInitialization_4_sse
-%define ZUC256_INIT_4 asm_Zuc256Initialization_4_sse
 %define ZUC_KEYGEN16B_4 asm_ZucGenKeystream16B_4_sse
 %define ZUC_KEYGEN8B_4 asm_ZucGenKeystream8B_4_sse
 %define ZUC_KEYGEN4B_4 asm_ZucGenKeystream4B_4_sse
@@ -73,40 +72,6 @@ dd      0x00578900, 0x0035E200, 0x00713500, 0x0009AF00
 dd      0x004D7800, 0x002F1300, 0x006BC400, 0x001AF100,
 dd      0x005E2600, 0x003C4D00, 0x00789A00, 0x0047AC00
 
-; Constants to be used to initialize the LFSR registers
-; The tables contain four different sets of constants:
-; 0-63 bytes: Encryption
-; 64-127 bytes: Authentication with tag size = 4
-; 128-191 bytes: Authentication with tag size = 8
-; 192-255 bytes: Authentication with tag size = 16
-align 16
-EK256_d64:
-dd      0x00220000, 0x002F0000, 0x00240000, 0x002A0000,
-dd      0x006D0000, 0x00400000, 0x00400000, 0x00400000,
-dd      0x00400000, 0x00400000, 0x00400000, 0x00400000,
-dd      0x00400000, 0x00520000, 0x00100000, 0x00300000
-
-align 16
-EK256_EIA3_4:
-dd      0x00220000, 0x002F0000, 0x00250000, 0x002A0000,
-dd      0x006D0000, 0x00400000, 0x00400000, 0x00400000,
-dd      0x00400000, 0x00400000, 0x00400000, 0x00400000,
-dd      0x00400000, 0x00520000, 0x00100000, 0x00300000
-
-align 16
-EK256_EIA3_8:
-dd      0x00230000, 0x002F0000, 0x00240000, 0x002A0000,
-dd      0x006D0000, 0x00400000, 0x00400000, 0x00400000,
-dd      0x00400000, 0x00400000, 0x00400000, 0x00400000,
-dd      0x00400000, 0x00520000, 0x00100000, 0x00300000
-
-align 16
-EK256_EIA3_16:
-dd      0x00230000, 0x002F0000, 0x00250000, 0x002A0000,
-dd      0x006D0000, 0x00400000, 0x00400000, 0x00400000,
-dd      0x00400000, 0x00400000, 0x00400000, 0x00400000,
-dd      0x00400000, 0x00520000, 0x00100000, 0x00300000
-
 align 16
 shuf_mask_key:
 dd      0x00FFFFFF, 0x01FFFFFF, 0x02FFFFFF, 0x03FFFFFF,
@@ -120,18 +85,6 @@ dd      0xFFFFFF00, 0xFFFFFF01, 0xFFFFFF02, 0xFFFFFF03,
 dd      0xFFFFFF04, 0xFFFFFF05, 0xFFFFFF06, 0xFFFFFF07,
 dd      0xFFFFFF08, 0xFFFFFF09, 0xFFFFFF0A, 0xFFFFFF0B,
 dd      0xFFFFFF0C, 0xFFFFFF0D, 0xFFFFFF0E, 0xFFFFFF0F,
-
-align 16
-shuf_mask_iv_17_19:
-db      0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0xFF, 0xFF, 0xFF, 0x01, 0xFF, 0xFF, 0xFF, 0x02, 0xFF
-
-align 16
-clear_iv_mask:
-db      0x00, 0x00, 0x3F, 0x00, 0x00, 0x00, 0x3F, 0x00, 0x00, 0x00, 0x3F, 0x00, 0x00, 0x00, 0x3F, 0x00
-
-align 16
-shuf_mask_iv_20_23:
-db      0xFF, 0xFF, 0x00, 0xFF, 0xFF, 0xFF, 0x01, 0xFF, 0xFF, 0xFF, 0x02, 0xFF, 0xFF, 0xFF, 0x03, 0xFF
 
 align 16
 mask31:
@@ -226,16 +179,6 @@ align 16
 shuf_mask_dw2_0_dw3_0:
 db      0x08, 0x09, 0x0a, 0x0b, 0xff, 0xff, 0xff, 0xff
 db      0x0c, 0x0d, 0x0e, 0x0f, 0xff, 0xff, 0xff, 0xff
-
-align 16
-shuf_mask_0_0_dw1_0:
-db      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff
-db      0x04, 0x05, 0x06, 0x07, 0xff, 0xff, 0xff, 0xff
-
-align 16
-shuf_mask_0_0_0_dw1:
-db      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff
-db      0xff, 0xff, 0xff, 0xff, 0x04, 0x05, 0x06, 0x07
 
 ; Stack frame for ZucCipher function
 struc STACK
@@ -736,155 +679,7 @@ mksection .text
 
 %endmacro
 
-;
-; Initialize LFSR registers for a single lane, for ZUC-256
-;
-%macro INIT_LFSR_256 9
-%define %%KEY       %1 ;; [in] Key pointer
-%define %%IV        %2 ;; [in] IV pointer
-%define %%LFSR0_3   %3 ;; [out] XMM register to contain initialized LFSR regs 0-3
-%define %%LFSR4_7   %4 ;; [out] XMM register to contain initialized LFSR regs 4-7
-%define %%LFSR8_11  %5 ;; [out] XMM register to contain initialized LFSR regs 8-11
-%define %%LFSR12_15 %6 ;; [out] XMM register to contain initialized LFSR regs 12-15
-%define %%XTMP      %7 ;; [clobbered] XMM temporary register
-%define %%TMP       %8 ;; [clobbered] GP temporary register
-%define %%TAG_SIZE  %9 ;; [in] Tag size (0, 4, 8 or 16 bytes)
-
-%if %%TAG_SIZE == 0
-%define %%CONSTANTS rel EK256_d64
-%elif %%TAG_SIZE == 4
-%define %%CONSTANTS rel EK256_EIA3_4
-%elif %%TAG_SIZE == 8
-%define %%CONSTANTS rel EK256_EIA3_8
-%elif %%TAG_SIZE == 16
-%define %%CONSTANTS rel EK256_EIA3_16
-%endif
-    ; s0 - s3
-    pxor           %%LFSR0_3, %%LFSR0_3
-    pinsrb         %%LFSR0_3, [%%KEY], 3      ; s0
-    pinsrb         %%LFSR0_3, [%%KEY + 1], 7  ; s1
-    pinsrb         %%LFSR0_3, [%%KEY + 2], 11 ; s2
-    pinsrb         %%LFSR0_3, [%%KEY + 3], 15 ; s3
-
-    psrld          %%LFSR0_3, 1
-
-    por            %%LFSR0_3, [%%CONSTANTS] ; s0 - s3
-
-    pinsrb         %%LFSR0_3, [%%KEY + 21], 1 ; s0
-    pinsrb         %%LFSR0_3, [%%KEY + 16], 0 ; s0
-
-    pinsrb         %%LFSR0_3, [%%KEY + 22], 5 ; s1
-    pinsrb         %%LFSR0_3, [%%KEY + 17], 4 ; s1
-
-    pinsrb         %%LFSR0_3, [%%KEY + 23], 9 ; s2
-    pinsrb         %%LFSR0_3, [%%KEY + 18], 8 ; s2
-
-    pinsrb         %%LFSR0_3, [%%KEY + 24], 13 ; s3
-    pinsrb         %%LFSR0_3, [%%KEY + 19], 12 ; s3
-
-    ; s4 - s7
-    pxor           %%LFSR4_7, %%LFSR4_7
-    pinsrb         %%LFSR4_7, [%%KEY + 4], 3   ; s4
-    pinsrb         %%LFSR4_7, [%%IV], 7        ; s5
-    pinsrb         %%LFSR4_7, [%%IV + 1], 11   ; s6
-    pinsrb         %%LFSR4_7, [%%IV + 10], 15  ; s7
-
-    psrld          %%LFSR4_7, 1
-
-    pinsrb         %%LFSR4_7, [%%KEY + 25], 1 ; s4
-    pinsrb         %%LFSR4_7, [%%KEY + 20], 0 ; s4
-
-    pinsrb         %%LFSR4_7, [%%KEY + 5], 5 ; s5
-    pinsrb         %%LFSR4_7, [%%KEY + 26], 4 ; s5
-
-    pinsrb         %%LFSR4_7, [%%KEY + 6], 9 ; s6
-    pinsrb         %%LFSR4_7, [%%KEY + 27], 8 ; s6
-
-    pinsrb         %%LFSR4_7, [%%KEY + 7], 13 ; s7
-    pinsrb         %%LFSR4_7, [%%IV + 2], 12 ; s7
-
-    por            %%LFSR4_7, [%%CONSTANTS + 16] ; s4 - s7
-
-    movd           %%XTMP, [%%IV + 17]
-    pshufb         %%XTMP, [rel shuf_mask_iv_17_19]
-    pand           %%XTMP, [rel clear_iv_mask]
-
-    por            %%LFSR4_7, %%XTMP
-
-    ; s8 - s11
-    pxor           %%LFSR8_11, %%LFSR8_11
-    pinsrb         %%LFSR8_11, [%%KEY + 8], 3   ; s8
-    pinsrb         %%LFSR8_11, [%%KEY + 9], 7   ; s9
-    pinsrb         %%LFSR8_11, [%%IV + 5], 11   ; s10
-    pinsrb         %%LFSR8_11, [%%KEY + 11], 15 ; s11
-
-    psrld          %%LFSR8_11, 1
-
-    pinsrb         %%LFSR8_11, [%%IV + 3], 1 ; s8
-    pinsrb         %%LFSR8_11, [%%IV + 11], 0 ; s8
-
-    pinsrb         %%LFSR8_11, [%%IV + 12], 5 ; s9
-    pinsrb         %%LFSR8_11, [%%IV + 4], 4 ; s9
-
-    pinsrb         %%LFSR8_11, [%%KEY + 10], 9 ; s10
-    pinsrb         %%LFSR8_11, [%%KEY + 28], 8 ; s10
-
-    pinsrb         %%LFSR8_11, [%%IV + 6], 13 ; s11
-    pinsrb         %%LFSR8_11, [%%IV + 13], 12 ; s11
-
-    por            %%LFSR8_11, [%%CONSTANTS + 32] ; s8 - s11
-
-    movd           %%XTMP, [%%IV + 20]
-    pshufb         %%XTMP, [rel shuf_mask_iv_20_23]
-    pand           %%XTMP, [rel clear_iv_mask]
-
-    por            %%LFSR8_11, %%XTMP
-
-    ; s12 - s15
-    pxor           %%LFSR12_15, %%LFSR12_15
-    pinsrb         %%LFSR12_15, [%%KEY + 12], 3   ; s12
-    pinsrb         %%LFSR12_15, [%%KEY + 13], 7   ; s13
-    pinsrb         %%LFSR12_15, [%%KEY + 14], 11  ; s14
-    pinsrb         %%LFSR12_15, [%%KEY + 15], 15  ; s15
-
-    psrld          %%LFSR12_15, 1
-
-    pinsrb         %%LFSR12_15, [%%IV + 7], 1 ; s12
-    pinsrb         %%LFSR12_15, [%%IV + 14], 0 ; s12
-
-    pinsrb         %%LFSR12_15, [%%IV + 15], 5 ; s13
-    pinsrb         %%LFSR12_15, [%%IV + 8], 4 ; s13
-
-    pinsrb         %%LFSR12_15, [%%IV + 16], 9 ; s14
-    pinsrb         %%LFSR12_15, [%%IV + 9], 8 ; s14
-
-    pinsrb         %%LFSR12_15, [%%KEY + 30], 13 ; s15
-    pinsrb         %%LFSR12_15, [%%KEY + 29], 12 ; s15
-
-    por            %%LFSR12_15, [%%CONSTANTS + 48] ; s12 - s15
-
-    movzx          DWORD(%%TMP), byte [%%IV + 24]
-    and            DWORD(%%TMP), 0x0000003f
-    shl            DWORD(%%TMP), 16
-    movd           %%XTMP, DWORD(%%TMP)
-
-    movzx          DWORD(%%TMP), byte [%%KEY + 31]
-    shl            DWORD(%%TMP), 12
-    and            DWORD(%%TMP), 0x000f0000 ; high nibble of K_31
-    pinsrd         %%XTMP, DWORD(%%TMP), 2
-
-    movzx          DWORD(%%TMP), byte [%%KEY + 31]
-    shl            DWORD(%%TMP), 16
-    and            DWORD(%%TMP), 0x000f0000 ; low nibble of K_31
-    pinsrd         %%XTMP, DWORD(%%TMP), 3
-
-    por            %%LFSR12_15, %%XTMP
-%endmacro
-
-%macro ZUC_INIT_4 2-3
-%define %%KEY_SIZE %1 ; [constant] Key size (128 or 256)
-%define %%TAG_SIZE %2 ; [in] Tag size (0 (for cipher), 4, 8 or 16)
-%define %%TAGS     %3 ; [in] Array of temporary tags
+%macro ZUC_INIT_4 0
 
 %ifdef LINUX
 	%define		pKe	rdi
@@ -928,7 +723,6 @@ mksection .text
         movdqa  [pState + OFS_R1], %%XTMP1
         movdqa  [pState + OFS_R2], %%XTMP1
 
-%if %%KEY_SIZE == 128
         ;; Load key and IVs
 %assign %%OFF 0
 %assign %%I 1
@@ -977,45 +771,6 @@ mksection .text
 %assign %%OFF (%%OFF + 16)
 %endrep
 
-%else ;; %%KEY_SIZE == 256
-        ;;; Initialize all LFSR registers
-%assign %%OFF 0
-%rep 4
-        ;; Load key and IV for each packet
-        mov     r15,  [pKe + %%OFF]
-        lea     r10, [pIv + %%OFF*4]
-
-        ; Initialize S0-15 for each packet
-        INIT_LFSR_256 r15, r10, %%XTMP1, %%XTMP2, %%XTMP3, %%XTMP4, %%XTMP5, r11, %%TAG_SIZE
-
-        movdqa  [pState + 2*%%OFF], %%XTMP1
-        movdqa  [pState + 2*%%OFF + 64], %%XTMP2
-        movdqa  [pState + 2*%%OFF + 64*2], %%XTMP3
-        movdqa  [pState + 2*%%OFF + 64*3], %%XTMP4
-%assign %%OFF (%%OFF + 8)
-%endrep
-
-    ; Read, transpose and store, so all S_X from the 4 packets are in the same register
-%assign %%OFF 0
-%rep 4
-
-        movdqa  %%XTMP1, [pState + %%OFF]
-        movdqa  %%XTMP2, [pState + %%OFF + 16]
-        movdqa  %%XTMP3, [pState + %%OFF + 16*2]
-        movdqa  %%XTMP4, [pState + %%OFF + 16*3]
-
-        TRANSPOSE4_U32  %%XTMP1, %%XTMP2, %%XTMP3, %%XTMP4, %%XTMP5, %%XTMP6
-
-        movdqa  [pState + %%OFF], %%XTMP1
-        movdqa  [pState + %%OFF + 16], %%XTMP2
-        movdqa  [pState + %%OFF + 16*2], %%XTMP3
-        movdqa  [pState + %%OFF + 16*3], %%XTMP4
-
-
-%assign %%OFF (%%OFF + 64)
-%endrep
-%endif ;; %%KEY_SIZE == 256
-
         ; Load read-only registers
         movdqa  %%MASK_31, [rel mask31]
 
@@ -1046,96 +801,14 @@ align_label
         LFSR_UPDT4  pState, 0, no_reg, %%XTMP1, %%XTMP2, %%XTMP3, %%XTMP4, %%XTMP5, %%XTMP6, \
                     %%MASK_31, %%XTMP8, work
 
-    ; Generate extra 4, 8 or 16 bytes of KS for initial tags
-%if %%TAG_SIZE == 4
-%define %%NUM_ROUNDS 1
-%elif %%TAG_SIZE == 8
-%define %%NUM_ROUNDS 2
-%elif %%TAG_SIZE == 16
-%define %%NUM_ROUNDS 4
-%else
-%define %%NUM_ROUNDS 0
-%endif
-
-%assign %%N 1
-%rep %%NUM_ROUNDS
-        BITS_REORG4 pState, %%N, no_reg, %%XTMP1, %%XTMP2, %%XTMP3, %%XTMP4, %%XTMP5, \
-                    %%XTMP6, %%XTMP7, %%XTMP8, %%XTMP9, %%XTMP10, APPEND(%%KSTR, %%N)
-        NONLIN_FUN4 pState, %%XTMP1, %%XTMP2, %%XTMP3, \
-                    %%XTMP4, %%XTMP5, %%XTMP6, %%XTMP7, %%W
-        ; OFS_X3 XOR W and store in stack
-        pxor        APPEND(%%KSTR, %%N), %%W
-        LFSR_UPDT4  pState, %%N, no_reg, %%XTMP1, %%XTMP2, %%XTMP3, %%XTMP4, %%XTMP5, %%XTMP6, \
-                    %%MASK_31, %%XTMP8, work
-%assign %%N (%%N + 1)
-%endrep
-
-%if %%TAG_SIZE == 4
-        movdqu  [%%TAGS], %%KSTR1
-        REORDER_LFSR pState, 1
-%elif %%TAG_SIZE == 8
-        ; Transpose the keystream and store the 8 bytes per buffer consecutively,
-        ; being the initial tag for each buffer
-        movdqa  %%XTMP1, %%KSTR1
-        punpckldq   %%XTMP1, %%KSTR2
-        punpckhdq   %%KSTR1, %%KSTR2
-        movdqu  [%%TAGS], %%XTMP1
-        movdqu  [%%TAGS + 16], %%KSTR1
-        REORDER_LFSR pState, 2
-%elif %%TAG_SIZE == 16
-        ; Transpose the keystream and store the 16 bytes per buffer consecutively,
-        ; being the initial tag for each buffer
-        TRANSPOSE4_U32 %%KSTR1, %%KSTR2, %%KSTR3, %%KSTR4, %%XTMP5, %%XTMP6
-        movdqu  [%%TAGS], %%KSTR1
-        movdqu  [%%TAGS + 16], %%KSTR2
-        movdqu  [%%TAGS + 16*2], %%KSTR3
-        movdqu  [%%TAGS + 16*3], %%KSTR4
-        REORDER_LFSR pState, 4
-%endif
-
     FUNC_RESTORE
 %endmacro
 
 MKGLOBAL(ZUC128_INIT_4,function,internal)
 align_function
 ZUC128_INIT_4:
-        ZUC_INIT_4 128, 0
+        ZUC_INIT_4
         ret
-
-MKGLOBAL(ZUC256_INIT_4,function,internal)
-align_function
-ZUC256_INIT_4:
-
-%define tags   arg4
-%define tag_sz arg5
-
-    cmp tag_sz, 0
-    je  init_for_cipher
-
-    cmp tag_sz, 8
-    je init_for_auth_tag_8B
-    jb init_for_auth_tag_4B
-
-    ; Fall-through for tag size = 16 bytes
-align_label
-init_for_auth_tag_16B:
-    ZUC_INIT_4 256, 16, tags
-    ret
-
-align_label
-init_for_auth_tag_8B:
-    ZUC_INIT_4 256, 8, tags
-    ret
-
-align_label
-init_for_auth_tag_4B:
-    ZUC_INIT_4 256, 4, tags
-    ret
-
-align_label
-init_for_cipher:
-    ZUC_INIT_4 256, 0
-    ret
 
 ;
 ; Generate N*4 bytes of keystream
@@ -1684,7 +1357,7 @@ exit_cipher:
 ;
 ; Processes 16 bytes of data and updates the digest
 ;
-%macro DIGEST_16_BYTES 14
+%macro DIGEST_16_BYTES 13
 %define %%KS      %1  ; [in] Pointer to keystream
 %define %%XDATA   %2  ; [in] XMM register with input data
 %define %%XDIGEST %3  ; [out] XMM register with result digest
@@ -1699,7 +1372,6 @@ exit_cipher:
 %define %%KS_M1   %11 ; [clobbered] Temporary XMM register
 %define %%KS_M2   %12 ; [clobbered] Temporary XMM register
 %define %%KS_H    %13 ; [clobbered] Temporary XMM register
-%define %%TAG_SZ  %14 ; [in] Tag size (4, 8 or 16)
 
         ; Reverse data bytes
 %if USE_GFNI == 1
@@ -1730,12 +1402,6 @@ exit_cipher:
         movdqu  %%XTMP4, [%%KS + (4*4)]
         pshufd  %%KS_L, %%XTMP1, 0x61 ; KS bits [63:32 31:0 95:64 63:32]
         pshufd  %%KS_M1, %%XTMP2, 0x61 ; KS bits [127:96 95:64 159:128 127:96]
-%if %%TAG_SZ != 4 ;; TAG_SZ == 8 or 16
-        pshufd  %%KS_M2, %%XTMP4, 0x61 ; KS bits [191:160 159:128 223:192 191:160]
-%if %%TAG_SZ == 16
-        pshufd  %%KS_H, %%XTMP4, 0xBB ; KS bits [255:224 223:192 255:224 223:192]
-%endif
-%endif ;; TAG_SZ != 4
 
         ;;  - set up DATA
         movdqa  %%XTMP1, %%XTMP3
@@ -1747,7 +1413,6 @@ exit_cipher:
 
         ;; - clmul
         ;; - xor the results from 4 32-bit words together
-%if %%TAG_SZ == 4
         ; Calculate lower 32 bits of tag
         pclmulqdq %%XTMP1, %%KS_L, 0x00
         pclmulqdq %%XTMP2, %%KS_L, 0x11
@@ -1759,91 +1424,10 @@ exit_cipher:
         pxor    %%XDIGEST, %%XTMP3
         pxor    %%XDIGEST, %%XTMP2
         psrldq  %%XDIGEST, 4
-%else ; %%TAG_SZ == 8 or 16
-        ; Save data for following products
-        movdqa  %%XTMP5, %%XTMP2 ; Data bits [31:0 0s 63:32 0s]
-        movdqa  %%XTMP6, %%XTMP3 ; Data bits [95:64 0s 127:96 0s]
-
-        ; Calculate lower 32 bits of tag
-        pclmulqdq %%XTMP1, %%KS_L, 0x00
-        pclmulqdq %%XTMP2, %%KS_L, 0x11
-        pclmulqdq %%XDIGEST, %%KS_M1, 0x00
-        pclmulqdq %%XTMP3, %%KS_M1, 0x11
-
-        ; XOR all products and move bits 63-32 bits to lower 32 bits
-        pxor    %%XTMP2, %%XTMP1
-        pxor    %%XDIGEST, %%XTMP3
-        pxor    %%XDIGEST, %%XTMP2
-        movq    %%XDIGEST, %%XDIGEST ; Clear top 64 bits
-        psrldq  %%XDIGEST, 4
-
-        ; Prepare data and calculate bits 63-32 of tag
-        movdqa  %%XTMP1, %%XTMP5
-        movdqa  %%XTMP2, %%XTMP5
-        movdqa  %%XTMP3, %%XTMP6
-        movdqa  %%XTMP4, %%XTMP6
-
-        pclmulqdq %%XTMP1, %%KS_L, 0x10
-        pclmulqdq %%XTMP2, %%KS_M1, 0x01
-        pclmulqdq %%XTMP3, %%KS_M1, 0x10
-        pclmulqdq %%XTMP4, %%KS_M2, 0x01
-
-        ; XOR all the products and keep only bits 63-32
-        pxor    %%XTMP1, %%XTMP2
-        pxor    %%XTMP3, %%XTMP4
-        pxor    %%XTMP1, %%XTMP3
-        pand    %%XTMP1, [rel bits_32_63]
-
-        ; OR with lower 32 bits, to construct 64 bits of tag
-        por     %%XDIGEST, %%XTMP1
-
-%if %%TAG_SZ == 16
-        ; Prepare data and calculate bits 95-64 of tag
-        movdqa  %%XTMP1, %%XTMP5
-        movdqa  %%XTMP2, %%XTMP5
-        movdqa  %%XTMP3, %%XTMP6
-        movdqa  %%XTMP4, %%XTMP6
-
-        pclmulqdq %%XTMP1, %%KS_M1, 0x00
-        pclmulqdq %%XTMP2, %%KS_M1, 0x11
-        pclmulqdq %%XTMP3, %%KS_M2, 0x00
-        pclmulqdq %%XTMP4, %%KS_M2, 0x11
-
-        ; XOR all the products and move bits 63-32 to bits 95-64
-        pxor    %%XTMP1, %%XTMP2
-        pxor    %%XTMP3, %%XTMP4
-        pxor    %%XTMP1, %%XTMP3
-        pshufb  %%XTMP1, [rel shuf_mask_0_0_dw1_0]
-
-        ; OR with lower 64 bits, to construct 96 bits of tag
-        por     %%XDIGEST, %%XTMP1
-
-        ; Prepare data and calculate bits 127-96 of tag
-        movdqa  %%XTMP1, %%XTMP5
-        movdqa  %%XTMP2, %%XTMP5
-        movdqa  %%XTMP3, %%XTMP6
-        movdqa  %%XTMP4, %%XTMP6
-
-        pclmulqdq %%XTMP1, %%KS_M1, 0x10
-        pclmulqdq %%XTMP2, %%KS_M2, 0x01
-        pclmulqdq %%XTMP3, %%KS_M2, 0x10
-        pclmulqdq %%XTMP4, %%KS_H,  0x01
-
-        ; XOR all the products and move bits 63-32 to bits 127-96
-        pxor    %%XTMP1, %%XTMP2
-        pxor    %%XTMP3, %%XTMP4
-        pxor    %%XTMP1, %%XTMP3
-        pshufb  %%XTMP1, [rel shuf_mask_0_0_0_dw1]
-
-        ; OR with lower 96 bits, to construct 128 bits of tag
-        por     %%XDIGEST, %%XTMP1
-
-%endif ; %%TAG_SZ == 16
-%endif ; %%TAG_SZ == 8 or 16
 
 %endmacro
 
-%macro REMAINDER 23
+%macro REMAINDER 21
 %define %%T             %1  ; [in] Pointer to authentication tag
 %define %%KS            %2  ; [in] Pointer to 32-byte keystream
 %define %%DATA          %3  ; [in] Pointer to input data
@@ -1865,8 +1449,6 @@ exit_cipher:
 %define %%KS_M1         %19 ; [clobbered] Temporary XMM register
 %define %%KS_M2         %20 ; [clobbered] Temporary XMM register
 %define %%KS_H          %21 ; [clobbered] Temporary XMM register
-%define %%KEY_SZ        %22 ; [in] Key size (128 or 256)
-%define %%TAG_SZ        %23 ; [in] Key size (4, 8 or 16)
 
 %define %%N_BYTES %%TMP3
 
@@ -1902,12 +1484,11 @@ exit_cipher:
         XPSRLB  %%XTMP1, %%TMP2, %%XTMP3, %%TMP1
 
         DIGEST_16_BYTES %%KS, %%XTMP1, %%XTMP6, %%XTMP2, %%XTMP3, %%XTMP4, \
-                        %%XTMP5, %%XTMP7, %%XTMP8, %%KS_L, %%KS_M1, %%KS_M2, %%KS_H, %%TAG_SZ
+                        %%XTMP5, %%XTMP7, %%XTMP8, %%KS_L, %%KS_M1, %%KS_M2, %%KS_H
 
 align_label
 %%Eia3RoundsSSE_end:
 
-%if %%TAG_SZ == 4
 %define %%TAG DWORD(%%TMP1)
         ;; - update T
         mov     %%TAG, [%%T]
@@ -1931,7 +1512,6 @@ align_label
         ; XOR with previous digest calculation
         xor     %%TAG, DWORD(%%TMP3)
 
-%if %%KEY_SZ == 128
         ;; XOR with keyStr[L-1]
 
         ; Read keyStr[L - 1] (last double word of keyStr)
@@ -1941,76 +1521,8 @@ align_label
         ; XOR with previous digest calculation
         xor     %%TAG, [%%KS + %%TMP2 * 4]
 
-%endif
         bswap   %%TAG
         mov     [%%T], %%TAG
-%else ; %%TAG_SZ == 8 or 16
-%define %%TAG %%TMP1
-        ;; Update lower 64 bits of T
-        movq    %%TAG, %%XTMP6
-        xor     %%TAG, [%%T]
-
-        ;; XOR with keyStr[n_bits] (Z_length, from spec)
-
-        ; Read keyStr[N_BITS / 32]
-        mov     %%TMP2, %%N_BITS
-        shr     %%TMP2, 5
-        mov     %%TMP3, [%%KS + %%TMP2*4]
-        mov     %%TMP4, [%%KS + %%TMP2*4 + 4]
-
-        ; Rotate left by N_BITS % 32
-        mov     %%TMP2, rcx ; Save RCX
-        mov     rcx, %%N_BITS
-        and     rcx, 0x1F
-        rol     %%TMP3, cl
-        rol     %%TMP4, cl
-        mov     rcx, %%TMP2 ; Restore RCX
-
-        shl     %%TMP4, 32
-        mov     DWORD(%%TMP3), DWORD(%%TMP3) ; Clear top 32 bits
-        or      %%TMP4, %%TMP3
-
-        ; XOR with previous digest calculation
-        xor     %%TAG, %%TMP4
-
-        ; Byte swap both dwords of the digest before writing out
-        bswap   %%TAG
-        ror     %%TAG, 32
-        mov     [%%T], %%TAG
-%if %%TAG_SZ == 16
-        ;; Update higher 64 bits of T
-        pextrq  %%TAG, %%XTMP6, 1
-        xor     %%TAG, [%%T + 8]
-
-        ;; XOR with keyStr[n_bits] (Z_length, from spec)
-
-        ; Read keyStr[N_BITS / 32]
-        mov     %%TMP2, %%N_BITS
-        shr     %%TMP2, 5
-        mov     %%TMP3, [%%KS + %%TMP2*4 + 4*2]
-        mov     %%TMP4, [%%KS + %%TMP2*4 + 4*3]
-
-        ; Rotate left by N_BITS % 32
-        mov     %%TMP2, rcx ; Save RCX
-        mov     rcx, %%N_BITS
-        and     rcx, 0x1F
-        rol     %%TMP3, cl
-        rol     %%TMP4, cl
-        mov     rcx, %%TMP2 ; Restore RCX
-
-        shl     %%TMP4, 32
-        mov     DWORD(%%TMP3), DWORD(%%TMP3) ; Clear top 32 bits
-        or      %%TMP4, %%TMP3
-
-        ; XOR with previous digest calculation
-        xor     %%TAG, %%TMP4
-
-        ; Byte swap both dwords of the digest before writing out
-        bswap   %%TAG
-        ror     %%TAG, 32
-        mov     [%%T + 8], %%TAG
-%endif ; %%TAG_SZ == 16
-%endif ; %%TAG_SZ == 4
 
         FUNC_RESTORE
 
@@ -2018,9 +1530,7 @@ align_label
 
 ;;
 ;; extern void asm_Eia3RemainderSSE(void *T, const void *ks,
-;;                                  const void *data, const uint64_t n_bits,
-;;                                  const uint64_t key_size,
-;;                                  const uint64_t tag_size);
+;;                                  const void *data, const uint64_t n_bits)
 ;;
 ;; Returns authentication update value to be XOR'ed with current authentication tag
 ;;
@@ -2028,8 +1538,6 @@ align_label
 ;;  @param [in] KS (key stream pointer)
 ;;  @param [in] DATA (data pointer)
 ;;  @param [in] N_BITS (number of bits to digest)
-;;  @param [in] KEY_SZ (Key size: 128 or 256 bits)
-;;  @param [in] TAG_SZ (Tag size: 4, 8 or 16 bytes)
 ;;
 MKGLOBAL(ZUC_EIA3REMAINDER,function,internal)
 align_function
@@ -2038,47 +1546,13 @@ ZUC_EIA3REMAINDER:
 %define KS      arg2
 %define DATA    arg3
 %define N_BITS  arg4
-%define KEY_SZ  arg5
-%define TAG_SZ  arg6
 
-        cmp     KEY_SZ, 128
-        je      remainder_key_sz_128
-
-        cmp     TAG_SZ, 8
-        je      remainder_tag_sz_8
-        ja      remainder_tag_sz_16
-
-        ; Key size = 256
-        ; Fall-through for tag size = 4 bytes
-align_label
-remainder_tag_sz_4:
         REMAINDER T, KS, DATA, N_BITS, r11, r12, r13, r14, r15, \
                   xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, \
-                  xmm8, xmm9, xmm10, xmm11, 256, 4
+                  xmm8, xmm9, xmm10, xmm11
         ret
 
-align_label
-remainder_tag_sz_8:
-        REMAINDER T, KS, DATA, N_BITS, r11, r12, r13, r14, r15, \
-                  xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, \
-                  xmm8, xmm9, xmm10, xmm11, 256, 8
-        ret
-
-align_label
-remainder_tag_sz_16:
-        REMAINDER T, KS, DATA, N_BITS, r11, r12, r13, r14, r15, \
-                  xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, \
-                  xmm8, xmm9, xmm10, xmm11, 256, 16
-        ret
-
-align_label
-remainder_key_sz_128:
-        REMAINDER T, KS, DATA, N_BITS, r11, r12, r13, r14, r15, \
-                  xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, \
-                  xmm8, xmm9, xmm10, xmm11, 128, 4
-        ret
-
-%macro ROUND 17
+%macro ROUND 16
 %define %%T             %1  ; [in] Pointer to authentication tag
 %define %%KS            %2  ; [in] Pointer to 32-byte keystream
 %define %%DATA          %3  ; [in] Pointer to input data
@@ -2095,28 +1569,17 @@ remainder_key_sz_128:
 %define %%KS_M1         %14 ; [clobbered] Temporary XMM register
 %define %%KS_M2         %15 ; [clobbered] Temporary XMM register
 %define %%KS_H          %16 ; [clobbered] Temporary XMM register
-%define %%TAG_SZ        %17 ; [constant] Tag size (4, 8 or 16 bytes)
 
         FUNC_SAVE
 
         ;; read 16 bytes and reverse bits
         movdqu  %%XTMP1, [%%DATA]
         DIGEST_16_BYTES %%KS, %%XTMP1, %%XTMP6, %%XTMP2, %%XTMP3, %%XTMP4, %%XTMP5, \
-                        %%XTMP7, %%XTMP8, %%KS_L, %%KS_M1, %%KS_M2, %%KS_H, %%TAG_SZ
+                        %%XTMP7, %%XTMP8, %%KS_L, %%KS_M1, %%KS_M2, %%KS_H
 
-%if %%TAG_SZ == 4
         ;; - update T
         movd    DWORD(%%TMP), %%XTMP6
         xor     [%%T], DWORD(%%TMP)
-%elif %%TAG_SZ == 8
-        ;; - update T
-        movq    %%TMP, %%XTMP6
-        xor     [%%T], %%TMP
-%else ;; %%TAG_SZ == 16
-        movdqu  %%XTMP1, [%%T]
-        pxor    %%XTMP1, %%XTMP6
-        movdqu  [%%T], %%XTMP1
-%endif
 
         ;; Copy last 16 bytes of KS to the front
         movdqa  %%XTMP1, [%%KS + 16]
@@ -2127,8 +1590,7 @@ remainder_key_sz_128:
 %endmacro
 
 ;;
-;;extern void asm_Eia3Round16BSSE(void *T, const void *KS, const void *DATA,
-;;                                const uint64_t tag_sz)
+;;extern void asm_Eia3Round16BSSE(void *T, const void *KS, const void *DATA)
 ;;
 ;; Updates authentication tag T based on keystream KS and DATA.
 ;; - it processes 16 bytes of DATA
@@ -2140,7 +1602,6 @@ remainder_key_sz_128:
 ;;  @param [in] T (digest pointer)
 ;;  @param [in] KS (key stream pointer)
 ;;  @param [in] DATA (data pointer)
-;;  @param [in] TAG_SZ (Tag size: 4, 8 or 16 bytes)
 ;;
 align 16
 MKGLOBAL(ZUC_EIA3ROUND16B,function,internal)
@@ -2150,29 +1611,10 @@ ZUC_EIA3ROUND16B:
 %define	T       arg1
 %define	KS      arg2
 %define	DATA    arg3
-%define TAG_SZ  arg4
 
-        cmp     TAG_SZ, 8
-        je      round_tag_8B
-        ja      round_tag_16B
-
-        ; Fall-through for tag size = 4 bytes
-align_label
-round_tag_4B:
         ROUND T, KS, DATA, rax, xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, \
-              xmm7, xmm8, xmm9, xmm10, xmm11, 4
-        ret
+              xmm7, xmm8, xmm9, xmm10, xmm11
 
-align_label
-round_tag_8B:
-        ROUND T, KS, DATA, rax, xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, \
-              xmm7, xmm8, xmm9, xmm10, xmm11, 8
-        ret
-
-align_label
-round_tag_16B:
-        ROUND T, KS, DATA, rax, xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, \
-              xmm7, xmm8, xmm9, xmm10, xmm11, 16
         ret
 
 ;----------------------------------------------------------------------------------------

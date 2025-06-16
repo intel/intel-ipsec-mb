@@ -150,14 +150,9 @@ typedef enum {
 #define IMB_KASUMI_BLOCK_SIZE  8
 #define IMB_KASUMI_DIGEST_SIZE 4
 
-#define IMB_ZUC_KEY_LEN_IN_BYTES           16
-#define IMB_ZUC_IV_LEN_IN_BYTES            16
-#define IMB_ZUC256_KEY_LEN_IN_BYTES        32
-#define IMB_ZUC256_IV_LEN_IN_BYTES_MIN     23
-#define IMB_ZUC256_IV_LEN_IN_BYTES_MAX     25
-#define IMB_ZUC_DIGEST_LEN_IN_BYTES        4
-#define IMB_ZUC256_DIGEST_LEN_IN_BYTES_MIN 4
-#define IMB_ZUC256_DIGEST_LEN_IN_BYTES_MAX 16
+#define IMB_ZUC_KEY_LEN_IN_BYTES    16
+#define IMB_ZUC_IV_LEN_IN_BYTES     16
+#define IMB_ZUC_DIGEST_LEN_IN_BYTES 4
 
 #define IMB_SNOW3G_DIGEST_LEN      4
 #define IMB_SNOW3G_IV_LEN_IN_BYTES 16
@@ -327,7 +322,6 @@ typedef enum {
         IMB_AUTH_POLY1305,               /**< POLY1305 */
         IMB_AUTH_CHACHA20_POLY1305,      /**< AEAD POLY1305 */
         IMB_AUTH_CHACHA20_POLY1305_SGL,  /**< AEAD CHACHA20 with SGL support */
-        IMB_AUTH_ZUC256_EIA3_BITLEN,     /**< 256-EIA3/NIA3 (3GPP) */
         IMB_AUTH_GCM_SGL,                /**< AES-GCM with SGL support */
         IMB_AUTH_CRC32_ETHERNET_FCS,     /**< CRC32-ETHERNET-FCS */
         IMB_AUTH_CRC32_SCTP,             /**< CRC32-SCTP */
@@ -476,9 +470,7 @@ typedef struct IMB_JOB {
                         const uint8_t *_key;
                         /**< Authentication key (16-byte aligned) */
                         const uint8_t *_iv;
-                        /**< Authentication 25-byte IV (16-byte aligned) */
-                        const uint8_t *_iv23;
-                        /**< Authentication 23-byte IV (16-byte aligned) */
+                        /**< Authentication 16-byte IV (16-byte aligned) */
                 } ZUC_EIA3; /**< ZUC-EIA3 specific fields */
                 struct _SNOW3G_UIA2_specific_fields {
                         const void *_key;
@@ -1156,7 +1148,6 @@ typedef struct IMB_MGR {
         void *aes_cmac_ooo;
         void *zuc_eea3_ooo;
         void *zuc_eia3_ooo;
-        void *zuc256_eia3_ooo;
         void *aes256_ccm_ooo;
         void *aes256_cmac_ooo;
         void *snow3g_uea2_ooo;
@@ -1166,8 +1157,6 @@ typedef struct IMB_MGR {
         void *sha_256_ooo;
         void *sha_384_ooo;
         void *sha_512_ooo;
-        void *zuc256_eia3_8B_ooo;
-        void *zuc256_eia3_16B_ooo;
         void *aes_cfb_128_ooo;
         void *aes_cfb_192_ooo;
         void *aes_cfb_256_ooo;

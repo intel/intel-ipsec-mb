@@ -120,7 +120,6 @@ set(HASH_ALGOS
     aes-gmac-256
     aes-cmac-256
     poly1305
-    zuc-eia3-256
     ghash
     eth-crc32
     sctp-crc32

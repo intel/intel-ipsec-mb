@@ -111,7 +111,6 @@ set(HASH_ALGOS
   aes-gmac-256
   aes-cmac-256
   poly-1305
-  zuc-eia3-256
   crc32-ethernet-fcs
   crc32-sctp
   crc32-wimax-ofdma-data

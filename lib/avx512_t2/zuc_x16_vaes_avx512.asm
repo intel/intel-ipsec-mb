@@ -30,9 +30,7 @@
 %define USE_GFNI_VAES_VPCLMUL 1
 %define CIPHER_16 asm_ZucCipher_16_gfni_avx512
 %define ZUC128_INIT asm_ZucInitialization_16_gfni_avx512
-%define ZUC256_INIT asm_Zuc256Initialization_16_gfni_avx512
 %define ZUC128_REMAINDER_16 asm_Eia3RemainderAVX512_16_VPCLMUL
-%define ZUC256_REMAINDER_16 asm_Eia3_256_RemainderAVX512_16_VPCLMUL
 %define ZUC_KEYGEN64B_16 asm_ZucGenKeystream64B_16_gfni_avx512
 %define ZUC_KEYGEN8B_16 asm_ZucGenKeystream8B_16_gfni_avx512
 %define ZUC_KEYGEN_16 asm_ZucGenKeystream_16_gfni_avx512

@@ -91,8 +91,7 @@ END_FIELDS
 START_FIELDS	; ZUC-EIA3 Specific Fields
 ;;;	name				size	align
 FIELD	__zuc_eia3_key,			8,	8	; pointer to key
-FIELD	__zuc_eia3_iv,			8,      8       ; pointer to IV (16-byte for ZUC-128 or 25-byte for ZUC-256)
-FIELD	__zuc_eia3_iv23,		8,	8	; pointer to 23-byte IV (only for ZUC-256)
+FIELD	__zuc_eia3_iv,			8,      8       ; pointer to IV (16-byte)
 END_FIELDS
 
 %assign _ZUC_EIA3_spec_fields_size	_FIELD_OFFSET
@@ -192,7 +191,6 @@ END_FIELDS
 %assign _gcm_aad_len	                _u + __gcm_aad_len
 %assign _zuc_eia3_key                   _u + __zuc_eia3_key
 %assign _zuc_eia3_iv                    _u + __zuc_eia3_iv
-%assign _zuc_eia3_iv23                  _u + __zuc_eia3_iv23
 %assign _snow3g_uia2_key                _u + __snow3g_uia2_key
 %assign _snow3g_uia2_iv                 _u + __snow3g_uia2_iv
 %assign _poly1305_key	                _u + __poly1305_key
