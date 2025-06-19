@@ -90,6 +90,45 @@ fixed_loop:
 
         ret
 
+;; void ssc_mark4(void)
+MKGLOBAL(ssc_mark4,function,)
+align 16
+ssc_mark4:
+        push rbx
+        mov  ebx, 4
+        db 0x64, 0x67, 0x90, 0x90, 0x90
+        pop  rbx
+        ret
+
+;; void ssc_mark5(void)
+MKGLOBAL(ssc_mark5,function,)
+align 16
+ssc_mark5:
+        push rbx
+        mov  ebx, 5
+        db 0x64, 0x67, 0x90, 0x90, 0x90
+        pop  rbx
+        ret
+
+;; void ssc_mark6(void)
+MKGLOBAL(ssc_mark6,function,)
+align 16
+ssc_mark6:
+        push rbx
+        mov  ebx, 6
+        db 0x64, 0x67, 0x90, 0x90, 0x90
+        pop  rbx
+        ret
+
+;; void ssc_mark7(void)
+MKGLOBAL(ssc_mark7,function,)
+align 16
+ssc_mark7:
+        push rbx
+        mov  ebx, 7
+        db 0x64, 0x67, 0x90, 0x90, 0x90
+        pop  rbx
+        ret
 
 %ifdef LINUX
 section .note.GNU-stack noalloc noexec nowrite progbits

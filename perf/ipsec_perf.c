@@ -730,6 +730,7 @@ struct custom_job_params custom_job_params = { .cipher_mode = TEST_NULL_CIPHER,
 uint8_t archs[NUM_ARCHS] = { 1, 1, 1, 1 }; /* uses all function sets */
 int use_gcm_sgl_api = 0;
 int use_unhalted_cycles = 0;                        /* read unhalted cycles instead of tsc */
+int use_ssc = 0;                                    /* Enable SSC mode */
 uint64_t rd_cycles_cost = 0;                        /* cost of reading unhalted cycles */
 uint64_t core_mask[NUM_CORE_MASK_ELEMENTS] = { 0 }; /* bitmap of selected cores */
 
@@ -774,6 +775,8 @@ static int use_timebox = 1;                  /* time-box feature on/off flag */
 static uint32_t timeout_ms = 0;              /* time for one packet size to be tested */
 static uint32_t num_runs = DEFAULT_NUM_RUNS; /* number of test runs to perform */
 static uint32_t throughput = 0;              /* report results as total bytes processed */
+
+static const int ssc_iter = 30;
 
 #ifdef LINUX
 static void
@@ -3556,8 +3559,16 @@ run_tests(void *arg)
                                 goto exit_failure;
                         }
 
+                        if (use_ssc) {
+                                ssc_mark4();
+                        }
+
                         process_variant(p_mgr, arch, &params, variant_ptr, run, buf, keys,
                                         quic_blob_ptr);
+
+                        if (use_ssc) {
+                                ssc_mark7();
+                        }
 
                         /* update and print progress bar */
                         if (info->print_info)
@@ -3683,7 +3694,11 @@ usage(void)
                 "--quic-api: run QUIC-API specific tests only\n"
                 "--buffer-offset val: val is 0 by default, valid range is 0 to 15.\n"
                 "                     This option allows to test unaligned buffer cases\n"
-                "--throughput: report total number of bytes processed within the timebox\n",
+                "--throughput: report total number of bytes processed within the timebox\n"
+                "--ssc: issue SSC start=4 and stop=7 marks. It reduces the number of\n"
+                "       iterations to 30 and executes only one run. Note that 30 iterations\n"
+                "       may not be suitable for all algorithms. It can be adjusted by\n"
+                "       using the --job-iter option following --ssc.",
                 MAX_NUM_THREADS + 1);
 }
 
@@ -4102,6 +4117,13 @@ main(int argc, char *argv[])
                 } else if (strcmp(argv[i], "-w") == 0) {
                         cache_type = WARM;
                         fprintf(stderr, "Warm cache, ");
+                } else if (strcmp(argv[i], "--ssc") == 0) {
+                        use_ssc = 1;
+                        job_iter = ssc_iter;
+                        throughput = 0;
+                        use_timebox = 0;
+                        silent_progress_bar = 1;
+                        num_runs = 1;
                 } else if (strcmp(argv[i], "--shani-on") == 0) {
                         flags &= (~IMB_FLAG_SHANI_OFF);
                 } else if (strcmp(argv[i], "--shani-off") == 0) {
@@ -4571,6 +4593,9 @@ main(int argc, char *argv[])
                         return EXIT_FAILURE;
                 }
         }
+
+        if (use_ssc)
+                fprintf(stderr, "SSC marks: start 4, stop 7\n");
 
         IMB_MGR *p_mgr = alloc_mb_mgr(flags);
 
