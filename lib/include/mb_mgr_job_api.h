@@ -522,6 +522,8 @@ SUBMIT_JOB_CIPHER_ENC(IMB_MGR *state, IMB_JOB *job, const IMB_CIPHER_MODE cipher
         } else if (IMB_CIPHER_ZUC_NCA6 == cipher_mode) {
                 MB_MGR_ZUC_OOO *zuc_nca6_ooo = state->zuc_nca6_ooo;
                 return SUBMIT_JOB_ZUC_NCA6(zuc_nca6_ooo, job, IMB_DIR_ENCRYPT);
+        } else if (IMB_CIPHER_SNOW5G_NCA4 == cipher_mode) {
+                return submit_snow5g_nca4_job(job, IMB_DIR_ENCRYPT);
         } else { /* assume IMB_CIPHER_NULL */
                 job->status |= IMB_STATUS_COMPLETED_CIPHER;
                 return job;
@@ -722,6 +724,8 @@ SUBMIT_JOB_CIPHER_DEC(IMB_MGR *state, IMB_JOB *job, const IMB_CIPHER_MODE cipher
         } else if (IMB_CIPHER_ZUC_NCA6 == cipher_mode) {
                 MB_MGR_ZUC_OOO *zuc_nca6_ooo = state->zuc_nca6_ooo;
                 return SUBMIT_JOB_ZUC_NCA6(zuc_nca6_ooo, job, IMB_DIR_DECRYPT);
+        } else if (IMB_CIPHER_SNOW5G_NCA4 == cipher_mode) {
+                return submit_snow5g_nca4_job(job, IMB_DIR_DECRYPT);
         } else {
                 /* assume IMB_CIPHER_NULL */
                 job->status |= IMB_STATUS_COMPLETED_CIPHER;
@@ -1070,6 +1074,13 @@ submit_cipher_dec_zuc_nca6(IMB_MGR *state, IMB_JOB *job)
         return SUBMIT_JOB_CIPHER_DEC(state, job, IMB_CIPHER_ZUC_NCA6, IMB_KEY_256_BYTES);
 }
 
+/* SNOW5G-NCA4 */
+static IMB_JOB *
+submit_cipher_dec_snow5g_nca4(IMB_MGR *state, IMB_JOB *job)
+{
+        return SUBMIT_JOB_CIPHER_DEC(state, job, IMB_CIPHER_SNOW5G_NCA4, IMB_KEY_256_BYTES);
+}
+
 /* ========================= */
 /* ======== ENCRYPT ======== */
 /* ========================= */
@@ -1349,6 +1360,13 @@ submit_cipher_enc_zuc_nca6(IMB_MGR *state, IMB_JOB *job)
         return SUBMIT_JOB_CIPHER_ENC(state, job, IMB_CIPHER_ZUC_NCA6, IMB_KEY_256_BYTES);
 }
 
+/* SNOW5G-NCA4 */
+static IMB_JOB *
+submit_cipher_enc_snow5g_nca4(IMB_MGR *state, IMB_JOB *job)
+{
+        return SUBMIT_JOB_CIPHER_ENC(state, job, IMB_CIPHER_SNOW5G_NCA4, IMB_KEY_256_BYTES);
+}
+
 /*
  * Four entries per algorithm (different key sizes),
  * algorithms in the same order IMB_CIPHER_MODE
@@ -1516,12 +1534,12 @@ static const submit_flush_fn_t tab_submit_cipher[] = {
         submit_cipher_dec_null,
         submit_cipher_dec_null,
         submit_cipher_dec_zuc_nca6,
+        /* [30] SNOW5G NCA4 */
+        submit_cipher_dec_null,
+        submit_cipher_dec_null,
+        submit_cipher_dec_null,
+        submit_cipher_dec_snow5g_nca4,
         /* add new cipher decrypt here */
-        /* [30] NULL */
-        NULL,
-        NULL,
-        NULL,
-        NULL,
         /* [31] NULL */
         NULL,
         NULL,
@@ -1682,12 +1700,12 @@ static const submit_flush_fn_t tab_submit_cipher[] = {
         submit_cipher_enc_null,
         submit_cipher_enc_null,
         submit_cipher_enc_zuc_nca6,
+        /* [30] SNOW5G NCA4 */
+        submit_cipher_enc_null,
+        submit_cipher_enc_null,
+        submit_cipher_enc_null,
+        submit_cipher_enc_snow5g_nca4,
         /* add new cipher encrypt here */
-        /* [30] NULL */
-        NULL,
-        NULL,
-        NULL,
-        NULL,
         /* [31] NULL */
         NULL,
         NULL,
@@ -1990,6 +2008,13 @@ flush_cipher_dec_zuc_nca6(IMB_MGR *state, IMB_JOB *job)
         return FLUSH_JOB_CIPHER_DEC(state, job, IMB_CIPHER_ZUC_NCA6, IMB_KEY_256_BYTES);
 }
 
+/* SNOW5G NCA4 */
+static IMB_JOB *
+flush_cipher_dec_snow5g_nca4(IMB_MGR *state, IMB_JOB *job)
+{
+        return FLUSH_JOB_CIPHER_DEC(state, job, IMB_CIPHER_SNOW5G_NCA4, IMB_KEY_256_BYTES);
+}
+
 /* ========================= */
 /* ======== ENCRYPT ======== */
 /* ========================= */
@@ -2280,6 +2305,13 @@ flush_cipher_enc_zuc_nca6(IMB_MGR *state, IMB_JOB *job)
         return FLUSH_JOB_CIPHER_ENC(state, job, IMB_CIPHER_ZUC_NCA6, IMB_KEY_256_BYTES);
 }
 
+/* SNOW5G NCA4 */
+static IMB_JOB *
+flush_cipher_enc_snow5g_nca4(IMB_MGR *state, IMB_JOB *job)
+{
+        return FLUSH_JOB_CIPHER_ENC(state, job, IMB_CIPHER_SNOW5G_NCA4, IMB_KEY_256_BYTES);
+}
+
 /*
  * Four entries per algorithm (different key sizes),
  * algorithms in the same order IMB_CIPHER_MODE
@@ -2442,12 +2474,12 @@ static const submit_flush_fn_t tab_flush_cipher[] = {
         flush_cipher_dec_null,
         flush_cipher_dec_null,
         flush_cipher_dec_zuc_nca6,
+        /* [30] SNOW5G NCA4 */
+        flush_cipher_dec_null,
+        flush_cipher_dec_null,
+        flush_cipher_dec_null,
+        flush_cipher_dec_snow5g_nca4,
         /* add new cipher decrypt here */
-        /* [30] NULL */
-        NULL,
-        NULL,
-        NULL,
-        NULL,
         /* [31] NULL */
         NULL,
         NULL,
@@ -2602,28 +2634,22 @@ static const submit_flush_fn_t tab_flush_cipher[] = {
         flush_cipher_enc_null,
         flush_cipher_enc_null,
         flush_cipher_enc_aes_nca5,
-        /* [33] ZUC NCA6 */
+        /* [29] ZUC NCA6 */
         flush_cipher_enc_null,
         flush_cipher_enc_null,
         flush_cipher_enc_null,
         flush_cipher_enc_zuc_nca6,
+        /* [30] SNOW5G NCA4 */
+        flush_cipher_enc_null,
+        flush_cipher_enc_null,
+        flush_cipher_enc_null,
+        flush_cipher_enc_snow5g_nca4,
         /* add new cipher encrypt here */
-        /* [29] NULL */
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        /* [30] NULL */
-        NULL,
-        NULL,
-        NULL,
-        NULL,
         /* [31] NULL */
         NULL,
         NULL,
         NULL,
         NULL,
-
 };
 
 /* ========================================================================= */
@@ -3250,6 +3276,12 @@ submit_hash_snow5g_nia4(IMB_MGR *state, IMB_JOB *job)
         return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_SNOW5G_NIA4);
 }
 
+static IMB_JOB *
+submit_hash_snow5g_nca4(IMB_MGR *state, IMB_JOB *job)
+{
+        return SUBMIT_JOB_HASH_EX(state, job, IMB_AUTH_SNOW5G_NCA4);
+}
+
 static const submit_flush_fn_t tab_submit_hash[] = {
         /* [0] invalid entry */
         NULL,
@@ -3369,6 +3401,8 @@ static const submit_flush_fn_t tab_submit_hash[] = {
         submit_hash_zuc_nca6,
         /* [54] SNOW5G NIA4 */
         submit_hash_snow5g_nia4,
+        /* [55] SNOW5G NCA4 */
+        submit_hash_snow5g_nca4,
         /* add new hash algorithms here */
 };
 
@@ -3725,6 +3759,12 @@ flush_hash_snow5g_nia4(IMB_MGR *state, IMB_JOB *job)
         return FLUSH_JOB_HASH_EX(state, job, IMB_AUTH_SNOW5G_NIA4);
 }
 
+static IMB_JOB *
+flush_hash_snow5g_nca4(IMB_MGR *state, IMB_JOB *job)
+{
+        return FLUSH_JOB_HASH_EX(state, job, IMB_AUTH_SNOW5G_NCA4);
+}
+
 static const submit_flush_fn_t tab_flush_hash[] = {
         /* [0] invalid entry */
         NULL,
@@ -3844,6 +3884,8 @@ static const submit_flush_fn_t tab_flush_hash[] = {
         flush_hash_zuc_nca6,
         /* [54] SNOW5G-NIA4 */
         flush_hash_snow5g_nia4,
+        /* [55] SNOW5G-NCA4 */
+        flush_hash_snow5g_nca4,
         /* add new hash algorithms here */
 };
 

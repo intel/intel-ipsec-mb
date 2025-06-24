@@ -272,6 +272,7 @@ flush_snow3g_uea2_job_avx2_t1(IMB_MGR *state)
 
 /* SNOW5G-NIA4 */
 #define GENERATE_HQP_SNOW5G generate_hqp_snow5g_sse
+#define SNOW5G_NCA4         snow5g_nca4_sse
 
 static void
 reset_ooo_mgrs(IMB_MGR *state)

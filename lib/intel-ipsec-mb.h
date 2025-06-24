@@ -294,10 +294,11 @@ typedef enum {
         IMB_CIPHER_SM4_GCM,
         IMB_CIPHER_ZUC_NEA6,
         IMB_CIPHER_SNOW5G_NEA4,
-        IMB_CIPHER_AES_NEA5, /**< AES256-NEA5 */
-        IMB_CIPHER_AES_NCA5, /**< AES256-NCA5 */
-        IMB_CIPHER_ZUC_NCA6, /**< ZUC256-NCA6 */
-        IMB_CIPHER_NUM
+        IMB_CIPHER_AES_NEA5,    /**< AES256-NEA5 */
+        IMB_CIPHER_AES_NCA5,    /**< AES256-NCA5 */
+        IMB_CIPHER_ZUC_NCA6,    /**< ZUC256-NCA6 */
+        IMB_CIPHER_SNOW5G_NCA4, /**< SNOW5G-NCA4 */
+        IMB_CIPHER_NUM          /**< Number of cipher modes */
 } IMB_CIPHER_MODE;
 
 typedef enum { IMB_DIR_ENCRYPT = 1, IMB_DIR_DECRYPT } IMB_CIPHER_DIRECTION;
@@ -361,6 +362,7 @@ typedef enum {
         IMB_AUTH_ZUC_NIA6,               /**< ZUC256-NIA6 */
         IMB_AUTH_ZUC_NCA6,               /**< ZUC256-NCA6 */
         IMB_AUTH_SNOW5G_NIA4,            /**< SNOW5G-NIA4 */
+        IMB_AUTH_SNOW5G_NCA4,            /**< SNOW5G-NCA4 */
         IMB_AUTH_NUM
 } IMB_HASH_ALG;
 

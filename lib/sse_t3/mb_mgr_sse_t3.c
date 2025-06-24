@@ -282,6 +282,7 @@ flush_snow3g_uea2_job_sse(IMB_MGR *state)
 
 /* SNOW5G-NIA4 */
 #define GENERATE_HQP_SNOW5G generate_hqp_snow5g_sse
+#define SNOW5G_NCA4         snow5g_nca4_sse
 
 /* ====================================================================== */
 

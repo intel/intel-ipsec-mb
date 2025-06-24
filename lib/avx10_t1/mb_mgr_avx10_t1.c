@@ -400,6 +400,7 @@ submit_job_docsis256_sec_crc_dec_vaes_avx512(MB_MGR_DOCSIS_AES_OOO *state, IMB_J
 
 /* SNOW5G-NIA4 */
 #define GENERATE_HQP_SNOW5G generate_hqp_snow5g_sse
+#define SNOW5G_NCA4         snow5g_nca4_sse
 
 /* ====================================================================== */
 

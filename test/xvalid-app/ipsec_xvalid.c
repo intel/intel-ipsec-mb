@@ -561,6 +561,10 @@ struct str_value_mapping aead_algo_str_map[] = {
           .values.job_params = { .cipher_mode = IMB_CIPHER_ZUC_NCA6,
                                  .hash_alg = IMB_AUTH_ZUC_NCA6,
                                  .key_size = IMB_KEY_256_BYTES } },
+        { .name = "SNOW5G-NCA4",
+          .values.job_params = { .cipher_mode = IMB_CIPHER_SNOW5G_NCA4,
+                                 .hash_alg = IMB_AUTH_SNOW5G_NCA4,
+                                 .key_size = IMB_KEY_256_BYTES } }
 };
 
 /* This struct stores all information about performed test case */
@@ -627,6 +631,7 @@ const uint8_t auth_tag_len_bytes[] = {
         4,                         /* IMB_AUTH_ZUC_NIA6 */
         4,                         /* IMB_AUTH_ZUC_NCA6 */
         4,                         /* IMB_AUTH_SNOW5G_NIA4 */
+        4,                         /* IMB_AUTH_SNOW5G_NCA4 */
 };
 
 /* Minimum, maximum and step values of key sizes */
@@ -659,7 +664,8 @@ const uint8_t key_sizes[][3] = {
         { 32, 32, 1 },  /* IMB_CIPHER_SNOW5G_NEA4 */
         { 32, 32, 1 },  /* IMB_CIPHER_AES_NEA5 */
         { 32, 32, 1 },  /* IMB_CIPHER_AES_NCA5 */
-        { 32, 32, 1 }   /* IMB_CIPHER_ZUC_NCA6 */
+        { 32, 32, 1 },  /* IMB_CIPHER_ZUC_NCA6 */
+        { 32, 32, 1 },  /* IMB_CIPHER_SNOW5G_NCA4 */
 };
 
 uint8_t custom_test = 0;
@@ -1436,6 +1442,7 @@ fill_job(IMB_JOB *job, const struct params_s *params, uint8_t *buf, uint8_t *dig
         case IMB_AUTH_DOCSIS_CRC32:
         case IMB_AUTH_AES_NCA5:
         case IMB_AUTH_ZUC_NCA6:
+        case IMB_AUTH_SNOW5G_NCA4:
                 /* No operation needed */
                 break;
         case IMB_AUTH_POLY1305:
@@ -1496,6 +1503,7 @@ fill_job(IMB_JOB *job, const struct params_s *params, uint8_t *buf, uint8_t *dig
                 break;
         case IMB_CIPHER_AES_NCA5:
         case IMB_CIPHER_ZUC_NCA6:
+        case IMB_CIPHER_SNOW5G_NCA4:
                 job->u.NCA.aad_len_in_bytes = params->aad_size;
                 job->u.NCA.aad = aad;
                 /* Fall-through */
@@ -1649,6 +1657,7 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys, const uint8_t *ciph
                         break;
                 case IMB_AUTH_AES_NCA5:
                 case IMB_AUTH_ZUC_NCA6:
+                case IMB_AUTH_SNOW5G_NCA4:
                 case IMB_AUTH_AES_CCM:
                 case IMB_AUTH_SM4_GCM:
                 case IMB_AUTH_AES_GMAC:
@@ -1721,6 +1730,7 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys, const uint8_t *ciph
                 case IMB_CIPHER_DOCSIS_DES:
                 case IMB_CIPHER_AES_NCA5:
                 case IMB_CIPHER_ZUC_NCA6:
+                case IMB_CIPHER_SNOW5G_NCA4:
                         nosimd_memset(enc_keys, pattern_cipher_key, sizeof(keys->enc_keys));
                         break;
                 case IMB_CIPHER_SNOW3G_UEA2_BITLEN:
@@ -1824,6 +1834,7 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys, const uint8_t *ciph
         case IMB_AUTH_SHAKE256:
         case IMB_AUTH_AES_NCA5:
         case IMB_AUTH_ZUC_NCA6:
+        case IMB_AUTH_SNOW5G_NCA4:
         case IMB_AUTH_SNOW5G_NIA4:
                 /* No operation needed */
                 break;
@@ -1907,6 +1918,7 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys, const uint8_t *ciph
         case IMB_CIPHER_ZUC_EEA3:
         case IMB_CIPHER_ZUC_NEA6:
         case IMB_CIPHER_ZUC_NCA6:
+        case IMB_CIPHER_SNOW5G_NCA4:
         case IMB_CIPHER_CHACHA20:
         case IMB_CIPHER_CHACHA20_POLY1305:
         case IMB_CIPHER_CHACHA20_POLY1305_SGL:
@@ -2987,6 +2999,10 @@ run_test(const IMB_ARCH enc_arch, const IMB_ARCH dec_arch, struct params_s *para
 
                         if ((c_mode == IMB_CIPHER_ZUC_NCA6 && hash_alg != IMB_AUTH_ZUC_NCA6) ||
                             (c_mode != IMB_CIPHER_ZUC_NCA6 && hash_alg == IMB_AUTH_ZUC_NCA6))
+                                continue;
+                        if ((c_mode == IMB_CIPHER_SNOW5G_NCA4 &&
+                             hash_alg != IMB_AUTH_SNOW5G_NCA4) ||
+                            (c_mode != IMB_CIPHER_SNOW5G_NCA4 && hash_alg == IMB_AUTH_SNOW5G_NCA4))
                                 continue;
                         /* This test app does not support SGL yet */
                         if ((c_mode == IMB_CIPHER_CHACHA20_POLY1305_SGL) ||
