@@ -38,23 +38,29 @@ submit_job_sha3(IMB_MGR *state, IMB_JOB *job, const IMB_HASH_ALG hash_alg)
 
         switch (hash_alg) {
         case IMB_AUTH_SHA3_224:
-                sha3_224(job->src, job->msg_len_to_hash_in_bytes, job->auth_tag_output);
+                sha3_224(job->src + job->hash_start_src_offset_in_bytes,
+                         job->msg_len_to_hash_in_bytes, job->auth_tag_output);
                 break;
         case IMB_AUTH_SHA3_256:
-                sha3_256(job->src, job->msg_len_to_hash_in_bytes, job->auth_tag_output);
+                sha3_256(job->src + job->hash_start_src_offset_in_bytes,
+                         job->msg_len_to_hash_in_bytes, job->auth_tag_output);
                 break;
         case IMB_AUTH_SHA3_384:
-                sha3_384(job->src, job->msg_len_to_hash_in_bytes, job->auth_tag_output);
+                sha3_384(job->src + job->hash_start_src_offset_in_bytes,
+                         job->msg_len_to_hash_in_bytes, job->auth_tag_output);
                 break;
         case IMB_AUTH_SHA3_512:
-                sha3_512(job->src, job->msg_len_to_hash_in_bytes, job->auth_tag_output);
+                sha3_512(job->src + job->hash_start_src_offset_in_bytes,
+                         job->msg_len_to_hash_in_bytes, job->auth_tag_output);
                 break;
         case IMB_AUTH_SHAKE128:
-                shake128(job->src, job->msg_len_to_hash_in_bytes, job->auth_tag_output,
+                shake128(job->src + job->hash_start_src_offset_in_bytes,
+                         job->msg_len_to_hash_in_bytes, job->auth_tag_output,
                          job->auth_tag_output_len_in_bytes);
                 break;
         case IMB_AUTH_SHAKE256:
-                shake256(job->src, job->msg_len_to_hash_in_bytes, job->auth_tag_output,
+                shake256(job->src + job->hash_start_src_offset_in_bytes,
+                         job->msg_len_to_hash_in_bytes, job->auth_tag_output,
                          job->auth_tag_output_len_in_bytes);
                 break;
         default:
