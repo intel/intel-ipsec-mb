@@ -450,37 +450,37 @@ struct str_value_mapping hash_algo_str_map[] = {
                 }
         },
         {
-                .name = "sha3-224",
+                .name = "SHA3-224",
                 .values.job_params = {
                         .hash_alg = IMB_AUTH_SHA3_224
                 }
         },
         {
-                .name = "sha3-256",
+                .name = "SHA3-256",
                 .values.job_params = {
                         .hash_alg = IMB_AUTH_SHA3_256
                 }
         },
         {
-                .name = "sha3-384",
+                .name = "SHA3-384",
                 .values.job_params = {
                         .hash_alg = IMB_AUTH_SHA3_384
                 }
         },
         {
-                .name = "sha3-512",
+                .name = "SHA3-512",
                 .values.job_params = {
                         .hash_alg = IMB_AUTH_SHA3_512
                 }
         },
         {
-                .name = "shake-128",
+                .name = "SHAKE-128",
                 .values.job_params = {
                         .hash_alg = IMB_AUTH_SHAKE128
                 }
         },
         {
-                .name = "shake-256",
+                .name = "SHAKE-256",
                 .values.job_params = {
                         .hash_alg = IMB_AUTH_SHAKE256
                 }
