@@ -49,6 +49,8 @@
 #define PROV_CIPHER_FLAG_CTS             0x0004
 #define PROV_CIPHER_FLAG_TLS1_MULTIBLOCK 0x0008
 #define PROV_CIPHER_FLAG_RAND_KEY        0x0010
+#define PROV_CIPHER_FLAG_VARIABLE_LENGTH 0x0100
+#define PROV_CIPHER_FLAG_INVERSE_CIPHER  0x0200
 
 #define GCM_IV_MAX_SIZE     (1024 / 8)
 #define PROV_AES_BLOCK_SIZE 16
@@ -186,6 +188,13 @@ prov_gcm_cipher(void *ctx, unsigned char *out, size_t *outl, size_t outsize,
                 const unsigned char *in, size_t inl);
 PROV_EVP_CIPHER
 get_default_cipher_aes_gcm(int nid);
+
+int
+prov_cipher_generic_get_params(OSSL_PARAM params[], unsigned int md, uint64_t flags, size_t kbits,
+                               size_t blkbits, size_t ivbits);
+
+const OSSL_PARAM *
+prov_cipher_generic_gettable_params(void *provctx);
 
 #define PROV_aes_gcm_cipher(alg, lc, UCMODE, flags, kbits, blkbits, ivbits, nid)                   \
         static OSSL_FUNC_cipher_get_params_fn alg##_##kbits##_##lc##_get_params;                   \

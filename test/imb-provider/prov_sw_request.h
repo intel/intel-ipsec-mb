@@ -31,9 +31,12 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <openssl/ec.h>
+#include <openssl/modes.h>
 
 #include <openssl/async.h>
 #include <intel-ipsec-mb.h>
+
+#define GENERIC_BLOCK_SIZE 16
 
 typedef struct {
         EVP_MD *md;
@@ -49,25 +52,73 @@ typedef struct _alg_context {
         PROV_DIGEST digest;
         size_t tls_data_size;
         size_t md_size;
+        size_t digest_len;
         unsigned char *key;
         size_t keylen;
 
         size_t block_size;
+        unsigned max_burst_size;
         IMB_HASH_ALG hash_alg;
         unsigned char msg_hash[64];
+
+        int nid;
+        block128_f block;
+        union {
+                cbc128_f cbc;
+                ctr128_f ctr;
+                ecb128_f ecb;
+        } stream;
+
+        unsigned int mode;
+        size_t ivlen;
+        size_t blocksize;
+        size_t bufsz; /* Number of bytes in buf */
+        unsigned int num;
+        unsigned int use_bits : 1;
+        unsigned int enc : 1;
+        unsigned int variable_keylength : 1;
+        unsigned int key_set : 1;
+        unsigned int pad : 1;
+        unsigned int inverse_cipher : 1;
+        unsigned int iv_set : 1;
+
+        size_t tlsmacsize;
+        unsigned int tlsversion;
+        unsigned char *tlsmac;
+
+        /* The original value of the iv */
+        unsigned char oiv[GENERIC_BLOCK_SIZE];
+
+        unsigned char next_iv[GENERIC_BLOCK_SIZE];
+        /* Buffer of partial blocks processed via update calls */
+        unsigned char buf[GENERIC_BLOCK_SIZE];
+        unsigned char iv[GENERIC_BLOCK_SIZE];
+        const void *ks; /* Pointer to algorithm specific key data */
+        IMB_JOB *imb_job;
+        unsigned char *enc_keys;
+        unsigned char *dec_keys;
         uint8_t auths[64];
+
 } ALG_CTX;
 
 typedef struct _op_data {
         struct _op_data *next;
         struct _op_data *prev;
         ALG_CTX *state;
+        unsigned char *out;
+        const unsigned char *in;
         const unsigned char *data;
         unsigned char *hash;
         IMB_JOB *imb_job;
         size_t len;
         ASYNC_JOB *job;
         int *sts;
+        uint8_t auths[64];
+        unsigned char enc_keys[16 * 15];
+        unsigned char dec_keys[16 * 15];
+        const uint8_t *iv;
+        int key_len;
+        int iv_len;
         int flush;
         struct timespec timestamp;
 } op_data;
