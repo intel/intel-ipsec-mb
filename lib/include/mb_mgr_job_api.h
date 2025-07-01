@@ -2686,24 +2686,12 @@ FLUSH_JOB_HASH_EX(IMB_MGR *state, IMB_JOB *job, const IMB_HASH_ALG hash_alg)
         case IMB_AUTH_SNOW3G_UIA2_BITLEN:
                 return FLUSH_JOB_SNOW3G_UIA2(snow3g_uia2_ooo);
 #endif
-        case IMB_AUTH_SHA3_224:
-                return submit_job_sha3(state, job, IMB_AUTH_SHA3_224);
-        case IMB_AUTH_SHA3_256:
-                return submit_job_sha3(state, job, IMB_AUTH_SHA3_256);
-        case IMB_AUTH_SHA3_384:
-                return submit_job_sha3(state, job, IMB_AUTH_SHA3_384);
-        case IMB_AUTH_SHA3_512:
-                return submit_job_sha3(state, job, IMB_AUTH_SHA3_512);
-        case IMB_AUTH_SHAKE128:
-                return submit_job_sha3(state, job, IMB_AUTH_SHAKE128);
-        case IMB_AUTH_SHAKE256:
-                return submit_job_sha3(state, job, IMB_AUTH_SHAKE256);
         default: /* assume GCM or IMB_AUTH_NULL */
                 if (!(job->status & IMB_STATUS_COMPLETED_AUTH)) {
                         job->status |= IMB_STATUS_COMPLETED_AUTH;
                         return job;
                 }
-                /* if HMAC is complete then return NULL */
+                /* if HMAC or SHA3/SHAKE is complete then return NULL */
                 return NULL;
         }
 }
