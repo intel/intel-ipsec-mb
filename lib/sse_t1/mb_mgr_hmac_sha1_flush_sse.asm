@@ -278,19 +278,12 @@ clear_ret:
 %ifdef SAFE_DATA
         pxor    xmm0, xmm0
 
-        ;; Clear digest (20B), outer_block (20B) and extra_block (64B)
-        ;; of returned job and NULL jobs
+        ;; Clear extra_block (64B) of returned job and NULL jobs
 %assign I 0
 %rep 4
 	cmp	qword [state + _ldata + (I*_HMAC_SHA1_LANE_DATA_size) + _job_in_lane], 0
 	jne	APPEND(skip_clear_,I)
 
-        ;; Clear digest
-        mov     dword [state + _args_digest + SHA1_DIGEST_WORD_SIZE*I + 0*SHA1_DIGEST_ROW_SIZE], 0
-        mov     dword [state + _args_digest + SHA1_DIGEST_WORD_SIZE*I + 1*SHA1_DIGEST_ROW_SIZE], 0
-        mov     dword [state + _args_digest + SHA1_DIGEST_WORD_SIZE*I + 2*SHA1_DIGEST_ROW_SIZE], 0
-        mov     dword [state + _args_digest + SHA1_DIGEST_WORD_SIZE*I + 3*SHA1_DIGEST_ROW_SIZE], 0
-        mov     dword [state + _args_digest + SHA1_DIGEST_WORD_SIZE*I + 4*SHA1_DIGEST_ROW_SIZE], 0
 
         lea     lane_data, [state + _ldata + (I*_HMAC_SHA1_LANE_DATA_size)]
         ;; Clear first 64 bytes of extra_block
@@ -299,10 +292,6 @@ clear_ret:
         movdqa  [lane_data + _extra_block + offset], xmm0
 %assign offset (offset + 16)
 %endrep
-
-        ;; Clear first 20 bytes of outer_block
-        movdqa  [lane_data + _outer_block], xmm0
-        mov     dword [lane_data + _outer_block + 16], 0
 
 APPEND(skip_clear_,I):
 %assign I (I+1)
