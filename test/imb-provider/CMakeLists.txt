@@ -92,3 +92,19 @@ link_libraries(${OPENSSL_LIB} ${PROV_SW_IPSEC_MB_LIB})
 # Set empty prefix
 set(CMAKE_STATIC_LIBRARY_PREFIX "")
 set(CMAKE_SHARED_LIBRARY_PREFIX "")
+
+# Enable testing
+enable_testing()
+
+# Add test subdirectory
+add_subdirectory(test)
+
+# Copy imb-provider.so to test directory after build
+add_custom_command(
+  TARGET imb-provider
+  POST_BUILD
+  COMMAND ${CMAKE_COMMAND} -E copy
+    $<TARGET_FILE:imb-provider>
+    ${CMAKE_CURRENT_BINARY_DIR}/test/
+  COMMENT "Copying imb-provider.so to test directory"
+)
