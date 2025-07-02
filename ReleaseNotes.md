@@ -36,6 +36,7 @@ Performance Applications
 - Removed AES-CBCS 1:9 cipher.
 - Removed SNOW-V cipher together with AEAD SNOW-V.
 - Added SHA3/SHAKE support to imb-perf application.
+- Added "--skip" option to imb-perf-tool.py to skip specific algorithms.
 
 Fixes
 - Fixed SM4-GCM plaintext/ciphertext address calculation (issue #159).

@@ -436,6 +436,8 @@ def parse_args():
                         help="disables time box feature for single packet size test duration (100ms)")
     parser.add_argument("--buffer-offset", default=None, type=int,
                         help="buffer start address offset value 0-15, default 0")
+    parser.add_argument("--skip", default=None,
+                        help="comma-separated list of algorithms to skip (e.g. aes-cbc-128,sha1)")
 
     args = parser.parse_args()
 
@@ -474,7 +476,7 @@ def parse_args():
         alg_types, args.job_size, args.cold_cache, args.arch_best, \
         args.shani_off, args.gfni_off, args.job_api, \
         args.unhalted_cycles, args.quick, args.smoke, args.turbo, args.imix, \
-        args.aad_size, args.job_iter, args.no_time_box, args.buffer_offset
+        args.aad_size, args.job_iter, args.no_time_box, args.buffer_offset, args.skip
 
 
 def run_test(core=None):
@@ -544,7 +546,7 @@ def main():
     # parse command line args
     archs, cores, directions, offset, alg_types, sizes, cold_cache, arch_best, \
         shani_off, gfni_off, job_api, unhalted_cycles, quick_test, smoke_test, \
-        turbo, imix, aad_size, job_iter, no_time_box, buffer_offset = parse_args()
+        turbo, imix, aad_size, job_iter, no_time_box, buffer_offset, skip = parse_args()
 
     # validate requested archs are supported
     if arch_best is True:
@@ -555,6 +557,16 @@ def main():
         for arch in archs:
             if arch not in supported_archs:
                 print('Error: {} arch not supported!'.format(arch), file=sys.stderr)
+                sys.exit(1)
+
+    # process skip list
+    skip_list = []
+    if skip:
+        skip_list = [s.strip() for s in skip.split(',') if s.strip()]
+        # loop to check if skip algos are valid
+        for s in skip_list:
+            if s not in cipher_algos and s not in hash_algos and s not in aead_algos:
+                print('Error: {} algorithm not supported! Cannot skip.'.format(s), file=sys.stderr)
                 sys.exit(1)
 
     # print args
@@ -588,6 +600,9 @@ def main():
             print('  Test type: {}'.format("smoke" if smoke_test else "quick"), file=sys.stderr)
         if job_iter is not None:
             print('  Job iterations: {}'.format(job_iter), file=sys.stderr)
+        # print skipped algos if set
+        if skip_list:
+            print('  Skipped algorithms: {}'.format(', '.join(skip_list)), file=sys.stderr)
 
         print(header, file=sys.stderr)
 
@@ -596,6 +611,8 @@ def main():
         if 'cipher-only' in alg_types:
             for direction in directions:
                 for cipher_alg in cipher_algos:
+                    if cipher_alg in skip_list or cipher_alg == 'null':
+                        continue
                     TODO_Q.put(Variant(idx=TOTAL_VARIANTS, arch=arch, direction=direction,
                                        offset=offset, sizes=sizes, cipher_alg=cipher_alg,
                                        cold_cache=cold_cache, shani_off=shani_off, gfni_off=gfni_off,
@@ -608,6 +625,8 @@ def main():
         if 'hash-only' in alg_types:
             # skip direction for hash only algs
             for hash_alg in hash_algos:
+                if hash_alg in skip_list or hash_alg == 'null':
+                    continue
                 TODO_Q.put(Variant(idx=TOTAL_VARIANTS, arch=arch, direction=None,
                                    offset=offset, sizes=sizes, hash_alg=hash_alg,
                                    cold_cache=cold_cache, shani_off=shani_off, gfni_off=gfni_off,
@@ -620,6 +639,8 @@ def main():
         if 'aead-only' in alg_types:
             for direction in directions:
                 for aead_alg in aead_algos:
+                    if aead_alg in skip_list:
+                        continue
                     TODO_Q.put(Variant(idx=TOTAL_VARIANTS, arch=arch, direction=direction,
                                        offset=offset, sizes=sizes, aead_alg=aead_alg,
                                        cold_cache=cold_cache, shani_off=shani_off, gfni_off=gfni_off,
@@ -633,7 +654,12 @@ def main():
             for direction in directions:
                 # all cipher + hash combinations
                 for cipher_alg in cipher_algos:
+                    if cipher_alg in skip_list:
+                        continue
                     for hash_alg in hash_algos:
+                        if hash_alg in skip_list or (hash_alg == 'null' and cipher_alg == 'null'):
+                            continue
+
                         TODO_Q.put(Variant(idx=TOTAL_VARIANTS, arch=arch, direction=direction,
                                            offset=offset, sizes=sizes, cipher_alg=cipher_alg,
                                            hash_alg=hash_alg, cold_cache=cold_cache,
