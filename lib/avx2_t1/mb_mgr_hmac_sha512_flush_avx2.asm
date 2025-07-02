@@ -340,22 +340,11 @@ clear_ret:
 %ifdef SAFE_DATA
         vpxor   ymm0, ymm0
 
-        ;; Clear digest (48B/64B), outer_block (48B/64B) and extra_block (128B) of returned job
+        ;; Clear extra_block (128B) of returned job
 %assign I 0
 %rep 4
 	cmp	qword [state + _ldata_sha512 + (I*_SHA512_LANE_DATA_size) + _job_in_lane_sha512], 0
 	jne	APPEND(skip_clear_,I)
-
-        ;; Clear digest (48 bytes for SHA-384, 64 bytes for SHA-512 bytes)
-%assign J 0
-%rep 6
-        mov     qword [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*I + J*SHA512_DIGEST_ROW_SIZE], 0
-%assign J (J+1)
-%endrep
-%if (SHA_X_DIGEST_SIZE != 384)
-        mov     qword [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*I + 6*SHA512_DIGEST_ROW_SIZE], 0
-        mov     qword [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*I + 7*SHA512_DIGEST_ROW_SIZE], 0
-%endif
 
         lea     lane_data, [state + _ldata_sha512 + (I*_SHA512_LANE_DATA_size)]
         ;; Clear first 128 bytes of extra_block
@@ -364,14 +353,6 @@ clear_ret:
         vmovdqa [lane_data + _extra_block + offset], ymm0
 %assign offset (offset + 32)
 %endrep
-
-        ;; Clear first 48 bytes (SHA-384) or 64 bytes (SHA-512) of outer_block
-        vmovdqu [lane_data + _outer_block], ymm0
-%if (SHA_X_DIGEST_SIZE == 384)
-        vmovdqa [lane_data + _outer_block + 32], xmm0
-%else
-        vmovdqu [lane_data + _outer_block + 32], ymm0
-%endif
 
 APPEND(skip_clear_,I):
 %assign I (I+1)
