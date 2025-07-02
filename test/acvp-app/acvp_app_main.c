@@ -1456,6 +1456,222 @@ sha2_512_handler(ACVP_TEST_CASE *test_case)
         return ACVP_SUCCESS;
 }
 
+static int
+sha3_224_handler(ACVP_TEST_CASE *test_case)
+{
+        ACVP_HASH_TC *tc;
+        IMB_JOB *job = NULL;
+
+        if (test_case == NULL)
+                return ACVP_CRYPTO_MODULE_FAIL;
+
+        tc = test_case->tc.hash;
+
+        job = IMB_GET_NEXT_JOB(mb_mgr);
+        job->cipher_direction = IMB_DIR_ENCRYPT;
+        job->chain_order = IMB_ORDER_HASH_CIPHER;
+        job->cipher_mode = IMB_CIPHER_NULL;
+        job->hash_alg = IMB_AUTH_SHA3_224;
+        job->cipher_start_src_offset_in_bytes = 0;
+        job->hash_start_src_offset_in_bytes = 0;
+        job->src = tc->msg;
+        job->msg_len_to_hash_in_bytes = tc->msg_len;
+        job->auth_tag_output_len_in_bytes = IMB_SHA3_224_DIGEST_SIZE_IN_BYTES;
+        job->auth_tag_output = tc->md;
+
+        job = IMB_SUBMIT_JOB(mb_mgr);
+        if (job == NULL)
+                job = IMB_FLUSH_JOB(mb_mgr);
+        if (job->status != IMB_STATUS_COMPLETED) {
+                fprintf(stderr, "Invalid job\n");
+                return ACVP_CRYPTO_MODULE_FAIL;
+        }
+        tc->md_len = IMB_SHA3_224_DIGEST_SIZE_IN_BYTES;
+        return ACVP_SUCCESS;
+}
+
+static int
+sha3_256_handler(ACVP_TEST_CASE *test_case)
+{
+        ACVP_HASH_TC *tc;
+        IMB_JOB *job = NULL;
+
+        if (test_case == NULL)
+                return ACVP_CRYPTO_MODULE_FAIL;
+
+        tc = test_case->tc.hash;
+
+        job = IMB_GET_NEXT_JOB(mb_mgr);
+        job->cipher_direction = IMB_DIR_ENCRYPT;
+        job->chain_order = IMB_ORDER_HASH_CIPHER;
+        job->cipher_mode = IMB_CIPHER_NULL;
+        job->hash_alg = IMB_AUTH_SHA3_256;
+        job->cipher_start_src_offset_in_bytes = 0;
+        job->hash_start_src_offset_in_bytes = 0;
+        job->src = tc->msg;
+        job->msg_len_to_hash_in_bytes = tc->msg_len;
+        job->auth_tag_output_len_in_bytes = IMB_SHA3_256_DIGEST_SIZE_IN_BYTES;
+        job->auth_tag_output = tc->md;
+
+        job = IMB_SUBMIT_JOB(mb_mgr);
+        if (job == NULL)
+                job = IMB_FLUSH_JOB(mb_mgr);
+        if (job->status != IMB_STATUS_COMPLETED) {
+                fprintf(stderr, "Invalid job\n");
+                return ACVP_CRYPTO_MODULE_FAIL;
+        }
+        tc->md_len = IMB_SHA3_256_DIGEST_SIZE_IN_BYTES;
+        return ACVP_SUCCESS;
+}
+
+static int
+sha3_384_handler(ACVP_TEST_CASE *test_case)
+{
+        ACVP_HASH_TC *tc;
+        IMB_JOB *job = NULL;
+
+        if (test_case == NULL)
+                return ACVP_CRYPTO_MODULE_FAIL;
+
+        tc = test_case->tc.hash;
+
+        job = IMB_GET_NEXT_JOB(mb_mgr);
+        job->cipher_direction = IMB_DIR_ENCRYPT;
+        job->chain_order = IMB_ORDER_HASH_CIPHER;
+        job->cipher_mode = IMB_CIPHER_NULL;
+        job->hash_alg = IMB_AUTH_SHA3_384;
+        job->cipher_start_src_offset_in_bytes = 0;
+        job->hash_start_src_offset_in_bytes = 0;
+        job->src = tc->msg;
+        job->msg_len_to_hash_in_bytes = tc->msg_len;
+        job->auth_tag_output_len_in_bytes = IMB_SHA3_384_DIGEST_SIZE_IN_BYTES;
+        job->auth_tag_output = tc->md;
+
+        job = IMB_SUBMIT_JOB(mb_mgr);
+        if (job == NULL)
+                job = IMB_FLUSH_JOB(mb_mgr);
+        if (job->status != IMB_STATUS_COMPLETED) {
+                fprintf(stderr, "Invalid job\n");
+                return ACVP_CRYPTO_MODULE_FAIL;
+        }
+        tc->md_len = IMB_SHA3_384_DIGEST_SIZE_IN_BYTES;
+        return ACVP_SUCCESS;
+}
+
+static int
+sha3_512_handler(ACVP_TEST_CASE *test_case)
+{
+        ACVP_HASH_TC *tc;
+        IMB_JOB *job = NULL;
+
+        if (test_case == NULL)
+                return ACVP_CRYPTO_MODULE_FAIL;
+
+        tc = test_case->tc.hash;
+
+        job = IMB_GET_NEXT_JOB(mb_mgr);
+        job->cipher_direction = IMB_DIR_ENCRYPT;
+        job->chain_order = IMB_ORDER_HASH_CIPHER;
+        job->cipher_mode = IMB_CIPHER_NULL;
+        job->hash_alg = IMB_AUTH_SHA3_512;
+        job->cipher_start_src_offset_in_bytes = 0;
+        job->hash_start_src_offset_in_bytes = 0;
+        job->src = tc->msg;
+        job->msg_len_to_hash_in_bytes = tc->msg_len;
+        job->auth_tag_output_len_in_bytes = IMB_SHA3_512_DIGEST_SIZE_IN_BYTES;
+        job->auth_tag_output = tc->md;
+
+        job = IMB_SUBMIT_JOB(mb_mgr);
+        if (job == NULL)
+                job = IMB_FLUSH_JOB(mb_mgr);
+        if (job->status != IMB_STATUS_COMPLETED) {
+                fprintf(stderr, "Invalid job\n");
+                return ACVP_CRYPTO_MODULE_FAIL;
+        }
+        tc->md_len = IMB_SHA3_512_DIGEST_SIZE_IN_BYTES;
+        return ACVP_SUCCESS;
+}
+
+static int
+shake128_handler(ACVP_TEST_CASE *test_case)
+{
+        ACVP_HASH_TC *tc;
+        IMB_JOB *job = NULL;
+
+        if (test_case == NULL)
+                return ACVP_CRYPTO_MODULE_FAIL;
+
+        tc = test_case->tc.hash;
+
+        /*
+         * For SHAKE, we need to handle variable output length.
+         * If no output length is specified, default to 32 bytes.
+         */
+        uint32_t output_len = (tc->xof_len > 0) ? tc->xof_len : 32;
+
+        job = IMB_GET_NEXT_JOB(mb_mgr);
+        job->cipher_direction = IMB_DIR_ENCRYPT;
+        job->chain_order = IMB_ORDER_HASH_CIPHER;
+        job->cipher_mode = IMB_CIPHER_NULL;
+        job->hash_alg = IMB_AUTH_SHAKE128;
+        job->cipher_start_src_offset_in_bytes = 0;
+        job->hash_start_src_offset_in_bytes = 0;
+        job->src = tc->msg;
+        job->msg_len_to_hash_in_bytes = tc->msg_len;
+        job->auth_tag_output_len_in_bytes = output_len;
+        job->auth_tag_output = tc->md;
+
+        job = IMB_SUBMIT_JOB(mb_mgr);
+        if (job == NULL)
+                job = IMB_FLUSH_JOB(mb_mgr);
+        if (job->status != IMB_STATUS_COMPLETED) {
+                fprintf(stderr, "Invalid job\n");
+                return ACVP_CRYPTO_MODULE_FAIL;
+        }
+        tc->md_len = output_len;
+        return ACVP_SUCCESS;
+}
+
+static int
+shake256_handler(ACVP_TEST_CASE *test_case)
+{
+        ACVP_HASH_TC *tc;
+        IMB_JOB *job = NULL;
+
+        if (test_case == NULL)
+                return ACVP_CRYPTO_MODULE_FAIL;
+
+        tc = test_case->tc.hash;
+
+        /*
+         * For SHAKE, we need to handle variable output length.
+         * If no output length is specified, default to 64 bytes.
+         */
+        uint32_t output_len = (tc->xof_len > 0) ? tc->xof_len : 64;
+
+        job = IMB_GET_NEXT_JOB(mb_mgr);
+        job->cipher_direction = IMB_DIR_ENCRYPT;
+        job->chain_order = IMB_ORDER_HASH_CIPHER;
+        job->cipher_mode = IMB_CIPHER_NULL;
+        job->hash_alg = IMB_AUTH_SHAKE256;
+        job->cipher_start_src_offset_in_bytes = 0;
+        job->hash_start_src_offset_in_bytes = 0;
+        job->src = tc->msg;
+        job->msg_len_to_hash_in_bytes = tc->msg_len;
+        job->auth_tag_output_len_in_bytes = output_len;
+        job->auth_tag_output = tc->md;
+
+        job = IMB_SUBMIT_JOB(mb_mgr);
+        if (job == NULL)
+                job = IMB_FLUSH_JOB(mb_mgr);
+        if (job->status != IMB_STATUS_COMPLETED) {
+                fprintf(stderr, "Invalid job\n");
+                return ACVP_CRYPTO_MODULE_FAIL;
+        }
+        tc->md_len = output_len;
+        return ACVP_SUCCESS;
+}
+
 static void
 usage(const char *app_name)
 {
@@ -1617,6 +1833,24 @@ main(int argc, char **argv)
                 goto exit;
 
         if (acvp_cap_hash_enable(ctx, ACVP_HASH_SHA512, &sha2_512_handler) != ACVP_SUCCESS)
+                goto exit;
+
+        if (acvp_cap_hash_enable(ctx, ACVP_HASH_SHA3_224, &sha3_224_handler) != ACVP_SUCCESS)
+                goto exit;
+
+        if (acvp_cap_hash_enable(ctx, ACVP_HASH_SHA3_256, &sha3_256_handler) != ACVP_SUCCESS)
+                goto exit;
+
+        if (acvp_cap_hash_enable(ctx, ACVP_HASH_SHA3_384, &sha3_384_handler) != ACVP_SUCCESS)
+                goto exit;
+
+        if (acvp_cap_hash_enable(ctx, ACVP_HASH_SHA3_512, &sha3_512_handler) != ACVP_SUCCESS)
+                goto exit;
+
+        if (acvp_cap_hash_enable(ctx, ACVP_HASH_SHAKE_128, &shake128_handler) != ACVP_SUCCESS)
+                goto exit;
+
+        if (acvp_cap_hash_enable(ctx, ACVP_HASH_SHAKE_256, &shake256_handler) != ACVP_SUCCESS)
                 goto exit;
 
         /* Allocate and initialize MB_MGR */

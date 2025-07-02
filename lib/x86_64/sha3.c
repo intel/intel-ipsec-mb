@@ -89,25 +89,25 @@ shake256(const uint8_t *input, uint64_t inputByteLen, uint8_t *output, uint64_t 
 void
 sha3_224(const uint8_t *input, uint64_t inputByteLen, uint8_t *output)
 {
-        Keccak(1152, 448, input, inputByteLen, 0x06, output, 28);
+        Keccak(1152, 448, input, inputByteLen, 0x06, output, IMB_SHA3_224_DIGEST_SIZE_IN_BYTES);
 }
 
 void
 sha3_256(const uint8_t *input, uint64_t inputByteLen, uint8_t *output)
 {
-        Keccak(1088, 512, input, inputByteLen, 0x06, output, 32);
+        Keccak(1088, 512, input, inputByteLen, 0x06, output, IMB_SHA3_256_DIGEST_SIZE_IN_BYTES);
 }
 
 void
 sha3_384(const uint8_t *input, uint64_t inputByteLen, uint8_t *output)
 {
-        Keccak(832, 768, input, inputByteLen, 0x06, output, 48);
+        Keccak(832, 768, input, inputByteLen, 0x06, output, IMB_SHA3_384_DIGEST_SIZE_IN_BYTES);
 }
 
 void
 sha3_512(const uint8_t *input, uint64_t inputByteLen, uint8_t *output)
 {
-        Keccak(576, 1024, input, inputByteLen, 0x06, output, 64);
+        Keccak(576, 1024, input, inputByteLen, 0x06, output, IMB_SHA3_512_DIGEST_SIZE_IN_BYTES);
 }
 
 /*
