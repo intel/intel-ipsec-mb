@@ -299,16 +299,11 @@ clear_ret:
 %ifdef SAFE_DATA
         pxor    xmm0, xmm0
 
-        ;; Clear digest, outer_block (28B/32B) and extra_block (64B)
-        ;; of returned job and NULL jobs
+        ;; Clear extra_block (64B) of returned job and NULL jobs
 %assign I 0
 %rep 2
 	cmp	qword [state + _ldata_sha256 + (I*_HMAC_SHA1_LANE_DATA_size) + _job_in_lane], 0
 	jne	APPEND(skip_clear_,I)
-
-        ;; Clear digest
-        movdqa  [state + _args_digest_sha256 + I*32], xmm0
-        movdqa  [state + _args_digest_sha256 + I*32 + 16], xmm0
 
         lea     lane_data, [state + _ldata_sha256 + (I*_HMAC_SHA1_LANE_DATA_size)]
         ;; Clear first 64 bytes of extra_block
@@ -317,15 +312,6 @@ clear_ret:
         movdqa  [lane_data + _extra_block + offset], xmm0
 %assign offset (offset + 16)
 %endrep
-
-        ;; Clear first 28 bytes (SHA-224) or 32 bytes (SHA-256) of outer_block
-        movdqa  [lane_data + _outer_block], xmm0
-%ifdef SHA224
-        mov     qword [lane_data + _outer_block + 16], 0
-        mov     dword [lane_data + _outer_block + 24], 0
-%else
-        movdqa  [lane_data + _outer_block + 16], xmm0
-%endif
 
 APPEND(skip_clear_,I):
 %assign I (I+1)
