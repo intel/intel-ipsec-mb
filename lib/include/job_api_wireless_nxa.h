@@ -159,6 +159,10 @@ submit_aes_nca5_job(IMB_JOB *job, IMB_CIPHER_DIRECTION cipher_dir)
         job->status |= IMB_STATUS_COMPLETED;
         memcpy(job->auth_tag_output, digest, job->auth_tag_output_len_in_bytes);
 
+#ifdef SAFE_DATA
+        clear_mem(HQP, sizeof(HQP));
+        clear_mem(&gdata_key, sizeof(struct gcm_key_data));
+#endif
         return job;
 }
 
@@ -202,7 +206,6 @@ submit_snow5g_nia4_job(IMB_JOB *job)
 #ifdef SAFE_DATA
         clear_mem(HQP, sizeof(HQP));
         clear_mem(&gdata_key, sizeof(struct gcm_key_data));
-        clear_mem(digest, sizeof(digest));
 #endif
         return job;
 }
@@ -232,9 +235,7 @@ submit_snow5g_nca4_job(IMB_JOB *job, IMB_CIPHER_DIRECTION cipher_dir)
                 SNOW5G_NCA4(job, state);
                 POLYVAL(&gdata_key, out, msg_len_bytes, digest);
         } else {
-
                 POLYVAL(&gdata_key, msg, msg_len_bytes, digest);
-
                 SNOW5G_NCA4(job, state);
         }
 
