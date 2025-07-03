@@ -1602,6 +1602,12 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys, const uint8_t *ciph
                 case IMB_AUTH_CRC7_FP_HEADER:
                 case IMB_AUTH_CRC6_IUUP_HEADER:
                 case IMB_AUTH_SM3:
+                case IMB_AUTH_SHA3_224:
+                case IMB_AUTH_SHA3_256:
+                case IMB_AUTH_SHA3_384:
+                case IMB_AUTH_SHA3_512:
+                case IMB_AUTH_SHAKE128:
+                case IMB_AUTH_SHAKE256:
                         /* No operation needed */
                         break;
                 case IMB_AUTH_AES_GMAC_128:
