@@ -40,6 +40,7 @@ http://creativecommons.org/publicdomain/zero/1.0/
 
 #include <stdint.h>
 #include <sha3.h>
+#include "include/clear_regs_mem.h"
 
 /**
  * Function to compute the Keccak[r, c] sponge function over a given input.
@@ -303,4 +304,8 @@ Keccak(const uint32_t rate, const uint32_t capacity, const uint8_t *input, uint6
                 if (outputByteLen > 0)
                         KeccakF1600_StatePermute(state);
         }
+
+#ifdef SAFE_DATA
+        clear_scratch_xmms_sse();
+#endif
 }
