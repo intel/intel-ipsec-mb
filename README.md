@@ -384,6 +384,12 @@ ACVP test application located in `test` directory is to support CAVP process. It
 - HMAC-SHA256 (HMAC-SHA2-256)  
 - HMAC-SHA384 (HMAC-SHA2-384)  
 - HMAC-SHA512 (HMAC-SHA2-512)  
+- SHA3-224  
+- SHA3-256  
+- SHA3-384  
+- SHA3-512  
+- SHAKE-128  
+- SHAKE-256  
 
 Note: the acvp-app requires libacvp 2.0+ to be built.
 
@@ -457,6 +463,18 @@ Note: the acvp-app requires libacvp 2.0+ to be built.
 |---------------------+-----------+----------------------------------------------------------|
 | HMAC-SHA512         | FIPS198-1 | keyLen: [min = 8, max = 524288, increment = 8]           |
 | (HMAC-SHA2-512)     |           | macLen: [min = 32, max = 512, increment = 8]             |
+|---------------------+-----------+----------------------------------------------------------|
+| SHA3-224            | FIPS202   | messageLength: [min = 0, max = 65536, increment = 8]     |
+|---------------------+-----------+----------------------------------------------------------|
+| SHA3-256            | FIPS202   | messageLength: [min = 0, max = 65536, increment = 8]     |
+|---------------------+-----------+----------------------------------------------------------|
+| SHA3-384            | FIPS202   | messageLength: [min = 0, max = 65536, increment = 8]     |
+|---------------------+-----------+----------------------------------------------------------|
+| SHA3-512            | FIPS202   | messageLength: [min = 0, max = 65536, increment = 8]     |
+|---------------------+-----------+----------------------------------------------------------|
+| SHAKE-128           | FIPS202   | outputLen: [min = 16, max = 65536, increment = 8]        |
+|---------------------+-----------+----------------------------------------------------------|
+| SHAKE-256           | FIPS202   | outputLen: [min = 16, max = 65536, increment = 8]        |
 +--------------------------------------------------------------------------------------------+
 ```
 ### Self-Test
@@ -501,6 +519,12 @@ The self-test consists of Cryptographic algorithm test (known answer test) on fo
   - HMAC-SHA256  
   - HMAC-SHA384  
   - HMAC-SHA512  
+  - SHA3-224  
+  - SHA3-256  
+  - SHA3-384  
+  - SHA3-512  
+  - SHAKE-128  
+  - SHAKE-256  
 
 KAT_Cipher and KAT_AEAD types conduct tests in encrypt and decrypt cipher directions. However, the corrupt callback is made only for the encrypt direction. No callback is made for the decrypt direction at the moment.
 

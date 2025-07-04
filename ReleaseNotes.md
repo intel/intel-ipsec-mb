@@ -23,7 +23,7 @@ Test Applications
 - Removed AES-CTR bit-length variant.
 - Removed AES-CBCS 1:9 cipher.
 - Removed SNOW-V cipher together with AEAD SNOW-V.
-- Added SHA3 and SHAKE support to imb-kat and imb-xvalid applications.
+- Added SHA3 and SHAKE support to imb-kat, imb-xvalid and imb-acvp applications.
 
 Performance Applications
 - Added `imb-perf-cmp.py` tool that compares post processed performance metrics.
