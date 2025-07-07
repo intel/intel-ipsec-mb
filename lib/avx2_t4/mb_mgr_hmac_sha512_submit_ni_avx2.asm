@@ -392,14 +392,8 @@ copy_tag_gt48:
 align_label
 clear_ret:
 %ifdef SAFE_DATA
-        ;; Clear digest (48B/64B), outer_block (48B/64B) and extra_block (128B) of returned job
+        ;; Clear extra_block (128B) of returned job
         vpxor   ymm0, ymm0
-        vmovdqa [state + _args_digest_sha512 + idx], ymm0
-%if (SHA_X_DIGEST_SIZE == 384)
-        vmovdqa [state + _args_digest_sha512 + idx + 32], xmm0
-%else
-        vmovdqa [state + _args_digest_sha512 + idx + 32], ymm0
-%endif
 
         shr     idx, 6 ;; Restore lane idx to 0 or 1
         imul  lane_data, idx, _SHA512_LANE_DATA_size
@@ -412,13 +406,6 @@ clear_ret:
 %assign offset (offset + 32)
 %endrep
 
-        ;; Clear first 48 bytes (SHA-384) or 64 bytes (SHA-512) of outer_block
-        vmovdqu [lane_data + _outer_block], ymm0
-%if (SHA_X_DIGEST_SIZE == 384)
-        vmovdqa [lane_data + _outer_block + 32], xmm0
-%else
-        vmovdqu [lane_data + _outer_block + 32], ymm0
-%endif
 %endif ;; SAFE_DATA
 
 align_label
