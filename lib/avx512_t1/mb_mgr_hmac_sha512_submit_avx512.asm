@@ -389,31 +389,13 @@ align_label
 clear_ret:
 
 %ifdef SAFE_DATA
-        ;; Clear digest (48B/64B), outer_block (48B/64B) and extra_block (128B) of returned job
-%assign J 0
-%rep 6
-        mov     qword [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + J*SHA512_DIGEST_ROW_SIZE], 0
-%assign J (J+1)
-%endrep
-%if (SHA_X_DIGEST_SIZE != 384)
-        mov     qword [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 6*SHA256_DIGEST_ROW_SIZE], 0
-        mov     qword [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 7*SHA256_DIGEST_ROW_SIZE], 0
-%endif
-
+        ;; Clear extra_block (128B) of returned job
         vpxorq  zmm0, zmm0
         imul	lane_data, idx, _SHA512_LANE_DATA_size
         lea	lane_data, [state + _ldata_sha512 + lane_data]
         ;; Clear first 128 bytes of extra_block
         vmovdqu64 [lane_data + _extra_block], zmm0
         vmovdqu64 [lane_data + _extra_block + 64], zmm0
-
-        ;; Clear first 48 bytes (SHA-384) or 64 bytes (SHA-512) of outer_block
-%if (SHA_X_DIGEST_SIZE == 384)
-        vmovdqu64 [lane_data + _outer_block], ymm0
-        vmovdqa64 [lane_data + _outer_block + 32], xmm0
-%else
-        vmovdqu64 [lane_data + _outer_block], zmm0
-%endif
 %endif ;; SAFE_DATA
 
 align_label

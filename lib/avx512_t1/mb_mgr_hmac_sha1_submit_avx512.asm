@@ -397,23 +397,13 @@ align_label
 clear_ret:
 
 %ifdef SAFE_DATA
-        ;; Clear digest (20B), outer_block (20B) and extra_block (64B) of returned job
-        mov     dword [state + _args_digest + SHA1_DIGEST_WORD_SIZE*idx + 0*SHA1_DIGEST_ROW_SIZE], 0
-        mov     dword [state + _args_digest + SHA1_DIGEST_WORD_SIZE*idx + 1*SHA1_DIGEST_ROW_SIZE], 0
-        mov     dword [state + _args_digest + SHA1_DIGEST_WORD_SIZE*idx + 2*SHA1_DIGEST_ROW_SIZE], 0
-        mov     dword [state + _args_digest + SHA1_DIGEST_WORD_SIZE*idx + 3*SHA1_DIGEST_ROW_SIZE], 0
-        mov     dword [state + _args_digest + SHA1_DIGEST_WORD_SIZE*idx + 4*SHA1_DIGEST_ROW_SIZE], 0
-
+        ;; Clear extra_block (64B) of returned job
         vpxorq  zmm0, zmm0
         imul    lane_data, idx, _HMAC_SHA1_LANE_DATA_size
         lea     lane_data, [state + _ldata + lane_data]
 
         ;; Clear first 64 bytes of extra_block
         vmovdqu64 [lane_data + _extra_block], zmm0
-
-        ;; Clear first 20 bytes of outer_block
-        vmovdqu64 [lane_data + _outer_block], xmm0
-        mov     dword [lane_data + _outer_block + 16], 0
 %endif
 
 align_label
