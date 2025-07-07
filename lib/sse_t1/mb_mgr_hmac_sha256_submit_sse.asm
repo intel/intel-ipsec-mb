@@ -393,16 +393,7 @@ align_label
 clear_ret:
 
 %ifdef SAFE_DATA
-        ;; Clear digest (28B/32B), outer_block (28B/32B) and extra_block (64B) of returned job
-%assign J 0
-%rep 7
-        mov     dword [state + _args_digest_sha256 + SHA256_DIGEST_WORD_SIZE*idx + J*SHA256_DIGEST_ROW_SIZE], 0
-%assign J (J+1)
-%endrep
-%ifndef SHA224
-        mov     dword [state + _args_digest_sha256 + SHA256_DIGEST_WORD_SIZE*idx + 7*SHA256_DIGEST_ROW_SIZE], 0
-%endif
-
+        ;; Clear extra_block (64B) of returned job
         pxor    xmm0, xmm0
         imul	lane_data, idx, _HMAC_SHA1_LANE_DATA_size
         lea	lane_data, [state + _ldata_sha256 + lane_data]
@@ -413,14 +404,6 @@ clear_ret:
 %assign offset (offset + 16)
 %endrep
 
-        ;; Clear first 28 bytes (SHA-224) or 32 bytes (SHA-256) of outer_block
-        movdqa  [lane_data + _outer_block], xmm0
-%ifdef SHA224
-        mov     qword [lane_data + _outer_block + 16], 0
-        mov     dword [lane_data + _outer_block + 24], 0
-%else
-        movdqa  [lane_data + _outer_block + 16], xmm0
-%endif
 %endif ;; SAFE_DATA
 
 align_label
