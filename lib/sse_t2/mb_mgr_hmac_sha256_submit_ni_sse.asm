@@ -383,10 +383,7 @@ clear_ret:
 
 %ifdef SAFE_DATA
         pxor    xmm0, xmm0
-        ;; Clear digest, outer_block (28B/32B) and extra_block (64B) of returned job
-        movdqa  [state + _args_digest_sha256 + idx], xmm0
-        movdqa  [state + _args_digest_sha256 + idx + 16], xmm0
-
+        ;; Clear extra_block (64B) of returned job
         shr     idx, 5 ;; Restore lane idx to 0 or 1
         imul	lane_data, idx, _HMAC_SHA1_LANE_DATA_size
         lea	lane_data, [state + _ldata_sha256 + lane_data]
@@ -397,14 +394,6 @@ clear_ret:
 %assign offset (offset + 16)
 %endrep
 
-        ;; Clear first 28 bytes (SHA-224) or 32 bytes (SHA-256) of outer_block
-        movdqa  [lane_data + _outer_block], xmm0
-%ifdef SHA224
-        mov     qword [lane_data + _outer_block + 16], 0
-        mov     dword [lane_data + _outer_block + 24], 0
-%else
-        movdqa  [lane_data + _outer_block + 16], xmm0
-%endif
 %endif ;; SAFE_DATA
 
 align_label

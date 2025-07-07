@@ -357,11 +357,8 @@ clear_ret:
 
 %ifdef SAFE_DATA
         pxor    xmm0, xmm0
-        ;; Clear digest (20B), outer_block (20B) and extra_block (64B)
+        ;; Clear extra_block (64B)
         ;; idx = 0 or 5 (depending on lane)
-        movdqu  [state + _args_digest + idx*4], xmm0
-        mov     dword [state + _args_digest + idx*4 + 16], 0
-
         shr     idx, 2 ;; idx == 5 ? 1 : 0
         imul    lane_data, idx, _HMAC_SHA1_LANE_DATA_size
         lea     lane_data, [state + _ldata + lane_data]
@@ -372,9 +369,6 @@ clear_ret:
 %assign offset (offset + 16)
 %endrep
 
-        ;; Clear 20 bytes of outer_block
-        movdqa  [lane_data + _outer_block], xmm0
-        mov     dword [lane_data + _outer_block + 16], 0
 %endif
 
 align_label
