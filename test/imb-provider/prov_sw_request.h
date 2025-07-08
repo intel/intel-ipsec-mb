@@ -100,8 +100,9 @@ typedef struct _alg_context {
         unsigned char *enc_keys;
         unsigned char *dec_keys;
         uint8_t auths[64];
-
         unsigned char *aad;
+        int aad_len;
+
         int tls_aad_len;
         int tag_len;
         int iv_len;

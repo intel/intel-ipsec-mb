@@ -82,6 +82,11 @@ extern const OSSL_DISPATCH prov_hmac_sha_functions[];
 extern const OSSL_DISPATCH prov_aes128ccm_functions[];
 extern const OSSL_DISPATCH prov_aes256ccm_functions[];
 
+extern const OSSL_DISPATCH prov_sm4ecb_functions[];
+extern const OSSL_DISPATCH prov_sm4cbc_functions[];
+extern const OSSL_DISPATCH prov_sm4ctr_functions[];
+extern const OSSL_DISPATCH prov_sm4gcm_functions[];
+
 PROV_PARAMS prov_params;
 
 static void
@@ -138,6 +143,10 @@ static const OSSL_ALGORITHM_CAPABLE prov_deflt_ciphers[] = {
         ALG(PROV_NAMES_AES_256_CFB, prov_aes256cfb_functions),
         ALG(PROV_NAMES_AES_128_CCM, prov_aes128ccm_functions),
         ALG(PROV_NAMES_AES_256_CCM, prov_aes256ccm_functions),
+        ALG(PROV_NAMES_SM4_ECB, prov_sm4ecb_functions),
+        ALG(PROV_NAMES_SM4_CBC, prov_sm4cbc_functions),
+        ALG(PROV_NAMES_SM4_CTR, prov_sm4ctr_functions),
+        ALG(PROV_NAMES_SM4_GCM, prov_sm4gcm_functions),
         { { NULL, NULL, NULL }, NULL }
 };
 

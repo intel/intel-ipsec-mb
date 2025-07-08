@@ -29,6 +29,7 @@
 #include "prov_ciphers.h"
 #include "e_prov.h"
 #include "prov_sw_gcm.h"
+#include "prov_sm4.h"
 
 int nid;
 #define AES_GCM_IV_MIN_SIZE (64 / 8)
@@ -446,6 +447,30 @@ const OSSL_PARAM *
 prov_cipher_aead_settable_ctx_params(ossl_unused void *cctx, ossl_unused void *provctx)
 {
         return prov_cipher_aead_known_settable_ctx_params;
+}
+
+static const OSSL_PARAM prov_cipher_generic_known_gettable_ctx_params[] = {
+        OSSL_PARAM_size_t(OSSL_CIPHER_PARAM_KEYLEN, NULL),
+        OSSL_PARAM_size_t(OSSL_CIPHER_PARAM_IVLEN, NULL),
+        OSSL_PARAM_octet_string(OSSL_CIPHER_PARAM_IV, NULL, 0),
+        OSSL_PARAM_octet_string(OSSL_CIPHER_PARAM_UPDATED_IV, NULL, 0), OSSL_PARAM_END
+};
+
+const OSSL_PARAM *
+prov_cipher_generic_gettable_ctx_params(ossl_unused void *cctx, ossl_unused void *provctx)
+{
+        return prov_cipher_generic_known_gettable_ctx_params;
+}
+
+static const OSSL_PARAM prov_cipher_generic_known_settable_ctx_params[] = {
+        OSSL_PARAM_size_t(OSSL_CIPHER_PARAM_KEYLEN, NULL),
+        OSSL_PARAM_octet_string(OSSL_CIPHER_PARAM_IV, NULL, 0), OSSL_PARAM_END
+};
+
+const OSSL_PARAM *
+prov_cipher_generic_settable_ctx_params(ossl_unused void *cctx, ossl_unused void *provctx)
+{
+        return prov_cipher_generic_known_settable_ctx_params;
 }
 
 /* prov_aes128gcm_functions */
