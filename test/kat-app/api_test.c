@@ -1299,7 +1299,10 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
                                     hash == IMB_AUTH_CRC7_FP_HEADER ||
                                     hash == IMB_AUTH_CRC6_IUUP_HEADER ||
                                     hash == IMB_AUTH_POLY1305 || hash == IMB_AUTH_GHASH ||
-                                    hash == IMB_AUTH_SM3 || hash == IMB_AUTH_HMAC_SM3)
+                                    hash == IMB_AUTH_SM3 || hash == IMB_AUTH_HMAC_SM3 ||
+                                    hash == IMB_AUTH_SHA3_224 || hash == IMB_AUTH_SHA3_256 ||
+                                    hash == IMB_AUTH_SHA3_384 || hash == IMB_AUTH_SHA3_512 ||
+                                    hash == IMB_AUTH_SHAKE128 || hash == IMB_AUTH_SHAKE256)
                                         continue;
 
                                 /*

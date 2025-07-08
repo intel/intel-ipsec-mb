@@ -1956,10 +1956,6 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job, const IMB_CIPHER_MODE cipher_
                         imb_set_errno(state, IMB_ERR_JOB_NULL_SRC);
                         return 1;
                 }
-                if (job->msg_len_to_hash_in_bytes > MB_MAX_LEN16) {
-                        imb_set_errno(state, IMB_ERR_JOB_AUTH_LEN);
-                        return 1;
-                }
                 if (job->auth_tag_output == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_AUTH);
                         return 1;
