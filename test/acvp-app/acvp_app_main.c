@@ -1461,11 +1461,39 @@ sha3_224_handler(ACVP_TEST_CASE *test_case)
 {
         ACVP_HASH_TC *tc;
         IMB_JOB *job = NULL;
+        uint8_t *large_data = NULL;
+        uint64_t len;
+        uint8_t *m;
 
         if (test_case == NULL)
                 return ACVP_CRYPTO_MODULE_FAIL;
 
         tc = test_case->tc.hash;
+
+        if (tc->test_type == ACVP_HASH_TEST_TYPE_LDT) {
+                int num_iter = tc->exp_len / tc->msg_len;
+                uint8_t *ld_idx;
+
+                large_data = calloc(tc->exp_len, sizeof(uint8_t));
+                if (large_data == NULL) {
+                        printf("Can't allocate large data buffer memory\n");
+                        return ACVP_CRYPTO_MODULE_FAIL;
+                }
+                ld_idx = large_data;
+
+                /* concatenate message in large data buffer */
+                for (int i = 0; i < num_iter; i++) {
+                        memcpy(ld_idx, tc->msg, tc->msg_len);
+                        ld_idx += tc->msg_len;
+                }
+                m = large_data;
+                len = tc->exp_len;
+
+                printf("Running SHA3-224 LDT (Long Data Test). This may take some time...\n");
+        } else {
+                m = tc->msg;
+                len = tc->msg_len;
+        }
 
         job = IMB_GET_NEXT_JOB(mb_mgr);
         job->cipher_direction = IMB_DIR_ENCRYPT;
@@ -1474,14 +1502,18 @@ sha3_224_handler(ACVP_TEST_CASE *test_case)
         job->hash_alg = IMB_AUTH_SHA3_224;
         job->cipher_start_src_offset_in_bytes = 0;
         job->hash_start_src_offset_in_bytes = 0;
-        job->src = tc->msg;
-        job->msg_len_to_hash_in_bytes = tc->msg_len;
+        job->src = m;
+        job->msg_len_to_hash_in_bytes = len;
         job->auth_tag_output_len_in_bytes = IMB_SHA3_224_DIGEST_SIZE_IN_BYTES;
         job->auth_tag_output = tc->md;
 
         job = IMB_SUBMIT_JOB(mb_mgr);
         if (job == NULL)
                 job = IMB_FLUSH_JOB(mb_mgr);
+
+        if (large_data != NULL)
+                free(large_data);
+
         if (job->status != IMB_STATUS_COMPLETED) {
                 fprintf(stderr, "Invalid job\n");
                 return ACVP_CRYPTO_MODULE_FAIL;
@@ -1495,11 +1527,39 @@ sha3_256_handler(ACVP_TEST_CASE *test_case)
 {
         ACVP_HASH_TC *tc;
         IMB_JOB *job = NULL;
+        uint8_t *large_data = NULL;
+        uint64_t len;
+        uint8_t *m;
 
         if (test_case == NULL)
                 return ACVP_CRYPTO_MODULE_FAIL;
 
         tc = test_case->tc.hash;
+
+        if (tc->test_type == ACVP_HASH_TEST_TYPE_LDT) {
+                int num_iter = tc->exp_len / tc->msg_len;
+                uint8_t *ld_idx;
+
+                large_data = calloc(tc->exp_len, sizeof(uint8_t));
+                if (large_data == NULL) {
+                        printf("Can't allocate large data buffer memory\n");
+                        return ACVP_CRYPTO_MODULE_FAIL;
+                }
+                ld_idx = large_data;
+
+                /* concatenate message in large data buffer */
+                for (int i = 0; i < num_iter; i++) {
+                        memcpy(ld_idx, tc->msg, tc->msg_len);
+                        ld_idx += tc->msg_len;
+                }
+                m = large_data;
+                len = tc->exp_len;
+
+                printf("Running SHA3-256 LDT (Long Data Test). This may take some time...\n");
+        } else {
+                m = tc->msg;
+                len = tc->msg_len;
+        }
 
         job = IMB_GET_NEXT_JOB(mb_mgr);
         job->cipher_direction = IMB_DIR_ENCRYPT;
@@ -1508,14 +1568,18 @@ sha3_256_handler(ACVP_TEST_CASE *test_case)
         job->hash_alg = IMB_AUTH_SHA3_256;
         job->cipher_start_src_offset_in_bytes = 0;
         job->hash_start_src_offset_in_bytes = 0;
-        job->src = tc->msg;
-        job->msg_len_to_hash_in_bytes = tc->msg_len;
+        job->src = m;
+        job->msg_len_to_hash_in_bytes = len;
         job->auth_tag_output_len_in_bytes = IMB_SHA3_256_DIGEST_SIZE_IN_BYTES;
         job->auth_tag_output = tc->md;
 
         job = IMB_SUBMIT_JOB(mb_mgr);
         if (job == NULL)
                 job = IMB_FLUSH_JOB(mb_mgr);
+
+        if (large_data != NULL)
+                free(large_data);
+
         if (job->status != IMB_STATUS_COMPLETED) {
                 fprintf(stderr, "Invalid job\n");
                 return ACVP_CRYPTO_MODULE_FAIL;
@@ -1529,11 +1593,39 @@ sha3_384_handler(ACVP_TEST_CASE *test_case)
 {
         ACVP_HASH_TC *tc;
         IMB_JOB *job = NULL;
+        uint8_t *large_data = NULL;
+        uint64_t len;
+        uint8_t *m;
 
         if (test_case == NULL)
                 return ACVP_CRYPTO_MODULE_FAIL;
 
         tc = test_case->tc.hash;
+
+        if (tc->test_type == ACVP_HASH_TEST_TYPE_LDT) {
+                int num_iter = tc->exp_len / tc->msg_len;
+                uint8_t *ld_idx;
+
+                large_data = calloc(tc->exp_len, sizeof(uint8_t));
+                if (large_data == NULL) {
+                        printf("Can't allocate large data buffer memory\n");
+                        return ACVP_CRYPTO_MODULE_FAIL;
+                }
+                ld_idx = large_data;
+
+                /* concatenate message in large data buffer */
+                for (int i = 0; i < num_iter; i++) {
+                        memcpy(ld_idx, tc->msg, tc->msg_len);
+                        ld_idx += tc->msg_len;
+                }
+                m = large_data;
+                len = tc->exp_len;
+
+                printf("Running SHA3-384 LDT (Long Data Test). This may take some time...\n");
+        } else {
+                m = tc->msg;
+                len = tc->msg_len;
+        }
 
         job = IMB_GET_NEXT_JOB(mb_mgr);
         job->cipher_direction = IMB_DIR_ENCRYPT;
@@ -1542,14 +1634,18 @@ sha3_384_handler(ACVP_TEST_CASE *test_case)
         job->hash_alg = IMB_AUTH_SHA3_384;
         job->cipher_start_src_offset_in_bytes = 0;
         job->hash_start_src_offset_in_bytes = 0;
-        job->src = tc->msg;
-        job->msg_len_to_hash_in_bytes = tc->msg_len;
+        job->src = m;
+        job->msg_len_to_hash_in_bytes = len;
         job->auth_tag_output_len_in_bytes = IMB_SHA3_384_DIGEST_SIZE_IN_BYTES;
         job->auth_tag_output = tc->md;
 
         job = IMB_SUBMIT_JOB(mb_mgr);
         if (job == NULL)
                 job = IMB_FLUSH_JOB(mb_mgr);
+
+        if (large_data != NULL)
+                free(large_data);
+
         if (job->status != IMB_STATUS_COMPLETED) {
                 fprintf(stderr, "Invalid job\n");
                 return ACVP_CRYPTO_MODULE_FAIL;
@@ -1563,11 +1659,39 @@ sha3_512_handler(ACVP_TEST_CASE *test_case)
 {
         ACVP_HASH_TC *tc;
         IMB_JOB *job = NULL;
+        uint8_t *large_data = NULL;
+        uint64_t len;
+        uint8_t *m;
 
         if (test_case == NULL)
                 return ACVP_CRYPTO_MODULE_FAIL;
 
         tc = test_case->tc.hash;
+
+        if (tc->test_type == ACVP_HASH_TEST_TYPE_LDT) {
+                int num_iter = tc->exp_len / tc->msg_len;
+                uint8_t *ld_idx;
+
+                large_data = calloc(tc->exp_len, sizeof(uint8_t));
+                if (large_data == NULL) {
+                        printf("Can't allocate large data buffer memory\n");
+                        return ACVP_CRYPTO_MODULE_FAIL;
+                }
+                ld_idx = large_data;
+
+                /* concatenate message in large data buffer */
+                for (int i = 0; i < num_iter; i++) {
+                        memcpy(ld_idx, tc->msg, tc->msg_len);
+                        ld_idx += tc->msg_len;
+                }
+                m = large_data;
+                len = tc->exp_len;
+
+                printf("Running SHA3-512 LDT (Long Data Test). This may take some time...\n");
+        } else {
+                m = tc->msg;
+                len = tc->msg_len;
+        }
 
         job = IMB_GET_NEXT_JOB(mb_mgr);
         job->cipher_direction = IMB_DIR_ENCRYPT;
@@ -1576,14 +1700,18 @@ sha3_512_handler(ACVP_TEST_CASE *test_case)
         job->hash_alg = IMB_AUTH_SHA3_512;
         job->cipher_start_src_offset_in_bytes = 0;
         job->hash_start_src_offset_in_bytes = 0;
-        job->src = tc->msg;
-        job->msg_len_to_hash_in_bytes = tc->msg_len;
+        job->src = m;
+        job->msg_len_to_hash_in_bytes = len;
         job->auth_tag_output_len_in_bytes = IMB_SHA3_512_DIGEST_SIZE_IN_BYTES;
         job->auth_tag_output = tc->md;
 
         job = IMB_SUBMIT_JOB(mb_mgr);
         if (job == NULL)
                 job = IMB_FLUSH_JOB(mb_mgr);
+
+        if (large_data != NULL)
+                free(large_data);
+
         if (job->status != IMB_STATUS_COMPLETED) {
                 fprintf(stderr, "Invalid job\n");
                 return ACVP_CRYPTO_MODULE_FAIL;
