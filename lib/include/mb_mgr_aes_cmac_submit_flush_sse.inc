@@ -380,30 +380,6 @@ align_label
  	mov	qword [state + _aes_cmac_job_in_lane + idx*8], 0
  	or	dword [job_rax + _status], IMB_STATUS_COMPLETED_AUTH
 
-%ifdef SAFE_DATA
-        pxor    xmm0, xmm0
-%ifidn %%SUBMIT_FLUSH, SUBMIT
-        ;; Clear digest (in memory for IV) and scratch memory of returned job
-        movdqa  [tmp3], xmm0
-
-        shl     idx, 4
-        movdqa  [state + _aes_cmac_scratch + idx], xmm0
-
-%else
-        ;; Clear digest and scratch memory of returned job and "NULL lanes"
-%assign I 0
-%rep NUM_LANES
-        cmp     qword [state + _aes_cmac_job_in_lane + I*8], 0
-        jne     APPEND(%%_skip_clear_,I)
-        movdqa  [state + _aes_cmac_args_IV + I*16], xmm0
-        movdqa  [state + _aes_cmac_scratch + I*16], xmm0
-APPEND(%%_skip_clear_,I):
-%assign I (I+1)
-%endrep
-%endif ;; SUBMIT
-
-%endif ;; SAFE_DATA
-
 align_label
 %%_return:
 	mov	rbx, [rsp + _gpr_save + 8*0]
