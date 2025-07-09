@@ -300,10 +300,6 @@ align_label
         bt              %%NULL_MASK, k
         jnc             %%_skip_clear %+ k
 
-        ;; clean lane block 0 and IV buffers
-        vmovdqa64       [state + _aes_ccm_init_blocks + (k*64)], ZWORD(%%XTMP)
-        vmovdqa64       [state + _aes_ccm_args_IV + (k*16)], %%XTMP
-
 %assign j 0 ; inner loop to iterate through round keys
 %rep NROUNDS + 2
         vmovdqa64       [state + _aes_ccm_args_key_tab + j + (k*16)], %%XTMP
@@ -608,10 +604,6 @@ align_label
        vpxorq   ZWORD(xtmp0), ZWORD(xtmp0)
 %ifidn %%SUBMIT_FLUSH, SUBMIT
        shl     min_idx, 4
-
-       ;; Clear digest (in memory for CBC IV), counter block 0 and AAD of returned job
-       vmovdqa   [state + _aes_ccm_args_IV + min_idx],              xtmp0
-       vmovdqa64 [state + _aes_ccm_init_blocks + min_idx * 4],      ZWORD(xtmp0)
 
        ;; Clear expanded keys
 %assign round 0

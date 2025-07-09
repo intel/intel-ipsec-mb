@@ -586,16 +586,10 @@ align_label
         ;; Clear expanded keys
         vpxor   xtmp0, xtmp0
 %ifidn %%SUBMIT_FLUSH, FLUSH
-        ;; Clear digest (in memory for CBC IV), counter block 0 and AAD
-        ;; of returned job and "NULL lanes"
 %assign LANE_ID 0
 %rep 16
         cmp     qword [state + _aes_ccm_job_in_lane + LANE_ID*8], 0
         jne     %%skip_clear_ %+ LANE_ID
-
-        vmovdqa [state + _aes_ccm_args_IV + LANE_ID*16], xtmp0
-        vmovdqa [state + _aes_ccm_init_blocks + LANE_ID*64], ytmp0
-        vmovdqa [state + _aes_ccm_init_blocks + LANE_ID*64 + 32], ytmp0
 
         ;; Clear expanded keys per lane
 %assign KEY 0
@@ -610,12 +604,7 @@ align_label
 %endrep
 
 %else ;; SUBMIT_FLUSH
-        ;; Clear digest (in memory for CBC IV), counter block 0 and AAD of returned job
         shl     min_idx, 4
-        vmovdqa [state + _aes_ccm_args_IV + min_idx], xtmp0
-        vmovdqa [state + _aes_ccm_init_blocks + min_idx * 4], ytmp0
-        vmovdqa [state + _aes_ccm_init_blocks + min_idx * 4 + 32], ytmp0
-
         ;; Clear expanded keys for processed lane
 %assign key_round 0
 %rep NUM_KEYS
