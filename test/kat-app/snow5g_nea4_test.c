@@ -38,10 +38,10 @@
 #include "utils.h"
 #include "cipher_test.h"
 
-extern const struct cipher_test snow5g_test_json[];
+extern const struct cipher_test snow5g_nea4_test_json[];
 
 int
-snow5g_test(IMB_MGR *p_mgr);
+snow5g_nea4_test(IMB_MGR *p_mgr);
 
 static uint32_t
 compare(const void *result, const void *expected, const size_t size)
@@ -149,7 +149,7 @@ snow5g_single_test(IMB_MGR *p_mgr, struct test_suite_context *ts, const void *ke
 }
 
 int
-snow5g_test(IMB_MGR *p_mgr)
+snow5g_nea4_test(IMB_MGR *p_mgr)
 {
         struct test_suite_context ts_snow5g;
         int errors = 0;
@@ -161,7 +161,7 @@ snow5g_test(IMB_MGR *p_mgr)
         /* Test SNOW5G */
         printf("SNOW5G test vectors\n");
         test_suite_start(&ts_snow5g, "SNOW5G");
-        for (const struct cipher_test *v = snow5g_test_json; v->msg != NULL; v++) {
+        for (const struct cipher_test *v = snow5g_nea4_test_json; v->msg != NULL; v++) {
                 assert(v->keySize == (32 * CHAR_BIT));
                 assert(v->ivSize == (16 * CHAR_BIT));
                 assert((v->msgSize % CHAR_BIT) == 0);

@@ -86,7 +86,7 @@ chacha20_poly1305_test(struct IMB_MGR *mb_mgr);
 extern int
 null_test(struct IMB_MGR *mb_mgr);
 extern int
-snow5g_test(struct IMB_MGR *mb_mgr);
+snow5g_nea4_test(struct IMB_MGR *mb_mgr);
 extern int
 direct_api_param_test(struct IMB_MGR *mb_mgr);
 extern int
@@ -192,7 +192,7 @@ struct imb_test tests[] = {
         { .str = "SM4_CTR", .fn = sm4_ctr_test, .enabled = 1 },
         { .str = "SM4_GCM", .fn = sm4_gcm_test, .enabled = 1 },
         { .str = "SHA3", .fn = sha3_test, .enabled = 1 },
-        { .str = "SNOW5G", .fn = snow5g_test, .enabled = 1 },
+        { .str = "SNOW5G_NEA4", .fn = snow5g_nea4_test, .enabled = 1 },
         { .str = "AES_NIA5", .fn = aes_nia5_test, .enabled = 1 },
         { .str = "AES_NEA5", .fn = aes_nea5_test, .enabled = 1 },
         { .str = "AES_NCA5", .fn = aes_nca5_test, .enabled = 1 },
