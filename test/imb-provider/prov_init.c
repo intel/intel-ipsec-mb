@@ -79,6 +79,9 @@ extern const OSSL_DISPATCH prov_aes256cfb_functions[];
 
 extern const OSSL_DISPATCH prov_hmac_sha_functions[];
 
+extern const OSSL_DISPATCH prov_aes128ccm_functions[];
+extern const OSSL_DISPATCH prov_aes256ccm_functions[];
+
 PROV_PARAMS prov_params;
 
 static void
@@ -133,6 +136,8 @@ static const OSSL_ALGORITHM_CAPABLE prov_deflt_ciphers[] = {
         ALG(PROV_NAMES_AES_128_CFB, prov_aes128cfb_functions),
         ALG(PROV_NAMES_AES_192_CFB, prov_aes192cfb_functions),
         ALG(PROV_NAMES_AES_256_CFB, prov_aes256cfb_functions),
+        ALG(PROV_NAMES_AES_128_CCM, prov_aes128ccm_functions),
+        ALG(PROV_NAMES_AES_256_CCM, prov_aes256ccm_functions),
         { { NULL, NULL, NULL }, NULL }
 };
 

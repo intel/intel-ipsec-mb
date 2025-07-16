@@ -34,9 +34,12 @@
 #include <openssl/modes.h>
 
 #include <openssl/async.h>
+#include <openssl/modes.h>
+#include <openssl/core_dispatch.h>
 #include <intel-ipsec-mb.h>
 
 #define GENERIC_BLOCK_SIZE 16
+typedef struct prov_evp_aes_cbc_cipher_st PROV_EVP_CIPHER;
 
 typedef struct {
         EVP_MD *md;
@@ -57,7 +60,6 @@ typedef struct _alg_context {
         size_t keylen;
 
         size_t block_size;
-        unsigned max_burst_size;
         IMB_HASH_ALG hash_alg;
         unsigned char msg_hash[64];
 
@@ -99,6 +101,14 @@ typedef struct _alg_context {
         unsigned char *dec_keys;
         uint8_t auths[64];
 
+        unsigned char *aad;
+        int tls_aad_len;
+        int tag_len;
+        int iv_len;
+        size_t tls_aad_pad_sz;
+        size_t L, M;
+        int tag_set;
+        PROV_EVP_CIPHER *cipher;
 } ALG_CTX;
 
 typedef struct _op_data {

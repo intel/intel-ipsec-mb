@@ -63,6 +63,8 @@ The `imb-provider` supports the following cryptographic algorithms:
     - AES-128-CFB
     - AES-192-CFB
     - AES-256-CFB
+    - AES-128-CCM
+    - AES-256-CCM
 
     To test the OpenSSL speed, use ```-evp aes-256-gcm``` or ```-evp aes-128-cfb``` option.
 

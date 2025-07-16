@@ -24,6 +24,8 @@
  OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 *******************************************************************************/
+#ifndef PROV_CIPHERS_H
+#define PROV_CIPHERS_H
 
 #include <string.h>
 #include <openssl/core.h>
@@ -228,3 +230,4 @@ prov_cipher_generic_gettable_params(void *provctx);
                   (void (*)(void)) prov_cipher_aead_settable_ctx_params },                         \
                 { 0, NULL }                                                                        \
         }
+#endif /* PROV_CIPHERS_H */
