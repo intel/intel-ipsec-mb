@@ -32,6 +32,7 @@
 %include "include/memcpy.inc"
 %include "include/align_avx.inc"
 
+extern copy_digest_avx
 extern sha512_x4_avx2
 
 mksection .rodata
@@ -275,7 +276,8 @@ copy_full_digest:
 	vmovq  	xmm0, [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 0*SHA512_DIGEST_ROW_SIZE]
 	vpinsrq xmm0, [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 1*SHA512_DIGEST_ROW_SIZE], 1
 	vpshufb xmm0, [rel byteswap]
-	simd_store_avx {p + 0*4}, xmm0, tmp2, tmp4, tmp6
+	lea	tmp5, [p + 0*4]		; destination pointer 
+	call	copy_digest_avx
 	jmp 	clear_ret
 
 align_label
@@ -296,7 +298,8 @@ copy_tag_gt16:
 	vmovq   xmm0, [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 2*SHA512_DIGEST_ROW_SIZE]
 	vpinsrq xmm0, [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 3*SHA512_DIGEST_ROW_SIZE], 1
 	vpshufb xmm0, [rel byteswap]
-	simd_store_avx {p + 4*4}, xmm0, tmp2, tmp4, tmp6
+	lea	tmp5, [p + 4*4]		; destination pointer
+	call	copy_digest_avx
 	jmp 	clear_ret
 
 align_label
@@ -316,7 +319,8 @@ copy_tag_gt32:
 	vmovq   xmm0, [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 4*SHA512_DIGEST_ROW_SIZE]
 	vpinsrq xmm0, [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 5*SHA512_DIGEST_ROW_SIZE], 1
 	vpshufb xmm0, [rel byteswap]
-	simd_store_avx {p + 8*4}, xmm0, tmp2, tmp4, tmp6
+	lea	tmp5, [p + 8*4]		; destination pointer
+	call	copy_digest_avx
 	jmp 	clear_ret
 
 align_label
@@ -333,7 +337,8 @@ copy_tag_gt48:
 	vmovq   xmm0, [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 6*SHA512_DIGEST_ROW_SIZE]
 	vpinsrq xmm0, [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 7*SHA512_DIGEST_ROW_SIZE], 1
 	vpshufb xmm0, [rel byteswap]
-	simd_store_avx {p + 12*4}, xmm0, tmp2, tmp4, tmp6
+	lea	tmp5, [p + 12*4]	; destination pointer
+	call	copy_digest_avx
 
 align_label
 clear_ret:

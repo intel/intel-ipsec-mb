@@ -552,7 +552,8 @@ asm_avx2_lib_objs := \
 	aes_cmac_vaes_avx2.o \
 	aes_cntr_ccm_vaes_avx2.o \
 	mb_mgr_aes128_ccm_auth_submit_flush_x16_vaes_avx2.o \
-	mb_mgr_aes256_ccm_auth_submit_flush_x16_vaes_avx2.o
+	mb_mgr_aes256_ccm_auth_submit_flush_x16_vaes_avx2.o \
+	copy_digest_avx.o
 #
 # List of ASM modules (avx2_t3 directory)
 #

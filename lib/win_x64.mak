@@ -456,7 +456,8 @@ lib_objs2 = \
 	$(OBJ_DIR)\aes_cntr_ccm_vaes_avx2.obj \
 	$(OBJ_DIR)\mb_mgr_aes128_ccm_auth_submit_flush_x16_vaes_avx2.obj \
 	$(OBJ_DIR)\mb_mgr_aes256_ccm_auth_submit_flush_x16_vaes_avx2.obj \
-	$(OBJ_DIR)\copy_digest_sse.obj
+	$(OBJ_DIR)\copy_digest_sse.obj \
+	$(OBJ_DIR)\copy_digest_avx.obj
 
 gcm_objs = \
 	$(OBJ_DIR)\gcm.obj \
