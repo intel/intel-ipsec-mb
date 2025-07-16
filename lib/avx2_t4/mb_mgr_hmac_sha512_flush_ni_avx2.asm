@@ -32,6 +32,8 @@
 %include "include/memcpy.inc"
 %include "include/align_avx.inc"
 
+extern copy_digest_avx
+
 %use smartalign
 alignmode nop
 
@@ -245,7 +247,8 @@ copy_full_digest:
 	mov    	tmp2, qword [job_rax + _auth_tag_output_len_in_bytes]
 	vmovdqa xmm0, [state + _args_digest_sha512 + idx]
 	vpshufb xmm0, [rel byteswap]
-	simd_store_avx {p + 0*4}, xmm0, tmp2, tmp4, tmp5
+	lea	tmp5, [p + 0*4]		; destination pointer
+	call	copy_digest_avx
 	jmp 	clear_ret
 
 align_label
@@ -264,7 +267,8 @@ copy_tag_gt16:
 	;; copy up to 32 bytes
 	vmovdqa xmm0, [state + _args_digest_sha512 + idx + 16]
 	vpshufb xmm0, [rel byteswap]
-	simd_store_avx {p + 4*4}, xmm0, tmp2, tmp4, tmp5
+	lea	tmp5, [p + 4*4]		; destination pointer
+	call	copy_digest_avx
 	jmp 	clear_ret
 
 align_label
@@ -282,7 +286,8 @@ copy_tag_gt32:
 	;; copy up to 48 bytes
 	vmovdqa xmm0, [state + _args_digest_sha512 + idx + 32]
 	vpshufb xmm0, [rel byteswap]
-	simd_store_avx {p + 8*4}, xmm0, tmp2, tmp4, tmp5
+	lea	tmp5, [p + 8*4]		; destination pointer
+	call	copy_digest_avx
 	jmp 	clear_ret
 
 align_label
@@ -297,7 +302,8 @@ copy_tag_gt48:
 	;; copy up to 64 bytes
 	vmovdqa xmm0, [state + _args_digest_sha512 + idx + 48]
 	vpshufb xmm0, [rel byteswap]
-	simd_store_avx {p + 12*4}, xmm0, tmp2, tmp4, tmp5
+	lea	tmp5, [p + 12*4]		; destination pointer
+	call	copy_digest_avx
 
 align_label
 clear_ret:
