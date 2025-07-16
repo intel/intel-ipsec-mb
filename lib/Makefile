@@ -455,7 +455,8 @@ asm_sse_lib_objs := \
 	sm3_base_update_sse.o \
 	sm3_base_one_block_sse.o \
 	sm3_base_msg_sse.o \
-	sm3_base_hmac_sse.o
+	sm3_base_hmac_sse.o \
+	copy_digest_sse.o
 
 #
 # List of ASM modules (avx directory)

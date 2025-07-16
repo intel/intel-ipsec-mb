@@ -33,6 +33,7 @@
 %include "include/const.inc"
 %include "include/align_sse.inc"
 
+extern copy_digest_sse
 extern sha512_x2_sse
 
 mksection .rodata
@@ -345,11 +346,12 @@ copy_full_digest:
 	ja 	copy_tag_gt16
 
 	;; copy up to 16 bytes
-	mov    	tmp2, qword [job_rax + _auth_tag_output_len_in_bytes]
+	mov    	tmp4, qword [job_rax + _auth_tag_output_len_in_bytes]
 	movq   	xmm0, [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 0*SHA512_DIGEST_ROW_SIZE]
 	pinsrq  xmm0, [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 1*SHA512_DIGEST_ROW_SIZE], 1
 	pshufb  xmm0, [rel byteswap]
-	simd_store_sse {p + 0*4}, xmm0, tmp2, tmp4, tmp3
+	lea	tmp, [p + 0*4]		; destination pointer
+	call	copy_digest_sse
 	jmp 	clear_ret
 
 align_label
@@ -361,8 +363,8 @@ copy_tag_gt16:
 	movdqu  [p + 0*4], xmm0
 
 	;; calculate remaining bytes to copy
-	mov    	tmp2, qword [job_rax + _auth_tag_output_len_in_bytes]
-	sub    	tmp2, 16 ; copied 16 bytes already
+	mov    	tmp4, qword [job_rax + _auth_tag_output_len_in_bytes]
+	sub    	tmp4, 16 ; copied 16 bytes already
 	cmp 	qword [job_rax + _auth_tag_output_len_in_bytes], 32
 	ja	copy_tag_gt32
 
@@ -370,7 +372,8 @@ copy_tag_gt16:
 	movq   	xmm0, [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 2*SHA512_DIGEST_ROW_SIZE]
 	pinsrq  xmm0, [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 3*SHA512_DIGEST_ROW_SIZE], 1
 	pshufb  xmm0, [rel byteswap]
-	simd_store_sse {p + 4*4}, xmm0, tmp2, tmp4, tmp3
+	lea	tmp, [p + 4*4]		; destination pointer
+	call	copy_digest_sse
 	jmp 	clear_ret
 
 align_label
@@ -381,7 +384,7 @@ copy_tag_gt32:
 	pshufb  xmm0, [rel byteswap]
 	movdqu  [p + 4*4], xmm0
 
-	sub    	tmp2, 16 ; copied another 16 bytes
+	sub    	tmp4, 16 ; copied another 16 bytes
 %if (SHA_X_DIGEST_SIZE != 384)
 	cmp 	qword [job_rax + _auth_tag_output_len_in_bytes], 48
 	ja	copy_tag_gt48
@@ -390,7 +393,8 @@ copy_tag_gt32:
 	movq   	xmm0, [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 4*SHA512_DIGEST_ROW_SIZE]
 	pinsrq  xmm0, [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 5*SHA512_DIGEST_ROW_SIZE], 1
 	pshufb  xmm0, [rel byteswap]
-	simd_store_sse {p + 8*4}, xmm0, tmp2, tmp4, tmp3
+	lea	tmp, [p + 8*4]		; destination pointer
+	call	copy_digest_sse
 	jmp 	clear_ret
 
 align_label
@@ -401,13 +405,14 @@ copy_tag_gt48:
 	pshufb  xmm0, [rel byteswap]
 	movdqu  [p + 8*4], xmm0
 
-	sub    	tmp2, 16 ; copied another 16 bytes
+	sub    	tmp4, 16 ; copied another 16 bytes
 
 	;; copy up to 64 bytes
 	movq   	xmm0, [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 6*SHA512_DIGEST_ROW_SIZE]
 	pinsrq  xmm0, [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 7*SHA512_DIGEST_ROW_SIZE], 1
 	pshufb  xmm0, [rel byteswap]
-	simd_store_sse {p + 12*4}, xmm0, tmp2, tmp4, tmp3
+	lea	tmp, [p + 12*4]		; destination pointer
+	call	copy_digest_sse
 
 align_label
 clear_ret:

@@ -32,6 +32,7 @@
 %include "include/memcpy.inc"
 %include "include/align_sse.inc"
 
+extern copy_digest_sse
 extern sha512_x2_sse
 
 mksection .rodata
@@ -260,7 +261,8 @@ copy_full_digest:
 	movq   	xmm0, [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 0*SHA512_DIGEST_ROW_SIZE]
 	pinsrq  xmm0, [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 1*SHA512_DIGEST_ROW_SIZE], 1
 	pshufb  xmm0, [rel byteswap]
-	simd_store_sse {p + 0*4}, xmm0, tmp2, tmp4, tmp6
+	lea	tmp5, [p + 0*4]		; destination pointer
+	call	copy_digest_sse
 	jmp 	clear_ret
 
 align_label
@@ -281,7 +283,8 @@ copy_tag_gt16:
 	movq   	xmm0, [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 2*SHA512_DIGEST_ROW_SIZE]
 	pinsrq  xmm0, [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 3*SHA512_DIGEST_ROW_SIZE], 1
 	pshufb  xmm0, [rel byteswap]
-	simd_store_sse {p + 4*4}, xmm0, tmp2, tmp4, tmp6
+	lea	tmp5, [p + 4*4]		; destination pointer
+	call	copy_digest_sse
 	jmp 	clear_ret
 
 align_label
@@ -301,7 +304,8 @@ copy_tag_gt32:
 	movq   	xmm0, [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 4*SHA512_DIGEST_ROW_SIZE]
 	pinsrq  xmm0, [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 5*SHA512_DIGEST_ROW_SIZE], 1
 	pshufb  xmm0, [rel byteswap]
-	simd_store_sse {p + 8*4}, xmm0, tmp2, tmp4, tmp6
+	lea	tmp5, [p + 8*4]		; destination pointer
+	call	copy_digest_sse
 	jmp 	clear_ret
 
 align_label
@@ -318,7 +322,8 @@ copy_tag_gt48:
 	movq   	xmm0, [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 6*SHA512_DIGEST_ROW_SIZE]
 	pinsrq  xmm0, [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 7*SHA512_DIGEST_ROW_SIZE], 1
 	pshufb  xmm0, [rel byteswap]
-	simd_store_sse {p + 12*4}, xmm0, tmp2, tmp4, tmp6
+	lea	tmp5, [p + 12*4]		; destination pointer
+	call	copy_digest_sse
 
 align_label
 clear_ret:
