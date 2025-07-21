@@ -286,19 +286,19 @@ mksection .text
         pinsrw	xcounter, [p_IV + 1], 1
         pinsrd  xcounter, [p_IV + 3], 1
 
-        cmp     p_ivlen, 7
-        je      _finish_nonce_move
+        cmp     p_ivlen, 10
+        je      _iv_length_10
+        ja      _iv_length_11_to_13
 
         cmp     p_ivlen, 8
         je      _iv_length_8
-        cmp     p_ivlen, 9
-        je      _iv_length_9
-        cmp     p_ivlen, 10
-        je      _iv_length_10
-        cmp     p_ivlen, 11
-        je      _iv_length_11
+        jb      _finish_nonce_move   ; p_ivlen = 7
+        jmp     _iv_length_9         ; p_ivlen = 9
+
+_iv_length_11_to_13:
         cmp     p_ivlen, 12
         je      _iv_length_12
+        jb      _iv_length_11
 
         ;; Bytes 8 - 13
 _iv_length_13:
