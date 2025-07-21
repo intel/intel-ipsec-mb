@@ -392,19 +392,19 @@ align_label
         vpinsrw init_block0, [tmp1 + 1], 1
         vpinsrd init_block0, [tmp1 + 3], 1
 
-        cmp     iv_len, 7
-        je      %%_finish_nonce_move
+        cmp     iv_len, 10
+        je      %%_iv_length_10
+        ja      %%_iv_length_11_to_13
 
         cmp     iv_len, 8
         je      %%_iv_length_8
-        cmp     iv_len, 9
-        je      %%_iv_length_9
-        cmp     iv_len, 10
-        je      %%_iv_length_10
-        cmp     iv_len, 11
-        je      %%_iv_length_11
+        jb      %%_finish_nonce_move   ; iv_len = 7
+        jmp     %%_iv_length_9         ; iv_len = 9
+
+%%_iv_length_11_to_13:
         cmp     iv_len, 12
         je      %%_iv_length_12
+        jb      %%_iv_length_11
 
         ;; Bytes 8 - 13
 %%_iv_length_13:
