@@ -26,7 +26,7 @@
 # Versions numbers
 %global major        2
 %global minor        0
-%global patch        0
+%global patch        1
 %global fullversion  %{major}.%{minor}.%{patch}
 
 # GitHub properties
@@ -109,6 +109,9 @@ ln -s libIPSec_MB.so.%{fullversion} libIPSec_MB.so
 %{_libdir}/libIPSec_MB.so
 
 %changelog
+* Wed Jul 23 2025 Marcel Cornu <marcel.d.cornu@intel.com> 2.0.1-1
+- Update for release package v2.0.1
+
 * Tue Nov 29 2024 Pablo de Lara Guarch <pablo.de.lara.guarch@intel.com> 2.0.0-1
 - Update for release package v2.0
 
