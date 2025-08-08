@@ -373,13 +373,13 @@ kasumi_f8_x_block_prep_op(IMB_MGR *mgr, struct kasumi_f8_x_blocks *s, const stru
          * - copy IV
          */
 
-        uint32_t min_size_bits = UINT32_MAX;
+        size_t min_size_bits = UINT32_MAX;
 
         for (size_t i = 0; i < s->n; i++)
                 if (s->vt[i]->msgSize < min_size_bits)
-                        min_size_bits = (uint32_t) s->vt[i]->msgSize;
+                        min_size_bits = s->vt[i]->msgSize;
 
-        const uint32_t min_size = (min_size_bits + 7) / CHAR_BIT;
+        const uint32_t min_size = (uint32_t) ((min_size_bits + 7ULL) / CHAR_BIT);
 
         for (size_t i = 0; i < s->n; i++) {
                 const size_t msg_len_vec =
