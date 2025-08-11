@@ -183,6 +183,9 @@ SNOW3G_F9_1_BUFFER_INTERNAL:
         movdqa  SNOW3G_CONST, [rel snow3g_constant]
         pxor    EV, EV
 
+        ;; Preload bswap value for use later
+        movdqa  xmm6, [rel bswap64]
+
         ;; P = ((uint64_t)KS[0] << 32) | ((uint64_t)KS[1])
         movq    P1, [KS]
         pshufd  P1, P1, 1110_0001b
@@ -203,7 +206,7 @@ SNOW3G_F9_1_BUFFER_INTERNAL:
         MUL_AND_REDUCE_TO_64 xmm1, P1, xmm4     ;; xmm1 = P2
         movdqa  xmm5, xmm1
         MUL_AND_REDUCE_TO_64 xmm5, P1, xmm4     ;; xmm5 = P3
-        pand    xmm5, [rel clear_hi64]
+        movq    xmm5, xmm5
         movdqa  xmm3, xmm5
         MUL_AND_REDUCE_TO_64 xmm3, P1, xmm4     ;; xmm3 = P4
 
@@ -217,8 +220,8 @@ start_4_blk_loop:
         movdqu          xmm3, [in_ptr + offset * 8]
         movdqu          xmm4, [in_ptr + offset * 8 + 16]
 
-        pshufb          xmm3, [rel bswap64]
-        pshufb          xmm4, [rel bswap64]
+        pshufb          xmm3, xmm6
+        pshufb          xmm4, xmm6
 
         pxor            xmm3, EV                ;; m1 XOR EV
 
@@ -238,7 +241,7 @@ start_4_blk_loop:
 
         REDUCE_TO_64    EV, xmm3                ;; EV = reduce128_to_64(t1);
 
-        pand            EV, [rel clear_hi64]    ;; EV = _mm_and_si128(EV, clear_hi64);
+        movq            EV, EV    ;; EV = _mm_and_si128(EV, clear_hi64);
 
         add     offset, 4                       ;; move to next 4 blocks
         cmp     end_offset, offset
@@ -250,7 +253,7 @@ start_4_blk_loop:
 align_loop
 start_single_blk_loop:
         movq    xmm0, [in_ptr + offset * 8]
-        pshufb  xmm0, [rel bswap64]
+        pshufb  xmm0, xmm6
         pxor    EV, xmm0
         MUL_AND_REDUCE_TO_64 EV, P1, xmm1
 
