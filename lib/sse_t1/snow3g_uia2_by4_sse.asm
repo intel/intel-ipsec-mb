@@ -90,7 +90,7 @@ dd      0x00000000, 0xffffffff, 0xffffffff, 0xffffffff
 mksection .text
 
 %ifidn __OUTPUT_FORMAT__, win64
-        %define XMM_STORAGE     16*3
+        %define XMM_STORAGE     16*10
         %define GP_STORAGE      8*8
 %else
         %define XMM_STORAGE     0
@@ -110,6 +110,13 @@ mksection .text
         movdqa [rsp + 0*16], xmm6
         movdqa [rsp + 1*16], xmm7
         movdqa [rsp + 2*16], xmm8
+        movdqa [rsp + 3*16], xmm9
+        movdqa [rsp + 4*16], xmm10
+        movdqa [rsp + 5*16], xmm11
+        movdqa [rsp + 6*16], xmm12
+        movdqa [rsp + 7*16], xmm13
+        movdqa [rsp + 8*16], xmm14
+        movdqa [rsp + 9*16], xmm15
         mov     [rsp + GP_OFFSET + 48], rdi
         mov     [rsp + GP_OFFSET + 56], rsi
 %endif
@@ -127,6 +134,13 @@ mksection .text
         movdqa xmm6,  [rsp + 0*16]
         movdqa xmm7,  [rsp + 1*16]
         movdqa xmm8,  [rsp + 2*16]
+        movdqa xmm9,  [rsp + 3*16]
+        movdqa xmm10, [rsp + 4*16]
+        movdqa xmm11, [rsp + 5*16]
+        movdqa xmm12, [rsp + 6*16]
+        movdqa xmm13, [rsp + 7*16]
+        movdqa xmm14, [rsp + 8*16]
+        movdqa xmm15, [rsp + 9*16]
         mov     rdi, [rsp + GP_OFFSET + 48]
         mov     rsi, [rsp + GP_OFFSET + 56]
 %endif
@@ -196,12 +210,11 @@ SNOW3G_F9_1_BUFFER_INTERNAL:
         shr     qword_len, 6
         je      partial_blk
 
-        mov     end_offset, qword_len
-        and     end_offset, 0xfffffffffffffffc  ;; round down to nearest 4 blocks
+        ;; Process 8 blocks at a time only for messages >= 320 bytes (40 qwords)
+        cmp     qword_len, 8
+        jb      check_4_blocks
 
-        cmp     qword_len, 4                    ;; check at least 4 qwords
-        jb      start_single_blk_loop
-
+        ;; Setup powers for 8-block parallel processing
         movdqa  xmm1, P1
         MUL_AND_REDUCE_TO_64 xmm1, P1, xmm4     ;; xmm1 = P2
         movdqa  xmm5, xmm1
@@ -209,13 +222,107 @@ SNOW3G_F9_1_BUFFER_INTERNAL:
         movq    xmm5, xmm5
         movdqa  xmm3, xmm5
         MUL_AND_REDUCE_TO_64 xmm3, P1, xmm4     ;; xmm3 = P4
+        
+        ;; Compute additional powers P5, P6, P7, P8
+        movdqa  xmm9, xmm3
+        MUL_AND_REDUCE_TO_64 xmm9, P1, xmm4     ;; xmm9 = P5
+        movdqa  xmm10, xmm9
+        MUL_AND_REDUCE_TO_64 xmm10, P1, xmm4    ;; xmm10 = P6
+        movdqa  xmm11, xmm10
+        MUL_AND_REDUCE_TO_64 xmm11, P1, xmm4    ;; xmm11 = P7
+        movdqa  xmm12, xmm11
+        MUL_AND_REDUCE_TO_64 xmm12, P1, xmm4    ;; xmm12 = P8
 
+        ;; Pack powers for parallel processing
         movdqa     xmm0, P1
-        punpcklqdq xmm0, xmm1                   ;; xmm0 = p1p2
+        punpcklqdq xmm0, xmm1                   ;; xmm0 = P1|P2
         movdqa     xmm1, xmm5
-        punpcklqdq xmm1, xmm3                   ;; xmm1 = p3p4
+        punpcklqdq xmm1, xmm3                   ;; xmm1 = P3|P4
+        movdqa     xmm13, xmm9
+        punpcklqdq xmm13, xmm10                 ;; xmm13 = P5|P6
+        movdqa     xmm14, xmm11
+        punpcklqdq xmm14, xmm12                 ;; xmm14 = P7|P8
+
+        mov     end_offset, qword_len
+        and     end_offset, 0xfffffffffffffff8  ;; round down to nearest 8 blocks
 
 align_loop
+start_8_blk_loop:
+        ;; Load all 8 blocks (64 bytes total)
+        movdqu          xmm3, [in_ptr + offset * 8]      ;; blocks 1,2
+        movdqu          xmm4, [in_ptr + offset * 8 + 16] ;; blocks 3,4
+        movdqu          xmm5, [in_ptr + offset * 8 + 32] ;; blocks 5,6
+        movdqu          xmm15, [in_ptr + offset * 8 + 48];; blocks 7,8
+
+        ;; Byte swap all 8 blocks
+        pshufb          xmm3, xmm6                       ;; swap blocks 1,2
+        pshufb          xmm4, xmm6                       ;; swap blocks 3,4  
+        pshufb          xmm5, xmm6                       ;; swap blocks 5,6
+        pshufb          xmm15, xmm6                      ;; swap blocks 7,8
+
+        ;; XOR first block with EV
+        pxor            xmm3, EV                         ;; block1 XOR EV, block2 unchanged
+
+        ;; Process blocks 1,2 with powers P8,P7
+        movdqa          xmm2, xmm3
+        pclmulqdq       xmm2, xmm14, 0x10               ;; block1 * P8
+        pclmulqdq       xmm3, xmm14, 0x01               ;; block2 * P7
+        pxor            xmm2, xmm3                       ;; combine results
+
+        ;; Process blocks 3,4 with powers P6,P5
+        movdqa          xmm3, xmm4
+        pclmulqdq       xmm3, xmm13, 0x10               ;; block3 * P6
+        pclmulqdq       xmm4, xmm13, 0x01               ;; block4 * P5
+        pxor            xmm3, xmm4                       ;; combine results
+        pxor            xmm2, xmm3                       ;; accumulate
+
+        ;; Process blocks 5,6 with powers P4,P3
+        movdqa          xmm3, xmm5
+        pclmulqdq       xmm3, xmm1, 0x10                ;; block5 * P4
+        pclmulqdq       xmm5, xmm1, 0x01                ;; block6 * P3
+        pxor            xmm3, xmm5                       ;; combine results
+        pxor            xmm2, xmm3                       ;; accumulate
+
+        ;; Process blocks 7,8 with powers P2,P1
+        movdqa          xmm3, xmm15
+        pclmulqdq       xmm3, xmm0, 0x10                ;; block7 * P2
+        pclmulqdq       xmm15, xmm0, 0x01               ;; block8 * P1
+        pxor            xmm3, xmm15                      ;; combine results
+        pxor            xmm2, xmm3                       ;; accumulate with previous results
+        movdqa          EV, xmm2                         ;; final result
+
+        REDUCE_TO_64    EV, xmm3                         ;; EV = reduce128_to_64(result);
+        movq            EV, EV                           ;; clear high 64 bits
+
+        add     	offset, 8                                ;; move to next 8 blocks
+        cmp     	end_offset, offset
+        jne     	start_8_blk_loop                         ;; process next 8 blocks
+
+align_label
+check_4_blocks:
+        mov     	end_offset, qword_len
+        and     	end_offset, 0xfffffffffffffffc  ;; round down to nearest 4 blocks
+        cmp     	end_offset, offset              ;; check if any 4-block groups left
+        jbe     	single_blk_chk
+
+        ;; Setup powers if we didn't come from 8-block processing
+        or     		offset, offset
+        jne     	start_4_blk_loop                      ;; powers already setup from 8-block loop
+        
+        movdqa  	xmm1, P1
+        MUL_AND_REDUCE_TO_64 xmm1, P1, xmm4     ;; xmm1 = P2
+        movdqa  	xmm5, xmm1
+        MUL_AND_REDUCE_TO_64 xmm5, P1, xmm4     ;; xmm5 = P3
+        movq    	xmm5, xmm5
+        movdqa  	xmm3, xmm5
+        MUL_AND_REDUCE_TO_64 xmm3, P1, xmm4     ;; xmm3 = P4
+
+        movdqa     	xmm0, P1
+        punpcklqdq 	xmm0, xmm1                   ;; xmm0 = p1p2
+        movdqa     	xmm1, xmm5
+        punpcklqdq 	xmm1, xmm3                   ;; xmm1 = p3p4
+
+align_label
 start_4_blk_loop:
         movdqu          xmm3, [in_ptr + offset * 8]
         movdqu          xmm4, [in_ptr + offset * 8 + 16]
@@ -242,13 +349,10 @@ start_4_blk_loop:
         REDUCE_TO_64    EV, xmm3                ;; EV = reduce128_to_64(t1);
 
         movq            EV, EV    ;; EV = _mm_and_si128(EV, clear_hi64);
-
-        add     offset, 4                       ;; move to next 4 blocks
-        cmp     end_offset, offset
-        jne     start_4_blk_loop                ;; at least 4 blocks left
-
+ 
         ;; less than 4 blocks left
-        jmp     single_blk_chk
+        add     	offset, 4                       ;; move past the 4 blocks processed
+        jmp     	single_blk_chk
 
 align_loop
 start_single_blk_loop:
