@@ -430,6 +430,15 @@ align_label
         mov     qword [state + _aes_ccm_job_in_lane + min_idx*8], 0
         or      dword [job_rax + _status], IMB_STATUS_COMPLETED_AUTH
 
+%ifdef SAFE_DATA
+        pxor    xmm0, xmm0
+        shl     min_idx, 6
+        movdqa  [state + _aes_ccm_init_blocks + min_idx + 0*16], xmm0
+        movdqa  [state + _aes_ccm_init_blocks + min_idx + 1*16], xmm0
+        movdqa  [state + _aes_ccm_init_blocks + min_idx + 2*16], xmm0
+        movdqa  [state + _aes_ccm_init_blocks + min_idx + 3*16], xmm0
+%endif
+
 align_label
 %%_return:
         mov     rbx, [rsp + _gpr_save + 8*0]

@@ -612,7 +612,13 @@ align_label
 %assign round (round + 1)
 %endrep
 
+        vmovdqa64 [state + _aes_ccm_init_blocks + min_idx*4], ZWORD(xtmp0)
+
 %else ;; FLUSH
+        shl     min_idx, 6
+        vmovdqa64 [state + _aes_ccm_init_blocks + min_idx], ZWORD(xtmp0)
+        shr     min_idx, 6
+
         ;; Clear digest (in memory for CBC IV), counter block 0 and AAD
         ;; of returned job and "NULL lanes"
         xor     DWORD(tmp2), DWORD(tmp2)

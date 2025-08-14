@@ -474,6 +474,41 @@ align_label
         mov     qword [state + _aes_ccm_job_in_lane + min_idx*8], 0
         or      dword [job_rax + _status], IMB_STATUS_COMPLETED_AUTH
 
+%ifdef SAFE_DATA
+        ;; Clear expanded keys
+        vpxor   xtmp0, xtmp0
+
+%ifidn %%SUBMIT_FLUSH, FLUSH
+        xor     tmp, tmp        ; tmp = LANE_ID * 8, 8 lanes to process
+        xor     tmp2, tmp2      ; tmp2 used to compare against zero
+align_loop
+%%_safe_data_flush:
+        cmp     qword [state + _aes_ccm_job_in_lane + tmp], tmp2
+        jne     %%_safe_data_flush_skip
+
+        ;; clear init blocks, tmp = LANE_ID * 8, tmp * 8 = LANE_ID * 64
+        vmovdqa [state + _aes_ccm_init_blocks + tmp*8 + 0*16], xtmp0
+        vmovdqa [state + _aes_ccm_init_blocks + tmp*8 + 1*16], xtmp0
+        vmovdqa [state + _aes_ccm_init_blocks + tmp*8 + 2*16], xtmp0
+        vmovdqa [state + _aes_ccm_init_blocks + tmp*8 + 3*16], xtmp0
+
+align_label
+%%_safe_data_flush_skip:
+        add     tmp, 8
+        cmp     tmp, 8*8
+        jne     %%_safe_data_flush
+
+%else ;; SUBMIT_FLUSH
+        ;; clear init block
+        shl     min_idx, 6
+        vmovdqa [state + _aes_ccm_init_blocks + min_idx + 0*16], xtmp0
+        vmovdqa [state + _aes_ccm_init_blocks + min_idx + 1*16], xtmp0
+        vmovdqa [state + _aes_ccm_init_blocks + min_idx + 2*16], xtmp0
+        vmovdqa [state + _aes_ccm_init_blocks + min_idx + 3*16], xtmp0
+%endif ;;  SUBMIT_FLUSH
+
+%endif ;; SAFE_DATA
+
 align_label
 %%_return:
         mov     rbx, [rsp + _gpr_save + 8*0]

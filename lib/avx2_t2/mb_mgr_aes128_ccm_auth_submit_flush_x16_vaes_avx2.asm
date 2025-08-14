@@ -586,31 +586,43 @@ align_label
         ;; Clear expanded keys
         vpxor   xtmp0, xtmp0
 %ifidn %%SUBMIT_FLUSH, FLUSH
-%assign LANE_ID 0
-%rep 16
-        cmp     qword [state + _aes_ccm_job_in_lane + LANE_ID*8], 0
-        jne     %%skip_clear_ %+ LANE_ID
+        xor     tmp1, tmp1      ; tmp1 = LANE_ID * 8, 16 lanes to process
+        xor     tmp2, tmp2      ; tmp2 used to compare against zero
+align_loop
+%%_safe_data_flush:
+        cmp     qword [state + _aes_ccm_job_in_lane + tmp1], tmp2
+        jne     %%_safe_data_flush_skip
 
-        ;; Clear expanded keys per lane
+        ;; clear init blocks, tmp1 = LANE_ID * 8, tmp1 * 8 = LANE_ID * 64
+        vmovdqa [state + _aes_ccm_init_blocks + tmp1*8 + 0*32], ytmp0
+        vmovdqa [state + _aes_ccm_init_blocks + tmp1*8 + 1*32], ytmp0
+
+        ;; Clear expanded keys per lane, tmp1 = LANE_ID * 8, tmp1 * 2 = LANE_ID * 16
+        lea     tmp3, [state + _aes_ccm_args_key_tab + tmp1*2]
 %assign KEY 0
 %rep NUM_KEYS
-        vmovdqa [state + _aes_ccm_args_key_tab + (LANE_ID << 4) + KEY*16*16], xtmp0
+        vmovdqa [tmp3 + KEY*16*16], xtmp0
 %assign KEY (KEY+1)
 %endrep
 
 align_label
-%%skip_clear_ %+ LANE_ID:
-%assign LANE_ID (LANE_ID+1)
-%endrep
+%%_safe_data_flush_skip:
+        add     tmp1, 8
+        cmp     tmp1, 16*8
+        jne     %%_safe_data_flush
 
 %else ;; SUBMIT_FLUSH
         shl     min_idx, 4
+        lea     tmp1, [state + _aes_ccm_args_key_tab + min_idx]
         ;; Clear expanded keys for processed lane
 %assign key_round 0
 %rep NUM_KEYS
-        vmovdqa [state + _aes_ccm_args_key_tab + key_round * (16*16) + min_idx], xtmp0
+        vmovdqa [tmp1 + key_round * (16*16)], xtmp0
 %assign key_round (key_round + 1)
 %endrep
+        ;; clear init block, min_idx = lane * 16, min_idx * 4 = lane * 64
+        vmovdqa [state + _aes_ccm_init_blocks + min_idx*4 + 0*32], ytmp0
+        vmovdqa [state + _aes_ccm_init_blocks + min_idx*4 + 1*32], ytmp0
 %endif ;;  SUBMIT_FLUSH
 
 %endif ;; SAFE_DATA
