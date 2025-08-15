@@ -47,8 +47,7 @@
 %endif
 
 %define E               rax
-%define qword_len       r12
-%define offset          r10
+%define rem_bits        r12
 %define tmp             r10
 %define tmp2            arg4
 %define tmp3            r11
@@ -78,10 +77,6 @@ dq      0x000000000000001b, 0x0000000000000000
 align 16
 bswap64:
 dq      0x0001020304050607, 0x08090a0b0c0d0e0f
-
-align 16
-clear_hi64:
-dq      0xffffffffffffffff, 0x0000000000000000
 
 align 16
 clear_low32:
@@ -183,6 +178,83 @@ mksection .text
 %endif
 %endmacro
 
+%macro simd_load_bswap_sse_8_1 3
+%define %%DST       %1    ; [out] destination XMM register
+%define %%SRC       %2    ; [in] pointer to src data
+%define %%SIZE      %3    ; [in] length in bytes (1-8 bytes)
+
+        pxor    %%DST, %%DST ; clear XMM register
+        cmp     %%SIZE, 2
+        jb      %%_size_1
+        je      %%_size_2
+        cmp     %%SIZE, 4
+        jb      %%_size_3
+        je      %%_size_4
+        cmp     %%SIZE, 6
+        jb      %%_size_5
+        je      %%_size_6
+        cmp     %%SIZE, 8
+        jb      %%_size_7
+        ;; fall through %%_size_8
+        pinsrb  %%DST, [%%SRC + 7], 0
+%%_size_7:
+        pinsrb  %%DST, [%%SRC + 6], 1
+%%_size_6:
+        pinsrb  %%DST, [%%SRC + 5], 2
+%%_size_5:
+        pinsrb  %%DST, [%%SRC + 4], 3
+%%_size_4:
+        pinsrb  %%DST, [%%SRC + 3], 4
+%%_size_3:
+        pinsrb  %%DST, [%%SRC + 2], 5
+%%_size_2:
+        pinsrb  %%DST, [%%SRC + 1], 6
+%%_size_1:
+        pinsrb  %%DST, [%%SRC + 0], 7
+
+%endm
+
+; rax   [in]    number of constants to compute 4 or 8
+; P1    [in]    xmm with the first hash key
+; xmm0  [out]   P1|P2
+; xmm1  [out]   P3|P4
+; xmm13 [out]   P5|P6
+; xmm14 [out]   P7|P8
+; xmm4, xmm3 [clobbered]
+
+align_function
+calc_hkey_powers:
+        cmp             rem_bits, bit_len              ;; lenInBits == remainingBits
+        jne             .return
+
+        ;; Setup powers for 8-block parallel processing and
+        ;; pack powers for parallel processing
+        movdqa          xmm1, P1
+        MUL_AND_REDUCE_TO_64 xmm1, P1, xmm4     ;; xmm1 = P2
+        movdqa          xmm0, P1
+        punpcklqdq      xmm0, xmm1              ;; xmm0 = P1|P2
+        MUL_AND_REDUCE_TO_64 xmm1, P1, xmm4     ;; xmm1 = P3
+        movdqa          xmm3, xmm1
+        MUL_AND_REDUCE_TO_64 xmm3, P1, xmm4     ;; xmm3 = P4
+        punpcklqdq      xmm1, xmm3              ;; xmm1 = P3|P4
+
+        cmp             eax, 8
+        jb              .return
+
+        ;; Compute additional powers P5, P6, P7, P8
+        MUL_AND_REDUCE_TO_64 xmm3, P1, xmm4     ;; xmm3 = P5
+        movdqa          xmm13, xmm3
+        MUL_AND_REDUCE_TO_64 xmm3, P1, xmm4     ;; xmm3 = P6
+        punpcklqdq      xmm13, xmm3             ;; xmm13 = P5|P6
+        MUL_AND_REDUCE_TO_64 xmm3, P1, xmm4     ;; xmm3 = P7
+        movdqa          xmm14, xmm3
+        MUL_AND_REDUCE_TO_64 xmm3, P1, xmm4     ;; xmm3 = P8
+        punpcklqdq      xmm14, xmm3             ;; xmm14 = P7|P8
+
+align_label
+.return:
+        ret
+
 ;; uint32_t
 ;; snow3g_f9_1_buffer_internal_sse(const uint64_t *pBufferIn,
 ;;                                 const uint32_t KS[5],
@@ -204,59 +276,29 @@ SNOW3G_F9_1_BUFFER_INTERNAL:
         movq    P1, [KS]
         pshufd  P1, P1, 1110_0001b
 
-        xor     offset, offset
+        mov     rem_bits, bit_len              ;; Initialize bits counter
 
-        mov     qword_len, bit_len              ;; lenInBits -> lenInQwords
-        shr     qword_len, 6
-        je      partial_blk
+        cmp     rem_bits, 8*8                  ;; less than 64-bits?
+        jb      .partial_blk
+        je      .single_blk_chk
 
-        ;; Process 8 blocks at a time only for messages >= 320 bytes (40 qwords)
-        cmp     qword_len, 8
-        jb      check_4_blocks
+        cmp     rem_bits, 8*8*8                ;; check at least 8 qwords in bits
+        jb      .check_4_blocks
 
-        ;; Setup powers for 8-block parallel processing
-        movdqa  xmm1, P1
-        MUL_AND_REDUCE_TO_64 xmm1, P1, xmm4     ;; xmm1 = P2
-        movdqa  xmm5, xmm1
-        MUL_AND_REDUCE_TO_64 xmm5, P1, xmm4     ;; xmm5 = P3
-        movq    xmm5, xmm5
-        movdqa  xmm3, xmm5
-        MUL_AND_REDUCE_TO_64 xmm3, P1, xmm4     ;; xmm3 = P4
-        
-        ;; Compute additional powers P5, P6, P7, P8
-        movdqa  xmm9, xmm3
-        MUL_AND_REDUCE_TO_64 xmm9, P1, xmm4     ;; xmm9 = P5
-        movdqa  xmm10, xmm9
-        MUL_AND_REDUCE_TO_64 xmm10, P1, xmm4    ;; xmm10 = P6
-        movdqa  xmm11, xmm10
-        MUL_AND_REDUCE_TO_64 xmm11, P1, xmm4    ;; xmm11 = P7
-        movdqa  xmm12, xmm11
-        MUL_AND_REDUCE_TO_64 xmm12, P1, xmm4    ;; xmm12 = P8
-
-        ;; Pack powers for parallel processing
-        movdqa     xmm0, P1
-        punpcklqdq xmm0, xmm1                   ;; xmm0 = P1|P2
-        movdqa     xmm1, xmm5
-        punpcklqdq xmm1, xmm3                   ;; xmm1 = P3|P4
-        movdqa     xmm13, xmm9
-        punpcklqdq xmm13, xmm10                 ;; xmm13 = P5|P6
-        movdqa     xmm14, xmm11
-        punpcklqdq xmm14, xmm12                 ;; xmm14 = P7|P8
-
-        mov     end_offset, qword_len
-        and     end_offset, 0xfffffffffffffff8  ;; round down to nearest 8 blocks
+        mov     eax, 8
+        call    calc_hkey_powers
 
 align_loop
-start_8_blk_loop:
+.start_8_blk_loop:
         ;; Load all 8 blocks (64 bytes total)
-        movdqu          xmm3, [in_ptr + offset * 8]      ;; blocks 1,2
-        movdqu          xmm4, [in_ptr + offset * 8 + 16] ;; blocks 3,4
-        movdqu          xmm5, [in_ptr + offset * 8 + 32] ;; blocks 5,6
-        movdqu          xmm15, [in_ptr + offset * 8 + 48];; blocks 7,8
+        movdqu          xmm3, [in_ptr + 0*16]           ;; blocks 1,2
+        movdqu          xmm4, [in_ptr + 1*16]           ;; blocks 3,4
+        movdqu          xmm5, [in_ptr + 2*16]           ;; blocks 5,6
+        movdqu          xmm15, [in_ptr + 3*16]          ;; blocks 7,8
 
         ;; Byte swap all 8 blocks
         pshufb          xmm3, xmm6                       ;; swap blocks 1,2
-        pshufb          xmm4, xmm6                       ;; swap blocks 3,4  
+        pshufb          xmm4, xmm6                       ;; swap blocks 3,4
         pshufb          xmm5, xmm6                       ;; swap blocks 5,6
         pshufb          xmm15, xmm6                      ;; swap blocks 7,8
 
@@ -294,112 +336,94 @@ start_8_blk_loop:
         REDUCE_TO_64    EV, xmm3                         ;; EV = reduce128_to_64(result);
         movq            EV, EV                           ;; clear high 64 bits
 
-        add     	offset, 8                                ;; move to next 8 blocks
-        cmp     	end_offset, offset
-        jne     	start_8_blk_loop                         ;; process next 8 blocks
+        add     	in_ptr, 8*8                     ;; move to next 8 8-byte blocks
+        sub             rem_bits, 8*8*8
+        cmp     	rem_bits, 8*8*8
+        jae     	.start_8_blk_loop                ;; process next 8 blocks
 
 align_label
-check_4_blocks:
-        mov     	end_offset, qword_len
-        and     	end_offset, 0xfffffffffffffffc  ;; round down to nearest 4 blocks
-        cmp     	end_offset, offset              ;; check if any 4-block groups left
-        jbe     	single_blk_chk
+.check_4_blocks:
+        cmp     	rem_bits, 4*8*8                 ;; check if any 4-block groups left
+        jb      	.single_blk_chk
 
-        ;; Setup powers if we didn't come from 8-block processing
-        or     		offset, offset
-        jne     	start_4_blk_loop                      ;; powers already setup from 8-block loop
-        
-        movdqa  	xmm1, P1
-        MUL_AND_REDUCE_TO_64 xmm1, P1, xmm4     ;; xmm1 = P2
-        movdqa  	xmm5, xmm1
-        MUL_AND_REDUCE_TO_64 xmm5, P1, xmm4     ;; xmm5 = P3
-        movq    	xmm5, xmm5
-        movdqa  	xmm3, xmm5
-        MUL_AND_REDUCE_TO_64 xmm3, P1, xmm4     ;; xmm3 = P4
+        mov             eax, 4
+        call            calc_hkey_powers
 
-        movdqa     	xmm0, P1
-        punpcklqdq 	xmm0, xmm1                   ;; xmm0 = p1p2
-        movdqa     	xmm1, xmm5
-        punpcklqdq 	xmm1, xmm3                   ;; xmm1 = p3p4
+        ;; Load all 4 blocks (32 bytes total)
+        movdqu          xmm3, [in_ptr + 0*16]           ;; blocks 1,2
+        movdqu          xmm4, [in_ptr + 1*16]           ;; blocks 3,4
 
-align_label
-start_4_blk_loop:
-        movdqu          xmm3, [in_ptr + offset * 8]
-        movdqu          xmm4, [in_ptr + offset * 8 + 16]
+        ;; Byte swap all 4 blocks
+        pshufb          xmm3, xmm6                       ;; swap blocks 1,2
+        pshufb          xmm4, xmm6                       ;; swap blocks 3,4  
 
-        pshufb          xmm3, xmm6
-        pshufb          xmm4, xmm6
+        ;; XOR first block with EV
+        pxor            xmm3, EV                         ;; block1 XOR EV, block2 unchanged
 
-        pxor            xmm3, EV                ;; m1 XOR EV
+        ;; Process blocks 1,2 with powers P8,P7
+        movdqa          xmm2, xmm3
+        pclmulqdq       xmm2, xmm1, 0x10                 ;; block1 * P4
+        pclmulqdq       xmm3, xmm1, 0x01                 ;; block2 * P3
+        pxor            xmm2, xmm3                       ;; combine results
 
-        movdqa          xmm5, xmm4
+        ;; Process blocks 3,4 with powers P6,P5
+        movdqa          xmm3, xmm4
+        pclmulqdq       xmm3, xmm0, 0x10                 ;; block3 * P2
+        pclmulqdq       xmm4, xmm0, 0x01                 ;; block4 * P1
+        pxor            xmm3, xmm4                       ;; combine results
+        pxor            xmm2, xmm3                       ;; accumulate
 
-        pclmulqdq       xmm5, xmm0, 0x10        ;; t1 = pclmulqdq_wrap(m2, p1p2, 0x10);
-        pclmulqdq       xmm4, xmm0, 0x01        ;; t2 = pclmulqdq_wrap(m2, p1p2, 0x01);
+        movdqa          EV, xmm2                         ;; final result
 
-        pxor            xmm5, xmm4
-
-        movdqa          EV, xmm3
-        pclmulqdq       EV, xmm1, 0x10          ;; t2 = pclmulqdq_wrap(m1, p3p4, 0x10);
-        pclmulqdq       xmm3, xmm1, 0x01        ;; t3 = pclmulqdq_wrap(m1, p3p4, 0x01);
-
-        pxor            EV, xmm3                ;; t2 = _mm_xor_si128(t2, t3);
-        pxor            EV, xmm5                ;; t1 = _mm_xor_si128(t2, t1);
-
-        REDUCE_TO_64    EV, xmm3                ;; EV = reduce128_to_64(t1);
-
-        movq            EV, EV    ;; EV = _mm_and_si128(EV, clear_hi64);
+        REDUCE_TO_64    EV, xmm3                         ;; EV = reduce128_to_64(result);
+        movq            EV, EV                           ;; clear high 64 bits
  
-        ;; less than 4 blocks left
-        add     	offset, 4                       ;; move past the 4 blocks processed
-        jmp     	single_blk_chk
+        add     	in_ptr, 4*8             ;; move to the next 4 blocks
+        sub     	rem_bits, 4*8*8
 
 align_loop
-start_single_blk_loop:
-        movq    xmm0, [in_ptr + offset * 8]
-        pshufb  xmm0, xmm6
-        pxor    EV, xmm0
+.single_blk_chk:
+        cmp     	rem_bits, 8*8
+        jb     	        .partial_blk
+
+        ;; full block still available
+        movq            xmm0, [in_ptr]
+        pshufb          xmm0, xmm6
+
+        pxor            EV, xmm0
         MUL_AND_REDUCE_TO_64 EV, P1, xmm1
 
-        inc     offset
+        add             in_ptr, 8
+        sub             rem_bits, 8*8
+        jmp             .single_blk_chk
 
+        ;; partial block
 align_label
-single_blk_chk:
-        cmp     qword_len, offset
-        ja      start_single_blk_loop
+.partial_blk:
+        or              rem_bits, rem_bits
+        jz              .skip_rem_bits
 
-align_label
-partial_blk:
-        mov     tmp5, 0x3f      ;; len_in_bits % 64
-        and     tmp5, bit_len
-        jz      skip_rem_bits
+        ;; load last 8 to 1 bytes
+        lea             tmp2, [rem_bits + 7]        ;; (rem_bits + 7) / 8
+        shr             tmp2, 3
 
-        ;; load last N bytes
-        mov     tmp2, tmp5      ;; (rem_bits + 7) / 8
-        add     tmp2, 7
-        shr     tmp2, 3
+        simd_load_bswap_sse_8_1 xmm3, in_ptr, tmp2
+        movq            tmp3, xmm3
 
-        shl     offset, 3       ;; qwords -> bytes
-        add     in_ptr, offset  ;; in + offset to last block
-
-        simd_load_sse_15_1 xmm3, in_ptr, tmp2
-        movq    tmp3, xmm3
-        bswap   tmp3
-
-        mov     tmp, 0xffffffffffffffff
-        mov     tmp6, 64
-        sub     tmp6, tmp5
+        mov             tmp, 0xffffffffffffffff
+        mov             tmp6, 64
+        sub             tmp6, rem_bits
 
         SHIFT_GP tmp, tmp6, tmp, tmp5, left
 
-        and     tmp3, tmp       ;;  V &= (((uint64_t)-1) << (64 - rem_bits)); /* mask extra bits */
-        movq    xmm0, tmp3
-        pxor    EV, xmm0
+        and             tmp3, tmp       ;;  V &= (((uint64_t)-1) << (64 - rem_bits)); /* mask extra bits */
+        movq            xmm0, tmp3
 
-        MUL_AND_REDUCE_TO_64 EV, P1, xmm3
+        pxor            EV, xmm0
+        MUL_AND_REDUCE_TO_64 EV, P1, xmm1
 
 align_label
-skip_rem_bits:
+.skip_rem_bits:
         ;; /* Multiply by Q */
         ;; E = multiply_and_reduce64(E ^ lengthInBits,
         ;;                           (((uint64_t)z[2] << 32) | ((uint64_t)z[3])));
@@ -412,11 +436,12 @@ skip_rem_bits:
         movq    xmm1, [KS + 8]                  ;; load z[2:3]
         pshufd  xmm1, xmm1, 1110_0001b
 
-        mov     DWORD(tmp4), [KS + (4 * 4)]         ;; tmp4 == z[4] << 32
+        mov     DWORD(tmp4), [KS + (4 * 4)]     ;; tmp4 == z[4] << 32
         shl     tmp4, 32
 
         MUL_AND_REDUCE_TO_64 EV, xmm1, xmm3
         movq    E, EV
+
         xor     E, tmp4
 
         bswap   E                               ;; return E (rax/eax)
