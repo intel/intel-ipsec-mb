@@ -39,6 +39,7 @@
 #include "prov_sw_gcm.h"
 #include "prov_sw_sha.h"
 #include "prov_sw_hmac_sha.h"
+#include "prov_sw_chacha20.h"
 
 OSSL_PROVIDER *prov = NULL;
 
@@ -87,6 +88,7 @@ extern const OSSL_DISPATCH prov_sm4cbc_functions[];
 extern const OSSL_DISPATCH prov_sm4ctr_functions[];
 extern const OSSL_DISPATCH prov_sm4gcm_functions[];
 extern const OSSL_DISPATCH prov_chacha20_poly1305_functions[];
+extern const OSSL_DISPATCH prov_chacha20_functions[];
 
 PROV_PARAMS prov_params;
 
@@ -149,6 +151,7 @@ static const OSSL_ALGORITHM_CAPABLE prov_deflt_ciphers[] = {
         ALG(PROV_NAMES_SM4_CTR, prov_sm4ctr_functions),
         ALG(PROV_NAMES_SM4_GCM, prov_sm4gcm_functions),
         ALG(PROV_NAMES_CHACHA20_POLY1305, prov_chacha20_poly1305_functions),
+        ALG(PROV_NAMES_CHACHA20, prov_chacha20_functions),
         { { NULL, NULL, NULL }, NULL }
 };
 

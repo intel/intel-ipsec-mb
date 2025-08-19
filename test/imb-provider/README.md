@@ -70,6 +70,7 @@ The `imb-provider` supports the following cryptographic algorithms:
     - SM4-CTR
     - SM4-GCM
     - ChaCha20-Poly1305
+    - ChaCha20
 
     To test the OpenSSL speed, use ```-evp aes-256-gcm```, ```-evp aes-128-cfb```, or ```-evp sm4-gcm``` option.
 
