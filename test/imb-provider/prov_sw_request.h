@@ -110,6 +110,12 @@ typedef struct _alg_context {
         size_t L, M;
         int tag_set;
         PROV_EVP_CIPHER *cipher;
+
+        unsigned char *tag;
+        int tag_calculated;
+        unsigned char *out;
+        unsigned char chacha20_key[32]; /* ChaCha20 key (32 bytes) */
+        unsigned char chacha20_iv[12];  /* ChaCha20 IV (12 bytes) */
 } ALG_CTX;
 
 typedef struct _op_data {
