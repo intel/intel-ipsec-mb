@@ -380,6 +380,12 @@ align_label
  	mov	qword [state + _aes_cmac_job_in_lane + idx*8], 0
  	or	dword [job_rax + _status], IMB_STATUS_COMPLETED_AUTH
 
+%ifdef SAFE_DATA
+        pxor    xmm0, xmm0
+        shl     idx, 4
+        movdqa  [state + _aes_cmac_scratch + idx], xmm0
+%endif
+
 align_label
 %%_return:
 	mov	rbx, [rsp + _gpr_save + 8*0]
