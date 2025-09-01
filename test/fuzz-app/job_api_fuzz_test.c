@@ -61,6 +61,9 @@ clamp_lengths(struct IMB_JOB *job, const uint64_t buffsize)
 
         if (job->hash_start_src_offset_in_bytes > buffsize)
                 job->hash_start_src_offset_in_bytes = buffsize;
+
+        if (job->auth_tag_output_len_in_bytes > buffsize)
+                job->auth_tag_output_len_in_bytes = buffsize;
 }
 
 static void
