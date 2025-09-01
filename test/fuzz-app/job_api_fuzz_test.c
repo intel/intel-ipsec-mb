@@ -370,6 +370,24 @@ hash_selection(void)
                         return IMB_AUTH_CRC6_IUUP_HEADER;
                 else if (strcmp(a, "IMB_AUTH_GHASH") == 0)
                         return IMB_AUTH_GHASH;
+                else if (strcmp(a, "IMB_AUTH_SM3") == 0)
+                        return IMB_AUTH_SM3;
+                else if (strcmp(a, "IMB_AUTH_HMAC_SM3") == 0)
+                        return IMB_AUTH_HMAC_SM3;
+                else if (strcmp(a, "IMB_AUTH_SM4_GCM") == 0)
+                        return IMB_AUTH_SM4_GCM;
+                else if (strcmp(a, "IMB_AUTH_SHA3_224") == 0)
+                        return IMB_AUTH_SHA3_224;
+                else if (strcmp(a, "IMB_AUTH_SHA3_256") == 0)
+                        return IMB_AUTH_SHA3_256;
+                else if (strcmp(a, "IMB_AUTH_SHA3_384") == 0)
+                        return IMB_AUTH_SHA3_384;
+                else if (strcmp(a, "IMB_AUTH_SHA3_512") == 0)
+                        return IMB_AUTH_SHA3_512;
+                else if (strcmp(a, "IMB_AUTH_SHAKE128") == 0)
+                        return IMB_AUTH_SHAKE128;
+                else if (strcmp(a, "IMB_AUTH_SHAKE256") == 0)
+                        return IMB_AUTH_SHAKE256;
                 else
                         return 0;
         }
@@ -422,6 +440,18 @@ cipher_selection(void)
                         return IMB_CIPHER_CHACHA20_POLY1305_SGL;
                 else if (strcmp(a, "IMB_CIPHER_GCM_SGL") == 0)
                         return IMB_CIPHER_GCM_SGL;
+                else if (strcmp(a, "IMB_CIPHER_SM4_ECB") == 0)
+                        return IMB_CIPHER_SM4_ECB;
+                else if (strcmp(a, "IMB_CIPHER_SM4_CBC") == 0)
+                        return IMB_CIPHER_SM4_CBC;
+                else if (strcmp(a, "IMB_CIPHER_CFB") == 0)
+                        return IMB_CIPHER_CFB;
+                else if (strcmp(a, "IMB_CIPHER_SM4_CNTR") == 0)
+                        return IMB_CIPHER_SM4_CNTR;
+                else if (strcmp(a, "IMB_CIPHER_SM4_CTR") == 0)
+                        return IMB_CIPHER_SM4_CTR;
+                else if (strcmp(a, "IMB_CIPHER_SM4_GCM") == 0)
+                        return IMB_CIPHER_SM4_GCM;
                 else
                         return 0;
         }
