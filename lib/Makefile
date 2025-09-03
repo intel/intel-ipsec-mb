@@ -449,7 +449,7 @@ asm_sse_lib_objs := \
 	crc32_wimax_sse.o \
 	chacha20_sse.o \
 	memcpy_sse.o \
-	snow3g_uia2_by4_sse.o \
+	snow3g_uia2_by8_sse.o \
 	sm4_sse.o \
 	sm3_base_init_sse.o \
 	sm3_base_update_sse.o \

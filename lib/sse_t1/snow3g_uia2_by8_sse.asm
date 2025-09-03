@@ -78,18 +78,14 @@ align 16
 bswap64:
 dq      0x0001020304050607, 0x08090a0b0c0d0e0f
 
-align 16
-clear_low32:
-dd      0x00000000, 0xffffffff, 0xffffffff, 0xffffffff
-
 mksection .text
 
 %ifidn __OUTPUT_FORMAT__, win64
-        %define XMM_STORAGE     16*10
-        %define GP_STORAGE      8*8
+        %define XMM_STORAGE     16*6
+        %define GP_STORAGE      8*7
 %else
         %define XMM_STORAGE     0
-        %define GP_STORAGE      6*8
+        %define GP_STORAGE      5*8
 %endif
 
 %define VARIABLE_OFFSET XMM_STORAGE + GP_STORAGE
@@ -105,22 +101,17 @@ mksection .text
         movdqa [rsp + 0*16], xmm6
         movdqa [rsp + 1*16], xmm7
         movdqa [rsp + 2*16], xmm8
-        movdqa [rsp + 3*16], xmm9
-        movdqa [rsp + 4*16], xmm10
-        movdqa [rsp + 5*16], xmm11
-        movdqa [rsp + 6*16], xmm12
-        movdqa [rsp + 7*16], xmm13
-        movdqa [rsp + 8*16], xmm14
-        movdqa [rsp + 9*16], xmm15
-        mov     [rsp + GP_OFFSET + 48], rdi
-        mov     [rsp + GP_OFFSET + 56], rsi
+        movdqa [rsp + 3*16], xmm13
+        movdqa [rsp + 4*16], xmm14
+        movdqa [rsp + 5*16], xmm15
+        mov     [rsp + GP_OFFSET + 40], rdi
+        mov     [rsp + GP_OFFSET + 48], rsi
 %endif
         mov     [rsp + GP_OFFSET],      r12
         mov     [rsp + GP_OFFSET + 8],  r13
         mov     [rsp + GP_OFFSET + 16], r14
         mov     [rsp + GP_OFFSET + 24], r15
-        mov     [rsp + GP_OFFSET + 32], rbx
-        mov     [rsp + GP_OFFSET + 40], r11 ;; rsp pointer
+        mov     [rsp + GP_OFFSET + 32], r11 ;; rsp pointer
 %endmacro
 
 %macro FUNC_RESTORE 0
@@ -129,22 +120,17 @@ mksection .text
         movdqa xmm6,  [rsp + 0*16]
         movdqa xmm7,  [rsp + 1*16]
         movdqa xmm8,  [rsp + 2*16]
-        movdqa xmm9,  [rsp + 3*16]
-        movdqa xmm10, [rsp + 4*16]
-        movdqa xmm11, [rsp + 5*16]
-        movdqa xmm12, [rsp + 6*16]
-        movdqa xmm13, [rsp + 7*16]
-        movdqa xmm14, [rsp + 8*16]
-        movdqa xmm15, [rsp + 9*16]
-        mov     rdi, [rsp + GP_OFFSET + 48]
-        mov     rsi, [rsp + GP_OFFSET + 56]
+        movdqa xmm13, [rsp + 3*16]
+        movdqa xmm14, [rsp + 4*16]
+        movdqa xmm15, [rsp + 5*16]
+        mov     rdi, [rsp + GP_OFFSET + 40]
+        mov     rsi, [rsp + GP_OFFSET + 48]
 %endif
         mov     r12, [rsp + GP_OFFSET]
         mov     r13, [rsp + GP_OFFSET + 8]
         mov     r14, [rsp + GP_OFFSET + 16]
         mov     r15, [rsp + GP_OFFSET + 24]
-        mov     rbx, [rsp + GP_OFFSET + 32]
-        mov     rsp, [rsp + GP_OFFSET + 40]
+        mov     rsp, [rsp + GP_OFFSET + 32]
 %endmacro
 
 ;; Reduce from 128 bits to 64 bits

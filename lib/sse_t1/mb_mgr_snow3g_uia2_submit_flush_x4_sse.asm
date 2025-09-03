@@ -41,6 +41,13 @@
 
 extern SNOW3G_F9_1_BUFFER_INT
 
+mksection .rodata
+default rel
+
+align 16
+lane_mask_tab:
+	dw ~(1 << 0), ~(1 << 1), ~(1 << 2), ~(1 << 3)
+
 mksection .text
 %ifdef LINUX
 %define arg1    rdi
@@ -237,7 +244,10 @@ align_label
         shl     %%UNUSED_LANES, 4
         or      %%UNUSED_LANES, %%LANE
         mov     [state + _snow3g_unused_lanes], %%UNUSED_LANES
-        btr     [state + _snow3g_init_done], WORD(%%LANE)
+        ;; replacement for slow `btr word [state + _snow3g_init_done], WORD(%%LANE)`
+        lea     %%TGP1, [rel lane_mask_tab]
+        mov     WORD(%%TGP1), [%%TGP1 + %%LANE*2]
+        and     [state + _snow3g_init_done], WORD(%%TGP1)
 
 %ifdef SAFE_DATA
         ;; clear keystream for processed job
