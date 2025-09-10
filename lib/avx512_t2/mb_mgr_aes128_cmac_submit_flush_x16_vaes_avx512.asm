@@ -52,18 +52,18 @@ mksection .text
 %define APPEND(a,b) a %+ b
 
 %ifdef LINUX
-%define arg1	rdi
-%define arg2	rsi
+%define arg1    rdi
+%define arg2    rsi
 %define arg3    rdx
 %else
-%define arg1	rcx
-%define arg2	rdx
+%define arg1    rcx
+%define arg2    rdx
 %define arg3    r8
 %endif
 
-%define state	arg1
-%define job	arg2
-%define len2	arg2
+%define state   arg1
+%define job     arg2
+%define len2    arg2
 
 %define job_rax          rax
 
@@ -90,8 +90,8 @@ mksection .text
 ; STACK_SPACE needs to be an odd multiple of 8
 ; This routine and its callee clobbers all GPRs
 struc STACK
-_gpr_save:	resq	8
-_rsp_save:	resq	1
+_gpr_save:      resq    8
+_rsp_save:      resq    1
 endstruc
 
 ;;; ===========================================================================
@@ -160,35 +160,35 @@ endstruc
 %macro GENERIC_SUBMIT_FLUSH_JOB_AES_CMAC_VAES_AVX512 1
 %define %%SUBMIT_FLUSH %1
 
-        mov	rax, rsp
-        sub	rsp, STACK_size
-        and	rsp, -16
+        mov     rax, rsp
+        sub     rsp, STACK_size
+        and     rsp, -16
 
-	mov	[rsp + _gpr_save + 8*0], rbx
-	mov	[rsp + _gpr_save + 8*1], rbp
-	mov	[rsp + _gpr_save + 8*2], r12
-	mov	[rsp + _gpr_save + 8*3], r13
-	mov	[rsp + _gpr_save + 8*4], r14
-	mov	[rsp + _gpr_save + 8*5], r15
+        mov     [rsp + _gpr_save + 8*0], rbx
+        mov     [rsp + _gpr_save + 8*1], rbp
+        mov     [rsp + _gpr_save + 8*2], r12
+        mov     [rsp + _gpr_save + 8*3], r13
+        mov     [rsp + _gpr_save + 8*4], r14
+        mov     [rsp + _gpr_save + 8*5], r15
 %ifndef LINUX
-	mov	[rsp + _gpr_save + 8*6], rsi
-	mov	[rsp + _gpr_save + 8*7], rdi
+        mov     [rsp + _gpr_save + 8*6], rsi
+        mov     [rsp + _gpr_save + 8*7], rdi
 %endif
-	mov	[rsp + _rsp_save], rax	; original SP
+        mov     [rsp + _rsp_save], rax  ; original SP
 
         ;; Find free lane
- 	mov	unused_lanes, [state + _aes_cmac_unused_lanes]
+        mov     unused_lanes, [state + _aes_cmac_unused_lanes]
 
 %ifidn %%SUBMIT_FLUSH, SUBMIT
 
- 	mov	lane, unused_lanes
-        and	lane, 0xF
- 	shr	unused_lanes, 4
- 	mov	[state + _aes_cmac_unused_lanes], unused_lanes
+        mov     lane, unused_lanes
+        and     lane, 0xF
+        shr     unused_lanes, 4
+        mov     [state + _aes_cmac_unused_lanes], unused_lanes
         add     qword [state + _aes_cmac_num_lanes_inuse], 1
 
         ;; Copy job info into lane
- 	mov	[state + _aes_cmac_job_in_lane + lane*8], job
+        mov     [state + _aes_cmac_job_in_lane + lane*8], job
 
         mov     tmp, lane
         shl     tmp, 4  ; lane*16
@@ -424,7 +424,7 @@ align_label
 align_label
 %%_copy_complete_digest:
         ; Job complete, copy digest to AT output
- 	mov	job_rax, [state + _aes_cmac_job_in_lane + idx*8]
+        mov     job_rax, [state + _aes_cmac_job_in_lane + idx*8]
 
         mov     tmp4, idx
         shl     tmp4, 4
@@ -462,17 +462,17 @@ align_label
 align_label
 %%_update_lanes:
         ; Update unused lanes
-        mov	unused_lanes, [state + _aes_cmac_unused_lanes]
-        shl	unused_lanes, 4
- 	or	unused_lanes, idx
- 	mov	[state + _aes_cmac_unused_lanes], unused_lanes
+        mov     unused_lanes, [state + _aes_cmac_unused_lanes]
+        shl     unused_lanes, 4
+        or      unused_lanes, idx
+        mov     [state + _aes_cmac_unused_lanes], unused_lanes
         sub     qword [state + _aes_cmac_num_lanes_inuse], 1
 
         ; Set return job
-        mov	job_rax, [state + _aes_cmac_job_in_lane + idx*8]
+        mov     job_rax, [state + _aes_cmac_job_in_lane + idx*8]
 
- 	mov	qword [state + _aes_cmac_job_in_lane + idx*8], 0
- 	or	dword [job_rax + _status], IMB_STATUS_COMPLETED_AUTH
+        mov     qword [state + _aes_cmac_job_in_lane + idx*8], 0
+        or      dword [job_rax + _status], IMB_STATUS_COMPLETED_AUTH
 
 %ifdef SAFE_DATA
         vpxor   xmm0, xmm0
@@ -493,28 +493,28 @@ align_label
 align_label
 %%_return:
 %ifdef SAFE_DATA
-	clear_all_zmms_asm
+        clear_all_zmms_asm
 %else
         vzeroupper
 %endif ;; SAFE_DATA
 
-        mov	rbx, [rsp + _gpr_save + 8*0]
-	mov	rbp, [rsp + _gpr_save + 8*1]
-	mov	r12, [rsp + _gpr_save + 8*2]
-	mov	r13, [rsp + _gpr_save + 8*3]
-	mov	r14, [rsp + _gpr_save + 8*4]
-	mov	r15, [rsp + _gpr_save + 8*5]
+        mov     rbx, [rsp + _gpr_save + 8*0]
+        mov     rbp, [rsp + _gpr_save + 8*1]
+        mov     r12, [rsp + _gpr_save + 8*2]
+        mov     r13, [rsp + _gpr_save + 8*3]
+        mov     r14, [rsp + _gpr_save + 8*4]
+        mov     r15, [rsp + _gpr_save + 8*5]
 %ifndef LINUX
-	mov	rsi, [rsp + _gpr_save + 8*6]
-	mov	rdi, [rsp + _gpr_save + 8*7]
+        mov     rsi, [rsp + _gpr_save + 8*6]
+        mov     rdi, [rsp + _gpr_save + 8*7]
 %endif
-	mov	rsp, [rsp + _rsp_save]	; original SP
-	ret
+        mov     rsp, [rsp + _rsp_save]  ; original SP
+        ret
 
 align_label
 %%_return_null:
-	xor	job_rax, job_rax
-	jmp	%%_return
+        xor     job_rax, job_rax
+        jmp     %%_return
 
 %ifidn %%SUBMIT_FLUSH, SUBMIT
 align_label
@@ -603,7 +603,7 @@ align_label
 
         ;; save and restore rcx on windows
 %ifndef LINUX
-	mov	tmp, rcx
+        mov     tmp, rcx
 %endif
         mov     rcx, rbits
         mov     tmp3, 0xff
@@ -614,7 +614,7 @@ align_label
         ;; pad final byte
         vpandn  xmm2, xmm4
 %ifndef LINUX
-	mov	rcx, tmp
+        mov     rcx, tmp
 %endif
         ;; set OR mask to pad final bit
         mov     tmp2, tmp3

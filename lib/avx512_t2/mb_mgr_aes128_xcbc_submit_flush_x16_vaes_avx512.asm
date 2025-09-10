@@ -59,18 +59,18 @@ byte_len_to_mask_table:
 mksection .text
 
 %ifdef LINUX
-%define arg1	rdi
-%define arg2	rsi
+%define arg1    rdi
+%define arg2    rsi
 %define arg3    rdx
 %else
-%define arg1	rcx
-%define arg2	rdx
+%define arg1    rcx
+%define arg2    rdx
 %define arg3    r8
 %endif
 
-%define state	arg1
-%define job	arg2
-%define len2	arg2
+%define state   arg1
+%define job     arg2
+%define len2    arg2
 
 %define job_rax          rax
 
@@ -97,8 +97,8 @@ mksection .text
 ; STACK_SPACE needs to be an odd multiple of 8
 ; This routine and its callee clobbers all GPRs
 struc STACK
-_gpr_save:	resq	8
-_rsp_save:	resq	1
+_gpr_save:      resq    8
+_rsp_save:      resq    1
 endstruc
 
 ;;; ===========================================================================
@@ -150,60 +150,60 @@ endstruc
 %macro GENERIC_SUBMIT_FLUSH_JOB_AES_XCBC_VAES_AVX512 1
 %define %%SUBMIT_FLUSH %1
 
-        mov	rax, rsp
-        sub	rsp, STACK_size
-        and	rsp, -16
+        mov     rax, rsp
+        sub     rsp, STACK_size
+        and     rsp, -16
 
-	mov	[rsp + _gpr_save + 8*0], rbx
-	mov	[rsp + _gpr_save + 8*1], rbp
-	mov	[rsp + _gpr_save + 8*2], r12
-	mov	[rsp + _gpr_save + 8*3], r13
-	mov	[rsp + _gpr_save + 8*4], r14
-	mov	[rsp + _gpr_save + 8*5], r15
+        mov     [rsp + _gpr_save + 8*0], rbx
+        mov     [rsp + _gpr_save + 8*1], rbp
+        mov     [rsp + _gpr_save + 8*2], r12
+        mov     [rsp + _gpr_save + 8*3], r13
+        mov     [rsp + _gpr_save + 8*4], r14
+        mov     [rsp + _gpr_save + 8*5], r15
 %ifndef LINUX
-	mov	[rsp + _gpr_save + 8*6], rsi
-	mov	[rsp + _gpr_save + 8*7], rdi
+        mov     [rsp + _gpr_save + 8*6], rsi
+        mov     [rsp + _gpr_save + 8*7], rdi
 %endif
-	mov	[rsp + _rsp_save], rax	; original SP
+        mov     [rsp + _rsp_save], rax  ; original SP
 
         ;; Find free lane
- 	mov	unused_lanes, [state + _aes_xcbc_unused_lanes]
+        mov     unused_lanes, [state + _aes_xcbc_unused_lanes]
 
 %ifidn %%SUBMIT_FLUSH, SUBMIT
-	mov	lane, unused_lanes
-	and	lane, 0xF
-	shr	unused_lanes, 4
-	imul	lane_data, lane, _XCBC_LANE_DATA_size
-	lea	lane_data, [state + _aes_xcbc_ldata + lane_data]
-	mov	len, [job + _msg_len_to_hash_in_bytes]
-	mov	[state + _aes_xcbc_unused_lanes], unused_lanes
+        mov     lane, unused_lanes
+        and     lane, 0xF
+        shr     unused_lanes, 4
+        imul    lane_data, lane, _XCBC_LANE_DATA_size
+        lea     lane_data, [state + _aes_xcbc_ldata + lane_data]
+        mov     len, [job + _msg_len_to_hash_in_bytes]
+        mov     [state + _aes_xcbc_unused_lanes], unused_lanes
         add     qword [state + _aes_xcbc_num_lanes_inuse], 1
-	mov	[lane_data + _xcbc_job_in_lane], job
-	mov	dword [lane_data + _xcbc_final_done], 0
-	mov	tmp, [job + _k1_expanded]
+        mov     [lane_data + _xcbc_job_in_lane], job
+        mov     dword [lane_data + _xcbc_final_done], 0
+        mov     tmp, [job + _k1_expanded]
         INSERT_KEYS tmp, lane, tmp2, zmm4, p
-	mov	p, [job + _src]
-	add	p, [job + _hash_start_src_offset_in_bytes]
+        mov     p, [job + _src]
+        add     p, [job + _hash_start_src_offset_in_bytes]
 
-	mov	last_len, len
+        mov     last_len, len
 
-        cmp	len, 16
-	jle	%%_small_buffer
+        cmp     len, 16
+        jle     %%_small_buffer
 
-	mov	[state + _aes_xcbc_args_in + lane*8], p
-	add	p, len		; set point to end of data
+        mov     [state + _aes_xcbc_args_in + lane*8], p
+        add     p, len          ; set point to end of data
 
-	and	last_len, 15	; Check lsbs of msg len
-	jnz	%%_slow_copy	; if not 16B mult, do slow copy
+        and     last_len, 15    ; Check lsbs of msg len
+        jnz     %%_slow_copy    ; if not 16B mult, do slow copy
 
 align_label
 %%_fast_copy:
-	vmovdqu	xmm0, [p - 16]	; load last block M[n]
+        vmovdqu xmm0, [p - 16]  ; load last block M[n]
         mov     tmp, [job + _k2] ; load K2 address
         vmovdqu xmm1, [tmp]     ; load K2
         vpxor   xmm0, xmm0, xmm1      ; M[n] XOR K2
-	vmovdqa	[lane_data + _xcbc_final_block], xmm0
-	sub	len, 16		; take last block off length
+        vmovdqa [lane_data + _xcbc_final_block], xmm0
+        sub     len, 16         ; take last block off length
 align_label
 %%_end_fast_copy:
         ;; Update lane len
@@ -216,12 +216,12 @@ align_label
         vmovdqu16       ymm0{k1}, ymm1
         vmovdqa64       [state + _aes_xcbc_lens], ymm0
 
-	vpxor	xmm1, xmm1, xmm1
-	shl	lane, 4	; multiply by 16
-	vmovdqa	[state + _aes_xcbc_args_ICV + lane], xmm1
+        vpxor   xmm1, xmm1, xmm1
+        shl     lane, 4 ; multiply by 16
+        vmovdqa [state + _aes_xcbc_args_ICV + lane], xmm1
 
         cmp     qword [state + _aes_xcbc_num_lanes_inuse], 16
-	jne	%%_return_null
+        jne     %%_return_null
 
         ;; Find min length for lanes 0-7
         vphminposuw xmm2, xmm0
@@ -294,25 +294,25 @@ align_label
         vpsubw          ymm0, ymm0, ymm3
         vmovdqa         [state + _aes_xcbc_lens], ymm0
 
-	; "state" and "args" are the same address, arg1
-	; len is arg2
+        ; "state" and "args" are the same address, arg1
+        ; len is arg2
 %ifidn %%SUBMIT_FLUSH, SUBMIT
         call    AES_XCBC_X16
 %else
         ; valid lane mask is arg3
         call    AES_XCBC_X16_FLUSH
 %endif
-	; state and idx are intact
+        ; state and idx are intact
 
 align_label
 %%_len_is_0:
-	; process completed job "idx"
-	imul	lane_data, idx, _XCBC_LANE_DATA_size
-	lea	lane_data, [state + _aes_xcbc_ldata + lane_data]
-	cmp	dword [lane_data + _xcbc_final_done], 0
-	jne	%%_end_loop
+        ; process completed job "idx"
+        imul    lane_data, idx, _XCBC_LANE_DATA_size
+        lea     lane_data, [state + _aes_xcbc_ldata + lane_data]
+        cmp     dword [lane_data + _xcbc_final_done], 0
+        jne     %%_end_loop
 
-	mov	dword [lane_data + _xcbc_final_done], 1
+        mov     dword [lane_data + _xcbc_final_done], 1
 
         ;; Update lane len
         vmovdqa64 ymm0, [state + _aes_xcbc_lens]
@@ -337,7 +337,7 @@ align_label
         ;; Find min length for lanes 0-7
         vphminposuw xmm2, xmm0
 
-        lea	tmp, [lane_data + _xcbc_final_block]
+        lea     tmp, [lane_data + _xcbc_final_block]
 
 %ifidn %%SUBMIT_FLUSH, FLUSH
         ;; update input pointers for idx (processed) lane
@@ -353,27 +353,27 @@ align_label
         kmovw           DWORD(arg3), k4
 %else
         ;; only update processed lane input pointer on submit
-        mov	[state + _aes_xcbc_args_in + 8*idx], tmp
+        mov     [state + _aes_xcbc_args_in + 8*idx], tmp
 %endif
 
-	jmp	%%_start_loop
+        jmp     %%_start_loop
 
 align_label
 %%_end_loop:
-	; process completed job "idx"
-	mov	job_rax, [lane_data + _xcbc_job_in_lane]
-	mov	icv, [job_rax + _auth_tag_output]
-	mov	unused_lanes, [state + _aes_xcbc_unused_lanes]
-	mov	qword [lane_data + _xcbc_job_in_lane], 0
-	or	dword [job_rax + _status], IMB_STATUS_COMPLETED_AUTH
-	shl	unused_lanes, 4
-	or	unused_lanes, idx
-	shl	idx, 4 ; multiply by 16
-	mov	[state + _aes_xcbc_unused_lanes], unused_lanes
+        ; process completed job "idx"
+        mov     job_rax, [lane_data + _xcbc_job_in_lane]
+        mov     icv, [job_rax + _auth_tag_output]
+        mov     unused_lanes, [state + _aes_xcbc_unused_lanes]
+        mov     qword [lane_data + _xcbc_job_in_lane], 0
+        or      dword [job_rax + _status], IMB_STATUS_COMPLETED_AUTH
+        shl     unused_lanes, 4
+        or      unused_lanes, idx
+        shl     idx, 4 ; multiply by 16
+        mov     [state + _aes_xcbc_unused_lanes], unused_lanes
         sub     qword [state + _aes_xcbc_num_lanes_inuse], 1
 
-	; copy 12 bytes
-	vmovdqa	xmm0, [state + _aes_xcbc_args_ICV + idx]
+        ; copy 12 bytes
+        vmovdqa xmm0, [state + _aes_xcbc_args_ICV + idx]
         mov     tmp, 0xfff
         kmovw   k1, DWORD(tmp)
         vmovdqu8 [icv]{k1}, xmm0
@@ -395,42 +395,42 @@ align_label
 %%_return:
 
 %ifdef SAFE_DATA
-	clear_all_zmms_asm
+        clear_all_zmms_asm
 %else
         vzeroupper
 %endif ;; SAFE_DATA
 
-	mov	rbx, [rsp + _gpr_save + 8*0]
-	mov	rbp, [rsp + _gpr_save + 8*1]
-	mov	r12, [rsp + _gpr_save + 8*2]
-	mov	r13, [rsp + _gpr_save + 8*3]
-	mov	r14, [rsp + _gpr_save + 8*4]
-	mov	r15, [rsp + _gpr_save + 8*5]
+        mov     rbx, [rsp + _gpr_save + 8*0]
+        mov     rbp, [rsp + _gpr_save + 8*1]
+        mov     r12, [rsp + _gpr_save + 8*2]
+        mov     r13, [rsp + _gpr_save + 8*3]
+        mov     r14, [rsp + _gpr_save + 8*4]
+        mov     r15, [rsp + _gpr_save + 8*5]
 %ifndef LINUX
-	mov	rsi, [rsp + _gpr_save + 8*6]
-	mov	rdi, [rsp + _gpr_save + 8*7]
+        mov     rsi, [rsp + _gpr_save + 8*6]
+        mov     rdi, [rsp + _gpr_save + 8*7]
 %endif
-	mov	rsp, [rsp + _rsp_save]	; original SP
+        mov     rsp, [rsp + _rsp_save]  ; original SP
 
         ret
 
 %ifidn %%SUBMIT_FLUSH, SUBMIT
 align_label
 %%_small_buffer:
-	; For buffers <= 16 Bytes
-	; The input data is set to final block
-	lea	tmp, [lane_data + _xcbc_final_block] ; final block
-	mov	[state + _aes_xcbc_args_in + lane*8], tmp
-	add	p, len		; set point to end of data
-	cmp	len, 16
-	je	%%_fast_copy
+        ; For buffers <= 16 Bytes
+        ; The input data is set to final block
+        lea     tmp, [lane_data + _xcbc_final_block] ; final block
+        mov     [state + _aes_xcbc_args_in + lane*8], tmp
+        add     p, len          ; set point to end of data
+        cmp     len, 16
+        je      %%_fast_copy
 
 align_label
 %%_slow_copy:
-	and	len, ~15	; take final block off len
-	sub	p, last_len	; adjust data pointer
-	lea	p2, [lane_data + _xcbc_final_block + 16] ; upper part of final
-	sub	p2, last_len	; adjust data pointer backwards
+        and     len, ~15        ; take final block off len
+        sub     p, last_len     ; adjust data pointer
+        lea     p2, [lane_data + _xcbc_final_block + 16] ; upper part of final
+        sub     p2, last_len    ; adjust data pointer backwards
 
         lea     tmp, [rel byte_len_to_mask_table]
         kmovw   k1, word [tmp + last_len*2]
@@ -440,20 +440,20 @@ align_label
 
         mov     tmp, 0x80
         vmovq   xmm0, tmp
-	vmovdqu	[lane_data + _xcbc_final_block + 16], xmm0 ; add padding
-	vmovdqu	xmm0, [p2]	; load final block to process
-	mov	tmp, [job + _k3] ; load K3 address
-	vmovdqu	xmm1, [tmp]	; load K3
-	vpxor	xmm0, xmm0, xmm1	; M[n] XOR K3
-	vmovdqu	[lane_data + _xcbc_final_block], xmm0	; write final block
-	jmp	%%_end_fast_copy
+        vmovdqu [lane_data + _xcbc_final_block + 16], xmm0 ; add padding
+        vmovdqu xmm0, [p2]      ; load final block to process
+        mov     tmp, [job + _k3] ; load K3 address
+        vmovdqu xmm1, [tmp]     ; load K3
+        vpxor   xmm0, xmm0, xmm1        ; M[n] XOR K3
+        vmovdqu [lane_data + _xcbc_final_block], xmm0   ; write final block
+        jmp     %%_end_fast_copy
 
 %endif ; SUBMIT
 
 align_label
 %%_return_null:
-	xor	job_rax, job_rax
-	jmp	%%_return
+        xor     job_rax, job_rax
+        jmp     %%_return
 
 %endmacro
 

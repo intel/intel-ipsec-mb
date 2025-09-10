@@ -35,14 +35,14 @@
 %include "include/align_avx512.inc"
 
 %ifndef LINUX
-%xdefine	arg1 rcx
-%xdefine	arg2 rdx
-%xdefine	arg3 r8
+%xdefine        arg1 rcx
+%xdefine        arg2 rdx
+%xdefine        arg3 r8
 %xdefine        arg4 r9
 %else
-%xdefine	arg1 rdi
-%xdefine	arg2 rsi
-%xdefine	arg3 rdx
+%xdefine        arg1 rdi
+%xdefine        arg2 rsi
+%xdefine        arg3 rdx
 %xdefine        arg4 rcx
 %endif
 

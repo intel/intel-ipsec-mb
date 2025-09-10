@@ -170,7 +170,7 @@
         ;; AES rounds
 %assign j 0
 %rep (%%NROUNDS + 2)
-     ZMM_AESDEC_ROUND_BLOCKS_0_16 %%CIPHER_PLAIN_0_3, %%CIPHER_PLAIN_4_7, \
+        ZMM_AESDEC_ROUND_BLOCKS_0_16 %%CIPHER_PLAIN_0_3, %%CIPHER_PLAIN_4_7, \
                         %%CIPHER_PLAIN_8_11, %%CIPHER_PLAIN_12_15, \
                         ZKEY %+ j, j, no_data, no_data, no_data, no_data, \
                         %%num_final_blocks, %%NROUNDS
@@ -288,8 +288,8 @@ align_loop
         jb      %%final_blocks
 
         DECRYPT_16_PARALLEL %%PLAIN_OUT, %%CIPH_IN, %%LENGTH, zIV, \
-                            zBLK_0_3, zBLK_4_7, zBLK_8_11, zBLK_12_15, \
-                            zTMP0, zTMP1, zTMP2, zTMP3, %%NROUNDS, %%TMP
+                                zBLK_0_3, zBLK_4_7, zBLK_8_11, zBLK_12_15, \
+                                zTMP0, zTMP1, zTMP2, zTMP3, %%NROUNDS, %%TMP
         jmp     %%decrypt_16_parallel
 
 align_label
@@ -350,106 +350,106 @@ align_label
 align_label
 %%final_num_blocks_is_15:
         FINAL_BLOCKS %%PLAIN_OUT, %%CIPH_IN, zIV, 15, zBLK_0_3, zBLK_4_7, \
-                     zBLK_8_11, zBLK_12_15, zTMP0, zTMP1, zTMP2, zTMP3, \
-                     %%TMP, %%NROUNDS
+                        zBLK_8_11, zBLK_12_15, zTMP0, zTMP1, zTMP2, zTMP3, \
+                        %%TMP, %%NROUNDS
         jmp     %%cbc_dec_done
 
 align_label
 %%final_num_blocks_is_14:
         FINAL_BLOCKS %%PLAIN_OUT, %%CIPH_IN, zIV, 14, zBLK_0_3, zBLK_4_7, \
-                     zBLK_8_11, zBLK_12_15, zTMP0, zTMP1, zTMP2, zTMP3, \
-                     %%TMP, %%NROUNDS
+                        zBLK_8_11, zBLK_12_15, zTMP0, zTMP1, zTMP2, zTMP3, \
+                        %%TMP, %%NROUNDS
         jmp     %%cbc_dec_done
 
 align_label
 %%final_num_blocks_is_13:
         FINAL_BLOCKS %%PLAIN_OUT, %%CIPH_IN, zIV, 13, zBLK_0_3, zBLK_4_7, \
-                     zBLK_8_11, zBLK_12_15, zTMP0, zTMP1, zTMP2, zTMP3, \
-                     %%TMP, %%NROUNDS
+                        zBLK_8_11, zBLK_12_15, zTMP0, zTMP1, zTMP2, zTMP3, \
+                        %%TMP, %%NROUNDS
         jmp     %%cbc_dec_done
 
 align_label
 %%final_num_blocks_is_12:
         FINAL_BLOCKS %%PLAIN_OUT, %%CIPH_IN, zIV, 12, zBLK_0_3, zBLK_4_7, \
-                     zBLK_8_11, zBLK_12_15, zTMP0, zTMP1, zTMP2, zTMP3, \
-                     %%TMP, %%NROUNDS
+                        zBLK_8_11, zBLK_12_15, zTMP0, zTMP1, zTMP2, zTMP3, \
+                        %%TMP, %%NROUNDS
         jmp     %%cbc_dec_done
 
 align_label
 %%final_num_blocks_is_11:
         FINAL_BLOCKS %%PLAIN_OUT, %%CIPH_IN, zIV, 11, zBLK_0_3, zBLK_4_7, \
-                     zBLK_8_11, zBLK_12_15, zTMP0, zTMP1, zTMP2, zTMP3, \
-                     %%TMP, %%NROUNDS
+                        zBLK_8_11, zBLK_12_15, zTMP0, zTMP1, zTMP2, zTMP3, \
+                        %%TMP, %%NROUNDS
         jmp     %%cbc_dec_done
 
 align_label
 %%final_num_blocks_is_10:
         FINAL_BLOCKS %%PLAIN_OUT, %%CIPH_IN, zIV, 10, zBLK_0_3, zBLK_4_7, \
-                     zBLK_8_11, zBLK_12_15, zTMP0, zTMP1, zTMP2, zTMP3, \
-                     %%TMP, %%NROUNDS
+                        zBLK_8_11, zBLK_12_15, zTMP0, zTMP1, zTMP2, zTMP3, \
+                        %%TMP, %%NROUNDS
         jmp     %%cbc_dec_done
 
 align_label
 %%final_num_blocks_is_9:
         FINAL_BLOCKS %%PLAIN_OUT, %%CIPH_IN, zIV, 9, zBLK_0_3, zBLK_4_7, \
-                     zBLK_8_11, zBLK_12_15, zTMP0, zTMP1, zTMP2, zTMP3, \
-                     %%TMP, %%NROUNDS
+                        zBLK_8_11, zBLK_12_15, zTMP0, zTMP1, zTMP2, zTMP3, \
+                        %%TMP, %%NROUNDS
         jmp     %%cbc_dec_done
 
 align_label
 %%final_num_blocks_is_8:
         FINAL_BLOCKS %%PLAIN_OUT, %%CIPH_IN, zIV, 8, zBLK_0_3, zBLK_4_7, \
-                     zBLK_8_11, zBLK_12_15, zTMP0, zTMP1, zTMP2, zTMP3, \
-                     %%TMP, %%NROUNDS
+                        zBLK_8_11, zBLK_12_15, zTMP0, zTMP1, zTMP2, zTMP3, \
+                        %%TMP, %%NROUNDS
         jmp     %%cbc_dec_done
 
 align_label
 %%final_num_blocks_is_7:
         FINAL_BLOCKS %%PLAIN_OUT, %%CIPH_IN, zIV, 7, zBLK_0_3, zBLK_4_7, \
-                     zBLK_8_11, zBLK_12_15, zTMP0, zTMP1, zTMP2, zTMP3, \
-                     %%TMP, %%NROUNDS
+                        zBLK_8_11, zBLK_12_15, zTMP0, zTMP1, zTMP2, zTMP3, \
+                        %%TMP, %%NROUNDS
         jmp     %%cbc_dec_done
 
 align_label
 %%final_num_blocks_is_6:
         FINAL_BLOCKS %%PLAIN_OUT, %%CIPH_IN, zIV, 6, zBLK_0_3, zBLK_4_7, \
-                     zBLK_8_11, zBLK_12_15, zTMP0, zTMP1, zTMP2, zTMP3, \
-                     %%TMP, %%NROUNDS
+                        zBLK_8_11, zBLK_12_15, zTMP0, zTMP1, zTMP2, zTMP3, \
+                        %%TMP, %%NROUNDS
         jmp     %%cbc_dec_done
 
 align_label
 %%final_num_blocks_is_5:
         FINAL_BLOCKS %%PLAIN_OUT, %%CIPH_IN, zIV, 5, zBLK_0_3, zBLK_4_7, \
-                     zBLK_8_11, zBLK_12_15, zTMP0, zTMP1, zTMP2, zTMP3, \
-                     %%TMP, %%NROUNDS
+                        zBLK_8_11, zBLK_12_15, zTMP0, zTMP1, zTMP2, zTMP3, \
+                        %%TMP, %%NROUNDS
         jmp     %%cbc_dec_done
 
 align_label
 %%final_num_blocks_is_4:
         FINAL_BLOCKS %%PLAIN_OUT, %%CIPH_IN, zIV, 4, zBLK_0_3, zBLK_4_7, \
-                     zBLK_8_11, zBLK_12_15, zTMP0, zTMP1, zTMP2, zTMP3, \
-                     %%TMP, %%NROUNDS
+                        zBLK_8_11, zBLK_12_15, zTMP0, zTMP1, zTMP2, zTMP3, \
+                        %%TMP, %%NROUNDS
         jmp     %%cbc_dec_done
 
 align_label
 %%final_num_blocks_is_3:
         FINAL_BLOCKS %%PLAIN_OUT, %%CIPH_IN, zIV, 3, zBLK_0_3, zBLK_4_7, \
-                     zBLK_8_11, zBLK_12_15, zTMP0, zTMP1, zTMP2, zTMP3, \
-                     %%TMP, %%NROUNDS
+                        zBLK_8_11, zBLK_12_15, zTMP0, zTMP1, zTMP2, zTMP3, \
+                        %%TMP, %%NROUNDS
         jmp     %%cbc_dec_done
 
 align_label
 %%final_num_blocks_is_2:
         FINAL_BLOCKS %%PLAIN_OUT, %%CIPH_IN, zIV, 2, zBLK_0_3, zBLK_4_7, \
-                     zBLK_8_11, zBLK_12_15, zTMP0, zTMP1, zTMP2, zTMP3, \
-                     %%TMP, %%NROUNDS
+                        zBLK_8_11, zBLK_12_15, zTMP0, zTMP1, zTMP2, zTMP3, \
+                        %%TMP, %%NROUNDS
         jmp     %%cbc_dec_done
 
 align_label
 %%final_num_blocks_is_1:
         FINAL_BLOCKS %%PLAIN_OUT, %%CIPH_IN, zIV, 1, zBLK_0_3, zBLK_4_7, \
-                     zBLK_8_11, zBLK_12_15, zTMP0, zTMP1, zTMP2, zTMP3, \
-                     %%TMP, %%NROUNDS
+                        zBLK_8_11, zBLK_12_15, zTMP0, zTMP1, zTMP2, zTMP3, \
+                        %%TMP, %%NROUNDS
 
 align_label
 %%cbc_dec_done:
@@ -473,7 +473,7 @@ aes_cbc_dec_128_vaes_avx512:
         AES_CBC_DEC p_in, p_out, p_keys, p_IV, num_bytes, 9, tmp
 
 %ifdef SAFE_DATA
-	clear_all_zmms_asm
+        clear_all_zmms_asm
 %else
         vzeroupper
 %endif ;; SAFE_DATA
@@ -492,7 +492,7 @@ aes_cbc_dec_192_vaes_avx512:
         AES_CBC_DEC p_in, p_out, p_keys, p_IV, num_bytes, 11, tmp
 
 %ifdef SAFE_DATA
-	clear_all_zmms_asm
+        clear_all_zmms_asm
 %else
         vzeroupper
 %endif ;; SAFE_DATA
@@ -511,7 +511,7 @@ aes_cbc_dec_256_vaes_avx512:
         AES_CBC_DEC p_in, p_out, p_keys, p_IV, num_bytes, 13, tmp
 
 %ifdef SAFE_DATA
-	clear_all_zmms_asm
+        clear_all_zmms_asm
 %else
         vzeroupper
 %endif ;; SAFE_DATA
@@ -519,4 +519,3 @@ aes_cbc_dec_256_vaes_avx512:
         ret
 
 mksection stack-noexec
-

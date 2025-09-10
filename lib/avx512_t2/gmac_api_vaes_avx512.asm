@@ -55,15 +55,15 @@ imb_aes_gmac_update_128_vaes_avx512:
 imb_aes_gmac_update_192_vaes_avx512:
 imb_aes_gmac_update_256_vaes_avx512:
         endbranch64
-	FUNC_SAVE small_frame
+        FUNC_SAVE small_frame
 
 %ifdef SAFE_PARAM
         ;; Reset imb_errno
         IMB_ERR_CHECK_RESET
 %endif
         ;; Check if msg_len == 0
-	cmp	arg4, 0
-	je	.exit_gmac_update
+        cmp     arg4, 0
+        je      .exit_gmac_update
 
 %ifdef SAFE_PARAM
         ;; Check key_data != NULL
@@ -83,11 +83,11 @@ imb_aes_gmac_update_256_vaes_avx512:
         add     [arg2 + AadLen], arg4
 
         ;; Deal with previous partial block
-	xor	r11, r11
-	vmovdqu64	xmm0, [arg2 + AadHash]
+        xor     r11, r11
+        vmovdqu64       xmm0, [arg2 + AadHash]
 
-	PARTIAL_BLOCK_GMAC arg1, arg2, arg3, arg4, r11, xmm0, r10, r12, rax, \
-                           zmm8, zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, zmm7, k1
+        PARTIAL_BLOCK_GMAC arg1, arg2, arg3, arg4, r11, xmm0, r10, r12, rax, \
+                        zmm8, zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, zmm7, k1
 %ifdef SAFE_DATA
         clear_zmms_avx512 xmm8
 %endif
@@ -110,7 +110,7 @@ imb_aes_gmac_update_256_vaes_avx512:
         ;; xmm0 [in/out] ghash value
         call    ghash_internal_vaes_avx512
 
-	vmovdqu64	[arg2 + AadHash], xmm0	; ctx_data.aad hash = aad_hash
+        vmovdqu64       [arg2 + AadHash], xmm0  ; ctx_data.aad hash = aad_hash
 
 %ifdef SAFE_DATA
         clear_zmms_avx512 xmm3, xmm4, xmm5, xmm6, xmm19, xmm9
@@ -125,7 +125,7 @@ align_label
         jz      .exit_gmac_update
 
         ; Save next partial block
-        mov	[arg2 + PBlockLen], arg4
+        mov     [arg2 + PBlockLen], arg4
         READ_SMALL_DATA_INPUT_AVX512 xmm1, arg3, arg4, r11, k1
         vpshufb xmm1, xmm1, [rel SHUF_MASK]
         vpxorq  xmm0, xmm0, xmm1
@@ -137,7 +137,7 @@ align_label
 align_label
 .exit_gmac_update:
         FUNC_RESTORE
-	ret
+        ret
 
 %ifdef SAFE_PARAM
 align_label
@@ -160,4 +160,3 @@ align_label
 %endif
 
 mksection stack-noexec
-

@@ -48,29 +48,29 @@ extern ethernet_fcs_avx512_local
 struc STACKFRAME
 _rsp_save:      resq    1
 _job_save:      resq    1
-_gpr_save:	resq	4
+_gpr_save:      resq    4
 endstruc
 
 %ifdef LINUX
-%define arg1	rdi
-%define arg2	rsi
-%define arg3	rdx
+%define arg1    rdi
+%define arg2    rsi
+%define arg3    rdx
 %else
-%define arg1	rcx
-%define arg2	rdx
-%define arg3	r8
+%define arg1    rcx
+%define arg2    rdx
+%define arg3    r8
 %endif
 
 %define job     arg1
 
-%define tmp1	rbx
-%define tmp2	rbp
-%define tmp3	r10
-%define tmp4	r11
-%define tmp5	r12
-%define tmp6	r13
-%define tmp7	r8
-%define tmp8	r9
+%define tmp1    rbx
+%define tmp2    rbp
+%define tmp3    r10
+%define tmp4    r11
+%define tmp5    r12
+%define tmp6    r13
+%define tmp7    r8
+%define tmp8    r9
 
 mksection .rodata
 
@@ -438,8 +438,8 @@ align_label
         ;; AES rounds including XOR
 %assign j 0
 %rep (%%NROUNDS + 2)
-     vbroadcastf64x2    %%ZT5, [%%KEY_PTR + (j * 16)]
-     ZMM_AESDEC_ROUND_BLOCKS_0_16 %%CIPHER_00_03, %%CIPHER_04_07, \
+        vbroadcastf64x2    %%ZT5, [%%KEY_PTR + (j * 16)]
+        ZMM_AESDEC_ROUND_BLOCKS_0_16 %%CIPHER_00_03, %%CIPHER_04_07, \
                         %%CIPHER_08_11, %%CIPHER_12_15, \
                         %%ZT5, j, %%ZT1, %%ZT2, %%ZT3, %%ZT4, \
                         %%NUMBL, %%NROUNDS
@@ -677,20 +677,20 @@ align_label
                 ;; \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
                 ;; CRC just decrypted blocks
                 vbroadcastf64x2 %%ZTMP0, [rel fold_by_16]
-	        vpclmulqdq	%%ZTMP1, %%ZCRC_SUM0, %%ZTMP0, 0x10
-	        vpclmulqdq	%%ZCRC_SUM0, %%ZCRC_SUM0, %%ZTMP0, 0x01
+                vpclmulqdq      %%ZTMP1, %%ZCRC_SUM0, %%ZTMP0, 0x10
+                vpclmulqdq      %%ZCRC_SUM0, %%ZCRC_SUM0, %%ZTMP0, 0x01
                 vpternlogq      %%ZCRC_SUM0, %%ZTMP1, %%ZC0, 0x96
 
-                vpclmulqdq	%%ZTMP1, %%ZCRC_SUM1, %%ZTMP0, 0x10
-	        vpclmulqdq	%%ZCRC_SUM1, %%ZCRC_SUM1, %%ZTMP0, 0x01
+                vpclmulqdq      %%ZTMP1, %%ZCRC_SUM1, %%ZTMP0, 0x10
+                vpclmulqdq      %%ZCRC_SUM1, %%ZCRC_SUM1, %%ZTMP0, 0x01
                 vpternlogq      %%ZCRC_SUM1, %%ZTMP1, %%ZC1, 0x96
 
-	        vpclmulqdq	%%ZTMP1, %%ZCRC_SUM2, %%ZTMP0, 0x10
-	        vpclmulqdq	%%ZCRC_SUM2, %%ZCRC_SUM2, %%ZTMP0, 0x01
+                vpclmulqdq      %%ZTMP1, %%ZCRC_SUM2, %%ZTMP0, 0x10
+                vpclmulqdq      %%ZCRC_SUM2, %%ZCRC_SUM2, %%ZTMP0, 0x01
                 vpternlogq      %%ZCRC_SUM2, %%ZTMP1, %%ZC2, 0x96
 
-                vpclmulqdq	%%ZTMP1, %%ZCRC_SUM3, %%ZTMP0, 0x10
-	        vpclmulqdq	%%ZCRC_SUM3, %%ZCRC_SUM3, %%ZTMP0, 0x01
+                vpclmulqdq      %%ZTMP1, %%ZCRC_SUM3, %%ZTMP0, 0x10
+                vpclmulqdq      %%ZCRC_SUM3, %%ZCRC_SUM3, %%ZTMP0, 0x01
                 vpternlogq      %%ZCRC_SUM3, %%ZTMP1, %%ZC3, 0x96
 
                 vextracti64x2   %%LAST_BLOCK, %%ZC3, 3
@@ -731,8 +731,8 @@ align_label
 %define %%ZT11       %20  ;; [clobbered] temporary ZMM
 %define %%ZT12       %21  ;; [clobbered] temporary ZMM
 %define %%ZT13       %22  ;; [clobbered] temporary ZMM
-                          ;; no ZT14 - taken by XIV
-                          ;; no ZT15 - taken by CRC_INIT
+                        ;; no ZT14 - taken by XIV
+                        ;; no ZT15 - taken by CRC_INIT
 %define %%ZT16       %23  ;; [clobbered] temporary ZMM
 %define %%ZT17       %24  ;; [clobbered] temporary ZMM
 %define %%ZT18       %25  ;; [clobbered] temporary ZMM
@@ -856,52 +856,52 @@ align_label
         mov     %%NUM_BLOCKS, %%NUM_BYTES
         shr     %%NUM_BLOCKS, 4
         and     %%NUM_BLOCKS, 15
-        jz	%%_decrypt_eq0
+        jz      %%_decrypt_eq0
 
         cmp     %%NUM_BLOCKS, 8
         jg      %%_decrypt_gt8
         je      %%_decrypt_eq8
 
         ;; 1 to 7 blocks
-	cmp	%%NUM_BLOCKS, 4
-	jg	%%_decrypt_gt4
-	je	%%_decrypt_eq4
+        cmp     %%NUM_BLOCKS, 4
+        jg      %%_decrypt_gt4
+        je      %%_decrypt_eq4
 
 align_label
 %%_decrypt_lt4:
         ;; 1 to 3 blocks
-	cmp	%%NUM_BLOCKS, 2
-	jg	%%_decrypt_eq3
-	je	%%_decrypt_eq2
+        cmp     %%NUM_BLOCKS, 2
+        jg      %%_decrypt_eq3
+        je      %%_decrypt_eq2
         jmp     %%_decrypt_eq1
 
 align_label
 %%_decrypt_gt4:
         ;; 5 to 7
-	cmp	%%NUM_BLOCKS, 6
-	jg	%%_decrypt_eq7
-	je	%%_decrypt_eq6
+        cmp     %%NUM_BLOCKS, 6
+        jg      %%_decrypt_eq7
+        je      %%_decrypt_eq6
         jmp     %%_decrypt_eq5
 
 align_label
 %%_decrypt_gt8:
         ;; 9 to 15
-	cmp	%%NUM_BLOCKS, 12
-	jg	%%_decrypt_gt12
-	je	%%_decrypt_eq12
+        cmp     %%NUM_BLOCKS, 12
+        jg      %%_decrypt_gt12
+        je      %%_decrypt_eq12
 
         ;; 9 to 11
-	cmp	%%NUM_BLOCKS, 10
-	jg	%%_decrypt_eq11
-	je	%%_decrypt_eq10
+        cmp     %%NUM_BLOCKS, 10
+        jg      %%_decrypt_eq11
+        je      %%_decrypt_eq10
         jmp     %%_decrypt_eq9
 
 align_label
 %%_decrypt_gt12:
         ;; 13 to 15
-	cmp	%%NUM_BLOCKS, 14
-	jg	%%_decrypt_eq15
-	je	%%_decrypt_eq14
+        cmp     %%NUM_BLOCKS, 14
+        jg      %%_decrypt_eq15
+        je      %%_decrypt_eq14
         jmp     %%_decrypt_eq13
 
 %assign number_of_blocks 1
@@ -1124,52 +1124,52 @@ align_label
         mov     %%NUM_BLOCKS, %%NUM_BYTES
         shr     %%NUM_BLOCKS, 4
         and     %%NUM_BLOCKS, 15
-        jz	%%_decrypt2_eq0
+        jz      %%_decrypt2_eq0
 
         cmp     %%NUM_BLOCKS, 8
         jg      %%_decrypt2_gt8
         je      %%_decrypt2_eq8
 
         ;; 1 to 7 blocks
-	cmp	%%NUM_BLOCKS, 4
-	jg	%%_decrypt2_gt4
-	je	%%_decrypt2_eq4
+        cmp     %%NUM_BLOCKS, 4
+        jg      %%_decrypt2_gt4
+        je      %%_decrypt2_eq4
 
 align_label
 %%_decrypt2_lt4:
         ;; 1 to 3 blocks
-	cmp	%%NUM_BLOCKS, 2
-	jg	%%_decrypt2_eq3
-	je	%%_decrypt2_eq2
+        cmp     %%NUM_BLOCKS, 2
+        jg      %%_decrypt2_eq3
+        je      %%_decrypt2_eq2
         jmp     %%_decrypt2_eq1
 
 align_label
 %%_decrypt2_gt4:
         ;; 5 to 7
-	cmp	%%NUM_BLOCKS, 6
-	jg	%%_decrypt2_eq7
-	je	%%_decrypt2_eq6
+        cmp     %%NUM_BLOCKS, 6
+        jg      %%_decrypt2_eq7
+        je      %%_decrypt2_eq6
         jmp     %%_decrypt2_eq5
 
 align_label
 %%_decrypt2_gt8:
         ;; 9 to 15
-	cmp	%%NUM_BLOCKS, 12
-	jg	%%_decrypt2_gt12
-	je	%%_decrypt2_eq12
+        cmp     %%NUM_BLOCKS, 12
+        jg      %%_decrypt2_gt12
+        je      %%_decrypt2_eq12
 
         ;; 9 to 11
-	cmp	%%NUM_BLOCKS, 10
-	jg	%%_decrypt2_eq11
-	je	%%_decrypt2_eq10
+        cmp     %%NUM_BLOCKS, 10
+        jg      %%_decrypt2_eq11
+        je      %%_decrypt2_eq10
         jmp     %%_decrypt2_eq9
 
 align_label
 %%_decrypt2_gt12:
         ;; 13 to 15
-	cmp	%%NUM_BLOCKS, 14
-	jg	%%_decrypt2_eq15
-	je	%%_decrypt2_eq14
+        cmp     %%NUM_BLOCKS, 14
+        jg      %%_decrypt2_eq15
+        je      %%_decrypt2_eq14
         jmp     %%_decrypt2_eq13
 
 %assign number_of_blocks 1
@@ -1231,52 +1231,52 @@ align_label
         mov     %%NUM_BLOCKS, %%NUM_BYTES
         shr     %%NUM_BLOCKS, 4
         and     %%NUM_BLOCKS, 15
-        jz	%%_eq16
+        jz      %%_eq16
 
         cmp     %%NUM_BLOCKS, 8
         jg      %%_gt8
         je      %%_eq8
 
         ;; 1 to 7 blocks
-	cmp	%%NUM_BLOCKS, 4
-	jg	%%_gt4
-	je	%%_eq4
+        cmp     %%NUM_BLOCKS, 4
+        jg      %%_gt4
+        je      %%_eq4
 
 align_label
 %%_lt4:
         ;; 1 to 3 blocks
-	cmp	%%NUM_BLOCKS, 2
-	jg	%%_eq3
-	je	%%_eq2
+        cmp     %%NUM_BLOCKS, 2
+        jg      %%_eq3
+        je      %%_eq2
         jmp     %%_eq1
 
 align_label
 %%_gt4:
         ;; 5 to 7
-	cmp	%%NUM_BLOCKS, 6
-	jg	%%_eq7
-	je	%%_eq6
+        cmp     %%NUM_BLOCKS, 6
+        jg      %%_eq7
+        je      %%_eq6
         jmp     %%_eq5
 
 align_label
 %%_gt8:
         ;; 9 to 15
-	cmp	%%NUM_BLOCKS, 12
-	jg	%%_gt12
-	je	%%_eq12
+        cmp     %%NUM_BLOCKS, 12
+        jg      %%_gt12
+        je      %%_eq12
 
         ;; 9 to 11
-	cmp	%%NUM_BLOCKS, 10
-	jg	%%_eq11
-	je	%%_eq10
+        cmp     %%NUM_BLOCKS, 10
+        jg      %%_eq11
+        je      %%_eq10
         jmp     %%_eq9
 
 align_label
 %%_gt12:
         ;; 13 to 15
-	cmp	%%NUM_BLOCKS, 14
-	jg	%%_eq15
-	je	%%_eq14
+        cmp     %%NUM_BLOCKS, 14
+        jg      %%_eq15
+        je      %%_eq14
         jmp     %%_eq13
 
 %assign number_of_blocks 1
@@ -1286,9 +1286,9 @@ align_label
         ;; Start building the pipeline by decrypting number of blocks
         ;; - later cipher & CRC operations get stitched
         AES_CBC_DEC_1_TO_16 %%SRC, %%DST, number_of_blocks, %%OFFSET, %%NUM_BYTES, \
-                           %%KEYS, %%ZIV, %%NROUNDS, \
-                           %%ZCRC0, %%ZCRC1, %%ZCRC2, %%ZCRC3, \
-                           %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5
+                        %%KEYS, %%ZIV, %%NROUNDS, \
+                        %%ZCRC0, %%ZCRC1, %%ZCRC2, %%ZCRC3, \
+                        %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5
 
         vextracti32x4       %%XIV, %%ZIV, 3
 
@@ -1406,7 +1406,7 @@ align_label
         ;; - DST is never modified so it points to start of the buffer that
         ;;   is subject of CRC calculation
         ETHERNET_FCS_CRC %%DST, %%NUM_BYTES, rax, %%XCRC_IN_OUT, %%GT1, \
-                         %%XCRC_MUL, %%XTMP0, %%XTMP1, %%XCRC_TMP
+                        %%XCRC_MUL, %%XTMP0, %%XTMP1, %%XCRC_TMP
         jmp     %%_do_return
 
 align_label
@@ -1474,10 +1474,10 @@ align_label
 %macro AES_DOCSIS_DEC_CRC32 1
 %define %%NROUNDS %1    ; [in] Number of rounds (9 or 13)
 
-        mov	        rax, rsp
-	sub	        rsp, STACKFRAME_size
-	and	        rsp, -64
-	mov	        [rsp + _rsp_save], rax	; original SP
+        mov             rax, rsp
+        sub             rsp, STACKFRAME_size
+        and             rsp, -64
+        mov             [rsp + _rsp_save], rax  ; original SP
         mov             [rsp + _gpr_save + 0*8], r12
         mov             [rsp + _gpr_save + 1*8], r13
         mov             [rsp + _gpr_save + 2*8], rbx
@@ -1505,7 +1505,7 @@ align_label
 align_label
 %%aes_docsis_dec_crc32_avx512__skip_aad:
         mov             tmp1, [job + _iv]
-	vmovdqu64       xmm14, [tmp1]   ; load IV
+        vmovdqu64       xmm14, [tmp1]   ; load IV
 
         mov             tmp2, [job + _src]
         add             tmp2, [job + _cipher_start_src_offset_in_bytes] ; AES start
@@ -1517,13 +1517,13 @@ align_label
         mov             tmp6, [job + _enc_keys]
 
         DOCSIS_DEC_CRC32 tmp5, tmp2, tmp3, tmp4, tmp6, \
-                         tmp7, tmp8, \
-                         xmm15, xmm14, \
-                         zmm0, zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, zmm7, \
-                         zmm8, zmm9, zmm10, zmm11, zmm12, zmm13, \
-                         zmm16, zmm17, zmm18, zmm19, zmm20, zmm21, zmm22, zmm23, \
-                         zmm24, zmm25, zmm26, zmm27, zmm28, zmm29, zmm30, zmm31, \
-                         %%NROUNDS
+                        tmp7, tmp8, \
+                        xmm15, xmm14, \
+                        zmm0, zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, zmm7, \
+                        zmm8, zmm9, zmm10, zmm11, zmm12, zmm13, \
+                        zmm16, zmm17, zmm18, zmm19, zmm20, zmm21, zmm22, zmm23, \
+                        zmm24, zmm25, zmm26, zmm27, zmm28, zmm29, zmm30, zmm31, \
+                        %%NROUNDS
 
         jmp             %%aes_docsis_dec_crc32_avx512__exit
 
@@ -1541,7 +1541,7 @@ align_label
 align_label
 %%aes_docsis_dec_crc32_avx512__exit:
         mov             tmp1, [job + _auth_tag_output]
-	mov             [tmp1], eax        ; store CRC32 value
+        mov             [tmp1], eax        ; store CRC32 value
 
         or              qword [job + _status], IMB_STATUS_COMPLETED_CIPHER
 
@@ -1550,10 +1550,10 @@ align_label
         mov             r13, [rsp + _gpr_save + 1*8]
         mov             rbx, [rsp + _gpr_save + 2*8]
         mov             rbp, [rsp + _gpr_save + 3*8]
-	mov	        rsp, [rsp + _rsp_save]	; original SP
+        mov             rsp, [rsp + _rsp_save]  ; original SP
 
 %ifdef SAFE_DATA
-	clear_all_zmms_asm
+        clear_all_zmms_asm
 %else
         vzeroupper
 %endif ;; SAFE_DATA

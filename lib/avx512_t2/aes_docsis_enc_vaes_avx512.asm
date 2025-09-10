@@ -1267,9 +1267,9 @@ align_label
                 vinserti32x4    %%ZDATA3, [%%GT8 + %%IDX + 16], 3
 
                 CRC32_ROUND_UPDATE %%ARG, \
-                                 %%ZDATA0, %%ZDATA1, %%ZDATA2, %%ZDATA3, \
-                                 %%ZDATB0, %%ZDATB1, %%ZDATB2, %%ZDATB3, \
-                                 k5, k6, %%ZCRC_MUL, %%GT8, %%GT9, %%GT10, %%ZT17, %%ZT18
+                                %%ZDATA0, %%ZDATA1, %%ZDATA2, %%ZDATA3, \
+                                %%ZDATB0, %%ZDATB1, %%ZDATB2, %%ZDATB3, \
+                                k5, k6, %%ZCRC_MUL, %%GT8, %%GT9, %%GT10, %%ZT17, %%ZT18
 
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;; CRC 16 lanes and mix it with AES rounds
@@ -1611,7 +1611,7 @@ align_label
 
         ;; GT6 - ptr, GT5 - length, ZT1 - CRC_MUL, ZT0 - CRC_IN_OUT
         ETHERNET_FCS_CRC %%GT6, %%GT5, %%GT7, XWORD(%%ZT0), %%GT2, \
-                         XWORD(%%ZT1), XWORD(%%ZT2), XWORD(%%ZT3), XWORD(%%ZT4)
+                        XWORD(%%ZT1), XWORD(%%ZT2), XWORD(%%ZT3), XWORD(%%ZT4)
 
         mov             %%GT6, [%%JOB + _src]
         add             %%GT6, [%%JOB + _hash_start_src_offset_in_bytes]
@@ -1637,7 +1637,7 @@ align_label
 
         ;; GT6 - ptr, GT5 - length, ZT1 - CRC_MUL, ZT0 - CRC_IN_OUT
         ETHERNET_FCS_CRC %%GT6, %%GT5, %%GT7, XWORD(%%ZT0), %%GT2, \
-                         XWORD(%%ZT1), XWORD(%%ZT2), XWORD(%%ZT3), XWORD(%%ZT4)
+                        XWORD(%%ZT1), XWORD(%%ZT2), XWORD(%%ZT3), XWORD(%%ZT4)
 
         not             DWORD(%%GT7)
         vmovd           xmm8, DWORD(%%GT7)

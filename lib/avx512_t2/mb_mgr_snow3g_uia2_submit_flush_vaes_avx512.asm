@@ -97,7 +97,7 @@ mksection .text
         and     lane, 0xF ;; just a nibble
         shr     unused_lanes, 4
         mov     [state + _snow3g_unused_lanes], unused_lanes
-        add	qword [state + _snow3g_lanes_in_use], 1
+        add     qword [state + _snow3g_lanes_in_use], 1
 
         mov     [state + _snow3g_job_in_lane + lane*8], job
 
@@ -241,10 +241,10 @@ align_label
 %%init_lanes_uia2:
 
         SNOW3G_AUTH_INIT_5 {state + _snow3g_args_keys}, \
-                           {state + _snow3g_args_IV}, \
-                           {state + _snow3g_ks}, \
-                           tmp, tmp2, k1, k2, k3, k4, k5, k6, \
-                           %%GEN
+                        {state + _snow3g_args_IV}, \
+                        {state + _snow3g_ks}, \
+                        tmp, tmp2, k1, k2, k3, k4, k5, k6, \
+                        %%GEN
 
         ;; update init_done for valid initialized lanes
         mov     [state + _snow3g_init_done], WORD(init_lanes)

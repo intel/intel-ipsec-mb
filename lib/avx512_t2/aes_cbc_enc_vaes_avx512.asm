@@ -129,7 +129,7 @@ endstruc
         mov             [GPR_SAVE_AREA + 8*1], rsi
         mov             [GPR_SAVE_AREA + 8*2], rdi
 %endif
-	mov             [GPR_SAVE_AREA + 8*3], r15
+        mov             [GPR_SAVE_AREA + 8*3], r15
 %endmacro
 
 ;; Restore register states
@@ -140,7 +140,7 @@ endstruc
         mov             rsi, [GPR_SAVE_AREA + 8*1]
         mov             rdi, [GPR_SAVE_AREA + 8*2]
 %endif
-	mov             r15, [GPR_SAVE_AREA + 8*3]
+        mov             r15, [GPR_SAVE_AREA + 8*3]
         add             rsp, STACK_size
 %endmacro
 
@@ -271,33 +271,33 @@ align_label
 
         ;; load 4 plaintext blocks for lanes 0-3
         PRELOADED_LOAD_STORE_4 IN_L0, IN_L1, IN_L2, IN_L3, %%IDX, \
-			       %%B0L00_03, %%B1L00_03, %%B2L00_03, \
-			       %%B3L00_03, LOAD, %%MODE, 0, 1, 2, 3
+                                %%B0L00_03, %%B1L00_03, %%B2L00_03, \
+                                %%B3L00_03, LOAD, %%MODE, 0, 1, 2, 3
 
         TRANSPOSE_4x4 %%B0L00_03, %%B1L00_03, %%B2L00_03, %%B3L00_03, \
-                      %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, TAB_A0B0A1B1, TAB_A2B2A3B3
+                        %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, TAB_A0B0A1B1, TAB_A2B2A3B3
 
         ;; load 4 plaintext blocks for lanes 4-7
         LOAD_STORE_4 4, 5, 6, 7, IN, %%IDX, %%B0L04_07, %%B1L04_07, \
-                     %%B2L04_07, %%B3L04_07, %%TMP0, %%TMP1, LOAD, %%MODE
+                        %%B2L04_07, %%B3L04_07, %%TMP0, %%TMP1, LOAD, %%MODE
 
         TRANSPOSE_4x4 %%B0L04_07, %%B1L04_07, %%B2L04_07, %%B3L04_07, \
-                      %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, TAB_A0B0A1B1, TAB_A2B2A3B3
+                        %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, TAB_A0B0A1B1, TAB_A2B2A3B3
 
         ;; load 4 plaintext blocks for lanes 8-11
         PRELOADED_LOAD_STORE_4 IN_L8, IN_L9, IN_L10, IN_L11, %%IDX, \
-				%%B0L08_11, %%B1L08_11, %%B2L08_11, \
-				%%B3L08_11, LOAD, %%MODE, 8, 9, 10, 11
+                                %%B0L08_11, %%B1L08_11, %%B2L08_11, \
+                                %%B3L08_11, LOAD, %%MODE, 8, 9, 10, 11
 
         TRANSPOSE_4x4 %%B0L08_11, %%B1L08_11, %%B2L08_11, %%B3L08_11, \
-                      %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, TAB_A0B0A1B1, TAB_A2B2A3B3
+                        %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, TAB_A0B0A1B1, TAB_A2B2A3B3
 
         ;; load 4 plaintext blocks for lanes 12-15
         LOAD_STORE_4 12, 13, 14, 15, IN, %%IDX, %%B0L12_15, %%B1L12_15, \
-                     %%B2L12_15, %%B3L12_15, %%TMP0, %%TMP1, LOAD, %%MODE
+                        %%B2L12_15, %%B3L12_15, %%TMP0, %%TMP1, LOAD, %%MODE
 
         TRANSPOSE_4x4 %%B0L12_15, %%B1L12_15, %%B2L12_15, %%B3L12_15, \
-                      %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, TAB_A0B0A1B1, TAB_A2B2A3B3
+                        %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, TAB_A0B0A1B1, TAB_A2B2A3B3
 
         ;; xor first plaintext block with IV and round zero key
         vpternlogq      %%B0L00_03, %%ZIV00_03, R0_K0_3, 0x96
@@ -345,31 +345,31 @@ align_label
 %if %%MAC_TYPE == MAC_TYPE_NONE
         ;; write back cipher text for lanes 0-3
         TRANSPOSE_4x4 %%B0L00_03, %%B1L00_03, %%B2L00_03, %%B3L00_03, \
-                      %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, TAB_A0B0A1B1, TAB_A2B2A3B3
+                        %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, TAB_A0B0A1B1, TAB_A2B2A3B3
 
         LOAD_STORE_4 0, 1, 2, 3, OUT, %%IDX, %%B0L00_03, %%B1L00_03, \
-                     %%B2L00_03, %%B3L00_03, %%TMP0, %%TMP1, STORE, %%MODE
+                        %%B2L00_03, %%B3L00_03, %%TMP0, %%TMP1, STORE, %%MODE
 
         ;; write back cipher text for lanes 4-7
         TRANSPOSE_4x4 %%B0L04_07, %%B1L04_07, %%B2L04_07, %%B3L04_07, \
-                      %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, TAB_A0B0A1B1, TAB_A2B2A3B3
+                        %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, TAB_A0B0A1B1, TAB_A2B2A3B3
 
         LOAD_STORE_4 4, 5, 6, 7, OUT, %%IDX, %%B0L04_07, %%B1L04_07, \
-                     %%B2L04_07, %%B3L04_07, %%TMP0, %%TMP1, STORE, %%MODE
+                        %%B2L04_07, %%B3L04_07, %%TMP0, %%TMP1, STORE, %%MODE
 
         ;; write back cipher text for lanes 8-11
         TRANSPOSE_4x4 %%B0L08_11, %%B1L08_11, %%B2L08_11, %%B3L08_11, \
-                      %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, TAB_A0B0A1B1, TAB_A2B2A3B3
+                        %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, TAB_A0B0A1B1, TAB_A2B2A3B3
 
         LOAD_STORE_4 8, 9, 10, 11, OUT, %%IDX, %%B0L08_11, %%B1L08_11, \
-                     %%B2L08_11, %%B3L08_11, %%TMP0, %%TMP1, STORE, %%MODE
+                        %%B2L08_11, %%B3L08_11, %%TMP0, %%TMP1, STORE, %%MODE
 
         ;; write back cipher text for lanes 12-15
         TRANSPOSE_4x4 %%B0L12_15, %%B1L12_15, %%B2L12_15, %%B3L12_15, \
-                      %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, TAB_A0B0A1B1, TAB_A2B2A3B3
+                        %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, TAB_A0B0A1B1, TAB_A2B2A3B3
 
         LOAD_STORE_4 12, 13, 14, 15, OUT, %%IDX, %%B0L12_15, %%B1L12_15, \
-                      %%B2L12_15, %%B3L12_15, %%TMP0, %%TMP1, STORE, %%MODE
+                        %%B2L12_15, %%B3L12_15, %%TMP0, %%TMP1, STORE, %%MODE
 
 %endif ;; MAC_TYPE
         sub             %%LENGTH, 64
@@ -384,14 +384,14 @@ align_label
         vpaddq          %%ZTMP1, %%ZTMP2, [IN + 64]
         vmovdqa64       [IN], %%ZTMP0
         vmovdqa64       [IN + 64], %%ZTMP1
-        add		IN_L0, %%IDX
-        add     	IN_L1, %%IDX
-        add     	IN_L2, %%IDX
-        add     	IN_L3, %%IDX
-        add     	IN_L8, %%IDX
-        add     	IN_L9, %%IDX
-        add     	IN_L10, %%IDX
-        add     	IN_L11, %%IDX
+        add             IN_L0, %%IDX
+        add             IN_L1, %%IDX
+        add             IN_L2, %%IDX
+        add             IN_L3, %%IDX
+        add             IN_L8, %%IDX
+        add             IN_L9, %%IDX
+        add             IN_L10, %%IDX
+        add             IN_L11, %%IDX
 %if %%MAC_TYPE == MAC_TYPE_NONE ;; skip out pointer update for CBC_MAC/XCBC
         vpaddq          %%ZTMP0, %%ZTMP2, [OUT]
         vpaddq          %%ZTMP1, %%ZTMP2, [OUT + 64]
@@ -475,33 +475,33 @@ align_label
 
         ;; load 4 plaintext blocks for lanes 0-3
         PRELOADED_LOAD_STORE_4 IN_L0, IN_L1, IN_L2, IN_L3, %%IDX, \
-				%%B0L00_03, %%B1L00_03, %%B2L00_03, \
-				%%B3L00_03, LOAD, %%MODE, 0, 1, 2, 3
+                                %%B0L00_03, %%B1L00_03, %%B2L00_03, \
+                                %%B3L00_03, LOAD, %%MODE, 0, 1, 2, 3
 
         TRANSPOSE_4x4 %%B0L00_03, %%B1L00_03, %%B2L00_03, %%B3L00_03, \
-                      %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, TAB_A0B0A1B1, TAB_A2B2A3B3
+                        %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, TAB_A0B0A1B1, TAB_A2B2A3B3
 
         ;; load 4 plaintext blocks for lanes 4-7
         LOAD_STORE_4 4, 5, 6, 7, IN, %%IDX, %%B0L04_07, %%B1L04_07, \
-                      %%B2L04_07, %%B3L04_07, %%TMP0, %%TMP1, LOAD, %%MODE
+                        %%B2L04_07, %%B3L04_07, %%TMP0, %%TMP1, LOAD, %%MODE
 
         TRANSPOSE_4x4 %%B0L04_07, %%B1L04_07, %%B2L04_07, %%B3L04_07, \
-                      %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, TAB_A0B0A1B1, TAB_A2B2A3B3
+                        %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, TAB_A0B0A1B1, TAB_A2B2A3B3
 
         ;; load 4 plaintext blocks for lanes 8-11
         PRELOADED_LOAD_STORE_4 IN_L8, IN_L9, IN_L10, IN_L11, %%IDX, \
-				%%B0L08_11, %%B1L08_11, %%B2L08_11, \
-				%%B3L08_11, LOAD, %%MODE, 8, 9, 10, 11
+                                %%B0L08_11, %%B1L08_11, %%B2L08_11, \
+                                %%B3L08_11, LOAD, %%MODE, 8, 9, 10, 11
 
         TRANSPOSE_4x4 %%B0L08_11, %%B1L08_11, %%B2L08_11, %%B3L08_11, \
-                      %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, TAB_A0B0A1B1, TAB_A2B2A3B3
+                        %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, TAB_A0B0A1B1, TAB_A2B2A3B3
 
         ;; load 4 plaintext blocks for lanes 12-15
         LOAD_STORE_4 12, 13, 14, 15, IN, %%IDX, %%B0L12_15, %%B1L12_15, \
-                      %%B2L12_15, %%B3L12_15, %%TMP0, %%TMP1, LOAD, %%MODE
+                        %%B2L12_15, %%B3L12_15, %%TMP0, %%TMP1, LOAD, %%MODE
 
         TRANSPOSE_4x4 %%B0L12_15, %%B1L12_15, %%B2L12_15, %%B3L12_15, \
-                      %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, TAB_A0B0A1B1, TAB_A2B2A3B3
+                        %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, TAB_A0B0A1B1, TAB_A2B2A3B3
 
         ;; xor plaintext block with IV and round zero key
         vpternlogq      %%B0L00_03, %%ZIV00_03, R0_K0_3, 0x96
@@ -559,31 +559,31 @@ align_label
 %if %%MAC_TYPE == MAC_TYPE_NONE
         ;; write back cipher text for lanes 0-3
         TRANSPOSE_4x4 %%B0L00_03, %%B1L00_03, %%B2L00_03, %%B3L00_03, \
-                      %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, TAB_A0B0A1B1, TAB_A2B2A3B3
+                        %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, TAB_A0B0A1B1, TAB_A2B2A3B3
 
         LOAD_STORE_4 0, 1, 2, 3, OUT, %%IDX, %%B0L00_03, %%B1L00_03, \
-                      %%B2L00_03, %%B3L00_03, %%TMP0, %%TMP1, STORE, %%MODE
+                        %%B2L00_03, %%B3L00_03, %%TMP0, %%TMP1, STORE, %%MODE
 
         ;; write back cipher text for lanes 4-7
         TRANSPOSE_4x4 %%B0L04_07, %%B1L04_07, %%B2L04_07, %%B3L04_07, \
-                      %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, TAB_A0B0A1B1, TAB_A2B2A3B3
+                        %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, TAB_A0B0A1B1, TAB_A2B2A3B3
 
         LOAD_STORE_4 4, 5, 6, 7, OUT, %%IDX, %%B0L04_07, %%B1L04_07, \
-                      %%B2L04_07, %%B3L04_07, %%TMP0, %%TMP1, STORE, %%MODE
+                        %%B2L04_07, %%B3L04_07, %%TMP0, %%TMP1, STORE, %%MODE
 
         ;; write back cipher text for lanes 8-11
         TRANSPOSE_4x4 %%B0L08_11, %%B1L08_11, %%B2L08_11, %%B3L08_11, \
-                      %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, TAB_A0B0A1B1, TAB_A2B2A3B3
+                        %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, TAB_A0B0A1B1, TAB_A2B2A3B3
 
         LOAD_STORE_4 8, 9, 10, 11, OUT, %%IDX, %%B0L08_11, %%B1L08_11, \
-                      %%B2L08_11, %%B3L08_11, %%TMP0, %%TMP1, STORE, %%MODE
+                        %%B2L08_11, %%B3L08_11, %%TMP0, %%TMP1, STORE, %%MODE
 
         ;; write back cipher text for lanes 12-15
         TRANSPOSE_4x4 %%B0L12_15, %%B1L12_15, %%B2L12_15, %%B3L12_15, \
-                      %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, TAB_A0B0A1B1, TAB_A2B2A3B3
+                        %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, TAB_A0B0A1B1, TAB_A2B2A3B3
 
         LOAD_STORE_4 12, 13, 14, 15, OUT, %%IDX, %%B0L12_15, %%B1L12_15, \
-                      %%B2L12_15, %%B3L12_15, %%TMP0, %%TMP1, STORE, %%MODE
+                        %%B2L12_15, %%B3L12_15, %%TMP0, %%TMP1, STORE, %%MODE
 %endif ;; !CBC_MAC
 
         ;; update in/out pointers
@@ -645,7 +645,7 @@ align_label
         vmovdqa64       ZIV08_11, [%%IV + 16*8]
         vmovdqa64       ZIV12_15, [%%IV + 16*12]
 
-	;; preload some input pointers
+        ;; preload some input pointers
         mov     IN_L0, [%%IN + 8*0]
         mov     IN_L1, [%%IN + 8*1]
         mov     IN_L2, [%%IN + 8*2]
@@ -659,7 +659,7 @@ align_label
 %if %%MAC_TYPE == MAC_TYPE_NONE
         lea     OUT, [%%OUT]
 %endif
-	;; preload some round keys
+        ;; preload some round keys
         vmovdqu64 R0_K0_3, [%%KP + %%K00_03_OFFSET]
         vmovdqu64 R0_K4_7, [%%KP + %%K04_07_OFFSET]
         vmovdqu64 R0_K8_11,[%%KP + %%K08_11_OFFSET]
@@ -668,10 +668,10 @@ align_label
         vmovdqu64 R2_K8_11,[%%KP + %%K08_11_OFFSET + 2 * (16*16)]
 
         ENCRYPT_16_PARALLEL ZIV00_03, ZIV04_07, ZIV08_11, ZIV12_15, \
-                            LEN, %%ROUNDS, IA0, ZT0, ZT1, ZT2, ZT3, ZT4, ZT5, \
-                            ZT6, ZT7, ZT8, ZT9, ZT10, ZT11, ZT12, ZT13, ZT14, \
-                            ZT15, ZT16, ZT17, ZT18, ZT19, IA1, IA2, \
-                            %%MAC_TYPE, %%SUBMIT_FLUSH
+                                LEN, %%ROUNDS, IA0, ZT0, ZT1, ZT2, ZT3, ZT4, ZT5, \
+                                ZT6, ZT7, ZT8, ZT9, ZT10, ZT11, ZT12, ZT13, ZT14, \
+                                ZT15, ZT16, ZT17, ZT18, ZT19, IA1, IA2, \
+                                %%MAC_TYPE, %%SUBMIT_FLUSH
 
         ;; get num remaining blocks
         shr             LEN, 4
@@ -685,23 +685,23 @@ align_label
 align_label
 %%_final_blocks_3:
         ENCRYPT_16_FINAL ZIV00_03, ZIV04_07, ZIV08_11, ZIV12_15, \
-                         %%ROUNDS, IA0, ZT0, ZT1, ZT2, ZT3, ZT4, ZT5, ZT6, ZT7,  \
-                         ZT8, ZT9, ZT10, ZT11, ZT12, ZT13, ZT14, ZT15, ZT16, ZT17, \
-                         ZT18, ZT19, IA1, IA2, 3, %%MAC_TYPE, %%SUBMIT_FLUSH
+                        %%ROUNDS, IA0, ZT0, ZT1, ZT2, ZT3, ZT4, ZT5, ZT6, ZT7,  \
+                        ZT8, ZT9, ZT10, ZT11, ZT12, ZT13, ZT14, ZT15, ZT16, ZT17, \
+                        ZT18, ZT19, IA1, IA2, 3, %%MAC_TYPE, %%SUBMIT_FLUSH
         jmp              %%_cbc_enc_done
 align_label
 %%_final_blocks_1:
         ENCRYPT_16_FINAL ZIV00_03, ZIV04_07, ZIV08_11, ZIV12_15, \
-                         %%ROUNDS, IA0, ZT0, ZT1, ZT2, ZT3, ZT4, ZT5, ZT6, ZT7,  \
-                         ZT8, ZT9, ZT10, ZT11, ZT12, ZT13, ZT14, ZT15, ZT16, ZT17, \
-                         ZT18, ZT19, IA1, IA2, 1, %%MAC_TYPE, %%SUBMIT_FLUSH
+                        %%ROUNDS, IA0, ZT0, ZT1, ZT2, ZT3, ZT4, ZT5, ZT6, ZT7,  \
+                        ZT8, ZT9, ZT10, ZT11, ZT12, ZT13, ZT14, ZT15, ZT16, ZT17, \
+                        ZT18, ZT19, IA1, IA2, 1, %%MAC_TYPE, %%SUBMIT_FLUSH
         jmp              %%_cbc_enc_done
 align_label
 %%_final_blocks_2:
         ENCRYPT_16_FINAL ZIV00_03, ZIV04_07, ZIV08_11, ZIV12_15, \
-                         %%ROUNDS, IA0, ZT0, ZT1, ZT2, ZT3, ZT4, ZT5, ZT6, ZT7,  \
-                         ZT8, ZT9, ZT10, ZT11, ZT12, ZT13, ZT14, ZT15, ZT16, ZT17, \
-                         ZT18, ZT19, IA1, IA2, 2, %%MAC_TYPE, %%SUBMIT_FLUSH
+                        %%ROUNDS, IA0, ZT0, ZT1, ZT2, ZT3, ZT4, ZT5, ZT6, ZT7,  \
+                        ZT8, ZT9, ZT10, ZT11, ZT12, ZT13, ZT14, ZT15, ZT16, ZT17, \
+                        ZT18, ZT19, IA1, IA2, 2, %%MAC_TYPE, %%SUBMIT_FLUSH
 align_label
 %%_cbc_enc_done:
         ;; store IV's per lane

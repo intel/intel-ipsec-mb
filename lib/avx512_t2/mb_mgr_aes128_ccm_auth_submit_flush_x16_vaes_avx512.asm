@@ -104,9 +104,9 @@ len_masks:
         dq 0x0000000000000000, 0x0000FFFF00000000
         dq 0x0000000000000000, 0xFFFF000000000000
 dupw:
-	dq 0x0100010001000100, 0x0100010001000100
+        dq 0x0100010001000100, 0x0100010001000100
 counter_mask:
-	dq 0xFFFFFFFFFFFFFF07, 0x0000FFFFFFFFFFFF
+        dq 0xFFFFFFFFFFFFFF07, 0x0000FFFFFFFFFFFF
 one:    dq  1
 two:    dq  2
 three:  dq  3
@@ -601,11 +601,11 @@ align_label
         or      dword [job_rax + _status], IMB_STATUS_COMPLETED_AUTH
 
 %ifdef SAFE_DATA
-       vpxorq   ZWORD(xtmp0), ZWORD(xtmp0)
+        vpxorq   ZWORD(xtmp0), ZWORD(xtmp0)
 %ifidn %%SUBMIT_FLUSH, SUBMIT
-       shl     min_idx, 4
+        shl     min_idx, 4
 
-       ;; Clear expanded keys
+        ;; Clear expanded keys
 %assign round 0
 %rep NROUNDS + 2
         vmovdqa [state + _aes_ccm_args_key_tab + round * (16*16) + min_idx], xtmp0

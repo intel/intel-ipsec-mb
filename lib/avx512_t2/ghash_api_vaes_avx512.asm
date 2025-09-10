@@ -118,8 +118,8 @@ align_function
 MKGLOBAL(ghash_internal_vaes_avx512,function,internal)
 ghash_internal_vaes_avx512:
         CALC_GHASH r12, r13, xmm0, arg1, zmm1, zmm3, zmm4, zmm5, \
-                   zmm6, zmm7, zmm8, zmm9, zmm10, zmm11, zmm12, zmm13, \
-                   zmm15, zmm16, zmm17, zmm18, zmm19, zmm20, rax, k1
+                zmm6, zmm7, zmm8, zmm9, zmm10, zmm11, zmm12, zmm13, \
+                zmm15, zmm16, zmm17, zmm18, zmm19, zmm20, rax, k1
         ;; **zmm3, zmm4, zmm5 and zmm6 may contain clear text
         ;; **zmm15, zmm16, zmm19 and zmm9 may contain hash key
         ret
@@ -164,7 +164,7 @@ ghash_vaes_avx512:
 %endif
 
         ;; copy tag to xmm0
-        vmovdqu	xmm0, [arg4]
+        vmovdqu xmm0, [arg4]
         vpshufb xmm0, xmm0, [rel SHUF_MASK] ; perform a 16Byte swap
 
         ;; arg1 [in] pointer to key structure => arg1

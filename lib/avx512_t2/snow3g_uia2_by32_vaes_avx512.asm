@@ -409,14 +409,14 @@ mksection .text
         ;; up to 31 blocks
         ZMM_LOAD_MASKED_BLOCKS_0_16 16, %%IN, 0, %%DATA0, %%DATA1, %%DATA2, %%DATA3, %%MASK
         ZMM_LOAD_MASKED_BLOCKS_0_16 16, rsp, %%CONST_TAB_OFFSET*8 + CONSTANTS_OFFSET, \
-                                    %%TMP0, %%TMP1, %%TMP2, %%TMP3, %%MASK
+                                        %%TMP0, %%TMP1, %%TMP2, %%TMP3, %%MASK
 %endif
 
 %ifidn %%MAX_BLOCKS, 24
         ;; up to 24 blocks
         ZMM_LOAD_MASKED_BLOCKS_0_16 12, %%IN, 0, %%DATA0, %%DATA1, %%DATA2, %%DATA3, %%MASK
         ZMM_LOAD_MASKED_BLOCKS_0_16 12, rsp, %%CONST_TAB_OFFSET*8 + CONSTANTS_OFFSET, \
-                                    %%TMP0, %%TMP1, %%TMP2, %%TMP3, %%MASK
+                                        %%TMP0, %%TMP1, %%TMP2, %%TMP3, %%MASK
         ;; zero unused blocks
         vpxorq          %%DATA3, %%DATA3, %%DATA3
         vpxorq          %%TMP3, %%TMP3, %%TMP3
@@ -426,7 +426,7 @@ mksection .text
         ;; up to 16 blocks
         ZMM_LOAD_MASKED_BLOCKS_0_16 8, %%IN, 0, %%DATA0, %%DATA1, %%DATA2, %%DATA3, %%MASK
         ZMM_LOAD_MASKED_BLOCKS_0_16 8, rsp, %%CONST_TAB_OFFSET*8 + CONSTANTS_OFFSET, \
-                                    %%TMP0, %%TMP1, %%TMP2, %%TMP3, %%MASK
+                                        %%TMP0, %%TMP1, %%TMP2, %%TMP3, %%MASK
         ;; zero unused blocks
         vpxorq          %%DATA2, %%DATA2, %%DATA2
         vpxorq          %%DATA3, %%DATA3, %%DATA3
@@ -438,7 +438,7 @@ mksection .text
         ;; 1 to 8 blocks
         ZMM_LOAD_MASKED_BLOCKS_0_16 4, %%IN, 0, %%DATA0, %%DATA1, %%DATA2, %%DATA3, %%MASK
         ZMM_LOAD_MASKED_BLOCKS_0_16 4, rsp, %%CONST_TAB_OFFSET*8 + CONSTANTS_OFFSET, \
-                                    %%TMP0, %%TMP1, %%TMP2, %%TMP3, %%MASK
+                                        %%TMP0, %%TMP1, %%TMP2, %%TMP3, %%MASK
         ;; zero unused blocks
         vpxorq          %%DATA1, %%DATA1, %%DATA1
         vpxorq          %%DATA2, %%DATA2, %%DATA2
@@ -595,7 +595,7 @@ align_label
 gt24_blocks:
         ;; 25 - 31 blocks
         PROCESS_FINAL_BLOCKS 31, in_ptr, qword_len, k2, tmp4, zmm3, zmm4, zmm23, zmm24, zmm0, \
-                             zmm1, zmm20, zmm21, zmm5, zmm6, zmm10, zmm11, zmm25, zmm26, zmm30, zmm31
+                                zmm1, zmm20, zmm21, zmm5, zmm6, zmm10, zmm11, zmm25, zmm26, zmm30, zmm31
 
         jmp     full_blocks_complete
 
@@ -603,7 +603,7 @@ align_label
 le24_blocks:
         ;; 17 - 24 blocks
         PROCESS_FINAL_BLOCKS 24, in_ptr, qword_len, k2, tmp4, zmm3, zmm4, zmm23, zmm24, zmm0, \
-                             zmm1, zmm20, zmm21, zmm5, zmm6, zmm10, zmm11, zmm25, zmm26, zmm30, zmm31
+                                zmm1, zmm20, zmm21, zmm5, zmm6, zmm10, zmm11, zmm25, zmm26, zmm30, zmm31
         jmp     full_blocks_complete
 
 align_label
@@ -615,14 +615,14 @@ align_label
 gt8_blocks:
         ;; 9 - 16 blocks
         PROCESS_FINAL_BLOCKS 16, in_ptr, qword_len, k2, tmp4, zmm3, zmm4, zmm23, zmm24, zmm0, \
-                             zmm1, zmm20, zmm21, zmm5, zmm6, zmm10, zmm11, zmm25, zmm26, zmm30, zmm31
+                                zmm1, zmm20, zmm21, zmm5, zmm6, zmm10, zmm11, zmm25, zmm26, zmm30, zmm31
         jmp     full_blocks_complete
 
 align_label
 le8_blocks:
         ;; 1 - 8 blocks
         PROCESS_FINAL_BLOCKS 8, in_ptr, qword_len, k2, tmp4, zmm3, zmm4, zmm23, zmm24, zmm0, \
-                             zmm1, zmm20, zmm21, zmm5, zmm6, zmm10, zmm11, zmm25, zmm26, zmm30, zmm31
+                                zmm1, zmm20, zmm21, zmm5, zmm6, zmm10, zmm11, zmm25, zmm26, zmm30, zmm31
 
         jmp     full_blocks_complete
 

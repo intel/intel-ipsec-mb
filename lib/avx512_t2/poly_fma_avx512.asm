@@ -1122,11 +1122,11 @@ align_loop
         ; zmm22-24 contain the 5x44-bit limbs of the powers of R
         ; zmm25-26 contain the 5x44-bit limbs of the powers of R' (5*4*R)
         POLY1305_MSG_MUL_REDUCE_VEC16 zmm13, zmm14, zmm15, zmm16, zmm17, zmm18, \
-                                      zmm22, zmm23, zmm24, zmm25, zmm26, \
-                                      zmm5, zmm6, zmm7, zmm8, zmm9, zmm10, \
-                                      zmm19, zmm20, zmm21, zmm27, zmm28, zmm29, \
-                                      zmm30, zmm31, zmm11, zmm0, zmm1, \
-                                      zmm2, zmm3, zmm4, zmm12, %%MSG, %%T0
+                                        zmm22, zmm23, zmm24, zmm25, zmm26, \
+                                        zmm5, zmm6, zmm7, zmm8, zmm9, zmm10, \
+                                        zmm19, zmm20, zmm21, zmm27, zmm28, zmm29, \
+                                        zmm30, zmm31, zmm11, zmm0, zmm1, \
+                                        zmm2, zmm3, zmm4, zmm12, %%MSG, %%T0
 
         jmp     %%_poly1305_blocks_loop
 
@@ -1171,10 +1171,10 @@ align_label
         vpsllq  zmm26, 2
 
         POLY1305_MUL_REDUCE_VEC16 zmm13, zmm14, zmm15, zmm16, zmm17, zmm18, \
-                                  zmm19, zmm20, zmm21, zmm27, zmm28, \
-                                  zmm22, zmm23, zmm24, zmm25, zmm26, \
-                                  zmm0, zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, \
-                                  zmm7, zmm8, zmm9, zmm10, zmm11, zmm12, zmm29
+                                zmm19, zmm20, zmm21, zmm27, zmm28, \
+                                zmm22, zmm23, zmm24, zmm25, zmm26, \
+                                zmm0, zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, \
+                                zmm7, zmm8, zmm9, zmm10, zmm11, zmm12, zmm29
 
         ;; Add all blocks (horizontally)
         vpaddq  zmm13, zmm16
@@ -1471,7 +1471,7 @@ align_loop
         add     %%T0, %%R1      ;; T0 = R1 + (R1 >> 2)
 
         POLY1305_MUL_REDUCE %%A0, %%A1, %%A2, %%R0, %%R1, \
-                            %%T0, %%T1, %%T2, %%T3, %%GP_RAX, %%GP_RDX
+                                %%T0, %%T1, %%T2, %%T3, %%GP_RAX, %%GP_RDX
 
         add     %%MSG, POLY1305_BLOCK_SIZE
         sub     %%LEN, POLY1305_BLOCK_SIZE
@@ -1586,7 +1586,7 @@ align_label
         add     %%T0, %%R1      ;; T0 = R1 + (R1 >> 2)
 
         POLY1305_MUL_REDUCE %%A0, %%A1, %%A2, %%R0, %%R1, \
-                            %%T0, %%T1, %%T2, %%T3, %%GP_RAX, %%GP_RDX
+                                %%T0, %%T1, %%T2, %%T3, %%GP_RAX, %%GP_RDX
 
 align_label
 %%_poly1305_blocks_exit:
@@ -1639,7 +1639,7 @@ align_label
 %macro FUNC_ENTRY 0
         mov     rax, rsp
         sub     rsp, STACKFRAME_size
-	and	rsp, -64
+        and     rsp, -64
 
         mov     [rsp + _gpr_save + 8*0], rbx
         mov     [rsp + _gpr_save + 8*1], rbp
@@ -1653,7 +1653,7 @@ align_label
 %assign i 0
 %assign j 6
 %rep 10
-	vmovdqa	[rsp + _xmm_save + i*16], APPEND(xmm, j)
+        vmovdqa [rsp + _xmm_save + i*16], APPEND(xmm, j)
 %assign i (i + 1)
 %assign j (j + 1)
 %endrep
@@ -1686,7 +1686,7 @@ align_label
 %assign i 0
 %assign j 6
 %rep 10
-	vmovdqa	APPEND(xmm, j), [rsp + _xmm_save + i*16]
+        vmovdqa APPEND(xmm, j), [rsp + _xmm_save + i*16]
 %assign i (i + 1)
 %assign j (j + 1)
 %endrep

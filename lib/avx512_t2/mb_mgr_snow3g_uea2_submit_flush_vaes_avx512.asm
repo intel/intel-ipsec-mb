@@ -102,7 +102,7 @@ mksection .text
         and     %%LANE, 0xF ; max 16 lanes
         shr     %%UNUSED_LANES, 4
         mov     [state + _snow3g_unused_lanes], %%UNUSED_LANES
-        add	qword [state + _snow3g_lanes_in_use], 1
+        add     qword [state + _snow3g_lanes_in_use], 1
         mov     [state + _snow3g_job_in_lane + %%LANE*8], job
 
         ;; set lane mask
@@ -208,9 +208,9 @@ align_loop
 
         ;; Do cipher / clock operation for all lanes and given common length
         SNOW_3G_KEYSTREAM state, %%MIN_COMMON_LEN, {state + _snow3g_args_in}, \
-                          {state + _snow3g_args_out}, %%OFFSET, \
-                          %%TGP0, %%TGP1, %%TGP2, \
-                          k1, k2, k3, k4, k5, k6, %%GEN
+                        {state + _snow3g_args_out}, %%OFFSET, \
+                        %%TGP0, %%TGP1, %%TGP2, \
+                        k1, k2, k3, k4, k5, k6, %%GEN
 
         ;; save DST[i] = DST[i] + %%OFFSET
         ;; save SRC[i] = SRC[i] + %%OFFSET
