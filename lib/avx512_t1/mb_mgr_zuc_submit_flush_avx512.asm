@@ -155,7 +155,7 @@ mksection .text
         vmovdqa [state + _zuc_args_IV + lane], xmm0
         shr     lane, 5
         mov     [state + _zuc_unused_lanes], unused_lanes
-        add	qword [state + _zuc_lanes_in_use], 1
+        add     qword [state + _zuc_lanes_in_use], 1
 
         mov     [state + _zuc_job_in_lane + lane*8], job
         ; New job that needs init (update bit in zuc_init_not_done bitmask)
@@ -240,7 +240,7 @@ align_label
 %%len_is_0_submit_eea3:
         ; process completed job "idx"
         ;; - decrement number of jobs in use
-        sub	qword [state + _zuc_lanes_in_use], 1
+        sub     qword [state + _zuc_lanes_in_use], 1
         mov     job_rax, [state + _zuc_job_in_lane + idx*8]
         mov     unused_lanes, [state + _zuc_unused_lanes]
         mov     qword [state + _zuc_job_in_lane + idx*8], 0
@@ -457,7 +457,7 @@ align_label
 %endif
         ; process completed job "idx"
         ;; - decrement number of jobs in use
-        sub	qword [state + _zuc_lanes_in_use], 1
+        sub     qword [state + _zuc_lanes_in_use], 1
         mov     job_rax, [state + _zuc_job_in_lane + idx*8]
         mov     unused_lanes, [state + _zuc_unused_lanes]
         mov     qword [state + _zuc_job_in_lane + idx*8], 0
@@ -710,7 +710,7 @@ align_label
 
         mov     unused_lanes, [state + _zuc_unused_lanes]
         mov     lane, unused_lanes
-        and	lane, 0xF           ;; just a nibble
+        and     lane, 0xF           ;; just a nibble
         shr     unused_lanes, 4
         mov     tmp, [job + _zuc_eia3_iv]
         shl     lane, 5
@@ -719,7 +719,7 @@ align_label
         vmovdqa [state + _zuc_args_IV + lane], xmm0
         shr     lane, 5
         mov     [state + _zuc_unused_lanes], unused_lanes
-        add	qword [state + _zuc_lanes_in_use], 1
+        add     qword [state + _zuc_lanes_in_use], 1
 
         mov     [state + _zuc_job_in_lane + lane*8], job
         ; New job that needs init (update bit in zuc_init_not_done bitmask)
@@ -972,7 +972,7 @@ align_label
 %endif
         ; process completed job "idx"
         ;; - decrement number of jobs in use
-        sub	qword [state + _zuc_lanes_in_use], 1
+        sub     qword [state + _zuc_lanes_in_use], 1
         mov     job_rax, [state + _zuc_job_in_lane + idx*8]
         mov     unused_lanes, [state + _zuc_unused_lanes]
         mov     qword [state + _zuc_job_in_lane + idx*8], 0

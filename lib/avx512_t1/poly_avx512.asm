@@ -1206,7 +1206,7 @@ align_loop
         add     %%T0, %%R1      ;; T0 = R1 + (R1 >> 2)
 
         POLY1305_MUL_REDUCE %%A0, %%A1, %%A2, %%R0, %%R1, \
-                            %%T0, %%T1, %%T2, %%T3, %%GP_RAX, %%GP_RDX
+                                %%T0, %%T1, %%T2, %%T3, %%GP_RAX, %%GP_RDX
 
         add     %%MSG, POLY1305_BLOCK_SIZE
         sub     %%LEN, POLY1305_BLOCK_SIZE
@@ -1245,7 +1245,7 @@ align_label
         add     %%T0, %%R1      ;; T0 = R1 + (R1 >> 2)
 
         POLY1305_MUL_REDUCE %%A0, %%A1, %%A2, %%R0, %%R1, \
-                            %%T0, %%T1, %%T2, %%T3, %%GP_RAX, %%GP_RDX
+                                %%T0, %%T1, %%T2, %%T3, %%GP_RAX, %%GP_RDX
 
 align_label
 %%_poly1305_blocks_exit:
@@ -1312,7 +1312,7 @@ align_label
 %assign i 0
 %assign j 6
 %rep 10
-	vmovdqa	[rsp + _xmm_save + i*16], APPEND(xmm, j)
+        vmovdqa [rsp + _xmm_save + i*16], APPEND(xmm, j)
 %assign i (i + 1)
 %assign j (j + 1)
 %endrep
@@ -1345,7 +1345,7 @@ align_label
 %assign i 0
 %assign j 6
 %rep 10
-	vmovdqa	APPEND(xmm, j), [rsp + _xmm_save + i*16]
+        vmovdqa APPEND(xmm, j), [rsp + _xmm_save + i*16]
 %assign i (i + 1)
 %assign j (j + 1)
 %endrep

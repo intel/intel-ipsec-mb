@@ -59,27 +59,27 @@ extern des3_x16_cbc_enc_avx512
 extern des3_x16_cbc_dec_avx512
 
 %ifdef LINUX
-%define arg1	rdi
-%define arg2	rsi
-%define arg3	rdx
-%define arg4	rcx
+%define arg1    rdi
+%define arg2    rsi
+%define arg3    rdx
+%define arg4    rcx
 %else
-%define arg1	rcx
-%define arg2	rdx
-%define arg3	r8
-%define arg4	r9
+%define arg1    rcx
+%define arg2    rdx
+%define arg3    r8
+%define arg4    r9
 %endif
 
-%define STATE	arg1
-%define JOB	arg2
+%define STATE   arg1
+%define JOB     arg2
 
 %define IA0     arg3
 %define IA1     arg4
 %define IA2     r10
 
-%define MIN_IDX	r11
+%define MIN_IDX r11
 %define MIN_LEN rax
-%define LANE	r11
+%define LANE    r11
 
 %define AVX512_NUM_DES_LANES 16
 
@@ -110,12 +110,12 @@ extern des3_x16_cbc_dec_avx512
 %define %%ENC_DEC %2
 
         ;; get unused lane and increment number of lanes in use
-        mov	IA0, [STATE + _des_unused_lanes]
+        mov     IA0, [STATE + _des_unused_lanes]
         mov     LANE, IA0
-        and	LANE, 0xF           ;; just a nibble
-        shr	IA0, 4
-        mov	[STATE + _des_unused_lanes], IA0
-	add	qword [STATE + _des_lanes_in_use], 1
+        and     LANE, 0xF           ;; just a nibble
+        shr     IA0, 4
+        mov     [STATE + _des_unused_lanes], IA0
+        add     qword [STATE + _des_lanes_in_use], 1
 
         ;; store job info in OOO structure
         ;; - job pointer
@@ -165,11 +165,11 @@ extern des3_x16_cbc_dec_avx512
         ;; schedule the processing
         ;; - find min job size
         vmovdqa         XWORD(ZTMP0), [STATE + _des_lens + 2*0]
-        vphminposuw	XWORD(ZTMP2), XWORD(ZTMP0)
+        vphminposuw     XWORD(ZTMP2), XWORD(ZTMP0)
         vpextrw         DWORD(MIN_LEN), XWORD(ZTMP2), 0   ; min value
         vpextrw         DWORD(MIN_IDX), XWORD(ZTMP2), 1   ; min index
         vmovdqa         XWORD(ZTMP1), [STATE + _des_lens + 2*8]
-        vphminposuw	XWORD(ZTMP2), XWORD(ZTMP1)
+        vphminposuw     XWORD(ZTMP2), XWORD(ZTMP1)
         vpextrw         DWORD(IA2), XWORD(ZTMP2), 0       ; min value
         cmp             DWORD(MIN_LEN), DWORD(IA2)
         jle             %%_use_min
@@ -239,17 +239,17 @@ align_label
 %%_des_submit_end:
         ;; return a job
         ;; - decrement number of jobs in use
-	sub	qword [STATE + _des_lanes_in_use], 1
+        sub     qword [STATE + _des_lanes_in_use], 1
         ;; - put the lane back to free lanes pool
-        mov	IA0, [STATE + _des_unused_lanes]
-        shl	IA0, 4
+        mov     IA0, [STATE + _des_unused_lanes]
+        shl     IA0, 4
         or      IA0, MIN_IDX
-        mov	[STATE + _des_unused_lanes], IA0
+        mov     [STATE + _des_unused_lanes], IA0
         ;; - mark job as complete
         ;; - clear job pointer
         mov     rax, [STATE + _des_job_in_lane + MIN_IDX*8]
         mov     qword [STATE + _des_job_in_lane + MIN_IDX*8], 0
-        or	dword [rax + _status], IMB_STATUS_COMPLETED_CIPHER
+        or      dword [rax + _status], IMB_STATUS_COMPLETED_CIPHER
 
 %ifdef SAFE_DATA
         ;; Clear IV
@@ -337,11 +337,11 @@ align_label
         ;; schedule the processing
         ;; - find min job size
         vmovdqa         XWORD(ZTMP0), [STATE + _des_lens + 2*0]
-        vphminposuw	XWORD(ZTMP2), XWORD(ZTMP0)
+        vphminposuw     XWORD(ZTMP2), XWORD(ZTMP0)
         vpextrw         DWORD(MIN_LEN), XWORD(ZTMP2), 0   ; min value
         vpextrw         DWORD(MIN_IDX), XWORD(ZTMP2), 1   ; min index
         vmovdqa         XWORD(ZTMP1), [STATE + _des_lens + 2*8]
-        vphminposuw	XWORD(ZTMP2), XWORD(ZTMP1)
+        vphminposuw     XWORD(ZTMP2), XWORD(ZTMP1)
         vpextrw         DWORD(IA2), XWORD(ZTMP2), 0       ; min value
         cmp             DWORD(MIN_LEN), DWORD(IA2)
         jle             %%_use_min
@@ -403,15 +403,15 @@ align_label
 %%_des_flush_end:
         ;; return a job
         ;; - decrement number of jobs in use
-	sub	qword [STATE + _des_lanes_in_use], 1
+        sub     qword [STATE + _des_lanes_in_use], 1
         ;; - put the lane back to free lanes pool
-        mov	IA0, [STATE + _des_unused_lanes]
-        shl	IA0, 4
+        mov     IA0, [STATE + _des_unused_lanes]
+        shl     IA0, 4
         or      IA0, MIN_IDX
-        mov	[STATE + _des_unused_lanes], IA0
+        mov     [STATE + _des_unused_lanes], IA0
         ;; - mark job as complete
         mov     rax, [STATE + _des_job_in_lane + MIN_IDX*8]
-        or	dword [rax + _status], IMB_STATUS_COMPLETED_CIPHER
+        or      dword [rax + _status], IMB_STATUS_COMPLETED_CIPHER
         ;; - clear job pointer
         mov     qword [STATE + _des_job_in_lane + MIN_IDX*8], 0
 %ifdef SAFE_DATA

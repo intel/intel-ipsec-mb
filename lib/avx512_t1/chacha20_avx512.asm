@@ -803,40 +803,40 @@ mksection .text
 
         ; A += B
         ZMM_OP_X4 vpaddd, %%ZMM_DWORD_A1, %%ZMM_DWORD_A2, %%ZMM_DWORD_A3, %%ZMM_DWORD_A4, \
-                          %%ZMM_DWORD_B1, %%ZMM_DWORD_B2, %%ZMM_DWORD_B3, %%ZMM_DWORD_B4
+                        %%ZMM_DWORD_B1, %%ZMM_DWORD_B2, %%ZMM_DWORD_B3, %%ZMM_DWORD_B4
         ; D ^= A
         ZMM_OP_X4 vpxorq, %%ZMM_DWORD_D1, %%ZMM_DWORD_D2, %%ZMM_DWORD_D3, %%ZMM_DWORD_D4, \
-                          %%ZMM_DWORD_A1, %%ZMM_DWORD_A2, %%ZMM_DWORD_A3, %%ZMM_DWORD_A4
+                        %%ZMM_DWORD_A1, %%ZMM_DWORD_A2, %%ZMM_DWORD_A3, %%ZMM_DWORD_A4
 
         ; D <<< 16
         ZMM_ROLS_X4 %%ZMM_DWORD_D1, %%ZMM_DWORD_D2, %%ZMM_DWORD_D3, %%ZMM_DWORD_D4, 16
 
         ; C += D
         ZMM_OP_X4 vpaddd, %%ZMM_DWORD_C1, %%ZMM_DWORD_C2, %%ZMM_DWORD_C3, %%ZMM_DWORD_C4, \
-                          %%ZMM_DWORD_D1, %%ZMM_DWORD_D2, %%ZMM_DWORD_D3, %%ZMM_DWORD_D4
+                        %%ZMM_DWORD_D1, %%ZMM_DWORD_D2, %%ZMM_DWORD_D3, %%ZMM_DWORD_D4
         ; B ^= C
         ZMM_OP_X4 vpxorq, %%ZMM_DWORD_B1, %%ZMM_DWORD_B2, %%ZMM_DWORD_B3, %%ZMM_DWORD_B4, \
-                          %%ZMM_DWORD_C1, %%ZMM_DWORD_C2, %%ZMM_DWORD_C3, %%ZMM_DWORD_C4
+                        %%ZMM_DWORD_C1, %%ZMM_DWORD_C2, %%ZMM_DWORD_C3, %%ZMM_DWORD_C4
 
         ; B <<< 12
         ZMM_ROLS_X4 %%ZMM_DWORD_B1, %%ZMM_DWORD_B2, %%ZMM_DWORD_B3, %%ZMM_DWORD_B4, 12
 
         ; A += B
         ZMM_OP_X4 vpaddd, %%ZMM_DWORD_A1, %%ZMM_DWORD_A2, %%ZMM_DWORD_A3, %%ZMM_DWORD_A4, \
-                          %%ZMM_DWORD_B1, %%ZMM_DWORD_B2, %%ZMM_DWORD_B3, %%ZMM_DWORD_B4
+                        %%ZMM_DWORD_B1, %%ZMM_DWORD_B2, %%ZMM_DWORD_B3, %%ZMM_DWORD_B4
         ; D ^= A
         ZMM_OP_X4 vpxorq, %%ZMM_DWORD_D1, %%ZMM_DWORD_D2, %%ZMM_DWORD_D3, %%ZMM_DWORD_D4, \
-                          %%ZMM_DWORD_A1, %%ZMM_DWORD_A2, %%ZMM_DWORD_A3, %%ZMM_DWORD_A4
+                        %%ZMM_DWORD_A1, %%ZMM_DWORD_A2, %%ZMM_DWORD_A3, %%ZMM_DWORD_A4
 
         ; D <<< 8
         ZMM_ROLS_X4 %%ZMM_DWORD_D1, %%ZMM_DWORD_D2, %%ZMM_DWORD_D3, %%ZMM_DWORD_D4, 8
 
         ; C += D
         ZMM_OP_X4 vpaddd, %%ZMM_DWORD_C1, %%ZMM_DWORD_C2, %%ZMM_DWORD_C3, %%ZMM_DWORD_C4, \
-                          %%ZMM_DWORD_D1, %%ZMM_DWORD_D2, %%ZMM_DWORD_D3, %%ZMM_DWORD_D4
+                        %%ZMM_DWORD_D1, %%ZMM_DWORD_D2, %%ZMM_DWORD_D3, %%ZMM_DWORD_D4
         ; B ^= C
         ZMM_OP_X4 vpxorq, %%ZMM_DWORD_B1, %%ZMM_DWORD_B2, %%ZMM_DWORD_B3, %%ZMM_DWORD_B4, \
-                          %%ZMM_DWORD_C1, %%ZMM_DWORD_C2, %%ZMM_DWORD_C3, %%ZMM_DWORD_C4
+                        %%ZMM_DWORD_C1, %%ZMM_DWORD_C2, %%ZMM_DWORD_C3, %%ZMM_DWORD_C4
 
         ; B <<< 7
         ZMM_ROLS_X4 %%ZMM_DWORD_B1, %%ZMM_DWORD_B2, %%ZMM_DWORD_B3, %%ZMM_DWORD_B4, 7
@@ -898,43 +898,43 @@ mksection .text
         ;;; A = 0, 1, 2, 3;   B = 4, 5, 6, 7;
         ;;; C = 8, 9, 10, 11; D = 12, 13, 14, 15
         CHACHA20_ROUND %%ZMM_DWORD0, %%ZMM_DWORD1, %%ZMM_DWORD2, %%ZMM_DWORD3, \
-                       %%ZMM_DWORD4, %%ZMM_DWORD5, %%ZMM_DWORD6, %%ZMM_DWORD7, \
-                       %%ZMM_DWORD8, %%ZMM_DWORD9, %%ZMM_DWORD10, %%ZMM_DWORD11, \
-                       %%ZMM_DWORD12, %%ZMM_DWORD13, %%ZMM_DWORD14, %%ZMM_DWORD15
+                        %%ZMM_DWORD4, %%ZMM_DWORD5, %%ZMM_DWORD6, %%ZMM_DWORD7, \
+                        %%ZMM_DWORD8, %%ZMM_DWORD9, %%ZMM_DWORD10, %%ZMM_DWORD11, \
+                        %%ZMM_DWORD12, %%ZMM_DWORD13, %%ZMM_DWORD14, %%ZMM_DWORD15
         ;;; For 4 diagonal rounds:
         ;;; A = 0, 1, 2, 3;   B = 5, 6, 7, 4;
         ;;; C = 10, 11, 8, 9; D = 15, 12, 13, 14
         CHACHA20_ROUND %%ZMM_DWORD0, %%ZMM_DWORD1, %%ZMM_DWORD2, %%ZMM_DWORD3, \
-                       %%ZMM_DWORD5, %%ZMM_DWORD6, %%ZMM_DWORD7, %%ZMM_DWORD4, \
-                       %%ZMM_DWORD10, %%ZMM_DWORD11, %%ZMM_DWORD8, %%ZMM_DWORD9, \
-                       %%ZMM_DWORD15, %%ZMM_DWORD12, %%ZMM_DWORD13, %%ZMM_DWORD14
+                        %%ZMM_DWORD5, %%ZMM_DWORD6, %%ZMM_DWORD7, %%ZMM_DWORD4, \
+                        %%ZMM_DWORD10, %%ZMM_DWORD11, %%ZMM_DWORD8, %%ZMM_DWORD9, \
+                        %%ZMM_DWORD15, %%ZMM_DWORD12, %%ZMM_DWORD13, %%ZMM_DWORD14
 %endrep
 
 %ifidn %%TYPE, QUIC
         GENERATE_1K_KS_AND_ENCRYPT_QUIC %%ZMM_DWORD0, %%ZMM_DWORD1, %%ZMM_DWORD2, %%ZMM_DWORD3, \
-                                   %%ZMM_DWORD4, %%ZMM_DWORD5, %%ZMM_DWORD6, %%ZMM_DWORD7, \
-                                   %%ZMM_DWORD8, %%ZMM_DWORD9, %%ZMM_DWORD10, %%ZMM_DWORD11, \
-                                   %%ZMM_DWORD12, %%ZMM_DWORD13, %%ZMM_DWORD14, %%ZMM_DWORD15, \
-                                   %%ZMM_DWORD_ORIG0, %%ZMM_DWORD_ORIG1, %%ZMM_DWORD_ORIG2, \
-                                   %%ZMM_DWORD_ORIG3,%%ZMM_DWORD_ORIG4, %%ZMM_DWORD_ORIG5, \
-                                   %%ZMM_DWORD_ORIG6, %%ZMM_DWORD_ORIG7, %%ZMM_DWORD_ORIG8, \
-                                   %%ZMM_DWORD_ORIG9, %%ZMM_DWORD_ORIG10, %%ZMM_DWORD_ORIG11, \
-                                   %%ZMM_DWORD_ORIG12, %%ZMM_DWORD_ORIG13, %%ZMM_DWORD_ORIG14, \
-                                   %%ZMM_DWORD_ORIG15, %%DST, %%OFF, %%TMP, %%KMASK
+                                %%ZMM_DWORD4, %%ZMM_DWORD5, %%ZMM_DWORD6, %%ZMM_DWORD7, \
+                                %%ZMM_DWORD8, %%ZMM_DWORD9, %%ZMM_DWORD10, %%ZMM_DWORD11, \
+                                %%ZMM_DWORD12, %%ZMM_DWORD13, %%ZMM_DWORD14, %%ZMM_DWORD15, \
+                                %%ZMM_DWORD_ORIG0, %%ZMM_DWORD_ORIG1, %%ZMM_DWORD_ORIG2, \
+                                %%ZMM_DWORD_ORIG3,%%ZMM_DWORD_ORIG4, %%ZMM_DWORD_ORIG5, \
+                                %%ZMM_DWORD_ORIG6, %%ZMM_DWORD_ORIG7, %%ZMM_DWORD_ORIG8, \
+                                %%ZMM_DWORD_ORIG9, %%ZMM_DWORD_ORIG10, %%ZMM_DWORD_ORIG11, \
+                                %%ZMM_DWORD_ORIG12, %%ZMM_DWORD_ORIG13, %%ZMM_DWORD_ORIG14, \
+                                %%ZMM_DWORD_ORIG15, %%DST, %%OFF, %%TMP, %%KMASK
 %else ;;
         ;; Add original states to processed states, transpose
         ;; these states to form the 64*16 bytes of keystream,
         ;; XOR with plaintext and write ciphertext out
         GENERATE_1K_KS_AND_ENCRYPT %%ZMM_DWORD0, %%ZMM_DWORD1, %%ZMM_DWORD2, %%ZMM_DWORD3, \
-                                   %%ZMM_DWORD4, %%ZMM_DWORD5, %%ZMM_DWORD6, %%ZMM_DWORD7, \
-                                   %%ZMM_DWORD8, %%ZMM_DWORD9, %%ZMM_DWORD10, %%ZMM_DWORD11, \
-                                   %%ZMM_DWORD12, %%ZMM_DWORD13, %%ZMM_DWORD14, %%ZMM_DWORD15, \
-                                   %%ZMM_DWORD_ORIG0, %%ZMM_DWORD_ORIG1, %%ZMM_DWORD_ORIG2, \
-                                   %%ZMM_DWORD_ORIG3,%%ZMM_DWORD_ORIG4, %%ZMM_DWORD_ORIG5, \
-                                   %%ZMM_DWORD_ORIG6, %%ZMM_DWORD_ORIG7, %%ZMM_DWORD_ORIG8, \
-                                   %%ZMM_DWORD_ORIG9, %%ZMM_DWORD_ORIG10, %%ZMM_DWORD_ORIG11, \
-                                   %%ZMM_DWORD_ORIG12, %%ZMM_DWORD_ORIG13, %%ZMM_DWORD_ORIG14, \
-                                   %%ZMM_DWORD_ORIG15, %%SRC, %%DST, %%OFF, %%TYPE
+                                %%ZMM_DWORD4, %%ZMM_DWORD5, %%ZMM_DWORD6, %%ZMM_DWORD7, \
+                                %%ZMM_DWORD8, %%ZMM_DWORD9, %%ZMM_DWORD10, %%ZMM_DWORD11, \
+                                %%ZMM_DWORD12, %%ZMM_DWORD13, %%ZMM_DWORD14, %%ZMM_DWORD15, \
+                                %%ZMM_DWORD_ORIG0, %%ZMM_DWORD_ORIG1, %%ZMM_DWORD_ORIG2, \
+                                %%ZMM_DWORD_ORIG3,%%ZMM_DWORD_ORIG4, %%ZMM_DWORD_ORIG5, \
+                                %%ZMM_DWORD_ORIG6, %%ZMM_DWORD_ORIG7, %%ZMM_DWORD_ORIG8, \
+                                %%ZMM_DWORD_ORIG9, %%ZMM_DWORD_ORIG10, %%ZMM_DWORD_ORIG11, \
+                                %%ZMM_DWORD_ORIG12, %%ZMM_DWORD_ORIG13, %%ZMM_DWORD_ORIG14, \
+                                %%ZMM_DWORD_ORIG15, %%SRC, %%DST, %%OFF, %%TYPE
 %endif
 %endmacro
 
@@ -1138,30 +1138,30 @@ mksection .text
         ;;; A = 0, 1, 2, 3;   B = 4, 5, 6, 7;
         ;;; C = 8, 9, 10, 11; D = 12, 13, 14, 15
         CHACHA20_ROUND %%ZMM_DWORD0, %%ZMM_DWORD1, %%ZMM_DWORD2, %%ZMM_DWORD3, \
-                       %%ZMM_DWORD4, %%ZMM_DWORD5, %%ZMM_DWORD6, %%ZMM_DWORD7, \
-                       %%ZMM_DWORD8, %%ZMM_DWORD9, %%ZMM_DWORD10, %%ZMM_DWORD11, \
-                       %%ZMM_DWORD12, %%ZMM_DWORD13, %%ZMM_DWORD14, %%ZMM_DWORD15
+                        %%ZMM_DWORD4, %%ZMM_DWORD5, %%ZMM_DWORD6, %%ZMM_DWORD7, \
+                        %%ZMM_DWORD8, %%ZMM_DWORD9, %%ZMM_DWORD10, %%ZMM_DWORD11, \
+                        %%ZMM_DWORD12, %%ZMM_DWORD13, %%ZMM_DWORD14, %%ZMM_DWORD15
         ;;; For 4 diagonal rounds:
         ;;; A = 0, 1, 2, 3;   B = 5, 6, 7, 4;
         ;;; C = 10, 11, 8, 9; D = 15, 12, 13, 14
         CHACHA20_ROUND %%ZMM_DWORD0, %%ZMM_DWORD1, %%ZMM_DWORD2, %%ZMM_DWORD3, \
-                       %%ZMM_DWORD5, %%ZMM_DWORD6, %%ZMM_DWORD7, %%ZMM_DWORD4, \
-                       %%ZMM_DWORD10, %%ZMM_DWORD11, %%ZMM_DWORD8, %%ZMM_DWORD9, \
-                       %%ZMM_DWORD15, %%ZMM_DWORD12, %%ZMM_DWORD13, %%ZMM_DWORD14
+                        %%ZMM_DWORD5, %%ZMM_DWORD6, %%ZMM_DWORD7, %%ZMM_DWORD4, \
+                        %%ZMM_DWORD10, %%ZMM_DWORD11, %%ZMM_DWORD8, %%ZMM_DWORD9, \
+                        %%ZMM_DWORD15, %%ZMM_DWORD12, %%ZMM_DWORD13, %%ZMM_DWORD14
 %endrep
 
         ;; Add original states to processed states and transpose
         ;; these states to form the 64*16 bytes of keystream
         ADD_TRANSPOSE_STATE_KS %%ZMM_DWORD0, %%ZMM_DWORD1, %%ZMM_DWORD2, %%ZMM_DWORD3, \
-                               %%ZMM_DWORD4, %%ZMM_DWORD5, %%ZMM_DWORD6, %%ZMM_DWORD7, \
-                               %%ZMM_DWORD8, %%ZMM_DWORD9, %%ZMM_DWORD10, %%ZMM_DWORD11, \
-                               %%ZMM_DWORD12, %%ZMM_DWORD13, %%ZMM_DWORD14, %%ZMM_DWORD15, \
-                               %%ZMM_DWORD_ORIG0, %%ZMM_DWORD_ORIG1, %%ZMM_DWORD_ORIG2, \
-                               %%ZMM_DWORD_ORIG3,%%ZMM_DWORD_ORIG4, %%ZMM_DWORD_ORIG5, \
-                               %%ZMM_DWORD_ORIG6, %%ZMM_DWORD_ORIG7, %%ZMM_DWORD_ORIG8, \
-                               %%ZMM_DWORD_ORIG9, %%ZMM_DWORD_ORIG10, %%ZMM_DWORD_ORIG11, \
-                               %%ZMM_DWORD_ORIG12, %%ZMM_DWORD_ORIG13, %%ZMM_DWORD_ORIG14, \
-                               %%ZMM_DWORD_ORIG15
+                                %%ZMM_DWORD4, %%ZMM_DWORD5, %%ZMM_DWORD6, %%ZMM_DWORD7, \
+                                %%ZMM_DWORD8, %%ZMM_DWORD9, %%ZMM_DWORD10, %%ZMM_DWORD11, \
+                                %%ZMM_DWORD12, %%ZMM_DWORD13, %%ZMM_DWORD14, %%ZMM_DWORD15, \
+                                %%ZMM_DWORD_ORIG0, %%ZMM_DWORD_ORIG1, %%ZMM_DWORD_ORIG2, \
+                                %%ZMM_DWORD_ORIG3,%%ZMM_DWORD_ORIG4, %%ZMM_DWORD_ORIG5, \
+                                %%ZMM_DWORD_ORIG6, %%ZMM_DWORD_ORIG7, %%ZMM_DWORD_ORIG8, \
+                                %%ZMM_DWORD_ORIG9, %%ZMM_DWORD_ORIG10, %%ZMM_DWORD_ORIG11, \
+                                %%ZMM_DWORD_ORIG12, %%ZMM_DWORD_ORIG13, %%ZMM_DWORD_ORIG14, \
+                                %%ZMM_DWORD_ORIG15
 %endmacro
 
 %macro ENCRYPT_1_16_BLOCKS 23-24
@@ -1443,9 +1443,9 @@ submit_job_chacha20_enc_dec_avx512:
 align_loop
 start_loop:
         ENCRYPT_1K zmm16, zmm17, zmm18, zmm19, zmm20, zmm21, zmm22, zmm23, \
-                   zmm24, zmm25, zmm26, zmm27, zmm28, zmm29, zmm30, zmm31, \
-                   zmm0, zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, zmm7, zmm8, \
-                   zmm9, zmm10, zmm11, zmm12, zmm13, zmm14, zmm15, src, dst, off, 0
+                zmm24, zmm25, zmm26, zmm27, zmm28, zmm29, zmm30, zmm31, \
+                zmm0, zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, zmm7, zmm8, \
+                zmm9, zmm10, zmm11, zmm12, zmm13, zmm14, zmm15, src, dst, off, 0
 
         ; Update remaining length
         sub     len, 64*16
@@ -1480,7 +1480,7 @@ exit_loop:
         ; Get last block counter dividing offset by 64
         shr     off, 6
         PREPARE_NEXT_STATES_4_TO_8 zmm0, zmm1, zmm2, zmm3, zmm7, \
-                                   zmm8, zmm9, off, iv, keys, k2, 4, no_key
+                                zmm8, zmm9, off, iv, keys, k2, 4, no_key
         shl     off, 6 ; Restore offset
 
         ; Use same first 4 registers as the output of GENERATE_1K_KS,
@@ -1499,7 +1499,7 @@ more_than_4_blocks_left:
         shr     off, 6
         ;; up to 8 blocks left
         PREPARE_NEXT_STATES_4_TO_8 zmm0, zmm1, zmm2, zmm3, zmm7, \
-                                   zmm8, zmm9, off, iv, keys, k2, 8, no_key
+                                zmm8, zmm9, off, iv, keys, k2, 8, no_key
         shl     off, 6 ; Restore offset
 
         ; Use same first 8 registers as the output of GENERATE_1K_KS,
@@ -1513,9 +1513,9 @@ align_label
 more_than_8_blocks_left:
         ; Generate another 64*16 bytes of keystream and XOR only the leftover plaintext
         GENERATE_1K_KS zmm16, zmm17, zmm18, zmm19, zmm20, zmm21, zmm22, zmm23, \
-                       zmm24, zmm25, zmm26, zmm27, zmm28, zmm29, zmm30, zmm31, \
-                       zmm0, zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, zmm7, zmm8, \
-                       zmm9, zmm10, zmm11, zmm12, zmm13, zmm14, zmm15
+                        zmm24, zmm25, zmm26, zmm27, zmm28, zmm29, zmm30, zmm31, \
+                        zmm0, zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, zmm7, zmm8, \
+                        zmm9, zmm10, zmm11, zmm12, zmm13, zmm14, zmm15
 
 align_label
 ks_gen_done:
@@ -1579,8 +1579,8 @@ APPEND(final_num_blocks_is_, I):
         kmovq   k1, [tmp + len*8]
 
         ENCRYPT_1_16_BLOCKS zmm25, zmm16, zmm17, zmm29, zmm19, zmm24, zmm26, zmm23, \
-                            zmm20, zmm21, zmm31, zmm27, zmm28, zmm22, zmm30, zmm18, \
-                            zmm0, src, dst, off, k1, I, 0
+                                zmm20, zmm21, zmm31, zmm27, zmm28, zmm22, zmm30, zmm18, \
+                                zmm0, src, dst, off, k1, I, 0
         jmp     no_partial_block
 
 %assign I (I + 1)
@@ -1621,7 +1621,7 @@ submit_job_chacha20_poly_enc_avx512:
 %assign i 0
 %assign j 6
 %rep 10
-	vmovdqa	[rsp + _XMM_WIN_SAVE + i*16], APPEND(xmm, j)
+        vmovdqa [rsp + _XMM_WIN_SAVE + i*16], APPEND(xmm, j)
 %assign i (i + 1)
 %assign j (j + 1)
 %endrep
@@ -1671,9 +1671,9 @@ submit_job_chacha20_poly_enc_avx512:
 
         ; Generate Poly key and encrypt 15*16 bytes
         ENCRYPT_1K zmm16, zmm17, zmm18, zmm19, zmm20, zmm21, zmm22, zmm23, \
-                   zmm24, zmm25, zmm26, zmm27, zmm28, zmm29, zmm30, zmm31, \
-                   zmm0, zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, zmm7, zmm8, \
-                   zmm9, zmm10, zmm11, zmm12, zmm13, zmm14, zmm15, src, dst, off, gen_poly_key
+                zmm24, zmm25, zmm26, zmm27, zmm28, zmm29, zmm30, zmm31, \
+                zmm0, zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, zmm7, zmm8, \
+                zmm9, zmm10, zmm11, zmm12, zmm13, zmm14, zmm15, src, dst, off, gen_poly_key
 
         ; Clear added_len, indicating that Poly key has been generated
         xor     added_len, added_len
@@ -1696,10 +1696,10 @@ submit_job_chacha20_poly_enc_avx512:
 align_loop
 start_loop_poly:
         ENCRYPT_1K zmm16, zmm17, zmm18, zmm19, zmm20, zmm21, zmm22, zmm23, \
-                   zmm24, zmm25, zmm26, zmm27, zmm28, zmm29, zmm30, zmm31, \
-                   zmm0, zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, zmm7, zmm8, \
-                   zmm9, zmm10, zmm11, zmm12, zmm13, zmm14, zmm15, src, dst, \
-                   off, no_gen_poly_key
+                zmm24, zmm25, zmm26, zmm27, zmm28, zmm29, zmm30, zmm31, \
+                zmm0, zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, zmm7, zmm8, \
+                zmm9, zmm10, zmm11, zmm12, zmm13, zmm14, zmm15, src, dst, \
+                off, no_gen_poly_key
 
         ; Update remaining length
         sub     len, 64*16
@@ -1738,14 +1738,14 @@ exit_loop_poly:
         jz      prepare_four_states
 
         PREPARE_NEXT_STATES_4_TO_8 zmm0, zmm1, zmm2, zmm3, zmm7, \
-                                   zmm8, zmm9, off, iv, keys, k2, 4, gen_poly_key
+                                zmm8, zmm9, off, iv, keys, k2, 4, gen_poly_key
         jmp     four_states_prepared
 
 align_label
 prepare_four_states:
 
         PREPARE_NEXT_STATES_4_TO_8 zmm0, zmm1, zmm2, zmm3, zmm7, \
-                                   zmm8, zmm9, off, iv, keys, k2, 4, no_key
+                                zmm8, zmm9, off, iv, keys, k2, 4, no_key
 
 align_label
 four_states_prepared:
@@ -1772,14 +1772,14 @@ more_than_4_blocks_left_poly:
         jz      prepare_eight_states
 
         PREPARE_NEXT_STATES_4_TO_8 zmm0, zmm1, zmm2, zmm3, zmm7, \
-                                   zmm8, zmm9, off, iv, keys, k2, 8, gen_poly_key
+                                zmm8, zmm9, off, iv, keys, k2, 8, gen_poly_key
         jmp     eight_states_prepared
 
 align_label
 prepare_eight_states:
 
         PREPARE_NEXT_STATES_4_TO_8 zmm0, zmm1, zmm2, zmm3, zmm7, \
-                                   zmm8, zmm9, off, iv, keys, k2, 8, no_key
+                                zmm8, zmm9, off, iv, keys, k2, 8, no_key
 align_label
 eight_states_prepared:
         shl     off, 6 ; Restore offset
@@ -1795,9 +1795,9 @@ align_label
 more_than_8_blocks_left_poly:
         ; Generate another 64*16 bytes of keystream and XOR only the leftover plaintext
         GENERATE_1K_KS zmm16, zmm17, zmm18, zmm19, zmm20, zmm21, zmm22, zmm23, \
-                       zmm24, zmm25, zmm26, zmm27, zmm28, zmm29, zmm30, zmm31, \
-                       zmm0, zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, zmm7, zmm8, \
-                       zmm9, zmm10, zmm11, zmm12, zmm13, zmm14, zmm15
+                        zmm24, zmm25, zmm26, zmm27, zmm28, zmm29, zmm30, zmm31, \
+                        zmm0, zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, zmm7, zmm8, \
+                        zmm9, zmm10, zmm11, zmm12, zmm13, zmm14, zmm15
 
 align_label
 ks_gen_done_poly:
@@ -1865,8 +1865,8 @@ APPEND3(final_num_blocks_is_, I, _poly):
         kmovq   k1, [tmp + len*8]
 
         ENCRYPT_1_16_BLOCKS zmm25, zmm16, zmm17, zmm29, zmm19, zmm24, zmm26, zmm23, \
-                            zmm20, zmm21, zmm31, zmm27, zmm28, zmm22, zmm30, zmm18, \
-                            zmm0, src, dst, off, k1, I, gen_poly_key
+                                zmm20, zmm21, zmm31, zmm27, zmm28, zmm22, zmm30, zmm18, \
+                                zmm0, src, dst, off, k1, I, gen_poly_key
         jmp     no_partial_block_poly
 
 %assign I (I + 1)
@@ -1894,7 +1894,7 @@ no_partial_block_poly:
 %assign i 0
 %assign j 6
 %rep 10
-	vmovdqa	APPEND(xmm, j), [rsp + _XMM_WIN_SAVE + i*16]
+        vmovdqa APPEND(xmm, j), [rsp + _XMM_WIN_SAVE + i*16]
 %assign i (i + 1)
 %assign j (j + 1)
 %endrep
@@ -1921,7 +1921,7 @@ gen_keystr_poly_key_avx512:
 %assign i 0
 %assign j 6
 %rep 10
-	vmovdqa	[rsp + _XMM_WIN_SAVE + i*16], APPEND(xmm, j)
+        vmovdqa [rsp + _XMM_WIN_SAVE + i*16], APPEND(xmm, j)
 %assign i (i + 1)
 %assign j (j + 1)
 %endrep
@@ -1955,9 +1955,9 @@ gen_keystr_poly_key_avx512:
         vmovdqa64 zmm12, [rel set_0_15]
 
         GENERATE_1K_KS zmm16, zmm17, zmm18, zmm19, zmm20, zmm21, zmm22, zmm23, \
-                       zmm24, zmm25, zmm26, zmm27, zmm28, zmm29, zmm30, zmm31, \
-                       zmm0, zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, zmm7, zmm8, \
-                       zmm9, zmm10, zmm11, zmm12, zmm13, zmm14, zmm15
+                        zmm24, zmm25, zmm26, zmm27, zmm28, zmm29, zmm30, zmm31, \
+                        zmm0, zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, zmm7, zmm8, \
+                        zmm9, zmm10, zmm11, zmm12, zmm13, zmm14, zmm15
 
         ; Clamp first 16 bytes of keystream (in zmm25), for poly key
         vpandq  ymm25, [rel poly_clamp_r]
@@ -1980,7 +1980,7 @@ gen_keystr_poly_key_avx512:
         vmovdqa64 [ks + 64*14], zmm30
         vmovdqa64 [ks + 64*15], zmm18
 
-        jmp	exit_gen_keystr
+        jmp     exit_gen_keystr
 
 align_label
 less_than_512_ks:
@@ -1990,7 +1990,7 @@ less_than_512_ks:
 
         xor     off, off
         PREPARE_NEXT_STATES_4_TO_8 zmm0, zmm1, zmm2, zmm3, zmm7, \
-                                   zmm8, zmm9, off, iv, keys, k1, 4, gen_poly_key
+                                zmm8, zmm9, off, iv, keys, k1, 4, gen_poly_key
 
         GENERATE_512_KS zmm25, zmm16, zmm17, zmm29, none, none, none, none, \
                         zmm0, zmm1, zmm2, zmm3, none, \
@@ -2005,13 +2005,13 @@ less_than_512_ks:
         vmovdqa64 [ks + 64*2], zmm17
         vmovdqa64 [ks + 64*3], zmm29
 
-        jmp	exit_gen_keystr
+        jmp     exit_gen_keystr
 
 align_label
 more_than_256_ks:
         xor     off, off
         PREPARE_NEXT_STATES_4_TO_8 zmm0, zmm1, zmm2, zmm3, zmm7, \
-                                   zmm8, zmm9, off, iv, keys, k1, 8, gen_poly_key
+                                zmm8, zmm9, off, iv, keys, k1, 8, gen_poly_key
 
         GENERATE_512_KS zmm25, zmm16, zmm17, zmm29, zmm19, zmm24, zmm26, zmm23, \
                         zmm0, zmm1, zmm2, zmm3, zmm7, \
@@ -2036,7 +2036,7 @@ exit_gen_keystr:
 %assign i 0
 %assign j 6
 %rep 10
-	vmovdqa	APPEND(xmm, j), [rsp + _XMM_WIN_SAVE + i*16]
+        vmovdqa APPEND(xmm, j), [rsp + _XMM_WIN_SAVE + i*16]
 %assign i (i + 1)
 %assign j (j + 1)
 %endrep
@@ -2067,11 +2067,11 @@ submit_job_chacha20_poly_dec_avx512:
         mov     rax, rsp
         sub     rsp, STACK_SIZE
         and     rsp, -16
-        mov	[rsp + _GP_SAVE], rsi
+        mov     [rsp + _GP_SAVE], rsi
 %assign i 0
 %assign j 6
 %rep 10
-	vmovdqa	[rsp + _XMM_WIN_SAVE + i*16], APPEND(xmm, j)
+        vmovdqa [rsp + _XMM_WIN_SAVE + i*16], APPEND(xmm, j)
 %assign i (i + 1)
 %assign j (j + 1)
 %endrep
@@ -2155,8 +2155,8 @@ APPEND(initial_dec_num_blocks_is_, I):
 %assign J (J+1)
 %endrep
         ENCRYPT_1_16_BLOCKS zmm0, zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, zmm7, \
-                            zmm8, zmm9, zmm10, zmm11, zmm12, zmm13, zmm14, zmm15, \
-                            zmm16, src, dst, off, k1, I, 0
+                                zmm8, zmm9, zmm10, zmm11, zmm12, zmm13, zmm14, zmm15, \
+                                zmm16, src, dst, off, k1, I, 0
         add     off, 64*I
         ; Check if less than 15*64 bytes have been decrypted (meaning there are no more to decrypt)
         cmp     len_xor, 15*64
@@ -2211,9 +2211,9 @@ resume_dec:
 align_loop
 start_loop_dec:
         ENCRYPT_1K zmm16, zmm17, zmm18, zmm19, zmm20, zmm21, zmm22, zmm23, \
-                   zmm24, zmm25, zmm26, zmm27, zmm28, zmm29, zmm30, zmm31, \
-                   zmm0, zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, zmm7, zmm8, \
-                   zmm9, zmm10, zmm11, zmm12, zmm13, zmm14, zmm15, src, dst, off, 0
+                zmm24, zmm25, zmm26, zmm27, zmm28, zmm29, zmm30, zmm31, \
+                zmm0, zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, zmm7, zmm8, \
+                zmm9, zmm10, zmm11, zmm12, zmm13, zmm14, zmm15, src, dst, off, 0
 
         ; Update remaining length
         sub     len, 64*16
@@ -2248,7 +2248,7 @@ exit_loop_dec:
         ; Get last block counter dividing offset by 64
         shr     off, 6
         PREPARE_NEXT_STATES_4_TO_8 zmm0, zmm1, zmm2, zmm3, zmm7, \
-                                   zmm8, zmm9, off, iv, keys, k2, 4, 0
+                                zmm8, zmm9, off, iv, keys, k2, 4, 0
         shl     off, 6 ; Restore offset
 
         ; Use same first 4 registers as the output of GENERATE_1K_KS,
@@ -2267,7 +2267,7 @@ more_than_4_blocks_left_dec:
         shr     off, 6
         ;; up to 8 blocks left
         PREPARE_NEXT_STATES_4_TO_8 zmm0, zmm1, zmm2, zmm3, zmm7, \
-                                   zmm8, zmm9, off, iv, keys, k2, 8, 0
+                                zmm8, zmm9, off, iv, keys, k2, 8, 0
         shl     off, 6 ; Restore offset
 
         ; Use same first 8 registers as the output of GENERATE_1K_KS,
@@ -2281,9 +2281,9 @@ align_label
 more_than_8_blocks_left_dec:
         ; Generate another 64*16 bytes of keystream and XOR only the leftover plaintext
         GENERATE_1K_KS zmm16, zmm17, zmm18, zmm19, zmm20, zmm21, zmm22, zmm23, \
-                       zmm24, zmm25, zmm26, zmm27, zmm28, zmm29, zmm30, zmm31, \
-                       zmm0, zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, zmm7, zmm8, \
-                       zmm9, zmm10, zmm11, zmm12, zmm13, zmm14, zmm15
+                        zmm24, zmm25, zmm26, zmm27, zmm28, zmm29, zmm30, zmm31, \
+                        zmm0, zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, zmm7, zmm8, \
+                        zmm9, zmm10, zmm11, zmm12, zmm13, zmm14, zmm15
 
 align_label
 ks_gen_done_dec:
@@ -2347,8 +2347,8 @@ APPEND(final_dec_num_blocks_is_, I):
         kmovq   k1, [tmp + len*8]
 
         ENCRYPT_1_16_BLOCKS zmm25, zmm16, zmm17, zmm29, zmm19, zmm24, zmm26, zmm23, \
-                            zmm20, zmm21, zmm31, zmm27, zmm28, zmm22, zmm30, zmm18, \
-                            zmm0, src, dst, off, k1, I, 0
+                                zmm20, zmm21, zmm31, zmm27, zmm28, zmm22, zmm30, zmm18, \
+                                zmm0, src, dst, off, k1, I, 0
         jmp     no_partial_block_dec
 
 %assign I (I + 1)
@@ -2375,7 +2375,7 @@ no_partial_block_dec:
 %assign i 0
 %assign j 6
 %rep 10
-	vmovdqa	APPEND(xmm, j), [rsp + _XMM_WIN_SAVE + i*16]
+        vmovdqa APPEND(xmm, j), [rsp + _XMM_WIN_SAVE + i*16]
 %assign i (i + 1)
 %assign j (j + 1)
 %endrep
@@ -2431,7 +2431,7 @@ chacha20_enc_dec_ks_avx512:
 %assign i 0
 %assign j 6
 %rep 10
-	vmovdqa	[rsp + _XMM_WIN_SAVE + i*16], APPEND(xmm, j)
+        vmovdqa [rsp + _XMM_WIN_SAVE + i*16], APPEND(xmm, j)
 %assign i (i + 1)
 %assign j (j + 1)
 %endrep
@@ -2522,9 +2522,9 @@ no_remain_ks_bytes:
 align_function
 start_loop_ks:
         ENCRYPT_1K zmm16, zmm17, zmm18, zmm19, zmm20, zmm21, zmm22, zmm23, \
-                   zmm24, zmm25, zmm26, zmm27, zmm28, zmm29, zmm30, zmm31, \
-                   zmm0, zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, zmm7, zmm8, \
-                   zmm9, zmm10, zmm11, zmm12, zmm13, zmm14, zmm15, src, dst, off, 0
+                zmm24, zmm25, zmm26, zmm27, zmm28, zmm29, zmm30, zmm31, \
+                zmm0, zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, zmm7, zmm8, \
+                zmm9, zmm10, zmm11, zmm12, zmm13, zmm14, zmm15, src, dst, off, 0
 
         ; Update remaining length
         sub     len, 64*16
@@ -2559,7 +2559,7 @@ exit_loop_ks:
 
         ; Get last block counter dividing offset by 64
         PREPARE_NEXT_STATES_4_TO_8 zmm0, zmm1, zmm2, zmm3, zmm7, \
-                                   zmm8, zmm9, blk_cnt, iv, keys, k2, 4, no_key
+                                zmm8, zmm9, blk_cnt, iv, keys, k2, 4, no_key
 
         ; Use same first 4 registers as the output of GENERATE_1K_KS,
         ; to be able to use common code later on to encrypt
@@ -2576,7 +2576,7 @@ more_than_4_blocks_left_ks:
         ; Get last block counter dividing offset by 64
         ;; up to 8 blocks left
         PREPARE_NEXT_STATES_4_TO_8 zmm0, zmm1, zmm2, zmm3, zmm7, \
-                                   zmm8, zmm9, blk_cnt, iv, keys, k2, 8, no_key
+                                zmm8, zmm9, blk_cnt, iv, keys, k2, 8, no_key
 
         ; Use same first 8 registers as the output of GENERATE_1K_KS,
         ; to be able to use common code later on to encrypt
@@ -2589,9 +2589,9 @@ align_label
 more_than_8_blocks_left_ks:
         ; Generate another 64*16 bytes of keystream and XOR only the leftover plaintext
         GENERATE_1K_KS zmm16, zmm17, zmm18, zmm19, zmm20, zmm21, zmm22, zmm23, \
-                       zmm24, zmm25, zmm26, zmm27, zmm28, zmm29, zmm30, zmm31, \
-                       zmm0, zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, zmm7, zmm8, \
-                       zmm9, zmm10, zmm11, zmm12, zmm13, zmm14, zmm15
+                        zmm24, zmm25, zmm26, zmm27, zmm28, zmm29, zmm30, zmm31, \
+                        zmm0, zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, zmm7, zmm8, \
+                        zmm9, zmm10, zmm11, zmm12, zmm13, zmm14, zmm15
 
 align_label
 ks_gen_done_ks:
@@ -2655,8 +2655,8 @@ APPEND3(final_num_blocks_is_, I, _ks):
         kmovq   k1, [tmp + len*8]
 
         ENCRYPT_1_16_BLOCKS zmm25, zmm16, zmm17, zmm29, zmm19, zmm24, zmm26, zmm23, \
-                            zmm20, zmm21, zmm31, zmm27, zmm28, zmm22, zmm30, zmm18, \
-                            zmm0, src, dst, off, k1, I, 0, prev_ks
+                                zmm20, zmm21, zmm31, zmm27, zmm28, zmm22, zmm30, zmm18, \
+                                zmm0, src, dst, off, k1, I, 0, prev_ks
         add     blk_cnt, I
 
         ; Update remain number of KS bytes
@@ -2686,7 +2686,7 @@ no_partial_block_ks:
 %assign i 0
 %assign j 6
 %rep 10
-	vmovdqa	APPEND(xmm, j), [rsp + _XMM_WIN_SAVE + i*16]
+        vmovdqa APPEND(xmm, j), [rsp + _XMM_WIN_SAVE + i*16]
 %assign i (i + 1)
 %assign j (j + 1)
 %endrep
@@ -2726,7 +2726,7 @@ quic_hp_chacha20_avx512:
 %assign i 0
 %assign j 6
 %rep 10
-	vmovdqa	[rsp + _XMM_WIN_SAVE + i*16], APPEND(xmm, j)
+        vmovdqa [rsp + _XMM_WIN_SAVE + i*16], APPEND(xmm, j)
 %assign i (i + 1)
 %assign j (j + 1)
 %endrep
@@ -2801,10 +2801,10 @@ start_loop_quic:
 %endrep
 
         ENCRYPT_1K zmm16, zmm17, zmm18, zmm19, zmm20, zmm21, zmm22, zmm23, \
-                   zmm24, zmm25, zmm26, zmm27, zmm28, zmm29, zmm30, zmm31, \
-                   zmm0, zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, zmm7, zmm8, \
-                   zmm9, zmm10, zmm11, zmm12, zmm13, zmm14, zmm15, none , \
-                   dst_array, off, QUIC, tmp, k1
+                zmm24, zmm25, zmm26, zmm27, zmm28, zmm29, zmm30, zmm31, \
+                zmm0, zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, zmm7, zmm8, \
+                zmm9, zmm10, zmm11, zmm12, zmm13, zmm14, zmm15, none , \
+                dst_array, off, QUIC, tmp, k1
 
         ; Update remaining length
         sub     num_buffers, 16
@@ -2908,14 +2908,14 @@ APPEND(final_num_buffers_is_, BUFFERS_LEFT):
 %endrep
         ; Generate another 64*16 bytes of keystream and XOR only the leftover plaintext
         GENERATE_1K_KS zmm16, zmm17, zmm18, zmm19, zmm20, zmm21, zmm22, zmm23, \
-                       zmm24, zmm25, zmm26, zmm27, zmm28, zmm29, zmm30, zmm31, \
-                       zmm0, zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, zmm7, zmm8, \
-                       zmm9, zmm10, zmm11, zmm12, zmm13, zmm14, zmm15
+                        zmm24, zmm25, zmm26, zmm27, zmm28, zmm29, zmm30, zmm31, \
+                        zmm0, zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, zmm7, zmm8, \
+                        zmm9, zmm10, zmm11, zmm12, zmm13, zmm14, zmm15
 %endif ; BUFFERS_LEFT <= 8
 
         OUTPUT_KS_1_16_BUFFERS_QUIC zmm25, zmm16, zmm17, zmm29, zmm19, zmm24, zmm26, zmm23, \
-                                  zmm20, zmm21, zmm31, zmm27, zmm28, zmm22, zmm30, zmm18, \
-                                  dst_array, off, tmp, k1, BUFFERS_LEFT
+                                zmm20, zmm21, zmm31, zmm27, zmm28, zmm22, zmm30, zmm18, \
+                                dst_array, off, tmp, k1, BUFFERS_LEFT
         jmp     end_quic
 
 %assign BUFFERS_LEFT (BUFFERS_LEFT + 1)
@@ -2934,7 +2934,7 @@ end_quic:
 %assign i 0
 %assign j 6
 %rep 10
-	vmovdqa	APPEND(xmm, j), [rsp + _XMM_WIN_SAVE + i*16]
+        vmovdqa APPEND(xmm, j), [rsp + _XMM_WIN_SAVE + i*16]
 %assign i (i + 1)
 %assign j (j + 1)
 %endrep

@@ -431,7 +431,7 @@ align_label
         mov     rsp, [rsp + _rsp_save]  ; original SP
 
 %ifdef SAFE_DATA
-       clear_all_zmms_asm
+        clear_all_zmms_asm
 %else
         vzeroupper
 %endif ;; SAFE_DATA
@@ -731,9 +731,9 @@ align_label
         vmovdqa64       APPEND(%%XDATB, crc_lane), [%%ARG + _docsis_crc_args_init + (16 *crc_lane)]
 
         CRC32_ROUND first_possible, last_possible, %%ARG, crc_lane, \
-                    APPEND(%%XDATA, crc_lane), %%XCRC_VAL, %%XCRC_DAT, \
-                    %%XCRC_MUL, %%XCRC_TMP, %%XCRC_TMP2, \
-                    %%GP1, %%IDX, 0, %%GT8, %%GT9, %%CRC32, APPEND(%%XDATB, crc_lane)
+                        APPEND(%%XDATA, crc_lane), %%XCRC_VAL, %%XCRC_DAT, \
+                        %%XCRC_MUL, %%XCRC_TMP, %%XCRC_TMP2, \
+                        %%GP1, %%IDX, 0, %%GT8, %%GT9, %%CRC32, APPEND(%%XDATB, crc_lane)
 %if crc_lane < 7
         ;; lanes 0 to 6 use k1 to k7
         ;; lane 7 uses condition check
@@ -881,9 +881,9 @@ align_label
         vmovdqu64       APPEND(%%XDATA, crc_lane), [%%GP1 + %%IDX + 16]
 
         CRC32_ROUND no_first, last_possible, %%ARG, crc_lane, \
-                    APPEND(%%XDATA, crc_lane), %%XCRC_VAL, %%XCRC_DAT, \
-                    %%XCRC_MUL, %%XCRC_TMP, %%XCRC_TMP2, \
-                    %%GP1, %%IDX, 16, %%GT8, %%GT9, %%CRC32, APPEND(%%XDATB, crc_lane)
+                        APPEND(%%XDATA, crc_lane), %%XCRC_VAL, %%XCRC_DAT, \
+                        %%XCRC_MUL, %%XCRC_TMP, %%XCRC_TMP2, \
+                        %%GP1, %%IDX, 16, %%GT8, %%GT9, %%CRC32, APPEND(%%XDATB, crc_lane)
 %assign crc_lane (crc_lane + 1)
 %endif  ;; i > 1 && crc_lane < 8
 
@@ -1148,7 +1148,7 @@ align_label
 
         ;; GT6 - ptr, GT5 - length, ZT1 - CRC_MUL, ZT0 - CRC_IN_OUT
         ETHERNET_FCS_CRC %%GT6, %%GT5, %%GT7, XWORD(%%ZT0), %%GT2, \
-                         XWORD(%%ZT1), XWORD(%%ZT2), XWORD(%%ZT3), XWORD(%%ZT4)
+                        XWORD(%%ZT1), XWORD(%%ZT2), XWORD(%%ZT3), XWORD(%%ZT4)
 
         mov             %%GT6, [%%JOB + _src]
         add             %%GT6, [%%JOB + _hash_start_src_offset_in_bytes]
@@ -1173,7 +1173,7 @@ align_label
 
         ;; GT6 - ptr, GT5 - length, ZT1 - CRC_MUL, ZT0 - CRC_IN_OUT
         ETHERNET_FCS_CRC %%GT6, %%GT5, %%GT7, XWORD(%%ZT0), %%GT2, \
-                         XWORD(%%ZT1), XWORD(%%ZT2), XWORD(%%ZT3), XWORD(%%ZT4)
+                        XWORD(%%ZT1), XWORD(%%ZT2), XWORD(%%ZT3), XWORD(%%ZT4)
 
         not             DWORD(%%GT7)
         vmovd           xmm8, DWORD(%%GT7)

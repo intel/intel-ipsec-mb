@@ -303,7 +303,7 @@ align_function
 MKGLOBAL(des_x16_cbc_dec_avx512,function,internal)
 des_x16_cbc_dec_avx512:
         GENERIC_DES_DEC DES, arg1, arg2
-	ret
+        ret
 
 ;;; arg 1 : pointer to DES OOO structure
 ;;; arg 2 : size in bytes
@@ -319,7 +319,7 @@ align_function
 MKGLOBAL(des3_x16_cbc_dec_avx512,function,internal)
 des3_x16_cbc_dec_avx512:
         GENERIC_DES_DEC 3DES, arg1, arg2
-	ret
+        ret
 
 ;;; arg 1 : pointer to DES OOO structure
 ;;; arg 2 : size in bytes
@@ -327,7 +327,7 @@ align_function
 MKGLOBAL(docsis_des_x16_enc_avx512,function,internal)
 docsis_des_x16_enc_avx512:
         GENERIC_DES_ENC DOCSIS, arg1, arg2
-	ret
+        ret
 
 ;;; arg 1 : pointer to DES OOO structure
 ;;; arg 2 : size in bytes
@@ -335,6 +335,6 @@ align_function
 MKGLOBAL(docsis_des_x16_dec_avx512,function,internal)
 docsis_des_x16_dec_avx512:
         GENERIC_DES_DEC DOCSIS, arg1, arg2
-	ret
+        ret
 
 mksection stack-noexec

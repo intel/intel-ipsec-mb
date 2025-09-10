@@ -60,59 +60,59 @@ default rel
 
 align 16
 byteswap:
-	dq 0x0405060700010203, 0x0c0d0e0f08090a0b
-	dq 0x0405060700010203, 0x0c0d0e0f08090a0b
+        dq 0x0405060700010203, 0x0c0d0e0f08090a0b
+        dq 0x0405060700010203, 0x0c0d0e0f08090a0b
 
 
 mksection .text
 
 %ifdef LINUX
-%define arg1	rdi
-%define arg2	rsi
-%define arg3	rcx
-%define arg4	rdx
+%define arg1    rdi
+%define arg2    rsi
+%define arg3    rcx
+%define arg4    rdx
 %else
-%define arg1	rcx
-%define arg2	rdx
-%define arg3	rdi
-%define arg4	rsi
+%define arg1    rcx
+%define arg2    rdx
+%define arg3    rdi
+%define arg4    rsi
 %endif
 
-%define state	arg1
-%define job	arg2
-%define len2	arg2
+%define state   arg1
+%define job     arg2
+%define len2    arg2
 
 ; idx needs to be in rbp, r15
-%define last_len	rbp
-%define idx		rbp
+%define last_len        rbp
+%define idx             rbp
 
-%define p		r11
-%define start_offset	r11
+%define p               r11
+%define start_offset    r11
 
-%define unused_lanes	rbx
-%define p2		rbx
-%define tmp4		rbx
+%define unused_lanes    rbx
+%define p2              rbx
+%define tmp4            rbx
 
-%define job_rax		rax
-%define len		rax
+%define job_rax         rax
+%define len             rax
 
-%define size_offset	arg3
-%define tmp2		arg3
+%define size_offset     arg3
+%define tmp2            arg3
 
-%define lane		arg4
-%define tmp3		arg4
+%define lane            arg4
+%define tmp3            arg4
 
-%define extra_blocks	r8
-%define tmp		r9
-%define lane_data	r10
+%define extra_blocks    r8
+%define tmp             r9
+%define lane_data       r10
 
-%define len_upper	r13
-%define idx_upper	r14
+%define len_upper       r13
+%define idx_upper       r14
 
 ; we clobber rbx, rsi, rdi, rbp; called routine also clobbers r9 to r15
 struc STACK
-_gpr_save:	resq	8
-_rsp_save:	resq	1
+_gpr_save:      resq    8
+_rsp_save:      resq    1
 endstruc
 
 ; JOB* FUNC(MB_MGR_HMAC_SHA_256_OOO *state, IMB_JOB *job)
@@ -126,235 +126,235 @@ submit_job_hmac_sha_224_avx512:
 MKGLOBAL(submit_job_hmac_sha_256_avx512,function,internal)
 submit_job_hmac_sha_256_avx512:
 %endif
-	mov	rax, rsp
-	sub	rsp, STACK_size
-	and	rsp, -32
-	mov	[rsp + _gpr_save + 8*0], rbx
-	mov	[rsp + _gpr_save + 8*1], rbp
-	mov	[rsp + _gpr_save + 8*2], r12
-	mov	[rsp + _gpr_save + 8*3], r13
-	mov	[rsp + _gpr_save + 8*4], r14
-	mov	[rsp + _gpr_save + 8*5], r15
+        mov     rax, rsp
+        sub     rsp, STACK_size
+        and     rsp, -32
+        mov     [rsp + _gpr_save + 8*0], rbx
+        mov     [rsp + _gpr_save + 8*1], rbp
+        mov     [rsp + _gpr_save + 8*2], r12
+        mov     [rsp + _gpr_save + 8*3], r13
+        mov     [rsp + _gpr_save + 8*4], r14
+        mov     [rsp + _gpr_save + 8*5], r15
 %ifndef LINUX
-	mov	[rsp + _gpr_save + 8*6], rsi
-	mov	[rsp + _gpr_save + 8*7], rdi
+        mov     [rsp + _gpr_save + 8*6], rsi
+        mov     [rsp + _gpr_save + 8*7], rdi
 %endif
-	mov	[rsp + _rsp_save], rax	; original SP
+        mov     [rsp + _rsp_save], rax  ; original SP
 
-	mov	unused_lanes, [state + _unused_lanes_sha256]
-	mov	lane, unused_lanes
-	and	lane, 0xF	    ;; just a nibble
-	shr	unused_lanes, 4
+        mov     unused_lanes, [state + _unused_lanes_sha256]
+        mov     lane, unused_lanes
+        and     lane, 0xF           ;; just a nibble
+        shr     unused_lanes, 4
 
-	imul	lane_data, lane, _HMAC_SHA1_LANE_DATA_size
-	lea	lane_data, [state + _ldata_sha256 + lane_data]
-	mov	[state + _unused_lanes_sha256], unused_lanes
+        imul    lane_data, lane, _HMAC_SHA1_LANE_DATA_size
+        lea     lane_data, [state + _ldata_sha256 + lane_data]
+        mov     [state + _unused_lanes_sha256], unused_lanes
 
-	add	dword [state + _num_lanes_inuse_sha256], 1
+        add     dword [state + _num_lanes_inuse_sha256], 1
 
-	mov	len, [job + _msg_len_to_hash_in_bytes]
-	mov	tmp, len
-	shr	tmp, 6	; divide by 64, len in terms of blocks
+        mov     len, [job + _msg_len_to_hash_in_bytes]
+        mov     tmp, len
+        shr     tmp, 6  ; divide by 64, len in terms of blocks
 
-	VPINSRQ_M512x2 state + _job_in_lane_sha256, job, r12d, zmm6, zmm7, k4, lane
+        VPINSRQ_M512x2 state + _job_in_lane_sha256, job, r12d, zmm6, zmm7, k4, lane
 
-	mov	dword [lane_data + _outer_done], 0
-	vmovdqa ymm5, [state + _lens_sha256]
-	VPINSRW_256 ymm5, xmm0, xmm1, p, lane, tmp, scale_x16
-	vmovdqa64 [state + _lens_sha256], ymm5
+        mov     dword [lane_data + _outer_done], 0
+        vmovdqa ymm5, [state + _lens_sha256]
+        VPINSRW_256 ymm5, xmm0, xmm1, p, lane, tmp, scale_x16
+        vmovdqa64 [state + _lens_sha256], ymm5
 
-	mov	last_len, len
-	and	last_len, 63
-	lea	extra_blocks, [last_len + 9 + 63]
-	shr	extra_blocks, 6
-	mov	[lane_data + _extra_blocks], DWORD(extra_blocks)
+        mov     last_len, len
+        and     last_len, 63
+        lea     extra_blocks, [last_len + 9 + 63]
+        shr     extra_blocks, 6
+        mov     [lane_data + _extra_blocks], DWORD(extra_blocks)
 
-	mov	p, [job + _src]
-	add	p, [job + _hash_start_src_offset_in_bytes]
-	mov	[state + _args_data_ptr_sha256 + PTR_SZ*lane], p
+        mov     p, [job + _src]
+        add     p, [job + _hash_start_src_offset_in_bytes]
+        mov     [state + _args_data_ptr_sha256 + PTR_SZ*lane], p
 
-	cmp	len, 64
-	jb	copy_lt64
+        cmp     len, 64
+        jb      copy_lt64
 
 align_label
 fast_copy:
-	vmovdqu32	zmm0, [p - 64 + len]
-	vmovdqu32	[lane_data + _extra_block], zmm0
+        vmovdqu32       zmm0, [p - 64 + len]
+        vmovdqu32       [lane_data + _extra_block], zmm0
 align_label
 end_fast_copy:
 
-	mov	size_offset, extra_blocks
-	shl	size_offset, 6
-	sub	size_offset, last_len
-	add	size_offset, 64-8
-	mov	[lane_data + _size_offset], DWORD(size_offset)
-	mov	start_offset, 64
-	sub	start_offset, last_len
-	mov	[lane_data + _start_offset], DWORD(start_offset)
+        mov     size_offset, extra_blocks
+        shl     size_offset, 6
+        sub     size_offset, last_len
+        add     size_offset, 64-8
+        mov     [lane_data + _size_offset], DWORD(size_offset)
+        mov     start_offset, 64
+        sub     start_offset, last_len
+        mov     [lane_data + _start_offset], DWORD(start_offset)
 
-	lea	tmp, [8*64 + 8*len]
-	bswap	tmp
-	mov	[lane_data + _extra_block + size_offset], tmp
+        lea     tmp, [8*64 + 8*len]
+        bswap   tmp
+        mov     [lane_data + _extra_block + size_offset], tmp
 
-	mov	tmp, [job + _auth_key_xor_ipad]
-	vmovdqu	xmm0, [tmp]
-	vmovdqu	xmm1, [tmp + 4*4]
-	vmovd	[state + _args_digest_sha256 + 4*lane + 0*SHA256_DIGEST_ROW_SIZE], xmm0
-	vpextrd	[state + _args_digest_sha256 + 4*lane + 1*SHA256_DIGEST_ROW_SIZE], xmm0, 1
-	vpextrd	[state + _args_digest_sha256 + 4*lane + 2*SHA256_DIGEST_ROW_SIZE], xmm0, 2
-	vpextrd	[state + _args_digest_sha256 + 4*lane + 3*SHA256_DIGEST_ROW_SIZE], xmm0, 3
-	vmovd	[state + _args_digest_sha256 + 4*lane + 4*SHA256_DIGEST_ROW_SIZE], xmm1
-	vpextrd	[state + _args_digest_sha256 + 4*lane + 5*SHA256_DIGEST_ROW_SIZE], xmm1, 1
-	vpextrd	[state + _args_digest_sha256 + 4*lane + 6*SHA256_DIGEST_ROW_SIZE], xmm1, 2
-	vpextrd	[state + _args_digest_sha256 + 4*lane + 7*SHA256_DIGEST_ROW_SIZE], xmm1, 3
+        mov     tmp, [job + _auth_key_xor_ipad]
+        vmovdqu xmm0, [tmp]
+        vmovdqu xmm1, [tmp + 4*4]
+        vmovd   [state + _args_digest_sha256 + 4*lane + 0*SHA256_DIGEST_ROW_SIZE], xmm0
+        vpextrd [state + _args_digest_sha256 + 4*lane + 1*SHA256_DIGEST_ROW_SIZE], xmm0, 1
+        vpextrd [state + _args_digest_sha256 + 4*lane + 2*SHA256_DIGEST_ROW_SIZE], xmm0, 2
+        vpextrd [state + _args_digest_sha256 + 4*lane + 3*SHA256_DIGEST_ROW_SIZE], xmm0, 3
+        vmovd   [state + _args_digest_sha256 + 4*lane + 4*SHA256_DIGEST_ROW_SIZE], xmm1
+        vpextrd [state + _args_digest_sha256 + 4*lane + 5*SHA256_DIGEST_ROW_SIZE], xmm1, 1
+        vpextrd [state + _args_digest_sha256 + 4*lane + 6*SHA256_DIGEST_ROW_SIZE], xmm1, 2
+        vpextrd [state + _args_digest_sha256 + 4*lane + 7*SHA256_DIGEST_ROW_SIZE], xmm1, 3
 
-	test	len, ~63
-	jnz	ge64_bytes
+        test    len, ~63
+        jnz     ge64_bytes
 
 align_label
 lt64_bytes:
         vmovdqa ymm5, [state + _lens_sha256]
-	VPINSRW_256 ymm5, xmm0, xmm1, tmp, lane, extra_blocks, scale_x16
-	vmovdqa64 [state + _lens_sha256], ymm5
-	lea	tmp, [lane_data + _extra_block + start_offset]
-	mov	[state + _args_data_ptr_sha256 + PTR_SZ*lane], tmp
-	mov	dword [lane_data + _extra_blocks], 0
+        VPINSRW_256 ymm5, xmm0, xmm1, tmp, lane, extra_blocks, scale_x16
+        vmovdqa64 [state + _lens_sha256], ymm5
+        lea     tmp, [lane_data + _extra_block + start_offset]
+        mov     [state + _args_data_ptr_sha256 + PTR_SZ*lane], tmp
+        mov     dword [lane_data + _extra_blocks], 0
 
 align_label
 ge64_bytes:
-        cmp	dword [state + _num_lanes_inuse_sha256], 0x10 ; all 16 lanes used?
-	jne	return_null
+        cmp     dword [state + _num_lanes_inuse_sha256], 0x10 ; all 16 lanes used?
+        jne     return_null
 
 align_loop
 start_loop:
-	; Find min length
-	vmovdqa	xmm0, [state + _lens_sha256]
-	vphminposuw	xmm1, xmm0
-	vpextrw	DWORD(len2), xmm1, 0	; min value
-	vpextrw	DWORD(idx), xmm1, 1	; min index (0...7)
+        ; Find min length
+        vmovdqa xmm0, [state + _lens_sha256]
+        vphminposuw     xmm1, xmm0
+        vpextrw DWORD(len2), xmm1, 0    ; min value
+        vpextrw DWORD(idx), xmm1, 1     ; min index (0...7)
 
-	vmovdqa	xmm2, [state + _lens_sha256 + 8*2]
-	vphminposuw	xmm3, xmm2
-	vpextrw	DWORD(len_upper), xmm3, 0	; min value
-	vpextrw	DWORD(idx_upper), xmm3, 1	; min index (8...F)
+        vmovdqa xmm2, [state + _lens_sha256 + 8*2]
+        vphminposuw     xmm3, xmm2
+        vpextrw DWORD(len_upper), xmm3, 0       ; min value
+        vpextrw DWORD(idx_upper), xmm3, 1       ; min index (8...F)
 
-	cmp	len2, len_upper
-	jle	use_min
+        cmp     len2, len_upper
+        jle     use_min
 
-	vmovdqa	xmm1, xmm3
-	mov	len2, len_upper
-	mov	idx, idx_upper	; idx is in range 0..7
-	add	idx, 8		; to reflect that real index is in 8..F range
+        vmovdqa xmm1, xmm3
+        mov     len2, len_upper
+        mov     idx, idx_upper  ; idx is in range 0..7
+        add     idx, 8          ; to reflect that real index is in 8..F range
 align_label
 use_min:
-	cmp	len2, 0
-	je	len_is_0
+        cmp     len2, 0
+        je      len_is_0
 
-	vpbroadcastw	xmm1, xmm1 ; duplicate words across all lanes
-	vpsubw	xmm0, xmm0, xmm1
-	vmovdqa	[state + _lens_sha256 + 0*2], xmm0
-	vpsubw	xmm2, xmm2, xmm1
-	vmovdqa	[state + _lens_sha256 + 8*2], xmm2
+        vpbroadcastw    xmm1, xmm1 ; duplicate words across all lanes
+        vpsubw  xmm0, xmm0, xmm1
+        vmovdqa [state + _lens_sha256 + 0*2], xmm0
+        vpsubw  xmm2, xmm2, xmm1
+        vmovdqa [state + _lens_sha256 + 8*2], xmm2
 
-	; "state" and "args" are the same address, arg1
-	; len is arg2
-	call	sha256_x16_avx512
-	; state and idx are intact
+        ; "state" and "args" are the same address, arg1
+        ; len is arg2
+        call    sha256_x16_avx512
+        ; state and idx are intact
 
 align_label
 len_is_0:
-	; process completed job "idx"
-	imul	lane_data, idx, _HMAC_SHA1_LANE_DATA_size
-	lea	lane_data, [state + _ldata_sha256 + lane_data]
-	mov	DWORD(extra_blocks), [lane_data + _extra_blocks]
-	cmp	extra_blocks, 0
-	jne	proc_extra_blocks
-	cmp	dword [lane_data + _outer_done], 0
-	jne	end_loop
+        ; process completed job "idx"
+        imul    lane_data, idx, _HMAC_SHA1_LANE_DATA_size
+        lea     lane_data, [state + _ldata_sha256 + lane_data]
+        mov     DWORD(extra_blocks), [lane_data + _extra_blocks]
+        cmp     extra_blocks, 0
+        jne     proc_extra_blocks
+        cmp     dword [lane_data + _outer_done], 0
+        jne     end_loop
 
 align_label
 proc_outer:
-	mov	dword [lane_data + _outer_done], 1
-	mov	DWORD(size_offset), [lane_data + _size_offset]
-	mov	qword [lane_data + _extra_block + size_offset], 0
-	vmovdqa ymm5, [state + _lens_sha256]
+        mov     dword [lane_data + _outer_done], 1
+        mov     DWORD(size_offset), [lane_data + _size_offset]
+        mov     qword [lane_data + _extra_block + size_offset], 0
+        vmovdqa ymm5, [state + _lens_sha256]
         VPINSRW_256 ymm5, xmm0, xmm1, tmp, idx, 1, scale_x16
-	vmovdqa64 [state + _lens_sha256], ymm5
-	lea	tmp, [lane_data + _outer_block]
-	mov	job, [state + _job_in_lane_sha256 + idx*8]
-	mov	[state + _args_data_ptr_sha256 + PTR_SZ*idx], tmp
+        vmovdqa64 [state + _lens_sha256], ymm5
+        lea     tmp, [lane_data + _outer_block]
+        mov     job, [state + _job_in_lane_sha256 + idx*8]
+        mov     [state + _args_data_ptr_sha256 + PTR_SZ*idx], tmp
 
-	vmovd	xmm0, [state + _args_digest_sha256 + 4*idx + 0*SHA256_DIGEST_ROW_SIZE]
-	vpinsrd	xmm0, xmm0, [state + _args_digest_sha256 + 4*idx + 1*SHA256_DIGEST_ROW_SIZE], 1
-	vpinsrd	xmm0, xmm0, [state + _args_digest_sha256 + 4*idx + 2*SHA256_DIGEST_ROW_SIZE], 2
-	vpinsrd	xmm0, xmm0, [state + _args_digest_sha256 + 4*idx + 3*SHA256_DIGEST_ROW_SIZE], 3
-	vpshufb	xmm0, xmm0, [rel byteswap]
-	vmovd	xmm1, [state + _args_digest_sha256 + 4*idx + 4*SHA256_DIGEST_ROW_SIZE]
-	vpinsrd	xmm1, xmm1, [state + _args_digest_sha256 + 4*idx + 5*SHA256_DIGEST_ROW_SIZE], 1
-	vpinsrd	xmm1, xmm1, [state + _args_digest_sha256 + 4*idx + 6*SHA256_DIGEST_ROW_SIZE], 2
+        vmovd   xmm0, [state + _args_digest_sha256 + 4*idx + 0*SHA256_DIGEST_ROW_SIZE]
+        vpinsrd xmm0, xmm0, [state + _args_digest_sha256 + 4*idx + 1*SHA256_DIGEST_ROW_SIZE], 1
+        vpinsrd xmm0, xmm0, [state + _args_digest_sha256 + 4*idx + 2*SHA256_DIGEST_ROW_SIZE], 2
+        vpinsrd xmm0, xmm0, [state + _args_digest_sha256 + 4*idx + 3*SHA256_DIGEST_ROW_SIZE], 3
+        vpshufb xmm0, xmm0, [rel byteswap]
+        vmovd   xmm1, [state + _args_digest_sha256 + 4*idx + 4*SHA256_DIGEST_ROW_SIZE]
+        vpinsrd xmm1, xmm1, [state + _args_digest_sha256 + 4*idx + 5*SHA256_DIGEST_ROW_SIZE], 1
+        vpinsrd xmm1, xmm1, [state + _args_digest_sha256 + 4*idx + 6*SHA256_DIGEST_ROW_SIZE], 2
 %ifndef SHA224
-	vpinsrd	xmm1, xmm1, [state + _args_digest_sha256 + 4*idx + 7*SHA256_DIGEST_ROW_SIZE], 3
+        vpinsrd xmm1, xmm1, [state + _args_digest_sha256 + 4*idx + 7*SHA256_DIGEST_ROW_SIZE], 3
 %endif
-	vpshufb	xmm1, xmm1, [rel byteswap]
-	vmovdqa	[lane_data + _outer_block], xmm0
-	vmovdqa	[lane_data + _outer_block + 4*4], xmm1
+        vpshufb xmm1, xmm1, [rel byteswap]
+        vmovdqa [lane_data + _outer_block], xmm0
+        vmovdqa [lane_data + _outer_block + 4*4], xmm1
 %ifdef SHA224
-	mov	dword [lane_data + _outer_block + 7*4], 0x80
+        mov     dword [lane_data + _outer_block + 7*4], 0x80
 %endif
 
-	mov	tmp, [job + _auth_key_xor_opad]
-	vmovdqu	xmm0, [tmp]
-	vmovdqu	xmm1, [tmp + 4*4]
-	vmovd	[state + _args_digest_sha256 + 4*idx + 0*SHA256_DIGEST_ROW_SIZE], xmm0
-	vpextrd	[state + _args_digest_sha256 + 4*idx + 1*SHA256_DIGEST_ROW_SIZE], xmm0, 1
-	vpextrd	[state + _args_digest_sha256 + 4*idx + 2*SHA256_DIGEST_ROW_SIZE], xmm0, 2
-	vpextrd	[state + _args_digest_sha256 + 4*idx + 3*SHA256_DIGEST_ROW_SIZE], xmm0, 3
-	vmovd	[state + _args_digest_sha256 + 4*idx + 4*SHA256_DIGEST_ROW_SIZE], xmm1
-	vpextrd	[state + _args_digest_sha256 + 4*idx + 5*SHA256_DIGEST_ROW_SIZE], xmm1, 1
-	vpextrd	[state + _args_digest_sha256 + 4*idx + 6*SHA256_DIGEST_ROW_SIZE], xmm1, 2
-	vpextrd	[state + _args_digest_sha256 + 4*idx + 7*SHA256_DIGEST_ROW_SIZE], xmm1, 3
+        mov     tmp, [job + _auth_key_xor_opad]
+        vmovdqu xmm0, [tmp]
+        vmovdqu xmm1, [tmp + 4*4]
+        vmovd   [state + _args_digest_sha256 + 4*idx + 0*SHA256_DIGEST_ROW_SIZE], xmm0
+        vpextrd [state + _args_digest_sha256 + 4*idx + 1*SHA256_DIGEST_ROW_SIZE], xmm0, 1
+        vpextrd [state + _args_digest_sha256 + 4*idx + 2*SHA256_DIGEST_ROW_SIZE], xmm0, 2
+        vpextrd [state + _args_digest_sha256 + 4*idx + 3*SHA256_DIGEST_ROW_SIZE], xmm0, 3
+        vmovd   [state + _args_digest_sha256 + 4*idx + 4*SHA256_DIGEST_ROW_SIZE], xmm1
+        vpextrd [state + _args_digest_sha256 + 4*idx + 5*SHA256_DIGEST_ROW_SIZE], xmm1, 1
+        vpextrd [state + _args_digest_sha256 + 4*idx + 6*SHA256_DIGEST_ROW_SIZE], xmm1, 2
+        vpextrd [state + _args_digest_sha256 + 4*idx + 7*SHA256_DIGEST_ROW_SIZE], xmm1, 3
 
-	jmp	start_loop
+        jmp     start_loop
 
 align_label
 proc_extra_blocks:
-	mov	DWORD(start_offset), [lane_data + _start_offset]
-	vmovdqa	ymm5, [state + _lens_sha256]
+        mov     DWORD(start_offset), [lane_data + _start_offset]
+        vmovdqa ymm5, [state + _lens_sha256]
         VPINSRW_256 ymm5, xmm0, xmm1, tmp, idx, extra_blocks, scale_x16
-	vmovdqa64 [state + _lens_sha256], ymm5
-	lea	tmp, [lane_data + _extra_block + start_offset]
-	mov	[state + _args_data_ptr_sha256 + 8*idx], tmp
-	mov	dword [lane_data + _extra_blocks], 0
-	jmp	start_loop
+        vmovdqa64 [state + _lens_sha256], ymm5
+        lea     tmp, [lane_data + _extra_block + start_offset]
+        mov     [state + _args_data_ptr_sha256 + 8*idx], tmp
+        mov     dword [lane_data + _extra_blocks], 0
+        jmp     start_loop
 
 align_label
 copy_lt64:
-	;; less than one message block of data
-	;; beginning of source block
-	;; destination extrablock but backwards by len from where 0x80 pre-populated
-	lea	p2, [lane_data + _extra_block  + 64]
-	sub	p2, len
-	memcpy_avx2_64_1 p2, p, len, tmp, tmp2, ymm0, ymm1
-	mov	unused_lanes, [state + _unused_lanes_sha256]
-	jmp	end_fast_copy
+        ;; less than one message block of data
+        ;; beginning of source block
+        ;; destination extrablock but backwards by len from where 0x80 pre-populated
+        lea     p2, [lane_data + _extra_block  + 64]
+        sub     p2, len
+        memcpy_avx2_64_1 p2, p, len, tmp, tmp2, ymm0, ymm1
+        mov     unused_lanes, [state + _unused_lanes_sha256]
+        jmp     end_fast_copy
 
 align_label
 return_null:
-	xor	job_rax, job_rax
-	jmp	return
+        xor     job_rax, job_rax
+        jmp     return
 
 align_label
 end_loop:
-	mov	job_rax, [state + _job_in_lane_sha256 + idx*8]
-	VPINSRQ_M512x2 state + _job_in_lane_sha256, 0, r12d, zmm6, zmm7, k4, idx
-	mov	unused_lanes, [state + _unused_lanes_sha256]
-	or	dword [job_rax + _status], IMB_STATUS_COMPLETED_AUTH
-	shl	unused_lanes, 4
-	or	unused_lanes, idx
-	mov	[state + _unused_lanes_sha256], unused_lanes
-	sub	dword [state + _num_lanes_inuse_sha256], 1
+        mov     job_rax, [state + _job_in_lane_sha256 + idx*8]
+        VPINSRQ_M512x2 state + _job_in_lane_sha256, 0, r12d, zmm6, zmm7, k4, idx
+        mov     unused_lanes, [state + _unused_lanes_sha256]
+        or      dword [job_rax + _status], IMB_STATUS_COMPLETED_AUTH
+        shl     unused_lanes, 4
+        or      unused_lanes, idx
+        mov     [state + _unused_lanes_sha256], unused_lanes
+        sub     dword [state + _num_lanes_inuse_sha256], 1
 
-	mov	p, [job_rax + _auth_tag_output]
+        mov     p, [job_rax + _auth_tag_output]
 
 %ifdef SHA224
         cmp     qword [job_rax + _auth_tag_output_len_in_bytes], 14
@@ -364,56 +364,56 @@ end_loop:
         jne     copy_full_digest
 %endif
 
-	;; copy 14 bytes for SHA224 // 16 bytes for SHA256
-	mov	DWORD(tmp),  [state + _args_digest_sha256 + 4*idx + 0*SHA256_DIGEST_ROW_SIZE]
-	mov	DWORD(tmp2), [state + _args_digest_sha256 + 4*idx + 1*SHA256_DIGEST_ROW_SIZE]
-	mov	DWORD(tmp3), [state + _args_digest_sha256 + 4*idx + 2*SHA256_DIGEST_ROW_SIZE]
-	mov	DWORD(tmp4), [state + _args_digest_sha256 + 4*idx + 3*SHA256_DIGEST_ROW_SIZE]
-	bswap	DWORD(tmp)
-	bswap	DWORD(tmp2)
-	bswap	DWORD(tmp3)
-	bswap	DWORD(tmp4)
-	mov	[p + 0*4], DWORD(tmp)
-	mov	[p + 1*4], DWORD(tmp2)
-	mov	[p + 2*4], DWORD(tmp3)
+        ;; copy 14 bytes for SHA224 // 16 bytes for SHA256
+        mov     DWORD(tmp),  [state + _args_digest_sha256 + 4*idx + 0*SHA256_DIGEST_ROW_SIZE]
+        mov     DWORD(tmp2), [state + _args_digest_sha256 + 4*idx + 1*SHA256_DIGEST_ROW_SIZE]
+        mov     DWORD(tmp3), [state + _args_digest_sha256 + 4*idx + 2*SHA256_DIGEST_ROW_SIZE]
+        mov     DWORD(tmp4), [state + _args_digest_sha256 + 4*idx + 3*SHA256_DIGEST_ROW_SIZE]
+        bswap   DWORD(tmp)
+        bswap   DWORD(tmp2)
+        bswap   DWORD(tmp3)
+        bswap   DWORD(tmp4)
+        mov     [p + 0*4], DWORD(tmp)
+        mov     [p + 1*4], DWORD(tmp2)
+        mov     [p + 2*4], DWORD(tmp3)
 %ifdef SHA224
-	mov	[p + 3*4], WORD(tmp4)
+        mov     [p + 3*4], WORD(tmp4)
 %else
-	mov	[p + 3*4], DWORD(tmp4)
+        mov     [p + 3*4], DWORD(tmp4)
 %endif
         jmp     clear_ret
 align_label
 copy_full_digest:
 %ifndef LINUX
-	mov 	tmp2, rcx ; save rcx
+        mov     tmp2, rcx ; save rcx
 %endif
-	mov 	rcx, qword [job_rax + _auth_tag_output_len_in_bytes]
+        mov     rcx, qword [job_rax + _auth_tag_output_len_in_bytes]
 
-        mov 	tmp4, 1
-	shl 	tmp4, cl  ; Calculate the mask for copying bytes
-	dec 	tmp4
-	kmovq 	k1, tmp4
+        mov     tmp4, 1
+        shl     tmp4, cl  ; Calculate the mask for copying bytes
+        dec     tmp4
+        kmovq   k1, tmp4
 
 %ifndef LINUX
-	mov 	rcx, tmp2 ; restore rcx
+        mov     rcx, tmp2 ; restore rcx
 %endif
 
-	;; copy up to 28/32 bytes
-	vmovd   xmm0, [state + _args_digest_sha256 + 4*idx + 0*SHA256_DIGEST_ROW_SIZE]
-	vpinsrd xmm0, [state + _args_digest_sha256 + 4*idx + 1*SHA256_DIGEST_ROW_SIZE], 1
-	vpinsrd xmm0, [state + _args_digest_sha256 + 4*idx + 2*SHA256_DIGEST_ROW_SIZE], 2
-	vpinsrd xmm0, [state + _args_digest_sha256 + 4*idx + 3*SHA256_DIGEST_ROW_SIZE], 3
+        ;; copy up to 28/32 bytes
+        vmovd   xmm0, [state + _args_digest_sha256 + 4*idx + 0*SHA256_DIGEST_ROW_SIZE]
+        vpinsrd xmm0, [state + _args_digest_sha256 + 4*idx + 1*SHA256_DIGEST_ROW_SIZE], 1
+        vpinsrd xmm0, [state + _args_digest_sha256 + 4*idx + 2*SHA256_DIGEST_ROW_SIZE], 2
+        vpinsrd xmm0, [state + _args_digest_sha256 + 4*idx + 3*SHA256_DIGEST_ROW_SIZE], 3
 
-	vmovd   xmm1, [state + _args_digest_sha256 + 4*idx + 4*SHA256_DIGEST_ROW_SIZE]
-	vpinsrd xmm1, [state + _args_digest_sha256 + 4*idx + 5*SHA256_DIGEST_ROW_SIZE], 1
-	vpinsrd xmm1, [state + _args_digest_sha256 + 4*idx + 6*SHA256_DIGEST_ROW_SIZE], 2
+        vmovd   xmm1, [state + _args_digest_sha256 + 4*idx + 4*SHA256_DIGEST_ROW_SIZE]
+        vpinsrd xmm1, [state + _args_digest_sha256 + 4*idx + 5*SHA256_DIGEST_ROW_SIZE], 1
+        vpinsrd xmm1, [state + _args_digest_sha256 + 4*idx + 6*SHA256_DIGEST_ROW_SIZE], 2
 %ifndef SHA224
-	vpinsrd xmm1, [state + _args_digest_sha256 + 4*idx + 7*SHA256_DIGEST_ROW_SIZE], 3
+        vpinsrd xmm1, [state + _args_digest_sha256 + 4*idx + 7*SHA256_DIGEST_ROW_SIZE], 3
 %endif
 
-	vinserti128 ymm0, xmm1, 1
-	vpshufb ymm0, ymm0, [rel byteswap]
-	vmovdqu8 [p + 0*4]{k1}, ymm0 ; Store bytes
+        vinserti128 ymm0, xmm1, 1
+        vpshufb ymm0, ymm0, [rel byteswap]
+        vmovdqu8 [p + 0*4]{k1}, ymm0 ; Store bytes
 
 align_label
 clear_ret:
@@ -421,8 +421,8 @@ clear_ret:
 %ifdef SAFE_DATA
         ;; Clear extra_block (64B) of returned job
         vpxorq  zmm0, zmm0
-        imul	lane_data, idx, _HMAC_SHA1_LANE_DATA_size
-        lea	lane_data, [state + _ldata_sha256 + lane_data]
+        imul    lane_data, idx, _HMAC_SHA1_LANE_DATA_size
+        lea     lane_data, [state + _ldata_sha256 + lane_data]
         ;; Clear first 64 bytes of extra_block
         vmovdqu64  [lane_data + _extra_block], zmm0
 %endif ;; SAFE_DATA
@@ -435,18 +435,18 @@ return:
         vzeroupper
 %endif
 
-	mov	rbx, [rsp + _gpr_save + 8*0]
-	mov	rbp, [rsp + _gpr_save + 8*1]
-	mov	r12, [rsp + _gpr_save + 8*2]
-	mov	r13, [rsp + _gpr_save + 8*3]
-	mov	r14, [rsp + _gpr_save + 8*4]
-	mov	r15, [rsp + _gpr_save + 8*5]
+        mov     rbx, [rsp + _gpr_save + 8*0]
+        mov     rbp, [rsp + _gpr_save + 8*1]
+        mov     r12, [rsp + _gpr_save + 8*2]
+        mov     r13, [rsp + _gpr_save + 8*3]
+        mov     r14, [rsp + _gpr_save + 8*4]
+        mov     r15, [rsp + _gpr_save + 8*5]
 %ifndef LINUX
-	mov	rsi, [rsp + _gpr_save + 8*6]
-	mov	rdi, [rsp + _gpr_save + 8*7]
+        mov     rsi, [rsp + _gpr_save + 8*6]
+        mov     rdi, [rsp + _gpr_save + 8*7]
 %endif
-	mov	rsp, [rsp + _rsp_save]	; original SP
+        mov     rsp, [rsp + _rsp_save]  ; original SP
 
-	ret
+        ret
 
 mksection stack-noexec
