@@ -105,49 +105,49 @@ endstruc
 %define GP_OFFSET XMM_STORAGE
 
 %macro FUNC_SAVE 0
-    mov     r11, rsp
-    sub     rsp, VARIABLE_OFFSET
-    and     rsp, ~31    ; align rsp to 32 bytes
+        mov     r11, rsp
+        sub     rsp, VARIABLE_OFFSET
+        and     rsp, ~31    ; align rsp to 32 bytes
 
-    mov     [rsp + 0*8],  rbx
-    mov     [rsp + 1*8],  rbp
-    mov     [rsp + 2*8],  r12
+        mov     [rsp + 0*8],  rbx
+        mov     [rsp + 1*8],  rbp
+        mov     [rsp + 2*8],  r12
 %ifndef LINUX
-    mov     [rsp + 3*8], rsi
-    mov     [rsp + 4*8], rdi
-    vmovdqa [rsp + 3*16], xmm6
-    vmovdqa [rsp + 4*16], xmm7
-    vmovdqa [rsp + 5*16], xmm8
-    vmovdqa [rsp + 6*16], xmm9
-    vmovdqa [rsp + 7*16], xmm10
-    vmovdqa [rsp + 8*16], xmm11
-    vmovdqa [rsp + 9*16], xmm12
-    vmovdqa [rsp + 10*16], xmm13
-    vmovdqa [rsp + 11*16], xmm14
-    vmovdqa [rsp + 12*16], xmm15
+        mov     [rsp + 3*8], rsi
+        mov     [rsp + 4*8], rdi
+        vmovdqa [rsp + 3*16], xmm6
+        vmovdqa [rsp + 4*16], xmm7
+        vmovdqa [rsp + 5*16], xmm8
+        vmovdqa [rsp + 6*16], xmm9
+        vmovdqa [rsp + 7*16], xmm10
+        vmovdqa [rsp + 8*16], xmm11
+        vmovdqa [rsp + 9*16], xmm12
+        vmovdqa [rsp + 10*16], xmm13
+        vmovdqa [rsp + 11*16], xmm14
+        vmovdqa [rsp + 12*16], xmm15
 %endif ; LINUX
-    mov     [rsp + 5*8], r11 ;; rsp pointer
+        mov     [rsp + 5*8], r11 ;; rsp pointer
 %endmacro
 
 %macro FUNC_RESTORE 0
-    mov     rbx, [rsp + 0*8]
-    mov     rbp, [rsp + 1*8]
-    mov     r12, [rsp + 2*8]
+        mov     rbx, [rsp + 0*8]
+        mov     rbp, [rsp + 1*8]
+        mov     r12, [rsp + 2*8]
 %ifndef LINUX
-    mov     rsi,   [rsp + 3*8]
-    mov     rdi,   [rsp + 4*8]
-    vmovdqa xmm6,  [rsp + 3*16]
-    vmovdqa xmm7,  [rsp + 4*16]
-    vmovdqa xmm8,  [rsp + 5*16]
-    vmovdqa xmm9,  [rsp + 6*16]
-    vmovdqa xmm10, [rsp + 7*16]
-    vmovdqa xmm11, [rsp + 8*16]
-    vmovdqa xmm12, [rsp + 9*16]
-    vmovdqa xmm13, [rsp + 10*16]
-    vmovdqa xmm14, [rsp + 11*16]
-    vmovdqa xmm15, [rsp + 12*16]
+        mov     rsi,   [rsp + 3*8]
+        mov     rdi,   [rsp + 4*8]
+        vmovdqa xmm6,  [rsp + 3*16]
+        vmovdqa xmm7,  [rsp + 4*16]
+        vmovdqa xmm8,  [rsp + 5*16]
+        vmovdqa xmm9,  [rsp + 6*16]
+        vmovdqa xmm10, [rsp + 7*16]
+        vmovdqa xmm11, [rsp + 8*16]
+        vmovdqa xmm12, [rsp + 9*16]
+        vmovdqa xmm13, [rsp + 10*16]
+        vmovdqa xmm14, [rsp + 11*16]
+        vmovdqa xmm15, [rsp + 12*16]
 %endif ; LINUX
-    mov     rsp,   [rsp + 5*8] ;; rsp pointer
+        mov     rsp,   [rsp + 5*8] ;; rsp pointer
 %endmacro
 
 %macro SHA512ROUNDS4_X2 13
@@ -263,13 +263,13 @@ sha512_ni_x2_avx2:
                 vmovdqu         STATE1b, [args + _args_digest_sha512 + 1*SHA512NI_DIGEST_ROW_SIZE + 32]
 
         vperm2i128 YTMP1, STATE0, STATE1, 0x20
-                    vperm2i128 YTMP0, STATE0b, STATE1b, 0x20
+                        vperm2i128 YTMP0, STATE0b, STATE1b, 0x20
         vperm2i128 STATE1, STATE0, STATE1, 0x31
-                    vperm2i128 STATE1b, STATE0b, STATE1b, 0x31
+                        vperm2i128 STATE1b, STATE0b, STATE1b, 0x31
         vpermq STATE0, YTMP1, 0x1b
-                    vpermq STATE0b, YTMP0, 0x1b
+                        vpermq STATE0b, YTMP0, 0x1b
         vpermq STATE1, STATE1, 0x1b
-                    vpermq STATE1b, STATE1b, 0x1b
+                        vpermq STATE1b, STATE1b, 0x1b
 
 align_loop
 .block_loop:
@@ -281,65 +281,65 @@ align_loop
 
         ;; R0- R3
         vmovdqu MSG, [INP+32*0]
-                    vmovdqu MSGb, [INPb+32*0]
+                        vmovdqu MSGb, [INPb+32*0]
         vpshufb MSG, MSG, [SHUF_MASK]
-                    vpshufb MSGb, MSGb, [SHUF_MASK]
+                        vpshufb MSGb, MSGb, [SHUF_MASK]
         vmovdqu MSGTMP0, MSG
-                    vmovdqu MSGTMP0b, MSGb
+                        vmovdqu MSGTMP0b, MSGb
         vpaddq MSG, MSG, [SHA512_CONSTS+32*0]
-                    vpaddq MSGb, MSGb, [SHA512_CONSTS+32*0]
+                        vpaddq MSGb, MSGb, [SHA512_CONSTS+32*0]
         vsha512rnds2 STATE1, STATE0, XWORD(MSG)
-                    vsha512rnds2 STATE1b, STATE0b, XWORD(MSGb)
+                        vsha512rnds2 STATE1b, STATE0b, XWORD(MSGb)
         vperm2i128 MSG, MSG, MSG, 0x01
-                    vperm2i128 MSGb, MSGb, MSGb, 0x01
+                        vperm2i128 MSGb, MSGb, MSGb, 0x01
         vsha512rnds2 STATE0, STATE1, XWORD(MSG)
-                    vsha512rnds2 STATE0b, STATE1b, XWORD(MSGb)
+                        vsha512rnds2 STATE0b, STATE1b, XWORD(MSGb)
 
         ;; R4-7
         vmovdqu MSG, [INP+32*1]
-                    vmovdqu MSGb, [INPb+32*1]
+                        vmovdqu MSGb, [INPb+32*1]
         vpshufb MSG, MSG, [SHUF_MASK]
-                    vpshufb MSGb, MSGb, [SHUF_MASK]
+                        vpshufb MSGb, MSGb, [SHUF_MASK]
         vmovdqu MSGTMP1, MSG
-                    vmovdqu MSGTMP1b, MSGb
+                        vmovdqu MSGTMP1b, MSGb
         vpaddq MSG, MSG, [SHA512_CONSTS+32*1]
-                    vpaddq MSGb, MSGb, [SHA512_CONSTS+32*1]
+                        vpaddq MSGb, MSGb, [SHA512_CONSTS+32*1]
         vsha512rnds2 STATE1, STATE0, XWORD(MSG)
-                    vsha512rnds2 STATE1b, STATE0b, XWORD(MSGb)
+                        vsha512rnds2 STATE1b, STATE0b, XWORD(MSGb)
         vperm2i128 MSG, MSG, MSG, 0x01
-                    vperm2i128 MSGb, MSGb, MSGb, 0x01
+                        vperm2i128 MSGb, MSGb, MSGb, 0x01
         vsha512rnds2 STATE0, STATE1, XWORD(MSG)
-                    vsha512rnds2 STATE0b, STATE1b, XWORD(MSGb)
+                        vsha512rnds2 STATE0b, STATE1b, XWORD(MSGb)
         vsha512msg1 MSGTMP0, XWORD(MSGTMP1)
-                    vsha512msg1 MSGTMP0b, XWORD(MSGTMP1b)
+                        vsha512msg1 MSGTMP0b, XWORD(MSGTMP1b)
 
         ;; R8-R11
         vmovdqu MSG, [INP+32*2]
-                    vmovdqu MSGb, [INPb+32*2]
+                        vmovdqu MSGb, [INPb+32*2]
         vpshufb MSG, MSG, [SHUF_MASK]
-                    vpshufb MSGb, MSGb, [SHUF_MASK]
+                        vpshufb MSGb, MSGb, [SHUF_MASK]
         vmovdqu MSGTMP2, MSG
-                    vmovdqu MSGTMP2b, MSGb
+                        vmovdqu MSGTMP2b, MSGb
 
 
         vpaddq MSG, MSG, [SHA512_CONSTS+32*2]
-                    vpaddq MSGb, MSGb, [SHA512_CONSTS+32*2]
+                        vpaddq MSGb, MSGb, [SHA512_CONSTS+32*2]
         vsha512rnds2 STATE1, STATE0, XWORD(MSG)
-                    vsha512rnds2 STATE1b, STATE0b, XWORD(MSGb)
+                        vsha512rnds2 STATE1b, STATE0b, XWORD(MSGb)
         vperm2i128 MSG, MSG, MSG, 0x01
-                    vperm2i128 MSGb, MSGb, MSGb, 0x01
+                        vperm2i128 MSGb, MSGb, MSGb, 0x01
         vsha512rnds2 STATE0, STATE1, XWORD(MSG)
-                    vsha512rnds2 STATE0b, STATE1b, XWORD(MSGb)
+                        vsha512rnds2 STATE0b, STATE1b, XWORD(MSGb)
         vsha512msg1 MSGTMP1, XWORD(MSGTMP2)
-                    vsha512msg1 MSGTMP1b, XWORD(MSGTMP2b)
+                        vsha512msg1 MSGTMP1b, XWORD(MSGTMP2b)
 
         ;; R12-15
         vmovdqu MSG, [INP+32*3]
-                    vmovdqu MSGb, [INPb+32*3]
+                        vmovdqu MSGb, [INPb+32*3]
         vpshufb MSG, MSG, [SHUF_MASK]
-                    vpshufb MSGb, MSGb, [SHUF_MASK]
+                        vpshufb MSGb, MSGb, [SHUF_MASK]
         vmovdqu YTMP0, MSG
-                    vmovdqu YTMP2, MSGb
+                        vmovdqu YTMP2, MSGb
 
         ;; R16-75
         SHA512ROUNDS4_X2 MSG, STATE0, STATE1, YTMP0, MSGTMP0, MSGTMP2, \
@@ -392,21 +392,21 @@ align_loop
 
         ;; R76-79
         vpaddq MSG, YTMP0, [SHA512_CONSTS+32*19]
-                    vpaddq MSGb, YTMP2, [SHA512_CONSTS+32*19]
+                        vpaddq MSGb, YTMP2, [SHA512_CONSTS+32*19]
         vsha512rnds2 STATE1, STATE0, XWORD(MSG)
-                    vsha512rnds2 STATE1b, STATE0b, XWORD(MSGb)
+                        vsha512rnds2 STATE1b, STATE0b, XWORD(MSGb)
         vperm2i128 MSG, MSG, MSG, 0x01
-                    vperm2i128 MSGb, MSGb, MSGb, 0x01
+                        vperm2i128 MSGb, MSGb, MSGb, 0x01
         vsha512rnds2 STATE0, STATE1, XWORD(MSG)
-                    vsha512rnds2 STATE0b, STATE1b, XWORD(MSGb)
+                        vsha512rnds2 STATE0b, STATE1b, XWORD(MSGb)
 
         vpaddq STATE0, STATE0, [rsp + frame.ABEF_SAVE]
         vpaddq STATE1, STATE1, [rsp + frame.CDGH_SAVE]
-                    vpaddq STATE0b, STATE0b, [rsp + frame.ABEF_SAVEb]
-                    vpaddq STATE1b, STATE1b, [rsp + frame.CDGH_SAVEb]
+                        vpaddq STATE0b, STATE0b, [rsp + frame.ABEF_SAVEb]
+                        vpaddq STATE1b, STATE1b, [rsp + frame.CDGH_SAVEb]
 
         lea INP, [INP+128]
-                    lea INPb, [INPb+128]
+                        lea INPb, [INPb+128]
 
         dec     NUM_BLKS
         jne     .block_loop
@@ -417,13 +417,13 @@ align_loop
 
         ; Reorder and write back the hash value
         vperm2i128 MSGTMP0, STATE0, STATE1, 0x31
-                    vperm2i128 MSGTMP1, STATE0b, STATE1b, 0x31
+                        vperm2i128 MSGTMP1, STATE0b, STATE1b, 0x31
         vperm2i128 MSGTMP2, STATE0, STATE1, 0x20
-                    vperm2i128 YTMP0, STATE0b, STATE1b, 0x20
+                        vperm2i128 YTMP0, STATE0b, STATE1b, 0x20
         vpermq STATE0, MSGTMP0, 0xb1
         vpermq STATE1, MSGTMP2, 0xb1
-                    vpermq STATE0b, MSGTMP1, 0xb1
-                    vpermq STATE1b, YTMP0, 0xb1
+                        vpermq STATE0b, MSGTMP1, 0xb1
+                        vpermq STATE1b, YTMP0, 0xb1
 
         ;; update digests
         vmovdqu         [args + _args_digest_sha512 + 0*SHA512NI_DIGEST_ROW_SIZE], STATE0

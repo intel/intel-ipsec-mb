@@ -240,70 +240,70 @@ end_loop:
 
 align_label
 copy_full_digest:
-	cmp 	qword [job_rax + _auth_tag_output_len_in_bytes], 16
-	ja 	copy_tag_gt16
+        cmp     qword [job_rax + _auth_tag_output_len_in_bytes], 16
+        ja      copy_tag_gt16
 
-	;; copy up to 16 bytes
-	mov    	tmp2, qword [job_rax + _auth_tag_output_len_in_bytes]
-	vmovdqa xmm0, [state + _args_digest_sha512 + idx]
-	vpshufb xmm0, [rel byteswap]
-	lea	tmp5, [p + 0*4]		; destination pointer
-	call	copy_digest_avx
-	jmp 	clear_ret
+        ;; copy up to 16 bytes
+        mov     tmp2, qword [job_rax + _auth_tag_output_len_in_bytes]
+        vmovdqa xmm0, [state + _args_digest_sha512 + idx]
+        vpshufb xmm0, [rel byteswap]
+        lea     tmp5, [p + 0*4]         ; destination pointer
+        call    copy_digest_avx
+        jmp     clear_ret
 
 align_label
 copy_tag_gt16:
-	;; copy 16 bytes first
-	vmovdqa xmm0, [state + _args_digest_sha512 + idx]
-	vpshufb xmm0, [rel byteswap]
-	vmovdqu [p + 0*4], xmm0
+        ;; copy 16 bytes first
+        vmovdqa xmm0, [state + _args_digest_sha512 + idx]
+        vpshufb xmm0, [rel byteswap]
+        vmovdqu [p + 0*4], xmm0
 
-	;; calculate remaining bytes to copy
-	mov    	tmp2, qword [job_rax + _auth_tag_output_len_in_bytes]
-	sub    	tmp2, 16 ; copied 16 bytes already
-	cmp 	qword [job_rax + _auth_tag_output_len_in_bytes], 32
-	ja	copy_tag_gt32
+        ;; calculate remaining bytes to copy
+        mov     tmp2, qword [job_rax + _auth_tag_output_len_in_bytes]
+        sub     tmp2, 16 ; copied 16 bytes already
+        cmp     qword [job_rax + _auth_tag_output_len_in_bytes], 32
+        ja      copy_tag_gt32
 
-	;; copy up to 32 bytes
-	vmovdqa xmm0, [state + _args_digest_sha512 + idx + 16]
-	vpshufb xmm0, [rel byteswap]
-	lea	tmp5, [p + 4*4]		; destination pointer
-	call	copy_digest_avx
-	jmp 	clear_ret
+        ;; copy up to 32 bytes
+        vmovdqa xmm0, [state + _args_digest_sha512 + idx + 16]
+        vpshufb xmm0, [rel byteswap]
+        lea     tmp5, [p + 4*4]         ; destination pointer
+        call    copy_digest_avx
+        jmp     clear_ret
 
 align_label
 copy_tag_gt32:
-	;; copy 32 bytes
-	vmovdqa xmm0, [state + _args_digest_sha512 + idx + 16]
-	vpshufb xmm0, [rel byteswap]
-	vmovdqu [p + 4*4], xmm0
+        ;; copy 32 bytes
+        vmovdqa xmm0, [state + _args_digest_sha512 + idx + 16]
+        vpshufb xmm0, [rel byteswap]
+        vmovdqu [p + 4*4], xmm0
 
-	sub    	tmp2, 16 ; copied another 16 bytes
+        sub     tmp2, 16 ; copied another 16 bytes
 %if (SHA_X_DIGEST_SIZE != 384)
-	cmp 	qword [job_rax + _auth_tag_output_len_in_bytes], 48
-	ja	copy_tag_gt48
+        cmp     qword [job_rax + _auth_tag_output_len_in_bytes], 48
+        ja      copy_tag_gt48
 %endif
-	;; copy up to 48 bytes
-	vmovdqa xmm0, [state + _args_digest_sha512 + idx + 32]
-	vpshufb xmm0, [rel byteswap]
-	lea	tmp5, [p + 8*4]		; destination pointer
-	call	copy_digest_avx
-	jmp 	clear_ret
+        ;; copy up to 48 bytes
+        vmovdqa xmm0, [state + _args_digest_sha512 + idx + 32]
+        vpshufb xmm0, [rel byteswap]
+        lea     tmp5, [p + 8*4]         ; destination pointer
+        call    copy_digest_avx
+        jmp     clear_ret
 
 align_label
 copy_tag_gt48:
-	;; copy 48 bytes
-	vmovdqa xmm0, [state + _args_digest_sha512 + idx + 32]
-	vpshufb xmm0, [rel byteswap]
-	vmovdqu [p + 8*4], xmm0
+        ;; copy 48 bytes
+        vmovdqa xmm0, [state + _args_digest_sha512 + idx + 32]
+        vpshufb xmm0, [rel byteswap]
+        vmovdqu [p + 8*4], xmm0
 
-	sub    	tmp2, 16 ; copied another 16 bytes
+        sub     tmp2, 16 ; copied another 16 bytes
 
-	;; copy up to 64 bytes
-	vmovdqa xmm0, [state + _args_digest_sha512 + idx + 48]
-	vpshufb xmm0, [rel byteswap]
-	lea	tmp5, [p + 12*4]		; destination pointer
-	call	copy_digest_avx
+        ;; copy up to 64 bytes
+        vmovdqa xmm0, [state + _args_digest_sha512 + idx + 48]
+        vpshufb xmm0, [rel byteswap]
+        lea     tmp5, [p + 12*4]                ; destination pointer
+        call    copy_digest_avx
 
 align_label
 clear_ret:

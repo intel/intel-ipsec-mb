@@ -44,15 +44,15 @@
 %include "include/align_avx.inc"
 
 %ifdef LINUX
-%define arg1	rdi
-%define arg2	rsi
-%define arg3	rdx
-%define arg4	rcx
+%define arg1    rdi
+%define arg2    rsi
+%define arg3    rdx
+%define arg4    rcx
 %else
-%define arg1	rcx
-%define arg2	rdx
-%define arg3	r8
-%define arg4	r9
+%define arg1    rcx
+%define arg2    rdx
+%define arg3    r8
+%define arg4    r9
 %endif
 
 %define arg_hash        arg1
@@ -64,7 +64,7 @@ default rel
 
 align 16
 SHUFF_MASK:
-	db 3, 2, 1, 0, 7, 6, 5, 4, 11, 10, 9, 8, 15, 14, 13, 12
+        db 3, 2, 1, 0, 7, 6, 5, 4, 11, 10, 9, 8, 15, 14, 13, 12
 
 mksection .text
 
@@ -83,11 +83,11 @@ mksection .text
 %define %%T3 %%W19_16
 
         vpalignr        %%T3, %%W11_08, %%W07_04, 3*4   ;; xmm8 = W10 W9 W8 W7
-	vpsrldq         %%T1, %%W15_12, 4               ;; xmm9 = 0 W15 W14 W13
-	vsm3msg1        %%T3, %%T1, %%W03_00            ;; xmm8 = WTMP3 WTMP2 WTMP1 WTMP0
-	vpalignr        %%T1, %%W07_04, %%W03_00, 3*4   ;; xmm9 = W6 W5 W4 W3
-	vpalignr        %%T2, %%W15_12, %%W11_08, 2*4   ;; xmm1 = W13 W12 W11 W10
-	vsm3msg2        %%T3, %%T1, %%T2                ;; xmm8 = W19 W18 W17 W16
+        vpsrldq         %%T1, %%W15_12, 4               ;; xmm9 = 0 W15 W14 W13
+        vsm3msg1        %%T3, %%T1, %%W03_00            ;; xmm8 = WTMP3 WTMP2 WTMP1 WTMP0
+        vpalignr        %%T1, %%W07_04, %%W03_00, 3*4   ;; xmm9 = W6 W5 W4 W3
+        vpalignr        %%T2, %%W15_12, %%W11_08, 2*4   ;; xmm1 = W13 W12 W11 W10
+        vsm3msg2        %%T3, %%T1, %%T2                ;; xmm8 = W19 W18 W17 W16
 %endmacro
 
 ;; ***************************************************************************
@@ -104,9 +104,9 @@ mksection .text
 %define %%R             %6      ;; [in] round number
 
         vpunpcklqdq     %%T1, %%W03_00, %%W07_04        ;; T1 = W5 W4 W1 W0
-	vsm3rnds2       %%CDGH, %%ABEF, %%T1, %%R       ;; CDGH = updated ABEF // 2 rounds
-	vpunpckhqdq     %%T1, %%W03_00, %%W07_04        ;; T1 = W7 W6 W3 W2
-	vsm3rnds2       %%ABEF, %%CDGH, %%T1, (%%R + 2) ;; ABEF = updated CDGH // 2 rounds
+        vsm3rnds2       %%CDGH, %%ABEF, %%T1, %%R       ;; CDGH = updated ABEF // 2 rounds
+        vpunpckhqdq     %%T1, %%W03_00, %%W07_04        ;; T1 = W7 W6 W3 W2
+        vsm3rnds2       %%ABEF, %%CDGH, %%T1, (%%R + 2) ;; ABEF = updated CDGH // 2 rounds
 %endmacro
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -264,6 +264,6 @@ block_loop:
 align_label
 done_hash:
 
-	ret
+        ret
 
 mksection stack-noexec

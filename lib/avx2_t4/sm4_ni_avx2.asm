@@ -175,10 +175,10 @@ align_function
 MKGLOBAL(sm4_ecb_ni_avx2,function,internal)
 sm4_ecb_ni_avx2:
 
-%define	IN      arg1
-%define	OUT     arg2
+%define IN      arg1
+%define OUT     arg2
 %define SIZE    arg3
-%define	KEY_EXP arg4
+%define KEY_EXP arg4
 
 %define IDX     r10
 %define TMP     r11
@@ -259,13 +259,13 @@ initial_num_blocks_is_ %+ initial_num_blocks :
 
         ; shuffle initial blocks initial blocks
         SHUFFLE_BLOCKS initial_num_blocks, YDATA0, YDATA1, YDATA2, YDATA3, \
-                       YDATA4, YDATA5, YDATA6, YDATA7, YSHUFB_IN
+                        YDATA4, YDATA5, YDATA6, YDATA7, YSHUFB_IN
 
         SM4_ROUNDS initial_num_blocks, YDATA0, YDATA1, YDATA2, YDATA3, \
-                       YDATA4, YDATA5, YDATA6, YDATA7, YKEY
+                        YDATA4, YDATA5, YDATA6, YDATA7, YKEY
 
         SHUFFLE_BLOCKS initial_num_blocks, YDATA0, YDATA1, YDATA2, YDATA3, \
-                       YDATA4, YDATA5, YDATA6, YDATA7, YSHUFB_OUT
+                        YDATA4, YDATA5, YDATA6, YDATA7, YSHUFB_OUT
 
         ; store initial blocks
         YMM_STORE_BLOCKS_AVX2_0_16 initial_num_blocks, OUT, 0, YDATA0, YDATA1,\
@@ -286,13 +286,13 @@ main_loop:
                 YDATA6, YDATA7
 
         SHUFFLE_BLOCKS NBLOCKS_MAIN, YDATA0, YDATA1, YDATA2, YDATA3, \
-                       YDATA4, YDATA5, YDATA6, YDATA7, YSHUFB_IN
+                        YDATA4, YDATA5, YDATA6, YDATA7, YSHUFB_IN
 
         SM4_ROUNDS NBLOCKS_MAIN, YDATA0, YDATA1, YDATA2, YDATA3, \
-                       YDATA4, YDATA5, YDATA6, YDATA7, YKEY
+                        YDATA4, YDATA5, YDATA6, YDATA7, YKEY
 
         SHUFFLE_BLOCKS NBLOCKS_MAIN, YDATA0, YDATA1, YDATA2, YDATA3, \
-                       YDATA4, YDATA5, YDATA6, YDATA7, YSHUFB_OUT
+                        YDATA4, YDATA5, YDATA6, YDATA7, YSHUFB_OUT
 
         ; store initial blocks
         YMM_STORE_BLOCKS_AVX2_0_16 NBLOCKS_MAIN, OUT, IDX, YDATA0, YDATA1,\
@@ -315,10 +315,10 @@ align_function
 MKGLOBAL(sm4_cbc_enc_ni_avx2,function,internal)
 sm4_cbc_enc_ni_avx2:
 
-%define	IN      arg1
-%define	OUT     arg2
+%define IN      arg1
+%define OUT     arg2
 %define SIZE    arg3
-%define	KEY_EXP arg4
+%define KEY_EXP arg4
 
 %define IV      r10
 %define IDX     r11
@@ -393,10 +393,10 @@ align_function
 MKGLOBAL(sm4_cbc_dec_ni_avx2,function,internal)
 sm4_cbc_dec_ni_avx2:
 
-%define	IN      arg1
-%define	OUT     arg2
+%define IN      arg1
+%define OUT     arg2
 %define SIZE    arg3
-%define	KEY_EXP arg4
+%define KEY_EXP arg4
 
 %define IV      r10
 
@@ -495,13 +495,13 @@ cbc_dec_initial_num_blocks_is_ %+ cbc_dec_initial_num_blocks :
 
         ; shuffle initial blocks initial blocks
         SHUFFLE_BLOCKS cbc_dec_initial_num_blocks, YDATA0, YDATA1, YDATA2, YDATA3, \
-                       YDATA4, YDATA5, YDATA6, YDATA7, YSHUFB_IN
+                        YDATA4, YDATA5, YDATA6, YDATA7, YSHUFB_IN
 
         SM4_ROUNDS cbc_dec_initial_num_blocks, YDATA0, YDATA1, YDATA2, YDATA3, \
-                       YDATA4, YDATA5, YDATA6, YDATA7, YKEY
+                        YDATA4, YDATA5, YDATA6, YDATA7, YKEY
 
         SHUFFLE_BLOCKS cbc_dec_initial_num_blocks, YDATA0, YDATA1, YDATA2, YDATA3, \
-                       YDATA4, YDATA5, YDATA6, YDATA7, YSHUFB_OUT
+                        YDATA4, YDATA5, YDATA6, YDATA7, YSHUFB_OUT
 
         ; Load IV in first block
         vmovdqu XWORD(YPREV_CT), [rsp]
@@ -554,13 +554,13 @@ cbc_dec_main_loop:
                 YDATA6, YDATA7
 
         SHUFFLE_BLOCKS NBLOCKS_MAIN, YDATA0, YDATA1, YDATA2, YDATA3, \
-                       YDATA4, YDATA5, YDATA6, YDATA7, YSHUFB_IN
+                        YDATA4, YDATA5, YDATA6, YDATA7, YSHUFB_IN
 
         SM4_ROUNDS NBLOCKS_MAIN, YDATA0, YDATA1, YDATA2, YDATA3, \
-                       YDATA4, YDATA5, YDATA6, YDATA7, YKEY
+                        YDATA4, YDATA5, YDATA6, YDATA7, YKEY
 
         SHUFFLE_BLOCKS NBLOCKS_MAIN, YDATA0, YDATA1, YDATA2, YDATA3, \
-                       YDATA4, YDATA5, YDATA6, YDATA7, YSHUFB_OUT
+                        YDATA4, YDATA5, YDATA6, YDATA7, YSHUFB_OUT
 
         ; XOR with previous ciphertext
         vmovdqu         XWORD(YPREV_CT), [rsp]
@@ -640,10 +640,10 @@ align_function
 MKGLOBAL(sm4_ctr_ni_avx2,function,internal)
 sm4_ctr_ni_avx2:
 
-%define	IN      arg1
-%define	OUT     arg2
+%define IN      arg1
+%define OUT     arg2
 %define SIZE    arg3
-%define	KEY_EXP arg4
+%define KEY_EXP arg4
 
 %define IV      r10
 %define IV_LEN  r11
@@ -741,10 +741,10 @@ ctr_4x32_loop:
                         YSHUFB_IN, YSHUFB_IN, YSHUFB_IN, YSHUFB_IN,  NULL, NULL, NULL, NULL
 
         SM4_ROUNDS 8, YIN_0, YIN_1, YIN_2, YIN_3, \
-                      NULL, NULL, NULL, NULL, YKEY
+                        NULL, NULL, NULL, NULL, YKEY
 
         SHUFFLE_BLOCKS 8, YIN_0, YIN_1, YIN_2, YIN_3, \
-                          NULL, NULL, NULL, NULL, YSHUFB_OUT
+                        NULL, NULL, NULL, NULL, YSHUFB_OUT
 
         vpxor   YIN_0, [IN + IDX]
         vpxor   YIN_1, [IN + IDX + 32]
@@ -798,10 +798,10 @@ final_num_blocks_is_  %+ ctr_blocks_left:
                         YSHUFB_IN, YSHUFB_IN, YSHUFB_IN, YSHUFB_IN,  NULL, NULL, NULL, NULL
 
         SM4_ROUNDS (ctr_blocks_left + 1), YIN_0, YIN_1, YIN_2, YIN_3, \
-                   NULL, NULL, NULL, NULL, YKEY
+                NULL, NULL, NULL, NULL, YKEY
 
         SHUFFLE_BLOCKS (ctr_blocks_left + 1), YIN_0, YIN_1, YIN_2, YIN_3, \
-                       NULL, NULL, NULL, NULL, YSHUFB_OUT
+                        NULL, NULL, NULL, NULL, YSHUFB_OUT
 
         ; Move last blocks to separate register, for partial block encryption/decryption preparation
 %assign final_block_reg (ctr_blocks_left / 2)
@@ -863,9 +863,9 @@ align_function
 MKGLOBAL(sm4_set_key_ni_avx2,function,internal)
 sm4_set_key_ni_avx2:
 
-%define	KEY             arg1
-%define	ENC_KEY_EXP     arg2
-%define	DEC_KEY_EXP     arg3
+%define KEY             arg1
+%define ENC_KEY_EXP     arg2
+%define DEC_KEY_EXP     arg3
 
         endbranch64
 %ifdef SAFE_PARAM
@@ -901,7 +901,7 @@ sm4_set_key_ni_avx2_return:
 %else
         vzeroupper
 %endif
-       ret
+        ret
 
 %ifdef SAFE_PARAM
 align_label
