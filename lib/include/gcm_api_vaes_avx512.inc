@@ -429,7 +429,7 @@ align_function
 MKGLOBAL(FN_NAME(enc_var_iv,_),function,internal)
 FN_NAME(enc_var_iv,_):
         endbranch64
-	FUNC_SAVE alloc_context
+        FUNC_SAVE alloc_context
 
         ;; Check if msg_len <= 256
         cmp     qword [arg2 + _msg_len_to_cipher], 16 * 16
@@ -438,11 +438,11 @@ FN_NAME(enc_var_iv,_):
         mov     arg1, [arg2 + _enc_keys]
 
         GCM_INIT arg1, {rsp + CONTEXT_OFFSET}, {[arg2 + _iv]}, \
-                 {[arg2 + _gcm_aad]}, {qword [arg2 + _gcm_aad_len]}, \
-                 r10, r11, r12, k1, xmm14, xmm2, \
-                 zmm1, zmm11, zmm3, zmm4, zmm5,   zmm6, zmm7, zmm8, zmm9, zmm10, \
-                 zmm12, zmm13, zmm15, zmm16, zmm17, zmm18, zmm19, zmm20, single_call, \
-                 {qword [arg2 + _iv_len_in_bytes]}
+                {[arg2 + _gcm_aad]}, {qword [arg2 + _gcm_aad_len]}, \
+                r10, r11, r12, k1, xmm14, xmm2, \
+                zmm1, zmm11, zmm3, zmm4, zmm5,   zmm6, zmm7, zmm8, zmm9, zmm10, \
+                zmm12, zmm13, zmm15, zmm16, zmm17, zmm18, zmm19, zmm20, single_call, \
+                {qword [arg2 + _iv_len_in_bytes]}
 
         mov     arg3, [arg2 + _src]
         add     arg3, [arg2 + _cipher_start_src_offset]
@@ -451,12 +451,12 @@ FN_NAME(enc_var_iv,_):
         GCM_ENC_DEC  arg1, {rsp + CONTEXT_OFFSET}, arg4, arg3, rbp, ENC, single_call, '>256'
 
         GCM_COMPLETE arg1, {rsp + CONTEXT_OFFSET}, \
-                     {[arg2 + _auth_tag_output]}, {[arg2 + _auth_tag_output_len_in_bytes]}, \
-                     single_call, k1, r10, r11, r12
+                        {[arg2 + _auth_tag_output]}, {[arg2 + _auth_tag_output_len_in_bytes]}, \
+                        single_call, k1, r10, r11, r12
 
 %ifdef SAFE_DATA
         clear_zmms_avx512 xmm1, xmm4, xmm6, xmm7, xmm8, xmm12, xmm13, xmm14, \
-                          xmm16, xmm17, xmm18, xmm19, xmm20, xmm21, xmm26, xmm30, xmm31
+                        xmm16, xmm17, xmm18, xmm19, xmm20, xmm21, xmm26, xmm30, xmm31
 %endif
         jmp     .exit_enc
 
@@ -468,14 +468,14 @@ align_label
         mov     arg4, [arg2 + _dst]
         mov     rbp, [arg2 + _msg_len_to_cipher]
         GCM_ENC_DEC_0_TO_256 arg1, arg4, arg3, rbp, \
-                             {[arg2 + _iv]}, \
-                             {[arg2 + _gcm_aad]}, {qword [arg2 + _gcm_aad_len]}, \
-                             {[arg2 + _auth_tag_output]}, {[arg2 + _auth_tag_output_len_in_bytes]}, \
-                             ENC, {qword [arg2 + _iv_len_in_bytes]}
+                                {[arg2 + _iv]}, \
+                                {[arg2 + _gcm_aad]}, {qword [arg2 + _gcm_aad_len]}, \
+                                {[arg2 + _auth_tag_output]}, {[arg2 + _auth_tag_output_len_in_bytes]}, \
+                                ENC, {qword [arg2 + _iv_len_in_bytes]}
 
 %ifdef SAFE_DATA
         clear_zmms_avx512 xmm0, xmm1, xmm2, xmm7, xmm8, xmm9, xmm11, xmm10, xmm14, \
-                          xmm15, xmm16, xmm17, xmm18, xmm19, xmm20, xmm21, xmm26
+                        xmm15, xmm16, xmm17, xmm18, xmm19, xmm20, xmm21, xmm26
 %endif
 
 align_label
@@ -499,7 +499,7 @@ align_function
 MKGLOBAL(FN_NAME(dec_var_iv,_),function,internal)
 FN_NAME(dec_var_iv,_):
         endbranch64
-	FUNC_SAVE alloc_context
+        FUNC_SAVE alloc_context
 
         ;; Check if msg_len <= 256
         cmp     qword [arg2 + _msg_len_to_cipher], 16 * 16
@@ -508,11 +508,11 @@ FN_NAME(dec_var_iv,_):
         mov     arg1, [arg2 + _dec_keys]
 
         GCM_INIT arg1, {rsp + CONTEXT_OFFSET}, {[arg2 + _iv]}, \
-                 {[arg2 + _gcm_aad]}, {qword [arg2 + _gcm_aad_len]}, \
-                 r10, r11, r12, k1, xmm14, xmm2, \
-                 zmm1, zmm11, zmm3, zmm4, zmm5,   zmm6, zmm7, zmm8, zmm9, zmm10, \
-                 zmm12, zmm13, zmm15, zmm16, zmm17, zmm18, zmm19, zmm20, single_call, \
-                 {qword [arg2 + _iv_len_in_bytes]}
+                {[arg2 + _gcm_aad]}, {qword [arg2 + _gcm_aad_len]}, \
+                r10, r11, r12, k1, xmm14, xmm2, \
+                zmm1, zmm11, zmm3, zmm4, zmm5,   zmm6, zmm7, zmm8, zmm9, zmm10, \
+                zmm12, zmm13, zmm15, zmm16, zmm17, zmm18, zmm19, zmm20, single_call, \
+                {qword [arg2 + _iv_len_in_bytes]}
 
         mov     arg3, [arg2 + _src]
         add     arg3, [arg2 + _cipher_start_src_offset]
@@ -521,12 +521,12 @@ FN_NAME(dec_var_iv,_):
         GCM_ENC_DEC  arg1, {rsp + CONTEXT_OFFSET}, arg4, arg3, rbp, DEC, single_call, '>256'
 
         GCM_COMPLETE arg1, {rsp + CONTEXT_OFFSET}, \
-                     {[arg2 + _auth_tag_output]}, {[arg2 + _auth_tag_output_len_in_bytes]}, \
-                     single_call, k1, r10, r11, r12
+                        {[arg2 + _auth_tag_output]}, {[arg2 + _auth_tag_output_len_in_bytes]}, \
+                        single_call, k1, r10, r11, r12
 
 %ifdef SAFE_DATA
         clear_zmms_avx512 xmm1, xmm4, xmm6, xmm7, xmm8, xmm12, xmm13, xmm14, \
-                          xmm16, xmm17, xmm18, xmm19, xmm20, xmm21, xmm26, xmm30, xmm31
+                        xmm16, xmm17, xmm18, xmm19, xmm20, xmm21, xmm26, xmm30, xmm31
 %endif
         jmp     .exit_dec
 
@@ -538,14 +538,14 @@ align_label
         mov     arg4, [arg2 + _dst]
         mov     rbp, [arg2 + _msg_len_to_cipher]
         GCM_ENC_DEC_0_TO_256 arg1, arg4, arg3, rbp, \
-                             {[arg2 + _iv]}, \
-                             {[arg2 + _gcm_aad]}, {qword [arg2 + _gcm_aad_len]}, \
-                             {[arg2 + _auth_tag_output]}, {[arg2 + _auth_tag_output_len_in_bytes]}, \
-                             DEC, {qword [arg2 + _iv_len_in_bytes]}
+                                {[arg2 + _iv]}, \
+                                {[arg2 + _gcm_aad]}, {qword [arg2 + _gcm_aad_len]}, \
+                                {[arg2 + _auth_tag_output]}, {[arg2 + _auth_tag_output_len_in_bytes]}, \
+                                DEC, {qword [arg2 + _iv_len_in_bytes]}
 
 %ifdef SAFE_DATA
         clear_zmms_avx512 xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm8, xmm9, xmm11, xmm14, xmm15, \
-                          xmm16, xmm17, xmm18, xmm19, xmm20, xmm21, xmm26, xmm27
+                        xmm16, xmm17, xmm18, xmm19, xmm20, xmm21, xmm26, xmm27
 %endif
 align_label
 .exit_dec:

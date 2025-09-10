@@ -46,12 +46,12 @@
 ;;         uint64_t  partial_block_length;
 ;; };
 
-%define AadHash		(16*0)	  ; store current Hash of data which has been input
-%define AadLen		(16*1)	  ; store length of input data which will not be encrypted or decrypted
-%define InLen		((16*1)+8); store length of input data which will be encrypted or decrypted
-%define PBlockEncKey	(16*2)	  ; encryption key for the partial block at the end of the previous update
-%define OrigIV		(16*3)	  ; input IV
-%define CurCount	(16*4)	  ; Current counter for generation of encryption key
-%define PBlockLen	(16*5)	  ; length of partial block at the end of the previous update
+%define AadHash         (16*0)    ; store current Hash of data which has been input
+%define AadLen          (16*1)    ; store length of input data which will not be encrypted or decrypted
+%define InLen           ((16*1)+8); store length of input data which will be encrypted or decrypted
+%define PBlockEncKey    (16*2)    ; encryption key for the partial block at the end of the previous update
+%define OrigIV          (16*3)    ; input IV
+%define CurCount        (16*4)    ; Current counter for generation of encryption key
+%define PBlockLen       (16*5)    ; length of partial block at the end of the previous update
 
 %endif ; GCM_CONTEXT_INC_INCLUDED

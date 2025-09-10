@@ -140,9 +140,9 @@ FN_NAME_AVX512(init,_):
         push    r14
         push    r15
         lea     r14, [rsp + 4*8]
-	; xmm6 needs to be maintained for Windows
-	sub	rsp, 1*16
-	vmovdqu	[rsp + 0*16], xmm6
+        ; xmm6 needs to be maintained for Windows
+        sub     rsp, 1*16
+        vmovdqu [rsp + 0*16], xmm6
 %endif
 
 %ifdef SAFE_PARAM
@@ -181,7 +181,7 @@ align_label
 exit_init:
 
 %ifidn __OUTPUT_FORMAT__, win64
-	vmovdqu	xmm6 , [rsp + 0*16]
+        vmovdqu xmm6 , [rsp + 0*16]
         add     rsp, 1*16
         pop     r15
         pop     r14
@@ -238,16 +238,16 @@ MKGLOBAL(FN_NAME_AVX512(init_var_iv,_),function,)
 FN_NAME(init_var_iv,_):
 FN_NAME_AVX512(init_var_iv,_):
         endbranch64
-	push	r12
-	push	r13
+        push    r12
+        push    r13
 %ifidn __OUTPUT_FORMAT__, win64
         push    r14
         push    r15
         lea     r14, [rsp + 4*8]
-	; xmm6 & xmm14 need to be maintained for Windows
-	sub	rsp, 2*16
-	vmovdqu	[rsp + 0*16], xmm6
-	vmovdqu	[rsp + 1*16], xmm14
+        ; xmm6 & xmm14 need to be maintained for Windows
+        sub     rsp, 2*16
+        vmovdqu [rsp + 0*16], xmm6
+        vmovdqu [rsp + 1*16], xmm14
 %endif
 
 %ifdef SAFE_PARAM
@@ -291,14 +291,14 @@ align_label
 exit_init_IV:
 
 %ifidn __OUTPUT_FORMAT__, win64
-	vmovdqu	xmm6, [rsp + 0*16]
-	vmovdqu	xmm14, [rsp + 1*16]
+        vmovdqu xmm6, [rsp + 0*16]
+        vmovdqu xmm14, [rsp + 1*16]
         add     rsp, 2*16
         pop     r15
         pop     r14
 %endif
-	pop	r13
-	pop	r12
+        pop     r13
+        pop     r12
         ret
 
 %ifdef SAFE_PARAM
@@ -354,10 +354,10 @@ FN_NAME_AVX512(enc,_update_):
         FUNC_SAVE
 
 %ifdef SAFE_PARAM
-	;; Reset imb_errno
+        ;; Reset imb_errno
         IMB_ERR_CHECK_RESET
 
-	;; Load max len to reg on windows
+        ;; Load max len to reg on windows
         INIT_GCM_MAX_LENGTH
 
         ;; Check key_data != NULL
@@ -517,9 +517,9 @@ skip_in_out_check_error_update_dec:
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;void   aes_gcm_enc_128_finalize_avx_gen4 / aes_gcm_enc_192_finalize_avx_gen4 /
-;	aes_gcm_enc_256_finalize_avx_gen4 /
+;       aes_gcm_enc_256_finalize_avx_gen4 /
 ;       aes_gcm_enc_128_finalize_avx512 / aes_gcm_enc_192_finalize_avx512 /
-;	aes_gcm_enc_256_finalize_avx512
+;       aes_gcm_enc_256_finalize_avx512
 ;       (const struct gcm_key_data *key_data,
 ;        struct gcm_context_data *context_data,
 ;        u8       *auth_tag,
@@ -558,14 +558,14 @@ FN_NAME_AVX512(enc,_finalize_):
 
 %ifidn __OUTPUT_FORMAT__, win64
         ; xmm6:xmm15 need to be maintained for Windows
-	sub	rsp, 7*16
-        vmovdqu	[rsp + 0*16], xmm6
-        vmovdqu	[rsp + 1*16], xmm9
-        vmovdqu	[rsp + 2*16], xmm10
-        vmovdqu	[rsp + 3*16], xmm11
-        vmovdqu	[rsp + 4*16], xmm13
-        vmovdqu	[rsp + 5*16], xmm14
-        vmovdqu	[rsp + 6*16], xmm15
+        sub     rsp, 7*16
+        vmovdqu [rsp + 0*16], xmm6
+        vmovdqu [rsp + 1*16], xmm9
+        vmovdqu [rsp + 2*16], xmm10
+        vmovdqu [rsp + 3*16], xmm11
+        vmovdqu [rsp + 4*16], xmm13
+        vmovdqu [rsp + 5*16], xmm14
+        vmovdqu [rsp + 6*16], xmm15
 %endif
         GCM_COMPLETE    arg1, arg2, arg3, arg4, multi_call
 
@@ -574,13 +574,13 @@ FN_NAME_AVX512(enc,_finalize_):
 %endif
 
 %ifidn __OUTPUT_FORMAT__, win64
-        vmovdqu	xmm15, [rsp + 6*16]
-        vmovdqu	xmm14, [rsp + 5*16]
-        vmovdqu	xmm13, [rsp + 4*16]
-        vmovdqu	xmm11, [rsp + 3*16]
-        vmovdqu	xmm10, [rsp + 2*16]
-        vmovdqu	xmm9,  [rsp + 1*16]
-        vmovdqu	xmm6,  [rsp + 0*16]
+        vmovdqu xmm15, [rsp + 6*16]
+        vmovdqu xmm14, [rsp + 5*16]
+        vmovdqu xmm13, [rsp + 4*16]
+        vmovdqu xmm11, [rsp + 3*16]
+        vmovdqu xmm10, [rsp + 2*16]
+        vmovdqu xmm9,  [rsp + 1*16]
+        vmovdqu xmm6,  [rsp + 0*16]
         add     rsp, 7*16
 %endif
         pop r12
@@ -615,9 +615,9 @@ error_enc_fin:
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;void   aes_gcm_dec_128_finalize_avx_gen4 / aes_gcm_dec_192_finalize_avx_gen4
-;	aes_gcm_dec_256_finalize_avx_gen4 /
+;       aes_gcm_dec_256_finalize_avx_gen4 /
 ;       aes_gcm_dec_128_finalize_avx512 / aes_gcm_dec_192_finalize_avx512
-;	aes_gcm_dec_256_finalize_avx512
+;       aes_gcm_dec_256_finalize_avx512
 ;       (const struct gcm_key_data *key_data,
 ;        struct gcm_context_data *context_data,
 ;        u8       *auth_tag,
@@ -657,14 +657,14 @@ FN_NAME_AVX512(dec,_finalize_):
 
 %ifidn __OUTPUT_FORMAT__, win64
         ; xmm6:xmm15 need to be maintained for Windows
-	sub	rsp, 7*16
-        vmovdqu	[rsp + 0*16], xmm6
-        vmovdqu	[rsp + 1*16], xmm9
-        vmovdqu	[rsp + 2*16], xmm10
-        vmovdqu	[rsp + 3*16], xmm11
-        vmovdqu	[rsp + 4*16], xmm13
-        vmovdqu	[rsp + 5*16], xmm14
-        vmovdqu	[rsp + 6*16], xmm15
+        sub     rsp, 7*16
+        vmovdqu [rsp + 0*16], xmm6
+        vmovdqu [rsp + 1*16], xmm9
+        vmovdqu [rsp + 2*16], xmm10
+        vmovdqu [rsp + 3*16], xmm11
+        vmovdqu [rsp + 4*16], xmm13
+        vmovdqu [rsp + 5*16], xmm14
+        vmovdqu [rsp + 6*16], xmm15
 %endif
         GCM_COMPLETE    arg1, arg2, arg3, arg4, multi_call
 
@@ -672,13 +672,13 @@ FN_NAME_AVX512(dec,_finalize_):
         clear_scratch_xmms_avx_asm
 %endif
 %ifidn __OUTPUT_FORMAT__, win64
-        vmovdqu	xmm15, [rsp + 6*16]
-        vmovdqu	xmm14, [rsp + 5*16]
-        vmovdqu	xmm13, [rsp + 4*16]
-        vmovdqu	xmm11, [rsp + 3*16]
-        vmovdqu	xmm10, [rsp + 2*16]
-        vmovdqu	xmm9,  [rsp + 1*16]
-        vmovdqu	xmm6,  [rsp + 0*16]
+        vmovdqu xmm15, [rsp + 6*16]
+        vmovdqu xmm14, [rsp + 5*16]
+        vmovdqu xmm13, [rsp + 4*16]
+        vmovdqu xmm11, [rsp + 3*16]
+        vmovdqu xmm10, [rsp + 2*16]
+        vmovdqu xmm9,  [rsp + 1*16]
+        vmovdqu xmm6,  [rsp + 0*16]
         add     rsp, 7*16
 %endif
 
@@ -1020,25 +1020,25 @@ MKGLOBAL(FN_NAME_AVX512(enc_var_iv,_),function,internal)
 FN_NAME(enc_var_iv,_):
 FN_NAME_AVX512(enc_var_iv,_):
         endbranch64
-	FUNC_SAVE alloc_context
+        FUNC_SAVE alloc_context
 
         mov     arg1, [arg2 + _enc_keys]
 
         GCM_INIT arg1, {rsp + CONTEXT_OFFSET}, {[arg2 + _iv]}, \
-                 {[arg2 + _gcm_aad]}, {qword [arg2 + _gcm_aad_len]}, \
-                 {qword [arg2 + _iv_len_in_bytes]}
+                {[arg2 + _gcm_aad]}, {qword [arg2 + _gcm_aad_len]}, \
+                {qword [arg2 + _iv_len_in_bytes]}
 
         mov     arg4, [arg2 + _src]
         add     arg4, [arg2 + _cipher_start_src_offset]
         mov     arg3, [arg2 + _dst]
         mov     [rsp + GP_OFFSET + 5*8], arg2   ; preserve job pointer
         mov     arg2, [arg2 + _msg_len_to_cipher]
-	GCM_ENC_DEC  arg1, {rsp + CONTEXT_OFFSET}, arg3, arg4, arg2, ENC, single_call
+        GCM_ENC_DEC  arg1, {rsp + CONTEXT_OFFSET}, arg3, arg4, arg2, ENC, single_call
 
         mov     arg2, [rsp + GP_OFFSET + 5*8]
         GCM_COMPLETE arg1, {rsp + CONTEXT_OFFSET}, \
-                     {[arg2 + _auth_tag_output]}, {[arg2 + _auth_tag_output_len_in_bytes]}, \
-                     single_call
+                        {[arg2 + _auth_tag_output]}, {[arg2 + _auth_tag_output_len_in_bytes]}, \
+                        single_call
 
         ;; mark job complete
         mov     dword [arg2 + _status], IMB_STATUS_COMPLETED
@@ -1046,7 +1046,7 @@ FN_NAME_AVX512(enc_var_iv,_):
         mov     rax, arg2       ;; return the job
 
         FUNC_RESTORE
-	ret
+        ret
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;
@@ -1064,25 +1064,25 @@ MKGLOBAL(FN_NAME_AVX512(dec_var_iv,_),function,internal)
 FN_NAME(dec_var_iv,_):
 FN_NAME_AVX512(dec_var_iv,_):
         endbranch64
-	FUNC_SAVE alloc_context
+        FUNC_SAVE alloc_context
 
         mov     arg1, [arg2 + _dec_keys]
 
         GCM_INIT arg1, {rsp + CONTEXT_OFFSET}, {[arg2 + _iv]}, \
-                 {[arg2 + _gcm_aad]}, {qword [arg2 + _gcm_aad_len]}, \
-                 {qword [arg2 + _iv_len_in_bytes]}
+                {[arg2 + _gcm_aad]}, {qword [arg2 + _gcm_aad_len]}, \
+                {qword [arg2 + _iv_len_in_bytes]}
 
         mov     arg4, [arg2 + _src]
         add     arg4, [arg2 + _cipher_start_src_offset]
         mov     arg3, [arg2 + _dst]
         mov     [rsp + GP_OFFSET + 5*8], arg2   ; preserve job pointer
         mov     arg2, [arg2 + _msg_len_to_cipher]
-	GCM_ENC_DEC  arg1, {rsp + CONTEXT_OFFSET}, arg3, arg4, arg2, DEC, single_call
+        GCM_ENC_DEC  arg1, {rsp + CONTEXT_OFFSET}, arg3, arg4, arg2, DEC, single_call
 
         mov     arg2, [rsp + GP_OFFSET + 5*8]
         GCM_COMPLETE arg1, {rsp + CONTEXT_OFFSET}, \
-                     {[arg2 + _auth_tag_output]}, {[arg2 + _auth_tag_output_len_in_bytes]}, \
-                     single_call
+                        {[arg2 + _auth_tag_output]}, {[arg2 + _auth_tag_output_len_in_bytes]}, \
+                        single_call
 
         ;; mark job complete
         mov     dword [arg2 + _status], IMB_STATUS_COMPLETED
@@ -1090,7 +1090,7 @@ FN_NAME_AVX512(dec_var_iv,_):
         mov     rax, arg2       ;; return the job
 
         FUNC_RESTORE
-	ret
+        ret
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;void   imb_aes_gmac_update_128_avx_gen4 / imb_aes_gmac_update_192_avx_gen4 /
@@ -1108,7 +1108,7 @@ MKGLOBAL(GMAC_FN_NAME_AVX512(update),function,)
 GMAC_FN_NAME(update):
 GMAC_FN_NAME_AVX512(update):
         endbranch64
-	FUNC_SAVE
+        FUNC_SAVE
 
 %ifdef SAFE_PARAM
         ;; Reset imb_errno
@@ -1116,7 +1116,7 @@ GMAC_FN_NAME_AVX512(update):
 %endif
         ;; Check if msg_len == 0
         or      arg4, arg4
-        je	.exit_gmac_update
+        je      .exit_gmac_update
 
 %ifdef SAFE_PARAM
         ;; Check key_data != NULL
@@ -1135,14 +1135,14 @@ GMAC_FN_NAME_AVX512(update):
         ; Increment size of "AAD length" for GMAC
         add     [arg2 + AadLen], arg4
 
-        vmovdqu	xmm0, [arg2 + AadHash]
+        vmovdqu xmm0, [arg2 + AadHash]
 
-        cmp	qword [arg2 + PBlockLen], 0
-	je	.partial_block_is_zero_len
+        cmp     qword [arg2 + PBlockLen], 0
+        je      .partial_block_is_zero_len
 
         ;; Deal with previous partial block
-	vmovdqu	xmm13, [arg1 + HashKey_1]
-	vmovdqu	xmm14, [arg1 + HashKeyK_1]
+        vmovdqu xmm13, [arg1 + HashKey_1]
+        vmovdqu xmm14, [arg1 + HashKeyK_1]
         ;; arg2 = [in] context
         ;; arg3 = [in] message pointer
         ;; arg4 = [in] message length
@@ -1170,7 +1170,7 @@ align_label
         ;; xmm0 = hash in/out
         call    ghash_internal_avx_gen4
 
-        vmovdqu	[arg2 + AadHash], xmm0	; ctx_data.aad hash = aad_hash
+        vmovdqu [arg2 + AadHash], xmm0  ; ctx_data.aad hash = aad_hash
 
 align_label
 .no_full_blocks:
@@ -1181,7 +1181,7 @@ align_label
         jz      .exit_gmac_update
 
         ; Save next partial block
-        mov	[arg2 + PBlockLen], arg4
+        mov     [arg2 + PBlockLen], arg4
 %ifdef IS_AVX2_GCM
         READ_SMALL_DATA_INPUT_AVX xmm1, arg3, arg4, r11
 %else
@@ -1193,9 +1193,9 @@ align_label
 
 align_label
 .exit_gmac_update:
-	FUNC_RESTORE
+        FUNC_RESTORE
 
-	ret
+        ret
 
 %ifdef SAFE_PARAM
 align_label

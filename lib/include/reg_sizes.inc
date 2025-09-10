@@ -30,47 +30,47 @@
 %ifndef _REG_SIZES_INC_
 %define _REG_SIZES_INC_
 
-%define	raxq	rax
+%define raxq    rax
 %define eaxq    rax
-%define	raxd	eax
-%define raxw	ax
-%define raxb	al
+%define raxd    eax
+%define raxw    ax
+%define raxb    al
 
-%define	rbxq	rbx
+%define rbxq    rbx
 %define ebxq    rbx
-%define	rbxd	ebx
-%define rbxw	bx
-%define rbxb	bl
+%define rbxd    ebx
+%define rbxw    bx
+%define rbxb    bl
 
-%define	rcxq	rcx
+%define rcxq    rcx
 %define ecxq    rcx
-%define	rcxd	ecx
-%define rcxw	cx
-%define rcxb	cl
+%define rcxd    ecx
+%define rcxw    cx
+%define rcxb    cl
 
-%define	rdxq	rdx
+%define rdxq    rdx
 %define edxq    rdx
-%define	rdxd	edx
-%define rdxw	dx
-%define rdxb	dl
+%define rdxd    edx
+%define rdxw    dx
+%define rdxb    dl
 
-%define	rsiq	rsi
+%define rsiq    rsi
 %define esiq    rsi
-%define	rsid	esi
-%define rsiw	si
-%define rsib	sil
+%define rsid    esi
+%define rsiw    si
+%define rsib    sil
 
-%define	rdiq	rdi
+%define rdiq    rdi
 %define ediq    rdi
-%define	rdid	edi
-%define rdiw	di
-%define rdib	dil
+%define rdid    edi
+%define rdiw    di
+%define rdib    dil
 
-%define	rbpq	rbp
+%define rbpq    rbp
 %define ebpq    rbp
-%define	rbpd	ebp
-%define rbpw	bp
-%define rbpb	bpl
+%define rbpd    ebp
+%define rbpw    bp
+%define rbpb    bpl
 
 %define r8dq    r8
 %define r9dq    r9

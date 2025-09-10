@@ -29,46 +29,46 @@
 
 ; Usage example
 
-;START_FIELDS	; JOB_AES
-;;;	name		size	align
-;FIELD	_plaintext,	8,	8	; pointer to plaintext
-;FIELD	_ciphertext,	8,	8	; pointer to ciphertext
-;FIELD	_IV,		16,	8	; IV
-;FIELD	_keys,		8,	8	; pointer to keys
-;FIELD	_len,		4,	4	; length in bytes
-;FIELD	_status,	4,	4	; status enumeration
-;FIELD	_user_data,	8,	8	; pointer to user data
+;START_FIELDS   ; JOB_AES
+;;;     name            size    align
+;FIELD  _plaintext,     8,      8       ; pointer to plaintext
+;FIELD  _ciphertext,    8,      8       ; pointer to ciphertext
+;FIELD  _IV,            16,     8       ; IV
+;FIELD  _keys,          8,      8       ; pointer to keys
+;FIELD  _len,           4,      4       ; length in bytes
+;FIELD  _status,        4,      4       ; status enumeration
+;FIELD  _user_data,     8,      8       ; pointer to user data
 ;UNION  _union,         size1,  align1, \
-;	                size2,  align2, \
-;	                size3,  align3, \
-;	                ...
+;                       size2,  align2, \
+;                       size3,  align3, \
+;                       ...
 ;END_FIELDS
-;%assign _JOB_AES_size	_FIELD_OFFSET
-;%assign _JOB_AES_align	_STRUCT_ALIGN
+;%assign _JOB_AES_size  _FIELD_OFFSET
+;%assign _JOB_AES_align _STRUCT_ALIGN
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ; Alternate "struc-like" syntax:
-;	STRUCT job_aes2
-;	RES_Q	.plaintext,	1
-;	RES_Q	.ciphertext, 	1
-;	RES_DQ	.IV,		1
-;	RES_B	.nested,	_JOB_AES_SIZE, _JOB_AES_ALIGN
-;	RES_U	.union,		size1, align1, \
-;				size2, align2, \
-;				...
-;	ENDSTRUCT
-;	; Following only needed if nesting
-;	%assign job_aes2_size	_FIELD_OFFSET
-;	%assign job_aes2_align	_STRUCT_ALIGN
+;       STRUCT job_aes2
+;       RES_Q   .plaintext,     1
+;       RES_Q   .ciphertext,    1
+;       RES_DQ  .IV,            1
+;       RES_B   .nested,        _JOB_AES_SIZE, _JOB_AES_ALIGN
+;       RES_U   .union,         size1, align1, \
+;                               size2, align2, \
+;                               ...
+;       ENDSTRUCT
+;       ; Following only needed if nesting
+;       %assign job_aes2_size   _FIELD_OFFSET
+;       %assign job_aes2_align  _STRUCT_ALIGN
 ;
 ; RES_* macros take a name, a count and an optional alignment.
 ; The count in in terms of the base size of the macro, and the
 ; default alignment is the base size.
 ; The macros are:
 ; Macro    Base size
-; RES_B	    1
-; RES_W	    2
+; RES_B     1
+; RES_W     2
 ; RES_D     4
 ; RES_Q     8
 ; RES_DQ   16
@@ -108,7 +108,7 @@
 %define %%align %3
 
 %assign _FIELD_OFFSET (_FIELD_OFFSET + (%%align) - 1) & (~ ((%%align)-1))
-%%name	equ	_FIELD_OFFSET
+%%name  equ     _FIELD_OFFSET
 %assign _FIELD_OFFSET _FIELD_OFFSET + (%%size)
 %if (%%align > _STRUCT_ALIGN)
 %assign _STRUCT_ALIGN %%align
@@ -122,23 +122,23 @@
 
 %macro UNION 5-*
 %if (0 == (%0 & 1))
-	%error EVEN number of parameters to UNION Macro
-	%err
+        %error EVEN number of parameters to UNION Macro
+        %err
 %endif
 %rotate 1
-	%assign _UNION_SIZE %1
-	%assign _UNION_ALIGN %2
+        %assign _UNION_SIZE %1
+        %assign _UNION_ALIGN %2
 %rep (%0 - 3)/2
-	%rotate 2
-	%if (%1 > _UNION_SIZE)
-		%assign _UNION_SIZE %1
-	%endif
-	%if (%2 > _UNION_ALIGN)
-		%assign _UNION_ALIGN %2
-	%endif
+        %rotate 2
+        %if (%1 > _UNION_SIZE)
+                %assign _UNION_SIZE %1
+        %endif
+        %if (%2 > _UNION_ALIGN)
+                %assign _UNION_ALIGN %2
+        %endif
 %endrep
 %rotate 2
-FIELD	%1, _UNION_SIZE, _UNION_ALIGN
+FIELD   %1, _UNION_SIZE, _UNION_ALIGN
 %endm
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -153,7 +153,7 @@ struc %1
 END_FIELDS
 %assign %%tmp (_FIELD_OFFSET - %%tmp)
 %if (%%tmp > 0)
-	resb	%%tmp
+        resb    %%tmp
 %endif
 endstruc
 %endm
@@ -166,7 +166,7 @@ endstruc
 
 %assign _FIELD_OFFSET (_FIELD_OFFSET + (%%align) - 1) & (~ ((%%align)-1))
 align %%align
-%%name	resb	%%size
+%%name  resb    %%size
 %assign _FIELD_OFFSET _FIELD_OFFSET + (%%size)
 %if (%%align > _STRUCT_ALIGN)
 %assign _STRUCT_ALIGN %%align
@@ -210,23 +210,23 @@ RES_int %1, 64*(%2), %3
 
 %macro RES_U 5-*
 %if (0 == (%0 & 1))
-	%error EVEN number of parameters to RES_U Macro
-	%err
+        %error EVEN number of parameters to RES_U Macro
+        %err
 %endif
 %rotate 1
-	%assign _UNION_SIZE %1
-	%assign _UNION_ALIGN %2
+        %assign _UNION_SIZE %1
+        %assign _UNION_ALIGN %2
 %rep (%0 - 3)/2
-	%rotate 2
-	%if (%1 > _UNION_SIZE)
-		%assign _UNION_SIZE %1
-	%endif
-	%if (%2 > _UNION_ALIGN)
-		%assign _UNION_ALIGN %2
-	%endif
+        %rotate 2
+        %if (%1 > _UNION_SIZE)
+                %assign _UNION_SIZE %1
+        %endif
+        %if (%2 > _UNION_ALIGN)
+                %assign _UNION_ALIGN %2
+        %endif
 %endrep
 %rotate 2
-RES_int	%1, _UNION_SIZE, _UNION_ALIGN
+RES_int %1, _UNION_SIZE, _UNION_ALIGN
 %endm
 
 %endif ; end ifdef _DATASTRUCT_INC_

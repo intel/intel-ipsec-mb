@@ -48,15 +48,15 @@ align_function
 MKGLOBAL(FN_NAME(init,_),function,)
 FN_NAME(init,_):
         endbranch64
-	push	r12
-	push	r13
+        push    r12
+        push    r13
 %ifidn __OUTPUT_FORMAT__, win64
         push    r14
         push    r15
         lea     r14, [rsp + 4*8]
-	; xmm6 needs to be maintained for Windows
-	sub	rsp, 1*16
-	movdqu	[rsp + 0*16], xmm6
+        ; xmm6 needs to be maintained for Windows
+        sub     rsp, 1*16
+        movdqu  [rsp + 0*16], xmm6
 %endif
 
 %ifdef SAFE_PARAM
@@ -86,7 +86,7 @@ FN_NAME(init,_):
 align_label
 skip_aad_check_init:
 %endif
-	GCM_INIT arg1, arg2, arg3, arg4, arg5
+        GCM_INIT arg1, arg2, arg3, arg4, arg5
 
 %ifdef SAFE_DATA
         clear_scratch_gps_asm
@@ -96,13 +96,13 @@ align_label
 exit_init:
 
 %ifidn __OUTPUT_FORMAT__, win64
-	movdqu	xmm6 , [rsp + 0*16]
+        movdqu  xmm6 , [rsp + 0*16]
         add     rsp, 16
         pop     r15
         pop     r14
 %endif
-	pop	r13
-	pop	r12
+        pop     r13
+        pop     r12
         ret
 
 %ifdef SAFE_PARAM
@@ -149,15 +149,15 @@ align_function
 MKGLOBAL(FN_NAME(init_var_iv,_),function,)
 FN_NAME(init_var_iv,_):
         endbranch64
-	push	r12
-	push	r13
+        push    r12
+        push    r13
 %ifidn __OUTPUT_FORMAT__, win64
         push    r14
         push    r15
         lea     r14, [rsp + 4*8]
-	; xmm6 needs to be maintained for Windows
-	sub	rsp, 1*16
-	movdqu	[rsp + 0*16], xmm6
+        ; xmm6 needs to be maintained for Windows
+        sub     rsp, 1*16
+        movdqu  [rsp + 0*16], xmm6
 %endif
 
 %ifdef SAFE_PARAM
@@ -194,12 +194,12 @@ skip_aad_check_init_IV:
         cmp     arg4, 12
         je      iv_len_12_init_IV
 
-	GCM_INIT arg1, arg2, arg3, arg5, arg6, arg4
+        GCM_INIT arg1, arg2, arg3, arg5, arg6, arg4
         jmp     skip_iv_len_12_init_IV
 
 align_label
 iv_len_12_init_IV:
-	GCM_INIT arg1, arg2, arg3, arg5, arg6
+        GCM_INIT arg1, arg2, arg3, arg5, arg6
 
 align_label
 skip_iv_len_12_init_IV:
@@ -211,13 +211,13 @@ align_label
 exit_init_IV:
 
 %ifidn __OUTPUT_FORMAT__, win64
-	movdqu	xmm6 , [rsp + 0*16]
+        movdqu  xmm6 , [rsp + 0*16]
         add     rsp, 1*16
         pop     r15
         pop     r14
 %endif
-	pop	r13
-	pop	r12
+        pop     r13
+        pop     r12
         ret
 
 %ifdef SAFE_PARAM
@@ -266,7 +266,7 @@ align_function
 MKGLOBAL(FN_NAME(enc,_update_),function,)
 FN_NAME(enc,_update_):
         endbranch64
-	FUNC_SAVE
+        FUNC_SAVE
 
 %ifdef SAFE_PARAM
         ;; Reset imb_errno
@@ -299,13 +299,13 @@ FN_NAME(enc,_update_):
         cmp     arg4, 0
         jz      error_update_enc
 %endif
-	GCM_ENC_DEC arg1, arg2, arg3, arg4, arg5, ENC
+        GCM_ENC_DEC arg1, arg2, arg3, arg4, arg5, ENC
 
 align_label
 exit_update_enc:
-	FUNC_RESTORE
+        FUNC_RESTORE
 
-	ret
+        ret
 
 %ifdef SAFE_PARAM
 align_label
@@ -351,7 +351,7 @@ align_function
 MKGLOBAL(FN_NAME(dec,_update_),function,)
 FN_NAME(dec,_update_):
         endbranch64
-	FUNC_SAVE
+        FUNC_SAVE
 
 %ifdef SAFE_PARAM
         ;; Reset imb_errno
@@ -385,13 +385,13 @@ FN_NAME(dec,_update_):
         jz      error_update_dec
 %endif
 
-	GCM_ENC_DEC arg1, arg2, arg3, arg4, arg5, DEC
+        GCM_ENC_DEC arg1, arg2, arg3, arg4, arg5, DEC
 
 align_label
 exit_update_dec:
-	FUNC_RESTORE
+        FUNC_RESTORE
 
-	ret
+        ret
 
 %ifdef SAFE_PARAM
 align_label
@@ -459,38 +459,38 @@ FN_NAME(enc,_finalize_):
         cmp     arg4, 16
         ja      error_enc_fin
 %endif
-	push r12
+        push r12
 
 %ifidn __OUTPUT_FORMAT__, win64
-	; xmm6:xmm15 need to be maintained for Windows
-        sub	rsp, 7*16
-        movdqu	[rsp + 0*16], xmm6
-        movdqu	[rsp + 1*16], xmm9
-        movdqu	[rsp + 2*16], xmm10
-        movdqu	[rsp + 3*16], xmm11
-        movdqu	[rsp + 4*16], xmm13
-        movdqu	[rsp + 5*16], xmm14
-        movdqu	[rsp + 6*16], xmm15
+        ; xmm6:xmm15 need to be maintained for Windows
+        sub     rsp, 7*16
+        movdqu  [rsp + 0*16], xmm6
+        movdqu  [rsp + 1*16], xmm9
+        movdqu  [rsp + 2*16], xmm10
+        movdqu  [rsp + 3*16], xmm11
+        movdqu  [rsp + 4*16], xmm13
+        movdqu  [rsp + 5*16], xmm14
+        movdqu  [rsp + 6*16], xmm15
 %endif
 
-	GCM_COMPLETE	arg1, arg2, arg3, arg4
+        GCM_COMPLETE    arg1, arg2, arg3, arg4
 
 %ifdef SAFE_DATA
         clear_scratch_gps_asm
         clear_scratch_xmms_sse_asm
 %endif
 %ifidn __OUTPUT_FORMAT__, win64
-        movdqu	xmm15, [rsp + 6*16]
-        movdqu	xmm14, [rsp + 5*16]
-        movdqu	xmm13, [rsp + 4*16]
-        movdqu	xmm11, [rsp + 3*16]
-        movdqu	xmm10, [rsp + 2*16]
-        movdqu	xmm9,  [rsp + 1*16]
-        movdqu	xmm6,  [rsp + 0*16]
+        movdqu  xmm15, [rsp + 6*16]
+        movdqu  xmm14, [rsp + 5*16]
+        movdqu  xmm13, [rsp + 4*16]
+        movdqu  xmm11, [rsp + 3*16]
+        movdqu  xmm10, [rsp + 2*16]
+        movdqu  xmm9,  [rsp + 1*16]
+        movdqu  xmm6,  [rsp + 0*16]
         add     rsp, 7*16
 %endif
 
-	pop r12
+        pop r12
 
 align_label
 exit_enc_fin:
@@ -556,37 +556,37 @@ FN_NAME(dec,_finalize_):
         ja      error_dec_fin
 %endif
 
-	push r12
+        push r12
 
 %ifidn __OUTPUT_FORMAT__, win64
-	; xmm6:xmm15 need to be maintained for Windows
-        sub	rsp, 7*16
-        movdqu	[rsp + 0*16], xmm6
-        movdqu	[rsp + 1*16], xmm9
-        movdqu	[rsp + 2*16], xmm10
-        movdqu	[rsp + 3*16], xmm11
-        movdqu	[rsp + 4*16], xmm13
-        movdqu	[rsp + 5*16], xmm14
-        movdqu	[rsp + 6*16], xmm15
+        ; xmm6:xmm15 need to be maintained for Windows
+        sub     rsp, 7*16
+        movdqu  [rsp + 0*16], xmm6
+        movdqu  [rsp + 1*16], xmm9
+        movdqu  [rsp + 2*16], xmm10
+        movdqu  [rsp + 3*16], xmm11
+        movdqu  [rsp + 4*16], xmm13
+        movdqu  [rsp + 5*16], xmm14
+        movdqu  [rsp + 6*16], xmm15
 %endif
-	GCM_COMPLETE	arg1, arg2, arg3, arg4
+        GCM_COMPLETE    arg1, arg2, arg3, arg4
 
 %ifdef SAFE_DATA
         clear_scratch_gps_asm
         clear_scratch_xmms_sse_asm
 %endif
 %ifidn __OUTPUT_FORMAT__, win64
-        movdqu	xmm15, [rsp + 6*16]
-        movdqu	xmm14, [rsp + 5*16]
-        movdqu	xmm13, [rsp + 4*16]
-        movdqu	xmm11, [rsp + 3*16]
-        movdqu	xmm10, [rsp + 2*16]
-        movdqu	xmm9,  [rsp + 1*16]
-        movdqu	xmm6,  [rsp + 0*16]
+        movdqu  xmm15, [rsp + 6*16]
+        movdqu  xmm14, [rsp + 5*16]
+        movdqu  xmm13, [rsp + 4*16]
+        movdqu  xmm11, [rsp + 3*16]
+        movdqu  xmm10, [rsp + 2*16]
+        movdqu  xmm9,  [rsp + 1*16]
+        movdqu  xmm6,  [rsp + 0*16]
         add     rsp, 7*16
 %endif
 
-	pop r12
+        pop r12
 
 align_label
 exit_dec_fin:

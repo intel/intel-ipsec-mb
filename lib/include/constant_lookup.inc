@@ -159,9 +159,9 @@ extern idx_rows_avx512
 %define %%INDICES       %1      ;; [in] zmm register with 64x8-bit index
 %define %%RET_VALUES    %2      ;; [out] zmm register with 64x8-bit values
 %define %%TABLE         %3      ;; [in] table pointer
-%define %%HIGH_BIT      %4	;; [clobbered] temporary zmm register
-%define %%ZTMP1         %5	;; [clobbered] temporary zmm register
-%define %%ZTMP2         %6	;; [clobbered] temporary zmm register
+%define %%HIGH_BIT      %4      ;; [clobbered] temporary zmm register
+%define %%ZTMP1         %5      ;; [clobbered] temporary zmm register
+%define %%ZTMP2         %6      ;; [clobbered] temporary zmm register
 %define %%MAP_TAB_0     %7      ;; [clobbered] lookup values for bytes eq 0-3f
 %define %%MAP_TAB_1     %8      ;; [clobbered] lookup values for bytes eq 40-7f
 %define %%MAP_TAB_2     %9      ;; [clobbered] lookup values for bytes eq 80-bf
@@ -174,9 +174,9 @@ extern idx_rows_avx512
         vmovdqu64       %%MAP_TAB_3, [%%TABLE + 64*3]
 
         LOOKUP8_64_AVX512_VBMI_4_MAP_TABLES %%INDICES, %%RET_VALUES, %%HIGH_BIT, \
-                                            %%ZTMP1, %%ZTMP2, \
-                                            %%MAP_TAB_0, %%MAP_TAB_1, \
-                                            %%MAP_TAB_2, %%MAP_TAB_3, %%KR1
+                                                %%ZTMP1, %%ZTMP2, \
+                                                %%MAP_TAB_0, %%MAP_TAB_1, \
+                                                %%MAP_TAB_2, %%MAP_TAB_3, %%KR1
 %endmacro
 
 %endif ;; _CONSTANT_LOOKUP_INC_

@@ -158,7 +158,7 @@ ghash_sse:
         pshufb  xmm0, [rel SHUF_MASK] ; perform a 16Byte swap
 
         CALC_AAD_HASH arg2, arg3, xmm0, arg1, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, \
-                      r10, r11, r12, r13, rax
+                        r10, r11, r12, r13, rax
 
         pshufb  xmm0, [rel SHUF_MASK] ; perform a 16Byte swap
 
@@ -210,15 +210,15 @@ align_function
 MKGLOBAL(GMAC_FN_NAME(update),function,)
 GMAC_FN_NAME(update):
         endbranch64
-	FUNC_SAVE
+        FUNC_SAVE
 
 %ifdef SAFE_PARAM
         ;; Reset imb_errno
         IMB_ERR_CHECK_RESET
 %endif
         ;; Check if msg_len == 0
-	cmp	arg4, 0
-	je	exit_gmac_update
+        cmp     arg4, 0
+        je      exit_gmac_update
 
 %ifdef SAFE_PARAM
         ;; Check key_data != NULL
@@ -238,11 +238,11 @@ GMAC_FN_NAME(update):
         add     [arg2 + AadLen], arg4
 
         ;; Deal with previous partial block
-	xor	r11, r11
-	movdqu	xmm13, [arg1 + HashKey]
-	movdqu	xmm8, [arg2 + AadHash]
+        xor     r11, r11
+        movdqu  xmm13, [arg1 + HashKey]
+        movdqu  xmm8, [arg2 + AadHash]
 
-	PARTIAL_BLOCK_GMAC arg1, arg2, arg3, arg4, r11, xmm8, xmm13
+        PARTIAL_BLOCK_GMAC arg1, arg2, arg3, arg4, r11, xmm8, xmm13
 
         ; CALC_AAD_HASH needs to deal with multiple of 16 bytes
         sub     arg4, r11
@@ -256,8 +256,8 @@ GMAC_FN_NAME(update):
 
         ;; Calculate GHASH of this segment
         CALC_AAD_HASH arg3, arg4, xmm8, arg1, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, \
-                      r10, r11, r12, r13, rax
-	movdqu	[arg2 + AadHash], xmm8	; ctx_data.aad hash = aad_hash
+                        r10, r11, r12, r13, rax
+        movdqu  [arg2 + AadHash], xmm8  ; ctx_data.aad hash = aad_hash
 
 align_label
 no_full_blocks:
@@ -268,7 +268,7 @@ no_full_blocks:
         jz      exit_gmac_update
 
         ; Save next partial block
-        mov	[arg2 + PBlockLen], arg4
+        mov     [arg2 + PBlockLen], arg4
         READ_SMALL_DATA_INPUT_SSE xmm1, arg3, arg4, r11
         pshufb  xmm1, [rel SHUF_MASK]
         pxor    xmm8, xmm1
@@ -276,9 +276,9 @@ no_full_blocks:
 
 align_label
 exit_gmac_update:
-	FUNC_RESTORE
+        FUNC_RESTORE
 
-	ret
+        ret
 
 %ifdef SAFE_PARAM
 align_label

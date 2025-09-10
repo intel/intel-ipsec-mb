@@ -61,126 +61,126 @@
 ; memcpy_avx2_128 DST, SRC, SIZE, TMP0, TMP1, YTMP0, YTMP1, YTMP2, YTMP3
 ;
 ; For example:
-; memcpy_sse_64		: SSE,  0 <= size < 64, falls through
-; memcpy_avx_64_1	: AVX1, 1 <= size < 64, falls through
-; memcpy_sse_128_ret	: SSE,  0 <= size < 128, ends with ret
-; mempcy_avx_128_1_ret	: AVX1, 1 <= size < 128, ends with ret
+; memcpy_sse_64         : SSE,  0 <= size < 64, falls through
+; memcpy_avx_64_1       : AVX1, 1 <= size < 64, falls through
+; memcpy_sse_128_ret    : SSE,  0 <= size < 128, ends with ret
+; mempcy_avx_128_1_ret  : AVX1, 1 <= size < 128, ends with ret
 ;
 
 %macro memcpy_sse_64 9
-	__memcpy_int %1,%2,%3,%4,%5,%6,%7,%8,%9, 0, 64, 0, 0
+        __memcpy_int %1,%2,%3,%4,%5,%6,%7,%8,%9, 0, 64, 0, 0
 %endm
 
 %macro memcpy_sse_64_1 9
-	__memcpy_int %1,%2,%3,%4,%5,%6,%7,%8,%9, 1, 64, 0, 0
+        __memcpy_int %1,%2,%3,%4,%5,%6,%7,%8,%9, 1, 64, 0, 0
 %endm
 
 %macro memcpy_sse_128 9
-	__memcpy_int %1,%2,%3,%4,%5,%6,%7,%8,%9, 0, 128, 0, 0
+        __memcpy_int %1,%2,%3,%4,%5,%6,%7,%8,%9, 0, 128, 0, 0
 %endm
 
 %macro memcpy_sse_128_1 9
-	__memcpy_int %1,%2,%3,%4,%5,%6,%7,%8,%9, 1, 128, 0, 0
+        __memcpy_int %1,%2,%3,%4,%5,%6,%7,%8,%9, 1, 128, 0, 0
 %endm
 
 %macro memcpy_sse_64_ret 9
-	__memcpy_int %1,%2,%3,%4,%5,%6,%7,%8,%9, 0, 64, 1, 0
+        __memcpy_int %1,%2,%3,%4,%5,%6,%7,%8,%9, 0, 64, 1, 0
 %endm
 
 %macro memcpy_sse_64_1_ret 9
-	__memcpy_int %1,%2,%3,%4,%5,%6,%7,%8,%9, 1, 64, 1, 0
+        __memcpy_int %1,%2,%3,%4,%5,%6,%7,%8,%9, 1, 64, 1, 0
 %endm
 
 %macro memcpy_sse_128_ret 9
-	__memcpy_int %1,%2,%3,%4,%5,%6,%7,%8,%9, 0, 128, 1, 0
+        __memcpy_int %1,%2,%3,%4,%5,%6,%7,%8,%9, 0, 128, 1, 0
 %endm
 
 %macro memcpy_sse_128_1_ret 9
-	__memcpy_int %1,%2,%3,%4,%5,%6,%7,%8,%9, 1, 128, 1, 0
+        __memcpy_int %1,%2,%3,%4,%5,%6,%7,%8,%9, 1, 128, 1, 0
 %endm
 
 %macro memcpy_sse_16 5
-	__memcpy_int %1,%2,%3,%4,%5,,,,, 0, 16, 0, 0
+        __memcpy_int %1,%2,%3,%4,%5,,,,, 0, 16, 0, 0
 %endm
 
 %macro memcpy_sse_16_1 5
-	__memcpy_int %1,%2,%3,%4,%5,,,,, 1, 16, 0, 0
+        __memcpy_int %1,%2,%3,%4,%5,,,,, 1, 16, 0, 0
 %endm
 
-	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 %macro memcpy_avx_64 9
-	__memcpy_int %1,%2,%3,%4,%5,%6,%7,%8,%9, 0, 64, 0, 1
+        __memcpy_int %1,%2,%3,%4,%5,%6,%7,%8,%9, 0, 64, 0, 1
 %endm
 
 %macro memcpy_avx_64_1 9
-	__memcpy_int %1,%2,%3,%4,%5,%6,%7,%8,%9, 1, 64, 0, 1
+        __memcpy_int %1,%2,%3,%4,%5,%6,%7,%8,%9, 1, 64, 0, 1
 %endm
 
 %macro memcpy_avx_128 9
-	__memcpy_int %1,%2,%3,%4,%5,%6,%7,%8,%9, 0, 128, 0, 1
+        __memcpy_int %1,%2,%3,%4,%5,%6,%7,%8,%9, 0, 128, 0, 1
 %endm
 
 %macro memcpy_avx_128_1 9
-	__memcpy_int %1,%2,%3,%4,%5,%6,%7,%8,%9, 1, 128, 0, 1
+        __memcpy_int %1,%2,%3,%4,%5,%6,%7,%8,%9, 1, 128, 0, 1
 %endm
 
 %macro memcpy_avx_64_ret 9
-	__memcpy_int %1,%2,%3,%4,%5,%6,%7,%8,%9, 0, 64, 1, 1
+        __memcpy_int %1,%2,%3,%4,%5,%6,%7,%8,%9, 0, 64, 1, 1
 %endm
 
 %macro memcpy_avx_64_1_ret 9
-	__memcpy_int %1,%2,%3,%4,%5,%6,%7,%8,%9, 1, 64, 1, 1
+        __memcpy_int %1,%2,%3,%4,%5,%6,%7,%8,%9, 1, 64, 1, 1
 %endm
 
 %macro memcpy_avx_128_ret 9
-	__memcpy_int %1,%2,%3,%4,%5,%6,%7,%8,%9, 0, 128, 1, 1
+        __memcpy_int %1,%2,%3,%4,%5,%6,%7,%8,%9, 0, 128, 1, 1
 %endm
 
 %macro memcpy_avx_128_1_ret 9
-	__memcpy_int %1,%2,%3,%4,%5,%6,%7,%8,%9, 1, 128, 1, 1
+        __memcpy_int %1,%2,%3,%4,%5,%6,%7,%8,%9, 1, 128, 1, 1
 %endm
 
 %macro memcpy_avx_16 5
-	__memcpy_int %1,%2,%3,%4,%5,,,,, 0, 16, 0, 1
+        __memcpy_int %1,%2,%3,%4,%5,,,,, 0, 16, 0, 1
 %endm
 
 %macro memcpy_avx_16_1 5
-	__memcpy_int %1,%2,%3,%4,%5,,,,, 1, 16, 0, 1
+        __memcpy_int %1,%2,%3,%4,%5,,,,, 1, 16, 0, 1
 %endm
 
-	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 %macro memcpy_avx2_64 7
-	__memcpy_int %1,%2,%3,%4,%5,%6,%7,--,--, 0, 64, 0, 2
+        __memcpy_int %1,%2,%3,%4,%5,%6,%7,--,--, 0, 64, 0, 2
 %endm
 
 %macro memcpy_avx2_64_1 7
-	__memcpy_int %1,%2,%3,%4,%5,%6,%7,--,--, 1, 64, 0, 2
+        __memcpy_int %1,%2,%3,%4,%5,%6,%7,--,--, 1, 64, 0, 2
 %endm
 
 %macro memcpy_avx2_128 9
-	__memcpy_int %1,%2,%3,%4,%5,%6,%7, %8, %9, 0, 128, 0, 2
+        __memcpy_int %1,%2,%3,%4,%5,%6,%7, %8, %9, 0, 128, 0, 2
 %endm
 
 %macro memcpy_avx2_128_1 9
-	__memcpy_int %1,%2,%3,%4,%5,%6,%7, %8, %9, 1, 128, 0, 2
+        __memcpy_int %1,%2,%3,%4,%5,%6,%7, %8, %9, 1, 128, 0, 2
 %endm
 
 %macro memcpy_avx2_64_ret 7
-	__memcpy_int %1,%2,%3,%4,%5,%6,%7,--,--, 0, 64, 1, 2
+        __memcpy_int %1,%2,%3,%4,%5,%6,%7,--,--, 0, 64, 1, 2
 %endm
 
 %macro memcpy_avx2_64_1_ret 7
-	__memcpy_int %1,%2,%3,%4,%5,%6,%7,--,--, 1, 64, 1, 2
+        __memcpy_int %1,%2,%3,%4,%5,%6,%7,--,--, 1, 64, 1, 2
 %endm
 
 %macro memcpy_avx2_128_ret 9
-	__memcpy_int %1,%2,%3,%4,%5,%6,%7,%8,%9, 0, 128, 1, 2
+        __memcpy_int %1,%2,%3,%4,%5,%6,%7,%8,%9, 0, 128, 1, 2
 %endm
 
 %macro memcpy_avx2_128_1_ret 9
-	__memcpy_int %1,%2,%3,%4,%5,%6,%7,%8,%9, 1, 128, 1, 2
+        __memcpy_int %1,%2,%3,%4,%5,%6,%7,%8,%9, 1, 128, 1, 2
 %endm
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -189,156 +189,156 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 %macro __memcpy_int 13
-%define %%DST     %1	; register: pointer to dst (not modified)
-%define %%SRC     %2	; register: pointer to src (not modified)
-%define %%SIZE    %3	; register: length in bytes (not modified)
-%define %%TMP0    %4	; 64-bit temp GPR (clobbered)
-%define %%TMP1    %5	; 64-bit temp GPR (clobbered)
-%define %%XTMP0   %6	; temp XMM (clobbered)
-%define %%XTMP1   %7	; temp XMM (clobbered)
-%define %%XTMP2   %8	; temp XMM (clobbered)
-%define %%XTMP3   %9	; temp XMM (clobbered)
-%define %%NOT0    %10	; if not 0, then assume size cannot be zero
-%define %%MAXSIZE %11	; 128, 64, etc
+%define %%DST     %1    ; register: pointer to dst (not modified)
+%define %%SRC     %2    ; register: pointer to src (not modified)
+%define %%SIZE    %3    ; register: length in bytes (not modified)
+%define %%TMP0    %4    ; 64-bit temp GPR (clobbered)
+%define %%TMP1    %5    ; 64-bit temp GPR (clobbered)
+%define %%XTMP0   %6    ; temp XMM (clobbered)
+%define %%XTMP1   %7    ; temp XMM (clobbered)
+%define %%XTMP2   %8    ; temp XMM (clobbered)
+%define %%XTMP3   %9    ; temp XMM (clobbered)
+%define %%NOT0    %10   ; if not 0, then assume size cannot be zero
+%define %%MAXSIZE %11   ; 128, 64, etc
 %define %%USERET  %12   ; if not 0, use "ret" at end
 %define %%USEAVX  %13   ; 0 = SSE, 1 = AVX1, 2 = AVX2
 
 %if (%%USERET != 0)
- %define %%DONE	ret
+%define %%DONE ret
 %else
- %define %%DONE jmp %%end
+%define %%DONE jmp %%end
 %endif
 
 %if (%%USEAVX != 0)
- %define %%MOVDQU vmovdqu
+%define %%MOVDQU vmovdqu
 %else
- %define %%MOVDQU movdqu
+%define %%MOVDQU movdqu
 %endif
 
 %if (%%MAXSIZE >= 128)
-	test	%%SIZE, 64
-	jz	%%lt64
-  %if (%%USEAVX >= 2)
-	%%MOVDQU	%%XTMP0, [%%SRC + 0*32]
-	%%MOVDQU	%%XTMP1, [%%SRC + 1*32]
-	%%MOVDQU	%%XTMP2, [%%SRC + %%SIZE - 2*32]
-	%%MOVDQU	%%XTMP3, [%%SRC + %%SIZE - 1*32]
+        test    %%SIZE, 64
+        jz      %%lt64
+%if (%%USEAVX >= 2)
+        %%MOVDQU        %%XTMP0, [%%SRC + 0*32]
+        %%MOVDQU        %%XTMP1, [%%SRC + 1*32]
+        %%MOVDQU        %%XTMP2, [%%SRC + %%SIZE - 2*32]
+        %%MOVDQU        %%XTMP3, [%%SRC + %%SIZE - 1*32]
 
-	%%MOVDQU	[%%DST + 0*32], %%XTMP0
-	%%MOVDQU	[%%DST + 1*32], %%XTMP1
-	%%MOVDQU	[%%DST + %%SIZE - 2*32], %%XTMP2
-	%%MOVDQU	[%%DST + %%SIZE - 1*32], %%XTMP3
-  %else
-	%%MOVDQU	%%XTMP0, [%%SRC + 0*16]
-	%%MOVDQU	%%XTMP1, [%%SRC + 1*16]
-	%%MOVDQU	%%XTMP2, [%%SRC + 2*16]
-	%%MOVDQU	%%XTMP3, [%%SRC + 3*16]
-	%%MOVDQU	[%%DST + 0*16], %%XTMP0
-	%%MOVDQU	[%%DST + 1*16], %%XTMP1
-	%%MOVDQU	[%%DST + 2*16], %%XTMP2
-	%%MOVDQU	[%%DST + 3*16], %%XTMP3
+        %%MOVDQU        [%%DST + 0*32], %%XTMP0
+        %%MOVDQU        [%%DST + 1*32], %%XTMP1
+        %%MOVDQU        [%%DST + %%SIZE - 2*32], %%XTMP2
+        %%MOVDQU        [%%DST + %%SIZE - 1*32], %%XTMP3
+%else
+        %%MOVDQU        %%XTMP0, [%%SRC + 0*16]
+        %%MOVDQU        %%XTMP1, [%%SRC + 1*16]
+        %%MOVDQU        %%XTMP2, [%%SRC + 2*16]
+        %%MOVDQU        %%XTMP3, [%%SRC + 3*16]
+        %%MOVDQU        [%%DST + 0*16], %%XTMP0
+        %%MOVDQU        [%%DST + 1*16], %%XTMP1
+        %%MOVDQU        [%%DST + 2*16], %%XTMP2
+        %%MOVDQU        [%%DST + 3*16], %%XTMP3
 
-	%%MOVDQU	%%XTMP0, [%%SRC + %%SIZE - 4*16]
-	%%MOVDQU	%%XTMP1, [%%SRC + %%SIZE - 3*16]
-	%%MOVDQU	%%XTMP2, [%%SRC + %%SIZE - 2*16]
-	%%MOVDQU	%%XTMP3, [%%SRC + %%SIZE - 1*16]
-	%%MOVDQU	[%%DST + %%SIZE - 4*16], %%XTMP0
-	%%MOVDQU	[%%DST + %%SIZE - 3*16], %%XTMP1
-	%%MOVDQU	[%%DST + %%SIZE - 2*16], %%XTMP2
-	%%MOVDQU	[%%DST + %%SIZE - 1*16], %%XTMP3
-  %endif
-	%%DONE
+        %%MOVDQU        %%XTMP0, [%%SRC + %%SIZE - 4*16]
+        %%MOVDQU        %%XTMP1, [%%SRC + %%SIZE - 3*16]
+        %%MOVDQU        %%XTMP2, [%%SRC + %%SIZE - 2*16]
+        %%MOVDQU        %%XTMP3, [%%SRC + %%SIZE - 1*16]
+        %%MOVDQU        [%%DST + %%SIZE - 4*16], %%XTMP0
+        %%MOVDQU        [%%DST + %%SIZE - 3*16], %%XTMP1
+        %%MOVDQU        [%%DST + %%SIZE - 2*16], %%XTMP2
+        %%MOVDQU        [%%DST + %%SIZE - 1*16], %%XTMP3
+%endif
+        %%DONE
 %endif
 
 %if (%%MAXSIZE >= 64)
 %%lt64:
-	test	%%SIZE, 32
-	jz	%%lt32
-  %if (%%USEAVX >= 2)
-	%%MOVDQU	%%XTMP0, [%%SRC + 0*32]
-	%%MOVDQU	%%XTMP1, [%%SRC + %%SIZE - 1*32]
-	%%MOVDQU	[%%DST + 0*32], %%XTMP0
-	%%MOVDQU	[%%DST + %%SIZE - 1*32], %%XTMP1
-  %else
-	%%MOVDQU	%%XTMP0, [%%SRC + 0*16]
-	%%MOVDQU	%%XTMP1, [%%SRC + 1*16]
-	%%MOVDQU	%%XTMP2, [%%SRC + %%SIZE - 2*16]
-	%%MOVDQU	%%XTMP3, [%%SRC + %%SIZE - 1*16]
-	%%MOVDQU	[%%DST + 0*16], %%XTMP0
-	%%MOVDQU	[%%DST + 1*16], %%XTMP1
-	%%MOVDQU	[%%DST + %%SIZE - 2*16], %%XTMP2
-	%%MOVDQU	[%%DST + %%SIZE - 1*16], %%XTMP3
-  %endif
-	%%DONE
+        test    %%SIZE, 32
+        jz      %%lt32
+%if (%%USEAVX >= 2)
+        %%MOVDQU        %%XTMP0, [%%SRC + 0*32]
+        %%MOVDQU        %%XTMP1, [%%SRC + %%SIZE - 1*32]
+        %%MOVDQU        [%%DST + 0*32], %%XTMP0
+        %%MOVDQU        [%%DST + %%SIZE - 1*32], %%XTMP1
+%else
+        %%MOVDQU        %%XTMP0, [%%SRC + 0*16]
+        %%MOVDQU        %%XTMP1, [%%SRC + 1*16]
+        %%MOVDQU        %%XTMP2, [%%SRC + %%SIZE - 2*16]
+        %%MOVDQU        %%XTMP3, [%%SRC + %%SIZE - 1*16]
+        %%MOVDQU        [%%DST + 0*16], %%XTMP0
+        %%MOVDQU        [%%DST + 1*16], %%XTMP1
+        %%MOVDQU        [%%DST + %%SIZE - 2*16], %%XTMP2
+        %%MOVDQU        [%%DST + %%SIZE - 1*16], %%XTMP3
+%endif
+        %%DONE
 %endif
 
 %if (%%MAXSIZE >= 32)
 %%lt32:
-	test	%%SIZE, 16
-	jz	%%lt16
-  %if (%%USEAVX >= 2)
-	%%MOVDQU	XWORD(%%XTMP0), [%%SRC + 0*16]
-	%%MOVDQU	XWORD(%%XTMP1), [%%SRC + %%SIZE - 1*16]
-	%%MOVDQU	[%%DST + 0*16], XWORD(%%XTMP0)
-	%%MOVDQU	[%%DST + %%SIZE - 1*16], XWORD(%%XTMP1)
-  %else
-	%%MOVDQU	%%XTMP0, [%%SRC + 0*16]
-	%%MOVDQU	%%XTMP1, [%%SRC + %%SIZE - 1*16]
-	%%MOVDQU	[%%DST + 0*16], %%XTMP0
-	%%MOVDQU	[%%DST + %%SIZE - 1*16], %%XTMP1
-  %endif
-	%%DONE
+        test    %%SIZE, 16
+        jz      %%lt16
+%if (%%USEAVX >= 2)
+        %%MOVDQU        XWORD(%%XTMP0), [%%SRC + 0*16]
+        %%MOVDQU        XWORD(%%XTMP1), [%%SRC + %%SIZE - 1*16]
+        %%MOVDQU        [%%DST + 0*16], XWORD(%%XTMP0)
+        %%MOVDQU        [%%DST + %%SIZE - 1*16], XWORD(%%XTMP1)
+%else
+        %%MOVDQU        %%XTMP0, [%%SRC + 0*16]
+        %%MOVDQU        %%XTMP1, [%%SRC + %%SIZE - 1*16]
+        %%MOVDQU        [%%DST + 0*16], %%XTMP0
+        %%MOVDQU        [%%DST + %%SIZE - 1*16], %%XTMP1
+%endif
+        %%DONE
 %endif
 
 %if (%%MAXSIZE >= 16)
         test    %%SIZE, 16
         jz      %%lt16
-        mov	%%TMP0, [%%SRC]
-        mov	%%TMP1, [%%SRC + 8]
-        mov	[%%DST], %%TMP0
-        mov	[%%DST + 8], %%TMP1
+        mov     %%TMP0, [%%SRC]
+        mov     %%TMP1, [%%SRC + 8]
+        mov     [%%DST], %%TMP0
+        mov     [%%DST + 8], %%TMP1
 %%lt16:
-	test	%%SIZE, 8
-	jz	%%lt8
-	mov	%%TMP0, [%%SRC]
-	mov	%%TMP1, [%%SRC + %%SIZE - 8]
-	mov	[%%DST], %%TMP0
-	mov	[%%DST + %%SIZE - 8], %%TMP1
-	%%DONE
+        test    %%SIZE, 8
+        jz      %%lt8
+        mov     %%TMP0, [%%SRC]
+        mov     %%TMP1, [%%SRC + %%SIZE - 8]
+        mov     [%%DST], %%TMP0
+        mov     [%%DST + %%SIZE - 8], %%TMP1
+        %%DONE
 %endif
 
 %if (%%MAXSIZE >= 8)
 %%lt8:
-	test	%%SIZE, 4
-	jz	%%lt4
-	mov	DWORD(%%TMP0), [%%SRC]
-	mov	DWORD(%%TMP1), [%%SRC + %%SIZE - 4]
-	mov	[%%DST], DWORD(%%TMP0)
-	mov	[%%DST + %%SIZE - 4], DWORD(%%TMP1)
-	%%DONE
+        test    %%SIZE, 4
+        jz      %%lt4
+        mov     DWORD(%%TMP0), [%%SRC]
+        mov     DWORD(%%TMP1), [%%SRC + %%SIZE - 4]
+        mov     [%%DST], DWORD(%%TMP0)
+        mov     [%%DST + %%SIZE - 4], DWORD(%%TMP1)
+        %%DONE
 %endif
 
 %if (%%MAXSIZE >= 4)
 %%lt4:
-	test	%%SIZE, 2
-	jz	%%lt2
-	movzx	DWORD(%%TMP0), word [%%SRC]
-	movzx	DWORD(%%TMP1), byte [%%SRC + %%SIZE - 1]
-	mov	[%%DST], WORD(%%TMP0)
-	mov	[%%DST + %%SIZE - 1], BYTE(%%TMP1)
-	%%DONE
+        test    %%SIZE, 2
+        jz      %%lt2
+        movzx   DWORD(%%TMP0), word [%%SRC]
+        movzx   DWORD(%%TMP1), byte [%%SRC + %%SIZE - 1]
+        mov     [%%DST], WORD(%%TMP0)
+        mov     [%%DST + %%SIZE - 1], BYTE(%%TMP1)
+        %%DONE
 %endif
 
 %%lt2:
 %if (%%NOT0 == 0)
-	 test	 %%SIZE, 1
-	 jz	 %%end
+        test    %%SIZE, 1
+        jz      %%end
 %endif
-	movzx	DWORD(%%TMP0), byte [%%SRC]
-	mov	[%%DST], BYTE(%%TMP0)
+        movzx   DWORD(%%TMP0), byte [%%SRC]
+        mov     [%%DST], BYTE(%%TMP0)
 %%end:
 %if (%%USERET != 0)
-	ret
+        ret
 %endif
 %endm
 
@@ -424,11 +424,11 @@
 %define %%PSRLDQ _PSRLDQ %%SIMDTYPE,
 
 %ifidn %%SIMDTYPE, SSE
- %define %%MOVDQU movdqu
- %define %%MOVQ movq
+%define %%MOVDQU movdqu
+%define %%MOVQ movq
 %else
- %define %%MOVDQU vmovdqu
- %define %%MOVQ vmovq
+%define %%MOVDQU vmovdqu
+%define %%MOVQ vmovq
 %endif
 
 ;; determine max byte size for store operation
@@ -503,8 +503,8 @@
 ; <ZERO> is blank or "_1". If "_1" then the min SIZE is 1 (otherwise 0)
 ;
 ; For example:
-; simd_load_sse_16		: SSE, 0 <= size <= 16
-; simd_load_avx_15_1	        : AVX, 1 <= size <= 15
+; simd_load_sse_16              : SSE, 0 <= size <= 16
+; simd_load_avx_15_1            : AVX, 1 <= size <= 15
 
 %macro simd_load_sse_15_1 3
         __simd_load %1,%2,%3,0,0,SSE
@@ -541,15 +541,15 @@
 %define %%SIMDTYPE  %6    ; "SSE" or "AVX"
 
 %ifidn %%SIMDTYPE, SSE
- %define %%MOVDQU movdqu
- %define %%PINSRB pinsrb
- %define %%PINSRQ pinsrq
- %define %%PXOR   pxor
+%define %%MOVDQU movdqu
+%define %%PINSRB pinsrb
+%define %%PINSRQ pinsrq
+%define %%PXOR   pxor
 %else
- %define %%MOVDQU vmovdqu
- %define %%PINSRB vpinsrb
- %define %%PINSRQ vpinsrq
- %define %%PXOR   vpxor
+%define %%MOVDQU vmovdqu
+%define %%PINSRB vpinsrb
+%define %%PINSRQ vpinsrq
+%define %%PXOR   vpxor
 %endif
 
 %if (%%ACCEPT_16 != 0)

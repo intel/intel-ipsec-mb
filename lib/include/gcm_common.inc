@@ -39,10 +39,10 @@
 ; Returns 0 if data has length 0.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 %macro READ_SMALL_DATA_INPUT 5
-%define	%%OUTPUT		%1 ; [out] xmm register
-%define	%%INPUT			%2 ; [in] gp with input address
-%define	%%LENGTH		%3 ; [in] gp with data length (0 to 16 bytes)
-%define	%%TMP1     		%4 ; [clobbered] temporary gp register
+%define %%OUTPUT                %1 ; [out] xmm register
+%define %%INPUT                 %2 ; [in] gp with input address
+%define %%LENGTH                %3 ; [in] gp with data length (0 to 16 bytes)
+%define %%TMP1                  %4 ; [clobbered] temporary gp register
 %define %%ARCH                  %5 ; [in] "SSE" or "AVX"
 
         mov             DWORD(%%TMP1), 16

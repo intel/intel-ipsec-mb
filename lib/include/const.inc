@@ -328,25 +328,25 @@ extern padding_0x80_tab16
 %define %%idx              %7 ; dword index/lane value
 
         xor %%tmp_gp2, %%tmp_gp2
-	bts %%tmp_gp2, DWORD(%%idx)
+        bts %%tmp_gp2, DWORD(%%idx)
 %ifidn %%qword_to_insert, 0
-	not %%tmp_gp2
-	kmovd %%tmp_k, %%tmp_gp2
-	vmovdqa64 %%tmp_simd1{%%tmp_k}{z}, [%%mem_addr]
-	vmovdqa64 [%%mem_addr], %%tmp_simd1
-	kshiftrd %%tmp_k, %%tmp_k, 8
-	vmovdqa64 %%tmp_simd1{%%tmp_k}{z}, [%%mem_addr + 64]
-	vmovdqa64 [%%mem_addr + 64], %%tmp_simd1
+        not %%tmp_gp2
+        kmovd %%tmp_k, %%tmp_gp2
+        vmovdqa64 %%tmp_simd1{%%tmp_k}{z}, [%%mem_addr]
+        vmovdqa64 [%%mem_addr], %%tmp_simd1
+        kshiftrd %%tmp_k, %%tmp_k, 8
+        vmovdqa64 %%tmp_simd1{%%tmp_k}{z}, [%%mem_addr + 64]
+        vmovdqa64 [%%mem_addr + 64], %%tmp_simd1
 %else
-	kmovd %%tmp_k, %%tmp_gp2
+        kmovd %%tmp_k, %%tmp_gp2
         vpbroadcastq %%tmp_simd2, %%qword_to_insert
-	vmovdqa64 %%tmp_simd1, [%%mem_addr]
-	vmovdqa64 %%tmp_simd1{%%tmp_k}, %%tmp_simd2
-	vmovdqa64 [%%mem_addr], %%tmp_simd1
-	kshiftrd %%tmp_k, %%tmp_k, 8
-	vmovdqa64 %%tmp_simd1, [%%mem_addr + 64]
-	vmovdqa64 %%tmp_simd1{%%tmp_k}, %%tmp_simd2
-	vmovdqa64 [%%mem_addr + 64], %%tmp_simd1
+        vmovdqa64 %%tmp_simd1, [%%mem_addr]
+        vmovdqa64 %%tmp_simd1{%%tmp_k}, %%tmp_simd2
+        vmovdqa64 [%%mem_addr], %%tmp_simd1
+        kshiftrd %%tmp_k, %%tmp_k, 8
+        vmovdqa64 %%tmp_simd1, [%%mem_addr + 64]
+        vmovdqa64 %%tmp_simd1{%%tmp_k}, %%tmp_simd2
+        vmovdqa64 [%%mem_addr + 64], %%tmp_simd1
 %endif
 %endmacro
 

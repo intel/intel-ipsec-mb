@@ -1236,7 +1236,7 @@ align_label
         je              %%_partial_block_done           ;Leave Macro if no partial blocks
 
         READ_SMALL_DATA_INPUT_LEN_BT16_AVX512 %%XTMP0, %%PLAIN_CIPH_IN, %%PLAIN_CIPH_LEN, \
-                                              %%IA0, %%IA2, %%MASKREG
+                                                %%IA0, %%IA2, %%MASKREG
         ;; **XTMP0 includes plain text
 
         ;; XTMP1 = my_ctx_data.partial_block_enc_key
@@ -1419,7 +1419,7 @@ align_label
                         %%SHUFMASK, %%SHUFMASK, %%SHUFMASK, %%SHUFMASK
 
         ;; load plain/cipher text
-       ZMM_LOAD_MASKED_BLOCKS_0_16 %%NUM_BLOCKS, %%PLAIN_CIPH_IN, %%DATA_OFFSET, \
+        ZMM_LOAD_MASKED_BLOCKS_0_16 %%NUM_BLOCKS, %%PLAIN_CIPH_IN, %%DATA_OFFSET, \
                         %%DAT0, %%DAT1, %%DAT2, %%DAT3, %%MASKREG
 
         ;; AES rounds and XOR with plain/cipher text
@@ -2421,7 +2421,7 @@ align_label
 %define %%TO_REDUCE_L           %36 ; [in/out] ZMM for low 4x128-bit GHASH sum
 %define %%TO_REDUCE_H           %37 ; [in/out] ZMM for hi 4x128-bit GHASH sum
 %define %%DO_REDUCTION          %38 ; [in] "no_reduction", "final_reduction", "first_time" or
-                                    ; "final_reduction_no_hxor"
+                                        ; "final_reduction_no_hxor"
 %define %%ENC_DEC               %39 ; [in] cipher direction
 %define %%DATA_DISPL            %40 ; [in] fixed numerical data displacement/offset
 %define %%GHASH_IN              %41 ; [in] current GHASH value or "no_ghash_in"
@@ -4135,7 +4135,7 @@ align_label
         ;; **ZTMP16 and ZTMP17 clobbered or cleared above
         ;; **ZTMP21 may include part of cipher key
 %ifdef SAFE_DATA
-       vpxorq   %%ZTMP21, %%ZTMP21, %%ZTMP21
+        vpxorq   %%ZTMP21, %%ZTMP21, %%ZTMP21
 %endif
 %ifidn %%INSTANCE_TYPE, multi_call
         vpshufb         %%CTR_BLOCKx, %%CTR_BLOCKx, XWORD(%%SHUF_MASK)
@@ -4209,7 +4209,7 @@ align_label
         ;; **ZTMP16 and ZTMP17 clobbered or cleared above
         ;; **ZTMP21 may include part of cipher key
 %ifdef SAFE_DATA
-       vpxorq   %%ZTMP21, %%ZTMP21, %%ZTMP21
+        vpxorq   %%ZTMP21, %%ZTMP21, %%ZTMP21
 %endif
 %ifidn %%INSTANCE_TYPE, multi_call
         vpshufb         %%CTR_BLOCKx, %%CTR_BLOCKx, XWORD(%%SHUF_MASK)
@@ -4242,9 +4242,9 @@ align_label
                 %%IA0, %%IA3, %%MASKREG, %%SHUF_MASK
         ;; **ZTMP1, ZTMP2, ZTMP3, ZTMP10 may include sensitive data
 %ifdef SAFE_DATA
-       vpxorq   %%ZTMP2, %%ZTMP2, %%ZTMP2
-       vpxorq   %%ZTMP3, %%ZTMP3, %%ZTMP3
-       vpxorq   %%ZTMP10, %%ZTMP10, %%ZTMP10
+        vpxorq   %%ZTMP2, %%ZTMP2, %%ZTMP2
+        vpxorq   %%ZTMP3, %%ZTMP3, %%ZTMP3
+        vpxorq   %%ZTMP10, %%ZTMP10, %%ZTMP10
 %endif
         ;; fall through to exit
 %endif ; include_small_packets != 0
@@ -4252,7 +4252,7 @@ align_label
 align_label
 %%_ghash_done:
 %ifdef SAFE_DATA
-       vpxorq   %%ZTMP1, %%ZTMP1, %%ZTMP1
+        vpxorq   %%ZTMP1, %%ZTMP1, %%ZTMP1
 %endif
 %ifidn %%INSTANCE_TYPE, multi_call
         ;; save the last counter block

@@ -203,7 +203,7 @@
 %assign i (i+1)
 %endrep
 %endif ; LINUX
-       vzeroupper
+        vzeroupper
 %endmacro
 
 ;
@@ -232,7 +232,7 @@
 ; This macro clears all YMM registers
 ;
 %macro clear_all_ymms_asm 0
-       vzeroall
+        vzeroall
 %endmacro
 
 ;

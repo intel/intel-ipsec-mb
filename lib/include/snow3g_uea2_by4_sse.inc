@@ -414,9 +414,9 @@ endstruc
 
         ;; Perform invSR(SQ(x)) transform
         SSE_LOOKUP_16X8BIT %%TMP1, %%TMP2, %%TMP3, %%TMP4, %%TMP5,  \
-                           %%TMP6, %%TMP7, %%TMP8, %%TMP9, %%TMP10, \
-                           %%TMP11, %%TMP12, %%TMP13, %%TMP14,        \
-                           %%TMPOUT
+                        %%TMP6, %%TMP7, %%TMP8, %%TMP9, %%TMP10, \
+                        %%TMP11, %%TMP12, %%TMP13, %%TMP14,        \
+                        %%TMPOUT
 
         pshufb          %%TMPOUT, [rel const_fixed_rotate_mask]
         pxor            %%TMP1, %%TMP1
@@ -589,8 +589,8 @@ endstruc
 
 %macro ALPHA_OP_NOT_SAFE 5
 %define %%LFSR_PTR      %1 ;; [in] r64 with address of LFSR register
-                             ;;      for mulalpha pass LFSR
-                             ;;      for divalpha pass LSFR 11
+                                ;;      for mulalpha pass LFSR
+                                ;;      for divalpha pass LSFR 11
 %define %%OP_TABLE      %2 ;; [in] address of mulalpha/divalpha val table
 %define %%TMP1          %3 ;; [out] temporary xmm register
 %define %%TMP_64        %4 ;; [clobbered] temporary gp register
@@ -734,12 +734,12 @@ endstruc
         ;; FSM Clock
 %ifdef SAFE_LOOKUP
         SNOW3G_FSM_CLOCK {%%STATE + _snow3g_args_FSM_1},  \
-                         {%%STATE + _snow3g_args_FSM_2},  \
-                         {%%STATE + _snow3g_args_FSM_3}, %%TMP1, %%TMP2,    \
-                         %%TMP3, %%TMP4, %%TMP5, %%TMP6, %%TMP7,    \
-                         %%TMP8, %%TMP9, %%TMP10, %%TMP11, %%TMP12, \
-                         %%TMP13, %%TMP14, %%TMP15, %%TMP16,          \
-                         %%STATE + _snow3g_args_LFSR_5
+                        {%%STATE + _snow3g_args_FSM_2},  \
+                        {%%STATE + _snow3g_args_FSM_3}, %%TMP1, %%TMP2,    \
+                        %%TMP3, %%TMP4, %%TMP5, %%TMP6, %%TMP7,    \
+                        %%TMP8, %%TMP9, %%TMP10, %%TMP11, %%TMP12, \
+                        %%TMP13, %%TMP14, %%TMP15, %%TMP16,          \
+                        %%STATE + _snow3g_args_LFSR_5
         movdqa          %%TMP15, [ %%STATE + _snow3g_args_LFSR_0 ]
         movdqa          %%TMP2, [rel ms_byte_mask]
         pshufb          %%TMP15,  %%TMP2
@@ -754,16 +754,16 @@ endstruc
                         %%TMP5, %%TMP6
 %else
         SNOW3G_FSM_CLOCK {%%STATE + _snow3g_args_FSM_1},  \
-                         {%%STATE + _snow3g_args_FSM_2},  \
-                         {%%STATE + _snow3g_args_FSM_3}, %%TMP1, %%TMP2,    \
-                         %%TMP3, %%TMP4, %%TMP5, %%TMP_64_1, %%TMP_64_2, \
-                         %%STATE + _snow3g_args_LFSR_5
+                        {%%STATE + _snow3g_args_FSM_2},  \
+                        {%%STATE + _snow3g_args_FSM_3}, %%TMP1, %%TMP2,    \
+                        %%TMP3, %%TMP4, %%TMP5, %%TMP_64_1, %%TMP_64_2, \
+                        %%STATE + _snow3g_args_LFSR_5
         ALPHA_OP_NOT_SAFE {%%STATE + _snow3g_args_LFSR_0}, snow3g_table_A_mul, \
-                          %%TMP2, %%TMP_64_1, %%TMP_64_2
+                        %%TMP2, %%TMP_64_1, %%TMP_64_2
 
 
         ALPHA_OP_NOT_SAFE {%%STATE + _snow3g_args_LFSR_11}, snow3g_table_A_div, \
-                          %%TMP7, %%TMP_64_1, %%TMP_64_2
+                        %%TMP7, %%TMP_64_1, %%TMP_64_2
 %endif  ;; SAFE_LOOKUP
 
         movdqa          %%TMP15, [%%STATE + _snow3g_args_LFSR_2 ]
@@ -1012,11 +1012,11 @@ align_loop
 %%next_dqw_round:
 %ifdef SAFE_LOOKUP
         SNOW3G_KEY_GEN_SSE %%STATE, %%TMP1, %%TMP2, %%TMP3, %%TMP4, %%TMP5,    \
-                           %%TMP6, %%TMP7, %%TMP8, %%TMP9, %%TMP10, %%TMP11,   \
-                           %%TMP12, %%TMP13, %%TMP14, %%TMP15, %%TMP16, %%TMP1_64
+                        %%TMP6, %%TMP7, %%TMP8, %%TMP9, %%TMP10, %%TMP11,   \
+                        %%TMP12, %%TMP13, %%TMP14, %%TMP15, %%TMP16, %%TMP1_64
 %else
         SNOW3G_KEY_GEN_SSE %%STATE, %%TMP1, %%TMP2, %%TMP3, %%TMP4, %%TMP5,    \
-                           %%TMP6, %%TMP7, %%TMP15, %%TMP2_64, %%IN, %%TMP1_64
+                        %%TMP6, %%TMP7, %%TMP15, %%TMP2_64, %%IN, %%TMP1_64
 %endif
 
         inc             %%TMP1_64
@@ -1044,11 +1044,11 @@ align_loop
         xor             %%TMP1_64,  %%TMP1_64
 %ifdef SAFE_LOOKUP
         SNOW3G_KEY_GEN_SSE %%STATE, %%TMP1, %%TMP2, %%TMP3, %%TMP4, %%TMP5,    \
-                           %%TMP6, %%TMP7, %%TMP8, %%TMP9, %%TMP10, %%TMP11,   \
-                           %%TMP12, %%TMP13, %%TMP14, %%TMP15, %%TMP16, %%TMP1_64
+                        %%TMP6, %%TMP7, %%TMP8, %%TMP9, %%TMP10, %%TMP11,   \
+                        %%TMP12, %%TMP13, %%TMP14, %%TMP15, %%TMP16, %%TMP1_64
 %else
         SNOW3G_KEY_GEN_SSE %%STATE, %%TMP1, %%TMP2, %%TMP3, %%TMP4, %%TMP5,    \
-                           %%TMP6, %%TMP7, %%TMP15, %%TMP2_64, %%IN, %%TMP1_64
+                        %%TMP6, %%TMP7, %%TMP15, %%TMP2_64, %%IN, %%TMP1_64
 %endif
 
         SNOW3G_OUTPUT       4, %%STATE, 0, %%IN, %%OUT, %%TMP1_64, %%TMP2_64
@@ -1065,11 +1065,11 @@ align_label
         xor             %%TMP1_64,  %%TMP1_64
 %ifdef SAFE_LOOKUP
         SNOW3G_KEY_GEN_SSE %%STATE, %%TMP1, %%TMP2, %%TMP3, %%TMP4, %%TMP5,    \
-                           %%TMP6, %%TMP7, %%TMP8, %%TMP9, %%TMP10, %%TMP11,   \
-                           %%TMP12, %%TMP13, %%TMP14, %%TMP15, %%TMP16, %%TMP1_64
+                        %%TMP6, %%TMP7, %%TMP8, %%TMP9, %%TMP10, %%TMP11,   \
+                        %%TMP12, %%TMP13, %%TMP14, %%TMP15, %%TMP16, %%TMP1_64
 %else
         SNOW3G_KEY_GEN_SSE %%STATE, %%TMP1, %%TMP2, %%TMP3, %%TMP4, %%TMP5,    \
-                           %%TMP6, %%TMP7, %%TMP15, %%TMP2_64, %%IN, %%TMP1_64
+                        %%TMP6, %%TMP7, %%TMP15, %%TMP2_64, %%IN, %%TMP1_64
 %endif
 
         SNOW3G_OUTPUT      3, %%STATE,  0, %%IN, %%OUT, %%TMP1_64, %%LENGTH
@@ -1130,11 +1130,11 @@ align_loop
 %%next_auth_round:
 %ifdef SAFE_LOOKUP
         SNOW3G_KEY_GEN_SSE %%STATE, %%TMP1, %%TMP2, %%TMP3, %%TMP4, %%TMP5,    \
-                           %%TMP6, %%TMP7, %%TMP8, %%TMP9, %%TMP10, %%TMP11,   \
-                           %%TMP12, %%TMP13, %%TMP14, %%TMP15, %%TMP16, %%TMP2_64
+                        %%TMP6, %%TMP7, %%TMP8, %%TMP9, %%TMP10, %%TMP11,   \
+                        %%TMP12, %%TMP13, %%TMP14, %%TMP15, %%TMP16, %%TMP2_64
 %else
         SNOW3G_KEY_GEN_SSE %%STATE, %%TMP1, %%TMP2, %%TMP3, %%TMP4, %%TMP5,    \
-                           %%TMP6, %%TMP7, %%TMP15, %%TMP3_64, %%TMP4_64, %%TMP2_64
+                        %%TMP6, %%TMP7, %%TMP15, %%TMP3_64, %%TMP4_64, %%TMP2_64
 %endif
         dec     %%TMP1_64
         jnz     %%next_auth_round
@@ -1145,11 +1145,11 @@ align_loop
 
 %ifdef SAFE_LOOKUP
         SNOW3G_KEY_GEN_SSE %%STATE, %%TMP1, %%TMP2, %%TMP3, %%TMP4, %%TMP5,    \
-                           %%TMP6, %%TMP7, %%TMP8, %%TMP9, %%TMP10, %%TMP11,   \
-                           %%TMP12, %%TMP13, %%TMP14, %%TMP15, %%TMP16, %%TMP2_64
+                        %%TMP6, %%TMP7, %%TMP8, %%TMP9, %%TMP10, %%TMP11,   \
+                        %%TMP12, %%TMP13, %%TMP14, %%TMP15, %%TMP16, %%TMP2_64
 %else
         SNOW3G_KEY_GEN_SSE %%STATE, %%TMP1, %%TMP2, %%TMP3, %%TMP4, %%TMP5,    \
-                           %%TMP6, %%TMP7, %%TMP15, %%TMP3_64, %%TMP4_64, %%TMP2_64
+                        %%TMP6, %%TMP7, %%TMP15, %%TMP3_64, %%TMP4_64, %%TMP2_64
 %endif
 
         ;; Put all lanes in KEYGEN state
@@ -1163,11 +1163,11 @@ align_loop
 %%next_auth_round2:
 %ifdef SAFE_LOOKUP
         SNOW3G_KEY_GEN_SSE %%STATE, %%TMP1, %%TMP2, %%TMP3, %%TMP4, %%TMP5,    \
-                           %%TMP6, %%TMP7, %%TMP8, %%TMP9, %%TMP10, %%TMP11,   \
-                           %%TMP12, %%TMP13, %%TMP14, %%TMP15, %%TMP16, %%TMP1_64
+                        %%TMP6, %%TMP7, %%TMP8, %%TMP9, %%TMP10, %%TMP11,   \
+                        %%TMP12, %%TMP13, %%TMP14, %%TMP15, %%TMP16, %%TMP1_64
 %else
         SNOW3G_KEY_GEN_SSE %%STATE, %%TMP1, %%TMP2, %%TMP3, %%TMP4, %%TMP5,    \
-                           %%TMP6, %%TMP7, %%TMP15, %%TMP3_64, %%TMP4_64, %%TMP1_64
+                        %%TMP6, %%TMP7, %%TMP15, %%TMP3_64, %%TMP4_64, %%TMP1_64
 %endif
         inc     %%TMP1_64
         cmp     %%TMP1_64, 4
@@ -1184,11 +1184,11 @@ align_loop
         ;; Generate final dw of keystream for each lane
 %ifdef SAFE_LOOKUP
         SNOW3G_KEY_GEN_SSE %%STATE, %%TMP1, %%TMP2, %%TMP3, %%TMP4, %%TMP5,    \
-                           %%TMP6, %%TMP7, %%TMP8, %%TMP9, %%TMP10, %%TMP11,   \
-                           %%TMP12, %%TMP13, %%TMP14, %%TMP15, %%TMP16, %%TMP2_64
+                        %%TMP6, %%TMP7, %%TMP8, %%TMP9, %%TMP10, %%TMP11,   \
+                        %%TMP12, %%TMP13, %%TMP14, %%TMP15, %%TMP16, %%TMP2_64
 %else
         SNOW3G_KEY_GEN_SSE %%STATE, %%TMP1, %%TMP2, %%TMP3, %%TMP4, %%TMP5,    \
-                           %%TMP6, %%TMP7, %%TMP15, %%TMP3_64, %%TMP4_64, %%TMP2_64
+                        %%TMP6, %%TMP7, %%TMP15, %%TMP3_64, %%TMP4_64, %%TMP2_64
 %endif
 
         ;; Store final dw of keystream for each lane

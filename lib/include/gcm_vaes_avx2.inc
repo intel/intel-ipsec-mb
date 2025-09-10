@@ -230,7 +230,7 @@ extern gcm_aes_ctr_16_vaes_avx2
 
 %define GP_OFFSET (LOCAL_STORAGE + XMM_STORAGE)
 
-%define	VARIABLE_OFFSET	(GP_STORAGE + LOCAL_STORAGE + XMM_STORAGE)
+%define VARIABLE_OFFSET (GP_STORAGE + LOCAL_STORAGE + XMM_STORAGE)
 
 ;; extra memory for GCM context structure
 %define CONTEXT_SIZE    6*16
@@ -771,7 +771,7 @@ align_label
 %%_partial_incomplete:
 %ifidn __OUTPUT_FORMAT__, win64
         mov     rax, %%PLAIN_CIPH_LEN
-       	add     [%%GDATA_CTX + PBlockLen], rax
+        add     [%%GDATA_CTX + PBlockLen], rax
 %else
         add     [%%GDATA_CTX + PBlockLen], %%PLAIN_CIPH_LEN
 %endif
@@ -947,10 +947,10 @@ align_label
         vmovdqa %%T2, xmm8
 %endif ;; %%num_initial_blocks == 0
 
-       ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-       ;; %%num_initial_blocks have been encrypted.
-       ;; Encrypt 16 blocks (potentially last block is partial) and
-       ;; GHASH already encrypted %%num_initial_blocks.
+        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        ;; %%num_initial_blocks have been encrypted.
+        ;; Encrypt 16 blocks (potentially last block is partial) and
+        ;; GHASH already encrypted %%num_initial_blocks.
 
                 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
                 ;; Prepare 16 counter blocks and perform rounds of AES cipher on
@@ -998,7 +998,7 @@ align_label
 %assign i 0
 %assign k (%%num_initial_blocks)
 
-         ;; GHASH block 1 & 2
+        ;; GHASH block 1 & 2
 %if ((i + 1) < %%num_initial_blocks)
         vmovdqu         %%YT2, [r15 + i*16]
         GHASH_SINGLE_MUL %%GDATA_KEY, k, %%YT2, %%YT1, %%YT4, %%YT6, %%YT5, %%YT3, first
@@ -1020,7 +1020,7 @@ align_label
                                 ymm1, ymm2, ymm3, ymm4, ymm5, ymm6, ymm7, ymm8, \
                                 ymm0, ymm0, ymm0, ymm0, ymm0, ymm0, ymm0, ymm0
 
-         ;; GHASH block 3 & 4
+        ;; GHASH block 3 & 4
 %if ((i + 1) < %%num_initial_blocks)
         vmovdqu         %%YT2, [r15 + i*16]
         GHASH_SINGLE_MUL %%GDATA_KEY, k, %%YT2, %%YT1, %%YT4, %%YT6, %%YT5, %%YT3, not_first
@@ -1046,7 +1046,7 @@ align_label
                                 ymm1, ymm2, ymm3, ymm4, ymm5, ymm6, ymm7, ymm8, \
                                 ymm0, ymm0, ymm0, ymm0, ymm0, ymm0, ymm0, ymm0
 
-         ;; GHASH block 5 & 6
+        ;; GHASH block 5 & 6
 %if ((i + 1) < %%num_initial_blocks)
 
         vmovdqu         %%YT2, [r15 + i*16]
@@ -1078,7 +1078,7 @@ align_label
                                 ymm1, ymm2, ymm3, ymm4, ymm5, ymm6, ymm7, ymm8, \
                                 ymm0, ymm0, ymm0, ymm0, ymm0, ymm0, ymm0, ymm0
 
-         ;; 7 & 8
+        ;; 7 & 8
 %if ((i + 1) < %%num_initial_blocks)
 
         vmovdqu         %%YT2, [r15 + i*16]
@@ -1111,7 +1111,7 @@ align_label
                                 ymm0, ymm0, ymm0, ymm0, ymm0, ymm0, ymm0, ymm0
 
 
-         ;; GHASH block 9 & 10
+        ;; GHASH block 9 & 10
 %if ((i + 1) < %%num_initial_blocks)
 
         vmovdqu         %%YT2, [r15 + i*16]
@@ -1141,7 +1141,7 @@ align_label
                                 ymm1, ymm2, ymm3, ymm4, ymm5, ymm6, ymm7, ymm8, \
                                 ymm0, ymm0, ymm0, ymm0, ymm0, ymm0, ymm0, ymm0
 
-         ;; GHASH block 11 & 12
+        ;; GHASH block 11 & 12
 %if ((i + 1) < %%num_initial_blocks)
 
         vmovdqu         %%YT2, [r15 + i*16]
@@ -1174,7 +1174,7 @@ align_label
                                 ymm0, ymm0, ymm0, ymm0, ymm0, ymm0, ymm0, ymm0
 
 
-         ;; GHASH block 13 & 14
+        ;; GHASH block 13 & 14
 %if ((i + 1) < %%num_initial_blocks)
         vmovdqu         %%YT2, [r15 + i*16]
         GHASH_SINGLE_MUL %%GDATA_KEY, k, %%YT2, %%YT1, %%YT4, %%YT6, %%YT5, %%YT3, not_first
@@ -1202,7 +1202,7 @@ align_label
                                 ymm1, ymm2, ymm3, ymm4, ymm5, ymm6, ymm7, ymm8, \
                                 ymm0, ymm0, ymm0, ymm0, ymm0, ymm0, ymm0, ymm0
 
-         ;; GHASH block 15 & 16
+        ;; GHASH block 15 & 16
 %if ((i + 1) < %%num_initial_blocks)
         vmovdqu         %%YT2, [r15 + i*16]
         GHASH_SINGLE_MUL %%GDATA_KEY, k, %%YT2, %%YT1, %%YT4, %%YT6, %%YT5, %%YT3, not_first
@@ -1567,7 +1567,7 @@ align_label
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
                 sub     DWORD(%%LENGTH), 16
-	        mov	[%%GDATA_CTX + PBlockLen], %%LENGTH
+                mov     [%%GDATA_CTX + PBlockLen], %%LENGTH
 
                 ;; Encrypt the last block of the message
                 VXLDR   %%T1, [%%PLAIN_CIPH_IN + %%DATA_OFFSET]
@@ -1610,7 +1610,7 @@ align_label
         ;; less than a full block of data.
 
         vmovdqa         xmm15, [rsp + TMP4]
-	mov	        [%%GDATA_CTX + PBlockLen], %%LENGTH
+        mov             [%%GDATA_CTX + PBlockLen], %%LENGTH
         vmovdqu         [%%GDATA_CTX + PBlockEncKey], xmm15
 
         ;; Handle a partial final block
@@ -2156,17 +2156,17 @@ align_label
 ;; Start of Stack Setup
 
 %macro FUNC_SAVE 0-1
-	;; Required for Update/GCM_ENC
+        ;; Required for Update/GCM_ENC
         mov     rax, rsp
 
 %if %0 == 0
-	sub     rsp, VARIABLE_OFFSET
+        sub     rsp, VARIABLE_OFFSET
 %else
 %ifidni %1, alloc_context
         sub     rsp, VARIABLE_OFFSET + CONTEXT_SIZE
 %endif
 %endif
-	and     rsp, ~31
+        and     rsp, ~31
 
         mov     [rsp + GP_OFFSET + 0*8], rax ; original rsp pointer
         mov     [rsp + GP_OFFSET + 1*8], r12
@@ -2439,7 +2439,7 @@ align_label
         ;; Update length of data processed
 %ifidn __OUTPUT_FORMAT__, win64
         mov     rax, %%PLAIN_CIPH_LEN
-       	add     [%%GDATA_CTX + InLen], rax
+        add     [%%GDATA_CTX + InLen], rax
 %else
         add    [%%GDATA_CTX + InLen], %%PLAIN_CIPH_LEN
 %endif
@@ -2610,12 +2610,12 @@ align_label
 
         ;; Encrypt the final partial block. If we did this as a single call then
         ;; the partial block was handled in the main GCM_ENC_DEC macro.
-	mov	r12, [%%GDATA_CTX + PBlockLen]
-	or	r12, r12
+        mov     r12, [%%GDATA_CTX + PBlockLen]
+        or      r12, r12
 
-	je %%_partial_done
+        je %%_partial_done
 
-	GHASH_MUL2 xmm14, xmm13, xmm0, xmm10, xmm11, xmm5, xmm6 ;GHASH computation for the last <16 Byte block
+        GHASH_MUL2 xmm14, xmm13, xmm0, xmm10, xmm11, xmm5, xmm6 ;GHASH computation for the last <16 Byte block
 
 align_label
 %%_partial_done:
@@ -2710,57 +2710,57 @@ align_label
 %define %%XMM11                 %16     ;; [clobbered] xmm register
 
         ;; @note PBlockLen must not be zero
-        mov	r13, [%%GDATA_CTX + PBlockLen]
+        mov     r13, [%%GDATA_CTX + PBlockLen]
 
         ; Read in input data without over reading
-	cmp	%%PLAIN_LEN, 16
-	jl	%%_fewer_than_16_bytes
+        cmp     %%PLAIN_LEN, 16
+        jl      %%_fewer_than_16_bytes
         ; If more than 16 bytes of data, just fill the xmm register
-	VXLDR   %%XMM1, [%%PLAIN_IN]
-	jmp	%%_data_read
+        VXLDR   %%XMM1, [%%PLAIN_IN]
+        jmp     %%_data_read
 
 align_label
 %%_fewer_than_16_bytes:
-	lea	r10, [%%PLAIN_IN]
-	READ_SMALL_DATA_INPUT_AVX	%%XMM1, r10, %%PLAIN_LEN, rax
+        lea     r10, [%%PLAIN_IN]
+        READ_SMALL_DATA_INPUT_AVX       %%XMM1, r10, %%PLAIN_LEN, rax
         ; Finished reading in data
 align_label
 %%_data_read:
 
-	lea	r12, [rel SHIFT_MASK]
+        lea     r12, [rel SHIFT_MASK]
         ; Adjust the shuffle mask pointer to be able to shift r13 bytes
         ; (16-r13 is the number of bytes in plaintext mod 16)
-	add	r12, r13
+        add     r12, r13
         ; Get the appropriate shuffle mask
-	vmovdqu	%%XMM2, [r12]
-	vmovdqa	%%XMM3, %%XMM1
+        vmovdqu %%XMM2, [r12]
+        vmovdqa %%XMM3, %%XMM1
 
-	mov	r15, %%PLAIN_LEN
-	add	r15, r13
+        mov     r15, %%PLAIN_LEN
+        add     r15, r13
         ; Set r15 to be the amount of data left in PLAIN_IN after filling the block
-	sub	r15, 16
+        sub     r15, 16
         ; Determine if partial block is not being filled and shift mask accordingly
-	jge	%%_no_extra_mask_1
-	sub	r12, r15
+        jge     %%_no_extra_mask_1
+        sub     r12, r15
 align_label
 %%_no_extra_mask_1:
 
         ; Get the appropriate mask to mask out bottom r13 bytes of %%XMM3
-	vmovdqu	%%XMM1, [r12 + ALL_F-SHIFT_MASK]
+        vmovdqu %%XMM1, [r12 + ALL_F-SHIFT_MASK]
 
-	vpand	%%XMM3, %%XMM3, %%XMM1
-	vpshufb	%%XMM3, %%XMM3, [rel SHUF_MASK]
-	vpshufb	%%XMM3, %%XMM3, %%XMM2
-	vpxor	%%AAD_HASH, %%AAD_HASH, %%XMM3
+        vpand   %%XMM3, %%XMM3, %%XMM1
+        vpshufb %%XMM3, %%XMM3, [rel SHUF_MASK]
+        vpshufb %%XMM3, %%XMM3, %%XMM2
+        vpxor   %%AAD_HASH, %%AAD_HASH, %%XMM3
 
-	or	r15, r15
-	jl	%%_partial_incomplete_1
+        or      r15, r15
+        jl      %%_partial_incomplete_1
 
         ; GHASH computation for the last <16 Byte block
-	GHASH_MUL2      %%AAD_HASH, %%HASH_SUBKEY, %%HASHK_SUBKEY, %%XMM0, %%XMM10, %%XMM11, %%XMM5
-	xor	rax, rax
-	mov	[%%GDATA_CTX + PBlockLen], rax
-	jmp	%%_ghash_done
+        GHASH_MUL2      %%AAD_HASH, %%HASH_SUBKEY, %%HASHK_SUBKEY, %%XMM0, %%XMM10, %%XMM11, %%XMM5
+        xor     rax, rax
+        mov     [%%GDATA_CTX + PBlockLen], rax
+        jmp     %%_ghash_done
 align_label
 %%_partial_incomplete_1:
 %ifidn __OUTPUT_FORMAT__, win64
@@ -2771,7 +2771,7 @@ align_label
 %endif
 align_label
 %%_ghash_done:
-	vmovdqu	[%%GDATA_CTX + AadHash], %%AAD_HASH
+        vmovdqu [%%GDATA_CTX + AadHash], %%AAD_HASH
 
         or      r15, r15
         jl      %%_partial_fill

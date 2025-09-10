@@ -887,14 +887,14 @@ endstruc
 %macro INIT_CONSTANTS 1
 %xdefine %%GEN  %1 ;; [in] avx512_gen1/avx512_gen2
 %ifidn %%GEN, avx512_gen2
-       vmovdqa64        FIXED_MAP_TAB_0, [rel const_transf_map + 64 * 0]
-       vmovdqa64        FIXED_MAP_TAB_1, [rel const_transf_map + 64 * 1]
-       vmovdqa64        FIXED_MAP_TAB_2, [rel const_transf_map + 64 * 2]
-       vmovdqa64        FIXED_MAP_TAB_3, [rel const_transf_map + 64 * 3]
+        vmovdqa64        FIXED_MAP_TAB_0, [rel const_transf_map + 64 * 0]
+        vmovdqa64        FIXED_MAP_TAB_1, [rel const_transf_map + 64 * 1]
+        vmovdqa64        FIXED_MAP_TAB_2, [rel const_transf_map + 64 * 2]
+        vmovdqa64        FIXED_MAP_TAB_3, [rel const_transf_map + 64 * 3]
 %endif
-       vmovdqa64        FIXED_ROTATE_MASK, [rel const_fixed_rotate_mask]
-       vmovdqa64        FIXED_PATTERN_SHUF, [rel const_fixup]
-       vmovdqa64        FIXED_M_MASK, [rel const_fixup_mask]
+        vmovdqa64        FIXED_ROTATE_MASK, [rel const_fixed_rotate_mask]
+        vmovdqa64        FIXED_PATTERN_SHUF, [rel const_fixup]
+        vmovdqa64        FIXED_M_MASK, [rel const_fixup_mask]
 %endmacro
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

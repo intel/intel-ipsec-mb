@@ -68,7 +68,7 @@
 %elifidni %1,stack-noexec
         ;; noexec stack marker
 %ifdef LINUX
-       section .note.GNU-stack noalloc noexec nowrite progbits
+        section .note.GNU-stack noalloc noexec nowrite progbits
 %endif                          ; LINUX
 %else
         ;; data, bss or code/text

@@ -39,29 +39,29 @@
 
 %define CONCAT(a,b) a %+ b
 
-%define xdata0	xmm0
-%define xdata1	xmm1
-%define xdata2	xmm2
-%define xdata3	xmm3
-%define xdata4	xmm4
-%define xdata5	xmm5
-%define xdata6	xmm6
-%define xdata7	xmm7
+%define xdata0  xmm0
+%define xdata1  xmm1
+%define xdata2  xmm2
+%define xdata3  xmm3
+%define xdata4  xmm4
+%define xdata5  xmm5
+%define xdata6  xmm6
+%define xdata7  xmm7
 
 %define xiv0    xmm8
-%define xiv1	xmm9
-%define xiv2	xmm10
-%define xiv3	xmm11
-%define xiv4	xmm12
-%define xiv5	xmm13
-%define xiv6	xmm14
+%define xiv1    xmm9
+%define xiv2    xmm10
+%define xiv3    xmm11
+%define xiv4    xmm12
+%define xiv5    xmm13
+%define xiv6    xmm14
 
-%define xkeytmp	xmm15
+%define xkeytmp xmm15
 
 struc STACK
-_IV:            resq	2
-_IV_new:        resq	2
-_rsp_save:	resq	1
+_IV:            resq    2
+_IV_new:        resq    2
+_rsp_save:      resq    1
 endstruc
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -99,7 +99,7 @@ endstruc
 %rep %%by
 
 %if !((%%by == 8) && (i == 0))
-	vmovdqu	        CONCAT(xdata,i), [%%p_in  + (i * 16)]
+        vmovdqu         CONCAT(xdata,i), [%%p_in  + (i * 16)]
 %endif
 
 %if i == (%%by - 1)
@@ -112,19 +112,19 @@ endstruc
 
         ;; ARK
 %assign i 0
-        vmovdqa	        xkeytmp, [%%p_keys + (0 * 16)]
+        vmovdqa         xkeytmp, [%%p_keys + (0 * 16)]
 %rep %%by
-	vpxor	        CONCAT(xdata,i), CONCAT(xdata,i), xkeytmp
+        vpxor           CONCAT(xdata,i), CONCAT(xdata,i), xkeytmp
 %assign i (i + 1)
 %endrep
 
         ;; AESDEC rounds
 %assign round 1
 %rep %%num_rounds
-        vmovdqa	        xkeytmp, [%%p_keys + (round * 16)]
+        vmovdqa         xkeytmp, [%%p_keys + (round * 16)]
 %assign i 0
 %rep %%by
-	vaesdec	        CONCAT(xdata,i), CONCAT(xdata,i), xkeytmp
+        vaesdec         CONCAT(xdata,i), CONCAT(xdata,i), xkeytmp
 %assign i (i + 1)
 %endrep
 %assign round (round + 1)
@@ -132,19 +132,19 @@ endstruc
 
         ;; AESDEC last
 %assign i 0
-        vmovdqa	        xkeytmp, [%%p_keys + (round * 16)]
+        vmovdqa         xkeytmp, [%%p_keys + (round * 16)]
 %rep %%by
-	vaesdeclast	CONCAT(xdata,i), CONCAT(xdata,i), xkeytmp
+        vaesdeclast     CONCAT(xdata,i), CONCAT(xdata,i), xkeytmp
 %assign i (i + 1)
 %endrep
 
         ;; XOR IV
-	vpxor	        xdata0, xdata0, [rsp + _IV]
+        vpxor           xdata0, xdata0, [rsp + _IV]
 %assign i 1
 %assign j 0
 %if (%%by > 1)
 %rep (%%by - 1)
-	vpxor	        CONCAT(xdata,i), CONCAT(xdata,i), CONCAT(xiv,j)
+        vpxor           CONCAT(xdata,i), CONCAT(xdata,i), CONCAT(xiv,j)
 %assign i (i + 1)
 %assign j (j + 1)
 %endrep
@@ -152,7 +152,7 @@ endstruc
 
 %if is_1_to_7_short_or_8_last == 0
         ;; prepare IV for the next round
-        vmovdqa	        xkeytmp, [rsp + _IV_new]
+        vmovdqa         xkeytmp, [rsp + _IV_new]
         vmovdqa         [rsp + _IV], xkeytmp
 %endif
 
@@ -161,7 +161,7 @@ endstruc
         ;; - do only (%%by - 1) stores first
 %assign i 0
 %rep %%by - 1
-	vmovdqu	        [%%p_out  + (i * 16)], CONCAT(xdata,i)
+        vmovdqu         [%%p_out  + (i * 16)], CONCAT(xdata,i)
 %assign i (i + 1)
 %endrep
 
@@ -175,19 +175,19 @@ endstruc
         cmp             %%length, %%by * 16
         jbe             %%_just_finish_stores
         ;; load 1st block of data in the next round
-	vmovdqu	        xkeytmp, [%%p_in  + (%%by * 16)]
-	vmovdqu	        [%%p_out  + (i * 16)], CONCAT(xdata,i)
+        vmovdqu         xkeytmp, [%%p_in  + (%%by * 16)]
+        vmovdqu         [%%p_out  + (i * 16)], CONCAT(xdata,i)
         vmovdqa         xdata0, xkeytmp
         jmp             %%_update_pointers
 
 align_label
 %%_just_finish_stores:
-        vmovdqu	        [%%p_out  + (i * 16)], CONCAT(xdata,i)
+        vmovdqu         [%%p_out  + (i * 16)], CONCAT(xdata,i)
 %endif
 
 %ifidni %%type, short
         ;; short message - just store
-        vmovdqu	        [%%p_out  + (i * 16)], CONCAT(xdata,i)
+        vmovdqu         [%%p_out  + (i * 16)], CONCAT(xdata,i)
 %endif
 
 %else
@@ -196,13 +196,13 @@ align_label
 
 %ifidni %%type, main
         ;; - MAIN: load 1st block for the next round and then store 8 blocks of this round
-	vmovdqu	        xdata0, [%%p_in  + (%%by * 16)]
-	vmovdqu	        [%%p_out  + (i * 16)], CONCAT(xdata,i)
+        vmovdqu         xdata0, [%%p_in  + (%%by * 16)]
+        vmovdqu         [%%p_out  + (i * 16)], CONCAT(xdata,i)
 %endif
 
 %ifidni %%type, last
         ;; LAST: store all 8 blocks
-	vmovdqu	        [%%p_out  + (i * 16)], CONCAT(xdata,i)
+        vmovdqu         [%%p_out  + (i * 16)], CONCAT(xdata,i)
 %endif
 %endif ;; %%by
 
@@ -210,8 +210,8 @@ align_label
 %%_update_pointers:
 
 %if is_1_to_7_short_or_8_last == 0
-        add	        %%p_in, (16 * %%by)
-        add	        %%p_out, (16 * %%by)
+        add             %%p_in, (16 * %%by)
+        add             %%p_out, (16 * %%by)
 
         sub             %%length, %%by * 16
         ;; Z-Flag gets updated
@@ -234,70 +234,70 @@ align_label
 %define %%num_rounds    %7      ;; [in] numeric value; number of AES rounds (excluding ARK and last round)
 
         mov             %%tmp, rsp
-        sub	        rsp, STACK_size
+        sub             rsp, STACK_size
         and             rsp, -16
         mov             [rsp + _rsp_save], %%tmp
 
         ;; load IV and put it on the stack frame
-        vmovdqu	        xmm0, [%%p_IV]
+        vmovdqu         xmm0, [%%p_IV]
         vmovdqa         [rsp + _IV], xmm0
 
         cmp             %%length, 8 * 16
         jae             %%_longer_than_8_blocks
 
         ;; process 1 to 7 blocks first
-	mov	        DWORD(%%tmp), DWORD(%%length)
+        mov             DWORD(%%tmp), DWORD(%%length)
         shr             DWORD(%%tmp), 4
         and             DWORD(%%tmp), 7
 
-	;; 1 <= %%tmp <= 7
-	cmp	        DWORD(%%tmp), 4
-	ja	        %%_sgt4
-	je	        %%_seq4
+        ;; 1 <= %%tmp <= 7
+        cmp             DWORD(%%tmp), 4
+        ja              %%_sgt4
+        je              %%_seq4
 align_label
 %%_slt4:
-	cmp	        DWORD(%%tmp), 2
-	ja	        %%_seq3
-	je	        %%_seq2
+        cmp             DWORD(%%tmp), 2
+        ja              %%_seq3
+        je              %%_seq2
 align_label
 %%_seq1:
-	DO_AES_DEC      %%p_in, %%p_out, %%p_keys, 1, %%num_rounds, %%length, short
-	jmp	        %%_do_return
+        DO_AES_DEC      %%p_in, %%p_out, %%p_keys, 1, %%num_rounds, %%length, short
+        jmp             %%_do_return
 
 align_label
 %%_seq2:
-	DO_AES_DEC      %%p_in, %%p_out, %%p_keys, 2, %%num_rounds, %%length, short
-	jmp	        %%_do_return
+        DO_AES_DEC      %%p_in, %%p_out, %%p_keys, 2, %%num_rounds, %%length, short
+        jmp             %%_do_return
 
 align_label
 %%_seq3:
-	DO_AES_DEC      %%p_in, %%p_out, %%p_keys, 3, %%num_rounds, %%length, short
-	jmp	        %%_do_return
+        DO_AES_DEC      %%p_in, %%p_out, %%p_keys, 3, %%num_rounds, %%length, short
+        jmp             %%_do_return
 
 align_label
 %%_seq4:
-	DO_AES_DEC      %%p_in, %%p_out, %%p_keys, 4, %%num_rounds, %%length, short
-	jmp	        %%_do_return
+        DO_AES_DEC      %%p_in, %%p_out, %%p_keys, 4, %%num_rounds, %%length, short
+        jmp             %%_do_return
 
 align_label
 %%_sgt4:
-	cmp	        DWORD(%%tmp), 6
-	ja	        %%_seq7
-	je	        %%_seq6
+        cmp             DWORD(%%tmp), 6
+        ja              %%_seq7
+        je              %%_seq6
 align_label
 %%_seq5:
-	DO_AES_DEC      %%p_in, %%p_out, %%p_keys, 5, %%num_rounds, %%length, short
-	jmp	        %%_do_return
+        DO_AES_DEC      %%p_in, %%p_out, %%p_keys, 5, %%num_rounds, %%length, short
+        jmp             %%_do_return
 
 align_label
 %%_seq6:
-	DO_AES_DEC      %%p_in, %%p_out, %%p_keys, 6, %%num_rounds, %%length, short
-	jmp	        %%_do_return
+        DO_AES_DEC      %%p_in, %%p_out, %%p_keys, 6, %%num_rounds, %%length, short
+        jmp             %%_do_return
 
 align_label
 %%_seq7:
-	DO_AES_DEC      %%p_in, %%p_out, %%p_keys, 7, %%num_rounds, %%length, short
-	jmp	        %%_do_return
+        DO_AES_DEC      %%p_in, %%p_out, %%p_keys, 7, %%num_rounds, %%length, short
+        jmp             %%_do_return
 
         ;; =====================================================================
         ;; message longer than 8 blocks
@@ -305,70 +305,70 @@ align_label
 align_label
 %%_longer_than_8_blocks:
         ;; process 1 to 7 blocks first
-	mov	        DWORD(%%tmp), DWORD(%%length)
+        mov             DWORD(%%tmp), DWORD(%%length)
         shr             DWORD(%%tmp), 4
         and             DWORD(%%tmp), 7
-	jz	        %%_eq0
+        jz              %%_eq0
 
-	;; 1 <= %%tmp <= 7
-	cmp	        DWORD(%%tmp), 4
-	ja	        %%_gt4
-	je	        %%_eq4
+        ;; 1 <= %%tmp <= 7
+        cmp             DWORD(%%tmp), 4
+        ja              %%_gt4
+        je              %%_eq4
 align_label
 %%_lt4:
-	cmp	        DWORD(%%tmp), 2
-	ja	        %%_eq3
-	je	        %%_eq2
+        cmp             DWORD(%%tmp), 2
+        ja              %%_eq3
+        je              %%_eq2
 align_label
 %%_eq1:
-	DO_AES_DEC      %%p_in, %%p_out, %%p_keys, 1, %%num_rounds, %%length, start
-	jz	        %%_do_return
-	jmp	        %%_main_loop
+        DO_AES_DEC      %%p_in, %%p_out, %%p_keys, 1, %%num_rounds, %%length, start
+        jz              %%_do_return
+        jmp             %%_main_loop
 
 align_label
 %%_eq2:
-	DO_AES_DEC      %%p_in, %%p_out, %%p_keys, 2, %%num_rounds, %%length, start
-	jz	        %%_do_return
-	jmp	        %%_main_loop
+        DO_AES_DEC      %%p_in, %%p_out, %%p_keys, 2, %%num_rounds, %%length, start
+        jz              %%_do_return
+        jmp             %%_main_loop
 
 align_label
 %%_eq3:
-	DO_AES_DEC      %%p_in, %%p_out, %%p_keys, 3, %%num_rounds, %%length, start
-	jz	        %%_do_return
-	jmp	        %%_main_loop
+        DO_AES_DEC      %%p_in, %%p_out, %%p_keys, 3, %%num_rounds, %%length, start
+        jz              %%_do_return
+        jmp             %%_main_loop
 
 align_label
 %%_eq4:
-	DO_AES_DEC      %%p_in, %%p_out, %%p_keys, 4, %%num_rounds, %%length, start
-	jz	        %%_do_return
-	jmp	        %%_main_loop
+        DO_AES_DEC      %%p_in, %%p_out, %%p_keys, 4, %%num_rounds, %%length, start
+        jz              %%_do_return
+        jmp             %%_main_loop
 
 align_label
 %%_gt4:
-	cmp	        DWORD(%%tmp), 6
-	ja	        %%_eq7
-	je	        %%_eq6
+        cmp             DWORD(%%tmp), 6
+        ja              %%_eq7
+        je              %%_eq6
 align_label
 %%_eq5:
-	DO_AES_DEC      %%p_in, %%p_out, %%p_keys, 5, %%num_rounds, %%length, start
-	jz	        %%_do_return
-	jmp	        %%_main_loop
+        DO_AES_DEC      %%p_in, %%p_out, %%p_keys, 5, %%num_rounds, %%length, start
+        jz              %%_do_return
+        jmp             %%_main_loop
 
 align_label
 %%_eq6:
-	DO_AES_DEC      %%p_in, %%p_out, %%p_keys, 6, %%num_rounds, %%length, start
-	jz	        %%_do_return
-	jmp	        %%_main_loop
+        DO_AES_DEC      %%p_in, %%p_out, %%p_keys, 6, %%num_rounds, %%length, start
+        jz              %%_do_return
+        jmp             %%_main_loop
 
 align_label
 %%_eq7:
-	DO_AES_DEC      %%p_in, %%p_out, %%p_keys, 7, %%num_rounds, %%length, start
-	jz	        %%_do_return
-	jmp	        %%_main_loop
+        DO_AES_DEC      %%p_in, %%p_out, %%p_keys, 7, %%num_rounds, %%length, start
+        jz              %%_do_return
+        jmp             %%_main_loop
 
 align_label
 %%_eq0:
-	vmovdqu	        xdata0, [%%p_in]
+        vmovdqu         xdata0, [%%p_in]
 
 align_loop
 %%_main_loop:
@@ -376,7 +376,7 @@ align_loop
         jb              %%_the_last_8_blocks
         ;; %%length is a multiple of 8 blocks (length = N x 8 x 16-bytes, where N = 2, 3, ..)
         DO_AES_DEC      %%p_in, %%p_out, %%p_keys, 8, %%num_rounds, %%length, main
-        jmp	        %%_main_loop
+        jmp             %%_main_loop
 
 align_label
 %%_the_last_8_blocks:
@@ -389,7 +389,7 @@ align_label
         clear_xmms_avx xdata0, xdata1, xdata2, xdata3, xdata4, xdata5, xdata6, xdata7, xkeytmp
 %endif ;; SAFE_DATA
 
-       ;; restore the stack pointer
-       ;; - IV is cipher text, no need to clear it from the stack
-       mov              rsp, [rsp + _rsp_save]
+        ;; restore the stack pointer
+        ;; - IV is cipher text, no need to clear it from the stack
+        mov              rsp, [rsp + _rsp_save]
 %endmacro

@@ -34,24 +34,24 @@
 mksection .rodata
 default rel
 align 64
-PSHUFFLE_TRANSPOSE_MASK1: 	dq 0x0000000000000000
-				dq 0x0000000000000001
-				dq 0x0000000000000008
-				dq 0x0000000000000009
-				dq 0x0000000000000004
-				dq 0x0000000000000005
-				dq 0x000000000000000C
-				dq 0x000000000000000D
+PSHUFFLE_TRANSPOSE_MASK1:       dq 0x0000000000000000
+                                dq 0x0000000000000001
+                                dq 0x0000000000000008
+                                dq 0x0000000000000009
+                                dq 0x0000000000000004
+                                dq 0x0000000000000005
+                                dq 0x000000000000000C
+                                dq 0x000000000000000D
 
 align 64
-PSHUFFLE_TRANSPOSE_MASK2: 	dq 0x0000000000000002
-				dq 0x0000000000000003
-				dq 0x000000000000000A
-				dq 0x000000000000000B
-				dq 0x0000000000000006
-				dq 0x0000000000000007
-				dq 0x000000000000000E
-				dq 0x000000000000000F
+PSHUFFLE_TRANSPOSE_MASK2:       dq 0x0000000000000002
+                                dq 0x0000000000000003
+                                dq 0x000000000000000A
+                                dq 0x000000000000000B
+                                dq 0x0000000000000006
+                                dq 0x0000000000000007
+                                dq 0x000000000000000E
+                                dq 0x000000000000000F
 
 ; LOAD FIRST 8 LANES FOR 16x16 32-BIT TRANSPOSE
 ;
@@ -103,22 +103,22 @@ PSHUFFLE_TRANSPOSE_MASK2: 	dq 0x0000000000000002
 ; r13 = {X X X X  X X X X  f15 f14 f13 f12   f11 f10 f9 f8}
 ; r14 = {X X X X  X X X X  g15 g14 g13 g12   g11 g10 g9 g8}
 ; r15 = {X X X X  X X X X  h15 h14 h13 h12   h11 h10 h9 h8}
-	vmovups	YWORD(%%r0),[%%addr0+%%ptr_offset]
-	vmovups	YWORD(%%r1),[%%addr1+%%ptr_offset]
-	vmovups	YWORD(%%r2),[%%addr2+%%ptr_offset]
-	vmovups	YWORD(%%r3),[%%addr3+%%ptr_offset]
-	vmovups	YWORD(%%r4),[%%addr4+%%ptr_offset]
-	vmovups	YWORD(%%r5),[%%addr5+%%ptr_offset]
-	vmovups	YWORD(%%r6),[%%addr6+%%ptr_offset]
-	vmovups	YWORD(%%r7),[%%addr7+%%ptr_offset]
-	vmovups	YWORD(%%r8),[%%addr0+%%ptr_offset+32]
-	vmovups	YWORD(%%r9),[%%addr1+%%ptr_offset+32]
-	vmovups	YWORD(%%r10),[%%addr2+%%ptr_offset+32]
-	vmovups	YWORD(%%r11),[%%addr3+%%ptr_offset+32]
-	vmovups	YWORD(%%r12),[%%addr4+%%ptr_offset+32]
-	vmovups	YWORD(%%r13),[%%addr5+%%ptr_offset+32]
-	vmovups	YWORD(%%r14),[%%addr6+%%ptr_offset+32]
-	vmovups	YWORD(%%r15),[%%addr7+%%ptr_offset+32]
+        vmovups YWORD(%%r0),[%%addr0+%%ptr_offset]
+        vmovups YWORD(%%r1),[%%addr1+%%ptr_offset]
+        vmovups YWORD(%%r2),[%%addr2+%%ptr_offset]
+        vmovups YWORD(%%r3),[%%addr3+%%ptr_offset]
+        vmovups YWORD(%%r4),[%%addr4+%%ptr_offset]
+        vmovups YWORD(%%r5),[%%addr5+%%ptr_offset]
+        vmovups YWORD(%%r6),[%%addr6+%%ptr_offset]
+        vmovups YWORD(%%r7),[%%addr7+%%ptr_offset]
+        vmovups YWORD(%%r8),[%%addr0+%%ptr_offset+32]
+        vmovups YWORD(%%r9),[%%addr1+%%ptr_offset+32]
+        vmovups YWORD(%%r10),[%%addr2+%%ptr_offset+32]
+        vmovups YWORD(%%r11),[%%addr3+%%ptr_offset+32]
+        vmovups YWORD(%%r12),[%%addr4+%%ptr_offset+32]
+        vmovups YWORD(%%r13),[%%addr5+%%ptr_offset+32]
+        vmovups YWORD(%%r14),[%%addr6+%%ptr_offset+32]
+        vmovups YWORD(%%r15),[%%addr7+%%ptr_offset+32]
 
 %endmacro
 
@@ -173,22 +173,22 @@ PSHUFFLE_TRANSPOSE_MASK2: 	dq 0x0000000000000002
 ; r14 = {o15 o14 o13 o12   o11 o10 o9 o8   g15 g14 g13 g12   g11 g10 g9 g8}
 ; r15 = {p15 p14 p13 p12   p11 p10 p9 p8   h15 h14 h13 h12   h11 h10 h9 h8}
 
-	vinserti64x4 %%r0, %%r0, [%%addr0+%%ptr_offset], 0x01
-	vinserti64x4 %%r1, %%r1, [%%addr1+%%ptr_offset], 0x01
-	vinserti64x4 %%r2, %%r2, [%%addr2+%%ptr_offset], 0x01
-	vinserti64x4 %%r3, %%r3, [%%addr3+%%ptr_offset], 0x01
-	vinserti64x4 %%r4, %%r4, [%%addr4+%%ptr_offset], 0x01
-	vinserti64x4 %%r5, %%r5, [%%addr5+%%ptr_offset], 0x01
-	vinserti64x4 %%r6, %%r6, [%%addr6+%%ptr_offset], 0x01
-	vinserti64x4 %%r7, %%r7, [%%addr7+%%ptr_offset], 0x01
-	vinserti64x4 %%r8, %%r8, [%%addr0+%%ptr_offset+32], 0x01
-	vinserti64x4 %%r9, %%r9, [%%addr1+%%ptr_offset+32], 0x01
-	vinserti64x4 %%r10, %%r10, [%%addr2+%%ptr_offset+32], 0x01
-	vinserti64x4 %%r11, %%r11, [%%addr3+%%ptr_offset+32], 0x01
-	vinserti64x4 %%r12, %%r12, [%%addr4+%%ptr_offset+32], 0x01
-	vinserti64x4 %%r13, %%r13, [%%addr5+%%ptr_offset+32], 0x01
-	vinserti64x4 %%r14, %%r14, [%%addr6+%%ptr_offset+32], 0x01
-	vinserti64x4 %%r15, %%r15, [%%addr7+%%ptr_offset+32], 0x01
+        vinserti64x4 %%r0, %%r0, [%%addr0+%%ptr_offset], 0x01
+        vinserti64x4 %%r1, %%r1, [%%addr1+%%ptr_offset], 0x01
+        vinserti64x4 %%r2, %%r2, [%%addr2+%%ptr_offset], 0x01
+        vinserti64x4 %%r3, %%r3, [%%addr3+%%ptr_offset], 0x01
+        vinserti64x4 %%r4, %%r4, [%%addr4+%%ptr_offset], 0x01
+        vinserti64x4 %%r5, %%r5, [%%addr5+%%ptr_offset], 0x01
+        vinserti64x4 %%r6, %%r6, [%%addr6+%%ptr_offset], 0x01
+        vinserti64x4 %%r7, %%r7, [%%addr7+%%ptr_offset], 0x01
+        vinserti64x4 %%r8, %%r8, [%%addr0+%%ptr_offset+32], 0x01
+        vinserti64x4 %%r9, %%r9, [%%addr1+%%ptr_offset+32], 0x01
+        vinserti64x4 %%r10, %%r10, [%%addr2+%%ptr_offset+32], 0x01
+        vinserti64x4 %%r11, %%r11, [%%addr3+%%ptr_offset+32], 0x01
+        vinserti64x4 %%r12, %%r12, [%%addr4+%%ptr_offset+32], 0x01
+        vinserti64x4 %%r13, %%r13, [%%addr5+%%ptr_offset+32], 0x01
+        vinserti64x4 %%r14, %%r14, [%%addr6+%%ptr_offset+32], 0x01
+        vinserti64x4 %%r15, %%r15, [%%addr7+%%ptr_offset+32], 0x01
 
 %endmacro
 
@@ -261,99 +261,99 @@ PSHUFFLE_TRANSPOSE_MASK2: 	dq 0x0000000000000002
 ; r14  = {p14 o14 n14 m14   l14 k14 j14 i14   h14 g14 f14 e14   d14 c14 b14 a14}
 ; r15  = {p15 o15 n15 m15   l15 k15 j15 i15   h15 g15 f15 e15   d15 c15 b15 a15}
 
-	; process first 4 rows (r0..r3)
-	vshufps	%%t0, %%r0, %%r1, 0x44	; t0 = {j5 j4 i5 i4  j1 j0 i1 i0  b5 b4 a5 a4  b1 b0 a1 a0}
-	vshufps	%%r0, %%r0, %%r1, 0xEE	; r0 = {j7 j6 i7 i6  j3 j2 i3 i2  b7 b6 a7 a6  b3 b2 a3 a2}
-	vshufps	%%t1, %%r2, %%r3, 0x44	; t1 = {l5 l4 k5 k4  l1 l0 k1 k0  d5 d4 c5 c4  d1 d0 c1 c0}
-	vshufps	%%r2, %%r2, %%r3, 0xEE	; r2 = {l7 l6 k7 k6  l3 l2 k3 k2  d7 d6 c7 c6  d3 d2 c3 c2}
+        ; process first 4 rows (r0..r3)
+        vshufps %%t0, %%r0, %%r1, 0x44  ; t0 = {j5 j4 i5 i4  j1 j0 i1 i0  b5 b4 a5 a4  b1 b0 a1 a0}
+        vshufps %%r0, %%r0, %%r1, 0xEE  ; r0 = {j7 j6 i7 i6  j3 j2 i3 i2  b7 b6 a7 a6  b3 b2 a3 a2}
+        vshufps %%t1, %%r2, %%r3, 0x44  ; t1 = {l5 l4 k5 k4  l1 l0 k1 k0  d5 d4 c5 c4  d1 d0 c1 c0}
+        vshufps %%r2, %%r2, %%r3, 0xEE  ; r2 = {l7 l6 k7 k6  l3 l2 k3 k2  d7 d6 c7 c6  d3 d2 c3 c2}
 
-	vshufps	%%r3, %%t0, %%t1, 0xDD	; r3 = {l5 k5 j5 i5  l1 k1 j1 i1  d5 c5 b5 a5  d1 c1 b1 a1}
-	vshufps	%%r1, %%r0, %%r2, 0x88	; r1 = {l6 k6 j6 i6  l2 k2 j2 i2  d6 c6 b6 a6  d2 c2 b2 a2}
-	vshufps	%%r0, %%r0, %%r2, 0xDD	; r0 = {l7 k7 j7 i7  l3 k3 j3 i3  d7 c7 b7 a7  d3 c3 b3 a3}
-	vshufps	%%t0, %%t0, %%t1, 0x88	; t0 = {l4 k4 j4 i4  l0 k0 j0 i0  d4 c4 b4 a4  d0 c0 b0 a0}
+        vshufps %%r3, %%t0, %%t1, 0xDD  ; r3 = {l5 k5 j5 i5  l1 k1 j1 i1  d5 c5 b5 a5  d1 c1 b1 a1}
+        vshufps %%r1, %%r0, %%r2, 0x88  ; r1 = {l6 k6 j6 i6  l2 k2 j2 i2  d6 c6 b6 a6  d2 c2 b2 a2}
+        vshufps %%r0, %%r0, %%r2, 0xDD  ; r0 = {l7 k7 j7 i7  l3 k3 j3 i3  d7 c7 b7 a7  d3 c3 b3 a3}
+        vshufps %%t0, %%t0, %%t1, 0x88  ; t0 = {l4 k4 j4 i4  l0 k0 j0 i0  d4 c4 b4 a4  d0 c0 b0 a0}
 
-	; Load permute masks
-	vmovdqa64	%%m0, [PSHUFFLE_TRANSPOSE_MASK1]
-	vmovdqa64	%%m1, [PSHUFFLE_TRANSPOSE_MASK2]
+        ; Load permute masks
+        vmovdqa64       %%m0, [PSHUFFLE_TRANSPOSE_MASK1]
+        vmovdqa64       %%m1, [PSHUFFLE_TRANSPOSE_MASK2]
 
-	; process second 4 rows (r4..r7)
-	vshufps	%%r2, %%r4, %%r5, 0x44	; r2 = {n5 n4 m5 m4  n1 n0 m1 m0  f5 f4 e5 e4  f1 f0 e1 e0}
-	vshufps	%%r4, %%r4, %%r5, 0xEE	; r4 = {n7 n6 m7 m6  n3 n2 m3 m2  f7 f6 e7 e6  f3 f2 e3 e2}
-	vshufps %%t1, %%r6, %%r7, 0x44	; t1 = {p5 p4 o5 o4  p1 p0 o1 o0  h5 h4 g5 g4  h1 h0 g1 g0}
-	vshufps	%%r6, %%r6, %%r7, 0xEE	; r6 = {p7 p6 o7 o6  p3 p2 o3 o2  h7 h6 g7 g6  h3 h2 g3 g2}
+        ; process second 4 rows (r4..r7)
+        vshufps %%r2, %%r4, %%r5, 0x44  ; r2 = {n5 n4 m5 m4  n1 n0 m1 m0  f5 f4 e5 e4  f1 f0 e1 e0}
+        vshufps %%r4, %%r4, %%r5, 0xEE  ; r4 = {n7 n6 m7 m6  n3 n2 m3 m2  f7 f6 e7 e6  f3 f2 e3 e2}
+        vshufps %%t1, %%r6, %%r7, 0x44  ; t1 = {p5 p4 o5 o4  p1 p0 o1 o0  h5 h4 g5 g4  h1 h0 g1 g0}
+        vshufps %%r6, %%r6, %%r7, 0xEE  ; r6 = {p7 p6 o7 o6  p3 p2 o3 o2  h7 h6 g7 g6  h3 h2 g3 g2}
 
-	vshufps	%%r7, %%r2, %%t1, 0xDD	; r7 = {p5 o5 n5 m5  p1 o1 n1 m1  h5 g5 f5 e5   h1 g1 f1 e1}
-	vshufps	%%r5, %%r4, %%r6, 0x88	; r5 = {p6 o6 n6 m6  p2 o2 n2 m2  h6 g6 f6 e6   h2 g2 f2 e2}
-	vshufps	%%r4, %%r4, %%r6, 0xDD	; r4 = {p7 o7 n7 m7  p3 o3 n3 m3  h7 g7 f7 e7   h3 g3 f3 e3}
-	vshufps	%%r2, %%r2, %%t1, 0x88	; r2 = {p4 o4 n4 m4  p0 o0 n0 m0  h4 g4 f4 e4   h0 g0 f0 e0}
+        vshufps %%r7, %%r2, %%t1, 0xDD  ; r7 = {p5 o5 n5 m5  p1 o1 n1 m1  h5 g5 f5 e5   h1 g1 f1 e1}
+        vshufps %%r5, %%r4, %%r6, 0x88  ; r5 = {p6 o6 n6 m6  p2 o2 n2 m2  h6 g6 f6 e6   h2 g2 f2 e2}
+        vshufps %%r4, %%r4, %%r6, 0xDD  ; r4 = {p7 o7 n7 m7  p3 o3 n3 m3  h7 g7 f7 e7   h3 g3 f3 e3}
+        vshufps %%r2, %%r2, %%t1, 0x88  ; r2 = {p4 o4 n4 m4  p0 o0 n0 m0  h4 g4 f4 e4   h0 g0 f0 e0}
 
-	; process third 4 rows (r8..r11)
-	vshufps	%%r6, %%r8, %%r9,    0x44	; r6  = {j13 j12 i13 i12  j9  j8  i9  i8   b13 b12 a13 a12  b9  b8  a9  a8 }
-	vshufps	%%r8, %%r8, %%r9,    0xEE	; r8  = {j15 j14 i15 i14  j11 j10 i11 i10  b15 b14 a15 a14  b11 b10 a11 a10}
-	vshufps	%%t1, %%r10, %%r11,  0x44	; t1  = {l13 l12 k13 k12  l9  l8  k9  k8   d13 d12 c13 c12  d9  d8  c9  c8 }
-	vshufps	%%r10, %%r10, %%r11, 0xEE	; r10 = {l15 l14 k15 k14  l11 l10 k11 k10  d15 d14 c15 c14  d11 d10 c11 c10}
+        ; process third 4 rows (r8..r11)
+        vshufps %%r6, %%r8, %%r9,    0x44       ; r6  = {j13 j12 i13 i12  j9  j8  i9  i8   b13 b12 a13 a12  b9  b8  a9  a8 }
+        vshufps %%r8, %%r8, %%r9,    0xEE       ; r8  = {j15 j14 i15 i14  j11 j10 i11 i10  b15 b14 a15 a14  b11 b10 a11 a10}
+        vshufps %%t1, %%r10, %%r11,  0x44       ; t1  = {l13 l12 k13 k12  l9  l8  k9  k8   d13 d12 c13 c12  d9  d8  c9  c8 }
+        vshufps %%r10, %%r10, %%r11, 0xEE       ; r10 = {l15 l14 k15 k14  l11 l10 k11 k10  d15 d14 c15 c14  d11 d10 c11 c10}
 
-	vshufps	%%r11, %%r6, %%t1, 0xDD		; r11 = {l13 k13 j13 i13  l9  k9  j9  i9   d13 c13 b13 a13  d9  c9  b9  a9 }
-	vshufps	%%r9, %%r8, %%r10, 0x88		; r9  = {l14 k14 j14 i14  l10 k10 j10 i10  d14 c14 b14 a14  d10 c10 b10 a10}
-	vshufps	%%r8, %%r8, %%r10, 0xDD		; r8  = {l15 k15 j15 i15  l11 k11 j11 i11  d15 c15 b15 a15  d11 c11 b11 a11}
-	vshufps	%%r6, %%r6, %%t1,  0x88		; r6  = {l12 k12 j12 i12  l8  k8  j8  i8   d12 c12 b12 a12  d8  c8  b8  a8 }
+        vshufps %%r11, %%r6, %%t1, 0xDD         ; r11 = {l13 k13 j13 i13  l9  k9  j9  i9   d13 c13 b13 a13  d9  c9  b9  a9 }
+        vshufps %%r9, %%r8, %%r10, 0x88         ; r9  = {l14 k14 j14 i14  l10 k10 j10 i10  d14 c14 b14 a14  d10 c10 b10 a10}
+        vshufps %%r8, %%r8, %%r10, 0xDD         ; r8  = {l15 k15 j15 i15  l11 k11 j11 i11  d15 c15 b15 a15  d11 c11 b11 a11}
+        vshufps %%r6, %%r6, %%t1,  0x88         ; r6  = {l12 k12 j12 i12  l8  k8  j8  i8   d12 c12 b12 a12  d8  c8  b8  a8 }
 
-	; process fourth 4 rows (r12..r15)
-	vshufps	%%r10, %%r12, %%r13, 0x44	; r10 = {n13 n12 m13 m12  n9  n8  m9  m8   f13 f12 e13 e12  f9  f8  e9  e8 }
-	vshufps	%%r12, %%r12, %%r13, 0xEE	; r12 = {n15 n14 m15 m14  n11 n10 m11 m10  f15 f14 e15 e14  f11 f10 e11 e10}
-	vshufps	%%t1, %%r14, %%r15,  0x44	; t1  = {p13 p12 o13 o12  p9  p8  o9  o8   h13 h12 g13 g12  h9  h8  g9  g8 }
-	vshufps	%%r14, %%r14, %%r15, 0xEE	; r14 = {p15 p14 o15 o14  p11 p10 o11 o10  h15 h14 g15 g14  h11 h10 g11 g10}
+        ; process fourth 4 rows (r12..r15)
+        vshufps %%r10, %%r12, %%r13, 0x44       ; r10 = {n13 n12 m13 m12  n9  n8  m9  m8   f13 f12 e13 e12  f9  f8  e9  e8 }
+        vshufps %%r12, %%r12, %%r13, 0xEE       ; r12 = {n15 n14 m15 m14  n11 n10 m11 m10  f15 f14 e15 e14  f11 f10 e11 e10}
+        vshufps %%t1, %%r14, %%r15,  0x44       ; t1  = {p13 p12 o13 o12  p9  p8  o9  o8   h13 h12 g13 g12  h9  h8  g9  g8 }
+        vshufps %%r14, %%r14, %%r15, 0xEE       ; r14 = {p15 p14 o15 o14  p11 p10 o11 o10  h15 h14 g15 g14  h11 h10 g11 g10}
 
-	vshufps	%%r15, %%r10, %%t1,  0xDD	; r15 = {p13 o13 n13 m13  p9  o9  n9  m9   h13 g13 f13 e13  h9  g9  f9  e9 }
-	vshufps	%%r13, %%r12, %%r14, 0x88	; r13 = {p14 o14 n14 m14  p10 o10 n10 m10  h14 g14 f14 e14  h10 g10 f10 e10}
-	vshufps	%%r12, %%r12, %%r14, 0xDD	; r12 = {p15 o15 n15 m15  p11 o11 n11 m11  h15 g15 f15 e15  h11 g11 f11 e11}
-	vshufps	%%r10, %%r10, %%t1,  0x88	; r10 = {p12 o12 n12 m12  p8  o8  n8  m8   h12 g12 f12 e12  h8  g8  f8  e8 }
+        vshufps %%r15, %%r10, %%t1,  0xDD       ; r15 = {p13 o13 n13 m13  p9  o9  n9  m9   h13 g13 f13 e13  h9  g9  f9  e9 }
+        vshufps %%r13, %%r12, %%r14, 0x88       ; r13 = {p14 o14 n14 m14  p10 o10 n10 m10  h14 g14 f14 e14  h10 g10 f10 e10}
+        vshufps %%r12, %%r12, %%r14, 0xDD       ; r12 = {p15 o15 n15 m15  p11 o11 n11 m11  h15 g15 f15 e15  h11 g11 f11 e11}
+        vshufps %%r10, %%r10, %%t1,  0x88       ; r10 = {p12 o12 n12 m12  p8  o8  n8  m8   h12 g12 f12 e12  h8  g8  f8  e8 }
 
-	; perform final shuffles on bottom half, producing r8-r15
-	vmovdqu32 %%t1, %%m0
-	vpermi2q  %%t1, %%r9, %%r13		; t1 =  {p10 o10 n10 m10  l10 k10 j10 i10  h10 g10 f10 e10  d10 c10 b10 a10}
-	vmovdqu32 %%r14, %%m1
-	vpermi2q  %%r14, %%r9, %%r13		; r14 = {p14 o14 n14 m14  l14 k14 j14 i14  h14 g14 f14 e14  d14 c14 b14 a14}
+        ; perform final shuffles on bottom half, producing r8-r15
+        vmovdqu32 %%t1, %%m0
+        vpermi2q  %%t1, %%r9, %%r13             ; t1 =  {p10 o10 n10 m10  l10 k10 j10 i10  h10 g10 f10 e10  d10 c10 b10 a10}
+        vmovdqu32 %%r14, %%m1
+        vpermi2q  %%r14, %%r9, %%r13            ; r14 = {p14 o14 n14 m14  l14 k14 j14 i14  h14 g14 f14 e14  d14 c14 b14 a14}
 
-	vmovdqu32 %%r9, %%m0
-	vpermi2q  %%r9, %%r11, %%r15		; r9  = {p9  o9  n9  m9   l9  k9  j9  i9   h9  g9  f9  e9   d9  c9  b9  a9}
-	vmovdqu32 %%r13, %%m1
-	vpermi2q  %%r13, %%r11, %%r15		; r13 = {p13 o13 n13 m13  l13 k13 j13 i13  h13 g13 f13 e13  d13 c13 b13 a13}
+        vmovdqu32 %%r9, %%m0
+        vpermi2q  %%r9, %%r11, %%r15            ; r9  = {p9  o9  n9  m9   l9  k9  j9  i9   h9  g9  f9  e9   d9  c9  b9  a9}
+        vmovdqu32 %%r13, %%m1
+        vpermi2q  %%r13, %%r11, %%r15           ; r13 = {p13 o13 n13 m13  l13 k13 j13 i13  h13 g13 f13 e13  d13 c13 b13 a13}
 
-	vmovdqu32 %%r11, %%m0
-	vpermi2q  %%r11, %%r8, %%r12		; r11 = {p11 o11 n11 m11  l11 k11 j11 i11  h11 g11 f11 e11  d11 c11 b11 a11}
-	vmovdqu32 %%r15, %%m1
-	vpermi2q  %%r15, %%r8, %%r12		; r15 = {p15 o15 n15 m15  l15 k15 j15 i15  h15 g15 f15 e15  d15 c15 b15 a15}
+        vmovdqu32 %%r11, %%m0
+        vpermi2q  %%r11, %%r8, %%r12            ; r11 = {p11 o11 n11 m11  l11 k11 j11 i11  h11 g11 f11 e11  d11 c11 b11 a11}
+        vmovdqu32 %%r15, %%m1
+        vpermi2q  %%r15, %%r8, %%r12            ; r15 = {p15 o15 n15 m15  l15 k15 j15 i15  h15 g15 f15 e15  d15 c15 b15 a15}
 
-	vmovdqu32 %%r8, %%m0
-	vpermi2q  %%r8, %%r6, %%r10		; r8  = {p8  o8  n8  m8   l8  k8  j8  i8   h8  g8  f8  e8    d8  c8  b8  a8}
-	vmovdqu32 %%r12, %%m1
-	vpermi2q  %%r12, %%r6, %%r10		; r12 = {p12 o12 n12 m12  l12 k12 j12 i12  h12 g12 f12 e12   d12 c12 b12 a12}
+        vmovdqu32 %%r8, %%m0
+        vpermi2q  %%r8, %%r6, %%r10             ; r8  = {p8  o8  n8  m8   l8  k8  j8  i8   h8  g8  f8  e8    d8  c8  b8  a8}
+        vmovdqu32 %%r12, %%m1
+        vpermi2q  %%r12, %%r6, %%r10            ; r12 = {p12 o12 n12 m12  l12 k12 j12 i12  h12 g12 f12 e12   d12 c12 b12 a12}
 
-	vmovdqu32 %%r10, %%t1			; r10 = {p10 o10 n10 m10  l10 k10 j10 i10  h10 g10 f10 e10  d10 c10 b10 a10}
+        vmovdqu32 %%r10, %%t1                   ; r10 = {p10 o10 n10 m10  l10 k10 j10 i10  h10 g10 f10 e10  d10 c10 b10 a10}
 
-	; perform final shuffles on top half, producing r0-r7
-	vmovdqu32 %%t1, %%m0
-	vpermi2q  %%t1, %%r1, %%r5		; t1 = {p2 o2 n2 m2  l2 k2 j2 i2  h2 g2 f2 e2  d2 c2 b2 a2}
-	vmovdqu32 %%r6, %%m1
-	vpermi2q  %%r6, %%r1, %%r5		; r6 = {p6 o6 n6 m6  l6 k6 j6 i6  h6 g6 f6 e6  d6 c6 b6 a6}
+        ; perform final shuffles on top half, producing r0-r7
+        vmovdqu32 %%t1, %%m0
+        vpermi2q  %%t1, %%r1, %%r5              ; t1 = {p2 o2 n2 m2  l2 k2 j2 i2  h2 g2 f2 e2  d2 c2 b2 a2}
+        vmovdqu32 %%r6, %%m1
+        vpermi2q  %%r6, %%r1, %%r5              ; r6 = {p6 o6 n6 m6  l6 k6 j6 i6  h6 g6 f6 e6  d6 c6 b6 a6}
 
-	vmovdqu32 %%r1, %%m0
-	vpermi2q  %%r1, %%r3, %%r7		; r1 = {p1 o1 n1 m1  l1 k1 j1 i1  h1 g1 f1 e1  d1 c1 b1 a1}
-	vmovdqu32 %%r5, %%m1
-	vpermi2q  %%r5, %%r3, %%r7		; r5 = {p5 o5 n5 m5  l5 k5 j5 i5  h5 g5 f5 e5  d5 c5 b5 a5}
+        vmovdqu32 %%r1, %%m0
+        vpermi2q  %%r1, %%r3, %%r7              ; r1 = {p1 o1 n1 m1  l1 k1 j1 i1  h1 g1 f1 e1  d1 c1 b1 a1}
+        vmovdqu32 %%r5, %%m1
+        vpermi2q  %%r5, %%r3, %%r7              ; r5 = {p5 o5 n5 m5  l5 k5 j5 i5  h5 g5 f5 e5  d5 c5 b5 a5}
 
-	vmovdqu32 %%r3, %%m0
-	vpermi2q  %%r3, %%r0, %%r4		; r3 = {p3 o3 n3 m3  l3 k3 j3 i3  h3 g3 f3 e3  d3 c3 b3 a3}
-	vmovdqu32 %%r7, %%m1
-	vpermi2q  %%r7, %%r0, %%r4		; r7 = {p7 o7 n7 m7  l7 k7 j7 i7  h7 g7 f7 e7  d7 c7 b7 a7}
+        vmovdqu32 %%r3, %%m0
+        vpermi2q  %%r3, %%r0, %%r4              ; r3 = {p3 o3 n3 m3  l3 k3 j3 i3  h3 g3 f3 e3  d3 c3 b3 a3}
+        vmovdqu32 %%r7, %%m1
+        vpermi2q  %%r7, %%r0, %%r4              ; r7 = {p7 o7 n7 m7  l7 k7 j7 i7  h7 g7 f7 e7  d7 c7 b7 a7}
 
-	vmovdqu32 %%r0, %%m0
-	vpermi2q  %%r0, %%t0, %%r2		; r0 = {p0 o0 n0 m0  l0 k0 j0 i0  h0 g0 f0 e0  d0 c0 b0 a0}
-	vmovdqu32 %%r4, %%m1
-	vpermi2q  %%r4,  %%t0, %%r2		; r4 = {p4 o4 n4 m4  l4 k4 j4 i4  h4 g4 f4 e4  d4 c4 b4 a4}
+        vmovdqu32 %%r0, %%m0
+        vpermi2q  %%r0, %%t0, %%r2              ; r0 = {p0 o0 n0 m0  l0 k0 j0 i0  h0 g0 f0 e0  d0 c0 b0 a0}
+        vmovdqu32 %%r4, %%m1
+        vpermi2q  %%r4,  %%t0, %%r2             ; r4 = {p4 o4 n4 m4  l4 k4 j4 i4  h4 g4 f4 e4  d4 c4 b4 a4}
 
-	vmovdqu32 %%r2, %%t1			; r2 = {p2 o2 n2 m2  l2 k2 j2 i2  h2 g2 f2 e2  d2 c2 b2 a2}
+        vmovdqu32 %%r2, %%t1                    ; r2 = {p2 o2 n2 m2  l2 k2 j2 i2  h2 g2 f2 e2  d2 c2 b2 a2}
 
 %endmacro
 
@@ -552,23 +552,23 @@ PSHUFFLE_TRANSPOSE_MASK2: 	dq 0x0000000000000002
 ; r6 = {g7 g6 g5 g4  c7 c6 c5 c4}
 ; r7 = {h7 h6 h5 h4  d7 d6 d5 d4}
 
-	vmovups	YWORD(%%r0),[%%addr0+%%ptr_offset]
-	vmovups	YWORD(%%r1),[%%addr1+%%ptr_offset]
-	vmovups	YWORD(%%r2),[%%addr2+%%ptr_offset]
-	vmovups	YWORD(%%r3),[%%addr3+%%ptr_offset]
-	vmovups	YWORD(%%r4),[%%addr0+%%ptr_offset+32]
-	vmovups	YWORD(%%r5),[%%addr1+%%ptr_offset+32]
-	vmovups	YWORD(%%r6),[%%addr2+%%ptr_offset+32]
-	vmovups	YWORD(%%r7),[%%addr3+%%ptr_offset+32]
+        vmovups YWORD(%%r0),[%%addr0+%%ptr_offset]
+        vmovups YWORD(%%r1),[%%addr1+%%ptr_offset]
+        vmovups YWORD(%%r2),[%%addr2+%%ptr_offset]
+        vmovups YWORD(%%r3),[%%addr3+%%ptr_offset]
+        vmovups YWORD(%%r4),[%%addr0+%%ptr_offset+32]
+        vmovups YWORD(%%r5),[%%addr1+%%ptr_offset+32]
+        vmovups YWORD(%%r6),[%%addr2+%%ptr_offset+32]
+        vmovups YWORD(%%r7),[%%addr3+%%ptr_offset+32]
 
-	vinserti64x4 %%r0, %%r0, [%%addr4+%%ptr_offset], 0x01
-	vinserti64x4 %%r1, %%r1, [%%addr5+%%ptr_offset], 0x01
-	vinserti64x4 %%r2, %%r2, [%%addr6+%%ptr_offset], 0x01
-	vinserti64x4 %%r3, %%r3, [%%addr7+%%ptr_offset], 0x01
-	vinserti64x4 %%r4, %%r4, [%%addr4+%%ptr_offset+32], 0x01
-	vinserti64x4 %%r5, %%r5, [%%addr5+%%ptr_offset+32], 0x01
-	vinserti64x4 %%r6, %%r6, [%%addr6+%%ptr_offset+32], 0x01
-	vinserti64x4 %%r7, %%r7, [%%addr7+%%ptr_offset+32], 0x01
+        vinserti64x4 %%r0, %%r0, [%%addr4+%%ptr_offset], 0x01
+        vinserti64x4 %%r1, %%r1, [%%addr5+%%ptr_offset], 0x01
+        vinserti64x4 %%r2, %%r2, [%%addr6+%%ptr_offset], 0x01
+        vinserti64x4 %%r3, %%r3, [%%addr7+%%ptr_offset], 0x01
+        vinserti64x4 %%r4, %%r4, [%%addr4+%%ptr_offset+32], 0x01
+        vinserti64x4 %%r5, %%r5, [%%addr5+%%ptr_offset+32], 0x01
+        vinserti64x4 %%r6, %%r6, [%%addr6+%%ptr_offset+32], 0x01
+        vinserti64x4 %%r7, %%r7, [%%addr7+%%ptr_offset+32], 0x01
 
 %endmacro
 
@@ -623,10 +623,10 @@ PSHUFFLE_TRANSPOSE_MASK2: 	dq 0x0000000000000002
         vmovdqa32 %%PERM_INDEX2, [PSHUFFLE_TRANSPOSE_MASK2] ; temp
 
         ; process top half (r0..r3)
-        vshufpd	%%t0, %%r0, %%r1, 0x00	; t0 = {f2 e2 f0 e0  b2 a2 b0 a0}
-        vshufpd	%%r1, %%r0, %%r1, 0xFF	; r0 = {f3 e3 f1 e1  b3 a3 b1 a1}
-        vshufpd	%%t1, %%r2, %%r3, 0x00	; t1 = {h2 g2 h0 g0  d2 c2 d0 c0}
-        vshufpd	%%r2, %%r2, %%r3, 0xFF	; r2 = {h3 g3 h1 g1  d3 c3 d1 c1}
+        vshufpd %%t0, %%r0, %%r1, 0x00  ; t0 = {f2 e2 f0 e0  b2 a2 b0 a0}
+        vshufpd %%r1, %%r0, %%r1, 0xFF  ; r0 = {f3 e3 f1 e1  b3 a3 b1 a1}
+        vshufpd %%t1, %%r2, %%r3, 0x00  ; t1 = {h2 g2 h0 g0  d2 c2 d0 c0}
+        vshufpd %%r2, %%r2, %%r3, 0xFF  ; r2 = {h3 g3 h1 g1  d3 c3 d1 c1}
 
         vmovdqa32   %%r3, %%r1
         vpermt2q    %%r1, %%PERM_INDEX1,%%r2   ; r1 = {h1 g1 f1 e1  d1 c1 b1 a1}
@@ -638,10 +638,10 @@ PSHUFFLE_TRANSPOSE_MASK2: 	dq 0x0000000000000002
         vpermt2q    %%r2, %%PERM_INDEX2,%%t1   ; r2 = {h2 g2 f2 e2  d2 c2 b2 a2}
 
         ; process top bottom (r4..r7)
-        vshufpd	%%t0, %%r4, %%r5, 0x00	; t0 = {f6 e6 f4 e4  b6 a6 b4 a4}
-        vshufpd	%%r5, %%r4, %%r5, 0xFF	; r0 = {f7 e7 f5 e5  b7 a7 b5 a5}
-        vshufpd	%%t1, %%r6, %%r7, 0x00	; t1 = {h6 g6 h4 g4  d6 c6 d4 c4}
-        vshufpd	%%r6, %%r6, %%r7, 0xFF	; r2 = {h7 g7 h5 g5  d7 c7 d5 c5}
+        vshufpd %%t0, %%r4, %%r5, 0x00  ; t0 = {f6 e6 f4 e4  b6 a6 b4 a4}
+        vshufpd %%r5, %%r4, %%r5, 0xFF  ; r0 = {f7 e7 f5 e5  b7 a7 b5 a5}
+        vshufpd %%t1, %%r6, %%r7, 0x00  ; t1 = {h6 g6 h4 g4  d6 c6 d4 c4}
+        vshufpd %%r6, %%r6, %%r7, 0xFF  ; r2 = {h7 g7 h5 g5  d7 c7 d5 c5}
 
         vmovdqa32   %%r7, %%r5
         vpermt2q    %%r5, %%PERM_INDEX1,%%r6   ; r5 = {h5 g5 f5 e5  d5 c5 b5 a5}

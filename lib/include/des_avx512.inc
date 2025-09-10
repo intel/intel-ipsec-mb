@@ -43,15 +43,15 @@
 %include "include/align_avx512.inc"
 
 %ifdef LINUX
-%define arg1	rdi
-%define arg2	rsi
-%define arg3	rdx
-%define arg4	rcx
+%define arg1    rdi
+%define arg2    rsi
+%define arg3    rdx
+%define arg4    rcx
 %else
-%define arg1	rcx
-%define arg2	rdx
-%define arg3	r8
-%define arg4	r9
+%define arg1    rcx
+%define arg2    rdx
+%define arg3    r8
+%define arg4    r9
 %endif
 
 %define OFFSET  rax
@@ -60,11 +60,11 @@
 %define IA1     arg4
 %define IA2     r10
 
-%define INP0	r11
-%define INP1	r12
-%define INP2	r13
-%define INP3	r14
-%define INP4	r15
+%define INP0    r11
+%define INP1    r12
+%define INP2    r13
+%define INP3    r14
+%define INP4    r15
 
 %define KSOFFSET r11
 
@@ -104,18 +104,18 @@
 %define ZTMP13  zmm31
 
 struc STACKFRAME
-_gpr_save:	resq	4       ; r12 to r15
-_rsp_save:	resq	1
-_mask_save:	resq	1
-_size_save:	resq	1
+_gpr_save:      resq    4       ; r12 to r15
+_rsp_save:      resq    1
+_mask_save:     resq    1
+_size_save:     resq    1
 _padding:       resq    1
-_tmp_iv:	resq	16      ; 2 x 64 bytes
-_tmp_in:	resq	16      ; 2 x 64 bytes
-_tmp_out:	resq	16      ; 2 x 64 bytes
-_tmp_mask:	resd	16      ; 1 x 64 bytes
-_key_sched:	resq	16*16   ; 16 lanes x 16 qwords; 16 x 128 bytes = 2048
-_key_sched2:	resq	16*16   ; 16 lanes x 16 qwords; 16 x 128 bytes = 2048
-_key_sched3:	resq	16*16   ; 16 lanes x 16 qwords; 16 x 128 bytes = 2048
+_tmp_iv:        resq    16      ; 2 x 64 bytes
+_tmp_in:        resq    16      ; 2 x 64 bytes
+_tmp_out:       resq    16      ; 2 x 64 bytes
+_tmp_mask:      resd    16      ; 1 x 64 bytes
+_key_sched:     resq    16*16   ; 16 lanes x 16 qwords; 16 x 128 bytes = 2048
+_key_sched2:    resq    16*16   ; 16 lanes x 16 qwords; 16 x 128 bytes = 2048
+_key_sched3:    resq    16*16   ; 16 lanes x 16 qwords; 16 x 128 bytes = 2048
 endstruc
 
 ;;; ===========================================================================
@@ -222,70 +222,70 @@ endstruc
 %define %%T3 %5
 
         vprord  %%T0, %%W0, 3
-	vpandd  %%T0, %%T0, [rel des_mask_values_avx512 + 0*64]
+        vpandd  %%T0, %%T0, [rel des_mask_values_avx512 + 0*64]
         vprord  %%T1, %%W0, 5
-	vpandd  %%T1, %%T1, [rel des_mask_values_avx512 + 1*64]
-	vpord   %%T0, %%T0, %%T1
+        vpandd  %%T1, %%T1, [rel des_mask_values_avx512 + 1*64]
+        vpord   %%T0, %%T0, %%T1
 
         vprord  %%T1, %%W0, 24
-	vpandd  %%T1, %%T1, [rel des_mask_values_avx512 + 2*64]
+        vpandd  %%T1, %%T1, [rel des_mask_values_avx512 + 2*64]
         vprord  %%T2, %%W0, 26
-	vpandd  %%T2, %%T2, [rel des_mask_values_avx512 + 3*64]
-	vpord   %%T1, %%T1, %%T2
-	vpord   %%T0, %%T0, %%T1
+        vpandd  %%T2, %%T2, [rel des_mask_values_avx512 + 3*64]
+        vpord   %%T1, %%T1, %%T2
+        vpord   %%T0, %%T0, %%T1
 
         vprord  %%T1, %%W0, 15
-	vpandd  %%T1, %%T1, [rel des_mask_values_avx512 + 4*64]
+        vpandd  %%T1, %%T1, [rel des_mask_values_avx512 + 4*64]
         vprord  %%T2, %%W0, 17
-	vpandd  %%T2, %%T2, [rel des_mask_values_avx512 + 5*64]
-	vpord   %%T1, %%T1, %%T2
+        vpandd  %%T2, %%T2, [rel des_mask_values_avx512 + 5*64]
+        vpord   %%T1, %%T1, %%T2
 
         vprord  %%T2, %%W0, 6
-	vpandd  %%T2, %%T2, [rel des_mask_values_avx512 + 6*64]
+        vpandd  %%T2, %%T2, [rel des_mask_values_avx512 + 6*64]
         vprord  %%T3, %%W0, 21
-	vpandd  %%T3, %%T3, [rel des_mask_values_avx512 + 7*64]
-	vpord   %%T2, %%T2, %%T3
-	vpord   %%T1, %%T1, %%T2
-	vpord   %%T0, %%T0, %%T1
+        vpandd  %%T3, %%T3, [rel des_mask_values_avx512 + 7*64]
+        vpord   %%T2, %%T2, %%T3
+        vpord   %%T1, %%T1, %%T2
+        vpord   %%T0, %%T0, %%T1
 
         vprord  %%T1, %%W0, 12
-	vpandd  %%T1, %%T1, [rel des_mask_values_avx512 + 8*64]
+        vpandd  %%T1, %%T1, [rel des_mask_values_avx512 + 8*64]
         vprord  %%T2, %%W0, 14
-	vpandd  %%T2, %%T2, [rel des_mask_values_avx512 + 9*64]
-	vpord   %%T1, %%T1, %%T2
+        vpandd  %%T2, %%T2, [rel des_mask_values_avx512 + 9*64]
+        vpord   %%T1, %%T1, %%T2
 
         vprord  %%T2, %%W0, 4
-	vpandd  %%T2, %%T2, [rel des_mask_values_avx512 + 10*64]
+        vpandd  %%T2, %%T2, [rel des_mask_values_avx512 + 10*64]
         vprord  %%T3, %%W0, 11
-	vpandd  %%T3, %%T3, [rel des_mask_values_avx512 + 11*64]
-	vpord   %%T2, %%T2, %%T3
-	vpord   %%T1, %%T1, %%T2
-	vpord   %%T0, %%T0, %%T1
+        vpandd  %%T3, %%T3, [rel des_mask_values_avx512 + 11*64]
+        vpord   %%T2, %%T2, %%T3
+        vpord   %%T1, %%T1, %%T2
+        vpord   %%T0, %%T0, %%T1
 
         vprord  %%T1, %%W0, 16
-	vpandd  %%T1, %%T1, [rel des_mask_values_avx512 + 12*64]
+        vpandd  %%T1, %%T1, [rel des_mask_values_avx512 + 12*64]
         vprord  %%T2, %%W0, 22
-	vpandd  %%T2, %%T2, [rel des_mask_values_avx512 + 13*64]
-	vpord   %%T1, %%T1, %%T2
+        vpandd  %%T2, %%T2, [rel des_mask_values_avx512 + 13*64]
+        vpord   %%T1, %%T1, %%T2
 
         vprord  %%T2, %%W0, 19
-	vpandd  %%T2, %%T2, [rel des_mask_values_avx512 + 14*64]
+        vpandd  %%T2, %%T2, [rel des_mask_values_avx512 + 14*64]
         vprord  %%T3, %%W0, 10
-	vpandd  %%T3, %%T3, [rel des_mask_values_avx512 + 15*64]
-	vpord   %%T2, %%T2, %%T3
-	vpord   %%T1, %%T1, %%T2
-	vpord   %%T0, %%T0, %%T1
+        vpandd  %%T3, %%T3, [rel des_mask_values_avx512 + 15*64]
+        vpord   %%T2, %%T2, %%T3
+        vpord   %%T1, %%T1, %%T2
+        vpord   %%T0, %%T0, %%T1
 
         vprord  %%T1, %%W0, 9
-	vpandd  %%T1, %%T1, [rel des_mask_values_avx512 + 16*64]
+        vpandd  %%T1, %%T1, [rel des_mask_values_avx512 + 16*64]
         vprord  %%T2, %%W0, 13
-	vpandd  %%T2, %%T2, [rel des_mask_values_avx512 + 17*64]
-	vpord   %%T1, %%T1, %%T2
+        vpandd  %%T2, %%T2, [rel des_mask_values_avx512 + 17*64]
+        vpord   %%T1, %%T1, %%T2
 
         vprord  %%T2, %%W0, 25
-	vpandd  %%T2, %%T2, [rel des_mask_values_avx512 + 18*64]
-	vpord   %%T1, %%T1, %%T2
-	vpord   %%W0, %%T0, %%T1
+        vpandd  %%T2, %%T2, [rel des_mask_values_avx512 + 18*64]
+        vpord   %%T1, %%T1, %%T2
+        vpord   %%W0, %%T0, %%T1
 %endmacro
 
 ;;; ===========================================================================
@@ -315,20 +315,20 @@ endstruc
 %define %%T0 %8
 %define %%T1 %9
 
-	vprord          %%T0, %%IN, 31
-	vprord          %%T1, %%IN, 3
-	vpshufb         %%T0, %%T0, [rel des_idx_e_avx512]
-	vpshufb         %%T1, %%T1, [rel des_idx_e_avx512]
-	vpunpcklbw      %%OUT0A, %%T0, %%T1
-	vpunpckhbw      %%OUT1A, %%T0, %%T1
-	vpxord          %%OUT0A, %%OUT0A, %%K0
-	vpxord          %%OUT1A, %%OUT1A, %%K1
-	vpandd          %%OUT0B, %%OUT0A, [rel des_and_eu_avx512]
-	vpsrlw          %%OUT0B, %%OUT0B, 8
-	vpandd          %%OUT0A, %%OUT0A, [rel des_and_ed_avx512]
-	vpandd          %%OUT1B, %%OUT1A, [rel des_and_eu_avx512]
-	vpsrlw          %%OUT1B, %%OUT1B, 8
-	vpandd          %%OUT1A, %%OUT1A, [rel des_and_ed_avx512]
+        vprord          %%T0, %%IN, 31
+        vprord          %%T1, %%IN, 3
+        vpshufb         %%T0, %%T0, [rel des_idx_e_avx512]
+        vpshufb         %%T1, %%T1, [rel des_idx_e_avx512]
+        vpunpcklbw      %%OUT0A, %%T0, %%T1
+        vpunpckhbw      %%OUT1A, %%T0, %%T1
+        vpxord          %%OUT0A, %%OUT0A, %%K0
+        vpxord          %%OUT1A, %%OUT1A, %%K1
+        vpandd          %%OUT0B, %%OUT0A, [rel des_and_eu_avx512]
+        vpsrlw          %%OUT0B, %%OUT0B, 8
+        vpandd          %%OUT0A, %%OUT0A, [rel des_and_ed_avx512]
+        vpandd          %%OUT1B, %%OUT1A, [rel des_and_eu_avx512]
+        vpsrlw          %%OUT1B, %%OUT1B, 8
+        vpandd          %%OUT1A, %%OUT1A, [rel des_and_ed_avx512]
 %endmacro
 
 ;;; ===========================================================================
@@ -356,71 +356,71 @@ endstruc
 %define %%T4 %10
 %define %%T5 %11
 
-	vmovdqa64       %%T0, [rel des_reg_values16bit_7_avx512]
-	vpcmpuw         k3, %%IN0A, %%T0, 2 ; 2 -> LE
-	vpcmpuw         k4, %%IN0B, %%T0, 2 ; 2 -> LE
-	vpcmpuw         k5, %%IN1A, %%T0, 2 ; 2 -> LE
-	vpcmpuw         k6, %%IN1B, %%T0, 2 ; 2 -> LE
+        vmovdqa64       %%T0, [rel des_reg_values16bit_7_avx512]
+        vpcmpuw         k3, %%IN0A, %%T0, 2 ; 2 -> LE
+        vpcmpuw         k4, %%IN0B, %%T0, 2 ; 2 -> LE
+        vpcmpuw         k5, %%IN1A, %%T0, 2 ; 2 -> LE
+        vpcmpuw         k6, %%IN1B, %%T0, 2 ; 2 -> LE
 
-	mov             DWORD(IA0), 0x55555555
-	kmovd           k1, DWORD(IA0)
-	mov             DWORD(IA0), 0xaaaaaaaa
-	kmovd           k2, DWORD(IA0)
+        mov             DWORD(IA0), 0x55555555
+        kmovd           k1, DWORD(IA0)
+        mov             DWORD(IA0), 0xaaaaaaaa
+        kmovd           k2, DWORD(IA0)
 
         vmovdqa64       %%T0, [rel des_S_box_flipped_avx512 + 0*64]
         vmovdqa64       %%T1, [rel des_S_box_flipped_avx512 + 1*64]
         vmovdqa64       %%T2, [rel des_S_box_flipped_avx512 + 4*64]
         vmovdqa64       %%T3, [rel des_S_box_flipped_avx512 + 5*64]
-	vpermw          %%T0{k1}{z}, %%IN0A, %%T0
-	vpermw          %%T1{k1}{z}, %%IN0A, %%T1
-	vpermw          %%T2{k2}{z}, %%IN0A, %%T2
-	vpermw          %%T3{k2}{z}, %%IN0A, %%T3
-	vpxord          %%T0, %%T0, %%T2
-	vpxord          %%OUT, %%T1, %%T3
+        vpermw          %%T0{k1}{z}, %%IN0A, %%T0
+        vpermw          %%T1{k1}{z}, %%IN0A, %%T1
+        vpermw          %%T2{k2}{z}, %%IN0A, %%T2
+        vpermw          %%T3{k2}{z}, %%IN0A, %%T3
+        vpxord          %%T0, %%T0, %%T2
+        vpxord          %%OUT, %%T1, %%T3
         vmovdqu16       %%OUT{k3}, %%T0
 
         vmovdqa64       %%T0, [rel des_S_box_flipped_avx512 + 2*64]
         vmovdqa64       %%T1, [rel des_S_box_flipped_avx512 + 3*64]
         vmovdqa64       %%T2, [rel des_S_box_flipped_avx512 + 6*64]
         vmovdqa64       %%T3, [rel des_S_box_flipped_avx512 + 7*64]
-	vpermw          %%T0{k1}{z}, %%IN0B, %%T0
-	vpermw          %%T1{k1}{z}, %%IN0B, %%T1
-	vpermw          %%T2{k2}{z}, %%IN0B, %%T2
-	vpermw          %%T3{k2}{z}, %%IN0B, %%T3
-	vpxord          %%T0, %%T0, %%T2
-	vpxord          %%T3, %%T1, %%T3
+        vpermw          %%T0{k1}{z}, %%IN0B, %%T0
+        vpermw          %%T1{k1}{z}, %%IN0B, %%T1
+        vpermw          %%T2{k2}{z}, %%IN0B, %%T2
+        vpermw          %%T3{k2}{z}, %%IN0B, %%T3
+        vpxord          %%T0, %%T0, %%T2
+        vpxord          %%T3, %%T1, %%T3
         vmovdqu16       %%T3{k4}, %%T0
-	vpsllw          %%T3, %%T3, 4
-	vpxord          %%OUT, %%OUT, %%T3
+        vpsllw          %%T3, %%T3, 4
+        vpxord          %%OUT, %%OUT, %%T3
 
         vmovdqa64       %%T0, [rel des_S_box_flipped_avx512 + 8*64]
         vmovdqa64       %%T1, [rel des_S_box_flipped_avx512 + 9*64]
         vmovdqa64       %%T2, [rel des_S_box_flipped_avx512 + 12*64]
         vmovdqa64       %%T3, [rel des_S_box_flipped_avx512 + 13*64]
-	vpermw          %%T0{k1}{z}, %%IN1A, %%T0
-	vpermw          %%T1{k1}{z}, %%IN1A, %%T1
-	vpermw          %%T2{k2}{z}, %%IN1A, %%T2
-	vpermw          %%T3{k2}{z}, %%IN1A, %%T3
-	vpxord          %%T0, %%T0, %%T2
-	vpxord          %%T4, %%T1, %%T3
+        vpermw          %%T0{k1}{z}, %%IN1A, %%T0
+        vpermw          %%T1{k1}{z}, %%IN1A, %%T1
+        vpermw          %%T2{k2}{z}, %%IN1A, %%T2
+        vpermw          %%T3{k2}{z}, %%IN1A, %%T3
+        vpxord          %%T0, %%T0, %%T2
+        vpxord          %%T4, %%T1, %%T3
         vmovdqu16       %%T4{k5}, %%T0
 
         vmovdqa64       %%T0, [rel des_S_box_flipped_avx512 + 10*64]
         vmovdqa64       %%T1, [rel des_S_box_flipped_avx512 + 11*64]
         vmovdqa64       %%T2, [rel des_S_box_flipped_avx512 + 14*64]
         vmovdqa64       %%T3, [rel des_S_box_flipped_avx512 + 15*64]
-	vpermw          %%T0{k1}{z}, %%IN1B, %%T0
-	vpermw          %%T1{k1}{z}, %%IN1B, %%T1
-	vpermw          %%T2{k2}{z}, %%IN1B, %%T2
-	vpermw          %%T3{k2}{z}, %%IN1B, %%T3
-	vpxord          %%T0, %%T0, %%T2
-	vpxord          %%T5, %%T1, %%T3
+        vpermw          %%T0{k1}{z}, %%IN1B, %%T0
+        vpermw          %%T1{k1}{z}, %%IN1B, %%T1
+        vpermw          %%T2{k2}{z}, %%IN1B, %%T2
+        vpermw          %%T3{k2}{z}, %%IN1B, %%T3
+        vpxord          %%T0, %%T0, %%T2
+        vpxord          %%T5, %%T1, %%T3
         vmovdqu16       %%T5{k6}, %%T0
-	vpsllw          %%T5, %%T5, 4
+        vpsllw          %%T5, %%T5, 4
 
-	vpxord          %%T4, %%T4, %%T5
-	vpsllw          %%T4, %%T4, 8
-	vpxord          %%OUT, %%OUT, %%T4
+        vpxord          %%T4, %%T4, %%T5
+        vpsllw          %%T4, %%T4, 8
+        vpxord          %%OUT, %%OUT, %%T4
         vpshufb         %%OUT, %%OUT, [rel des_shuffle_reg_avx512]
 %endmacro
 
@@ -630,29 +630,29 @@ align_loop
 %define %%H0 %23
 %define %%H2 %24
 
-	vpunpckldq      %%K0, %%IN00, %%IN01
-	vpunpckhdq      %%K1, %%IN00, %%IN01
-	vpunpckldq      %%T0, %%IN02, %%IN03
+        vpunpckldq      %%K0, %%IN00, %%IN01
+        vpunpckhdq      %%K1, %%IN00, %%IN01
+        vpunpckldq      %%T0, %%IN02, %%IN03
 
-	vpunpckldq      %%IN00, %%IN04, %%IN05
-	vpunpckhdq      %%IN01, %%IN04, %%IN05
-	vpunpckldq      %%IN02, %%IN06, %%IN07
+        vpunpckldq      %%IN00, %%IN04, %%IN05
+        vpunpckhdq      %%IN01, %%IN04, %%IN05
+        vpunpckldq      %%IN02, %%IN06, %%IN07
 
         vpunpcklqdq     %%K2, %%K0, %%T0
-	vpunpckhqdq     %%T2, %%K0, %%T0
+        vpunpckhqdq     %%T2, %%K0, %%T0
 
         vpunpcklqdq     %%K0, %%IN00, %%IN02
-	vpunpckhqdq     %%K1, %%IN00, %%IN02
+        vpunpckhqdq     %%K1, %%IN00, %%IN02
 
-	vpunpckldq      %%K4, %%IN08, %%IN09
-	vpunpckldq      %%IN04, %%IN10, %%IN11
-	vpunpckldq      %%IN06, %%IN12, %%IN13
-	vpunpckldq      %%IN10, %%IN14, %%IN15
+        vpunpckldq      %%K4, %%IN08, %%IN09
+        vpunpckldq      %%IN04, %%IN10, %%IN11
+        vpunpckldq      %%IN06, %%IN12, %%IN13
+        vpunpckldq      %%IN10, %%IN14, %%IN15
 
         vpunpcklqdq     %%IN12, %%K4, %%IN04
-	vpunpckhqdq     %%IN13, %%K4, %%IN04
+        vpunpckhqdq     %%IN13, %%K4, %%IN04
         vpunpcklqdq     %%IN00, %%IN06, %%IN10
-	vpunpckhqdq     %%IN01, %%IN06, %%IN10
+        vpunpckhqdq     %%IN01, %%IN06, %%IN10
 
         vshufi64x2      %%H0, %%K2, %%K0, 0x44
         vshufi64x2      %%H2, %%IN12, %%IN00, 0x44
@@ -702,13 +702,13 @@ align_loop
 
         vpxord          %%T0, %%T0, %%T0
 
-	vpunpckldq      %%K0, %%IN01, %%IN00
-	vpunpckhdq      %%K1, %%IN01, %%IN00
+        vpunpckldq      %%K0, %%IN01, %%IN00
+        vpunpckhdq      %%K1, %%IN01, %%IN00
 
         vpunpcklqdq     %%K2, %%K0, %%T0
-	vpunpckhqdq     %%T2, %%K0, %%T0
-	vpunpcklqdq     %%K3, %%K1, %%T0
-	vpunpckhqdq     %%T3, %%K1, %%T0
+        vpunpckhqdq     %%T2, %%K0, %%T0
+        vpunpcklqdq     %%K3, %%K1, %%T0
+        vpunpckhqdq     %%T3, %%K1, %%T0
 
         vshufi64x2      %%H0, %%K2, %%T0, 0x44
         vshufi64x2      %%H1, %%K2, %%T0, 0xee
@@ -1364,14 +1364,14 @@ align_label
 %define %%SIZE          %3      ;; [in] GP with message size in bytes
 
         ;; push the registers and allocate the stack frame
-	mov	        rax, rsp
+        mov             rax, rsp
 %ifnidn %%DES_DOCSIS, 3DES
-	sub	        rsp, _key_sched2        ;; no need for schedule 2 and 3 for non-TDES/3DES algos
+        sub             rsp, _key_sched2        ;; no need for schedule 2 and 3 for non-TDES/3DES algos
 %else
-	sub	        rsp, STACKFRAME_size
+        sub             rsp, STACKFRAME_size
 %endif
-	and	        rsp, -64
-	mov	        [rsp + _rsp_save], rax	; original SP
+        and             rsp, -64
+        mov             [rsp + _rsp_save], rax  ; original SP
         mov             [rsp + _gpr_save + 0*8], r12
         mov             [rsp + _gpr_save + 1*8], r13
         mov             [rsp + _gpr_save + 2*8], r14
@@ -1672,10 +1672,10 @@ align_label
         mov             r13, [rsp + _gpr_save + 1*8]
         mov             r14, [rsp + _gpr_save + 2*8]
         mov             r15, [rsp + _gpr_save + 3*8]
-	mov	        rsp, [rsp + _rsp_save]	; original SP
+        mov             rsp, [rsp + _rsp_save]  ; original SP
 
 %ifdef SAFE_DATA
-	clear_all_zmms_asm
+        clear_all_zmms_asm
 %else
         vzeroupper
 %endif ;; SAFE_DATA
@@ -1693,10 +1693,10 @@ align_label
 %define %%SIZE          %3      ;; [in] GP with message size in bytes
 
         ;; push the registers and allocate the stack frame
-	mov	        rax, rsp
-	sub	        rsp, STACKFRAME_size
-	and	        rsp, -64
-	mov	        [rsp + _rsp_save], rax	; original SP
+        mov             rax, rsp
+        sub             rsp, STACKFRAME_size
+        and             rsp, -64
+        mov             [rsp + _rsp_save], rax  ; original SP
         mov             [rsp + _gpr_save + 0*8], r12
         mov             [rsp + _gpr_save + 1*8], r13
         mov             [rsp + _gpr_save + 2*8], r14
@@ -1993,10 +1993,10 @@ align_label
         mov             r13, [rsp + _gpr_save + 1*8]
         mov             r14, [rsp + _gpr_save + 2*8]
         mov             r15, [rsp + _gpr_save + 3*8]
-	mov	        rsp, [rsp + _rsp_save]	; original SP
+        mov             rsp, [rsp + _rsp_save]  ; original SP
 
 %ifdef SAFE_DATA
-	clear_all_zmms_asm
+        clear_all_zmms_asm
 %else
         vzeroupper
 %endif ;; SAFE_DATA

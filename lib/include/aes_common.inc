@@ -356,25 +356,25 @@
 
 %xdefine %%DSTREG %%DST %+ _dst_idx
 
-         sub            %%LENGTH, _blocks_loaded * 16
-         cmp            %%LENGTH, 32
-         jb             %%_load_less_than_32
-         vmovdqu        %%DSTREG, [%%INP + %%DATA_OFFSET + _src_offset]
-         jmp            %%_load_done
+        sub            %%LENGTH, _blocks_loaded * 16
+        cmp            %%LENGTH, 32
+        jb             %%_load_less_than_32
+        vmovdqu        %%DSTREG, [%%INP + %%DATA_OFFSET + _src_offset]
+        jmp            %%_load_done
 %%_load_less_than_32:
-         cmp            %%LENGTH, 16
-         je             %%_load_16
-         jb             %%_load_less_than_16
-         sub            %%LENGTH, 16
-         simd_load_avx_15_1 XWORD(%%DSTREG), {%%INP + %%DATA_OFFSET + _src_offset + 16}, %%LENGTH
-         vinserti128    %%DSTREG, %%DSTREG, XWORD(%%DSTREG), 1
-         vinserti128    %%DSTREG, %%DSTREG, [%%INP + %%DATA_OFFSET + _src_offset], 0
-         jmp            %%_load_done
+        cmp            %%LENGTH, 16
+        je             %%_load_16
+        jb             %%_load_less_than_16
+        sub            %%LENGTH, 16
+        simd_load_avx_15_1 XWORD(%%DSTREG), {%%INP + %%DATA_OFFSET + _src_offset + 16}, %%LENGTH
+        vinserti128    %%DSTREG, %%DSTREG, XWORD(%%DSTREG), 1
+        vinserti128    %%DSTREG, %%DSTREG, [%%INP + %%DATA_OFFSET + _src_offset], 0
+        jmp            %%_load_done
 %%_load_16:
-         vmovdqu        XWORD(%%DSTREG), [%%INP + %%DATA_OFFSET + _src_offset]
-         jmp            %%_load_done
+        vmovdqu        XWORD(%%DSTREG), [%%INP + %%DATA_OFFSET + _src_offset]
+        jmp            %%_load_done
 %%_load_less_than_16:
-         simd_load_avx_15_1 XWORD(%%DSTREG), {%%INP + %%DATA_OFFSET + _src_offset}, %%LENGTH
+        simd_load_avx_15_1 XWORD(%%DSTREG), {%%INP + %%DATA_OFFSET + _src_offset}, %%LENGTH
 %%_load_done:
 
 %endmacro
@@ -1914,20 +1914,20 @@
 %define %%MODE          %14 ; [in] load/store operation mode
 
 %ifidn %%MODE, SUBMIT_MODE
-       LOAD_STORE_x4 %%LANE_A, %%LANE_B, %%LANE_C, %%LANE_D, %%DATA_PTR, \
-                     %%OFFSET, %%ZDATA0, %%ZDATA1, %%ZDATA2, %%ZDATA3, \
-                     %%GP0, %%GP1, %%LOAD_STORE
+        LOAD_STORE_x4 %%LANE_A, %%LANE_B, %%LANE_C, %%LANE_D, %%DATA_PTR, \
+                        %%OFFSET, %%ZDATA0, %%ZDATA1, %%ZDATA2, %%ZDATA3, \
+                        %%GP0, %%GP1, %%LOAD_STORE
 %endif
 
 %ifidn %%MODE, SUBMIT_FINAL_MODE
-       LOAD_STORE_x4 %%LANE_A, %%LANE_B, %%LANE_C, %%LANE_D, %%DATA_PTR, \
-                     %%OFFSET, %%ZDATA0, %%ZDATA1, %%ZDATA2, %%ZDATA3, \
-                     %%GP0, %%GP1, %%LOAD_STORE, k1
+        LOAD_STORE_x4 %%LANE_A, %%LANE_B, %%LANE_C, %%LANE_D, %%DATA_PTR, \
+                        %%OFFSET, %%ZDATA0, %%ZDATA1, %%ZDATA2, %%ZDATA3, \
+                        %%GP0, %%GP1, %%LOAD_STORE, k1
 %endif
 %ifidn %%MODE, FLUSH_MODE
         LOAD_STORE_VAR_x4 %%LANE_A, %%LANE_B, %%LANE_C, %%LANE_D, %%DATA_PTR, \
-                          %%OFFSET, %%ZDATA0, %%ZDATA1, %%ZDATA2, %%ZDATA3, \
-                          %%GP0, %%GP1, %%LOAD_STORE, k1, k2
+                        %%OFFSET, %%ZDATA0, %%ZDATA1, %%ZDATA2, %%ZDATA3, \
+                        %%GP0, %%GP1, %%LOAD_STORE, k1, k2
 %endif
 %endmacro
 
@@ -1961,9 +1961,9 @@
 %endif
 %ifidn %%MODE, FLUSH_MODE
         PRELOADED_LOAD_STORE_VAR_x4 %%IN0, %%IN1, %%IN2, %%IN3, %%OFFSET, \
-                                    %%ZDATA0, %%ZDATA1, %%ZDATA2, %%ZDATA3, \
-                                    %%LOAD_STORE, %%LANE_A, %%LANE_B, \
-                                    %%LANE_C, %%LANE_D, k1, k2, k3, k4
+                                        %%ZDATA0, %%ZDATA1, %%ZDATA2, %%ZDATA3, \
+                                        %%LOAD_STORE, %%LANE_A, %%LANE_B, \
+                                        %%LANE_C, %%LANE_D, k1, k2, k3, k4
 %endif
 %endmacro
 

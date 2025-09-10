@@ -45,16 +45,16 @@
 extern AES_CBC_ENC_X4
 
 %ifdef LINUX
-%define arg1	rdi
-%define arg2	rsi
+%define arg1    rdi
+%define arg2    rsi
 %else
-%define arg1	rcx
-%define arg2	rdx
+%define arg1    rcx
+%define arg2    rdx
 %endif
 
-%define state	arg1
-%define job	arg2
-%define len2	arg2
+%define state   arg1
+%define job     arg2
+%define len2    arg2
 
 %define job_rax          rax
 
@@ -71,8 +71,8 @@ extern AES_CBC_ENC_X4
 ; STACK_SPACE needs to be an odd multiple of 8
 ; This routine and its callee clobbers all GPRs
 struc STACK
-_gpr_save:	resq	8
-_rsp_save:	resq	1
+_gpr_save:      resq    8
+_rsp_save:      resq    1
 endstruc
 
 %if NUM_LANES > 4
@@ -81,7 +81,7 @@ default rel
 
 align 16
 dupw:
-	dq 0x0100010001000100, 0x0100010001000100
+        dq 0x0100010001000100, 0x0100010001000100
 %endif
 
 mksection .text
@@ -92,40 +92,40 @@ mksection .text
 MKGLOBAL(SUBMIT_JOB_AES_ENC,function,internal)
 align_function
 SUBMIT_JOB_AES_ENC:
-        mov	rax, rsp
-        sub	rsp, STACK_size
-        and	rsp, -16
+        mov     rax, rsp
+        sub     rsp, STACK_size
+        and     rsp, -16
 
-	mov	[rsp + _gpr_save + 8*0], rbx
-	mov	[rsp + _gpr_save + 8*1], rbp
-	mov	[rsp + _gpr_save + 8*2], r12
-	mov	[rsp + _gpr_save + 8*3], r13
-	mov	[rsp + _gpr_save + 8*4], r14
-	mov	[rsp + _gpr_save + 8*5], r15
+        mov     [rsp + _gpr_save + 8*0], rbx
+        mov     [rsp + _gpr_save + 8*1], rbp
+        mov     [rsp + _gpr_save + 8*2], r12
+        mov     [rsp + _gpr_save + 8*3], r13
+        mov     [rsp + _gpr_save + 8*4], r14
+        mov     [rsp + _gpr_save + 8*5], r15
 %ifndef LINUX
-	mov	[rsp + _gpr_save + 8*6], rsi
-	mov	[rsp + _gpr_save + 8*7], rdi
+        mov     [rsp + _gpr_save + 8*6], rsi
+        mov     [rsp + _gpr_save + 8*7], rdi
 %endif
-	mov	[rsp + _rsp_save], rax	; original SP
+        mov     [rsp + _rsp_save], rax  ; original SP
 
-	mov	unused_lanes, [state + _aes_unused_lanes]
-	mov	lane, unused_lanes
+        mov     unused_lanes, [state + _aes_unused_lanes]
+        mov     lane, unused_lanes
         and     lane, 0xf
-	shr	unused_lanes, 4
-	mov	iv, [job + _iv]
-	mov	[state + _aes_unused_lanes], unused_lanes
+        shr     unused_lanes, 4
+        mov     iv, [job + _iv]
+        mov     [state + _aes_unused_lanes], unused_lanes
 
-	mov	[state + _aes_job_in_lane + lane*8], job
-	mov	tmp, [job + _src]
-	add	tmp, [job + _cipher_start_src_offset_in_bytes]
-	movdqu	xmm0, [iv]
-	mov	[state + _aes_args_in + lane*8], tmp
-	mov	tmp, [job + _enc_keys]
-	mov	[state + _aes_args_keys + lane*8], tmp
-	mov	tmp, [job + _dst]
-	mov	[state + _aes_args_out + lane*8], tmp
-	shl	lane, 4	; multiply by 16
-	movdqa	[state + _aes_args_IV + lane], xmm0
+        mov     [state + _aes_job_in_lane + lane*8], job
+        mov     tmp, [job + _src]
+        add     tmp, [job + _cipher_start_src_offset_in_bytes]
+        movdqu  xmm0, [iv]
+        mov     [state + _aes_args_in + lane*8], tmp
+        mov     tmp, [job + _enc_keys]
+        mov     [state + _aes_args_keys + lane*8], tmp
+        mov     tmp, [job + _dst]
+        mov     [state + _aes_args_out + lane*8], tmp
+        shl     lane, 4 ; multiply by 16
+        movdqa  [state + _aes_args_IV + lane], xmm0
 
         ;; insert len into proper lane
         mov     len, [job + _msg_len_to_cipher_in_bytes]
@@ -135,39 +135,39 @@ SUBMIT_JOB_AES_ENC:
         XPINSRW xmm0, xmm1, tmp, lane, len, no_scale
         movdqa  [state + _aes_lens], xmm0
 
-	cmp	unused_lanes, 0xf
-	jne	return_null
+        cmp     unused_lanes, 0xf
+        jne     return_null
 
-	; Find min length
-	phminposuw	xmm1, xmm0
-	pextrw	len2, xmm1, 0	; min value
-	pextrw	idx, xmm1, 1	; min index (0...3)
-	cmp	len2, 0
-	je	len_is_0
+        ; Find min length
+        phminposuw      xmm1, xmm0
+        pextrw  len2, xmm1, 0   ; min value
+        pextrw  idx, xmm1, 1    ; min index (0...3)
+        cmp     len2, 0
+        je      len_is_0
 
 %if NUM_LANES > 4
-	pshufb	xmm1, [rel dupw]   ; duplicate words across all lanes
+        pshufb  xmm1, [rel dupw]   ; duplicate words across all lanes
 %else
-        pshuflw	xmm1, xmm1, 0
+        pshuflw xmm1, xmm1, 0
 %endif
-	psubw	xmm0, xmm1
-	movdqa	[state + _aes_lens], xmm0
+        psubw   xmm0, xmm1
+        movdqa  [state + _aes_lens], xmm0
 
-	; "state" and "args" are the same address, arg1
-	; len is arg2
-	call	AES_CBC_ENC_X4
-	; state and idx are intact
+        ; "state" and "args" are the same address, arg1
+        ; len is arg2
+        call    AES_CBC_ENC_X4
+        ; state and idx are intact
 
 align_label
 len_is_0:
-	; process completed job "idx"
-	mov	job_rax, [state + _aes_job_in_lane + idx*8]
-	mov	unused_lanes, [state + _aes_unused_lanes]
-	mov	qword [state + _aes_job_in_lane + idx*8], 0
-	or	dword [job_rax + _status], IMB_STATUS_COMPLETED_CIPHER
-	shl	unused_lanes, 4
-	or	unused_lanes, idx
-	mov	[state + _aes_unused_lanes], unused_lanes
+        ; process completed job "idx"
+        mov     job_rax, [state + _aes_job_in_lane + idx*8]
+        mov     unused_lanes, [state + _aes_unused_lanes]
+        mov     qword [state + _aes_job_in_lane + idx*8], 0
+        or      dword [job_rax + _status], IMB_STATUS_COMPLETED_CIPHER
+        shl     unused_lanes, 4
+        or      unused_lanes, idx
+        mov     [state + _aes_unused_lanes], unused_lanes
 %ifdef SAFE_DATA
         ;; Clear IV
         pxor    xmm0, xmm0
@@ -178,23 +178,23 @@ len_is_0:
 
 align_label
 return:
-	mov	rbx, [rsp + _gpr_save + 8*0]
-	mov	rbp, [rsp + _gpr_save + 8*1]
-	mov	r12, [rsp + _gpr_save + 8*2]
-	mov	r13, [rsp + _gpr_save + 8*3]
-	mov	r14, [rsp + _gpr_save + 8*4]
-	mov	r15, [rsp + _gpr_save + 8*5]
+        mov     rbx, [rsp + _gpr_save + 8*0]
+        mov     rbp, [rsp + _gpr_save + 8*1]
+        mov     r12, [rsp + _gpr_save + 8*2]
+        mov     r13, [rsp + _gpr_save + 8*3]
+        mov     r14, [rsp + _gpr_save + 8*4]
+        mov     r15, [rsp + _gpr_save + 8*5]
 %ifndef LINUX
-	mov	rsi, [rsp + _gpr_save + 8*6]
-	mov	rdi, [rsp + _gpr_save + 8*7]
+        mov     rsi, [rsp + _gpr_save + 8*6]
+        mov     rdi, [rsp + _gpr_save + 8*7]
 %endif
-	mov	rsp, [rsp + _rsp_save]	; original SP
+        mov     rsp, [rsp + _rsp_save]  ; original SP
 
-	ret
+        ret
 
 align_label
 return_null:
-	xor	job_rax, job_rax
-	jmp	return
+        xor     job_rax, job_rax
+        jmp     return
 
 mksection stack-noexec

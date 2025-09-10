@@ -40,7 +40,7 @@ section .text
 default rel
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;void	aes_gcm_precomp_128_sse / aes_gcm_precomp_192_sse / aes_gcm_precomp_256_sse
+;void   aes_gcm_precomp_128_sse / aes_gcm_precomp_192_sse / aes_gcm_precomp_256_sse
 ;        (struct gcm_key_data *key_data);
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 align_function
@@ -62,8 +62,8 @@ FN_NAME(precomp,_):
         movdqu [rsp +  0*16], xmm6
 %endif
 
-	pxor	xmm6, xmm6
-	ENCRYPT_SINGLE_BLOCK	arg1, xmm6, xmm2	; xmm6 = HashKey
+        pxor    xmm6, xmm6
+        ENCRYPT_SINGLE_BLOCK    arg1, xmm6, xmm2        ; xmm6 = HashKey
 
         pshufb  xmm6, [SHUF_MASK]
         ;;;;;;;;;;;;;;;  PRECOMPUTATION of HashKey<<1 mod poly from the HashKey;;;;;;;;;;;;;;;
@@ -130,7 +130,7 @@ align_function
 MKGLOBAL(FN_NAME(enc,_),function,)
 FN_NAME(enc,_):
         endbranch64
-	FUNC_SAVE
+        FUNC_SAVE
 
 %ifdef SAFE_PARAM
         ;; Reset imb_errno
@@ -191,17 +191,17 @@ skip_in_out_check_enc:
 align_label
 skip_aad_check_enc:
 %endif
-	GCM_INIT arg1, arg2, arg6, arg7, arg8
+        GCM_INIT arg1, arg2, arg6, arg7, arg8
 
-	GCM_ENC_DEC  arg1, arg2, arg3, arg4, arg5, ENC
+        GCM_ENC_DEC  arg1, arg2, arg3, arg4, arg5, ENC
 
-	GCM_COMPLETE arg1, arg2, arg9, arg10
+        GCM_COMPLETE arg1, arg2, arg9, arg10
 
 align_label
 exit_enc:
-	FUNC_RESTORE
+        FUNC_RESTORE
 
-	ret
+        ret
 
 %ifdef SAFE_PARAM
 align_label
@@ -272,7 +272,7 @@ align_function
 MKGLOBAL(FN_NAME(dec,_),function,)
 FN_NAME(dec,_):
         endbranch64
-	FUNC_SAVE
+        FUNC_SAVE
 
 %ifdef SAFE_PARAM
         ;; Reset imb_errno
@@ -334,17 +334,17 @@ align_label
 skip_aad_check_dec:
 %endif
 
-	GCM_INIT arg1, arg2, arg6, arg7, arg8
+        GCM_INIT arg1, arg2, arg6, arg7, arg8
 
-	GCM_ENC_DEC  arg1, arg2, arg3, arg4, arg5, DEC
+        GCM_ENC_DEC  arg1, arg2, arg3, arg4, arg5, DEC
 
-	GCM_COMPLETE arg1, arg2, arg9, arg10
+        GCM_COMPLETE arg1, arg2, arg9, arg10
 
 align_label
 exit_dec:
-	FUNC_RESTORE
+        FUNC_RESTORE
 
-	ret
+        ret
 
 %ifdef SAFE_PARAM
 align_label
@@ -410,7 +410,7 @@ align_function
 MKGLOBAL(FN_NAME(enc_var_iv,_),function,internal)
 FN_NAME(enc_var_iv,_):
         endbranch64
-	FUNC_SAVE alloc_context
+        FUNC_SAVE alloc_context
 
         mov     arg1, [arg2 + _enc_keys]
 
@@ -418,15 +418,15 @@ FN_NAME(enc_var_iv,_):
         je      iv_len_12_enc_IV
 
         GCM_INIT arg1, {rsp + CONTEXT_OFFSET}, {[arg2 + _iv]}, \
-                 {[arg2 + _gcm_aad]}, {[arg2 + _gcm_aad_len]}, \
-                 {[arg2 + _iv_len_in_bytes]}
+                {[arg2 + _gcm_aad]}, {[arg2 + _gcm_aad_len]}, \
+                {[arg2 + _iv_len_in_bytes]}
 
         jmp     skip_iv_len_12_enc_IV
 
 align_function
 iv_len_12_enc_IV:
-	GCM_INIT arg1, {rsp + CONTEXT_OFFSET}, {[arg2 + _iv]}, \
-                 {[arg2 + _gcm_aad]}, {[arg2 + _gcm_aad_len]}
+        GCM_INIT arg1, {rsp + CONTEXT_OFFSET}, {[arg2 + _iv]}, \
+                {[arg2 + _gcm_aad]}, {[arg2 + _gcm_aad_len]}
 
 align_label
 skip_iv_len_12_enc_IV:
@@ -435,11 +435,11 @@ skip_iv_len_12_enc_IV:
         mov     arg4, [arg2 + _dst]
         mov     [rsp + GP_OFFSET + 5*8], arg2   ; preserve job pointer
         mov     arg2, [arg2 + _msg_len_to_cipher]
-	GCM_ENC_DEC  arg1, {rsp + CONTEXT_OFFSET}, arg4, arg3, arg2, ENC
+        GCM_ENC_DEC  arg1, {rsp + CONTEXT_OFFSET}, arg4, arg3, arg2, ENC
 
         mov     arg2, [rsp + GP_OFFSET + 5*8]
         GCM_COMPLETE arg1, {rsp + CONTEXT_OFFSET}, \
-                     {[arg2 + _auth_tag_output]}, {[arg2 + _auth_tag_output_len_in_bytes]}
+                        {[arg2 + _auth_tag_output]}, {[arg2 + _auth_tag_output_len_in_bytes]}
 
         ;; mark job complete
         mov     dword [arg2 + _status], IMB_STATUS_COMPLETED
@@ -447,7 +447,7 @@ skip_iv_len_12_enc_IV:
         mov     rax, arg2       ;; return the job
 
         FUNC_RESTORE
-	ret
+        ret
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;
@@ -460,7 +460,7 @@ align_function
 MKGLOBAL(FN_NAME(dec_var_iv,_),function,internal)
 FN_NAME(dec_var_iv,_):
         endbranch64
-	FUNC_SAVE alloc_context
+        FUNC_SAVE alloc_context
 
         mov     arg1, [arg2 + _dec_keys]
 
@@ -468,15 +468,15 @@ FN_NAME(dec_var_iv,_):
         je      iv_len_12_dec_IV
 
         GCM_INIT arg1, {rsp + CONTEXT_OFFSET}, {[arg2 + _iv]}, \
-                 {[arg2 + _gcm_aad]}, {[arg2 + _gcm_aad_len]}, \
-                 {[arg2 + _iv_len_in_bytes]}
+                {[arg2 + _gcm_aad]}, {[arg2 + _gcm_aad_len]}, \
+                {[arg2 + _iv_len_in_bytes]}
 
         jmp     skip_iv_len_12_dec_IV
 
 align_label
 iv_len_12_dec_IV:
-	GCM_INIT arg1, {rsp + CONTEXT_OFFSET}, {[arg2 + _iv]}, \
-                 {[arg2 + _gcm_aad]}, {[arg2 + _gcm_aad_len]}
+        GCM_INIT arg1, {rsp + CONTEXT_OFFSET}, {[arg2 + _iv]}, \
+                {[arg2 + _gcm_aad]}, {[arg2 + _gcm_aad_len]}
 
 align_label
 skip_iv_len_12_dec_IV:
@@ -485,11 +485,11 @@ skip_iv_len_12_dec_IV:
         mov     arg4, [arg2 + _dst]
         mov     [rsp + GP_OFFSET + 5*8], arg2   ; preserve job pointer
         mov     arg2, [arg2 + _msg_len_to_cipher]
-	GCM_ENC_DEC  arg1, {rsp + CONTEXT_OFFSET}, arg4, arg3, arg2, DEC
+        GCM_ENC_DEC  arg1, {rsp + CONTEXT_OFFSET}, arg4, arg3, arg2, DEC
 
         mov     arg2, [rsp + GP_OFFSET + 5*8]
         GCM_COMPLETE arg1, {rsp + CONTEXT_OFFSET}, \
-                     {[arg2 + _auth_tag_output]}, {[arg2 + _auth_tag_output_len_in_bytes]}
+                        {[arg2 + _auth_tag_output]}, {[arg2 + _auth_tag_output_len_in_bytes]}
 
         ;; mark job complete
         mov     dword [arg2 + _status], IMB_STATUS_COMPLETED
@@ -497,7 +497,7 @@ skip_iv_len_12_dec_IV:
         mov     rax, arg2       ;; return the job
 
         FUNC_RESTORE
-	ret
+        ret
 
 mksection stack-noexec
 %endif ; GCM_API_SSE_INC

@@ -303,7 +303,7 @@ align_label
 %else ; end SUBMIT
 
         ;; Check at least one job
-	bt	unused_lanes, ((NUM_LANES * 4) + 3)
+        bt      unused_lanes, ((NUM_LANES * 4) + 3)
         jc      %%_return_null
 
         ;; Find a lane with a non-null job
@@ -377,7 +377,7 @@ align_loop
         or      len2, len2
         je      %%_len_is_0
         ;; subtract min length from all lengths
-	pshufb	min_len_idx, [rel dupw]     ; duplicate words across all lanes
+        pshufb  min_len_idx, [rel dupw]     ; duplicate words across all lanes
         psubw   ccm_lens, min_len_idx
         movdqa  [state + _aes_ccm_lens], ccm_lens
 

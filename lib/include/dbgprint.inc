@@ -89,30 +89,30 @@ extern pDebugBuffer
 %endif
 %xdefine %%size %1
 %rotate 1
-	push	%%reg
-	mov	%%reg, [pDebugBuffer]
+        push    %%reg
+        mov     %%reg, [pDebugBuffer]
 %rep %0 - 1
-	mov	byte [%%reg], %%size
-	%if (%%size == 2)
-	mov	word [%%reg+1], %1
-	%elif (%%size == 4)
-	mov	dword [%%reg+1], %1
-	%elif (%%size == 8)
-	mov	qword [%%reg+1], %1
-	%elif (%%size == 16)
-	movdqu	oword [%%reg+1], %1
-	%elif (%%size == 32)
-	vmovdqu	[%%reg+1], %1
-	%elif (%%size == 64)
-	vmovdqu32 [%%reg+1], %1
-	%else
-	%error invalid size %%size
-	%endif
-	add	%%reg, %%size+1
+        mov     byte [%%reg], %%size
+        %if (%%size == 2)
+        mov     word [%%reg+1], %1
+        %elif (%%size == 4)
+        mov     dword [%%reg+1], %1
+        %elif (%%size == 8)
+        mov     qword [%%reg+1], %1
+        %elif (%%size == 16)
+        movdqu  oword [%%reg+1], %1
+        %elif (%%size == 32)
+        vmovdqu [%%reg+1], %1
+        %elif (%%size == 64)
+        vmovdqu32 [%%reg+1], %1
+        %else
+        %error invalid size %%size
+        %endif
+        add     %%reg, %%size+1
 %rotate 1
 %endrep
-	mov	[pDebugBuffer], %%reg
-	pop	%%reg
+        mov     [pDebugBuffer], %%reg
+        pop     %%reg
 %endmacro
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -125,95 +125,95 @@ extern pDebugBuffer
 %endif
 %xdefine %%size %1
 %rotate 1
-	push	%%reg
-	mov	%%reg, [pDebugBuffer]
+        push    %%reg
+        mov     %%reg, [pDebugBuffer]
 
-	mov	byte [%%reg], 0x57
+        mov     byte [%%reg], 0x57
 mksection .rodata
 %%lab: db %1, 0
 mksection .text
-	mov	qword [%%reg+1], %%lab
-	add	%%reg, 8+1
+        mov     qword [%%reg+1], %%lab
+        add     %%reg, 8+1
 %rotate 1
 
 %rep %0 - 2
-	mov	byte [%%reg], %%size
+        mov     byte [%%reg], %%size
 %if (%%size == 2)
-	mov	word [%%reg+1], %1
+        mov     word [%%reg+1], %1
 %elif (%%size == 4)
-	mov	dword [%%reg+1], %1
+        mov     dword [%%reg+1], %1
 %elif (%%size == 8)
-	mov	qword [%%reg+1], %1
+        mov     qword [%%reg+1], %1
 %elif (%%size == 16)
-	movdqu	oword [%%reg+1], %1
+        movdqu  oword [%%reg+1], %1
 %elif (%%size == 32)
-	vmovdqu	[%%reg+1], %1
+        vmovdqu [%%reg+1], %1
 %elif (%%size == 64)
-	vmovdqu32 [%%reg+1], %1
+        vmovdqu32 [%%reg+1], %1
 %else
 %error invalid size %%size
 %endif
-	add	%%reg, %%size+1
+        add     %%reg, %%size+1
 %rotate 1
 %endrep
-	mov	[pDebugBuffer], %%reg
-	pop	%%reg
+        mov     [pDebugBuffer], %%reg
+        pop     %%reg
 %endmacro
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; DBGPRINTL* data, ...
 %macro DBGPRINT16 1+
-	DBGPRINT_INT 2, %1
+        DBGPRINT_INT 2, %1
 %endmacro
 %macro DBGPRINT32 1+
-	DBGPRINT_INT 4, %1
+        DBGPRINT_INT 4, %1
 %endmacro
 %macro DBGPRINT64 1+
-	DBGPRINT_INT 8, %1
+        DBGPRINT_INT 8, %1
 %endmacro
 %macro DBGPRINT_XMM 1+
-	DBGPRINT_INT 16, %1
+        DBGPRINT_INT 16, %1
 %endmacro
 %macro DBGPRINT_YMM 1+
-	DBGPRINT_INT 32, %1
+        DBGPRINT_INT 32, %1
 %endmacro
 %macro DBGPRINT_ZMM 1+
-	DBGPRINT_INT 64, %1
+        DBGPRINT_INT 64, %1
 %endmacro
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; DBGPRINTL* label, data, ...
 %macro DBGPRINTL16 2+
-	DBGPRINTL_INT 2, %1, %2
+        DBGPRINTL_INT 2, %1, %2
 %endmacro
 %macro DBGPRINTL32 2+
-	DBGPRINTL_INT 4, %1, %2
+        DBGPRINTL_INT 4, %1, %2
 %endmacro
 %macro DBGPRINTL64 2+
-	DBGPRINTL_INT 8, %1, %2
+        DBGPRINTL_INT 8, %1, %2
 %endmacro
 %macro DBGPRINTL_XMM 2+
-	DBGPRINTL_INT 16, %1, %2
+        DBGPRINTL_INT 16, %1, %2
 %endmacro
 %macro DBGPRINTL_YMM 2+
-	DBGPRINTL_INT 32, %1, %2
+        DBGPRINTL_INT 32, %1, %2
 %endmacro
 %macro DBGPRINTL_ZMM 2+
-	DBGPRINTL_INT 64, %1, %2
+        DBGPRINTL_INT 64, %1, %2
 %endmacro
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 %macro DBGPRINTL 1
-	push	r15
-	mov	r15, [pDebugBuffer]
+        push    r15
+        mov     r15, [pDebugBuffer]
 
-	mov	byte [r15], 0x57
+        mov     byte [r15], 0x57
 mksection .rodata
 %%lab: db %1, 0
 mksection .text
-	mov	qword [r15+1], %%lab
-	add	r15, 8+1
+        mov     qword [r15+1], %%lab
+        add     r15, 8+1
 
-	mov	[pDebugBuffer], r15
-	pop	r15
+        mov     [pDebugBuffer], r15
+        pop     r15
 %endmacro
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -250,145 +250,145 @@ mksection .text
 
 %if 0 ; OLD
 %macro DBGPRINTL_ZMM 2-*
-	push	rax
-	mov	rax, [pDebugBuffer]
+        push    rax
+        mov     rax, [pDebugBuffer]
 
-	mov	byte [rax], 0x57
+        mov     byte [rax], 0x57
 mksection .rodata
 %%lab: db %1, 0
 mksection .text
-	mov	qword [rax+1], %%lab
-	add	rax, 8+1
+        mov     qword [rax+1], %%lab
+        add     rax, 8+1
 %rotate 1
 
 %rep %0 - 1
-	mov	byte [rax], 64
-	vmovdqu32 [rax+1], %1
+        mov     byte [rax], 64
+        vmovdqu32 [rax+1], %1
 %rotate 1
-	add	rax, 64+1
+        add     rax, 64+1
 %endrep
-	mov	[pDebugBuffer], rax
-	pop	rax
+        mov     [pDebugBuffer], rax
+        pop     rax
 %endmacro
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 %macro DBGPRINT_ZMM 1-*
-	push	rax
-	mov	rax, [pDebugBuffer]
+        push    rax
+        mov     rax, [pDebugBuffer]
 %rep %0
-	mov	byte [rax], 64
-	vmovdqu32 [rax+1], %1
+        mov     byte [rax], 64
+        vmovdqu32 [rax+1], %1
 %rotate 1
-	add	rax, 64+1
+        add     rax, 64+1
 %endrep
-	mov	[pDebugBuffer], rax
-	pop	rax
+        mov     [pDebugBuffer], rax
+        pop     rax
 %endmacro
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 %macro DBGPRINT_YMM 1-*
-	push	rax
-	mov	rax, [pDebugBuffer]
+        push    rax
+        mov     rax, [pDebugBuffer]
 %rep %0
-	mov	byte [rax], 32
-	vmovdqu	[rax+1], %1
+        mov     byte [rax], 32
+        vmovdqu [rax+1], %1
 %rotate 1
-	add	rax, 32+1
+        add     rax, 32+1
 %endrep
-	mov	[pDebugBuffer], rax
-	pop	rax
+        mov     [pDebugBuffer], rax
+        pop     rax
 %endmacro
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 %macro DBGPRINT_XMM 1-*
-	push	rax
-	mov	rax, [pDebugBuffer]
+        push    rax
+        mov     rax, [pDebugBuffer]
 %rep %0
-	mov	byte [rax], 16
-	vmovdqu	oword [rax+1], %1
+        mov     byte [rax], 16
+        vmovdqu oword [rax+1], %1
 %rotate 1
-	add	rax, 16+1
+        add     rax, 16+1
 %endrep
-	mov	[pDebugBuffer], rax
-	pop	rax
+        mov     [pDebugBuffer], rax
+        pop     rax
 %endmacro
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 %macro DBGPRINTL64 2-*
-	push	rax
-	mov	rax, [pDebugBuffer]
+        push    rax
+        mov     rax, [pDebugBuffer]
 
-	mov	byte [rax], 0x57
+        mov     byte [rax], 0x57
 mksection .rodata
 %%lab: db %1, 0
 mksection .text
-	mov	qword [rax+1], %%lab
-	add	rax, 8+1
+        mov     qword [rax+1], %%lab
+        add     rax, 8+1
 %rotate 1
 
 %rep %0 - 1
-	mov	byte [rax], 8
-	mov	qword [rax+1], %1
+        mov     byte [rax], 8
+        mov     qword [rax+1], %1
 %rotate 1
-	add	rax, 8+1
+        add     rax, 8+1
 %endrep
-	mov	[pDebugBuffer], rax
-	pop	rax
+        mov     [pDebugBuffer], rax
+        pop     rax
 %endmacro
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 %macro DBGPRINT64 1-*
-	push	rax
-	mov	rax, [pDebugBuffer]
+        push    rax
+        mov     rax, [pDebugBuffer]
 %rep %0
-	mov	byte [rax], 8
-	mov	qword [rax+1], %1
+        mov     byte [rax], 8
+        mov     qword [rax+1], %1
 %rotate 1
-	add	rax, 8+1
+        add     rax, 8+1
 %endrep
-	mov	[pDebugBuffer], rax
-	pop	rax
+        mov     [pDebugBuffer], rax
+        pop     rax
 %endmacro
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 %macro DBGPRINT32 1-*
-	push	rax
-	mov	rax, [pDebugBuffer]
+        push    rax
+        mov     rax, [pDebugBuffer]
 %rep %0
-	mov	byte [rax], 4
-	mov	dword [rax+1], %1
+        mov     byte [rax], 4
+        mov     dword [rax+1], %1
 %rotate 1
-	add	rax, 4+1
+        add     rax, 4+1
 %endrep
-	mov	[pDebugBuffer], rax
-	pop	rax
+        mov     [pDebugBuffer], rax
+        pop     rax
 %endmacro
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 %macro DBGPRINT16 1-*
-	push	rax
-	mov	rax, [pDebugBuffer]
+        push    rax
+        mov     rax, [pDebugBuffer]
 %rep %0
-	mov	byte [rax], 2
-	mov	word [rax+1], %1
+        mov     byte [rax], 2
+        mov     word [rax+1], %1
 %rotate 1
-	add	rax, 2+1
+        add     rax, 2+1
 %endrep
-	mov	[pDebugBuffer], rax
-	pop	rax
+        mov     [pDebugBuffer], rax
+        pop     rax
 %endmacro
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 %macro DBGPRINT_LAB 1
-	push	rax
-	mov	rax, [pDebugBuffer]
+        push    rax
+        mov     rax, [pDebugBuffer]
 
-	mov	byte [rax], 0x57
+        mov     byte [rax], 0x57
 mksection .rodata
 %%lab: db %1, 0
 mksection .text
-	mov	qword [rax+1], %%lab
-	add	rax, 8+1
+        mov     qword [rax+1], %%lab
+        add     rax, 8+1
 
-	mov	[pDebugBuffer], rax
-	pop	rax
+        mov     [pDebugBuffer], rax
+        pop     rax
 %endmacro
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 %macro DBGHIST 2
-	inc	dword [%1 + 4 * %2]
+        inc     dword [%1 + 4 * %2]
 %endmacro
 %macro DBGPRINT_ZMM 1-*
 %endmacro
