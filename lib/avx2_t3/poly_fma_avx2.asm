@@ -728,11 +728,11 @@ align_loop
         jbe     %%_poly1305_blocks_loop_end
 
         POLY1305_MSG_MUL_REDUCE_VEC4 %%YMM_ACC0, %%YMM_ACC1, %%YMM_ACC2, \
-                                     [rsp + _r4_save], [rsp + _r4_save + 32], [rsp + _r4_save + 32*2], \
-                                     [rsp + _r4p_save], [rsp + _r4p_save + 32], \
-                                     %%YTMP1, %%YTMP2, %%YTMP3, %%YTMP4, %%YTMP5, %%YTMP6, \
-                                     %%YTMP7, %%YTMP8, %%YTMP9, %%YTMP10, %%YTMP11, %%YTMP12, \
-                                     %%MSG, %%T0
+                                        [rsp + _r4_save], [rsp + _r4_save + 32], [rsp + _r4_save + 32*2], \
+                                        [rsp + _r4p_save], [rsp + _r4p_save + 32], \
+                                        %%YTMP1, %%YTMP2, %%YTMP3, %%YTMP4, %%YTMP5, %%YTMP6, \
+                                        %%YTMP7, %%YTMP8, %%YTMP9, %%YTMP10, %%YTMP11, %%YTMP12, \
+                                        %%MSG, %%T0
 
         jmp     %%_poly1305_blocks_loop
 
@@ -760,9 +760,9 @@ align_label
         vpsllq  %%YTMP2, 2
 
         POLY1305_MUL_REDUCE_VEC4 %%YMM_ACC0, %%YMM_ACC1, %%YMM_ACC2, \
-                                 %%YMM_R0, %%YMM_R1, %%YMM_R2, %%YTMP1, %%YTMP2, \
-                                 %%YTMP3, %%YTMP4, %%YTMP5, %%YTMP6, \
-                                 %%YTMP7, %%YTMP8, %%YTMP9, %%YTMP10
+                                %%YMM_R0, %%YMM_R1, %%YMM_R2, %%YTMP1, %%YTMP2, \
+                                %%YTMP3, %%YTMP4, %%YTMP5, %%YTMP6, \
+                                %%YTMP7, %%YTMP8, %%YTMP9, %%YTMP10
 
         vextracti128   XWORD(%%YTMP1), %%YMM_ACC0, 1
         vextracti128   XWORD(%%YTMP2), %%YMM_ACC1, 1
@@ -846,7 +846,7 @@ align_loop
         add     %%T0, %%R1      ;; T0 = R1 + (R1 >> 2)
 
         POLY1305_MUL_REDUCE %%A0, %%A1, %%A2, %%R0, %%R1, \
-                            %%T0, %%T1, %%T2, %%T3, %%GP_RAX, %%GP_RDX
+                                %%T0, %%T1, %%T2, %%T3, %%GP_RAX, %%GP_RDX
 
         add     %%MSG, POLY1305_BLOCK_SIZE
         sub     %%LEN, POLY1305_BLOCK_SIZE
@@ -883,7 +883,7 @@ align_label
         add     %%T0, %%R1      ;; T0 = R1 + (R1 >> 2)
 
         POLY1305_MUL_REDUCE %%A0, %%A1, %%A2, %%R0, %%R1, \
-                            %%T0, %%T1, %%T2, %%T3, %%GP_RAX, %%GP_RDX
+                                %%T0, %%T1, %%T2, %%T3, %%GP_RAX, %%GP_RDX
 
 align_label
 %%_poly1305_blocks_exit:
@@ -936,7 +936,7 @@ align_label
 %macro FUNC_ENTRY 0
         mov     rax, rsp
         sub     rsp, STACKFRAME_size
-	and	rsp, -32
+        and     rsp, -32
 
         mov     [rsp + _gpr_save + 8*0], rbx
         mov     [rsp + _gpr_save + 8*1], rbp
@@ -950,7 +950,7 @@ align_label
 %assign i 0
 %assign j 6
 %rep 10
-	vmovdqa	[rsp + _xmm_save + i*16], APPEND(xmm, j)
+        vmovdqa [rsp + _xmm_save + i*16], APPEND(xmm, j)
 %assign i (i + 1)
 %assign j (j + 1)
 %endrep
@@ -983,7 +983,7 @@ align_label
 %assign i 0
 %assign j 6
 %rep 10
-	vmovdqa	APPEND(xmm, j), [rsp + _xmm_save + i*16]
+        vmovdqa APPEND(xmm, j), [rsp + _xmm_save + i*16]
 %assign i (i + 1)
 %assign j (j + 1)
 %endrep
