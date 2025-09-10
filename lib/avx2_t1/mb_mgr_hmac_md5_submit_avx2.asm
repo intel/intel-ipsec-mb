@@ -38,20 +38,20 @@ extern md5_x8x2_avx2
 
 %if 1
 %ifdef LINUX
-%define arg1	rdi
-%define arg2	rsi
-%define reg3	rcx
-%define reg4	rdx
+%define arg1    rdi
+%define arg2    rsi
+%define reg3    rcx
+%define reg4    rdx
 %else
-%define arg1	rcx
-%define arg2	rdx
-%define reg3	rdi
-%define reg4	rsi
+%define arg1    rcx
+%define arg2    rdx
+%define reg3    rdi
+%define reg4    rsi
 %endif
 
-%define state	arg1
-%define job	arg2
-%define len2	arg2
+%define state   arg1
+%define job     arg2
+%define len2    arg2
 
 ; idx needs to be in rbp
 %define last_len        rbp
@@ -67,10 +67,10 @@ extern md5_x8x2_avx2
 %define len             rax
 
 %define size_offset     reg3
-%define tmp2		reg3
+%define tmp2            reg3
 
 %define lane            reg4
-%define tmp3		reg4
+%define tmp3            reg4
 
 %define extra_blocks    r8
 
@@ -86,8 +86,8 @@ extern md5_x8x2_avx2
 
 ; This routine and/or the called routine clobbers all GPRs
 struc STACK
-_gpr_save:	resq	8
-_rsp_save:	resq	1
+_gpr_save:      resq    8
+_rsp_save:      resq    1
 endstruc
 
 mksection .text
@@ -98,24 +98,24 @@ mksection .text
 MKGLOBAL(submit_job_hmac_md5_avx2,function,internal)
 align_function
 submit_job_hmac_md5_avx2:
-        mov	rax, rsp
-        sub	rsp, STACK_size
-        and	rsp, -32
+        mov     rax, rsp
+        sub     rsp, STACK_size
+        and     rsp, -32
 
-	mov	[rsp + _gpr_save + 8*0], rbx
-	mov	[rsp + _gpr_save + 8*1], rbp
-	mov	[rsp + _gpr_save + 8*2], r12
-	mov	[rsp + _gpr_save + 8*3], r13
-	mov	[rsp + _gpr_save + 8*4], r14
-	mov	[rsp + _gpr_save + 8*5], r15
+        mov     [rsp + _gpr_save + 8*0], rbx
+        mov     [rsp + _gpr_save + 8*1], rbp
+        mov     [rsp + _gpr_save + 8*2], r12
+        mov     [rsp + _gpr_save + 8*3], r13
+        mov     [rsp + _gpr_save + 8*4], r14
+        mov     [rsp + _gpr_save + 8*5], r15
 %ifndef LINUX
-	mov	[rsp + _gpr_save + 8*6], rsi
-	mov	[rsp + _gpr_save + 8*7], rdi
+        mov     [rsp + _gpr_save + 8*6], rsi
+        mov     [rsp + _gpr_save + 8*7], rdi
 %endif
-	mov	[rsp + _rsp_save], rax	; original SP
+        mov     [rsp + _rsp_save], rax  ; original SP
 
         DBGPRINTL "---------- enter md5 submit -----------"
-        mov	unused_lanes, [state + _unused_lanes_md5]
+        mov     unused_lanes, [state + _unused_lanes_md5]
         mov     DWORD(num_lanes_inuse), [state + _num_lanes_inuse_md5]
         mov     lane, unused_lanes
 
@@ -125,89 +125,89 @@ submit_job_hmac_md5_avx2:
         add     num_lanes_inuse, 1
         mov     [state + _num_lanes_inuse_md5], DWORD(num_lanes_inuse)
         DBGPRINTL64 "SUBMIT ********** num_lanes_in_use", num_lanes_inuse
-        imul	lane_data, lane, _HMAC_SHA1_LANE_DATA_size
-        lea	lane_data, [state + _ldata_md5 + lane_data]
-        mov	len, [job + _msg_len_to_hash_in_bytes]
-        mov	tmp, len
-        shr	tmp, 6	; divide by 64, len in terms of blocks
+        imul    lane_data, lane, _HMAC_SHA1_LANE_DATA_size
+        lea     lane_data, [state + _ldata_md5 + lane_data]
+        mov     len, [job + _msg_len_to_hash_in_bytes]
+        mov     tmp, len
+        shr     tmp, 6  ; divide by 64, len in terms of blocks
         DBGPRINTL64 "SUBMIT job len, num_blks ", len, tmp
-        mov	[lane_data + _job_in_lane], job
-        mov	dword [lane_data + _outer_done], 0
+        mov     [lane_data + _job_in_lane], job
+        mov     dword [lane_data + _outer_done], 0
 
         VPINSRW_M256 state + _lens_md5, xmm0, xmm1, p, lane, tmp, scale_x16
 
-        mov	last_len, len
-        and	last_len, 63
-        lea	extra_blocks, [last_len + 9 + 63]
-        shr	extra_blocks, 6
-        mov	[lane_data + _extra_blocks], DWORD(extra_blocks)
+        mov     last_len, len
+        and     last_len, 63
+        lea     extra_blocks, [last_len + 9 + 63]
+        shr     extra_blocks, 6
+        mov     [lane_data + _extra_blocks], DWORD(extra_blocks)
 
-        mov	p, [job + _src]
-        add	p, [job + _hash_start_src_offset_in_bytes]
-        mov	[state + _args_data_ptr_md5 + PTR_SZ*lane], p
+        mov     p, [job + _src]
+        add     p, [job + _hash_start_src_offset_in_bytes]
+        mov     [state + _args_data_ptr_md5 + PTR_SZ*lane], p
 
-        cmp	len, 64
-        jb	copy_lt64
+        cmp     len, 64
+        jb      copy_lt64
 
 align_label
 fast_copy:
-        add	p, len
+        add     p, len
         vmovdqu    ymm0, [p - 64 + 0 * 32]
         vmovdqu    ymm1, [p - 64 + 1 * 32]
         vmovdqu    [lane_data + _extra_block + 0*32], ymm0
         vmovdqu    [lane_data + _extra_block + 1*32], ymm1
 align_label
 end_fast_copy:
-        mov	size_offset, extra_blocks
-        shl	size_offset, 6
-        sub	size_offset, last_len
-        add	size_offset, 64-8
-        mov	[lane_data + _size_offset], DWORD(size_offset)
-        mov	start_offset, 64
-        sub	start_offset, last_len
-        mov	[lane_data + _start_offset], DWORD(start_offset)
+        mov     size_offset, extra_blocks
+        shl     size_offset, 6
+        sub     size_offset, last_len
+        add     size_offset, 64-8
+        mov     [lane_data + _size_offset], DWORD(size_offset)
+        mov     start_offset, 64
+        sub     start_offset, last_len
+        mov     [lane_data + _start_offset], DWORD(start_offset)
 
-        lea	tmp, [8*64 + 8*len]
+        lea     tmp, [8*64 + 8*len]
 ;	bswap	tmp
-        mov	[lane_data + _extra_block + size_offset], tmp
+        mov     [lane_data + _extra_block + size_offset], tmp
 
-        mov	tmp, [job + _auth_key_xor_ipad]
-        vmovdqu	xmm0, [tmp]
-        vmovd	[state + _args_digest_md5 + MD5_DIGEST_WORD_SIZE*lane + 0*MD5_DIGEST_ROW_SIZE], xmm0
-        vpextrd	[state + _args_digest_md5 + MD5_DIGEST_WORD_SIZE*lane + 1*MD5_DIGEST_ROW_SIZE], xmm0, 1
-        vpextrd	[state + _args_digest_md5 + MD5_DIGEST_WORD_SIZE*lane + 2*MD5_DIGEST_ROW_SIZE], xmm0, 2
-        vpextrd	[state + _args_digest_md5 + MD5_DIGEST_WORD_SIZE*lane + 3*MD5_DIGEST_ROW_SIZE], xmm0, 3
+        mov     tmp, [job + _auth_key_xor_ipad]
+        vmovdqu xmm0, [tmp]
+        vmovd   [state + _args_digest_md5 + MD5_DIGEST_WORD_SIZE*lane + 0*MD5_DIGEST_ROW_SIZE], xmm0
+        vpextrd [state + _args_digest_md5 + MD5_DIGEST_WORD_SIZE*lane + 1*MD5_DIGEST_ROW_SIZE], xmm0, 1
+        vpextrd [state + _args_digest_md5 + MD5_DIGEST_WORD_SIZE*lane + 2*MD5_DIGEST_ROW_SIZE], xmm0, 2
+        vpextrd [state + _args_digest_md5 + MD5_DIGEST_WORD_SIZE*lane + 3*MD5_DIGEST_ROW_SIZE], xmm0, 3
 
-        test	len, ~63
-        jnz	ge64_bytes
+        test    len, ~63
+        jnz     ge64_bytes
 
 align_label
 lt64_bytes:
         VPINSRW_M256 state + _lens_md5, xmm0, xmm1, tmp, lane, extra_blocks, scale_x16
 
-        lea	tmp, [lane_data + _extra_block + start_offset]
-        mov	[state + _args_data_ptr_md5 + PTR_SZ*lane], tmp
-        mov	dword [lane_data + _extra_blocks], 0
+        lea     tmp, [lane_data + _extra_block + start_offset]
+        mov     [state + _args_data_ptr_md5 + PTR_SZ*lane], tmp
+        mov     dword [lane_data + _extra_blocks], 0
 
 align_label
 ge64_bytes:
         DBGPRINTL64 "SUBMIT md5 all lanes loaded? ********** num_lanes_in_use", num_lanes_inuse
-        cmp	num_lanes_inuse, 0x10  ; all 16 lanes loaded?
-        jne	return_null
-        jmp	start_loop
+        cmp     num_lanes_inuse, 0x10  ; all 16 lanes loaded?
+        jne     return_null
+        jmp     start_loop
 
 align_loop
 start_loop:
         ; Find min length
-        vmovdqa	xmm0, [state + _lens_md5]
-        vphminposuw	xmm1, xmm0
-        vpextrw	DWORD(len2), xmm1, 0	; min value
-        vpextrw	DWORD(idx), xmm1, 1	; min index (0...7)
+        vmovdqa xmm0, [state + _lens_md5]
+        vphminposuw     xmm1, xmm0
+        vpextrw DWORD(len2), xmm1, 0    ; min value
+        vpextrw DWORD(idx), xmm1, 1     ; min index (0...7)
 
         vmovdqa xmm2, [state + _lens_md5 + 1*16]  ;; second 8 lengths
-        vphminposuw	xmm3, xmm2
-        vpextrw	DWORD(len_upper), xmm3, 0	; min value
-        vpextrw	DWORD(idx_upper), xmm3, 1	; min index (8...F)
+        vphminposuw     xmm3, xmm2
+        vpextrw DWORD(len_upper), xmm3, 0       ; min value
+        vpextrw DWORD(idx_upper), xmm3, 1       ; min index (8...F)
 
         cmp len2, len_upper
         jle use_min
@@ -223,70 +223,70 @@ min_in_high:
 align_label
 use_min:
 
-        cmp	len2, 0
-        je	len_is_0
+        cmp     len2, 0
+        je      len_is_0
         DBGPRINTL64 "min_length min_index ", len2, idx
-        vpbroadcastw	xmm1, xmm1 ; duplicate words across all lanes
-        vpsubw	xmm0, xmm0, xmm1
-        vmovdqa	[state + _lens_md5 + 0*16], xmm0
+        vpbroadcastw    xmm1, xmm1 ; duplicate words across all lanes
+        vpsubw  xmm0, xmm0, xmm1
+        vmovdqa [state + _lens_md5 + 0*16], xmm0
         DBGPRINTL_XMM "SUBMIT lens after sub lower", xmm0
 
-        vpsubw	xmm2, xmm2, xmm1
-        vmovdqa	[state + _lens_md5 + 1*16], xmm2
+        vpsubw  xmm2, xmm2, xmm1
+        vmovdqa [state + _lens_md5 + 1*16], xmm2
         DBGPRINTL_XMM "SUBMIT lens after sub upper", xmm2
 
         ; "state" and "args" are the same address, arg1
         ; len is arg2
-        call	md5_x8x2_avx2
+        call    md5_x8x2_avx2
         ; state and idx are intact
 
 align_label
 len_is_0:
         ; process completed job "idx"
-        imul	lane_data, idx, _HMAC_SHA1_LANE_DATA_size
-        lea	lane_data, [state + _ldata_md5 + lane_data]
-        mov	DWORD(extra_blocks), [lane_data + _extra_blocks]
-        cmp	extra_blocks, 0
-        jne	proc_extra_blocks
-        cmp	dword [lane_data + _outer_done], 0
-        jne	end_loop
+        imul    lane_data, idx, _HMAC_SHA1_LANE_DATA_size
+        lea     lane_data, [state + _ldata_md5 + lane_data]
+        mov     DWORD(extra_blocks), [lane_data + _extra_blocks]
+        cmp     extra_blocks, 0
+        jne     proc_extra_blocks
+        cmp     dword [lane_data + _outer_done], 0
+        jne     end_loop
 
 align_label
 proc_outer:
-        mov	dword [lane_data + _outer_done], 1
-        mov	DWORD(size_offset), [lane_data + _size_offset]
-        mov	qword [lane_data + _extra_block + size_offset], 0
+        mov     dword [lane_data + _outer_done], 1
+        mov     DWORD(size_offset), [lane_data + _size_offset]
+        mov     qword [lane_data + _extra_block + size_offset], 0
 
         VPINSRW_M256 state + _lens_md5, xmm0, xmm1, tmp, idx, 1, scale_x16
 
-        lea	tmp, [lane_data + _outer_block]
-        mov	job, [lane_data + _job_in_lane]
-        mov	[state + _args_data_ptr_md5 + PTR_SZ*idx], tmp
+        lea     tmp, [lane_data + _outer_block]
+        mov     job, [lane_data + _job_in_lane]
+        mov     [state + _args_data_ptr_md5 + PTR_SZ*idx], tmp
 
-        vmovd	xmm0, [state + _args_digest_md5 + MD5_DIGEST_WORD_SIZE*idx + 0*MD5_DIGEST_ROW_SIZE]
-        vpinsrd	xmm0, [state + _args_digest_md5 + MD5_DIGEST_WORD_SIZE*idx + 1*MD5_DIGEST_ROW_SIZE], 1
-        vpinsrd	xmm0, [state + _args_digest_md5 + MD5_DIGEST_WORD_SIZE*idx + 2*MD5_DIGEST_ROW_SIZE], 2
-        vpinsrd	xmm0, [state + _args_digest_md5 + MD5_DIGEST_WORD_SIZE*idx + 3*MD5_DIGEST_ROW_SIZE], 3
-        vmovdqa	[lane_data + _outer_block], xmm0
+        vmovd   xmm0, [state + _args_digest_md5 + MD5_DIGEST_WORD_SIZE*idx + 0*MD5_DIGEST_ROW_SIZE]
+        vpinsrd xmm0, [state + _args_digest_md5 + MD5_DIGEST_WORD_SIZE*idx + 1*MD5_DIGEST_ROW_SIZE], 1
+        vpinsrd xmm0, [state + _args_digest_md5 + MD5_DIGEST_WORD_SIZE*idx + 2*MD5_DIGEST_ROW_SIZE], 2
+        vpinsrd xmm0, [state + _args_digest_md5 + MD5_DIGEST_WORD_SIZE*idx + 3*MD5_DIGEST_ROW_SIZE], 3
+        vmovdqa [lane_data + _outer_block], xmm0
 
-        mov	tmp, [job + _auth_key_xor_opad]
-        vmovdqu	xmm0, [tmp]
-        vmovd	[state + _args_digest_md5 + MD5_DIGEST_WORD_SIZE*idx + 0*MD5_DIGEST_ROW_SIZE], xmm0
-        vpextrd	[state + _args_digest_md5 + MD5_DIGEST_WORD_SIZE*idx + 1*MD5_DIGEST_ROW_SIZE], xmm0, 1
-        vpextrd	[state + _args_digest_md5 + MD5_DIGEST_WORD_SIZE*idx + 2*MD5_DIGEST_ROW_SIZE], xmm0, 2
-        vpextrd	[state + _args_digest_md5 + MD5_DIGEST_WORD_SIZE*idx + 3*MD5_DIGEST_ROW_SIZE], xmm0, 3
-        jmp	start_loop
+        mov     tmp, [job + _auth_key_xor_opad]
+        vmovdqu xmm0, [tmp]
+        vmovd   [state + _args_digest_md5 + MD5_DIGEST_WORD_SIZE*idx + 0*MD5_DIGEST_ROW_SIZE], xmm0
+        vpextrd [state + _args_digest_md5 + MD5_DIGEST_WORD_SIZE*idx + 1*MD5_DIGEST_ROW_SIZE], xmm0, 1
+        vpextrd [state + _args_digest_md5 + MD5_DIGEST_WORD_SIZE*idx + 2*MD5_DIGEST_ROW_SIZE], xmm0, 2
+        vpextrd [state + _args_digest_md5 + MD5_DIGEST_WORD_SIZE*idx + 3*MD5_DIGEST_ROW_SIZE], xmm0, 3
+        jmp     start_loop
 
 align_label
 proc_extra_blocks:
-        mov	DWORD(start_offset), [lane_data + _start_offset]
+        mov     DWORD(start_offset), [lane_data + _start_offset]
 
         VPINSRW_M256 state + _lens_md5, xmm0, xmm1, tmp, idx, extra_blocks, scale_x16
 
-        lea	tmp, [lane_data + _extra_block + start_offset]
-        mov	[state + _args_data_ptr_md5 + PTR_SZ*idx], tmp
-        mov	dword [lane_data + _extra_blocks], 0
-        jmp	start_loop
+        lea     tmp, [lane_data + _extra_block + start_offset]
+        mov     [state + _args_data_ptr_md5 + PTR_SZ*idx], tmp
+        mov     dword [lane_data + _extra_blocks], 0
+        jmp     start_loop
 
 align_label
 
@@ -295,47 +295,47 @@ copy_lt64:
         ;; beginning of source block
         ;; destination extrablock but backwards by len from where 0x80 pre-populated
         ;; p2 clobbers unused_lanes, undo before exiting
-        lea	p2, [lane_data + _extra_block  + 64]
+        lea     p2, [lane_data + _extra_block  + 64]
         sub     p2, len
         memcpy_avx2_64_1 p2, p, len, tmp4, tmp2, ymm0, ymm1
-        mov	unused_lanes, [state + _unused_lanes_md5]
-        jmp	end_fast_copy
+        mov     unused_lanes, [state + _unused_lanes_md5]
+        jmp     end_fast_copy
 
 align_label
 return_null:
-        xor	job_rax, job_rax
-        jmp	return
+        xor     job_rax, job_rax
+        jmp     return
 
 align_label
 end_loop:
-        mov	job_rax, [lane_data + _job_in_lane]
-        mov	unused_lanes, [state + _unused_lanes_md5]
-        mov	qword [lane_data + _job_in_lane], 0
-        or	dword [job_rax + _status], IMB_STATUS_COMPLETED_AUTH
-        shl	unused_lanes, 4
-        or	unused_lanes, idx
-        mov	[state + _unused_lanes_md5], unused_lanes
+        mov     job_rax, [lane_data + _job_in_lane]
+        mov     unused_lanes, [state + _unused_lanes_md5]
+        mov     qword [lane_data + _job_in_lane], 0
+        or      dword [job_rax + _status], IMB_STATUS_COMPLETED_AUTH
+        shl     unused_lanes, 4
+        or      unused_lanes, idx
+        mov     [state + _unused_lanes_md5], unused_lanes
 
         mov     DWORD(num_lanes_inuse), [state + _num_lanes_inuse_md5]
         sub     num_lanes_inuse, 1
         mov     [state + _num_lanes_inuse_md5], DWORD(num_lanes_inuse)
 
-        mov	p, [job_rax + _auth_tag_output]
+        mov     p, [job_rax + _auth_tag_output]
 
         ; copy 12 bytes
-        mov	DWORD(tmp),  [state + _args_digest_md5 + MD5_DIGEST_WORD_SIZE*idx + 0*MD5_DIGEST_ROW_SIZE]
-        mov	DWORD(tmp2), [state + _args_digest_md5 + MD5_DIGEST_WORD_SIZE*idx + 1*MD5_DIGEST_ROW_SIZE]
-        mov	DWORD(tmp3), [state + _args_digest_md5 + MD5_DIGEST_WORD_SIZE*idx + 2*MD5_DIGEST_ROW_SIZE]
-        mov	[p + 0*4], DWORD(tmp)
-        mov	[p + 1*4], DWORD(tmp2)
-        mov	[p + 2*4], DWORD(tmp3)
+        mov     DWORD(tmp),  [state + _args_digest_md5 + MD5_DIGEST_WORD_SIZE*idx + 0*MD5_DIGEST_ROW_SIZE]
+        mov     DWORD(tmp2), [state + _args_digest_md5 + MD5_DIGEST_WORD_SIZE*idx + 1*MD5_DIGEST_ROW_SIZE]
+        mov     DWORD(tmp3), [state + _args_digest_md5 + MD5_DIGEST_WORD_SIZE*idx + 2*MD5_DIGEST_ROW_SIZE]
+        mov     [p + 0*4], DWORD(tmp)
+        mov     [p + 1*4], DWORD(tmp2)
+        mov     [p + 2*4], DWORD(tmp3)
 
-	cmp	DWORD [job_rax + _auth_tag_output_len_in_bytes], 12
-	je 	clear_ret
+        cmp     DWORD [job_rax + _auth_tag_output_len_in_bytes], 12
+        je      clear_ret
 
-	; copy 16 bytes
-	mov	DWORD(tmp3), [state + _args_digest_md5 + MD5_DIGEST_WORD_SIZE*idx + 3*MD5_DIGEST_ROW_SIZE]
-	mov	[p + 3*4], DWORD(tmp3)
+        ; copy 16 bytes
+        mov     DWORD(tmp3), [state + _args_digest_md5 + MD5_DIGEST_WORD_SIZE*idx + 3*MD5_DIGEST_ROW_SIZE]
+        mov     [p + 3*4], DWORD(tmp3)
 
 align_label
 clear_ret:
@@ -355,17 +355,17 @@ return:
         DBGPRINTL "---------- exit md5 submit -----------"
 
         vzeroupper
-	mov	rbx, [rsp + _gpr_save + 8*0]
-	mov	rbp, [rsp + _gpr_save + 8*1]
-	mov	r12, [rsp + _gpr_save + 8*2]
-	mov	r13, [rsp + _gpr_save + 8*3]
-	mov	r14, [rsp + _gpr_save + 8*4]
-	mov	r15, [rsp + _gpr_save + 8*5]
+        mov     rbx, [rsp + _gpr_save + 8*0]
+        mov     rbp, [rsp + _gpr_save + 8*1]
+        mov     r12, [rsp + _gpr_save + 8*2]
+        mov     r13, [rsp + _gpr_save + 8*3]
+        mov     r14, [rsp + _gpr_save + 8*4]
+        mov     r15, [rsp + _gpr_save + 8*5]
 %ifndef LINUX
-	mov	rsi, [rsp + _gpr_save + 8*6]
-	mov	rdi, [rsp + _gpr_save + 8*7]
+        mov     rsi, [rsp + _gpr_save + 8*6]
+        mov     rdi, [rsp + _gpr_save + 8*7]
 %endif
-	mov	rsp, [rsp + _rsp_save]	; original SP
+        mov     rsp, [rsp + _rsp_save]  ; original SP
 
         ret
 

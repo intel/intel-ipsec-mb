@@ -155,7 +155,7 @@ align_function
 MKGLOBAL(ghash_internal_avx_gen4,function,internal)
 ghash_internal_avx_gen4:
         CALC_AAD_HASH r12, r13, xmm0, arg1, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, \
-                      r10, r11, rax
+                        r10, r11, rax
         ret
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -173,8 +173,8 @@ ghash_internal_avx_gen4:
 align_function
 MKGLOBAL(partial_block_gmac_avx_gen4,function,internal)
 partial_block_gmac_avx_gen4:
-	PARTIAL_BLOCK_GMAC arg2, arg3, arg4, r11, xmm0, xmm13, xmm14, \
-                           xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm8, xmm9, xmm10
+        PARTIAL_BLOCK_GMAC arg2, arg3, arg4, r11, xmm0, xmm13, xmm14, \
+                        xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm8, xmm9, xmm10
         ret
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -219,7 +219,7 @@ ghash_avx512:
 %endif
 
         ;; copy tag to xmm0
-        vmovdqu	xmm0, [arg4]
+        vmovdqu xmm0, [arg4]
         vpshufb xmm0, [rel SHUF_MASK] ; perform a 16Byte swap
 
         mov     r12, arg2
@@ -262,4 +262,3 @@ error_ghash:
 %endif
 
 mksection stack-noexec
-

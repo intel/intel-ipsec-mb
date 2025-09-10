@@ -53,35 +53,35 @@
 ;;
 
 %ifdef LINUX
-%define arg1	rdi
-%define arg2	rsi
-%define arg3	rdx
-%define arg4	rcx
-%define arg5	r8
+%define arg1    rdi
+%define arg2    rsi
+%define arg3    rdx
+%define arg4    rcx
+%define arg5    r8
 %else
-%define arg1	rcx
-%define arg2	rdx
-%define arg3	r8
-%define arg4	r9
-%define arg5	[rsp + 5*8]
+%define arg1    rcx
+%define arg2    rdx
+%define arg3    r8
+%define arg4    r9
+%define arg5    [rsp + 5*8]
 %endif
 
-%define OUT	arg1
-%define IN	arg2
-%define IV	arg3
-%define KEYS	arg4
+%define OUT     arg1
+%define IN      arg2
+%define IV      arg3
+%define KEYS    arg4
 %ifdef LINUX
-%define LEN	arg5
+%define LEN     arg5
 %else
-%define LEN2	arg5
-%define LEN	r11
+%define LEN2    arg5
+%define LEN     r11
 %endif
 
-%define TMP0	rax
-%define TMP1	r10
+%define TMP0    rax
+%define TMP1    r10
 
-%define XDATA	xmm0
-%define XIN	xmm1
+%define XDATA   xmm0
+%define XIN     xmm1
 
 mksection .text
 
@@ -89,7 +89,7 @@ mksection .text
 %define %%NROUNDS %1
 
 %ifndef LINUX
-	mov		LEN, LEN2
+        mov             LEN, LEN2
 %endif
 %ifdef SAFE_PARAM
         IMB_ERR_CHECK_RESET
@@ -128,24 +128,24 @@ align_label
 %%skip_in_out_check:
 %endif
 
-	simd_load_avx_16 XIN, IN, LEN
+        simd_load_avx_16 XIN, IN, LEN
 
-	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-	vmovdqu		XDATA, [IV] 		; IV (or next to last block)
-	vpxor		XDATA, [KEYS + 16*0]	; 0. ARK
+        vmovdqu         XDATA, [IV]             ; IV (or next to last block)
+        vpxor           XDATA, [KEYS + 16*0]    ; 0. ARK
 %assign i 16
 %rep %%NROUNDS
-	vaesenc		XDATA, [KEYS + i]	; ENC
+        vaesenc         XDATA, [KEYS + i]       ; ENC
 %assign i (i+16)
 %endrep
-	vaesenclast	XDATA, [KEYS + i]
+        vaesenclast     XDATA, [KEYS + i]
 
-	vpxor		XDATA, XIN 		; plaintext/ciphertext XOR block cipher encryption
+        vpxor           XDATA, XIN              ; plaintext/ciphertext XOR block cipher encryption
 
-	simd_store_avx	OUT, XDATA, LEN, TMP0, TMP1
+        simd_store_avx  OUT, XDATA, LEN, TMP0, TMP1
 
-	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 %ifdef SAFE_DATA
         ;; XDATA and XIN are the only scratch SIMD registers used

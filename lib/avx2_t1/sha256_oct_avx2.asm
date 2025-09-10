@@ -52,42 +52,42 @@ default rel
 align 64
 ;global K256_8
 K256_8:
-	dd	0x428a2f98,	0x71374491
-	dd	0xb5c0fbcf,	0xe9b5dba5
-	dd	0x3956c25b,	0x59f111f1
-	dd	0x923f82a4,	0xab1c5ed5
-	dd	0xd807aa98,	0x12835b01
-	dd	0x243185be,	0x550c7dc3
-	dd	0x72be5d74,	0x80deb1fe
-	dd	0x9bdc06a7,	0xc19bf174
-	dd	0xe49b69c1,	0xefbe4786
-	dd	0x0fc19dc6,	0x240ca1cc
-	dd	0x2de92c6f,	0x4a7484aa
-	dd	0x5cb0a9dc,	0x76f988da
-	dd	0x983e5152,	0xa831c66d
-	dd	0xb00327c8,	0xbf597fc7
-	dd	0xc6e00bf3,	0xd5a79147
-	dd	0x06ca6351,	0x14292967
-	dd	0x27b70a85,	0x2e1b2138
-	dd	0x4d2c6dfc,	0x53380d13
-	dd	0x650a7354,	0x766a0abb
-	dd	0x81c2c92e,	0x92722c85
-	dd	0xa2bfe8a1,	0xa81a664b
-	dd	0xc24b8b70,	0xc76c51a3
-	dd	0xd192e819,	0xd6990624
-	dd	0xf40e3585,	0x106aa070
-	dd	0x19a4c116,	0x1e376c08
-	dd	0x2748774c,	0x34b0bcb5
-	dd	0x391c0cb3,	0x4ed8aa4a
-	dd	0x5b9cca4f,	0x682e6ff3
-	dd	0x748f82ee,	0x78a5636f
-	dd	0x84c87814,	0x8cc70208
-	dd	0x90befffa,	0xa4506ceb
-	dd	0xbef9a3f7,	0xc67178f2
+        dd      0x428a2f98,     0x71374491
+        dd      0xb5c0fbcf,     0xe9b5dba5
+        dd      0x3956c25b,     0x59f111f1
+        dd      0x923f82a4,     0xab1c5ed5
+        dd      0xd807aa98,     0x12835b01
+        dd      0x243185be,     0x550c7dc3
+        dd      0x72be5d74,     0x80deb1fe
+        dd      0x9bdc06a7,     0xc19bf174
+        dd      0xe49b69c1,     0xefbe4786
+        dd      0x0fc19dc6,     0x240ca1cc
+        dd      0x2de92c6f,     0x4a7484aa
+        dd      0x5cb0a9dc,     0x76f988da
+        dd      0x983e5152,     0xa831c66d
+        dd      0xb00327c8,     0xbf597fc7
+        dd      0xc6e00bf3,     0xd5a79147
+        dd      0x06ca6351,     0x14292967
+        dd      0x27b70a85,     0x2e1b2138
+        dd      0x4d2c6dfc,     0x53380d13
+        dd      0x650a7354,     0x766a0abb
+        dd      0x81c2c92e,     0x92722c85
+        dd      0xa2bfe8a1,     0xa81a664b
+        dd      0xc24b8b70,     0xc76c51a3
+        dd      0xd192e819,     0xd6990624
+        dd      0xf40e3585,     0x106aa070
+        dd      0x19a4c116,     0x1e376c08
+        dd      0x2748774c,     0x34b0bcb5
+        dd      0x391c0cb3,     0x4ed8aa4a
+        dd      0x5b9cca4f,     0x682e6ff3
+        dd      0x748f82ee,     0x78a5636f
+        dd      0x84c87814,     0x8cc70208
+        dd      0x90befffa,     0xa4506ceb
+        dd      0xbef9a3f7,     0xc67178f2
 
 align 16
 PSHUFFLE_BYTE_FLIP_MASK:
-	dq 0x0405060700010203, 0x0c0d0e0f08090a0b
+        dq 0x0405060700010203, 0x0c0d0e0f08090a0b
 
 extern K256
 mksection .text
@@ -99,82 +99,82 @@ mksection .text
 %define GP_OFFSET XMM_STORAGE
 
 %macro FUNC_SAVE 0
-    mov      r11, rsp
-    sub      rsp, VARIABLE_OFFSET
-    and      rsp, ~31	; align rsp to 32 bytes
+        mov      r11, rsp
+        sub      rsp, VARIABLE_OFFSET
+        and      rsp, ~31   ; align rsp to 32 bytes
 
-    mov      [rsp + 0*8],  rbx
-    mov      [rsp + 1*8],  rbp
-    mov      [rsp + 2*8],  r12
-    mov      [rsp + 3*8],  r13
-    mov      [rsp + 4*8],  r14
-    mov      [rsp + 5*8],  r15
+        mov      [rsp + 0*8],  rbx
+        mov      [rsp + 1*8],  rbp
+        mov      [rsp + 2*8],  r12
+        mov      [rsp + 3*8],  r13
+        mov      [rsp + 4*8],  r14
+        mov      [rsp + 5*8],  r15
 %ifndef LINUX
-    mov      [rsp + 6*8],  rsi
-    mov      [rsp + 7*8],  rdi
-    vmovdqa  [rsp + 4*16], xmm6
-    vmovdqa  [rsp + 5*16], xmm7
-    vmovdqa  [rsp + 6*16], xmm8
-    vmovdqa  [rsp + 7*16], xmm9
-    vmovdqa  [rsp + 8*16], xmm10
-    vmovdqa  [rsp + 9*16], xmm11
-    vmovdqa  [rsp + 10*16], xmm12
-    vmovdqa  [rsp + 11*16], xmm13
-    vmovdqa  [rsp + 12*16], xmm14
-    vmovdqa  [rsp + 13*16], xmm15
+        mov      [rsp + 6*8],  rsi
+        mov      [rsp + 7*8],  rdi
+        vmovdqa  [rsp + 4*16], xmm6
+        vmovdqa  [rsp + 5*16], xmm7
+        vmovdqa  [rsp + 6*16], xmm8
+        vmovdqa  [rsp + 7*16], xmm9
+        vmovdqa  [rsp + 8*16], xmm10
+        vmovdqa  [rsp + 9*16], xmm11
+        vmovdqa  [rsp + 10*16], xmm12
+        vmovdqa  [rsp + 11*16], xmm13
+        vmovdqa  [rsp + 12*16], xmm14
+        vmovdqa  [rsp + 13*16], xmm15
 %endif ; LINUX
-    mov      [rsp + 14*16], r11 ;; rsp pointer
+        mov      [rsp + 14*16], r11 ;; rsp pointer
 %endmacro
 
 %macro FUNC_RESTORE 0
-    mov      rbx,  [rsp + 0*8]
-    mov      rbp,  [rsp + 1*8]
-    mov      r12,  [rsp + 2*8]
-    mov      r13,  [rsp + 3*8]
-    mov      r14,  [rsp + 4*8]
-    mov      r15,  [rsp + 5*8]
+        mov      rbx,  [rsp + 0*8]
+        mov      rbp,  [rsp + 1*8]
+        mov      r12,  [rsp + 2*8]
+        mov      r13,  [rsp + 3*8]
+        mov      r14,  [rsp + 4*8]
+        mov      r15,  [rsp + 5*8]
 %ifndef LINUX
-    mov      rsi,   [rsp + 6*8]
-    mov      rdi,   [rsp + 7*8]
-    vmovdqa  xmm6,  [rsp + 4*16]
-    vmovdqa  xmm7,  [rsp + 5*16]
-    vmovdqa  xmm8,  [rsp + 6*16]
-    vmovdqa  xmm9,  [rsp + 7*16]
-    vmovdqa  xmm10, [rsp + 8*16]
-    vmovdqa  xmm11, [rsp + 9*16]
-    vmovdqa  xmm12, [rsp + 10*16]
-    vmovdqa  xmm13, [rsp + 11*16]
-    vmovdqa  xmm14, [rsp + 12*16]
-    vmovdqa  xmm15, [rsp + 13*16]
+        mov      rsi,   [rsp + 6*8]
+        mov      rdi,   [rsp + 7*8]
+        vmovdqa  xmm6,  [rsp + 4*16]
+        vmovdqa  xmm7,  [rsp + 5*16]
+        vmovdqa  xmm8,  [rsp + 6*16]
+        vmovdqa  xmm9,  [rsp + 7*16]
+        vmovdqa  xmm10, [rsp + 8*16]
+        vmovdqa  xmm11, [rsp + 9*16]
+        vmovdqa  xmm12, [rsp + 10*16]
+        vmovdqa  xmm13, [rsp + 11*16]
+        vmovdqa  xmm14, [rsp + 12*16]
+        vmovdqa  xmm15, [rsp + 13*16]
 
 %ifdef SAFE_DATA
-    vpxor    xmm5, xmm5, xmm5
-    vmovdqa  xmm5,  [rsp + 4*16]
-    vmovdqa  xmm5,  [rsp + 5*16]
-    vmovdqa  xmm5,  [rsp + 6*16]
-    vmovdqa  xmm5,  [rsp + 7*16]
-    vmovdqa  xmm5,  [rsp + 8*16]
-    vmovdqa  xmm5,  [rsp + 9*16]
-    vmovdqa  xmm5,  [rsp + 10*16]
-    vmovdqa  xmm5,  [rsp + 11*16]
-    vmovdqa  xmm5,  [rsp + 12*16]
-    vmovdqa  xmm5,  [rsp + 13*16]
+        vpxor    xmm5, xmm5, xmm5
+        vmovdqa  xmm5,  [rsp + 4*16]
+        vmovdqa  xmm5,  [rsp + 5*16]
+        vmovdqa  xmm5,  [rsp + 6*16]
+        vmovdqa  xmm5,  [rsp + 7*16]
+        vmovdqa  xmm5,  [rsp + 8*16]
+        vmovdqa  xmm5,  [rsp + 9*16]
+        vmovdqa  xmm5,  [rsp + 10*16]
+        vmovdqa  xmm5,  [rsp + 11*16]
+        vmovdqa  xmm5,  [rsp + 12*16]
+        vmovdqa  xmm5,  [rsp + 13*16]
 %endif
 %endif ; LINUX
-    mov      rsp,   [rsp + 14*16] ;; rsp pointer
+        mov      rsp,   [rsp + 14*16] ;; rsp pointer
 %endmacro
 
 %ifdef LINUX
-     %define arg1 	rdi
-     %define arg2	rsi
-     %define reg3	rcx
-     %define reg4	rdx
+        %define arg1       rdi
+        %define arg2       rsi
+        %define reg3       rcx
+        %define reg4       rdx
 %else
- ; Windows definitions
-     %define arg1 	rcx
-     %define arg2 	rdx
-     %define reg3	rsi
-     %define reg4	rdi
+; Windows definitions
+        %define arg1       rcx
+        %define arg2       rdx
+        %define reg3       rsi
+        %define reg4       rdi
 %endif
 
 ; Common definitions
@@ -182,8 +182,8 @@ mksection .text
 %define INP_SIZE arg2
 
 %define IDX     rax
-%define ROUND	rbx
-%define TBL	reg3
+%define ROUND   rbx
+%define TBL     reg3
 
 %define inp0 r9
 %define inp1 r10
@@ -239,7 +239,7 @@ mksection .text
 %define TT6 ymm14
 %define TT7 ymm15
 
-%define SZ8	8*SHA256_DIGEST_WORD_SIZE	; Size of one vector register
+%define SZ8     8*SHA256_DIGEST_WORD_SIZE       ; Size of one vector register
 %define ROUNDS 64*SHA256_DIGEST_WORD_SIZE
 
 ; Define stack usage
@@ -247,21 +247,21 @@ mksection .text
 ;; Assume stack aligned to 32 bytes before call
 ;; Therefore FRAMESZ mod 32 must be 32-8 = 24
 struc stack_frame
-  .data		resb	16*SZ8
-  .digest	resb	8*SZ8
-  .ytmp		resb	4*SZ8
-  .align	resb	24
+.data         resb    16*SZ8
+.digest       resb    8*SZ8
+.ytmp         resb    4*SZ8
+.align        resb    24
 endstruc
-%define FRAMESZ	stack_frame_size
-%define _DIGEST	stack_frame.digest
-%define _YTMP	stack_frame.ytmp
+%define FRAMESZ stack_frame_size
+%define _DIGEST stack_frame.digest
+%define _YTMP   stack_frame.ytmp
 
-%define YTMP0	rsp + _YTMP + 0*SZ8
-%define YTMP1	rsp + _YTMP + 1*SZ8
-%define YTMP2	rsp + _YTMP + 2*SZ8
-%define YTMP3	rsp + _YTMP + 3*SZ8
+%define YTMP0   rsp + _YTMP + 0*SZ8
+%define YTMP1   rsp + _YTMP + 1*SZ8
+%define YTMP2   rsp + _YTMP + 2*SZ8
+%define YTMP3   rsp + _YTMP + 3*SZ8
 
-%define VMOVPS	vmovups
+%define VMOVPS  vmovups
 
 %macro ROTATE_ARGS 0
 %xdefine TMP_ h
@@ -280,9 +280,9 @@ endstruc
 %define %%reg %1
 %define %%imm %2
 %define %%tmp %3
-	vpslld	%%tmp, %%reg, (32-(%%imm))
-	vpsrld	%%reg, %%reg, %%imm
-	vpor	%%reg, %%reg, %%tmp
+        vpslld  %%tmp, %%reg, (32-(%%imm))
+        vpsrld  %%reg, %%reg, %%imm
+        vpor    %%reg, %%reg, %%tmp
 %endmacro
 
 ; non-destructive
@@ -292,84 +292,84 @@ endstruc
 %define %%imm %2
 %define %%tmp %3
 %define %%src %4
-	;vmovdqa	%%tmp, %%reg
-	vpslld	%%tmp, %%src, (32-(%%imm))
-	vpsrld	%%reg, %%src, %%imm
-	vpor	%%reg, %%reg, %%tmp
+        ;vmovdqa	%%tmp, %%reg
+        vpslld  %%tmp, %%src, (32-(%%imm))
+        vpsrld  %%reg, %%src, %%imm
+        vpor    %%reg, %%reg, %%tmp
 %endmacro
 
 ; PRORD dst/src, amt
 %macro PRORD 2
-	PRORD	%1, %2, TMP
+        PRORD   %1, %2, TMP
 %endmacro
 
 ; PRORD_nd dst, src, amt
 %macro PRORD_nd 3
-	PRORD_nd	%1, %3, TMP, %2
+        PRORD_nd        %1, %3, TMP, %2
 %endmacro
 
 ;; arguments passed implicitly in preprocessor symbols i, a...h
 %macro ROUND_00_15 2
 %define %%T1 %1
 %define %%i  %2
-	PRORD_nd	a0, e, (11-6)	; sig1: a0 = (e >> 5)
+        PRORD_nd        a0, e, (11-6)   ; sig1: a0 = (e >> 5)
 
-	vpxor	a2, f, g	; ch: a2 = f^g
-	vpand	a2, a2, e		; ch: a2 = (f^g)&e
-	vpxor	a2, a2, g		; a2 = ch
+        vpxor   a2, f, g        ; ch: a2 = f^g
+        vpand   a2, a2, e               ; ch: a2 = (f^g)&e
+        vpxor   a2, a2, g               ; a2 = ch
 
-	PRORD_nd	a1, e, 25		; sig1: a1 = (e >> 25)
-	vmovdqa	[SZ8*(%%i&0xf) + rsp], %%T1
-	vpbroadcastd TT7, [TBL + ROUND]
-	vpaddd	%%T1, %%T1, TT7	; T1 = W + K
-	vpxor	a0, a0, e	; sig1: a0 = e ^ (e >> 5)
-	PRORD	a0, 6		; sig1: a0 = (e >> 6) ^ (e >> 11)
-	vpaddd	h, h, a2	; h = h + ch
-	PRORD_nd	a2, a, (13-2)	; sig0: a2 = (a >> 11)
-	vpaddd	h, h, %%T1	; h = h + ch + W + K
-	vpxor	a0, a0, a1	; a0 = sigma1
-	PRORD_nd	a1, a, 22	; sig0: a1 = (a >> 22)
-	vpxor	%%T1, a, c	; maj: T1 = a^c
-	add	ROUND, 4	; ROUND++
-	vpand	%%T1, %%T1, b	; maj: T1 = (a^c)&b
-	vpaddd	h, h, a0
+        PRORD_nd        a1, e, 25               ; sig1: a1 = (e >> 25)
+        vmovdqa [SZ8*(%%i&0xf) + rsp], %%T1
+        vpbroadcastd TT7, [TBL + ROUND]
+        vpaddd  %%T1, %%T1, TT7 ; T1 = W + K
+        vpxor   a0, a0, e       ; sig1: a0 = e ^ (e >> 5)
+        PRORD   a0, 6           ; sig1: a0 = (e >> 6) ^ (e >> 11)
+        vpaddd  h, h, a2        ; h = h + ch
+        PRORD_nd        a2, a, (13-2)   ; sig0: a2 = (a >> 11)
+        vpaddd  h, h, %%T1      ; h = h + ch + W + K
+        vpxor   a0, a0, a1      ; a0 = sigma1
+        PRORD_nd        a1, a, 22       ; sig0: a1 = (a >> 22)
+        vpxor   %%T1, a, c      ; maj: T1 = a^c
+        add     ROUND, 4        ; ROUND++
+        vpand   %%T1, %%T1, b   ; maj: T1 = (a^c)&b
+        vpaddd  h, h, a0
 
-	vpaddd	d, d, h
+        vpaddd  d, d, h
 
-	vpxor	a2, a2, a	; sig0: a2 = a ^ (a >> 11)
-	PRORD	a2, 2		; sig0: a2 = (a >> 2) ^ (a >> 13)
-	vpxor	a2, a2, a1	; a2 = sig0
-	vpand	a1, a, c	; maj: a1 = a&c
-	vpor	a1, a1, %%T1	; a1 = maj
-	vpaddd	h, h, a1	; h = h + ch + W + K + maj
-	vpaddd	h, h, a2	; h = h + ch + W + K + maj + sigma0
+        vpxor   a2, a2, a       ; sig0: a2 = a ^ (a >> 11)
+        PRORD   a2, 2           ; sig0: a2 = (a >> 2) ^ (a >> 13)
+        vpxor   a2, a2, a1      ; a2 = sig0
+        vpand   a1, a, c        ; maj: a1 = a&c
+        vpor    a1, a1, %%T1    ; a1 = maj
+        vpaddd  h, h, a1        ; h = h + ch + W + K + maj
+        vpaddd  h, h, a2        ; h = h + ch + W + K + maj + sigma0
 
-	ROTATE_ARGS
+        ROTATE_ARGS
 %endm
 
 ;; arguments passed implicitly in preprocessor symbols i, a...h
 %macro ROUND_16_XX 2
 %define %%T1 %1
 %define %%i  %2
-	vmovdqa	%%T1, [SZ8*((%%i-15)&0xf) + rsp]
-	vmovdqa	a1, [SZ8*((%%i-2)&0xf) + rsp]
-	vmovdqa	a0, %%T1
-	PRORD	%%T1, 18-7
-	vmovdqa	a2, a1
-	PRORD	a1, 19-17
-	vpxor	%%T1, %%T1, a0
-	PRORD	%%T1, 7
-	vpxor	a1, a1, a2
-	PRORD	a1, 17
-	vpsrld	a0, a0, 3
-	vpxor	%%T1, %%T1, a0
-	vpsrld	a2, a2, 10
-	vpxor	a1, a1, a2
-	vpaddd	%%T1, %%T1, [SZ8*((%%i-16)&0xf) + rsp]
-	vpaddd	a1, a1, [SZ8*((%%i-7)&0xf) + rsp]
-	vpaddd	%%T1, %%T1, a1
+        vmovdqa %%T1, [SZ8*((%%i-15)&0xf) + rsp]
+        vmovdqa a1, [SZ8*((%%i-2)&0xf) + rsp]
+        vmovdqa a0, %%T1
+        PRORD   %%T1, 18-7
+        vmovdqa a2, a1
+        PRORD   a1, 19-17
+        vpxor   %%T1, %%T1, a0
+        PRORD   %%T1, 7
+        vpxor   a1, a1, a2
+        PRORD   a1, 17
+        vpsrld  a0, a0, 3
+        vpxor   %%T1, %%T1, a0
+        vpsrld  a2, a2, 10
+        vpxor   a1, a1, a2
+        vpaddd  %%T1, %%T1, [SZ8*((%%i-16)&0xf) + rsp]
+        vpaddd  a1, a1, [SZ8*((%%i-7)&0xf) + rsp]
+        vpaddd  %%T1, %%T1, a1
 
-	ROUND_00_15 %%T1, %%i
+        ROUND_00_15 %%T1, %%i
 
 %endm
 
@@ -384,167 +384,167 @@ endstruc
 MKGLOBAL(sha256_oct_avx2,function,internal)
 align_function
 sha256_oct_avx2:
-	; general registers preserved in outer calling routine
-	; outer calling routine saves all the XMM registers
-	sub	rsp, FRAMESZ
+        ; general registers preserved in outer calling routine
+        ; outer calling routine saves all the XMM registers
+        sub     rsp, FRAMESZ
 
-	;; Load the pre-transposed incoming digest.
-	vmovdqu	a,[STATE + 0*SHA256_DIGEST_ROW_SIZE]
-	vmovdqu	b,[STATE + 1*SHA256_DIGEST_ROW_SIZE]
-	vmovdqu	c,[STATE + 2*SHA256_DIGEST_ROW_SIZE]
-	vmovdqu	d,[STATE + 3*SHA256_DIGEST_ROW_SIZE]
-	vmovdqu	e,[STATE + 4*SHA256_DIGEST_ROW_SIZE]
-	vmovdqu	f,[STATE + 5*SHA256_DIGEST_ROW_SIZE]
-	vmovdqu	g,[STATE + 6*SHA256_DIGEST_ROW_SIZE]
-	vmovdqu	h,[STATE + 7*SHA256_DIGEST_ROW_SIZE]
+        ;; Load the pre-transposed incoming digest.
+        vmovdqu a,[STATE + 0*SHA256_DIGEST_ROW_SIZE]
+        vmovdqu b,[STATE + 1*SHA256_DIGEST_ROW_SIZE]
+        vmovdqu c,[STATE + 2*SHA256_DIGEST_ROW_SIZE]
+        vmovdqu d,[STATE + 3*SHA256_DIGEST_ROW_SIZE]
+        vmovdqu e,[STATE + 4*SHA256_DIGEST_ROW_SIZE]
+        vmovdqu f,[STATE + 5*SHA256_DIGEST_ROW_SIZE]
+        vmovdqu g,[STATE + 6*SHA256_DIGEST_ROW_SIZE]
+        vmovdqu h,[STATE + 7*SHA256_DIGEST_ROW_SIZE]
 
-	lea	TBL,[rel K256_8]
+        lea     TBL,[rel K256_8]
 
-	;; load the address of each of the 4 message lanes
-	;; getting ready to transpose input onto stack
-	mov	inp0,[STATE + _data_ptr_sha256 + 0*PTR_SZ]
-	mov	inp1,[STATE + _data_ptr_sha256 + 1*PTR_SZ]
-	mov	inp2,[STATE + _data_ptr_sha256 + 2*PTR_SZ]
-	mov	inp3,[STATE + _data_ptr_sha256 + 3*PTR_SZ]
-	mov	inp4,[STATE + _data_ptr_sha256 + 4*PTR_SZ]
-	mov	inp5,[STATE + _data_ptr_sha256 + 5*PTR_SZ]
-	mov	inp6,[STATE + _data_ptr_sha256 + 6*PTR_SZ]
-	mov	inp7,[STATE + _data_ptr_sha256 + 7*PTR_SZ]
+        ;; load the address of each of the 4 message lanes
+        ;; getting ready to transpose input onto stack
+        mov     inp0,[STATE + _data_ptr_sha256 + 0*PTR_SZ]
+        mov     inp1,[STATE + _data_ptr_sha256 + 1*PTR_SZ]
+        mov     inp2,[STATE + _data_ptr_sha256 + 2*PTR_SZ]
+        mov     inp3,[STATE + _data_ptr_sha256 + 3*PTR_SZ]
+        mov     inp4,[STATE + _data_ptr_sha256 + 4*PTR_SZ]
+        mov     inp5,[STATE + _data_ptr_sha256 + 5*PTR_SZ]
+        mov     inp6,[STATE + _data_ptr_sha256 + 6*PTR_SZ]
+        mov     inp7,[STATE + _data_ptr_sha256 + 7*PTR_SZ]
 
-	xor	IDX, IDX
+        xor     IDX, IDX
 align_loop
 lloop:
-	xor	ROUND, ROUND
+        xor     ROUND, ROUND
 
-	;; save old digest
-	vmovdqa	[rsp + _DIGEST + 0*SZ8], a
-	vmovdqa	[rsp + _DIGEST + 1*SZ8], b
-	vmovdqa	[rsp + _DIGEST + 2*SZ8], c
-	vmovdqa	[rsp + _DIGEST + 3*SZ8], d
-	vmovdqa	[rsp + _DIGEST + 4*SZ8], e
-	vmovdqa	[rsp + _DIGEST + 5*SZ8], f
-	vmovdqa	[rsp + _DIGEST + 6*SZ8], g
-	vmovdqa	[rsp + _DIGEST + 7*SZ8], h
-	DBGPRINTL_YMM "transposed digest ", a,b,c,d,e,f,g,h
+        ;; save old digest
+        vmovdqa [rsp + _DIGEST + 0*SZ8], a
+        vmovdqa [rsp + _DIGEST + 1*SZ8], b
+        vmovdqa [rsp + _DIGEST + 2*SZ8], c
+        vmovdqa [rsp + _DIGEST + 3*SZ8], d
+        vmovdqa [rsp + _DIGEST + 4*SZ8], e
+        vmovdqa [rsp + _DIGEST + 5*SZ8], f
+        vmovdqa [rsp + _DIGEST + 6*SZ8], g
+        vmovdqa [rsp + _DIGEST + 7*SZ8], h
+        DBGPRINTL_YMM "transposed digest ", a,b,c,d,e,f,g,h
 %assign i 0
 %rep 2
-	TRANSPOSE8_U32_LOAD8 TT0, TT1, TT2, TT3, TT4, TT5, TT6, TT7, \
-			     inp0, inp1, inp2, inp3, inp4, inp5, \
-			     inp6, inp7, IDX+i*32
+        TRANSPOSE8_U32_LOAD8 TT0, TT1, TT2, TT3, TT4, TT5, TT6, TT7, \
+                                inp0, inp1, inp2, inp3, inp4, inp5, \
+                                inp6, inp7, IDX+i*32
 
-	vmovdqa	[YTMP0], g
-	vmovdqa	[YTMP1], h
-	TRANSPOSE8_U32_PRELOADED TT0, TT1, TT2, TT3, TT4, TT5, TT6, TT7,   TMP0, TMP1
-	DBGPRINTL_YMM "transposed input ", TT0, TT1, TT2, TT3, TT4, TT5, TT6, TT7
-	vbroadcasti128	TMP1, [rel PSHUFFLE_BYTE_FLIP_MASK]
-	vmovdqa	g, [YTMP0]
-	vpshufb	TT0, TT0, TMP1
-	vpshufb	TT1, TT1, TMP1
-	vpshufb	TT2, TT2, TMP1
-	vpshufb	TT3, TT3, TMP1
-	vpshufb	TT4, TT4, TMP1
-	vpshufb	TT5, TT5, TMP1
-	vpshufb	TT6, TT6, TMP1
-	vpshufb	TT7, TT7, TMP1
-	vmovdqa	h, [YTMP1]
-	vmovdqa	[YTMP0], TT4
-	vmovdqa	[YTMP1], TT5
-	vmovdqa	[YTMP2], TT6
-	vmovdqa	[YTMP3], TT7
-	ROUND_00_15	TT0,(i*8+0)
-	vmovdqa	TT0, [YTMP0]
-	ROUND_00_15	TT1,(i*8+1)
-	vmovdqa	TT1, [YTMP1]
-	ROUND_00_15	TT2,(i*8+2)
-	vmovdqa	TT2, [YTMP2]
-	ROUND_00_15	TT3,(i*8+3)
-	vmovdqa	TT3, [YTMP3]
-	ROUND_00_15	TT0,(i*8+4)
-	ROUND_00_15	TT1,(i*8+5)
-	ROUND_00_15	TT2,(i*8+6)
-	ROUND_00_15	TT3,(i*8+7)
+        vmovdqa [YTMP0], g
+        vmovdqa [YTMP1], h
+        TRANSPOSE8_U32_PRELOADED TT0, TT1, TT2, TT3, TT4, TT5, TT6, TT7,   TMP0, TMP1
+        DBGPRINTL_YMM "transposed input ", TT0, TT1, TT2, TT3, TT4, TT5, TT6, TT7
+        vbroadcasti128  TMP1, [rel PSHUFFLE_BYTE_FLIP_MASK]
+        vmovdqa g, [YTMP0]
+        vpshufb TT0, TT0, TMP1
+        vpshufb TT1, TT1, TMP1
+        vpshufb TT2, TT2, TMP1
+        vpshufb TT3, TT3, TMP1
+        vpshufb TT4, TT4, TMP1
+        vpshufb TT5, TT5, TMP1
+        vpshufb TT6, TT6, TMP1
+        vpshufb TT7, TT7, TMP1
+        vmovdqa h, [YTMP1]
+        vmovdqa [YTMP0], TT4
+        vmovdqa [YTMP1], TT5
+        vmovdqa [YTMP2], TT6
+        vmovdqa [YTMP3], TT7
+        ROUND_00_15     TT0,(i*8+0)
+        vmovdqa TT0, [YTMP0]
+        ROUND_00_15     TT1,(i*8+1)
+        vmovdqa TT1, [YTMP1]
+        ROUND_00_15     TT2,(i*8+2)
+        vmovdqa TT2, [YTMP2]
+        ROUND_00_15     TT3,(i*8+3)
+        vmovdqa TT3, [YTMP3]
+        ROUND_00_15     TT0,(i*8+4)
+        ROUND_00_15     TT1,(i*8+5)
+        ROUND_00_15     TT2,(i*8+6)
+        ROUND_00_15     TT3,(i*8+7)
 %assign i (i+1)
 %endrep
-	add	IDX, 4*4*4
+        add     IDX, 4*4*4
 
 %assign i (i*8)
 
-	jmp	Lrounds_16_xx
+        jmp     Lrounds_16_xx
 align_loop
 Lrounds_16_xx:
 %rep 16
-	ROUND_16_XX	T1, i
+        ROUND_16_XX     T1, i
 %assign i (i+1)
 %endrep
 
-	cmp	ROUND,ROUNDS
-	jb	Lrounds_16_xx
+        cmp     ROUND,ROUNDS
+        jb      Lrounds_16_xx
 
-	;; add old digest
-	vpaddd	a, a, [rsp + _DIGEST + 0*SZ8]
-	vpaddd	b, b, [rsp + _DIGEST + 1*SZ8]
-	vpaddd	c, c, [rsp + _DIGEST + 2*SZ8]
-	vpaddd	d, d, [rsp + _DIGEST + 3*SZ8]
-	vpaddd	e, e, [rsp + _DIGEST + 4*SZ8]
-	vpaddd	f, f, [rsp + _DIGEST + 5*SZ8]
-	vpaddd	g, g, [rsp + _DIGEST + 6*SZ8]
-	vpaddd	h, h, [rsp + _DIGEST + 7*SZ8]
+        ;; add old digest
+        vpaddd  a, a, [rsp + _DIGEST + 0*SZ8]
+        vpaddd  b, b, [rsp + _DIGEST + 1*SZ8]
+        vpaddd  c, c, [rsp + _DIGEST + 2*SZ8]
+        vpaddd  d, d, [rsp + _DIGEST + 3*SZ8]
+        vpaddd  e, e, [rsp + _DIGEST + 4*SZ8]
+        vpaddd  f, f, [rsp + _DIGEST + 5*SZ8]
+        vpaddd  g, g, [rsp + _DIGEST + 6*SZ8]
+        vpaddd  h, h, [rsp + _DIGEST + 7*SZ8]
 
-	sub	INP_SIZE, 1  ;; unit is blocks
-	jne	lloop
+        sub     INP_SIZE, 1  ;; unit is blocks
+        jne     lloop
 
-	; write back to memory (state object) the transposed digest
-	vmovdqu	[STATE + 0*SHA256_DIGEST_ROW_SIZE],a
-	vmovdqu	[STATE + 1*SHA256_DIGEST_ROW_SIZE],b
-	vmovdqu	[STATE + 2*SHA256_DIGEST_ROW_SIZE],c
-	vmovdqu	[STATE + 3*SHA256_DIGEST_ROW_SIZE],d
-	vmovdqu	[STATE + 4*SHA256_DIGEST_ROW_SIZE],e
-	vmovdqu	[STATE + 5*SHA256_DIGEST_ROW_SIZE],f
-	vmovdqu	[STATE + 6*SHA256_DIGEST_ROW_SIZE],g
-	vmovdqu	[STATE + 7*SHA256_DIGEST_ROW_SIZE],h
-	DBGPRINTL_YMM "sha256 digest on exit ", a,b,c,d,e,f,g,h
+        ; write back to memory (state object) the transposed digest
+        vmovdqu [STATE + 0*SHA256_DIGEST_ROW_SIZE],a
+        vmovdqu [STATE + 1*SHA256_DIGEST_ROW_SIZE],b
+        vmovdqu [STATE + 2*SHA256_DIGEST_ROW_SIZE],c
+        vmovdqu [STATE + 3*SHA256_DIGEST_ROW_SIZE],d
+        vmovdqu [STATE + 4*SHA256_DIGEST_ROW_SIZE],e
+        vmovdqu [STATE + 5*SHA256_DIGEST_ROW_SIZE],f
+        vmovdqu [STATE + 6*SHA256_DIGEST_ROW_SIZE],g
+        vmovdqu [STATE + 7*SHA256_DIGEST_ROW_SIZE],h
+        DBGPRINTL_YMM "sha256 digest on exit ", a,b,c,d,e,f,g,h
 
-	; update input pointers
-	add	inp0, IDX
-	mov	[STATE + _data_ptr_sha256 + 0*8], inp0
-	add	inp1, IDX
-	mov	[STATE + _data_ptr_sha256 + 1*8], inp1
-	add	inp2, IDX
-	mov	[STATE + _data_ptr_sha256 + 2*8], inp2
-	add	inp3, IDX
-	mov	[STATE + _data_ptr_sha256 + 3*8], inp3
-	add	inp4, IDX
-	mov	[STATE + _data_ptr_sha256 + 4*8], inp4
-	add	inp5, IDX
-	mov	[STATE + _data_ptr_sha256 + 5*8], inp5
-	add	inp6, IDX
-	mov	[STATE + _data_ptr_sha256 + 6*8], inp6
-	add	inp7, IDX
-	mov	[STATE + _data_ptr_sha256 + 7*8], inp7
+        ; update input pointers
+        add     inp0, IDX
+        mov     [STATE + _data_ptr_sha256 + 0*8], inp0
+        add     inp1, IDX
+        mov     [STATE + _data_ptr_sha256 + 1*8], inp1
+        add     inp2, IDX
+        mov     [STATE + _data_ptr_sha256 + 2*8], inp2
+        add     inp3, IDX
+        mov     [STATE + _data_ptr_sha256 + 3*8], inp3
+        add     inp4, IDX
+        mov     [STATE + _data_ptr_sha256 + 4*8], inp4
+        add     inp5, IDX
+        mov     [STATE + _data_ptr_sha256 + 5*8], inp5
+        add     inp6, IDX
+        mov     [STATE + _data_ptr_sha256 + 6*8], inp6
+        add     inp7, IDX
+        mov     [STATE + _data_ptr_sha256 + 7*8], inp7
 
-	;;;;;;;;;;;;;;;;
-	;; Postamble
+        ;;;;;;;;;;;;;;;;
+        ;; Postamble
 
 %ifdef SAFE_DATA
         ;; Clear stack frame ((16+8+4)*32 bytes)
         clear_all_ymms_asm
 %assign i 0
 %rep (16+8+4)
-	vmovdqa [rsp + i*SZ8], ymm0
+        vmovdqa [rsp + i*SZ8], ymm0
 %assign i (i+1)
 %endrep
 %endif
 
-	add rsp, FRAMESZ
-	ret
+        add rsp, FRAMESZ
+        ret
 
 ; void call_sha256_oct_avx2_from_c(SHA256_ARGS *args, UINT32 size_in_blocks);
 MKGLOBAL(call_sha256_oct_avx2_from_c,function,internal)
 align_function
 call_sha256_oct_avx2_from_c:
-	FUNC_SAVE
-	call sha256_oct_avx2
-	FUNC_RESTORE
-	ret
+        FUNC_SAVE
+        call sha256_oct_avx2
+        FUNC_RESTORE
+        ret
 
 mksection stack-noexec

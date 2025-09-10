@@ -42,16 +42,16 @@ mksection .text
 MKGLOBAL(copy_digest_avx,function,internal)
 align_function
 copy_digest_avx:
-    ;; Preserve registers
-    push r10
-    push r11
+        ;; Preserve registers
+        push r10
+        push r11
 
-    simd_store_avx r9, xmm0, rbx, r10, r11
-    
-    ;; Restore registers
-    pop r11
-    pop r10
-    
-    ret
+        simd_store_avx r9, xmm0, rbx, r10, r11
+
+        ;; Restore registers
+        pop r11
+        pop r10
+
+        ret
 
 mksection stack-noexec

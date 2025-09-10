@@ -44,65 +44,65 @@ extern ddq_add_5, ddq_add_6, ddq_add_7, ddq_add_8
 %define CONCAT(a,b) a %+ b
 %define VMOVDQ vmovdqu
 
-%define xdata0	xmm0
-%define xdata1	xmm1
-%define xpart	xmm1
-%define xdata2	xmm2
-%define xdata3	xmm3
-%define xdata4	xmm4
-%define xdata5	xmm5
-%define xdata6	xmm6
-%define xdata7	xmm7
+%define xdata0  xmm0
+%define xdata1  xmm1
+%define xpart   xmm1
+%define xdata2  xmm2
+%define xdata3  xmm3
+%define xdata4  xmm4
+%define xdata5  xmm5
+%define xdata6  xmm6
+%define xdata7  xmm7
 %define xcounter xmm8
 %define xtmp    xmm8
 %define xbyteswap xmm9
 %define xtmp2   xmm9
-%define xkey0 	xmm10
+%define xkey0   xmm10
 %define xtmp3   xmm10
-%define xkey4 	xmm11
-%define xkey8 	xmm12
-%define xkey12	xmm13
-%define xkeyA	xmm14
-%define xkeyB	xmm15
+%define xkey4   xmm11
+%define xkey8   xmm12
+%define xkey12  xmm13
+%define xkeyA   xmm14
+%define xkeyB   xmm15
 
 %ifdef CNTR_CCM_AVX
 %ifdef LINUX
-%define job	  rdi
-%define p_in	  rsi
-%define p_keys	  rdx
-%define p_out	  rcx
+%define job       rdi
+%define p_in      rsi
+%define p_keys    rdx
+%define p_out     rcx
 %define num_bytes r8
 %define p_ivlen   r9
 %else ;; LINUX
-%define job	  rcx
-%define p_in	  rdx
-%define p_keys	  r8
-%define p_out	  r9
+%define job       rcx
+%define p_in      rdx
+%define p_keys    r8
+%define p_out     r9
 %define num_bytes r10
 %define p_ivlen   rax
 %endif ;; LINUX
 %define p_IV    r11
 %else ;; CNTR_CCM_AVX
 %ifdef LINUX
-%define p_in	  rdi
-%define p_IV	  rsi
-%define p_keys	  rdx
-%define p_out	  rcx
+%define p_in      rdi
+%define p_IV      rsi
+%define p_keys    rdx
+%define p_out     rcx
 %define num_bytes r8
 %define num_bits  r8
 %define p_ivlen   r9
 %else
-%define p_in	  rcx
-%define p_IV	  rdx
-%define p_keys	  r8
-%define p_out	  r9
+%define p_in      rcx
+%define p_IV      rdx
+%define p_keys    r8
+%define p_out     r9
 %define num_bytes r10
 %define num_bits  r10
 %define p_ivlen   qword [rsp + 8*6]
 %endif ;; LINUX
 %endif ;; CNTR_CCM_AVX
 
-%define tmp	r11
+%define tmp     r11
 %define flags   r11
 
 %define r_bits   r12
@@ -110,11 +110,11 @@ extern ddq_add_5, ddq_add_6, ddq_add_7, ddq_add_8
 %define mask    r14
 
 %macro do_aes_load 2
-	do_aes %1, %2, 1
+        do_aes %1, %2, 1
 %endmacro
 
 %macro do_aes_noload 2
-	do_aes %1, %2, 0
+        do_aes %1, %2, 0
 %endmacro
 
 ; do_aes num_in_par load_keys
@@ -127,150 +127,150 @@ extern ddq_add_5, ddq_add_6, ddq_add_7, ddq_add_8
 %define %%VPADD vpaddd
 
 %if (%%load_keys)
-	vmovdqa	xkey0, [p_keys + 0*16]
+        vmovdqa xkey0, [p_keys + 0*16]
 %endif
 
-	vpshufb	xdata0, xcounter, xbyteswap
+        vpshufb xdata0, xcounter, xbyteswap
 %assign i 1
 %rep (%%by - 1)
-	%%VPADD	CONCAT(xdata,i), xcounter, [rel CONCAT(ddq_add_,i)]
-	vpshufb	CONCAT(xdata,i), CONCAT(xdata,i), xbyteswap
+        %%VPADD CONCAT(xdata,i), xcounter, [rel CONCAT(ddq_add_,i)]
+        vpshufb CONCAT(xdata,i), CONCAT(xdata,i), xbyteswap
 %assign i (i + 1)
 %endrep
 
-	vmovdqa	xkeyA, [p_keys + 1*16]
+        vmovdqa xkeyA, [p_keys + 1*16]
 
-	vpxor	xdata0, xkey0
-	%%VPADD	xcounter, xcounter, [rel CONCAT(ddq_add_,%%by)]
+        vpxor   xdata0, xkey0
+        %%VPADD xcounter, xcounter, [rel CONCAT(ddq_add_,%%by)]
 
 %assign i 1
 %rep (%%by - 1)
-	vpxor	CONCAT(xdata,i), xkey0
+        vpxor   CONCAT(xdata,i), xkey0
 %assign i (i + 1)
 %endrep
 
-	vmovdqa	xkeyB, [p_keys + 2*16]
+        vmovdqa xkeyB, [p_keys + 2*16]
 %assign i 0
 %rep %%by
-	vaesenc	CONCAT(xdata,i), CONCAT(xdata,i), xkeyA		; key 1
+        vaesenc CONCAT(xdata,i), CONCAT(xdata,i), xkeyA         ; key 1
 %assign i (i+1)
 %endrep
 
-	vmovdqa	xkeyA, [p_keys + 3*16]
+        vmovdqa xkeyA, [p_keys + 3*16]
 %assign i 0
 %rep %%by
-	vaesenc	CONCAT(xdata,i), CONCAT(xdata,i), xkeyB		; key 2
+        vaesenc CONCAT(xdata,i), CONCAT(xdata,i), xkeyB         ; key 2
 %assign i (i+1)
 %endrep
 
-	add	p_in, 16*%%by
+        add     p_in, 16*%%by
 
 %if (%%load_keys)
-	vmovdqa	xkey4, [p_keys + 4*16]
+        vmovdqa xkey4, [p_keys + 4*16]
 %endif
 %assign i 0
 %rep %%by
-	vaesenc	CONCAT(xdata,i), CONCAT(xdata,i), xkeyA		; key 3
+        vaesenc CONCAT(xdata,i), CONCAT(xdata,i), xkeyA         ; key 3
 %assign i (i+1)
 %endrep
 
-	vmovdqa	xkeyA, [p_keys + 5*16]
+        vmovdqa xkeyA, [p_keys + 5*16]
 %assign i 0
 %rep %%by
-	vaesenc	CONCAT(xdata,i), CONCAT(xdata,i), xkey4		; key 4
+        vaesenc CONCAT(xdata,i), CONCAT(xdata,i), xkey4         ; key 4
 %assign i (i+1)
 %endrep
 
-	vmovdqa	xkeyB, [p_keys + 6*16]
+        vmovdqa xkeyB, [p_keys + 6*16]
 %assign i 0
 %rep %%by
-	vaesenc	CONCAT(xdata,i), CONCAT(xdata,i), xkeyA		; key 5
+        vaesenc CONCAT(xdata,i), CONCAT(xdata,i), xkeyA         ; key 5
 %assign i (i+1)
 %endrep
 
-	vmovdqa	xkeyA, [p_keys + 7*16]
+        vmovdqa xkeyA, [p_keys + 7*16]
 %assign i 0
 %rep %%by
-	vaesenc	CONCAT(xdata,i), CONCAT(xdata,i), xkeyB		; key 6
-%assign i (i+1)
-%endrep
-
-%if (%%load_keys)
-	vmovdqa	xkey8, [p_keys + 8*16]
-%endif
-%assign i 0
-%rep %%by
-	vaesenc	CONCAT(xdata,i), CONCAT(xdata,i), xkeyA		; key 7
-%assign i (i+1)
-%endrep
-
-	vmovdqa	xkeyA, [p_keys + 9*16]
-%assign i 0
-%rep %%by
-	vaesenc	CONCAT(xdata,i), CONCAT(xdata,i), xkey8		; key 8
-%assign i (i+1)
-%endrep
-
-	vmovdqa	xkeyB, [p_keys + 10*16]
-%assign i 0
-%rep %%by
-	vaesenc	CONCAT(xdata,i), CONCAT(xdata,i), xkeyA		; key 9
-%assign i (i+1)
-%endrep
-
-	vmovdqa	xkeyA, [p_keys + 11*16]
-%assign i 0
-%rep %%by
-	vaesenc	CONCAT(xdata,i), CONCAT(xdata,i), xkeyB		; key 10
+        vaesenc CONCAT(xdata,i), CONCAT(xdata,i), xkeyB         ; key 6
 %assign i (i+1)
 %endrep
 
 %if (%%load_keys)
-	vmovdqa	xkey12, [p_keys + 12*16]
+        vmovdqa xkey8, [p_keys + 8*16]
 %endif
 %assign i 0
 %rep %%by
-	vaesenc	CONCAT(xdata,i), CONCAT(xdata,i), xkeyA		; key 11
+        vaesenc CONCAT(xdata,i), CONCAT(xdata,i), xkeyA         ; key 7
 %assign i (i+1)
 %endrep
 
-	vmovdqa	xkeyA, [p_keys + 13*16]
+        vmovdqa xkeyA, [p_keys + 9*16]
 %assign i 0
 %rep %%by
-	vaesenc	CONCAT(xdata,i), CONCAT(xdata,i), xkey12	; key 12
+        vaesenc CONCAT(xdata,i), CONCAT(xdata,i), xkey8         ; key 8
 %assign i (i+1)
 %endrep
 
-	vmovdqa	xkeyB, [p_keys + 14*16]
+        vmovdqa xkeyB, [p_keys + 10*16]
 %assign i 0
 %rep %%by
-	vaesenc	CONCAT(xdata,i), CONCAT(xdata,i), xkeyA		; key 13
+        vaesenc CONCAT(xdata,i), CONCAT(xdata,i), xkeyA         ; key 9
+%assign i (i+1)
+%endrep
+
+        vmovdqa xkeyA, [p_keys + 11*16]
+%assign i 0
+%rep %%by
+        vaesenc CONCAT(xdata,i), CONCAT(xdata,i), xkeyB         ; key 10
+%assign i (i+1)
+%endrep
+
+%if (%%load_keys)
+        vmovdqa xkey12, [p_keys + 12*16]
+%endif
+%assign i 0
+%rep %%by
+        vaesenc CONCAT(xdata,i), CONCAT(xdata,i), xkeyA         ; key 11
+%assign i (i+1)
+%endrep
+
+        vmovdqa xkeyA, [p_keys + 13*16]
+%assign i 0
+%rep %%by
+        vaesenc CONCAT(xdata,i), CONCAT(xdata,i), xkey12        ; key 12
+%assign i (i+1)
+%endrep
+
+        vmovdqa xkeyB, [p_keys + 14*16]
+%assign i 0
+%rep %%by
+        vaesenc CONCAT(xdata,i), CONCAT(xdata,i), xkeyA         ; key 13
 %assign i (i+1)
 %endrep
 
 %assign i 0
 %rep %%by
-	vaesenclast	CONCAT(xdata,i), CONCAT(xdata,i), xkeyB	; key 14
+        vaesenclast     CONCAT(xdata,i), CONCAT(xdata,i), xkeyB ; key 14
 %assign i (i+1)
 %endrep
 
 %assign i 0
 %rep (%%by / 2)
 %assign j (i+1)
-	VMOVDQ	xkeyA, [p_in + i*16 - 16*%%by]
-	VMOVDQ	xkeyB, [p_in + j*16 - 16*%%by]
-	vpxor	CONCAT(xdata,i), CONCAT(xdata,i), xkeyA
-	vpxor	CONCAT(xdata,j), CONCAT(xdata,j), xkeyB
+        VMOVDQ  xkeyA, [p_in + i*16 - 16*%%by]
+        VMOVDQ  xkeyB, [p_in + j*16 - 16*%%by]
+        vpxor   CONCAT(xdata,i), CONCAT(xdata,i), xkeyA
+        vpxor   CONCAT(xdata,j), CONCAT(xdata,j), xkeyB
 %assign i (i+2)
 %endrep
 %if (i < %%by)
-	VMOVDQ	xkeyA, [p_in + i*16 - 16*%%by]
-	vpxor	CONCAT(xdata,i), CONCAT(xdata,i), xkeyA
+        VMOVDQ  xkeyA, [p_in + i*16 - 16*%%by]
+        vpxor   CONCAT(xdata,i), CONCAT(xdata,i), xkeyA
 %endif
 
 %assign i 0
 %rep %%by
-	VMOVDQ	[p_out  + i*16], CONCAT(xdata,i)
+        VMOVDQ  [p_out  + i*16], CONCAT(xdata,i)
 %assign i (i+1)
 %endrep
 %endmacro
@@ -289,11 +289,11 @@ mksection .text
         mov     p_in, [job + _src]
         add     p_in, [job + _cipher_start_src_offset_in_bytes]
         mov     p_ivlen, [job + _iv_len_in_bytes]
-        mov	num_bytes, [job + _msg_len_to_cipher_in_bytes]
+        mov     num_bytes, [job + _msg_len_to_cipher_in_bytes]
         mov     p_keys, [job + _enc_keys]
         mov     p_out, [job + _dst]
 
-	vmovdqa	xbyteswap, [rel byteswap_const]
+        vmovdqa xbyteswap, [rel byteswap_const]
         ;; Prepare IV ;;
 
         ;; Byte 0: flags with L'
@@ -345,10 +345,10 @@ _finish_nonce_move:
         vpor    xcounter, [rel set_byte15]
 %else ;; CNTR
 %ifndef LINUX
-	mov	num_bytes, [rsp + 8*5]
+        mov     num_bytes, [rsp + 8*5]
 %endif
 
-	vmovdqa	xbyteswap, [rel byteswap_const]
+        vmovdqa xbyteswap, [rel byteswap_const]
         test    p_ivlen, 16
         jnz     %%iv_is_16_bytes
         ; Read 12 bytes: Nonce + ESP IV. Then pad with block counter 0x00000001
@@ -360,93 +360,93 @@ _finish_nonce_move:
 %endif ;; CNTR/CCM
 align_label
 %%bswap_iv:
-	vpshufb	xcounter, xbyteswap
+        vpshufb xcounter, xbyteswap
 
         ;; calculate len
-	mov	tmp, num_bytes
-	and	tmp, 7*16
-	jz	%%chk             ; x8 > or < 15 (not 7 lines)
+        mov     tmp, num_bytes
+        and     tmp, 7*16
+        jz      %%chk             ; x8 > or < 15 (not 7 lines)
 
-	; 1 <= tmp <= 7
-	cmp	tmp, 4*16
-	jg	%%gt4
-	je	%%eq4
+        ; 1 <= tmp <= 7
+        cmp     tmp, 4*16
+        jg      %%gt4
+        je      %%eq4
 
 align_label
 %%lt4:
-	cmp	tmp, 2*16
-	jg	%%eq3
-	je	%%eq2
+        cmp     tmp, 2*16
+        jg      %%eq3
+        je      %%eq2
 align_label
 %%eq1:
-	do_aes_load	1, %%CNTR_TYPE
-	add	p_out, 1*16
-	jmp	%%chk
+        do_aes_load     1, %%CNTR_TYPE
+        add     p_out, 1*16
+        jmp     %%chk
 
 align_label
 %%eq2:
-	do_aes_load	2, %%CNTR_TYPE
-	add	p_out, 2*16
-	jmp	%%chk
+        do_aes_load     2, %%CNTR_TYPE
+        add     p_out, 2*16
+        jmp     %%chk
 
 align_label
 %%eq3:
-	do_aes_load	3, %%CNTR_TYPE
-	add	p_out, 3*16
-	jmp	%%chk
+        do_aes_load     3, %%CNTR_TYPE
+        add     p_out, 3*16
+        jmp     %%chk
 
 align_label
 %%eq4:
-	do_aes_load	4, %%CNTR_TYPE
-	add	p_out, 4*16
-	jmp	%%chk
+        do_aes_load     4, %%CNTR_TYPE
+        add     p_out, 4*16
+        jmp     %%chk
 
 align_label
 %%gt4:
-	cmp	tmp, 6*16
-	jg	%%eq7
-	je	%%eq6
+        cmp     tmp, 6*16
+        jg      %%eq7
+        je      %%eq6
 
 align_label
 %%eq5:
-	do_aes_load	5, %%CNTR_TYPE
-	add	p_out, 5*16
-	jmp	%%chk
+        do_aes_load     5, %%CNTR_TYPE
+        add     p_out, 5*16
+        jmp     %%chk
 
 align_label
 %%eq6:
-	do_aes_load	6, %%CNTR_TYPE
-	add	p_out, 6*16
-	jmp	%%chk
+        do_aes_load     6, %%CNTR_TYPE
+        add     p_out, 6*16
+        jmp     %%chk
 
 align_label
 %%eq7:
-	do_aes_load	7, %%CNTR_TYPE
-	add	p_out, 7*16
-	; fall through to chk
+        do_aes_load     7, %%CNTR_TYPE
+        add     p_out, 7*16
+        ; fall through to chk
 align_label
 %%chk:
-	and	num_bytes, ~(7*16)
-	jz	%%do_return2
+        and     num_bytes, ~(7*16)
+        jz      %%do_return2
 
-        cmp	num_bytes, 16
-        jb	%%last
+        cmp     num_bytes, 16
+        jb      %%last
 
-	; process multiples of 8 blocks
-	vmovdqa	xkey0, [p_keys + 0*16]
-	vmovdqa	xkey4, [p_keys + 4*16]
-	vmovdqa	xkey8, [p_keys + 8*16]
-	vmovdqa	xkey12, [p_keys + 12*16]
-	jmp	%%main_loop2
+        ; process multiples of 8 blocks
+        vmovdqa xkey0, [p_keys + 0*16]
+        vmovdqa xkey4, [p_keys + 4*16]
+        vmovdqa xkey8, [p_keys + 8*16]
+        vmovdqa xkey12, [p_keys + 12*16]
+        jmp     %%main_loop2
 
 align_loop
 %%main_loop2:
-	; num_bytes is a multiple of 8 blocks + partial bytes
-	do_aes_noload	8, %%CNTR_TYPE
-	add	p_out,	8*16
-	sub	num_bytes, 8*16
-        cmp	num_bytes, 8*16
-	jae	%%main_loop2
+        ; num_bytes is a multiple of 8 blocks + partial bytes
+        do_aes_noload   8, %%CNTR_TYPE
+        add     p_out,  8*16
+        sub     num_bytes, 8*16
+        cmp     num_bytes, 8*16
+        jae     %%main_loop2
 
         ; Check if there is a partial block
         or      num_bytes, num_bytes
@@ -455,37 +455,37 @@ align_loop
 align_label
 %%do_return2:
 %ifidn %%CNTR_TYPE, CCM
-	mov	rax, job
-	or	dword [rax + _status], IMB_STATUS_COMPLETED_CIPHER
+        mov     rax, job
+        or      dword [rax + _status], IMB_STATUS_COMPLETED_CIPHER
 %endif
 
 %ifdef SAFE_DATA
-	clear_all_xmms_avx_asm
+        clear_all_xmms_avx_asm
 %endif ;; SAFE_DATA
 
-	ret
+        ret
 
 align_label
 %%last:
 
-	; load partial block into XMM register
-	simd_load_avx_15_1 xpart, p_in, num_bytes
+        ; load partial block into XMM register
+        simd_load_avx_15_1 xpart, p_in, num_bytes
 
 align_label
 %%final_ctr_enc:
-	; Encryption of a single partial block
-        vpshufb	xcounter, xbyteswap
-        vmovdqa	xdata0, xcounter
-        vpxor	xdata0, [p_keys + 16*0]
+        ; Encryption of a single partial block
+        vpshufb xcounter, xbyteswap
+        vmovdqa xdata0, xcounter
+        vpxor   xdata0, [p_keys + 16*0]
 %assign i 1
 %rep 13
         vaesenc xdata0, [p_keys + 16*i]
 %assign i (i+1)
 %endrep
-	; created keystream
+        ; created keystream
         vaesenclast xdata0, [p_keys + 16*i]
 
-	; xor keystream with the message (scratch)
+        ; xor keystream with the message (scratch)
         vpxor   xdata0, xpart
 
 align_label
@@ -493,7 +493,7 @@ align_label
         ; copy result into the output buffer
         simd_store_avx_15 p_out, xdata0, num_bytes, tmp, rax
 
-        jmp	%%do_return2
+        jmp     %%do_return2
 
 align_label
 %%iv_is_16_bytes:
@@ -508,14 +508,14 @@ align_function
 ; arg 1 : job
 MKGLOBAL(aes_cntr_ccm_256_avx,function,internal)
 aes_cntr_ccm_256_avx:
-	endbranch64
-	DO_CNTR CCM
+        endbranch64
+        DO_CNTR CCM
 %else
 ;; aes_cntr_256_avx(void *in, void *IV, void *keys, void *out, UINT64 num_bytes,
 ;;                  UINT64 iv_len)
 MKGLOBAL(aes_cntr_256_avx,function,internal)
 aes_cntr_256_avx:
-	DO_CNTR CNTR
+        DO_CNTR CNTR
 %endif ;; CNTR_CCM_AVX
 
 mksection stack-noexec

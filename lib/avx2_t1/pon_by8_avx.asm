@@ -1215,7 +1215,7 @@ align_label
         pop     r12
 
 %ifdef SAFE_DATA
-	clear_all_xmms_avx_asm
+        clear_all_xmms_avx_asm
 %endif ;; SAFE_DATA
 
 %endmacro                       ; AES128_CTR_PON

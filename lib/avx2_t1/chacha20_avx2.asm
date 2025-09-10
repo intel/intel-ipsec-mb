@@ -320,11 +320,11 @@ align_label
         DIAG_TO_COLUMN %%B_L_KS2, %%C_L_KS1, %%D_L_KS3
 %else
         QUARTER_ROUND_X8 %%A_L_KS0, %%B_L_KS2, %%C_L_KS1, %%D_L_KS3, \
-                         %%A_H_KS4, %%B_H_KS6, %%C_H_KS5, %%D_H_KS7, %%YTMP
+                        %%A_H_KS4, %%B_H_KS6, %%C_H_KS5, %%D_H_KS7, %%YTMP
         COLUMN_TO_DIAG %%B_L_KS2, %%C_L_KS1, %%D_L_KS3
         COLUMN_TO_DIAG %%B_H_KS6, %%C_H_KS5, %%D_H_KS7
         QUARTER_ROUND_X8 %%A_L_KS0, %%B_L_KS2, %%C_L_KS1, %%D_L_KS3, \
-                         %%A_H_KS4, %%B_H_KS6, %%C_H_KS5, %%D_H_KS7, %%YTMP
+                        %%A_H_KS4, %%B_H_KS6, %%C_H_KS5, %%D_H_KS7, %%YTMP
         DIAG_TO_COLUMN %%B_L_KS2, %%C_L_KS1, %%D_L_KS3
         DIAG_TO_COLUMN %%B_H_KS6, %%C_H_KS5, %%D_H_KS7
 %endif ;; %%NUM_BLOCKS == 4
@@ -425,47 +425,47 @@ align_label
 
         ; A += B
         YMM_OP_X8 vpaddd, %%YMM_DWORD_A1, %%YMM_DWORD_A2, %%YMM_DWORD_A3, %%YMM_DWORD_A4, \
-                         %%YMM_DWORD_B1, %%YMM_DWORD_B2, %%YMM_DWORD_B3, %%YMM_DWORD_B4
+                        %%YMM_DWORD_B1, %%YMM_DWORD_B2, %%YMM_DWORD_B3, %%YMM_DWORD_B4
         ; D ^= A
         YMM_OP_X8 vpxor, %%YMM_DWORD_D1, %%YMM_DWORD_D2, %%YMM_DWORD_D3, %%YMM_DWORD_D4, \
                         %%YMM_DWORD_A1, %%YMM_DWORD_A2, %%YMM_DWORD_A3, %%YMM_DWORD_A4
 
         ; D <<< 16
         YMM_ROLS_X8 %%YMM_DWORD_D1, %%YMM_DWORD_D2, %%YMM_DWORD_D3, %%YMM_DWORD_D4, 16, \
-                    %%YMM_DWORD_B1
+                        %%YMM_DWORD_B1
 
         ; C += D
         YMM_OP_X8 vpaddd, %%YMM_DWORD_C1, %%YMM_DWORD_C2, %%YMM_DWORD_C3, %%YMM_DWORD_C4, \
-                         %%YMM_DWORD_D1, %%YMM_DWORD_D2, %%YMM_DWORD_D3, %%YMM_DWORD_D4
+                        %%YMM_DWORD_D1, %%YMM_DWORD_D2, %%YMM_DWORD_D3, %%YMM_DWORD_D4
         ; B ^= C
         YMM_OP_X8 vpxor, %%YMM_DWORD_B1, %%YMM_DWORD_B2, %%YMM_DWORD_B3, %%YMM_DWORD_B4, \
                         %%YMM_DWORD_C1, %%YMM_DWORD_C2, %%YMM_DWORD_C3, %%YMM_DWORD_C4
 
         ; B <<< 12
         YMM_ROLS_X8 %%YMM_DWORD_B1, %%YMM_DWORD_B2, %%YMM_DWORD_B3, %%YMM_DWORD_B4, 12, \
-                    %%YMM_DWORD_D1
+                        %%YMM_DWORD_D1
 
         ; A += B
         YMM_OP_X8 vpaddd, %%YMM_DWORD_A1, %%YMM_DWORD_A2, %%YMM_DWORD_A3, %%YMM_DWORD_A4, \
-                          %%YMM_DWORD_B1, %%YMM_DWORD_B2, %%YMM_DWORD_B3, %%YMM_DWORD_B4
+                        %%YMM_DWORD_B1, %%YMM_DWORD_B2, %%YMM_DWORD_B3, %%YMM_DWORD_B4
         ; D ^= A
         YMM_OP_X8 vpxor, %%YMM_DWORD_D1, %%YMM_DWORD_D2, %%YMM_DWORD_D3, %%YMM_DWORD_D4, \
-                          %%YMM_DWORD_A1, %%YMM_DWORD_A2, %%YMM_DWORD_A3, %%YMM_DWORD_A4
+                        %%YMM_DWORD_A1, %%YMM_DWORD_A2, %%YMM_DWORD_A3, %%YMM_DWORD_A4
 
         ; D <<< 8
         YMM_ROLS_X8 %%YMM_DWORD_D1, %%YMM_DWORD_D2, %%YMM_DWORD_D3, %%YMM_DWORD_D4, 8, \
-                    %%YMM_DWORD_B1
+                        %%YMM_DWORD_B1
 
         ; C += D
         YMM_OP_X8 vpaddd, %%YMM_DWORD_C1, %%YMM_DWORD_C2, %%YMM_DWORD_C3, %%YMM_DWORD_C4, \
-                          %%YMM_DWORD_D1, %%YMM_DWORD_D2, %%YMM_DWORD_D3, %%YMM_DWORD_D4
+                        %%YMM_DWORD_D1, %%YMM_DWORD_D2, %%YMM_DWORD_D3, %%YMM_DWORD_D4
         ; B ^= C
         YMM_OP_X8 vpxor, %%YMM_DWORD_B1, %%YMM_DWORD_B2, %%YMM_DWORD_B3, %%YMM_DWORD_B4, \
-                          %%YMM_DWORD_C1, %%YMM_DWORD_C2, %%YMM_DWORD_C3, %%YMM_DWORD_C4
+                        %%YMM_DWORD_C1, %%YMM_DWORD_C2, %%YMM_DWORD_C3, %%YMM_DWORD_C4
 
         ; B <<< 7
         YMM_ROLS_X8 %%YMM_DWORD_B1, %%YMM_DWORD_B2, %%YMM_DWORD_B3, %%YMM_DWORD_B4, 7, \
-                    %%YMM_DWORD_D1
+                        %%YMM_DWORD_D1
 %endmacro
 
 ;;
@@ -498,14 +498,14 @@ align_label
 
 %rep 10
         CHACHA20_ROUND %%YMM_DWORD_0, %%YMM_DWORD_1, %%YMM_DWORD_2, %%YMM_DWORD_3, \
-                       %%YMM_DWORD_4, %%YMM_DWORD_5, %%YMM_DWORD_6, %%YMM_DWORD_7, \
-                       %%YMM_DWORD_8, %%YMM_DWORD_9, %%YMM_DWORD_10, %%YMM_DWORD_11, \
-                       %%YMM_DWORD_12, %%YMM_DWORD_13, %%YMM_DWORD_14, %%YMM_DWORD_15
+                        %%YMM_DWORD_4, %%YMM_DWORD_5, %%YMM_DWORD_6, %%YMM_DWORD_7, \
+                        %%YMM_DWORD_8, %%YMM_DWORD_9, %%YMM_DWORD_10, %%YMM_DWORD_11, \
+                        %%YMM_DWORD_12, %%YMM_DWORD_13, %%YMM_DWORD_14, %%YMM_DWORD_15
 
         CHACHA20_ROUND %%YMM_DWORD_0, %%YMM_DWORD_1, %%YMM_DWORD_2, %%YMM_DWORD_3, \
-                       %%YMM_DWORD_5, %%YMM_DWORD_6, %%YMM_DWORD_7, %%YMM_DWORD_4, \
-                       %%YMM_DWORD_10, %%YMM_DWORD_11, %%YMM_DWORD_8, %%YMM_DWORD_9, \
-                       %%YMM_DWORD_15, %%YMM_DWORD_12, %%YMM_DWORD_13, %%YMM_DWORD_14
+                        %%YMM_DWORD_5, %%YMM_DWORD_6, %%YMM_DWORD_7, %%YMM_DWORD_4, \
+                        %%YMM_DWORD_10, %%YMM_DWORD_11, %%YMM_DWORD_8, %%YMM_DWORD_9, \
+                        %%YMM_DWORD_15, %%YMM_DWORD_12, %%YMM_DWORD_13, %%YMM_DWORD_14
 %endrep
 
 %assign %%i 0
@@ -631,7 +631,7 @@ submit_job_chacha20_enc_dec_avx2:
 %assign i 0
 %assign j 6
 %rep 10
-	vmovdqa	[rsp + _XMM_WIN_SAVE + i*16], APPEND(xmm, j)
+        vmovdqa [rsp + _XMM_WIN_SAVE + i*16], APPEND(xmm, j)
 %assign i (i + 1)
 %assign j (j + 1)
 %endrep
@@ -769,7 +769,7 @@ exit_loop:
         ; Get last block counter dividing offset by 64
         shr     off, 6
         PREPARE_NEXT_STATES_2_TO_4 ymm4, ymm5, ymm6, ymm7, none, \
-                                   ymm8, ymm9, off, iv, keys, 2
+                                ymm8, ymm9, off, iv, keys, 2
         shl     off, 6 ; Restore offset
 
         GENERATE_256_KS ymm0, ymm1, ymm8, ymm9, none, none, none, none, \
@@ -797,7 +797,7 @@ more_than_2_blocks_left:
         ; Get last block counter dividing offset by 64
         shr     off, 6
         PREPARE_NEXT_STATES_2_TO_4 ymm4, ymm5, ymm6, ymm7, ymm12, \
-                                   ymm8, ymm9, off, iv, keys, 4
+                                ymm8, ymm9, off, iv, keys, 4
         shl     off, 6 ; Restore offset
 
         GENERATE_256_KS ymm0, ymm1, ymm8, ymm9, ymm2, ymm3, ymm10, ymm11, \
@@ -994,7 +994,7 @@ no_partial_block:
 %assign i 0
 %assign j 6
 %rep 10
-	vmovdqa	APPEND(xmm, j), [rsp + _XMM_WIN_SAVE + i*16]
+        vmovdqa APPEND(xmm, j), [rsp + _XMM_WIN_SAVE + i*16]
 %assign i (i + 1)
 %assign j (j + 1)
 %endrep
@@ -1061,7 +1061,7 @@ chacha20_enc_dec_ks_avx2:
 %assign i 0
 %assign j 6
 %rep 10
-	vmovdqa	[rsp + _XMM_WIN_SAVE + i*16], APPEND(xmm, j)
+        vmovdqa [rsp + _XMM_WIN_SAVE + i*16], APPEND(xmm, j)
 %assign i (i + 1)
 %assign j (j + 1)
 %endrep
@@ -1240,7 +1240,7 @@ exit_loop_ks:
 
         ; Get last block counter dividing offset by 64
         PREPARE_NEXT_STATES_2_TO_4 ymm4, ymm5, ymm6, ymm7, none, \
-                                   ymm8, ymm9, blk_cnt, iv, keys, 2
+                                ymm8, ymm9, blk_cnt, iv, keys, 2
 
         GENERATE_256_KS ymm0, ymm1, ymm8, ymm9, none, none, none, none, \
                         ymm4, ymm5, ymm6, ymm7, none, ymm10, 2
@@ -1268,7 +1268,7 @@ more_than_2_blocks_left_ks:
 
         ; Get last block counter dividing offset by 64
         PREPARE_NEXT_STATES_2_TO_4 ymm4, ymm5, ymm6, ymm7, ymm12, \
-                                   ymm8, ymm9, blk_cnt, iv, keys, 4
+                                ymm8, ymm9, blk_cnt, iv, keys, 4
 
         GENERATE_256_KS ymm0, ymm1, ymm8, ymm9, ymm2, ymm3, ymm10, ymm11, \
                         ymm4, ymm5, ymm6, ymm7, ymm12, ymm13, 4
@@ -1467,7 +1467,7 @@ no_partial_block_ks:
 %assign i 0
 %assign j 6
 %rep 10
-	vmovdqa	APPEND(xmm, j), [rsp + _XMM_WIN_SAVE + i*16]
+        vmovdqa APPEND(xmm, j), [rsp + _XMM_WIN_SAVE + i*16]
 %assign i (i + 1)
 %assign j (j + 1)
 %endrep
@@ -1508,7 +1508,7 @@ quic_hp_chacha20_avx2:
 %assign i 0
 %assign j 6
 %rep 10
-	vmovdqa	[rsp + _XMM_WIN_SAVE + i*16], APPEND(xmm, j)
+        vmovdqa [rsp + _XMM_WIN_SAVE + i*16], APPEND(xmm, j)
 %assign i (i + 1)
 %assign j (j + 1)
 %endrep
@@ -1641,7 +1641,7 @@ exit_loop_quic:
 align_label
 one_buffer_left:
         PREPARE_NEXT_STATES_1_TO_4_QUIC ymm4, ymm5, ymm6, ymm7, ymm12, \
-                                   ymm8, ymm9, src_array, off, tmp, key, 1
+                                ymm8, ymm9, src_array, off, tmp, key, 1
 
         ; Generate 128 bytes of keystream
         GENERATE_256_KS ymm0, ymm1, ymm8, ymm9, none, none, none, none, \
@@ -1658,7 +1658,7 @@ align_label
 two_buffers_left:
 
         PREPARE_NEXT_STATES_1_TO_4_QUIC ymm4, ymm5, ymm6, ymm7, ymm12, \
-                                   ymm8, ymm9, src_array, off, tmp, key, 2
+                                ymm8, ymm9, src_array, off, tmp, key, 2
 
         ; Generate 128 bytes of keystream
         GENERATE_256_KS ymm0, ymm1, ymm8, ymm9, none, none, none, none, \
@@ -1678,7 +1678,7 @@ align_label
 four_buffers_left:
 
         PREPARE_NEXT_STATES_1_TO_4_QUIC ymm4, ymm5, ymm6, ymm7, ymm12, \
-                                   ymm8, ymm9, src_array, off, tmp, key, 4
+                                ymm8, ymm9, src_array, off, tmp, key, 4
 
         ; Generate 256 bytes of keystream
         GENERATE_256_KS ymm0, ymm1, ymm8, ymm9, ymm2, ymm3, ymm10, ymm11, \
@@ -1704,7 +1704,7 @@ align_label
 three_buffers_left:
 
         PREPARE_NEXT_STATES_1_TO_4_QUIC ymm4, ymm5, ymm6, ymm7, ymm12, \
-                                   ymm8, ymm9, src_array, off, tmp, key, 3
+                                ymm8, ymm9, src_array, off, tmp, key, 3
 
         ; Generate 256 bytes of keystream
         GENERATE_256_KS ymm0, ymm1, ymm8, ymm9, ymm2, ymm3, ymm10, ymm11, \
@@ -1828,7 +1828,7 @@ no_more_buffers:
 %assign i 0
 %assign j 6
 %rep 10
-	vmovdqa	APPEND(xmm, j), [rsp + _XMM_WIN_SAVE + i*16]
+        vmovdqa APPEND(xmm, j), [rsp + _XMM_WIN_SAVE + i*16]
 %assign i (i + 1)
 %assign j (j + 1)
 %endrep
@@ -1887,10 +1887,10 @@ poly1305_key_gen_avx:
         mov     rax, rsp
         sub     rsp, 3*16 + 8
         and     rsp, -16
-	vmovdqa	[rsp], xmm6
-	vmovdqa	[rsp + 16], xmm7
-	vmovdqa	[rsp + 16*2], xmm8
-	mov	[rsp + 16*3], rax
+        vmovdqa [rsp], xmm6
+        vmovdqa [rsp + 16], xmm7
+        vmovdqa [rsp + 16*2], xmm8
+        mov     [rsp + 16*3], rax
 %endif
         ;; prepare chacha state from IV, key
         vmovdqa xmm0, [rel constants]
@@ -1914,10 +1914,10 @@ poly1305_key_gen_avx:
         clear_all_xmms_avx_asm
 %endif
 %ifndef LINUX
-	vmovdqa	xmm6, [rsp]
-	vmovdqa	xmm7, [rsp + 16]
-	vmovdqa	xmm8, [rsp + 16*2]
-	mov	rsp, [rsp + 16*3]
+        vmovdqa xmm6, [rsp]
+        vmovdqa xmm7, [rsp + 16]
+        vmovdqa xmm8, [rsp + 16*2]
+        mov     rsp, [rsp + 16*3]
 %endif
         ret
 

@@ -68,8 +68,8 @@ default rel
 
 align 32
 Ek_d:
-dd	0x0044D700, 0x0026BC00, 0x00626B00, 0x00135E00, 0x00578900, 0x0035E200, 0x00713500, 0x0009AF00
-dd	0x004D7800, 0x002F1300, 0x006BC400, 0x001AF100, 0x005E2600, 0x003C4D00, 0x00789A00, 0x0047AC00
+dd      0x0044D700, 0x0026BC00, 0x00626B00, 0x00135E00, 0x00578900, 0x0035E200, 0x00713500, 0x0009AF00
+dd      0x004D7800, 0x002F1300, 0x006BC400, 0x001AF100, 0x005E2600, 0x003C4D00, 0x00789A00, 0x0047AC00
 
 align 32
 shuf_mask_key:
@@ -83,8 +83,8 @@ dd      0xFFFFFF08, 0xFFFFFF09, 0xFFFFFF0A, 0xFFFFFF0B, 0xFFFFFF0C, 0xFFFFFF0D, 
 
 align 32
 mask31:
-dd	0x7FFFFFFF, 0x7FFFFFFF, 0x7FFFFFFF, 0x7FFFFFFF,
-dd	0x7FFFFFFF, 0x7FFFFFFF, 0x7FFFFFFF, 0x7FFFFFFF,
+dd      0x7FFFFFFF, 0x7FFFFFFF, 0x7FFFFFFF, 0x7FFFFFFF,
+dd      0x7FFFFFFF, 0x7FFFFFFF, 0x7FFFFFFF, 0x7FFFFFFF,
 
 align 32
 swap_mask:
@@ -147,15 +147,15 @@ dw      0x0020, 0x0020, 0x0020, 0x0020, 0x0020, 0x0020, 0x0020, 0x0020
 
 align 16
 bit_reverse_table_l:
-db	0x00, 0x08, 0x04, 0x0c, 0x02, 0x0a, 0x06, 0x0e, 0x01, 0x09, 0x05, 0x0d, 0x03, 0x0b, 0x07, 0x0f
+db      0x00, 0x08, 0x04, 0x0c, 0x02, 0x0a, 0x06, 0x0e, 0x01, 0x09, 0x05, 0x0d, 0x03, 0x0b, 0x07, 0x0f
 
 align 16
 bit_reverse_table_h:
-db	0x00, 0x80, 0x40, 0xc0, 0x20, 0xa0, 0x60, 0xe0, 0x10, 0x90, 0x50, 0xd0, 0x30, 0xb0, 0x70, 0xf0
+db      0x00, 0x80, 0x40, 0xc0, 0x20, 0xa0, 0x60, 0xe0, 0x10, 0x90, 0x50, 0xd0, 0x30, 0xb0, 0x70, 0xf0
 
 align 16
 bit_reverse_and_table:
-db	0x0f, 0x0f, 0x0f, 0x0f, 0x0f, 0x0f, 0x0f, 0x0f, 0x0f, 0x0f, 0x0f, 0x0f, 0x0f, 0x0f, 0x0f, 0x0f
+db      0x0f, 0x0f, 0x0f, 0x0f, 0x0f, 0x0f, 0x0f, 0x0f, 0x0f, 0x0f, 0x0f, 0x0f, 0x0f, 0x0f, 0x0f, 0x0f
 
 align 16
 bit_mask_table:
@@ -787,12 +787,12 @@ align 64
 align_loop
 %%start_loop_init:
         BITS_REORG8 pState, r15, r14, %%YTMP1, %%YTMP2, %%YTMP3, %%YTMP4, %%YTMP5, \
-                    %%YTMP6, %%YTMP7, %%YTMP8, %%YTMP9, %%YTMP10
+                        %%YTMP6, %%YTMP7, %%YTMP8, %%YTMP9, %%YTMP10
         NONLIN_FUN8 pState, %%YTMP1, %%YTMP2, %%YTMP3, \
-                    %%YTMP4, %%YTMP5, %%YTMP6, %%YTMP7, %%W
+                        %%YTMP4, %%YTMP5, %%YTMP6, %%YTMP7, %%W
         vpsrld  %%W, 1 ; Shift out LSB of W
         LFSR_UPDT8  pState, r15, r14, %%YTMP1, %%YTMP2, %%YTMP3, %%YTMP4, %%YTMP5, %%YTMP6, \
-                    %%MASK_31, %%W, init ; W used in LFSR update
+                        %%MASK_31, %%W, init ; W used in LFSR update
         inc     r15
         cmp     r15, 32
         jne     %%start_loop_init
@@ -802,11 +802,11 @@ align_label
 
         ; And once more, initial round from keygen phase = 33 times
         BITS_REORG8 pState, 0, no_reg, %%YTMP1, %%YTMP2, %%YTMP3, %%YTMP4, %%YTMP5, \
-                    %%YTMP6, %%YTMP7, %%YTMP8, %%YTMP9, %%YTMP10
+                        %%YTMP6, %%YTMP7, %%YTMP8, %%YTMP9, %%YTMP10
         NONLIN_FUN8 pState, %%YTMP1, %%YTMP2, %%YTMP3, \
-                    %%YTMP4, %%YTMP5, %%YTMP6, %%YTMP7, %%W
+                        %%YTMP4, %%YTMP5, %%YTMP6, %%YTMP7, %%W
         LFSR_UPDT8  pState, 0, no_reg, %%YTMP1, %%YTMP2, %%YTMP3, %%YTMP4, %%YTMP5, %%YTMP6, \
-                    %%MASK_31, %%YTMP8, work
+                        %%MASK_31, %%YTMP8, work
 
         FUNC_RESTORE
 %endmacro
@@ -872,9 +872,9 @@ align_loop
 %%start_loop_keystr:
         inc     r15
         BITS_REORG8 pState, r15, r14, %%YTMP1, %%YTMP2, %%YTMP3, %%YTMP4, %%YTMP5, \
-                    %%YTMP6, %%YTMP7, %%YTMP8, %%YTMP9, %%YTMP10, %%X3
+                        %%YTMP6, %%YTMP7, %%YTMP8, %%YTMP9, %%YTMP10, %%X3
         NONLIN_FUN8 pState, %%YTMP1, %%YTMP2, %%YTMP3, \
-                    %%YTMP4, %%YTMP5, %%YTMP6, %%YTMP7, %%W
+                        %%YTMP4, %%YTMP5, %%YTMP6, %%YTMP7, %%W
         ; OFS_X3 XOR W and store in stack
         vpxor       %%X3, %%W
         mov         r14, r15
@@ -882,7 +882,7 @@ align_loop
         shl         r14, 5
         vmovdqa     [rsp + 8*8 + r14], %%X3
         LFSR_UPDT8  pState, r15, r14, %%YTMP1, %%YTMP2, %%YTMP3, %%YTMP4, %%YTMP5, %%YTMP6, \
-                    %%MASK_31, %%YTMP8, work
+                        %%MASK_31, %%YTMP8, work
 
         cmp         r15, %%NUM_ROUNDS
         jne         %%start_loop_keystr
@@ -928,7 +928,7 @@ align_loop
         vpxor   %%YTMP1, %%YTMP1
 %assign %%I 0
 %rep (2+%%NUM_ROUNDS)
-	vmovdqa [rsp + %%I*32], %%YTMP1
+        vmovdqa [rsp + %%I*32], %%YTMP1
 %assign %%I (%%I+1)
 %endrep
 %endif
@@ -1066,9 +1066,9 @@ align_loop
 %%start_loop_cipher:
         inc     r15
         BITS_REORG8 pState, r15, r14, %%YTMP1, %%YTMP2, %%YTMP3, %%YTMP4, %%YTMP5, \
-                    %%YTMP6, %%YTMP7, %%YTMP8, %%YTMP9, %%YTMP10, %%X3
+                        %%YTMP6, %%YTMP7, %%YTMP8, %%YTMP9, %%YTMP10, %%X3
         NONLIN_FUN8 pState, %%YTMP1, %%YTMP2, %%YTMP3, \
-                    %%YTMP4, %%YTMP5, %%YTMP6, %%YTMP7, %%W
+                        %%YTMP4, %%YTMP5, %%YTMP6, %%YTMP7, %%W
         ; OFS_X3 XOR W and store in stack
         vpxor       %%X3, %%W
         mov         r14, r15
@@ -1076,7 +1076,7 @@ align_loop
         shl         r14, 5
         vmovdqa     [rsp + r14], %%X3
         LFSR_UPDT8  pState, r15, r14, %%YTMP1, %%YTMP2, %%YTMP3, %%YTMP4, %%YTMP5, %%YTMP6, \
-                    %%MASK_31, %%YTMP8, work
+                        %%MASK_31, %%YTMP8, work
 
         cmp         r15, (%%NROUNDS + %%INITIAL_ROUND)
         jne         %%start_loop_cipher
@@ -1088,7 +1088,7 @@ align_loop
 %endrep
 
         TRANSPOSE8_U32 %%YTMP1, %%YTMP2, %%YTMP3, %%YTMP4, %%YTMP5, %%YTMP6, \
-                       %%YTMP7, %%YTMP8, %%YTMP9, %%YTMP10
+                        %%YTMP7, %%YTMP8, %%YTMP9, %%YTMP10
         ;; XOR Input buffer with keystream in rounds of 32B
 
         mov     r12, [pIn]
@@ -1380,7 +1380,7 @@ exit_final_rounds:
         vpxor   ymm0, ymm0
 %assign i 0
 %rep 8
-	vmovdqa [rsp + i*32], ymm0
+        vmovdqa [rsp + i*32], ymm0
 %assign i (i+1)
 %endrep
 %endif
@@ -1525,8 +1525,8 @@ asm_Eia3Round32B_avx:
         vmovdqa  xmm2, [bit_reverse_and_table]
 
         EIA3_ROUND T, KS, DATA, r11, \
-                  xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, \
-                  xmm8, xmm9, xmm10, xmm11, xmm12, xmm13, 2
+                xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, \
+                xmm8, xmm9, xmm10, xmm11, xmm12, xmm13, 2
 
         ;; Copy last 32 bytes of KS to the front
         vmovdqa xmm0, [KS + 32]
@@ -1684,8 +1684,8 @@ asm_Eia3Remainder_avx:
         vmovdqa  xmm2, [rel bit_reverse_and_table]
 
         REMAINDER T, KS, DATA, N_BITS, r11, r12, r13, r14, r15, \
-                  xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, \
-                  xmm8, xmm9, xmm10, xmm11, xmm12, xmm13
+                xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, \
+                xmm8, xmm9, xmm10, xmm11, xmm12, xmm13
         ret
 
 %endif ; USE_GFNI == 0

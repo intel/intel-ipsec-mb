@@ -726,7 +726,7 @@ FLUSH_JOB_ZUC128_EEA3:
 
         mov     unused_lanes, [state + _zuc_unused_lanes]
         mov     lane, unused_lanes
-        and	lane, 0xF           ;; just a nibble
+        and     lane, 0xF           ;; just a nibble
         shr     unused_lanes, 4
         mov     tmp, [job + _zuc_eia3_iv]
         shl     lane, 5

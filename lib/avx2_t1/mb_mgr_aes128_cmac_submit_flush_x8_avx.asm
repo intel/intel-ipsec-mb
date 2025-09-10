@@ -48,32 +48,32 @@ default rel
 
 align 16
 len_masks:
-	;ddq 0x0000000000000000000000000000FFFF
-	dq 0x000000000000FFFF, 0x0000000000000000
-	;ddq 0x000000000000000000000000FFFF0000
-	dq 0x00000000FFFF0000, 0x0000000000000000
-	;ddq 0x00000000000000000000FFFF00000000
-	dq 0x0000FFFF00000000, 0x0000000000000000
-	;ddq 0x0000000000000000FFFF000000000000
-	dq 0xFFFF000000000000, 0x0000000000000000
-	;ddq 0x000000000000FFFF0000000000000000
-	dq 0x0000000000000000, 0x000000000000FFFF
-	;ddq 0x00000000FFFF00000000000000000000
-	dq 0x0000000000000000, 0x00000000FFFF0000
-	;ddq 0x0000FFFF000000000000000000000000
-	dq 0x0000000000000000, 0x0000FFFF00000000
-	;ddq 0xFFFF0000000000000000000000000000
-	dq 0x0000000000000000, 0xFFFF000000000000
+        ;ddq 0x0000000000000000000000000000FFFF
+        dq 0x000000000000FFFF, 0x0000000000000000
+        ;ddq 0x000000000000000000000000FFFF0000
+        dq 0x00000000FFFF0000, 0x0000000000000000
+        ;ddq 0x00000000000000000000FFFF00000000
+        dq 0x0000FFFF00000000, 0x0000000000000000
+        ;ddq 0x0000000000000000FFFF000000000000
+        dq 0xFFFF000000000000, 0x0000000000000000
+        ;ddq 0x000000000000FFFF0000000000000000
+        dq 0x0000000000000000, 0x000000000000FFFF
+        ;ddq 0x00000000FFFF00000000000000000000
+        dq 0x0000000000000000, 0x00000000FFFF0000
+        ;ddq 0x0000FFFF000000000000000000000000
+        dq 0x0000000000000000, 0x0000FFFF00000000
+        ;ddq 0xFFFF0000000000000000000000000000
+        dq 0x0000000000000000, 0xFFFF000000000000
 dupw:
-	;ddq 0x01000100010001000100010001000100
-	dq 0x0100010001000100, 0x0100010001000100
-one:	dq  1
-two:	dq  2
-three:	dq  3
-four:	dq  4
-five:	dq  5
-six:	dq  6
-seven:	dq  7
+        ;ddq 0x01000100010001000100010001000100
+        dq 0x0100010001000100, 0x0100010001000100
+one:    dq  1
+two:    dq  2
+three:  dq  3
+four:   dq  4
+five:   dq  5
+six:    dq  6
+seven:  dq  7
 
 align 16
 len_shuf_masks:
@@ -87,16 +87,16 @@ mksection .text
 %define APPEND(a,b) a %+ b
 
 %ifdef LINUX
-%define arg1	rdi
-%define arg2	rsi
+%define arg1    rdi
+%define arg2    rsi
 %else
-%define arg1	rcx
-%define arg2	rdx
+%define arg1    rcx
+%define arg2    rdx
 %endif
 
-%define state	arg1
-%define job	arg2
-%define len2	arg2
+%define state   arg1
+%define job     arg2
+%define len2    arg2
 
 %define job_rax          rax
 
@@ -124,8 +124,8 @@ mksection .text
 ; STACK_SPACE needs to be an odd multiple of 8
 ; This routine and its callee clobbers all GPRs
 struc STACK
-_gpr_save:	resq	8
-_rsp_save:	resq	1
+_gpr_save:      resq    8
+_rsp_save:      resq    1
 endstruc
 
 ;;; ===========================================================================
@@ -141,37 +141,37 @@ endstruc
 %macro GENERIC_SUBMIT_FLUSH_JOB_AES_CMAC_AVX 1
 %define %%SUBMIT_FLUSH %1
 
-        mov	rax, rsp
-        sub	rsp, STACK_size
-        and	rsp, -16
+        mov     rax, rsp
+        sub     rsp, STACK_size
+        and     rsp, -16
 
-	mov	[rsp + _gpr_save + 8*0], rbx
-	mov	[rsp + _gpr_save + 8*1], rbp
-	mov	[rsp + _gpr_save + 8*2], r12
-	mov	[rsp + _gpr_save + 8*3], r13
-	mov	[rsp + _gpr_save + 8*4], r14
-	mov	[rsp + _gpr_save + 8*5], r15
+        mov     [rsp + _gpr_save + 8*0], rbx
+        mov     [rsp + _gpr_save + 8*1], rbp
+        mov     [rsp + _gpr_save + 8*2], r12
+        mov     [rsp + _gpr_save + 8*3], r13
+        mov     [rsp + _gpr_save + 8*4], r14
+        mov     [rsp + _gpr_save + 8*5], r15
 %ifndef LINUX
-	mov	[rsp + _gpr_save + 8*6], rsi
-	mov	[rsp + _gpr_save + 8*7], rdi
+        mov     [rsp + _gpr_save + 8*6], rsi
+        mov     [rsp + _gpr_save + 8*7], rdi
 %endif
-	mov	[rsp + _rsp_save], rax	; original SP
+        mov     [rsp + _rsp_save], rax  ; original SP
 
         ;; Find free lane
- 	mov	unused_lanes, [state + _aes_cmac_unused_lanes]
+        mov     unused_lanes, [state + _aes_cmac_unused_lanes]
 
 %ifidn %%SUBMIT_FLUSH, SUBMIT
 
- 	mov	lane, unused_lanes
-        and	lane, 0xF
- 	shr	unused_lanes, 4
- 	mov	[state + _aes_cmac_unused_lanes], unused_lanes
+        mov     lane, unused_lanes
+        and     lane, 0xF
+        shr     unused_lanes, 4
+        mov     [state + _aes_cmac_unused_lanes], unused_lanes
 
         ;; Copy job info into lane
- 	mov	[state + _aes_cmac_job_in_lane + lane*8], job
+        mov     [state + _aes_cmac_job_in_lane + lane*8], job
         ;; Copy keys into lane args
- 	mov	tmp, [job + _key_expanded]
- 	mov	[state + _aes_cmac_args_keys + lane*8], tmp
+        mov     tmp, [job + _key_expanded]
+        mov     [state + _aes_cmac_args_keys + lane*8], tmp
         mov     tmp, lane
         shl     tmp, 4  ; lane*16
 
@@ -323,7 +323,7 @@ align_loop
         je      %%_len_is_0
         vpshufb xmm1, xmm1, [rel dupw]   ; duplicate words across all lanes
         vpsubw  xmm0, xmm1
-	vmovdqa [state + _aes_cmac_lens], xmm0
+        vmovdqa [state + _aes_cmac_lens], xmm0
 
         ; "state" and "args" are the same address, arg1
         ; len2 is arg2
@@ -382,7 +382,7 @@ align_label
 align_label
 %%_copy_complete_digest:
         ; Job complete, copy digest to AT output
- 	mov	job_rax, [state + _aes_cmac_job_in_lane + idx*8]
+        mov     job_rax, [state + _aes_cmac_job_in_lane + idx*8]
 
         mov     tmp4, idx
         shl     tmp4, 4
@@ -405,16 +405,16 @@ align_label
 align_label
 %%_update_lanes:
         ; Update unused lanes
-        mov	unused_lanes, [state + _aes_cmac_unused_lanes]
-        shl	unused_lanes, 4
- 	or	unused_lanes, idx
- 	mov	[state + _aes_cmac_unused_lanes], unused_lanes
+        mov     unused_lanes, [state + _aes_cmac_unused_lanes]
+        shl     unused_lanes, 4
+        or      unused_lanes, idx
+        mov     [state + _aes_cmac_unused_lanes], unused_lanes
 
         ; Set return job
-        mov	job_rax, [state + _aes_cmac_job_in_lane + idx*8]
+        mov     job_rax, [state + _aes_cmac_job_in_lane + idx*8]
 
- 	mov	qword [state + _aes_cmac_job_in_lane + idx*8], 0
- 	or	dword [job_rax + _status], IMB_STATUS_COMPLETED_AUTH
+        mov     qword [state + _aes_cmac_job_in_lane + idx*8], 0
+        or      dword [job_rax + _status], IMB_STATUS_COMPLETED_AUTH
 
 %ifdef SAFE_DATA
         vpxor   xmm0, xmm0, xmm0
@@ -424,23 +424,23 @@ align_label
 
 align_label
 %%_return:
-	mov	rbx, [rsp + _gpr_save + 8*0]
-	mov	rbp, [rsp + _gpr_save + 8*1]
-	mov	r12, [rsp + _gpr_save + 8*2]
-	mov	r13, [rsp + _gpr_save + 8*3]
-	mov	r14, [rsp + _gpr_save + 8*4]
-	mov	r15, [rsp + _gpr_save + 8*5]
+        mov     rbx, [rsp + _gpr_save + 8*0]
+        mov     rbp, [rsp + _gpr_save + 8*1]
+        mov     r12, [rsp + _gpr_save + 8*2]
+        mov     r13, [rsp + _gpr_save + 8*3]
+        mov     r14, [rsp + _gpr_save + 8*4]
+        mov     r15, [rsp + _gpr_save + 8*5]
 %ifndef LINUX
-	mov	rsi, [rsp + _gpr_save + 8*6]
-	mov	rdi, [rsp + _gpr_save + 8*7]
+        mov     rsi, [rsp + _gpr_save + 8*6]
+        mov     rdi, [rsp + _gpr_save + 8*7]
 %endif
-	mov	rsp, [rsp + _rsp_save]	; original SP
-	ret
+        mov     rsp, [rsp + _rsp_save]  ; original SP
+        ret
 
 align_label
 %%_return_null:
-	xor	job_rax, job_rax
-	jmp	%%_return
+        xor     job_rax, job_rax
+        jmp     %%_return
 
 %ifidn %%SUBMIT_FLUSH, SUBMIT
 align_label
@@ -502,7 +502,7 @@ align_label
 
         ;; save and restore rcx on windows
 %ifndef LINUX
-	mov	tmp, rcx
+        mov     tmp, rcx
 %endif
         mov     rcx, rbits
         mov     tmp3, 0xff
@@ -513,7 +513,7 @@ align_label
         ;; pad final byte
         vpandn  xmm2, xmm0
 %ifndef LINUX
-	mov	rcx, tmp
+        mov     rcx, tmp
 %endif
         ;; set OR mask to pad final bit
         mov     tmp2, tmp3
