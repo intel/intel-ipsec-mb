@@ -88,11 +88,11 @@ default rel
 
 MKGLOBAL(gps,data,)
 align 8
-gps:	        resq	14
+gps:            resq    14
 
 MKGLOBAL(simd_regs,data,)
 alignb 64
-simd_regs:	resb	32*64
+simd_regs:      resb    32*64
 
 section .text
 
