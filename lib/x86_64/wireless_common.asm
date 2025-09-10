@@ -60,13 +60,13 @@ mksection .text
         %define %%PSHUFB  pshufb
 %endif
 %ifdef LINUX
-        %define	        %%pIn	rdi
-        %define	        %%pOut	rsi
-        %define	        %%pKS	rdx
+        %define         %%pIn   rdi
+        %define         %%pOut  rsi
+        %define         %%pKS   rdx
 %else
-        %define	        %%pIn	rcx
-        %define	        %%pOut	rdx
-        %define	        %%pKS	r8
+        %define         %%pIn   rcx
+        %define         %%pOut  rdx
+        %define         %%pKS   r8
 %endif
 
         %define         %%XKEY    xmm0
@@ -93,13 +93,13 @@ asm_XorKeyStream16B_sse:
 MKGLOBAL(asm_XorKeyStream32B_avx2,function,internal)
 asm_XorKeyStream32B_avx2:
 %ifdef LINUX
-        %define	        pIn	rdi
-        %define	        pOut	rsi
-        %define	        pKS	rdx
+        %define         pIn     rdi
+        %define         pOut    rsi
+        %define         pKS     rdx
 %else
-        %define	        pIn	rcx
-        %define	        pOut	rdx
-        %define	        pKS	r8
+        %define         pIn     rcx
+        %define         pOut    rdx
+        %define         pKS     r8
 %endif
         %define         YKEY   ymm0
         %define         YIN    ymm1
@@ -117,13 +117,13 @@ asm_XorKeyStream32B_avx2:
 MKGLOBAL(asm_XorKeyStream64B_avx512,function,internal)
 asm_XorKeyStream64B_avx512:
 %ifdef LINUX
-        %define	        pIn     rdi
-        %define	        pOut    rsi
-        %define	        pKS     rdx
+        %define         pIn     rdi
+        %define         pOut    rsi
+        %define         pKS     rdx
 %else
-        %define	        pIn     rcx
-        %define	        pOut    rdx
-        %define	        pKS     r8
+        %define         pIn     rcx
+        %define         pOut    rdx
+        %define         pKS     r8
 %endif
         %define         ZKEY    zmm0
         %define         ZIN     zmm1

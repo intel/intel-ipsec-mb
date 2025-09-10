@@ -251,7 +251,7 @@ mksection .text
         adc     %%A2, 1                 ;; padding bit
 
         POLY1305_MUL_REDUCE %%A0, %%A1, %%A2, %%R0, %%R1, \
-                            %%T0, %%T1, %%T2, %%T3, %%GP_RAX, %%GP_RDX
+                                %%T0, %%T1, %%T2, %%T3, %%GP_RAX, %%GP_RDX
 
         add     %%MSG, POLY1305_BLOCK_SIZE
         sub     %%LEN, POLY1305_BLOCK_SIZE
@@ -307,7 +307,7 @@ mksection .text
         add     %%T0, %%R1      ;; T0 = R1 + (R1 >> 2)
 
         POLY1305_MUL_REDUCE %%A0, %%A1, %%A2, %%R0, %%R1, \
-                            %%T0, %%T1, %%T2, %%T3, %%GP_RAX, %%GP_RDX
+                                %%T0, %%T1, %%T2, %%T3, %%GP_RAX, %%GP_RDX
 
 %ifdef SAFE_DATA
         ;; clear the scratch buffer
@@ -396,7 +396,7 @@ mksection .text
         add     rsp, STACKFRAME_size
 
 %ifdef SAFE_DATA
-       clear_scratch_gps_asm
+        clear_scratch_gps_asm
 %endif ;; SAFE_DATA
 
 %endmacro
@@ -441,7 +441,7 @@ poly1305_mac_scalar:
         sub     rsp, 16
 
         POLY1305_PARTIAL_BLOCK rsp, msg, len, _a0, _a1, _a2, _r0, _r1, \
-                               gp6, gp7, gp8, gp9, rax, rdx, no_padding
+                                gp6, gp7, gp8, gp9, rax, rdx, no_padding
 
         ;; remove the stack frame (memory is cleared as part of the macro)
         add     rsp, 16
@@ -524,7 +524,7 @@ poly1305_aead_update_scalar:
         sub     rsp, 16
 
         POLY1305_PARTIAL_BLOCK rsp, arg1, _len, _a0, _a1, _a2, _r0, _r1, \
-                               gp10, gp11, gp8, gp9, rax, rdx, pad_to_16
+                                gp10, gp11, gp8, gp9, rax, rdx, pad_to_16
 
         ;; remove the stack frame (memory is cleared as part of the macro)
         add     rsp, 16

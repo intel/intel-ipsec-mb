@@ -30,12 +30,12 @@
 %include "include/reg_sizes.inc"
 
 %ifdef LINUX
-%define arg1		rdi
-%define arg2	        rsi
+%define arg1            rdi
+%define arg2            rsi
 %define arg3            rdx
 %else
-%define arg1		rcx
-%define arg2	        rdx
+%define arg1            rcx
+%define arg2            rdx
 %define arg3            r8
 %endif
 

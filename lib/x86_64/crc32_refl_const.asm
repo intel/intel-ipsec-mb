@@ -47,8 +47,8 @@ crc32_ethernet_fcs_const:
         dq 0x0000000081256527, 0x00000000f1da05aa   ; 256-bits fold
         dq 0x00000000ccaa009e, 0x00000000ae689191   ; 128-bits fold
         dq 0x0000000000000000, 0x0000000000000000   ; padding
-	dq 0x00000000ccaa009e, 0x00000000b8bc6765   ; 128-bits to 64-bits fold
-	dq 0x00000001f7011640, 0x00000001db710640   ; 64-bits to 32-bits reduction
+        dq 0x00000000ccaa009e, 0x00000000b8bc6765   ; 128-bits to 64-bits fold
+        dq 0x00000001f7011640, 0x00000001db710640   ; 64-bits to 32-bits reduction
 
 ;; CRC16 X25 CCITT 0x1021 / initial value = 0xffff
 align 64
@@ -64,7 +64,7 @@ crc16_x25_ccitt_const:
         dq 0x0000000000005b44, 0x0000000000007762   ; 256-b fold
         dq 0x00000000000081bf, 0x0000000000008e10   ; 128-b fold
         dq 0x0000000000000000, 0x0000000000000000   ; padding
-	dq 0x00000000000081bf, 0x0000000000001cbb   ; 128-bits to 64-bits fold
-	dq 0x000000011c581910, 0x0000000000010810   ; 64-bits to 32-bits reduction
+        dq 0x00000000000081bf, 0x0000000000001cbb   ; 128-bits to 64-bits fold
+        dq 0x000000011c581910, 0x0000000000010810   ; 64-bits to 32-bits reduction
 
 mksection stack-noexec
