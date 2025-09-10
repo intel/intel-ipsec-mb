@@ -88,19 +88,19 @@ dd      0xFFFFFF0C, 0xFFFFFF0D, 0xFFFFFF0E, 0xFFFFFF0F,
 
 align 16
 mask31:
-dd	0x7FFFFFFF, 0x7FFFFFFF, 0x7FFFFFFF, 0x7FFFFFFF
+dd      0x7FFFFFFF, 0x7FFFFFFF, 0x7FFFFFFF, 0x7FFFFFFF
 
 align 16
 bit_reverse_table_l:
-db	0x00, 0x08, 0x04, 0x0c, 0x02, 0x0a, 0x06, 0x0e, 0x01, 0x09, 0x05, 0x0d, 0x03, 0x0b, 0x07, 0x0f
+db      0x00, 0x08, 0x04, 0x0c, 0x02, 0x0a, 0x06, 0x0e, 0x01, 0x09, 0x05, 0x0d, 0x03, 0x0b, 0x07, 0x0f
 
 align 16
 bit_reverse_table_h:
-db	0x00, 0x80, 0x40, 0xc0, 0x20, 0xa0, 0x60, 0xe0, 0x10, 0x90, 0x50, 0xd0, 0x30, 0xb0, 0x70, 0xf0
+db      0x00, 0x80, 0x40, 0xc0, 0x20, 0xa0, 0x60, 0xe0, 0x10, 0x90, 0x50, 0xd0, 0x30, 0xb0, 0x70, 0xf0
 
 align 16
 bit_reverse_and_table:
-db	0x0f, 0x0f, 0x0f, 0x0f, 0x0f, 0x0f, 0x0f, 0x0f, 0x0f, 0x0f, 0x0f, 0x0f, 0x0f, 0x0f, 0x0f, 0x0f
+db      0x0f, 0x0f, 0x0f, 0x0f, 0x0f, 0x0f, 0x0f, 0x0f, 0x0f, 0x0f, 0x0f, 0x0f, 0x0f, 0x0f, 0x0f, 0x0f
 
 align 16
 swap_mask:
@@ -269,19 +269,19 @@ mksection .text
 %define %%t1 %6
 
         movdqa  %%t0, %%r0
-	shufps	%%t0, %%r1, 0x44	; t0 = {b1 b0 a1 a0}
-	shufps	%%r0, %%r1, 0xEE	; r0 = {b3 b2 a3 a2}
+        shufps  %%t0, %%r1, 0x44        ; t0 = {b1 b0 a1 a0}
+        shufps  %%r0, %%r1, 0xEE        ; r0 = {b3 b2 a3 a2}
         movdqa  %%t1, %%r2
-	shufps  %%t1, %%r3, 0x44	; t1 = {d1 d0 c1 c0}
-	shufps	%%r2, %%r3, 0xEE	; r2 = {d3 d2 c3 c2}
+        shufps  %%t1, %%r3, 0x44        ; t1 = {d1 d0 c1 c0}
+        shufps  %%r2, %%r3, 0xEE        ; r2 = {d3 d2 c3 c2}
 
         movdqa  %%r1, %%t0
-	shufps	%%r1, %%t1, 0xDD	; r1 = {d1 c1 b1 a1}
+        shufps  %%r1, %%t1, 0xDD        ; r1 = {d1 c1 b1 a1}
         movdqa  %%r3, %%r0
-	shufps	%%r3, %%r2, 0xDD	; r3 = {d3 c3 b3 a3}
-	shufps	%%r0, %%r2, 0x88	; r2 = {d2 c2 b2 a2}
+        shufps  %%r3, %%r2, 0xDD        ; r3 = {d3 c3 b3 a3}
+        shufps  %%r0, %%r2, 0x88        ; r2 = {d2 c2 b2 a2}
         movdqa  %%r2, %%r0
-	shufps	%%t0, %%t1, 0x88	; r0 = {d0 c0 b0 a0}
+        shufps  %%t0, %%t1, 0x88        ; r0 = {d0 c0 b0 a0}
         movdqa  %%r0, %%t0
 %endmacro
 
@@ -593,9 +593,9 @@ mksection .text
         LOAD_LFSR %%STATE, %%ROUND_NUM, 15, %%TMP, %%LFSR_15
 %endif
 
-    ; Calculate LFSR feedback (S_16)
+        ; Calculate LFSR feedback (S_16)
 
-    ; In Init mode, W is added to the S_16 calculation
+        ; In Init mode, W is added to the S_16 calculation
 %ifidn %%MODE, init
         ADD_MOD31 %%W, %%LFSR_0, %%XTMP, %%MASK_31
 %else
@@ -634,14 +634,14 @@ mksection .text
 %if %%NUM_ROUNDS != 16
 %assign %%i 0
 %rep 16
-    movdqa APPEND(xmm,%%i), [%%STATE + 16*%%i]
+        movdqa APPEND(xmm,%%i), [%%STATE + 16*%%i]
 %assign %%i (%%i+1)
 %endrep
 
 %assign %%i 0
 %assign %%j %%NUM_ROUNDS
 %rep 16
-    movdqa [%%STATE + 16*%%i], APPEND(xmm,%%j)
+        movdqa [%%STATE + 16*%%i], APPEND(xmm,%%j)
 %assign %%i (%%i+1)
 %assign %%j ((%%j+1) % 16)
 %endrep
@@ -669,26 +669,26 @@ mksection .text
 %define %%LFSR      %6 ;; [out] XMM register to contain initialized LFSR regs
 %define %%XTMP      %7 ;; [clobbered] XMM temporary register
 
-    movdqa          %%LFSR, %%KEY
-    movdqa          %%XTMP, %%IV
-    pshufb          %%LFSR, %%SHUF_KEY
-    psrld           %%LFSR, 1
-    pshufb          %%XTMP, %%SHUF_IV
-    por             %%LFSR, %%XTMP
-    por             %%LFSR, %%EKD_MASK
+        movdqa          %%LFSR, %%KEY
+        movdqa          %%XTMP, %%IV
+        pshufb          %%LFSR, %%SHUF_KEY
+        psrld           %%LFSR, 1
+        pshufb          %%XTMP, %%SHUF_IV
+        por             %%LFSR, %%XTMP
+        por             %%LFSR, %%EKD_MASK
 
 %endmacro
 
 %macro ZUC_INIT_4 0
 
 %ifdef LINUX
-	%define		pKe	rdi
-	%define		pIv	rsi
-	%define		pState	rdx
+        %define         pKe     rdi
+        %define         pIv     rsi
+        %define         pState  rdx
 %else
-	%define		pKe	rcx
-	%define		pIv	rdx
-	%define		pState	r8
+        %define         pKe     rcx
+        %define         pIv     rdx
+        %define         pState  r8
 %endif
 
 %define %%XTMP1  xmm0
@@ -753,7 +753,7 @@ mksection .text
 %assign %%J 5
 %rep 4
         INIT_LFSR_128 APPEND(%%XTMP,%%I), APPEND(%%XTMP,%%J), %%XTMP13, %%XTMP14, \
-                      %%XTMP15, APPEND(%%XTMP, %%IDX), %%XTMP16
+                        %%XTMP15, APPEND(%%XTMP, %%IDX), %%XTMP16
 %assign %%IDX (%%IDX + 1)
 %assign %%I (%%I + 1)
 %assign %%J (%%J + 1)
@@ -782,12 +782,12 @@ align_loop
         je      %%exit_loop
         ; Shift LFSR 32-times, update state variables
         BITS_REORG4 pState, r15, r14, %%XTMP1, %%XTMP2, %%XTMP3, %%XTMP4, %%XTMP5, \
-                    %%XTMP6, %%XTMP7, %%XTMP8, %%XTMP9, %%XTMP10
+                        %%XTMP6, %%XTMP7, %%XTMP8, %%XTMP9, %%XTMP10
         NONLIN_FUN4 pState, %%XTMP1, %%XTMP2, %%XTMP3, \
-                    %%XTMP4, %%XTMP5, %%XTMP6, %%XTMP7, %%W
+                        %%XTMP4, %%XTMP5, %%XTMP6, %%XTMP7, %%W
         psrld   %%W, 1 ; Shift out LSB of W
         LFSR_UPDT4  pState, r15, r14, %%XTMP1, %%XTMP2, %%XTMP3, %%XTMP4, %%XTMP5, %%XTMP6, \
-                    %%MASK_31, %%W, init ; W used in LFSR update
+                        %%MASK_31, %%W, init ; W used in LFSR update
         inc     r15
         jmp     %%start_loop
 
@@ -795,13 +795,13 @@ align_label
 %%exit_loop:
         ; And once more, initial round from keygen phase = 33 times
         BITS_REORG4 pState, 0, no_reg, %%XTMP1, %%XTMP2, %%XTMP3, %%XTMP4, %%XTMP5, \
-                    %%XTMP6, %%XTMP7, %%XTMP8, %%XTMP9, %%XTMP10
+                        %%XTMP6, %%XTMP7, %%XTMP8, %%XTMP9, %%XTMP10
         NONLIN_FUN4 pState, %%XTMP1, %%XTMP2, %%XTMP3, \
-                    %%XTMP4, %%XTMP5, %%XTMP6, %%XTMP7, %%W
+                        %%XTMP4, %%XTMP5, %%XTMP6, %%XTMP7, %%W
         LFSR_UPDT4  pState, 0, no_reg, %%XTMP1, %%XTMP2, %%XTMP3, %%XTMP4, %%XTMP5, %%XTMP6, \
-                    %%MASK_31, %%XTMP8, work
+                        %%MASK_31, %%XTMP8, work
 
-    FUNC_RESTORE
+        FUNC_RESTORE
 %endmacro
 
 MKGLOBAL(ZUC128_INIT_4,function,internal)
@@ -818,11 +818,11 @@ ZUC128_INIT_4:
 %define %%NUM_ROUNDS    %1 ; [in] Number of 4-byte rounds
 
 %ifdef LINUX
-	%define		pState	rdi
-	%define		pKS	rsi
+        %define         pState  rdi
+        %define         pKS     rsi
 %else
-	%define		pState	rcx
-	%define		pKS	rdx
+        %define         pState  rcx
+        %define         pKS     rdx
 %endif
 
 %define %%XTMP1  xmm0
@@ -862,16 +862,16 @@ align_loop
         inc     r15
         ; Shift LFSR 32-times, update state variables
         BITS_REORG4 pState, r15, r14, %%XTMP1, %%XTMP2, %%XTMP3, %%XTMP4, %%XTMP5, \
-                    %%XTMP6, %%XTMP7, %%XTMP8, %%XTMP9, %%XTMP10, %%KSTR1
+                        %%XTMP6, %%XTMP7, %%XTMP8, %%XTMP9, %%XTMP10, %%KSTR1
         NONLIN_FUN4 pState, %%XTMP1, %%XTMP2, %%XTMP3, \
-                    %%XTMP4, %%XTMP5, %%XTMP6, %%XTMP7, %%W
+                        %%XTMP4, %%XTMP5, %%XTMP6, %%XTMP7, %%W
         pxor        %%KSTR1, %%W
         mov         r14, r15
         dec         r14
         shl         r14, 4
         movdqa      [rsp + KEYSTR_OFFSET + r14], %%KSTR1
         LFSR_UPDT4  pState, r15, r14, %%XTMP1, %%XTMP2, %%XTMP3, %%XTMP4, %%XTMP5, %%XTMP6, \
-                    %%MASK_31, %%XTMP8, work
+                        %%MASK_31, %%XTMP8, work
         cmp         r15, %%NUM_ROUNDS
         jne         %%start_loop_keygen
 
@@ -1031,16 +1031,16 @@ align_loop
         inc     r15
         ; Shift LFSR 32-times, update state variables
         BITS_REORG4 pState, r15, r14, %%XTMP1, %%XTMP2, %%XTMP3, %%XTMP4, %%XTMP5, \
-                    %%XTMP6, %%XTMP7, %%XTMP8, %%XTMP9, %%XTMP10, %%KSTR1
+                        %%XTMP6, %%XTMP7, %%XTMP8, %%XTMP9, %%XTMP10, %%KSTR1
         NONLIN_FUN4 pState, %%XTMP1, %%XTMP2, %%XTMP3, \
-                    %%XTMP4, %%XTMP5, %%XTMP6, %%XTMP7, %%W
+                        %%XTMP4, %%XTMP5, %%XTMP6, %%XTMP7, %%W
         pxor        %%KSTR1, %%W
         mov         r14, r15
         sub         r14, (%%INITIAL_ROUND+1)
         shl         r14, 4
         movdqa      [rsp + KEYSTR_OFFSET + r14], %%KSTR1
         LFSR_UPDT4  pState, r15, r14, %%XTMP1, %%XTMP2, %%XTMP3, %%XTMP4, %%XTMP5, %%XTMP6, \
-                    %%MASK_31, %%XTMP8, work
+                        %%MASK_31, %%XTMP8, work
         cmp         r15, (%%NROUNDS + %%INITIAL_ROUND)
         jne         %%start_loop_cipher
 
@@ -1548,8 +1548,8 @@ ZUC_EIA3REMAINDER:
 %define N_BITS  arg4
 
         REMAINDER T, KS, DATA, N_BITS, r11, r12, r13, r14, r15, \
-                  xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, \
-                  xmm8, xmm9, xmm10, xmm11
+                xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, \
+                xmm8, xmm9, xmm10, xmm11
         ret
 
 %macro ROUND 16
@@ -1608,12 +1608,12 @@ MKGLOBAL(ZUC_EIA3ROUND16B,function,internal)
 align_function
 ZUC_EIA3ROUND16B:
 
-%define	T       arg1
-%define	KS      arg2
-%define	DATA    arg3
+%define T       arg1
+%define KS      arg2
+%define DATA    arg3
 
         ROUND T, KS, DATA, rax, xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, \
-              xmm7, xmm8, xmm9, xmm10, xmm11
+                xmm7, xmm8, xmm9, xmm10, xmm11
 
         ret
 

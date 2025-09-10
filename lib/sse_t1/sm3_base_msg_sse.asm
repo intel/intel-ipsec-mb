@@ -100,7 +100,7 @@ mksection .rodata
 
 align 16
 SHUFF_MASK:
-	db 3, 2, 1, 0, 7, 6, 5, 4, 11, 10, 9, 8, 15, 14, 13, 12
+        db 3, 2, 1, 0, 7, 6, 5, 4, 11, 10, 9, 8, 15, 14, 13, 12
 
 mksection .text
 

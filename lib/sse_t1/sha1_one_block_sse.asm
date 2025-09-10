@@ -35,36 +35,36 @@ mksection .rodata
 default rel
 align 16
 PSHUFFLE_BYTE_FLIP_MASK: ;ddq 0x0c0d0e0f08090a0b0405060700010203
-	dq 0x0405060700010203, 0x0c0d0e0f08090a0b
+        dq 0x0405060700010203, 0x0c0d0e0f08090a0b
 K00_19:                  ;ddq 0x5A8279995A8279995A8279995A827999
-	dq 0x5A8279995A827999, 0x5A8279995A827999
+        dq 0x5A8279995A827999, 0x5A8279995A827999
 K20_39:                  ;ddq 0x6ED9EBA16ED9EBA16ED9EBA16ED9EBA1
-	dq 0x6ED9EBA16ED9EBA1, 0x6ED9EBA16ED9EBA1
+        dq 0x6ED9EBA16ED9EBA1, 0x6ED9EBA16ED9EBA1
 K40_59:                  ;ddq 0x8F1BBCDC8F1BBCDC8F1BBCDC8F1BBCDC
-	dq 0x8F1BBCDC8F1BBCDC, 0x8F1BBCDC8F1BBCDC
+        dq 0x8F1BBCDC8F1BBCDC, 0x8F1BBCDC8F1BBCDC
 K60_79:                  ;ddq 0xCA62C1D6CA62C1D6CA62C1D6CA62C1D6
-	dq 0xCA62C1D6CA62C1D6, 0xCA62C1D6CA62C1D6
+        dq 0xCA62C1D6CA62C1D6, 0xCA62C1D6CA62C1D6
 
 mksection .text
 
-%define	MOVDQ movdqu ;; assume buffers not aligned
+%define MOVDQ movdqu ;; assume buffers not aligned
 
 %ifdef LINUX
-%define INP	rdi ; 1st arg
+%define INP     rdi ; 1st arg
 %define CTX     rsi ; 2nd arg
-%define ARG3 	rdx ; 3rd arg
-%define REG3	edx
-%define REG4	ecx
+%define ARG3    rdx ; 3rd arg
+%define REG3    edx
+%define REG4    ecx
 %else
-%define INP	rcx ; 1st arg
+%define INP     rcx ; 1st arg
 %define CTX     rdx ; 2nd arg
-%define ARG3 	r8  ; 3rd arg
-%define REG3	edi
-%define REG4	esi
+%define ARG3    r8  ; 3rd arg
+%define REG3    edi
+%define REG4    esi
 %endif
 
 %define FRAMESZ 3*16 + 1*8
-%define _RSP	FRAMESZ-1*8 + rsp
+%define _RSP    FRAMESZ-1*8 + rsp
 
 %define a   eax
 %define b   ebx
@@ -123,10 +123,10 @@ mksection .text
 %define %%regC %3
 %define %%regD %4
 %define %%regT %5
-	mov  %%regF,%%regC
-	xor  %%regF,%%regD
-	and  %%regF,%%regB
-	xor  %%regF,%%regD
+        mov  %%regF,%%regC
+        xor  %%regF,%%regD
+        and  %%regF,%%regB
+        xor  %%regF,%%regD
 %endmacro
 
 ; macro MAGIC_F1 F,B,C,D,T   ;; F = (B ^ C ^ D)
@@ -136,9 +136,9 @@ mksection .text
 %define %%regC %3
 %define %%regD %4
 %define %%regT %5
-	mov  %%regF,%%regD
-	xor  %%regF,%%regC
-	xor  %%regF,%%regB
+        mov  %%regF,%%regD
+        xor  %%regF,%%regC
+        xor  %%regF,%%regB
 %endmacro
 
 ; macro MAGIC_F2 F,B,C,D,T   ;; F = ((B & C) | (B & D) | (C & D))
@@ -148,12 +148,12 @@ mksection .text
 %define %%regC %3
 %define %%regD %4
 %define %%regT %5
-	mov  %%regF,%%regB
-	mov  %%regT,%%regB
-	or   %%regF,%%regC
-	and  %%regT,%%regC
-	and  %%regF,%%regD
-	or   %%regF,%%regT
+        mov  %%regF,%%regB
+        mov  %%regT,%%regB
+        or   %%regF,%%regC
+        and  %%regT,%%regC
+        and  %%regF,%%regD
+        or   %%regF,%%regT
 %endmacro
 
 ; macro MAGIC_F3 F,B,C,D,T   ;; F = (B ^ C ^ D)
@@ -163,297 +163,297 @@ mksection .text
 %define %%regC %3
 %define %%regD %4
 %define %%regT %5
-	MAGIC_F1 %%regF,%%regB,%%regC,%%regD,%%regT
+        MAGIC_F1 %%regF,%%regB,%%regC,%%regD,%%regT
 %endmacro
 
 ;; input is T1
 %macro ROUND 1
-%define %%MAGIC	%1
-	add   e,T1
-	mov   T1,a
-	rol   T1,5
-	add   e,T1
-	%%MAGIC     h,b,c,d,T1      ;; FUN  = MAGIC_Fi(B,C,D)
-	rol   b,30
-	add   h,e
+%define %%MAGIC %1
+        add   e,T1
+        mov   T1,a
+        rol   T1,5
+        add   e,T1
+        %%MAGIC     h,b,c,d,T1      ;; FUN  = MAGIC_Fi(B,C,D)
+        rol   b,30
+        add   h,e
 ROTATE_ARGS
 %endmacro
 
 %macro do_4i 1
-		movdqa	XFER, XK
-		paddd	XFER, X0
-		pextrd	T1, XFER, 0
-	;ROUND %1
-	add   e,T1
-		;SCHEDULE_4
-		movdqa	XTMP0, X1
-		palignr XTMP0, X0, 8		; XTMP0 = W[-14]
-	mov   T1,a
-		movdqa	XTMP1, X2
-	rol   T1,5
-		pxor	XTMP1, X0			; XTMP1 = W[-8] ^ W[-16]
-	add   e,T1
-		pxor	XTMP0, XTMP1		; XTMP0 = W[-8] ^ W[-14] ^ W[-16]
-	%1     h,b,c,d,T1      ;; FUN  = MAGIC_Fi(B,C,D)
+                movdqa  XFER, XK
+                paddd   XFER, X0
+                pextrd  T1, XFER, 0
+        ;ROUND %1
+        add   e,T1
+                ;SCHEDULE_4
+                movdqa  XTMP0, X1
+                palignr XTMP0, X0, 8            ; XTMP0 = W[-14]
+        mov   T1,a
+                movdqa  XTMP1, X2
+        rol   T1,5
+                pxor    XTMP1, X0                       ; XTMP1 = W[-8] ^ W[-16]
+        add   e,T1
+                pxor    XTMP0, XTMP1            ; XTMP0 = W[-8] ^ W[-14] ^ W[-16]
+        %1     h,b,c,d,T1      ;; FUN  = MAGIC_Fi(B,C,D)
 
-		;; Finish low half
-		movdqa	X4, X3
-	rol   b,30
-		psrldq	X4, 4			; X4 = W[-3] {xxBA}
-	add   h,e
+                ;; Finish low half
+                movdqa  X4, X3
+        rol   b,30
+                psrldq  X4, 4                   ; X4 = W[-3] {xxBA}
+        add   h,e
 ROTATE_ARGS
-		pextrd	T1, XFER, 1
-	;ROUND %1
-	add   e,T1
-		pxor	X4, XTMP0			;
-	mov   T1,a
-		movdqa	XTMP1, X4
-	rol   T1,5
-		;; rotate X4 left 1
-		psrld	XTMP1, (32-1)
-	add   e,T1
-		pslld	X4, 1
-	%1     h,b,c,d,T1      ;; FUN  = MAGIC_Fi(B,C,D)
-		pxor	X4, XTMP1			; X4 = W[0] {xxBA}
-	rol   b,30
-	add   h,e
+                pextrd  T1, XFER, 1
+        ;ROUND %1
+        add   e,T1
+                pxor    X4, XTMP0                       ;
+        mov   T1,a
+                movdqa  XTMP1, X4
+        rol   T1,5
+                ;; rotate X4 left 1
+                psrld   XTMP1, (32-1)
+        add   e,T1
+                pslld   X4, 1
+        %1     h,b,c,d,T1      ;; FUN  = MAGIC_Fi(B,C,D)
+                pxor    X4, XTMP1                       ; X4 = W[0] {xxBA}
+        rol   b,30
+        add   h,e
 ROTATE_ARGS
-		pextrd	T1, XFER, 2
-	;ROUND %1
-	add   e,T1
-		movdqa	XTMP1, X4
-	mov   T1,a
+                pextrd  T1, XFER, 2
+        ;ROUND %1
+        add   e,T1
+                movdqa  XTMP1, X4
+        mov   T1,a
 
-		;; Finish high half
-		palignr XTMP1, X3, 4		; XTMP1 = w[-3] {DCxx}
-	rol   T1,5
-	add   e,T1
-		pxor	XTMP0, XTMP1
-	%1     h,b,c,d,T1      ;; FUN  = MAGIC_Fi(B,C,D)
-		;; rotate XTMP0 left 1
-		movdqa	XTMP1, XTMP0
-		psrld	XTMP1, (32-1)
-	rol   b,30
-	add   h,e
+                ;; Finish high half
+                palignr XTMP1, X3, 4            ; XTMP1 = w[-3] {DCxx}
+        rol   T1,5
+        add   e,T1
+                pxor    XTMP0, XTMP1
+        %1     h,b,c,d,T1      ;; FUN  = MAGIC_Fi(B,C,D)
+                ;; rotate XTMP0 left 1
+                movdqa  XTMP1, XTMP0
+                psrld   XTMP1, (32-1)
+        rol   b,30
+        add   h,e
 ROTATE_ARGS
-		pextrd	T1, XFER, 3
-	;ROUND %1
-	add   e,T1
-	mov   T1,a
-		pslld	XTMP0, 1
-	rol   T1,5
-	add   e,T1
-		pxor	XTMP0, XTMP1		; XTMP0 = W[0] {DCxx}
-	%1     h,b,c,d,T1      ;; FUN  = MAGIC_Fi(B,C,D)
-		;; COMBINE HALVES
-		shufps	X4, XTMP0, 11100100b	; X4 = X[0] {DCBA}
-	rol   b,30
-	add   h,e
+                pextrd  T1, XFER, 3
+        ;ROUND %1
+        add   e,T1
+        mov   T1,a
+                pslld   XTMP0, 1
+        rol   T1,5
+        add   e,T1
+                pxor    XTMP0, XTMP1            ; XTMP0 = W[0] {DCxx}
+        %1     h,b,c,d,T1      ;; FUN  = MAGIC_Fi(B,C,D)
+                ;; COMBINE HALVES
+                shufps  X4, XTMP0, 11100100b    ; X4 = X[0] {DCBA}
+        rol   b,30
+        add   h,e
 
-		rotate_Xs
+                rotate_Xs
 ROTATE_ARGS
 %endmacro
 
 %macro one_block 0
-	movdqa	XTMP0, [rel PSHUFFLE_BYTE_FLIP_MASK]
+        movdqa  XTMP0, [rel PSHUFFLE_BYTE_FLIP_MASK]
 
-	MOVDQ	X0, [INP + 0*16]
-	MOVDQ	X1, [INP + 1*16]
+        MOVDQ   X0, [INP + 0*16]
+        MOVDQ   X1, [INP + 1*16]
 
-	;; load next message block
-	MOVDQ	X2, [INP + 2*16]
-	MOVDQ	X3, [INP + 3*16]
+        ;; load next message block
+        MOVDQ   X2, [INP + 2*16]
+        MOVDQ   X3, [INP + 3*16]
 
-	;; byte swap first 16 dwords
-	pshufb	X0, XTMP0
-	pshufb	X1, XTMP0
-	pshufb	X2, XTMP0
-	pshufb	X3, XTMP0
+        ;; byte swap first 16 dwords
+        pshufb  X0, XTMP0
+        pshufb  X1, XTMP0
+        pshufb  X2, XTMP0
+        pshufb  X3, XTMP0
 
-	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-	;; do rounds 00-19
-	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-	movdqa	XK, [rel K00_19]
-	mov	RND, 3
-	ROTATE_ARGS
-	ROTATE_ARGS
-	ROTATE_ARGS
-	ROTATE_ARGS
-	rotate_Xs
-	rotate_Xs
-	rotate_Xs
-	rotate_Xs
-	jmp	.loop1_5
+        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        ;; do rounds 00-19
+        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        movdqa  XK, [rel K00_19]
+        mov     RND, 3
+        ROTATE_ARGS
+        ROTATE_ARGS
+        ROTATE_ARGS
+        ROTATE_ARGS
+        rotate_Xs
+        rotate_Xs
+        rotate_Xs
+        rotate_Xs
+        jmp     .loop1_5
 align_loop
 .loop1:
 
-	do_4i	MAGIC_F0
+        do_4i   MAGIC_F0
 
 align_label
 .loop1_5:
-	do_4i	MAGIC_F0
+        do_4i   MAGIC_F0
 
-	rotate_Xs
-	rotate_Xs
-	rotate_Xs
-	rotate_Xs
-	movdqa	X0, X2
-	movdqa	X2, X4
-	movdqa	X4, X1
-	movdqa	X1, X3
+        rotate_Xs
+        rotate_Xs
+        rotate_Xs
+        rotate_Xs
+        movdqa  X0, X2
+        movdqa  X2, X4
+        movdqa  X4, X1
+        movdqa  X1, X3
 
-	sub	RND, 1
-	jne	.loop1
+        sub     RND, 1
+        jne     .loop1
 
-	rotate_Xs
-	rotate_Xs
-	rotate_Xs
-	rotate_Xs
+        rotate_Xs
+        rotate_Xs
+        rotate_Xs
+        rotate_Xs
 
-	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-	;; end rounds 00-19
-	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        ;; end rounds 00-19
+        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-	;; do rounds 20-39
-	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-	movdqa	XK, [rel K20_39]
-	mov	RND, 3
-	ROTATE_ARGS
-	ROTATE_ARGS
-	ROTATE_ARGS
-	ROTATE_ARGS
-	rotate_Xs
-	rotate_Xs
-	rotate_Xs
-	rotate_Xs
-	jmp	.loop2_5
+        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        ;; do rounds 20-39
+        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        movdqa  XK, [rel K20_39]
+        mov     RND, 3
+        ROTATE_ARGS
+        ROTATE_ARGS
+        ROTATE_ARGS
+        ROTATE_ARGS
+        rotate_Xs
+        rotate_Xs
+        rotate_Xs
+        rotate_Xs
+        jmp     .loop2_5
 
 align_loop
 .loop2:
 
-	do_4i	MAGIC_F1
+        do_4i   MAGIC_F1
 
 align_label
 .loop2_5:
-	do_4i	MAGIC_F1
+        do_4i   MAGIC_F1
 
-	rotate_Xs
-	rotate_Xs
-	rotate_Xs
-	rotate_Xs
-	movdqa	X0, X2
-	movdqa	X2, X4
-	movdqa	X4, X1
-	movdqa	X1, X3
+        rotate_Xs
+        rotate_Xs
+        rotate_Xs
+        rotate_Xs
+        movdqa  X0, X2
+        movdqa  X2, X4
+        movdqa  X4, X1
+        movdqa  X1, X3
 
-	sub	RND, 1
-	jne	.loop2
+        sub     RND, 1
+        jne     .loop2
 
-	rotate_Xs
-	rotate_Xs
-	rotate_Xs
-	rotate_Xs
+        rotate_Xs
+        rotate_Xs
+        rotate_Xs
+        rotate_Xs
 
-	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-	;; end rounds 20-39
-	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        ;; end rounds 20-39
+        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-	;; do rounds 40-59
-	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-	movdqa	XK, [rel K40_59]
-	mov	RND, 3
-	ROTATE_ARGS
-	ROTATE_ARGS
-	ROTATE_ARGS
-	ROTATE_ARGS
-	rotate_Xs
-	rotate_Xs
-	rotate_Xs
-	rotate_Xs
-	jmp	.loop3_5
+        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        ;; do rounds 40-59
+        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        movdqa  XK, [rel K40_59]
+        mov     RND, 3
+        ROTATE_ARGS
+        ROTATE_ARGS
+        ROTATE_ARGS
+        ROTATE_ARGS
+        rotate_Xs
+        rotate_Xs
+        rotate_Xs
+        rotate_Xs
+        jmp     .loop3_5
 
 align_loop
 .loop3:
 
-	do_4i	MAGIC_F2
+        do_4i   MAGIC_F2
 
 align_label
 .loop3_5:
-	do_4i	MAGIC_F2
+        do_4i   MAGIC_F2
 
-	rotate_Xs
-	rotate_Xs
-	rotate_Xs
-	rotate_Xs
-	movdqa	X0, X2
-	movdqa	X2, X4
-	movdqa	X4, X1
-	movdqa	X1, X3
+        rotate_Xs
+        rotate_Xs
+        rotate_Xs
+        rotate_Xs
+        movdqa  X0, X2
+        movdqa  X2, X4
+        movdqa  X4, X1
+        movdqa  X1, X3
 
-	sub	RND, 1
-	jne	.loop3
+        sub     RND, 1
+        jne     .loop3
 
-	rotate_Xs
-	rotate_Xs
-	rotate_Xs
-	rotate_Xs
+        rotate_Xs
+        rotate_Xs
+        rotate_Xs
+        rotate_Xs
 
-	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-	;; end rounds 40-59
-	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        ;; end rounds 40-59
+        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-	;; do rounds 60-79
-	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-	movdqa	XK, [rel K60_79]
+        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        ;; do rounds 60-79
+        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        movdqa  XK, [rel K60_79]
 
-	do_4i	MAGIC_F3
+        do_4i   MAGIC_F3
 
-	movdqa	XFER, XK
-	paddd	XFER, X0
-	pextrd	T1, XFER, 0
-	ROUND MAGIC_F3
-	pextrd	T1, XFER, 1
-	ROUND MAGIC_F3
-	pextrd	T1, XFER, 2
-	ROUND MAGIC_F3
-	pextrd	T1, XFER, 3
-	ROUND MAGIC_F3
+        movdqa  XFER, XK
+        paddd   XFER, X0
+        pextrd  T1, XFER, 0
+        ROUND MAGIC_F3
+        pextrd  T1, XFER, 1
+        ROUND MAGIC_F3
+        pextrd  T1, XFER, 2
+        ROUND MAGIC_F3
+        pextrd  T1, XFER, 3
+        ROUND MAGIC_F3
 
-	movdqa	XFER, XK
-	paddd	XFER, X1
-	pextrd	T1, XFER, 0
-	ROUND MAGIC_F3
-	pextrd	T1, XFER, 1
-	ROUND MAGIC_F3
-	pextrd	T1, XFER, 2
-	ROUND MAGIC_F3
-	pextrd	T1, XFER, 3
-	ROUND MAGIC_F3
+        movdqa  XFER, XK
+        paddd   XFER, X1
+        pextrd  T1, XFER, 0
+        ROUND MAGIC_F3
+        pextrd  T1, XFER, 1
+        ROUND MAGIC_F3
+        pextrd  T1, XFER, 2
+        ROUND MAGIC_F3
+        pextrd  T1, XFER, 3
+        ROUND MAGIC_F3
 
-	movdqa	XFER, XK
-	paddd	XFER, X2
-	pextrd	T1, XFER, 0
-	ROUND MAGIC_F3
-	pextrd	T1, XFER, 1
-	ROUND MAGIC_F3
-	pextrd	T1, XFER, 2
-	ROUND MAGIC_F3
-	pextrd	T1, XFER, 3
-	ROUND MAGIC_F3
+        movdqa  XFER, XK
+        paddd   XFER, X2
+        pextrd  T1, XFER, 0
+        ROUND MAGIC_F3
+        pextrd  T1, XFER, 1
+        ROUND MAGIC_F3
+        pextrd  T1, XFER, 2
+        ROUND MAGIC_F3
+        pextrd  T1, XFER, 3
+        ROUND MAGIC_F3
 
-	movdqa	XFER, XK
-	paddd	XFER, X3
-	pextrd	T1, XFER, 0
-	ROUND MAGIC_F3
-	pextrd	T1, XFER, 1
-	ROUND MAGIC_F3
-	pextrd	T1, XFER, 2
-	ROUND MAGIC_F3
-	pextrd	T1, XFER, 3
-	ROUND MAGIC_F3
+        movdqa  XFER, XK
+        paddd   XFER, X3
+        pextrd  T1, XFER, 0
+        ROUND MAGIC_F3
+        pextrd  T1, XFER, 1
+        ROUND MAGIC_F3
+        pextrd  T1, XFER, 2
+        ROUND MAGIC_F3
+        pextrd  T1, XFER, 3
+        ROUND MAGIC_F3
 %endmacro
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -464,43 +464,43 @@ align_label
 MKGLOBAL(sha1_block_sse,function,internal)
 align_function
 sha1_block_sse:
-	push	rbx
-	push	rsi
-	push	rdi
-	push	r12
-	push	r13
+        push    rbx
+        push    rsi
+        push    rdi
+        push    r12
+        push    r13
 
 %ifndef LINUX
-	mov	rax, rsp		; copy rsp
-	sub	rsp, FRAMESZ
-	and	rsp, -16		; align stack frame
-	mov	[_RSP],rax		; save copy of rsp
-	movdqa	[rsp + 0 * 16], xmm6
-	movdqa	[rsp + 1 * 16], xmm7
-	movdqa	[rsp + 2 * 16], xmm8
+        mov     rax, rsp                ; copy rsp
+        sub     rsp, FRAMESZ
+        and     rsp, -16                ; align stack frame
+        mov     [_RSP],rax              ; save copy of rsp
+        movdqa  [rsp + 0 * 16], xmm6
+        movdqa  [rsp + 1 * 16], xmm7
+        movdqa  [rsp + 2 * 16], xmm8
 
 %endif
 
         ;; set up a-f based on h0-h4
-	mov	a, [SZ*0 + CTX]
-	mov	b, [SZ*1 + CTX]
-	mov	c, [SZ*2 + CTX]
-	mov	d, [SZ*3 + CTX]
-	mov	e, [SZ*4 + CTX]
+        mov     a, [SZ*0 + CTX]
+        mov     b, [SZ*1 + CTX]
+        mov     c, [SZ*2 + CTX]
+        mov     d, [SZ*3 + CTX]
+        mov     e, [SZ*4 + CTX]
 
-	one_block
+        one_block
 
         ;; update result digest h0-h4
-	add	[SZ*0 + CTX], a
-	add	[SZ*1 + CTX], b
-	add	[SZ*2 + CTX], c
-	add	[SZ*3 + CTX], d
-	add	[SZ*4 + CTX], e
+        add     [SZ*0 + CTX], a
+        add     [SZ*1 + CTX], b
+        add     [SZ*2 + CTX], c
+        add     [SZ*3 + CTX], d
+        add     [SZ*4 + CTX], e
 
 %ifndef LINUX
-	movdqa	xmm8, [rsp + 2 * 16]
-	movdqa	xmm7, [rsp + 1 * 16]
-	movdqa	xmm6, [rsp + 0 * 16]
+        movdqa  xmm8, [rsp + 2 * 16]
+        movdqa  xmm7, [rsp + 1 * 16]
+        movdqa  xmm6, [rsp + 0 * 16]
 
 %ifdef SAFE_DATA
         ;; Clear potential sensitive data stored in stack
@@ -511,20 +511,20 @@ sha1_block_sse:
 
 %endif
 
-	mov	rsp, [_RSP]
+        mov     rsp, [_RSP]
 %else ;; LINUX
 %ifdef SAFE_DATA
-	clear_all_xmms_sse_asm
+        clear_all_xmms_sse_asm
 %endif
 %endif ;; LINUX
 
-	pop	r13
-	pop	r12
-	pop	rdi
-	pop	rsi
-	pop	rbx
+        pop     r13
+        pop     r12
+        pop     rdi
+        pop     rsi
+        pop     rbx
 
-	ret
+        ret
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -535,72 +535,72 @@ sha1_block_sse:
 MKGLOBAL(sha1_update_sse,function,internal)
 align_function
 sha1_update_sse:
-	push	rbx
-	push	rsi
-	push	rdi
-	push	r12
-	push	r13
-	push   	r14
+        push    rbx
+        push    rsi
+        push    rdi
+        push    r12
+        push    r13
+        push    r14
 
 %ifndef LINUX
-	mov	rax, rsp		; copy rsp
-	sub	rsp, FRAMESZ
-	and	rsp, -16		; align stack frame
-	mov	[_RSP],rax		; save copy of rsp
-	movdqa	[rsp + 0 * 16], xmm6
-	movdqa	[rsp + 1 * 16], xmm7
-	movdqa	[rsp + 2 * 16], xmm8
+        mov     rax, rsp                ; copy rsp
+        sub     rsp, FRAMESZ
+        and     rsp, -16                ; align stack frame
+        mov     [_RSP],rax              ; save copy of rsp
+        movdqa  [rsp + 0 * 16], xmm6
+        movdqa  [rsp + 1 * 16], xmm7
+        movdqa  [rsp + 2 * 16], xmm8
 
 %endif
 
-	mov 	r14, ARG3
+        mov     r14, ARG3
 
 align_loop
 process_block:
         ;; set up a-f based on h0-h4
-	mov	a, [SZ*0 + CTX]
-	mov	b, [SZ*1 + CTX]
-	mov	c, [SZ*2 + CTX]
-	mov	d, [SZ*3 + CTX]
-	mov	e, [SZ*4 + CTX]
+        mov     a, [SZ*0 + CTX]
+        mov     b, [SZ*1 + CTX]
+        mov     c, [SZ*2 + CTX]
+        mov     d, [SZ*3 + CTX]
+        mov     e, [SZ*4 + CTX]
 
-	one_block
+        one_block
 
         ;; update result digest h0-h4
-	add	[SZ*0 + CTX], a
-	add	[SZ*1 + CTX], b
-	add	[SZ*2 + CTX], c
-	add	[SZ*3 + CTX], d
-	add	[SZ*4 + CTX], e
+        add     [SZ*0 + CTX], a
+        add     [SZ*1 + CTX], b
+        add     [SZ*2 + CTX], c
+        add     [SZ*3 + CTX], d
+        add     [SZ*4 + CTX], e
 
-	add 	INP, 64
-	dec 	r14
-	jnz 	process_block
+        add     INP, 64
+        dec     r14
+        jnz     process_block
 
 %ifndef LINUX
-	movdqa	xmm8, [rsp + 2 * 16]
-	movdqa	xmm7, [rsp + 1 * 16]
-	movdqa	xmm6, [rsp + 0 * 16]
+        movdqa  xmm8, [rsp + 2 * 16]
+        movdqa  xmm7, [rsp + 1 * 16]
+        movdqa  xmm6, [rsp + 0 * 16]
 
 %ifdef SAFE_DATA
         ;; Clear potential sensitive data stored in xmms
         clear_xmms_sse xmm0, xmm1, xmm2, xmm3, xmm4, xmm5
 %endif
 
-	mov	rsp, [_RSP]
+        mov     rsp, [_RSP]
 %else ;; LINUX
 %ifdef SAFE_DATA
-	clear_all_xmms_sse_asm
+        clear_all_xmms_sse_asm
 %endif
 %endif ;; LINUX
 
-	pop 	r14
-	pop	r13
-	pop	r12
-	pop	rdi
-	pop	rsi
-	pop	rbx
+        pop     r14
+        pop     r13
+        pop     r12
+        pop     rdi
+        pop     rsi
+        pop     rbx
 
-	ret
+        ret
 
 mksection stack-noexec

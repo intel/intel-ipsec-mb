@@ -44,33 +44,33 @@ default rel
 
 align 16
 len_masks:
-	;ddq 0x0000000000000000000000000000FFFF
-	dq 0x000000000000FFFF, 0x0000000000000000
-	;ddq 0x000000000000000000000000FFFF0000
-	dq 0x00000000FFFF0000, 0x0000000000000000
-	;ddq 0x00000000000000000000FFFF00000000
-	dq 0x0000FFFF00000000, 0x0000000000000000
-	;ddq 0x0000000000000000FFFF000000000000
-	dq 0xFFFF000000000000, 0x0000000000000000
-one:	dq  1
-two:	dq  2
-three:	dq  3
+        ;ddq 0x0000000000000000000000000000FFFF
+        dq 0x000000000000FFFF, 0x0000000000000000
+        ;ddq 0x000000000000000000000000FFFF0000
+        dq 0x00000000FFFF0000, 0x0000000000000000
+        ;ddq 0x00000000000000000000FFFF00000000
+        dq 0x0000FFFF00000000, 0x0000000000000000
+        ;ddq 0x0000000000000000FFFF000000000000
+        dq 0xFFFF000000000000, 0x0000000000000000
+one:    dq  1
+two:    dq  2
+three:  dq  3
 
 mksection .text
 
 %define APPEND(a,b) a %+ b
 
 %ifdef LINUX
-%define arg1	rdi
-%define arg2	rsi
+%define arg1    rdi
+%define arg2    rsi
 %else
-%define arg1	rcx
-%define arg2	rdx
+%define arg1    rcx
+%define arg2    rdx
 %endif
 
-%define state	arg1
-%define job	arg2
-%define len2	arg2
+%define state   arg1
+%define job     arg2
+%define len2    arg2
 
 %define job_rax          rax
 
@@ -93,8 +93,8 @@ mksection .text
 ; STACK_SPACE needs to be an odd multiple of 8
 ; This routine and its callee clobbers all GPRs
 struc STACK
-_gpr_save:	resq	8
-_rsp_save:	resq	1
+_gpr_save:      resq    8
+_rsp_save:      resq    1
 endstruc
 
 ; JOB* FLUSH_JOB_AES_XCBC(MB_MGR_AES_XCBC_OOO *state, IMB_JOB *job)
@@ -104,74 +104,74 @@ MKGLOBAL(FLUSH_JOB_AES_XCBC,function,internal)
 align_function
 FLUSH_JOB_AES_XCBC:
 
-        mov	rax, rsp
-        sub	rsp, STACK_size
-        and	rsp, -16
+        mov     rax, rsp
+        sub     rsp, STACK_size
+        and     rsp, -16
 
-	mov	[rsp + _gpr_save + 8*0], rbx
-	mov	[rsp + _gpr_save + 8*1], rbp
-	mov	[rsp + _gpr_save + 8*2], r12
-	mov	[rsp + _gpr_save + 8*3], r13
-	mov	[rsp + _gpr_save + 8*4], r14
-	mov	[rsp + _gpr_save + 8*5], r15
+        mov     [rsp + _gpr_save + 8*0], rbx
+        mov     [rsp + _gpr_save + 8*1], rbp
+        mov     [rsp + _gpr_save + 8*2], r12
+        mov     [rsp + _gpr_save + 8*3], r13
+        mov     [rsp + _gpr_save + 8*4], r14
+        mov     [rsp + _gpr_save + 8*5], r15
 %ifndef LINUX
-	mov	[rsp + _gpr_save + 8*6], rsi
-	mov	[rsp + _gpr_save + 8*7], rdi
+        mov     [rsp + _gpr_save + 8*6], rsi
+        mov     [rsp + _gpr_save + 8*7], rdi
 %endif
-	mov	[rsp + _rsp_save], rax	; original SP
+        mov     [rsp + _rsp_save], rax  ; original SP
 
-	; check for empty
-	mov	unused_lanes, [state + _aes_xcbc_unused_lanes]
-	bt	unused_lanes, 32+7
-	jc	return_null
+        ; check for empty
+        mov     unused_lanes, [state + _aes_xcbc_unused_lanes]
+        bt      unused_lanes, 32+7
+        jc      return_null
 
-	; find a lane with a non-null job
-	xor	idx, idx
-	cmp	qword [state + _aes_xcbc_ldata + 1 * _XCBC_LANE_DATA_size + _xcbc_job_in_lane], 0
-	cmovne	idx, [rel one]
-	cmp	qword [state + _aes_xcbc_ldata + 2 * _XCBC_LANE_DATA_size + _xcbc_job_in_lane], 0
-	cmovne	idx, [rel two]
-	cmp	qword [state + _aes_xcbc_ldata + 3 * _XCBC_LANE_DATA_size + _xcbc_job_in_lane], 0
-	cmovne	idx, [rel three]
+        ; find a lane with a non-null job
+        xor     idx, idx
+        cmp     qword [state + _aes_xcbc_ldata + 1 * _XCBC_LANE_DATA_size + _xcbc_job_in_lane], 0
+        cmovne  idx, [rel one]
+        cmp     qword [state + _aes_xcbc_ldata + 2 * _XCBC_LANE_DATA_size + _xcbc_job_in_lane], 0
+        cmovne  idx, [rel two]
+        cmp     qword [state + _aes_xcbc_ldata + 3 * _XCBC_LANE_DATA_size + _xcbc_job_in_lane], 0
+        cmovne  idx, [rel three]
 
 align_loop
 copy_lane_data:
-	; copy idx to empty lanes
-	mov	tmp1, [state + _aes_xcbc_args_in + idx*8]
-	mov	tmp3, [state + _aes_xcbc_args_keys + idx*8]
-	shl	idx, 4 ; multiply by 16
-	movdqa	xmm2, [state + _aes_xcbc_args_ICV + idx]
-	movdqa	xmm0, [state + _aes_xcbc_lens]
+        ; copy idx to empty lanes
+        mov     tmp1, [state + _aes_xcbc_args_in + idx*8]
+        mov     tmp3, [state + _aes_xcbc_args_keys + idx*8]
+        shl     idx, 4 ; multiply by 16
+        movdqa  xmm2, [state + _aes_xcbc_args_ICV + idx]
+        movdqa  xmm0, [state + _aes_xcbc_lens]
 
 %assign I 0
 %rep 4
-	cmp	qword [state + _aes_xcbc_ldata + I * _XCBC_LANE_DATA_size + _xcbc_job_in_lane], 0
-	jne	APPEND(skip_,I)
-	mov	[state + _aes_xcbc_args_in + I*8], tmp1
-	mov	[state + _aes_xcbc_args_keys + I*8], tmp3
-	movdqa	[state + _aes_xcbc_args_ICV + I*16], xmm2
-	por	xmm0, [rel len_masks + 16*I]
+        cmp     qword [state + _aes_xcbc_ldata + I * _XCBC_LANE_DATA_size + _xcbc_job_in_lane], 0
+        jne     APPEND(skip_,I)
+        mov     [state + _aes_xcbc_args_in + I*8], tmp1
+        mov     [state + _aes_xcbc_args_keys + I*8], tmp3
+        movdqa  [state + _aes_xcbc_args_ICV + I*16], xmm2
+        por     xmm0, [rel len_masks + 16*I]
 APPEND(skip_,I):
 %assign I (I+1)
 %endrep
 
-	movdqa	[state + _aes_xcbc_lens], xmm0
+        movdqa  [state + _aes_xcbc_lens], xmm0
 
-	; Find min length
-	phminposuw	xmm1, xmm0
-	pextrw	len2, xmm1, 0	; min value
-	pextrw	idx, xmm1, 1	; min index (0...3)
-	cmp	len2, 0
-	je	len_is_0
+        ; Find min length
+        phminposuw      xmm1, xmm0
+        pextrw  len2, xmm1, 0   ; min value
+        pextrw  idx, xmm1, 1    ; min index (0...3)
+        cmp     len2, 0
+        je      len_is_0
 
-	pshuflw	xmm1, xmm1, 0
-	psubw	xmm0, xmm1
-	movdqa	[state + _aes_xcbc_lens], xmm0
+        pshuflw xmm1, xmm1, 0
+        psubw   xmm0, xmm1
+        movdqa  [state + _aes_xcbc_lens], xmm0
 
-	; "state" and "args" are the same address, arg1
-	; len is arg2
-	call	AES_XCBC_X4
-	; state and idx are intact
+        ; "state" and "args" are the same address, arg1
+        ; len is arg2
+        call    AES_XCBC_X4
+        ; state and idx are intact
 
 align_label
 len_is_0:
@@ -199,10 +199,10 @@ end_loop:
         shl     idx, 4 ; multiply by 16
         mov     [state + _aes_xcbc_unused_lanes], unused_lanes
 
-	; copy 12 bytes
-	movdqa	xmm0, [state + _aes_xcbc_args_ICV + idx]
-	movq	[icv], xmm0
-	pextrd	[icv + 8], xmm0, 2
+        ; copy 12 bytes
+        movdqa  xmm0, [state + _aes_xcbc_args_ICV + idx]
+        movq    [icv], xmm0
+        pextrd  [icv + 8], xmm0, 2
 
 %ifdef SAFE_DATA
         pxor    xmm0, xmm0
@@ -210,9 +210,9 @@ end_loop:
         ;; Clear ICV's and final blocks in returned job and NULL lanes
 %assign I 0
 %rep 4
-        cmp	qword [state + _aes_xcbc_ldata + I * _XCBC_LANE_DATA_size + _xcbc_job_in_lane], 0
-        jne	APPEND(skip_clear_,I)
-        movdqa	[state + _aes_xcbc_args_ICV + I*16], xmm0
+        cmp     qword [state + _aes_xcbc_ldata + I * _XCBC_LANE_DATA_size + _xcbc_job_in_lane], 0
+        jne     APPEND(skip_clear_,I)
+        movdqa  [state + _aes_xcbc_args_ICV + I*16], xmm0
         lea     lane_data, [state + _aes_xcbc_ldata + (I * _XCBC_LANE_DATA_size)]
         movdqa  [lane_data + _xcbc_final_block], xmm0
         movdqa  [lane_data + _xcbc_final_block + 16], xmm0
@@ -223,23 +223,23 @@ APPEND(skip_clear_,I):
 align_label
 return:
 
-	mov	rbx, [rsp + _gpr_save + 8*0]
-	mov	rbp, [rsp + _gpr_save + 8*1]
-	mov	r12, [rsp + _gpr_save + 8*2]
-	mov	r13, [rsp + _gpr_save + 8*3]
-	mov	r14, [rsp + _gpr_save + 8*4]
-	mov	r15, [rsp + _gpr_save + 8*5]
+        mov     rbx, [rsp + _gpr_save + 8*0]
+        mov     rbp, [rsp + _gpr_save + 8*1]
+        mov     r12, [rsp + _gpr_save + 8*2]
+        mov     r13, [rsp + _gpr_save + 8*3]
+        mov     r14, [rsp + _gpr_save + 8*4]
+        mov     r15, [rsp + _gpr_save + 8*5]
 %ifndef LINUX
-	mov	rsi, [rsp + _gpr_save + 8*6]
-	mov	rdi, [rsp + _gpr_save + 8*7]
+        mov     rsi, [rsp + _gpr_save + 8*6]
+        mov     rdi, [rsp + _gpr_save + 8*7]
 %endif
-	mov	rsp, [rsp + _rsp_save]	; original SP
+        mov     rsp, [rsp + _rsp_save]  ; original SP
 
-	ret
+        ret
 
 align_label
 return_null:
-	xor	job_rax, job_rax
-	jmp	return
+        xor     job_rax, job_rax
+        jmp     return
 
 mksection stack-noexec

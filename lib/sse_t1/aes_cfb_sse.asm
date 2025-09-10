@@ -36,18 +36,18 @@
 ;;; It is designed to manage partial blocks of DOCSIS 3.1 SEC BPI
 
 ;; In System V AMD64 ABI
-;;	callee saves: RBX, RBP, R12-R15
+;;      callee saves: RBX, RBP, R12-R15
 ;; Windows x64 ABI
-;;	callee saves: RBX, RBP, RDI, RSI, RSP, R12-R15
+;;      callee saves: RBX, RBP, RDI, RSI, RSP, R12-R15
 ;;
-;; Registers:		RAX RBX RCX RDX RBP RSI RDI R8  R9  R10 R11 R12 R13 R14 R15
-;;			-----------------------------------------------------------
-;; Windows clobbers:	RAX                             R9  R10 R11
-;; Windows preserves:	    RBX RCX RDX RBP RSI RDI R8              R12 R13 R14 R15
-;;			-----------------------------------------------------------
-;; Linux clobbers:	RAX                             R9  R10
-;; Linux preserves:	    RBX RCX RDX RBP RSI RDI R8          R11 R12 R13 R14 R15
-;;			-----------------------------------------------------------
+;; Registers:           RAX RBX RCX RDX RBP RSI RDI R8  R9  R10 R11 R12 R13 R14 R15
+;;                      -----------------------------------------------------------
+;; Windows clobbers:    RAX                             R9  R10 R11
+;; Windows preserves:       RBX RCX RDX RBP RSI RDI R8              R12 R13 R14 R15
+;;                      -----------------------------------------------------------
+;; Linux clobbers:      RAX                             R9  R10
+;; Linux preserves:         RBX RCX RDX RBP RSI RDI R8          R11 R12 R13 R14 R15
+;;                      -----------------------------------------------------------
 ;;
 ;; Linux/Windows clobbers: xmm0
 ;;
@@ -58,35 +58,35 @@
 %endif
 
 %ifdef LINUX
-%define arg1	rdi
-%define arg2	rsi
-%define arg3	rdx
-%define arg4	rcx
-%define arg5	r8
+%define arg1    rdi
+%define arg2    rsi
+%define arg3    rdx
+%define arg4    rcx
+%define arg5    r8
 %else
-%define arg1	rcx
-%define arg2	rdx
-%define arg3	r8
-%define arg4	r9
-%define arg5	[rsp + 5*8]
+%define arg1    rcx
+%define arg2    rdx
+%define arg3    r8
+%define arg4    r9
+%define arg5    [rsp + 5*8]
 %endif
 
-%define OUT	arg1
-%define IN	arg2
-%define IV	arg3
-%define KEYS	arg4
+%define OUT     arg1
+%define IN      arg2
+%define IV      arg3
+%define KEYS    arg4
 %ifdef LINUX
-%define LEN	arg5
+%define LEN     arg5
 %else
-%define LEN2	arg5
-%define LEN	r11
+%define LEN2    arg5
+%define LEN     r11
 %endif
 
-%define TMP0	rax
-%define TMP1	r10
+%define TMP0    rax
+%define TMP1    r10
 
-%define XDATA	xmm0
-%define XIN	xmm1
+%define XDATA   xmm0
+%define XIN     xmm1
 
 mksection .text
 
@@ -94,7 +94,7 @@ mksection .text
 %define %%NROUNDS %1
 
 %ifndef LINUX
-	mov		LEN, LEN2
+        mov             LEN, LEN2
 %endif
 %ifdef SAFE_PARAM
         IMB_ERR_CHECK_RESET
@@ -133,24 +133,24 @@ align_label
 %%skip_in_out_check:
 %endif
 
-	simd_load_sse_16 XIN, IN, LEN
+        simd_load_sse_16 XIN, IN, LEN
 
-	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-	movdqu		XDATA, [IV] 		; IV (or next to last block)
-	pxor		XDATA, [KEYS + 16*0]	; 0. ARK
+        movdqu          XDATA, [IV]             ; IV (or next to last block)
+        pxor            XDATA, [KEYS + 16*0]    ; 0. ARK
 %assign i 16
 %rep %%NROUNDS
-	aesenc		XDATA, [KEYS + i]	; ENC
+        aesenc          XDATA, [KEYS + i]       ; ENC
 %assign i (i+16)
 %endrep
-	aesenclast	XDATA, [KEYS + i]
+        aesenclast      XDATA, [KEYS + i]
 
-	pxor		XDATA, XIN 		; plaintext/ciphertext XOR block cipher encryption
+        pxor            XDATA, XIN              ; plaintext/ciphertext XOR block cipher encryption
 
-	simd_store_sse	OUT, XDATA, LEN, TMP0, TMP1
+        simd_store_sse  OUT, XDATA, LEN, TMP0, TMP1
 
-	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 %ifdef SAFE_DATA
         ;; XDATA and XIN are the only scratch SIMD registers used
@@ -186,7 +186,7 @@ AES_CFB_128_ONE:
         endbranch64
         do_cfb 9
 
-	ret
+        ret
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; void aes_cfb_256_one(void *out, void *in, void *iv, void *keys, uint64_t len)
@@ -213,6 +213,6 @@ AES_CFB_256_ONE:
         endbranch64
         do_cfb 13
 
-	ret
+        ret
 
 mksection stack-noexec

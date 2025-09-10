@@ -662,7 +662,7 @@ align_label
         ;; XGEM payload shorter or equal to 4 bytes
 %ifidn %%DIR, ENC
         ;; Don't write Ethernet FCS on encryption
-       xor     DWORD(write_back_crc), DWORD(write_back_crc)
+        xor     DWORD(write_back_crc), DWORD(write_back_crc)
 %else
         ;; Mark decryption as not finished
         ;; - Ethernet FCS is not computed
@@ -925,7 +925,7 @@ align_label
         pop     r12
 
 %ifdef SAFE_DATA
-	clear_all_xmms_sse_asm
+        clear_all_xmms_sse_asm
 %endif ;; SAFE_DATA
 
 %endmacro                       ; AES128_CTR_PON

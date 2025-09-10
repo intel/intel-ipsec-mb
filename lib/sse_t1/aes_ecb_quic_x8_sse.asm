@@ -109,30 +109,30 @@
 %endmacro
 
 %ifdef LINUX
-%define IN		rdi
-%define KEYS		rsi
-%define OUT		rdx
-%define N_BUFS		rcx
+%define IN              rdi
+%define KEYS            rsi
+%define OUT             rdx
+%define N_BUFS          rcx
 %else
-%define IN		rcx
-%define KEYS		rdx
-%define OUT		r8
-%define N_BUFS		r9
+%define IN              rcx
+%define KEYS            rdx
+%define OUT             r8
+%define N_BUFS          r9
 %endif
 
-%define IDX		rax
-%define TMP		IDX
-%define XDATA0		xmm0
-%define XDATA1		xmm1
-%define XDATA2		xmm2
-%define XDATA3		xmm3
-%define XKEY0		xmm4
-%define XKEY2		xmm5
-%define XKEY4		xmm6
-%define XKEY6		xmm7
-%define XKEY10		xmm8
-%define XKEY_A		xmm14
-%define XKEY_B		xmm15
+%define IDX             rax
+%define TMP             IDX
+%define XDATA0          xmm0
+%define XDATA1          xmm1
+%define XDATA2          xmm2
+%define XDATA3          xmm3
+%define XKEY0           xmm4
+%define XKEY2           xmm5
+%define XKEY4           xmm6
+%define XKEY6           xmm7
+%define XKEY10          xmm8
+%define XKEY_A          xmm14
+%define XKEY_B          xmm15
 
 mksection .text
 

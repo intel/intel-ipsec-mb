@@ -94,7 +94,7 @@ mksection .text
         shr     %%UNUSED_LANES, 4
         mov     dword [%%LANE_LIST], DWORD(%%UNUSED_LANES)
 
-        add	word [%%LANES_IN_USE], 1
+        add     word [%%LANES_IN_USE], 1
         mov     [%%JOB_LANES + %%LANE_NR*8], %%JOB
 %endmacro
 
@@ -169,9 +169,9 @@ mksection .text
 
 %ifidn %%SUBMIT_FLUSH, submit
         GET_UNUSED_LANE_SSE state + _snow3g_unused_lanes, \
-                            state + _snow3g_lanes_in_use, \
-                            state + _snow3g_job_in_lane,  \
-                            job, %%LANE, %%UNUSED_LANES
+                                state + _snow3g_lanes_in_use, \
+                                state + _snow3g_job_in_lane,  \
+                                job, %%LANE, %%UNUSED_LANES
 
         mov             %%TGP1, [job + _enc_keys]
         mov             %%TGP2, [job + _iv]
@@ -184,7 +184,7 @@ mksection .text
         ;; should be read from src and written to dst.
         ;; When mask is set to 0 so no reads/writes occur.
         SNOW3G_INIT_LANE_SSE state, %%LANE, %%TGP1, %%TGP2, %%TMP_XMM_0, \
-                             %%TMP_XMM_1, %%TMP_XMM_2
+                                %%TMP_XMM_1, %%TMP_XMM_2
 
         ;; 32 iterations in Init mode are required
         ;; details of _snow3g_lens dw fields are in FLUSH section
@@ -251,7 +251,7 @@ align_loop
         ;; fill %%TMP_XMM_0 with common length values per initialized length
         ;; to be subtracted from remaining byte lengths and rounded dw lengths
         movd            %%TMP_XMM_0, DWORD(%%TGP0)
-        pshufd	        %%TMP_XMM_0, %%TMP_XMM_0, 0
+        pshufd          %%TMP_XMM_0, %%TMP_XMM_0, 0
 
         ;; Create mask with lanes in use
         pxor            %%TMP_XMM_2, %%TMP_XMM_2
@@ -417,10 +417,10 @@ MKGLOBAL(SUBMIT_JOB_SNOW3G_UEA2,function,internal)
 align_function
 SUBMIT_JOB_SNOW3G_UEA2:
         SUBMIT_FLUSH_JOB_SNOW3G_UEA2_SSE submit, tmp_gp1, tmp_gp2, tmp_gp3,     \
-                                     tmp_gp4, tmp_gp5, tmp_gp6, tmp_gp7,    \
-                                     tmp_gp8, xmm0, xmm1, xmm2, xmm3, xmm4, \
-                                     xmm5, xmm6, xmm7, xmm8, xmm9, xmm10,   \
-                                     xmm11, xmm12, xmm13, xmm14, xmm15
+                                        tmp_gp4, tmp_gp5, tmp_gp6, tmp_gp7,    \
+                                        tmp_gp8, xmm0, xmm1, xmm2, xmm3, xmm4, \
+                                        xmm5, xmm6, xmm7, xmm8, xmm9, xmm10,   \
+                                        xmm11, xmm12, xmm13, xmm14, xmm15
 
         ret
 
@@ -428,9 +428,9 @@ MKGLOBAL(FLUSH_JOB_SNOW3G_UEA2,function,internal)
 align_function
 FLUSH_JOB_SNOW3G_UEA2:
         SUBMIT_FLUSH_JOB_SNOW3G_UEA2_SSE flush, tmp_gp1, tmp_gp2, tmp_gp3, tmp_gp4,\
-                                     tmp_gp5, tmp_gp6, tmp_gp7, tmp_gp8, xmm0, \
-                                     xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, \
-                                     xmm8, xmm9, xmm10, xmm11, xmm12, xmm13,   \
-                                     xmm14, xmm15
+                                        tmp_gp5, tmp_gp6, tmp_gp7, tmp_gp8, xmm0, \
+                                        xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, \
+                                        xmm8, xmm9, xmm10, xmm11, xmm12, xmm13,   \
+                                        xmm14, xmm15
         ret
 mksection stack-noexec

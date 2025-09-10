@@ -334,18 +334,18 @@ align_label
 %define %%t1 %6 ;; [clobbered] Temporary XMM register
 
         movdqa  %%t0, %%r0
-        shufps	%%t0, %%r1, 0x44	; t0 = {b1 b0 a1 a0}
-        shufps	%%r0, %%r1, 0xEE	; r0 = {b3 b2 a3 a2}
+        shufps  %%t0, %%r1, 0x44        ; t0 = {b1 b0 a1 a0}
+        shufps  %%r0, %%r1, 0xEE        ; r0 = {b3 b2 a3 a2}
         movdqa  %%t1, %%r2
-        shufps  %%t1, %%r3, 0x44	; t1 = {d1 d0 c1 c0}
-        shufps	%%r2, %%r3, 0xEE	; r2 = {d3 d2 c3 c2}
+        shufps  %%t1, %%r3, 0x44        ; t1 = {d1 d0 c1 c0}
+        shufps  %%r2, %%r3, 0xEE        ; r2 = {d3 d2 c3 c2}
 
         movdqa  %%r1, %%t0
-        shufps	%%r1, %%t1, 0xDD	; r1 = {d1 c1 b1 a1}
+        shufps  %%r1, %%t1, 0xDD        ; r1 = {d1 c1 b1 a1}
         movdqa  %%r3, %%r0
-        shufps	%%r3, %%r2, 0xDD	; r3 = {d3 c3 b3 a3}
-        shufps	%%r0, %%r2, 0x88	; r0 = {d2 c2 b2 a2}
-        shufps	%%t0, %%t1, 0x88	; t0 = {d0 c0 b0 a0}
+        shufps  %%r3, %%r2, 0xDD        ; r3 = {d3 c3 b3 a3}
+        shufps  %%r0, %%r2, 0x88        ; r0 = {d2 c2 b2 a2}
+        shufps  %%t0, %%t1, 0x88        ; t0 = {d0 c0 b0 a0}
 %endmacro
 
 ; Rotate dwords on a XMM registers to the left N_BITS
@@ -585,47 +585,47 @@ align_label
 
         ; A += B
         XMM_OP_X4 paddd, %%XMM_DWORD_A1, %%XMM_DWORD_A2, %%XMM_DWORD_A3, %%XMM_DWORD_A4, \
-                         %%XMM_DWORD_B1, %%XMM_DWORD_B2, %%XMM_DWORD_B3, %%XMM_DWORD_B4
+                        %%XMM_DWORD_B1, %%XMM_DWORD_B2, %%XMM_DWORD_B3, %%XMM_DWORD_B4
         ; D ^= A
         XMM_OP_X4 pxor, %%XMM_DWORD_D1, %%XMM_DWORD_D2, %%XMM_DWORD_D3, %%XMM_DWORD_D4, \
                         %%XMM_DWORD_A1, %%XMM_DWORD_A2, %%XMM_DWORD_A3, %%XMM_DWORD_A4
 
         ; D <<< 16
         XMM_ROLS_X4 %%XMM_DWORD_D1, %%XMM_DWORD_D2, %%XMM_DWORD_D3, %%XMM_DWORD_D4, 16, \
-                    %%XMM_DWORD_B1
+                        %%XMM_DWORD_B1
 
         ; C += D
         XMM_OP_X4 paddd, %%XMM_DWORD_C1, %%XMM_DWORD_C2, %%XMM_DWORD_C3, %%XMM_DWORD_C4, \
-                         %%XMM_DWORD_D1, %%XMM_DWORD_D2, %%XMM_DWORD_D3, %%XMM_DWORD_D4
+                        %%XMM_DWORD_D1, %%XMM_DWORD_D2, %%XMM_DWORD_D3, %%XMM_DWORD_D4
         ; B ^= C
         XMM_OP_X4 pxor, %%XMM_DWORD_B1, %%XMM_DWORD_B2, %%XMM_DWORD_B3, %%XMM_DWORD_B4, \
                         %%XMM_DWORD_C1, %%XMM_DWORD_C2, %%XMM_DWORD_C3, %%XMM_DWORD_C4
 
         ; B <<< 12
         XMM_ROLS_X4 %%XMM_DWORD_B1, %%XMM_DWORD_B2, %%XMM_DWORD_B3, %%XMM_DWORD_B4, 12, \
-                    %%XMM_DWORD_D1
+                        %%XMM_DWORD_D1
 
         ; A += B
         XMM_OP_X4 paddd, %%XMM_DWORD_A1, %%XMM_DWORD_A2, %%XMM_DWORD_A3, %%XMM_DWORD_A4, \
-                          %%XMM_DWORD_B1, %%XMM_DWORD_B2, %%XMM_DWORD_B3, %%XMM_DWORD_B4
+                        %%XMM_DWORD_B1, %%XMM_DWORD_B2, %%XMM_DWORD_B3, %%XMM_DWORD_B4
         ; D ^= A
         XMM_OP_X4 pxor, %%XMM_DWORD_D1, %%XMM_DWORD_D2, %%XMM_DWORD_D3, %%XMM_DWORD_D4, \
-                          %%XMM_DWORD_A1, %%XMM_DWORD_A2, %%XMM_DWORD_A3, %%XMM_DWORD_A4
+                        %%XMM_DWORD_A1, %%XMM_DWORD_A2, %%XMM_DWORD_A3, %%XMM_DWORD_A4
 
         ; D <<< 8
         XMM_ROLS_X4 %%XMM_DWORD_D1, %%XMM_DWORD_D2, %%XMM_DWORD_D3, %%XMM_DWORD_D4, 8, \
-                    %%XMM_DWORD_B1
+                        %%XMM_DWORD_B1
 
         ; C += D
         XMM_OP_X4 paddd, %%XMM_DWORD_C1, %%XMM_DWORD_C2, %%XMM_DWORD_C3, %%XMM_DWORD_C4, \
-                          %%XMM_DWORD_D1, %%XMM_DWORD_D2, %%XMM_DWORD_D3, %%XMM_DWORD_D4
+                        %%XMM_DWORD_D1, %%XMM_DWORD_D2, %%XMM_DWORD_D3, %%XMM_DWORD_D4
         ; B ^= C
         XMM_OP_X4 pxor, %%XMM_DWORD_B1, %%XMM_DWORD_B2, %%XMM_DWORD_B3, %%XMM_DWORD_B4, \
-                          %%XMM_DWORD_C1, %%XMM_DWORD_C2, %%XMM_DWORD_C3, %%XMM_DWORD_C4
+                        %%XMM_DWORD_C1, %%XMM_DWORD_C2, %%XMM_DWORD_C3, %%XMM_DWORD_C4
 
         ; B <<< 7
         XMM_ROLS_X4 %%XMM_DWORD_B1, %%XMM_DWORD_B2, %%XMM_DWORD_B3, %%XMM_DWORD_B4, 7, \
-                    %%XMM_DWORD_D1
+                        %%XMM_DWORD_D1
 %endmacro
 
 ;;
@@ -662,14 +662,14 @@ align_label
 align_loop
 %%start_loop:
         CHACHA20_ROUND %%XMM_DWORD_0, %%XMM_DWORD_1, %%XMM_DWORD_2, %%XMM_DWORD_3, \
-                       %%XMM_DWORD_4, %%XMM_DWORD_5, %%XMM_DWORD_6, %%XMM_DWORD_7, \
-                       %%XMM_DWORD_8, %%XMM_DWORD_9, %%XMM_DWORD_10, %%XMM_DWORD_11, \
-                       %%XMM_DWORD_12, %%XMM_DWORD_13, %%XMM_DWORD_14, %%XMM_DWORD_15
+                        %%XMM_DWORD_4, %%XMM_DWORD_5, %%XMM_DWORD_6, %%XMM_DWORD_7, \
+                        %%XMM_DWORD_8, %%XMM_DWORD_9, %%XMM_DWORD_10, %%XMM_DWORD_11, \
+                        %%XMM_DWORD_12, %%XMM_DWORD_13, %%XMM_DWORD_14, %%XMM_DWORD_15
 
         CHACHA20_ROUND %%XMM_DWORD_0, %%XMM_DWORD_1, %%XMM_DWORD_2, %%XMM_DWORD_3, \
-                       %%XMM_DWORD_5, %%XMM_DWORD_6, %%XMM_DWORD_7, %%XMM_DWORD_4, \
-                       %%XMM_DWORD_10, %%XMM_DWORD_11, %%XMM_DWORD_8, %%XMM_DWORD_9, \
-                       %%XMM_DWORD_15, %%XMM_DWORD_12, %%XMM_DWORD_13, %%XMM_DWORD_14
+                        %%XMM_DWORD_5, %%XMM_DWORD_6, %%XMM_DWORD_7, %%XMM_DWORD_4, \
+                        %%XMM_DWORD_10, %%XMM_DWORD_11, %%XMM_DWORD_8, %%XMM_DWORD_9, \
+                        %%XMM_DWORD_15, %%XMM_DWORD_12, %%XMM_DWORD_13, %%XMM_DWORD_14
 
         dec     DWORD(%%LOOP_IDX)
         jnz     %%start_loop
@@ -901,14 +901,14 @@ check_1_or_2_blocks_left:
 
         ; Generate 64 bytes of keystream
         GENERATE_64_128_KS xmm0, xmm1, xmm2, xmm3, xmm9, xmm10, xmm11, \
-                           xmm12, xmm13
+                        xmm12, xmm13
 
         cmp     len, 64
         jne     less_than_64
 
         ;; Exactly 64 bytes left
         ENCRYPT_64B src, dst, off, 0, xmm9, xmm10, xmm11, xmm12, \
-                    xmm5, xmm6
+                        xmm5, xmm6
 
         jmp     no_partial_block
 
@@ -945,17 +945,17 @@ two_blocks_left:
 
         ; Generate 128 bytes of keystream
         GENERATE_64_128_KS xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, \
-                           xmm13, xmm8, xmm9, xmm10, xmm11, xmm12
+                        xmm13, xmm8, xmm9, xmm10, xmm11, xmm12
 
         cmp     len, 128
         jb      between_64_127
 
         ; Load 128 bytes of plaintext, XOR with KS and store ciphertext
         ENCRYPT_64B src, dst, off, 0, xmm4, xmm5, xmm6, xmm7, \
-                    xmm0, xmm1
+                        xmm0, xmm1
 
         ENCRYPT_64B src, dst, off, 64, xmm9, xmm10, xmm11, xmm12, \
-                    xmm0, xmm1
+                        xmm0, xmm1
 
         jmp     no_partial_block
 
@@ -963,7 +963,7 @@ align_label
 between_64_127:
         ; Load plaintext, XOR with KS and store ciphertext for first 64 bytes
         ENCRYPT_64B src, dst, off, 0, xmm4, xmm5, xmm6, xmm7, \
-                    xmm0, xmm1
+                        xmm0, xmm1
 
         sub     len, 64
 
@@ -1028,10 +1028,10 @@ more_than_2_blocks_left:
 
         ; Encrypt first 128 bytes of plaintext (there are at least two 64 byte blocks to process)
         ENCRYPT_64B src, dst, off, 0, xmm0, xmm4, xmm8, xmm12, \
-                    xmm2, xmm3
+                        xmm2, xmm3
 
         ENCRYPT_64B src, dst, off, 64, xmm1, xmm5, xmm9, xmm13, \
-                    xmm2, xmm3
+                        xmm2, xmm3
 
         ; Restore xmm2,xmm3
         movdqa  xmm2, [rsp + _XMM_SAVE]
@@ -1047,7 +1047,7 @@ more_than_2_blocks_left:
 
         ; Encrypt next 64 bytes (128-191)
         ENCRYPT_64B src, dst, off, 0, xmm2, xmm6, xmm10, xmm14, \
-                    xmm0, xmm1
+                        xmm0, xmm1
 
         sub     len, 64
         ; Check if there are remaining bytes to process
@@ -1131,7 +1131,7 @@ chacha20_enc_dec_ks_sse:
 %assign i 0
 %assign j 6
 %rep 10
-	movdqa	[rsp + _XMM_WIN_SAVE + i*16], APPEND(xmm, j)
+        movdqa  [rsp + _XMM_WIN_SAVE + i*16], APPEND(xmm, j)
 %assign i (i + 1)
 %assign j (j + 1)
 %endrep
@@ -1367,7 +1367,7 @@ check_1_or_2_blocks_left_ks:
 
         ; Generate 64 bytes of keystream
         GENERATE_64_128_KS xmm0, xmm1, xmm2, xmm3, xmm9, xmm10, xmm11, \
-                           xmm12, xmm13
+                        xmm12, xmm13
 
         cmp     len, 64
         jne     less_than_64_ks
@@ -1376,7 +1376,7 @@ check_1_or_2_blocks_left_ks:
 
         ; Load plaintext, XOR with KS and store ciphertext
         ENCRYPT_64B src, dst, off, 0, xmm9, xmm10, xmm11, xmm12, \
-                    xmm14, xmm15
+                        xmm14, xmm15
 
         inc     blk_cnt
 
@@ -1425,17 +1425,17 @@ two_blocks_left_ks:
 
         ; Generate 128 bytes of keystream
         GENERATE_64_128_KS xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, \
-                           xmm13, xmm8, xmm9, xmm10, xmm11, xmm12
+                        xmm13, xmm8, xmm9, xmm10, xmm11, xmm12
 
         cmp     len, 128
         jb      between_64_127_ks
 
         ; Encrypt first 128 bytes of plaintext (there are at least two 64 byte blocks to process)
         ENCRYPT_64B src, dst, off, 0, xmm4, xmm5, xmm6, xmm7, \
-                    xmm14, xmm15
+                        xmm14, xmm15
 
         ENCRYPT_64B src, dst, off, 64, xmm9, xmm10, xmm11, xmm12, \
-                    xmm14, xmm15
+                        xmm14, xmm15
 
         add     blk_cnt, 2
 
@@ -1445,7 +1445,7 @@ align_label
 between_64_127_ks:
         ; Load plaintext, XOR with KS and store ciphertext for first 64 bytes
         ENCRYPT_64B src, dst, off, 0, xmm4, xmm5, xmm6, xmm7, \
-                    xmm14, xmm15
+                        xmm14, xmm15
 
         sub     len, 64
         add     off, 64
@@ -1510,10 +1510,10 @@ more_than_2_blocks_left_ks:
 
         ; Encrypt first 128 bytes of plaintext (there are at least two 64 byte blocks to process)
         ENCRYPT_64B src, dst, off, 0, xmm0, xmm4, xmm8, xmm12, \
-                    xmm2, xmm3
+                        xmm2, xmm3
 
         ENCRYPT_64B src, dst, off, 64, xmm1, xmm5, xmm9, xmm13, \
-                    xmm2, xmm3
+                        xmm2, xmm3
 
         ; Restore xmm2,xmm3
         movdqa  xmm2, [rsp + _XMM_SAVE]
@@ -1530,7 +1530,7 @@ more_than_2_blocks_left_ks:
 
         ; Encrypt next 64 bytes (128-191)
         ENCRYPT_64B src, dst, off, 0, xmm2, xmm6, xmm10, xmm14, \
-                    xmm0, xmm1
+                        xmm0, xmm1
 
         add     off, 64
         sub     len, 64
@@ -1588,7 +1588,7 @@ exit_ks:
 %assign i 0
 %assign j 6
 %rep 10
-	movdqa	APPEND(xmm, j), [rsp + _XMM_WIN_SAVE + i*16]
+        movdqa  APPEND(xmm, j), [rsp + _XMM_WIN_SAVE + i*16]
 %assign i (i + 1)
 %assign j (j + 1)
 %endrep
@@ -1607,10 +1607,10 @@ poly1305_key_gen_sse:
         mov     rax, rsp
         sub     rsp, 3*16 + 8
         and     rsp, -16
-	movdqa	[rsp], xmm6
-	movdqa	[rsp + 16], xmm7
-	movdqa	[rsp + 16*2], xmm8
-	mov	[rsp + 16*3], rax
+        movdqa  [rsp], xmm6
+        movdqa  [rsp + 16], xmm7
+        movdqa  [rsp + 16*2], xmm8
+        mov     [rsp + 16*3], rax
 %endif
         ;; prepare chacha state from IV, key
         movdqa  xmm0, [rel constants]
@@ -1635,10 +1635,10 @@ poly1305_key_gen_sse:
 %endif
 
 %ifndef LINUX
-	movdqa	xmm6, [rsp]
-	movdqa	xmm7, [rsp + 16]
-	movdqa	xmm8, [rsp + 16*2]
-	mov	rsp, [rsp + 16*3]
+        movdqa  xmm6, [rsp]
+        movdqa  xmm7, [rsp + 16]
+        movdqa  xmm8, [rsp + 16*2]
+        mov     rsp, [rsp + 16*3]
 %endif
         ret
 
@@ -1665,7 +1665,7 @@ submit_job_chacha20_poly_enc_sse:
 %assign i 0
 %assign j 6
 %rep 10
-	movdqa	[rsp + _XMM_WIN_SAVE + i*16], APPEND(xmm, j)
+        movdqa  [rsp + _XMM_WIN_SAVE + i*16], APPEND(xmm, j)
 %assign i (i + 1)
 %assign j (j + 1)
 %endrep
@@ -1973,7 +1973,7 @@ check_1_or_2_blocks_left_poly:
 
         ; Generate 64 bytes of keystream
         GENERATE_64_128_KS xmm0, xmm1, xmm2, xmm3, xmm9, xmm10, xmm11, \
-                           xmm12, xmm13
+                        xmm12, xmm13
 
         cmp     len, 64
         jne     less_than_64_poly
@@ -1982,7 +1982,7 @@ check_1_or_2_blocks_left_poly:
 
         ; Load plaintext, XOR with KS and store ciphertext
         ENCRYPT_64B src, dst, off, 0, xmm9, xmm10, xmm11, xmm12, \
-                    xmm14, xmm15
+                        xmm14, xmm15
 
         jmp     no_partial_block_poly
 
@@ -1990,7 +1990,7 @@ align_label
 gen_poly_key:
         ; Generate 64 bytes of keystream
         GENERATE_64_128_KS xmm0, xmm1, xmm2, xmm3, xmm9, xmm10, xmm11, \
-                           xmm12, xmm13
+                        xmm12, xmm13
 
         ; Write out 32-byte Poly key
         pand    xmm9, [rel poly_clamp_r]
@@ -2034,17 +2034,17 @@ two_blocks_left_poly:
 
         ; Generate 128 bytes of keystream
         GENERATE_64_128_KS xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, \
-                           xmm13, xmm8, xmm9, xmm10, xmm11, xmm12
+                        xmm13, xmm8, xmm9, xmm10, xmm11, xmm12
 
         cmp     len, 128
         jb      between_64_127_poly
 
         ; Load plaintext, XOR with KS and store ciphertext
         ENCRYPT_64B src, dst, off, 0, xmm4, xmm5, xmm6, xmm7, \
-                    xmm14, xmm15
+                        xmm14, xmm15
 
         ENCRYPT_64B src, dst, off, 64, xmm9, xmm10, xmm11, xmm12, \
-                    xmm14, xmm15
+                        xmm14, xmm15
 
         jmp     no_partial_block_poly
 
@@ -2059,7 +2059,7 @@ gen_poly_key_two_blocks:
 
         ; Generate 128 bytes of keystream
         GENERATE_64_128_KS xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, \
-                           xmm13, xmm8, xmm9, xmm10, xmm11, xmm12
+                        xmm13, xmm8, xmm9, xmm10, xmm11, xmm12
 
         ; Write out 32-byte Poly key
         pand    xmm4, [rel poly_clamp_r]
@@ -2070,7 +2070,7 @@ gen_poly_key_two_blocks:
 
         ; Write up to 64 bytes of ciphertext
         ENCRYPT_1B_64B src, dst, len, off, 0, xmm9, xmm10, xmm11, xmm12, \
-                       xmm0, xmm1, xmm2, xmm3, off, src
+                        xmm0, xmm1, xmm2, xmm3, off, src
 
         jmp     no_partial_block_poly
 
@@ -2078,7 +2078,7 @@ align_label
 between_64_127_poly:
         ; Load plaintext, XOR with KS and store ciphertext for first 64 bytes
         ENCRYPT_64B src, dst, off, 0, xmm4, xmm5, xmm6, xmm7, \
-                    xmm14, xmm15
+                        xmm14, xmm15
 
         sub     len, 64
 
@@ -2145,10 +2145,10 @@ more_than_2_blocks_left_poly:
 
         ; Encrypt first 128 bytes of plaintext (there are at least two 64 byte blocks to process)
         ENCRYPT_64B src, dst, off, 0, xmm0, xmm4, xmm8, xmm12, \
-                    xmm2, xmm3
+                        xmm2, xmm3
 
         ENCRYPT_64B src, dst, off, 64, xmm1, xmm5, xmm9, xmm13, \
-                    xmm2, xmm3
+                        xmm2, xmm3
 
         ; Restore xmm2,xmm3
         movdqa  xmm2, [rsp + _XMM_SAVE]
@@ -2164,7 +2164,7 @@ more_than_2_blocks_left_poly:
 
         ; Encrypt next 64 bytes (128-191)
         ENCRYPT_64B src, dst, off, 0, xmm2, xmm6, xmm10, xmm14, \
-                    xmm0, xmm1
+                        xmm0, xmm1
 
         sub     len, 64
 
@@ -2193,7 +2193,7 @@ gen_poly_key_up_to_four_blocks:
 
         ; Write first 64 bytes of ciphertext
         ENCRYPT_64B src, dst, off, 0, xmm1, xmm5, xmm9, xmm13, \
-                    xmm0, xmm4
+                        xmm0, xmm4
 
         add     off, 64
         sub     len, 64
@@ -2204,7 +2204,7 @@ gen_poly_key_up_to_four_blocks:
 
         ; Encrypt next 64 bytes (128-191)
         ENCRYPT_64B src, dst, off, 0, xmm2, xmm6, xmm10, xmm14, \
-                    xmm0, xmm1
+                        xmm0, xmm1
 
         sub     len, 64
 
@@ -2244,7 +2244,7 @@ no_partial_block_poly:
 %assign i 0
 %assign j 6
 %rep 10
-	movdqa	APPEND(xmm, j), [rsp + _XMM_WIN_SAVE + i*16]
+        movdqa  APPEND(xmm, j), [rsp + _XMM_WIN_SAVE + i*16]
 %assign i (i + 1)
 %assign j (j + 1)
 %endrep
@@ -2285,7 +2285,7 @@ submit_job_chacha20_poly_dec_sse:
 %assign i 0
 %assign j 6
 %rep 10
-	movdqa	[rsp + _XMM_WIN_SAVE + i*16], APPEND(xmm, j)
+        movdqa  [rsp + _XMM_WIN_SAVE + i*16], APPEND(xmm, j)
 %assign i (i + 1)
 %assign j (j + 1)
 %endrep
@@ -2325,7 +2325,7 @@ initial_dec_num_blocks_is_2:
 
         ; 2 initial blocks
         ENCRYPT_64B src, dst, off, 0, xmm0, xmm1, xmm2, xmm3, \
-                    xmm4, xmm5, ks
+                        xmm4, xmm5, ks
 
         add     ks, 64
         sub     len_xor, 64
@@ -2340,12 +2340,12 @@ initial_dec_num_blocks_is_3:
 
         ; 3 initial blocks
         ENCRYPT_64B src, dst, off, 0, xmm0, xmm1, xmm2, xmm3, \
-                    xmm4, xmm5, ks
+                        xmm4, xmm5, ks
 
         add     ks, 64
 
         ENCRYPT_64B src, dst, off, 64, xmm0, xmm1, xmm2, xmm3, \
-                    xmm4, xmm5, ks
+                        xmm4, xmm5, ks
 
         add     ks, 64
         sub     len_xor, 128
@@ -2556,14 +2556,14 @@ check_1_or_2_blocks_left_dec:
 
         ; Generate 64 bytes of keystream
         GENERATE_64_128_KS xmm0, xmm1, xmm2, xmm3, xmm9, xmm10, xmm11, \
-                           xmm12, xmm13
+                        xmm12, xmm13
 
         cmp     len, 64
         jne     less_than_64_dec
 
         ;; Exactly 64 bytes left
         ENCRYPT_64B src, dst, off, 0, xmm9, xmm10, xmm11, xmm12, \
-                    xmm5, xmm6
+                        xmm5, xmm6
 
         jmp     no_partial_block_dec
 
@@ -2600,17 +2600,17 @@ two_blocks_left_dec:
 
         ; Generate 128 bytes of keystream
         GENERATE_64_128_KS xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, \
-                           xmm13, xmm8, xmm9, xmm10, xmm11, xmm12
+                        xmm13, xmm8, xmm9, xmm10, xmm11, xmm12
 
         cmp     len, 128
         jb      between_64_127_dec
 
         ; Load 128 bytes of plaintext, XOR with KS and store ciphertext
         ENCRYPT_64B src, dst, off, 0, xmm4, xmm5, xmm6, xmm7, \
-                    xmm0, xmm1
+                        xmm0, xmm1
 
         ENCRYPT_64B src, dst, off, 64, xmm9, xmm10, xmm11, xmm12, \
-                    xmm0, xmm1
+                        xmm0, xmm1
 
         jmp     no_partial_block_dec
 
@@ -2618,7 +2618,7 @@ align_label
 between_64_127_dec:
         ; Load plaintext, XOR with KS and store ciphertext for first 64 bytes
         ENCRYPT_64B src, dst, off, 0, xmm4, xmm5, xmm6, xmm7, \
-                    xmm0, xmm1
+                        xmm0, xmm1
 
         sub     len, 64
 
@@ -2683,10 +2683,10 @@ more_than_2_blocks_left_dec:
 
         ; Encrypt first 128 bytes of plaintext (there are at least two 64 byte blocks to process)
         ENCRYPT_64B src, dst, off, 0, xmm0, xmm4, xmm8, xmm12, \
-                    xmm2, xmm3
+                        xmm2, xmm3
 
         ENCRYPT_64B src, dst, off, 64, xmm1, xmm5, xmm9, xmm13, \
-                    xmm2, xmm3
+                        xmm2, xmm3
 
         ; Restore xmm2,xmm3
         movdqa  xmm2, [rsp + _XMM_SAVE]
@@ -2702,7 +2702,7 @@ more_than_2_blocks_left_dec:
 
         ; Encrypt next 64 bytes (128-191)
         ENCRYPT_64B src, dst, off, 0, xmm2, xmm6, xmm10, xmm14, \
-                    xmm0, xmm1
+                        xmm0, xmm1
 
         sub     len, 64
         ; Check if there are remaining bytes to process
@@ -2741,7 +2741,7 @@ no_partial_block_dec:
 %assign i 0
 %assign j 6
 %rep 10
-	movdqa	APPEND(xmm, j), [rsp + _XMM_WIN_SAVE + i*16]
+        movdqa  APPEND(xmm, j), [rsp + _XMM_WIN_SAVE + i*16]
 %assign i (i + 1)
 %assign j (j + 1)
 %endrep
@@ -2765,7 +2765,7 @@ gen_keystr_poly_key_sse:
 %assign i 0
 %assign j 6
 %rep 10
-	movdqa	[rsp + _XMM_WIN_SAVE + i*16], APPEND(xmm, j)
+        movdqa  [rsp + _XMM_WIN_SAVE + i*16], APPEND(xmm, j)
 %assign i (i + 1)
 %assign j (j + 1)
 %endrep
@@ -2888,7 +2888,7 @@ restore_gen_keystr:
 %assign i 0
 %assign j 6
 %rep 10
-	movdqa	APPEND(xmm, j), [rsp + _XMM_WIN_SAVE + i*16]
+        movdqa  APPEND(xmm, j), [rsp + _XMM_WIN_SAVE + i*16]
 %assign i (i + 1)
 %assign j (j + 1)
 %endrep
@@ -2916,7 +2916,7 @@ check_1_or_2_blocks_left_gen:
 
         ; Generate 64 bytes of keystream
         GENERATE_64_128_KS xmm0, xmm1, xmm2, xmm3, xmm9, xmm10, xmm11, \
-                           xmm12, xmm13
+                        xmm12, xmm13
 
         ; xmm14 contains first 16 bytes of KS, which are clamped to be
         ; the first 16 bytes of the Poly key
@@ -2948,7 +2948,7 @@ two_blocks_left_gen:
 
         ; Generate 128 bytes of keystream
         GENERATE_64_128_KS xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, \
-                           xmm13, xmm8, xmm9, xmm10, xmm11, xmm12
+                        xmm13, xmm8, xmm9, xmm10, xmm11, xmm12
 
         ; xmm14 contains first 16 bytes of KS, which are clamped to be
         ; the first 16 bytes of the Poly key
@@ -2971,7 +2971,7 @@ exit_gen:
 %ifdef SAFE_DATA
         clear_all_xmms_sse_asm
 %endif
-        jmp	restore_gen_keystr
+        jmp     restore_gen_keystr
 
 MKGLOBAL(quic_hp_chacha20_sse,function,internal)
 align_function
@@ -3001,7 +3001,7 @@ quic_hp_chacha20_sse:
 %assign i 0
 %assign j 6
 %rep 10
-        movdqa	[rsp + _XMM_WIN_SAVE + i*16], APPEND(xmm, j)
+        movdqa  [rsp + _XMM_WIN_SAVE + i*16], APPEND(xmm, j)
 %assign i (i + 1)
 %assign j (j + 1)
 %endrep
@@ -3124,7 +3124,7 @@ one_buffer_left:
 
         ; Generate 64 bytes of keystream
         GENERATE_64_128_KS xmm0, xmm1, xmm2, xmm3, xmm9, xmm10, xmm11, \
-                           xmm12, xmm13
+                        xmm12, xmm13
 
         ; Write 5-byte output for single buffer
         mov     tmp, [dst_array + off]
@@ -3147,7 +3147,7 @@ two_buffers_left:
 
         ; Generate 128 bytes of keystream
         GENERATE_64_128_KS xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, \
-                           xmm13, xmm8, xmm9, xmm10, xmm11, xmm12
+                        xmm13, xmm8, xmm9, xmm10, xmm11, xmm12
 
         ; Write 5-byte output for two buffers
         mov     tmp, [dst_array + off]
@@ -3221,7 +3221,7 @@ no_more_buffers:
 %assign i 0
 %assign j 6
 %rep 10
-        movdqa	APPEND(xmm, j), [rsp + _XMM_WIN_SAVE + i*16]
+        movdqa  APPEND(xmm, j), [rsp + _XMM_WIN_SAVE + i*16]
 %assign i (i + 1)
 %assign j (j + 1)
 %endrep

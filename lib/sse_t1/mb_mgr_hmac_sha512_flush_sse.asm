@@ -38,14 +38,14 @@ extern sha512_x2_sse
 mksection .rodata
 default rel
 align 16
-byteswap:	;ddq 0x08090a0b0c0d0e0f0001020304050607
-	dq 0x0001020304050607, 0x08090a0b0c0d0e0f
+byteswap:       ;ddq 0x08090a0b0c0d0e0f0001020304050607
+        dq 0x0001020304050607, 0x08090a0b0c0d0e0f
 len_masks:
-	;ddq 0x0000000000000000000000000000FFFF
-	dq 0x000000000000FFFF, 0x0000000000000000
-	;ddq 0x000000000000000000000000FFFF0000
-	dq 0x00000000FFFF0000, 0x0000000000000000
-one:	dq  1
+        ;ddq 0x0000000000000000000000000000FFFF
+        dq 0x000000000000FFFF, 0x0000000000000000
+        ;ddq 0x000000000000000000000000FFFF0000
+        dq 0x00000000FFFF0000, 0x0000000000000000
+one:    dq  1
 
 mksection .text
 
@@ -56,47 +56,47 @@ mksection .text
 
 %if 1
 %ifdef LINUX
-%define arg1	rdi
-%define arg2	rsi
+%define arg1    rdi
+%define arg2    rsi
 %else
-%define arg1	rcx
-%define arg2	rdx
+%define arg1    rcx
+%define arg2    rdx
 %endif
 
-%define state	arg1
-%define job	arg2
-%define len2	arg2
+%define state   arg1
+%define job     arg2
+%define len2    arg2
 
 ; idx needs to be in rbx, rbp, r12-r15
-%define idx		rbp
+%define idx             rbp
 
-%define unused_lanes	rbx
-%define lane_data	rbx
-%define tmp2		rbx
+%define unused_lanes    rbx
+%define lane_data       rbx
+%define tmp2            rbx
 
-%define job_rax		rax
-%define	tmp1		rax
-%define size_offset	rax
-%define tmp		rax
-%define start_offset	rax
+%define job_rax         rax
+%define tmp1            rax
+%define size_offset     rax
+%define tmp             rax
+%define start_offset    rax
 
-%define tmp3		arg1
+%define tmp3            arg1
 
-%define extra_blocks	arg2
-%define p		arg2
+%define extra_blocks    arg2
+%define p               arg2
 
-%define tmp4		r8
+%define tmp4            r8
 
-%define tmp5		r9
+%define tmp5            r9
 
-%define tmp6		r10
+%define tmp6            r10
 
 %endif
 
 ; This routine clobbers rbx, rbp
 struc STACK
-_gpr_save:	resq	2
-_rsp_save:	resq	1
+_gpr_save:      resq    2
+_rsp_save:      resq    1
 endstruc
 
 %define APPEND(a,b) a %+ b
@@ -107,121 +107,121 @@ MKGLOBAL(FUNC,function,internal)
 align_function
 FUNC:
 
-	mov	rax, rsp
-	sub	rsp, STACK_size
-	and	rsp, -16
+        mov     rax, rsp
+        sub     rsp, STACK_size
+        and     rsp, -16
 
-	mov	[rsp + _gpr_save + 8*0], rbx
-	mov	[rsp + _gpr_save + 8*1], rbp
-	mov	[rsp + _rsp_save], rax	; original SP
+        mov     [rsp + _gpr_save + 8*0], rbx
+        mov     [rsp + _gpr_save + 8*1], rbp
+        mov     [rsp + _rsp_save], rax  ; original SP
 
-	mov	unused_lanes, [state + _unused_lanes_sha512]
-	bt	unused_lanes, 16+7
-	jc	return_null
+        mov     unused_lanes, [state + _unused_lanes_sha512]
+        bt      unused_lanes, 16+7
+        jc      return_null
 
-	; find a lane with a non-null job
-	xor	idx, idx
-	cmp	qword [state + _ldata_sha512 + 1 * _SHA512_LANE_DATA_size + _job_in_lane_sha512], 0
-	cmovne	idx, [rel one]
+        ; find a lane with a non-null job
+        xor     idx, idx
+        cmp     qword [state + _ldata_sha512 + 1 * _SHA512_LANE_DATA_size + _job_in_lane_sha512], 0
+        cmovne  idx, [rel one]
 
 align_loop
 copy_lane_data:
-	; copy good lane (idx) to empty lanes
-	movdqa	xmm0, [state + _lens_sha512]
-	mov	tmp, [state + _args_sha512 + _data_ptr_sha512 + PTR_SZ*idx]
+        ; copy good lane (idx) to empty lanes
+        movdqa  xmm0, [state + _lens_sha512]
+        mov     tmp, [state + _args_sha512 + _data_ptr_sha512 + PTR_SZ*idx]
 
 %assign I 0
 %rep 2
-	cmp	qword [state + _ldata_sha512 + I * _SHA512_LANE_DATA_size + _job_in_lane_sha512], 0
-	jne	APPEND(skip_,I)
-	mov	[state + _args_sha512 + _data_ptr_sha512 + PTR_SZ*I], tmp
-	por	xmm0, [rel len_masks + 16*I]
+        cmp     qword [state + _ldata_sha512 + I * _SHA512_LANE_DATA_size + _job_in_lane_sha512], 0
+        jne     APPEND(skip_,I)
+        mov     [state + _args_sha512 + _data_ptr_sha512 + PTR_SZ*I], tmp
+        por     xmm0, [rel len_masks + 16*I]
 APPEND(skip_,I):
 %assign I (I+1)
 %endrep
 
-	movdqa	[state + _lens_sha512], xmm0
+        movdqa  [state + _lens_sha512], xmm0
 
-	phminposuw	xmm1, xmm0
-	pextrw	len2, xmm1, 0	; min value
-	pextrw	idx, xmm1, 1	; min index (0...3)
-	cmp	len2, 0
-	je	len_is_0
+        phminposuw      xmm1, xmm0
+        pextrw  len2, xmm1, 0   ; min value
+        pextrw  idx, xmm1, 1    ; min index (0...3)
+        cmp     len2, 0
+        je      len_is_0
 
-	pshuflw	xmm1, xmm1, 0xA0
-	psubw	xmm0, xmm1
-	movdqa	[state + _lens_sha512], xmm0
+        pshuflw xmm1, xmm1, 0xA0
+        psubw   xmm0, xmm1
+        movdqa  [state + _lens_sha512], xmm0
 
-	; "state" and "args" are the same address, arg1
-	; len is arg2
-	call	sha512_x2_sse
-	; state and idx are intact
+        ; "state" and "args" are the same address, arg1
+        ; len is arg2
+        call    sha512_x2_sse
+        ; state and idx are intact
 
 align_label
 len_is_0:
-	; process completed job "idx"
-	imul	lane_data, idx, _SHA512_LANE_DATA_size
-	lea	lane_data, [state + _ldata_sha512 + lane_data]
-	mov	DWORD(extra_blocks), [lane_data + _extra_blocks_sha512]
-	cmp	extra_blocks, 0
-	jne	proc_extra_blocks
-	cmp	dword [lane_data + _outer_done_sha512], 0
-	jne	end_loop
+        ; process completed job "idx"
+        imul    lane_data, idx, _SHA512_LANE_DATA_size
+        lea     lane_data, [state + _ldata_sha512 + lane_data]
+        mov     DWORD(extra_blocks), [lane_data + _extra_blocks_sha512]
+        cmp     extra_blocks, 0
+        jne     proc_extra_blocks
+        cmp     dword [lane_data + _outer_done_sha512], 0
+        jne     end_loop
 
 align_label
 proc_outer:
-	mov	dword [lane_data + _outer_done_sha512], 1
-	mov	DWORD(size_offset), [lane_data + _size_offset_sha512]
-	mov	qword [lane_data + _extra_block_sha512 + size_offset], 0
-	mov	word [state + _lens_sha512 + 2*idx], 1
-	lea	tmp, [lane_data + _outer_block_sha512]
-	mov	job, [lane_data + _job_in_lane_sha512]
-	mov	[state + _args_data_ptr_sha512 + PTR_SZ*idx], tmp
+        mov     dword [lane_data + _outer_done_sha512], 1
+        mov     DWORD(size_offset), [lane_data + _size_offset_sha512]
+        mov     qword [lane_data + _extra_block_sha512 + size_offset], 0
+        mov     word [state + _lens_sha512 + 2*idx], 1
+        lea     tmp, [lane_data + _outer_block_sha512]
+        mov     job, [lane_data + _job_in_lane_sha512]
+        mov     [state + _args_data_ptr_sha512 + PTR_SZ*idx], tmp
 
 %assign I 0
 %rep (SHA_X_DIGEST_SIZE / (8*16))
-	movq	xmm0, [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + (2*I)*SHA512_DIGEST_ROW_SIZE]
-	pinsrq	xmm0, [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + (2*I + 1) *SHA512_DIGEST_ROW_SIZE], 1
-	pshufb	xmm0, [rel byteswap]
-	movdqa	[lane_data + _outer_block_sha512 + I*16], xmm0
+        movq    xmm0, [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + (2*I)*SHA512_DIGEST_ROW_SIZE]
+        pinsrq  xmm0, [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + (2*I + 1) *SHA512_DIGEST_ROW_SIZE], 1
+        pshufb  xmm0, [rel byteswap]
+        movdqa  [lane_data + _outer_block_sha512 + I*16], xmm0
 %assign I (I+1)
 %endrep
 
-	mov	tmp, [job + _auth_key_xor_opad]
+        mov     tmp, [job + _auth_key_xor_opad]
 %assign I 0
 %rep 4
-	movdqu	xmm0, [tmp + I * 16]
-	movq	[state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 2*I*SHA512_DIGEST_ROW_SIZE], xmm0
-	pextrq	[state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + (2*I + 1)*SHA512_DIGEST_ROW_SIZE], xmm0, 1
+        movdqu  xmm0, [tmp + I * 16]
+        movq    [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 2*I*SHA512_DIGEST_ROW_SIZE], xmm0
+        pextrq  [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + (2*I + 1)*SHA512_DIGEST_ROW_SIZE], xmm0, 1
 %assign I (I+1)
 %endrep
-	jmp	copy_lane_data
+        jmp     copy_lane_data
 
 align_label
 proc_extra_blocks:
-	mov	DWORD(start_offset), [lane_data + _start_offset_sha512]
-	mov	[state + _lens_sha512 + 2*idx], WORD(extra_blocks)
-	lea	tmp, [lane_data + _extra_block_sha512 + start_offset]
-	mov	[state + _args_data_ptr_sha512 + PTR_SZ*idx], tmp
-	mov	dword [lane_data + _extra_blocks_sha512], 0
-	jmp	copy_lane_data
+        mov     DWORD(start_offset), [lane_data + _start_offset_sha512]
+        mov     [state + _lens_sha512 + 2*idx], WORD(extra_blocks)
+        lea     tmp, [lane_data + _extra_block_sha512 + start_offset]
+        mov     [state + _args_data_ptr_sha512 + PTR_SZ*idx], tmp
+        mov     dword [lane_data + _extra_blocks_sha512], 0
+        jmp     copy_lane_data
 
 align_label
 return_null:
-	xor	job_rax, job_rax
-	jmp	return
+        xor     job_rax, job_rax
+        jmp     return
 
 align_label
 end_loop:
-	mov	job_rax, [lane_data + _job_in_lane_sha512]
-	mov	qword [lane_data + _job_in_lane_sha512], 0
-	or	dword [job_rax + _status], IMB_STATUS_COMPLETED_AUTH
-	mov	unused_lanes, [state + _unused_lanes_sha512]
-	shl	unused_lanes, 8
-	or	unused_lanes, idx
-	mov	[state + _unused_lanes_sha512], unused_lanes
+        mov     job_rax, [lane_data + _job_in_lane_sha512]
+        mov     qword [lane_data + _job_in_lane_sha512], 0
+        or      dword [job_rax + _status], IMB_STATUS_COMPLETED_AUTH
+        mov     unused_lanes, [state + _unused_lanes_sha512]
+        shl     unused_lanes, 8
+        or      unused_lanes, idx
+        mov     [state + _unused_lanes_sha512], unused_lanes
 
-	mov	p, [job_rax + _auth_tag_output]
+        mov     p, [job_rax + _auth_tag_output]
 
 %if (SHA_X_DIGEST_SIZE != 384)
         cmp     qword [job_rax + _auth_tag_output_len_in_bytes], 32
@@ -230,100 +230,100 @@ end_loop:
         cmp     qword [job_rax + _auth_tag_output_len_in_bytes], 24
         jne     copy_full_digest
 %endif
-	;; copy 32 bytes for SHA512 // 24 bytes for SHA384
-	mov	QWORD(tmp2), [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 0*SHA512_DIGEST_ROW_SIZE]
-	mov	QWORD(tmp4), [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 1*SHA512_DIGEST_ROW_SIZE]
-	mov	QWORD(tmp6), [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 2*SHA512_DIGEST_ROW_SIZE]
+        ;; copy 32 bytes for SHA512 // 24 bytes for SHA384
+        mov     QWORD(tmp2), [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 0*SHA512_DIGEST_ROW_SIZE]
+        mov     QWORD(tmp4), [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 1*SHA512_DIGEST_ROW_SIZE]
+        mov     QWORD(tmp6), [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 2*SHA512_DIGEST_ROW_SIZE]
 %if (SHA_X_DIGEST_SIZE != 384)
-	mov	QWORD(tmp5), [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 3*SHA512_DIGEST_ROW_SIZE]
+        mov     QWORD(tmp5), [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 3*SHA512_DIGEST_ROW_SIZE]
 %endif
-	bswap	QWORD(tmp2)
-	bswap	QWORD(tmp4)
-	bswap	QWORD(tmp6)
+        bswap   QWORD(tmp2)
+        bswap   QWORD(tmp4)
+        bswap   QWORD(tmp6)
 %if (SHA_X_DIGEST_SIZE != 384)
-	bswap	QWORD(tmp5)
+        bswap   QWORD(tmp5)
 %endif
-	mov	[p + 0*8], QWORD(tmp2)
-	mov	[p + 1*8], QWORD(tmp4)
-	mov	[p + 2*8], QWORD(tmp6)
+        mov     [p + 0*8], QWORD(tmp2)
+        mov     [p + 1*8], QWORD(tmp4)
+        mov     [p + 2*8], QWORD(tmp6)
 %if (SHA_X_DIGEST_SIZE != 384)
-	mov	[p + 3*8], QWORD(tmp5)
+        mov     [p + 3*8], QWORD(tmp5)
 %endif
         jmp     clear_ret
 
 align_label
 copy_full_digest:
-	cmp 	qword [job_rax + _auth_tag_output_len_in_bytes], 16
-	ja 	copy_tag_gt16
+        cmp     qword [job_rax + _auth_tag_output_len_in_bytes], 16
+        ja      copy_tag_gt16
 
-	;; copy up to 16 bytes
-	mov    	tmp2, qword [job_rax + _auth_tag_output_len_in_bytes]
-	movq   	xmm0, [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 0*SHA512_DIGEST_ROW_SIZE]
-	pinsrq  xmm0, [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 1*SHA512_DIGEST_ROW_SIZE], 1
-	pshufb  xmm0, [rel byteswap]
-	lea	tmp5, [p + 0*4]		; destination pointer
-	call	copy_digest_sse
-	jmp 	clear_ret
+        ;; copy up to 16 bytes
+        mov     tmp2, qword [job_rax + _auth_tag_output_len_in_bytes]
+        movq    xmm0, [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 0*SHA512_DIGEST_ROW_SIZE]
+        pinsrq  xmm0, [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 1*SHA512_DIGEST_ROW_SIZE], 1
+        pshufb  xmm0, [rel byteswap]
+        lea     tmp5, [p + 0*4]         ; destination pointer
+        call    copy_digest_sse
+        jmp     clear_ret
 
 align_label
 copy_tag_gt16:
-	;; copy 16 bytes first
-	movq   	xmm0, [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 0*SHA512_DIGEST_ROW_SIZE]
-	pinsrq  xmm0, [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 1*SHA512_DIGEST_ROW_SIZE], 1
-	pshufb  xmm0, [rel byteswap]
-	movdqu  [p + 0*4], xmm0
+        ;; copy 16 bytes first
+        movq    xmm0, [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 0*SHA512_DIGEST_ROW_SIZE]
+        pinsrq  xmm0, [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 1*SHA512_DIGEST_ROW_SIZE], 1
+        pshufb  xmm0, [rel byteswap]
+        movdqu  [p + 0*4], xmm0
 
-	;; calculate remaining bytes to copy
-	mov    	tmp2, qword [job_rax + _auth_tag_output_len_in_bytes]
-	sub    	tmp2, 16 ; copied 16 bytes already
-	cmp 	qword [job_rax + _auth_tag_output_len_in_bytes], 32
-	ja	copy_tag_gt32
+        ;; calculate remaining bytes to copy
+        mov     tmp2, qword [job_rax + _auth_tag_output_len_in_bytes]
+        sub     tmp2, 16 ; copied 16 bytes already
+        cmp     qword [job_rax + _auth_tag_output_len_in_bytes], 32
+        ja      copy_tag_gt32
 
-	;; copy up to 32 bytes
-	movq   	xmm0, [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 2*SHA512_DIGEST_ROW_SIZE]
-	pinsrq  xmm0, [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 3*SHA512_DIGEST_ROW_SIZE], 1
-	pshufb  xmm0, [rel byteswap]
-	lea	tmp5, [p + 4*4]		; destination pointer
-	call	copy_digest_sse
-	jmp 	clear_ret
+        ;; copy up to 32 bytes
+        movq    xmm0, [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 2*SHA512_DIGEST_ROW_SIZE]
+        pinsrq  xmm0, [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 3*SHA512_DIGEST_ROW_SIZE], 1
+        pshufb  xmm0, [rel byteswap]
+        lea     tmp5, [p + 4*4]         ; destination pointer
+        call    copy_digest_sse
+        jmp     clear_ret
 
 align_label
 copy_tag_gt32:
-	;; copy 32 bytes
-	movq   	xmm0, [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 2*SHA512_DIGEST_ROW_SIZE]
-	pinsrq  xmm0, [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 3*SHA512_DIGEST_ROW_SIZE], 1
-	pshufb  xmm0, [rel byteswap]
-	movdqu  [p + 4*4], xmm0
+        ;; copy 32 bytes
+        movq    xmm0, [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 2*SHA512_DIGEST_ROW_SIZE]
+        pinsrq  xmm0, [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 3*SHA512_DIGEST_ROW_SIZE], 1
+        pshufb  xmm0, [rel byteswap]
+        movdqu  [p + 4*4], xmm0
 
-	sub    	tmp2, 16 ; copied another 16 bytes
+        sub     tmp2, 16 ; copied another 16 bytes
 %if (SHA_X_DIGEST_SIZE != 384)
-	cmp 	qword [job_rax + _auth_tag_output_len_in_bytes], 48
-	ja	copy_tag_gt48
+        cmp     qword [job_rax + _auth_tag_output_len_in_bytes], 48
+        ja      copy_tag_gt48
 %endif
-	;; copy up to 48 bytes
-	movq   	xmm0, [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 4*SHA512_DIGEST_ROW_SIZE]
-	pinsrq  xmm0, [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 5*SHA512_DIGEST_ROW_SIZE], 1
-	pshufb  xmm0, [rel byteswap]
-	lea	tmp5, [p + 8*4]		; destination pointer
-	call	copy_digest_sse
-	jmp 	clear_ret
+        ;; copy up to 48 bytes
+        movq    xmm0, [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 4*SHA512_DIGEST_ROW_SIZE]
+        pinsrq  xmm0, [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 5*SHA512_DIGEST_ROW_SIZE], 1
+        pshufb  xmm0, [rel byteswap]
+        lea     tmp5, [p + 8*4]         ; destination pointer
+        call    copy_digest_sse
+        jmp     clear_ret
 
 align_label
 copy_tag_gt48:
-	;; copy 48 bytes
-	movq   	xmm0, [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 4*SHA512_DIGEST_ROW_SIZE]
-	pinsrq  xmm0, [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 5*SHA512_DIGEST_ROW_SIZE], 1
-	pshufb  xmm0, [rel byteswap]
-	movdqu  [p + 8*4], xmm0
+        ;; copy 48 bytes
+        movq    xmm0, [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 4*SHA512_DIGEST_ROW_SIZE]
+        pinsrq  xmm0, [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 5*SHA512_DIGEST_ROW_SIZE], 1
+        pshufb  xmm0, [rel byteswap]
+        movdqu  [p + 8*4], xmm0
 
-	sub    	tmp2, 16 ; copied another 16 bytes
+        sub     tmp2, 16 ; copied another 16 bytes
 
-	;; copy up to 64 bytes
-	movq   	xmm0, [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 6*SHA512_DIGEST_ROW_SIZE]
-	pinsrq  xmm0, [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 7*SHA512_DIGEST_ROW_SIZE], 1
-	pshufb  xmm0, [rel byteswap]
-	lea	tmp5, [p + 12*4]		; destination pointer
-	call	copy_digest_sse
+        ;; copy up to 64 bytes
+        movq    xmm0, [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 6*SHA512_DIGEST_ROW_SIZE]
+        pinsrq  xmm0, [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 7*SHA512_DIGEST_ROW_SIZE], 1
+        pshufb  xmm0, [rel byteswap]
+        lea     tmp5, [p + 12*4]                ; destination pointer
+        call    copy_digest_sse
 
 align_label
 clear_ret:
@@ -334,8 +334,8 @@ clear_ret:
         ;; Clear extra_block (128B) of returned job
 %assign I 0
 %rep 2
-	cmp	qword [state + _ldata_sha512 + (I*_SHA512_LANE_DATA_size) + _job_in_lane_sha512], 0
-	jne	APPEND(skip_clear_,I)
+        cmp     qword [state + _ldata_sha512 + (I*_SHA512_LANE_DATA_size) + _job_in_lane_sha512], 0
+        jne     APPEND(skip_clear_,I)
 
         lea     lane_data, [state + _ldata_sha512 + (I*_SHA512_LANE_DATA_size)]
         ;; Clear first 128 bytes of extra_block
@@ -353,9 +353,9 @@ APPEND(skip_clear_,I):
 
 align_label
 return:
-	mov	rbx, [rsp + _gpr_save + 8*0]
-	mov	rbp, [rsp + _gpr_save + 8*1]
-	mov	rsp, [rsp + _rsp_save]	; original SP
-	ret
+        mov     rbx, [rsp + _gpr_save + 8*0]
+        mov     rbp, [rsp + _gpr_save + 8*1]
+        mov     rsp, [rsp + _rsp_save]  ; original SP
+        ret
 
 mksection stack-noexec

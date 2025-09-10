@@ -36,47 +36,47 @@ extern md5_x4x2_sse
 mksection .rodata
 default rel
 align 16
-dupw:	;ddq 0x01000100010001000100010001000100
-	dq 0x0100010001000100, 0x0100010001000100
+dupw:   ;ddq 0x01000100010001000100010001000100
+        dq 0x0100010001000100, 0x0100010001000100
 len_masks:
-	;ddq 0x0000000000000000000000000000FFFF
-	dq 0x000000000000FFFF, 0x0000000000000000
-	;ddq 0x000000000000000000000000FFFF0000
-	dq 0x00000000FFFF0000, 0x0000000000000000
-	;ddq 0x00000000000000000000FFFF00000000
-	dq 0x0000FFFF00000000, 0x0000000000000000
-	;ddq 0x0000000000000000FFFF000000000000
-	dq 0xFFFF000000000000, 0x0000000000000000
-	;ddq 0x000000000000FFFF0000000000000000
-	dq 0x0000000000000000, 0x000000000000FFFF
-	;ddq 0x00000000FFFF00000000000000000000
-	dq 0x0000000000000000, 0x00000000FFFF0000
-	;ddq 0x0000FFFF000000000000000000000000
-	dq 0x0000000000000000, 0x0000FFFF00000000
-	;ddq 0xFFFF0000000000000000000000000000
-	dq 0x0000000000000000, 0xFFFF000000000000
-one:	dq  1
-two:	dq  2
-three:	dq  3
-four:	dq  4
-five:	dq  5
-six:	dq  6
-seven:	dq  7
+        ;ddq 0x0000000000000000000000000000FFFF
+        dq 0x000000000000FFFF, 0x0000000000000000
+        ;ddq 0x000000000000000000000000FFFF0000
+        dq 0x00000000FFFF0000, 0x0000000000000000
+        ;ddq 0x00000000000000000000FFFF00000000
+        dq 0x0000FFFF00000000, 0x0000000000000000
+        ;ddq 0x0000000000000000FFFF000000000000
+        dq 0xFFFF000000000000, 0x0000000000000000
+        ;ddq 0x000000000000FFFF0000000000000000
+        dq 0x0000000000000000, 0x000000000000FFFF
+        ;ddq 0x00000000FFFF00000000000000000000
+        dq 0x0000000000000000, 0x00000000FFFF0000
+        ;ddq 0x0000FFFF000000000000000000000000
+        dq 0x0000000000000000, 0x0000FFFF00000000
+        ;ddq 0xFFFF0000000000000000000000000000
+        dq 0x0000000000000000, 0xFFFF000000000000
+one:    dq  1
+two:    dq  2
+three:  dq  3
+four:   dq  4
+five:   dq  5
+six:    dq  6
+seven:  dq  7
 
 mksection .text
 
 %if 1
 %ifdef LINUX
-%define arg1	rdi
-%define arg2	rsi
+%define arg1    rdi
+%define arg2    rsi
 %else
-%define arg1	rcx
-%define arg2	rdx
+%define arg1    rcx
+%define arg2    rdx
 %endif
 
-%define state	arg1
-%define job	arg2
-%define len2	arg2
+%define state   arg1
+%define job     arg2
+%define len2    arg2
 
 ; idx needs to be in rbp
 %define idx             rbp
@@ -84,28 +84,28 @@ mksection .text
 ; unused_lanes must be in rax-rdx
 %define unused_lanes    rbx
 %define lane_data       rbx
-%define tmp2		rbx
+%define tmp2            rbx
 
 %define job_rax         rax
-%define	tmp1		rax
+%define tmp1            rax
 %define size_offset     rax
 %define tmp             rax
 %define start_offset    rax
 
-%define tmp3		arg1
+%define tmp3            arg1
 
 %define extra_blocks    arg2
 %define p               arg2
 
-%define tmp4		r8
-%define tmp5		r9
+%define tmp4            r8
+%define tmp5            r9
 
 %endif
 
 ; This routine and/or the called routine clobbers all GPRs
 struc STACK
-_gpr_save:	resq	8
-_rsp_save:	resq	1
+_gpr_save:      resq    8
+_rsp_save:      resq    1
 endstruc
 
 %define APPEND(a,b) a %+ b
@@ -116,155 +116,155 @@ MKGLOBAL(flush_job_hmac_md5_sse,function,internal)
 align_function
 flush_job_hmac_md5_sse:
 
-        mov	rax, rsp
-        sub	rsp, STACK_size
-        and	rsp, -16
+        mov     rax, rsp
+        sub     rsp, STACK_size
+        and     rsp, -16
 
-	mov	[rsp + _gpr_save + 8*0], rbx
-	mov	[rsp + _gpr_save + 8*1], rbp
-	mov	[rsp + _gpr_save + 8*2], r12
-	mov	[rsp + _gpr_save + 8*3], r13
-	mov	[rsp + _gpr_save + 8*4], r14
-	mov	[rsp + _gpr_save + 8*5], r15
+        mov     [rsp + _gpr_save + 8*0], rbx
+        mov     [rsp + _gpr_save + 8*1], rbp
+        mov     [rsp + _gpr_save + 8*2], r12
+        mov     [rsp + _gpr_save + 8*3], r13
+        mov     [rsp + _gpr_save + 8*4], r14
+        mov     [rsp + _gpr_save + 8*5], r15
 %ifndef LINUX
-	mov	[rsp + _gpr_save + 8*6], rsi
-	mov	[rsp + _gpr_save + 8*7], rdi
+        mov     [rsp + _gpr_save + 8*6], rsi
+        mov     [rsp + _gpr_save + 8*7], rdi
 %endif
-	mov	[rsp + _rsp_save], rax	; original SP
+        mov     [rsp + _rsp_save], rax  ; original SP
 
-	mov	unused_lanes, [state + _unused_lanes_md5]
-	bt	unused_lanes, 32+3
-	jc	return_null
+        mov     unused_lanes, [state + _unused_lanes_md5]
+        bt      unused_lanes, 32+3
+        jc      return_null
 
-	; find a lane with a non-null job
-	xor	idx, idx
-	cmp	qword [state + _ldata_md5 + 1 * _HMAC_SHA1_LANE_DATA_size + _job_in_lane],0
-	cmovne	idx, [rel one]
-	cmp	qword [state + _ldata_md5 + 2 * _HMAC_SHA1_LANE_DATA_size + _job_in_lane],0
-	cmovne	idx, [rel two]
-	cmp	qword [state + _ldata_md5 + 3 * _HMAC_SHA1_LANE_DATA_size + _job_in_lane],0
-	cmovne	idx, [rel three]
-	cmp	qword [state + _ldata_md5 + 4 * _HMAC_SHA1_LANE_DATA_size + _job_in_lane],0
-	cmovne	idx, [rel four]
-	cmp	qword [state + _ldata_md5 + 5 * _HMAC_SHA1_LANE_DATA_size + _job_in_lane],0
-	cmovne	idx, [rel five]
-	cmp	qword [state + _ldata_md5 + 6 * _HMAC_SHA1_LANE_DATA_size + _job_in_lane],0
-	cmovne	idx, [rel six]
-	cmp	qword [state + _ldata_md5 + 7 * _HMAC_SHA1_LANE_DATA_size + _job_in_lane],0
-	cmovne	idx, [rel seven]
+        ; find a lane with a non-null job
+        xor     idx, idx
+        cmp     qword [state + _ldata_md5 + 1 * _HMAC_SHA1_LANE_DATA_size + _job_in_lane],0
+        cmovne  idx, [rel one]
+        cmp     qword [state + _ldata_md5 + 2 * _HMAC_SHA1_LANE_DATA_size + _job_in_lane],0
+        cmovne  idx, [rel two]
+        cmp     qword [state + _ldata_md5 + 3 * _HMAC_SHA1_LANE_DATA_size + _job_in_lane],0
+        cmovne  idx, [rel three]
+        cmp     qword [state + _ldata_md5 + 4 * _HMAC_SHA1_LANE_DATA_size + _job_in_lane],0
+        cmovne  idx, [rel four]
+        cmp     qword [state + _ldata_md5 + 5 * _HMAC_SHA1_LANE_DATA_size + _job_in_lane],0
+        cmovne  idx, [rel five]
+        cmp     qword [state + _ldata_md5 + 6 * _HMAC_SHA1_LANE_DATA_size + _job_in_lane],0
+        cmovne  idx, [rel six]
+        cmp     qword [state + _ldata_md5 + 7 * _HMAC_SHA1_LANE_DATA_size + _job_in_lane],0
+        cmovne  idx, [rel seven]
 
 align_loop
 copy_lane_data:
-	; copy good lane (idx) to empty lanes
-	movdqa	xmm0, [state + _lens_md5]
-	mov	tmp, [state + _args_data_ptr_md5 + PTR_SZ*idx]
+        ; copy good lane (idx) to empty lanes
+        movdqa  xmm0, [state + _lens_md5]
+        mov     tmp, [state + _args_data_ptr_md5 + PTR_SZ*idx]
 
 %assign I 0
 %rep 8
-	cmp	qword [state + _ldata_md5 + I * _HMAC_SHA1_LANE_DATA_size + _job_in_lane], 0
-	jne	APPEND(skip_,I)
-	mov	[state + _args_data_ptr_md5 + PTR_SZ*I], tmp
-	por	xmm0, [rel len_masks + 16*I]
+        cmp     qword [state + _ldata_md5 + I * _HMAC_SHA1_LANE_DATA_size + _job_in_lane], 0
+        jne     APPEND(skip_,I)
+        mov     [state + _args_data_ptr_md5 + PTR_SZ*I], tmp
+        por     xmm0, [rel len_masks + 16*I]
 APPEND(skip_,I):
 %assign I (I+1)
 %endrep
 
-	movdqa	[state + _lens_md5], xmm0
+        movdqa  [state + _lens_md5], xmm0
 
-	phminposuw	xmm1, xmm0
-	pextrw	len2, xmm1, 0	; min value
-	pextrw	idx, xmm1, 1	; min index (0...3)
-	cmp	len2, 0
-	je	len_is_0
+        phminposuw      xmm1, xmm0
+        pextrw  len2, xmm1, 0   ; min value
+        pextrw  idx, xmm1, 1    ; min index (0...3)
+        cmp     len2, 0
+        je      len_is_0
 
-	pshufb	xmm1, [rel dupw]	; duplicate words across all lanes
-	psubw	xmm0, xmm1
-	movdqa	[state + _lens_md5], xmm0
+        pshufb  xmm1, [rel dupw]        ; duplicate words across all lanes
+        psubw   xmm0, xmm1
+        movdqa  [state + _lens_md5], xmm0
 
-	; "state" and "args" are the same address, arg1
-	; len is arg2
-	call	md5_x4x2_sse
-	; state and idx are intact
+        ; "state" and "args" are the same address, arg1
+        ; len is arg2
+        call    md5_x4x2_sse
+        ; state and idx are intact
 
 align_label
 len_is_0:
-	; process completed job "idx"
-	imul	lane_data, idx, _HMAC_SHA1_LANE_DATA_size
-	lea	lane_data, [state + _ldata_md5 + lane_data]
-	mov	DWORD(extra_blocks), [lane_data + _extra_blocks]
-	cmp	extra_blocks, 0
-	jne	proc_extra_blocks
-	cmp	dword [lane_data + _outer_done], 0
-	jne	end_loop
+        ; process completed job "idx"
+        imul    lane_data, idx, _HMAC_SHA1_LANE_DATA_size
+        lea     lane_data, [state + _ldata_md5 + lane_data]
+        mov     DWORD(extra_blocks), [lane_data + _extra_blocks]
+        cmp     extra_blocks, 0
+        jne     proc_extra_blocks
+        cmp     dword [lane_data + _outer_done], 0
+        jne     end_loop
 
 align_label
 proc_outer:
-	mov	dword [lane_data + _outer_done], 1
-	mov	DWORD(size_offset), [lane_data + _size_offset]
-	mov	qword [lane_data + _extra_block + size_offset], 0
-	mov	word [state + _lens_md5 + 2*idx], 1
-	lea	tmp, [lane_data + _outer_block]
-	mov	job, [lane_data + _job_in_lane]
-	mov	[state + _args_data_ptr_md5 + PTR_SZ*idx], tmp
+        mov     dword [lane_data + _outer_done], 1
+        mov     DWORD(size_offset), [lane_data + _size_offset]
+        mov     qword [lane_data + _extra_block + size_offset], 0
+        mov     word [state + _lens_md5 + 2*idx], 1
+        lea     tmp, [lane_data + _outer_block]
+        mov     job, [lane_data + _job_in_lane]
+        mov     [state + _args_data_ptr_md5 + PTR_SZ*idx], tmp
 
-	movd	xmm0, [state + _args_digest_md5 + MD5_DIGEST_WORD_SIZE*idx + 0*MD5_DIGEST_ROW_SIZE]
-	pinsrd	xmm0, [state + _args_digest_md5 + MD5_DIGEST_WORD_SIZE*idx + 1*MD5_DIGEST_ROW_SIZE], 1
-	pinsrd	xmm0, [state + _args_digest_md5 + MD5_DIGEST_WORD_SIZE*idx + 2*MD5_DIGEST_ROW_SIZE], 2
-	pinsrd	xmm0, [state + _args_digest_md5 + MD5_DIGEST_WORD_SIZE*idx + 3*MD5_DIGEST_ROW_SIZE], 3
-;	pshufb	xmm0, [byteswap wrt rip]
-	movdqa	[lane_data + _outer_block], xmm0
+        movd    xmm0, [state + _args_digest_md5 + MD5_DIGEST_WORD_SIZE*idx + 0*MD5_DIGEST_ROW_SIZE]
+        pinsrd  xmm0, [state + _args_digest_md5 + MD5_DIGEST_WORD_SIZE*idx + 1*MD5_DIGEST_ROW_SIZE], 1
+        pinsrd  xmm0, [state + _args_digest_md5 + MD5_DIGEST_WORD_SIZE*idx + 2*MD5_DIGEST_ROW_SIZE], 2
+        pinsrd  xmm0, [state + _args_digest_md5 + MD5_DIGEST_WORD_SIZE*idx + 3*MD5_DIGEST_ROW_SIZE], 3
+;       pshufb  xmm0, [byteswap wrt rip]
+        movdqa  [lane_data + _outer_block], xmm0
 
-	mov	tmp, [job + _auth_key_xor_opad]
-	movdqu	xmm0, [tmp]
-	movd	[state + _args_digest_md5 + MD5_DIGEST_WORD_SIZE*idx + 0*MD5_DIGEST_ROW_SIZE], xmm0
-	pextrd	[state + _args_digest_md5 + MD5_DIGEST_WORD_SIZE*idx + 1*MD5_DIGEST_ROW_SIZE], xmm0, 1
-	pextrd	[state + _args_digest_md5 + MD5_DIGEST_WORD_SIZE*idx + 2*MD5_DIGEST_ROW_SIZE], xmm0, 2
-	pextrd	[state + _args_digest_md5 + MD5_DIGEST_WORD_SIZE*idx + 3*MD5_DIGEST_ROW_SIZE], xmm0, 3
-	jmp	copy_lane_data
+        mov     tmp, [job + _auth_key_xor_opad]
+        movdqu  xmm0, [tmp]
+        movd    [state + _args_digest_md5 + MD5_DIGEST_WORD_SIZE*idx + 0*MD5_DIGEST_ROW_SIZE], xmm0
+        pextrd  [state + _args_digest_md5 + MD5_DIGEST_WORD_SIZE*idx + 1*MD5_DIGEST_ROW_SIZE], xmm0, 1
+        pextrd  [state + _args_digest_md5 + MD5_DIGEST_WORD_SIZE*idx + 2*MD5_DIGEST_ROW_SIZE], xmm0, 2
+        pextrd  [state + _args_digest_md5 + MD5_DIGEST_WORD_SIZE*idx + 3*MD5_DIGEST_ROW_SIZE], xmm0, 3
+        jmp     copy_lane_data
 
 align_label
 proc_extra_blocks:
-	mov	DWORD(start_offset), [lane_data + _start_offset]
-	mov	[state + _lens_md5 + 2*idx], WORD(extra_blocks)
-	lea	tmp, [lane_data + _extra_block + start_offset]
-	mov	[state + _args_data_ptr_md5 + PTR_SZ*idx], tmp
-	mov	dword [lane_data + _extra_blocks], 0
-	jmp	copy_lane_data
+        mov     DWORD(start_offset), [lane_data + _start_offset]
+        mov     [state + _lens_md5 + 2*idx], WORD(extra_blocks)
+        lea     tmp, [lane_data + _extra_block + start_offset]
+        mov     [state + _args_data_ptr_md5 + PTR_SZ*idx], tmp
+        mov     dword [lane_data + _extra_blocks], 0
+        jmp     copy_lane_data
 
 align_label
 return_null:
-	xor	job_rax, job_rax
-	jmp	return
+        xor     job_rax, job_rax
+        jmp     return
 
 align_label
 end_loop:
-	mov	job_rax, [lane_data + _job_in_lane]
-	mov	qword [lane_data + _job_in_lane], 0
-	or	dword [job_rax + _status], IMB_STATUS_COMPLETED_AUTH
-	mov	unused_lanes, [state + _unused_lanes_md5]
-	shl	unused_lanes, 4
-	or	unused_lanes, idx
-	mov	[state + _unused_lanes_md5], unused_lanes
+        mov     job_rax, [lane_data + _job_in_lane]
+        mov     qword [lane_data + _job_in_lane], 0
+        or      dword [job_rax + _status], IMB_STATUS_COMPLETED_AUTH
+        mov     unused_lanes, [state + _unused_lanes_md5]
+        shl     unused_lanes, 4
+        or      unused_lanes, idx
+        mov     [state + _unused_lanes_md5], unused_lanes
 
-	mov	p, [job_rax + _auth_tag_output]
+        mov     p, [job_rax + _auth_tag_output]
 
-	; copy 12 bytes
-	mov	DWORD(tmp2), [state + _args_digest_md5 + MD5_DIGEST_WORD_SIZE*idx + 0*MD5_DIGEST_ROW_SIZE]
-	mov	DWORD(tmp4), [state + _args_digest_md5 + MD5_DIGEST_WORD_SIZE*idx + 1*MD5_DIGEST_ROW_SIZE]
-	mov	DWORD(tmp5), [state + _args_digest_md5 + MD5_DIGEST_WORD_SIZE*idx + 2*MD5_DIGEST_ROW_SIZE]
-;	bswap	DWORD(tmp2)
-;	bswap	DWORD(tmp4)
-;	bswap	DWORD(tmp3)
-	mov	[p + 0*4], DWORD(tmp2)
-	mov	[p + 1*4], DWORD(tmp4)
-	mov	[p + 2*4], DWORD(tmp5)
+        ; copy 12 bytes
+        mov     DWORD(tmp2), [state + _args_digest_md5 + MD5_DIGEST_WORD_SIZE*idx + 0*MD5_DIGEST_ROW_SIZE]
+        mov     DWORD(tmp4), [state + _args_digest_md5 + MD5_DIGEST_WORD_SIZE*idx + 1*MD5_DIGEST_ROW_SIZE]
+        mov     DWORD(tmp5), [state + _args_digest_md5 + MD5_DIGEST_WORD_SIZE*idx + 2*MD5_DIGEST_ROW_SIZE]
+;       bswap   DWORD(tmp2)
+;       bswap   DWORD(tmp4)
+;       bswap   DWORD(tmp3)
+        mov     [p + 0*4], DWORD(tmp2)
+        mov     [p + 1*4], DWORD(tmp4)
+        mov     [p + 2*4], DWORD(tmp5)
 
         cmp     DWORD [job_rax + _auth_tag_output_len_in_bytes], 12
         je      clear_ret
 
         ; copy 16 bytes
-        mov	DWORD(tmp5), [state + _args_digest_md5 + MD5_DIGEST_WORD_SIZE*idx + 3*MD5_DIGEST_ROW_SIZE]
-        mov	[p + 3*4], DWORD(tmp5)
+        mov     DWORD(tmp5), [state + _args_digest_md5 + MD5_DIGEST_WORD_SIZE*idx + 3*MD5_DIGEST_ROW_SIZE]
+        mov     [p + 3*4], DWORD(tmp5)
 
 align_label
 clear_ret:
@@ -275,8 +275,8 @@ clear_ret:
         ;; Clear extra_block (64B) of returned job and NULL jobs
 %assign I 0
 %rep 8
-	cmp	qword [state + _ldata_md5 + (I*_HMAC_SHA1_LANE_DATA_size) + _job_in_lane], 0
-	jne	APPEND(skip_clear_,I)
+        cmp     qword [state + _ldata_md5 + (I*_HMAC_SHA1_LANE_DATA_size) + _job_in_lane], 0
+        jne     APPEND(skip_clear_,I)
 
         lea     lane_data, [state + _ldata_md5 + (I*_HMAC_SHA1_LANE_DATA_size)]
         ;; Clear first 64 bytes of extra_block
@@ -295,18 +295,18 @@ APPEND(skip_clear_,I):
 align_label
 return:
 
-	mov	rbx, [rsp + _gpr_save + 8*0]
-	mov	rbp, [rsp + _gpr_save + 8*1]
-	mov	r12, [rsp + _gpr_save + 8*2]
-	mov	r13, [rsp + _gpr_save + 8*3]
-	mov	r14, [rsp + _gpr_save + 8*4]
-	mov	r15, [rsp + _gpr_save + 8*5]
+        mov     rbx, [rsp + _gpr_save + 8*0]
+        mov     rbp, [rsp + _gpr_save + 8*1]
+        mov     r12, [rsp + _gpr_save + 8*2]
+        mov     r13, [rsp + _gpr_save + 8*3]
+        mov     r14, [rsp + _gpr_save + 8*4]
+        mov     r15, [rsp + _gpr_save + 8*5]
 %ifndef LINUX
-	mov	rsi, [rsp + _gpr_save + 8*6]
-	mov	rdi, [rsp + _gpr_save + 8*7]
+        mov     rsi, [rsp + _gpr_save + 8*6]
+        mov     rdi, [rsp + _gpr_save + 8*7]
 %endif
-	mov	rsp, [rsp + _rsp_save]	; original SP
+        mov     rsp, [rsp + _rsp_save]  ; original SP
 
-	ret
+        ret
 
 mksection stack-noexec

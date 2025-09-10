@@ -38,9 +38,9 @@ len_masks:
         dq 0x0000FFFF00000000, 0x0000000000000000
         dq 0xFFFF000000000000, 0x0000000000000000
         dq 0x0000000000000000, 0x000000000000FFFF
-	dq 0x0000000000000000, 0x00000000FFFF0000
-	dq 0x0000000000000000, 0x0000FFFF00000000
-	dq 0x0000000000000000, 0xFFFF000000000000
+        dq 0x0000000000000000, 0x00000000FFFF0000
+        dq 0x0000000000000000, 0x0000FFFF00000000
+        dq 0x0000000000000000, 0xFFFF000000000000
 
 align 16
 len_shuf_masks:
@@ -51,19 +51,19 @@ len_shuf_masks:
 
 align 16
 dupw:
-	dq 0x0100010001000100, 0x0100010001000100
+        dq 0x0100010001000100, 0x0100010001000100
 
 align 16
 counter_mask:
-	dq 0xFFFFFFFFFFFFFF07, 0x0000FFFFFFFFFFFF
+        dq 0xFFFFFFFFFFFFFF07, 0x0000FFFFFFFFFFFF
 
 one:    dq  1
 two:    dq  2
 three:  dq  3
-four:	dq  4
-five:	dq  5
-six:	dq  6
-seven:	dq  7
+four:   dq  4
+five:   dq  5
+six:    dq  6
+seven:  dq  7
 
 mksection .text
 

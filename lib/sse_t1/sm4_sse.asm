@@ -346,9 +346,9 @@ MKGLOBAL(SM4_SET_KEY,function,internal)
 align_function
 SM4_SET_KEY:
 
-%define	KEY             arg1
-%define	ENC_KEY_EXP     arg2
-%define	DEC_KEY_EXP     arg3
+%define KEY             arg1
+%define ENC_KEY_EXP     arg2
+%define DEC_KEY_EXP     arg3
 
 %define XTMP1 xmm1
 %define XTMP2 xmm2
@@ -477,10 +477,10 @@ MKGLOBAL(SM4_ECB,function,internal)
 align_function
 SM4_ECB:
 
-%define	IN      arg1
-%define	OUT     arg2
+%define IN      arg1
+%define OUT     arg2
 %define SIZE    arg3
-%define	KEY_EXP arg4
+%define KEY_EXP arg4
 
         FUNC_SAVE
 
@@ -525,10 +525,10 @@ MKGLOBAL(SM4_CBC_ENC,function,internal)
 align_function
 SM4_CBC_ENC:
 
-%define	IN      arg1
-%define	OUT     arg2
+%define IN      arg1
+%define OUT     arg2
 %define SIZE    arg3
-%define	KEY_EXP arg4
+%define KEY_EXP arg4
 
 %define IV      r10
 
@@ -581,10 +581,10 @@ MKGLOBAL(SM4_CBC_DEC,function,internal)
 align_function
 SM4_CBC_DEC:
 
-%define	IN      arg1
-%define	OUT     arg2
+%define IN      arg1
+%define OUT     arg2
 %define SIZE    arg3
-%define	KEY_EXP arg4
+%define KEY_EXP arg4
 
 %define IV      r10
 
@@ -639,10 +639,10 @@ MKGLOBAL(SM4_CTR,function,internal)
 align_function
 SM4_CTR:
 
-%define	IN      arg1
-%define	OUT     arg2
+%define IN      arg1
+%define OUT     arg2
 %define SIZE    arg3
-%define	KEY_EXP arg4
+%define KEY_EXP arg4
 
 %define IV      r10
 

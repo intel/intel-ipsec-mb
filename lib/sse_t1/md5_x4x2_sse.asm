@@ -119,13 +119,13 @@ mksection .text
 
 %ifdef LINUX
 ;; Linux Registers
-%define arg1	rdi
-%define arg2	rsi
+%define arg1    rdi
+%define arg2    rsi
 %define mem1    rcx
 %define mem2    rdx
 %else
-%define arg1	rcx
-%define arg2	rdx
+%define arg1    rcx
+%define arg2    rdx
 %define mem1    rdi
 %define mem2    rsi
 %endif
@@ -197,9 +197,9 @@ mksection .text
 
 ; stack size must be an odd multiple of 8 bytes in size
 struc STACK
-_DATA:		reso	2*2*16	; 2 blocks * 2 sets of lanes * 16 regs
-_DIGEST:	reso	8	; stores AA-DD, AA2-DD2
-		resb	8	; for alignment
+_DATA:          reso    2*2*16  ; 2 blocks * 2 sets of lanes * 16 regs
+_DIGEST:        reso    8       ; stores AA-DD, AA2-DD2
+                resb    8       ; for alignment
 endstruc
 %define STACK_SIZE STACK_size
 
@@ -772,10 +772,10 @@ lastblock:
         pxor    xmm0, xmm0
 %assign i 0
 %rep (2*2*16+8)
-        movdqa	[rsp + i*16], xmm0
+        movdqa  [rsp + i*16], xmm0
 %assign i (i+1)
 %endrep
-	clear_all_xmms_sse_asm
+        clear_all_xmms_sse_asm
 %endif
 
         ;;;;;;;;;;;;;;;;

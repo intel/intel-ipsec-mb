@@ -322,15 +322,15 @@ align_loop
         REDUCE_TO_64    EV, xmm3                         ;; EV = reduce128_to_64(result);
         movq            EV, EV                           ;; clear high 64 bits
 
-        add     	in_ptr, 8*8                     ;; move to next 8 8-byte blocks
+        add             in_ptr, 8*8                     ;; move to next 8 8-byte blocks
         sub             rem_bits, 8*8*8
-        cmp     	rem_bits, 8*8*8
-        jae     	.start_8_blk_loop                ;; process next 8 blocks
+        cmp             rem_bits, 8*8*8
+        jae             .start_8_blk_loop                ;; process next 8 blocks
 
 align_label
 .check_4_blocks:
-        cmp     	rem_bits, 4*8*8                 ;; check if any 4-block groups left
-        jb      	.single_blk_chk
+        cmp             rem_bits, 4*8*8                 ;; check if any 4-block groups left
+        jb              .single_blk_chk
 
         mov             eax, 4
         call            calc_hkey_powers
@@ -341,7 +341,7 @@ align_label
 
         ;; Byte swap all 4 blocks
         pshufb          xmm3, xmm6                       ;; swap blocks 1,2
-        pshufb          xmm4, xmm6                       ;; swap blocks 3,4  
+        pshufb          xmm4, xmm6                       ;; swap blocks 3,4
 
         ;; XOR first block with EV
         pxor            xmm3, EV                         ;; block1 XOR EV, block2 unchanged
@@ -363,14 +363,14 @@ align_label
 
         REDUCE_TO_64    EV, xmm3                         ;; EV = reduce128_to_64(result);
         movq            EV, EV                           ;; clear high 64 bits
- 
-        add     	in_ptr, 4*8             ;; move to the next 4 blocks
-        sub     	rem_bits, 4*8*8
+
+        add             in_ptr, 4*8             ;; move to the next 4 blocks
+        sub             rem_bits, 4*8*8
 
 align_loop
 .single_blk_chk:
-        cmp     	rem_bits, 8*8
-        jb     	        .partial_blk
+        cmp             rem_bits, 8*8
+        jb              .partial_blk
 
         ;; full block still available
         movq            xmm0, [in_ptr]

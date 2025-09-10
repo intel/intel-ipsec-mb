@@ -841,11 +841,11 @@ align_label
         movd    xmm0, DWORD(tmp5)
         pshufb  xmm0, [rel broadcast_word]
         movdqa  xmm1, [state + _zuc_lens]
-        movdqa	xmm2, xmm1
+        movdqa  xmm2, xmm1
 
         pcmpeqw xmm3, xmm3 ;; Get all ff's in XMM register
         pcmpeqw xmm1, xmm3 ;; Mask with FFFF in NULL jobs
-        movq	tmp5, xmm1
+        movq    tmp5, xmm1
         mov     [rsp + _null_len_save], tmp5 ;; Save lengths with FFFF in NULL jobs
 
         pand    xmm0, xmm1 ;; Length of valid job in all NULL jobs
@@ -892,7 +892,7 @@ APPEND(%%skip_eia3_,I):
 
         RESTORE_STACK_SPACE 6
 
-        mov	tmp5, [rsp + _null_len_save]
+        mov     tmp5, [rsp + _null_len_save]
         mov     state, [rsp + _gpr_save + 8*8]
 
         ;; Clear all lengths of valid jobs and set to FFFF to NULL jobs
