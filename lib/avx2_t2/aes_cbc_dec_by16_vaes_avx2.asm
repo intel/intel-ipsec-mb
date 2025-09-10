@@ -39,16 +39,16 @@ _TMP_YMM_SAVE:             resy    1       ; Space to store 1 temporary YMM regi
 endstruc
 
 %ifdef LINUX
-%define arg1	rdi
-%define arg2	rsi
-%define arg3	rdx
-%define arg4	rcx
+%define arg1    rdi
+%define arg2    rsi
+%define arg3    rdx
+%define arg4    rcx
 %define arg5    r8
 %else
-%define arg1	rcx
-%define arg2	rdx
-%define arg3	r8
-%define arg4	r9
+%define arg1    rcx
+%define arg2    rdx
+%define arg3    r8
+%define arg4    r9
 %define arg5    rax
 %endif
 
@@ -124,9 +124,9 @@ endstruc
 %rep (%%NROUNDS + 2)
         vbroadcasti128      TMP_0, [AES_ROUND_KEYS + ROUND*16]
         YMM_AESDEC_ROUND_BLOCKS_AVX2_0_16 CIPHER_PLAIN_0_15, TMP_0, ROUND,      \
-                                          no_data, no_data, no_data, no_data,  \
-                                          no_data, no_data, no_data, no_data,  \
-                                          %%NUM_FINAL_BLOCKS, %%NROUNDS
+                                        no_data, no_data, no_data, no_data,  \
+                                        no_data, no_data, no_data, no_data,  \
+                                        %%NUM_FINAL_BLOCKS, %%NROUNDS
 
 %assign ROUND (ROUND + 1)
 %endrep
@@ -136,8 +136,8 @@ endstruc
 
         ;; XOR with decrypted blocks to get plain text
         YMM_OPCODE3_DSTR_SRC1R_SRC2R_BLOCKS_0_16 %%NUM_FINAL_BLOCKS, vpxor,            \
-                                                 CIPHER_PLAIN_0_15,            \
-                                                 CIPHER_PLAIN_0_15, Y_TEMP_0_7
+                                                CIPHER_PLAIN_0_15,            \
+                                                CIPHER_PLAIN_0_15, Y_TEMP_0_7
 
         ;; write plain text back to output
         YMM_STORE_BLOCKS_AVX2_0_16 %%NUM_FINAL_BLOCKS, %%PLAIN_OUT, 0, CIPHER_PLAIN_0_15
@@ -270,7 +270,7 @@ align_label
 align_label
 %%cbc_dec_done:
 %ifdef SAFE_DATA
-	clear_all_ymms_asm
+        clear_all_ymms_asm
 %else
         vzeroupper
 %endif ;; SAFE_DATA
@@ -316,4 +316,3 @@ aes_cbc_dec_256_vaes_avx2:
         ret
 
 mksection stack-noexec
-

@@ -50,7 +50,7 @@ mksection .rodata
 default rel
 
 counter_mask:
-	dq 0xFFFFFFFFFFFFFF07, 0x0000FFFFFFFFFFFF
+        dq 0xFFFFFFFFFFFFFF07, 0x0000FFFFFFFFFFFF
 
 mksection .text
 
@@ -711,7 +711,7 @@ align_label
 
 %%_done:
 %ifdef SAFE_DATA
-	clear_all_ymms_asm
+        clear_all_ymms_asm
 %else
         vzeroupper
 %endif ;; SAFE_DATA

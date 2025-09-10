@@ -34,4 +34,3 @@
 %endif
 
 %include "avx2_t2/mb_mgr_aes128_ccm_auth_submit_flush_x16_vaes_avx2.asm"
-

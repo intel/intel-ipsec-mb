@@ -307,7 +307,7 @@ align_label
         mov     %%TMP_GP_1, [%%JOB + _msg_len_to_cipher_in_bytes]
 
 %ifidn MODE, CBC
-	and	%%TMP_GP_1, -16		; DOCSIS may pass size unaligned to block size
+        and     %%TMP_GP_1, -16         ; DOCSIS may pass size unaligned to block size
 %endif
         mov     [state + _aes_lens + 2*%%LANE_IDX], WORD(%%TMP_GP_1)
         ;; Store IV
@@ -455,7 +455,7 @@ align_label
 align_label
 %%done:
 %ifdef SAFE_DATA
-	clear_all_ymms_asm
+        clear_all_ymms_asm
 %else
         vzeroupper
 %endif ;; SAFE_DATA
@@ -483,5 +483,3 @@ FLUSH_JOB_AES_ENC:
         FUNC_RESTORE
         ret
 mksection stack-noexec
-
-

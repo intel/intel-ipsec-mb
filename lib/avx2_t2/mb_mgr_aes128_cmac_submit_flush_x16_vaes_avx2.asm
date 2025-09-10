@@ -489,7 +489,7 @@ align_label
 align_label
 %%_copy_complete_digest:
         ; Job complete, copy digest to AT output
- 	mov	job_rax, [state + _aes_cmac_job_in_lane + idx*8]
+        mov     job_rax, [state + _aes_cmac_job_in_lane + idx*8]
 
         mov     TMP_GP_1, idx
         shl     TMP_GP_1, 4
@@ -512,17 +512,17 @@ align_label
 align_label
 %%_update_lanes:
         ; Update unused lanes
-        mov	unused_lanes, [state + _aes_cmac_unused_lanes]
-        shl	unused_lanes, 4
- 	or	unused_lanes, idx
- 	mov	[state + _aes_cmac_unused_lanes], unused_lanes
+        mov     unused_lanes, [state + _aes_cmac_unused_lanes]
+        shl     unused_lanes, 4
+        or      unused_lanes, idx
+        mov     [state + _aes_cmac_unused_lanes], unused_lanes
         sub     qword [state + _aes_cmac_num_lanes_inuse], 1
 
         ; Set return job
-        mov	job_rax, [state + _aes_cmac_job_in_lane + idx*8]
+        mov     job_rax, [state + _aes_cmac_job_in_lane + idx*8]
 
- 	mov	qword [state + _aes_cmac_job_in_lane + idx*8], 0
- 	or	dword [job_rax + _status], IMB_STATUS_COMPLETED_AUTH
+        mov     qword [state + _aes_cmac_job_in_lane + idx*8], 0
+        or      dword [job_rax + _status], IMB_STATUS_COMPLETED_AUTH
 
 %ifdef SAFE_DATA
         ;; Clear expanded keys
@@ -569,7 +569,7 @@ align_label
 align_label
 %%return_null:
         xor     job_rax, job_rax
-	jmp	%%done
+        jmp     %%done
 
 %if %%SUBMIT_FLUSH == SUBMIT
 align_label
@@ -631,7 +631,7 @@ align_label
 
         ;; save and restore rcx on windows
 %ifndef LINUX
-	mov	TMP_GP_1, rcx
+        mov     TMP_GP_1, rcx
 %endif
         mov     rcx, rbits
         mov     TMP_GP_3, 0xff
@@ -642,7 +642,7 @@ align_label
         ;; pad final byte
         vpandn  XMM_TMP_2, XMM_TMP_0
 %ifndef LINUX
-	mov	rcx, TMP_GP_1
+        mov     rcx, TMP_GP_1
 %endif
         ;; set OR mask to pad final bit
         mov     TMP_GP_2, TMP_GP_3
@@ -676,7 +676,7 @@ align_label
 align_label
 %%done:
 %ifdef SAFE_DATA
-	clear_all_ymms_asm
+        clear_all_ymms_asm
 %else
         vzeroupper
 %endif ;; SAFE_DATA
@@ -704,5 +704,3 @@ FLUSH_JOB_AES_ENC:
         FUNC_RESTORE
         ret
 mksection stack-noexec
-
-

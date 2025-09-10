@@ -38,7 +38,7 @@ align_function
 MKGLOBAL(aes_cntr_128_vaes_avx2,function,internal)
 aes_cntr_128_vaes_avx2:
         endbranch64
-	DO_CNTR 128, CNTR
-	ret
+        DO_CNTR 128, CNTR
+        ret
 
 mksection stack-noexec

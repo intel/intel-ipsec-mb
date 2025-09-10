@@ -212,7 +212,7 @@
 
         ;; read 1 block per each lane
         RD_SINGLE_BLOCK         %%IDX, TMP_0_3, TMP_4_7
- 
+
 %ifidn %%MODE, CFB
         ;; encrypt previous ciphertext/IV
         AESENC_ROUNDS_x16       LANE_0_7, LANE_8_15, %%NROUNDS

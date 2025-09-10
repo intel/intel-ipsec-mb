@@ -33,4 +33,3 @@
 %define ZUC_KEYGEN8B_8 asm_ZucGenKeystream8B_8_gfni_avx2
 %define ZUC_KEYGEN4B_8 asm_ZucGenKeystream4B_8_gfni_avx2
 %include "avx2_t1/zuc_x8_avx2.asm"
-

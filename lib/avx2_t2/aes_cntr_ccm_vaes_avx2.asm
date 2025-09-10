@@ -76,9 +76,9 @@ align_function
 ; arg 1 : job
 MKGLOBAL(aes_cntr_ccm_128_vaes_avx2,function,internal)
 aes_cntr_ccm_128_vaes_avx2:
-	endbranch64
+        endbranch64
         FUNC_SAVE
-	DO_CNTR 128, CCM
+        DO_CNTR 128, CCM
         FUNC_RESTORE
         ret
 
@@ -87,9 +87,9 @@ align_function
 ; arg 1 : job
 MKGLOBAL(aes_cntr_ccm_256_vaes_avx2,function,internal)
 aes_cntr_ccm_256_vaes_avx2:
-	endbranch64
+        endbranch64
         FUNC_SAVE
-	DO_CNTR 256, CCM
+        DO_CNTR 256, CCM
         FUNC_RESTORE
         ret
 
