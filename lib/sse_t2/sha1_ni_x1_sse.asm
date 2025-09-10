@@ -46,48 +46,48 @@
 %include "include/align_sse.inc"
 
 %ifdef LINUX
-%define arg1	rdi
-%define arg2	rsi
-%define arg3	rdx
-%define arg4	rcx
+%define arg1    rdi
+%define arg2    rsi
+%define arg3    rdx
+%define arg4    rcx
 %else
-%define arg1	rcx
-%define arg2	rdx
-%define arg3	r8
-%define arg4	r9
+%define arg1    rcx
+%define arg2    rdx
+%define arg3    r8
+%define arg4    r9
 %endif
 
 %define args            arg1
-%define NUM_BLKS 	arg2
+%define NUM_BLKS        arg2
 %define lane            arg3
 %define tmp             arg4
 ; reso = resdq => 16 bytes
 struc frame
-.ABCD_SAVE	reso	1
-.E_SAVE		reso	1
-.align		resq	1
+.ABCD_SAVE      reso    1
+.E_SAVE         reso    1
+.align          resq    1
 endstruc
 
-%define INP		r10
+%define INP             r10
 
-%define ABCD		xmm0
-%define E0		xmm1	; Need two E's b/c they ping pong
-%define E1		xmm2
-%define MSG0		xmm3
-%define MSG1		xmm4
-%define MSG2		xmm5
-%define MSG3		xmm6
+%define ABCD            xmm0
+%define E0              xmm1    ; Need two E's b/c they ping pong
+%define E1              xmm2
+%define MSG0            xmm3
+%define MSG1            xmm4
+%define MSG2            xmm5
+%define MSG3            xmm6
 
-%define SHUF_MASK	xmm14
-%define E_MASK		xmm15
+%define SHUF_MASK       xmm14
+%define E_MASK          xmm15
 
 mksection .rodata
 default rel
 align 64
 PSHUFFLE_BYTE_FLIP_MASK: ;ddq 0x000102030405060708090a0b0c0d0e0f
-	dq 0x08090a0b0c0d0e0f, 0x0001020304050607
+        dq 0x08090a0b0c0d0e0f, 0x0001020304050607
 UPPER_WORD_MASK:         ;ddq 0xFFFFFFFF000000000000000000000000
-	dq 0x0000000000000000, 0xFFFFFFFF00000000
+        dq 0x0000000000000000, 0xFFFFFFFF00000000
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -100,212 +100,212 @@ mksection .text
 MKGLOBAL(sha1_ni_x1,function,internal)
 align_function
 sha1_ni_x1:
-	sub		rsp, frame_size
+        sub             rsp, frame_size
 
-	shl		NUM_BLKS, 6	; convert to bytes
-	jz		done_hash
+        shl             NUM_BLKS, 6     ; convert to bytes
+        jz              done_hash
 
-	;; load input pointers
-	mov		INP, [args + _data_ptr_sha1 + lane*PTR_SZ]
+        ;; load input pointers
+        mov             INP, [args + _data_ptr_sha1 + lane*PTR_SZ]
 
-	add		NUM_BLKS, INP	; pointer to end of data block -> loop exit condition
+        add             NUM_BLKS, INP   ; pointer to end of data block -> loop exit condition
 
-	;; load initial digest
+        ;; load initial digest
         mov             tmp, SHA1NI_DIGEST_ROW_SIZE
         imul            tmp, lane
-	movdqu		ABCD, [args + tmp]
-	pxor		E0, E0
-	pinsrd		E0, [args + tmp + 4*SHA1_DIGEST_WORD_SIZE], 3
-	pshufd		ABCD, ABCD, 0x1B
+        movdqu          ABCD, [args + tmp]
+        pxor            E0, E0
+        pinsrd          E0, [args + tmp + 4*SHA1_DIGEST_WORD_SIZE], 3
+        pshufd          ABCD, ABCD, 0x1B
 
-	movdqa		SHUF_MASK, [rel PSHUFFLE_BYTE_FLIP_MASK]
-	movdqa		E_MASK, [rel UPPER_WORD_MASK]
+        movdqa          SHUF_MASK, [rel PSHUFFLE_BYTE_FLIP_MASK]
+        movdqa          E_MASK, [rel UPPER_WORD_MASK]
 
 align_loop
 loop0:
-	;; Copy digests
-	movdqa		[rsp + frame.ABCD_SAVE], ABCD
-	movdqa		[rsp + frame.E_SAVE],    E0
+        ;; Copy digests
+        movdqa          [rsp + frame.ABCD_SAVE], ABCD
+        movdqa          [rsp + frame.E_SAVE],    E0
 
-	;; Only needed if not using sha1nexte for rounds 0-3
-	pand		E0,   E_MASK
+        ;; Only needed if not using sha1nexte for rounds 0-3
+        pand            E0,   E_MASK
 
-	;; Rounds 0-3
-	movdqu		MSG0, [INP + 0*16]
-	pshufb		MSG0, SHUF_MASK
-	paddd		E0, MSG0
-	movdqa		E1, ABCD
-	sha1rnds4	ABCD, E0, 0
+        ;; Rounds 0-3
+        movdqu          MSG0, [INP + 0*16]
+        pshufb          MSG0, SHUF_MASK
+        paddd           E0, MSG0
+        movdqa          E1, ABCD
+        sha1rnds4       ABCD, E0, 0
 
-	;; Rounds 4-7
-	movdqu		MSG1, [INP + 1*16]
-	pshufb		MSG1, SHUF_MASK
-	sha1nexte	E1, MSG1
-	movdqa		E0, ABCD
-	sha1rnds4	ABCD, E1, 0
-	sha1msg1	MSG0, MSG1
+        ;; Rounds 4-7
+        movdqu          MSG1, [INP + 1*16]
+        pshufb          MSG1, SHUF_MASK
+        sha1nexte       E1, MSG1
+        movdqa          E0, ABCD
+        sha1rnds4       ABCD, E1, 0
+        sha1msg1        MSG0, MSG1
 
-	;; Rounds 8-11
-	movdqu		MSG2, [INP + 2*16]
-	pshufb		MSG2, SHUF_MASK
-	sha1nexte	E0, MSG2
-	movdqa		E1, ABCD
-	sha1rnds4	ABCD, E0, 0
-	sha1msg1	MSG1, MSG2
-	pxor		MSG0, MSG2
+        ;; Rounds 8-11
+        movdqu          MSG2, [INP + 2*16]
+        pshufb          MSG2, SHUF_MASK
+        sha1nexte       E0, MSG2
+        movdqa          E1, ABCD
+        sha1rnds4       ABCD, E0, 0
+        sha1msg1        MSG1, MSG2
+        pxor            MSG0, MSG2
 
-	;; Rounds 12-15
-	movdqu		MSG3, [INP + 3*16]
-	pshufb		MSG3, SHUF_MASK
-	sha1nexte	E1, MSG3
-	movdqa		E0, ABCD
-	sha1msg2	MSG0, MSG3
-	sha1rnds4	ABCD, E1, 0
-	sha1msg1	MSG2, MSG3
-	pxor		MSG1, MSG3
+        ;; Rounds 12-15
+        movdqu          MSG3, [INP + 3*16]
+        pshufb          MSG3, SHUF_MASK
+        sha1nexte       E1, MSG3
+        movdqa          E0, ABCD
+        sha1msg2        MSG0, MSG3
+        sha1rnds4       ABCD, E1, 0
+        sha1msg1        MSG2, MSG3
+        pxor            MSG1, MSG3
 
-	;; Rounds 16-19
-	sha1nexte	E0, MSG0
-	movdqa		E1, ABCD
-	sha1msg2	MSG1, MSG0
-	sha1rnds4	ABCD, E0, 0
-	sha1msg1	MSG3, MSG0
-	pxor		MSG2, MSG0
+        ;; Rounds 16-19
+        sha1nexte       E0, MSG0
+        movdqa          E1, ABCD
+        sha1msg2        MSG1, MSG0
+        sha1rnds4       ABCD, E0, 0
+        sha1msg1        MSG3, MSG0
+        pxor            MSG2, MSG0
 
-	;; Rounds 20-23
-	sha1nexte	E1, MSG1
-	movdqa		E0, ABCD
-	sha1msg2	MSG2, MSG1
-	sha1rnds4	ABCD, E1, 1
-	sha1msg1	MSG0, MSG1
-	pxor		MSG3, MSG1
+        ;; Rounds 20-23
+        sha1nexte       E1, MSG1
+        movdqa          E0, ABCD
+        sha1msg2        MSG2, MSG1
+        sha1rnds4       ABCD, E1, 1
+        sha1msg1        MSG0, MSG1
+        pxor            MSG3, MSG1
 
-	;; Rounds 24-27
-	sha1nexte	E0, MSG2
-	movdqa		E1, ABCD
-	sha1msg2	MSG3, MSG2
-	sha1rnds4	ABCD, E0, 1
-	sha1msg1	MSG1, MSG2
-	pxor		MSG0, MSG2
+        ;; Rounds 24-27
+        sha1nexte       E0, MSG2
+        movdqa          E1, ABCD
+        sha1msg2        MSG3, MSG2
+        sha1rnds4       ABCD, E0, 1
+        sha1msg1        MSG1, MSG2
+        pxor            MSG0, MSG2
 
-	;; Rounds 28-31
-	sha1nexte	E1, MSG3
-	movdqa		E0, ABCD
-	sha1msg2	MSG0, MSG3
-	sha1rnds4	ABCD, E1, 1
-	sha1msg1	MSG2, MSG3
-	pxor		MSG1, MSG3
+        ;; Rounds 28-31
+        sha1nexte       E1, MSG3
+        movdqa          E0, ABCD
+        sha1msg2        MSG0, MSG3
+        sha1rnds4       ABCD, E1, 1
+        sha1msg1        MSG2, MSG3
+        pxor            MSG1, MSG3
 
-	;; Rounds 32-35
-	sha1nexte	E0, MSG0
-	movdqa		E1, ABCD
-	sha1msg2	MSG1, MSG0
-	sha1rnds4	ABCD, E0, 1
-	sha1msg1	MSG3, MSG0
-	pxor		MSG2, MSG0
+        ;; Rounds 32-35
+        sha1nexte       E0, MSG0
+        movdqa          E1, ABCD
+        sha1msg2        MSG1, MSG0
+        sha1rnds4       ABCD, E0, 1
+        sha1msg1        MSG3, MSG0
+        pxor            MSG2, MSG0
 
-	;; Rounds 36-39
-	sha1nexte	E1, MSG1
-	movdqa		E0, ABCD
-	sha1msg2	MSG2, MSG1
-	sha1rnds4	ABCD, E1, 1
-	sha1msg1	MSG0, MSG1
-	pxor		MSG3, MSG1
+        ;; Rounds 36-39
+        sha1nexte       E1, MSG1
+        movdqa          E0, ABCD
+        sha1msg2        MSG2, MSG1
+        sha1rnds4       ABCD, E1, 1
+        sha1msg1        MSG0, MSG1
+        pxor            MSG3, MSG1
 
-	;; Rounds 40-43
-	sha1nexte	E0, MSG2
-	movdqa		E1, ABCD
-	sha1msg2	MSG3, MSG2
-	sha1rnds4	ABCD, E0, 2
-	sha1msg1	MSG1, MSG2
-	pxor		MSG0, MSG2
+        ;; Rounds 40-43
+        sha1nexte       E0, MSG2
+        movdqa          E1, ABCD
+        sha1msg2        MSG3, MSG2
+        sha1rnds4       ABCD, E0, 2
+        sha1msg1        MSG1, MSG2
+        pxor            MSG0, MSG2
 
-	;; Rounds 44-47
-	sha1nexte	E1, MSG3
-	movdqa		E0, ABCD
-	sha1msg2	MSG0, MSG3
-	sha1rnds4	ABCD, E1, 2
-	sha1msg1	MSG2, MSG3
-	pxor		MSG1, MSG3
+        ;; Rounds 44-47
+        sha1nexte       E1, MSG3
+        movdqa          E0, ABCD
+        sha1msg2        MSG0, MSG3
+        sha1rnds4       ABCD, E1, 2
+        sha1msg1        MSG2, MSG3
+        pxor            MSG1, MSG3
 
-	;; Rounds 48-51
-	sha1nexte	E0, MSG0
-	movdqa		E1, ABCD
-	sha1msg2	MSG1, MSG0
-	sha1rnds4	ABCD, E0, 2
-	sha1msg1	MSG3, MSG0
-	pxor		MSG2, MSG0
+        ;; Rounds 48-51
+        sha1nexte       E0, MSG0
+        movdqa          E1, ABCD
+        sha1msg2        MSG1, MSG0
+        sha1rnds4       ABCD, E0, 2
+        sha1msg1        MSG3, MSG0
+        pxor            MSG2, MSG0
 
-	;; Rounds 52-55
-	sha1nexte	E1, MSG1
-	movdqa		E0, ABCD
-	sha1msg2	MSG2, MSG1
-	sha1rnds4	ABCD, E1, 2
-	sha1msg1	MSG0, MSG1
-	pxor		MSG3, MSG1
+        ;; Rounds 52-55
+        sha1nexte       E1, MSG1
+        movdqa          E0, ABCD
+        sha1msg2        MSG2, MSG1
+        sha1rnds4       ABCD, E1, 2
+        sha1msg1        MSG0, MSG1
+        pxor            MSG3, MSG1
 
-	;; Rounds 56-59
-	sha1nexte	E0, MSG2
-	movdqa		E1, ABCD
-	sha1msg2	MSG3, MSG2
-	sha1rnds4	ABCD, E0, 2
-	sha1msg1	MSG1, MSG2
-	pxor		MSG0, MSG2
+        ;; Rounds 56-59
+        sha1nexte       E0, MSG2
+        movdqa          E1, ABCD
+        sha1msg2        MSG3, MSG2
+        sha1rnds4       ABCD, E0, 2
+        sha1msg1        MSG1, MSG2
+        pxor            MSG0, MSG2
 
-	;; Rounds 60-63
-	sha1nexte	E1, MSG3
-	movdqa		E0, ABCD
-	sha1msg2	MSG0, MSG3
-	sha1rnds4	ABCD, E1, 3
-	sha1msg1	MSG2, MSG3
-	pxor		MSG1, MSG3
+        ;; Rounds 60-63
+        sha1nexte       E1, MSG3
+        movdqa          E0, ABCD
+        sha1msg2        MSG0, MSG3
+        sha1rnds4       ABCD, E1, 3
+        sha1msg1        MSG2, MSG3
+        pxor            MSG1, MSG3
 
-	;; Rounds 64-67
-	sha1nexte	E0, MSG0
-	movdqa		E1, ABCD
-	sha1msg2	MSG1, MSG0
-	sha1rnds4	ABCD, E0, 3
-	sha1msg1	MSG3, MSG0
-	pxor		MSG2, MSG0
+        ;; Rounds 64-67
+        sha1nexte       E0, MSG0
+        movdqa          E1, ABCD
+        sha1msg2        MSG1, MSG0
+        sha1rnds4       ABCD, E0, 3
+        sha1msg1        MSG3, MSG0
+        pxor            MSG2, MSG0
 
-	;; Rounds 68-71
-	sha1nexte	E1, MSG1
-	movdqa		E0, ABCD
-	sha1msg2	MSG2, MSG1
-	sha1rnds4	ABCD, E1, 3
-	pxor		MSG3, MSG1
+        ;; Rounds 68-71
+        sha1nexte       E1, MSG1
+        movdqa          E0, ABCD
+        sha1msg2        MSG2, MSG1
+        sha1rnds4       ABCD, E1, 3
+        pxor            MSG3, MSG1
 
-	;; Rounds 72-75
-	sha1nexte	E0, MSG2
-	movdqa		E1, ABCD
-	sha1msg2	MSG3, MSG2
-	sha1rnds4	ABCD, E0, 3
+        ;; Rounds 72-75
+        sha1nexte       E0, MSG2
+        movdqa          E1, ABCD
+        sha1msg2        MSG3, MSG2
+        sha1rnds4       ABCD, E0, 3
 
-	;; Rounds 76-79
-	sha1nexte	E1, MSG3
-	movdqa		E0, ABCD
-	sha1rnds4	ABCD, E1, 3
+        ;; Rounds 76-79
+        sha1nexte       E1, MSG3
+        movdqa          E0, ABCD
+        sha1rnds4       ABCD, E1, 3
 
-	;; Need to rotate E left by 30
-	movdqa		E1, E0
-	pslld		E0, 30
-	psrld		E1, 2
-	pxor		E0, E1
+        ;; Need to rotate E left by 30
+        movdqa          E1, E0
+        pslld           E0, 30
+        psrld           E1, 2
+        pxor            E0, E1
 
-	paddd		ABCD, [rsp + frame.ABCD_SAVE]
-	paddd		E0,   [rsp + frame.E_SAVE]
+        paddd           ABCD, [rsp + frame.ABCD_SAVE]
+        paddd           E0,   [rsp + frame.E_SAVE]
 
-	add		INP, 64
-	cmp		INP, NUM_BLKS
-	jne		loop0
+        add             INP, 64
+        cmp             INP, NUM_BLKS
+        jne             loop0
 
-	;; write out digests
-	pshufd		ABCD, ABCD, 0x1B
-	movdqu		[args + tmp], ABCD
-	pextrd		[args + tmp + 4*SHA1_DIGEST_WORD_SIZE], E0, 3
+        ;; write out digests
+        pshufd          ABCD, ABCD, 0x1B
+        movdqu          [args + tmp], ABCD
+        pextrd          [args + tmp + 4*SHA1_DIGEST_WORD_SIZE], E0, 3
 
-	;; update input pointers
-	mov		[args + _data_ptr_sha1 + lane*PTR_SZ], INP
+        ;; update input pointers
+        mov             [args + _data_ptr_sha1 + lane*PTR_SZ], INP
 
 align_label
 done_hash:
@@ -321,8 +321,8 @@ done_hash:
         movdqa   [rsp + 1*16], MSG0
 %endif
 
-	add		rsp, frame_size
+        add             rsp, frame_size
 
-	ret
+        ret
 
 mksection stack-noexec

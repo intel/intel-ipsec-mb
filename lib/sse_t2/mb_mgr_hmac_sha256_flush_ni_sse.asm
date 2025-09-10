@@ -46,48 +46,48 @@
 extern sha256_ni_x1
 
 %ifdef LINUX
-%define arg1	rdi
-%define arg2	rsi
+%define arg1    rdi
+%define arg2    rsi
 %define arg3    rdx
 %else
-%define arg1	rcx
-%define arg2	rdx
+%define arg1    rcx
+%define arg2    rdx
 %define arg3    r8
 %endif
 
-%define state	arg1
-%define job	arg2
-%define len2	arg2
+%define state   arg1
+%define job     arg2
+%define len2    arg2
 
 ; idx needs to be in rbx, rbp, r13-r15
-%define idx		rbp
+%define idx             rbp
 
-%define unused_lanes	rbx
-%define lane_data	rbx
-%define tmp2		rbx
+%define unused_lanes    rbx
+%define lane_data       rbx
+%define tmp2            rbx
 
-%define job_rax		rax
-%define	tmp1		rax
-%define size_offset	rax
-%define tmp		rax
-%define start_offset	rax
+%define job_rax         rax
+%define tmp1            rax
+%define size_offset     rax
+%define tmp             rax
+%define start_offset    rax
 
-%define tmp3		arg1
+%define tmp3            arg1
 
-%define extra_blocks	arg2
-%define p		arg2
+%define extra_blocks    arg2
+%define p               arg2
 
-%define tmp4		r11
+%define tmp4            r11
 
-%define tmp5	        r9
+%define tmp5            r9
 
-%define tmp6	        r10
+%define tmp6            r10
 
-%define bswap_xmm4	xmm4
+%define bswap_xmm4      xmm4
 
 struc STACK
-_gpr_save:	resq	4 ;rbx, rbp, rsi (win), rdi (win)
-_rsp_save:	resq	1
+_gpr_save:      resq    4 ;rbx, rbp, rsi (win), rdi (win)
+_rsp_save:      resq    1
 endstruc
 
 %define APPEND(a,b) a %+ b
@@ -97,10 +97,10 @@ default rel
 
 align 16
 byteswap:
-	dq 0x0405060700010203
-	dq 0x0c0d0e0f08090a0b
+        dq 0x0405060700010203
+        dq 0x0c0d0e0f08090a0b
 
-one:	dq  1
+one:    dq  1
 
 mksection .text
 
@@ -117,131 +117,131 @@ MKGLOBAL(flush_job_hmac_sha_256_ni_sse,function,internal)
 align_function
 flush_job_hmac_sha_256_ni_sse:
 %endif
-	mov	rax, rsp
-	sub	rsp, STACK_size
-	and	rsp, -16
+        mov     rax, rsp
+        sub     rsp, STACK_size
+        and     rsp, -16
 
-	mov	[rsp + _gpr_save + 8*0], rbx
-	mov	[rsp + _gpr_save + 8*1], rbp
+        mov     [rsp + _gpr_save + 8*0], rbx
+        mov     [rsp + _gpr_save + 8*1], rbp
 %ifndef LINUX
-	mov	[rsp + _gpr_save + 8*2], rsi
-	mov	[rsp + _gpr_save + 8*3], rdi
+        mov     [rsp + _gpr_save + 8*2], rsi
+        mov     [rsp + _gpr_save + 8*3], rdi
 %endif
-	mov	[rsp + _rsp_save], rax	; original SP
+        mov     [rsp + _rsp_save], rax  ; original SP
 
         DBGPRINTL "enter sha256-ni-sse flush"
 
-	mov	unused_lanes, [state + _unused_lanes_sha256]
-	bt	unused_lanes, 16+7
-	jc	return_null
+        mov     unused_lanes, [state + _unused_lanes_sha256]
+        bt      unused_lanes, 16+7
+        jc      return_null
 
-	; find a lane with a non-null job, assume it is 0 then check 1
-	xor	idx, idx
-	cmp	qword [state + _ldata_sha256 + 1 * _HMAC_SHA1_LANE_DATA_size + _job_in_lane], 0
-	cmovne	idx, [rel one]
-	DBGPRINTL64 "idx:", idx
+        ; find a lane with a non-null job, assume it is 0 then check 1
+        xor     idx, idx
+        cmp     qword [state + _ldata_sha256 + 1 * _HMAC_SHA1_LANE_DATA_size + _job_in_lane], 0
+        cmovne  idx, [rel one]
+        DBGPRINTL64 "idx:", idx
 
 align_loop
 copy_lane_data:
-	xor	len2, len2
-	mov	WORD(len2), word [state + _lens_sha256 + idx*2]
+        xor     len2, len2
+        mov     WORD(len2), word [state + _lens_sha256 + idx*2]
 
         mov     arg3, idx
 
-	; No need to find min length - only two lanes available
-        cmp	len2, 0
-        je	len_is_0
+        ; No need to find min length - only two lanes available
+        cmp     len2, 0
+        je      len_is_0
 
-	; set length lane to 0
-        mov	dword [state + _lens_sha256], 0
+        ; set length lane to 0
+        mov     dword [state + _lens_sha256], 0
 
         ; "state" and "args" are the same address, arg1
-	; len is arg2
-	call	sha256_ni_x1
-	; state and idx are intact
+        ; len is arg2
+        call    sha256_ni_x1
+        ; state and idx are intact
 
 align_label
 len_is_0:
-	; process completed job "idx"
-	imul	lane_data, idx, _HMAC_SHA1_LANE_DATA_size
-	lea	lane_data, [state + _ldata_sha256 + lane_data]
-	mov	DWORD(extra_blocks), [lane_data + _extra_blocks]
-	cmp	extra_blocks, 0
-	jne	proc_extra_blocks
-	movdqa	bswap_xmm4, [rel byteswap]
-	cmp	dword [lane_data + _outer_done], 0
-	jne	end_loop
+        ; process completed job "idx"
+        imul    lane_data, idx, _HMAC_SHA1_LANE_DATA_size
+        lea     lane_data, [state + _ldata_sha256 + lane_data]
+        mov     DWORD(extra_blocks), [lane_data + _extra_blocks]
+        cmp     extra_blocks, 0
+        jne     proc_extra_blocks
+        movdqa  bswap_xmm4, [rel byteswap]
+        cmp     dword [lane_data + _outer_done], 0
+        jne     end_loop
 
 align_label
 proc_outer:
-	mov	dword [lane_data + _outer_done], 1
-	mov	DWORD(size_offset), [lane_data + _size_offset]
-	mov	qword [lane_data + _extra_block + size_offset], 0
-	mov	word [state + _lens_sha256 + 2*idx], 1
-	lea	tmp, [lane_data + _outer_block]
-	mov	job, [lane_data + _job_in_lane]
-	mov	[state + _args_data_ptr_sha256 + PTR_SZ*idx], tmp
+        mov     dword [lane_data + _outer_done], 1
+        mov     DWORD(size_offset), [lane_data + _size_offset]
+        mov     qword [lane_data + _extra_block + size_offset], 0
+        mov     word [state + _lens_sha256 + 2*idx], 1
+        lea     tmp, [lane_data + _outer_block]
+        mov     job, [lane_data + _job_in_lane]
+        mov     [state + _args_data_ptr_sha256 + PTR_SZ*idx], tmp
 
 %if SHA256NI_DIGEST_ROW_SIZE != 32
 %error "Below code has been optimized for SHA256NI_DIGEST_ROW_SIZE = 32!"
 %endif
-	lea	tmp4, [idx*8]	 ; x8 here + scale factor x4 below give x32
-	movdqu	xmm0, [state + _args_digest_sha256 + tmp4*4]
-	movdqu	xmm1, [state + _args_digest_sha256 + tmp4*4 + 4*4]
-	pshufb	xmm0, bswap_xmm4
-	pshufb	xmm1, bswap_xmm4
-	movdqa	[lane_data + _outer_block], xmm0
-	movdqa	[lane_data + _outer_block + 4*4], xmm1
+        lea     tmp4, [idx*8]    ; x8 here + scale factor x4 below give x32
+        movdqu  xmm0, [state + _args_digest_sha256 + tmp4*4]
+        movdqu  xmm1, [state + _args_digest_sha256 + tmp4*4 + 4*4]
+        pshufb  xmm0, bswap_xmm4
+        pshufb  xmm1, bswap_xmm4
+        movdqa  [lane_data + _outer_block], xmm0
+        movdqa  [lane_data + _outer_block + 4*4], xmm1
 %ifdef SHA224
-	;; overwrite top 4 bytes with 0x80
-	mov	dword [lane_data + _outer_block + 7*4], 0x80
+        ;; overwrite top 4 bytes with 0x80
+        mov     dword [lane_data + _outer_block + 7*4], 0x80
 %endif
-        DBGPRINTL	"sha256 outer hash input words:"
+        DBGPRINTL       "sha256 outer hash input words:"
         DBGPRINT_XMM xmm0
         DBGPRINT_XMM xmm1
 
-	mov	tmp, [job + _auth_key_xor_opad]
-	movdqu	xmm0, [tmp]
-	movdqu	xmm1, [tmp + 4*4]
-	DBGPRINTL64 "auth_key_xor_opad", tmp
-	movdqu	[state + _args_digest_sha256 + tmp4*4], xmm0
-	movdqu	[state + _args_digest_sha256 + tmp4*4 + 4*4], xmm1
-        DBGPRINTL	"new digest args"
+        mov     tmp, [job + _auth_key_xor_opad]
+        movdqu  xmm0, [tmp]
+        movdqu  xmm1, [tmp + 4*4]
+        DBGPRINTL64 "auth_key_xor_opad", tmp
+        movdqu  [state + _args_digest_sha256 + tmp4*4], xmm0
+        movdqu  [state + _args_digest_sha256 + tmp4*4 + 4*4], xmm1
+        DBGPRINTL       "new digest args"
         DBGPRINT_XMM xmm0
         DBGPRINT_XMM xmm1
-	jmp	copy_lane_data
+        jmp     copy_lane_data
 
 align_label
 proc_extra_blocks:
-	mov	DWORD(start_offset), [lane_data + _start_offset]
-	mov	[state + _lens_sha256 + 2*idx], WORD(extra_blocks)
-	lea	tmp, [lane_data + _extra_block + start_offset]
-	mov	[state + _args_data_ptr_sha256 + PTR_SZ*idx], tmp
-	mov	dword [lane_data + _extra_blocks], 0
-	jmp	copy_lane_data
+        mov     DWORD(start_offset), [lane_data + _start_offset]
+        mov     [state + _lens_sha256 + 2*idx], WORD(extra_blocks)
+        lea     tmp, [lane_data + _extra_block + start_offset]
+        mov     [state + _args_data_ptr_sha256 + PTR_SZ*idx], tmp
+        mov     dword [lane_data + _extra_blocks], 0
+        jmp     copy_lane_data
 
 align_label
 return_null:
-	xor	job_rax, job_rax
-	jmp	return
+        xor     job_rax, job_rax
+        jmp     return
 
 align_label
 end_loop:
-	mov	job_rax, [lane_data + _job_in_lane]
-	mov	qword [lane_data + _job_in_lane], 0
-	or	dword [job_rax + _status], IMB_STATUS_COMPLETED_AUTH
-	mov	unused_lanes, [state + _unused_lanes_sha256]
-	shl	unused_lanes, 8
-	or	unused_lanes, idx
-	mov	[state + _unused_lanes_sha256], unused_lanes
+        mov     job_rax, [lane_data + _job_in_lane]
+        mov     qword [lane_data + _job_in_lane], 0
+        or      dword [job_rax + _status], IMB_STATUS_COMPLETED_AUTH
+        mov     unused_lanes, [state + _unused_lanes_sha256]
+        shl     unused_lanes, 8
+        or      unused_lanes, idx
+        mov     [state + _unused_lanes_sha256], unused_lanes
 
-	mov	p, [job_rax + _auth_tag_output]
+        mov     p, [job_rax + _auth_tag_output]
 
-	; copy 16 bytes for SHA256, 14 bytes for SHA224
+        ; copy 16 bytes for SHA256, 14 bytes for SHA224
 %if SHA256NI_DIGEST_ROW_SIZE != 32
 %error "Below code has been optimized for SHA256NI_DIGEST_ROW_SIZE = 32!"
 %endif
-	shl	idx, 5
+        shl     idx, 5
 
 %ifdef SHA224
         cmp     qword [job_rax + _auth_tag_output_len_in_bytes], 14
@@ -250,48 +250,48 @@ end_loop:
         cmp     qword [job_rax + _auth_tag_output_len_in_bytes], 16
         jne     copy_full_digest
 %endif
-	movdqu	xmm0, [state + _args_digest_sha256 + idx]
-	pshufb	xmm0, bswap_xmm4
+        movdqu  xmm0, [state + _args_digest_sha256 + idx]
+        pshufb  xmm0, bswap_xmm4
 %ifdef SHA224
-	;; SHA224
-	movq	[p + 0*4], xmm0
-	pextrd	[p + 2*4], xmm0, 2
-	pextrw	[p + 3*4], xmm0, 6
+        ;; SHA224
+        movq    [p + 0*4], xmm0
+        pextrd  [p + 2*4], xmm0, 2
+        pextrw  [p + 3*4], xmm0, 6
 %else
-	;; SHA256
-	movdqu	[p], xmm0
+        ;; SHA256
+        movdqu  [p], xmm0
 %endif
-	DBGPRINTL	"auth_tag_output:"
-        DBGPRINT_XMM	xmm0
+        DBGPRINTL       "auth_tag_output:"
+        DBGPRINT_XMM    xmm0
         jmp     clear_ret
 
 align_label
 copy_full_digest:
-	cmp 	qword [job_rax + _auth_tag_output_len_in_bytes], 16
-	ja 	copy_tag_gt16
+        cmp     qword [job_rax + _auth_tag_output_len_in_bytes], 16
+        ja      copy_tag_gt16
 
- 	;; copy up to 16 bytes
-	mov 	tmp2, qword [job_rax + _auth_tag_output_len_in_bytes]
-	movdqu	xmm0, [state + _args_digest_sha256 + idx]
-	pshufb	xmm0, bswap_xmm4
-	simd_store_sse {p + 0*4}, xmm0, tmp2, tmp4, tmp5
-	jmp 	clear_ret
+        ;; copy up to 16 bytes
+        mov     tmp2, qword [job_rax + _auth_tag_output_len_in_bytes]
+        movdqu  xmm0, [state + _args_digest_sha256 + idx]
+        pshufb  xmm0, bswap_xmm4
+        simd_store_sse {p + 0*4}, xmm0, tmp2, tmp4, tmp5
+        jmp     clear_ret
 
 align_label
 copy_tag_gt16:
-	;; copy 16 bytes first
-	movdqu	xmm0, [state + _args_digest_sha256 + idx]
-	pshufb	xmm0, bswap_xmm4
-	movdqu	[p], xmm0
+        ;; copy 16 bytes first
+        movdqu  xmm0, [state + _args_digest_sha256 + idx]
+        pshufb  xmm0, bswap_xmm4
+        movdqu  [p], xmm0
 
-	;; calculate remaining bytes to copy
-	mov 	tmp2, qword [job_rax + _auth_tag_output_len_in_bytes]
-	sub 	tmp2, 16
+        ;; calculate remaining bytes to copy
+        mov     tmp2, qword [job_rax + _auth_tag_output_len_in_bytes]
+        sub     tmp2, 16
 
-	;; copy remaining bytes
-	movdqu	xmm1, [state + _args_digest_sha256 + idx + 16]
-	pshufb	xmm1, bswap_xmm4
-	simd_store_sse {p + 4*4}, xmm1, tmp2, tmp4, tmp5
+        ;; copy remaining bytes
+        movdqu  xmm1, [state + _args_digest_sha256 + idx + 16]
+        pshufb  xmm1, bswap_xmm4
+        simd_store_sse {p + 4*4}, xmm1, tmp2, tmp4, tmp5
 
 align_label
 clear_ret:
@@ -302,8 +302,8 @@ clear_ret:
         ;; Clear extra_block (64B) of returned job and NULL jobs
 %assign I 0
 %rep 2
-	cmp	qword [state + _ldata_sha256 + (I*_HMAC_SHA1_LANE_DATA_size) + _job_in_lane], 0
-	jne	APPEND(skip_clear_,I)
+        cmp     qword [state + _ldata_sha256 + (I*_HMAC_SHA1_LANE_DATA_size) + _job_in_lane], 0
+        jne     APPEND(skip_clear_,I)
 
         lea     lane_data, [state + _ldata_sha256 + (I*_HMAC_SHA1_LANE_DATA_size)]
         ;; Clear first 64 bytes of extra_block
@@ -323,13 +323,13 @@ align_label
 return:
         DBGPRINTL "exit sha256-ni-sse flush"
 
-	mov	rbx, [rsp + _gpr_save + 8*0]
-	mov	rbp, [rsp + _gpr_save + 8*1]
+        mov     rbx, [rsp + _gpr_save + 8*0]
+        mov     rbp, [rsp + _gpr_save + 8*1]
 %ifndef LINUX
-	mov	rsi, [rsp + _gpr_save + 8*2]
-	mov	rdi, [rsp + _gpr_save + 8*3]
+        mov     rsi, [rsp + _gpr_save + 8*2]
+        mov     rdi, [rsp + _gpr_save + 8*3]
 %endif
-	mov	rsp, [rsp + _rsp_save]	; original SP
-	ret
+        mov     rsp, [rsp + _rsp_save]  ; original SP
+        ret
 
 mksection stack-noexec
