@@ -33,7 +33,7 @@ project(imb-provider)
 set(PROV_COMMON_SRC e_prov.c prov_evp.c)
 set(PROV_SRC prov_init.c prov_ciphers.c prov_bio.c)
 set(PROV_SW_IPSEC_SRC prov_sw_gcm.c prov_sha.c prov_sw_sha.c prov_sw_ipsec_inf.c)
-set(PROV_SW_ASYNC prov_sw_submit.c prov_sw_freelist.c prov_sw_polling.c prov_sw_queue.c prov_sw_init.c prov_events.c prov_sw_hmac_sha.c prov_hmac_sha.c prov_sw_aes_cfb.c prov_aes_cfb.c prov_aes_ccm.c prov_sw_ccm.c prov_sm4.c prov_chacha20_poly1305.c prov_sw_chacha20_poly1305.c prov_sw_chacha20.c prov_chacha20.c)
+set(PROV_SW_ASYNC prov_sw_submit.c prov_sw_freelist.c prov_sw_polling.c prov_sw_queue.c prov_sw_init.c prov_events.c prov_sw_hmac_sha.c prov_hmac_sha.c prov_sw_aes_cfb.c prov_aes_cfb.c prov_aes_ccm.c prov_sw_ccm.c prov_sm4.c prov_chacha20_poly1305.c prov_sw_chacha20_poly1305.c prov_sw_chacha20.c prov_chacha20.c prov_poly1305.c prov_sw_poly1305.c)
 set(IPSEC_SRC ${CMAKE_SOURCE_DIR}/../../lib/intel-ipsec-mb.h)
 include_directories(${CMAKE_SOURCE_DIR}/../../lib)
 

@@ -92,5 +92,10 @@ The `imb-provider` supports the following cryptographic algorithms:
 
     To test the OpenSSL speed, use ```-hmac sha512``` option.
 
+- **Authentication & MAC**:
+    - Poly1305
+
+    To test the OpenSSL speed, use ```-evp poly1305``` option.
+
 These algorithms are optimized for performance using the IPSecMB library.
-## 
+##
