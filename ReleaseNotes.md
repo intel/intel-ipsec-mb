@@ -38,6 +38,9 @@ Performance Applications
 - Added SHA3/SHAKE support to imb-perf application.
 - Added "--skip" option to imb-perf-tool.py to skip specific algorithms.
 
+Tools
+- Added asm-format.py tool that formats assembly source files.
+
 Fixes
 - Fixed SM4-GCM plaintext/ciphertext address calculation (issue #159).
 - Fixed destination pointer calculation for SNOW3G and KASUMI, in JOB API, which should
