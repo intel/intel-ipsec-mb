@@ -1366,7 +1366,14 @@ init_offsets(const enum cache_type_e ctype)
         } else { /* WARM */
                 uint32_t i;
 
-                index_limit = 16;
+                /*
+                 * In SSC mode use one buffer only to avoid cache misses.
+                 * Otherwise use 16 buffers for warm cache scenario.
+                 */
+                if (use_ssc)
+                        index_limit = 1;
+                else
+                        index_limit = 16;
 
                 for (i = 0; i < index_limit; i++) {
                         /*
