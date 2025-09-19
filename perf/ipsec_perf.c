@@ -36,6 +36,7 @@
 #ifdef LINUX
 #include <signal.h>
 #include <sys/time.h>
+#include <limits.h>
 #endif
 #ifdef __clang_analyzer__
 #include <assert.h>
@@ -1080,10 +1081,17 @@ set_affinity(const int cpu)
         memset(&NewGroupAffinity, 0, sizeof(GROUP_AFFINITY));
         num_cpus = GetActiveProcessorCount(ALL_PROCESSOR_GROUPS);
 #else
-        num_cpus = sysconf(_SC_NPROCESSORS_CONF);
+        const long sc_ret = sysconf(_SC_NPROCESSORS_CONF);
+
+        if (sc_ret < 0 || sc_ret > UINT_MAX) {
+                fprintf(stderr, "sysconf(_SC_NPROCESSORS_CONF) error!\n");
+                return 1;
+        }
+
+        num_cpus = (unsigned) sc_ret;
 #endif
         if (num_cpus == 0) {
-                fprintf(stderr, "Zero processors in the system!");
+                fprintf(stderr, "Zero processors in the system!\n");
                 return 1;
         }
 
