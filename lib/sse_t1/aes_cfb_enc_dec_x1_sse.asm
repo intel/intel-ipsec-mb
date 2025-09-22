@@ -228,54 +228,39 @@ align_label
 
 %%seven_block_processing:
         SSE_AES_CFB_DEC_PARALLEL 7, %%NROUNDS
-        or      NLOOPS, NLOOPS
-        je      %%post_processing
-        movdqa  XDATA0, XIN
-        jmp     %%main_loop
+        jmp     %%check_remaining_blocks
 
 align_label
 %%six_block_processing:
         SSE_AES_CFB_DEC_PARALLEL 6, %%NROUNDS
-        or      NLOOPS, NLOOPS
-        je      %%post_processing
-        movdqa  XDATA0, XIN
-        jmp     %%main_loop
+        jmp     %%check_remaining_blocks
 
 align_label
 %%five_block_processing:
         SSE_AES_CFB_DEC_PARALLEL 5, %%NROUNDS
-        or      NLOOPS, NLOOPS
-        je      %%post_processing
-        movdqa  XDATA0, XIN
-        jmp     %%main_loop
+        jmp     %%check_remaining_blocks
 
 align_label
 %%four_block_processing:
         SSE_AES_CFB_DEC_PARALLEL 4, %%NROUNDS
-        or      NLOOPS, NLOOPS
-        je      %%post_processing
-        movdqa  XDATA0, XIN
-        jmp     %%main_loop
+        jmp     %%check_remaining_blocks
 
 align_label
 %%three_block_processing:
         SSE_AES_CFB_DEC_PARALLEL 3, %%NROUNDS
-        or      NLOOPS, NLOOPS
-        je      %%post_processing
-        movdqa  XDATA0, XIN
-        jmp     %%main_loop
+        jmp     %%check_remaining_blocks
 
 align_label
 %%two_block_processing:
         SSE_AES_CFB_DEC_PARALLEL 2, %%NROUNDS
-        or      NLOOPS, NLOOPS
-        je      %%post_processing
-        movdqa  XDATA0, XIN
-        jmp     %%main_loop
+        jmp     %%check_remaining_blocks
 
 align_label
 %%one_block_processing:
         SSE_AES_CFB_DEC_PARALLEL 1, %%NROUNDS
+
+align_label
+%%check_remaining_blocks:
         or      NLOOPS, NLOOPS
         je      %%post_processing
         movdqa  XDATA0, XIN
