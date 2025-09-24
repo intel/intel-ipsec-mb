@@ -371,7 +371,7 @@ ACVP test application located in `test` directory is to support CAVP process. It
 - AES-CBC  
 - AES-EBC
 - AES-CFB
-- TDES-EDE-CBC  
+- TDES-CBC  
 - AES-CTR  
 - AES-CMAC  
 - SHA1 (SHA-1)  
@@ -420,18 +420,18 @@ Note: the acvp-app requires libacvp 2.0+ to be built.
 | AES-CFB128          | SP800-38A | Key size: 128, 192, 256                                  |
 |                     |           | Direction: encrypt and decrypt                           |
 |---------------------+-----------+----------------------------------------------------------|
-| TDES-EDE-CBC        | SP800-38A | Key size: 192                                            |
-|                     |           | Direction: encrypt and decrypt                           |
+| TDES-CBC            | SP800-38A | Direction: encrypt and decrypt                           |
+|                     |           | keyingOption: 1                                          |
 |---------------------+-----------+----------------------------------------------------------|
-| SHA1 (SHA-1)        | FIPS180-4 | messageLength: [min = 0, max = 65528, increment = 8]     |
+| SHA1 (SHA-1)        | FIPS180-4 | messageLength: [min = 0, max = 65536, increment = 8]     |
 |---------------------+-----------+----------------------------------------------------------|
-| SHA224 (SHA2-224)   | FIPS180-4 | messageLength: [min = 0, max = 65528, increment = 8]     |
+| SHA224 (SHA2-224)   | FIPS180-4 | messageLength: [min = 0, max = 65536, increment = 8]     |
 |---------------------+-----------+----------------------------------------------------------|
-| SHA256 (SHA2-256)   | FIPS180-4 | messageLength: [min = 0, max = 65528, increment = 8]     |
+| SHA256 (SHA2-256)   | FIPS180-4 | messageLength: [min = 0, max = 65536, increment = 8]     |
 |---------------------+-----------+----------------------------------------------------------|
-| SHA384 (SHA2-384)   | FIPS180-4 | messageLength: [min = 0, max = 65528, increment = 8]     |
+| SHA384 (SHA2-384)   | FIPS180-4 | messageLength: [min = 0, max = 65536, increment = 8]     |
 |---------------------+-----------+----------------------------------------------------------|
-| SHA512 (SHA2-512)   | FIPS180-4 | messageLength: [min = 0, max = 65528, increment = 8]     |
+| SHA512 (SHA2-512)   | FIPS180-4 | messageLength: [min = 0, max = 65536, increment = 8]     |
 |---------------------+-----------+----------------------------------------------------------|
 | AES-CCM             | SP800-38C | Key size: 128, 256                                       |
 |                     |           | Direction: encrypt and decrypt                           |
@@ -446,7 +446,7 @@ Note: the acvp-app requires libacvp 2.0+ to be built.
 |                     |           | aadLen: [min = 0, max = 65536, increment = 8]            |
 |---------------------+-----------+----------------------------------------------------------|
 | AES-CMAC            | SP800-38B | Key size: 128, 256                                       |
-|                     |           | msgLen: [min = 8, max = 65528, increment 8]              |
+|                     |           | msgLen: [min = 8, max = 524272, increment 8]             |
 |                     |           | macLen: [min = 8, max = 128, increment = 8]              |
 |---------------------+-----------+----------------------------------------------------------|
 | HMAC-SHA1           | FIPS198-1 | keyLen: [min = 8, max = 524288, increment = 8]           |
@@ -505,7 +505,7 @@ The self-test consists of Cryptographic algorithm test (known answer test) on fo
   - AES-CTR  
   - AES-ECB  
   - AES-CFB
-  - TDES-EDE-CBC  
+  - TDES-CBC  
 - KAT_Auth:
   - AES-GMAC  
   - AES-CMAC  
