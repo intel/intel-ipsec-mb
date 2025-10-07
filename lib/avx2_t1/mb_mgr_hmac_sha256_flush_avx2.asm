@@ -270,14 +270,10 @@ end_loop:
         jne     copy_full_digest
 %endif
         ;; copy SHA224 14bytes / SHA256 16bytes
-        mov     DWORD(tmp),  [state + _args_digest_sha256 + 4*idx + 0*SHA256_DIGEST_ROW_SIZE]
-        mov     DWORD(tmp2), [state + _args_digest_sha256 + 4*idx + 1*SHA256_DIGEST_ROW_SIZE]
-        mov     DWORD(tmp4), [state + _args_digest_sha256 + 4*idx + 2*SHA256_DIGEST_ROW_SIZE]
-        mov     DWORD(tmp5), [state + _args_digest_sha256 + 4*idx + 3*SHA256_DIGEST_ROW_SIZE]
-        bswap   DWORD(tmp)
-        bswap   DWORD(tmp2)
-        bswap   DWORD(tmp4)
-        bswap   DWORD(tmp5)
+        movbe   DWORD(tmp),  [state + _args_digest_sha256 + 4*idx + 0*SHA256_DIGEST_ROW_SIZE]
+        movbe   DWORD(tmp2), [state + _args_digest_sha256 + 4*idx + 1*SHA256_DIGEST_ROW_SIZE]
+        movbe   DWORD(tmp4), [state + _args_digest_sha256 + 4*idx + 2*SHA256_DIGEST_ROW_SIZE]
+        movbe   DWORD(tmp5), [state + _args_digest_sha256 + 4*idx + 3*SHA256_DIGEST_ROW_SIZE]
         mov     [p + 0*4], DWORD(tmp)
         mov     [p + 1*4], DWORD(tmp2)
         mov     [p + 2*4], DWORD(tmp4)
