@@ -251,8 +251,7 @@ proc_outer:
         vpinsrd xmm0, xmm0, [state + _args_digest + SHA1_DIGEST_WORD_SIZE*idx + 2*SHA1_DIGEST_ROW_SIZE], 2
         vpinsrd xmm0, xmm0, [state + _args_digest + SHA1_DIGEST_WORD_SIZE*idx + 3*SHA1_DIGEST_ROW_SIZE], 3
         vpshufb xmm0, xmm0, [rel byteswap]
-        mov     DWORD(tmp),  [state + _args_digest + SHA1_DIGEST_WORD_SIZE*idx + 4*SHA1_DIGEST_ROW_SIZE]
-        bswap   DWORD(tmp)
+        movbe   DWORD(tmp),  [state + _args_digest + SHA1_DIGEST_WORD_SIZE*idx + 4*SHA1_DIGEST_ROW_SIZE]
         vmovdqa [lane_data + _outer_block], xmm0
         mov     [lane_data + _outer_block + 4*SHA1_DIGEST_WORD_SIZE], DWORD(tmp)
 
@@ -311,12 +310,9 @@ end_loop:
         jne     copy_tag
 
         ; copy 12 bytes
-        mov     DWORD(tmp),  [state + _args_digest + SHA1_DIGEST_WORD_SIZE*idx + 0*SHA1_DIGEST_ROW_SIZE]
-        mov     DWORD(tmp2), [state + _args_digest + SHA1_DIGEST_WORD_SIZE*idx + 1*SHA1_DIGEST_ROW_SIZE]
-        mov     DWORD(tmp3), [state + _args_digest + SHA1_DIGEST_WORD_SIZE*idx + 2*SHA1_DIGEST_ROW_SIZE]
-        bswap   DWORD(tmp)
-        bswap   DWORD(tmp2)
-        bswap   DWORD(tmp3)
+        movbe   DWORD(tmp),  [state + _args_digest + SHA1_DIGEST_WORD_SIZE*idx + 0*SHA1_DIGEST_ROW_SIZE]
+        movbe   DWORD(tmp2), [state + _args_digest + SHA1_DIGEST_WORD_SIZE*idx + 1*SHA1_DIGEST_ROW_SIZE]
+        movbe   DWORD(tmp3), [state + _args_digest + SHA1_DIGEST_WORD_SIZE*idx + 2*SHA1_DIGEST_ROW_SIZE]
         mov     [p + 0*SHA1_DIGEST_WORD_SIZE], DWORD(tmp)
         mov     [p + 1*SHA1_DIGEST_WORD_SIZE], DWORD(tmp2)
         mov     [p + 2*SHA1_DIGEST_WORD_SIZE], DWORD(tmp3)
@@ -325,8 +321,7 @@ end_loop:
 align_label
 copy_tag:
         ;; always copy 4 bytes
-        mov     DWORD(tmp2), [state + _args_digest + idx*4 + 0*SHA1_DIGEST_ROW_SIZE]
-        bswap   DWORD(tmp2)
+        movbe   DWORD(tmp2), [state + _args_digest + idx*4 + 0*SHA1_DIGEST_ROW_SIZE]
         mov     [p + 0*SHA1_DIGEST_WORD_SIZE], DWORD(tmp2)
         cmp     qword [job_rax + _auth_tag_output_len_in_bytes], 4
         je      clear_ret
