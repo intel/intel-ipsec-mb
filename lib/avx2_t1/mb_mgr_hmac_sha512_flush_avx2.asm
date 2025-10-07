@@ -246,17 +246,11 @@ end_loop:
 %endif
 
         ;; copy 32 bytes for SHA512 / 24 bytes for SHA384
-        mov     QWORD(tmp2), [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 0*SHA512_DIGEST_ROW_SIZE]
-        mov     QWORD(tmp4), [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 1*SHA512_DIGEST_ROW_SIZE]
-        mov     QWORD(tmp6), [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 2*SHA512_DIGEST_ROW_SIZE]
+        movbe   QWORD(tmp2), [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 0*SHA512_DIGEST_ROW_SIZE]
+        movbe   QWORD(tmp4), [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 1*SHA512_DIGEST_ROW_SIZE]
+        movbe   QWORD(tmp6), [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 2*SHA512_DIGEST_ROW_SIZE]
 %if (SHA_X_DIGEST_SIZE != 384)
-        mov     QWORD(tmp5), [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 3*SHA512_DIGEST_ROW_SIZE]
-%endif
-        bswap   QWORD(tmp2)
-        bswap   QWORD(tmp4)
-        bswap   QWORD(tmp6)
-%if (SHA_X_DIGEST_SIZE != 384)
-        bswap   QWORD(tmp5)
+        movbe   QWORD(tmp5), [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 3*SHA512_DIGEST_ROW_SIZE]
 %endif
         mov     [p + 0*8], QWORD(tmp2)
         mov     [p + 1*8], QWORD(tmp4)

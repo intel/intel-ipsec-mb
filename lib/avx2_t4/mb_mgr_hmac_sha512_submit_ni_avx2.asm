@@ -321,8 +321,7 @@ end_loop:
 %else
         vmovdqu xmm0, [state + _args_digest_sha512 + idx]
         vpshufb xmm0, [rel byteswap]
-        mov     QWORD(tmp2), [state + _args_digest_sha512 + idx + 16]
-        bswap   QWORD(tmp2)
+        movbe   QWORD(tmp2), [state + _args_digest_sha512 + idx + 16]
         vmovdqu [p], xmm0
         mov     [p + 16], QWORD(tmp2)
 %endif
