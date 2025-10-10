@@ -700,7 +700,7 @@ clear_data(struct data *data)
  * Generate fill patterns
  * - make sure each patterns are different
  * - do not return zero pattern
- * - make sure it takes as long as possible before pattern is re-used again
+ * - make sure it takes as long as possible before pattern is reused again
  */
 static int
 get_pattern_seed(void)

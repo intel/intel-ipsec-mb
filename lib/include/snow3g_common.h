@@ -1558,7 +1558,7 @@ snow3g_keystream_8_4(snow3gKeyState8_t *pCtx)
 }
 
 /*
- * @brief 8x8 uint32_t matrix tranpose.
+ * @brief 8x8 uint32_t matrix transpose.
  *
  * @param[in/clobbered] in      Array of rows to transpose
  * @param[out]          out     Array of transposed columns

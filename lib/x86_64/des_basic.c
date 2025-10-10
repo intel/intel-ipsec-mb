@@ -69,7 +69,7 @@ fp_z(uint32_t *pl, uint32_t *pr)
 }
 
 /* 1st part of DES round
- * - permutes and exands R(32 bits) into 48 bits
+ * - permutes and expands R(32 bits) into 48 bits
  */
 __forceinline uint64_t
 e_phase(const uint64_t R)

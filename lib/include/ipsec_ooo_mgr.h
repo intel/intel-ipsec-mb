@@ -245,7 +245,7 @@ typedef struct {
 
 /* AES-CCM out-of-order scheduler structure */
 typedef struct {
-        AES_ARGS args; /* need to re-use AES arguments */
+        AES_ARGS args; /* need to reuse AES arguments */
         DECLARE_ALIGNED(uint16_t lens[16], 32);
         DECLARE_ALIGNED(uint16_t init_done[16], 32);
         /* each byte is index (0...3) of unused lanes
@@ -261,7 +261,7 @@ typedef struct {
 
 /* AES-CMAC out-of-order scheduler structure */
 typedef struct {
-        AES_ARGS args; /* need to re-use AES arguments */
+        AES_ARGS args; /* need to reuse AES arguments */
         DECLARE_ALIGNED(uint16_t lens[16], 32);
         DECLARE_ALIGNED(uint16_t init_done[16], 32);
         /* each byte is index (0...3) of unused lanes

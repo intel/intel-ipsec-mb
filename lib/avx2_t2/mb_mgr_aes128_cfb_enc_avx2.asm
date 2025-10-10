@@ -159,7 +159,7 @@ endstruc
         mov             rsp, [rsp + _rsp_save]  ; original SP
 %endmacro
 
-;; this macro uses ymm regisers YMM_TMP_ 0:7
+;; this macro uses ymm registers YMM_TMP_ 0:7
 %macro INSERT_KEYS 3
 %define %%DST           %1 ; [clobbered] GP reg
 %define %%SRC           %2 ; [clobbered] GP reg

@@ -782,7 +782,7 @@ validate_snow3g_f8_2_blocks(struct IMB_MGR *mb_mgr, uint32_t job_api,
                                                pSrcBuff[0], packetLen[0], pSrcBuff[1], pSrcBuff[1],
                                                packetLen[1]);
 
-                /*compare the ciphertext with the encryped plaintext*/
+                /*compare the ciphertext with the encrypted plaintext*/
                 for (i = 0; i < numPackets; i++) {
                         if (memcmp(pSrcBuff[i], testVectors[j].ct, packetLen[i]) != 0) {
                                 printf("IMB_SNOW3G_F8_2_BUFFER(Enc) vector:%zu "
@@ -832,7 +832,7 @@ validate_snow3g_f8_2_blocks(struct IMB_MGR *mb_mgr, uint32_t job_api,
                                                pDstBuff[0], packetLen[0], pSrcBuff[1], pDstBuff[1],
                                                packetLen[1]);
 
-                /*compare the ciphertext with the encryped plaintext*/
+                /*compare the ciphertext with the encrypted plaintext*/
                 for (i = 0; i < numPackets; i++) {
                         if (memcmp(pDstBuff[i], testVectors[j].ct, packetLen[i]) != 0) {
                                 printf("IMB_SNOW3G_F8_2_BUFFER(Enc) vector:%zu "
@@ -1024,7 +1024,7 @@ validate_snow3g_f8_4_blocks(struct IMB_MGR *mb_mgr, uint32_t job_api,
                                                packetLen[2], pSrcBuff[3], pSrcBuff[3],
                                                packetLen[3]);
 
-                /* compare the ciphertext with the encryped plaintext*/
+                /* compare the ciphertext with the encrypted plaintext*/
                 for (i = 0; i < numPackets; i++) {
                         if (memcmp(pSrcBuff[i], testVectors[j].ct, packetLen[i]) != 0) {
                                 printf("IMB_SNOW3G_F8_4_BUFFER(Enc) vector:%zu "
@@ -1077,7 +1077,7 @@ validate_snow3g_f8_4_blocks(struct IMB_MGR *mb_mgr, uint32_t job_api,
                                                packetLen[2], pSrcBuff[3], pDstBuff[3],
                                                packetLen[3]);
 
-                /*compare the ciphertext with the encryped plaintext*/
+                /*compare the ciphertext with the encrypted plaintext*/
                 for (i = 0; i < numPackets; i++) {
                         if (memcmp(pDstBuff[i], testVectors[j].ct, packetLen[i]) != 0) {
                                 printf("IMB_SNOW3G_F8_4_BUFFER(Enc) vector:%zu "
@@ -1208,7 +1208,7 @@ validate_snow3g_f8_4_blocks(struct IMB_MGR *mb_mgr, uint32_t job_api,
                                        pDstBuff[1], packetLen[1], pSrcBuff[2], pDstBuff[2],
                                        packetLen[2], pSrcBuff[3], pDstBuff[3], packetLen[3]);
 
-        /*compare the ciphertext with the encryped plaintext*/
+        /*compare the ciphertext with the encrypted plaintext*/
         for (i = 0; i < numPackets; i++) {
                 if (memcmp(pDstBuff[i], (const uint8_t *) testVectors[1].ct, packetLen[i]) != 0) {
                         printf("IMB_SNOW3G_F8_4_BUFFER(Enc, diff size) "
@@ -1351,7 +1351,7 @@ validate_snow3g_f8_8_blocks(struct IMB_MGR *mb_mgr, uint32_t job_api,
                                                packetLen[5], pSrcBuff[6], pDstBuff[6], packetLen[6],
                                                pSrcBuff[7], pDstBuff[7], packetLen[7]);
 
-                /*compare the ciphertext with the encryped plaintext*/
+                /*compare the ciphertext with the encrypted plaintext*/
                 for (i = 0; i < numPackets; i++) {
                         if (memcmp(pDstBuff[i], testVectors[j].ct, packetLen[i]) != 0) {
                                 printf("IMB_SNOW3G_F8_8_BUFFER(Enc) vector:%zu "
@@ -1481,7 +1481,7 @@ validate_snow3g_f8_8_blocks(struct IMB_MGR *mb_mgr, uint32_t job_api,
                         packetLen[4], pSrcBuff[5], pDstBuff[5], packetLen[5], pSrcBuff[6],
                         pDstBuff[6], packetLen[6], pSrcBuff[7], pDstBuff[7], packetLen[7]);
 
-        /*compare the ciphertext with the encryped plaintext*/
+        /*compare the ciphertext with the encrypted plaintext*/
         for (i = 0; i < numPackets; i++) {
                 if (memcmp(pDstBuff[i], testVectors[1].ct, packetLen[i]) != 0) {
                         printf("IMB_SNOW3G_F8_8_BUFFER(Enc, diff size) "

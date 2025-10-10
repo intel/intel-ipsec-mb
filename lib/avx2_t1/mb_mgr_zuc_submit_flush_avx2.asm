@@ -137,7 +137,7 @@ mksection .text
         ; Load mask for lanes 4-7
         and     %%LANE_MASK, 0xf0
         lea     %%TMP2, [rel bitmask_to_dword_tab]
-        add     %%TMP2, %%LANE_MASK ; lane_mask already multipied by 16 to move through the table
+        add     %%TMP2, %%LANE_MASK ; lane_mask already multiplied by 16 to move through the table
         vmovdqa xmm1, [%%TMP2]
 
         ;; Clear state for lanes
@@ -292,7 +292,7 @@ mksection .text
         ; Load mask for lanes 4-7
         and     tmp, 0xf0
         lea     tmp3, [rel bitmask_to_dword_tab]
-        add     tmp3, tmp ; tmp already multipied by 16 to move through the table
+        add     tmp3, tmp ; tmp already multiplied by 16 to move through the table
         vmovdqa xmm5, [tmp3]
 
         ;; Restore state from stack for lanes that did not need init

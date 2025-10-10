@@ -545,7 +545,7 @@ align_loop
 %if %%swap_zmms != 0
         ;; register names are swapped
         ;; - meaning there is function generated for the same pair of zmm's but they are swapped (R with L)
-        ;; - the idea is to re-use existing function and swap register values before the call (3DES/TDES use case)
+        ;; - the idea is to reuse existing function and swap register values before the call (3DES/TDES use case)
 %define %%NEW_R %%L
 %define %%NEW_L %%R
         vmovdqa64       %5, %%R

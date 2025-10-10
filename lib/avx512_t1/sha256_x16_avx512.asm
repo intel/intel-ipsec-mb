@@ -45,7 +45,7 @@
 %include "include/reg_sizes.inc"
 %include "include/clear_regs.inc"
 %include "include/align_avx512.inc"
-; re-use K256 from sha256_oct_avx2.asm
+; reuse K256 from sha256_oct_avx2.asm
 extern K256
 
 ;; code to compute x16 SHA256 using AVX512

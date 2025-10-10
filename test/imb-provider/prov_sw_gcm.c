@@ -161,7 +161,7 @@ vaesgcm_ciphers_init(void *ctx, const unsigned char *inkey, const unsigned char 
 
         qctx->tls_aad_len = -1;
 
-        /* If we got a key passed in, inialize the key schedule */
+        /* If we got a key passed in, initialize the key schedule */
         if (inkey)
                 retval = vaesgcm_init_key(ctx, inkey);
 

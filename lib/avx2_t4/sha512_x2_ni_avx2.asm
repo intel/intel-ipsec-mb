@@ -222,7 +222,7 @@ endstruc
                 vsha512msg2     %%_Y4, %%_Y3
 %endmacro
 
-;; re-use symbols from AVX codebase
+;; reuse symbols from AVX codebase
 extern SHA512_K_AVX
 
 mksection .rodata

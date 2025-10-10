@@ -149,7 +149,7 @@ vavx2_ctr_ddq_add_be_16_16:
                 DQ 0x0000000000000000, 0x1000000000000000
                 DQ 0x0000000000000000, 0x1000000000000000
 %else
-;; constants already declared - re-use them inseatd of copying
+;; constants already declared - reuse them inseatd of copying
 extern vavx2_byteswap_const2
 extern vavx2_ctr_ddq_add_1_0
 extern vavx2_ctr_ddq_add_1

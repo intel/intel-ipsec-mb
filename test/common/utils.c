@@ -90,7 +90,7 @@ memory_set(void *dst, const int val, size_t length)
  * @param start_ptr can be
  *          - pointer to data being dumped then first column of the dump will
  *            display addresses
- *          - NULL pointer then first column witll display indexes
+ *          - NULL pointer then first column will display indexes
  */
 void
 hexdump_ex(FILE *fp, const char *msg, const void *p, size_t len, const void *start_ptr)
