@@ -206,6 +206,9 @@ mksection .text
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; AES CFB dec entry point
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        or      LEN, LEN
+        je      %%_done
+
         xor     IDX, IDX
         mov     NBLOCKS, LEN
         shr     NBLOCKS, 4
@@ -314,6 +317,9 @@ align_label
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; AES CFB enc entry point
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        or      LEN, LEN
+        je      %%_done
+
         mov     IDX, 16
         movdqu  XDATA0, [IV]     ; IV, used for 1st block only
 align_loop
