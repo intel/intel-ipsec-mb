@@ -923,6 +923,7 @@ typedef int (*imb_self_test_cb_t)(void *cb_arg, const IMB_SELF_TEST_CALLBACK_DAT
 #define IMB_FEATURE_AVX10_256      (1ULL << 29)
 #define IMB_FEATURE_AVX10_512      (1ULL << 30)
 #define IMB_FEATURE_AVX10_2        (1ULL << 31)
+#define IMB_FEATURE_MOVBE          (1ULL << 32)
 
 /**
  * Self test defines
@@ -945,7 +946,7 @@ typedef int (*imb_self_test_cb_t)(void *cb_arg, const IMB_SELF_TEST_CALLBACK_DAT
 #define IMB_CPUFLAGS_SSE_T3   (IMB_CPUFLAGS_SSE_T2 | IMB_FEATURE_GFNI)
 #define IMB_CPUFLAGS_AVX2                                                                          \
         (IMB_CPUFLAGS_SSE | IMB_FEATURE_AVX | IMB_FEATURE_XSAVE | IMB_FEATURE_OSXSAVE |            \
-         IMB_FEATURE_AVX2 | IMB_FEATURE_BMI2)
+         IMB_FEATURE_AVX2 | IMB_FEATURE_BMI2 | IMB_FEATURE_MOVBE)
 #define IMB_CPUFLAGS_AVX512 (IMB_CPUFLAGS_AVX2 | IMB_FEATURE_AVX512_SKX)
 #define IMB_CPUFLAGS_AVX512_T2                                                                     \
         (IMB_CPUFLAGS_AVX512 | IMB_FEATURE_VAES | IMB_FEATURE_VPCLMULQDQ | IMB_FEATURE_GFNI |      \

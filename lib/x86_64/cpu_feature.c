@@ -74,6 +74,13 @@ detect_pclmulqdq(void)
 }
 
 static uint32_t
+detect_movbe(void)
+{
+        /* Check presence of MOVBE - bit 22 of ECX */
+        return (cpuid_1_0.ecx & (1UL << 22));
+}
+
+static uint32_t
 detect_cmov(void)
 {
         /* Check presence of CMOV - bit 15 of EDX */
@@ -288,6 +295,7 @@ cpu_feature_detect(void)
         } feat_tab[] = { { 7, IMB_FEATURE_SHANI, detect_shani },
                          { 1, IMB_FEATURE_AESNI, detect_aesni },
                          { 1, IMB_FEATURE_PCLMULQDQ, detect_pclmulqdq },
+                         { 1, IMB_FEATURE_MOVBE, detect_movbe },
                          { 1, IMB_FEATURE_CMOV, detect_cmov },
                          { 1, IMB_FEATURE_SSE4_2, detect_sse42 },
                          { 1, IMB_FEATURE_AVX, detect_avx },
