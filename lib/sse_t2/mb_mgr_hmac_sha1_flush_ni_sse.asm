@@ -186,7 +186,8 @@ proc_outer:
         lea     p2, [idx + idx*4]
         movdqu  xmm0, [state + _args_digest + p2*4]
         pshufb  xmm0, [rel byteswap]
-        movbe   DWORD(tmp),  [state + _args_digest + p2*4 + 4*SHA1_DIGEST_WORD_SIZE]
+        mov     DWORD(tmp),  [state + _args_digest + p2*4 + 4*SHA1_DIGEST_WORD_SIZE]
+        bswap   DWORD(tmp)
         movdqa  [lane_data + _outer_block], xmm0
         mov     [lane_data + _outer_block + 4*SHA1_DIGEST_WORD_SIZE], DWORD(tmp)
         DBGPRINTL_XMM "sha1 outer hash input words[0-3]", xmm0
@@ -237,18 +238,22 @@ end_loop:
         jne     copy_tag
 
         ; copy 12 bytes
-        movbe   DWORD(tmp2), [state + _args_digest + idx*4 + 0*SHA1_DIGEST_WORD_SIZE]
-        movbe   DWORD(tmp4), [state + _args_digest + idx*4 + 1*SHA1_DIGEST_WORD_SIZE]
+        mov     DWORD(tmp2), [state + _args_digest + idx*4 + 0*SHA1_DIGEST_WORD_SIZE]
+        mov     DWORD(tmp4), [state + _args_digest + idx*4 + 1*SHA1_DIGEST_WORD_SIZE]
+        bswap   DWORD(tmp2)
+        bswap   DWORD(tmp4)
         mov     [p + 0*4], DWORD(tmp2)
         mov     [p + 1*4], DWORD(tmp4)
-        movbe   DWORD(tmp2), [state + _args_digest + idx*4 + 2*SHA1_DIGEST_WORD_SIZE]
+        mov     DWORD(tmp2), [state + _args_digest + idx*4 + 2*SHA1_DIGEST_WORD_SIZE]
+        bswap   DWORD(tmp2)
         mov     [p + 2*4], DWORD(tmp2)
         jmp     clear_ret
 
 align_label
 copy_tag:
         ;; always copy 4 bytes
-        movbe   DWORD(tmp2), [state + _args_digest + idx*4 + 0*SHA1_DIGEST_ROW_SIZE]
+        mov     DWORD(tmp2), [state + _args_digest + idx*4 + 0*SHA1_DIGEST_ROW_SIZE]
+        bswap   DWORD(tmp2)
         mov     [p + 0*SHA1_DIGEST_WORD_SIZE], DWORD(tmp2)
         cmp     qword [job_rax + _auth_tag_output_len_in_bytes], 4
         je      clear_ret
