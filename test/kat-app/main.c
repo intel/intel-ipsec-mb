@@ -250,6 +250,7 @@ print_hw_features(void)
                          { IMB_FEATURE_SHANI, "SHANI" },
                          { IMB_FEATURE_AESNI, "AESNI" },
                          { IMB_FEATURE_PCLMULQDQ, "PCLMULQDQ" },
+                         { IMB_FEATURE_MOVBE, "MOVBE" },
                          { IMB_FEATURE_CMOV, "CMOV" },
                          { IMB_FEATURE_SSE4_2, "SSE4.2" },
                          { IMB_FEATURE_AVX, "AVX" },
