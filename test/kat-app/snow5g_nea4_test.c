@@ -1,5 +1,5 @@
 /**********************************************************************
-  Copyright(c) 2024 Intel Corporation All rights reserved.
+  Copyright(c) 2024-2025 Intel Corporation All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
   modification, are permitted provided that the following conditions
@@ -27,148 +27,184 @@
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************/
 
-#include <stdlib.h>
-#include <stdio.h>
 #include <stdint.h>
-#include <string.h> /* for memcmp() */
-#include <assert.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <limits.h>
 
 #include <intel-ipsec-mb.h>
 #include "utils.h"
 #include "cipher_test.h"
 
+#define SNOW5G_KEY_SIZE 32
+#define SNOW5G_IV_SIZE  16
+#define BUFFER_PAD_SIZE 16
+#define PAD_PATTERN     0xa5
+
 extern const struct cipher_test snow5g_nea4_test_json[];
 
 int
-snow5g_nea4_test(IMB_MGR *p_mgr);
+snow5g_nea4_test(IMB_MGR *mgr);
 
-static uint32_t
-compare(const void *result, const void *expected, const size_t size)
+static int
+validate_job_result(const struct IMB_JOB *job, const uint8_t *expected, const uint8_t *buffer,
+                    const uint8_t *padding, const size_t len)
 {
-        if (memcmp(result, expected, size) != 0) {
-                hexdump(stderr, "expected", expected, size);
-                hexdump(stderr, "received", result, size);
-                return 1;
+        const int job_num = (const int) ((uintptr_t) job->user_data2);
+
+        if (job->status != IMB_STATUS_COMPLETED) {
+                printf("Job %d error: status=%d\n", job_num, job->status);
+                return 0;
         }
-        return 0;
-}
-
-/* check for buffer under/over-write */
-static uint32_t
-check_buffer_over_under_write(uint8_t *result, const int pad_pattern, const size_t pad_size,
-                              const size_t alloc_size)
-{
-        uint8_t *pad_block = malloc(pad_size);
-        uint8_t error = 0;
-
-        if (pad_block == NULL) {
-                fprintf(stderr, "Error allocating %lu bytes!\n", (unsigned long) pad_size);
-                exit(EXIT_FAILURE);
+        if (memcmp(expected, buffer + BUFFER_PAD_SIZE, len) != 0) {
+                printf("Job %d: output mismatch\n", job_num);
+                return 0;
         }
-
-        /* check for buffer under/over-write */
-        memset(pad_block, pad_pattern, pad_size);
-
-        if (memcmp(pad_block, result, pad_size) != 0) {
-                hexdump(stderr, "underwrite detected", result, pad_size);
-                error = 1;
+        if (memcmp(padding, buffer, BUFFER_PAD_SIZE) != 0 ||
+            memcmp(padding, buffer + BUFFER_PAD_SIZE + len, BUFFER_PAD_SIZE) != 0) {
+                printf("Job %d: buffer overflow detected\n", job_num);
+                return 0;
         }
-
-        if (memcmp(pad_block, &result[alloc_size - pad_size], pad_size) != 0) {
-                hexdump(stderr, "overwrite detected", &result[alloc_size - pad_size], pad_size);
-                error = 1;
-        }
-
-        free(pad_block);
-
-        return error;
+        return 1;
 }
 
 static void
-snow5g_single_test(IMB_MGR *p_mgr, struct test_suite_context *ts, const void *key, const void *iv,
-                   const void *plain, const size_t size, const void *expected)
+configure_job(struct IMB_JOB *job, const void *key, const void *iv, size_t len)
 {
-        const size_t pad_size = 16;
-        const size_t alloc_size = size + (2 * pad_size);
-        const int pad_pattern = 0xa5;
-        uint8_t *dst_ptr = NULL, *output = malloc(alloc_size);
-        uint32_t pass = 0, fail = 0;
-        struct IMB_JOB *job;
-
-        if (output == NULL) {
-                fprintf(stderr, "Error allocating %lu bytes!\n", (unsigned long) alloc_size);
-                exit(EXIT_FAILURE);
-        }
-
-        dst_ptr = &output[pad_size];
-
-        /* Prime padding blocks with a pattern */
-        memset(output, pad_pattern, pad_size);
-        memset(&output[alloc_size - pad_size], pad_pattern, pad_size);
-
-        job = IMB_GET_NEXT_JOB(p_mgr);
-
         job->cipher_direction = IMB_DIR_ENCRYPT;
         job->chain_order = IMB_ORDER_HASH_CIPHER;
         job->cipher_mode = IMB_CIPHER_SNOW5G_NEA4;
         job->hash_alg = IMB_AUTH_NULL;
-        job->key_len_in_bytes = 32;
-        job->iv_len_in_bytes = 16;
+        job->key_len_in_bytes = SNOW5G_KEY_SIZE;
+        job->iv_len_in_bytes = SNOW5G_IV_SIZE;
         job->cipher_start_src_offset_in_bytes = 0;
-
         job->enc_keys = key;
         job->iv = iv;
-        job->dst = dst_ptr;
-        job->src = plain;
-        job->msg_len_to_cipher_in_bytes = size;
+        job->msg_len_to_cipher_in_bytes = len;
+}
 
-        job = IMB_SUBMIT_JOB(p_mgr);
-        if (job == NULL) {
-                const int err = imb_get_errno(p_mgr);
+static int
+run_snow5g_jobs(IMB_MGR *mgr, const void *key, const void *iv, const void *input,
+                const void *expected, size_t len, const uint32_t num_jobs)
+{
+        struct IMB_JOB *job;
+        uint8_t padding[BUFFER_PAD_SIZE];
+        uint8_t **buffers;
+        uint32_t jobs_rx = 0;
 
-                if (err != 0)
-                        printf("Error: %s!\n", imb_get_strerror(err));
-                fail++;
-        } else {
-                int fail_found = 0;
-                /* check for vector match */
-                fail_found = compare(dst_ptr, expected, size);
-
-                fail_found +=
-                        check_buffer_over_under_write(output, pad_pattern, pad_size, alloc_size);
-
-                if (fail_found)
-                        fail++;
-                else
-                        pass++;
+        buffers = malloc(num_jobs * sizeof(void *));
+        if (buffers == NULL) {
+                fprintf(stderr, "Memory allocation failed\n");
+                return -1;
         }
 
-        test_suite_update(ts, pass, fail);
-        free(output);
+        /* Initialize all pointers to NULL for safe cleanup */
+        for (uint32_t i = 0; i < num_jobs; i++)
+                buffers[i] = NULL;
+
+        memset(padding, PAD_PATTERN, BUFFER_PAD_SIZE);
+
+        /* Allocate output buffers with padding */
+        for (uint32_t i = 0; i < num_jobs; i++) {
+                buffers[i] = malloc(len + (BUFFER_PAD_SIZE * 2));
+                if (buffers[i] == NULL)
+                        goto cleanup;
+                memset(buffers[i], PAD_PATTERN, len + (BUFFER_PAD_SIZE * 2));
+        }
+
+        /* Flush scheduler before submitting new jobs */
+        while (IMB_FLUSH_JOB(mgr) != NULL)
+                ;
+
+        /* Submit jobs */
+        for (uint32_t i = 0; i < num_jobs; i++) {
+                job = IMB_GET_NEXT_JOB(mgr);
+                job->src = input;
+                job->dst = buffers[i] + BUFFER_PAD_SIZE;
+                job->user_data = buffers[i];
+                job->user_data2 = (void *) ((uintptr_t) i);
+                configure_job(job, key, iv, len);
+
+                job = IMB_SUBMIT_JOB(mgr);
+                if (job != NULL) {
+                        jobs_rx++;
+                        if (!validate_job_result(job, expected, job->user_data, padding, len))
+                                goto cleanup;
+                } else if (imb_get_errno(mgr) != 0) {
+                        printf("Error: %s\n", imb_get_strerror(imb_get_errno(mgr)));
+                        goto cleanup;
+                }
+        }
+
+        /* Flush remaining jobs */
+        while ((job = IMB_FLUSH_JOB(mgr)) != NULL) {
+                if (imb_get_errno(mgr) != 0) {
+                        printf("Error: %s\n", imb_get_strerror(imb_get_errno(mgr)));
+                        goto cleanup;
+                }
+                jobs_rx++;
+                if (!validate_job_result(job, expected, job->user_data, padding, len))
+                        goto cleanup;
+        }
+
+        if (jobs_rx != num_jobs) {
+                printf("Expected %u jobs, received %u\n", num_jobs, jobs_rx);
+                goto cleanup;
+        }
+
+        /* Final flush to clear any remaining state */
+        while (IMB_FLUSH_JOB(mgr) != NULL)
+                ;
+
+        for (uint32_t i = 0; i < num_jobs; i++)
+                free(buffers[i]);
+        free(buffers);
+        return 0;
+
+cleanup:
+        /* Final flush to clear any remaining state */
+        while (IMB_FLUSH_JOB(mgr) != NULL)
+                ;
+
+        for (uint32_t i = 0; i < num_jobs; i++)
+                free(buffers[i]);
+        free(buffers);
+        return -1;
+}
+
+static void
+test_vectors(IMB_MGR *mgr, struct test_suite_context *ctx, const struct cipher_test *vectors,
+             const int num_jobs)
+{
+        for (; vectors->msg != NULL; vectors++) {
+                const size_t len = vectors->msgSize / CHAR_BIT;
+
+#ifdef DEBUG
+                if (!quiet_mode)
+                        printf("Vector %zu  KeySize:%zu IVSize:%zu MsgSize:%zu\n", vectors->tcId,
+                               vectors->keySize, vectors->ivSize, vectors->msgSize);
+#endif
+
+                if (run_snow5g_jobs(mgr, vectors->key, vectors->iv, vectors->msg, vectors->ct, len,
+                                    num_jobs)) {
+                        printf("Error #%zu encrypt, jobs: %i\n", vectors->tcId, num_jobs);
+                        test_suite_update(ctx, 0, 1);
+                } else {
+                        test_suite_update(ctx, 1, 0);
+                }
+        }
 }
 
 int
-snow5g_nea4_test(IMB_MGR *p_mgr)
+snow5g_nea4_test(IMB_MGR *mgr)
 {
-        struct test_suite_context ts_snow5g;
-        int errors = 0;
+        struct test_suite_context ctx;
 
-        /* flush the scheduler */
-        while (IMB_FLUSH_JOB(p_mgr) != NULL)
-                ;
+        test_suite_start(&ctx, "SNOW5G-NEA4");
 
-        /* Test SNOW5G */
-        printf("SNOW5G test vectors\n");
-        test_suite_start(&ts_snow5g, "SNOW5G");
-        for (const struct cipher_test *v = snow5g_nea4_test_json; v->msg != NULL; v++) {
-                assert(v->keySize == (32 * CHAR_BIT));
-                assert(v->ivSize == (16 * CHAR_BIT));
-                assert((v->msgSize % CHAR_BIT) == 0);
-                snow5g_single_test(p_mgr, &ts_snow5g, v->key, v->iv, v->msg, v->msgSize / CHAR_BIT,
-                                   v->ct);
-        }
+        for (uint32_t i = 0; i < test_num_jobs_size; i++)
+                test_vectors(mgr, &ctx, snow5g_nea4_test_json, test_num_jobs[i]);
 
-        errors += test_suite_end(&ts_snow5g);
-        return errors;
+        return test_suite_end(&ctx);
 }
