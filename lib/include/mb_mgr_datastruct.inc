@@ -272,6 +272,62 @@ _zuc_args_digest equ    _zuc_args + _zucarg_digest
 _zuc_args_KS     equ    _zuc_args + _zucarg_KS
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;; Define SNOW5G Out of Order Data Structures
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+START_FIELDS    ; SNOW5G_ARGS
+;;      name                    size    align
+FIELD   _snow5g_arg_in,          8*8,    64      ; array of 8 pointers to in text
+FIELD   _snow5g_arg_out,         8*8,    64      ; array of 8 pointers to out text
+FIELD   _snow5g_arg_keys,        8*8,    64      ; array of 8 pointers to keys
+FIELD   _snow5g_arg_IV,          8*16,   64      ; array of 8 x 128-bit IVs
+FIELD   _snow5g_arg_digest,      8*16,   64      ; array of 8 x 128-bit digests
+FIELD   _snow5g_arg_LFSRA_LO,    8*16,   64      ; 8*128-bit LFSR A lower registers
+FIELD   _snow5g_arg_LFSRA_HI,    8*16,   64      ; 8*128-bit LFSR A higher registers
+FIELD   _snow5g_arg_LFSRB_LO,    8*16,   64      ; 8*128-bit LFSR B lower registers
+FIELD   _snow5g_arg_LFSRB_HI,    8*16,   64      ; 8*128-bit LFSR B higher registers
+FIELD   _snow5g_arg_FSM_1,       8*16,   64      ; 8*128-bit FSM 1 registers
+FIELD   _snow5g_arg_FSM_2,       8*16,   64      ; 8*128-bit FSM 2 registers
+FIELD   _snow5g_arg_FSM_3,       8*16,   64      ; 8*128-bit FSM 3 registers
+FIELD   _snow5g_arg_T1,          8*16,   64      ; 8*128-bit T1 tap registers
+FIELD   _snow5g_arg_T2,          8*16,   64      ; 8*128-bit T2 tap registers
+FIELD   _snow5g_arg_INITIALIZED, 8*8,    64      ; array of 8 x 64-bit initialization flags
+FIELD   _snow5g_arg_LD_ST_MASK,  8*8,    64      ; array of 8 x 64-bit load/store byte masks
+FIELD   _snow5g_arg_byte_length, 8*8,    64      ; array of 8 x 64-bit original lengths (in bytes)
+END_FIELDS
+%assign _SNOW5G_ARGS_size       _FIELD_OFFSET
+%assign _SNOW5G_ARGS_align      _STRUCT_ALIGN
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+START_FIELDS    ; MB_MGR_SNOW5G_OOO
+;;      name                    size                    align
+FIELD   _snow5g_args,           _SNOW5G_ARGS_size,      _SNOW5G_ARGS_align
+FIELD   _snow5g_lens_dqw,       8*4,                    64      ; 8 x 32-bit vector (lengths in dqwords)
+FIELD   _snow5g_job_in_lane,    8*8,                    8       ; 8 x 64-bit job pointers
+FIELD   _snow5g_bits_fixup,     8*4,                    4       ; 8 x 32-bit bit fixup values
+FIELD   _snow5g_INIT_MASK,      8,                      8       ; 64-bit initialization mask
+FIELD   _snow5g_unused_lanes,   8,                      8       ; 64-bit unused lanes queue
+FIELD   _snow5g_lanes_in_use,   8,                      8       ; 64-bit number of lanes in use
+END_FIELDS
+%assign _MB_MGR_SNOW5G_OOO_size     _FIELD_OFFSET
+%assign _MB_MGR_SNOW5G_OOO_align    _STRUCT_ALIGN
+
+; SNOW5G aliases
+_snow5g_args_in         equ    _snow5g_args + _snow5g_arg_in
+_snow5g_args_out        equ    _snow5g_args + _snow5g_arg_out
+_snow5g_args_keys       equ    _snow5g_args + _snow5g_arg_keys
+_snow5g_args_LFSRA_LO   equ    _snow5g_args + _snow5g_arg_LFSRA_LO
+_snow5g_args_LFSRA_HI   equ    _snow5g_args + _snow5g_arg_LFSRA_HI
+_snow5g_args_LFSRB_LO   equ    _snow5g_args + _snow5g_arg_LFSRB_LO
+_snow5g_args_LFSRB_HI   equ    _snow5g_args + _snow5g_arg_LFSRB_HI
+_snow5g_args_FSM_1      equ    _snow5g_args + _snow5g_arg_FSM_1
+_snow5g_args_FSM_2      equ    _snow5g_args + _snow5g_arg_FSM_2
+_snow5g_args_FSM_3      equ    _snow5g_args + _snow5g_arg_FSM_3
+_snow5g_args_LD_ST_MASK equ    _snow5g_args + _snow5g_arg_LD_ST_MASK
+_snow5g_args_byte_length equ   _snow5g_args + _snow5g_arg_byte_length
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;; Define HMAC Out Of Order Data Structures
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
