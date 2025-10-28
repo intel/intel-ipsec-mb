@@ -291,6 +291,19 @@ SUBMIT_JOB_SM4_CTR(IMB_JOB *job)
         return job;
 }
 
+__forceinline IMB_JOB *
+SUBMIT_JOB_SNOW5G_NEA4(IMB_MGR *state, IMB_JOB *job)
+{
+#ifdef SUBMIT_JOB_SNOW5G_NEA4_X8
+        MB_MGR_SNOW5G_OOO *snow5g_ooo = state->snow5g_ooo;
+        return SUBMIT_JOB_SNOW5G_NEA4_X8(snow5g_ooo, job);
+#else
+        (void) state; /* suppress unused parameter warning */
+        SUBMIT_JOB_SNOW5G(job);
+        job->status |= IMB_STATUS_COMPLETED_CIPHER;
+        return job;
+#endif
+}
 /* ========================================================================= */
 /* AES-CFB DEC */
 /* ========================================================================= */
@@ -477,7 +490,7 @@ SUBMIT_JOB_CIPHER_ENC(IMB_MGR *state, IMB_JOB *job, const IMB_CIPHER_MODE cipher
         } else if (IMB_CIPHER_KASUMI_UEA1_BITLEN == cipher_mode) {
                 return submit_kasumi_uea1_job(state, job);
         } else if (IMB_CIPHER_SNOW5G_NEA4 == cipher_mode) {
-                return SUBMIT_JOB_SNOW5G(job);
+                return SUBMIT_JOB_SNOW5G_NEA4(state, job);
         } else if (IMB_CIPHER_SM4_ECB == cipher_mode) {
                 return SUBMIT_JOB_SM4_ECB_ENC(job);
         } else if (IMB_CIPHER_SM4_CBC == cipher_mode) {
@@ -581,6 +594,11 @@ FLUSH_JOB_CIPHER_ENC(IMB_MGR *state, IMB_JOB *job, const IMB_CIPHER_MODE cipher_
         } else if (IMB_CIPHER_ZUC_NCA6 == cipher_mode) {
                 MB_MGR_ZUC_OOO *zuc_nca6_ooo = state->zuc_nca6_ooo;
                 return FLUSH_JOB_ZUC_NCA6(zuc_nca6_ooo, IMB_DIR_ENCRYPT);
+#ifdef FLUSH_JOB_SNOW5G_NEA4_X8
+        } else if (IMB_CIPHER_SNOW5G_NEA4 == cipher_mode) {
+                MB_MGR_SNOW5G_OOO *snow5g_ooo = state->snow5g_ooo;
+                return FLUSH_JOB_SNOW5G_NEA4_X8(snow5g_ooo);
+#endif
 #ifdef FLUSH_JOB_SNOW3G_UEA2
         } else if (IMB_CIPHER_SNOW3G_UEA2_BITLEN == cipher_mode) {
                 return FLUSH_JOB_SNOW3G_UEA2(state);
@@ -710,7 +728,7 @@ SUBMIT_JOB_CIPHER_DEC(IMB_MGR *state, IMB_JOB *job, const IMB_CIPHER_MODE cipher
         } else if (IMB_CIPHER_KASUMI_UEA1_BITLEN == cipher_mode) {
                 return submit_kasumi_uea1_job(state, job);
         } else if (IMB_CIPHER_SNOW5G_NEA4 == cipher_mode) {
-                return SUBMIT_JOB_SNOW5G(job);
+                return SUBMIT_JOB_SNOW5G_NEA4(state, job);
         } else if (IMB_CIPHER_SM4_ECB == cipher_mode) {
                 return SUBMIT_JOB_SM4_ECB_DEC(job);
         } else if (IMB_CIPHER_SM4_CBC == cipher_mode) {
@@ -787,6 +805,13 @@ FLUSH_JOB_CIPHER_DEC(IMB_MGR *state, IMB_JOB *job, const IMB_CIPHER_MODE cipher_
 
                 return FLUSH_JOB_ZUC_NCA6(zuc_nca6_ooo, IMB_DIR_DECRYPT);
         }
+
+#ifdef FLUSH_JOB_SNOW5G_NEA4_X8
+        if (IMB_CIPHER_SNOW5G_NEA4 == cipher_mode) {
+                MB_MGR_SNOW5G_OOO *snow5g_ooo = state->snow5g_ooo;
+                return FLUSH_JOB_SNOW5G_NEA4_X8(snow5g_ooo);
+        }
+#endif
         return NULL;
 }
 

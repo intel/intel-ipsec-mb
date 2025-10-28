@@ -436,3 +436,16 @@ ooo_mgr_snow3g_reset(void *p_ooo_mgr, const unsigned num_lanes)
         } else if (num_lanes == 16)
                 p_mgr->unused_lanes = 0xFEDCBA9876543210;
 }
+
+IMB_DLL_LOCAL
+void
+ooo_mgr_snow5g_reset(void *p_ooo_mgr, const unsigned num_lanes)
+{
+        MB_MGR_SNOW5G_OOO *p_mgr = (MB_MGR_SNOW5G_OOO *) p_ooo_mgr;
+        memset(p_mgr, 0, offsetof(MB_MGR_SNOW5G_OOO, road_block));
+        memset(p_mgr->lens, 0xff, sizeof(p_mgr->lens));
+        p_mgr->num_lanes_inuse = 0;
+        p_mgr->init_mask = 0;
+        if (num_lanes == 8)
+                p_mgr->unused_lanes = 0x76543210;
+}

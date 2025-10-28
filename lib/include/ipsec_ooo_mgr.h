@@ -193,6 +193,35 @@ typedef struct {
         uint64_t byte_length[16];
 } SNOW3G_ARGS;
 
+/**
+ *****************************************************************************
+ * @description
+ *      Structure to store the Snow5G state for 8 packets.
+ *****************************************************************************/
+typedef struct {
+        void *in[8];                                /* array of 8 pointers to in text */
+        void *out[8];                               /* array of 8 pointers to out text */
+        void *keys[8];                              /* array of 8 pointers to keys */
+        DECLARE_ALIGNED(uint8_t iv[8][16], 64);     /* array of 8 x 128-bit IVs */
+        DECLARE_ALIGNED(uint8_t digest[8][16], 64); /* array of 8 x 128-bit digests */
+        /* LFSR state for 8 lanes - each lane uses 128-bit registers */
+        DECLARE_ALIGNED(uint8_t LFSR_A_LO[8][16], 64); /* 8*128-bit LFSR A lower registers */
+        DECLARE_ALIGNED(uint8_t LFSR_A_HI[8][16], 64); /* 8*128-bit LFSR A higher registers */
+        DECLARE_ALIGNED(uint8_t LFSR_B_LO[8][16], 64); /* 8*128-bit LFSR B lower registers */
+        DECLARE_ALIGNED(uint8_t LFSR_B_HI[8][16], 64); /* 8*128-bit LFSR B higher registers */
+        /* FSM state for 8 lanes - each lane uses 128-bit registers */
+        DECLARE_ALIGNED(uint8_t FSM_R1[8][16], 64); /* 8*128-bit FSM 1 registers */
+        DECLARE_ALIGNED(uint8_t FSM_R2[8][16], 64); /* 8*128-bit FSM 2 registers */
+        DECLARE_ALIGNED(uint8_t FSM_R3[8][16], 64); /* 8*128-bit FSM 3 registers */
+        /* Tap registers for 8 lanes - each lane uses 128-bit registers */
+        DECLARE_ALIGNED(uint8_t T1[8][16], 64);       /* 8*128-bit T1 tap registers */
+        DECLARE_ALIGNED(uint8_t T2[8][16], 64);       /* 8*128-bit T2 tap registers */
+        DECLARE_ALIGNED(uint64_t INITIALIZED[8], 64); /* array of 8 x 64-bit initialization flags */
+        DECLARE_ALIGNED(uint64_t LD_ST_MASK[8], 64); /* array of 8 x 64-bit load/store byte masks */
+        DECLARE_ALIGNED(uint64_t byte_length[8],
+                        64); /* array of 8 x 64-bit original lengths (in bytes) */
+} SNOW5G_ARGS;
+
 /* AES out-of-order scheduler fields */
 typedef struct {
         AES_ARGS args;
@@ -300,6 +329,19 @@ typedef struct {
         uint16_t unused_lane_bitmask;
         uint64_t road_block;
 } MB_MGR_ZUC_OOO;
+
+/* SNOW5G out-of-order scheduler fields */
+typedef struct {
+        DECLARE_ALIGNED(SNOW5G_ARGS args, 64);
+        DECLARE_ALIGNED(uint32_t lens[8], 32);
+        IMB_JOB *job_in_lane[8];
+        uint32_t bits_fixup[8];
+        uint64_t init_mask;
+        uint64_t unused_lanes;
+        uint64_t num_lanes_inuse;
+        uint64_t init_done;
+        uint64_t road_block;
+} MB_MGR_SNOW5G_OOO;
 
 /* HMAC-SHA1 and HMAC-SHA256/224 */
 typedef struct {
