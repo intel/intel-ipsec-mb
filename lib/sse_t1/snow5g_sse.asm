@@ -87,7 +87,7 @@ mksection .text
 %define TEMP_1          xmm3
 %define TEMP_2          xmm4
 %define TEMP_3          xmm5
-%define FSM_R1          xmm6    ;; FSM R1 
+%define FSM_R1          xmm6    ;; FSM R1
 %define FSM_R2          xmm7    ;; FSM R2
 %define FSM_R3          xmm8    ;; FSM R3
 %define LFSR_A_LDQ      xmm9    ;; LFSR A: (a7, ..., a0)
@@ -168,25 +168,25 @@ mksection .text
         movdqa  gB, [rel beta]
         movdqa  gSigma, [rel sigma]
 
-        movdqa  KEYSTREAM, [%%SRC + 0*16], 
-        movdqa  T1, [%%SRC + 1*16], 
-        movdqa  T2, [%%SRC + 2*16], 
-        movdqa  FSM_R1, [%%SRC + 3*16], 
-        movdqa  FSM_R2, [%%SRC + 4*16], 
-        movdqa  FSM_R3, [%%SRC + 5*16], 
-        movdqa  LFSR_A_LDQ, [%%SRC + 6*16], 
-        movdqa  LFSR_A_HDQ, [%%SRC + 7*16], 
-        movdqa  LFSR_B_LDQ, [%%SRC + 8*16], 
-        movdqa  LFSR_B_HDQ, [%%SRC + 9*16], 
+        movdqa  KEYSTREAM, [%%SRC + 0*16],
+        movdqa  T1, [%%SRC + 1*16],
+        movdqa  T2, [%%SRC + 2*16],
+        movdqa  FSM_R1, [%%SRC + 3*16],
+        movdqa  FSM_R2, [%%SRC + 4*16],
+        movdqa  FSM_R3, [%%SRC + 5*16],
+        movdqa  LFSR_A_LDQ, [%%SRC + 6*16],
+        movdqa  LFSR_A_HDQ, [%%SRC + 7*16],
+        movdqa  LFSR_B_LDQ, [%%SRC + 8*16],
+        movdqa  LFSR_B_HDQ, [%%SRC + 9*16],
 %endmacro ; STATE_RESTORE
 
 ;------------------------------------------------------------------------------
 ; snow5g_round_sse
 ; Performs one SNOW 5G round: generate keystream, update FSM and LFSR
 ; Register usage:
-; Input:  LFSR_B_HDQ, FSM_R1, FSM_R2, LFSR_A_HDQ, FSM_R3, gSigma, 
+; Input:  LFSR_B_HDQ, FSM_R1, FSM_R2, LFSR_A_HDQ, FSM_R3, gSigma,
 ;         LFSR_A_LDQ, LFSR_B_LDQ, T1, T2, gA, gB
-; Output: KEYSTREAM, FSM_R1, FSM_R2, FSM_R3, LFSR_A_HDQ, LFSR_A_LDQ, 
+; Output: KEYSTREAM, FSM_R1, FSM_R2, FSM_R3, LFSR_A_HDQ, LFSR_A_LDQ,
 ;         LFSR_B_HDQ, LFSR_B_LDQ, T1
 ; Clobbered: TEMP_1, TEMP_2
 ;------------------------------------------------------------------------------
@@ -242,7 +242,7 @@ snow5g_round_sse:
         movdqa          TEMP_2, LFSR_B_LDQ
         psllw           TEMP_2, 1                       ; (b_i << 1)
         psraw           LFSR_B_LDQ, 15                  ; 16-bit mask with sign bits preserved
-        pand            LFSR_B_LDQ, gB              
+        pand            LFSR_B_LDQ, gB
         pxor            TEMP_2, LFSR_B_LDQ              ; beta(lfsrB [7:0])
         pxor            LFSR_B_HDQ, TEMP_2              ; lfsrB[15:8]
 
@@ -401,7 +401,7 @@ generate_hqp_snow5g_sse:
 
         SNOW5G_INIT arg1, arg2
 
-        ;; Snow 5G.GenerateHQP 
+        ;; Snow 5G.GenerateHQP
         call snow5g_round_sse
         movdqa          T2, LFSR_A_HDQ
         movdqu          [arg3], KEYSTREAM

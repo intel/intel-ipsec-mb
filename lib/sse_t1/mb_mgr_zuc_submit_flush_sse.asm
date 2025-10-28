@@ -1274,7 +1274,7 @@ APPEND(skip_nca6_,I):
 
         RESTORE_STACK_SPACE 7
 
-        mov	tmp5, [rsp + _null_len_save]
+        mov     tmp5, [rsp + _null_len_save]
         mov     state, [rsp + _gpr_save + 8*8]
 
         ;; Clear all lengths (function above completes all buffers)

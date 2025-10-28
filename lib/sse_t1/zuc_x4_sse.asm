@@ -714,16 +714,16 @@ mksection .text
 %define %%LFSR      %7 ;; [out] XMM register to contain initialized LFSR regs
 %define %%XTMP      %8 ;; [clobbered] XMM temporary register
 
-    movdqu          %%LFSR, [%%KEY]
-    movdqa          %%XTMP, %%IV
-    pshufb          %%LFSR, %%SHUF_KEY
-    psrld           %%LFSR, 1
-    pshufb          %%XTMP, %%SHUF_IV
-    por             %%LFSR, %%XTMP
-    por             %%LFSR, %%EKD_MASK
-    movdqu          %%XTMP, [%%KEY + 16]
-    pshufb          %%XTMP, %%SHUF_KEY2
-    por             %%LFSR, %%XTMP
+        movdqu          %%LFSR, [%%KEY]
+        movdqa          %%XTMP, %%IV
+        pshufb          %%LFSR, %%SHUF_KEY
+        psrld           %%LFSR, 1
+        pshufb          %%XTMP, %%SHUF_IV
+        por             %%LFSR, %%XTMP
+        por             %%LFSR, %%EKD_MASK
+        movdqu          %%XTMP, [%%KEY + 16]
+        pshufb          %%XTMP, %%SHUF_KEY2
+        por             %%LFSR, %%XTMP
 
 %endmacro
 
@@ -852,13 +852,13 @@ mksection .text
         movdqa  %%XTMP14, [rel shuf_mask_iv_nea6 + %%OFF]
         movdqa  %%XTMP15, [rel Ek_d_NEA6 + %%OFF]
 
-       ; Set 4xLFSR registers for all packets
+        ; Set 4xLFSR registers for all packets
 %assign %%IDX 9
 %assign %%I 1
 %assign %%J 5
 %rep 4
         INIT_LFSR_NEA6 APPEND(%%KEY,%%I), APPEND(%%XTMP,%%J), %%XTMP13, %%XTMP1, %%XTMP14, \
-                      %%XTMP15, APPEND(%%XTMP, %%IDX), %%XTMP16
+                        %%XTMP15, APPEND(%%XTMP, %%IDX), %%XTMP16
 %assign %%IDX (%%IDX + 1)
 %assign %%I (%%I + 1)
 %assign %%J (%%J + 1)

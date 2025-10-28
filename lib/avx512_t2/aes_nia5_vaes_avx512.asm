@@ -99,7 +99,7 @@ generate_hqp_vaes_avx512:
         vmovq   x_counter, [iv]
         vpinsrd x_counter, [iv + 8], 2
         ; For AES, this AI bit 0 of first byte needs to be set
-        vporq  	x_counter, [rel set_ai_bit]
+        vporq   x_counter, [rel set_ai_bit]
 
         ; Counter for H, Q, P
         vshufi32x4 z_counter, z_counter, 0x00
@@ -113,11 +113,11 @@ generate_hqp_vaes_avx512:
 %assign i (i + 1)
 %endrep
 
-        vpxorq	z_counter, z_counter, zkey0
+        vpxorq  z_counter, z_counter, zkey0
 
 %assign i 1
 %rep 13
-        vaesenc	z_counter, z_counter, zkey %+ i
+        vaesenc z_counter, z_counter, zkey %+ i
 %assign i (i + 1)
 %endrep
         vaesenclast z_counter, z_counter, zkey14

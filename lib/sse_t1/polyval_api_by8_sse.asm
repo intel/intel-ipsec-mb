@@ -140,10 +140,9 @@ polyval_sse:
         movdqu  xmm0, [arg4]
 
         CALC_AAD_HASH arg2, arg3, xmm0, arg1, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, \
-                      r10, r11, r12, r13, rax, 1
+                        r10, r11, r12, r13, rax, 1
 
         movdqu  [arg4], xmm0
 
         FUNC_RESTORE
         ret
-
