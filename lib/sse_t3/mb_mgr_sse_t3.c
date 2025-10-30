@@ -216,10 +216,6 @@
 #define SUBMIT_JOB_ZUC_EIA3 submit_job_zuc_eia3_gfni_sse
 #define FLUSH_JOB_ZUC_EIA3  flush_job_zuc_eia3_gfni_sse
 
-/* SNOW-V */
-#define SUBMIT_JOB_SNOW_V      snow_v_sse
-#define SUBMIT_JOB_SNOW_V_AEAD snow_v_aead_init_sse
-
 /* SNOW3G UE2 & UIA2 */
 static IMB_JOB *
 submit_snow3g_uea2_job_sse(IMB_MGR *state, IMB_JOB *job)

@@ -274,11 +274,6 @@ IMB_JOB *
 submit_job_chacha20_enc_dec_avx(IMB_JOB *job);
 
 IMB_JOB *
-snow_v_avx(IMB_JOB *job);
-IMB_JOB *
-snow_v_aead_init_avx(IMB_JOB *job);
-
-IMB_JOB *
 submit_job_aes128_cmac_auth_avx(MB_MGR_CMAC_OOO *state, IMB_JOB *job);
 
 IMB_JOB *

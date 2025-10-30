@@ -114,16 +114,6 @@ END_FIELDS
 %assign _POLY1305_spec_fields_size      _FIELD_OFFSET
 %assign _POLY1305_spec_fields_align     _STRUCT_ALIGN
 
-START_FIELDS    ; SNOW_V Specific Fields
-;;;     name                            size    align
-FIELD   __snow_v_aad,                   8,      8       ; pointer to AAD
-FIELD   __snow_v_aad_len,               8,      8       ; 64-bit AAD length
-FIELD   __snow_v_reserved,              8,      8       ; pointer to hkey endpad
-END_FIELDS
-
-%assign _SNOW_V_AEAD_spec_fields_size   _FIELD_OFFSET
-%assign _SNOW_V_AEAD_spec_fields_align  _STRUCT_ALIGN
-
 START_FIELDS    ; IMB_JOB
 ;;;     name                            size    align
 FIELD   _enc_keys,                      8,      8       ; pointer to enc keys
@@ -147,8 +137,7 @@ UNION   _u,     _HMAC_spec_fields_size,     _HMAC_spec_fields_align, \
                 _GCM_spec_fields_size, _GCM_spec_fields_align, \
                 _ZUC_EIA3_spec_fields_size, _ZUC_EIA3_spec_fields_align, \
                 _SNOW3G_UIA2_spec_fields_size, _SNOW3G_UIA2_spec_fields_align, \
-                _POLY1305_spec_fields_size, _POLY1305_spec_fields_align, \
-                _SNOW_V_AEAD_spec_fields_size, _SNOW_V_AEAD_spec_fields_align
+                _POLY1305_spec_fields_size, _POLY1305_spec_fields_align
 
 FIELD   _status,                        4,      4       ; IMB_JOB_STS
 FIELD   _cipher_mode,                   4,      4       ; IMB_JOB_CIPHER_MODE
@@ -194,8 +183,5 @@ END_FIELDS
 %assign _snow3g_uia2_key                _u + __snow3g_uia2_key
 %assign _snow3g_uia2_iv                 _u + __snow3g_uia2_iv
 %assign _poly1305_key                   _u + __poly1305_key
-%assign _snow_v_aad                     _u + __snow_v_aad
-%assign _snow_v_aad_len                 _u + __snow_v_aad_len
-%assign _snow_v_reserved                _u + __snow_v_reserved
 %assign _gcm_aad                        _u + __gcm_aad
 %assign _gcm_aad_len                    _u + __gcm_aad_len

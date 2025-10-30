@@ -4234,7 +4234,7 @@ main(int argc, char *argv[])
                         }
                         i++;
                 } else if (strcmp(argv[i], "--aad-size") == 0) {
-                        /* Get AAD size for both GCM, CCM, CHACHA20-POLY1305 and SNOW-V-AEAD */
+                        /* Get AAD size for GCM, CCM, and CHACHA20-POLY1305 */
                         i = get_next_num_arg((const char *const *) argv, i, argc, &aad_size,
                                              sizeof(aad_size));
                         if (aad_size > AAD_SIZE_MAX) {
