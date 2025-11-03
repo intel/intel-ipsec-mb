@@ -723,6 +723,7 @@ uint32_t job_iter = 0;
 uint32_t tag_size = 0;
 uint64_t aad_size = AAD_SIZE_MAX + 1;
 
+int turbo_enabled = 0;
 struct custom_job_params custom_job_params = { .cipher_mode = TEST_NULL_CIPHER,
                                                .hash_alg = TEST_NULL_HASH,
                                                .key_size = 0,
@@ -734,6 +735,7 @@ int use_unhalted_cycles = 0;                        /* read unhalted cycles inst
 int use_ssc = 0;                                    /* Enable SSC mode */
 uint64_t rd_cycles_cost = 0;                        /* cost of reading unhalted cycles */
 uint64_t core_mask[NUM_CORE_MASK_ELEMENTS] = { 0 }; /* bitmap of selected cores */
+double tsc_scale_ratio = 1.0;                       /* TSC to core cycle scaling ratio */
 
 uint64_t flags = 0; /* flags passed to alloc_mb_mgr() */
 
@@ -3397,8 +3399,11 @@ print_times(struct variant_s *variant_list, struct params_s *params, const uint3
                         printf("%d", job_size_list[sz]);
                 for (col = 0; col < total_variants; col++) {
                         uint64_t *time_ptr = &variant_list[col].avg_times[sz * num_runs];
-                        const unsigned long long val =
-                                mean_median(time_ptr, num_runs, p_buffer, p_keys);
+                        unsigned long long val = mean_median(time_ptr, num_runs, p_buffer, p_keys);
+
+                        /* If --turbo parameter is passed, divide by TSC scaling ratio */
+                        if (turbo_enabled)
+                                val = (unsigned long long) ((double) val / tsc_scale_ratio);
 
                         printf("\t%llu", val);
                 }
@@ -3700,6 +3705,7 @@ usage(void)
                 "--print-info: Display system and algorithm information\n"
                 "--turbo: Run extended TSC to core scaling measurement\n"
                 "        (Use when turbo enabled)\n"
+                "        (Enables cycle cost division by TSC scaling ratio)\n"
                 "--no-tsc-detect: don't check TSC to core scaling\n"
                 "--tag-size: modify tag size\n"
                 "--plot: Adjust text output for direct use with plot output\n"
@@ -4116,7 +4122,6 @@ main(int argc, char *argv[])
         unsigned int cipher_dir_set = 0;
         /* 1 size by default on job sizes list */
         uint32_t num_sizes_list = 1;
-        int turbo_enabled = 0;
         int tsc_detect = 1;
         char timebox_str[64] = { 0 };
         char throughput_str[64] = { 0 };
@@ -4552,9 +4557,15 @@ main(int argc, char *argv[])
                 }
         }
 
-        if (tsc_detect)
-                fprintf(stderr, "TSC scaling to core cycles: %.3f\n",
-                        get_tsc_to_core_scale(turbo_enabled));
+        if (turbo_enabled == 1 && tsc_detect == 0) {
+                fprintf(stderr, "When --turbo is used, --no-tsc-detect must not be used\n");
+                return EXIT_FAILURE;
+        }
+
+        if (tsc_detect) {
+                tsc_scale_ratio = get_tsc_to_core_scale(turbo_enabled);
+                fprintf(stderr, "TSC scaling to core cycles: %.3f\n", tsc_scale_ratio);
+        }
 
         /**
          * if SHA size increment not specified by user, set to default value
