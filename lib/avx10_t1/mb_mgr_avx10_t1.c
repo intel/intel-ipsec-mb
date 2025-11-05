@@ -268,8 +268,15 @@
 #define SUBMIT_JOB_ZUC_NCA6 submit_job_zuc_nca6_gfni_sse
 #define FLUSH_JOB_ZUC_NCA6  flush_job_zuc_nca6_gfni_sse
 
-/* SNOW5G */
-#define SUBMIT_JOB_SNOW5G snow_5g_sse
+/* SNOW5G VAES AVX512 external functions */
+extern IMB_JOB *
+submit_job_snow5g_nea4_vaes_avx512(MB_MGR_SNOW5G_OOO *state, IMB_JOB *job);
+extern IMB_JOB *
+flush_job_snow5g_nea4_vaes_avx512(MB_MGR_SNOW5G_OOO *state);
+
+/* SNOW5G-NEA4 */
+#define SUBMIT_JOB_SNOW5G_NEA4_X8 submit_job_snow5g_nea4_vaes_avx512
+#define FLUSH_JOB_SNOW5G_NEA4_X8  flush_job_snow5g_nea4_vaes_avx512
 
 /* SNOW3G UEA2 & UIA2 */
 static IMB_JOB *
@@ -487,6 +494,7 @@ reset_ooo_mgrs(IMB_MGR *state)
         ooo_mgr_aes_reset(state->aes_cfb_128_ooo, 16);
         ooo_mgr_aes_reset(state->aes_cfb_192_ooo, 16);
         ooo_mgr_aes_reset(state->aes_cfb_256_ooo, 16);
+        ooo_mgr_snow5g_reset(state->snow5g_ooo, 8);
 }
 
 IMB_DLL_LOCAL void
