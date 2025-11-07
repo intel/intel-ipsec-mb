@@ -217,8 +217,17 @@ align_label
 
 align_label
 .small_packet_path:
-        mov     r10, NROUNDS
-        mov     r11, 12
+%ifndef LINUX
+        mov     rdi, arg5
+        mov     rsi, arg6
+%endif
+        mov     r12, arg7
+        mov     r13, arg8
+        mov     rbp, arg9
+        mov     r15, arg10
+
+        mov     r10d, NROUNDS
+        mov     r11d, 12
         call    gcm_0_to_256_enc_wrapper_asm
 
 align_label
@@ -372,8 +381,17 @@ align_label
 
 align_label
 .small_packet_path:
-        mov     r10, NROUNDS
-        mov     r11, 12
+%ifndef LINUX
+        mov     rdi, arg5
+        mov     rsi, arg6
+%endif
+        mov     r12, arg7
+        mov     r13, arg8
+        mov     rbp, arg9
+        mov     r15, arg10
+
+        mov     r10d, NROUNDS
+        mov     r11d, 12
         call    gcm_0_to_256_dec_wrapper_asm
 
 align_label
@@ -487,46 +505,19 @@ align_label
 %ifdef LINUX
         mov     arg5, [arg2 + _msg_len_to_cipher]
         mov     arg6, [arg2 + _iv]
-
-        ;; Save args 7-11 on stack
-        sub     rsp, 32
-        mov     r10, [arg2 + _gcm_aad]
-        mov     [rsp], r10
-        mov     r10, [arg2 + _gcm_aad_len]
-        mov     [rsp + 8], r10
-        mov     r10, [arg2 + _auth_tag_output]
-        mov     [rsp + 16], r10
-        mov     r10, [arg2 + _auth_tag_output_len_in_bytes]
-        mov     [rsp + 24], r10  
 %else
         ;; Windows save args 5-11 on stack
-        sub     rsp, 80
-        mov     r10, [arg2 + _msg_len_to_cipher]
-        mov     [rsp + 32], r10
-        mov     r10, [arg2 + _iv]
-        mov     [rsp + 40], r10
-        mov     r10, [arg2 + _gcm_aad]
-        mov     [rsp + 48], r10
-        mov     r10, [arg2 + _gcm_aad_len]
-        mov     [rsp + 56], r10
-        mov     r10, [arg2 + _auth_tag_output]
-        mov     [rsp + 64], r10
-        mov     r10, [arg2 + _auth_tag_output_len_in_bytes]
-        mov     [rsp + 72], r10
+        mov     rdi, [arg2 + _msg_len_to_cipher]
+        mov     rsi, [arg2 + _iv]
 %endif
-        ;; Use r14 as base pointer to access pushed arguments
-        mov     r14, rsp
-        sub     r14, 8
+        mov     r12, [arg2 + _gcm_aad]
+        mov     r13, [arg2 + _gcm_aad_len]
+        mov     rbp, [arg2 + _auth_tag_output]
+        mov     r15, [arg2 + _auth_tag_output_len_in_bytes]
 
-        mov     r10, NROUNDS
+        mov     r10d, NROUNDS
         mov     r11, [arg2 + _iv_len_in_bytes]
         call    gcm_0_to_256_enc_wrapper_asm
-
-%ifdef LINUX
-        add     rsp, 32  ;; Clean up stack
-%else
-        add     rsp, 80  ;; Clean up stack
-%endif
 
 %ifdef SAFE_DATA
         clear_zmms_avx512 xmm0, xmm1, xmm2, xmm7, xmm8, xmm9, xmm11, xmm10, xmm14, \
@@ -596,46 +587,19 @@ align_label
 %ifdef LINUX
         mov     arg5, [arg2 + _msg_len_to_cipher]
         mov     arg6, [arg2 + _iv]
-
-        ;; Save args 7-11 on stack
-        sub     rsp, 32
-        mov     r10, [arg2 + _gcm_aad]
-        mov     [rsp], r10
-        mov     r10, [arg2 + _gcm_aad_len]
-        mov     [rsp + 8], r10
-        mov     r10, [arg2 + _auth_tag_output]
-        mov     [rsp + 16], r10
-        mov     r10, [arg2 + _auth_tag_output_len_in_bytes]
-        mov     [rsp + 24], r10
 %else
         ;; Windows save args 5-11 on stack
-        sub     rsp, 80
-        mov     r10, [arg2 + _msg_len_to_cipher]
-        mov     [rsp + 32], r10
-        mov     r10, [arg2 + _iv]
-        mov     [rsp + 40], r10
-        mov     r10, [arg2 + _gcm_aad]
-        mov     [rsp + 48], r10
-        mov     r10, [arg2 + _gcm_aad_len]
-        mov     [rsp + 56], r10
-        mov     r10, [arg2 + _auth_tag_output]
-        mov     [rsp + 64], r10
-        mov     r10, [arg2 + _auth_tag_output_len_in_bytes]
-        mov     [rsp + 72], r10
+        mov     rdi, [arg2 + _msg_len_to_cipher]
+        mov     rsi, [arg2 + _iv]
 %endif
-        ;; Use r14 as base pointer to access pushed arguments
-        mov     r14, rsp
-        sub     r14, 8
+        mov     r12, [arg2 + _gcm_aad]
+        mov     r13, [arg2 + _gcm_aad_len]
+        mov     rbp, [arg2 + _auth_tag_output]
+        mov     r15, [arg2 + _auth_tag_output_len_in_bytes]
 
-        mov     r10, NROUNDS
+        mov     r10d, NROUNDS
         mov     r11, [arg2 + _iv_len_in_bytes]
         call    gcm_0_to_256_dec_wrapper_asm
-
-%ifdef LINUX
-        add     rsp, 32  ;; Clean up stack
-%else
-        add     rsp, 80  ;; Clean up stack
-%endif
 
 %ifdef SAFE_DATA
         clear_zmms_avx512 xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm8, xmm9, xmm11, xmm14, xmm15, \

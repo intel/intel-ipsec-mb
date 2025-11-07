@@ -35,6 +35,12 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 extern ghash_internal_vaes_avx512
 
+mksection .rodata
+
+align 4
+byte_mask_12bytes:
+        dw 0xfff
+
 mksection .text
 default rel
 
@@ -49,13 +55,13 @@ default rel
 ;; - works with AAD size
 ;; - works with IV size provided IV length is provided
 ;; Output: C and T
-;; Clobbers rax, r12, r13, zmm0-zmm23, zmm26-zmm29, zmm30, zmm31, k1, k2, r11 (windows)
+;; Clobbers rax, rbx, A_IN, zmm0-zmm23, zmm26-zmm29, zmm30, zmm31, k1, k2, r11 (windows)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 %macro  GCM_ENC_DEC_0_TO_256 12
 %define %%GDATA_KEY         %1  ; [in] key pointer
 %define %%CIPH_PLAIN_OUT    %2  ; [in] output buffer pointer
 %define %%PLAIN_CIPH_IN     %3  ; [in] input buffer pointer
-%define %%PLAIN_CIPH_LEN    %4  ; [in] buffer length
+%define %%LENGTH            %4  ; [in] buffer length
 %define %%IV                %5  ; [in] IV pointer
 %define %%A_IN              %6  ; [in] AAD pointer
 %define %%A_LEN             %7  ; [in] AAD length in bytes
@@ -66,9 +72,7 @@ default rel
 %define %%IV_LEN            %12 ; [in] IV length
 
 %define %%IA0               rax
-%define %%IA1               r12
-%define %%IA2               r13
-%define %%IA3               r11
+%define %%IA1               rbx
 
 %define %%CTR_BLOCKz            zmm0
 %define %%CTR_BLOCKx            xmm0 ; hardcoded in GCM_INIT
@@ -120,7 +124,7 @@ default rel
 
 %define %%MASK_TEXT             k1
 %define %%MASK_TAG              k1
-%define %%MASK_IVAAD            k2
+%define %%MASK_IVAAD            k1
 
         ;; ===================================================================
         ;; prepare IV
@@ -128,17 +132,22 @@ default rel
         cmp     %%IV_LEN, 12
         je      %%_iv_length_is_12_bytes
 
+        mov     rbx, r12        ; save A_IN
+        mov     r14, r13        ; save A_LEN
+
         CALC_J0 %%GDATA_KEY, %%IV, %%IV_LEN, %%ORIG_IVx
+
+        mov     r12, rbx        ; restore A_IN
+        mov     r13, r14        ; restore A_LEN
+
         jmp     %%_iv_prep_is_done
 
 align_label
 %%_iv_length_is_12_bytes:
         ;; read 12 IV bytes and pad with 0x00000001
         vmovdqa64       %%ORIG_IVx, [rel ONEf]
-        mov             %%IA2, %%IV
-        mov             DWORD(%%IA1), 0x0000_0fff
-        kmovd           %%MASK_IVAAD, DWORD(%%IA1)
-        vmovdqu8        %%ORIG_IVx{%%MASK_IVAAD}, [%%IA2]      ; ctr = IV | 0x1
+        kmovd           %%MASK_IVAAD, [rel byte_mask_12bytes]
+        vmovdqu8        %%ORIG_IVx{%%MASK_IVAAD}, [%%IV]      ; ctr = IV | 0x1
 
 align_label
 %%_iv_prep_is_done:
@@ -148,26 +157,14 @@ align_label
         ;; ===================================================================
         ;; check for zero message length
 
-%ifidn __OUTPUT_FORMAT__, win64
-        cmp     %%PLAIN_CIPH_LEN, 0
-%else
-        or      %%PLAIN_CIPH_LEN, %%PLAIN_CIPH_LEN
-%endif
+        or      %%LENGTH, %%LENGTH
         je      %%_small_initial_num_blocks_is_0
 
-        ;; ===================================================================
-        ;; Prepare %%LENGTH register
-%ifidn __OUTPUT_FORMAT__, win64
-%define %%LENGTH            %%IA3
-        mov     %%LENGTH, %%PLAIN_CIPH_LEN
-%else
-%define %%LENGTH %%PLAIN_CIPH_LEN        ;; PLAIN_CIPH_LEN is a register on linux
-%endif
         ;; ===================================================================
         ;; Determine how many blocks to process
         ;; - process one additional block if there is a partial block (round up)
 
-%define %%NUM_BLOCKS        %%IA1
+%define %%NUM_BLOCKS        %%IA0
 
         mov     DWORD(%%NUM_BLOCKS), DWORD(%%LENGTH)
         add     DWORD(%%NUM_BLOCKS), 15
@@ -242,6 +239,19 @@ align_label
 %define %%CTR3                  %%ZTMP3
 
         ;; ===================================================================
+        ;; get load/store mask for plain/cipher text
+        lea             %%IA0, [rel byte64_len_to_mask_table]
+        lea             %%IA0, [%%IA0 + %%LENGTH*8]
+%if num_blocks > 12
+        sub             %%IA0, 3 * 64 * 8
+%elif num_blocks > 8
+        sub             %%IA0, 2 * 64 * 8
+%elif num_blocks > 4
+        sub             %%IA0, 1 * 64 * 8
+%endif
+        kmovq           %%MASK_TEXT, [%%IA0]
+
+        ;; ===================================================================
         ;; - load shuffle mask
         ;; - retrieve 32-bit counter in BE format
 %if num_blocks == 1
@@ -251,25 +261,12 @@ align_label
 %else
         vmovdqa64       %%SHUF_MASK, [rel SHUF_MASK]
 %endif
-        vmovd           DWORD(%%IA2), %%CTR_BLOCKx
-
-        ;; ===================================================================
-        ;; get load/store mask for plain/cipher text
-        lea             %%IA0, [rel byte64_len_to_mask_table]
-        mov             %%IA1, %%LENGTH
-%if num_blocks > 12
-        sub             %%IA1, 3 * 64
-%elif num_blocks > 8
-        sub             %%IA1, 2 * 64
-%elif num_blocks > 4
-        sub             %%IA1, 64
-%endif
-        kmovq           %%MASK_TEXT, [%%IA0 + %%IA1*8]
+        vmovd           DWORD(%%IA0), %%CTR_BLOCKx
 
         ;; ===================================================================
         ;; Check if counter blocks can be prepared in BE format or
         ;; LE format is required
-        cmp             BYTE(%%IA2), 256 - num_blocks
+        cmp             BYTE(%%IA0), 256 - num_blocks
         jae             %%_ctr_overflow_ %+ num_blocks
 
         ;; ===================================================================
@@ -367,7 +364,7 @@ align_label
         ;; ===================================================================
         ;; AES rounds and XOR with plain/cipher text
 
-        vbroadcastf64x2 %%ZTMP10, [%%GDATA_KEY]
+        vbroadcasti64x2 %%ZTMP10, [%%GDATA_KEY]
 %if blend_orig_iv_aes == 0
         vpxorq          %%ORIG_IVx, %%ORIG_IVx, XWORD(%%ZTMP10)
 %endif
@@ -376,12 +373,9 @@ align_label
                         %%CTR0, %%CTR1, %%CTR2, %%CTR3, \
                         %%ZTMP10, %%ZTMP10, %%ZTMP10, %%ZTMP10
 
-        lea             %%IA1, [%%GDATA_KEY + 16]
-
-align_loop
-%%_aesenc_loop %+ num_blocks :
-
-        vbroadcastf64x2 %%ZTMP10, [%%IA1]
+%assign aesenc_round 1
+%rep 9
+        vbroadcasti64x2 %%ZTMP10, [%%GDATA_KEY + aesenc_round * 16]
 %if blend_orig_iv_aes == 0
         vaesenc          %%ORIG_IVx, %%ORIG_IVx, XWORD(%%ZTMP10)
 %endif
@@ -389,13 +383,28 @@ align_loop
                         %%CTR0, %%CTR1, %%CTR2, %%CTR3, \
                         %%CTR0, %%CTR1, %%CTR2, %%CTR3, \
                         %%ZTMP10, %%ZTMP10, %%ZTMP10, %%ZTMP10
+%assign aesenc_round (aesenc_round + 1)
+%endrep
 
-        add             %%IA1, 16 ; increment key pointer
-        dec             %%ROUNDS ; decrement rounds counter
-        jnz             %%_aesenc_loop %+ num_blocks
+        cmp     DWORD(%%ROUNDS), 11
+        jb      %%_encrypt_128bit_key %+ num_blocks
+        je      %%_encrypt_192bit_key %+ num_blocks
+        ;; fall through for 256bit key
 
-        ;; last round
-        vbroadcastf64x2 %%ZTMP10, [%%IA1]
+%assign aesenc_round 10
+%rep 4
+        vbroadcasti32x4 %%ZTMP10, [%%GDATA_KEY + aesenc_round * 16]
+%if blend_orig_iv_aes == 0
+        vaesenc          %%ORIG_IVx, %%ORIG_IVx, XWORD(%%ZTMP10)
+%endif
+        ZMM_OPCODE3_DSTR_SRC1R_SRC2R_BLOCKS_0_16 num_blocks_aes, vaesenc, \
+                        %%CTR0, %%CTR1, %%CTR2, %%CTR3, \
+                        %%CTR0, %%CTR1, %%CTR2, %%CTR3, \
+                        %%ZTMP10, %%ZTMP10, %%ZTMP10, %%ZTMP10
+%assign aesenc_round (aesenc_round + 1)
+%endrep
+
+        vbroadcasti32x4 %%ZTMP10, [%%GDATA_KEY + aesenc_round * 16]
 %if blend_orig_iv_aes == 0
         vaesenclast     %%ORIG_IVx, %%ORIG_IVx, XWORD(%%ZTMP10)
 %endif
@@ -403,6 +412,48 @@ align_loop
                         %%CTR0, %%CTR1, %%CTR2, %%CTR3, \
                         %%CTR0, %%CTR1, %%CTR2, %%CTR3, \
                         %%ZTMP10, %%ZTMP10, %%ZTMP10, %%ZTMP10
+        jmp             %%_encrypt_end %+ num_blocks
+
+align_label
+%%_encrypt_192bit_key %+ num_blocks :
+
+%assign aesenc_round 10
+%rep 2
+        vbroadcasti32x4 %%ZTMP10, [%%GDATA_KEY + aesenc_round * 16]
+%if blend_orig_iv_aes == 0
+        vaesenc          %%ORIG_IVx, %%ORIG_IVx, XWORD(%%ZTMP10)
+%endif
+        ZMM_OPCODE3_DSTR_SRC1R_SRC2R_BLOCKS_0_16 num_blocks_aes, vaesenc, \
+                        %%CTR0, %%CTR1, %%CTR2, %%CTR3, \
+                        %%CTR0, %%CTR1, %%CTR2, %%CTR3, \
+                        %%ZTMP10, %%ZTMP10, %%ZTMP10, %%ZTMP10
+%assign aesenc_round (aesenc_round + 1)
+%endrep
+
+        vbroadcasti32x4 %%ZTMP10, [%%GDATA_KEY + aesenc_round * 16]
+%if blend_orig_iv_aes == 0
+        vaesenclast     %%ORIG_IVx, %%ORIG_IVx, XWORD(%%ZTMP10)
+%endif
+        ZMM_OPCODE3_DSTR_SRC1R_SRC2R_BLOCKS_0_16 num_blocks_aes, vaesenclast, \
+                        %%CTR0, %%CTR1, %%CTR2, %%CTR3, \
+                        %%CTR0, %%CTR1, %%CTR2, %%CTR3, \
+                        %%ZTMP10, %%ZTMP10, %%ZTMP10, %%ZTMP10
+        jmp             %%_encrypt_end %+ num_blocks
+
+align_label
+%%_encrypt_128bit_key %+ num_blocks :
+
+        vbroadcasti32x4 %%ZTMP10, [%%GDATA_KEY + 10 * 16]
+%if blend_orig_iv_aes == 0
+        vaesenclast     %%ORIG_IVx, %%ORIG_IVx, XWORD(%%ZTMP10)
+%endif
+        ZMM_OPCODE3_DSTR_SRC1R_SRC2R_BLOCKS_0_16 num_blocks_aes, vaesenclast, \
+                        %%CTR0, %%CTR1, %%CTR2, %%CTR3, \
+                        %%CTR0, %%CTR1, %%CTR2, %%CTR3, \
+                        %%ZTMP10, %%ZTMP10, %%ZTMP10, %%ZTMP10
+
+align_label
+%%_encrypt_end %+ num_blocks :
 
         ;; ===================================================================
         ;; Extract encrypted original IV
@@ -469,14 +520,12 @@ align_loop
         ;; - one reduction for everything (AAD + message + length block)
 
         ;; IV may be different than 12 bytes and %%MASK_IVAAD not set
-        mov             DWORD(%%IA1), 0x0000_0fff
-        kmovd           %%MASK_IVAAD, DWORD(%%IA1)
+        kmovd           %%MASK_IVAAD, [rel byte_mask_12bytes]
 
-        mov             %%IA1, %%A_IN
-        vmovdqu8        %%AAD_HASHx{%%MASK_IVAAD}{z}, [%%IA1]
+        vmovdqu8        %%AAD_HASHx{%%MASK_IVAAD}{z}, [%%A_IN]
         vpshufb         %%AAD_HASHx, %%AAD_HASHx, %%SHUF_MASKx
 
-        vmovq           XWORD(%%ZTMP15), %%PLAIN_CIPH_LEN
+        vmovq           XWORD(%%ZTMP15), %%LENGTH
         vpinsrq         XWORD(%%ZTMP15), %%A_LEN, 1             ; ZTMP15 = len(A)||len(C)
         vpsllq          XWORD(%%ZTMP15), XWORD(%%ZTMP15), 3     ; convert bytes into bits
         vinserti64x2    %%AAD_HASHy, XWORD(%%ZTMP15), 1
@@ -528,13 +577,14 @@ align_label
 
         vpxor           xmm0, xmm0, xmm0
         ;; arg1 - GDATA_KEY
-        ;; r12 - message pointer
-        ;; r13 - message length
+        ;; r12 - message pointer - %%A_IN
+        ;; r13 - message length - %%A_LEN
         ;; xmm0 - hash in/out
-        mov             r12, %%A_IN
-        mov             r13, %%A_LEN
+
+        mov             %%IA1, %%A_LEN
         call            ghash_internal_vaes_avx512
         vmovdqa64       %%AAD_HASHx, xmm0
+        mov             %%A_LEN, %%IA1
 
 %if num_blocks == 16
         ;; ===================================================================
@@ -549,7 +599,7 @@ align_label
         vmovdqu8        XWORD(%%ZTMP13), [%%GDATA_KEY + HashKey_1]
         vmovdqu8        XWORD(%%ZTMP14), [%%GDATA_KEY + HashKey_1 + HKeyGap]
 
-        vmovq           XWORD(%%ZTMP15), %%PLAIN_CIPH_LEN
+        vmovq           XWORD(%%ZTMP15), %%LENGTH
         vpinsrq         XWORD(%%ZTMP15), %%A_LEN, 1             ; ZTMP15 = len(A)||len(C)
         vpsllq          XWORD(%%ZTMP15), XWORD(%%ZTMP15), 3     ; convert bytes into bits
 
@@ -559,7 +609,7 @@ align_label
 %else
         ;; ===================================================================
         ;; create & append length block into message for GHASH
-        vmovq           XWORD(%%ZTMP15), %%PLAIN_CIPH_LEN
+        vmovq           XWORD(%%ZTMP15), %%LENGTH
         vpinsrq         XWORD(%%ZTMP15), %%A_LEN, 1             ; ZTMP15 = len(A)||len(C)
         vpsllq          XWORD(%%ZTMP15), XWORD(%%ZTMP15), 3     ; convert bytes into bits
 
@@ -608,13 +658,14 @@ align_label
         ;; calculate AAD hash for 0 message length case
         vpxor           xmm0, xmm0, xmm0
         ;; arg1 - GDATA_KEY
-        ;; r12 - message pointer
-        ;; r13 - message length
+        ;; r12 - message pointer - %%A_IN
+        ;; r13 - message length - %%A_LEN
         ;; xmm0 - hash in/out
-        mov             r12, %%A_IN
-        mov             r13, %%A_LEN
+
+        mov             %%IA1, %%A_LEN
         call            ghash_internal_vaes_avx512
         vmovdqa64       %%AAD_HASHx, xmm0
+        mov             %%A_LEN, %%IA1
 
         ;; ===================================================================
         ;; encrypt original IV
@@ -677,12 +728,9 @@ align_label
 
         ;; ===================================================================
         ;; Store the tag T
-        mov             %%IA0, %%AUTH_TAG
-        mov             %%IA1, %%AUTH_TAG_LEN
-
-        lea             %%IA2, [rel byte64_len_to_mask_table]
-        kmovq           %%MASK_TAG, [%%IA2 + %%IA1*8]
-        vmovdqu8        [%%IA0]{%%MASK_TAG}, %%ORIG_IVx
+        lea             %%IA0, [rel byte64_len_to_mask_table]
+        kmovq           %%MASK_TAG, [%%IA0 + %%AUTH_TAG_LEN*8]
+        vmovdqu8        [%%AUTH_TAG]{%%MASK_TAG}, %%ORIG_IVx
 
 %endmacro                       ; GCM_ENC_DEC_0_TO_256
 
@@ -691,17 +739,17 @@ align_label
 ;; Wrapper function for GCM_ENC_DEC_0_TO_256 macro - encryption case
 ;; Parameters:
 ;;   arg1 (rdi/rcx) = GDATA_KEY (const struct gcm_key_data *key_data)
-;;   arg2 (rsi/rdx) = context_data (not used by 0-256 macro)
+;;   -- arg2 (rsi/rdx) = context_data (not used by 0-256 macro)
 ;;   arg3 (rdx/r8)  = CIPH_PLAIN_OUT (u8 *out)
 ;;   arg4 (rcx/r9)  = PLAIN_CIPH_IN (const u8 *in)
-;;   arg5 (r8/stack) = PLAIN_CIPH_LEN (u64 msg_len)
-;;   arg6 (r9/stack) = IV (u8 *iv)
-;;   arg7 (stack)    = A_IN (const u8 *aad)
-;;   arg8 (stack)    = A_LEN (u64 aad_len)
-;;   arg9 (stack)    = AUTH_TAG (u8 *auth_tag)
-;;   arg10 (stack)   = AUTH_TAG_LEN (u64 auth_tag_len)
-;;   arg11 (r10)   = ROUNDS (number of AES rounds)
-;;   arg12 (r11)   = IV_LEN (u64 iv_len)
+;;   arg5 (r8/rdi) = PLAIN_CIPH_LEN (u64 msg_len)
+;;   arg6 (r9/rsi) = IV (u8 *iv)
+;;   arg7 (r12)    = A_IN (const u8 *aad)
+;;   arg8 (r13)      = A_LEN (u64 aad_len)
+;;   arg9 (rbp)      = AUTH_TAG (u8 *auth_tag)
+;;   arg10 (r15)     = AUTH_TAG_LEN (u64 auth_tag_len)
+;;   arg11 (r10)     = ROUNDS (number of AES rounds)
+;;   arg12 (r11)     = IV_LEN (u64 iv_len)
 ;; Output: Encrypted data and auth tag
 ;; Clobbers: rax, r12, r13, zmm0-zmm23, zmm26-zmm31, k1, k2, r11 (windows)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -709,8 +757,11 @@ align_function
 MKGLOBAL(gcm_0_to_256_enc_wrapper_asm,function,internal)
 gcm_0_to_256_enc_wrapper_asm:
 
-        ;; Call the macro directly
-        GCM_ENC_DEC_0_TO_256 arg1, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, ENC, r10, r11
+%ifdef LINUX
+        GCM_ENC_DEC_0_TO_256 rdi,  rdx,  rcx,  r8,  r9, r12, r13, rbp, r15, ENC, r10, r11
+%else
+        GCM_ENC_DEC_0_TO_256 rcx,  r8,  r9,  rdi,  rsi, r12, r13, rbp, r15, ENC, r10, r11
+%endif
 
         ret
 
@@ -719,17 +770,17 @@ gcm_0_to_256_enc_wrapper_asm:
 ;; Wrapper function for GCM_ENC_DEC_0_TO_256 macro - decryption case
 ;; Parameters:
 ;;   arg1 (rdi/rcx) = GDATA_KEY (const struct gcm_key_data *key_data)
-;;   arg2 (rsi/rdx) = context_data (not used by 0-256 macro)
+;;   -- arg2 (rsi/rdx) = context_data (not used by 0-256 macro)
 ;;   arg3 (rdx/r8)  = CIPH_PLAIN_OUT (u8 *out)
 ;;   arg4 (rcx/r9)  = PLAIN_CIPH_IN (const u8 *in)
-;;   arg5 (r8/stack) = PLAIN_CIPH_LEN (u64 msg_len)
-;;   arg6 (r9/stack) = IV (u8 *iv)
-;;   arg7 (stack)    = A_IN (const u8 *aad)
-;;   arg8 (stack)    = A_LEN (u64 aad_len)
-;;   arg9 (stack)    = AUTH_TAG (u8 *auth_tag)
-;;   arg10 (stack)   = AUTH_TAG_LEN (u64 auth_tag_len)
-;;   arg11 (r10)   = ROUNDS (number of AES rounds)
-;;   arg12 (r11)   = IV_LEN (u64 iv_len)
+;;   arg5 (r8/rdi) = PLAIN_CIPH_LEN (u64 msg_len)
+;;   arg6 (r9/rsi) = IV (u8 *iv)
+;;   arg7 (r12)    = A_IN (const u8 *aad)
+;;   arg8 (r13)      = A_LEN (u64 aad_len)
+;;   arg9 (rbp)      = AUTH_TAG (u8 *auth_tag)
+;;   arg10 (r15)     = AUTH_TAG_LEN (u64 auth_tag_len)
+;;   arg11 (r10)     = ROUNDS (number of AES rounds)
+;;   arg12 (r11)     = IV_LEN (u64 iv_len)
 ;; Output: Decrypted data and auth tag
 ;; Clobbers: rax, r12, r13, zmm0-zmm23, zmm26-zmm31, k1, k2, r11 (windows)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -737,7 +788,10 @@ align_function
 MKGLOBAL(gcm_0_to_256_dec_wrapper_asm,function,internal)
 gcm_0_to_256_dec_wrapper_asm:
 
-        ;; Call the macro directly
-        GCM_ENC_DEC_0_TO_256 arg1, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, DEC, r10, r11
+%ifdef LINUX
+        GCM_ENC_DEC_0_TO_256 rdi,  rdx,  rcx,  r8, r9, r12, r13, rbp, r15, DEC, r10, r11
+%else
+        GCM_ENC_DEC_0_TO_256 rcx,  r8,  r9,  rdi, rsi, r12, r13, rbp, r15, DEC, r10, r11
+%endif
 
         ret
