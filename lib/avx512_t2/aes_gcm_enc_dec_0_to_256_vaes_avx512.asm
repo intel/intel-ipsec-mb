@@ -45,6 +45,277 @@ mksection .text
 default rel
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Module register definitions to be used in standalone functions
+;; (Not used within macros - macros use their own %% prefixed versions)
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+%define G_IA0                   rax
+%define G_IA1                   rbx
+
+%define GDATA_KEY               arg1
+%define ROUNDS                  r10
+
+
+%define G_CTR_BLOCKz            zmm0
+%define G_CTR_BLOCKx            xmm0
+
+%define G_AAD_HASHz             zmm1
+%define G_AAD_HASHy             ymm1
+%define G_AAD_HASHx             xmm1
+
+%define G_SHUF_MASK             zmm30
+%define G_SHUF_MASKy            ymm30
+%define G_SHUF_MASKx            xmm30
+
+%define G_ORIG_IV               zmm31
+%define G_ORIG_IVx              xmm31
+
+%define G_ZTMP0                 zmm2
+%define G_ZTMP1                 zmm3
+%define G_ZTMP2                 zmm4
+%define G_ZTMP3                 zmm5
+%define G_ZTMP4                 zmm6
+%define G_ZTMP5                 zmm7
+%define G_ZTMP6                 zmm8
+%define G_ZTMP7                 zmm9
+%define G_ZTMP8                 zmm10
+%define G_ZTMP9                 zmm11
+%define G_ZTMP10                zmm12
+%define G_ZTMP11                zmm13
+%define G_ZTMP12                zmm14
+%define G_ZTMP13                zmm15
+%define G_ZTMP14                zmm16
+%define G_ZTMP15                zmm17
+%define G_ZTMP16                zmm18
+%define G_ZTMP17                zmm19
+%define G_ZTMP18                zmm20
+%define G_ZTMP19                zmm21
+%define G_ZTMP20                zmm22
+%define G_ZTMP21                zmm23
+%define G_ZTMP22                zmm26
+%define G_ZTMP23                zmm27
+%define G_ZTMP24                zmm28
+%define G_ZTMP25                zmm29
+
+%define G_DAT0                  G_ZTMP22
+%define G_DAT1                  G_ZTMP23
+%define G_DAT2                  G_ZTMP24
+%define G_DAT3                  G_ZTMP25
+
+%define G_MASK_TEXT             k1
+%define G_MASK_TAG              k1
+%define G_MASK_IVAAD            k1
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Generate gcm_aes_ctr functions for different block counts and blend modes
+;; Functions follow pattern: gcm_aes_ctr_N where:
+;;   N = number of blocks (1-17)
+;;
+;; IN:
+;;   arg1 (GDATA_KEY) - key pointer
+;;   r10 (ROUNDS)     - number of AES rounds (9, 11, or 13)
+;;   G_ZTMP0-G_ZTMP3  - counter blocks
+;;   G_ORIG_IVx       - original IV if blend_orig_iv == 0
+;;
+;; OUT:
+;;   G_ZTMP0-G_ZTMP3        - encrypted counter blocks
+;;   G_ORIG_IVx            - encrypted original IV (if blend_orig_iv == 0)
+;;
+;; CLOBBERED:
+;;   zmm12 (G_ZTMP10)
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+align_function
+gcm_aes_ctr_1_vaes_avx512:
+        vpxor           XWORD(G_ZTMP0), XWORD(G_ZTMP0), [GDATA_KEY + 16*0]
+        vaesenc         XWORD(G_ZTMP0), XWORD(G_ZTMP0), [GDATA_KEY + 16*1]
+        vaesenc         XWORD(G_ZTMP0), XWORD(G_ZTMP0), [GDATA_KEY + 16*2]
+        vaesenc         XWORD(G_ZTMP0), XWORD(G_ZTMP0), [GDATA_KEY + 16*3]
+        vaesenc         XWORD(G_ZTMP0), XWORD(G_ZTMP0), [GDATA_KEY + 16*4]
+        vaesenc         XWORD(G_ZTMP0), XWORD(G_ZTMP0), [GDATA_KEY + 16*5]
+        vaesenc         XWORD(G_ZTMP0), XWORD(G_ZTMP0), [GDATA_KEY + 16*6]
+        vaesenc         XWORD(G_ZTMP0), XWORD(G_ZTMP0), [GDATA_KEY + 16*7]
+        vaesenc         XWORD(G_ZTMP0), XWORD(G_ZTMP0), [GDATA_KEY + 16*8]
+        vaesenc         XWORD(G_ZTMP0), XWORD(G_ZTMP0), [GDATA_KEY + 16*9]
+        cmp             DWORD(ROUNDS), 11
+        jb              .encrypt_128bit_key_1
+        je              .encrypt_192bit_key_1
+        ;; fall through for 256bit key
+        vaesenc         XWORD(G_ZTMP0), XWORD(G_ZTMP0), [GDATA_KEY + 16*10]
+        vaesenc         XWORD(G_ZTMP0), XWORD(G_ZTMP0), [GDATA_KEY + 16*11]
+        vaesenc         XWORD(G_ZTMP0), XWORD(G_ZTMP0), [GDATA_KEY + 16*12]
+        vaesenc         XWORD(G_ZTMP0), XWORD(G_ZTMP0), [GDATA_KEY + 16*13]
+        vaesenclast     XWORD(G_ZTMP0), XWORD(G_ZTMP0), [GDATA_KEY + 16*14]
+        ret
+
+align_label
+.encrypt_192bit_key_1:
+        vaesenc         XWORD(G_ZTMP0), XWORD(G_ZTMP0), [GDATA_KEY + 16*10]
+        vaesenc         XWORD(G_ZTMP0), XWORD(G_ZTMP0), [GDATA_KEY + 16*11]
+        vaesenclast     XWORD(G_ZTMP0), XWORD(G_ZTMP0), [GDATA_KEY + 16*12]
+        ret
+
+align_label
+.encrypt_128bit_key_1:
+        vaesenclast     XWORD(G_ZTMP0), XWORD(G_ZTMP0), [GDATA_KEY + 16*10]
+        ret
+
+
+%assign num_blocks_outer 2
+%rep 15
+%if num_blocks_outer % 4 == 0
+%assign blend_orig_iv_aes 0
+%else 
+%assign blend_orig_iv_aes 1
+%endif
+
+align_function
+gcm_aes_ctr_ %+ num_blocks_outer %+ _vaes_avx512 :
+
+        vbroadcasti64x2 G_ZTMP10, [GDATA_KEY]
+%if blend_orig_iv_aes == 0
+        vpxorq          G_ORIG_IVx, G_ORIG_IVx, XWORD(G_ZTMP10)
+%endif
+        ZMM_OPCODE3_DSTR_SRC1R_SRC2R_BLOCKS_0_16 num_blocks_outer, vpxorq, \
+                        G_ZTMP0, G_ZTMP1, G_ZTMP2, G_ZTMP3, \
+                        G_ZTMP0, G_ZTMP1, G_ZTMP2, G_ZTMP3, \
+                        G_ZTMP10, G_ZTMP10, G_ZTMP10, G_ZTMP10
+
+%assign aesenc_round 1
+%rep 9
+        vbroadcasti64x2 G_ZTMP10, [GDATA_KEY + aesenc_round * 16]
+%if blend_orig_iv_aes == 0
+        vaesenc         G_ORIG_IVx, G_ORIG_IVx, XWORD(G_ZTMP10)
+%endif
+        ZMM_OPCODE3_DSTR_SRC1R_SRC2R_BLOCKS_0_16 num_blocks_outer, vaesenc, \
+                        G_ZTMP0, G_ZTMP1, G_ZTMP2, G_ZTMP3, \
+                        G_ZTMP0, G_ZTMP1, G_ZTMP2, G_ZTMP3, \
+                        G_ZTMP10, G_ZTMP10, G_ZTMP10, G_ZTMP10
+%assign aesenc_round (aesenc_round + 1)
+%endrep
+
+        cmp     DWORD(ROUNDS), 11
+        jb      .encrypt_128bit_key_ %+ num_blocks_outer
+        je      .encrypt_192bit_key_ %+ num_blocks_outer
+        ;; fall through for 256bit key
+
+%assign aesenc_round 10
+%rep 4
+        vbroadcasti32x4 G_ZTMP10, [GDATA_KEY + aesenc_round * 16]
+%if blend_orig_iv_aes == 0
+        vaesenc         G_ORIG_IVx, G_ORIG_IVx, XWORD(G_ZTMP10)
+%endif
+        ZMM_OPCODE3_DSTR_SRC1R_SRC2R_BLOCKS_0_16 num_blocks_outer, vaesenc, \
+                        G_ZTMP0, G_ZTMP1, G_ZTMP2, G_ZTMP3, \
+                        G_ZTMP0, G_ZTMP1, G_ZTMP2, G_ZTMP3, \
+                        G_ZTMP10, G_ZTMP10, G_ZTMP10, G_ZTMP10
+%assign aesenc_round (aesenc_round + 1)
+%endrep
+
+        vbroadcasti32x4 G_ZTMP10, [GDATA_KEY + aesenc_round * 16]
+%if blend_orig_iv_aes == 0
+        vaesenclast     G_ORIG_IVx, G_ORIG_IVx, XWORD(G_ZTMP10)
+%endif
+        ZMM_OPCODE3_DSTR_SRC1R_SRC2R_BLOCKS_0_16 num_blocks_outer, vaesenclast, \
+                        G_ZTMP0, G_ZTMP1, G_ZTMP2, G_ZTMP3, \
+                        G_ZTMP0, G_ZTMP1, G_ZTMP2, G_ZTMP3, \
+                        G_ZTMP10, G_ZTMP10, G_ZTMP10, G_ZTMP10
+        ret
+
+align_label
+.encrypt_192bit_key_ %+ num_blocks_outer :
+%assign aesenc_round 10
+%rep 2
+        vbroadcasti32x4 G_ZTMP10, [GDATA_KEY + aesenc_round * 16]
+%if blend_orig_iv_aes == 0
+        vaesenc         G_ORIG_IVx, G_ORIG_IVx, XWORD(G_ZTMP10)
+%endif
+        ZMM_OPCODE3_DSTR_SRC1R_SRC2R_BLOCKS_0_16 num_blocks_outer, vaesenc, \
+                        G_ZTMP0, G_ZTMP1, G_ZTMP2, G_ZTMP3, \
+                        G_ZTMP0, G_ZTMP1, G_ZTMP2, G_ZTMP3, \
+                        G_ZTMP10, G_ZTMP10, G_ZTMP10, G_ZTMP10
+%assign aesenc_round (aesenc_round + 1)
+%endrep
+
+        vbroadcasti32x4 G_ZTMP10, [GDATA_KEY + aesenc_round * 16]
+%if blend_orig_iv_aes == 0
+        vaesenclast     G_ORIG_IVx, G_ORIG_IVx, XWORD(G_ZTMP10)
+%endif
+        ZMM_OPCODE3_DSTR_SRC1R_SRC2R_BLOCKS_0_16 num_blocks_outer, vaesenclast, \
+                        G_ZTMP0, G_ZTMP1, G_ZTMP2, G_ZTMP3, \
+                        G_ZTMP0, G_ZTMP1, G_ZTMP2, G_ZTMP3, \
+                        G_ZTMP10, G_ZTMP10, G_ZTMP10, G_ZTMP10
+        ret
+
+align_label
+.encrypt_128bit_key_ %+ num_blocks_outer :
+        vbroadcasti32x4 G_ZTMP10, [GDATA_KEY + 10 * 16]
+%if blend_orig_iv_aes == 0
+        vaesenclast     G_ORIG_IVx, G_ORIG_IVx, XWORD(G_ZTMP10)
+%endif
+        ZMM_OPCODE3_DSTR_SRC1R_SRC2R_BLOCKS_0_16 num_blocks_outer, vaesenclast, \
+                        G_ZTMP0, G_ZTMP1, G_ZTMP2, G_ZTMP3, \
+                        G_ZTMP0, G_ZTMP1, G_ZTMP2, G_ZTMP3, \
+                        G_ZTMP10, G_ZTMP10, G_ZTMP10, G_ZTMP10
+        ret
+
+%assign num_blocks_outer (num_blocks_outer + 1)
+%endrep
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Generate gcm_ghash_ functions for different block counts
+;; Functions follow pattern: gcm_ghash_N where:
+;;   N = number of message blocks (1-16)
+;;
+;; IN:
+;;   arg1 (GDATA_KEY) - key pointer (rdi on Linux, rcx on Windows)
+;;   r12              - AAD pointer (12 bytes)
+;;   r8               - message length in bytes
+;;   r13              - AAD length in bytes (12)
+;;   G_DAT0-G_DAT3      - shuffled cipher text blocks for GHASH
+;;   G_SHUF_MASKx      - shuffle mask
+;;
+;; OUT:
+;;   G_AAD_HASHx       - final GHASH result
+;;
+;; CLOBBERED:
+;;   G_ZTMP10-G_ZTMP21
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+%assign num_blocks_ghash 1
+%rep 16
+
+align_function
+gcm_ghash_common_ %+ num_blocks_ghash %+ _vaes_avx512:
+
+        GHASH_1_TO_16 GDATA_KEY, G_AAD_HASHx, \
+        G_ZTMP10, G_ZTMP11, G_ZTMP12, G_ZTMP13, G_ZTMP20, \
+        G_ZTMP21, G_ZTMP16, G_ZTMP17, G_ZTMP18, G_ZTMP19, \
+        1, \
+        G_DAT0, G_DAT1, G_DAT2, G_DAT3, num_blocks_ghash, G_ZTMP15, G_ZTMP14
+
+        ret
+
+align_function
+gcm_ghash_ %+ num_blocks_ghash %+ _vaes_avx512:
+%assign num_blocks2_ghash (num_blocks_ghash + 1)
+%if num_blocks_ghash == 16
+
+        GHASH_1_TO_16 GDATA_KEY, G_AAD_HASHx, \
+                        G_ZTMP10, G_ZTMP11, G_ZTMP12, G_ZTMP13, G_ZTMP14, \
+                        G_ZTMP15, G_ZTMP16, G_ZTMP17, G_ZTMP18, G_ZTMP19, G_AAD_HASHz, \
+                        G_DAT0, G_DAT1, G_DAT2, G_DAT3, num_blocks_ghash
+
+%else
+        GHASH_1_TO_16 GDATA_KEY, G_AAD_HASHx, \
+                        G_ZTMP10, G_ZTMP11, G_ZTMP12, G_ZTMP13, G_ZTMP14, \
+                        G_ZTMP15, G_ZTMP16, G_ZTMP17, G_ZTMP18, G_ZTMP19, G_AAD_HASHz, \
+                        G_DAT0, G_DAT1, G_DAT2, G_DAT3, num_blocks2_ghash
+
+%endif
+        ret
+%assign num_blocks_ghash (num_blocks_ghash + 1)
+%endrep
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; GCM_ENC_DEC_0_TO_256
 ;; - combines and optimizes functionality of three macros:
 ;;   - GCM_INIT
@@ -55,7 +326,7 @@ default rel
 ;; - works with AAD size
 ;; - works with IV size provided IV length is provided
 ;; Output: C and T
-;; Clobbers rax, rbx, A_IN, zmm0-zmm23, zmm26-zmm29, zmm30, zmm31, k1, k2, r11 (windows)
+;; Clobbers rax, rbx, A_IN, zmm0-zmm23, zmm26-zmm31, k1, r11 (windows)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 %macro  GCM_ENC_DEC_0_TO_256 12
 %define %%GDATA_KEY         %1  ; [in] key pointer
@@ -71,61 +342,6 @@ default rel
 %define %%ROUNDS            %11 ; [in] number of rounds
 %define %%IV_LEN            %12 ; [in] IV length
 
-%define %%IA0               rax
-%define %%IA1               rbx
-
-%define %%CTR_BLOCKz            zmm0
-%define %%CTR_BLOCKx            xmm0 ; hardcoded in GCM_INIT
-
-%define %%AAD_HASHz             zmm1
-%define %%AAD_HASHy             ymm1
-%define %%AAD_HASHx             xmm1 ; hardcoded in GCM_COMPLETE
-
-%define %%SHUF_MASK             zmm30
-%define %%SHUF_MASKy            ymm30
-%define %%SHUF_MASKx            xmm30
-
-%define %%ORIG_IV               zmm31
-%define %%ORIG_IVx              xmm31
-
-%define %%ZTMP0                 zmm2
-%define %%ZTMP1                 zmm3
-%define %%ZTMP2                 zmm4
-%define %%ZTMP3                 zmm5
-%define %%ZTMP4                 zmm6
-%define %%ZTMP5                 zmm7
-%define %%ZTMP6                 zmm8
-%define %%ZTMP7                 zmm9
-%define %%ZTMP8                 zmm10 ; used by ghash()
-%define %%ZTMP9                 zmm11 ; used by ghash()
-%define %%ZTMP10                zmm12
-%define %%ZTMP11                zmm13
-%define %%ZTMP12                zmm14
-%define %%ZTMP13                zmm15
-%define %%ZTMP14                zmm16
-%define %%ZTMP15                zmm17
-%define %%ZTMP16                zmm18
-%define %%ZTMP17                zmm19
-%define %%ZTMP18                zmm20
-%define %%ZTMP19                zmm21
-%define %%ZTMP20                zmm22
-%define %%ZTMP21                zmm23
-%define %%ZTMP22                zmm24 ; not used
-%define %%ZTMP23                zmm25 ; not used
-%define %%ZTMP24                zmm26
-%define %%ZTMP25                zmm27
-%define %%ZTMP26                zmm28
-%define %%ZTMP27                zmm29
-
-%define %%DAT0                  %%ZTMP24
-%define %%DAT1                  %%ZTMP25
-%define %%DAT2                  %%ZTMP26
-%define %%DAT3                  %%ZTMP27
-
-%define %%MASK_TEXT             k1
-%define %%MASK_TAG              k1
-%define %%MASK_IVAAD            k1
-
         ;; ===================================================================
         ;; prepare IV
         ;; IV may be different than 12 bytes
@@ -135,7 +351,7 @@ default rel
         mov     rbx, r12        ; save A_IN
         mov     r14, r13        ; save A_LEN
 
-        CALC_J0 %%GDATA_KEY, %%IV, %%IV_LEN, %%ORIG_IVx
+        CALC_J0 %%GDATA_KEY, %%IV, %%IV_LEN, G_ORIG_IVx
 
         mov     r12, rbx        ; restore A_IN
         mov     r13, r14        ; restore A_LEN
@@ -145,14 +361,14 @@ default rel
 align_label
 %%_iv_length_is_12_bytes:
         ;; read 12 IV bytes and pad with 0x00000001
-        vmovdqa64       %%ORIG_IVx, [rel ONEf]
-        kmovd           %%MASK_IVAAD, [rel byte_mask_12bytes]
-        vmovdqu8        %%ORIG_IVx{%%MASK_IVAAD}, [%%IV]      ; ctr = IV | 0x1
+        vmovdqa64       G_ORIG_IVx, [rel ONEf]
+        kmovd           G_MASK_IVAAD, [rel byte_mask_12bytes]
+        vmovdqu8        G_ORIG_IVx{G_MASK_IVAAD}, [%%IV]      ; ctr = IV | 0x1
 
 align_label
 %%_iv_prep_is_done:
         ;; set up context fields
-        vpshufb %%CTR_BLOCKx, %%ORIG_IVx, [rel SHUF_MASK]
+        vpshufb G_CTR_BLOCKx, G_ORIG_IVx, [rel SHUF_MASK]
 
         ;; ===================================================================
         ;; check for zero message length
@@ -164,7 +380,7 @@ align_label
         ;; Determine how many blocks to process
         ;; - process one additional block if there is a partial block (round up)
 
-%define %%NUM_BLOCKS        %%IA0
+%define %%NUM_BLOCKS        G_IA0
 
         mov     DWORD(%%NUM_BLOCKS), DWORD(%%LENGTH)
         add     DWORD(%%NUM_BLOCKS), 15
@@ -233,54 +449,54 @@ align_label
 align_label
 %%_small_initial_num_blocks_is_ %+ num_blocks :
 
-%define %%CTR0                  %%ZTMP0
-%define %%CTR1                  %%ZTMP1
-%define %%CTR2                  %%ZTMP2
-%define %%CTR3                  %%ZTMP3
+%define %%CTR0                  G_ZTMP0
+%define %%CTR1                  G_ZTMP1
+%define %%CTR2                  G_ZTMP2
+%define %%CTR3                  G_ZTMP3
 
         ;; ===================================================================
         ;; get load/store mask for plain/cipher text
-        lea             %%IA0, [rel byte64_len_to_mask_table]
-        lea             %%IA0, [%%IA0 + %%LENGTH*8]
+        lea             G_IA0, [rel byte64_len_to_mask_table]
+        lea             G_IA0, [G_IA0 + %%LENGTH*8]
 %if num_blocks > 12
-        sub             %%IA0, 3 * 64 * 8
+        sub             G_IA0, 3 * 64 * 8
 %elif num_blocks > 8
-        sub             %%IA0, 2 * 64 * 8
+        sub             G_IA0, 2 * 64 * 8
 %elif num_blocks > 4
-        sub             %%IA0, 1 * 64 * 8
+        sub             G_IA0, 1 * 64 * 8
 %endif
-        kmovq           %%MASK_TEXT, [%%IA0]
+        kmovq           G_MASK_TEXT, [G_IA0]
 
         ;; ===================================================================
         ;; - load shuffle mask
         ;; - retrieve 32-bit counter in BE format
 %if num_blocks == 1
-        vmovdqa64       %%SHUF_MASKx, [rel SHUF_MASK]
+        vmovdqa64       G_SHUF_MASKx, [rel SHUF_MASK]
 %elif num_blocks == 2
-        vmovdqa64       %%SHUF_MASKy, [rel SHUF_MASK]
+        vmovdqa64       G_SHUF_MASKy, [rel SHUF_MASK]
 %else
-        vmovdqa64       %%SHUF_MASK, [rel SHUF_MASK]
+        vmovdqa64       G_SHUF_MASK, [rel SHUF_MASK]
 %endif
-        vmovd           DWORD(%%IA0), %%CTR_BLOCKx
+        vmovd           DWORD(G_IA0), G_CTR_BLOCKx
 
         ;; ===================================================================
         ;; Check if counter blocks can be prepared in BE format or
         ;; LE format is required
-        cmp             BYTE(%%IA0), 256 - num_blocks
+        cmp             BYTE(G_IA0), 256 - num_blocks
         jae             %%_ctr_overflow_ %+ num_blocks
 
         ;; ===================================================================
         ;; Prepare AES counter blocks (BE format, no byte overflow)
 %if num_blocks == 1
-        vpaddd          XWORD(%%CTR0), %%ORIG_IVx, [rel ONEf]
+        vpaddd          XWORD(%%CTR0), G_ORIG_IVx, [rel ONEf]
 %elif num_blocks == 2
-        vshufi64x2      YWORD(%%CTR0), YWORD(%%ORIG_IV), YWORD(%%ORIG_IV), 0
+        vshufi64x2      YWORD(%%CTR0), YWORD(G_ORIG_IV), YWORD(G_ORIG_IV), 0
         vpaddd          YWORD(%%CTR0), YWORD(%%CTR0), [rel ddq_addbe_1234]
 %else
-        vshufi64x2      %%CTR_BLOCKz, %%ORIG_IV, %%ORIG_IV, 0
-        vpaddd          %%CTR0, %%CTR_BLOCKz, [rel ddq_addbe_1234]
+        vshufi64x2      G_CTR_BLOCKz, G_ORIG_IV, G_ORIG_IV, 0
+        vpaddd          %%CTR0, G_CTR_BLOCKz, [rel ddq_addbe_1234]
 %if num_blocks > 4
-        vpaddd          %%CTR1, %%CTR_BLOCKz, [rel ddq_addbe_5678]
+        vpaddd          %%CTR1, G_CTR_BLOCKz, [rel ddq_addbe_5678]
 %endif
 %if num_blocks > 8
         vpaddd          %%CTR2, %%CTR0, [rel ddq_addbe_8888]
@@ -296,15 +512,15 @@ align_label
         ;; ===================================================================
         ;; Prepare AES counter blocks (LE format, byte overflow)
 %if num_blocks == 1
-        vpaddd          XWORD(%%CTR0), %%CTR_BLOCKx, [rel ONE]
+        vpaddd          XWORD(%%CTR0), G_CTR_BLOCKx, [rel ONE]
 %elif num_blocks == 2
-        vshufi64x2      YWORD(%%CTR0), YWORD(%%CTR_BLOCKz), YWORD(%%CTR_BLOCKz), 0
+        vshufi64x2      YWORD(%%CTR0), YWORD(G_CTR_BLOCKz), YWORD(G_CTR_BLOCKz), 0
         vpaddd          YWORD(%%CTR0), YWORD(%%CTR0), [rel ddq_add_1234]
 %else
-        vshufi64x2      %%CTR_BLOCKz, %%CTR_BLOCKz, %%CTR_BLOCKz, 0
-        vpaddd          %%CTR0, %%CTR_BLOCKz, [rel ddq_add_1234]
+        vshufi64x2      G_CTR_BLOCKz, G_CTR_BLOCKz, G_CTR_BLOCKz, 0
+        vpaddd          %%CTR0, G_CTR_BLOCKz, [rel ddq_add_1234]
 %if num_blocks > 4
-        vpaddd          %%CTR1, %%CTR_BLOCKz, [rel ddq_add_5678]
+        vpaddd          %%CTR1, G_CTR_BLOCKz, [rel ddq_add_5678]
 %endif
 %if num_blocks > 8
         vpaddd          %%CTR2, %%CTR0, [rel ddq_add_8888]
@@ -319,7 +535,7 @@ align_label
         ZMM_OPCODE3_DSTR_SRC1R_SRC2R_BLOCKS_0_16 num_blocks, vpshufb, \
                         %%CTR0, %%CTR1, %%CTR2, %%CTR3, \
                         %%CTR0, %%CTR1, %%CTR2, %%CTR3, \
-                        %%SHUF_MASK, %%SHUF_MASK, %%SHUF_MASK, %%SHUF_MASK
+                        G_SHUF_MASK, G_SHUF_MASK, G_SHUF_MASK, G_SHUF_MASK
 
 align_label
 %%_ctr_ready_ %+ num_blocks :
@@ -332,21 +548,21 @@ align_label
 %assign blend_orig_iv_aes 1
 
 %if (num_blocks >= 14) && (num_blocks <= 15)
-        vinserti64x2    %%CTR3, %%ORIG_IVx, num_blocks - 12
+        vinserti64x2    %%CTR3, G_ORIG_IVx, num_blocks - 12
 %elif (num_blocks == 13)
-        vinserti64x2    YWORD(%%CTR3), %%ORIG_IVx, num_blocks - 12
+        vinserti64x2    YWORD(%%CTR3), G_ORIG_IVx, num_blocks - 12
 %elif (num_blocks >= 10) && (num_blocks <= 11)
-        vinserti64x2    %%CTR2, %%ORIG_IVx, num_blocks - 8
+        vinserti64x2    %%CTR2, G_ORIG_IVx, num_blocks - 8
 %elif (num_blocks == 9)
-        vinserti64x2    YWORD(%%CTR2), %%ORIG_IVx, num_blocks - 8
+        vinserti64x2    YWORD(%%CTR2), G_ORIG_IVx, num_blocks - 8
 %elif (num_blocks >= 6) && (num_blocks <= 7)
-        vinserti64x2    %%CTR1, %%ORIG_IVx, num_blocks - 4
+        vinserti64x2    %%CTR1, G_ORIG_IVx, num_blocks - 4
 %elif (num_blocks == 5)
-        vinserti64x2    YWORD(%%CTR1), %%ORIG_IVx, num_blocks - 4
+        vinserti64x2    YWORD(%%CTR1), G_ORIG_IVx, num_blocks - 4
 %elif (num_blocks >= 2) && (num_blocks <= 3)
-        vinserti64x2    %%CTR0, %%ORIG_IVx, num_blocks
+        vinserti64x2    %%CTR0, G_ORIG_IVx, num_blocks
 %else ; (num_blocks == 1)
-        vinserti64x2    YWORD(%%CTR0), %%ORIG_IVx, num_blocks
+        vinserti64x2    YWORD(%%CTR0), G_ORIG_IVx, num_blocks
 %endif
 
 %else
@@ -358,99 +574,13 @@ align_label
         ;; ===================================================================
         ;; load plain/cipher text
         ZMM_LOAD_MASKED_BLOCKS_0_16 num_blocks, %%PLAIN_CIPH_IN, 0, \
-                        %%DAT0, %%DAT1, %%DAT2, %%DAT3, %%MASK_TEXT
+                        G_DAT0, G_DAT1, G_DAT2, G_DAT3, G_MASK_TEXT
 
 
         ;; ===================================================================
         ;; AES rounds and XOR with plain/cipher text
 
-        vbroadcasti64x2 %%ZTMP10, [%%GDATA_KEY]
-%if blend_orig_iv_aes == 0
-        vpxorq          %%ORIG_IVx, %%ORIG_IVx, XWORD(%%ZTMP10)
-%endif
-        ZMM_OPCODE3_DSTR_SRC1R_SRC2R_BLOCKS_0_16 num_blocks_aes, vpxorq, \
-                        %%CTR0, %%CTR1, %%CTR2, %%CTR3, \
-                        %%CTR0, %%CTR1, %%CTR2, %%CTR3, \
-                        %%ZTMP10, %%ZTMP10, %%ZTMP10, %%ZTMP10
-
-%assign aesenc_round 1
-%rep 9
-        vbroadcasti64x2 %%ZTMP10, [%%GDATA_KEY + aesenc_round * 16]
-%if blend_orig_iv_aes == 0
-        vaesenc          %%ORIG_IVx, %%ORIG_IVx, XWORD(%%ZTMP10)
-%endif
-        ZMM_OPCODE3_DSTR_SRC1R_SRC2R_BLOCKS_0_16 num_blocks_aes, vaesenc, \
-                        %%CTR0, %%CTR1, %%CTR2, %%CTR3, \
-                        %%CTR0, %%CTR1, %%CTR2, %%CTR3, \
-                        %%ZTMP10, %%ZTMP10, %%ZTMP10, %%ZTMP10
-%assign aesenc_round (aesenc_round + 1)
-%endrep
-
-        cmp     DWORD(%%ROUNDS), 11
-        jb      %%_encrypt_128bit_key %+ num_blocks
-        je      %%_encrypt_192bit_key %+ num_blocks
-        ;; fall through for 256bit key
-
-%assign aesenc_round 10
-%rep 4
-        vbroadcasti32x4 %%ZTMP10, [%%GDATA_KEY + aesenc_round * 16]
-%if blend_orig_iv_aes == 0
-        vaesenc          %%ORIG_IVx, %%ORIG_IVx, XWORD(%%ZTMP10)
-%endif
-        ZMM_OPCODE3_DSTR_SRC1R_SRC2R_BLOCKS_0_16 num_blocks_aes, vaesenc, \
-                        %%CTR0, %%CTR1, %%CTR2, %%CTR3, \
-                        %%CTR0, %%CTR1, %%CTR2, %%CTR3, \
-                        %%ZTMP10, %%ZTMP10, %%ZTMP10, %%ZTMP10
-%assign aesenc_round (aesenc_round + 1)
-%endrep
-
-        vbroadcasti32x4 %%ZTMP10, [%%GDATA_KEY + aesenc_round * 16]
-%if blend_orig_iv_aes == 0
-        vaesenclast     %%ORIG_IVx, %%ORIG_IVx, XWORD(%%ZTMP10)
-%endif
-        ZMM_OPCODE3_DSTR_SRC1R_SRC2R_BLOCKS_0_16 num_blocks_aes, vaesenclast, \
-                        %%CTR0, %%CTR1, %%CTR2, %%CTR3, \
-                        %%CTR0, %%CTR1, %%CTR2, %%CTR3, \
-                        %%ZTMP10, %%ZTMP10, %%ZTMP10, %%ZTMP10
-        jmp             %%_encrypt_end %+ num_blocks
-
-align_label
-%%_encrypt_192bit_key %+ num_blocks :
-
-%assign aesenc_round 10
-%rep 2
-        vbroadcasti32x4 %%ZTMP10, [%%GDATA_KEY + aesenc_round * 16]
-%if blend_orig_iv_aes == 0
-        vaesenc          %%ORIG_IVx, %%ORIG_IVx, XWORD(%%ZTMP10)
-%endif
-        ZMM_OPCODE3_DSTR_SRC1R_SRC2R_BLOCKS_0_16 num_blocks_aes, vaesenc, \
-                        %%CTR0, %%CTR1, %%CTR2, %%CTR3, \
-                        %%CTR0, %%CTR1, %%CTR2, %%CTR3, \
-                        %%ZTMP10, %%ZTMP10, %%ZTMP10, %%ZTMP10
-%assign aesenc_round (aesenc_round + 1)
-%endrep
-
-        vbroadcasti32x4 %%ZTMP10, [%%GDATA_KEY + aesenc_round * 16]
-%if blend_orig_iv_aes == 0
-        vaesenclast     %%ORIG_IVx, %%ORIG_IVx, XWORD(%%ZTMP10)
-%endif
-        ZMM_OPCODE3_DSTR_SRC1R_SRC2R_BLOCKS_0_16 num_blocks_aes, vaesenclast, \
-                        %%CTR0, %%CTR1, %%CTR2, %%CTR3, \
-                        %%CTR0, %%CTR1, %%CTR2, %%CTR3, \
-                        %%ZTMP10, %%ZTMP10, %%ZTMP10, %%ZTMP10
-        jmp             %%_encrypt_end %+ num_blocks
-
-align_label
-%%_encrypt_128bit_key %+ num_blocks :
-
-        vbroadcasti32x4 %%ZTMP10, [%%GDATA_KEY + 10 * 16]
-%if blend_orig_iv_aes == 0
-        vaesenclast     %%ORIG_IVx, %%ORIG_IVx, XWORD(%%ZTMP10)
-%endif
-        ZMM_OPCODE3_DSTR_SRC1R_SRC2R_BLOCKS_0_16 num_blocks_aes, vaesenclast, \
-                        %%CTR0, %%CTR1, %%CTR2, %%CTR3, \
-                        %%CTR0, %%CTR1, %%CTR2, %%CTR3, \
-                        %%ZTMP10, %%ZTMP10, %%ZTMP10, %%ZTMP10
+        call    gcm_aes_ctr_ %+ num_blocks_aes %+ _vaes_avx512
 
 align_label
 %%_encrypt_end %+ num_blocks :
@@ -459,25 +589,25 @@ align_label
         ;; Extract encrypted original IV
 %if blend_orig_iv_aes != 0
 %if num_blocks >= 12
-        vextracti32x4   %%ORIG_IVx, %%CTR3, num_blocks - 12
+        vextracti32x4   G_ORIG_IVx, %%CTR3, num_blocks - 12
 %elif num_blocks >= 8
-        vextracti32x4   %%ORIG_IVx, %%CTR2, num_blocks - 8
+        vextracti32x4   G_ORIG_IVx, %%CTR2, num_blocks - 8
 %elif num_blocks >= 4
-        vextracti32x4   %%ORIG_IVx, %%CTR1, num_blocks - 4
+        vextracti32x4   G_ORIG_IVx, %%CTR1, num_blocks - 4
 %else
-        vextracti32x4   %%ORIG_IVx, %%CTR0, num_blocks
+        vextracti32x4   G_ORIG_IVx, %%CTR0, num_blocks
 %endif
 %endif
 
         ZMM_OPCODE3_DSTR_SRC1R_SRC2R_BLOCKS_0_16 num_blocks, vpxorq, \
                         %%CTR0, %%CTR1, %%CTR2, %%CTR3, \
                         %%CTR0, %%CTR1, %%CTR2, %%CTR3, \
-                        %%DAT0, %%DAT1, %%DAT2, %%DAT3
+                        G_DAT0, G_DAT1, G_DAT2, G_DAT3
 
         ;; ===================================================================
         ;; write cipher/plain text back to output and
         ZMM_STORE_MASKED_BLOCKS_0_16 num_blocks, %%CIPH_PLAIN_OUT, 0, \
-                        %%CTR0, %%CTR1, %%CTR2, %%CTR3, %%MASK_TEXT
+                        %%CTR0, %%CTR1, %%CTR2, %%CTR3, G_MASK_TEXT
 
         ;; ===================================================================
         ;; Shuffle the cipher text blocks for hashing part
@@ -485,28 +615,28 @@ align_label
 %ifidn  %%ENC_DEC, DEC
         ;; Decrypt case
         ZMM_OPCODE3_DSTR_SRC1R_SRC2R_BLOCKS_0_16 num_blocks, vpshufb, \
-                        %%DAT0, %%DAT1, %%DAT2, %%DAT3, \
-                        %%DAT0, %%DAT1, %%DAT2, %%DAT3, \
-                        %%SHUF_MASK, %%SHUF_MASK, %%SHUF_MASK, %%SHUF_MASK
+                        G_DAT0, G_DAT1, G_DAT2, G_DAT3, \
+                        G_DAT0, G_DAT1, G_DAT2, G_DAT3, \
+                        G_SHUF_MASK, G_SHUF_MASK, G_SHUF_MASK, G_SHUF_MASK
 %else
         ;; Encrypt case
 
         ;; - zero bytes outside the mask before hashing
 %if num_blocks <= 4
-        vmovdqu8        %%CTR0{%%MASK_TEXT}{z}, %%CTR0
+        vmovdqu8        %%CTR0{G_MASK_TEXT}{z}, %%CTR0
 %elif num_blocks <= 8
-        vmovdqu8        %%CTR1{%%MASK_TEXT}{z}, %%CTR1
+        vmovdqu8        %%CTR1{G_MASK_TEXT}{z}, %%CTR1
 %elif num_blocks <= 12
-        vmovdqu8        %%CTR2{%%MASK_TEXT}{z}, %%CTR2
+        vmovdqu8        %%CTR2{G_MASK_TEXT}{z}, %%CTR2
 %else
-        vmovdqu8        %%CTR3{%%MASK_TEXT}{z}, %%CTR3
+        vmovdqu8        %%CTR3{G_MASK_TEXT}{z}, %%CTR3
 %endif
 
         ;; - cipher blocks are in CTR0-CTR3
         ZMM_OPCODE3_DSTR_SRC1R_SRC2R_BLOCKS_0_16 num_blocks, vpshufb, \
-                        %%DAT0, %%DAT1, %%DAT2, %%DAT3, \
+                        G_DAT0, G_DAT1, G_DAT2, G_DAT3, \
                         %%CTR0, %%CTR1, %%CTR2, %%CTR3, \
-                        %%SHUF_MASK, %%SHUF_MASK, %%SHUF_MASK, %%SHUF_MASK
+                        G_SHUF_MASK, G_SHUF_MASK, G_SHUF_MASK, G_SHUF_MASK
 %endif                          ; Encrypt
 
         ;; ===================================================================
@@ -519,16 +649,16 @@ align_label
         ;; - AAD and block with sizes get hashed together
         ;; - one reduction for everything (AAD + message + length block)
 
-        ;; IV may be different than 12 bytes and %%MASK_IVAAD not set
-        kmovd           %%MASK_IVAAD, [rel byte_mask_12bytes]
+        ;; IV may be different than 12 bytes and G_MASK_IVAAD not set
+        kmovd           G_MASK_IVAAD, [rel byte_mask_12bytes]
 
-        vmovdqu8        %%AAD_HASHx{%%MASK_IVAAD}{z}, [%%A_IN]
-        vpshufb         %%AAD_HASHx, %%AAD_HASHx, %%SHUF_MASKx
+        vmovdqu8        G_AAD_HASHx{G_MASK_IVAAD}{z}, [%%A_IN]
+        vpshufb         G_AAD_HASHx, G_AAD_HASHx, G_SHUF_MASKx
 
-        vmovq           XWORD(%%ZTMP15), %%LENGTH
-        vpinsrq         XWORD(%%ZTMP15), %%A_LEN, 1             ; ZTMP15 = len(A)||len(C)
-        vpsllq          XWORD(%%ZTMP15), XWORD(%%ZTMP15), 3     ; convert bytes into bits
-        vinserti64x2    %%AAD_HASHy, XWORD(%%ZTMP15), 1
+        vmovq           XWORD(G_ZTMP15), %%LENGTH
+        vpinsrq         XWORD(G_ZTMP15), %%A_LEN, 1             ; ZTMP15 = len(A)||len(C)
+        vpsllq          XWORD(G_ZTMP15), XWORD(G_ZTMP15), 3     ; convert bytes into bits
+        vinserti64x2    G_AAD_HASHy, XWORD(G_ZTMP15), 1
 
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;; GHASH 12 byte AAD with length block using respective GHASH key powers
@@ -538,22 +668,22 @@ align_label
 %assign num_blocks2 (num_blocks + 2)
 %define %%HKeyN2 HashKey_ %+ num_blocks2
 
-        vmovdqu8        XWORD(%%ZTMP13), [%%GDATA_KEY + %%HKeyN2 + HKeyGap]
-        vinserti64x2    YWORD(%%ZTMP13), [%%GDATA_KEY + HashKey_1 + HKeyGap], 1
-        vpclmulqdq      YWORD(%%ZTMP14), %%AAD_HASHy, YWORD(%%ZTMP13), 0x00     ; TLL = GH_L * KK_L
-        vpclmulqdq      YWORD(%%ZTMP15), %%AAD_HASHy, YWORD(%%ZTMP13), 0x10     ; TLH = GH_L * KK_H
-        vmovdqu8        XWORD(%%ZTMP13), [%%GDATA_KEY + %%HKeyN2]
-        vinserti64x2    YWORD(%%ZTMP13), [%%GDATA_KEY + HashKey_1], 1
-        vpclmulqdq      YWORD(%%ZTMP16), %%AAD_HASHy, YWORD(%%ZTMP13), 0x01     ; THL = GH_H * HK_L
-        vpclmulqdq      YWORD(%%ZTMP17), %%AAD_HASHy, YWORD(%%ZTMP13), 0x11     ; THH = GH_H * HK_H
+        vmovdqu8        XWORD(G_ZTMP13), [%%GDATA_KEY + %%HKeyN2 + HKeyGap]
+        vinserti64x2    YWORD(G_ZTMP13), [%%GDATA_KEY + HashKey_1 + HKeyGap], 1
+        vpclmulqdq      YWORD(G_ZTMP14), G_AAD_HASHy, YWORD(G_ZTMP13), 0x00     ; TLL = GH_L * KK_L
+        vpclmulqdq      YWORD(G_ZTMP15), G_AAD_HASHy, YWORD(G_ZTMP13), 0x10     ; TLH = GH_L * KK_H
+        vmovdqu8        XWORD(G_ZTMP13), [%%GDATA_KEY + %%HKeyN2]
+        vinserti64x2    YWORD(G_ZTMP13), [%%GDATA_KEY + HashKey_1], 1
+        vpclmulqdq      YWORD(G_ZTMP16), G_AAD_HASHy, YWORD(G_ZTMP13), 0x01     ; THL = GH_H * HK_L
+        vpclmulqdq      YWORD(G_ZTMP17), G_AAD_HASHy, YWORD(G_ZTMP13), 0x11     ; THH = GH_H * HK_H
 
 %undef %%HKeyN2
 
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;; add products
 
-        vpxorq          YWORD(%%ZTMP14), YWORD(%%ZTMP14), YWORD(%%ZTMP16)       ;; TLL += THL
-        vpxorq          YWORD(%%ZTMP15), YWORD(%%ZTMP15), YWORD(%%ZTMP17)       ;; TLH += THH
+        vpxorq          YWORD(G_ZTMP14), YWORD(G_ZTMP14), YWORD(G_ZTMP16)       ;; TLL += THL
+        vpxorq          YWORD(G_ZTMP15), YWORD(G_ZTMP15), YWORD(G_ZTMP17)       ;; TLH += THH
 
         ;; ===================================================================
         ;; continue with message GHASH followed by reduction
@@ -562,11 +692,7 @@ align_label
         ;;   HASH_KEY  = [ HK ^ (N + 1), HK ^ N, ... HK ^ 2 ]
         ;;   MSG       = [ MSG1,         MSG2,   ... MSGN ]
 
-        GHASH_1_TO_16 %%GDATA_KEY, %%AAD_HASHx, \
-                        %%ZTMP10, %%ZTMP11, %%ZTMP12, %%ZTMP13, %%ZTMP20, \
-                        %%ZTMP21, %%ZTMP16, %%ZTMP17, %%ZTMP18, %%ZTMP19, \
-                        1, \
-                        %%DAT0, %%DAT1, %%DAT2, %%DAT3, num_blocks, %%ZTMP15, %%ZTMP14
+        call    gcm_ghash_common_ %+ num_blocks %+ _vaes_avx512
 
         jmp             %%_small_initial_blocks_encrypted
 
@@ -581,52 +707,49 @@ align_label
         ;; r13 - message length - %%A_LEN
         ;; xmm0 - hash in/out
 
-        mov             %%IA1, %%A_LEN
+        mov             G_IA1, %%A_LEN
         call            ghash_internal_vaes_avx512
-        vmovdqa64       %%AAD_HASHx, xmm0
-        mov             %%A_LEN, %%IA1
+        vmovdqa64       G_AAD_HASHx, xmm0
+        mov             %%A_LEN, G_IA1
 
 %if num_blocks == 16
         ;; ===================================================================
         ;; message GHASH compute
-        GHASH_1_TO_16 %%GDATA_KEY, %%AAD_HASHx, \
-                        %%ZTMP10, %%ZTMP11, %%ZTMP12, %%ZTMP13, %%ZTMP14, \
-                        %%ZTMP15, %%ZTMP16, %%ZTMP17, %%ZTMP18, %%ZTMP19, %%AAD_HASHz, \
-                        %%DAT0, %%DAT1, %%DAT2, %%DAT3, num_blocks
+        call   gcm_ghash_16_vaes_avx512
 
         ;; ===================================================================
         ;; GHASH length block
-        vmovdqu8        XWORD(%%ZTMP13), [%%GDATA_KEY + HashKey_1]
-        vmovdqu8        XWORD(%%ZTMP14), [%%GDATA_KEY + HashKey_1 + HKeyGap]
+        vmovdqu8        XWORD(G_ZTMP13), [%%GDATA_KEY + HashKey_1]
+        vmovdqu8        XWORD(G_ZTMP14), [%%GDATA_KEY + HashKey_1 + HKeyGap]
 
-        vmovq           XWORD(%%ZTMP15), %%LENGTH
-        vpinsrq         XWORD(%%ZTMP15), %%A_LEN, 1             ; ZTMP15 = len(A)||len(C)
-        vpsllq          XWORD(%%ZTMP15), XWORD(%%ZTMP15), 3     ; convert bytes into bits
+        vmovq           XWORD(G_ZTMP15), %%LENGTH
+        vpinsrq         XWORD(G_ZTMP15), %%A_LEN, 1             ; ZTMP15 = len(A)||len(C)
+        vpsllq          XWORD(G_ZTMP15), XWORD(G_ZTMP15), 3     ; convert bytes into bits
 
-        vpxorq          %%AAD_HASHx, %%AAD_HASHx, XWORD(%%ZTMP15)
-        GHASH_MUL2      %%AAD_HASHx, XWORD(%%ZTMP13), XWORD(%%ZTMP14), XWORD(%%ZTMP16), XWORD(%%ZTMP17), XWORD(%%ZTMP18), XWORD(%%ZTMP19)
+        vpxorq          G_AAD_HASHx, G_AAD_HASHx, XWORD(G_ZTMP15)
+        GHASH_MUL2      G_AAD_HASHx, XWORD(G_ZTMP13), XWORD(G_ZTMP14), XWORD(G_ZTMP16), XWORD(G_ZTMP17), XWORD(G_ZTMP18), XWORD(G_ZTMP19)
 
 %else
         ;; ===================================================================
         ;; create & append length block into message for GHASH
-        vmovq           XWORD(%%ZTMP15), %%LENGTH
-        vpinsrq         XWORD(%%ZTMP15), %%A_LEN, 1             ; ZTMP15 = len(A)||len(C)
-        vpsllq          XWORD(%%ZTMP15), XWORD(%%ZTMP15), 3     ; convert bytes into bits
+        vmovq           XWORD(G_ZTMP15), %%LENGTH
+        vpinsrq         XWORD(G_ZTMP15), %%A_LEN, 1             ; ZTMP15 = len(A)||len(C)
+        vpsllq          XWORD(G_ZTMP15), XWORD(G_ZTMP15), 3     ; convert bytes into bits
 
 %if num_blocks == 12
-        vmovdqa64       XWORD(%%DAT3), XWORD(%%ZTMP15)
+        vmovdqa64       XWORD(G_DAT3), XWORD(G_ZTMP15)
 %elif num_blocks > 12
-        vinserti64x2    %%DAT3, XWORD(%%ZTMP15), num_blocks - 12
+        vinserti64x2    G_DAT3, XWORD(G_ZTMP15), num_blocks - 12
 %elif num_blocks == 8
-        vmovdqa64       XWORD(%%DAT2), XWORD(%%ZTMP15)
+        vmovdqa64       XWORD(G_DAT2), XWORD(G_ZTMP15)
 %elif num_blocks > 8
-        vinserti64x2    %%DAT2, XWORD(%%ZTMP15), num_blocks - 8
+        vinserti64x2    G_DAT2, XWORD(G_ZTMP15), num_blocks - 8
 %elif num_blocks == 4
-        vmovdqa64       XWORD(%%DAT1), XWORD(%%ZTMP15)
+        vmovdqa64       XWORD(G_DAT1), XWORD(G_ZTMP15)
 %elif num_blocks > 4
-        vinserti64x2    %%DAT1, XWORD(%%ZTMP15), num_blocks - 4
+        vinserti64x2    G_DAT1, XWORD(G_ZTMP15), num_blocks - 4
 %else
-        vinserti64x2    %%DAT0, XWORD(%%ZTMP15), num_blocks
+        vinserti64x2    G_DAT0, XWORD(G_ZTMP15), num_blocks
 %endif
 
         ;; ===================================================================
@@ -634,10 +757,7 @@ align_label
 
 %assign num_blocks2 (num_blocks + 1)
 
-        GHASH_1_TO_16 %%GDATA_KEY, %%AAD_HASHx, \
-                        %%ZTMP10, %%ZTMP11, %%ZTMP12, %%ZTMP13, %%ZTMP14, \
-                        %%ZTMP15, %%ZTMP16, %%ZTMP17, %%ZTMP18, %%ZTMP19, %%AAD_HASHz, \
-                        %%DAT0, %%DAT1, %%DAT2, %%DAT3, num_blocks2
+        call   gcm_ghash_ %+ num_blocks %+ _vaes_avx512
 
 %endif
         jmp             %%_small_initial_blocks_encrypted
@@ -652,7 +772,7 @@ align_label
         ;; Zero message size case (not optimized, not used very often)
 align_label
 %%_small_initial_num_blocks_is_0:
-        vmovdqa64       %%SHUF_MASKx, [rel SHUF_MASK]
+        vmovdqa64       G_SHUF_MASKx, [rel SHUF_MASK]
 
         ;; ===================================================================
         ;; calculate AAD hash for 0 message length case
@@ -662,75 +782,75 @@ align_label
         ;; r13 - message length - %%A_LEN
         ;; xmm0 - hash in/out
 
-        mov             %%IA1, %%A_LEN
+        mov             G_IA1, %%A_LEN
         call            ghash_internal_vaes_avx512
-        vmovdqa64       %%AAD_HASHx, xmm0
-        mov             %%A_LEN, %%IA1
+        vmovdqa64       G_AAD_HASHx, xmm0
+        mov             %%A_LEN, G_IA1
 
         ;; ===================================================================
         ;; encrypt original IV
-        vpxorq          %%ORIG_IVx, %%ORIG_IVx, [%%GDATA_KEY]
-        vaesenc         %%ORIG_IVx, [%%GDATA_KEY + 16*1]
-        vaesenc         %%ORIG_IVx, [%%GDATA_KEY + 16*2]
-        vaesenc         %%ORIG_IVx, [%%GDATA_KEY + 16*3]
-        vaesenc         %%ORIG_IVx, [%%GDATA_KEY + 16*4]
-        vaesenc         %%ORIG_IVx, [%%GDATA_KEY + 16*5]
-        vaesenc         %%ORIG_IVx, [%%GDATA_KEY + 16*6]
-        vaesenc         %%ORIG_IVx, [%%GDATA_KEY + 16*7]
-        vaesenc         %%ORIG_IVx, [%%GDATA_KEY + 16*8]
-        vaesenc         %%ORIG_IVx, [%%GDATA_KEY + 16*9]
+        vpxorq          G_ORIG_IVx, G_ORIG_IVx, [%%GDATA_KEY]
+        vaesenc         G_ORIG_IVx, [%%GDATA_KEY + 16*1]
+        vaesenc         G_ORIG_IVx, [%%GDATA_KEY + 16*2]
+        vaesenc         G_ORIG_IVx, [%%GDATA_KEY + 16*3]
+        vaesenc         G_ORIG_IVx, [%%GDATA_KEY + 16*4]
+        vaesenc         G_ORIG_IVx, [%%GDATA_KEY + 16*5]
+        vaesenc         G_ORIG_IVx, [%%GDATA_KEY + 16*6]
+        vaesenc         G_ORIG_IVx, [%%GDATA_KEY + 16*7]
+        vaesenc         G_ORIG_IVx, [%%GDATA_KEY + 16*8]
+        vaesenc         G_ORIG_IVx, [%%GDATA_KEY + 16*9]
 
-        cmp             %%ROUNDS, 11
+        cmp             DWORD(%%ROUNDS), 11
         jb              %%_single_block_128
         je              %%_single_block_192
 
-        vaesenc         %%ORIG_IVx, [%%GDATA_KEY + 16*10]
-        vaesenc         %%ORIG_IVx, [%%GDATA_KEY + 16*11]
-        vaesenc         %%ORIG_IVx, [%%GDATA_KEY + 16*12]
-        vaesenc         %%ORIG_IVx, [%%GDATA_KEY + 16*13]
-        vaesenclast     %%ORIG_IVx, [%%GDATA_KEY + 16*14]
+        vaesenc         G_ORIG_IVx, [%%GDATA_KEY + 16*10]
+        vaesenc         G_ORIG_IVx, [%%GDATA_KEY + 16*11]
+        vaesenc         G_ORIG_IVx, [%%GDATA_KEY + 16*12]
+        vaesenc         G_ORIG_IVx, [%%GDATA_KEY + 16*13]
+        vaesenclast     G_ORIG_IVx, [%%GDATA_KEY + 16*14]
         jmp             %%_ghash_length_block
 
 align_label
 %%_single_block_192:
-        vaesenc         %%ORIG_IVx, [%%GDATA_KEY + 16*10]
-        vaesenc         %%ORIG_IVx, [%%GDATA_KEY + 16*11]
-        vaesenclast     %%ORIG_IVx, [%%GDATA_KEY + 16*12]
+        vaesenc         G_ORIG_IVx, [%%GDATA_KEY + 16*10]
+        vaesenc         G_ORIG_IVx, [%%GDATA_KEY + 16*11]
+        vaesenclast     G_ORIG_IVx, [%%GDATA_KEY + 16*12]
         jmp             %%_ghash_length_block
 
 align_label
 %%_single_block_128:
-        vaesenclast     %%ORIG_IVx, [%%GDATA_KEY + 16*10]
+        vaesenclast     G_ORIG_IVx, [%%GDATA_KEY + 16*10]
 
         ;; ===================================================================
         ;; GHASH length block
 align_label
 %%_ghash_length_block:
-        vmovdqu8        XWORD(%%ZTMP13), [%%GDATA_KEY + HashKey_1]
-        vmovdqu8        XWORD(%%ZTMP14), [%%GDATA_KEY + HashKey_1 + HKeyGap]
+        vmovdqu8        XWORD(G_ZTMP13), [%%GDATA_KEY + HashKey_1]
+        vmovdqu8        XWORD(G_ZTMP14), [%%GDATA_KEY + HashKey_1 + HKeyGap]
 
-        vpxorq          XWORD(%%ZTMP15), XWORD(%%ZTMP15), XWORD(%%ZTMP15)       ; len(C) = 0
-        vpinsrq         XWORD(%%ZTMP15), %%A_LEN, 1             ; ZTMP15 = len(A)||len(C)
-        vpsllq          XWORD(%%ZTMP15), XWORD(%%ZTMP15), 3     ; convert bytes into bits
+        vpxorq          XWORD(G_ZTMP15), XWORD(G_ZTMP15), XWORD(G_ZTMP15)       ; len(C) = 0
+        vpinsrq         XWORD(G_ZTMP15), %%A_LEN, 1             ; ZTMP15 = len(A)||len(C)
+        vpsllq          XWORD(G_ZTMP15), XWORD(G_ZTMP15), 3     ; convert bytes into bits
 
-        vpxorq          %%AAD_HASHx, %%AAD_HASHx, XWORD(%%ZTMP15)
-        GHASH_MUL2      %%AAD_HASHx, XWORD(%%ZTMP13), XWORD(%%ZTMP14), XWORD(%%ZTMP16), XWORD(%%ZTMP17), XWORD(%%ZTMP18), XWORD(%%ZTMP19)
+        vpxorq          G_AAD_HASHx, G_AAD_HASHx, XWORD(G_ZTMP15)
+        GHASH_MUL2      G_AAD_HASHx, XWORD(G_ZTMP13), XWORD(G_ZTMP14), XWORD(G_ZTMP16), XWORD(G_ZTMP17), XWORD(G_ZTMP18), XWORD(G_ZTMP19)
 
 align_label
 %%_small_initial_blocks_encrypted:
         ;; ===================================================================
         ;; Complete GMAC computation
-        ;;     S => %%AAD_HASHx
-        ;;     CIPHER(J0) => %%ORIG_IVx
+        ;;     S => G_AAD_HASHx
+        ;;     CIPHER(J0) => G_ORIG_IVx
         ;; T = MSB(GCTR(J0,S))
-        vpshufb         %%AAD_HASHx, %%AAD_HASHx, %%SHUF_MASKx
-        vpxorq          %%ORIG_IVx, %%ORIG_IVx, %%AAD_HASHx
+        vpshufb         G_AAD_HASHx, G_AAD_HASHx, G_SHUF_MASKx
+        vpxorq          G_ORIG_IVx, G_ORIG_IVx, G_AAD_HASHx
 
         ;; ===================================================================
         ;; Store the tag T
-        lea             %%IA0, [rel byte64_len_to_mask_table]
-        kmovq           %%MASK_TAG, [%%IA0 + %%AUTH_TAG_LEN*8]
-        vmovdqu8        [%%AUTH_TAG]{%%MASK_TAG}, %%ORIG_IVx
+        lea             G_IA0, [rel byte64_len_to_mask_table]
+        kmovq           G_MASK_TAG, [G_IA0 + %%AUTH_TAG_LEN*8]
+        vmovdqu8        [%%AUTH_TAG]{G_MASK_TAG}, G_ORIG_IVx
 
 %endmacro                       ; GCM_ENC_DEC_0_TO_256
 
@@ -751,7 +871,7 @@ align_label
 ;;   arg11 (r10)     = ROUNDS (number of AES rounds)
 ;;   arg12 (r11)     = IV_LEN (u64 iv_len)
 ;; Output: Encrypted data and auth tag
-;; Clobbers: rax, r12, r13, zmm0-zmm23, zmm26-zmm31, k1, k2, r11 (windows)
+;; Clobbers: rax, r12, r13, zmm0-zmm23, zmm26-zmm31, k1, r11 (windows)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 align_function
 MKGLOBAL(gcm_0_to_256_enc_wrapper_asm,function,internal)
@@ -782,7 +902,7 @@ gcm_0_to_256_enc_wrapper_asm:
 ;;   arg11 (r10)     = ROUNDS (number of AES rounds)
 ;;   arg12 (r11)     = IV_LEN (u64 iv_len)
 ;; Output: Decrypted data and auth tag
-;; Clobbers: rax, r12, r13, zmm0-zmm23, zmm26-zmm31, k1, k2, r11 (windows)
+;; Clobbers: rax, r12, r13, zmm0-zmm23, zmm26-zmm31, k1, r11 (windows)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 align_function
 MKGLOBAL(gcm_0_to_256_dec_wrapper_asm,function,internal)
