@@ -1663,7 +1663,7 @@ align_label
 
 ;; =============================================================================
 ;; Encrypt 16 blocks at a time & GHASH the 16 previously encrypted cipher text blocks
-%macro  GHASH_16_ENCRYPT_16_PARALLEL 7
+%macro  GHASH_16_ENCRYPT_16_PARALLEL 8
 %define %%GDATA                 %1      ;; [in] AES key and hash key pointer
 %define %%CIPH_PLAIN_OUT        %2      ;; [in] plain/cipher text pointer
 %define %%PLAIN_CIPH_IN         %3      ;; [in] cipher/plain text pointer
@@ -1671,6 +1671,7 @@ align_label
 %define %%ENC_DEC               %5      ;; [in] 'ENC' - encrypt, 'DEC' - decrypt direction selection
 %define %%FULL_PARTIAL          %6      ;; [in] 'full' - process 16 blocks, 'partial' - encrypt 16 blocks but load/store 15
 %define %%CTR_CHECK             %7      ;; [in/out] GP register with counter check
+%define %%NROUNDS               %8      ;; [in] number of AES rounds (9, 11 or 13)
 ;;      ymm9                            ;; [in/out] 2x128-bit most recent counter block
 ;;      ymm1-ymm8                       ;; [out] cipher text blocks ready for GHASH (shuffled & added HASH value to block 0)
 ;;      ymm0, ymm10-ymm15               ;; [clobbered] temporary registers
@@ -1875,7 +1876,12 @@ align_label
                 vaesenc         ymm8, ymm8, %%YT5
 
                 vbroadcasti128  %%YT5, [%%GDATA + 16*10]
-%ifndef GCM128_MODE            ; GCM192 or GCM256
+
+                cmp             DWORD(%%NROUNDS), 11
+                jb              %%_final_aes_round
+                je              %%_aes_192_rounds
+
+                ;; AES-256: rounds 10-13
                 vaesenc         ymm1, ymm1, %%YT5
                 vaesenc         ymm2, ymm2, %%YT5
                 vaesenc         ymm3, ymm3, %%YT5
@@ -1896,8 +1902,6 @@ align_label
                 vaesenc         ymm8, ymm8, %%YT5
 
                 vbroadcasti128  %%YT5, [%%GDATA + 16*12]
-%endif
-%ifdef GCM256_MODE
                 vaesenc         ymm1, ymm1, %%YT5
                 vaesenc         ymm2, ymm2, %%YT5
                 vaesenc         ymm3, ymm3, %%YT5
@@ -1918,8 +1922,34 @@ align_label
                 vaesenc         ymm8, ymm8, %%YT5
 
                 vbroadcasti128  %%YT5, [%%GDATA + 16*14]
-%endif                          ; GCM256
+                jmp             %%_final_aes_round
 
+align_label
+%%_aes_192_rounds:
+                ;; AES-192: rounds 10-11
+                vaesenc         ymm1, ymm1, %%YT5
+                vaesenc         ymm2, ymm2, %%YT5
+                vaesenc         ymm3, ymm3, %%YT5
+                vaesenc         ymm4, ymm4, %%YT5
+                vaesenc         ymm5, ymm5, %%YT5
+                vaesenc         ymm6, ymm6, %%YT5
+                vaesenc         ymm7, ymm7, %%YT5
+                vaesenc         ymm8, ymm8, %%YT5
+
+                vbroadcasti128  %%YT5, [%%GDATA + 16*11]
+                vaesenc         ymm1, ymm1, %%YT5
+                vaesenc         ymm2, ymm2, %%YT5
+                vaesenc         ymm3, ymm3, %%YT5
+                vaesenc         ymm4, ymm4, %%YT5
+                vaesenc         ymm5, ymm5, %%YT5
+                vaesenc         ymm6, ymm6, %%YT5
+                vaesenc         ymm7, ymm7, %%YT5
+                vaesenc         ymm8, ymm8, %%YT5
+
+                vbroadcasti128  %%YT5, [%%GDATA + 16*12]
+
+align_label
+%%_final_aes_round:
                 vmovdqu %%YT2, [%%PLAIN_CIPH_IN+%%DATA_OFFSET+16*0]
                 vmovdqu %%YT3, [%%PLAIN_CIPH_IN+%%DATA_OFFSET+16*2]
                 vmovdqu %%YT4, [%%PLAIN_CIPH_IN+%%DATA_OFFSET+16*4]
@@ -2520,7 +2550,7 @@ align_label
 
 align_loop
 %%_encrypt_by_16_new:
-        GHASH_16_ENCRYPT_16_PARALLEL  %%GDATA_KEY, %%CIPH_PLAIN_OUT, %%PLAIN_CIPH_IN, %%DATA_OFFSET, %%ENC_DEC, full, r15
+        GHASH_16_ENCRYPT_16_PARALLEL  %%GDATA_KEY, %%CIPH_PLAIN_OUT, %%PLAIN_CIPH_IN, %%DATA_OFFSET, %%ENC_DEC, full, r15, r10
         add     %%DATA_OFFSET, 256
         sub     r13, 256
         jz      %%_encrypt_done
@@ -2529,7 +2559,7 @@ align_loop
 
 align_label
 %%_encrypt_by_16_partial:
-        GHASH_16_ENCRYPT_16_PARALLEL  %%GDATA_KEY, %%CIPH_PLAIN_OUT, %%PLAIN_CIPH_IN, %%DATA_OFFSET, %%ENC_DEC, partial, r15
+        GHASH_16_ENCRYPT_16_PARALLEL  %%GDATA_KEY, %%CIPH_PLAIN_OUT, %%PLAIN_CIPH_IN, %%DATA_OFFSET, %%ENC_DEC, partial, r15, r10
         add     %%DATA_OFFSET, 256 - 16
         sub     r13, 256 - 16
 
