@@ -35,6 +35,7 @@
 
 #include <string.h>
 
+#include "include/arch_avx512_type2.h"
 #include "include/zuc_internal.h"
 #include "include/wireless_common.h"
 #include "include/save_xmms.h"
@@ -883,4 +884,121 @@ zuc_eia3_n_buffer_gfni_avx512(const void *const pKey[], const void *const pIv[],
                               uint32_t *pMacI[], const uint32_t numBuffers)
 {
         _zuc_eia3_n_buffer(pKey, pIv, pBufferIn, lengthInBits, pMacI, numBuffers, 1);
+}
+
+void
+zuc_nia6_16_buffer_job_gfni_avx512(const void *const pKey[NUM_AVX512_BUFS], const uint8_t *pIv,
+                                   const void *const pBufferIn[NUM_AVX512_BUFS],
+                                   void *pMacI[NUM_AVX512_BUFS],
+                                   const uint16_t lengthInBytes[NUM_AVX512_BUFS],
+                                   const void *const job_in_lane[NUM_AVX512_BUFS])
+{
+        unsigned int i;
+        DECLARE_ALIGNED(ZucState16_t state, 64);
+        DECLARE_ALIGNED(uint32_t keyStr[2 * NUM_AVX512_BUFS * 16], 64);
+        const uint8_t *pIn8[NUM_AVX512_BUFS] = { NULL };
+        /* structure to store the 16 keys */
+        DECLARE_ALIGNED(ZucKey16_t keys, 64);
+
+        for (i = 0; i < NUM_AVX512_BUFS; i++) {
+                pIn8[i] = (const uint8_t *) pBufferIn[i];
+                keys.pKeys[i] = pKey[i];
+        }
+
+        /* Initialize ZUC state */
+        asm_ZucNEA6Initialization_16_gfni_avx512(&keys, pIv, &state, 0xffff);
+
+        /* Generate H,Q,P (3*16 bytes) keys */
+        asm_ZucGenKeystream_16_gfni_avx512(&state, keyStr, 0, 12);
+
+        /* Load shuffle mask for H, Q, P for each of the buffers */
+        const __m128i shuf_mask =
+                _mm_set_epi8(12, 13, 14, 15, 8, 9, 10, 11, 4, 5, 6, 7, 0, 1, 2, 3);
+
+        for (i = 0; i < NUM_AVX512_BUFS; i++) {
+                struct gcm_key_data gdata_key;
+                DECLARE_ALIGNED(uint8_t H[16], 16);
+                DECLARE_ALIGNED(uint8_t Q[16], 16);
+                DECLARE_ALIGNED(uint8_t P[16], 16);
+                uint8_t tag[16];
+                const IMB_JOB *job = job_in_lane[i];
+
+                if (job == NULL)
+                        continue;
+
+                /*
+                 * Set H, Q, P pointers.
+                 * Keystream is generated interleaved in blocks of 16 bytes,
+                 * as it was designed for ZUC-EIA3. Refer to lines 559-580 for
+                 * an explanation of the memory layout
+                 */
+                const uint32_t buf_idx = get_start_key_addr(i);
+
+                /*
+                 * H - First 16 bytes for each buffer
+                 * Q - Bytes 64-79 for each buffer
+                 * P - Bytes 128-143 for each buffer
+                 */
+                const uint64_t *ks_u64 = (const uint64_t *) &keyStr[buf_idx];
+                uint64_t *h_u64 = (uint64_t *) H;
+                uint64_t *q_u64 = (uint64_t *) Q;
+                uint64_t *p_u64 = (uint64_t *) P;
+
+                /* H */
+                h_u64[0] = ks_u64[0];
+                h_u64[1] = ks_u64[1];
+
+                /* Q */
+                q_u64[0] = ks_u64[8]; /* 64 bytes offset => 8 uint64_t */
+                q_u64[1] = ks_u64[9];
+
+                /* P */
+                p_u64[0] = ks_u64[16]; /* 128 bytes offset => 16 uint64_t */
+                p_u64[1] = ks_u64[17];
+
+                memset(tag, 0, 16);
+
+                /* Shuffle H */
+                const __m128i h_xmm =
+                        _mm_shuffle_epi8(_mm_loadu_si128((const __m128i *) H), shuf_mask);
+                _mm_storeu_si128((__m128i *) H, h_xmm);
+                /* Precompute hash keys from H */
+                polyval_pre_vclmul_avx512(H, &gdata_key);
+                /* Digest message bytes */
+                polyval_vclmul_avx512(&gdata_key, pIn8[i], lengthInBytes[i], tag);
+
+                /* XOR 16-byte lengths array with previous digest and hash with Q */
+                const __m128i lengths_xmm = _mm_set_epi64x(lengthInBytes[i] * 8, 0);
+                __m128i tag_xmm = _mm_loadu_si128((const __m128i *) tag);
+                tag_xmm = _mm_xor_si128(tag_xmm, lengths_xmm);
+                _mm_storeu_si128((__m128i *) tag, tag_xmm);
+
+                /* Shuffle Q */
+                const __m128i q_xmm =
+                        _mm_shuffle_epi8(_mm_loadu_si128((const __m128i *) Q), shuf_mask);
+                _mm_storeu_si128((__m128i *) Q, q_xmm);
+                polyval_16B_vclmul_avx512(Q, tag);
+
+                /* Shuffle P */
+                const __m128i p_xmm =
+                        _mm_shuffle_epi8(_mm_loadu_si128((const __m128i *) P), shuf_mask);
+                /* XOR tag with P */
+                tag_xmm = _mm_loadu_si128((const __m128i *) tag);
+                tag_xmm = _mm_xor_si128(tag_xmm, p_xmm);
+                _mm_storeu_si128((__m128i *) tag, tag_xmm);
+
+                memcpy(pMacI[i], tag, job->auth_tag_output_len_in_bytes);
+#ifdef SAFE_DATA
+                /* Clear sensitive data (in registers and stack) */
+                clear_mem(H, sizeof(H));
+                clear_mem(Q, sizeof(Q));
+                clear_mem(P, sizeof(P));
+#endif
+        }
+
+#ifdef SAFE_DATA
+        /* Clear sensitive data (in registers and stack) */
+        clear_mem(&state, sizeof(state));
+        clear_mem(&keys, sizeof(keys));
+#endif
 }

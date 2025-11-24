@@ -27,7 +27,7 @@ Library
 - Added AES-NIA5 SSE type 1 and AVX512 type 2 implementations.
 - Added AES-NEA5 SSE, AVX2 and AVX512 implementations.
 - Added AES-NCA5 SSE type 1 and AVX512 type 2 implementations.
-- Added ZUC-NIA6 SSE type 1 implementation.
+- Added ZUC-NIA6 SSE type 1 and AVX512 type 2 implementations
 - Added ZUC-NCA6 SSE type 1 and SSE type 3 implementations.
 - Added SNOW5G-NIA4 SSE type 1 implementation.
 - Added SNOW5G-NCA4 SSE type 1 implementation.

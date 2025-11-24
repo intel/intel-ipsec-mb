@@ -258,7 +258,7 @@ asm_ZucInitialization_4_gfni_sse(ZucKey4_t *pKeys, const uint8_t *ivs, ZucState4
  * @param[in,out] pState            Pointer to a ZUC state structure of type
  *                                  @ref ZucState4_t that will be populated
  *                                  with the initialized ZUC state.
- *
+ * @param[in] lane_mask             Mask containing lanes to initialize (only for AVX512)
  * @pre
  *      None
  *
@@ -269,11 +269,18 @@ asm_ZucNEA6Initialization_4_sse(ZucKey4_t *pKeys, const uint8_t *ivs, ZucState4_
 IMB_DLL_LOCAL void
 asm_ZucNEA6Initialization_4_gfni_sse(ZucKey4_t *pKeys, const uint8_t *ivs, ZucState4_t *pState);
 
+IMB_DLL_LOCAL void
+asm_ZucNEA6Initialization_16_avx512(ZucKey16_t *pKeys, const uint8_t *ivs, ZucState16_t *pState,
+                                    const uint64_t lane_mask);
+
+IMB_DLL_LOCAL void
+asm_ZucNEA6Initialization_16_gfni_avx512(ZucKey16_t *pKeys, const uint8_t *ivs,
+                                         ZucState16_t *pState, const uint64_t lane_mask);
+
 /**
  ******************************************************************************
  * @description
  *      Definition of the external function that implements the initialization
->>>>>>> 5a033f2c (lib: add ZUC-NIA6 algorithm)
  *      stage of the ZUC algorithm for 8 packets. The function will initialize
  *      the state for 8 individual packets.
  *
@@ -1060,6 +1067,14 @@ zuc_nca6_4_buffer_job_gfni_sse(const void *const pKey[4], const uint8_t *ivs,
                                const void *const pBufferIn[4], void *pBufferOut[4],
                                const uint16_t lengthInBytes[4], const IMB_JOB *const job_in_lane[4],
                                const IMB_CIPHER_DIRECTION dir);
+
+IMB_DLL_LOCAL
+void
+zuc_nia6_16_buffer_job_gfni_avx512(const void *const pKey[16], const uint8_t *ivs,
+                                   const void *const pBufferIn[16], void *pMacI[16],
+                                   const uint16_t lengthInBytes[16],
+                                   const void *const job_in_lane[16]);
+
 /* the s-boxes */
 extern const uint8_t S0[256];
 extern const uint8_t S1[256];
