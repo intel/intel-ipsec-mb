@@ -2618,19 +2618,54 @@ align_label
 ; Output: Authorization Tag (AUTH_TAG) and Authorization Tag length (AUTH_TAG_LEN)
 ; Clobbers rax, r10-r12, and xmm0-xmm2, xmm5-xmm6, xmm9-xmm11, xmm13-xmm15
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-%macro  GCM_COMPLETE            5
+%macro  GCM_COMPLETE            5-6
 %define %%GDATA_KEY             %1
 %define %%GDATA_CTX             %2
 %define %%AUTH_TAG              %3
 %define %%AUTH_TAG_LEN          %4
 %define %%INSTANCE_TYPE         %5
+%define %%ROUNDS                %6
 %define %%PLAIN_CIPH_LEN        rax
 
         vmovdqu xmm13, [%%GDATA_KEY + HashKey_1]
         vmovdqu xmm0, [%%GDATA_KEY + HashKeyK_1]
         ;; Start AES as early as possible
         vmovdqu xmm9, [%%GDATA_CTX + OrigIV]    ; xmm9 = Y0
+%if %0 == 6
+                vpxor    xmm9, xmm9, [%%GDATA_KEY+16*0]
+                vaesenc  xmm9, [%%GDATA_KEY+16*1]
+                vaesenc  xmm9, [%%GDATA_KEY+16*2]
+                vaesenc  xmm9, [%%GDATA_KEY+16*3]
+                vaesenc  xmm9, [%%GDATA_KEY+16*4]
+                vaesenc  xmm9, [%%GDATA_KEY+16*5]
+                vaesenc  xmm9, [%%GDATA_KEY+16*6]
+                vaesenc  xmm9, [%%GDATA_KEY+16*7]
+                vaesenc  xmm9, [%%GDATA_KEY+16*8]
+                vaesenc  xmm9, [%%GDATA_KEY+16*9]
+
+                cmp %%ROUNDS, 11
+                jb %%_128_block
+                je %%_192_block
+
+                vaesenc  xmm9, [%%GDATA_KEY+16*10]
+                vaesenc  xmm9, [%%GDATA_KEY+16*11]
+                vaesenc  xmm9, [%%GDATA_KEY+16*12]
+                vaesenc  xmm9, [%%GDATA_KEY+16*13]
+                vaesenclast      xmm9, [%%GDATA_KEY+16*14]
+                jmp %%_done
+
+%%_128_block:
+                vaesenclast      xmm9, [%%GDATA_KEY+16*10]
+                jmp %%_done
+
+%%_192_block:
+                vaesenc  xmm9, [%%GDATA_KEY+16*10]
+                vaesenc  xmm9, [%%GDATA_KEY+16*11]
+                vaesenclast      xmm9, [%%GDATA_KEY+16*12]
+%%_done:
+%else
         ENCRYPT_SINGLE_BLOCK %%GDATA_KEY, xmm9  ; E(K, Y0)
+%endif
 
 %ifidn %%INSTANCE_TYPE, multi_call
         ;; If the GCM function is called as a single function call rather
@@ -2701,7 +2736,6 @@ align_label
 align_label
 %%_T_16:
         vmovdqu  [r10], xmm9
-
 align_label
 %%_return_T_done:
 

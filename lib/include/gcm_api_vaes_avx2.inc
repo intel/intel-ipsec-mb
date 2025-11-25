@@ -37,6 +37,8 @@ default rel
 
 extern ghash_internal_vaes_avx2
 extern partial_block_gmac_vaes_avx2
+extern aes_gcm_enc_finalize
+extern aes_gcm_dec_finalize
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;void   aes_gcm_precomp_128_vaes_avx2 /
@@ -505,87 +507,8 @@ align_function
 MKGLOBAL(FN_NAME(enc,_finalize_),function,)
 FN_NAME(enc,_finalize_):
         endbranch64
-%ifdef SAFE_PARAM
-        ;; Reset imb_errno
-        IMB_ERR_CHECK_RESET
-
-        ;; Check key_data != NULL
-        or      arg1, arg1
-        jz      error_enc_fin
-
-        ;; Check context_data != NULL
-        or      arg2, arg2
-        jz      error_enc_fin
-
-        ;; Check auth_tag != NULL
-        or      arg3, arg3
-        jz      error_enc_fin
-
-        ;; Check auth_tag_len == 0 or > 16
-        or      arg4, arg4
-        jz      error_enc_fin
-
-        cmp     arg4, 16
-        ja      error_enc_fin
-%endif
-        push r12
-
-%ifidn __OUTPUT_FORMAT__, win64
-        ; xmm6:xmm15 need to be maintained for Windows
-        sub     rsp, 7*16
-        vmovdqu [rsp + 0*16], xmm6
-        vmovdqu [rsp + 1*16], xmm9
-        vmovdqu [rsp + 2*16], xmm10
-        vmovdqu [rsp + 3*16], xmm11
-        vmovdqu [rsp + 4*16], xmm13
-        vmovdqu [rsp + 5*16], xmm14
-        vmovdqu [rsp + 6*16], xmm15
-%endif
-        GCM_COMPLETE    arg1, arg2, arg3, arg4, multi_call
-
-%ifdef SAFE_DATA
-        clear_scratch_xmms_avx_asm
-%endif
-
-%ifidn __OUTPUT_FORMAT__, win64
-        vmovdqu xmm15, [rsp + 6*16]
-        vmovdqu xmm14, [rsp + 5*16]
-        vmovdqu xmm13, [rsp + 4*16]
-        vmovdqu xmm11, [rsp + 3*16]
-        vmovdqu xmm10, [rsp + 2*16]
-        vmovdqu xmm9,  [rsp + 1*16]
-        vmovdqu xmm6,  [rsp + 0*16]
-        add     rsp, 7*16
-%endif
-        pop r12
-align_label
-exit_enc_fin:
-        ret
-
-%ifdef SAFE_PARAM
-align_label
-error_enc_fin:
-        ;; Clear reg and imb_errno
-        IMB_ERR_CHECK_START rax
-
-        ;; Check key_data != NULL
-        IMB_ERR_CHECK_NULL arg1, rax, IMB_ERR_NULL_EXP_KEY
-
-        ;; Check context_data != NULL
-        IMB_ERR_CHECK_NULL arg2, rax, IMB_ERR_NULL_CTX
-
-        ;; Check auth_tag != NULL
-        IMB_ERR_CHECK_NULL arg3, rax, IMB_ERR_NULL_AUTH
-
-        ;; Check auth_tag_len == 0 or > 16
-        IMB_ERR_CHECK_ZERO arg4, rax, IMB_ERR_AUTH_TAG_LEN
-
-        IMB_ERR_CHECK_ABOVE arg4, 16, rax, IMB_ERR_AUTH_TAG_LEN
-
-        ;; Set imb_errno
-        IMB_ERR_CHECK_END rax
-        jmp     exit_enc_fin
-%endif
+        mov r10d, NROUNDS
+        jmp aes_gcm_enc_finalize
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;void   aes_gcm_dec_128_finalize_vaes_avx2 / aes_gcm_dec_192_finalize_vaes_avx2
@@ -599,89 +522,8 @@ align_function
 MKGLOBAL(FN_NAME(dec,_finalize_),function,)
 FN_NAME(dec,_finalize_):
         endbranch64
-%ifdef SAFE_PARAM
-        ;; Reset imb_errno
-        IMB_ERR_CHECK_RESET
-
-        ;; Check key_data != NULL
-        or      arg1, arg1
-        jz      error_dec_fin
-
-        ;; Check context_data != NULL
-        or      arg2, arg2
-        jz      error_dec_fin
-
-        ;; Check auth_tag != NULL
-        or      arg3, arg3
-        jz      error_dec_fin
-
-        ;; Check auth_tag_len == 0 or > 16
-        or      arg4, arg4
-        jz      error_dec_fin
-
-        cmp     arg4, 16
-        ja      error_dec_fin
-%endif
-
-        push r12
-
-%ifidn __OUTPUT_FORMAT__, win64
-        ; xmm6:xmm15 need to be maintained for Windows
-        sub     rsp, 7*16
-        vmovdqu [rsp + 0*16], xmm6
-        vmovdqu [rsp + 1*16], xmm9
-        vmovdqu [rsp + 2*16], xmm10
-        vmovdqu [rsp + 3*16], xmm11
-        vmovdqu [rsp + 4*16], xmm13
-        vmovdqu [rsp + 5*16], xmm14
-        vmovdqu [rsp + 6*16], xmm15
-%endif
-        GCM_COMPLETE    arg1, arg2, arg3, arg4, multi_call
-
-%ifdef SAFE_DATA
-        clear_scratch_xmms_avx_asm
-%endif
-%ifidn __OUTPUT_FORMAT__, win64
-        vmovdqu xmm15, [rsp + 6*16]
-        vmovdqu xmm14, [rsp + 5*16]
-        vmovdqu xmm13, [rsp + 4*16]
-        vmovdqu xmm11, [rsp + 3*16]
-        vmovdqu xmm10, [rsp + 2*16]
-        vmovdqu xmm9,  [rsp + 1*16]
-        vmovdqu xmm6,  [rsp + 0*16]
-        add     rsp, 7*16
-%endif
-
-        pop r12
-
-align_label
-exit_dec_fin:
-        ret
-
-%ifdef SAFE_PARAM
-align_label
-error_dec_fin:
-        ;; Clear reg and imb_errno
-        IMB_ERR_CHECK_START rax
-
-        ;; Check key_data != NULL
-        IMB_ERR_CHECK_NULL arg1, rax, IMB_ERR_NULL_EXP_KEY
-
-        ;; Check context_data != NULL
-        IMB_ERR_CHECK_NULL arg2, rax, IMB_ERR_NULL_CTX
-
-        ;; Check auth_tag != NULL
-        IMB_ERR_CHECK_NULL arg3, rax, IMB_ERR_NULL_AUTH
-
-        ;; Check auth_tag_len == 0 or > 16
-        IMB_ERR_CHECK_ZERO arg4, rax, IMB_ERR_AUTH_TAG_LEN
-
-        IMB_ERR_CHECK_ABOVE arg4, 16, rax, IMB_ERR_AUTH_TAG_LEN
-
-        ;; Set imb_errno
-        IMB_ERR_CHECK_END rax
-        jmp     exit_dec_fin
-%endif
+        mov r10d, NROUNDS
+        jmp aes_gcm_dec_finalize
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;void   aes_gcm_enc_128_vaes_avx2 / aes_gcm_enc_192_vaes_avx2 / aes_gcm_enc_256_vaes_avx2 /
