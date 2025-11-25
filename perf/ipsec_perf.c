@@ -1160,10 +1160,15 @@ init_msr_mod(void)
 #ifdef _WIN32
         max_core_count = GetActiveProcessorCount(ALL_PROCESSOR_GROUPS);
 #else
-        max_core_count = sysconf(_SC_NPROCESSORS_CONF);
+        const long nprocs = sysconf(_SC_NPROCESSORS_CONF);
+        if (nprocs < 0) {
+                fprintf(stderr, "Failed to get processor count!\n");
+                return MACHINE_RETVAL_ERROR;
+        }
+        max_core_count = (unsigned) nprocs;
 #endif
         if (max_core_count == 0) {
-                fprintf(stderr, "Zero processors in the system!");
+                fprintf(stderr, "Zero processors in the system!\n");
                 return MACHINE_RETVAL_ERROR;
         }
 
