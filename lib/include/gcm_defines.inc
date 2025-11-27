@@ -35,7 +35,7 @@
 ;       James Guilford
 
 %ifdef WIN_ABI
-        %xdefine GCM_MAX_LENGTH r10
+        %xdefine GCM_MAX_LENGTH r11
 %else
         %xdefine GCM_MAX_LENGTH [rel gcm_max_len]
 %endif
