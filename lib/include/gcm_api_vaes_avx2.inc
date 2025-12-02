@@ -43,6 +43,8 @@ extern aes_gcm_enc_update
 extern aes_gcm_dec_update
 extern aes_gcm_enc_vaes_avx2
 extern aes_gcm_dec_vaes_avx2
+extern aes_gcm_enc_var_iv
+extern aes_gcm_dec_var_iv
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;void   aes_gcm_precomp_128_vaes_avx2 /
@@ -439,33 +441,8 @@ align_function
 MKGLOBAL(FN_NAME(enc_var_iv,_),function,internal)
 FN_NAME(enc_var_iv,_):
         endbranch64
-        FUNC_SAVE alloc_context
-
-        mov     arg1, [arg2 + _enc_keys]
-
-        GCM_INIT arg1, {rsp + CONTEXT_OFFSET}, {[arg2 + _iv]}, \
-                {[arg2 + _gcm_aad]}, {qword [arg2 + _gcm_aad_len]}, \
-                {qword [arg2 + _iv_len_in_bytes]}
-
-        mov     arg4, [arg2 + _src]
-        add     arg4, [arg2 + _cipher_start_src_offset]
-        mov     arg3, [arg2 + _dst]
-        mov     [rsp + GP_OFFSET + 5*8], arg2   ; preserve job pointer
-        mov     arg2, [arg2 + _msg_len_to_cipher]
-        GCM_ENC_DEC  arg1, {rsp + CONTEXT_OFFSET}, arg3, arg4, arg2, ENC, single_call
-
-        mov     arg2, [rsp + GP_OFFSET + 5*8]
-        GCM_COMPLETE arg1, {rsp + CONTEXT_OFFSET}, \
-                        {[arg2 + _auth_tag_output]}, {[arg2 + _auth_tag_output_len_in_bytes]}, \
-                        single_call
-
-        ;; mark job complete
-        mov     dword [arg2 + _status], IMB_STATUS_COMPLETED
-
-        mov     rax, arg2       ;; return the job
-
-        FUNC_RESTORE
-        ret
+        mov r10d, NROUNDS
+        jmp aes_gcm_enc_var_iv
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;
@@ -479,33 +456,8 @@ align_function
 MKGLOBAL(FN_NAME(dec_var_iv,_),function,internal)
 FN_NAME(dec_var_iv,_):
         endbranch64
-        FUNC_SAVE alloc_context
-
-        mov     arg1, [arg2 + _dec_keys]
-
-        GCM_INIT arg1, {rsp + CONTEXT_OFFSET}, {[arg2 + _iv]}, \
-                {[arg2 + _gcm_aad]}, {qword [arg2 + _gcm_aad_len]}, \
-                {qword [arg2 + _iv_len_in_bytes]}
-
-        mov     arg4, [arg2 + _src]
-        add     arg4, [arg2 + _cipher_start_src_offset]
-        mov     arg3, [arg2 + _dst]
-        mov     [rsp + GP_OFFSET + 5*8], arg2   ; preserve job pointer
-        mov     arg2, [arg2 + _msg_len_to_cipher]
-        GCM_ENC_DEC  arg1, {rsp + CONTEXT_OFFSET}, arg3, arg4, arg2, DEC, single_call
-
-        mov     arg2, [rsp + GP_OFFSET + 5*8]
-        GCM_COMPLETE arg1, {rsp + CONTEXT_OFFSET}, \
-                        {[arg2 + _auth_tag_output]}, {[arg2 + _auth_tag_output_len_in_bytes]}, \
-                        single_call
-
-        ;; mark job complete
-        mov     dword [arg2 + _status], IMB_STATUS_COMPLETED
-
-        mov     rax, arg2       ;; return the job
-
-        FUNC_RESTORE
-        ret
+        mov r10d, NROUNDS
+        jmp aes_gcm_dec_var_iv
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;void   imb_aes_gmac_update_128_vaes_avx2 / imb_aes_gmac_update_192_vaes_avx2 /
