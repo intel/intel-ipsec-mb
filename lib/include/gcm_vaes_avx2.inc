@@ -2083,7 +2083,7 @@ align_label
 ;;;   KEY  - Key for encrypting the partial block
 ;;;   HASH - Current hash value
 ;;; SMASHES:
-;;;   r10, r12, r15, rax
+;;;   r12, r15, rax
 ;;;   T1, T2
 ;;; Note AVX2:
 ;;;   PLAIN_CIPH_LEN, %7, is passed only to determine
@@ -2107,13 +2107,13 @@ align_label
         ;; NOTE: type of read tuned based %%PLAIN_CIPH_LEN setting
 %ifidn %%PLAIN_CIPH_LEN, LT16
         ;; Handle the case where the message is < 16 bytes
-        lea      r10, [%%PLAIN_CIPH_IN + %%DATA_OFFSET]
+        lea      rax, [%%PLAIN_CIPH_IN + %%DATA_OFFSET]
 
         ;; T1            - packed output
-        ;; r10           - input data address
+        ;; rax           - input data address
         ;; r13           - input data length
-        ;; r12, r15, rax - temp registers
-        READ_SMALL_DATA_INPUT_AVX   %%T1, r10, r13, r12
+        ;; r12           - temp registers
+        READ_SMALL_DATA_INPUT_AVX   %%T1, rax, r13, r12
 
         lea      r12, [SHIFT_MASK + 16]
         sub      r12, r13
@@ -2458,7 +2458,7 @@ align_label
 ; Input: gcm_key_data struct* (GDATA_KEY), gcm_context_data *(GDATA_CTX), input text (PLAIN_CIPH_IN),
 ; input text length (PLAIN_CIPH_LEN) and whether encoding or decoding (ENC_DEC).
 ; Output: A cipher of the given plain text (CIPH_PLAIN_OUT), and updated GDATA_CTX
-; Clobbers rax, r10-r15, and xmm0-xmm15
+; Clobbers rax, r11-r15, and xmm0-xmm15
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 %macro  GCM_ENC_DEC         7-8
 %define %%GDATA_KEY         %1
@@ -2531,7 +2531,7 @@ align_label
         jae     %%_large_message_path
 
 %if %0 == 8
-        GCM_ENC_DEC_SMALL %%GDATA_KEY, %%GDATA_CTX, %%CIPH_PLAIN_OUT, %%PLAIN_CIPH_IN, %%PLAIN_CIPH_LEN, %%ENC_DEC, %%DATA_OFFSET, r13, r12, xmm9, xmm14, %%INSTANCE_TYPE, r10
+        GCM_ENC_DEC_SMALL %%GDATA_KEY, %%GDATA_CTX, %%CIPH_PLAIN_OUT, %%PLAIN_CIPH_IN, %%PLAIN_CIPH_LEN, %%ENC_DEC, %%DATA_OFFSET, r13, r12, xmm9, xmm14, %%INSTANCE_TYPE, %%ROUNDS
 %else
         GCM_ENC_DEC_SMALL %%GDATA_KEY, %%GDATA_CTX, %%CIPH_PLAIN_OUT, %%PLAIN_CIPH_IN, %%PLAIN_CIPH_LEN, %%ENC_DEC, %%DATA_OFFSET, r13, r12, xmm9, xmm14, %%INSTANCE_TYPE
 %endif

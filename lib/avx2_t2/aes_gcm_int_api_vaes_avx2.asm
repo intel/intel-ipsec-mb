@@ -33,6 +33,8 @@
 mksection .text
 default rel
 
+extern ghash_internal_vaes_avx2
+
 align_function
 MKGLOBAL(aes_gcm_enc_finalize,function,internal)
 aes_gcm_enc_finalize:
@@ -357,4 +359,265 @@ skip_in_out_check_error_update_dec:
         ;; Set imb_errno
         IMB_ERR_CHECK_END rax
         jmp     exit_update_dec
+%endif
+
+align_function
+MKGLOBAL(aes_gcm_enc_vaes_avx2,function,internal)
+aes_gcm_enc_vaes_avx2:
+        FUNC_SAVE
+
+%ifdef SAFE_PARAM
+        ;; Reset imb_errno
+        IMB_ERR_CHECK_RESET
+
+        ;; Load max len to reg on windows
+        INIT_GCM_MAX_LENGTH
+
+        ;; Check key_data != NULL
+        or      arg1, arg1
+        jz      error_enc
+
+        ;; Check context_data != NULL
+        or      arg2, arg2
+        jz      error_enc
+
+        ;; Check IV != NULL
+        cmp     arg6, 0
+        jz      error_enc
+
+        ;; Check auth_tag != NULL
+        cmp     arg9, 0
+        jz      error_enc
+
+        ;; Check auth_tag_len == 0 or > 16
+        cmp     arg10, 0
+        jz      error_enc
+
+        cmp     arg10, 16
+        ja      error_enc
+
+        ;; Check if msg_len == 0
+        cmp     arg5, 0
+        jz      skip_in_out_check_enc
+
+        ;; Check if msg_len > max_len
+        cmp     arg5, GCM_MAX_LENGTH
+        ja      error_enc
+
+        ;; Check out != NULL (msg_len != 0)
+        or      arg3, arg3
+        jz      error_enc
+
+        ;; Check in != NULL (msg_len != 0)
+        or      arg4, arg4
+        jz      error_enc
+
+align_label
+skip_in_out_check_enc:
+        ;; Check if aad_len == 0
+        cmp     arg8, 0
+        jz      skip_aad_check_enc
+
+        ;; Check aad != NULL (aad_len != 0)
+        cmp     arg7, 0
+        jz      error_enc
+
+align_label
+skip_aad_check_enc:
+%endif
+        push r10    ; Save NROUNDS
+        GCM_INIT arg1, arg2, arg6, arg7, arg8
+
+        pop r10     ; Restore NROUNDS
+        GCM_ENC_DEC  arg1, arg2, arg3, arg4, arg5, ENC, single_call, r10
+
+        GCM_COMPLETE arg1, arg2, arg9, arg10, single_call, r10
+
+align_label
+exit_enc:
+        FUNC_RESTORE
+
+        ret
+
+%ifdef SAFE_PARAM
+align_label
+error_enc:
+        ;; Clear reg and imb_errno
+        IMB_ERR_CHECK_START rax
+
+        ;; Check key_data != NULL
+        IMB_ERR_CHECK_NULL arg1, rax, IMB_ERR_NULL_EXP_KEY
+
+        ;; Check context_data != NULL
+        IMB_ERR_CHECK_NULL arg2, rax, IMB_ERR_NULL_CTX
+
+        ;; Check IV != NULL
+        IMB_ERR_CHECK_NULL arg6, rax, IMB_ERR_NULL_IV
+
+        ;; Check auth_tag != NULL
+        IMB_ERR_CHECK_NULL arg9, rax, IMB_ERR_NULL_AUTH
+
+        ;; Check auth_tag_len == 0 or > 16
+        IMB_ERR_CHECK_ZERO arg10, rax, IMB_ERR_AUTH_TAG_LEN
+
+        IMB_ERR_CHECK_ABOVE arg10, 16, rax, IMB_ERR_AUTH_TAG_LEN
+
+        ;; Check if msg_len == 0
+        cmp     arg5, 0
+        jz      skip_in_out_check_error_enc
+
+        ;; Check if msg_len > max_len
+        IMB_ERR_CHECK_ABOVE arg5, GCM_MAX_LENGTH, rax, IMB_ERR_CIPH_LEN
+
+        ;; Check out != NULL (msg_len != 0)
+        IMB_ERR_CHECK_NULL arg3, rax, IMB_ERR_NULL_DST
+
+        ;; Check in != NULL (msg_len != 0)
+        IMB_ERR_CHECK_NULL arg4, rax, IMB_ERR_NULL_SRC
+
+align_label
+skip_in_out_check_error_enc:
+        ;; Check if aad_len == 0
+        cmp     arg8, 0
+        jz      skip_aad_check_error_enc
+
+        ;; Check aad != NULL (aad_len != 0)
+        IMB_ERR_CHECK_NULL arg7, rax, IMB_ERR_NULL_AAD
+
+align_label
+skip_aad_check_error_enc:
+        ;; Set imb_errno
+        IMB_ERR_CHECK_END rax
+        jmp     exit_enc
+%endif
+
+align_function
+MKGLOBAL(aes_gcm_dec_vaes_avx2,function,internal)
+aes_gcm_dec_vaes_avx2:
+        FUNC_SAVE
+
+%ifdef SAFE_PARAM
+        ;; Reset imb_errno
+        IMB_ERR_CHECK_RESET
+
+        ;; Load max len to reg on windows
+        INIT_GCM_MAX_LENGTH
+
+        ;; Check key_data != NULL
+        or      arg1, arg1
+        jz      error_dec
+
+        ;; Check context_data != NULL
+        or      arg2, arg2
+        jz      error_dec
+
+        ;; Check IV != NULL
+        cmp     arg6, 0
+        jz      error_dec
+
+        ;; Check auth_tag != NULL
+        cmp     arg9, 0
+        jz      error_dec
+
+        ;; Check auth_tag_len == 0 or > 16
+        cmp     arg10, 0
+        jz      error_dec
+
+        cmp     arg10, 16
+        ja      error_dec
+
+        ;; Check if msg_len == 0
+        cmp     arg5, 0
+        jz      skip_in_out_check_dec
+
+        ;; Check if msg_len > max_len
+        cmp     arg5, GCM_MAX_LENGTH
+        ja      error_dec
+
+        ;; Check out != NULL (msg_len != 0)
+        or      arg3, arg3
+        jz      error_dec
+
+        ;; Check in != NULL (msg_len != 0)
+        or      arg4, arg4
+        jz      error_dec
+
+align_label
+skip_in_out_check_dec:
+        ;; Check if aad_len == 0
+        cmp     arg8, 0
+        jz      skip_aad_check_dec
+
+        ;; Check aad != NULL (aad_len != 0)
+        cmp     arg7, 0
+        jz      error_dec
+
+align_label
+skip_aad_check_dec:
+%endif
+        push r10    ; Save NROUNDS
+        GCM_INIT arg1, arg2, arg6, arg7, arg8
+
+        pop r10     ; Restore NROUNDS
+        GCM_ENC_DEC  arg1, arg2, arg3, arg4, arg5, DEC, single_call, r10
+
+        GCM_COMPLETE arg1, arg2, arg9, arg10, single_call, r10
+
+align_label
+exit_dec:
+        FUNC_RESTORE
+
+        ret
+
+%ifdef SAFE_PARAM
+align_label
+error_dec:
+        ;; Clear reg and imb_errno
+        IMB_ERR_CHECK_START rax
+
+        ;; Check key_data != NULL
+        IMB_ERR_CHECK_NULL arg1, rax, IMB_ERR_NULL_EXP_KEY
+
+        ;; Check context_data != NULL
+        IMB_ERR_CHECK_NULL arg2, rax, IMB_ERR_NULL_CTX
+
+        ;; Check IV != NULL
+        IMB_ERR_CHECK_NULL arg6, rax, IMB_ERR_NULL_IV
+
+        ;; Check auth_tag != NULL
+        IMB_ERR_CHECK_NULL arg9, rax, IMB_ERR_NULL_AUTH
+
+        ;; Check auth_tag_len == 0 or > 16
+        IMB_ERR_CHECK_ZERO arg10, rax, IMB_ERR_AUTH_TAG_LEN
+
+        IMB_ERR_CHECK_ABOVE arg10, 16, rax, IMB_ERR_AUTH_TAG_LEN
+
+        ;; Check if msg_len == 0
+        cmp     arg5, 0
+        jz      skip_in_out_check_error_dec
+
+        ;; Check if msg_len > max_len
+        IMB_ERR_CHECK_ABOVE arg5, GCM_MAX_LENGTH, rax, IMB_ERR_CIPH_LEN
+
+        ;; Check out != NULL (msg_len != 0)
+        IMB_ERR_CHECK_NULL arg3, rax, IMB_ERR_NULL_DST
+
+        ;; Check in != NULL (msg_len != 0)
+        IMB_ERR_CHECK_NULL arg4, rax, IMB_ERR_NULL_SRC
+
+align_label
+skip_in_out_check_error_dec:
+        ;; Check if aad_len == 0
+        cmp     arg8, 0
+        jz      skip_aad_check_error_dec
+
+        ;; Check aad != NULL (aad_len != 0)
+        IMB_ERR_CHECK_NULL arg7, rax, IMB_ERR_NULL_AAD
+
+align_label
+skip_aad_check_error_dec:
+
+        ;; Set imb_errno
+        IMB_ERR_CHECK_END rax
+        jmp     exit_dec
 %endif
