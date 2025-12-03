@@ -691,3 +691,101 @@ aes_gcm_dec_var_iv:
 
         FUNC_RESTORE
         ret
+
+align_function
+MKGLOBAL(aes_gcm_precomp_vaes_avx2,function,internal)
+aes_gcm_precomp_vaes_avx2:
+%ifdef SAFE_PARAM
+        ;; Reset imb_errno
+        IMB_ERR_CHECK_RESET
+
+        ;; Check key_data != NULL
+        or      arg1, arg1
+        jz      error_precomp
+%endif
+
+%ifidn __OUTPUT_FORMAT__, win64
+        sub     rsp, 1*16
+        ; only xmm6 needs to be maintained
+        vmovdqu [rsp + 0*16],xmm6
+%endif
+
+        vpxor    xmm6, xmm6
+        vpxor    xmm6, xmm6, [arg1]
+        vaesenc  xmm6, [arg1+16*1]
+        vaesenc  xmm6, [arg1+16*2]
+        vaesenc  xmm6, [arg1+16*3]
+        vaesenc  xmm6, [arg1+16*4]
+        vaesenc  xmm6, [arg1+16*5]
+        vaesenc  xmm6, [arg1+16*6]
+        vaesenc  xmm6, [arg1+16*7]
+        vaesenc  xmm6, [arg1+16*8]
+        vaesenc  xmm6, [arg1+16*9]
+
+        cmp      r10d, 11
+        je       aes_192_precomp
+        jb       aes_128_precomp
+
+        vaesenc  xmm6, [arg1+16*10]
+        vaesenc  xmm6, [arg1+16*11]
+        vaesenc  xmm6, [arg1+16*12]
+        vaesenc  xmm6, [arg1+16*13]
+        vaesenclast  xmm6, [arg1+16*14]
+
+        jmp      enc_done
+
+aes_192_precomp:
+        vaesenc  xmm6, [arg1+16*10]
+        vaesenc  xmm6, [arg1+16*11]
+        vaesenclast  xmm6, [arg1+16*12]
+        jmp      enc_done
+
+aes_128_precomp:
+        vaesenclast  xmm6, [arg1+16*10]
+
+enc_done:
+        vpshufb  xmm6, [rel SHUF_MASK]
+        ;;;;;;;;;;;;;;;  PRECOMPUTATION of HashKey<<1 mod poly from the HashKey;;;;;;;;;;;;;;;
+        vpsrlq   xmm2, xmm6, 63
+        vpsllq   xmm6, xmm6, 1
+        vpsrldq  xmm1, xmm2, 8
+        vpslldq  xmm2, xmm2, 8
+        vpor     xmm6, xmm6, xmm2
+        ;reduction
+        vpshufd  xmm2, xmm1, 00100100b
+        vpcmpeqd xmm2, [rel TWOONE]
+        vpand    xmm2, xmm2, [rel POLY]
+        vpxor    xmm6, xmm6, xmm2                       ; xmm6 holds the HashKey<<1 mod poly
+        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        vmovdqu  [arg1 + HashKey_1], xmm6               ; store HashKey<<1 mod poly
+
+        PRECOMPUTE arg1, xmm6, xmm0, xmm1, xmm2, xmm3, xmm4, xmm5
+
+%ifdef SAFE_DATA
+        clear_scratch_xmms_avx_asm
+%endif
+
+%ifidn __OUTPUT_FORMAT__, win64
+        vmovdqu xmm6, [rsp + 0*16]
+        add     rsp, 1*16
+%endif
+
+align_label
+exit_precomp:
+
+        ret
+
+%ifdef SAFE_PARAM
+align_label
+error_precomp:
+        ;; Clear reg and imb_errno
+        IMB_ERR_CHECK_START rax
+
+        ;; Check key_data != NULL
+        IMB_ERR_CHECK_NULL arg1, rax, IMB_ERR_NULL_EXP_KEY
+
+        ;; Set imb_errno
+        IMB_ERR_CHECK_END rax
+
+        jmp exit_precomp
+%endif
