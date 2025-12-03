@@ -46,6 +46,8 @@ extern aes_gcm_dec_vaes_avx2
 extern aes_gcm_enc_var_iv
 extern aes_gcm_dec_var_iv
 extern aes_gcm_precomp_vaes_avx2
+extern aes_gcm_init_vaes_avx2
+extern aes_gcm_init_var_iv_vaes_avx2
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;void   aes_gcm_precomp_128_vaes_avx2 /
@@ -72,91 +74,7 @@ align_function
 MKGLOBAL(FN_NAME(init,_),function,)
 FN_NAME(init,_):
         endbranch64
-        push    r12
-        push    r13
-%ifidn __OUTPUT_FORMAT__, win64
-        push    r14
-        push    r15
-        lea     r14, [rsp + 4*8]
-        ; xmm6 needs to be maintained for Windows
-        sub     rsp, 1*16
-        vmovdqu [rsp + 0*16], xmm6
-%endif
-
-%ifdef SAFE_PARAM
-        ;; Reset imb_errno
-        IMB_ERR_CHECK_RESET
-
-        ;; Check key_data != NULL
-        or      arg1, arg1
-        jz      error_init
-
-        ;; Check context_data != NULL
-        or      arg2, arg2
-        jz      error_init
-
-        ;; Check IV != NULL
-        or      arg3, arg3
-        jz      error_init
-
-        ;; Check if aad_len == 0
-        cmp     arg5, 0
-        jz      skip_aad_check_init
-
-        ;; Check aad != NULL (aad_len != 0)
-        or      arg4, arg4
-        jz      error_init
-
-align_label
-skip_aad_check_init:
-%endif
-        GCM_INIT arg1, arg2, arg3, arg4, arg5
-
-%ifdef SAFE_DATA
-        clear_scratch_xmms_avx_asm
-%endif
-align_label
-exit_init:
-
-%ifidn __OUTPUT_FORMAT__, win64
-        vmovdqu xmm6 , [rsp + 0*16]
-        add     rsp, 1*16
-        pop     r15
-        pop     r14
-%endif
-        pop     r13
-        pop     r12
-        ret
-
-%ifdef SAFE_PARAM
-align_label
-error_init:
-        ;; Clear reg and imb_errno
-        IMB_ERR_CHECK_START rax
-
-        ;; Check key_data != NULL
-        IMB_ERR_CHECK_NULL arg1, rax, IMB_ERR_NULL_EXP_KEY
-
-        ;; Check context_data != NULL
-        IMB_ERR_CHECK_NULL arg2, rax, IMB_ERR_NULL_CTX
-
-        ;; Check IV != NULL
-        IMB_ERR_CHECK_NULL arg3, rax, IMB_ERR_NULL_IV
-
-        ;; Check if aad_len == 0
-        cmp     arg5, 0
-        jz      skip_aad_check_error_init
-
-        ;; Check aad != NULL (aad_len != 0)
-        IMB_ERR_CHECK_NULL arg4, rax, IMB_ERR_NULL_AAD
-
-align_label
-skip_aad_check_error_init:
-
-        ;; Set imb_errno
-        IMB_ERR_CHECK_END rax
-        jmp     exit_init
-%endif
+        jmp aes_gcm_init_vaes_avx2
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;void   aes_gcm_init_var_iv_128_vaes_avx2 / aes_gcm_init_var_iv_192_vaes_avx2 /
@@ -172,101 +90,7 @@ align_function
 MKGLOBAL(FN_NAME(init_var_iv,_),function,)
 FN_NAME(init_var_iv,_):
         endbranch64
-        push    r12
-        push    r13
-%ifidn __OUTPUT_FORMAT__, win64
-        push    r14
-        push    r15
-        lea     r14, [rsp + 4*8]
-        ; xmm6 & xmm14 need to be maintained for Windows
-        sub     rsp, 2*16
-        vmovdqu [rsp + 0*16], xmm6
-        vmovdqu [rsp + 1*16], xmm14
-%endif
-
-%ifdef SAFE_PARAM
-        ;; Reset imb_errno
-        IMB_ERR_CHECK_RESET
-
-        ;; Check key_data != NULL
-        or      arg1, arg1
-        jz      error_init_IV
-
-        ;; Check context_data != NULL
-        or      arg2, arg2
-        jz      error_init_IV
-
-        ;; Check IV != NULL
-        or      arg3, arg3
-        jz      error_init_IV
-
-        ;; Check iv_len != 0
-        or      arg4, arg4
-        jz      error_init_IV
-
-        ;; Check if aad_len == 0
-        cmp     arg6, 0
-        jz      skip_aad_check_init_IV
-
-        ;; Check aad != NULL (aad_len != 0)
-        cmp     arg5, 0
-        jz      error_init_IV
-
-align_label
-skip_aad_check_init_IV:
-%endif
-
-        GCM_INIT arg1, arg2, arg3, arg5, arg6, arg4
-
-%ifdef SAFE_DATA
-        clear_scratch_xmms_avx_asm
-%endif
-align_label
-exit_init_IV:
-
-%ifidn __OUTPUT_FORMAT__, win64
-        vmovdqu xmm6, [rsp + 0*16]
-        vmovdqu xmm14, [rsp + 1*16]
-        add     rsp, 2*16
-        pop     r15
-        pop     r14
-%endif
-        pop     r13
-        pop     r12
-        ret
-
-%ifdef SAFE_PARAM
-align_label
-error_init_IV:
-        ;; Clear reg and imb_errno
-        IMB_ERR_CHECK_START rax
-
-        ;; Check key_data != NULL
-        IMB_ERR_CHECK_NULL arg1, rax, IMB_ERR_NULL_EXP_KEY
-
-        ;; Check context_data != NULL
-        IMB_ERR_CHECK_NULL arg2, rax, IMB_ERR_NULL_CTX
-
-        ;; Check IV != NULL
-        IMB_ERR_CHECK_NULL arg3, rax, IMB_ERR_NULL_IV
-
-        ;; Check iv_len != 0
-        IMB_ERR_CHECK_ZERO arg4, rax, IMB_ERR_IV_LEN
-
-        ;; Check if aad_len == 0
-        cmp     arg6, 0
-        jz      skip_aad_check_error_init_IV
-
-        ;; Check aad != NULL (aad_len != 0)
-        IMB_ERR_CHECK_NULL arg5, rax, IMB_ERR_NULL_AAD
-
-align_label
-skip_aad_check_error_init_IV:
-
-        ;; Set imb_errno
-        IMB_ERR_CHECK_END rax
-        jmp     exit_init_IV
-%endif
+        jmp aes_gcm_init_var_iv_vaes_avx2
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;void   aes_gcm_enc_128_update_vaes_avx2 / aes_gcm_enc_192_update_vaes_avx2 /
