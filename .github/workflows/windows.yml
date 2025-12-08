@@ -22,8 +22,6 @@ jobs:
 
     - name: Checkout repo
       uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3.6.0
-      with:
-        repository: 'intel/intel-ipsec-mb'
 
     - name: Add MSBuild to PATH
       uses: microsoft/setup-msbuild@c26a08ba26249b81327e26f6ef381897b6a8754d # v1.0.2
@@ -57,8 +55,6 @@ jobs:
 
     - name: Checkout repo
       uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3.6.0
-      with:
-        repository: 'intel/intel-ipsec-mb'
 
     - name: Add MSBuild to PATH
       uses: microsoft/setup-msbuild@c26a08ba26249b81327e26f6ef381897b6a8754d # v1.0.2

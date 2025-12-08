@@ -16,12 +16,12 @@ jobs:
 
     steps:
     - name: Install packages
-      run: sudo apt-get install -y nasm
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y nasm
 
     - name: Checkout repo
       uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3.6.0
-      with:
-        repository: intel/intel-ipsec-mb
 
     - name: Build
       run: make -j
@@ -39,12 +39,12 @@ jobs:
 
     steps:
     - name: Install packages
-      run: sudo apt-get install -y nasm
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y nasm
 
     - name: Checkout repo
       uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3.6.0
-      with:
-        repository: intel/intel-ipsec-mb
 
     - name: Build
       run: make SHARED=n -j
@@ -55,12 +55,12 @@ jobs:
 
     steps:
     - name: Install packages
-      run: sudo apt-get install -y nasm clang
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y nasm clang
 
     - name: Checkout repo
       uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3.6.0
-      with:
-        repository: intel/intel-ipsec-mb
 
     - name: Build
       run: make CC=clang -j
@@ -71,12 +71,12 @@ jobs:
 
     steps:
     - name: Install packages
-      run: sudo apt-get install -y nasm clang
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y nasm clang
 
     - name: Checkout repo
       uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3.6.0
-      with:
-        repository: intel/intel-ipsec-mb
 
     - name: Build
       run: make CC=clang SHARED=n -j
@@ -87,12 +87,12 @@ jobs:
 
     steps:
     - name: Install packages
-      run: sudo apt-get install -y nasm clang
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y nasm clang
 
     - name: Checkout repo
       uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3.6.0
-      with:
-        repository: intel/intel-ipsec-mb
 
     - name: Build
       run: make CC=clang AESNI_EMU=y -j
@@ -105,12 +105,12 @@ jobs:
 
     steps:
     - name: Install packages
-      run: sudo apt-get install -y nasm
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y nasm cmake
 
     - name: Checkout repo
       uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3.6.0
-      with:
-        repository: 'intel/intel-ipsec-mb'
 
     - name: Configure CMake
       run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
@@ -138,12 +138,12 @@ jobs:
 
     steps:
     - name: Install packages
-      run: sudo apt-get install -y nasm
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y nasm cmake
 
     - name: Checkout repo
       uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3.6.0
-      with:
-        repository: 'intel/intel-ipsec-mb'
 
     - name: Configure CMake
       run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}

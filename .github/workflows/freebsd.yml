@@ -17,8 +17,6 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3.6.0
-        with:
-          repository: 'intel/intel-ipsec-mb'
 
       - name: Build
         uses: vmactions/freebsd-vm@35a5b20a98476a681c7576a344775be7e7f77f06 # v1.0.6
@@ -37,8 +35,6 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3.6.0
-        with:
-          repository: 'intel/intel-ipsec-mb'
 
       - name: Build
         uses: vmactions/freebsd-vm@35a5b20a98476a681c7576a344775be7e7f77f06 # v1.0.6
@@ -57,8 +53,6 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3.6.0
-        with:
-          repository: 'intel/intel-ipsec-mb'
 
       - name: Clang Release Build
         uses: vmactions/freebsd-vm@35a5b20a98476a681c7576a344775be7e7f77f06 # v1.0.6
@@ -83,8 +77,6 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3.6.0
-        with:
-          repository: 'intel/intel-ipsec-mb'
 
       - name: Release build with GCC
         uses: vmactions/freebsd-vm@35a5b20a98476a681c7576a344775be7e7f77f06 # v1.0.6
