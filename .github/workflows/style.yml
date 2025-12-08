@@ -19,8 +19,8 @@ jobs:
       run: |
         wget https://apt.llvm.org/llvm.sh
         chmod +x llvm.sh
-        ./llvm.sh 18
-        sudo apt install -y nasm cmake clang-format-18
+        sudo -E ./llvm.sh 18
+        sudo -E apt-get install -y nasm cmake clang-format-18
 
     - name: Checkout repo
       uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3.6.0
