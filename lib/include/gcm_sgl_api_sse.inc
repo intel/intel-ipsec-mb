@@ -38,6 +38,8 @@ default rel
 
 extern aes_gcm_enc_finalize_sse
 extern aes_gcm_dec_finalize_sse
+extern aes_gcm_enc_update_sse
+extern aes_gcm_dec_update_sse
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;void   aes_gcm_init_128_sse / aes_gcm_init_192_sse / aes_gcm_init_256_sse (
@@ -269,78 +271,8 @@ align_function
 MKGLOBAL(FN_NAME(enc,_update_),function,)
 FN_NAME(enc,_update_):
         endbranch64
-        FUNC_SAVE
-
-%ifdef SAFE_PARAM
-        ;; Reset imb_errno
-        IMB_ERR_CHECK_RESET
-
-        ;; Load max len to reg on windows
-        INIT_GCM_MAX_LENGTH
-
-        ;; Check key_data != NULL
-        cmp     arg1, 0
-        jz      error_update_enc
-
-        ;; Check context_data != NULL
-        cmp     arg2, 0
-        jz      error_update_enc
-
-        ;; Check if msg_len == 0
-        cmp     arg5, 0
-        jz      error_update_enc
-
-        ;; Check if msg_len > max_len
-        cmp     arg5, GCM_MAX_LENGTH
-        ja      error_update_enc
-
-        ;; Check out != NULL (msg_len != 0)
-        cmp     arg3, 0
-        jz      error_update_enc
-
-        ;; Check in != NULL (msg_len != 0)
-        cmp     arg4, 0
-        jz      error_update_enc
-%endif
-        GCM_ENC_DEC arg1, arg2, arg3, arg4, arg5, ENC
-
-align_label
-exit_update_enc:
-        FUNC_RESTORE
-
-        ret
-
-%ifdef SAFE_PARAM
-align_label
-error_update_enc:
-        ;; Clear reg and imb_errno
-        IMB_ERR_CHECK_START rax
-
-        ;; Check key_data != NULL
-        IMB_ERR_CHECK_NULL arg1, rax, IMB_ERR_NULL_EXP_KEY
-
-        ;; Check context_data != NULL
-        IMB_ERR_CHECK_NULL arg2, rax, IMB_ERR_NULL_CTX
-
-        ;; Check if plaintext_len == 0
-        cmp     arg5, 0
-        jz      skip_in_out_check_error_update_enc
-
-        ;; Check if msg_len > max_len
-        IMB_ERR_CHECK_ABOVE arg5, GCM_MAX_LENGTH, rax, IMB_ERR_CIPH_LEN
-
-        ;; Check out != NULL
-        IMB_ERR_CHECK_NULL arg3, rax, IMB_ERR_NULL_DST
-
-        ;; Check in != NULL (plaintext_len != 0)
-        IMB_ERR_CHECK_NULL arg4, rax, IMB_ERR_NULL_SRC
-
-align_label
-skip_in_out_check_error_update_enc:
-        ;; Set imb_errno
-        IMB_ERR_CHECK_END rax
-        jmp     exit_update_enc
-%endif
+        mov r10d, NROUNDS
+        jmp aes_gcm_enc_update_sse
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;void   aes_gcm_dec_128_update_sse / aes_gcm_dec_192_update_sse / aes_gcm_dec_256_update_sse
@@ -354,79 +286,8 @@ align_function
 MKGLOBAL(FN_NAME(dec,_update_),function,)
 FN_NAME(dec,_update_):
         endbranch64
-        FUNC_SAVE
-
-%ifdef SAFE_PARAM
-        ;; Reset imb_errno
-        IMB_ERR_CHECK_RESET
-
-        ;; Load max len to reg on windows
-        INIT_GCM_MAX_LENGTH
-
-        ;; Check key_data != NULL
-        cmp     arg1, 0
-        jz      error_update_dec
-
-        ;; Check context_data != NULL
-        cmp     arg2, 0
-        jz      error_update_dec
-
-        ;; Check if msg_len == 0
-        cmp     arg5, 0
-        jz      error_update_dec
-
-        ;; Check if msg_len > max_len
-        cmp     arg5, GCM_MAX_LENGTH
-        ja      error_update_dec
-
-        ;; Check out != NULL (msg_len != 0)
-        cmp     arg3, 0
-        jz      error_update_dec
-
-        ;; Check in != NULL (msg_len != 0)
-        cmp     arg4, 0
-        jz      error_update_dec
-%endif
-
-        GCM_ENC_DEC arg1, arg2, arg3, arg4, arg5, DEC
-
-align_label
-exit_update_dec:
-        FUNC_RESTORE
-
-        ret
-
-%ifdef SAFE_PARAM
-align_label
-error_update_dec:
-        ;; Clear reg and imb_errno
-        IMB_ERR_CHECK_START rax
-
-        ;; Check key_data != NULL
-        IMB_ERR_CHECK_NULL arg1, rax, IMB_ERR_NULL_EXP_KEY
-
-        ;; Check context_data != NULL
-        IMB_ERR_CHECK_NULL arg2, rax, IMB_ERR_NULL_CTX
-
-        ;; Check if plaintext_len == 0
-        cmp     arg5, 0
-        jz      skip_in_out_check_error_update_dec
-
-        ;; Check if msg_len > max_len
-        IMB_ERR_CHECK_ABOVE arg5, GCM_MAX_LENGTH, rax, IMB_ERR_CIPH_LEN
-
-        ;; Check out != NULL
-        IMB_ERR_CHECK_NULL arg3, rax, IMB_ERR_NULL_DST
-
-        ;; Check in != NULL (plaintext_len != 0)
-        IMB_ERR_CHECK_NULL arg4, rax, IMB_ERR_NULL_SRC
-
-align_label
-skip_in_out_check_error_update_dec:
-        ;; Set imb_errno
-        IMB_ERR_CHECK_END rax
-        jmp     exit_update_dec
-%endif
+        mov r10d, NROUNDS
+        jmp aes_gcm_dec_update_sse
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;void   aes_gcm_enc_128_finalize_sse / aes_gcm_enc_192_finalize_sse / aes_gcm_enc_256_finalize_sse
