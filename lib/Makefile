@@ -657,7 +657,8 @@ c_gcm_objs := gcm.o
 asm_sse_gcm_objs := \
 	gcm128_api_by8_sse.o gcm192_api_by8_sse.o gcm256_api_by8_sse.o \
 	gcm128_sgl_api_by8_sse.o gcm192_sgl_api_by8_sse.o gcm256_sgl_api_by8_sse.o \
-	gcm128_gmac_api_by8_sse.o gcm192_gmac_api_by8_sse.o gcm256_gmac_api_by8_sse.o
+	gcm128_gmac_api_by8_sse.o gcm192_gmac_api_by8_sse.o gcm256_gmac_api_by8_sse.o \
+	gcm_sgl_int_api_sse.o
 
 asm_avx_gcm_objs :=
 

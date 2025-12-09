@@ -1943,6 +1943,59 @@ align_label
         paddd   xmm9, [ONE]                     ; INCR CNT to get Yn
         movdqu  [%%GDATA_CTX + CurCount], xmm9          ; my_ctx.data.current_counter = xmm9
         pshufb  xmm9, [SHUF_MASK]
+%if %0 == 7
+        movdqu   xmm2, [%%GDATA_KEY+16*0]
+        pxor     xmm9, xmm2
+        movdqu   xmm2, [%%GDATA_KEY+16*1]
+        aesenc  xmm9, xmm2
+        movdqu   xmm2, [%%GDATA_KEY+16*2]
+        aesenc  xmm9, xmm2
+        movdqu   xmm2, [%%GDATA_KEY+16*3]
+        aesenc  xmm9, xmm2
+        movdqu   xmm2, [%%GDATA_KEY+16*4]
+        aesenc  xmm9, xmm2
+        movdqu   xmm2, [%%GDATA_KEY+16*5]
+        aesenc  xmm9, xmm2
+        movdqu   xmm2, [%%GDATA_KEY+16*6]
+        aesenc  xmm9, xmm2
+        movdqu   xmm2, [%%GDATA_KEY+16*7]
+        aesenc  xmm9, xmm2
+        movdqu   xmm2, [%%GDATA_KEY+16*8]
+        aesenc  xmm9, xmm2
+        movdqu   xmm2, [%%GDATA_KEY+16*9]
+        aesenc  xmm9, xmm2
+
+        cmp DWORD(%%ROUNDS), 11
+        jb %%_128_encrypt
+        je %%_192_encrypt
+
+        movdqu   xmm2, [%%GDATA_KEY+16*10]
+        aesenc  xmm9, xmm2
+        movdqu   xmm2, [%%GDATA_KEY+16*11]
+        aesenc  xmm9, xmm2
+        movdqu   xmm2, [%%GDATA_KEY+16*12]
+        aesenc  xmm9, xmm2
+        movdqu   xmm2, [%%GDATA_KEY+16*13]
+        aesenc  xmm9, xmm2
+        movdqu   xmm2, [%%GDATA_KEY+16*14]
+        aesenclast      xmm9, xmm2
+        jmp %%_encrypt_done
+
+%%_128_encrypt:
+        movdqu   xmm2, [%%GDATA_KEY+16*10]
+        aesenclast      xmm9, xmm2
+        jmp %%_encrypt_done
+
+%%_192_encrypt:
+        movdqu   xmm2, [%%GDATA_KEY+16*10]
+        aesenc  xmm9, xmm2
+        movdqu   xmm2, [%%GDATA_KEY+16*11]
+        aesenc      xmm9, xmm2
+        movdqu   xmm2, [%%GDATA_KEY+16*12]
+        aesenclast      xmm9, xmm2
+
+%%_encrypt_done:
+%else
         ENCRYPT_SINGLE_BLOCK    %%GDATA_KEY, xmm9, xmm2                    ; E(K, Yn)
         movdqu  [%%GDATA_CTX + PBlockEncKey], xmm9              ; my_ctx_data.partial_block_enc_key = xmm9
 
@@ -2024,11 +2077,12 @@ align_label
 ; Output: Authorization Tag (AUTH_TAG) and Authorization Tag length (AUTH_TAG_LEN)
 ; Clobbers rax, r10-r12, and xmm0-xmm2, xmm5-xmm6, xmm9-xmm11, xmm13-xmm15
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-%macro  GCM_COMPLETE            4
+%macro  GCM_COMPLETE            4-5
 %define %%GDATA_KEY             %1
 %define %%GDATA_CTX             %2
 %define %%AUTH_TAG              %3
 %define %%AUTH_TAG_LEN          %4
+%define %%ROUNDS                %5
 %define %%PLAIN_CYPH_LEN        rax
 
         mov     r12, [%%GDATA_CTX + PBlockLen]          ; r12 = aadLen (number of bytes)
@@ -2061,8 +2115,61 @@ align_label
 
         movdqu  xmm9, [%%GDATA_CTX + OrigIV]            ; xmm9 = Y0
 
-        ENCRYPT_SINGLE_BLOCK    %%GDATA_KEY, xmm9, xmm2 ; E(K, Y0)
+%if %0 == 5
+        movdqu  xmm2, [%%GDATA_KEY+16*0]
+        pxor    xmm9, xmm2
+        movdqu  xmm2, [%%GDATA_KEY+16*1]
+        aesenc  xmm9, xmm2
+        movdqu  xmm2, [%%GDATA_KEY+16*2]
+        aesenc  xmm9, xmm2
+        movdqu  xmm2, [%%GDATA_KEY+16*3]
+        aesenc  xmm9, xmm2
+        movdqu  xmm2, [%%GDATA_KEY+16*4]
+        aesenc  xmm9, xmm2
+        movdqu  xmm2, [%%GDATA_KEY+16*5]
+        aesenc  xmm9, xmm2
+        movdqu  xmm2, [%%GDATA_KEY+16*6]
+        aesenc  xmm9, xmm2
+        movdqu  xmm2, [%%GDATA_KEY+16*7]
+        aesenc  xmm9, xmm2
+        movdqu  xmm2, [%%GDATA_KEY+16*8]
+        aesenc  xmm9, xmm2
+        movdqu  xmm2, [%%GDATA_KEY+16*9]
+        aesenc  xmm9, xmm2
 
+
+        cmp %%ROUNDS, 11
+        jb %%_128_block
+        je %%_192_block
+
+        movdqu  xmm2, [%%GDATA_KEY+16*10]
+        aesenc  xmm9, xmm2
+        movdqu  xmm2, [%%GDATA_KEY+16*11]
+        aesenc  xmm9, xmm2
+        movdqu  xmm2, [%%GDATA_KEY+16*12]
+        aesenc  xmm9, xmm2
+        movdqu  xmm2, [%%GDATA_KEY+16*13]
+        aesenc  xmm9, xmm2
+        movdqu  xmm2, [%%GDATA_KEY+16*14]
+        aesenclast      xmm9, xmm2
+        jmp %%_done
+
+%%_128_block:
+        movdqu  xmm2, [%%GDATA_KEY+16*10]
+        aesenclast      xmm9, xmm2
+        jmp %%_done
+
+%%_192_block:
+        movdqu  xmm2, [%%GDATA_KEY+16*10]
+        aesenc  xmm9, xmm2
+        movdqu  xmm2, [%%GDATA_KEY+16*11]
+        aesenc      xmm9, xmm2
+        movdqu  xmm2, [%%GDATA_KEY+16*12]
+        aesenclast      xmm9, xmm2
+%%_done:
+%else
+        ENCRYPT_SINGLE_BLOCK    %%GDATA_KEY, xmm9, xmm2 ; E(K, Y0)
+%endif
         pxor    xmm9, xmm14
 
 align_label
