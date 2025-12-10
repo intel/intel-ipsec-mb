@@ -1,0 +1,112 @@
+name: Packaging
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: read
+
+jobs:
+  # Build and validate DEB package on Ubuntu
+  build-deb-package:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y nasm cmake
+
+    - name: Checkout repo
+      uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3.6.0
+
+    - name: Configure CMake
+      run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=Release -DBUILD_LIBRARY_ONLY=ON
+
+    - name: Build
+      run: cmake --build ${{github.workspace}}/build --config Release --parallel
+
+    - name: Create DEB package
+      working-directory: ${{github.workspace}}/build
+      run: cpack -G DEB
+
+    - name: Validate DEB package
+      working-directory: ${{github.workspace}}/build
+      run: |
+        # List generated packages
+        ls -la *.deb
+        # Get package info
+        dpkg-deb --info *.deb
+        # List package contents
+        dpkg-deb --contents *.deb
+
+    - name: Test DEB package installation
+      working-directory: ${{github.workspace}}/build
+      run: |
+        # Install the package
+        sudo dpkg -i *.deb
+        # Verify library is installed
+        sudo ldconfig -p | grep -i ipsec || true
+        ls -la /usr/local/lib*/libIPSec* || ls -la /usr/lib*/libIPSec* || true
+
+    - name: Test building against installed library
+      working-directory: ${{github.workspace}}/examples/burst-app
+      run: |
+        gcc main.c -lIPSec_MB
+
+    - name: Test package removal
+      run: |
+        # Remove the package
+        sudo dpkg -r intel-ipsec-mb
+
+    - name: Upload DEB package artifact
+      if: ${{ github.repository == 'intel/intel-ipsec-mb' }}
+      uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
+      with:
+        name: deb-package
+        path: ${{github.workspace}}/build/*.deb
+        retention-days: 7
+
+  # Build and validate RPM package on Ubuntu (using alien or building on Fedora)
+  build-rpm-package:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y nasm cmake rpm
+
+    - name: Checkout repo
+      uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3.6.0
+
+    - name: Configure CMake
+      run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=Release -DBUILD_LIBRARY_ONLY=ON
+
+    - name: Build
+      run: cmake --build ${{github.workspace}}/build --config Release --parallel
+
+    - name: Create RPM package
+      working-directory: ${{github.workspace}}/build
+      run: cpack -G RPM
+
+    - name: Validate RPM package
+      working-directory: ${{github.workspace}}/build
+      run: |
+        # List generated packages
+        ls -la *.rpm
+        # Get package info
+        rpm -qip *.rpm
+        # List package contents
+        rpm -qlp *.rpm
+
+    - name: Upload RPM package artifact
+      if: ${{ github.repository == 'intel/intel-ipsec-mb' }}
+      uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
+      with:
+        name: rpm-package
+        path: ${{github.workspace}}/build/*.rpm
+        retention-days: 7
