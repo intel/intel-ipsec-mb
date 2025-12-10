@@ -105,3 +105,9 @@ endif()
 
 # add custom target to print help information
 imb_add_target_print_help("${IPSEC_MB_OPTIONS}")
+
+# ##############################################################################
+# configure CPack for package generation
+# ##############################################################################
+
+include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/cpack.cmake")
