@@ -490,7 +490,8 @@ gcm_objs = \
 	$(OBJ_DIR)\gcm256_api_by8_sse.obj \
 	$(OBJ_DIR)\gcm256_sgl_api_by8_sse.obj \
 	$(OBJ_DIR)\gcm256_gmac_api_by8_sse.obj \
-	$(OBJ_DIR)\gcm_sgl_int_api_sse.obj
+	$(OBJ_DIR)\gcm_sgl_int_api_sse.obj \
+	$(OBJ_DIR)\gcm_int_api_sse.obj
 
 avx2_t4_objs = \
 	$(OBJ_DIR)\mb_mgr_avx2_t4.obj \
