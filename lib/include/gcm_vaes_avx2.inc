@@ -2668,7 +2668,7 @@ align_label
                 vaesenc  xmm9, [%%GDATA_KEY+16*8]
                 vaesenc  xmm9, [%%GDATA_KEY+16*9]
 
-                cmp %%ROUNDS, 11
+                cmp DWORD(%%ROUNDS), 11
                 jb %%_128_block
                 je %%_192_block
 

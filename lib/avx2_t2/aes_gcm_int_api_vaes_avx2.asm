@@ -36,6 +36,14 @@ default rel
 extern ghash_internal_vaes_avx2
 extern partial_block_gmac_vaes_avx2
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;void   aes_gcm_enc_finalize_vaes_avx2
+;       (const struct gcm_key_data *key_data,
+;        struct gcm_context_data *context_data,
+;        u8       *auth_tag,
+;        u64      auth_tag_len);
+;        Expects NROUNDS value (9, 11, 13) in r10
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 align_function
 MKGLOBAL(aes_gcm_enc_finalize,function,internal)
 aes_gcm_enc_finalize:
@@ -122,6 +130,14 @@ error_enc_fin:
         jmp     exit_enc_fin
 %endif
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;void   aes_gcm_dec_finalize_vaes_avx2
+;       (const struct gcm_key_data *key_data,
+;        struct gcm_context_data *context_data,
+;        u8       *auth_tag,
+;        u64      auth_tag_len);
+;        Expects NROUNDS value (9, 11, 13) in r10
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 align_function
 MKGLOBAL(aes_gcm_dec_finalize,function,internal)
 aes_gcm_dec_finalize:
@@ -209,6 +225,15 @@ error_dec_fin:
         jmp     exit_dec_fin
 %endif
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;void   aes_gcm_enc_update_vaes_avx2
+;       (const struct gcm_key_data *key_data,
+;        struct gcm_context_data *context_data,
+;        u8       *out,
+;        const u8 *in,
+;        u64      msg_len);
+;        Expects NROUNDS value (9, 11, 13) in r10
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 align_function
 MKGLOBAL(aes_gcm_enc_update,function,internal)
 aes_gcm_enc_update:
@@ -285,6 +310,15 @@ skip_in_out_check_error_update_enc:
         jmp     exit_update_enc
 %endif
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;void   aes_gcm_dec_update_vaes_avx2
+;       (const struct gcm_key_data *key_data,
+;        struct gcm_context_data *context_data,
+;        u8       *out,
+;        const u8 *in,
+;        u64      msg_len);
+;        Expects NROUNDS value (9, 11, 13) in r10
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 align_function
 MKGLOBAL(aes_gcm_dec_update,function,internal)
 aes_gcm_dec_update:
@@ -362,6 +396,20 @@ skip_in_out_check_error_update_dec:
         jmp     exit_update_dec
 %endif
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;void   aes_gcm_enc_vaes_avx2
+;       (const struct gcm_key_data *key_data,
+;        struct gcm_context_data *context_data,
+;        u8       *out,
+;        const u8 *in,
+;        u64      msg_len,
+;        u8       *iv,
+;        const u8 *aad,
+;        u64      aad_len,
+;        u8       *auth_tag,
+;        u64      auth_tag_len);
+;        Expects NROUNDS value (9, 11, 13) in r10
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 align_function
 MKGLOBAL(aes_gcm_enc_vaes_avx2,function,internal)
 aes_gcm_enc_vaes_avx2:
@@ -492,6 +540,20 @@ skip_aad_check_error_enc:
         jmp     exit_enc
 %endif
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;void   aes_gcm_dec_vaes_avx2
+;       (const struct gcm_key_data *key_data,
+;        struct gcm_context_data *context_data,
+;        u8       *out,
+;        const u8 *in,
+;        u64      msg_len,
+;        u8       *iv,
+;        const u8 *aad,
+;        u64      aad_len,
+;        u8       *auth_tag,
+;        u64      auth_tag_len);
+;        Expects NROUNDS value (9, 11, 13) in r10
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 align_function
 MKGLOBAL(aes_gcm_dec_vaes_avx2,function,internal)
 aes_gcm_dec_vaes_avx2:
@@ -623,6 +685,14 @@ skip_aad_check_error_dec:
         jmp     exit_dec
 %endif
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;
+; NOTE: THIS API IS USED BY JOB-API ONLY, NO NEED FOR 2ND SAFE PARAM CHECK
+;
+;IMB_JOB * aes_gcm_enc_var_iv_vaes_avx2
+;       (IMB_MGR *state, IMB_JOB *job)
+;       Expects NROUNDS value (9, 11, 13) in r10
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 align_function
 MKGLOBAL(aes_gcm_enc_var_iv,function,internal)
 aes_gcm_enc_var_iv:
@@ -658,6 +728,14 @@ aes_gcm_enc_var_iv:
         FUNC_RESTORE
         ret
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;
+; NOTE: THIS API IS USED BY JOB-API ONLY, NO NEED FOR 2ND SAFE PARAM CHECK
+;
+;IMB_JOB *aes_gcm_dec_var_iv_vaes_avx2
+;       (IMB_MGR *state, IMB_JOB *job)
+;       Expects NROUNDS value (9, 11, 13) in r10
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 align_function
 MKGLOBAL(aes_gcm_dec_var_iv,function,internal)
 aes_gcm_dec_var_iv:
@@ -693,6 +771,11 @@ aes_gcm_dec_var_iv:
         FUNC_RESTORE
         ret
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;void   aes_gcm_precomp_vaes_avx2
+;       (struct gcm_key_data *key_data)
+;       Expects NROUNDS value (9, 11, 13) in r10
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 align_function
 MKGLOBAL(aes_gcm_precomp_vaes_avx2,function,internal)
 aes_gcm_precomp_vaes_avx2:
@@ -791,6 +874,14 @@ error_precomp:
         jmp exit_precomp
 %endif
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;void   aes_gcm_init_vaes_avx2
+;       (const struct gcm_key_data *key_data,
+;        struct gcm_context_data *context_data,
+;        u8       *iv,
+;        const u8 *aad,
+;        u64      aad_len);
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 align_function
 MKGLOBAL(aes_gcm_init_vaes_avx2,function,internal)
 aes_gcm_init_vaes_avx2:
@@ -880,6 +971,15 @@ skip_aad_check_error_init:
         jmp     exit_init
 %endif
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;void   aes_gcm_init_var_iv_vaes_avx2
+;       (const struct gcm_key_data *key_data,
+;        struct gcm_context_data *context_data,
+;        u8        *iv,
+;        const u64 iv_len,
+;        const u8  *aad,
+;        const u64 aad_len);
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 align_function
 MKGLOBAL(aes_gcm_init_var_iv_vaes_avx2,function,internal)
 aes_gcm_init_var_iv_vaes_avx2:
@@ -979,6 +1079,13 @@ skip_aad_check_error_init_IV:
         jmp     exit_init_IV
 %endif
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;void   imb_aes_gmac_update_vaes_avx2
+;        const struct gcm_key_data *key_data,
+;        struct gcm_context_data *context_data,
+;        const   u8 *in,
+;        const   u64 msg_len);
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 align_function
 MKGLOBAL(aes_gmac_update_vaes_avx2,function,internal)
 aes_gmac_update_vaes_avx2:
