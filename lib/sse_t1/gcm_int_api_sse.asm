@@ -28,6 +28,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 %define GCM128_MODE 1
 %include "include/gcm_sse.inc"
+%include "include/imb_job.inc"
 %include "include/align_sse.inc"
 
 mksection .text
@@ -321,3 +322,111 @@ skip_aad_check_error_dec:
         IMB_ERR_CHECK_END rax
         jmp     exit_dec
 %endif
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;
+; NOTE: THIS API IS USED BY JOB-API ONLY, NO NEED FOR 2ND SAFE PARAM CHECK
+;
+;IMB_JOB *aes_gcm_enc_var_iv_sse
+;        (IMB_MGR *state, IMB_JOB *job)
+;        Expects NROUNDS value (9, 11, 13) in r10
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+align_function
+MKGLOBAL(aes_gcm_enc_var_iv_sse,function,internal)
+aes_gcm_enc_var_iv_sse:
+        FUNC_SAVE alloc_context
+
+        mov     arg1, [arg2 + _enc_keys]
+
+        cmp     qword [arg2 + _iv_len_in_bytes], 12
+        je      iv_len_12_enc_IV
+
+        mov r15, r10 ; Save NROUNDS
+        GCM_INIT arg1, {rsp + CONTEXT_OFFSET}, {[arg2 + _iv]}, \
+                {[arg2 + _gcm_aad]}, {[arg2 + _gcm_aad_len]}, \
+                {[arg2 + _iv_len_in_bytes]}
+        mov r10, r15 ; Restore NROUNDS
+
+        jmp     skip_iv_len_12_enc_IV
+
+align_function
+iv_len_12_enc_IV:
+        mov r15, r10 ; Save NROUNDS
+        GCM_INIT arg1, {rsp + CONTEXT_OFFSET}, {[arg2 + _iv]}, \
+                {[arg2 + _gcm_aad]}, {[arg2 + _gcm_aad_len]}
+        mov r10, r15 ; Restore NROUNDS
+
+align_label
+skip_iv_len_12_enc_IV:
+        mov     arg3, [arg2 + _src]
+        add     arg3, [arg2 + _cipher_start_src_offset]
+        mov     arg4, [arg2 + _dst]
+        mov     [rsp + GP_OFFSET + 5*8], arg2   ; preserve job pointer
+        mov     arg2, [arg2 + _msg_len_to_cipher]
+        GCM_ENC_DEC  arg1, {rsp + CONTEXT_OFFSET}, arg4, arg3, arg2, ENC, r10
+
+        mov     arg2, [rsp + GP_OFFSET + 5*8]
+        GCM_COMPLETE arg1, {rsp + CONTEXT_OFFSET}, \
+                        {[arg2 + _auth_tag_output]}, {[arg2 + _auth_tag_output_len_in_bytes]}, r10
+
+        ;; mark job complete
+        mov     dword [arg2 + _status], IMB_STATUS_COMPLETED
+
+        mov     rax, arg2       ;; return the job
+
+        FUNC_RESTORE
+        ret
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;
+; NOTE: THIS API IS USED BY JOB-API ONLY, NO NEED FOR 2ND SAFE PARAM CHECK
+;
+;IMB_JOB *aes_gcm_dec_var_iv_sse
+;        (IMB_MGR *state, IMB_JOB *job)
+;        Expects NROUNDS value (9, 11, 13) in r10
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+align_function
+MKGLOBAL(aes_gcm_dec_var_iv_sse,function,internal)
+aes_gcm_dec_var_iv_sse:
+        FUNC_SAVE alloc_context
+
+        mov     arg1, [arg2 + _dec_keys]
+
+        cmp     qword [arg2 + _iv_len_in_bytes], 12
+        je      iv_len_12_dec_IV
+
+        mov    r15, r10 ; Save NROUNDS
+        GCM_INIT arg1, {rsp + CONTEXT_OFFSET}, {[arg2 + _iv]}, \
+                {[arg2 + _gcm_aad]}, {[arg2 + _gcm_aad_len]}, \
+                {[arg2 + _iv_len_in_bytes]}
+        mov    r10, r15 ; Restore NROUNDS
+
+        jmp     skip_iv_len_12_dec_IV
+
+align_label
+iv_len_12_dec_IV:
+        mov    r15, r10 ; Save NROUNDS
+        GCM_INIT arg1, {rsp + CONTEXT_OFFSET}, {[arg2 + _iv]}, \
+                {[arg2 + _gcm_aad]}, {[arg2 + _gcm_aad_len]}
+        mov    r10, r15 ; Restore NROUNDS
+
+align_label
+skip_iv_len_12_dec_IV:
+        mov     arg3, [arg2 + _src]
+        add     arg3, [arg2 + _cipher_start_src_offset]
+        mov     arg4, [arg2 + _dst]
+        mov     [rsp + GP_OFFSET + 5*8], arg2   ; preserve job pointer
+        mov     arg2, [arg2 + _msg_len_to_cipher]
+        GCM_ENC_DEC  arg1, {rsp + CONTEXT_OFFSET}, arg4, arg3, arg2, DEC, r10
+
+        mov     arg2, [rsp + GP_OFFSET + 5*8]
+        GCM_COMPLETE arg1, {rsp + CONTEXT_OFFSET}, \
+                        {[arg2 + _auth_tag_output]}, {[arg2 + _auth_tag_output_len_in_bytes]}, r10
+
+        ;; mark job complete
+        mov     dword [arg2 + _status], IMB_STATUS_COMPLETED
+
+        mov     rax, arg2       ;; return the job
+
+        FUNC_RESTORE
+        ret
