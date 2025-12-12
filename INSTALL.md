@@ -3,8 +3,9 @@
 ## Contents
 
 1. [Compilation](https://github.com/intel/intel-ipsec-mb/blob/main/INSTALL.md#compilation)
-2. [Installation](https://github.com/intel/intel-ipsec-mb/blob/main/INSTALL.md#installation)
-3. [Testing](https://github.com/intel/intel-ipsec-mb/blob/main/INSTALL.md#testing)
+2. [Creating Installation Packages](https://github.com/intel/intel-ipsec-mb/blob/main/INSTALL.md#creating-installation-packages)
+3. [Installation](https://github.com/intel/intel-ipsec-mb/blob/main/INSTALL.md#installation)
+4. [Testing](https://github.com/intel/intel-ipsec-mb/blob/main/INSTALL.md#testing)
 
 ## Compilation (x64 only)
 
@@ -221,9 +222,122 @@ Build with debugging information:
 For more build options and their explanation run:   
 `> gmake help`
 
+## Creating Installation Packages
+
+### Linux Packages (DEB and RPM)
+
+After building the library with CMake, you can create installation packages using CPack.
+
+#### Prerequisites
+Ensure you have the required packaging tools installed:
+- For DEB packages: `dpkg-dev`
+- For RPM packages: `rpm` on Debian/Ubuntu or `rpm-build` on RHEL/Fedora/SUSE
+
+#### Creating DEB Packages (Debian/Ubuntu)
+```bash
+# Configure and build
+cmake -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_LIBRARY_ONLY=ON
+cmake --build build --parallel
+
+# Create DEB package
+cd build
+cpack -G DEB
+```
+
+This will generate a `.deb` package file: `intel-ipsec-mb_<version>_amd64.deb`
+
+#### Creating RPM Packages (RHEL/Fedora/SUSE)
+```bash
+# Configure and build
+cmake -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_LIBRARY_ONLY=ON
+cmake --build build --parallel
+
+# Create RPM package
+cd build
+cpack -G RPM
+```
+
+This will generate an `.rpm` package file: `intel-ipsec-mb-<version>-1.x86_64.rpm`
+
 ## Installation
 
-### Unix (Linux and FreeBSD)
+### Installing from Packages (Linux)
+
+#### Debian/Ubuntu (.deb packages)
+
+To install from a .deb package:
+```bash
+sudo dpkg -i intel-ipsec-mb_<version>_amd64.deb
+```
+
+After installation, the library files are installed to `/usr/local/lib`.  
+To ensure the dynamic linker can find the library, you may need to update the linker cache:
+
+```bash
+sudo ldconfig
+```
+
+If the library path is not in the default linker search path, create a configuration file:
+```bash
+echo "/usr/local/lib" | sudo tee /etc/ld.so.conf.d/intel-ipsec-mb.conf
+sudo ldconfig
+```
+
+To verify the library is found by the linker:
+```bash
+ldconfig -p | grep libIPSec_MB
+```
+
+To uninstall:
+```bash
+sudo dpkg -r intel-ipsec-mb
+```
+
+#### RHEL/Fedora/SUSE (.rpm packages)
+
+To install from an .rpm package:
+```bash
+sudo rpm -ivh intel-ipsec-mb-<version>-1.x86_64.rpm
+```
+
+Or using yum/dnf:
+```bash
+sudo yum install intel-ipsec-mb-<version>-1.x86_64.rpm
+# or
+sudo dnf install intel-ipsec-mb-<version>-1.x86_64.rpm
+```
+
+After installation, update the linker cache:
+```bash
+sudo ldconfig
+```
+
+If the library path is not in the default linker search path, create a configuration file:
+```bash
+echo "/usr/local/lib" | sudo tee /etc/ld.so.conf.d/intel-ipsec-mb.conf
+sudo ldconfig
+```
+
+To verify the library is found by the linker:
+```bash
+ldconfig -p | grep libIPSec_MB
+```
+
+To uninstall:
+```bash
+sudo rpm -e intel-ipsec-mb
+```
+
+Or using yum/dnf:
+```bash
+sudo yum remove intel-ipsec-mb
+# or
+sudo dnf remove intel-ipsec-mb
+```
+
+### Building and Installing from Source
+
+#### Unix (Linux and FreeBSD)
 
 First compile the library and then install:   
 ```
