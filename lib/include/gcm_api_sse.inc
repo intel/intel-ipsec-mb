@@ -43,6 +43,7 @@ extern aes_gcm_enc_sse
 extern aes_gcm_dec_sse
 extern aes_gcm_enc_var_iv_sse
 extern aes_gcm_dec_var_iv_sse
+extern aes_gcm_precomp_sse
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;void   aes_gcm_precomp_128_sse / aes_gcm_precomp_192_sse / aes_gcm_precomp_256_sse
@@ -52,71 +53,8 @@ align_function
 MKGLOBAL(FN_NAME(precomp,_),function,)
 FN_NAME(precomp,_):
         endbranch64
-%ifdef SAFE_PARAM
-        ;; Reset imb_errno
-        IMB_ERR_CHECK_RESET
-
-        ;; Check key_data != NULL
-        cmp     arg1, 0
-        jz      error_precomp
-%endif
-
-%ifidn __OUTPUT_FORMAT__, win64
-        sub     rsp, 1*16
-        ; only xmm6 needs to be maintained
-        movdqu [rsp +  0*16], xmm6
-%endif
-
-        pxor    xmm6, xmm6
-        ENCRYPT_SINGLE_BLOCK    arg1, xmm6, xmm2        ; xmm6 = HashKey
-
-        pshufb  xmm6, [SHUF_MASK]
-        ;;;;;;;;;;;;;;;  PRECOMPUTATION of HashKey<<1 mod poly from the HashKey;;;;;;;;;;;;;;;
-        movdqa  xmm2, xmm6
-        psllq   xmm6, 1
-        psrlq   xmm2, 63
-        movdqa  xmm1, xmm2
-        pslldq  xmm2, 8
-        psrldq  xmm1, 8
-        por     xmm6, xmm2
-        ;reduction
-        pshufd  xmm2, xmm1, 00100100b
-        pcmpeqd xmm2, [TWOONE]
-        pand    xmm2, [POLY]
-        pxor    xmm6, xmm2                             ; xmm6 holds the HashKey<<1 mod poly
-        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        movdqu  [arg1 + HashKey], xmm6                  ; store HashKey<<1 mod poly
-
-        PRECOMPUTE  arg1, xmm6, xmm0, xmm1, xmm2, xmm3, xmm4, xmm5
-
-%ifdef SAFE_DATA
-        clear_scratch_gps_asm
-        clear_scratch_xmms_sse_asm
-%endif
-%ifidn __OUTPUT_FORMAT__, win64
-        movdqu  xmm6, [rsp + 0*16]
-        add     rsp, 1*16
-%endif
-
-align_label
-exit_precomp:
-
-        ret
-
-%ifdef SAFE_PARAM
-align_label
-error_precomp:
-        ;; Clear reg and imb_errno
-        IMB_ERR_CHECK_START rax
-
-        ;; Check key_data != NULL
-        IMB_ERR_CHECK_NULL arg1, rax, IMB_ERR_NULL_EXP_KEY
-
-        ;; Set imb_errno
-        IMB_ERR_CHECK_END rax
-
-        jmp exit_precomp
-%endif
+        mov r10d, NROUNDS
+        jmp aes_gcm_precomp_sse
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;void   aes_gcm_enc_128_sse / aes_gcm_enc_192_sse / aes_gcm_enc_256_sse

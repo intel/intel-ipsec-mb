@@ -430,3 +430,126 @@ skip_iv_len_12_dec_IV:
 
         FUNC_RESTORE
         ret
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;void   aes_gcm_precomp_sse
+;        (struct gcm_key_data *key_data);
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+align_function
+MKGLOBAL(aes_gcm_precomp_sse,function,internal)
+aes_gcm_precomp_sse:
+%ifdef SAFE_PARAM
+        ;; Reset imb_errno
+        IMB_ERR_CHECK_RESET
+
+        ;; Check key_data != NULL
+        cmp     arg1, 0
+        jz      error_precomp
+%endif
+
+%ifidn __OUTPUT_FORMAT__, win64
+        sub     rsp, 1*16
+        ; only xmm6 needs to be maintained
+        movdqu [rsp +  0*16], xmm6
+%endif
+
+        pxor    xmm6, xmm6
+
+        movdqu  xmm2, [arg1 + 16*0]
+        pxor xmm6, xmm2
+        movdqu  xmm2, [arg1 + 16*1]
+        aesenc xmm6, xmm2
+        movdqu  xmm2, [arg1 + 16*2]
+        aesenc xmm6, xmm2
+        movdqu  xmm2, [arg1 + 16*3]
+        aesenc xmm6, xmm2
+        movdqu  xmm2, [arg1 + 16*4]
+        aesenc xmm6, xmm2
+        movdqu  xmm2, [arg1 + 16*5]
+        aesenc xmm6, xmm2
+        movdqu  xmm2, [arg1 + 16*6]
+        aesenc xmm6, xmm2
+        movdqu  xmm2, [arg1 + 16*7]
+        aesenc xmm6, xmm2
+        movdqu  xmm2, [arg1 + 16*8]
+        aesenc xmm6, xmm2
+        movdqu  xmm2, [arg1 + 16*9]
+        aesenc xmm6, xmm2
+
+        cmp r10d, 11
+        je  aes_192
+        jb  aes_128
+
+        movdqu  xmm2, [arg1 + 16*10]
+        aesenc xmm6, xmm2
+        movdqu  xmm2, [arg1 + 16*11]
+        aesenc xmm6, xmm2
+        movdqu  xmm2, [arg1 + 16*12]
+        aesenc xmm6, xmm2
+        movdqu  xmm2, [arg1 + 16*13]
+        aesenc xmm6, xmm2
+        movdqu  xmm2, [arg1 + 16*14]
+        aesenclast xmm6, xmm2
+        jmp aesenc_complete
+
+aes_192:
+        movdqu  xmm2, [arg1 + 16*10]
+        aesenc xmm6, xmm2
+        movdqu  xmm2, [arg1 + 16*11]
+        aesenc xmm6, xmm2
+        movdqu  xmm2, [arg1 + 16*12]
+        aesenclast xmm6, xmm2
+        jmp aesenc_complete
+
+aes_128:
+        movdqu  xmm2, [arg1 + 16*10]
+        aesenclast xmm6, xmm2
+
+aesenc_complete:
+        pshufb  xmm6, [SHUF_MASK]
+        ;;;;;;;;;;;;;;;  PRECOMPUTATION of HashKey<<1 mod poly from the HashKey;;;;;;;;;;;;;;;
+        movdqa  xmm2, xmm6
+        psllq   xmm6, 1
+        psrlq   xmm2, 63
+        movdqa  xmm1, xmm2
+        pslldq  xmm2, 8
+        psrldq  xmm1, 8
+        por     xmm6, xmm2
+        ;reduction
+        pshufd  xmm2, xmm1, 00100100b
+        pcmpeqd xmm2, [TWOONE]
+        pand    xmm2, [POLY]
+        pxor    xmm6, xmm2                             ; xmm6 holds the HashKey<<1 mod poly
+        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        movdqu  [arg1 + HashKey], xmm6                  ; store HashKey<<1 mod poly
+
+        PRECOMPUTE  arg1, xmm6, xmm0, xmm1, xmm2, xmm3, xmm4, xmm5
+
+%ifdef SAFE_DATA
+        clear_scratch_gps_asm
+        clear_scratch_xmms_sse_asm
+%endif
+%ifidn __OUTPUT_FORMAT__, win64
+        movdqu  xmm6, [rsp + 0*16]
+        add     rsp, 1*16
+%endif
+
+align_label
+exit_precomp:
+
+        ret
+
+%ifdef SAFE_PARAM
+align_label
+error_precomp:
+        ;; Clear reg and imb_errno
+        IMB_ERR_CHECK_START rax
+
+        ;; Check key_data != NULL
+        IMB_ERR_CHECK_NULL arg1, rax, IMB_ERR_NULL_EXP_KEY
+
+        ;; Set imb_errno
+        IMB_ERR_CHECK_END rax
+
+        jmp exit_precomp
+%endif
