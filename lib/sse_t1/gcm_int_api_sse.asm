@@ -553,3 +553,103 @@ error_precomp:
 
         jmp exit_precomp
 %endif
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;void   imb_aes_gmac_update_sse
+;        const struct gcm_key_data *key_data,
+;        struct gcm_context_data *context_data,
+;        const   u8 *in,
+;        const   u64 msg_len);
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+align_function
+MKGLOBAL(imb_aes_gmac_update_sse,function,internal)
+imb_aes_gmac_update_sse:
+        FUNC_SAVE
+
+%ifdef SAFE_PARAM
+        ;; Reset imb_errno
+        IMB_ERR_CHECK_RESET
+%endif
+        ;; Check if msg_len == 0
+        cmp     arg4, 0
+        je      exit_gmac_update
+
+%ifdef SAFE_PARAM
+        ;; Check key_data != NULL
+        cmp     arg1, 0
+        jz      error_gmac_update
+
+        ;; Check context_data != NULL
+        cmp     arg2, 0
+        jz      error_gmac_update
+
+        ;; Check in != NULL (msg_len != 0)
+        cmp     arg3, 0
+        jz      error_gmac_update
+%endif
+
+        ; Increment size of "AAD length" for GMAC
+        add     [arg2 + AadLen], arg4
+
+        ;; Deal with previous partial block
+        xor     r11, r11
+        movdqu  xmm13, [arg1 + HashKey]
+        movdqu  xmm8, [arg2 + AadHash]
+
+        PARTIAL_BLOCK_GMAC arg1, arg2, arg3, arg4, r11, xmm8, xmm13
+
+        ; CALC_AAD_HASH needs to deal with multiple of 16 bytes
+        sub     arg4, r11
+        add     arg3, r11
+
+        movq    xmm7, arg4 ; Save remaining length
+        and     arg4, -16 ; Get multiple of 16 bytes
+
+        or      arg4, arg4
+        jz      no_full_blocks
+
+        ;; Calculate GHASH of this segment
+        CALC_AAD_HASH arg3, arg4, xmm8, arg1, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, \
+                        r10, r11, r12, r13, rax
+        movdqu  [arg2 + AadHash], xmm8  ; ctx_data.aad hash = aad_hash
+
+align_label
+no_full_blocks:
+        add     arg3, arg4 ; Point at partial block
+
+        movq    arg4, xmm7 ; Restore original remaining length
+        and     arg4, 15
+        jz      exit_gmac_update
+
+        ; Save next partial block
+        mov     [arg2 + PBlockLen], arg4
+        READ_SMALL_DATA_INPUT_SSE xmm1, arg3, arg4, r11
+        pshufb  xmm1, [rel SHUF_MASK]
+        pxor    xmm8, xmm1
+        movdqu  [arg2 + AadHash], xmm8
+
+align_label
+exit_gmac_update:
+        FUNC_RESTORE
+
+        ret
+
+%ifdef SAFE_PARAM
+align_label
+error_gmac_update:
+        ;; Clear reg and imb_errno
+        IMB_ERR_CHECK_START rax
+
+        ;; Check key_data != NULL
+        IMB_ERR_CHECK_NULL arg1, rax, IMB_ERR_NULL_EXP_KEY
+
+        ;; Check context_data != NULL
+        IMB_ERR_CHECK_NULL arg2, rax, IMB_ERR_NULL_CTX
+
+        ;; Check in != NULL (msg_len != 0)
+        IMB_ERR_CHECK_NULL arg3, rax, IMB_ERR_NULL_SRC
+
+        ;; Set imb_errno
+        IMB_ERR_CHECK_END rax
+        jmp     exit_gmac_update
+%endif
