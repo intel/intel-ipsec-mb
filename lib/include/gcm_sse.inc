@@ -824,7 +824,7 @@ align_label
 %assign i (i+1)
 %endrep
 
-                cmp %%ROUNDS, 11
+                cmp DWORD(%%ROUNDS), 11
                 je  %%_192_intitial_blocks
                 jb  %%_128_initial_blocks
 
@@ -865,6 +865,7 @@ align_label
 %endrep
         jmp     %%_encryption_round_done
 
+align_label
 %%_192_intitial_blocks:
                 movdqu  %%T_key, [%%GDATA_KEY+16*10]
 %assign i (9-%%num_initial_blocks)
@@ -889,6 +890,7 @@ align_label
 %endrep
         jmp     %%_encryption_round_done
 
+align_label
 %%_128_initial_blocks:
                 ;; last encryption round (14th for AES-256, 12th for AES-192 and 10th for AES-128)
                 movdqu  %%T_key, [%%GDATA_KEY+16*10]
@@ -898,6 +900,7 @@ align_label
 %assign i (i+1)
 %endrep
 
+align_label
 %%_encryption_round_done:
 
 %else
@@ -1117,7 +1120,7 @@ align_label
                 aesenc  %%XMM7, %%T_key
                 aesenc  %%XMM8, %%T_key
 
-                cmp     %%ROUNDS, 11
+                cmp     DWORD(%%ROUNDS), 11
                 je      %%_192_block
                 jb      %%_128_block
 
@@ -1163,6 +1166,8 @@ align_label
 
                 movdqu  %%T_key, [%%GDATA_KEY+16*14]             ; do final key round
                 jmp     %%_final_round
+
+align_label
 %%_192_block:
                 movdqu  %%T_key, [%%GDATA_KEY+16*10]
                 aesenc  %%XMM1, %%T_key
@@ -1187,8 +1192,10 @@ align_label
                 movdqu  %%T_key, [%%GDATA_KEY+16*12]             ; do final key round
                 jmp     %%_final_round
 
+align_label
 %%_128_block:
                 movdqu  %%T_key, [%%GDATA_KEY+16*10]             ; do final key round
+align_label
 %%_final_round:
 
 %else
@@ -1589,7 +1596,7 @@ align_label
         pxor    %%T4, %%T2                              ; accumulate the results in %%T4:%%T7
 
 %if %0 == 23
-        cmp %%ROUNDS, 11
+        cmp DWORD(%%ROUNDS), 11
         je  %%_gcm_192
         jb  %%_gcm_128
 
@@ -1636,6 +1643,7 @@ align_label
                 movdqu  %%T5, [%%GDATA + 16*14]        ; finish last key round
                 jmp     %%_aesenc_complete
 
+align_label
 %%_gcm_192:
                 movdqu  %%T1, [%%GDATA + 16*10]
                 aesenc  %%XMM1, %%T1
@@ -1660,9 +1668,11 @@ align_label
                 movdqu  %%T5, [%%GDATA + 16*12]        ; finish last key round
                 jmp     %%_aesenc_complete
 
+align_label
 %%_gcm_128:
                 movdqu  %%T5, [%%GDATA + 16*10]
 
+align_label
 %%_aesenc_complete:
 
 %else
@@ -2374,56 +2384,40 @@ align_label
         movdqu  [%%GDATA_CTX + CurCount], xmm9          ; my_ctx.data.current_counter = xmm9
         pshufb  xmm9, [SHUF_MASK]
 %if %0 == 7
-        movdqu   xmm2, [%%GDATA_KEY+16*0]
-        pxor     xmm9, xmm2
-        movdqu   xmm2, [%%GDATA_KEY+16*1]
-        aesenc  xmm9, xmm2
-        movdqu   xmm2, [%%GDATA_KEY+16*2]
-        aesenc  xmm9, xmm2
-        movdqu   xmm2, [%%GDATA_KEY+16*3]
-        aesenc  xmm9, xmm2
-        movdqu   xmm2, [%%GDATA_KEY+16*4]
-        aesenc  xmm9, xmm2
-        movdqu   xmm2, [%%GDATA_KEY+16*5]
-        aesenc  xmm9, xmm2
-        movdqu   xmm2, [%%GDATA_KEY+16*6]
-        aesenc  xmm9, xmm2
-        movdqu   xmm2, [%%GDATA_KEY+16*7]
-        aesenc  xmm9, xmm2
-        movdqu   xmm2, [%%GDATA_KEY+16*8]
-        aesenc  xmm9, xmm2
-        movdqu   xmm2, [%%GDATA_KEY+16*9]
-        aesenc  xmm9, xmm2
+        pxor     xmm9, [%%GDATA_KEY+16*0]
+        aesenc   xmm9, [%%GDATA_KEY+16*1]
+        aesenc   xmm9, [%%GDATA_KEY+16*2]
+        aesenc   xmm9, [%%GDATA_KEY+16*3]
+        aesenc   xmm9, [%%GDATA_KEY+16*4]
+        aesenc   xmm9, [%%GDATA_KEY+16*5]
+        aesenc   xmm9, [%%GDATA_KEY+16*6]
+        aesenc   xmm9, [%%GDATA_KEY+16*7]
+        aesenc   xmm9, [%%GDATA_KEY+16*8]
+        aesenc   xmm9, [%%GDATA_KEY+16*9]
 
         cmp DWORD(%%ROUNDS), 11
         jb %%_128_encrypt
         je %%_192_encrypt
 
-        movdqu   xmm2, [%%GDATA_KEY+16*10]
-        aesenc  xmm9, xmm2
-        movdqu   xmm2, [%%GDATA_KEY+16*11]
-        aesenc  xmm9, xmm2
-        movdqu   xmm2, [%%GDATA_KEY+16*12]
-        aesenc  xmm9, xmm2
-        movdqu   xmm2, [%%GDATA_KEY+16*13]
-        aesenc  xmm9, xmm2
-        movdqu   xmm2, [%%GDATA_KEY+16*14]
-        aesenclast      xmm9, xmm2
+        aesenc   xmm9, [%%GDATA_KEY+16*10]
+        aesenc   xmm9, [%%GDATA_KEY+16*11]
+        aesenc   xmm9, [%%GDATA_KEY+16*12]
+        aesenc   xmm9, [%%GDATA_KEY+16*13]
+        aesenclast   xmm9, [%%GDATA_KEY+16*14]
         jmp %%_encrypt_done
 
+align_label
 %%_128_encrypt:
-        movdqu   xmm2, [%%GDATA_KEY+16*10]
-        aesenclast      xmm9, xmm2
+        aesenclast   xmm9, [%%GDATA_KEY+16*10]
         jmp %%_encrypt_done
 
+align_label
 %%_192_encrypt:
-        movdqu   xmm2, [%%GDATA_KEY+16*10]
-        aesenc  xmm9, xmm2
-        movdqu   xmm2, [%%GDATA_KEY+16*11]
-        aesenc      xmm9, xmm2
-        movdqu   xmm2, [%%GDATA_KEY+16*12]
-        aesenclast      xmm9, xmm2
+        aesenc   xmm9, [%%GDATA_KEY+16*10]
+        aesenc   xmm9, [%%GDATA_KEY+16*11]
+        aesenclast   xmm9, [%%GDATA_KEY+16*12]
 
+align_label
 %%_encrypt_done:
 %else
         ENCRYPT_SINGLE_BLOCK    %%GDATA_KEY, xmm9, xmm2                    ; E(K, Yn)
@@ -2547,56 +2541,41 @@ align_label
         movdqu  xmm9, [%%GDATA_CTX + OrigIV]            ; xmm9 = Y0
 
 %if %0 == 5
-        movdqu  xmm2, [%%GDATA_KEY+16*0]
-        pxor    xmm9, xmm2
-        movdqu  xmm2, [%%GDATA_KEY+16*1]
-        aesenc  xmm9, xmm2
-        movdqu  xmm2, [%%GDATA_KEY+16*2]
-        aesenc  xmm9, xmm2
-        movdqu  xmm2, [%%GDATA_KEY+16*3]
-        aesenc  xmm9, xmm2
-        movdqu  xmm2, [%%GDATA_KEY+16*4]
-        aesenc  xmm9, xmm2
-        movdqu  xmm2, [%%GDATA_KEY+16*5]
-        aesenc  xmm9, xmm2
-        movdqu  xmm2, [%%GDATA_KEY+16*6]
-        aesenc  xmm9, xmm2
-        movdqu  xmm2, [%%GDATA_KEY+16*7]
-        aesenc  xmm9, xmm2
-        movdqu  xmm2, [%%GDATA_KEY+16*8]
-        aesenc  xmm9, xmm2
-        movdqu  xmm2, [%%GDATA_KEY+16*9]
-        aesenc  xmm9, xmm2
+        pxor     xmm9, [%%GDATA_KEY+16*0]
+        aesenc   xmm9, [%%GDATA_KEY+16*1]
+        aesenc   xmm9, [%%GDATA_KEY+16*2]
+        aesenc   xmm9, [%%GDATA_KEY+16*3]
+        aesenc   xmm9, [%%GDATA_KEY+16*4]
+        aesenc   xmm9, [%%GDATA_KEY+16*5]
+        aesenc   xmm9, [%%GDATA_KEY+16*6]
+        aesenc   xmm9, [%%GDATA_KEY+16*7]
+        aesenc   xmm9, [%%GDATA_KEY+16*8]
+        aesenc   xmm9, [%%GDATA_KEY+16*9]
 
 
-        cmp %%ROUNDS, 11
+        cmp DWORD(%%ROUNDS), 11
         jb %%_128_block
         je %%_192_block
 
-        movdqu  xmm2, [%%GDATA_KEY+16*10]
-        aesenc  xmm9, xmm2
-        movdqu  xmm2, [%%GDATA_KEY+16*11]
-        aesenc  xmm9, xmm2
-        movdqu  xmm2, [%%GDATA_KEY+16*12]
-        aesenc  xmm9, xmm2
-        movdqu  xmm2, [%%GDATA_KEY+16*13]
-        aesenc  xmm9, xmm2
-        movdqu  xmm2, [%%GDATA_KEY+16*14]
-        aesenclast      xmm9, xmm2
+        aesenc   xmm9, [%%GDATA_KEY+16*10]
+        aesenc   xmm9, [%%GDATA_KEY+16*11]
+        aesenc   xmm9, [%%GDATA_KEY+16*12]
+        aesenc   xmm9, [%%GDATA_KEY+16*13]
+        aesenclast   xmm9, [%%GDATA_KEY+16*14]
         jmp %%_done
 
+align_label
 %%_128_block:
-        movdqu  xmm2, [%%GDATA_KEY+16*10]
-        aesenclast      xmm9, xmm2
+        aesenclast   xmm9, [%%GDATA_KEY+16*10]
         jmp %%_done
 
+align_label
 %%_192_block:
-        movdqu  xmm2, [%%GDATA_KEY+16*10]
-        aesenc  xmm9, xmm2
-        movdqu  xmm2, [%%GDATA_KEY+16*11]
-        aesenc      xmm9, xmm2
-        movdqu  xmm2, [%%GDATA_KEY+16*12]
-        aesenclast      xmm9, xmm2
+        aesenc   xmm9, [%%GDATA_KEY+16*10]
+        aesenc   xmm9, [%%GDATA_KEY+16*11]
+        aesenclast   xmm9, [%%GDATA_KEY+16*12]
+
+align_label
 %%_done:
 %else
         ENCRYPT_SINGLE_BLOCK    %%GDATA_KEY, xmm9, xmm2 ; E(K, Y0)

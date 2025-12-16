@@ -455,56 +455,40 @@ aes_gcm_precomp_sse:
 
         pxor    xmm6, xmm6
 
-        movdqu  xmm2, [arg1 + 16*0]
-        pxor xmm6, xmm2
-        movdqu  xmm2, [arg1 + 16*1]
-        aesenc xmm6, xmm2
-        movdqu  xmm2, [arg1 + 16*2]
-        aesenc xmm6, xmm2
-        movdqu  xmm2, [arg1 + 16*3]
-        aesenc xmm6, xmm2
-        movdqu  xmm2, [arg1 + 16*4]
-        aesenc xmm6, xmm2
-        movdqu  xmm2, [arg1 + 16*5]
-        aesenc xmm6, xmm2
-        movdqu  xmm2, [arg1 + 16*6]
-        aesenc xmm6, xmm2
-        movdqu  xmm2, [arg1 + 16*7]
-        aesenc xmm6, xmm2
-        movdqu  xmm2, [arg1 + 16*8]
-        aesenc xmm6, xmm2
-        movdqu  xmm2, [arg1 + 16*9]
-        aesenc xmm6, xmm2
+        pxor xmm6, [arg1 + 16*0]
+        aesenc xmm6, [arg1 + 16*1]
+        aesenc xmm6, [arg1 + 16*2]
+        aesenc xmm6, [arg1 + 16*3]
+        aesenc xmm6, [arg1 + 16*4]
+        aesenc xmm6, [arg1 + 16*5]
+        aesenc xmm6, [arg1 + 16*6]
+        aesenc xmm6, [arg1 + 16*7]
+        aesenc xmm6, [arg1 + 16*8]
+        aesenc xmm6, [arg1 + 16*9]
 
         cmp r10d, 11
         je  aes_192
         jb  aes_128
 
-        movdqu  xmm2, [arg1 + 16*10]
-        aesenc xmm6, xmm2
-        movdqu  xmm2, [arg1 + 16*11]
-        aesenc xmm6, xmm2
-        movdqu  xmm2, [arg1 + 16*12]
-        aesenc xmm6, xmm2
-        movdqu  xmm2, [arg1 + 16*13]
-        aesenc xmm6, xmm2
-        movdqu  xmm2, [arg1 + 16*14]
-        aesenclast xmm6, xmm2
+        aesenc xmm6, [arg1 + 16*10]
+        aesenc xmm6, [arg1 + 16*11]
+        aesenc xmm6, [arg1 + 16*12]
+        aesenc xmm6, [arg1 + 16*13]
+        aesenclast xmm6, [arg1 + 16*14]
         jmp aesenc_complete
 
+align_label
 aes_192:
-        movdqu  xmm2, [arg1 + 16*10]
-        aesenc xmm6, xmm2
-        movdqu  xmm2, [arg1 + 16*11]
-        aesenc xmm6, xmm2
-        movdqu  xmm2, [arg1 + 16*12]
-        aesenclast xmm6, xmm2
+        aesenc xmm6, [arg1 + 16*10]
+        aesenc xmm6, [arg1 + 16*11]
+        aesenclast xmm6, [arg1 + 16*12]
         jmp aesenc_complete
 
+align_label
 aes_128:
-        movdqu  xmm2, [arg1 + 16*10]
-        aesenclast xmm6, xmm2
+        aesenclast xmm6, [arg1 + 16*10]
 
+align_label
 aesenc_complete:
         pshufb  xmm6, [SHUF_MASK]
         ;;;;;;;;;;;;;;;  PRECOMPUTATION of HashKey<<1 mod poly from the HashKey;;;;;;;;;;;;;;;
