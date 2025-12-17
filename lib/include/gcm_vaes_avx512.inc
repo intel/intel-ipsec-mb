@@ -3790,7 +3790,7 @@ align_label
 ; Output: Authorization Tag (AUTH_TAG) and Authorization Tag length (AUTH_TAG_LEN)
 ; Clobbers xmm0-xmm2, xmm5-xmm6, xmm9-xmm11, xmm13-xmm15
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-%macro  GCM_COMPLETE            9
+%macro  GCM_COMPLETE            9-10
 %define %%GDATA_KEY             %1      ; [in] GP with pointer to key structure
 %define %%GDATA_CTX             %2      ; [in] GP with pointer to context structure
 %define %%AUTH_TAG              %3      ; [in] pointer to store auth tag into (GP or mem)
@@ -3800,6 +3800,7 @@ align_label
 %define %%IA0                   %7      ; [clobbered] temporary GP
 %define %%IA1                   %8      ; [clobbered] temporary GP
 %define %%IA2                   %9      ; [clobbered] temporary GP
+%define %%ROUNDS                %10     ; [in] number of AES rounds
 
         ;; @note: xmm14 is hardcoded for hash input in singe_call case
 
@@ -3809,7 +3810,46 @@ align_label
 
         ;; Start AES as early as possible
         vmovdqu         xmm9, [%%GDATA_CTX + OrigIV]    ; xmm9 = Y0
+%if %0 == 10
+        vpxorq          xmm9, xmm9, [%%GDATA_KEY+16*0]
+        vaesenc         xmm9, [%%GDATA_KEY+16*1]
+        vaesenc         xmm9, [%%GDATA_KEY+16*2]
+        vaesenc         xmm9, [%%GDATA_KEY+16*3]
+        vaesenc         xmm9, [%%GDATA_KEY+16*4]
+        vaesenc         xmm9, [%%GDATA_KEY+16*5]
+        vaesenc         xmm9, [%%GDATA_KEY+16*6]
+        vaesenc         xmm9, [%%GDATA_KEY+16*7]
+        vaesenc         xmm9, [%%GDATA_KEY+16*8]
+        vaesenc         xmm9, [%%GDATA_KEY+16*9]
+
+        cmp             DWORD(%%ROUNDS), 11
+        je              %%_192_rounds
+        jb              %%_128_rounds
+
+        vaesenc         xmm9, [%%GDATA_KEY+16*10]
+        vaesenc         xmm9, [%%GDATA_KEY+16*11]
+        vaesenc         xmm9, [%%GDATA_KEY+16*12]
+        vaesenc         xmm9, [%%GDATA_KEY+16*13]
+        vaesenclast     xmm9, [%%GDATA_KEY+16*14]
+        jmp             %%_rounds_done
+
+align_label
+%%_192_rounds:
+        vaesenc         xmm9, [%%GDATA_KEY+16*10]
+        vaesenc         xmm9, [%%GDATA_KEY+16*11]
+        vaesenclast     xmm9, [%%GDATA_KEY+16*12]
+        jmp             %%_rounds_done
+
+align_label
+%%_128_rounds:
+        vaesenclast     xmm9, [%%GDATA_KEY+16*10]
+
+align_label
+%%_rounds_done:
+
+%else
         ENCRYPT_SINGLE_BLOCK %%GDATA_KEY, xmm9  ; E(K, Y0)
+%endif
 
 %ifidn %%INSTANCE_TYPE, multi_call
         ;; If the GCM function is called as a single function call rather

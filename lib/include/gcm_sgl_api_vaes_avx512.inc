@@ -40,6 +40,8 @@
 ;;; External symbols
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 extern ghash_internal_vaes_avx512
+extern aes_gcm_enc_finalize_vaes_avx512
+extern aes_gcm_dec_finalize_vaes_avx512
 
 mksection .text
 default rel
@@ -407,66 +409,8 @@ MKGLOBAL(FN_NAME(enc,_finalize_),function,)
 align_function
 FN_NAME(enc,_finalize_):
         endbranch64
-;; All parameters are passed through registers
-%ifdef SAFE_PARAM
-        ;; Reset imb_errno
-        IMB_ERR_CHECK_RESET
-
-        ;; Check key_data != NULL
-        cmp     arg1, 0
-        jz      error_enc_fin
-
-        ;; Check context_data != NULL
-        cmp     arg2, 0
-        jz      error_enc_fin
-
-        ;; Check auth_tag != NULL
-        cmp     arg3, 0
-        jz      error_enc_fin
-
-        ;; Check auth_tag_len == 0 or > 16
-        cmp     arg4, 0
-        jz      error_enc_fin
-
-        cmp     arg4, 16
-        ja      error_enc_fin
-%endif
-
-        FUNC_SAVE small_frame
-        GCM_COMPLETE    arg1, arg2, arg3, arg4, multi_call, k1, r10, r11, r12
-%ifdef SAFE_DATA
-        ;; **xmm5, xmm6, xmm11, xmm13, xmm14 and xmm16 may contain sensitive data
-        clear_zmms_avx512 xmm5, xmm6, xmm11, xmm13, xmm14, xmm16
-%endif
-        FUNC_RESTORE
-align_label
-exit_enc_fin:
-        ret
-
-%ifdef SAFE_PARAM
-align_label
-error_enc_fin:
-        ;; Clear reg and imb_errno
-        IMB_ERR_CHECK_START rax
-
-        ;; Check key_data != NULL
-        IMB_ERR_CHECK_NULL arg1, rax, IMB_ERR_NULL_EXP_KEY
-
-        ;; Check context_data != NULL
-        IMB_ERR_CHECK_NULL arg2, rax, IMB_ERR_NULL_CTX
-
-        ;; Check auth_tag != NULL
-        IMB_ERR_CHECK_NULL arg3, rax, IMB_ERR_NULL_AUTH
-
-        ;; Check auth_tag_len == 0 or > 16
-        IMB_ERR_CHECK_ZERO arg4, rax, IMB_ERR_AUTH_TAG_LEN
-
-        IMB_ERR_CHECK_ABOVE arg4, 16, rax, IMB_ERR_AUTH_TAG_LEN
-
-        ;; Set imb_errno
-        IMB_ERR_CHECK_END rax
-        jmp     exit_enc_fin
-%endif
+        mov r10d, NROUNDS
+        jmp aes_gcm_enc_finalize_vaes_avx512
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -481,68 +425,8 @@ MKGLOBAL(FN_NAME(dec,_finalize_),function,)
 align_function
 FN_NAME(dec,_finalize_):
         endbranch64
-;; All parameters are passed through registers
-%ifdef SAFE_PARAM
-        ;; Reset imb_errno
-        IMB_ERR_CHECK_RESET
-
-        ;; Check key_data != NULL
-        cmp     arg1, 0
-        jz      error_dec_fin
-
-        ;; Check context_data != NULL
-        cmp     arg2, 0
-        jz      error_dec_fin
-
-        ;; Check auth_tag != NULL
-        cmp     arg3, 0
-        jz      error_dec_fin
-
-        ;; Check auth_tag_len == 0 or > 16
-        cmp     arg4, 0
-        jz      error_dec_fin
-
-        cmp     arg4, 16
-        ja      error_dec_fin
-%endif
-
-        FUNC_SAVE small_frame
-        GCM_COMPLETE    arg1, arg2, arg3, arg4, multi_call, k1, r10, r11, r12
-
-%ifdef SAFE_DATA
-        ;; **xmm5, xmm6, xmm11, xmm13, xmm14 and xmm16 may contain sensitive data
-        clear_zmms_avx512 xmm5, xmm6, xmm11, xmm13, xmm14, xmm16
-%endif
-
-        FUNC_RESTORE
-align_label
-exit_dec_fin:
-        ret
-
-%ifdef SAFE_PARAM
-align_label
-error_dec_fin:
-        ;; Clear reg and imb_errno
-        IMB_ERR_CHECK_START rax
-
-        ;; Check key_data != NULL
-        IMB_ERR_CHECK_NULL arg1, rax, IMB_ERR_NULL_EXP_KEY
-
-        ;; Check context_data != NULL
-        IMB_ERR_CHECK_NULL arg2, rax, IMB_ERR_NULL_CTX
-
-        ;; Check auth_tag != NULL
-        IMB_ERR_CHECK_NULL arg3, rax, IMB_ERR_NULL_AUTH
-
-        ;; Check auth_tag_len == 0 or > 16
-        IMB_ERR_CHECK_ZERO arg4, rax, IMB_ERR_AUTH_TAG_LEN
-
-        IMB_ERR_CHECK_ABOVE arg4, 16, rax, IMB_ERR_AUTH_TAG_LEN
-
-        ;; Set imb_errno
-        IMB_ERR_CHECK_END rax
-        jmp     exit_dec_fin
-%endif
+        mov r10d, NROUNDS
+        jmp aes_gcm_dec_finalize_vaes_avx512
 
 mksection stack-noexec
 
