@@ -1334,7 +1334,7 @@ align_label
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Ciphers 1 to 16 blocks and prepares them for later GHASH compute operation
-%macro INITIAL_BLOCKS_PARTIAL_CIPHER 25
+%macro INITIAL_BLOCKS_PARTIAL_CIPHER 25-26
 %define %%GDATA_KEY             %1  ; [in] key pointer
 %define %%GDATA_CTX             %2  ; [in] context pointer
 %define %%CIPH_PLAIN_OUT        %3  ; [in] text output pointer
@@ -1360,6 +1360,7 @@ align_label
 %define %%IA1                   %23 ; [clobbered] GP temporary
 %define %%MASKREG               %24 ; [clobbered] mask register
 %define %%SHUFMASK              %25 ; [out] ZMM loaded with BE/LE shuffle mask
+%define %%ROUNDS                %26 ; [in] number of AES rounds (9, 11, 13)
 
 %if %%NUM_BLOCKS == 1
         vmovdqa64       XWORD(%%SHUFMASK), [rel SHUF_MASK]
@@ -1423,6 +1424,142 @@ align_label
                         %%DAT0, %%DAT1, %%DAT2, %%DAT3, %%MASKREG
 
         ;; AES rounds and XOR with plain/cipher text
+%if %0 == 26
+
+        vbroadcastf64x2 %%ZT1, [%%GDATA_KEY + (0 * 16)]
+        ZMM_OPCODE3_DSTR_SRC1R_SRC2R_BLOCKS_0_16 %%NUM_BLOCKS, vpxorq, \
+                        %%CTR0, %%CTR1, %%CTR2, %%CTR3, \
+                        %%CTR0, %%CTR1, %%CTR2, %%CTR3, \
+                        %%ZT1, %%ZT1, %%ZT1, %%ZT1
+
+        vbroadcastf64x2 %%ZT1, [%%GDATA_KEY + (1 * 16)]
+        ZMM_OPCODE3_DSTR_SRC1R_SRC2R_BLOCKS_0_16 %%NUM_BLOCKS, vaesenc, \
+                %%CTR0, %%CTR1, %%CTR2, %%CTR3, \
+                %%CTR0, %%CTR1, %%CTR2, %%CTR3, \
+                %%ZT1, %%ZT1, %%ZT1, %%ZT1
+
+        vbroadcastf64x2 %%ZT1, [%%GDATA_KEY + (2 * 16)]
+        ZMM_OPCODE3_DSTR_SRC1R_SRC2R_BLOCKS_0_16 %%NUM_BLOCKS, vaesenc, \
+                %%CTR0, %%CTR1, %%CTR2, %%CTR3, \
+                %%CTR0, %%CTR1, %%CTR2, %%CTR3, \
+                %%ZT1, %%ZT1, %%ZT1, %%ZT1
+
+        vbroadcastf64x2 %%ZT1, [%%GDATA_KEY + (3 * 16)]
+        ZMM_OPCODE3_DSTR_SRC1R_SRC2R_BLOCKS_0_16 %%NUM_BLOCKS, vaesenc, \
+                %%CTR0, %%CTR1, %%CTR2, %%CTR3, \
+                %%CTR0, %%CTR1, %%CTR2, %%CTR3, \
+                %%ZT1, %%ZT1, %%ZT1, %%ZT1
+
+        vbroadcastf64x2 %%ZT1, [%%GDATA_KEY + (4 * 16)]
+        ZMM_OPCODE3_DSTR_SRC1R_SRC2R_BLOCKS_0_16 %%NUM_BLOCKS, vaesenc, \
+                %%CTR0, %%CTR1, %%CTR2, %%CTR3, \
+                %%CTR0, %%CTR1, %%CTR2, %%CTR3, \
+                %%ZT1, %%ZT1, %%ZT1, %%ZT1
+
+        vbroadcastf64x2 %%ZT1, [%%GDATA_KEY + (5 * 16)]
+        ZMM_OPCODE3_DSTR_SRC1R_SRC2R_BLOCKS_0_16 %%NUM_BLOCKS, vaesenc, \
+                %%CTR0, %%CTR1, %%CTR2, %%CTR3, \
+                %%CTR0, %%CTR1, %%CTR2, %%CTR3, \
+                %%ZT1, %%ZT1, %%ZT1, %%ZT1
+
+        vbroadcastf64x2 %%ZT1, [%%GDATA_KEY + (6 * 16)]
+        ZMM_OPCODE3_DSTR_SRC1R_SRC2R_BLOCKS_0_16 %%NUM_BLOCKS, vaesenc, \
+                %%CTR0, %%CTR1, %%CTR2, %%CTR3, \
+                %%CTR0, %%CTR1, %%CTR2, %%CTR3, \
+                %%ZT1, %%ZT1, %%ZT1, %%ZT1
+
+        vbroadcastf64x2 %%ZT1, [%%GDATA_KEY + (7 * 16)]
+        ZMM_OPCODE3_DSTR_SRC1R_SRC2R_BLOCKS_0_16 %%NUM_BLOCKS, vaesenc, \
+                %%CTR0, %%CTR1, %%CTR2, %%CTR3, \
+                %%CTR0, %%CTR1, %%CTR2, %%CTR3, \
+                %%ZT1, %%ZT1, %%ZT1, %%ZT1
+
+        vbroadcastf64x2 %%ZT1, [%%GDATA_KEY + (8 * 16)]
+        ZMM_OPCODE3_DSTR_SRC1R_SRC2R_BLOCKS_0_16 %%NUM_BLOCKS, vaesenc, \
+                %%CTR0, %%CTR1, %%CTR2, %%CTR3, \
+                %%CTR0, %%CTR1, %%CTR2, %%CTR3, \
+                %%ZT1, %%ZT1, %%ZT1, %%ZT1
+
+        vbroadcastf64x2 %%ZT1, [%%GDATA_KEY + (9 * 16)]
+        ZMM_OPCODE3_DSTR_SRC1R_SRC2R_BLOCKS_0_16 %%NUM_BLOCKS, vaesenc, \
+                %%CTR0, %%CTR1, %%CTR2, %%CTR3, \
+                %%CTR0, %%CTR1, %%CTR2, %%CTR3, \
+                %%ZT1, %%ZT1, %%ZT1, %%ZT1
+
+        cmp DWORD(%%ROUNDS), 11
+        je  %%_192_rounds
+        jb  %%_128_rounds
+
+        vbroadcastf64x2 %%ZT1, [%%GDATA_KEY + (10 * 16)]
+        ZMM_OPCODE3_DSTR_SRC1R_SRC2R_BLOCKS_0_16 %%NUM_BLOCKS, vaesenc, \
+                %%CTR0, %%CTR1, %%CTR2, %%CTR3, \
+                %%CTR0, %%CTR1, %%CTR2, %%CTR3, \
+                %%ZT1, %%ZT1, %%ZT1, %%ZT1
+
+        vbroadcastf64x2 %%ZT1, [%%GDATA_KEY + (11 * 16)]
+        ZMM_OPCODE3_DSTR_SRC1R_SRC2R_BLOCKS_0_16 %%NUM_BLOCKS, vaesenc, \
+                %%CTR0, %%CTR1, %%CTR2, %%CTR3, \
+                %%CTR0, %%CTR1, %%CTR2, %%CTR3, \
+                %%ZT1, %%ZT1, %%ZT1, %%ZT1
+
+        vbroadcastf64x2 %%ZT1, [%%GDATA_KEY + (12 * 16)]
+        ZMM_OPCODE3_DSTR_SRC1R_SRC2R_BLOCKS_0_16 %%NUM_BLOCKS, vaesenc, \
+                %%CTR0, %%CTR1, %%CTR2, %%CTR3, \
+                %%CTR0, %%CTR1, %%CTR2, %%CTR3, \
+                %%ZT1, %%ZT1, %%ZT1, %%ZT1
+
+        vbroadcastf64x2 %%ZT1, [%%GDATA_KEY + (13 * 16)]
+        ZMM_OPCODE3_DSTR_SRC1R_SRC2R_BLOCKS_0_16 %%NUM_BLOCKS, vaesenc, \
+                %%CTR0, %%CTR1, %%CTR2, %%CTR3, \
+                %%CTR0, %%CTR1, %%CTR2, %%CTR3, \
+                %%ZT1, %%ZT1, %%ZT1, %%ZT1
+
+        vbroadcastf64x2 %%ZT1, [%%GDATA_KEY + (14 * 16)]
+        ZMM_OPCODE3_DSTR_SRC1R_SRC2R_BLOCKS_0_16 %%NUM_BLOCKS, vaesenclast, \
+                %%CTR0, %%CTR1, %%CTR2, %%CTR3, \
+                %%CTR0, %%CTR1, %%CTR2, %%CTR3, \
+                %%ZT1, %%ZT1, %%ZT1, %%ZT1
+
+        jmp             %%_rounds_done
+
+align_label
+%%_192_rounds:
+        vbroadcastf64x2 %%ZT1, [%%GDATA_KEY + (10 * 16)]
+        ZMM_OPCODE3_DSTR_SRC1R_SRC2R_BLOCKS_0_16 %%NUM_BLOCKS, vaesenc, \
+                %%CTR0, %%CTR1, %%CTR2, %%CTR3, \
+                %%CTR0, %%CTR1, %%CTR2, %%CTR3, \
+                %%ZT1, %%ZT1, %%ZT1, %%ZT1
+
+        vbroadcastf64x2 %%ZT1, [%%GDATA_KEY + (11 * 16)]
+        ZMM_OPCODE3_DSTR_SRC1R_SRC2R_BLOCKS_0_16 %%NUM_BLOCKS, vaesenc, \
+                %%CTR0, %%CTR1, %%CTR2, %%CTR3, \
+                %%CTR0, %%CTR1, %%CTR2, %%CTR3, \
+                %%ZT1, %%ZT1, %%ZT1, %%ZT1
+
+        vbroadcastf64x2 %%ZT1, [%%GDATA_KEY + (12 * 16)]
+        ZMM_OPCODE3_DSTR_SRC1R_SRC2R_BLOCKS_0_16 %%NUM_BLOCKS, vaesenclast, \
+                %%CTR0, %%CTR1, %%CTR2, %%CTR3, \
+                %%CTR0, %%CTR1, %%CTR2, %%CTR3, \
+                %%ZT1, %%ZT1, %%ZT1, %%ZT1
+
+        jmp             %%_rounds_done
+
+align_label
+%%_128_rounds:
+        vbroadcastf64x2 %%ZT1, [%%GDATA_KEY + (10 * 16)]
+        ZMM_OPCODE3_DSTR_SRC1R_SRC2R_BLOCKS_0_16 %%NUM_BLOCKS, vaesenclast, \
+                %%CTR0, %%CTR1, %%CTR2, %%CTR3, \
+                %%CTR0, %%CTR1, %%CTR2, %%CTR3, \
+                %%ZT1, %%ZT1, %%ZT1, %%ZT1
+
+align_label
+%%_rounds_done:
+        ZMM_OPCODE3_DSTR_SRC1R_SRC2R_BLOCKS_0_16 %%NUM_BLOCKS, vpxorq, \
+                        %%CTR0, %%CTR1, %%CTR2, %%CTR3, \
+                        %%CTR0, %%CTR1, %%CTR2, %%CTR3, \
+                        %%DAT0, %%DAT1, %%DAT2, %%DAT3
+
+%else
 %assign j 0
 %rep (NROUNDS + 2)
         vbroadcastf64x2 %%ZT1, [%%GDATA_KEY + (j * 16)]
@@ -1432,6 +1569,7 @@ align_label
                         %%NUM_BLOCKS, NROUNDS
 %assign j (j + 1)
 %endrep
+%endif
         ;; **DAT0, DAT1, DAT2, DAT3 may contain clear text
 
 %ifidn %%INSTANCE_TYPE, multi_call
@@ -1690,7 +1828,7 @@ align_label
 ;;;
 ;;; num_initial_blocks is expected to include the partial final block
 ;;; in the count.
-%macro INITIAL_BLOCKS_PARTIAL 31
+%macro INITIAL_BLOCKS_PARTIAL 31-32
 %define %%GDATA_KEY             %1  ; [in] key pointer
 %define %%GDATA_CTX             %2  ; [in] context pointer
 %define %%CIPH_PLAIN_OUT        %3  ; [in] text output pointer
@@ -1722,7 +1860,17 @@ align_label
 %define %%IA1                   %29 ; [clobbered] GP temporary
 %define %%MASKREG               %30 ; [clobbered] mask register
 %define %%SHUFMASK              %31 ; [clobbered] ZMM for BE/LE shuffle mask
+%define %%ROUNDS                %32 ; [in] number of AES rounds
 
+%if %0 == 32
+        INITIAL_BLOCKS_PARTIAL_CIPHER \
+                        %%GDATA_KEY, %%GDATA_CTX, %%CIPH_PLAIN_OUT, %%PLAIN_CIPH_IN, \
+                        %%LENGTH, %%DATA_OFFSET, %%NUM_BLOCKS, %%CTR, \
+                        %%ENC_DEC, %%INSTANCE_TYPE, %%DAT0, %%DAT1, %%DAT2, %%DAT3, \
+                        XWORD(%%LAST_CIPHER_BLK), XWORD(%%LAST_GHASH_BLK), \
+                        %%CTR0, %%CTR1, %%CTR2, %%CTR3, %%ZT0, \
+                        %%IA0, %%IA1, %%MASKREG, %%SHUFMASK, %%ROUNDS
+%else
         INITIAL_BLOCKS_PARTIAL_CIPHER \
                         %%GDATA_KEY, %%GDATA_CTX, %%CIPH_PLAIN_OUT, %%PLAIN_CIPH_IN, \
                         %%LENGTH, %%DATA_OFFSET, %%NUM_BLOCKS, %%CTR, \
@@ -1730,6 +1878,7 @@ align_label
                         XWORD(%%LAST_CIPHER_BLK), XWORD(%%LAST_GHASH_BLK), \
                         %%CTR0, %%CTR1, %%CTR2, %%CTR3, %%ZT0, \
                         %%IA0, %%IA1, %%MASKREG, %%SHUFMASK
+%endif
         ;; **CTR0, CTR1, CTR2, CTR3, %%ZT0 may contain sensitive data
         INITIAL_BLOCKS_PARTIAL_GHASH \
                         %%GDATA_KEY, %%GDATA_CTX, %%LENGTH, \
@@ -1747,7 +1896,7 @@ align_label
 ;;; ===========================================================================
 ;;; Stitched GHASH of 16 blocks (with reduction) with encryption of N blocks
 ;;; followed with GHASH of the N blocks.
-%macro GHASH_16_ENCRYPT_N_GHASH_N 47
+%macro GHASH_16_ENCRYPT_N_GHASH_N 47-48
 %define %%GDATA                 %1  ; [in] key pointer
 %define %%GCTX                  %2  ; [in] context pointer
 %define %%CIPH_PLAIN_OUT        %3  ; [in] pointer to output buffer
@@ -1795,6 +1944,7 @@ align_label
 %define %%MASKREG               %45 ; [clobbered] mask register
 %define %%NUM_BLOCKS            %46 ; [in] numerical value with number of blocks to be encrypted/ghashed (1 to 16)
 %define %%INSTANCE_TYPE         %47 ; [in] multi_call or single_call
+%define %%ROUNDS                %48 ; [in] number of rounds (9, 11, 13)
 
 %xdefine %%THH1 %%HASH_IN_OUT   ; this is to avoid additional move in do_reduction case
 
@@ -2069,6 +2219,54 @@ align_label
                         %%B00_03, %%B04_07, %%B08_11, %%B12_15, \
                         %%AESKEY2, %%AESKEY2, %%AESKEY2, %%AESKEY2
 
+%if %0 == 48
+        cmp    DWORD(%%ROUNDS), 11
+        je     %%_aes_192_rounds
+        jb     %%_aes_done
+
+        vbroadcastf64x2 %%AESKEY2, [%%GDATA + (16 * 11)]
+        ZMM_OPCODE3_DSTR_SRC1R_SRC2R_BLOCKS_0_16 %%NUM_BLOCKS, vaesenc, \
+                        %%B00_03, %%B04_07, %%B08_11, %%B12_15, \
+                        %%B00_03, %%B04_07, %%B08_11, %%B12_15, \
+                        %%AESKEY1, %%AESKEY1, %%AESKEY1, %%AESKEY1
+        vbroadcastf64x2 %%AESKEY1, [%%GDATA + (16 * 12)]
+
+        ZMM_OPCODE3_DSTR_SRC1R_SRC2R_BLOCKS_0_16 %%NUM_BLOCKS, vaesenc, \
+                        %%B00_03, %%B04_07, %%B08_11, %%B12_15, \
+                        %%B00_03, %%B04_07, %%B08_11, %%B12_15, \
+                        %%AESKEY2, %%AESKEY2, %%AESKEY2, %%AESKEY2
+        vbroadcastf64x2 %%AESKEY2, [%%GDATA + (16 * 13)]
+
+        ZMM_OPCODE3_DSTR_SRC1R_SRC2R_BLOCKS_0_16 %%NUM_BLOCKS, vaesenc, \
+                        %%B00_03, %%B04_07, %%B08_11, %%B12_15, \
+                        %%B00_03, %%B04_07, %%B08_11, %%B12_15, \
+                        %%AESKEY1, %%AESKEY1, %%AESKEY1, %%AESKEY1
+        vbroadcastf64x2 %%AESKEY1, [%%GDATA + (16 * 14)]
+
+        ZMM_OPCODE3_DSTR_SRC1R_SRC2R_BLOCKS_0_16 %%NUM_BLOCKS, vaesenc, \
+                        %%B00_03, %%B04_07, %%B08_11, %%B12_15, \
+                        %%B00_03, %%B04_07, %%B08_11, %%B12_15, \
+                        %%AESKEY2, %%AESKEY2, %%AESKEY2, %%AESKEY2
+        jmp %%_aes_done
+
+align_label
+%%_aes_192_rounds:
+        vbroadcastf64x2 %%AESKEY2, [%%GDATA + (16 * 11)]
+        ZMM_OPCODE3_DSTR_SRC1R_SRC2R_BLOCKS_0_16 %%NUM_BLOCKS, vaesenc, \
+                        %%B00_03, %%B04_07, %%B08_11, %%B12_15, \
+                        %%B00_03, %%B04_07, %%B08_11, %%B12_15, \
+                        %%AESKEY1, %%AESKEY1, %%AESKEY1, %%AESKEY1
+        vbroadcastf64x2 %%AESKEY1, [%%GDATA + (16 * 12)]
+
+        ZMM_OPCODE3_DSTR_SRC1R_SRC2R_BLOCKS_0_16 %%NUM_BLOCKS, vaesenc, \
+                        %%B00_03, %%B04_07, %%B08_11, %%B12_15, \
+                        %%B00_03, %%B04_07, %%B08_11, %%B12_15, \
+                        %%AESKEY2, %%AESKEY2, %%AESKEY2, %%AESKEY2
+
+align_label
+%%_aes_done:
+
+%else
 %if (NROUNDS >= 11)
         vbroadcastf64x2 %%AESKEY2, [%%GDATA + (16 * 11)]
 %endif
@@ -2102,6 +2300,8 @@ align_label
                         %%AESKEY2, %%AESKEY2, %%AESKEY2, %%AESKEY2
 %endif ; GCM256 / NROUNDS = 13 (15 including the first and the last)
 %endif ; GCM192 / NROUNDS = 11 (13 including the first and the last)
+
+%endif ; Runtime NROUNDS
 
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;; the last AES round
@@ -2236,7 +2436,7 @@ align_label
 ;;; ===========================================================================
 ;;; Stitched GHASH of 16 blocks (with reduction) with encryption of N blocks
 ;;; followed with GHASH of the N blocks.
-%macro GCM_ENC_DEC_LAST 46
+%macro GCM_ENC_DEC_LAST 46-47
 %define %%GDATA                 %1  ; [in] key pointer
 %define %%GCTX                  %2  ; [in] context pointer
 %define %%CIPH_PLAIN_OUT        %3  ; [in] pointer to output buffer
@@ -2283,6 +2483,7 @@ align_label
 %define %%IA1                   %44 ; [clobbered] GP temporary
 %define %%MASKREG               %45 ; [clobbered] mask register
 %define %%INSTANCE_TYPE         %46 ; [in] multi_call or single_call
+%define %%ROUNDS                %47 ; [in] number of AES rounds (9, 11 or 13)
 
         mov     DWORD(%%IA0), DWORD(%%LENGTH)
         add     DWORD(%%IA0), 15
@@ -2338,6 +2539,20 @@ align_label
 %rep 16
 align_label
 %%_last_num_blocks_is_ %+ num_blocks :
+
+%if %0 == 47
+        GHASH_16_ENCRYPT_N_GHASH_N \
+                %%GDATA, %%GCTX, %%CIPH_PLAIN_OUT, %%PLAIN_CIPH_IN, \
+                %%DATA_OFFSET, %%LENGTH, %%CTR_BE, %%CTR_CHECK, \
+                %%HASHKEY_OFFSET, %%GHASHIN_BLK_OFFSET, %%SHFMSK, \
+                %%ZT00, %%ZT01, %%ZT02, %%ZT03, %%ZT04, %%ZT05, %%ZT06, %%ZT07, \
+                %%ZT08, %%ZT09, %%ZT10, %%ZT11, %%ZT12, %%ZT13, %%ZT14, %%ZT15, \
+                %%ZT16, %%ZT17, %%ZT18, %%ZT19, %%ZT20, %%ZT21, %%ZT22, %%ZT23, \
+                %%ADDBE_4x4, %%ADDBE_1234, %%GHASH_TYPE, \
+                %%TO_REDUCE_L, %%TO_REDUCE_H, \
+                %%ENC_DEC, %%HASH_IN_OUT, %%IA0, %%IA1, %%MASKREG, \
+                num_blocks, %%INSTANCE_TYPE, %%ROUNDS
+%else
         GHASH_16_ENCRYPT_N_GHASH_N \
                 %%GDATA, %%GCTX, %%CIPH_PLAIN_OUT, %%PLAIN_CIPH_IN, \
                 %%DATA_OFFSET, %%LENGTH, %%CTR_BE, %%CTR_CHECK, \
@@ -2349,6 +2564,7 @@ align_label
                 %%TO_REDUCE_L, %%TO_REDUCE_H, \
                 %%ENC_DEC, %%HASH_IN_OUT, %%IA0, %%IA1, %%MASKREG, \
                 num_blocks, %%INSTANCE_TYPE
+%endif
         ;; **ZT01 may contain sensitive data
         jmp     %%_last_blocks_done
 %assign num_blocks (num_blocks + 1)
@@ -2382,7 +2598,7 @@ align_label
 ;;; - encrypts 16 blocks at a time
 ;;; - ghash the 16 previously encrypted ciphertext blocks
 ;;; - no partial block or multi_call handling here
-%macro  GHASH_16_ENCRYPT_16_PARALLEL 42
+%macro  GHASH_16_ENCRYPT_16_PARALLEL 42-43
 %define %%GDATA                 %1  ; [in] key pointer
 %define %%CIPH_PLAIN_OUT        %2  ; [in] pointer to output buffer
 %define %%PLAIN_CIPH_IN         %3  ; [in] pointer to input buffer
@@ -2426,6 +2642,7 @@ align_label
 %define %%DATA_DISPL            %40 ; [in] fixed numerical data displacement/offset
 %define %%GHASH_IN              %41 ; [in] current GHASH value or "no_ghash_in"
 %define %%HK_LOAD_TYPE          %42 ; [in] hash key load type: hk_load or hk_bcast
+%define %%ROUNDS                %43 ; [in] number of AES rounds: 9, 11 or 13
 
 %define %%B00_03 %%ZT1
 %define %%B04_07 %%ZT2
@@ -2713,6 +2930,54 @@ align_label
         vaesenc         %%B04_07, %%B04_07, %%AESKEY2
         vaesenc         %%B08_11, %%B08_11, %%AESKEY2
         vaesenc         %%B12_15, %%B12_15, %%AESKEY2
+
+%if %0 == 43
+        cmp DWORD(%%ROUNDS), 11
+        jb  %%_final_round
+        je  %%_aes_192
+
+        vbroadcastf64x2 %%AESKEY2, [%%GDATA + (16 * 11)]
+        vaesenc         %%B00_03, %%B00_03, %%AESKEY1
+        vaesenc         %%B04_07, %%B04_07, %%AESKEY1
+        vaesenc         %%B08_11, %%B08_11, %%AESKEY1
+        vaesenc         %%B12_15, %%B12_15, %%AESKEY1
+        vbroadcastf64x2 %%AESKEY1, [%%GDATA + (16 * 12)]
+
+        vaesenc         %%B00_03, %%B00_03, %%AESKEY2
+        vaesenc         %%B04_07, %%B04_07, %%AESKEY2
+        vaesenc         %%B08_11, %%B08_11, %%AESKEY2
+        vaesenc         %%B12_15, %%B12_15, %%AESKEY2
+        vbroadcastf64x2 %%AESKEY2, [%%GDATA + (16 * 13)]
+
+        vaesenc         %%B00_03, %%B00_03, %%AESKEY1
+        vaesenc         %%B04_07, %%B04_07, %%AESKEY1
+        vaesenc         %%B08_11, %%B08_11, %%AESKEY1
+        vaesenc         %%B12_15, %%B12_15, %%AESKEY1
+        vbroadcastf64x2 %%AESKEY1, [%%GDATA + (16 * 14)]
+
+        vaesenc         %%B00_03, %%B00_03, %%AESKEY2
+        vaesenc         %%B04_07, %%B04_07, %%AESKEY2
+        vaesenc         %%B08_11, %%B08_11, %%AESKEY2
+        vaesenc         %%B12_15, %%B12_15, %%AESKEY2
+
+        jmp             %%_final_round
+
+align_label
+%%_aes_192:
+        vbroadcastf64x2 %%AESKEY2, [%%GDATA + (16 * 11)]
+        vaesenc         %%B00_03, %%B00_03, %%AESKEY1
+        vaesenc         %%B04_07, %%B04_07, %%AESKEY1
+        vaesenc         %%B08_11, %%B08_11, %%AESKEY1
+        vaesenc         %%B12_15, %%B12_15, %%AESKEY1
+        vbroadcastf64x2 %%AESKEY1, [%%GDATA + (16 * 12)]
+
+        vaesenc         %%B00_03, %%B00_03, %%AESKEY2
+        vaesenc         %%B04_07, %%B04_07, %%AESKEY2
+        vaesenc         %%B08_11, %%B08_11, %%AESKEY2
+        vaesenc         %%B12_15, %%B12_15, %%AESKEY2
+        jmp             %%_final_round
+
+%else
 %if (NROUNDS >= 11)
         vbroadcastf64x2 %%AESKEY2, [%%GDATA + (16 * 11)]
 %endif
@@ -2747,6 +3012,10 @@ align_label
 %endif ; GCM256 / NROUNDS = 13 (15 including the first and the last)
 %endif ; GCM192 / NROUNDS = 11 (13 including the first and the last)
 
+%endif ; Runtime rounds
+
+align_label
+%%_final_round:
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;; the last AES round
         vaesenclast     %%B00_03, %%B00_03, %%AESKEY1
@@ -3070,7 +3339,7 @@ align_label
 ;;; - number of blocks in the message comes as argument
 ;;; - depending on the number of blocks an optimized variant of
 ;;;   INITIAL_BLOCKS_PARTIAL is invoked
-%macro  GCM_ENC_DEC_SMALL   39
+%macro  GCM_ENC_DEC_SMALL   39-40
 %define %%GDATA_KEY         %1  ; [in] key pointer
 %define %%GDATA_CTX         %2  ; [in] context pointer
 %define %%CIPH_PLAIN_OUT    %3  ; [in] output buffer
@@ -3110,6 +3379,7 @@ align_label
 %define %%IA1               %37 ; [clobbered] GP register
 %define %%MASKREG           %38 ; [clobbered] mask register
 %define %%SHUFMASK          %39 ; [clobbered] ZMM to be used for BE/LE shuffle mask
+%define %%ROUNDS            %40 ; [in] number of AES rounds (9, 11, 13)
 
         cmp     DWORD(%%NUM_BLOCKS), 8
         je      %%_small_initial_num_blocks_is_8
@@ -3161,6 +3431,16 @@ align_label
 %assign num_blocks 1
 %rep 16
 %%_small_initial_num_blocks_is_ %+ num_blocks :
+
+%if %0 == 40
+        INITIAL_BLOCKS_PARTIAL  %%GDATA_KEY, %%GDATA_CTX, %%CIPH_PLAIN_OUT, \
+                %%PLAIN_CIPH_IN, %%LENGTH, %%DATA_OFFSET, num_blocks, \
+                %%CTR, %%HASH_IN_OUT, %%ENC_DEC, %%INSTANCE_TYPE, \
+                %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, \
+                %%ZTMP5, %%ZTMP6, %%ZTMP7, %%ZTMP8, %%ZTMP9, \
+                %%ZTMP10, %%ZTMP11, %%ZTMP12, %%ZTMP13, %%ZTMP14, %%ZTMP15, \
+                %%IA0, %%IA1, %%MASKREG, %%SHUFMASK, %%ROUNDS
+%else
         INITIAL_BLOCKS_PARTIAL  %%GDATA_KEY, %%GDATA_CTX, %%CIPH_PLAIN_OUT, \
                 %%PLAIN_CIPH_IN, %%LENGTH, %%DATA_OFFSET, num_blocks, \
                 %%CTR, %%HASH_IN_OUT, %%ENC_DEC, %%INSTANCE_TYPE, \
@@ -3168,6 +3448,7 @@ align_label
                 %%ZTMP5, %%ZTMP6, %%ZTMP7, %%ZTMP8, %%ZTMP9, \
                 %%ZTMP10, %%ZTMP11, %%ZTMP12, %%ZTMP13, %%ZTMP14, %%ZTMP15, \
                 %%IA0, %%IA1, %%MASKREG, %%SHUFMASK
+%endif
         ;; **ZTMP1, ZTMP2, ZTMP3, ZTMP10 may contain sensitive data
 %if num_blocks != 16
         jmp     %%_small_initial_blocks_encrypted
@@ -3187,9 +3468,9 @@ align_label
 ; Input: gcm_key_data struct* (GDATA_KEY), gcm_context_data *(GDATA_CTX), input text (PLAIN_CIPH_IN),
 ; input text length (PLAIN_CIPH_LEN) and whether encoding or decoding (ENC_DEC).
 ; Output: A cipher of the given plain text (CIPH_PLAIN_OUT), and updated GDATA_CTX
-; Clobbers rax, r10-r15, and zmm0-zmm31, k1
+; Clobbers rax, rbx, r11-r13, r15, and zmm0-zmm31, k1
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-%macro  GCM_ENC_DEC         7-8
+%macro  GCM_ENC_DEC         7-9
 %define %%GDATA_KEY         %1  ; [in] key pointer
 %define %%GDATA_CTX         %2  ; [in] context pointer
 %define %%CIPH_PLAIN_OUT    %3  ; [in] output buffer pointer
@@ -3198,13 +3479,19 @@ align_label
 %define %%ENC_DEC           %6  ; [in] cipher direction
 %define %%INSTANCE_TYPE     %7  ; [in] 'single_call' or 'multi_call' selection
 %define %%MSG_SIZE_SCOPE    %8  ; [in] '>256' to remove small packets code path
+%define %%ROUNDS            %9  ; [in] number of rounds (9, 11, 13)
 
 %assign include_small_packets 1
+%assign runtime_nrounds 0
 
 %if %0 > 7
 %ifidn %%MSG_SIZE_SCOPE, '>256'
 %assign include_small_packets 0
 %endif
+%endif
+
+%if %0 > 8
+%assign runtime_nrounds 1
 %endif
 
 %define %%IA0               r10
@@ -3298,8 +3585,8 @@ align_label
 
         ;; Update length of data processed
 %ifidn __OUTPUT_FORMAT__, win64
-        mov             %%IA0, %%PLAIN_CIPH_LEN
-        add             [%%GDATA_CTX + InLen], %%IA0
+        mov             %%IA1, %%PLAIN_CIPH_LEN
+        add             [%%GDATA_CTX + InLen], %%IA1
 %else
         add             [%%GDATA_CTX + InLen], %%PLAIN_CIPH_LEN
 %endif
@@ -3311,7 +3598,7 @@ align_label
         ;; block fill the remaining bytes here.
         PARTIAL_BLOCK %%GDATA_KEY, %%GDATA_CTX, %%CIPH_PLAIN_OUT, %%PLAIN_CIPH_IN, \
                 %%PLAIN_CIPH_LEN, %%DATA_OFFSET, %%AAD_HASHx, %%ENC_DEC, \
-                %%IA0, %%IA1, %%IA2, %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, \
+                %%IA1, %%IA2, %%IA5, %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, \
                 %%ZTMP5, %%ZTMP6, %%ZTMP7, %%ZTMP8, %%ZTMP9, %%MASKREG
         ;; **ZTMP1 may contain sensitive data
 %else
@@ -3365,11 +3652,19 @@ align_label
 %assign aesout_offset (STACK_LOCAL_OFFSET + (0 * 16))
 %assign data_in_out_offset 0
 
+%if runtime_nrounds == 1
+        INITIAL_BLOCKS_16       %%PLAIN_CIPH_IN, %%CIPH_PLAIN_OUT, %%GDATA_KEY, %%DATA_OFFSET, \
+                                no_ghash, %%CTR_BLOCKz, %%CTR_CHECK, %%ADDBE_4x4, %%ADDBE_1234, \
+                                %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, \
+                                %%ZTMP5, %%ZTMP6, %%ZTMP7, %%ZTMP8, \
+                                %%SHUF_MASK, %%ENC_DEC, aesout_offset, data_in_out_offset, %%ROUNDS
+%else
         INITIAL_BLOCKS_16       %%PLAIN_CIPH_IN, %%CIPH_PLAIN_OUT, %%GDATA_KEY, %%DATA_OFFSET, \
                                 no_ghash, %%CTR_BLOCKz, %%CTR_CHECK, %%ADDBE_4x4, %%ADDBE_1234, \
                                 %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, \
                                 %%ZTMP5, %%ZTMP6, %%ZTMP7, %%ZTMP8, \
                                 %%SHUF_MASK, %%ENC_DEC, aesout_offset, data_in_out_offset
+%endif
 
         cmp             %%LENGTH, (32 * 16)
         jb              %%_message_below_32_blocks
@@ -3378,11 +3673,19 @@ align_label
 %assign aesout_offset (STACK_LOCAL_OFFSET + (16 * 16))
 %assign data_in_out_offset (16 * 16)
 
+%if runtime_nrounds == 1
+        INITIAL_BLOCKS_16       %%PLAIN_CIPH_IN, %%CIPH_PLAIN_OUT, %%GDATA_KEY, %%DATA_OFFSET, \
+                                no_ghash, %%CTR_BLOCKz, %%CTR_CHECK, %%ADDBE_4x4, %%ADDBE_1234, \
+                                %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, \
+                                %%ZTMP5, %%ZTMP6, %%ZTMP7, %%ZTMP8, \
+                                %%SHUF_MASK, %%ENC_DEC, aesout_offset, data_in_out_offset, %%ROUNDS
+%else
         INITIAL_BLOCKS_16       %%PLAIN_CIPH_IN, %%CIPH_PLAIN_OUT, %%GDATA_KEY, %%DATA_OFFSET, \
                                 no_ghash, %%CTR_BLOCKz, %%CTR_CHECK, %%ADDBE_4x4, %%ADDBE_1234, \
                                 %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, \
                                 %%ZTMP5, %%ZTMP6, %%ZTMP7, %%ZTMP8, \
                                 %%SHUF_MASK, %%ENC_DEC, aesout_offset, data_in_out_offset
+%endif
 
         add             %%DATA_OFFSET, (32 * 16)
         sub             %%LENGTH, (32 * 16)
@@ -3403,6 +3706,19 @@ align_label
 %assign data_in_out_offset (0 * 16)
 %assign ghashin_offset (STACK_LOCAL_OFFSET + (0 * 16))
 
+%if runtime_nrounds == 1
+        GHASH_16_ENCRYPT_16_PARALLEL  %%GDATA_KEY, %%CIPH_PLAIN_OUT, %%PLAIN_CIPH_IN, %%DATA_OFFSET, \
+                %%CTR_BLOCKz, %%CTR_CHECK, \
+                HashKey_32, aesout_offset, ghashin_offset, %%SHUF_MASK, \
+                %%ZTMP0,  %%ZTMP1,  %%ZTMP2,  %%ZTMP3, \
+                %%ZTMP4,  %%ZTMP5,  %%ZTMP6,  %%ZTMP7, \
+                %%ZTMP8,  %%ZTMP9,  %%ZTMP10, %%ZTMP11,\
+                %%ZTMP12, %%ZTMP13, %%ZTMP14, %%ZTMP15,\
+                %%ZTMP16, %%ZTMP17, %%ZTMP18, %%ZTMP19, \
+                %%ZTMP20, %%ZTMP21, %%ZTMP22, \
+                %%ADDBE_4x4, %%ADDBE_1234, %%GL, %%GH, \
+                first_time, %%ENC_DEC, data_in_out_offset, %%AAD_HASHz, hk_bcast, %%ROUNDS
+%else
         GHASH_16_ENCRYPT_16_PARALLEL  %%GDATA_KEY, %%CIPH_PLAIN_OUT, %%PLAIN_CIPH_IN, %%DATA_OFFSET, \
                 %%CTR_BLOCKz, %%CTR_CHECK, \
                 HashKey_32, aesout_offset, ghashin_offset, %%SHUF_MASK, \
@@ -3414,12 +3730,26 @@ align_label
                 %%ZTMP20, %%ZTMP21, %%ZTMP22, \
                 %%ADDBE_4x4, %%ADDBE_1234, %%GL, %%GH, \
                 first_time, %%ENC_DEC, data_in_out_offset, %%AAD_HASHz, hk_bcast
+%endif
 
         ;; ==== AES-CTR + GHASH - 16 blocks, reduction
 %assign aesout_offset (STACK_LOCAL_OFFSET + (16 * 16))
 %assign data_in_out_offset (16 * 16)
 %assign ghashin_offset (STACK_LOCAL_OFFSET + (16 * 16))
 
+%if runtime_nrounds == 1
+        GHASH_16_ENCRYPT_16_PARALLEL  %%GDATA_KEY, %%CIPH_PLAIN_OUT, %%PLAIN_CIPH_IN, %%DATA_OFFSET, \
+                %%CTR_BLOCKz, %%CTR_CHECK, \
+                HashKey_16, aesout_offset, ghashin_offset, %%SHUF_MASK, \
+                %%ZTMP0,  %%ZTMP1,  %%ZTMP2,  %%ZTMP3, \
+                %%ZTMP4,  %%ZTMP5,  %%ZTMP6,  %%ZTMP7, \
+                %%ZTMP8,  %%ZTMP9,  %%ZTMP10, %%ZTMP11,\
+                %%ZTMP12, %%ZTMP13, %%ZTMP14, %%ZTMP15,\
+                %%ZTMP16, %%ZTMP17, %%ZTMP18, %%ZTMP19, \
+                %%ZTMP20, %%ZTMP21, %%ZTMP22, \
+                %%ADDBE_4x4, %%ADDBE_1234, %%GL, %%GH, \
+                final_reduction_no_hxor, %%ENC_DEC, data_in_out_offset, no_ghash_in, hk_bcast, %%ROUNDS
+%else
         GHASH_16_ENCRYPT_16_PARALLEL  %%GDATA_KEY, %%CIPH_PLAIN_OUT, %%PLAIN_CIPH_IN, %%DATA_OFFSET, \
                 %%CTR_BLOCKz, %%CTR_CHECK, \
                 HashKey_16, aesout_offset, ghashin_offset, %%SHUF_MASK, \
@@ -3431,6 +3761,7 @@ align_label
                 %%ZTMP20, %%ZTMP21, %%ZTMP22, \
                 %%ADDBE_4x4, %%ADDBE_1234, %%GL, %%GH, \
                 final_reduction_no_hxor, %%ENC_DEC, data_in_out_offset, no_ghash_in, hk_bcast
+%endif
 
         ;; **ZTMP16 and ZTMP17 contain AES round keys
         ;; === xor cipher block 0 with GHASH (ZT4)
@@ -3451,6 +3782,19 @@ align_label
 %assign data_in_out_offset (0 * 16)
 %assign ghashin_offset (STACK_LOCAL_OFFSET + (0 * 16))
 
+%if runtime_nrounds == 1
+        GHASH_16_ENCRYPT_16_PARALLEL  %%GDATA_KEY, %%CIPH_PLAIN_OUT, %%PLAIN_CIPH_IN, %%DATA_OFFSET, \
+                %%CTR_BLOCKz, %%CTR_CHECK, \
+                HashKey_32, aesout_offset, ghashin_offset, %%SHUF_MASK, \
+                %%ZTMP0,  %%ZTMP1,  %%ZTMP2,  %%ZTMP3, \
+                %%ZTMP4,  %%ZTMP5,  %%ZTMP6,  %%ZTMP7, \
+                %%ZTMP8,  %%ZTMP9,  %%ZTMP10, %%ZTMP11,\
+                %%ZTMP12, %%ZTMP13, %%ZTMP14, %%ZTMP15,\
+                %%ZTMP16, %%ZTMP17, %%ZTMP18, %%ZTMP19, \
+                %%ZTMP20, %%ZTMP21, %%ZTMP22, \
+                %%ADDBE_4x4, %%ADDBE_1234, %%GL, %%GH, \
+                first_time, %%ENC_DEC, data_in_out_offset, %%AAD_HASHz, hk_load, %%ROUNDS
+%else
         GHASH_16_ENCRYPT_16_PARALLEL  %%GDATA_KEY, %%CIPH_PLAIN_OUT, %%PLAIN_CIPH_IN, %%DATA_OFFSET, \
                 %%CTR_BLOCKz, %%CTR_CHECK, \
                 HashKey_32, aesout_offset, ghashin_offset, %%SHUF_MASK, \
@@ -3462,12 +3806,26 @@ align_label
                 %%ZTMP20, %%ZTMP21, %%ZTMP22, \
                 %%ADDBE_4x4, %%ADDBE_1234, %%GL, %%GH, \
                 first_time, %%ENC_DEC, data_in_out_offset, %%AAD_HASHz, hk_load
+%endif
 
         ;; ==== AES-CTR + GHASH - 16 blocks, reduction
 %assign aesout_offset (STACK_LOCAL_OFFSET + (16 * 16))
 %assign data_in_out_offset (16 * 16)
 %assign ghashin_offset (STACK_LOCAL_OFFSET + (16 * 16))
 
+%if runtime_nrounds == 1
+        GHASH_16_ENCRYPT_16_PARALLEL  %%GDATA_KEY, %%CIPH_PLAIN_OUT, %%PLAIN_CIPH_IN, %%DATA_OFFSET, \
+                %%CTR_BLOCKz, %%CTR_CHECK, \
+                HashKey_16, aesout_offset, ghashin_offset, %%SHUF_MASK, \
+                %%ZTMP0,  %%ZTMP1,  %%ZTMP2,  %%ZTMP3, \
+                %%ZTMP4,  %%ZTMP5,  %%ZTMP6,  %%ZTMP7, \
+                %%ZTMP8,  %%ZTMP9,  %%ZTMP10, %%ZTMP11,\
+                %%ZTMP12, %%ZTMP13, %%ZTMP14, %%ZTMP15,\
+                %%ZTMP16, %%ZTMP17, %%ZTMP18, %%ZTMP19, \
+                %%ZTMP20, %%ZTMP21, %%ZTMP22, \
+                %%ADDBE_4x4, %%ADDBE_1234, %%GL, %%GH, \
+                final_reduction, %%ENC_DEC, data_in_out_offset, no_ghash_in, hk_load, %%ROUNDS
+%else
         GHASH_16_ENCRYPT_16_PARALLEL  %%GDATA_KEY, %%CIPH_PLAIN_OUT, %%PLAIN_CIPH_IN, %%DATA_OFFSET, \
                 %%CTR_BLOCKz, %%CTR_CHECK, \
                 HashKey_16, aesout_offset, ghashin_offset, %%SHUF_MASK, \
@@ -3479,6 +3837,7 @@ align_label
                 %%ZTMP20, %%ZTMP21, %%ZTMP22, \
                 %%ADDBE_4x4, %%ADDBE_1234, %%GL, %%GH, \
                 final_reduction, %%ENC_DEC, data_in_out_offset, no_ghash_in, hk_load
+%endif
 
         ;; **ZTMP16 and ZTMP17 contain AES round keys
 
@@ -3510,6 +3869,7 @@ align_label
         ;; ==== GHASH 1 x 16 blocks with reduction + cipher and ghash on the reminder
 %assign ghashin_offset (STACK_LOCAL_OFFSET + (16 * 16))
 
+%if runtime_nrounds == 1
         GCM_ENC_DEC_LAST \
                 %%GDATA_KEY, %%GDATA_CTX, %%CIPH_PLAIN_OUT, %%PLAIN_CIPH_IN, \
                 %%DATA_OFFSET, %%LENGTH, %%CTR_BLOCKz, %%CTR_CHECK, \
@@ -3519,7 +3879,19 @@ align_label
                 %%ZTMP14, %%ZTMP15, %%ZTMP16, %%ZTMP17, %%ZTMP18, %%ZTMP19, %%ZTMP20, \
                 %%ZTMP21, %%ZTMP22, %%ZTMP23, \
                 %%ADDBE_4x4, %%ADDBE_1234, end_reduce, %%GL, %%GH, \
-                %%ENC_DEC, %%AAD_HASHz, %%IA0, %%IA5, %%MASKREG, %%INSTANCE_TYPE
+                %%ENC_DEC, %%AAD_HASHz, %%IA1, %%IA5, %%MASKREG, %%INSTANCE_TYPE, %%ROUNDS
+%else
+        GCM_ENC_DEC_LAST \
+                %%GDATA_KEY, %%GDATA_CTX, %%CIPH_PLAIN_OUT, %%PLAIN_CIPH_IN, \
+                %%DATA_OFFSET, %%LENGTH, %%CTR_BLOCKz, %%CTR_CHECK, \
+                HashKey_16, ghashin_offset, %%SHUF_MASK, \
+                %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, %%ZTMP6, \
+                %%ZTMP7, %%ZTMP8, %%ZTMP9, %%ZTMP10, %%ZTMP11, %%ZTMP12, %%ZTMP13, \
+                %%ZTMP14, %%ZTMP15, %%ZTMP16, %%ZTMP17, %%ZTMP18, %%ZTMP19, %%ZTMP20, \
+                %%ZTMP21, %%ZTMP22, %%ZTMP23, \
+                %%ADDBE_4x4, %%ADDBE_1234, end_reduce, %%GL, %%GH, \
+                %%ENC_DEC, %%AAD_HASHz, %%IA1, %%IA5, %%MASKREG, %%INSTANCE_TYPE
+%endif
         ;; **ZTMP9 clobbered but ZTMP1 may include sensitive data
         ;; **ZTMP16 and ZTMP17 clobbered or cleared above
         ;; **ZTMP21 may include part of cipher key
@@ -3544,6 +3916,19 @@ align_label
 %assign ghashin_offset (STACK_LOCAL_OFFSET + (0 * 16))
 %assign data_in_out_offset (0 * 16)
 
+%if runtime_nrounds == 1
+        GHASH_16_ENCRYPT_16_PARALLEL  %%GDATA_KEY, %%CIPH_PLAIN_OUT, %%PLAIN_CIPH_IN, %%DATA_OFFSET, \
+                %%CTR_BLOCKz, %%CTR_CHECK, \
+                HashKey_32, aesout_offset, ghashin_offset, %%SHUF_MASK, \
+                %%ZTMP0,  %%ZTMP1,  %%ZTMP2,  %%ZTMP3, \
+                %%ZTMP4,  %%ZTMP5,  %%ZTMP6,  %%ZTMP7, \
+                %%ZTMP8,  %%ZTMP9,  %%ZTMP10, %%ZTMP11,\
+                %%ZTMP12, %%ZTMP13, %%ZTMP14, %%ZTMP15,\
+                %%ZTMP16, %%ZTMP17, %%ZTMP18, %%ZTMP19, \
+                %%ZTMP20, %%ZTMP21, %%ZTMP22, \
+                %%ADDBE_4x4, %%ADDBE_1234, %%GL, %%GH, \
+                first_time, %%ENC_DEC, data_in_out_offset, %%AAD_HASHz, hk_load, %%ROUNDS
+%else
         GHASH_16_ENCRYPT_16_PARALLEL  %%GDATA_KEY, %%CIPH_PLAIN_OUT, %%PLAIN_CIPH_IN, %%DATA_OFFSET, \
                 %%CTR_BLOCKz, %%CTR_CHECK, \
                 HashKey_32, aesout_offset, ghashin_offset, %%SHUF_MASK, \
@@ -3555,6 +3940,7 @@ align_label
                 %%ZTMP20, %%ZTMP21, %%ZTMP22, \
                 %%ADDBE_4x4, %%ADDBE_1234, %%GL, %%GH, \
                 first_time, %%ENC_DEC, data_in_out_offset, %%AAD_HASHz, hk_load
+%endif
 
         ;; **ZTMP16 and ZTMP17 contain AES round keys
 
@@ -3576,14 +3962,15 @@ align_label
 
         ;; calculate offset to the right hash key
 %ifidn %%INSTANCE_TYPE, multi_call
-        mov             DWORD(%%IA0), DWORD(%%LENGTH)
+        mov             DWORD(%%IA1), DWORD(%%LENGTH)
 %else
-        lea             DWORD(%%IA0), [DWORD(%%LENGTH) + 15]
+        lea             DWORD(%%IA1), [DWORD(%%LENGTH) + 15]
 %endif
-        and             DWORD(%%IA0), ~15
+        and             DWORD(%%IA1), ~15
         mov             DWORD(%%HASHK_PTR), HashKey_16
-        sub             DWORD(%%HASHK_PTR), DWORD(%%IA0)
+        sub             DWORD(%%HASHK_PTR), DWORD(%%IA1)
 
+%if runtime_nrounds == 1
         GCM_ENC_DEC_LAST \
                 %%GDATA_KEY, %%GDATA_CTX, %%CIPH_PLAIN_OUT, %%PLAIN_CIPH_IN, \
                 %%DATA_OFFSET, %%LENGTH, %%CTR_BLOCKz, %%CTR_CHECK, \
@@ -3593,7 +3980,19 @@ align_label
                 %%ZTMP14, %%ZTMP15, %%ZTMP16, %%ZTMP17, %%ZTMP18, %%ZTMP19, %%ZTMP20, \
                 %%ZTMP21, %%ZTMP22, %%ZTMP23, \
                 %%ADDBE_4x4, %%ADDBE_1234, start, %%GL, %%GH, \
-                %%ENC_DEC, %%AAD_HASHz, %%IA0, %%IA5, %%MASKREG, %%INSTANCE_TYPE
+                %%ENC_DEC, %%AAD_HASHz, %%IA1, %%IA5, %%MASKREG, %%INSTANCE_TYPE, %%ROUNDS
+%else
+        GCM_ENC_DEC_LAST \
+                %%GDATA_KEY, %%GDATA_CTX, %%CIPH_PLAIN_OUT, %%PLAIN_CIPH_IN, \
+                %%DATA_OFFSET, %%LENGTH, %%CTR_BLOCKz, %%CTR_CHECK, \
+                %%HASHK_PTR, ghashin_offset, %%SHUF_MASK, \
+                %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, %%ZTMP6, \
+                %%ZTMP7, %%ZTMP8, %%ZTMP9, %%ZTMP10, %%ZTMP11, %%ZTMP12, %%ZTMP13, \
+                %%ZTMP14, %%ZTMP15, %%ZTMP16, %%ZTMP17, %%ZTMP18, %%ZTMP19, %%ZTMP20, \
+                %%ZTMP21, %%ZTMP22, %%ZTMP23, \
+                %%ADDBE_4x4, %%ADDBE_1234, start, %%GL, %%GH, \
+                %%ENC_DEC, %%AAD_HASHz, %%IA1, %%IA5, %%MASKREG, %%INSTANCE_TYPE
+%endif
         ;; **ZTMP9 clobbered but ZTMP1 may include sensitive data
         ;; **ZTMP16 and ZTMP17 clobbered or cleared above
         ;; **ZTMP21 may include part of cipher key
@@ -3618,6 +4017,7 @@ align_label
         shr             DWORD(%%IA1), 4
         ;; %%IA1 can be in the range from 0 to 16
 
+%if runtime_nrounds == 1
         GCM_ENC_DEC_SMALL \
                 %%GDATA_KEY, %%GDATA_CTX, %%CIPH_PLAIN_OUT, %%PLAIN_CIPH_IN, \
                 %%PLAIN_CIPH_LEN, %%ENC_DEC, %%DATA_OFFSET, \
@@ -3628,7 +4028,20 @@ align_label
                 %%ZTMP12, %%ZTMP13, %%ZTMP14, %%ZTMP15, \
                 %%ZTMP16, %%ZTMP17, %%ZTMP18, %%ZTMP19, \
                 %%ZTMP20, %%ZTMP21, %%ZTMP22, \
-                %%IA0, %%IA3, %%MASKREG, %%SHUF_MASK
+                %%IA5, %%IA3, %%MASKREG, %%SHUF_MASK, %%ROUNDS
+%else
+        GCM_ENC_DEC_SMALL \
+                %%GDATA_KEY, %%GDATA_CTX, %%CIPH_PLAIN_OUT, %%PLAIN_CIPH_IN, \
+                %%PLAIN_CIPH_LEN, %%ENC_DEC, %%DATA_OFFSET, \
+                %%LENGTH, %%IA1, %%CTR_BLOCKx, %%AAD_HASHx, %%INSTANCE_TYPE, \
+                %%ZTMP0,  %%ZTMP1,  %%ZTMP2,  %%ZTMP3,  \
+                %%ZTMP4,  %%ZTMP5,  %%ZTMP6,  %%ZTMP7,  \
+                %%ZTMP8,  %%ZTMP9,  %%ZTMP10, %%ZTMP11, \
+                %%ZTMP12, %%ZTMP13, %%ZTMP14, %%ZTMP15, \
+                %%ZTMP16, %%ZTMP17, %%ZTMP18, %%ZTMP19, \
+                %%ZTMP20, %%ZTMP21, %%ZTMP22, \
+                %%IA5, %%IA3, %%MASKREG, %%SHUF_MASK
+%endif
         ;; **ZTMP1, ZTMP2, ZTMP3, ZTMP10 may include sensitive data
 %ifdef SAFE_DATA
         vpxorq   %%ZTMP2, %%ZTMP2, %%ZTMP2
@@ -3656,7 +4069,7 @@ align_label
 ;;; ===========================================================================
 ;;; ===========================================================================
 ;;; Encrypt/decrypt the initial 16 blocks
-%macro INITIAL_BLOCKS_16 22
+%macro INITIAL_BLOCKS_16 22-23
 %define %%IN            %1      ; [in] input buffer
 %define %%OUT           %2      ; [in] output buffer
 %define %%KP            %3      ; [in] pointer to expanded keys
@@ -3679,6 +4092,7 @@ align_label
 %define %%ENC_DEC       %20     ; [in] ENC (encrypt) or DEC (decrypt) selector
 %define %%BLK_OFFSET    %21     ; [in] stack frame offset to ciphered blocks
 %define %%DATA_DISPL    %22     ; [in] fixed numerical data displacement/offset
+%define %%ROUNDS        %23     ; [in] number of AES rounds
 
 %define %%B00_03        %%T5
 %define %%B04_07        %%T6
@@ -3721,6 +4135,137 @@ align_label
         VX512LDR        %%T3, [%%IN + %%DATA_OFFSET + %%DATA_DISPL + (64*3)]
 
         ;; move to AES encryption rounds
+%if %0 == 23
+        vbroadcastf64x2 %%T4, [%%KP + (16*0)]
+        vpxorq          %%B00_03, %%B00_03, %%T4
+        vpxorq          %%B04_07, %%B04_07, %%T4
+        vpxorq          %%B08_11, %%B08_11, %%T4
+        vpxorq          %%B12_15, %%B12_15, %%T4
+
+        vbroadcastf64x2 %%T4, [%%KP + (16*1)]
+        vaesenc         %%B00_03, %%B00_03, %%T4
+        vaesenc         %%B04_07, %%B04_07, %%T4
+        vaesenc         %%B08_11, %%B08_11, %%T4
+        vaesenc         %%B12_15, %%B12_15, %%T4
+
+        vbroadcastf64x2 %%T4, [%%KP + (16*2)]
+        vaesenc         %%B00_03, %%B00_03, %%T4
+        vaesenc         %%B04_07, %%B04_07, %%T4
+        vaesenc         %%B08_11, %%B08_11, %%T4
+        vaesenc         %%B12_15, %%B12_15, %%T4
+
+        vbroadcastf64x2 %%T4, [%%KP + (16*3)]
+        vaesenc         %%B00_03, %%B00_03, %%T4
+        vaesenc         %%B04_07, %%B04_07, %%T4
+        vaesenc         %%B08_11, %%B08_11, %%T4
+        vaesenc         %%B12_15, %%B12_15, %%T4
+
+        vbroadcastf64x2 %%T4, [%%KP + (16*4)]
+        vaesenc         %%B00_03, %%B00_03, %%T4
+        vaesenc         %%B04_07, %%B04_07, %%T4
+        vaesenc         %%B08_11, %%B08_11, %%T4
+        vaesenc         %%B12_15, %%B12_15, %%T4
+
+        vbroadcastf64x2 %%T4, [%%KP + (16*5)]
+        vaesenc         %%B00_03, %%B00_03, %%T4
+        vaesenc         %%B04_07, %%B04_07, %%T4
+        vaesenc         %%B08_11, %%B08_11, %%T4
+        vaesenc         %%B12_15, %%B12_15, %%T4
+
+        vbroadcastf64x2 %%T4, [%%KP + (16*6)]
+        vaesenc         %%B00_03, %%B00_03, %%T4
+        vaesenc         %%B04_07, %%B04_07, %%T4
+        vaesenc         %%B08_11, %%B08_11, %%T4
+        vaesenc         %%B12_15, %%B12_15, %%T4
+
+        vbroadcastf64x2 %%T4, [%%KP + (16*7)]
+        vaesenc         %%B00_03, %%B00_03, %%T4
+        vaesenc         %%B04_07, %%B04_07, %%T4
+        vaesenc         %%B08_11, %%B08_11, %%T4
+        vaesenc         %%B12_15, %%B12_15, %%T4
+
+        vbroadcastf64x2 %%T4, [%%KP + (16*8)]
+        vaesenc         %%B00_03, %%B00_03, %%T4
+        vaesenc         %%B04_07, %%B04_07, %%T4
+        vaesenc         %%B08_11, %%B08_11, %%T4
+        vaesenc         %%B12_15, %%B12_15, %%T4
+
+        vbroadcastf64x2 %%T4, [%%KP + (16*9)]
+        vaesenc         %%B00_03, %%B00_03, %%T4
+        vaesenc         %%B04_07, %%B04_07, %%T4
+        vaesenc         %%B08_11, %%B08_11, %%T4
+        vaesenc         %%B12_15, %%B12_15, %%T4
+
+        cmp             DWORD(%%ROUNDS), 11
+        je              %%_192_rounds
+        jb              %%_128_rounds
+
+        vbroadcastf64x2 %%T4, [%%KP + (16*10)]
+        vaesenc         %%B00_03, %%B00_03, %%T4
+        vaesenc         %%B04_07, %%B04_07, %%T4
+        vaesenc         %%B08_11, %%B08_11, %%T4
+        vaesenc         %%B12_15, %%B12_15, %%T4
+
+        vbroadcastf64x2 %%T4, [%%KP + (16*11)]
+        vaesenc         %%B00_03, %%B00_03, %%T4
+        vaesenc         %%B04_07, %%B04_07, %%T4
+        vaesenc         %%B08_11, %%B08_11, %%T4
+        vaesenc         %%B12_15, %%B12_15, %%T4
+
+        vbroadcastf64x2 %%T4, [%%KP + (16*12)]
+        vaesenc         %%B00_03, %%B00_03, %%T4
+        vaesenc         %%B04_07, %%B04_07, %%T4
+        vaesenc         %%B08_11, %%B08_11, %%T4
+        vaesenc         %%B12_15, %%B12_15, %%T4
+
+        vbroadcastf64x2 %%T4, [%%KP + (16*13)]
+        vaesenc         %%B00_03, %%B00_03, %%T4
+        vaesenc         %%B04_07, %%B04_07, %%T4
+        vaesenc         %%B08_11, %%B08_11, %%T4
+        vaesenc         %%B12_15, %%B12_15, %%T4
+
+        vbroadcastf64x2 %%T4, [%%KP + (16*14)]
+        vaesenclast     %%B00_03, %%B00_03, %%T4
+        vaesenclast     %%B04_07, %%B04_07, %%T4
+        vaesenclast     %%B08_11, %%B08_11, %%T4
+        vaesenclast     %%B12_15, %%B12_15, %%T4
+
+        jmp             %%_rounds_done
+
+align_label
+%%_192_rounds:
+        vbroadcastf64x2 %%T4, [%%KP + (16*10)]
+        vaesenc         %%B00_03, %%B00_03, %%T4
+        vaesenc         %%B04_07, %%B04_07, %%T4
+        vaesenc         %%B08_11, %%B08_11, %%T4
+        vaesenc         %%B12_15, %%B12_15, %%T4
+
+        vbroadcastf64x2 %%T4, [%%KP + (16*11)]
+        vaesenc         %%B00_03, %%B00_03, %%T4
+        vaesenc         %%B04_07, %%B04_07, %%T4
+        vaesenc         %%B08_11, %%B08_11, %%T4
+        vaesenc         %%B12_15, %%B12_15, %%T4
+
+        vbroadcastf64x2 %%T4, [%%KP + (16*12)]
+        vaesenclast     %%B00_03, %%B00_03, %%T4
+        vaesenclast     %%B04_07, %%B04_07, %%T4
+        vaesenclast     %%B08_11, %%B08_11, %%T4
+        vaesenclast     %%B12_15, %%B12_15, %%T4
+
+        jmp             %%_rounds_done
+
+align_label
+%%_128_rounds:
+        vbroadcastf64x2 %%T4, [%%KP + (16*10)]
+        vaesenclast     %%B00_03, %%B00_03, %%T4
+        vaesenclast     %%B04_07, %%B04_07, %%T4
+        vaesenclast     %%B08_11, %%B08_11, %%T4
+        vaesenclast     %%B12_15, %%B12_15, %%T4
+
+align_label
+%%_rounds_done:
+
+%else
 %assign i 0
         vbroadcastf64x2 %%T4, [%%KP + (16*i)]
         vpxorq          %%B00_03, %%B00_03, %%T4
@@ -3743,6 +4288,7 @@ align_label
         vaesenclast     %%B04_07, %%B04_07, %%T4
         vaesenclast     %%B08_11, %%B08_11, %%T4
         vaesenclast     %%B12_15, %%B12_15, %%T4
+%endif
 
         ;;  xor against text
         vpxorq          %%B00_03, %%B00_03, %%T0
