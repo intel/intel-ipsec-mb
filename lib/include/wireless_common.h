@@ -33,6 +33,11 @@
 #include <x86intrin.h>
 #else
 #include <intrin.h>
+#ifndef __MINGW32__
+// Force a function call instead of intrinsic expansion
+// TODO: Remove this workaround for VS2022 issue
+#pragma function(_byteswap_ulong)
+#endif
 #endif
 
 #define NUM_PACKETS_1  1
