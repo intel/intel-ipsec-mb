@@ -37,6 +37,8 @@
 mksection .text
 default rel
 
+extern ghash_internal_vaes_avx512
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;void   aes_gcm_enc_finalize_vaes_avx512
 ;       (const struct gcm_key_data *key_data,
@@ -346,4 +348,174 @@ skip_in_out_check_error_update_dec:
         ;; Set imb_errno
         IMB_ERR_CHECK_END rax
         jmp     exit_update_dec
+%endif
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;void   aes_gcm_init_vaes_avx512
+;       (const struct gcm_key_data *key_data,
+;        struct gcm_context_data *context_data,
+;        u8       *iv,
+;        const u8 *aad,
+;        u64      aad_len);
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+align_function
+MKGLOBAL(aes_gcm_init_vaes_avx512,function,internal)
+aes_gcm_init_vaes_avx512:
+        FUNC_SAVE small_frame
+
+%ifdef SAFE_PARAM
+        ;; Reset imb_errno
+        IMB_ERR_CHECK_RESET
+
+        ;; Check key_data != NULL
+        cmp     arg1, 0
+        jz      error_init
+
+        ;; Check context_data != NULL
+        cmp     arg2, 0
+        jz      error_init
+
+        ;; Check IV != NULL
+        cmp     arg3, 0
+        jz      error_init
+
+        ;; Check if aad_len == 0
+        cmp     arg5, 0
+        jz      skip_aad_check_init
+
+        ;; Check aad != NULL (aad_len != 0)
+        cmp     arg4, 0
+        jz      error_init
+
+align_label
+skip_aad_check_init:
+%endif
+        GCM_INIT arg1, arg2, arg3, arg4, arg5, r10, r11, r12, k1, xmm14, xmm2, \
+                zmm1, zmm3, zmm4, zmm5, zmm6, zmm7, zmm8, zmm9, zmm10, zmm11, \
+                zmm12, zmm13, zmm15, zmm16, zmm17, zmm18, zmm19, zmm20, multi_call
+
+align_label
+exit_init:
+
+        FUNC_RESTORE
+        ret
+
+%ifdef SAFE_PARAM
+align_label
+error_init:
+        ;; Clear reg and imb_errno
+        IMB_ERR_CHECK_START rax
+
+        ;; Check key_data != NULL
+        IMB_ERR_CHECK_NULL arg1, rax, IMB_ERR_NULL_EXP_KEY
+
+        ;; Check context_data != NULL
+        IMB_ERR_CHECK_NULL arg2, rax, IMB_ERR_NULL_CTX
+
+        ;; Check IV != NULL
+        IMB_ERR_CHECK_NULL arg3, rax, IMB_ERR_NULL_IV
+
+        ;; Check if aad_len == 0
+        cmp     arg5, 0
+        jz      skip_aad_check_error_init
+
+        ;; Check aad != NULL (aad_len != 0)
+        IMB_ERR_CHECK_NULL arg4, rax, IMB_ERR_NULL_AAD
+
+align_label
+skip_aad_check_error_init:
+
+        ;; Set imb_errno
+        IMB_ERR_CHECK_END rax
+        jmp     exit_init
+%endif
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;void   aes_gcm_init_var_iv_vaes_avx512
+;       (const struct gcm_key_data *key_data,
+;        struct gcm_context_data *context_data,
+;        u8        *iv,
+;        const u64 iv_len,
+;        const u8  *aad,
+;        const u64 aad_len);
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+align_function
+MKGLOBAL(aes_gcm_init_var_iv_vaes_avx512,function,internal)
+aes_gcm_init_var_iv_vaes_avx512:
+        FUNC_SAVE small_frame
+
+%ifdef SAFE_PARAM
+        ;; Reset imb_errno
+        IMB_ERR_CHECK_RESET
+
+        ;; Check key_data != NULL
+        cmp     arg1, 0
+        jz      error_init_IV
+
+        ;; Check context_data != NULL
+        cmp     arg2, 0
+        jz      error_init_IV
+
+        ;; Check IV != NULL
+        cmp     arg3, 0
+        jz      error_init_IV
+
+        ;; Check iv_len != 0
+        cmp     arg4, 0
+        jz      error_init_IV
+
+        ;; Check if aad_len == 0
+        cmp     arg6, 0
+        jz      skip_aad_check_init_IV
+
+        ;; Check aad != NULL (aad_len != 0)
+        cmp     arg5, 0
+        jz      error_init_IV
+
+align_label
+skip_aad_check_init_IV:
+%endif
+        GCM_INIT arg1, arg2, arg3, arg5, arg6, r10, r11, r12, k1, xmm14, xmm2, \
+                zmm1, zmm11, zmm3, zmm4, zmm5, zmm6, zmm7, zmm8, zmm9, zmm10, \
+                zmm12, zmm13, zmm15, zmm16, zmm17, zmm18, zmm19, zmm20, multi_call, arg4
+
+        ;; SAFE_DATA covered in FUNC_RESTORE()
+align_label
+exit_init_IV:
+
+        FUNC_RESTORE
+        ret
+
+%ifdef SAFE_PARAM
+align_label
+error_init_IV:
+        ;; Clear reg and imb_errno
+        IMB_ERR_CHECK_START rax
+
+        ;; Check key_data != NULL
+        IMB_ERR_CHECK_NULL arg1, rax, IMB_ERR_NULL_EXP_KEY
+
+        ;; Check context_data != NULL
+        IMB_ERR_CHECK_NULL arg2, rax, IMB_ERR_NULL_CTX
+
+        ;; Check IV != NULL
+        IMB_ERR_CHECK_NULL arg3, rax, IMB_ERR_NULL_IV
+
+        ;; Check iv_len != 0
+        IMB_ERR_CHECK_ZERO arg4, rax, IMB_ERR_IV_LEN
+
+        ;; Check if aad_len == 0
+        cmp     arg6, 0
+        jz      skip_aad_check_error_init_IV
+
+        ;; Check aad != NULL (aad_len != 0)
+        IMB_ERR_CHECK_NULL arg5, rax, IMB_ERR_NULL_AAD
+
+align_label
+skip_aad_check_error_init_IV:
+
+        ;; Set imb_errno
+        IMB_ERR_CHECK_END rax
+        jmp     exit_init_IV
 %endif
