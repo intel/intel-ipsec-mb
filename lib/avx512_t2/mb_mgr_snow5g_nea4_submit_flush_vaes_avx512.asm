@@ -74,25 +74,58 @@ default rel
 align 64
 dd_0_to_7:
         dd 0, 1, 2, 3, 4, 5, 6, 7
+
 align 64
 all_fs:
 times 8 dd 0xffffffff
+
+align 2
+lane_set_mask:
+        db 0x3, 0xC
+
+align 2
+lane_clr_mask:
+        db ~0x3, ~0xC
+
 mksection .text
 
-%macro SUBMIT_FLUSH_JOB_SNOW5G_NEA4 13
+;; Update LP_INIT_MASK bits for a specific lane in memory
+%macro UPDATE_LP_INIT_MASK 6
+%define %%LANE            %1  ;; [in] lane index (0-7)
+%define %%LANE_PAIR       %2  ;; [in] lane pair index (lane >> 1, pre-calculated)
+%define %%TGP0            %3  ;; [clobbered] GP register
+%define %%TGP1            %4  ;; [clobbered] GP register
+%define %%TGP2            %5  ;; [clobbered] GP register
+%define %%OP              %6  ;; [in] set/clear
+
+        mov             BYTE(%%TGP0), byte [state + _snow5g_arg_LP_INIT_MASK + %%LANE_PAIR]
+        mov             DWORD(%%TGP2), DWORD(%%LANE)
+        and             DWORD(%%TGP2), 1                        ; %%TGP2 = lane & 1
+%ifidn %%OP, set
+        lea             %%TGP1, [rel lane_set_mask]
+        or              BYTE(%%TGP0), [%%TGP1 + %%TGP2]
+%else
+        lea             %%TGP1, [rel lane_clr_mask]
+        and             BYTE(%%TGP0), [%%TGP1 + %%TGP2]
+%endif
+        mov             [state + _snow5g_arg_LP_INIT_MASK + %%LANE_PAIR], BYTE(%%TGP0)
+
+%endmacro
+
+
+%macro SUBMIT_FLUSH_JOB_SNOW5G_NEA4 12
 %define %%SUBMIT_FLUSH    %1  ;; [in] submit/flush selector
-%define %%INIT_FLAG       %2  ;; [clobbered] GP register
-%define %%UNUSED_LANES    %3  ;; [clobbered] GP register
-%define %%LANE            %4  ;; [clobbered] GP register
-%define %%TGP0            %5  ;; [clobbered] GP register
-%define %%TGP1            %6  ;; [clobbered] GP register
-%define %%TGP2            %7  ;; [clobbered] GP register
-%define %%TGP3            %8  ;; [clobbered] GP register
-%define %%TGP4            %9  ;; [clobbered] GP register
-%define %%TGP5            %10 ;; [clobbered] GP register
-%define %%MIN_COMMON_LEN  %11 ;; [clobbered] GP register
-%define %%OFFSET          %12 ;; [clobbered] GP register
-%define %%GEN             %13 ;; [in] avx512_gen1/avx512_gen2
+%define %%UNUSED_LANES    %2  ;; [clobbered] GP register
+%define %%LANE            %3  ;; [clobbered] GP register
+%define %%TGP0            %4  ;; [clobbered] GP register
+%define %%TGP1            %5  ;; [clobbered] GP register
+%define %%TGP2            %6  ;; [clobbered] GP register
+%define %%LANE_PAIR       %7  ;; [clobbered] GP register
+%define %%TGP4            %8  ;; [clobbered] GP register
+%define %%TGP5            %9  ;; [clobbered] GP register
+%define %%MIN_COMMON_LEN  %10 ;; [clobbered] GP register
+%define %%OFFSET          %11 ;; [clobbered] GP register
+%define %%GEN             %12 ;; [in] avx512_gen1/avx512_gen2
 
         xor     job_rax, job_rax        ;; assume NULL return job
 
@@ -122,12 +155,19 @@ mksection .text
         korw            k6, k1, k6
         kmovw           [state + _snow5g_INIT_MASK], k6
 
+        ;; Set LP_INIT_MASK bits for this lane
+        ;; Each byte controls a lane pair: bits [0:1] for even lane, bits [2:3] for odd lane
+        mov             DWORD(%%LANE_PAIR), DWORD(%%LANE)
+        shr             DWORD(%%LANE_PAIR), 1                   ; lane_pair = lane >> 1
+        UPDATE_LP_INIT_MASK %%LANE, %%LANE_PAIR, %%TGP0, %%TGP1, %%TGP2, set
+
+%%_submit_lp_updated:
         ;; 15 iterations of FSM and LFSR clock are needed for SNOW5G initialization
         ;; LD_ST_MASK is used to determine if any data should
         ;; be read from src and written to dst
         ;; When set to 0 so no reads/writes occur.
         ;; In this case, input/output pointers are set to a valid address.
-        mov             qword [state + _snow5g_args_LD_ST_MASK + %%LANE*8], 0
+        mov             word [state + _snow5g_args_LD_ST_MASK + %%LANE*2], 0
         mov             [state + _snow5g_args_in + %%LANE*8], state
         mov             [state + _snow5g_args_out + %%LANE*8], state
 
@@ -182,6 +222,8 @@ align_loop
         vmovd           DWORD(%%MIN_COMMON_LEN), xmm0
         mov             DWORD(%%LANE), DWORD(%%MIN_COMMON_LEN)
         and             DWORD(%%LANE), 7                ;; keep lane index on 3 least significant bits
+        mov             DWORD(%%LANE_PAIR), DWORD(%%LANE)
+        shr             DWORD(%%LANE_PAIR), 1           ;; lane_pair = lane >> 1 (0-3)
         xor             DWORD(%%TGP0), DWORD(%%TGP0)
         bts             DWORD(%%TGP0), DWORD(%%LANE)
         kmovd           k7, DWORD(%%TGP0)                               ;; k7 holds mask of the min LANE
@@ -194,32 +236,42 @@ align_loop
 %ifidn %%SUBMIT_FLUSH, submit
         vpsubd          ymm0, ymm0, ymm1
 %else ; FLUSH
-        vpcmpd          k1, ymm0, [rel all_fs], 4      ; 4 = not-equal
-        vpsubd          ymm0{k1}, ymm0, ymm1
+        vpcmpd          k6, ymm0, [rel all_fs], 4      ; 4 = not-equal
+        vpsubd          ymm0{k6}, ymm0, ymm1
 %endif
         vmovdqa32       [state + _snow5g_lens_dqw], ymm0
+
+        ;; Load LP_INIT_MASK bytes into k-registers right before SNOW5G_KEYSTREAM
+        kmovb           k1, byte [state + _snow5g_arg_LP_INIT_MASK + 0]
+        kmovb           k2, byte [state + _snow5g_arg_LP_INIT_MASK + 1]
+        kmovb           k3, byte [state + _snow5g_arg_LP_INIT_MASK + 2]
+        kmovb           k4, byte [state + _snow5g_arg_LP_INIT_MASK + 3]
 
         ;; Do cipher / clock operation for all lanes and given common length
         SNOW5G_KEYSTREAM state, %%MIN_COMMON_LEN, {state + _snow5g_args_in}, \
                         {state + _snow5g_args_out}, %%OFFSET, %%TGP0, %%TGP1, %%TGP2, k1, k2, k3, k4, k5, k6
 
-        ;; Set K registers based on LD_ST_MASK for pointer update masking
-        ;; k1 for lanes 0-3, k2 for lanes 4-7
-        vmovdqa64       ymm5, [state + _snow5g_args_LD_ST_MASK + 0*8]
-        vmovdqa64       ymm6, [state + _snow5g_args_LD_ST_MASK + 4*8]
-        vptestmq        k1, ymm5, ymm5  ; k1 = mask for lanes 0-3 where LD_ST_MASK != 0
-        vptestmq        k2, ymm6, ymm6  ; k2 = mask for lanes 4-7 where LD_ST_MASK != 0
+        ;; Combine lane pair masks for ymm registers
+        ;; k1-k4 contain LP_INIT_MASK bits (set for INIT lanes, clear for WORK lanes)
+        kunpckbw        k5, k1, k2          ; Combine k1[1:0] and k2[1:0] into k5[3:0] for lanes 0-3
+        kunpckbw        k6, k3, k4          ; Combine k3[1:0] and k4[1:0] into k6[3:0] for lanes 4-7
 
-        ;; Add offsets to SRC and DST ptrs, skip lanes where LD_ST_MASK=0
+        ;; Invert to create update masks (update pointers when NOT in INIT)
+        knotb           k5, k5              ; k5 = NOT(k1|k2) - update mask for lanes 0-3
+        knotb           k6, k6              ; k6 = NOT(k3|k4) - update mask for lanes 4-7
+
+        ;; Add offsets to SRC and DST ptrs for lanes not in INIT
         vpbroadcastq    ymm0, %%OFFSET
         vmovdqa64       ymm1, [state + _snow5g_args_in + 0*8]
         vmovdqa64       ymm2, [state + _snow5g_args_in + 4*8]
         vmovdqa64       ymm3, [state + _snow5g_args_out + 0*8]
         vmovdqa64       ymm4, [state + _snow5g_args_out + 4*8]
-        vpaddq          ymm1{k1}, ymm1, ymm0
-        vpaddq          ymm2{k2}, ymm2, ymm0
-        vpaddq          ymm3{k1}, ymm3, ymm0
-        vpaddq          ymm4{k2}, ymm4, ymm0
+
+        vpaddq          ymm1{k5}, ymm1, ymm0    ; Update lanes 0-3 if NOT in INIT
+        vpaddq          ymm2{k6}, ymm2, ymm0    ; Update lanes 4-7 if NOT in INIT
+        vpaddq          ymm3{k5}, ymm3, ymm0    ; Update lanes 0-3 if NOT in INIT
+        vpaddq          ymm4{k6}, ymm4, ymm0    ; Update lanes 6-7 if NOT in INIT
+
         vmovdqa64       [state + _snow5g_args_in + 0*8], ymm1
         vmovdqa64       [state + _snow5g_args_in + 4*8], ymm2
         vmovdqa64       [state + _snow5g_args_out + 0*8], ymm3
@@ -234,7 +286,7 @@ align_label
         ;;   WORK2) message processed for the trailing bytes below 16 bytes
 
         ;; check if the job is in one of INIT1 or INIT2 state
-        test            word [state + _snow5g_args_LD_ST_MASK + %%LANE*8], 0xffff
+        test            word [state + _snow5g_args_LD_ST_MASK + %%LANE*2], 0xffff
         jz              %%_init_phase_in_progress
 
         ;; The job is in WORK1 or WORK2 state
@@ -250,7 +302,7 @@ align_label
         xor             WORD(%%TGP2), WORD(%%TGP2)
         bts             WORD(%%TGP2), WORD(%%TGP0)
         dec             WORD(%%TGP2)
-        mov             [state + _snow5g_args_LD_ST_MASK + %%LANE*8], WORD(%%TGP2)
+        mov             [state + _snow5g_args_LD_ST_MASK + %%LANE*2], WORD(%%TGP2)
 
         ;; set length in 16-byte blocks to 1
         vmovdqa32       ymm0, [state + _snow5g_lens_dqw]
@@ -303,8 +355,11 @@ align_label
         vpxor           xmm0, xmm0, xmm1
         vmovdqu         [state + _snow5g_args_FSM_1 + %%TGP1], xmm0     ;; Store back modified FSM1
 
-        lea             %%TGP1, [state + _snow5g_args_LD_ST_MASK + %%LANE*8]
-        mov             word [%%TGP1], 0xffff
+
+        ;; Clear LP_INIT_MASK bits for this lane (INIT2 -> WORK1 transition)
+        UPDATE_LP_INIT_MASK %%LANE, %%LANE_PAIR, %%TGP0, %%TGP1, %%TGP2, clear
+
+        mov             word [state + _snow5g_args_LD_ST_MASK + %%LANE*2], 0xffff
 
         ;; length in 16-byte blocks = original length in bytes / 16
         ;; - odd bytes are processed later
@@ -335,7 +390,7 @@ align_label
 
         ;; required in case of flush
         ;; Input/output pointers are set to a valid address.
-        mov             word [state + _snow5g_args_LD_ST_MASK + %%LANE*8], 0
+        mov             word [state + _snow5g_args_LD_ST_MASK + %%LANE*2], 0
         mov             [state + _snow5g_args_in + %%LANE*8], state
         mov             [state + _snow5g_args_out + %%LANE*8], state
 
@@ -350,6 +405,9 @@ align_label
         shl             %%UNUSED_LANES, 4
         or              %%UNUSED_LANES, %%LANE
         mov             [state + _snow5g_unused_lanes], %%UNUSED_LANES
+
+        ;; Clear LP_INIT_MASK bits for this lane
+        UPDATE_LP_INIT_MASK %%LANE, %%LANE_PAIR, %%TGP0, %%TGP1, %%TGP2, clear
 
 %ifdef SAFE_DATA
         ;; clear finished job lane, %%LANE is an index of finished job
@@ -406,7 +464,7 @@ MKGLOBAL(SUBMIT_JOB_SNOW5G_NEA4_GEN2,function,internal)
 align_function
 SUBMIT_JOB_SNOW5G_NEA4_GEN2:
         SNOW5G_FUNC_START
-        SUBMIT_FLUSH_JOB_SNOW5G_NEA4 submit, tmp_gp1, tmp_gp2, tmp_gp3, tmp_gp4, tmp_gp5, tmp_gp6, tmp_gp7, tmp_gp8, tmp_gp9, tmp_gp10, tmp_gp11, avx512_gen2
+        SUBMIT_FLUSH_JOB_SNOW5G_NEA4 submit, tmp_gp2, tmp_gp3, tmp_gp4, tmp_gp5, tmp_gp6, tmp_gp7, tmp_gp8, tmp_gp9, tmp_gp10, tmp_gp11, avx512_gen2
         SNOW5G_FUNC_END
         ret
 
@@ -416,7 +474,7 @@ MKGLOBAL(FLUSH_JOB_SNOW5G_NEA4_GEN2,function,internal)
 align_function
 FLUSH_JOB_SNOW5G_NEA4_GEN2:
         SNOW5G_FUNC_START
-        SUBMIT_FLUSH_JOB_SNOW5G_NEA4 flush, tmp_gp1, tmp_gp2, tmp_gp3, tmp_gp4, tmp_gp5, tmp_gp6, tmp_gp7, tmp_gp8, tmp_gp9, tmp_gp10, tmp_gp11, avx512_gen2
+        SUBMIT_FLUSH_JOB_SNOW5G_NEA4 flush, tmp_gp2, tmp_gp3, tmp_gp4, tmp_gp5, tmp_gp6, tmp_gp7, tmp_gp8, tmp_gp9, tmp_gp10, tmp_gp11, avx512_gen2
         SNOW5G_FUNC_END
         ret
 

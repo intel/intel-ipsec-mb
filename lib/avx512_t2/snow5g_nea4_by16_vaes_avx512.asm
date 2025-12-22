@@ -216,9 +216,9 @@ endstruc
 %define %%LANE          %2 ;; [in] lane number 0-7
 %define %%KEY           %3 ;; [in] address of key
 %define %%IV            %4 ;; [in] address of iv
-%define %%TMP1         %5 ;; [clobbered] temporary ymm register
-%define %%TMP2         %6 ;; [clobbered] temporary ymm register
-%define %%TMP_GP       %7 ;; [clobbered] temporary general purpose register
+%define %%TMP1          %5 ;; [clobbered] temporary ymm register
+%define %%TMP2          %6 ;; [clobbered] temporary ymm register
+%define %%TMP_GP        %7 ;; [clobbered] temporary general purpose register
         vmovdqu      %%TMP1,  [%%KEY]
         ; store copy of the key
         mov [%%STATE + _snow5g_args_keys + %%LANE*8], %%KEY
@@ -363,7 +363,7 @@ endstruc
 
         mov             %%TGP0, [%%SRC_PTRS + ((%%LANE_PAIR * 2 + %%LANE_INDEX) * 8)]
         mov             %%TGP1, [%%DST_PTRS + ((%%LANE_PAIR * 2 + %%LANE_INDEX) * 8)]
-        kmovw           %%KREG, [%%STATE_PTR + _snow5g_args_LD_ST_MASK + (%%LANE_PAIR * 16 + %%LANE_INDEX * 8)]
+        kmovw           %%KREG, [%%STATE_PTR + _snow5g_args_LD_ST_MASK + (%%LANE_PAIR * 4 + %%LANE_INDEX * 2)]
         vmovdqu8        XWORD(%%TEMP_XMM2){%%KREG}{z}, [%%TGP0 + %%OFFSET]
         vpxorq          XWORD(%%TEMP_XMM1), XWORD(%%TEMP_XMM1), XWORD(%%TEMP_XMM2)
         vmovdqu8        [%%TGP1 + %%OFFSET]{%%KREG}, XWORD(%%TEMP_XMM1)
@@ -412,52 +412,6 @@ endstruc
 %endmacro
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Prepare K-register masks for conditional XOR operations during INIT phases
-;; - For each lane pair, creates a 4-bit k-register mask for qword-granularity masking
-;; - k[1:0] = 0b11 if lane_low is in INIT (LD_ST_MASK==0), else 0b00
-;; - k[3:2] = 0b11 if lane_high is in INIT (LD_ST_MASK==0), else 0b00
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-%macro SNOW5G_PREPARE_INIT_MASKS 6
-%define %%STATE_PTR            %1  ;; [in] pointer to state structure
-%define %%TGP0                 %2  ;; [clobbered] temporary 64bit register
-%define %%KREG1                %3  ;; [out] k-register for lane pair 0-1
-%define %%KREG2                %4  ;; [out] k-register for lane pair 2-3
-%define %%KREG3                %5  ;; [out] k-register for lane pair 4-5
-%define %%KREG4                %6  ;; [out] k-register for lane pair 6-7
-
-%assign lane_pair 0
-%rep 4
-%assign lane_offset (lane_pair * 16)  ; Each lane pair has 2 lanes * 8 bytes = 16 bytes
-        xor             %%TGP0, %%TGP0
-
-        ;; Check lane_low: if LD_ST_MASK==0 (INIT), OR with 0b0011
-        cmp             DWORD [%%STATE_PTR + _snow5g_args_LD_ST_MASK + lane_offset], 0
-        jne             %%_lane_high_ %+ lane_pair
-        or              %%TGP0, 0x3
-
-%%_lane_high_ %+ lane_pair:
-        ;; Check lane_high: if LD_ST_MASK==0 (INIT), OR with 0b1100
-        cmp             DWORD [%%STATE_PTR + _snow5g_args_LD_ST_MASK + lane_offset + 8], 0
-        jne             %%_set_kreg_ %+ lane_pair
-        or              %%TGP0, 0xC
-
-%%_set_kreg_ %+ lane_pair:
-%if lane_pair == 0
-        kmovq           %%KREG1, %%TGP0
-%elif lane_pair == 1
-        kmovq           %%KREG2, %%TGP0
-%elif lane_pair == 2
-        kmovq           %%KREG3, %%TGP0
-%else
-        kmovq           %%KREG4, %%TGP0
-%endif
-%assign lane_pair (lane_pair + 1)
-%endrep
-
-%endmacro
-
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; SNOW5G cipher code generating required number of 16-byte keystream blocks
 ;; - it is multi-buffer implementation (8 buffers)
 ;; - buffers can be in initialization or working mode
@@ -471,10 +425,10 @@ endstruc
 %xdefine %%TGP0                 %6  ;; [clobbered] temporary 64bit register
 %xdefine %%TGP1                 %7  ;; [clobbered] temporary 64bit register
 %xdefine %%TGP3                 %8  ;; [clobbered] temporary 64bit register
-%xdefine %%KREG1                %9  ;; [clobbered] k-register for lane pair 0-1
-%xdefine %%KREG2                %10  ;; [clobbered] k-register for lane pair 2-3
-%xdefine %%KREG3                %11 ;; [clobbered] k-register for lane pair 4-5
-%xdefine %%KREG4                %12 ;; [clobbered] k-register for lane pair 6-7
+%xdefine %%KREG1                %9  ;; [in] k-register with LP_INIT_MASK for lane pair 0-1
+%xdefine %%KREG2                %10 ;; [in] k-register with LP_INIT_MASK for lane pair 2-3
+%xdefine %%KREG3                %11 ;; [in] k-register with LP_INIT_MASK for lane pair 4-5
+%xdefine %%KREG4                %12 ;; [in] k-register with LP_INIT_MASK for lane pair 6-7
 %xdefine %%KREG5                %13 ;; [clobbered] k-register for lane pair 6-7
 %xdefine %%KREG6                %14 ;; [clobbered] k-register for lane pair 6-7
 
@@ -483,9 +437,6 @@ endstruc
 
         xor             %%OFFSET,  %%OFFSET
         LFSR_FSM_STATE  %%STATE_PTR, LOAD
-
-        ;; Prepare K-register masks for conditional XOR operations during INIT phases
-        SNOW5G_PREPARE_INIT_MASKS %%STATE_PTR, %%TGP0, %%KREG1, %%KREG2, %%KREG3, %%KREG4
 
 align_loop
 %%next_keyword:

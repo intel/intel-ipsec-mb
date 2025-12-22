@@ -214,10 +214,11 @@ typedef struct {
         DECLARE_ALIGNED(uint8_t FSM_R2[8][16], 64); /* 8*128-bit FSM 2 registers */
         DECLARE_ALIGNED(uint8_t FSM_R3[8][16], 64); /* 8*128-bit FSM 3 registers */
         /* Tap registers for 8 lanes - each lane uses 128-bit registers */
-        DECLARE_ALIGNED(uint8_t T1[8][16], 64);       /* 8*128-bit T1 tap registers */
-        DECLARE_ALIGNED(uint8_t T2[8][16], 64);       /* 8*128-bit T2 tap registers */
-        DECLARE_ALIGNED(uint64_t INITIALIZED[8], 64); /* array of 8 x 64-bit initialization flags */
-        DECLARE_ALIGNED(uint64_t LD_ST_MASK[8], 64); /* array of 8 x 64-bit load/store byte masks */
+        DECLARE_ALIGNED(uint8_t T1[8][16], 64);      /* 8*128-bit T1 tap registers */
+        DECLARE_ALIGNED(uint8_t T2[8][16], 64);      /* 8*128-bit T2 tap registers */
+        DECLARE_ALIGNED(uint8_t LP_INIT_MASK[4], 4); /* array of 4 x 8-bit init done flags (1 per
+                                                         lane pair) */
+        DECLARE_ALIGNED(uint16_t LD_ST_MASK[8], 16); /* array of 8 x 16-bit load/store byte masks */
         DECLARE_ALIGNED(uint64_t byte_length[8],
                         64); /* array of 8 x 64-bit original lengths (in bytes) */
 } SNOW5G_ARGS;

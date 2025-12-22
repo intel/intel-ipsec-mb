@@ -291,8 +291,8 @@ FIELD   _snow5g_arg_FSM_2,       8*16,   64      ; 8*128-bit FSM 2 registers
 FIELD   _snow5g_arg_FSM_3,       8*16,   64      ; 8*128-bit FSM 3 registers
 FIELD   _snow5g_arg_T1,          8*16,   64      ; 8*128-bit T1 tap registers
 FIELD   _snow5g_arg_T2,          8*16,   64      ; 8*128-bit T2 tap registers
-FIELD   _snow5g_arg_INITIALIZED, 8*8,    64      ; array of 8 x 64-bit initialization flags
-FIELD   _snow5g_arg_LD_ST_MASK,  8*8,    64      ; array of 8 x 64-bit load/store byte masks
+FIELD   _snow5g_arg_LP_INIT_MASK, 4*1,    4       ; array of 4 x 8-bit init phase flags (1 per lane pair)
+FIELD   _snow5g_arg_LD_ST_MASK,  8*2,    16      ; array of 8 x 16-bit load/store byte masks
 FIELD   _snow5g_arg_byte_length, 8*8,    64      ; array of 8 x 64-bit original lengths (in bytes)
 END_FIELDS
 %assign _SNOW5G_ARGS_size       _FIELD_OFFSET
