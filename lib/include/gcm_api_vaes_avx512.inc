@@ -40,7 +40,7 @@
 %ifdef GCM128_MODE
 %define NROUNDS 9
 %endif
-%ifdef GCM192_MODE  
+%ifdef GCM192_MODE
 %define NROUNDS 11
 %endif
 %ifdef GCM256_MODE
@@ -53,6 +53,8 @@
 extern ghash_internal_vaes_avx512
 extern gcm_0_to_256_enc_wrapper_asm
 extern gcm_0_to_256_dec_wrapper_asm
+extern aes_gcm_enc_vaes_avx512
+extern aes_gcm_dec_vaes_avx512
 
 mksection .text
 default rel
@@ -143,149 +145,8 @@ align_function
 MKGLOBAL(FN_NAME(enc,_),function,)
 FN_NAME(enc,_):
         endbranch64
-        FUNC_SAVE
-
-%ifdef SAFE_PARAM
-        ;; Reset imb_errno
-        IMB_ERR_CHECK_RESET
-
-        ;; Load max len to reg on windows
-        INIT_GCM_MAX_LENGTH
-
-        ;; Check key_data != NULL
-        cmp     arg1, 0
-        jz      .error_enc
-
-        ;; Check context_data != NULL
-        cmp     arg2, 0
-        jz      .error_enc
-
-        ;; Check IV != NULL
-        cmp     arg6, 0
-        jz      .error_enc
-
-        ;; Check auth_tag != NULL
-        cmp     arg9, 0
-        jz      .error_enc
-
-        ;; Check auth_tag_len == 0 or > 16
-        cmp     arg10, 0
-        jz      .error_enc
-
-        cmp     arg10, 16
-        ja      .error_enc
-
-        ;; Check if msg_len == 0
-        cmp     arg5, 0
-        jz      .skip_in_out_check_enc
-
-        ;; Check if msg_len > max_len
-        cmp     arg5, GCM_MAX_LENGTH
-        ja      .error_enc
-
-        ;; Check out != NULL (msg_len != 0)
-        cmp     arg3, 0
-        jz      .error_enc
-
-        ;; Check in != NULL (msg_len != 0)
-        cmp     arg4, 0
-        jz      .error_enc
-
-align_label
-.skip_in_out_check_enc:
-        ;; Check if aad_len == 0
-        cmp     arg8, 0
-        jz      .skip_aad_check_enc
-
-        ;; Check aad != NULL (aad_len != 0)
-        cmp     arg7, 0
-        jz      .error_enc
-
-align_label
-.skip_aad_check_enc:
-%endif
-        ;; Check if msg_len <= 256
-        cmp     arg5, 16 * 16
-        jbe     .small_packet_path
-
-        GCM_INIT arg1, arg2, arg6, arg7, arg8, r10, r11, r12, k1, xmm14, xmm2, \
-                zmm1, zmm3, zmm4, zmm5, zmm6, zmm7, zmm8, zmm9, zmm10, zmm11, \
-                zmm12, zmm13, zmm15, zmm16, zmm17, zmm18, zmm19, zmm20, single_call
-        GCM_ENC_DEC  arg1, arg2, arg3, arg4, arg5, ENC, single_call, '>256'
-        GCM_COMPLETE arg1, arg2, arg9, arg10, single_call, k1, r10, r11, r12
-        jmp     .exit_enc
-
-align_label
-.small_packet_path:
-%ifndef LINUX
-        mov     rdi, arg5
-        mov     rsi, arg6
-%endif
-        mov     r12, arg7
-        mov     r13, arg8
-        mov     rbp, arg9
-        mov     r15, arg10
-
-        mov     r10d, NROUNDS
-        mov     r11d, 12
-        call    gcm_0_to_256_enc_wrapper_asm
-
-align_label
-.exit_enc:
-        FUNC_RESTORE
-        ret
-
-%ifdef SAFE_PARAM
-align_label
-.error_enc:
-        ;; Clear reg and imb_errno
-        IMB_ERR_CHECK_START rax
-
-        ;; Check key_data != NULL
-        IMB_ERR_CHECK_NULL arg1, rax, IMB_ERR_NULL_EXP_KEY
-
-        ;; Check context_data != NULL
-        IMB_ERR_CHECK_NULL arg2, rax, IMB_ERR_NULL_CTX
-
-        ;; Check IV != NULL
-        IMB_ERR_CHECK_NULL arg6, rax, IMB_ERR_NULL_IV
-
-        ;; Check auth_tag != NULL
-        IMB_ERR_CHECK_NULL arg9, rax, IMB_ERR_NULL_AUTH
-
-        ;; Check auth_tag_len == 0 or > 16
-        IMB_ERR_CHECK_ZERO arg10, rax, IMB_ERR_AUTH_TAG_LEN
-
-        IMB_ERR_CHECK_ABOVE arg10, 16, rax, IMB_ERR_AUTH_TAG_LEN
-
-        ;; Check if msg_len == 0
-        cmp     arg5, 0
-        jz      .skip_in_out_check_error_enc
-
-        ;; Check if msg_len > max_len
-        IMB_ERR_CHECK_ABOVE arg5, GCM_MAX_LENGTH, rax, IMB_ERR_CIPH_LEN
-
-        ;; Check out != NULL (msg_len != 0)
-        IMB_ERR_CHECK_NULL arg3, rax, IMB_ERR_NULL_DST
-
-        ;; Check in != NULL (msg_len != 0)
-        IMB_ERR_CHECK_NULL arg4, rax, IMB_ERR_NULL_SRC
-
-align_label
-.skip_in_out_check_error_enc:
-        ;; Check if aad_len == 0
-        cmp     arg8, 0
-        jz      .skip_aad_check_error_enc
-
-        ;; Check aad != NULL (aad_len != 0)
-        IMB_ERR_CHECK_NULL arg7, rax, IMB_ERR_NULL_AAD
-
-align_label
-.skip_aad_check_error_enc:
-        ;; Set imb_errno
-        IMB_ERR_CHECK_END rax
-        jmp     .exit_enc
-%endif
+        mov r10d, NROUNDS
+        jmp aes_gcm_enc_vaes_avx512
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;void   aes_gcm_dec_128_vaes_avx512 / aes_gcm_dec_192_vaes_avx512 / aes_gcm_dec_256_vaes_avx512
@@ -304,153 +165,8 @@ align_function
 MKGLOBAL(FN_NAME(dec,_),function,)
 FN_NAME(dec,_):
         endbranch64
-        FUNC_SAVE
-
-%ifdef SAFE_PARAM
-        ;; Reset imb_errno
-        IMB_ERR_CHECK_RESET
-
-        ;; Load max len to reg on windows
-        INIT_GCM_MAX_LENGTH
-
-        ;; Check key_data != NULL
-        cmp     arg1, 0
-        jz      .error_dec
-
-        ;; Check context_data != NULL
-        cmp     arg2, 0
-        jz      .error_dec
-
-        ;; Check IV != NULL
-        cmp     arg6, 0
-        jz      .error_dec
-
-        ;; Check auth_tag != NULL
-        cmp     arg9, 0
-        jz      .error_dec
-
-        ;; Check auth_tag_len == 0 or > 16
-        cmp     arg10, 0
-        jz      .error_dec
-
-        cmp     arg10, 16
-        ja      .error_dec
-
-        ;; Check if msg_len == 0
-        cmp     arg5, 0
-        jz      .skip_in_out_check_dec
-
-        ;; Check if msg_len > max_len
-        cmp     arg5, GCM_MAX_LENGTH
-        ja      .error_dec
-
-        ;; Check out != NULL (msg_len != 0)
-        cmp     arg3, 0
-        jz      .error_dec
-
-        ;; Check in != NULL (msg_len != 0)
-        cmp     arg4, 0
-        jz      .error_dec
-
-align_label
-.skip_in_out_check_dec:
-        ;; Check if aad_len == 0
-        cmp     arg8, 0
-        jz      .skip_aad_check_dec
-
-        ;; Check aad != NULL (aad_len != 0)
-        cmp     arg7, 0
-        jz      .error_dec
-
-align_label
-.skip_aad_check_dec:
-%endif
-        ;; Check if msg_len <= 256
-        cmp     arg5, 16 * 16
-        jbe     .small_packet_path
-
-        GCM_INIT arg1, arg2, arg6, arg7, arg8, r10, r11, r12, k1, xmm14, xmm2, \
-                zmm1, zmm3, zmm4, zmm5, zmm6, zmm7, zmm8, zmm9, zmm10, zmm11, \
-                zmm12, zmm13, zmm15, zmm16, zmm17, zmm18, zmm19, zmm20, single_call
-        GCM_ENC_DEC  arg1, arg2, arg3, arg4, arg5, DEC, single_call, '>256'
-        GCM_COMPLETE arg1, arg2, arg9, arg10, single_call, k1, r10, r11, r12
-%ifdef SAFE_DATA
-        clear_zmms_avx512 xmm6
-%endif
-        jmp     .exit_dec
-
-align_label
-.small_packet_path:
-%ifndef LINUX
-        mov     rdi, arg5
-        mov     rsi, arg6
-%endif
-        mov     r12, arg7
-        mov     r13, arg8
-        mov     rbp, arg9
-        mov     r15, arg10
-
-        mov     r10d, NROUNDS
-        mov     r11d, 12
-        call    gcm_0_to_256_dec_wrapper_asm
-
-align_label
-.exit_dec:
-        FUNC_RESTORE
-        ret
-
-%ifdef SAFE_PARAM
-align_label
-.error_dec:
-        ;; Clear reg and imb_errno
-        IMB_ERR_CHECK_START rax
-
-        ;; Check key_data != NULL
-        IMB_ERR_CHECK_NULL arg1, rax, IMB_ERR_NULL_EXP_KEY
-
-        ;; Check context_data != NULL
-        IMB_ERR_CHECK_NULL arg2, rax, IMB_ERR_NULL_CTX
-
-        ;; Check IV != NULL
-        IMB_ERR_CHECK_NULL arg6, rax, IMB_ERR_NULL_IV
-
-        ;; Check auth_tag != NULL
-        IMB_ERR_CHECK_NULL arg9, rax, IMB_ERR_NULL_AUTH
-
-        ;; Check auth_tag_len == 0 or > 16
-        IMB_ERR_CHECK_ZERO arg10, rax, IMB_ERR_AUTH_TAG_LEN
-
-        IMB_ERR_CHECK_ABOVE arg10, 16, rax, IMB_ERR_AUTH_TAG_LEN
-
-        ;; Check if msg_len == 0
-        cmp     arg5, 0
-        jz      .skip_in_out_check_error_dec
-
-        ;; Check if msg_len > max_len
-        IMB_ERR_CHECK_ABOVE arg5, GCM_MAX_LENGTH, rax, IMB_ERR_CIPH_LEN
-
-        ;; Check out != NULL (msg_len != 0)
-        IMB_ERR_CHECK_NULL arg3, rax, IMB_ERR_NULL_DST
-
-        ;; Check in != NULL (msg_len != 0)
-        IMB_ERR_CHECK_NULL arg4, rax, IMB_ERR_NULL_SRC
-
-align_label
-.skip_in_out_check_error_dec:
-        ;; Check if aad_len == 0
-        cmp     arg8, 0
-        jz      .skip_aad_check_error_dec
-
-        ;; Check aad != NULL (aad_len != 0)
-        IMB_ERR_CHECK_NULL arg7, rax, IMB_ERR_NULL_AAD
-
-align_label
-.skip_aad_check_error_dec:
-
-        ;; Set imb_errno
-        IMB_ERR_CHECK_END rax
-        jmp     .exit_dec
-%endif
+        mov r10d, NROUNDS
+        jmp aes_gcm_dec_vaes_avx512
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;

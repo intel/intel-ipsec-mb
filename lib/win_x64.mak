@@ -481,6 +481,7 @@ gcm_objs = \
 	$(OBJ_DIR)\aes256_gcm_api_vaes_avx512.obj \
 	$(OBJ_DIR)\aes256_gcm_sgl_api_vaes_avx512.obj \
 	$(OBJ_DIR)\gcm_int_sgl_api_vaes_avx512.obj \
+	$(OBJ_DIR)\gcm_int_api_vaes_avx512.obj \
 	$(OBJ_DIR)\aes_gcm_enc_dec_0_to_256_vaes_avx512.obj \
 	$(OBJ_DIR)\gcm128_api_by8_sse.obj \
 	$(OBJ_DIR)\gcm128_sgl_api_by8_sse.obj \
