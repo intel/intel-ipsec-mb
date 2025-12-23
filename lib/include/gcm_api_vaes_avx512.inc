@@ -55,6 +55,8 @@ extern gcm_0_to_256_enc_wrapper_asm
 extern gcm_0_to_256_dec_wrapper_asm
 extern aes_gcm_enc_vaes_avx512
 extern aes_gcm_dec_vaes_avx512
+extern aes_gcm_enc_var_iv_vaes_avx512
+extern aes_gcm_dec_var_iv_vaes_avx512
 
 mksection .text
 default rel
@@ -179,76 +181,8 @@ align_function
 MKGLOBAL(FN_NAME(enc_var_iv,_),function,internal)
 FN_NAME(enc_var_iv,_):
         endbranch64
-        FUNC_SAVE alloc_context
-
-        ;; Check if msg_len <= 256
-        cmp     qword [arg2 + _msg_len_to_cipher], 16 * 16
-        jbe     .small_packet_path
-
-        mov     arg1, [arg2 + _enc_keys]
-
-        GCM_INIT arg1, {rsp + CONTEXT_OFFSET}, {[arg2 + _iv]}, \
-                {[arg2 + _gcm_aad]}, {qword [arg2 + _gcm_aad_len]}, \
-                r10, r11, r12, k1, xmm14, xmm2, \
-                zmm1, zmm11, zmm3, zmm4, zmm5,   zmm6, zmm7, zmm8, zmm9, zmm10, \
-                zmm12, zmm13, zmm15, zmm16, zmm17, zmm18, zmm19, zmm20, single_call, \
-                {qword [arg2 + _iv_len_in_bytes]}
-
-        mov     arg3, [arg2 + _src]
-        add     arg3, [arg2 + _cipher_start_src_offset]
-        mov     arg4, [arg2 + _dst]
-        mov     rbp, [arg2 + _msg_len_to_cipher]
-        GCM_ENC_DEC  arg1, {rsp + CONTEXT_OFFSET}, arg4, arg3, rbp, ENC, single_call, '>256'
-
-        GCM_COMPLETE arg1, {rsp + CONTEXT_OFFSET}, \
-                        {[arg2 + _auth_tag_output]}, {[arg2 + _auth_tag_output_len_in_bytes]}, \
-                        single_call, k1, r10, r11, r12
-
-%ifdef SAFE_DATA
-        clear_zmms_avx512 xmm1, xmm4, xmm6, xmm7, xmm8, xmm12, xmm13, xmm14, \
-                        xmm16, xmm17, xmm18, xmm19, xmm20, xmm21, xmm26, xmm30, xmm31
-%endif
-        jmp     .exit_enc
-
-align_label
-.small_packet_path:
-        ;; Load arguments for wrapper function call
-        mov     arg1, [arg2 + _enc_keys]
-        mov     arg3, [arg2 + _dst]
-        mov     arg4, [arg2 + _src]
-        add     arg4, [arg2 + _cipher_start_src_offset]
-
-%ifdef LINUX
-        mov     arg5, [arg2 + _msg_len_to_cipher]
-        mov     arg6, [arg2 + _iv]
-%else
-        ;; Windows save args 5-11 on stack
-        mov     rdi, [arg2 + _msg_len_to_cipher]
-        mov     rsi, [arg2 + _iv]
-%endif
-        mov     r12, [arg2 + _gcm_aad]
-        mov     r13, [arg2 + _gcm_aad_len]
-        mov     rbp, [arg2 + _auth_tag_output]
-        mov     r15, [arg2 + _auth_tag_output_len_in_bytes]
-
-        mov     r10d, NROUNDS
-        mov     r11, [arg2 + _iv_len_in_bytes]
-        call    gcm_0_to_256_enc_wrapper_asm
-
-%ifdef SAFE_DATA
-        clear_zmms_avx512 xmm0, xmm1, xmm2, xmm7, xmm8, xmm9, xmm11, xmm10, xmm14, \
-                        xmm15, xmm16, xmm17, xmm18, xmm19, xmm20, xmm21, xmm26
-%endif
-
-align_label
-.exit_enc:
-        ;; mark job complete
-        mov     dword [arg2 + _status], IMB_STATUS_COMPLETED
-
-        mov     rax, arg2       ;; return the job
-
-        FUNC_RESTORE
-        ret
+        mov r10d, NROUNDS
+        jmp aes_gcm_enc_var_iv_vaes_avx512
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;
@@ -261,75 +195,8 @@ align_function
 MKGLOBAL(FN_NAME(dec_var_iv,_),function,internal)
 FN_NAME(dec_var_iv,_):
         endbranch64
-        FUNC_SAVE alloc_context
-
-        ;; Check if msg_len <= 256
-        cmp     qword [arg2 + _msg_len_to_cipher], 16 * 16
-        jbe     .small_packet_path
-
-        mov     arg1, [arg2 + _dec_keys]
-
-        GCM_INIT arg1, {rsp + CONTEXT_OFFSET}, {[arg2 + _iv]}, \
-                {[arg2 + _gcm_aad]}, {qword [arg2 + _gcm_aad_len]}, \
-                r10, r11, r12, k1, xmm14, xmm2, \
-                zmm1, zmm11, zmm3, zmm4, zmm5,   zmm6, zmm7, zmm8, zmm9, zmm10, \
-                zmm12, zmm13, zmm15, zmm16, zmm17, zmm18, zmm19, zmm20, single_call, \
-                {qword [arg2 + _iv_len_in_bytes]}
-
-        mov     arg3, [arg2 + _src]
-        add     arg3, [arg2 + _cipher_start_src_offset]
-        mov     arg4, [arg2 + _dst]
-        mov     rbp, [arg2 + _msg_len_to_cipher]
-        GCM_ENC_DEC  arg1, {rsp + CONTEXT_OFFSET}, arg4, arg3, rbp, DEC, single_call, '>256'
-
-        GCM_COMPLETE arg1, {rsp + CONTEXT_OFFSET}, \
-                        {[arg2 + _auth_tag_output]}, {[arg2 + _auth_tag_output_len_in_bytes]}, \
-                        single_call, k1, r10, r11, r12
-
-%ifdef SAFE_DATA
-        clear_zmms_avx512 xmm1, xmm4, xmm6, xmm7, xmm8, xmm12, xmm13, xmm14, \
-                        xmm16, xmm17, xmm18, xmm19, xmm20, xmm21, xmm26, xmm30, xmm31
-%endif
-        jmp     .exit_dec
-
-align_label
-.small_packet_path:
-        ;; Load arguments for wrapper function call
-        mov     arg1, [arg2 + _enc_keys]
-        mov     arg3, [arg2 + _dst]
-        mov     arg4, [arg2 + _src]
-        add     arg4, [arg2 + _cipher_start_src_offset]
-
-%ifdef LINUX
-        mov     arg5, [arg2 + _msg_len_to_cipher]
-        mov     arg6, [arg2 + _iv]
-%else
-        ;; Windows save args 5-11 on stack
-        mov     rdi, [arg2 + _msg_len_to_cipher]
-        mov     rsi, [arg2 + _iv]
-%endif
-        mov     r12, [arg2 + _gcm_aad]
-        mov     r13, [arg2 + _gcm_aad_len]
-        mov     rbp, [arg2 + _auth_tag_output]
-        mov     r15, [arg2 + _auth_tag_output_len_in_bytes]
-
-        mov     r10d, NROUNDS
-        mov     r11, [arg2 + _iv_len_in_bytes]
-        call    gcm_0_to_256_dec_wrapper_asm
-
-%ifdef SAFE_DATA
-        clear_zmms_avx512 xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm8, xmm9, xmm11, xmm14, xmm15, \
-                        xmm16, xmm17, xmm18, xmm19, xmm20, xmm21, xmm26, xmm27
-%endif
-align_label
-.exit_dec:
-        ;; mark job complete
-        mov     dword [arg2 + _status], IMB_STATUS_COMPLETED
-
-        mov     rax, arg2       ;; return the job
-
-        FUNC_RESTORE
-        ret
+        mov r10d, NROUNDS
+        jmp aes_gcm_dec_var_iv_vaes_avx512
 
 mksection stack-noexec
 
