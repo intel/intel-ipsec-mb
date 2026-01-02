@@ -57,6 +57,7 @@ extern aes_gcm_enc_vaes_avx512
 extern aes_gcm_dec_vaes_avx512
 extern aes_gcm_enc_var_iv_vaes_avx512
 extern aes_gcm_dec_var_iv_vaes_avx512
+extern aes_gcm_precomp_vaes_avx512
 
 mksection .text
 default rel
@@ -71,64 +72,8 @@ align_function
 MKGLOBAL(FN_NAME(precomp,_),function,)
 FN_NAME(precomp,_):
         endbranch64
-;; Parameter is passed through register
-%ifdef SAFE_PARAM
-        ;; Reset imb_errno
-        IMB_ERR_CHECK_RESET
-
-        ;; Check key_data != NULL
-        cmp     arg1, 0
-        jz      error_precomp
-%endif
-
-        FUNC_SAVE small_frame
-
-        vpxor   xmm6, xmm6
-        ENCRYPT_SINGLE_BLOCK    arg1, xmm6              ; xmm6 = HashKey
-
-        vpshufb  xmm6, [rel SHUF_MASK]
-        ;;;;;;;;;;;;;;;  PRECOMPUTATION of HashKey<<1 mod poly from the HashKey;;;;;;;;;;;;;;;
-        vmovdqa  xmm2, xmm6
-        vpsllq   xmm6, xmm6, 1
-        vpsrlq   xmm2, xmm2, 63
-        vmovdqa  xmm1, xmm2
-        vpslldq  xmm2, xmm2, 8
-        vpsrldq  xmm1, xmm1, 8
-        vpor     xmm6, xmm6, xmm2
-        ;reduction
-        vpshufd  xmm2, xmm1, 00100100b
-        vpcmpeqd xmm2, [rel TWOONE]
-        vpand    xmm2, xmm2, [rel POLY]
-        vpxor    xmm6, xmm6, xmm2                       ; xmm6 holds the HashKey<<1 mod poly
-        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        vmovdqu  [arg1 + HashKey_1], xmm6               ; store HashKey<<1 mod poly
-
-        PRECOMPUTE arg1, xmm6, xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm7, xmm8
-
-%ifdef SAFE_DATA
-        clear_zmms_avx512 xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8
-%endif
-
-        FUNC_RESTORE
-align_label
-exit_precomp:
-
-        ret
-
-%ifdef SAFE_PARAM
-align_label
-error_precomp:
-        ;; Clear reg and imb_errno
-        IMB_ERR_CHECK_START rax
-
-        ;; Check key_data != NULL
-        IMB_ERR_CHECK_NULL arg1, rax, IMB_ERR_NULL_EXP_KEY
-
-        ;; Set imb_errno
-        IMB_ERR_CHECK_END rax
-
-        jmp exit_precomp
-%endif
+        mov r10d, NROUNDS
+        jmp aes_gcm_precomp_vaes_avx512
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;void   aes_gcm_enc_128_vaes_avx512 / aes_gcm_enc_192_vaes_avx512 / aes_gcm_enc_256_vaes_avx512
