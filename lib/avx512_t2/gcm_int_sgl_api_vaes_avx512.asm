@@ -272,6 +272,15 @@ skip_in_out_check_error_update_enc:
         jmp     exit_update_enc
 %endif
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;void   aes_gcm_dec_update_vaes_avx512
+;       (const struct gcm_key_data *key_data,
+;        struct gcm_context_data *context_data,
+;        u8       *out,
+;        const u8 *in,
+;        u64      msg_len);
+;        Expects NROUNDS value (9, 11, 13) in r10
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 align_function
 MKGLOBAL(aes_gcm_dec_update_vaes_avx512,function,internal)
 aes_gcm_dec_update_vaes_avx512:
