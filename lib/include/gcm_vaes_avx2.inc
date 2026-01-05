@@ -1457,7 +1457,8 @@ align_label
 ;;; INITIAL_BLOCKS macro with support for a partial final block.
 ;;; num_initial_blocks is expected to include the partial final block
 ;;;     in the count.
-%macro INITIAL_BLOCKS_PARTIAL 9-10
+;;; Requires r10 to be preloaded with number of AES rounds (9, 11 or 13).
+%macro INITIAL_BLOCKS_PARTIAL 9
 %define %%GDATA_KEY             %1      ;; [in] pointer to GCM key data
 %define %%GDATA_CTX             %2      ;; [in] pointer to GCM context data
 %define %%CIPH_PLAIN_OUT        %3      ;; [in] pointer to destination buffer
@@ -1467,7 +1468,6 @@ align_label
 %define %%num_initial_blocks    %7      ;; [in] numeric value, number of blocks can be from 1 to 7 (not 0)
 %define %%ENC_DEC               %8      ;; [in] selection for "ENC" encrypt or "DEC" for decrypt directions
 %define %%INSTANCE_TYPE         %9      ;; [in] "multi_call" or "single_call" API type selection
-%define %%ROUNDS                %10     ;; [in] number of AES rounds (9, 11 or 13)
 ;;      xmm9                            ;; [in/out] most recent counter block
 ;;                                      ;;     NOTE: in some sections ymm9/xmm9 is used as a temporary register.
 ;;      r10                             ;; [in] number of AESENC rounds (9, 11 or 13)
@@ -1505,9 +1505,6 @@ align_label
 
                 ;; prepare counter blocks and do AES encryption on them
 %xdefine %%FN gcm_aes_ctr_ %+ %%num_initial_blocks %+ _vaes_avx2
-%if %0 != 10
-                mov             r10d, NROUNDS
-%endif
                 call            %%FN
 %undef %%FN
                 ;; save last counter block (LE)
@@ -2374,7 +2371,7 @@ align_label
         ;; @note: xmm2 - needs to return counter block
 %endmacro
 
-%macro  GCM_ENC_DEC_SMALL   12-13
+%macro  GCM_ENC_DEC_SMALL   13
 %define %%GDATA_KEY         %1
 %define %%GDATA_CTX         %2
 %define %%CIPH_PLAIN_OUT    %3
@@ -2420,15 +2417,9 @@ align_label
 %rep 15
 align_label
 %%_small_initial_num_blocks_is_ %+ n :
-%if %0 == 13
-        INITIAL_BLOCKS_PARTIAL  %%GDATA_KEY, %%GDATA_CTX, %%CIPH_PLAIN_OUT, \
-                %%PLAIN_CIPH_IN, %%LENGTH, %%DATA_OFFSET, n, \
-                %%ENC_DEC, %%INSTANCE_TYPE, %%ROUNDS
-%else
         INITIAL_BLOCKS_PARTIAL  %%GDATA_KEY, %%GDATA_CTX, %%CIPH_PLAIN_OUT, \
                 %%PLAIN_CIPH_IN, %%LENGTH, %%DATA_OFFSET, n, \
                 %%ENC_DEC, %%INSTANCE_TYPE
-%endif
 
         jmp     %%_small_initial_blocks_encrypted
 %assign n (n - 1)
@@ -2436,15 +2427,9 @@ align_label
 
 align_label
 %%_small_initial_num_blocks_is_1:
-%if %0 == 13
-        INITIAL_BLOCKS_PARTIAL  %%GDATA_KEY, %%GDATA_CTX, %%CIPH_PLAIN_OUT, \
-                %%PLAIN_CIPH_IN, %%LENGTH, %%DATA_OFFSET, 1, \
-                %%ENC_DEC, %%INSTANCE_TYPE, %%ROUNDS
-%else
         INITIAL_BLOCKS_PARTIAL  %%GDATA_KEY, %%GDATA_CTX, %%CIPH_PLAIN_OUT, \
                 %%PLAIN_CIPH_IN, %%LENGTH, %%DATA_OFFSET, 1, \
                 %%ENC_DEC, %%INSTANCE_TYPE
-%endif
 
 align_label
 %%_small_initial_blocks_encrypted:
@@ -2460,7 +2445,7 @@ align_label
 ; Output: A cipher of the given plain text (CIPH_PLAIN_OUT), and updated GDATA_CTX
 ; Clobbers rax, r11-r15, and xmm0-xmm15
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-%macro  GCM_ENC_DEC         7-8
+%macro  GCM_ENC_DEC         8
 %define %%GDATA_KEY         %1
 %define %%GDATA_CTX         %2
 %define %%CIPH_PLAIN_OUT    %3
@@ -2530,18 +2515,12 @@ align_label
         cmp     r13, 256
         jae     %%_large_message_path
 
-%if %0 == 8
         GCM_ENC_DEC_SMALL %%GDATA_KEY, %%GDATA_CTX, %%CIPH_PLAIN_OUT, %%PLAIN_CIPH_IN, %%PLAIN_CIPH_LEN, %%ENC_DEC, %%DATA_OFFSET, r13, r12, xmm9, xmm14, %%INSTANCE_TYPE, %%ROUNDS
-%else
-        GCM_ENC_DEC_SMALL %%GDATA_KEY, %%GDATA_CTX, %%CIPH_PLAIN_OUT, %%PLAIN_CIPH_IN, %%PLAIN_CIPH_LEN, %%ENC_DEC, %%DATA_OFFSET, r13, r12, xmm9, xmm14, %%INSTANCE_TYPE
-%endif
+
         jmp     %%_ghash_done
 
 align_label
 %%_large_message_path:
-%if %0 != 8
-        mov     r10d, NROUNDS
-%endif
         mov     r15, rsp
 %ifidn %%ENC_DEC, ENC
         call    gcm_initial_blocks_enc_vaes_avx2
@@ -2643,7 +2622,7 @@ align_label
 ; Output: Authorization Tag (AUTH_TAG) and Authorization Tag length (AUTH_TAG_LEN)
 ; Clobbers rax, r10-r12, and xmm0-xmm2, xmm5-xmm6, xmm9-xmm11, xmm13-xmm15
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-%macro  GCM_COMPLETE            5-6
+%macro  GCM_COMPLETE            6
 %define %%GDATA_KEY             %1
 %define %%GDATA_CTX             %2
 %define %%AUTH_TAG              %3
@@ -2656,41 +2635,38 @@ align_label
         vmovdqu xmm0, [%%GDATA_KEY + HashKeyK_1]
         ;; Start AES as early as possible
         vmovdqu xmm9, [%%GDATA_CTX + OrigIV]    ; xmm9 = Y0
-%if %0 == 6
-                vpxor    xmm9, xmm9, [%%GDATA_KEY+16*0]
-                vaesenc  xmm9, [%%GDATA_KEY+16*1]
-                vaesenc  xmm9, [%%GDATA_KEY+16*2]
-                vaesenc  xmm9, [%%GDATA_KEY+16*3]
-                vaesenc  xmm9, [%%GDATA_KEY+16*4]
-                vaesenc  xmm9, [%%GDATA_KEY+16*5]
-                vaesenc  xmm9, [%%GDATA_KEY+16*6]
-                vaesenc  xmm9, [%%GDATA_KEY+16*7]
-                vaesenc  xmm9, [%%GDATA_KEY+16*8]
-                vaesenc  xmm9, [%%GDATA_KEY+16*9]
 
-                cmp DWORD(%%ROUNDS), 11
-                jb %%_128_block
-                je %%_192_block
+        vpxor    xmm9, xmm9, [%%GDATA_KEY+16*0]
+        vaesenc  xmm9, [%%GDATA_KEY+16*1]
+        vaesenc  xmm9, [%%GDATA_KEY+16*2]
+        vaesenc  xmm9, [%%GDATA_KEY+16*3]
+        vaesenc  xmm9, [%%GDATA_KEY+16*4]
+        vaesenc  xmm9, [%%GDATA_KEY+16*5]
+        vaesenc  xmm9, [%%GDATA_KEY+16*6]
+        vaesenc  xmm9, [%%GDATA_KEY+16*7]
+        vaesenc  xmm9, [%%GDATA_KEY+16*8]
+        vaesenc  xmm9, [%%GDATA_KEY+16*9]
 
-                vaesenc  xmm9, [%%GDATA_KEY+16*10]
-                vaesenc  xmm9, [%%GDATA_KEY+16*11]
-                vaesenc  xmm9, [%%GDATA_KEY+16*12]
-                vaesenc  xmm9, [%%GDATA_KEY+16*13]
-                vaesenclast      xmm9, [%%GDATA_KEY+16*14]
-                jmp %%_done
+        cmp DWORD(%%ROUNDS), 11
+        jb %%_128_block
+        je %%_192_block
+
+        vaesenc  xmm9, [%%GDATA_KEY+16*10]
+        vaesenc  xmm9, [%%GDATA_KEY+16*11]
+        vaesenc  xmm9, [%%GDATA_KEY+16*12]
+        vaesenc  xmm9, [%%GDATA_KEY+16*13]
+        vaesenclast      xmm9, [%%GDATA_KEY+16*14]
+        jmp %%_done
 
 %%_128_block:
-                vaesenclast      xmm9, [%%GDATA_KEY+16*10]
-                jmp %%_done
+        vaesenclast      xmm9, [%%GDATA_KEY+16*10]
+        jmp %%_done
 
 %%_192_block:
-                vaesenc  xmm9, [%%GDATA_KEY+16*10]
-                vaesenc  xmm9, [%%GDATA_KEY+16*11]
-                vaesenclast      xmm9, [%%GDATA_KEY+16*12]
+        vaesenc  xmm9, [%%GDATA_KEY+16*10]
+        vaesenc  xmm9, [%%GDATA_KEY+16*11]
+        vaesenclast      xmm9, [%%GDATA_KEY+16*12]
 %%_done:
-%else
-        ENCRYPT_SINGLE_BLOCK %%GDATA_KEY, xmm9  ; E(K, Y0)
-%endif
 
 %ifidn %%INSTANCE_TYPE, multi_call
         ;; If the GCM function is called as a single function call rather
