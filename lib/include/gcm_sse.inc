@@ -710,7 +710,7 @@ align_label
 ; %%GDATA_KEY, %%GDATA_CTX, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, r14 are used as a pointer only, not modified
 ; Updated AAD_HASH is returned in %%T3
 
-%macro INITIAL_BLOCKS 24-25
+%macro INITIAL_BLOCKS 25
 %define %%GDATA_KEY             %1
 %define %%GDATA_CTX             %2
 %define %%CYPH_PLAIN_OUT        %3
@@ -760,7 +760,6 @@ align_label
 %endrep
 
                 ;; encrypt N blocks (13 rounds for AES-256, 11 for AES-192 and 9 for AES-128)
-%if %0 == 25
                 movdqu  %%T_key, [%%GDATA_KEY+16*1]
 %assign i (9-%%num_initial_blocks)
 %rep %%num_initial_blocks
@@ -903,26 +902,6 @@ align_label
 align_label
 %%_encryption_round_done:
 
-%else
-%assign j 1
-%rep NROUNDS
-                movdqu  %%T_key, [%%GDATA_KEY+16*j]
-%assign i (9-%%num_initial_blocks)
-%rep %%num_initial_blocks
-                aesenc  reg(i),%%T_key
-%assign i (i+1)
-%endrep
-
-%assign j (j+1)
-%endrep
-                ;; last encryption round (14th for AES-256, 12th for AES-192 and 10th for AES-128)
-                movdqu  %%T_key, [%%GDATA_KEY+16*j]
-%assign i (9-%%num_initial_blocks)
-%rep %%num_initial_blocks
-                aesenclast      reg(i), %%T_key
-%assign i (i+1)
-%endrep
-%endif
                 ;; - load source buffer block
                 ;; - XOR AES result with plain/cipher text block
                 ;; - store to destination is postponed for later
@@ -1029,7 +1008,6 @@ align_label
                 pxor    %%XMM7, %%T_key
                 pxor    %%XMM8, %%T_key
 
-%if %0 == 25
                 movdqu  %%T_key, [%%GDATA_KEY+16*1]
                 aesenc  %%XMM1, %%T_key
                 aesenc  %%XMM2, %%T_key
@@ -1198,24 +1176,6 @@ align_label
 align_label
 %%_final_round:
 
-%else
-%assign i 1
-%rep    NROUNDS                                                 ; do early (13) rounds (11 for GCM192)
-                movdqu  %%T_key, [%%GDATA_KEY+16*i]
-                aesenc  %%XMM1, %%T_key
-                aesenc  %%XMM2, %%T_key
-                aesenc  %%XMM3, %%T_key
-                aesenc  %%XMM4, %%T_key
-                aesenc  %%XMM5, %%T_key
-                aesenc  %%XMM6, %%T_key
-                aesenc  %%XMM7, %%T_key
-                aesenc  %%XMM8, %%T_key
-%assign i (i+1)
-%endrep
-
-                movdqu          %%T_key, [%%GDATA_KEY+16*i]             ; do final key round
-%endif
-
                 ;; - load source buffer block
                 ;; - do the last AES encryption round
                 ;; - XOR AES result with plain/cipher text block
@@ -1279,7 +1239,7 @@ align_label
 ; ghash the 8 previously encrypted ciphertext blocks
 ; %%GDATA (KEY), %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN are used as pointers only, not modified
 ; %%DATA_OFFSET is the data offset value
-%macro GHASH_8_ENCRYPT_8_PARALLEL 22-23
+%macro GHASH_8_ENCRYPT_8_PARALLEL 23
 %define %%GDATA                 %1
 %define %%CYPH_PLAIN_OUT        %2
 %define %%PLAIN_CYPH_IN         %3
@@ -1595,7 +1555,6 @@ align_label
         pxor    %%T7, %%T3
         pxor    %%T4, %%T2                              ; accumulate the results in %%T4:%%T7
 
-%if %0 == 23
         cmp DWORD(%%ROUNDS), 11
         je  %%_gcm_192
         jb  %%_gcm_128
@@ -1641,7 +1600,7 @@ align_label
                 aesenc  %%XMM8, %%T1
 
                 movdqu  %%T5, [%%GDATA + 16*14]        ; finish last key round
-                jmp     %%_aesenc_complete
+                jmp     %%_final_round
 
 align_label
 %%_gcm_192:
@@ -1666,86 +1625,14 @@ align_label
                 aesenc  %%XMM8, %%T1
 
                 movdqu  %%T5, [%%GDATA + 16*12]        ; finish last key round
-                jmp     %%_aesenc_complete
+                jmp     %%_final_round
 
 align_label
 %%_gcm_128:
                 movdqu  %%T5, [%%GDATA + 16*10]
 
 align_label
-%%_aesenc_complete:
-
-%else
-%ifdef GCM128_MODE
-                movdqu  %%T5, [%%GDATA + 16*10]
-%endif
-%ifdef GCM192_MODE
-                movdqu  %%T1, [%%GDATA + 16*10]
-                aesenc  %%XMM1, %%T1
-                aesenc  %%XMM2, %%T1
-                aesenc  %%XMM3, %%T1
-                aesenc  %%XMM4, %%T1
-                aesenc  %%XMM5, %%T1
-                aesenc  %%XMM6, %%T1
-                aesenc  %%XMM7, %%T1
-                aesenc  %%XMM8, %%T1
-
-                movdqu  %%T1, [%%GDATA + 16*11]
-                aesenc  %%XMM1, %%T1
-                aesenc  %%XMM2, %%T1
-                aesenc  %%XMM3, %%T1
-                aesenc  %%XMM4, %%T1
-                aesenc  %%XMM5, %%T1
-                aesenc  %%XMM6, %%T1
-                aesenc  %%XMM7, %%T1
-                aesenc  %%XMM8, %%T1
-
-                movdqu  %%T5, [%%GDATA + 16*12]        ; finish last key round
-%endif
-%ifdef GCM256_MODE
-                movdqu  %%T1, [%%GDATA + 16*10]
-                aesenc  %%XMM1, %%T1
-                aesenc  %%XMM2, %%T1
-                aesenc  %%XMM3, %%T1
-                aesenc  %%XMM4, %%T1
-                aesenc  %%XMM5, %%T1
-                aesenc  %%XMM6, %%T1
-                aesenc  %%XMM7, %%T1
-                aesenc  %%XMM8, %%T1
-
-                movdqu  %%T1, [%%GDATA + 16*11]
-                aesenc  %%XMM1, %%T1
-                aesenc  %%XMM2, %%T1
-                aesenc  %%XMM3, %%T1
-                aesenc  %%XMM4, %%T1
-                aesenc  %%XMM5, %%T1
-                aesenc  %%XMM6, %%T1
-                aesenc  %%XMM7, %%T1
-                aesenc  %%XMM8, %%T1
-
-                movdqu  %%T1, [%%GDATA + 16*12]
-                aesenc  %%XMM1, %%T1
-                aesenc  %%XMM2, %%T1
-                aesenc  %%XMM3, %%T1
-                aesenc  %%XMM4, %%T1
-                aesenc  %%XMM5, %%T1
-                aesenc  %%XMM6, %%T1
-                aesenc  %%XMM7, %%T1
-                aesenc  %%XMM8, %%T1
-
-                movdqu  %%T1, [%%GDATA + 16*13]
-                aesenc  %%XMM1, %%T1
-                aesenc  %%XMM2, %%T1
-                aesenc  %%XMM3, %%T1
-                aesenc  %%XMM4, %%T1
-                aesenc  %%XMM5, %%T1
-                aesenc  %%XMM6, %%T1
-                aesenc  %%XMM7, %%T1
-                aesenc  %%XMM8, %%T1
-
-                movdqu  %%T5, [%%GDATA + 16*14]        ; finish last key round
-%endif
-%endif
+%%_final_round:
 
                 ;; - load source buffer block
                 ;; - do the last AES encryption round
@@ -2183,7 +2070,7 @@ align_label
 ; Output: A cypher of the given plain text (CYPH_PLAIN_OUT), and updated GDATA_CTX
 ; Clobbers rax, r11-r15, and xmm0-xmm15
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-%macro  GCM_ENC_DEC             6-7
+%macro  GCM_ENC_DEC             7
 %define %%GDATA_KEY             %1
 %define %%GDATA_CTX             %2
 %define %%CYPH_PLAIN_OUT        %3
@@ -2241,81 +2128,56 @@ align_label
 
 align_label
 %%_initial_num_blocks_is_7:
-%if %0 == 7
         INITIAL_BLOCKS  %%GDATA_KEY, %%GDATA_CTX, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, r13, %%DATA_OFFSET, 7, xmm12, xmm13, xmm14, xmm15, xmm11, xmm9, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, xmm10, xmm0, %%ENC_DEC, %%ROUNDS
-%else
-        INITIAL_BLOCKS  %%GDATA_KEY, %%GDATA_CTX, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, r13, %%DATA_OFFSET, 7, xmm12, xmm13, xmm14, xmm15, xmm11, xmm9, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, xmm10, xmm0, %%ENC_DEC
-%endif
+
         sub     r13, 16*7
         jmp     %%_initial_blocks_encrypted
 
 align_label
 %%_initial_num_blocks_is_6:
-%if %0 == 7
         INITIAL_BLOCKS  %%GDATA_KEY, %%GDATA_CTX, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, r13, %%DATA_OFFSET, 6, xmm12, xmm13, xmm14, xmm15, xmm11, xmm9, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, xmm10, xmm0, %%ENC_DEC, %%ROUNDS
-%else
-        INITIAL_BLOCKS  %%GDATA_KEY, %%GDATA_CTX, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, r13, %%DATA_OFFSET, 6, xmm12, xmm13, xmm14, xmm15, xmm11, xmm9, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, xmm10, xmm0, %%ENC_DEC
-%endif
+
         sub     r13, 16*6
         jmp     %%_initial_blocks_encrypted
 
 align_label
 %%_initial_num_blocks_is_5:
-%if %0 == 7
         INITIAL_BLOCKS  %%GDATA_KEY, %%GDATA_CTX, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, r13, %%DATA_OFFSET, 5, xmm12, xmm13, xmm14, xmm15, xmm11, xmm9, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, xmm10, xmm0, %%ENC_DEC, %%ROUNDS
-%else
-        INITIAL_BLOCKS  %%GDATA_KEY, %%GDATA_CTX, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, r13, %%DATA_OFFSET, 5, xmm12, xmm13, xmm14, xmm15, xmm11, xmm9, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, xmm10, xmm0, %%ENC_DEC
-%endif
+
         sub     r13, 16*5
         jmp     %%_initial_blocks_encrypted
 
 align_label
 %%_initial_num_blocks_is_4:
-%if %0 == 7
         INITIAL_BLOCKS  %%GDATA_KEY, %%GDATA_CTX, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, r13, %%DATA_OFFSET, 4, xmm12, xmm13, xmm14, xmm15, xmm11, xmm9, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, xmm10, xmm0, %%ENC_DEC, %%ROUNDS
-%else
-        INITIAL_BLOCKS  %%GDATA_KEY, %%GDATA_CTX, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, r13, %%DATA_OFFSET, 4, xmm12, xmm13, xmm14, xmm15, xmm11, xmm9, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, xmm10, xmm0, %%ENC_DEC
-%endif
+
         sub     r13, 16*4
         jmp     %%_initial_blocks_encrypted
 
 align_label
 %%_initial_num_blocks_is_3:
-%if %0 == 7
         INITIAL_BLOCKS  %%GDATA_KEY, %%GDATA_CTX, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, r13, %%DATA_OFFSET, 3, xmm12, xmm13, xmm14, xmm15, xmm11, xmm9, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, xmm10, xmm0, %%ENC_DEC, %%ROUNDS
-%else
-        INITIAL_BLOCKS  %%GDATA_KEY, %%GDATA_CTX, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, r13, %%DATA_OFFSET, 3, xmm12, xmm13, xmm14, xmm15, xmm11, xmm9, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, xmm10, xmm0, %%ENC_DEC
-%endif
+
         sub     r13, 16*3
         jmp     %%_initial_blocks_encrypted
 
 align_label
 %%_initial_num_blocks_is_2:
-%if %0 == 7
         INITIAL_BLOCKS  %%GDATA_KEY, %%GDATA_CTX, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, r13, %%DATA_OFFSET, 2, xmm12, xmm13, xmm14, xmm15, xmm11, xmm9, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, xmm10, xmm0, %%ENC_DEC, %%ROUNDS
-%else
-        INITIAL_BLOCKS  %%GDATA_KEY, %%GDATA_CTX, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, r13, %%DATA_OFFSET, 2, xmm12, xmm13, xmm14, xmm15, xmm11, xmm9, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, xmm10, xmm0, %%ENC_DEC
-%endif
+
         sub     r13, 16*2
         jmp     %%_initial_blocks_encrypted
 
 align_label
 %%_initial_num_blocks_is_1:
-%if %0 == 7
         INITIAL_BLOCKS  %%GDATA_KEY, %%GDATA_CTX, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, r13, %%DATA_OFFSET, 1, xmm12, xmm13, xmm14, xmm15, xmm11, xmm9, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, xmm10, xmm0, %%ENC_DEC, %%ROUNDS
-%else
-        INITIAL_BLOCKS  %%GDATA_KEY, %%GDATA_CTX, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, r13, %%DATA_OFFSET, 1, xmm12, xmm13, xmm14, xmm15, xmm11, xmm9, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, xmm10, xmm0, %%ENC_DEC
-%endif
+
         sub     r13, 16
         jmp     %%_initial_blocks_encrypted
 
 align_label
 %%_initial_num_blocks_is_0:
-%if %0 == 7
         INITIAL_BLOCKS  %%GDATA_KEY, %%GDATA_CTX, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, r13, %%DATA_OFFSET, 0, xmm12, xmm13, xmm14, xmm15, xmm11, xmm9, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, xmm10, xmm0, %%ENC_DEC, %%ROUNDS
-%else
-        INITIAL_BLOCKS  %%GDATA_KEY, %%GDATA_CTX, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, r13, %%DATA_OFFSET, 0, xmm12, xmm13, xmm14, xmm15, xmm11, xmm9, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, xmm10, xmm0, %%ENC_DEC
-%endif
 
 align_label
 %%_initial_blocks_encrypted:
@@ -2335,11 +2197,8 @@ align_loop
         jg      %%_encrypt_by_8
 
         add     r15b, 8
-%if %0 == 7
         GHASH_8_ENCRYPT_8_PARALLEL      %%GDATA_KEY, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, %%DATA_OFFSET, xmm0, xmm10, xmm11, xmm12, xmm13, xmm14, xmm9, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, xmm15, out_order, %%ENC_DEC, %%ROUNDS
-%else
-        GHASH_8_ENCRYPT_8_PARALLEL      %%GDATA_KEY, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, %%DATA_OFFSET, xmm0, xmm10, xmm11, xmm12, xmm13, xmm14, xmm9, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, xmm15, out_order, %%ENC_DEC
-%endif
+
         add     %%DATA_OFFSET, 128
         sub     r13, 128
         jne     %%_encrypt_by_8_new
@@ -2351,11 +2210,8 @@ align_label
 %%_encrypt_by_8:
         pshufb  xmm9, [SHUF_MASK]
         add     r15b, 8
-%if %0 == 7
         GHASH_8_ENCRYPT_8_PARALLEL      %%GDATA_KEY, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, %%DATA_OFFSET, xmm0, xmm10, xmm11, xmm12, xmm13, xmm14, xmm9, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, xmm15, in_order, %%ENC_DEC, %%ROUNDS
-%else
-        GHASH_8_ENCRYPT_8_PARALLEL      %%GDATA_KEY, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, %%DATA_OFFSET, xmm0, xmm10, xmm11, xmm12, xmm13, xmm14, xmm9, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, xmm15, in_order, %%ENC_DEC
-%endif
+
         pshufb  xmm9, [SHUF_MASK]
         add     %%DATA_OFFSET, 128
         sub     r13, 128
@@ -2383,7 +2239,7 @@ align_label
         paddd   xmm9, [ONE]                     ; INCR CNT to get Yn
         movdqu  [%%GDATA_CTX + CurCount], xmm9          ; my_ctx.data.current_counter = xmm9
         pshufb  xmm9, [SHUF_MASK]
-%if %0 == 7
+
         pxor     xmm9, [%%GDATA_KEY+16*0]
         aesenc   xmm9, [%%GDATA_KEY+16*1]
         aesenc   xmm9, [%%GDATA_KEY+16*2]
@@ -2419,9 +2275,6 @@ align_label
 
 align_label
 %%_encrypt_done:
-%else
-        ENCRYPT_SINGLE_BLOCK    %%GDATA_KEY, xmm9, xmm2                    ; E(K, Yn)
-%endif
         movdqu  [%%GDATA_CTX + PBlockEncKey], xmm9              ; my_ctx_data.partial_block_enc_key = xmm9
 
         cmp     %%PLAIN_CYPH_LEN, 16
@@ -2502,7 +2355,7 @@ align_label
 ; Output: Authorization Tag (AUTH_TAG) and Authorization Tag length (AUTH_TAG_LEN)
 ; Clobbers rax, r10-r12, and xmm0-xmm2, xmm5-xmm6, xmm9-xmm11, xmm13-xmm15
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-%macro  GCM_COMPLETE            4-5
+%macro  GCM_COMPLETE            5
 %define %%GDATA_KEY             %1
 %define %%GDATA_CTX             %2
 %define %%AUTH_TAG              %3
@@ -2540,7 +2393,6 @@ align_label
 
         movdqu  xmm9, [%%GDATA_CTX + OrigIV]            ; xmm9 = Y0
 
-%if %0 == 5
         pxor     xmm9, [%%GDATA_KEY+16*0]
         aesenc   xmm9, [%%GDATA_KEY+16*1]
         aesenc   xmm9, [%%GDATA_KEY+16*2]
@@ -2577,9 +2429,6 @@ align_label
 
 align_label
 %%_done:
-%else
-        ENCRYPT_SINGLE_BLOCK    %%GDATA_KEY, xmm9, xmm2 ; E(K, Y0)
-%endif
         pxor    xmm9, xmm14
 
 align_label
