@@ -199,6 +199,40 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; GHASH_REDUCTION MACRO to reduce the 256-bit product to 128 bits modulo the GCM polynomial
+; Input: %%GH and %%T1 contain the 256-bit result from pclmulqdq (low and high halves)
+; Output: %%GH holds the final 128-bit reduced value
+; Parameters %%T2, %%T3, %%T4, %%T5 are used as scratch registers during computation
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+%macro GHASH_REDUCTION 4
+%define %%GH %1         ; 16 Bytes
+%define %%T1 %2
+%define %%T2 %3
+%define %%T3 %4
+
+        ; first phase of the reduction
+        movdqa  %%T3, [rel POLY2]
+
+        movdqa  %%T2, %%T3
+        pclmulqdq %%T2, %%GH, 0x01
+        pslldq  %%T2, 8                                 ; shift-L %%T2 2 DWs
+
+        pxor    %%GH, %%T2                              ; first phase of the reduction complete
+
+        ; second phase of the reduction
+        movdqa  %%T2, %%T3
+        pclmulqdq %%T2, %%GH, 0x00
+        psrldq  %%T2, 4                                 ; shift-R %%T2 1 DW
+
+        pclmulqdq %%GH, %%T3, 0x01
+        pslldq  %%GH, 4                                 ; shift-L %%GH 1 DW
+
+        pxor    %%GH, %%T2                              ; second phase of the reduction complete
+        pxor    %%GH, %%T1                              ; the result is in %%GH
+
+%endmacro
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; GHASH_MUL MACRO to implement: Data*HashKey mod (128,127,126,121,0)
 ; Input: A and B (128-bits each, bit-reflected)
 ; Output: C = A*B*x mod poly, (i.e. >>1 )
@@ -234,38 +268,8 @@
         pxor    %%GH, %%T3
         pxor    %%T1, %%T2                              ; <%%T1:%%GH> holds the result of the carry-less multiplication of %%GH by %%HK
 
-        ;first phase of the reduction
-        movdqa  %%T2, %%GH
-        movdqa  %%T3, %%GH
-        movdqa  %%T4, %%GH                              ; move %%GH into %%T2, %%T3, %%T4 in order to perform the three shifts independently
-
-        pslld   %%T2, 31                                ; packed right shifting << 31
-        pslld   %%T3, 30                                ; packed right shifting shift << 30
-        pslld   %%T4, 25                                ; packed right shifting shift << 25
-        pxor    %%T2, %%T3                              ; xor the shifted versions
-        pxor    %%T2, %%T4
-
-        movdqa  %%T5, %%T2
-        psrldq  %%T5, 4                                 ; shift-R %%T5 1 DW
-
-        pslldq  %%T2, 12                                ; shift-L %%T2 3 DWs
-        pxor    %%GH, %%T2                              ; first phase of the reduction complete
-        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-        ;second phase of the reduction
-        movdqa  %%T2,%%GH                               ; make 3 copies of %%GH (in in %%T2, %%T3, %%T4) for doing three shift operations
-        movdqa  %%T3,%%GH
-        movdqa  %%T4,%%GH
-
-        psrld   %%T2,1                                  ; packed left shifting >> 1
-        psrld   %%T3,2                                  ; packed left shifting >> 2
-        psrld   %%T4,7                                  ; packed left shifting >> 7
-        pxor    %%T2,%%T3                               ; xor the shifted versions
-        pxor    %%T2,%%T4
-
-        pxor    %%T2, %%T5
-        pxor    %%GH, %%T2
-        pxor    %%GH, %%T1                              ; the result is in %%T1
+        ; Do the reduction
+        GHASH_REDUCTION %%GH, %%T1, %%T2, %%T3
 
 %endmacro
 
@@ -407,28 +411,8 @@ align_loop
         pxor            %%XTMP2, %%XTMP4
         pxor            %%XTMP1, %%XTMP3                                ; accumulate the results in %%T1(M):%%T2(L)
 
-        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        ;first phase of the reduction
-        movdqa          %%XTMP5, [rel POLY2]
-        movdqa          %%XTMP0, %%XTMP5
-        pclmulqdq       %%XTMP0, %%XTMP2, 0x01
-        pslldq          %%XTMP0, 8                                      ; shift-L xmm2 2 DWs
-        pxor            %%XTMP2, %%XTMP0                                ; first phase of the reduction complete
-
-        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        ;second phase of the reduction
-        movdqa          %%XTMP3, %%XTMP5
-        pclmulqdq       %%XTMP3, %%XTMP2, 0x00
-        psrldq          %%XTMP3, 4                                      ; shift-R 1 DW (Shift-R only 1-DW to obtain 2-DWs shift-R)
-
-        movdqa          %%XTMP4, %%XTMP5
-        pclmulqdq       %%XTMP4, %%XTMP2, 0x10
-        pslldq          %%XTMP4, 4                                      ; shift-L 1 DW (Shift-L 1-DW to obtain result with no shifts)
-
-        pxor            %%XTMP4, %%XTMP3                                ; second phase of the reduction complete
-        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        movdqa          %%AAD_HASH, %%XTMP1
-        pxor            %%AAD_HASH, %%XTMP4                             ; the result is in %%T1
+        movdqa          %%AAD_HASH, %%XTMP2                             ; move low 128 bits to AAD_HASH
+        GHASH_REDUCTION %%AAD_HASH, %%XTMP1, %%XTMP0, %%XTMP3
 
         sub     %%T2, 128
         je      %%_CALC_AAD_done
@@ -1657,23 +1641,6 @@ align_label
 %assign j (j+1)
 %endrep
 
-        ;; first phase of the reduction
-        movdqa  %%T2, %%T7
-        movdqa  %%T3, %%T7
-        movdqa  %%T1, %%T7                              ; move %%T7 into %%T2, %%T3, %%T1 in order to perform the three shifts independently
-
-        pslld   %%T2, 31                                ; packed right shifting << 31
-        pslld   %%T3, 30                                ; packed right shifting shift << 30
-        pslld   %%T1, 25                                ; packed right shifting shift << 25
-        pxor    %%T2, %%T3                              ; xor the shifted versions
-        pxor    %%T2, %%T1
-
-        movdqa  %%T5, %%T2
-        psrldq  %%T5, 4                                 ; shift-R %%T5 1 DW
-
-        pslldq  %%T2, 12                                ; shift-L %%T2 3 DWs
-        pxor    %%T7, %%T2                              ; first phase of the reduction complete
-
                 ;; Note: Loads done first and then stores.
                 ;;       This is to avoid potential loads being blocked on
                 ;;       false store-to-load condition.
@@ -1699,22 +1666,8 @@ align_label
 %assign j (j+1)
 %endrep
 
-        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-        ;; second phase of the reduction
-        movdqa  %%T2,%%T7                               ; make 3 copies of %%T7 (in in %%T2, %%T3, %%T1) for doing three shift operations
-        movdqa  %%T3,%%T7
-        movdqa  %%T1,%%T7
-
-        psrld   %%T2,1                                  ; packed left shifting >> 1
-        psrld   %%T3,2                                  ; packed left shifting >> 2
-        psrld   %%T1,7                                  ; packed left shifting >> 7
-        pxor    %%T2,%%T3                               ; xor the shifted versions
-        pxor    %%T2,%%T1
-
-        pxor    %%T2, %%T5
-        pxor    %%T7, %%T2
-        pxor    %%T7, %%T4                              ; the result is in %%T4
+        ;; reduction
+        GHASH_REDUCTION %%T7, %%T4, %%T1, %%T2
 
         pxor    %%XMM1, %%T7
 
@@ -1866,38 +1819,8 @@ align_label
         pxor    %%T7, %%T4
         pxor    %%T6, %%T2                              ; <%%T6:%%T7> holds the result of the accumulated carry-less multiplications
 
-        ;first phase of the reduction
-        movdqa %%T2, %%T7
-        movdqa %%T3, %%T7
-        movdqa %%T4, %%T7                               ; move %%T7 into %%T2, %%T3, %%T4 in order to perform the three shifts independently
-
-        pslld %%T2, 31                                  ; packed right shifting << 31
-        pslld %%T3, 30                                  ; packed right shifting shift << 30
-        pslld %%T4, 25                                  ; packed right shifting shift << 25
-        pxor %%T2, %%T3                                 ; xor the shifted versions
-        pxor %%T2, %%T4
-
-        movdqa %%T1, %%T2
-        psrldq %%T1, 4                                  ; shift-R %%T1 1 DW
-
-        pslldq %%T2, 12                                 ; shift-L %%T2 3 DWs
-        pxor %%T7, %%T2                                 ; first phase of the reduction complete
-        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-        ;second phase of the reduction
-        movdqa %%T2,%%T7                                ; make 3 copies of %%T7 (in in %%T2, %%T3, %%T4) for doing three shift operations
-        movdqa %%T3,%%T7
-        movdqa %%T4,%%T7
-
-        psrld %%T2,1                                    ; packed left shifting >> 1
-        psrld %%T3,2                                    ; packed left shifting >> 2
-        psrld %%T4,7                                    ; packed left shifting >> 7
-        pxor %%T2,%%T3                                  ; xor the shifted versions
-        pxor %%T2,%%T4
-
-        pxor %%T2, %%T1
-        pxor %%T7, %%T2
-        pxor %%T6, %%T7                                 ; the result is in %%T6
+        GHASH_REDUCTION %%T7, %%T6, %%T1, %%T2
+        movdqa          %%T6, %%T7                      ; move result to %%T6
 
 %endmacro
 
