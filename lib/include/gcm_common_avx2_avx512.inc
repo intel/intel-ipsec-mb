@@ -1710,7 +1710,7 @@ align_label
 ;; =============================================================================
 ;; Encrypt 8 blocks at a time and ghash the 8 previously encrypted
 ;; ciphertext blocks.
-%macro  GHASH_8_ENCRYPT_8_PARALLEL 24
+%macro  GHASH_8_ENCRYPT_8_PARALLEL 25
 %define %%GDATA                 %1      ;; [in] key pointer
 %define %%CIPH_PLAIN_OUT        %2      ;; [in] destination buffer
 %define %%PLAIN_CIPH_IN         %3      ;; [in] source buffer
@@ -1735,6 +1735,7 @@ align_label
 %define %%ENC_DEC               %22     ;; [in] cipher direction "ENC" or "DEC"
 %define %%FULL_PARTIAL          %23     ;; [in] the last, 8th block partial or full selection "full" or "partial"
 %define %%GHASH_BLK_PTR         %24     ;; [in] pointer to 8 blocks ready for GHASH
+%define %%ROUNDS                %25     ;; [in] number of AES rounds
 
         cmp     DWORD(%%CTR_OVERFLOW_REG), 255 - 8
         ja      %%_ctr_overflow
@@ -1982,9 +1983,11 @@ align_label
         vmovdqa         [%%GHASH_BLK_PTR + TMP1], %%T1
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-%assign i 10
-%rep (NROUNDS - 9)
-                vmovdqa %%T1, [%%GDATA + 16*i]
+                cmp DWORD(%%ROUNDS), 11
+                jb  %%_128_aesenc
+                je  %%_192_aesenc
+
+                vmovdqa %%T1, [%%GDATA + 16*10]
                 vaesenc %%XMM1, %%T1
                 vaesenc %%XMM2, %%T1
                 vaesenc %%XMM3, %%T1
@@ -1993,8 +1996,71 @@ align_label
                 vaesenc %%XMM6, %%T1
                 vaesenc %%XMM7, %%T1
                 vaesenc %%XMM8, %%T1
-%assign i (i + 1)
-%endrep
+
+                vmovdqa %%T1, [%%GDATA + 16*11]
+                vaesenc %%XMM1, %%T1
+                vaesenc %%XMM2, %%T1
+                vaesenc %%XMM3, %%T1
+                vaesenc %%XMM4, %%T1
+                vaesenc %%XMM5, %%T1
+                vaesenc %%XMM6, %%T1
+                vaesenc %%XMM7, %%T1
+                vaesenc %%XMM8, %%T1
+
+                vmovdqa %%T1, [%%GDATA + 16*12]
+                vaesenc %%XMM1, %%T1
+                vaesenc %%XMM2, %%T1
+                vaesenc %%XMM3, %%T1
+                vaesenc %%XMM4, %%T1
+                vaesenc %%XMM5, %%T1
+                vaesenc %%XMM6, %%T1
+                vaesenc %%XMM7, %%T1
+                vaesenc %%XMM8, %%T1
+
+                vmovdqa %%T1, [%%GDATA + 16*13]
+                vaesenc %%XMM1, %%T1
+                vaesenc %%XMM2, %%T1
+                vaesenc %%XMM3, %%T1
+                vaesenc %%XMM4, %%T1
+                vaesenc %%XMM5, %%T1
+                vaesenc %%XMM6, %%T1
+                vaesenc %%XMM7, %%T1
+                vaesenc %%XMM8, %%T1
+
+                vmovdqa         %%T1, [%%GDATA + 16*14]
+                jmp             %%_final_aesenc_block
+
+align_label
+%%_192_aesenc:
+                vmovdqa %%T1, [%%GDATA + 16*10]
+                vaesenc %%XMM1, %%T1
+                vaesenc %%XMM2, %%T1
+                vaesenc %%XMM3, %%T1
+                vaesenc %%XMM4, %%T1
+                vaesenc %%XMM5, %%T1
+                vaesenc %%XMM6, %%T1
+                vaesenc %%XMM7, %%T1
+                vaesenc %%XMM8, %%T1
+
+                vmovdqa %%T1, [%%GDATA + 16*11]
+                vaesenc %%XMM1, %%T1
+                vaesenc %%XMM2, %%T1
+                vaesenc %%XMM3, %%T1
+                vaesenc %%XMM4, %%T1
+                vaesenc %%XMM5, %%T1
+                vaesenc %%XMM6, %%T1
+                vaesenc %%XMM7, %%T1
+                vaesenc %%XMM8, %%T1
+
+                vmovdqa %%T1, [%%GDATA + 16*12]
+                jmp             %%_final_aesenc_block
+
+align_label
+%%_128_aesenc:
+                vmovdqa         %%T1, [%%GDATA + 16*10]
+
+align_label
+%%_final_aesenc_block:
 
                 ;; loading plain/cipher text
                 VXLDR           %%T2, [%%PLAIN_CIPH_IN + %%DATA_OFFSET + 16*0]
@@ -2004,7 +2070,6 @@ align_label
                 VXLDR           %%T4, [%%PLAIN_CIPH_IN + %%DATA_OFFSET + 16*4]
                 VXLDR           %%T7, [%%PLAIN_CIPH_IN + %%DATA_OFFSET + 16*5]
 
-                vmovdqa         %%T1, [%%GDATA + 16*(NROUNDS + 1)]
                 vaesenclast     %%XMM1, %%T1
                 vaesenclast     %%XMM2, %%T1
                 vaesenclast     %%XMM3, %%T1
@@ -2778,7 +2843,7 @@ align_loop
         ;; xmm7  - XMM7
         ;; xmm8  - XMM8
         ;; xmm15 - T7
-        GHASH_8_ENCRYPT_8_PARALLEL  %%GDATA_KEY, %%CIPH_PLAIN_OUT, %%PLAIN_CIPH_IN, %%DATA_OFFSET, xmm0, xmm10, xmm11, xmm12, xmm13, xmm14, xmm9, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, xmm15, r15, %%ENC_DEC, full, r12
+        GHASH_8_ENCRYPT_8_PARALLEL  %%GDATA_KEY, %%CIPH_PLAIN_OUT, %%PLAIN_CIPH_IN, %%DATA_OFFSET, xmm0, xmm10, xmm11, xmm12, xmm13, xmm14, xmm9, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, xmm15, r15, %%ENC_DEC, full, r12, r10
 
         add     %%DATA_OFFSET, 128
         sub     r13, 128
@@ -2797,7 +2862,7 @@ align_label
         ;; TBD: Might need to account for when we don't have room to increment the counter.
 
         ;; Process parallel buffers with a final partial block.
-        GHASH_8_ENCRYPT_8_PARALLEL  %%GDATA_KEY, %%CIPH_PLAIN_OUT, %%PLAIN_CIPH_IN, %%DATA_OFFSET, xmm0, xmm10, xmm11, xmm12, xmm13, xmm14, xmm9, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, xmm15, r15, %%ENC_DEC, partial, r12
+        GHASH_8_ENCRYPT_8_PARALLEL  %%GDATA_KEY, %%CIPH_PLAIN_OUT, %%PLAIN_CIPH_IN, %%DATA_OFFSET, xmm0, xmm10, xmm11, xmm12, xmm13, xmm14, xmm9, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, xmm15, r15, %%ENC_DEC, partial, r12, r10
 
         add     %%DATA_OFFSET, 128-16
         sub     r13, 128-16
