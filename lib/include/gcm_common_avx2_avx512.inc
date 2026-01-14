@@ -588,7 +588,7 @@ align_label
 ; input text length (PLAIN_CIPH_LEN), the current data offset (DATA_OFFSET),
 ; the hash subkey (HASH_SUBKEY) and whether encoding or decoding (ENC_DEC)
 ; Output: A cipher of the first partial block (CIPH_PLAIN_OUT), and updated GDATA_CTX
-; Clobbers rax, r10, r12, r13, r15, xmm0, xmm1, xmm2, xmm3, xmm5, xmm6, xmm9, xmm10, xmm11
+; Clobbers rax, r12, r13, r15, xmm0, xmm1, xmm2, xmm3, xmm5, xmm6, xmm9, xmm10, xmm11
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 %macro PARTIAL_BLOCK    8
 %define %%GDATA_CTX             %1      ;; [in/out] GP with pointer to GCM context structure; context gets updated
@@ -612,8 +612,8 @@ align_label
 
 align_label
 %%_fewer_than_16_bytes:
-        lea     r10, [%%PLAIN_CIPH_IN + %%DATA_OFFSET]
-        READ_SMALL_DATA_INPUT_AVX   xmm1, r10, %%PLAIN_CIPH_LEN, rax
+        lea     r12, [%%PLAIN_CIPH_IN + %%DATA_OFFSET]
+        READ_SMALL_DATA_INPUT_AVX   xmm1, r12, %%PLAIN_CIPH_LEN, rax
 
 align_label
 %%_data_read:                           ;Finished reading in data
@@ -1350,7 +1350,7 @@ align_label
 ;;; INITIAL_BLOCKS macro with support for a partial final block.
 ;;; num_initial_blocks is expected to include the partial final block
 ;;;     in the count.
-%macro INITIAL_BLOCKS_PARTIAL 25
+%macro INITIAL_BLOCKS_PARTIAL 25-26
 %define %%GDATA_KEY             %1      ;; [in] pointer to GCM key data
 %define %%GDATA_CTX             %2      ;; [in] pointer to GCM context data
 %define %%CIPH_PLAIN_OUT        %3      ;; [in] pointer to destination buffer
@@ -1376,6 +1376,7 @@ align_label
 %define %%T_key                 %23
 %define %%ENC_DEC               %24
 %define %%INSTANCE_TYPE         %25
+%define %%ROUNDS                %26
 
 %assign i (8 - %%num_initial_blocks)
                 ;; Move AAD_HASH to temp reg
@@ -1399,6 +1400,147 @@ align_label
 %assign i (i + 1)
 %endrep
 
+%if %0 == 26
+                vmovdqu  %%T_key, [%%GDATA_KEY+16*1]
+%assign i (9-%%num_initial_blocks)
+%rep %%num_initial_blocks
+                vaesenc  reg(i), %%T_key
+%assign i (i + 1)
+%endrep
+
+                vmovdqu  %%T_key, [%%GDATA_KEY+16*2]
+%assign i (9-%%num_initial_blocks)
+%rep %%num_initial_blocks
+                vaesenc  reg(i), %%T_key
+%assign i (i + 1)
+%endrep
+
+                vmovdqu  %%T_key, [%%GDATA_KEY+16*3]
+%assign i (9-%%num_initial_blocks)
+%rep %%num_initial_blocks
+                vaesenc  reg(i), %%T_key
+%assign i (i + 1)
+%endrep
+
+                vmovdqu  %%T_key, [%%GDATA_KEY+16*4]
+%assign i (9-%%num_initial_blocks)
+%rep %%num_initial_blocks
+                vaesenc  reg(i), %%T_key
+%assign i (i + 1)
+%endrep
+
+                vmovdqu  %%T_key, [%%GDATA_KEY+16*5]
+%assign i (9-%%num_initial_blocks)
+%rep %%num_initial_blocks
+                vaesenc  reg(i), %%T_key
+%assign i (i + 1)
+%endrep
+
+                vmovdqu  %%T_key, [%%GDATA_KEY+16*6]
+%assign i (9-%%num_initial_blocks)
+%rep %%num_initial_blocks
+                vaesenc  reg(i), %%T_key
+%assign i (i + 1)
+%endrep
+
+                vmovdqu  %%T_key, [%%GDATA_KEY+16*7]
+%assign i (9-%%num_initial_blocks)
+%rep %%num_initial_blocks
+                vaesenc  reg(i), %%T_key
+%assign i (i + 1)
+%endrep
+
+                vmovdqu  %%T_key, [%%GDATA_KEY+16*8]
+%assign i (9-%%num_initial_blocks)
+%rep %%num_initial_blocks
+                vaesenc  reg(i), %%T_key
+%assign i (i + 1)
+%endrep
+
+                vmovdqu  %%T_key, [%%GDATA_KEY+16*9]
+%assign i (9-%%num_initial_blocks)
+%rep %%num_initial_blocks
+                vaesenc  reg(i), %%T_key
+%assign i (i + 1)
+%endrep
+                cmp     DWORD(%%ROUNDS), 11
+                jb      %%_initial_blocks_128
+                je      %%_initial_blocks_192
+
+                vmovdqu  %%T_key, [%%GDATA_KEY+16*10]
+%assign i (9-%%num_initial_blocks)
+%rep %%num_initial_blocks
+                vaesenc  reg(i), %%T_key
+%assign i (i + 1)
+%endrep
+
+                vmovdqu  %%T_key, [%%GDATA_KEY+16*11]
+%assign i (9-%%num_initial_blocks)
+%rep %%num_initial_blocks
+                vaesenc  reg(i), %%T_key
+%assign i (i + 1)
+%endrep
+
+                vmovdqu  %%T_key, [%%GDATA_KEY+16*12]
+%assign i (9-%%num_initial_blocks)
+%rep %%num_initial_blocks
+                vaesenc  reg(i), %%T_key
+%assign i (i + 1)
+%endrep
+
+                vmovdqu  %%T_key, [%%GDATA_KEY+16*13]
+%assign i (9-%%num_initial_blocks)
+%rep %%num_initial_blocks
+                vaesenc  reg(i), %%T_key
+%assign i (i + 1)
+%endrep
+
+                vmovdqu  %%T_key, [%%GDATA_KEY+16*14]
+%assign i (9 - %%num_initial_blocks)
+%rep %%num_initial_blocks
+                vaesenclast      reg(i),%%T_key
+%assign i (i + 1)
+%endrep
+        jmp     %%_initial_blocks_done
+
+align_label
+%%_initial_blocks_192:
+                vmovdqu  %%T_key, [%%GDATA_KEY+16*10]
+%assign i (9-%%num_initial_blocks)
+%rep %%num_initial_blocks
+                vaesenc  reg(i), %%T_key
+%assign i (i + 1)
+%endrep
+
+                vmovdqu  %%T_key, [%%GDATA_KEY+16*11]
+%assign i (9-%%num_initial_blocks)
+%rep %%num_initial_blocks
+                vaesenc  reg(i), %%T_key
+%assign i (i + 1)
+%endrep
+
+                vmovdqu  %%T_key, [%%GDATA_KEY+16*12]
+%assign i (9 - %%num_initial_blocks)
+%rep %%num_initial_blocks
+                vaesenclast      reg(i),%%T_key
+%assign i (i + 1)
+%endrep
+        jmp     %%_initial_blocks_done
+
+align_label
+%%_initial_blocks_128:
+                vmovdqu  %%T_key, [%%GDATA_KEY+16*10]
+%assign i (9 - %%num_initial_blocks)
+%rep %%num_initial_blocks
+                vaesenclast      reg(i),%%T_key
+%assign i (i + 1)
+%endrep
+
+align_label
+%%_initial_blocks_done:
+
+%else
+
 %assign j 1
 %rep NROUNDS
                 vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
@@ -1417,6 +1559,8 @@ align_label
                 vaesenclast      reg(i),%%T_key
 %assign i (i + 1)
 %endrep
+
+%endif
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Hash all but the last block of data
@@ -2275,7 +2419,7 @@ align_label
 ;;;   KEY  - Key for encrypting the partial block
 ;;;   HASH - Current hash value
 ;;; SMASHES:
-;;;   r10, r12, r15, rax
+;;;   r12, r15, rax
 ;;;   T1, T2
 ;;; Note AVX2:
 ;;;   PLAIN_CIPH_LEN, %7, is passed only to determine
@@ -2301,13 +2445,13 @@ align_label
         ;; NOTE: type of read tuned based %%PLAIN_CIPH_LEN setting
 %ifidn %%PLAIN_CIPH_LEN, LT16
         ;; Handle the case where the message is < 16 bytes
-        lea      r10, [%%PLAIN_CIPH_IN + %%DATA_OFFSET]
+        lea      rax, [%%PLAIN_CIPH_IN + %%DATA_OFFSET]
 
         ;; T1            - packed output
-        ;; r10           - input data address
+        ;; rax           - input data address
         ;; r13           - input data length
-        ;; r12, r15, rax - temp registers
-        READ_SMALL_DATA_INPUT_AVX   %%T1, r10, r13, r12
+        ;; r12, r15      - temp registers
+        READ_SMALL_DATA_INPUT_AVX   %%T1, rax, r13, r12
 
         lea      r12, [SHIFT_MASK + 16]
         sub      r12, r13
@@ -2593,7 +2737,7 @@ align_label
         ;; @note: xmm2 - needs to return counter block
 %endmacro
 
-%macro  GCM_ENC_DEC_SMALL   12
+%macro  GCM_ENC_DEC_SMALL   12-13
 %define %%GDATA_KEY         %1
 %define %%GDATA_CTX         %2
 %define %%CIPH_PLAIN_OUT    %3
@@ -2606,6 +2750,7 @@ align_label
 %define %%CTR               %10 ; assumed xmm9
 %define %%HASH_OUT          %11 ; assumed xmm14
 %define %%INSTANCE_TYPE     %12
+%define %%ROUNDS            %13
 
         ;; NOTE: the check below is obsolete in current implementation. The check is already done in GCM_ENC_DEC.
         ;; cmp     %%NUM_BLOCKS, 0
@@ -2626,74 +2771,139 @@ align_label
 
 align_label
 %%_small_initial_num_blocks_is_8:
+%if %0 == 13
+        INITIAL_BLOCKS_PARTIAL  %%GDATA_KEY, %%GDATA_CTX, %%CIPH_PLAIN_OUT, \
+                %%PLAIN_CIPH_IN, %%LENGTH, %%DATA_OFFSET, 8, \
+                xmm12, xmm13, %%HASH_OUT, xmm15, xmm11, %%CTR, \
+                xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, \
+                xmm10, xmm0, %%ENC_DEC, %%INSTANCE_TYPE, %%ROUNDS
+%else
         INITIAL_BLOCKS_PARTIAL  %%GDATA_KEY, %%GDATA_CTX, %%CIPH_PLAIN_OUT, \
                 %%PLAIN_CIPH_IN, %%LENGTH, %%DATA_OFFSET, 8, \
                 xmm12, xmm13, %%HASH_OUT, xmm15, xmm11, %%CTR, \
                 xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, \
                 xmm10, xmm0, %%ENC_DEC, %%INSTANCE_TYPE
+%endif
         jmp     %%_small_initial_blocks_encrypted
 
 align_label
 %%_small_initial_num_blocks_is_7:
+%if %0 == 13
+        INITIAL_BLOCKS_PARTIAL  %%GDATA_KEY, %%GDATA_CTX, %%CIPH_PLAIN_OUT, \
+                %%PLAIN_CIPH_IN, %%LENGTH, %%DATA_OFFSET, 7, \
+                xmm12, xmm13, %%HASH_OUT, xmm15, xmm11, %%CTR, \
+                xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, \
+                xmm10, xmm0, %%ENC_DEC, %%INSTANCE_TYPE, %%ROUNDS
+%else
         INITIAL_BLOCKS_PARTIAL  %%GDATA_KEY, %%GDATA_CTX, %%CIPH_PLAIN_OUT, \
                 %%PLAIN_CIPH_IN, %%LENGTH, %%DATA_OFFSET, 7, \
                 xmm12, xmm13, %%HASH_OUT, xmm15, xmm11, %%CTR, \
                 xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, \
                 xmm10, xmm0, %%ENC_DEC, %%INSTANCE_TYPE
+%endif
         jmp     %%_small_initial_blocks_encrypted
 
 align_label
 %%_small_initial_num_blocks_is_6:
+%if %0 == 13
+        INITIAL_BLOCKS_PARTIAL  %%GDATA_KEY, %%GDATA_CTX, %%CIPH_PLAIN_OUT, \
+                %%PLAIN_CIPH_IN, %%LENGTH, %%DATA_OFFSET, 6, \
+                xmm12, xmm13, %%HASH_OUT, xmm15, xmm11, %%CTR, \
+                xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, \
+                xmm10, xmm0, %%ENC_DEC, %%INSTANCE_TYPE, %%ROUNDS
+%else
         INITIAL_BLOCKS_PARTIAL  %%GDATA_KEY, %%GDATA_CTX, %%CIPH_PLAIN_OUT, \
                 %%PLAIN_CIPH_IN, %%LENGTH, %%DATA_OFFSET, 6, \
                 xmm12, xmm13, %%HASH_OUT, xmm15, xmm11, %%CTR, \
                 xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, \
                 xmm10, xmm0, %%ENC_DEC, %%INSTANCE_TYPE
+%endif
         jmp     %%_small_initial_blocks_encrypted
 
 align_label
 %%_small_initial_num_blocks_is_5:
+%if %0 == 13
+        INITIAL_BLOCKS_PARTIAL  %%GDATA_KEY, %%GDATA_CTX, %%CIPH_PLAIN_OUT, \
+                %%PLAIN_CIPH_IN, %%LENGTH, %%DATA_OFFSET, 5, \
+                xmm12, xmm13, %%HASH_OUT, xmm15, xmm11, %%CTR, \
+                xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, \
+                xmm10, xmm0, %%ENC_DEC, %%INSTANCE_TYPE, %%ROUNDS
+%else
         INITIAL_BLOCKS_PARTIAL  %%GDATA_KEY, %%GDATA_CTX, %%CIPH_PLAIN_OUT, \
                 %%PLAIN_CIPH_IN, %%LENGTH, %%DATA_OFFSET, 5, \
                 xmm12, xmm13, %%HASH_OUT, xmm15, xmm11, %%CTR, \
                 xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, \
                 xmm10, xmm0, %%ENC_DEC, %%INSTANCE_TYPE
+%endif
         jmp     %%_small_initial_blocks_encrypted
 
 align_label
 %%_small_initial_num_blocks_is_4:
+%if %0 == 13
+        INITIAL_BLOCKS_PARTIAL  %%GDATA_KEY, %%GDATA_CTX, %%CIPH_PLAIN_OUT, \
+                %%PLAIN_CIPH_IN, %%LENGTH, %%DATA_OFFSET, 4, \
+                xmm12, xmm13, %%HASH_OUT, xmm15, xmm11, %%CTR, \
+                xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, \
+                xmm10, xmm0, %%ENC_DEC, %%INSTANCE_TYPE, %%ROUNDS
+%else
         INITIAL_BLOCKS_PARTIAL  %%GDATA_KEY, %%GDATA_CTX, %%CIPH_PLAIN_OUT, \
                 %%PLAIN_CIPH_IN, %%LENGTH, %%DATA_OFFSET, 4, \
                 xmm12, xmm13, %%HASH_OUT, xmm15, xmm11, %%CTR, \
                 xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, \
                 xmm10, xmm0, %%ENC_DEC, %%INSTANCE_TYPE
+%endif
         jmp     %%_small_initial_blocks_encrypted
 
 align_label
 %%_small_initial_num_blocks_is_3:
+%if %0 == 13
+        INITIAL_BLOCKS_PARTIAL  %%GDATA_KEY, %%GDATA_CTX, %%CIPH_PLAIN_OUT, \
+                %%PLAIN_CIPH_IN, %%LENGTH, %%DATA_OFFSET, 3, \
+                xmm12, xmm13, %%HASH_OUT, xmm15, xmm11, %%CTR, \
+                xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, \
+                xmm10, xmm0, %%ENC_DEC, %%INSTANCE_TYPE, %%ROUNDS
+%else
         INITIAL_BLOCKS_PARTIAL  %%GDATA_KEY, %%GDATA_CTX, %%CIPH_PLAIN_OUT, \
                 %%PLAIN_CIPH_IN, %%LENGTH, %%DATA_OFFSET, 3, \
                 xmm12, xmm13, %%HASH_OUT, xmm15, xmm11, %%CTR, \
                 xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, \
                 xmm10, xmm0, %%ENC_DEC, %%INSTANCE_TYPE
+%endif
         jmp     %%_small_initial_blocks_encrypted
 
 align_label
 %%_small_initial_num_blocks_is_2:
+%if %0 == 13
+        INITIAL_BLOCKS_PARTIAL  %%GDATA_KEY, %%GDATA_CTX, %%CIPH_PLAIN_OUT, \
+                %%PLAIN_CIPH_IN, %%LENGTH, %%DATA_OFFSET, 2, \
+                xmm12, xmm13, %%HASH_OUT, xmm15, xmm11, %%CTR, \
+                xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, \
+                xmm10, xmm0, %%ENC_DEC, %%INSTANCE_TYPE, %%ROUNDS
+%else
         INITIAL_BLOCKS_PARTIAL  %%GDATA_KEY, %%GDATA_CTX, %%CIPH_PLAIN_OUT, \
                 %%PLAIN_CIPH_IN, %%LENGTH, %%DATA_OFFSET, 2, \
                 xmm12, xmm13, %%HASH_OUT, xmm15, xmm11, %%CTR, \
                 xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, \
                 xmm10, xmm0, %%ENC_DEC, %%INSTANCE_TYPE
+%endif
         jmp     %%_small_initial_blocks_encrypted
 
 align_label
 %%_small_initial_num_blocks_is_1:
+%if %0 == 13
+        INITIAL_BLOCKS_PARTIAL  %%GDATA_KEY, %%GDATA_CTX, %%CIPH_PLAIN_OUT, \
+                %%PLAIN_CIPH_IN, %%LENGTH, %%DATA_OFFSET, 1, \
+                xmm12, xmm13, %%HASH_OUT, xmm15, xmm11, %%CTR, \
+                xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, \
+                xmm10, xmm0, %%ENC_DEC, %%INSTANCE_TYPE, %%ROUNDS
+%else
         INITIAL_BLOCKS_PARTIAL  %%GDATA_KEY, %%GDATA_CTX, %%CIPH_PLAIN_OUT, \
                 %%PLAIN_CIPH_IN, %%LENGTH, %%DATA_OFFSET, 1, \
                 xmm12, xmm13, %%HASH_OUT, xmm15, xmm11, %%CTR, \
                 xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, \
                 xmm10, xmm0, %%ENC_DEC, %%INSTANCE_TYPE
+%endif
+
 align_label
 %%_small_initial_blocks_encrypted:
 
@@ -2710,7 +2920,7 @@ align_label
 ; Output: A cipher of the given plain text (CIPH_PLAIN_OUT), and updated GDATA_CTX
 ; Clobbers rax, r10-r15, and xmm0-xmm15
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-%macro  GCM_ENC_DEC         7
+%macro  GCM_ENC_DEC         7-8
 %define %%GDATA_KEY         %1
 %define %%GDATA_CTX         %2
 %define %%CIPH_PLAIN_OUT    %3
@@ -2718,6 +2928,7 @@ align_label
 %define %%PLAIN_CIPH_LEN    %5
 %define %%ENC_DEC           %6
 %define %%INSTANCE_TYPE     %7
+%define %%ROUNDS            %8
 %define %%DATA_OFFSET       r11
 
 ; Macro flow:
@@ -2779,12 +2990,18 @@ align_label
         cmp     r13, 128
         jae     %%_large_message_path
 
+%if %0 == 8
+        GCM_ENC_DEC_SMALL %%GDATA_KEY, %%GDATA_CTX, %%CIPH_PLAIN_OUT, %%PLAIN_CIPH_IN, %%PLAIN_CIPH_LEN, %%ENC_DEC, %%DATA_OFFSET, r13, r12, xmm9, xmm14, %%INSTANCE_TYPE, %%ROUNDS
+%else
         GCM_ENC_DEC_SMALL %%GDATA_KEY, %%GDATA_CTX, %%CIPH_PLAIN_OUT, %%PLAIN_CIPH_IN, %%PLAIN_CIPH_LEN, %%ENC_DEC, %%DATA_OFFSET, r13, r12, xmm9, xmm14, %%INSTANCE_TYPE
+%endif
         jmp     %%_ghash_done
 
 align_label
 %%_large_message_path:
+%if %0 != 8
         mov     r10d, NROUNDS
+%endif
         mov     r15, rsp
 %ifidn %%ENC_DEC, ENC
         call    gcm_initial_blocks_enc_avx_gen4
