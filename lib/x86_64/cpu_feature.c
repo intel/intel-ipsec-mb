@@ -222,7 +222,7 @@ static uint32_t
 detect_sm4ni(void)
 {
 #ifdef SMX_NI
-        /* Check presence of SM3NI - bit 2 of EAX */
+        /* Check presence of SM4NI - bit 2 of EAX */
         return (cpuid_7_1.eax & (1UL << 2));
 #else
         return 0;
