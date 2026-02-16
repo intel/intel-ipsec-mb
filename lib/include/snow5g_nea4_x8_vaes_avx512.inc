@@ -1,3 +1,6 @@
+%ifndef _SNOW5G_NEA4_X8_VAES_AVX512_ASM_
+%define _SNOW5G_NEA4_X8_VAES_AVX512_ASM_
+
 ;;
 ;; Copyright (c) 2025, Intel Corporation
 ;;
@@ -29,6 +32,9 @@
 %include "include/imb_job.inc"
 %include "include/constant_lookup.inc"
 %include "include/align_avx512.inc"
+%include "include/cet.inc"
+%include "include/clear_regs.inc"
+%include "include/os.inc"
 
 mksection .rodata
 default rel
@@ -130,6 +136,16 @@ mksection .text
 %xdefine LFSR_B_LDQ_L67         ymm5
 %xdefine LFSR_B_HDQ_L67         ymm4
 
+%ifdef LINUX
+%define arg1    rdi
+%define arg2    rsi
+%define arg3    rdx
+%else
+%define arg1    rcx
+%define arg2    rdx
+%define arg3    r8
+%endif
+
 struc STACK
 _LFSR_A_HDQ_01:     resb    (16 * 8)
 _LFSR_A_HDQ_23:     resb    (16 * 8)
@@ -144,12 +160,15 @@ _keystream_23:      resb    (16 * 8)
 _keystream_45:      resb    (16 * 8)
 _keystream_67:      resb    (16 * 8)
 _gpr_save:      resq    8
+%ifndef LINUX
+_xmm_save:      resb    (16 * 10)       ; XMM6-15 save area (Windows only)
+%endif
 _rsp_save:      resq    1
 endstruc
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Saves register contents and creates stack frame for key stream
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Saves register contents and creates stack frame
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 %macro SNOW5G_FUNC_START 0
         mov     rax, rsp
         sub     rsp, STACK_size
@@ -164,16 +183,27 @@ endstruc
 %ifndef LINUX
         mov     [rsp + _gpr_save + 8 * 6], rsi
         mov     [rsp + _gpr_save + 8 * 7], rdi
+        ;; Save XMM6-15 (Windows callee-saved)
+        vmovdqa [rsp + _xmm_save + 16 * 0], xmm6
+        vmovdqa [rsp + _xmm_save + 16 * 1], xmm7
+        vmovdqa [rsp + _xmm_save + 16 * 2], xmm8
+        vmovdqa [rsp + _xmm_save + 16 * 3], xmm9
+        vmovdqa [rsp + _xmm_save + 16 * 4], xmm10
+        vmovdqa [rsp + _xmm_save + 16 * 5], xmm11
+        vmovdqa [rsp + _xmm_save + 16 * 6], xmm12
+        vmovdqa [rsp + _xmm_save + 16 * 7], xmm13
+        vmovdqa [rsp + _xmm_save + 16 * 8], xmm14
+        vmovdqa [rsp + _xmm_save + 16 * 9], xmm15
 %endif
         mov     [rsp + _rsp_save], rax          ;; original SP
 %endmacro
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Restores register contents and removes the stack frame
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 %macro SNOW5G_FUNC_END 0
 %ifdef SAFE_DATA
-        clear_all_ymms_asm
+        clear_scratch_ymms_asm
 %else
         vzeroupper
 %endif
@@ -186,11 +216,24 @@ endstruc
 %ifndef LINUX
         mov     rsi, [rsp + _gpr_save + 8 * 6]
         mov     rdi, [rsp + _gpr_save + 8 * 7]
+        ;; Restore XMM6-15 (Windows callee-saved)
+        vmovdqa xmm6,  [rsp + _xmm_save + 16 * 0]
+        vmovdqa xmm7,  [rsp + _xmm_save + 16 * 1]
+        vmovdqa xmm8,  [rsp + _xmm_save + 16 * 2]
+        vmovdqa xmm9,  [rsp + _xmm_save + 16 * 3]
+        vmovdqa xmm10, [rsp + _xmm_save + 16 * 4]
+        vmovdqa xmm11, [rsp + _xmm_save + 16 * 5]
+        vmovdqa xmm12, [rsp + _xmm_save + 16 * 6]
+        vmovdqa xmm13, [rsp + _xmm_save + 16 * 7]
+        vmovdqa xmm14, [rsp + _xmm_save + 16 * 8]
+        vmovdqa xmm15, [rsp + _xmm_save + 16 * 9]
 %endif
         mov     rsp, [rsp + _rsp_save]  ; original SP
 %endmacro
 
-
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Clock FSM state machine for 2 lanes
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 %macro SNOW5G_FSM_CLOCK_2 6
 %define %%FSM_R1               %1  ;; [in/out] ymm with FSM 1 values
 %define %%FSM_R2               %2  ;; [in/out] ymm with FSM 2 values
@@ -207,10 +250,9 @@ endstruc
 
 %endmacro
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; LFSR & FSM INITIALIZATION for a new job
-;; - initialize LFSR & FSM for single key-iv pair
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; LFSR & FSM initialization for a new job (single key-iv pair)
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 %macro SNOW_5G_LFSR_FSM_INIT_SUBMIT 7
 %define %%STATE         %1 ;; [in] pointer to state structure
 %define %%LANE          %2 ;; [in] lane number 0-7
@@ -243,7 +285,7 @@ endstruc
 %endmacro
 
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Update SNOW5G LFSR
 ;; for i in [0,7]:
 ;;    tmpa_i = alpha(a_i)  + b_i + a_(i + 7)
@@ -298,10 +340,9 @@ endstruc
 
 %endmacro
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Stores to/loads from memory from/to vector registers key stream state registers
-;; - uses global register mapping for load/store operation
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Store/load LFSR and FSM state to/from memory
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 %macro LFSR_FSM_STATE 2
 %define %%PTR   %1 ;; [in] pointer to state structure
 %define %%TYPE  %2 ;; [in] "STORE" or "LOAD" selector
@@ -340,10 +381,9 @@ endstruc
 %endif
 %endmacro
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; XOR source input and keystream, write out to destination
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; XOR keystream with source input and write to destination
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 %macro WRITE_KEYSTREAM_XOR_LANE 12
 %define %%KEYSTREAM_MEM       %1  ;; [in] memory reference to keystream (128-bit)
 %define %%LANE_PAIR           %2  ;; [in] lane pair index (0,1,2,3)
@@ -370,10 +410,11 @@ endstruc
 
 %endmacro
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Generate keystream, encrypt/decrypt data, clock FSM and update LFSR for one lane pair
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-%macro SNOW5G_ENC_DEC_LANE_PAIR 21
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Generate keystream, encrypt/decrypt, clock FSM and update LFSR for one lane pair
+;; When SKIP_XOR is 1, only generates keystream (for HQP generation)
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+%macro SNOW5G_ENC_DEC_LANE_PAIR 22
 %define %%LANE_PAIR            %1  ;; [in] lane pair index (0,1,2,3)
 %define %%FSM_R1               %2  ;; [in/out] FSM R1 register
 %define %%FSM_R2               %3  ;; [in/out] FSM R2 register
@@ -387,35 +428,37 @@ endstruc
 %define %%KEYSTREAM_SAVE       %11 ;; [in] stack offset for keystream save
 %define %%TEMP1                %12 ;; [clobbered] temporary ymm register
 %define %%TEMP2                %13 ;; [clobbered] temporary ymm register
-%define %%SRC_PTRS             %14 ;; [in] address of array of pointers to src buffers
-%define %%DST_PTRS             %15 ;; [in] address of array of pointers to dst buffers
-%define %%STATE_PTR            %16 ;; [in] pointer to state structure
-%define %%OFFSET               %17 ;; [in] current offset to src/dst
-%define %%TGP0                 %18 ;; [clobbered] temporary 64bit register
-%define %%TGP1                 %19 ;; [clobbered] temporary 64bit register
+%define %%SRC_PTRS             %14 ;; [in] address of array of pointers to src buffers (ignored if SKIP_XOR=1)
+%define %%DST_PTRS             %15 ;; [in] address of array of pointers to dst buffers (ignored if SKIP_XOR=1)
+%define %%STATE_PTR            %16 ;; [in] pointer to state structure (ignored if SKIP_XOR=1)
+%define %%OFFSET               %17 ;; [in] current offset to src/dst (ignored if SKIP_XOR=1)
+%define %%TGP0                 %18 ;; [clobbered] temporary 64bit register (ignored if SKIP_XOR=1)
+%define %%TGP1                 %19 ;; [clobbered] temporary 64bit register (ignored if SKIP_XOR=1)
 %define %%KREG_INIT            %20 ;; [in] k-register mask for INIT phase
-%define %%KREG_LDST            %21 ;; [clobbered] k-register for load/store masking
+%define %%KREG_LDST            %21 ;; [clobbered] k-register for load/store masking (ignored if SKIP_XOR=1)
+%define %%SKIP_XOR             %22 ;; [in] 1 to skip XOR/write (keystream only), 0 for normal enc/dec
 
-        ;; Generate keystream and XOR with input data
+        ;; Generate keystream
         vpaddw          %%TEMP1, %%LFSR_B_HDQ, %%FSM_R1
         vpxorq          %%TEMP1, %%FSM_R2, %%TEMP1
         vmovdqa32       [rsp + %%KEYSTREAM_SAVE], %%TEMP1
 
+%if (%%SKIP_XOR == 0)
+        ;; XOR keystream with input data and write to output
         WRITE_KEYSTREAM_XOR_LANE [rsp + %%KEYSTREAM_SAVE], %%LANE_PAIR, 0, %%TEMP1, %%TEMP2, %%SRC_PTRS, %%DST_PTRS, %%STATE_PTR, \
                                 %%OFFSET, %%TGP0, %%TGP1, %%KREG_LDST
         WRITE_KEYSTREAM_XOR_LANE [rsp + %%KEYSTREAM_SAVE + 16], %%LANE_PAIR, 1, %%TEMP1, %%TEMP2, %%SRC_PTRS, %%DST_PTRS, %%STATE_PTR, \
                                 %%OFFSET, %%TGP0, %%TGP1, %%KREG_LDST
+%endif
 
         SNOW5G_FSM_CLOCK_2 %%FSM_R1, %%FSM_R2, %%FSM_R3, %%LFSR_A_HDQ, %%TEMP1, %%TEMP2
         SNOW5G_LFSR_UPDATE %%LFSR_A_LDQ, %%LFSR_A_HDQ, %%LFSR_B_LDQ, %%LFSR_B_HDQ, %%LFSR_A_SAVE, %%LFSR_B_SAVE, [rsp + %%KEYSTREAM_SAVE], %%KREG_INIT, %%TEMP1, %%TEMP2
 
 %endmacro
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; SNOW5G cipher code generating required number of 16-byte keystream blocks
-;; - it is multi-buffer implementation (8 buffers)
-;; - buffers can be in initialization or working mode
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; SNOW5G cipher - generates required number of 16-byte keystream blocks (8 buffers)
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 %macro SNOW5G_KEYSTREAM 14
 %xdefine %%STATE_PTR            %1  ;; [in] FSM_LFSR state structure pointer
 %xdefine %%COUNT                %2  ;; [in/clobbered] number of 16-byte blocks to be processed
@@ -443,19 +486,19 @@ align_loop
 
         SNOW5G_ENC_DEC_LANE_PAIR 0, FSM_R1_L01, FSM_R2_L01, FSM_R3_L01, LFSR_A_LDQ_L01, LFSR_A_HDQ_L01, LFSR_B_LDQ_L01, LFSR_B_HDQ_L01, \
                                 _LFSR_A_HDQ_01, _LFSR_B_HDQ_01, _keystream_01, TEMP1, TEMP2, %%SRC_PTRS, %%DST_PTRS, %%STATE_PTR, \
-                                %%OFFSET, %%TGP0, %%TGP1, %%KREG1, %%KREG5
+                                %%OFFSET, %%TGP0, %%TGP1, %%KREG1, %%KREG5, 0
 
         SNOW5G_ENC_DEC_LANE_PAIR 1, FSM_R1_L23, FSM_R2_L23, FSM_R3_L23, LFSR_A_LDQ_L23, LFSR_A_HDQ_L23, LFSR_B_LDQ_L23, LFSR_B_HDQ_L23, \
                                 _LFSR_A_HDQ_23, _LFSR_B_HDQ_23, _keystream_23, TEMP1, TEMP2, %%SRC_PTRS, %%DST_PTRS, %%STATE_PTR, \
-                                %%OFFSET, %%TGP0, %%TGP1, %%KREG2, %%KREG5
+                                %%OFFSET, %%TGP0, %%TGP1, %%KREG2, %%KREG5, 0
 
         SNOW5G_ENC_DEC_LANE_PAIR 2, FSM_R1_L45, FSM_R2_L45, FSM_R3_L45, LFSR_A_LDQ_L45, LFSR_A_HDQ_L45, LFSR_B_LDQ_L45, LFSR_B_HDQ_L45, \
                                 _LFSR_A_HDQ_45, _LFSR_B_HDQ_45, _keystream_45, TEMP1, TEMP2, %%SRC_PTRS, %%DST_PTRS, %%STATE_PTR, \
-                                %%OFFSET, %%TGP0, %%TGP1, %%KREG3, %%KREG5
+                                %%OFFSET, %%TGP0, %%TGP1, %%KREG3, %%KREG5, 0
 
         SNOW5G_ENC_DEC_LANE_PAIR 3, FSM_R1_L67, FSM_R2_L67, FSM_R3_L67, LFSR_A_LDQ_L67, LFSR_A_HDQ_L67, LFSR_B_LDQ_L67, LFSR_B_HDQ_L67, \
                                 _LFSR_A_HDQ_67, _LFSR_B_HDQ_67, _keystream_67, TEMP1, TEMP2, %%SRC_PTRS, %%DST_PTRS, %%STATE_PTR, \
-                                %%OFFSET, %%TGP0, %%TGP1, %%KREG4, %%KREG5
+                                %%OFFSET, %%TGP0, %%TGP1, %%KREG4, %%KREG5, 0
 
         add             %%OFFSET, 16
         dec             %%COUNT
@@ -469,3 +512,188 @@ align_loop
         ;; bytes unaligned to words are handled by the manager through LD_ST_MASK
 
 %endmacro
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Store keystream for all 4 lane pairs to HQP output
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+%macro HQP_STORE_ALL_KS 3
+%define %%HQP_PTR              %1   ;; [in] base pointer to HQP output
+%define %%HQP_OFFSET           %2   ;; [in] offset within each lane's HQP (0, 16, or 32)
+%define %%TEMP                 %3   ;; [clobbered] temporary ymm register
+
+%assign %%i 0
+%rep 4
+%assign %%lp_lo (%%i * 2)
+%assign %%lp_hi (%%i * 2 + 1)
+%assign %%lane0_off (%%lp_lo * 48 + %%HQP_OFFSET)
+        vmovdqa32       %%TEMP, [rsp + _keystream_ %+ %%lp_lo %+ %%lp_hi]
+        vmovdqu32       [%%HQP_PTR + %%lane0_off], XWORD(%%TEMP)
+        vextracti32x4   [%%HQP_PTR + %%lane0_off + 48], %%TEMP, 1
+%assign %%i (%%i + 1)
+%endrep
+%endmacro
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Load key data via pointer array into YMM for a lane pair
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+%macro LOAD_KEY_PAIR 5
+%define %%KEY_PTRS      %1  ;; [in] pointer to array of key pointers
+%define %%LANE_LO       %2  ;; [in] low lane index
+%define %%LANE_HI       %3  ;; [in] high lane index
+%define %%OFFSET        %4  ;; [in] offset within key (0 or 16)
+%define %%DEST          %5  ;; [out] destination YMM register
+        mov     r10, [%%KEY_PTRS + %%LANE_LO * 8]
+        mov     r11, [%%KEY_PTRS + %%LANE_HI * 8]
+        vmovdqu32 XWORD(%%DEST), [r10 + %%OFFSET]
+        vinserti32x4 %%DEST, %%DEST, [r11 + %%OFFSET], 1
+%endmacro
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; XOR key data into a register for a lane pair
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+%macro XOR_KEY_INTO_REG 5
+%define %%KEY_PTRS      %1  ;; [in] pointer to array of key pointers
+%define %%LANE_LO       %2  ;; [in] low lane index
+%define %%LANE_HI       %3  ;; [in] high lane index
+%define %%OFFSET        %4  ;; [in] offset within key (0 or 16)
+%define %%REG           %5  ;; [in/out] register to XOR into
+        mov     r10, [%%KEY_PTRS + %%LANE_LO * 8]
+        mov     r11, [%%KEY_PTRS + %%LANE_HI * 8]
+        vmovdqu32 XWORD(TEMP0), [r10 + %%OFFSET]
+        vinserti32x4 TEMP0, TEMP0, [r11 + %%OFFSET], 1
+        vpxorq  %%REG, %%REG, TEMP0
+%endmacro
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Process all 4 lane pairs (one init/keystream round)
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+%macro PROCESS_ALL_LANE_PAIRS 1
+%define %%KREG_INIT     %1  ;; [in] k-register for LFSR feedback (k1=init, k2=keygen)
+
+        SNOW5G_ENC_DEC_LANE_PAIR 0, FSM_R1_L01, FSM_R2_L01, FSM_R3_L01, \
+                                LFSR_A_LDQ_L01, LFSR_A_HDQ_L01, LFSR_B_LDQ_L01, LFSR_B_HDQ_L01, \
+                                _LFSR_A_HDQ_01, _LFSR_B_HDQ_01, _keystream_01, \
+                                TEMP0, TEMP1, 0, 0, 0, 0, r10, r11, %%KREG_INIT, k3, 1
+        SNOW5G_ENC_DEC_LANE_PAIR 1, FSM_R1_L23, FSM_R2_L23, FSM_R3_L23, \
+                                LFSR_A_LDQ_L23, LFSR_A_HDQ_L23, LFSR_B_LDQ_L23, LFSR_B_HDQ_L23, \
+                                _LFSR_A_HDQ_23, _LFSR_B_HDQ_23, _keystream_23, \
+                                TEMP0, TEMP1, 0, 0, 0, 0, r10, r11, %%KREG_INIT, k3, 1
+        SNOW5G_ENC_DEC_LANE_PAIR 2, FSM_R1_L45, FSM_R2_L45, FSM_R3_L45, \
+                                LFSR_A_LDQ_L45, LFSR_A_HDQ_L45, LFSR_B_LDQ_L45, LFSR_B_HDQ_L45, \
+                                _LFSR_A_HDQ_45, _LFSR_B_HDQ_45, _keystream_45, \
+                                TEMP0, TEMP1, 0, 0, 0, 0, r10, r11, %%KREG_INIT, k3, 1
+        SNOW5G_ENC_DEC_LANE_PAIR 3, FSM_R1_L67, FSM_R2_L67, FSM_R3_L67, \
+                                LFSR_A_LDQ_L67, LFSR_A_HDQ_L67, LFSR_B_LDQ_L67, LFSR_B_HDQ_L67, \
+                                _LFSR_A_HDQ_67, _LFSR_B_HDQ_67, _keystream_67, \
+                                TEMP0, TEMP1, 0, 0, 0, 0, r10, r11, %%KREG_INIT, k3, 1
+%endmacro
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Initialize LFSR/FSM state from keys and IVs for all 8 lanes
+;; LFSRA_LO = IV, LFSRA_HI = key[0:15], LFSRB_LO = 0, LFSRB_HI = key[16:31]
+;; FSM R1/R2/R3 = 0
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+%macro SNOW5G_INIT_STATE 2
+%define %%KEY_PTRS      %1  ;; [in] pointer to array of key pointers
+%define %%IV_PTR        %2  ;; [in] pointer to contiguous IVs (16 bytes per lane)
+
+        ;; Clear FSM and LFSRB_LO registers using broadcast zero
+        vpxorq  TEMP0, TEMP0, TEMP0
+%assign %%i 0
+%rep 4
+%assign %%lp_lo (%%i * 2)
+%assign %%lp_hi (%%i * 2 + 1)
+        vmovdqa32  FSM_R1_L %+ %%lp_lo %+ %%lp_hi, TEMP0
+        vmovdqa32  FSM_R2_L %+ %%lp_lo %+ %%lp_hi, TEMP0
+        vmovdqa32  FSM_R3_L %+ %%lp_lo %+ %%lp_hi, TEMP0
+        vmovdqa32  LFSR_B_LDQ_L %+ %%lp_lo %+ %%lp_hi, TEMP0
+%assign %%i (%%i + 1)
+%endrep
+
+        ;; Load IVs into LFSRA_LO (IVs are contiguous, use single 32-byte loads)
+%assign %%i 0
+%rep 4
+%assign %%lp_lo (%%i * 2)
+%assign %%lp_hi (%%i * 2 + 1)
+        vmovdqu64  LFSR_A_LDQ_L %+ %%lp_lo %+ %%lp_hi, [%%IV_PTR + %%lp_lo * 16]
+%assign %%i (%%i + 1)
+%endrep
+
+        ;; Load keys: key[0:15] -> LFSRA_HI, key[16:31] -> LFSRB_HI
+%assign %%i 0
+%rep 4
+%assign %%lp_lo (%%i * 2)
+%assign %%lp_hi (%%i * 2 + 1)
+        LOAD_KEY_PAIR %%KEY_PTRS, %%lp_lo, %%lp_hi, 0, LFSR_A_HDQ_L %+ %%lp_lo %+ %%lp_hi
+        LOAD_KEY_PAIR %%KEY_PTRS, %%lp_lo, %%lp_hi, 16, LFSR_B_HDQ_L %+ %%lp_lo %+ %%lp_hi
+%assign %%i (%%i + 1)
+%endrep
+%endmacro
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Run 17 SNOW5G initialization rounds with key mixing
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+%macro SNOW5G_INIT_ROUNDS 1
+%define %%KEY_PTRS      %1  ;; [in] pointer to array of key pointers
+
+        ;; Set up k-register masks
+        kxnord  k1, k1, k1              ;; k1 = all 1s (init phase - feedback)
+        kxord   k2, k2, k2              ;; k2 = all 0s (keygen phase - no feedback)
+
+        ;; 15 init rounds with keystream feedback
+        mov     ebp, 15
+align_loop
+%%init_loop:
+        PROCESS_ALL_LANE_PAIRS k1
+        dec     ebp
+        jnz     %%init_loop
+
+        ;; Round 16: R1 ^= key[0:15], then init round
+%assign %%i 0
+%rep 4
+%assign %%lp_lo (%%i * 2)
+%assign %%lp_hi (%%i * 2 + 1)
+        XOR_KEY_INTO_REG %%KEY_PTRS, %%lp_lo, %%lp_hi, 0, FSM_R1_L %+ %%lp_lo %+ %%lp_hi
+%assign %%i (%%i + 1)
+%endrep
+        PROCESS_ALL_LANE_PAIRS k1
+
+        ;; Round 17: R1 ^= key[16:31]
+%assign %%i 0
+%rep 4
+%assign %%lp_lo (%%i * 2)
+%assign %%lp_hi (%%i * 2 + 1)
+        XOR_KEY_INTO_REG %%KEY_PTRS, %%lp_lo, %%lp_hi, 16, FSM_R1_L %+ %%lp_lo %+ %%lp_hi
+%assign %%i (%%i + 1)
+%endrep
+%endmacro
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; generate_hqp_snow5g_nia4_x8_vaes_avx512(keys[], ivs, hqp_out)
+;; Generate H, Q, P keys for 8 SNOW5G NIA4 buffers in parallel
+;; Output: hqp[lane*48 + 0..15]=H, hqp[lane*48 + 16..31]=Q, hqp[lane*48 + 32..47]=P
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+MKGLOBAL(generate_hqp_snow5g_nia4_x8_vaes_avx512,function,internal)
+align_function
+generate_hqp_snow5g_nia4_x8_vaes_avx512:
+        endbranch64
+        SNOW5G_FUNC_START
+
+        ;; Initialize LFSR/FSM state and run init rounds
+        SNOW5G_INIT_STATE arg1, arg2
+        SNOW5G_INIT_ROUNDS arg1
+
+        ;; Generate H (offset 0), Q (offset 16), P (offset 32)
+        PROCESS_ALL_LANE_PAIRS k2
+        HQP_STORE_ALL_KS arg3, 0, TEMP0
+        PROCESS_ALL_LANE_PAIRS k2
+        HQP_STORE_ALL_KS arg3, 16, TEMP0
+        PROCESS_ALL_LANE_PAIRS k2
+        HQP_STORE_ALL_KS arg3, 32, TEMP0
+
+        SNOW5G_FUNC_END
+        ret
+
+mksection stack-noexec
+
+%endif ; _SNOW5G_NEA4_X8_VAES_AVX512_ASM_

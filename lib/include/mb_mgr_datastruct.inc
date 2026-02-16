@@ -317,6 +317,7 @@ END_FIELDS
 _snow5g_args_in         equ    _snow5g_args + _snow5g_arg_in
 _snow5g_args_out        equ    _snow5g_args + _snow5g_arg_out
 _snow5g_args_keys       equ    _snow5g_args + _snow5g_arg_keys
+_snow5g_args_IV         equ    _snow5g_args + _snow5g_arg_IV
 _snow5g_args_LFSRA_LO   equ    _snow5g_args + _snow5g_arg_LFSRA_LO
 _snow5g_args_LFSRA_HI   equ    _snow5g_args + _snow5g_arg_LFSRA_HI
 _snow5g_args_LFSRB_LO   equ    _snow5g_args + _snow5g_arg_LFSRB_LO

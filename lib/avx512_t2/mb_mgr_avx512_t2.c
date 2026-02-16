@@ -256,15 +256,13 @@
 #define SUBMIT_JOB_ZUC_NCA6 submit_job_zuc_nca6_gfni_sse
 #define FLUSH_JOB_ZUC_NCA6  flush_job_zuc_nca6_gfni_sse
 
-/* SNOW5G VAES AVX512 external functions */
-extern IMB_JOB *
-submit_job_snow5g_nea4_vaes_avx512(MB_MGR_SNOW5G_OOO *state, IMB_JOB *job);
-extern IMB_JOB *
-flush_job_snow5g_nea4_vaes_avx512(MB_MGR_SNOW5G_OOO *state);
-
 /* SNOW5G-NEA4 */
 #define SUBMIT_JOB_SNOW5G_NEA4_X8 submit_job_snow5g_nea4_vaes_avx512
 #define FLUSH_JOB_SNOW5G_NEA4_X8  flush_job_snow5g_nea4_vaes_avx512
+
+/* SNOW5G-NIA4 */
+#define SUBMIT_JOB_SNOW5G_NIA4_X8 submit_job_snow5g_nia4_vaes_avx512
+#define FLUSH_JOB_SNOW5G_NIA4_X8  flush_job_snow5g_nia4_vaes_avx512
 
 /* SNOW3G UEA2 & UIA2 */
 static IMB_JOB *
@@ -452,6 +450,9 @@ reset_ooo_mgrs(IMB_MGR *state)
 
         /* Init SNOW5G out-of-order fields */
         ooo_mgr_snow5g_reset(state->snow5g_ooo, 8);
+
+        /* Init SNOW5G NIA4 out-of-order fields */
+        ooo_mgr_snow5g_reset(state->snow5g_nia4_ooo, 8);
 
         /* Init SHA1 out-of-order fields */
         ooo_mgr_sha1_reset(state->sha_1_ooo, AVX512_NUM_SHA1_LANES);

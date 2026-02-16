@@ -164,7 +164,7 @@ align_label
 %rep 15
 %if num_blocks_outer % 4 == 0
 %assign blend_orig_iv_aes 0
-%else 
+%else
 %assign blend_orig_iv_aes 1
 %endif
 

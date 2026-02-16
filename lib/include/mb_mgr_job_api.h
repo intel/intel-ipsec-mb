@@ -2705,6 +2705,9 @@ SUBMIT_JOB_HASH_EX(IMB_MGR *state, IMB_JOB *job, const IMB_HASH_ALG hash_alg)
 #if (defined(SAFE_LOOKUP) || defined(AVX512))
         MB_MGR_SNOW3G_OOO *snow3g_uia2_ooo = state->snow3g_uia2_ooo;
 #endif
+#ifdef SUBMIT_JOB_SNOW5G_NIA4_X8
+        MB_MGR_SNOW5G_OOO *snow5g_nia4_ooo = state->snow5g_nia4_ooo;
+#endif
 
         switch (hash_alg) {
         case IMB_AUTH_HMAC_SHA_1:
@@ -2858,7 +2861,11 @@ SUBMIT_JOB_HASH_EX(IMB_MGR *state, IMB_JOB *job, const IMB_HASH_ALG hash_alg)
         case IMB_AUTH_AES_NIA5:
                 return submit_aes_nia5_job(job);
         case IMB_AUTH_SNOW5G_NIA4:
+#ifdef SUBMIT_JOB_SNOW5G_NIA4_X8
+                return SUBMIT_JOB_SNOW5G_NIA4_X8(snow5g_nia4_ooo, job);
+#else
                 return submit_snow5g_nia4_job(job);
+#endif
         default:
                 /**
                  * assume IMB_AUTH_GCM, IMB_AUTH_SM4_GCM, IMB_AUTH_PON_CRC_BIP or IMB_AUTH_NULL
@@ -2891,6 +2898,9 @@ FLUSH_JOB_HASH_EX(IMB_MGR *state, IMB_JOB *job, const IMB_HASH_ALG hash_alg)
         MB_MGR_SHA_512_OOO *sha_512_ooo = state->sha_512_ooo;
 #if (defined(SAFE_LOOKUP) || defined(AVX512))
         MB_MGR_SNOW3G_OOO *snow3g_uia2_ooo = state->snow3g_uia2_ooo;
+#endif
+#ifdef FLUSH_JOB_SNOW5G_NIA4_X8
+        MB_MGR_SNOW5G_OOO *snow5g_nia4_ooo = state->snow5g_nia4_ooo;
 #endif
 
         switch (hash_alg) {
@@ -2938,6 +2948,10 @@ FLUSH_JOB_HASH_EX(IMB_MGR *state, IMB_JOB *job, const IMB_HASH_ALG hash_alg)
 #if (defined(SAFE_LOOKUP) || defined(AVX512))
         case IMB_AUTH_SNOW3G_UIA2_BITLEN:
                 return FLUSH_JOB_SNOW3G_UIA2(snow3g_uia2_ooo);
+#endif
+#ifdef FLUSH_JOB_SNOW5G_NIA4_X8
+        case IMB_AUTH_SNOW5G_NIA4:
+                return FLUSH_JOB_SNOW5G_NIA4_X8(snow5g_nia4_ooo);
 #endif
         default:
                 if (!(job->status & IMB_STATUS_COMPLETED_AUTH)) {

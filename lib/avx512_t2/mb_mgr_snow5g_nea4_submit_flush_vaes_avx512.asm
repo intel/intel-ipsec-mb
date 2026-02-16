@@ -33,7 +33,7 @@
 %include "include/clear_regs.inc"
 %include "include/align_avx512.inc"
 
-%include "avx512_t2/snow5g_nea4_by16_vaes_avx512.asm"
+%include "include/snow5g_nea4_x8_vaes_avx512.inc"
 
 %ifndef SUBMIT_JOB_SNOW5G_NEA4
 %define SUBMIT_JOB_SNOW5G_NEA4_GEN2 submit_job_snow5g_nea4_vaes_avx512

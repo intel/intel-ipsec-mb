@@ -248,6 +248,17 @@ void
 snow3g_f9_1_buffer_vaes_avx512(const snow3g_key_schedule_t *pHandle, const void *pIV,
                                const void *pBufferIn, const uint64_t lengthInBits, void *pDigest);
 
+/* SNOW5G VAES AVX512 external functions */
+extern IMB_JOB *
+submit_job_snow5g_nea4_vaes_avx512(MB_MGR_SNOW5G_OOO *state, IMB_JOB *job);
+extern IMB_JOB *
+flush_job_snow5g_nea4_vaes_avx512(MB_MGR_SNOW5G_OOO *state);
+
+extern IMB_JOB *
+submit_job_snow5g_nia4_vaes_avx512(MB_MGR_SNOW5G_OOO *state, IMB_JOB *job);
+extern IMB_JOB *
+flush_job_snow5g_nia4_vaes_avx512(MB_MGR_SNOW5G_OOO *state);
+
 void
 aes_docsis128_dec_crc32_vaes_avx512(IMB_JOB *job);
 void
