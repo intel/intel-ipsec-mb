@@ -38,29 +38,14 @@
 #endif
 
 #ifdef SAFE_LOOKUP
-#define LOOKUP8_SSE(_table, _idx, _size) \
-        lookup_8bit_sse(_table, _idx, _size)
-#define LOOKUP8_AVX(_table, _idx, _size) \
-        lookup_8bit_avx(_table, _idx, _size)
-#define LOOKUP16_SSE(_table, _idx, _size) \
-        lookup_16bit_sse(_table, _idx, _size)
-#define LOOKUP16_AVX(_table, _idx, _size) \
-        lookup_16bit_avx(_table, _idx, _size)
-#define LOOKUP32_SSE(_table, _idx, _size) \
-        lookup_32bit_sse(_table, _idx, _size)
-#define LOOKUP32_AVX(_table, _idx, _size) \
-        lookup_32bit_avx(_table, _idx, _size)
-#define LOOKUP64_SSE(_table, _idx, _size) \
-        lookup_64bit_sse(_table, _idx, _size)
-#define LOOKUP64_AVX(_table, _idx, _size) \
-        lookup_64bit_avx(_table, _idx, _size)
-#define KASUMI_SBOX_AVX2(_num) \
-        kasumi_sbox_avx2(_num)
-#define KASUMI_FI_AVX2(_data, _key1, _key2, _key3) \
-        kasumi_FI_avx2(_data, _key1, _key2, _key3)
-#define KASUMI_FI_AVX512(_data, _key1, _key2, _key3) \
-        kasumi_FI_avx512(_data, _key1, _key2, _key3)
-
+#define LOOKUP8_SSE(_table, _idx, _size)  lookup_8bit_sse(_table, _idx, _size)
+#define LOOKUP8_AVX(_table, _idx, _size)  lookup_8bit_avx(_table, _idx, _size)
+#define LOOKUP16_SSE(_table, _idx, _size) lookup_16bit_sse(_table, _idx, _size)
+#define LOOKUP16_AVX(_table, _idx, _size) lookup_16bit_avx(_table, _idx, _size)
+#define LOOKUP32_SSE(_table, _idx, _size) lookup_32bit_sse(_table, _idx, _size)
+#define LOOKUP32_AVX(_table, _idx, _size) lookup_32bit_avx(_table, _idx, _size)
+#define LOOKUP64_SSE(_table, _idx, _size) lookup_64bit_sse(_table, _idx, _size)
+#define LOOKUP64_AVX(_table, _idx, _size) lookup_64bit_avx(_table, _idx, _size)
 #else
 #define LOOKUP8_SSE(_table, _idx, _size)  _table[_idx]
 #define LOOKUP8_AVX(_table, _idx, _size)  _table[_idx]
@@ -71,6 +56,15 @@
 #define LOOKUP64_SSE(_table, _idx, _size) _table[_idx]
 #define LOOKUP64_AVX(_table, _idx, _size) _table[_idx]
 #endif
+
+/*
+ * Kasumi AVX2/AVX512 FI functions are bitsliced Boolean-equation
+ * implementations with no table lookups, so they are always used
+ * regardless of SAFE_LOOKUP.
+ */
+#define KASUMI_SBOX_AVX2(_num)                       kasumi_sbox_avx2(_num)
+#define KASUMI_FI_AVX2(_data, _key1, _key2, _key3)   kasumi_FI_avx2(_data, _key1, _key2, _key3)
+#define KASUMI_FI_AVX512(_data, _key1, _key2, _key3) kasumi_FI_avx512(_data, _key1, _key2, _key3)
 
 /**
  * @brief Constant time SSE lookup function on variable size table
@@ -105,7 +99,8 @@ IMB_DLL_LOCAL uint16_t
 kasumi_FI_avx2(const uint16_t data, const uint16_t key1, const uint16_t key2, const uint16_t key3);
 
 IMB_DLL_LOCAL uint16_t
-kasumi_FI_avx512(const uint16_t data, const uint16_t key1, const uint16_t key2, const uint16_t key3);
+kasumi_FI_avx512(const uint16_t data, const uint16_t key1, const uint16_t key2,
+                 const uint16_t key3);
 
 /**
  * @brief Constant time SSE lookup function on variable size table

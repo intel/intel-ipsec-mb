@@ -103,8 +103,8 @@ isolate_input_bits_8    dq  0x0000000000000000, 0x8000000000000000, 0x8000800080
 
 align 32
 ;; Masks used in 1st AVX512 S-box calculation. Permute bytes of register so that in iteration i,
-;; the ith input bit is present as the lowest bit of each of the low 7 words 
-;; and the (i+7)th input bit is present as the lowest bit of each of the high 9 words 
+;; the ith input bit is present as the lowest bit of each of the low 7 words
+;; and the (i+7)th input bit is present as the lowest bit of each of the high 9 words
 permute_bytes_input_0  dq  0x0000000000000000, 0x0707000000000000, 0x0707070707070707, 0x0707070707070707
 permute_bytes_input_1  dq  0x0101010101010101, 0x0808010101010101, 0x0808080808080808, 0x0808080808080808
 permute_bytes_input_2  dq  0x0202020202020202, 0x0909020202020202, 0x0909090909090909, 0x0909090909090909
@@ -117,8 +117,8 @@ permute_bytes_input_8  dq  0xffffffffffffffff, 0x0f0fffffffffffff, 0x0f0f0f0f0f0
 
 align 32
 ;; Masks used in 2nd AVX512 S-box calculation. Permute words of register so that in iteration i,
-;; the ith input bit is present as the lowest bit of each of the low 7 words 
-;; and the (i+7)th input bit is present as the lowest bit of each of the high 9 words 
+;; the ith input bit is present as the lowest bit of each of the low 7 words
+;; and the (i+7)th input bit is present as the lowest bit of each of the high 9 words
 permute_words_input_0  dq  0x0000000000000000, 0x0007000000000000, 0x0007000700070007, 0x0007000700070007
 permute_words_input_1  dq  0x0001000100010001, 0x0008000100010001, 0x0008000800080008, 0x0008000800080008
 permute_words_input_2  dq  0x0002000200020002, 0x0009000200020002, 0x0009000900090009, 0x0009000900090009
@@ -181,10 +181,17 @@ times 8 dd 0xf0f0f0f0
 
 mksection .text
 
+%ifdef LINUX
         %define arg1    rdi
         %define arg2    rsi
         %define arg3    rdx
         %define arg4    rcx
+%else
+        %define arg1    rcx
+        %define arg2    rdx
+        %define arg3    r8
+        %define arg4    r9
+%endif
 
 %define bcast_idx xmm0
 %define xadd      xmm1
@@ -228,137 +235,195 @@ mksection .text
 %define     permute_words_input_(x) permute_words_input_ %+ x
 
 %macro KASUMI_SBOX_AVX2 0
-    vpxor       ymm10, ymm10, ymm10
-    vmovd   xmm13, edi
-    vpbroadcastw ymm13, xmm13     ; broadcast input across all words of ymm13
+        vpxor       ymm10, ymm10, ymm10
+        vmovd   xmm13, edi
+        vpbroadcastw ymm13, xmm13     ; broadcast input across all words of ymm13
 %assign i 0
 %rep 9
-    vpand   y(i), ymm13, [rel isolate_input_bits(i)]
-    vpcmpeqw y(i), y(i), [rel isolate_input_bits(i)]  ; fill with 1s if equal to 0, else fill with 0s
+        vpand   y(i), ymm13, [rel isolate_input_bits(i)]
+        vpcmpeqw y(i), y(i), [rel isolate_input_bits(i)]  ; fill with 1s if equal to 0, else fill with 0s
 %assign i (i + 1)
 %endrep
 %assign i 0
 %rep 9
-    vpor    y(i), y(i), [rel sbox_mask_x(i)] ; or the x-masks with the x-values
+        vpor    y(i), y(i), [rel sbox_mask_x(i)] ; or the x-masks with the x-values
 %assign i (i + 1)
 %endrep
-    vpand   ymm2, ymm3      ; carry out the AND operations to combine all x-masks
-    vpand   ymm4, ymm5
-    vpand   ymm6, ymm7
-    vpand   ymm9, ymm11
-    vpand   ymm2, ymm4
-    vpand   ymm6, ymm8
-    vpand   ymm2, ymm6
-    vpand   ymm2, ymm9
-    vpand   ymm2, ymm2, [rel sbox_mask_last] ; mask which accounts for setting 1s and 0s in set locations
-    vpsllw      ymm10, ymm2, 8
-    vpxor       ymm2, ymm2, ymm10
-    vpsllw      ymm10, ymm2, 4
-    vpxor       ymm2, ymm2, ymm10
-    vpsllw      ymm10, ymm2, 2
-    vpxor       ymm2, ymm2, ymm10
-    vpsllw      ymm10, ymm2, 1
-    vpxor       ymm2, ymm2, ymm10
+        vpand   ymm2, ymm3      ; carry out the AND operations to combine all x-masks
+        vpand   ymm4, ymm5
+        vpand   ymm6, ymm7
+        vpand   ymm9, ymm11
+        vpand   ymm2, ymm4
+        vpand   ymm6, ymm8
+        vpand   ymm2, ymm6
+        vpand   ymm2, ymm9
+        vpand   ymm2, ymm2, [rel sbox_mask_last] ; mask which accounts for setting 1s and 0s in set locations
+        vpsllw      ymm10, ymm2, 8
+        vpxor       ymm2, ymm2, ymm10
+        vpsllw      ymm10, ymm2, 4
+        vpxor       ymm2, ymm2, ymm10
+        vpsllw      ymm10, ymm2, 2
+        vpxor       ymm2, ymm2, ymm10
+        vpsllw      ymm10, ymm2, 1
+        vpxor       ymm2, ymm2, ymm10
 
-    vpmovmskb   r9, ymm2
-    pext        rax, r9, [rel test_t]
+        vpmovmskb   r9, ymm2
+        pext        rax, r9, [rel test_t]
 %endmacro
 
 ;; arg1: data
 ;; arg2: key1
 ;; arg3: key2
-;; arg4: key3    
+;; arg4: key3
+;; Number of non-volatile XMM/YMM registers saved on Windows (xmm6-xmm11, xmm13)
+%define YMM_SAVES 7
+%define STACK_SIZE (YMM_SAVES * 32)
+
 align 32
 MKGLOBAL(kasumi_FI_avx2, function, internal)
 kasumi_FI_avx2:
-    xor     arg1, arg2
-    KASUMI_SBOX_AVX2
-    pdep    arg1, arg1, [rel high_7]
-    xor     arg1, rax
-    pext    r8, arg1, [rel high_7]
-    xor     arg1, r8
-    ror     dx, 9
-    xor     arg1, arg3
-    KASUMI_SBOX_AVX2
-    pdep    arg1, arg1, [rel high_7]
-    xor     rax, arg1
-    pext    r8, rax, [rel high_7]
-    xor     rax, r8
-    ror     ax, 7
-    xor     rax, arg4
-    ret
+%ifndef LINUX
+        mov             rax, rsp
+        ;; allocate save area + 8 bytes for original rsp + up to 31 bytes for alignment
+        sub             rsp, STACK_SIZE + 8 + 31
+        and             rsp, ~31
+        vmovdqa         [rsp + 0*32], ymm6
+        vmovdqa         [rsp + 1*32], ymm7
+        vmovdqa         [rsp + 2*32], ymm8
+        vmovdqa         [rsp + 3*32], ymm9
+        vmovdqa         [rsp + 4*32], ymm10
+        vmovdqa         [rsp + 5*32], ymm11
+        vmovdqa         [rsp + 6*32], ymm13
+        mov             [rsp + STACK_SIZE], rax  ;; save original rsp
+%endif
+
+        xor     arg1, arg2
+        KASUMI_SBOX_AVX2
+        pdep    arg1, arg1, [rel high_7]
+        xor     arg1, rax
+        pext    r8, arg1, [rel high_7]
+        xor     arg1, r8
+        ror     dx, 9
+        xor     arg1, arg3
+        KASUMI_SBOX_AVX2
+        pdep    arg1, arg1, [rel high_7]
+        xor     rax, arg1
+        pext    r8, rax, [rel high_7]
+        xor     rax, r8
+        ror     ax, 7
+        xor     rax, arg4
+
+%ifndef LINUX
+        vmovdqa         ymm6,  [rsp + 0*32]
+        vmovdqa         ymm7,  [rsp + 1*32]
+        vmovdqa         ymm8,  [rsp + 2*32]
+        vmovdqa         ymm9,  [rsp + 3*32]
+        vmovdqa         ymm10, [rsp + 4*32]
+        vmovdqa         ymm11, [rsp + 5*32]
+        vmovdqa         ymm13, [rsp + 6*32]
+        mov             rsp, [rsp + STACK_SIZE]
+%endif
+
+        ret
 
 %macro KASUMI_SBOX_AVX512a 0
 %assign i 0
 %rep 9
-    vmovdqa     y(i), [rel permute_bytes_input_(i)]
-    vpermb      y(i), y(i), ymm10
+        vmovdqa     y(i), [rel permute_bytes_input_(i)]
+        vpermb      y(i), y(i), ymm10
 %assign i (i + 1)
 %endrep
-    vpor        y0, y0, [rel sbox_mask_x(0)]
+        vpor        y0, y0, [rel sbox_mask_x(0)]
 %assign i 1
 %rep 8
-    vpternlogq  y0, y(i), [rel sbox_mask_x(i)], 0xE0
+        vpternlogq  y0, y(i), [rel sbox_mask_x(i)], 0xE0
 %assign i (i + 1)
 %endrep
-    vpandd      ymm2, ymm2, [rel sbox_mask_last]
-    vpopcntw    ymm2, ymm2
+        vpandd      ymm2, ymm2, [rel sbox_mask_last]
+        vpopcntw    ymm2, ymm2
 %endmacro
 
 %macro KASUMI_SBOX_AVX512b 0
 %assign i 0
 %rep 9
-    vmovdqa     y(i), [rel permute_words_input_(i)]
-    vpermw      y(i), y(i), ymm10
+        vmovdqa     y(i), [rel permute_words_input_(i)]
+        vpermw      y(i), y(i), ymm10
 %assign i (i + 1)
 %endrep
-    vpor        y0, y0, [rel sbox_mask_x(0)]
+        vpor        y0, y0, [rel sbox_mask_x(0)]
 %assign i 1
 %rep 8
-    vpternlogq  y0, y(i), [rel sbox_mask_x(i)], 0xE0
+        vpternlogq  y0, y(i), [rel sbox_mask_x(i)], 0xE0
 %assign i (i + 1)
 %endrep
-    vpandd      ymm2, ymm2, [rel sbox_mask_last]
-    vpopcntw    ymm2, ymm2
+        vpandd      ymm2, ymm2, [rel sbox_mask_last]
+        vpopcntw    ymm2, ymm2
 %endmacro
 
 ;; arg1: data
 ;; arg2: key1
 ;; arg3: key2
-;; arg4: key3    
+;; arg4: key3
 align 32
 MKGLOBAL(kasumi_FI_avx512, function, internal)
 kasumi_FI_avx512:
-    xor     arg1, arg2
-    kmovd       k4, [rel zero]
-    vmovdqa     ymm1, [rel vpermb_mask]
-    vmovdqa     ymm0, [rel vpermw_mask]
-    kmovd       k1, edi
-    vpmovm2b    ymm10, k1
-    KASUMI_SBOX_AVX512a
-    vpermb      ymm10, ymm1, ymm10
-    vpxord      ymm10, ymm10, ymm2
-    vpermw      ymm3 {k4}{z}, ymm0, ymm10
-    vpxord      ymm10, ymm10, ymm3
-    ror         dx, 9
-    kmovd       k6, edx
-    vpmovm2w    ymm11, k6
-    vpxord      ymm10, ymm10, ymm11
-    vpand       ymm10, ymm10, [rel least_sig_bit_word]
-    vpcmpw      k2, ymm10, [rel least_sig_bit_word], 0
-    vpcmpeqw    ymm10, ymm10, [rel least_sig_bit_word]
-    KASUMI_SBOX_AVX512b
-    vpand       ymm2, ymm2, [rel least_sig_bit_word]
-    vpcmpw      k1, ymm2, [rel least_sig_bit_word], 0
-    kmovd       edi, k2
-    kmovd       eax, k1
-    pdep    arg1, arg1, [rel high_7]
-    xor     rax, arg1
-    pext    r8, rax, [rel high_7]
-    xor     rax, r8
-    ror     ax, 7
-    xor     rax, arg4
-    ret
+%ifndef LINUX
+        mov             rax, rsp
+        ;; allocate save area + 8 bytes for original rsp + up to 31 bytes for alignment
+        sub             rsp, STACK_SIZE + 8 + 31
+        and             rsp, ~31
+        vmovdqa         [rsp + 0*32], ymm6
+        vmovdqa         [rsp + 1*32], ymm7
+        vmovdqa         [rsp + 2*32], ymm8
+        vmovdqa         [rsp + 3*32], ymm9
+        vmovdqa         [rsp + 4*32], ymm10
+        vmovdqa         [rsp + 5*32], ymm11
+        vmovdqa         [rsp + 6*32], ymm13
+        mov             [rsp + STACK_SIZE], rax  ;; save original rsp
+%endif
+
+        xor     arg1, arg2
+        kmovd       k4, [rel zero]
+        vmovdqa     ymm1, [rel vpermb_mask]
+        vmovdqa     ymm0, [rel vpermw_mask]
+        kmovd       k1, edi
+        vpmovm2b    ymm10, k1
+        KASUMI_SBOX_AVX512a
+        vpermb      ymm10, ymm1, ymm10
+        vpxord      ymm10, ymm10, ymm2
+        vpermw      ymm3 {k4}{z}, ymm0, ymm10
+        vpxord      ymm10, ymm10, ymm3
+        ror         dx, 9
+        kmovd       k6, edx
+        vpmovm2w    ymm11, k6
+        vpxord      ymm10, ymm10, ymm11
+        vpand       ymm10, ymm10, [rel least_sig_bit_word]
+        vpcmpw      k2, ymm10, [rel least_sig_bit_word], 0
+        vpcmpeqw    ymm10, ymm10, [rel least_sig_bit_word]
+        KASUMI_SBOX_AVX512b
+        vpand       ymm2, ymm2, [rel least_sig_bit_word]
+        vpcmpw      k1, ymm2, [rel least_sig_bit_word], 0
+        kmovd       edi, k2
+        kmovd       eax, k1
+        pdep    arg1, arg1, [rel high_7]
+        xor     rax, arg1
+        pext    r8, rax, [rel high_7]
+        xor     rax, r8
+        ror     ax, 7
+        xor     rax, arg4
+
+%ifndef LINUX
+        vmovdqa         ymm6,  [rsp + 0*32]
+        vmovdqa         ymm7,  [rsp + 1*32]
+        vmovdqa         ymm8,  [rsp + 2*32]
+        vmovdqa         ymm9,  [rsp + 3*32]
+        vmovdqa         ymm10, [rsp + 4*32]
+        vmovdqa         ymm11, [rsp + 5*32]
+        vmovdqa         ymm13, [rsp + 6*32]
+        mov             rsp, [rsp + STACK_SIZE]
+%endif
+
+        ret
 
 ; uint8_t lookup_8bit_sse(const void *table, const uint32_t idx, const uint32_t size);
 ; arg 1 : pointer to table to look up

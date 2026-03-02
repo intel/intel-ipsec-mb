@@ -28,16 +28,16 @@
 #include <limits.h>
 
 #define AVX512
-#define CLEAR_SCRATCH_SIMD_REGS clear_scratch_xmms_avx
-#define KASUMI_F8_1_BUFFER kasumi_f8_1_buffer_avx512
-#define KASUMI_F8_1_BUFFER_BIT kasumi_f8_1_buffer_bit_avx512
-#define KASUMI_F8_2_BUFFER kasumi_f8_2_buffer_avx512
-#define KASUMI_F8_3_BUFFER kasumi_f8_3_buffer_avx512
-#define KASUMI_F8_4_BUFFER kasumi_f8_4_buffer_avx512
-#define KASUMI_F8_N_BUFFER kasumi_f8_n_buffer_avx512
-#define KASUMI_F9_1_BUFFER kasumi_f9_1_buffer_avx512
-#define KASUMI_F9_1_BUFFER_USER kasumi_f9_1_buffer_user_avx512
+#define CLEAR_SCRATCH_SIMD_REGS  clear_scratch_xmms_avx
+#define KASUMI_F8_1_BUFFER       kasumi_f8_1_buffer_avx512
+#define KASUMI_F8_1_BUFFER_BIT   kasumi_f8_1_buffer_bit_avx512
+#define KASUMI_F8_2_BUFFER       kasumi_f8_2_buffer_avx512
+#define KASUMI_F8_3_BUFFER       kasumi_f8_3_buffer_avx512
+#define KASUMI_F8_4_BUFFER       kasumi_f8_4_buffer_avx512
+#define KASUMI_F8_N_BUFFER       kasumi_f8_n_buffer_avx512
+#define KASUMI_F9_1_BUFFER       kasumi_f9_1_buffer_avx512
+#define KASUMI_F9_1_BUFFER_USER  kasumi_f9_1_buffer_user_avx512
 #define KASUMI_INIT_F8_KEY_SCHED kasumi_init_f8_key_sched_avx512
 #define KASUMI_INIT_F9_KEY_SCHED kasumi_init_f9_key_sched_avx512
-#define KASUMI_KEY_SCHED_SIZE kasumi_key_sched_size_avx512
+#define KASUMI_KEY_SCHED_SIZE    kasumi_key_sched_size_avx512
 #include "include/kasumi_common_avx.h"
