@@ -25,17 +25,17 @@ To build the project, follow these steps:
 
     - `-DWITH_IPSEC_INSTALL_DIR`: Specifies the directory where IPSecMB is installed.
     - `-DWITH_IPSEC_BUILD_DIR`: Specifies the directory where IPSecMB is built.
-    - `-DOPENSSL_INSTALL_DIR`: Specifies the installation directory of a custom OpenSSL. Without this option, the provider will be built where CMake and make are executed.
+    - `-DOPENSSL_INSTALL_DIR`: Specifies the installation directory of a custom OpenSSL. Without this option, the provider will be built where CMake is executed.
 
     These options configure the paths for the necessary dependencies and installation directories.
-    ```
 
 3. Build & Install the provider:
     ```sh
-    make && make install
+    cmake --build . --parallel
+    cmake --install .
     ```
 
-    > **Note:** If you are installing the provider to the system OpenSSL directory, you may need to use `sudo make install` to ensure you have the necessary permissions.
+    > **Note:** If you are installing the provider to the system OpenSSL directory, you may need to use `sudo cmake --install .` to ensure you have the necessary permissions.
 
 ## Usage
 

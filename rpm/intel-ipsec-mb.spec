@@ -46,6 +46,7 @@ Group:              Development/Tools
 ExclusiveArch:      x86_64
 Source0:            https://github.com/intel/%{githubname}/archive/v%{githubver}.tar.gz#/%{githubfull}.tar.gz
 URL:                https://github.com/intel/%{githubname}
+BuildRequires:      cmake
 BuildRequires:      make
 BuildRequires:      gcc >= 4.8.3
 BuildRequires:      nasm >= 2.14
@@ -76,8 +77,9 @@ https://github.com/intel/%{githubname}
 %endif
 
 %build
-cd lib
-make EXTRA_CFLAGS='%{optflags}' %{?_smp_mflags}
+cmake -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_LIBRARY_ONLY=ON \
+      -DCMAKE_C_FLAGS_RELEASE="%{optflags}"
+cmake --build build --parallel
 
 %install
 
@@ -85,7 +87,7 @@ make EXTRA_CFLAGS='%{optflags}' %{?_smp_mflags}
 install -d %{buildroot}/%{_includedir}
 install -m 0644 %{_builddir}/%{githubfull}/lib/intel-ipsec-mb.h %{buildroot}/%{_includedir}
 install -d %{buildroot}/%{_libdir}
-install -s -m 0755 %{_builddir}/%{githubfull}/lib/libIPSec_MB.so.%{fullversion} %{buildroot}/%{_libdir}
+install -s -m 0755 %{_builddir}/%{githubfull}/build/lib/libIPSec_MB.so.%{fullversion} %{buildroot}/%{_libdir}
 install -d %{buildroot}/%{_mandir}/man7
 install -m 0444 lib/libipsec-mb.7 %{buildroot}/%{_mandir}/man7
 install -m 0444 lib/libipsec-mb-dev.7 %{buildroot}/%{_mandir}/man7

@@ -10,42 +10,6 @@ permissions:
   contents: read
 
 jobs:
-  # Build shared library with GMake (Clang)
-  release-gmake-clang-shared:
-    runs-on: ubuntu-22.04
-
-    steps:
-      - name: Checkout repo
-        uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3.6.0
-
-      - name: Build
-        uses: vmactions/freebsd-vm@35a5b20a98476a681c7576a344775be7e7f77f06 # v1.0.6
-        with:
-          usesh: true
-          mem: 8192
-          prepare: pkg install -y curl nasm llvm gmake
-          run: |
-            freebsd-version
-            gmake CC=clang -j 4
-
-  # Build shared library with GMake (GCC)
-  release-gmake-gcc-shared:
-    runs-on: ubuntu-22.04
-
-    steps:
-      - name: Checkout repo
-        uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3.6.0
-
-      - name: Build
-        uses: vmactions/freebsd-vm@35a5b20a98476a681c7576a344775be7e7f77f06 # v1.0.6
-        with:
-          usesh: true
-          mem: 8192
-          prepare: pkg install -y curl nasm gmake gcc
-          run: |
-            freebsd-version
-            gmake CC=gcc -j 4
-
   # CMake release build with Clang
   release-cmake-clang:
     runs-on: ubuntu-22.04

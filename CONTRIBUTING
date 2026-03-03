@@ -75,8 +75,8 @@ To format your code please use checkpatch.pl script (version 0.32) from
 Linux kernel
 (https://github.com/torvalds/linux/blob/master/scripts/checkpatch.pl).
 
-The top level Makefile contains a target "style" that can be used to check
-formatting. Please ensure the checkpatch.pl script has been added to your PATH.
+Use the CMake target "style" to check formatting:
+`cmake -B build && cmake --build build --target style`
 
 
 Indentation

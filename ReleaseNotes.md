@@ -2,6 +2,10 @@
 
 Unreleased
 ======================================================================
+General
+- Removed support for legacy Makefile-based builds and legacy Windows `.mak` build scripts.
+- Updated CI workflows, project documentation, and RPM packaging instructions to use CMake-only build flows.
+
 Library
 - Added AES-CFB AVX2 type 2 implementation.
 - Added AES-CBC AVX2 type 2 implementation.

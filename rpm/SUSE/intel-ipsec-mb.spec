@@ -36,6 +36,7 @@ Group:              Development/Libraries/C and C++
 URL:                https://github.com/intel/%{name}
 Source0:            https://github.com/intel/%{name}/archive/v%{githubver}.tar.gz#/%{githubfull}.tar.gz
 ExclusiveArch:      x86_64
+BuildRequires:      cmake
 BuildRequires:      make
 BuildRequires:      gcc >= 4.8.3
 BuildRequires:      nasm >= 2.14
@@ -67,14 +68,15 @@ and primarily targeted at packet processing applications.
 %autosetup -n %{name}-%{githubver}
 
 %build
-cd lib
-%make_build EXTRA_CFLAGS='%{optflags}'
+cmake -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_LIBRARY_ONLY=ON \
+      -DCMAKE_C_FLAGS_RELEASE="%{optflags}"
+cmake --build build --parallel
 
 %install
 install -d %{buildroot}/%{_includedir}
 install -m 0644 %{_builddir}/%{githubfull}/lib/intel-ipsec-mb.h %{buildroot}/%{_includedir}
 install -d %{buildroot}/%{_libdir}
-install -s -m 0755 %{_builddir}/%{githubfull}/lib/libIPSec_MB.so.%{version} %{buildroot}/%{_libdir}
+install -s -m 0755 %{_builddir}/%{githubfull}/build/lib/libIPSec_MB.so.%{version} %{buildroot}/%{_libdir}
 install -d %{buildroot}/%{_mandir}/man7
 install -m 0444 lib/libipsec-mb.7 %{buildroot}/%{_mandir}/man7
 install -m 0444 lib/libipsec-mb-dev.7 %{buildroot}/%{_mandir}/man7

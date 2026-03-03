@@ -301,10 +301,10 @@ macro(imb_add_target_spellcheck)
       COMMAND ${CMAKE_COMMAND} -E echo "Running spellcheck:"
       COMMAND
         bash -c "${CODESPELL} -d -L ${CS_IGNORE_WORDS} \
-	      -S '*.obj,*.o,*.a,*.so,*.lib,*~,*.so,*.so.*,*.d,imb-perf' \
-	      -S 'imb-kat,imb-xvalid' \
-	      ./lib ./perf ./test README.md SECURITY.md CONTRIBUTING \
-	      Makefile win_x64.mak ReleaseNotes.txt LICENSE ${CS_EXTRA_OPTS}"
+              -S '*.obj,*.o,*.a,*.so,*.lib,*~,*.so,*.so.*,*.d,imb-perf' \
+              -S 'imb-kat,imb-xvalid' \
+              ./lib ./perf ./test README.md SECURITY.md CONTRIBUTING \
+              ReleaseNotes.md LICENSE ${CS_EXTRA_OPTS}"
       WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
       VERBATIM)
   endif()

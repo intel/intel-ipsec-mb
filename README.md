@@ -311,7 +311,10 @@ https://github.com/intel/intel-ipsec-mb/releases
 Full documentation can be found at: https://intel.github.io/intel-ipsec-mb
 
 To generate documentation locally, run:  
-`> make doxy`
+```
+cmake -B build
+cmake --build build --target doxy
+```
 
 ## 6. Compilation
 

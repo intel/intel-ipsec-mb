@@ -69,7 +69,7 @@ There are three build options that are used to increase safety in
 the code and help protect external functions from incorrect input data.
 The SAFE_DATA, SAFE_PARAM and SAFE_LOOKUP options are enabled by default.
 Due to the potential performance impact associated to the extra code, these
-can be disabled by setting the parameter equal to "n" (e.g. make SAFE_LOOKUP=n).
+can be disabled with CMake options (e.g. `cmake -DSAFE_LOOKUP=OFF ..`).
 
 No specific code has been added, and no specific validation or security
 tests have been performed to help protect against or check for side-channel
@@ -95,7 +95,7 @@ Algorithms where these constant time functions are used are the following:
 - KASUMI: all architectures  
 - SNOW3G: all architectures  
 
-If SAFE_LOOKUP is not enabled in the build (e.g. make SAFE_LOOKUP=n) then the
+If SAFE_LOOKUP is not enabled in the build (e.g. `cmake -DSAFE_LOOKUP=OFF ..`) then the
 algorithms listed above may be susceptible to timing attacks which could expose
 the cryptographic key.
 

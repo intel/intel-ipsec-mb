@@ -10,94 +10,7 @@ permissions:
   contents: read
 
 jobs:
-  # Build shared library with Make (GCC)
-  release-make-gcc-shared:
-    runs-on: ubuntu-latest
-
-    steps:
-    - name: Install packages
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y nasm
-
-    - name: Checkout repo
-      uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3.6.0
-
-    - name: Build
-      run: make -j
-
-    - name: Install
-      run: sudo make install
-
-    - name: Test installation
-      working-directory: ${{github.workspace}}/examples/burst-app
-      run: gcc main.c -lIPSec_MB
-
-  # Build static library with Make (GCC)
-  release-make-gcc-static:
-    runs-on: ubuntu-latest
-
-    steps:
-    - name: Install packages
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y nasm
-
-    - name: Checkout repo
-      uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3.6.0
-
-    - name: Build
-      run: make SHARED=n -j
-
-  # Build shared library with Make (Clang)
-  release-make-clang-shared:
-    runs-on: ubuntu-latest
-
-    steps:
-    - name: Install packages
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y nasm clang
-
-    - name: Checkout repo
-      uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3.6.0
-
-    - name: Build
-      run: make CC=clang -j
-
-  # Build static library with Make (Clang)
-  release-make-clang-static:
-    runs-on: ubuntu-latest
-
-    steps:
-    - name: Install packages
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y nasm clang
-
-    - name: Checkout repo
-      uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3.6.0
-
-    - name: Build
-      run: make CC=clang SHARED=n -j
-
-  # Build shared library with Make and AESNI emulation enabled (Clang)
-  release-make-clang-shared-aesni-emu:
-    runs-on: ubuntu-latest
-
-    steps:
-    - name: Install packages
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y nasm clang
-
-    - name: Checkout repo
-      uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3.6.0
-
-    - name: Build
-      run: make CC=clang AESNI_EMU=y -j
-
-  # CMake release build with shared library (Makefiles)
+  # CMake release build with shared library
   release-cmake-gcc-shared:
     env:
       BUILD_TYPE: Release
@@ -130,7 +43,7 @@ jobs:
       working-directory: ${{github.workspace}}/examples/burst-app
       run: gcc main.c -lIPSec_MB
 
-  # CMake debug build with shared library (Makefiles)
+  # CMake debug build with shared library
   debug-cmake-gcc-shared:
     env:
       BUILD_TYPE: Debug
@@ -154,4 +67,3 @@ jobs:
     - name: Test
       working-directory: ${{github.workspace}}/build
       run: ctest -j 5 -C ${{env.BUILD_TYPE}}
-
