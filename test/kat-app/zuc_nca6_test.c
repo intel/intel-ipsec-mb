@@ -285,14 +285,111 @@ test_zuc_nca6_std_vectors(IMB_MGR *p_mgr, struct test_suite_context *ts, const s
                 printf("\n");
 }
 
+/*
+ * Test mixing encrypt and decrypt jobs in a single flush:
+ * submits one ENCRYPT and one DECRYPT job back-to-back, then flushes,
+ * verifying both produce correct ciphertext/plaintext and tag.
+ */
+static void
+test_zuc_nca6_mixed_flush(IMB_MGR *mb_mgr, struct test_suite_context *ts, const struct aead_test *v)
+{
+        const IMB_CIPHER_DIRECTION dirs[] = { IMB_DIR_ENCRYPT, IMB_DIR_DECRYPT };
+        uint8_t *out[2] = { NULL, NULL };
+        uint8_t *tag[2] = { NULL, NULL };
+        const uint64_t msg_len = v->msgSize / 8;
+        const uint64_t tag_len = v->tagSize / 8;
+        IMB_JOB *job;
+        int i, completed = 0, err;
+
+        for (i = 0; i < 2; i++) {
+                out[i] = malloc(msg_len);
+                tag[i] = malloc(tag_len);
+                if (out[i] == NULL || tag[i] == NULL) {
+                        fprintf(stderr, "failed to allocate buffers\n");
+                        test_suite_update(ts, 0, 1);
+                        goto exit;
+                }
+                memset(out[i], 0, msg_len);
+                memset(tag[i], 0, tag_len);
+                job = IMB_GET_NEXT_JOB(mb_mgr);
+                if (!job) {
+                        fprintf(stderr, "failed to get job\n");
+                        test_suite_update(ts, 0, 1);
+                        goto exit;
+                }
+                job->cipher_mode = IMB_CIPHER_ZUC_NCA6;
+                job->hash_alg = IMB_AUTH_ZUC_NCA6;
+                job->cipher_direction = dirs[i];
+                job->chain_order = (dirs[i] == IMB_DIR_ENCRYPT) ? IMB_ORDER_CIPHER_HASH
+                                                                : IMB_ORDER_HASH_CIPHER;
+                job->enc_keys = (const void *) v->key;
+                job->dec_keys = (const void *) v->key;
+                job->key_len_in_bytes = 32;
+                job->src = (const uint8_t *) ((dirs[i] == IMB_DIR_ENCRYPT) ? v->msg : v->ct);
+                job->dst = (uint8_t *) out[i];
+                job->msg_len_to_cipher_in_bytes = msg_len;
+                job->cipher_start_src_offset_in_bytes = UINT64_C(0);
+                job->iv = (const uint8_t *) v->iv;
+                job->iv_len_in_bytes = 16;
+                job->u.NCA.aad = (const uint8_t *) v->aad;
+                job->u.NCA.aad_len_in_bytes = v->aadSize / 8;
+                job->auth_tag_output = (uint8_t *) tag[i];
+                job->auth_tag_output_len_in_bytes = tag_len;
+                job = IMB_SUBMIT_JOB(mb_mgr);
+                if (job) {
+                        if (job->status != IMB_STATUS_COMPLETED) {
+                                test_suite_update(ts, 0, 1);
+                                return;
+                        }
+                        completed++;
+                }
+        }
+
+        while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL) {
+                if (job->status != IMB_STATUS_COMPLETED) {
+                        test_suite_update(ts, 0, 1);
+                        return;
+                }
+                completed++;
+        }
+
+        if (completed != 2) {
+                fprintf(stderr, "mixed: expected 2 completions, got %d\n", completed);
+                test_suite_update(ts, 0, 1);
+                return;
+        }
+
+        for (i = 0; i < 2; i++) {
+                err = 0;
+                if (msg_len > 0) {
+                        const uint8_t *exp =
+                                (const uint8_t *) ((dirs[i] == IMB_DIR_ENCRYPT) ? v->ct : v->msg);
+
+                        err |= check_data(out[i], exp, msg_len, "mixed out");
+                }
+                err |= check_data(tag[i], (const uint8_t *) v->tag, tag_len, "mixed tag");
+                test_suite_update(ts, err == 0, err != 0);
+        }
+exit:
+        for (i = 0; i < 2; i++) {
+                free(out[i]);
+                free(tag[i]);
+        }
+}
+
 int
 zuc_nca6_test(IMB_MGR *p_mgr)
 {
         struct test_suite_context ts;
+        const struct aead_test *v;
         int errors = 0;
 
         test_suite_start(&ts, "ZUC-NCA6");
         test_zuc_nca6_std_vectors(p_mgr, &ts, zuc_nca6_test_json);
+
+        for (v = zuc_nca6_test_json; v->msg != NULL; v++)
+                if (v->msgSize > 0 && v->aadSize > 0)
+                        test_zuc_nca6_mixed_flush(p_mgr, &ts, v);
 
         errors += test_suite_end(&ts);
 

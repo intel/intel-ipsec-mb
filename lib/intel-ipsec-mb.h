@@ -1189,7 +1189,8 @@ typedef struct IMB_MGR {
         void *aes_cfb_256_ooo;
         void *zuc_nea6_ooo;
         void *zuc_nia6_ooo;
-        void *zuc_nca6_ooo;
+        void *zuc_nca6_enc_ooo;
+        void *zuc_nca6_dec_ooo;
         void *snow5g_ooo;
         void *snow5g_nia4_ooo;
         void *end_ooo; /* add new out-of-order managers above this line */

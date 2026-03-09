@@ -533,7 +533,7 @@ SUBMIT_JOB_CIPHER_ENC(IMB_MGR *state, IMB_JOB *job, const IMB_CIPHER_MODE cipher
         } else if (IMB_CIPHER_AES_NCA5 == cipher_mode) {
                 return submit_aes_nca5_job(job, IMB_DIR_ENCRYPT);
         } else if (IMB_CIPHER_ZUC_NCA6 == cipher_mode) {
-                MB_MGR_ZUC_OOO *zuc_nca6_ooo = state->zuc_nca6_ooo;
+                MB_MGR_ZUC_OOO *zuc_nca6_ooo = state->zuc_nca6_enc_ooo;
                 return SUBMIT_JOB_ZUC_NCA6(zuc_nca6_ooo, job, IMB_DIR_ENCRYPT);
         } else if (IMB_CIPHER_SNOW5G_NCA4 == cipher_mode) {
                 return submit_snow5g_nca4_job(job, IMB_DIR_ENCRYPT);
@@ -592,7 +592,7 @@ FLUSH_JOB_CIPHER_ENC(IMB_MGR *state, IMB_JOB *job, const IMB_CIPHER_MODE cipher_
 
                 return FLUSH_JOB_ZUC_NEA6(zuc_nea6_ooo);
         } else if (IMB_CIPHER_ZUC_NCA6 == cipher_mode) {
-                MB_MGR_ZUC_OOO *zuc_nca6_ooo = state->zuc_nca6_ooo;
+                MB_MGR_ZUC_OOO *zuc_nca6_ooo = state->zuc_nca6_enc_ooo;
                 return FLUSH_JOB_ZUC_NCA6(zuc_nca6_ooo, IMB_DIR_ENCRYPT);
 #ifdef FLUSH_JOB_SNOW5G_NEA4_X8
         } else if (IMB_CIPHER_SNOW5G_NEA4 == cipher_mode) {
@@ -740,7 +740,7 @@ SUBMIT_JOB_CIPHER_DEC(IMB_MGR *state, IMB_JOB *job, const IMB_CIPHER_MODE cipher
         } else if (IMB_CIPHER_AES_NCA5 == cipher_mode) {
                 return submit_aes_nca5_job(job, IMB_DIR_DECRYPT);
         } else if (IMB_CIPHER_ZUC_NCA6 == cipher_mode) {
-                MB_MGR_ZUC_OOO *zuc_nca6_ooo = state->zuc_nca6_ooo;
+                MB_MGR_ZUC_OOO *zuc_nca6_ooo = state->zuc_nca6_dec_ooo;
                 return SUBMIT_JOB_ZUC_NCA6(zuc_nca6_ooo, job, IMB_DIR_DECRYPT);
         } else if (IMB_CIPHER_SNOW5G_NCA4 == cipher_mode) {
                 return submit_snow5g_nca4_job(job, IMB_DIR_DECRYPT);
@@ -801,7 +801,7 @@ FLUSH_JOB_CIPHER_DEC(IMB_MGR *state, IMB_JOB *job, const IMB_CIPHER_MODE cipher_
         }
 
         if (IMB_CIPHER_ZUC_NCA6 == cipher_mode) {
-                MB_MGR_ZUC_OOO *zuc_nca6_ooo = state->zuc_nca6_ooo;
+                MB_MGR_ZUC_OOO *zuc_nca6_ooo = state->zuc_nca6_dec_ooo;
 
                 return FLUSH_JOB_ZUC_NCA6(zuc_nca6_ooo, IMB_DIR_DECRYPT);
         }
