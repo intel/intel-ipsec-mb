@@ -1,5 +1,5 @@
 /*******************************************************************************
-  Copyright (c) 2025, Intel Corporation
+  Copyright (c) 2026, Intel Corporation
 
   Redistribution and use in source and binary forms, with or without
   modification, are permitted provided that the following conditions are met:
@@ -33,35 +33,32 @@
 __forceinline IMB_JOB *
 submit_job_sha3(IMB_MGR *state, IMB_JOB *job, const IMB_HASH_ALG hash_alg)
 {
-        /* state not used */
-        (void) state;
-
         switch (hash_alg) {
         case IMB_AUTH_SHA3_224:
-                sha3_224(job->src + job->hash_start_src_offset_in_bytes,
-                         job->msg_len_to_hash_in_bytes, job->auth_tag_output);
+                state->sha3_224(job->src + job->hash_start_src_offset_in_bytes,
+                                job->msg_len_to_hash_in_bytes, job->auth_tag_output);
                 break;
         case IMB_AUTH_SHA3_256:
-                sha3_256(job->src + job->hash_start_src_offset_in_bytes,
-                         job->msg_len_to_hash_in_bytes, job->auth_tag_output);
+                state->sha3_256(job->src + job->hash_start_src_offset_in_bytes,
+                                job->msg_len_to_hash_in_bytes, job->auth_tag_output);
                 break;
         case IMB_AUTH_SHA3_384:
-                sha3_384(job->src + job->hash_start_src_offset_in_bytes,
-                         job->msg_len_to_hash_in_bytes, job->auth_tag_output);
+                state->sha3_384(job->src + job->hash_start_src_offset_in_bytes,
+                                job->msg_len_to_hash_in_bytes, job->auth_tag_output);
                 break;
         case IMB_AUTH_SHA3_512:
-                sha3_512(job->src + job->hash_start_src_offset_in_bytes,
-                         job->msg_len_to_hash_in_bytes, job->auth_tag_output);
+                state->sha3_512(job->src + job->hash_start_src_offset_in_bytes,
+                                job->msg_len_to_hash_in_bytes, job->auth_tag_output);
                 break;
         case IMB_AUTH_SHAKE128:
-                shake128(job->src + job->hash_start_src_offset_in_bytes,
-                         job->msg_len_to_hash_in_bytes, job->auth_tag_output,
-                         job->auth_tag_output_len_in_bytes);
+                state->shake128(job->src + job->hash_start_src_offset_in_bytes,
+                                job->msg_len_to_hash_in_bytes, job->auth_tag_output,
+                                job->auth_tag_output_len_in_bytes);
                 break;
         case IMB_AUTH_SHAKE256:
-                shake256(job->src + job->hash_start_src_offset_in_bytes,
-                         job->msg_len_to_hash_in_bytes, job->auth_tag_output,
-                         job->auth_tag_output_len_in_bytes);
+                state->shake256(job->src + job->hash_start_src_offset_in_bytes,
+                                job->msg_len_to_hash_in_bytes, job->auth_tag_output,
+                                job->auth_tag_output_len_in_bytes);
                 break;
         default:
                 job->status |= IMB_STATUS_INVALID_ARGS;

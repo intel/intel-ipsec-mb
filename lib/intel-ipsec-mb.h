@@ -725,6 +725,8 @@ typedef void (*keyexp_t)(const void *, void *, void *);
 typedef void (*cmac_subkey_gen_t)(const void *, void *, void *);
 typedef void (*hash_one_block_t)(const void *, void *);
 typedef void (*hash_fn_t)(const void *, const uint64_t, void *);
+typedef void (*sha3_fn_t)(const uint8_t *, const uint64_t, uint8_t *);
+typedef void (*shake_fn_t)(const uint8_t *, const uint64_t, uint8_t *, const uint64_t);
 typedef void (*xcbc_keyexp_t)(const void *, void *, void *, void *);
 typedef int (*des_keysched_t)(uint64_t *, const void *);
 typedef void (*aes_cfb_t)(void *, const void *, const void *, const void *, uint64_t);
@@ -1007,6 +1009,12 @@ typedef struct IMB_MGR {
         hash_fn_t sha256;
         hash_fn_t sha384;
         hash_fn_t sha512;
+        sha3_fn_t sha3_224;
+        sha3_fn_t sha3_256;
+        sha3_fn_t sha3_384;
+        sha3_fn_t sha3_512;
+        shake_fn_t shake128;
+        shake_fn_t shake256;
         aes_cfb_t aes128_cfb_one;
 
         aes_gcm_enc_dec_t gcm128_enc;

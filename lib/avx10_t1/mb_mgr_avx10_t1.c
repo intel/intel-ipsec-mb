@@ -517,6 +517,12 @@ init_mb_mgr_avx10_t1_internal(IMB_MGR *state, const int reset_mgrs)
         state->sha384 = sha384_avx512;
         state->sha512_one_block = sha512_one_block_avx512;
         state->sha512 = sha512_avx512;
+        state->sha3_224 = sha3_224_avx512;
+        state->sha3_256 = sha3_256_avx512;
+        state->sha3_384 = sha3_384_avx512;
+        state->sha3_512 = sha3_512_avx512;
+        state->shake128 = shake128_avx512;
+        state->shake256 = shake256_avx512;
         state->md5_one_block = md5_one_block_avx512;
 
         state->aes128_cfb_one = aes_cfb_128_one_avx;

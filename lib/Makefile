@@ -329,7 +329,7 @@ c_lib_objs := \
 	hmac_ipad_opad.o \
 	cipher_suite_id.o \
 	capabilities.o \
-        sm4_gcm.o \
+    sm4_gcm.o \
 	sha3.o
 
 ifeq ($(AVX_IFMA), y)
@@ -644,7 +644,8 @@ asm_avx512_lib_objs := \
 	mb_mgr_aes192_cfb_enc_submit_vaes_avx512.o \
 	mb_mgr_aes192_cfb_enc_flush_vaes_avx512.o \
 	mb_mgr_aes256_cfb_enc_submit_vaes_avx512.o \
-	mb_mgr_aes256_cfb_enc_flush_vaes_avx512.o
+	mb_mgr_aes256_cfb_enc_flush_vaes_avx512.o \
+	sha3_avx512.o
 
 
 

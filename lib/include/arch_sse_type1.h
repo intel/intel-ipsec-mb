@@ -216,6 +216,20 @@ sha512_sse(const void *data, const uint64_t length, void *digest);
 IMB_DLL_EXPORT void
 sha512_one_block_sse(const void *data, void *digest);
 
+/* SHA3 / SHAKE generic C implementation (x86_64/sha3.c) */
+IMB_DLL_LOCAL void
+sha3_224(const uint8_t *input, uint64_t inputByteLen, uint8_t *output);
+IMB_DLL_LOCAL void
+sha3_256(const uint8_t *input, uint64_t inputByteLen, uint8_t *output);
+IMB_DLL_LOCAL void
+sha3_384(const uint8_t *input, uint64_t inputByteLen, uint8_t *output);
+IMB_DLL_LOCAL void
+sha3_512(const uint8_t *input, uint64_t inputByteLen, uint8_t *output);
+IMB_DLL_LOCAL void
+shake128(const uint8_t *input, uint64_t inputByteLen, uint8_t *output, uint64_t outputByteLen);
+IMB_DLL_LOCAL void
+shake256(const uint8_t *input, uint64_t inputByteLen, uint8_t *output, uint64_t outputByteLen);
+
 /* moved from MB MGR */
 IMB_JOB *
 submit_job_aes128_enc_sse(MB_MGR_AES_OOO *state, IMB_JOB *job);

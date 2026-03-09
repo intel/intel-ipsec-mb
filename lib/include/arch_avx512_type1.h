@@ -190,4 +190,20 @@ sha512_one_block_avx512(const void *data, void *digest);
 IMB_DLL_EXPORT void
 set_suite_id_avx512_t1(IMB_MGR *state, IMB_JOB *job);
 
+/* SHA3 / SHAKE AVX-512 ASM functions (sha3_avx512.asm) */
+IMB_DLL_LOCAL void
+sha3_224_avx512(const uint8_t *input, const uint64_t inputByteLen, uint8_t *output);
+IMB_DLL_LOCAL void
+sha3_256_avx512(const uint8_t *input, const uint64_t inputByteLen, uint8_t *output);
+IMB_DLL_LOCAL void
+sha3_384_avx512(const uint8_t *input, const uint64_t inputByteLen, uint8_t *output);
+IMB_DLL_LOCAL void
+sha3_512_avx512(const uint8_t *input, const uint64_t inputByteLen, uint8_t *output);
+IMB_DLL_LOCAL void
+shake128_avx512(const uint8_t *input, const uint64_t inputByteLen, uint8_t *output,
+                uint64_t outputByteLen);
+IMB_DLL_LOCAL void
+shake256_avx512(const uint8_t *input, const uint64_t inputByteLen, uint8_t *output,
+                uint64_t outputByteLen);
+
 #endif /* IMB_ASM_AVX512_T1_H */

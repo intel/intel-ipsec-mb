@@ -356,7 +356,8 @@ lib_objs1 = \
 	$(OBJ_DIR)\aes_cfb_enc_vaes_avx512.obj \
 	$(OBJ_DIR)\capabilities.obj \
 	$(OBJ_DIR)\sm4_gcm.obj \
-	$(OBJ_DIR)\sha3.obj
+	$(OBJ_DIR)\sha3.obj \
+	$(OBJ_DIR)\sha3_avx512.obj
 
 lib_objs2 = \
 	$(OBJ_DIR)\mb_mgr_aes192_cbc_enc_flush_avx.obj \

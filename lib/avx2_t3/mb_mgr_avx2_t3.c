@@ -392,6 +392,12 @@ init_mb_mgr_avx2_t3_internal(IMB_MGR *state, const int reset_mgrs)
         state->sha384 = sha384_avx2;
         state->sha512_one_block = sha512_one_block_avx2;
         state->sha512 = sha512_avx2;
+        state->sha3_224 = sha3_224;
+        state->sha3_256 = sha3_256;
+        state->sha3_384 = sha3_384;
+        state->sha3_512 = sha3_512;
+        state->shake128 = shake128;
+        state->shake256 = shake256;
         state->md5_one_block = md5_one_block_avx2;
 
         state->aes128_cfb_one = aes_cfb_128_one_avx;
