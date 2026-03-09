@@ -1,5 +1,5 @@
-%ifndef _SNOW5G_NEA4_X8_VAES_AVX512_ASM_
-%define _SNOW5G_NEA4_X8_VAES_AVX512_ASM_
+%ifndef _SNOW5G_X8_VAES_AVX512_ASM_
+%define _SNOW5G_X8_VAES_AVX512_ASM_
 
 ;;
 ;; Copyright (c) 2025, Intel Corporation
@@ -38,14 +38,6 @@
 
 mksection .rodata
 default rel
-
-align 64
-dw_len_to_db_mask:
-        dq 0x0000000000000000, 0x000000000000000f, 0x00000000000000ff, 0x0000000000000fff
-        dq 0x000000000000ffff, 0x00000000000fffff, 0x0000000000ffffff, 0x000000000fffffff
-        dq 0x00000000ffffffff, 0x0000000fffffffff, 0x000000ffffffffff, 0x00000fffffffffff
-        dq 0x0000ffffffffffff, 0x000fffffffffffff, 0x00ffffffffffffff, 0x0fffffffffffffff
-        dq 0xffffffffffffffff, 0x0000000000000000, 0x0000000000000000, 0x0000000000000000
 
 align 64
 const_byte_shuff_mask:
@@ -97,6 +89,14 @@ align 64
 beta:
 times 16 dw 0xcc87
 times 16 dw 0xcc87
+
+align 64
+byte_len_to_mask_table_nca4:
+        dw      0x0000, 0x0001, 0x0003, 0x0007
+        dw      0x000f, 0x001f, 0x003f, 0x007f
+        dw      0x00ff, 0x01ff, 0x03ff, 0x07ff
+        dw      0x0fff, 0x1fff, 0x3fff, 0x7fff
+        dw      0xffff
 
 mksection .text
 %xdefine TEMP0                   ymm0
@@ -641,11 +641,11 @@ align_loop
         kxord   k2, k2, k2              ;; k2 = all 0s (keygen phase - no feedback)
 
         ;; 15 init rounds with keystream feedback
-        mov     ebp, 15
+        mov     DWORD(rbp), 15
 align_loop
 %%init_loop:
         PROCESS_ALL_LANE_PAIRS k1
-        dec     ebp
+        dec     DWORD(rbp)
         jnz     %%init_loop
 
         ;; Round 16: R1 ^= key[0:15], then init round
@@ -669,31 +669,144 @@ align_loop
 %endmacro
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; generate_hqp_snow5g_nia4_x8_vaes_avx512(keys[], ivs, hqp_out)
-;; Generate H, Q, P keys for 8 SNOW5G NIA4 buffers in parallel
-;; Output: hqp[lane*48 + 0..15]=H, hqp[lane*48 + 16..31]=Q, hqp[lane*48 + 32..47]=P
+;; NCA4 cipher: encrypt/decrypt 16 bytes per lane, clock FSM and update LFSR
+;; %%LANE_MASK: 2 = both lanes, 0 = lane 0 only (lower xmm), 1 = lane 1 only (upper xmm)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-MKGLOBAL(generate_hqp_snow5g_nia4_x8_vaes_avx512,function,internal)
-align_function
-generate_hqp_snow5g_nia4_x8_vaes_avx512:
-        endbranch64
-        SNOW5G_FUNC_START
+%macro NCA4_CIPHER_LANE_PAIR 20
+%define %%LANE_PAIR            %1   ;; [in] lane pair index
+%define %%FSM_R1               %2   ;; [in/out] FSM R1 register
+%define %%FSM_R2               %3   ;; [in/out] FSM R2 register
+%define %%FSM_R3               %4   ;; [in/out] FSM R3 register
+%define %%LFSR_A_LDQ           %5   ;; [in/out] LFSR A low DQW
+%define %%LFSR_A_HDQ           %6   ;; [in/out] LFSR A high DQW
+%define %%LFSR_B_LDQ           %7   ;; [in/out] LFSR B low DQW
+%define %%LFSR_B_HDQ           %8   ;; [in/out] LFSR B high DQW
+%define %%LFSR_A_SAVE          %9   ;; [in] stack offset for LFSR_A_HDQ save
+%define %%LFSR_B_SAVE          %10  ;; [in] stack offset for LFSR_B_HDQ save
+%define %%KEYSTREAM_SAVE       %11  ;; [in] stack offset for keystream save
+%define %%TEMP1                %12  ;; [clobbered] temporary zmm register
+%define %%TEMP2                %13  ;; [clobbered] temporary zmm register
+%define %%SRC_PTRS             %14  ;; [in] address of array of pointers to src buffers
+%define %%DST_PTRS             %15  ;; [in] address of array of pointers to dst buffers
+%define %%OFFSET               %16  ;; [in] current byte offset into src/dst buffers
+%define %%TGP0                 %17  ;; [clobbered] temporary 64-bit register
+%define %%TGP1                 %18  ;; [clobbered] temporary 64-bit register
+%define %%KREG_INIT            %19  ;; [in] k-register mask for INIT phase
+%define %%LANE_MASK            %20  ;; [in] 2=both lanes, 0=lane0 only, 1=lane1 only
 
-        ;; Initialize LFSR/FSM state and run init rounds
-        SNOW5G_INIT_STATE arg1, arg2
-        SNOW5G_INIT_ROUNDS arg1
+        vpaddw          %%TEMP1, %%LFSR_B_HDQ, %%FSM_R1
+        vpxord          %%TEMP1, %%TEMP1, %%FSM_R2
+        vmovdqa32       [rsp + %%KEYSTREAM_SAVE], %%TEMP1
 
-        ;; Generate H (offset 0), Q (offset 16), P (offset 32)
-        PROCESS_ALL_LANE_PAIRS k2
-        HQP_STORE_ALL_KS arg3, 0, TEMP0
-        PROCESS_ALL_LANE_PAIRS k2
-        HQP_STORE_ALL_KS arg3, 16, TEMP0
-        PROCESS_ALL_LANE_PAIRS k2
-        HQP_STORE_ALL_KS arg3, 32, TEMP0
+%if %%LANE_MASK != 1
+        mov             %%TGP0, [%%SRC_PTRS + (%%LANE_PAIR * 2 + 0) * 8]
+        mov             %%TGP1, [%%DST_PTRS + (%%LANE_PAIR * 2 + 0) * 8]
+        vmovdqu32       XWORD(%%TEMP2), [%%TGP0 + %%OFFSET]
+        vpxord          XWORD(%%TEMP2), XWORD(%%TEMP1), XWORD(%%TEMP2)
+        vmovdqu32       [%%TGP1 + %%OFFSET], XWORD(%%TEMP2)
+%endif
 
-        SNOW5G_FUNC_END
-        ret
+%if %%LANE_MASK != 0
+        vextracti32x4   XWORD(%%TEMP1), %%TEMP1, 1
+        mov             %%TGP0, [%%SRC_PTRS + (%%LANE_PAIR * 2 + 1) * 8]
+        mov             %%TGP1, [%%DST_PTRS + (%%LANE_PAIR * 2 + 1) * 8]
+        vmovdqu32       XWORD(%%TEMP2), [%%TGP0 + %%OFFSET]
+        vpxord          XWORD(%%TEMP2), XWORD(%%TEMP1), XWORD(%%TEMP2)
+        vmovdqu32       [%%TGP1 + %%OFFSET], XWORD(%%TEMP2)
+%endif
+
+        SNOW5G_FSM_CLOCK_2 %%FSM_R1, %%FSM_R2, %%FSM_R3, %%LFSR_A_HDQ, %%TEMP1, %%TEMP2
+        SNOW5G_LFSR_UPDATE %%LFSR_A_LDQ, %%LFSR_A_HDQ, %%LFSR_B_LDQ, %%LFSR_B_HDQ, %%LFSR_A_SAVE, %%LFSR_B_SAVE, [rsp + %%KEYSTREAM_SAVE], %%KREG_INIT, %%TEMP1, %%TEMP2
+%endmacro
+
+;; NCA4 cipher round: encrypt/decrypt 16 bytes for lane pair L01
+%macro NCA4_CIPHER_L01 2
+%define %%OFFSET    %1  ;; [in] byte offset register
+%define %%LANE_MASK %2  ;; [in] 2=both, 0=lane0 only, 1=lane1 only
+        NCA4_CIPHER_LANE_PAIR 0, FSM_R1_L01, FSM_R2_L01, FSM_R3_L01, \
+                LFSR_A_LDQ_L01, LFSR_A_HDQ_L01, LFSR_B_LDQ_L01, LFSR_B_HDQ_L01, \
+                _LFSR_A_HDQ_01, _LFSR_B_HDQ_01, _keystream_01, \
+                TEMP1, TEMP2, arg2, arg3, %%OFFSET, r10, rbp, k1, %%LANE_MASK
+%endmacro
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; 2-lane (single lane pair L01) helpers for NCA4
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; Init LFSR/FSM state for 2 lanes (uses L01 registers only)
+%macro SNOW5G_INIT_STATE_X2 2
+%define %%KEY_PTRS      %1
+%define %%IV_PTR        %2
+        vpxorq          TEMP0, TEMP0, TEMP0
+        vmovdqa32       FSM_R1_L01, TEMP0
+        vmovdqa32       FSM_R2_L01, TEMP0
+        vmovdqa32       FSM_R3_L01, TEMP0
+        vmovdqa32       LFSR_B_LDQ_L01, TEMP0
+        vmovdqu64       LFSR_A_LDQ_L01, [%%IV_PTR]
+        LOAD_KEY_PAIR   %%KEY_PTRS, 0, 1, 0,  LFSR_A_HDQ_L01
+        LOAD_KEY_PAIR   %%KEY_PTRS, 0, 1, 16, LFSR_B_HDQ_L01
+%endmacro
+
+;; 17-round SNOW5G init for 2 lanes (uses L01 only)
+%macro SNOW5G_INIT_ROUNDS_X2 1
+%define %%KEY_PTRS      %1
+        kxnord  k1, k1, k1
+        kxord   k2, k2, k2
+        mov     DWORD(rbp), 15
+align_loop
+%%init_loop_x2:
+        SNOW5G_ENC_DEC_LANE_PAIR 0, FSM_R1_L01, FSM_R2_L01, FSM_R3_L01, \
+                LFSR_A_LDQ_L01, LFSR_A_HDQ_L01, LFSR_B_LDQ_L01, LFSR_B_HDQ_L01, \
+                _LFSR_A_HDQ_01, _LFSR_B_HDQ_01, _keystream_01, \
+                TEMP0, TEMP1, 0, 0, 0, 0, r10, r11, k1, k3, 1
+        dec     DWORD(rbp)
+        jnz     %%init_loop_x2
+        XOR_KEY_INTO_REG %%KEY_PTRS, 0, 1, 0,  FSM_R1_L01
+        SNOW5G_ENC_DEC_LANE_PAIR 0, FSM_R1_L01, FSM_R2_L01, FSM_R3_L01, \
+                LFSR_A_LDQ_L01, LFSR_A_HDQ_L01, LFSR_B_LDQ_L01, LFSR_B_HDQ_L01, \
+                _LFSR_A_HDQ_01, _LFSR_B_HDQ_01, _keystream_01, \
+                TEMP0, TEMP1, 0, 0, 0, 0, r10, r11, k1, k3, 1
+        XOR_KEY_INTO_REG %%KEY_PTRS, 0, 1, 16, FSM_R1_L01
+%endmacro
+
+;; Store 2-lane state (lanes 0 and 1, 160 bytes each)
+%macro STATE_STORE_NCA4_X2 1
+%define %%STATE_PTR     %1
+        vmovdqu32       [%%STATE_PTR + 0*160 + 3*16], XWORD(FSM_R1_L01)
+        vmovdqu32       [%%STATE_PTR + 0*160 + 4*16], XWORD(FSM_R2_L01)
+        vmovdqu32       [%%STATE_PTR + 0*160 + 5*16], XWORD(FSM_R3_L01)
+        vmovdqu32       [%%STATE_PTR + 0*160 + 6*16], XWORD(LFSR_A_LDQ_L01)
+        vmovdqu32       [%%STATE_PTR + 0*160 + 7*16], XWORD(LFSR_A_HDQ_L01)
+        vmovdqu32       [%%STATE_PTR + 0*160 + 8*16], XWORD(LFSR_B_LDQ_L01)
+        vmovdqu32       [%%STATE_PTR + 0*160 + 9*16], XWORD(LFSR_B_HDQ_L01)
+        vextracti32x4   [%%STATE_PTR + 1*160 + 3*16], FSM_R1_L01, 1
+        vextracti32x4   [%%STATE_PTR + 1*160 + 4*16], FSM_R2_L01, 1
+        vextracti32x4   [%%STATE_PTR + 1*160 + 5*16], FSM_R3_L01, 1
+        vextracti32x4   [%%STATE_PTR + 1*160 + 6*16], LFSR_A_LDQ_L01, 1
+        vextracti32x4   [%%STATE_PTR + 1*160 + 7*16], LFSR_A_HDQ_L01, 1
+        vextracti32x4   [%%STATE_PTR + 1*160 + 8*16], LFSR_B_LDQ_L01, 1
+        vextracti32x4   [%%STATE_PTR + 1*160 + 9*16], LFSR_B_HDQ_L01, 1
+%endmacro
+
+;; Load 2-lane state (lanes 0 and 1, 160 bytes each) into L01 registers
+%macro STATE_LOAD_NCA4_X2 1
+%define %%STATE_PTR     %1
+        vmovdqu32       XWORD(FSM_R1_L01),    [%%STATE_PTR + 0*160 + 3*16]
+        vinserti32x4    FSM_R1_L01,    FSM_R1_L01,    [%%STATE_PTR + 1*160 + 3*16], 1
+        vmovdqu32       XWORD(FSM_R2_L01),    [%%STATE_PTR + 0*160 + 4*16]
+        vinserti32x4    FSM_R2_L01,    FSM_R2_L01,    [%%STATE_PTR + 1*160 + 4*16], 1
+        vmovdqu32       XWORD(FSM_R3_L01),    [%%STATE_PTR + 0*160 + 5*16]
+        vinserti32x4    FSM_R3_L01,    FSM_R3_L01,    [%%STATE_PTR + 1*160 + 5*16], 1
+        vmovdqu32       XWORD(LFSR_A_LDQ_L01),[%%STATE_PTR + 0*160 + 6*16]
+        vinserti32x4    LFSR_A_LDQ_L01,LFSR_A_LDQ_L01,[%%STATE_PTR + 1*160 + 6*16], 1
+        vmovdqu32       XWORD(LFSR_A_HDQ_L01),[%%STATE_PTR + 0*160 + 7*16]
+        vinserti32x4    LFSR_A_HDQ_L01,LFSR_A_HDQ_L01,[%%STATE_PTR + 1*160 + 7*16], 1
+        vmovdqu32       XWORD(LFSR_B_LDQ_L01),[%%STATE_PTR + 0*160 + 8*16]
+        vinserti32x4    LFSR_B_LDQ_L01,LFSR_B_LDQ_L01,[%%STATE_PTR + 1*160 + 8*16], 1
+        vmovdqu32       XWORD(LFSR_B_HDQ_L01),[%%STATE_PTR + 0*160 + 9*16]
+        vinserti32x4    LFSR_B_HDQ_L01,LFSR_B_HDQ_L01,[%%STATE_PTR + 1*160 + 9*16], 1
+%endmacro
 
 mksection stack-noexec
 
-%endif ; _SNOW5G_NEA4_X8_VAES_AVX512_ASM_
+%endif ; _SNOW5G_X8_VAES_AVX512_ASM_

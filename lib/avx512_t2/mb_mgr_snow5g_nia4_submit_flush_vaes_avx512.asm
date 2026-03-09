@@ -35,6 +35,7 @@
 %include "include/clear_regs.inc"
 %include "include/cet.inc"
 %include "include/align_avx512.inc"
+%include "include/snow5g_x8_vaes_avx512.inc"
 
 mksection .text
 default rel
@@ -399,6 +400,29 @@ align 64
 flush_job_snow5g_nia4_vaes_avx512:
         endbranch64
         FLUSH_JOB_SNOW5G_NIA4_X8
+        ret
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; generate_hqp_snow5g_nia4_x8_vaes_avx512(keys[], ivs, hqp_out)
+;; Generate H, Q, P keys for 8 SNOW5G NIA4 buffers in parallel
+;; Output: hqp[lane*48 + 0..15]=H, hqp[lane*48 + 16..31]=Q, hqp[lane*48 + 32..47]=P
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+MKGLOBAL(generate_hqp_snow5g_nia4_x8_vaes_avx512,function,internal)
+align_function
+generate_hqp_snow5g_nia4_x8_vaes_avx512:
+        SNOW5G_FUNC_START
+
+        SNOW5G_INIT_STATE arg1, arg2
+        SNOW5G_INIT_ROUNDS arg1
+
+        PROCESS_ALL_LANE_PAIRS k2
+        HQP_STORE_ALL_KS arg3, 0, TEMP0
+        PROCESS_ALL_LANE_PAIRS k2
+        HQP_STORE_ALL_KS arg3, 16, TEMP0
+        PROCESS_ALL_LANE_PAIRS k2
+        HQP_STORE_ALL_KS arg3, 32, TEMP0
+
+        SNOW5G_FUNC_END
         ret
 
 mksection stack-noexec

@@ -259,6 +259,25 @@ submit_job_snow5g_nia4_vaes_avx512(MB_MGR_SNOW5G_OOO *state, IMB_JOB *job);
 extern IMB_JOB *
 flush_job_snow5g_nia4_vaes_avx512(MB_MGR_SNOW5G_OOO *state);
 
+extern IMB_JOB *
+submit_job_snow5g_nca4_enc_vaes_avx512(MB_MGR_SNOW5G_OOO *state, IMB_JOB *job);
+extern IMB_JOB *
+flush_job_snow5g_nca4_enc_vaes_avx512(MB_MGR_SNOW5G_OOO *state);
+extern IMB_JOB *
+submit_job_snow5g_nca4_dec_vaes_avx512(MB_MGR_SNOW5G_OOO *state, IMB_JOB *job);
+extern IMB_JOB *
+flush_job_snow5g_nca4_dec_vaes_avx512(MB_MGR_SNOW5G_OOO *state);
+
+extern void
+generate_hqp_snow5g_nca4_x2_vaes_avx512(const void *const pKey[2], const uint8_t *pIv, uint8_t *hqp,
+                                        uint8_t *states);
+extern void
+snow5g_nca4_cipher_x2(uint8_t *states, const void *const pSrc[2], void *const pDst[2],
+                      const uint64_t len_lane0, const uint64_t len_lane1);
+extern void
+snow5g_nca4_cipher_x1(uint8_t *states, const void *const pSrc[2], void *const pDst[2],
+                      const uint64_t len_lane0);
+
 void
 aes_docsis128_dec_crc32_vaes_avx512(IMB_JOB *job);
 void

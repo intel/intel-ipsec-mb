@@ -71,11 +71,32 @@ check_data(const uint8_t *test, const uint8_t *expected, uint64_t len, const cha
         return is_error;
 }
 
+static void
+fill_nca4_job(IMB_JOB *job, const struct aead_test *v, IMB_CIPHER_DIRECTION dir, const uint8_t *src,
+              uint8_t *dst, uint8_t *tag)
+{
+        job->cipher_mode = IMB_CIPHER_SNOW5G_NCA4;
+        job->hash_alg = IMB_AUTH_SNOW5G_NCA4;
+        job->cipher_direction = dir;
+        job->chain_order = (dir == IMB_DIR_ENCRYPT) ? IMB_ORDER_CIPHER_HASH : IMB_ORDER_HASH_CIPHER;
+        job->enc_keys = (const void *) v->key;
+        job->dec_keys = (const void *) v->key;
+        job->key_len_in_bytes = 32;
+        job->src = src;
+        job->dst = dst;
+        job->msg_len_to_cipher_in_bytes = v->msgSize / 8;
+        job->cipher_start_src_offset_in_bytes = UINT64_C(0);
+        job->iv = (const uint8_t *) v->iv;
+        job->iv_len_in_bytes = 16;
+        job->u.NCA.aad = (const uint8_t *) v->aad;
+        job->u.NCA.aad_len_in_bytes = v->aadSize / 8;
+        job->auth_tag_output = tag;
+        job->auth_tag_output_len_in_bytes = v->tagSize / 8;
+}
+
 static int
-snow5g_nca4_job(IMB_MGR *mb_mgr, IMB_CIPHER_DIRECTION cipher_dir, const uint32_t *exp_key,
-                uint8_t *out, const uint8_t *in, const uint64_t len, const uint8_t *iv,
-                const uint8_t *aad, const uint64_t aad_len, uint8_t *auth_tag,
-                const uint64_t auth_tag_len)
+snow5g_nca4_job(IMB_MGR *mb_mgr, const struct aead_test *v, IMB_CIPHER_DIRECTION dir,
+                const uint8_t *src, uint8_t *dst, uint8_t *tag)
 {
         IMB_JOB *job;
 
@@ -85,25 +106,11 @@ snow5g_nca4_job(IMB_MGR *mb_mgr, IMB_CIPHER_DIRECTION cipher_dir, const uint32_t
                 return -1;
         }
 
-        job->cipher_mode = IMB_CIPHER_SNOW5G_NCA4;
-        job->chain_order =
-                (cipher_dir == IMB_DIR_ENCRYPT) ? IMB_ORDER_CIPHER_HASH : IMB_ORDER_HASH_CIPHER;
-        job->enc_keys = exp_key;
-        job->dec_keys = exp_key;
-        job->key_len_in_bytes = 32;
-        job->src = in;
-        job->dst = out;
-        job->msg_len_to_cipher_in_bytes = len;
-        job->cipher_start_src_offset_in_bytes = UINT64_C(0);
-        job->iv = iv;
-        job->iv_len_in_bytes = 16;
-        job->u.GCM.aad = aad;
-        job->u.GCM.aad_len_in_bytes = aad_len;
-        job->auth_tag_output = auth_tag;
-        job->auth_tag_output_len_in_bytes = auth_tag_len;
-        job->cipher_direction = cipher_dir;
-        job->hash_alg = IMB_AUTH_SNOW5G_NCA4;
+        fill_nca4_job(job, v, dir, src, dst, tag);
         job = IMB_SUBMIT_JOB(mb_mgr);
+
+        while (job == NULL)
+                job = IMB_FLUSH_JOB(mb_mgr);
 
         if (job->status != IMB_STATUS_COMPLETED) {
                 fprintf(stderr, "failed job, status:%d\n", job->status);
@@ -150,10 +157,8 @@ test_snow5g_nca4_vectors(IMB_MGR *p_mgr, struct aead_test const *vector,
         /*
          * Encrypt
          */
-        if (snow5g_nca4_job(p_mgr, IMB_DIR_ENCRYPT, (const uint32_t *) vector->key, ct_test,
-                            (const void *) vector->msg, vector->msgSize / 8,
-                            (const uint8_t *) vector->iv, (const uint8_t *) vector->aad,
-                            vector->aadSize / 8, T_test, vector->tagSize / 8)) {
+        if (snow5g_nca4_job(p_mgr, vector, IMB_DIR_ENCRYPT, (const uint8_t *) vector->msg, ct_test,
+                            T_test)) {
                 test_suite_update(ts, 0, 1);
                 goto test_snow5g_nca4_vectors_exit;
         }
@@ -167,10 +172,7 @@ test_snow5g_nca4_vectors(IMB_MGR *p_mgr, struct aead_test const *vector,
 
         /* test of in-place encrypt */
         memory_copy(pt_test, (const void *) vector->msg, vector->msgSize / 8);
-        if (snow5g_nca4_job(p_mgr, IMB_DIR_ENCRYPT, (const uint32_t *) vector->key, pt_test,
-                            pt_test, vector->msgSize / 8, (const uint8_t *) vector->iv,
-                            (const uint8_t *) vector->aad, vector->aadSize / 8, T_test,
-                            vector->tagSize / 8)) {
+        if (snow5g_nca4_job(p_mgr, vector, IMB_DIR_ENCRYPT, pt_test, pt_test, T_test)) {
                 test_suite_update(ts, 0, 1);
                 goto test_snow5g_nca4_vectors_exit;
         }
@@ -187,10 +189,8 @@ test_snow5g_nca4_vectors(IMB_MGR *p_mgr, struct aead_test const *vector,
         /*
          * Decrypt
          */
-        if (snow5g_nca4_job(p_mgr, IMB_DIR_DECRYPT, (const uint32_t *) vector->key, pt_test,
-                            (const void *) vector->ct, vector->msgSize / 8,
-                            (const uint8_t *) vector->iv, (const uint8_t *) vector->aad,
-                            vector->aadSize / 8, T_test, vector->tagSize / 8)) {
+        if (snow5g_nca4_job(p_mgr, vector, IMB_DIR_DECRYPT, (const uint8_t *) vector->ct, pt_test,
+                            T_test)) {
                 test_suite_update(ts, 0, 1);
                 goto test_snow5g_nca4_vectors_exit;
         }
@@ -205,10 +205,7 @@ test_snow5g_nca4_vectors(IMB_MGR *p_mgr, struct aead_test const *vector,
 
         /* test in in-place decrypt */
         memory_copy(ct_test, (const void *) vector->ct, vector->msgSize / 8);
-        if (snow5g_nca4_job(p_mgr, IMB_DIR_DECRYPT, (const uint32_t *) vector->key, ct_test,
-                            ct_test, vector->msgSize / 8, (const uint8_t *) vector->iv,
-                            (const uint8_t *) vector->aad, vector->aadSize / 8, T_test,
-                            vector->tagSize / 8)) {
+        if (snow5g_nca4_job(p_mgr, vector, IMB_DIR_DECRYPT, ct_test, ct_test, T_test)) {
                 test_suite_update(ts, 0, 1);
                 goto test_snow5g_nca4_vectors_exit;
         }
@@ -254,14 +251,170 @@ test_snow5g_nca4_std_vectors(IMB_MGR *p_mgr, struct test_suite_context *ts,
                 printf("\n");
 }
 
+#define NCA4_MAX_BUF 128
+
+static void
+test_snow5g_nca4_submit_flush(IMB_MGR *mb_mgr, struct test_suite_context *ts,
+                              const struct aead_test *v)
+{
+        uint8_t *out[2] = { NULL, NULL };
+        uint8_t *tag[2] = { NULL, NULL };
+        const uint64_t msg_len = v->msgSize / 8;
+        const uint64_t tag_len = v->tagSize / 8;
+        IMB_JOB *job;
+        int i, completed = 0, err;
+
+        for (i = 0; i < 2; i++) {
+                out[i] = malloc(NCA4_MAX_BUF);
+                tag[i] = malloc(16);
+                if (!out[i] || !tag[i]) {
+                        fprintf(stderr, "failed to allocate memory\n");
+                        test_suite_update(ts, 0, 1);
+                        goto done;
+                }
+        }
+
+        for (i = 0; i < 2; i++) {
+                memset(out[i], 0, NCA4_MAX_BUF);
+                memset(tag[i], 0, 16);
+                job = IMB_GET_NEXT_JOB(mb_mgr);
+                if (!job) {
+                        fprintf(stderr, "failed to get job\n");
+                        test_suite_update(ts, 0, 1);
+                        goto done;
+                }
+                fill_nca4_job(job, v, IMB_DIR_ENCRYPT, (const uint8_t *) v->msg, out[i], tag[i]);
+                job = IMB_SUBMIT_JOB(mb_mgr);
+                if (job) {
+                        if (job->status != IMB_STATUS_COMPLETED) {
+                                test_suite_update(ts, 0, 1);
+                                goto done;
+                        }
+                        completed++;
+                }
+        }
+
+        while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL) {
+                if (job->status != IMB_STATUS_COMPLETED) {
+                        test_suite_update(ts, 0, 1);
+                        goto done;
+                }
+                completed++;
+        }
+
+        if (completed != 2) {
+                fprintf(stderr, "submit/flush: expected 2 completions, got %d\n", completed);
+                test_suite_update(ts, 0, 1);
+                goto done;
+        }
+
+        for (i = 0; i < 2; i++) {
+                err = 0;
+                if (msg_len > 0)
+                        err |= check_data(out[i], (const uint8_t *) v->ct, msg_len,
+                                          "submit/flush out");
+                err |= check_data(tag[i], (const uint8_t *) v->tag, tag_len, "submit/flush tag");
+                test_suite_update(ts, err == 0, err != 0);
+        }
+done:
+        for (i = 0; i < 2; i++) {
+                free(out[i]);
+                free(tag[i]);
+        }
+}
+
+static void
+test_snow5g_nca4_mixed_submit_flush(IMB_MGR *mb_mgr, struct test_suite_context *ts,
+                                    const struct aead_test *v)
+{
+        const IMB_CIPHER_DIRECTION dirs[] = { IMB_DIR_ENCRYPT, IMB_DIR_DECRYPT };
+        uint8_t *out[2] = { NULL, NULL };
+        uint8_t *tag[2] = { NULL, NULL };
+        const uint64_t msg_len = v->msgSize / 8;
+        const uint64_t tag_len = v->tagSize / 8;
+        IMB_JOB *job;
+        int i, completed = 0, err;
+
+        for (i = 0; i < 2; i++) {
+                out[i] = malloc(NCA4_MAX_BUF);
+                tag[i] = malloc(16);
+                if (!out[i] || !tag[i]) {
+                        fprintf(stderr, "failed to allocate memory\n");
+                        test_suite_update(ts, 0, 1);
+                        goto done;
+                }
+        }
+
+        for (i = 0; i < 2; i++) {
+                const uint8_t *src =
+                        (const uint8_t *) ((dirs[i] == IMB_DIR_ENCRYPT) ? v->msg : v->ct);
+
+                memset(out[i], 0, NCA4_MAX_BUF);
+                memset(tag[i], 0, 16);
+                job = IMB_GET_NEXT_JOB(mb_mgr);
+                if (!job) {
+                        fprintf(stderr, "failed to get job\n");
+                        test_suite_update(ts, 0, 1);
+                        goto done;
+                }
+                fill_nca4_job(job, v, dirs[i], src, out[i], tag[i]);
+                job = IMB_SUBMIT_JOB(mb_mgr);
+                if (job) {
+                        if (job->status != IMB_STATUS_COMPLETED) {
+                                test_suite_update(ts, 0, 1);
+                                goto done;
+                        }
+                        completed++;
+                }
+        }
+
+        while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL) {
+                if (job->status != IMB_STATUS_COMPLETED) {
+                        test_suite_update(ts, 0, 1);
+                        goto done;
+                }
+                completed++;
+        }
+
+        if (completed != 2) {
+                fprintf(stderr, "mixed: expected 2 completions, got %d\n", completed);
+                test_suite_update(ts, 0, 1);
+                goto done;
+        }
+
+        for (i = 0; i < 2; i++) {
+                err = 0;
+                if (msg_len > 0) {
+                        const uint8_t *exp =
+                                (const uint8_t *) ((dirs[i] == IMB_DIR_ENCRYPT) ? v->ct : v->msg);
+
+                        err |= check_data(out[i], exp, msg_len, "mixed out");
+                }
+                err |= check_data(tag[i], (const uint8_t *) v->tag, tag_len, "mixed tag");
+                test_suite_update(ts, err == 0, err != 0);
+        }
+done:
+        for (i = 0; i < 2; i++) {
+                free(out[i]);
+                free(tag[i]);
+        }
+}
+
 int
 snow5g_nca4_test(IMB_MGR *p_mgr)
 {
         struct test_suite_context ts;
+        const struct aead_test *v;
         int errors = 0;
 
         test_suite_start(&ts, "SNOW5G-NCA4");
         test_snow5g_nca4_std_vectors(p_mgr, &ts, snow5g_nca4_test_json);
+
+        for (v = snow5g_nca4_test_json; v->msg != NULL; v++)
+                if (v->msgSize > 0 && v->aadSize > 0) {
+                        test_snow5g_nca4_submit_flush(p_mgr, &ts, v);
+                        test_snow5g_nca4_mixed_submit_flush(p_mgr, &ts, v);
+                }
 
         errors += test_suite_end(&ts);
 

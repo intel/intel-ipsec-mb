@@ -536,7 +536,12 @@ SUBMIT_JOB_CIPHER_ENC(IMB_MGR *state, IMB_JOB *job, const IMB_CIPHER_MODE cipher
                 MB_MGR_ZUC_OOO *zuc_nca6_ooo = state->zuc_nca6_enc_ooo;
                 return SUBMIT_JOB_ZUC_NCA6(zuc_nca6_ooo, job, IMB_DIR_ENCRYPT);
         } else if (IMB_CIPHER_SNOW5G_NCA4 == cipher_mode) {
+#ifdef SUBMIT_JOB_SNOW5G_NCA4_ENC_X2
+                MB_MGR_SNOW5G_OOO *snow5g_nca4_ooo = state->snow5g_nca4_enc_ooo;
+                return SUBMIT_JOB_SNOW5G_NCA4_ENC_X2(snow5g_nca4_ooo, job);
+#else
                 return submit_snow5g_nca4_job(job, IMB_DIR_ENCRYPT);
+#endif
         } else { /* assume IMB_CIPHER_NULL */
                 job->status |= IMB_STATUS_COMPLETED_CIPHER;
                 return job;
@@ -598,6 +603,11 @@ FLUSH_JOB_CIPHER_ENC(IMB_MGR *state, IMB_JOB *job, const IMB_CIPHER_MODE cipher_
         } else if (IMB_CIPHER_SNOW5G_NEA4 == cipher_mode) {
                 MB_MGR_SNOW5G_OOO *snow5g_ooo = state->snow5g_ooo;
                 return FLUSH_JOB_SNOW5G_NEA4_X8(snow5g_ooo);
+#endif
+#ifdef FLUSH_JOB_SNOW5G_NCA4_ENC_X2
+        } else if (IMB_CIPHER_SNOW5G_NCA4 == cipher_mode) {
+                MB_MGR_SNOW5G_OOO *snow5g_nca4_ooo = state->snow5g_nca4_enc_ooo;
+                return FLUSH_JOB_SNOW5G_NCA4_ENC_X2(snow5g_nca4_ooo);
 #endif
 #ifdef FLUSH_JOB_SNOW3G_UEA2
         } else if (IMB_CIPHER_SNOW3G_UEA2_BITLEN == cipher_mode) {
@@ -743,7 +753,12 @@ SUBMIT_JOB_CIPHER_DEC(IMB_MGR *state, IMB_JOB *job, const IMB_CIPHER_MODE cipher
                 MB_MGR_ZUC_OOO *zuc_nca6_ooo = state->zuc_nca6_dec_ooo;
                 return SUBMIT_JOB_ZUC_NCA6(zuc_nca6_ooo, job, IMB_DIR_DECRYPT);
         } else if (IMB_CIPHER_SNOW5G_NCA4 == cipher_mode) {
+#ifdef SUBMIT_JOB_SNOW5G_NCA4_DEC_X2
+                MB_MGR_SNOW5G_OOO *snow5g_nca4_ooo = state->snow5g_nca4_dec_ooo;
+                return SUBMIT_JOB_SNOW5G_NCA4_DEC_X2(snow5g_nca4_ooo, job);
+#else
                 return submit_snow5g_nca4_job(job, IMB_DIR_DECRYPT);
+#endif
         } else {
                 /* assume IMB_CIPHER_NULL */
                 job->status |= IMB_STATUS_COMPLETED_CIPHER;
@@ -810,6 +825,12 @@ FLUSH_JOB_CIPHER_DEC(IMB_MGR *state, IMB_JOB *job, const IMB_CIPHER_MODE cipher_
         if (IMB_CIPHER_SNOW5G_NEA4 == cipher_mode) {
                 MB_MGR_SNOW5G_OOO *snow5g_ooo = state->snow5g_ooo;
                 return FLUSH_JOB_SNOW5G_NEA4_X8(snow5g_ooo);
+        }
+#endif
+#ifdef FLUSH_JOB_SNOW5G_NCA4_DEC_X2
+        if (IMB_CIPHER_SNOW5G_NCA4 == cipher_mode) {
+                MB_MGR_SNOW5G_OOO *snow5g_nca4_ooo = state->snow5g_nca4_dec_ooo;
+                return FLUSH_JOB_SNOW5G_NCA4_DEC_X2(snow5g_nca4_ooo);
         }
 #endif
         return NULL;

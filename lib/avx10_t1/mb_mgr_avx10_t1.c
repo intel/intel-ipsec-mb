@@ -276,6 +276,12 @@
 #define SUBMIT_JOB_SNOW5G_NIA4_X8 submit_job_snow5g_nia4_vaes_avx512
 #define FLUSH_JOB_SNOW5G_NIA4_X8  flush_job_snow5g_nia4_vaes_avx512
 
+/* SNOW5G-NCA4 */
+#define SUBMIT_JOB_SNOW5G_NCA4_ENC_X2 submit_job_snow5g_nca4_enc_vaes_avx512
+#define FLUSH_JOB_SNOW5G_NCA4_ENC_X2  flush_job_snow5g_nca4_enc_vaes_avx512
+#define SUBMIT_JOB_SNOW5G_NCA4_DEC_X2 submit_job_snow5g_nca4_dec_vaes_avx512
+#define FLUSH_JOB_SNOW5G_NCA4_DEC_X2  flush_job_snow5g_nca4_dec_vaes_avx512
+
 /* SNOW3G UEA2 & UIA2 */
 static IMB_JOB *
 submit_snow3g_uea2_job_vaes_avx512(IMB_MGR *state, IMB_JOB *job)
@@ -495,6 +501,8 @@ reset_ooo_mgrs(IMB_MGR *state)
         ooo_mgr_aes_reset(state->aes_cfb_256_ooo, 16);
         ooo_mgr_snow5g_reset(state->snow5g_ooo, 8);
         ooo_mgr_snow5g_reset(state->snow5g_nia4_ooo, 8);
+        ooo_mgr_snow5g_reset(state->snow5g_nca4_enc_ooo, 2);
+        ooo_mgr_snow5g_reset(state->snow5g_nca4_dec_ooo, 2);
 }
 
 IMB_DLL_LOCAL void
