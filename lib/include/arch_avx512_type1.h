@@ -206,4 +206,47 @@ IMB_DLL_LOCAL void
 shake256_avx512(const uint8_t *input, const uint64_t inputByteLen, uint8_t *output,
                 uint64_t outputByteLen);
 
+/* KASUMI */
+void
+kasumi_f8_1_buffer_avx512(const kasumi_key_sched_t *pCtx, const uint64_t IV, const void *pBufferIn,
+                          void *pBufferOut, const uint32_t cipherLengthInBytes);
+void
+kasumi_f8_1_buffer_bit_avx512(const kasumi_key_sched_t *pCtx, const uint64_t IV,
+                              const void *pBufferIn, void *pBufferOut,
+                              const uint32_t cipherLengthInBits, const uint32_t offsetInBits);
+void
+kasumi_f8_2_buffer_avx512(const kasumi_key_sched_t *pCtx, const uint64_t IV1, const uint64_t IV2,
+                          const void *pBufferIn1, void *pBufferOut1, const uint32_t lengthInBytes1,
+                          const void *pBufferIn2, void *pBufferOut2, const uint32_t lengthInBytes2);
+void
+kasumi_f8_3_buffer_avx512(const kasumi_key_sched_t *pCtx, const uint64_t IV1, const uint64_t IV2,
+                          const uint64_t IV3, const void *pBufferIn1, void *pBufferOut1,
+                          const void *pBufferIn2, void *pBufferOut2, const void *pBufferIn3,
+                          void *pBufferOut3, const uint32_t lengthInBytes);
+void
+kasumi_f8_4_buffer_avx512(const kasumi_key_sched_t *pCtx, const uint64_t IV1, const uint64_t IV2,
+                          const uint64_t IV3, const uint64_t IV4, const void *pBufferIn1,
+                          void *pBufferOut1, const void *pBufferIn2, void *pBufferOut2,
+                          const void *pBufferIn3, void *pBufferOut3, const void *pBufferIn4,
+                          void *pBufferOut4, const uint32_t lengthInBytes);
+void
+kasumi_f8_n_buffer_avx512(const kasumi_key_sched_t *pKeySchedule, const uint64_t IV[],
+                          const void *const pDataIn[], void *pDataOut[], const uint32_t dataLen[],
+                          const uint32_t dataCount);
+
+void
+kasumi_f9_1_buffer_avx512(const kasumi_key_sched_t *pCtx, const void *pBufferIn,
+                          const uint32_t lengthInBytes, void *pDigest);
+
+void
+kasumi_f9_1_buffer_user_avx512(const kasumi_key_sched_t *pCtx, const uint64_t IV,
+                               const void *pBufferIn, const uint32_t lengthInBits, void *pDigest,
+                               const uint32_t direction);
+
+#define KASUMI_FI_AVX512(_data, _key1, _key2, _key3) kasumi_FI_avx512(_data, _key1, _key2, _key3)
+
+IMB_DLL_LOCAL uint16_t
+kasumi_FI_avx512(const uint16_t data, const uint16_t key1, const uint16_t key2,
+                 const uint16_t key3);
+
 #endif /* IMB_ASM_AVX512_T1_H */

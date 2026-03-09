@@ -1,5 +1,5 @@
 /*******************************************************************************
-  Copyright (c) 2009-2022, Intel Corporation
+  Copyright (c) 2009-2026, Intel Corporation
 
   Redistribution and use in source and binary forms, with or without
   modification, are permitted provided that the following conditions are met:
@@ -31,7 +31,9 @@
 
 #include "include/save_xmms.h"
 #include "include/clear_regs_mem.h"
-#include "kasumi_internal.h"
+#include "include/kasumi_internal.h"
+#include "include/arch_avx2_type1.h"
+#include "include/arch_avx512_type1.h"
 #include "include/error.h"
 
 #define SAVE_XMMS    save_xmms_avx
@@ -417,22 +419,4 @@ KASUMI_F9_1_BUFFER_USER(const kasumi_key_sched_t *pCtx, const uint64_t IV, const
 #ifndef LINUX
         RESTORE_XMMS(xmm_save);
 #endif
-}
-
-int
-KASUMI_INIT_F8_KEY_SCHED(const void *const pKey, kasumi_key_sched_t *pCtx)
-{
-        return kasumi_init_f8_key_sched(pKey, pCtx);
-}
-
-int
-KASUMI_INIT_F9_KEY_SCHED(const void *const pKey, kasumi_key_sched_t *pCtx)
-{
-        return kasumi_init_f9_key_sched(pKey, pCtx);
-}
-
-size_t
-KASUMI_KEY_SCHED_SIZE(void)
-{
-        return kasumi_key_sched_size();
 }

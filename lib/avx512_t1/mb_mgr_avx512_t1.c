@@ -505,9 +505,9 @@ init_mb_mgr_avx512_t1_internal(IMB_MGR *state, const int reset_mgrs)
         state->f8_n_buffer = kasumi_f8_n_buffer_avx2;
         state->f9_1_buffer = kasumi_f9_1_buffer_avx2;
         state->f9_1_buffer_user = kasumi_f9_1_buffer_user_avx2;
-        state->kasumi_init_f8_key_sched = kasumi_init_f8_key_sched_avx2;
-        state->kasumi_init_f9_key_sched = kasumi_init_f9_key_sched_avx2;
-        state->kasumi_key_sched_size = kasumi_key_sched_size_avx2;
+        state->kasumi_init_f8_key_sched = kasumi_init_f8_key_sched_sse;
+        state->kasumi_init_f9_key_sched = kasumi_init_f9_key_sched_sse;
+        state->kasumi_key_sched_size = kasumi_key_sched_size_sse;
 
         state->snow3g_f8_1_buffer_bit = snow3g_f8_1_buffer_bit_avx512;
         state->snow3g_f8_1_buffer = snow3g_f8_1_buffer_avx512;

@@ -44,6 +44,8 @@
 #include "memcpy.h"
 #include "error.h"
 #include "kasumi_interface.h"
+#include "include/arch_avx2_type1.h"
+#include "include/arch_avx512_type1.h"
 
 /*---------------------------------------------------------------------
  * Kasumi Inner S-Boxes
@@ -156,56 +158,57 @@ typedef union SafeBuffer {
 
 #define ROL16(a, b) (uint16_t)((a << b) | (a >> (16 - b)))
 
+static inline uint16_t
+FIp1(uint16_t data, const uint16_t key1, const uint16_t key2, const uint16_t key3)
+{
 #ifdef AVX512
-#define FIp1(data, key1, key2, key3)                                                               \
-        do {                                                                                       \
-                (data) = KASUMI_FI_AVX512(data, key1, key2, key3);                                 \
-        } while (0)
+        return KASUMI_FI_AVX512(data, key1, key2, key3);
 #elif defined(AVX2)
-#define FIp1(data, key1, key2, key3)                                                               \
-        do {                                                                                       \
-                (data) = KASUMI_FI_AVX2(data, key1, key2, key3);                                   \
-        } while (0)
+        return KASUMI_FI_AVX2(data, key1, key2, key3);
 #else
-#define FIp1(data, key1, key2, key3)                                                               \
-        do {                                                                                       \
-                uint16_t datal, datah;                                                             \
-                                                                                                   \
-                (data) ^= (key1);                                                                  \
-                datal = LOOKUP16_SSE(sso_kasumi_S7e, (uint8_t) (data), 256);                       \
-                datah = LOOKUP16_SSE(sso_kasumi_S9e, (data) >> 7, 512);                            \
-                (data) = datal ^ datah;                                                            \
-                (data) ^= (key2);                                                                  \
-                datal = LOOKUP16_SSE(sso_kasumi_S7e, (data) >> 9, 256);                            \
-                datah = LOOKUP16_SSE(sso_kasumi_S9e, (data) & 0x1FF, 512);                         \
-                (data) = datal ^ datah;                                                            \
-                (data) ^= (key3);                                                                  \
-        } while (0)
+        uint16_t datal, datah;
+
+        data ^= key1;
+        datal = LOOKUP16_SSE(sso_kasumi_S7e, (uint8_t) data, 256);
+        datah = LOOKUP16_SSE(sso_kasumi_S9e, data >> 7, 512);
+        data = datal ^ datah;
+        data ^= key2;
+        datal = LOOKUP16_SSE(sso_kasumi_S7e, data >> 9, 256);
+        datah = LOOKUP16_SSE(sso_kasumi_S9e, data & 0x1FF, 512);
+        data = datal ^ datah;
+        data ^= key3;
+        return data;
 #endif
+}
 
-#define FLpi(key1, key2, res_h, res_l)                                                             \
-        do {                                                                                       \
-                uint16_t l, r;                                                                     \
-                r = (res_l) & (key1);                                                              \
-                r = (res_h) ^ ROL16(r, 1);                                                         \
-                l = r | (key2);                                                                    \
-                (res_h) = (res_l) ^ ROL16(l, 1);                                                   \
-                (res_l) = r;                                                                       \
-        } while (0)
+static inline void
+FLpi(const uint16_t key1, const uint16_t key2, uint16_t *res_h, uint16_t *res_l)
+{
+        uint16_t l, r;
 
-#define FLp1(index, h, l)                                                                          \
-        do {                                                                                       \
-                uint16_t ka = *(index + 0);                                                        \
-                uint16_t kb = *(index + 1);                                                        \
-                FLpi(ka, kb, h, l);                                                                \
-        } while (0)
+        r = (*res_l) & key1;
+        r = (*res_h) ^ ROL16(r, 1);
+        l = r | key2;
+        *res_h = (*res_l) ^ ROL16(l, 1);
+        *res_l = r;
+}
 
-#define FOp1(index, h, l)                                                                          \
-        do {                                                                                       \
-                FIp1(h, *(index + 2), *(index + 3), l);                                            \
-                FIp1(l, *(index + 4), *(index + 5), h);                                            \
-                FIp1(h, *(index + 6), *(index + 7), l);                                            \
-        } while (0)
+static inline void
+FLp1(const uint16_t *index, uint16_t *h, uint16_t *l)
+{
+        uint16_t ka = *(index + 0);
+        uint16_t kb = *(index + 1);
+
+        FLpi(ka, kb, h, l);
+}
+
+static inline void
+FOp1(const uint16_t *index, uint16_t *h, uint16_t *l)
+{
+        *h = FIp1(*h, *(index + 2), *(index + 3), *l);
+        *l = FIp1(*l, *(index + 4), *(index + 5), *h);
+        *h = FIp1(*h, *(index + 6), *(index + 7), *l);
+}
 
 /**
  *******************************************************************************
@@ -226,16 +229,16 @@ kasumi_1_block(const uint16_t *context, uint16_t *data)
         do {
                 uint16_t temp_l = data[3], temp_h = data[2];
 
-                FLp1(context, temp_h, temp_l);
-                FOp1(context, temp_h, temp_l);
+                FLp1(context, &temp_h, &temp_l);
+                FOp1(context, &temp_h, &temp_l);
                 context += 8;
                 data[1] ^= temp_l;
                 data[0] ^= temp_h;
 
                 temp_h = data[1];
                 temp_l = data[0];
-                FOp1(context, temp_h, temp_l);
-                FLp1(context, temp_h, temp_l);
+                FOp1(context, &temp_h, &temp_l);
+                FLp1(context, &temp_h, &temp_l);
                 context += 8;
                 data[3] ^= temp_h;
                 data[2] ^= temp_l;
