@@ -125,7 +125,7 @@ mksection .text
         ;; unused lanes is a list of all unused lane ids (0-7)
         mov     %%UNUSED_LANES, [state + _snow5g_unused_lanes]
         mov     %%LANE, %%UNUSED_LANES
-        and     %%LANE, 0x7 ; max 8 lanes
+        and     %%LANE, 0x1
         shr     %%UNUSED_LANES, 4
         mov     [state + _snow5g_unused_lanes], %%UNUSED_LANES
         add     qword [state + _snow5g_lanes_in_use], 1
@@ -167,15 +167,14 @@ mksection .text
         cmp             qword [state + _snow5g_lanes_in_use], job_rax
         je              %%return_nea4   ;; RAX is NULL
 
-        ;; Set unused lanes to max length to prevent selection
-        cmp             qword [state + _snow5g_job_in_lane + 0*8], 0
-        jne             %%_flush_lane0_ok
-        mov             dword [state + _snow5g_lens_dqw + 0*4], 0xFFFFFFFF
-%%_flush_lane0_ok:
-        cmp             qword [state + _snow5g_job_in_lane + 1*8], 0
-        jne             %%_flush_lane1_ok
-        mov             dword [state + _snow5g_lens_dqw + 1*4], 0xFFFFFFFF
-%%_flush_lane1_ok:
+        ;; Set unused lane to max length to prevent selection
+        cmp             qword [state + _snow5g_lanes_in_use], 2
+        je              %%_flush_lanes_ready
+
+        mov             DWORD(%%UNUSED_LANES), [state + _snow5g_unused_lanes]
+        and             DWORD(%%UNUSED_LANES), 0x1
+        mov             dword [state + _snow5g_lens_dqw + %%UNUSED_LANES*4], 0xFFFFFFFF
+%%_flush_lanes_ready:
 %endif
 
         ;; ---------------------------------------------------------------------
@@ -202,28 +201,15 @@ align_loop
         mov             DWORD(%%TGP0), [state + _snow5g_lens_dqw + 4]
         xor             DWORD(%%LANE), DWORD(%%LANE)
         cmp             DWORD(%%TGP0), DWORD(%%MIN_COMMON_LEN)
-        jae             %%_lane0_is_min
-        mov             DWORD(%%MIN_COMMON_LEN), DWORD(%%TGP0)
-        inc             DWORD(%%LANE)
-%%_lane0_is_min:
+        cmovb           DWORD(%%MIN_COMMON_LEN), DWORD(%%TGP0)
+        adc             DWORD(%%LANE), 0
         xor             DWORD(%%LANE_PAIR), DWORD(%%LANE_PAIR)
         test            DWORD(%%MIN_COMMON_LEN), DWORD(%%MIN_COMMON_LEN)
         jz              %%_len_is_0
 
         ;; subtract common minimum length from lane lengths
-%ifidn %%SUBMIT_FLUSH, submit
         sub             [state + _snow5g_lens_dqw], DWORD(%%MIN_COMMON_LEN)
         sub             [state + _snow5g_lens_dqw + 4], DWORD(%%MIN_COMMON_LEN)
-%else ; FLUSH
-        cmp             dword [state + _snow5g_lens_dqw], 0xFFFFFFFF
-        je              %%_skip_sub_0
-        sub             [state + _snow5g_lens_dqw], DWORD(%%MIN_COMMON_LEN)
-%%_skip_sub_0:
-        cmp             dword [state + _snow5g_lens_dqw + 4], 0xFFFFFFFF
-        je              %%_skip_sub_1
-        sub             [state + _snow5g_lens_dqw + 4], DWORD(%%MIN_COMMON_LEN)
-%%_skip_sub_1:
-%endif
 
         kmovb           k1, byte [state + _snow5g_arg_LP_INIT_MASK]
 

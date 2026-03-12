@@ -41,13 +41,6 @@ snow5g_nia4_x2_job_vaes_avx512(const void *const pKey[NUM_NIA4_BUFS], const uint
                                const void *const pBufferIn[NUM_NIA4_BUFS],
                                void *pMacI[NUM_NIA4_BUFS],
                                const uint16_t lengthInBytes[NUM_NIA4_BUFS],
-                               const void *const job_in_lane[NUM_NIA4_BUFS]);
-
-IMB_DLL_LOCAL void
-snow5g_nia4_x2_job_vaes_avx512(const void *const pKey[NUM_NIA4_BUFS], const uint8_t *pIv,
-                               const void *const pBufferIn[NUM_NIA4_BUFS],
-                               void *pMacI[NUM_NIA4_BUFS],
-                               const uint16_t lengthInBytes[NUM_NIA4_BUFS],
                                const void *const job_in_lane[NUM_NIA4_BUFS])
 {
         DECLARE_ALIGNED(uint8_t HQP[NUM_NIA4_BUFS * 48], 64);

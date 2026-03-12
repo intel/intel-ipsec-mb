@@ -215,7 +215,6 @@ endstruc
 
         mov     DWORD(tmp), 1
         shlx    DWORD(tmp), DWORD(tmp), DWORD(lane)
-        kmovd   k1, DWORD(tmp)
         not     DWORD(tmp)
         and     [state + _snow5g_INIT_MASK], WORD(tmp)
 
@@ -237,28 +236,26 @@ endstruc
 
         mov     len, [job + _msg_len_to_hash_in_bytes]
 
-        vmovdqa         xmm0, [state + _snow5g_lens_dqw]
-        vpbroadcastw    xmm1, WORD(len)
-        vmovdqu16       xmm0{k1}, xmm1
-        vmovdqa         [state + _snow5g_lens_dqw], xmm0
+        mov     [state + _snow5g_lens_dqw + lane*2], WORD(len)
 
         cmp     qword [state + _snow5g_lanes_in_use], 2
         jne     %%return_null_submit_nia4
 
-        ; If a lane already has len=0, its tag was computed in the previous batch.
-        ; Complete it immediately without calling CALL_NIA4_X2 again (avoids tag overwrite).
-        vpxor           xmm1, xmm1, xmm1
-        vpcmpw          k4, xmm0, xmm1, 0      ; k4 = mask of len=0 lanes
-        kandnw          k4, k1, k4             ; exclude the newly submitted lane
-        kmovw           DWORD(tmp2), k4
-        bsf             DWORD(idx), DWORD(tmp2)
-        jnz             %%len_is_0_submit_nia4  ; pending job ready, complete without reprocessing
+        ;; Check if the other lane has len=0 (already completed in previous batch)
+        mov             DWORD(idx), DWORD(lane)
+        xor             DWORD(idx), 1
+        cmp             word [state + _snow5g_lens_dqw + idx*2], 0
+        je              %%len_is_0_submit_nia4
 
-        vphminposuw     xmm2, xmm0
-        vpextrw         DWORD(tmp2), xmm2, 0  ; tmp2 = minimum length value
-        vpextrw         DWORD(idx), xmm2, 1   ; idx  = minimum length lane index
+        ;; Find minimum length lane
+        movzx           DWORD(tmp), word [state + _snow5g_lens_dqw]
+        movzx           DWORD(tmp2), word [state + _snow5g_lens_dqw + 2]
+        xor             DWORD(idx), DWORD(idx)
+        cmp             DWORD(tmp2), DWORD(tmp)
+        cmovb           DWORD(tmp), DWORD(tmp2)
+        adc             DWORD(idx), 0
 
-        test            DWORD(tmp2), DWORD(tmp2)
+        test            DWORD(tmp), DWORD(tmp)
         jz              %%len_is_0_submit_nia4
 
         mov     r11, state
@@ -304,43 +301,50 @@ align_label
         cmp     qword [state + _snow5g_lanes_in_use], 0
         jz      %%return_null_flush_nia4
 
-        vpxor           xmm0, xmm0
-        vmovdqu64       xmm1, [state + _snow5g_job_in_lane]
-        vpcmpq          k1, xmm1, xmm0, 0
-        kmovb           DWORD(tmp3), k1
+        cmp     qword [state + _snow5g_lanes_in_use], 2
+        je      %%_flush_both_active_nia4
 
-        vmovdqa         xmm0, [state + _snow5g_lens_dqw]
-        mov             WORD(tmp4), 0xffff
-        vpbroadcastw    xmm1, WORD(tmp4)
-        vmovdqu16       xmm0{k1}, xmm1
-        vmovdqa         [state + _snow5g_lens_dqw], xmm0
+        ;; One lane active: find unused lane and set its length to max
+        mov     DWORD(tmp3), [state + _snow5g_unused_lanes]
+        and     DWORD(tmp3), 0x1
+        mov     word [state + _snow5g_lens_dqw + tmp3*2], 0xFFFF
 
-        vpxor           xmm1, xmm1
-        vpcmpw          k4, xmm0, xmm1, 0
-        kmovw           DWORD(tmp), k4
-        bsf             DWORD(idx), DWORD(tmp)
-        jnz             %%len_is_0_flush_nia4
+        mov     DWORD(idx), DWORD(tmp3)
+        xor     DWORD(idx), 1
 
-        vphminposuw     xmm2, xmm0
-        vpextrw         DWORD(idx), xmm2, 1
+        cmp     word [state + _snow5g_lens_dqw + idx*2], 0
+        je      %%len_is_0_flush_nia4
 
-        vpbroadcastq    xmm1, [state + _snow5g_args_in + idx*8]
-        vmovdqu64       [state + _snow5g_args_in]{k1}, xmm1
+        ;; Copy active lane's args to unused lane for NIA4_X2
+        mov     tmp4, [state + _snow5g_args_in + idx*8]
+        mov     [state + _snow5g_args_in + tmp3*8], tmp4
 
-        vpbroadcastq    xmm1, [state + _snow5g_args_keys + idx*8]
-        vmovdqu64       [state + _snow5g_args_keys]{k1}, xmm1
+        mov     tmp4, [state + _snow5g_args_keys + idx*8]
+        mov     [state + _snow5g_args_keys + tmp3*8], tmp4
 
-        shl             idx, 4
-        vbroadcasti128  ymm2, [state + _snow5g_args_IV + idx]
-        shr             idx, 4
+        mov     DWORD(tmp), DWORD(idx)
+        shl     DWORD(tmp), 4
+        vmovdqu xmm0, [state + _snow5g_args_IV + tmp]
+        mov     DWORD(tmp), DWORD(tmp3)
+        shl     DWORD(tmp), 4
+        vmovdqu [state + _snow5g_args_IV + tmp], xmm0
 
-        mov             r11, state
+        jmp     %%_flush_call_nia4
 
-        mov             DWORD(tmp3), DWORD(idx)
-        xor             DWORD(tmp3), 1
-        shl             DWORD(tmp3), 4
-        vmovdqu         [r11 + _snow5g_args_IV + tmp3], XWORD(ymm2)
+%%_flush_both_active_nia4:
+        ;; Both lanes active: find minimum length lane
+        movzx   DWORD(tmp), word [state + _snow5g_lens_dqw]
+        movzx   DWORD(tmp4), word [state + _snow5g_lens_dqw + 2]
+        xor     DWORD(idx), DWORD(idx)
+        cmp     DWORD(tmp4), DWORD(tmp)
+        cmovb   DWORD(tmp), DWORD(tmp4)
+        adc     DWORD(idx), 0
 
+        test    DWORD(tmp), DWORD(tmp)
+        jz      %%len_is_0_flush_nia4
+
+%%_flush_call_nia4:
+        mov     r11, state
         CALL_NIA4_X2
 
         mov     state, [rsp + _gpr_save_nia4 + 8*8]

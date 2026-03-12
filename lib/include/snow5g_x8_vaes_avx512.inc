@@ -309,16 +309,15 @@ endstruc
 
         vpalignr %%TEMP1, %%LFSR_A_HDQ, %%LFSR_A_LDQ, 14
         vpsraw %%TEMP2, %%LFSR_A_LDQ, 15
-        vpand  %%TEMP2, %%TEMP2, [rel alpha]
-        vpsllw %%LFSR_A_NEW, %%LFSR_A_LDQ, 1
-        vpxorq  %%LFSR_A_NEW, %%LFSR_A_NEW, %%TEMP2
+        vpaddw %%LFSR_A_NEW, %%LFSR_A_LDQ, %%LFSR_A_LDQ
+        vpternlogq %%LFSR_A_NEW, %%TEMP2, [rel alpha], 0x78
         vpternlogq  %%LFSR_A_NEW, %%TEMP1, %%LFSR_B_LDQ, 0x96
 
-        vpxorq  %%LFSR_B_NEW, %%LFSR_B_HDQ, %%LFSR_A_LDQ
-        vpsllw %%TEMP1, %%LFSR_B_LDQ, 1
+        vmovdqa32 %%LFSR_B_NEW, %%LFSR_A_LDQ
+        vpaddw %%TEMP1, %%LFSR_B_LDQ, %%LFSR_B_LDQ
         vpsraw %%TEMP2, %%LFSR_B_LDQ, 15
-        vpand  %%TEMP2, %%TEMP2, [rel beta]
-        vpternlogq  %%LFSR_B_NEW, %%TEMP1, %%TEMP2, 0x96
+        vpternlogq %%TEMP1, %%TEMP2, [rel beta], 0x78
+        vpternlogq  %%LFSR_B_NEW, %%TEMP1, %%LFSR_B_HDQ, 0x96
 
         vpxorq          %%LFSR_A_NEW{%%KREG}, %%LFSR_A_NEW, %%KEYSTREAM_MEM
 
@@ -412,7 +411,7 @@ endstruc
 %if %%LANE_INDEX == 0
         vmovdqa32       XWORD(%%TEMP_XMM1), XWORD(%%KEYSTREAM_YMM)
 %else
-        vextracti128    XWORD(%%TEMP_XMM1), %%KEYSTREAM_YMM, 1
+        vextracti32x4   XWORD(%%TEMP_XMM1), %%KEYSTREAM_YMM, 1
 %endif
 
         vmovdqu8        XWORD(%%TEMP_XMM2){%%KREG}{z}, [%%SRC_PTR + %%OFFSET]
@@ -497,7 +496,7 @@ endstruc
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Optimized enc/dec for 2-lane (uses pre-loaded pointers and masks)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-%macro SNOW5G_ENC_DEC_LANE_PAIR_X2 17
+%macro SNOW5G_ENC_DEC_LANE_PAIR_X2 21
 %define %%FSM_R1               %1  ;; [in/out] FSM R1 register
 %define %%FSM_R2               %2  ;; [in/out] FSM R2 register
 %define %%FSM_R3               %3  ;; [in/out] FSM R3 register
@@ -515,6 +514,10 @@ endstruc
 %define %%DST_PTR0             %15 ;; [in] pre-loaded dst pointer lane 0
 %define %%DST_PTR1             %16 ;; [in] pre-loaded dst pointer lane 1
 %define %%OFFSET               %17 ;; [in] current offset to src/dst
+%define %%CONST_SIGMA          %18 ;; [in] ymm with sigma shuffle constant
+%define %%CONST_ALPHA          %19 ;; [in] ymm with alpha polynomial constant
+%define %%CONST_BETA           %20 ;; [in] ymm with beta polynomial constant
+%define %%CONST_ZERO           %21 ;; [in] ymm with zero (AES round key)
 
         vpaddw          %%KEYSTREAM_SAVE_REG, %%LFSR_B_HDQ, %%FSM_R1
         vpxorq          %%KEYSTREAM_SAVE_REG, %%FSM_R2, %%KEYSTREAM_SAVE_REG
@@ -526,19 +529,18 @@ endstruc
         vpalignr        %%LFSR_A_NEW, %%LFSR_A_HDQ, %%LFSR_A_LDQ, 14
         vpaddw          %%TEMP1, %%TEMP1, %%FSM_R2
         vpsraw          %%TEMP2, %%LFSR_A_LDQ, 15
-        vpand           %%TEMP2, %%TEMP2, [rel alpha]
-        vaesenc         %%FSM_R3, %%FSM_R2, [rel zero]
-        vpsllw          %%LFSR_B_NEW, %%LFSR_A_LDQ, 1
-        vpxorq          %%LFSR_B_NEW, %%LFSR_B_NEW, %%TEMP2
-        vaesenc         %%FSM_R2, %%FSM_R1, [rel zero]
+        vaesenc         %%FSM_R3, %%FSM_R2, %%CONST_ZERO
+        vpaddw          %%LFSR_B_NEW, %%LFSR_A_LDQ, %%LFSR_A_LDQ
+        vpternlogq      %%LFSR_B_NEW, %%TEMP2, %%CONST_ALPHA, 0x78
+        vaesenc         %%FSM_R2, %%FSM_R1, %%CONST_ZERO
         vpternlogq      %%LFSR_B_NEW, %%LFSR_A_NEW, %%LFSR_B_LDQ, 0x96
-        vpshufb         %%FSM_R1, %%TEMP1, [rel sigma]
+        vpshufb         %%FSM_R1, %%TEMP1, %%CONST_SIGMA
 
-        vpxorq          %%LFSR_A_NEW, %%LFSR_B_HDQ, %%LFSR_A_LDQ
-        vpsllw          %%TEMP1, %%LFSR_B_LDQ, 1
+        vmovdqa32       %%LFSR_A_NEW, %%LFSR_A_LDQ
+        vpaddw          %%TEMP1, %%LFSR_B_LDQ, %%LFSR_B_LDQ
         vpsraw          %%TEMP2, %%LFSR_B_LDQ, 15
-        vpand           %%TEMP2, %%TEMP2, [rel beta]
-        vpternlogq      %%LFSR_A_NEW, %%TEMP1, %%TEMP2, 0x96
+        vpternlogq      %%TEMP1, %%TEMP2, %%CONST_BETA, 0x78
+        vpternlogq      %%LFSR_A_NEW, %%TEMP1, %%LFSR_B_HDQ, 0x96
 
         vpxorq          %%LFSR_B_NEW{k1}, %%LFSR_B_NEW, %%KEYSTREAM_SAVE_REG
 
@@ -632,11 +634,17 @@ align_loop
         kmovw           k2, [%%STATE_PTR + _snow5g_args_LD_ST_MASK + 0]
         kmovw           k3, [%%STATE_PTR + _snow5g_args_LD_ST_MASK + 2]
 
+        vmovdqa64       ymm16, [rel sigma]
+        vmovdqa64       ymm17, [rel alpha]
+        vmovdqa64       ymm18, [rel beta]
+        vpxorq          ymm19, ymm19, ymm19
+
 align_loop
 %%next_keyword_x2:
         SNOW5G_ENC_DEC_LANE_PAIR_X2 FSM_R1_L01, FSM_R2_L01, FSM_R3_L01, \
                 LFSR_A_LDQ_L01, LFSR_A_HDQ_L01, LFSR_B_LDQ_L01, LFSR_B_HDQ_L01, \
-                ymm4, ymm5, ymm6, TEMP1, TEMP2, %%TGP0, %%TGP1, r12, r13, %%OFFSET
+                ymm4, ymm5, ymm6, ymm20, ymm21, %%TGP0, %%TGP1, r12, r13, %%OFFSET, \
+                ymm16, ymm17, ymm18, ymm19
 
         add             %%OFFSET, 16
         dec             %%COUNT
