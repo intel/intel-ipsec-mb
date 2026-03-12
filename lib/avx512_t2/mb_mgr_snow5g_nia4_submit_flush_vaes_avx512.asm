@@ -25,7 +25,7 @@
 ;; OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;
 
-;; SNOW5G-NIA4 8-buffer Submit/Flush functions for AVX512
+;; SNOW5G-NIA4 2-buffer Submit/Flush functions for AVX512
 
 %include "include/os.inc"
 %include "include/imb_job.inc"
@@ -40,7 +40,7 @@
 mksection .text
 default rel
 
-extern snow5g_nia4_8_buffer_job_vaes_avx512
+extern snow5g_nia4_x2_job_vaes_avx512
 
 %ifdef LINUX
 %define arg1    rdi
@@ -142,10 +142,9 @@ endstruc
 %endmacro
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Calls snow5g_nia4_8_buffer_job_vaes_avx512
 ;; Expects state pointer in r11
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-%macro CALL_NIA4_8_BUFFER 0
+%macro CALL_NIA4_X2 0
         RESERVE_STACK_SPACE 6
 
         lea     arg1, [r11 + _snow5g_args_keys]
@@ -161,7 +160,7 @@ endstruc
         lea     r12, [r11 + _snow5g_job_in_lane]
         mov     arg6, r12
 %endif
-        call    snow5g_nia4_8_buffer_job_vaes_avx512
+        call    snow5g_nia4_x2_job_vaes_avx512
 
         RESTORE_STACK_SPACE 6
 %endmacro
@@ -191,9 +190,9 @@ endstruc
 %endmacro
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Submits a job to the 8-buffer SNOW5G-NIA4 scheduler
+;; Submits a job to the 2-buffer SNOW5G-NIA4 scheduler
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-%macro SUBMIT_JOB_SNOW5G_NIA4_X8 0
+%macro SUBMIT_JOB_SNOW5G_NIA4_X2 0
 
 %define len              rbp
 %define idx              rbp
@@ -202,49 +201,40 @@ endstruc
 %define unused_lanes     rbx
 %define tmp              r15
 %define tmp2             r13
-%define min_len          r14
 
         SNOW5G_NIA4_FUNC_START 1
 
-        ;; Get unused lane from lane queue
         mov     unused_lanes, [state + _snow5g_unused_lanes]
         mov     lane, unused_lanes
-        and     lane, 0x7           ;; just 3 bits for 8 lanes
+        and     lane, 0x1
         shr     unused_lanes, 4
         mov     [state + _snow5g_unused_lanes], unused_lanes
         add     qword [state + _snow5g_lanes_in_use], 1
 
-        ;; Store job pointer in lane
         mov     [state + _snow5g_job_in_lane + lane*8], job
 
-        ;; Create lane mask: tmp = 1 << lane
         mov     DWORD(tmp), 1
         shlx    DWORD(tmp), DWORD(tmp), DWORD(lane)
         kmovd   k1, DWORD(tmp)
         not     DWORD(tmp)
-        and     [state + _snow5g_INIT_MASK], WORD(tmp)  ;; clear bit in unused bitmask
+        and     [state + _snow5g_INIT_MASK], WORD(tmp)
 
-        ;; Copy job data into lane arrays
         mov     tmp, [job + _src]
         add     tmp, [job + _hash_start_src_offset_in_bytes]
         mov     [state + _snow5g_args_in + lane*8], tmp
 
-        ;; Store key pointer
         mov     tmp, [job + _snow5g_nia4_key]
         mov     [state + _snow5g_args_keys + lane*8], tmp
 
-        ;; Copy IV to state array (16 bytes per lane)
         mov     tmp, [job + _snow5g_nia4_iv]
         mov     tmp2, lane
         shl     tmp2, 4
         vmovdqu xmm0, [tmp]
         vmovdqu [state + _snow5g_args_IV + tmp2], xmm0
 
-        ;; Store output tag pointer
         mov     tmp, [job + _auth_tag_output]
         mov     [state + _snow5g_args_out + lane*8], tmp
 
-        ;; Insert len into proper lane (bytes)
         mov     len, [job + _msg_len_to_hash_in_bytes]
 
         vmovdqa         xmm0, [state + _snow5g_lens_dqw]
@@ -252,26 +242,34 @@ endstruc
         vmovdqu16       xmm0{k1}, xmm1
         vmovdqa         [state + _snow5g_lens_dqw], xmm0
 
-        ;; Check if all 8 lanes are full
-        cmp     qword [state + _snow5g_lanes_in_use], 8
+        cmp     qword [state + _snow5g_lanes_in_use], 2
         jne     %%return_null_submit_nia4
 
-        ;; All 8 lanes full - find min length
-        vphminposuw     xmm2, xmm0
-        vpextrw         DWORD(min_len), xmm2, 0   ; min value
-        vpextrw         DWORD(idx), xmm2, 1       ; min index
+        ; If a lane already has len=0, its tag was computed in the previous batch.
+        ; Complete it immediately without calling CALL_NIA4_X2 again (avoids tag overwrite).
+        vpxor           xmm1, xmm1, xmm1
+        vpcmpw          k4, xmm0, xmm1, 0      ; k4 = mask of len=0 lanes
+        kandnw          k4, k1, k4             ; exclude the newly submitted lane
+        kmovw           DWORD(tmp2), k4
+        bsf             DWORD(idx), DWORD(tmp2)
+        jnz             %%len_is_0_submit_nia4  ; pending job ready, complete without reprocessing
 
-        or              min_len, min_len
+        vphminposuw     xmm2, xmm0
+        vpextrw         DWORD(tmp2), xmm2, 0  ; tmp2 = minimum length value
+        vpextrw         DWORD(idx), xmm2, 1   ; idx  = minimum length lane index
+
+        test            DWORD(tmp2), DWORD(tmp2)
         jz              %%len_is_0_submit_nia4
 
         mov     r11, state
-        CALL_NIA4_8_BUFFER
+        CALL_NIA4_X2
 
         mov     state, [rsp + _gpr_save_nia4 + 8*8]
         mov     job,   [rsp + _gpr_save_nia4 + 8*9]
 
-        vpxorq          xmm0, xmm0
-        vmovdqa         [state + _snow5g_lens_dqw], xmm0
+        ; Clear only the 2 active lanes; unused lanes (2-7) must stay 0xFFFF
+        mov     word [state + _snow5g_lens_dqw + 0*2], 0
+        mov     word [state + _snow5g_lens_dqw + 1*2], 0
 
 align_label
 %%len_is_0_submit_nia4:
@@ -288,9 +286,9 @@ align_label
 %endmacro
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Flushes completed jobs from the 8-buffer SNOW5G-NIA4 scheduler
+;; Flushes completed jobs from the 2-buffer SNOW5G-NIA4 scheduler
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-%macro FLUSH_JOB_SNOW5G_NIA4_X8 0
+%macro FLUSH_JOB_SNOW5G_NIA4_X2 0
 
 %define unused_lanes     rbx
 %define tmp1             rbx
@@ -300,18 +298,15 @@ align_label
 %define tmp3             r8
 %define tmp4             r15
 %define idx              r14
-%define min_len          r15
 
         SNOW5G_NIA4_FUNC_START 0
 
-        ;; Check for empty
         cmp     qword [state + _snow5g_lanes_in_use], 0
         jz      %%return_null_flush_nia4
 
-        ;; Find NULL lanes (k1) and set their lengths to 0xFFFF
-        vpxorq          zmm0, zmm0
-        vmovdqu64       zmm1, [state + _snow5g_job_in_lane]
-        vpcmpq          k1, zmm1, zmm0, 0
+        vpxor           xmm0, xmm0
+        vmovdqu64       xmm1, [state + _snow5g_job_in_lane]
+        vpcmpq          k1, xmm1, xmm0, 0
         kmovb           DWORD(tmp3), k1
 
         vmovdqa         xmm0, [state + _snow5g_lens_dqw]
@@ -320,57 +315,39 @@ align_label
         vmovdqu16       xmm0{k1}, xmm1
         vmovdqa         [state + _snow5g_lens_dqw], xmm0
 
-        ;; Check if any job already finished (len == 0)
         vpxor           xmm1, xmm1
         vpcmpw          k4, xmm0, xmm1, 0
         kmovw           DWORD(tmp), k4
         bsf             DWORD(idx), DWORD(tmp)
         jnz             %%len_is_0_flush_nia4
 
-        ;; Find min length
         vphminposuw     xmm2, xmm0
-        vpextrw         DWORD(min_len), xmm2, 0
         vpextrw         DWORD(idx), xmm2, 1
 
-        ;; Copy valid lane data (idx) into NULL lanes (k1)
-        vpbroadcastq    zmm1, [state + _snow5g_args_in + idx*8]
-        vmovdqu64       [state + _snow5g_args_in]{k1}, zmm1
+        vpbroadcastq    xmm1, [state + _snow5g_args_in + idx*8]
+        vmovdqu64       [state + _snow5g_args_in]{k1}, xmm1
 
-        vpbroadcastq    zmm1, [state + _snow5g_args_keys + idx*8]
-        vmovdqu64       [state + _snow5g_args_keys]{k1}, zmm1
+        vpbroadcastq    xmm1, [state + _snow5g_args_keys + idx*8]
+        vmovdqu64       [state + _snow5g_args_keys]{k1}, xmm1
 
         shl             idx, 4
-        vbroadcasti32x4 zmm2, [state + _snow5g_args_IV + idx]
+        vbroadcasti128  ymm2, [state + _snow5g_args_IV + idx]
         shr             idx, 4
 
-        ;; Save state pointer before clobbering rcx
-        ;; (On Windows, state=arg1=rcx which will be overwritten below)
-        mov     r11, state
+        mov             r11, state
 
-        ;; Copy IV to NULL lanes using masked ZMM stores
-        ;; Expand 8-bit lane mask to 16-bit dword mask (each lane = 4 dwords)
-        kmovb           eax, k1
-        mov             ecx, 0x1111
+        mov             DWORD(tmp3), DWORD(idx)
+        xor             DWORD(tmp3), 1
+        shl             DWORD(tmp3), 4
+        vmovdqu         [r11 + _snow5g_args_IV + tmp3], XWORD(ymm2)
 
-        ;; First ZMM: lanes 0-3 (expand bits 0-3)
-        pdep            edx, eax, ecx
-        imul            edx, edx, 0xF
-        kmovw           k2, edx
-        vmovdqu32       [r11 + _snow5g_args_IV]{k2}, zmm2
-
-        ;; Second ZMM: lanes 4-7 (expand bits 4-7)
-        shr             eax, 4
-        pdep            eax, eax, ecx
-        imul            eax, eax, 0xF
-        kmovw           k2, eax
-        vmovdqu32       [r11 + _snow5g_args_IV + 64]{k2}, zmm2
-
-        CALL_NIA4_8_BUFFER
+        CALL_NIA4_X2
 
         mov     state, [rsp + _gpr_save_nia4 + 8*8]
 
-        vpxorq          xmm0, xmm0
-        vmovdqa         [state + _snow5g_lens_dqw], xmm0
+        ; Clear only the 2 active lanes; unused lanes (2-7) must stay 0xFFFF
+        mov     word [state + _snow5g_lens_dqw + 0*2], 0
+        mov     word [state + _snow5g_lens_dqw + 1*2], 0
 
 align_label
 %%len_is_0_flush_nia4:
@@ -386,43 +363,18 @@ align_label
         SNOW5G_NIA4_FUNC_END
 %endmacro
 
-;; submit_job_snow5g_nia4_vaes_avx512(state, job)
 MKGLOBAL(submit_job_snow5g_nia4_vaes_avx512,function,internal)
-align 64
+align_function
 submit_job_snow5g_nia4_vaes_avx512:
         endbranch64
-        SUBMIT_JOB_SNOW5G_NIA4_X8
+        SUBMIT_JOB_SNOW5G_NIA4_X2
         ret
 
-;; flush_job_snow5g_nia4_vaes_avx512(state)
 MKGLOBAL(flush_job_snow5g_nia4_vaes_avx512,function,internal)
-align 64
+align_function
 flush_job_snow5g_nia4_vaes_avx512:
         endbranch64
-        FLUSH_JOB_SNOW5G_NIA4_X8
-        ret
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; generate_hqp_snow5g_nia4_x8_vaes_avx512(keys[], ivs, hqp_out)
-;; Generate H, Q, P keys for 8 SNOW5G NIA4 buffers in parallel
-;; Output: hqp[lane*48 + 0..15]=H, hqp[lane*48 + 16..31]=Q, hqp[lane*48 + 32..47]=P
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-MKGLOBAL(generate_hqp_snow5g_nia4_x8_vaes_avx512,function,internal)
-align_function
-generate_hqp_snow5g_nia4_x8_vaes_avx512:
-        SNOW5G_FUNC_START
-
-        SNOW5G_INIT_STATE arg1, arg2
-        SNOW5G_INIT_ROUNDS arg1
-
-        PROCESS_ALL_LANE_PAIRS k2
-        HQP_STORE_ALL_KS arg3, 0, TEMP0
-        PROCESS_ALL_LANE_PAIRS k2
-        HQP_STORE_ALL_KS arg3, 16, TEMP0
-        PROCESS_ALL_LANE_PAIRS k2
-        HQP_STORE_ALL_KS arg3, 32, TEMP0
-
-        SNOW5G_FUNC_END
+        FLUSH_JOB_SNOW5G_NIA4_X2
         ret
 
 mksection stack-noexec

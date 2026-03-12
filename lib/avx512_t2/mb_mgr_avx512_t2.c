@@ -257,12 +257,12 @@
 #define FLUSH_JOB_ZUC_NCA6  flush_job_zuc_nca6_gfni_sse
 
 /* SNOW5G-NEA4 */
-#define SUBMIT_JOB_SNOW5G_NEA4_X8 submit_job_snow5g_nea4_vaes_avx512
-#define FLUSH_JOB_SNOW5G_NEA4_X8  flush_job_snow5g_nea4_vaes_avx512
+#define SUBMIT_JOB_SNOW5G_NEA4_X2 submit_job_snow5g_nea4_vaes_avx512
+#define FLUSH_JOB_SNOW5G_NEA4_X2  flush_job_snow5g_nea4_vaes_avx512
 
 /* SNOW5G-NIA4 */
-#define SUBMIT_JOB_SNOW5G_NIA4_X8 submit_job_snow5g_nia4_vaes_avx512
-#define FLUSH_JOB_SNOW5G_NIA4_X8  flush_job_snow5g_nia4_vaes_avx512
+#define SUBMIT_JOB_SNOW5G_NIA4_X2 submit_job_snow5g_nia4_vaes_avx512
+#define FLUSH_JOB_SNOW5G_NIA4_X2  flush_job_snow5g_nia4_vaes_avx512
 
 /* SNOW5G-NCA4 */
 #define SUBMIT_JOB_SNOW5G_NCA4_ENC_X2 submit_job_snow5g_nca4_enc_vaes_avx512

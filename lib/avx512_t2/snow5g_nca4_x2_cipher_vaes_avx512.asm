@@ -56,21 +56,21 @@ generate_hqp_snow5g_nca4_x2_vaes_avx512:
         kxord   k2, k2, k2
         SNOW5G_ENC_DEC_LANE_PAIR 0, FSM_R1_L01, FSM_R2_L01, FSM_R3_L01, \
                 LFSR_A_LDQ_L01, LFSR_A_HDQ_L01, LFSR_B_LDQ_L01, LFSR_B_HDQ_L01, \
-                _LFSR_A_HDQ_01, _LFSR_B_HDQ_01, _keystream_01, \
+                ymm4, ymm5, _keystream_01, \
                 TEMP0, TEMP1, 0, 0, 0, 0, r10, r11, k2, k3, 1
         vmovdqa32       TEMP0, [rsp + _keystream_01]
         vmovdqu32       [arg3 + 0*48 + 0], XWORD(TEMP0)
         vextracti32x4   [arg3 + 1*48 + 0], TEMP0, 1
         SNOW5G_ENC_DEC_LANE_PAIR 0, FSM_R1_L01, FSM_R2_L01, FSM_R3_L01, \
                 LFSR_A_LDQ_L01, LFSR_A_HDQ_L01, LFSR_B_LDQ_L01, LFSR_B_HDQ_L01, \
-                _LFSR_A_HDQ_01, _LFSR_B_HDQ_01, _keystream_01, \
+                ymm4, ymm5, _keystream_01, \
                 TEMP0, TEMP1, 0, 0, 0, 0, r10, r11, k2, k3, 1
         vmovdqa32       TEMP0, [rsp + _keystream_01]
         vmovdqu32       [arg3 + 0*48 + 16], XWORD(TEMP0)
         vextracti32x4   [arg3 + 1*48 + 16], TEMP0, 1
         SNOW5G_ENC_DEC_LANE_PAIR 0, FSM_R1_L01, FSM_R2_L01, FSM_R3_L01, \
                 LFSR_A_LDQ_L01, LFSR_A_HDQ_L01, LFSR_B_LDQ_L01, LFSR_B_HDQ_L01, \
-                _LFSR_A_HDQ_01, _LFSR_B_HDQ_01, _keystream_01, \
+                ymm4, ymm5, _keystream_01, \
                 TEMP0, TEMP1, 0, 0, 0, 0, r10, r11, k2, k3, 1
         vmovdqa32       TEMP0, [rsp + _keystream_01]
         vmovdqu32       [arg3 + 0*48 + 32], XWORD(TEMP0)

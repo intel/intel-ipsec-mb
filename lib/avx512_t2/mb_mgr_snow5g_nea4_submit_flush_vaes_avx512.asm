@@ -71,14 +71,6 @@
 mksection .rodata
 default rel
 
-align 64
-dd_0_to_7:
-        dd 0, 1, 2, 3, 4, 5, 6, 7
-
-align 64
-all_fs:
-times 8 dd 0xffffffff
-
 align 2
 lane_set_mask:
         db 0x3, 0xC
@@ -139,21 +131,13 @@ mksection .text
         add     qword [state + _snow5g_lanes_in_use], 1
         mov     [state + _snow5g_job_in_lane + %%LANE*8], job
 
-        ;; set lane mask
-        xor             %%TGP0, %%TGP0
-        bts             DWORD(%%TGP0), DWORD(%%LANE)
-        kmovd           k1, DWORD(%%TGP0)
-
         ;; Initialize LFSR and FSM registers
         mov             %%TGP1, [job + _enc_keys]
         mov             %%TGP2, [job + _iv]
 
         SNOW_5G_LFSR_FSM_INIT_SUBMIT state, %%LANE, %%TGP1, %%TGP2, ymm0, ymm1, %%TGP5
 
-        ;; _INIT_MASK is common mask for clocking loop
-        kmovw           k6, [state + _snow5g_INIT_MASK]
-        korw            k6, k1, k6
-        kmovw           [state + _snow5g_INIT_MASK], k6
+        bts             word [state + _snow5g_INIT_MASK], WORD(%%LANE)
 
         ;; Set LP_INIT_MASK bits for this lane
         ;; Each byte controls a lane pair: bits [0:1] for even lane, bits [2:3] for odd lane
@@ -171,21 +155,27 @@ mksection .text
         mov             [state + _snow5g_args_in + %%LANE*8], state
         mov             [state + _snow5g_args_out + %%LANE*8], state
 
-        vmovdqa32       ymm0, [state + _snow5g_lens_dqw]
-        mov             DWORD(%%TGP0), 15
-        vpbroadcastd    ymm0{k1}, DWORD(%%TGP0)
-        vmovdqa32       [state + _snow5g_lens_dqw], ymm0
+        mov             dword [state + _snow5g_lens_dqw + %%LANE*4], 15
 
         ;; insert length into proper lane
         mov             %%TGP0, [job + _msg_len_to_cipher_in_bytes]
         mov             [state + _snow5g_args_byte_length + %%LANE*8], %%TGP0
 
-        cmp             qword [state + _snow5g_lanes_in_use], 8
+        cmp             qword [state + _snow5g_lanes_in_use], 2
         jne             %%return_nea4   ;; RAX is NULL
-        ;; if all lanes are busy fall through to %%process_job_nea4
 %else   ;; FLUSH
         cmp             qword [state + _snow5g_lanes_in_use], job_rax
         je              %%return_nea4   ;; RAX is NULL
+
+        ;; Set unused lanes to max length to prevent selection
+        cmp             qword [state + _snow5g_job_in_lane + 0*8], 0
+        jne             %%_flush_lane0_ok
+        mov             dword [state + _snow5g_lens_dqw + 0*4], 0xFFFFFFFF
+%%_flush_lane0_ok:
+        cmp             qword [state + _snow5g_job_in_lane + 1*8], 0
+        jne             %%_flush_lane1_ok
+        mov             dword [state + _snow5g_lens_dqw + 1*4], 0xFFFFFFFF
+%%_flush_lane1_ok:
 %endif
 
         ;; ---------------------------------------------------------------------
@@ -207,75 +197,51 @@ mksection .text
 
 align_loop
 %%_find_min:
-        ;; Find minimum length
-        vmovdqa32       ymm0, [state + _snow5g_lens_dqw]
-        vpslld          ymm0, ymm0, 4
-        vpord           ymm0, ymm0, [rel dd_0_to_7]
-        vextracti32x4   xmm1, ymm0, 1                   ; extract upper 128 bits
-
-        vpminud         xmm0, xmm0, xmm1
-        vpsrldq         xmm1, xmm0, 8
-        vpminud         xmm0, xmm0, xmm1
-        vpsrldq         xmm1, xmm0, 4
-        vpminud         xmm0, xmm0, xmm1
-
-        vmovd           DWORD(%%MIN_COMMON_LEN), xmm0
-        mov             DWORD(%%LANE), DWORD(%%MIN_COMMON_LEN)
-        and             DWORD(%%LANE), 7                ;; keep lane index on 3 least significant bits
-        mov             DWORD(%%LANE_PAIR), DWORD(%%LANE)
-        shr             DWORD(%%LANE_PAIR), 1           ;; lane_pair = lane >> 1 (0-3)
-        xor             DWORD(%%TGP0), DWORD(%%TGP0)
-        bts             DWORD(%%TGP0), DWORD(%%LANE)
-        kmovd           k7, DWORD(%%TGP0)                               ;; k7 holds mask of the min LANE
-        shr             DWORD(%%MIN_COMMON_LEN), 4      ;; remove index from 4 least significant bits
+        ;; Find minimum length across 2 lanes
+        mov             DWORD(%%MIN_COMMON_LEN), [state + _snow5g_lens_dqw]
+        mov             DWORD(%%TGP0), [state + _snow5g_lens_dqw + 4]
+        xor             DWORD(%%LANE), DWORD(%%LANE)
+        cmp             DWORD(%%TGP0), DWORD(%%MIN_COMMON_LEN)
+        jae             %%_lane0_is_min
+        mov             DWORD(%%MIN_COMMON_LEN), DWORD(%%TGP0)
+        inc             DWORD(%%LANE)
+%%_lane0_is_min:
+        xor             DWORD(%%LANE_PAIR), DWORD(%%LANE_PAIR)
+        test            DWORD(%%MIN_COMMON_LEN), DWORD(%%MIN_COMMON_LEN)
         jz              %%_len_is_0
 
-        ;; subtract common minimum length from all lanes lengths
-        vmovdqa32       ymm0, [state + _snow5g_lens_dqw]
-        vpbroadcastd    ymm1, DWORD(%%MIN_COMMON_LEN)
+        ;; subtract common minimum length from lane lengths
 %ifidn %%SUBMIT_FLUSH, submit
-        vpsubd          ymm0, ymm0, ymm1
+        sub             [state + _snow5g_lens_dqw], DWORD(%%MIN_COMMON_LEN)
+        sub             [state + _snow5g_lens_dqw + 4], DWORD(%%MIN_COMMON_LEN)
 %else ; FLUSH
-        vpcmpd          k6, ymm0, [rel all_fs], 4      ; 4 = not-equal
-        vpsubd          ymm0{k6}, ymm0, ymm1
+        cmp             dword [state + _snow5g_lens_dqw], 0xFFFFFFFF
+        je              %%_skip_sub_0
+        sub             [state + _snow5g_lens_dqw], DWORD(%%MIN_COMMON_LEN)
+%%_skip_sub_0:
+        cmp             dword [state + _snow5g_lens_dqw + 4], 0xFFFFFFFF
+        je              %%_skip_sub_1
+        sub             [state + _snow5g_lens_dqw + 4], DWORD(%%MIN_COMMON_LEN)
+%%_skip_sub_1:
 %endif
-        vmovdqa32       [state + _snow5g_lens_dqw], ymm0
 
-        ;; Load LP_INIT_MASK bytes into k-registers right before SNOW5G_KEYSTREAM
-        kmovb           k1, byte [state + _snow5g_arg_LP_INIT_MASK + 0]
-        kmovb           k2, byte [state + _snow5g_arg_LP_INIT_MASK + 1]
-        kmovb           k3, byte [state + _snow5g_arg_LP_INIT_MASK + 2]
-        kmovb           k4, byte [state + _snow5g_arg_LP_INIT_MASK + 3]
+        kmovb           k1, byte [state + _snow5g_arg_LP_INIT_MASK]
 
-        ;; Do cipher / clock operation for all lanes and given common length
-        SNOW5G_KEYSTREAM state, %%MIN_COMMON_LEN, {state + _snow5g_args_in}, \
-                        {state + _snow5g_args_out}, %%OFFSET, %%TGP0, %%TGP1, %%TGP2, k1, k2, k3, k4, k5, k6
+        SNOW5G_KEYSTREAM_X2 state, %%MIN_COMMON_LEN, {state + _snow5g_args_in}, \
+                        {state + _snow5g_args_out}, %%OFFSET, %%TGP0, %%TGP1, k1
 
-        ;; Combine lane pair masks for ymm registers
-        ;; k1-k4 contain LP_INIT_MASK bits (set for INIT lanes, clear for WORK lanes)
-        kunpckbw        k5, k1, k2          ; Combine k1[1:0] and k2[1:0] into k5[3:0] for lanes 0-3
-        kunpckbw        k6, k3, k4          ; Combine k3[1:0] and k4[1:0] into k6[3:0] for lanes 4-7
-
-        ;; Invert to create update masks (update pointers when NOT in INIT)
-        knotb           k5, k5              ; k5 = NOT(k1|k2) - update mask for lanes 0-3
-        knotb           k6, k6              ; k6 = NOT(k3|k4) - update mask for lanes 4-7
-
-        ;; Add offsets to SRC and DST ptrs for lanes not in INIT
-        vpbroadcastq    ymm0, %%OFFSET
-        vmovdqa64       ymm1, [state + _snow5g_args_in + 0*8]
-        vmovdqa64       ymm2, [state + _snow5g_args_in + 4*8]
-        vmovdqa64       ymm3, [state + _snow5g_args_out + 0*8]
-        vmovdqa64       ymm4, [state + _snow5g_args_out + 4*8]
-
-        vpaddq          ymm1{k5}, ymm1, ymm0    ; Update lanes 0-3 if NOT in INIT
-        vpaddq          ymm2{k6}, ymm2, ymm0    ; Update lanes 4-7 if NOT in INIT
-        vpaddq          ymm3{k5}, ymm3, ymm0    ; Update lanes 0-3 if NOT in INIT
-        vpaddq          ymm4{k6}, ymm4, ymm0    ; Update lanes 6-7 if NOT in INIT
-
-        vmovdqa64       [state + _snow5g_args_in + 0*8], ymm1
-        vmovdqa64       [state + _snow5g_args_in + 4*8], ymm2
-        vmovdqa64       [state + _snow5g_args_out + 0*8], ymm3
-        vmovdqa64       [state + _snow5g_args_out + 4*8], ymm4
+        ;; Update src/dst pointers for lanes not in INIT
+        mov             BYTE(%%TGP0), [state + _snow5g_arg_LP_INIT_MASK]
+        test            BYTE(%%TGP0), 0x3
+        jnz             %%_skip_ptr_0
+        add             [state + _snow5g_args_in], %%OFFSET
+        add             [state + _snow5g_args_out], %%OFFSET
+%%_skip_ptr_0:
+        test            BYTE(%%TGP0), 0xC
+        jnz             %%_skip_ptr_1
+        add             [state + _snow5g_args_in + 8], %%OFFSET
+        add             [state + _snow5g_args_out + 8], %%OFFSET
+%%_skip_ptr_1:
 
 align_label
 %%_len_is_0:
@@ -305,10 +271,7 @@ align_label
         mov             [state + _snow5g_args_LD_ST_MASK + %%LANE*2], WORD(%%TGP2)
 
         ;; set length in 16-byte blocks to 1
-        vmovdqa32       ymm0, [state + _snow5g_lens_dqw]
-        mov             DWORD(%%TGP0), 1
-        vpbroadcastd    ymm0{k7}, DWORD(%%TGP0)
-        vmovdqa32       [state + _snow5g_lens_dqw], ymm0
+        mov             dword [state + _snow5g_lens_dqw + %%LANE*4], 1
 
         ;; clear the length so that the job can transition to completion
         mov             qword [state + _snow5g_args_byte_length + %%LANE*8], 0
@@ -335,10 +298,7 @@ align_label
 
         btr             word [state + _snow5g_INIT_MASK], WORD(%%LANE)  ;; INIT_MASK[LANE] = 0
 
-        vmovdqa32       ymm0, [state + _snow5g_lens_dqw]
-        mov             DWORD(%%TGP0), 1
-        vpbroadcastd    ymm0{k7}, DWORD(%%TGP0)
-        vmovdqa32       [state + _snow5g_lens_dqw], ymm0
+        mov             dword [state + _snow5g_lens_dqw + %%LANE*4], 1
         jmp             %%_find_min
 
 align_label
@@ -365,9 +325,7 @@ align_label
         ;; - odd bytes are processed later
         mov             %%TGP0, [state + _snow5g_args_byte_length + %%LANE*8]
         shr             %%TGP0, 4
-        vmovdqa32       ymm0, [state + _snow5g_lens_dqw]
-        vpbroadcastd    ymm0{k7}, DWORD(%%TGP0)
-        vmovdqa32       [state + _snow5g_lens_dqw], ymm0
+        mov             [state + _snow5g_lens_dqw + %%LANE*4], DWORD(%%TGP0)
 
         ;; set the correct in & out pointers
         mov             %%TGP0, [state + _snow5g_job_in_lane + %%LANE*8]
@@ -384,9 +342,7 @@ align_label
 align_label
 %%process_completed_job_submit_nea4:
         ;; COMPLETE: return job, change job length to UINT32_MAX
-        vmovdqa32       ymm0, [state + _snow5g_lens_dqw]
-        vpbroadcastd    ymm0{k7}, [rel all_fs]
-        vmovdqa32       [state + _snow5g_lens_dqw], ymm0
+        mov             dword [state + _snow5g_lens_dqw + %%LANE*4], 0xFFFFFFFF
 
         ;; required in case of flush
         ;; Input/output pointers are set to a valid address.
@@ -434,23 +390,9 @@ align_label
         ;; clear register contents
         clear_scratch_ymms_asm
 
-        ;; Clear LFSR_A_HDQ fields (4 fields × 32 bytes each)
         vmovdqa32       [rsp + _LFSR_A_HDQ_01], ymm0
-        vmovdqa32       [rsp + _LFSR_A_HDQ_23], ymm0
-        vmovdqa32       [rsp + _LFSR_A_HDQ_45], ymm0
-        vmovdqa32       [rsp + _LFSR_A_HDQ_67], ymm0
-
-        ;; Clear LFSR_B_HDQ fields (4 fields × 32 bytes each)
         vmovdqa32       [rsp + _LFSR_B_HDQ_01], ymm0
-        vmovdqa32       [rsp + _LFSR_B_HDQ_23], ymm0
-        vmovdqa32       [rsp + _LFSR_B_HDQ_45], ymm0
-        vmovdqa32       [rsp + _LFSR_B_HDQ_67], ymm0
-
-        ;; Clear keystream fields (4 fields × 32 bytes each)
         vmovdqa32       [rsp + _keystream_01], ymm0
-        vmovdqa32       [rsp + _keystream_23], ymm0
-        vmovdqa32       [rsp + _keystream_45], ymm0
-        vmovdqa32       [rsp + _keystream_67], ymm0
 %else
         vzeroupper
 %endif

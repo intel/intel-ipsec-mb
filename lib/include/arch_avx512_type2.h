@@ -269,6 +269,11 @@ extern IMB_JOB *
 flush_job_snow5g_nca4_dec_vaes_avx512(MB_MGR_SNOW5G_OOO *state);
 
 extern void
+snow5g_nia4_x2_job_vaes_avx512(const void *const pKey[2], const uint8_t *pIv,
+                               const void *const pBufferIn[2], void *pMacI[2],
+                               const uint16_t lengthInBytes[2], const void *const job_in_lane[2]);
+
+extern void
 generate_hqp_snow5g_nca4_x2_vaes_avx512(const void *const pKey[2], const uint8_t *pIv, uint8_t *hqp,
                                         uint8_t *states);
 extern void
