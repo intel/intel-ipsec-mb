@@ -143,7 +143,8 @@ mksection .text
 ;; Output: rax  (16-bit S-box result: S9 in upper 9 bits, S7 in lower 7 bits)
 ;; Clobbers: ymm2-ymm11, ymm13, r10
 %macro KASUMI_SBOX_AVX2 0
-        vpbroadcastw ymm13, WORD(arg1)     ; broadcast input across all words of ymm13
+        vmovd       xmm13, DWORD(arg1)     ; load input into low word of xmm13
+        vpbroadcastw ymm13, xmm13          ; broadcast input across all words of ymm13
 %assign i 0
 %rep 9
         vpand   y(i), ymm13, [rel isolate_input_bits(i)]
