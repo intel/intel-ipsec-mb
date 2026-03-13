@@ -25,9 +25,15 @@
 ;; OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;
 
+;; Bitsliced constant-time KASUMI FI function implementation.
+;; The S7/S9 S-box substitutions are computed using Boolean equations
+;; evaluated in parallel across YMM register words, based on:
+;;   E. Urquhart and D. Chambers, "An Optimised Constant-time Implementation
+;;   of KASUMI FI Function," ISSC, 2024.
+;;   https://ieeexplore.ieee.org/document/10603289
+
 %include "include/os.inc"
 %include "include/reg_sizes.inc"
-%include "include/cet.inc"
 %include "include/constant_lookup.inc"
 %include "include/align_avx.inc"
 
@@ -77,9 +83,18 @@ isolate_input_bits_7    dq  0x0000000000000000, 0x4000000000000000, 0x4000400040
 isolate_input_bits_8    dq  0x0000000000000000, 0x8000000000000000, 0x8000800080008000, 0x8000800080008000
 
 align 8
-high_7    dq  0x3F80
-align 8
 pext_odd_bytes_mask    dq  0xAAAAAAAA
+
+align 32
+nibble_mask:       times 32 db 0x0F
+
+align 32
+parity_nibble_lut:
+        ;; Nibble parity lookup: entry[i] = 0xFF if popcount(i) is odd, 0x00 if even
+        db 0x00, 0xFF, 0xFF, 0x00, 0xFF, 0x00, 0x00, 0xFF
+        db 0xFF, 0x00, 0x00, 0xFF, 0x00, 0xFF, 0xFF, 0x00
+        db 0x00, 0xFF, 0xFF, 0x00, 0xFF, 0x00, 0x00, 0xFF
+        db 0xFF, 0x00, 0x00, 0xFF, 0x00, 0xFF, 0xFF, 0x00
 
 mksection .text
 
@@ -95,15 +110,6 @@ mksection .text
         %define arg4    r9
 %endif
 
-%define     x0    xmm2
-%define     x1    xmm3
-%define     x2    xmm4
-%define     x3    xmm5
-%define     x4    xmm6
-%define     x5    xmm7
-%define     x6    xmm8
-%define     x7    xmm9
-%define     x8    xmm11
 %define     y0    ymm2
 %define     y1    ymm3
 %define     y2    ymm4
@@ -117,7 +123,6 @@ mksection .text
 %define     y(n)  y %+ n
 %define     sbox_mask_x(n)   sbox_mask_x %+ n
 
-%define     x(n)  x %+ n
 %define     x_mask(n)   x %+ n %+_mask
 %define     isolate_input_bits(n) isolate_input_bits_ %+ n
 %define     permute_bytes_input_(x) permute_bytes_input_ %+ x
@@ -135,13 +140,13 @@ mksection .text
 ;; Each input bit is isolated and compared against its expected position to produce
 ;; an all-ones or all-zeros mask per word. These per-bit masks are OR'd with
 ;; precomputed S-box Boolean equation constants (sbox_mask_x0..x8), then AND'd
-;; together to evaluate the combined S7/S9 output equations. A final XOR-shift
-;; reduction collapses each word to a single output bit, and VPMOVMSKB + PEXT
-;; extract the 16-bit S-box result into RAX.
+;; together to evaluate the combined S7/S9 output equations. A nibble-parity
+;; LUT reduction (via VPSHUFB) collapses each word to a single output bit,
+;; and VPMOVMSKB + PEXT extract the 16-bit S-box result into RAX.
 ;;
 ;; Input:  arg1 (16-bit value in low word)
 ;; Output: rax  (16-bit S-box result: S9 in upper 9 bits, S7 in lower 7 bits)
-;; Clobbers: ymm2-ymm11, ymm13, r10
+;; Clobbers: ymm0-ymm11, ymm13, r10
 %macro KASUMI_SBOX_AVX2 0
         vmovd       xmm13, DWORD(arg1)     ; load input into low word of xmm13
         vpbroadcastw ymm13, xmm13          ; broadcast input across all words of ymm13
@@ -156,25 +161,27 @@ mksection .text
         vpor    y(i), y(i), [rel sbox_mask_x(i)] ; or the x-masks with the x-values
 %assign i (i + 1)
 %endrep
-        vpand   ymm2, ymm3      ; carry out the AND operations to combine all x-masks
-        vpand   ymm4, ymm5
-        vpand   ymm6, ymm7
-        vpand   ymm9, ymm11
-        vpand   ymm2, ymm4
-        vpand   ymm6, ymm8
-        vpand   ymm2, ymm6
-        vpand   ymm2, ymm9
-        vpand   ymm2, ymm2, [rel sbox_mask_last] ; mask which accounts for setting 1s and 0s in set locations
-        vpsllw      ymm10, ymm2, 8
-        vpxor       ymm2, ymm2, ymm10
-        vpsllw      ymm10, ymm2, 4
-        vpxor       ymm2, ymm2, ymm10
-        vpsllw      ymm10, ymm2, 2
-        vpxor       ymm2, ymm2, ymm10
-        vpsllw      ymm10, ymm2, 1
-        vpxor       ymm2, ymm2, ymm10
+        vmovdqa     ymm10, [rel parity_nibble_lut]  ; preload nibble parity LUT
+        vpand   y0, y1      ; carry out the AND operations to combine all x-masks
+        vpand   y2, y3
+        vpand   y4, y5
+        vpand   y7, y8
+        vpand   y0, y2
+        vpand   y4, y6
+        vpand   y4, y7
+        vpand   y0, y0, [rel sbox_mask_last] ; mask which accounts for setting 1s and 0s in set locations
+        vpand   y0, y4
+        ;; Horizontal XOR via nibble parity LUT reduction
+        vpand       ymm1, y0, [rel nibble_mask]          ; isolate low nibbles
+        vpsrlw      ymm0, y0, 4                           ; shift high nibbles down
+        vpand       ymm0, ymm0, [rel nibble_mask]         ; isolate high nibbles
+        vpshufb     ymm1, ymm10, ymm1                     ; parity of low nibbles (0x00 or 0xFF)
+        vpshufb     ymm0, ymm10, ymm0                     ; parity of high nibbles
+        vpxor       ymm0, ymm0, ymm1                      ; byte parity
+        vpsllw      ymm1, ymm0, 8                         ; replicate byte parity to high byte
+        vpxor       y0, ymm0, ymm1                        ; word parity in MSB of each word
 
-        vpmovmskb   r10, ymm2
+        vpmovmskb   r10, y0
         pext        rax, r10, [rel pext_odd_bytes_mask]
 %endmacro
 
@@ -185,7 +192,6 @@ mksection .text
 align_function
 MKGLOBAL(kasumi_FI_avx2, function, internal)
 kasumi_FI_avx2:
-        endbranch64
 %ifndef LINUX
         sub             rsp, STACK_SIZE
         vmovdqu         [rsp + 0*16], xmm6
@@ -200,16 +206,22 @@ kasumi_FI_avx2:
         ;; Kasumi FI: unbalanced Feistel with combined S7/S9 via AVX2
         xor     arg1, arg2                              ;; mix data with key1
         KASUMI_SBOX_AVX2                                ;; 1st S-box pass
-        pdep    arg1, arg1, [rel high_7]                ;; place S9 bits in upper positions
+        shl     arg1, 7                                 ;; rotate S7 to high positions
+        and     arg1, 0x3F80                      ;; place S9 bits in upper positions
         xor     arg1, rax                               ;; merge S9 with S7
-        pext    r10, arg1, [rel high_7]                 ;; extract high 7-bit field
+        mov     r10, arg1
+        shr     r10, 7
+        and     r10, 0x7F                               ;; extract high 7-bit field
         xor     arg1, r10                               ;; clear high positions
         ror     WORD(arg3), 9                           ;; rotate key2 for subkey alignment
         xor     arg1, arg3                              ;; mix key2 into state
         KASUMI_SBOX_AVX2                                ;; 2nd S-box pass
-        pdep    arg1, arg1, [rel high_7]                ;; place S9 bits in upper positions
+        shl     arg1, 7                                 ;; rotate S7 to high positions
+        and     arg1, 0x3F80                      ;; place S9 bits in upper positions
         xor     rax, arg1                               ;; merge S9 with S7
-        pext    r10, rax, [rel high_7]                  ;; extract high 7-bit field
+        mov     r10, rax
+        shr     r10, 7
+        and     r10, 0x7F                               ;; extract high 7-bit field
         xor     rax, r10                                ;; clear high positions
         ror     ax, 7                                   ;; rotate S7/S9 into final positions
         xor     rax, arg4                               ;; mix with key3

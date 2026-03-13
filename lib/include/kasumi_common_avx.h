@@ -43,11 +43,6 @@ void
 KASUMI_F8_1_BUFFER(const kasumi_key_sched_t *pCtx, const uint64_t IV, const void *pBufferIn,
                    void *pBufferOut, const uint32_t cipherLengthInBytes)
 {
-#ifndef LINUX
-        DECLARE_ALIGNED(imb_uint128_t xmm_save[10], 16);
-
-        SAVE_XMMS(xmm_save);
-#endif
 #ifdef SAFE_PARAM
         /* Check for NULL pointers */
         imb_set_errno(NULL, 0);
@@ -70,14 +65,6 @@ KASUMI_F8_1_BUFFER(const kasumi_key_sched_t *pCtx, const uint64_t IV, const void
         }
 #endif
         kasumi_f8_1_buffer(pCtx, IV, pBufferIn, pBufferOut, cipherLengthInBytes);
-#ifdef SAFE_DATA
-        /* Clear sensitive data in registers */
-        CLEAR_SCRATCH_GPS();
-        CLEAR_SCRATCH_SIMD_REGS();
-#endif
-#ifndef LINUX
-        RESTORE_XMMS(xmm_save);
-#endif
 }
 
 void
@@ -85,11 +72,6 @@ KASUMI_F8_1_BUFFER_BIT(const kasumi_key_sched_t *pCtx, const uint64_t IV, const 
                        void *pBufferOut, const uint32_t cipherLengthInBits,
                        const uint32_t offsetInBits)
 {
-#ifndef LINUX
-        DECLARE_ALIGNED(imb_uint128_t xmm_save[10], 16);
-
-        SAVE_XMMS(xmm_save);
-#endif
 #ifdef SAFE_PARAM
         /* Check for NULL pointers */
         imb_set_errno(NULL, 0);
@@ -112,14 +94,6 @@ KASUMI_F8_1_BUFFER_BIT(const kasumi_key_sched_t *pCtx, const uint64_t IV, const 
         }
 #endif
         kasumi_f8_1_buffer_bit(pCtx, IV, pBufferIn, pBufferOut, cipherLengthInBits, offsetInBits);
-#ifdef SAFE_DATA
-        /* Clear sensitive data in registers */
-        CLEAR_SCRATCH_GPS();
-        CLEAR_SCRATCH_SIMD_REGS();
-#endif
-#ifndef LINUX
-        RESTORE_XMMS(xmm_save);
-#endif
 }
 
 void
@@ -127,11 +101,6 @@ KASUMI_F8_2_BUFFER(const kasumi_key_sched_t *pCtx, const uint64_t IV1, const uin
                    const void *pBufferIn1, void *pBufferOut1, const uint32_t lengthInBytes1,
                    const void *pBufferIn2, void *pBufferOut2, const uint32_t lengthInBytes2)
 {
-#ifndef LINUX
-        DECLARE_ALIGNED(imb_uint128_t xmm_save[10], 16);
-
-        SAVE_XMMS(xmm_save);
-#endif
 #ifdef SAFE_PARAM
         /* Check for NULL pointers */
         imb_set_errno(NULL, 0);
@@ -160,15 +129,6 @@ KASUMI_F8_2_BUFFER(const kasumi_key_sched_t *pCtx, const uint64_t IV1, const uin
 #endif
         kasumi_f8_1_buffer(pCtx, IV1, pBufferIn1, pBufferOut1, lengthInBytes1);
         kasumi_f8_1_buffer(pCtx, IV2, pBufferIn2, pBufferOut2, lengthInBytes2);
-
-#ifdef SAFE_DATA
-        /* Clear sensitive data in registers */
-        CLEAR_SCRATCH_GPS();
-        CLEAR_SCRATCH_SIMD_REGS();
-#endif
-#ifndef LINUX
-        RESTORE_XMMS(xmm_save);
-#endif
 }
 
 void
@@ -177,11 +137,6 @@ KASUMI_F8_3_BUFFER(const kasumi_key_sched_t *pCtx, const uint64_t IV1, const uin
                    const void *pBufferIn2, void *pBufferOut2, const void *pBufferIn3,
                    void *pBufferOut3, const uint32_t lengthInBytes)
 {
-#ifndef LINUX
-        DECLARE_ALIGNED(imb_uint128_t xmm_save[10], 16);
-
-        SAVE_XMMS(xmm_save);
-#endif
 #ifdef SAFE_PARAM
         /* Check for NULL pointers */
         imb_set_errno(NULL, 0);
@@ -206,15 +161,6 @@ KASUMI_F8_3_BUFFER(const kasumi_key_sched_t *pCtx, const uint64_t IV1, const uin
         kasumi_f8_1_buffer(pCtx, IV1, pBufferIn1, pBufferOut1, lengthInBytes);
         kasumi_f8_1_buffer(pCtx, IV2, pBufferIn2, pBufferOut2, lengthInBytes);
         kasumi_f8_1_buffer(pCtx, IV3, pBufferIn3, pBufferOut3, lengthInBytes);
-
-#ifdef SAFE_DATA
-        /* Clear sensitive data in registers */
-        CLEAR_SCRATCH_GPS();
-        CLEAR_SCRATCH_SIMD_REGS();
-#endif
-#ifndef LINUX
-        RESTORE_XMMS(xmm_save);
-#endif
 }
 
 void
@@ -225,11 +171,6 @@ KASUMI_F8_4_BUFFER(const kasumi_key_sched_t *pCtx, const uint64_t IV1, const uin
                    const void *pBufferIn3, void *pBufferOut3, const void *pBufferIn4,
                    void *pBufferOut4, const uint32_t lengthInBytes)
 {
-#ifndef LINUX
-        DECLARE_ALIGNED(imb_uint128_t xmm_save[10], 16);
-
-        SAVE_XMMS(xmm_save);
-#endif
 #ifdef SAFE_PARAM
         /* Check for NULL pointers */
         imb_set_errno(NULL, 0);
@@ -256,15 +197,6 @@ KASUMI_F8_4_BUFFER(const kasumi_key_sched_t *pCtx, const uint64_t IV1, const uin
         kasumi_f8_1_buffer(pCtx, IV2, pBufferIn2, pBufferOut2, lengthInBytes);
         kasumi_f8_1_buffer(pCtx, IV3, pBufferIn3, pBufferOut3, lengthInBytes);
         kasumi_f8_1_buffer(pCtx, IV4, pBufferIn4, pBufferOut4, lengthInBytes);
-
-#ifdef SAFE_DATA
-        /* Clear sensitive data in registers */
-        CLEAR_SCRATCH_GPS();
-        CLEAR_SCRATCH_SIMD_REGS();
-#endif
-#ifndef LINUX
-        RESTORE_XMMS(xmm_save);
-#endif
 }
 
 void
@@ -273,11 +205,6 @@ KASUMI_F8_N_BUFFER(const kasumi_key_sched_t *pKeySchedule, const uint64_t IV[],
                    const void *const pDataIn[], void *pDataOut[], const uint32_t dataLen[],
                    const uint32_t dataCount)
 {
-#ifndef LINUX
-        DECLARE_ALIGNED(imb_uint128_t xmm_save[10], 16);
-
-        SAVE_XMMS(xmm_save);
-#endif
         uint32_t i = 0;
 
 #ifdef SAFE_PARAM
@@ -325,25 +252,12 @@ KASUMI_F8_N_BUFFER(const kasumi_key_sched_t *pKeySchedule, const uint64_t IV[],
 
         for (i = 0; i < dataCount; i++)
                 kasumi_f8_1_buffer(pKeySchedule, IV[i], pDataIn[i], pDataOut[i], dataLen[i]);
-#ifdef SAFE_DATA
-        /* Clear sensitive data in registers */
-        CLEAR_SCRATCH_GPS();
-        CLEAR_SCRATCH_SIMD_REGS();
-#endif
-#ifndef LINUX
-        RESTORE_XMMS(xmm_save);
-#endif
 }
 
 void
 KASUMI_F9_1_BUFFER(const kasumi_key_sched_t *pCtx, const void *pBufferIn,
                    const uint32_t lengthInBytes, void *pDigest)
 {
-#ifndef LINUX
-        DECLARE_ALIGNED(imb_uint128_t xmm_save[10], 16);
-
-        SAVE_XMMS(xmm_save);
-#endif
 #ifdef SAFE_PARAM
         /* Reset error */
         imb_set_errno(NULL, 0);
@@ -368,25 +282,12 @@ KASUMI_F9_1_BUFFER(const kasumi_key_sched_t *pCtx, const void *pBufferIn,
         }
 #endif
         kasumi_f9_1_buffer(pCtx, pBufferIn, lengthInBytes, pDigest);
-#ifdef SAFE_DATA
-        /* Clear sensitive data in registers */
-        CLEAR_SCRATCH_GPS();
-        CLEAR_SCRATCH_SIMD_REGS();
-#endif
-#ifndef LINUX
-        RESTORE_XMMS(xmm_save);
-#endif
 }
 
 void
 KASUMI_F9_1_BUFFER_USER(const kasumi_key_sched_t *pCtx, const uint64_t IV, const void *pBufferIn,
                         const uint32_t lengthInBits, void *pDigest, const uint32_t direction)
 {
-#ifndef LINUX
-        DECLARE_ALIGNED(imb_uint128_t xmm_save[10], 16);
-
-        SAVE_XMMS(xmm_save);
-#endif
 #ifdef SAFE_PARAM
         /* Reset error */
         imb_set_errno(NULL, 0);
@@ -411,12 +312,4 @@ KASUMI_F9_1_BUFFER_USER(const kasumi_key_sched_t *pCtx, const uint64_t IV, const
         }
 #endif
         kasumi_f9_1_buffer_user(pCtx, IV, pBufferIn, lengthInBits, pDigest, direction);
-#ifdef SAFE_DATA
-        /* Clear sensitive data in registers */
-        CLEAR_SCRATCH_GPS();
-        CLEAR_SCRATCH_SIMD_REGS();
-#endif
-#ifndef LINUX
-        RESTORE_XMMS(xmm_save);
-#endif
 }

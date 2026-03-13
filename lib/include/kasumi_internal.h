@@ -169,11 +169,11 @@ FIp1(uint16_t data, const uint16_t key1, const uint16_t key2, const uint16_t key
         uint16_t datal, datah;
 
         data ^= key1;
-        datal = LOOKUP16_SSE(sso_kasumi_S7e, (uint8_t) data, 256);
+        datal = LOOKUP16_SSE(sso_kasumi_S7e, (uint8_t) data & 0x7F, 128);
         datah = LOOKUP16_SSE(sso_kasumi_S9e, data >> 7, 512);
         data = datal ^ datah;
         data ^= key2;
-        datal = LOOKUP16_SSE(sso_kasumi_S7e, data >> 9, 256);
+        datal = LOOKUP16_SSE(sso_kasumi_S7e, data >> 9, 128);
         datah = LOOKUP16_SSE(sso_kasumi_S9e, data & 0x1FF, 512);
         data = datal ^ datah;
         data ^= key3;
