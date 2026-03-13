@@ -25,15 +25,21 @@
 ;; OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;
 
+;; Bitsliced constant-time KASUMI FI function implementation.
+;; The S7/S9 S-box substitutions are computed using Boolean equations
+;; evaluated in parallel across YMM register words, based on:
+;;   E. Urquhart and D. Chambers, "An Optimised Constant-time Implementation
+;;   of KASUMI FI Function," ISSC, 2024.
+;;   https://ieeexplore.ieee.org/document/10603289
+
 %include "include/os.inc"
 %include "include/reg_sizes.inc"
-%include "include/cet.inc"
 %include "include/constant_lookup.inc"
 %include "include/align_avx512.inc"
 
 extern sbox_mask_x0, sbox_mask_x1, sbox_mask_x2, sbox_mask_x3
 extern sbox_mask_x4, sbox_mask_x5, sbox_mask_x6, sbox_mask_x7
-extern sbox_mask_x8, sbox_mask_last, high_7
+extern sbox_mask_x8, sbox_mask_last
 
 mksection .rodata
 default rel
@@ -88,15 +94,6 @@ mksection .text
         %define arg4    r9
 %endif
 
-%define     x0    xmm2
-%define     x1    xmm3
-%define     x2    xmm4
-%define     x3    xmm5
-%define     x4    xmm6
-%define     x5    xmm7
-%define     x6    xmm8
-%define     x7    xmm9
-%define     x8    xmm11
 %define     y0    ymm2
 %define     y1    ymm3
 %define     y2    ymm4
@@ -110,7 +107,6 @@ mksection .text
 %define     y(n)  y %+ n
 %define     sbox_mask_x(n)   sbox_mask_x %+ n
 
-%define     x(n)  x %+ n
 %define     x_mask(n)   x %+ n %+_mask
 %define     permute_bytes_input_(x) permute_bytes_input_ %+ x
 %define     permute_words_input_(x) permute_words_input_ %+ x
@@ -149,8 +145,8 @@ mksection .text
         vpternlogq  y0, y(i), [rel sbox_mask_x(i)], 0xE0
 %assign i (i + 1)
 %endrep
-        vpandd      ymm2, ymm2, [rel sbox_mask_last]
-        vpopcntw    ymm2, ymm2
+        vpandd      y0, y0, [rel sbox_mask_last]
+        vpopcntw    y0, y0
 %endmacro
 
 ;; KASUMI_SBOX_AVX512b
@@ -181,8 +177,8 @@ mksection .text
         vpternlogq  y0, y(i), [rel sbox_mask_x(i)], 0xE0
 %assign i (i + 1)
 %endrep
-        vpandd      ymm2, ymm2, [rel sbox_mask_last]
-        vpopcntw    ymm2, ymm2
+        vpandd      y0, y0, [rel sbox_mask_last]
+        vpopcntw    y0, y0
 %endmacro
 
 ;; arg1: data
@@ -192,7 +188,6 @@ mksection .text
 align_function
 MKGLOBAL(kasumi_FI_avx512, function, internal)
 kasumi_FI_avx512:
-        endbranch64
 %ifndef LINUX
         sub             rsp, STACK_SIZE
         vmovdqu         [rsp + 0*16], xmm6
@@ -221,17 +216,18 @@ kasumi_FI_avx512:
         kmovd       k6, DWORD(arg3)
         vpmovm2w    ymm11, k6
         vpxord      ymm10, ymm10, ymm11                 ;; mix key2 into state
-        vpand       ymm10, ymm10, [rel least_sig_bit_word] ;; isolate LSBs per word
-        vpcmpw      k2, ymm10, [rel least_sig_bit_word], 0 ;; save S9 result bits
-        vpcmpeqw    ymm10, ymm10, [rel least_sig_bit_word] ;; set words to all-1s/0s for S-box input
+        vptestmw    k2, ymm10, [rel least_sig_bit_word]  ;; k2 = words with LSB set
+        vpmovm2w    ymm10, k2
         KASUMI_SBOX_AVX512b                              ;; 2nd S-box pass
-        vpand       ymm2, ymm2, [rel least_sig_bit_word] ;; isolate LSBs of S-box output
-        vpcmpw      k1, ymm2, [rel least_sig_bit_word], 0 ;; save S7 result bits
+        vptestmw    k1, ymm2, [rel least_sig_bit_word]   ;; k1 = words with LSB set
         kmovd       DWORD(arg1), k2                      ;; S9 bits
         kmovd       eax, k1                              ;; S7 bits
-        pdep    arg1, arg1, [rel high_7]                 ;; place S9 bits in upper positions
+        shl     arg1, 7                                   ;; rotate S7 to high positions
+        and     arg1, 0x3F80                              ;; place S9 bits in upper positions
         xor     rax, arg1                                ;; merge S9 with S7
-        pext    r10, rax, [rel high_7]                   ;; extract high 7-bit field
+        mov     r10, rax
+        shr     r10, 7
+        and     r10, 0x7F                                 ;; extract high 7-bit field
         xor     rax, r10                                 ;; clear high positions
         ror     ax, 7                                    ;; rotate S7/S9 into final positions
         xor     rax, arg4                                ;; mix with key3
