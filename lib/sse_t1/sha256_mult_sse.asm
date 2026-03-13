@@ -42,6 +42,7 @@
 %include "include/mb_mgr_datastruct.inc"
 %include "include/clear_regs.inc"
 %include "include/align_sse.inc"
+%include "include/cet.inc"
 
 ;%define DO_DBGPRINT
 %include "include/dbgprint.inc"
@@ -520,6 +521,7 @@ Lrounds_16_xx:
 MKGLOBAL(call_sha_256_mult_sse_from_c,function,internal)
 align_function
 call_sha_256_mult_sse_from_c:
+        endbranch64
         FUNC_SAVE
         call sha_256_mult_sse
         FUNC_RESTORE

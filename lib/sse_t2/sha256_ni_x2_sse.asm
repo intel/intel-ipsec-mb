@@ -44,6 +44,7 @@
 %include "include/mb_mgr_datastruct.inc"
 %include "include/clear_regs.inc"
 %include "include/align_sse.inc"
+%include "include/cet.inc"
 
 ; resdq = res0 => 16 bytes
 struc frame
@@ -655,6 +656,7 @@ done_hash:
 MKGLOBAL(call_sha256_ni_x2_sse_from_c,function,internal)
 align_function
 call_sha256_ni_x2_sse_from_c:
+        endbranch64
         FUNC_SAVE
         call sha256_ni
         FUNC_RESTORE

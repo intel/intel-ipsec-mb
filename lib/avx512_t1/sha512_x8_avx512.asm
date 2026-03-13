@@ -46,6 +46,7 @@
 %include "include/transpose_avx512.inc"
 %include "include/clear_regs.inc"
 %include "include/align_avx512.inc"
+%include "include/cet.inc"
 %define APPEND(a,b) a %+ b
 
 %ifdef LINUX
@@ -539,6 +540,7 @@ lastLoop:
 MKGLOBAL(call_sha512_x8_avx512_from_c,function,internal)
 align_function
 call_sha512_x8_avx512_from_c:
+        endbranch64
         FUNC_SAVE
         call sha512_x8_avx512
         FUNC_RESTORE

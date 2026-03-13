@@ -47,6 +47,7 @@
 %include "include/mb_mgr_datastruct.inc"
 %include "include/clear_regs.inc"
 %include "include/align_avx.inc"
+%include "include/cet.inc"
 mksection .rodata
 default rel
 align 64
@@ -471,6 +472,7 @@ DBGPRINTL_YMM "sha512-avx2 Outgoing digest", a, b, c, d, e, f, g, h
 MKGLOBAL(call_sha512_x4_avx2_from_c,function,internal)
 align_function
 call_sha512_x4_avx2_from_c:
+        endbranch64
         FUNC_SAVE
         call sha512_x4_avx2
         FUNC_RESTORE

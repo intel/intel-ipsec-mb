@@ -32,6 +32,7 @@
 %include "include/mb_mgr_datastruct.inc"
 %include "include/clear_regs.inc"
 %include "include/align_sse.inc"
+%include "include/cet.inc"
 
 mksection .rodata
 default rel
@@ -522,6 +523,7 @@ lloop:
 MKGLOBAL(call_sha1_mult_sse_from_c,function,internal)
 align_function
 call_sha1_mult_sse_from_c:
+        endbranch64
         FUNC_SAVE
         call sha1_mult_sse
         FUNC_RESTORE

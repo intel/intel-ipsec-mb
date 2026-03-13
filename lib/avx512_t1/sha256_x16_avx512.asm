@@ -45,6 +45,7 @@
 %include "include/reg_sizes.inc"
 %include "include/clear_regs.inc"
 %include "include/align_avx512.inc"
+%include "include/cet.inc"
 ; reuse K256 from sha256_oct_avx2.asm
 extern K256
 
@@ -605,6 +606,7 @@ lastLoop:
 MKGLOBAL(call_sha256_x16_avx512_from_c,function,internal)
 align_function
 call_sha256_x16_avx512_from_c:
+        endbranch64
         FUNC_SAVE
         call sha256_x16_avx512
         FUNC_RESTORE

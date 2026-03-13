@@ -44,6 +44,7 @@
 %include "include/reg_sizes.inc"
 %include "include/mb_mgr_datastruct.inc"
 %include "include/align_avx.inc"
+%include "include/cet.inc"
 
 ; resdq = res0 => 16 bytes
 struc frame
@@ -454,6 +455,7 @@ align_label
 MKGLOBAL(call_sha512_ni_x2_avx2_from_c,function,internal)
 align_function
 call_sha512_ni_x2_avx2_from_c:
+        endbranch64
         FUNC_SAVE
         call sha512_ni_x2_avx2
         FUNC_RESTORE

@@ -46,6 +46,7 @@
 %include "include/transpose_avx2.inc"
 %include "include/clear_regs.inc"
 %include "include/align_avx.inc"
+%include "include/cet.inc"
 
 mksection .rodata
 default rel
@@ -542,6 +543,7 @@ Lrounds_16_xx:
 MKGLOBAL(call_sha256_oct_avx2_from_c,function,internal)
 align_function
 call_sha256_oct_avx2_from_c:
+        endbranch64
         FUNC_SAVE
         call sha256_oct_avx2
         FUNC_RESTORE

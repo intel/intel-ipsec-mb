@@ -39,6 +39,7 @@ default rel
 
 %include "include/align_avx512.inc"
 %include "include/sha3_common.inc"
+%include "include/cet.inc"
 
 section .text
 
@@ -435,6 +436,7 @@ keccak_rnd_loop:
 align_function
 MKGLOBAL(sha3_224_avx512,function,)
 sha3_224_avx512:
+        endbranch64
         push    rbp
         push    rbx
         push    r12
@@ -492,6 +494,7 @@ align_label
 align_function
 MKGLOBAL(sha3_256_avx512,function,)
 sha3_256_avx512:
+        endbranch64
         push    rbp
         push    rbx
         push    r12
@@ -547,6 +550,7 @@ align_label
 align_function
 MKGLOBAL(sha3_384_avx512,function,)
 sha3_384_avx512:
+        endbranch64
         push    rbp
         push    rbx
         push    r12
@@ -602,6 +606,7 @@ align_label
 align_function
 MKGLOBAL(sha3_512_avx512,function,)
 sha3_512_avx512:
+        endbranch64
         push    rbp
         push    rbx
         push    r12
@@ -658,6 +663,7 @@ align_label
 align_function
 MKGLOBAL(shake128_avx512,function,)
 shake128_avx512:
+        endbranch64
         push    rbp
         push    rbx
         push    r12
@@ -733,6 +739,7 @@ align_label
 align_function
 MKGLOBAL(shake256_avx512,function,)
 shake256_avx512:
+        endbranch64
         push    rbp
         push    rbx
         push    r12

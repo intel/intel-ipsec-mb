@@ -405,6 +405,7 @@ done_hash:
 MKGLOBAL(call_sha256_ni_x1_sse_from_c,function,internal)
 align_function
 call_sha256_ni_x1_sse_from_c:
+        endbranch64
         FUNC_SAVE
         call sha256_ni_x1
         FUNC_RESTORE
