@@ -135,9 +135,6 @@ static const uint16_t sso_kasumi_S9e[] = {
 #define QWORDSIZEINBYTES  (8)
 #define LAST_PADDING_BIT  (1)
 
-/*--------- 16 bit rotate left ------------------------------------------*/
-#define ROL16(a, b) (uint16_t)((a << b) | (a >> (16 - b)))
-
 /*----- a 64-bit structure to help with kasumi endian issues -----*/
 typedef union _ku64 {
         uint64_t b64[1];
@@ -163,8 +160,6 @@ FIp1(uint16_t data, const uint16_t key1, const uint16_t key2, const uint16_t key
 {
 #ifdef AVX512
         return KASUMI_FI_AVX512(data, key1, key2, key3);
-#elif defined(AVX2)
-        return KASUMI_FI_AVX2(data, key1, key2, key3);
 #else
         uint16_t datal, datah;
 
@@ -223,6 +218,9 @@ FOp1(const uint16_t *index, uint16_t *h, uint16_t *l)
 static void
 kasumi_1_block(const uint16_t *context, uint16_t *data)
 {
+#ifdef AVX2
+        kasumi_1_block_avx2(context, data);
+#else
         const uint16_t *end = context + KASUMI_KEY_SCHEDULE_SIZE;
 
         /* 4 iterations odd/even */
@@ -243,6 +241,7 @@ kasumi_1_block(const uint16_t *context, uint16_t *data)
                 data[3] ^= temp_h;
                 data[2] ^= temp_l;
         } while (context < end);
+#endif
 }
 
 /*---------------------------------------------------------------------
@@ -484,7 +483,6 @@ kasumi_f8_1_buffer_bit(const kasumi_key_sched_t *pCtx, const uint64_t IV, const 
 
         /* First encryption to create modifier */
         kasumi_1_block(pCtx->msk16, a.b16);
-
         /* Final initialisation steps */
         blkcnt = 0;
         b.b64[0] = a.b64[0];
@@ -684,6 +682,7 @@ kasumi_f9_1_buffer_user(const kasumi_key_sched_t *pCtx, const uint64_t IV, const
         a.b64[0] = BSWAP64(IV);
         /* KASUMI it */
         kasumi_1_block(pCtx->sk16, a.b16);
+
         /* update */
         b.b64[0] = a.b64[0];
 
@@ -741,7 +740,6 @@ kasumi_f9_1_buffer_user(const kasumi_key_sched_t *pCtx, const uint64_t IV, const
         }
         /* Kasumi b */
         kasumi_1_block(pCtx->msk16, b.b16);
-
         /* swap result */
         *(uint32_t *) pDigest = bswap4(b.b32[1]);
 #ifdef SAFE_DATA

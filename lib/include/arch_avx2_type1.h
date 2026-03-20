@@ -164,10 +164,8 @@ kasumi_f9_1_buffer_user_avx2(const kasumi_key_sched_t *pCtx, const uint64_t IV,
                              const void *pBufferIn, const uint32_t lengthInBits, void *pDigest,
                              const uint32_t direction);
 
-#define KASUMI_FI_AVX2(_data, _key1, _key2, _key3) kasumi_FI_avx2(_data, _key1, _key2, _key3)
-
-IMB_DLL_LOCAL uint16_t
-kasumi_FI_avx2(const uint16_t data, const uint16_t key1, const uint16_t key2, const uint16_t key3);
+IMB_DLL_LOCAL void
+kasumi_1_block_avx2(const uint16_t *context, uint16_t *data);
 
 /* stitched AES128-CNTR, CRC32 and BIP */
 IMB_JOB *
