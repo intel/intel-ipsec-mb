@@ -222,18 +222,22 @@ endstruc
         add     tmp, [job + _hash_start_src_offset_in_bytes]
         mov     [state + _snow5g_args_in + lane*8], tmp
 
+        ;; Store key pointer
         mov     tmp, [job + _snow5g_nia4_key]
         mov     [state + _snow5g_args_keys + lane*8], tmp
 
+        ;; Copy IV to state array (16 bytes per lane)
         mov     tmp, [job + _snow5g_nia4_iv]
         mov     tmp2, lane
         shl     tmp2, 4
         vmovdqu xmm0, [tmp]
         vmovdqu [state + _snow5g_args_IV + tmp2], xmm0
 
+        ;; Store output tag pointer
         mov     tmp, [job + _auth_tag_output]
         mov     [state + _snow5g_args_out + lane*8], tmp
 
+        ;; Insert len into proper lane (bytes)
         mov     len, [job + _msg_len_to_hash_in_bytes]
 
         mov     [state + _snow5g_lens_dqw + lane*2], WORD(len)
@@ -264,7 +268,7 @@ endstruc
         mov     state, [rsp + _gpr_save_nia4 + 8*8]
         mov     job,   [rsp + _gpr_save_nia4 + 8*9]
 
-        ; Clear only the 2 active lanes; unused lanes (2-7) must stay 0xFFFF
+        ; Clear lane lengths after processing
         mov     word [state + _snow5g_lens_dqw + 0*2], 0
         mov     word [state + _snow5g_lens_dqw + 1*2], 0
 
@@ -301,9 +305,6 @@ align_label
         cmp     qword [state + _snow5g_lanes_in_use], 0
         jz      %%return_null_flush_nia4
 
-        cmp     qword [state + _snow5g_lanes_in_use], 2
-        je      %%_flush_both_active_nia4
-
         ;; One lane active: find unused lane and set its length to max
         mov     DWORD(tmp3), [state + _snow5g_unused_lanes]
         and     DWORD(tmp3), 0x1
@@ -328,28 +329,12 @@ align_label
         mov     DWORD(tmp), DWORD(tmp3)
         shl     DWORD(tmp), 4
         vmovdqu [state + _snow5g_args_IV + tmp], xmm0
-
-        jmp     %%_flush_call_nia4
-
-%%_flush_both_active_nia4:
-        ;; Both lanes active: find minimum length lane
-        movzx   DWORD(tmp), word [state + _snow5g_lens_dqw]
-        movzx   DWORD(tmp4), word [state + _snow5g_lens_dqw + 2]
-        xor     DWORD(idx), DWORD(idx)
-        cmp     DWORD(tmp4), DWORD(tmp)
-        cmovb   DWORD(tmp), DWORD(tmp4)
-        adc     DWORD(idx), 0
-
-        test    DWORD(tmp), DWORD(tmp)
-        jz      %%len_is_0_flush_nia4
-
-%%_flush_call_nia4:
         mov     r11, state
         CALL_NIA4_X2
 
         mov     state, [rsp + _gpr_save_nia4 + 8*8]
 
-        ; Clear only the 2 active lanes; unused lanes (2-7) must stay 0xFFFF
+        ; Clear lane lengths after processing
         mov     word [state + _snow5g_lens_dqw + 0*2], 0
         mov     word [state + _snow5g_lens_dqw + 1*2], 0
 

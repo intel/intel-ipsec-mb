@@ -83,7 +83,7 @@ mksection .text
 
 ;; Update LP_INIT_MASK bits for a specific lane in memory
 %macro UPDATE_LP_INIT_MASK 6
-%define %%LANE            %1  ;; [in] lane index (0-7)
+%define %%LANE            %1  ;; [in] lane index (0-1)
 %define %%LANE_PAIR       %2  ;; [in] lane pair index (lane >> 1, pre-calculated)
 %define %%TGP0            %3  ;; [clobbered] GP register
 %define %%TGP1            %4  ;; [clobbered] GP register
@@ -122,7 +122,7 @@ mksection .text
         xor     job_rax, job_rax        ;; assume NULL return job
 
 %ifidn %%SUBMIT_FLUSH, submit
-        ;; unused lanes is a list of all unused lane ids (0-7)
+        ;; unused lanes is a list of all unused lane ids (0-1)
         mov     %%UNUSED_LANES, [state + _snow5g_unused_lanes]
         mov     %%LANE, %%UNUSED_LANES
         and     %%LANE, 0x1
@@ -168,13 +168,9 @@ mksection .text
         je              %%return_nea4   ;; RAX is NULL
 
         ;; Set unused lane to max length to prevent selection
-        cmp             qword [state + _snow5g_lanes_in_use], 2
-        je              %%_flush_lanes_ready
-
         mov             DWORD(%%UNUSED_LANES), [state + _snow5g_unused_lanes]
         and             DWORD(%%UNUSED_LANES), 0x1
         mov             dword [state + _snow5g_lens_dqw + %%UNUSED_LANES*4], 0xFFFFFFFF
-%%_flush_lanes_ready:
 %endif
 
         ;; ---------------------------------------------------------------------
