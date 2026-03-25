@@ -158,9 +158,6 @@ typedef union SafeBuffer {
 static inline uint16_t
 FIp1(uint16_t data, const uint16_t key1, const uint16_t key2, const uint16_t key3)
 {
-#ifdef AVX512
-        return KASUMI_FI_AVX512(data, key1, key2, key3);
-#else
         uint16_t datal, datah;
 
         data ^= key1;
@@ -173,7 +170,6 @@ FIp1(uint16_t data, const uint16_t key1, const uint16_t key2, const uint16_t key
         data = datal ^ datah;
         data ^= key3;
         return data;
-#endif
 }
 
 static inline void
@@ -220,6 +216,8 @@ kasumi_1_block(const uint16_t *context, uint16_t *data)
 {
 #ifdef AVX2
         kasumi_1_block_avx2(context, data);
+#elif defined(AVX512)
+        kasumi_1_block_avx512(context, data);
 #else
         const uint16_t *end = context + KASUMI_KEY_SCHEDULE_SIZE;
 

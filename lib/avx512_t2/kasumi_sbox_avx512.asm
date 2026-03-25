@@ -111,9 +111,34 @@ mksection .text
 %define     permute_bytes_input_(x) permute_bytes_input_ %+ x
 %define     permute_words_input_(x) permute_words_input_ %+ x
 
-;; Number of non-volatile XMM/YMM registers saved on Windows (xmm6-xmm11, xmm13)
-%define XMM_SAVES 7
-%define STACK_SIZE (XMM_SAVES * 16)
+;; ============================================================================
+;; GP register definitions for kasumi_1_block_avx512
+;;
+;; Inputs (aliased to calling convention registers):
+%define KS       arg1           ; pointer into key schedule (advances each round)
+%define DPTR     arg2           ; pointer to data block (constant throughout)
+%define TMPH     r13            ; temp_h (16-bit value in low word)
+%define TMPL     r14            ; temp_l (16-bit value in low word)
+%define STATE    r11            ; FI Feistel state accumulator (survives sbox)
+;;
+;; Scratch (clobbered by macros):
+%define TMP0     rax            ; S-box output / general scratch
+%define TMP1     r10            ; S-box input / general scratch
+%define TMP2     r15            ; FL scratch
+;; ============================================================================
+
+;; Preloaded YMM/k constants (survive across sbox macro calls):
+%define YPERMW  ymm0       ; vpermw_mask   (word permutation indices for 2nd sbox pass)
+%define YPERMB  ymm1       ; vpermb_mask   (byte permutation indices for 1st sbox pass)
+%define YLSB    ymm12      ; least_sig_bit_word (LSB-per-word test mask)
+%define KMASK7  k4         ; kmask_s7      (low 7 bits mask for S7 isolation)
+
+;; Stack frame for kasumi_1_block_avx512
+;; Windows: 3 pushes + ret = 32, sub rsp, 192 => total = 224, 224 mod 16 = 0
+%ifndef LINUX
+%define BLK_STACK_SIZE  192
+%define BLK_XMM_OFFSET  32      ; 32 (shadow space)
+%endif
 
 ;; KASUMI_SBOX_AVX512a
 ;; Computes the combined Kasumi S7/S9 S-box substitution using AVX-512
@@ -181,67 +206,326 @@ mksection .text
         vpopcntw    y0, y0
 %endmacro
 
-;; arg1: data
-;; arg2: key1
-;; arg3: key2
-;; arg4: key3
-align_function
-MKGLOBAL(kasumi_FI_avx512, function, internal)
-kasumi_FI_avx512:
-%ifndef LINUX
-        sub             rsp, STACK_SIZE
-        vmovdqu         [rsp + 0*16], xmm6
-        vmovdqu         [rsp + 1*16], xmm7
-        vmovdqu         [rsp + 2*16], xmm8
-        vmovdqu         [rsp + 3*16], xmm9
-        vmovdqu         [rsp + 4*16], xmm10
-        vmovdqu         [rsp + 5*16], xmm11
-        vmovdqu         [rsp + 6*16], xmm13
-%endif
+;; ============================================================================
+;; KASUMI_FI_AVX512 - Inline FI sub-function
+;;
+;; Performs the FI unbalanced Feistel with two AVX-512 S-box evaluations.
+;; Assumes YPERMW, YPERMB, YLSB, KMASK7 are preloaded with constants.
+;;
+;; %1 (data)      = 16-bit register holding data input
+;; %2 (key1_off)  = byte offset into key_sched for key1 (uint16_t)
+;; %3 (key2_off)  = byte offset into key_sched for key2 (uint16_t)
+;; %4 (key3)      = 16-bit register holding key3
+;; %5 (result)    = 16-bit register to receive result
+;; Clobbers: TMP0, TMP1, STATE, ymm2-ymm11, k1, k2, k6
+;; ============================================================================
+%macro KASUMI_FI_AVX512 5
+%define %%data     %1
+%define %%key1_off %2
+%define %%key2_off %3
+%define %%key3     %4
+%define %%result   %5
 
-        ;; Kasumi FI: unbalanced Feistel with combined S7/S9 via AVX-512
+        ;; --- First half of FI Feistel ---
+        ;; STATE = data ^ key1
+        movzx   STATE, %%data
+        xor     WORD(STATE), word [KS + %%key1_off]
 
-        xor     arg1, arg2                              ;; mix data with key1
-        kmovd       k4, [rel kmask_s7]                      ;; k4 = S7 isolation mask (low 7 bits)
-        vmovdqa     ymm1, [rel vpermb_mask]
-        vmovdqa     ymm0, [rel vpermw_mask]
-        kmovd       k1, DWORD(arg1)
-        vpmovm2b    ymm10, k1                            ;; expand bits to byte mask
-        KASUMI_SBOX_AVX512a                              ;; 1st S-box pass
-        vpermb      ymm10, ymm1, ymm10                  ;; rearrange input for Feistel cross-mix
-        vpxord      ymm10, ymm10, ymm2                  ;; XOR with S-box output
-        vpermw      ymm3 {k4}{z}, ymm0, ymm10           ;; align S9/S7 halves
-        vpxord      ymm10, ymm10, ymm3                  ;; complete cross-mix
-        ror         WORD(arg3), 9                        ;; rotate key2 for subkey alignment
-        kmovd       k6, DWORD(arg3)
+        ;; Expand input bits to byte mask and run 1st S-box pass
+        kmovd       k1, DWORD(STATE)
+        vpmovm2b    ymm10, k1                           ; expand bits to byte mask
+        KASUMI_SBOX_AVX512a                              ; 1st S-box pass (output: ymm2)
+
+        ;; Feistel cross-mix: rearrange + XOR with S-box output
+        vpermb      ymm10, YPERMB, ymm10                ; rearrange input for cross-mix
+        vpxord      ymm10, ymm10, ymm2                  ; XOR with S-box output
+        vpermw      ymm3 {KMASK7}{z}, YPERMW, ymm10     ; align S9/S7 halves
+        vpxord      ymm10, ymm10, ymm3                  ; complete cross-mix
+
+        ;; --- Second half of FI Feistel ---
+        ;; Mix key2 into state (rotate key2 in register, not memory)
+        movzx   DWORD(TMP1), word [KS + %%key2_off]
+        ror     WORD(TMP1), 9                            ; rotate key2 for subkey alignment
+        kmovd       k6, DWORD(TMP1)
         vpmovm2w    ymm11, k6
-        vpxord      ymm10, ymm10, ymm11                 ;; mix key2 into state
-        vptestmw    k2, ymm10, [rel least_sig_bit_word]  ;; k2 = words with LSB set
-        vpmovm2w    ymm10, k2
-        KASUMI_SBOX_AVX512b                              ;; 2nd S-box pass
-        vptestmw    k1, ymm2, [rel least_sig_bit_word]   ;; k1 = words with LSB set
-        kmovd       DWORD(arg1), k2                      ;; S9 bits
-        kmovd       eax, k1                              ;; S7 bits
-        shl     arg1, 7                                   ;; rotate S7 to high positions
-        and     arg1, 0x3F80                              ;; place S9 bits in upper positions
-        xor     rax, arg1                                ;; merge S9 with S7
-        mov     r10, rax
-        shr     r10, 7
-        and     r10, 0x7F                                 ;; extract high 7-bit field
-        xor     rax, r10                                 ;; clear high positions
-        ror     ax, 7                                    ;; rotate S7/S9 into final positions
-        xor     rax, arg4                                ;; mix with key3
+        vpxord      ymm10, ymm10, ymm11                 ; mix key2 into state
 
-        vzeroall
+        ;; Extract LSBs as word mask and run 2nd S-box pass
+        vptestmw    k2, ymm10, YLSB                      ; k2 = words with LSB set
+        vpmovm2w    ymm10, k2
+        KASUMI_SBOX_AVX512b                              ; 2nd S-box pass (output: ymm2)
+
+        ;; Extract 16-bit result from S-box output
+        vptestmw    k1, ymm2, YLSB                       ; k1 = words with LSB set
+        kmovd       DWORD(STATE), k2                     ; S9 bits
+        kmovd       DWORD(TMP0), k1                      ; S7 bits
+        shl     STATE, 7                                  ; rotate S7 to high positions
+        and     STATE, 0x3F80                             ; place S9 bits in upper positions
+        xor     TMP0, STATE                              ; merge S9 with S7
+        mov     STATE, TMP0
+        shr     STATE, 7                                 ; extract high 7-bit field
+        and     STATE, 0x7F
+        xor     TMP0, STATE                              ; clear high positions
+        ror     WORD(TMP0), 7                            ; rotate S7/S9 into final positions
+
+        ;; Mix with key3
+        xor     WORD(TMP0), %%key3
+        mov     %%result, WORD(TMP0)
+%endmacro
+
+;; ============================================================================
+;; FLp1 - Inline FL sub-function
+;;
+;; Computes the FL layer using subkeys key_sched[0] (ka) and key_sched[1] (kb).
+;; Modifies TMPH and TMPL in-place.
+;;
+;; Expected register state on entry:
+;;   KS   - pointer to current round's 8 subkeys (uint16_t[8])
+;;   TMPH - 16-bit temp_h value in low word
+;;   TMPL - 16-bit temp_l value in low word
+;;   DPTR - pointer to data block (not used directly, preserved)
+;;
+;; Algorithm:
+;;   r  = temp_l & ka
+;;   r  = temp_h ^ ROL16(r, 1)
+;;   l  = r | kb
+;;   temp_h = temp_l ^ ROL16(l, 1)
+;;   temp_l = r
+;;
+;; Clobbers: TMP0, TMP1, TMP2
+;; ============================================================================
+%macro FLp1 0
+        movzx   DWORD(TMP0), word [KS + 0]         ; ka = key_sched[0]
+
+        ;; r = temp_l & ka
+        mov     WORD(TMP2), WORD(TMPL)
+        and     WORD(TMP2), WORD(TMP0)
+        ;; r = temp_h ^ ROL16(r, 1)
+        rol     WORD(TMP2), 1
+        xor     WORD(TMP2), WORD(TMPH)
+
+        ;; l = r | kb
+        mov     WORD(TMPH), WORD(TMP2)
+        or      WORD(TMPH), word [KS + 2]    ; kb = key_sched[1]
+        ;; temp_h = old_temp_l ^ ROL16(l, 1)
+        rol     WORD(TMPH), 1
+        xor     WORD(TMPH), WORD(TMPL)
+
+        ;; Commit results (TMPH already holds new temp_h)
+        mov     WORD(TMPL), WORD(TMP2)            ; TMPL = new temp_l = r
+%endmacro
+
+;; ============================================================================
+;; FOp1 - FO sub-function
+;;
+;; Invokes KASUMI_FI_AVX512 three times using subkeys key_sched[2..7]:
+;;   h = FI(h, key_sched[2], key_sched[3], l)       key offsets: +4,  +6
+;;   l = FI(l, key_sched[4], key_sched[5], h)       key offsets: +8,  +10
+;;   h = FI(h, key_sched[6], key_sched[7], l)       key offsets: +12, +14
+;;
+;; Expected register state on entry:
+;;   KS   - pointer to current round's 8 subkeys (uint16_t[8])
+;;   TMPH - 16-bit temp_h value in low word
+;;   TMPL - 16-bit temp_l value in low word
+;;   DPTR - pointer to data block (not used directly, preserved)
+;;
+;; Clobbers: TMP0, TMP1, STATE, ymm2-ymm11, k1, k2, k6
+;; ============================================================================
+%macro FOp1 0
+        KASUMI_FI_AVX512 WORD(TMPH), 4, 6, WORD(TMPL), WORD(TMPH)
+        KASUMI_FI_AVX512 WORD(TMPL), 8, 10, WORD(TMPH), WORD(TMPL)
+        KASUMI_FI_AVX512 WORD(TMPH), 12, 14, WORD(TMPL), WORD(TMPH)
+%endmacro
+
+;; ============================================================================
+;; kasumi_1_block_avx512(const uint16_t *key_sched, uint16_t *data)
+;;
+;; Performs the Kasumi block cipher on a single 64-bit data block.
+;; Executes 8 rounds (4 odd/even pairs, fully unrolled):
+;;   - Odd rounds:  FL -> FO
+;;   - Even rounds: FO -> FL
+;;
+;; Each round consumes 8 subkeys (16 bytes) from the key schedule.
+;; The FO sub-function uses KASUMI_FI_AVX512 for constant-time S-box
+;; substitution via bitsliced AVX-512 Boolean equations.
+;;
+;; Parameters:
+;;   arg1 = const uint16_t *key_sched  (64 x uint16_t = 128 bytes)
+;;   arg2 = uint16_t *data           (64-bit block, 4 x uint16_t, in-place)
+;; ============================================================================
+align_function
+MKGLOBAL(kasumi_1_block_avx512, function, internal)
+kasumi_1_block_avx512:
+        ;; Save callee-saved GPRs
+        push    r13
+        push    r14
+        push    r15
+
 %ifndef LINUX
-        vmovdqu         xmm6,  [rsp + 0*16]
-        vmovdqu         xmm7,  [rsp + 1*16]
-        vmovdqu         xmm8,  [rsp + 2*16]
-        vmovdqu         xmm9,  [rsp + 3*16]
-        vmovdqu         xmm10, [rsp + 4*16]
-        vmovdqu         xmm11, [rsp + 5*16]
-        vmovdqu         xmm13, [rsp + 6*16]
-        add             rsp, STACK_SIZE
+        sub     rsp, BLK_STACK_SIZE
+
+        ;; Save non-volatile XMM registers (Windows)
+        vmovdqu [rsp + BLK_XMM_OFFSET + 0*16], xmm6
+        vmovdqu [rsp + BLK_XMM_OFFSET + 1*16], xmm7
+        vmovdqu [rsp + BLK_XMM_OFFSET + 2*16], xmm8
+        vmovdqu [rsp + BLK_XMM_OFFSET + 3*16], xmm9
+        vmovdqu [rsp + BLK_XMM_OFFSET + 4*16], xmm10
+        vmovdqu [rsp + BLK_XMM_OFFSET + 5*16], xmm11
+        vmovdqu [rsp + BLK_XMM_OFFSET + 6*16], xmm12
+        vmovdqu [rsp + BLK_XMM_OFFSET + 7*16], xmm13
+        vmovdqu [rsp + BLK_XMM_OFFSET + 8*16], xmm14
+        vmovdqu [rsp + BLK_XMM_OFFSET + 9*16], xmm15
 %endif
+
+        ;; KS = arg1 = key schedule pointer (advances each round)
+        ;; DPTR = arg2 = data pointer (constant)
+
+        ;; Preload constants that survive across all sbox evaluations
+        kmovd       KMASK7, [rel kmask_s7]               ; S7 isolation mask (low 7 bits)
+        vmovdqa     YPERMB, [rel vpermb_mask]             ; byte permutation for 1st sbox
+        vmovdqa     YPERMW, [rel vpermw_mask]             ; word permutation for 2nd sbox
+        vmovdqa     YLSB, [rel least_sig_bit_word]       ; LSB-per-word test mask
+
+        ;; =============================================================
+        ;; Round 1 (odd): FL -> FO
+        ;; =============================================================
+
+        movzx   DWORD(TMPH), word [DPTR + 4]   ; TMPH = data[2]
+        movzx   DWORD(TMPL), word [DPTR + 6]   ; TMPL = data[3]
+
+        FLp1
+        FOp1
+
+        add     KS, 16
+
+        xor     [DPTR + 2], WORD(TMPL)          ; data[1] ^= temp_l
+        xor     [DPTR + 0], WORD(TMPH)          ; data[0] ^= temp_h
+
+        ;; =============================================================
+        ;; Round 2 (even): FO -> FL
+        ;; =============================================================
+
+        movzx   DWORD(TMPH), word [DPTR + 2]   ; TMPH = data[1]
+        movzx   DWORD(TMPL), word [DPTR + 0]   ; TMPL = data[0]
+
+        FOp1
+        FLp1
+
+        add     KS, 16
+
+        xor     [DPTR + 6], WORD(TMPH)          ; data[3] ^= temp_h
+        xor     [DPTR + 4], WORD(TMPL)          ; data[2] ^= temp_l
+
+        ;; =============================================================
+        ;; Round 3 (odd): FL -> FO
+        ;; =============================================================
+
+        movzx   DWORD(TMPH), word [DPTR + 4]   ; TMPH = data[2]
+        movzx   DWORD(TMPL), word [DPTR + 6]   ; TMPL = data[3]
+
+        FLp1
+        FOp1
+
+        add     KS, 16
+
+        xor     [DPTR + 2], WORD(TMPL)          ; data[1] ^= temp_l
+        xor     [DPTR + 0], WORD(TMPH)          ; data[0] ^= temp_h
+
+        ;; =============================================================
+        ;; Round 4 (even): FO -> FL
+        ;; =============================================================
+
+        movzx   DWORD(TMPH), word [DPTR + 2]   ; TMPH = data[1]
+        movzx   DWORD(TMPL), word [DPTR + 0]   ; TMPL = data[0]
+
+        FOp1
+        FLp1
+
+        add     KS, 16
+
+        xor     [DPTR + 6], WORD(TMPH)          ; data[3] ^= temp_h
+        xor     [DPTR + 4], WORD(TMPL)          ; data[2] ^= temp_l
+
+        ;; =============================================================
+        ;; Round 5 (odd): FL -> FO
+        ;; =============================================================
+
+        movzx   DWORD(TMPH), word [DPTR + 4]   ; TMPH = data[2]
+        movzx   DWORD(TMPL), word [DPTR + 6]   ; TMPL = data[3]
+
+        FLp1
+        FOp1
+
+        add     KS, 16
+
+        xor     [DPTR + 2], WORD(TMPL)          ; data[1] ^= temp_l
+        xor     [DPTR + 0], WORD(TMPH)          ; data[0] ^= temp_h
+
+        ;; =============================================================
+        ;; Round 6 (even): FO -> FL
+        ;; =============================================================
+
+        movzx   DWORD(TMPH), word [DPTR + 2]   ; TMPH = data[1]
+        movzx   DWORD(TMPL), word [DPTR + 0]   ; TMPL = data[0]
+
+        FOp1
+        FLp1
+
+        add     KS, 16
+
+        xor     [DPTR + 6], WORD(TMPH)          ; data[3] ^= temp_h
+        xor     [DPTR + 4], WORD(TMPL)          ; data[2] ^= temp_l
+
+        ;; =============================================================
+        ;; Round 7 (odd): FL -> FO
+        ;; =============================================================
+
+        movzx   DWORD(TMPH), word [DPTR + 4]   ; TMPH = data[2]
+        movzx   DWORD(TMPL), word [DPTR + 6]   ; TMPL = data[3]
+
+        FLp1
+        FOp1
+
+        add     KS, 16
+
+        xor     [DPTR + 2], WORD(TMPL)          ; data[1] ^= temp_l
+        xor     [DPTR + 0], WORD(TMPH)          ; data[0] ^= temp_h
+
+        ;; =============================================================
+        ;; Round 8 (even): FO -> FL
+        ;; =============================================================
+
+        movzx   DWORD(TMPH), word [DPTR + 2]   ; TMPH = data[1]
+        movzx   DWORD(TMPL), word [DPTR + 0]   ; TMPL = data[0]
+
+        FOp1
+        FLp1
+
+        xor     [DPTR + 6], WORD(TMPH)          ; data[3] ^= temp_h
+        xor     [DPTR + 4], WORD(TMPL)          ; data[2] ^= temp_l
+
+        vzeroall                                 ; single vzeroall at the end
+
+%ifndef LINUX
+        ;; Restore non-volatile XMM registers (Windows)
+        vmovdqu xmm6,  [rsp + BLK_XMM_OFFSET + 0*16]
+        vmovdqu xmm7,  [rsp + BLK_XMM_OFFSET + 1*16]
+        vmovdqu xmm8,  [rsp + BLK_XMM_OFFSET + 2*16]
+        vmovdqu xmm9,  [rsp + BLK_XMM_OFFSET + 3*16]
+        vmovdqu xmm10, [rsp + BLK_XMM_OFFSET + 4*16]
+        vmovdqu xmm11, [rsp + BLK_XMM_OFFSET + 5*16]
+        vmovdqu xmm12, [rsp + BLK_XMM_OFFSET + 6*16]
+        vmovdqu xmm13, [rsp + BLK_XMM_OFFSET + 7*16]
+        vmovdqu xmm14, [rsp + BLK_XMM_OFFSET + 8*16]
+        vmovdqu xmm15, [rsp + BLK_XMM_OFFSET + 9*16]
+
+        add     rsp, BLK_STACK_SIZE
+%endif
+
+        pop     r15
+        pop     r14
+        pop     r13
 
         ret
+
+mksection stack-noexec
