@@ -71,7 +71,7 @@ General
 
 Library
 - AES-GCM changes
-  - Reduced binary size of AVX512 type 2 and AVX2 type 1 code by re-using internal GHASH functions.
+  - Reduced binary size of AVX512 type 2 and AVX2 type 1 code by reusing internal GHASH functions.
   - Optimized small packets for AVX512 type 2 (1 to 256 bytes).
   - Removed specialized AVX512 type 1 and AVX2 type 1 is used instead.
   - Implemented multiply reduce optimization for GHASH AVX2 type 1.
@@ -79,7 +79,7 @@ Library
   - Added new AVX2 type 2 implementation.
 - DES, 3DES/TDES and DES-DOCSIS binary size reduction.
   - reduced stack frame size for DES and DES-DOCSIS.
-  - re-used common transpose macros in the implementation.
+  - reused common transpose macros in the implementation.
 - Fixed LFSR update in single buffer ZUC API implementation.
 - SM4 changes:
   - Added SM4-CTR and SM4-GCM SSE implementations.
