@@ -46,26 +46,16 @@ extern const struct cipher_test kasumi_f8_json[];
 int
 kasumi_test(struct IMB_MGR *mb_mgr);
 static int
-validate_kasumi_f8_1_block(struct IMB_MGR *mb_mgr, const unsigned job_api);
+validate_kasumi_f8_1_block(struct IMB_MGR *mb_mgr);
 static int
-validate_kasumi_f8_1_bitblock(struct IMB_MGR *mb_mgr, const unsigned job_api);
+validate_kasumi_f8_1_bitblock(struct IMB_MGR *mb_mgr);
 static int
-validate_kasumi_f8_1_bitblock_offset(struct IMB_MGR *mb_mgr, const unsigned job_api);
+validate_kasumi_f8_1_bitblock_offset(struct IMB_MGR *mb_mgr);
 static int
-validate_kasumi_f8_2_blocks(struct IMB_MGR *mb_mgr, const unsigned job_api);
-static int
-validate_kasumi_f8_3_blocks(struct IMB_MGR *mb_mgr, const unsigned job_api);
-static int
-validate_kasumi_f8_4_blocks(struct IMB_MGR *mb_mgr, const unsigned job_api);
-static int
-validate_kasumi_f8_n_blocks(struct IMB_MGR *mb_mgr, const unsigned job_api);
-static int
-validate_kasumi_f9(IMB_MGR *mgr, const unsigned job_api);
-static int
-validate_kasumi_f9_user(IMB_MGR *mgr, const unsigned job_api);
+validate_kasumi_f9(IMB_MGR *mgr);
 
 struct kasumi_test_case {
-        int (*func)(struct IMB_MGR *, const unsigned job_api);
+        int (*func)(struct IMB_MGR *);
         const char *func_name;
 };
 
@@ -74,17 +64,11 @@ static const struct kasumi_test_case kasumi_f8_func_tab[] = {
         { validate_kasumi_f8_1_block, "validate_kasumi_f8_1_block" },
         { validate_kasumi_f8_1_bitblock, "validate_kasumi_f8_1_bitblock" },
         { validate_kasumi_f8_1_bitblock_offset, "validate_kasumi_f8_1_bitblock_offset" },
-        { validate_kasumi_f8_2_blocks, "validate_kasumi_f8_2_blocks" },
-        { validate_kasumi_f8_3_blocks, "validate_kasumi_f8_3_blocks" },
-        { validate_kasumi_f8_4_blocks, "validate_kasumi_f8_4_blocks" },
-        { validate_kasumi_f8_n_blocks, "validate_kasumi_f8_n_blocks" }
 };
 
 /* kasumi f9 validation function pointer table */
-static const struct kasumi_test_case kasumi_f9_func_tab[] = {
-        { validate_kasumi_f9, "validate_kasumi_f9" },
-        { validate_kasumi_f9_user, "validate_kasumi_f9_user" }
-};
+static const struct kasumi_test_case kasumi_f9_func_tab[] = { { validate_kasumi_f9,
+                                                                "validate_kasumi_f9" } };
 
 static int
 submit_kasumi_f8_jobs(struct IMB_MGR *mb_mgr, kasumi_key_sched_t **keys, uint64_t **ivs,
@@ -333,8 +317,7 @@ kasumi_f8_x_block_clean_op(struct kasumi_f8_x_blocks *s)
 
 static int
 kasumi_f8_x_block_prep_op(IMB_MGR *mgr, struct kasumi_f8_x_blocks *s, const struct cipher_test *v,
-                          const struct cipher_test *vstart, const unsigned job_api,
-                          const int same_size, const uint32_t bit_offset)
+                          const struct cipher_test *vstart, const uint32_t bit_offset)
 {
         /* set up vt[] */
         s->vt[0] = v;
@@ -346,21 +329,11 @@ kasumi_f8_x_block_prep_op(IMB_MGR *mgr, struct kasumi_f8_x_blocks *s, const stru
                 if (vc->msg == NULL)
                         vc = vstart;
 
-                if (!job_api) {
-                        /* find same key match for direct API and byte length */
-                        while ((vc->msgSize % CHAR_BIT) != 0 ||
-                               memcmp(vc->key, v->key, v->keySize / CHAR_BIT) != 0) {
-                                vc++;
-                                if (vc->msg == NULL)
-                                        vc = vstart;
-                        }
-                } else {
-                        /* find byte aligned length vector */
-                        while ((vc->msgSize % CHAR_BIT) != 0) {
-                                vc++;
-                                if (vc->msg == NULL)
-                                        vc = vstart;
-                        }
+                /* find byte aligned length vector */
+                while ((vc->msgSize % CHAR_BIT) != 0) {
+                        vc++;
+                        if (vc->msg == NULL)
+                                vc = vstart;
                 }
 
                 s->vt[i] = vc;
@@ -373,20 +346,10 @@ kasumi_f8_x_block_prep_op(IMB_MGR *mgr, struct kasumi_f8_x_blocks *s, const stru
          * - copy IV
          */
 
-        size_t min_size_bits = UINT32_MAX;
-
-        for (size_t i = 0; i < s->n; i++)
-                if (s->vt[i]->msgSize < min_size_bits)
-                        min_size_bits = s->vt[i]->msgSize;
-
-        const uint32_t min_size = (uint32_t) ((min_size_bits + 7ULL) / CHAR_BIT);
-
         for (size_t i = 0; i < s->n; i++) {
-                const size_t msg_len_vec =
-                        ((!job_api) && same_size) ? min_size : (s->vt[i]->msgSize + 7) / CHAR_BIT;
+                const size_t msg_len_vec = (s->vt[i]->msgSize + 7) / CHAR_BIT;
                 const size_t msg_len = (bit_offset != 0) ? (msg_len_vec + 1) : msg_len_vec;
-                const size_t msg_len_bits =
-                        ((!job_api) && same_size) ? min_size_bits : s->vt[i]->msgSize;
+                const size_t msg_len_bits = s->vt[i]->msgSize;
 
                 memcpy(s->key[i], s->vt[i]->key, s->vt[i]->keySize / CHAR_BIT);
 
@@ -505,13 +468,13 @@ kasumi_f8_x_block_check_op(struct kasumi_f8_x_blocks *s, const char *name, const
 }
 
 static int
-validate_kasumi_f8_1_bitblock(IMB_MGR *mgr, const unsigned job_api)
+validate_kasumi_f8_1_bitblock(IMB_MGR *mgr)
 {
         const uint32_t n = 1;
         struct kasumi_f8_x_blocks s;
         const struct cipher_test *v;
 
-        printf("Testing IMB_KASUMI_F8_1_BUFFER_BIT (%s):\n", job_api ? "Job API" : "Direct API");
+        printf("Testing IMB_KASUMI_F8_1_BUFFER_BIT (Job API):\n");
 
         if (!kasumi_f8_x_block_alloc(mgr, &s, n)) {
                 printf("F8 alloc failed !\n");
@@ -520,27 +483,19 @@ validate_kasumi_f8_1_bitblock(IMB_MGR *mgr, const unsigned job_api)
 
         for (v = kasumi_f8_json; v->msg != NULL; v++) {
 
-                if (!kasumi_f8_x_block_prep_op(mgr, &s, v, kasumi_f8_json, job_api, 0, 0)) {
+                if (!kasumi_f8_x_block_prep_op(mgr, &s, v, kasumi_f8_json, 0)) {
                         kasumi_f8_x_block_free(&s);
                         printf("F8 prep failed !\n");
                         return 1;
                 }
 
                 /* Validate Encrypt */
-                if (job_api)
-                        submit_kasumi_f8_jobs(mgr, s.keySched, s.pIV, s.encBuff, s.encBuff,
-                                              s.bitLens, s.bitOffsets, IMB_DIR_ENCRYPT, n);
-                else
-                        IMB_KASUMI_F8_1_BUFFER_BIT(mgr, s.keySched[0], *s.pIV[0], s.encBuff[0],
-                                                   s.encBuff[0], s.bitLens[0], s.bitOffsets[0]);
+                submit_kasumi_f8_jobs(mgr, s.keySched, s.pIV, s.encBuff, s.encBuff, s.bitLens,
+                                      s.bitOffsets, IMB_DIR_ENCRYPT, n);
 
                 /* Validate Decrypt */
-                if (job_api)
-                        submit_kasumi_f8_jobs(mgr, s.keySched, s.pIV, s.decBuff, s.decBuff,
-                                              s.bitLens, s.bitOffsets, IMB_DIR_DECRYPT, n);
-                else
-                        IMB_KASUMI_F8_1_BUFFER_BIT(mgr, s.keySched[0], *s.pIV[0], s.decBuff[0],
-                                                   s.decBuff[0], s.bitLens[0], s.bitOffsets[0]);
+                submit_kasumi_f8_jobs(mgr, s.keySched, s.pIV, s.decBuff, s.decBuff, s.bitLens,
+                                      s.bitOffsets, IMB_DIR_DECRYPT, n);
 
                 if (!kasumi_f8_x_block_check_op(&s, __FUNCTION__, 1)) {
                         kasumi_f8_x_block_free(&s);
@@ -557,14 +512,13 @@ validate_kasumi_f8_1_bitblock(IMB_MGR *mgr, const unsigned job_api)
 }
 
 static int
-validate_kasumi_f8_1_bitblock_offset(IMB_MGR *mgr, const unsigned job_api)
+validate_kasumi_f8_1_bitblock_offset(IMB_MGR *mgr)
 {
         const uint32_t n = 1;
         struct kasumi_f8_x_blocks s;
         const struct cipher_test *v;
 
-        printf("Testing IMB_KASUMI_F8_1_BUFFER_BIT (offset) (%s):\n",
-               job_api ? "Job API" : "Direct API");
+        printf("Testing IMB_KASUMI_F8_1_BUFFER_BIT (offset) (Job API):\n");
 
         if (!kasumi_f8_x_block_alloc(mgr, &s, n)) {
                 printf("F8 alloc failed !\n");
@@ -574,30 +528,19 @@ validate_kasumi_f8_1_bitblock_offset(IMB_MGR *mgr, const unsigned job_api)
         for (v = kasumi_f8_json; v->msg != NULL; v++) {
 
                 for (uint32_t bitoff = 0; bitoff < 8; bitoff++) {
-                        if (!kasumi_f8_x_block_prep_op(mgr, &s, v, kasumi_f8_json, job_api, 0,
-                                                       bitoff)) {
+                        if (!kasumi_f8_x_block_prep_op(mgr, &s, v, kasumi_f8_json, bitoff)) {
                                 kasumi_f8_x_block_free(&s);
                                 printf("F8 prep failed !\n");
                                 return 1;
                         }
 
                         /* Validate Encrypt */
-                        if (job_api)
-                                submit_kasumi_f8_jobs(mgr, s.keySched, s.pIV, s.encBuff, s.encBuff,
-                                                      s.bitLens, s.bitOffsets, IMB_DIR_ENCRYPT, n);
-                        else
-                                IMB_KASUMI_F8_1_BUFFER_BIT(mgr, s.keySched[0], *s.pIV[0],
-                                                           s.encBuff[0], s.encBuff[0], s.bitLens[0],
-                                                           s.bitOffsets[0]);
+                        submit_kasumi_f8_jobs(mgr, s.keySched, s.pIV, s.encBuff, s.encBuff,
+                                              s.bitLens, s.bitOffsets, IMB_DIR_ENCRYPT, n);
 
                         /* Validate Decrypt */
-                        if (job_api)
-                                submit_kasumi_f8_jobs(mgr, s.keySched, s.pIV, s.decBuff, s.decBuff,
-                                                      s.bitLens, s.bitOffsets, IMB_DIR_DECRYPT, n);
-                        else
-                                IMB_KASUMI_F8_1_BUFFER_BIT(mgr, s.keySched[0], *s.pIV[0],
-                                                           s.decBuff[0], s.decBuff[0], s.bitLens[0],
-                                                           s.bitOffsets[0]);
+                        submit_kasumi_f8_jobs(mgr, s.keySched, s.pIV, s.decBuff, s.decBuff,
+                                              s.bitLens, s.bitOffsets, IMB_DIR_DECRYPT, n);
 
                         if (!kasumi_f8_x_block_check_op(&s, __FUNCTION__, 1)) {
                                 kasumi_f8_x_block_free(&s);
@@ -614,13 +557,13 @@ validate_kasumi_f8_1_bitblock_offset(IMB_MGR *mgr, const unsigned job_api)
         return 0;
 }
 static int
-validate_kasumi_f8_1_block(IMB_MGR *mgr, const unsigned job_api)
+validate_kasumi_f8_1_block(IMB_MGR *mgr)
 {
         const uint32_t n = 1;
         struct kasumi_f8_x_blocks s;
         const struct cipher_test *v;
 
-        printf("Testing IMB_KASUMI_F8_1_BUFFER (%s):\n", job_api ? "Job API" : "Direct API");
+        printf("Testing IMB_KASUMI_F8_1_BUFFER (Job API):\n");
 
         if (!kasumi_f8_x_block_alloc(mgr, &s, n)) {
                 printf("F8 alloc failed !\n");
@@ -632,27 +575,19 @@ validate_kasumi_f8_1_block(IMB_MGR *mgr, const unsigned job_api)
                 if ((v->msgSize % CHAR_BIT) != 0)
                         continue;
 
-                if (!kasumi_f8_x_block_prep_op(mgr, &s, v, kasumi_f8_json, job_api, 0, 0)) {
+                if (!kasumi_f8_x_block_prep_op(mgr, &s, v, kasumi_f8_json, 0)) {
                         kasumi_f8_x_block_free(&s);
                         printf("F8 prep failed !\n");
                         return 1;
                 }
 
                 /* Validate Encrypt */
-                if (job_api)
-                        submit_kasumi_f8_jobs(mgr, s.keySched, s.pIV, s.encBuff, s.encBuff,
-                                              s.bitLens, s.bitOffsets, IMB_DIR_ENCRYPT, n);
-                else
-                        IMB_KASUMI_F8_1_BUFFER(mgr, s.keySched[0], *s.pIV[0], s.encBuff[0],
-                                               s.encBuff[0], s.packetLen[0]);
+                submit_kasumi_f8_jobs(mgr, s.keySched, s.pIV, s.encBuff, s.encBuff, s.bitLens,
+                                      s.bitOffsets, IMB_DIR_ENCRYPT, n);
 
                 /*Validate Decrypt*/
-                if (job_api)
-                        submit_kasumi_f8_jobs(mgr, s.keySched, s.pIV, s.decBuff, s.decBuff,
-                                              s.bitLens, s.bitOffsets, IMB_DIR_DECRYPT, n);
-                else
-                        IMB_KASUMI_F8_1_BUFFER(mgr, s.keySched[0], *s.pIV[0], s.decBuff[0],
-                                               s.decBuff[0], s.packetLen[0]);
+                submit_kasumi_f8_jobs(mgr, s.keySched, s.pIV, s.decBuff, s.decBuff, s.bitLens,
+                                      s.bitOffsets, IMB_DIR_DECRYPT, n);
 
                 if (!kasumi_f8_x_block_check_op(&s, __FUNCTION__, 0)) {
                         kasumi_f8_x_block_free(&s);
@@ -668,300 +603,11 @@ validate_kasumi_f8_1_block(IMB_MGR *mgr, const unsigned job_api)
 }
 
 static int
-validate_kasumi_f8_2_blocks(IMB_MGR *mgr, const unsigned job_api)
-{
-        const uint32_t n = 2;
-        struct kasumi_f8_x_blocks s;
-        const struct cipher_test *v;
-
-        printf("Testing IMB_KASUMI_F8_2_BUFFER (%s):\n", job_api ? "Job API" : "Direct API");
-
-        if (!kasumi_f8_x_block_alloc(mgr, &s, n)) {
-                printf("F8 alloc failed !\n");
-                return 1;
-        }
-
-        for (v = kasumi_f8_json; v->msg != NULL; v++) {
-
-                if ((v->msgSize % CHAR_BIT) != 0)
-                        continue;
-
-                if (!kasumi_f8_x_block_prep_op(mgr, &s, v, kasumi_f8_json, job_api, 0, 0)) {
-                        kasumi_f8_x_block_free(&s);
-                        printf("F8 prep failed !\n");
-                        return 1;
-                }
-
-                /* Test the encrypt */
-                if (job_api)
-                        submit_kasumi_f8_jobs(mgr, s.keySched, s.pIV, s.encBuff, s.encBuff,
-                                              s.bitLens, s.bitOffsets, IMB_DIR_ENCRYPT, n);
-                else
-                        IMB_KASUMI_F8_2_BUFFER(mgr, s.keySched[0], *s.pIV[0], *s.pIV[1],
-                                               s.encBuff[0], s.encBuff[0], s.packetLen[0],
-                                               s.encBuff[1], s.encBuff[1], s.packetLen[1]);
-
-                /* Test the decrypt */
-                if (job_api)
-                        submit_kasumi_f8_jobs(mgr, s.keySched, s.pIV, s.decBuff, s.decBuff,
-                                              s.bitLens, s.bitOffsets, IMB_DIR_DECRYPT, n);
-                else
-                        IMB_KASUMI_F8_2_BUFFER(mgr, s.keySched[0], *s.pIV[0], *s.pIV[1],
-                                               s.decBuff[0], s.decBuff[0], s.packetLen[0],
-                                               s.decBuff[1], s.decBuff[1], s.packetLen[1]);
-
-                if (!kasumi_f8_x_block_check_op(&s, __FUNCTION__, 0)) {
-                        kasumi_f8_x_block_free(&s);
-                        return 1;
-                }
-
-                kasumi_f8_x_block_clean_op(&s);
-        }
-
-        printf("[%s]: PASS.\n", __FUNCTION__);
-
-        kasumi_f8_x_block_free(&s);
-        return 0;
-}
-
-static int
-validate_kasumi_f8_3_blocks(IMB_MGR *mgr, const unsigned job_api)
-{
-        const uint32_t n = 3;
-        struct kasumi_f8_x_blocks s;
-        const struct cipher_test *v;
-
-        printf("Testing IMB_KASUMI_F8_3_BUFFER (%s):\n", job_api ? "Job API" : "Direct API");
-
-        if (!kasumi_f8_x_block_alloc(mgr, &s, n)) {
-                printf("F8 alloc failed !\n");
-                return 1;
-        }
-
-        for (v = kasumi_f8_json; v->msg != NULL; v++) {
-
-                if ((v->msgSize % CHAR_BIT) != 0)
-                        continue;
-
-                if (!kasumi_f8_x_block_prep_op(mgr, &s, v, kasumi_f8_json, job_api, 1, 0)) {
-                        kasumi_f8_x_block_free(&s);
-                        printf("F8 prep failed !\n");
-                        return 1;
-                }
-
-                /* Test the encrypt */
-                if (job_api)
-                        submit_kasumi_f8_jobs(mgr, s.keySched, s.pIV, s.encBuff, s.encBuff,
-                                              s.bitLens, s.bitOffsets, IMB_DIR_ENCRYPT, n);
-                else
-                        IMB_KASUMI_F8_3_BUFFER(mgr, s.keySched[0], *s.pIV[0], *s.pIV[1], *s.pIV[2],
-                                               s.encBuff[0], s.encBuff[0], s.encBuff[1],
-                                               s.encBuff[1], s.encBuff[2], s.encBuff[2],
-                                               s.packetLen[0]);
-
-                /* Test the decrypt */
-                if (job_api)
-                        submit_kasumi_f8_jobs(mgr, s.keySched, s.pIV, s.decBuff, s.decBuff,
-                                              s.bitLens, s.bitOffsets, IMB_DIR_DECRYPT, n);
-                else
-                        IMB_KASUMI_F8_3_BUFFER(mgr, s.keySched[0], *s.pIV[0], *s.pIV[1], *s.pIV[2],
-                                               s.decBuff[0], s.decBuff[0], s.decBuff[1],
-                                               s.decBuff[1], s.decBuff[2], s.decBuff[2],
-                                               s.packetLen[0]);
-
-                if (!kasumi_f8_x_block_check_op(&s, __FUNCTION__, 0)) {
-                        kasumi_f8_x_block_free(&s);
-                        return 1;
-                }
-
-                kasumi_f8_x_block_clean_op(&s);
-        }
-
-        printf("[%s]: PASS.\n", __FUNCTION__);
-        kasumi_f8_x_block_free(&s);
-        return 0;
-}
-
-static int
-validate_kasumi_f8_4_blocks(IMB_MGR *mgr, const unsigned job_api)
-{
-        const uint32_t n = 4;
-        struct kasumi_f8_x_blocks s;
-        const struct cipher_test *v;
-
-        printf("Testing IMB_KASUMI_F8_4_BUFFER (%s):\n", job_api ? "Job API" : "Direct API");
-
-        if (!kasumi_f8_x_block_alloc(mgr, &s, n)) {
-                printf("F8 alloc failed !\n");
-                return 1;
-        }
-
-        for (v = kasumi_f8_json; v->msg != NULL; v++) {
-
-                if ((v->msgSize % CHAR_BIT) != 0)
-                        continue;
-
-                if (!kasumi_f8_x_block_prep_op(mgr, &s, v, kasumi_f8_json, job_api, 1, 0)) {
-                        kasumi_f8_x_block_free(&s);
-                        printf("F8 prep failed !\n");
-                        return 1;
-                }
-
-                /* Test the encrypt */
-                if (job_api)
-                        submit_kasumi_f8_jobs(mgr, s.keySched, s.pIV, s.encBuff, s.encBuff,
-                                              s.bitLens, s.bitOffsets, IMB_DIR_ENCRYPT, n);
-                else
-                        IMB_KASUMI_F8_4_BUFFER(mgr, s.keySched[0], *s.pIV[0], *s.pIV[1], *s.pIV[2],
-                                               *s.pIV[3], s.encBuff[0], s.encBuff[0], s.encBuff[1],
-                                               s.encBuff[1], s.encBuff[2], s.encBuff[2],
-                                               s.encBuff[3], s.encBuff[3], s.packetLen[0]);
-
-                /* Test the decrypt */
-                if (job_api)
-                        submit_kasumi_f8_jobs(mgr, s.keySched, s.pIV, s.decBuff, s.decBuff,
-                                              s.bitLens, s.bitOffsets, IMB_DIR_DECRYPT, n);
-                else
-                        IMB_KASUMI_F8_4_BUFFER(mgr, s.keySched[0], *s.pIV[0], *s.pIV[1], *s.pIV[2],
-                                               *s.pIV[3], s.decBuff[0], s.decBuff[0], s.decBuff[1],
-                                               s.decBuff[1], s.decBuff[2], s.decBuff[2],
-                                               s.decBuff[3], s.decBuff[3], s.packetLen[0]);
-
-                if (!kasumi_f8_x_block_check_op(&s, __FUNCTION__, 0)) {
-                        kasumi_f8_x_block_free(&s);
-                        return 1;
-                }
-
-                kasumi_f8_x_block_clean_op(&s);
-        }
-
-        printf("[%s]: PASS.\n", __FUNCTION__);
-        kasumi_f8_x_block_free(&s);
-        return 0;
-}
-
-static int
-validate_kasumi_f8_n_blocks(IMB_MGR *mgr, const unsigned job_api)
-{
-        const size_t max_n = 16;
-
-        printf("Testing IMB_KASUMI_F8_N_BUFFER (%s):\n", job_api ? "Job API" : "Direct API");
-
-        for (uint32_t n = 1; n <= max_n; n++) {
-                struct kasumi_f8_x_blocks s;
-
-                if (!kasumi_f8_x_block_alloc(mgr, &s, n)) {
-                        printf("F8 alloc failed !\n");
-                        return 1;
-                }
-
-                for (const struct cipher_test *v = kasumi_f8_json; v->msg != NULL; v++) {
-
-                        if ((v->msgSize % CHAR_BIT) != 0)
-                                continue;
-
-                        /* same size */
-                        if (!kasumi_f8_x_block_prep_op(mgr, &s, v, kasumi_f8_json, job_api, 1, 0)) {
-                                kasumi_f8_x_block_free(&s);
-                                printf("F8 prep failed !\n");
-                                return 1;
-                        }
-
-                        /* Test the encrypt */
-                        if (job_api)
-                                submit_kasumi_f8_jobs(mgr, s.keySched, s.pIV, s.encBuff, s.encBuff,
-                                                      s.bitLens, s.bitOffsets, IMB_DIR_ENCRYPT, n);
-                        else
-                                /* All buffers share the same key */
-                                IMB_KASUMI_F8_N_BUFFER(mgr, s.keySched[0], s.IV,
-                                                       (const void *const *) s.encBuff,
-                                                       (void **) s.encBuff, s.packetLen, n);
-
-                        /* Test the decrypt */
-                        if (job_api)
-                                submit_kasumi_f8_jobs(mgr, s.keySched, s.pIV, s.decBuff, s.decBuff,
-                                                      s.bitLens, s.bitOffsets, IMB_DIR_DECRYPT, n);
-                        else
-                                /* All buffers share the same key */
-                                IMB_KASUMI_F8_N_BUFFER(mgr, s.keySched[0], s.IV,
-                                                       (const void *const *) s.decBuff,
-                                                       (void **) s.decBuff, s.packetLen, n);
-
-                        if (!kasumi_f8_x_block_check_op(&s, __FUNCTION__, 0)) {
-                                kasumi_f8_x_block_free(&s);
-                                return 1;
-                        }
-
-                        kasumi_f8_x_block_clean_op(&s);
-                } /* json vectors */
-
-                kasumi_f8_x_block_free(&s);
-        }
-
-        printf("[%s]: PASS, 1 to %zu buffers equal sizes.\n", __FUNCTION__, max_n);
-
-        for (uint32_t n = 1; n <= max_n; n++) {
-                struct kasumi_f8_x_blocks s;
-
-                if (!kasumi_f8_x_block_alloc(mgr, &s, n)) {
-                        printf("F8 alloc failed !\n");
-                        return 1;
-                }
-
-                for (const struct cipher_test *v = kasumi_f8_json; v->msg != NULL; v++) {
-
-                        if ((v->msgSize % CHAR_BIT) != 0)
-                                continue;
-
-                        /* different sizes */
-                        if (!kasumi_f8_x_block_prep_op(mgr, &s, v, kasumi_f8_json, job_api, 0, 0)) {
-                                kasumi_f8_x_block_free(&s);
-                                printf("F8 prep failed !\n");
-                                return 1;
-                        }
-
-                        /* Test the encrypt */
-                        if (job_api)
-                                submit_kasumi_f8_jobs(mgr, s.keySched, s.pIV, s.encBuff, s.encBuff,
-                                                      s.bitLens, s.bitOffsets, IMB_DIR_ENCRYPT, n);
-                        else
-                                /* All buffers share the same key */
-                                IMB_KASUMI_F8_N_BUFFER(mgr, s.keySched[0], s.IV,
-                                                       (const void *const *) s.encBuff,
-                                                       (void **) s.encBuff, s.packetLen, n);
-
-                        /* Test the decrypt */
-                        if (job_api)
-                                submit_kasumi_f8_jobs(mgr, s.keySched, s.pIV, s.decBuff, s.decBuff,
-                                                      s.bitLens, s.bitOffsets, IMB_DIR_DECRYPT, n);
-                        else
-                                /* All buffers share the same key */
-                                IMB_KASUMI_F8_N_BUFFER(mgr, s.keySched[0], s.IV,
-                                                       (const void *const *) s.decBuff,
-                                                       (void **) s.decBuff, s.packetLen, n);
-
-                        if (!kasumi_f8_x_block_check_op(&s, __FUNCTION__, 0)) {
-                                kasumi_f8_x_block_free(&s);
-                                return 1;
-                        }
-
-                        kasumi_f8_x_block_clean_op(&s);
-                } /* json vectors */
-
-                kasumi_f8_x_block_free(&s);
-        }
-
-        printf("[%s]: PASS, 1 to %zu buffers.\n", __FUNCTION__, max_n);
-
-        return 0;
-}
-
-static int
-validate_kasumi_f9(IMB_MGR *mgr, const unsigned job_api)
+validate_kasumi_f9(IMB_MGR *mgr)
 {
         int ret = 1; /* assume error */
 
-        printf("Testing IMB_KASUMI_F9_1_BUFFER (%s):\n", job_api ? "Job API" : "Direct API");
+        printf("Testing IMB_KASUMI_F9_1_BUFFER (Job API):\n");
 
         kasumi_key_sched_t *pKeySched = malloc(IMB_KASUMI_KEY_SCHED_SIZE(mgr));
         if (!pKeySched) {
@@ -987,10 +633,7 @@ validate_kasumi_f9(IMB_MGR *mgr, const unsigned job_api)
                 uint8_t digest[IMB_KASUMI_DIGEST_SIZE] = { 0 };
 
                 /* Test F9 integrity */
-                if (job_api)
-                        submit_kasumi_f9_job(mgr, pKeySched, v->msg, digest, byteLen);
-                else
-                        IMB_KASUMI_F9_1_BUFFER(mgr, pKeySched, v->msg, byteLen, digest);
+                submit_kasumi_f9_job(mgr, pKeySched, v->msg, digest, byteLen);
 
                 /* Compare the digest with the expected in the vectors */
                 IMB_ASSERT(v->tagSize == (IMB_KASUMI_DIGEST_SIZE * CHAR_BIT));
@@ -1009,69 +652,6 @@ exit:
         return ret;
 }
 
-static int
-validate_kasumi_f9_user(IMB_MGR *mgr, const unsigned job_api)
-{
-        /* only direct API available here */
-        if (job_api)
-                return 0;
-
-        int ret = 1; /* assume error */
-
-        printf("Testing IMB_KASUMI_F9_1_BUFFER_USER (Direct API):\n");
-
-        kasumi_key_sched_t *pKeySched = malloc(IMB_KASUMI_KEY_SCHED_SIZE(mgr));
-        if (!pKeySched) {
-                printf("malloc (IMB_KASUMI_KEY_SCHED_SIZE()): failed !\n");
-                goto exit;
-        }
-
-        for (const struct mac_test *v = kasumi_f9_json; v->msg != NULL; v++) {
-
-                /* in this test skip vectors with empty IV */
-                if (v->ivSize != ((IMB_KASUMI_IV_SIZE + 1) * CHAR_BIT))
-                        continue;
-
-                uint64_t iv = 0;
-
-                IMB_ASSERT(sizeof(iv) == IMB_KASUMI_IV_SIZE);
-                memcpy(&iv, &v->iv[1], IMB_KASUMI_IV_SIZE);
-
-                const uint32_t direction = (uint32_t) v->iv[0];
-
-                IMB_ASSERT(v->keySize == (IMB_KASUMI_KEY_SIZE * CHAR_BIT));
-
-                if (IMB_KASUMI_INIT_F9_KEY_SCHED(mgr, v->key, pKeySched)) {
-                        printf("IMB_KASUMI_INIT_F9_KEY_SCHED() error\n");
-                        goto exit;
-                }
-
-                uint8_t digest[IMB_KASUMI_DIGEST_SIZE] = { 0 };
-
-                /* Test the integrity for f9_user with IV */
-                IMB_ASSERT(v->msgSize < UINT32_MAX);
-                IMB_KASUMI_F9_1_BUFFER_USER(mgr, pKeySched, iv, v->msg, (uint32_t) v->msgSize,
-                                            digest, direction);
-
-                /* Compare the digest with the expected in the vectors */
-                IMB_ASSERT(v->tagSize == (IMB_KASUMI_DIGEST_SIZE * CHAR_BIT));
-                if (memcmp(digest, v->tag, IMB_KASUMI_DIGEST_SIZE) != 0) {
-                        hexdump(stdout, "digest", digest, IMB_KASUMI_DIGEST_SIZE);
-                        hexdump(stdout, "expected", v->tag, v->tagSize / CHAR_BIT);
-                        printf("direction %u\n", direction);
-                        printf("F9 integrity tcId:%zu Failed\n", v->tcId);
-                        goto exit;
-                }
-        }
-
-        printf("[%s]:     PASS, for single buffers.\n", __FUNCTION__);
-        ret = 0;
-
-exit:
-        free(pKeySched);
-        return ret;
-}
-
 int
 kasumi_test(struct IMB_MGR *mb_mgr)
 {
@@ -1081,16 +661,7 @@ kasumi_test(struct IMB_MGR *mb_mgr)
 
         test_suite_start(&ts, "KASUMI-F8");
         for (i = 0; i < DIM(kasumi_f8_func_tab); i++) {
-                /* validate direct API */
-                if (kasumi_f8_func_tab[i].func(mb_mgr, 0)) {
-                        printf("%s: FAIL\n", kasumi_f8_func_tab[i].func_name);
-                        test_suite_update(&ts, 0, 1);
-                } else {
-                        test_suite_update(&ts, 1, 0);
-                }
-
-                /* validate job API */
-                if (kasumi_f8_func_tab[i].func(mb_mgr, 1)) {
+                if (kasumi_f8_func_tab[i].func(mb_mgr)) {
                         printf("%s: FAIL\n", kasumi_f8_func_tab[i].func_name);
                         test_suite_update(&ts, 0, 1);
                 } else {
@@ -1101,16 +672,7 @@ kasumi_test(struct IMB_MGR *mb_mgr)
 
         test_suite_start(&ts, "KASUMI-F9");
         for (i = 0; i < DIM(kasumi_f9_func_tab); i++) {
-                /* validate direct API */
-                if (kasumi_f9_func_tab[i].func(mb_mgr, 0)) {
-                        printf("%s: FAIL\n", kasumi_f9_func_tab[i].func_name);
-                        test_suite_update(&ts, 0, 1);
-                } else {
-                        test_suite_update(&ts, 1, 0);
-                }
-
-                /* validate job API */
-                if (kasumi_f9_func_tab[i].func(mb_mgr, 1)) {
+                if (kasumi_f9_func_tab[i].func(mb_mgr)) {
                         printf("%s: FAIL\n", kasumi_f9_func_tab[i].func_name);
                         test_suite_update(&ts, 0, 1);
                 } else {
