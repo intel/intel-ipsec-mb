@@ -396,7 +396,11 @@ _finish_nonce_move:
         push r14
 %endif
 
-	vmovdqa	xbyteswap, [rel byteswap_const]
+        ;; check for zero length message
+        or      num_bytes, num_bytes
+        jz      %%do_return2
+
+        vmovdqa	xbyteswap, [rel byteswap_const]
 %ifidn %%CNTR_TYPE, CNTR
         test    p_ivlen, 16
         jnz     %%iv_is_16_bytes
