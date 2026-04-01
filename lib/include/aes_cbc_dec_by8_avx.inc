@@ -235,6 +235,10 @@ endstruc
         and             rsp, -16
         mov             [rsp + _rsp_save], %%tmp
 
+        ;; check for zero length message
+        or              %%length, %%length
+        jz              %%_do_return
+
         ;; load IV and put it on the stack frame
         vmovdqu	        xmm0, [%%p_IV]
         vmovdqa         [rsp + _IV], xmm0
