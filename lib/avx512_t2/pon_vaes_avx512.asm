@@ -296,6 +296,7 @@ endstruc
         ;; - length is obtained from message length to hash (BIP) minus XGEM header size
         mov     tmp_2, [job + _msg_len_to_hash_in_bytes]
         sub     tmp_2, 8
+        jz      %%_no_bip_payload_enc
 
 %%start_bip:
         cmp     tmp_2, 64
@@ -325,6 +326,7 @@ endstruc
         vpxord  xmm1, xmm0
 
         vmovq   bip, xmm1
+%%_no_bip_payload_enc:
 %endif ; CIPHER = CTR
 
         mov     tmp_1, [job + _auth_tag_output]
@@ -419,6 +421,7 @@ endstruc
         ;; - length is obtained from message length to hash (BIP) minus XGEM header size
         mov     tmp_2, [job + _msg_len_to_hash_in_bytes]
         sub     tmp_2, 8
+        jz      %%_no_bip_payload_dec
 
 %%start_bip:
         cmp     tmp_2, 64
@@ -448,6 +451,7 @@ endstruc
         vpxord  xmm1, xmm0
 
         vmovd   DWORD(bip), xmm1
+%%_no_bip_payload_dec:
 
 %endif ; CIPHER == CTR
 
