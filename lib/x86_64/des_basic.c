@@ -346,6 +346,10 @@ des_enc_cbc_basic(const void *input, void *output, const int size, const uint64_
         uint64_t *out = output;
         const int nblocks = size / 8;
         int n;
+
+        if (size == 0)
+                return;
+
         uint64_t iv = *ivec;
 
         for (n = 0; n < nblocks; n++)
@@ -376,6 +380,10 @@ des_dec_cbc_basic(const void *input, void *output, const int size, const uint64_
         uint64_t *out = output;
         const int nblocks = size / 8;
         int n;
+
+        if (size == 0)
+                return;
+
         uint64_t iv = *ivec;
 
         for (n = 0; n < nblocks; n++) {
@@ -413,6 +421,10 @@ des3_enc_cbc_basic(const void *input, void *output, const int size, const uint64
         uint64_t *out = output;
         const int nblocks = size / 8;
         int n;
+
+        if (size == 0)
+                return;
+
         uint64_t iv = *ivec;
 
         for (n = 0; n < nblocks; n++) {
@@ -452,6 +464,10 @@ des3_dec_cbc_basic(const void *input, void *output, const int size, const uint64
         uint64_t *out = output;
         const int nblocks = size / 8;
         int n;
+
+        if (size == 0)
+                return;
+
         uint64_t iv = *ivec;
 
         for (n = 0; n < nblocks; n++) {
@@ -540,6 +556,10 @@ docsis_des_enc_basic(const void *input, void *output, const int size, const uint
         const int nblocks = size / IMB_DES_BLOCK_SIZE;
         const int partial = size & 7;
         int n;
+
+        if (size == 0)
+                return;
+
         uint64_t iv = *ivec;
 
         for (n = 0; n < nblocks; n++)
@@ -578,6 +598,10 @@ docsis_des_dec_basic(const void *input, void *output, const int size, const uint
         const int nblocks = size / IMB_DES_BLOCK_SIZE;
         const int partial = size & 7;
         int n;
+
+        if (size == 0)
+                return;
+
         uint64_t iv = *ivec;
 
         if (partial) {
