@@ -353,6 +353,10 @@ _finish_nonce_move:
         mov     num_bytes, [rsp + 8*5]
 %endif
 
+        ;; check for zero length message
+        or      num_bytes, num_bytes
+        jz      %%_do_return2
+
         movdqa  xbyteswap, [rel byteswap_const]
         test    p_ivlen, 16
         jnz     %%_iv_is_16_bytes

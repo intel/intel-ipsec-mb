@@ -258,6 +258,10 @@ mksection .text
         mov     num_bytes, [rsp + 8*5]
 %endif
 
+        ;; check for zero length message
+        or      num_bytes, num_bytes
+        jz      %%do_return2
+
         movdqa  xbyteswap, [rel byteswap_const]
 %ifidn %%CNTR_TYPE, CNTR
         test    p_ivlen, 16
