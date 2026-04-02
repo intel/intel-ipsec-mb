@@ -29,6 +29,7 @@ Test Applications
 - Removed AES-CBCS 1:9 cipher.
 - Removed SNOW-V cipher together with AEAD SNOW-V.
 - Added SHA3 and SHAKE support to imb-kat, imb-xvalid and imb-acvp applications.
+- Added new zero length message test application.
 
 Performance Applications
 - Added `imb-perf-cmp.py` tool that compares post processed performance metrics.
