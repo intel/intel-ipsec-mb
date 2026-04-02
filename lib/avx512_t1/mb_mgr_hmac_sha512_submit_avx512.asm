@@ -157,9 +157,13 @@ submit_job_hmac_sha_384_avx512:
 	shr	extra_blocks, 7
 	mov	[lane_data + _extra_blocks_sha512], DWORD(extra_blocks)
 
-	mov	p, [job + _src]
-	add	p, [job + _hash_start_src_offset_in_bytes]
-	mov	[state + _args_data_ptr_sha512 + PTR_SZ*lane], p
+        ; zero length check — skip src load and copy for empty messages
+        test    len, len
+        jz      end_fast_copy
+
+        mov     p, [job + _src]
+        add     p, [job + _hash_start_src_offset_in_bytes]
+        mov     [state + _args_data_ptr_sha512 + PTR_SZ*lane], p
 
 	cmp	len, 128
 	jb	copy_lt128
