@@ -114,20 +114,39 @@ SUBMIT_JOB_AES_XCBC:
 %endif
 	mov	[rsp + _rsp_save], rax	; original SP
 
-	mov	unused_lanes, [state + _aes_xcbc_unused_lanes]
-	mov	lane, unused_lanes
-	and	lane, 0xF
-	shr	unused_lanes, 4
-	imul	lane_data, lane, _XCBC_LANE_DATA_size
-	lea	lane_data, [state + _aes_xcbc_ldata + lane_data]
-	mov	len, [job + _msg_len_to_hash_in_bytes]
-	mov	[state + _aes_xcbc_unused_lanes], unused_lanes
-	mov	[lane_data + _xcbc_job_in_lane], job
-	mov	dword [lane_data + _xcbc_final_done], 0
-	mov	tmp, [job + _k1_expanded]
-	mov	[state + _aes_xcbc_args_keys + lane*8], tmp
-	mov	p, [job + _src]
-	add	p, [job + _hash_start_src_offset_in_bytes]
+        mov     unused_lanes, [state + _aes_xcbc_unused_lanes]
+        mov     lane, unused_lanes
+        and     lane, 0xF
+        shr     unused_lanes, 4
+        imul    lane_data, lane, _XCBC_LANE_DATA_size
+        lea     lane_data, [state + _aes_xcbc_ldata + lane_data]
+        mov     len, [job + _msg_len_to_hash_in_bytes]
+        mov     [state + _aes_xcbc_unused_lanes], unused_lanes
+        mov     [lane_data + _xcbc_job_in_lane], job
+        mov     dword [lane_data + _xcbc_final_done], 0
+        mov     tmp, [job + _k1_expanded]
+        mov     [state + _aes_xcbc_args_keys + lane*8], tmp
+
+        ;; zero length check — set up final block without accessing src
+        test    len, len
+        jnz     .not_zero_len
+
+        ; update lane message pointer to point at the final block
+        lea     tmp, [lane_data + _xcbc_final_block]
+        mov     [state + _aes_xcbc_args_in + lane*8], tmp
+
+        ; final block = M[n] XOR K3
+        ; M[n] = 0x80 (padding) followed by zeros
+        vmovdqa xmm0, [rel x80]
+        mov     tmp, [job + _k3]
+        vmovdqu xmm1, [tmp]
+        vpxor   xmm0, xmm0, xmm1
+        vmovdqa [lane_data + _xcbc_final_block], xmm0
+        jmp     end_fast_copy
+
+.not_zero_len:
+        mov     p, [job + _src]
+        add     p, [job + _hash_start_src_offset_in_bytes]
 
 	mov	last_len, len
 
