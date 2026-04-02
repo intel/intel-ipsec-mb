@@ -1,5 +1,5 @@
 ;;
-;; Copyright (c) 2020-2024, Intel Corporation
+;; Copyright (c) 2020-2026, Intel Corporation
 ;;
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
@@ -526,6 +526,35 @@ endstruc
 
 %%_lt_one_block:
         ;; Single partial block
+
+        ;; zero length — build m_last from padding and K2 only (no src access)
+        ;; (must test len before it gets clobbered by tmp alias below)
+        test    len, len
+        jnz     %%_lt_one_block_nonzero
+
+        mov     word [state + _aes_cmac_init_done + lane*2], 1
+        mov     [state + _aes_cmac_args_in + lane*8], m_last
+
+        ;; Set len to 16
+        vmovdqa64       ymm0, [state + _aes_cmac_lens]
+        xor             DWORD(tmp3), DWORD(tmp3)
+        bts             DWORD(tmp3), DWORD(lane)
+        kmovd           k1, DWORD(tmp3)
+        mov             DWORD(tmp2), 16
+        vpbroadcastw    ymm1, WORD(tmp2)
+        vmovdqu16       ymm0{k1}, ymm1
+        vmovdqa64       [state + _aes_cmac_lens], ymm0
+
+        ;; M_last = padding(M_n) XOR K2
+        ;; Note that M_n = 0x80 followed by zeros
+        vmovdqu xmm1, [rel padding_0x80_tab16 + 16]
+        mov     tmp3, [job + _skey2]
+        vmovdqu xmm2, [tmp3]
+        vpxor   xmm2, xmm1
+        vmovdqa [m_last], xmm2
+        jmp     %%_step_5
+
+%%_lt_one_block_nonzero:
         mov     word [state + _aes_cmac_init_done + lane*2], 1
         mov     [state + _aes_cmac_args_in + lane*8], m_last
 
