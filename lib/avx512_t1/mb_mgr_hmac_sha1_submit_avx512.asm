@@ -165,11 +165,15 @@ submit_job_hmac_avx512:
 	DBGPRINTL64 "extra_blocks", extra_blocks
         mov	[lane_data + _extra_blocks], DWORD(extra_blocks)
 
-        mov	p, [job + _src]
-        add	p, [job + _hash_start_src_offset_in_bytes]
-        mov	[state + _args_data_ptr + PTR_SZ*lane], p
-        cmp	len, 64
-        jb	copy_lt64
+        ; zero length check — skip src load and copy for empty messages
+        test    len, len
+        jz      end_fast_copy
+
+        mov     p, [job + _src]
+        add     p, [job + _hash_start_src_offset_in_bytes]
+        mov     [state + _args_data_ptr + PTR_SZ*lane], p
+        cmp     len, 64
+        jb      copy_lt64
 
 fast_copy:
 	vmovdqu32	zmm0, [p - 64 + len]

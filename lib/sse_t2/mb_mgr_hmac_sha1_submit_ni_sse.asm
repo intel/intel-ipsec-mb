@@ -153,12 +153,16 @@ submit_job_hmac_ni_sse:
         shr	extra_blocks, 6
         mov	[lane_data + _extra_blocks], DWORD(extra_blocks)
 
-        mov	p, [job + _src]
-        add	p, [job + _hash_start_src_offset_in_bytes]
-	DBGPRINTL64 "src pointer + offset:", p
-        mov	[state + _args_data_ptr + PTR_SZ*lane], p
-        cmp	len, 64
-        jb	copy_lt64
+        ; zero length check — skip src load and copy for empty messages
+        test    len, len
+        jz      end_fast_copy
+
+        mov     p, [job + _src]
+        add     p, [job + _hash_start_src_offset_in_bytes]
+        DBGPRINTL64 "src pointer + offset:", p
+        mov     [state + _args_data_ptr + PTR_SZ*lane], p
+        cmp     len, 64
+        jb      copy_lt64
 
 fast_copy:
         add	p, len
