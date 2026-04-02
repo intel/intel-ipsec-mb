@@ -128,6 +128,26 @@ SUBMIT_JOB_AES_XCBC:
         mov     dword [lane_data + _xcbc_final_done], 0
         mov     tmp, [job + _k1_expanded]
         mov     [state + _aes_xcbc_args_keys + lane*8], tmp
+
+        ;; zero length check — set up final block without accessing src
+        test    len, len
+        jnz     .not_zero_len
+
+        ; update lane message pointer to point at the final block
+        lea     tmp, [lane_data + _xcbc_final_block]
+        mov     [state + _aes_xcbc_args_in + lane*8], tmp
+
+        ; final block = M[n] XOR K3
+        ; M[n] = 0x80 (padding) followed by zeros
+        vmovdqa xmm0, [rel x80]
+        mov     tmp, [job + _k3]
+        vmovdqu xmm1, [tmp]
+        vpxor   xmm0, xmm0, xmm1
+        vmovdqa [lane_data + _xcbc_final_block], xmm0
+        jmp     end_fast_copy
+
+align_label
+.not_zero_len:
         mov     p, [job + _src]
         add     p, [job + _hash_start_src_offset_in_bytes]
 
