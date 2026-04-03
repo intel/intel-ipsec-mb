@@ -140,10 +140,8 @@ mksection .text
 %define KMASK7  k4         ; kmask_s7      (low 7 bits mask for S7 isolation)
 
 ;; Stack frame for kasumi_1_block_avx512
-;; Windows: 5 pushes + ret = 48, sub rsp, 144 => total = 192, 192 mod 16 = 0
 %ifndef LINUX
-%define BLK_STACK_SIZE  144
-%define BLK_XMM_OFFSET  32      ; 32 (shadow space)
+%define BLK_STACK_SIZE  (7 * 16)        ; 7 non-volatile XMM registers x 16 bytes
 %endif
 
 ;; KASUMI_SBOX_AVX512a
@@ -377,13 +375,13 @@ kasumi_1_block_avx512:
         sub     rsp, BLK_STACK_SIZE
 
         ;; Save non-volatile XMM registers (Windows)
-        vmovdqu [rsp + BLK_XMM_OFFSET + 0*16], xmm6
-        vmovdqu [rsp + BLK_XMM_OFFSET + 1*16], xmm7
-        vmovdqu [rsp + BLK_XMM_OFFSET + 2*16], xmm8
-        vmovdqu [rsp + BLK_XMM_OFFSET + 3*16], xmm9
-        vmovdqu [rsp + BLK_XMM_OFFSET + 4*16], xmm10
-        vmovdqu [rsp + BLK_XMM_OFFSET + 5*16], xmm11
-        vmovdqu [rsp + BLK_XMM_OFFSET + 6*16], xmm12
+        vmovdqu [rsp + 0*16], xmm6
+        vmovdqu [rsp + 1*16], xmm7
+        vmovdqu [rsp + 2*16], xmm8
+        vmovdqu [rsp + 3*16], xmm9
+        vmovdqu [rsp + 4*16], xmm10
+        vmovdqu [rsp + 5*16], xmm11
+        vmovdqu [rsp + 6*16], xmm12
 %endif
 
         ;; KS = arg1 = key schedule pointer (advances each round)
@@ -517,13 +515,13 @@ kasumi_1_block_avx512:
 
 %ifndef LINUX
         ;; Restore non-volatile XMM registers (Windows)
-        vmovdqu xmm6,  [rsp + BLK_XMM_OFFSET + 0*16]
-        vmovdqu xmm7,  [rsp + BLK_XMM_OFFSET + 1*16]
-        vmovdqu xmm8,  [rsp + BLK_XMM_OFFSET + 2*16]
-        vmovdqu xmm9,  [rsp + BLK_XMM_OFFSET + 3*16]
-        vmovdqu xmm10, [rsp + BLK_XMM_OFFSET + 4*16]
-        vmovdqu xmm11, [rsp + BLK_XMM_OFFSET + 5*16]
-        vmovdqu xmm12, [rsp + BLK_XMM_OFFSET + 6*16]
+        vmovdqu xmm6,  [rsp + 0*16]
+        vmovdqu xmm7,  [rsp + 1*16]
+        vmovdqu xmm8,  [rsp + 2*16]
+        vmovdqu xmm9,  [rsp + 3*16]
+        vmovdqu xmm10, [rsp + 4*16]
+        vmovdqu xmm11, [rsp + 5*16]
+        vmovdqu xmm12, [rsp + 6*16]
 
         add     rsp, BLK_STACK_SIZE
 %endif
