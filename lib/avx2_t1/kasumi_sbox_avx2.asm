@@ -133,10 +133,21 @@ mksection .text
 ;; Inputs (aliased to calling convention registers):
 %define KS       arg1           ; pointer into key schedule (advances each round)
 %define DPTR     arg2           ; pointer to data block (constant throughout)
-%define TMPH     r13            ; temp_h (16-bit value in low word)
-%define TMPL     r14            ; temp_l (16-bit value in low word)
+%define TMPH     r13            ; round working register (left/right half)
+%define TMPL     r14            ; round working register (right/left half)
 %define STATE    r11            ; FI Feistel state accumulator (survives sbox)
-;;
+
+;; Data block registers (hold D[0..3] across all 8 rounds):
+%ifdef LINUX
+%define DPTR0    rdx            ; D[0]
+%define DPTR2    rcx            ; D[1]
+%else
+%define DPTR0    r8             ; D[0]
+%define DPTR2    r9             ; D[1]
+%endif
+%define DPTR4    rbx            ; D[2] (callee-saved)
+%define DPTR6    r12            ; D[3] (callee-saved)
+
 ;; Scratch (clobbered by macros):
 %define TMP0     rax            ; S-box output / general scratch
 %define TMP1     r10            ; S-box input / general scratch
@@ -159,12 +170,17 @@ mksection .text
 ;; LUT reduction (via VPSHUFB) collapses each word to a single output bit,
 ;; and VPMOVMSKB + PEXT extract the 16-bit S-box result into TMP0.
 ;;
-;; Input:  TMP1 (16-bit value in low word)
-;; Output: TMP0 (16-bit S-box result: S9 in upper 9 bits, S7 in lower 7 bits)
+;; Expects ymm10 to be preloaded with the parity_nibble_lut for the LUT reduction step.
+;;
+;; Input: %%sbox_input (16-bit value in low word)
+;; Output: %%sbox_result (16-bit S-box result: S9 in upper 9 bits, S7 in lower 7 bits)
 ;; Clobbers: ymm0-ymm11, ymm13, TMP1
-%macro KASUMI_SBOX_AVX2 0
-        vmovd       xmm13, DWORD(TMP1)      ; load input into low word of xmm13
-        vpbroadcastw ymm13, xmm13           ; broadcast input across all words of ymm13
+%macro KASUMI_SBOX_AVX2 2
+%define %%sbox_input  %1
+%define %%sbox_result %2
+
+        vmovd       xmm13, DWORD(%%sbox_input)      ; load input into low word of xmm13
+        vpbroadcastw ymm13, xmm13                   ; broadcast input across all words of ymm13
 %assign i 0
 %rep 9
         vpand   y(i), ymm13, [rel isolate_input_bits(i)]
@@ -176,7 +192,6 @@ mksection .text
         vpor    y(i), y(i), [rel sbox_mask_x(i)] ; or the x-masks with the x-values
 %assign i (i + 1)
 %endrep
-        vmovdqa     ymm10, [rel parity_nibble_lut]  ; preload nibble parity LUT
         vpand   y0, y1                              ; carry out the AND operations to combine all x-masks
         vpand   y2, y3
         vpand   y4, y5
@@ -197,7 +212,7 @@ mksection .text
         vpxor       y0, ymm0, ymm1                        ; word parity in MSB of each word
 
         vpmovmskb   DWORD(TMP1), y0
-        pext        TMP0, TMP1, [rel pext_odd_bytes_mask]
+        pext        %%sbox_result, TMP1, [rel pext_odd_bytes_mask]
 %endmacro
 
 ;; ============================================================================
@@ -213,11 +228,11 @@ mksection .text
 ;; where ZE() = zero-extend 7->9 bits, LS7() = least significant 7 bits.
 ;; The S7/S9 S-box evaluations use bitsliced AVX2 Boolean equations.
 ;;
-;; %1 (data)      = 16-bit register holding data input
+;; %1 (data)      = 64-bit register holding data input (upper 16 bits zero)
 ;; %2 (key1_off)  = byte offset into key_sched for KOi,j (uint16_t)
 ;; %3 (key2_off)  = byte offset into key_sched for KIi,j (uint16_t)
-;; %4 (key3)      = 16-bit register holding r_{j-1} (FO Feistel XOR)
-;; %5 (result)    = 16-bit register to receive result
+;; %4 (key3)      = 64-bit register holding r_{j-1} (upper 16 bits zero)
+;; %5 (result)    = 64-bit register to receive zero-extended 16-bit result
 ;; Clobbers: TMP0, TMP1, STATE, ymm0-ymm11, ymm13
 ;; ============================================================================
 %macro KASUMI_FI_AVX2 5
@@ -229,44 +244,41 @@ mksection .text
 
         ;; --- FI Round 1: (data ^ KOi,j) -> S9/S7 -> l1||r1 ---
         ;; STATE = FI_input ^ KOi,j  (= l0[9] || r0[7])
-        movzx   STATE, %%data
-        xor     WORD(STATE), word [KS + %%key1_off]      ; KOi,j
-        mov     TMP1, STATE                              ; copy for sbox (TMP1 clobbered)
+        mov     DWORD(STATE), DWORD(%%data)
+        xor     WORD(STATE), word [KS + %%key1_off]     ; ^ KOi,j
 
-        KASUMI_SBOX_AVX2                                 ; TMP0 = S-box(TMP1)
+        KASUMI_SBOX_AVX2 STATE, TMP0                    ; TMP0 = S-box(STATE);
 
         ;; Feistel cross: r1 = S9[l0] ^ ZE(r0), l1 = S7[r0] ^ LS7(r1)
-        shl     STATE, 7                ; ZE(r0): shift r0[7] up to align with S9[l0]
-        and     STATE, 0x3F80           ; isolate ZE(r0) in S9 position [13:7]
-        xor     STATE, TMP0             ; upper 9 = r1 = S9[l0]^ZE(r0), lower 7 = S7[r0]
-        mov     TMP0, STATE
-        shr     TMP0, 7                 ; extract LS7(r1) from upper field
-        and     TMP0, 0x7F              ; LS7(r1)
-        xor     STATE, TMP0             ; lower 7 = l1 = S7[r0] ^ LS7(r1)
+        shl     DWORD(STATE), 7                         ; ZE(r0): shift r0[7] up to align with S9[l0]
+        and     DWORD(STATE), 0x3F80                    ; isolate ZE(r0) in S9 position [13:7]
+        xor     DWORD(STATE), DWORD(TMP0)               ; upper 9 = r1 = S9[l0]^ZE(r0), lower 7 = S7[r0]
+        mov     DWORD(TMP0), DWORD(STATE)
+        shr     DWORD(TMP0), 7                          ; extract LS7(r1) from upper field
+        and     DWORD(TMP0), 0x7F                       ; LS7(r1)
+        xor     DWORD(STATE), DWORD(TMP0)               ; lower 7 = l1 = S7[r0] ^ LS7(r1)
 
         ;; --- FI key mix: l2||r2 = (l1||r1) ^ KIi,j ---
         ;; STATE layout = r1[9]||l1[7]; ROR16(KIi,j, 9) aligns to this layout
-        movzx   DWORD(TMP1), word [KS + %%key2_off]      ; KIi,j
-        ror     WORD(TMP1), 9                            ; align KIi,j to r[9]||l[7] layout
-        xor     STATE, TMP1                              ; l2[7] || r2[9] (in r||l order)
-        mov     TMP1, STATE                              ; copy for 2nd S-box pass
+        movzx   TMP1, word [KS + %%key2_off]            ; KIi,j
+        ror     WORD(TMP1), 9                           ; align KIi,j to r[9]||l[7] layout
+        xor     STATE, TMP1                             ; l2[7] || r2[9] (STATE[31:16]=0)
 
         ;; --- FI Round 2: l2||r2 -> S9/S7 -> l3||r3 ---
-        KASUMI_SBOX_AVX2                                 ; TMP0 = S-box(TMP1)
+        KASUMI_SBOX_AVX2 STATE, %%result                ; %%result = S-box(STATE)
 
         ;; Feistel cross: r3 = S9[r2] ^ ZE(l2), l3 = S7[l2] ^ LS7(r3)
-        shl     STATE, 7                ; ZE(l2): shift l2[7] up to align with S9[r2]
-        and     STATE, 0x3F80           ; isolate ZE(l2) in S9 position [13:7]
-        xor     TMP0, STATE             ; upper 9 = r3 = S9[r2]^ZE(l2), lower 7 = S7[l2]
-        mov     STATE, TMP0
-        shr     STATE, 7                ; extract LS7(r3) from upper field
-        and     STATE, 0x7F             ; LS7(r3)
-        xor     TMP0, STATE             ; lower 7 = l3 = S7[l2] ^ LS7(r3)
-        ror     WORD(TMP0), 7           ; pack into l3[7] || r3[9] output layout
+        shl     DWORD(STATE), 7                         ; ZE(l2): shift l2[7] up to align with S9[r2]
+        and     DWORD(STATE), 0x3F80                    ; isolate ZE(l2) in S9 position [13:7]
+        xor     DWORD(%%result), DWORD(STATE)           ; upper 9 = r3 = S9[r2]^ZE(l2), lower 7 = S7[l2]
+        mov     DWORD(STATE), DWORD(%%result)
+        shr     DWORD(STATE), 7                         ; extract LS7(r3) from upper field
+        and     DWORD(STATE), 0x7F                      ; LS7(r3)
+        xor     DWORD(%%result), DWORD(STATE)           ; lower 7 = l3 = S7[l2] ^ LS7(r3)
+        ror     WORD(%%result), 7                       ; pack into l3[7] || r3[9] output layout
 
         ;; Fused FO XOR: ^= r_{j-1}
-        xor     WORD(TMP0), %%key3      ; ^= r_{j-1} (passed as key3)
-        mov     %%result, WORD(TMP0)
+        xor     DWORD(%%result), DWORD(%%key3)          ; ^= r_{j-1} (passed as key3)
 %endmacro
 
 ;; ============================================================================
@@ -286,25 +298,23 @@ mksection .text
 ;; Register mapping: TMPL = L (left), TMPH = R (right)
 ;;   KLi,1 = key_sched[0], KLi,2 = key_sched[1]
 ;;
-;; Clobbers: TMP0, TMP1, TMP2
+;; Clobbers: TMP2
 ;; ============================================================================
 %macro FLp1 0
-        movzx   DWORD(TMP0), word [KS + 0]           ; KLi,1
-
         ;; R' = R ^ ROL16(L AND KLi,1, 1)
-        mov     WORD(TMP2), WORD(TMPL)
-        and     WORD(TMP2), WORD(TMP0)               ; L AND KLi,1
+        movzx   DWORD(TMP2), word [KS + 0]           ; KLi,1 (zero-extended)
+        and     DWORD(TMP2), DWORD(TMPL)             ; L AND KLi,1
         rol     WORD(TMP2), 1                        ; ROL16(..., 1)
-        xor     WORD(TMP2), WORD(TMPH)               ; R' = R ^ ROL16(L AND KLi,1, 1)
+        xor     DWORD(TMP2), DWORD(TMPH)             ; R' = R ^ ROL16(L AND KLi,1, 1)
 
         ;; L' = L ^ ROL16(R' OR KLi,2, 1)
-        mov     WORD(TMPH), WORD(TMP2)
-        or      WORD(TMPH), word [KS + 2]            ; R' OR KLi,2
+        movzx   DWORD(TMPH), word [KS + 2]           ; KLi,2 (zero-extended)
+        or      DWORD(TMPH), DWORD(TMP2)             ; R' OR KLi,2
         rol     WORD(TMPH), 1                        ; ROL16(..., 1)
-        xor     WORD(TMPH), WORD(TMPL)               ; L' = L ^ ROL16(R' OR KLi,2, 1)
+        xor     DWORD(TMPH), DWORD(TMPL)             ; L' = L ^ ROL16(R' OR KLi,2, 1)
 
         ;; Output: TMPH = L', TMPL = R'
-        mov     WORD(TMPL), WORD(TMP2)               ; TMPL = R'
+        mov     DWORD(TMPL), DWORD(TMP2)             ; TMPL = R'
 %endmacro
 
 ;; ============================================================================
@@ -330,11 +340,11 @@ mksection .text
 ;; ============================================================================
 %macro FOp1 0
         ;; j=1: r1 = FI(l0 ^ KOi,1, KIi,1) ^ r0;  l1 = r0
-        KASUMI_FI_AVX2 WORD(TMPH), 4, 6, WORD(TMPL), WORD(TMPH)
+        KASUMI_FI_AVX2 TMPH, 4, 6, TMPL, TMPH
         ;; j=2: r2 = FI(l1 ^ KOi,2, KIi,2) ^ r1;  l2 = r1
-        KASUMI_FI_AVX2 WORD(TMPL), 8, 10, WORD(TMPH), WORD(TMPL)
+        KASUMI_FI_AVX2 TMPL, 8, 10, TMPH, TMPL
         ;; j=3: r3 = FI(l2 ^ KOi,3, KIi,3) ^ r2;  l3 = r2
-        KASUMI_FI_AVX2 WORD(TMPH), 12, 14, WORD(TMPL), WORD(TMPH)
+        KASUMI_FI_AVX2 TMPH, 12, 14, TMPL, TMPH
 %endmacro
 
 ;; ============================================================================
@@ -359,6 +369,8 @@ align_function
 MKGLOBAL(kasumi_1_block_avx2, function, internal)
 kasumi_1_block_avx2:
         ;; Save callee-saved GPRs
+        push    rbx
+        push    r12
         push    r13
         push    r14
         push    r15
@@ -382,123 +394,139 @@ kasumi_1_block_avx2:
         ;; KS = arg1 = key schedule pointer (advances each round)
         ;; DPTR = arg2 = data pointer (constant)
 
+        ;; preload nibble parity LUT to persist across all sbox evaluations
+        vmovdqa     ymm10, [rel parity_nibble_lut]
+
+        ;; Load 64-bit data block as four 16-bit words: D[0..3]
+        movzx   DWORD(DPTR0), word [DPTR + 0]   ; D[0]
+        movzx   DWORD(DPTR2), word [DPTR + 2]   ; D[1]
+        movzx   DWORD(DPTR4), word [DPTR + 4]   ; D[2]
+        movzx   DWORD(DPTR6), word [DPTR + 6]   ; D[3]
+
+
         ;; =============================================================
         ;; Round 1 (odd): D[0]||D[1] ^= FO_1(FL_1(D[2]||D[3]))
         ;; =============================================================
 
-        movzx   DWORD(TMPH), word [DPTR + 4]   ; D[2]
-        movzx   DWORD(TMPL), word [DPTR + 6]   ; D[3]
+        mov   DWORD(TMPH), DWORD(DPTR4)          ; right half = D[2]
+        mov   DWORD(TMPL), DWORD(DPTR6)          ; D[3]
 
         FLp1
         FOp1
 
         add     KS, 16
 
-        xor     [DPTR + 2], WORD(TMPL)          ; D[1] ^= R'
-        xor     [DPTR + 0], WORD(TMPH)          ; D[0] ^= L'
+        xor     DWORD(DPTR2), DWORD(TMPL)        ; D[1] ^= R'
+        xor     DWORD(DPTR0), DWORD(TMPH)        ; D[0] ^= L'
 
         ;; =============================================================
         ;; Round 2 (even): D[2]||D[3] ^= FL_2(FO_2(D[0]||D[1]))
         ;; =============================================================
 
-        movzx   DWORD(TMPH), word [DPTR + 2]   ; D[1]
-        movzx   DWORD(TMPL), word [DPTR + 0]   ; D[0]
+        mov   DWORD(TMPH), DWORD(DPTR2)          ; left half = D[1]
+        mov   DWORD(TMPL), DWORD(DPTR0)          ; D[0]
 
         FOp1
         FLp1
 
         add     KS, 16
 
-        xor     [DPTR + 6], WORD(TMPH)          ; D[3] ^= L'
-        xor     [DPTR + 4], WORD(TMPL)          ; D[2] ^= R'
+        xor     DWORD(DPTR6), DWORD(TMPH)        ; D[3] ^= L'
+        xor     DWORD(DPTR4), DWORD(TMPL)        ; D[2] ^= R'
 
         ;; =============================================================
         ;; Round 3 (odd): D[0]||D[1] ^= FO_3(FL_3(D[2]||D[3]))
         ;; =============================================================
 
-        movzx   DWORD(TMPH), word [DPTR + 4]   ; D[2]
-        movzx   DWORD(TMPL), word [DPTR + 6]   ; D[3]
+        mov   DWORD(TMPH), DWORD(DPTR4)          ; right half = D[2]
+        mov   DWORD(TMPL), DWORD(DPTR6)          ; D[3]
 
         FLp1
         FOp1
 
         add     KS, 16
 
-        xor     [DPTR + 2], WORD(TMPL)          ; D[1] ^= R'
-        xor     [DPTR + 0], WORD(TMPH)          ; D[0] ^= L'
+        xor     DWORD(DPTR2), DWORD(TMPL)        ; D[1] ^= R'
+        xor     DWORD(DPTR0), DWORD(TMPH)        ; D[0] ^= L'
 
         ;; =============================================================
         ;; Round 4 (even): D[2]||D[3] ^= FL_4(FO_4(D[0]||D[1]))
         ;; =============================================================
 
-        movzx   DWORD(TMPH), word [DPTR + 2]   ; D[1]
-        movzx   DWORD(TMPL), word [DPTR + 0]   ; D[0]
+        mov   DWORD(TMPH), DWORD(DPTR2)          ; left half = D[1]
+        mov   DWORD(TMPL), DWORD(DPTR0)          ; D[0]
 
         FOp1
         FLp1
 
         add     KS, 16
 
-        xor     [DPTR + 6], WORD(TMPH)          ; D[3] ^= L'
-        xor     [DPTR + 4], WORD(TMPL)          ; D[2] ^= R'
+        xor     DWORD(DPTR6), DWORD(TMPH)        ; D[3] ^= L'
+        xor     DWORD(DPTR4), DWORD(TMPL)        ; D[2] ^= R'
 
         ;; =============================================================
         ;; Round 5 (odd): D[0]||D[1] ^= FO_5(FL_5(D[2]||D[3]))
         ;; =============================================================
 
-        movzx   DWORD(TMPH), word [DPTR + 4]   ; D[2]
-        movzx   DWORD(TMPL), word [DPTR + 6]   ; D[3]
+        mov   DWORD(TMPH), DWORD(DPTR4)          ; right half = D[2]
+        mov   DWORD(TMPL), DWORD(DPTR6)          ; D[3]
 
         FLp1
         FOp1
 
         add     KS, 16
 
-        xor     [DPTR + 2], WORD(TMPL)          ; D[1] ^= R'
-        xor     [DPTR + 0], WORD(TMPH)          ; D[0] ^= L'
+        xor     DWORD(DPTR2), DWORD(TMPL)        ; D[1] ^= R'
+        xor     DWORD(DPTR0), DWORD(TMPH)        ; D[0] ^= L'
 
         ;; =============================================================
         ;; Round 6 (even): D[2]||D[3] ^= FL_6(FO_6(D[0]||D[1]))
         ;; =============================================================
 
-        movzx   DWORD(TMPH), word [DPTR + 2]   ; D[1]
-        movzx   DWORD(TMPL), word [DPTR + 0]   ; D[0]
+        mov   DWORD(TMPH), DWORD(DPTR2)          ; left half = D[1]
+        mov   DWORD(TMPL), DWORD(DPTR0)          ; D[0]
 
         FOp1
         FLp1
 
         add     KS, 16
 
-        xor     [DPTR + 6], WORD(TMPH)          ; D[3] ^= L'
-        xor     [DPTR + 4], WORD(TMPL)          ; D[2] ^= R'
+        xor     DWORD(DPTR6), DWORD(TMPH)        ; D[3] ^= L'
+        xor     DWORD(DPTR4), DWORD(TMPL)        ; D[2] ^= R'
 
         ;; =============================================================
         ;; Round 7 (odd): D[0]||D[1] ^= FO_7(FL_7(D[2]||D[3]))
         ;; =============================================================
 
-        movzx   DWORD(TMPH), word [DPTR + 4]   ; D[2]
-        movzx   DWORD(TMPL), word [DPTR + 6]   ; D[3]
+        mov   DWORD(TMPH), DWORD(DPTR4)          ; right half = D[2]
+        mov   DWORD(TMPL), DWORD(DPTR6)          ; D[3]
 
         FLp1
         FOp1
 
         add     KS, 16
 
-        xor     [DPTR + 2], WORD(TMPL)          ; D[1] ^= R'
-        xor     [DPTR + 0], WORD(TMPH)          ; D[0] ^= L'
+        xor     DWORD(DPTR2), DWORD(TMPL)        ; D[1] ^= R'
+        xor     DWORD(DPTR0), DWORD(TMPH)        ; D[0] ^= L'
 
         ;; =============================================================
         ;; Round 8 (even): D[2]||D[3] ^= FL_8(FO_8(D[0]||D[1]))
         ;; =============================================================
 
-        movzx   DWORD(TMPH), word [DPTR + 2]   ; D[1]
-        movzx   DWORD(TMPL), word [DPTR + 0]   ; D[0]
+        mov   DWORD(TMPH), DWORD(DPTR2)          ; left half = D[1]
+        mov   DWORD(TMPL), DWORD(DPTR0)          ; D[0]
 
         FOp1
         FLp1
 
-        xor     [DPTR + 6], WORD(TMPH)          ; D[3] ^= L'
-        xor     [DPTR + 4], WORD(TMPL)          ; D[2] ^= R'
+        xor     DWORD(DPTR6), DWORD(TMPH)        ; D[3] ^= L'
+        xor     DWORD(DPTR4), DWORD(TMPL)        ; D[2] ^= R'
+
+        ;; Store result: D[0]||D[1]||D[2]||D[3]
+        mov   [DPTR + 0], WORD(DPTR0)
+        mov   [DPTR + 2], WORD(DPTR2)
+        mov   [DPTR + 4], WORD(DPTR4)
+        mov   [DPTR + 6], WORD(DPTR6)
 
         vzeroall                                 ; single vzeroall at the end
 
@@ -521,6 +549,8 @@ kasumi_1_block_avx2:
         pop     r15
         pop     r14
         pop     r13
+        pop     r12
+        pop     rbx
 
         ret
 
