@@ -67,3 +67,28 @@ link_directories(${LIB_DIR})
 add_executable(${TEST_APP} ${TEST_APP_SRC_FILES})
 target_link_libraries(${TEST_APP} PRIVATE ${IPSEC_MB_LIB})
 target_compile_definitions(${TEST_APP} PRIVATE ${APP_DEFINES})
+
+
+# ##############################################################################
+# register test with CTest
+# ##############################################################################
+if(IMB_BIN_DIR)
+  set(TEST_APP_BIN_DIR "${IMB_BIN_DIR}")
+else()
+  set(TEST_APP_BIN_DIR "${CMAKE_CURRENT_BINARY_DIR}")
+endif()
+
+add_test(
+  NAME ZEROLEN::DEFAULT
+  COMMAND ${TEST_APP}
+  WORKING_DIRECTORY ${TEST_APP_BIN_DIR})
+
+add_test(
+  NAME ZEROLEN::GFNIOFF
+  COMMAND ${TEST_APP} --gfni-off
+  WORKING_DIRECTORY ${TEST_APP_BIN_DIR})
+
+add_test(
+  NAME ZEROLEN::SHANIOFF
+  COMMAND ${TEST_APP} --shani-off
+  WORKING_DIRECTORY ${TEST_APP_BIN_DIR})
