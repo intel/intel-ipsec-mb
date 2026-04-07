@@ -48,7 +48,7 @@ byte_hexdump(const char *message, const uint8_t *ptr, int len);
 int
 update_flags_and_archs(const char *arg, uint8_t arch_support[IMB_ARCH_NUM], uint64_t *flags);
 int
-detect_arch(uint8_t arch_support[IMB_ARCH_NUM]);
+detect_arch(uint8_t arch_support[IMB_ARCH_NUM], const uint64_t flags);
 void
 print_tested_arch(const uint64_t features, const IMB_ARCH arch);
 

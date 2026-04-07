@@ -3348,7 +3348,7 @@ main(int argc, char *argv[])
         }
 
         /* detect available architectures and features*/
-        if (detect_arch(arch_support) < 0)
+        if (detect_arch(arch_support, flags) < 0)
                 return EXIT_FAILURE;
 
         /* disable tests depending on instruction sets supported */

@@ -1670,17 +1670,16 @@ main(int argc, char **argv)
                imb_get_version_str());
 
         /* Detect available architectures */
-        if (detect_arch(arch_support) < 0) {
+        if (detect_arch(arch_support, flags) < 0) {
                 guard_mem_free(&gm);
                 guard_page_free(&gp);
                 return EXIT_FAILURE;
         }
 
-        for (int i = 0; i < IMB_ARCH_NUM; i++)
-                arch_support[i] = arch_support[i] & arch_select[i];
-
         /* Run tests for each supported architecture */
         for (IMB_ARCH atype = IMB_ARCH_SSE; atype < IMB_ARCH_NUM; atype++) {
+
+                arch_support[atype] = arch_support[atype] & arch_select[atype];
 
                 if (!arch_support[atype])
                         continue;

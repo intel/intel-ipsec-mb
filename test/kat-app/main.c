@@ -415,7 +415,7 @@ main(int argc, char **argv)
         print_hw_features();
 
         /* Detect available architectures and features */
-        if (detect_arch(arch_support) < 0)
+        if (detect_arch(arch_support, flags) < 0)
                 return EXIT_FAILURE;
 
         /* Combine user arch selection with HW capabilities */

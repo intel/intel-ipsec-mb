@@ -205,7 +205,7 @@ update_flags_and_archs(const char *arg, uint8_t arch_support[IMB_ARCH_NUM], uint
  * @retval -1 bad input or issues with alloc_mb_mgr()
  */
 int
-detect_arch(uint8_t arch_support[IMB_ARCH_NUM])
+detect_arch(uint8_t arch_support[IMB_ARCH_NUM], const uint64_t flags)
 {
         const uint64_t detect_sse = IMB_FEATURE_SSE4_2 | IMB_FEATURE_CMOV | IMB_FEATURE_AESNI;
         const uint64_t detect_avx = IMB_FEATURE_AVX | IMB_FEATURE_CMOV | IMB_FEATURE_AESNI;
@@ -224,7 +224,7 @@ detect_arch(uint8_t arch_support[IMB_ARCH_NUM])
         for (arch_id = IMB_ARCH_SSE; arch_id < IMB_ARCH_NUM; arch_id++)
                 arch_support[arch_id] = 1;
 
-        p_mgr = alloc_mb_mgr(0);
+        p_mgr = alloc_mb_mgr(flags);
         if (p_mgr == NULL) {
                 fprintf(stderr, "Architecture detect error!\n");
                 return -1;
