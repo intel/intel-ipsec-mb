@@ -21,6 +21,7 @@ Library
 - Added SHA3-224, SHA3-256, SHA3-384 and SHA3-512 base implementations.
 - Added SHAKE128 and SHAKE256 base implementations.
 - Removed KASUMI bit-length support and corresponding API.
+- Added support for zero-length messages in HMAC-SHA and HMAC-MD5 algorithms.
 
 Test Applications
 - Added `--offset` parameter to `imb-xvalid` application.
@@ -30,6 +31,7 @@ Test Applications
 - Removed SNOW-V cipher together with AEAD SNOW-V.
 - Added SHA3 and SHAKE support to imb-kat, imb-xvalid and imb-acvp applications.
 - Added new zero length message test application.
+- Added zero-length message HMAC-SHA and HMAC-MD5 test vectors.
 
 Performance Applications
 - Added `imb-perf-cmp.py` tool that compares post processed performance metrics.
