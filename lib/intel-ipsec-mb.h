@@ -943,7 +943,7 @@ typedef int (*imb_self_test_cb_t)(void *cb_arg, const IMB_SELF_TEST_CALLBACK_DAT
 #define IMB_CPUFLAGS_AVX2_T4                                                                       \
         (IMB_CPUFLAGS_AVX2_T3 | IMB_FEATURE_SM3NI | IMB_FEATURE_SM4NI | IMB_FEATURE_SHA512NI)
 #define IMB_CPUFLAGS_AVX10                                                                         \
-        (IMB_CPUFLAGS_AVX512 | IMB_CPUFLAGS_AVX2_T4 | IMB_FEATURE_APX | IMB_FEATURE_AVX10_2 |      \
+        (IMB_CPUFLAGS_AVX512_T2 | IMB_CPUFLAGS_AVX2_T4 | IMB_FEATURE_APX | IMB_FEATURE_AVX10_2 |   \
          IMB_FEATURE_AVX10_512)
 
 /* TOP LEVEL (IMB_MGR) Data structure fields */
