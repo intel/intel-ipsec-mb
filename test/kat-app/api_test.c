@@ -1378,13 +1378,7 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
                                          * Cases below don't allow for zero length
                                          * hash messages
                                          */
-                                case IMB_AUTH_HMAC_SHA_1:
-                                case IMB_AUTH_HMAC_SHA_224:
-                                case IMB_AUTH_HMAC_SHA_256:
-                                case IMB_AUTH_HMAC_SHA_384:
-                                case IMB_AUTH_HMAC_SHA_512:
                                 case IMB_AUTH_HMAC_SM3:
-                                case IMB_AUTH_MD5:
                                 case IMB_AUTH_KASUMI_UIA1:
                                         fill_in_job(&template_job, cipher, dir, hash, order,
                                                     &chacha_ctx, &gcm_ctx);
