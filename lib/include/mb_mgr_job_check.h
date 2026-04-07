@@ -1052,6 +1052,14 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job, const IMB_CIPHER_MODE cipher_
                         imb_set_errno(state, IMB_ERR_JOB_CIPH_LEN);
                         return 1;
                 }
+                if (job->msg_len_to_cipher_in_bits & 7) {
+                        imb_set_errno(state, IMB_ERR_JOB_CIPH_LEN);
+                        return 1;
+                }
+                if (job->cipher_start_src_offset_in_bits & 7) {
+                        imb_set_errno(state, IMB_ERR_JOB_SRC_OFFSET);
+                        return 1;
+                }
                 if (job->iv_len_in_bytes != UINT64_C(8)) {
                         imb_set_errno(state, IMB_ERR_JOB_IV_LEN);
                         return 1;

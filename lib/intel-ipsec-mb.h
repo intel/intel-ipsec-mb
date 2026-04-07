@@ -782,8 +782,6 @@ typedef void (*zuc_eia3_n_buffer_t)(const void *const *, const void *const *, co
 
 typedef void (*kasumi_f8_1_buffer_t)(const kasumi_key_sched_t *, const uint64_t, const void *,
                                      void *, const uint32_t);
-typedef void (*kasumi_f8_1_buffer_bit_t)(const kasumi_key_sched_t *, const uint64_t, const void *,
-                                         void *, const uint32_t, const uint32_t);
 typedef void (*kasumi_f9_1_buffer_t)(const kasumi_key_sched_t *, const void *, const uint32_t,
                                      void *);
 typedef int (*kasumi_init_f8_key_sched_t)(const void *, kasumi_key_sched_t *);
@@ -1036,7 +1034,6 @@ typedef struct IMB_MGR {
         zuc_eia3_1_buffer_t eia3_1_buffer;
 
         kasumi_f8_1_buffer_t f8_1_buffer;
-        kasumi_f8_1_buffer_bit_t f8_1_buffer_bit;
         kasumi_f9_1_buffer_t f9_1_buffer;
         kasumi_init_f8_key_sched_t kasumi_init_f8_key_sched;
         kasumi_init_f9_key_sched_t kasumi_init_f9_key_sched;
@@ -2103,27 +2100,6 @@ init_mb_mgr_auto(IMB_MGR *state, IMB_ARCH *arch);
  ******************************************************************************/
 #define IMB_KASUMI_F8_1_BUFFER(_mgr, _exp_key, _iv, _src, _dst, _len)                              \
         ((_mgr)->f8_1_buffer((_exp_key), (_iv), (_src), (_dst), (_len)))
-
-/**
- * @brief Kasumi bit-level f8 operation on a single buffer
- *
- * This function performs kasumi f8 operation on a single buffer. The key has
- * already been scheduled with kasumi_init_f8_key_sched().
- * No extra bits are modified.
- *
- * @param [in]  _mgr      Pointer to multi-buffer structure
- * @param [in]  _exp_key  Context where the scheduled keys are stored
- * @param [in]  _iv       Initialization vector
- * @param [in]  _src      Input buffer
- * @param [out] _dst      Output buffer
- * @param [in]  _len      Length in BITS
- * @param [in]  _offset   Offset in BITS from begin of input buffer
- *
- * @deprecated Please use the job API instead.
- *
- ******************************************************************************/
-#define IMB_KASUMI_F8_1_BUFFER_BIT(_mgr, _exp_key, _iv, _src, _dst, _len, _offset)                 \
-        ((_mgr)->f8_1_buffer_bit((_exp_key), (_iv), (_src), (_dst), (_len), (_offset)))
 
 /**
  * @brief Kasumi bit-level f9 operation on a single buffer.

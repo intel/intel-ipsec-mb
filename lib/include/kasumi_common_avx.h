@@ -68,35 +68,6 @@ KASUMI_F8_1_BUFFER(const kasumi_key_sched_t *pCtx, const uint64_t IV, const void
 }
 
 void
-KASUMI_F8_1_BUFFER_BIT(const kasumi_key_sched_t *pCtx, const uint64_t IV, const void *pBufferIn,
-                       void *pBufferOut, const uint32_t cipherLengthInBits,
-                       const uint32_t offsetInBits)
-{
-#ifdef SAFE_PARAM
-        /* Check for NULL pointers */
-        imb_set_errno(NULL, 0);
-        if (pCtx == NULL) {
-                imb_set_errno(NULL, IMB_ERR_NULL_EXP_KEY);
-                return;
-        }
-        if (pBufferIn == NULL) {
-                imb_set_errno(NULL, IMB_ERR_NULL_SRC);
-                return;
-        }
-        if (pBufferOut == NULL) {
-                imb_set_errno(NULL, IMB_ERR_NULL_DST);
-                return;
-        }
-        /* Check input data is in range of supported length */
-        if (cipherLengthInBits == 0 || cipherLengthInBits > KASUMI_MAX_LEN) {
-                imb_set_errno(NULL, IMB_ERR_CIPH_LEN);
-                return;
-        }
-#endif
-        kasumi_f8_1_buffer_bit(pCtx, IV, pBufferIn, pBufferOut, cipherLengthInBits, offsetInBits);
-}
-
-void
 KASUMI_F9_1_BUFFER(const kasumi_key_sched_t *pCtx, const void *pBufferIn,
                    const uint32_t lengthInBytes, void *pDigest)
 {

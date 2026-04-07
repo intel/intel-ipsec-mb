@@ -131,10 +131,6 @@ aes_cfb_256_one_avx(void *out, const void *in, const void *iv, const void *keys,
 void
 kasumi_f8_1_buffer_avx2(const kasumi_key_sched_t *pCtx, const uint64_t IV, const void *pBufferIn,
                         void *pBufferOut, const uint32_t cipherLengthInBytes);
-void
-kasumi_f8_1_buffer_bit_avx2(const kasumi_key_sched_t *pCtx, const uint64_t IV,
-                            const void *pBufferIn, void *pBufferOut,
-                            const uint32_t cipherLengthInBits, const uint32_t offsetInBits);
 
 void
 kasumi_f9_1_buffer_avx2(const kasumi_key_sched_t *pCtx, const void *pBufferIn,

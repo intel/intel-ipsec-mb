@@ -38,21 +38,11 @@ submit_kasumi_uea1_job(IMB_MGR *state, IMB_JOB *job)
         const uint32_t msg_bitlen = (const uint32_t) job->msg_len_to_cipher_in_bits;
         const uint32_t msg_bitoff = (const uint32_t) job->cipher_start_src_offset_in_bits;
 
-        /* Use bit length API if
-         * - msg length is not a multiple of bytes
-         * - bit offset is not a multiple of bytes
-         */
-        if ((msg_bitlen & 0x07) || (msg_bitoff & 0x07)) {
-                IMB_KASUMI_F8_1_BUFFER_BIT(state, key, iv, job->src, job->dst, msg_bitlen,
-                                           msg_bitoff);
+        const uint32_t msg_bytelen = msg_bitlen >> 3;
+        const uint32_t msg_byteoff = msg_bitoff >> 3;
+        const void *src = job->src + msg_byteoff;
 
-        } else {
-                const uint32_t msg_bytelen = msg_bitlen >> 3;
-                const uint32_t msg_byteoff = msg_bitoff >> 3;
-                const void *src = job->src + msg_byteoff;
-
-                IMB_KASUMI_F8_1_BUFFER(state, key, iv, src, job->dst, msg_bytelen);
-        }
+        IMB_KASUMI_F8_1_BUFFER(state, key, iv, src, job->dst, msg_bytelen);
 
         job->status |= IMB_STATUS_COMPLETED_CIPHER;
         return job;

@@ -20,6 +20,7 @@ Library
 - Removed ZUC-EEA3-256 and ZUC-EIA3-256 algorithms.
 - Added SHA3-224, SHA3-256, SHA3-384 and SHA3-512 base implementations.
 - Added SHAKE128 and SHAKE256 base implementations.
+- Removed KASUMI bit-length support and corresponding API.
 
 Test Applications
 - Added `--offset` parameter to `imb-xvalid` application.

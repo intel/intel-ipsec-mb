@@ -498,7 +498,6 @@ init_mb_mgr_avx512_t1_internal(IMB_MGR *state, const int reset_mgrs)
         state->eia3_n_buffer = zuc_eia3_n_buffer_avx512;
 
         state->f8_1_buffer = kasumi_f8_1_buffer_avx2;
-        state->f8_1_buffer_bit = kasumi_f8_1_buffer_bit_avx2;
         state->f9_1_buffer = kasumi_f9_1_buffer_avx2;
         state->kasumi_init_f8_key_sched = kasumi_init_f8_key_sched_sse;
         state->kasumi_init_f9_key_sched = kasumi_init_f9_key_sched_sse;

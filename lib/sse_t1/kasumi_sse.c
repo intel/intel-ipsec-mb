@@ -87,48 +87,6 @@ kasumi_f8_1_buffer_sse(const kasumi_key_sched_t *pCtx, const uint64_t IV, const 
 }
 
 void
-kasumi_f8_1_buffer_bit_sse(const kasumi_key_sched_t *pCtx, const uint64_t IV, const void *pBufferIn,
-                           void *pBufferOut, const uint32_t cipherLengthInBits,
-                           const uint32_t offsetInBits)
-{
-#ifndef LINUX
-        DECLARE_ALIGNED(imb_uint128_t xmm_save[10], 16);
-
-        SAVE_XMMS(xmm_save);
-#endif
-#ifdef SAFE_PARAM
-        /* Check for NULL pointers */
-        imb_set_errno(NULL, 0);
-        if (pCtx == NULL) {
-                imb_set_errno(NULL, IMB_ERR_NULL_EXP_KEY);
-                return;
-        }
-        if (pBufferIn == NULL) {
-                imb_set_errno(NULL, IMB_ERR_NULL_SRC);
-                return;
-        }
-        if (pBufferOut == NULL) {
-                imb_set_errno(NULL, IMB_ERR_NULL_DST);
-                return;
-        }
-        /* Check input data is in range of supported length */
-        if (cipherLengthInBits == 0 || cipherLengthInBits > KASUMI_MAX_LEN) {
-                imb_set_errno(NULL, IMB_ERR_CIPH_LEN);
-                return;
-        }
-#endif
-        kasumi_f8_1_buffer_bit(pCtx, IV, pBufferIn, pBufferOut, cipherLengthInBits, offsetInBits);
-#ifdef SAFE_DATA
-        /* Clear sensitive data in registers */
-        CLEAR_SCRATCH_GPS();
-        CLEAR_SCRATCH_SIMD_REGS();
-#endif
-#ifndef LINUX
-        RESTORE_XMMS(xmm_save);
-#endif
-}
-
-void
 kasumi_f9_1_buffer_sse(const kasumi_key_sched_t *pCtx, const void *pBufferIn,
                        const uint32_t lengthInBytes, void *pDigest)
 {
