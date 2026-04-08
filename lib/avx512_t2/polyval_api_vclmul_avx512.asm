@@ -35,7 +35,7 @@ section .text
 default rel
 
 align_function
-MKGLOBAL(polyval_pre_vclmul_avx512,function,)
+MKGLOBAL(polyval_pre_vclmul_avx512,function,internal)
 polyval_pre_vclmul_avx512:
         endbranch64
         FUNC_SAVE small_frame
@@ -91,7 +91,7 @@ exit_ghash_pre:
 ;        void   *in_out)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 align_function
-MKGLOBAL(polyval_16B_vclmul_avx512,function,)
+MKGLOBAL(polyval_16B_vclmul_avx512,function,internal)
 polyval_16B_vclmul_avx512:
         endbranch64
 
@@ -115,7 +115,7 @@ polyval_16B_vclmul_avx512:
 ;        void         *io_tag)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 align_function
-MKGLOBAL(polyval_vclmul_avx512,function,)
+MKGLOBAL(polyval_vclmul_avx512,function,internal)
 polyval_vclmul_avx512:
         endbranch64
 
