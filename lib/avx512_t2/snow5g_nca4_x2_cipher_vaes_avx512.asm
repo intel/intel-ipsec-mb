@@ -27,7 +27,7 @@
 
 ;; SNOW5G-NCA4 2-lane cipher and HQP generation for AVX512-VAES
 
-%include "include/snow5g_x8_vaes_avx512.inc"
+%include "include/snow5g_x2_vaes_avx512.inc"
 
 %ifdef LINUX
 %define arg4    rcx
@@ -48,39 +48,10 @@ align_function
 generate_hqp_snow5g_nca4_x2_vaes_avx512:
         SNOW5G_FUNC_START
 
-        mov     r12, arg4
-
-        SNOW5G_INIT_STATE_X2 arg1, arg2
-        SNOW5G_INIT_ROUNDS_X2 arg1
-
-        kxord   k2, k2, k2
-        SNOW5G_ENC_DEC_LANE_PAIR 0, FSM_R1_L01, FSM_R2_L01, FSM_R3_L01, \
+        SNOW5G_GENERATE_HQP_X2 arg1, arg2, arg3, arg4, _keystream_01, \
+                FSM_R1_L01, FSM_R2_L01, FSM_R3_L01, \
                 LFSR_A_LDQ_L01, LFSR_A_HDQ_L01, LFSR_B_LDQ_L01, LFSR_B_HDQ_L01, \
-                ymm4, ymm5, _keystream_01, \
-                TEMP0, TEMP1, 0, 0, 0, 0, r10, r11, k2, k3, 1
-        vmovdqa32       TEMP0, [rsp + _keystream_01]
-        vmovdqu32       [arg3 + 0*48 + 0], XWORD(TEMP0)
-        vextracti32x4   [arg3 + 1*48 + 0], TEMP0, 1
-        SNOW5G_ENC_DEC_LANE_PAIR 0, FSM_R1_L01, FSM_R2_L01, FSM_R3_L01, \
-                LFSR_A_LDQ_L01, LFSR_A_HDQ_L01, LFSR_B_LDQ_L01, LFSR_B_HDQ_L01, \
-                ymm4, ymm5, _keystream_01, \
-                TEMP0, TEMP1, 0, 0, 0, 0, r10, r11, k2, k3, 1
-        vmovdqa32       TEMP0, [rsp + _keystream_01]
-        vmovdqu32       [arg3 + 0*48 + 16], XWORD(TEMP0)
-        vextracti32x4   [arg3 + 1*48 + 16], TEMP0, 1
-        SNOW5G_ENC_DEC_LANE_PAIR 0, FSM_R1_L01, FSM_R2_L01, FSM_R3_L01, \
-                LFSR_A_LDQ_L01, LFSR_A_HDQ_L01, LFSR_B_LDQ_L01, LFSR_B_HDQ_L01, \
-                ymm4, ymm5, _keystream_01, \
-                TEMP0, TEMP1, 0, 0, 0, 0, r10, r11, k2, k3, 1
-        vmovdqa32       TEMP0, [rsp + _keystream_01]
-        vmovdqu32       [arg3 + 0*48 + 32], XWORD(TEMP0)
-        vextracti32x4   [arg3 + 1*48 + 32], TEMP0, 1
-
-        test    r12, r12
-        jz      .skip_state_store_x2
-        STATE_STORE_NCA4_X2 r12
-align_label
-.skip_state_store_x2:
+                TEMP0, TEMP1, ymm4, ymm5, rbp, k1, k2
 
         SNOW5G_FUNC_END
         ret
