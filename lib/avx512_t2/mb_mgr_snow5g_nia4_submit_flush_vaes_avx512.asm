@@ -35,12 +35,13 @@
 %include "include/clear_regs.inc"
 %include "include/cet.inc"
 %include "include/align_avx512.inc"
-%include "include/snow5g_x8_vaes_avx512.inc"
+%include "include/snow5g_x2_vaes_avx512.inc"
+
+%define _SNOW5G_NIA4_X2_INCLUDED_
+%include "avx512_t2/snow5g_nia4_x2_vaes_avx512.asm"
 
 mksection .text
 default rel
-
-extern snow5g_nia4_x2_job_vaes_avx512
 
 %ifdef LINUX
 %define arg1    rdi
@@ -63,15 +64,6 @@ extern snow5g_nia4_x2_job_vaes_avx512
 
 %define job_rax rax
 
-; This routine and its callee clobbers all GPRs
-struc STACK_NIA4
-_gpr_save_nia4:      resq    10
-%ifndef LINUX
-_xmm_save_nia4:      resb    (16 * 10)       ; XMM6-15 save area (Windows only)
-%endif
-_rsp_save_nia4:      resq    1
-endstruc
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Saves register contents and creates stack frame
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -80,7 +72,7 @@ endstruc
 
         mov     rax, rsp
         sub     rsp, STACK_NIA4_size
-        and     rsp, -16
+        and     rsp, -64
 
         mov     [rsp + _gpr_save_nia4 + 8*0], rbx
         mov     [rsp + _gpr_save_nia4 + 8*1], rbp
@@ -142,30 +134,6 @@ endstruc
 %endmacro
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Expects state pointer in r11
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-%macro CALL_NIA4_X2 0
-        RESERVE_STACK_SPACE 6
-
-        lea     arg1, [r11 + _snow5g_args_keys]
-        lea     arg2, [r11 + _snow5g_args_IV]
-        lea     arg3, [r11 + _snow5g_args_in]
-        lea     arg4, [r11 + _snow5g_args_out]
-%ifdef LINUX
-        lea     arg5, [r11 + _snow5g_lens_dqw]
-        lea     arg6, [r11 + _snow5g_job_in_lane]
-%else
-        lea     r12, [r11 + _snow5g_lens_dqw]
-        mov     arg5, r12
-        lea     r12, [r11 + _snow5g_job_in_lane]
-        mov     arg6, r12
-%endif
-        call    snow5g_nia4_x2_job_vaes_avx512
-
-        RESTORE_STACK_SPACE 6
-%endmacro
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Completes a job and returns it in job_rax
 ;; Clobbers: %%TMP, unused_lanes
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -178,7 +146,7 @@ endstruc
         mov     unused_lanes, [state + _snow5g_unused_lanes]
         mov     qword [state + _snow5g_job_in_lane + %%IDX*8], 0
         or      dword [job_rax + _status], IMB_STATUS_COMPLETED_AUTH
-        mov     word [state + _snow5g_lens_dqw + %%IDX*2], 0xFFFF
+        mov     dword [state + _snow5g_lens_dqw + %%IDX*4], 0xFFFFFFFF
         shl     unused_lanes, 4
         or      unused_lanes, %%IDX
         mov     [state + _snow5g_unused_lanes], unused_lanes
@@ -240,7 +208,7 @@ endstruc
         ;; Insert len into proper lane (bytes)
         mov     len, [job + _msg_len_to_hash_in_bytes]
 
-        mov     [state + _snow5g_lens_dqw + lane*2], WORD(len)
+        mov     [state + _snow5g_lens_dqw + lane*4], DWORD(len)
 
         cmp     qword [state + _snow5g_lanes_in_use], 2
         jne     %%return_null_submit_nia4
@@ -248,12 +216,12 @@ endstruc
         ;; Check if the other lane has len=0 (already completed in previous batch)
         mov             DWORD(idx), DWORD(lane)
         xor             DWORD(idx), 1
-        cmp             word [state + _snow5g_lens_dqw + idx*2], 0
+        cmp             dword [state + _snow5g_lens_dqw + idx*4], 0
         je              %%len_is_0_submit_nia4
 
         ;; Find minimum length lane
-        movzx           DWORD(tmp), word [state + _snow5g_lens_dqw]
-        movzx           DWORD(tmp2), word [state + _snow5g_lens_dqw + 2]
+        mov             DWORD(tmp), [state + _snow5g_lens_dqw]
+        mov             DWORD(tmp2), [state + _snow5g_lens_dqw + 4]
         xor             DWORD(idx), DWORD(idx)
         cmp             DWORD(tmp2), DWORD(tmp)
         cmovb           DWORD(tmp), DWORD(tmp2)
@@ -262,15 +230,17 @@ endstruc
         test            DWORD(tmp), DWORD(tmp)
         jz              %%len_is_0_submit_nia4
 
+        mov     [rsp + _idx_save_nia4], idx
         mov     r11, state
-        CALL_NIA4_X2
+        SNOW5G_NIA4_AUTH_X2
 
         mov     state, [rsp + _gpr_save_nia4 + 8*8]
         mov     job,   [rsp + _gpr_save_nia4 + 8*9]
+        mov     idx,   [rsp + _idx_save_nia4]
 
         ; Clear lane lengths after processing
-        mov     word [state + _snow5g_lens_dqw + 0*2], 0
-        mov     word [state + _snow5g_lens_dqw + 1*2], 0
+        mov     dword [state + _snow5g_lens_dqw + 0*4], 0
+        mov     dword [state + _snow5g_lens_dqw + 1*4], 0
 
 align_label
 %%len_is_0_submit_nia4:
@@ -308,12 +278,12 @@ align_label
         ;; One lane active: find unused lane and set its length to max
         mov     DWORD(tmp3), [state + _snow5g_unused_lanes]
         and     DWORD(tmp3), 0x1
-        mov     word [state + _snow5g_lens_dqw + tmp3*2], 0xFFFF
+        mov     dword [state + _snow5g_lens_dqw + tmp3*4], 0xFFFFFFFF
 
         mov     DWORD(idx), DWORD(tmp3)
         xor     DWORD(idx), 1
 
-        cmp     word [state + _snow5g_lens_dqw + idx*2], 0
+        cmp     dword [state + _snow5g_lens_dqw + idx*4], 0
         je      %%len_is_0_flush_nia4
 
         ;; Copy active lane's args to unused lane for NIA4_X2
@@ -329,14 +299,16 @@ align_label
         mov     DWORD(tmp), DWORD(tmp3)
         shl     DWORD(tmp), 4
         vmovdqu [state + _snow5g_args_IV + tmp], xmm0
+        mov     [rsp + _idx_save_nia4], idx
         mov     r11, state
-        CALL_NIA4_X2
+        SNOW5G_NIA4_AUTH_X2
 
         mov     state, [rsp + _gpr_save_nia4 + 8*8]
+        mov     idx,   [rsp + _idx_save_nia4]
 
         ; Clear lane lengths after processing
-        mov     word [state + _snow5g_lens_dqw + 0*2], 0
-        mov     word [state + _snow5g_lens_dqw + 1*2], 0
+        mov     dword [state + _snow5g_lens_dqw + 0*4], 0
+        mov     dword [state + _snow5g_lens_dqw + 1*4], 0
 
 align_label
 %%len_is_0_flush_nia4:

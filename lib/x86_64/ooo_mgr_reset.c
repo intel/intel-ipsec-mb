@@ -460,6 +460,6 @@ ooo_mgr_snow5g_reset(void *p_ooo_mgr, const unsigned num_lanes)
         memset(p_mgr->lens, 0xff, sizeof(p_mgr->lens));
         p_mgr->num_lanes_inuse = 0;
         p_mgr->init_mask = 0;
-        if (num_lanes == 8)
-                p_mgr->unused_lanes = 0x76543210;
+        if (num_lanes == 2)
+                p_mgr->unused_lanes = 0x10;
 }

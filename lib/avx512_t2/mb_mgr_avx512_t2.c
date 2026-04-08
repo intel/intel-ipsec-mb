@@ -466,10 +466,10 @@ reset_ooo_mgrs(IMB_MGR *state)
         ooo_mgr_snow3g_reset(state->snow3g_uia2_ooo, 16);
 
         /* Init SNOW5G out-of-order fields */
-        ooo_mgr_snow5g_reset(state->snow5g_ooo, 8);
+        ooo_mgr_snow5g_reset(state->snow5g_ooo, 2);
 
         /* Init SNOW5G NIA4 out-of-order fields */
-        ooo_mgr_snow5g_reset(state->snow5g_nia4_ooo, 8);
+        ooo_mgr_snow5g_reset(state->snow5g_nia4_ooo, 2);
 
         /* Init SNOW5G NCA4 out-of-order fields */
         ooo_mgr_snow5g_reset(state->snow5g_nca4_enc_ooo, 2);
