@@ -3478,8 +3478,11 @@ print_times(struct variant_s *variant_list, struct params_s *params, const uint3
                                                                      "SHA3_512",
                                                                      "SHAKE_128",
                                                                      "SHAKE_256",
+                                                                     "AES_NIA5",
                                                                      "AES_NCA5",
                                                                      "ZUC_NCA6",
+                                                                     "ZUC_NIA6",
+                                                                     "SNOW5G_NIA4",
                                                                      "SNOW5G_NCA4" };
                 struct params_s par;
 
