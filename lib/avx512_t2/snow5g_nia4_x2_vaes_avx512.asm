@@ -27,178 +27,155 @@
 
 ;; SNOW5G-NIA4 2-lane POLYVAL-based authentication macros for AVX512-VAES
 
-%define GCM128_MODE 1
+%define GCM128_MODE 1    ; Need to define GCM128_MODE just for gcm_vaes_avx512.inc
 %include "include/gcm_vaes_avx512.inc"
 
 extern polyval_vclmul_avx512
 extern polyval_pre_vclmul_avx512
 
-;; polyval_pre_vclmul_avx512(key, gdata) — ABI-agnostic call wrapper
-%macro CALL_POLYVAL_PRE 2   ;; %%key_expr, %%gdata_expr
-%ifdef LINUX
-        lea     rdi, [%1]
-        lea     rsi, [%2]
-%else
-        lea     rcx, [%1]
-        lea     rdx, [%2]
-%endif
-        call    polyval_pre_vclmul_avx512
-%endmacro
+;; HQP field layout: H(16) | Q(16) | P(16) = 48 bytes per lane
+%define NIA4_HQP_STRIDE         48
+;; gcm_key_data: expanded_keys(16*15) + vaes_avx512.shifted_hkey(16*32*2), padded to 64B
+%define NIA4_GCM_KEY_DATA_LEN   (((16*15 + 16*32*2) + 63) & ~63)
+;; Number of 64-byte blocks covering NIA4_GCM_KEY_DATA_LEN (= 20)
+%define NIA4_GCM_KEY_BLOCKS     (NIA4_GCM_KEY_DATA_LEN / 64)
 
+;; Callee-saved GP register aliases — live across all calls in SNOW5G_NIA4_AUTH_X2
 %define p_buffer_in     r12
 %define p_mac_i         r13
 %define len_bytes       r14
 %define job_in_lane     r15
 %define p_hqp           rbp
 
-struc STACK_NIA4
-_hqp_nia4:           resb    (48 * 2)        ; HQP: 2 lanes x 48 bytes (H+Q+P)
-_digest_nia4:        resb    16
-                        resb    16              ; padding to 32B boundary
-_keystream_nia4:     resb    32
-_gdata_nia4:         resb    1280            ; struct gcm_key_data (lane 0)
-_gdata_nia4_1:       resb    1280            ; struct gcm_key_data (lane 1)
-_gpr_save_nia4:      resq    10
-%ifndef LINUX
-_xmm_save_nia4:      resb    (16 * 10)       ; XMM6-15 save area (Windows only)
+;; ABI function call argument registers
+%ifdef LINUX
+%define arg1    rdi
+%define arg2    rsi
+%define arg3    rdx
+%define arg4    rcx
+%else
+%define arg1    rcx
+%define arg2    rdx
+%define arg3    r8
+%define arg4    r9
 %endif
-_rsp_save_nia4:      resq    1
-_idx_save_nia4:      resq    1
+
+struc STACK_NIA4
+;; NIA4 auth working data (used by SNOW5G_NIA4_AUTH_X2 / PROCESS_NIA4_LANE)
+_hqp_nia4:      resb    (NIA4_HQP_STRIDE * 2)   ; HQP: 2 lanes x 48 bytes (H+Q+P)
+_keystream_nia4: resy   1                        ; 32-byte keystream scratch
+_gdata_nia4:    resb    NIA4_GCM_KEY_DATA_LEN    ; struct gcm_key_data (shared, reused per lane)
+_digest_nia4:   reso    1                        ; 16-byte POLYVAL digest
+;; Function frame (used by mb_mgr SNOW5G_NIA4_FUNC_START/END)
+_gpr_save_nia4: resq    8                        ; callee-saved GP regs
+_state_save_nia4: resq   1                        ; state (arg1) save
+_job_save_nia4: resq     1                        ; job (arg2) save
+%ifndef LINUX
+_xmm_save_nia4: reso    10                       ; XMM6-15 save area (Windows only)
+%endif
+_rsp_save_nia4: resq    1                        ; original RSP before alignment
+_idx_save_nia4: resq    1                        ; lane index saved across AUTH_X2 call
 endstruc
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Per-lane POLYVAL authentication
-;; Calls polyval_vclmul_avx512 function for bulk hash (i-cache friendly),
-;; then inlines digest XOR, single-block GHASH_MUL finalization, and tag output.
+;; Per-lane POLYVAL authentication: build HashKey table, call polyval bulk hash,
+;; digest XOR with length, single-block GHASH_MUL finalization, and tag output.
+;; Uses file-scope callee-saved aliases: p_buffer_in, p_mac_i, len_bytes,
+;; job_in_lane, p_hqp.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-%macro PROCESS_NIA4_LANE 5
-%define %%LANE          %1   ;; [in] lane index (0 or 1)
-%define %%GDATA_REG     %2   ;; [in] GP reg: pointer to gcm_key_data (pre-loaded)
-%define %%SRC_REG       %3   ;; [in] GP reg: source data pointer (pre-loaded)
-%define %%LEN_REG       %4   ;; [in] GP reg: byte length (pre-loaded)
-%define %%MASKREG       %5   ;; [clobbered] k-register
+%macro PROCESS_NIA4_LANE 11
+%define %%LANE      %1   ;; [in] lane index (0 or 1)
+%define %%SRC_IDX   %2   ;; [in] source slot index for p_buffer_in / len_bytes arrays
+%define %%GDATA     %3   ;; [in] address expression for gcm_key_data area
+%define %%HQP_OFF   %4   ;; [in] HQP byte offset (0 or NIA4_HQP_STRIDE)
+%define %%DIGEST    %5   ;; [clobbered] XMM digest accumulator / final tag
+%define %%XTMP0     %6   ;; [clobbered] XMM temp
+%define %%XTMP1     %7   ;; [clobbered] XMM temp (GHASH_MUL)
+%define %%XTMP2     %8   ;; [clobbered] XMM temp (GHASH_MUL)
+%define %%XTMP3     %9   ;; [clobbered] XMM temp (GHASH_MUL)
+%define %%XTMP4     %10  ;; [clobbered] XMM temp (GHASH_MUL)
+%define %%KMASK     %11  ;; [clobbered] opmask for tag store
+;; Implicit GP registers — ABI arg aliases (arg1..arg4) used for polyval calls;
+;; rax, ecx used as volatile scratch after calls.
 
-        ;; polyval_vclmul_avx512(gdata_key, in, in_len, io_tag)
-        ;; arg1=rdi, arg2=rsi, arg3=rdx, arg4=rcx (Linux ABI)
-%ifdef LINUX
-        mov     rdi, %%GDATA_REG
-        mov     rsi, %%SRC_REG
-        mov     edx, DWORD(%%LEN_REG)
-        lea     rcx, [rsp + _digest_nia4]
-%else
-        mov     rcx, %%GDATA_REG
-        mov     rdx, %%SRC_REG
-        mov     r8d, DWORD(%%LEN_REG)
-        lea     r9, [rsp + _digest_nia4]
-%endif
+        ;; polyval_pre_vclmul_avx512(arg1=key, arg2=gdata)
+        lea     arg1, [rsp + _hqp_nia4 + %%HQP_OFF]
+        lea     arg2, [%%GDATA]
+        call    polyval_pre_vclmul_avx512
+
+        ;; Setup: load polyval args, clear digest
+        lea     arg1, [%%GDATA]                            ;; gdata_key
+        mov     arg2, [p_buffer_in + %%SRC_IDX*8]          ;; src
+        mov     DWORD(arg3), [len_bytes + %%SRC_IDX*4]     ;; len
+        vpxorq  %%DIGEST, %%DIGEST, %%DIGEST
+        vmovdqu64 [rsp + _digest_nia4], %%DIGEST           ;; digest = 0
+
+        ;; polyval_vclmul_avx512(arg1=gdata, arg2=src, arg3=len, arg4=io_tag)
+        ;; arg1=gdata, arg2=src, arg3=len already set from above
+        lea     arg4, [rsp + _digest_nia4]                 ;; arg4 = io_tag
         call    polyval_vclmul_avx512
 
+        lea     p_hqp, [rsp + _hqp_nia4 + %%HQP_OFF]
+
         ;; digest ^= { 0, lengthInBytes[lane] * 8 }
-        ;; vpinsrq xmm1, xmm1(zero), rax, 1: 1 P5 uop, 3cy (vs vmovq+vpslldq: 2 P5 uops, 5cy)
-        vmovdqa         xmm0, [rsp + _digest_nia4]
-        mov             eax, [len_bytes + %%LANE*4]
-        shl             rax, 3
-        vpxorq          xmm1, xmm1, xmm1
-        vpinsrq         xmm1, xmm1, rax, 1
-        vpxorq          xmm0, xmm0, xmm1
+        vmovdqu64 %%DIGEST, [rsp + _digest_nia4]
+        mov       eax, [len_bytes + %%LANE*4]             ;; len in bytes
+        shl       rax, 3                                  ;; len in bits
+        vmovq     %%XTMP0, rax
+        vpslldq   %%XTMP0, %%XTMP0, 8                     ;; { 0, len_bits }
+        vpxorq    %%DIGEST, %%DIGEST, %%XTMP0
 
         ;; single-block POLYVAL of digest with Q key
-        ;; Note: GHASH_MUL T4/T5 (params 6-7) are unused — xmm5 aliased safely
-        vmovdqu64       xmm1, [p_hqp + 16]
-        GHASH_MUL       xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm5
+        vmovdqu64 %%XTMP0, [p_hqp + 16]                  ;; Q key
+        GHASH_MUL %%DIGEST, %%XTMP0, %%XTMP1, %%XTMP2, %%XTMP3, %%XTMP4, %%XTMP4
 
         ;; tag = digest ^ P
-        vpxorq          xmm0, xmm0, [p_hqp + 32]
+        vpxorq    %%DIGEST, %%DIGEST, [p_hqp + 32]       ;; P key
 
-        ;; Copy tag to output — use bzhi (BMI2) for mask generation
-        mov             rax, [job_in_lane + %%LANE*8]
-        mov             ecx, [rax + _auth_tag_output_len_in_bytes]
-        mov             eax, -1
-        bzhi            eax, eax, ecx           ;; mask = low tag_len_bytes bits
-        kmovw           %%MASKREG, eax
-        mov             rdx, [p_mac_i + %%LANE*8]
-        vmovdqu8        [rdx]{%%MASKREG}, xmm0
+        ;; Copy tag to output — masked store for partial tag lengths
+        mov       rax, [job_in_lane + %%LANE*8]           ;; job pointer
+        mov       ecx, [rax + _auth_tag_output_len_in_bytes]
+        mov       eax, -1
+        bzhi      eax, eax, ecx                           ;; mask = low tag_len bits
+        kmovw     %%KMASK, eax
+        mov       rdx, [p_mac_i + %%LANE*8]               ;; output pointer
+        vmovdqu8  [rdx]{%%KMASK}, %%DIGEST
 %endmacro
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; NIA4 authentication for 2 lanes — expects state pointer in r11
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-%macro SNOW5G_NIA4_AUTH_X2 0
-        ;; Register assignments
-%define NIA4_T_GP       rax     ;; GP scratch / job pointer check
-%define NIA4_GDATA0     rdi     ;; gcm_key_data ptr (lane 0; also Linux arg1)
-%define NIA4_SRC0       rsi     ;; source data ptr  (lane 0; also Linux arg2)
-%define NIA4_LEN0       rcx     ;; byte length      (lane 0; also Linux arg3)
-%define NIA4_GDATA1     r8      ;; gcm_key_data ptr (lane 1)
-%define NIA4_SRC1       r9      ;; source data ptr  (lane 1)
-%define NIA4_LEN1       r11     ;; byte length      (lane 1; r11 free after state saved)
-%define NIA4_MASKREG    k1      ;; k-register for masked store
-%define NIA4_STATE      r11     ;; SNOW5G OOO state pointer (input; reused as NIA4_LEN1)
-%define NIA4_KMASK2     k2      ;; SNOW5G k-register scratch
-        ;; Save state field addresses into callee-saved regs before r11 is repurposed
-        lea     p_buffer_in, [NIA4_STATE + _snow5g_args_in]
-        lea     p_mac_i,     [NIA4_STATE + _snow5g_args_out]
-        lea     len_bytes,   [NIA4_STATE + _snow5g_lens_dqw]
-        lea     job_in_lane, [NIA4_STATE + _snow5g_job_in_lane]
+;; NIA4 authentication for 2 lanes
+;; Clobbered callee-saved GPRs: rbp, r12, r13, r14, r15
+;; Clobbered SIMD/opmask: all volatile (contains function calls)
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+%macro SNOW5G_NIA4_AUTH_X2 1
+%define %%STATE     %1   ;; [in] GP reg: SNOW5G OOO state pointer
 
-        RESERVE_STACK_SPACE 4
+        ;; Save state field addresses into callee-saved regs
+        lea     p_buffer_in, [%%STATE + _snow5g_args_in]
+        lea     p_mac_i,     [%%STATE + _snow5g_args_out]
+        lea     len_bytes,   [%%STATE + _snow5g_lens_dqw]
+        lea     job_in_lane, [%%STATE + _snow5g_job_in_lane]
 
-        lea     NIA4_T_GP, [NIA4_STATE + _snow5g_args_keys]
-        SNOW5G_GENERATE_HQP_X2 NIA4_T_GP, NIA4_STATE + _snow5g_args_IV, \
-                rsp + _hqp_nia4, 0, _keystream_nia4, \
+        lea     rax, [%%STATE + _snow5g_args_keys]
+        SNOW5G_GENERATE_HQP_X2 rax, {%%STATE + _snow5g_args_IV}, \
+                {rsp + _hqp_nia4}, 0, _keystream_nia4, \
                 FSM_R1_L01, FSM_R2_L01, FSM_R3_L01, \
                 LFSR_A_LDQ_L01, LFSR_A_HDQ_L01, LFSR_B_LDQ_L01, LFSR_B_HDQ_L01, \
-                TEMP0, TEMP1, ymm4, ymm5, NIA4_LEN0, NIA4_MASKREG, NIA4_KMASK2
+                TEMP0, TEMP1, ymm4, ymm5, rcx, k1, k2
 
-        mov     NIA4_T_GP, [job_in_lane + 0*8]
-        test    NIA4_T_GP, NIA4_T_GP
-        jz      .lane0_empty
+        mov     rax, [job_in_lane]
+        test    rax, rax
+        jz      .check_lane1
 
-        ;; Lane 0 PRE: compute POLYVAL HashKey table
-        CALL_POLYVAL_PRE rsp + _hqp_nia4 + 0, rsp + _gdata_nia4
+        PROCESS_NIA4_LANE 0, 0, {rsp + _gdata_nia4}, 0, \
+                xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, k1
 
-        ;; Lane 1 PRE: compute POLYVAL HashKey table (skip if no lane 1 job)
-        mov     NIA4_T_GP, [job_in_lane + 1*8]
-        test    NIA4_T_GP, NIA4_T_GP
-        jz      .process_lane0
-        CALL_POLYVAL_PRE rsp + _hqp_nia4 + 48, rsp + _gdata_nia4_1
-
-.process_lane0:
-        ;; Reload caller-saved regs clobbered by CALL_POLYVAL_PRE
-        lea     NIA4_GDATA0,      [rsp + _gdata_nia4]
-        mov     NIA4_SRC0,        [p_buffer_in + 0*8]
-        mov     DWORD(NIA4_LEN0), [len_bytes + 0*4]
-        vpxorq  xmm0, xmm0, xmm0
-        vmovdqa [rsp + _digest_nia4], xmm0
-        lea     p_hqp, [rsp + _hqp_nia4 + 0]
-        PROCESS_NIA4_LANE 0, NIA4_GDATA0, NIA4_SRC0, NIA4_LEN0, NIA4_MASKREG
-
-        ;; Lane 1: process if present (regs clobbered by PROCESS_NIA4_LANE above)
-        mov     NIA4_T_GP, [job_in_lane + 1*8]
-        test    NIA4_T_GP, NIA4_T_GP
+.check_lane1:
+        mov     rax, [job_in_lane + 1*8]
+        test    rax, rax
         jz      .auth_done
-        lea     NIA4_GDATA1,      [rsp + _gdata_nia4_1]
-        mov     NIA4_SRC1,        [p_buffer_in + 1*8]
-        mov     DWORD(NIA4_LEN1), [len_bytes + 1*4]
-        vpxorq  xmm0, xmm0, xmm0
-        vmovdqa [rsp + _digest_nia4], xmm0
-        lea     p_hqp, [rsp + _hqp_nia4 + 48]
-        PROCESS_NIA4_LANE 1, NIA4_GDATA1, NIA4_SRC1, NIA4_LEN1, NIA4_MASKREG
-        jmp     .auth_done
-
-.lane0_empty:
-        ;; Lane 0 absent: process lane 1 only (reusing _gdata_nia4 area)
-        mov     NIA4_T_GP, [job_in_lane + 1*8]
-        test    NIA4_T_GP, NIA4_T_GP
-        jz      .auth_done
-        CALL_POLYVAL_PRE rsp + _hqp_nia4 + 48, rsp + _gdata_nia4
-        lea     NIA4_GDATA0,      [rsp + _gdata_nia4]
-        mov     NIA4_SRC0,        [p_buffer_in + 1*8]
-        mov     DWORD(NIA4_LEN0), [len_bytes + 1*4]
-        vpxorq  xmm0, xmm0, xmm0
-        vmovdqa [rsp + _digest_nia4], xmm0
-        lea     p_hqp, [rsp + _hqp_nia4 + 48]
-        PROCESS_NIA4_LANE 1, NIA4_GDATA0, NIA4_SRC0, NIA4_LEN0, NIA4_MASKREG
+        PROCESS_NIA4_LANE 1, 1, {rsp + _gdata_nia4}, NIA4_HQP_STRIDE, \
+                xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, k1
 
 .auth_done:
 
@@ -206,24 +183,15 @@ endstruc
         vpxorq  zmm0, zmm0, zmm0
         vmovdqa64 [rsp + _hqp_nia4], zmm0
         vmovdqa32 [rsp + _hqp_nia4 + 64], ymm0
-        vmovdqa [rsp + _digest_nia4], xmm0
+        vmovdqa32 [rsp + _digest_nia4], xmm0
         vmovdqa32 [rsp + _keystream_nia4], ymm0
 %assign i 0
-%rep 20
+%rep NIA4_GCM_KEY_BLOCKS
         vmovdqu64 [rsp + _gdata_nia4 + 64 * i], zmm0
 %assign i (i + 1)
 %endrep
-%assign i 0
-%rep 20
-        vmovdqu64 [rsp + _gdata_nia4_1 + 64 * i], zmm0
-%assign i (i + 1)
-%endrep
 %endif
 
-        RESTORE_STACK_SPACE 4
 %endmacro
 
-%ifndef _SNOW5G_NIA4_X2_INCLUDED_
-%include "include/os.inc"
 mksection stack-noexec
-%endif

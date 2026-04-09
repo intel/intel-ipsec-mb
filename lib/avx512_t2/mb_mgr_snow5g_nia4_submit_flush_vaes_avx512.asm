@@ -36,8 +36,6 @@
 %include "include/cet.inc"
 %include "include/align_avx512.inc"
 %include "include/snow5g_x2_vaes_avx512.inc"
-
-%define _SNOW5G_NIA4_X2_INCLUDED_
 %include "avx512_t2/snow5g_nia4_x2_vaes_avx512.asm"
 
 mksection .text
@@ -95,9 +93,9 @@ default rel
         vmovdqa [rsp + _xmm_save_nia4 + 16 * 8], xmm14
         vmovdqa [rsp + _xmm_save_nia4 + 16 * 9], xmm15
 %endif
-        mov     [rsp + _gpr_save_nia4 + 8*8], state
+        mov     [rsp + _state_save_nia4], state
 %if %%SAVE_JOB
-        mov     [rsp + _gpr_save_nia4 + 8*9], job
+        mov     [rsp + _job_save_nia4], job
 %endif
         mov     [rsp + _rsp_save_nia4], rax
 %endmacro
@@ -108,6 +106,8 @@ default rel
 %macro SNOW5G_NIA4_FUNC_END 0
 %ifdef SAFE_DATA
         clear_all_zmms_asm
+%else
+        vzeroupper
 %endif
         mov     rbx, [rsp + _gpr_save_nia4 + 8*0]
         mov     rbp, [rsp + _gpr_save_nia4 + 8*1]
@@ -152,8 +152,8 @@ default rel
         mov     [state + _snow5g_unused_lanes], unused_lanes
 
         ;; Update unused lane bitmask: INIT_MASK |= (1 << IDX)
-        mov     DWORD(%%TMP), 1
-        shlx    DWORD(%%TMP), DWORD(%%TMP), DWORD(%%IDX)
+        xor     DWORD(%%TMP), DWORD(%%TMP)
+        bts     DWORD(%%TMP), DWORD(%%IDX)
         or      [state + _snow5g_INIT_MASK], WORD(%%TMP)
 %endmacro
 
@@ -181,8 +181,8 @@ default rel
 
         mov     [state + _snow5g_job_in_lane + lane*8], job
 
-        mov     DWORD(tmp), 1
-        shlx    DWORD(tmp), DWORD(tmp), DWORD(lane)
+        xor     DWORD(tmp), DWORD(tmp)
+        bts     DWORD(tmp), DWORD(lane)
         not     DWORD(tmp)
         and     [state + _snow5g_INIT_MASK], WORD(tmp)
 
@@ -232,15 +232,14 @@ default rel
 
         mov     [rsp + _idx_save_nia4], idx
         mov     r11, state
-        SNOW5G_NIA4_AUTH_X2
+        SNOW5G_NIA4_AUTH_X2 r11
 
-        mov     state, [rsp + _gpr_save_nia4 + 8*8]
-        mov     job,   [rsp + _gpr_save_nia4 + 8*9]
+        mov     state, [rsp + _state_save_nia4]
+        mov     job,   [rsp + _job_save_nia4]
         mov     idx,   [rsp + _idx_save_nia4]
 
         ; Clear lane lengths after processing
-        mov     dword [state + _snow5g_lens_dqw + 0*4], 0
-        mov     dword [state + _snow5g_lens_dqw + 1*4], 0
+        mov     qword [state + _snow5g_lens_dqw], 0
 
 align_label
 %%len_is_0_submit_nia4:
@@ -301,14 +300,13 @@ align_label
         vmovdqu [state + _snow5g_args_IV + tmp], xmm0
         mov     [rsp + _idx_save_nia4], idx
         mov     r11, state
-        SNOW5G_NIA4_AUTH_X2
+        SNOW5G_NIA4_AUTH_X2 r11
 
-        mov     state, [rsp + _gpr_save_nia4 + 8*8]
+        mov     state, [rsp + _state_save_nia4]
         mov     idx,   [rsp + _idx_save_nia4]
 
         ; Clear lane lengths after processing
-        mov     dword [state + _snow5g_lens_dqw + 0*4], 0
-        mov     dword [state + _snow5g_lens_dqw + 1*4], 0
+        mov     qword [state + _snow5g_lens_dqw], 0
 
 align_label
 %%len_is_0_flush_nia4:
