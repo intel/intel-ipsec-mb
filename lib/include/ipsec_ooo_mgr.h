@@ -356,6 +356,7 @@ typedef struct {
         DECLARE_ALIGNED(uint32_t state[MAX_ZUC_STATE_SZ], 64);
         uint16_t init_not_done;
         uint16_t unused_lane_bitmask;
+        uint16_t completed_job_bitmask;
         uint64_t road_block;
 } MB_MGR_ZUC_OOO;
 

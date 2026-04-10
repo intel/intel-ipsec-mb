@@ -43,5 +43,8 @@
 %define ZUC_NIA6_16_BUFFER zuc_nia6_16_buffer_job_gfni_avx512
 %define SUBMIT_JOB_ZUC_NIA6 submit_job_zuc_nia6_gfni_avx512
 %define FLUSH_JOB_ZUC_NIA6 flush_job_zuc_nia6_gfni_avx512
+%define ZUC_NCA6_16_BUFFER zuc_nca6_16_buffer_job_gfni_avx512
+%define SUBMIT_JOB_ZUC_NCA6 submit_job_zuc_nca6_gfni_avx512
+%define FLUSH_JOB_ZUC_NCA6 flush_job_zuc_nca6_gfni_avx512
 %define USE_GFNI 1
 %include "avx512_t1/mb_mgr_zuc_submit_flush_avx512.asm"

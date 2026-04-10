@@ -91,6 +91,24 @@ find_min_length32(const uint32_t length[NUM_AVX512_BUFS])
         return (min_length1 < min_length2) ? min_length1 : min_length2;
 }
 
+static inline uint16_t
+find_min_length16(const uint16_t length[NUM_AVX512_BUFS])
+{
+        /* Load two groups of 8 uint16_t values */
+        __m128i xmm_len1 = _mm_loadu_si128((const __m128i *) &length[0]);
+        __m128i xmm_len2 = _mm_loadu_si128((const __m128i *) &length[8]);
+
+        /* Find minimum in each half */
+        xmm_len1 = _mm_minpos_epu16(xmm_len1);
+        xmm_len2 = _mm_minpos_epu16(xmm_len2);
+
+        /* Calculate the minimum input packet size from all packets */
+        const uint16_t min1 = (uint16_t) _mm_extract_epi16(xmm_len1, 0);
+        const uint16_t min2 = (uint16_t) _mm_extract_epi16(xmm_len2, 0);
+
+        return (min1 < min2) ? min1 : min2;
+}
+
 static inline void
 init_16(ZucKey16_t *keys, const uint8_t *ivs, ZucState16_t *state, const uint16_t lane_mask,
         const unsigned use_gfni)
@@ -998,6 +1016,257 @@ zuc_nia6_16_buffer_job_gfni_avx512(const void *const pKey[NUM_AVX512_BUFS], cons
 
 #ifdef SAFE_DATA
         /* Clear sensitive data (in registers and stack) */
+        clear_mem(&state, sizeof(state));
+        clear_mem(&keys, sizeof(keys));
+#endif
+}
+
+void
+zuc_nca6_16_buffer_job_gfni_avx512(const void *const pKey[NUM_AVX512_BUFS], uint8_t *pIv,
+                                   const void *const pBufferIn[NUM_AVX512_BUFS],
+                                   void *pBufferOut[NUM_AVX512_BUFS],
+                                   const uint16_t length[NUM_AVX512_BUFS],
+                                   const IMB_JOB *const job_in_lane[NUM_AVX512_BUFS],
+                                   const IMB_CIPHER_DIRECTION dir)
+{
+        unsigned int i;
+        DECLARE_ALIGNED(ZucState16_t state, 64);
+        DECLARE_ALIGNED(ZucState_t singlePktState, 64);
+        DECLARE_ALIGNED(uint32_t keyStr[2 * NUM_AVX512_BUFS * 16], 64);
+        DECLARE_ALIGNED(uint16_t remainBytes[NUM_AVX512_BUFS], 32) = { 0 };
+        DECLARE_ALIGNED(ZucKey16_t keys, 64);
+        DECLARE_ALIGNED(const uint64_t *pIn64[NUM_AVX512_BUFS], 64);
+        DECLARE_ALIGNED(uint64_t * pOut64[NUM_AVX512_BUFS], 64);
+        uint8_t tags[NUM_AVX512_BUFS][16];
+        uint16_t bytes;
+        const uint8_t *pTempBufInPtr;
+        uint8_t *pTempBufOutPtr;
+        DECLARE_ALIGNED(uint8_t singleKeyStr[ZUC_KEYSTR_LEN], 64);
+        uint64_t *pKeyStream64;
+        const __m128i shuf_mask =
+                _mm_set_epi8(12, 13, 14, 15, 8, 9, 10, 11, 4, 5, 6, 7, 0, 1, 2, 3);
+
+        memset(tags, 0, sizeof(tags));
+
+        for (i = 0; i < NUM_AVX512_BUFS; i++) {
+                keys.pKeys[i] = pKey[i];
+                remainBytes[i] = length[i];
+        }
+
+        /* Find minimum cipher length across all lanes (null lanes have UINT16_MAX) */
+        bytes = find_min_length16(length);
+        if (bytes == UINT16_MAX)
+                bytes = 0;
+
+        /*
+         * Copy real lane's IV to null lane slots so they are initialized with
+         * the same ZUC state.  The IV stride in _zuc_args_IV is 32 bytes and
+         * each IV occupies 16 bytes (one XMM register).
+         */
+        {
+                const unsigned int iv_stride = 32;
+                const unsigned int iv_len = 16;
+                unsigned int real_lane = NUM_AVX512_BUFS;
+
+                for (i = 0; i < NUM_AVX512_BUFS; i++) {
+                        if (job_in_lane[i] != NULL) {
+                                real_lane = i;
+                                break;
+                        }
+                }
+                if (real_lane < NUM_AVX512_BUFS) {
+                        const uint8_t *real_iv = pIv + real_lane * iv_stride;
+
+                        for (i = 0; i < NUM_AVX512_BUFS; i++)
+                                if (job_in_lane[i] == NULL)
+                                        memcpy(pIv + i * iv_stride, real_iv, iv_len);
+                }
+        }
+
+        /* Initialize ZUC state */
+        asm_ZucNEA6Initialization_16_gfni_avx512(&keys, pIv, &state, 0xffff);
+
+        /* Generate H, Q, P keys (12 rounds = 3 * 16 bytes per buffer) */
+        asm_ZucGenKeystream_16_gfni_avx512(&state, keyStr, 0, 12);
+
+        /* Set up in/out pointers for all lanes */
+        for (i = 0; i < NUM_AVX512_BUFS; i++) {
+                pIn64[i] = (const uint64_t *) pBufferIn[i];
+                pOut64[i] = (uint64_t *) pBufferOut[i];
+                if (job_in_lane[i] == NULL)
+                        remainBytes[i] = bytes;
+        }
+
+        /* Decrypt: compute POLYVAL on ciphertext before decrypting */
+        if (dir == IMB_DIR_DECRYPT) {
+                for (i = 0; i < NUM_AVX512_BUFS; i++) {
+                        const IMB_JOB *job = job_in_lane[i];
+                        struct gcm_key_data gdata_key;
+                        DECLARE_ALIGNED(uint8_t H[16], 16);
+
+                        if (job == NULL)
+                                continue;
+
+                        const uint32_t buf_idx = get_start_key_addr(i);
+                        const uint64_t *ks_u64 = (const uint64_t *) &keyStr[buf_idx];
+                        uint64_t *h_u64 = (uint64_t *) H;
+
+                        h_u64[0] = ks_u64[0];
+                        h_u64[1] = ks_u64[1];
+
+                        const __m128i h_xmm =
+                                _mm_shuffle_epi8(_mm_loadu_si128((const __m128i *) H), shuf_mask);
+                        _mm_storeu_si128((__m128i *) H, h_xmm);
+                        polyval_pre_vclmul_avx512(H, &gdata_key);
+                        polyval_vclmul_avx512(&gdata_key, job->u.NCA.aad,
+                                              job->u.NCA.aad_len_in_bytes, tags[i]);
+                        polyval_vclmul_avx512(&gdata_key, pBufferIn[i], length[i], tags[i]);
+#ifdef SAFE_DATA
+                        clear_mem(H, sizeof(H));
+#endif
+                }
+        }
+
+        /* Encrypt/decrypt common minimum length across all real lanes */
+        asm_ZucCipher_16_gfni_avx512(&state, pIn64, pOut64, remainBytes, (uint16_t) bytes);
+
+        /* Per-lane: cipher remainder, POLYVAL for encrypt, tag finalization */
+        for (i = 0; i < NUM_AVX512_BUFS; i++) {
+                const IMB_JOB *job = job_in_lane[i];
+                DECLARE_ALIGNED(uint8_t Q[16], 16);
+                DECLARE_ALIGNED(uint8_t P[16], 16);
+
+                if (job == NULL)
+                        continue;
+
+                /* Handle remaining bytes for this lane */
+                if (remainBytes[i]) {
+                        singlePktState.lfsrState[0] = state.lfsrState[0][i];
+                        singlePktState.lfsrState[1] = state.lfsrState[1][i];
+                        singlePktState.lfsrState[2] = state.lfsrState[2][i];
+                        singlePktState.lfsrState[3] = state.lfsrState[3][i];
+                        singlePktState.lfsrState[4] = state.lfsrState[4][i];
+                        singlePktState.lfsrState[5] = state.lfsrState[5][i];
+                        singlePktState.lfsrState[6] = state.lfsrState[6][i];
+                        singlePktState.lfsrState[7] = state.lfsrState[7][i];
+                        singlePktState.lfsrState[8] = state.lfsrState[8][i];
+                        singlePktState.lfsrState[9] = state.lfsrState[9][i];
+                        singlePktState.lfsrState[10] = state.lfsrState[10][i];
+                        singlePktState.lfsrState[11] = state.lfsrState[11][i];
+                        singlePktState.lfsrState[12] = state.lfsrState[12][i];
+                        singlePktState.lfsrState[13] = state.lfsrState[13][i];
+                        singlePktState.lfsrState[14] = state.lfsrState[14][i];
+                        singlePktState.lfsrState[15] = state.lfsrState[15][i];
+                        singlePktState.fR1 = state.fR1[i];
+                        singlePktState.fR2 = state.fR2[i];
+
+                        uint32_t numKeyStreamsPerPkt = remainBytes[i] / ZUC_KEYSTR_LEN;
+                        const uint32_t numBytesLeftOver = remainBytes[i] % ZUC_KEYSTR_LEN;
+                        const uint32_t processedBytes = length[i] - remainBytes[i];
+
+                        pTempBufInPtr = (const uint8_t *) pBufferIn[i];
+                        pTempBufOutPtr = (uint8_t *) pBufferOut[i];
+
+                        pOut64[0] = (uint64_t *) &pTempBufOutPtr[processedBytes];
+                        pIn64[0] = (const uint64_t *) &pTempBufInPtr[processedBytes];
+
+                        while (numKeyStreamsPerPkt--) {
+                                asm_ZucGenKeystream64B_avx((uint32_t *) singleKeyStr,
+                                                           &singlePktState);
+                                pKeyStream64 = (uint64_t *) singleKeyStr;
+                                asm_XorKeyStream64B_avx512(pIn64[0], pOut64[0], pKeyStream64);
+                                pIn64[0] += 8;
+                                pOut64[0] += 8;
+                        }
+
+                        if (numBytesLeftOver) {
+                                DECLARE_ALIGNED(uint8_t tempSrc[64], 64);
+                                DECLARE_ALIGNED(uint8_t tempDst[64], 64);
+                                uint64_t *pTempSrc64;
+                                uint64_t *pTempDst64;
+                                const uint32_t offset = length[i] - numBytesLeftOver;
+                                const uint64_t num4BRounds = ((numBytesLeftOver - 1) / 4) + 1;
+
+                                asm_ZucGenKeystream_avx((uint32_t *) singleKeyStr, &singlePktState,
+                                                        num4BRounds);
+                                memcpy(&tempSrc[0], &pTempBufInPtr[offset], numBytesLeftOver);
+                                memset(&tempSrc[numBytesLeftOver], 0, 64 - numBytesLeftOver);
+                                pKeyStream64 = (uint64_t *) singleKeyStr;
+                                pTempSrc64 = (uint64_t *) &tempSrc[0];
+                                pTempDst64 = (uint64_t *) &tempDst[0];
+                                asm_XorKeyStream64B_avx512(pTempSrc64, pTempDst64, pKeyStream64);
+                                memcpy(&pTempBufOutPtr[offset], &tempDst[0], numBytesLeftOver);
+#ifdef SAFE_DATA
+                                clear_mem(tempSrc, sizeof(tempSrc));
+                                clear_mem(tempDst, sizeof(tempDst));
+#endif
+                        }
+                }
+
+                /* Encrypt: compute POLYVAL on ciphertext after encrypting */
+                if (dir == IMB_DIR_ENCRYPT) {
+                        struct gcm_key_data gdata_key;
+                        DECLARE_ALIGNED(uint8_t H[16], 16);
+                        const uint32_t buf_idx = get_start_key_addr(i);
+                        const uint64_t *ks_u64 = (const uint64_t *) &keyStr[buf_idx];
+                        uint64_t *h_u64 = (uint64_t *) H;
+
+                        h_u64[0] = ks_u64[0];
+                        h_u64[1] = ks_u64[1];
+
+                        const __m128i h_xmm =
+                                _mm_shuffle_epi8(_mm_loadu_si128((const __m128i *) H), shuf_mask);
+                        _mm_storeu_si128((__m128i *) H, h_xmm);
+                        polyval_pre_vclmul_avx512(H, &gdata_key);
+                        polyval_vclmul_avx512(&gdata_key, job->u.NCA.aad,
+                                              job->u.NCA.aad_len_in_bytes, tags[i]);
+                        polyval_vclmul_avx512(&gdata_key, pBufferOut[i], length[i], tags[i]);
+#ifdef SAFE_DATA
+                        clear_mem(H, sizeof(H));
+#endif
+                }
+
+                /* Tag finalization: XOR lengths, POLYVAL with Q, XOR with P */
+                const uint32_t buf_idx = get_start_key_addr(i);
+                const uint64_t *ks_u64 = (const uint64_t *) &keyStr[buf_idx];
+                uint64_t *q_u64 = (uint64_t *) Q;
+                uint64_t *p_u64 = (uint64_t *) P;
+
+                q_u64[0] = ks_u64[8];
+                q_u64[1] = ks_u64[9];
+                p_u64[0] = ks_u64[16];
+                p_u64[1] = ks_u64[17];
+
+                const __m128i lengths_xmm = _mm_set_epi64x(
+                        (int64_t) (job->u.NCA.aad_len_in_bytes * 8), (int64_t) (length[i] * 8));
+                __m128i tag_xmm = _mm_loadu_si128((const __m128i *) tags[i]);
+
+                tag_xmm = _mm_xor_si128(tag_xmm, lengths_xmm);
+                _mm_storeu_si128((__m128i *) tags[i], tag_xmm);
+
+                const __m128i q_xmm =
+                        _mm_shuffle_epi8(_mm_loadu_si128((const __m128i *) Q), shuf_mask);
+                _mm_storeu_si128((__m128i *) Q, q_xmm);
+                polyval_16B_vclmul_avx512(Q, tags[i]);
+
+                const __m128i p_xmm =
+                        _mm_shuffle_epi8(_mm_loadu_si128((const __m128i *) P), shuf_mask);
+                tag_xmm = _mm_loadu_si128((const __m128i *) tags[i]);
+                tag_xmm = _mm_xor_si128(tag_xmm, p_xmm);
+                _mm_storeu_si128((__m128i *) tags[i], tag_xmm);
+
+                memcpy(job->auth_tag_output, tags[i], job->auth_tag_output_len_in_bytes);
+#ifdef SAFE_DATA
+                clear_mem(Q, sizeof(Q));
+                clear_mem(P, sizeof(P));
+                clear_mem(tags[i], sizeof(tags[i]));
+#endif
+        }
+
+#ifdef SAFE_DATA
+        clear_mem(keyStr, sizeof(keyStr));
+        clear_mem(singleKeyStr, sizeof(singleKeyStr));
+        clear_mem(&singlePktState, sizeof(singlePktState));
         clear_mem(&state, sizeof(state));
         clear_mem(&keys, sizeof(keys));
 #endif

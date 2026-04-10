@@ -156,6 +156,11 @@ IMB_JOB *
 flush_job_zuc_nia6_gfni_avx512(MB_MGR_ZUC_OOO *state);
 
 IMB_JOB *
+submit_job_zuc_nca6_gfni_avx512(MB_MGR_ZUC_OOO *state, IMB_JOB *job, IMB_CIPHER_DIRECTION dir);
+IMB_JOB *
+flush_job_zuc_nca6_gfni_avx512(MB_MGR_ZUC_OOO *state, IMB_CIPHER_DIRECTION dir);
+
+IMB_JOB *
 aes_cntr_ccm_128_vaes_avx512(IMB_JOB *job);
 
 IMB_JOB *

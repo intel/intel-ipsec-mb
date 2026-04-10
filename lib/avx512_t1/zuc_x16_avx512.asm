@@ -33,6 +33,8 @@
 %include "include/mb_mgr_datastruct.inc"
 %include "include/cet.inc"
 %include "include/align_avx512.inc"
+%include "include/clear_regs.inc"
+
 %define APPEND(a,b) a %+ b
 %define APPEND3(a,b,c) a %+ b %+ c
 
@@ -2374,7 +2376,7 @@ _no_final_rounds:
         vmovdqa64       [pOut], zmm1
         vmovdqa64       [pOut + 64], zmm2
 
-        ; Clear keystream from stack
+        ; Clear keystream from stack and registers holding plaintext/ciphertext data
 %ifdef SAFE_DATA
         vpxorq          zmm0, zmm0
 %assign I 0
@@ -2382,6 +2384,8 @@ _no_final_rounds:
         vmovdqa64       [rsp + KEYSTR_OFFSET + I*64], zmm0
 %assign I (I + 1)
 %endrep
+        clear_zmms_avx512 zmm16, zmm17, zmm18, zmm19, zmm20, zmm21, zmm22, zmm23, \
+                        zmm24, zmm25, zmm26, zmm27, zmm28, zmm29, zmm30, zmm31
 %endif
         FUNC_RESTORE
 
