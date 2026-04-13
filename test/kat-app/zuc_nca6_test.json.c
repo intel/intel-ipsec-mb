@@ -24,7 +24,7 @@
   OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 *******************************************************************************/
-/* ZUC-NCA6-256, Version: 2.0, 2024-05-01 */
+/* ZUC-NCA6-256, Version: 20.0, 2026-03-25 */
 #include "aead_test.h"
 const struct aead_test zuc_nca6_test_json[] = {
         /* Vectors from ZUC NCA6 specification */

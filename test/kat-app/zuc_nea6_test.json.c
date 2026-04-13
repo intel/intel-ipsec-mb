@@ -25,7 +25,7 @@
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 *******************************************************************************/
 
-/* ZUC-NEA6-256, Version: 2.0, 2024-05-01 */
+/* ZUC-NEA6-256, Version: 20.0, 2026-03-25 */
 #include "cipher_test.h"
 const struct cipher_test zuc_nea6_test_json[] = {
         /* Vectors from ZUC NEA6 specification */

@@ -24,7 +24,7 @@
   OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 *******************************************************************************/
-/* AES-NIA5-256, Version: 2.0, 2024-05-01 */
+/* AES-NIA5-256, Version: 20.0, 2026-03-25 */
 #include "mac_test.h"
 
 const struct mac_test aes_nia5_test_json[] = {

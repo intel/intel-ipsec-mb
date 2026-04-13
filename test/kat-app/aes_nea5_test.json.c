@@ -24,7 +24,7 @@
   OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 *******************************************************************************/
-/* AES-NEA5-256, Version: 2.0, 2024-05-01 */
+/* AES-NEA5-256, Version: 20.0, 2026-03-25 */
 #include "cipher_test.h"
 const struct cipher_test aes_nea5_test_json[] = {
         /* Vectors from AES NEA5 specification */
