@@ -2,7 +2,7 @@
 %define _SNOW5G_X8_VAES_AVX512_ASM_
 
 ;;
-;; Copyright (c) 2025, Intel Corporation
+;; Copyright (c) 2025-2026, Intel Corporation
 ;;
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
