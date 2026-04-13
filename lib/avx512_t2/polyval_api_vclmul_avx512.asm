@@ -34,7 +34,7 @@
 section .text
 default rel
 
-align 32
+align_function
 MKGLOBAL(polyval_pre_vclmul_avx512,function,)
 polyval_pre_vclmul_avx512:
         endbranch64
@@ -90,7 +90,7 @@ exit_ghash_pre:
 ;       (const void   *hash_key,
 ;        void   *in_out)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-align 32
+align_function
 MKGLOBAL(polyval_16B_vclmul_avx512,function,)
 polyval_16B_vclmul_avx512:
         endbranch64
@@ -114,7 +114,7 @@ polyval_16B_vclmul_avx512:
 ;        const u64    in_len,
 ;        void         *io_tag)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-align 32
+align_function
 MKGLOBAL(polyval_vclmul_avx512,function,)
 polyval_vclmul_avx512:
         endbranch64

@@ -201,7 +201,6 @@ db      0x08, 0x09, 0x0a, 0x0b, 0xff, 0xff, 0xff, 0xff
 db      0x0c, 0x0d, 0x0e, 0x0f, 0xff, 0xff, 0xff, 0xff
 
 mksection .text
-align 64
 
 %define OFS_R1  (16*(2*16))
 %define OFS_R2  (OFS_R1 + (2*16))
@@ -908,7 +907,7 @@ align_label
         FUNC_RESTORE
 %endmacro
 
-align 64
+align_function
 MKGLOBAL(ZUC128_INIT_8,function,internal)
 align_function
 ZUC128_INIT_8:
@@ -917,7 +916,7 @@ ZUC128_INIT_8:
 
         ret
 
-align 64
+align_function
 MKGLOBAL(ZUCNEA6_INIT_8,function,internal)
 ZUCNEA6_INIT_8:
         endbranch64
@@ -1056,7 +1055,7 @@ align_loop
 ;;  RDI    - pSta
 ;;  RSI    - pKeyStr
 ;;
-align 64
+align_function
 MKGLOBAL(ZUC_KEYGEN32B_8,function,internal)
 align_function
 ZUC_KEYGEN32B_8:
@@ -1076,7 +1075,7 @@ ZUC_KEYGEN32B_8:
 ;;  RDI    - pSta
 ;;  RSI    - pKeyStr
 ;;
-align 64
+align_function
 MKGLOBAL(ZUC_KEYGEN16B_8,function,internal)
 align_function
 ZUC_KEYGEN16B_8:
@@ -1096,7 +1095,7 @@ ZUC_KEYGEN16B_8:
 ;;  RDI    - pSta
 ;;  RSI    - pKeyStr
 ;;
-align 64
+align_function
 MKGLOBAL(ZUC_KEYGEN8B_8,function,internal)
 align_function
 ZUC_KEYGEN8B_8:
@@ -1116,7 +1115,7 @@ ZUC_KEYGEN8B_8:
 ;;  RDI    - pSta
 ;;  RSI    - pKeyStr
 ;;
-align 64
+align_function
 MKGLOBAL(ZUC_KEYGEN4B_8,function,internal)
 align_function
 ZUC_KEYGEN4B_8:
@@ -1330,7 +1329,7 @@ align_loop
 ;;  RCX - lengths
 ;;  R8  - min_length
 ;;
-align 64
+align_function
 MKGLOBAL(ZUC_CIPHER_8,function,internal)
 align_function
 ZUC_CIPHER_8:

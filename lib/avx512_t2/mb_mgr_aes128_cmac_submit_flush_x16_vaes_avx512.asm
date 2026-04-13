@@ -676,7 +676,7 @@ align_label
 %endif
 %endmacro
 
-align 64
+align_function
 ; IMB_JOB * submit_job_aes_cmac_auth_vaes_avx512(MB_MGR_CMAC_OOO *state, IMB_JOB *job)
 ; arg 1 : state
 ; arg 2 : job

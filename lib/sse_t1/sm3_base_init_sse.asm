@@ -54,7 +54,7 @@ mksection .text
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; void sm3_base_init(uint32_t digest[8])
-align 32
+align_function
 MKGLOBAL(sm3_base_init,function,internal)
 align_function
 sm3_base_init:

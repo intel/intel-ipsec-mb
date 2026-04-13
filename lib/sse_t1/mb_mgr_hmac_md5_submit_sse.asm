@@ -279,7 +279,6 @@ proc_extra_blocks:
         mov     dword [lane_data + _extra_blocks], 0
         jmp     start_loop
 
-        align   16
 
 align_label
 copy_lt64:

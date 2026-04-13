@@ -28,6 +28,7 @@
 %include "include/os.inc"
 %include "include/cet.inc"
 %include "include/clear_regs.inc"
+%include "include/align_avx512.inc"
 
 %ifdef LINUX
 %define arg1    rdi
@@ -65,7 +66,7 @@ section .text
 ;; 0, 1 and 2.
 ;; The 3x16 bytes are output through argument 3.
 ;;
-align 32
+align_function
 MKGLOBAL(generate_hqp_vaes_avx512,function,internal)
 generate_hqp_vaes_avx512:
 

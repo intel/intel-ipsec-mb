@@ -337,7 +337,6 @@ FIELD   _RSP,                   8,              8
 %assign STACK_SPACE     _FIELD_OFFSET
 
 mksection .text
-align 64
 
 %ifdef LINUX
 %define arg1 rdi
@@ -1269,7 +1268,7 @@ align_label
 ;;                                      ZucState16_t *pState,
 ;;                                      const uint64_t lane_mask)
 ;;
-align 64
+align_function
 MKGLOBAL(ZUC128_INIT,function,internal)
 align_function
 ZUC128_INIT:
@@ -1293,7 +1292,7 @@ ZUC128_INIT:
 ;;                                          ZucState16_t *pState,
 ;;                                          const uint64_t lane_mask)
 ;;
-align 64
+align_function
 MKGLOBAL(ZUCNEA6_INIT,function,internal)
 ZUCNEA6_INIT:
 %define pKe             arg1
@@ -1891,7 +1890,7 @@ align_loop
 ;; void asm_ZucGenKeystream64B_16_avx512(state16_t *pSta, u32* pKeyStr[16],
 ;;                                       const u32 key_off)
 ;;
-align 64
+align_function
 MKGLOBAL(ZUC_KEYGEN64B_16,function,internal)
 align_function
 ZUC_KEYGEN64B_16:
@@ -1947,7 +1946,7 @@ ZUC_EIA3_N64B:
 ;;                                             const u32 key_off,
 ;;                                             const u16 lane_mask)
 ;;
-align 64
+align_function
 MKGLOBAL(ZUC_KEYGEN64B_SKIP8_16,function,internal)
 align_function
 ZUC_KEYGEN64B_SKIP8_16:
@@ -1965,7 +1964,7 @@ ZUC_KEYGEN64B_SKIP8_16:
 ;; void asm_ZucGenKeystream8B_16_avx512(state16_t *pSta, u32* pKeyStr[16],
 ;;                                      const u32 key_off)
 ;;
-align 64
+align_function
 MKGLOBAL(ZUC_KEYGEN8B_16,function,internal)
 align_function
 ZUC_KEYGEN8B_16:
@@ -2050,7 +2049,7 @@ align_label
 ;;                                    const u32 key_off,
 ;;                                    const u32 numRounds)
 ;;
-align 64
+align_function
 MKGLOBAL(ZUC_KEYGEN_16,function,internal)
 align_function
 ZUC_KEYGEN_16:
@@ -2070,7 +2069,7 @@ ZUC_KEYGEN_16:
 ;;                                          const u16 lane_mask,
 ;;                                          u32 numRounds)
 ;;
-align 64
+align_function
 MKGLOBAL(ZUC_KEYGEN_SKIP8_16,function,internal)
 align_function
 ZUC_KEYGEN_SKIP8_16:
@@ -2219,7 +2218,7 @@ align_label
 ;; void asm_ZucCipher_16_avx512(state16_t *pSta, u64 *pIn[16],
 ;;                              u64 *pOut[16], u16 lengths[16],
 ;;                              u64 min_length);
-align 64
+align_function
 MKGLOBAL(CIPHER_16,function,internal)
 align_function
 CIPHER_16:
