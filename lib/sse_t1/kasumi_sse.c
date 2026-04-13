@@ -27,6 +27,7 @@
 
 #include <limits.h>
 
+#define SSE
 #define CLEAR_SCRATCH_SIMD_REGS clear_scratch_xmms_sse
 
 #include "include/kasumi_internal.h"

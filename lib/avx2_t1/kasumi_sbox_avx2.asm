@@ -51,6 +51,15 @@ MKGLOBAL(sbox_mask_x7,data,internal)
 MKGLOBAL(sbox_mask_x8,data,internal)
 MKGLOBAL(sbox_mask_last,data,internal)
 MKGLOBAL(high_7,data,internal)
+MKGLOBAL(isolate_input_bits_0,data,internal)
+MKGLOBAL(isolate_input_bits_1,data,internal)
+MKGLOBAL(isolate_input_bits_2,data,internal)
+MKGLOBAL(isolate_input_bits_3,data,internal)
+MKGLOBAL(isolate_input_bits_4,data,internal)
+MKGLOBAL(isolate_input_bits_5,data,internal)
+MKGLOBAL(isolate_input_bits_6,data,internal)
+MKGLOBAL(isolate_input_bits_7,data,internal)
+MKGLOBAL(isolate_input_bits_8,data,internal)
 
 align 32
 ;; Masks representing the (stitched) S(7/9)-box Boolean equations

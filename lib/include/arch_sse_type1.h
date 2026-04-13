@@ -426,4 +426,8 @@ generate_hqp_aes_sse(const void *aes_expanded_keys, const void *iv, uint8_t HQP[
 IMB_DLL_EXPORT void
 set_suite_id_sse_t1(IMB_MGR *state, IMB_JOB *job);
 
+/* KASUMI bitsliced SSE S-box */
+IMB_DLL_LOCAL void
+kasumi_1_block_sse(const uint16_t *key_sched, uint16_t *data);
+
 #endif /* IMB_ARCH_SSE_TYPE1_H */

@@ -46,6 +46,7 @@
 #include "kasumi_interface.h"
 #include "include/arch_avx2_type1.h"
 #include "include/arch_avx512_type1.h"
+#include "include/arch_sse_type1.h"
 
 /*---------------------------------------------------------------------
  * Kasumi Inner S-Boxes
@@ -216,29 +217,10 @@ kasumi_1_block(const uint16_t *context, uint16_t *data)
 {
 #ifdef AVX2
         kasumi_1_block_avx2(context, data);
-#elif defined(AVX512)
+#elif defined(AVX512) || defined(AVX10)
         kasumi_1_block_avx512(context, data);
-#else
-        const uint16_t *end = context + KASUMI_KEY_SCHEDULE_SIZE;
-
-        /* 4 iterations odd/even */
-        do {
-                uint16_t temp_l = data[3], temp_h = data[2];
-
-                FLp1(context, &temp_h, &temp_l);
-                FOp1(context, &temp_h, &temp_l);
-                context += 8;
-                data[1] ^= temp_l;
-                data[0] ^= temp_h;
-
-                temp_h = data[1];
-                temp_l = data[0];
-                FOp1(context, &temp_h, &temp_l);
-                FLp1(context, &temp_h, &temp_l);
-                context += 8;
-                data[3] ^= temp_h;
-                data[2] ^= temp_l;
-        } while (context < end);
+#elif defined(SSE)
+        kasumi_1_block_sse(context, data);
 #endif
 }
 
