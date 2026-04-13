@@ -55,7 +55,7 @@
 enum api_type { TEST_DIRECT_API, TEST_SINGLE_JOB_API, TEST_BURST_JOB_API };
 
 int
-zuc_eia3_test(struct IMB_MGR *mb_mgr);
+zuc_eia3_nia6_test(struct IMB_MGR *mb_mgr);
 
 extern const struct mac_test zuc_eia3_128_test_json[];
 extern const struct mac_test zuc_nia6_test_json[];
@@ -185,7 +185,7 @@ freePtrArray(uint8_t *pArr[MAXBUFS], uint32_t arrayLength)
 }
 
 int
-zuc_eia3_test(struct IMB_MGR *mb_mgr)
+zuc_eia3_nia6_test(struct IMB_MGR *mb_mgr)
 {
 
         const uint32_t numBuffs[] = { 4, 8, 9, 16, 17 };
@@ -205,13 +205,13 @@ zuc_eia3_test(struct IMB_MGR *mb_mgr)
         if (createData(pSrcData, MAXBUFS)) {
                 printf("createData() error\n");
                 test_suite_update(&eia3_ctx, 0, 1);
-                goto exit_zuc_eia3_test;
+                goto exit_zuc_eia3_nia6_test;
         }
         if (createData(pDstData, MAXBUFS)) {
                 printf("createData() error\n");
                 freePtrArray(pSrcData, MAXBUFS);
                 test_suite_update(&eia3_ctx, 0, 1);
-                goto exit_zuc_eia3_test;
+                goto exit_zuc_eia3_nia6_test;
         }
 
         /* Create random keys and vectors */
@@ -221,7 +221,7 @@ zuc_eia3_test(struct IMB_MGR *mb_mgr)
                 freePtrArray(pSrcData, MAXBUFS);
                 freePtrArray(pDstData, MAXBUFS);
                 test_suite_update(&eia3_ctx, 0, 1);
-                goto exit_zuc_eia3_test;
+                goto exit_zuc_eia3_nia6_test;
         }
 
         /* Direct API tests */
@@ -270,7 +270,7 @@ zuc_eia3_test(struct IMB_MGR *mb_mgr)
                         test_suite_update(&nia6_ctx, 1, 0);
         }
 
-exit_zuc_eia3_test:
+exit_zuc_eia3_nia6_test:
         freePtrArray(pKeys, MAXBUFS);    /*Free the key buffers*/
         freePtrArray(pIV, MAXBUFS);      /*Free the vector buffers*/
         freePtrArray(pSrcData, MAXBUFS); /*Free the source buffers*/

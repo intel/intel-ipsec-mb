@@ -54,8 +54,8 @@ set(TEST_TYPES
     DES
     CCM
     CMAC
-    ZUC_EEA3
-    ZUC_EIA3
+    ZUC_EEA3_NEA6
+    ZUC_EIA3_NIA6
     KASUMI
     SNOW3G
     HMAC_SHA1
