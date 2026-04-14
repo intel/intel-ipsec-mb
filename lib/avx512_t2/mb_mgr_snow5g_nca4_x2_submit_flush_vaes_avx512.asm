@@ -34,11 +34,300 @@
 %include "include/clear_regs.inc"
 %include "include/cet.inc"
 %include "include/align_avx512.inc"
+%include "include/snow5g_x2_vaes_avx512.inc"
+
+extern nca_vclmul_avx512
+
+%define NCA4_HQP_SIZE           48  ;; HQP: H(16) | Q(16) | P(16) = 48 bytes per lane
+
+;; Callee-saved GP register aliases
+%define p_state         r12
+%define p_job_in_lane   r13
+
+struc STACK_NCA4_WORK
+_hqp_nca4:       resb    (NCA4_HQP_SIZE * 2)             ; HQP: 2 lanes x 48 bytes
+_digest_nca4:    resb    (16 * 2)                        ; 2 x 16-byte digest output
+_keystream_nca4: resy    1                               ; 32-byte keystream scratch
+;; SNOW5G state: 2 lanes x (4 LFSRs + 3 FSMs) = 2 x (7 x 16B) bytes
+_states_nca4:   resb    (112 * 2)
+_gpr_save_nca4: resq     10
+%ifndef LINUX
+_xmm_save_nca4: reso     10
+%endif
+_rsp_save_nca4: resq     1
+endstruc
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Per-lane POLYVAL authentication
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+%macro NCA4_POLYVAL_LANE 3
+%define %%LANE      %1  ;; [in] lane index (0 or 1)
+%define %%DATA_FLD  %2  ;; [in] state field for msg pointer (_snow5g_args_in or _snow5g_args_out)
+%define %%CHECK_NULL %3 ;; [in] 1 = guard against NULL job, 0 = job guaranteed non-NULL
+
+        mov     rax, [p_job_in_lane + %%LANE*8]
+%if %%CHECK_NULL
+        test    rax, rax
+        jz      %%skip_polyval_ %+ %%LANE
+%endif
+
+        ;; nca_vclmul_avx512(digest, hqp, msg, msg_len, aad, aad_len)
+        lea     arg1, [rsp + _digest_nca4 + %%LANE*16]
+        lea     arg2, [rsp + _hqp_nca4 + NCA4_HQP_SIZE * %%LANE]
+        mov     arg3, [p_state + %%DATA_FLD + %%LANE*8]
+        mov     arg4, [rax + _msg_len_to_cipher_in_bytes]
+%ifdef LINUX
+        mov     arg5, [rax + _cbcmac_aad]
+        mov     arg6, [rax + _cbcmac_aad_len]
+%else
+        mov     r10, [rax + _cbcmac_aad]
+        mov     r11, [rax + _cbcmac_aad_len]
+        sub     rsp, 48
+        mov     [rsp + 32], r10
+        mov     [rsp + 40], r11
+%endif
+        call    nca_vclmul_avx512
+%ifndef LINUX
+        add     rsp, 48
+%endif
+
+%if %%CHECK_NULL
+%%skip_polyval_ %+ %%LANE:
+%endif
+%endmacro
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Per-lane tag output: masked store of digest to auth_tag_output
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+%macro NCA4_COPY_TAG 2
+%define %%LANE      %1  ;; [in] lane index (0 or 1)
+%define %%CHECK_NULL %2 ;; [in] 1 = guard against NULL job, 0 = job guaranteed non-NULL
+
+        mov     rax, [p_job_in_lane + %%LANE*8]
+%if %%CHECK_NULL
+        test    rax, rax
+        jz      %%skip_tag_ %+ %%LANE
+%endif
+
+        vmovdqu64 xmm0, [rsp + _digest_nca4 + %%LANE*16]
+        mov     ecx, [rax + _auth_tag_output_len_in_bytes]
+        mov     rdx, [rax + _auth_tag_output]
+        mov     eax, -1
+        bzhi    eax, eax, ecx           ;; ecx bytes → ecx low bits set
+        kmovw   k1, eax
+        vmovdqu8 [rdx]{k1}, xmm0
+
+%if %%CHECK_NULL
+%%skip_tag_ %+ %%LANE:
+%endif
+%endmacro
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; 2-lane cipher: full 16-byte blocks + masked tail per lane.
+;; Clobbers: rax, rbx, rbp, r8-r15, ymm0-ymm5, k1
+;; STATE_IN_REGS=1 skips reload of FSM/LFSR YMMs (caller must have them live).
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+%macro SNOW5G_NCA4_CIPHER_X2 1
+%define %%STATE_IN_REGS %1      ;; [in] 1 = state already in YMM regs, skip load
+%define %%rem0          r12
+%define %%rem1          rbx
+%define %%num_blocks    r13
+%define %%len0          r14     ;; [in] lane 0 length in bytes, [clobbered] extra full blocks
+%define %%longer_lane   r11
+%define %%len1          r15     ;; [in] lane 1 length in bytes, [clobbered] byte offset
+
+        mov     rax, %%len0
+        or      rax, %%len1
+        jz      %%cipher_done
+
+        ;; Load src/dst pointers ONCE for all phases (constant across loop).
+        ;; Read directly via p_state (r12) before %%rem0 alias overwrites it.
+        mov     r8,  [p_state + _snow5g_args_in + 0]    ;; src lane 0
+        mov     r9,  [p_state + _snow5g_args_out + 0]   ;; dst lane 0
+        mov     r10, [p_state + _snow5g_args_in + 8]    ;; src lane 1
+        mov     rbp, [p_state + _snow5g_args_out + 8]   ;; dst lane 1
+
+        mov     DWORD(%%rem0), DWORD(%%len0)
+        mov     DWORD(%%rem1), DWORD(%%len1)
+        and     DWORD(%%rem0), 15
+        and     DWORD(%%rem1), 15
+        shr     DWORD(%%len0), 4
+        shr     DWORD(%%len1), 4
+
+        mov     DWORD(%%num_blocks), DWORD(%%len0)
+        xor     DWORD(%%longer_lane), DWORD(%%longer_lane)
+        cmp     DWORD(%%len0), DWORD(%%len1)
+        cmova   DWORD(%%num_blocks), DWORD(%%len1)
+        cmovb   DWORD(%%len0), DWORD(%%len1)
+        setb    BYTE(%%longer_lane)
+        sub     DWORD(%%len0), DWORD(%%num_blocks)
+        xor     %%len1, %%len1          ;; repurpose %%len1 as byte offset into src/dst buffers
+%define %%offset        %%len1
+
+%if %%STATE_IN_REGS == 0
+        lea     rax, [rsp + _states_nca4]
+        STATE_LOAD_NCA4_X2 rax
+%endif
+        kxord   k1, k1, k1
+
+        ;; Phase 1: both lanes, full blocks
+        test    DWORD(%%num_blocks), DWORD(%%num_blocks)
+        jz      %%phase1_done
+align_loop
+%%phase1:
+        NCA4_CIPHER_LANE_PAIR FSM_R1_L01, FSM_R2_L01, FSM_R3_L01, \
+                LFSR_A_LDQ_L01, LFSR_A_HDQ_L01, LFSR_B_LDQ_L01, LFSR_B_HDQ_L01, \
+                _keystream_nca4, \
+                TEMP1, TEMP2, r8, r9, r10, rbp, %%offset, k1, 2
+        add     %%offset, 16
+        dec     DWORD(%%num_blocks)
+        jnz     %%phase1
+align_label
+%%phase1_done:
+
+        ;; Phase 2: extra full blocks for the longer lane
+        test    DWORD(%%len0), DWORD(%%len0)
+        jz      %%phase2_done
+        test    DWORD(%%longer_lane), DWORD(%%longer_lane)
+        jnz     %%phase2_lane1
+align_loop
+%%phase2_lane0:
+        NCA4_CIPHER_LANE_PAIR FSM_R1_L01, FSM_R2_L01, FSM_R3_L01, \
+                LFSR_A_LDQ_L01, LFSR_A_HDQ_L01, LFSR_B_LDQ_L01, LFSR_B_HDQ_L01, \
+                _keystream_nca4, \
+                TEMP1, TEMP2, r8, r9, r10, rbp, %%offset, k1, 0
+        add     %%offset, 16
+        dec     DWORD(%%len0)
+        jnz     %%phase2_lane0
+        jmp     %%phase2_done
+align_loop
+%%phase2_lane1:
+        NCA4_CIPHER_LANE_PAIR FSM_R1_L01, FSM_R2_L01, FSM_R3_L01, \
+                LFSR_A_LDQ_L01, LFSR_A_HDQ_L01, LFSR_B_LDQ_L01, LFSR_B_HDQ_L01, \
+                _keystream_nca4, \
+                TEMP1, TEMP2, r8, r9, r10, rbp, %%offset, k1, 1
+        add     %%offset, 16
+        dec     DWORD(%%len0)
+        jnz     %%phase2_lane1
+align_label
+%%phase2_done:
+
+        ;; Tail: partial bytes via masked stores
+        mov     DWORD(rax), DWORD(%%rem0)
+        or      DWORD(rax), DWORD(%%rem1)
+        jz      %%skip_tail
+
+        vpaddw  TEMP1, LFSR_B_HDQ_L01, FSM_R1_L01
+        vpxord  TEMP1, TEMP1, FSM_R2_L01
+
+        lea     rax, [rel byte_len_to_mask_table_nca4]
+        kmovw   k1, [rax + %%rem0*2]
+        vmovdqu8        XWORD(TEMP2){k1}{z}, [r8 + %%offset]
+        vpxord          XWORD(TEMP2), XWORD(TEMP1), XWORD(TEMP2)
+        vmovdqu8        [r9 + %%offset]{k1}, XWORD(TEMP2)
+
+        vextracti32x4   XWORD(TEMP1), TEMP1, 1
+        kmovw   k1, [rax + %%rem1*2]
+        vmovdqu8        XWORD(TEMP2){k1}{z}, [r10 + %%offset]
+        vpxord          XWORD(TEMP2), XWORD(TEMP1), XWORD(TEMP2)
+        vmovdqu8        [rbp + %%offset]{k1}, XWORD(TEMP2)
+%undef %%offset
+
+%%skip_tail:
+        ;; Restore p_state/p_job_in_lane clobbered by cipher
+        mov     p_state, [rsp + _gpr_save_nca4 + 8*8]
+        lea     p_job_in_lane, [p_state + _snow5g_job_in_lane]
+%%cipher_done:
+%endmacro
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; NCA4 2-lane AEAD core: HQP generation, POLYVAL, cipher, tag output
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+%macro SNOW5G_NCA4_CORE 3
+%define %%STATE         %1  ;; [in] GP reg: SNOW5G OOO state pointer
+%define %%DIR           %2  ;; [in] 0=encrypt, 1=decrypt
+%define %%LANE1_VALID   %3  ;; [in] 1=lane 1 has a job (submit), 0=lane 1 NULL (flush)
+
+        mov     p_state, %%STATE
+        lea     p_job_in_lane, [%%STATE + _snow5g_job_in_lane]
+
+        ;; Generate HQP and SNOW5G cipher state for both lanes.
+        ;; ENCRYPT: state YMMs stay live across cipher (no POLYVAL between);
+        ;;          skip state-store in HQP and state-load in cipher.
+        ;; DECRYPT: POLYVAL function call between HQP and cipher clobbers YMMs;
+        ;;          must persist state through memory.
+        lea     rax, [p_state + _snow5g_args_keys]
+%if %%DIR == 0
+        SNOW5G_GENERATE_HQP_X2 rax, {p_state + _snow5g_args_IV}, \
+                {rsp + _hqp_nca4}, 0, _keystream_nca4, \
+                FSM_R1_L01, FSM_R2_L01, FSM_R3_L01, \
+                LFSR_A_LDQ_L01, LFSR_A_HDQ_L01, LFSR_B_LDQ_L01, LFSR_B_HDQ_L01, \
+                TEMP0, TEMP1, ymm4, ymm5, rcx, k1, k2
+%else
+        lea     rbx, [rsp + _states_nca4]
+        SNOW5G_GENERATE_HQP_X2 rax, {p_state + _snow5g_args_IV}, \
+                {rsp + _hqp_nca4}, rbx, _keystream_nca4, \
+                FSM_R1_L01, FSM_R2_L01, FSM_R3_L01, \
+                LFSR_A_LDQ_L01, LFSR_A_HDQ_L01, LFSR_B_LDQ_L01, LFSR_B_HDQ_L01, \
+                TEMP0, TEMP1, ymm4, ymm5, rcx, k1, k2
+%endif
+
+        ;; Collect cipher lengths into r14 (lane 0) and r15 (lane 1)
+        ;; Lane 0 is always valid; lane 1 only when called from submit.
+        mov     rax, [p_job_in_lane]
+        mov     r14, [rax + _msg_len_to_cipher_in_bytes]
+%if %%LANE1_VALID
+        mov     rax, [p_job_in_lane + 8]
+        mov     r15, [rax + _msg_len_to_cipher_in_bytes]
+%else
+        xor     r15d, r15d
+%endif
+
+%if %%DIR == 1
+        ;; Decrypt: hash AAD + ciphertext (input) BEFORE cipher
+%if %%LANE1_VALID
+        NCA4_POLYVAL_LANE 0, _snow5g_args_in, 0
+        NCA4_POLYVAL_LANE 1, _snow5g_args_in, 0
+%else
+        NCA4_POLYVAL_LANE 0, _snow5g_args_in, 0
+        NCA4_POLYVAL_LANE 1, _snow5g_args_in, 1
+%endif
+%endif
+
+        SNOW5G_NCA4_CIPHER_X2 (1 - %%DIR)
+
+%if %%DIR == 0
+        ;; Encrypt: hash AAD + ciphertext (output) AFTER cipher
+%if %%LANE1_VALID
+        NCA4_POLYVAL_LANE 0, _snow5g_args_out, 0
+        NCA4_POLYVAL_LANE 1, _snow5g_args_out, 0
+%else
+        NCA4_POLYVAL_LANE 0, _snow5g_args_out, 0
+        NCA4_POLYVAL_LANE 1, _snow5g_args_out, 1
+%endif
+%endif
+
+        NCA4_COPY_TAG 0, 0
+        NCA4_COPY_TAG 1, (1 - %%LANE1_VALID)
+
+%ifdef SAFE_DATA
+        vpxorq  zmm0, zmm0, zmm0
+        vmovdqa64 [rsp + _hqp_nca4], zmm0
+        vmovdqa32 [rsp + _hqp_nca4 + 64], ymm0
+        vmovdqa64 [rsp + _digest_nca4], ymm0
+%if %%DIR == 1
+        ;; _states_nca4 only written on decrypt path
+        vmovdqu64 [rsp + _states_nca4 + 64 * 0], zmm0
+        vmovdqu64 [rsp + _states_nca4 + 64 * 1], zmm0
+        vmovdqu64 [rsp + _states_nca4 + 64 * 2], zmm0
+        vmovdqa32 [rsp + _states_nca4 + 64 * 3], ymm0
+%endif
+%endif
+
+%endmacro
 
 mksection .text
 default rel
-
-extern snow5g_nca4_x2_job_vaes_avx512
 
 %ifdef LINUX
 %define arg1    rdi
@@ -58,25 +347,15 @@ extern snow5g_nca4_x2_job_vaes_avx512
 
 %define state   arg1
 %define job     arg2
-
 %define job_rax rax
-
-; This routine and its callee clobbers all GPRs
-struc STACK_NCA4
-_gpr_save_nca4:      resq    10
-%ifndef LINUX
-_xmm_save_nca4:      resb    (16 * 10)       ; XMM6-15 save area (Windows only)
-%endif
-_rsp_save_nca4:      resq    1
-endstruc
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Saves register contents and creates stack frame
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 %macro SNOW5G_NCA4_FUNC_START 0
         mov     rax, rsp
-        sub     rsp, STACK_NCA4_size
-        and     rsp, -16
+        sub     rsp, STACK_NCA4_WORK_size
+        and     rsp, -64
 
         mov     [rsp + _gpr_save_nca4 + 8*0], rbx
         mov     [rsp + _gpr_save_nca4 + 8*1], rbp
@@ -121,7 +400,6 @@ endstruc
 %ifndef LINUX
         mov     rsi, [rsp + _gpr_save_nca4 + 8*6]
         mov     rdi, [rsp + _gpr_save_nca4 + 8*7]
-        ;; Restore XMM6-15 (Windows callee-saved)
         vmovdqa xmm6,  [rsp + _xmm_save_nca4 + 16 * 0]
         vmovdqa xmm7,  [rsp + _xmm_save_nca4 + 16 * 1]
         vmovdqa xmm8,  [rsp + _xmm_save_nca4 + 16 * 2]
@@ -137,87 +415,59 @@ endstruc
 %endmacro
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Calls NCA4 2-buffer processing function
-;; %1 = decrypt flag (0 = encrypt, 1 = decrypt)
-;; %2 = state pointer
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-%macro CALL_NCA4_2_BUFFER 2
-        RESERVE_STACK_SPACE 6
-
-        lea     arg2, [%2 + _snow5g_args_IV]
-        lea     arg3, [%2 + _snow5g_args_in]
-        lea     arg4, [%2 + _snow5g_args_out]
-        ;; arg5 is a stack slot on Windows — lea needs a register destination
-        lea     r12, [%2 + _snow5g_job_in_lane]
-        mov     arg5, r12
-        mov     arg6, %1
-        lea     arg1, [%2 + _snow5g_args_keys]
-
-        call    snow5g_nca4_x2_job_vaes_avx512
-
-        RESTORE_STACK_SPACE 6
-%endmacro
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Submits a job to the 2-buffer SNOW5G-NCA4 scheduler
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-%macro SUBMIT_JOB_SNOW5G_NCA4_ENC_X2 1
+%macro SUBMIT_JOB_SNOW5G_NCA4_X2 1
 
-%define lane             r8
-%define tmp              r15
-%define tmp2             r13
+%define %%lane           r8
+%define %%tmp            r15
+%define %%tmp2           xmm0
 
         SNOW5G_NCA4_FUNC_START
 
         ;; Lane index = current lanes in use (0 or 1)
-        mov     lane, [state + _snow5g_lanes_in_use]
+        mov     %%lane, [state + _snow5g_lanes_in_use]
         add     qword [state + _snow5g_lanes_in_use], 1
 
         ;; Store job pointer in lane
-        mov     [state + _snow5g_job_in_lane + lane*8], job
+        mov     [state + _snow5g_job_in_lane + %%lane*8], job
 
         ;; Copy job data into lane arrays
-        mov     tmp, [job + _src]
-        add     tmp, [job + _cipher_start_src_offset_in_bytes]
-        mov     [state + _snow5g_args_in + lane*8], tmp
+        mov     %%tmp, [job + _src]
+        add     %%tmp, [job + _cipher_start_src_offset_in_bytes]
+        mov     [state + _snow5g_args_in + %%lane*8], %%tmp
 
-        ;; Store output pointer
-        mov     tmp, [job + _dst]
-        mov     [state + _snow5g_args_out + lane*8], tmp
+        mov     %%tmp, [job + _dst]
+        mov     [state + _snow5g_args_out + %%lane*8], %%tmp
 
-        ;; Store key pointer
-        mov     tmp, [job + _enc_keys]
-        mov     [state + _snow5g_args_keys + lane*8], tmp
+        mov     %%tmp, [job + _enc_keys]
+        mov     [state + _snow5g_args_keys + %%lane*8], %%tmp
 
         ;; Copy IV to state array (16 bytes per lane)
-        mov     tmp, [job + _iv]
-        lea     tmp2, [lane*8]
-        vmovdqu xmm0, [tmp]
-        vmovdqu [state + _snow5g_args_IV + tmp2*2], xmm0
+        mov     %%tmp, [job + _iv]
+        vmovdqu %%tmp2, [%%tmp]
+        shl     %%lane, 4
+        vmovdqu [state + _snow5g_args_IV + %%lane], %%tmp2
 
-        ;; Check if all 2 lanes are full
-        cmp     qword [state + _snow5g_lanes_in_use], 2
-        jne     %%return_null_submit_nca4
+        ;; Check if all 2 lanes are full (%%lane != 0 after shl means old count was 1)
+        test    %%lane, %%lane
+        jz      %%return_null_submit
 
         ;; Both lanes full - process them
-        CALL_NCA4_2_BUFFER %1, state
-
-        mov     state, [rsp + _gpr_save_nca4 + 8*8]
+        SNOW5G_NCA4_CORE state, %1, 1
 
         ;; Complete both jobs and reset state
-        mov     job_rax, [state + _snow5g_job_in_lane]
+        mov     job_rax, [p_state + _snow5g_job_in_lane]
+        mov     rbx, [p_state + _snow5g_job_in_lane + 8]
         or      dword [job_rax + _status], IMB_STATUS_COMPLETED
-        mov     job_rax, [state + _snow5g_job_in_lane + 8]
-        or      dword [job_rax + _status], IMB_STATUS_COMPLETED
-        xor     tmp, tmp
-        mov     [state + _snow5g_job_in_lane], tmp
-        mov     [state + _snow5g_job_in_lane + 8], tmp
-        mov     [state + _snow5g_lanes_in_use], tmp
-
+        or      dword [rbx + _status], IMB_STATUS_COMPLETED
+        mov     qword [p_state + _snow5g_job_in_lane], 0
+        mov     qword [p_state + _snow5g_job_in_lane + 8], 0
+        mov     qword [p_state + _snow5g_lanes_in_use], 0
         jmp     %%exit_submit
 
 align_label
-%%return_null_submit_nca4:
+%%return_null_submit:
         xor     job_rax, job_rax
 
 align_label
@@ -228,42 +478,43 @@ align_label
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Flushes completed jobs from the 2-buffer SNOW5G-NCA4 scheduler
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-%macro FLUSH_JOB_SNOW5G_NCA4_ENC_X2 1
+%macro FLUSH_JOB_SNOW5G_NCA4_X2 1
+
+%define %%tmp            r11
+%define %%tmp2           xmm0
 
         SNOW5G_NCA4_FUNC_START
 
         ;; Check for empty
         cmp     qword [state + _snow5g_lanes_in_use], 0
-        jz      %%return_null_flush_nca4
+        jz      %%return_null_flush
 
         ;; With 2 lanes, flush always has lane 0 valid, lane 1 null.
         ;; Fill lane 1 from lane 0.
-        mov             r11, [state + _snow5g_args_in]
-        mov             [state + _snow5g_args_in + 8], r11
+        mov             %%tmp, [state + _snow5g_args_in]
+        mov             [state + _snow5g_args_in + 8], %%tmp
 
-        mov             r11, [state + _snow5g_args_out]
-        mov             [state + _snow5g_args_out + 8], r11
+        mov             %%tmp, [state + _snow5g_args_out]
+        mov             [state + _snow5g_args_out + 8], %%tmp
 
-        mov             r11, [state + _snow5g_args_keys]
-        mov             [state + _snow5g_args_keys + 8], r11
+        mov             %%tmp, [state + _snow5g_args_keys]
+        mov             [state + _snow5g_args_keys + 8], %%tmp
 
-        vmovdqa64       xmm0, [state + _snow5g_args_IV]
-        vmovdqa64       [state + _snow5g_args_IV + 16], xmm0
+        vmovdqa64       %%tmp2, [state + _snow5g_args_IV]
+        vmovdqa64       [state + _snow5g_args_IV + 16], %%tmp2
 
-        CALL_NCA4_2_BUFFER %1, state
-
-        mov     state, [rsp + _gpr_save_nca4 + 8*8]
+        SNOW5G_NCA4_CORE state, %1, 0
 
         ;; Complete lane 0 job and reset state
-        mov     job_rax, [state + _snow5g_job_in_lane]
+        mov     job_rax, [p_state + _snow5g_job_in_lane]
         or      dword [job_rax + _status], IMB_STATUS_COMPLETED
-        mov     qword [state + _snow5g_job_in_lane], 0
-        mov     qword [state + _snow5g_lanes_in_use], 0
+        mov     qword [p_state + _snow5g_job_in_lane], 0
+        mov     qword [p_state + _snow5g_lanes_in_use], 0
 
         jmp     %%exit_flush
 
 align_label
-%%return_null_flush_nca4:
+%%return_null_flush:
         xor     job_rax, job_rax
 
 align_label
@@ -275,32 +526,28 @@ align_label
 MKGLOBAL(submit_job_snow5g_nca4_enc_vaes_avx512,function,internal)
 align_function
 submit_job_snow5g_nca4_enc_vaes_avx512:
-        endbranch64
-        SUBMIT_JOB_SNOW5G_NCA4_ENC_X2 0
+        SUBMIT_JOB_SNOW5G_NCA4_X2 0
         ret
 
 ;; flush_job_snow5g_nca4_enc_vaes_avx512(state) - encrypt queue
 MKGLOBAL(flush_job_snow5g_nca4_enc_vaes_avx512,function,internal)
 align_function
 flush_job_snow5g_nca4_enc_vaes_avx512:
-        endbranch64
-        FLUSH_JOB_SNOW5G_NCA4_ENC_X2 0
+        FLUSH_JOB_SNOW5G_NCA4_X2 0
         ret
 
 ;; submit_job_snow5g_nca4_dec_vaes_avx512(state, job) - decrypt queue
 MKGLOBAL(submit_job_snow5g_nca4_dec_vaes_avx512,function,internal)
 align_function
 submit_job_snow5g_nca4_dec_vaes_avx512:
-        endbranch64
-        SUBMIT_JOB_SNOW5G_NCA4_ENC_X2 1
+        SUBMIT_JOB_SNOW5G_NCA4_X2 1
         ret
 
 ;; flush_job_snow5g_nca4_dec_vaes_avx512(state) - decrypt queue
 MKGLOBAL(flush_job_snow5g_nca4_dec_vaes_avx512,function,internal)
 align_function
 flush_job_snow5g_nca4_dec_vaes_avx512:
-        endbranch64
-        FLUSH_JOB_SNOW5G_NCA4_ENC_X2 1
+        FLUSH_JOB_SNOW5G_NCA4_X2 1
         ret
 
 mksection stack-noexec
