@@ -113,6 +113,7 @@ macro(imb_set_proj_defaults)
       CACHE STRING "" FORCE)
 
   if(WIN32)
+    set(CMAKE_OBJECT_PATH_MAX 512)
     set(DEFAULT_INSTALL_PREFIX "C:/Program Files/intel-ipsec-mb")
     set(CMAKE_INSTALL_PREFIX
         ${DEFAULT_INSTALL_PREFIX}
