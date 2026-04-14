@@ -441,8 +441,8 @@ align_label
         call    gcm_0_to_256_enc_wrapper_asm
 
 %ifdef SAFE_DATA
-        clear_zmms_avx512 xmm0, xmm1, xmm2, xmm7, xmm8, xmm9, xmm11, xmm10, xmm14, \
-                        xmm15, xmm16, xmm17, xmm18, xmm19, xmm20, xmm21, xmm26
+        clear_zmms_avx512 xmm0, xmm1, xmm2, xmm7, xmm8, xmm9, xmm11, xmm10, xmm13, \
+                        xmm14, xmm15, xmm16, xmm17, xmm18, xmm19, xmm20, xmm21, xmm26
 %endif
 
 align_label
