@@ -260,7 +260,7 @@ _zuc_eea3_16_buffer_avx512(const void *const pKey[NUM_AVX512_BUFS],
         for (i = 0; i < NUM_AVX512_BUFS; i++) {
                 remainBytes[i] = length[i];
                 keys.pKeys[i] = pKey[i];
-                memcpy(ivs + i * 32, pIv[i], 16);
+                memcpy(ivs + i * 16, pIv[i], 16);
         }
 
         init_16(&keys, ivs, &state, 0xFFFF, use_gfni);
@@ -633,7 +633,7 @@ _zuc_eia3_16_buffer_avx512(const void *const pKey[NUM_AVX512_BUFS],
         for (i = 0; i < NUM_AVX512_BUFS; i++) {
                 pIn8[i] = (const uint8_t *) pBufferIn[i];
                 keys.pKeys[i] = pKey[i];
-                memcpy(ivs + i * 32, pIv[i], 16);
+                memcpy(ivs + i * 16, pIv[i], 16);
                 lens[i] = (uint16_t) lengthInBits[i];
         }
 
@@ -1060,11 +1060,11 @@ zuc_nca6_16_buffer_job_gfni_avx512(const void *const pKey[NUM_AVX512_BUFS], uint
 
         /*
          * Copy real lane's IV to null lane slots so they are initialized with
-         * the same ZUC state.  The IV stride in _zuc_args_IV is 32 bytes and
+         * the same ZUC state.  The IV stride in _zuc_args_IV is 16 bytes and
          * each IV occupies 16 bytes (one XMM register).
          */
         {
-                const unsigned int iv_stride = 32;
+                const unsigned int iv_stride = 16;
                 const unsigned int iv_len = 16;
                 unsigned int real_lane = NUM_AVX512_BUFS;
 

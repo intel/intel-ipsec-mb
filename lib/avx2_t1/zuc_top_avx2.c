@@ -233,7 +233,7 @@ _zuc_eea3_8_buffer_avx2(const void *const pKey[NUM_AVX2_BUFS], const void *const
         for (i = 0; i < NUM_AVX2_BUFS; i++) {
                 remainBytes[i] = length[i];
                 keys.pKeys[i] = pKey[i];
-                memcpy(ivs + i * 32, pIv[i], 16);
+                memcpy(ivs + i * 16, pIv[i], 16);
         }
 
         asm_ZucInitialization_8_avx2(&keys, ivs, &state);
@@ -552,7 +552,7 @@ _zuc_eia3_8_buffer_avx2(const void *const pKey[NUM_AVX2_BUFS], const void *const
                 pIn8[i] = (const uint8_t *) pBufferIn[i];
                 pKeyStrArr[i] = (uint32_t *) &keyStr[i][0];
                 keys.pKeys[i] = pKey[i];
-                memcpy(ivs + i * 32, pIv[i], 16);
+                memcpy(ivs + i * 16, pIv[i], 16);
         }
 
         asm_ZucInitialization_8_avx2(&keys, ivs, &state);

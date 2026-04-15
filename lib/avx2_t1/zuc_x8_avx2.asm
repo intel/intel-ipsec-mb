@@ -815,7 +815,7 @@ mksection .text
 %assign %%OFF_PTR 0
 %rep 8
         mov     r9, [pKe + %%OFF_PTR]  ; Load Key N pointer
-        lea     r10, [pIv + 4*%%OFF_PTR] ; Load IV N pointer
+        lea     r10, [pIv + 2*%%OFF_PTR] ; Load IV N pointer
         INIT_LFSR_128 r9, r10, %%YTMP13, %%YTMP14, %%YTMP15, APPEND(%%YTMP, %%I), %%YTMP12
 %assign %%I (%%I + 1)
 %assign %%OFF_PTR (%%OFF_PTR + 8)
@@ -849,7 +849,7 @@ mksection .text
 %assign %%OFF_PTR 0
 %rep 8
         mov     r9, [pKe + %%OFF_PTR]  ; Load Key N pointer
-        lea     r10, [pIv + 4*%%OFF_PTR] ; Load IV N pointer
+        lea     r10, [pIv + 2*%%OFF_PTR] ; Load IV N pointer
         INIT_LFSR_NEA6 r9, r10, %%YTMP13, %%YTMP12, %%YTMP14, %%YTMP15, APPEND(%%YTMP, %%I), %%YTMP11
 %assign %%I (%%I + 1)
 %assign %%OFF_PTR (%%OFF_PTR + 8)

@@ -786,7 +786,7 @@ mksection .text
         mov     r15,  [pKe + %%OFF]
         movdqu  APPEND(%%XTMP, %%I), [r15]
         ; Read 16 bytes of IV
-        movdqa  APPEND(%%XTMP, %%J), [pIv + %%OFF*4]
+        movdqa  APPEND(%%XTMP, %%J), [pIv + %%OFF*2]
 %assign %%OFF (%%OFF + 8)
 %assign %%I (%%I + 1)
 %assign %%J (%%J + 1)
@@ -835,7 +835,7 @@ mksection .text
 %rep 4
         mov     APPEND(%%KEY, %%I),  [pKe + %%OFF]
         ; Read 16 bytes of IV
-        movdqa  APPEND(%%XTMP, %%J), [pIv + %%OFF*4]
+        movdqa  APPEND(%%XTMP, %%J), [pIv + %%OFF*2]
 %assign %%OFF (%%OFF + 8)
 %assign %%I (%%I + 1)
 %assign %%J (%%J + 1)

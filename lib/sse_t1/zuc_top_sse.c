@@ -198,7 +198,7 @@ _zuc_eea3_4_buffer_sse(const void *const pKey[NUM_SSE_BUFS], const void *const p
         for (i = 0; i < NUM_SSE_BUFS; i++) {
                 remainBytes[i] = length[i];
                 keys.pKeys[i] = pKey[i];
-                memcpy(ivs + i * 32, pIv[i], 16);
+                memcpy(ivs + i * 16, pIv[i], 16);
         }
 
         init_4(&keys, ivs, &state, use_gfni);
@@ -653,7 +653,7 @@ _zuc_eia3_4_buffer_sse(const void *const pKey[NUM_SSE_BUFS], const void *const p
                 pIn8[i] = (const uint8_t *) pBufferIn[i];
                 pKeyStrArr[i] = (uint32_t *) &keyStr[i][0];
                 keys.pKeys[i] = pKey[i];
-                memcpy(ivs + i * 32, pIv[i], 16);
+                memcpy(ivs + i * 16, pIv[i], 16);
         }
 
         init_4(&keys, ivs, &state, use_gfni);

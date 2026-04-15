@@ -160,11 +160,11 @@ mksection .text
         and     lane, 0xF ;; just a nibble
         shr     unused_lanes, 4
         mov     tmp, [job + _iv]
-        shl     lane, 5
+        shl     lane, 4
         ; Read the 16 bytes of IV
         vmovdqu xmm0, [tmp]
         vmovdqa [state + _zuc_args_IV + lane], xmm0
-        shr     lane, 5
+        shr     lane, 4
         mov     [state + _zuc_unused_lanes], unused_lanes
         add     qword [state + _zuc_lanes_in_use], 1
 
@@ -749,11 +749,11 @@ align_label
         and     lane, 0xF           ;; just a nibble
         shr     unused_lanes, 4
         mov     tmp, [job + _zuc_eia3_iv]
-        shl     lane, 5
+        shl     lane, 4
         ; Read first 16 bytes of IV
         vmovdqu xmm0, [tmp]
         vmovdqa [state + _zuc_args_IV + lane], xmm0
-        shr     lane, 5
+        shr     lane, 4
         mov     [state + _zuc_unused_lanes], unused_lanes
         add     qword [state + _zuc_lanes_in_use], 1
 
@@ -1112,11 +1112,11 @@ extern ZUC_NCA6_16_BUFFER
         and     lane, 0xF           ;; just a nibble
         shr     unused_lanes, 4
         mov     tmp, [job + _zuc_eia3_iv]
-        shl     lane, 5
+        shl     lane, 4
         ; Read the 16 bytes of IV
         vmovdqu  xmm0, [tmp]
         vmovdqa  [state + _zuc_args_IV + lane], xmm0
-        shr     lane, 5
+        shr     lane, 4
         mov     [state + _zuc_unused_lanes], unused_lanes
         add     qword [state + _zuc_lanes_in_use], 1
 
@@ -1464,11 +1464,11 @@ FLUSH_JOB_ZUC_NIA6:
         and     lane, 0xF               ;; just a nibble
         shr     unused_lanes, 4
         mov     tmp, [job + _iv]
-        shl     lane, 5
+        shl     lane, 4
         ; Read the 16 bytes of IV
         vmovdqu  xmm0, [tmp]
         vmovdqa  [state + _zuc_args_IV + lane], xmm0
-        shr     lane, 5
+        shr     lane, 4
         mov     [state + _zuc_unused_lanes], unused_lanes
         add     qword [state + _zuc_lanes_in_use], 1
 

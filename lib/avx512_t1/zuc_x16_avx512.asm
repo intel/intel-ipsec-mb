@@ -1192,7 +1192,7 @@ mksection .text
 %assign %%LFSR_IDX 1
 %rep 16
         mov     %%TMP, [pKe + 8*%%IDX]  ; Load Key N pointer
-        lea     %%TMP2, [pIv + 32*%%IDX] ; Load IV N pointer
+        lea     %%TMP2, [pIv + 16*%%IDX] ; Load IV N pointer
 %ifidn %%ALGO, ZUC128
         INIT_LFSR_128 %%TMP, %%TMP2, APPEND(%%LFSR, %%LFSR_IDX), %%ZTMP1
 %else ; %%ALGO == ZUCNEA6

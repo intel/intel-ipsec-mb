@@ -255,12 +255,12 @@ mksection .text
         movzx   lane, BYTE(unused_lanes)
         shr     unused_lanes, 8
         mov     tmp, [job + _iv]
-        shl     lane, 5
+        shl     lane, 4
 
         ; Read first 16 bytes of IV
         movdqu  xmm0, [tmp]
         movdqa  [state + _zuc_args_IV + lane], xmm0
-        shr     lane, 5
+        shr     lane, 4
         mov     [state + _zuc_unused_lanes], unused_lanes
 
         mov     [state + _zuc_job_in_lane + lane*8], job
@@ -716,11 +716,11 @@ FLUSH_JOB_ZUC_NEA6:
         movzx   lane, BYTE(unused_lanes)
         shr     unused_lanes, 8
         mov     tmp, [job + _zuc_eia3_iv]
-        shl     lane, 5
+        shl     lane, 4
         ; Read the 16 bytes of IV
         movdqu  xmm0, [tmp]
         movdqa  [state + _zuc_args_IV + lane], xmm0
-        shr     lane, 5
+        shr     lane, 4
         mov     [state + _zuc_unused_lanes], unused_lanes
 
         mov     [state + _zuc_job_in_lane + lane*8], job
@@ -1061,13 +1061,13 @@ SUBMIT_JOB_ZUC_NCA6:
         movzx   lane, BYTE(unused_lanes)
         shr     unused_lanes, 8
         mov     tmp, [job + _iv]
-        shl     lane, 5
+        shl     lane, 4
 
         ; Read first 16 bytes of IV
         movdqu  xmm0, [tmp]
         movdqa  [state + _zuc_args_IV + lane], xmm0
 
-        shr     lane, 5
+        shr     lane, 4
         mov     [state + _zuc_unused_lanes], unused_lanes
 
         mov     [state + _zuc_job_in_lane + lane*8], job
@@ -1227,9 +1227,9 @@ FLUSH_JOB_ZUC_NCA6:
         mov     tmp1, [state + _zuc_args_in + idx*8]
         mov     tmp2, [state + _zuc_args_out + idx*8]
         mov     tmp3, [state + _zuc_args_keys + idx*8]
-        shl     idx, 5
+        shl     idx, 4
         movdqa  xmm4, [state + _zuc_args_IV + idx]
-        shr     idx, 5
+        shr     idx, 4
 
         pcmpeqw xmm3, xmm3 ;; Get all ff's in XMM register
         pcmpeqw xmm0, xmm3 ;; Mask with FFFF in NULL jobs
@@ -1242,7 +1242,7 @@ FLUSH_JOB_ZUC_NCA6:
         mov     [state + _zuc_args_in + I*8], tmp1
         mov     [state + _zuc_args_out + I*8], tmp2
         mov     [state + _zuc_args_keys + I*8], tmp3
-        movdqa  [state + _zuc_args_IV + I*32], xmm4
+        movdqa  [state + _zuc_args_IV + I*16], xmm4
 APPEND(skip_nca6_,I):
 %assign I (I+1)
 %endrep

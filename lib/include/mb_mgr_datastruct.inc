@@ -240,7 +240,7 @@ START_FIELDS    ; ZUC_ARGS_X16
 FIELD   _zucarg_in,     16*8,   64      ; array of 16 pointers to in text
 FIELD   _zucarg_out,    16*8,   64      ; array of 16 pointers to out text
 FIELD   _zucarg_keys,   16*8,   8       ; array of 16 pointers to keys
-FIELD   _zucarg_IV,     16*32,  32      ; array of IVs (up to 25 bytes each)
+FIELD   _zucarg_IV,     16*16,  16      ; array of IVs (16 bytes each)
 FIELD   _zucarg_digest, 16*16,  64      ; array of 16 digests
 FIELD   _zucarg_KS,     16*128, 64      ; array of 128-byte keystream of 16 buffers
 END_FIELDS
