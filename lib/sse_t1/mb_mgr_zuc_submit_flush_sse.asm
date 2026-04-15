@@ -1032,12 +1032,10 @@ SUBMIT_JOB_ZUC_NCA6:
 %define len              rbp
 %define idx              rbp
 %define tmp              rbp
-%define tmp2             r14
-%define tmp3             r15
 
 %define lane             r8
 %define unused_lanes     rbx
-%define len2             r13
+%define len2             r14
 
         mov     rax, rsp
         sub     rsp, STACK_size
