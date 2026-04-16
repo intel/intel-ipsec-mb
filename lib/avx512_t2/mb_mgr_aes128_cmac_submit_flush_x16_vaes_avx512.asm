@@ -233,15 +233,8 @@ endstruc
 
         ;; Update lane len
         vmovdqa64 ymm0, [state + _aes_cmac_lens]
-%ifndef LINUX
-        mov     tmp3, rcx       ; save rcx
-%endif
-        mov     rcx, lane
-        mov     tmp, 1
-        shl     tmp, cl
-%ifndef LINUX
-        mov     rcx, tmp3       ; restore rcx
-%endif
+        xor     DWORD(tmp), DWORD(tmp)
+        bts     DWORD(tmp), DWORD(lane)
         kmovq   k1, tmp
 
         vpbroadcastw    ymm1, WORD(tmp2)
@@ -378,9 +371,9 @@ align_label
         mov     word [state + _aes_cmac_init_done + idx*2], 1
 
         ; Set len to 16
-        mov             tmp3, 16
-        xor             tmp4, tmp4
-        bts             WORD(tmp4), WORD(idx)
+        mov             DWORD(tmp3), 16
+        xor             DWORD(tmp4), DWORD(tmp4)
+        bts             DWORD(tmp4), DWORD(idx)
         kmovw           k1, DWORD(tmp4)
 
         vpbroadcastw    ymm1, WORD(tmp3)
@@ -444,16 +437,10 @@ align_label
         vmovdqa xmm0, [tmp3]
 
         ;; get mask for padding
-%ifndef LINUX
-        mov     tmp3, rcx       ; save rcx
-%endif
-        mov     rcx, tmp4
-        mov     DWORD(tmp5), 0xffff
-        shl     DWORD(tmp5), cl
-        not     DWORD(tmp5)
-%ifndef LINUX
-        mov     rcx, tmp3       ; restore rcx
-%endif
+        ;; tmp4 = authentication tag length
+        xor     DWORD(tmp5), DWORD(tmp5)
+        bts     DWORD(tmp5), DWORD(tmp4)
+        dec     DWORD(tmp5)
         kmovq   k1, tmp5
 
         vmovdqu8 [tmp2]{k1}, xmm0
@@ -573,16 +560,9 @@ align_label
 
         ;; Set len to 16
         vmovdqa64       ymm0, [state + _aes_cmac_lens]
-        mov             tmp2, 16
-%ifndef LINUX
-        mov             tmp3, rcx       ; save rcx
-%endif
-        mov             rcx, lane
-        mov             tmp, 1
-        shl             tmp, cl
-%ifndef LINUX
-        mov             rcx, tmp3       ; restore rcx
-%endif
+        mov             DWORD(tmp2), 16
+        xor             DWORD(tmp), DWORD(tmp)
+        bts             DWORD(tmp), DWORD(lane)
         kmovq           k1, tmp
 
         vpbroadcastw    ymm1, WORD(tmp2)
@@ -610,16 +590,9 @@ align_label
         jz      %%_load_full_block_3gpp
 
         ;; load remainder bytes from last block
-%ifndef LINUX
-        mov     tmp3, rcx       ; save rcx
-%endif
-        mov     rcx, r
-        mov     DWORD(tmp5), 0xffff
-        shl     DWORD(tmp5), cl
-        not     tmp5
-%ifndef LINUX
-        mov     rcx, tmp3       ; restore rcx
-%endif
+        xor     DWORD(tmp5), DWORD(tmp5)
+        bts     DWORD(tmp5), DWORD(r)
+        dec     DWORD(tmp5)
         kmovq   k1, tmp5
         vmovdqu8 xmm4{k1}{z}, [tmp]
 
