@@ -263,23 +263,22 @@ endstruc
         lea     tmp3, [n - 1]
         shl     tmp3, 4
         add     tmp, tmp3
-        vmovdqu xmm1, [tmp] ;; load last block
+        ;; tmp = address of last (partial) block with r valid bytes
 
-        ;; get mask for padding
-%ifndef LINUX
-        mov     tmp3, rcx       ; save rcx
-%endif
-        mov     rcx, r
-        mov     tmp, 0xffff
-        shl     tmp, cl
-%ifndef LINUX
-        mov     rcx, tmp3       ; restore rcx
-%endif
-        kmovq   k1, tmp
+        ;; get mask for data (k2) and padding (k1)
+        xor     tmp4, tmp4
+        bts     tmp4, r         ;; tmp4 = 1 << r
+        dec     tmp4            ;; tmp4 = (1 << r) - 1 = bits 0..r-1
+        kmovd   k2, DWORD(tmp4) ;; k2 = data positions (bits 0..r-1)
+        knotw   k1, k2          ;; k1 = padding positions (bits r..15)
 
+        ;; safely load only r valid bytes from source (zero rest)
+        vmovdqu8 xmm1{k2}{z}, [tmp]
+
+        ;; merge padding for remaining bytes r..15
         lea     tmp, [rel padding_0x80_tab16 + 16]
         sub     tmp, r
-        vmovdqu8 xmm1{k1}, [tmp] ;; merge last block and padding
+        vmovdqu8 xmm1{k1}, [tmp]
 
         ;; src + n + r
         mov     tmp3, [job + _skey2]
