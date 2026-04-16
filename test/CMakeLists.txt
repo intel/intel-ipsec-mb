@@ -45,6 +45,9 @@ add_subdirectory(mp-app)
 # build imb-zerolen application
 add_subdirectory(zerolen-app)
 
+# build imb-oob application
+add_subdirectory(oob-app)
+
 if(NOT WINDOWS)
   # build imb-acvp if libacvp available
   if(NOT ACVP_LOC)
