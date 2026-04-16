@@ -239,7 +239,7 @@ align_label
 
         lea     %%SRC, [%%SRC + %%REG_OFF + 48 + %%IMM_OFF]
         lea     %%DST, [%%DST + %%REG_OFF + 48 + %%IMM_OFF]
-        sub     %%LEN, (48 + %%IMM_OFF)
+        sub     %%LEN, 48
         simd_load_sse_15_1 %%PT3, %%SRC, %%LEN
 
         ; XOR KS with plaintext and store resulting ciphertext
@@ -267,7 +267,7 @@ align_label
 
         lea     %%SRC, [%%SRC + %%REG_OFF + 32 + %%IMM_OFF]
         lea     %%DST, [%%DST + %%REG_OFF + 32 + %%IMM_OFF]
-        sub     %%LEN, (32 + %%IMM_OFF)
+        sub     %%LEN, 32
         simd_load_sse_16_1 %%PT2, %%SRC, %%LEN
 
         ; XOR KS with plaintext and store resulting ciphertext
@@ -291,7 +291,7 @@ align_label
 
         lea     %%SRC, [%%SRC + %%REG_OFF + 16 + %%IMM_OFF]
         lea     %%DST, [%%DST + %%REG_OFF + 16 + %%IMM_OFF]
-        sub     %%LEN, (16 + %%IMM_OFF)
+        sub     %%LEN, 16
         simd_load_sse_16_1 %%PT1, %%SRC, %%LEN
 
         ; XOR KS with plaintext and store resulting ciphertext
