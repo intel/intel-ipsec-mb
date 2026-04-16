@@ -65,7 +65,7 @@ submit_aes_nia5_job(IMB_JOB *job)
         const uint8_t *msg = job->src + job->hash_start_src_offset_in_bytes;
 
         /* Generate H, Q, P keys */
-        GENERATE_HQP_AES(job->u.AES_NIA5._expanded_auth_key, job->u.AES_NIA5._iv, HQP);
+        GENERATE_HQP_AES(job->u.NIA._key, job->u.NIA._iv, HQP);
 
         /* Precompute hash keys from H */
         POLYVAL_PRE(H, &gdata_key);
@@ -178,7 +178,7 @@ submit_snow5g_nia4_job(IMB_JOB *job)
         const uint8_t *msg = job->src + job->hash_start_src_offset_in_bytes;
 
         /* Generate H, Q, P keys for SNOW5G NIA4 */
-        GENERATE_HQP_SNOW5G(job->u.SNOW5G_NIA4._key, job->u.SNOW5G_NIA4._iv, HQP, NULL);
+        GENERATE_HQP_SNOW5G(job->u.NIA._key, job->u.NIA._iv, HQP, NULL);
 
         /* Precompute hash keys from H */
         POLYVAL_PRE(H, &gdata_key);

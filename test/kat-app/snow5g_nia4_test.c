@@ -111,8 +111,8 @@ test_snow5g_nia4(struct IMB_MGR *mb_mgr, const struct mac_test *vec, const int n
 
                 job->hash_alg = IMB_AUTH_SNOW5G_NIA4;
                 job->msg_len_to_hash_in_bytes = vec->msgSize / 8;
-                job->u.SNOW5G_NIA4._key = (const void *) vec->key,
-                job->u.SNOW5G_NIA4._iv = (const void *) vec->iv;
+                job->u.NIA._key = (const void *) vec->key;
+                job->u.NIA._iv = (const void *) vec->iv;
                 job->src = (const void *) vec->msg;
                 job->hash_start_src_offset_in_bytes = 0;
                 job->auth_tag_output = auths[i] + sizeof(padding);

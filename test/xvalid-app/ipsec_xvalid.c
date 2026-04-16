@@ -1385,8 +1385,8 @@ fill_job(IMB_JOB *job, const struct params_s *params, uint8_t *buf, uint8_t *dig
                 job->msg_len_to_hash_in_bits = (job->msg_len_to_hash_in_bytes * 8);
                 break;
         case IMB_AUTH_ZUC_NIA6:
-                job->u.ZUC_EIA3._key = k2;
-                job->u.ZUC_EIA3._iv = auth_iv;
+                job->u.NIA._key = k2;
+                job->u.NIA._iv = auth_iv;
                 break;
         case IMB_AUTH_SNOW3G_UIA2_BITLEN:
                 job->u.SNOW3G_UIA2._key = k2;
@@ -1454,12 +1454,12 @@ fill_job(IMB_JOB *job, const struct params_s *params, uint8_t *buf, uint8_t *dig
                 job->u.CHACHA20_POLY1305.aad = aad;
                 break;
         case IMB_AUTH_AES_NIA5:
-                job->u.AES_NIA5._expanded_auth_key = (const uint8_t *) k1_expanded;
-                job->u.AES_NIA5._iv = auth_iv;
+                job->u.NIA._key = k1_expanded;
+                job->u.NIA._iv = auth_iv;
                 break;
         case IMB_AUTH_SNOW5G_NIA4:
-                job->u.SNOW5G_NIA4._key = (const uint8_t *) enc_keys;
-                job->u.SNOW5G_NIA4._iv = auth_iv;
+                job->u.NIA._key = enc_keys;
+                job->u.NIA._iv = auth_iv;
                 break;
         default:
                 printf("Unsupported hash algorithm %u, line %d\n", (unsigned) params->hash_alg,

@@ -531,24 +531,20 @@ typedef struct IMB_JOB {
                         struct chacha20_poly1305_context_data *ctx;
                         /**< Chacha20-Poly1305 context (for SGL only) */
                 } CHACHA20_POLY1305; /**< Chacha20-Poly1305 specific fields */
-                struct _AES_NIA5_specific_fields {
-                        const uint8_t *_expanded_auth_key;
-                        /**< AES expanded encryption keys (16-byte aligned) */
-                        const uint8_t *_iv;
-                        /**< Authentication 16-byte IV */
-                } AES_NIA5; /**< AES_NIA5 specific fields */
+                struct _NIA_specific_fields {
+                        const void *_key;
+                        /**< Authentication pointer key (16 bytes for NIA4 and NIA6
+                         * pointer to expanded key for NIA5) */
+                        const void *_iv;
+                        /**< Authentication IV pointer (16 bytes) */
+                } NIA; /**< NIA4/5/6 specific fields */
                 struct _NCA_specific_fields {
                         const void *aad;
                         /**< Additional Authentication Data (AAD) */
                         uint64_t aad_len_in_bytes; /**< Length of AAD */
                 } NCA;                             /**< NCA4/5/6 specific fields */
-                struct _SNOW5G_NIA4_specific_fields {
-                        const void *_key;
-                        /**< SNOW5G key */
-                        const void *_iv;
-                        /**< Authentication IV */
-                } SNOW5G_NIA4; /**< SNOW5G_NIA4 specific fields */
-        } u;                   /**< Hash algorithm-specific fields */
+
+        } u; /**< Hash algorithm-specific fields */
 
         IMB_STATUS status;                     /**< Job status */
         IMB_CIPHER_MODE cipher_mode;           /**< Cipher mode */

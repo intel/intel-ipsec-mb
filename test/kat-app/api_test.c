@@ -501,14 +501,18 @@ fill_in_job(struct IMB_JOB *job, const IMB_CIPHER_MODE cipher_mode,
                 job->iv_len_in_bytes = 16;
                 break;
         case IMB_AUTH_SNOW5G_NIA4:
-                job->u.SNOW5G_NIA4._key = dust_bin;
-                job->u.SNOW5G_NIA4._iv = dust_bin;
+                job->u.NIA._key = dust_bin;
+                job->u.NIA._iv = dust_bin;
                 break;
         case IMB_AUTH_AES_NIA5:
-                job->u.AES_NIA5._expanded_auth_key = dust_bin;
-                job->u.AES_NIA5._iv = dust_bin;
+                job->u.NIA._key = dust_bin;
+                job->u.NIA._iv = dust_bin;
                 break;
         case IMB_AUTH_ZUC_NIA6:
+                job->u.NIA._key = dust_bin;
+                job->u.NIA._iv = dust_bin;
+                job->auth_tag_output_len_in_bytes = 4;
+                break;
         case IMB_AUTH_ZUC_EIA3_BITLEN:
                 job->u.ZUC_EIA3._key = dust_bin;
                 job->u.ZUC_EIA3._iv = dust_bin;

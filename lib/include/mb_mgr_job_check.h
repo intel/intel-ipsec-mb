@@ -1656,6 +1656,14 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job, const IMB_CIPHER_MODE cipher_
         case IMB_AUTH_AES_NIA5:
         case IMB_AUTH_SNOW5G_NIA4:
         case IMB_AUTH_ZUC_NIA6:
+                if (job->u.NIA._key == NULL) {
+                        imb_set_errno(state, IMB_ERR_JOB_NULL_KEY);
+                        return 1;
+                }
+                if (job->u.NIA._iv == NULL) {
+                        imb_set_errno(state, IMB_ERR_JOB_NULL_IV);
+                        return 1;
+                }
                 if (job->src == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_SRC);
                         return 1;

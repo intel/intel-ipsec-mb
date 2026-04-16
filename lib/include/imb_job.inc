@@ -106,14 +106,14 @@ END_FIELDS
 %assign _SNOW3G_UIA2_spec_fields_size   _FIELD_OFFSET
 %assign _SNOW3G_UIA2_spec_fields_align  _STRUCT_ALIGN
 
-START_FIELDS    ; SNOW5G-NIA4 Specific Fields
+START_FIELDS    ; NIA4/5/6 Specific Fields
 ;;;     name                            size    align
-FIELD   __snow5g_nia4_key,              8,      8       ; pointer to key
-FIELD   __snow5g_nia4_iv,               8,      8       ; pointer to IV (16-byte)
+FIELD   __nia_key,                      8,      8       ; pointer to key
+FIELD   __nia_iv,                       8,      8       ; pointer to IV
 END_FIELDS
 
-%assign _SNOW5G_NIA4_spec_fields_size   _FIELD_OFFSET
-%assign _SNOW5G_NIA4_spec_fields_align  _STRUCT_ALIGN
+%assign _NIA_spec_fields_size   _FIELD_OFFSET
+%assign _NIA_spec_fields_align  _STRUCT_ALIGN
 
 START_FIELDS    ; POLY1305 Specific Fields
 ;;;     name                            size    align
@@ -146,7 +146,7 @@ UNION   _u,     _HMAC_spec_fields_size,     _HMAC_spec_fields_align, \
                 _GCM_spec_fields_size, _GCM_spec_fields_align, \
                 _ZUC_EIA3_spec_fields_size, _ZUC_EIA3_spec_fields_align, \
                 _SNOW3G_UIA2_spec_fields_size, _SNOW3G_UIA2_spec_fields_align, \
-                _SNOW5G_NIA4_spec_fields_size, _SNOW5G_NIA4_spec_fields_align, \
+                _NIA_spec_fields_size, _NIA_spec_fields_align, \
                 _POLY1305_spec_fields_size, _POLY1305_spec_fields_align
 
 FIELD   _status,                        4,      4       ; IMB_JOB_STS
@@ -192,8 +192,8 @@ END_FIELDS
 %assign _zuc_eia3_iv                    _u + __zuc_eia3_iv
 %assign _snow3g_uia2_key                _u + __snow3g_uia2_key
 %assign _snow3g_uia2_iv                 _u + __snow3g_uia2_iv
-%assign _snow5g_nia4_key                _u + __snow5g_nia4_key
-%assign _snow5g_nia4_iv                 _u + __snow5g_nia4_iv
+%assign _nia_key                        _u + __nia_key
+%assign _nia_iv                         _u + __nia_iv
 %assign _poly1305_key                   _u + __poly1305_key
 %assign _gcm_aad                        _u + __gcm_aad
 %assign _gcm_aad_len                    _u + __gcm_aad_len

@@ -223,11 +223,11 @@ endstruc
         mov     [state + _snow5g_args_in + lane*8], tmp
 
         ;; Store key pointer
-        mov     tmp, [job + _snow5g_nia4_key]
+        mov     tmp, [job + _nia_key]
         mov     [state + _snow5g_args_keys + lane*8], tmp
 
         ;; Copy IV to state array (16 bytes per lane)
-        mov     tmp, [job + _snow5g_nia4_iv]
+        mov     tmp, [job + _nia_iv]
         mov     tmp2, lane
         shl     tmp2, 4
         vmovdqu xmm0, [tmp]

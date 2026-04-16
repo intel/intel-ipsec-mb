@@ -2309,12 +2309,12 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params, const uint32_t num_iter, uint8
                 job_template.u.CMAC._skey2 = k3;
                 break;
         case TEST_AES_NIA5:
-                job_template.u.AES_NIA5._expanded_auth_key = (const uint8_t *) k1_expanded;
-                job_template.u.AES_NIA5._iv = (const uint8_t *) &auth_iv;
+                job_template.u.NIA._key = k1_expanded;
+                job_template.u.NIA._iv = &auth_iv;
                 break;
         case TEST_SNOW5G_NIA4:
-                job_template.u.SNOW5G_NIA4._key = (const uint8_t *) gcm_key;
-                job_template.u.SNOW5G_NIA4._iv = (const uint8_t *) &auth_iv;
+                job_template.u.NIA._key = gcm_key;
+                job_template.u.NIA._iv = &auth_iv;
                 break;
         case TEST_HASH_POLY1305:
                 job_template.u.POLY1305._key = k1_expanded;
@@ -2323,9 +2323,12 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params, const uint32_t num_iter, uint8
                 job_template.cipher_start_src_offset_in_bytes = 8;
                 break;
         case TEST_ZUC_EIA3:
-        case TEST_ZUC_NIA6:
                 job_template.u.ZUC_EIA3._key = k3;
                 job_template.u.ZUC_EIA3._iv = (uint8_t *) &auth_iv;
+                break;
+        case TEST_ZUC_NIA6:
+                job_template.u.NIA._key = k3;
+                job_template.u.NIA._iv = &auth_iv;
                 break;
         case TEST_SNOW3G_UIA2:
                 job_template.u.SNOW3G_UIA2._key = k3;

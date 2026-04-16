@@ -301,8 +301,13 @@ submit_burst_eia3_jobs(struct IMB_MGR *mb_mgr, uint8_t **const keys, uint8_t **c
                 job->chain_order = IMB_ORDER_CIPHER_HASH;
                 job->cipher_mode = IMB_CIPHER_NULL;
                 job->src = src[i];
-                job->u.ZUC_EIA3._iv = iv[i];
-                job->u.ZUC_EIA3._key = keys[i];
+                if (hash_alg == IMB_AUTH_ZUC_NIA6) {
+                        job->u.NIA._key = keys[i];
+                        job->u.NIA._iv = iv[i];
+                } else {
+                        job->u.ZUC_EIA3._key = keys[i];
+                        job->u.ZUC_EIA3._iv = iv[i];
+                }
 
                 job->hash_start_src_offset_in_bytes = 0;
                 job->msg_len_to_hash_in_bits = lens[i];
@@ -358,8 +363,13 @@ submit_eia3_jobs(struct IMB_MGR *mb_mgr, uint8_t **const keys, uint8_t **const i
                 job->chain_order = IMB_ORDER_CIPHER_HASH;
                 job->cipher_mode = IMB_CIPHER_NULL;
                 job->src = src[i];
-                job->u.ZUC_EIA3._iv = iv[i];
-                job->u.ZUC_EIA3._key = keys[i];
+                if (hash_alg == IMB_AUTH_ZUC_NIA6) {
+                        job->u.NIA._key = keys[i];
+                        job->u.NIA._iv = iv[i];
+                } else {
+                        job->u.ZUC_EIA3._key = keys[i];
+                        job->u.ZUC_EIA3._iv = iv[i];
+                }
 
                 job->hash_start_src_offset_in_bytes = 0;
                 job->msg_len_to_hash_in_bits = lens[i];

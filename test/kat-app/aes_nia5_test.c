@@ -116,12 +116,12 @@ test_aes_nia5(struct IMB_MGR *mb_mgr, const struct mac_test *vec, const int num_
 
                 job->hash_alg = IMB_AUTH_AES_NIA5;
                 job->msg_len_to_hash_in_bytes = vec->msgSize / 8;
-                job->u.AES_NIA5._expanded_auth_key = (const uint8_t *) expkey;
+                job->u.NIA._key = expkey;
                 job->src = (const void *) vec->msg;
                 job->hash_start_src_offset_in_bytes = 0;
                 job->auth_tag_output = auths[i] + sizeof(padding);
                 job->auth_tag_output_len_in_bytes = vec->tagSize / 8;
-                job->u.AES_NIA5._iv = (const void *) vec->iv;
+                job->u.NIA._iv = vec->iv;
 
                 job->user_data = auths[i];
 
