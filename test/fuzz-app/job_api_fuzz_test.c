@@ -152,6 +152,14 @@ fill_additional_cipher_data(struct IMB_JOB *job, struct IMB_SGL_IOV *sgl_segs,
                         job->u.CHACHA20_POLY1305.aad_len_in_bytes = buffsize;
                 fill_job_sgl_segments(job, sgl_segs, num_sgl_segs, buff, buffsize);
                 break;
+        case IMB_CIPHER_AES_NCA5:
+        case IMB_CIPHER_ZUC_NCA6:
+        case IMB_CIPHER_SNOW5G_NCA4:
+                if (job->u.NCA.aad != NULL)
+                        job->u.NCA.aad = buff;
+                if (job->u.NCA.aad_len_in_bytes > buffsize)
+                        job->u.NCA.aad_len_in_bytes = buffsize;
+                break;
         default:
                 break;
         }
@@ -207,6 +215,22 @@ fill_additional_hash_data(struct IMB_JOB *job, void *buff, uint64_t buffsize)
                         job->u.ZUC_EIA3._key = (uint8_t *) buff;
                 if (job->u.ZUC_EIA3._iv != NULL)
                         job->u.ZUC_EIA3._iv = (uint8_t *) buff;
+                break;
+        case IMB_AUTH_ZUC_NIA6:
+        case IMB_AUTH_AES_NIA5:
+        case IMB_AUTH_SNOW5G_NIA4:
+                if (job->u.NIA._key != NULL)
+                        job->u.NIA._key = buff;
+                if (job->u.NIA._iv != NULL)
+                        job->u.NIA._iv = buff;
+                break;
+        case IMB_AUTH_AES_NCA5:
+        case IMB_AUTH_ZUC_NCA6:
+        case IMB_AUTH_SNOW5G_NCA4:
+                if (job->u.NCA.aad != NULL)
+                        job->u.NCA.aad = buff;
+                if (job->u.NCA.aad_len_in_bytes > buffsize)
+                        job->u.NCA.aad_len_in_bytes = buffsize;
                 break;
         case IMB_AUTH_SNOW3G_UIA2_BITLEN:
                 if (job->u.SNOW3G_UIA2._key != NULL)
@@ -388,6 +412,18 @@ hash_selection(void)
                         return IMB_AUTH_SHAKE128;
                 else if (strcmp(a, "IMB_AUTH_SHAKE256") == 0)
                         return IMB_AUTH_SHAKE256;
+                else if (strcmp(a, "IMB_AUTH_AES_NIA5") == 0)
+                        return IMB_AUTH_AES_NIA5;
+                else if (strcmp(a, "IMB_AUTH_AES_NCA5") == 0)
+                        return IMB_AUTH_AES_NCA5;
+                else if (strcmp(a, "IMB_AUTH_ZUC_NIA6") == 0)
+                        return IMB_AUTH_ZUC_NIA6;
+                else if (strcmp(a, "IMB_AUTH_ZUC_NCA6") == 0)
+                        return IMB_AUTH_ZUC_NCA6;
+                else if (strcmp(a, "IMB_AUTH_SNOW5G_NIA4") == 0)
+                        return IMB_AUTH_SNOW5G_NIA4;
+                else if (strcmp(a, "IMB_AUTH_SNOW5G_NCA4") == 0)
+                        return IMB_AUTH_SNOW5G_NCA4;
                 else
                         return 0;
         }
@@ -452,6 +488,18 @@ cipher_selection(void)
                         return IMB_CIPHER_SM4_CTR;
                 else if (strcmp(a, "IMB_CIPHER_SM4_GCM") == 0)
                         return IMB_CIPHER_SM4_GCM;
+                else if (strcmp(a, "IMB_CIPHER_ZUC_NEA6") == 0)
+                        return IMB_CIPHER_ZUC_NEA6;
+                else if (strcmp(a, "IMB_CIPHER_SNOW5G_NEA4") == 0)
+                        return IMB_CIPHER_SNOW5G_NEA4;
+                else if (strcmp(a, "IMB_CIPHER_AES_NEA5") == 0)
+                        return IMB_CIPHER_AES_NEA5;
+                else if (strcmp(a, "IMB_CIPHER_AES_NCA5") == 0)
+                        return IMB_CIPHER_AES_NCA5;
+                else if (strcmp(a, "IMB_CIPHER_ZUC_NCA6") == 0)
+                        return IMB_CIPHER_ZUC_NCA6;
+                else if (strcmp(a, "IMB_CIPHER_SNOW5G_NCA4") == 0)
+                        return IMB_CIPHER_SNOW5G_NCA4;
                 else
                         return 0;
         }
