@@ -123,7 +123,7 @@ endstruc
 mksection .text
 
 ;
-; Encrypts up to 64 bytes of data.
+; Encrypts 64 bytes of data.
 ;
 %macro ENCRYPT_64B 10-11
 %define %%SRC     %1 ; [in] Source pointer
@@ -164,11 +164,11 @@ mksection .text
 %endmacro
 
 ;
-; Encrypts 64 bytes of data.
-; Keystream needs to be aligned to 16 bytes,
+; Encrypts 1 to 63 bytes of data.
+; Keystream does not need to be aligned to 16 bytes,
 ; if pointer is passed
 ;
-%macro ENCRYPT_1B_64B 15-16
+%macro ENCRYPT_1B_63B 15-16
 %define %%SRC     %1  ; [in/out] Source pointer
 %define %%DST     %2  ; [in/out] Destination pointer
 %define %%LEN     %3  ; [in/clobbered] Length to encrypt
@@ -237,7 +237,7 @@ mksection .text
 
         lea     %%SRC, [%%SRC + %%REG_OFF + 48 + %%IMM_OFF]
         lea     %%DST, [%%DST + %%REG_OFF + 48 + %%IMM_OFF]
-        sub     %%LEN, (48 + %%IMM_OFF)
+        sub     %%LEN, 48
         simd_load_sse_15_1 %%PT3, %%SRC, %%LEN
 
         ; XOR KS with plaintext and store resulting ciphertext
@@ -264,7 +264,7 @@ mksection .text
 
         lea     %%SRC, [%%SRC + %%REG_OFF + 32 + %%IMM_OFF]
         lea     %%DST, [%%DST + %%REG_OFF + 32 + %%IMM_OFF]
-        sub     %%LEN, (32 + %%IMM_OFF)
+        sub     %%LEN, 32
         simd_load_sse_16_1 %%PT2, %%SRC, %%LEN
 
         ; XOR KS with plaintext and store resulting ciphertext
@@ -287,7 +287,7 @@ mksection .text
 
         lea     %%SRC, [%%SRC + %%REG_OFF + 16 + %%IMM_OFF]
         lea     %%DST, [%%DST + %%REG_OFF + 16 + %%IMM_OFF]
-        sub     %%LEN, (16 + %%IMM_OFF)
+        sub     %%LEN, 16
         simd_load_sse_16_1 %%PT1, %%SRC, %%LEN
 
         ; XOR KS with plaintext and store resulting ciphertext
@@ -904,7 +904,7 @@ check_1_or_2_blocks_left:
 
 less_than_64:
 
-        ENCRYPT_1B_64B  src, dst, len, off, 0, xmm9, xmm10, xmm11, xmm12, \
+        ENCRYPT_1B_63B  src, dst, len, off, 0, xmm9, xmm10, xmm11, xmm12, \
                         xmm0, xmm1, xmm2, xmm3, off, src
 
         jmp     no_partial_block
@@ -955,7 +955,7 @@ between_64_127:
         sub     len, 64
 
         ; Handle rest up to 63 bytes
-        ENCRYPT_1B_64B  src, dst, len, off, 64, xmm9, xmm10, xmm11, xmm12, \
+        ENCRYPT_1B_63B  src, dst, len, off, 64, xmm9, xmm10, xmm11, xmm12, \
                         xmm0, xmm1, xmm2, xmm3, off, src
 
         jmp     no_partial_block
@@ -1039,13 +1039,13 @@ more_than_2_blocks_left:
         ; Check if there are remaining bytes to process
         jz      no_partial_block
 
-        ENCRYPT_1B_64B  src, dst, len, off, 64, xmm3, xmm7, xmm11, xmm15, \
+        ENCRYPT_1B_63B  src, dst, len, off, 64, xmm3, xmm7, xmm11, xmm15, \
                         xmm0, xmm1, xmm2, xmm4, off, src
 
         jmp     no_partial_block
 
 between_129_191:
-        ENCRYPT_1B_64B  src, dst, len, off, 0, xmm2, xmm6, xmm10, xmm14, \
+        ENCRYPT_1B_63B  src, dst, len, off, 0, xmm2, xmm6, xmm10, xmm14, \
                         xmm0, xmm1, xmm4, xmm3, off, src
 
 no_partial_block:
@@ -1149,7 +1149,7 @@ chacha20_enc_dec_ks_sse:
         mov     tmp5, tmp3
         ; Read up to 63 bytes of KS and XOR the first bytes of message
         ; with the previous unused bytes of keystream
-        ENCRYPT_1B_64B  src, dst, tmp3, off, 0, xmm9, xmm10, xmm11, xmm12, \
+        ENCRYPT_1B_63B  src, dst, tmp3, off, 0, xmm9, xmm10, xmm11, xmm12, \
                         xmm0, xmm1, xmm2, xmm3, tmp, tmp2, prev_ks
 
         ; Update remain bytes of KS
@@ -1366,7 +1366,7 @@ less_than_64_ks:
 
         ; Preserve len
         mov     tmp5, len
-        ENCRYPT_1B_64B  src, dst, len, off, 0, xmm9, xmm10, xmm11, xmm12, \
+        ENCRYPT_1B_63B  src, dst, len, off, 0, xmm9, xmm10, xmm11, xmm12, \
                         xmm0, xmm1, xmm2, xmm3, src, off
 
         inc     blk_cnt
@@ -1971,7 +1971,7 @@ gen_poly_key:
 
 less_than_64_poly:
 
-        ENCRYPT_1B_64B  src, dst, len, off, 0, xmm9, xmm10, xmm11, xmm12, \
+        ENCRYPT_1B_63B  src, dst, len, off, 0, xmm9, xmm10, xmm11, xmm12, \
                         xmm0, xmm1, xmm2, xmm3, off, src
 
         jmp     no_partial_block_poly
@@ -2036,7 +2036,7 @@ gen_poly_key_two_blocks:
         sub     len, 64
 
         ; Write up to 64 bytes of ciphertext
-        ENCRYPT_1B_64B src, dst, len, off, 0, xmm9, xmm10, xmm11, xmm12, \
+        ENCRYPT_1B_63B src, dst, len, off, 0, xmm9, xmm10, xmm11, xmm12, \
                        xmm0, xmm1, xmm2, xmm3, off, src
 
         jmp     no_partial_block_poly
@@ -2048,7 +2048,7 @@ between_64_127_poly:
 
         sub     len, 64
 
-        ENCRYPT_1B_64B  src, dst, len, off, 64, xmm9, xmm10, xmm11, xmm12, \
+        ENCRYPT_1B_63B  src, dst, len, off, 64, xmm9, xmm10, xmm11, xmm12, \
                         xmm0, xmm1, xmm2, xmm3, off, src
 
         jmp     no_partial_block_poly
@@ -2137,7 +2137,7 @@ more_than_2_blocks_left_poly:
         or      len, len
         jz      no_partial_block_poly
 
-        ENCRYPT_1B_64B  src, dst, len, off, 64, xmm3, xmm7, xmm11, xmm15, \
+        ENCRYPT_1B_63B  src, dst, len, off, 64, xmm3, xmm7, xmm11, xmm15, \
                         xmm0, xmm1, xmm2, xmm4, off, src
 
         jmp     no_partial_block_poly
@@ -2176,13 +2176,13 @@ gen_poly_key_up_to_four_blocks:
         or      len, len
         jz      no_partial_block_poly
 
-        ENCRYPT_1B_64B  src, dst, len, off, 64, xmm3, xmm7, xmm11, xmm15, \
+        ENCRYPT_1B_63B  src, dst, len, off, 64, xmm3, xmm7, xmm11, xmm15, \
                         xmm0, xmm1, xmm2, xmm4, off, src
 
         jmp     no_partial_block_poly
 
 between_129_191_poly:
-        ENCRYPT_1B_64B  src, dst, len, off, 0, xmm2, xmm6, xmm10, xmm14, \
+        ENCRYPT_1B_63B  src, dst, len, off, 0, xmm2, xmm6, xmm10, xmm14, \
                         xmm0, xmm1, xmm3, xmm4, off, src
 
 no_partial_block_poly:
@@ -2277,7 +2277,7 @@ submit_job_chacha20_poly_dec_sse:
         je      initial_dec_num_blocks_is_2
 
         ; 1 initial block
-        ENCRYPT_1B_64B  src, dst, len_xor, off, 0, xmm0, xmm1, xmm2, xmm3, \
+        ENCRYPT_1B_63B  src, dst, len_xor, off, 0, xmm0, xmm1, xmm2, xmm3, \
                         xmm4, xmm5, xmm6, xmm7, off, src, ks
 
         jmp     no_partial_block_dec
@@ -2291,7 +2291,7 @@ initial_dec_num_blocks_is_2:
         add     ks, 64
         sub     len_xor, 64
 
-        ENCRYPT_1B_64B  src, dst, len_xor, off, 64, xmm0, xmm1, xmm2, xmm3, \
+        ENCRYPT_1B_63B  src, dst, len_xor, off, 64, xmm0, xmm1, xmm2, xmm3, \
                         xmm4, xmm5, xmm6, xmm7, off, src, ks
 
         jmp     no_partial_block_dec
@@ -2310,7 +2310,7 @@ initial_dec_num_blocks_is_3:
         add     ks, 64
         sub     len_xor, 128
 
-        ENCRYPT_1B_64B  src, dst, len_xor, off, 128, xmm2, xmm6, xmm10, xmm14, \
+        ENCRYPT_1B_63B  src, dst, len_xor, off, 128, xmm2, xmm6, xmm10, xmm14, \
                         xmm0, xmm1, xmm3, xmm4, off, src, ks
 
         ; If len_xor == 64, it means that there might be more bytes to encrypt
@@ -2527,7 +2527,7 @@ check_1_or_2_blocks_left_dec:
 
 less_than_64_dec:
 
-        ENCRYPT_1B_64B  src, dst, len, off, 0, xmm9, xmm10, xmm11, xmm12, \
+        ENCRYPT_1B_63B  src, dst, len, off, 0, xmm9, xmm10, xmm11, xmm12, \
                         xmm0, xmm1, xmm2, xmm3, off, src
 
         jmp     no_partial_block_dec
@@ -2578,7 +2578,7 @@ between_64_127_dec:
         sub     len, 64
 
         ; Handle rest up to 63 bytes
-        ENCRYPT_1B_64B  src, dst, len, off, 64, xmm9, xmm10, xmm11, xmm12, \
+        ENCRYPT_1B_63B  src, dst, len, off, 64, xmm9, xmm10, xmm11, xmm12, \
                         xmm0, xmm1, xmm2, xmm3, off, src
 
         jmp     no_partial_block_dec
@@ -2662,13 +2662,13 @@ more_than_2_blocks_left_dec:
         ; Check if there are remaining bytes to process
         jz      no_partial_block_dec
 
-        ENCRYPT_1B_64B  src, dst, len, off, 64, xmm3, xmm7, xmm11, xmm15, \
+        ENCRYPT_1B_63B  src, dst, len, off, 64, xmm3, xmm7, xmm11, xmm15, \
                         xmm0, xmm1, xmm2, xmm4, off, src
 
         jmp     no_partial_block_dec
 
 between_129_191_dec:
-        ENCRYPT_1B_64B  src, dst, len, off, 0, xmm2, xmm6, xmm10, xmm14, \
+        ENCRYPT_1B_63B  src, dst, len, off, 0, xmm2, xmm6, xmm10, xmm14, \
                         xmm0, xmm1, xmm4, xmm3, off, src
 
 no_partial_block_dec:
