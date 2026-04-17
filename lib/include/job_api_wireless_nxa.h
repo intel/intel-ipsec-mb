@@ -56,6 +56,23 @@ submit_job_aes_nea5(IMB_JOB *job)
 __forceinline IMB_JOB *
 submit_aes_nia5_job(IMB_JOB *job)
 {
+#ifdef NIA_MSG
+        DECLARE_ALIGNED(uint8_t HQP[3 * 16], 64);
+        DECLARE_ALIGNED(uint8_t digest[16], 16) = { 0 };
+        const uint8_t *msg = job->src + job->hash_start_src_offset_in_bytes;
+
+        /* Generate H, Q, P keys */
+        GENERATE_HQP_AES(job->u.NIA._key, job->u.NIA._iv, HQP);
+
+        NIA_MSG(digest, HQP, msg, job->msg_len_to_hash_in_bytes);
+
+        job->status |= IMB_STATUS_COMPLETED_AUTH;
+        memcpy(job->auth_tag_output, digest, job->auth_tag_output_len_in_bytes);
+
+#ifdef SAFE_DATA
+        clear_mem(HQP, sizeof(HQP));
+#endif
+#else
         DECLARE_ALIGNED(uint8_t HQP[3 * 16], 64);
         DECLARE_ALIGNED(uint8_t digest[16], 16) = { 0 };
         struct gcm_key_data gdata_key;
@@ -94,12 +111,52 @@ submit_aes_nia5_job(IMB_JOB *job)
         clear_mem(HQP, sizeof(HQP));
         clear_mem(&gdata_key, sizeof(struct gcm_key_data));
 #endif
+#endif
         return job;
 }
 
 __forceinline IMB_JOB *
 submit_aes_nca5_job(IMB_JOB *job, IMB_CIPHER_DIRECTION cipher_dir)
 {
+#ifdef NCA_MSG
+        DECLARE_ALIGNED(uint8_t HQP[3 * 16], 64);
+        DECLARE_ALIGNED(uint8_t digest[16], 16) = { 0 };
+        const uint8_t *msg = job->src + job->cipher_start_src_offset_in_bytes;
+
+        /* Generate H, Q, P keys */
+        GENERATE_HQP_AES(job->enc_keys, job->iv, HQP);
+
+        /* Prepare IV for AES-CTR */
+        uint8_t iv[16];
+
+        __m128i iv_reg = _mm_loadu_si128((const __m128i *) job->iv);
+        iv_reg = _mm_and_si128(iv_reg, _mm_loadu_si128((const __m128i *) zero_low_4B_mask));
+
+        _mm_storeu_si128((__m128i *) iv, iv_reg);
+        if (cipher_dir == IMB_DIR_ENCRYPT) {
+                /* Encrypt plaintext */
+                AES_CTR_256(msg, iv, job->enc_keys, job->dst, job->msg_len_to_cipher_in_bytes, 16);
+
+                /* Digest ciphertext */
+                NCA_MSG(digest, HQP, job->dst, job->msg_len_to_cipher_in_bytes, job->u.NCA.aad,
+                        job->u.NCA.aad_len_in_bytes);
+        } else { /* Decrypt */
+                /* Digest ciphertext */
+                NCA_MSG(digest, HQP, msg, job->msg_len_to_cipher_in_bytes, job->u.NCA.aad,
+                        job->u.NCA.aad_len_in_bytes);
+
+                /* Decrypt ciphertext (assumes last 4 bytes of 16-byte IV as 0) */
+                AES_CTR_256(msg, iv, job->enc_keys, job->dst, job->msg_len_to_cipher_in_bytes, 16);
+        }
+
+        job->status |= IMB_STATUS_COMPLETED;
+        memcpy(job->auth_tag_output, digest, job->auth_tag_output_len_in_bytes);
+
+#ifdef SAFE_DATA
+        clear_mem(HQP, sizeof(HQP));
+#endif
+        return job;
+#else
         DECLARE_ALIGNED(uint8_t HQP[3 * 16], 64);
         DECLARE_ALIGNED(uint8_t digest[16], 16) = { 0 };
         struct gcm_key_data gdata_key;
@@ -164,11 +221,13 @@ submit_aes_nca5_job(IMB_JOB *job, IMB_CIPHER_DIRECTION cipher_dir)
         clear_mem(&gdata_key, sizeof(struct gcm_key_data));
 #endif
         return job;
+#endif
 }
 
 __forceinline IMB_JOB *
 submit_snow5g_nia4_job(IMB_JOB *job)
 {
+#if defined(POLYVAL) && defined(POLYVAL_PRE) && defined(POLYVAL_16B)
         DECLARE_ALIGNED(uint8_t HQP[3 * 16], 64);
         DECLARE_ALIGNED(uint8_t digest[16], 16) = { 0 };
         struct gcm_key_data gdata_key;
@@ -207,12 +266,14 @@ submit_snow5g_nia4_job(IMB_JOB *job)
         clear_mem(HQP, sizeof(HQP));
         clear_mem(&gdata_key, sizeof(struct gcm_key_data));
 #endif
+#endif /* if defined(POLYVAL) */
         return job;
 }
 
 __forceinline IMB_JOB *
 submit_snow5g_nca4_job(IMB_JOB *job, IMB_CIPHER_DIRECTION cipher_dir)
 {
+#if defined(POLYVAL) && defined(POLYVAL_PRE) && defined(POLYVAL_16B)
         DECLARE_ALIGNED(uint8_t HQP[3 * 16], 64);
         DECLARE_ALIGNED(uint8_t digest[16], 16) = { 0 };
         DECLARE_ALIGNED(uint8_t state[10 * 16], 16);
@@ -260,6 +321,10 @@ submit_snow5g_nca4_job(IMB_JOB *job, IMB_CIPHER_DIRECTION cipher_dir)
         clear_mem(&gdata_key, sizeof(struct gcm_key_data));
 #endif
         job->status |= IMB_STATUS_COMPLETED;
+#else
+        (void) job;
+        (void) cipher_dir;
+#endif /* if defined(POLYVAL) */
         return job;
 }
 

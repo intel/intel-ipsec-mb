@@ -96,6 +96,15 @@ polyval_pre_vclmul_avx512(const void *key, struct gcm_key_data *key_data);
 void
 polyval_16B_vclmul_avx512(const void *key, void *in_out_data);
 
+/* NIA */
+IMB_DLL_LOCAL void
+nia_vclmul_avx512(void *digest, const void *hqp, const void *msg, const uint64_t msg_len);
+
+/* NCA */
+IMB_DLL_LOCAL void
+nca_vclmul_avx512(void *digest, const void *hqp, const void *msg, const uint64_t msg_len,
+                  const void *aad, const uint64_t aad_len);
+
 /* AES-NxA5 */
 void
 generate_hqp_vaes_avx512(const void *aes_expanded_keys, const void *iv, uint8_t HQP[]);

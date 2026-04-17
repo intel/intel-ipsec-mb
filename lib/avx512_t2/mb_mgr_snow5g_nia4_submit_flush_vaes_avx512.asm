@@ -36,7 +36,8 @@
 %include "include/cet.inc"
 %include "include/align_avx512.inc"
 %include "include/snow5g_x2_vaes_avx512.inc"
-%include "avx512_t2/snow5g_nia4_x2_vaes_avx512.inc"
+
+extern nia_vclmul_avx512
 
 mksection .text
 default rel
@@ -61,6 +62,103 @@ default rel
 %define job     arg2
 
 %define job_rax rax
+
+
+;; HQP field layout: H(16) | Q(16) | P(16) = 48 bytes per lane
+%define NIA4_HQP_STRIDE         48
+
+struc STACK_NIA4
+;; NIA4 auth working data (used by SNOW5G_NIA4_AUTH_X2 / PROCESS_NIA4_LANE)
+_hqp_nia4:      resb    (NIA4_HQP_STRIDE * 2)   ; HQP: 2 lanes x 48 bytes (H+Q+P)
+_keystream_nia4: resy   1                        ; 32-byte keystream scratch
+_digest_nia4:   reso    1                        ; 16-byte POLYVAL digest
+;; Function frame (used by mb_mgr SNOW5G_NIA4_FUNC_START/END)
+_gpr_save_nia4: resq    8                        ; callee-saved GP regs
+_state_save_nia4: resq   1                        ; state (arg1) save
+_job_save_nia4: resq     1                        ; job (arg2) save
+%ifndef LINUX
+_xmm_save_nia4: reso    10                       ; XMM6-15 save area (Windows only)
+%endif
+_rsp_save_nia4: resq    1                        ; original RSP before alignment
+_idx_save_nia4: resq    1                        ; lane index saved across AUTH_X2 call
+endstruc
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Per-lane POLYVAL authentication: build HashKey table, call polyval bulk hash,
+;; digest XOR with length, single-block GHASH_MUL finalization, and tag output.
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+%macro PROCESS_NIA4_LANE 4
+%define %%STATE     %1  ;; [in] GP reg: SNOW5G OOO state pointer
+%define %%LANE      %2  ;; [in] lane index (0 or 1)
+%define %%DIGEST    %3  ;; [clobbered] temporary XMM
+%define %%KMASK     %4  ;; [clobbered] temporary mask K-register
+
+%define %%GP1       arg1        ; temporary GP
+%define %%GP2       arg2        ; temporary GP
+
+        lea     arg1, [rsp + _digest_nia4]              ;; digest out
+        lea     arg2, [rsp + _hqp_nia4 + NIA4_HQP_STRIDE * %%LANE]      ;; HQP
+        mov     arg3, [%%STATE + _snow5g_args_in + %%LANE*8]            ;; msg
+        mov     DWORD(arg4), [%%STATE + _snow5g_lens_dqw + %%LANE*4]    ;; msg_len
+        call    nia_vclmul_avx512
+
+        ;; Reload state pointer (r11 clobbered by nia_vclmul_avx512 call)
+        mov     %%STATE, [rsp + _state_save_nia4]
+
+        ;; Copy tag to output — masked store for partial tag lengths
+        vmovdqu64 %%DIGEST, [rsp + _digest_nia4]
+        mov       %%GP1, [%%STATE + _snow5g_job_in_lane + %%LANE*8]     ;; job pointer
+        mov       DWORD(%%GP1), [%%GP1 + _auth_tag_output_len_in_bytes]
+        mov       DWORD(%%GP2), -1
+        bzhi      DWORD(%%GP2), DWORD(%%GP2), DWORD(%%GP1) ;; mask = low tag_len bits
+        kmovw     %%KMASK, DWORD(%%GP2)
+        mov       %%GP1, [%%STATE + _snow5g_args_out + %%LANE*8]        ;; output tag pointer
+        vmovdqu8  [%%GP1]{%%KMASK}, %%DIGEST
+%endmacro
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; NIA4 authentication for 2 lanes
+;; Clobbered callee-saved GPRs: rbp, r12, r13, r14, r15
+;; Clobbered SIMD/opmask: all volatile (contains function calls)
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+%macro SNOW5G_NIA4_AUTH_X2 1
+%define %%STATE     %1   ;; [in] GP reg: SNOW5G OOO state pointer
+
+        lea     rax, [%%STATE + _snow5g_args_keys]
+        SNOW5G_GENERATE_HQP_X2 rax, {%%STATE + _snow5g_args_IV}, \
+                {rsp + _hqp_nia4}, 0, _keystream_nia4, \
+                FSM_R1_L01, FSM_R2_L01, FSM_R3_L01, \
+                LFSR_A_LDQ_L01, LFSR_A_HDQ_L01, LFSR_B_LDQ_L01, LFSR_B_HDQ_L01, \
+                TEMP0, TEMP1, ymm4, ymm5, rcx, k1, k2
+
+        ;; Reload state pointer (r11 clobbered by SNOW5G_GENERATE_HQP_X2)
+        mov     %%STATE, [rsp + _state_save_nia4]
+
+        mov     rax, [%%STATE + _snow5g_job_in_lane + 0*8]
+        test    rax, rax
+        jz      .check_lane1
+
+        PROCESS_NIA4_LANE %%STATE, 0, xmm0, k1
+
+align_label
+.check_lane1:
+        mov     rax, [%%STATE + _snow5g_job_in_lane + 1*8]
+        test    rax, rax
+        jz      .auth_done
+
+        PROCESS_NIA4_LANE %%STATE, 1, xmm0, k1
+
+align_label
+.auth_done:
+
+%ifdef SAFE_DATA
+        vpxorq  xmm0, xmm0, xmm0
+        vmovdqa64 [rsp + _hqp_nia4], zmm0
+        vmovdqa32 [rsp + _hqp_nia4 + 64], ymm0
+        vmovdqa32 [rsp + _keystream_nia4], ymm0
+%endif
+
+%endmacro
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Saves register contents and creates stack frame
@@ -160,7 +258,11 @@ default rel
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Submits a job to the 2-buffer SNOW5G-NIA4 scheduler
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-%macro SUBMIT_JOB_SNOW5G_NIA4_X2 0
+
+MKGLOBAL(submit_job_snow5g_nia4_vaes_avx512,function,internal)
+align_function
+submit_job_snow5g_nia4_vaes_avx512:
+        endbranch64
 
 %define len              rbp
 %define idx              rbp
@@ -211,13 +313,13 @@ default rel
         mov     [state + _snow5g_lens_dqw + lane*4], DWORD(len)
 
         cmp     qword [state + _snow5g_lanes_in_use], 2
-        jne     %%return_null_submit_nia4
+        jne     .return_null_submit_nia4
 
         ;; Check if the other lane has len=0 (already completed in previous batch)
         mov             DWORD(idx), DWORD(lane)
         xor             DWORD(idx), 1
         cmp             dword [state + _snow5g_lens_dqw + idx*4], 0
-        je              %%len_is_0_submit_nia4
+        je              .len_is_0_submit_nia4
 
         ;; Find minimum length lane
         mov             DWORD(tmp), [state + _snow5g_lens_dqw]
@@ -228,7 +330,7 @@ default rel
         adc             DWORD(idx), 0
 
         test            DWORD(tmp), DWORD(tmp)
-        jz              %%len_is_0_submit_nia4
+        jz              .len_is_0_submit_nia4
 
         mov     [rsp + _idx_save_nia4], idx
         mov     r11, state
@@ -242,23 +344,26 @@ default rel
         mov     qword [state + _snow5g_lens_dqw], 0
 
 align_label
-%%len_is_0_submit_nia4:
+.len_is_0_submit_nia4:
         COMPLETE_JOB idx, tmp
-        jmp     %%exit_submit
+        jmp     .exit_submit
 
 align_label
-%%return_null_submit_nia4:
+.return_null_submit_nia4:
         xor     job_rax, job_rax
 
 align_label
-%%exit_submit:
+.exit_submit:
         SNOW5G_NIA4_FUNC_END
-%endmacro
+        ret
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Flushes completed jobs from the 2-buffer SNOW5G-NIA4 scheduler
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-%macro FLUSH_JOB_SNOW5G_NIA4_X2 0
+MKGLOBAL(flush_job_snow5g_nia4_vaes_avx512,function,internal)
+align_function
+flush_job_snow5g_nia4_vaes_avx512:
+        endbranch64
 
 %define unused_lanes     rbx
 %define tmp1             rbx
@@ -272,7 +377,7 @@ align_label
         SNOW5G_NIA4_FUNC_START 0
 
         cmp     qword [state + _snow5g_lanes_in_use], 0
-        jz      %%return_null_flush_nia4
+        jz      .return_null_flush_nia4
 
         ;; One lane active: find unused lane and set its length to max
         mov     DWORD(tmp3), [state + _snow5g_unused_lanes]
@@ -283,7 +388,7 @@ align_label
         xor     DWORD(idx), 1
 
         cmp     dword [state + _snow5g_lens_dqw + idx*4], 0
-        je      %%len_is_0_flush_nia4
+        je      .len_is_0_flush_nia4
 
         ;; Copy active lane's args to unused lane for NIA4_X2
         mov     tmp4, [state + _snow5g_args_in + idx*8]
@@ -309,31 +414,17 @@ align_label
         mov     qword [state + _snow5g_lens_dqw], 0
 
 align_label
-%%len_is_0_flush_nia4:
+.len_is_0_flush_nia4:
         COMPLETE_JOB idx, tmp3
-        jmp     %%exit_flush
+        jmp     .exit_flush
 
 align_label
-%%return_null_flush_nia4:
+.return_null_flush_nia4:
         xor     job_rax, job_rax
 
 align_label
-%%exit_flush:
+.exit_flush:
         SNOW5G_NIA4_FUNC_END
-%endmacro
-
-MKGLOBAL(submit_job_snow5g_nia4_vaes_avx512,function,internal)
-align_function
-submit_job_snow5g_nia4_vaes_avx512:
-        endbranch64
-        SUBMIT_JOB_SNOW5G_NIA4_X2
-        ret
-
-MKGLOBAL(flush_job_snow5g_nia4_vaes_avx512,function,internal)
-align_function
-flush_job_snow5g_nia4_vaes_avx512:
-        endbranch64
-        FLUSH_JOB_SNOW5G_NIA4_X2
         ret
 
 mksection stack-noexec

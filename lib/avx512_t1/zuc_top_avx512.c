@@ -239,15 +239,12 @@ _zuc_eea3_16_buffer_avx512(const void *const pKey[NUM_AVX512_BUFS],
         unsigned int i = 0;
         /* Calculate the minimum input packet size from all packets */
         uint16_t bytes = (uint16_t) find_min_length32(length);
-
         DECLARE_ALIGNED(uint16_t remainBytes[NUM_AVX512_BUFS], 32) = { 0 };
         DECLARE_ALIGNED(uint8_t keyStr[NUM_AVX512_BUFS][64], 64);
         /* structure to store the 16 keys */
         DECLARE_ALIGNED(ZucKey16_t keys, 64);
         /* structure to store the 16 IV's */
         DECLARE_ALIGNED(uint8_t ivs[NUM_AVX512_BUFS * 32], 16);
-        const uint8_t *pTempBufInPtr = NULL;
-        uint8_t *pTempBufOutPtr = NULL;
 
         DECLARE_ALIGNED(const uint64_t *pIn64[NUM_AVX512_BUFS], 64) = { NULL };
         DECLARE_ALIGNED(uint64_t * pOut64[NUM_AVX512_BUFS], 64) = { NULL };
@@ -276,22 +273,8 @@ _zuc_eea3_16_buffer_avx512(const void *const pKey[NUM_AVX512_BUFS],
         for (i = 0; i < NUM_AVX512_BUFS; i++) {
                 if (remainBytes[i]) {
                         /* need to copy the zuc state to single packet state */
-                        singlePktState.lfsrState[0] = state.lfsrState[0][i];
-                        singlePktState.lfsrState[1] = state.lfsrState[1][i];
-                        singlePktState.lfsrState[2] = state.lfsrState[2][i];
-                        singlePktState.lfsrState[3] = state.lfsrState[3][i];
-                        singlePktState.lfsrState[4] = state.lfsrState[4][i];
-                        singlePktState.lfsrState[5] = state.lfsrState[5][i];
-                        singlePktState.lfsrState[6] = state.lfsrState[6][i];
-                        singlePktState.lfsrState[7] = state.lfsrState[7][i];
-                        singlePktState.lfsrState[8] = state.lfsrState[8][i];
-                        singlePktState.lfsrState[9] = state.lfsrState[9][i];
-                        singlePktState.lfsrState[10] = state.lfsrState[10][i];
-                        singlePktState.lfsrState[11] = state.lfsrState[11][i];
-                        singlePktState.lfsrState[12] = state.lfsrState[12][i];
-                        singlePktState.lfsrState[13] = state.lfsrState[13][i];
-                        singlePktState.lfsrState[14] = state.lfsrState[14][i];
-                        singlePktState.lfsrState[15] = state.lfsrState[15][i];
+                        for (unsigned j = 0; j <= 15; j++)
+                                singlePktState.lfsrState[j] = state.lfsrState[j][i];
 
                         singlePktState.fR1 = state.fR1[i];
                         singlePktState.fR2 = state.fR2[i];
@@ -299,8 +282,8 @@ _zuc_eea3_16_buffer_avx512(const void *const pKey[NUM_AVX512_BUFS],
                         uint32_t numKeyStreamsPerPkt = remainBytes[i] / ZUC_KEYSTR_LEN;
                         const uint32_t numBytesLeftOver = remainBytes[i] % ZUC_KEYSTR_LEN;
 
-                        pTempBufInPtr = pBufferIn[i];
-                        pTempBufOutPtr = pBufferOut[i];
+                        const uint8_t *pTempBufInPtr = pBufferIn[i];
+                        uint8_t *pTempBufOutPtr = pBufferOut[i];
 
                         /* update the output and input pointers here to point
                          * to the i'th buffers */
@@ -670,22 +653,8 @@ _zuc_eia3_16_buffer_avx512(const void *const pKey[NUM_AVX512_BUFS],
                  * at least 8B more of keystream, so we need to copy
                  * the zuc state to single packet state first */
                 if (remainBits > (14 * 32)) {
-                        singlePktState.lfsrState[0] = state.lfsrState[0][i];
-                        singlePktState.lfsrState[1] = state.lfsrState[1][i];
-                        singlePktState.lfsrState[2] = state.lfsrState[2][i];
-                        singlePktState.lfsrState[3] = state.lfsrState[3][i];
-                        singlePktState.lfsrState[4] = state.lfsrState[4][i];
-                        singlePktState.lfsrState[5] = state.lfsrState[5][i];
-                        singlePktState.lfsrState[6] = state.lfsrState[6][i];
-                        singlePktState.lfsrState[7] = state.lfsrState[7][i];
-                        singlePktState.lfsrState[8] = state.lfsrState[8][i];
-                        singlePktState.lfsrState[9] = state.lfsrState[9][i];
-                        singlePktState.lfsrState[10] = state.lfsrState[10][i];
-                        singlePktState.lfsrState[11] = state.lfsrState[11][i];
-                        singlePktState.lfsrState[12] = state.lfsrState[12][i];
-                        singlePktState.lfsrState[13] = state.lfsrState[13][i];
-                        singlePktState.lfsrState[14] = state.lfsrState[14][i];
-                        singlePktState.lfsrState[15] = state.lfsrState[15][i];
+                        for (unsigned j = 0; j <= 15; j++)
+                                singlePktState.lfsrState[j] = state.lfsrState[j][i];
 
                         singlePktState.fR1 = state.fR1[i];
                         singlePktState.fR2 = state.fR2[i];
@@ -911,15 +880,12 @@ zuc_nia6_16_buffer_job_gfni_avx512(const void *const pKey[NUM_AVX512_BUFS], cons
                                    const uint16_t lengthInBytes[NUM_AVX512_BUFS],
                                    const void *const job_in_lane[NUM_AVX512_BUFS])
 {
-        unsigned int i;
         DECLARE_ALIGNED(ZucState16_t state, 64);
         DECLARE_ALIGNED(uint32_t keyStr[2 * NUM_AVX512_BUFS * 16], 64);
-        const uint8_t *pIn8[NUM_AVX512_BUFS] = { NULL };
         /* structure to store the 16 keys */
         DECLARE_ALIGNED(ZucKey16_t keys, 64);
 
-        for (i = 0; i < NUM_AVX512_BUFS; i++) {
-                pIn8[i] = (const uint8_t *) pBufferIn[i];
+        for (unsigned i = 0; i < NUM_AVX512_BUFS; i++) {
                 keys.pKeys[i] = pKey[i];
         }
 
@@ -933,12 +899,7 @@ zuc_nia6_16_buffer_job_gfni_avx512(const void *const pKey[NUM_AVX512_BUFS], cons
         const __m128i shuf_mask =
                 _mm_set_epi8(12, 13, 14, 15, 8, 9, 10, 11, 4, 5, 6, 7, 0, 1, 2, 3);
 
-        for (i = 0; i < NUM_AVX512_BUFS; i++) {
-                struct gcm_key_data gdata_key;
-                DECLARE_ALIGNED(uint8_t H[16], 16);
-                DECLARE_ALIGNED(uint8_t Q[16], 16);
-                DECLARE_ALIGNED(uint8_t P[16], 16);
-                uint8_t tag[16];
+        for (unsigned i = 0; i < NUM_AVX512_BUFS; i++) {
                 const IMB_JOB *job = job_in_lane[i];
 
                 if (job == NULL)
@@ -958,59 +919,21 @@ zuc_nia6_16_buffer_job_gfni_avx512(const void *const pKey[NUM_AVX512_BUFS], cons
                  * P - Bytes 128-143 for each buffer
                  */
                 const uint64_t *ks_u64 = (const uint64_t *) &keyStr[buf_idx];
-                uint64_t *h_u64 = (uint64_t *) H;
-                uint64_t *q_u64 = (uint64_t *) Q;
-                uint64_t *p_u64 = (uint64_t *) P;
+                __m128i HQP[3];
 
-                /* H */
-                h_u64[0] = ks_u64[0];
-                h_u64[1] = ks_u64[1];
+                HQP[0] = _mm_shuffle_epi8(_mm_loadu_si128((const __m128i *) &ks_u64[0]), shuf_mask);
+                HQP[1] = _mm_shuffle_epi8(_mm_loadu_si128((const __m128i *) &ks_u64[8]), shuf_mask);
+                HQP[2] =
+                        _mm_shuffle_epi8(_mm_loadu_si128((const __m128i *) &ks_u64[16]), shuf_mask);
 
-                /* Q */
-                q_u64[0] = ks_u64[8]; /* 64 bytes offset => 8 uint64_t */
-                q_u64[1] = ks_u64[9];
+                uint8_t tag[16];
 
-                /* P */
-                p_u64[0] = ks_u64[16]; /* 128 bytes offset => 16 uint64_t */
-                p_u64[1] = ks_u64[17];
-
-                memset(tag, 0, 16);
-
-                /* Shuffle H */
-                const __m128i h_xmm =
-                        _mm_shuffle_epi8(_mm_loadu_si128((const __m128i *) H), shuf_mask);
-                _mm_storeu_si128((__m128i *) H, h_xmm);
-                /* Precompute hash keys from H */
-                polyval_pre_vclmul_avx512(H, &gdata_key);
-                /* Digest message bytes */
-                polyval_vclmul_avx512(&gdata_key, pIn8[i], lengthInBytes[i], tag);
-
-                /* XOR 16-byte lengths array with previous digest and hash with Q */
-                const __m128i lengths_xmm = _mm_set_epi64x(lengthInBytes[i] * 8, 0);
-                __m128i tag_xmm = _mm_loadu_si128((const __m128i *) tag);
-                tag_xmm = _mm_xor_si128(tag_xmm, lengths_xmm);
-                _mm_storeu_si128((__m128i *) tag, tag_xmm);
-
-                /* Shuffle Q */
-                const __m128i q_xmm =
-                        _mm_shuffle_epi8(_mm_loadu_si128((const __m128i *) Q), shuf_mask);
-                _mm_storeu_si128((__m128i *) Q, q_xmm);
-                polyval_16B_vclmul_avx512(Q, tag);
-
-                /* Shuffle P */
-                const __m128i p_xmm =
-                        _mm_shuffle_epi8(_mm_loadu_si128((const __m128i *) P), shuf_mask);
-                /* XOR tag with P */
-                tag_xmm = _mm_loadu_si128((const __m128i *) tag);
-                tag_xmm = _mm_xor_si128(tag_xmm, p_xmm);
-                _mm_storeu_si128((__m128i *) tag, tag_xmm);
+                nia_vclmul_avx512(tag, HQP, (const void *) pBufferIn[i], lengthInBytes[i]);
 
                 memcpy(pMacI[i], tag, job->auth_tag_output_len_in_bytes);
 #ifdef SAFE_DATA
                 /* Clear sensitive data (in registers and stack) */
-                clear_mem(H, sizeof(H));
-                clear_mem(Q, sizeof(Q));
-                clear_mem(P, sizeof(P));
+                clear_mem(HQP, sizeof(HQP));
 #endif
         }
 
@@ -1037,16 +960,10 @@ zuc_nca6_16_buffer_job_gfni_avx512(const void *const pKey[NUM_AVX512_BUFS], uint
         DECLARE_ALIGNED(ZucKey16_t keys, 64);
         DECLARE_ALIGNED(const uint64_t *pIn64[NUM_AVX512_BUFS], 64);
         DECLARE_ALIGNED(uint64_t * pOut64[NUM_AVX512_BUFS], 64);
-        uint8_t tags[NUM_AVX512_BUFS][16];
         uint16_t bytes;
-        const uint8_t *pTempBufInPtr;
-        uint8_t *pTempBufOutPtr;
         DECLARE_ALIGNED(uint8_t singleKeyStr[ZUC_KEYSTR_LEN], 64);
-        uint64_t *pKeyStream64;
         const __m128i shuf_mask =
                 _mm_set_epi8(12, 13, 14, 15, 8, 9, 10, 11, 4, 5, 6, 7, 0, 1, 2, 3);
-
-        memset(tags, 0, sizeof(tags));
 
         for (i = 0; i < NUM_AVX512_BUFS; i++) {
                 keys.pKeys[i] = pKey[i];
@@ -1063,24 +980,16 @@ zuc_nca6_16_buffer_job_gfni_avx512(const void *const pKey[NUM_AVX512_BUFS], uint
          * the same ZUC state.  The IV stride in _zuc_args_IV is 16 bytes and
          * each IV occupies 16 bytes (one XMM register).
          */
-        {
-                const unsigned int iv_stride = 16;
+        for (i = 0; i < NUM_AVX512_BUFS; i++)
+                if (job_in_lane[i] != NULL)
+                        break;
+        if (i < NUM_AVX512_BUFS) {
                 const unsigned int iv_len = 16;
-                unsigned int real_lane = NUM_AVX512_BUFS;
+                const uint8_t *real_iv = pIv + i * iv_len;
 
-                for (i = 0; i < NUM_AVX512_BUFS; i++) {
-                        if (job_in_lane[i] != NULL) {
-                                real_lane = i;
-                                break;
-                        }
-                }
-                if (real_lane < NUM_AVX512_BUFS) {
-                        const uint8_t *real_iv = pIv + real_lane * iv_stride;
-
-                        for (i = 0; i < NUM_AVX512_BUFS; i++)
-                                if (job_in_lane[i] == NULL)
-                                        memcpy(pIv + i * iv_stride, real_iv, iv_len);
-                }
+                for (unsigned j = 0; j < NUM_AVX512_BUFS; j++)
+                        if (job_in_lane[j] == NULL)
+                                memcpy(pIv + j * iv_len, real_iv, iv_len);
         }
 
         /* Initialize ZUC state */
@@ -1101,28 +1010,29 @@ zuc_nca6_16_buffer_job_gfni_avx512(const void *const pKey[NUM_AVX512_BUFS], uint
         if (dir == IMB_DIR_DECRYPT) {
                 for (i = 0; i < NUM_AVX512_BUFS; i++) {
                         const IMB_JOB *job = job_in_lane[i];
-                        struct gcm_key_data gdata_key;
-                        DECLARE_ALIGNED(uint8_t H[16], 16);
 
                         if (job == NULL)
                                 continue;
 
                         const uint32_t buf_idx = get_start_key_addr(i);
                         const uint64_t *ks_u64 = (const uint64_t *) &keyStr[buf_idx];
-                        uint64_t *h_u64 = (uint64_t *) H;
+                        __m128i HQP[3];
 
-                        h_u64[0] = ks_u64[0];
-                        h_u64[1] = ks_u64[1];
+                        HQP[0] = _mm_shuffle_epi8(_mm_loadu_si128((const __m128i *) &ks_u64[0]),
+                                                  shuf_mask);
+                        HQP[1] = _mm_shuffle_epi8(_mm_loadu_si128((const __m128i *) &ks_u64[8]),
+                                                  shuf_mask);
+                        HQP[2] = _mm_shuffle_epi8(_mm_loadu_si128((const __m128i *) &ks_u64[16]),
+                                                  shuf_mask);
 
-                        const __m128i h_xmm =
-                                _mm_shuffle_epi8(_mm_loadu_si128((const __m128i *) H), shuf_mask);
-                        _mm_storeu_si128((__m128i *) H, h_xmm);
-                        polyval_pre_vclmul_avx512(H, &gdata_key);
-                        polyval_vclmul_avx512(&gdata_key, job->u.NCA.aad,
-                                              job->u.NCA.aad_len_in_bytes, tags[i]);
-                        polyval_vclmul_avx512(&gdata_key, pBufferIn[i], length[i], tags[i]);
+                        uint8_t tag[16];
+
+                        nca_vclmul_avx512(tag, HQP, (const void *) pBufferIn[i], length[i],
+                                          job->u.NCA.aad, job->u.NCA.aad_len_in_bytes);
+
+                        memcpy(job->auth_tag_output, tag, job->auth_tag_output_len_in_bytes);
 #ifdef SAFE_DATA
-                        clear_mem(H, sizeof(H));
+                        clear_mem(HQP, sizeof(HQP));
 #endif
                 }
         }
@@ -1133,30 +1043,15 @@ zuc_nca6_16_buffer_job_gfni_avx512(const void *const pKey[NUM_AVX512_BUFS], uint
         /* Per-lane: cipher remainder, POLYVAL for encrypt, tag finalization */
         for (i = 0; i < NUM_AVX512_BUFS; i++) {
                 const IMB_JOB *job = job_in_lane[i];
-                DECLARE_ALIGNED(uint8_t Q[16], 16);
-                DECLARE_ALIGNED(uint8_t P[16], 16);
 
                 if (job == NULL)
                         continue;
 
                 /* Handle remaining bytes for this lane */
                 if (remainBytes[i]) {
-                        singlePktState.lfsrState[0] = state.lfsrState[0][i];
-                        singlePktState.lfsrState[1] = state.lfsrState[1][i];
-                        singlePktState.lfsrState[2] = state.lfsrState[2][i];
-                        singlePktState.lfsrState[3] = state.lfsrState[3][i];
-                        singlePktState.lfsrState[4] = state.lfsrState[4][i];
-                        singlePktState.lfsrState[5] = state.lfsrState[5][i];
-                        singlePktState.lfsrState[6] = state.lfsrState[6][i];
-                        singlePktState.lfsrState[7] = state.lfsrState[7][i];
-                        singlePktState.lfsrState[8] = state.lfsrState[8][i];
-                        singlePktState.lfsrState[9] = state.lfsrState[9][i];
-                        singlePktState.lfsrState[10] = state.lfsrState[10][i];
-                        singlePktState.lfsrState[11] = state.lfsrState[11][i];
-                        singlePktState.lfsrState[12] = state.lfsrState[12][i];
-                        singlePktState.lfsrState[13] = state.lfsrState[13][i];
-                        singlePktState.lfsrState[14] = state.lfsrState[14][i];
-                        singlePktState.lfsrState[15] = state.lfsrState[15][i];
+                        for (unsigned j = 0; j <= 15; j++)
+                                singlePktState.lfsrState[j] = state.lfsrState[j][i];
+
                         singlePktState.fR1 = state.fR1[i];
                         singlePktState.fR2 = state.fR2[i];
 
@@ -1164,8 +1059,8 @@ zuc_nca6_16_buffer_job_gfni_avx512(const void *const pKey[NUM_AVX512_BUFS], uint
                         const uint32_t numBytesLeftOver = remainBytes[i] % ZUC_KEYSTR_LEN;
                         const uint32_t processedBytes = length[i] - remainBytes[i];
 
-                        pTempBufInPtr = (const uint8_t *) pBufferIn[i];
-                        pTempBufOutPtr = (uint8_t *) pBufferOut[i];
+                        const uint8_t *pTempBufInPtr = (const uint8_t *) pBufferIn[i];
+                        uint8_t *pTempBufOutPtr = (uint8_t *) pBufferOut[i];
 
                         pOut64[0] = (uint64_t *) &pTempBufOutPtr[processedBytes];
                         pIn64[0] = (const uint64_t *) &pTempBufInPtr[processedBytes];
@@ -1173,8 +1068,8 @@ zuc_nca6_16_buffer_job_gfni_avx512(const void *const pKey[NUM_AVX512_BUFS], uint
                         while (numKeyStreamsPerPkt--) {
                                 asm_ZucGenKeystream64B_avx((uint32_t *) singleKeyStr,
                                                            &singlePktState);
-                                pKeyStream64 = (uint64_t *) singleKeyStr;
-                                asm_XorKeyStream64B_avx512(pIn64[0], pOut64[0], pKeyStream64);
+                                asm_XorKeyStream64B_avx512(pIn64[0], pOut64[0],
+                                                           (uint64_t *) singleKeyStr);
                                 pIn64[0] += 8;
                                 pOut64[0] += 8;
                         }
@@ -1182,19 +1077,18 @@ zuc_nca6_16_buffer_job_gfni_avx512(const void *const pKey[NUM_AVX512_BUFS], uint
                         if (numBytesLeftOver) {
                                 DECLARE_ALIGNED(uint8_t tempSrc[64], 64);
                                 DECLARE_ALIGNED(uint8_t tempDst[64], 64);
-                                uint64_t *pTempSrc64;
-                                uint64_t *pTempDst64;
                                 const uint32_t offset = length[i] - numBytesLeftOver;
                                 const uint64_t num4BRounds = ((numBytesLeftOver - 1) / 4) + 1;
 
                                 asm_ZucGenKeystream_avx((uint32_t *) singleKeyStr, &singlePktState,
                                                         num4BRounds);
+
                                 memcpy(&tempSrc[0], &pTempBufInPtr[offset], numBytesLeftOver);
                                 memset(&tempSrc[numBytesLeftOver], 0, 64 - numBytesLeftOver);
-                                pKeyStream64 = (uint64_t *) singleKeyStr;
-                                pTempSrc64 = (uint64_t *) &tempSrc[0];
-                                pTempDst64 = (uint64_t *) &tempDst[0];
-                                asm_XorKeyStream64B_avx512(pTempSrc64, pTempDst64, pKeyStream64);
+
+                                asm_XorKeyStream64B_avx512((uint64_t *) tempSrc,
+                                                           (uint64_t *) tempDst,
+                                                           (uint64_t *) singleKeyStr);
                                 memcpy(&pTempBufOutPtr[offset], &tempDst[0], numBytesLeftOver);
 #ifdef SAFE_DATA
                                 clear_mem(tempSrc, sizeof(tempSrc));
@@ -1205,62 +1099,28 @@ zuc_nca6_16_buffer_job_gfni_avx512(const void *const pKey[NUM_AVX512_BUFS], uint
 
                 /* Encrypt: compute POLYVAL on ciphertext after encrypting */
                 if (dir == IMB_DIR_ENCRYPT) {
-                        struct gcm_key_data gdata_key;
-                        DECLARE_ALIGNED(uint8_t H[16], 16);
                         const uint32_t buf_idx = get_start_key_addr(i);
                         const uint64_t *ks_u64 = (const uint64_t *) &keyStr[buf_idx];
-                        uint64_t *h_u64 = (uint64_t *) H;
+                        __m128i HQP[3];
 
-                        h_u64[0] = ks_u64[0];
-                        h_u64[1] = ks_u64[1];
+                        HQP[0] = _mm_shuffle_epi8(_mm_loadu_si128((const __m128i *) &ks_u64[0]),
+                                                  shuf_mask);
+                        HQP[1] = _mm_shuffle_epi8(_mm_loadu_si128((const __m128i *) &ks_u64[8]),
+                                                  shuf_mask);
+                        HQP[2] = _mm_shuffle_epi8(_mm_loadu_si128((const __m128i *) &ks_u64[16]),
+                                                  shuf_mask);
 
-                        const __m128i h_xmm =
-                                _mm_shuffle_epi8(_mm_loadu_si128((const __m128i *) H), shuf_mask);
-                        _mm_storeu_si128((__m128i *) H, h_xmm);
-                        polyval_pre_vclmul_avx512(H, &gdata_key);
-                        polyval_vclmul_avx512(&gdata_key, job->u.NCA.aad,
-                                              job->u.NCA.aad_len_in_bytes, tags[i]);
-                        polyval_vclmul_avx512(&gdata_key, pBufferOut[i], length[i], tags[i]);
+                        uint8_t tag[16];
+
+                        nca_vclmul_avx512(tag, HQP, (const void *) pBufferOut[i], length[i],
+                                          job->u.NCA.aad, job->u.NCA.aad_len_in_bytes);
+
+                        memcpy(job->auth_tag_output, tag, job->auth_tag_output_len_in_bytes);
+
 #ifdef SAFE_DATA
-                        clear_mem(H, sizeof(H));
+                        clear_mem(HQP, sizeof(HQP));
 #endif
                 }
-
-                /* Tag finalization: XOR lengths, POLYVAL with Q, XOR with P */
-                const uint32_t buf_idx = get_start_key_addr(i);
-                const uint64_t *ks_u64 = (const uint64_t *) &keyStr[buf_idx];
-                uint64_t *q_u64 = (uint64_t *) Q;
-                uint64_t *p_u64 = (uint64_t *) P;
-
-                q_u64[0] = ks_u64[8];
-                q_u64[1] = ks_u64[9];
-                p_u64[0] = ks_u64[16];
-                p_u64[1] = ks_u64[17];
-
-                const __m128i lengths_xmm = _mm_set_epi64x(
-                        (int64_t) (job->u.NCA.aad_len_in_bytes * 8), (int64_t) (length[i] * 8));
-                __m128i tag_xmm = _mm_loadu_si128((const __m128i *) tags[i]);
-
-                tag_xmm = _mm_xor_si128(tag_xmm, lengths_xmm);
-                _mm_storeu_si128((__m128i *) tags[i], tag_xmm);
-
-                const __m128i q_xmm =
-                        _mm_shuffle_epi8(_mm_loadu_si128((const __m128i *) Q), shuf_mask);
-                _mm_storeu_si128((__m128i *) Q, q_xmm);
-                polyval_16B_vclmul_avx512(Q, tags[i]);
-
-                const __m128i p_xmm =
-                        _mm_shuffle_epi8(_mm_loadu_si128((const __m128i *) P), shuf_mask);
-                tag_xmm = _mm_loadu_si128((const __m128i *) tags[i]);
-                tag_xmm = _mm_xor_si128(tag_xmm, p_xmm);
-                _mm_storeu_si128((__m128i *) tags[i], tag_xmm);
-
-                memcpy(job->auth_tag_output, tags[i], job->auth_tag_output_len_in_bytes);
-#ifdef SAFE_DATA
-                clear_mem(Q, sizeof(Q));
-                clear_mem(P, sizeof(P));
-                clear_mem(tags[i], sizeof(tags[i]));
-#endif
         }
 
 #ifdef SAFE_DATA

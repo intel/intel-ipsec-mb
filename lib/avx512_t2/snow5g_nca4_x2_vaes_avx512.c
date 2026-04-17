@@ -36,20 +36,6 @@
 
 #define NUM_NCA4_BUFS 2
 
-static inline void
-tag_finalize(const uint8_t *Q, const uint8_t *P, uint8_t *digest, const IMB_JOB *job)
-{
-        const uint64_t msg_len_bits = job->msg_len_to_cipher_in_bytes * 8;
-        const uint64_t aad_len_bits = job->u.NCA.aad_len_in_bytes * 8;
-        __m128i d = _mm_xor_si128(_mm_load_si128((const __m128i *) digest),
-                                  _mm_set_epi64x(aad_len_bits, msg_len_bits));
-        _mm_store_si128((__m128i *) digest, d);
-        polyval_16B_vclmul_avx512(Q, digest);
-        d = _mm_xor_si128(_mm_load_si128((const __m128i *) digest),
-                          _mm_load_si128((const __m128i *) P));
-        memcpy(job->auth_tag_output, &d, job->auth_tag_output_len_in_bytes);
-}
-
 IMB_DLL_LOCAL void
 snow5g_nca4_x2_job_vaes_avx512(const void *const pKey[NUM_NCA4_BUFS], const uint8_t *pIv,
                                const void *const pBufferIn[NUM_NCA4_BUFS],
@@ -68,25 +54,19 @@ snow5g_nca4_x2_job_vaes_avx512(const void *const pKey[NUM_NCA4_BUFS], const uint
         generate_hqp_snow5g_nca4_x2_vaes_avx512(pKey, pIv, HQP, states);
 
         DECLARE_ALIGNED(uint8_t digests[NUM_NCA4_BUFS * 16], 16);
-        DECLARE_ALIGNED(struct gcm_key_data gdata_keys[NUM_NCA4_BUFS], 16);
 
         uint64_t lens[NUM_NCA4_BUFS] = { 0, 0 };
+
         for (unsigned i = 0; i < NUM_NCA4_BUFS; i++) {
                 const IMB_JOB *job = (const IMB_JOB *) job_in_lane[i];
 
                 if (job == NULL)
                         continue;
 
-                _mm_store_si128((__m128i *) &digests[i * 16], _mm_setzero_si128());
-                polyval_pre_vclmul_avx512(&HQP[i * 48], &gdata_keys[i]);
-
-                if (job->u.NCA.aad_len_in_bytes != 0)
-                        polyval_vclmul_avx512(&gdata_keys[i], job->u.NCA.aad,
-                                              job->u.NCA.aad_len_in_bytes, &digests[i * 16]);
-
                 if (decrypt)
-                        polyval_vclmul_avx512(&gdata_keys[i], pBufferIn[i],
-                                              job->msg_len_to_cipher_in_bytes, &digests[i * 16]);
+                        nca_vclmul_avx512(&digests[i * 16], &HQP[i * 48], pBufferIn[i],
+                                          job->msg_len_to_cipher_in_bytes, job->u.NCA.aad,
+                                          job->u.NCA.aad_len_in_bytes);
 
                 lens[i] = job->msg_len_to_cipher_in_bytes;
         }
@@ -104,18 +84,16 @@ snow5g_nca4_x2_job_vaes_avx512(const void *const pKey[NUM_NCA4_BUFS], const uint
                 if (job == NULL)
                         continue;
 
-                if (!decrypt && job->msg_len_to_cipher_in_bytes > 0)
-                        polyval_vclmul_avx512(&gdata_keys[i], pBufferOut[i],
-                                              job->msg_len_to_cipher_in_bytes, &digests[i * 16]);
+                if (!decrypt)
+                        nca_vclmul_avx512(&digests[i * 16], &HQP[i * 48], pBufferOut[i],
+                                          job->msg_len_to_cipher_in_bytes, job->u.NCA.aad,
+                                          job->u.NCA.aad_len_in_bytes);
 
-                tag_finalize(&HQP[i * 48 + 16], &HQP[i * 48 + 32], &digests[i * 16], job);
+                memcpy(job->auth_tag_output, &digests[i * 16], job->auth_tag_output_len_in_bytes);
         }
 
 #ifdef SAFE_DATA
         clear_mem(HQP, sizeof(HQP));
         clear_mem(states, sizeof(states));
-        clear_mem(digests, sizeof(digests));
-        clear_mem(&gdata_keys, sizeof(gdata_keys));
-        clear_scratch_xmms_avx();
 #endif
 }
