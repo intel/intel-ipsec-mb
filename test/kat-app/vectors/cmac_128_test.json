@@ -1,0 +1,236 @@
+{
+   "algorithm" : "CMAC",
+   "generatorVersion" : "RFC4493",
+   "header" : [
+      "Test vectors of type MacTest are intended for testing the generation and verification of MACs."
+   ],
+   "notes" : {},
+   "numberOfTests" : 17,
+   "schema" : "mac_test_schema.json",
+   "testGroups" : [
+      {
+         "type" : "MacTest",
+         "source" : "https://tools.ietf.org/html/rfc4493",
+         "tagSize" : 128,
+         "keySize" : 128,
+         "tests" : [
+            {
+               "comment" : "Msg size 0",
+               "key" : "2b7e151628aed2a6abf7158809cf4f3c",
+               "msg" : "6bc1bee22e409f96e93d7e117393172aae2d8a571e03ac9c9eb76fac45af8e5130c81c46a35ce411e5fbc1191a0a52eff69f2445df4f9b17ad2b417be66c3710",
+               "result" : "valid",
+               "tag" : "bb1d6929e95937287fa37d129b756746",
+               "tcId" : 1,
+               "subKey1" : "fbeed618357133667c85e08f7236a8de",
+               "subKey2" : "f7ddac306ae266ccf90bc11ee46d513b",
+               "msgSize" : 0
+            },
+            {
+               "comment" : "Msg size 16",
+               "key" : "2b7e151628aed2a6abf7158809cf4f3c",
+               "msg" : "6bc1bee22e409f96e93d7e117393172aae2d8a571e03ac9c9eb76fac45af8e5130c81c46a35ce411e5fbc1191a0a52eff69f2445df4f9b17ad2b417be66c3710",
+               "result" : "valid",
+               "tag" : "070a16b46b4d4144f79bdd9dd04a287c",
+               "tcId" : 2,
+               "subKey1" : "fbeed618357133667c85e08f7236a8de",
+               "subKey2" : "f7ddac306ae266ccf90bc11ee46d513b",
+               "msgSize" : 128
+            },
+            {
+               "comment" : "Msg size 40",
+               "key" : "2b7e151628aed2a6abf7158809cf4f3c",
+               "msg" : "6bc1bee22e409f96e93d7e117393172aae2d8a571e03ac9c9eb76fac45af8e5130c81c46a35ce411e5fbc1191a0a52eff69f2445df4f9b17ad2b417be66c3710",
+               "result" : "valid",
+               "tag" : "dfa66747de9ae63030ca32611497c827",
+               "tcId" : 3,
+               "subKey1" : "fbeed618357133667c85e08f7236a8de",
+               "subKey2" : "f7ddac306ae266ccf90bc11ee46d513b",
+               "msgSize" : 320
+            },
+            {
+               "comment" : "Msg size 64",
+               "key" : "2b7e151628aed2a6abf7158809cf4f3c",
+               "msg" : "6bc1bee22e409f96e93d7e117393172aae2d8a571e03ac9c9eb76fac45af8e5130c81c46a35ce411e5fbc1191a0a52eff69f2445df4f9b17ad2b417be66c3710",
+               "result" : "valid",
+               "tag" : "51f0bebf7e3b9d92fc49741779363cfe",
+               "tcId" : 4,
+               "subKey1" : "fbeed618357133667c85e08f7236a8de",
+               "subKey2" : "f7ddac306ae266ccf90bc11ee46d513b",
+               "msgSize" : 512
+            }
+         ]
+      },
+      {
+         "type" : "MacTest",
+         "tagSize" : 120,
+         "keySize" : 128,
+         "tests" : [
+            {
+               "comment" : "Msg size 0, Tag size 15",
+               "key" : "2b7e151628aed2a6abf7158809cf4f3c",
+               "msg" : "6bc1bee22e409f96e93d7e117393172aae2d8a571e03ac9c9eb76fac45af8e5130c81c46a35ce411e5fbc1191a0a52eff69f2445df4f9b17ad2b417be66c3710",
+               "result" : "valid",
+               "tag" : "bb1d6929e95937287fa37d129b756746",
+               "tcId" : 5,
+               "subKey1" : "fbeed618357133667c85e08f7236a8de",
+               "subKey2" : "f7ddac306ae266ccf90bc11ee46d513b",
+               "msgSize" : 0
+            },
+            {
+               "comment" : "Msg size 16, Tag size 15",
+               "key" : "2b7e151628aed2a6abf7158809cf4f3c",
+               "msg" : "6bc1bee22e409f96e93d7e117393172aae2d8a571e03ac9c9eb76fac45af8e5130c81c46a35ce411e5fbc1191a0a52eff69f2445df4f9b17ad2b417be66c3710",
+               "result" : "valid",
+               "tag" : "070a16b46b4d4144f79bdd9dd04a287c",
+               "tcId" : 6,
+               "subKey1" : "fbeed618357133667c85e08f7236a8de",
+               "subKey2" : "f7ddac306ae266ccf90bc11ee46d513b",
+               "msgSize" : 128
+            },
+            {
+               "comment" : "Msg size 40, Tag size 15",
+               "key" : "2b7e151628aed2a6abf7158809cf4f3c",
+               "msg" : "6bc1bee22e409f96e93d7e117393172aae2d8a571e03ac9c9eb76fac45af8e5130c81c46a35ce411e5fbc1191a0a52eff69f2445df4f9b17ad2b417be66c3710",
+               "result" : "valid",
+               "tag" : "dfa66747de9ae63030ca32611497c827",
+               "tcId" : 7,
+               "subKey1" : "fbeed618357133667c85e08f7236a8de",
+               "subKey2" : "f7ddac306ae266ccf90bc11ee46d513b",
+               "msgSize" : 320
+            },
+            {
+               "comment" : "Msg size 64, Tag size 15",
+               "key" : "2b7e151628aed2a6abf7158809cf4f3c",
+               "msg" : "6bc1bee22e409f96e93d7e117393172aae2d8a571e03ac9c9eb76fac45af8e5130c81c46a35ce411e5fbc1191a0a52eff69f2445df4f9b17ad2b417be66c3710",
+               "result" : "valid",
+               "tag" : "51f0bebf7e3b9d92fc49741779363cfe",
+               "tcId" : 8,
+               "subKey1" : "fbeed618357133667c85e08f7236a8de",
+               "subKey2" : "f7ddac306ae266ccf90bc11ee46d513b",
+               "msgSize" : 512
+            }
+         ]
+      },
+      {
+         "type" : "MacTest",
+         "tagSize" : 96,
+         "keySize" : 128,
+         "tests" : [
+            {
+               "comment" : "Msg size 0, Tag size 12",
+               "key" : "2b7e151628aed2a6abf7158809cf4f3c",
+               "msg" : "6bc1bee22e409f96e93d7e117393172aae2d8a571e03ac9c9eb76fac45af8e5130c81c46a35ce411e5fbc1191a0a52eff69f2445df4f9b17ad2b417be66c3710",
+               "result" : "valid",
+               "tag" : "bb1d6929e95937287fa37d129b756746",
+               "tcId" : 9,
+               "subKey1" : "fbeed618357133667c85e08f7236a8de",
+               "subKey2" : "f7ddac306ae266ccf90bc11ee46d513b",
+               "msgSize" : 0
+            },
+            {
+               "comment" : "Msg size 16, Tag size 12",
+               "key" : "2b7e151628aed2a6abf7158809cf4f3c",
+               "msg" : "6bc1bee22e409f96e93d7e117393172aae2d8a571e03ac9c9eb76fac45af8e5130c81c46a35ce411e5fbc1191a0a52eff69f2445df4f9b17ad2b417be66c3710",
+               "result" : "valid",
+               "tag" : "070a16b46b4d4144f79bdd9dd04a287c",
+               "tcId" : 10,
+               "subKey1" : "fbeed618357133667c85e08f7236a8de",
+               "subKey2" : "f7ddac306ae266ccf90bc11ee46d513b",
+               "msgSize" : 128
+            },
+            {
+               "comment" : "Msg size 40, Tag size 12",
+               "key" : "2b7e151628aed2a6abf7158809cf4f3c",
+               "msg" : "6bc1bee22e409f96e93d7e117393172aae2d8a571e03ac9c9eb76fac45af8e5130c81c46a35ce411e5fbc1191a0a52eff69f2445df4f9b17ad2b417be66c3710",
+               "result" : "valid",
+               "tag" : "dfa66747de9ae63030ca32611497c827",
+               "tcId" : 11,
+               "subKey1" : "fbeed618357133667c85e08f7236a8de",
+               "subKey2" : "f7ddac306ae266ccf90bc11ee46d513b",
+               "msgSize" : 320
+            },
+            {
+               "comment" : "Msg size 64, Tag size 12",
+               "key" : "2b7e151628aed2a6abf7158809cf4f3c",
+               "msg" : "6bc1bee22e409f96e93d7e117393172aae2d8a571e03ac9c9eb76fac45af8e5130c81c46a35ce411e5fbc1191a0a52eff69f2445df4f9b17ad2b417be66c3710",
+               "result" : "valid",
+               "tag" : "51f0bebf7e3b9d92fc49741779363cfe",
+               "tcId" : 12,
+               "subKey1" : "fbeed618357133667c85e08f7236a8de",
+               "subKey2" : "f7ddac306ae266ccf90bc11ee46d513b",
+               "msgSize" : 512
+            }
+         ]
+      },
+      {
+         "tagSize" : 32,
+         "keySize" : 128,
+         "tests" : [
+            {
+               "comment" : "Msg size 0, Tag size 4",
+               "key" : "2b7e151628aed2a6abf7158809cf4f3c",
+               "msg" : "6bc1bee22e409f96e93d7e117393172aae2d8a571e03ac9c9eb76fac45af8e5130c81c46a35ce411e5fbc1191a0a52eff69f2445df4f9b17ad2b417be66c3710",
+               "result" : "valid",
+               "tag" : "bb1d6929e95937287fa37d129b756746",
+               "tcId" : 13,
+               "subKey1" : "fbeed618357133667c85e08f7236a8de",
+               "subKey2" : "f7ddac306ae266ccf90bc11ee46d513b",
+               "msgSize" : 0
+            },
+            {
+               "comment" : "Msg size 16, Tag size 4",
+               "key" : "2b7e151628aed2a6abf7158809cf4f3c",
+               "msg" : "6bc1bee22e409f96e93d7e117393172aae2d8a571e03ac9c9eb76fac45af8e5130c81c46a35ce411e5fbc1191a0a52eff69f2445df4f9b17ad2b417be66c3710",
+               "result" : "valid",
+               "tag" : "070a16b46b4d4144f79bdd9dd04a287c",
+               "tcId" : 14,
+               "subKey1" : "fbeed618357133667c85e08f7236a8de",
+               "subKey2" : "f7ddac306ae266ccf90bc11ee46d513b",
+               "msgSize" : 128
+            },
+            {
+               "comment" : "Msg size 40, Tag size 4",
+               "key" : "2b7e151628aed2a6abf7158809cf4f3c",
+               "msg" : "6bc1bee22e409f96e93d7e117393172aae2d8a571e03ac9c9eb76fac45af8e5130c81c46a35ce411e5fbc1191a0a52eff69f2445df4f9b17ad2b417be66c3710",
+               "result" : "valid",
+               "tag" : "dfa66747de9ae63030ca32611497c827",
+               "tcId" : 15,
+               "subKey1" : "fbeed618357133667c85e08f7236a8de",
+               "subKey2" : "f7ddac306ae266ccf90bc11ee46d513b",
+               "msgSize" : 320
+            },
+            {
+               "comment" : "Msg size 64, Tag size 4",
+               "key" : "2b7e151628aed2a6abf7158809cf4f3c",
+               "msg" : "6bc1bee22e409f96e93d7e117393172aae2d8a571e03ac9c9eb76fac45af8e5130c81c46a35ce411e5fbc1191a0a52eff69f2445df4f9b17ad2b417be66c3710",
+               "result" : "valid",
+               "tag" : "51f0bebf7e3b9d92fc49741779363cfe",
+               "tcId" : 16,
+               "subKey1" : "fbeed618357133667c85e08f7236a8de",
+               "subKey2" : "f7ddac306ae266ccf90bc11ee46d513b",
+               "msgSize" : 512
+            }
+         ],
+         "type" : "MacTest"
+      },
+      {
+         "type" : "MacTest",
+         "tests" : [
+            {
+               "comment" : "Msg size 8",
+               "key" : "2b7e151628aed2a6abf7158809cf4f3c",
+               "msg" : "6bc1bee22e409f96e93d7e117393172aae2d8a571e03ac9c9eb76fac45af8e5130c81c46a35ce411e5fbc1191a0a52eff69f2445df4f9b17ad2b417be66c3710",
+               "result" : "valid",
+               "tag" : "dc87cdcf77a2f1829e012c4d31af2f8b",
+               "tcId" : 17,
+               "subKey1" : "fbeed618357133667c85e08f7236a8de",
+               "subKey2" : "f7ddac306ae266ccf90bc11ee46d513b",
+               "msgSize" : 64,
+               "tagSize" : 128,
+               "keySize" : 128
+            }
+         ]
+      }
+   ]
+}
+
