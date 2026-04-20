@@ -193,5 +193,3 @@ endstruc
 %endif
 
 %endmacro
-
-mksection stack-noexec

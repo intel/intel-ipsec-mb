@@ -36,7 +36,7 @@
 %include "include/cet.inc"
 %include "include/align_avx512.inc"
 %include "include/snow5g_x2_vaes_avx512.inc"
-%include "avx512_t2/snow5g_nia4_x2_vaes_avx512.asm"
+%include "avx512_t2/snow5g_nia4_x2_vaes_avx512.inc"
 
 mksection .text
 default rel
