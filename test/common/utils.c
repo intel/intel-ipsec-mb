@@ -429,3 +429,33 @@ byte_hexdump(const char *message, const uint8_t *ptr, int len)
         printf("\n");
         printf("\n");
 };
+
+/* Redirect stderr to /dev/null (NUL on Windows); returns fd to restore later.
+ * Returns -1 if suppression could not be set up; restore_stderr(-1) is a no-op. */
+int
+suppress_stderr(void)
+{
+        int saved = IMB_DUP(STDERR_FILENO);
+
+        if (saved < 0)
+                return -1;
+
+        int devnull = IMB_OPEN(IMB_DEVNULL, O_WRONLY);
+
+        if (devnull < 0)
+                return saved;
+
+        IMB_DUP2(devnull, STDERR_FILENO);
+        IMB_CLOSE(devnull);
+        return saved;
+}
+
+/* Restore stderr from a previously saved fd. */
+void
+restore_stderr(int saved)
+{
+        if (saved < 0)
+                return;
+        IMB_DUP2(saved, STDERR_FILENO);
+        IMB_CLOSE(saved);
+}

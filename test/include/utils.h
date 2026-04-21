@@ -29,7 +29,27 @@
 #define TESTAPP_UTILS_H
 
 #include <stdio.h>
+#include <fcntl.h>
 #include <intel-ipsec-mb.h>
+
+#ifdef _WIN32
+#include <io.h>
+#define IMB_DUP     _dup
+#define IMB_DUP2    _dup2
+#define IMB_OPEN    _open
+#define IMB_CLOSE   _close
+#define IMB_DEVNULL "NUL"
+#ifndef STDERR_FILENO
+#define STDERR_FILENO 2
+#endif
+#else
+#include <unistd.h>
+#define IMB_DUP     dup
+#define IMB_DUP2    dup2
+#define IMB_OPEN    open
+#define IMB_CLOSE   close
+#define IMB_DEVNULL "/dev/null"
+#endif
 
 #define DIM(_x)            (sizeof(_x) / sizeof(_x[0]))
 #define DIV_ROUND_UP(x, y) ((x + y - 1) / y)
@@ -77,6 +97,14 @@ void
 memory_copy(void *dst, const void *src, size_t length);
 void
 memory_set(void *dst, const int val, size_t length);
+/* Directory containing JSON vector files (set by --vector-dir; default: "<app>/vectors") */
+extern const char *kat_vector_dir;
+
+int
+suppress_stderr(void);
+void
+restore_stderr(int saved);
+
 #include "vector_utils.h"
 
 #endif /* TESTAPP_UTILS_H */

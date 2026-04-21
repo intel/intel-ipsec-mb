@@ -39,6 +39,7 @@ if(multi_config_gen)
 endif()
 
 set(TEST_TYPES
+    JSON_PARSER
     KAT
     DO_TEST
     CBC

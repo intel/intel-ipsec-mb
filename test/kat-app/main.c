@@ -98,6 +98,8 @@ gmac_test(struct IMB_MGR *mb_mgr);
 extern int
 ghash_test(struct IMB_MGR *mb_mgr);
 extern int
+json_parser_test(struct IMB_MGR *mb_mgr);
+extern int
 cbc_test(struct IMB_MGR *mb_mgr);
 extern int
 cfb_one_block_test(struct IMB_MGR *mb_mgr);
@@ -149,6 +151,7 @@ struct imb_test {
 struct imb_test tests[] = {
         { .str = "KAT", .fn = known_answer_test, .enabled = 1 },
         { .str = "DO_TEST", .fn = do_test, .enabled = 1 },
+        { .str = "JSON_PARSER", .fn = json_parser_test, .enabled = 1 },
         { .str = "CBC", .fn = cbc_test, .enabled = 1 },
         { .str = "CFB_ONE", .fn = cfb_one_block_test, .enabled = 1 },
         { .str = "CFB", .fn = aes_cfb_test, .enabled = 1 },
