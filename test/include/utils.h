@@ -37,6 +37,8 @@
 extern int quiet_mode;
 extern const unsigned test_num_jobs[];
 extern const size_t test_num_jobs_size;
+struct mac_test;
+struct cipher_test;
 
 void
 hexdump(FILE *fp, const char *msg, const void *p, size_t len);
@@ -75,5 +77,6 @@ void
 memory_copy(void *dst, const void *src, size_t length);
 void
 memory_set(void *dst, const int val, size_t length);
+#include "vector_utils.h"
 
 #endif /* TESTAPP_UTILS_H */

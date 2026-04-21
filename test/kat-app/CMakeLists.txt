@@ -42,6 +42,7 @@ set(TEST_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../include)
 # ##############################################################################
 file(GLOB TEST_APP_SRC_FILES "${CMAKE_CURRENT_SOURCE_DIR}/*.c")
 list(APPEND TEST_APP_SRC_FILES ${CMAKE_CURRENT_SOURCE_DIR}/../common/utils.c)
+list(APPEND TEST_APP_SRC_FILES ${CMAKE_CURRENT_SOURCE_DIR}/../common/vector_utils.c)
 
 # ##############################################################################
 # set C compiler and NASM options
@@ -65,7 +66,9 @@ link_directories(${LIB_DIR})
 
 add_executable(${TEST_APP} ${TEST_APP_SRC_FILES})
 target_link_libraries(${TEST_APP} PRIVATE ${IPSEC_MB_LIB})
-target_compile_definitions(${TEST_APP} PRIVATE ${APP_DEFINES})
+target_compile_definitions(
+  ${TEST_APP} PRIVATE ${APP_DEFINES}
+                      KAT_APP_VECTOR_DIR="${CMAKE_CURRENT_SOURCE_DIR}/vectors")
 
 # ##############################################################################
 # include tests

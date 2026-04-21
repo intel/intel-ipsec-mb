@@ -39,7 +39,47 @@
 int
 cbc_test(struct IMB_MGR *mb_mgr);
 
-extern const struct cipher_test cbc_test_json[];
+static struct cipher_test *cbc_vectors;
+
+#ifndef KAT_APP_VECTOR_DIR
+#define KAT_APP_VECTOR_DIR "./vectors"
+#endif
+
+/**
+ * @brief Load AES-CBC vectors from the configured kat-app JSON path.
+ *
+ * @param ctx receives loader allocation context for later cleanup
+ *
+ * @return 0 on success or -1 on failure
+ */
+static int
+load_cbc_vectors(struct test_json_alloc_ctx **ctx)
+{
+        char path[1024];
+        int ret;
+        const char *const file_name = "cbc_test.json";
+
+        ret = snprintf(path, sizeof(path), "%s/%s", KAT_APP_VECTOR_DIR, file_name);
+        /* Treat truncation as failure; otherwise path would be silently invalid. */
+        if (ret < 0 || ret >= (int) sizeof(path))
+                return -1;
+
+        if (json_load_cipher_test(path, &cbc_vectors, ctx) < 0)
+                return -1;
+
+        return 0;
+}
+/**
+ * @brief Free AES-CBC vectors previously loaded by load_cbc_vectors().
+ *
+ * @param ctx loader context returned by load_cbc_vectors()
+ */
+static void
+free_cbc_vectors(struct test_json_alloc_ctx *ctx)
+{
+        json_free_test_ctx(ctx);
+        cbc_vectors = NULL;
+}
 
 static int
 aes_job_ok(const struct IMB_JOB *job, const uint8_t *out_text, const uint8_t *target,
@@ -67,7 +107,7 @@ aes_job_ok(const struct IMB_JOB *job, const uint8_t *out_text, const uint8_t *ta
 }
 
 static int
-test_aes_many(struct IMB_MGR *mb_mgr, void *enc_keys, void *dec_keys, const void *iv,
+test_aes_many(struct IMB_MGR *mb_mgr, const void *enc_keys, const void *dec_keys, const void *iv,
               const uint8_t *in_text, const uint8_t *out_text, const unsigned text_len,
               const int dir, const int order, const IMB_CIPHER_MODE cipher, const int in_place,
               const int key_len, const int num_jobs)
@@ -178,10 +218,11 @@ end_alloc:
 }
 
 static int
-test_aes_many_burst(struct IMB_MGR *mb_mgr, void *enc_keys, void *dec_keys, const void *iv,
-                    const uint8_t *in_text, const uint8_t *out_text, const unsigned text_len,
-                    const int dir, const int order, const IMB_CIPHER_MODE cipher,
-                    const int in_place, const int key_len, const int num_jobs)
+test_aes_many_burst(struct IMB_MGR *mb_mgr, const void *enc_keys, const void *dec_keys,
+                    const void *iv, const uint8_t *in_text, const uint8_t *out_text,
+                    const unsigned text_len, const int dir, const int order,
+                    const IMB_CIPHER_MODE cipher, const int in_place, const int key_len,
+                    const int num_jobs)
 {
         struct IMB_JOB *job, *jobs[IMB_MAX_BURST_SIZE] = { NULL };
         uint8_t padding[16];
@@ -284,10 +325,10 @@ end_alloc:
 }
 
 static int
-test_aes_many_cipher_burst(struct IMB_MGR *mb_mgr, void *enc_keys, void *dec_keys, const void *iv,
-                           const uint8_t *in_text, const uint8_t *out_text, const unsigned text_len,
-                           const int dir, const IMB_CIPHER_MODE cipher, const int in_place,
-                           const int key_len, const int num_jobs)
+test_aes_many_cipher_burst(struct IMB_MGR *mb_mgr, const void *enc_keys, const void *dec_keys,
+                           const void *iv, const uint8_t *in_text, const uint8_t *out_text,
+                           const unsigned text_len, const int dir, const IMB_CIPHER_MODE cipher,
+                           const int in_place, const int key_len, const int num_jobs)
 {
         struct IMB_JOB *job, jobs[IMB_MAX_BURST_SIZE];
         uint8_t padding[16];
@@ -383,7 +424,7 @@ test_cbc_vectors(struct IMB_MGR *mb_mgr, struct test_suite_context *ctx128,
                  struct test_suite_context *ctx192, struct test_suite_context *ctx256,
                  const IMB_CIPHER_MODE cipher, const int num_jobs)
 {
-        const struct cipher_test *v = cbc_test_json;
+        const struct cipher_test *v = cbc_vectors;
         DECLARE_ALIGNED(uint32_t enc_keys[15 * 4], 16);
         DECLARE_ALIGNED(uint32_t dec_keys[15 * 4], 16);
 
@@ -548,6 +589,10 @@ cbc_test(struct IMB_MGR *mb_mgr)
         struct test_suite_context ctx128;
         struct test_suite_context ctx192;
         struct test_suite_context ctx256;
+        struct test_json_alloc_ctx *ctx = NULL;
+
+        if (load_cbc_vectors(&ctx) < 0)
+                return 1;
 
         test_suite_start(&ctx128, "AES-CBC-128");
         test_suite_start(&ctx192, "AES-CBC-192");
@@ -558,6 +603,8 @@ cbc_test(struct IMB_MGR *mb_mgr)
         errors += test_suite_end(&ctx128);
         errors += test_suite_end(&ctx192);
         errors += test_suite_end(&ctx256);
+
+        free_cbc_vectors(ctx);
 
         return errors;
 }
