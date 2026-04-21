@@ -44,9 +44,84 @@ enum cmac_type {
 int
 cmac_test(struct IMB_MGR *mb_mgr);
 
-extern const struct mac_test cmac_128_test_json[];
-extern const struct mac_test cmac_256_test_json[];
-extern const struct mac_test cmac_3gpp_test_json[];
+static struct mac_test *cmac_128_vectors;
+static struct mac_test *cmac_256_vectors;
+static struct mac_test *cmac_3gpp_vectors;
+
+#ifndef KAT_APP_VECTOR_DIR
+#define KAT_APP_VECTOR_DIR "./vectors"
+#endif
+
+/**
+ * @brief Load all CMAC vector sets used by the CMAC kat-app module.
+ *
+ * @param ctx_128 receives context for cmac_128 vectors
+ * @param ctx_256 receives context for cmac_256 vectors
+ * @param ctx_3gpp receives context for cmac_3gpp vectors
+ *
+ * @return 0 on success or -1 on failure
+ */
+static int
+load_cmac_vectors(struct test_json_alloc_ctx **ctx_128, struct test_json_alloc_ctx **ctx_256,
+                  struct test_json_alloc_ctx **ctx_3gpp)
+{
+        char path[1024];
+        int ret;
+        const char *const cmac_128_file = "cmac_128_test.json";
+        const char *const cmac_256_file = "cmac_256_test.json";
+        const char *const cmac_3gpp_file = "cmac_3gpp_test.json";
+
+        ret = snprintf(path, sizeof(path), "%s/%s", KAT_APP_VECTOR_DIR, cmac_128_file);
+        /* Treat truncation as failure; otherwise path would be silently invalid. */
+        if (ret < 0 || ret >= (int) sizeof(path))
+                return -1;
+        if (json_load_mac_test(path, &cmac_128_vectors, ctx_128) < 0)
+                return -1;
+
+        ret = snprintf(path, sizeof(path), "%s/%s", KAT_APP_VECTOR_DIR, cmac_256_file);
+        /* Treat truncation as failure; otherwise path would be silently invalid. */
+        if (ret < 0 || ret >= (int) sizeof(path))
+                goto err;
+        if (json_load_mac_test(path, &cmac_256_vectors, ctx_256) < 0)
+                goto err;
+
+        ret = snprintf(path, sizeof(path), "%s/%s", KAT_APP_VECTOR_DIR, cmac_3gpp_file);
+        /* Treat truncation as failure; otherwise path would be silently invalid. */
+        if (ret < 0 || ret >= (int) sizeof(path))
+                goto err;
+        if (json_load_mac_test(path, &cmac_3gpp_vectors, ctx_3gpp) < 0)
+                goto err;
+
+        return 0;
+
+err:
+        json_free_test_ctx(*ctx_128);
+        json_free_test_ctx(*ctx_256);
+        json_free_test_ctx(*ctx_3gpp);
+        *ctx_128 = NULL;
+        *ctx_256 = NULL;
+        *ctx_3gpp = NULL;
+        cmac_128_vectors = NULL;
+        cmac_256_vectors = NULL;
+        cmac_3gpp_vectors = NULL;
+        return -1;
+}
+
+/**
+ * @brief Free all CMAC vector sets loaded by load_cmac_vectors().
+ *
+ * @param ctx_128 context for cmac_128 vectors
+ * @param ctx_256 context for cmac_256 vectors
+ * @param ctx_3gpp context for cmac_3gpp vectors
+ */
+static void
+free_cmac_vectors(struct test_json_alloc_ctx *ctx_128, struct test_json_alloc_ctx *ctx_256,
+                  struct test_json_alloc_ctx *ctx_3gpp)
+{
+        json_free_test_ctx(ctx_128);
+        json_free_test_ctx(ctx_256);
+        json_free_test_ctx(ctx_3gpp);
+}
 
 static const struct cmac_subkeys {
         const char *key;
@@ -154,22 +229,20 @@ static const struct cmac_subkeys cmac_3gpp_subkeys[] = {
 };
 
 static int
-cmac_subkey_test(const struct cmac_subkeys *skeys, uint32_t *skey1, uint32_t *skey2)
+cmac_subkey_test(const struct cmac_subkeys *skeys, const uint32_t *skey1, const uint32_t *skey2)
 {
-        uint32_t sub_key_size = sizeof(skey1);
+        const size_t sub_key_size = IMB_AES_BLOCK_SIZE;
 
         if (memcmp(skeys->sub_key1, skey1, sub_key_size)) {
                 printf("sub-key1 mismatched\n");
-                hexdump(stderr, "Received", &skey1, sub_key_size);
+                hexdump(stderr, "Received", skey1, sub_key_size);
                 hexdump(stderr, "Expected", (const void *) skeys->sub_key1, sub_key_size);
                 return 0;
         }
 
-        sub_key_size = sizeof(skey2);
-
         if (memcmp(skeys->sub_key2, skey2, sub_key_size)) {
                 printf("sub-key2 mismatched\n");
-                hexdump(stderr, "Received", &skey2, sub_key_size);
+                hexdump(stderr, "Received", skey2, sub_key_size);
                 hexdump(stderr, "Expected", (const void *) skeys->sub_key2, sub_key_size);
                 return 0;
         }
@@ -523,7 +596,7 @@ end2:
 static void
 test_cmac_std_vectors(struct IMB_MGR *mb_mgr, struct test_suite_context *ctx, const int num_jobs)
 {
-        const struct mac_test *v = cmac_128_test_json;
+        const struct mac_test *v = cmac_128_vectors;
         const struct cmac_subkeys *sk = cmac_128_subkeys;
 
         if (!quiet_mode)
@@ -561,7 +634,7 @@ static void
 test_cmac_256_std_vectors(struct IMB_MGR *mb_mgr, struct test_suite_context *ctx,
                           const int num_jobs)
 {
-        const struct mac_test *v = cmac_256_test_json;
+        const struct mac_test *v = cmac_256_vectors;
         const struct cmac_subkeys *sk = cmac_256_subkeys;
 
         if (!quiet_mode)
@@ -598,7 +671,7 @@ static void
 test_cmac_bitlen_std_vectors(struct IMB_MGR *mb_mgr, struct test_suite_context *ctx,
                              const int num_jobs)
 {
-        const struct mac_test *v = cmac_128_test_json;
+        const struct mac_test *v = cmac_128_vectors;
         const struct cmac_subkeys *sk = cmac_128_subkeys;
 
         if (!quiet_mode)
@@ -638,7 +711,7 @@ static void
 test_cmac_bitlen_3gpp_vectors(struct IMB_MGR *mb_mgr, struct test_suite_context *ctx,
                               const int num_jobs)
 {
-        const struct mac_test *v = cmac_3gpp_test_json;
+        const struct mac_test *v = cmac_3gpp_vectors;
         const struct cmac_subkeys *sk = cmac_3gpp_subkeys;
 
         if (!quiet_mode)
@@ -677,6 +750,12 @@ cmac_test(struct IMB_MGR *mb_mgr)
 {
         int i, errors = 0;
         struct test_suite_context ctx;
+        struct test_json_alloc_ctx *ctx_128 = NULL;
+        struct test_json_alloc_ctx *ctx_256 = NULL;
+        struct test_json_alloc_ctx *ctx_3gpp = NULL;
+
+        if (load_cmac_vectors(&ctx_128, &ctx_256, &ctx_3gpp) < 0)
+                return 1;
 
         /* CMAC 128 with standard vectors */
         test_suite_start(&ctx, "AES-CMAC-128");
@@ -699,6 +778,11 @@ cmac_test(struct IMB_MGR *mb_mgr)
         for (i = 1; i < IMB_MAX_BURST_SIZE; i++)
                 test_cmac_256_std_vectors(mb_mgr, &ctx, i);
         errors += test_suite_end(&ctx);
+
+        free_cmac_vectors(ctx_128, ctx_256, ctx_3gpp);
+        cmac_128_vectors = NULL;
+        cmac_256_vectors = NULL;
+        cmac_3gpp_vectors = NULL;
 
         return errors;
 }
