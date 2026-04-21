@@ -511,6 +511,7 @@ static int
 validate_kasumi_f9(IMB_MGR *mgr)
 {
         int ret = 1; /* assume error */
+        uint8_t *framed = NULL;
 
         printf("Testing IMB_KASUMI_F9_1_BUFFER (Job API):\n");
 
@@ -522,11 +523,14 @@ validate_kasumi_f9(IMB_MGR *mgr)
 
         for (const struct mac_test *v = kasumi_f9_json; v->msg != NULL; v++) {
 
-                /* in this test skip vectors with non-empty IV */
-                if (v->ivSize != 0)
+                /* Skip vectors whose message length is not byte-aligned */
+                if ((v->msgSize % CHAR_BIT) != 0)
                         continue;
 
-                const uint32_t byteLen = (uint32_t) ((v->msgSize + 7) / CHAR_BIT);
+                const size_t iv_bytes = v->ivSize / CHAR_BIT;
+                const size_t msg_bytes = v->msgSize / CHAR_BIT;
+                const void *src = v->msg;
+                uint32_t total_bytes = (uint32_t) msg_bytes;
 
                 IMB_ASSERT(v->keySize == (IMB_KASUMI_KEY_SIZE * CHAR_BIT));
 
@@ -535,10 +539,74 @@ validate_kasumi_f9(IMB_MGR *mgr)
                         goto exit;
                 }
 
+                /*
+                 * If the vector supplies a separate IV, the test vector uses one
+                 * of two formats and the full f9 input frame is assembled here:
+                 *
+                 * ivSize == 72 (9 bytes):
+                 *   iv[0]    = DIRECTION byte (ls bit = DIR bit)
+                 *   iv[1..8] = COUNT (4 bytes) || FRESH (4 bytes)
+                 *   msg      = raw user message (DIR and pad bits cleared)
+                 *   frame = COUNT||FRESH||msg||DIR||pad assembled below
+                 *
+                 * ivSize == 64 (8 bytes):
+                 *   iv[0..3] = COUNT (4 bytes)
+                 *   iv[4..7] = BEARER(5b)||DIRECTION(1b)||0^26
+                 *   msg      = the complete pre-assembled f9 input frame
+                 *   pass msg directly, no framing needed
+                 *
+                 * ivSize == 0:
+                 *   msg is already the complete f9 input frame (COUNT||FRESH||
+                 *   user-data||DIR||pad), ready to pass directly to the library.
+                 */
+                if (iv_bytes == (72 / CHAR_BIT)) {
+                        /* 72-bit IV: iv[0]=direction byte, iv[1..8]=COUNT+FRESH */
+                        const size_t count_fresh_bytes = iv_bytes - 1;
+                        const uint8_t dir = *((const uint8_t *) v->iv) & 1;
+
+                        /*
+                         * Total frame size rounded up to a multiple of 64 bits:
+                         *   64 (COUNT+FRESH) + msgSize + 1 (DIR) + 1 (pad '1')
+                         * The +63 ensures we round up.
+                         */
+                        const size_t frame_bits =
+                                (count_fresh_bytes * CHAR_BIT + (size_t) v->msgSize + 2 + 63) &
+                                ~(size_t) 63;
+                        total_bytes = (uint32_t) (frame_bits / CHAR_BIT);
+
+                        framed = calloc(total_bytes, 1);
+                        if (!framed) {
+                                printf("F9 calloc(framed, %u bytes) tcId:%zu: failed!\n",
+                                       total_bytes, v->tcId);
+                                goto exit;
+                        }
+                        memcpy(framed, (const uint8_t *) v->iv + 1, count_fresh_bytes);
+                        memcpy(framed + count_fresh_bytes, v->msg, msg_bytes);
+
+                        /*
+                         * Set DIR bit at position msgSize (0-indexed within msg)
+                         * and the mandatory '1' padding start bit at msgSize+1.
+                         * The offset into framed[] accounts for COUNT+FRESH.
+                         */
+                        const size_t dir_bit = v->msgSize;
+                        const size_t dir_byte = count_fresh_bytes + dir_bit / CHAR_BIT;
+                        const unsigned int dir_shift =
+                                (unsigned int) (CHAR_BIT - 1 - (dir_bit % CHAR_BIT));
+                        const size_t pad_bit = dir_bit + 1;
+                        const size_t pad_byte = count_fresh_bytes + pad_bit / CHAR_BIT;
+                        const unsigned int pad_shift =
+                                (unsigned int) (CHAR_BIT - 1 - (pad_bit % CHAR_BIT));
+
+                        framed[dir_byte] |= (uint8_t) (dir << dir_shift);
+                        framed[pad_byte] |= (uint8_t) (1u << pad_shift);
+
+                        src = framed;
+                }
+
                 uint8_t digest[IMB_KASUMI_DIGEST_SIZE] = { 0 };
 
                 /* Test F9 integrity */
-                submit_kasumi_f9_job(mgr, pKeySched, v->msg, digest, byteLen);
+                submit_kasumi_f9_job(mgr, pKeySched, src, digest, total_bytes);
 
                 /* Compare the digest with the expected in the vectors */
                 IMB_ASSERT(v->tagSize == (IMB_KASUMI_DIGEST_SIZE * CHAR_BIT));
@@ -548,11 +616,15 @@ validate_kasumi_f9(IMB_MGR *mgr)
                         printf("F9 integrity tcId:%zu Failed\n", v->tcId);
                         goto exit;
                 }
+
+                free(framed);
+                framed = NULL;
         }
 
         ret = 0;
         printf("[%s]: PASS, for single buffers.\n", __FUNCTION__);
 exit:
+        free(framed);
         free(pKeySched);
         return ret;
 }
