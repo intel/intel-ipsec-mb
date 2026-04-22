@@ -86,6 +86,10 @@ ooo_mgr_sha512_reset(void *p_ooo_mgr, const unsigned num_lanes);
 
 IMB_DLL_LOCAL
 void
+ooo_mgr_sha3_reset(void *p_ooo_mgr, const unsigned num_lanes);
+
+IMB_DLL_LOCAL
+void
 ooo_mgr_des_reset(void *p_ooo_mgr, const unsigned num_lanes);
 
 IMB_DLL_LOCAL

@@ -2723,6 +2723,18 @@ SUBMIT_JOB_HASH_EX(IMB_MGR *state, IMB_JOB *job, const IMB_HASH_ALG hash_alg)
         MB_MGR_SHA_256_OOO *sha_256_ooo = state->sha_256_ooo;
         MB_MGR_SHA_512_OOO *sha_384_ooo = state->sha_384_ooo;
         MB_MGR_SHA_512_OOO *sha_512_ooo = state->sha_512_ooo;
+#ifdef SUBMIT_JOB_SHA3_224
+        MB_MGR_SHA3_OOO *sha3_224_ooo = state->sha3_224_ooo;
+#endif
+#ifdef SUBMIT_JOB_SHA3_256
+        MB_MGR_SHA3_OOO *sha3_256_ooo = state->sha3_256_ooo;
+#endif
+#ifdef SUBMIT_JOB_SHA3_384
+        MB_MGR_SHA3_OOO *sha3_384_ooo = state->sha3_384_ooo;
+#endif
+#ifdef SUBMIT_JOB_SHA3_512
+        MB_MGR_SHA3_OOO *sha3_512_ooo = state->sha3_512_ooo;
+#endif
 #if (defined(SAFE_LOOKUP) || defined(AVX512))
         MB_MGR_SNOW3G_OOO *snow3g_uia2_ooo = state->snow3g_uia2_ooo;
 #endif
@@ -2868,13 +2880,29 @@ SUBMIT_JOB_HASH_EX(IMB_MGR *state, IMB_JOB *job, const IMB_HASH_ALG hash_alg)
         case IMB_AUTH_SM3:
                 return SUBMIT_JOB_SM3(job);
         case IMB_AUTH_SHA3_224:
+#ifdef SUBMIT_JOB_SHA3_224
+                return SUBMIT_JOB_SHA3_224(sha3_224_ooo, job);
+#else
                 return submit_job_sha3(state, job, IMB_AUTH_SHA3_224);
+#endif
         case IMB_AUTH_SHA3_256:
+#ifdef SUBMIT_JOB_SHA3_256
+                return SUBMIT_JOB_SHA3_256(sha3_256_ooo, job);
+#else
                 return submit_job_sha3(state, job, IMB_AUTH_SHA3_256);
+#endif
         case IMB_AUTH_SHA3_384:
+#ifdef SUBMIT_JOB_SHA3_384
+                return SUBMIT_JOB_SHA3_384(sha3_384_ooo, job);
+#else
                 return submit_job_sha3(state, job, IMB_AUTH_SHA3_384);
+#endif
         case IMB_AUTH_SHA3_512:
+#ifdef SUBMIT_JOB_SHA3_512
+                return SUBMIT_JOB_SHA3_512(sha3_512_ooo, job);
+#else
                 return submit_job_sha3(state, job, IMB_AUTH_SHA3_512);
+#endif
         case IMB_AUTH_SHAKE128:
                 return submit_job_sha3(state, job, IMB_AUTH_SHAKE128);
         case IMB_AUTH_SHAKE256:
@@ -2917,6 +2945,18 @@ FLUSH_JOB_HASH_EX(IMB_MGR *state, IMB_JOB *job, const IMB_HASH_ALG hash_alg)
         MB_MGR_SHA_256_OOO *sha_256_ooo = state->sha_256_ooo;
         MB_MGR_SHA_512_OOO *sha_384_ooo = state->sha_384_ooo;
         MB_MGR_SHA_512_OOO *sha_512_ooo = state->sha_512_ooo;
+#ifdef FLUSH_JOB_SHA3_224
+        MB_MGR_SHA3_OOO *sha3_224_ooo = state->sha3_224_ooo;
+#endif
+#ifdef FLUSH_JOB_SHA3_256
+        MB_MGR_SHA3_OOO *sha3_256_ooo = state->sha3_256_ooo;
+#endif
+#ifdef FLUSH_JOB_SHA3_384
+        MB_MGR_SHA3_OOO *sha3_384_ooo = state->sha3_384_ooo;
+#endif
+#ifdef FLUSH_JOB_SHA3_512
+        MB_MGR_SHA3_OOO *sha3_512_ooo = state->sha3_512_ooo;
+#endif
 #if (defined(SAFE_LOOKUP) || defined(AVX512))
         MB_MGR_SNOW3G_OOO *snow3g_uia2_ooo = state->snow3g_uia2_ooo;
 #endif
@@ -2945,6 +2985,30 @@ FLUSH_JOB_HASH_EX(IMB_MGR *state, IMB_JOB *job, const IMB_HASH_ALG hash_alg)
                 return FLUSH_JOB_SHA384(sha_384_ooo, job);
         case IMB_AUTH_SHA_512:
                 return FLUSH_JOB_SHA512(sha_512_ooo, job);
+        case IMB_AUTH_SHA3_224:
+#ifdef FLUSH_JOB_SHA3_224
+                return FLUSH_JOB_SHA3_224(sha3_224_ooo, job);
+#else
+                return NULL;
+#endif
+        case IMB_AUTH_SHA3_256:
+#ifdef FLUSH_JOB_SHA3_256
+                return FLUSH_JOB_SHA3_256(sha3_256_ooo, job);
+#else
+                return NULL;
+#endif
+        case IMB_AUTH_SHA3_384:
+#ifdef FLUSH_JOB_SHA3_384
+                return FLUSH_JOB_SHA3_384(sha3_384_ooo, job);
+#else
+                return NULL;
+#endif
+        case IMB_AUTH_SHA3_512:
+#ifdef FLUSH_JOB_SHA3_512
+                return FLUSH_JOB_SHA3_512(sha3_512_ooo, job);
+#else
+                return NULL;
+#endif
         case IMB_AUTH_AES_XCBC:
                 return FLUSH_JOB_AES_XCBC(aes_xcbc_ooo);
         case IMB_AUTH_MD5:

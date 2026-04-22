@@ -39,6 +39,7 @@
 %define MAX_SHA1_LANES          16
 %define MAX_SHA256_LANES        16
 %define MAX_SHA512_LANES        8
+%define MAX_SHA3_LANES          4
 
 %define NUM_MD5_DIGEST_WORDS    4
 %define NUM_SHA1_DIGEST_WORDS   5

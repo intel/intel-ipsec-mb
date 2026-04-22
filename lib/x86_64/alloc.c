@@ -93,6 +93,10 @@ const struct {
                       OOO_INFO(sha_256_ooo, MB_MGR_SHA_256_OOO),
                       OOO_INFO(sha_384_ooo, MB_MGR_SHA_512_OOO),
                       OOO_INFO(sha_512_ooo, MB_MGR_SHA_512_OOO),
+                      OOO_INFO(sha3_224_ooo, MB_MGR_SHA3_OOO),
+                      OOO_INFO(sha3_256_ooo, MB_MGR_SHA3_OOO),
+                      OOO_INFO(sha3_384_ooo, MB_MGR_SHA3_OOO),
+                      OOO_INFO(sha3_512_ooo, MB_MGR_SHA3_OOO),
                       OOO_INFO(aes_cfb_128_ooo, MB_MGR_AES_OOO),
                       OOO_INFO(aes_cfb_192_ooo, MB_MGR_AES_OOO),
                       OOO_INFO(aes_cfb_256_ooo, MB_MGR_AES_OOO) };

@@ -1180,6 +1180,10 @@ typedef struct IMB_MGR {
         void *sha_256_ooo;
         void *sha_384_ooo;
         void *sha_512_ooo;
+        void *sha3_224_ooo;
+        void *sha3_256_ooo;
+        void *sha3_384_ooo;
+        void *sha3_512_ooo;
         void *aes_cfb_128_ooo;
         void *aes_cfb_192_ooo;
         void *aes_cfb_256_ooo;

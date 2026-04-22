@@ -558,4 +558,43 @@ _snow3g_args_FSM_3   equ _snow3g_args + __snow3g_arg_FSM_3
 _snow3g_args_LD_ST_MASK       equ _snow3g_args + __snow3g_arg_LD_ST_MASK
 _snow3g_args_byte_length      equ _snow3g_args + __snow3g_arg_byte_length
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;; Define SHA3 Out Of Order Data Structures
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+START_FIELDS    ; SHA3_ARGS
+;;      name                    size                            align
+FIELD   _sha3_kstate,           25*MAX_SHA3_LANES*8,            32      ; 4-lane interleaved keccak state (25 x 4 qwords)
+FIELD   _sha3_data_ptr,         MAX_SHA3_LANES*8,               8       ; array of 4 pointers to input data
+END_FIELDS
+%assign _SHA3_ARGS_size         _FIELD_OFFSET
+%assign _SHA3_ARGS_align        _STRUCT_ALIGN
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+START_FIELDS    ; SHA3_LANE_DATA
+;;      name                    size    align
+FIELD   _sha3_extra_block,      168,    8       ; padded message block buffer (max SHA3 rate = SHAKE-128 = 168 B)
+FIELD   _sha3_job_in_lane,      8,      8       ; pointer to IMB_JOB
+FIELD   _sha3_finalized,        4,      4       ; 1 until padding has been applied
+END_FIELDS
+%assign _SHA3_LANE_DATA_size    _FIELD_OFFSET
+%assign _SHA3_LANE_DATA_align   _STRUCT_ALIGN
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+START_FIELDS    ; MB_MGR_SHA3_OOO
+;;      name                        size                                        align
+FIELD   _sha3_args,                 _SHA3_ARGS_size,                            _SHA3_ARGS_align
+FIELD   _sha3_ldata,                _SHA3_LANE_DATA_size*MAX_SHA3_LANES,        _SHA3_LANE_DATA_align
+FIELD   _sha3_lens,                 MAX_SHA3_LANES*8,                           32      ; 4 x u64 byte lengths
+FIELD   _sha3_unused_lanes,         8,                                          8
+FIELD   _sha3_num_lanes_inuse,      4,                                          4
+END_FIELDS
+%assign _MB_MGR_SHA3_OOO_size   _FIELD_OFFSET
+%assign _MB_MGR_SHA3_OOO_align  _STRUCT_ALIGN
+
+_sha3_args_kstate       equ     _sha3_args + _sha3_kstate
+_sha3_args_data_ptr     equ     _sha3_args + _sha3_data_ptr
+
 %endif ;; MB_MGR_DATASTRUCT_INC_INCLUDED

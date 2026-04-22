@@ -272,9 +272,10 @@ keccak_1600_copy_digest:
 ;; Keccak-f[1600] permutation
 ;; YMM0-YMM24    [in/out]    keccak state
 ;; YMM25-YMM31   [clobbered] temporaries
-;; R13           [clobbered] round counter
+;; R13D          [clobbered] round counter
 ;; R14           [clobbered] round constant table pointer
 align_function
+MKGLOBAL(keccak1600_block_64bit,function,internal)
 keccak1600_block_64bit:
         mov             r13d, 24
         lea             r14, [rel SHA3RC]

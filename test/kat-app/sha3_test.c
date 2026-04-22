@@ -363,7 +363,7 @@ test_shake_vectors(struct IMB_MGR *mb_mgr, struct test_suite_context *shake128_c
                 } else {
                         test_suite_update(ctx, 1, 0);
                 }
-                if (test_sha3(mb_mgr, shake256_v, num_jobs, sha_type)) {
+                if (test_sha3_burst(mb_mgr, shake256_v, num_jobs, sha_type)) {
                         printf("SHAKE256 burst error #%zu\n", shake256_v->tcId);
                         test_suite_update(ctx, 0, 1);
                 } else {

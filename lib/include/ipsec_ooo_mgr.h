@@ -49,6 +49,7 @@
 #define AVX512_NUM_SHA512_LANES 8
 #define AVX512_NUM_MD5_LANES    32
 #define AVX512_NUM_DES_LANES    16
+#define AVX512_NUM_SHA3_LANES   4
 
 #define AVX2_NUM_SHA1_LANES   8
 #define AVX2_NUM_SHA256_LANES 8
@@ -126,6 +127,35 @@ typedef struct {
         DECLARE_ALIGNED(uint64_t digest[SHA512_DIGEST_SZ], 32);
         const uint8_t *data_ptr[AVX512_NUM_SHA512_LANES];
 } SHA512_ARGS;
+
+/*
+ * SHA3 argument structure for 4-lane multi-buffer Keccak.
+ */
+#define SHA3_STATE_WORDS  25
+#define SHA3_EXTRA_BLK_SZ 168 /* max SHA3 rate = SHAKE-128 = 168 B */
+
+typedef struct {
+        uint8_t extra_block[SHA3_EXTRA_BLK_SZ]; /* no forced 32-byte align; align=8 via pointer
+                                                   field */
+        IMB_JOB *job_in_lane;
+        uint32_t finalized;
+} SHA3_LANE_DATA;
+
+typedef struct {
+        /* interleaved keccak state: state[word*4 + lane], 25 words × 4 lanes */
+        DECLARE_ALIGNED(uint64_t keccak_state[SHA3_STATE_WORDS * AVX512_NUM_SHA3_LANES], 32);
+        const uint8_t *data_ptr[AVX512_NUM_SHA3_LANES];
+} SHA3_ARGS;
+
+typedef struct {
+        SHA3_ARGS args;
+        SHA3_LANE_DATA ldata[AVX512_NUM_SHA3_LANES];
+        DECLARE_ALIGNED(uint64_t lens[AVX512_NUM_SHA3_LANES], 32);
+        uint64_t unused_lanes;
+        uint32_t num_lanes_inuse;
+        uint32_t total_num_lanes;
+        uint64_t road_block;
+} MB_MGR_SHA3_OOO;
 
 typedef struct {
         DECLARE_ALIGNED(uint32_t digest[MD5_DIGEST_SZ], 32);

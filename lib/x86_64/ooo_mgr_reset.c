@@ -396,6 +396,20 @@ ooo_mgr_sha512_reset(void *p_ooo_mgr, const unsigned num_lanes)
 
 IMB_DLL_LOCAL
 void
+ooo_mgr_sha3_reset(void *p_ooo_mgr, const unsigned num_lanes)
+{
+        MB_MGR_SHA3_OOO *p_mgr = (MB_MGR_SHA3_OOO *) p_ooo_mgr;
+
+        memset(p_mgr, 0, offsetof(MB_MGR_SHA3_OOO, road_block));
+        p_mgr->total_num_lanes = num_lanes;
+
+        /* AVX512_NUM_SHA3_LANES == 4, nibble-packed: 0xF3210 */
+        if (num_lanes == 4)
+                p_mgr->unused_lanes = 0xF3210;
+}
+
+IMB_DLL_LOCAL
+void
 ooo_mgr_des_reset(void *p_ooo_mgr, const unsigned num_lanes)
 {
         MB_MGR_DES_OOO *p_mgr = (MB_MGR_DES_OOO *) p_ooo_mgr;
