@@ -206,6 +206,13 @@ struct imb_test tests[] = {
 
 static int self_test_corrupt = 0;
 
+/* Default vector directory set by CMake build system; NULL if not set */
+#ifndef KAT_APP_VECTOR_DIR
+#define KAT_APP_VECTOR_DIR NULL
+#endif
+
+const char *kat_vector_dir = KAT_APP_VECTOR_DIR;
+
 static char *
 get_test_types(void)
 {
@@ -257,8 +264,10 @@ usage(const char *name)
                 "--quiet: Enable quiet mode with reduced text output\n"
                 "--self-test-info: provides information about self-test progress (> v1.4)\n"
                 "--self-test-corrupt: corrupt message during self-test (> v1.4; expect "
-                "initialization fail)\n",
-                name, test_types);
+                "initialization fail)\n"
+                "--vector-dir <DIR>: Directory containing JSON vector files "
+                "(default: %s)\n",
+                name, test_types, kat_vector_dir ? kat_vector_dir : "(none; use --vector-dir)");
 
         free(test_types);
 }
@@ -399,7 +408,13 @@ main(int argc, char **argv)
                         self_test_info = 1;
                 else if (strcmp(argv[i], "--self-test-corrupt") == 0)
                         self_test_corrupt = 1;
-                else if (strcmp(argv[i], "--test-type") == 0) {
+                else if (strcmp(argv[i], "--vector-dir") == 0) {
+                        if (i + 1 >= argc) {
+                                fprintf(stderr, "--vector-dir requires a directory argument\n");
+                                return EXIT_FAILURE;
+                        }
+                        kat_vector_dir = argv[++i];
+                } else if (strcmp(argv[i], "--test-type") == 0) {
                         unsigned selected_test;
 
                         selected_test = check_test_string_arg(argv[i], argv[i + 1]);

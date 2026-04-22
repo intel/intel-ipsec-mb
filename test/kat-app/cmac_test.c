@@ -48,10 +48,6 @@ static struct mac_test *cmac_128_vectors;
 static struct mac_test *cmac_256_vectors;
 static struct mac_test *cmac_3gpp_vectors;
 
-#ifndef KAT_APP_VECTOR_DIR
-#define KAT_APP_VECTOR_DIR "./vectors"
-#endif
-
 /**
  * @brief Load all CMAC vector sets used by the CMAC kat-app module.
  *
@@ -71,21 +67,26 @@ load_cmac_vectors(struct test_json_alloc_ctx **ctx_128, struct test_json_alloc_c
         const char *const cmac_256_file = "cmac_256_test.json";
         const char *const cmac_3gpp_file = "cmac_3gpp_test.json";
 
-        ret = snprintf(path, sizeof(path), "%s/%s", KAT_APP_VECTOR_DIR, cmac_128_file);
+        if (kat_vector_dir == NULL) {
+                fprintf(stderr, "Error: no vector directory set; use --vector-dir <DIR>\n");
+                return -1;
+        }
+
+        ret = snprintf(path, sizeof(path), "%s/%s", kat_vector_dir, cmac_128_file);
         /* Treat truncation as failure; otherwise path would be silently invalid. */
         if (ret < 0 || ret >= (int) sizeof(path))
                 return -1;
         if (json_load_mac_test(path, &cmac_128_vectors, ctx_128) < 0)
                 return -1;
 
-        ret = snprintf(path, sizeof(path), "%s/%s", KAT_APP_VECTOR_DIR, cmac_256_file);
+        ret = snprintf(path, sizeof(path), "%s/%s", kat_vector_dir, cmac_256_file);
         /* Treat truncation as failure; otherwise path would be silently invalid. */
         if (ret < 0 || ret >= (int) sizeof(path))
                 goto err;
         if (json_load_mac_test(path, &cmac_256_vectors, ctx_256) < 0)
                 goto err;
 
-        ret = snprintf(path, sizeof(path), "%s/%s", KAT_APP_VECTOR_DIR, cmac_3gpp_file);
+        ret = snprintf(path, sizeof(path), "%s/%s", kat_vector_dir, cmac_3gpp_file);
         /* Treat truncation as failure; otherwise path would be silently invalid. */
         if (ret < 0 || ret >= (int) sizeof(path))
                 goto err;
