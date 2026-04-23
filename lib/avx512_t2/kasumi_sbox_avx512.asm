@@ -262,8 +262,9 @@ mksection .text
         vpxord      ymm10, ymm10, ymm11                 ; l2[7] || r2[9]
 
         ;; --- FI Round 2: l2||r2 -> S9/S7 -> l3||r3 ---
-        vptestmw    k2, ymm10, YLSB                      ; k2 = l2||r2 LSBs
-        vpmovm2w    ymm10, k2
+        vpand       ymm10, ymm10, YLSB                  ; isolate LSB per word
+        vpcmpw      k2, ymm10, YLSB, 0                  ; k2 = l2||r2 LSBs
+        vpcmpeqw    ymm10, ymm10, YLSB
         KASUMI_SBOX_AVX512b                              ; S9[r2] and S7[l2]
 
         ;; Extract FI output: reassemble l3[7] || r3[9]
