@@ -349,7 +349,7 @@ typedef struct {
 /* ZUC out-of-order scheduler fields */
 typedef struct {
         ZUC_ARGS_x16 args;
-        DECLARE_ALIGNED(uint16_t lens[16], 16);
+        DECLARE_ALIGNED(uint16_t lens[16], 32);
         uint64_t unused_lanes;
         IMB_JOB *job_in_lane[16];
         uint64_t num_lanes_inuse;
