@@ -401,7 +401,7 @@ validate_snow3g_f8_1_block(struct IMB_MGR *mb_mgr, uint32_t job_api,
                         uint32_t bit_offset = 0;
 
                         submit_uea2_jobs(mb_mgr, &pKeySched, &pIV, &pSrcBuff, &pSrcBuff, &bit_len,
-                                         &bit_offset, IMB_DIR_ENCRYPT, 1);
+                                         &bit_offset, IMB_DIR_DECRYPT, 1);
                 } else
                         IMB_SNOW3G_F8_1_BUFFER(mb_mgr, pKeySched, pIV, srcBuff, srcBuff, length);
 
