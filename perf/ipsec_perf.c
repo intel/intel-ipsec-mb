@@ -1979,7 +1979,7 @@ do_test_quic_chacha_poly(struct params_s *params, const uint32_t num_iter, IMB_M
         const void *aad[MAX_K];
         void *tag[MAX_K];
         uint64_t len[MAX_K];
-        const uint8_t kp[32];
+        const uint8_t kp[32] = { 0 };
         int K = MAX_K;
         uint64_t time = 0;
         uint32_t aux;
@@ -2181,7 +2181,7 @@ do_test_quic_chacha20_hp(struct params_s *params, const uint32_t num_iter, IMB_M
 {
         void *out[MAX_K];
         const void *in[MAX_K];
-        const uint8_t kp[32];
+        const uint8_t kp[32] = { 0 };
         int K = MAX_K;
         uint64_t time = 0;
         const uint64_t pkt_size = 16; /* Fixed packet size for this API */
