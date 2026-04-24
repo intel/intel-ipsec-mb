@@ -93,7 +93,7 @@ static int
 test_IMB_AES_KEYEXP_128(struct IMB_MGR *mgr)
 {
         unsigned i = 1;
-        const uint8_t key[BUFF_SIZE];
+        const uint8_t key[BUFF_SIZE] = { 0 };
         uint8_t enc_exp_key[BUFF_SIZE];
         uint8_t dec_exp_key[BUFF_SIZE];
         int seg_err; /* segfault flag */
@@ -130,7 +130,7 @@ static int
 test_IMB_AES_KEYEXP_192(struct IMB_MGR *mgr)
 {
         unsigned i = 1;
-        const uint8_t key[BUFF_SIZE];
+        const uint8_t key[BUFF_SIZE] = { 0 };
         uint8_t enc_exp_key[BUFF_SIZE];
         uint8_t dec_exp_key[BUFF_SIZE];
         int seg_err; /* segfault flag */
@@ -167,7 +167,7 @@ static int
 test_IMB_AES_KEYEXP_256(struct IMB_MGR *mgr)
 {
         unsigned i = 1;
-        const uint8_t key[BUFF_SIZE];
+        const uint8_t key[BUFF_SIZE] = { 0 };
         uint8_t enc_exp_key[BUFF_SIZE];
         uint8_t dec_exp_key[BUFF_SIZE];
         int seg_err; /* segfault flag */
@@ -205,7 +205,7 @@ static int
 test_IMB_AES_CMAC_SUBKEY_GEN_128(struct IMB_MGR *mgr)
 {
         unsigned i = 1;
-        const uint8_t exp_key[BUFF_SIZE];
+        const uint8_t exp_key[BUFF_SIZE] = { 0 };
         uint8_t key1[BUFF_SIZE];
         uint8_t key2[BUFF_SIZE];
         int seg_err; /* segfault flag */
@@ -242,7 +242,7 @@ static int
 test_IMB_AES_XCBC_KEYEXP(struct IMB_MGR *mgr)
 {
         unsigned i = 1;
-        const uint8_t key[BUFF_SIZE];
+        const uint8_t key[BUFF_SIZE] = { 0 };
         uint8_t exp_key[BUFF_SIZE];
         uint8_t exp_key2[BUFF_SIZE];
         uint8_t exp_key3[BUFF_SIZE];
@@ -283,7 +283,7 @@ test_IMB_DES_KEYSCHED(struct IMB_MGR *mgr)
 {
         unsigned i = 1;
         uint64_t exp_key[BUFF_SIZE];
-        const uint8_t key[BUFF_SIZE];
+        const uint8_t key[BUFF_SIZE] = { 0 };
         int seg_err; /* segfault flag */
 
         seg_err = setjmp(dir_api_param_env);
@@ -315,7 +315,7 @@ static int
 test_IMB_SHA1_ONE_BLOCK(struct IMB_MGR *mgr)
 {
         unsigned i = 1;
-        const uint8_t src[BUFF_SIZE];
+        const uint8_t src[BUFF_SIZE] = { 0 };
         uint8_t tag[BUFF_SIZE];
         int seg_err; /* segfault flag */
 
@@ -348,7 +348,7 @@ static int
 test_IMB_SHA224_ONE_BLOCK(struct IMB_MGR *mgr)
 {
         unsigned i = 1;
-        const uint8_t src[BUFF_SIZE];
+        const uint8_t src[BUFF_SIZE] = { 0 };
         uint8_t tag[BUFF_SIZE];
         int seg_err; /* segfault flag */
 
@@ -381,7 +381,7 @@ static int
 test_IMB_SHA256_ONE_BLOCK(struct IMB_MGR *mgr)
 {
         unsigned i = 1;
-        const uint8_t src[BUFF_SIZE];
+        const uint8_t src[BUFF_SIZE] = { 0 };
         uint8_t tag[BUFF_SIZE];
         int seg_err; /* segfault flag */
 
@@ -414,7 +414,7 @@ static int
 test_IMB_SHA384_ONE_BLOCK(struct IMB_MGR *mgr)
 {
         unsigned i = 1;
-        const uint8_t src[BUFF_SIZE];
+        const uint8_t src[BUFF_SIZE] = { 0 };
         uint8_t tag[BUFF_SIZE];
         int seg_err; /* segfault flag */
 
@@ -447,7 +447,7 @@ static int
 test_IMB_SHA512_ONE_BLOCK(struct IMB_MGR *mgr)
 {
         unsigned i = 1;
-        const uint8_t src[BUFF_SIZE];
+        const uint8_t src[BUFF_SIZE] = { 0 };
         uint8_t tag[BUFF_SIZE];
         int seg_err; /* segfault flag */
 
@@ -480,7 +480,7 @@ static int
 test_IMB_MD5_ONE_BLOCK(struct IMB_MGR *mgr)
 {
         unsigned i = 1;
-        const uint8_t src[BUFF_SIZE];
+        const uint8_t src[BUFF_SIZE] = { 0 };
         uint8_t tag[BUFF_SIZE];
         int seg_err; /* segfault flag */
 
@@ -513,7 +513,7 @@ static int
 test_IMB_SHA1(struct IMB_MGR *mgr)
 {
         unsigned i = 1;
-        const uint8_t src[BUFF_SIZE];
+        const uint8_t src[BUFF_SIZE] = { 0 };
         const uint64_t length = 1;
         uint8_t tag[BUFF_SIZE];
         int seg_err; /* segfault flag */
@@ -549,7 +549,7 @@ static int
 test_IMB_SHA224(struct IMB_MGR *mgr)
 {
         unsigned i = 1;
-        const uint8_t src[BUFF_SIZE];
+        const uint8_t src[BUFF_SIZE] = { 0 };
         const uint64_t length = 1;
         uint8_t tag[BUFF_SIZE];
         int seg_err; /* segfault flag */
@@ -585,7 +585,7 @@ static int
 test_IMB_SHA256(struct IMB_MGR *mgr)
 {
         unsigned i = 1;
-        const uint8_t src[BUFF_SIZE];
+        const uint8_t src[BUFF_SIZE] = { 0 };
         const uint64_t length = 1;
         uint8_t tag[BUFF_SIZE];
         int seg_err; /* segfault flag */
@@ -621,7 +621,7 @@ static int
 test_IMB_SHA384(struct IMB_MGR *mgr)
 {
         unsigned i = 1;
-        const uint8_t src[BUFF_SIZE];
+        const uint8_t src[BUFF_SIZE] = { 0 };
         const uint64_t length = 1;
         uint8_t tag[BUFF_SIZE];
         int seg_err; /* segfault flag */
@@ -657,7 +657,7 @@ static int
 test_IMB_SHA512(struct IMB_MGR *mgr)
 {
         unsigned i = 1;
-        const uint8_t src[BUFF_SIZE];
+        const uint8_t src[BUFF_SIZE] = { 0 };
         const uint64_t length = 1;
         uint8_t tag[BUFF_SIZE];
         int seg_err; /* segfault flag */
@@ -694,9 +694,9 @@ test_IMB_AES128_CFB_ONE(struct IMB_MGR *mgr)
 {
         unsigned i = 1;
         uint8_t dst[BUFF_SIZE];
-        const uint8_t src[BUFF_SIZE];
-        const uint8_t iv[BUFF_SIZE];
-        const uint8_t enc_exp_key[BUFF_SIZE];
+        const uint8_t src[BUFF_SIZE] = { 0 };
+        const uint8_t iv[BUFF_SIZE] = { 0 };
+        const uint8_t enc_exp_key[BUFF_SIZE] = { 0 };
         uint64_t len = 1;
         int seg_err; /* segfault flag */
 
@@ -735,15 +735,15 @@ static int
 test_IMB_AES128_GCM_ENC(struct IMB_MGR *mgr)
 {
         unsigned i = 1;
-        const struct gcm_key_data exp_key_s;
+        const struct gcm_key_data exp_key_s = { 0 };
         const struct gcm_key_data *exp_key = &exp_key_s;
         struct gcm_context_data ctx_s;
         struct gcm_context_data *ctx = &ctx_s;
         uint8_t dst[BUFF_SIZE];
-        uint8_t const src[BUFF_SIZE];
+        uint8_t const src[BUFF_SIZE] = { 0 };
         uint64_t len = 1;
-        const uint8_t iv[BUFF_SIZE];
-        uint8_t const aad[BUFF_SIZE];
+        const uint8_t iv[BUFF_SIZE] = { 0 };
+        uint8_t const aad[BUFF_SIZE] = { 0 };
         uint64_t aadl = 1;
         uint8_t tag[BUFF_SIZE];
         uint64_t tagl = 1;
@@ -799,15 +799,15 @@ static int
 test_IMB_AES192_GCM_ENC(struct IMB_MGR *mgr)
 {
         unsigned i = 1;
-        const struct gcm_key_data exp_key_s;
+        const struct gcm_key_data exp_key_s = { 0 };
         const struct gcm_key_data *exp_key = &exp_key_s;
         struct gcm_context_data ctx_s;
         struct gcm_context_data *ctx = &ctx_s;
         uint8_t dst[BUFF_SIZE];
-        uint8_t const src[BUFF_SIZE];
+        uint8_t const src[BUFF_SIZE] = { 0 };
         uint64_t len = 1;
-        const uint8_t iv[BUFF_SIZE];
-        uint8_t const aad[BUFF_SIZE];
+        const uint8_t iv[BUFF_SIZE] = { 0 };
+        uint8_t const aad[BUFF_SIZE] = { 0 };
         uint64_t aadl = 1;
         uint8_t tag[BUFF_SIZE];
         uint64_t tagl = 1;
@@ -863,15 +863,15 @@ static int
 test_IMB_AES256_GCM_ENC(struct IMB_MGR *mgr)
 {
         unsigned i = 1;
-        const struct gcm_key_data exp_key_s;
+        const struct gcm_key_data exp_key_s = { 0 };
         const struct gcm_key_data *exp_key = &exp_key_s;
         struct gcm_context_data ctx_s;
         struct gcm_context_data *ctx = &ctx_s;
         uint8_t dst[BUFF_SIZE];
-        uint8_t const src[BUFF_SIZE];
+        uint8_t const src[BUFF_SIZE] = { 0 };
         uint64_t len = 1;
-        const uint8_t iv[BUFF_SIZE];
-        uint8_t const aad[BUFF_SIZE];
+        const uint8_t iv[BUFF_SIZE] = { 0 };
+        uint8_t const aad[BUFF_SIZE] = { 0 };
         uint64_t aadl = 1;
         uint8_t tag[BUFF_SIZE];
         uint64_t tagl = 1;
@@ -927,15 +927,15 @@ static int
 test_IMB_AES128_GCM_DEC(struct IMB_MGR *mgr)
 {
         unsigned i = 1;
-        const struct gcm_key_data exp_key_s;
+        const struct gcm_key_data exp_key_s = { 0 };
         const struct gcm_key_data *exp_key = &exp_key_s;
         struct gcm_context_data ctx_s;
         struct gcm_context_data *ctx = &ctx_s;
         uint8_t dst[BUFF_SIZE];
-        uint8_t const src[BUFF_SIZE];
+        uint8_t const src[BUFF_SIZE] = { 0 };
         uint64_t len = 1;
-        const uint8_t iv[BUFF_SIZE];
-        uint8_t const aad[BUFF_SIZE];
+        const uint8_t iv[BUFF_SIZE] = { 0 };
+        uint8_t const aad[BUFF_SIZE] = { 0 };
         uint64_t aadl = 1;
         uint8_t tag[BUFF_SIZE];
         uint64_t tagl = 1;
@@ -991,15 +991,15 @@ static int
 test_IMB_AES192_GCM_DEC(struct IMB_MGR *mgr)
 {
         unsigned i = 1;
-        const struct gcm_key_data exp_key_s;
+        const struct gcm_key_data exp_key_s = { 0 };
         const struct gcm_key_data *exp_key = &exp_key_s;
         struct gcm_context_data ctx_s;
         struct gcm_context_data *ctx = &ctx_s;
         uint8_t dst[BUFF_SIZE];
-        uint8_t const src[BUFF_SIZE];
+        uint8_t const src[BUFF_SIZE] = { 0 };
         uint64_t len = 1;
-        const uint8_t iv[BUFF_SIZE];
-        uint8_t const aad[BUFF_SIZE];
+        const uint8_t iv[BUFF_SIZE] = { 0 };
+        uint8_t const aad[BUFF_SIZE] = { 0 };
         uint64_t aadl = 1;
         uint8_t tag[BUFF_SIZE];
         uint64_t tagl = 1;
@@ -1055,15 +1055,15 @@ static int
 test_IMB_AES256_GCM_DEC(struct IMB_MGR *mgr)
 {
         unsigned i = 1;
-        const struct gcm_key_data exp_key_s;
+        const struct gcm_key_data exp_key_s = { 0 };
         const struct gcm_key_data *exp_key = &exp_key_s;
         struct gcm_context_data ctx_s;
         struct gcm_context_data *ctx = &ctx_s;
         uint8_t dst[BUFF_SIZE];
-        uint8_t const src[BUFF_SIZE];
+        uint8_t const src[BUFF_SIZE] = { 0 };
         uint64_t len = 1;
-        const uint8_t iv[BUFF_SIZE];
-        uint8_t const aad[BUFF_SIZE];
+        const uint8_t iv[BUFF_SIZE] = { 0 };
+        uint8_t const aad[BUFF_SIZE] = { 0 };
         uint64_t aadl = 1;
         uint8_t tag[BUFF_SIZE];
         uint64_t tagl = 1;
@@ -1119,12 +1119,12 @@ static int
 test_IMB_AES128_GCM_INIT(struct IMB_MGR *mgr)
 {
         unsigned i = 1;
-        const struct gcm_key_data exp_key_s;
+        const struct gcm_key_data exp_key_s = { 0 };
         const struct gcm_key_data *exp_key = &exp_key_s;
         struct gcm_context_data ctx_s;
         struct gcm_context_data *ctx = &ctx_s;
-        const uint8_t iv[BUFF_SIZE];
-        uint8_t const aad[BUFF_SIZE];
+        const uint8_t iv[BUFF_SIZE] = { 0 };
+        uint8_t const aad[BUFF_SIZE] = { 0 };
         uint64_t aadl = 1;
         int seg_err; /* segfault flag */
 
@@ -1163,12 +1163,12 @@ static int
 test_IMB_AES192_GCM_INIT(struct IMB_MGR *mgr)
 {
         unsigned i = 1;
-        const struct gcm_key_data exp_key_s;
+        const struct gcm_key_data exp_key_s = { 0 };
         const struct gcm_key_data *exp_key = &exp_key_s;
         struct gcm_context_data ctx_s;
         struct gcm_context_data *ctx = &ctx_s;
-        const uint8_t iv[BUFF_SIZE];
-        uint8_t const aad[BUFF_SIZE];
+        const uint8_t iv[BUFF_SIZE] = { 0 };
+        uint8_t const aad[BUFF_SIZE] = { 0 };
         uint64_t aadl = 1;
         int seg_err; /* segfault flag */
 
@@ -1207,12 +1207,12 @@ static int
 test_IMB_AES256_GCM_INIT(struct IMB_MGR *mgr)
 {
         unsigned i = 1;
-        const struct gcm_key_data exp_key_s;
+        const struct gcm_key_data exp_key_s = { 0 };
         const struct gcm_key_data *exp_key = &exp_key_s;
         struct gcm_context_data ctx_s;
         struct gcm_context_data *ctx = &ctx_s;
-        const uint8_t iv[BUFF_SIZE];
-        uint8_t const aad[BUFF_SIZE];
+        const uint8_t iv[BUFF_SIZE] = { 0 };
+        uint8_t const aad[BUFF_SIZE] = { 0 };
         uint64_t aadl = 1;
         int seg_err; /* segfault flag */
 
@@ -1252,12 +1252,12 @@ static int
 test_IMB_AES128_GCM_ENC_UPDATE(struct IMB_MGR *mgr)
 {
         unsigned i = 1;
-        const struct gcm_key_data exp_key_s;
+        const struct gcm_key_data exp_key_s = { 0 };
         const struct gcm_key_data *exp_key = &exp_key_s;
         struct gcm_context_data ctx_s;
         struct gcm_context_data *ctx = &ctx_s;
         uint8_t dst[BUFF_SIZE];
-        const uint8_t src[BUFF_SIZE];
+        const uint8_t src[BUFF_SIZE] = { 0 };
         uint64_t len = 1;
         int seg_err; /* segfault flag */
 
@@ -1298,12 +1298,12 @@ static int
 test_IMB_AES192_GCM_ENC_UPDATE(struct IMB_MGR *mgr)
 {
         unsigned i = 1;
-        const struct gcm_key_data exp_key_s;
+        const struct gcm_key_data exp_key_s = { 0 };
         const struct gcm_key_data *exp_key = &exp_key_s;
         struct gcm_context_data ctx_s;
         struct gcm_context_data *ctx = &ctx_s;
         uint8_t dst[BUFF_SIZE];
-        const uint8_t src[BUFF_SIZE];
+        const uint8_t src[BUFF_SIZE] = { 0 };
         uint64_t len = 1;
         int seg_err; /* segfault flag */
 
@@ -1344,12 +1344,12 @@ static int
 test_IMB_AES256_GCM_ENC_UPDATE(struct IMB_MGR *mgr)
 {
         unsigned i = 1;
-        const struct gcm_key_data exp_key_s;
+        const struct gcm_key_data exp_key_s = { 0 };
         const struct gcm_key_data *exp_key = &exp_key_s;
         struct gcm_context_data ctx_s;
         struct gcm_context_data *ctx = &ctx_s;
         uint8_t dst[BUFF_SIZE];
-        const uint8_t src[BUFF_SIZE];
+        const uint8_t src[BUFF_SIZE] = { 0 };
         uint64_t len = 1;
         int seg_err; /* segfault flag */
 
@@ -1390,12 +1390,12 @@ static int
 test_IMB_AES128_GCM_DEC_UPDATE(struct IMB_MGR *mgr)
 {
         unsigned i = 1;
-        const struct gcm_key_data exp_key_s;
+        const struct gcm_key_data exp_key_s = { 0 };
         const struct gcm_key_data *exp_key = &exp_key_s;
         struct gcm_context_data ctx_s;
         struct gcm_context_data *ctx = &ctx_s;
         uint8_t dst[BUFF_SIZE];
-        const uint8_t src[BUFF_SIZE];
+        const uint8_t src[BUFF_SIZE] = { 0 };
         uint64_t len = 1;
         int seg_err; /* segfault flag */
 
@@ -1436,12 +1436,12 @@ static int
 test_IMB_AES192_GCM_DEC_UPDATE(struct IMB_MGR *mgr)
 {
         unsigned i = 1;
-        const struct gcm_key_data exp_key_s;
+        const struct gcm_key_data exp_key_s = { 0 };
         const struct gcm_key_data *exp_key = &exp_key_s;
         struct gcm_context_data ctx_s;
         struct gcm_context_data *ctx = &ctx_s;
         uint8_t dst[BUFF_SIZE];
-        const uint8_t src[BUFF_SIZE];
+        const uint8_t src[BUFF_SIZE] = { 0 };
         uint64_t len = 1;
         int seg_err; /* segfault flag */
 
@@ -1482,12 +1482,12 @@ static int
 test_IMB_AES256_GCM_DEC_UPDATE(struct IMB_MGR *mgr)
 {
         unsigned i = 1;
-        const struct gcm_key_data exp_key_s;
+        const struct gcm_key_data exp_key_s = { 0 };
         const struct gcm_key_data *exp_key = &exp_key_s;
         struct gcm_context_data ctx_s;
         struct gcm_context_data *ctx = &ctx_s;
         uint8_t dst[BUFF_SIZE];
-        const uint8_t src[BUFF_SIZE];
+        const uint8_t src[BUFF_SIZE] = { 0 };
         uint64_t len = 1;
         int seg_err; /* segfault flag */
 
@@ -1528,7 +1528,7 @@ static int
 test_IMB_AES128_GCM_ENC_FINALIZE(struct IMB_MGR *mgr)
 {
         unsigned i = 1;
-        const struct gcm_key_data exp_key_s;
+        const struct gcm_key_data exp_key_s = { 0 };
         const struct gcm_key_data *exp_key = &exp_key_s;
         struct gcm_context_data ctx_s;
         struct gcm_context_data *ctx = &ctx_s;
@@ -1571,7 +1571,7 @@ static int
 test_IMB_AES192_GCM_ENC_FINALIZE(struct IMB_MGR *mgr)
 {
         unsigned i = 1;
-        const struct gcm_key_data exp_key_s;
+        const struct gcm_key_data exp_key_s = { 0 };
         const struct gcm_key_data *exp_key = &exp_key_s;
         struct gcm_context_data ctx_s;
         struct gcm_context_data *ctx = &ctx_s;
@@ -1614,7 +1614,7 @@ static int
 test_IMB_AES256_GCM_ENC_FINALIZE(struct IMB_MGR *mgr)
 {
         unsigned i = 1;
-        const struct gcm_key_data exp_key_s;
+        const struct gcm_key_data exp_key_s = { 0 };
         const struct gcm_key_data *exp_key = &exp_key_s;
         struct gcm_context_data ctx_s;
         struct gcm_context_data *ctx = &ctx_s;
@@ -1657,7 +1657,7 @@ static int
 test_IMB_AES128_GCM_DEC_FINALIZE(struct IMB_MGR *mgr)
 {
         unsigned i = 1;
-        const struct gcm_key_data exp_key_s;
+        const struct gcm_key_data exp_key_s = { 0 };
         const struct gcm_key_data *exp_key = &exp_key_s;
         struct gcm_context_data ctx_s;
         struct gcm_context_data *ctx = &ctx_s;
@@ -1700,7 +1700,7 @@ static int
 test_IMB_AES192_GCM_DEC_FINALIZE(struct IMB_MGR *mgr)
 {
         unsigned i = 1;
-        const struct gcm_key_data exp_key_s;
+        const struct gcm_key_data exp_key_s = { 0 };
         const struct gcm_key_data *exp_key = &exp_key_s;
         struct gcm_context_data ctx_s;
         struct gcm_context_data *ctx = &ctx_s;
@@ -1743,7 +1743,7 @@ static int
 test_IMB_AES256_GCM_DEC_FINALIZE(struct IMB_MGR *mgr)
 {
         unsigned i = 1;
-        const struct gcm_key_data exp_key_s;
+        const struct gcm_key_data exp_key_s = { 0 };
         const struct gcm_key_data *exp_key = &exp_key_s;
         struct gcm_context_data ctx_s;
         struct gcm_context_data *ctx = &ctx_s;
@@ -1785,7 +1785,7 @@ static int
 test_IMB_AES128_GCM_PRE(struct IMB_MGR *mgr)
 {
         unsigned i = 1;
-        const uint8_t key[BUFF_SIZE];
+        const uint8_t key[BUFF_SIZE] = { 0 };
         struct gcm_key_data exp_key_s;
         struct gcm_key_data *exp_key = &exp_key_s;
         int seg_err; /* segfault flag */
@@ -1819,7 +1819,7 @@ static int
 test_IMB_AES192_GCM_PRE(struct IMB_MGR *mgr)
 {
         unsigned i = 1;
-        const uint8_t key[BUFF_SIZE];
+        const uint8_t key[BUFF_SIZE] = { 0 };
         struct gcm_key_data exp_key_s;
         struct gcm_key_data *exp_key = &exp_key_s;
         int seg_err; /* segfault flag */
@@ -1853,7 +1853,7 @@ static int
 test_IMB_AES256_GCM_PRE(struct IMB_MGR *mgr)
 {
         unsigned i = 1;
-        const uint8_t key[BUFF_SIZE];
+        const uint8_t key[BUFF_SIZE] = { 0 };
         struct gcm_key_data exp_key_s;
         struct gcm_key_data *exp_key = &exp_key_s;
         int seg_err; /* segfault flag */
@@ -1887,9 +1887,9 @@ static int
 test_IMB_ZUC_EEA3_1_BUFFER(struct IMB_MGR *mgr)
 {
         unsigned i = 1;
-        const uint8_t key[BUFF_SIZE];
-        const uint8_t iv[BUFF_SIZE];
-        const uint8_t src[BUFF_SIZE];
+        const uint8_t key[BUFF_SIZE] = { 0 };
+        const uint8_t iv[BUFF_SIZE] = { 0 };
+        const uint8_t src[BUFF_SIZE] = { 0 };
         uint8_t dst[BUFF_SIZE];
         const uint32_t len = 1;
         int seg_err; /* segfault flag */
@@ -1932,13 +1932,13 @@ test_IMB_ZUC_EEA3_4_BUFFER(struct IMB_MGR *mgr)
         unsigned i = 1;
         const void *key[MAX_BUFFS];
         const void *key_NULL_pts[MAX_BUFFS];
-        const uint8_t key_s[MAX_BUFFS][BUFF_SIZE];
+        const uint8_t key_s[MAX_BUFFS][BUFF_SIZE] = { 0 };
         const void *iv[MAX_BUFFS];
         const void *iv_NULL_pts[MAX_BUFFS];
-        const uint8_t iv_s[MAX_BUFFS][BUFF_SIZE];
+        const uint8_t iv_s[MAX_BUFFS][BUFF_SIZE] = { 0 };
         const void *src[MAX_BUFFS];
         const void *src_NULL_pts[MAX_BUFFS];
-        const uint8_t src_s[MAX_BUFFS][BUFF_SIZE];
+        const uint8_t src_s[MAX_BUFFS][BUFF_SIZE] = { 0 };
         void *dst[MAX_BUFFS];
         void *dst_NULL_pts[MAX_BUFFS];
         uint8_t dst_s[MAX_BUFFS][BUFF_SIZE];
@@ -2001,13 +2001,13 @@ test_IMB_ZUC_EEA3_N_BUFFER(struct IMB_MGR *mgr)
         unsigned i = 1;
         const void *key[MAX_BUFFS];
         const void *key_NULL_pts[MAX_BUFFS];
-        const uint8_t key_s[MAX_BUFFS][BUFF_SIZE];
+        const uint8_t key_s[MAX_BUFFS][BUFF_SIZE] = { 0 };
         const void *iv[MAX_BUFFS];
         const void *iv_NULL_pts[MAX_BUFFS];
-        const uint8_t iv_s[MAX_BUFFS][BUFF_SIZE];
+        const uint8_t iv_s[MAX_BUFFS][BUFF_SIZE] = { 0 };
         const void *src[MAX_BUFFS];
         const void *src_NULL_pts[MAX_BUFFS];
-        const uint8_t src_s[MAX_BUFFS][BUFF_SIZE];
+        const uint8_t src_s[MAX_BUFFS][BUFF_SIZE] = { 0 };
         void *dst[MAX_BUFFS];
         void *dst_NULL_pts[MAX_BUFFS];
         uint8_t dst_s[MAX_BUFFS][BUFF_SIZE];
@@ -2070,9 +2070,9 @@ static int
 test_IMB_ZUC_EIA3_1_BUFFER(struct IMB_MGR *mgr)
 {
         unsigned i = 1;
-        const uint8_t key[BUFF_SIZE];
-        const uint8_t iv[BUFF_SIZE];
-        const uint8_t src[BUFF_SIZE];
+        const uint8_t key[BUFF_SIZE] = { 0 };
+        const uint8_t iv[BUFF_SIZE] = { 0 };
+        const uint8_t src[BUFF_SIZE] = { 0 };
         const uint32_t len = 1;
         uint32_t tag[BUFF_SIZE];
         int seg_err; /* segfault flag */
@@ -2114,7 +2114,7 @@ static int
 test_IMB_KASUMI_INIT_F8_KEY_SCHED(struct IMB_MGR *mgr)
 {
         unsigned i = 1;
-        const uint8_t key[BUFF_SIZE];
+        const uint8_t key[BUFF_SIZE] = { 0 };
         kasumi_key_sched_t exp_key_s;
         kasumi_key_sched_t *exp_key = &exp_key_s;
         int seg_err; /* segfault flag */
@@ -2149,7 +2149,7 @@ static int
 test_IMB_KASUMI_INIT_F9_KEY_SCHED(struct IMB_MGR *mgr)
 {
         unsigned i = 1;
-        const uint8_t key[BUFF_SIZE];
+        const uint8_t key[BUFF_SIZE] = { 0 };
         kasumi_key_sched_t exp_key_s;
         kasumi_key_sched_t *exp_key = &exp_key_s;
         int seg_err; /* segfault flag */
@@ -2184,10 +2184,10 @@ static int
 test_IMB_SNOW3G_F8_1_BUFFER_BIT(struct IMB_MGR *mgr)
 {
         unsigned i = 1;
-        const snow3g_key_schedule_t exp_key_s;
+        const snow3g_key_schedule_t exp_key_s = { 0 };
         const snow3g_key_schedule_t *exp_key = &exp_key_s;
-        const uint8_t iv[BUFF_SIZE];
-        const uint8_t src[BUFF_SIZE];
+        const uint8_t iv[BUFF_SIZE] = { 0 };
+        const uint8_t src[BUFF_SIZE] = { 0 };
         uint8_t dst[BUFF_SIZE];
         const uint32_t len = 1;
         const uint32_t offset = 1;
@@ -2231,10 +2231,10 @@ static int
 test_IMB_SNOW3G_F8_1_BUFFER(struct IMB_MGR *mgr)
 {
         unsigned i = 1;
-        const snow3g_key_schedule_t exp_key_s;
+        const snow3g_key_schedule_t exp_key_s = { 0 };
         const snow3g_key_schedule_t *exp_key = &exp_key_s;
-        const uint8_t iv[BUFF_SIZE];
-        const uint8_t src[BUFF_SIZE];
+        const uint8_t iv[BUFF_SIZE] = { 0 };
+        const uint8_t src[BUFF_SIZE] = { 0 };
         uint8_t dst[BUFF_SIZE];
         const uint32_t len = 1;
         int seg_err; /* segfault flag */
@@ -2275,14 +2275,14 @@ static int
 test_IMB_SNOW3G_F8_2_BUFFER(struct IMB_MGR *mgr)
 {
         unsigned i = 1;
-        const snow3g_key_schedule_t exp_key_s;
+        const snow3g_key_schedule_t exp_key_s = { 0 };
         const snow3g_key_schedule_t *exp_key = &exp_key_s;
-        const uint8_t iv1[BUFF_SIZE];
-        const uint8_t iv2[BUFF_SIZE];
-        const uint8_t src1[BUFF_SIZE];
+        const uint8_t iv1[BUFF_SIZE] = { 0 };
+        const uint8_t iv2[BUFF_SIZE] = { 0 };
+        const uint8_t src1[BUFF_SIZE] = { 0 };
         uint8_t dst1[BUFF_SIZE];
         const uint32_t len1 = 1;
-        const uint8_t src2[BUFF_SIZE];
+        const uint8_t src2[BUFF_SIZE] = { 0 };
         uint8_t dst2[BUFF_SIZE];
         const uint32_t len2 = 1;
         int seg_err; /* segfault flag */
@@ -2333,22 +2333,22 @@ static int
 test_IMB_SNOW3G_F8_4_BUFFER(struct IMB_MGR *mgr)
 {
         unsigned i = 1;
-        const snow3g_key_schedule_t exp_key_s;
+        const snow3g_key_schedule_t exp_key_s = { 0 };
         const snow3g_key_schedule_t *exp_key = &exp_key_s;
-        const uint8_t iv1[BUFF_SIZE];
-        const uint8_t iv2[BUFF_SIZE];
-        const uint8_t iv3[BUFF_SIZE];
-        const uint8_t iv4[BUFF_SIZE];
-        const uint8_t src1[BUFF_SIZE];
+        const uint8_t iv1[BUFF_SIZE] = { 0 };
+        const uint8_t iv2[BUFF_SIZE] = { 0 };
+        const uint8_t iv3[BUFF_SIZE] = { 0 };
+        const uint8_t iv4[BUFF_SIZE] = { 0 };
+        const uint8_t src1[BUFF_SIZE] = { 0 };
         uint8_t dst1[BUFF_SIZE];
         const uint32_t len1 = 1;
-        const uint8_t src2[BUFF_SIZE];
+        const uint8_t src2[BUFF_SIZE] = { 0 };
         uint8_t dst2[BUFF_SIZE];
         const uint32_t len2 = 1;
-        const uint8_t src3[BUFF_SIZE];
+        const uint8_t src3[BUFF_SIZE] = { 0 };
         uint8_t dst3[BUFF_SIZE];
         const uint32_t len3 = 1;
-        const uint8_t src4[BUFF_SIZE];
+        const uint8_t src4[BUFF_SIZE] = { 0 };
         uint8_t dst4[BUFF_SIZE];
         const uint32_t len4 = 1;
         int seg_err; /* segfault flag */
@@ -2432,38 +2432,38 @@ static int
 test_IMB_SNOW3G_F8_8_BUFFER(struct IMB_MGR *mgr)
 {
         unsigned i = 1;
-        const snow3g_key_schedule_t exp_key_s;
+        const snow3g_key_schedule_t exp_key_s = { 0 };
         const snow3g_key_schedule_t *exp_key = &exp_key_s;
-        const uint8_t iv1[BUFF_SIZE];
-        const uint8_t iv2[BUFF_SIZE];
-        const uint8_t iv3[BUFF_SIZE];
-        const uint8_t iv4[BUFF_SIZE];
-        const uint8_t iv5[BUFF_SIZE];
-        const uint8_t iv6[BUFF_SIZE];
-        const uint8_t iv7[BUFF_SIZE];
-        const uint8_t iv8[BUFF_SIZE];
-        const uint8_t src1[BUFF_SIZE];
+        const uint8_t iv1[BUFF_SIZE] = { 0 };
+        const uint8_t iv2[BUFF_SIZE] = { 0 };
+        const uint8_t iv3[BUFF_SIZE] = { 0 };
+        const uint8_t iv4[BUFF_SIZE] = { 0 };
+        const uint8_t iv5[BUFF_SIZE] = { 0 };
+        const uint8_t iv6[BUFF_SIZE] = { 0 };
+        const uint8_t iv7[BUFF_SIZE] = { 0 };
+        const uint8_t iv8[BUFF_SIZE] = { 0 };
+        const uint8_t src1[BUFF_SIZE] = { 0 };
         uint8_t dst1[BUFF_SIZE];
         const uint32_t len1 = 1;
-        const uint8_t src2[BUFF_SIZE];
+        const uint8_t src2[BUFF_SIZE] = { 0 };
         uint8_t dst2[BUFF_SIZE];
         const uint32_t len2 = 1;
-        const uint8_t src3[BUFF_SIZE];
+        const uint8_t src3[BUFF_SIZE] = { 0 };
         uint8_t dst3[BUFF_SIZE];
         const uint32_t len3 = 1;
-        const uint8_t src4[BUFF_SIZE];
+        const uint8_t src4[BUFF_SIZE] = { 0 };
         uint8_t dst4[BUFF_SIZE];
         const uint32_t len4 = 1;
-        const uint8_t src5[BUFF_SIZE];
+        const uint8_t src5[BUFF_SIZE] = { 0 };
         uint8_t dst5[BUFF_SIZE];
         const uint32_t len5 = 1;
-        const uint8_t src6[BUFF_SIZE];
+        const uint8_t src6[BUFF_SIZE] = { 0 };
         uint8_t dst6[BUFF_SIZE];
         const uint32_t len6 = 1;
-        const uint8_t src7[BUFF_SIZE];
+        const uint8_t src7[BUFF_SIZE] = { 0 };
         uint8_t dst7[BUFF_SIZE];
         const uint32_t len7 = 1;
-        const uint8_t src8[BUFF_SIZE];
+        const uint8_t src8[BUFF_SIZE] = { 0 };
         uint8_t dst8[BUFF_SIZE];
         const uint32_t len8 = 1;
         int seg_err; /* segfault flag */
@@ -2991,14 +2991,14 @@ static int
 test_IMB_SNOW3G_F8_N_BUFFER(struct IMB_MGR *mgr)
 {
         unsigned i = 1;
-        const snow3g_key_schedule_t exp_key_s;
+        const snow3g_key_schedule_t exp_key_s = { 0 };
         const snow3g_key_schedule_t *exp_key = &exp_key_s;
         const void *iv[MAX_BUFFS];
         const void *iv_NULL_pts[MAX_BUFFS];
-        const uint8_t iv_s[MAX_BUFFS][BUFF_SIZE];
+        const uint8_t iv_s[MAX_BUFFS][BUFF_SIZE] = { 0 };
         const void *src[MAX_BUFFS];
         const void *src_NULL_pts[MAX_BUFFS];
-        const uint8_t src_s[MAX_BUFFS][BUFF_SIZE];
+        const uint8_t src_s[MAX_BUFFS][BUFF_SIZE] = { 0 };
         void *dst[MAX_BUFFS];
         void *dst_NULL_pts[MAX_BUFFS];
         uint8_t dst_s[MAX_BUFFS][BUFF_SIZE];
@@ -3059,13 +3059,13 @@ test_IMB_SNOW3G_F8_8_BUFFER_MULTIKEY(struct IMB_MGR *mgr)
         unsigned i = 1;
         const snow3g_key_schedule_t *exp_key[MAX_BUFFS];
         const snow3g_key_schedule_t *exp_key_NULL_pts[MAX_BUFFS];
-        const snow3g_key_schedule_t exp_key_s[MAX_BUFFS][BUFF_SIZE];
+        const snow3g_key_schedule_t exp_key_s[MAX_BUFFS][BUFF_SIZE] = { 0 };
         const void *iv[MAX_BUFFS];
         const void *iv_NULL_pts[MAX_BUFFS];
-        const uint8_t iv_s[MAX_BUFFS][BUFF_SIZE];
+        const uint8_t iv_s[MAX_BUFFS][BUFF_SIZE] = { 0 };
         const void *src[MAX_BUFFS];
         const void *src_NULL_pts[MAX_BUFFS];
-        const uint8_t src_s[MAX_BUFFS][BUFF_SIZE];
+        const uint8_t src_s[MAX_BUFFS][BUFF_SIZE] = { 0 };
         void *dst[MAX_BUFFS];
         void *dst_NULL_pts[MAX_BUFFS];
         uint8_t dst_s[MAX_BUFFS][BUFF_SIZE];
@@ -3127,13 +3127,13 @@ test_IMB_SNOW3G_F8_N_BUFFER_MULTIKEY(struct IMB_MGR *mgr)
         unsigned i = 1;
         const snow3g_key_schedule_t *exp_key[MAX_BUFFS];
         const snow3g_key_schedule_t *exp_key_NULL_pts[MAX_BUFFS];
-        const snow3g_key_schedule_t exp_key_s[MAX_BUFFS][BUFF_SIZE];
+        const snow3g_key_schedule_t exp_key_s[MAX_BUFFS][BUFF_SIZE] = { 0 };
         const void *iv[MAX_BUFFS];
         const void *iv_NULL_pts[MAX_BUFFS];
-        const uint8_t iv_s[MAX_BUFFS][BUFF_SIZE];
+        const uint8_t iv_s[MAX_BUFFS][BUFF_SIZE] = { 0 };
         const void *src[MAX_BUFFS];
         const void *src_NULL_pts[MAX_BUFFS];
-        const uint8_t src_s[MAX_BUFFS][BUFF_SIZE];
+        const uint8_t src_s[MAX_BUFFS][BUFF_SIZE] = { 0 };
         void *dst[MAX_BUFFS];
         void *dst_NULL_pts[MAX_BUFFS];
         uint8_t dst_s[MAX_BUFFS][BUFF_SIZE];
@@ -3194,10 +3194,10 @@ static int
 test_IMB_SNOW3G_F9_1_BUFFER(struct IMB_MGR *mgr)
 {
         unsigned i = 1;
-        const snow3g_key_schedule_t exp_key_s;
+        const snow3g_key_schedule_t exp_key_s = { 0 };
         const snow3g_key_schedule_t *exp_key = &exp_key_s;
-        const uint8_t iv[BUFF_SIZE];
-        const uint8_t src[BUFF_SIZE];
+        const uint8_t iv[BUFF_SIZE] = { 0 };
+        const uint8_t src[BUFF_SIZE] = { 0 };
         const uint64_t len = 1;
         uint8_t tag[BUFF_SIZE];
         int seg_err; /* segfault flag */
@@ -3239,7 +3239,7 @@ static int
 test_IMB_SNOW3G_INIT_KEY_SCHED(struct IMB_MGR *mgr)
 {
         unsigned i = 1;
-        const uint8_t key[BUFF_SIZE];
+        const uint8_t key[BUFF_SIZE] = { 0 };
         snow3g_key_schedule_t exp_key_s;
         snow3g_key_schedule_t *exp_key = &exp_key_s;
         int seg_err; /* segfault flag */
@@ -3275,7 +3275,7 @@ test_IMB_GHASH(struct IMB_MGR *mgr)
         unsigned i = 1;
         struct gcm_key_data exp_key_s;
         struct gcm_key_data *exp_key = &exp_key_s;
-        const uint8_t src[BUFF_SIZE];
+        const uint8_t src[BUFF_SIZE] = { 0 };
         const uint64_t len = 1;
         uint8_t tag[BUFF_SIZE];
         const uint64_t tagl = 1;
@@ -3319,13 +3319,13 @@ test_IMB_ZUC_EIA3_N_BUFFER(struct IMB_MGR *mgr)
         unsigned i = 1;
         const void *key[MAX_BUFFS];
         const void *key_NULL_pts[MAX_BUFFS];
-        const uint8_t key_s[MAX_BUFFS][BUFF_SIZE];
+        const uint8_t key_s[MAX_BUFFS][BUFF_SIZE] = { 0 };
         const void *iv[MAX_BUFFS];
         const void *iv_NULL_pts[MAX_BUFFS];
-        const uint8_t iv_s[MAX_BUFFS][BUFF_SIZE];
+        const uint8_t iv_s[MAX_BUFFS][BUFF_SIZE] = { 0 };
         const void *src[MAX_BUFFS];
         const void *src_NULL_pts[MAX_BUFFS];
-        const uint8_t src_s[MAX_BUFFS][BUFF_SIZE];
+        const uint8_t src_s[MAX_BUFFS][BUFF_SIZE] = { 0 };
         const uint32_t len_all_zero[MAX_BUFFS] = {
                 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
         };
@@ -3389,13 +3389,13 @@ static int
 test_IMB_AES128_GCM_INIT_VAR_IV(struct IMB_MGR *mgr)
 {
         unsigned i = 1;
-        const struct gcm_key_data exp_key_s;
+        const struct gcm_key_data exp_key_s = { 0 };
         const struct gcm_key_data *exp_key = &exp_key_s;
         struct gcm_context_data ctx_s;
         struct gcm_context_data *ctx = &ctx_s;
-        const uint8_t iv[BUFF_SIZE];
+        const uint8_t iv[BUFF_SIZE] = { 0 };
         const uint64_t ivl = 1;
-        const uint8_t aad[BUFF_SIZE];
+        const uint8_t aad[BUFF_SIZE] = { 0 };
         const uint64_t aadl = 1;
         int seg_err; /* segfault flag */
 
@@ -3438,13 +3438,13 @@ static int
 test_IMB_AES192_GCM_INIT_VAR_IV(struct IMB_MGR *mgr)
 {
         unsigned i = 1;
-        const struct gcm_key_data exp_key_s;
+        const struct gcm_key_data exp_key_s = { 0 };
         const struct gcm_key_data *exp_key = &exp_key_s;
         struct gcm_context_data ctx_s;
         struct gcm_context_data *ctx = &ctx_s;
-        const uint8_t iv[BUFF_SIZE];
+        const uint8_t iv[BUFF_SIZE] = { 0 };
         const uint64_t ivl = 1;
-        const uint8_t aad[BUFF_SIZE];
+        const uint8_t aad[BUFF_SIZE] = { 0 };
         const uint64_t aadl = 1;
         int seg_err; /* segfault flag */
 
@@ -3487,13 +3487,13 @@ static int
 test_IMB_AES256_GCM_INIT_VAR_IV(struct IMB_MGR *mgr)
 {
         unsigned i = 1;
-        const struct gcm_key_data exp_key_s;
+        const struct gcm_key_data exp_key_s = { 0 };
         const struct gcm_key_data *exp_key = &exp_key_s;
         struct gcm_context_data ctx_s;
         struct gcm_context_data *ctx = &ctx_s;
-        const uint8_t iv[BUFF_SIZE];
+        const uint8_t iv[BUFF_SIZE] = { 0 };
         const uint64_t ivl = 1;
-        const uint8_t aad[BUFF_SIZE];
+        const uint8_t aad[BUFF_SIZE] = { 0 };
         const uint64_t aadl = 1;
         int seg_err; /* segfault flag */
 
@@ -3535,11 +3535,11 @@ static int
 test_IMB_AES128_GMAC_INIT(struct IMB_MGR *mgr)
 {
         unsigned i = 1;
-        const struct gcm_key_data exp_key_s;
+        const struct gcm_key_data exp_key_s = { 0 };
         const struct gcm_key_data *exp_key = &exp_key_s;
         struct gcm_context_data ctx_s;
         struct gcm_context_data *ctx = &ctx_s;
-        const uint8_t iv[BUFF_SIZE];
+        const uint8_t iv[BUFF_SIZE] = { 0 };
         const uint64_t ivl = 1;
         int seg_err; /* segfault flag */
 
@@ -3577,11 +3577,11 @@ static int
 test_IMB_AES192_GMAC_INIT(struct IMB_MGR *mgr)
 {
         unsigned i = 1;
-        const struct gcm_key_data exp_key_s;
+        const struct gcm_key_data exp_key_s = { 0 };
         const struct gcm_key_data *exp_key = &exp_key_s;
         struct gcm_context_data ctx_s;
         struct gcm_context_data *ctx = &ctx_s;
-        const uint8_t iv[BUFF_SIZE];
+        const uint8_t iv[BUFF_SIZE] = { 0 };
         const uint64_t ivl = 1;
         int seg_err; /* segfault flag */
 
@@ -3619,11 +3619,11 @@ static int
 test_IMB_AES256_GMAC_INIT(struct IMB_MGR *mgr)
 {
         unsigned i = 1;
-        const struct gcm_key_data exp_key_s;
+        const struct gcm_key_data exp_key_s = { 0 };
         const struct gcm_key_data *exp_key = &exp_key_s;
         struct gcm_context_data ctx_s;
         struct gcm_context_data *ctx = &ctx_s;
-        const uint8_t iv[BUFF_SIZE];
+        const uint8_t iv[BUFF_SIZE] = { 0 };
         const uint64_t ivl = 1;
         int seg_err; /* segfault flag */
 
@@ -3661,11 +3661,11 @@ static int
 test_IMB_AES128_GMAC_UPDATE(struct IMB_MGR *mgr)
 {
         unsigned i = 1;
-        const struct gcm_key_data exp_key_s;
+        const struct gcm_key_data exp_key_s = { 0 };
         const struct gcm_key_data *exp_key = &exp_key_s;
         struct gcm_context_data ctx_s;
         struct gcm_context_data *ctx = &ctx_s;
-        const uint8_t src[BUFF_SIZE];
+        const uint8_t src[BUFF_SIZE] = { 0 };
         const uint64_t len = 1;
         int seg_err; /* segfault flag */
 
@@ -3702,11 +3702,11 @@ static int
 test_IMB_AES192_GMAC_UPDATE(struct IMB_MGR *mgr)
 {
         unsigned i = 1;
-        const struct gcm_key_data exp_key_s;
+        const struct gcm_key_data exp_key_s = { 0 };
         const struct gcm_key_data *exp_key = &exp_key_s;
         struct gcm_context_data ctx_s;
         struct gcm_context_data *ctx = &ctx_s;
-        const uint8_t src[BUFF_SIZE];
+        const uint8_t src[BUFF_SIZE] = { 0 };
         const uint64_t len = 1;
         int seg_err; /* segfault flag */
 
@@ -3743,11 +3743,11 @@ static int
 test_IMB_AES256_GMAC_UPDATE(struct IMB_MGR *mgr)
 {
         unsigned i = 1;
-        const struct gcm_key_data exp_key_s;
+        const struct gcm_key_data exp_key_s = { 0 };
         const struct gcm_key_data *exp_key = &exp_key_s;
         struct gcm_context_data ctx_s;
         struct gcm_context_data *ctx = &ctx_s;
-        const uint8_t src[BUFF_SIZE];
+        const uint8_t src[BUFF_SIZE] = { 0 };
         const uint64_t len = 1;
         int seg_err; /* segfault flag */
 
@@ -3785,7 +3785,7 @@ static int
 test_IMB_AES128_GMAC_FINALIZE(struct IMB_MGR *mgr)
 {
         unsigned i = 1;
-        const struct gcm_key_data exp_key_s;
+        const struct gcm_key_data exp_key_s = { 0 };
         const struct gcm_key_data *exp_key = &exp_key_s;
         struct gcm_context_data ctx_s;
         struct gcm_context_data *ctx = &ctx_s;
@@ -3828,7 +3828,7 @@ static int
 test_IMB_AES192_GMAC_FINALIZE(struct IMB_MGR *mgr)
 {
         unsigned i = 1;
-        const struct gcm_key_data exp_key_s;
+        const struct gcm_key_data exp_key_s = { 0 };
         const struct gcm_key_data *exp_key = &exp_key_s;
         struct gcm_context_data ctx_s;
         struct gcm_context_data *ctx = &ctx_s;
@@ -3871,7 +3871,7 @@ static int
 test_IMB_AES256_GMAC_FINALIZE(struct IMB_MGR *mgr)
 {
         unsigned i = 1;
-        const struct gcm_key_data exp_key_s;
+        const struct gcm_key_data exp_key_s = { 0 };
         const struct gcm_key_data *exp_key = &exp_key_s;
         struct gcm_context_data ctx_s;
         struct gcm_context_data *ctx = &ctx_s;
@@ -3914,7 +3914,7 @@ static int
 test_IMB_AES_CMAC_SUBKEY_GEN_256(struct IMB_MGR *mgr)
 {
         unsigned i = 1;
-        const uint8_t exp_key[BUFF_SIZE];
+        const uint8_t exp_key[BUFF_SIZE] = { 0 };
         uint8_t key1[BUFF_SIZE];
         uint8_t key2[BUFF_SIZE];
         int seg_err; /* segfault flag */
@@ -3951,7 +3951,7 @@ static int
 test_IMB_GHASH_PRE(struct IMB_MGR *mgr)
 {
         unsigned i = 1;
-        const uint8_t key[BUFF_SIZE];
+        const uint8_t key[BUFF_SIZE] = { 0 };
         struct gcm_key_data exp_key_s;
         struct gcm_key_data *exp_key = &exp_key_s;
         int seg_err; /* segfault flag */
@@ -4372,11 +4372,11 @@ static int
 test_IMB_CHACHA20_POLY1305_INIT(struct IMB_MGR *mgr)
 {
         unsigned i = 1;
-        const uint8_t key[BUFF_SIZE];
+        const uint8_t key[BUFF_SIZE] = { 0 };
         struct chacha20_poly1305_context_data ctx_s;
         struct chacha20_poly1305_context_data *ctx = &ctx_s;
-        const uint8_t iv[BUFF_SIZE];
-        const uint8_t aad[BUFF_SIZE];
+        const uint8_t iv[BUFF_SIZE] = { 0 };
+        const uint8_t aad[BUFF_SIZE] = { 0 };
         const uint64_t aadl = 1;
         int seg_err; /* segfault flag */
 
@@ -4416,11 +4416,11 @@ static int
 test_IMB_CHACHA20_POLY1305_ENC_UPDATE(struct IMB_MGR *mgr)
 {
         unsigned i = 1;
-        const uint8_t key[BUFF_SIZE];
+        const uint8_t key[BUFF_SIZE] = { 0 };
         struct chacha20_poly1305_context_data ctx_s;
         struct chacha20_poly1305_context_data *ctx = &ctx_s;
         uint8_t dst[BUFF_SIZE];
-        const uint8_t src[BUFF_SIZE];
+        const uint8_t src[BUFF_SIZE] = { 0 };
         const uint64_t len = 1;
         int seg_err; /* segfault flag */
 
@@ -4460,11 +4460,11 @@ static int
 test_IMB_CHACHA20_POLY1305_DEC_UPDATE(struct IMB_MGR *mgr)
 {
         unsigned i = 1;
-        const uint8_t key[BUFF_SIZE];
+        const uint8_t key[BUFF_SIZE] = { 0 };
         struct chacha20_poly1305_context_data ctx_s;
         struct chacha20_poly1305_context_data *ctx = &ctx_s;
         uint8_t dst[BUFF_SIZE];
-        const uint8_t src[BUFF_SIZE];
+        const uint8_t src[BUFF_SIZE] = { 0 };
         const uint64_t len = 1;
         int seg_err; /* segfault flag */
 
