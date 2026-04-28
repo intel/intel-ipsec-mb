@@ -1,0 +1,201 @@
+{
+   "algorithm": "AES-CCM",
+   "generatorVersion": "RFC3610",
+   "header": [
+      "Test vectors of type AeadTest test authenticated encryption with additional data. The test vectors are intended for testing both encryption and decryption."
+   ],
+   "notes": {},
+   "numberOfTests": 12,
+   "schema": "aead_test_schema_v1.json",
+   "testGroups": [
+      {
+         "ivSize": 104,
+         "keySize": 256,
+         "source": "https://tools.ietf.org/html/rfc3610",
+         "tagSize": 64,
+         "tests": [
+            {
+               "aad": "0001020304050607",
+               "comment": "",
+               "ct": "216163decf74e00cab0456ff45cda7171fa596d70f7691",
+               "flags": [],
+               "iv": "00000003020100a0a1a2a3a4a5",
+               "key": "c0c1c2c3c4c5c6c7c8c9cacbcccdcecfc0c1c2c3c4c5c6c7c8c9cacbcccdcecf",
+               "msg": "08090a0b0c0d0e0f101112131415161718191a1b1c1d1e",
+               "result": "valid",
+               "tag": "ca8afaa23f223e64",
+               "tcId": 1
+            },
+            {
+               "aad": "0001020304050607",
+               "comment": "",
+               "ct": "616a606d544194ab29d2a98614da024014fac5ce970aa1e9",
+               "flags": [],
+               "iv": "00000004030201a0a1a2a3a4a5",
+               "key": "c0c1c2c3c4c5c6c7c8c9cacbcccdcecfc0c1c2c3c4c5c6c7c8c9cacbcccdcecf",
+               "msg": "08090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+               "result": "valid",
+               "tag": "f1a3ed0ee12a9b69",
+               "tcId": 2
+            },
+            {
+               "aad": "0001020304050607",
+               "comment": "",
+               "ct": "754cddea13599b30bac6d40d120d430a2b44c40b1fde3124c4",
+               "flags": [],
+               "iv": "00000005040302a0a1a2a3a4a5",
+               "key": "c0c1c2c3c4c5c6c7c8c9cacbcccdcecfc0c1c2c3c4c5c6c7c8c9cacbcccdcecf",
+               "msg": "08090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20",
+               "result": "valid",
+               "tag": "9ed2c4f404dcf3eb",
+               "tcId": 3
+            },
+            {
+               "aad": "000102030405060708090a0b",
+               "comment": "",
+               "ct": "5c14c78c02c5a264d8df46578834ef27c1a301",
+               "flags": [],
+               "iv": "00000006050403a0a1a2a3a4a5",
+               "key": "c0c1c2c3c4c5c6c7c8c9cacbcccdcecfc0c1c2c3c4c5c6c7c8c9cacbcccdcecf",
+               "msg": "0c0d0e0f101112131415161718191a1b1c1d1e",
+               "result": "valid",
+               "tag": "efda9e13c700cc63",
+               "tcId": 4
+            },
+            {
+               "aad": "000102030405060708090a0b",
+               "comment": "",
+               "ct": "2cf828a55a7deff1633d2672a07b352c3dc5b4e5",
+               "flags": [],
+               "iv": "00000007060504a0a1a2a3a4a5",
+               "key": "c0c1c2c3c4c5c6c7c8c9cacbcccdcecfc0c1c2c3c4c5c6c7c8c9cacbcccdcecf",
+               "msg": "0c0d0e0f101112131415161718191a1b1c1d1e1f",
+               "result": "valid",
+               "tag": "8fc49d90be7894a5",
+               "tcId": 5
+            },
+            {
+               "aad": "08400fd2e128a57c5030f1844408abaea5b8fcba0000",
+               "comment": "",
+               "ct": "122ab4d401c31a55e0596a5ecc37dbd4a2b53fd8",
+               "flags": [],
+               "iv": "005030f1844408b5039776e70c",
+               "key": "c97c1f67ce371185514a8a19f2bdd52fc97c1f67ce371185514a8a19f2bdd52f",
+               "msg": "f8ba1a55d02f85ae967bb62fb6cda8eb7e78a050",
+               "result": "valid",
+               "tag": "421db8e9bf603fe8",
+               "tcId": 9
+            },
+            {
+               "aad": "",
+               "comment": "",
+               "ct": "122ab4d401c31a55e0596a5ecc37dbd4a2b53fd8",
+               "flags": [],
+               "iv": "005030f1844408b5039776e70c",
+               "key": "c97c1f67ce371185514a8a19f2bdd52fc97c1f67ce371185514a8a19f2bdd52f",
+               "msg": "f8ba1a55d02f85ae967bb62fb6cda8eb7e78a050",
+               "result": "valid",
+               "tag": "1c89def372039619",
+               "tcId": 11
+            }
+         ],
+         "type": "AeadTest"
+      },
+      {
+         "ivSize": 104,
+         "keySize": 256,
+         "source": "https://tools.ietf.org/html/rfc3610",
+         "tagSize": 80,
+         "tests": [
+            {
+               "aad": "74a0ebc9069f5b37",
+               "comment": "",
+               "ct": "8eefd98c256fefcdc3c0ad3c42b1d7442b447541c3b11885",
+               "flags": [],
+               "iv": "00920f40e56cdc3c9696766cfa",
+               "key": "d7828d13b2b0bdc325a76236df93cc6bd7828d13b2b0bdc325a76236df93cc6b",
+               "msg": "1761433c37c5a35fc1f39f406302eb907c6163be38c98437",
+               "result": "valid",
+               "tag": "90593c67e2f79e2ace9e",
+               "tcId": 6
+            },
+            {
+               "aad": "6e37a6ef546d955d34ab6059",
+               "comment": "",
+               "ct": "23687a56540951b0134f65e9cde6ac57225928e393eaa6c514bf9d1d5db0a316b24a09e89ad2e404660184d3af850269f4a2435c9813f1969968c18c4b3f69ce05261276dbb77d99cc0b6e430375ffd9858e1c4e7d0f4dfd1c6a1e5cf4173aa91ff8d0adf8b68bc1b5ff716fbe1892ed437304edb97835a47099dd62c06884685f373c9fdd8bfb758247ae1b21545e1e437c63c5b547a7655647bac5304b4aada5685d2231b892254d428b51f8fbba1aaa86713e22c07fd758d02590f518f7e969e36f5e1c38a352a3494b701eb61365f71af9e003942b4bd9b018a82ada80d488d30b37e14abebfd92c84d1f5565c7914771b9d34652239784dee299a80422aaf3d84b73c60a6084cbb2b8edb944d72081b29d1e9dbe9532cc022e07527612e26e4802ab0d3f44e909192db",
+               "flags": [],
+               "iv": "008d493b30ae8b3c9696766cfa",
+               "key": "d7828d13b2b0bdc325a76236df93cc6bd7828d13b2b0bdc325a76236df93cc6b",
+               "msg": "abf21c0b02feb88f856df4a37381bce3cc12851702feb88f856df4a37381bce3cc12851702feb88f856df4a37381bce3cc12851702feb88f856df4a37381bce3cc12851702feb88f856df4a37381bce3cc12851702feb88f856df4a37381bce3cc12851702feb88f856df4a37381bce3cc12851702feb88f856df4a37381bce3cc12851702feb88f856df4a37381bce3cc12851702feb88f856df4a37381bce3cc12851702feb88f856df4a37381bce3cc12851702feb88f856df4a37381bce3cc12851702feb88f856df4a37381bce3cc12851702feb88f856df4a37381bce3cc12851702feb88f856df4a37381bce3cc12851702feb88f856df4a37381bce3cc12851702feb88f856df4a37381bce3cc12851702feb88f856df4a37381bce3cc12851702feb88f856df4a3",
+               "result": "valid",
+               "tag": "92e14f3d5358c886185d",
+               "tcId": 7
+            }
+         ],
+         "type": "AeadTest"
+      },
+      {
+         "ivSize": 56,
+         "keySize": 256,
+         "source": "https://tools.ietf.org/html/rfc3610",
+         "tagSize": 32,
+         "tests": [
+            {
+               "aad": "0001020304050607",
+               "comment": "",
+               "ct": "d0b54a05",
+               "flags": [],
+               "iv": "10111213141516",
+               "key": "404142434445464748494a4b4c4d4e4f404142434445464748494a4b4c4d4e4f",
+               "msg": "20212223",
+               "result": "valid",
+               "tag": "4550abab",
+               "tcId": 8
+            }
+         ],
+         "type": "AeadTest"
+      },
+      {
+         "ivSize": 56,
+         "keySize": 256,
+         "source": "https://tools.ietf.org/html/rfc3610",
+         "tagSize": 80,
+         "tests": [
+            {
+               "aad": "0001020304050607",
+               "comment": "",
+               "ct": "d0b54a05",
+               "flags": [],
+               "iv": "10111213141516",
+               "key": "404142434445464748494a4b4c4d4e4f404142434445464748494a4b4c4d4e4f",
+               "msg": "20212223",
+               "result": "valid",
+               "tag": "f816abe3a7c926b43dea",
+               "tcId": 10
+            }
+         ],
+         "type": "AeadTest"
+      },
+      {
+         "ivSize": 56,
+         "keySize": 256,
+         "source": "https://tools.ietf.org/html/rfc3610",
+         "tagSize": 128,
+         "tests": [
+            {
+               "aad": "0001020304050607",
+               "comment": "",
+               "ct": "d0b54a05",
+               "flags": [],
+               "iv": "10111213141516",
+               "key": "404142434445464748494a4b4c4d4e4f404142434445464748494a4b4c4d4e4f",
+               "msg": "20212223",
+               "result": "valid",
+               "tag": "4580d71da5345f7cf911b99519869030",
+               "tcId": 12
+            }
+         ],
+         "type": "AeadTest"
+      }
+   ]
+}

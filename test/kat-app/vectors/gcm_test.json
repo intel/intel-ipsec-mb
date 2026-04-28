@@ -1,0 +1,468 @@
+{
+   "algorithm": "AES-GCM",
+   "generatorVersion": "",
+   "header": [
+      "Test vectors of type AeadTest test authenticated encryption with additional data. The test vectors are intended for testing both encryption and decryption."
+   ],
+   "notes": {},
+   "numberOfTests": 26,
+   "schema": "aead_test_schema_v1.json",
+   "testGroups": [
+      {
+         "ivSize": 96,
+         "keySize": 128,
+         "source": "http://www.ieee802.org/1/files/public/docs2011/bn-randall-test-vectors-0511-v1.pdf",
+         "tagSize": 128,
+         "tests": [
+            {
+               "aad": "d609b1f056637a0d46df998d88e52e00b2c2846512153524c0895e81",
+               "comment": "60-Byte Packet Encryption Using GCM-AES-128",
+               "ct": "701afa1cc039c0d765128a665dab69243899bf7318ccdc81c9931da17fbe8edd7d17cb8b4c26fc81e3284f2b7fba713d",
+               "flags": [],
+               "iv": "12153524c0895e81b2c28465",
+               "key": "ad7a2bd03eac835a6f620fdcb506b345",
+               "msg": "08000f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a0002",
+               "result": "valid",
+               "tag": "4f8d55e7d3f06fd5a13c0c29b9d5b880",
+               "tcId": 1
+            },
+            {
+               "aad": "e20106d7cd0df0761e8dcd3d88e54c2a76d457ed",
+               "comment": "54-Byte Packet Encryption Using GCM-AES-128",
+               "ct": "13b4c72b389dc5018e72a171dd85a5d3752274d3a019fbcaed09a425cd9b2e1c9b72eee7c9de7d52b3f3",
+               "flags": [],
+               "iv": "f0761e8dcd3d000176d457ed",
+               "key": "071b113b0ca743fecccf3d051f737382",
+               "msg": "08000f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f30313233340004",
+               "result": "valid",
+               "tag": "d6a5284f4a6d3fe22a5d6c2b960494c3",
+               "tcId": 2
+            }
+         ],
+         "type": "AeadTest"
+      },
+      {
+         "ivSize": 96,
+         "keySize": 128,
+         "source": "http://csrc.nist.gov/groups/STM/cavp/gcmtestvectors.zip gcmEncryptExtIV128.rsp",
+         "tagSize": 128,
+         "tests": [
+            {
+               "aad": "24825602bd12a984e0092d3e448eda5f",
+               "comment": "",
+               "ct": "93fe7d9e9bfd10348a5606e5cafa7354",
+               "flags": [],
+               "iv": "b3d8cc017cbb89b39e0f67e2",
+               "key": "c939cc13397c1d37de6ae0e1cb7c423c",
+               "msg": "c3b3c41f113a31b73d9a5cd432103069",
+               "result": "valid",
+               "tag": "0032a1dc85f1c9786925a2e71d8272dd",
+               "tcId": 3
+            },
+            {
+               "aad": "021fafd238463973ffe80256e5b1c6b1",
+               "comment": "",
+               "ct": "dfce4e9cd291103d7fe4e63351d9e79d3dfd391e3267104658212da96521b7db",
+               "flags": [],
+               "iv": "6f58a93fe1d207fae4ed2f6d",
+               "key": "298efa1ccf29cf62ae6824bfc19557fc",
+               "msg": "cc38bccd6bc536ad919b1395f5d63801f99f8068d65ca5ac63872daf16b93901",
+               "result": "valid",
+               "tag": "542465ef599316f73a7a560509a2d9f2",
+               "tcId": 4
+            },
+            {
+               "aad": "021fafd238463973ffe80256e5b1c6b1",
+               "comment": "",
+               "ct": "dfce4e9cd291103d7fe4e63351d9e79d3dfd391e3267104658212da96521b7db",
+               "flags": [],
+               "iv": "6f58a93fe1d207fae4ed2f6d",
+               "key": "298efa1ccf29cf62ae6824bfc19557fc",
+               "msg": "cc38bccd6bc536ad919b1395f5d63801f99f8068d65ca5ac63872daf16b93901",
+               "result": "valid",
+               "tag": "542465ef599316f73a7a560509a2d9f2",
+               "tcId": 5
+            }
+         ],
+         "type": "AeadTest"
+      },
+      {
+         "ivSize": 96,
+         "keySize": 128,
+         "source": "http://csrc.nist.gov/groups/ST/toolkit/BCM/documents/proposedmodes/gcm/gcm-revised-spec.pdf",
+         "tagSize": 128,
+         "tests": [
+            {
+               "aad": "",
+               "comment": "",
+               "ct": "0388dace60b6a392f328c2b971b2fe78",
+               "flags": [],
+               "iv": "000000000000000000000000",
+               "key": "00000000000000000000000000000000",
+               "msg": "00000000000000000000000000000000",
+               "result": "valid",
+               "tag": "ab6e47d42cec13bdf53a67b21257bddf",
+               "tcId": 6
+            },
+            {
+               "aad": "",
+               "comment": "",
+               "ct": "42831ec2217774244b7221b784d0d49ce3aa212f2c02a4e035c17e2329aca12e21d514b25466931c7d8f6a5aac84aa051ba30b396a0aac973d58e091473f5985",
+               "flags": [],
+               "iv": "cafebabefacedbaddecaf888",
+               "key": "feffe9928665731c6d6a8f9467308308",
+               "msg": "d9313225f88406e5a55909c5aff5269a86a7a9531534f7da2e4c303d8a318a721c3c0c95956809532fcf0e2449a6b525b16aedf5aa0de657ba637b391aafd255",
+               "result": "valid",
+               "tag": "4d5c2af327cd64a62cf35abd2ba6fab4",
+               "tcId": 7
+            },
+            {
+               "aad": "feedfacedeadbeeffeedfacedeadbeefabaddad2",
+               "comment": "",
+               "ct": "42831ec2217774244b7221b784d0d49ce3aa212f2c02a4e035c17e2329aca12e21d514b25466931c7d8f6a5aac84aa051ba30b396a0aac973d58e091",
+               "flags": [],
+               "iv": "cafebabefacedbaddecaf888",
+               "key": "feffe9928665731c6d6a8f9467308308",
+               "msg": "d9313225f88406e5a55909c5aff5269a86a7a9531534f7da2e4c303d8a318a721c3c0c95956809532fcf0e2449a6b525b16aedf5aa0de657ba637b39",
+               "result": "valid",
+               "tag": "5bc94fbc3221a5db94fae95ae7121a47",
+               "tcId": 8
+            }
+         ],
+         "type": "AeadTest"
+      },
+      {
+         "ivSize": 96,
+         "keySize": 256,
+         "source": "http://csrc.nist.gov/groups/ST/toolkit/BCM/documents/proposedmodes/gcm/gcm-revised-spec.pdf",
+         "tagSize": 128,
+         "tests": [
+            {
+               "aad": "",
+               "comment": "",
+               "ct": "cea7403d4d606b6e074ec5d3baf39d18",
+               "flags": [],
+               "iv": "000000000000000000000000",
+               "key": "0000000000000000000000000000000000000000000000000000000000000000",
+               "msg": "00000000000000000000000000000000",
+               "result": "valid",
+               "tag": "d0d1c8a799996bf0265b98b5d48ab919",
+               "tcId": 9
+            },
+            {
+               "aad": "",
+               "comment": "",
+               "ct": "522dc1f099567d07f47f37a32a84427d643a8cdcbfe5c0c97598a2bd2555d1aa8cb08e48590dbb3da7b08b1056828838c5f61e6393ba7a0abcc9f662898015ad",
+               "flags": [],
+               "iv": "cafebabefacedbaddecaf888",
+               "key": "feffe9928665731c6d6a8f9467308308feffe9928665731c6d6a8f9467308308",
+               "msg": "d9313225f88406e5a55909c5aff5269a86a7a9531534f7da2e4c303d8a318a721c3c0c95956809532fcf0e2449a6b525b16aedf5aa0de657ba637b391aafd255",
+               "result": "valid",
+               "tag": "b094dac5d93471bdec1a502270e3cc6c",
+               "tcId": 10
+            },
+            {
+               "aad": "feedfacedeadbeeffeedfacedeadbeefabaddad2",
+               "comment": "",
+               "ct": "522dc1f099567d07f47f37a32a84427d643a8cdcbfe5c0c97598a2bd2555d1aa8cb08e48590dbb3da7b08b1056828838c5f61e6393ba7a0abcc9f662",
+               "flags": [],
+               "iv": "cafebabefacedbaddecaf888",
+               "key": "feffe9928665731c6d6a8f9467308308feffe9928665731c6d6a8f9467308308",
+               "msg": "d9313225f88406e5a55909c5aff5269a86a7a9531534f7da2e4c303d8a318a721c3c0c95956809532fcf0e2449a6b525b16aedf5aa0de657ba637b39",
+               "result": "valid",
+               "tag": "76fc6ece0f4e1768cddf8853bb2d551b",
+               "tcId": 11
+            }
+         ],
+         "type": "AeadTest"
+      },
+      {
+         "ivSize": 96,
+         "keySize": 192,
+         "source": "https://tools.ietf.org/html/draft-mcgrew-gcm-test-01 case #7",
+         "tagSize": 128,
+         "tests": [
+            {
+               "aad": "0000a5f80000000a",
+               "comment": "",
+               "ct": "a5b1f8066029aea40e598b8122de02420938b3ab33f828e687b8858b5bfbdbd0315b27452144cc77",
+               "flags": [],
+               "iv": "cafebabefacedbaddecaf888",
+               "key": "feffe9928665731c6d6a8f9467308308feffe9928665731c",
+               "msg": "45000028a4ad4000400678800a01038f0a010612802306b8cb712602dd6bb03e501016d075680001",
+               "result": "valid",
+               "tag": "95457b9652037f5318027b5b4cd7a636",
+               "tcId": 12
+            }
+         ],
+         "type": "AeadTest"
+      },
+      {
+         "ivSize": 96,
+         "keySize": 256,
+         "source": "https://tools.ietf.org/html/draft-mcgrew-gcm-test-01 case #7",
+         "tagSize": 32,
+         "tests": [
+            {
+               "aad": "feedfacedeadbeeffeedfacedeadbeefabaddad2",
+               "comment": "",
+               "ct": "522dc1f099567d07f47f37a32a84427d643a8cdcbfe5c0c97598a2bd2555d1aa8cb08e48590dbb3da7b08b1056828838c5f61e6393ba7a0abcc9f662",
+               "flags": [],
+               "iv": "cafebabefacedbaddecaf888",
+               "key": "feffe9928665731c6d6a8f9467308308feffe9928665731c6d6a8f9467308308",
+               "msg": "d9313225f88406e5a55909c5aff5269a86a7a9531534f7da2e4c303d8a318a721c3c0c95956809532fcf0e2449a6b525b16aedf5aa0de657ba637b39",
+               "result": "valid",
+               "tag": "76fc6ece",
+               "tcId": 13
+            }
+         ],
+         "type": "AeadTest"
+      },
+      {
+         "ivSize": 96,
+         "keySize": 256,
+         "source": "https://tools.ietf.org/html/draft-mcgrew-gcm-test-01 case #7",
+         "tagSize": 64,
+         "tests": [
+            {
+               "aad": "feedfacedeadbeeffeedfacedeadbeefabaddad2",
+               "comment": "",
+               "ct": "522dc1f099567d07f47f37a32a84427d643a8cdcbfe5c0c97598a2bd2555d1aa8cb08e48590dbb3da7b08b1056828838c5f61e6393ba7a0abcc9f662",
+               "flags": [],
+               "iv": "cafebabefacedbaddecaf888",
+               "key": "feffe9928665731c6d6a8f9467308308feffe9928665731c6d6a8f9467308308",
+               "msg": "d9313225f88406e5a55909c5aff5269a86a7a9531534f7da2e4c303d8a318a721c3c0c95956809532fcf0e2449a6b525b16aedf5aa0de657ba637b39",
+               "result": "valid",
+               "tag": "76fc6ece0f4e1768",
+               "tcId": 14
+            }
+         ],
+         "type": "AeadTest"
+      },
+      {
+         "ivSize": 96,
+         "keySize": 256,
+         "source": "https://tools.ietf.org/html/draft-mcgrew-gcm-test-01 case #7",
+         "tagSize": 112,
+         "tests": [
+            {
+               "aad": "feedfacedeadbeeffeedfacedeadbeefabaddad2",
+               "comment": "",
+               "ct": "522dc1f099567d07f47f37a32a84427d643a8cdcbfe5c0c97598a2bd2555d1aa8cb08e48590dbb3da7b08b1056828838c5f61e6393ba7a0abcc9f662",
+               "flags": [],
+               "iv": "cafebabefacedbaddecaf888",
+               "key": "feffe9928665731c6d6a8f9467308308feffe9928665731c6d6a8f9467308308",
+               "msg": "d9313225f88406e5a55909c5aff5269a86a7a9531534f7da2e4c303d8a318a721c3c0c95956809532fcf0e2449a6b525b16aedf5aa0de657ba637b39",
+               "result": "valid",
+               "tag": "76fc6ece0f4e1768cddf8853bb2d",
+               "tcId": 15
+            }
+         ],
+         "type": "AeadTest"
+      },
+      {
+         "ivSize": 96,
+         "keySize": 256,
+         "source": "https://tools.ietf.org/html/draft-mcgrew-gcm-test-01 case #7",
+         "tagSize": 120,
+         "tests": [
+            {
+               "aad": "feedfacedeadbeeffeedfacedeadbeefabaddad2",
+               "comment": "",
+               "ct": "522dc1f099567d07f47f37a32a84427d643a8cdcbfe5c0c97598a2bd2555d1aa8cb08e48590dbb3da7b08b1056828838c5f61e6393ba7a0abcc9f662",
+               "flags": [],
+               "iv": "cafebabefacedbaddecaf888",
+               "key": "feffe9928665731c6d6a8f9467308308feffe9928665731c6d6a8f9467308308",
+               "msg": "d9313225f88406e5a55909c5aff5269a86a7a9531534f7da2e4c303d8a318a721c3c0c95956809532fcf0e2449a6b525b16aedf5aa0de657ba637b39",
+               "result": "valid",
+               "tag": "76fc6ece0f4e1768cddf8853bb2d55",
+               "tcId": 16
+            }
+         ],
+         "type": "AeadTest"
+      },
+      {
+         "ivSize": 96,
+         "keySize": 128,
+         "source": "https://tools.ietf.org/html/draft-mcgrew-gcm-test-01 case #7",
+         "tagSize": 128,
+         "tests": [
+            {
+               "aad": "0001020304050607",
+               "comment": "No Plaintext",
+               "ct": "",
+               "flags": [],
+               "iv": "000102030405060708090a0b",
+               "key": "000102030405060708090a0b0c0d0e0f",
+               "msg": "",
+               "result": "valid",
+               "tag": "8df7d8edb99165faad1b038c53b320e8",
+               "tcId": 17
+            },
+            {
+               "aad": "",
+               "comment": "No AAD",
+               "ct": "936da5cd621ef15343db6b813aae7e07",
+               "flags": [],
+               "iv": "000102030405060708090a0b",
+               "key": "000102030405060708090a0b0c0d0e0f",
+               "msg": "000102030405060708090a0b0c0d0e0f",
+               "result": "valid",
+               "tag": "fe8ec5555f3608f70ebc7fcee9592e9b",
+               "tcId": 18
+            },
+            {
+               "aad": "",
+               "comment": "No plaintext, no AAD",
+               "ct": "",
+               "flags": [],
+               "iv": "000102030405060708090a0b",
+               "key": "000102030405060708090a0b0c0d0e0f",
+               "msg": "",
+               "result": "valid",
+               "tag": "435b9ba12d75a4be8a977ea3cd011890",
+               "tcId": 19
+            },
+            {
+               "aad": "c94c410194c765e3dcc7964379758ed3",
+               "comment": "No plaintext",
+               "ct": "",
+               "flags": [],
+               "iv": "f8f105f9c3df4965780321f8",
+               "key": "7680c5d3ca6154758e510f4d25b98820",
+               "msg": "",
+               "result": "valid",
+               "tag": "94dca8edfcf90bb74b153c8d48a17930",
+               "tcId": 21
+            }
+         ],
+         "type": "AeadTest"
+      },
+      {
+         "ivSize": 96,
+         "keySize": 128,
+         "source": "https://tools.ietf.org/html/draft-mcgrew-gcm-test-01 case #7",
+         "tagSize": 8,
+         "tests": [
+            {
+               "aad": "d609b1f056637a0d46df998d88e52e00b2c2846512153524c0895e81",
+               "comment": "Variable tag size (1 byte)",
+               "ct": "701afa1cc039c0d765128a665dab69243899bf7318ccdc81c9931da17fbe8edd7d17cb8b4c26fc81e3284f2b7fba713d",
+               "flags": [],
+               "iv": "12153524c0895e81b2c28465",
+               "key": "ad7a2bd03eac835a6f620fdcb506b345",
+               "msg": "08000f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a0002",
+               "result": "valid",
+               "tag": "4f",
+               "tcId": 20
+            }
+         ],
+         "type": "AeadTest"
+      },
+      {
+         "ivSize": 64,
+         "keySize": 256,
+         "source": "http://csrc.nist.gov/groups/ST/toolkit/BCM/documents/proposedmodes/gcm/gcm-revised-spec.pdf",
+         "tagSize": 128,
+         "tests": [
+            {
+               "aad": "feedfacedeadbeeffeedfacedeadbeefabaddad2",
+               "comment": "",
+               "ct": "c3762df1ca787d32ae47c13bf19844cbaf1ae14d0b976afac52ff7d79bba9de0feb582d33934a4f0954cc2363bc73f7862ac430e64abe499f47c9b1f",
+               "flags": [],
+               "iv": "cafebabefacedbad",
+               "key": "feffe9928665731c6d6a8f9467308308feffe9928665731c6d6a8f9467308308",
+               "msg": "d9313225f88406e5a55909c5aff5269a86a7a9531534f7da2e4c303d8a318a721c3c0c95956809532fcf0e2449a6b525b16aedf5aa0de657ba637b39",
+               "result": "valid",
+               "tag": "3a337dbf46a792c45e454913fe2ea8f2",
+               "tcId": 22
+            }
+         ],
+         "type": "AeadTest"
+      },
+      {
+         "ivSize": 8,
+         "keySize": 128,
+         "source": "http://csrc.nist.gov/groups/ST/toolkit/BCM/documents/proposedmodes/gcm/gcm-revised-spec.pdf",
+         "tagSize": 128,
+         "tests": [
+            {
+               "aad": "6dd49eaeb4103dac8f97e3234946dd2d",
+               "comment": "",
+               "ct": "50de86a7a92a8a5ea33db5696b96cd77",
+               "flags": [],
+               "iv": "cf",
+               "key": "83f9d97d4ab759fddcc3ef54a0e2a8ec",
+               "msg": "77e6329cf9424f71c808df9170bfd298",
+               "result": "valid",
+               "tag": "aa181e84bc8b4bf5a68927c409d422cb",
+               "tcId": 23
+            }
+         ],
+         "type": "AeadTest"
+      },
+      {
+         "ivSize": 8,
+         "keySize": 192,
+         "source": "http://csrc.nist.gov/groups/ST/toolkit/BCM/documents/proposedmodes/gcm/gcm-revised-spec.pdf",
+         "tagSize": 128,
+         "tests": [
+            {
+               "aad": "8fbe5a21a65bddd0331604c917839cf7",
+               "comment": "",
+               "ct": "8349e3a48f5d89d942c24d80aefb1c5f",
+               "flags": [],
+               "iv": "ca",
+               "key": "8b1c63bccb5579e5887f5bf7b2bd0cbcff136d40d7b61ab2",
+               "msg": "224f5f2a237b307c7842de75d9d1bb65",
+               "result": "valid",
+               "tag": "3d49e3d43f9a4a964c6d844d60b4ef1e",
+               "tcId": 24
+            }
+         ],
+         "type": "AeadTest"
+      },
+      {
+         "ivSize": 1024,
+         "keySize": 128,
+         "source": "http://csrc.nist.gov/groups/ST/toolkit/BCM/documents/proposedmodes/gcm/gcm-revised-spec.pdf",
+         "tagSize": 32,
+         "tests": [
+            {
+               "aad": "d8f1163d8c840292a2b2dacf4ac7c36aff8733f18fabb4fa5594544125e03d1e6e5d6d0fd61656c8d8f327c92839ae5539bb469c9257f109ebff85aad7bd220fdaa95c022dbd0c7bb2d878ad504122c943045d3c5eba8f1f56c0",
+               "comment": "",
+               "ct": "4f6cf471be7cbd2575cd5a1747aea8fe9dea83e51936beac3e68f66206922060c697ffa7af80ad6bb68f2cf4fc97416ee52abe",
+               "flags": [],
+               "iv": "492cadaccd3ca3fbc9cf9f06eb3325c4e159850b0dbe98199b89b7af528806610b6f63998e1eae80c348e74cbb921d8326631631fc6a5d304f39166daf7ea15fa1977f101819adb510b50fe9932e12c5a85aa3fd1e73d8d760af218be829903a77c63359d75edd91b4f6ed5465a72662f5055999e059e7654a8edc921aa0d496",
+               "key": "0e00c76561d2bd9b40c3c15427e2b08f",
+               "msg": "fef03c2d7fb15bf0d2df18007d99f967c878ad59359034f7bb2c19af120685d78e32f6b8b83b032019956ca9c0195721476b85",
+               "result": "valid",
+               "tag": "e20b6655",
+               "tcId": 25
+            }
+         ],
+         "type": "AeadTest"
+      },
+      {
+         "ivSize": 480,
+         "keySize": 256,
+         "source": "http://csrc.nist.gov/groups/ST/toolkit/BCM/documents/proposedmodes/gcm/gcm-revised-spec.pdf",
+         "tagSize": 128,
+         "tests": [
+            {
+               "aad": "feedfacedeadbeeffeedfacedeadbeefabaddad2",
+               "comment": "",
+               "ct": "5a8def2f0c9e53f1f75d7853659e2a20eeb2b22aafde6419a058ab4f6f746bf40fc0c3b780f244452da3ebf1c5d82cdea2418997200ef82e44ae7e3f",
+               "flags": [],
+               "iv": "9313225df88406e555909c5aff5269aa6a7a9538534f7da1e4c303d2a318a728c3c0c95156809539fcf0e2429a6b525416aedbf5a0de6a57a637b39b",
+               "key": "feffe9928665731c6d6a8f9467308308feffe9928665731c6d6a8f9467308308",
+               "msg": "d9313225f88406e5a55909c5aff5269a86a7a9531534f7da2e4c303d8a318a721c3c0c95956809532fcf0e2449a6b525b16aedf5aa0de657ba637b39",
+               "result": "valid",
+               "tag": "a44a8266ee1c8eb0c8b5d4cf5ae9f19a",
+               "tcId": 26
+            }
+         ],
+         "type": "AeadTest"
+      }
+   ]
+}
