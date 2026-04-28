@@ -791,8 +791,8 @@ typedef void (*chacha_poly_finalize_t)(struct chacha20_poly1305_context_data *, 
 typedef void (*ghash_t)(const struct gcm_key_data *, const void *, const uint64_t, void *,
                         const uint64_t);
 
-typedef void (*zuc_eea3_1_buffer_t)(const void *, const void *, const void *, void *,
-                                    const uint32_t);
+typedef void (*zuc_eea3_1_buffer_t)(struct IMB_MGR *, const void *, const void *, const void *,
+                                    void *, const uint32_t);
 
 typedef void (*zuc_eea3_4_buffer_t)(const void *const *, const void *const *, const void *const *,
                                     void **, const uint32_t *);
@@ -800,8 +800,8 @@ typedef void (*zuc_eea3_4_buffer_t)(const void *const *, const void *const *, co
 typedef void (*zuc_eea3_n_buffer_t)(const void *const *, const void *const *, const void *const *,
                                     void **, const uint32_t *, const uint32_t);
 
-typedef void (*zuc_eia3_1_buffer_t)(const void *, const void *, const void *, const uint32_t,
-                                    uint32_t *);
+typedef void (*zuc_eia3_1_buffer_t)(struct IMB_MGR *, const void *, const void *, const void *,
+                                    const uint32_t, uint32_t *);
 
 typedef void (*zuc_eia3_n_buffer_t)(const void *const *, const void *const *, const void *const *,
                                     const uint32_t *, uint32_t **, const uint32_t);
@@ -2087,7 +2087,7 @@ init_mb_mgr_auto(IMB_MGR *state, IMB_ARCH *arch);
  * @deprecated Please use the job API instead.
  */
 #define IMB_ZUC_EEA3_1_BUFFER(_mgr, _key, _iv, _src, _dst, _len)                                   \
-        ((_mgr)->eea3_1_buffer((_key), (_iv), (_src), (_dst), (_len)))
+        ((_mgr)->eea3_1_buffer((_mgr), (_key), (_iv), (_src), (_dst), (_len)))
 /**
  * @copydoc IMB_ZUC_EEA3_1_BUFFER
  */
@@ -2112,7 +2112,7 @@ init_mb_mgr_auto(IMB_MGR *state, IMB_ARCH *arch);
  * @deprecated Please use the job API instead.
  */
 #define IMB_ZUC_EIA3_1_BUFFER(_mgr, _key, _iv, _src, _len, _tag)                                   \
-        ((_mgr)->eia3_1_buffer((_key), (_iv), (_src), (_len), (_tag)))
+        ((_mgr)->eia3_1_buffer((_mgr), (_key), (_iv), (_src), (_len), (_tag)))
 /**
  * @copydoc IMB_ZUC_EIA3_1_BUFFER
  */
