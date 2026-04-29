@@ -212,17 +212,20 @@ MKGLOBAL(%%FN,function,internal)
         cmp     dword [state + _sha3_num_lanes_inuse], MAX_SHA3_LANES
         jne     %%ret_null
 %else
-        ;; --- FLUSH: find first occupied lane ---
+        ;; --- FLUSH: find first occupied lane (unrolled, no branches) ---
+        ;; Scan high→low with cmovne so the lowest occupied lane index wins.
         cmp     dword [state + _sha3_num_lanes_inuse], 0
         je      %%ret_null
-        xor     lane, lane
-%%find_lane:
-        imul    rax, lane, _SHA3_LANE_DATA_size
-        cmp     qword [state + _sha3_ldata + rax + _sha3_job_in_lane], 0
-        jne     %%lane_found
-        inc     lane
-        jmp     %%find_lane
-%%lane_found:
+        mov     lane, 3
+        mov     rax, 2
+        cmp     qword [state + _sha3_ldata + 2*_SHA3_LANE_DATA_size + _sha3_job_in_lane], 0
+        cmovne  lane, rax
+        mov     rax, 1
+        cmp     qword [state + _sha3_ldata + 1*_SHA3_LANE_DATA_size + _sha3_job_in_lane], 0
+        cmovne  lane, rax
+        xor     rax, rax
+        cmp     qword [state + _sha3_ldata + 0*_SHA3_LANE_DATA_size + _sha3_job_in_lane], 0
+        cmovne  lane, rax
 %endif
 
         ;; =============================================
@@ -253,19 +256,14 @@ align_loop
 %else
         mov     min_idx, lane
         mov     min_len, [state + _sha3_lens + lane*8]
-        xor     rax, rax
         ; SIMD: gather job_in_lane[0..3], build null-lane mask,
         ;       broadcast live lane's data_ptr into null slots,
         ;       and preset null-lane lens to UINT64_MAX so they
         ;       never win the subsequent scalar min-find.
-        mov     rax,  [state + _sha3_ldata + 0*_SHA3_LANE_DATA_size + _sha3_job_in_lane]
-        mov     arg3, [state + _sha3_ldata + 1*_SHA3_LANE_DATA_size + _sha3_job_in_lane]
-        mov     arg4, [state + _sha3_ldata + 2*_SHA3_LANE_DATA_size + _sha3_job_in_lane]
-        mov     r11,  [state + _sha3_ldata + 3*_SHA3_LANE_DATA_size + _sha3_job_in_lane]
-        vmovq      xmm27, rax
-        vpinsrq    xmm27, xmm27, arg3, 1
-        vmovq      xmm28, arg4
-        vpinsrq    xmm28, xmm28, r11,  1
+        vmovq      xmm27, [state + _sha3_ldata + 0*_SHA3_LANE_DATA_size + _sha3_job_in_lane]
+        vpinsrq    xmm27, xmm27, [state + _sha3_ldata + 1*_SHA3_LANE_DATA_size + _sha3_job_in_lane], 1
+        vmovq      xmm28, [state + _sha3_ldata + 2*_SHA3_LANE_DATA_size + _sha3_job_in_lane]
+        vpinsrq    xmm28, xmm28, [state + _sha3_ldata + 3*_SHA3_LANE_DATA_size + _sha3_job_in_lane], 1
         vinserti32x4 ymm27, ymm27, xmm28, 1        ; ymm27 = job_in_lane[0..3]
         vpxorq     ymm28, ymm28, ymm28
         vpcmpeqq   k2, ymm27, ymm28                ; k2 = null-lane mask
@@ -511,5 +509,543 @@ SHA3_OOO_SUBMIT_FLUSH_FN submit_job_sha3_384_avx512, SHA3_384_RATE, SHA3_384_DIG
 SHA3_OOO_SUBMIT_FLUSH_FN flush_job_sha3_384_avx512,  SHA3_384_RATE, SHA3_384_DIGEST_SZ, 0
 SHA3_OOO_SUBMIT_FLUSH_FN submit_job_sha3_512_avx512, SHA3_512_RATE, SHA3_512_DIGEST_SZ, 1
 SHA3_OOO_SUBMIT_FLUSH_FN flush_job_sha3_512_avx512,  SHA3_512_RATE, SHA3_512_DIGEST_SZ, 0
+
+; ============================================================
+; SHAKE_OOO_SUBMIT_FLUSH_FN  fn_name, rate, is_submit
+;
+; Identical to SHA3_OOO_SUBMIT_FLUSH_FN except:
+;   - Uses SHAKE_MRATE_PADDING (0x1f) domain byte
+;   - Variable output length: reads auth_tag_output_len_in_bytes from job
+;   - XOF squeeze loop for the completing lane after final permutation
+;
+; Squeeze strategy:
+;   After the 4-lane absorb loop the state is already saved to memory.
+;   For the completing lane we reload its 25 state words from the interleaved
+;   kstate into ymm0-ymm24 (single-lane mode, other lane slots stay zero).
+;   We then squeeze full-rate output blocks directly to the output buffer,
+;   calling keccak1600_block_64bit for each additional block needed.
+;   The final partial block is extracted to the stack scratch area (already
+;   allocated) and then the needed bytes are masked-copied to the output.
+; ============================================================
+
+; SHAKE_MRATE_PADDING constant expected by this macro:
+%define SHAKE_MB_PAD   0x1F
+
+; Windows x64 stack frame for SHAKE_OOO_SUBMIT_FLUSH_FN
+;
+; After 6 pushes (48 bytes) + return address (8 bytes) = 56 bytes offset
+; → rsp mod 16 = 8.  We need the combined sub to be ≡ 8 mod 16 to restore
+; 16-byte alignment before any call.  256 (scratch) + 232 (saves) = 488 ≡ 8 mod 16. ✓
+;
+;   [rsp +   0 ..  255]  scratch buffer for squeeze partial block
+;   [rsp + 256 ..  415]  xmm6–xmm15  (10 × 16 bytes)
+;   [rsp + 416]          rdi
+;   [rsp + 424]          JOB (rsi)
+;   [rsp + 432]          STATE (rbx)
+;   [rsp + 440]          MIN_LEN (rbp)
+;   [rsp + 448]          LANE (r12)
+;   [rsp + 456]          MIN_IDX (r13)
+;   [rsp + 464]          NUM_BLOCKS (r14)
+;   [rsp + 472]          REMAINING (r15)
+;   [rsp + 480 ..  487]  alignment padding
+%ifidn __OUTPUT_FORMAT__, win64
+%define SHAKE_FRAME_SIZE       488
+%define SHAKE_WIN_XMM_OFF      256
+%define SHAKE_WIN_RDI_OFF      416
+%define SHAKE_WIN_RSI_OFF      424
+%define SHAKE_WIN_RBX_OFF      432
+%define SHAKE_WIN_RBP_OFF      440
+%define SHAKE_WIN_R12_OFF      448
+%define SHAKE_WIN_R13_OFF      456
+%define SHAKE_WIN_R14_OFF      464
+%define SHAKE_WIN_R15_OFF      472
+%else
+%define SHAKE_FRAME_SIZE       256
+%endif
+
+; Register aliases for SHAKE_OOO_SUBMIT_FLUSH_FN
+%define STATE           rbx     ; MB_MGR_SHA3_OOO* (callee-saved)
+%define LANE            r12     ; current lane index (callee-saved)
+%define LANE32          r12d    ; 32-bit form of LANE
+%define MIN_IDX         r13     ; min-length lane index (callee-saved)
+%define MIN_IDX32       r13d    ; 32-bit form of MIN_IDX
+%define NUM_BLOCKS      r14     ; number of full rate-blocks to absorb (callee-saved)
+%define REMAINING       r15     ; remaining bytes after full blocks (callee-saved)
+%define MIN_LEN         rbp     ; minimum length across active lanes (callee-saved)
+%define JOB             rsi     ; IMB_JOB* argument / current job pointer
+%define DATA0           r8      ; data pointer lane 0
+%define DATA1           r9      ; data pointer lane 1
+%define DATA2           r10     ; data pointer lane 2 / output pointer (squeeze)
+%define DATA3           r11     ; data pointer lane 3
+%define OUTLEN          rbp     ; total squeeze output length (reuses MIN_LEN slot)
+%define OUT_PTR         r10     ; squeeze output pointer (reuses DATA2 slot)
+%define LANE_SAVED      r15     ; saved lane index across keccak calls (squeeze phase)
+%define COPY_OFF        r13     ; partial-copy offset (squeeze tail)
+
+%macro SHAKE_OOO_SUBMIT_FLUSH_FN 3
+%xdefine %%FN      %1      ; function name
+%xdefine %%RATE    %2      ; SHAKE rate in bytes
+%xdefine %%SUB     %3      ; 1 = submit, 0 = flush
+
+align_function
+MKGLOBAL(%%FN,function,internal)
+%%FN:
+        push    REMAINING
+        push    NUM_BLOCKS
+        push    MIN_IDX
+        push    LANE
+        push    STATE
+        push    MIN_LEN
+%ifidn __OUTPUT_FORMAT__, win64
+        sub     rsp, SHAKE_FRAME_SIZE        ; scratch (0-255) + xmm saves (256+) + padding
+        vmovdqa [rsp + SHAKE_WIN_XMM_OFF +  0*16], xmm6
+        vmovdqa [rsp + SHAKE_WIN_XMM_OFF +  1*16], xmm7
+        vmovdqa [rsp + SHAKE_WIN_XMM_OFF +  2*16], xmm8
+        vmovdqa [rsp + SHAKE_WIN_XMM_OFF +  3*16], xmm9
+        vmovdqa [rsp + SHAKE_WIN_XMM_OFF +  4*16], xmm10
+        vmovdqa [rsp + SHAKE_WIN_XMM_OFF +  5*16], xmm11
+        vmovdqa [rsp + SHAKE_WIN_XMM_OFF +  6*16], xmm12
+        vmovdqa [rsp + SHAKE_WIN_XMM_OFF +  7*16], xmm13
+        vmovdqa [rsp + SHAKE_WIN_XMM_OFF +  8*16], xmm14
+        vmovdqa [rsp + SHAKE_WIN_XMM_OFF +  9*16], xmm15
+        mov     [rsp + SHAKE_WIN_RDI_OFF], rdi
+        mov     [rsp + SHAKE_WIN_RSI_OFF], JOB
+        mov     [rsp + SHAKE_WIN_RBX_OFF], STATE
+        mov     [rsp + SHAKE_WIN_RBP_OFF], MIN_LEN
+        mov     [rsp + SHAKE_WIN_R12_OFF], LANE
+        mov     [rsp + SHAKE_WIN_R13_OFF], MIN_IDX
+        mov     [rsp + SHAKE_WIN_R14_OFF], NUM_BLOCKS
+        mov     [rsp + SHAKE_WIN_R15_OFF], REMAINING
+%else
+        sub     rsp, SHAKE_FRAME_SIZE   ; scratch buffer for squeeze partial block
+%endif
+        mov     STATE, arg1             ; STATE = MB_MGR_SHA3_OOO*
+        mov     JOB, arg2               ; JOB = IMB_JOB*
+
+%if %%SUB
+        ;; --- SUBMIT: allocate free lane ---
+        mov     LANE, [STATE + _sha3_unused_lanes]
+        mov     MIN_IDX32, LANE32
+        and     MIN_IDX32, 0xF            ; extract lane index
+        shr     LANE, 4
+        mov     [STATE + _sha3_unused_lanes], LANE
+        inc     dword [STATE + _sha3_num_lanes_inuse]
+
+        mov     rax, [JOB + _src]
+        add     rax, [JOB + _hash_start_src_offset_in_bytes]
+        mov     [STATE + _sha3_args_data_ptr + MIN_IDX*8], rax
+
+        ;; Zero this lane's slice of the interleaved kstate
+        vpxorq  ymm31, ymm31, ymm31
+        mov     eax, 1
+        shlx    eax, eax, MIN_IDX32       ; eax = 1 << lane
+        kmovd   k1, eax
+%assign %%W 0
+%rep 25
+        vmovdqu64  ymm30, [STATE + _sha3_args_kstate + %%W*32]
+        vmovdqu64  ymm30 {k1}, ymm31
+        vmovdqu64  [STATE + _sha3_args_kstate + %%W*32], ymm30
+%assign %%W (%%W+1)
+%endrep
+        imul    rax, MIN_IDX, _SHA3_LANE_DATA_size
+        mov     [STATE + _sha3_ldata + rax + _sha3_job_in_lane], JOB
+        mov     dword [STATE + _sha3_ldata + rax + _sha3_finalized], 0
+
+        mov     rcx, [JOB + _msg_len_to_hash_in_bytes]
+        mov     [STATE + _sha3_lens + MIN_IDX*8], rcx
+
+        mov     LANE, MIN_IDX
+        cmp     dword [STATE + _sha3_num_lanes_inuse], MAX_SHA3_LANES
+        jne     %%ret_null
+%else
+        ;; --- FLUSH: find first occupied lane (unrolled, no branches) ---
+        ;; Scan high→low with cmovne so the lowest occupied lane index wins.
+        cmp     dword [STATE + _sha3_num_lanes_inuse], 0
+        je      %%ret_null
+        mov     LANE, 3
+        mov     rax, 2
+        cmp     qword [STATE + _sha3_ldata + 2*_SHA3_LANE_DATA_size + _sha3_job_in_lane], 0
+        cmovne  LANE, rax
+        mov     rax, 1
+        cmp     qword [STATE + _sha3_ldata + 1*_SHA3_LANE_DATA_size + _sha3_job_in_lane], 0
+        cmovne  LANE, rax
+        xor     rax, rax
+        cmp     qword [STATE + _sha3_ldata + 0*_SHA3_LANE_DATA_size + _sha3_job_in_lane], 0
+        cmovne  LANE, rax
+%endif
+
+        ;; =============================================
+        ;; do { find-min; absorb; finalize } while lens[min]!=0
+        ;; =============================================
+align_loop
+%%do_loop:
+
+%if %%SUB
+        mov     MIN_LEN, [STATE + _sha3_lens + 0*8]
+        xor     MIN_IDX, MIN_IDX
+        mov     rax, [STATE + _sha3_lens + 1*8]
+        cmp     rax, MIN_LEN
+        cmovb   MIN_LEN, rax
+        mov     rcx, 1
+        cmovb   MIN_IDX, rcx
+        mov     rax, [STATE + _sha3_lens + 2*8]
+        cmp     rax, MIN_LEN
+        cmovb   MIN_LEN, rax
+        mov     rcx, 2
+        cmovb   MIN_IDX, rcx
+        mov     rax, [STATE + _sha3_lens + 3*8]
+        cmp     rax, MIN_LEN
+        cmovb   MIN_LEN, rax
+        mov     rcx, 3
+        cmovb   MIN_IDX, rcx
+%%min_done:
+%else
+        ; SIMD: gather job_in_lane[0..3], build null-lane mask,
+        ;       broadcast live lane's data_ptr into null slots,
+        ;       and preset null-lane lens to UINT64_MAX so they
+        ;       never win the subsequent scalar min-find.
+        vmovq      xmm27, [STATE + _sha3_ldata + 0*_SHA3_LANE_DATA_size + _sha3_job_in_lane]
+        vpinsrq    xmm27, xmm27, [STATE + _sha3_ldata + 1*_SHA3_LANE_DATA_size + _sha3_job_in_lane], 1
+        vmovq      xmm28, [STATE + _sha3_ldata + 2*_SHA3_LANE_DATA_size + _sha3_job_in_lane]
+        vpinsrq    xmm28, xmm28, [STATE + _sha3_ldata + 3*_SHA3_LANE_DATA_size + _sha3_job_in_lane], 1
+        vinserti32x4 ymm27, ymm27, xmm28, 1        ; ymm27 = job_in_lane[0..3]
+        vpxorq     ymm28, ymm28, ymm28
+        vpcmpeqq   k2, ymm27, ymm28                ; k2 = null-lane mask
+
+        vpbroadcastq ymm29, [STATE + _sha3_args_data_ptr + LANE*8]
+        vmovdqa64   ymm28, [STATE + _sha3_args_data_ptr]
+        vmovdqa64   ymm28 {k2}, ymm29              ; fill null slots with live data_ptr
+        vmovdqa64   [STATE + _sha3_args_data_ptr], ymm28
+
+        vpternlogq  ymm27, ymm27, ymm27, 0xFF       ; all-ones = UINT64_MAX
+        vmovdqa64   ymm29, [STATE + _sha3_lens]
+        vmovdqa64   ymm29 {k2}, ymm27              ; null slots: lens = UINT64_MAX (won't win min)
+        vmovdqa64   [STATE + _sha3_lens], ymm29    ; write back so scalar min-find sees UINT64_MAX for null lanes
+
+        ; unrolled branch-free min-find across 4 lanes;
+        ; null lanes carry UINT64_MAX so they can never win.
+        mov     MIN_LEN, [STATE + _sha3_lens + 0*8]
+        xor     MIN_IDX, MIN_IDX
+        mov     rax, [STATE + _sha3_lens + 1*8]
+        cmp     rax, MIN_LEN
+        cmovb   MIN_LEN, rax
+        mov     rcx, 1
+        cmovb   MIN_IDX, rcx
+        mov     rax, [STATE + _sha3_lens + 2*8]
+        cmp     rax, MIN_LEN
+        cmovb   MIN_LEN, rax
+        mov     rcx, 2
+        cmovb   MIN_IDX, rcx
+        mov     rax, [STATE + _sha3_lens + 3*8]
+        cmp     rax, MIN_LEN
+        cmovb   MIN_LEN, rax
+        mov     rcx, 3
+        cmovb   MIN_IDX, rcx
+%endif
+
+        ;; NUM_BLOCKS = MIN_LEN / RATE,  REMAINING = MIN_LEN % RATE
+        mov     rax, MIN_LEN
+        xor     rdx, rdx        ; DIV uses implicit RDX:RAX on all ABIs
+        mov     arg4, %%RATE
+        div     arg4
+        mov     NUM_BLOCKS, rax
+        mov     REMAINING, rdx
+
+        ;; subtract NUM_BLOCKS*RATE from all lens
+        imul    rax, NUM_BLOCKS, %%RATE
+        sub     qword [STATE + _sha3_lens + 0*8], rax
+        sub     qword [STATE + _sha3_lens + 1*8], rax
+        sub     qword [STATE + _sha3_lens + 2*8], rax
+        sub     qword [STATE + _sha3_lens + 3*8], rax
+
+        ;; absorb full blocks
+        test    NUM_BLOCKS, NUM_BLOCKS
+        jz      %%no_absorb
+
+        lea     rax, [STATE + _sha3_args_kstate]
+        X4_LOAD_STATE rax
+
+        mov     DATA0, [STATE + _sha3_args_data_ptr + 0*8]
+        mov     DATA1, [STATE + _sha3_args_data_ptr + 1*8]
+        mov     DATA2, [STATE + _sha3_args_data_ptr + 2*8]
+        mov     DATA3, [STATE + _sha3_args_data_ptr + 3*8]
+align_loop
+%%absorb_loop:
+        ABSORB_BYTES_x4 DATA0, DATA1, DATA2, DATA3, 0, %%RATE
+        add     DATA0, %%RATE
+        add     DATA1, %%RATE
+        add     DATA2, %%RATE
+        add     DATA3, %%RATE
+        push    MIN_IDX                 ; keccak1600_block_64bit clobbers MIN_IDX and NUM_BLOCKS
+        push    NUM_BLOCKS
+        call    keccak1600_block_64bit
+        pop     NUM_BLOCKS
+        pop     MIN_IDX
+        dec     NUM_BLOCKS
+        jnz     %%absorb_loop
+
+        lea     rax, [STATE + _sha3_args_kstate]
+        X4_SAVE_STATE rax
+        mov     [STATE + _sha3_args_data_ptr + 0*8], DATA0
+        mov     [STATE + _sha3_args_data_ptr + 1*8], DATA1
+        mov     [STATE + _sha3_args_data_ptr + 2*8], DATA2
+        mov     [STATE + _sha3_args_data_ptr + 3*8], DATA3
+align_label
+%%no_absorb:
+
+        ;; Finalize MIN_IDX lane if padding not yet applied
+        ;; DATA0 (r8) is free after the absorb loop; reuse it to hold
+        ;; MIN_IDX * _SHA3_LANE_DATA_size for the rest of the finalize block.
+        imul    DATA0, MIN_IDX, _SHA3_LANE_DATA_size    ; DATA0 = ldata offset for MIN_IDX
+        cmp     dword [STATE + _sha3_ldata + DATA0 + _sha3_finalized], 1
+        je      %%check_done
+
+        ;; Zero extra_block[0..RATE-1]
+        vpxorq  ymm31, ymm31, ymm31
+        lea     arg1, [STATE + _sha3_ldata + DATA0]     ; arg1 = &ldata[MIN_IDX]
+%assign %%OFF 0
+%assign %%REM %%RATE
+%rep (%%RATE / 32)
+        vmovdqu64  [arg1 + _sha3_extra_block + %%OFF], ymm31
+%assign %%OFF (%%OFF+32)
+%assign %%REM (%%REM-32)
+%endrep
+%if %%REM >= 16
+        vmovdqu64  [arg1 + _sha3_extra_block + %%OFF], xmm31
+%assign %%OFF (%%OFF+16)
+%assign %%REM (%%REM-16)
+%endif
+%if %%REM >= 8
+        vmovq      [arg1 + _sha3_extra_block + %%OFF], xmm31
+%endif
+
+        ;; Copy REMAINING message bytes into extra_block
+        mov     arg2, [STATE + _sha3_args_data_ptr + MIN_IDX*8]
+        lea     arg1, [arg1 + _sha3_extra_block]        ; arg1 = &extra_block[0]
+        mov     arg4, REMAINING
+        test    arg4, arg4
+        jz      %%no_copy_shake
+%ifndef LINUX
+        mov     r10, rdi                 ; preserve nonvolatile regs for Win64 ABI
+        mov     r11, JOB
+        mov     rdi, arg1                ; rep movsb uses rdi (dst) / rsi (src) / rcx (count)
+        mov     JOB, arg2
+        mov     rcx, arg4
+%endif
+        rep     movsb
+%ifndef LINUX
+        mov     arg1, rdi                ; after copy: arg1 = &extra_block[REMAINING]
+        mov     rdi, r10
+        mov     JOB, r11
+%endif
+        ;; arg1 now points at extra_block[REMAINING]
+%%no_copy_shake:
+        ;; Apply SHAKE domain separation byte at extra_block[REMAINING]
+        xor     byte [arg1], SHAKE_MB_PAD
+
+        ;; Flip EOM bit at extra_block[RATE-1]  (DATA0 still holds ldata offset)
+        xor     byte [STATE + _sha3_ldata + DATA0 + _sha3_extra_block + %%RATE - 1], 0x80
+
+        ;; Point data_ptr[MIN_IDX] to extra_block
+        lea     rax, [STATE + _sha3_ldata + DATA0 + _sha3_extra_block]
+        mov     [STATE + _sha3_args_data_ptr + MIN_IDX*8], rax
+
+        ;; lens[MIN_IDX] = RATE (one full padding block to absorb)
+        mov     qword [STATE + _sha3_lens + MIN_IDX*8], %%RATE
+
+        ;; finalized = 1
+        mov     dword [STATE + _sha3_ldata + DATA0 + _sha3_finalized], 1
+
+%%check_done:
+        cmp     qword [STATE + _sha3_lens + MIN_IDX*8], 0
+        jnz     %%do_loop
+
+        ;; ====================================================================
+        ;; Squeeze phase: extract outlen bytes for completing lane MIN_IDX
+        ;; ====================================================================
+
+        ;; Compute ldata offset once into LANE (r12 – callee-saved, survives
+        ;; all keccak1600_block_64bit calls below; its original lane-index role
+        ;; is no longer needed past this point).
+        ;; DATA0 already holds MIN_IDX * _SHA3_LANE_DATA_size from the finalize
+        ;; imul above and is not clobbered on this fall-through path.
+        mov     LANE, DATA0                              ; LANE = &ldata[MIN_IDX] offset
+
+        ;; Get job* and output info
+        mov     rax, [STATE + _sha3_ldata + LANE + _sha3_job_in_lane]  ; rax = IMB_JOB*
+        mov     OUTLEN,  [rax + _auth_tag_output_len_in_bytes]         ; total squeeze length
+        mov     OUT_PTR, [rax + _auth_tag_output]                      ; output buffer pointer
+
+        ;; Save lane index in LANE_SAVED (keccak1600_block_64bit clobbers MIN_IDX, NUM_BLOCKS)
+        mov     LANE_SAVED, MIN_IDX
+
+        ;; Load completing lane's 25 state words from interleaved kstate into ymm slot 0
+        ;; kstate layout: word W for lane L is at [STATE + _sha3_args_kstate + W*32 + L*8]
+%assign %%W 0
+%rep 25
+        vmovq   APPEND(xmm, %%W), [STATE + _sha3_args_kstate + %%W*32 + LANE_SAVED*8]
+%assign %%W (%%W+1)
+%endrep
+
+        ;; === XOF squeeze loop ===
+align_loop
+%%squeeze_loop:
+        cmp     OUTLEN, %%RATE
+        jb      %%squeeze_last
+
+        ;; Full-rate block: write %%RATE bytes directly to output
+%assign %%W 0
+%rep (%%RATE / 8)
+        vmovq   [OUT_PTR + %%W*8], APPEND(xmm, %%W)
+%assign %%W (%%W+1)
+%endrep
+        add     OUT_PTR, %%RATE
+        sub     OUTLEN, %%RATE
+        jz      %%squeeze_done
+
+        ;; Need another block: run Keccak permutation (clobbers MIN_IDX/KSTATE_BASE, NUM_BLOCKS)
+        call    keccak1600_block_64bit
+        jmp     %%squeeze_loop
+
+align_label
+%%squeeze_last:
+        ;; Partial final block: extract %%RATE bytes to stack scratch buffer,
+        ;; then copy only OUTLEN bytes to actual output
+%assign %%W 0
+%rep (%%RATE / 8)
+        vmovq   [rsp + %%W*8], APPEND(xmm, %%W)
+%assign %%W (%%W+1)
+%endrep
+        xor     COPY_OFF, COPY_OFF      ; COPY_OFF = byte offset into scratch/output
+align_loop
+%%copy_partial_loop:
+        cmp     OUTLEN, 32
+        jb      %%copy_last_chunk
+        vmovdqu64       ymm31, [rsp + COPY_OFF]
+        vmovdqu64       [OUT_PTR + COPY_OFF], ymm31
+        sub     OUTLEN, 32
+        add     COPY_OFF, 32
+        jmp     %%copy_partial_loop
+align_label
+%%copy_last_chunk:
+        test    OUTLEN, OUTLEN
+        jz      %%squeeze_done
+        xor     rax, rax
+        bts     rax, OUTLEN
+        dec     rax
+        kmovq   k1, rax
+        vmovdqu8        ymm31{k1}{z}, [rsp + COPY_OFF]
+        vmovdqu8        [OUT_PTR + COPY_OFF]{k1}, ymm31
+
+align_label
+%%squeeze_done:
+        ;; ====================================================================
+        ;; Lane release  (LANE still holds MIN_IDX * _SHA3_LANE_DATA_size)
+        ;; ====================================================================
+        mov     rax, [STATE + _sha3_ldata + LANE + _sha3_job_in_lane]  ; rax = IMB_JOB*
+
+        mov     arg4, [STATE + _sha3_unused_lanes]
+        shl     arg4, 4
+        or      arg4, LANE_SAVED
+        mov     [STATE + _sha3_unused_lanes], arg4
+        dec     dword [STATE + _sha3_num_lanes_inuse]
+
+        or      dword [rax + _status], IMB_STATUS_COMPLETED_AUTH
+
+        mov     qword [STATE + _sha3_ldata + LANE + _sha3_job_in_lane], 0
+
+%ifdef SAFE_DATA
+        ;; Zero extra_block of completed lane (clear sensitive message data)
+        vpxorq  ymm31, ymm31, ymm31
+        lea     arg1, [STATE + _sha3_ldata + LANE]
+%assign %%OFF 0
+%assign %%REM %%RATE
+%rep (%%RATE / 32)
+        vmovdqu64  [arg1 + _sha3_extra_block + %%OFF], ymm31
+%assign %%OFF (%%OFF+32)
+%assign %%REM (%%REM-32)
+%endrep
+%if %%REM >= 16
+        vmovdqu64  [arg1 + _sha3_extra_block + %%OFF], xmm31
+%assign %%OFF (%%OFF+16)
+%assign %%REM (%%REM-16)
+%endif
+%if %%REM >= 8
+        vmovq      [arg1 + _sha3_extra_block + %%OFF], xmm31
+%endif
+        ;; Zero stack scratch buffer (may hold sensitive key/message material)
+        vpxorq          ymm0, ymm0, ymm0
+        vmovdqu64       [rsp + 32*0], ymm0
+        vmovdqu64       [rsp + 32*1], ymm0
+        vmovdqu64       [rsp + 32*2], ymm0
+        vmovdqu64       [rsp + 32*3], ymm0
+        vmovdqu64       [rsp + 32*4], ymm0
+        vmovdqu64       [rsp + 32*5], ymm0
+        vmovdqu64       [rsp + 32*6], ymm0
+        vmovdqu64       [rsp + 32*7], ymm0
+%endif ; SAFE_DATA
+
+%%return:
+%ifidn __OUTPUT_FORMAT__, win64
+        vmovdqa xmm6,  [rsp + SHAKE_WIN_XMM_OFF +  0*16]
+        vmovdqa xmm7,  [rsp + SHAKE_WIN_XMM_OFF +  1*16]
+        vmovdqa xmm8,  [rsp + SHAKE_WIN_XMM_OFF +  2*16]
+        vmovdqa xmm9,  [rsp + SHAKE_WIN_XMM_OFF +  3*16]
+        vmovdqa xmm10, [rsp + SHAKE_WIN_XMM_OFF +  4*16]
+        vmovdqa xmm11, [rsp + SHAKE_WIN_XMM_OFF +  5*16]
+        vmovdqa xmm12, [rsp + SHAKE_WIN_XMM_OFF +  6*16]
+        vmovdqa xmm13, [rsp + SHAKE_WIN_XMM_OFF +  7*16]
+        vmovdqa xmm14, [rsp + SHAKE_WIN_XMM_OFF +  8*16]
+        vmovdqa xmm15, [rsp + SHAKE_WIN_XMM_OFF +  9*16]
+        mov     rdi,       [rsp + SHAKE_WIN_RDI_OFF]
+        mov     JOB,       [rsp + SHAKE_WIN_RSI_OFF]
+        mov     STATE,     [rsp + SHAKE_WIN_RBX_OFF]
+        mov     MIN_LEN,   [rsp + SHAKE_WIN_RBP_OFF]
+        mov     LANE,      [rsp + SHAKE_WIN_R12_OFF]
+        mov     MIN_IDX,   [rsp + SHAKE_WIN_R13_OFF]
+        mov     NUM_BLOCKS,[rsp + SHAKE_WIN_R14_OFF]
+        mov     REMAINING, [rsp + SHAKE_WIN_R15_OFF]
+        add     rsp, SHAKE_FRAME_SIZE
+%else
+        add     rsp, SHAKE_FRAME_SIZE   ; release scratch buffer
+%endif
+        pop     MIN_LEN
+        pop     STATE
+        pop     LANE
+        pop     MIN_IDX
+        pop     NUM_BLOCKS
+        pop     REMAINING
+        ret
+%%ret_null:
+        xor     eax, eax
+        jmp     %%return
+%endmacro
+
+
+; ============================================================
+section .text
+; ============================================================
+
+SHAKE_OOO_SUBMIT_FLUSH_FN submit_job_shake128_avx512, SHAKE128_RATE, 1
+SHAKE_OOO_SUBMIT_FLUSH_FN flush_job_shake128_avx512,  SHAKE128_RATE, 0
+SHAKE_OOO_SUBMIT_FLUSH_FN submit_job_shake256_avx512, SHAKE256_RATE, 1
+SHAKE_OOO_SUBMIT_FLUSH_FN flush_job_shake256_avx512,  SHAKE256_RATE, 0
+
+; Undefine aliases to avoid polluting other macros
+%undef STATE
+%undef LANE
+%undef MIN_IDX
+%undef NUM_BLOCKS
+%undef REMAINING
+%undef MIN_LEN
+%undef JOB
+%undef DATA0
+%undef DATA1
+%undef DATA2
+%undef DATA3
+%undef OUTLEN
+%undef OUT_PTR
+%undef LANE_SAVED
+%undef COPY_OFF
 
 section .note.GNU-stack noalloc noexec nowrite progbits

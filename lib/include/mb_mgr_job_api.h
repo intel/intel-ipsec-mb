@@ -2735,6 +2735,12 @@ SUBMIT_JOB_HASH_EX(IMB_MGR *state, IMB_JOB *job, const IMB_HASH_ALG hash_alg)
 #ifdef SUBMIT_JOB_SHA3_512
         MB_MGR_SHA3_OOO *sha3_512_ooo = state->sha3_512_ooo;
 #endif
+#ifdef SUBMIT_JOB_SHAKE128
+        MB_MGR_SHA3_OOO *shake128_ooo = state->shake128_ooo;
+#endif
+#ifdef SUBMIT_JOB_SHAKE256
+        MB_MGR_SHA3_OOO *shake256_ooo = state->shake256_ooo;
+#endif
 #if (defined(SAFE_LOOKUP) || defined(AVX512))
         MB_MGR_SNOW3G_OOO *snow3g_uia2_ooo = state->snow3g_uia2_ooo;
 #endif
@@ -2904,9 +2910,17 @@ SUBMIT_JOB_HASH_EX(IMB_MGR *state, IMB_JOB *job, const IMB_HASH_ALG hash_alg)
                 return submit_job_sha3(state, job, IMB_AUTH_SHA3_512);
 #endif
         case IMB_AUTH_SHAKE128:
+#ifdef SUBMIT_JOB_SHAKE128
+                return SUBMIT_JOB_SHAKE128(shake128_ooo, job);
+#else
                 return submit_job_sha3(state, job, IMB_AUTH_SHAKE128);
+#endif
         case IMB_AUTH_SHAKE256:
+#ifdef SUBMIT_JOB_SHAKE256
+                return SUBMIT_JOB_SHAKE256(shake256_ooo, job);
+#else
                 return submit_job_sha3(state, job, IMB_AUTH_SHAKE256);
+#endif
         case IMB_AUTH_AES_NIA5:
                 return submit_aes_nia5_job(job);
         case IMB_AUTH_SNOW5G_NIA4:
@@ -2956,6 +2970,12 @@ FLUSH_JOB_HASH_EX(IMB_MGR *state, IMB_JOB *job, const IMB_HASH_ALG hash_alg)
 #endif
 #ifdef FLUSH_JOB_SHA3_512
         MB_MGR_SHA3_OOO *sha3_512_ooo = state->sha3_512_ooo;
+#endif
+#ifdef FLUSH_JOB_SHAKE128
+        MB_MGR_SHA3_OOO *shake128_ooo = state->shake128_ooo;
+#endif
+#ifdef FLUSH_JOB_SHAKE256
+        MB_MGR_SHA3_OOO *shake256_ooo = state->shake256_ooo;
 #endif
 #if (defined(SAFE_LOOKUP) || defined(AVX512))
         MB_MGR_SNOW3G_OOO *snow3g_uia2_ooo = state->snow3g_uia2_ooo;
@@ -3037,6 +3057,14 @@ FLUSH_JOB_HASH_EX(IMB_MGR *state, IMB_JOB *job, const IMB_HASH_ALG hash_alg)
 #ifdef FLUSH_JOB_SNOW5G_NIA4_X2
         case IMB_AUTH_SNOW5G_NIA4:
                 return FLUSH_JOB_SNOW5G_NIA4_X2(snow5g_nia4_ooo);
+#endif
+#ifdef FLUSH_JOB_SHAKE128
+        case IMB_AUTH_SHAKE128:
+                return FLUSH_JOB_SHAKE128(shake128_ooo, job);
+#endif
+#ifdef FLUSH_JOB_SHAKE256
+        case IMB_AUTH_SHAKE256:
+                return FLUSH_JOB_SHAKE256(shake256_ooo, job);
 #endif
         default:
                 if (!(job->status & IMB_STATUS_COMPLETED_AUTH)) {

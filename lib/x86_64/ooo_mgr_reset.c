@@ -410,6 +410,22 @@ ooo_mgr_sha3_reset(void *p_ooo_mgr, const unsigned num_lanes)
 
 IMB_DLL_LOCAL
 void
+ooo_mgr_shake128_reset(void *p_ooo_mgr, const unsigned num_lanes)
+{
+        /* SHAKE128 OOO uses the same MB_MGR_SHA3_OOO structure */
+        ooo_mgr_sha3_reset(p_ooo_mgr, num_lanes);
+}
+
+IMB_DLL_LOCAL
+void
+ooo_mgr_shake256_reset(void *p_ooo_mgr, const unsigned num_lanes)
+{
+        /* SHAKE256 OOO uses the same MB_MGR_SHA3_OOO structure */
+        ooo_mgr_sha3_reset(p_ooo_mgr, num_lanes);
+}
+
+IMB_DLL_LOCAL
+void
 ooo_mgr_des_reset(void *p_ooo_mgr, const unsigned num_lanes)
 {
         MB_MGR_DES_OOO *p_mgr = (MB_MGR_DES_OOO *) p_ooo_mgr;

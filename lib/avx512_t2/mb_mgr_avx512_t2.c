@@ -208,6 +208,12 @@
 #define SUBMIT_JOB_SHA3_512 submit_job_sha3_512_avx512
 #define FLUSH_JOB_SHA3_512  flush_job_sha3_512_avx512
 
+/* SHAKE128/256 */
+#define SUBMIT_JOB_SHAKE128 submit_job_shake128_avx512
+#define FLUSH_JOB_SHAKE128  flush_job_shake128_avx512
+#define SUBMIT_JOB_SHAKE256 submit_job_shake256_avx512
+#define FLUSH_JOB_SHAKE256  flush_job_shake256_avx512
+
 /* HMAC-SHA1/224/256/384/512 */
 #define SUBMIT_JOB_HMAC         submit_job_hmac_avx512
 #define FLUSH_JOB_HMAC          flush_job_hmac_avx512
@@ -495,6 +501,10 @@ reset_ooo_mgrs(IMB_MGR *state)
         ooo_mgr_sha3_reset(state->sha3_256_ooo, AVX512_NUM_SHA3_LANES);
         ooo_mgr_sha3_reset(state->sha3_384_ooo, AVX512_NUM_SHA3_LANES);
         ooo_mgr_sha3_reset(state->sha3_512_ooo, AVX512_NUM_SHA3_LANES);
+
+        /* Init SHAKE128/256 out-of-order fields */
+        ooo_mgr_shake128_reset(state->shake128_ooo, AVX512_NUM_SHA3_LANES);
+        ooo_mgr_shake256_reset(state->shake256_ooo, AVX512_NUM_SHA3_LANES);
 
         /*  Init AES-CFB out-of-order fields */
         ooo_mgr_aes_reset(state->aes_cfb_128_ooo, 16);
