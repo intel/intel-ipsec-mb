@@ -490,6 +490,7 @@ align_label
         pop     min_idx
         pop     num_blocks
         pop     remaining
+        vzeroupper
         ret
 
 %%ret_null:
@@ -1015,6 +1016,7 @@ align_label
         pop     MIN_IDX
         pop     NUM_BLOCKS
         pop     REMAINING
+        vzeroupper
         ret
 %%ret_null:
         xor     eax, eax
