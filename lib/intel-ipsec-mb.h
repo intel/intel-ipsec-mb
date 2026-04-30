@@ -797,14 +797,15 @@ typedef void (*zuc_eea3_1_buffer_t)(struct IMB_MGR *, const void *, const void *
 typedef void (*zuc_eea3_4_buffer_t)(const void *const *, const void *const *, const void *const *,
                                     void **, const uint32_t *);
 
-typedef void (*zuc_eea3_n_buffer_t)(const void *const *, const void *const *, const void *const *,
-                                    void **, const uint32_t *, const uint32_t);
+typedef void (*zuc_eea3_n_buffer_t)(struct IMB_MGR *, const void *const *, const void *const *,
+                                    const void *const *, void **, const uint32_t *, const uint32_t);
 
 typedef void (*zuc_eia3_1_buffer_t)(struct IMB_MGR *, const void *, const void *, const void *,
                                     const uint32_t, uint32_t *);
 
-typedef void (*zuc_eia3_n_buffer_t)(const void *const *, const void *const *, const void *const *,
-                                    const uint32_t *, uint32_t **, const uint32_t);
+typedef void (*zuc_eia3_n_buffer_t)(struct IMB_MGR *, const void *const *, const void *const *,
+                                    const void *const *, const uint32_t *, uint32_t **,
+                                    const uint32_t);
 
 typedef void (*kasumi_f8_1_buffer_t)(const kasumi_key_sched_t *, const uint64_t, const void *,
                                      void *, const uint32_t);
@@ -2085,6 +2086,12 @@ init_mb_mgr_auto(IMB_MGR *state, IMB_ARCH *arch);
  * @param _len   Length of input data in bytes.
  *
  * @deprecated Please use the job API instead.
+ *
+ * These functions submit and flush jobs internally using the job API.
+ * Do not mix calls to these functions with other job API calls
+ * (IMB_GET_NEXT_JOB / IMB_SUBMIT_JOB / IMB_FLUSH_JOB) on the same
+ * IMB_MGR. Mixing may cause in-flight jobs submitted via the job API
+ * to be returned to the wrong caller or silently lost.
  */
 #define IMB_ZUC_EEA3_1_BUFFER(_mgr, _key, _iv, _src, _dst, _len)                                   \
         ((_mgr)->eea3_1_buffer((_mgr), (_key), (_iv), (_src), (_dst), (_len)))
@@ -2097,7 +2104,7 @@ init_mb_mgr_auto(IMB_MGR *state, IMB_ARCH *arch);
  * @copydoc IMB_ZUC_EEA3_1_BUFFER
  */
 #define IMB_ZUC_EEA3_N_BUFFER(_mgr, _key, _iv, _src, _dst, _len, _count)                           \
-        ((_mgr)->eea3_n_buffer((_key), (_iv), (_src), (_dst), (_len), (_count)))
+        ((_mgr)->eea3_n_buffer((_mgr), (_key), (_iv), (_src), (_dst), (_len), (_count)))
 
 /**
  * @brief ZUC EIA3 Integrity functions
@@ -2110,6 +2117,12 @@ init_mb_mgr_auto(IMB_MGR *state, IMB_ARCH *arch);
  * @param _tag   Pointer to Authenticated Tag output (4 bytes)
  *
  * @deprecated Please use the job API instead.
+ *
+ * These functions submit and flush jobs internally using the job API.
+ * Do not mix calls to these functions with other job API calls
+ * (IMB_GET_NEXT_JOB / IMB_SUBMIT_JOB / IMB_FLUSH_JOB) on the same
+ * IMB_MGR. Mixing may cause in-flight jobs submitted via the job API
+ * to be returned to the wrong caller or silently lost.
  */
 #define IMB_ZUC_EIA3_1_BUFFER(_mgr, _key, _iv, _src, _len, _tag)                                   \
         ((_mgr)->eia3_1_buffer((_mgr), (_key), (_iv), (_src), (_len), (_tag)))
@@ -2117,7 +2130,7 @@ init_mb_mgr_auto(IMB_MGR *state, IMB_ARCH *arch);
  * @copydoc IMB_ZUC_EIA3_1_BUFFER
  */
 #define IMB_ZUC_EIA3_N_BUFFER(_mgr, _key, _iv, _src, _len, _tag, _count)                           \
-        ((_mgr)->eia3_n_buffer((_key), (_iv), (_src), (_len), (_tag), (_count)))
+        ((_mgr)->eia3_n_buffer((_mgr), (_key), (_iv), (_src), (_len), (_tag), (_count)))
 
 /* KASUMI F8/F9 functions */
 

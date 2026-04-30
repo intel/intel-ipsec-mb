@@ -398,23 +398,22 @@ zuc_eea3_1_buffer_avx2(IMB_MGR *mgr, const void *pKey, const void *pIv, const vo
 }
 
 void
-zuc_eea3_n_buffer_avx2(const void *const pKey[], const void *const pIv[],
+zuc_eea3_n_buffer_avx2(IMB_MGR *mgr, const void *const pKey[], const void *const pIv[],
                        const void *const pBufferIn[], void *pBufferOut[], const uint32_t length[],
                        const uint32_t numBuffers)
 {
-#ifndef LINUX
-        DECLARE_ALIGNED(imb_uint128_t xmm_save[10], 16);
-
-        SAVE_XMMS(xmm_save);
-#endif
-
-        unsigned int i;
-        unsigned int packetCount = numBuffers;
+        IMB_JOB *job;
+        uint32_t i;
 
 #ifdef SAFE_PARAM
         imb_set_errno(NULL, 0);
 
         /* Check for NULL pointers */
+        if (mgr == NULL) {
+                imb_set_errno(NULL, IMB_ERR_NULL_MBMGR);
+                return;
+        }
+
         if (pKey == NULL) {
                 imb_set_errno(NULL, IMB_ERR_NULL_KEY);
                 return;
@@ -469,34 +468,38 @@ zuc_eea3_n_buffer_avx2(const void *const pKey[], const void *const pIv[],
                 }
         }
 #endif
-        i = 0;
-
-        while (packetCount >= 8) {
-                packetCount -= 8;
-                _zuc_eea3_8_buffer_avx2(&pKey[i], &pIv[i], &pBufferIn[i], &pBufferOut[i],
-                                        &length[i]);
-                i += 8;
+        if (IMB_FLUSH_JOB(mgr) != NULL) {
+                imb_set_errno(mgr, IMB_ERR_QUEUE_SPACE);
+                return;
         }
 
-        if (packetCount >= 4) {
-                packetCount -= 4;
-                _zuc_eea3_4_buffer_sse(&pKey[i], &pIv[i], &pBufferIn[i], &pBufferOut[i], &length[i],
-                                       0);
-                i += 4;
+        uint32_t jobs_returned = 0;
+
+        for (i = 0; i < numBuffers; i++) {
+                job = IMB_GET_NEXT_JOB(mgr);
+                job->cipher_direction = IMB_DIR_ENCRYPT;
+                job->chain_order = IMB_ORDER_CIPHER_HASH;
+                job->cipher_mode = IMB_CIPHER_ZUC_EEA3;
+                job->enc_keys = pKey[i];
+                job->key_len_in_bytes = IMB_ZUC_KEY_LEN_IN_BYTES;
+                job->iv = (const uint8_t *) pIv[i];
+                job->iv_len_in_bytes = IMB_ZUC_IV_LEN_IN_BYTES;
+                job->src = (const uint8_t *) pBufferIn[i];
+                job->dst = (uint8_t *) pBufferOut[i];
+                job->cipher_start_src_offset_in_bytes = 0;
+                job->msg_len_to_cipher_in_bytes = length[i];
+                job->hash_alg = IMB_AUTH_NULL;
+
+                job = IMB_SUBMIT_JOB(mgr);
+                if (job != NULL)
+                        jobs_returned++;
         }
 
-        while (packetCount--) {
-                _zuc_eea3_1_buffer_avx2(pKey[i], pIv[i], pBufferIn[i], pBufferOut[i], length[i]);
-                i++;
-        }
-#ifdef SAFE_DATA
-        /* Clear sensitive data in registers */
-        CLEAR_SCRATCH_GPS();
-        CLEAR_SCRATCH_SIMD_REGS();
-#endif
-#ifndef LINUX
-        RESTORE_XMMS(xmm_save);
-#endif
+        while (IMB_FLUSH_JOB(mgr) != NULL)
+                jobs_returned++;
+
+        if (jobs_returned != numBuffers)
+                imb_set_errno(mgr, IMB_ERR_NULL_JOB);
 }
 
 static inline void
@@ -871,23 +874,22 @@ zuc_eia3_8_buffer_job_gfni_avx2(const void *const pKey[NUM_AVX2_BUFS], const uin
 }
 
 void
-zuc_eia3_n_buffer_avx2(const void *const pKey[], const void *const pIv[],
+zuc_eia3_n_buffer_avx2(IMB_MGR *mgr, const void *const pKey[], const void *const pIv[],
                        const void *const pBufferIn[], const uint32_t lengthInBits[],
                        uint32_t *pMacI[], const uint32_t numBuffers)
 {
-#ifndef LINUX
-        DECLARE_ALIGNED(imb_uint128_t xmm_save[10], 16);
-
-        SAVE_XMMS(xmm_save);
-#endif
-
-        unsigned int i;
-        unsigned int packetCount = numBuffers;
+        IMB_JOB *job;
+        uint32_t i;
 
 #ifdef SAFE_PARAM
         imb_set_errno(NULL, 0);
 
         /* Check for NULL pointers */
+        if (mgr == NULL) {
+                imb_set_errno(NULL, IMB_ERR_NULL_MBMGR);
+                return;
+        }
+
         if (pKey == NULL) {
                 imb_set_errno(NULL, IMB_ERR_NULL_KEY);
                 return;
@@ -942,33 +944,36 @@ zuc_eia3_n_buffer_avx2(const void *const pKey[], const void *const pIv[],
                 }
         }
 #endif
-        i = 0;
-
-        while (packetCount >= 8) {
-                packetCount -= 8;
-                _zuc_eia3_8_buffer_avx2(&pKey[i], &pIv[i], &pBufferIn[i], &lengthInBits[i],
-                                        &pMacI[i]);
-                i += 8;
+        if (IMB_FLUSH_JOB(mgr) != NULL) {
+                imb_set_errno(mgr, IMB_ERR_QUEUE_SPACE);
+                return;
         }
 
-        if (packetCount >= 4) {
-                packetCount -= 4;
-                _zuc_eia3_4_buffer_sse(&pKey[i], &pIv[i], &pBufferIn[i], &lengthInBits[i],
-                                       &pMacI[i], 0);
-                i += 4;
+        uint32_t jobs_returned = 0;
+
+        for (i = 0; i < numBuffers; i++) {
+                job = IMB_GET_NEXT_JOB(mgr);
+                job->cipher_direction = IMB_DIR_ENCRYPT;
+                job->chain_order = IMB_ORDER_CIPHER_HASH;
+                job->cipher_mode = IMB_CIPHER_NULL;
+                job->key_len_in_bytes = IMB_ZUC_KEY_LEN_IN_BYTES;
+                job->hash_alg = IMB_AUTH_ZUC_EIA3_BITLEN;
+                job->src = (const uint8_t *) pBufferIn[i];
+                job->u.ZUC_EIA3._key = (const uint8_t *) pKey[i];
+                job->u.ZUC_EIA3._iv = (const uint8_t *) pIv[i];
+                job->hash_start_src_offset_in_bytes = 0;
+                job->msg_len_to_hash_in_bits = lengthInBits[i];
+                job->auth_tag_output = (uint8_t *) pMacI[i];
+                job->auth_tag_output_len_in_bytes = IMB_ZUC_DIGEST_LEN_IN_BYTES;
+
+                job = IMB_SUBMIT_JOB(mgr);
+                if (job != NULL)
+                        jobs_returned++;
         }
 
-        while (packetCount--) {
-                _zuc_eia3_1_buffer_avx2(pKey[i], pIv[i], pBufferIn[i], lengthInBits[i], pMacI[i]);
-                i++;
-        }
+        while (IMB_FLUSH_JOB(mgr) != NULL)
+                jobs_returned++;
 
-#ifdef SAFE_DATA
-        /* Clear sensitive data in registers */
-        CLEAR_SCRATCH_GPS();
-        CLEAR_SCRATCH_SIMD_REGS();
-#endif
-#ifndef LINUX
-        RESTORE_XMMS(xmm_save);
-#endif
+        if (jobs_returned != numBuffers)
+                imb_set_errno(mgr, IMB_ERR_NULL_JOB);
 }

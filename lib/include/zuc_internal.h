@@ -1096,7 +1096,7 @@ zuc_eea3_4_buffer_sse(const void *const pKey[4], const void *const pIv[4],
                       const uint32_t lengthInBytes[4]);
 
 void
-zuc_eea3_n_buffer_sse(const void *const pKey[], const void *const pIv[],
+zuc_eea3_n_buffer_sse(IMB_MGR *mgr, const void *const pKey[], const void *const pIv[],
                       const void *const pBufferIn[], void *pBufferOut[],
                       const uint32_t lengthInBytes[], const uint32_t numBuffers);
 
@@ -1105,12 +1105,12 @@ zuc_eia3_1_buffer_sse(IMB_MGR *mgr, const void *pKey, const void *pIv, const voi
                       const uint32_t lengthInBits, uint32_t *pMacI);
 
 void
-zuc_eia3_n_buffer_sse(const void *const pKey[], const void *const pIv[],
+zuc_eia3_n_buffer_sse(IMB_MGR *mgr, const void *const pKey[], const void *const pIv[],
                       const void *const pBufferIn[], const uint32_t lengthInBits[],
                       uint32_t *pMacI[], const uint32_t numBuffers);
 
 void
-zuc_eia3_n_buffer_gfni_sse(const void *const pKey[], const void *const pIv[],
+zuc_eia3_n_buffer_gfni_sse(IMB_MGR *mgr, const void *const pKey[], const void *const pIv[],
                            const void *const pBufferIn[], const uint32_t lengthInBits[],
                            uint32_t *pMacI[], const uint32_t numBuffers);
 
@@ -1120,7 +1120,7 @@ zuc_eea3_4_buffer_gfni_sse(const void *const pKey[4], const void *const pIv[4],
                            const uint32_t lengthInBytes[4]);
 
 void
-zuc_eea3_n_buffer_gfni_sse(const void *const pKey[], const void *const pIv[],
+zuc_eea3_n_buffer_gfni_sse(IMB_MGR *mgr, const void *const pKey[], const void *const pIv[],
                            const void *const pBufferIn[], void *pBufferOut[],
                            const uint32_t lengthInBytes[], const uint32_t numBuffers);
 
@@ -1129,7 +1129,7 @@ zuc_eea3_1_buffer_avx2(IMB_MGR *mgr, const void *pKey, const void *pIv, const vo
                        void *pBufferOut, const uint32_t lengthInBytes);
 
 void
-zuc_eea3_n_buffer_avx2(const void *const pKey[], const void *const pIv[],
+zuc_eea3_n_buffer_avx2(IMB_MGR *mgr, const void *const pKey[], const void *const pIv[],
                        const void *const pBufferIn[], void *pBufferOut[],
                        const uint32_t lengthInBytes[], const uint32_t numBuffers);
 
@@ -1138,7 +1138,7 @@ zuc_eia3_1_buffer_avx2(IMB_MGR *mgr, const void *pKey, const void *pIv, const vo
                        const uint32_t lengthInBits, uint32_t *pMacI);
 
 void
-zuc_eia3_n_buffer_avx2(const void *const pKey[], const void *const pIv[],
+zuc_eia3_n_buffer_avx2(IMB_MGR *mgr, const void *const pKey[], const void *const pIv[],
                        const void *const pBufferIn[], const uint32_t lengthInBits[],
                        uint32_t *pMacI[], const uint32_t numBuffers);
 
@@ -1147,12 +1147,12 @@ zuc_eea3_1_buffer_avx512(IMB_MGR *mgr, const void *pKey, const void *pIv, const 
                          void *pBufferOut, const uint32_t lengthInBytes);
 
 void
-zuc_eea3_n_buffer_avx512(const void *const pKey[], const void *const pIv[],
+zuc_eea3_n_buffer_avx512(IMB_MGR *mgr, const void *const pKey[], const void *const pIv[],
                          const void *const pBufferIn[], void *pBufferOut[],
                          const uint32_t lengthInBytes[], const uint32_t numBuffers);
 
 void
-zuc_eea3_n_buffer_gfni_avx512(const void *const pKey[], const void *const pIv[],
+zuc_eea3_n_buffer_gfni_avx512(IMB_MGR *mgr, const void *const pKey[], const void *const pIv[],
                               const void *const pBufferIn[], void *pBufferOut[],
                               const uint32_t lengthInBytes[], const uint32_t numBuffers);
 
@@ -1161,12 +1161,12 @@ zuc_eia3_1_buffer_avx512(IMB_MGR *mgr, const void *pKey, const void *pIv, const 
                          const uint32_t lengthInBits, uint32_t *pMacI);
 
 void
-zuc_eia3_n_buffer_avx512(const void *const pKey[], const void *const pIv[],
+zuc_eia3_n_buffer_avx512(IMB_MGR *mgr, const void *const pKey[], const void *const pIv[],
                          const void *const pBufferIn[], const uint32_t lengthInBits[],
                          uint32_t *pMacI[], const uint32_t numBuffers);
 
 void
-zuc_eia3_n_buffer_gfni_avx512(const void *const pKey[], const void *const pIv[],
+zuc_eia3_n_buffer_gfni_avx512(IMB_MGR *mgr, const void *const pKey[], const void *const pIv[],
                               const void *const pBufferIn[], const uint32_t lengthInBits[],
                               uint32_t *pMacI[], const uint32_t numBuffers);
 
