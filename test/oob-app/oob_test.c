@@ -899,12 +899,12 @@ setup_hash_fields(IMB_JOB *job, const enum hash_setup setup, const uint8_t *iv)
                 job->u.KASUMI_UIA1._key = key_store;
                 break;
         case HASH_AES_NIA5:
-                job->u.AES_NIA5._expanded_auth_key = key_store;
-                job->u.AES_NIA5._iv = iv;
+                job->u.NIA._key = key_store;
+                job->u.NIA._iv = iv;
                 break;
         case HASH_SNOW5G_NIA4:
-                job->u.SNOW5G_NIA4._key = key_store;
-                job->u.SNOW5G_NIA4._iv = iv;
+                job->u.NIA._key = key_store;
+                job->u.NIA._iv = iv;
                 break;
         case HASH_PLAIN:
         default:
