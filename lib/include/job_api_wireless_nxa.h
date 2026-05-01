@@ -56,7 +56,6 @@ submit_job_aes_nea5(IMB_JOB *job)
 __forceinline IMB_JOB *
 submit_aes_nia5_job(IMB_JOB *job)
 {
-#ifdef NIA_MSG
         DECLARE_ALIGNED(uint8_t HQP[3 * 16], 64);
         DECLARE_ALIGNED(uint8_t digest[16], 16) = { 0 };
         const uint8_t *msg = job->src + job->hash_start_src_offset_in_bytes;
@@ -72,53 +71,12 @@ submit_aes_nia5_job(IMB_JOB *job)
 #ifdef SAFE_DATA
         clear_mem(HQP, sizeof(HQP));
 #endif
-#else
-        DECLARE_ALIGNED(uint8_t HQP[3 * 16], 64);
-        DECLARE_ALIGNED(uint8_t digest[16], 16) = { 0 };
-        struct gcm_key_data gdata_key;
-        uint8_t *H = HQP;
-        uint8_t *Q = &HQP[16];
-        uint8_t *P = &HQP[16 * 2];
-        const uint8_t *msg = job->src + job->hash_start_src_offset_in_bytes;
-
-        /* Generate H, Q, P keys */
-        GENERATE_HQP_AES(job->u.NIA._key, job->u.NIA._iv, HQP);
-
-        /* Precompute hash keys from H */
-        POLYVAL_PRE(H, &gdata_key);
-        /* Digest message bytes */
-        POLYVAL(&gdata_key, msg, job->msg_len_to_hash_in_bytes, digest);
-
-        /* XOR 16-byte lengths array with previous digest and hash with Q */
-        uint8_t lengths[16] = { 0 };
-        const uint64_t msg_len_in_bits = job->msg_len_to_hash_in_bytes * 8;
-
-        memcpy(&lengths[8], &msg_len_in_bits, 8);
-
-        for (int i = 0; i < 16; i++)
-                digest[i] ^= lengths[i];
-
-        POLYVAL_16B(Q, digest);
-
-        /* XOR digest with P */
-        for (int i = 0; i < 16; i++)
-                digest[i] ^= P[i];
-
-        job->status |= IMB_STATUS_COMPLETED_AUTH;
-        memcpy(job->auth_tag_output, digest, job->auth_tag_output_len_in_bytes);
-
-#ifdef SAFE_DATA
-        clear_mem(HQP, sizeof(HQP));
-        clear_mem(&gdata_key, sizeof(struct gcm_key_data));
-#endif
-#endif
         return job;
 }
 
 __forceinline IMB_JOB *
 submit_aes_nca5_job(IMB_JOB *job, IMB_CIPHER_DIRECTION cipher_dir)
 {
-#ifdef NCA_MSG
         DECLARE_ALIGNED(uint8_t HQP[3 * 16], 64);
         DECLARE_ALIGNED(uint8_t digest[16], 16) = { 0 };
         const uint8_t *msg = job->src + job->cipher_start_src_offset_in_bytes;
@@ -156,175 +114,59 @@ submit_aes_nca5_job(IMB_JOB *job, IMB_CIPHER_DIRECTION cipher_dir)
         clear_mem(HQP, sizeof(HQP));
 #endif
         return job;
-#else
-        DECLARE_ALIGNED(uint8_t HQP[3 * 16], 64);
-        DECLARE_ALIGNED(uint8_t digest[16], 16) = { 0 };
-        struct gcm_key_data gdata_key;
-        uint8_t *H = HQP;
-        uint8_t *Q = &HQP[16];
-        uint8_t *P = &HQP[16 * 2];
-        const uint8_t *msg = job->src + job->cipher_start_src_offset_in_bytes;
-
-        /* Generate H, Q, P keys */
-        GENERATE_HQP_AES(job->enc_keys, job->iv, HQP);
-
-        /* Precompute hash keys from H */
-        POLYVAL_PRE(H, &gdata_key);
-
-        /* Digest AAD bytes if any */
-        if (job->u.NCA.aad_len_in_bytes != 0)
-                POLYVAL(&gdata_key, job->u.NCA.aad, job->u.NCA.aad_len_in_bytes, digest);
-
-        /* Prepare IV for AES-CTR */
-        uint8_t iv[16];
-
-        __m128i iv_reg = _mm_loadu_si128((const __m128i *) job->iv);
-        iv_reg = _mm_and_si128(iv_reg, _mm_loadu_si128((const __m128i *) zero_low_4B_mask));
-
-        _mm_storeu_si128((__m128i *) iv, iv_reg);
-        if (cipher_dir == IMB_DIR_ENCRYPT) {
-                /* Encrypt plaintext */
-                AES_CTR_256(msg, iv, job->enc_keys, job->dst, job->msg_len_to_cipher_in_bytes, 16);
-
-                /* Digest ciphertext */
-                POLYVAL(&gdata_key, job->dst, job->msg_len_to_cipher_in_bytes, digest);
-        } else { /* Decrypt */
-                /* Digest ciphertext */
-                POLYVAL(&gdata_key, msg, job->msg_len_to_cipher_in_bytes, digest);
-
-                /* Decrypt ciphertext (assumes last 4 bytes of 16-byte IV as 0) */
-                AES_CTR_256(msg, iv, job->enc_keys, job->dst, job->msg_len_to_cipher_in_bytes, 16);
-        }
-
-        uint8_t lengths[16] = { 0 };
-        const uint64_t msg_len_in_bits = job->msg_len_to_cipher_in_bytes * 8;
-        const uint64_t aad_len_in_bits = job->u.NCA.aad_len_in_bytes * 8;
-
-        memcpy(lengths, &msg_len_in_bits, 8);
-        memcpy(&lengths[8], &aad_len_in_bits, 8);
-
-        /* XOR 16-byte lengths array with previous digest and hash with Q */
-        for (int i = 0; i < 16; i++)
-                digest[i] ^= lengths[i];
-
-        POLYVAL_16B(Q, digest);
-
-        /* XOR digest with P */
-        for (int i = 0; i < 16; i++)
-                digest[i] ^= P[i];
-
-        job->status |= IMB_STATUS_COMPLETED;
-        memcpy(job->auth_tag_output, digest, job->auth_tag_output_len_in_bytes);
-
-#ifdef SAFE_DATA
-        clear_mem(HQP, sizeof(HQP));
-        clear_mem(&gdata_key, sizeof(struct gcm_key_data));
-#endif
-        return job;
-#endif
 }
 
 __forceinline IMB_JOB *
 submit_snow5g_nia4_job(IMB_JOB *job)
 {
-#if defined(POLYVAL) && defined(POLYVAL_PRE) && defined(POLYVAL_16B)
         DECLARE_ALIGNED(uint8_t HQP[3 * 16], 64);
         DECLARE_ALIGNED(uint8_t digest[16], 16) = { 0 };
-        struct gcm_key_data gdata_key;
-        uint8_t *H = HQP;
-        uint8_t *Q = &HQP[16];
-        uint8_t *P = &HQP[16 * 2];
         const uint8_t *msg = job->src + job->hash_start_src_offset_in_bytes;
 
         /* Generate H, Q, P keys for SNOW5G NIA4 */
         GENERATE_HQP_SNOW5G(job->u.NIA._key, job->u.NIA._iv, HQP, NULL);
 
-        /* Precompute hash keys from H */
-        POLYVAL_PRE(H, &gdata_key);
-        /* Digest message bytes */
-        POLYVAL(&gdata_key, msg, job->msg_len_to_hash_in_bytes, digest);
-
-        /* XOR 16-byte lengths array with previous digest and hash with Q */
-        uint8_t lengths[16] = { 0 };
-        const uint64_t msg_len_in_bits = job->msg_len_to_hash_in_bytes * 8;
-
-        memcpy(&lengths[8], &msg_len_in_bits, 8);
-
-        for (int i = 0; i < 16; i++)
-                digest[i] ^= lengths[i];
-
-        POLYVAL_16B(Q, digest);
-
-        /* XOR digest with P */
-        for (int i = 0; i < 16; i++)
-                digest[i] ^= P[i];
+        NIA_MSG(digest, HQP, msg, job->msg_len_to_hash_in_bytes);
 
         job->status |= IMB_STATUS_COMPLETED_AUTH;
         memcpy(job->auth_tag_output, digest, job->auth_tag_output_len_in_bytes);
 
 #ifdef SAFE_DATA
         clear_mem(HQP, sizeof(HQP));
-        clear_mem(&gdata_key, sizeof(struct gcm_key_data));
 #endif
-#endif /* if defined(POLYVAL) */
         return job;
 }
 
 __forceinline IMB_JOB *
 submit_snow5g_nca4_job(IMB_JOB *job, IMB_CIPHER_DIRECTION cipher_dir)
 {
-#if defined(POLYVAL) && defined(POLYVAL_PRE) && defined(POLYVAL_16B)
         DECLARE_ALIGNED(uint8_t HQP[3 * 16], 64);
         DECLARE_ALIGNED(uint8_t digest[16], 16) = { 0 };
         DECLARE_ALIGNED(uint8_t state[10 * 16], 16);
 
-        struct gcm_key_data gdata_key;
-        uint8_t *H = HQP;
-        uint8_t *Q = &HQP[16];
-        uint8_t *P = &HQP[16 * 2];
-        uint8_t const *out = job->dst;
-        uint64_t msg_len_bytes = job->msg_len_to_cipher_in_bytes;
-        uint64_t msg_len_bits = msg_len_bytes * 8;
         const uint8_t *msg = job->src + job->cipher_start_src_offset_in_bytes;
 
         GENERATE_HQP_SNOW5G(job->enc_keys, job->iv, HQP, state);
-        POLYVAL_PRE(H, &gdata_key);
-
-        POLYVAL(&gdata_key, job->u.NCA.aad, job->u.NCA.aad_len_in_bytes, digest);
 
         if (cipher_dir == IMB_DIR_ENCRYPT) {
                 SNOW5G_NCA4(job, state);
-                POLYVAL(&gdata_key, out, msg_len_bytes, digest);
+                /* Digest ciphertext */
+                NCA_MSG(digest, HQP, job->dst, job->msg_len_to_cipher_in_bytes, job->u.NCA.aad,
+                        job->u.NCA.aad_len_in_bytes);
         } else {
-                POLYVAL(&gdata_key, msg, msg_len_bytes, digest);
+                /* Digest ciphertext */
+                NCA_MSG(digest, HQP, msg, job->msg_len_to_cipher_in_bytes, job->u.NCA.aad,
+                        job->u.NCA.aad_len_in_bytes);
                 SNOW5G_NCA4(job, state);
         }
-
-        uint8_t lengths[16] = { 0 };
-        const uint64_t aad_len_bits = job->u.NCA.aad_len_in_bytes * 8;
-        memcpy(lengths, &msg_len_bits, 8);
-        memcpy(&lengths[8], &aad_len_bits, 8);
-
-        for (int i = 0; i < 16; i++)
-                digest[i] ^= lengths[i];
-
-        POLYVAL_16B(Q, digest);
-
-        for (int i = 0; i < 16; i++)
-                digest[i] ^= P[i];
 
         memcpy(job->auth_tag_output, digest, job->auth_tag_output_len_in_bytes);
 
 #ifdef SAFE_DATA
         clear_mem(state, sizeof(state));
         clear_mem(HQP, sizeof(HQP));
-        clear_mem(&gdata_key, sizeof(struct gcm_key_data));
 #endif
         job->status |= IMB_STATUS_COMPLETED;
-#else
-        (void) job;
-        (void) cipher_dir;
-#endif /* if defined(POLYVAL) */
         return job;
 }
 

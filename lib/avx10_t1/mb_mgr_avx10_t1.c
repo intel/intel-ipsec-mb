@@ -418,11 +418,6 @@ submit_job_docsis256_sec_crc_dec_vaes_avx512(MB_MGR_DOCSIS_AES_OOO *state, IMB_J
 #define FLUSH_JOB_HMAC_SM3  unused
 #endif
 
-/* POLYVAL */
-#undef POLYVAL
-#undef POLYVAL_16B
-#undef POLYVAL_PRE
-
 /* NIA/NCA */
 #define NIA_MSG nia_vclmul_avx512
 #define NCA_MSG nca_vclmul_avx512

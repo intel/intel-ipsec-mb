@@ -418,6 +418,15 @@ polyval_pre_sse(const void *key, struct gcm_key_data *key_data);
 void
 polyval_16B_sse(const void *key, void *in_out_data);
 
+/* NIA */
+IMB_DLL_LOCAL void
+nia_clmul_sse(void *digest, const void *hqp, const void *msg, const uint64_t msg_len);
+
+/* NCA */
+IMB_DLL_LOCAL void
+nca_clmul_sse(void *digest, const void *hqp, const void *msg, const uint64_t msg_len,
+              const void *aad, const uint64_t aad_len);
+
 /* AES-NxA5 */
 void
 generate_hqp_aes_sse(const void *aes_expanded_keys, const void *iv, uint8_t HQP[]);

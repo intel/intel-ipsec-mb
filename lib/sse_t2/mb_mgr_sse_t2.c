@@ -271,13 +271,12 @@ flush_snow3g_uea2_job_sse(IMB_MGR *state)
 #define SUBMIT_JOB_HMAC_SM3 sm3_hmac_submit_sse
 #define FLUSH_JOB_HMAC_SM3  unused
 
-/* POLYVAL */
-#define POLYVAL     polyval_sse
-#define POLYVAL_16B polyval_16B_sse
-#define POLYVAL_PRE polyval_pre_sse
-
 /* AES-NIA5 */
 #define GENERATE_HQP_AES generate_hqp_aes_sse
+
+/* NIA/NCA */
+#define NIA_MSG nia_clmul_sse
+#define NCA_MSG nca_clmul_sse
 
 /* SNOW5G-NIA4 */
 #define GENERATE_HQP_SNOW5G generate_hqp_snow5g_sse

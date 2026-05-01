@@ -366,13 +366,10 @@ submit_aes_docsis256_dec_crc32_avx512(MB_MGR_DOCSIS_AES_OOO *state, IMB_JOB *job
 #define SUBMIT_JOB_HMAC_SM3 sm3_hmac_submit_sse
 #define FLUSH_JOB_HMAC_SM3  unused
 
-/* POLYVAL */
-#define POLYVAL     polyval_sse
-#define POLYVAL_16B polyval_16B_sse
-#define POLYVAL_PRE polyval_pre_sse
-
 /* AES-NIA5 */
 #define GENERATE_HQP_AES generate_hqp_aes_sse
+#define NIA_MSG          nia_clmul_sse
+#define NCA_MSG          nca_clmul_sse
 
 /* SNOW5G-NIA4 */
 #define GENERATE_HQP_SNOW5G generate_hqp_snow5g_sse
