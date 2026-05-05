@@ -694,40 +694,10 @@ test_zuc_api(struct IMB_MGR *mgr)
         }
         print_progress();
 
-        IMB_ZUC_EEA3_1_BUFFER(mgr, NULL, NULL, NULL, NULL, inv_len);
-        IMB_ZUC_EEA3_1_BUFFER(mgr, NULL, NULL, NULL, out_buf, text_len);
-        if (memcmp(out_buf, zero_buf, text_len) != 0) {
-                printf("%s: IMB_ZUC_EEA3_1_BUFFER, invalid "
-                       "param test failed!\n",
-                       __func__);
-                return 1;
-        }
-        print_progress();
-
-        IMB_ZUC_EEA3_4_BUFFER(mgr, NULL, NULL, NULL, NULL, NULL);
-        IMB_ZUC_EEA3_4_BUFFER(mgr, NULL, NULL, NULL, out_bufs, lens);
-        if (memcmp(out_buf, zero_buf, text_len) != 0) {
-                printf("%s: IMB_ZUC_EEA3_4_BUFFER, invalid "
-                       "param test failed!\n",
-                       __func__);
-                return 1;
-        }
-        print_progress();
-
         IMB_ZUC_EEA3_N_BUFFER(mgr, NULL, NULL, NULL, NULL, NULL, inv_len);
         IMB_ZUC_EEA3_N_BUFFER(mgr, NULL, NULL, NULL, out_bufs, lens, NUM_BUFS);
         if (memcmp(out_buf, zero_buf, text_len) != 0) {
                 printf("%s: IMB_ZUC_EEA3_N_BUFFER, invalid "
-                       "param test failed!\n",
-                       __func__);
-                return 1;
-        }
-        print_progress();
-
-        IMB_ZUC_EIA3_1_BUFFER(mgr, NULL, NULL, NULL, inv_len, NULL);
-        IMB_ZUC_EIA3_1_BUFFER(mgr, NULL, NULL, NULL, text_len, out_bufs[0]);
-        if (memcmp(out_buf, zero_buf, text_len) != 0) {
-                printf("%s: IMB_ZUC_EIA3_1_BUFFER, invalid "
                        "param test failed!\n",
                        __func__);
                 return 1;

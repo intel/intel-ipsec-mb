@@ -70,9 +70,6 @@ int
 validate_zuc_algorithm(struct IMB_MGR *mb_mgr, uint8_t *pSrcData, uint8_t *pDstData, uint8_t *pKeys,
                        uint8_t *pIV);
 int
-validate_zuc_EIA_1_block(struct IMB_MGR *mb_mgr, uint8_t *pSrcData, uint8_t *pDstData,
-                         uint8_t *pKeys, uint8_t *pIV, const enum api_type type);
-int
 validate_zuc_EIA_n_block(struct IMB_MGR *mb_mgr, uint8_t **pSrcData, uint8_t **pDstData,
                          uint8_t **pKeys, uint8_t **pIV, uint32_t numBuffs,
                          const enum api_type type);
@@ -225,12 +222,6 @@ zuc_eia3_nia6_test(struct IMB_MGR *mb_mgr)
         }
 
         /* Direct API tests */
-        if (validate_zuc_EIA_1_block(mb_mgr, pSrcData[0], pDstData[0], pKeys[0], pIV[0],
-                                     TEST_DIRECT_API))
-                test_suite_update(&eia3_ctx, 0, 1);
-        else
-                test_suite_update(&eia3_ctx, 1, 0);
-
         for (i = 0; i < DIM(numBuffs); i++) {
                 if (validate_zuc_EIA_n_block(mb_mgr, pSrcData, pDstData, pKeys, pIV, numBuffs[i],
                                              TEST_DIRECT_API))
@@ -240,12 +231,6 @@ zuc_eia3_nia6_test(struct IMB_MGR *mb_mgr)
         }
 
         /* Job API tests */
-        if (validate_zuc_EIA_1_block(mb_mgr, pSrcData[0], pDstData[0], pKeys[0], pIV[0],
-                                     TEST_SINGLE_JOB_API))
-                test_suite_update(&eia3_ctx, 0, 1);
-        else
-                test_suite_update(&eia3_ctx, 1, 0);
-
         for (i = 0; i < DIM(numBuffs); i++) {
                 if (validate_zuc_EIA_n_block(mb_mgr, pSrcData, pDstData, pKeys, pIV, numBuffs[i],
                                              TEST_SINGLE_JOB_API))
@@ -415,55 +400,6 @@ zuc_eia3_128_set_params(const struct mac_test *v, struct zuc_eia3_128_params *p)
         p->bearer = &params[4];
         p->direction = &params[5];
 }
-
-int
-validate_zuc_EIA_1_block(struct IMB_MGR *mb_mgr, uint8_t *pSrcData, uint8_t *pDstData,
-                         uint8_t *pKeys, uint8_t *pIV, const enum api_type type)
-{
-        uint32_t i;
-        int ret = 0;
-        uint32_t bitLength;
-        const struct mac_test *v = zuc_eia3_128_test_json;
-
-        for (i = 0; v[i].msg != NULL; i++) {
-                struct zuc_eia3_128_params p = { 0 };
-                const size_t tag_len = IMB_ZUC_DIGEST_LEN_IN_BYTES;
-
-                memcpy(pKeys, v[i].key, IMB_ZUC_KEY_LEN_IN_BYTES);
-
-                zuc_eia3_128_set_params(&v[i], &p);
-                zuc_eia3_iv_gen(*p.count, *p.bearer, *p.direction, pIV);
-                bitLength = (uint32_t) v[i].msgSize;
-
-                const uint32_t byteLength = (bitLength + 7) / 8;
-
-                memcpy(pSrcData, v[i].msg, byteLength);
-                if (type == TEST_SINGLE_JOB_API)
-                        submit_eia3_jobs(mb_mgr, &pKeys, &pIV, &pSrcData, &pDstData, &bitLength, 1,
-                                         &tag_len, IMB_AUTH_ZUC_EIA3_BITLEN);
-                else /* TEST_DIRECT_API */
-                        IMB_ZUC_EIA3_1_BUFFER(mb_mgr, pKeys, pIV, pSrcData, bitLength,
-                                              (uint32_t *) pDstData);
-                const int retTmp = memcmp(pDstData, v[i].tag, v[i].tagSize / 8);
-                if (retTmp) {
-                        printf("Validate ZUC 1 block test %zu (Int): FAIL\n", v[i].tcId);
-                        byte_hexdump("Expected", (const uint8_t *) v[i].tag,
-                                     IMB_ZUC_DIGEST_LEN_IN_BYTES);
-                        byte_hexdump("Found", pDstData, IMB_ZUC_DIGEST_LEN_IN_BYTES);
-                        ret = retTmp;
-                }
-#ifdef DEBUG
-                else {
-                        if (!quiet_mode)
-                                printf("ZUC-EIA3 128 1 block vector %zu Message length: %zu, "
-                                       "Tag length: %zu\n",
-                                       v[i].tcId, v[i].msgSize / 8, v[i].tagSize / 8);
-                }
-#endif
-                fflush(stdout);
-        }
-        return ret;
-};
 
 int
 validate_zuc_EIA_n_block(struct IMB_MGR *mb_mgr, uint8_t **pSrcData, uint8_t **pDstData,

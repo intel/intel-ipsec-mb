@@ -791,17 +791,8 @@ typedef void (*chacha_poly_finalize_t)(struct chacha20_poly1305_context_data *, 
 typedef void (*ghash_t)(const struct gcm_key_data *, const void *, const uint64_t, void *,
                         const uint64_t);
 
-typedef void (*zuc_eea3_1_buffer_t)(struct IMB_MGR *, const void *, const void *, const void *,
-                                    void *, const uint32_t);
-
-typedef void (*zuc_eea3_4_buffer_t)(const void *const *, const void *const *, const void *const *,
-                                    void **, const uint32_t *);
-
 typedef void (*zuc_eea3_n_buffer_t)(struct IMB_MGR *, const void *const *, const void *const *,
                                     const void *const *, void **, const uint32_t *, const uint32_t);
-
-typedef void (*zuc_eia3_1_buffer_t)(struct IMB_MGR *, const void *, const void *, const void *,
-                                    const uint32_t, uint32_t *);
 
 typedef void (*zuc_eia3_n_buffer_t)(struct IMB_MGR *, const void *const *, const void *const *,
                                     const void *const *, const uint32_t *, uint32_t **,
@@ -1055,10 +1046,7 @@ typedef struct IMB_MGR {
         aes_gcm_pre_t gcm192_pre;
         aes_gcm_pre_t gcm256_pre;
 
-        zuc_eea3_1_buffer_t eea3_1_buffer;
-        zuc_eea3_4_buffer_t eea3_4_buffer;
         zuc_eea3_n_buffer_t eea3_n_buffer;
-        zuc_eia3_1_buffer_t eia3_1_buffer;
 
         kasumi_f8_1_buffer_t f8_1_buffer;
         kasumi_f9_1_buffer_t f9_1_buffer;
@@ -2076,7 +2064,7 @@ init_mb_mgr_auto(IMB_MGR *state, IMB_ARCH *arch);
 /* ZUC EEA3/EIA3 functions */
 
 /**
- * @brief ZUC EEA3 Confidentiality functions
+ * @brief ZUC EEA3 Confidentiality function
  *
  * @param _mgr   Pointer to multi-buffer structure
  * @param _key   Pointer to key
@@ -2087,27 +2075,17 @@ init_mb_mgr_auto(IMB_MGR *state, IMB_ARCH *arch);
  *
  * @deprecated Please use the job API instead.
  *
- * These functions submit and flush jobs internally using the job API.
- * Do not mix calls to these functions with other job API calls
+ * This function submits and flushes jobs internally using the job API.
+ * Do not mix calls to this function with other job API calls
  * (IMB_GET_NEXT_JOB / IMB_SUBMIT_JOB / IMB_FLUSH_JOB) on the same
  * IMB_MGR. Mixing may cause in-flight jobs submitted via the job API
  * to be returned to the wrong caller or silently lost.
- */
-#define IMB_ZUC_EEA3_1_BUFFER(_mgr, _key, _iv, _src, _dst, _len)                                   \
-        ((_mgr)->eea3_1_buffer((_mgr), (_key), (_iv), (_src), (_dst), (_len)))
-/**
- * @copydoc IMB_ZUC_EEA3_1_BUFFER
- */
-#define IMB_ZUC_EEA3_4_BUFFER(_mgr, _key, _iv, _src, _dst, _len)                                   \
-        ((_mgr)->eea3_4_buffer((_key), (_iv), (_src), (_dst), (_len)))
-/**
- * @copydoc IMB_ZUC_EEA3_1_BUFFER
  */
 #define IMB_ZUC_EEA3_N_BUFFER(_mgr, _key, _iv, _src, _dst, _len, _count)                           \
         ((_mgr)->eea3_n_buffer((_mgr), (_key), (_iv), (_src), (_dst), (_len), (_count)))
 
 /**
- * @brief ZUC EIA3 Integrity functions
+ * @brief ZUC EIA3 Integrity function
  *
  * @param _mgr   Pointer to multi-buffer structure
  * @param _key   Pointer to key
@@ -2118,16 +2096,11 @@ init_mb_mgr_auto(IMB_MGR *state, IMB_ARCH *arch);
  *
  * @deprecated Please use the job API instead.
  *
- * These functions submit and flush jobs internally using the job API.
- * Do not mix calls to these functions with other job API calls
+ * This function submits and flushes jobs internally using the job API.
+ * Do not mix calls to this function with other job API calls
  * (IMB_GET_NEXT_JOB / IMB_SUBMIT_JOB / IMB_FLUSH_JOB) on the same
  * IMB_MGR. Mixing may cause in-flight jobs submitted via the job API
  * to be returned to the wrong caller or silently lost.
- */
-#define IMB_ZUC_EIA3_1_BUFFER(_mgr, _key, _iv, _src, _len, _tag)                                   \
-        ((_mgr)->eia3_1_buffer((_mgr), (_key), (_iv), (_src), (_len), (_tag)))
-/**
- * @copydoc IMB_ZUC_EIA3_1_BUFFER
  */
 #define IMB_ZUC_EIA3_N_BUFFER(_mgr, _key, _iv, _src, _len, _tag, _count)                           \
         ((_mgr)->eia3_n_buffer((_mgr), (_key), (_iv), (_src), (_len), (_tag), (_count)))

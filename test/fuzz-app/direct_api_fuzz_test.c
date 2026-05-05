@@ -831,17 +831,6 @@ zuc_start(const size_t dataSize, const uint8_t *data)
 }
 
 static int
-test_zuc_eea3_1_buff(IMB_MGR *p_mgr, uint8_t *buff, size_t dataSize)
-{
-        if (zuc_start(dataSize, buff) != 0)
-                return -1;
-
-        IMB_ZUC_EEA3_1_BUFFER(p_mgr, zuc_key, zuc_iv, buff, buff, dataSize);
-        zuc_end();
-        return 0;
-}
-
-static int
 test_zuc_eea3_iv_gen(IMB_MGR *p_mgr, uint8_t *buff, size_t dataSize)
 {
         (void) p_mgr;
@@ -928,26 +917,6 @@ test_zuc_mb_set1(struct test_zuc_mb *ts, const void *key, const void *iv, const 
 }
 
 static int
-test_zuc_eea3_4_buff(IMB_MGR *p_mgr, uint8_t *buff, size_t dataSize)
-{
-        if (zuc_start(dataSize, buff) != 0)
-                return -1;
-
-        struct test_zuc_mb ts;
-        const uint32_t n = 4;
-
-        if (test_zuc_mb_alloc(&ts, n) != 0) {
-                zuc_end();
-                return -1;
-        }
-        test_zuc_mb_set1(&ts, zuc_key, zuc_iv, buff, buff, dataSize, NULL);
-        IMB_ZUC_EEA3_4_BUFFER(p_mgr, ts.key, ts.iv, ts.in, ts.out, ts.len);
-        test_zuc_mb_free(&ts);
-        zuc_end();
-        return 0;
-}
-
-static int
 test_zuc_eea3_n_buff(IMB_MGR *p_mgr, uint8_t *buff, size_t dataSize)
 {
         if (zuc_start(dataSize, buff) != 0)
@@ -963,19 +932,6 @@ test_zuc_eea3_n_buff(IMB_MGR *p_mgr, uint8_t *buff, size_t dataSize)
         test_zuc_mb_set1(&ts, zuc_key, zuc_iv, buff, buff, dataSize, NULL);
         IMB_ZUC_EEA3_N_BUFFER(p_mgr, ts.key, ts.iv, ts.in, ts.out, ts.len, n);
         test_zuc_mb_free(&ts);
-        zuc_end();
-        return 0;
-}
-
-static int
-test_zuc_eia3_1_buff(IMB_MGR *p_mgr, uint8_t *buff, size_t dataSize)
-{
-        if (zuc_start(dataSize, buff) != 0)
-                return -1;
-
-        const uint32_t len = dataSize * 8;
-
-        IMB_ZUC_EIA3_1_BUFFER(p_mgr, zuc_key, zuc_iv, buff, len, zuc_tag);
         zuc_end();
         return 0;
 }
@@ -2304,11 +2260,8 @@ struct {
         { test_ghash, "test_ghash" },
         { test_ghash_pre, "test_ghash_pre" },
 
-        { test_zuc_eea3_1_buff, "test_zuc_eea3_1_buff" },
-        { test_zuc_eea3_4_buff, "test_zuc_eea3_4_buff" },
         { test_zuc_eea3_n_buff, "test_zuc_eea3_n_buff" },
         { test_zuc_eea3_iv_gen, "test_zuc_eea3_iv_gen" },
-        { test_zuc_eia3_1_buff, "test_zuc_eia3_1_buff" },
         { test_zuc_eia3_n_buff, "test_zuc_eia3_n_buff" },
         { test_zuc_eia3_iv_gen, "test_zuc_eia3_iv_gen" },
 

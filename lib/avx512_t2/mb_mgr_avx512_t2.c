@@ -590,9 +590,6 @@ init_mb_mgr_avx512_t2_internal(IMB_MGR *state, const int reset_mgrs)
         state->aes128_cfb_one = aes_cfb_128_one_avx;
         state->aes256_cfb_one = aes_cfb_256_one_avx;
 
-        state->eea3_1_buffer = zuc_eea3_1_buffer_avx512;
-        state->eea3_4_buffer = zuc_eea3_4_buffer_sse;
-        state->eia3_1_buffer = zuc_eia3_1_buffer_avx512;
         state->eea3_n_buffer = zuc_eea3_n_buffer_gfni_avx512;
         state->eia3_n_buffer = zuc_eia3_n_buffer_gfni_avx512;
 

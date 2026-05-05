@@ -1882,118 +1882,6 @@ test_IMB_AES256_GCM_PRE(struct IMB_MGR *mgr)
 }
 
 /*
- * @brief Performs direct API invalid param tests for IMB_ZUC_EEA3_1_BUFFER */
-static int
-test_IMB_ZUC_EEA3_1_BUFFER(struct IMB_MGR *mgr)
-{
-        unsigned i = 1;
-        const uint8_t key[BUFF_SIZE] = { 0 };
-        const uint8_t iv[BUFF_SIZE] = { 0 };
-        const uint8_t src[BUFF_SIZE] = { 0 };
-        uint8_t dst[BUFF_SIZE];
-        const uint32_t len = 1;
-        int seg_err; /* segfault flag */
-
-        seg_err = setjmp(dir_api_param_env);
-        if (seg_err) {
-                printf("%s: segfault occurred!", __func__);
-                return 1;
-        }
-
-        struct fn_args {
-                const void *key;
-                const void *iv;
-                const void *src;
-                void *dst;
-                const uint32_t len;
-                const IMB_ERR exp_err;
-        } fn_args[] = { { NULL, iv, src, dst, len, IMB_ERR_NULL_KEY },
-                        { key, NULL, src, dst, len, IMB_ERR_NULL_IV },
-                        { key, iv, NULL, dst, len, IMB_ERR_NULL_SRC },
-                        { key, iv, src, NULL, len, IMB_ERR_NULL_DST },
-                        { key, iv, src, dst, 0, IMB_ERR_CIPH_LEN } };
-
-        /* Iterate over args */
-        for (i = 0; i < DIM(fn_args); i++) {
-                const struct fn_args *ap = &fn_args[i];
-
-                IMB_ZUC_EEA3_1_BUFFER(mgr, ap->key, ap->iv, ap->src, ap->dst, ap->len);
-                if (unexpected_err(mgr, ap->exp_err, "IMB_ZUC_EEA3_1_BUFFER"))
-                        return 1;
-        }
-        return 0;
-}
-
-/*
- * @brief Performs direct API invalid param tests for IMB_ZUC_EEA3_4_BUFFER */
-static int
-test_IMB_ZUC_EEA3_4_BUFFER(struct IMB_MGR *mgr)
-{
-        unsigned i = 1;
-        const void *key[MAX_BUFFS];
-        const void *key_NULL_pts[MAX_BUFFS];
-        const uint8_t key_s[MAX_BUFFS][BUFF_SIZE] = { 0 };
-        const void *iv[MAX_BUFFS];
-        const void *iv_NULL_pts[MAX_BUFFS];
-        const uint8_t iv_s[MAX_BUFFS][BUFF_SIZE] = { 0 };
-        const void *src[MAX_BUFFS];
-        const void *src_NULL_pts[MAX_BUFFS];
-        const uint8_t src_s[MAX_BUFFS][BUFF_SIZE] = { 0 };
-        void *dst[MAX_BUFFS];
-        void *dst_NULL_pts[MAX_BUFFS];
-        uint8_t dst_s[MAX_BUFFS][BUFF_SIZE];
-        const uint32_t len_all_zero[MAX_BUFFS] = {
-                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-        };
-        const uint32_t len[MAX_BUFFS] = { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };
-        int seg_err; /* segfault flag */
-
-        seg_err = setjmp(dir_api_param_env);
-        if (seg_err) {
-                printf("%s: segfault occurred!", __func__);
-                return 1;
-        }
-
-        for (i = 0; i < MAX_BUFFS; i++) {
-                key[i] = key_s[i];
-                key_NULL_pts[i] = NULL;
-                iv[i] = iv_s[i];
-                iv_NULL_pts[i] = NULL;
-                src[i] = src_s[i];
-                src_NULL_pts[i] = NULL;
-                dst[i] = dst_s[i];
-                dst_NULL_pts[i] = NULL;
-        }
-
-        struct fn_args {
-                const void *const *key;
-                const void *const *iv;
-                const void *const *src;
-                void **dst;
-                const uint32_t *len;
-                const IMB_ERR exp_err;
-        } fn_args[] = { { key_NULL_pts, iv, src, dst, len, IMB_ERR_NULL_KEY },
-                        { NULL, iv, src, dst, len, IMB_ERR_NULL_KEY },
-                        { key, iv_NULL_pts, src, dst, len, IMB_ERR_NULL_IV },
-                        { key, NULL, src, dst, len, IMB_ERR_NULL_IV },
-                        { key, iv, src_NULL_pts, dst, len, IMB_ERR_NULL_SRC },
-                        { key, iv, NULL, dst, len, IMB_ERR_NULL_SRC },
-                        { key, iv, src, dst_NULL_pts, len, IMB_ERR_NULL_DST },
-                        { key, iv, src, NULL, len, IMB_ERR_NULL_DST },
-                        { key, iv, src, dst, len_all_zero, IMB_ERR_CIPH_LEN } };
-
-        /* Iterate over args */
-        for (i = 0; i < DIM(fn_args); i++) {
-                const struct fn_args *ap = &fn_args[i];
-
-                IMB_ZUC_EEA3_4_BUFFER(mgr, ap->key, ap->iv, ap->src, ap->dst, ap->len);
-                if (unexpected_err(mgr, ap->exp_err, "IMB_ZUC_EEA3_4_BUFFER"))
-                        return 1;
-        }
-        return 0;
-}
-
-/*
  * @brief Performs direct API invalid param tests for IMB_ZUC_EEA3_N_BUFFER */
 static int
 test_IMB_ZUC_EEA3_N_BUFFER(struct IMB_MGR *mgr)
@@ -2059,49 +1947,6 @@ test_IMB_ZUC_EEA3_N_BUFFER(struct IMB_MGR *mgr)
 
                 IMB_ZUC_EEA3_N_BUFFER(mgr, ap->key, ap->iv, ap->src, ap->dst, ap->len, ap->count);
                 if (unexpected_err(mgr, ap->exp_err, "IMB_ZUC_EEA3_N_BUFFER"))
-                        return 1;
-        }
-        return 0;
-}
-
-/*
- * @brief Performs direct API invalid param tests for IMB_ZUC_EIA3_1_BUFFER */
-static int
-test_IMB_ZUC_EIA3_1_BUFFER(struct IMB_MGR *mgr)
-{
-        unsigned i = 1;
-        const uint8_t key[BUFF_SIZE] = { 0 };
-        const uint8_t iv[BUFF_SIZE] = { 0 };
-        const uint8_t src[BUFF_SIZE] = { 0 };
-        const uint32_t len = 1;
-        uint32_t tag[BUFF_SIZE];
-        int seg_err; /* segfault flag */
-
-        seg_err = setjmp(dir_api_param_env);
-        if (seg_err) {
-                printf("%s: segfault occurred!", __func__);
-                return 1;
-        }
-
-        struct fn_args {
-                const void *key;
-                const void *iv;
-                const void *src;
-                const uint32_t len;
-                uint32_t *tag;
-                const IMB_ERR exp_err;
-        } fn_args[] = { { NULL, iv, src, len, tag, IMB_ERR_NULL_KEY },
-                        { key, NULL, src, len, tag, IMB_ERR_NULL_IV },
-                        { key, iv, NULL, len, tag, IMB_ERR_NULL_SRC },
-                        { key, iv, src, 0, tag, IMB_ERR_AUTH_LEN },
-                        { key, iv, src, len, NULL, IMB_ERR_NULL_AUTH } };
-
-        /* Iterate over args */
-        for (i = 0; i < DIM(fn_args); i++) {
-                const struct fn_args *ap = &fn_args[i];
-
-                IMB_ZUC_EIA3_1_BUFFER(mgr, ap->key, ap->iv, ap->src, ap->len, ap->tag);
-                if (unexpected_err(mgr, ap->exp_err, "IMB_ZUC_EIA3_1_BUFFER"))
                         return 1;
         }
         return 0;
@@ -4686,16 +4531,7 @@ direct_api_param_test(struct IMB_MGR *mb_mgr)
         errors += test_IMB_AES256_GCM_PRE(mb_mgr);
         run++;
 
-        errors += test_IMB_ZUC_EEA3_1_BUFFER(mb_mgr);
-        run++;
-
-        errors += test_IMB_ZUC_EEA3_4_BUFFER(mb_mgr);
-        run++;
-
         errors += test_IMB_ZUC_EEA3_N_BUFFER(mb_mgr);
-        run++;
-
-        errors += test_IMB_ZUC_EIA3_1_BUFFER(mb_mgr);
         run++;
 
         errors += test_IMB_KASUMI_INIT_F8_KEY_SCHED(mb_mgr);

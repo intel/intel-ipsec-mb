@@ -70,12 +70,6 @@ int
 validate_zuc_algorithm(struct IMB_MGR *mb_mgr, uint8_t *pSrcData, uint8_t *pDstData, uint8_t *pKeys,
                        uint8_t *pIV);
 int
-validate_zuc_EEA_1_block(struct IMB_MGR *mb_mgr, uint8_t *pSrcData, uint8_t *pDstData,
-                         uint8_t *pKeys, uint8_t *pIV, const enum api_type type);
-int
-validate_zuc_EEA_4_block(struct IMB_MGR *mb_mgr, uint8_t **pSrcData, uint8_t **pDstData,
-                         uint8_t **pKeys, uint8_t **pIV, enum api_type type);
-int
 validate_zuc_EEA_n_block(struct IMB_MGR *mb_mgr, uint8_t **pSrcData, uint8_t **pDstData,
                          uint8_t **pKeys, uint8_t **pIV, uint32_t numBuffs,
                          const enum api_type type);
@@ -230,17 +224,6 @@ zuc_eea3_nea6_test(struct IMB_MGR *mb_mgr)
         }
 
         /* Direct API tests */
-        if (validate_zuc_EEA_1_block(mb_mgr, pSrcData[0], pSrcData[0], pKeys[0], pIV[0],
-                                     TEST_DIRECT_API))
-                test_suite_update(&eea3_ctx, 0, 1);
-        else
-                test_suite_update(&eea3_ctx, 1, 0);
-
-        if (validate_zuc_EEA_4_block(mb_mgr, pSrcData, pSrcData, pKeys, pIV, TEST_DIRECT_API))
-                test_suite_update(&eea3_ctx, 0, 1);
-        else
-                test_suite_update(&eea3_ctx, 1, 0);
-
         for (i = 0; i < DIM(numBuffs); i++) {
                 if (validate_zuc_EEA_n_block(mb_mgr, pSrcData, pDstData, pKeys, pIV, numBuffs[i],
                                              TEST_DIRECT_API))
@@ -250,17 +233,6 @@ zuc_eea3_nea6_test(struct IMB_MGR *mb_mgr)
         }
 
         /* Job API tests */
-        if (validate_zuc_EEA_1_block(mb_mgr, pSrcData[0], pSrcData[0], pKeys[0], pIV[0],
-                                     TEST_SINGLE_JOB_API))
-                test_suite_update(&eea3_ctx, 0, 1);
-        else
-                test_suite_update(&eea3_ctx, 1, 0);
-
-        if (validate_zuc_EEA_4_block(mb_mgr, pSrcData, pSrcData, pKeys, pIV, TEST_SINGLE_JOB_API))
-                test_suite_update(&eea3_ctx, 0, 1);
-        else
-                test_suite_update(&eea3_ctx, 1, 0);
-
         for (i = 0; i < DIM(numBuffs); i++) {
                 if (validate_zuc_EEA_n_block(mb_mgr, pSrcData, pDstData, pKeys, pIV, numBuffs[i],
                                              TEST_SINGLE_JOB_API))
@@ -488,51 +460,6 @@ zuc_eea3_128_set_params(const struct cipher_test *v, struct zuc_eea3_128_params 
         p->direction = &params[5];
 }
 
-int
-validate_zuc_EEA_1_block(struct IMB_MGR *mb_mgr, uint8_t *pSrcData, uint8_t *pDstData,
-                         uint8_t *pKeys, uint8_t *pIV, const enum api_type type)
-{
-        uint32_t i;
-        int ret = 0;
-        const struct cipher_test *vectors = zuc_eea3_128_test_json;
-
-        /* ZUC-128-EEA3 */
-        for (i = 0; vectors[i].msg != NULL; i++) {
-                char msg[50];
-                int retTmp;
-                uint32_t byteLength;
-                const unsigned int iv_len = IMB_ZUC_IV_LEN_IN_BYTES;
-
-                /* generate IV if params stored in vector */
-                if ((vectors[i].ivSize / 8) != iv_len) {
-                        struct zuc_eea3_128_params p = { 0 };
-
-                        zuc_eea3_128_set_params(&vectors[i], &p);
-                        zuc_eea3_iv_gen(*p.count, *p.bearer, *p.direction, pIV);
-                } else
-                        /* actual iv stored in vector */
-                        memcpy(pIV, vectors[i].iv, IMB_ZUC_IV_LEN_IN_BYTES);
-
-                memcpy(pKeys, vectors[i].key, IMB_ZUC_KEY_LEN_IN_BYTES);
-                byteLength = (uint32_t) (vectors[i].msgSize + 7) / 8;
-                memcpy(pSrcData, vectors[i].msg, byteLength);
-                if (type == TEST_SINGLE_JOB_API)
-                        submit_eea3_jobs(mb_mgr, &pKeys, &pIV, &pSrcData, &pDstData, &byteLength,
-                                         IMB_DIR_ENCRYPT, 1, IMB_ZUC_KEY_LEN_IN_BYTES, &iv_len,
-                                         IMB_CIPHER_ZUC_EEA3);
-                else
-                        IMB_ZUC_EEA3_1_BUFFER(mb_mgr, pKeys, pIV, pSrcData, pDstData, byteLength);
-
-                snprintf(msg, sizeof(msg), "Validate ZUC 1 block test %zu (Enc):", vectors[i].tcId);
-                retTmp = test_output(pDstData, (const uint8_t *) vectors[i].ct, byteLength,
-                                     (uint32_t) vectors[i].msgSize, msg);
-                if (retTmp < 0)
-                        ret = retTmp;
-        }
-
-        return ret;
-};
-
 static int
 submit_and_verify(struct IMB_MGR *mb_mgr, uint8_t **pSrcData, uint8_t **pDstData, uint8_t **pKeys,
                   uint8_t **pIV, const enum api_type type, IMB_CIPHER_DIRECTION dir,
@@ -540,7 +467,7 @@ submit_and_verify(struct IMB_MGR *mb_mgr, uint8_t **pSrcData, uint8_t **pDstData
                   const uint32_t *buf_idx)
 {
         unsigned int i;
-        uint32_t packetLen[MAXBUFS];
+        uint32_t packetLen[MAXBUFS] = { 0 };
         int ret = 0;
         unsigned int iv_lens[MAXBUFS];
         const struct cipher_test *vectors = zuc_eea3_128_test_json;
@@ -576,17 +503,10 @@ submit_and_verify(struct IMB_MGR *mb_mgr, uint8_t **pSrcData, uint8_t **pDstData
                 submit_burst_eea3_jobs(mb_mgr, pKeys, pIV, pSrcData, pDstData, packetLen, dir,
                                        num_buffers, IMB_ZUC_KEY_LEN_IN_BYTES, iv_lens,
                                        IMB_CIPHER_ZUC_EEA3);
-        else {
-                if (num_buffers == 4)
-                        IMB_ZUC_EEA3_4_BUFFER(
-                                mb_mgr, (const void *const *) pKeys, (const void *const *) pIV,
-                                (const void *const *) pSrcData, (void **) pDstData, packetLen);
-                else
-                        IMB_ZUC_EEA3_N_BUFFER(mb_mgr, (const void *const *) pKeys,
-                                              (const void *const *) pIV,
-                                              (const void *const *) pSrcData, (void **) pDstData,
-                                              packetLen, num_buffers);
-        }
+        else
+                IMB_ZUC_EEA3_N_BUFFER(mb_mgr, (const void *const *) pKeys,
+                                      (const void *const *) pIV, (const void *const *) pSrcData,
+                                      (void **) pDstData, packetLen, num_buffers);
 
         for (i = 0; i < num_buffers; i++) {
                 uint8_t *pDst8 = (uint8_t *) pDstData[i];
@@ -619,58 +539,6 @@ submit_and_verify(struct IMB_MGR *mb_mgr, uint8_t **pSrcData, uint8_t **pDstData
 
         return ret;
 }
-
-int
-validate_zuc_EEA_4_block(struct IMB_MGR *mb_mgr, uint8_t **pSrcData, uint8_t **pDstData,
-                         uint8_t **pKeys, uint8_t **pIV, const enum api_type type)
-{
-        uint32_t i, j, num_vectors = 0;
-        int ret = 0;
-        int retTmp;
-        uint32_t buf_idx[4];
-        const struct cipher_test *vectors = zuc_eea3_128_test_json;
-
-        /* calculate number of vectors */
-        for (i = 0; vectors[i].msg != NULL; i++)
-                num_vectors++;
-
-        if (num_vectors == 0) {
-                printf("ZUC-EEA3 128 4 block - No vectors found!\n");
-                return -1;
-        }
-
-        for (i = 0; i < num_vectors; i++) {
-                for (j = 0; j < 4; j++)
-                        buf_idx[j] = i;
-
-                retTmp = submit_and_verify(mb_mgr, pSrcData, pDstData, pKeys, pIV, type,
-                                           IMB_DIR_ENCRYPT, 0, 4, buf_idx);
-                if (retTmp < 0)
-                        ret = retTmp;
-                retTmp = submit_and_verify(mb_mgr, pSrcData, pDstData, pKeys, pIV, type,
-                                           IMB_DIR_DECRYPT, 0, 4, buf_idx);
-                if (retTmp < 0)
-                        ret = retTmp;
-        }
-
-        /* Encrypt 4 different buffers, grouping all available test vectors
-         * in groups of 4 */
-        for (i = 0; i < num_vectors; i++) {
-                for (j = 0; j < 4; j++)
-                        buf_idx[j] = (i + j) % num_vectors;
-
-                retTmp = submit_and_verify(mb_mgr, pSrcData, pDstData, pKeys, pIV, type,
-                                           IMB_DIR_ENCRYPT, 1, 4, buf_idx);
-                if (retTmp < 0)
-                        ret = retTmp;
-                retTmp = submit_and_verify(mb_mgr, pSrcData, pDstData, pKeys, pIV, type,
-                                           IMB_DIR_DECRYPT, 1, 4, buf_idx);
-                if (retTmp < 0)
-                        ret = retTmp;
-        }
-
-        return ret;
-};
 
 int
 validate_zuc_EEA_n_block(struct IMB_MGR *mb_mgr, uint8_t **pSrcData, uint8_t **pDstData,
@@ -732,7 +600,7 @@ submit_and_verify_zuc_nea6(struct IMB_MGR *mb_mgr, uint8_t **pSrcData, uint8_t *
                            const unsigned int num_buffers, const uint32_t *buf_idx)
 {
         unsigned int i;
-        uint32_t packetLen[MAXBUFS];
+        uint32_t packetLen[MAXBUFS] = { 0 };
         int ret = 0;
         unsigned int iv_lens[MAXBUFS];
         const struct cipher_test *vectors = zuc_nea6_test_json;
