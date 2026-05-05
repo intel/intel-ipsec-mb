@@ -30,6 +30,14 @@
 #include <string.h>
 #include <stdint.h>
 
+#ifdef _WIN32
+#include <process.h>
+#define IMB_GETPID() ((int) _getpid())
+#else
+#include <unistd.h>
+#define IMB_GETPID() ((int) getpid())
+#endif
+
 #include <intel-ipsec-mb.h>
 #include "utils.h"
 #include "mac_test.h"
@@ -66,7 +74,8 @@ json_parser_test(struct IMB_MGR *mb_mgr)
         (void) mb_mgr;
 
         int errors = 0;
-        char path[64];
+        const int pid = IMB_GETPID();
+        char path[128];
         struct mac_test *mac_v = NULL;
         struct cipher_test *cipher_v = NULL;
         struct test_json_alloc_ctx *ctx = NULL;
@@ -78,7 +87,7 @@ json_parser_test(struct IMB_MGR *mb_mgr)
         /* ------------------------------------------------------------------ */
         /* P1 – valid MAC single vector                                        */
         /* ------------------------------------------------------------------ */
-        strcpy(path, "imb_json_test_1.json");
+        snprintf(path, sizeof(path), "imb_json_test_1_%d.json", pid);
         ret = write_tmp_file(path, "{\n"
                                    "  \"testGroups\": [\n"
                                    "    {\n"
@@ -137,7 +146,7 @@ p1_done:
         /* ------------------------------------------------------------------ */
         /* P2 – valid MAC with "invalid" result                                */
         /* ------------------------------------------------------------------ */
-        strcpy(path, "imb_json_test_2.json");
+        snprintf(path, sizeof(path), "imb_json_test_2_%d.json", pid);
         ret = write_tmp_file(path, "{\n"
                                    "  \"testGroups\": [\n"
                                    "    {\n"
@@ -190,7 +199,7 @@ p2_done:
         /* ------------------------------------------------------------------ */
         /* P3 – fields at testGroup level (inherited)                          */
         /* ------------------------------------------------------------------ */
-        strcpy(path, "imb_json_test_3.json");
+        snprintf(path, sizeof(path), "imb_json_test_3_%d.json", pid);
         ret = write_tmp_file(path, "{\n"
                                    "  \"testGroups\": [\n"
                                    "    {\n"
@@ -246,7 +255,7 @@ p3_done:
         /* ------------------------------------------------------------------ */
         /* P4 – valid MAC multiple testGroups                                  */
         /* ------------------------------------------------------------------ */
-        strcpy(path, "imb_json_test_4.json");
+        snprintf(path, sizeof(path), "imb_json_test_4_%d.json", pid);
         ret = write_tmp_file(path, "{\n"
                                    "  \"testGroups\": [\n"
                                    "    {\n"
@@ -315,7 +324,7 @@ p4_done:
         /* ------------------------------------------------------------------ */
         /* P5 – valid cipher single vector                                     */
         /* ------------------------------------------------------------------ */
-        strcpy(path, "imb_json_test_5.json");
+        snprintf(path, sizeof(path), "imb_json_test_5_%d.json", pid);
         ret = write_tmp_file(path, "{\n"
                                    "  \"testGroups\": [\n"
                                    "    {\n"
@@ -376,7 +385,7 @@ p5_done:
         /* ------------------------------------------------------------------ */
         /* P6 – sizes derived from hex when size fields absent                 */
         /* ------------------------------------------------------------------ */
-        strcpy(path, "imb_json_test_6.json");
+        snprintf(path, sizeof(path), "imb_json_test_6_%d.json", pid);
         ret = write_tmp_file(path, "{\n"
                                    "  \"testGroups\": [\n"
                                    "    {\n"
@@ -428,7 +437,7 @@ p6_done:
         /* ================================================================== */
 
         /* N1 – empty file */
-        strcpy(path, "imb_json_test_n1.json");
+        snprintf(path, sizeof(path), "imb_json_test_n1_%d.json", pid);
         if (write_tmp_file(path, "") != 0) {
                 fprintf(stderr, "FAIL: N1 - could not create temp file\n");
                 errors++;
@@ -454,7 +463,7 @@ p6_done:
         }
 
         /* N2 – empty JSON object {} */
-        strcpy(path, "imb_json_test_n2.json");
+        snprintf(path, sizeof(path), "imb_json_test_n2_%d.json", pid);
         if (write_tmp_file(path, "{}") != 0) {
                 fprintf(stderr, "FAIL: N2 - could not create temp file\n");
                 errors++;
@@ -480,7 +489,7 @@ p6_done:
         }
 
         /* N3 – root is array [] */
-        strcpy(path, "imb_json_test_n3.json");
+        snprintf(path, sizeof(path), "imb_json_test_n3_%d.json", pid);
         if (write_tmp_file(path, "[]") != 0) {
                 fprintf(stderr, "FAIL: N3 - could not create temp file\n");
                 errors++;
@@ -506,7 +515,7 @@ p6_done:
         }
 
         /* N4 – testGroups not array */
-        strcpy(path, "imb_json_test_n4.json");
+        snprintf(path, sizeof(path), "imb_json_test_n4_%d.json", pid);
         if (write_tmp_file(path, "{\"testGroups\": \"bad\"}") != 0) {
                 fprintf(stderr, "FAIL: N4 - could not create temp file\n");
                 errors++;
@@ -533,7 +542,7 @@ p6_done:
         }
 
         /* N5 – tests not array */
-        strcpy(path, "imb_json_test_n5.json");
+        snprintf(path, sizeof(path), "imb_json_test_n5_%d.json", pid);
         if (write_tmp_file(path, "{\"testGroups\": [{\"tests\": \"bad\"}]}") != 0) {
                 fprintf(stderr, "FAIL: N5 - could not create temp file\n");
                 errors++;
@@ -560,7 +569,7 @@ p6_done:
         }
 
         /* N6 – missing result field */
-        strcpy(path, "imb_json_test_n6.json");
+        snprintf(path, sizeof(path), "imb_json_test_n6_%d.json", pid);
         if (write_tmp_file(path, "{\n"
                                  "  \"testGroups\": [\n"
                                  "    {\n"
@@ -603,7 +612,7 @@ p6_done:
         }
 
         /* N7 – invalid result value */
-        strcpy(path, "imb_json_test_n7.json");
+        snprintf(path, sizeof(path), "imb_json_test_n7_%d.json", pid);
         if (write_tmp_file(path, "{\n"
                                  "  \"testGroups\": [\n"
                                  "    {\n"
@@ -647,7 +656,7 @@ p6_done:
         }
 
         /* N8 – invalid hex chars */
-        strcpy(path, "imb_json_test_n8.json");
+        snprintf(path, sizeof(path), "imb_json_test_n8_%d.json", pid);
         if (write_tmp_file(path, "{\n"
                                  "  \"testGroups\": [\n"
                                  "    {\n"
@@ -691,7 +700,7 @@ p6_done:
         }
 
         /* N9 – truncated JSON */
-        strcpy(path, "imb_json_test_n9.json");
+        snprintf(path, sizeof(path), "imb_json_test_n9_%d.json", pid);
         if (write_tmp_file(path, "{\"testGroups\": [") != 0) {
                 fprintf(stderr, "FAIL: N9 - could not create temp file\n");
                 errors++;
@@ -717,7 +726,7 @@ p6_done:
         }
 
         /* N10 – negative keySize */
-        strcpy(path, "imb_json_test_n10.json");
+        snprintf(path, sizeof(path), "imb_json_test_n10_%d.json", pid);
         if (write_tmp_file(path, "{\n"
                                  "  \"testGroups\": [\n"
                                  "    {\n"
@@ -761,7 +770,7 @@ p6_done:
         }
 
         /* N11 – keySize overflow */
-        strcpy(path, "imb_json_test_n11.json");
+        snprintf(path, sizeof(path), "imb_json_test_n11_%d.json", pid);
         if (write_tmp_file(path, "{\n"
                                  "  \"testGroups\": [\n"
                                  "    {\n"
