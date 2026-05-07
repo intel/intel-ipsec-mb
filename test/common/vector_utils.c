@@ -1503,8 +1503,6 @@ json_load_cipher_test(const char *path, struct cipher_test **out_vectors,
                                 json, tokens, token_cnt, tc_pos, tg_pos, "keySize");
                         const int iv_size_idx = json_member_with_fallback(json, tokens, token_cnt,
                                                                           tc_pos, tg_pos, "ivSize");
-                        const int msg_size_idx = json_member_with_fallback(
-                                json, tokens, token_cnt, tc_pos, tg_pos, "msgSize");
                         const int tcid_idx = json_member_with_fallback(json, tokens, token_cnt,
                                                                        tc_pos, tg_pos, "tcId");
                         const int result_idx = json_member_with_fallback(json, tokens, token_cnt,
@@ -1578,18 +1576,9 @@ json_load_cipher_test(const char *path, struct cipher_test **out_vectors,
                                 vectors[rec].ivSize =
                                         (size_t) (tokens[iv_idx].end - tokens[iv_idx].start) * 4;
 
-                        if (msg_size_idx >= 0) {
-                                if (json_parse_size_t(json, &tokens[msg_size_idx],
-                                                      &vectors[rec].msgSize) < 0) {
-                                        set_parse_error(&err_reason, &errnum,
-                                                        "invalid msgSize value", 0);
-                                        goto err;
-                                }
-                        } else {
-                                /* hex chars * 4 bits/char = msgSize in bits */
-                                vectors[rec].msgSize =
-                                        (size_t) (tokens[msg_idx].end - tokens[msg_idx].start) * 4;
-                        }
+                        /* hex chars * 4 bits/char = msgSize in bits */
+                        vectors[rec].msgSize =
+                                (size_t) (tokens[msg_idx].end - tokens[msg_idx].start) * 4;
 
                         if (tcid_idx >= 0) {
                                 if (json_parse_size_t(json, &tokens[tcid_idx], &vectors[rec].tcId) <
