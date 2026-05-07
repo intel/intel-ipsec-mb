@@ -38,8 +38,70 @@
 int
 ccm_test(struct IMB_MGR *mb_mgr);
 
-extern const struct aead_test ccm_128_test_json[];
-extern const struct aead_test ccm_256_test_json[];
+static struct aead_test *ccm_128_vectors;
+static struct aead_test *ccm_256_vectors;
+
+/**
+ * @brief Load AES-CCM vector sets from the configured kat-app JSON paths.
+ *
+ * @param ctx_128 receives context for ccm_128 vectors
+ * @param ctx_256 receives context for ccm_256 vectors
+ *
+ * @return 0 on success or -1 on failure
+ */
+static int
+load_ccm_vectors(struct test_json_alloc_ctx **ctx_128, struct test_json_alloc_ctx **ctx_256)
+{
+        char path[1024];
+        int ret;
+        const char *const ccm_128_file = "ccm_128_test.json";
+        const char *const ccm_256_file = "ccm_256_test.json";
+
+        if (kat_vector_dir == NULL) {
+                fprintf(stderr, "Error: no vector directory set; use --vector-dir <DIR>\n");
+                return -1;
+        }
+
+        ret = snprintf(path, sizeof(path), "%s/%s", kat_vector_dir, ccm_128_file);
+        /* Treat truncation as failure; otherwise path would be silently invalid. */
+        if (ret < 0 || ret >= (int) sizeof(path))
+                return -1;
+        if (json_load_aead_test(path, &ccm_128_vectors, ctx_128) < 0)
+                return -1;
+
+        ret = snprintf(path, sizeof(path), "%s/%s", kat_vector_dir, ccm_256_file);
+        /* Treat truncation as failure; otherwise path would be silently invalid. */
+        if (ret < 0 || ret >= (int) sizeof(path))
+                goto err;
+        if (json_load_aead_test(path, &ccm_256_vectors, ctx_256) < 0)
+                goto err;
+
+        return 0;
+
+err:
+        json_free_test_ctx(*ctx_128);
+        json_free_test_ctx(*ctx_256);
+        *ctx_128 = NULL;
+        *ctx_256 = NULL;
+        ccm_128_vectors = NULL;
+        ccm_256_vectors = NULL;
+        return -1;
+}
+
+/**
+ * @brief Free AES-CCM vectors previously loaded by load_ccm_vectors().
+ *
+ * @param ctx_128 context for ccm_128 vectors
+ * @param ctx_256 context for ccm_256 vectors
+ */
+static void
+free_ccm_vectors(struct test_json_alloc_ctx *ctx_128, struct test_json_alloc_ctx *ctx_256)
+{
+        json_free_test_ctx(ctx_128);
+        json_free_test_ctx(ctx_256);
+        ccm_128_vectors = NULL;
+        ccm_256_vectors = NULL;
+}
 
 static int
 ccm_job_ok(const struct aead_test *vec, const struct IMB_JOB *job, const uint8_t *target,
@@ -76,23 +138,21 @@ ccm_job_ok(const struct aead_test *vec, const struct IMB_JOB *job, const uint8_t
                 }
         } else { /* out-of-place */
                 if (dir == IMB_DIR_ENCRYPT) {
-                        if (memcmp(vec->ct + vec->aadSize / 8, target + sizeof_padding,
-                                   vec->msgSize / 8 - vec->aadSize / 8)) {
+                        if (memcmp(vec->ct, target + sizeof_padding, vec->msgSize / 8)) {
                                 printf("cipher mismatched\n");
                                 hexdump(stderr, "Received", target + sizeof_padding,
-                                        vec->msgSize / 8 - vec->aadSize / 8);
-                                hexdump(stderr, "Expected", vec->ct + vec->aadSize / 8,
-                                        vec->msgSize / 8 - vec->aadSize / 8);
+                                        vec->msgSize / 8);
+                                hexdump(stderr, "Expected", (const void *) vec->ct,
+                                        vec->msgSize / 8);
                                 return 0;
                         }
                 } else {
-                        if (memcmp(vec->msg + vec->aadSize / 8, target + sizeof_padding,
-                                   vec->msgSize / 8 - vec->aadSize / 8)) {
+                        if (memcmp(vec->msg, target + sizeof_padding, vec->msgSize / 8)) {
                                 printf("cipher mismatched\n");
                                 hexdump(stderr, "Received", target + sizeof_padding,
-                                        vec->msgSize / 8 - vec->aadSize / 8);
-                                hexdump(stderr, "Expected", vec->msg + vec->aadSize,
-                                        vec->msgSize / 8 - vec->aadSize / 8);
+                                        vec->msgSize / 8);
+                                hexdump(stderr, "Expected", (const void *) vec->msg,
+                                        vec->msgSize / 8);
                                 return 0;
                         }
                 }
@@ -104,22 +164,11 @@ ccm_job_ok(const struct aead_test *vec, const struct IMB_JOB *job, const uint8_t
                 return 0;
         }
 
-        if (in_place) {
-                if (memcmp(padding, target + sizeof_padding + vec->msgSize / 8, sizeof_padding)) {
-                        printf("cipher overwrite tail\n");
-                        hexdump(stderr, "Target", target + sizeof_padding + vec->msgSize / 8,
-                                sizeof_padding);
-                        return 0;
-                }
-        } else {
-                if (memcmp(padding, target + sizeof_padding + vec->msgSize / 8 - vec->aadSize / 8,
-                           sizeof_padding)) {
-                        printf("cipher overwrite tail\n");
-                        hexdump(stderr, "Target",
-                                target + sizeof_padding + vec->msgSize / 8 - vec->aadSize / 8,
-                                sizeof_padding);
-                        return 0;
-                }
+        if (memcmp(padding, target + sizeof_padding + vec->msgSize / 8, sizeof_padding)) {
+                printf("cipher overwrite tail\n");
+                hexdump(stderr, "Target", target + sizeof_padding + vec->msgSize / 8,
+                        sizeof_padding);
+                return 0;
         }
 
         /* hash checks */
@@ -135,10 +184,10 @@ ccm_job_ok(const struct aead_test *vec, const struct IMB_JOB *job, const uint8_t
                 return 0;
         }
 
-        if (memcmp(vec->ct + vec->msgSize / 8, &auth[sizeof_padding], vec->tagSize / 8)) {
+        if (memcmp(vec->tag, &auth[sizeof_padding], vec->tagSize / 8)) {
                 printf("hash mismatched\n");
                 hexdump(stderr, "Received", &auth[sizeof_padding], vec->tagSize / 8);
-                hexdump(stderr, "Expected", vec->ct + vec->msgSize / 8, vec->tagSize / 8);
+                hexdump(stderr, "Expected", (const void *) vec->tag, vec->tagSize / 8);
                 return 0;
         }
         return 1;
@@ -197,7 +246,7 @@ test_ccm_aead_burst(struct IMB_MGR *mb_mgr, const struct aead_test *vec, const i
                 job->cipher_direction = dir;
                 job->chain_order = order;
                 if (in_place) {
-                        job->dst = targets[i] + sizeof(padding) + vec->aadSize / 8;
+                        job->dst = targets[i] + sizeof(padding);
                         job->src = targets[i] + sizeof(padding);
                 } else {
                         if (dir == IMB_DIR_ENCRYPT) {
@@ -214,17 +263,17 @@ test_ccm_aead_burst(struct IMB_MGR *mb_mgr, const struct aead_test *vec, const i
                 job->key_len_in_bytes = key_length;
                 job->iv = (const void *) vec->iv;
                 job->iv_len_in_bytes = vec->ivSize / 8;
-                job->cipher_start_src_offset_in_bytes = vec->aadSize / 8;
-                job->msg_len_to_cipher_in_bytes = vec->msgSize / 8 - vec->aadSize / 8;
+                job->cipher_start_src_offset_in_bytes = 0;
+                job->msg_len_to_cipher_in_bytes = vec->msgSize / 8;
 
                 job->hash_alg = IMB_AUTH_AES_CCM;
-                job->hash_start_src_offset_in_bytes = vec->aadSize / 8;
-                job->msg_len_to_hash_in_bytes = vec->msgSize / 8 - vec->aadSize / 8;
+                job->hash_start_src_offset_in_bytes = 0;
+                job->msg_len_to_hash_in_bytes = vec->msgSize / 8;
                 job->auth_tag_output = auths[i] + sizeof(padding);
                 job->auth_tag_output_len_in_bytes = vec->tagSize / 8;
 
                 job->u.CCM.aad_len_in_bytes = vec->aadSize / 8;
-                job->u.CCM.aad = job->src;
+                job->u.CCM.aad = (const void *) vec->aad;
 
                 job->user_data = targets[i];
                 job->user_data2 = auths[i];
@@ -339,7 +388,7 @@ test_ccm(struct IMB_MGR *mb_mgr, const struct aead_test *vec, const int dir, con
                 job->cipher_direction = dir;
                 job->chain_order = order;
                 if (in_place) {
-                        job->dst = targets[i] + sizeof(padding) + vec->aadSize / 8;
+                        job->dst = targets[i] + sizeof(padding);
                         job->src = targets[i] + sizeof(padding);
                 } else {
                         if (dir == IMB_DIR_ENCRYPT) {
@@ -356,17 +405,17 @@ test_ccm(struct IMB_MGR *mb_mgr, const struct aead_test *vec, const int dir, con
                 job->key_len_in_bytes = key_length;
                 job->iv = (const void *) vec->iv;
                 job->iv_len_in_bytes = vec->ivSize / 8;
-                job->cipher_start_src_offset_in_bytes = vec->aadSize / 8;
-                job->msg_len_to_cipher_in_bytes = vec->msgSize / 8 - vec->aadSize / 8;
+                job->cipher_start_src_offset_in_bytes = 0;
+                job->msg_len_to_cipher_in_bytes = vec->msgSize / 8;
 
                 job->hash_alg = IMB_AUTH_AES_CCM;
-                job->hash_start_src_offset_in_bytes = vec->aadSize / 8;
-                job->msg_len_to_hash_in_bytes = vec->msgSize / 8 - vec->aadSize / 8;
+                job->hash_start_src_offset_in_bytes = 0;
+                job->msg_len_to_hash_in_bytes = vec->msgSize / 8;
                 job->auth_tag_output = auths[i] + sizeof(padding);
                 job->auth_tag_output_len_in_bytes = vec->tagSize / 8;
 
                 job->u.CCM.aad_len_in_bytes = vec->aadSize / 8;
-                job->u.CCM.aad = job->src;
+                job->u.CCM.aad = (const void *) vec->aad;
 
                 job->user_data = targets[i];
                 job->user_data2 = auths[i];
@@ -422,7 +471,7 @@ end2:
 static void
 test_ccm_128_std_vectors(struct IMB_MGR *mb_mgr, struct test_suite_context *ctx, const int num_jobs)
 {
-        const struct aead_test *v = ccm_128_test_json;
+        const struct aead_test *v = ccm_128_vectors;
 
         if (!quiet_mode)
                 printf("AES-CCM-128 standard test vectors (N jobs = %d):\n", num_jobs);
@@ -506,7 +555,7 @@ test_ccm_128_std_vectors(struct IMB_MGR *mb_mgr, struct test_suite_context *ctx,
 static void
 test_ccm_256_std_vectors(struct IMB_MGR *mb_mgr, struct test_suite_context *ctx, const int num_jobs)
 {
-        const struct aead_test *v = ccm_256_test_json;
+        const struct aead_test *v = ccm_256_vectors;
 
         if (!quiet_mode)
                 printf("AES-CCM-256 standard test vectors (N jobs = %d):\n", num_jobs);
@@ -591,7 +640,12 @@ int
 ccm_test(struct IMB_MGR *mb_mgr)
 {
         struct test_suite_context ctx;
+        struct test_json_alloc_ctx *ctx_128 = NULL;
+        struct test_json_alloc_ctx *ctx_256 = NULL;
         int errors = 0;
+
+        if (load_ccm_vectors(&ctx_128, &ctx_256) < 0)
+                return 1;
 
         /* AES-CCM-128 tests */
         test_suite_start(&ctx, "AES-CCM-128");
@@ -605,5 +659,6 @@ ccm_test(struct IMB_MGR *mb_mgr)
                 test_ccm_256_std_vectors(mb_mgr, &ctx, i);
         errors += test_suite_end(&ctx);
 
+        free_ccm_vectors(ctx_128, ctx_256);
         return errors;
 }
