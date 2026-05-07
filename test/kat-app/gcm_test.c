@@ -48,7 +48,7 @@
 int
 gcm_test(IMB_MGR *p_mgr);
 
-extern const struct aead_test gcm_test_json[];
+static struct aead_test *gcm_vectors;
 
 typedef int (*gcm_enc_dec_fn_t)(IMB_MGR *, const struct gcm_key_data *, struct gcm_context_data *,
                                 uint8_t *, const uint8_t *, uint64_t, const uint8_t *,
@@ -62,6 +62,48 @@ typedef int (*gcm_enc_dec_many_fn_t)(IMB_MGR *, const struct gcm_key_data *,
                                      const IMB_KEY_SIZE_BYTES, const uint32_t);
 
 static IMB_MGR *p_gcm_mgr = NULL;
+
+/**
+ * @brief Load AES-GCM vectors from the configured kat-app JSON path.
+ *
+ * @param ctx receives loader allocation context for later cleanup
+ *
+ * @return 0 on success or -1 on failure
+ */
+static int
+load_gcm_vectors(struct test_json_alloc_ctx **ctx)
+{
+        char path[1024];
+        int ret;
+        const char *const file_name = "gcm_test.json";
+
+        if (kat_vector_dir == NULL) {
+                fprintf(stderr, "Error: no vector directory set; use --vector-dir <DIR>\n");
+                return -1;
+        }
+
+        ret = snprintf(path, sizeof(path), "%s/%s", kat_vector_dir, file_name);
+        /* Treat truncation as failure; otherwise path would be silently invalid. */
+        if (ret < 0 || ret >= (int) sizeof(path))
+                return -1;
+
+        if (json_load_aead_test(path, &gcm_vectors, ctx) < 0)
+                return -1;
+
+        return 0;
+}
+
+/**
+ * @brief Free AES-GCM vectors previously loaded by load_gcm_vectors().
+ *
+ * @param ctx loader context returned by load_gcm_vectors()
+ */
+static void
+free_gcm_vectors(struct test_json_alloc_ctx *ctx)
+{
+        json_free_test_ctx(ctx);
+        gcm_vectors = NULL;
+}
 
 static int
 check_data(const uint8_t *test, const uint8_t *expected, uint64_t len, const char *data_name)
@@ -1440,6 +1482,7 @@ gcm_test(IMB_MGR *p_mgr)
 {
         struct test_suite_context ts128, ts192, ts256;
         struct test_suite_context *ctx;
+        struct test_json_alloc_ctx *vector_ctx = NULL;
         uint32_t key_sz;
         const uint32_t buf_sz = 2032;
         const uint32_t seg_sz_step = 4;
@@ -1448,10 +1491,13 @@ gcm_test(IMB_MGR *p_mgr)
 
         p_gcm_mgr = p_mgr;
 
+        if (load_gcm_vectors(&vector_ctx) < 0)
+                return 1;
+
         test_suite_start(&ts128, "AES-GCM-128");
         test_suite_start(&ts192, "AES-GCM-192");
         test_suite_start(&ts256, "AES-GCM-256");
-        test_gcm_std_vectors(&ts128, &ts192, &ts256, gcm_test_json, 0);
+        test_gcm_std_vectors(&ts128, &ts192, &ts256, gcm_vectors, 0);
         errors = test_suite_end(&ts128);
         errors += test_suite_end(&ts192);
         errors += test_suite_end(&ts256);
@@ -1459,7 +1505,7 @@ gcm_test(IMB_MGR *p_mgr)
         test_suite_start(&ts128, "SGL-GCM-128");
         test_suite_start(&ts192, "SGL-GCM-192");
         test_suite_start(&ts256, "SGL-GCM-256");
-        test_gcm_std_vectors(&ts128, &ts192, &ts256, gcm_test_json, 1);
+        test_gcm_std_vectors(&ts128, &ts192, &ts256, gcm_vectors, 1);
         /* SGL test comparing linear buffer with segmented buffers */
         for (key_sz = IMB_KEY_128_BYTES; key_sz <= IMB_KEY_256_BYTES; key_sz += 16) {
                 if (key_sz == IMB_KEY_128_BYTES)
@@ -1496,5 +1542,6 @@ gcm_test(IMB_MGR *p_mgr)
         errors += test_suite_end(&ts192);
         errors += test_suite_end(&ts256);
 
+        free_gcm_vectors(vector_ctx);
         return errors;
 }
