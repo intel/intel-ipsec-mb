@@ -17,7 +17,7 @@ be shared across multiple test applications.
 | **Token** | A lightweight descriptor pointing into the raw JSON buffer. Tokens are never decoded or copied — they are just `(type, start, end)` tuples. |
 | **Decoding** | The second stage of parsing: reading a token's byte range from the raw buffer and converting it into its final form (e.g. decoding a hex string into binary bytes). |
 | **Hex string** | A string where every two characters represent one byte in hexadecimal (e.g. `"2b7e"` → `0x2b 0x7e`). All binary fields in the JSON files use this encoding. |
-| **Sentinel-terminated array** | An array whose last element is a zero-initialised dummy entry that signals the end of the data. Callers loop until they hit it rather than needing a separate length variable. For both `mac_test` and `cipher_test`, the sentinel is detected by `msg == NULL`. |
+| **Sentinel-terminated array** | An array whose last element is a zero-initialised dummy entry that signals the end of the data. Callers loop until they hit it rather than needing a separate length variable. For `mac_test`, `cipher_test`, and `aead_test`, the sentinel is detected by `msg == NULL`. |
 | **Allocation context** | An opaque object (`struct test_json_alloc_ctx`) that tracks every heap allocation made during a parse. Passing it to `json_free_test_ctx()` releases all memory in one call — callers never need to free individual fields. |
 | **Field inheritance** | A mechanism by which fields defined at the `testGroups` level automatically apply to every test case in that group, unless the test case defines the same field itself. |
 | **`result` field** | A mandatory string in every test case that is either `"valid"` (the operation should succeed and produce the expected output) or `"invalid"` (the operation is expected to fail or produce a different output). Maps to `resultValid = 1` or `0`. |
@@ -31,14 +31,15 @@ header `test/include/vector_utils.h`. It has **no external library
 dependencies** — tokenisation and decoding are implemented from scratch using
 only the C standard library.
 
-Two high-level entry points are provided:
+Three high-level entry points are provided:
 
 | Function | Fills struct |
 |---|---|
 | `json_load_mac_test()` | `struct mac_test` array |
 | `json_load_cipher_test()` | `struct cipher_test` array |
+| `json_load_aead_test()` | `struct aead_test` array |
 
-Both functions share identical calling conventions and return a
+All three functions share identical calling conventions and return a
 sentinel-terminated array plus an opaque allocation context. All memory is
 released in a single call to `json_free_test_ctx()`.
 
@@ -108,6 +109,24 @@ uppercase hexadecimal strings**. Size fields (`keySize`, `ivSize`, `msgSize`,
 | `ct` | hex string | **required** | Ciphertext |
 | `result` | `"valid"` or `"invalid"` | **required** | Expected outcome |
 
+#### AEAD test fields (`struct aead_test`)
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `tcId` | number | optional | Numeric test-case identifier |
+| `key` | hex string | **required** | Encryption key |
+| `keySize` | number (bits) | optional* | Key size in bits |
+| `iv` | hex string | **required** | Initialisation vector / nonce |
+| `ivSize` | number (bits) | optional* | IV size in bits |
+| `aad` | hex string | optional | Additional authenticated data |
+| `aadSize` | number (bits) | optional* | AAD size in bits |
+| `msg` | hex string | **required** | Plaintext |
+| `msgSize` | number (bits) | optional* | Plaintext size in bits |
+| `ct` | hex string | **required** | Ciphertext |
+| `tag` | hex string | **required** | Authentication tag |
+| `tagSize` | number (bits) | optional* | Tag size in bits |
+| `result` | `"valid"` or `"invalid"` | **required** | Expected outcome |
+
 > **\* Size derivation.** When a `*Size` field is absent, the parser derives
 > the bit length from the hex-string length: `len(hex_string) * 4`. If both
 > the explicit size field and the hex string are present, the explicit size
@@ -117,6 +136,10 @@ uppercase hexadecimal strings**. Size fields (`keySize`, `ivSize`, `msgSize`,
 > than the hex-string length — this covers truncated tags and non-byte-aligned
 > messages where the hex field carries the full output but only the declared
 > number of bits are significant.
+>
+> **AEAD fields are always explicit.** The `aad`, `ct`, and `tag` fields in
+> AEAD test vectors each carry only their own data. In particular, `aad` is
+> never embedded in `msg`, and `tag` is never appended to `ct`.
 
 ### Field inheritance
 
@@ -203,7 +226,7 @@ test_json_alloc_ctx
 ## Parsing Flow
 
 ```
-json_load_mac_test() / json_load_cipher_test()
+json_load_mac_test() / json_load_cipher_test() / json_load_aead_test()
     │
     ├─ 1. Allocate test_json_alloc_ctx
     │
@@ -301,10 +324,10 @@ json_free_test_ctx(ctx);
 
 ### Sentinel detection
 
-The output array has one extra zero-initialised element appended. For MAC
-vectors the sentinel is detected by `msg == NULL`; for cipher vectors likewise.
-Do **not** use `tcId` or size fields for sentinel detection — they are `0` in
-the sentinel but could also be `0` in a real vector.
+The output array has one extra zero-initialised element appended. For MAC,
+cipher, and AEAD vectors the sentinel is detected by `msg == NULL`. Do **not**
+use `tcId` or size fields for sentinel detection — they are `0` in the
+sentinel but could also be `0` in a real vector.
 
 ---
 
@@ -340,6 +363,26 @@ struct cipher_test {
     const char  *ct;          /* decoded ciphertext */
     int          resultValid; /* 1 = "valid", 0 = "invalid" */
     size_t       msgSize;     /* plaintext size in bits */
+};
+```
+
+### `struct aead_test`
+
+```c
+struct aead_test {
+    size_t       ivSize;       /* IV size in bits */
+    size_t       keySize;      /* key size in bits */
+    size_t       tagSize;      /* tag size in bits */
+    size_t       tcId;         /* test-case identifier */
+    const char  *key;          /* decoded key bytes */
+    const char  *iv;           /* decoded IV bytes */
+    const char  *aad;          /* decoded AAD bytes */
+    const char  *msg;          /* decoded plaintext (NULL in sentinel) */
+    const char  *ct;           /* decoded ciphertext */
+    const char  *tag;          /* decoded authentication tag */
+    int          resultValid;  /* 1 = "valid", 0 = "invalid" */
+    size_t       aadSize;      /* AAD size in bits */
+    size_t       msgSize;      /* plaintext size in bits */
 };
 ```
 

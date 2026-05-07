@@ -42,6 +42,7 @@
 #include "utils.h"
 #include "mac_test.h"
 #include "cipher_test.h"
+#include "aead_test.h"
 
 int
 json_parser_test(struct IMB_MGR *mb_mgr);
@@ -78,6 +79,7 @@ json_parser_test(struct IMB_MGR *mb_mgr)
         char path[128];
         struct mac_test *mac_v = NULL;
         struct cipher_test *cipher_v = NULL;
+        struct aead_test *aead_v = NULL;
         struct test_json_alloc_ctx *ctx = NULL;
         int ret;
 
@@ -432,6 +434,81 @@ p6_cleanup:
 p6_done:
         remove_tmp_file(path);
 
+        /* ------------------------------------------------------------------ */
+        /* P7 – valid AEAD vectors, sentinel and empty msg/tag handling        */
+        /* ------------------------------------------------------------------ */
+        snprintf(path, sizeof(path), "imb_json_test_7_%d.json", pid);
+        ret = write_tmp_file(path, "{\n"
+                                   "  \"testGroups\": [\n"
+                                   "    {\n"
+                                   "      \"tests\": [\n"
+                                   "        {\n"
+                                   "          \"tcId\": 1,\n"
+                                   "          \"key\": \"000102030405060708090a0b0c0d0e0f\",\n"
+                                   "          \"keySize\": 128,\n"
+                                   "          \"iv\": \"00112233445566778899aabb\",\n"
+                                   "          \"ivSize\": 96,\n"
+                                   "          \"aad\": \"aabbccdd\",\n"
+                                   "          \"msg\": \"\",\n"
+                                   "          \"ct\": \"\",\n"
+                                   "          \"tag\": \"\",\n"
+                                   "          \"tagSize\": 0,\n"
+                                   "          \"result\": \"valid\"\n"
+                                   "        },\n"
+                                   "        {\n"
+                                   "          \"tcId\": 2,\n"
+                                   "          \"key\": \"000102030405060708090a0b0c0d0e0f\",\n"
+                                   "          \"keySize\": 128,\n"
+                                   "          \"iv\": \"00112233445566778899aabb\",\n"
+                                   "          \"ivSize\": 96,\n"
+                                   "          \"aad\": \"\",\n"
+                                   "          \"msg\": \"0011\",\n"
+                                   "          \"ct\": \"2233\",\n"
+                                   "          \"tag\": \"44556677\",\n"
+                                   "          \"result\": \"invalid\"\n"
+                                   "        }\n"
+                                   "      ]\n"
+                                   "    }\n"
+                                   "  ]\n"
+                                   "}\n");
+        if (ret != 0) {
+                fprintf(stderr, "FAIL: P7 – could not write temp file\n");
+                errors++;
+                goto p7_done;
+        }
+        ret = json_load_aead_test(path, &aead_v, &ctx);
+        if (ret != 0) {
+                fprintf(stderr, "FAIL: P7 – json_load_aead_test returned %d\n", ret);
+                errors++;
+                goto p7_cleanup;
+        }
+        if (aead_v[2].msg != NULL) {
+                fprintf(stderr, "FAIL: P7 – expected sentinel at index 2\n");
+                errors++;
+        } else if (aead_v[0].tcId != 1 || aead_v[0].msgSize != 0 || aead_v[0].tagSize != 0 ||
+                   aead_v[0].resultValid != 1 || aead_v[0].msg == NULL || aead_v[0].ct == NULL ||
+                   aead_v[0].tag == NULL || aead_v[1].tcId != 2 || aead_v[1].msgSize != 16 ||
+                   aead_v[1].tagSize != 32 || aead_v[1].resultValid != 0 || aead_v[1].msg == NULL ||
+                   (unsigned char) aead_v[1].msg[0] != 0x00 || aead_v[1].tag == NULL ||
+                   (unsigned char) aead_v[1].tag[0] != 0x44) {
+                fprintf(stderr, "FAIL: P7 – unexpected field values\n");
+                errors++;
+        } else {
+                if (!quiet_mode) {
+#ifdef DEBUG
+                        printf("PASS: P7 - valid AEAD vectors with sentinel and empty msg/tag\n");
+#else
+                        printf(".");
+#endif
+                }
+        }
+p7_cleanup:
+        json_free_test_ctx(ctx);
+        ctx = NULL;
+        aead_v = NULL;
+p7_done:
+        remove_tmp_file(path);
+
         /* ================================================================== */
         /* Negative tests – parser must return -1                             */
         /* ================================================================== */
@@ -442,7 +519,7 @@ p6_done:
                 fprintf(stderr, "FAIL: N1 - could not create temp file\n");
                 errors++;
         } else {
-                int saved_stderr = suppress_stderr();
+                const int saved_stderr = suppress_stderr();
                 ret = json_load_mac_test(path, &mac_v, &ctx);
                 restore_stderr(saved_stderr);
                 if (ret != -1) {
@@ -468,7 +545,7 @@ p6_done:
                 fprintf(stderr, "FAIL: N2 - could not create temp file\n");
                 errors++;
         } else {
-                int saved_stderr = suppress_stderr();
+                const int saved_stderr = suppress_stderr();
                 ret = json_load_mac_test(path, &mac_v, &ctx);
                 restore_stderr(saved_stderr);
                 if (ret != -1) {
@@ -494,7 +571,7 @@ p6_done:
                 fprintf(stderr, "FAIL: N3 - could not create temp file\n");
                 errors++;
         } else {
-                int saved_stderr = suppress_stderr();
+                const int saved_stderr = suppress_stderr();
                 ret = json_load_mac_test(path, &mac_v, &ctx);
                 restore_stderr(saved_stderr);
                 if (ret != -1) {
@@ -520,7 +597,7 @@ p6_done:
                 fprintf(stderr, "FAIL: N4 - could not create temp file\n");
                 errors++;
         } else {
-                int saved_stderr = suppress_stderr();
+                const int saved_stderr = suppress_stderr();
                 ret = json_load_mac_test(path, &mac_v, &ctx);
                 restore_stderr(saved_stderr);
                 if (ret != -1) {
@@ -547,7 +624,7 @@ p6_done:
                 fprintf(stderr, "FAIL: N5 - could not create temp file\n");
                 errors++;
         } else {
-                int saved_stderr = suppress_stderr();
+                const int saved_stderr = suppress_stderr();
                 ret = json_load_mac_test(path, &mac_v, &ctx);
                 restore_stderr(saved_stderr);
                 if (ret != -1) {
@@ -590,7 +667,7 @@ p6_done:
                 fprintf(stderr, "FAIL: N6 - could not create temp file\n");
                 errors++;
         } else {
-                int saved_stderr = suppress_stderr();
+                const int saved_stderr = suppress_stderr();
                 ret = json_load_mac_test(path, &mac_v, &ctx);
                 restore_stderr(saved_stderr);
                 if (ret != -1) {
@@ -634,7 +711,7 @@ p6_done:
                 fprintf(stderr, "FAIL: N7 - could not create temp file\n");
                 errors++;
         } else {
-                int saved_stderr = suppress_stderr();
+                const int saved_stderr = suppress_stderr();
                 ret = json_load_mac_test(path, &mac_v, &ctx);
                 restore_stderr(saved_stderr);
                 if (ret != -1) {
@@ -678,7 +755,7 @@ p6_done:
                 fprintf(stderr, "FAIL: N8 - could not create temp file\n");
                 errors++;
         } else {
-                int saved_stderr = suppress_stderr();
+                const int saved_stderr = suppress_stderr();
                 ret = json_load_mac_test(path, &mac_v, &ctx);
                 restore_stderr(saved_stderr);
                 if (ret != -1) {
@@ -705,7 +782,7 @@ p6_done:
                 fprintf(stderr, "FAIL: N9 - could not create temp file\n");
                 errors++;
         } else {
-                int saved_stderr = suppress_stderr();
+                const int saved_stderr = suppress_stderr();
                 ret = json_load_mac_test(path, &mac_v, &ctx);
                 restore_stderr(saved_stderr);
                 if (ret != -1) {
@@ -748,7 +825,7 @@ p6_done:
                 fprintf(stderr, "FAIL: N10 - could not create temp file\n");
                 errors++;
         } else {
-                int saved_stderr = suppress_stderr();
+                const int saved_stderr = suppress_stderr();
                 ret = json_load_mac_test(path, &mac_v, &ctx);
                 restore_stderr(saved_stderr);
                 if (ret != -1) {
@@ -792,7 +869,7 @@ p6_done:
                 fprintf(stderr, "FAIL: N11 - could not create temp file\n");
                 errors++;
         } else {
-                int saved_stderr = suppress_stderr();
+                const int saved_stderr = suppress_stderr();
                 ret = json_load_mac_test(path, &mac_v, &ctx);
                 restore_stderr(saved_stderr);
                 if (ret != -1) {
@@ -805,6 +882,195 @@ p6_done:
                         if (!quiet_mode) {
 #ifdef DEBUG
                                 printf("PASS: N11 - keySize overflow\n");
+#else
+                                printf(".");
+#endif
+                        }
+                }
+                remove_tmp_file(path);
+        }
+
+        /* N12 – AEAD missing aad field */
+        snprintf(path, sizeof(path), "imb_json_test_n12_%d.json", pid);
+        if (write_tmp_file(path, "{\n"
+                                 "  \"testGroups\": [\n"
+                                 "    {\n"
+                                 "      \"tests\": [\n"
+                                 "        {\n"
+                                 "          \"tcId\": 1,\n"
+                                 "          \"key\": \"000102030405060708090a0b0c0d0e0f\",\n"
+                                 "          \"keySize\": 128,\n"
+                                 "          \"iv\": \"00112233445566778899aabb\",\n"
+                                 "          \"ivSize\": 96,\n"
+                                 "          \"msg\": \"0011\",\n"
+                                 "          \"ct\": \"2233\",\n"
+                                 "          \"tag\": \"44556677\",\n"
+                                 "          \"tagSize\": 32,\n"
+                                 "          \"result\": \"valid\"\n"
+                                 "        }\n"
+                                 "      ]\n"
+                                 "    }\n"
+                                 "  ]\n"
+                                 "}\n") != 0) {
+                fprintf(stderr, "FAIL: N12 - could not create temp file\n");
+                errors++;
+        } else {
+                const int saved_stderr = suppress_stderr();
+                ret = json_load_aead_test(path, &aead_v, &ctx);
+                restore_stderr(saved_stderr);
+                if (ret != -1) {
+                        fprintf(stderr,
+                                "FAIL: N12 – expected -1 for AEAD missing aad field, got %d\n",
+                                ret);
+                        errors++;
+                        json_free_test_ctx(ctx);
+                        ctx = NULL;
+                } else {
+                        if (!quiet_mode) {
+#ifdef DEBUG
+                                printf("PASS: N12 - AEAD missing aad field\n");
+#else
+                                printf(".");
+#endif
+                        }
+                }
+                remove_tmp_file(path);
+        }
+
+        /* N13 – AEAD tagSize exceeds decoded tag length */
+        snprintf(path, sizeof(path), "imb_json_test_n13_%d.json", pid);
+        if (write_tmp_file(path, "{\n"
+                                 "  \"testGroups\": [\n"
+                                 "    {\n"
+                                 "      \"tests\": [\n"
+                                 "        {\n"
+                                 "          \"tcId\": 1,\n"
+                                 "          \"key\": \"000102030405060708090a0b0c0d0e0f\",\n"
+                                 "          \"keySize\": 128,\n"
+                                 "          \"iv\": \"00112233445566778899aabb\",\n"
+                                 "          \"ivSize\": 96,\n"
+                                 "          \"aad\": \"\",\n"
+                                 "          \"msg\": \"0011\",\n"
+                                 "          \"ct\": \"2233\",\n"
+                                 "          \"tag\": \"44\",\n"
+                                 "          \"tagSize\": 16,\n"
+                                 "          \"result\": \"valid\"\n"
+                                 "        }\n"
+                                 "      ]\n"
+                                 "    }\n"
+                                 "  ]\n"
+                                 "}\n") != 0) {
+                fprintf(stderr, "FAIL: N13 - could not create temp file\n");
+                errors++;
+        } else {
+                const int saved_stderr = suppress_stderr();
+                ret = json_load_aead_test(path, &aead_v, &ctx);
+                restore_stderr(saved_stderr);
+                if (ret != -1) {
+                        fprintf(stderr,
+                                "FAIL: N13 – expected -1 for AEAD tagSize validation, got %d\n",
+                                ret);
+                        errors++;
+                        json_free_test_ctx(ctx);
+                        ctx = NULL;
+                } else {
+                        if (!quiet_mode) {
+#ifdef DEBUG
+                                printf("PASS: N13 - AEAD tagSize exceeds decoded tag length\n");
+#else
+                                printf(".");
+#endif
+                        }
+                }
+                remove_tmp_file(path);
+        }
+
+        /* N14 – cipher ct length does not match msg length */
+        snprintf(path, sizeof(path), "imb_json_test_n14_%d.json", pid);
+        if (write_tmp_file(path, "{\n"
+                                 "  \"testGroups\": [\n"
+                                 "    {\n"
+                                 "      \"keySize\": 128,\n"
+                                 "      \"ivSize\": 128,\n"
+                                 "      \"tests\": [\n"
+                                 "        {\n"
+                                 "          \"tcId\": 1,\n"
+                                 "          \"key\": \"2b7e151628aed2a6abf7158809cf4f3c\",\n"
+                                 "          \"iv\":  \"000102030405060708090a0b0c0d0e0f\",\n"
+                                 "          \"msg\": \"6bc1bee22e409f96e93d7e117393172a\",\n"
+                                 "          \"ct\":  \"7649abac8119b246cee98e9b12e9197d00\",\n"
+                                 "          \"result\": \"valid\"\n"
+                                 "        }\n"
+                                 "      ]\n"
+                                 "    }\n"
+                                 "  ]\n"
+                                 "}\n") != 0) {
+                fprintf(stderr, "FAIL: N14 - could not create temp file\n");
+                errors++;
+        } else {
+                const int saved_stderr = suppress_stderr();
+                ret = json_load_cipher_test(path, &cipher_v, &ctx);
+                restore_stderr(saved_stderr);
+                if (ret != -1) {
+                        fprintf(stderr,
+                                "FAIL: N14 – expected -1 for cipher ct/msg length mismatch, got "
+                                "%d\n",
+                                ret);
+                        errors++;
+                        json_free_test_ctx(ctx);
+                        ctx = NULL;
+                } else {
+                        if (!quiet_mode) {
+#ifdef DEBUG
+                                printf("PASS: N14 - cipher ct length does not match msg length\n");
+#else
+                                printf(".");
+#endif
+                        }
+                }
+                remove_tmp_file(path);
+        }
+
+        /* N15 – AEAD ct length does not match msg length */
+        snprintf(path, sizeof(path), "imb_json_test_n15_%d.json", pid);
+        if (write_tmp_file(path, "{\n"
+                                 "  \"testGroups\": [\n"
+                                 "    {\n"
+                                 "      \"keySize\": 128,\n"
+                                 "      \"ivSize\": 96,\n"
+                                 "      \"tagSize\": 128,\n"
+                                 "      \"tests\": [\n"
+                                 "        {\n"
+                                 "          \"tcId\": 1,\n"
+                                 "          \"key\": \"000102030405060708090a0b0c0d0e0f\",\n"
+                                 "          \"iv\":  \"00112233445566778899aabb\",\n"
+                                 "          \"aad\": \"\",\n"
+                                 "          \"msg\": \"0011223344556677\",\n"
+                                 "          \"ct\":  \"001122334455667700\",\n"
+                                 "          \"tag\": \"00112233445566778899aabbccddeeff\",\n"
+                                 "          \"result\": \"valid\"\n"
+                                 "        }\n"
+                                 "      ]\n"
+                                 "    }\n"
+                                 "  ]\n"
+                                 "}\n") != 0) {
+                fprintf(stderr, "FAIL: N15 - could not create temp file\n");
+                errors++;
+        } else {
+                const int saved_stderr = suppress_stderr();
+                ret = json_load_aead_test(path, &aead_v, &ctx);
+                restore_stderr(saved_stderr);
+                if (ret != -1) {
+                        fprintf(stderr,
+                                "FAIL: N15 – expected -1 for AEAD ct/msg length mismatch, got %d\n",
+                                ret);
+                        errors++;
+                        json_free_test_ctx(ctx);
+                        ctx = NULL;
+                } else {
+                        if (!quiet_mode) {
+#ifdef DEBUG
+                                printf("PASS: N15 - AEAD ct length does not match msg length\n");
 #else
                                 printf(".");
 #endif

@@ -36,6 +36,7 @@
 #include "vector_utils.h"
 #include "mac_test.h"
 #include "cipher_test.h"
+#include "aead_test.h"
 
 /**
  * @brief Record a parse error reason and errno for reporting at the `err` label.
@@ -1653,6 +1654,11 @@ json_load_cipher_test(const char *path, struct cipher_test **out_vectors,
                                                 "declared msgSize exceeds decoded ct length", 0);
                                 goto err;
                         }
+                        if (msg_len != ct_len) {
+                                set_parse_error(&err_reason, &errnum,
+                                                "ct length does not match msg length", 0);
+                                goto err;
+                        }
 
                         if (result_idx < 0 || json_result_to_valid(json, &tokens[result_idx],
                                                                    &vectors[rec].resultValid) < 0) {
@@ -1675,6 +1681,372 @@ json_load_cipher_test(const char *path, struct cipher_test **out_vectors,
 
 err:
         json_report_parse_error(path, "json_load_cipher_test", err_reason, errnum, 0, tg_idx,
+                                test_idx, have_tcid ? &tcid : NULL);
+err_no_report:
+        json_free_test_ctx(ctx);
+        return -1;
+}
+
+/**
+ * @brief Parse AEAD vectors from a JSON file into a sentinel-terminated
+ *        struct aead_test array.
+ *
+ * @param [in] path JSON file path
+ * @param [out] out_vectors Parsed AEAD vector array
+ * @param [out] out_ctx Allocation context for json_free_test_ctx()
+ *
+ * @return Operation status.
+ * @retval 0 Vectors parsed successfully.
+ * @retval -1 Invalid input, parse failure, or allocation failure.
+ */
+int
+json_load_aead_test(const char *path, struct aead_test **out_vectors,
+                    struct test_json_alloc_ctx **out_ctx)
+{
+        struct test_json_alloc_ctx *ctx;
+        char *json = NULL;
+        json_tok *tokens = NULL;
+        int token_cnt = 0;
+        int test_groups_idx;
+        int tg_pos;
+        size_t test_cnt = 0;
+        struct aead_test *vectors;
+        size_t rec = 0;
+        const char *err_reason = NULL;
+        int errnum = 0;
+        int tg_idx = -1;
+        int test_idx = -1;
+        size_t tcid = 0;
+        int have_tcid = 0;
+
+        if (path == NULL || out_vectors == NULL || out_ctx == NULL) {
+                json_report_parse_error(path, "json_load_aead_test", "invalid function arguments",
+                                        0, 0, -1, -1, NULL);
+                return -1;
+        }
+
+        *out_vectors = NULL;
+        *out_ctx = NULL;
+
+        ctx = calloc(1, sizeof(*ctx));
+        if (ctx == NULL) {
+                json_report_parse_error(path, "json_load_aead_test",
+                                        "unable to allocate JSON allocation context", ENOMEM, 0, -1,
+                                        -1, NULL);
+                return -1;
+        }
+
+        if (json_load_doc(path, ctx, &json, &tokens, &token_cnt) < 0)
+                goto err_no_report;
+
+        if (token_cnt <= 0 || tokens[0].type != JSON_TOK_OBJECT) {
+                set_parse_error(&err_reason, &errnum, "top-level JSON token must be an object", 0);
+                goto err;
+        }
+
+        test_groups_idx = json_object_get(json, tokens, token_cnt, 0, "testGroups");
+        if (test_groups_idx < 0 || tokens[test_groups_idx].type != JSON_TOK_ARRAY) {
+                set_parse_error(&err_reason, &errnum,
+                                "missing or invalid top-level testGroups array", 0);
+                goto err;
+        }
+
+        /* First pass: count all tests to size the output vector array. */
+        tg_pos = test_groups_idx + 1;
+        for (int i = 0; i < tokens[test_groups_idx].size; i++) {
+                const int tests_idx = json_object_get(json, tokens, token_cnt, tg_pos, "tests");
+
+                tg_idx = i;
+                test_idx = -1;
+                have_tcid = 0;
+                if (tests_idx < 0 || tokens[tests_idx].type != JSON_TOK_ARRAY) {
+                        set_parse_error(&err_reason, &errnum,
+                                        "missing or invalid tests array in testGroup", 0);
+                        goto err;
+                }
+
+                test_cnt += (size_t) tokens[tests_idx].size;
+                tg_pos = json_token_skip(tokens, tg_pos);
+        }
+
+        vectors = alloc_ctx_alloc(ctx, (test_cnt + 1) * sizeof(*vectors));
+        if (vectors == NULL) {
+                set_parse_error(&err_reason, &errnum, "unable to allocate AEAD vector array",
+                                ENOMEM);
+                goto err;
+        }
+        memset(vectors, 0, (test_cnt + 1) * sizeof(*vectors));
+
+        /* Second pass: decode all test fields and payload buffers. */
+        tg_pos = test_groups_idx + 1;
+        for (int i = 0; i < tokens[test_groups_idx].size; i++) {
+                const int tests_idx = json_object_get(json, tokens, token_cnt, tg_pos, "tests");
+                int tc_pos;
+
+                tg_idx = i;
+                test_idx = -1;
+                have_tcid = 0;
+                if (tests_idx < 0 || tokens[tests_idx].type != JSON_TOK_ARRAY) {
+                        set_parse_error(&err_reason, &errnum,
+                                        "missing or invalid tests array in testGroup", 0);
+                        goto err;
+                }
+                tc_pos = tests_idx + 1;
+
+                for (int j = 0; j < tokens[tests_idx].size; j++) {
+                        const int key_idx = json_member_with_fallback(json, tokens, token_cnt,
+                                                                      tc_pos, tg_pos, "key");
+                        const int iv_idx = json_member_with_fallback(json, tokens, token_cnt,
+                                                                     tc_pos, tg_pos, "iv");
+                        const int aad_idx = json_member_with_fallback(json, tokens, token_cnt,
+                                                                      tc_pos, tg_pos, "aad");
+                        const int msg_idx = json_member_with_fallback(json, tokens, token_cnt,
+                                                                      tc_pos, tg_pos, "msg");
+                        const int ct_idx = json_member_with_fallback(json, tokens, token_cnt,
+                                                                     tc_pos, tg_pos, "ct");
+                        const int tag_idx = json_member_with_fallback(json, tokens, token_cnt,
+                                                                      tc_pos, tg_pos, "tag");
+                        const int key_size_idx = json_member_with_fallback(
+                                json, tokens, token_cnt, tc_pos, tg_pos, "keySize");
+                        const int iv_size_idx = json_member_with_fallback(json, tokens, token_cnt,
+                                                                          tc_pos, tg_pos, "ivSize");
+                        const int tag_size_idx = json_member_with_fallback(
+                                json, tokens, token_cnt, tc_pos, tg_pos, "tagSize");
+                        const int tcid_idx = json_member_with_fallback(json, tokens, token_cnt,
+                                                                       tc_pos, tg_pos, "tcId");
+                        const int result_idx = json_member_with_fallback(json, tokens, token_cnt,
+                                                                         tc_pos, tg_pos, "result");
+                        size_t key_len = 0;
+                        size_t iv_len = 0;
+                        size_t aad_len = 0;
+                        size_t msg_len = 0;
+                        size_t ct_len = 0;
+                        size_t tag_len = 0;
+
+                        test_idx = j;
+                        have_tcid = 0;
+                        vectors[rec].keySize = 0;
+                        vectors[rec].ivSize = 0;
+                        vectors[rec].aadSize = 0;
+                        vectors[rec].msgSize = 0;
+                        vectors[rec].tagSize = 0;
+                        vectors[rec].tcId = 0;
+
+                        if (key_idx < 0) {
+                                set_parse_error(&err_reason, &errnum, "missing key field", 0);
+                                goto err;
+                        }
+                        if (iv_idx < 0) {
+                                set_parse_error(&err_reason, &errnum, "missing iv field", 0);
+                                goto err;
+                        }
+                        if (aad_idx < 0) {
+                                set_parse_error(&err_reason, &errnum, "missing aad field", 0);
+                                goto err;
+                        }
+                        if (msg_idx < 0) {
+                                set_parse_error(&err_reason, &errnum, "missing msg field", 0);
+                                goto err;
+                        }
+                        if (ct_idx < 0) {
+                                set_parse_error(&err_reason, &errnum, "missing ct field", 0);
+                                goto err;
+                        }
+                        if (tag_idx < 0) {
+                                set_parse_error(&err_reason, &errnum, "missing tag field", 0);
+                                goto err;
+                        }
+
+                        if (key_size_idx >= 0) {
+                                if (json_parse_size_t(json, &tokens[key_size_idx],
+                                                      &vectors[rec].keySize) < 0) {
+                                        set_parse_error(&err_reason, &errnum,
+                                                        "invalid keySize value", 0);
+                                        goto err;
+                                }
+                                /* hex chars * 4 bits/char = keySize in bits */
+                                size_t derived =
+                                        (size_t) (tokens[key_idx].end - tokens[key_idx].start) * 4;
+                                if (derived != vectors[rec].keySize) {
+                                        set_parse_error(&err_reason, &errnum,
+                                                        "keySize does not match key length", 0);
+                                        goto err;
+                                }
+                        } else
+                                /* hex chars * 4 bits/char = keySize in bits */
+                                vectors[rec].keySize =
+                                        (size_t) (tokens[key_idx].end - tokens[key_idx].start) * 4;
+
+                        if (iv_size_idx >= 0) {
+                                if (json_parse_size_t(json, &tokens[iv_size_idx],
+                                                      &vectors[rec].ivSize) < 0) {
+                                        set_parse_error(&err_reason, &errnum,
+                                                        "invalid ivSize value", 0);
+                                        goto err;
+                                }
+                                /* hex chars * 4 bits/char = ivSize in bits */
+                                size_t derived =
+                                        (size_t) (tokens[iv_idx].end - tokens[iv_idx].start) * 4;
+                                if (derived != vectors[rec].ivSize) {
+                                        set_parse_error(&err_reason, &errnum,
+                                                        "ivSize does not match iv length", 0);
+                                        goto err;
+                                }
+                        } else
+                                /* hex chars * 4 bits/char = ivSize in bits */
+                                vectors[rec].ivSize =
+                                        (size_t) (tokens[iv_idx].end - tokens[iv_idx].start) * 4;
+
+                        /* hex chars * 4 bits/char = aadSize in bits */
+                        vectors[rec].aadSize =
+                                (size_t) (tokens[aad_idx].end - tokens[aad_idx].start) * 4;
+
+                        /* hex chars * 4 bits/char = msgSize in bits */
+                        vectors[rec].msgSize =
+                                (size_t) (tokens[msg_idx].end - tokens[msg_idx].start) * 4;
+
+                        if (tag_size_idx >= 0) {
+                                if (json_parse_size_t(json, &tokens[tag_size_idx],
+                                                      &vectors[rec].tagSize) < 0) {
+                                        set_parse_error(&err_reason, &errnum,
+                                                        "invalid tagSize value", 0);
+                                        goto err;
+                                }
+                        } else
+                                /* hex chars * 4 bits/char = tagSize in bits */
+                                vectors[rec].tagSize =
+                                        (size_t) (tokens[tag_idx].end - tokens[tag_idx].start) * 4;
+
+                        if (tcid_idx >= 0) {
+                                if (json_parse_size_t(json, &tokens[tcid_idx], &vectors[rec].tcId) <
+                                    0) {
+                                        set_parse_error(&err_reason, &errnum, "invalid tcId value",
+                                                        0);
+                                        goto err;
+                                }
+                                tcid = vectors[rec].tcId;
+                                have_tcid = 1;
+                        }
+
+                        if (json_hex_token_len_bytes(&tokens[key_idx], &key_len) < 0) {
+                                set_parse_error(&err_reason, &errnum, "invalid key hex string", 0);
+                                goto err;
+                        }
+                        if (json_hex_token_len_bytes(&tokens[iv_idx], &iv_len) < 0) {
+                                set_parse_error(&err_reason, &errnum, "invalid iv hex string", 0);
+                                goto err;
+                        }
+                        if (json_hex_token_len_bytes(&tokens[aad_idx], &aad_len) < 0) {
+                                set_parse_error(&err_reason, &errnum, "invalid aad hex string", 0);
+                                goto err;
+                        }
+                        if (json_hex_token_len_bytes(&tokens[msg_idx], &msg_len) < 0) {
+                                set_parse_error(&err_reason, &errnum, "invalid msg hex string", 0);
+                                goto err;
+                        }
+                        if (json_hex_token_len_bytes(&tokens[ct_idx], &ct_len) < 0) {
+                                set_parse_error(&err_reason, &errnum, "invalid ct hex string", 0);
+                                goto err;
+                        }
+                        if (json_hex_token_len_bytes(&tokens[tag_idx], &tag_len) < 0) {
+                                set_parse_error(&err_reason, &errnum, "invalid tag hex string", 0);
+                                goto err;
+                        }
+
+                        if (json_decode_hex_token(json, &tokens[key_idx], ctx, &vectors[rec].key) <
+                            0) {
+                                set_parse_error(&err_reason, &errnum,
+                                                "unable to decode key hex string", 0);
+                                goto err;
+                        }
+                        if (json_decode_hex_token(json, &tokens[iv_idx], ctx, &vectors[rec].iv) <
+                            0) {
+                                set_parse_error(&err_reason, &errnum,
+                                                "unable to decode iv hex string", 0);
+                                goto err;
+                        }
+                        if (json_decode_hex_token(json, &tokens[aad_idx], ctx, &vectors[rec].aad) <
+                            0) {
+                                set_parse_error(&err_reason, &errnum,
+                                                "unable to decode aad hex string", 0);
+                                goto err;
+                        }
+                        if (json_decode_hex_token(json, &tokens[msg_idx], ctx, &vectors[rec].msg) <
+                            0) {
+                                set_parse_error(&err_reason, &errnum,
+                                                "unable to decode msg hex string", 0);
+                                goto err;
+                        }
+                        if (json_decode_hex_token(json, &tokens[ct_idx], ctx, &vectors[rec].ct) <
+                            0) {
+                                set_parse_error(&err_reason, &errnum,
+                                                "unable to decode ct hex string", 0);
+                                goto err;
+                        }
+                        if (json_decode_hex_token(json, &tokens[tag_idx], ctx, &vectors[rec].tag) <
+                            0) {
+                                set_parse_error(&err_reason, &errnum,
+                                                "unable to decode tag hex string", 0);
+                                goto err;
+                        }
+
+                        if (json_validate_declared_size(vectors[rec].keySize, key_len) < 0) {
+                                set_parse_error(&err_reason, &errnum,
+                                                "declared keySize exceeds decoded key length", 0);
+                                goto err;
+                        }
+                        if (json_validate_declared_size(vectors[rec].ivSize, iv_len) < 0) {
+                                set_parse_error(&err_reason, &errnum,
+                                                "declared ivSize exceeds decoded iv length", 0);
+                                goto err;
+                        }
+                        if (json_validate_declared_size(vectors[rec].aadSize, aad_len) < 0) {
+                                set_parse_error(&err_reason, &errnum,
+                                                "declared aadSize exceeds decoded aad length", 0);
+                                goto err;
+                        }
+                        if (json_validate_declared_size(vectors[rec].msgSize, msg_len) < 0) {
+                                set_parse_error(&err_reason, &errnum,
+                                                "declared msgSize exceeds decoded msg length", 0);
+                                goto err;
+                        }
+                        if (json_validate_declared_size(vectors[rec].msgSize, ct_len) < 0) {
+                                set_parse_error(&err_reason, &errnum,
+                                                "declared msgSize exceeds decoded ct length", 0);
+                                goto err;
+                        }
+                        if (json_validate_declared_size(vectors[rec].tagSize, tag_len) < 0) {
+                                set_parse_error(&err_reason, &errnum,
+                                                "declared tagSize exceeds decoded tag length", 0);
+                                goto err;
+                        }
+                        if (msg_len != ct_len) {
+                                set_parse_error(&err_reason, &errnum,
+                                                "ct length does not match msg length", 0);
+                                goto err;
+                        }
+
+                        if (result_idx < 0 || json_result_to_valid(json, &tokens[result_idx],
+                                                                   &vectors[rec].resultValid) < 0) {
+                                set_parse_error(&err_reason, &errnum,
+                                                "missing or invalid result field", 0);
+                                goto err;
+                        }
+
+                        rec++;
+                        tc_pos = json_token_skip(tokens, tc_pos);
+                }
+
+                tg_pos = json_token_skip(tokens, tg_pos);
+        }
+
+        *out_vectors = vectors;
+        *out_ctx = ctx;
+
+        return 0;
+
+err:
+        json_report_parse_error(path, "json_load_aead_test", err_reason, errnum, 0, tg_idx,
                                 test_idx, have_tcid ? &tcid : NULL);
 err_no_report:
         json_free_test_ctx(ctx);
