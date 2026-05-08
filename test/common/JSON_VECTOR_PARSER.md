@@ -19,7 +19,7 @@ be shared across multiple test applications.
 | **Hex string** | A string where every two characters represent one byte in hexadecimal (e.g. `"2b7e"` → `0x2b 0x7e`). All binary fields in the JSON files use this encoding. |
 | **Sentinel-terminated array** | An array whose last element is a zero-initialised dummy entry that signals the end of the data. Callers loop until they hit it rather than needing a separate length variable. For `mac_test`, `cipher_test`, and `aead_test`, the sentinel is detected by `msg == NULL`. |
 | **Allocation context** | An opaque object (`struct test_json_alloc_ctx`) that tracks every heap allocation made during a parse. Passing it to `json_free_test_ctx()` releases all memory in one call — callers never need to free individual fields. |
-| **Field inheritance** | A mechanism by which fields defined at the `testGroups` level automatically apply to every test case in that group, unless the test case defines the same field itself. |
+| **Field inheritance** | Size fields (`keySize`, `ivSize`, `tagSize`) are defined at the `testGroups` level and apply to every test case in that group. The parser reads these fields exclusively from the group scope; test-case-level size fields are not supported. Binary payload fields (`key`, `iv`, `msg`, `ct`, `tag`, `aad`) are read exclusively from the test-case scope. |
 | **`result` field** | A mandatory string in every test case that is either `"valid"` (the operation should succeed and produce the expected output) or `"invalid"` (the operation is expected to fail or produce a different output). Maps to `resultValid = 1` or `0`. |
 
 ---
@@ -45,6 +45,39 @@ released in a single call to `json_free_test_ctx()`.
 
 ---
 
+## Vector File Schemas
+
+### Upstream basis
+
+The JSON vector files conform to schemas inspired by the
+[Wycheproof](https://github.com/google/wycheproof) project's v1 test format.
+
+### Schema types
+
+Each vector file declares the schema it conforms to in the top-level `"schema"`
+field:
+
+| Schema name | Test type | Algorithms |
+|---|---|---|
+| `mac_test_schema_v1.json` | `MacTest` | CMAC-128, CMAC-256 |
+| `mac_with_iv_test_schema_v1.json` | `MacWithIvTest` | IV-bearing MACs |
+| `ind_cpa_test_schema_v1.json` | `IndCpaTest` | AES-CBC |
+| `aead_test_schema_v1.json` | `AeadTest` | AES-GCM, AES-CCM |
+
+### Deviations from upstream Wycheproof
+
+The following intentional deviations exist relative to upstream Wycheproof
+schemas:
+
+**1. `msgSize` in MAC test vectors (extension)**  
+The `mac_test_schema_v1.json` adds an optional `msgSize` field (integer, bits)
+to each test vector. This field is absent in upstream Wycheproof and is used
+exclusively for bit-level MAC algorithms (e.g. CMAC-3GPP) where the `msg` hex
+string is zero-padded to the next byte boundary and `msgSize` carries the true
+bit length. Byte-aligned MAC vectors omit this field entirely.
+
+---
+
 ## JSON File Format
 
 Vector files follow a subset of the
@@ -57,15 +90,13 @@ of individual test cases.
 {
   "testGroups": [
     {
-      "key":     "2b7e151628aed2a6abf7158809cf4f3c",
       "keySize": 128,
       "tests": [
         {
           "tcId":    1,
+          "key":     "2b7e151628aed2a6abf7158809cf4f3c",
           "msg":     "6bc1bee22e409f96e93d7e117393172a",
-          "msgSize": 128,
           "tag":     "070a16b46b4d4144f79bdd9dd04a287c",
-          "tagSize": 128,
           "result":  "valid"
         }
       ]
@@ -76,87 +107,115 @@ of individual test cases.
 
 ### Fields
 
-All binary fields (`key`, `iv`, `msg`, `tag`, `ct`) are **lowercase or
-uppercase hexadecimal strings**. Size fields (`keySize`, `ivSize`, `msgSize`,
-`tagSize`) express lengths in **bits**.
+All binary fields (`key`, `iv`, `msg`, `tag`, `ct`, `aad`) are **lowercase or
+uppercase hexadecimal strings**. Size fields (`keySize`, `ivSize`, `tagSize`,
+and the MAC-only `msgSize`) express lengths in **bits**.
+
+Fields belong to one of two scopes within the JSON:
+
+- **Group-level** (`testGroups[]` object): size fields only.
+- **Test-level** (`tests[]` object): binary payload fields, `tcId`, and `result`.
 
 #### MAC test fields (`struct mac_test`)
+
+**Group-level** (`testGroups[]` object):
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `keySize` | number (bits) | optional* | Key size in bits |
+| `tagSize` | number (bits) | optional* | Tag size in bits |
+| `ivSize` | number (bits) | optional* | IV size in bits (absent for nonce-free MACs such as CMAC) |
+
+**Test-level** (`tests[]` object):
 
 | Field | Type | Required | Description |
 |---|---|---|---|
 | `tcId` | number | optional | Numeric test-case identifier |
 | `key` | hex string | **required** | Key material |
-| `keySize` | number (bits) | optional* | Key size in bits |
 | `msg` | hex string | **required** | Input message |
-| `msgSize` | number (bits) | optional* | Message size in bits |
+| `msgSize` | number (bits) | optional | True message size in bits; only present for bit-level algorithms (e.g. CMAC-3GPP) where `msg` is zero-padded to the next byte boundary |
 | `tag` | hex string | **required** | Expected authentication tag |
-| `tagSize` | number (bits) | optional* | Tag size in bits |
 | `iv` | hex string | optional | Initialisation vector (absent for nonce-free MACs such as CMAC) |
-| `ivSize` | number (bits) | optional* | IV size in bits |
 | `result` | `"valid"` or `"invalid"` | **required** | Expected outcome |
 
 #### Cipher test fields (`struct cipher_test`)
+
+**Group-level** (`testGroups[]` object):
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `keySize` | number (bits) | optional* | Key size in bits |
+| `ivSize` | number (bits) | optional* | IV size in bits |
+
+**Test-level** (`tests[]` object):
 
 | Field | Type | Required | Description |
 |---|---|---|---|
 | `tcId` | number | optional | Numeric test-case identifier |
 | `key` | hex string | **required** | Encryption key |
-| `keySize` | number (bits) | optional* | Key size in bits |
 | `iv` | hex string | **required** | Initialisation vector |
-| `ivSize` | number (bits) | optional* | IV size in bits |
 | `msg` | hex string | **required** | Plaintext |
-| `msgSize` | number (bits) | optional* | Plaintext size in bits |
 | `ct` | hex string | **required** | Ciphertext |
 | `result` | `"valid"` or `"invalid"` | **required** | Expected outcome |
 
 #### AEAD test fields (`struct aead_test`)
 
+**Group-level** (`testGroups[]` object):
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `keySize` | number (bits) | optional* | Key size in bits |
+| `ivSize` | number (bits) | optional* | IV size in bits |
+| `tagSize` | number (bits) | optional* | Tag size in bits |
+
+**Test-level** (`tests[]` object):
+
 | Field | Type | Required | Description |
 |---|---|---|---|
 | `tcId` | number | optional | Numeric test-case identifier |
 | `key` | hex string | **required** | Encryption key |
-| `keySize` | number (bits) | optional* | Key size in bits |
 | `iv` | hex string | **required** | Initialisation vector / nonce |
-| `ivSize` | number (bits) | optional* | IV size in bits |
-| `aad` | hex string | optional | Additional authenticated data |
-| `aadSize` | number (bits) | optional* | AAD size in bits |
+| `aad` | hex string | **required** | Additional authenticated data (use `""` for empty AAD) |
 | `msg` | hex string | **required** | Plaintext |
-| `msgSize` | number (bits) | optional* | Plaintext size in bits |
 | `ct` | hex string | **required** | Ciphertext |
 | `tag` | hex string | **required** | Authentication tag |
-| `tagSize` | number (bits) | optional* | Tag size in bits |
 | `result` | `"valid"` or `"invalid"` | **required** | Expected outcome |
 
-> **\* Size derivation.** When a `*Size` field is absent, the parser derives
-> the bit length from the hex-string length: `len(hex_string) * 4`. If both
-> the explicit size field and the hex string are present, the explicit size
-> takes precedence and is not overwritten. For `keySize` and `ivSize` the
-> explicit value must exactly match the hex-string length (a mismatch is a
-> parse error). For `tagSize` and `msgSize` the explicit value may be smaller
-> than the hex-string length — this covers truncated tags and non-byte-aligned
-> messages where the hex field carries the full output but only the declared
-> number of bits are significant.
+> **\* Size derivation.** When a group-level size field is absent, the parser
+> derives the bit length from the corresponding hex-string length:
+> `len(hex_string) * 4`. When the size field is present it must exactly match
+> the hex-string length for `keySize` and `ivSize` (a mismatch is a parse
+> error). For `tagSize` the declared value may be smaller than the hex-string
+> length — this covers truncated tags where the hex field carries the full
+> output but only the declared number of bits are significant.
+> For MAC vectors, the test-level `msgSize` may also be smaller than the hex
+> length — this covers non-byte-aligned messages where `msg` is zero-padded to
+> the next byte boundary. For cipher and AEAD vectors, plaintext and AAD sizes
+> are always derived from the hex field length and are not present in the JSON.
 >
 > **AEAD fields are always explicit.** The `aad`, `ct`, and `tag` fields in
 > AEAD test vectors each carry only their own data. In particular, `aad` is
-> never embedded in `msg`, and `tag` is never appended to `ct`.
+> never embedded in `msg`, and `tag` is never appended to `ct`. An absent
+> `aad` field is a parse error; use `""` to express zero-length AAD.
 
 ### Field inheritance
 
-Fields may be specified at the **`testGroups` level** and inherited by every
-test case inside that group. A field on a test-case object **overrides** the
-group-level value. This allows compact files where, for example, a single
-`key` applies to every vector in a group:
+Size fields (`keySize`, `ivSize`, `tagSize`) are read exclusively from the
+**`testGroups` level** and apply to every test case in that group. Binary
+payload fields (`key`, `iv`, `msg`, `ct`, `tag`, `aad`) must be specified at
+the **test-case level**. Size fields at the test-case level are not read by the
+parser. This matches the schema, which places size fields only in the group
+object and payload fields only in the test vector object.
 
 ```json
 {
   "testGroups": [
     {
-      "key":     "2b7e151628aed2a6abf7158809cf4f3c",
       "keySize": 128,
+      "tagSize": 128,
       "tests": [
-        { "tcId": 1, "msg": "...", "tag": "...", "result": "valid" },
-        { "tcId": 2, "msg": "...", "tag": "...", "result": "invalid" }
+        { "tcId": 1, "key": "...", "msg": "...", "tag": "...", "result": "valid" },
+        { "tcId": 2, "key": "...", "msg": "...", "tag": "...", "result": "invalid" }
       ]
     }
   ]
@@ -251,7 +310,8 @@ json_load_mac_test() / json_load_cipher_test() / json_load_aead_test()
     ├─ 5. Allocate output vector array (test_cnt + 1 elements; last is zero sentinel)
     │
     └─ 6. Second pass — decode each test case
-            ├─ json_member_with_fallback()  ← tc scope, then tg scope
+            ├─ json_object_get(tg_pos)      ← size fields from group scope
+            ├─ json_object_get(tc_pos)      ← payload/metadata from test scope
             ├─ json_parse_size_t()          ← numeric fields
             ├─ json_hex_token_len_bytes()   ← validate hex length
             ├─ json_decode_hex_token()      ← hex → binary buffer in ctx
@@ -264,7 +324,6 @@ json_load_mac_test() / json_load_cipher_test() / json_load_aead_test()
 | Helper | Purpose |
 |---|---|
 | `json_object_get()` | Find a key inside an object token, return value token index |
-| `json_member_with_fallback()` | Look up a key in tc object first, then tg object |
 | `json_token_skip()` | Walk past a token subtree (used to advance the cursor) |
 | `json_token_eq()` | Compare a string token against a C string literal |
 | `json_decode_hex_token()` | Decode a hex string token into a binary buffer |
@@ -422,8 +481,10 @@ The `-1` return value also signals failure to callers that redirect stderr
 | Size value overflows `size_t` | load function |
 | Declared bit size exceeds decoded buffer | load function |
 | Declared size does not match hex field length | load function |
+| Cipher or AEAD `ct` length does not match `msg` length | load function |
 | Required field (`key`, `msg`, `tag`) missing from MAC test case | load function |
 | Required field (`key`, `iv`, `msg`, `ct`) missing from cipher test case | load function |
+| Required field (`key`, `iv`, `aad`, `msg`, `ct`, `tag`) missing from AEAD test case | load function |
 | Memory allocation failure | any stage |
 
 ---
@@ -492,10 +553,11 @@ system beyond temporary files:
 |---|---|
 | P1 | Single MAC vector, all fields present |
 | P2 | MAC vector with `"result": "invalid"` → `resultValid == 0` |
-| P3 | Fields at `testGroups` level inherited by test case |
+| P3 | Size fields (`keySize`, `tagSize`) at `testGroups` level inherited by test case |
 | P4 | Multiple `testGroups`, all vectors collected |
 | P5 | Single cipher vector with `iv` and `ct` fields |
 | P6 | Size fields absent — derived from hex length |
+| P7 | Valid AEAD vectors including empty `msg` and empty `tag` |
 | N1 | Empty file → `-1` |
 | N2 | Empty JSON object `{}` → `-1` |
 | N3 | Root is array `[]` → `-1` |
@@ -507,3 +569,7 @@ system beyond temporary files:
 | N9 | Truncated JSON document → `-1` |
 | N10 | Negative `keySize` → `-1` |
 | N11 | `keySize` integer overflow → `-1` |
+| N12 | AEAD vector missing required `aad` field → `-1` |
+| N13 | AEAD `tagSize` exceeds decoded `tag` length → `-1` |
+| N14 | Cipher `ct` length does not match `msg` length → `-1` |
+| N15 | AEAD `ct` length does not match `msg` length → `-1` |
