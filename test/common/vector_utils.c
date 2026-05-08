@@ -695,31 +695,6 @@ json_object_get(const char *json, const json_tok *tokens, const int token_cnt, c
 }
 
 /**
- * @brief Resolve a member from test-case scope, then test-group scope.
- *
- * @param [in] json JSON document text
- * @param [in] tokens Token array
- * @param [in] token_cnt Number of tokens in tokens
- * @param [in] tc_obj Test-case object token index
- * @param [in] tg_obj Test-group object token index
- * @param [in] key Requested member key
- *
- * @return Value token index for key.
- * @retval -1 Key not found in either scope.
- */
-static int
-json_member_with_fallback(const char *json, const json_tok *tokens, const int token_cnt,
-                          const int tc_obj, const int tg_obj, const char *key)
-{
-        int idx = json_object_get(json, tokens, token_cnt, tc_obj, key);
-
-        if (idx >= 0)
-                return idx;
-
-        return json_object_get(json, tokens, token_cnt, tg_obj, key);
-}
-
-/**
  * @brief Parse an unsigned decimal JSON primitive into size_t.
  *
  * @param [in] json JSON document text
@@ -1172,26 +1147,22 @@ json_load_mac_test(const char *path, struct mac_test **out_vectors,
                 }
                 tc_pos = tests_idx + 1;
                 for (int j = 0; j < tokens[tests_idx].size; j++) {
-                        const int key_idx = json_member_with_fallback(json, tokens, token_cnt,
-                                                                      tc_pos, tg_pos, "key");
-                        const int msg_idx = json_member_with_fallback(json, tokens, token_cnt,
-                                                                      tc_pos, tg_pos, "msg");
-                        const int tag_idx = json_member_with_fallback(json, tokens, token_cnt,
-                                                                      tc_pos, tg_pos, "tag");
-                        const int iv_idx = json_member_with_fallback(json, tokens, token_cnt,
-                                                                     tc_pos, tg_pos, "iv");
-                        const int key_size_idx = json_member_with_fallback(
-                                json, tokens, token_cnt, tc_pos, tg_pos, "keySize");
-                        const int tag_size_idx = json_member_with_fallback(
-                                json, tokens, token_cnt, tc_pos, tg_pos, "tagSize");
-                        const int msg_size_idx = json_member_with_fallback(
-                                json, tokens, token_cnt, tc_pos, tg_pos, "msgSize");
-                        const int iv_size_idx = json_member_with_fallback(json, tokens, token_cnt,
-                                                                          tc_pos, tg_pos, "ivSize");
-                        const int tcid_idx = json_member_with_fallback(json, tokens, token_cnt,
-                                                                       tc_pos, tg_pos, "tcId");
-                        const int result_idx = json_member_with_fallback(json, tokens, token_cnt,
-                                                                         tc_pos, tg_pos, "result");
+                        const int key_idx = json_object_get(json, tokens, token_cnt, tc_pos, "key");
+                        const int msg_idx = json_object_get(json, tokens, token_cnt, tc_pos, "msg");
+                        const int tag_idx = json_object_get(json, tokens, token_cnt, tc_pos, "tag");
+                        const int iv_idx = json_object_get(json, tokens, token_cnt, tc_pos, "iv");
+                        const int key_size_idx =
+                                json_object_get(json, tokens, token_cnt, tg_pos, "keySize");
+                        const int tag_size_idx =
+                                json_object_get(json, tokens, token_cnt, tg_pos, "tagSize");
+                        const int msg_size_idx =
+                                json_object_get(json, tokens, token_cnt, tc_pos, "msgSize");
+                        const int iv_size_idx =
+                                json_object_get(json, tokens, token_cnt, tg_pos, "ivSize");
+                        const int tcid_idx =
+                                json_object_get(json, tokens, token_cnt, tc_pos, "tcId");
+                        const int result_idx =
+                                json_object_get(json, tokens, token_cnt, tc_pos, "result");
                         size_t key_len = 0;
                         size_t msg_len = 0;
                         size_t tag_len = 0;
@@ -1492,22 +1463,18 @@ json_load_cipher_test(const char *path, struct cipher_test **out_vectors,
                 tc_pos = tests_idx + 1;
 
                 for (int j = 0; j < tokens[tests_idx].size; j++) {
-                        const int key_idx = json_member_with_fallback(json, tokens, token_cnt,
-                                                                      tc_pos, tg_pos, "key");
-                        const int iv_idx = json_member_with_fallback(json, tokens, token_cnt,
-                                                                     tc_pos, tg_pos, "iv");
-                        const int msg_idx = json_member_with_fallback(json, tokens, token_cnt,
-                                                                      tc_pos, tg_pos, "msg");
-                        const int ct_idx = json_member_with_fallback(json, tokens, token_cnt,
-                                                                     tc_pos, tg_pos, "ct");
-                        const int key_size_idx = json_member_with_fallback(
-                                json, tokens, token_cnt, tc_pos, tg_pos, "keySize");
-                        const int iv_size_idx = json_member_with_fallback(json, tokens, token_cnt,
-                                                                          tc_pos, tg_pos, "ivSize");
-                        const int tcid_idx = json_member_with_fallback(json, tokens, token_cnt,
-                                                                       tc_pos, tg_pos, "tcId");
-                        const int result_idx = json_member_with_fallback(json, tokens, token_cnt,
-                                                                         tc_pos, tg_pos, "result");
+                        const int key_idx = json_object_get(json, tokens, token_cnt, tc_pos, "key");
+                        const int iv_idx = json_object_get(json, tokens, token_cnt, tc_pos, "iv");
+                        const int msg_idx = json_object_get(json, tokens, token_cnt, tc_pos, "msg");
+                        const int ct_idx = json_object_get(json, tokens, token_cnt, tc_pos, "ct");
+                        const int key_size_idx =
+                                json_object_get(json, tokens, token_cnt, tg_pos, "keySize");
+                        const int iv_size_idx =
+                                json_object_get(json, tokens, token_cnt, tg_pos, "ivSize");
+                        const int tcid_idx =
+                                json_object_get(json, tokens, token_cnt, tc_pos, "tcId");
+                        const int result_idx =
+                                json_object_get(json, tokens, token_cnt, tc_pos, "result");
                         size_t key_len = 0;
                         size_t iv_len = 0;
                         size_t msg_len = 0;
@@ -1794,28 +1761,22 @@ json_load_aead_test(const char *path, struct aead_test **out_vectors,
                 tc_pos = tests_idx + 1;
 
                 for (int j = 0; j < tokens[tests_idx].size; j++) {
-                        const int key_idx = json_member_with_fallback(json, tokens, token_cnt,
-                                                                      tc_pos, tg_pos, "key");
-                        const int iv_idx = json_member_with_fallback(json, tokens, token_cnt,
-                                                                     tc_pos, tg_pos, "iv");
-                        const int aad_idx = json_member_with_fallback(json, tokens, token_cnt,
-                                                                      tc_pos, tg_pos, "aad");
-                        const int msg_idx = json_member_with_fallback(json, tokens, token_cnt,
-                                                                      tc_pos, tg_pos, "msg");
-                        const int ct_idx = json_member_with_fallback(json, tokens, token_cnt,
-                                                                     tc_pos, tg_pos, "ct");
-                        const int tag_idx = json_member_with_fallback(json, tokens, token_cnt,
-                                                                      tc_pos, tg_pos, "tag");
-                        const int key_size_idx = json_member_with_fallback(
-                                json, tokens, token_cnt, tc_pos, tg_pos, "keySize");
-                        const int iv_size_idx = json_member_with_fallback(json, tokens, token_cnt,
-                                                                          tc_pos, tg_pos, "ivSize");
-                        const int tag_size_idx = json_member_with_fallback(
-                                json, tokens, token_cnt, tc_pos, tg_pos, "tagSize");
-                        const int tcid_idx = json_member_with_fallback(json, tokens, token_cnt,
-                                                                       tc_pos, tg_pos, "tcId");
-                        const int result_idx = json_member_with_fallback(json, tokens, token_cnt,
-                                                                         tc_pos, tg_pos, "result");
+                        const int key_idx = json_object_get(json, tokens, token_cnt, tc_pos, "key");
+                        const int iv_idx = json_object_get(json, tokens, token_cnt, tc_pos, "iv");
+                        const int aad_idx = json_object_get(json, tokens, token_cnt, tc_pos, "aad");
+                        const int msg_idx = json_object_get(json, tokens, token_cnt, tc_pos, "msg");
+                        const int ct_idx = json_object_get(json, tokens, token_cnt, tc_pos, "ct");
+                        const int tag_idx = json_object_get(json, tokens, token_cnt, tc_pos, "tag");
+                        const int key_size_idx =
+                                json_object_get(json, tokens, token_cnt, tg_pos, "keySize");
+                        const int iv_size_idx =
+                                json_object_get(json, tokens, token_cnt, tg_pos, "ivSize");
+                        const int tag_size_idx =
+                                json_object_get(json, tokens, token_cnt, tg_pos, "tagSize");
+                        const int tcid_idx =
+                                json_object_get(json, tokens, token_cnt, tc_pos, "tcId");
+                        const int result_idx =
+                                json_object_get(json, tokens, token_cnt, tc_pos, "result");
                         size_t key_len = 0;
                         size_t iv_len = 0;
                         size_t aad_len = 0;
