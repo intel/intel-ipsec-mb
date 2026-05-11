@@ -1155,8 +1155,6 @@ json_load_mac_test(const char *path, struct mac_test **out_vectors,
                                 json_object_get(json, tokens, token_cnt, tg_pos, "keySize");
                         const int tag_size_idx =
                                 json_object_get(json, tokens, token_cnt, tg_pos, "tagSize");
-                        const int msg_size_idx =
-                                json_object_get(json, tokens, token_cnt, tc_pos, "msgSize");
                         const int iv_size_idx =
                                 json_object_get(json, tokens, token_cnt, tg_pos, "ivSize");
                         const int tcid_idx =
@@ -1219,18 +1217,9 @@ json_load_mac_test(const char *path, struct mac_test **out_vectors,
                                 /* hex chars * 4 bits/char = tagSize in bits */
                                 vectors[rec].tagSize =
                                         (size_t) (tokens[tag_idx].end - tokens[tag_idx].start) * 4;
-                        if (msg_size_idx >= 0) {
-                                if (json_parse_size_t(json, &tokens[msg_size_idx],
-                                                      &vectors[rec].msgSize) < 0) {
-                                        set_parse_error(&err_reason, &errnum,
-                                                        "invalid msgSize value", 0);
-                                        goto err;
-                                }
-                        } else {
-                                /* hex chars * 4 bits/char = msgSize in bits */
-                                vectors[rec].msgSize =
-                                        (size_t) (tokens[msg_idx].end - tokens[msg_idx].start) * 4;
-                        }
+                        /* hex chars * 4 bits/char = msgSize in bits */
+                        vectors[rec].msgSize =
+                                (size_t) (tokens[msg_idx].end - tokens[msg_idx].start) * 4;
                         if (iv_size_idx >= 0) {
                                 if (json_parse_size_t(json, &tokens[iv_size_idx],
                                                       &vectors[rec].ivSize) < 0) {
@@ -1311,11 +1300,6 @@ json_load_mac_test(const char *path, struct mac_test **out_vectors,
                         if (json_validate_declared_size(vectors[rec].keySize, key_len) < 0) {
                                 set_parse_error(&err_reason, &errnum,
                                                 "declared keySize exceeds decoded key length", 0);
-                                goto err;
-                        }
-                        if (json_validate_declared_size(vectors[rec].msgSize, msg_len) < 0) {
-                                set_parse_error(&err_reason, &errnum,
-                                                "declared msgSize exceeds decoded msg length", 0);
                                 goto err;
                         }
                         if (json_validate_declared_size(vectors[rec].tagSize, tag_len) < 0) {

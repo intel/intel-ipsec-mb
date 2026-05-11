@@ -64,18 +64,6 @@ field:
 | `ind_cpa_test_schema_v1.json` | `IndCpaTest` | AES-CBC |
 | `aead_test_schema_v1.json` | `AeadTest` | AES-GCM, AES-CCM |
 
-### Deviations from upstream Wycheproof
-
-The following intentional deviations exist relative to upstream Wycheproof
-schemas:
-
-**1. `msgSize` in MAC test vectors (extension)**  
-The `mac_test_schema_v1.json` adds an optional `msgSize` field (integer, bits)
-to each test vector. This field is absent in upstream Wycheproof and is used
-exclusively for bit-level MAC algorithms (e.g. CMAC-3GPP) where the `msg` hex
-string is zero-padded to the next byte boundary and `msgSize` carries the true
-bit length. Byte-aligned MAC vectors omit this field entirely.
-
 ---
 
 ## JSON File Format
@@ -108,8 +96,8 @@ of individual test cases.
 ### Fields
 
 All binary fields (`key`, `iv`, `msg`, `tag`, `ct`, `aad`) are **lowercase or
-uppercase hexadecimal strings**. Size fields (`keySize`, `ivSize`, `tagSize`,
-and the MAC-only `msgSize`) express lengths in **bits**.
+uppercase hexadecimal strings**. Size fields (`keySize`, `ivSize`, `tagSize`)
+express lengths in **bits**.
 
 Fields belong to one of two scopes within the JSON:
 
@@ -133,7 +121,6 @@ Fields belong to one of two scopes within the JSON:
 | `tcId` | number | optional | Numeric test-case identifier |
 | `key` | hex string | **required** | Key material |
 | `msg` | hex string | **required** | Input message |
-| `msgSize` | number (bits) | optional | True message size in bits; only present for bit-level algorithms (e.g. CMAC-3GPP) where `msg` is zero-padded to the next byte boundary |
 | `tag` | hex string | **required** | Expected authentication tag |
 | `iv` | hex string | optional | Initialisation vector (absent for nonce-free MACs such as CMAC) |
 | `result` | `"valid"` or `"invalid"` | **required** | Expected outcome |
@@ -188,9 +175,7 @@ Fields belong to one of two scopes within the JSON:
 > error). For `tagSize` the declared value may be smaller than the hex-string
 > length — this covers truncated tags where the hex field carries the full
 > output but only the declared number of bits are significant.
-> For MAC vectors, the test-level `msgSize` may also be smaller than the hex
-> length — this covers non-byte-aligned messages where `msg` is zero-padded to
-> the next byte boundary. For cipher and AEAD vectors, plaintext and AAD sizes
+> For cipher and AEAD vectors, plaintext and AAD sizes
 > are always derived from the hex field length and are not present in the JSON.
 >
 > **AEAD fields are always explicit.** The `aad`, `ct`, and `tag` fields in

@@ -37,7 +37,6 @@
 
 enum cmac_type {
         CMAC_128 = 0,
-        CMAC_128_BITLEN,
         CMAC_256,
 };
 
@@ -46,26 +45,22 @@ cmac_test(struct IMB_MGR *mb_mgr);
 
 static struct mac_test *cmac_128_vectors;
 static struct mac_test *cmac_256_vectors;
-static struct mac_test *cmac_3gpp_vectors;
 
 /**
  * @brief Load all CMAC vector sets used by the CMAC kat-app module.
  *
  * @param ctx_128 receives context for cmac_128 vectors
  * @param ctx_256 receives context for cmac_256 vectors
- * @param ctx_3gpp receives context for cmac_3gpp vectors
  *
  * @return 0 on success or -1 on failure
  */
 static int
-load_cmac_vectors(struct test_json_alloc_ctx **ctx_128, struct test_json_alloc_ctx **ctx_256,
-                  struct test_json_alloc_ctx **ctx_3gpp)
+load_cmac_vectors(struct test_json_alloc_ctx **ctx_128, struct test_json_alloc_ctx **ctx_256)
 {
         char path[1024];
         int ret;
         const char *const cmac_128_file = "cmac_128_test.json";
         const char *const cmac_256_file = "cmac_256_test.json";
-        const char *const cmac_3gpp_file = "cmac_3gpp_test.json";
 
         if (kat_vector_dir == NULL) {
                 fprintf(stderr, "Error: no vector directory set; use --vector-dir <DIR>\n");
@@ -86,25 +81,15 @@ load_cmac_vectors(struct test_json_alloc_ctx **ctx_128, struct test_json_alloc_c
         if (json_load_mac_test(path, &cmac_256_vectors, ctx_256) < 0)
                 goto err;
 
-        ret = snprintf(path, sizeof(path), "%s/%s", kat_vector_dir, cmac_3gpp_file);
-        /* Treat truncation as failure; otherwise path would be silently invalid. */
-        if (ret < 0 || ret >= (int) sizeof(path))
-                goto err;
-        if (json_load_mac_test(path, &cmac_3gpp_vectors, ctx_3gpp) < 0)
-                goto err;
-
         return 0;
 
 err:
         json_free_test_ctx(*ctx_128);
         json_free_test_ctx(*ctx_256);
-        json_free_test_ctx(*ctx_3gpp);
         *ctx_128 = NULL;
         *ctx_256 = NULL;
-        *ctx_3gpp = NULL;
         cmac_128_vectors = NULL;
         cmac_256_vectors = NULL;
-        cmac_3gpp_vectors = NULL;
         return -1;
 }
 
@@ -113,15 +98,12 @@ err:
  *
  * @param ctx_128 context for cmac_128 vectors
  * @param ctx_256 context for cmac_256 vectors
- * @param ctx_3gpp context for cmac_3gpp vectors
  */
 static void
-free_cmac_vectors(struct test_json_alloc_ctx *ctx_128, struct test_json_alloc_ctx *ctx_256,
-                  struct test_json_alloc_ctx *ctx_3gpp)
+free_cmac_vectors(struct test_json_alloc_ctx *ctx_128, struct test_json_alloc_ctx *ctx_256)
 {
         json_free_test_ctx(ctx_128);
         json_free_test_ctx(ctx_256);
-        json_free_test_ctx(ctx_3gpp);
 }
 
 static const struct cmac_subkeys {
@@ -198,34 +180,6 @@ static const struct cmac_subkeys cmac_256_subkeys[] = {
           "\x08\xd7\x2d\x98\x10\xa3\x09\x14\xdf\xf4",
           "\xca\xd1\xed\x03\x29\x9e\xed\xac\x2e\x9a\x99\x80\x86\x21\x50\x2f",
           "\x95\xa3\xda\x06\x53\x3d\xdb\x58\x5d\x35\x33\x01\x0c\x42\xa0\xd9" },
-        { NULL, NULL, NULL }
-};
-
-static const struct cmac_subkeys cmac_3gpp_subkeys[] = {
-        { "\x2b\xd6\x45\x9f\x82\xc5\xb3\x00\x95\x2c\x49\x10\x48\x81\xff\x48",
-          "\xdc\x84\xc2\x70\xb5\xbf\x83\xf9\x6f\x90\xbe\x18\x8d\x3f\x64\x18",
-          "\xb9\x09\x84\xe1\x6b\x7f\x07\xf2\xdf\x21\x7c\x31\x1a\x7e\xc8\xb7" },
-        { "\xd3\xc5\xd5\x92\x32\x7f\xb1\x1c\x40\x35\xc6\x68\x0a\xf8\xc6\xd1",
-          "\x36\xe3\xe5\x32\x26\x52\x2b\xa6\xc0\xa4\x23\x6b\xcb\xbf\x0c\xe3",
-          "\x6d\xc7\xca\x64\x4c\xa4\x57\x4d\x81\x48\x46\xd7\x97\x7e\x19\xc6" },
-        { "\x7e\x5e\x94\x43\x1e\x11\xd7\x38\x28\xd7\x39\xcc\x6c\xed\x45\x73",
-          "\xaf\x16\x8c\x50\x6a\xf0\x3c\xf3\xa4\x4a\xbf\x1a\x61\x34\xc1\x59",
-          "\x5e\x2d\x18\xa0\xd5\xe0\x79\xe7\x48\x95\x7e\x34\xc2\x69\x82\x35" },
-        { "\xd3\x41\x9b\xe8\x21\x08\x7a\xcd\x02\x12\x3a\x92\x48\x03\x33\x59",
-          "\x0a\x9b\xa0\x10\x5b\x3d\x9a\x43\x47\xe6\x56\x15\x4e\x6d\x37\xc8",
-          "\x15\x37\x40\x20\xb6\x7b\x34\x86\x8f\xcc\xac\x2a\x9c\xda\x6f\x90" },
-        { "\x83\xfd\x23\xa2\x44\xa7\x4c\xf3\x58\xda\x30\x19\xf1\x72\x26\x35",
-          "\x3b\xec\x38\xae\x79\x0d\x59\x58\xe0\x9b\x73\xab\x61\xbd\x48\x0f",
-          "\x77\xd8\x71\x5c\xf2\x1a\xb2\xb1\xc1\x36\xe7\x56\xc3\x7a\x90\x1e" },
-        { "\x68\x32\xa6\x5c\xff\x44\x73\x62\x1e\xbd\xd4\xba\x26\xa9\x21\xfe",
-          "\xca\x02\x47\x87\x0f\xc2\x7f\xad\x1b\x17\xe1\xa1\x48\xb0\x2d\x8d",
-          "\x94\x04\x8f\x0e\x1f\x84\xff\x5a\x36\x2f\xc3\x42\x91\x60\x5b\x9d" },
-        { "\x5d\x0a\x80\xd8\x13\x4a\xe1\x96\x77\x82\x4b\x67\x1e\x83\x8a\xf4",
-          "\x30\x65\xc4\x53\xf7\x72\x72\xe1\x79\xef\x65\x04\x7d\xc9\xfc\x3d",
-          "\x60\xcb\x88\xa7\xee\xe4\xe5\xc2\xf3\xde\xca\x08\xfb\x93\xf8\x7a" },
-        { "\xb3\x12\x0f\xfd\xb2\xcf\x6a\xf4\xe7\x3e\xaf\x2e\xf4\xeb\xec\x69",
-          "\x58\xc8\xbb\x9a\xe4\x22\x92\xc3\xb1\x73\x90\xc8\xf5\x58\x58\xb6",
-          "\xb1\x91\x77\x35\xc8\x45\x25\x87\x62\xe7\x21\x91\xea\xb0\xb1\x6c" },
         { NULL, NULL, NULL }
 };
 
@@ -313,7 +267,7 @@ test_cmac(struct IMB_MGR *mb_mgr, const struct mac_test *vec, const struct cmac_
                 memset(auths[i], -1, 16 + (sizeof(padding) * 2));
         }
 
-        if ((type == CMAC_128) || (type == CMAC_128_BITLEN)) {
+        if (type == CMAC_128) {
                 IMB_AES_KEYEXP_128(mb_mgr, vec->key, expkey, dust);
                 IMB_AES_CMAC_SUBKEY_GEN_128(mb_mgr, expkey, skey1, skey2);
         } else { /* AES-CMAC-256 */
@@ -340,12 +294,6 @@ test_cmac(struct IMB_MGR *mb_mgr, const struct mac_test *vec, const struct cmac_
                 case CMAC_128:
                         job->hash_alg = IMB_AUTH_AES_CMAC;
                         job->msg_len_to_hash_in_bytes = vec->msgSize / 8;
-                        break;
-                case CMAC_128_BITLEN:
-                        job->hash_alg = IMB_AUTH_AES_CMAC_BITLEN;
-                        /* check for std or 3gpp vectors
-                           scale len if necessary */
-                        job->msg_len_to_hash_in_bits = vec->msgSize;
                         break;
                 case CMAC_256:
                         job->hash_alg = IMB_AUTH_AES_CMAC_256;
@@ -406,12 +354,6 @@ test_cmac(struct IMB_MGR *mb_mgr, const struct mac_test *vec, const struct cmac_
                 case CMAC_128:
                         job->hash_alg = IMB_AUTH_AES_CMAC;
                         job->msg_len_to_hash_in_bytes = vec->msgSize / 8;
-                        break;
-                case CMAC_128_BITLEN:
-                        job->hash_alg = IMB_AUTH_AES_CMAC_BITLEN;
-                        /* check for std or 3gpp vectors
-                           scale len if necessary */
-                        job->msg_len_to_hash_in_bits = vec->msgSize;
                         break;
                 case CMAC_256:
                         job->hash_alg = IMB_AUTH_AES_CMAC_256;
@@ -497,7 +439,7 @@ test_cmac_hash_burst(struct IMB_MGR *mb_mgr, const struct mac_test *vec,
                 memset(auths[i], -1, 16 + (sizeof(padding) * 2));
         }
 
-        if ((type == CMAC_128) || (type == CMAC_128_BITLEN)) {
+        if (type == CMAC_128) {
                 IMB_AES_KEYEXP_128(mb_mgr, vec->key, expkey, dust);
                 IMB_AES_CMAC_SUBKEY_GEN_128(mb_mgr, expkey, skey1, skey2);
         } else { /* AES-CMAC-256 */
@@ -521,12 +463,6 @@ test_cmac_hash_burst(struct IMB_MGR *mb_mgr, const struct mac_test *vec,
                 case CMAC_128:
                         job->hash_alg = IMB_AUTH_AES_CMAC;
                         job->msg_len_to_hash_in_bytes = vec->msgSize / 8;
-                        break;
-                case CMAC_128_BITLEN:
-                        job->hash_alg = IMB_AUTH_AES_CMAC_BITLEN;
-                        /* check for std or 3gpp vectors
-                           scale len if necessary */
-                        job->msg_len_to_hash_in_bits = vec->msgSize;
                         break;
                 case CMAC_256:
                         job->hash_alg = IMB_AUTH_AES_CMAC_256;
@@ -668,84 +604,6 @@ test_cmac_256_std_vectors(struct IMB_MGR *mb_mgr, struct test_suite_context *ctx
                 printf("\n");
 }
 
-static void
-test_cmac_bitlen_std_vectors(struct IMB_MGR *mb_mgr, struct test_suite_context *ctx,
-                             const int num_jobs)
-{
-        const struct mac_test *v = cmac_128_vectors;
-        const struct cmac_subkeys *sk = cmac_128_subkeys;
-
-        if (!quiet_mode)
-                printf("AES-CMAC-128 BITLEN standard test vectors "
-                       "(N jobs = %d):\n",
-                       num_jobs);
-        for (; v->msg != NULL; v++, sk++) {
-                if (!quiet_mode) {
-#ifdef DEBUG
-                        printf("Standard bit length vector %zu Message length (bits): %zu, "
-                               "Tag length:%zu\n",
-                               v->tcId, v->msgSize, v->tagSize / 8);
-#else
-                        printf(".");
-#endif
-                }
-
-                if (test_cmac(mb_mgr, v, sk, num_jobs, CMAC_128_BITLEN)) {
-                        printf("error #%zu\n", v->tcId);
-                        test_suite_update(ctx, 0, 1);
-                } else {
-                        test_suite_update(ctx, 1, 0);
-                }
-
-                if (test_cmac_hash_burst(mb_mgr, v, sk, num_jobs, CMAC_128_BITLEN)) {
-                        printf("hash burst error #%zu\n", v->tcId);
-                        test_suite_update(ctx, 0, 1);
-                } else {
-                        test_suite_update(ctx, 1, 0);
-                }
-        }
-        if (!quiet_mode)
-                printf("\n");
-}
-
-static void
-test_cmac_bitlen_3gpp_vectors(struct IMB_MGR *mb_mgr, struct test_suite_context *ctx,
-                              const int num_jobs)
-{
-        const struct mac_test *v = cmac_3gpp_vectors;
-        const struct cmac_subkeys *sk = cmac_3gpp_subkeys;
-
-        if (!quiet_mode)
-                printf("AES-CMAC-128 BITLEN 3GPP test vectors (N jobs = %d):\n", num_jobs);
-        for (; v->msg != NULL; v++, sk++) {
-                if (!quiet_mode) {
-#ifdef DEBUG
-                        printf("3gpp vector %zu Message length (bits): %zu, "
-                               "Tag length:%zu\n",
-                               v->tcId, v->msgSize, v->tagSize / 8);
-#else
-                        printf(".");
-#endif
-                }
-
-                if (test_cmac(mb_mgr, v, sk, num_jobs, CMAC_128_BITLEN)) {
-                        printf("error #%zu\n", v->tcId);
-                        test_suite_update(ctx, 0, 1);
-                } else {
-                        test_suite_update(ctx, 1, 0);
-                }
-
-                if (test_cmac_hash_burst(mb_mgr, v, sk, num_jobs, CMAC_128_BITLEN)) {
-                        printf("hash burst error #%zu\n", v->tcId);
-                        test_suite_update(ctx, 0, 1);
-                } else {
-                        test_suite_update(ctx, 1, 0);
-                }
-        }
-        if (!quiet_mode)
-                printf("\n");
-}
-
 int
 cmac_test(struct IMB_MGR *mb_mgr)
 {
@@ -753,9 +611,8 @@ cmac_test(struct IMB_MGR *mb_mgr)
         struct test_suite_context ctx;
         struct test_json_alloc_ctx *ctx_128 = NULL;
         struct test_json_alloc_ctx *ctx_256 = NULL;
-        struct test_json_alloc_ctx *ctx_3gpp = NULL;
 
-        if (load_cmac_vectors(&ctx_128, &ctx_256, &ctx_3gpp) < 0)
+        if (load_cmac_vectors(&ctx_128, &ctx_256) < 0)
                 return 1;
 
         /* CMAC 128 with standard vectors */
@@ -764,26 +621,15 @@ cmac_test(struct IMB_MGR *mb_mgr)
                 test_cmac_std_vectors(mb_mgr, &ctx, i);
         errors += test_suite_end(&ctx);
 
-        /* CMAC 128 BITLEN with standard vectors */
-        test_suite_start(&ctx, "AES-CMAC-128-BIT-LENGTH");
-        for (i = 1; i < IMB_MAX_BURST_SIZE; i++)
-                test_cmac_bitlen_std_vectors(mb_mgr, &ctx, i);
-
-        /* CMAC 128 BITLEN with 3GPP vectors */
-        for (i = 1; i < IMB_MAX_BURST_SIZE; i++)
-                test_cmac_bitlen_3gpp_vectors(mb_mgr, &ctx, i);
-        errors += test_suite_end(&ctx);
-
         /* CMAC 256 with standard vectors */
         test_suite_start(&ctx, "AES-CMAC-256");
         for (i = 1; i < IMB_MAX_BURST_SIZE; i++)
                 test_cmac_256_std_vectors(mb_mgr, &ctx, i);
         errors += test_suite_end(&ctx);
 
-        free_cmac_vectors(ctx_128, ctx_256, ctx_3gpp);
+        free_cmac_vectors(ctx_128, ctx_256);
         cmac_128_vectors = NULL;
         cmac_256_vectors = NULL;
-        cmac_3gpp_vectors = NULL;
 
         return errors;
 }
