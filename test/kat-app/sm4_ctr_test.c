@@ -39,7 +39,36 @@
 int
 sm4_ctr_test(struct IMB_MGR *mb_mgr);
 
-extern const struct cipher_test sm4_ctr_test_json[];
+static struct cipher_test *sm4_ctr_vectors;
+
+static int
+load_sm4_ctr_vectors(struct test_json_alloc_ctx **ctx)
+{
+        char path[1024];
+        int ret;
+        const char *const file_name = "sm4_ctr_test.json";
+
+        if (kat_vector_dir == NULL) {
+                fprintf(stderr, "Error: no vector directory set; use --vector-dir <DIR>\n");
+                return -1;
+        }
+
+        ret = snprintf(path, sizeof(path), "%s/%s", kat_vector_dir, file_name);
+        if (ret < 0 || ret >= (int) sizeof(path))
+                return -1;
+
+        if (json_load_cipher_test(path, &sm4_ctr_vectors, ctx) < 0)
+                return -1;
+
+        return 0;
+}
+
+static void
+free_sm4_ctr_vectors(struct test_json_alloc_ctx *ctx)
+{
+        json_free_test_ctx(ctx);
+        sm4_ctr_vectors = NULL;
+}
 
 static int
 sm4_job_ok(const struct IMB_JOB *job, IMB_MGR *mgr, const uint8_t *out_text, const uint8_t *target,
@@ -185,7 +214,7 @@ static void
 test_sm4_ctr_vectors(struct IMB_MGR *mb_mgr, struct test_suite_context *ctx,
                      const IMB_CIPHER_MODE cipher, const int num_jobs)
 {
-        const struct cipher_test *v = sm4_ctr_test_json;
+        const struct cipher_test *v = sm4_ctr_vectors;
         DECLARE_ALIGNED(uint32_t exp_enc_keys[IMB_SM4_KEY_SCHEDULE_ROUNDS], 16);
         DECLARE_ALIGNED(uint32_t dust[IMB_SM4_KEY_SCHEDULE_ROUNDS], 16);
 
@@ -253,11 +282,16 @@ sm4_ctr_test(struct IMB_MGR *mb_mgr)
         unsigned i;
         int errors = 0;
         struct test_suite_context ctx;
+        struct test_json_alloc_ctx *jctx = NULL;
+
+        if (load_sm4_ctr_vectors(&jctx) < 0)
+                return 1;
 
         test_suite_start(&ctx, "SM4-CTR-128");
         for (i = 0; i < test_num_jobs_size; i++)
                 test_sm4_ctr_vectors(mb_mgr, &ctx, IMB_CIPHER_SM4_CNTR, test_num_jobs[i]);
         errors += test_suite_end(&ctx);
 
+        free_sm4_ctr_vectors(jctx);
         return errors;
 }
