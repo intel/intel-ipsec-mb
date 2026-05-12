@@ -1,0 +1,88 @@
+{
+    "algorithm": "ZUC-EEA3",
+    "generatorVersion": "",
+    "header": [
+        "Test vectors of type CipherTest tests intended for testing both encryption and decryption."
+    ],
+    "notes": {},
+    "numberOfTests": 6,
+    "schema": "ind_cpa_test_schema_v1.json",
+    "testGroups": [
+        {
+            "type": "IndCpaTest",
+            "source": "https://www.3gpp.org/ftp/Specs/archive/35_series/35.221/",
+            "keySize": 128,
+            "ivSize": 48,
+            "tests": [
+                {
+                    "tcId": 2,
+                    "comment": "",
+                    "key": "e5bd3ea0eb55ade866c6ac58bd54302a",
+                    "iv": "236805001801",
+                    "msg": "14a8ef693d678507bbe7270a7f67ff5006c3525b9807e467c4e56000ba338f5d429559036751822246c80d3b38f07f4be2d8ff5805f5132229bde93bbbdcaf382bf1ee972fbf9977bada8945847a2a6c9ad34a667554e04d1f7fa2c33241bd8f01ba220d",
+                    "ct": "131d43e0dea1be5c5a1bfd971d852cbf712d7b4f57961fea3208afa8bca433f456ad09c7417e58bc69cf8866d1353f74865e80781d202dfb3ecff7fcbc3b190fe82a204ed0e350fc0f6f2613b2f2bca6df5a473a57a4a00d985ebad880d6f23864a07b01",
+                    "result": "valid",
+                    "flags": []
+                },
+                {
+                    "tcId": 10,
+                    "comment": "",
+                    "key": "000102030405060708090a0b0c0d0e0f",
+                    "iv": "4b7250cf0000",
+                    "msg": "00000000000000000000000000000000000000000000000000000000000000000000000000",
+                    "ct": "f555336501312ed77208c8fc30b5a44a7d097d6e744e1040075f4785126999d56eb23b972a",
+                    "result": "valid",
+                    "flags": []
+                }
+            ]
+        },
+        {
+            "type": "IndCpaTest",
+            "source": "https://www.3gpp.org/ftp/Specs/archive/35_series/35.221/",
+            "keySize": 128,
+            "ivSize": 128,
+            "tests": [
+                {
+                    "tcId": 6,
+                    "comment": "",
+                    "key": "00000000000000000000000000000000",
+                    "iv": "00000000000000000000000000000000",
+                    "msg": "0000000000000000",
+                    "ct": "27bede74018082da",
+                    "result": "valid",
+                    "flags": []
+                },
+                {
+                    "tcId": 7,
+                    "comment": "",
+                    "key": "ffffffffffffffffffffffffffffffff",
+                    "iv": "ffffffffffffffffffffffffffffffff",
+                    "msg": "0000000000000000",
+                    "ct": "0657cfa07096398b",
+                    "result": "valid",
+                    "flags": []
+                },
+                {
+                    "tcId": 8,
+                    "comment": "",
+                    "key": "3d4c4be96a82fdaeb58f641db17b455b",
+                    "iv": "84319aa8de6915ca1f6bda6bfbd8c766",
+                    "msg": "0000000000000000",
+                    "ct": "14f1c2723279c419",
+                    "result": "valid",
+                    "flags": []
+                },
+                {
+                    "tcId": 9,
+                    "comment": "",
+                    "key": "4d320bfad4c285bfd6b8bd00f39d8b41",
+                    "iv": "52959daba0bf176ece2dc315049eb574",
+                    "msg": "0000000000000000",
+                    "ct": "ed4400e70633e5c5",
+                    "result": "valid",
+                    "flags": []
+                }
+            ]
+        }
+    ]
+}

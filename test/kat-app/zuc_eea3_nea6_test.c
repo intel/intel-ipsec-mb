@@ -57,7 +57,37 @@ enum api_type { TEST_DIRECT_API, TEST_SINGLE_JOB_API, TEST_BURST_JOB_API };
 int
 zuc_eea3_nea6_test(struct IMB_MGR *mb_mgr);
 
-extern const struct cipher_test zuc_eea3_128_test_json[];
+static struct cipher_test *zuc_eea3_128_vectors;
+
+static int
+load_zuc_eea3_128_vectors(struct test_json_alloc_ctx **ctx)
+{
+        char path[1024];
+        int ret;
+        const char *const file_name = "zuc_eea3_128_test.json";
+
+        if (kat_vector_dir == NULL) {
+                fprintf(stderr, "Error: no vector directory set; use --vector-dir <DIR>\n");
+                return -1;
+        }
+
+        ret = snprintf(path, sizeof(path), "%s/%s", kat_vector_dir, file_name);
+        if (ret < 0 || ret >= (int) sizeof(path))
+                return -1;
+
+        if (json_load_cipher_test(path, &zuc_eea3_128_vectors, ctx) < 0)
+                return -1;
+
+        return 0;
+}
+
+static void
+free_zuc_eea3_128_vectors(struct test_json_alloc_ctx *ctx)
+{
+        json_free_test_ctx(ctx);
+        zuc_eea3_128_vectors = NULL;
+}
+
 extern const struct cipher_test zuc_nea6_test_json[];
 
 struct zuc_eea3_128_params {
@@ -195,6 +225,10 @@ zuc_eea3_nea6_test(struct IMB_MGR *mb_mgr)
         uint8_t *pDstData[MAXBUFS] = { 0 };
         struct test_suite_context eea3_ctx;
         struct test_suite_context nea6_ctx;
+        struct test_json_alloc_ctx *eea3_jctx = NULL;
+
+        if (load_zuc_eea3_128_vectors(&eea3_jctx) < 0)
+                return 1;
 
         test_suite_start(&eea3_ctx, "ZUC-EEA3");
         test_suite_start(&nea6_ctx, "ZUC-NEA6");
@@ -275,6 +309,7 @@ exit_zuc_eea3_nea6_test:
         errors += test_suite_end(&eea3_ctx);
         errors += test_suite_end(&nea6_ctx);
 
+        free_zuc_eea3_128_vectors(eea3_jctx);
         return errors;
 }
 
@@ -470,7 +505,7 @@ submit_and_verify(struct IMB_MGR *mb_mgr, uint8_t **pSrcData, uint8_t **pDstData
         uint32_t packetLen[MAXBUFS] = { 0 };
         int ret = 0;
         unsigned int iv_lens[MAXBUFS];
-        const struct cipher_test *vectors = zuc_eea3_128_test_json;
+        const struct cipher_test *vectors = zuc_eea3_128_vectors;
 
         for (i = 0; i < num_buffers; i++) {
                 const struct cipher_test *vector = &vectors[buf_idx[i]];
@@ -549,7 +584,7 @@ validate_zuc_EEA_n_block(struct IMB_MGR *mb_mgr, uint8_t **pSrcData, uint8_t **p
         int ret = 0;
         int retTmp;
         uint32_t buf_idx[MAXBUFS];
-        const struct cipher_test *vectors = zuc_eea3_128_test_json;
+        const struct cipher_test *vectors = zuc_eea3_128_vectors;
 
         /* calculate number of vectors */
         for (i = 0; vectors[i].msg != NULL; i++)
