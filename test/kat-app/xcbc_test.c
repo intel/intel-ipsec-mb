@@ -38,7 +38,36 @@
 int
 xcbc_test(struct IMB_MGR *mb_mgr);
 
-extern const struct mac_test xcbc_test_json[];
+static struct mac_test *xcbc_vectors;
+
+static int
+load_xcbc_vectors(struct test_json_alloc_ctx **ctx)
+{
+        char path[1024];
+        int ret;
+        const char *const file_name = "xcbc_test.json";
+
+        if (kat_vector_dir == NULL) {
+                fprintf(stderr, "Error: no vector directory set; use --vector-dir <DIR>\n");
+                return -1;
+        }
+
+        ret = snprintf(path, sizeof(path), "%s/%s", kat_vector_dir, file_name);
+        if (ret < 0 || ret >= (int) sizeof(path))
+                return -1;
+
+        if (json_load_mac_test(path, &xcbc_vectors, ctx) < 0)
+                return -1;
+
+        return 0;
+}
+
+static void
+free_xcbc_vectors(struct test_json_alloc_ctx *ctx)
+{
+        json_free_test_ctx(ctx);
+        xcbc_vectors = NULL;
+}
 
 static int
 xcbc_job_ok(const struct mac_test *vec, const struct IMB_JOB *job, const uint8_t *auth,
@@ -211,7 +240,7 @@ end2:
 static void
 test_xcbc_std_vectors(struct IMB_MGR *mb_mgr, struct test_suite_context *ctx, const int num_jobs)
 {
-        const struct mac_test *v = xcbc_test_json;
+        const struct mac_test *v = xcbc_vectors;
 
         if (!quiet_mode)
                 printf("AES-XCBC-128 standard test vectors (N jobs = %d):\n", num_jobs);
@@ -249,7 +278,11 @@ int
 xcbc_test(struct IMB_MGR *mb_mgr)
 {
         struct test_suite_context ctx;
+        struct test_json_alloc_ctx *jctx = NULL;
         int i, errors;
+
+        if (load_xcbc_vectors(&jctx) < 0)
+                return 1;
 
         test_suite_start(&ctx, "AES-XCBC-128");
         /* AES-XCBC 128 with standard vectors */
@@ -257,5 +290,6 @@ xcbc_test(struct IMB_MGR *mb_mgr)
                 test_xcbc_std_vectors(mb_mgr, &ctx, i);
         errors = test_suite_end(&ctx);
 
+        free_xcbc_vectors(jctx);
         return errors;
 }
