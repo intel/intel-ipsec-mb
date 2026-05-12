@@ -40,7 +40,37 @@
 #include "mac_test.h"
 #include "cipher_test.h"
 
-extern const struct mac_test kasumi_f9_json[];
+static struct mac_test *kasumi_f9_vectors;
+
+static int
+load_kasumi_f9_vectors(struct test_json_alloc_ctx **ctx)
+{
+        char path[1024];
+        int ret;
+        const char *const file_name = "kasumi_f9_test.json";
+
+        if (kat_vector_dir == NULL) {
+                fprintf(stderr, "Error: no vector directory set; use --vector-dir <DIR>\n");
+                return -1;
+        }
+
+        ret = snprintf(path, sizeof(path), "%s/%s", kat_vector_dir, file_name);
+        if (ret < 0 || ret >= (int) sizeof(path))
+                return -1;
+
+        if (json_load_mac_test(path, &kasumi_f9_vectors, ctx) < 0)
+                return -1;
+
+        return 0;
+}
+
+static void
+free_kasumi_f9_vectors(struct test_json_alloc_ctx *ctx)
+{
+        json_free_test_ctx(ctx);
+        kasumi_f9_vectors = NULL;
+}
+
 extern const struct cipher_test kasumi_f8_json[];
 
 int
@@ -521,7 +551,7 @@ validate_kasumi_f9(IMB_MGR *mgr)
                 goto exit;
         }
 
-        for (const struct mac_test *v = kasumi_f9_json; v->msg != NULL; v++) {
+        for (const struct mac_test *v = kasumi_f9_vectors; v->msg != NULL; v++) {
 
                 /* Skip vectors whose message length is not byte-aligned */
                 if ((v->msgSize % CHAR_BIT) != 0)
@@ -633,8 +663,12 @@ int
 kasumi_test(struct IMB_MGR *mb_mgr)
 {
         struct test_suite_context ts;
+        struct test_json_alloc_ctx *f9_jctx = NULL;
         int errors = 0;
         unsigned i;
+
+        if (load_kasumi_f9_vectors(&f9_jctx) < 0)
+                return 1;
 
         test_suite_start(&ts, "KASUMI-F8");
         for (i = 0; i < DIM(kasumi_f8_func_tab); i++) {
@@ -658,5 +692,6 @@ kasumi_test(struct IMB_MGR *mb_mgr)
         }
         errors += test_suite_end(&ts);
 
+        free_kasumi_f9_vectors(f9_jctx);
         return errors;
 }
