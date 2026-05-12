@@ -1,0 +1,194 @@
+{
+    "algorithm": "AES-CTR",
+    "generatorVersion": "",
+    "header": [
+        "Test vectors of type CipherTest tests intended for testing both encryption and decryption."
+    ],
+    "notes": {},
+    "numberOfTests": 15,
+    "schema": "ind_cpa_test_schema_v1.json",
+    "testGroups": [
+        {
+            "type": "IndCpaTest",
+            "source": "https://tools.ietf.org/html/rfc3686",
+            "keySize": 128,
+            "ivSize": 96,
+            "tests": [
+                {
+                    "tcId": 1,
+                    "comment": "Encrypting 16 octets using AES-CTR with 128-bit key",
+                    "key": "ae6852f8121067cc4bf7a5765577f39e",
+                    "iv": "000000300000000000000000",
+                    "msg": "53696e676c6520626c6f636b206d7367",
+                    "ct": "e4095d4fb7a7b3792d6175a3261311b8",
+                    "result": "valid",
+                    "flags": []
+                },
+                {
+                    "tcId": 2,
+                    "comment": "Encrypting 32 octets using AES-CTR with 128-bit key",
+                    "key": "7e24067817fae0d743d6ce1f32539163",
+                    "iv": "006cb6dbc0543b59da48d90b",
+                    "msg": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+                    "ct": "5104a106168a72d9790d41ee8edad388eb2e1efc46da57c8fce630df9141be28",
+                    "result": "valid",
+                    "flags": []
+                },
+                {
+                    "tcId": 3,
+                    "comment": "Encrypting 36 octets using AES-CTR with 128-bit key",
+                    "key": "7691be035e5020a8ac6e618529f9a0dc",
+                    "iv": "00e0017b27777f3f4a1786f0",
+                    "msg": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20212223",
+                    "ct": "c1cf48a89f2ffdd9cf4652e9efdb72d74540a42bde6d7836d59a5ceaaef3105325b2072f",
+                    "result": "valid",
+                    "flags": []
+                },
+                {
+                    "tcId": 10,
+                    "comment": "Encrypting 128 octets using AES-CTR with 128-bit key",
+                    "key": "ae6852f8121067cc4bf7a5765577f39e",
+                    "iv": "000000300000000000000000",
+                    "msg": "a86344f836592ff2dadd17cefe2af2a23587340f35fcd8f257a1cb190c3314e123ebc08882055f015dfc5308db348e94e4a8267fbcb78be1582f2c91cd5b4aaa7aba5fd29bf87dea76b664b329d30219a0dce9b89051a8de2ea1b77e510d34b3ede75eb88ae9fe89f80b85097608780d27598e144346a091eeaaff748dbc98b9",
+                    "ct": "1f0377d0ed9bbce99bd30106f854907d676f19d70bf3928d60c0185a24c1d760829c223745e39da67637e17a13b44063f4d8de4164fce2422e3feae12806a5ac6ac1580c84ff9b6ae5be4e8c4ce997d524301b19df87568531565adee06ec01ccb515b6eacf5b060602f620aea62512e5b1b99513bace9c5597d0eb6516c167a",
+                    "result": "valid",
+                    "flags": []
+                },
+                {
+                    "tcId": 11,
+                    "comment": "Encrypting 136 octets using AES-CTR with 128-bit key",
+                    "key": "ae6852f8121067cc4bf7a5765577f39e",
+                    "iv": "000000300000000000000000",
+                    "msg": "a86344f836592ff2dadd17cefe2af2a23587340f35fcd8f257a1cb190c3314e123ebc08882055f015dfc5308db348e94e4a8267fbcb78be1582f2c91cd5b4aaa7aba5fd29bf87dea76b664b329d30219a0dce9b89051a8de2ea1b77e510d34b3ede75eb88ae9fe89f80b85097608780d27598e144346a091eeaaff748dbc98b912ad82df2ff89ce0",
+                    "ct": "1f0377d0ed9bbce99bd30106f854907d676f19d70bf3928d60c0185a24c1d760829c223745e39da67637e17a13b44063f4d8de4164fce2422e3feae12806a5ac6ac1580c84ff9b6ae5be4e8c4ce997d524301b19df87568531565adee06ec01ccb515b6eacf5b060602f620aea62512e5b1b99513bace9c5597d0eb6516c167a7a13b440699b5816",
+                    "result": "valid",
+                    "flags": []
+                },
+                {
+                    "tcId": 12,
+                    "comment": "Encrypting 256 octets using AES-CTR with 128-bit key",
+                    "key": "ae6852f8121067cc4bf7a5765577f39e",
+                    "iv": "000000300000000000000000",
+                    "msg": "a86344f836592ff2dadd17cefe2af2a23587340f35fcd8f257a1cb190c3314e123ebc08882055f015dfc5308db348e94e4a8267fbcb78be1582f2c91cd5b4aaa7aba5fd29bf87dea76b664b329d30219a0dce9b89051a8de2ea1b77e510d34b3ede75eb88ae9fe89f80b85097608780d27598e144346a091eeaaff748dbc98b977bd414fabf8781fed2b1489b57b615e8835460f835bc6e6611dd85ed3c3c6e8fb8e59db3117f8cdc1d42defd8259e881058f2a6844fa1325f0ea214f7038506944f838704975a8d9a73362ae06da91fbc2fd29ed17d2c891fe1a08f5d3eab9e791a76c30ac8cfcb3563d94687af742447ba60ab335da8defe1bc53facd9ad94",
+                    "ct": "1f0377d0ed9bbce99bd30106f854907d676f19d70bf3928d60c0185a24c1d760829c223745e39da67637e17a13b44063f4d8de4164fce2422e3feae12806a5ac6ac1580c84ff9b6ae5be4e8c4ce997d524301b19df87568531565adee06ec01ccb515b6eacf5b060602f620aea62512e5b1b99513bace9c5597d0eb6516c167a1f0377d0ed9bbce99bd30106f854907d676f19d70bf3928d60c0185a24c1d760829c223745e39da67637e17a13b44063f4d8de4164fce2422e3feae12806a5ac6ac1580c84ff9b6ae5be4e8c4ce997d524301b19df87568531565adee06ec01ccb515b6eacf5b060602f620aea62512e5b1b99513bace9c5597d0eb6516c167a",
+                    "result": "valid",
+                    "flags": []
+                },
+                {
+                    "tcId": 13,
+                    "comment": "Encrypting 300 octets using AES-CTR with 128-bit key",
+                    "key": "ae6852f8121067cc4bf7a5765577f39e",
+                    "iv": "000000300000000000000000",
+                    "msg": "a86344f836592ff2dadd17cefe2af2a23587340f35fcd8f257a1cb190c3314e123ebc08882055f015dfc5308db348e94e4a8267fbcb78be1582f2c91cd5b4aaa7aba5fd29bf87dea76b664b329d30219a0dce9b89051a8de2ea1b77e510d34b3ede75eb88ae9fe89f80b85097608780d27598e144346a091eeaaff748dbc98b977bd414fabf8781fed2b1489b57b615e8835460f835bc6e6611dd85ed3c3c6e8fb8e59db3117f8cdc1d42defd8259e881058f2a6844fa1325f0ea214f7038506944f838704975a8d9a73362ae06da91fbc2fd29ed17d2c891fe1a08f5d3eab9e791a76c30ac8cfcb3563d94687af742447ba60ab335da8defe1bc53facd9ad9466b83f3a219fd04346dd658b4499669164e2696fbb858ccc7fea96d15eb47cd0ab028da3593b8cd5d0e7b4c4",
+                    "ct": "1f0377d0ed9bbce99bd30106f854907d676f19d70bf3928d60c0185a24c1d760829c223745e39da67637e17a13b44063f4d8de4164fce2422e3feae12806a5ac6ac1580c84ff9b6ae5be4e8c4ce997d524301b19df87568531565adee06ec01ccb515b6eacf5b060602f620aea62512e5b1b99513bace9c5597d0eb6516c167a1f0377d0ed9bbce99bd30106f854907d676f19d70bf3928d60c0185a24c1d760829c223745e39da67637e17a13b44063f4d8de4164fce2422e3feae12806a5ac6ac1580c84ff9b6ae5be4e8c4ce997d524301b19df87568531565adee06ec01ccb515b6eacf5b060602f620aea62512e5b1b99513bace9c5597d0eb6516c167aed5255b9766c5e6e769700c7ebfeec10942ca9af9b0919b3172996ba8eac3d0a9b70540f1ed4e813e68fadfd",
+                    "result": "valid",
+                    "flags": []
+                },
+                {
+                    "tcId": 14,
+                    "comment": "Encrypting 384 octets using AES-CTR with 128-bit key",
+                    "key": "ae6852f8121067cc4bf7a5765577f39e",
+                    "iv": "000000300000000000000000",
+                    "msg": "a86344f836592ff2dadd17cefe2af2a23587340f35fcd8f257a1cb190c3314e123ebc08882055f015dfc5308db348e94e4a8267fbcb78be1582f2c91cd5b4aaa7aba5fd29bf87dea76b664b329d30219a0dce9b89051a8de2ea1b77e510d34b3ede75eb88ae9fe89f80b85097608780d27598e144346a091eeaaff748dbc98b977bd414fabf8781fed2b1489b57b615e8835460f835bc6e6611dd85ed3c3c6e8fb8e59db3117f8cdc1d42defd8259e881058f2a6844fa1325f0ea214f7038506944f838704975a8d9a73362ae06da91fbc2fd29ed17d2c891fe1a08f5d3eab9e791a76c30ac8cfcb3563d94687af742447ba60ab335da8defe1bc53facd9ad9466b83f3a219fd04346dd658b4499669164e2696fbb858ccc7fea96d15eb47cd0ab028da3593b8cd5d0e7b4c490419f784e829ee41b97a9a47b48ad56c0e48652fcad930b7d38ce7364bdf7007be646032f4b759f3a2d3242fe8074892734ce5ebfbe07509108272b3277a7ff83b1abc898beac337c4719336f4dbe3edce087fb",
+                    "ct": "1f0377d0ed9bbce99bd30106f854907d676f19d70bf3928d60c0185a24c1d760829c223745e39da67637e17a13b44063f4d8de4164fce2422e3feae12806a5ac6ac1580c84ff9b6ae5be4e8c4ce997d524301b19df87568531565adee06ec01ccb515b6eacf5b060602f620aea62512e5b1b99513bace9c5597d0eb6516c167a1f0377d0ed9bbce99bd30106f854907d676f19d70bf3928d60c0185a24c1d760829c223745e39da67637e17a13b44063f4d8de4164fce2422e3feae12806a5ac6ac1580c84ff9b6ae5be4e8c4ce997d524301b19df87568531565adee06ec01ccb515b6eacf5b060602f620aea62512e5b1b99513bace9c5597d0eb6516c167aed5255b9766c5e6e769700c7ebfeec10942ca9af9b0919b3172996ba8eac3d0a9b70540f1ed4e813e68fadfdfd13cfd59406a02479c0f8053d19eb96da31aef54d822c23039a4385943630e80a9b1f056e4ba59878be730d8c605588d6a3801319dbf8cda7dc284c09affe8877e16e12575aa8c638cff50d422c67b3226f3d7d",
+                    "result": "valid",
+                    "flags": []
+                }
+            ]
+        },
+        {
+            "type": "IndCpaTest",
+            "source": "https://tools.ietf.org/html/rfc3686",
+            "keySize": 192,
+            "ivSize": 96,
+            "tests": [
+                {
+                    "tcId": 4,
+                    "comment": "Encrypting 16 octets using AES-CTR with 192-bit key",
+                    "key": "16af5b145fc9f579c175f93e3bfb0eed863d06ccfdb78515",
+                    "iv": "0000004836733c147d6d93cb",
+                    "msg": "53696e676c6520626c6f636b206d7367",
+                    "ct": "4b55384fe259c9c84e7935a003cbe928",
+                    "result": "valid",
+                    "flags": []
+                },
+                {
+                    "tcId": 5,
+                    "comment": "Encrypting 32 octets using AES-CTR with 192-bit key",
+                    "key": "7c5cb2401b3dc33c19e7340819e0f69c678c3db8e6f6a91a",
+                    "iv": "0096b03b020c6eadc2cb500d",
+                    "msg": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+                    "ct": "453243fc609b23327edfaafa7131cd9f8490701c5ad4a79cfc1fe0ff42f4fb00",
+                    "result": "valid",
+                    "flags": []
+                },
+                {
+                    "tcId": 6,
+                    "comment": "Encrypting 36 octets using AES-CTR with 192-bit key",
+                    "key": "02bf391ee8ecb159b959617b0965279bf59b60a786d3e0fe",
+                    "iv": "0007bdfd5cbd60278dcc0912",
+                    "msg": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20212223",
+                    "ct": "96893fc55e5c722f540b7dd1ddf7e758d288bc95c69165884536c811662f2188abee0935",
+                    "result": "valid",
+                    "flags": []
+                }
+            ]
+        },
+        {
+            "type": "IndCpaTest",
+            "source": "https://tools.ietf.org/html/rfc3686",
+            "keySize": 256,
+            "ivSize": 96,
+            "tests": [
+                {
+                    "tcId": 7,
+                    "comment": "Encrypting 16 octets using AES-CTR with 256-bit key",
+                    "key": "776beff2851db06f4c8a0542c8696f6c6a81af1eec96b4d37fc1d689e6c1c104",
+                    "iv": "00000060db5672c97aa8f0b2",
+                    "msg": "53696e676c6520626c6f636b206d7367",
+                    "ct": "145ad01dbf824ec7560863dc71e3e0c0",
+                    "result": "valid",
+                    "flags": []
+                },
+                {
+                    "tcId": 8,
+                    "comment": "Encrypting 32 octets using AES-CTR with 256-bit key",
+                    "key": "f6d66d6bd52d59bb0796365879eff886c66dd51a5b6a99744b50590c87a23884",
+                    "iv": "00faac24c1585ef15a43d875",
+                    "msg": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+                    "ct": "f05e231b3894612c49ee000b804eb2a9b8306b508f839d6a5530831d9344af1c",
+                    "result": "valid",
+                    "flags": []
+                },
+                {
+                    "tcId": 9,
+                    "comment": "Encrypting 36 octets using AES-CTR with 256-bit key",
+                    "key": "ff7a617ce69148e4f1726e2f43581de2aa62d9f805532edff1eed687fb54153d",
+                    "iv": "001cc5b751a51d70a1c11148",
+                    "msg": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20212223",
+                    "ct": "eb6c52821d0bbbf7ce7594462aca4faab407df866569fd07f48cc0b583d6071f1ec0e6b8",
+                    "result": "valid",
+                    "flags": []
+                }
+            ]
+        },
+        {
+            "type": "IndCpaTest",
+            "source": "https://tools.ietf.org/html/rfc3686",
+            "keySize": 128,
+            "ivSize": 128,
+            "tests": [
+                {
+                    "tcId": 15,
+                    "comment": "",
+                    "key": "2b7e151628aed2a6abf7158809cf4f3c",
+                    "iv": "f0f1f2f3f4f5f6f7f8f9fafbfcfdfeff",
+                    "msg": "6bc1bee22e409f96e93d7e117393172aae2d8a571e03ac9c9eb76fac45af8e5130c81c46a35ce411e5fbc1191a0a52eff69f2445df4f9b17ad2b417be66c3710",
+                    "ct": "874d6191b620e3261bef6864990db6ce9806f66b7970fdff8617187bb9fffdff5ae4df3edbd5d35e5b4f09020db03eab1e031dda2fbe03d1792170a0f3009cee",
+                    "result": "valid",
+                    "flags": []
+                }
+            ]
+        }
+    ]
+}

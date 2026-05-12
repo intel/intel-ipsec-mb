@@ -41,8 +41,36 @@
 int
 ctr_test(struct IMB_MGR *);
 
-extern const struct cipher_test ctr_test_json[];
-extern const struct cipher_test ctr_bit_test_json[];
+static struct cipher_test *ctr_vectors;
+
+static int
+load_ctr_vectors(struct test_json_alloc_ctx **ctx)
+{
+        char path[1024];
+        int ret;
+        const char *const file_name = "ctr_test.json";
+
+        if (kat_vector_dir == NULL) {
+                fprintf(stderr, "Error: no vector directory set; use --vector-dir <DIR>\n");
+                return -1;
+        }
+
+        ret = snprintf(path, sizeof(path), "%s/%s", kat_vector_dir, file_name);
+        if (ret < 0 || ret >= (int) sizeof(path))
+                return -1;
+
+        if (json_load_cipher_test(path, &ctr_vectors, ctx) < 0)
+                return -1;
+
+        return 0;
+}
+
+static void
+free_ctr_vectors(struct test_json_alloc_ctx *ctx)
+{
+        json_free_test_ctx(ctx);
+        ctr_vectors = NULL;
+}
 
 static int
 test_ctr(struct IMB_MGR *mb_mgr, const void *expkey, unsigned key_len, const void *iv,
@@ -620,17 +648,22 @@ ctr_test(struct IMB_MGR *mb_mgr)
         struct test_suite_context ctx128;
         struct test_suite_context ctx192;
         struct test_suite_context ctx256;
+        struct test_json_alloc_ctx *jctx = NULL;
+
+        if (load_ctr_vectors(&jctx) < 0)
+                return 1;
 
         /* Standard CTR vectors */
         test_suite_start(&ctx128, "AES-CTR-128");
         test_suite_start(&ctx192, "AES-CTR-192");
         test_suite_start(&ctx256, "AES-CTR-256");
-        test_ctr_vectors(mb_mgr, &ctx128, &ctx192, &ctx256, ctr_test_json);
+        test_ctr_vectors(mb_mgr, &ctx128, &ctx192, &ctx256, ctr_vectors);
         for (i = 1; i <= MAX_CTR_JOBS; i++)
-                test_ctr_vectors_burst(mb_mgr, &ctx128, &ctx192, &ctx256, ctr_test_json, i);
+                test_ctr_vectors_burst(mb_mgr, &ctx128, &ctx192, &ctx256, ctr_vectors, i);
         errors += test_suite_end(&ctx128);
         errors += test_suite_end(&ctx192);
         errors += test_suite_end(&ctx256);
 
+        free_ctr_vectors(jctx);
         return errors;
 }
