@@ -39,10 +39,63 @@
 int
 des_test(struct IMB_MGR *mb_mgr);
 
-extern const struct cipher_test des_test_json[];
-extern const struct cipher_test des_docsis_test_json[];
-extern const struct cipher_test des_cfb_test_json[];
-extern const struct cipher_test des3_test_json[];
+static struct cipher_test *des_vectors;
+static struct cipher_test *des_docsis_vectors;
+static struct cipher_test *des_cfb_vectors;
+static struct cipher_test *des3_vectors;
+
+static int
+load_des_vectors(struct test_json_alloc_ctx **ctx_des, struct test_json_alloc_ctx **ctx_docsis,
+                 struct test_json_alloc_ctx **ctx_cfb, struct test_json_alloc_ctx **ctx_3des)
+{
+        char path[1024];
+        int ret;
+
+        if (kat_vector_dir == NULL) {
+                fprintf(stderr, "Error: no vector directory set; use --vector-dir <DIR>\n");
+                return -1;
+        }
+
+        ret = snprintf(path, sizeof(path), "%s/des_test.json", kat_vector_dir);
+        if (ret < 0 || ret >= (int) sizeof(path))
+                return -1;
+        if (json_load_cipher_test(path, &des_vectors, ctx_des) < 0)
+                return -1;
+
+        ret = snprintf(path, sizeof(path), "%s/des_docsis_test.json", kat_vector_dir);
+        if (ret < 0 || ret >= (int) sizeof(path))
+                return -1;
+        if (json_load_cipher_test(path, &des_docsis_vectors, ctx_docsis) < 0)
+                return -1;
+
+        ret = snprintf(path, sizeof(path), "%s/des_cfb_test.json", kat_vector_dir);
+        if (ret < 0 || ret >= (int) sizeof(path))
+                return -1;
+        if (json_load_cipher_test(path, &des_cfb_vectors, ctx_cfb) < 0)
+                return -1;
+
+        ret = snprintf(path, sizeof(path), "%s/des3_test.json", kat_vector_dir);
+        if (ret < 0 || ret >= (int) sizeof(path))
+                return -1;
+        if (json_load_cipher_test(path, &des3_vectors, ctx_3des) < 0)
+                return -1;
+
+        return 0;
+}
+
+static void
+free_des_vectors(struct test_json_alloc_ctx *ctx_des, struct test_json_alloc_ctx *ctx_docsis,
+                 struct test_json_alloc_ctx *ctx_cfb, struct test_json_alloc_ctx *ctx_3des)
+{
+        json_free_test_ctx(ctx_des);
+        des_vectors = NULL;
+        json_free_test_ctx(ctx_docsis);
+        des_docsis_vectors = NULL;
+        json_free_test_ctx(ctx_cfb);
+        des_cfb_vectors = NULL;
+        json_free_test_ctx(ctx_3des);
+        des3_vectors = NULL;
+}
 
 static int
 test_des_many(struct IMB_MGR *mb_mgr, const uint64_t *ks, const uint64_t *ks2, const uint64_t *ks3,
@@ -320,7 +373,7 @@ test_des3_vectors(struct IMB_MGR *mb_mgr, const struct cipher_test *v, const cha
 static int
 des_cfb_validate(struct test_suite_context *ctx)
 {
-        const struct cipher_test *v = des_cfb_test_json;
+        const struct cipher_test *v = des_cfb_vectors;
 
         printf("DES-CFB standard test vectors:\n");
         for (; v->msg != NULL; v++) {
@@ -381,14 +434,23 @@ int
 des_test(struct IMB_MGR *mb_mgr)
 {
         struct test_suite_context ctx;
+        struct test_json_alloc_ctx *jctx_des = NULL;
+        struct test_json_alloc_ctx *jctx_docsis = NULL;
+        struct test_json_alloc_ctx *jctx_cfb = NULL;
+        struct test_json_alloc_ctx *jctx_3des = NULL;
         int errors;
 
+        if (load_des_vectors(&jctx_des, &jctx_docsis, &jctx_cfb, &jctx_3des) < 0) {
+                free_des_vectors(jctx_des, jctx_docsis, jctx_cfb, jctx_3des);
+                return 1;
+        }
+
         test_suite_start(&ctx, "DES-CBC-64");
-        test_des_vectors(mb_mgr, des_test_json, "DES standard test vectors", IMB_CIPHER_DES, &ctx);
+        test_des_vectors(mb_mgr, des_vectors, "DES standard test vectors", IMB_CIPHER_DES, &ctx);
         errors = test_suite_end(&ctx);
 
         test_suite_start(&ctx, "DOCSIS-DES-64");
-        test_des_vectors(mb_mgr, des_docsis_test_json, "DOCSIS DES standard test vectors",
+        test_des_vectors(mb_mgr, des_docsis_vectors, "DOCSIS DES standard test vectors",
                          IMB_CIPHER_DOCSIS_DES, &ctx);
         errors += test_suite_end(&ctx);
 
@@ -397,10 +459,11 @@ des_test(struct IMB_MGR *mb_mgr)
         errors += test_suite_end(&ctx);
 
         test_suite_start(&ctx, "3DES-CBC-192");
-        test_des_vectors(mb_mgr, des_test_json, "3DES (single key) standard test vectors",
+        test_des_vectors(mb_mgr, des_vectors, "3DES (single key) standard test vectors",
                          IMB_CIPHER_DES3, &ctx);
-        test_des3_vectors(mb_mgr, des3_test_json, "3DES (multiple keys) test vectors", &ctx);
+        test_des3_vectors(mb_mgr, des3_vectors, "3DES (multiple keys) test vectors", &ctx);
         errors += test_suite_end(&ctx);
 
+        free_des_vectors(jctx_des, jctx_docsis, jctx_cfb, jctx_3des);
         return errors;
 }

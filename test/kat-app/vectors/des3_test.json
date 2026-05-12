@@ -1,0 +1,60 @@
+{
+    "algorithm": "3DES",
+    "generatorVersion": "",
+    "header": [
+        "Test vectors of type CipherTest tests intended for testing both encryption and decryption."
+    ],
+    "notes": {},
+    "numberOfTests": 4,
+    "schema": "ind_cpa_test_schema_v1.json",
+    "testGroups": [
+        {
+            "type": "IndCpaTest",
+            "source": "https://csrc.nist.gov/publications/fips/fips46-3/fips46-3.pdf",
+            "keySize": 192,
+            "ivSize": 64,
+            "tests": [
+                {
+                    "tcId": 1,
+                    "comment": "",
+                    "key": "000102030405060708090a0b0c0d0e0f0001020304050607",
+                    "iv": "0001020304050607",
+                    "msg": "0000000000000000",
+                    "ct": "df0b6c9c31cd0ce4",
+                    "result": "valid",
+                    "flags": []
+                },
+                {
+                    "tcId": 2,
+                    "comment": "",
+                    "key": "000102030405060708090a0b0c0d0e0f0001020304050607",
+                    "iv": "0001020304050607",
+                    "msg": "000102030405060708090a0b0c0d0e0f",
+                    "ct": "ddada161e8d79673ed7532e59223cd0d",
+                    "result": "valid",
+                    "flags": []
+                },
+                {
+                    "tcId": 3,
+                    "comment": "",
+                    "key": "000102030405060708090a0b0c0d0e0f1011121314151617",
+                    "iv": "0001020304050607",
+                    "msg": "0000000000000000",
+                    "ct": "58ed248f77f6b19e",
+                    "result": "valid",
+                    "flags": []
+                },
+                {
+                    "tcId": 4,
+                    "comment": "",
+                    "key": "000102030405060708090a0b0c0d0e0f1011121314151617",
+                    "iv": "0001020304050607",
+                    "msg": "000102030405060708090a0b0c0d0e0f",
+                    "ct": "894bc3085426a441f27f73ae26abbf74",
+                    "result": "valid",
+                    "flags": []
+                }
+            ]
+        }
+    ]
+}

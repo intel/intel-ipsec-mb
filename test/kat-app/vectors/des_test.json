@@ -1,0 +1,40 @@
+{
+    "algorithm": "DES",
+    "generatorVersion": "",
+    "header": [
+        "Test vectors of type CipherTest tests intended for testing both encryption and decryption."
+    ],
+    "notes": {},
+    "numberOfTests": 2,
+    "schema": "ind_cpa_test_schema_v1.json",
+    "testGroups": [
+        {
+            "type": "IndCpaTest",
+            "source": "CM-SP-SECv3.1-I07-170111 I.7",
+            "keySize": 64,
+            "ivSize": 64,
+            "tests": [
+                {
+                    "tcId": 1,
+                    "comment": "",
+                    "key": "e6600fd8852ef5ab",
+                    "iv": "810e528e1c5fda1a",
+                    "msg": "000102030405060708090a0b88416506",
+                    "ct": "0dda5acbd05e55679f04d1b6413d4eed",
+                    "result": "valid",
+                    "flags": []
+                },
+                {
+                    "tcId": 2,
+                    "comment": "",
+                    "key": "3b3898371520f75e",
+                    "iv": "02a811774dcde13b",
+                    "msg": "05eff700e9a13ae5ca0bcbd0484764bd1f231ea81c7b64c514735ac55e4b79633b706424119e09dcaad4acf21b10af3b33cde3504847155cbb6f2219ba9b7df5",
+                    "ct": "f3318d01194da800a42c10b533d6bc1197592dcc9b5d359ac3045d074c86bf72e51a722582225403de8b7a585c6c28df410e38d62a86e34fa27c22396006036f",
+                    "result": "valid",
+                    "flags": []
+                }
+            ]
+        }
+    ]
+}
