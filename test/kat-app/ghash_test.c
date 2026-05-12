@@ -39,7 +39,36 @@
 int
 ghash_test(struct IMB_MGR *mb_mgr);
 
-extern const struct mac_test ghash_test_json[];
+static struct mac_test *ghash_vectors;
+
+static int
+load_ghash_vectors(struct test_json_alloc_ctx **ctx)
+{
+        char path[1024];
+        int ret;
+        const char *const file_name = "ghash_test.json";
+
+        if (kat_vector_dir == NULL) {
+                fprintf(stderr, "Error: no vector directory set; use --vector-dir <DIR>\n");
+                return -1;
+        }
+
+        ret = snprintf(path, sizeof(path), "%s/%s", kat_vector_dir, file_name);
+        if (ret < 0 || ret >= (int) sizeof(path))
+                return -1;
+
+        if (json_load_mac_test(path, &ghash_vectors, ctx) < 0)
+                return -1;
+
+        return 0;
+}
+
+static void
+free_ghash_vectors(struct test_json_alloc_ctx *ctx)
+{
+        json_free_test_ctx(ctx);
+        ghash_vectors = NULL;
+}
 
 static int
 check_data(const uint8_t *test, const char *expected, uint64_t len, const char *data_name)
@@ -73,12 +102,16 @@ int
 ghash_test(struct IMB_MGR *mb_mgr)
 {
         struct test_suite_context ts;
+        struct test_json_alloc_ctx *jctx = NULL;
         int use_job_api = 0;
+
+        if (load_ghash_vectors(&jctx) < 0)
+                return 1;
 
         test_suite_start(&ts, "GHASH");
 
         while (use_job_api < 2) {
-                const struct mac_test *vec = ghash_test_json;
+                const struct mac_test *vec = ghash_vectors;
 
                 printf("GHASH test vectors (%s API):\n", use_job_api ? "job" : "direct");
                 while (vec->msg != NULL) {
@@ -98,6 +131,7 @@ ghash_test(struct IMB_MGR *mb_mgr)
                                 if (!job) {
                                         fprintf(stderr, "failed to get job for ghash\n");
                                         test_suite_update(&ts, 0, 1);
+                                        free_ghash_vectors(jctx);
                                         return test_suite_end(&ts);
                                 }
 
@@ -130,5 +164,8 @@ ghash_test(struct IMB_MGR *mb_mgr)
                 use_job_api++;
         }
 
-        return test_suite_end(&ts);
+        int ret = test_suite_end(&ts);
+
+        free_ghash_vectors(jctx);
+        return ret;
 }

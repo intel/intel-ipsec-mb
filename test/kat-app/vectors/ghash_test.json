@@ -1,0 +1,64 @@
+{
+    "algorithm": "GHASH",
+    "generatorVersion": "",
+    "header": [
+        "Test vectors of type MacTest are intended for testing the generation and verification of MACs."
+    ],
+    "notes": {},
+    "numberOfTests": 4,
+    "schema": "mac_test_schema_v1.json",
+    "testGroups": [
+        {
+            "type": "MacTest",
+            "source": "https://csrc.nist.gov/publications/nistpubs/800-38D/SP-800-38D.pdf",
+            "keySize": 128,
+            "tagSize": 128,
+            "tests": [
+                {
+                    "tcId": 1,
+                    "comment": "",
+                    "key": "a1f6258c877d5fcd8964484538bfc92c",
+                    "msg": "000102030405060708090a0b0c0d0e0f",
+                    "tag": "9ee5a51fbe28a1153ef196f50bbf03ca",
+                    "result": "valid",
+                    "flags": []
+                },
+                {
+                    "tcId": 3,
+                    "comment": "",
+                    "key": "1f0a6dcc67b1872298227791dda19b6a",
+                    "msg": "05",
+                    "tag": "e6ce47b5fbf2ef3751f15753ad564fed",
+                    "result": "valid",
+                    "flags": []
+                },
+                {
+                    "tcId": 4,
+                    "comment": "",
+                    "key": "1f0f8a3aca642edeb1df8a529a2976ee",
+                    "msg": "9bb5929fa7aa83fd0cd1833a8ed54dda6aafa1c7a1323ad4929a2c83c6279259289011de194ed516ef4f72eb7918d5b1c522401492a2",
+                    "tag": "8ba53f5fd70e557c30d4f2e11a4ff8c7",
+                    "result": "valid",
+                    "flags": []
+                }
+            ]
+        },
+        {
+            "type": "MacTest",
+            "source": "https://csrc.nist.gov/publications/nistpubs/800-38D/SP-800-38D.pdf",
+            "keySize": 128,
+            "tagSize": 96,
+            "tests": [
+                {
+                    "tcId": 2,
+                    "comment": "",
+                    "key": "1f0a6dcc67b1872298227791dda19b6a",
+                    "msg": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+                    "tag": "b540da44a38c9c2b958e4b0b",
+                    "result": "valid",
+                    "flags": []
+                }
+            ]
+        }
+    ]
+}
