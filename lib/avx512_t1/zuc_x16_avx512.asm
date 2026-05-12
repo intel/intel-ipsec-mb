@@ -2120,9 +2120,7 @@ ZUC_KEYGEN_SKIP8_16:
 %define %%STATE      %13
 %define %%TMP        %14
 %define %%TMP2       %15
-%if %0 == 16
 %define %%INIT_KMASK %16
-%endif
 
         ; Read R1/R2
         vmovdqa32   %%R1, [%%STATE + OFS_R1]
@@ -2147,9 +2145,7 @@ align_loop
         ; - Shift W right by 1 for init LFSR feedback
         ; - Zero W for work lanes so LFSR_UPDT(init) gives
         ;   W = 0 + LFSR_0 = LFSR_0 (correct work mode result)
-        vpsrld  zmm7, 1
-        vpxorq  zmm8, zmm8, zmm8
-        vpblendmd zmm7{%%INIT_KMASK}, zmm8, zmm7
+        vpsrld zmm7 {%%INIT_KMASK}{z}, zmm7, 1
         LFSR_UPDT16  %%STATE, %%TMP, %%TMP2, %%LANE_MASK, zmm1, zmm2, zmm3, zmm4, zmm5, \
                         zmm6, %%MASK_31, zmm7, init
 %else
