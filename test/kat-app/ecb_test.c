@@ -39,7 +39,36 @@
 int
 ecb_test(struct IMB_MGR *mb_mgr);
 
-extern const struct cipher_test ecb_test_json[];
+static struct cipher_test *ecb_vectors;
+
+static int
+load_ecb_vectors(struct test_json_alloc_ctx **ctx)
+{
+        char path[1024];
+        int ret;
+        const char *const file_name = "ecb_test.json";
+
+        if (kat_vector_dir == NULL) {
+                fprintf(stderr, "Error: no vector directory set; use --vector-dir <DIR>\n");
+                return -1;
+        }
+
+        ret = snprintf(path, sizeof(path), "%s/%s", kat_vector_dir, file_name);
+        if (ret < 0 || ret >= (int) sizeof(path))
+                return -1;
+
+        if (json_load_cipher_test(path, &ecb_vectors, ctx) < 0)
+                return -1;
+
+        return 0;
+}
+
+static void
+free_ecb_vectors(struct test_json_alloc_ctx *ctx)
+{
+        json_free_test_ctx(ctx);
+        ecb_vectors = NULL;
+}
 
 static int
 ecb_job_ok(const struct IMB_JOB *job, const uint8_t *out_text, const uint8_t *target,
@@ -233,7 +262,7 @@ test_ecb_vectors(struct IMB_MGR *mb_mgr, const IMB_CIPHER_MODE cipher, const int
                  struct test_suite_context *ts128, struct test_suite_context *ts192,
                  struct test_suite_context *ts256)
 {
-        const struct cipher_test *v = ecb_test_json;
+        const struct cipher_test *v = ecb_vectors;
         DECLARE_ALIGNED(uint32_t enc_keys[15 * 4], 16);
         DECLARE_ALIGNED(uint32_t dec_keys[15 * 4], 16);
 
@@ -355,6 +384,10 @@ ecb_test(struct IMB_MGR *mb_mgr)
         struct test_suite_context ts128, ts192, ts256;
         unsigned i;
         int errors = 0;
+        struct test_json_alloc_ctx *jctx = NULL;
+
+        if (load_ecb_vectors(&jctx) < 0)
+                return 1;
 
         test_suite_start(&ts128, "AES-ECB-128");
         test_suite_start(&ts192, "AES-ECB-192");
@@ -367,5 +400,6 @@ ecb_test(struct IMB_MGR *mb_mgr)
         errors += test_suite_end(&ts192);
         errors += test_suite_end(&ts256);
 
+        free_ecb_vectors(jctx);
         return errors;
 }

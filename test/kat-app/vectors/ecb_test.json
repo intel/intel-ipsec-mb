@@ -1,0 +1,106 @@
+{
+    "algorithm": "AES-ECB",
+    "generatorVersion": "",
+    "header": [
+        "Test vectors of type CipherTest tests intended for testing both encryption and decryption."
+    ],
+    "notes": {},
+    "numberOfTests": 7,
+    "schema": "ind_cpa_test_schema_v1.json",
+    "testGroups": [
+        {
+            "type": "IndCpaTest",
+            "source": "https://csrc.nist.gov/publications/fips/fips197/fips-197.pdf",
+            "keySize": 128,
+            "ivSize": 0,
+            "tests": [
+                {
+                    "tcId": 1,
+                    "comment": "",
+                    "key": "2b7e151628aed2a6abf7158809cf4f3c",
+                    "iv": "",
+                    "msg": "6bc1bee22e409f96e93d7e117393172aae2d8a571e03ac9c9eb76fac45af8e5130c81c46a35ce411e5fbc1191a0a52eff69f2445df4f9b17ad2b417be66c3710",
+                    "ct": "3ad77bb40d7a3660a89ecaf32466ef97f5d3d58503b9699de785895a96fdbaaf43b1cd7f598ece23881b00e3ed0306887b0c785e27e8ad3f8223207104725dd4",
+                    "result": "valid",
+                    "flags": []
+                },
+                {
+                    "tcId": 4,
+                    "comment": "",
+                    "key": "2b7e151628aed2a6abf7158809cf4f3c",
+                    "iv": "",
+                    "msg": "f7cd12fb4f8e50ab358e56f983539a1afc473c9601fe0187d5de46245c628fbaba91178dba5a79b157054d08ba1f30d38040e937b0d6348733ddc05b2d581d2a7bb6e3d0c8a07a69c85d10a2c339caaf40dcc7cbff187d510628281f3a9c187d5bb5e920c2ae177fd1657a75cf21a01e171bf7e8625faf347fd8184a94f23390",
+                    "ct": "48a0e80a8999abb5666d682343401f26ac52c47b090a8fc03800f5483afdcd7e21e7f8f6c2a74c1c6e8357f4a4b0c05f367322ff3344abeb96a8e03765816b8289cdccac33187d430e795330214c9518b6c9ea5c6fa110a3510e678c1c9df157ebf6ad4ff255e8116faa4de5183dc314f940fa869daffffc78babe61f8d1008d",
+                    "result": "valid",
+                    "flags": []
+                },
+                {
+                    "tcId": 7,
+                    "comment": "",
+                    "key": "2b7e151628aed2a6abf7158809cf4f3c",
+                    "iv": "",
+                    "msg": "dd14de30e0fd7b2a948e28a0f6936ef592651d5e782a9d39fcb86d8ba5f44b21dd4ee9ebd7a7a159dc4c5ecc83abd345fe2c7323ea45cb0c126728cdef4ecae21d9282d80fa936236d3868aca0ebdcccdfb83a53041a55278e22868cbddc6b129c69d27a4b525d7634b95e300a8d1ef127da5bb95ebf653400b6d2b08912b635ae277f11e9f91c71c950fed4765095f7e11c14cd670ff06da2937b2c8d835cffe495f3a1fd00776841b4fb81f4611a845a53c3dcba0d672ecff230f51de9c42cac1fa79c64fd45301ba13b3dc7f5f9bbba99a4126e4eea0b297fcd84645040b76a2429a4a7a1efa9cfdf09ffaa175d8274f5aed0e9ecad5ea784dae733587e00455fbb15a3650ef57e27e704525881d0ee8fafe23cbe08978a9712b009fea5ebd19c30e89a3fe038342badb7c4da54ab979c462b2c0bb349cd9d32383c1a49dc2fe7cd8ab076cf30ea0bb0b763edb28cc92cb775a8f663b6cdb563fb5f89ae3d3373afdecb370a506faef3a67985ddc524c5292364ef43d7c4abd8b084266be8b15db569fb970e20b3c160ad1ad2d63a7308f0475fcf15f77bf369085a6b9fc712a1f0fb91c9076121a0304c1681cd3c61e8969130dd0c0e0ba133956799d61e1ab312fdad4648875ee8d4f5acdfa737b8a1628cb8b6b0696329606426c3f8188e46a0c5455c082aed298411ea59c016e20430632287b6c781a658c0b2b07dbc16446e5d6dce2ae0206935a15d17485588fede34e718bf7e0a1c3288abdee10261095896ef1673acc05c15ca9bea0e05978809c5d09590aea5b528c65a7bb3ccae5771835657cae88b210c371dde85e21ba238a0c5c7987bf95e6a68b3ed495e46b9c9f634a60eac9072cff85b4813407acefd3c16ffb5eab25647cc9fbcae4ac8a5595701d79fd7bf13b1bfb79aa0a1c6666196f2cd8ccb3c67b5edb7a254843ccb7eb39705cb8fa9c63ca2bdbf3ab8920801eafd552f272a8238261d811933753ca2131e589f0b085d7a2c9ad1a54c41b41df8420887dd8ec905d28cba9328be4a14132a58f01cacc1c449bce1dab62d069832eaa38911ca5f3eda24e2db1ecaf3c0c764ee4b3da2ee69b03f2cd549ba2d457dddb00dc5e05795bef84a11464cbbdfa85af9ff0e31a9505dc4b33d0946333931d5b3e591cfca8ae0c28eeabe5464780c251c17bc49f9c0305f08049db5e4eb9ee51e6dbc7be7f0d1a00118514f64c39c70254fedc7bc19000922975d6fe4479805cdccded5e3afa3de69992ad1284d7c89a0dbaef9f14a46dfbe1d37f2d5364a54e8c4fb577709053199af9a17d120933189ffed0ff8edb3cf4c9a74bb003641d1136873786342dd99159af4e1ad6df65eca2024d79d2f5897f7de3151a31ce266244ba1560232f489f3869a85da95a87f6a77023abae0be345c9a1a",
+                    "ct": "62a1cc1e1bc3b111b5114c37bfd00cef369f994938c262bd3e03d102a218dc589c0199d847eb27ce7684a5abb79bbb98c984026e3265c9cbcac7a59511cc0a9d5eeaba59ef25c02d8ba2ec2f34ea7cefee2a5780c4ca5e088c121339d1c796934122971c7de047abfad7c6385a39db4cd46d502b8fb1920601bfdc145c32eeb06a36e8e9f3129f1f00e5253b5274ba501781605c15ec4db06aa1ddb4a27101b88b59935823d638bf4994b76e2275681f152cc4464435c87a402e553f674d1221f6b120474f35e496f9a2dc4ce3a21341ed6d868023e52ad1a0698f7e223ff1659fd786a878574974915291e71ee214e988e167123d0a2231562e36d445c99b7b09535536eda3c222ac005e57c84065d2626135f2e84fb39d2cb2125e1547d61c9980e01c0928a07e6c96c96233d3be5316a0f2a9421c81a3359b939ec6c08303b73966c986f88dc0e288b41f5d1580602d531d6007bc7211d00ecb709ca04856215f18dda31ddbe0410c9eb9a27e32b33e919df2a60d8ceaae44b20f1135272eb63de963862e81dcfab4521d9cd54495c8d0668abdf6d1ffeb8268587bec0e920e48d6ff8dacc141849e5654f9b51cb09fdefe14420d2212f27d7bc32e72277612df572f97829bcf751a4a0cad29564c74af9503ff9f9dc32e9c1a4275e159c905126cea2b2f89fca473c8dcf6d550192280bc0848b445472501a9557b66bd840f16fa4423516fed350e884ddae82794bd684628798c0303f081acbcc2dda898dfe31c1c4b439e7b263ce9ff3bee35e62acfdc1785999e885c384c564a06eb28f7b59704d40585ee90d7e2108a86b23fbf3f6ae6ebc14297cb30414479447e1e3e55e5c8d5ec643d0969eadbe5083300791b31f23dbd73e60ec1b945bfa5525acd717a2e201ebfff420a6a1ba4ad793d345473e2d66fb0ccc08a563d4d9035e34bcc4040bccf93a0bd5ced2257925c8dfb679eab40c9ed7ca1b636b2cbbcf21a466c1fb3e4f64c7a1081169377a3a107ecc80176f8e3e6aeaf90983abd7d2857b4c5fe13ab6c77c1c3471d342fdde17b8b65c4e345da6eba37b137bf631d3977f0a8f8da91d327b92970f7ae116d8a8f2f3ae1b89bb52aa87b8649ca0c95171eaf9c526b68aee3c3c98c894bf2fbb1ae2f80f9a3f41009368127066de9798ea48e12fa038e694c7ec510d5006487f8108a8e969ec8ac4275976d623fa32911d273d395efb464a4370915427fc4468b80a8d92afc388ff9c1c595ad62c96c600b30048c88b50b7323a4e0b76e4c78e50afbe1c4eb1ab4d83c06b0002386b0b49d33e421caf2ad14078225de85e4585693093aebde467776a23539d0f61081733f223bebca0019388926297d6f70a6bb5258b10a85e90b742f08e8a44da1cff275ed05ae7f10b17126c5c7dcb02d26f1b4",
+                    "result": "valid",
+                    "flags": []
+                }
+            ]
+        },
+        {
+            "type": "IndCpaTest",
+            "source": "https://csrc.nist.gov/publications/fips/fips197/fips-197.pdf",
+            "keySize": 192,
+            "ivSize": 0,
+            "tests": [
+                {
+                    "tcId": 2,
+                    "comment": "",
+                    "key": "8e73b0f7da0e6452c810f32b809079e562f8ead2522c6b7b",
+                    "iv": "",
+                    "msg": "6bc1bee22e409f96e93d7e117393172aae2d8a571e03ac9c9eb76fac45af8e5130c81c46a35ce411e5fbc1191a0a52eff69f2445df4f9b17ad2b417be66c3710",
+                    "ct": "bd334f1d6e45f25ff712a214571fa5cc974104846d0ad3ad7734ecb3ecee4eefef7afd2270e2e60adce0ba2face6444e9a4b41ba738d6c72fb16691603c18e0e",
+                    "result": "valid",
+                    "flags": []
+                },
+                {
+                    "tcId": 5,
+                    "comment": "",
+                    "key": "8e73b0f7da0e6452c810f32b809079e562f8ead2522c6b7b",
+                    "iv": "",
+                    "msg": "1908a3581714705ab8ab4f5fa4252becb6740b9d563bafa3a42d3e1f18843b4f48d9a3fe591e80674435260078da68fa619cd88e5cc1ffeb9c7de7a938eb66f86a46715102ba8d70555b60c64caeda2e17bb65ef60859e77e583ef30083aba8028c0a1934c2a0be1cbd0ac72721d96760ec0ec7d84fdee08a111200d595c063fa3f1d7a31d29c3aa052b748c7360654376d4d77b5f40f477e1cc85371cd8da91f040b2432d8751d0ce27a660ac67ea8bae462e7806098a82b00d575682fe89d2",
+                    "ct": "cce23fc312413163033a3cfe7655d226f0c9b5c6f01ec372fb64947df15e2a9e0d9a7ae0bc7ba66541c0a09db1b109996ee7255e642b74faa19a033388812748dd53770befd92ffac8500e08a14512822bfb855a398c713259273753ce3eae004553fdafa5d11ae9a41be399decd03366b72437604a8f983ef9e5775360e99e1792b2b960110b8f64aa613ab7f5560f0c95c81a79699b4554148f1d4a1b476b535e1028e09b26c113ffb044798ab9b55c3a92a64325a6996288c5be3b26082ec",
+                    "result": "valid",
+                    "flags": []
+                }
+            ]
+        },
+        {
+            "type": "IndCpaTest",
+            "source": "https://csrc.nist.gov/publications/fips/fips197/fips-197.pdf",
+            "keySize": 256,
+            "ivSize": 0,
+            "tests": [
+                {
+                    "tcId": 3,
+                    "comment": "",
+                    "key": "603deb1015ca71be2b73aef0857d77811f352c073b6108d72d9810a30914dff4",
+                    "iv": "",
+                    "msg": "6bc1bee22e409f96e93d7e117393172aae2d8a571e03ac9c9eb76fac45af8e5130c81c46a35ce411e5fbc1191a0a52eff69f2445df4f9b17ad2b417be66c3710",
+                    "ct": "f3eed1bdb5d2a03c064b5a7e3db181f8591ccb10d410ed26dc5ba74a31362870b6ed21b99ca6f4f9f153e7b1beafed1d23304b7a39f9f3ff067d8d8f9e24ecc7",
+                    "result": "valid",
+                    "flags": []
+                },
+                {
+                    "tcId": 6,
+                    "comment": "",
+                    "key": "603deb1015ca71be2b73aef0857d77811f352c073b6108d72d9810a30914dff4",
+                    "iv": "",
+                    "msg": "0be548a6a1bcac8180065fae1e3f55736d367f573da44a6bb6652fb7e88547e24142c24e58f1de429f154cafea0420d01a1936747112721bdb18f90bb3f363d462528b630f6b4db970d691a0433f46fe43bbb8dc5edbd41ff0179425ee5567bf4dda9de74bc67acf8fd7bb296e26d4c3089b6715e92d9f2d3c7626d3dafe6e739d09604b3560db77b6c04591f9148a7adde2f1df8f124fd775d69a17da7688f0fa4427be61af559fc7f07677decad1475155b1bffa1eca281770f3b5d4324704e092d8a5036946997f1e3fb29336a388750768b833ce173f5cb71e9338c51d79867c9d9e2f69380f975c67bfa08d370bd3b104871d74fe30fbd02292f9f323c9",
+                    "ct": "4bc01f80f5c7e8f5c9d03c86507821ce01ec9100c9f873432f738a6deeed2d4017169315aced2861b00fa2e1d38051df73ce484c1cc18bc99e5c4807a0f629f86387e4e78bf8cf58da5762112e6e917ec773db273c647252e327841f733ff494d2dd93336591988913a92b0d6f56511507c6a7368f0cd6c20706657af894a675484ccca5a991042f7b8946d287cbd61bf31ea7e509cf75059fc9accc61152d2e2c0a574d33176b229e92c581ce9d52687d98e12370c5193e91fcc6d7675fbb5720963f1f9f64e9b151fd8cc10f50be435f90b4d1b6417c379271da9dfdee698c2418e88160e2893342d41b6acb4a5b00014f11470f57b090f0edb0342e9f816c",
+                    "result": "valid",
+                    "flags": []
+                }
+            ]
+        }
+    ]
+}
