@@ -57,7 +57,37 @@ enum api_type { TEST_DIRECT_API, TEST_SINGLE_JOB_API, TEST_BURST_JOB_API };
 int
 zuc_eia3_nia6_test(struct IMB_MGR *mb_mgr);
 
-extern const struct mac_test zuc_eia3_128_test_json[];
+static struct mac_test *zuc_eia3_128_vectors;
+
+static int
+load_zuc_eia3_128_vectors(struct test_json_alloc_ctx **ctx)
+{
+        char path[1024];
+        int ret;
+        const char *const file_name = "zuc_eia3_128_test.json";
+
+        if (kat_vector_dir == NULL) {
+                fprintf(stderr, "Error: no vector directory set; use --vector-dir <DIR>\n");
+                return -1;
+        }
+
+        ret = snprintf(path, sizeof(path), "%s/%s", kat_vector_dir, file_name);
+        if (ret < 0 || ret >= (int) sizeof(path))
+                return -1;
+
+        if (json_load_mac_test(path, &zuc_eia3_128_vectors, ctx) < 0)
+                return -1;
+
+        return 0;
+}
+
+static void
+free_zuc_eia3_128_vectors(struct test_json_alloc_ctx *ctx)
+{
+        json_free_test_ctx(ctx);
+        zuc_eia3_128_vectors = NULL;
+}
+
 extern const struct mac_test zuc_nia6_test_json[];
 
 struct zuc_eia3_128_params {
@@ -194,6 +224,10 @@ zuc_eia3_nia6_test(struct IMB_MGR *mb_mgr)
         uint8_t *pDstData[MAXBUFS] = { 0 };
         struct test_suite_context eia3_ctx;
         struct test_suite_context nia6_ctx;
+        struct test_json_alloc_ctx *eia3_jctx = NULL;
+
+        if (load_zuc_eia3_128_vectors(&eia3_jctx) < 0)
+                return 1;
 
         test_suite_start(&eia3_ctx, "ZUC-EIA3");
         test_suite_start(&nia6_ctx, "ZUC-NIA6");
@@ -264,6 +298,7 @@ exit_zuc_eia3_nia6_test:
         errors += test_suite_end(&eia3_ctx);
         errors += test_suite_end(&nia6_ctx);
 
+        free_zuc_eia3_128_vectors(eia3_jctx);
         return errors;
 }
 
@@ -411,7 +446,7 @@ validate_zuc_EIA_n_block(struct IMB_MGR *mb_mgr, uint8_t **pSrcData, uint8_t **p
         uint32_t byteLength;
         uint32_t bitLength[MAXBUFS];
         size_t tag_lens[MAXBUFS];
-        const struct mac_test *v = zuc_eia3_128_test_json;
+        const struct mac_test *v = zuc_eia3_128_vectors;
 
         /* calculate number of test vectors */
         for (i = 0; v[i].msg != NULL; i++)

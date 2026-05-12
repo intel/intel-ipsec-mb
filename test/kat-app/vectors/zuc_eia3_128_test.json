@@ -1,0 +1,52 @@
+{
+  "algorithm": "ZUC-EIA3-128",
+  "generatorVersion": "",
+  "header": [
+    "Test vectors of type MacTest are intended for testing the",
+    "generation and verification of MACs."
+  ],
+  "notes": {},
+  "numberOfTests": 3,
+  "schema": "mac_with_iv_test_schema_v1.json",
+  "testGroups": [
+    {
+      "type": "MacWithIvTest",
+      "source": "3GPP TS 35.222",
+      "keySize": 128,
+      "ivSize": 48,
+      "tagSize": 32,
+      "tests": [
+        {
+          "tcId": 1,
+          "comment": "",
+          "key": "c9e6cec4607c72db000aefa88385ab0a",
+          "iv": "da5940a90a00",
+          "msg": "983b41d47d780c9e1ad11d7eb70391b1de0b35da2dc62f83e7b78d6306ca0ea07e941b7be91348f9fcb170e2217fecd97f9f68adb16e5d7d21e569d280ed775c",
+          "tag": "bbaf2fc3",
+          "result": "valid",
+          "flags": []
+        },
+        {
+          "tcId": 2,
+          "comment": "",
+          "key": "000102030405060708090a0b0c0d0e0f",
+          "iv": "674523010a00",
+          "msg": "5bad724710ba1c56",
+          "tag": "1b3d0f74",
+          "result": "valid",
+          "flags": []
+        },
+        {
+          "tcId": 3,
+          "comment": "",
+          "key": "c9e6cec4607c72db000aefa88385ab0a",
+          "iv": "da5940a90a01",
+          "msg": "983b41d47d780c9e1ad11d7eb70391b1de0b35da2dc62f83e7b78d6306ca0ea07e941b7be91348f9fcb170e2217fecd97f9f68adb16e5d7d21e569d2",
+          "tag": "395c1192",
+          "result": "valid",
+          "flags": []
+        }
+      ]
+    }
+  ]
+}
