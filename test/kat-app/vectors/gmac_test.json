@@ -1,0 +1,88 @@
+{
+    "algorithm": "GMAC",
+    "generatorVersion": "",
+    "header": [
+        "Test vectors of type MacTest are intended for testing the generation and verification of MACs."
+    ],
+    "notes": {},
+    "numberOfTests": 4,
+    "schema": "mac_with_iv_test_schema_v1.json",
+    "testGroups": [
+        {
+            "type": "MacWithIvTest",
+            "source": "http://csrc.nist.gov/groups/ST/toolkit/BCM/documents/proposedmodes/gcm/gcm-revised-spec.pdf",
+            "keySize": 128,
+            "ivSize": 96,
+            "tagSize": 32,
+            "tests": [
+                {
+                    "tcId": 1,
+                    "comment": "Long Message",
+                    "key": "000102030405060708090a0b0c0d0e0f",
+                    "iv": "000102030405060708090a0b",
+                    "msg": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f",
+                    "tag": "c53af9e8",
+                    "result": "valid",
+                    "flags": []
+                }
+            ]
+        },
+        {
+            "type": "MacWithIvTest",
+            "source": "http://csrc.nist.gov/groups/ST/toolkit/BCM/documents/proposedmodes/gcm/gcm-revised-spec.pdf",
+            "keySize": 128,
+            "ivSize": 96,
+            "tagSize": 128,
+            "tests": [
+                {
+                    "tcId": 2,
+                    "comment": "Long Message",
+                    "key": "feffe9928665731c6d6a8f9467308308",
+                    "iv": "cafebabefacedbaddecaf888",
+                    "msg": "0102030405060708090a0b0c0d0e0f100102030405060708090a0b0c0d0e0f100102030405060708090a0b0c0d0e0f100102030405060708090a0b0c0d0e0f100102030405060708090a0b0c0d0e0f100102030405060708090a0b0c0d0e0f100102030405060708090a0b0c0d0e0f100102030405060708090a0b0c0d0e0f100102030405060708090a0b0c0d0e0f100102030405060708090a0b0c0d0e0f10",
+                    "tag": "4c0c4f472d78f6d80353202f1adf90d0",
+                    "result": "valid",
+                    "flags": []
+                }
+            ]
+        },
+        {
+            "type": "MacWithIvTest",
+            "source": "http://csrc.nist.gov/groups/ST/toolkit/BCM/documents/proposedmodes/gcm/gcm-revised-spec.pdf",
+            "keySize": 192,
+            "ivSize": 96,
+            "tagSize": 128,
+            "tests": [
+                {
+                    "tcId": 3,
+                    "comment": "Long Message",
+                    "key": "aa740abfadcda779220d3b406c5d7ec09a77fe9d94104539",
+                    "iv": "ab2265b4c168955561f04315",
+                    "msg": "0102030405060708090a0b0c0d0e0f100102030405060708090a0b0c0d0e0f100102030405060708090a0b0c0d0e0f100102030405060708090a0b0c0d0e0f100102030405060708090a0b0c0d0e0f10",
+                    "tag": "cf8280640246f4fb33ae1d90ea4883db",
+                    "result": "valid",
+                    "flags": []
+                }
+            ]
+        },
+        {
+            "type": "MacWithIvTest",
+            "source": "http://csrc.nist.gov/groups/ST/toolkit/BCM/documents/proposedmodes/gcm/gcm-revised-spec.pdf",
+            "keySize": 256,
+            "ivSize": 96,
+            "tagSize": 128,
+            "tests": [
+                {
+                    "tcId": 4,
+                    "comment": "Long Message",
+                    "key": "b548e4934f5c64d3c0f0b78f7b4d8824aac46b3c8d2cc35ee4bfb254e4fcbaf7",
+                    "iv": "2eede1dc6447c7afc4415358",
+                    "msg": "0102030405060708090a0b0c0d0e0f100102030405060708090a0b0c0d0e0f100102030405060708090a0b0c0d0e0f100102030405060708090a0b0c0d0e0f1001",
+                    "tag": "77460d6fb187dba946adcdfbb7f913a1",
+                    "result": "valid",
+                    "flags": []
+                }
+            ]
+        }
+    ]
+}

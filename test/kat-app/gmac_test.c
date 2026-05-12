@@ -39,7 +39,36 @@
 int
 gmac_test(struct IMB_MGR *mb_mgr);
 
-extern const struct mac_test gmac_test_kat_json[];
+static struct mac_test *gmac_vectors;
+
+static int
+load_gmac_vectors(struct test_json_alloc_ctx **ctx)
+{
+        char path[1024];
+        int ret;
+        const char *const file_name = "gmac_test.json";
+
+        if (kat_vector_dir == NULL) {
+                fprintf(stderr, "Error: no vector directory set; use --vector-dir <DIR>\n");
+                return -1;
+        }
+
+        ret = snprintf(path, sizeof(path), "%s/%s", kat_vector_dir, file_name);
+        if (ret < 0 || ret >= (int) sizeof(path))
+                return -1;
+
+        if (json_load_mac_test(path, &gmac_vectors, ctx) < 0)
+                return -1;
+
+        return 0;
+}
+
+static void
+free_gmac_vectors(struct test_json_alloc_ctx *ctx)
+{
+        json_free_test_ctx(ctx);
+        gmac_vectors = NULL;
+}
 
 static int
 check_data(const uint8_t *test, const uint8_t *expected, uint64_t len, const char *data_name)
@@ -213,14 +242,18 @@ int
 gmac_test(IMB_MGR *mb_mgr)
 {
         struct test_suite_context ts128, ts192, ts256;
+        struct test_json_alloc_ctx *jctx = NULL;
         int errors = 0;
+
+        if (load_gmac_vectors(&jctx) < 0)
+                return 1;
 
         test_suite_start(&ts128, "AES-GMAC-128");
         test_suite_start(&ts192, "AES-GMAC-192");
         test_suite_start(&ts256, "AES-GMAC-256");
 
         printf("GMAC test vectors:\n");
-        const struct mac_test *vec = gmac_test_kat_json;
+        const struct mac_test *vec = gmac_vectors;
         while (vec->msg != NULL) {
                 uint64_t seg_size;
 
@@ -236,5 +269,6 @@ gmac_test(IMB_MGR *mb_mgr)
         errors += test_suite_end(&ts192);
         errors += test_suite_end(&ts256);
 
+        free_gmac_vectors(jctx);
         return errors;
 }
