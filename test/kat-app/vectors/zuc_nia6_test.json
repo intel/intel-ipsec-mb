@@ -1,0 +1,279 @@
+{
+    "algorithm": "ZUC-NIA6",
+    "generatorVersion": "",
+    "header": [],
+    "notes": {},
+    "numberOfTests": 17,
+    "schema": "mac_with_iv_test_schema_v1.json",
+    "testGroups": [
+        {
+            "type": "MacWithIvTest",
+            "source": "3GPP TS 33.501",
+            "keySize": 256,
+            "ivSize": 128,
+            "tagSize": 40,
+            "tests": [
+                {
+                    "tcId": 1,
+                    "comment": "",
+                    "key": "0000000000000000000000000000000000000000000000000000000000000000",
+                    "iv": "283f0000000000000000000000000000",
+                    "msg": "00",
+                    "tag": "41539061eb",
+                    "result": "valid",
+                    "flags": []
+                }
+            ]
+        },
+        {
+            "type": "MacWithIvTest",
+            "source": "3GPP TS 33.501",
+            "keySize": 256,
+            "ivSize": 128,
+            "tagSize": 48,
+            "tests": [
+                {
+                    "tcId": 2,
+                    "comment": "",
+                    "key": "0100000000000000000000000000000000000000000000000000000000000000",
+                    "iv": "301c1112131415168000000100000000",
+                    "msg": "0102030405060708090a0b0c0d0e0f101112",
+                    "tag": "961976e0cfc7",
+                    "result": "valid",
+                    "flags": []
+                },
+                {
+                    "tcId": 9,
+                    "comment": "",
+                    "key": "9d5e3df5036c21b523d525d182291a93ff6e49f84c525355532e7fcf305fae26",
+                    "iv": "3036b1c97dacd73fdf3327c700000000",
+                    "msg": "b22ed06f3a25350697d2dc109b1b59b405528143bcb592b8643bcc049eb0c1ce26c376",
+                    "tag": "78eaa9f16e47",
+                    "result": "valid",
+                    "flags": []
+                },
+                {
+                    "tcId": 11,
+                    "comment": "",
+                    "key": "eb1c36e4879bba9e073629e76c56eaf519346ebf35968e11ff48acfe141c9f40",
+                    "iv": "301aa121f383d9c8e9796bfb00000000",
+                    "msg": "0953b1e2e62f75477696edc93044f21321e700c57beace19eac30665be494cf0b995ad2242d444661e657092135c1a4264cb3171add80bd2b4b93aa9ac8705275895ac1ed3a7c0e375e02ffcb065747423a4a49685d0ac85e205eb64cc8a8d9ebc",
+                    "tag": "0c95bd25c821",
+                    "result": "valid",
+                    "flags": []
+                }
+            ]
+        },
+        {
+            "type": "MacWithIvTest",
+            "source": "3GPP TS 33.501",
+            "keySize": 256,
+            "ivSize": 128,
+            "tagSize": 72,
+            "tests": [
+                {
+                    "tcId": 3,
+                    "comment": "",
+                    "key": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+                    "iv": "483f000000000000ffffffff00000000",
+                    "msg": "ffff00",
+                    "tag": "7e36a99ca0f00806d5",
+                    "result": "valid",
+                    "flags": []
+                }
+            ]
+        },
+        {
+            "type": "MacWithIvTest",
+            "source": "3GPP TS 33.501",
+            "keySize": 256,
+            "ivSize": 128,
+            "tagSize": 96,
+            "tests": [
+                {
+                    "tcId": 4,
+                    "comment": "",
+                    "key": "5555555555555555555555555555555555555555555555555555555555555555",
+                    "iv": "600d000000000000aa00aa0000000000",
+                    "msg": "ffff00ff",
+                    "tag": "4047331bb8f040ea8ff08f12",
+                    "result": "valid",
+                    "flags": []
+                }
+            ]
+        },
+        {
+            "type": "MacWithIvTest",
+            "source": "3GPP TS 33.501",
+            "keySize": 256,
+            "ivSize": 128,
+            "tagSize": 120,
+            "tests": [
+                {
+                    "tcId": 5,
+                    "comment": "",
+                    "key": "1f2f3f4f5f6f7f8f9fafbfcfdfefff0f1f3f5f7f9f2f4f6f8fafffffffffffff",
+                    "iv": "783fffffffffffffffffffff00000000",
+                    "msg": "0102030405060708090a0b0c0d0e0f101112131415aaabacadaeaf",
+                    "tag": "5aa2a106524cd35b0aab10e8042819",
+                    "result": "valid",
+                    "flags": []
+                }
+            ]
+        },
+        {
+            "type": "MacWithIvTest",
+            "source": "3GPP TS 33.501",
+            "keySize": 256,
+            "ivSize": 128,
+            "tagSize": 128,
+            "tests": [
+                {
+                    "tcId": 6,
+                    "comment": "",
+                    "key": "64e7f9a3ef617d7e6cff9f64191c1fa35c953230a62282999ee6773a7c44b5b4",
+                    "iv": "80282923be84e16c37ab2e7f00000000",
+                    "msg": "f69e7d49dcad4f14f2444066d06bc430b7323ba122f622919de18b1fdab0ca9902b9729d492c807ebf3811ac9421580c19e6537fd1cac60bbc9bd49a2c3a6f9fd45813fc227eb424cf50f57cb4129a08df6b4043e6694b4e7bc6214d416a960fde30a6ed52ed6af487af454628425fbdb7f954d2da",
+                    "tag": "943dffe6b2aeec3504896726db2dad9c",
+                    "result": "valid",
+                    "flags": []
+                },
+                {
+                    "tcId": 7,
+                    "comment": "",
+                    "key": "dce001a5ef617d7e6cff9f64191c1fa35c953230a62282999ee6773a7c44b5b4",
+                    "iv": "80350123456789ab0123456700000000",
+                    "msg": "ff",
+                    "tag": "3e2b31339b0285155a7a32e5ca0a6b9b",
+                    "result": "valid",
+                    "flags": []
+                },
+                {
+                    "tcId": 13,
+                    "comment": "",
+                    "key": "75477f8bc45e9ae59b93460c1598356c032093653b6e578a35260a31fcc2a843",
+                    "iv": "8005aceaeed9678ff8e0d34600000000",
+                    "msg": "04988b7431cfc7b69e9914537dc276b85f95f12d6e53be54f2a981fe956ba6e1dc469d57aec2771804d4bdf251660dad5eb684bc144a85c583c906a88cd449754f7981b1257825dde4bbb58bc82b5319451e",
+                    "tag": "062f88d8f4bd264bf9c3b2275addac6b",
+                    "result": "valid",
+                    "flags": []
+                },
+                {
+                    "tcId": 14,
+                    "comment": "",
+                    "key": "95db6256ca82b432401588e067b32ad8de53a7a91b38e41b4f1812681d6846e2",
+                    "iv": "803fb1fa6c1143fdf3f4c8d800000000",
+                    "msg": "ad0259bce219e1e8443df24b37ed4d676553aa385d7ce708835812e3f113097b42ef2a2b19f5f9c92ebb69b46872b9904aa0454bf638d2c63143c155fc809f1c9c20389199613c3bf079098233a860",
+                    "tag": "f81a5f6e7ae9bac3dc7cb9f489cd6aa4",
+                    "result": "valid",
+                    "flags": []
+                }
+            ]
+        },
+        {
+            "type": "MacWithIvTest",
+            "source": "3GPP TS 33.501",
+            "keySize": 256,
+            "ivSize": 128,
+            "tagSize": 80,
+            "tests": [
+                {
+                    "tcId": 8,
+                    "comment": "",
+                    "key": "b63025c49f04b56b8ee44fe2b867c7fe6ee1013a579c06e9c89abf738fc1a1d6",
+                    "iv": "500b8e98f9212053f110fe3800000000",
+                    "msg": "b4ff4d100293a006021df8ab31dc10756e78d005e85248d9d60deeb8a876aa37f4c88c394a4c4cd66d3c1af2c8ff4df970519ecd0960c9361c66dbbef6a098ecd19153f002cca5e03583fa35505c3250bd56227a",
+                    "tag": "a9042309eb5a41cc0a18",
+                    "result": "valid",
+                    "flags": []
+                },
+                {
+                    "tcId": 12,
+                    "comment": "",
+                    "key": "abc7627bad7b026e09a642dce566c5b704c1d3c7da164e7577782fa36b81d3f0",
+                    "iv": "50368a634fcd9af6a74a923d00000000",
+                    "msg": "59b41d73bba4874d",
+                    "tag": "82fd3813cd2b678714ac",
+                    "result": "valid",
+                    "flags": []
+                }
+            ]
+        },
+        {
+            "type": "MacWithIvTest",
+            "source": "3GPP TS 33.501",
+            "keySize": 256,
+            "ivSize": 128,
+            "tagSize": 88,
+            "tests": [
+                {
+                    "tcId": 10,
+                    "comment": "",
+                    "key": "847faf209adc7c75c3d78f38cebf593a87ea56b102e33eb0c5e3d2d4713fab69",
+                    "iv": "5801929ecfc1c692eb84f41e00000000",
+                    "msg": "388e57fa6356b271def2775d9002cb579b9de125ae1af85a5f552dab51fbd7a097dcb0ab81a24f531fbf608b49a586c16eb212e85a649695baf69f54327a0c9b347ba2eb0d9c70c0821e4b2abc293ff01d6b142d0fbe1963e17d6eb7bc7e4d12a7c51f",
+                    "tag": "ed360442d07ca289beb816",
+                    "result": "valid",
+                    "flags": []
+                }
+            ]
+        },
+        {
+            "type": "MacWithIvTest",
+            "source": "3GPP TS 33.501",
+            "keySize": 256,
+            "ivSize": 128,
+            "tagSize": 56,
+            "tests": [
+                {
+                    "tcId": 15,
+                    "comment": "",
+                    "key": "51a8e4c8f0d8ab91df891ee3c017fc446153146c6055e62db045355f87d8cadc",
+                    "iv": "383c63cdce93454f348580ed00000000",
+                    "msg": "028577e4cc8424b3190b5f",
+                    "tag": "9498f76440df8c",
+                    "result": "valid",
+                    "flags": []
+                }
+            ]
+        },
+        {
+            "type": "MacWithIvTest",
+            "source": "3GPP TS 33.501",
+            "keySize": 256,
+            "ivSize": 128,
+            "tagSize": 112,
+            "tests": [
+                {
+                    "tcId": 16,
+                    "comment": "",
+                    "key": "7eaa7cb98e07d31971ec44a3c65b25d1aadce3724b42969ab180814f34a5b75c",
+                    "iv": "7001a3c2a14a521e0399ad5900000000",
+                    "msg": "8b3fa71df53847f8ba45e368405e8686c6fc1206b6e3304a6b611b0f0237c8b9db8f9a666ead37b286e5f504346304b5638527f992905bef995b354fdf10949f27f4e90f269fa4051f27453d388e87c488",
+                    "tag": "4a76fcf8c0bbbcb6c7bb855b1211",
+                    "result": "valid",
+                    "flags": []
+                }
+            ]
+        },
+        {
+            "type": "MacWithIvTest",
+            "source": "3GPP TS 33.501",
+            "keySize": 256,
+            "ivSize": 128,
+            "tagSize": 32,
+            "tests": [
+                {
+                    "tcId": 17,
+                    "comment": "",
+                    "key": "f5906ccfbb8f2b23feed6d682b2c75f839c702b619934ef5bc636cf8be175e9f",
+                    "iv": "2039d2490cc68b552a59c3f800000000",
+                    "msg": "09f1b9d441466edef20b0ee20062fdc8c5064d661ff2e8fb99c893ae07717f47ba8c9437110dd184358bc8de27f7406565450f26494879206ae341d34a1497c7aa6672f4e545f10615ec2365710e832023efa93c64097f4656",
+                    "tag": "e5a84a1d",
+                    "result": "invalid",
+                    "flags": []
+                }
+            ]
+        }
+    ]
+}

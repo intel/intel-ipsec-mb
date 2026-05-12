@@ -39,7 +39,36 @@
 int
 zuc_nca6_test(IMB_MGR *p_mgr);
 
-extern const struct aead_test zuc_nca6_test_json[];
+static struct aead_test *zuc_nca6_vectors;
+
+static int
+load_zuc_nca6_vectors(struct test_json_alloc_ctx **ctx)
+{
+        char path[1024];
+        int ret;
+        const char *const file_name = "zuc_nca6_test.json";
+
+        if (kat_vector_dir == NULL) {
+                fprintf(stderr, "Error: no vector directory set; use --vector-dir <DIR>\n");
+                return -1;
+        }
+
+        ret = snprintf(path, sizeof(path), "%s/%s", kat_vector_dir, file_name);
+        if (ret < 0 || ret >= (int) sizeof(path))
+                return -1;
+
+        if (json_load_aead_test(path, &zuc_nca6_vectors, ctx) < 0)
+                return -1;
+
+        return 0;
+}
+
+static void
+free_zuc_nca6_vectors(struct test_json_alloc_ctx *ctx)
+{
+        json_free_test_ctx(ctx);
+        zuc_nca6_vectors = NULL;
+}
 
 static int
 check_data(const uint8_t *test, const uint8_t *expected, uint64_t len, const char *data_name)
@@ -383,15 +412,20 @@ zuc_nca6_test(IMB_MGR *p_mgr)
         struct test_suite_context ts;
         const struct aead_test *v;
         int errors = 0;
+        struct test_json_alloc_ctx *jctx = NULL;
+
+        if (load_zuc_nca6_vectors(&jctx) < 0)
+                return 1;
 
         test_suite_start(&ts, "ZUC-NCA6");
-        test_zuc_nca6_std_vectors(p_mgr, &ts, zuc_nca6_test_json);
+        test_zuc_nca6_std_vectors(p_mgr, &ts, zuc_nca6_vectors);
 
-        for (v = zuc_nca6_test_json; v->msg != NULL; v++)
+        for (v = zuc_nca6_vectors; v->msg != NULL; v++)
                 if (v->msgSize > 0 && v->aadSize > 0)
                         test_zuc_nca6_mixed_flush(p_mgr, &ts, v);
 
         errors += test_suite_end(&ts);
 
+        free_zuc_nca6_vectors(jctx);
         return errors;
 }
