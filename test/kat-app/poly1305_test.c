@@ -37,7 +37,36 @@
 int
 poly1305_test(struct IMB_MGR *mb_mgr);
 
-extern const struct mac_test poly1305_test_json[];
+static struct mac_test *poly1305_vectors;
+
+static int
+load_poly1305_vectors(struct test_json_alloc_ctx **ctx)
+{
+        char path[1024];
+        int ret;
+        const char *const file_name = "poly1305_test.json";
+
+        if (kat_vector_dir == NULL) {
+                fprintf(stderr, "Error: no vector directory set; use --vector-dir <DIR>\n");
+                return -1;
+        }
+
+        ret = snprintf(path, sizeof(path), "%s/%s", kat_vector_dir, file_name);
+        if (ret < 0 || ret >= (int) sizeof(path))
+                return -1;
+
+        if (json_load_mac_test(path, &poly1305_vectors, ctx) < 0)
+                return -1;
+
+        return 0;
+}
+
+static void
+free_poly1305_vectors(struct test_json_alloc_ctx *ctx)
+{
+        json_free_test_ctx(ctx);
+        poly1305_vectors = NULL;
+}
 
 static int
 poly1305_job_ok(struct IMB_MGR *mb_mgr, const struct mac_test *vec, const struct IMB_JOB *job,
@@ -166,7 +195,7 @@ static void
 test_poly1305_vectors(struct IMB_MGR *mb_mgr, const int num_jobs, struct test_suite_context *ctx,
                       const char *banner)
 {
-        const struct mac_test *v = poly1305_test_json;
+        const struct mac_test *v = poly1305_vectors;
 
         if (!quiet_mode)
                 printf("%s (N jobs = %d):\n", banner, num_jobs);
@@ -201,12 +230,17 @@ int
 poly1305_test(struct IMB_MGR *mb_mgr)
 {
         struct test_suite_context ctx;
+        struct test_json_alloc_ctx *jctx = NULL;
         int i, errors;
+
+        if (load_poly1305_vectors(&jctx) < 0)
+                return 1;
 
         test_suite_start(&ctx, "POLY1305");
         for (i = 1; i < 20; i++)
                 test_poly1305_vectors(mb_mgr, i, &ctx, "Poly1305 RFC7539 vectors");
         errors = test_suite_end(&ctx);
 
+        free_poly1305_vectors(jctx);
         return errors;
 }
