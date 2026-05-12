@@ -41,7 +41,36 @@
 int
 aes_cfb_test(struct IMB_MGR *);
 
-extern const struct cipher_test aes_cfb_test_json[];
+static struct cipher_test *aes_cfb_vectors;
+
+static int
+load_aes_cfb_vectors(struct test_json_alloc_ctx **ctx)
+{
+        char path[1024];
+        int ret;
+        const char *const file_name = "aes_cfb_test.json";
+
+        if (kat_vector_dir == NULL) {
+                fprintf(stderr, "Error: no vector directory set; use --vector-dir <DIR>\n");
+                return -1;
+        }
+
+        ret = snprintf(path, sizeof(path), "%s/%s", kat_vector_dir, file_name);
+        if (ret < 0 || ret >= (int) sizeof(path))
+                return -1;
+
+        if (json_load_cipher_test(path, &aes_cfb_vectors, ctx) < 0)
+                return -1;
+
+        return 0;
+}
+
+static void
+free_aes_cfb_vectors(struct test_json_alloc_ctx *ctx)
+{
+        json_free_test_ctx(ctx);
+        aes_cfb_vectors = NULL;
+}
 
 static int
 aes_job_ok(const struct IMB_JOB *job, const uint8_t *out_text, const uint8_t *target,
@@ -457,11 +486,15 @@ int
 aes_cfb_test(struct IMB_MGR *mb_mgr)
 {
         uint32_t i;
+        struct test_json_alloc_ctx *jctx = NULL;
 
         int errors = 0;
         struct test_suite_context ctx128;
         struct test_suite_context ctx192;
         struct test_suite_context ctx256;
+
+        if (load_aes_cfb_vectors(&jctx) < 0)
+                return 1;
 
         /* Standard aes_cfb vectors */
         test_suite_start(&ctx128, "AES-CFB-128");
@@ -469,12 +502,13 @@ aes_cfb_test(struct IMB_MGR *mb_mgr)
         test_suite_start(&ctx256, "AES-CFB-256");
 
         for (i = 0; i < test_num_jobs_size; i++)
-                test_aes_cfb_vectors(mb_mgr, &ctx128, &ctx192, &ctx256, aes_cfb_test_json,
+                test_aes_cfb_vectors(mb_mgr, &ctx128, &ctx192, &ctx256, aes_cfb_vectors,
                                      test_num_jobs[i]);
 
         errors += test_suite_end(&ctx128);
         errors += test_suite_end(&ctx192);
         errors += test_suite_end(&ctx256);
 
+        free_aes_cfb_vectors(jctx);
         return errors;
 }
