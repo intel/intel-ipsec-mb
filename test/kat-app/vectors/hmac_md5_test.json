@@ -1,0 +1,212 @@
+{
+    "algorithm": "HMAC-MD5",
+    "generatorVersion": "",
+    "header": [
+        "Test vectors of type MacTest are intended for testing the",
+        "generation and verification of MACs."
+    ],
+    "notes": {},
+    "numberOfTests": 15,
+    "schema": "mac_test_schema_v1.json",
+    "testGroups": [
+        {
+            "type": "MacTest",
+            "source": "https://tools.ietf.org/html/rfc2202",
+            "keySize": 128,
+            "tagSize": 128,
+            "tests": [
+                {
+                    "tcId": 1,
+                    "comment": "ASCII message 'Hi There'",
+                    "key": "0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b",
+                    "msg": "4869205468657265",
+                    "tag": "9294727a3638bb1c13f48ef8158bfc9d",
+                    "result": "valid",
+                    "flags": []
+                },
+                {
+                    "tcId": 3,
+                    "comment": "Long Message",
+                    "key": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                    "msg": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+                    "tag": "56be34521d144c88dbb8c733f0e8b3f6",
+                    "result": "valid",
+                    "flags": []
+                },
+                {
+                    "tcId": 5,
+                    "comment": "ASCII message: 'Test With Truncation'",
+                    "key": "0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c",
+                    "msg": "546573742057697468205472756e636174696f6e",
+                    "tag": "56461ef2342edc00f9bab995690efd4c",
+                    "result": "valid",
+                    "flags": []
+                },
+                {
+                    "tcId": 15,
+                    "comment": "Zero-length message",
+                    "key": "0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b",
+                    "msg": "",
+                    "tag": "c9e99a43cd8fa24a840aa85c7cca0061",
+                    "result": "valid",
+                    "flags": []
+                }
+            ]
+        },
+        {
+            "type": "MacTest",
+            "source": "https://tools.ietf.org/html/rfc2202",
+            "keySize": 32,
+            "tagSize": 128,
+            "tests": [
+                {
+                    "tcId": 2,
+                    "comment": "ASCII message: 'what do ya want for nothing?'",
+                    "key": "4a656665",
+                    "msg": "7768617420646f2079612077616e7420666f72206e6f7468696e673f",
+                    "tag": "750c783e6ab0b503eaa86e310a5db738",
+                    "result": "valid",
+                    "flags": []
+                }
+            ]
+        },
+        {
+            "type": "MacTest",
+            "source": "https://tools.ietf.org/html/rfc2202",
+            "keySize": 200,
+            "tagSize": 128,
+            "tests": [
+                {
+                    "tcId": 4,
+                    "comment": "Long Message",
+                    "key": "0102030405060708090a0b0c0d0e0f10111213141516171819",
+                    "msg": "cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd",
+                    "tag": "697eaf0aca3a3aea3a75164746ffaa79",
+                    "result": "valid",
+                    "flags": []
+                }
+            ]
+        },
+        {
+            "type": "MacTest",
+            "source": "https://tools.ietf.org/html/rfc2202",
+            "keySize": 640,
+            "tagSize": 128,
+            "tests": [
+                {
+                    "tcId": 6,
+                    "comment": "Long Key",
+                    "key": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                    "msg": "54657374205573696e67204c6172676572205468616e20426c6f636b2d53697a65204b6579202d2048617368204b6579204669727374",
+                    "tag": "6b1ab7fe4bd7bf8f0b62e6ce61b9d0cd",
+                    "result": "valid",
+                    "flags": []
+                },
+                {
+                    "tcId": 7,
+                    "comment": "Long Key",
+                    "key": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                    "msg": "54657374205573696e67204c6172676572205468616e20426c6f636b2d53697a65204b657920616e64204c6172676572205468616e204f6e6520426c6f636b2d53697a652044617461",
+                    "tag": "6f630fad67cda0ee1fb1f562db3aa53e",
+                    "result": "valid",
+                    "flags": []
+                }
+            ]
+        },
+        {
+            "type": "MacTest",
+            "source": "https://tools.ietf.org/html/rfc2202",
+            "keySize": 128,
+            "tagSize": 96,
+            "tests": [
+                {
+                    "tcId": 8,
+                    "comment": "ASCII message 'Hi There'",
+                    "key": "0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b",
+                    "msg": "4869205468657265",
+                    "tag": "9294727a3638bb1c13f48ef8",
+                    "result": "valid",
+                    "flags": []
+                },
+                {
+                    "tcId": 10,
+                    "comment": "Long Message",
+                    "key": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                    "msg": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+                    "tag": "56be34521d144c88dbb8c733",
+                    "result": "valid",
+                    "flags": []
+                },
+                {
+                    "tcId": 12,
+                    "comment": "ASCII message: 'Test With Truncation'",
+                    "key": "0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c",
+                    "msg": "546573742057697468205472756e636174696f6e",
+                    "tag": "56461ef2342edc00f9bab995",
+                    "result": "valid",
+                    "flags": []
+                }
+            ]
+        },
+        {
+            "type": "MacTest",
+            "source": "https://tools.ietf.org/html/rfc2202",
+            "keySize": 32,
+            "tagSize": 96,
+            "tests": [
+                {
+                    "tcId": 9,
+                    "comment": "ASCII message: 'what do ya want for nothing?'",
+                    "key": "4a656665",
+                    "msg": "7768617420646f2079612077616e7420666f72206e6f7468696e673f",
+                    "tag": "750c783e6ab0b503eaa86e31",
+                    "result": "valid",
+                    "flags": []
+                }
+            ]
+        },
+        {
+            "type": "MacTest",
+            "source": "https://tools.ietf.org/html/rfc2202",
+            "keySize": 200,
+            "tagSize": 96,
+            "tests": [
+                {
+                    "tcId": 11,
+                    "comment": "Long Message",
+                    "key": "0102030405060708090a0b0c0d0e0f10111213141516171819",
+                    "msg": "cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd",
+                    "tag": "697eaf0aca3a3aea3a751647",
+                    "result": "valid",
+                    "flags": []
+                }
+            ]
+        },
+        {
+            "type": "MacTest",
+            "source": "https://tools.ietf.org/html/rfc2202",
+            "keySize": 640,
+            "tagSize": 96,
+            "tests": [
+                {
+                    "tcId": 13,
+                    "comment": "Long Key",
+                    "key": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                    "msg": "54657374205573696e67204c6172676572205468616e20426c6f636b2d53697a65204b6579202d2048617368204b6579204669727374",
+                    "tag": "6b1ab7fe4bd7bf8f0b62e6ce",
+                    "result": "valid",
+                    "flags": []
+                },
+                {
+                    "tcId": 14,
+                    "comment": "Long Key",
+                    "key": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                    "msg": "54657374205573696e67204c6172676572205468616e20426c6f636b2d53697a65204b657920616e64204c6172676572205468616e204f6e6520426c6f636b2d53697a652044617461",
+                    "tag": "6f630fad67cda0ee1fb1f562",
+                    "result": "valid",
+                    "flags": []
+                }
+            ]
+        }
+    ]
+}

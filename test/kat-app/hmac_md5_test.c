@@ -38,7 +38,36 @@
 int
 hmac_md5_test(struct IMB_MGR *mb_mgr);
 
-extern const struct mac_test hmac_md5_test_json[];
+static struct mac_test *hmac_md5_vectors;
+
+static int
+load_hmac_md5_vectors(struct test_json_alloc_ctx **ctx)
+{
+        char path[1024];
+        int ret;
+        const char *const file_name = "hmac_md5_test.json";
+
+        if (kat_vector_dir == NULL) {
+                fprintf(stderr, "Error: no vector directory set; use --vector-dir <DIR>\n");
+                return -1;
+        }
+
+        ret = snprintf(path, sizeof(path), "%s/%s", kat_vector_dir, file_name);
+        if (ret < 0 || ret >= (int) sizeof(path))
+                return -1;
+
+        if (json_load_mac_test(path, &hmac_md5_vectors, ctx) < 0)
+                return -1;
+
+        return 0;
+}
+
+static void
+free_hmac_md5_vectors(struct test_json_alloc_ctx *ctx)
+{
+        json_free_test_ctx(ctx);
+        hmac_md5_vectors = NULL;
+}
 
 static int
 hmac_md5_job_ok(const struct mac_test *vec, const struct IMB_JOB *job, const uint8_t *auth,
@@ -179,7 +208,7 @@ static void
 test_hmac_md5_std_vectors(struct IMB_MGR *mb_mgr, const int num_jobs, struct test_suite_context *ts)
 {
 
-        const struct mac_test *v = hmac_md5_test_json;
+        const struct mac_test *v = hmac_md5_vectors;
 
         if (!quiet_mode)
                 printf("HMAC-MD5 standard test vectors (N jobs = %d):\n", num_jobs);
@@ -218,12 +247,17 @@ int
 hmac_md5_test(struct IMB_MGR *mb_mgr)
 {
         struct test_suite_context ts;
+        struct test_json_alloc_ctx *ctx = NULL;
         int num_jobs, errors = 0;
+
+        if (load_hmac_md5_vectors(&ctx) < 0)
+                return 1;
 
         test_suite_start(&ts, "HMAC-MD5");
         for (num_jobs = 1; num_jobs <= 17; num_jobs++)
                 test_hmac_md5_std_vectors(mb_mgr, num_jobs, &ts);
         errors = test_suite_end(&ts);
 
+        free_hmac_md5_vectors(ctx);
         return errors;
 }
