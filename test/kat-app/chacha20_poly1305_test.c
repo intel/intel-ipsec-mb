@@ -40,7 +40,36 @@
 int
 chacha20_poly1305_test(struct IMB_MGR *mb_mgr);
 
-extern const struct aead_test chacha20_poly1305_test_json[];
+static struct aead_test *chacha20_poly1305_vectors;
+
+static int
+load_chacha20_poly1305_vectors(struct test_json_alloc_ctx **ctx)
+{
+        char path[1024];
+        int ret;
+        const char *const file_name = "chacha20_poly1305_test.json";
+
+        if (kat_vector_dir == NULL) {
+                fprintf(stderr, "Error: no vector directory set; use --vector-dir <DIR>\n");
+                return -1;
+        }
+
+        ret = snprintf(path, sizeof(path), "%s/%s", kat_vector_dir, file_name);
+        if (ret < 0 || ret >= (int) sizeof(path))
+                return -1;
+
+        if (json_load_aead_test(path, &chacha20_poly1305_vectors, ctx) < 0)
+                return -1;
+
+        return 0;
+}
+
+static void
+free_chacha20_poly1305_vectors(struct test_json_alloc_ctx *ctx)
+{
+        json_free_test_ctx(ctx);
+        chacha20_poly1305_vectors = NULL;
+}
 
 static int
 aead_ok(const struct aead_test *vec, const size_t auth_len, const uint8_t *out_text,
@@ -950,11 +979,15 @@ chacha20_poly1305_test(struct IMB_MGR *mb_mgr)
 {
         int i, errors = 0;
         struct test_suite_context ctx;
+        struct test_json_alloc_ctx *jctx = NULL;
         uint32_t seg_sz;
+
+        if (load_chacha20_poly1305_vectors(&jctx) < 0)
+                return 1;
 
         test_suite_start(&ctx, "AEAD-CHACHA20-256-POLY1305");
         for (i = 1; i < 20; i++)
-                test_aead_vectors(mb_mgr, &ctx, i, chacha20_poly1305_test_json);
+                test_aead_vectors(mb_mgr, &ctx, i, chacha20_poly1305_vectors);
         for (seg_sz = SEG_SZ_STEP; seg_sz <= MAX_SEG_SZ; seg_sz += SEG_SZ_STEP) {
                 /* Job API */
                 test_sgl(mb_mgr, &ctx, BUF_SZ, seg_sz, IMB_DIR_ENCRYPT, 1, 0);
@@ -971,5 +1004,6 @@ chacha20_poly1305_test(struct IMB_MGR *mb_mgr)
 
         errors = test_suite_end(&ctx);
 
+        free_chacha20_poly1305_vectors(jctx);
         return errors;
 }
