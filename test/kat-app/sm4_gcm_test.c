@@ -48,7 +48,36 @@
 int
 sm4_gcm_test(IMB_MGR *p_mgr);
 
-extern const struct aead_test sm4_gcm_test_json[];
+static struct aead_test *sm4_gcm_vectors;
+
+static int
+load_sm4_gcm_vectors(struct test_json_alloc_ctx **ctx)
+{
+        char path[1024];
+        int ret;
+        const char *const file_name = "sm4_gcm_test.json";
+
+        if (kat_vector_dir == NULL) {
+                fprintf(stderr, "Error: no vector directory set; use --vector-dir <DIR>\n");
+                return -1;
+        }
+
+        ret = snprintf(path, sizeof(path), "%s/%s", kat_vector_dir, file_name);
+        if (ret < 0 || ret >= (int) sizeof(path))
+                return -1;
+
+        if (json_load_aead_test(path, &sm4_gcm_vectors, ctx) < 0)
+                return -1;
+
+        return 0;
+}
+
+static void
+free_sm4_gcm_vectors(struct test_json_alloc_ctx *ctx)
+{
+        json_free_test_ctx(ctx);
+        sm4_gcm_vectors = NULL;
+}
 
 static IMB_MGR *p_gcm_mgr = NULL;
 
@@ -305,13 +334,18 @@ sm4_gcm_test(IMB_MGR *p_mgr)
 {
         struct test_suite_context ts;
         int errors = 0;
+        struct test_json_alloc_ctx *jctx = NULL;
+
+        if (load_sm4_gcm_vectors(&jctx) < 0)
+                return 1;
 
         p_gcm_mgr = p_mgr;
 
         test_suite_start(&ts, "SM4-GCM");
-        test_gcm_std_vectors(&ts, sm4_gcm_test_json);
+        test_gcm_std_vectors(&ts, sm4_gcm_vectors);
 
         errors += test_suite_end(&ts);
 
+        free_sm4_gcm_vectors(jctx);
         return errors;
 }
