@@ -1,0 +1,142 @@
+{
+    "algorithm": "HMAC-SHA256",
+    "generatorVersion": "",
+    "header": [
+        "Test vectors of type MacTest are intended for testing the",
+        "generation and verification of MACs."
+    ],
+    "notes": {},
+    "numberOfTests": 9,
+    "schema": "mac_test_schema_v1.json",
+    "testGroups": [
+        {
+            "type": "MacTest",
+            "source": "https://tools.ietf.org/html/rfc4231",
+            "keySize": 160,
+            "tagSize": 256,
+            "tests": [
+                {
+                    "tcId": 1,
+                    "comment": "Message: 'Hi There'",
+                    "key": "0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b",
+                    "msg": "4869205468657265",
+                    "tag": "b0344c61d8db38535ca8afceaf0bf12b881dc200c9833da726e9376c2e32cff7",
+                    "result": "valid",
+                    "flags": []
+                },
+                {
+                    "tcId": 3,
+                    "comment": "Message: 'what do ya want for nothing?'",
+                    "key": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                    "msg": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+                    "tag": "773ea91e36800e46854db8ebd09181a72959098b3ef8c122d9635514ced565fe",
+                    "result": "valid",
+                    "flags": []
+                },
+                {
+                    "tcId": 9,
+                    "comment": "Zero-length message",
+                    "key": "0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b",
+                    "msg": "",
+                    "tag": "999a901219f032cd497cadb5e6051e97b6a29ab297bd6ae722bd6062a2f59542",
+                    "result": "valid",
+                    "flags": []
+                }
+            ]
+        },
+        {
+            "type": "MacTest",
+            "source": "https://tools.ietf.org/html/rfc4231",
+            "keySize": 32,
+            "tagSize": 256,
+            "tests": [
+                {
+                    "tcId": 2,
+                    "comment": "Message: 'what do ya want for nothing?'",
+                    "key": "4a656665",
+                    "msg": "7768617420646f2079612077616e7420666f72206e6f7468696e673f",
+                    "tag": "5bdcc146bf60754e6a042426089575c75a003f089d2739839dec58b964ec3843",
+                    "result": "valid",
+                    "flags": []
+                }
+            ]
+        },
+        {
+            "type": "MacTest",
+            "source": "https://tools.ietf.org/html/rfc4231",
+            "keySize": 200,
+            "tagSize": 256,
+            "tests": [
+                {
+                    "tcId": 4,
+                    "comment": "Long Message",
+                    "key": "0102030405060708090a0b0c0d0e0f10111213141516171819",
+                    "msg": "cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd",
+                    "tag": "82558a389a443c0ea4cc819899f2083a85f0faa3e578f8077a2e3ff46729665b",
+                    "result": "valid",
+                    "flags": []
+                }
+            ]
+        },
+        {
+            "type": "MacTest",
+            "source": "https://tools.ietf.org/html/rfc4231",
+            "keySize": 160,
+            "tagSize": 128,
+            "tests": [
+                {
+                    "tcId": 5,
+                    "comment": "Message: 'Test With Truncation'",
+                    "key": "0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c",
+                    "msg": "546573742057697468205472756e636174696f6e",
+                    "tag": "a3b6167473100ee06e0c796c2955552b",
+                    "result": "valid",
+                    "flags": []
+                }
+            ]
+        },
+        {
+            "type": "MacTest",
+            "source": "https://tools.ietf.org/html/rfc4231",
+            "keySize": 1048,
+            "tagSize": 256,
+            "tests": [
+                {
+                    "tcId": 6,
+                    "comment": "message : 'Test Using Larger Than Block-Size Key - Hash Key First'",
+                    "key": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                    "msg": "54657374205573696e67204c6172676572205468616e20426c6f636b2d53697a65204b6579202d2048617368204b6579204669727374",
+                    "tag": "60e431591ee0b67f0d8a26aacbf5b77f8e0bc6213728c5140546040f0ee37f54",
+                    "result": "valid",
+                    "flags": []
+                },
+                {
+                    "tcId": 7,
+                    "comment": "message : 'This is a test using a larger than block-size key and a larger than block-size data. The key needs to be hashed before being used by the HMAC algorithm.'",
+                    "key": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                    "msg": "5468697320697320612074657374207573696e672061206c6172676572207468616e20626c6f636b2d73697a65206b657920616e642061206c6172676572207468616e20626c6f636b2d73697a6520646174612e20546865206b6579206e6565647320746f20626520686173686564206265666f7265206265696e6720757365642062792074686520484d414320616c676f726974686d2e",
+                    "tag": "9b09ffa71b942fcb27635fbcd5b0e944bfdc63644f0713938a7f51535c3a35e2",
+                    "result": "valid",
+                    "flags": []
+                }
+            ]
+        },
+        {
+            "type": "MacTest",
+            "source": "https://csrc.nist.gov/csrc/media/projects/",
+            "keySize": 512,
+            "tagSize": 256,
+            "tests": [
+                {
+                    "tcId": 8,
+                    "comment": "message : 'This is a test using a larger than block-size key and a larger than block-size data. The key needs to be hashed before being used by the HMAC algorithm.'",
+                    "key": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f",
+                    "msg": "53616d706c65206d65737361676520666f72206b65796c656e3d626c6f636b6c656e",
+                    "tag": "8bb9a1db9806f20df7f77b82138c7914d174d59e13dc4d0169c9057b133e1d62",
+                    "result": "valid",
+                    "flags": []
+                }
+            ]
+        }
+    ]
+}

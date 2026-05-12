@@ -41,10 +41,126 @@
 int
 hmac_sha256_sha512_test(struct IMB_MGR *mb_mgr);
 
-extern const struct mac_test hmac_sha224_test_kat_json[];
-extern const struct mac_test hmac_sha256_test_kat_json[];
-extern const struct mac_test hmac_sha384_test_kat_json[];
-extern const struct mac_test hmac_sha512_test_kat_json[];
+static struct mac_test *hmac_sha224_vectors;
+static struct mac_test *hmac_sha256_vectors;
+static struct mac_test *hmac_sha384_vectors;
+static struct mac_test *hmac_sha512_vectors;
+
+static int
+load_hmac_sha224_vectors(struct test_json_alloc_ctx **ctx)
+{
+        char path[1024];
+        int ret;
+        const char *const file_name = "hmac_sha224_test.json";
+
+        if (kat_vector_dir == NULL) {
+                fprintf(stderr, "Error: no vector directory set; use --vector-dir <DIR>\n");
+                return -1;
+        }
+
+        ret = snprintf(path, sizeof(path), "%s/%s", kat_vector_dir, file_name);
+        if (ret < 0 || ret >= (int) sizeof(path))
+                return -1;
+
+        if (json_load_mac_test(path, &hmac_sha224_vectors, ctx) < 0)
+                return -1;
+
+        return 0;
+}
+
+static void
+free_hmac_sha224_vectors(struct test_json_alloc_ctx *ctx)
+{
+        json_free_test_ctx(ctx);
+        hmac_sha224_vectors = NULL;
+}
+
+static int
+load_hmac_sha256_vectors(struct test_json_alloc_ctx **ctx)
+{
+        char path[1024];
+        int ret;
+        const char *const file_name = "hmac_sha256_test.json";
+
+        if (kat_vector_dir == NULL) {
+                fprintf(stderr, "Error: no vector directory set; use --vector-dir <DIR>\n");
+                return -1;
+        }
+
+        ret = snprintf(path, sizeof(path), "%s/%s", kat_vector_dir, file_name);
+        if (ret < 0 || ret >= (int) sizeof(path))
+                return -1;
+
+        if (json_load_mac_test(path, &hmac_sha256_vectors, ctx) < 0)
+                return -1;
+
+        return 0;
+}
+
+static void
+free_hmac_sha256_vectors(struct test_json_alloc_ctx *ctx)
+{
+        json_free_test_ctx(ctx);
+        hmac_sha256_vectors = NULL;
+}
+
+static int
+load_hmac_sha384_vectors(struct test_json_alloc_ctx **ctx)
+{
+        char path[1024];
+        int ret;
+        const char *const file_name = "hmac_sha384_test.json";
+
+        if (kat_vector_dir == NULL) {
+                fprintf(stderr, "Error: no vector directory set; use --vector-dir <DIR>\n");
+                return -1;
+        }
+
+        ret = snprintf(path, sizeof(path), "%s/%s", kat_vector_dir, file_name);
+        if (ret < 0 || ret >= (int) sizeof(path))
+                return -1;
+
+        if (json_load_mac_test(path, &hmac_sha384_vectors, ctx) < 0)
+                return -1;
+
+        return 0;
+}
+
+static void
+free_hmac_sha384_vectors(struct test_json_alloc_ctx *ctx)
+{
+        json_free_test_ctx(ctx);
+        hmac_sha384_vectors = NULL;
+}
+
+static int
+load_hmac_sha512_vectors(struct test_json_alloc_ctx **ctx)
+{
+        char path[1024];
+        int ret;
+        const char *const file_name = "hmac_sha512_test.json";
+
+        if (kat_vector_dir == NULL) {
+                fprintf(stderr, "Error: no vector directory set; use --vector-dir <DIR>\n");
+                return -1;
+        }
+
+        ret = snprintf(path, sizeof(path), "%s/%s", kat_vector_dir, file_name);
+        if (ret < 0 || ret >= (int) sizeof(path))
+                return -1;
+
+        if (json_load_mac_test(path, &hmac_sha512_vectors, ctx) < 0)
+                return -1;
+
+        return 0;
+}
+
+static void
+free_hmac_sha512_vectors(struct test_json_alloc_ctx *ctx)
+{
+        json_free_test_ctx(ctx);
+        hmac_sha512_vectors = NULL;
+}
 
 static int
 hmac_shax_job_ok(const struct mac_test *vec, const struct IMB_JOB *job, const int sha_type,
@@ -555,16 +671,16 @@ test_hmac_shax_std_vectors(struct IMB_MGR *mb_mgr, const int sha_type, const uin
 
         switch (sha_type) {
         case 224:
-                v = hmac_sha224_test_kat_json;
+                v = hmac_sha224_vectors;
                 break;
         case 256:
-                v = hmac_sha256_test_kat_json;
+                v = hmac_sha256_vectors;
                 break;
         case 384:
-                v = hmac_sha384_test_kat_json;
+                v = hmac_sha384_vectors;
                 break;
         default:
-                v = hmac_sha512_test_kat_json;
+                v = hmac_sha512_vectors;
                 break;
         }
         if (!quiet_mode)
@@ -625,9 +741,28 @@ hmac_sha256_sha512_test(struct IMB_MGR *mb_mgr)
         static const char *const sha_names_tab[] = { "HMAC-SHA224", "HMAC-SHA256", "HMAC-SHA384",
                                                      "HMAC-SHA512" };
         struct test_suite_context ts_sha224, ts_sha256, ts_sha384, ts_sha512;
+        struct test_json_alloc_ctx *ctx224 = NULL, *ctx256 = NULL, *ctx384 = NULL, *ctx512 = NULL;
         unsigned i, num_jobs;
         int errors = 0;
         uint32_t tag_size;
+
+        if (load_hmac_sha224_vectors(&ctx224) < 0)
+                return 1;
+        if (load_hmac_sha256_vectors(&ctx256) < 0) {
+                free_hmac_sha224_vectors(ctx224);
+                return 1;
+        }
+        if (load_hmac_sha384_vectors(&ctx384) < 0) {
+                free_hmac_sha224_vectors(ctx224);
+                free_hmac_sha256_vectors(ctx256);
+                return 1;
+        }
+        if (load_hmac_sha512_vectors(&ctx512) < 0) {
+                free_hmac_sha224_vectors(ctx224);
+                free_hmac_sha256_vectors(ctx256);
+                free_hmac_sha384_vectors(ctx384);
+                return 1;
+        }
 
         /* Initialize test suites and store in array */
         test_suite_start(&ts_sha224, sha_names_tab[0]);
@@ -644,7 +779,7 @@ hmac_sha256_sha512_test(struct IMB_MGR *mb_mgr)
                                                    sha_ts_tab[i]);
         }
 
-        const struct mac_test *vec_224 = hmac_sha224_test_kat_json;
+        const struct mac_test *vec_224 = hmac_sha224_vectors;
         assert(vec_224->tagSize / 8 == 28);
         for (tag_size = 4; tag_size <= 28; tag_size++) {
                 if (test_hmac_shax(mb_mgr, vec_224, IMB_MAX_BURST_SIZE, sha_types_tab[0],
@@ -656,7 +791,7 @@ hmac_sha256_sha512_test(struct IMB_MGR *mb_mgr)
                 }
         }
 
-        const struct mac_test *vec_256 = hmac_sha256_test_kat_json;
+        const struct mac_test *vec_256 = hmac_sha256_vectors;
         assert(vec_256->tagSize / 8 == 32);
         for (tag_size = 4; tag_size <= 32; tag_size++) {
                 if (test_hmac_shax(mb_mgr, vec_256, IMB_MAX_BURST_SIZE, sha_types_tab[1],
@@ -668,7 +803,7 @@ hmac_sha256_sha512_test(struct IMB_MGR *mb_mgr)
                 }
         }
 
-        const struct mac_test *vec_384 = hmac_sha384_test_kat_json;
+        const struct mac_test *vec_384 = hmac_sha384_vectors;
         assert(vec_384->tagSize / 8 == 48);
         for (tag_size = 4; tag_size <= 48; tag_size++) {
                 if (test_hmac_shax(mb_mgr, vec_384, IMB_MAX_BURST_SIZE, sha_types_tab[2],
@@ -680,7 +815,7 @@ hmac_sha256_sha512_test(struct IMB_MGR *mb_mgr)
                 }
         }
 
-        const struct mac_test *vec_512 = hmac_sha512_test_kat_json;
+        const struct mac_test *vec_512 = hmac_sha512_vectors;
         assert(vec_512->tagSize / 8 == 64);
         for (tag_size = 4; tag_size <= 64; tag_size++) {
                 if (test_hmac_shax(mb_mgr, vec_512, IMB_MAX_BURST_SIZE, sha_types_tab[3],
@@ -698,5 +833,9 @@ hmac_sha256_sha512_test(struct IMB_MGR *mb_mgr)
         errors += test_suite_end(&ts_sha384);
         errors += test_suite_end(&ts_sha512);
 
+        free_hmac_sha224_vectors(ctx224);
+        free_hmac_sha256_vectors(ctx256);
+        free_hmac_sha384_vectors(ctx384);
+        free_hmac_sha512_vectors(ctx512);
         return errors;
 }
