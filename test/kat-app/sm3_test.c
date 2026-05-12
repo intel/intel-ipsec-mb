@@ -37,7 +37,36 @@
 int
 sm3_test(struct IMB_MGR *mb_mgr);
 
-extern const struct mac_test sm3_test_json[];
+static struct mac_test *sm3_vectors;
+
+static int
+load_sm3_vectors(struct test_json_alloc_ctx **ctx)
+{
+        char path[1024];
+        int ret;
+        const char *const file_name = "sm3_test.json";
+
+        if (kat_vector_dir == NULL) {
+                fprintf(stderr, "Error: no vector directory set; use --vector-dir <DIR>\n");
+                return -1;
+        }
+
+        ret = snprintf(path, sizeof(path), "%s/%s", kat_vector_dir, file_name);
+        if (ret < 0 || ret >= (int) sizeof(path))
+                return -1;
+
+        if (json_load_mac_test(path, &sm3_vectors, ctx) < 0)
+                return -1;
+
+        return 0;
+}
+
+static void
+free_sm3_vectors(struct test_json_alloc_ctx *ctx)
+{
+        json_free_test_ctx(ctx);
+        sm3_vectors = NULL;
+}
 
 static int
 sm3_job_ok(const struct mac_test *vec, const struct IMB_JOB *job, const uint8_t *auth,
@@ -157,7 +186,7 @@ end2:
 static void
 test_sm3_vectors(struct IMB_MGR *mb_mgr, struct test_suite_context *ctx, const int num_jobs)
 {
-        const struct mac_test *v = sm3_test_json;
+        const struct mac_test *v = sm3_vectors;
 
         if (!quiet_mode)
                 printf("SM3 standard test vectors (N jobs = %d):\n", num_jobs);
@@ -181,6 +210,10 @@ int
 sm3_test(struct IMB_MGR *mb_mgr)
 {
         struct test_suite_context ctx;
+        struct test_json_alloc_ctx *jctx = NULL;
+
+        if (load_sm3_vectors(&jctx) < 0)
+                return 1;
 
         test_suite_start(&ctx, "SM3");
 
@@ -189,5 +222,6 @@ sm3_test(struct IMB_MGR *mb_mgr)
 
         const int errors = test_suite_end(&ctx);
 
+        free_sm3_vectors(jctx);
         return errors;
 }
