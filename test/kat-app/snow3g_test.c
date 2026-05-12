@@ -42,7 +42,37 @@
 #define IMB_SNOW3G_NUM_SUPPORTED_BUFFERS 16
 
 extern const struct cipher_test snow3g_cipher_bit_test_vectors_json[];
-extern const struct mac_test snow3g_hash_test_vectors_json[];
+static struct mac_test *snow3g_f9_vectors;
+
+static int
+load_snow3g_f9_vectors(struct test_json_alloc_ctx **ctx)
+{
+        char path[1024];
+        int ret;
+        const char *const file_name = "snow3g_f9_test.json";
+
+        if (kat_vector_dir == NULL) {
+                fprintf(stderr, "Error: no vector directory set; use --vector-dir <DIR>\n");
+                return -1;
+        }
+
+        ret = snprintf(path, sizeof(path), "%s/%s", kat_vector_dir, file_name);
+        if (ret < 0 || ret >= (int) sizeof(path))
+                return -1;
+
+        if (json_load_mac_test(path, &snow3g_f9_vectors, ctx) < 0)
+                return -1;
+
+        return 0;
+}
+
+static void
+free_snow3g_f9_vectors(struct test_json_alloc_ctx *ctx)
+{
+        json_free_test_ctx(ctx);
+        snow3g_f9_vectors = NULL;
+}
+
 extern const struct cipher_test snow3g_cipher_test_vectors_json[];
 extern const struct cipher_test snow3g_cipher_linear_test_vectors_json[];
 
@@ -2493,7 +2523,7 @@ validate_snow3g_f9(struct IMB_MGR *mb_mgr, uint32_t job_api, struct test_suite_c
 {
         int numVectors = 0, i;
         size_t size = 0;
-        const struct mac_test *testVectors = snow3g_hash_test_vectors_json;
+        const struct mac_test *testVectors = snow3g_f9_vectors;
 
         snow3g_key_schedule_t *pKeySched = NULL;
         uint8_t *pKey = NULL;
@@ -2653,7 +2683,7 @@ validate_f9_iv_gen(void)
 
         /* 6 test sets */
         const struct hash_iv_gen_params *iv_params = snow3g_iv_params_f9_json;
-        const struct mac_test *testVectors = snow3g_hash_test_vectors_json;
+        const struct mac_test *testVectors = snow3g_f9_vectors;
 
         /* calculate number of vectors */
         for (i = 0; testVectors[i].msg != NULL; i++)
@@ -2692,6 +2722,10 @@ snow3g_test(struct IMB_MGR *mb_mgr)
         uint32_t i;
         struct test_suite_context uea2_ctx;
         struct test_suite_context uia2_ctx;
+        struct test_json_alloc_ctx *f9_jctx = NULL;
+
+        if (load_snow3g_f9_vectors(&f9_jctx) < 0)
+                return 1;
 
         test_suite_start(&uea2_ctx, "SNOW3G-UEA2");
         test_suite_start(&uia2_ctx, "SNOW3G-UIA2");
@@ -2718,5 +2752,6 @@ snow3g_test(struct IMB_MGR *mb_mgr)
         errors += test_suite_end(&uea2_ctx);
         errors += test_suite_end(&uia2_ctx);
 
+        free_snow3g_f9_vectors(f9_jctx);
         return errors;
 }
