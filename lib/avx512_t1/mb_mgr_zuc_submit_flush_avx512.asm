@@ -49,6 +49,9 @@
 %define ZUCNEA6_INIT_16     asm_ZucNEA6Initialization_16_avx512
 %define ZUC_KEYGEN4B_16    asm_ZucGenKeystream4B_16_avx512
 %define ZUC_CIPHER         asm_ZucCipher_16_avx512
+%define ZUC_CIPHER_INIT    asm_ZucCipherInit_16_avx512
+%define ZUC128_LFSR_LOAD_16  asm_ZucLfsrLoad_avx512
+%define ZUCNEA6_LFSR_LOAD_16 asm_ZucNEA6LfsrLoad_avx512
 %define ZUC_REMAINDER_16   asm_Eia3RemainderAVX512_16
 %define ZUC_KEYGEN_SKIP8_16 asm_ZucGenKeystream_16_skip8_avx512
 %define ZUC_KEYGEN64B_SKIP8_16 asm_ZucGenKeystream64B_16_skip8_avx512
@@ -69,6 +72,12 @@ extern asm_ZucInitialization_16_avx512
 extern asm_ZucInitialization_16_gfni_avx512
 extern asm_ZucCipher_16_avx512
 extern asm_ZucCipher_16_gfni_avx512
+extern asm_ZucCipherInit_16_avx512
+extern asm_ZucCipherInit_16_gfni_avx512
+extern asm_ZucLfsrLoad_avx512
+extern asm_ZucLfsrLoad_gfni_avx512
+extern asm_ZucNEA6LfsrLoad_avx512
+extern asm_ZucNEA6LfsrLoad_gfni_avx512
 extern asm_ZucNEA6Initialization_16_avx512
 extern asm_ZucNEA6Initialization_16_gfni_avx512
 extern asm_Eia3RemainderAVX512_16
@@ -185,6 +194,23 @@ mksection .text
         mov     tmp, [job + _dst]
         mov     [state + _zuc_args_out + lane*8], tmp
 
+        ;; Call LFSR_LOAD for this lane
+        mov     tmp, [job + _enc_keys]
+        mov     tmp2, [job + _iv]
+        mov     r15, lane
+        lea     arg1, [state + _zuc_state]
+        mov     arg2, tmp
+        mov     arg3, tmp2
+        mov     arg4, r15
+%ifidn %%ALGO, ZUC128
+        call    ZUC128_LFSR_LOAD_16
+%else
+        call    ZUCNEA6_LFSR_LOAD_16
+%endif
+        mov     state, [rsp + _gpr_save + 8*8]
+        mov     job,   [rsp + _gpr_save + 8*9]
+        mov     lane, r15
+
         ;; insert len into proper lane
         mov     len, [job + _msg_len_to_cipher_in_bytes]
 
@@ -221,32 +247,110 @@ align_label
         ; to pass parameter to next function
         mov     r11, state
 
-        lea     arg1, [r11 + _zuc_args_keys]
-        lea     arg2, [r11 + _zuc_args_IV]
-        lea     arg3, [r11 + _zuc_state]
-        movzx   DWORD(arg4), word [r11 + _zuc_init_not_done]
+        ;; Phase 1: Init rounds via CIPHER_INIT(init_mask=0xFFFF)
+        ;; Set all lanes' src/dst to KS buffer for init
+        lea     tmp, [r11 + _zuc_args_KS]
+        vpbroadcastq    zmm0, tmp
+        vmovdqa64       [r11 + _zuc_args_in], zmm0
+        vmovdqa64       [r11 + _zuc_args_in + 64], zmm0
+        vmovdqa64       [r11 + _zuc_args_out], zmm0
+        vmovdqa64       [r11 + _zuc_args_out + 64], zmm0
 
+        ;; Set init length (real lens are restored from jobs later)
 %ifidn %%ALGO, ZUC128
-        call    ZUC128_INIT_16
-%else ;; %%ALGO == ZUCNEA6
-        call    ZUCNEA6_INIT_16
-%endif ;; %%ALGO
+        mov     WORD(tmp), 128
+%else
+        mov     WORD(tmp), 192
+%endif
+        vpbroadcastw    ymm1, WORD(tmp)
+        vmovdqa64       [r11 + _zuc_lens], ymm1
 
+        ;; Call CIPHER_INIT with init_mask=0xFFFF (all lanes init)
+        RESERVE_STACK_SPACE 6
+        lea     arg1, [r11 + _zuc_state]
+        lea     arg2, [r11 + _zuc_args_in]
+        lea     arg3, [r11 + _zuc_args_out]
+        lea     arg4, [r11 + _zuc_lens]
+%ifidn %%ALGO, ZUC128
+        mov     arg5, 128
+%else
+        mov     arg5, 192
+%endif
+        mov     DWORD(arg6), 0xFFFF
+        call    ZUC_CIPHER_INIT
+        RESTORE_STACK_SPACE 6
         mov     r11, [rsp + _gpr_save + 8*8]
 
-        mov     word [r11 + _zuc_init_not_done], 0 ; Init done for all lanes
+        ;; Phase 2: Discard round via CIPHER_INIT(init_mask=0)
+        ;; Reset src/dst to KS buffer
+        lea     tmp, [r11 + _zuc_args_KS]
+        vpbroadcastq    zmm0, tmp
+        vmovdqa64       [r11 + _zuc_args_in], zmm0
+        vmovdqa64       [r11 + _zuc_args_in + 64], zmm0
+        vmovdqa64       [r11 + _zuc_args_out], zmm0
+        vmovdqa64       [r11 + _zuc_args_out + 64], zmm0
 
-        RESERVE_STACK_SPACE 5
+        mov     WORD(tmp), 4
+        vpbroadcastw    ymm1, WORD(tmp)
+        vmovdqa64       [r11 + _zuc_lens], ymm1
+
+        RESERVE_STACK_SPACE 6
+        lea     arg1, [r11 + _zuc_state]
+        lea     arg2, [r11 + _zuc_args_in]
+        lea     arg3, [r11 + _zuc_args_out]
+        lea     arg4, [r11 + _zuc_lens]
+        mov     arg5, 4
+        xor     arg6, arg6
+        call    ZUC_CIPHER_INIT
+        RESTORE_STACK_SPACE 6
+        mov     r11, [rsp + _gpr_save + 8*8]
+
+        ;; Phase 3: Restore real src/dst/lens and cipher
+        mov     word [r11 + _zuc_init_not_done], 0
+
+        ;; Restore real src/dst/lens from job structures
+%assign %%I 0
+%rep 16
+        mov     tmp, [r11 + _zuc_job_in_lane + %%I*8]
+        mov     tmp2, [tmp + _src]
+        add     tmp2, [tmp + _cipher_start_src_offset_in_bytes]
+        mov     [r11 + _zuc_args_in + %%I*8], tmp2
+        mov     tmp2, [tmp + _dst]
+        mov     [r11 + _zuc_args_out + %%I*8], tmp2
+        movzx   DWORD(tmp2), word [tmp + _msg_len_to_cipher_in_bytes]
+        mov     [r11 + _zuc_lens + %%I*2], WORD(tmp2)
+%assign %%I (%%I + 1)
+%endrep
+
+        ;; Find min length
+        vmovdqa64       ymm0, [r11 + _zuc_lens]
+        vphminposuw     xmm2, xmm0
+        vpextrw         DWORD(min_len), xmm2, 0
+        vpextrw         DWORD(idx), xmm2, 1
+        vextracti128    xmm1, ymm0, 1
+        vphminposuw     xmm2, xmm1
+        vpextrw         DWORD(tmp), xmm2, 0
+        cmp             DWORD(min_len), DWORD(tmp)
+        jle             %%use_min2
+        vpextrw         DWORD(idx), xmm2, 1
+        add             DWORD(idx), 8
+        mov             min_len, tmp
+%%use_min2:
+        or              min_len, min_len
+        je              %%len_is_0_submit_eea3
+
+        RESERVE_STACK_SPACE 6
 
         lea     arg1, [r11 + _zuc_state]
         lea     arg2, [r11 + _zuc_args_in]
         lea     arg3, [r11 + _zuc_args_out]
         lea     arg4, [r11 + _zuc_lens]
         mov     arg5, min_len
+        xor     arg6, arg6         ; init_mask = 0 (pure work mode)
 
-        call    ZUC_CIPHER
+        call    ZUC_CIPHER_INIT
 
-        RESTORE_STACK_SPACE 5
+        RESTORE_STACK_SPACE 6
 
         mov     state, [rsp + _gpr_save + 8*8]
         mov     job,   [rsp + _gpr_save + 8*9]
@@ -441,17 +545,18 @@ align_label
         vpbroadcastd    zmm0, DWORD(tmp4)
         vmovdqa32 [r12 + _zuc_state + OFS_R2]{k1}, zmm0
 
-        RESERVE_STACK_SPACE 5
+        RESERVE_STACK_SPACE 6
 
         lea     arg1, [r12 + _zuc_state]
         lea     arg2, [r12 + _zuc_args_in]
         lea     arg3, [r12 + _zuc_args_out]
         lea     arg4, [r12 + _zuc_lens]
         mov     arg5, min_len
+        xor     arg6, arg6         ; init_mask = 0 (pure work mode)
 
-        call    ZUC_CIPHER
+        call    ZUC_CIPHER_INIT
 
-        RESTORE_STACK_SPACE 5
+        RESTORE_STACK_SPACE 6
 
         mov     state, [rsp + _gpr_save + 8*8]
 

@@ -41,8 +41,11 @@
 %ifndef CIPHER_16
 %define USE_GFNI_VAES_VPCLMUL 0
 %define CIPHER_16 asm_ZucCipher_16_avx512
+%define CIPHER_INIT_16 asm_ZucCipherInit_16_avx512
 %define ZUC128_INIT asm_ZucInitialization_16_avx512
 %define ZUCNEA6_INIT asm_ZucNEA6Initialization_16_avx512
+%define ZUC128_LFSR_LOAD asm_ZucLfsrLoad_avx512
+%define ZUCNEA6_LFSR_LOAD asm_ZucNEA6LfsrLoad_avx512
 %define ZUC128_REMAINDER_16 asm_Eia3RemainderAVX512_16
 %define ZUC_KEYGEN64B_16 asm_ZucGenKeystream64B_16_avx512
 %define ZUC_KEYGEN8B_16 asm_ZucGenKeystream8B_16_avx512
@@ -2097,7 +2100,11 @@ ZUC_KEYGEN_SKIP8_16:
 ;; 5 - ZMM16-31 will contain 64 bytes of KS for each buffer
 ;; 6 - Reads 64 bytes of data for each buffer, XOR with KS and writes the ciphertext
 ;;
-%macro CIPHER64B 15
+;; Optional 16th parameter: INIT_KMASK - k-register with bits set for init lanes
+;; When provided, init lanes use LFSR_UPDT in init mode (W feedback) while work lanes
+;; use work mode (no W feedback). This allows init and cipher to run in parallel.
+;;
+%macro CIPHER64B 15-16
 %define %%NROUNDS    %1
 %define %%BYTE_MASK  %2
 %define %%LANE_MASK  %3
@@ -2113,6 +2120,9 @@ ZUC_KEYGEN_SKIP8_16:
 %define %%STATE      %13
 %define %%TMP        %14
 %define %%TMP2       %15
+%if %0 == 16
+%define %%INIT_KMASK %16
+%endif
 
         ; Read R1/R2
         vmovdqa32   %%R1, [%%STATE + OFS_R1]
@@ -2132,8 +2142,20 @@ align_loop
         vpxorq      zmm16, zmm7
         ; Shuffle bytes within KS words to XOR with plaintext later
         vpshufb         zmm16, [rel swap_mask]
+%if %0 == 16
+        ; Mixed init/work mode:
+        ; - Shift W right by 1 for init LFSR feedback
+        ; - Zero W for work lanes so LFSR_UPDT(init) gives
+        ;   W = 0 + LFSR_0 = LFSR_0 (correct work mode result)
+        vpsrld  zmm7, 1
+        vpxorq  zmm8, zmm8, zmm8
+        vpblendmd zmm7{%%INIT_KMASK}, zmm8, zmm7
+        LFSR_UPDT16  %%STATE, %%TMP, %%TMP2, %%LANE_MASK, zmm1, zmm2, zmm3, zmm4, zmm5, \
+                        zmm6, %%MASK_31, zmm7, init
+%else
         LFSR_UPDT16  %%STATE, %%TMP, %%TMP2, %%LANE_MASK, zmm1, zmm2, zmm3, zmm4, zmm5, \
                         zmm6, %%MASK_31, zmm7, work
+%endif
 
         mov     %%TMP2, %%TMP
         dec     %%TMP2
@@ -2389,6 +2411,290 @@ _no_final_rounds:
 %endif
         FUNC_RESTORE
 
+        ret
+
+;;
+;; void CIPHER_INIT_16(state16_t *pSta, u64 *pIn[16],
+;;                     u64 *pOut[16], u16 lengths[16],
+;;                     u64 min_length, u64 init_mask);
+;;
+;; Combined cipher function that processes init and working lanes in parallel.
+;; Init lanes (identified by init_mask) use LFSR_UPDT in init mode (W feedback)
+;; while working lanes use work mode. This allows ZUC initialization rounds and
+;; cipher operations to execute simultaneously across different lanes.
+;;
+align_function
+MKGLOBAL(CIPHER_INIT_16,function,internal)
+align_function
+CIPHER_INIT_16:
+
+%define pState     arg1
+%define pIn        arg2
+%define pOut       arg3
+%define lengths    arg4
+
+%define min_length r10
+%define buf_idx    r11
+
+        mov     min_length, arg5
+
+        ; Load init_mask into k4 before FUNC_SAVE adjusts stack
+%ifdef LINUX
+        kmovw   k4, arg6
+%else
+        mov     r11d, [rsp + 48]
+        kmovw   k4, r11d
+%endif
+
+        FUNC_SAVE
+
+        ; Convert all lengths set to UINT16_MAX (indicating that lane is not valid) to min length
+        vpbroadcastw ymm0, min_length
+        vmovdqa ymm1, [lengths]
+        vpcmpw k1, ymm1, [rel all_ffs], 0
+        vmovdqu16 ymm1{k1}, ymm0 ; YMM1 contain updated lengths
+
+        ; Round up to nearest multiple of 4 bytes
+        vpaddw  ymm0, [rel all_threes]
+        vpandq  ymm0, [rel all_fffcs]
+
+        ; Calculate remaining bytes to encrypt after function call
+        vpsubw  ymm2, ymm1, ymm0
+        vpxorq  ymm3, ymm3
+        vpcmpw  k1, ymm2, ymm3, 1 ; Get mask of lengths < 0
+        ; Set to zero the lengths of the lanes which are going to be completed
+        vmovdqu16 ymm2{k1}, ymm3 ; YMM2 contain final lengths
+        vmovdqa [lengths], ymm2 ; Update in memory the final updated lengths
+
+        ; Calculate number of bytes to encrypt after round of 64 bytes (up to 63 bytes),
+        ; for each lane, and store it in stack to be used in the last round
+        vpsubw  ymm1, ymm2 ; Bytes to encrypt in all lanes
+        vpandq  ymm1, [rel all_3fs] ; Number of final bytes (up to 63 bytes) for each lane
+        vmovdqa [rsp + LANE_OFFSET], ymm1
+
+        ; Load state pointer in RAX
+        mov     rax, pState
+
+        ; Load read-only registers
+        mov     r12d, 0xAAAAAAAA
+        kmovd   k1, r12d
+        mov     r12, 0xFFFFFFFFFFFFFFFF
+        kmovq   k2, r12
+        mov     r12d, 0x0000FFFF
+        kmovd   k3, r12d
+
+        xor     buf_idx, buf_idx
+
+        ;; Perform rounds of 64 bytes, where LFSR reordering is not needed
+align_loop
+ci_loop:
+        cmp     min_length, 64
+        jl      ci_exit_loop
+
+        vmovdqa64 zmm0, [rel mask31]
+
+        CIPHER64B 16, k2, k3, buf_idx, 0, zmm0, zmm10, zmm11, zmm12, zmm13, zmm14, zmm15, rax, r14, r15, k4
+
+        sub     min_length, 64
+        add     buf_idx, 64
+        jmp     ci_loop
+
+align_label
+ci_exit_loop:
+
+        mov     r15, min_length
+        add     r15, 3
+        shr     r15, 2 ;; numbers of rounds left (round up length to nearest multiple of 4B)
+        jz      ci_no_final_rounds
+
+        vmovdqa64 zmm0, [rel mask31]
+
+        CIPHER64B r15, k2, k3, buf_idx, 1, zmm0, zmm10, zmm11, zmm12, zmm13, zmm14, zmm15, rax, r14, r13, k4
+        cmp     r15, 8
+        je      ci_num_final_rounds_is_8
+        jl      ci_final_rounds_is_1_7
+
+        ; Final blocks 9-16
+        cmp     r15, 12
+        je      ci_num_final_rounds_is_12
+        jl      ci_final_rounds_is_9_11
+
+        ; Final blocks 13-16
+        cmp     r15, 16
+        je      ci_num_final_rounds_is_16
+        cmp     r15, 15
+        je      ci_num_final_rounds_is_15
+        cmp     r15, 14
+        je      ci_num_final_rounds_is_14
+        cmp     r15, 13
+        je      ci_num_final_rounds_is_13
+
+align_label
+ci_final_rounds_is_9_11:
+        cmp     r15, 11
+        je      ci_num_final_rounds_is_11
+        cmp     r15, 10
+        je      ci_num_final_rounds_is_10
+        cmp     r15, 9
+        je      ci_num_final_rounds_is_9
+
+align_label
+ci_final_rounds_is_1_7:
+        cmp     r15, 4
+        je      ci_num_final_rounds_is_4
+        jl      ci_final_rounds_is_1_3
+
+        ; Final blocks 5-7
+        cmp     r15, 7
+        je      ci_num_final_rounds_is_7
+        cmp     r15, 6
+        je      ci_num_final_rounds_is_6
+        cmp     r15, 5
+        je      ci_num_final_rounds_is_5
+
+align_label
+ci_final_rounds_is_1_3:
+        cmp     r15, 3
+        je      ci_num_final_rounds_is_3
+        cmp     r15, 2
+        je      ci_num_final_rounds_is_2
+
+        jmp     ci_num_final_rounds_is_1
+
+        ; Perform encryption of last bytes (<= 64 bytes) and reorder LFSR registers
+        ; if needed (if not all 16 rounds of 4 bytes are done)
+%assign I 1
+%rep 16
+ci_num_final_rounds_is_ %+ I:
+        REORDER_LFSR rax, I, k3
+        add     buf_idx, min_length
+        jmp     ci_no_final_rounds
+%assign I (I + 1)
+%endrep
+
+align_label
+ci_no_final_rounds:
+        ;; update in/out pointers only for work lanes (not init lanes)
+        add             buf_idx, 3
+        and             buf_idx, 0xfffffffffffffffc
+        knotw           k5, k4          ; k5 = work lane mask (inverted init mask)
+        kmovb           k6, k5          ; bits 0-7 for low 8 lanes' pointers
+        kshiftrw        k7, k5, 8       ; bits 8-15 shifted to 0-7 for high 8 lanes
+        vpbroadcastq    zmm0, buf_idx
+        vpaddq          zmm1, zmm0, [pIn]
+        vpaddq          zmm2, zmm0, [pIn + 64]
+        vmovdqu64       [pIn]{k6}, zmm1
+        vmovdqu64       [pIn + 64]{k7}, zmm2
+        vpaddq          zmm1, zmm0, [pOut]
+        vpaddq          zmm2, zmm0, [pOut + 64]
+        vmovdqu64       [pOut]{k6}, zmm1
+        vmovdqu64       [pOut + 64]{k7}, zmm2
+
+        ; Clear keystream from stack and registers holding plaintext/ciphertext data
+%ifdef SAFE_DATA
+        vpxorq          zmm0, zmm0
+%assign I 0
+%rep 16
+        vmovdqa64       [rsp + KEYSTR_OFFSET + I*64], zmm0
+%assign I (I + 1)
+%endrep
+        clear_zmms_avx512 zmm16, zmm17, zmm18, zmm19, zmm20, zmm21, zmm22, zmm23, \
+                        zmm24, zmm25, zmm26, zmm27, zmm28, zmm29, zmm30, zmm31
+%endif
+        FUNC_RESTORE
+
+        ret
+
+;;
+;; Per-lane LFSR load from key/IV for ZUC-128.
+;; Initializes LFSR registers for a single lane and zeros R1/R2.
+;;
+;; void ZUC128_LFSR_LOAD(state16_t *pState, u8 *pKey, u8 *pIv, u64 lane)
+;;
+align_function
+MKGLOBAL(ZUC128_LFSR_LOAD,function,internal)
+align_function
+ZUC128_LFSR_LOAD:
+
+        endbranch64
+
+        INIT_LFSR_128 arg2, arg3, zmm0, zmm1
+
+        ;; Scatter LFSR registers to transposed state with +1 rotation.
+        ;; S_i stored at position (i+1)%16 so CIPHER64B round 1 correctly
+        ;; reads S_j from position (1+j)%16 = (j+1)%16.
+        shl     arg4, 2
+        vmovd   [arg1 + 1*64 + arg4], xmm0           ; S0 -> position 1
+        vpextrd [arg1 + 2*64 + arg4], xmm0, 1      ; S1 -> position 2
+        vpextrd [arg1 + 3*64 + arg4], xmm0, 2      ; S2 -> position 3
+        vpextrd [arg1 + 4*64 + arg4], xmm0, 3      ; S3 -> position 4
+        vextracti128 xmm1, ymm0, 1
+        vmovd   [arg1 + 5*64 + arg4], xmm1           ; S4 -> position 5
+        vpextrd [arg1 + 6*64 + arg4], xmm1, 1      ; S5 -> position 6
+        vpextrd [arg1 + 7*64 + arg4], xmm1, 2      ; S6 -> position 7
+        vpextrd [arg1 + 8*64 + arg4], xmm1, 3      ; S7 -> position 8
+        vextracti64x2 xmm1, zmm0, 2
+        vmovd   [arg1 + 9*64 + arg4], xmm1           ; S8 -> position 9
+        vpextrd [arg1 + 10*64 + arg4], xmm1, 1     ; S9 -> position 10
+        vpextrd [arg1 + 11*64 + arg4], xmm1, 2     ; S10 -> position 11
+        vpextrd [arg1 + 12*64 + arg4], xmm1, 3     ; S11 -> position 12
+        vextracti64x2 xmm1, zmm0, 3
+        vmovd   [arg1 + 13*64 + arg4], xmm1          ; S12 -> position 13
+        vpextrd [arg1 + 14*64 + arg4], xmm1, 1     ; S13 -> position 14
+        vpextrd [arg1 + 15*64 + arg4], xmm1, 2     ; S14 -> position 15
+        vpextrd [arg1 + 0*64 + arg4], xmm1, 3      ; S15 -> position 0
+
+        ; Zero R1/R2 for this lane
+        xor     eax, eax
+        mov     [arg1 + OFS_R1 + arg4], eax
+        mov     [arg1 + OFS_R2 + arg4], eax
+
+        vzeroupper
+        ret
+
+;;
+;; Per-lane LFSR load from key/IV for ZUC-NEA6.
+;; Initializes LFSR registers for a single lane and zeros R1/R2.
+;;
+;; void ZUCNEA6_LFSR_LOAD(state16_t *pState, u8 *pKey, u8 *pIv, u64 lane)
+;;
+align_function
+MKGLOBAL(ZUCNEA6_LFSR_LOAD,function,internal)
+align_function
+ZUCNEA6_LFSR_LOAD:
+
+        endbranch64
+
+        INIT_LFSR_NEA6 arg2, arg3, zmm0, zmm1
+
+        ;; Scatter LFSR registers to transposed state with +1 rotation.
+        shl     arg4, 2
+        vmovd   [arg1 + 1*64 + arg4], xmm0           ; S0 -> position 1
+        vpextrd [arg1 + 2*64 + arg4], xmm0, 1      ; S1 -> position 2
+        vpextrd [arg1 + 3*64 + arg4], xmm0, 2      ; S2 -> position 3
+        vpextrd [arg1 + 4*64 + arg4], xmm0, 3      ; S3 -> position 4
+        vextracti128 xmm1, ymm0, 1
+        vmovd   [arg1 + 5*64 + arg4], xmm1           ; S4 -> position 5
+        vpextrd [arg1 + 6*64 + arg4], xmm1, 1      ; S5 -> position 6
+        vpextrd [arg1 + 7*64 + arg4], xmm1, 2      ; S6 -> position 7
+        vpextrd [arg1 + 8*64 + arg4], xmm1, 3      ; S7 -> position 8
+        vextracti64x2 xmm1, zmm0, 2
+        vmovd   [arg1 + 9*64 + arg4], xmm1           ; S8 -> position 9
+        vpextrd [arg1 + 10*64 + arg4], xmm1, 1     ; S9 -> position 10
+        vpextrd [arg1 + 11*64 + arg4], xmm1, 2     ; S10 -> position 11
+        vpextrd [arg1 + 12*64 + arg4], xmm1, 3     ; S11 -> position 12
+        vextracti64x2 xmm1, zmm0, 3
+        vmovd   [arg1 + 13*64 + arg4], xmm1          ; S12 -> position 13
+        vpextrd [arg1 + 14*64 + arg4], xmm1, 1     ; S13 -> position 14
+        vpextrd [arg1 + 15*64 + arg4], xmm1, 2     ; S14 -> position 15
+        vpextrd [arg1 + 0*64 + arg4], xmm1, 3      ; S15 -> position 0
+
+        ; Zero R1/R2 for this lane
+        xor     eax, eax
+        mov     [arg1 + OFS_R1 + arg4], eax
+        mov     [arg1 + OFS_R2 + arg4], eax
+
+        vzeroupper
         ret
 
 
