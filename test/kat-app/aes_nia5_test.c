@@ -38,7 +38,36 @@
 int
 aes_nia5_test(struct IMB_MGR *mb_mgr);
 
-extern const struct mac_test aes_nia5_test_json[];
+static struct mac_test *aes_nia5_vectors;
+
+static int
+load_aes_nia5_vectors(struct test_json_alloc_ctx **ctx)
+{
+        char path[1024];
+        int ret;
+        const char *const file_name = "aes_nia5_test.json";
+
+        if (kat_vector_dir == NULL) {
+                fprintf(stderr, "Error: no vector directory set; use --vector-dir <DIR>\n");
+                return -1;
+        }
+
+        ret = snprintf(path, sizeof(path), "%s/%s", kat_vector_dir, file_name);
+        if (ret < 0 || ret >= (int) sizeof(path))
+                return -1;
+
+        if (json_load_mac_test(path, &aes_nia5_vectors, ctx) < 0)
+                return -1;
+
+        return 0;
+}
+
+static void
+free_aes_nia5_vectors(struct test_json_alloc_ctx *ctx)
+{
+        json_free_test_ctx(ctx);
+        aes_nia5_vectors = NULL;
+}
 
 static int
 aes_nia5_job_ok(const struct mac_test *vec, const struct IMB_JOB *job, const uint8_t *auth,
@@ -166,7 +195,7 @@ static void
 test_aes_nia5_std_vectors(struct IMB_MGR *mb_mgr, struct test_suite_context *ctx,
                           const int num_jobs)
 {
-        const struct mac_test *v = aes_nia5_test_json;
+        const struct mac_test *v = aes_nia5_vectors;
 
         if (!quiet_mode)
                 printf("AES-NIA5 standard test vectors (N jobs = %d):\n", num_jobs);
@@ -197,6 +226,10 @@ aes_nia5_test(struct IMB_MGR *mb_mgr)
 {
         int i, errors = 0;
         struct test_suite_context ctx;
+        struct test_json_alloc_ctx *jctx = NULL;
+
+        if (load_aes_nia5_vectors(&jctx) < 0)
+                return 1;
 
         /* AES-NIA5 with standard vectors */
         test_suite_start(&ctx, "AES-NIA5");
@@ -204,5 +237,6 @@ aes_nia5_test(struct IMB_MGR *mb_mgr)
                 test_aes_nia5_std_vectors(mb_mgr, &ctx, i);
         errors += test_suite_end(&ctx);
 
+        free_aes_nia5_vectors(jctx);
         return errors;
 }

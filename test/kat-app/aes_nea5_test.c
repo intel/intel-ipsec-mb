@@ -39,7 +39,36 @@
 int
 aes_nea5_test(struct IMB_MGR *);
 
-extern const struct cipher_test aes_nea5_test_json[];
+static struct cipher_test *aes_nea5_vectors;
+
+static int
+load_aes_nea5_vectors(struct test_json_alloc_ctx **ctx)
+{
+        char path[1024];
+        int ret;
+        const char *const file_name = "aes_nea5_test.json";
+
+        if (kat_vector_dir == NULL) {
+                fprintf(stderr, "Error: no vector directory set; use --vector-dir <DIR>\n");
+                return -1;
+        }
+
+        ret = snprintf(path, sizeof(path), "%s/%s", kat_vector_dir, file_name);
+        if (ret < 0 || ret >= (int) sizeof(path))
+                return -1;
+
+        if (json_load_cipher_test(path, &aes_nea5_vectors, ctx) < 0)
+                return -1;
+
+        return 0;
+}
+
+static void
+free_aes_nea5_vectors(struct test_json_alloc_ctx *ctx)
+{
+        json_free_test_ctx(ctx);
+        aes_nea5_vectors = NULL;
+}
 
 static int
 test_ctr(struct IMB_MGR *mb_mgr, const void *expkey, unsigned key_len, const void *iv,
@@ -329,13 +358,18 @@ aes_nea5_test(struct IMB_MGR *mb_mgr)
         uint32_t i;
         int errors = 0;
         struct test_suite_context ctx;
+        struct test_json_alloc_ctx *jctx = NULL;
+
+        if (load_aes_nea5_vectors(&jctx) < 0)
+                return 1;
 
         /* Standard CTR vectors */
         test_suite_start(&ctx, "AES-NEA5");
-        test_ctr_vectors(mb_mgr, &ctx, aes_nea5_test_json);
+        test_ctr_vectors(mb_mgr, &ctx, aes_nea5_vectors);
         for (i = 1; i <= MAX_CTR_JOBS; i++)
-                test_ctr_vectors_burst(mb_mgr, &ctx, aes_nea5_test_json, i);
+                test_ctr_vectors_burst(mb_mgr, &ctx, aes_nea5_vectors, i);
         errors += test_suite_end(&ctx);
 
+        free_aes_nea5_vectors(jctx);
         return errors;
 }

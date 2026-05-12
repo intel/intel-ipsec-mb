@@ -42,7 +42,36 @@
 #define BUFFER_PAD_SIZE 16
 #define PAD_PATTERN     0xa5
 
-extern const struct cipher_test snow5g_nea4_test_json[];
+static struct cipher_test *snow5g_nea4_vectors;
+
+static int
+load_snow5g_nea4_vectors(struct test_json_alloc_ctx **ctx)
+{
+        char path[1024];
+        int ret;
+        const char *const file_name = "snow5g_nea4_test.json";
+
+        if (kat_vector_dir == NULL) {
+                fprintf(stderr, "Error: no vector directory set; use --vector-dir <DIR>\n");
+                return -1;
+        }
+
+        ret = snprintf(path, sizeof(path), "%s/%s", kat_vector_dir, file_name);
+        if (ret < 0 || ret >= (int) sizeof(path))
+                return -1;
+
+        if (json_load_cipher_test(path, &snow5g_nea4_vectors, ctx) < 0)
+                return -1;
+
+        return 0;
+}
+
+static void
+free_snow5g_nea4_vectors(struct test_json_alloc_ctx *ctx)
+{
+        json_free_test_ctx(ctx);
+        snow5g_nea4_vectors = NULL;
+}
 
 int
 snow5g_nea4_test(IMB_MGR *mgr);
@@ -200,11 +229,16 @@ int
 snow5g_nea4_test(IMB_MGR *mgr)
 {
         struct test_suite_context ctx;
+        struct test_json_alloc_ctx *jctx = NULL;
+
+        if (load_snow5g_nea4_vectors(&jctx) < 0)
+                return 1;
 
         test_suite_start(&ctx, "SNOW5G-NEA4");
 
         for (uint32_t i = 0; i < test_num_jobs_size; i++)
-                test_vectors(mgr, &ctx, snow5g_nea4_test_json, test_num_jobs[i]);
+                test_vectors(mgr, &ctx, snow5g_nea4_vectors, test_num_jobs[i]);
 
+        free_snow5g_nea4_vectors(jctx);
         return test_suite_end(&ctx);
 }

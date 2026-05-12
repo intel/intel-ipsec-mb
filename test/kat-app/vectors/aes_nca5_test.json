@@ -1,0 +1,341 @@
+{
+    "algorithm": "AES-NCA5",
+    "header": [
+        "AES-NCA5 test vectors from 3GPP TS 33.501"
+    ],
+    "notes": {},
+    "numberOfTests": 20,
+    "schema": "aead_test_schema_v1.json",
+    "testGroups": [
+        {
+            "type": "AeadTest",
+            "source": "3GPP TS 33.501",
+            "keySize": 256,
+            "ivSize": 128,
+            "tagSize": 32,
+            "tests": [
+                {
+                    "tcId": 1,
+                    "comment": "",
+                    "key": "0000000000000000000000000000000000000000000000000000000000000000",
+                    "iv": "24000000000000000000000000000000",
+                    "aad": "",
+                    "msg": "",
+                    "ct": "",
+                    "tag": "a3b4cc5a",
+                    "result": "valid",
+                    "flags": []
+                }
+            ]
+        },
+        {
+            "type": "AeadTest",
+            "source": "3GPP TS 33.501",
+            "keySize": 256,
+            "ivSize": 128,
+            "tagSize": 40,
+            "tests": [
+                {
+                    "tcId": 2,
+                    "comment": "",
+                    "key": "0000000000000000000000000000000000000000000000000000000000000000",
+                    "iv": "2c3f0000000000000000000000000000",
+                    "aad": "",
+                    "msg": "00",
+                    "ct": "8e",
+                    "tag": "7a4df4fafe",
+                    "result": "valid",
+                    "flags": []
+                },
+                {
+                    "tcId": 20,
+                    "comment": "",
+                    "key": "ead4d940e3864c1e75845f248148b6c0e71e9678feb899da76e89d75e82903a4",
+                    "iv": "2c1bd31711a59dbefdddec8f00000000",
+                    "aad": "bc837185c076",
+                    "msg": "7a8aefe915757ded4ad633f986f57f058824b49100d3c508a72d8f1f561e1cb3ec8f02050609a19d46667b839855545933a3d90beee27dbbec6e097476c6114731da14fd581ea55cc10ee81d3135fc77508883542f040580d19965d89b4f139e4c2b19e82a464f2bcc428ce93a0304",
+                    "ct": "c854d841fce471a4de58099ccba77a1fe7e6a391ea7cb7a36986ba83d0614a38ac91cd0c2c7feb28519958231ca64beafba8be924680c26dec93601087b8ac1374a5536b91497558f7395b0723273d00d2a051e5742934db7aa5f1e2a5e7fe20611702efb46571bec402a97854257e",
+                    "tag": "bcc5668293",
+                    "result": "invalid",
+                    "flags": []
+                }
+            ]
+        },
+        {
+            "type": "AeadTest",
+            "source": "3GPP TS 33.501",
+            "keySize": 256,
+            "ivSize": 128,
+            "tagSize": 48,
+            "tests": [
+                {
+                    "tcId": 3,
+                    "comment": "",
+                    "key": "0100000000000000000000000000000000000000000000000000000000000000",
+                    "iv": "341c1112131415168000000100000000",
+                    "aad": "",
+                    "msg": "0102030405060708090a0b0c0d0e0f101112",
+                    "ct": "33ea026d3156435f1b7610781a895eae222d",
+                    "tag": "fab6686ddeec",
+                    "result": "valid",
+                    "flags": []
+                }
+            ]
+        },
+        {
+            "type": "AeadTest",
+            "source": "3GPP TS 33.501",
+            "keySize": 256,
+            "ivSize": 128,
+            "tagSize": 56,
+            "tests": [
+                {
+                    "tcId": 4,
+                    "comment": "",
+                    "key": "0000000000000000000000000000000000000000000000000000000000000001",
+                    "iv": "3c001020304050000000000100000000",
+                    "aad": "00",
+                    "msg": "",
+                    "ct": "",
+                    "tag": "3942196a9b26fa",
+                    "result": "valid",
+                    "flags": []
+                }
+            ]
+        },
+        {
+            "type": "AeadTest",
+            "source": "3GPP TS 33.501",
+            "keySize": 256,
+            "ivSize": 128,
+            "tagSize": 64,
+            "tests": [
+                {
+                    "tcId": 5,
+                    "comment": "",
+                    "key": "8000000000000000000000000000010100000000000000000000000000000008",
+                    "iv": "44000000000000000000000100000000",
+                    "aad": "0102030405060708090a0b0c0d0e0f101112131415",
+                    "msg": "",
+                    "ct": "",
+                    "tag": "77cdb538b9c3be40",
+                    "result": "valid",
+                    "flags": []
+                },
+                {
+                    "tcId": 18,
+                    "comment": "",
+                    "key": "6dadf49b0e24f316bcb8ce50d09854eda985ff3d0cddc608a490c72b02504ccf",
+                    "iv": "4412f29031fd9fd60735e9fd00000000",
+                    "aad": "27c165c463",
+                    "msg": "514e25e9d7b6a3eb3a1f4b1d141822",
+                    "ct": "a7300e4e5c6273c7e7532e15fb9275",
+                    "tag": "1bc7ff4c7a881fa9",
+                    "result": "valid",
+                    "flags": []
+                },
+                {
+                    "tcId": 19,
+                    "comment": "",
+                    "key": "9ba3c5a8749b7699e6918eaee8a84236716c369454ae4d99fa76e98db27f2148",
+                    "iv": "440ec320f2a5294291ce561c00000000",
+                    "aad": "4744b921af22c3d27133f60b5c2dc309bb117958c176adb4f4ca80b93bd590",
+                    "msg": "905ff5ecd49dfa6c2f35441e1182721a50ba1e05a5cf4db2a67dec",
+                    "ct": "eb9b3404624a66b91abfbe6184421caff410a0e01f5dc372fdbb0b",
+                    "tag": "5151eba7a1910ac8",
+                    "result": "valid",
+                    "flags": []
+                }
+            ]
+        },
+        {
+            "type": "AeadTest",
+            "source": "3GPP TS 33.501",
+            "keySize": 256,
+            "ivSize": 128,
+            "tagSize": 72,
+            "tests": [
+                {
+                    "tcId": 6,
+                    "comment": "",
+                    "key": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+                    "iv": "4c3f000000000000ffffffff00000000",
+                    "aad": "0102030405060708090a0b0c0d0e0f101112131415",
+                    "msg": "ffff00",
+                    "ct": "fed2c8",
+                    "tag": "549cd31e80a886d2e4",
+                    "result": "valid",
+                    "flags": []
+                },
+                {
+                    "tcId": 12,
+                    "comment": "",
+                    "key": "5fcccdb23a2cc9d2999459d7b99ae7eb291fea73fcd8559efa0feca71c7afb61",
+                    "iv": "4c1463ef5411bc98d3f80ffa00000000",
+                    "aad": "86a2e8a1136fa4c9efa8eb25f8cd728348ff96b184f4a6ab1cb06ebd7ad69d6d",
+                    "msg": "5bc20d79478a15738d4b7a71886bf44c3216b49839503a09cde3ce2348a6136efaea77f163a16d410684a40edad9fd6f3ca82ff79b501168ab72a962d39b7c9d00bc8279a3abce5051299a6489830ffb7ab2e780b087ef17edc8f92b7a",
+                    "ct": "d4ef3cbf0ec03ed56bf3ce3d655bf68c8301a775c44219758318e6348d60818652f1ff4e1bef3056b868e87e45067a7f996c8384cbf65830ffb726ed69980f94e3430cd6aeab129d2c92774759f5488fe4ffc3b0e929057733c222d81f",
+                    "tag": "9edce9d442fb6fe830",
+                    "result": "valid",
+                    "flags": []
+                }
+            ]
+        },
+        {
+            "type": "AeadTest",
+            "source": "3GPP TS 33.501",
+            "keySize": 256,
+            "ivSize": 128,
+            "tagSize": 96,
+            "tests": [
+                {
+                    "tcId": 7,
+                    "comment": "",
+                    "key": "5555555555555555555555555555555555555555555555555555555555555555",
+                    "iv": "640d000000000000aa00aa0000000000",
+                    "aad": "0102030405060708090a0b0c0d0e0f101112131415",
+                    "msg": "ffff00ff",
+                    "ct": "6adc2fc2",
+                    "tag": "94c440682df0799e045e81c0",
+                    "result": "valid",
+                    "flags": []
+                },
+                {
+                    "tcId": 13,
+                    "comment": "",
+                    "key": "16a9703438a66dbec8ad30381215d57e9ee24911dac15981b00e12f5dfa43182",
+                    "iv": "6435729de216d8800c471fda00000000",
+                    "aad": "838b969a24f3ce0b58da375f620534aad82351ded63822cb4df0f1",
+                    "msg": "1d0aa3a037673a37d64a3a04e0def53681009919f8bde77d3ee15eebc5fbf02a0823c6619066c8e443c29c3029e3e4edd429c6338a8054e136dd2dc2323ddd408df7dcae87d9ab2a4c5d8b2fb0907f7b22366c6a8e69b312db672486232347f1e5f19ba4648cc1d83a03a42ea5230a",
+                    "ct": "ea0f933638a61d386465a51c9bd52433e7d461c6fc6ff32f4e8add39c5e01bcdefb401c1c70e9dbebdb5fc3e9468c4c030fd3cc0c12d72c8c416d8c107cb78530a3a82c2ad83a140be858c98432a13b3e4a10e7a7f7a34d5eef5168b578a89abbafb9e62b1d0a933c357910023a86d",
+                    "tag": "9e0dfc72fca90c55ac042f71",
+                    "result": "valid",
+                    "flags": []
+                },
+                {
+                    "tcId": 14,
+                    "comment": "",
+                    "key": "c165b118aa5bdd570423b7dd902d2c3ad2169e55b0cc21dfaa79ad65aba4d2af",
+                    "iv": "6407b4447b5a93380263e3eb00000000",
+                    "aad": "de8d62240c7edcfcff",
+                    "msg": "d1cc22190b84cf07daac0cc1c1e30718447152721bd86369d101e01a37b8ab02ec4e87c262dacb3fb70bca9b1a8a402a1678",
+                    "ct": "d8773591b3e96886ea7206490d603c6c40aef1261f280879a23deac87764a31ad55813920af33863bf1165c3023c4c03619e",
+                    "tag": "dcdea2225a6708dd1c747828",
+                    "result": "valid",
+                    "flags": []
+                }
+            ]
+        },
+        {
+            "type": "AeadTest",
+            "source": "3GPP TS 33.501",
+            "keySize": 256,
+            "ivSize": 128,
+            "tagSize": 120,
+            "tests": [
+                {
+                    "tcId": 8,
+                    "comment": "",
+                    "key": "1f2f3f4f5f6f7f8f9fafbfcfdfefff0f1f3f5f7f9f2f4f6f8fafffffffffffff",
+                    "iv": "7c3fffffffffffffffffffff00000000",
+                    "aad": "0102030405060708090a0b0c0d0e0f101112131415161718192021",
+                    "msg": "0102030405060708090a0b0c0d0e0f101112131415aaabacadaeaf",
+                    "ct": "35fa39bde2a5e529443eb241f41fe04f685c06d1d4287b1919a437",
+                    "tag": "8dd10c6ef6d760af98f89e569ffaf9",
+                    "result": "valid",
+                    "flags": []
+                },
+                {
+                    "tcId": 11,
+                    "comment": "",
+                    "key": "94f1322b038609cd6776388d0abf606ed5c6608c7542b7b01125a3d0f2439db1",
+                    "iv": "7c06c988a46a9781add6adb600000000",
+                    "aad": "5d5fac801f",
+                    "msg": "50630c3f29df10c949b1091c6af372c6f78f1f9a8924aee170d0085a3ac38d0f2372d902885fba5221903c7518fd711e",
+                    "ct": "0d2568c9bc8601978967cd896bc3fa9aa108e29d00a22b3fd454629f973de3bcd94de4fee880f7ad87edcc388b33ca67",
+                    "tag": "8e55c91f00ff53fd40f3cd85ee77f0",
+                    "result": "valid",
+                    "flags": []
+                },
+                {
+                    "tcId": 17,
+                    "comment": "",
+                    "key": "6457c64252675cc270733119dce66ac06d16b5505dfa23609c594b8ac169cfdc",
+                    "iv": "7c1c569cb7ee0fa74873ad9d00000000",
+                    "aad": "9a60b50d4e4ac63817ba015222d2b1629cd4458b3aaf70",
+                    "msg": "48ff5063cf745d44921bab56131f7ceec169a0dc3496d4957bc390951a4bfc",
+                    "ct": "aeb305963b41885ed7dad0ddaec6a641221970d74f5d729bb465130e344684",
+                    "tag": "fe9822e1042f97ce2a5e5f10ff8cab",
+                    "result": "valid",
+                    "flags": []
+                }
+            ]
+        },
+        {
+            "type": "AeadTest",
+            "source": "3GPP TS 33.501",
+            "keySize": 256,
+            "ivSize": 128,
+            "tagSize": 128,
+            "tests": [
+                {
+                    "tcId": 9,
+                    "comment": "",
+                    "key": "64e7f9a3ef617d7e6cff9f64191c1fa35c953230a62282999ee6773a7c44b5b4",
+                    "iv": "84282923be84e16c37ab2e7f00000000",
+                    "aad": "c599d5e980b2eac9cc53bf67d6bf14d67e2ddc8e6683ef57495c0aa3db56f0b1b30d496b7438bf62c2fabaf2d6b7deb92225d54e38a64e30e8d545fda85e85e53a146c5d883def18d330dd330c2368b0823ee125bef4c3b5ab92f340fb1846d7c549447373fe2ce6db",
+                    "msg": "f69e7d49dcad4f14f2444066d06bc430b7323ba122f622919de18b1fdab0ca9902b9729d492c807ebf3811ac9421580c19e6537fd1cac60bbc9bd49a2c3a6f9fd45813fc227eb424cf50f57cb4129a08df6b4043e6694b4e7bc6214d416a960fde30a6ed52ed6af487af454628425fbdb7f954d2da",
+                    "ct": "b9377779b888be537f4ef2765737b30eb70fd98a710792f337c19a5d6264c3a8bda2ccc623caaa4b67fee80dc9d97d211a3962d68adef24135ab4b34ad1b16ca00a68103a71b4d32429c178db9dc1752e913d697aaf7ff30da7e2548dd34f0956ddd3cd6dbc6d58e6f982ee49bb29e93c7f23b3115",
+                    "tag": "6dc9c07ad766a636ba0acdb5542e0c90",
+                    "result": "valid",
+                    "flags": []
+                },
+                {
+                    "tcId": 10,
+                    "comment": "",
+                    "key": "dce001a5ef617d7e6cff9f64191c1fa35c953230a62282999ee6773a7c44b5b4",
+                    "iv": "84350123456789ab0123456700000000",
+                    "aad": "ffff",
+                    "msg": "ff",
+                    "ct": "ff",
+                    "tag": "9d4414be9093e96fee81808471113daa",
+                    "result": "valid",
+                    "flags": []
+                },
+                {
+                    "tcId": 15,
+                    "comment": "",
+                    "key": "68e423975cc0a13e812acff55926ca77b5e4d472d7649cd1555e246c6cb1fb9a",
+                    "iv": "843b2ab9441a41e78cef173900000000",
+                    "aad": "70fcfe64892112caae79b109d09458db799b90ad6a61d99b347c",
+                    "msg": "a18af9f4a34d95546afb6bb98963a1696e372655c9b325a4e33a577148d13e10d0135a5c6391fbd55949c578e973716b640e8cd123fa1b5e60b6b1842555f2096fb407087c45cd357b347f210aed5862e3cd5a3f907a6251c2",
+                    "ct": "946193af1852ad16e3b1ac35eb2a14d6c550ae6e10cee43c0fb16cf2e89d5ee63efc90cac7e20012daa5461ddea9debaba60b83a89ce3feac330115d66ee332bc6a468700637a652d1c141d9c52a9b7a1e22b7cda67578379a",
+                    "tag": "603159528596933d5540d086a614df08",
+                    "result": "valid",
+                    "flags": []
+                }
+            ]
+        },
+        {
+            "type": "AeadTest",
+            "source": "3GPP TS 33.501",
+            "keySize": 256,
+            "ivSize": 128,
+            "tagSize": 88,
+            "tests": [
+                {
+                    "tcId": 16,
+                    "comment": "",
+                    "key": "4a625984e470edce7191018fe3b8332684571925ea7bbeb1b66d4c656933cb79",
+                    "iv": "5c3f6591d17622de8994eb7700000000",
+                    "aad": "e1707b309c2abc68b48f3214",
+                    "msg": "ec6d3b773b7e6d1a672b36ed009a91a552914f6d1f1a702be5cf0e49cb2646f5189c220ca91f67b1b5115bacf2a6c63a52f2e71077452ab8b829784c0165693660ffa7ba805ba27931c7c609a9d32767feb3fc2a332f210f",
+                    "ct": "f0b78cd9d1888009ef5bf36acb9c993fca18bf880b13a0699877d0e793916d91dc0bef53a7e3b7dd8aa68e9424baf461a6c4d87dca5aca3bdbebf71cc9128ae1c69c738f62014604ba2adb94e928567940dbca87806280cc",
+                    "tag": "b93f8d0047ecb3ca6b9c65",
+                    "result": "valid",
+                    "flags": []
+                }
+            ]
+        }
+    ]
+}
