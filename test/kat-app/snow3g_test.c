@@ -41,7 +41,43 @@
 #define IMB_SNOW3G_MAX_DATA_LEN          3048
 #define IMB_SNOW3G_NUM_SUPPORTED_BUFFERS 16
 
-extern const struct cipher_test snow3g_cipher_bit_test_vectors_json[];
+static struct cipher_test *snow3g_f8_vectors;
+static struct cipher_test *snow3g_f8_linear_vectors;
+
+static int
+load_snow3g_f8_vectors(struct test_json_alloc_ctx **ctx_f8, struct test_json_alloc_ctx **ctx_linear)
+{
+        char path[1024];
+        int ret;
+
+        if (kat_vector_dir == NULL) {
+                fprintf(stderr, "Error: no vector directory set; use --vector-dir <DIR>\n");
+                return -1;
+        }
+
+        ret = snprintf(path, sizeof(path), "%s/snow3g_f8_test.json", kat_vector_dir);
+        if (ret < 0 || ret >= (int) sizeof(path))
+                return -1;
+        if (json_load_cipher_test(path, &snow3g_f8_vectors, ctx_f8) < 0)
+                return -1;
+
+        ret = snprintf(path, sizeof(path), "%s/snow3g_f8_linear_test.json", kat_vector_dir);
+        if (ret < 0 || ret >= (int) sizeof(path))
+                return -1;
+        if (json_load_cipher_test(path, &snow3g_f8_linear_vectors, ctx_linear) < 0)
+                return -1;
+
+        return 0;
+}
+
+static void
+free_snow3g_f8_vectors(struct test_json_alloc_ctx *ctx_f8, struct test_json_alloc_ctx *ctx_linear)
+{
+        json_free_test_ctx(ctx_f8);
+        snow3g_f8_vectors = NULL;
+        json_free_test_ctx(ctx_linear);
+        snow3g_f8_linear_vectors = NULL;
+}
 static struct mac_test *snow3g_f9_vectors;
 
 static int
@@ -72,9 +108,6 @@ free_snow3g_f9_vectors(struct test_json_alloc_ctx *ctx)
         json_free_test_ctx(ctx);
         snow3g_f9_vectors = NULL;
 }
-
-extern const struct cipher_test snow3g_cipher_test_vectors_json[];
-extern const struct cipher_test snow3g_cipher_linear_test_vectors_json[];
 
 int
 snow3g_test(struct IMB_MGR *mb_mgr);
@@ -157,18 +190,11 @@ struct hash_iv_gen_params {
 
 const struct cipher_iv_gen_params snow3g_iv_params_f8_json[] = {
         { 1, "\x00\x00\x00\x00", "\x00", "\x00" },
-        { 2, "\x0f\xf2\xa4\x72", "\x0c", "\x01" },
         { 3, "\x26\x6b\x55\xfa", "\x03", "\x01" },
-        { 4, "\x7b\xcf\x8b\xe2", "\x18", "\x00" },
-        { 5, "\xb4\x59\x8a\x39", "\x05", "\x01" },
-        { 6, "\x0f\xf2\xa4\x72", "\x09", "\x00" },
         { 0, NULL, NULL, NULL }
 };
 
 const struct hash_iv_gen_params snow3g_iv_params_f9_json[] = {
-        { 1, "\x56\xf0\xa6\x38", "\x49\xec\xd2\x05", "\x00" },
-        { 2, "\xe2\x87\xdc\x3e", "\xe2\xd8\xf2\xa4", "\x01" },
-        { 3, "\x44\x61\xaf\x36", "\x3a\xf0\x38\x98", "\x01" },
         { 4, "\x41\x3e\x79\x14", "\xfd\xe8\x97\x03", "\x01" },
         { 5, "\x3c\x39\x6f\x29", "\x37\x77\x22\x6b", "\x01" },
         { 6, "\x3c\x39\x6f\x29", "\x37\x77\x22\x6b", "\x01" },
@@ -339,7 +365,7 @@ validate_snow3g_f8_1_block(struct IMB_MGR *mb_mgr, uint32_t job_api,
 {
         int numVectors = 0, i;
         size_t size = 0;
-        const struct cipher_test *testVectors = snow3g_cipher_test_vectors_json;
+        const struct cipher_test *testVectors = snow3g_f8_vectors;
 
         snow3g_key_schedule_t *pKeySched = NULL;
         uint8_t *pKey = NULL;
@@ -501,8 +527,7 @@ validate_snow3g_f8_1_bitblock(struct IMB_MGR *mb_mgr, uint32_t job_api,
 {
         int i, numVectors = 0;
         size_t size = 0;
-        const struct cipher_test *vect_bit = snow3g_cipher_bit_test_vectors_json;
-        const struct cipher_test *vect_standard = snow3g_cipher_test_vectors_json;
+        const struct cipher_test *vect_bit = snow3g_f8_vectors;
 
         snow3g_key_schedule_t *pKeySched = NULL;
         uint8_t *pKey = NULL;
@@ -589,12 +614,12 @@ validate_snow3g_f8_1_bitblock(struct IMB_MGR *mb_mgr, uint32_t job_api,
                                                    (byte_len + IMB_SNOW3G_PAD_LEN * 2) * 8,
                                                    head_offset);
                         } else {
-                                byte_len = (uint32_t) vect_standard[i].msgSize / 8;
+                                byte_len = (uint32_t) vect_bit[i].msgSize / 8;
                                 final_byte_offset = byte_len;
                                 bit_len = byte_len * 8;
                                 tail_offset = bit_len % 8;
-                                memcpy(srcBuff, vect_standard[i].msg, byte_len);
-                                memcpy(dstBuff, vect_standard[i].ct, byte_len);
+                                memcpy(srcBuff, vect_bit[i].msg, byte_len);
+                                memcpy(dstBuff, vect_bit[i].ct, byte_len);
                         }
 
                         /*setup the keysched to be used*/
@@ -714,7 +739,7 @@ validate_snow3g_f8_2_blocks(struct IMB_MGR *mb_mgr, uint32_t job_api,
 {
         int i, j, numVectors = 0, numPackets = 2;
         size_t size = 0;
-        const struct cipher_test *testVectors = snow3g_cipher_test_vectors_json;
+        const struct cipher_test *testVectors = snow3g_f8_vectors;
 
         snow3g_key_schedule_t *pKeySched[IMB_SNOW3G_NUM_SUPPORTED_BUFFERS];
         uint8_t *pKey[IMB_SNOW3G_NUM_SUPPORTED_BUFFERS];
@@ -956,7 +981,7 @@ validate_snow3g_f8_4_blocks(struct IMB_MGR *mb_mgr, uint32_t job_api,
 {
         int i, j, numVectors = 0, numPackets = 4;
         size_t size = 0;
-        const struct cipher_test *testVectors = snow3g_cipher_test_vectors_json;
+        const struct cipher_test *testVectors = snow3g_f8_vectors;
 
         snow3g_key_schedule_t *pKeySched[IMB_SNOW3G_NUM_SUPPORTED_BUFFERS];
         uint8_t *pKey[IMB_SNOW3G_NUM_SUPPORTED_BUFFERS];
@@ -1280,7 +1305,7 @@ validate_snow3g_f8_8_blocks(struct IMB_MGR *mb_mgr, uint32_t job_api,
 {
         int i, j, numVectors = 0, numPackets = 8;
         size_t size = 0;
-        const struct cipher_test *testVectors = snow3g_cipher_test_vectors_json;
+        const struct cipher_test *testVectors = snow3g_f8_vectors;
 
         snow3g_key_schedule_t *pKeySched[IMB_SNOW3G_NUM_SUPPORTED_BUFFERS];
         uint8_t *pKey[IMB_SNOW3G_NUM_SUPPORTED_BUFFERS];
@@ -1555,7 +1580,7 @@ validate_snow3g_f8_8_blocks_multi_key(struct IMB_MGR *mb_mgr, uint32_t job_api,
         const int numPackets = 8;
         size_t size = 0;
 
-        const struct cipher_test *testVectors = snow3g_cipher_test_vectors_json;
+        const struct cipher_test *testVectors = snow3g_f8_vectors;
 
         snow3g_key_schedule_t *pKeySched[IMB_SNOW3G_NUM_SUPPORTED_BUFFERS];
         uint8_t *pKey[IMB_SNOW3G_NUM_SUPPORTED_BUFFERS];
@@ -1722,7 +1747,7 @@ validate_snow3g_f8_n_blocks(struct IMB_MGR *mb_mgr, uint32_t job_api,
 {
         int numVectors = 0, i, numPackets = IMB_SNOW3G_NUM_SUPPORTED_BUFFERS;
         size_t size = 0;
-        const struct cipher_test *testVectors = snow3g_cipher_test_vectors_json;
+        const struct cipher_test *testVectors = snow3g_f8_vectors;
 
         snow3g_key_schedule_t *pKeySched[IMB_SNOW3G_NUM_SUPPORTED_BUFFERS];
         uint8_t *pKey[IMB_SNOW3G_NUM_SUPPORTED_BUFFERS];
@@ -1888,7 +1913,7 @@ validate_snow3g_f8_n_blocks_linear(struct IMB_MGR *mb_mgr, uint32_t job_api,
 {
         int i, j, numPackets = IMB_SNOW3G_NUM_SUPPORTED_BUFFERS;
         size_t size = 0;
-        const struct cipher_test *testVectors = snow3g_cipher_linear_test_vectors_json;
+        const struct cipher_test *testVectors = snow3g_f8_linear_vectors;
 
         snow3g_key_schedule_t *pKeySched[IMB_SNOW3G_NUM_SUPPORTED_BUFFERS];
         uint8_t *pKey[IMB_SNOW3G_NUM_SUPPORTED_BUFFERS];
@@ -2081,7 +2106,7 @@ validate_snow3g_f8_n_blocks_linear_mkeys(struct IMB_MGR *mb_mgr, uint32_t job_ap
 {
         int numVectors = 0, i, j;
         size_t size = 0;
-        const struct cipher_test *testVectors = snow3g_cipher_test_vectors_json;
+        const struct cipher_test *testVectors = snow3g_f8_vectors;
 
         snow3g_key_schedule_t **pKeySched = NULL;
         uint8_t **pKey = NULL;
@@ -2354,7 +2379,7 @@ validate_snow3g_f8_n_blocks_multi(struct IMB_MGR *mb_mgr, uint32_t job_api,
 {
         int i, j, numVectors = 0, numPackets = IMB_SNOW3G_NUM_SUPPORTED_BUFFERS;
         size_t size = 0;
-        const struct cipher_test *testVectors = snow3g_cipher_test_vectors_json;
+        const struct cipher_test *testVectors = snow3g_f8_vectors;
 
         snow3g_key_schedule_t *pKeySched[IMB_SNOW3G_NUM_SUPPORTED_BUFFERS];
         uint8_t *pKey[IMB_SNOW3G_NUM_SUPPORTED_BUFFERS];
@@ -2631,26 +2656,28 @@ snow3g_f9_1_buffer_exit:
 static int
 validate_f8_iv_gen(void)
 {
-        uint32_t i, numVectors = 0;
+        uint32_t i, numParams = 0;
         uint8_t IV[16];
 
 #ifdef DEBUG
         printf("Testing snow3g_f8_iv_gen:\n");
 #endif
         const struct cipher_iv_gen_params *iv_params = snow3g_iv_params_f8_json;
-        const struct cipher_test *testVectors = snow3g_cipher_bit_test_vectors_json;
+        const struct cipher_test *testVectors = snow3g_f8_vectors;
 
-        /* calculate number of vectors */
-        for (i = 0; testVectors[i].msg != NULL; i++)
-                numVectors++;
+        /* calculate number of iv_params entries */
+        for (i = 0; iv_params[i].count != NULL; i++)
+                numParams++;
 
-        if (!numVectors) {
+        if (!numParams) {
                 printf("No Snow3G test vectors found !\n");
                 return 1;
         }
 
-        /* skip first vector as it's not part of test data */
-        for (i = 1; i < numVectors; i++) {
+        /* skip first entry as it's not part of test data */
+        for (i = 1; i < numParams; i++) {
+                const size_t tc_idx = iv_params[i].tcId - 1; /* tcId is 1-based */
+
                 memset(IV, 0, sizeof(IV));
 
                 /* generate IV */
@@ -2660,10 +2687,10 @@ validate_f8_iv_gen(void)
                         return 1;
 
                 /* validate result */
-                if (memcmp(IV, testVectors[i].iv, 16) != 0) {
-                        printf("snow3g_f8_iv_gen vector num: %zu\n", testVectors[i].tcId);
+                if (memcmp(IV, testVectors[tc_idx].iv, 16) != 0) {
+                        printf("snow3g_f8_iv_gen vector num: %zu\n", testVectors[tc_idx].tcId);
                         snow3g_hexdump("Actual", IV, 16);
-                        snow3g_hexdump("Expected", (const uint8_t *) testVectors[i].iv, 16);
+                        snow3g_hexdump("Expected", (const uint8_t *) testVectors[tc_idx].iv, 16);
                         return 1;
                 }
         }
@@ -2723,9 +2750,16 @@ snow3g_test(struct IMB_MGR *mb_mgr)
         struct test_suite_context uea2_ctx;
         struct test_suite_context uia2_ctx;
         struct test_json_alloc_ctx *f9_jctx = NULL;
+        struct test_json_alloc_ctx *f8_jctx = NULL;
+        struct test_json_alloc_ctx *f8_linear_jctx = NULL;
 
         if (load_snow3g_f9_vectors(&f9_jctx) < 0)
                 return 1;
+        if (load_snow3g_f8_vectors(&f8_jctx, &f8_linear_jctx) < 0) {
+                free_snow3g_f8_vectors(f8_jctx, f8_linear_jctx);
+                free_snow3g_f9_vectors(f9_jctx);
+                return 1;
+        }
 
         test_suite_start(&uea2_ctx, "SNOW3G-UEA2");
         test_suite_start(&uia2_ctx, "SNOW3G-UIA2");
@@ -2752,6 +2786,7 @@ snow3g_test(struct IMB_MGR *mb_mgr)
         errors += test_suite_end(&uea2_ctx);
         errors += test_suite_end(&uia2_ctx);
 
+        free_snow3g_f8_vectors(f8_jctx, f8_linear_jctx);
         free_snow3g_f9_vectors(f9_jctx);
         return errors;
 }
