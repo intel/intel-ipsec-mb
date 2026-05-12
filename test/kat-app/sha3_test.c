@@ -37,9 +37,96 @@
 int
 sha3_test(struct IMB_MGR *mb_mgr);
 
-extern const struct mac_test sha3_test_json[];
-extern const struct mac_test shake128_test_json[];
-extern const struct mac_test shake256_test_json[];
+static struct mac_test *sha3_vectors;
+static struct mac_test *shake128_vectors;
+static struct mac_test *shake256_vectors;
+
+static int
+load_sha3_vectors(struct test_json_alloc_ctx **ctx)
+{
+        char path[1024];
+        int ret;
+        const char *const file_name = "sha3_test.json";
+
+        if (kat_vector_dir == NULL) {
+                fprintf(stderr, "Error: no vector directory set; use --vector-dir <DIR>\n");
+                return -1;
+        }
+
+        ret = snprintf(path, sizeof(path), "%s/%s", kat_vector_dir, file_name);
+        if (ret < 0 || ret >= (int) sizeof(path))
+                return -1;
+
+        if (json_load_mac_test(path, &sha3_vectors, ctx) < 0)
+                return -1;
+
+        return 0;
+}
+
+static void
+free_sha3_vectors(struct test_json_alloc_ctx *ctx)
+{
+        json_free_test_ctx(ctx);
+        sha3_vectors = NULL;
+}
+
+static int
+load_shake128_vectors(struct test_json_alloc_ctx **ctx)
+{
+        char path[1024];
+        int ret;
+        const char *const file_name = "shake128_test.json";
+
+        if (kat_vector_dir == NULL) {
+                fprintf(stderr, "Error: no vector directory set; use --vector-dir <DIR>\n");
+                return -1;
+        }
+
+        ret = snprintf(path, sizeof(path), "%s/%s", kat_vector_dir, file_name);
+        if (ret < 0 || ret >= (int) sizeof(path))
+                return -1;
+
+        if (json_load_mac_test(path, &shake128_vectors, ctx) < 0)
+                return -1;
+
+        return 0;
+}
+
+static void
+free_shake128_vectors(struct test_json_alloc_ctx *ctx)
+{
+        json_free_test_ctx(ctx);
+        shake128_vectors = NULL;
+}
+
+static int
+load_shake256_vectors(struct test_json_alloc_ctx **ctx)
+{
+        char path[1024];
+        int ret;
+        const char *const file_name = "shake256_test.json";
+
+        if (kat_vector_dir == NULL) {
+                fprintf(stderr, "Error: no vector directory set; use --vector-dir <DIR>\n");
+                return -1;
+        }
+
+        ret = snprintf(path, sizeof(path), "%s/%s", kat_vector_dir, file_name);
+        if (ret < 0 || ret >= (int) sizeof(path))
+                return -1;
+
+        if (json_load_mac_test(path, &shake256_vectors, ctx) < 0)
+                return -1;
+
+        return 0;
+}
+
+static void
+free_shake256_vectors(struct test_json_alloc_ctx *ctx)
+{
+        json_free_test_ctx(ctx);
+        shake256_vectors = NULL;
+}
 
 static int
 sha3_job_ok(const struct mac_test *vec, const struct IMB_JOB *job, const uint8_t *auth,
@@ -258,7 +345,7 @@ test_sha3_vectors(struct IMB_MGR *mb_mgr, struct test_suite_context *sha3_224_ct
                   struct test_suite_context *sha3_512_ctx, const int num_jobs)
 {
         struct test_suite_context *ctx;
-        const struct mac_test *v = sha3_test_json;
+        const struct mac_test *v = sha3_vectors;
         IMB_HASH_ALG sha_type;
 
         if (!quiet_mode)
@@ -316,8 +403,8 @@ test_shake_vectors(struct IMB_MGR *mb_mgr, struct test_suite_context *shake128_c
                    struct test_suite_context *shake256_ctx, const int num_jobs)
 {
         struct test_suite_context *ctx;
-        const struct mac_test *shake128_v = shake128_test_json;
-        const struct mac_test *shake256_v = shake256_test_json;
+        const struct mac_test *shake128_v = shake128_vectors;
+        const struct mac_test *shake256_v = shake256_vectors;
         IMB_HASH_ALG sha_type;
 
         if (!quiet_mode)
@@ -377,8 +464,21 @@ sha3_test(struct IMB_MGR *mb_mgr)
 {
         struct test_suite_context sha3_224_ctx, sha3_256_ctx, sha3_384_ctx, sha3_512_ctx;
         struct test_suite_context shake128_ctx, shake256_ctx;
+        struct test_json_alloc_ctx *ctx_sha3 = NULL, *ctx_128 = NULL, *ctx_256 = NULL;
         int errors = 0;
         unsigned i;
+
+        if (load_sha3_vectors(&ctx_sha3) < 0)
+                return 1;
+        if (load_shake128_vectors(&ctx_128) < 0) {
+                free_sha3_vectors(ctx_sha3);
+                return 1;
+        }
+        if (load_shake256_vectors(&ctx_256) < 0) {
+                free_sha3_vectors(ctx_sha3);
+                free_shake128_vectors(ctx_128);
+                return 1;
+        }
 
         test_suite_start(&sha3_224_ctx, "SHA3_224");
         test_suite_start(&sha3_256_ctx, "SHA3_256");
@@ -401,5 +501,8 @@ sha3_test(struct IMB_MGR *mb_mgr)
         errors += test_suite_end(&shake128_ctx);
         errors += test_suite_end(&shake256_ctx);
 
+        free_sha3_vectors(ctx_sha3);
+        free_shake128_vectors(ctx_128);
+        free_shake256_vectors(ctx_256);
         return errors;
 }

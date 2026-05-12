@@ -1,0 +1,278 @@
+{
+    "algorithm": "SHAKE-128",
+    "generatorVersion": "",
+    "header": [],
+    "notes": {},
+    "numberOfTests": 20,
+    "schema": "mac_test_schema_v1.json",
+    "testGroups": [
+        {
+            "keySize": 0,
+            "tagSize": 128,
+            "source": "NIST SHA3 KAT",
+            "tests": [
+                {
+                    "tcId": 1,
+                    "comment": "",
+                    "key": "",
+                    "msg": "",
+                    "tag": "7f9c2ba4e88f827d616045507605853e",
+                    "result": "valid",
+                    "flags": []
+                },
+                {
+                    "tcId": 2,
+                    "comment": "",
+                    "key": "",
+                    "msg": "d9e8",
+                    "tag": "c7211512340734235bb8d3c4651495aa",
+                    "result": "valid",
+                    "flags": []
+                },
+                {
+                    "tcId": 3,
+                    "comment": "",
+                    "key": "",
+                    "msg": "7216a825029da1",
+                    "tag": "9de6ffacf3e59693a3de81b02f7db77a",
+                    "result": "valid",
+                    "flags": []
+                },
+                {
+                    "tcId": 4,
+                    "comment": "",
+                    "key": "",
+                    "msg": "84f6cb3dc77b9bf856caf54e",
+                    "tag": "56538d52b26f967bb9405e0f54fdf6e2",
+                    "result": "valid",
+                    "flags": []
+                },
+                {
+                    "tcId": 5,
+                    "comment": "",
+                    "key": "",
+                    "msg": "b0438cd9e8853e976cfc13abbbb62fb8b5a50d59",
+                    "tag": "c3ffe9ea9fa6c9cf59ad26f44ea0b82a",
+                    "result": "valid",
+                    "flags": []
+                },
+                {
+                    "tcId": 6,
+                    "comment": "",
+                    "key": "",
+                    "msg": "3080da1ec624fad699f4e92d6c3d0d0071f4da0753a7f46579b2937d8ab62c082c474e6412e5ca2f352e",
+                    "tag": "4f45c853a4a76e583ca36ef95df2e718",
+                    "result": "valid",
+                    "flags": []
+                },
+                {
+                    "tcId": 7,
+                    "comment": "",
+                    "key": "",
+                    "msg": "c521710a951c7f1fda05ddf7b78366976ce6f8ee7abbbf0c089db690854e6a5f8f06029c130a7cd4b68139787483bc918774af",
+                    "tag": "65fa398b3a99fa2c9a122f46a4ac4896",
+                    "result": "valid",
+                    "flags": []
+                },
+                {
+                    "tcId": 8,
+                    "comment": "",
+                    "key": "",
+                    "msg": "e49706130f266af2946e496e0e722a494a9966c09eb124b37c33880646c92847640dc091959426b0822b80859960b4ac1845205d68708c90ad465c659b7a0ac28bd0d43ece27b23e41b68b5d2196a8122180698dbad937e1c3ebb96841764b638067ace263e7f6e4f897d4be4f1aefc18dd5a9173cf20eeee5ab07d9e1c5d1726c5aae45fb",
+                    "tag": "88aaefdc72313bafbfa868feff53cdc9",
+                    "result": "valid",
+                    "flags": []
+                },
+                {
+                    "tcId": 9,
+                    "comment": "",
+                    "key": "",
+                    "msg": "f532cfe60ad57d5b728ada11233db2fa570e34d6e254ea54c3e2ef7af98a5c4698e003961b406045fc13cc97824df4d7db3a8a3e6a7b3a17624ce0219408f83585ee5528c42517f37afed711437a24293c0c33ed5e9fd2420adb9ea1e4a476bde5e42f66ac8b89ad15d46249",
+                    "tag": "af13516966e1509a79559ed22702b563",
+                    "result": "valid",
+                    "flags": []
+                },
+                {
+                    "tcId": 10,
+                    "comment": "",
+                    "key": "",
+                    "msg": "b544f67430894566f3b2b2a7da3d93c1991be352a30644044b1544be298ee01cc0fb471d5d80e01c426b8d02040d32b932c971e4376ab8cd82b97e9ee450c9d539a9f4f24a7aaf72f2454701802a28ec5d01a0d5efa5e5aabc925ad8d3b30ebb68758559be20bc514a67670e153e7d4062ebf68d9160d48343c860d2bf60b6b8948883bc801a0e9f91fa75908aee399f88b0fd74e5428b415d8218f56ffec9b306097682590fad461025faefa8e465f018783df2b5f414ca53e80ba9ad3650930721e41311a7a22c0f117d9237c8091b5a6a3d70c71d77086d24c0573fb05142ddf857d7708bf43bd5e586e3ff412b0796af8554e466bae2f25bbf",
+                    "tag": "35682c319112619df356aed163ca2318",
+                    "result": "valid",
+                    "flags": []
+                }
+            ],
+            "type": "MacTest"
+        },
+        {
+            "keySize": 0,
+            "tagSize": 144,
+            "source": "NIST SHA3 KAT",
+            "tests": [
+                {
+                    "tcId": 12,
+                    "comment": "",
+                    "key": "",
+                    "msg": "e137b0843baff9dcde0a617cb889f3d1",
+                    "tag": "a08532d0cb489b187b67613b6ccc2b3e8e3b",
+                    "result": "valid",
+                    "flags": []
+                }
+            ],
+            "type": "MacTest"
+        },
+        {
+            "keySize": 0,
+            "tagSize": 160,
+            "source": "NIST SHA3 KAT",
+            "tests": [
+                {
+                    "tcId": 11,
+                    "comment": "",
+                    "key": "",
+                    "msg": "b62bae726e14fe9ed55bfa762815f15f",
+                    "tag": "d98b628dc2aac97ea43a7a843f55e3d7eed5c1df",
+                    "result": "valid",
+                    "flags": []
+                }
+            ],
+            "type": "MacTest"
+        },
+        {
+            "keySize": 0,
+            "tagSize": 232,
+            "source": "NIST SHA3 KAT",
+            "tests": [
+                {
+                    "tcId": 13,
+                    "comment": "",
+                    "key": "",
+                    "msg": "43707282fcbc66599cb04ba3138d31c0",
+                    "tag": "b9a7cfa9f54c0ea302182d82324f76dc0718d266879c1b9f00e62612d3",
+                    "result": "valid",
+                    "flags": []
+                }
+            ],
+            "type": "MacTest"
+        },
+        {
+            "keySize": 0,
+            "tagSize": 256,
+            "source": "NIST SHA3 KAT",
+            "tests": [
+                {
+                    "tcId": 15,
+                    "comment": "",
+                    "key": "",
+                    "msg": "e097e9df944bc6875440db2d03836a5d",
+                    "tag": "1a5a940b8fa585525140a4db8d3feac455a01160f82177a12c6cd8f374ee5de5",
+                    "result": "valid",
+                    "flags": []
+                }
+            ],
+            "type": "MacTest"
+        },
+        {
+            "keySize": 0,
+            "tagSize": 296,
+            "source": "NIST SHA3 KAT",
+            "tests": [
+                {
+                    "tcId": 14,
+                    "comment": "",
+                    "key": "",
+                    "msg": "c8a0af2b725b947cc1e6c6ad1674bc2d",
+                    "tag": "57f729bb247168426f2a9bfff1420c2543798b8c55e4fb43a396f81bb28fc4737bb6b1b803",
+                    "result": "valid",
+                    "flags": []
+                }
+            ],
+            "type": "MacTest"
+        },
+        {
+            "keySize": 0,
+            "tagSize": 392,
+            "source": "NIST SHA3 KAT",
+            "tests": [
+                {
+                    "tcId": 16,
+                    "comment": "",
+                    "key": "",
+                    "msg": "2b9f4c55780a569cba3a2169068300d9",
+                    "tag": "f8c350220cc4bc20d9a4ddcc31f4aad8951c678c3d6c670cdca7c80a26e54f3f828ff3c4878f99044315e1fbedbf8f21bd",
+                    "result": "valid",
+                    "flags": []
+                }
+            ],
+            "type": "MacTest"
+        },
+        {
+            "keySize": 0,
+            "tagSize": 408,
+            "source": "NIST SHA3 KAT",
+            "tests": [
+                {
+                    "tcId": 17,
+                    "comment": "",
+                    "key": "",
+                    "msg": "cd36f08d4a88d87ebd9aaa3551f49ba2",
+                    "tag": "84362fccb82fac4055af8a66ea6834c99e4007d11f5331db86c5c503220ba9eb12ae07da0356978589c40dec177ecd683d0695",
+                    "result": "valid",
+                    "flags": []
+                }
+            ],
+            "type": "MacTest"
+        },
+        {
+            "keySize": 0,
+            "tagSize": 528,
+            "source": "NIST SHA3 KAT",
+            "tests": [
+                {
+                    "tcId": 18,
+                    "comment": "",
+                    "key": "",
+                    "msg": "cca9f848cd5233308ee63532ac5da3b2",
+                    "tag": "b669067016fc393493fbc0b79748568f903655c0387b6130db8a6ede11f76f2a9c89bfa1365fa8bf6b69ea0da695f3615dd358436fe81c89720fec5ffa89377a2467",
+                    "result": "valid",
+                    "flags": []
+                }
+            ],
+            "type": "MacTest"
+        },
+        {
+            "keySize": 0,
+            "tagSize": 576,
+            "source": "NIST SHA3 KAT",
+            "tests": [
+                {
+                    "tcId": 19,
+                    "comment": "",
+                    "key": "",
+                    "msg": "f9c91042085580fef373c97bb8ba7627",
+                    "tag": "8f67edf4fa970d13a73acfa21a920a50a61524c5be7cd310802ed42a51d870877bf78b2028c048c6967749016f24b2ea91401a74751e28d238dded82b8589df543c4813f9c4dc2d8",
+                    "result": "valid",
+                    "flags": []
+                }
+            ],
+            "type": "MacTest"
+        },
+        {
+            "keySize": 0,
+            "tagSize": 632,
+            "source": "NIST SHA3 KAT",
+            "tests": [
+                {
+                    "tcId": 20,
+                    "comment": "",
+                    "key": "",
+                    "msg": "086fa00b43e0272a1042ee53566cbb48",
+                    "tag": "5b32e5d6bb6d621cd8e6ed1c3f12bb9ab6690bfc2e10c116d90365c2d7ddac5e0ed0004df199dea9e9fda9e93b7cc43976d2c87dc00c63cc2b2fa0f3dd60c4baa0e16731c3f9a98f59371ba1c30dff",
+                    "result": "valid",
+                    "flags": []
+                }
+            ],
+            "type": "MacTest"
+        }
+    ]
+}
