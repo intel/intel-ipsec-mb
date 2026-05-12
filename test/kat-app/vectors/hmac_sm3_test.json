@@ -1,0 +1,27 @@
+{
+    "algorithm": "HMAC-SM3",
+    "generatorVersion": "",
+    "header": [],
+    "notes": {},
+    "numberOfTests": 1,
+    "schema": "mac_test_schema_v1.json",
+    "testGroups": [
+        {
+            "type": "MacTest",
+            "source": "Intel generated",
+            "keySize": 296,
+            "tagSize": 256,
+            "tests": [
+                {
+                    "tcId": 1,
+                    "comment": "",
+                    "key": "0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425",
+                    "msg": "cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd",
+                    "tag": "220bf579ded555393f0159f66c99877822a3ecf610d1552154b41d44b94db3ae",
+                    "result": "valid",
+                    "flags": []
+                }
+            ]
+        }
+    ]
+}

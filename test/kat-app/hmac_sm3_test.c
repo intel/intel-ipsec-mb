@@ -38,7 +38,36 @@
 int
 hmac_sm3_test(struct IMB_MGR *mb_mgr);
 
-extern const struct mac_test hmac_sm3_test_kat_json[];
+static struct mac_test *hmac_sm3_vectors;
+
+static int
+load_hmac_sm3_vectors(struct test_json_alloc_ctx **ctx)
+{
+        char path[1024];
+        int ret;
+        const char *const file_name = "hmac_sm3_test.json";
+
+        if (kat_vector_dir == NULL) {
+                fprintf(stderr, "Error: no vector directory set; use --vector-dir <DIR>\n");
+                return -1;
+        }
+
+        ret = snprintf(path, sizeof(path), "%s/%s", kat_vector_dir, file_name);
+        if (ret < 0 || ret >= (int) sizeof(path))
+                return -1;
+
+        if (json_load_mac_test(path, &hmac_sm3_vectors, ctx) < 0)
+                return -1;
+
+        return 0;
+}
+
+static void
+free_hmac_sm3_vectors(struct test_json_alloc_ctx *ctx)
+{
+        json_free_test_ctx(ctx);
+        hmac_sm3_vectors = NULL;
+}
 static int
 hmac_sm3_job_ok(const struct mac_test *vec, const struct IMB_JOB *job, const uint8_t *auth,
                 const uint8_t *padding, const size_t sizeof_padding)
@@ -276,7 +305,7 @@ static void
 test_hmac_sm3_std_vectors(struct IMB_MGR *mb_mgr, const uint32_t num_jobs,
                           struct test_suite_context *ts)
 {
-        const struct mac_test *v = hmac_sm3_test_kat_json;
+        const struct mac_test *v = hmac_sm3_vectors;
 
         if (!quiet_mode)
                 printf("HMAC-SM3 standard test vectors (N jobs = %u):\n", num_jobs);
@@ -314,13 +343,18 @@ int
 hmac_sm3_test(struct IMB_MGR *mb_mgr)
 {
         struct test_suite_context ts;
+        struct test_json_alloc_ctx *ctx = NULL;
         int errors = 0;
         uint32_t num_jobs;
 
-        test_suite_start(&ts, "SM3");
+        if (load_hmac_sm3_vectors(&ctx) < 0)
+                return 1;
+
+        test_suite_start(&ts, "HMAC-SM3");
         for (num_jobs = 1; num_jobs <= IMB_MAX_BURST_SIZE; num_jobs++)
                 test_hmac_sm3_std_vectors(mb_mgr, num_jobs, &ts);
         errors = test_suite_end(&ts);
 
+        free_hmac_sm3_vectors(ctx);
         return errors;
 }
