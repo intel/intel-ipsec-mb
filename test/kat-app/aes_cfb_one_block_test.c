@@ -39,7 +39,36 @@
 int
 cfb_one_block_test(struct IMB_MGR *mb_mgr);
 
-extern const struct cipher_test cfb_one_block_test_json[];
+static struct cipher_test *cfb_one_block_vectors;
+
+static int
+load_cfb_one_block_vectors(struct test_json_alloc_ctx **ctx)
+{
+        char path[1024];
+        int ret;
+        const char *const file_name = "aes_cfb_one_block_test.json";
+
+        if (kat_vector_dir == NULL) {
+                fprintf(stderr, "Error: no vector directory set; use --vector-dir <DIR>\n");
+                return -1;
+        }
+
+        ret = snprintf(path, sizeof(path), "%s/%s", kat_vector_dir, file_name);
+        if (ret < 0 || ret >= (int) sizeof(path))
+                return -1;
+
+        if (json_load_cipher_test(path, &cfb_one_block_vectors, ctx) < 0)
+                return -1;
+
+        return 0;
+}
+
+static void
+free_cfb_one_block_vectors(struct test_json_alloc_ctx *ctx)
+{
+        json_free_test_ctx(ctx);
+        cfb_one_block_vectors = NULL;
+}
 
 static int
 cfb_validate_ok(const uint8_t *output, const uint8_t *in_text, const size_t plen,
@@ -129,7 +158,7 @@ static void
 cfb_test_vectors(struct IMB_MGR *mb_mgr, struct test_suite_context *ctx128,
                  struct test_suite_context *ctx256)
 {
-        const struct cipher_test *v = cfb_one_block_test_json;
+        const struct cipher_test *v = cfb_one_block_vectors;
 
         for (; v->msg != NULL; v++) {
                 struct test_suite_context *ctx;
@@ -161,6 +190,10 @@ cfb_one_block_test(struct IMB_MGR *mb_mgr)
         int errors = 0;
         struct test_suite_context ctx128;
         struct test_suite_context ctx256;
+        struct test_json_alloc_ctx *jctx = NULL;
+
+        if (load_cfb_one_block_vectors(&jctx) < 0)
+                return 1;
 
         test_suite_start(&ctx128, "AES-CFB-128 ONE-BLOCK");
         test_suite_start(&ctx256, "AES-CFB-256 ONE-BLOCK");
@@ -168,5 +201,6 @@ cfb_one_block_test(struct IMB_MGR *mb_mgr)
         errors += test_suite_end(&ctx128);
         errors += test_suite_end(&ctx256);
 
+        free_cfb_one_block_vectors(jctx);
         return errors;
 }

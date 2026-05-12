@@ -1,0 +1,158 @@
+{
+    "algorithm": "AES-CFB-ONE-BLOCK",
+    "generatorVersion": "",
+    "header": [
+        "Test vectors of type CipherTest tests intended for testing both encryption and decryption."
+    ],
+    "notes": {},
+    "numberOfTests": 13,
+    "schema": "ind_cpa_test_schema_v1.json",
+    "testGroups": [
+        {
+            "type": "IndCpaTest",
+            "source": "CM-SP-SECv3.1-I06-160602 section I.10.2",
+            "keySize": 128,
+            "ivSize": 128,
+            "tests": [
+                {
+                    "tcId": 1,
+                    "comment": "",
+                    "key": "0123456789abcdef0123456789abcdef",
+                    "iv": "1234567890abcdef1234567890abcdef",
+                    "msg": "4e6f77206973207468652074696d6520",
+                    "ct": "43bc0ad0fc8d93ff80e0bff141fc6708",
+                    "result": "valid",
+                    "flags": []
+                },
+                {
+                    "tcId": 2,
+                    "comment": "",
+                    "key": "e6600fd8852ef5abe6600fd8852ef5ab",
+                    "iv": "9dd1674bba61101b56756474364f101d",
+                    "msg": "d2d19f",
+                    "ct": "44d473",
+                    "result": "valid",
+                    "flags": []
+                },
+                {
+                    "tcId": 3,
+                    "comment": "",
+                    "key": "2b7e151628aed2a6abf7158809cf4f3c",
+                    "iv": "000102030405060708090a0b0c0d0e0f",
+                    "msg": "6bc1bee22e409f96e93d7e117393172a",
+                    "ct": "3b3fd92eb72dad20333449f8e83cfb4a",
+                    "result": "valid",
+                    "flags": []
+                },
+                {
+                    "tcId": 4,
+                    "comment": "",
+                    "key": "2b7e151628aed2a6abf7158809cf4f3c",
+                    "iv": "3b3fd92eb72dad20333449f8e83cfb4a",
+                    "msg": "ae2d8a571e03ac9c9eb76fac45af8e51",
+                    "ct": "c8a64537a0b3a93fcde3cdad9f1ce58b",
+                    "result": "valid",
+                    "flags": []
+                },
+                {
+                    "tcId": 5,
+                    "comment": "",
+                    "key": "2b7e151628aed2a6abf7158809cf4f3c",
+                    "iv": "c8a64537a0b3a93fcde3cdad9f1ce58b",
+                    "msg": "30c81c46a35ce411e5fbc1191a0a52ef",
+                    "ct": "26751f67a3cbb140b1808cf187a4f4df",
+                    "result": "valid",
+                    "flags": []
+                },
+                {
+                    "tcId": 6,
+                    "comment": "",
+                    "key": "2b7e151628aed2a6abf7158809cf4f3c",
+                    "iv": "26751f67a3cbb140b1808cf187a4f4df",
+                    "msg": "f69f2445df4f9b17ad2b417be66c3710",
+                    "ct": "c04b05357c5d1c0eeac4c66f9ff7f2e6",
+                    "result": "valid",
+                    "flags": []
+                },
+                {
+                    "tcId": 7,
+                    "comment": "",
+                    "key": "2b7e151628aed2a6abf7158809cf4f3c",
+                    "iv": "000102030405060708090a0b0c0d0e0f",
+                    "msg": "6bc1bee22e409f96",
+                    "ct": "3b3fd92eb72dad20",
+                    "result": "valid",
+                    "flags": []
+                },
+                {
+                    "tcId": 8,
+                    "comment": "",
+                    "key": "2b7e151628aed2a6abf7158809cf4f3c",
+                    "iv": "c8a64537a0b3a93fcde3cdad9f1ce58b",
+                    "msg": "30c81c46a35ce411",
+                    "ct": "26751f67a3cbb140",
+                    "result": "valid",
+                    "flags": []
+                }
+            ]
+        },
+        {
+            "type": "IndCpaTest",
+            "source": "https://nvlpubs.nist.gov/nistpubs/Legacy/SP/nistspecialpublication800-38a.pdf",
+            "keySize": 256,
+            "ivSize": 128,
+            "tests": [
+                {
+                    "tcId": 9,
+                    "comment": "",
+                    "key": "603deb1015ca71be2b73aef0857d77811f352c073b6108d72d9810a30914dff4",
+                    "iv": "000102030405060708090a0b0c0d0e0f",
+                    "msg": "6bc1bee22e409f96e93d7e117393172a",
+                    "ct": "dc7e84bfda79164b7ecd8486985d3860",
+                    "result": "valid",
+                    "flags": []
+                },
+                {
+                    "tcId": 10,
+                    "comment": "",
+                    "key": "603deb1015ca71be2b73aef0857d77811f352c073b6108d72d9810a30914dff4",
+                    "iv": "dc7e84bfda79164b7ecd8486985d3860",
+                    "msg": "ae2d8a571e03ac9c9eb76fac45af8e51",
+                    "ct": "39ffed143b28b1c832113c6331e5407b",
+                    "result": "valid",
+                    "flags": []
+                },
+                {
+                    "tcId": 11,
+                    "comment": "",
+                    "key": "603deb1015ca71be2b73aef0857d77811f352c073b6108d72d9810a30914dff4",
+                    "iv": "39ffed143b28b1c832113c6331e5407b",
+                    "msg": "30c81c46a35ce411e5fbc1191a0a52ef",
+                    "ct": "df10132415e54b92a13ed0a8267ae2f9",
+                    "result": "valid",
+                    "flags": []
+                },
+                {
+                    "tcId": 12,
+                    "comment": "",
+                    "key": "603deb1015ca71be2b73aef0857d77811f352c073b6108d72d9810a30914dff4",
+                    "iv": "df10132415e54b92a13ed0a8267ae2f9",
+                    "msg": "f69f2445df4f9b17ad2b417be66c3710",
+                    "ct": "75a385741ab9cef82031623d55b1e471",
+                    "result": "valid",
+                    "flags": []
+                },
+                {
+                    "tcId": 13,
+                    "comment": "",
+                    "key": "603deb1015ca71be2b73aef0857d77811f352c073b6108d72d9810a30914dff4",
+                    "iv": "dc7e84bfda79164b7ecd8486985d3860",
+                    "msg": "ae2d8a571e03ac9c",
+                    "ct": "39ffed143b28b1c8",
+                    "result": "valid",
+                    "flags": []
+                }
+            ]
+        }
+    ]
+}
