@@ -59,10 +59,10 @@ field:
 
 | Schema name | Test type | Algorithms |
 |---|---|---|
-| `mac_test_schema_v1.json` | `MacTest` | CMAC-128, CMAC-256 |
-| `mac_with_iv_test_schema_v1.json` | `MacWithIvTest` | IV-bearing MACs |
-| `ind_cpa_test_schema_v1.json` | `IndCpaTest` | AES-CBC |
-| `aead_test_schema_v1.json` | `AeadTest` | AES-GCM, AES-CCM |
+| `mac_test_schema_v1.json` | `MacTest` | CMAC-128/256, HMAC-MD5/SHA1/SHA2-\*/SM3, SHA/SHA3/SHAKE-128/256, SM3, Poly1305, AES-XCBC, GHASH |
+| `mac_with_iv_test_schema_v1.json` | `MacWithIvTest` | GMAC, ZUC-EIA3-128, ZUC-NIA6, SNOW3G-UIA2, KASUMI-UIA1, SNOW5G-NIA4, AES-NIA5 |
+| `ind_cpa_test_schema_v1.json` | `IndCpaTest` | AES-CBC/CTR/ECB/CFB, DES/3DES/DES-CFB/DES-DOCSIS, ChaCha20, KASUMI-UEA1, SNOW3G-UEA2, ZUC-EEA3-128, ZUC-NEA6, SM4-CBC/CTR/ECB, SNOW5G-NEA4, AES-NEA5 |
+| `aead_test_schema_v1.json` | `AeadTest` | AES-GCM, AES-CCM-128/256, ChaCha20-Poly1305, SM4-GCM, ZUC-NCA6, SNOW5G-NCA4, AES-NCA5 |
 
 ---
 
@@ -359,6 +359,27 @@ for (size_t i = 0; vectors[i].msg != NULL; i++) {
 json_free_test_ctx(ctx);
 ```
 
+### Load AEAD vectors
+
+```c
+#include "vector_utils.h"
+#include "aead_test.h"
+
+struct aead_test *vectors;
+struct test_json_alloc_ctx *ctx;
+
+if (json_load_aead_test("path/to/vectors.json", &vectors, &ctx) != 0) {
+    /* handle error */
+}
+
+for (size_t i = 0; vectors[i].msg != NULL; i++) {
+    /* use vectors[i].key, vectors[i].iv, vectors[i].aad,
+     * vectors[i].msg, vectors[i].ct, vectors[i].tag, … */
+}
+
+json_free_test_ctx(ctx);
+```
+
 ### Return values
 
 | Return | Meaning |
@@ -437,8 +458,9 @@ struct aead_test {
 
 ## Error Handling and Diagnostics
 
-Every error path calls the internal `json_report_parse_error()` helper which
-always prints a structured message to `stderr`:
+Every error path sets `err_reason` via the `PARSE_FAIL_IF` macro and then
+calls `json_report_parse_error()`, which always prints a structured message
+to `stderr`:
 
 ```
 JSON parse error: file="path.json", stage="json_load_mac_test",
