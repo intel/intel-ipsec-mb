@@ -88,8 +88,8 @@
                     "tcId": 5,
                     "comment": "Message: 'Test With Truncation'",
                     "key": "0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c",
-                    "msg": "3abf34c3503b2a23a46efc619baef897",
-                    "tag": "a3b6167473100ee06e0c796c2955552b",
+                    "msg": "546573742057697468205472756e636174696f6e",
+                    "tag": "3abf34c3503b2a23a46efc619baef897",
                     "result": "valid",
                     "flags": []
                 }
