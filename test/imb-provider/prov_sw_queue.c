@@ -82,8 +82,14 @@ queue_async_cleanup(queue_async *queue)
 int
 queue_async_enqueue(queue_async *queue, op_data *item)
 {
-        if (queue == NULL || item == NULL || queue->disabled)
+        if (queue == NULL || item == NULL)
                 return 1;
+
+        pthread_mutex_lock(&queue->mb_queue_mutex);
+        if (queue->disabled) {
+                pthread_mutex_unlock(&queue->mb_queue_mutex);
+                return 1;
+        }
 
         pthread_mutex_lock(&queue->mb_queue_mutex);
 
