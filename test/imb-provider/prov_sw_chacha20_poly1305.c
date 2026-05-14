@@ -157,6 +157,10 @@ chacha20_poly1305_async_final(ALG_CTX *ctx, unsigned char *out)
         }
 
         else if (!ctx->enc && ctx->tag_set) {
+                if (ctx->tag == NULL) {
+                        fprintf(stderr, "Error: Tag buffer is NULL\n");
+                        return FAILURE;
+                }
                 if (memcmp(ctx->tag, ctx->auths, ctx->tag_len) != 0) {
                         fprintf(stderr, "Error: Authentication tag verification failed\n");
                         return FAILURE;
