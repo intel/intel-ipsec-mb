@@ -321,7 +321,10 @@ default rel
 %assign blk_idx 0
 %rep %%NUM_BLOCKS
 %assign hk_power (%%NUM_BLOCKS - blk_idx)
-%assign is_last (blk_idx == (%%NUM_BLOCKS - 1))
+%assign is_last 0
+%if blk_idx == (%%NUM_BLOCKS - 1)
+%assign is_last 1
+%endif
 
 %if is_last
         ;; last block: may be partial

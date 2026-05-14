@@ -91,8 +91,6 @@ queue_async_enqueue(queue_async *queue, op_data *item)
                 return 1;
         }
 
-        pthread_mutex_lock(&queue->mb_queue_mutex);
-
         if (queue->num_items == 0) {
                 queue->head = queue->tail = item;
         } else {
