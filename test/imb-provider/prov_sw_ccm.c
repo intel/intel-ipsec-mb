@@ -74,8 +74,10 @@ prov_sw_ccm_init(ALG_CTX *ctx, const unsigned char *key, const size_t keylen,
         ctx->iv_set = 0;
 
         if (iv != NULL && ivlen > 0) {
-                /* Use the smaller of the two lengths to prevent buffer overflow */
-                size_t copy_len = (ivlen < ctx->iv_len) ? ivlen : ctx->iv_len;
+                /* Use the smallest of ivlen, iv_len, and the buffer size to prevent overflow */
+                size_t copy_len = (ivlen < (size_t) ctx->iv_len) ? ivlen : (size_t) ctx->iv_len;
+                if (copy_len > sizeof(ctx->iv))
+                        copy_len = sizeof(ctx->iv);
                 memcpy(ctx->iv, iv, copy_len);
                 memcpy(ctx->next_iv, iv, copy_len);
                 ctx->iv_set = 1;
