@@ -228,9 +228,6 @@ prov_aes_ccm_ctrl(ALG_CTX *ctx, const int type, int arg, const void *ptr)
 
         enc = ctx->enc;
 
-        if (NULL == ctx)
-                return 0;
-
         switch (type) {
         case EVP_CTRL_INIT:
                 ctx->tag_set = 0;

@@ -98,9 +98,6 @@ vaesgcm_ciphers_init(void *ctx, const unsigned char *inkey, const unsigned char 
                 return 0;
         }
         qctx->enc = enc;
-        if (qctx == NULL) {
-                return 0;
-        }
 
         /* If a key is set and a tag has already been calculated
          * this cipher ctx is being reused, so zero the gcm ctx and tag state variables */
@@ -205,9 +202,6 @@ vaesgcm_ciphers_ctrl(void *ctx, int type, int arg, void *ptr)
                 return -1;
         }
 
-        if (qctx == NULL) {
-                return -1;
-        }
         enc = qctx->enc;
         switch (type) {
         case EVP_CTRL_INIT: {
@@ -601,9 +595,7 @@ vaesgcm_ciphers_do_cipher(void *ctx, unsigned char *out, size_t *padlen, const u
         if (ctx == NULL) {
                 return -1;
         }
-        if (qctx == NULL) {
-                return -1;
-        }
+
         enc = PROV_AES_CIPHER_CTX_encrypting(qctx);
         nid = prov_aes_gcm_ctx_get_nid((PROV_AES_GCM_CTX *) qctx);
 
@@ -693,9 +685,6 @@ vaesgcm_init_key(void *ctx, const unsigned char *inkey)
                 return 0;
         }
 
-        if (qctx == NULL) {
-                return 0;
-        }
         nid = prov_aes_gcm_ctx_get_nid((PROV_AES_GCM_CTX *) ctx);
         if (!prov_check_gcm_nid(nid)) {
                 return -1;
@@ -723,9 +712,6 @@ vaesgcm_init_gcm(void *ctx)
                 return 0;
         }
 
-        if (qctx == NULL) {
-                return 0;
-        }
         nid = prov_aes_gcm_ctx_get_nid((PROV_AES_GCM_CTX *) ctx);
         if (!prov_check_gcm_nid(nid)) {
                 return 0;
