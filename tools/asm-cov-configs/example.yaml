@@ -1,0 +1,196 @@
+# Copyright (c) 2026, Intel Corporation
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+#     * Redistributions of source code must retain the above copyright notice,
+#       this list of conditions and the following disclaimer.
+#     * Redistributions in binary form must reproduce the above copyright
+#       notice, this list of conditions and the following disclaimer in the
+#       documentation and/or other materials provided with the distribution.
+#     * Neither the name of Intel Corporation nor the names of its contributors
+#       may be used to endorse or promote products derived from this software
+#       without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+# Generic config example for asm-cov.py
+#
+# This file documents all supported config options and typical examples.
+# Required top-level sections:
+#   target, commands
+# Optional top-level sections:
+#   results_dir, tools, symbols, outputs, behavior, paths
+#
+# Template placeholders use Python format syntax: {name}
+# Available placeholders:
+#   - {target_image} in tools.disassembler.command_template and symbols.command_template
+#   - Any matrix axis key in commands.* templates (for example {arch}, {algo}, ...)
+#   - Auto-derived values for each matrix axis:
+#       {axis_slug}   : slugified axis value
+#       {axis_mapped} : value from commands.value_maps[axis], else slugified fallback
+#
+# CLI interaction notes:
+#   - --symbol-file overrides symbols.* at runtime (copied to outputs.result_syms).
+#   - --generate-symbol-file is standalone and requires --image-path:
+#       ./asm-cov.py --image-path <image> --generate-symbol-file <path>
+#   - --select axis=value filters matrix combinations.
+#
+# Path resolution rules:
+#   - All paths inside this config file (results_dir, target.image_path,
+#     symbols.path, paths.prepend_path[]) may be absolute or relative.
+#     Relative paths are resolved against the directory of this config file,
+#     so the config is portable regardless of the shell's CWD.
+#   - Paths passed on the CLI (--results-dir, --symbol-file, --image-path,
+#     --generate-symbol-file) are resolved against the current working dir.
+
+# OPTIONAL: results directory for coverage outputs.
+# CLI --results-dir overrides this value when provided.
+# Absolute or relative to this config file.
+# results_dir: "./coverage-results"
+
+target:
+  # REQUIRED: Path to image to disassemble and/or scan for symbols.
+  # May be absolute or relative to this config file. Examples:
+  #   image_path: "/opt/builds/libmycrypto.so"        # absolute
+  #   image_path: "../build/lib/libmycrypto.so"       # relative to this file
+  image_path: "/path/to/libmycrypto.so"
+
+  image_match:
+    # REQUIRED: How to identify target image lines inside MIX files.
+    # Supported types:
+    #   contains : matcher value is a substring of MIX image line
+    #   regex    : matcher value is a regular expression
+    #   basename : basename(matcher value) is searched in MIX image line
+    #
+    # Example 1 (contains):
+    # type: "contains"
+    # value: "libmycrypto.so"
+    #
+    # Example 2 (regex):
+    type: "regex"
+    value: "libmycrypto(\\.so(\\..+)?)?$"
+    #
+    # Example 3 (basename):
+    # type: "basename"
+    # value: "/opt/build/libmycrypto.so.2"
+
+commands:
+  # REQUIRED: executable + args are rendered per matrix combination.
+  executable: "./my-crypto-tests"
+  args_template: ["--algo", "{algo}", "--impl", "{impl}", "--size", "{size}"]
+
+  # REQUIRED: matrix_axes values must be non-empty lists.
+  matrix_axes:
+    arch: ["icx", "clx"]
+    algo: ["aes-gcm", "chacha20-poly1305"]
+    impl: ["scalar", "simd"]
+    size: ["64", "1024", "8192"]
+
+  # REQUIRED: subdirectory under results dir for each rendered command.
+  # Use *_mapped or *_slug variants for readable/stable names.
+  result_subdir_template: "run_{arch}_{algo_mapped}_{impl}_{size}"
+
+  # OPTIONAL: map raw axis values to friendly tokens used by {axis_mapped}.
+  # If a value is not listed, slugified raw value is used automatically.
+  value_maps:
+    algo:
+      "aes-gcm": "aesgcm"
+      "chacha20-poly1305": "chacha20poly1305"
+
+# OPTIONAL: tools section.
+# If omitted, defaults are used:
+#   emulator.command_template   = ["setarch", "--addr-no-randomize", "sde64", "-{arch}"]
+#   emulator.mix_enable_flag    = "-mix"
+#   emulator.mix_output_flag    = "-omix"
+#   emulator.top_blocks         = 10000000
+#   emulator.mix_option_candidates =
+#     - ["-mix_disable_per_function_stats", "1"]
+#     - ["-mix_omit_per_function_stats", "1"]
+#   disassembler.command_template = ["xed64", "-no-resync", "-s", ".text", "-I", "-i", "{target_image}"]
+#
+# Uncomment to override defaults:
+# tools:
+#   emulator:
+#     command_template: ["setarch", "--addr-no-randomize", "sde64", "-{arch}"]
+#     mix_enable_flag: "-mix"
+#     mix_output_flag: "-omix"
+#     top_blocks: 10000000
+#     mix_option_candidates:
+#       - ["-mix_disable_per_function_stats", "1"]
+#       - ["-mix_omit_per_function_stats", "1"]
+#   disassembler:
+#     command_template: ["xed64", "-no-resync", "-s", ".text", "-I", "-i", "{target_image}"]
+
+# OPTIONAL: symbols section.
+# If omitted, defaults are used:
+#   symbols.mode = "generate"
+#
+# Supported modes:
+#   provided : copy symbols from symbols.path
+#   generate : generate from disassembly (SYM lines)
+#   command  : run symbols.command_template and use stdout symbols (one per line)
+#
+# Uncomment to override defaults:
+# symbols:
+#   mode: "command"
+#   # REQUIRED when mode=provided
+#   # Absolute or relative to this config file, e.g. "./my-symbols.syms"
+#   # path: "/path/to/symbols.syms"
+#   # REQUIRED when mode=command
+#   # Note: every command_template entry is rendered with str.format(**context),
+#   # so any literal '{' or '}' (e.g. awk actions) MUST be escaped by doubling
+#   # them ('{{' and '}}'). The only supported placeholder is {target_image}.
+#   command_template:
+#     - "bash"
+#     - "-lc"
+#     - "nm -D --defined-only {target_image} | awk '{{print $3}}' | sed '/^$/d'"
+#   # OPTIONAL: list of symbols to skip during coverage analysis.
+#   # Entries are fnmatch-style glob patterns (case-sensitive) applied to each
+#   # symbol name after materialization, regardless of mode. Examples:
+#   #   - "_init"             # exact match
+#   #   - "_start"
+#   #   - "*.cold"            # any symbol ending in .cold
+#   #   - "*constprop*"       # any symbol containing constprop
+#   # ignore:
+#   #   - "_init"
+#   #   - "_start"
+#   #   - "*.cold"
+
+outputs:
+  # OPTIONAL: output filenames (defaults shown).
+  # All result_* files and per-command MIX subdirs are placed under
+  #   <results_dir>/<data_dir>/
+  # The HTML report (report_dir) is placed directly under <results_dir>/
+  data_dir: "data"
+  result_mix: "result.mix"
+  result_out: "result.out"
+  result_xed: "result.xed"
+  result_syms: "result.syms"
+  result_cover: "result.cover"
+  report_dir: "cov-report"
+
+behavior:
+  # OPTIONAL: parallel emulator jobs for SDE stage (default: 1).
+  # CLI -j/--parallel-jobs overrides this value when provided.
+  parallel_jobs: 1
+
+  # OPTIONAL: prepend script directory to PATH for tool lookup (default: true).
+  include_script_dir_in_path: false
+
+paths:
+  # OPTIONAL: extra PATH entries prepended before running commands.
+  # Relative entries are resolved relative to this config file.
+  # Add locations for tools like sde64/xed64 here when they are not already in PATH.
+  prepend_path:
+    - "/opt/myproject/build/bin"
+    - "../third_party/tools/bin"

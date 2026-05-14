@@ -1,0 +1,62 @@
+# Copyright (c) 2026, Intel Corporation
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+#     * Redistributions of source code must retain the above copyright notice,
+#       this list of conditions and the following disclaimer.
+#     * Redistributions in binary form must reproduce the above copyright
+#       notice, this list of conditions and the following disclaimer in the
+#       documentation and/or other materials provided with the distribution.
+#     * Neither the name of Intel Corporation nor the names of its contributors
+#       may be used to endorse or promote products derived from this software
+#       without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+target:
+  image_path: "../../build_cov/lib/libIPSec_MB.so"
+  image_match:
+    type: "contains"
+    value: "libIPSec_MB"
+
+commands:
+  executable: "imb-kat"
+  args_template: ["--quiet", "{kat_arch}", "--test-type", "{test_type}"]
+  matrix_axes:
+    arch: ["icx", "snr", "glm", "clx"]
+    kat_arch: ["--no-avx2 --no-avx512", "--no-sse --no-avx512", "--no-sse --no-avx2"]
+    test_type: ["KAT", "DO_TEST", "CBC", "CFB_ONE", "CFB", "CTR", "PON", "XCBC", "GCM", "GMAC", "GHASH", "CUSTOMOP", "DES", "CCM", "CMAC", "ZUC_EEA3_NEA6", "ZUC_EIA3_NIA6", "KASUMI", "SNOW3G", "HMAC_SHA1", "HMAC_SHA256", "HMAC_MD5", "AES", "ECB", "SHA", "CHAINED", "HEC", "CHACHA", "POLY1305", "API", "DIRECT_API", "CLEAR_MEM", "CRC", "CHACHA20_POLY1305", "NULL", "DIRECT_API_PARAM", "QUIC-ECB", "QUIC_CHACHA20", "SM4_ECB", "SM4_CBC", "SM3", "HMAC_SM3", "SM4_CTR", "SM4_GCM", "SHA3", "SNOW5G_NEA4", "AES_NIA5", "AES_NEA5", "AES_NCA5", "ZUC_NCA6", "SNOW5G_NIA4", "SNOW5G_NCA4"]
+  result_subdir_template: "imb-kat_{arch}_{kat_arch_mapped}-{test_type}"
+  value_maps:
+    kat_arch:
+      "--no-avx2 --no-avx512": "sse"
+      "--no-sse --no-avx512": "avx2"
+      "--no-sse --no-avx2": "avx512"
+
+behavior:
+  include_script_dir_in_path: true
+  parallel_jobs: 4
+
+paths:
+  prepend_path:
+    - "../../build_cov/test/kat-app"
+
+results_dir: "../../build_cov/asm-cov-results"
+
+symbols:
+  ignore:
+    - "frame_dummy"
+    - "__do_global_dtors_aux"
+    - "*.cold"
+    - "*_clones"
+    - "*constprop*"

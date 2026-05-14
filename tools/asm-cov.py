@@ -137,6 +137,7 @@ class CovState:
 class SymbolInfo:
     """Coverage counters for one symbol, used to build HTML summaries."""
     found: bool = False
+    slug: str = ""
     total_lines: int = 0
     unexec_lines: int = 0
     jcc_total: int = 0
@@ -154,30 +155,11 @@ class SymbolInfo:
         return float(((self.jcc_total - self.jcc_nt) / self.jcc_total) * 100)
 
 
-def write_all_symbols_from_disasm(disasm_text, output_file):
-    """Write all discovered SYM labels from disassembly, preserving first-seen order."""
-    seen = set()
-    symbols = []
-    for line in disasm_text.splitlines():
-        if not line.startswith("SYM "):
-            continue
-        sym = line.split(" ", 1)[1].strip()
-        if sym.endswith(":"):
-            sym = sym[:-1]
-        if not sym or sym in seen:
-            continue
-        seen.add(sym)
-        symbols.append(sym)
-    with open(output_file, "w", encoding="utf-8") as f:
-        for sym in symbols:
-            f.write(sym + "\n")
-    return len(symbols)
+def extract_unique_symbols_from_disasm(disasm_text, output_file):
+    """Extract SYM labels from disassembly, dedup (first-seen wins), write to file.
 
-
-def generate_symbols_from_disasm(disasm_text, output_file):
-    """Generate symbols from disassembly used by coverage mode.
-
-    Deduplicates by first-seen name (matches ``write_all_symbols_from_disasm``).
+    Returns the number of unique symbols written. Used by both standalone
+    ``--generate-symbol-file`` mode and coverage ``symbols.mode: generate``.
     """
     seen = set()
     symbols = []
@@ -194,6 +176,7 @@ def generate_symbols_from_disasm(disasm_text, output_file):
     with open(output_file, "w", encoding="utf-8") as f:
         for sym in symbols:
             f.write(sym + "\n")
+    return len(symbols)
 
 
 def data_path(rc, *parts):
@@ -262,7 +245,7 @@ def materialize_symbol_file(rc, env, out_syms=None):
     target_image = rc["target_image_path"]
     if mode == "generate":
         disasm = disassemble_target_image(rc, target_image, env)
-        generate_symbols_from_disasm(disasm, out_syms)
+        extract_unique_symbols_from_disasm(disasm, out_syms)
         _apply_symbol_ignore(out_syms, ignore, quiet, verbose)
         return out_syms
 
@@ -1332,14 +1315,24 @@ def generate_html_files(xed_file, symbols_file, addr_attrs, output_dir):
     # Second pass: write one HTML file per symbol inside its own `with` block.
     os.makedirs(output_dir, exist_ok=True)
     symbols = {}
+    used_slugs = {}
     for name, header_line, body_lines in groups:
-        info = SymbolInfo(found=True)
+        # Symbol names may contain characters that are illegal in filenames
+        # (e.g. '/', ':', '<', '>'); slugify and disambiguate collisions.
+        base_slug = slugify(name)
+        slug = base_slug
+        suffix = 2
+        while slug in used_slugs and used_slugs[slug] != name:
+            slug = "{}_{}".format(base_slug, suffix)
+            suffix += 1
+        used_slugs[slug] = name
+        info = SymbolInfo(found=True, slug=slug)
         symbols[name] = info
-        out_path = os.path.join(output_dir, "{}.html".format(name))
+        out_path = os.path.join(output_dir, "{}.html".format(slug))
         with open(out_path, 'w', encoding="utf-8") as html_file:
             html_file.write(HTML_START)
             html_file.write("<h1>Symbol Coverage</h1>\n")
-            html_file.write('<h2>{}</h2>\n'.format(header_line.split()[1]))
+            html_file.write('<h2>{}</h2>\n'.format(html.escape(name)))
             html_file.write(
                 "<p class='legend'>"
                 "<span class='tag unexec'>Unexecuted</span>"
@@ -1359,7 +1352,7 @@ def generate_html_files(xed_file, symbols_file, addr_attrs, output_dir):
                     info.jcc_total += 1
                     jcc = True
 
-                dis_line = ' '.join(parts[5:])
+                dis_line = html.escape(' '.join(parts[5:]))
                 if address in addr_attrs:
                     if ATTR_JCC_NT in addr_attrs[address]:
                         info.jcc_nt += 1
@@ -1430,13 +1423,15 @@ def generate_cov_report(out_file, xed_file, sym_file, output_dir, report_dir_nam
 
             symbol_rows.append(
                 "<tr>"
-                "<td><a href='{sd}/{0}.html'>{0}</a></td>"
+                "<td><a href='{sd}/{slug}.html'>{name}</a></td>"
                 "<td class='num {1}'>{2}/{3}</td><td class='num {1}'>{4:.2f}%</td>"
                 "<td class='num {5}'>{6}/{7}</td><td class='num {5}'>{8:.2f}%</td>"
                 "</tr>\n".format(
                     key, get_cov_class(_line_cov), _exec_lines, _total_lines, _line_cov,
                     get_cov_class(_branch_cov), _jcc_taken, _jcc_total, _branch_cov,
                     sd=symbols_subdir,
+                    slug=html.escape(symbols[key].slug, quote=True),
+                    name=html.escape(key),
                 )
             )
 
@@ -1565,7 +1560,7 @@ def main():
         env = os.environ.copy()
         check_required_tools_in_path(["xed64"], "standalone symbol generation")
         disasm = disassemble_image_default(image_path, env)
-        count = write_all_symbols_from_disasm(disasm, out_syms)
+        count = extract_unique_symbols_from_disasm(disasm, out_syms)
         print("Generated symbols file: {} ({} symbols)".format(out_syms, count))
         return
 

@@ -1,0 +1,190 @@
+{
+  "_copyright": [
+    "Copyright (c) 2026, Intel Corporation",
+    "",
+    "Redistribution and use in source and binary forms, with or without",
+    "modification, are permitted provided that the following conditions are met:",
+    "",
+    "    * Redistributions of source code must retain the above copyright notice,",
+    "      this list of conditions and the following disclaimer.",
+    "    * Redistributions in binary form must reproduce the above copyright",
+    "      notice, this list of conditions and the following disclaimer in the",
+    "      documentation and/or other materials provided with the distribution.",
+    "    * Neither the name of Intel Corporation nor the names of its contributors",
+    "      may be used to endorse or promote products derived from this software",
+    "      without specific prior written permission.",
+    "",
+    "THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS \"AS IS\"",
+    "AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE",
+    "IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE",
+    "DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE",
+    "FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL",
+    "DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR",
+    "SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER",
+    "CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,",
+    "OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE",
+    "OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."
+  ],
+  "_doc": [
+    "Generic documented JSON example for asm-cov.py.",
+    "Required top-level sections: target, commands.",
+    "Optional top-level sections: results_dir, tools, symbols, outputs, behavior, paths.",
+    "Placeholders use Python format syntax: {name}.",
+    "Available placeholders include matrix keys ({arch}, {algo}, ...) and {target_image}.",
+    "Auto-derived per-axis placeholders: {axis_slug}, {axis_mapped}.",
+    "--symbol-file overrides symbols at runtime.",
+    "--generate-symbol-file is standalone and requires --image-path.",
+    "Path resolution: all paths inside this config (results_dir, target.image_path,",
+    "symbols.path, paths.prepend_path[]) may be absolute or relative; relative",
+    "paths resolve against the directory of this config file.",
+    "Paths passed on the CLI resolve against the current working directory."
+  ],
+  "results_dir": "./coverage-results",
+  "target": {
+    "_doc": [
+      "Required: image_path + image_match.",
+      "image_path may be absolute or relative to this config file,",
+      "e.g. \"../build/lib/libmycrypto.so\".",
+      "image_match.type supports: contains, regex, basename."
+    ],
+    "image_path": "/path/to/libmycrypto.so",
+    "image_match": {
+      "type": "regex",
+      "value": "libmycrypto(\\.so(\\..+)?)?$"
+    }
+  },
+  "commands": {
+    "_doc": [
+      "Required: executable, args_template, matrix_axes, result_subdir_template.",
+      "Each matrix_axes entry must be a non-empty array."
+    ],
+    "executable": "./my-crypto-tests",
+    "args_template": [
+      "--algo",
+      "{algo}",
+      "--impl",
+      "{impl}",
+      "--size",
+      "{size}"
+    ],
+    "matrix_axes": {
+      "arch": [
+        "icx",
+        "clx"
+      ],
+      "algo": [
+        "aes-gcm",
+        "chacha20-poly1305"
+      ],
+      "impl": [
+        "scalar",
+        "simd"
+      ],
+      "size": [
+        "64",
+        "1024",
+        "8192"
+      ]
+    },
+    "result_subdir_template": "run_{arch}_{algo_mapped}_{impl}_{size}",
+    "value_maps": {
+      "_doc": "Optional. Maps raw values to friendly tokens used by {axis_mapped}.",
+      "algo": {
+        "aes-gcm": "aesgcm",
+        "chacha20-poly1305": "chacha20poly1305"
+      }
+    }
+  },
+  "tools": {
+    "_doc": [
+      "Optional. If omitted, defaults are used.",
+      "Default emulator.command_template: [\"setarch\",\"--addr-no-randomize\",\"sde64\",\"-{arch}\"]",
+      "Default disassembler.command_template: [\"xed64\",\"-no-resync\",\"-s\",\".text\",\"-I\",\"-i\",\"{target_image}\"]"
+    ],
+    "emulator": {
+      "command_template": [
+        "setarch",
+        "--addr-no-randomize",
+        "sde64",
+        "-{arch}"
+      ],
+      "mix_enable_flag": "-mix",
+      "mix_output_flag": "-omix",
+      "top_blocks": 10000000,
+      "mix_option_candidates": [
+        [
+          "-mix_disable_per_function_stats",
+          "1"
+        ],
+        [
+          "-mix_omit_per_function_stats",
+          "1"
+        ]
+      ]
+    },
+    "disassembler": {
+      "command_template": [
+        "xed64",
+        "-no-resync",
+        "-s",
+        ".text",
+        "-I",
+        "-i",
+        "{target_image}"
+      ]
+    }
+  },
+  "symbols": {
+    "_doc": [
+      "Optional. If omitted, mode defaults to \"generate\".",
+      "Modes: provided | generate | command.",
+      "mode=provided requires path.",
+      "mode=command requires command_template.",
+      "Each command_template entry is rendered with str.format(**context);",
+      "literal '{' / '}' (e.g. awk actions) must be doubled to '{{' / '}}'.",
+      "The only supported placeholder is {target_image}.",
+      "ignore is an optional list of fnmatch-style glob patterns (case-sensitive);",
+      "symbols matching any pattern are skipped during coverage analysis."
+    ],
+    "mode": "command",
+    "command_template": [
+      "bash",
+      "-lc",
+      "nm -D --defined-only {target_image} | awk '{{print $3}}' | sed '/^$/d'"
+    ],
+    "ignore": [
+      "_init",
+      "_start",
+      "*.cold",
+      "*constprop*"
+    ]
+  },
+  "outputs": {
+    "_doc": [
+      "Optional output names (shown with defaults).",
+      "All result_* files and per-command MIX subdirs are placed under <results_dir>/<data_dir>/.",
+      "The HTML report (report_dir) is placed directly under <results_dir>/."
+    ],
+    "data_dir": "data",
+    "result_mix": "result.mix",
+    "result_out": "result.out",
+    "result_xed": "result.xed",
+    "result_syms": "result.syms",
+    "result_cover": "result.cover",
+    "report_dir": "cov-report"
+  },
+  "behavior": {
+    "_doc": [
+      "parallel_jobs controls emulator parallelism; CLI -j/--parallel-jobs overrides."
+    ],
+    "parallel_jobs": 1,
+    "include_script_dir_in_path": false
+  },
+  "paths": {
+    "_doc": "Optional PATH prefixes. Add sde64/xed64 locations if not already in system PATH.",
+    "prepend_path": [
+      "/opt/myproject/build/bin",
+      "../third_party/tools/bin"
+    ]
+  }
+}
