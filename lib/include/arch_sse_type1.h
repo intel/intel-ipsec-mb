@@ -439,4 +439,113 @@ set_suite_id_sse_t1(IMB_MGR *state, IMB_JOB *job);
 IMB_DLL_LOCAL void
 kasumi_1_block_sse(const uint16_t *key_sched, uint16_t *data);
 
+/* ========================================================================= */
+/* DES/3DES SSE implementation                                               */
+/* ========================================================================= */
+
+/**
+ * @brief DES CBC encryption
+ *
+ * @param input source buffer with plain text
+ * @param output destination buffer for cipher text
+ * @param size number of bytes to encrypt (multiple of 8)
+ * @param ks pointer to key schedule structure
+ * @param p_iv pointer to initialization vector
+ */
+IMB_DLL_LOCAL void
+des_enc_cbc_sse(const void *input, void *output, const int size, const uint64_t *ks,
+                const uint64_t *p_iv);
+
+/**
+ * @brief DES CBC decryption
+ *
+ * @param input source buffer with cipher text
+ * @param output destination buffer for plain text
+ * @param size number of bytes to decrypt (multiple of 8)
+ * @param ks pointer to key schedule structure
+ * @param p_iv pointer to initialization vector
+ */
+IMB_DLL_LOCAL void
+des_dec_cbc_sse(const void *input, void *output, const int size, const uint64_t *ks,
+                const uint64_t *p_iv);
+
+/**
+ * @brief 3DES CBC encryption
+ *
+ * @param input source buffer with plain text
+ * @param output destination buffer for cipher text
+ * @param size number of bytes to encrypt (multiple of 8)
+ * @param ks1 pointer to key schedule 1 structure
+ * @param ks2 pointer to key schedule 2 structure
+ * @param ks3 pointer to key schedule 3 structure
+ * @param p_iv pointer to initialization vector
+ */
+IMB_DLL_LOCAL void
+des3_enc_cbc_sse(const void *input, void *output, const int size, const uint64_t *ks1,
+                 const uint64_t *ks2, const uint64_t *ks3, const uint64_t *p_iv);
+
+/**
+ * @brief 3DES CBC decryption
+ *
+ * @param input source buffer with cipher text
+ * @param output destination buffer for plain text
+ * @param size number of bytes to decrypt (multiple of 8)
+ * @param ks1 pointer to key schedule 1 structure
+ * @param ks2 pointer to key schedule 2 structure
+ * @param ks3 pointer to key schedule 3 structure
+ * @param p_iv pointer to initialization vector
+ */
+IMB_DLL_LOCAL void
+des3_dec_cbc_sse(const void *input, void *output, const int size, const uint64_t *ks1,
+                 const uint64_t *ks2, const uint64_t *ks3, const uint64_t *p_iv);
+
+/**
+ * @brief DOCSIS DES encryption
+ *
+ * @param input source buffer with plain text
+ * @param output destination buffer for cipher text
+ * @param size number of bytes to encrypt
+ * @param ks pointer to key schedule structure
+ * @param p_iv pointer to initialization vector
+ */
+IMB_DLL_LOCAL void
+docsis_des_enc_sse(const void *input, void *output, const int size, const uint64_t *ks,
+                   const uint64_t *p_iv);
+
+/**
+ * @brief DOCSIS DES decryption
+ *
+ * @param input source buffer with cipher text
+ * @param output destination buffer for plain text
+ * @param size number of bytes to decrypt
+ * @param ks pointer to key schedule structure
+ * @param p_iv pointer to initialization vector
+ */
+IMB_DLL_LOCAL void
+docsis_des_dec_sse(const void *input, void *output, const int size, const uint64_t *ks,
+                   const uint64_t *p_iv);
+
+/**
+ * @brief DES single-block encrypt/decrypt (full round function in assembly)
+ *
+ * Performs IP + 16 Feistel rounds (E, S-box, P) + FP entirely in SSE assembly.
+ *
+ * @param data DES block (r in low 32 bits, l in high 32 bits)
+ * @param ks   pointer to 16 round keys (E-in-ks format)
+ * @param enc  1 = encrypt, 0 = decrypt
+ *
+ * @return processed block (l in low 32, r in high 32)
+ */
+IMB_DLL_LOCAL uint64_t
+des_enc_dec_1_sse(uint64_t data, const uint64_t *ks, const int enc);
+
+/**
+ * @brief Converts key schedule from standard to E-in-ks format (ASM)
+ *
+ * @param ks_new output buffer (16 × uint64_t, E-in-ks format)
+ * @param ks_old input key schedule (16 × uint64_t, standard format)
+ */
+IMB_DLL_LOCAL void
+convert_ks_for_sse(uint64_t *ks_new, const uint64_t *ks_old);
+
 #endif /* IMB_ARCH_SSE_TYPE1_H */

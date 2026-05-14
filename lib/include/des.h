@@ -29,7 +29,7 @@
 #define IMB_DES_H
 
 #include <stdint.h>
-#include "arch_x86_64.h"
+#include "arch_sse_type1.h"
 
 /* ========================================================================= */
 /* DES and 3DES inline function for use in mb_mgr_code.h                     */
@@ -45,9 +45,9 @@ __forceinline IMB_JOB *
 DES_CBC_ENC(IMB_JOB *job)
 {
         IMB_ASSERT(!(job->status & IMB_STATUS_COMPLETED_CIPHER));
-        des_enc_cbc_basic(job->src + job->cipher_start_src_offset_in_bytes, job->dst,
-                          job->msg_len_to_cipher_in_bytes & (~(IMB_DES_BLOCK_SIZE - 1)),
-                          job->enc_keys, (const uint64_t *) job->iv);
+        des_enc_cbc_sse(job->src + job->cipher_start_src_offset_in_bytes, job->dst,
+                        job->msg_len_to_cipher_in_bytes & (~(IMB_DES_BLOCK_SIZE - 1)),
+                        job->enc_keys, (const uint64_t *) job->iv);
         job->status |= IMB_STATUS_COMPLETED_CIPHER;
         return job;
 }
@@ -62,9 +62,9 @@ __forceinline IMB_JOB *
 DES_CBC_DEC(IMB_JOB *job)
 {
         IMB_ASSERT(!(job->status & IMB_STATUS_COMPLETED_CIPHER));
-        des_dec_cbc_basic(job->src + job->cipher_start_src_offset_in_bytes, job->dst,
-                          job->msg_len_to_cipher_in_bytes & (~(IMB_DES_BLOCK_SIZE - 1)),
-                          job->dec_keys, (const uint64_t *) job->iv);
+        des_dec_cbc_sse(job->src + job->cipher_start_src_offset_in_bytes, job->dst,
+                        job->msg_len_to_cipher_in_bytes & (~(IMB_DES_BLOCK_SIZE - 1)),
+                        job->dec_keys, (const uint64_t *) job->iv);
         job->status |= IMB_STATUS_COMPLETED_CIPHER;
         return job;
 }
@@ -81,9 +81,9 @@ DES3_CBC_ENC(IMB_JOB *job)
         const void *const *ks_ptr = (const void *const *) job->enc_keys;
 
         IMB_ASSERT(!(job->status & IMB_STATUS_COMPLETED_CIPHER));
-        des3_enc_cbc_basic(job->src + job->cipher_start_src_offset_in_bytes, job->dst,
-                           job->msg_len_to_cipher_in_bytes & (~(IMB_DES_BLOCK_SIZE - 1)), ks_ptr[0],
-                           ks_ptr[1], ks_ptr[2], (const uint64_t *) job->iv);
+        des3_enc_cbc_sse(job->src + job->cipher_start_src_offset_in_bytes, job->dst,
+                         job->msg_len_to_cipher_in_bytes & (~(IMB_DES_BLOCK_SIZE - 1)), ks_ptr[0],
+                         ks_ptr[1], ks_ptr[2], (const uint64_t *) job->iv);
         job->status |= IMB_STATUS_COMPLETED_CIPHER;
         return job;
 }
@@ -100,9 +100,9 @@ DES3_CBC_DEC(IMB_JOB *job)
         const void *const *ks_ptr = (const void *const *) job->dec_keys;
 
         IMB_ASSERT(!(job->status & IMB_STATUS_COMPLETED_CIPHER));
-        des3_dec_cbc_basic(job->src + job->cipher_start_src_offset_in_bytes, job->dst,
-                           job->msg_len_to_cipher_in_bytes & (~(IMB_DES_BLOCK_SIZE - 1)), ks_ptr[0],
-                           ks_ptr[1], ks_ptr[2], (const uint64_t *) job->iv);
+        des3_dec_cbc_sse(job->src + job->cipher_start_src_offset_in_bytes, job->dst,
+                         job->msg_len_to_cipher_in_bytes & (~(IMB_DES_BLOCK_SIZE - 1)), ks_ptr[0],
+                         ks_ptr[1], ks_ptr[2], (const uint64_t *) job->iv);
         job->status |= IMB_STATUS_COMPLETED_CIPHER;
         return job;
 }

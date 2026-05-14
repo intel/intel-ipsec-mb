@@ -354,9 +354,9 @@ __forceinline IMB_JOB *
 DOCSIS_DES_ENC(IMB_JOB *job)
 {
         IMB_ASSERT(!(job->status & IMB_STATUS_COMPLETED_CIPHER));
-        docsis_des_enc_basic(job->src + job->cipher_start_src_offset_in_bytes, job->dst,
-                             (int) job->msg_len_to_cipher_in_bytes, job->enc_keys,
-                             (const uint64_t *) job->iv);
+        docsis_des_enc_sse(job->src + job->cipher_start_src_offset_in_bytes, job->dst,
+                           (int) job->msg_len_to_cipher_in_bytes, job->enc_keys,
+                           (const uint64_t *) job->iv);
         job->status |= IMB_STATUS_COMPLETED_CIPHER;
         return job;
 }
@@ -371,9 +371,9 @@ __forceinline IMB_JOB *
 DOCSIS_DES_DEC(IMB_JOB *job)
 {
         IMB_ASSERT(!(job->status & IMB_STATUS_COMPLETED_CIPHER));
-        docsis_des_dec_basic(job->src + job->cipher_start_src_offset_in_bytes, job->dst,
-                             (int) job->msg_len_to_cipher_in_bytes, job->dec_keys,
-                             (const uint64_t *) job->iv);
+        docsis_des_dec_sse(job->src + job->cipher_start_src_offset_in_bytes, job->dst,
+                           (int) job->msg_len_to_cipher_in_bytes, job->dec_keys,
+                           (const uint64_t *) job->iv);
         job->status |= IMB_STATUS_COMPLETED_CIPHER;
         return job;
 }

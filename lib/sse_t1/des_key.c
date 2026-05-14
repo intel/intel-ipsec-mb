@@ -1,5 +1,5 @@
 /*******************************************************************************
-  Copyright (c) 2017-2024, Intel Corporation
+  Copyright (c) 2017-2026, Intel Corporation
 
   Redistribution and use in source and binary forms, with or without
   modification, are permitted provided that the following conditions are met:
@@ -54,11 +54,14 @@ rotate28(const uint32_t val, const unsigned nshift)
 }
 
 /**
- * @brief Expands 8 groups of 6bits into 8 groups of 8bits
+ * @brief Expands 8x6-bit fields into 8x8-bit fields (one per byte)
  *
- * @param in a 48-bit word including 8 groups of 6bits
+ * Takes 48-bit PC2 output packed as 8 x 6-bit S-box keys
+ * and spreads each into a separate byte.
  *
- * @return 64-bit word with 8 groups of 8bits
+ * @param in a 48-bit word: S1 at [5:0], S2 at [11:6], ..., S8 at [47:42]
+ *
+ * @return 64-bit word with S1 in byte 0, S2 in byte 1, ..., S8 in byte 7
  */
 __forceinline uint64_t
 expand_8x6_to_8x8(const uint64_t in)
@@ -101,37 +104,31 @@ des_key_schedule(uint64_t *ks, const void *key)
                 imb_set_errno(NULL, IMB_ERR_NULL_EXP_KEY);
                 return -1;
         }
-
 #endif
-
-        uint64_t c, d;
-        uint64_t t = 0;
-        int n;
-
         /* KEY: 56 bits but spread across 64 bits
          * - MSB per byte used for parity
          * - load_and_convert loads the key and swaps bits in bytes
          *   so that bit numbers are more suitable for LE machine and
          *   FIPS46-3 DES tables
          */
-        t = load64_reflect(key);
+        uint64_t t = load64_reflect(key);
 
         /* PC1
          * - built from the KEY, PC1 permute tables skip KEY parity bits
          * - c & d are both 28 bits
          */
-        c = permute_64b(t, pc1c_table_fips46_3, IMB_DIM(pc1c_table_fips46_3));
-        d = permute_64b(t, pc1d_table_fips46_3, IMB_DIM(pc1d_table_fips46_3));
+        uint64_t c = permute_64b(t, pc1c_table_fips46_3, IMB_DIM(pc1c_table_fips46_3));
+        uint64_t d = permute_64b(t, pc1d_table_fips46_3, IMB_DIM(pc1d_table_fips46_3));
 
         /* KS rounds */
-        for (n = 0; n < 16; n++) {
+        for (int n = 0; n < 16; n++) {
                 c = rotate28((uint32_t) c, (unsigned) shift_tab_fips46_3[n]);
                 d = rotate28((uint32_t) d, (unsigned) shift_tab_fips46_3[n]);
 
                 /* PC2 */
                 t = permute_64b(c | (d << 28), pc2_table_fips46_3, IMB_DIM(pc2_table_fips46_3));
 
-                /* store KS as 6 bits per byte and keep LE */
+                /* store KS in 6 bits per byte format */
                 ks[n] = expand_8x6_to_8x8(t);
         }
 

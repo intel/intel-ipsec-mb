@@ -31,6 +31,8 @@ Library
 - Added ZUC-NCA6 SSE type 1, SSE type 3 and AVX512 type 2 implementations.
 - Added SNOW5G-NIA4 SSE type 1 and AVX512 type 2 implementations.
 - Added SNOW5G-NCA4 SSE type 1 and AVX512 type 2 implementations.
+- Added new SSE type 1 implementation of DES block encryption that is used in
+  DES, DOCSIS-DES and 3DES/TDES algorithms across SSE and AVX2 architecture types.
 
 Test Applications
 - Added `--offset` parameter to `imb-xvalid` application.
