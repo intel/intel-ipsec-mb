@@ -57,6 +57,7 @@ Performance Applications
 
 Tools
 - Added asm-format.py tool that formats assembly source files.
+- Added asm-cov.py tool that produces x86 assembly line and branch coverage reports.
 
 Fixes
 - Fixed SM4-GCM plaintext/ciphertext address calculation (issue #159).
