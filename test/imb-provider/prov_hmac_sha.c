@@ -79,7 +79,6 @@ prov_hmac_sha_final(void *vctx, unsigned char *out, size_t *outl, const size_t o
         if (!prov_is_running())
                 return 0;
 
-        *outl = ctx->md_size;
         if (outl != NULL && outsz >= ctx->md_size) {
                 ret = hmac_sha_async_final(ctx, out);
                 *outl = ctx->md_size;

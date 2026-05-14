@@ -229,11 +229,13 @@ chacha20_cipher_cha(void *vctx, unsigned char *out, size_t *outl, const size_t o
         if (!chacha20_stream_update_cha(ctx, out, outl, outsize, in, inl))
                 return FAILURE;
 
+        if (outl == NULL)
+                return FAILURE;
+
         if (!chacha20_stream_final(ctx, out + *outl, outl, outsize - *outl))
                 return FAILURE;
 
-        if (outl != NULL)
-                *outl += inl;
+        *outl += inl;
 
         return SUCCESS;
 }

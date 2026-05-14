@@ -103,11 +103,16 @@ prov_aes_gcm_newctx(void *provctx, size_t keybits, int nid)
         ctx = OPENSSL_zalloc(sizeof(*ctx));
         cipher = OPENSSL_zalloc(sizeof(PROV_EVP_CIPHER));
 
+        if (ctx == NULL || cipher == NULL) {
+                OPENSSL_free(ctx);
+                OPENSSL_free(cipher);
+                return NULL;
+        }
+
         cipher->nid = nid;
         ctx->cipher = cipher;
 
-        if (ctx != NULL)
-                prov_gcm_initctx(provctx, &ctx->base, keybits, AES_GCM_IV_MIN_SIZE);
+        prov_gcm_initctx(provctx, &ctx->base, keybits, AES_GCM_IV_MIN_SIZE);
         return ctx;
 }
 
