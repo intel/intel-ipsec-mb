@@ -50,209 +50,9 @@
 #include <setjmp.h>
 #include <signal.h>
 
-#ifdef _WIN32
-#include <windows.h>
-#else
-#include <sys/mman.h>
-#include <unistd.h>
-#endif
-
 #include <intel-ipsec-mb.h>
 #include "utils.h"
-
-/* ========================================================================== */
-/* Guard page allocator                                                       */
-/* ========================================================================== */
-
-/** Opaque handle for a guard-page allocation */
-struct guard_page {
-        void *ptr;   /**< pointer to start of unmapped page */
-        size_t size; /**< allocation size (one page) */
-};
-
-/**
- * @brief Detects page size in bytes
- *
- * @param [in/out] p_page_bytes pointer at which page size in bytes is stored
- *
- * @return Operation status
- * @retval 0 success
- * @retval -1 input error
- * @retval -2 sysconf() failed
- */
-static int
-get_page_size(size_t *p_page_bytes)
-{
-        if (p_page_bytes == NULL)
-                return -1;
-#ifdef _WIN32
-        SYSTEM_INFO si;
-
-        GetSystemInfo(&si);
-        const size_t page_bytes = (size_t) si.dwPageSize;
-#else
-        const long ret = sysconf(_SC_PAGESIZE);
-
-        if (ret < 0)
-                return -2; /* sysconf error */
-
-        const size_t page_bytes = (size_t) ret;
-#endif
-        *p_page_bytes = page_bytes;
-        return 0;
-}
-
-/**
- * @brief Allocate a single page with no access permissions (guard page).
- *
- * Any read or write to the returned pointer triggers a fault.
- *
- * @param [in/out] gp guard page structure to initialize
- *
- * @return Operation status
- * @retval 0 success
- * @retval -1 failure
- */
-static int
-guard_page_alloc(struct guard_page *gp)
-{
-        memset(gp, 0, sizeof(*gp));
-
-        size_t page_bytes = 0;
-        const int ret = get_page_size(&page_bytes);
-
-        if (ret != 0 || page_bytes == 0)
-                return -1;
-#ifdef _WIN32
-        gp->ptr = VirtualAlloc(NULL, page_bytes, MEM_COMMIT | MEM_RESERVE, PAGE_NOACCESS);
-        if (gp->ptr == NULL)
-                return -1;
-#else
-        gp->ptr = mmap(NULL, page_bytes, PROT_NONE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-        if (gp->ptr == MAP_FAILED) {
-                gp->ptr = NULL;
-                return -1;
-        }
-#endif
-        gp->size = page_bytes;
-        return 0;
-}
-
-/**
- * @brief Free a guard page allocation.
- *
- * @param [in] gp guard page structure to free
- */
-static void
-guard_page_free(struct guard_page *gp)
-{
-        if (gp->ptr == NULL)
-                return;
-#ifdef _WIN32
-        VirtualFree(gp->ptr, 0, MEM_RELEASE);
-#else
-        munmap(gp->ptr, gp->size);
-#endif
-        memset(gp, 0, sizeof(*gp));
-}
-
-/**
- * @brief Usable memory region immediately followed by a guard page.
- *
- * Used by PON tests that need a small readable buffer (XGEM header)
- * with guard-page protection immediately after the data area.
- *
- * Layout: [ RW page(s) ][ Guard page (PROT_NONE) ]
- *
- * The usable pointer is placed at the end of the RW region so that
- * (usable + size) sits exactly at the guard page boundary.
- */
-struct guard_mem {
-        void *base;   /**< base of allocation */
-        size_t total; /**< total allocation size (usable + guard) */
-        void *usable; /**< pointer to usable region */
-        size_t size;  /**< usable size in bytes */
-};
-
-/**
- * @brief Allocate a usable RW region followed by a guard page.
- *
- * The usable data is placed at the END of the RW pages, right before
- * the guard page. Any access past \a usable_size bytes hits the guard.
- *
- * @param [in/out] gm       guard memory structure to initialize
- * @param [in] usable_bytes bytes of usable memory needed
- *
- * @return Operation status
- * @retval 0 success
- * @retval -1 allocation failed
- * @retval -2 sysconf() failed
- */
-static int
-guard_mem_alloc(struct guard_mem *gm, const size_t usable_bytes)
-{
-        memset(gm, 0, sizeof(*gm));
-
-        size_t page_bytes = 0;
-        const int ret = get_page_size(&page_bytes);
-
-        if (ret != 0 || page_bytes == 0)
-                return ret;
-
-        /* Align usable and total sizes to multiple of page size */
-        const size_t usable_bytes_aligned = (usable_bytes + page_bytes - 1) & ~(page_bytes - 1);
-        const size_t total_bytes_aligned = usable_bytes_aligned + page_bytes;
-
-#ifdef _WIN32
-        gm->base =
-                VirtualAlloc(NULL, total_bytes_aligned, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
-        if (gm->base == NULL)
-                return -1;
-
-        DWORD old_protect;
-
-        if (!VirtualProtect((uint8_t *) gm->base + usable_bytes_aligned, page_bytes, PAGE_NOACCESS,
-                            &old_protect)) {
-                VirtualFree(gm->base, 0, MEM_RELEASE);
-                return -1;
-        }
-#else
-        gm->base = mmap(NULL, total_bytes_aligned, PROT_READ | PROT_WRITE,
-                        MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-        if (gm->base == MAP_FAILED) {
-                gm->base = NULL;
-                return -1;
-        }
-        if (mprotect((uint8_t *) gm->base + usable_bytes_aligned, page_bytes, PROT_NONE) != 0) {
-                munmap(gm->base, total_bytes_aligned);
-                gm->base = NULL;
-                return -1;
-        }
-#endif
-
-        gm->total = total_bytes_aligned;
-        gm->size = usable_bytes;
-        gm->usable = (uint8_t *) gm->base + usable_bytes_aligned - usable_bytes;
-        return 0;
-}
-
-/**
- * @brief Free a guard memory allocation.
- *
- * @param [in] gm guard memory structure to free
- */
-static void
-guard_mem_free(struct guard_mem *gm)
-{
-        if (gm->base == NULL)
-                return;
-#ifdef _WIN32
-        VirtualFree(gm->base, 0, MEM_RELEASE);
-#else
-        munmap(gm->base, gm->total);
-#endif
-        memset(gm, 0, sizeof(*gm));
-}
+#include "guard_mem.h"
 
 /* ========================================================================== */
 /* SIGSEGV / Access Violation handler                                         */
@@ -997,8 +797,10 @@ static const struct aead_test_vec aead_tests[] = {
         { "AES-NCA5-DEC", IMB_CIPHER_AES_NCA5, IMB_AUTH_AES_NCA5, IMB_DIR_DECRYPT, 32, 16, 16 },
         { "ZUC-NCA6-ENC", IMB_CIPHER_ZUC_NCA6, IMB_AUTH_ZUC_NCA6, IMB_DIR_ENCRYPT, 32, 16, 16 },
         { "ZUC-NCA6-DEC", IMB_CIPHER_ZUC_NCA6, IMB_AUTH_ZUC_NCA6, IMB_DIR_DECRYPT, 32, 16, 16 },
-        { "SNOW5G-NCA4-ENC", IMB_CIPHER_SNOW5G_NCA4, IMB_AUTH_SNOW5G_NCA4, IMB_DIR_ENCRYPT, 32, 16, 16 },
-        { "SNOW5G-NCA4-DEC", IMB_CIPHER_SNOW5G_NCA4, IMB_AUTH_SNOW5G_NCA4, IMB_DIR_DECRYPT, 32, 16, 16 },
+        { "SNOW5G-NCA4-ENC", IMB_CIPHER_SNOW5G_NCA4, IMB_AUTH_SNOW5G_NCA4, IMB_DIR_ENCRYPT, 32, 16,
+          16 },
+        { "SNOW5G-NCA4-DEC", IMB_CIPHER_SNOW5G_NCA4, IMB_AUTH_SNOW5G_NCA4, IMB_DIR_DECRYPT, 32, 16,
+          16 },
 };
 
 /**
@@ -1246,7 +1048,10 @@ test_pon_zerolen(IMB_MGR *mgr, IMB_CIPHER_DIRECTION dir, const char *name,
         const uint64_t xgem_offset = 8;
         uint8_t tag[8];
 
-        memset(gm->usable, 0, gm->size);
+        /* End-align 8-byte header so (hdr + 8) abuts the trailing guard page */
+        uint8_t *hdr = (uint8_t *) gm->usable + gm->size - xgem_offset;
+
+        memset(hdr, 0, xgem_offset);
         memset(tag, 0, sizeof(tag));
 
         while (IMB_FLUSH_JOB(mgr) != NULL)
@@ -1273,8 +1078,8 @@ test_pon_zerolen(IMB_MGR *mgr, IMB_CIPHER_DIRECTION dir, const char *name,
         job->chain_order = IMB_ORDER_CIPHER_HASH;
         job->hash_alg = IMB_AUTH_PON_CRC_BIP;
 
-        job->src = (const uint8_t *) gm->usable;
-        job->dst = (uint8_t *) gm->usable + xgem_offset;
+        job->src = (const uint8_t *) hdr;
+        job->dst = hdr + xgem_offset;
         job->cipher_start_src_offset_in_bytes = xgem_offset;
         job->hash_start_src_offset_in_bytes = 0;
 
@@ -1652,7 +1457,8 @@ usage(const char *prog)
  * Uses the IMB_CIPHER_NUM / IMB_AUTH_NUM sentinel values so this check
  * automatically catches newly added enum values that have no test entry.
  *
- * @return number of uncovered algorithms (0 = full coverage)
+ * @return number of uncovered algorithms
+ * @retval 0 full coverage
  */
 static int
 check_algorithm_coverage(void)
@@ -1764,7 +1570,7 @@ main(int argc, char **argv)
                imb_get_version_str());
 
         /* Warn if any algorithm is missing from the test arrays */
-        check_algorithm_coverage();
+        errors += check_algorithm_coverage();
 
         /* Detect available architectures */
         if (detect_arch(arch_support, flags) < 0) {

@@ -42,7 +42,8 @@ set(TEST_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../include)
 # ##############################################################################
 set(TEST_APP_SRC_FILES
   ${CMAKE_CURRENT_SOURCE_DIR}/zerolen_test.c
-  ${CMAKE_CURRENT_SOURCE_DIR}/../common/utils.c)
+  ${CMAKE_CURRENT_SOURCE_DIR}/../common/utils.c
+  ${CMAKE_CURRENT_SOURCE_DIR}/../common/guard_mem.c)
 
 # ##############################################################################
 # set C compiler and NASM options
