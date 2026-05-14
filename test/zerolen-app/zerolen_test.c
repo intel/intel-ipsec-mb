@@ -434,6 +434,13 @@ static const struct cipher_test_vec cipher_tests[] = {
         /* KASUMI-UEA1 (3GPP cipher, bitlen) */
         { "KASUMI-UEA1-ENC", IMB_CIPHER_KASUMI_UEA1_BITLEN, IMB_DIR_ENCRYPT, 16, 8 },
         { "KASUMI-UEA1-DEC", IMB_CIPHER_KASUMI_UEA1_BITLEN, IMB_DIR_DECRYPT, 16, 8 },
+        /* 5G NEA cipher algorithms */
+        { "AES-NEA5-ENC", IMB_CIPHER_AES_NEA5, IMB_DIR_ENCRYPT, 32, 16 },
+        { "AES-NEA5-DEC", IMB_CIPHER_AES_NEA5, IMB_DIR_DECRYPT, 32, 16 },
+        { "ZUC-NEA6-ENC", IMB_CIPHER_ZUC_NEA6, IMB_DIR_ENCRYPT, 32, 16 },
+        { "ZUC-NEA6-DEC", IMB_CIPHER_ZUC_NEA6, IMB_DIR_DECRYPT, 32, 16 },
+        { "SNOW5G-NEA4-ENC", IMB_CIPHER_SNOW5G_NEA4, IMB_DIR_ENCRYPT, 32, 16 },
+        { "SNOW5G-NEA4-DEC", IMB_CIPHER_SNOW5G_NEA4, IMB_DIR_DECRYPT, 32, 16 },
 };
 
 /**
@@ -639,6 +646,7 @@ enum hash_setup {
         HASH_ZUC,      /**< u.ZUC_EIA3 key/iv */
         HASH_SNOW3G,   /**< u.SNOW3G_UIA2 key/iv */
         HASH_KASUMI,   /**< u.KASUMI_UIA1 key */
+        HASH_NIA,      /**< u.NIA key/iv (AES-NIA5, ZUC-NIA6, SNOW5G-NIA4) */
 };
 
 /** Hash test vector descriptor */
@@ -707,6 +715,10 @@ static const struct hash_test_vec hash_tests[] = {
         /* SHAKE */
         { "SHAKE128", IMB_AUTH_SHAKE128, 16, HASH_PLAIN },
         { "SHAKE256", IMB_AUTH_SHAKE256, 32, HASH_PLAIN },
+        /* 5G NIA integrity algorithms */
+        { "AES-NIA5", IMB_AUTH_AES_NIA5, 16, HASH_NIA },
+        { "ZUC-NIA6", IMB_AUTH_ZUC_NIA6, 16, HASH_NIA },
+        { "SNOW5G-NIA4", IMB_AUTH_SNOW5G_NIA4, 16, HASH_NIA },
 };
 
 /**
@@ -755,6 +767,10 @@ setup_hash_fields(IMB_JOB *job, const enum hash_setup setup)
                 break;
         case HASH_KASUMI:
                 job->u.KASUMI_UIA1._key = key_store;
+                break;
+        case HASH_NIA:
+                job->u.NIA._key = key_store;
+                job->u.NIA._iv = key_store + 256;
                 break;
         case HASH_PLAIN:
         default:
@@ -976,6 +992,13 @@ static const struct aead_test_vec aead_tests[] = {
         /* SM4-GCM */
         { "SM4-GCM-ENC", IMB_CIPHER_SM4_GCM, IMB_AUTH_SM4_GCM, IMB_DIR_ENCRYPT, 16, 12, 16 },
         { "SM4-GCM-DEC", IMB_CIPHER_SM4_GCM, IMB_AUTH_SM4_GCM, IMB_DIR_DECRYPT, 16, 12, 16 },
+        /* 5G NCA AEAD algorithms */
+        { "AES-NCA5-ENC", IMB_CIPHER_AES_NCA5, IMB_AUTH_AES_NCA5, IMB_DIR_ENCRYPT, 32, 16, 16 },
+        { "AES-NCA5-DEC", IMB_CIPHER_AES_NCA5, IMB_AUTH_AES_NCA5, IMB_DIR_DECRYPT, 32, 16, 16 },
+        { "ZUC-NCA6-ENC", IMB_CIPHER_ZUC_NCA6, IMB_AUTH_ZUC_NCA6, IMB_DIR_ENCRYPT, 32, 16, 16 },
+        { "ZUC-NCA6-DEC", IMB_CIPHER_ZUC_NCA6, IMB_AUTH_ZUC_NCA6, IMB_DIR_DECRYPT, 32, 16, 16 },
+        { "SNOW5G-NCA4-ENC", IMB_CIPHER_SNOW5G_NCA4, IMB_AUTH_SNOW5G_NCA4, IMB_DIR_ENCRYPT, 32, 16, 16 },
+        { "SNOW5G-NCA4-DEC", IMB_CIPHER_SNOW5G_NCA4, IMB_AUTH_SNOW5G_NCA4, IMB_DIR_DECRYPT, 32, 16, 16 },
 };
 
 /**
@@ -1025,6 +1048,12 @@ setup_aead_job(IMB_JOB *job, const struct aead_test_vec *tv, const uint8_t *src,
         case IMB_AUTH_CHACHA20_POLY1305:
                 job->u.CHACHA20_POLY1305.aad = src;
                 job->u.CHACHA20_POLY1305.aad_len_in_bytes = 0;
+                break;
+        case IMB_AUTH_AES_NCA5:
+        case IMB_AUTH_ZUC_NCA6:
+        case IMB_AUTH_SNOW5G_NCA4:
+                job->u.NCA.aad = src;
+                job->u.NCA.aad_len_in_bytes = 0;
                 break;
         default:
                 break;
@@ -1613,6 +1642,71 @@ usage(const char *prog)
 }
 
 /* ========================================================================== */
+/* Algorithm coverage check                                                   */
+/* ========================================================================== */
+
+/**
+ * @brief Verify that every library cipher mode and hash algorithm is covered
+ *        by at least one of the test arrays (cipher, hash, AEAD, special).
+ *
+ * Uses the IMB_CIPHER_NUM / IMB_AUTH_NUM sentinel values so this check
+ * automatically catches newly added enum values that have no test entry.
+ *
+ * @return number of uncovered algorithms (0 = full coverage)
+ */
+static int
+check_algorithm_coverage(void)
+{
+        int missing = 0;
+        uint8_t cipher_seen[IMB_CIPHER_NUM] = { 0 };
+        uint8_t hash_seen[IMB_AUTH_NUM] = { 0 };
+
+        /* Scan cipher_tests[] */
+        for (unsigned i = 0; i < DIM(cipher_tests); i++)
+                cipher_seen[cipher_tests[i].cipher] = 1;
+
+        /* Scan hash_tests[] */
+        for (unsigned i = 0; i < DIM(hash_tests); i++)
+                hash_seen[hash_tests[i].hash] = 1;
+
+        /* Scan aead_tests[] (covers both cipher and hash) */
+        for (unsigned i = 0; i < DIM(aead_tests); i++) {
+                cipher_seen[aead_tests[i].cipher] = 1;
+                hash_seen[aead_tests[i].hash] = 1;
+        }
+
+        /* Algorithms tested in special_tests or intentionally skipped */
+        cipher_seen[IMB_CIPHER_NULL] = 1;
+        cipher_seen[IMB_CIPHER_CUSTOM] = 1;
+        cipher_seen[IMB_CIPHER_PON_AES_CNTR] = 1;          /* tested in special_tests */
+        cipher_seen[IMB_CIPHER_GCM_SGL] = 1;               /* SGL variant */
+        cipher_seen[IMB_CIPHER_CHACHA20_POLY1305_SGL] = 1; /* SGL variant */
+
+        hash_seen[IMB_AUTH_NULL] = 1;
+        hash_seen[IMB_AUTH_CUSTOM] = 1;
+        hash_seen[IMB_AUTH_PON_CRC_BIP] = 1;           /* tested in special_tests */
+        hash_seen[IMB_AUTH_DOCSIS_CRC32] = 1;          /* tested in special_tests */
+        hash_seen[IMB_AUTH_GCM_SGL] = 1;               /* SGL variant */
+        hash_seen[IMB_AUTH_CHACHA20_POLY1305_SGL] = 1; /* SGL variant */
+
+        for (int i = 1; i < IMB_CIPHER_NUM; i++) {
+                if (!cipher_seen[i]) {
+                        printf("WARNING: cipher mode %d not tested\n", i);
+                        missing++;
+                }
+        }
+
+        for (int i = 1; i < IMB_AUTH_NUM; i++) {
+                if (!hash_seen[i]) {
+                        printf("WARNING: hash algorithm %d not tested\n", i);
+                        missing++;
+                }
+        }
+
+        return missing;
+}
+
+/* ========================================================================== */
 /* Main                                                                       */
 /* ========================================================================== */
 
@@ -1668,6 +1762,9 @@ main(int argc, char **argv)
         printf("Zero-Length Message Test\n"
                "Library version: %s\n",
                imb_get_version_str());
+
+        /* Warn if any algorithm is missing from the test arrays */
+        check_algorithm_coverage();
 
         /* Detect available architectures */
         if (detect_arch(arch_support, flags) < 0) {
