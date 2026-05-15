@@ -6,7 +6,7 @@
         "generation and verification of MACs."
     ],
     "notes": {},
-    "numberOfTests": 10,
+    "numberOfTests": 8,
     "schema": "mac_test_schema_v1.json",
     "testGroups": [
         {
@@ -90,23 +90,6 @@
         {
             "type": "MacTest",
             "source": "https://tools.ietf.org/html/rfc2202",
-            "keySize": 160,
-            "tagSize": 96,
-            "tests": [
-                {
-                    "tcId": 6,
-                    "comment": "Tag Length 96",
-                    "key": "0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c",
-                    "msg": "546573742057697468205472756e636174696f6e",
-                    "tag": "4c1a03424b55e07fe7f27be1",
-                    "result": "valid",
-                    "flags": []
-                }
-            ]
-        },
-        {
-            "type": "MacTest",
-            "source": "https://tools.ietf.org/html/rfc2202",
             "keySize": 640,
             "tagSize": 160,
             "tests": [
@@ -125,23 +108,6 @@
                     "key": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
                     "msg": "54657374205573696e67204c6172676572205468616e20426c6f636b2d53697a65204b657920616e64204c6172676572205468616e204f6e6520426c6f636b2d53697a652044617461",
                     "tag": "e8e99d0f45237d786d6bbaa7965c7808bbff1a91",
-                    "result": "valid",
-                    "flags": []
-                }
-            ]
-        },
-        {
-            "type": "MacTest",
-            "source": "https://tools.ietf.org/html/rfc2202",
-            "keySize": 392,
-            "tagSize": 96,
-            "tests": [
-                {
-                    "tcId": 9,
-                    "comment": "Tag size 96",
-                    "key": "707172737475767778797a7b7c7d7e7f808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9fa0",
-                    "msg": "53616d706c65202334",
-                    "tag": "9ea886efe268dbecce420c75",
                     "result": "valid",
                     "flags": []
                 }

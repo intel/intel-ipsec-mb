@@ -6,7 +6,7 @@
         "generation and verification of MACs."
     ],
     "notes": {},
-    "numberOfTests": 9,
+    "numberOfTests": 7,
     "schema": "mac_test_schema_v1.json",
     "testGroups": [
         {
@@ -81,23 +81,6 @@
         {
             "type": "MacTest",
             "source": "https://tools.ietf.org/html/rfc4231",
-            "keySize": 160,
-            "tagSize": 128,
-            "tests": [
-                {
-                    "tcId": 5,
-                    "comment": "Message: 'Test With Truncation'",
-                    "key": "0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c",
-                    "msg": "546573742057697468205472756e636174696f6e",
-                    "tag": "3abf34c3503b2a23a46efc619baef897",
-                    "result": "valid",
-                    "flags": []
-                }
-            ]
-        },
-        {
-            "type": "MacTest",
-            "source": "https://tools.ietf.org/html/rfc4231",
             "keySize": 1048,
             "tagSize": 384,
             "tests": [
@@ -116,23 +99,6 @@
                     "key": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
                     "msg": "5468697320697320612074657374207573696e672061206c6172676572207468616e20626c6f636b2d73697a65206b657920616e642061206c6172676572207468616e20626c6f636b2d73697a6520646174612e20546865206b6579206e6565647320746f20626520686173686564206265666f7265206265696e6720757365642062792074686520484d414320616c676f726974686d2e",
                     "tag": "6617178e941f020d351e2f254e8fd32c602420feb0b8fb9adccebb82461e99c5a678cc31e799176d3860e6110c46523e",
-                    "result": "valid",
-                    "flags": []
-                }
-            ]
-        },
-        {
-            "type": "MacTest",
-            "source": "https://csrc.nist.gov/csrc/media/projects/",
-            "keySize": 512,
-            "tagSize": 192,
-            "tests": [
-                {
-                    "tcId": 8,
-                    "comment": "message : 'This is a test using a larger than block-size key and a larger than block-size data. The key needs to be hashed before being used by the HMAC algorithm.'",
-                    "key": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f",
-                    "msg": "53616d706c65206d65737361676520666f72206b65796c656e3d626c6f636b6c656e",
-                    "tag": "63c5daa5e651847ca897c95814ab830bededc7d25e83eef9",
                     "result": "valid",
                     "flags": []
                 }

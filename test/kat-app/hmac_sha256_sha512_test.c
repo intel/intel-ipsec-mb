@@ -695,22 +695,6 @@ test_hmac_shax_std_vectors(struct IMB_MGR *mb_mgr, const int sha_type, const uin
                         printf(".");
 #endif
                 }
-                /* @todo add truncation functionality to hmac_sha224 to hmac_sha 512*/
-                const int flag =
-                        ((sha_type == 224 && (v->tagSize / 8) != IMB_SHA224_DIGEST_SIZE_IN_BYTES) ||
-                         (sha_type == 256 && (v->tagSize / 8) != IMB_SHA256_DIGEST_SIZE_IN_BYTES) ||
-                         (sha_type == 384 && (v->tagSize / 8) != IMB_SHA384_DIGEST_SIZE_IN_BYTES) ||
-                         (sha_type == 512 && (v->tagSize / 8) != IMB_SHA512_DIGEST_SIZE_IN_BYTES));
-
-                if (flag) {
-#ifdef DEBUG
-                        if (!quiet_mode)
-                                printf("Skipped vector %zu, "
-                                       "N/A for HMAC-SHA%d\n",
-                                       v->tcId, sha_type);
-#endif
-                        continue;
-                }
                 if (test_hmac_shax(mb_mgr, v, num_jobs, sha_type, v->tagSize / 8)) {
                         printf("error #%zu\n", v->tcId);
                         test_suite_update(ts, 0, 1);

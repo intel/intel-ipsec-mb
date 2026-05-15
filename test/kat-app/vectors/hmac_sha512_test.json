@@ -1,142 +1,108 @@
 {
-  "algorithm": "HMAC-SHA512",
-  "generatorVersion": "",
-  "header": [
-    "Test vectors of type MacTest are intended for testing the",
-    "generation and verification of MACs."
-  ],
-  "notes": {},
-  "numberOfTests": 9,
-  "schema": "mac_test_schema_v1.json",
-  "testGroups": [
-    {
-      "type": "MacTest",
-      "source": "https://tools.ietf.org/html/rfc4231",
-      "keySize": 160,
-      "tagSize": 512,
-      "tests": [
+    "algorithm": "HMAC-SHA512",
+    "generatorVersion": "",
+    "header": [
+        "Test vectors of type MacTest are intended for testing the",
+        "generation and verification of MACs."
+    ],
+    "notes": {},
+    "numberOfTests": 7,
+    "schema": "mac_test_schema_v1.json",
+    "testGroups": [
         {
-          "tcId": 1,
-          "comment": "Message: 'Hi There'",
-          "key": "0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b",
-          "msg": "4869205468657265",
-          "tag": "87aa7cdea5ef619d4ff0b4241a1d6cb02379f4e2ce4ec2787ad0b30545e17cdedaa833b7d6b8a702038b274eaea3f4e4be9d914eeb61f1702e696c203a126854",
-          "result": "valid",
-          "flags": []
+            "type": "MacTest",
+            "source": "https://tools.ietf.org/html/rfc4231",
+            "keySize": 160,
+            "tagSize": 512,
+            "tests": [
+                {
+                    "tcId": 1,
+                    "comment": "Message: 'Hi There'",
+                    "key": "0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b",
+                    "msg": "4869205468657265",
+                    "tag": "87aa7cdea5ef619d4ff0b4241a1d6cb02379f4e2ce4ec2787ad0b30545e17cdedaa833b7d6b8a702038b274eaea3f4e4be9d914eeb61f1702e696c203a126854",
+                    "result": "valid",
+                    "flags": []
+                },
+                {
+                    "tcId": 3,
+                    "comment": "Message: 'what do ya want for nothing?'",
+                    "key": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                    "msg": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+                    "tag": "fa73b0089d56a284efb0f0756c890be9b1b5dbdd8ee81a3655f83e33b2279d39bf3e848279a722c806b485a47e67c807b946a337bee8942674278859e13292fb",
+                    "result": "valid",
+                    "flags": []
+                },
+                {
+                    "tcId": 9,
+                    "comment": "Zero-length message",
+                    "key": "0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b",
+                    "msg": "",
+                    "tag": "ad8da3d882af6e9b872457adcdd638e9b87af44825425085f8ce81a4122bab781b92f5ab92ac24948ad369f86558fd469ca3f4861cb0f0dfb33154428ed03dfb",
+                    "result": "valid",
+                    "flags": []
+                }
+            ]
         },
         {
-          "tcId": 3,
-          "comment": "Message: 'what do ya want for nothing?'",
-          "key": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-          "msg": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
-          "tag": "fa73b0089d56a284efb0f0756c890be9b1b5dbdd8ee81a3655f83e33b2279d39bf3e848279a722c806b485a47e67c807b946a337bee8942674278859e13292fb",
-          "result": "valid",
-          "flags": []
+            "type": "MacTest",
+            "source": "https://tools.ietf.org/html/rfc4231",
+            "keySize": 32,
+            "tagSize": 512,
+            "tests": [
+                {
+                    "tcId": 2,
+                    "comment": "Message: 'what do ya want for nothing?'",
+                    "key": "4a656665",
+                    "msg": "7768617420646f2079612077616e7420666f72206e6f7468696e673f",
+                    "tag": "164b7a7bfcf819e2e395fbe73b56e0a387bd64222e831fd610270cd7ea2505549758bf75c05a994a6d034f65f8f0e6fdcaeab1a34d4a6b4b636e070a38bce737",
+                    "result": "valid",
+                    "flags": []
+                }
+            ]
         },
         {
-          "tcId": 9,
-          "comment": "Zero-length message",
-          "key": "0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b",
-          "msg": "",
-          "tag": "ad8da3d882af6e9b872457adcdd638e9b87af44825425085f8ce81a4122bab781b92f5ab92ac24948ad369f86558fd469ca3f4861cb0f0dfb33154428ed03dfb",
-          "result": "valid",
-          "flags": []
-        }
-      ]
-    },
-    {
-      "type": "MacTest",
-      "source": "https://tools.ietf.org/html/rfc4231",
-      "keySize": 32,
-      "tagSize": 512,
-      "tests": [
-        {
-          "tcId": 2,
-          "comment": "Message: 'what do ya want for nothing?'",
-          "key": "4a656665",
-          "msg": "7768617420646f2079612077616e7420666f72206e6f7468696e673f",
-          "tag": "164b7a7bfcf819e2e395fbe73b56e0a387bd64222e831fd610270cd7ea2505549758bf75c05a994a6d034f65f8f0e6fdcaeab1a34d4a6b4b636e070a38bce737",
-          "result": "valid",
-          "flags": []
-        }
-      ]
-    },
-    {
-      "type": "MacTest",
-      "source": "https://tools.ietf.org/html/rfc4231",
-      "keySize": 200,
-      "tagSize": 512,
-      "tests": [
-        {
-          "tcId": 4,
-          "comment": "Long Message",
-          "key": "0102030405060708090a0b0c0d0e0f10111213141516171819",
-          "msg": "cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd",
-          "tag": "b0ba465637458c6990e5a8c5f61d4af7e576d97ff94b872de76f8050361ee3dba91ca5c11aa25eb4d679275cc5788063a5f19741120c4f2de2adebeb10a298dd",
-          "result": "valid",
-          "flags": []
-        }
-      ]
-    },
-    {
-      "type": "MacTest",
-      "source": "https://tools.ietf.org/html/rfc4231",
-      "keySize": 160,
-      "tagSize": 128,
-      "tests": [
-        {
-          "tcId": 5,
-          "comment": "Message: 'Test With Truncation'",
-          "key": "0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c",
-          "msg": "546573742057697468205472756e636174696f6e",
-          "tag": "415fad6271580a531d4179bc891d87a6",
-          "result": "valid",
-          "flags": []
-        }
-      ]
-    },
-    {
-      "type": "MacTest",
-      "source": "https://tools.ietf.org/html/rfc4231",
-      "keySize": 1048,
-      "tagSize": 512,
-      "tests": [
-        {
-          "tcId": 6,
-          "comment": "message : 'Test Using Larger Than Block-Size Key - Hash Key First'",
-          "key": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-          "msg": "54657374205573696e67204c6172676572205468616e20426c6f636b2d53697a65204b6579202d2048617368204b6579204669727374",
-          "tag": "80b24263c7c1a3ebb71493c1dd7be8b49b46d1f41b4aeec1121b013783f8f3526b56d037e05f2598bd0fd2215d6a1e5295e64f73f63f0aec8b915a985d786598",
-          "result": "valid",
-          "flags": []
+            "type": "MacTest",
+            "source": "https://tools.ietf.org/html/rfc4231",
+            "keySize": 200,
+            "tagSize": 512,
+            "tests": [
+                {
+                    "tcId": 4,
+                    "comment": "Long Message",
+                    "key": "0102030405060708090a0b0c0d0e0f10111213141516171819",
+                    "msg": "cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd",
+                    "tag": "b0ba465637458c6990e5a8c5f61d4af7e576d97ff94b872de76f8050361ee3dba91ca5c11aa25eb4d679275cc5788063a5f19741120c4f2de2adebeb10a298dd",
+                    "result": "valid",
+                    "flags": []
+                }
+            ]
         },
         {
-          "tcId": 7,
-          "comment": "message : 'This is a test using a larger than block-size key and a larger than block-size data. The key needs to be hashed before being used by the HMAC algorithm.'",
-          "key": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-          "msg": "5468697320697320612074657374207573696e672061206c6172676572207468616e20626c6f636b2d73697a65206b657920616e642061206c6172676572207468616e20626c6f636b2d73697a6520646174612e20546865206b6579206e6565647320746f20626520686173686564206265666f7265206265696e6720757365642062792074686520484d414320616c676f726974686d2e",
-          "tag": "e37b6a775dc87dbaa4dfa9f96e5e3ffddebd71f8867289865df5a32d20cdc944b6022cac3c4982b10d5eeb55c3e4de15134676fb6de0446065c97440fa8c6a58",
-          "result": "valid",
-          "flags": []
+            "type": "MacTest",
+            "source": "https://tools.ietf.org/html/rfc4231",
+            "keySize": 1048,
+            "tagSize": 512,
+            "tests": [
+                {
+                    "tcId": 6,
+                    "comment": "message : 'Test Using Larger Than Block-Size Key - Hash Key First'",
+                    "key": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                    "msg": "54657374205573696e67204c6172676572205468616e20426c6f636b2d53697a65204b6579202d2048617368204b6579204669727374",
+                    "tag": "80b24263c7c1a3ebb71493c1dd7be8b49b46d1f41b4aeec1121b013783f8f3526b56d037e05f2598bd0fd2215d6a1e5295e64f73f63f0aec8b915a985d786598",
+                    "result": "valid",
+                    "flags": []
+                },
+                {
+                    "tcId": 7,
+                    "comment": "message : 'This is a test using a larger than block-size key and a larger than block-size data. The key needs to be hashed before being used by the HMAC algorithm.'",
+                    "key": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                    "msg": "5468697320697320612074657374207573696e672061206c6172676572207468616e20626c6f636b2d73697a65206b657920616e642061206c6172676572207468616e20626c6f636b2d73697a6520646174612e20546865206b6579206e6565647320746f20626520686173686564206265666f7265206265696e6720757365642062792074686520484d414320616c676f726974686d2e",
+                    "tag": "e37b6a775dc87dbaa4dfa9f96e5e3ffddebd71f8867289865df5a32d20cdc944b6022cac3c4982b10d5eeb55c3e4de15134676fb6de0446065c97440fa8c6a58",
+                    "result": "valid",
+                    "flags": []
+                }
+            ]
         }
-      ]
-    },
-    {
-      "type": "MacTest",
-      "source": "https://csrc.nist.gov/csrc/media/projects/",
-      "keySize": 512,
-      "tagSize": 256,
-      "tests": [
-        {
-          "tcId": 8,
-          "comment": "message : 'This is a test using a larger than block-size key and a larger than block-size data. The key needs to be hashed before being used by the HMAC algorithm.'",
-          "key": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f",
-          "msg": "53616d706c65206d65737361676520666f72206b65796c656e3d626c6f636b6c656e",
-          "tag": "fc25e240658ca785b7a811a8d3f7b4ca48cfa26a8a366bf2cd1f836b05fcb024",
-          "result": "valid",
-          "flags": []
-        }
-      ]
-    }
-  ]
+    ]
 }

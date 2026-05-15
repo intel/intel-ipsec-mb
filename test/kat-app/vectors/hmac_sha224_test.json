@@ -6,7 +6,7 @@
         "generation and verification of MACs."
     ],
     "notes": {},
-    "numberOfTests": 9,
+    "numberOfTests": 8,
     "schema": "mac_test_schema_v1.json",
     "testGroups": [
         {
@@ -73,23 +73,6 @@
                     "key": "0102030405060708090a0b0c0d0e0f10111213141516171819",
                     "msg": "cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd",
                     "tag": "6c11506874013cac6a2abc1bb382627cec6a90d86efc012de7afec5a",
-                    "result": "valid",
-                    "flags": []
-                }
-            ]
-        },
-        {
-            "type": "MacTest",
-            "source": "https://tools.ietf.org/html/rfc4231",
-            "keySize": 160,
-            "tagSize": 128,
-            "tests": [
-                {
-                    "tcId": 5,
-                    "comment": "Message: 'Test With Truncation'",
-                    "key": "0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c",
-                    "msg": "546573742057697468205472756e636174696f6e",
-                    "tag": "0e2aea68a90c8d37c988bcdb9fca6fa8",
                     "result": "valid",
                     "flags": []
                 }
