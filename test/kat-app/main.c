@@ -432,6 +432,10 @@ main(int argc, char **argv)
                                                 tests[test_idx].enabled = 0;
                         }
                         i++;
+                } else {
+                        fprintf(stderr, "Unknown argument: '%s'\n", argv[i]);
+                        usage(argv[0]);
+                        return EXIT_FAILURE;
                 }
         }
 
