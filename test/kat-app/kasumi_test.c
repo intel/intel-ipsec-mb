@@ -45,23 +45,7 @@ static struct mac_test *kasumi_f9_vectors;
 static int
 load_kasumi_f9_vectors(struct test_json_alloc_ctx **ctx)
 {
-        char path[1024];
-        int ret;
-        const char *const file_name = "kasumi_f9_test.json";
-
-        if (kat_vector_dir == NULL) {
-                fprintf(stderr, "Error: no vector directory set; use --vector-dir <DIR>\n");
-                return -1;
-        }
-
-        ret = snprintf(path, sizeof(path), "%s/%s", kat_vector_dir, file_name);
-        if (ret < 0 || ret >= (int) sizeof(path))
-                return -1;
-
-        if (json_load_mac_test(path, &kasumi_f9_vectors, ctx) < 0)
-                return -1;
-
-        return 0;
+        return load_mac_vectors(kat_vector_dir, "kasumi_f9_test.json", &kasumi_f9_vectors, ctx);
 }
 
 static void
@@ -76,23 +60,7 @@ static struct cipher_test *kasumi_f8_vectors;
 static int
 load_kasumi_f8_vectors(struct test_json_alloc_ctx **ctx)
 {
-        char path[1024];
-        int ret;
-        const char *const file_name = "kasumi_f8_test.json";
-
-        if (kat_vector_dir == NULL) {
-                fprintf(stderr, "Error: no vector directory set; use --vector-dir <DIR>\n");
-                return -1;
-        }
-
-        ret = snprintf(path, sizeof(path), "%s/%s", kat_vector_dir, file_name);
-        if (ret < 0 || ret >= (int) sizeof(path))
-                return -1;
-
-        if (json_load_cipher_test(path, &kasumi_f8_vectors, ctx) < 0)
-                return -1;
-
-        return 0;
+        return load_cipher_vectors(kat_vector_dir, "kasumi_f8_test.json", &kasumi_f8_vectors, ctx);
 }
 
 static void

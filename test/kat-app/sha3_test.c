@@ -44,23 +44,7 @@ static struct mac_test *shake256_vectors;
 static int
 load_sha3_vectors(struct test_json_alloc_ctx **ctx)
 {
-        char path[1024];
-        int ret;
-        const char *const file_name = "sha3_test.json";
-
-        if (kat_vector_dir == NULL) {
-                fprintf(stderr, "Error: no vector directory set; use --vector-dir <DIR>\n");
-                return -1;
-        }
-
-        ret = snprintf(path, sizeof(path), "%s/%s", kat_vector_dir, file_name);
-        if (ret < 0 || ret >= (int) sizeof(path))
-                return -1;
-
-        if (json_load_mac_test(path, &sha3_vectors, ctx) < 0)
-                return -1;
-
-        return 0;
+        return load_mac_vectors(kat_vector_dir, "sha3_test.json", &sha3_vectors, ctx);
 }
 
 static void
@@ -73,23 +57,7 @@ free_sha3_vectors(struct test_json_alloc_ctx *ctx)
 static int
 load_shake128_vectors(struct test_json_alloc_ctx **ctx)
 {
-        char path[1024];
-        int ret;
-        const char *const file_name = "shake128_test.json";
-
-        if (kat_vector_dir == NULL) {
-                fprintf(stderr, "Error: no vector directory set; use --vector-dir <DIR>\n");
-                return -1;
-        }
-
-        ret = snprintf(path, sizeof(path), "%s/%s", kat_vector_dir, file_name);
-        if (ret < 0 || ret >= (int) sizeof(path))
-                return -1;
-
-        if (json_load_mac_test(path, &shake128_vectors, ctx) < 0)
-                return -1;
-
-        return 0;
+        return load_mac_vectors(kat_vector_dir, "shake128_test.json", &shake128_vectors, ctx);
 }
 
 static void
@@ -102,23 +70,7 @@ free_shake128_vectors(struct test_json_alloc_ctx *ctx)
 static int
 load_shake256_vectors(struct test_json_alloc_ctx **ctx)
 {
-        char path[1024];
-        int ret;
-        const char *const file_name = "shake256_test.json";
-
-        if (kat_vector_dir == NULL) {
-                fprintf(stderr, "Error: no vector directory set; use --vector-dir <DIR>\n");
-                return -1;
-        }
-
-        ret = snprintf(path, sizeof(path), "%s/%s", kat_vector_dir, file_name);
-        if (ret < 0 || ret >= (int) sizeof(path))
-                return -1;
-
-        if (json_load_mac_test(path, &shake256_vectors, ctx) < 0)
-                return -1;
-
-        return 0;
+        return load_mac_vectors(kat_vector_dir, "shake256_test.json", &shake256_vectors, ctx);
 }
 
 static void

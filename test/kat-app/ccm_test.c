@@ -52,40 +52,15 @@ static struct aead_test *ccm_256_vectors;
 static int
 load_ccm_vectors(struct test_json_alloc_ctx **ctx_128, struct test_json_alloc_ctx **ctx_256)
 {
-        char path[1024];
-        int ret;
-        const char *const ccm_128_file = "ccm_128_test.json";
-        const char *const ccm_256_file = "ccm_256_test.json";
-
-        if (kat_vector_dir == NULL) {
-                fprintf(stderr, "Error: no vector directory set; use --vector-dir <DIR>\n");
+        if (load_aead_vectors(kat_vector_dir, "ccm_128_test.json", &ccm_128_vectors, ctx_128) < 0)
+                return -1;
+        if (load_aead_vectors(kat_vector_dir, "ccm_256_test.json", &ccm_256_vectors, ctx_256) < 0) {
+                json_free_test_ctx(*ctx_128);
+                *ctx_128 = NULL;
+                ccm_128_vectors = NULL;
                 return -1;
         }
-
-        ret = snprintf(path, sizeof(path), "%s/%s", kat_vector_dir, ccm_128_file);
-        /* Treat truncation as failure; otherwise path would be silently invalid. */
-        if (ret < 0 || ret >= (int) sizeof(path))
-                return -1;
-        if (json_load_aead_test(path, &ccm_128_vectors, ctx_128) < 0)
-                return -1;
-
-        ret = snprintf(path, sizeof(path), "%s/%s", kat_vector_dir, ccm_256_file);
-        /* Treat truncation as failure; otherwise path would be silently invalid. */
-        if (ret < 0 || ret >= (int) sizeof(path))
-                goto err;
-        if (json_load_aead_test(path, &ccm_256_vectors, ctx_256) < 0)
-                goto err;
-
         return 0;
-
-err:
-        json_free_test_ctx(*ctx_128);
-        json_free_test_ctx(*ctx_256);
-        *ctx_128 = NULL;
-        *ctx_256 = NULL;
-        ccm_128_vectors = NULL;
-        ccm_256_vectors = NULL;
-        return -1;
 }
 
 /**

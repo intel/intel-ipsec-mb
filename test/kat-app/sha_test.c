@@ -43,23 +43,7 @@ static struct mac_test *sha_vectors;
 static int
 load_sha_vectors(struct test_json_alloc_ctx **ctx)
 {
-        char path[1024];
-        int ret;
-        const char *const file_name = "sha_test.json";
-
-        if (kat_vector_dir == NULL) {
-                fprintf(stderr, "Error: no vector directory set; use --vector-dir <DIR>\n");
-                return -1;
-        }
-
-        ret = snprintf(path, sizeof(path), "%s/%s", kat_vector_dir, file_name);
-        if (ret < 0 || ret >= (int) sizeof(path))
-                return -1;
-
-        if (json_load_mac_test(path, &sha_vectors, ctx) < 0)
-                return -1;
-
-        return 0;
+        return load_mac_vectors(kat_vector_dir, "sha_test.json", &sha_vectors, ctx);
 }
 
 static void

@@ -46,23 +46,7 @@ static struct cipher_test *ctr_vectors;
 static int
 load_ctr_vectors(struct test_json_alloc_ctx **ctx)
 {
-        char path[1024];
-        int ret;
-        const char *const file_name = "ctr_test.json";
-
-        if (kat_vector_dir == NULL) {
-                fprintf(stderr, "Error: no vector directory set; use --vector-dir <DIR>\n");
-                return -1;
-        }
-
-        ret = snprintf(path, sizeof(path), "%s/%s", kat_vector_dir, file_name);
-        if (ret < 0 || ret >= (int) sizeof(path))
-                return -1;
-
-        if (json_load_cipher_test(path, &ctr_vectors, ctx) < 0)
-                return -1;
-
-        return 0;
+        return load_cipher_vectors(kat_vector_dir, "ctr_test.json", &ctr_vectors, ctx);
 }
 
 static void

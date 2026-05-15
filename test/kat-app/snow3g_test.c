@@ -47,27 +47,11 @@ static struct cipher_test *snow3g_f8_linear_vectors;
 static int
 load_snow3g_f8_vectors(struct test_json_alloc_ctx **ctx_f8, struct test_json_alloc_ctx **ctx_linear)
 {
-        char path[1024];
-        int ret;
-
-        if (kat_vector_dir == NULL) {
-                fprintf(stderr, "Error: no vector directory set; use --vector-dir <DIR>\n");
+        if (load_cipher_vectors(kat_vector_dir, "snow3g_f8_test.json", &snow3g_f8_vectors, ctx_f8) <
+            0)
                 return -1;
-        }
-
-        ret = snprintf(path, sizeof(path), "%s/snow3g_f8_test.json", kat_vector_dir);
-        if (ret < 0 || ret >= (int) sizeof(path))
-                return -1;
-        if (json_load_cipher_test(path, &snow3g_f8_vectors, ctx_f8) < 0)
-                return -1;
-
-        ret = snprintf(path, sizeof(path), "%s/snow3g_f8_linear_test.json", kat_vector_dir);
-        if (ret < 0 || ret >= (int) sizeof(path))
-                return -1;
-        if (json_load_cipher_test(path, &snow3g_f8_linear_vectors, ctx_linear) < 0)
-                return -1;
-
-        return 0;
+        return load_cipher_vectors(kat_vector_dir, "snow3g_f8_linear_test.json",
+                                   &snow3g_f8_linear_vectors, ctx_linear);
 }
 
 static void
@@ -83,23 +67,7 @@ static struct mac_test *snow3g_f9_vectors;
 static int
 load_snow3g_f9_vectors(struct test_json_alloc_ctx **ctx)
 {
-        char path[1024];
-        int ret;
-        const char *const file_name = "snow3g_f9_test.json";
-
-        if (kat_vector_dir == NULL) {
-                fprintf(stderr, "Error: no vector directory set; use --vector-dir <DIR>\n");
-                return -1;
-        }
-
-        ret = snprintf(path, sizeof(path), "%s/%s", kat_vector_dir, file_name);
-        if (ret < 0 || ret >= (int) sizeof(path))
-                return -1;
-
-        if (json_load_mac_test(path, &snow3g_f9_vectors, ctx) < 0)
-                return -1;
-
-        return 0;
+        return load_mac_vectors(kat_vector_dir, "snow3g_f9_test.json", &snow3g_f9_vectors, ctx);
 }
 
 static void

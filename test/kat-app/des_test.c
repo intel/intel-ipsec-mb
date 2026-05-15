@@ -48,39 +48,14 @@ static int
 load_des_vectors(struct test_json_alloc_ctx **ctx_des, struct test_json_alloc_ctx **ctx_docsis,
                  struct test_json_alloc_ctx **ctx_cfb, struct test_json_alloc_ctx **ctx_3des)
 {
-        char path[1024];
-        int ret;
-
-        if (kat_vector_dir == NULL) {
-                fprintf(stderr, "Error: no vector directory set; use --vector-dir <DIR>\n");
+        if (load_cipher_vectors(kat_vector_dir, "des_test.json", &des_vectors, ctx_des) < 0)
                 return -1;
-        }
-
-        ret = snprintf(path, sizeof(path), "%s/des_test.json", kat_vector_dir);
-        if (ret < 0 || ret >= (int) sizeof(path))
+        if (load_cipher_vectors(kat_vector_dir, "des_docsis_test.json", &des_docsis_vectors,
+                                ctx_docsis) < 0)
                 return -1;
-        if (json_load_cipher_test(path, &des_vectors, ctx_des) < 0)
+        if (load_cipher_vectors(kat_vector_dir, "des_cfb_test.json", &des_cfb_vectors, ctx_cfb) < 0)
                 return -1;
-
-        ret = snprintf(path, sizeof(path), "%s/des_docsis_test.json", kat_vector_dir);
-        if (ret < 0 || ret >= (int) sizeof(path))
-                return -1;
-        if (json_load_cipher_test(path, &des_docsis_vectors, ctx_docsis) < 0)
-                return -1;
-
-        ret = snprintf(path, sizeof(path), "%s/des_cfb_test.json", kat_vector_dir);
-        if (ret < 0 || ret >= (int) sizeof(path))
-                return -1;
-        if (json_load_cipher_test(path, &des_cfb_vectors, ctx_cfb) < 0)
-                return -1;
-
-        ret = snprintf(path, sizeof(path), "%s/des3_test.json", kat_vector_dir);
-        if (ret < 0 || ret >= (int) sizeof(path))
-                return -1;
-        if (json_load_cipher_test(path, &des3_vectors, ctx_3des) < 0)
-                return -1;
-
-        return 0;
+        return load_cipher_vectors(kat_vector_dir, "des3_test.json", &des3_vectors, ctx_3des);
 }
 
 static void

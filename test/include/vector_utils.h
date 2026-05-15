@@ -37,9 +37,9 @@ struct test_json_alloc_ctx;
  * @brief Load vectors from a MAC-format JSON file into a sentinel-terminated
  *        struct mac_test array.
  *
- * @param path path to vector JSON file
- * @param out_vectors loaded vectors on success
- * @param out_ctx allocator context to be passed to json_free_test_ctx()
+ * @param [in] path path to vector JSON file
+ * @param [out] out_vectors loaded vectors on success
+ * @param [out] out_ctx allocator context to be passed to json_free_test_ctx()
  *
  * @return Operation status
  * @retval 0 success
@@ -53,9 +53,9 @@ json_load_mac_test(const char *path, struct mac_test **out_vectors,
  * @brief Load vectors from a CIPHER-format JSON file into a
  *        sentinel-terminated struct cipher_test array.
  *
- * @param path path to vector JSON file
- * @param out_vectors loaded vectors on success
- * @param out_ctx allocator context to be passed to json_free_test_ctx()
+ * @param [in] path path to vector JSON file
+ * @param [out] out_vectors loaded vectors on success
+ * @param [out] out_ctx allocator context to be passed to json_free_test_ctx()
  *
  * @return Operation status
  * @retval 0 success
@@ -69,9 +69,9 @@ json_load_cipher_test(const char *path, struct cipher_test **out_vectors,
  * @brief Load vectors from an AEAD-format JSON file into a
  *        sentinel-terminated struct aead_test array.
  *
- * @param path path to vector JSON file
- * @param out_vectors loaded vectors on success
- * @param out_ctx allocator context to be passed to json_free_test_ctx()
+ * @param [in] path path to vector JSON file
+ * @param [out] out_vectors loaded vectors on success
+ * @param [out] out_ctx allocator context to be passed to json_free_test_ctx()
  *
  * @return Operation status
  * @retval 0 success
@@ -87,5 +87,53 @@ json_load_aead_test(const char *path, struct aead_test **out_vectors,
  */
 void
 json_free_test_ctx(struct test_json_alloc_ctx *ctx);
+
+/**
+ * @brief Load MAC-format vectors from a file in the given vector directory.
+ *
+ * @param [in] vector_dir directory containing vector files
+ * @param [in] file_name  vector file name (not a full path)
+ * @param [out] out_vectors loaded vectors on success
+ * @param [out] out_ctx allocator context to be passed to json_free_test_ctx()
+ *
+ * @return Operation status
+ * @retval 0 success
+ * @retval -1 error (parse error printed to stderr)
+ */
+int
+load_mac_vectors(const char *vector_dir, const char *file_name, struct mac_test **out_vectors,
+                 struct test_json_alloc_ctx **out_ctx);
+
+/**
+ * @brief Load cipher-format vectors from a file in the given vector directory.
+ *
+ * @param [in] vector_dir directory containing vector files
+ * @param [in] file_name  vector file name (not a full path)
+ * @param [out] out_vectors loaded vectors on success
+ * @param [out] out_ctx allocator context to be passed to json_free_test_ctx()
+ *
+ * @return Operation status
+ * @retval 0 success
+ * @retval -1 error (parse error printed to stderr)
+ */
+int
+load_cipher_vectors(const char *vector_dir, const char *file_name, struct cipher_test **out_vectors,
+                    struct test_json_alloc_ctx **out_ctx);
+
+/**
+ * @brief Load AEAD-format vectors from a file in the given vector directory.
+ *
+ * @param [in] vector_dir directory containing vector files
+ * @param [in] file_name  vector file name (not a full path)
+ * @param [out] out_vectors loaded vectors on success
+ * @param [out] out_ctx allocator context to be passed to json_free_test_ctx()
+ *
+ * @return Operation status
+ * @retval 0 success
+ * @retval -1 error (parse error printed to stderr)
+ */
+int
+load_aead_vectors(const char *vector_dir, const char *file_name, struct aead_test **out_vectors,
+                  struct test_json_alloc_ctx **out_ctx);
 
 #endif /* TESTAPP_VECTOR_UTILS_H */

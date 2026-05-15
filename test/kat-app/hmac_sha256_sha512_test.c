@@ -49,23 +49,7 @@ static struct mac_test *hmac_sha512_vectors;
 static int
 load_hmac_sha224_vectors(struct test_json_alloc_ctx **ctx)
 {
-        char path[1024];
-        int ret;
-        const char *const file_name = "hmac_sha224_test.json";
-
-        if (kat_vector_dir == NULL) {
-                fprintf(stderr, "Error: no vector directory set; use --vector-dir <DIR>\n");
-                return -1;
-        }
-
-        ret = snprintf(path, sizeof(path), "%s/%s", kat_vector_dir, file_name);
-        if (ret < 0 || ret >= (int) sizeof(path))
-                return -1;
-
-        if (json_load_mac_test(path, &hmac_sha224_vectors, ctx) < 0)
-                return -1;
-
-        return 0;
+        return load_mac_vectors(kat_vector_dir, "hmac_sha224_test.json", &hmac_sha224_vectors, ctx);
 }
 
 static void
@@ -78,23 +62,7 @@ free_hmac_sha224_vectors(struct test_json_alloc_ctx *ctx)
 static int
 load_hmac_sha256_vectors(struct test_json_alloc_ctx **ctx)
 {
-        char path[1024];
-        int ret;
-        const char *const file_name = "hmac_sha256_test.json";
-
-        if (kat_vector_dir == NULL) {
-                fprintf(stderr, "Error: no vector directory set; use --vector-dir <DIR>\n");
-                return -1;
-        }
-
-        ret = snprintf(path, sizeof(path), "%s/%s", kat_vector_dir, file_name);
-        if (ret < 0 || ret >= (int) sizeof(path))
-                return -1;
-
-        if (json_load_mac_test(path, &hmac_sha256_vectors, ctx) < 0)
-                return -1;
-
-        return 0;
+        return load_mac_vectors(kat_vector_dir, "hmac_sha256_test.json", &hmac_sha256_vectors, ctx);
 }
 
 static void
@@ -107,23 +75,7 @@ free_hmac_sha256_vectors(struct test_json_alloc_ctx *ctx)
 static int
 load_hmac_sha384_vectors(struct test_json_alloc_ctx **ctx)
 {
-        char path[1024];
-        int ret;
-        const char *const file_name = "hmac_sha384_test.json";
-
-        if (kat_vector_dir == NULL) {
-                fprintf(stderr, "Error: no vector directory set; use --vector-dir <DIR>\n");
-                return -1;
-        }
-
-        ret = snprintf(path, sizeof(path), "%s/%s", kat_vector_dir, file_name);
-        if (ret < 0 || ret >= (int) sizeof(path))
-                return -1;
-
-        if (json_load_mac_test(path, &hmac_sha384_vectors, ctx) < 0)
-                return -1;
-
-        return 0;
+        return load_mac_vectors(kat_vector_dir, "hmac_sha384_test.json", &hmac_sha384_vectors, ctx);
 }
 
 static void
@@ -136,23 +88,7 @@ free_hmac_sha384_vectors(struct test_json_alloc_ctx *ctx)
 static int
 load_hmac_sha512_vectors(struct test_json_alloc_ctx **ctx)
 {
-        char path[1024];
-        int ret;
-        const char *const file_name = "hmac_sha512_test.json";
-
-        if (kat_vector_dir == NULL) {
-                fprintf(stderr, "Error: no vector directory set; use --vector-dir <DIR>\n");
-                return -1;
-        }
-
-        ret = snprintf(path, sizeof(path), "%s/%s", kat_vector_dir, file_name);
-        if (ret < 0 || ret >= (int) sizeof(path))
-                return -1;
-
-        if (json_load_mac_test(path, &hmac_sha512_vectors, ctx) < 0)
-                return -1;
-
-        return 0;
+        return load_mac_vectors(kat_vector_dir, "hmac_sha512_test.json", &hmac_sha512_vectors, ctx);
 }
 
 static void

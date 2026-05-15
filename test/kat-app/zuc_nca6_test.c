@@ -44,23 +44,7 @@ static struct aead_test *zuc_nca6_vectors;
 static int
 load_zuc_nca6_vectors(struct test_json_alloc_ctx **ctx)
 {
-        char path[1024];
-        int ret;
-        const char *const file_name = "zuc_nca6_test.json";
-
-        if (kat_vector_dir == NULL) {
-                fprintf(stderr, "Error: no vector directory set; use --vector-dir <DIR>\n");
-                return -1;
-        }
-
-        ret = snprintf(path, sizeof(path), "%s/%s", kat_vector_dir, file_name);
-        if (ret < 0 || ret >= (int) sizeof(path))
-                return -1;
-
-        if (json_load_aead_test(path, &zuc_nca6_vectors, ctx) < 0)
-                return -1;
-
-        return 0;
+        return load_aead_vectors(kat_vector_dir, "zuc_nca6_test.json", &zuc_nca6_vectors, ctx);
 }
 
 static void

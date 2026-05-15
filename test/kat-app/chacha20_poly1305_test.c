@@ -45,23 +45,8 @@ static struct aead_test *chacha20_poly1305_vectors;
 static int
 load_chacha20_poly1305_vectors(struct test_json_alloc_ctx **ctx)
 {
-        char path[1024];
-        int ret;
-        const char *const file_name = "chacha20_poly1305_test.json";
-
-        if (kat_vector_dir == NULL) {
-                fprintf(stderr, "Error: no vector directory set; use --vector-dir <DIR>\n");
-                return -1;
-        }
-
-        ret = snprintf(path, sizeof(path), "%s/%s", kat_vector_dir, file_name);
-        if (ret < 0 || ret >= (int) sizeof(path))
-                return -1;
-
-        if (json_load_aead_test(path, &chacha20_poly1305_vectors, ctx) < 0)
-                return -1;
-
-        return 0;
+        return load_aead_vectors(kat_vector_dir, "chacha20_poly1305_test.json",
+                                 &chacha20_poly1305_vectors, ctx);
 }
 
 static void

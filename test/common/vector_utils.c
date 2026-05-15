@@ -1754,3 +1754,51 @@ err_no_report:
         json_free_test_ctx(ctx);
         return -1;
 }
+
+static int
+build_vector_path(const char *vector_dir, const char *file_name, char *buf, size_t buf_size)
+{
+        int ret;
+
+        if (vector_dir == NULL) {
+                fprintf(stderr, "Error: no vector directory set; use --vector-dir <DIR>\n");
+                return -1;
+        }
+        ret = snprintf(buf, buf_size, "%s/%s", vector_dir, file_name);
+        if (ret < 0 || ret >= (int) buf_size)
+                return -1;
+        return 0;
+}
+
+int
+load_mac_vectors(const char *vector_dir, const char *file_name, struct mac_test **out_vectors,
+                 struct test_json_alloc_ctx **out_ctx)
+{
+        char path[1024] = { 0 };
+
+        if (build_vector_path(vector_dir, file_name, path, sizeof(path)) < 0)
+                return -1;
+        return json_load_mac_test(path, out_vectors, out_ctx);
+}
+
+int
+load_cipher_vectors(const char *vector_dir, const char *file_name, struct cipher_test **out_vectors,
+                    struct test_json_alloc_ctx **out_ctx)
+{
+        char path[1024] = { 0 };
+
+        if (build_vector_path(vector_dir, file_name, path, sizeof(path)) < 0)
+                return -1;
+        return json_load_cipher_test(path, out_vectors, out_ctx);
+}
+
+int
+load_aead_vectors(const char *vector_dir, const char *file_name, struct aead_test **out_vectors,
+                  struct test_json_alloc_ctx **out_ctx)
+{
+        char path[1024] = { 0 };
+
+        if (build_vector_path(vector_dir, file_name, path, sizeof(path)) < 0)
+                return -1;
+        return json_load_aead_test(path, out_vectors, out_ctx);
+}
