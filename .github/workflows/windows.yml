@@ -73,32 +73,6 @@ jobs:
     - name: Build
       run: cmake --build ${{env.BUILD_DIR}} --config ${{env.BUILD_TYPE}}
 
-  # CMake release build with shared library (ninja) on VS2026
-  debug-cmake-ninja-vs2026:
-    runs-on: windows-2025-vs2026
-
-    steps:
-    - name: Setup NASM
-      uses: ilammy/setup-nasm@13cbeb366c45c4379d3478cdcbadd8295feb5028 # v1.5.1
-
-    - name: Checkout repo
-      uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3.6.0
-
-    - name: Setup environment
-      run: |
-        New-Item -ItemType Directory -Path "$pwd\build"
-        New-Item -ItemType Directory -Path "$pwd\build\bin"
-        "BUILD_DIR=$pwd\build" >> $env:GITHUB_ENV
-        "BINARY_DIR=$pwd\build\bin" >> $env:GITHUB_ENV
-        $env:PATH += "$pwd\build\bin;"
-
-    - name: Configure CMake
-      run: cmake -G Ninja -DCMAKE_C_COMPILER=cl -DCMAKE_CXX_COMPILER=cl -DIMB_BIN_DIR=${{env.BINARY_DIR}} -B ${{env.BUILD_DIR}}
-    - name: Build
-      run: cmake --build ${{env.BUILD_DIR}}
-    - name: Test
-      run: ctest -j 5 -C ${{env.BUILD_TYPE}} --test-dir ${{env.BUILD_DIR}}
-
   # CMake release build with shared library (msbuild) on VS2022
   release-cmake-msvc-msbuild-vs2022:
     env:
@@ -172,6 +146,11 @@ jobs:
     - name: Setup NASM
       uses: ilammy/setup-nasm@13cbeb366c45c4379d3478cdcbadd8295feb5028 # v1.5.1
 
+    - name: Setup MSVC dev environment
+      uses: ilammy/msvc-dev-cmd@v1
+      with:
+        arch: x64
+
     - name: Checkout repo
       uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3.6.0
 
@@ -188,4 +167,4 @@ jobs:
     - name: Build
       run: cmake --build ${{env.BUILD_DIR}}
     - name: Test
-      run: ctest -j 5 -C ${{env.BUILD_TYPE}} --test-dir ${{env.BUILD_DIR}}
+      run: ctest -j 5 --test-dir ${{env.BUILD_DIR}}
