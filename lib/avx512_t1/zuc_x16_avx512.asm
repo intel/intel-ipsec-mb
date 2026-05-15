@@ -2104,23 +2104,25 @@ ZUC_KEYGEN_SKIP8_16:
 ;; When provided, init lanes use LFSR_UPDT in init mode (W feedback) while work lanes
 ;; use work mode (no W feedback). This allows init and cipher to run in parallel.
 ;;
+;; Clobbers r9
+;;
 %macro CIPHER64B 15-16
-%define %%NROUNDS    %1
-%define %%BYTE_MASK  %2
-%define %%LANE_MASK  %3
-%define %%OFFSET     %4
-%define %%LAST_ROUND %5
-%define %%MASK_31    %6
-%define %%X0         %7
-%define %%X1         %8
-%define %%X2         %9
-%define %%W          %10
-%define %%R1         %11
-%define %%R2         %12
-%define %%STATE      %13
-%define %%TMP        %14
-%define %%TMP2       %15
-%define %%INIT_KMASK %16
+%define %%NROUNDS      %1
+%define %%BYTE_MASK    %2
+%define %%LANE_MASK    %3
+%define %%OFFSET       %4
+%define %%LAST_ROUND   %5
+%define %%MASK_31      %6
+%define %%X0           %7
+%define %%X1           %8
+%define %%X2           %9
+%define %%W            %10
+%define %%R1           %11
+%define %%R2           %12
+%define %%STATE        %13
+%define %%TMP          %14
+%define %%TMP2         %15
+%define %%INIT_KMASK   %16
 
         ; Read R1/R2
         vmovdqa32   %%R1, [%%STATE + OFS_R1]
@@ -2215,6 +2217,10 @@ align_label
 %endrep
 
         ;; Write output for all 16 buffers (zmm16-31) using registers r12-15
+%if %0 == 16
+        kmovw   r9d, %%INIT_KMASK
+%endif
+
 %assign i 0
 %assign j 16
 %assign k 12
@@ -2225,8 +2231,15 @@ align_label
         movzx   r12d, word [rsp + LANE_OFFSET + (j-16)*2]
         kmovq   %%BYTE_MASK, [rbx + r12*8]
 %endif
+%if %0 == 16
+        bt      r9d, (j - 16)
+        jc      %%skip_output_ %+ j
+%endif
         mov     APPEND(r, k), [pOut + i]
         vmovdqu8 [APPEND(r, k) + %%OFFSET]{%%BYTE_MASK}, APPEND(zmm, j)
+%if %0 == 16
+%%skip_output_ %+ j:
+%endif
 %assign k 12 + ((j + 1) % 3)
 %assign j (j + 1)
 %assign i (i + 8)

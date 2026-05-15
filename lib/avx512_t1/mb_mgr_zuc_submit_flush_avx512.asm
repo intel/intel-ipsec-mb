@@ -132,516 +132,9 @@ mksection .text
 
 %define APPEND(a,b) a %+ b
 
-%macro SUBMIT_JOB_ZUC_EEA3 1
-%define %%ALGO      %1 ; [constant] ZUC128 or ZUCNEA6
-
-; idx needs to be in rbp
-%define len              rbp
-%define idx              rbp
-
-%define lane             r8
-%define unused_lanes     rbx
-%define tmp              r12
-%define tmp2             r13
-%define tmp3             r14
-%define min_len          r14
-
-        mov     rax, rsp
-        sub     rsp, STACK_size
-        and     rsp, -16
-
-        mov     [rsp + _gpr_save + 8*0], rbx
-        mov     [rsp + _gpr_save + 8*1], rbp
-        mov     [rsp + _gpr_save + 8*2], r12
-        mov     [rsp + _gpr_save + 8*3], r13
-        mov     [rsp + _gpr_save + 8*4], r14
-        mov     [rsp + _gpr_save + 8*5], r15
-%ifndef LINUX
-        mov     [rsp + _gpr_save + 8*6], rsi
-        mov     [rsp + _gpr_save + 8*7], rdi
-%endif
-        mov     [rsp + _gpr_save + 8*8], state
-        mov     [rsp + _gpr_save + 8*9], job
-        mov     [rsp + _rsp_save], rax  ; original SP
-
-        mov     unused_lanes, [state + _zuc_unused_lanes]
-        mov     lane, unused_lanes
-        and     lane, 0xF ;; just a nibble
-        shr     unused_lanes, 4
-        mov     tmp, [job + _iv]
-        shl     lane, 4
-        ; Read the 16 bytes of IV
-        vmovdqu xmm0, [tmp]
-        vmovdqa [state + _zuc_args_IV + lane], xmm0
-        shr     lane, 4
-        mov     [state + _zuc_unused_lanes], unused_lanes
-        add     qword [state + _zuc_lanes_in_use], 1
-
-        mov     [state + _zuc_job_in_lane + lane*8], job
-        ; New job that needs init (update bit in zuc_init_not_done bitmask)
-        lea     tmp2, [rel index_to_mask]
-        movzx   DWORD(tmp), word [tmp2 + lane*2]
-        kmovw   k1, DWORD(tmp)
-        or      [state + _zuc_init_not_done], WORD(tmp)
-        not     DWORD(tmp)
-        and     [state + _zuc_unused_lane_bitmask], WORD(tmp)
-
-        mov     tmp, [job + _src]
-        add     tmp, [job + _cipher_start_src_offset_in_bytes]
-        mov     [state + _zuc_args_in + lane*8], tmp
-        mov     tmp, [job + _enc_keys]
-        mov     [state + _zuc_args_keys + lane*8], tmp
-        mov     tmp, [job + _dst]
-        mov     [state + _zuc_args_out + lane*8], tmp
-
-        ;; Call LFSR_LOAD for this lane
-        mov     tmp, [job + _enc_keys]
-        mov     tmp2, [job + _iv]
-        mov     r15, lane
-        lea     arg1, [state + _zuc_state]
-        mov     arg2, tmp
-        mov     arg3, tmp2
-        mov     arg4, r15
-%ifidn %%ALGO, ZUC128
-        call    ZUC128_LFSR_LOAD_16
-%else
-        call    ZUCNEA6_LFSR_LOAD_16
-%endif
-        mov     state, [rsp + _gpr_save + 8*8]
-        mov     job,   [rsp + _gpr_save + 8*9]
-        mov     lane, r15
-
-        ;; insert len into proper lane
-        mov     len, [job + _msg_len_to_cipher_in_bytes]
-
-        ;; Update lane len
-        vmovdqa64       ymm0, [state + _zuc_lens]
-        vpbroadcastw    ymm1, WORD(len)
-        vmovdqu16       ymm0{k1}, ymm1
-        vmovdqa64       [state + _zuc_lens], ymm0
-
-        ;; Find min length for lanes 0-7
-        vphminposuw     xmm2, xmm0
-
-        xor     job_rax, job_rax
-        cmp     qword [state + _zuc_lanes_in_use], 16
-        jne     %%return_submit_eea3
-
-        ; Find min length for lanes 8-15
-        vpextrw         DWORD(min_len), xmm2, 0   ; min value
-        vpextrw         DWORD(idx), xmm2, 1   ; min index
-        vextracti128    xmm1, ymm0, 1
-        vphminposuw     xmm2, xmm1
-        vpextrw         DWORD(tmp), xmm2, 0       ; min value
-        cmp             DWORD(min_len), DWORD(tmp)
-        jle             %%use_min
-        vpextrw         DWORD(idx), xmm2, 1   ; min index
-        add             DWORD(idx), 8               ; but index +8
-        mov             min_len, tmp                    ; min len
-align_label
-%%use_min:
-        or              min_len, min_len
-        je              %%len_is_0_submit_eea3
-
-        ; Move state into r11, as register for state will be used
-        ; to pass parameter to next function
-        mov     r11, state
-
-        ;; Read init mask to determine if all lanes or just some need init
-        movzx   DWORD(r15), word [r11 + _zuc_init_not_done]
-        cmp     DWORD(r15), 0xFFFF
-        jne     %%mixed_init_submit
-
-        ;; ============================================================
-        ;; Fast path: all 16 lanes need init (common first-batch case)
-        ;; ============================================================
-
-        ;; Phase 1: Init rounds via CIPHER_INIT(init_mask=0xFFFF)
-        ;; Set all lanes' src/dst to KS buffer for init
-        lea     tmp, [r11 + _zuc_args_KS]
-        vpbroadcastq    zmm0, tmp
-        vmovdqa64       [r11 + _zuc_args_in], zmm0
-        vmovdqa64       [r11 + _zuc_args_in + 64], zmm0
-        vmovdqa64       [r11 + _zuc_args_out], zmm0
-        vmovdqa64       [r11 + _zuc_args_out + 64], zmm0
-
-        ;; Set init length (real lens are restored from jobs later)
-%ifidn %%ALGO, ZUC128
-        ;; 32 rounds * 4 bytes = 128 bytes
-        mov     WORD(tmp), 128
-%else
-        ;; 48 rounds * 4 bytes = 192 bytes
-        mov     WORD(tmp), 192
-%endif
-        vpbroadcastw    ymm1, WORD(tmp)
-        vmovdqa64       [r11 + _zuc_lens], ymm1
-
-        ;; Call CIPHER_INIT with init_mask=0xFFFF (all lanes init)
-        RESERVE_STACK_SPACE 6
-        lea     arg1, [r11 + _zuc_state]
-        lea     arg2, [r11 + _zuc_args_in]
-        lea     arg3, [r11 + _zuc_args_out]
-        lea     arg4, [r11 + _zuc_lens]
-%ifidn %%ALGO, ZUC128
-        ;; 32 rounds * 4 bytes = 128 bytes
-        mov     arg5, 128
-%else
-        ;; 48 rounds * 4 bytes = 192 bytes
-        mov     arg5, 192
-%endif
-        mov     DWORD(arg6), 0xFFFF
-        call    ZUC_CIPHER_INIT
-        RESTORE_STACK_SPACE 6
-        mov     r11, [rsp + _gpr_save + 8*8]
-
-        ;; Phase 2: Discard round via CIPHER_INIT(init_mask=0)
-        ;; Reset src/dst to KS buffer
-        lea     tmp, [r11 + _zuc_args_KS]
-        vpbroadcastq    zmm0, tmp
-        vmovdqa64       [r11 + _zuc_args_in], zmm0
-        vmovdqa64       [r11 + _zuc_args_in + 64], zmm0
-        vmovdqa64       [r11 + _zuc_args_out], zmm0
-        vmovdqa64       [r11 + _zuc_args_out + 64], zmm0
-
-        mov     WORD(tmp), 4
-        vpbroadcastw    ymm1, WORD(tmp)
-        vmovdqa64       [r11 + _zuc_lens], ymm1
-
-        RESERVE_STACK_SPACE 6
-        lea     arg1, [r11 + _zuc_state]
-        lea     arg2, [r11 + _zuc_args_in]
-        lea     arg3, [r11 + _zuc_args_out]
-        lea     arg4, [r11 + _zuc_lens]
-        mov     arg5, 4
-        xor     arg6, arg6
-        call    ZUC_CIPHER_INIT
-        RESTORE_STACK_SPACE 6
-        mov     r11, [rsp + _gpr_save + 8*8]
-
-        ;; Phase 3: All lanes done init
-        mov     word [r11 + _zuc_init_not_done], 0
-
-        ;; Restore real src/dst/lens from job structures
-%assign %%I 0
-%rep 16
-        mov     tmp, [r11 + _zuc_job_in_lane + %%I*8]
-        mov     tmp2, [tmp + _src]
-        add     tmp2, [tmp + _cipher_start_src_offset_in_bytes]
-        mov     [r11 + _zuc_args_in + %%I*8], tmp2
-        mov     tmp2, [tmp + _dst]
-        mov     [r11 + _zuc_args_out + %%I*8], tmp2
-        movzx   DWORD(tmp2), word [tmp + _msg_len_to_cipher_in_bytes]
-        mov     [r11 + _zuc_lens + %%I*2], WORD(tmp2)
-%assign %%I (%%I + 1)
-%endrep
-
-        jmp     %%submit_cipher_phase
-
-        ;; ============================================================
-        ;; Mixed path: some lanes need init, others are already working
-        ;; ============================================================
-%%mixed_init_submit:
-        ;; r15 = init_mask (callee-saved, survives function calls)
-        ;; Save init_mask to stack for restore phase
-        mov     [rsp + _gpr_save + 8*10], r15
-        mov     qword [rsp + _gpr_save + 8*12], 0  ; in_discard mask (lanes past init, doing discard)
-
-        ;; Set init lanes' src/dst to KS buffer; work lanes keep real pointers
-        kmovw   k4, DWORD(r15)
-        lea     tmp, [r11 + _zuc_args_KS]
-        vpbroadcastq    zmm1, tmp
-        kmovb           k5, k4
-        kshiftrw        k6, k4, 8
-        vmovdqu64       [r11 + _zuc_args_in]{k5}, zmm1
-        vmovdqu64       [r11 + _zuc_args_in + 64]{k6}, zmm1
-        vmovdqu64       [r11 + _zuc_args_out]{k5}, zmm1
-        vmovdqu64       [r11 + _zuc_args_out + 64]{k6}, zmm1
-
-        ;; Set init lanes' length to init round bytes; work lanes keep real lengths
-%ifidn %%ALGO, ZUC128
-        ;; 32 rounds * 4 bytes = 128 bytes
-        mov     WORD(tmp), 128
-%else
-        ;; 48 rounds * 4 bytes = 192 bytes
-        mov     WORD(tmp), 192
-%endif
-        vpbroadcastw    ymm1, WORD(tmp)
-        vmovdqa64       ymm0, [r11 + _zuc_lens]
-        vmovdqu16       ymm0{k4}, ymm1
-        vmovdqa64       [r11 + _zuc_lens], ymm0
-
-        ;; Find min length across all lanes
-        vphminposuw     xmm2, xmm0
-        vpextrw         DWORD(min_len), xmm2, 0
-        vpextrw         DWORD(idx), xmm2, 1
-        vextracti128    xmm1, ymm0, 1
-        vphminposuw     xmm2, xmm1
-        vpextrw         DWORD(tmp), xmm2, 0
-        cmp             DWORD(min_len), DWORD(tmp)
-        jle             %%use_min_mixed_init
-        vpextrw         DWORD(idx), xmm2, 1
-        add             DWORD(idx), 8
-        mov             min_len, tmp
-%%use_min_mixed_init:
-        or              min_len, min_len
-        je              %%len_is_0_submit_eea3
-
-%%mixed_init_loop:
-        ;; Process init and work lanes in parallel
-        ;; init_mask = r15 & ~in_discard: only true-init lanes (not discard-phase lanes)
-        movzx   DWORD(tmp), word [rsp + _gpr_save + 8*12]  ; in_discard
-        not     WORD(tmp)
-        and     DWORD(tmp), DWORD(r15)    ; tmp = true init_mask
-        RESERVE_STACK_SPACE 6
-        lea     arg1, [r11 + _zuc_state]
-        lea     arg2, [r11 + _zuc_args_in]
-        lea     arg3, [r11 + _zuc_args_out]
-        lea     arg4, [r11 + _zuc_lens]
-        mov     arg5, min_len
-        mov     DWORD(arg6), DWORD(tmp)   ; init_mask = r15 & ~in_discard
-        call    ZUC_CIPHER_INIT
-        RESTORE_STACK_SPACE 6
-        mov     r11, [rsp + _gpr_save + 8*8]
-        mov     state, r11
-
-        ;; Check if any pending lanes (init or discard) finished (length == 0)
-        vmovdqa64       ymm0, [r11 + _zuc_lens]
-        vpxor           ymm1, ymm1
-        kmovw           k4, DWORD(r15)                ; all pending lanes (init + discard)
-        vpcmpw          k5{k4}, ymm0, ymm1, 0         ; pending lanes with len==0
-        kmovw           DWORD(tmp), k5
-        or              DWORD(tmp), DWORD(tmp)
-        jz              %%no_init_done_submit
-
-        ;; tmp = mask of r15-lanes with len==0 (init or discard just completed)
-        movzx   DWORD(tmp2), word [rsp + _gpr_save + 8*12]  ; in_discard mask
-
-        ;; Discard-done: lanes in both tmp and in_discard -> clear from r15 and in_discard
-        mov     DWORD(tmp3), DWORD(tmp)
-        and     DWORD(tmp3), DWORD(tmp2)              ; tmp3 = discard_done
-        or      DWORD(tmp3), DWORD(tmp3)
-        jz      %%no_discard_done_submit
-        not     WORD(tmp3)
-        and     DWORD(r15), DWORD(tmp3)               ; clear discard-done from r15
-        and     [rsp + _gpr_save + 8*12], WORD(tmp3)  ; clear discard-done from in_discard
-        not     WORD(tmp3)                            ; restore discard_done mask
-%%no_discard_done_submit:
-        ;; Init-done: lanes in tmp but NOT in in_discard -> transition to discard, add to in_discard
-        not     WORD(tmp2)                            ; tmp2 = ~in_discard (old value)
-        and     DWORD(tmp), DWORD(tmp2)               ; tmp = init_done = done & ~old_in_discard
-        or      DWORD(tmp), DWORD(tmp)
-        jz      %%no_init_done_submit
-
-        ;; Add init-done lanes to in_discard; keep their r15 bits until discard completes
-        not     WORD(tmp2)                            ; restore in_discard
-        or      [rsp + _gpr_save + 8*12], WORD(tmp)   ; mark as in_discard
-        lea     tmp2, [r11 + _zuc_args_KS]
-        vpbroadcastq    zmm1, tmp2
-        kmovw           k5, DWORD(tmp)
-        kmovb           k6, k5
-        kshiftrw        k7, k5, 8
-        vmovdqu64       [r11 + _zuc_args_in]{k6}, zmm1
-        vmovdqu64       [r11 + _zuc_args_in + 64]{k7}, zmm1
-        vmovdqu64       [r11 + _zuc_args_out]{k6}, zmm1
-        vmovdqu64       [r11 + _zuc_args_out + 64]{k7}, zmm1
-
-        mov     WORD(tmp2), 4
-        vpbroadcastw    ymm1, WORD(tmp2)
-        vmovdqu16       ymm0{k5}, ymm1
-        vmovdqa64       [r11 + _zuc_lens], ymm0
-        ;; r15 bits are NOT cleared here; cleared only when discard completes
-
-%%no_init_done_submit:
-        ;; Find min length again
-        vmovdqa64       ymm0, [r11 + _zuc_lens]
-        vphminposuw     xmm2, xmm0
-        vpextrw         DWORD(min_len), xmm2, 0
-        vpextrw         DWORD(idx), xmm2, 1
-        vextracti128    xmm1, ymm0, 1
-        vphminposuw     xmm2, xmm1
-        vpextrw         DWORD(tmp), xmm2, 0
-        cmp             DWORD(min_len), DWORD(tmp)
-        jle             %%use_min_mixed_post
-        vpextrw         DWORD(idx), xmm2, 1
-        add             DWORD(idx), 8
-        mov             min_len, tmp
-%%use_min_mixed_post:
-        ;; If all init lanes have completed their init+discard, stop advancing ZUC state.
-        ;; Remaining work is handled by %%submit_cipher_phase after pointer restore.
-        or              DWORD(r15), DWORD(r15)
-        jz              %%mixed_init_complete
-
-        or              min_len, min_len
-        jnz             %%mixed_init_loop
-
-        ;; min_len == 0 and r15 != 0: init/discard lanes still in progress
-        or              DWORD(r15), DWORD(r15)
-        jnz             %%mixed_still_active
-
-        ;; r15 == 0: no init lanes left, but check for discard lanes (len > 0, non-0xFFFF)
-        ;; If all non-0xFFFF lanes are at 0, init is truly complete
-        vpxor           ymm1, ymm1
-        vpcmpw          k4, ymm0, ymm1, 0     ; k4 = lanes with len==0
-        mov             WORD(tmp), 0xffff
-        vpbroadcastw    ymm1, WORD(tmp)
-        vpcmpw          k5, ymm0, ymm1, 0     ; k5 = lanes with len==0xFFFF
-        korw            k6, k4, k5             ; k6 = lanes that are 0 or 0xFFFF
-        kmovw           DWORD(tmp), k6
-        cmp             WORD(tmp), 0xFFFF      ; all lanes are 0 or 0xFFFF?
-        je              %%mixed_init_complete
-
-%%mixed_still_active:
-        ;; Work/discard lanes still going
-        ;; Redirect completed lanes (len==0) to KS dummy buffer so CIPHER_INIT
-        ;; doesn't corrupt real src/dst, then set their len to 0xFFFF
-        vpxor           ymm1, ymm1
-        vpcmpw          k4, ymm0, ymm1, 0
-        lea             tmp2, [state + _zuc_args_KS]
-        vpbroadcastq    zmm1, tmp2
-        kmovw           DWORD(tmp), k4
-        mov             DWORD(tmp2), DWORD(tmp)
-        and             DWORD(tmp2), 0xFF
-        kmovb           k5, DWORD(tmp2)
-        shr             DWORD(tmp), 8
-        kmovb           k6, DWORD(tmp)
-        vmovdqu64       [state + _zuc_args_in]{k5}, zmm1
-        vmovdqu64       [state + _zuc_args_in + 64]{k6}, zmm1
-        vmovdqu64       [state + _zuc_args_out]{k5}, zmm1
-        vmovdqu64       [state + _zuc_args_out + 64]{k6}, zmm1
-        mov             WORD(tmp), 0xffff
-        vpbroadcastw    ymm1, WORD(tmp)
-        vmovdqu16       ymm0{k4}, ymm1
-        vmovdqa64       [state + _zuc_lens], ymm0
-
-        ;; Re-find min and loop
-        vphminposuw     xmm2, xmm0
-        vpextrw         DWORD(min_len), xmm2, 0
-        vpextrw         DWORD(idx), xmm2, 1
-        vextracti128    xmm1, ymm0, 1
-        vphminposuw     xmm2, xmm1
-        vpextrw         DWORD(tmp), xmm2, 0
-        cmp             DWORD(min_len), DWORD(tmp)
-        jle             %%mixed_init_loop
-        vpextrw         DWORD(idx), xmm2, 1
-        add             DWORD(idx), 8
-        mov             min_len, tmp
-        jmp             %%mixed_init_loop
-
-%%mixed_init_complete:
-        mov     word [r11 + _zuc_init_not_done], 0
-
-        ;; Restore ONLY init lanes' real src/dst/lens from jobs
-        ;; Work lanes already have correct advanced pointers
-        mov     r15, [rsp + _gpr_save + 8*10]
-%assign %%I 0
-%rep 16
-        test    DWORD(r15), (1 << %%I)
-        jz      %%skip_restore_submit_ %+ %%I
-        mov     tmp, [r11 + _zuc_job_in_lane + %%I*8]
-        mov     tmp2, [tmp + _src]
-        add     tmp2, [tmp + _cipher_start_src_offset_in_bytes]
-        mov     [r11 + _zuc_args_in + %%I*8], tmp2
-        mov     tmp2, [tmp + _dst]
-        mov     [r11 + _zuc_args_out + %%I*8], tmp2
-        movzx   DWORD(tmp2), word [tmp + _msg_len_to_cipher_in_bytes]
-        mov     [r11 + _zuc_lens + %%I*2], WORD(tmp2)
-%%skip_restore_submit_ %+ %%I:
-%assign %%I (%%I + 1)
-%endrep
-
-        ;; Restore work lanes that were set to 0xFFFF back to 0
-        ;; (they completed during init loop)
-        vmovdqa64       ymm0, [r11 + _zuc_lens]
-        mov             WORD(tmp), 0xffff
-        vpbroadcastw    ymm1, WORD(tmp)
-        vpcmpw          k4, ymm0, ymm1, 0
-        vpxor           ymm1, ymm1
-        vmovdqu16       ymm0{k4}, ymm1
-        vmovdqa64       [r11 + _zuc_lens], ymm0
-
-%%submit_cipher_phase:
-        ;; Find min length
-        vmovdqa64       ymm0, [r11 + _zuc_lens]
-        vphminposuw     xmm2, xmm0
-        vpextrw         DWORD(min_len), xmm2, 0
-        vpextrw         DWORD(idx), xmm2, 1
-        vextracti128    xmm1, ymm0, 1
-        vphminposuw     xmm2, xmm1
-        vpextrw         DWORD(tmp), xmm2, 0
-        cmp             DWORD(min_len), DWORD(tmp)
-        jle             %%use_min2
-        vpextrw         DWORD(idx), xmm2, 1
-        add             DWORD(idx), 8
-        mov             min_len, tmp
-%%use_min2:
-        or              min_len, min_len
-        je              %%len_is_0_submit_eea3
-
-        RESERVE_STACK_SPACE 6
-
-        lea     arg1, [r11 + _zuc_state]
-        lea     arg2, [r11 + _zuc_args_in]
-        lea     arg3, [r11 + _zuc_args_out]
-        lea     arg4, [r11 + _zuc_lens]
-        mov     arg5, min_len
-        xor     arg6, arg6         ; init_mask = 0 (pure work mode)
-
-        call    ZUC_CIPHER_INIT
-
-        RESTORE_STACK_SPACE 6
-
-        mov     state, [rsp + _gpr_save + 8*8]
-        mov     job,   [rsp + _gpr_save + 8*9]
-
-align_label
-%%len_is_0_submit_eea3:
-        ; process completed job "idx"
-        ;; - decrement number of lanes in use
-        sub     qword [state + _zuc_lanes_in_use], 1
-        mov     job_rax, [state + _zuc_job_in_lane + idx*8]
-        mov     unused_lanes, [state + _zuc_unused_lanes]
-        mov     qword [state + _zuc_job_in_lane + idx*8], 0
-        or      dword [job_rax + _status], IMB_STATUS_COMPLETED_CIPHER
-        shl     unused_lanes, 4
-        or      unused_lanes, idx
-        mov     [state + _zuc_unused_lanes], unused_lanes
-        lea     tmp2, [rel index_to_mask]
-        movzx   DWORD(tmp), word [tmp2 + idx*2]
-        or      [state + _zuc_unused_lane_bitmask], WORD(tmp)
-
-        ; Clear ZUC state of lane that is returned
-%ifdef SAFE_DATA
-        vpxorq          zmm0, zmm0
-        kmovw           k1, [tmp2 + idx*2]
-%assign i 0
-%rep (16 + 6)
-        vmovdqa32       [state + _zuc_state]{k1}, zmm0
-%assign i (i + 1)
-%endrep
-%endif
-
-align_label
-%%return_submit_eea3:
-%ifdef SAFE_DATA
-        clear_scratch_zmms_asm
-%else
-        vzeroupper
-%endif
-        mov     rbx, [rsp + _gpr_save + 8*0]
-        mov     rbp, [rsp + _gpr_save + 8*1]
-        mov     r12, [rsp + _gpr_save + 8*2]
-        mov     r13, [rsp + _gpr_save + 8*3]
-        mov     r14, [rsp + _gpr_save + 8*4]
-        mov     r15, [rsp + _gpr_save + 8*5]
-%ifndef LINUX
-        mov     rsi, [rsp + _gpr_save + 8*6]
-        mov     rdi, [rsp + _gpr_save + 8*7]
-%endif
-        mov     rsp, [rsp + _rsp_save]  ; original SP
-%endmacro
-
-%macro FLUSH_JOB_ZUC_EEA3 1
-%define %%ALGO      %1 ; [constant] ZUC128 or ZUCNEA6
+%macro SUBMIT_FLUSH_JOB_ZUC_EEA3 2
+%define %%ALGO            %1 ; [constant] ZUC128 or ZUCNEA6
+%define %%SUBMIT_FLUSH    %2 ; [in] submit/flush selector
 
 %define unused_lanes     rbx
 %define tmp1             rbx
@@ -651,6 +144,10 @@ align_label
 ; idx needs to be in rbp (will be maintained after function calls)
 %define tmp              rbp
 %define idx              rbp
+
+%define len              rbp
+
+%define lane             r8
 
 %define tmp3             r8
 %define tmp4             r9
@@ -673,12 +170,72 @@ align_label
         mov     [rsp + _gpr_save + 8*7], rdi
 %endif
         mov     [rsp + _gpr_save + 8*8], state
+        mov     [rsp + _gpr_save + 8*9], job
         mov     [rsp + _rsp_save], rax  ; original SP
 
-        ; check for empty
-        xor     job_rax, job_rax
-        cmp     qword [state + _zuc_lanes_in_use], 0
-        jz      %%return_flush_eea3
+        xor     job_rax, job_rax        ;; assume NULL return job
+
+%ifidn %%SUBMIT_FLUSH, submit
+        mov     unused_lanes, [state + _zuc_unused_lanes]
+        mov     lane, unused_lanes
+        and     lane, 0xF ;; just a nibble
+        shr     unused_lanes, 4
+        mov     tmp, [job + _iv]
+        shl     lane, 4
+
+        ; Read the 16 bytes of IV
+        vmovdqu xmm0, [tmp]
+        vmovdqa [state + _zuc_args_IV + lane], xmm0
+        shr     lane, 4
+        mov     [state + _zuc_unused_lanes], unused_lanes
+        add     qword [state + _zuc_lanes_in_use], 1
+
+        mov     [state + _zuc_job_in_lane + lane*8], job
+        ; New job that needs init (update bit in zuc_init_not_done bitmask)
+        lea     tmp2, [rel index_to_mask]
+        movzx   DWORD(tmp), word [tmp2 + lane*2]
+        or      [state + _zuc_init_not_done], WORD(tmp)
+        not     DWORD(tmp)
+        and     [state + _zuc_unused_lane_bitmask], WORD(tmp)
+
+        ;; Copy job args to lane
+        mov     tmp, [job + _src]
+        add     tmp, [job + _cipher_start_src_offset_in_bytes]
+        mov     [state + _zuc_args_in + lane*8], tmp
+        mov     tmp, [job + _enc_keys]
+        mov     [state + _zuc_args_keys + lane*8], tmp
+        mov     tmp2, [job + _dst]
+        mov     [state + _zuc_args_out + lane*8], tmp2
+
+        ;; Call LFSR_LOAD for this lane
+        mov     tmp2, [job + _iv]
+        mov     r15, lane
+        lea     arg1, [state + _zuc_state]
+        mov     arg2, tmp
+        mov     arg3, tmp2
+        mov     arg4, r15
+%ifidn %%ALGO, ZUC128
+        call    ZUC128_LFSR_LOAD_16
+%else
+        call    ZUCNEA6_LFSR_LOAD_16
+%endif
+        ;; Move state into r12 for use during the loop (state reg is clobbered by calls)
+        mov     r12, [rsp + _gpr_save + 8*8]
+        mov     job, [rsp + _gpr_save + 8*9]
+        mov     lane, r15
+
+        cmp     qword [r12 + _zuc_lanes_in_use], 16
+        jne     %%submit_flush_cleanup
+
+        ;; r15 = _zuc_init_not_done (init lanes)
+        movzx   DWORD(r15), word [r12 + _zuc_init_not_done]
+
+        ;; no null jobs
+        xor     DWORD(null_jobs_mask), DWORD(null_jobs_mask)
+
+%else   ;; FLUSH
+        cmp             qword [state + _zuc_lanes_in_use], job_rax
+        je              %%return_submit_flush_eea3   ;; RAX is NULL
 
         ; Find lanes with NULL jobs
         vpxorq          zmm0, zmm0
@@ -696,70 +253,63 @@ align_label
         vmovdqu16       ymm0{k3}, ymm1
         vmovdqa64       [state + _zuc_lens], ymm0
 
-        ; Move state into r12 for use during the loop (state reg is clobbered by calls)
-        mov     r12, state
-
-        ;; _zuc_completed_job_bitmask is persistent in the state structure (not the stack)
-        ;; No stack initialization needed.
+        ;; Move state into r12 for use during the loop (state reg is clobbered by calls)
+        mov             r12, state
 
         ;; r15 = _zuc_init_not_done (init lanes)
-        movzx   DWORD(r15), word [r12 + _zuc_init_not_done]
+        movzx           DWORD(r15), word [r12 + _zuc_init_not_done]
 
-        ;; Set NULL lanes' src/dst/keys to KS buffer so ZUC_CIPHER_INIT
-        ;; doesn't dereference stale/NULL pointers from a previous job.
-        ;; NULL lanes also need a valid key pointer.
-        lea     tmp3, [r12 + _zuc_args_KS]
-        vpbroadcastq    zmm1, tmp3
-        kmovb           k5, k3          ; k3 = null_jobs_mask (L8)
-        kshiftrw        k6, k3, 8       ; null_jobs_mask (H8)
-        vmovdqu64       [r12 + _zuc_args_in]{k5}, zmm1
-        vmovdqu64       [r12 + _zuc_args_in + 64]{k6}, zmm1
-        vmovdqu64       [r12 + _zuc_args_out]{k5}, zmm1
-        vmovdqu64       [r12 + _zuc_args_out + 64]{k6}, zmm1
-        vmovdqu64       [r12 + _zuc_args_keys]{k5}, zmm1
-        vmovdqu64       [r12 + _zuc_args_keys + 64]{k6}, zmm1
+        ;; CIPHER64B skips output writes for init-mask lanes, so null lane pOut
+        ;; is never written.  No need to reset it here.
+        ;; in pointers are cloned from a work lane each loop iteration.
+%endif
 
         ;; For init lanes: also set src/dst to KS and set length to init_bytes
-        or      DWORD(r15), DWORD(r15)
-        jz      %%no_init_lanes_flush
+        or              DWORD(r15), DWORD(r15)
+        jz              %%no_init_lanes_submit_flush
 
         ;; For init lanes: check if init was already started in a previous flush call.
         ;; Indicator: if _zuc_args_in[lane] is within the KS buffer range, init was started.
         ;; If _zuc_args_in[lane] is a real pointer (outside KS), this is a fresh init.
         ;; For fresh init: set lens=init_bytes and in/out=KS.
         ;; For resumed init: reset in/out to KS base (CIPHER_INIT advanced it) but keep lens.
-        lea     tmp4, [r12 + _zuc_args_KS]
+        lea             tmp4, [r12 + _zuc_args_KS]
 %ifidn %%ALGO, ZUC128
-        mov     WORD(tmp3), 128
+        mov             WORD(tmp3), 128
 %else
-        mov     WORD(tmp3), 192
+        mov             WORD(tmp3), 192
 %endif
 %assign %%I 0
 %rep 16
-        test    DWORD(r15), (1 << %%I)
-        jz      %%skip_init_setup_ %+ %%I
+        test            DWORD(r15), (1 << %%I)
+        jz              %%skip_init_setup_ %+ %%I
         ;; Check if in/out already points into KS buffer (init started)
-        mov     tmp5, [r12 + _zuc_args_in + %%I*8]
-        sub     tmp5, tmp4                          ; offset from KS base
-        cmp     tmp5, (16*128)                      ; is offset < KS buffer size?
-        jb      %%reset_init_ptrs_ %+ %%I          ; yes -> init started, preserve lens
+        mov             tmp5, [r12 + _zuc_args_in + %%I*8]
+        sub             tmp5, tmp4                          ; offset from KS base
+        cmp             tmp5, (16*128)                      ; is offset < KS buffer size?
+        jb              %%reset_init_ptrs_ %+ %%I          ; yes -> init started, preserve lens
         ;; Fresh init: set lens = init_bytes (direct memory write)
-        mov     [r12 + _zuc_lens + %%I*2], WORD(tmp3)
+        mov             [r12 + _zuc_lens + %%I*2], WORD(tmp3)
+
 align_label
 %%reset_init_ptrs_ %+ %%I:
-        ;; Set in/out = KS base (fresh: start of KS; resumed: reset to base)
-        mov     [r12 + _zuc_args_in + %%I*8], tmp4
-        mov     [r12 + _zuc_args_out + %%I*8], tmp4
+        ;; Set pIn = KS base (acts as "init started" indicator for next iteration;
+        ;; also provides a valid read address).  pOut writes are suppressed by
+        ;; CIPHER64B for init-mask lanes, so no pOut reset is needed.
+        mov             [r12 + _zuc_args_in + %%I*8], tmp4
+
+align_label
 %%skip_init_setup_ %+ %%I:
 %assign %%I (%%I + 1)
 %endrep
 
-%%no_init_lanes_flush:
+align_label
+%%no_init_lanes_submit_flush:
         ;; Find a lane with min length (already accounts for NULL=0xFFFF)
         vmovdqa64       ymm0, [r12 + _zuc_lens]
 
 align_loop
-%%find_min_flush:
+%%find_min_submit_flush:
         ;; Find min length for lanes 0-7
         vphminposuw     xmm2, xmm0
         vpextrw         DWORD(min_len), xmm2, 0
@@ -769,44 +319,55 @@ align_loop
         vphminposuw     xmm2, xmm1
         vpextrw         DWORD(tmp3), xmm2, 0
         cmp             DWORD(min_len), DWORD(tmp3)
-        jle             %%use_min_unified_flush
+        jle             %%use_min_unified_submit_flush
         vpextrw         DWORD(idx), xmm2, 1
         add             DWORD(idx), 8
         mov             min_len, tmp3
-align_label
-%%use_min_unified_flush:
-        or              min_len, min_len
-        jz              %%len_is_0_flush_handler
 
-        ;; Reset NULL, INIT, and IN-DISCARD lane in/out pointers to KS each iteration.
-        ;; CIPHER_INIT advances all in/out pointers; these lanes use KS as scratch.
-        lea     tmp3, [r12 + _zuc_args_KS]
+align_label
+%%use_min_unified_submit_flush:
+        or              min_len, min_len
+        jz              %%len_is_0_submit_flush_handler
+
+        ;; Null lanes have stale/NULL in and out pointers from a previous job.
+        ;; Include them in the init_mask passed to ZUC_CIPHER_INIT so CIPHER_INIT
+        ;; treats them as init-mode and never advances their in/out pointers,
+        ;; preventing writes past _zuc_args_KS regardless of min_len.
+        ;; Also clone the work lane's in pointer into null lanes so reads within
+        ;; the call stay in bounds (CIPHER_INIT won't write this pointer back).
+        movzx           DWORD(tmp4), word [r12 + _zuc_init_not_done]
+        or              DWORD(tmp4), DWORD(null_jobs_mask)  ; null lanes -> init-mode
+
+        or              DWORD(null_jobs_mask), DWORD(null_jobs_mask)
+        jz              %%no_clone_in
+
+        mov             tmp3, [r12 + _zuc_args_in + idx*8]
         vpbroadcastq    zmm1, tmp3
-        movzx   DWORD(tmp4), word [r12 + _zuc_init_not_done]
-        or      DWORD(tmp4), DWORD(null_jobs_mask)
-        movzx   DWORD(tmp5), word [r12 + _zuc_completed_job_bitmask]
-        or      DWORD(tmp4), DWORD(tmp5)                       ; in_discard mask
-        mov     DWORD(tmp5), DWORD(tmp4)
-        and     DWORD(tmp5), 0xFF
+        mov             DWORD(tmp5), DWORD(null_jobs_mask)
+        and             DWORD(tmp5), 0xFF
         kmovb           k5, DWORD(tmp5)
-        shr     DWORD(tmp4), 8
-        kmovb           k6, DWORD(tmp4)
+        mov             DWORD(tmp5), DWORD(null_jobs_mask)
+        shr             DWORD(tmp5), 8
+        kmovb           k6, DWORD(tmp5)
         vmovdqu64       [r12 + _zuc_args_in]{k5}, zmm1
         vmovdqu64       [r12 + _zuc_args_in + 64]{k6}, zmm1
-        vmovdqu64       [r12 + _zuc_args_out]{k5}, zmm1
-        vmovdqu64       [r12 + _zuc_args_out + 64]{k6}, zmm1
 
-        ;; Call ZUC_CIPHER_INIT with init_mask = init_not_done (NOT in-discard/work lanes)
-        ;; In-discard and work lanes run in work mode (init_mask bit=0)
-        ;; Note: ZUC_CIPHER_INIT internally advances _zuc_args_in/out pointers for all lanes.
+align_label
+%%no_clone_in:
+        ;; Call ZUC_CIPHER_INIT.
+        ;; Lanes in init_mask (tmp4 = init_not_done | null_jobs_mask):
+        ;; LFSR uses init feedback, in/out pointers NOT advanced.
+        ;; CIPHER64B skips output writes for init-mask lanes, so null/init-phase
+        ;; lane pOut (fixed at KS scratch) is never overflowed regardless of min_len.
+        ;; Work + discard lanes: XOR output written, in/out pointers advanced by min_len.
         RESERVE_STACK_SPACE 6
-        lea     arg1, [r12 + _zuc_state]
-        lea     arg2, [r12 + _zuc_args_in]
-        lea     arg3, [r12 + _zuc_args_out]
-        lea     arg4, [r12 + _zuc_lens]
-        mov     arg5, min_len
-        movzx   DWORD(arg6), word [r12 + _zuc_init_not_done]
-        call    ZUC_CIPHER_INIT
+        lea             arg1, [r12 + _zuc_state]
+        lea             arg2, [r12 + _zuc_args_in]
+        lea             arg3, [r12 + _zuc_args_out]
+        mov             arg6, tmp4              ; set arg6 before lea arg4 clobbers tmp4/r9 on Windows
+        lea             arg4, [r12 + _zuc_lens]
+        mov             arg5, min_len
+        call            ZUC_CIPHER_INIT
         RESTORE_STACK_SPACE 6
 
         ;; Reload lens (CIPHER_INIT updated them), restore NULL lanes to 0xFFFF
@@ -817,104 +378,97 @@ align_label
         vmovdqu16       ymm0{k3}, ymm1
         vmovdqa64       [r12 + _zuc_lens], ymm0
 
-        jmp             %%find_min_flush
+        jmp             %%find_min_submit_flush
 
 align_label
-%%len_is_0_flush_handler:
+%%len_is_0_submit_flush_handler:
         ;; A lane has finished its current phase. Determine which phase it's in.
         ;; idx = lane index with length == 0
 
         ;; Check if lane is in init phase (init_not_done bit set)
-        movzx   DWORD(tmp3), word [r12 + _zuc_init_not_done]
-        bt      DWORD(tmp3), DWORD(idx)
-        jnc     %%not_in_init_flush
+        movzx           DWORD(tmp3), word [r12 + _zuc_init_not_done]
+        bt              DWORD(tmp3), DWORD(idx)
+        jnc             %%not_in_init_submit_flush
 
         ;; Lane finished init -> transition to discard phase (1 work-mode round, 4 bytes)
         ;; Clear init_not_done bit, set in_discard bit
-        btr     DWORD(tmp3), DWORD(idx)
-        mov     word [r12 + _zuc_init_not_done], WORD(tmp3)
-        bts     dword [r12 + _zuc_completed_job_bitmask], DWORD(idx)
+        btr             DWORD(tmp3), DWORD(idx)
+        mov             word [r12 + _zuc_init_not_done], WORD(tmp3)
+        bts             dword [r12 + _zuc_completed_job_bitmask], DWORD(idx)
         ;; Set len=4, src/dst=KS
-        lea     tmp3, [r12 + _zuc_args_KS]
-        mov     [r12 + _zuc_args_in + idx*8], tmp3
-        mov     [r12 + _zuc_args_out + idx*8], tmp3
-        mov     word [r12 + _zuc_lens + idx*2], 4
+        lea             tmp3, [r12 + _zuc_args_KS]
+        mov             [r12 + _zuc_args_in + idx*8], tmp3
+        mov             [r12 + _zuc_args_out + idx*8], tmp3
+        mov             word [r12 + _zuc_lens + idx*2], 4
         ;; Reload ymm0 lens and loop
         vmovdqa64       ymm0, [r12 + _zuc_lens]
-        jmp             %%find_min_flush
+        jmp             %%find_min_submit_flush
 
 align_label
-%%not_in_init_flush:
+%%not_in_init_submit_flush:
         ;; Check if lane is in discard phase (in_discard bit set)
-        bt      dword [r12 + _zuc_completed_job_bitmask], DWORD(idx)
-        jnc     %%not_in_discard_flush
+        bt              dword [r12 + _zuc_completed_job_bitmask], DWORD(idx)
+        jnc             %%not_in_discard_submit_flush
 
         ;; Lane finished discard -> transition to work phase
         ;; Restore real src/dst/len from job, clear in_discard bit
-        btr     dword [r12 + _zuc_completed_job_bitmask], DWORD(idx)
-        mov     tmp3, [r12 + _zuc_job_in_lane + idx*8]
-        mov     tmp4, [tmp3 + _src]
-        add     tmp4, [tmp3 + _cipher_start_src_offset_in_bytes]
-        mov     [r12 + _zuc_args_in + idx*8], tmp4
-        mov     tmp4, [tmp3 + _dst]
-        mov     [r12 + _zuc_args_out + idx*8], tmp4
-        movzx   DWORD(tmp4), word [tmp3 + _msg_len_to_cipher_in_bytes]
-        mov     word [r12 + _zuc_lens + idx*2], WORD(tmp4)
+        btr             dword [r12 + _zuc_completed_job_bitmask], DWORD(idx)
+        mov             tmp3, [r12 + _zuc_job_in_lane + idx*8]
+        mov             tmp4, [tmp3 + _src]
+        add             tmp4, [tmp3 + _cipher_start_src_offset_in_bytes]
+        mov             [r12 + _zuc_args_in + idx*8], tmp4
+        mov             tmp4, [tmp3 + _dst]
+        mov             [r12 + _zuc_args_out + idx*8], tmp4
+        movzx           DWORD(tmp4), word [tmp3 + _msg_len_to_cipher_in_bytes]
+        mov             word [r12 + _zuc_lens + idx*2], WORD(tmp4)
         ;; Reload ymm0 lens and loop
         vmovdqa64       ymm0, [r12 + _zuc_lens]
-        jmp             %%find_min_flush
+        jmp             %%find_min_submit_flush
 
 align_label
-%%not_in_discard_flush:
+%%not_in_discard_submit_flush:
         ;; Lane is in work mode and finished -> return this job
-        ;; Restore state register for job-return code
-        mov     state, [rsp + _gpr_save + 8*8]
-
         ; Prepare bitmask to clear ZUC state with lane
         ; that is returned and NULL lanes
 %ifdef SAFE_DATA
-        lea     tmp2, [rel index_to_mask]
-        movzx   DWORD(tmp1), word [tmp2 + idx*2]
-        movzx   DWORD(tmp3), word [state + _zuc_unused_lane_bitmask]
-        or      tmp3, tmp1 ;; bitmask with NULL lanes and job to return
-        kmovq   k1, tmp3
+        lea             tmp2, [rel index_to_mask]
+        movzx           DWORD(tmp1), word [tmp2 + idx*2]
+        movzx           DWORD(tmp3), word [r12 + _zuc_unused_lane_bitmask]
+        or              tmp3, tmp1 ;; bitmask with NULL lanes and job to return
+        kmovq           k1, tmp3
 
-        jmp     %%skip_flush_clear_state
+        jmp             %%skip_submit_flush_clear_state
 %endif
-align_label
-%%len_is_0_flush_eea3:
-%ifdef SAFE_DATA
-        ; Prepare bitmask to clear ZUC state with lane that is returned
-        lea     tmp3, [rel index_to_mask]
-        kmovw   k1, [tmp3 + idx*2]
 
 align_label
-%%skip_flush_clear_state:
-%endif
+%%skip_submit_flush_clear_state:
         ; process completed job "idx"
         ;; - decrement number of jobs in use
-        sub     qword [state + _zuc_lanes_in_use], 1
-        mov     job_rax, [state + _zuc_job_in_lane + idx*8]
-        mov     unused_lanes, [state + _zuc_unused_lanes]
-        mov     qword [state + _zuc_job_in_lane + idx*8], 0
-        or      dword [job_rax + _status], IMB_STATUS_COMPLETED_CIPHER
-        shl     unused_lanes, 4
-        or      unused_lanes, idx
-        mov     [state + _zuc_unused_lanes], unused_lanes
+        sub             qword [r12 + _zuc_lanes_in_use], 1
+        mov             job_rax, [r12 + _zuc_job_in_lane + idx*8]
+        mov             unused_lanes, [r12 + _zuc_unused_lanes]
+        mov             qword [r12 + _zuc_job_in_lane + idx*8], 0
+        or              dword [job_rax + _status], IMB_STATUS_COMPLETED_CIPHER
+        shl             unused_lanes, 4
+        or              unused_lanes, idx
+        mov             [r12 + _zuc_unused_lanes], unused_lanes
 
-        lea     tmp4, [rel index_to_mask]
-        movzx   DWORD(tmp3), word [tmp4 + idx*2]
-        or      [state + _zuc_unused_lane_bitmask], WORD(tmp3)
+        lea             tmp4, [rel index_to_mask]
+        movzx           DWORD(tmp3), word [tmp4 + idx*2]
+        or              [r12 + _zuc_unused_lane_bitmask], WORD(tmp3)
+
         ; Clear ZUC state using k1 bitmask set above
 %ifdef SAFE_DATA
         vpxorq          zmm0, zmm0
 %assign i 0
 %rep (16 + 6)
-        vmovdqa32       [state + _zuc_state]{k1}, zmm0
+        vmovdqa32       [r12 + _zuc_state + i*64]{k1}, zmm0
 %assign i (i + 1)
 %endrep
 %endif
 
+align_label
+%%submit_flush_cleanup:
 %ifdef SAFE_DATA
         clear_scratch_zmms_asm
 %else
@@ -922,19 +476,19 @@ align_label
 %endif
 
 align_label
-%%return_flush_eea3:
+%%return_submit_flush_eea3:
 
-        mov     rbx, [rsp + _gpr_save + 8*0]
-        mov     rbp, [rsp + _gpr_save + 8*1]
-        mov     r12, [rsp + _gpr_save + 8*2]
-        mov     r13, [rsp + _gpr_save + 8*3]
-        mov     r14, [rsp + _gpr_save + 8*4]
-        mov     r15, [rsp + _gpr_save + 8*5]
+        mov             rbx, [rsp + _gpr_save + 8*0]
+        mov             rbp, [rsp + _gpr_save + 8*1]
+        mov             r12, [rsp + _gpr_save + 8*2]
+        mov             r13, [rsp + _gpr_save + 8*3]
+        mov             r14, [rsp + _gpr_save + 8*4]
+        mov             r15, [rsp + _gpr_save + 8*5]
 %ifndef LINUX
-        mov     rsi, [rsp + _gpr_save + 8*6]
-        mov     rdi, [rsp + _gpr_save + 8*7]
+        mov             rsi, [rsp + _gpr_save + 8*6]
+        mov             rdi, [rsp + _gpr_save + 8*7]
 %endif
-        mov     rsp, [rsp + _rsp_save]  ; original SP
+        mov             rsp, [rsp + _rsp_save]  ; original SP
 %endmacro
 
 ; JOB* SUBMIT_JOB_ZUC128_EEA3(MB_MGR_ZUC_OOO *state, IMB_JOB *job)
@@ -944,7 +498,7 @@ align_function
 MKGLOBAL(SUBMIT_JOB_ZUC128_EEA3,function,internal)
 align_function
 SUBMIT_JOB_ZUC128_EEA3:
-        SUBMIT_JOB_ZUC_EEA3 ZUC128
+        SUBMIT_FLUSH_JOB_ZUC_EEA3 ZUC128, submit
         ret
 
 ; JOB* SUBMIT_JOB_ZUC_NEA6(MB_MGR_ZUC_OOO *state, IMB_JOB *job)
@@ -953,7 +507,7 @@ SUBMIT_JOB_ZUC128_EEA3:
 align_function
 MKGLOBAL(SUBMIT_JOB_ZUC_NEA6,function,internal)
 SUBMIT_JOB_ZUC_NEA6:
-        SUBMIT_JOB_ZUC_EEA3 ZUCNEA6
+        SUBMIT_FLUSH_JOB_ZUC_EEA3 ZUCNEA6, submit
         ret
 
 ; JOB* FLUSH_JOB_ZUC128_EEA3(MB_MGR_ZUC_OOO *state)
@@ -962,7 +516,7 @@ align_function
 MKGLOBAL(FLUSH_JOB_ZUC128_EEA3,function,internal)
 align_function
 FLUSH_JOB_ZUC128_EEA3:
-        FLUSH_JOB_ZUC_EEA3 ZUC128
+        SUBMIT_FLUSH_JOB_ZUC_EEA3 ZUC128, flush
         ret
 
 ; JOB* FLUSH_JOB_ZUC_NEA6(MB_MGR_ZUC_OOO *state)
@@ -970,7 +524,7 @@ FLUSH_JOB_ZUC128_EEA3:
 align_function
 MKGLOBAL(FLUSH_JOB_ZUC_NEA6,function,internal)
 FLUSH_JOB_ZUC_NEA6:
-        FLUSH_JOB_ZUC_EEA3 ZUCNEA6
+        SUBMIT_FLUSH_JOB_ZUC_EEA3 ZUCNEA6, flush
         ret
 
 %macro ZUC_EIA3_16_BUFFER 4
