@@ -10,11 +10,11 @@ permissions:
   contents: read
 
 jobs:
-  # CMake release build with shared library (msbuild)
-  release-cmake-msvc-msbuild:
+  # CMake release build with shared library (msbuild) on VS2026
+  release-cmake-msvc-msbuild-vs2026:
     env:
       BUILD_TYPE: Release
-    runs-on: windows-latest
+    runs-on: windows-2025-vs2026
 
     steps:
     - name: Setup NASM
@@ -44,10 +44,10 @@ jobs:
       run: ctest -j 5 -C ${{env.BUILD_TYPE}} --test-dir ${{env.BUILD_DIR}}
 
   # CMake debug build with shared library (msbuild)
-  debug-cmake-msvc-msbuild:
+  debug-cmake-msvc-msbuild-vs2026:
     env:
       BUILD_TYPE: Debug
-    runs-on: windows-latest
+    runs-on: windows-2025-vs2026
 
     steps:
     - name: Setup NASM
@@ -73,5 +73,121 @@ jobs:
     - name: Build
       run: cmake --build ${{env.BUILD_DIR}} --config ${{env.BUILD_TYPE}}
 
+  # CMake release build with shared library (ninja) on VS2026
+  debug-cmake-ninja-vs2026:
+    runs-on: windows-2025-vs2026
+
+    steps:
+    - name: Setup NASM
+      uses: ilammy/setup-nasm@13cbeb366c45c4379d3478cdcbadd8295feb5028 # v1.5.1
+
+    - name: Checkout repo
+      uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3.6.0
+
+    - name: Setup environment
+      run: |
+        New-Item -ItemType Directory -Path "$pwd\build"
+        New-Item -ItemType Directory -Path "$pwd\build\bin"
+        "BUILD_DIR=$pwd\build" >> $env:GITHUB_ENV
+        "BINARY_DIR=$pwd\build\bin" >> $env:GITHUB_ENV
+        $env:PATH += "$pwd\build\bin;"
+
+    - name: Configure CMake
+      run: cmake -G Ninja -DIMB_BIN_DIR=${{env.BINARY_DIR}} -B ${{env.BUILD_DIR}}
+
+    - name: Build
+      run: cmake --build ${{env.BUILD_DIR}}
+    - name: Test
+      run: ctest -j 5 -C ${{env.BUILD_TYPE}} --test-dir ${{env.BUILD_DIR}}
+
+  # CMake release build with shared library (msbuild) on VS2022
+  release-cmake-msvc-msbuild-vs2022:
+    env:
+      BUILD_TYPE: Release
+    runs-on: windows-2022
+
+    steps:
+    - name: Setup NASM
+      uses: ilammy/setup-nasm@13cbeb366c45c4379d3478cdcbadd8295feb5028 # v1.5.1
+
+    - name: Checkout repo
+      uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3.6.0
+
+    - name: Add MSBuild to PATH
+      uses: microsoft/setup-msbuild@c26a08ba26249b81327e26f6ef381897b6a8754d # v1.0.2
+
+    - name: Setup environment
+      run: |
+        New-Item -ItemType Directory -Path "$pwd\build"
+        New-Item -ItemType Directory -Path "$pwd\build\bin"
+        "BUILD_DIR=$pwd\build" >> $env:GITHUB_ENV
+        "BINARY_DIR=$pwd\build\bin" >> $env:GITHUB_ENV
+        $env:PATH += "$pwd\build\bin;"
+
+    - name: Configure CMake
+      run: cmake -A x64 -DIMB_BIN_DIR=${{env.BINARY_DIR}} -B ${{env.BUILD_DIR}}
+
+    - name: Build
+      run: cmake --build ${{env.BUILD_DIR}} --config ${{env.BUILD_TYPE}}
+
+    - name: Test
+      run: ctest -j 5 -C ${{env.BUILD_TYPE}} --test-dir ${{env.BUILD_DIR}}
+
+  # CMake debug build with shared library (msbuild) on VS2022
+  debug-cmake-msvc-msbuild-vs2022:
+    env:
+      BUILD_TYPE: Debug
+    runs-on: windows-2022
+
+    steps:
+    - name: Setup NASM
+      uses: ilammy/setup-nasm@13cbeb366c45c4379d3478cdcbadd8295feb5028 # v1.5.1
+
+    - name: Checkout repo
+      uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3.6.0
+
+    - name: Add MSBuild to PATH
+      uses: microsoft/setup-msbuild@c26a08ba26249b81327e26f6ef381897b6a8754d # v1.0.2
+
+    - name: Setup environment
+      run: |
+        New-Item -ItemType Directory -Path "$pwd\build"
+        New-Item -ItemType Directory -Path "$pwd\build\bin"
+        "BUILD_DIR=$pwd\build" >> $env:GITHUB_ENV
+        "BINARY_DIR=$pwd\build\bin" >> $env:GITHUB_ENV
+        $env:PATH += "$pwd\build\bin;"
+
+    - name: Configure CMake
+      run: cmake -A x64 -DIMB_BIN_DIR=${{env.BINARY_DIR}} -B ${{env.BUILD_DIR}}
+
+    - name: Build
+      run: cmake --build ${{env.BUILD_DIR}} --config ${{env.BUILD_TYPE}}
+    - name: Test
+      run: ctest -j 5 -C ${{env.BUILD_TYPE}} --test-dir ${{env.BUILD_DIR}}
+
+  # CMake release build with shared library (ninja) on VS2022
+  debug-cmake-ninja-vs2022:
+    runs-on: windows-2022
+
+    steps:
+    - name: Setup NASM
+      uses: ilammy/setup-nasm@13cbeb366c45c4379d3478cdcbadd8295feb5028 # v1.5.1
+
+    - name: Checkout repo
+      uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3.6.0
+
+    - name: Setup environment
+      run: |
+        New-Item -ItemType Directory -Path "$pwd\build"
+        New-Item -ItemType Directory -Path "$pwd\build\bin"
+        "BUILD_DIR=$pwd\build" >> $env:GITHUB_ENV
+        "BINARY_DIR=$pwd\build\bin" >> $env:GITHUB_ENV
+        $env:PATH += "$pwd\build\bin;"
+
+    - name: Configure CMake
+      run: cmake -G Ninja -DIMB_BIN_DIR=${{env.BINARY_DIR}} -B ${{env.BUILD_DIR}}
+
+    - name: Build
+      run: cmake --build ${{env.BUILD_DIR}}
     - name: Test
       run: ctest -j 5 -C ${{env.BUILD_TYPE}} --test-dir ${{env.BUILD_DIR}}
