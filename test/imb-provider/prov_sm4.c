@@ -235,8 +235,10 @@ sm4_async_do_cipher(ALG_CTX *ctx, unsigned char *out, size_t *outl, size_t outsi
 
         const int nid = ctx->nid;
 
-        if (nid != NID_sm4_ecb && nid != NID_sm4_cbc && nid != NID_sm4_gcm && nid != NID_sm4_ctr)
+        if (nid != NID_sm4_ecb && nid != NID_sm4_cbc && nid != NID_sm4_gcm && nid != NID_sm4_ctr) {
+                fprintf(stderr, "Unsupported SM4 cipher mode: %d\n", nid);
                 return 0;
+        }
 
         /* Block size validation for ECB and CBC modes */
         if ((nid == NID_sm4_ecb || nid == NID_sm4_cbc) && len % SM4_BLOCK_SIZE != 0) {
@@ -304,10 +306,6 @@ sm4_async_do_cipher(ALG_CTX *ctx, unsigned char *out, size_t *outl, size_t outsi
                 imb_job->auth_tag_output = ctx->auths;
                 imb_job->auth_tag_output_len_in_bytes = 16;
                 break;
-
-        default:
-                fprintf(stderr, "Unsupported SM4 cipher mode: %d\n", nid);
-                return 0;
         }
 
         const int ret = async_update(tlv, ctx, async_job, imb_job);
