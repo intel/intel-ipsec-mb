@@ -1880,6 +1880,10 @@ main(int argc, char **argv)
                         goto exit;
                 } else if (strcmp(argv[i], "-v") == 0) {
                         verbose = 1;
+                } else {
+                        fprintf(stderr, "Unknown argument: '%s'\n", argv[i]);
+                        usage(argv[0]);
+                        goto exit;
                 }
         }
 
