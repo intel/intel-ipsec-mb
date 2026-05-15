@@ -93,8 +93,7 @@ jobs:
         $env:PATH += "$pwd\build\bin;"
 
     - name: Configure CMake
-      run: cmake -G Ninja -DIMB_BIN_DIR=${{env.BINARY_DIR}} -B ${{env.BUILD_DIR}}
-
+      run: cmake -G Ninja -DCMAKE_C_COMPILER=cl -DCMAKE_CXX_COMPILER=cl -DIMB_BIN_DIR=${{env.BINARY_DIR}} -B ${{env.BUILD_DIR}}
     - name: Build
       run: cmake --build ${{env.BUILD_DIR}}
     - name: Test
@@ -185,8 +184,7 @@ jobs:
         $env:PATH += "$pwd\build\bin;"
 
     - name: Configure CMake
-      run: cmake -G Ninja -DIMB_BIN_DIR=${{env.BINARY_DIR}} -B ${{env.BUILD_DIR}}
-
+      run: cmake -G Ninja -DCMAKE_C_COMPILER=cl -DCMAKE_CXX_COMPILER=cl -DIMB_BIN_DIR=${{env.BINARY_DIR}} -B ${{env.BUILD_DIR}}
     - name: Build
       run: cmake --build ${{env.BUILD_DIR}}
     - name: Test
