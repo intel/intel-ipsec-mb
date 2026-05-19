@@ -708,7 +708,7 @@ def build_environment(rc):
     if rc["behavior"]["include_script_dir_in_path"]:
         path_parts.append(SCRIPT_DIR)
     if path_parts:
-        env["PATH"] = ":".join(path_parts + [env.get("PATH", "")])
+        env["PATH"] = os.pathsep.join(path_parts + [env.get("PATH", "")])
     return env
 
 
